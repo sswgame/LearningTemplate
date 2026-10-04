@@ -226,6 +226,19 @@ namespace sw
             return prop._metadata._bTransient == SW_FALSE;
         }
 
+        /**
+         * @brief 이 문맥에서 이 타입의 프로퍼티를 쓰고 읽는지 — Transient 를 빼고, 세이브 직렬화(`isSaveGameOnly`)면 옵트인 타입의 `SaveGame` 만.
+         * @param owner 프로퍼티를 든 타입(상속 목록을 도는 그 타입). 옵트인 판정은 상속분까지 본다(`TypeInfo::hasSaveGameProperty`).
+         */
+        static bool shouldSerializeProperty( const TypeInfo& owner, const PropertyInfo& prop, const SerializeContext& ctx )
+        {
+            if ( prop._metadata._bTransient == SW_TRUE )
+                return false;
+            if ( ctx.isSaveGameOnly() == false || prop._metadata._bSaveGame == SW_TRUE )
+                return true;
+            return owner.hasSaveGameProperty() == false;
+        }
+
         /** @brief JSON 문자열을 바이너리 버퍼로 트랜스코딩합니다. */
         SW_API static bool transcodeJsonToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
                                                   const SerializeContext& ctx = SerializeContext::getDefault() );

@@ -45,7 +45,8 @@ Object/
 │  ├─ CameraRegistry.*          # 카메라 등록부 + 역할 · 우선순위 선택 규칙 하나(게임 · 에디터 카메라가 같이 쓴다)
 │  ├─ SceneAudio.*              # 오디오 컴포넌트 등록부 + 프레임마다 리스너 · 에미터 · 가림 · 리버브 존을 오디오 엔진에 넣기(Engine/Audio/README.md)
 │  ├─ MeshInstanceBatch.* · SpriteInstanceBatch.*  # 컴포넌트 없이 인스턴스 N 개를 드는 렌더 프리미티브(PrimitiveRegistry 에 등록)
-│  └─ ObjectStateSerializer.*
+│  ├─ ObjectStateSerializer.*
+│  └─ ObjectValidation.*        # 컴포넌트의 리플렉션 검증 함수(`Validate = fn`)를 돌려 ValidationIssueLog 에 둔다 — 로드(묶음 끝) · 글 저장 · 인스펙터 편집
 ├─ Animation/          # AnimationSystem — 애니메이션 유닛(SkeletalMeshComponent)을 의존 레벨 · 단계(시간 → 기본 포즈 → 부착 → 후처리 → 팔레트)로 평가.
 │                      #   매니저가 소유하고 tick 의 한 단계(틱 뒤 · 트랜스폼 플러시 앞)에서 부른다. 단계 안은 engine::runParallel
 ├─ Component/           # 기반 Component + 엔진 기본 컴포넌트
@@ -312,6 +313,9 @@ if ( pTarget != nullptr ) { ... }
 - 에디터 되돌리기 · 플레이 세션 복원 · 핫 리로드는 오브젝트를 다시 만들 때 **같은 id 를 되살립니다**
   (`GameObjectManager::createGameObjectWithId`, `ObjectStateSerializer` 의 `ObjectIdentity`). 그래서 그 너머로도 핸들이 이어집니다.
 - objectId 는 프로세스 전체에서 하나로 셉니다(영속 이월이 같은 id 로 옮겨 심는다). 핸들은 자기를 만든 매니저(씬)에게 풉니다.
+- 저장한 상태를 읽는 묶음(`ObjectStateBatch`)은 `GameObjectHandle` 을 **어디에 들었든** 이 실행의 오브젝트로 옮깁니다 — 단일 값 · 시퀀스 원소(제자리) ·
+  set 원소 · 맵 키(빼고 다시 넣는다) · 맵 값 · 중첩 컨테이너(`remapContainerHandles`). 묶음에 없는 대상을 가리키던 핸들은 없음이 됩니다. `ComponentHandle` 은
+  옮길 표가 없어 파일 상태면 비우고 경고합니다(컨테이너를 원소로 든 set 도 같다).
 - 씬 파일의 엔티티는 **파일 id**(`<entity id="…">`, 유니티의 fileID 자리)를 듭니다. 런타임 objectId 와 다른 공간이고, 씬이
   런타임 id ↔ 파일 id 표를 들고 저장할 때마다 같은 값을 다시 씁니다. 프리팹 파일은 오브젝트 하나라 id 가 없습니다.
 

@@ -67,6 +67,7 @@ namespace sw
             , _pOpaqueQueryFn{ nullptr }
             , _bIgnoreCaseKeys{ SW_TRUE }
             , _bAllowUnknownProperties{ SW_FALSE }
+            , _bSaveGameOnly{ SW_FALSE }
             , _reservedFlags{ 0 } {}
 
         // ------------------------------------------------------------------------------
@@ -81,6 +82,16 @@ namespace sw
         SerializeContext& setIgnoreCaseKeys( bool bIgnoreCaseKeys )
         {
             _bIgnoreCaseKeys = bIgnoreCaseKeys ? SW_TRUE : SW_FALSE;
+            return *this;
+        }
+
+        /**
+         * @brief 세이브 직렬화인지 설정합니다. 켜면 `SaveGame` 프로퍼티가 하나라도 있는 타입(옵트인)은 그것만 쓰고 읽으며, 읽을 때 나머지 프로퍼티에
+         *        기본값(`Default=`)을 채우지 않습니다 — 세이브에 없는 값은 지금 값 그대로입니다. 하나도 없는 타입은 이 설정과 무관하게 전부입니다.
+         */
+        SerializeContext& setSaveGameOnly( bool bSaveGameOnly )
+        {
+            _bSaveGameOnly = bSaveGameOnly ? SW_TRUE : SW_FALSE;
             return *this;
         }
 
@@ -110,6 +121,8 @@ namespace sw
         bool ignoresCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
         /** @brief 스키마에 없는 프로퍼티를 건너뛰고 계속하는지 반환합니다. */
         bool allowsUnknownProperties() const { return _bAllowUnknownProperties == SW_TRUE; }
+        /** @brief 세이브 직렬화인지(`setSaveGameOnly`) 반환합니다. */
+        bool isSaveGameOnly() const { return _bSaveGameOnly == SW_TRUE; }
 
         /** @brief 소유 포인터 팩토리에 넘길 outer(소유자) 인스턴스를 설정합니다. */
         SerializeContext& setOuterInstance( void* pOuter )
@@ -195,7 +208,8 @@ namespace sw
         OpaqueElementQueryFn    _pOpaqueQueryFn;
         uint8                   _bIgnoreCaseKeys         : 1;
         uint8                   _bAllowUnknownProperties : 1;
-        [[maybe_unused]] uint8  _reservedFlags           : 6;
+        uint8                   _bSaveGameOnly           : 1;
+        [[maybe_unused]] uint8  _reservedFlags           : 5;
     };
 
 } // namespace sw

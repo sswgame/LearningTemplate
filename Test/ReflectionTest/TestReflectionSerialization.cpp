@@ -3134,6 +3134,78 @@ SW_TEST_CASE( ReflectionSerializationTest, EveryPropertyHasATypeTheSerializersCa
 }
 
 /**
+ * @brief [ReflectionSerializationTest] set · unordered_set · 정수 · 열거형 키 맵 · 맵 안의 set · 시퀀스 안의 맵 · 세 겹 컨테이너가 세 형식에서 왕복한다
+ * @details 키는 글 형식에서 글로 적힌다(JSON 오브젝트 키 · XML 항목의 키) — 정수 · 열거자 이름이 그대로 다시 읽혀야 한다. 뒤의 `_after` 는 바이너리 스트림이
+ *          컨테이너를 읽다 어긋나지 않았는지 본다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, ContainerShapesRoundTripInEveryFormat )
+{
+    const sw::TypeInfo* pType = sw::ContainerShapeActor::StaticType();
+    SW_ASSERT_NOT_NULL( pType );
+    sw::ContainerShapeActor source;
+    source._uniqueTag   = { "fire", "ice" };
+    source._uniqueId    = { 3, 9 };
+    source._mapIdToName = {
+        { 7, "seven"},
+        {-2, "minus"}
+    };
+    source._mapStatusToCount = {
+        {   sw::SampleStatus::Moving, 4},
+        {sw::SampleStatus::Attacking, 1}
+    };
+    source._mapGroupToId = {
+        {"a", { 1, 2 }},
+        {"b",       {}}
+    };
+    source._listScoreTable = {
+        { { "x", 1 } },
+        { { "y", 2 }, { "z", 3 } }
+    };
+    source._mapNameToGrid = {
+        { "g", { { 1, 2 }, { 3 } } }
+    };
+    source._after = 42;
+
+    // sw 의 연관 컨테이너에는 == 가 없다 — 원소마다 찾아 비교한다.
+    const auto isSame = [&source]( const sw::ContainerShapeActor& actor )
+    {
+        bool bSame = actor._uniqueTag.size() == 2 && actor._uniqueTag.count( "fire" ) == 1 && actor._uniqueTag.count( "ice" ) == 1;
+        bSame      = bSame && actor._uniqueId.size() == 2 && actor._uniqueId.count( 3 ) == 1 && actor._uniqueId.count( 9 ) == 1;
+        bSame      = bSame && actor._mapIdToName.size() == 2 && actor._mapIdToName.count( 7 ) == 1 && actor._mapIdToName.find( 7 )->second == "seven" && actor._mapIdToName.count( -2 ) == 1;
+        bSame      = bSame && actor._mapStatusToCount.size() == 2 && actor._mapStatusToCount.at( sw::SampleStatus::Moving ) == 4 &&
+                actor._mapStatusToCount.at( sw::SampleStatus::Attacking ) == 1;
+        bSame = bSame && actor._mapGroupToId.size() == 2 && actor._mapGroupToId.at( "a" ).size() == 2 && actor._mapGroupToId.at( "a" ).count( 2 ) == 1 &&
+                actor._mapGroupToId.at( "b" ).empty();
+        bSame = bSame && actor._listScoreTable.size() == 2 && actor._listScoreTable[0].at( "x" ) == 1 && actor._listScoreTable[1].size() == 2 &&
+                actor._listScoreTable[1].at( "z" ) == 3;
+        bSame = bSame && actor._mapNameToGrid.count( "g" ) == 1 && actor._mapNameToGrid.find( "g" )->second == source._mapNameToGrid.find( "g" )->second;
+        return bSame && actor._after == 42;
+    };
+
+    const sw::string        xml = sw::XmlSerializer::serialize( &source, *pType );
+    sw::ContainerShapeActor fromXml;
+    SW_EXPECT_TRUE_MSG( sw::XmlSerializer::deserialize( &fromXml, *pType, xml ), xml.c_str() );
+    SW_EXPECT_TRUE_MSG( isSame( fromXml ), xml.c_str() );
+
+    const sw::string        json = sw::JsonSerializer::serialize( &source, *pType );
+    sw::ContainerShapeActor fromJson;
+    SW_EXPECT_TRUE_MSG( sw::JsonSerializer::deserialize( &fromJson, *pType, json ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( isSame( fromJson ), json.c_str() );
+
+    sw::vector<uint8> bytes;
+    sw::BinarySerializer::serialize( &source, *pType, bytes );
+    sw::ContainerShapeActor fromBinary;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromBinary, *pType, bytes.data(), bytes.size() ) );
+    SW_EXPECT_TRUE( isSame( fromBinary ) );
+
+    sw::vector<uint8> compactBytes;
+    sw::BinarySerializer::serializeCompact( &source, *pType, compactBytes );
+    sw::ContainerShapeActor fromCompact;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &fromCompact, *pType, compactBytes.data(), compactBytes.size() ) );
+    SW_EXPECT_TRUE( isSame( fromCompact ) );
+}
+
+/**
  * @brief [ReflectionSerializationTest] 고정 배열 프로퍼티는 세 형식에서 왕복한다 — 칸마다 채우고, 칸보다 많은 원소는 실패로 알린다
  * @details 고정 배열은 자라지 않으므로 읽기가 "뒤에 넣기" 가 아니라 순번의 칸을 채운다(`ISequenceContainerWrapper::appendElement` 의 순번 인자).
  *          파일의 원소가 칸보다 적으면 남은 칸은 그대로다.

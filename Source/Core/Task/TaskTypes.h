@@ -196,6 +196,22 @@ namespace sw
                 return *reinterpret_cast<const Stored* const*>( _arrStorage );
         }
 
+        /**
+         * @brief 타입을 묻지 않고 값의 자리를 돌려줍니다. 비었으면 nullptr 입니다.
+         * @details 담긴 타입을 다른 길(리플렉션 타입 이름 · `EnumInfo::_size`)로 아는 쪽만 씁니다 — 크기 검사가 없습니다.
+         */
+        const void* getRawPtr() const
+        {
+            if ( _pVtable == nullptr )
+                return nullptr;
+            if ( _pVtable->_bIsInline )
+                return _arrStorage;
+            return *reinterpret_cast<const void* const*>( _arrStorage );
+        }
+
+        /** @brief 담긴 값의 크기(`sizeof`)입니다. 비었으면 0 입니다. */
+        size_t getStoredSize() const { return ( _pVtable != nullptr ) ? _pVtable->_typeSize : 0; }
+
         template <typename T>
         /** @brief 값을 복사해 반환합니다. 값이 없으면 defaultValue 입니다. */
         T getValue( const T& defaultValue = T{} ) const

@@ -45,12 +45,23 @@ namespace sw
         static constexpr uint32 kSaveBinMagic   = 0x53415631u; // 'SAV1'
         static constexpr uint32 kSaveBinVersion = 1;
 
+        /**
+         * @brief 세이브 직렬화 문맥입니다 — `PROPERTY( SaveGame )` 이 하나라도 있는 타입은 그것만 쓰고 읽습니다(없는 타입은 전부).
+         * @details 읽을 때 세이브에 없는 칸은 지금 값 그대로입니다(기본값으로 되돌리지 않는다).
+         */
+        static SerializeContext makeSaveContext()
+        {
+            SerializeContext ctx = SerializeContext::deriveFromDefault();
+            ctx.setSaveGameOnly( true );
+            return ctx;
+        }
+
         /** @brief 임의의 리플렉션 객체를 SAV1 바이너리 파일로 저장합니다. */
         template <typename T>
         [[nodiscard]] static bool saveGameToSlot( const T& saveObject, string_view path )
         {
             Archive payloadArch;
-            if ( payloadArch.serializeObject( saveObject ) == false )
+            if ( payloadArch.serializeObject( saveObject, makeSaveContext() ) == false )
                 return false;
 
             const uint32 crc = payloadArch.computeChecksum();
@@ -99,7 +110,7 @@ namespace sw
                 return false;
 
             Archive payloadArch( pPayload, payloadSize );
-            return payloadArch.deserializeObject( outSaveObject );
+            return payloadArch.deserializeObject( outSaveObject, makeSaveContext() );
         }
     };
 } // namespace sw

@@ -14,6 +14,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectValidation.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -210,30 +211,30 @@ namespace sw
                 return s_typeName;
             }
 
-            static bool isHandleTypeName( const hashed_string& typeName )
-            {
-                return typeName == getObjectHandleTypeName() || typeName == getComponentHandleTypeName();
-            }
-
             /**
-             * @brief 묶음이 저장된 id 를 옮기지 못하는 자리에 핸들을 담는 프로퍼티인지 봅니다.
-             * @details 옮기는 자리는 단일 `GameObjectHandle` 과 제자리 쓰기가 되는 평평한 시퀀스의 원소뿐입니다. `ComponentHandle` 은 저장된
-             *          컴포넌트 id 를 이 실행의 컴포넌트로 옮길 표가 없고, 맵 · set 의 키 · 값과 중첩 컨테이너의 원소는 제자리에서 고칠 수 없습니다.
+             * @brief 묶음이 저장된 id 를 옮길 표가 없는 `ComponentHandle` 을 담는 프로퍼티인지 봅니다(단일 값 · 컨테이너의 어느 단계든).
+             * @details `GameObjectHandle` 은 어디에 들었든 옮긴다(`ObjectStateBatch::remapContainerHandles`). `ComponentHandle` 은 저장된
+             *          컴포넌트 id 를 이 실행의 컴포넌트로 옮길 표가 없다.
              */
-            static bool holdsUnmappedHandle( const PropertyInfo& prop )
+            static bool holdsComponentHandle( const PropertyInfo& prop )
             {
                 if ( prop._bIsContainer == SW_FALSE )
                     return prop._typeName == getComponentHandleTypeName();
-
-                const NestedContainerInfo  shape       = prop.getContainerShape();
-                ISequenceContainerWrapper* pSequence   = ( shape._wrapper != nullptr ) ? shape._wrapper->asSequence() : nullptr;
-                const bool                 bRemappable = pSequence != nullptr && pSequence->allowsInPlaceElementWrite() && shape._elementNested == nullptr &&
-                                         shape._elementTypeName == getObjectHandleTypeName();
-                if ( bRemappable )
-                    return false;
+                const NestedContainerInfo shape = prop.getContainerShape();
                 for ( const NestedContainerInfo* pLevel = &shape; pLevel != nullptr; pLevel = pLevel->_elementNested.get() )
                 {
-                    if ( isHandleTypeName( pLevel->_elementTypeName ) || isHandleTypeName( pLevel->_keyTypeName ) )
+                    if ( pLevel->_elementTypeName == getComponentHandleTypeName() || pLevel->_keyTypeName == getComponentHandleTypeName() )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief 컨테이너의 어느 단계(키 · 원소)에 `GameObjectHandle` 이 드는지 봅니다. */
+            static bool holdsObjectHandle( const NestedContainerInfo& shape )
+            {
+                for ( const NestedContainerInfo* pLevel = &shape; pLevel != nullptr; pLevel = pLevel->_elementNested.get() )
+                {
+                    if ( pLevel->_elementTypeName == getObjectHandleTypeName() || pLevel->_keyTypeName == getObjectHandleTypeName() )
                         return true;
                 }
                 return false;
@@ -297,6 +298,9 @@ namespace sw
         const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
         if ( pTypeInfo == nullptr )
             return {};
+
+        // 글로 저장하는 길(씬 · 프리팹 저작)은 쓰기 전에 검증한다 — 결과만 남기고 저장은 그대로 한다. 바이너리(플레이 · 되돌리기 스냅숏)는 보지 않는다.
+        (void)ObjectValidation::reportGameObject( *pGameObject, true );
 
         SerializeContext                                     ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
         const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options };
@@ -603,6 +607,13 @@ namespace sw
                     pComp->onPostLoad();
             }
         }
+
+        // 5) 읽은 값을 검증한다(`Validate = fn`) — 결과는 `ValidationIssueLog` 로 간다(맵 검사). 값을 고치거나 로드를 멈추지 않는다.
+        for ( const Entry& entry : _listEntry )
+        {
+            if ( entry._bLoadedState == true && entry._pObject->isPendingDestroy() == false )
+                (void)ObjectValidation::reportGameObject( *entry._pObject, true );
+        }
     }
 
     void ObjectStateBatch::resolveObjectReferences( const Entry& entry ) const
@@ -622,22 +633,9 @@ namespace sw
                 // 읽지 않은 칸(Transient)은 지금 실행의 값이다 — 옮기면 살아 있는 참조를 망친다.
                 if ( prop._metadata._bTransient == SW_TRUE )
                     continue;
-                if ( ObjectStateSerializerInternal::holdsUnmappedHandle( prop ) )
-                {
-                    // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 비우고 알린다.
-                    if ( _idSpace == ObjectIdSpace::Saved )
-                    {
-                        SW_LOG_WARNING( "Property '%#::%#' holds object handles a load batch cannot remap (ComponentHandle, map/set or nested "
-                                        "container) - cleared",
-                                        pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str() );
-                        if ( prop._bIsContainer == SW_TRUE )
-                            prop._containerWrapper->clear( prop.getRawPtr( pComp ) );
-                        else
-                            *static_cast<ComponentHandle*>( prop.getRawPtr( pComp ) ) = ComponentHandle{};
-                    }
-                    continue;
-                }
-                if ( prop._bIsContainer == SW_FALSE )
+                // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못하는 자리는 비우고 알린다.
+                const bool bComponentHandle = ObjectStateSerializerInternal::holdsComponentHandle( prop );
+                if ( bComponentHandle == false && prop._bIsContainer == SW_FALSE )
                 {
                     if ( prop._typeName == handleTypeName )
                     {
@@ -646,18 +644,123 @@ namespace sw
                     }
                     continue;
                 }
-                ISequenceContainerWrapper* pSequence = ( prop._containerWrapper != nullptr ) ? prop._containerWrapper->asSequence() : nullptr;
-                if ( pSequence == nullptr || prop._elementTypeName != handleTypeName )
+                bool bRemapped = bComponentHandle == false;
+                if ( bRemapped && prop._containerWrapper != nullptr )
+                {
+                    const NestedContainerInfo shape = prop.getContainerShape();
+                    if ( ObjectStateSerializerInternal::holdsObjectHandle( shape ) )
+                        bRemapped = remapContainerHandles( prop.getRawPtr( pComp ), shape );
+                }
+                if ( bRemapped || _idSpace != ObjectIdSpace::Saved )
                     continue;
-                void*        pContainer   = prop.getRawPtr( pComp );
-                const size_t elementCount = pSequence->getSize( pContainer );
+                SW_LOG_WARNING( "Property '%#::%#' holds object handles a load batch cannot remap (ComponentHandle, or a set of containers) - cleared",
+                                pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str() );
+                if ( prop._bIsContainer == SW_TRUE )
+                    prop._containerWrapper->clear( prop.getRawPtr( pComp ) );
+                else
+                    *static_cast<ComponentHandle*>( prop.getRawPtr( pComp ) ) = ComponentHandle{};
+            }
+        }
+    }
+
+    bool ObjectStateBatch::remapContainerHandles( void* pContainer, const NestedContainerInfo& shape ) const
+    {
+        if ( pContainer == nullptr || shape._wrapper == nullptr )
+            return true;
+        const hashed_string& handleTypeName = ObjectStateSerializerInternal::getObjectHandleTypeName();
+
+        ISequenceContainerWrapper* pSequence = shape._wrapper->asSequence();
+        if ( pSequence != nullptr )
+        {
+            const size_t elementCount = pSequence->getSize( pContainer );
+            if ( shape._elementNested != nullptr )
+            {
+                // 원소가 곧 정렬 키인 set 은 원소를 제자리에서 고칠 수 없다 — 컨테이너를 원소로 든 set 은 옮기지 못한다.
+                if ( pSequence->allowsInPlaceElementWrite() == false )
+                    return ObjectStateSerializerInternal::holdsObjectHandle( *shape._elementNested ) == false;
+                for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                {
+                    if ( remapContainerHandles( pSequence->getElement( pContainer, elementIndex ), *shape._elementNested ) == false )
+                        return false;
+                }
+                return true;
+            }
+            if ( shape._elementTypeName != handleTypeName )
+                return true;
+            if ( pSequence->allowsInPlaceElementWrite() )
+            {
                 for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                 {
                     GameObjectHandle* pHandle = static_cast<GameObjectHandle*>( pSequence->getElement( pContainer, elementIndex ) );
                     *pHandle                  = resolveObjectReference( *pHandle );
                 }
+                return true;
             }
+            // set — 옮긴 값으로 빼고 다시 넣는다(자리는 컨테이너가 정한다).
+            vector<GameObjectHandle> listHandle;
+            listHandle.reserve( elementCount );
+            for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                listHandle.push_back( resolveObjectReference( *static_cast<const GameObjectHandle*>( pSequence->getElementConst( pContainer, elementIndex ) ) ) );
+            pSequence->clear( pContainer );
+            for ( size_t elementIndex = 0; elementIndex < listHandle.size(); ++elementIndex )
+            {
+                const GameObjectHandle handle = listHandle[elementIndex];
+                (void)pSequence->appendElement( pContainer, elementIndex, ElementFillDelegate::create( [handle]( void* pElement )
+                {
+                    *static_cast<GameObjectHandle*>( pElement ) = handle;
+                    return true;
+                } ) );
+            }
+            return true;
         }
+
+        IMapContainerWrapper* pMap = shape._wrapper->asMap();
+        if ( pMap == nullptr )
+            return true;
+        // 값부터 제자리에서 옮긴다(핸들 값 · 중첩 컨테이너).
+        bool bValueRemapped = true;
+        if ( shape._elementNested != nullptr || shape._elementTypeName == handleTypeName )
+        {
+            pMap->forEachMutable( pContainer, MapForEachMutableDelegate::create( [this, &shape, &bValueRemapped, &handleTypeName]( const void*, void* pValue )
+            {
+                if ( shape._elementNested != nullptr )
+                    bValueRemapped = remapContainerHandles( pValue, *shape._elementNested ) && bValueRemapped;
+                else if ( shape._elementTypeName == handleTypeName )
+                    *static_cast<GameObjectHandle*>( pValue ) = resolveObjectReference( *static_cast<GameObjectHandle*>( pValue ) );
+            } ) );
+        }
+        if ( bValueRemapped == false || shape._keyTypeName != handleTypeName )
+            return bValueRemapped;
+
+        // 키는 정렬 · 해시 자리라 제자리에서 고칠 수 없다 — 값을 밖에 복사해 두고, 비운 뒤 옮긴 키로 다시 넣는다.
+        constexpr size_t kAlignment  = 64;
+        const size_t     valueStride = ( pMap->getValueSize() + kAlignment - 1 ) / kAlignment * kAlignment;
+        const size_t     entryCount  = pMap->getSize( pContainer );
+        if ( entryCount == 0 )
+            return true;
+        uint8* pValueBlock = static_cast<uint8*>( Memory::allocateAligned( valueStride * entryCount, kAlignment ) );
+        if ( pValueBlock == nullptr )
+            return false;
+        vector<GameObjectHandle> listKey;
+        listKey.reserve( entryCount );
+        bool bCopied = true;
+        pMap->forEach( pContainer, MapForEachDelegate::create( [this, pMap, pValueBlock, valueStride, &listKey, &bCopied]( const void* pKey, const void* pValue )
+        {
+            void* pSlot = pValueBlock + valueStride * listKey.size();
+            pMap->defaultConstructValue( pSlot );
+            bCopied = pMap->copyValue( pSlot, pValue ) && bCopied;
+            listKey.push_back( resolveObjectReference( *static_cast<const GameObjectHandle*>( pKey ) ) );
+        } ) );
+        if ( bCopied )
+        {
+            pMap->clear( pContainer );
+            for ( size_t entryIndex = 0; entryIndex < listKey.size(); ++entryIndex )
+                pMap->insertKeyValue( pContainer, &listKey[entryIndex], pValueBlock + valueStride * entryIndex );
+        }
+        for ( size_t entryIndex = 0; entryIndex < listKey.size(); ++entryIndex )
+            pMap->destroyValue( pValueBlock + valueStride * entryIndex );
+        Memory::freeAligned( pValueBlock );
+        return bCopied;
     }
 
     GameObjectHandle ObjectStateBatch::resolveObjectReference( GameObjectHandle savedHandle ) const

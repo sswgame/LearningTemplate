@@ -214,6 +214,13 @@ namespace sw
                     else
                         uniqueMatchedPropHashes.insert( prop.getNameHash() );
 
+                    // 세이브 읽기에서 옵트인 타입의 SaveGame 이 아닌 칸은 읽지 않는다 — 세이브가 지금 값을 덮지 않는다(쓰기도 적지 않는다).
+                    if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, ctx ) == false )
+                    {
+                        reader.skip( payloadSize );
+                        continue;
+                    }
+
                     // **기록 타입을 같이 넘긴다.** 태그가 그것을 들고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
                     // 타입을 짐작한다(정수와 실수를 가르지 못한다).
                     const bool bWireMismatch = ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() );
@@ -265,7 +272,9 @@ namespace sw
                         bMatched = ( matchedBitmask & ( 1ULL << propIdx ) ) != 0;
                     else
                         bMatched = uniqueMatchedPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueMatchedPropHashes.end();
-                    if ( bMatched == false )
+                    // 세이브 읽기가 다루지 않는 칸(옵트인 타입의 SaveGame 이 아닌 것)은 지금 값 그대로다 — 기본값으로 되돌리지 않는다.
+                    const bool bOutsideSaveGame = ctx.isSaveGameOnly() && SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], ctx ) == false;
+                    if ( bMatched == false && bOutsideSaveGame == false )
                         SerializerUtil::applyPropertyDefault( listProp[propIdx], pInstance, ctx );
                 }
                 return true;
@@ -478,7 +487,7 @@ namespace sw
         uint32                      propCount{ 0 };
         for ( const PropertyInfo& prop : listProp )
         {
-            if ( prop._metadata._bTransient == SW_TRUE )
+            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, ctx ) == false )
                 continue;
             ++propCount;
         }
@@ -489,7 +498,7 @@ namespace sw
 
         for ( const PropertyInfo& prop : listProp )
         {
-            if ( prop._metadata._bTransient == SW_TRUE )
+            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, ctx ) == false )
                 continue;
             const void* pPropPtr = prop.getRawPtr( pInstance );
 

@@ -24,7 +24,7 @@ namespace
         FunctionInfo method;
         method._name           = "Probe";
         method._returnTypeName = "void";
-        method._listParameterTypeName.push_back( pParamType );
+        method._listParameter.push_back( sw::FunctionParameterInfo( "", pParamType, "", nullptr ) );
         return method;
     }
 
@@ -145,7 +145,7 @@ SW_TEST_CASE( InspectorBuiltinValueTest, MethodArgKeepsExactCppType )
 SW_TEST_CASE( InspectorBuiltinValueTest, PrepareMethodArgsKeepsOrResetsSlots )
 {
     FunctionInfo method = makeMethodTaking( "float64" );
-    method._listParameterTypeName.push_back( "TagID" );
+    method._listParameter.push_back( sw::FunctionParameterInfo( "", "TagID", "", nullptr ) );
 
     vector<InspectorMethodArgSlot> listSlot;
     SW_ASSERT_TRUE( InspectorBuiltinValueUtil::prepareMethodArgs( method, listSlot ) );
@@ -156,19 +156,19 @@ SW_TEST_CASE( InspectorBuiltinValueTest, PrepareMethodArgsKeepsOrResetsSlots )
     SW_EXPECT_EQUAL( 3.25, listSlot[0]._value.getValue<float64>() );
 
     // 같은 칸의 인자 타입이 바뀌면(핫 리로드로 시그니처가 바뀐 경우 등) 새 타입의 기본값이 된다.
-    method._listParameterTypeName[0] = "int16";
+    method._listParameter[0]._typeName = "int16";
     SW_ASSERT_TRUE( InspectorBuiltinValueUtil::prepareMethodArgs( method, listSlot ) );
     SW_EXPECT_NOT_NULL( listSlot[0]._value.getPtr<int16>() );
     SW_EXPECT_EQUAL( int16{ 0 }, listSlot[0]._value.getValue<int16>() );
 
     // 내장 타입이 아닌 인자가 하나라도 있으면 부를 수 없다.
-    method._listParameterTypeName.push_back( "SceneComponent" );
+    method._listParameter.push_back( sw::FunctionParameterInfo( "", "SceneComponent", "", nullptr ) );
     SW_EXPECT_FALSE( InspectorBuiltinValueUtil::prepareMethodArgs( method, listSlot ) );
     SW_EXPECT_FALSE( listSlot[2]._value.hasValue() );
 
     FunctionInfo manyArg;
     for ( uint32 index = 0; index <= InspectorBuiltinValueUtil::kMaxMethodArgCount; ++index )
-        manyArg._listParameterTypeName.push_back( "int32" );
+        manyArg._listParameter.push_back( sw::FunctionParameterInfo( "", "int32", "", nullptr ) );
     SW_EXPECT_FALSE( InspectorBuiltinValueUtil::prepareMethodArgs( manyArg, listSlot ) );
     SW_EXPECT_EQUAL( size_t{ InspectorBuiltinValueUtil::kMaxMethodArgCount }, listSlot.size() );
 }

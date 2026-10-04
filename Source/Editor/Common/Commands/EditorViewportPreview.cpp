@@ -63,8 +63,8 @@ namespace sw::editor
             /** @brief 대사 미리보기 메서드의 시그니처( string speaker, string text )인지입니다. */
             static bool takesDialogueLineArgs( const FunctionInfo& method )
             {
-                return method._listParameterTypeName.size() == 2 && method._listParameterTypeName[0] == "string" &&
-                       method._listParameterTypeName[1] == "string" && method._invoker.isBound();
+                return method._listParameter.size() == 2 && method._listParameter[0]._typeName == "string" &&
+                       method._listParameter[1]._typeName == "string" && method._invoker.isBound();
             }
         };
 

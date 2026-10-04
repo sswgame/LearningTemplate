@@ -63,6 +63,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
@@ -339,6 +340,15 @@ namespace sw
                 SW_LOG_INFO( "Starting Headless (CookShaders)..." );
                 const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
                 loop._bHeadlessTaskFailed       = summary.isClean() == false;
+                return EngineInitResult::SkipDependents;
+            }
+
+            // 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleTypes)라 게임 · 킷의 타입까지 든다.
+            string reflectionDocsDir;
+            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::WRITE_REFLECTION_DOCS, reflectionDocsDir ) && reflectionDocsDir.empty() == false )
+            {
+                loop._bHeadless           = true;
+                loop._bHeadlessTaskFailed = ReflectionDocWriter::writeMarkdown( engine::getTypeRegistry(), reflectionDocsDir ) == 0;
                 return EngineInitResult::SkipDependents;
             }
 

@@ -18,10 +18,11 @@ sw_addTestExecutable(ReflectionTest
 		"unit;reflection;nogpu"
 	TIMEOUT
 		30
-	# 파서를 차례로 띄우는 ReflectionParserTest 가 실행 시간의 거의 전부라 하나로 두면 부하가 걸릴 때 제한 30 초를 넘는다.
-	# 둘로 갈라 병렬로 돈다(ReflectionTest_Shard1 · _Shard2).
+	# 파서를 프로세스로 띄우는 ReflectionParserTest 가 실행 시간의 거의 전부다(케이스마다 파서 실행 1~4 번, 실행 하나에 기동 · 종료
+	# 0.5~1 초 + CoreMinimal.h 파싱 0.5 초 — 기계가 바쁘면 2~3 배). 부하가 걸린 기계에서도 조각마다 30 초 안에 들게 여섯으로 가른다
+	# (ReflectionTest_Shard1 ~ _Shard6, 케이스는 스위트 안에서 번갈아 나뉜다).
 	SHARDS
-		2
+		6
 )
 
 target_include_directories(ReflectionTest PRIVATE "${CMAKE_SOURCE_DIR}/Tools")
