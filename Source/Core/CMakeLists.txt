@@ -17,6 +17,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/DataRaceDetector.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/DeadlockDetector.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/Futex.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/ThreadName.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Container/DynamicBitset.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Delegate/Delegate.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Module/ModuleUnloadListener.cpp"

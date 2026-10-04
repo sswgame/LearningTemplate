@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/BuildInfo.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/Concurrency/ThreadName.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/AsyncFileIo.h"
 #include "Core/File/FileUtil.h"
@@ -87,6 +88,7 @@
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/ProfilerBackend.h"
 #include "Engine/Window/IWindow.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -853,6 +855,10 @@ namespace sw
             engine::bindEngineServices( services );
         }
 
+        // 외부 프로파일러(`-gv_tracy`)는 서비스 표가 선 직후에 켠다 — 기동 단계부터 타임라인에 남고, 켤 때 엔진 프로파일러도 같이 켠다.
+        ThreadName::setCurrentThreadName( "GameThread" );
+        ProfilerBackend::initialize();
+
         // 초기화(`initialize()`)의 순서는 손으로 적지 않는다. 단계마다 먼저 서야 하는 단계를 `EngineInitStepList.xxx` 에 적고,
         // 여기서는 위상 순서로 단계 구조체(`<단계>StartupStep`)의 본문을 부른다. 종료와 해제는 그 역순이다(`shutdown`).
         const bool bStarted = _startup.initializeAll( *this );
@@ -877,6 +883,8 @@ namespace sw
         // 단계가 소유한 객체를 표의 역순으로 해제한다(`<단계>StartupStep::destroy`): 렌더러 쪽 → RHI → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 →
         // 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _startup.destroyAll();
+        // 할당 관찰을 떼고 출력을 비운다. 출력 객체(Tracy)는 프로세스 수명이라 남아 있는 구간을 닫을 수 있다.
+        ProfilerBackend::shutdown();
         // 표 밖 부트스트랩을 세운 역순으로 내린다(시험 하네스와 같은 끝 정리).
         _bootstrap.shutdown();
 
@@ -1175,6 +1183,10 @@ namespace sw
     void EngineLoop::endFrame()
     {
         engine::getFrameProfiler().endFrame();
+        // 외부 프로파일러(Tracy)의 주 프레임 경계 — 게임 스레드 프레임이다.
+        IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();
+        if ( pProfilerBackend != nullptr )
+            pProfilerBackend->markFrame( nullptr );
         const bool bReportedBefore = _profileSession.hasReported();
         _profileSession.onFrameEnd();
         // CPU 메모리 태그 표 옆에 GPU 메모리 표를 둔다. 보고 세션은 Utility 층이라 Graphics 의 장부를 볼 수 없어 여기서 잇는다.
