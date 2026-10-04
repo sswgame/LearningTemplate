@@ -47,7 +47,9 @@
 			                    _fillColor="0.85,0.2,0.2,1"
 			                    _trailColor="0.95,0.8,0.25,1"
 			                    _backgroundColor="0.08,0.08,0.1,0.8"
-			                    _bVisible="false" />
+			                    _bVisible="false"
+			                    _bShowWhenHurt="true"
+			                    _bHideWhenDead="true" />
 			<ShooterEnemyComponent _componentName="ShooterEnemyComponent"
 			                       _bActive="true"
 			                       _director="0"
@@ -63,6 +65,18 @@
 			                       _corpseTime="3"
 			                       _runSpeed="3.2"
 			                       _turnRate="6" />
+			<NavMeshAgentComponent _componentName="NavMeshAgentComponent"
+			                       _bActive="true"
+			                       _agentType="Humanoid"
+			                       _maxSpeed="3"
+			                       _maxAcceleration="12"
+			                       _stoppingDistance="1.45"
+			                       _radius="0.45"
+			                       _separationWeight="2"
+			                       _avoidanceQuality="Medium"
+			                       _turnRate="8"
+			                       _bUpdatePosition="true"
+			                       _bUpdateRotation="false" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

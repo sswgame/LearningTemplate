@@ -65,18 +65,35 @@
 | 고정 배치(땅 · 해 · 카메라 · 건물 · 장식 설정 · 디렉터) | 씬 `Resource/game/<팩>/maps/*.scene.xml` — 팩의 `data/gamesettings.xml` 의 `startMap` |
 | 데이터로 런타임에 생기는 것(유닛 · 손님 · 탄 · 짓는 건물) | 프리팹 `prefabs/*.prefab.xml` — `game::getService<AssetManager>()->getPrefabCache().spawn( … )` |
 | 규칙 · 상태 | 키트의 보통 클래스 — 씬 없이 시험한다(컴포넌트로 만들지 않는다) |
-| 규칙을 돌리고 스폰을 지시 | 디렉터 컴포넌트 하나(언리얼 GameMode/GameState) — `TickGroup::PrePhysics` |
+| 규칙을 돌리고 스폰을 지시 | 디렉터 컴포넌트 하나(언리얼 GameMode/GameState) — GameFramework `GameDirectorComponent` 를 상속한다(아래) |
 | 엔티티의 모습 | 뷰 컴포넌트 — 디렉터를 읽기만 하고 자기 오브젝트에만 쓴다, `TickGroup::PostUpdate` |
 | 엔티티 하나의 입력 · AI | 컨트롤러 컴포넌트 — 뷰와 같은 규칙(디렉터를 읽기만, 자기 오브젝트에만 쓴다), 기본 그룹 `DuringPhysics` |
-| 장르 무관 카메라 · 장식 | GameFramework `Components/`(`OrthoCameraRigComponent` · `FirstPersonCameraComponent` · `PropScatterComponent` …) |
-| 게임 클래스 | `requestFirstScene()` 과, 상태 저장 전에 디렉터의 시뮬레이션을 싣고(`getComponentStateStore().capture<디렉터>`) 디렉터가 세운 것을 걷는 일, 복원 뒤 돌려주는 일(`restore<디렉터>`) |
+| 장르 무관 카메라 · 장식 | GameFramework `Camera/`(`OrthoCameraRigComponent` · `FirstPersonCameraComponent`) · `World/`(`PropScatterComponent` · `GravityComponent` …) |
+| 게임 클래스 | `requestFirstScene()` 과, 생성자의 `registerDirector<디렉터>()` 한 줄 — 상태 저장 전에 시뮬레이션을 싣고 디렉터가 세운 것을 걷으며, 복원 뒤 돌려준다 |
+
+**디렉터는 베이스를 쓴다** — `GameFramework/Framework/GameDirectorComponent`(언리얼 `AGameModeBase` · `AGameStateBase` 의 자리, Lyra 처럼 게임 상태를 한 컴포넌트에).
+골격(틱 그룹 · 상태 바이트 보류 · 틱 뒤 플러시 · 대기 소리 · 세운 것 걷기 · 자동 플레이 · 디렉터 찾기)은 베이스가 들고, 디렉터는 게임마다 다른 것만 적는다:
+
+| 디렉터가 적는 것 | 언제 |
+|------|------|
+| `startGame()` | `onBeginPlay` — 데이터를 읽고 새 판을 연다. 못 열면 알리고 false(틱도 돌지 않는다) |
+| `writeState` · `readState` | 상태 바이트 — 첫 값은 `StateArchiveUtil::writeHeader` 의 표 · 버전, 형식을 바꾸면 버전을 올린다 |
+| `onStateRestored( bRestored )` | 복원 바이트를 적용한 뒤 — 로그, 실패면 새 판으로 되돌리기. 시작 전에 받은 바이트는 베이스가 들고 있다가 시작한 뒤 적용한다 |
+| `onGameStarted()` | 판이 열리고 첫 플러시 뒤 — 조작 안내 · 카메라 |
+| `tickGame( dt )` | 판이 열린 뒤 매 틱(PrePhysics) |
+| `onFlush( manager, bRespawnViews )` | 틱 뒤 게임 스레드 — 쌓인 스폰을 세운다. `bRespawnViews` 면 처음(또는 걷은 뒤)이라 지금 상태의 모습 전부 |
+| `onViewsDespawned()` · `hasPendingSpawn()` | 걷은 뒤 자기 핸들 목록 비우기 · 틱 끝에 플러시를 잡을지 |
+
+세우기는 `spawnPrefab`(걷을 목록에 든다) · `destroySpawned`, 소리는 `getSoundQueue().queueClip / queueEvent / queueEventAt`(틱 뒤에 낸다), 색만 다른 모습은
+`MaterialTintCache`, 뷰 · 컨트롤러가 디렉터를 찾는 것은 `GameDirectorComponent::resolve<디렉터>( manager, handle )`. 자동 플레이 PROPERTY 는 베이스의 `_bAutoPlay`
+하나이고 게임은 `SW_GAME_AUTOPLAY` 로 전역 변수를 등록한다(`isAutoPlayOn()` 이 둘을 본다).
 
 지킬 것:
 
-- **디렉터의 시뮬레이션은 `writeState` · `restoreState` 로 넘긴다.** 키트의 보통 클래스는 PROPERTY 가 아니라 핫 리로드 · 세이브에서 사라진다 — 디렉터가
-  `writeState( Archive& )`(첫 값은 `StateArchiveUtil::writeHeader` 의 표 · 버전)와 `restoreState( vector<uint8>&& )`(시작 전이면 들고 있다가 `onBeginPlay` 가
-  데이터를 읽은 뒤 적용, 읽지 못하면 새 판)를 두고, 게임 클래스가 실어 돌려준다(`GameFramework/README.md` Framework 절). 형식을 바꾸면 디렉터의 버전을 올린다.
-- **틱 안에서는 구조를 바꾸지 않는다.** 디렉터는 스폰 요청을 쌓고 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세운다(틱 안의 `addComponent` 는 nullptr).
+- **디렉터의 시뮬레이션은 `writeState` · `readState` 로 넘긴다.** 키트의 보통 클래스는 PROPERTY 가 아니라 핫 리로드 · 세이브에서 사라진다 — 게임 모듈의 정적 ·
+  컴포넌트 멤버는 모듈과 함께 내려간다. 넘길 것은 상태 바이트로만 넘기고, 게임 인스턴스가 생성자에서 `registerDirector<디렉터>()` 로 올린다(디렉터가 아닌 상태 컴포넌트는
+  `registerStatefulComponent<T>()`, 상태 없이 세운 것만 걷는 컴포넌트는 `registerViewOwner<T>()` — `despawnViews()` 를 둔다).
+- **틱 안에서는 구조를 바꾸지 않는다.** 디렉터는 스폰 요청을 쌓고(`hasPendingSpawn`) 베이스가 `executeOrDeferPostTick` 한 번으로 틱 뒤에 `onFlush` 를 부른다(틱 안의 `addComponent` 는 nullptr).
 - **같은 그룹은 병렬이다.** 뷰는 자기 오브젝트에만 쓰고, 남의 컨테이너는 첨자(`operator[]` — Debug 경합 검출기가 쓰기로 센다) 대신 `data()` · const 참조로 읽는다.
   다른 오브젝트에 값을 넣어야 하면(디렉터 → 카메라 리그) 읽는 쪽보다 **앞 그룹**에서 넣는다.
 - **런타임에만 쓰는 머티리얼 에셋을 두지 않는다.** 프리팹만 가리키는 머티리얼은 처음 스폰할 때 올라가고 마지막 것이 사라질 때 내려간다 — 색만 다르면

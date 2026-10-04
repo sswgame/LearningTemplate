@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Components/FadeOutComponent.h"
+#include "GameFramework/World/FadeOutComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

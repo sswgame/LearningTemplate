@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""감싼 서드파티(Jolt · Box2D · ACL · Tracy)의 헤더는 그 백엔드 폴더에서만 include 하고, 그 라이브러리는 Engine 의 CMakeLists 에서만 링크한다.
+"""감싼 서드파티(Jolt · Box2D · ACL · Tracy · Recast)의 헤더는 그 백엔드 폴더에서만 include 하고, 그 라이브러리는 Engine 의 CMakeLists 에서만 링크한다.
 
-엔진은 3D 물리 · 2D 물리 · 애니메이션 압축을 **엔진 쪽 인터페이스** 뒤에 감싼다(`IPhysicsScene3D` · `IPhysicsScene2D` · 애니메이션 코덱).
+엔진은 3D 물리 · 2D 물리 · 애니메이션 압축 · 내비메시를 **엔진 쪽 인터페이스** 뒤에 감싼다(`IPhysicsScene3D` · `IPhysicsScene2D` · 애니메이션 코덱 ·
+`INavMesh` · `INavCrowd`).
 라이브러리를 나중에 바꿀 수 있으려면 라이브러리 타입이 백엔드 폴더 밖으로 새지 않아야 한다 — 한 군데라도 새면 바꿀 때 그 자리가
 모두 따라 바뀐다. 이 게이트가 그 경계를 지킨다.
 
   1) `#include <Jolt/...>` 는 `Source/Engine/Physics/Jolt/` 안에서만, `<box2d/...>` 는 `Source/Engine/Physics/Box2D/` 안에서만,
      `<acl/...>` · `<rtm/...>` 는 `Source/Engine/Animation/Codec/Acl/` 안에서만, `<tracy/...>` 는 `Source/Engine/Utility/Profiling/Tracy/`
-     안에서만 쓴다(시험 · 도구 · 게임도 예외 없이 인터페이스를 쓴다 — Tracy 는 `IProfilerBackend` · `SW_PROFILE_SCOPE`).
-  2) 그 라이브러리 타깃(`joltphysics` · `Jolt::Jolt` · `box2d` · `box2d::box2d` · `acl` · `tracy` · `Tracy::TracyClient`)을 `target_link_libraries` 로 링크하는 것은
+     안에서만, `<recastnavigation/...>`(와 `Recast*.h` · `Detour*.h` · `DebugDraw.h`)는 `Source/Engine/Navigation/Recast/` 안에서만 쓴다
+     (시험 · 도구 · 게임도 예외 없이 인터페이스를 쓴다 — Tracy 는 `IProfilerBackend` · `SW_PROFILE_SCOPE`, Recast 는 `INavMesh`).
+  2) 그 라이브러리 타깃(`joltphysics` · `Jolt::Jolt` · `box2d` · `box2d::box2d` · `acl` · `tracy` · `Tracy::TracyClient` · `recastnavigation` · `RecastNavigation::*`)을 `target_link_libraries` 로 링크하는 것은
      `Source/Engine/CMakeLists.txt` 하나다 — 다른 타깃이 링크하면 헤더 경로 · 정의가 그 타깃으로 번진다. 라이브러리를 정의하는
      `ThirdParty/` 는 보지 않는다.
 
@@ -48,6 +50,13 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
     LibraryRule("Box2D", ("box2d/",), "Source/Engine/Physics/Box2D/", ("box2d", "box2d::box2d")),
     LibraryRule("ACL", ("acl/", "rtm/"), "Source/Engine/Animation/Codec/Acl/", ("acl",)),
     LibraryRule("Tracy", ("tracy/", "client/Tracy", "common/Tracy"), "Source/Engine/Utility/Profiling/Tracy/", ("tracy", "Tracy::TracyClient")),
+    LibraryRule(
+        "Recast",
+        ("recastnavigation/", "Recast", "Detour", "DebugDraw.h"),
+        "Source/Engine/Navigation/Recast/",
+        ("recastnavigation", "RecastNavigation::Recast", "RecastNavigation::Detour", "RecastNavigation::DetourCrowd",
+         "RecastNavigation::DetourTileCache", "RecastNavigation::DebugUtils"),
+    ),
 )
 
 #: 감싼 라이브러리를 링크해도 되는 유일한 CMake 파일입니다.
@@ -128,7 +137,7 @@ def findLinkViolations(repositoryRoot: Path, listFileArgument: list[str] | None)
 class CheckThirdPartyIsolationGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
-    description = "감싼 서드파티(Jolt · Box2D · ACL · Tracy)의 헤더 · 링크가 백엔드 폴더 · Engine CMakeLists 밖으로 새지 않는지 검사"
+    description = "감싼 서드파티(Jolt · Box2D · ACL · Tracy · Recast)의 헤더 · 링크가 백엔드 폴더 · Engine CMakeLists 밖으로 새지 않는지 검사"
     buildComment = "Checking that wrapped third-party libraries stay inside their backend folders..."
     timeoutSeconds = 30
     preCommitPattern = ("Source/*", "Test/*", "Tools/*", "cmake/*", "CMakeLists.txt")
@@ -137,7 +146,8 @@ class CheckThirdPartyIsolationGate(LintGate):
     hint = (
         "  감싼 라이브러리는 엔진 인터페이스로만 씁니다 — 물리는 Engine/Physics/IPhysicsScene.h, 애니메이션 압축은 코덱 인터페이스,\n"
         "  프로파일러는 SW_PROFILE_SCOPE · Engine/Utility/Profiling/IProfilerBackend.h.\n"
-        "  라이브러리 헤더가 필요한 코드는 백엔드 폴더(Physics/Jolt · Physics/Box2D · Animation/Codec/Acl · Utility/Profiling/Tracy)로 옮기고,\n"
+        "  내비메시는 Engine/Navigation/INavMesh.h.\n"
+        "  라이브러리 헤더가 필요한 코드는 백엔드 폴더(Physics/Jolt · Physics/Box2D · Animation/Codec/Acl · Utility/Profiling/Tracy · Navigation/Recast)로 옮기고,\n"
         f"  링크는 {_kCmakeLinkOwner} 에만 둡니다."
     )
     selfTestCases = [
@@ -162,6 +172,14 @@ class CheckThirdPartyIsolationGate(LintGate):
             "files": {"Source/Engine/Graphics/RHI/Modules/Probe/CMakeLists.txt": "target_link_libraries(RHI_Probe PRIVATE Tracy::TracyClient)\n"},
         },
         {
+            "name": "Detour 헤더를 게임 프레임워크에서 include 한다",
+            "files": {"Source/GameFramework/AI/Probe.cpp": "#include <recastnavigation/DetourNavMeshQuery.h>\nint probe() { return 0; }\n"},
+        },
+        {
+            "name": "Recast 헤더를 경로 없이 내비게이션 인터페이스 폴더에서 include 한다",
+            "files": {"Source/Engine/Navigation/Probe.h": "#pragma once\n#include <Recast.h>\n"},
+        },
+        {
             "name": "Jolt 를 게임 모듈의 CMakeLists 에서 링크한다",
             "files": {"Source/Games/Probe/CMakeLists.txt": "add_library(Probe MODULE probe.cpp)\ntarget_link_libraries(Probe\n    PRIVATE\n    joltphysics\n)\n"},
         },
@@ -172,7 +190,7 @@ class CheckThirdPartyIsolationGate(LintGate):
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         listViolation = findIncludeViolations(repositoryRoot, args.files) + findLinkViolations(repositoryRoot, args.files)
-        return GateResult(listViolation=listViolation, summary="Jolt · Box2D · ACL · Tracy 헤더와 링크가 제자리에 있다")
+        return GateResult(listViolation=listViolation, summary="Jolt · Box2D · ACL · Tracy · Recast 헤더와 링크가 제자리에 있다")
 
 
 main = CheckThirdPartyIsolationGate.run

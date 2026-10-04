@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Components/PropScatterComponent.h"
+#include "GameFramework/World/PropScatterComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

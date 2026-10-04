@@ -9,10 +9,10 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Components/GravityComponent.h"
 #include "GameFramework/Framework/GameEventUtil.h"
 #include "GameFramework/Gimmick/Genre/GenreGimmickUtil.h"
 #include "GameFramework/Gimmick/GimmickSensorComponent.h"
+#include "GameFramework/World/GravityComponent.h"
 
 namespace sw
 {

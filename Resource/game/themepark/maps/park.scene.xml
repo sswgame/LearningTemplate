@@ -387,7 +387,7 @@
 					                       _cameraRig="1"
 					                       _gate="4"
 					                       _autoBuildInterval="20"
-					                       _bAutoBuild="false" />
+					                       _bAutoPlay="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>

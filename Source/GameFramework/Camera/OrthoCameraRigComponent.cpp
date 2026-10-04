@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Components/OrthoCameraRigComponent.h"
+#include "GameFramework/Camera/OrthoCameraRigComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

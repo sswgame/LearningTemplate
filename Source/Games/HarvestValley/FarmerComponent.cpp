@@ -33,7 +33,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const FarmDirectorComponent* pDirector = FarmDirectorComponent::resolveDirector( *pManager, _director );
+        const FarmDirectorComponent* pDirector = GameDirectorComponent::resolve<FarmDirectorComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
         const float3 lift{ 0.0f, _heightOffset, 0.0f };

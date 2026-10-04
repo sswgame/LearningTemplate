@@ -197,6 +197,10 @@ if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
     endif()
     message(STATUS "[Engine] Tracy profiler client linked (delay-loaded on Windows)")
 endif()
+# 2-3) 내비메시 백엔드 — Recast & Detour(정적 라이브러리, 굽기 · 질의 · 군중). 헤더는 Navigation/Recast 에서만 include 한다
+# (CheckThirdPartyIsolation.py) — 다른 코드는 엔진 인터페이스(INavMesh · INavCrowd)만 본다.
+# ------------------------------------------------------------------------------
+target_link_libraries(Engine PRIVATE recastnavigation)
 
 # ------------------------------------------------------------------------------
 # 3) RHI 링크 — Shipping 은 백엔드 하나를 Engine 에 정적 링크, Dev 는 RHI_* MODULE 을 런타임에 로드

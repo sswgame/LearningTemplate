@@ -8,6 +8,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
@@ -42,5 +43,51 @@ namespace sw
          * @details 한 번 쓰는 에미터를 만들어 그 자리에 두고, 소리가 끝나면 엔진이 지웁니다.
          */
         static AudioPlayingId postEventAt( const hashed_string& eventName, const float3& position );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class GameSoundQueue
+     * @brief 틱 안(워커)에서 낼 소리를 모았다가 틱 뒤 게임 스레드에서 쌓은 순서대로 냅니다 — 오디오는 게임 스레드에서만 부릅니다.
+     * @details 이름은 포인터만 듭니다 — 리터럴 · 정적 문자열을 넘깁니다. 언리얼은 게임 스레드에서 바로 내지만, 여기 컴포넌트 틱은 워커에서 돈다.
+     */
+    class SW_GF_API GameSoundQueue
+    {
+    public:
+        GameSoundQueue();
+
+        /** @brief 효과음 클립(리소스 경로 — `GameSound::play`)을 쌓습니다. */
+        void queueClip( const utf8* pPath );
+        /** @brief 이벤트(2D — `GameSound::postEvent`)를 쌓습니다. */
+        void queueEvent( const utf8* pEventName );
+        /** @brief 이벤트를 월드 자리 하나에서 내도록(`GameSound::postEventAt`) 쌓습니다. */
+        void queueEventAt( const utf8* pEventName, const float3& position );
+
+        /** @brief 쌓인 소리를 쌓은 순서대로 내고 비웁니다. 게임 스레드(틱 밖 · 틱 뒤 큐)에서만 부릅니다. */
+        void playAll();
+        /** @brief 내지 않고 버립니다(복원 · 걷기). */
+        void clear() { _listEntry.clear(); }
+        bool isEmpty() const { return _listEntry.empty(); }
+
+    private:
+        /** @brief 소리 하나를 내는 길입니다. */
+        enum class Kind : uint8
+        {
+            Clip,
+            Event,
+            EventAt
+        };
+
+        /** @brief 쌓인 소리 하나입니다. */
+        struct Entry
+        {
+            float3      _position{};
+            const utf8* _pName{ nullptr };
+            Kind        _kind{ Kind::Clip };
+        };
+
+        vector<Entry> _listEntry;
     };
 } // namespace sw

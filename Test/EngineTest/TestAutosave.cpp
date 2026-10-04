@@ -5,8 +5,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Components/AutosaveTriggerComponent.h"
 #include "GameFramework/Framework/Autosave.h"
+#include "GameFramework/Framework/AutosaveTriggerComponent.h"
 #include "GameFramework/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"

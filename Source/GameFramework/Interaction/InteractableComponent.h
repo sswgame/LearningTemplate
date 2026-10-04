@@ -25,7 +25,7 @@ namespace sw
      *          (`SocketSetComponent` 의 `*.sockets.xml`, 마커의 +Z 가 하는 쪽이 볼 방향)에서 찾고, 없으면 오브젝트 원점 · 앞입니다. 하는 쪽이 시작할 때
      *          그 자리를 마커 이름의 워프 목표로 넣어(`MotionWarpingComponent`) 애니메이션이 모션 워핑으로 손을 문고리에 맞춥니다.
      *          강조 요청은 고른 하는 쪽(`InteractorComponent`)이 세우고 내리는 원자 깃발이라 렌더러 · UI 가 아무 때나 읽습니다(`getHighlightRequest`).
-     *          완료(`completeInteraction`)는 쿨다운을 걸고, 같은 오브젝트의 `GimmickSensorComponent` 에 사용을 알리고(기믹 Interaction 센서),
+     *          완료(`completeInteraction`)는 쿨다운을 걸고, 완료 수를 올리고(같은 오브젝트의 기믹 센서가 끌어 읽는다 — 상호작용은 기믹을 모른다),
      *          `InteractionCompletedEvent` 를 내고, 권한 훅에 알립니다. 게임 스레드에서 부릅니다(하는 쪽이 틱 뒤로 미룬다).
      */
     REFLECT( Category = "Interaction", DisplayName = "Interactable", Tooltip = "Something an interactor can use: data-defined kind, alignment point, cooldown, highlight" )
@@ -67,8 +67,10 @@ namespace sw
         /** @brief 요청이 있으면 정의의 강조 방식, 없으면 None 입니다. 렌더러 · UI 가 읽습니다. */
         InteractionHighlight getHighlightRequest() const;
 
-        /** @brief 끝났습니다 — 쿨다운 · 기믹 센서 · 이벤트 · 권한 훅. 게임 스레드에서 부릅니다. */
+        /** @brief 끝났습니다 — 쿨다운 · 완료 수 · 이벤트 · 권한 훅. 게임 스레드에서 부릅니다. */
         void completeInteraction( const GameObject& interactor );
+        /** @brief 지금까지 끝난 횟수입니다(아무 스레드). 기믹 센서가 지난번에 본 수와 견줘 사용으로 셉니다. */
+        uint32 getCompletedCount() const { return _completedCount.load( std::memory_order_relaxed ); }
         /** @brief 마지막으로 끝낸 이입니다(밀기 방향 · 채집 보상 대상). */
         GameObjectHandle getLastInteractor() const { return _lastInteractor; }
 
@@ -92,6 +94,7 @@ namespace sw
         InteractionDef        _overrideDef;
         const InteractionDef* _pDef;
         uint32                _seenCatalogReloadCount; ///< 정의를 찾을 때의 `InteractionCatalog::getSharedReloadCount` — 달라지면 다시 찾는다
+        atomic<uint32>        _completedCount;         ///< 끝난 횟수 — 같은 오브젝트의 기믹 센서가 끌어 읽는다
         atomic<uint8>         _bHighlightRequested;
         uint8                 _bHasOverride;
     };

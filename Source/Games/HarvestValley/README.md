@@ -50,7 +50,7 @@ Play 를 누르면 디렉터가 밭을 세우며, Stop 은 플레이 전 씬으�
 한 번으로 세우고, 효과음도 그때 냅니다. 작물 모델은 디렉터가 미리 쥐고 있어 단계가 바뀔 때 뷰가 워커에서 파일을 읽지 않습니다.
 
 **핫 리로드 · 상태 저장.** 농장 상태(달력 · 밭 · 인벤토리 · 농부 자리 · 체력 · 도구 · 날씨 난수)는 PROPERTY 가 아니라 디렉터의 `writeState` 로 상태 스냅샷의
-컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`). 상태를 쓰기 전에 게임(`onBeforeStateSerialize`)이 농장을 싣고 디렉터가 세운 칸을 걷으며, 다시 만든
+컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`). 상태를 쓰기 전에 게임 인스턴스(생성자의 `registerDirector` 한 줄 — `GameInstanceBase`)가 농장을 싣고 디렉터가 세운 칸을 걷으며, 다시 만든
 디렉터가 데이터를 읽은 뒤 농장을 되살리고 칸을 다시 세웁니다. 형식이 맞지 않으면(디렉터의 `kStateVersion` 을 올렸다) 알리고 새 농장으로 시작합니다.
 `App -gv_farmAutoPlay=1 -gv_reloadGameAtFrame=1500` 이면 리로드 앞뒤의 `[Farm]` 줄이 같은 날 · 시각 · 체력으로 이어진다.
 

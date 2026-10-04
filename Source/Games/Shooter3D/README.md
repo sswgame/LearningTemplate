@@ -13,6 +13,7 @@ cmake --build --preset Ninja-Debug-Shooter3D
 cd build/Ninja-Debug-Shooter3D/Bin
 ./App.exe -dx12
 ./App.exe -dx12 -gv_shooterAutoPlay=1   # 조준 · 사격 · 이동도 AI(가까우면 산탄총, 멀면 소총 — 8 m 안의 적부터 쏜다)
+./App.exe -dx12 -gv_shooterAutoPlay=1 -gv_navDebugDraw=23  # 내비메시 걷는 면 · 적의 경로를 화면에(16), 편집기 뷰포트에는 선도(1 · 2 · 4)
 ./App.exe -dx12 -gv_cameraPreset=thirdperson   # 시작 카메라 프리셋(firstperson · thirdperson · orbit · cctv) — 프리셋마다 스크린샷을 찍을 때
 ./App.exe -dx12 -EnableEditor "-gv_editorStartupScene=game/shooter3d/maps/arena.scene.xml"
 # 튐 진단 — 프레임마다 dt · 발 · 몸 자리와 요 · 루트/골반/머리/손 본 · 카메라 · 적 하나를 CSV 로(끝날 때 쓴다). 연속 스크린샷과 같이 본다.
@@ -72,7 +73,8 @@ cd build/Ninja-Debug-Shooter3D/Bin
 | 페이싱 · 쓰러뜨린 수 · 효과 풀 · 로그 | `ShooterDirectorComponent`(씬에 하나 — 언리얼 GameMode/GameState 자리) |
 | 이동 · 점프 · 무기 셋 · 히트스캔(적은 캡슐) · 체력 · 조준선 · 탄도선 요청 | `ShooterPlayerComponent` — 플레이어 오브젝트(카메라 · 1인칭 손에 든 총 · 조준선 스프라이트와 같은 오브젝트) |
 | 몸이 플레이어를 따르기 · 애니메이터 파라미터 · 상체 레이어 | `ShooterAvatarComponent`(몸 오브젝트) |
-| 적 하나 | `ShooterEnemyComponent` — 일어나기 → 쫓기(이웃과 떨어지고 상자를 돌아감) → 휘두르기 → 움찔 → 쓰러짐 |
+| 적 하나 | `ShooterEnemyComponent` — 일어나기 → 쫓기(내비메시 에이전트가 상자 더미를 경로로 돌아가고 군중이 이웃을 비킨다) → 휘두르기 → 움찔 → 쓰러짐 |
+| 내비메시 | 씬의 `NavigationSurface`(`NavMeshSurfaceComponent` — 보이는 메시로 Humanoid 베이크) · 플레이어 오브젝트의 `NavMeshModifierComponent`(손에 든 총 · 카메라를 베이크에서 뺀다) · 스켈레톤 프리팹의 `NavMeshAgentComponent`(자리를 쓰고, 몸 요는 적 컴포넌트가 돌린다). 쿠킹은 `maps/arena.navmesh` 를 쓰고 Dev 는 플레이 첫 프레임에 베이크한다 |
 | 1인칭 시점 · 마우스 잠금 · 손에 든 총 자리 | GameFramework `FirstPersonCameraComponent`(플레이어 오브젝트) |
 | 화면에 나가는 시점 | `ViewCamera` 오브젝트(우선순위 10)의 `CameraDirectorComponent` — 프리셋 `data/shooter.cameras.xml`, 대상은 플레이어. 1인칭 프리셋이면 플레이어가 몸을 숨기고 손에 든 총 · 조준선을 보인다(그 밖은 반대) |
 | 감시 카메라 · 모니터 | `CctvCamera`(렌더 텍스처 `rendertarget/shooter_cctv`)의 디렉터가 `data/cctv.cameras.xml` 의 `cctv_sweep` 을 쓴다. 북쪽 벽 `CctvMonitor` 가 그 텍스처를 읽는다 |
@@ -88,7 +90,7 @@ cd build/Ninja-Debug-Shooter3D/Bin
 작업이 들어오면 이 소켓 · 물리 에셋 자리를 씁니다.
 
 **핫 리로드 · 상태 저장.** 판의 진행(처치 수)은 디렉터의 `writeState` 로 상태 스냅샷의 컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`).
-상태를 쓰기 전에 게임(`onBeforeStateSerialize`)이 진행을 싣고 디렉터가 세운 적 · 효과 풀과 플레이어의 몸을 걷으며, 다시 만든 디렉터는 감독을 처음부터
+상태를 쓰기 전에 게임 인스턴스(생성자의 `registerDirector` 한 줄 — `GameInstanceBase`)가 진행을 싣고 디렉터가 세운 적 · 효과 풀과 플레이어의 몸을 걷으며, 다시 만든 디렉터는 감독을 처음부터
 돌리고 플레이어가 몸을 다시 세웁니다. 무기 카탈로그 · 외형 데이터는 게임 서비스입니다.
 
 ## 파일 · 에셋

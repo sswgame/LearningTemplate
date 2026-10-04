@@ -12,10 +12,10 @@
 #include "GameFramework/Ability/AbilityCatalog.h"
 #include "GameFramework/Ability/AbilitySystemEvents.h"
 #include "GameFramework/Ability/GameplayAbility.h"
+#include "GameFramework/Combat/HealthListenerComponent.h"
 #include "GameFramework/Framework/GameEventUtil.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/UI/DamageNumberComponent.h"
-#include "GameFramework/UI/HealthBarComponent.h"
 
 namespace sw
 {
@@ -1612,17 +1612,15 @@ namespace sw
 
     void AbilitySystemComponent::syncHealthBar( bool bReset )
     {
-        GameObject*         pOwner = getOwner();
-        HealthBarComponent* pBar   = pOwner != nullptr ? pOwner->getComponent<HealthBarComponent>() : nullptr;
-        if ( pBar == nullptr || hasAttribute( _healthAttribute ) == false )
+        const GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr || hasAttribute( _healthAttribute ) == false )
             return;
 
-        const float32 maxHealth = getAttributeValue( _maxHealthAttribute );
-        const float32 ratio     = maxHealth > 0.0f ? MathUtil::clamp( getAttributeValue( _healthAttribute ) / maxHealth, 0.0f, 1.0f ) : 0.0f;
-        if ( bReset )
-            pBar->resetRatio( ratio );
-        else
-            pBar->setTargetRatio( ratio );
+        const float32      maxHealth = getAttributeValue( _maxHealthAttribute );
+        HealthChangedEvent event;
+        event._ratio = maxHealth > 0.0f ? MathUtil::clamp( getAttributeValue( _healthAttribute ) / maxHealth, 0.0f, 1.0f ) : 0.0f;
+        event._kind  = bReset ? HealthChangeKind::Reset : HealthChangeKind::Changed;
+        HealthListenerComponent::broadcast( *pOwner, event );
     }
 
     void AbilitySystemComponent::spawnDamageNumber( float32 amount )

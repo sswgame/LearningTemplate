@@ -11,7 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Components/FirstPersonCameraComponent.h"
+#include "GameFramework/Camera/FirstPersonCameraComponent.h"
 #include "GameFramework/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"

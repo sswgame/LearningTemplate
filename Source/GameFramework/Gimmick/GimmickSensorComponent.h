@@ -82,7 +82,7 @@ namespace sw
 
         /** @brief 쌓인 피해를 꺼내고 비웁니다. */
         float32 consumeDamage();
-        /** @brief 쌓인 사용 횟수를 꺼내고 비웁니다. */
+        /** @brief 쌓인 사용 횟수를 꺼내고 비웁니다 — `notifyUsed` 로 쌓인 것과, 같은 오브젝트의 `InteractableComponent` 가 지난번 뒤로 끝난 수입니다. */
         float32 consumeUses();
 
     private:
@@ -97,6 +97,7 @@ namespace sw
 
         atomic<float32> _pendingDamage;
         atomic<float32> _pendingUse;
+        atomic<uint32>  _seenCompletedCount; ///< 지난번에 본 `InteractableComponent::getCompletedCount`
         atomic<float32> _signal;
     };
 } // namespace sw
