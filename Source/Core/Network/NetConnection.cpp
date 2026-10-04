@@ -161,7 +161,12 @@ namespace sw
         return true;
     }
 
-    float64 NetConnection::computeResendDelay() const { return MathUtil::max( 0.1, static_cast<float64>( _stats._rtt ) * 1.5 ); }
+    float64 NetConnection::computeResendDelay() const { return MathUtil::max( 0.1, static_cast<float64>( _stats._rtt ) + kResendMargin ); }
+
+    bool NetConnection::isReliableDue( const OutgoingReliable& message, float64 time, float64 resendDelay ) const
+    {
+        return message._lastSentTime < 0.0 || message._bResendNow != SW_FALSE || time - message._lastSentTime >= resendDelay;
+    }
 
     bool NetConnection::hasDataToSend( float64 time ) const
     {
@@ -171,7 +176,7 @@ namespace sw
         for ( uint16 messageId = _oldestUnackedReliableId; messageId != _nextReliableSendId; ++messageId )
         {
             const OutgoingReliable* pMessage = _outgoingReliable.find( messageId );
-            if ( pMessage != nullptr && ( pMessage->_lastSentTime < 0.0 || time - pMessage->_lastSentTime >= resendDelay ) )
+            if ( pMessage != nullptr && isReliableDue( *pMessage, time, resendDelay ) )
                 return true;
         }
         return false;
@@ -228,7 +233,7 @@ namespace sw
         for ( uint16 messageId = _oldestUnackedReliableId; messageId != _nextReliableSendId; ++messageId )
         {
             OutgoingReliable* pMessage = _outgoingReliable.find( messageId );
-            if ( pMessage == nullptr || ( pMessage->_lastSentTime >= 0.0 && time - pMessage->_lastSentTime < resendDelay ) )
+            if ( pMessage == nullptr || isReliableDue( *pMessage, time, resendDelay ) == false )
                 continue;
             if ( pSent->_reliableCount >= kMaxReliablePerPacket )
                 break;
@@ -237,6 +242,7 @@ namespace sw
             if ( pMessage->_lastSentTime >= 0.0 )
                 ++_stats._resentMessageCount;
             pMessage->_lastSentTime                        = time;
+            pMessage->_bResendNow                          = SW_FALSE;
             pSent->_arrReliableId[pSent->_reliableCount++] = messageId;
         }
         // 2) 순서만 — 종류마다 가장 새 것 하나씩(쌓을 때 옛것은 이미 바뀌었다). 들어가지 않은 것은 다음 패킷에.
@@ -390,9 +396,30 @@ namespace sw
             for ( int32 index = 0; index < pSent->_reliableCount; ++index )
                 _outgoingReliable.remove( pSent->_arrReliableId[index] );
         }
+        detectLostPackets( ack );
         // 가장 오래된 미확인 신뢰 id 를 앞으로.
         while ( _oldestUnackedReliableId != _nextReliableSendId && _outgoingReliable.exists( _oldestUnackedReliableId ) == false )
             ++_oldestUnackedReliableId;
+    }
+
+    void NetConnection::detectLostPackets( uint16 ack )
+    {
+        // 확인된 가장 새 패킷보다 kFastResendGap 개 넘게 앞인데 확인이 없는 패킷 — 잃었다(그 사이 순서 바뀜은 기다린다). 확인 묶음(32) 안만 본다.
+        if ( _sentPackets.exists( ack ) == false || _sentPackets.find( ack )->_bAcked == SW_FALSE )
+            return;
+        for ( int32 offset = kFastResendGap; offset <= 33; ++offset )
+        {
+            SentPacket* pSent = _sentPackets.find( static_cast<uint16>( ack - offset ) );
+            if ( pSent == nullptr || pSent->_bAcked != SW_FALSE || pSent->_bLossDetected != SW_FALSE )
+                continue;
+            pSent->_bLossDetected = SW_TRUE;
+            for ( int32 index = 0; index < pSent->_reliableCount; ++index )
+            {
+                OutgoingReliable* pMessage = _outgoingReliable.find( pSent->_arrReliableId[index] );
+                if ( pMessage != nullptr && pMessage->_lastSentTime >= 0.0 )
+                    pMessage->_bResendNow = SW_TRUE;
+            }
+        }
     }
 
     void NetConnection::updateStats( float64 time )

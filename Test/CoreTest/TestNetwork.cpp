@@ -696,6 +696,53 @@ SW_TEST_CASE( NetworkTest, ExpiredChallengeIsRejected )
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
 }
 
+/**
+ * @brief [NetworkTest] 뒤에 보낸 패킷들이 확인됐는데 확인이 없는 패킷의 신뢰 메시지는 재전송 간격을 기다리지 않고 바로 다시 실린다(빠른 재전송)
+ * @details 재전송을 시계(RTT 기반)로만 하면 손실 많은 회선에서 신뢰 순서 채널의 꼬리가 길다 — 앞 메시지를 기다리는 머리 막힘이 그 지연을 뒤 메시지 모두에
+ *          옮긴다(250 ms · 손실 15 % 파괴 시나리오에서 사건 최대 지연 4.1 초). 여기서는 RTT 를 1 초로 익힌 뒤 회선이 빨라진 경우로, 시계라면 1 초 넘게
+ *          기다릴 메시지가 0.1 초 안에 다시 간다.
+ */
+SW_TEST_CASE( NetworkTest, LostPacketIsResentBeforeTheResendDelay )
+{
+    NetConnection sender;
+    NetConnection receiver;
+    const auto    sendTo = []( NetConnection& from, NetConnection& to, float64 sendTime, float64 receiveTime, bool bDeliver )
+    {
+        BitWriter packet;
+        from.writePacket( sendTime, packet, 300 );
+        if ( bDeliver == false )
+            return;
+        BitReader reader( packet.getBytes().data(), packet.getByteCount() );
+        (void)to.readPacket( receiveTime, reader );
+    };
+    // RTT 1 초를 익힌다 — 한쪽 0.5 초.
+    float64 time = 0.0;
+    for ( int32 round = 0; round < 30; ++round )
+    {
+        time += 1.0;
+        sendTo( sender, receiver, time, time + 0.5, true );
+        sendTo( receiver, sender, time + 0.5, time + 1.0, true );
+    }
+    SW_ASSERT_TRUE( sender.getStats()._rtt > 0.8f );
+
+    // 신뢰 메시지를 실은 패킷을 잃고, 뒤의 패킷 넷(비신뢰)은 빨라진 회선으로 간다.
+    time += 2.0;
+    const vector<uint8> message = makeMessage( 4242, 8 );
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
+    sendTo( sender, receiver, time, time, false );
+    for ( int32 index = 1; index <= 4; ++index )
+    {
+        const vector<uint8> filler = makeMessage( index, 4 );
+        SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::Unreliable, filler.data(), static_cast<int32>( filler.size() ) ) );
+        sendTo( sender, receiver, time + 0.01 * index, time + 0.01 * index + 0.02, true );
+    }
+    sendTo( receiver, sender, time + 0.07, time + 0.09, true );
+    sendTo( sender, receiver, time + 0.1, time + 0.12, true );
+    vector<uint8> buffer;
+    SW_ASSERT_TRUE( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) );
+    SW_EXPECT_EQUAL( 4242, readMessageValue( buffer ) );
+}
+
 SW_TEST_CASE( NetworkTest, UdpTransportSendsDatagramsOverLocalhost )
 {
     UdpNetTransport server;
