@@ -88,6 +88,12 @@
       "include_patterns": ["*.hdr", "*_sky.*", "*_env.*"]
     },
     {
+      "name": "Vrm_Character_Textures",
+      "inherits": "Base_Default",
+      "include_patterns": ["*/textures_raw/avatarsample_d/*"],
+      "format": "BC3_UNORM"
+    },
+    {
       "name": "Fallback_Default",
       "inherits": "Base_Default"
     }
