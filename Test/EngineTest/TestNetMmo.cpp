@@ -122,7 +122,7 @@ SW_TEST_CASE( NetMmoTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
             while ( clientHost.receiveMessage( connectionId, channel, buffer ) )
-                SW_EXPECT_TRUE( view.handleMessage( buffer ) );
+                SW_EXPECT_TRUE( NetHandleResult::Handled == view.handleMessage( 0, buffer ) );
             vector<MmoClientEvent> listEvent;
             view.drainEvents( listEvent );
             for ( const MmoClientEvent& event : listEvent )

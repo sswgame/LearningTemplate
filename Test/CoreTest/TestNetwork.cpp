@@ -50,7 +50,7 @@ namespace
         return buffer;
     }
 
-    /** @brief 시험용 처리기 — 맡은 영역에서 @p acceptedKind 만 받아들이고 받은 수를 셉니다. */
+    /** @brief 시험용 처리기 — 맡은 영역에서 @p acceptedKind 만 맡고(가변 정수 하나가 몸) 받은 수를 셉니다. */
     class CountingHandler : public INetMessageHandler
     {
     public:
@@ -62,14 +62,16 @@ namespace
         {
         }
 
-        uint8 getMessageRangeBase() const override { return _rangeBase; }
-        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override
+        uint8           getMessageRangeBase() const override { return _rangeBase; }
+        uint16          getMessageKindMask() const override { return static_cast<uint16>( 1u << ( _acceptedKind - _rangeBase ) ); }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
         {
-            if ( size <= 0 || pData[0] != _acceptedKind )
-                return false;
+            (void)body.readVarUint();
+            if ( body.hasOverflowed() )
+                return NetHandleResult::Malformed;
             ++_handledCount;
-            _lastConnectionId = connectionId;
-            return true;
+            _lastConnectionId = context._connectionId;
+            return NetHandleResult::Handled;
         }
 
         int32 getHandledCount() const { return _handledCount; }
@@ -889,9 +891,88 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
 
     // 뺀 처리기는 더 묻지 않는다. 빈 메시지는 누구에게도 가지 않는다.
     router.removeHandler( &gameFirst );
-    SW_EXPECT_FALSE( router.dispatch( 0, messageWriter.begin( 0x81 ).getBytes().data(), 1 ) );
-    SW_EXPECT_FALSE( router.dispatch( 0, nullptr, 0 ) );
+    messageWriter.begin( 0x81 ).writeVarUint( 1 );
+    SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, messageWriter.getBytes().data(), messageWriter.getByteCount() ) );
+    SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, nullptr, 0 ) );
     SW_EXPECT_EQUAL( 1, gameFirst.getHandledCount() );
+}
+
+/**
+ * @brief [NetworkTest] 맡은 종류인데 몸이 깨진 메시지는 라우터가 세고 버린다 — 다른 처리기 · "처리기 없음" 목록으로 가지 않는다
+ * @details `bool` 하나가 "내 것 아님" 과 "깨짐" 을 함께 뜻하던 때는 깨진 메시지가 다음 처리기로 넘어가 결국 처리기 없는 메시지 목록에 섞였다.
+ */
+SW_TEST_CASE( NetworkTest, MalformedMessageIsCountedNotForwarded )
+{
+    NetTestPair pair;
+    SW_ASSERT_TRUE( pair._server.listen() );
+    SW_ASSERT_TRUE( pair._client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    pair.run( 0.3 );
+    CountingHandler  handler( NetMessageRange::kGame, 0x81 );
+    NetMessageRouter router;
+    router.addHandler( &handler );
+    NetMessageWriter messageWriter;
+    (void)messageWriter.begin( 0x81 ); // 몸(가변 정수)이 없다
+    SW_ASSERT_TRUE( messageWriter.send( pair._client, 0, NetChannelType::ReliableOrdered ) );
+    messageWriter.begin( 0x81 ).writeVarUint( 5 );
+    SW_ASSERT_TRUE( messageWriter.send( pair._client, 0, NetChannelType::ReliableOrdered ) );
+    pair.run( 0.2 );
+    vector<NetReceivedMessage> listUnhandled;
+    SW_EXPECT_EQUAL( 2, router.pump( pair._server, &listUnhandled ) );
+    SW_EXPECT_EQUAL( 1, handler.getHandledCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, router.getMalformedCount() );
+    SW_EXPECT_TRUE( listUnhandled.empty() );
+}
+
+/**
+ * @brief [NetworkTest] 라우터는 연결 사건을 메시지보다 먼저 모든 처리기에 알린다 — 연결 · 끊김이 한 번의 꺼내기 안에서 메시지와 순서를 지킨다
+ */
+SW_TEST_CASE( NetworkTest, RouterTellsHandlersAboutConnectionsBeforeTheirMessages )
+{
+    class ConnectionTracker final : public INetMessageHandler
+    {
+    public:
+        uint8           getMessageRangeBase() const override { return NetMessageRange::kGame; }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
+        {
+            (void)context;
+            (void)body;
+            _log.push_back( _bOpen ? 'M' : 'x' );
+            return NetHandleResult::Handled;
+        }
+        void onConnectionOpened( int32 connectionId ) override
+        {
+            (void)connectionId;
+            _bOpen = true;
+            _log.push_back( 'O' );
+        }
+        void onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override
+        {
+            (void)reason;
+            (void)connectionId;
+            _bOpen = false;
+            _log.push_back( 'C' );
+        }
+
+        string _log;
+        bool   _bOpen{ false };
+    };
+
+    NetTestPair pair;
+    SW_ASSERT_TRUE( pair._server.listen() );
+    SW_ASSERT_TRUE( pair._client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    ConnectionTracker tracker;
+    NetMessageRouter  router;
+    router.addHandler( &tracker );
+    pair.run( 0.3 );
+    NetMessageWriter messageWriter;
+    messageWriter.begin( 0x80 ).writeVarUint( 1 );
+    SW_ASSERT_TRUE( messageWriter.send( pair._client, 0, NetChannelType::ReliableOrdered ) );
+    pair.run( 0.2 );
+    (void)router.pump( pair._server );
+    pair._client.disconnect( 0 );
+    pair.run( 0.2 );
+    (void)router.pump( pair._server );
+    SW_EXPECT_TRUE( tracker._log == "OMC" );
 }
 
 SW_TEST_CASE( NetworkTest, ServerTellsManyClientsApartByAddress )

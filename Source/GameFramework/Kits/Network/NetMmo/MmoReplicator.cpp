@@ -194,6 +194,19 @@ namespace sw
             _listObserver[static_cast<size_t>( connectionId )] = Observer{};
     }
 
+    NetHandleResult MmoReplicator::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    {
+        (void)context;
+        (void)body;
+        return NetHandleResult::Handled; // 마스크가 0 이라 오지 않는다
+    }
+
+    void MmoReplicator::onConnectionClosed( int32 connectionId, NetDisconnectReason reason )
+    {
+        (void)reason;
+        removeObserver( connectionId );
+    }
+
     int32 MmoReplicator::getVisibleCount( int32 connectionId ) const
     {
         return connectionId >= 0 && connectionId < static_cast<int32>( _listObserver.size() )
@@ -362,39 +375,43 @@ namespace sw
     // ------------------------------------------------------------------------------
     // MmoClientView
     // ------------------------------------------------------------------------------
-    bool MmoClientView::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
+    void MmoClientView::onConnectionOpened( int32 connectionId )
     {
-        (void)connectionId; // 클라이언트 — 받는 쪽은 서버 하나
-        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetKitMessageRange::kMmo ) == false )
-            return false;
-        BitReader reader( pData + 1, size - 1 );
-        if ( pData[0] == NetMmoMessage::kEnter )
+        (void)connectionId;
+        _mapEntity.clear();
+    }
+
+    NetHandleResult MmoClientView::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    {
+        BitReader& reader = body;
+        if ( context._kind == NetMmoMessage::kEnter )
         {
             MmoEntity entity;
-            if ( MmoReplicatorInternal::readEntity( reader, entity, true ) )
-            {
-                const uint32 entityId = entity._entityId;
-                _mapEntity[entityId]  = std::move( entity );
-                _listEvent.push_back( MmoClientEvent{ entityId, MmoClientEvent::Kind::Entered } );
-            }
+            if ( MmoReplicatorInternal::readEntity( reader, entity, true ) == false )
+                return NetHandleResult::Malformed;
+            const uint32 entityId = entity._entityId;
+            _mapEntity[entityId]  = std::move( entity );
+            _listEvent.push_back( MmoClientEvent{ entityId, MmoClientEvent::Kind::Entered } );
         }
-        else if ( pData[0] == NetMmoMessage::kLeave )
+        else if ( context._kind == NetMmoMessage::kLeave )
         {
             const uint64 count = reader.readVarUint();
             for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
             {
                 const uint32 entityId = static_cast<uint32>( reader.readVarUint() );
-                if ( _mapEntity.erase( entityId ) > 0 )
+                if ( reader.hasOverflowed() == false && _mapEntity.erase( entityId ) > 0 )
                     _listEvent.push_back( MmoClientEvent{ entityId, MmoClientEvent::Kind::Left } );
             }
+            if ( reader.hasOverflowed() )
+                return NetHandleResult::Malformed;
         }
-        else if ( pData[0] == NetMmoMessage::kUpdate )
+        else
         {
             while ( reader.readBool() )
             {
                 MmoEntity update;
                 if ( MmoReplicatorInternal::readEntity( reader, update, false ) == false )
-                    break;
+                    return NetHandleResult::Malformed;
                 const auto entityIter = _mapEntity.find( update._entityId );
                 if ( entityIter == _mapEntity.end() )
                     continue; // 들어옴보다 먼저 왔거나 이미 나갔다 — 버린다
@@ -403,7 +420,7 @@ namespace sw
                 _listEvent.push_back( MmoClientEvent{ update._entityId, MmoClientEvent::Kind::Updated } );
             }
         }
-        return true;
+        return NetHandleResult::Handled;
     }
 
     void MmoClientView::drainEvents( vector<MmoClientEvent>& outListEvent )

@@ -49,10 +49,24 @@ namespace sw
         return client;
     }
 
-    void ReplicationServer::onDisconnected( int32 connectionId )
+    void ReplicationServer::resetClient( int32 connectionId )
     {
         if ( connectionId >= 0 && connectionId < static_cast<int32>( _listClient.size() ) )
             _listClient[static_cast<size_t>( connectionId )] = ClientState{};
+    }
+
+    void ReplicationServer::onConnectionOpened( int32 connectionId ) { resetClient( connectionId ); }
+
+    void ReplicationServer::onConnectionClosed( int32 connectionId, NetDisconnectReason reason )
+    {
+        (void)reason;
+        resetClient( connectionId );
+    }
+
+    uint16 ReplicationServer::getMessageKindMask() const
+    {
+        return static_cast<uint16>( ( 1u << ( NetClientServerMessage::kSnapshotAck - NetKitMessageRange::kClientServer ) ) |
+                                    ( 1u << ( NetClientServerMessage::kInput - NetKitMessageRange::kClientServer ) ) );
     }
 
     void ReplicationServer::beginTick( uint32 tick )
@@ -152,38 +166,33 @@ namespace sw
         (void)scratch._messageWriter.send( *_pHost, connectionId, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 — NetHost 가 지킨다
     }
 
-    bool ReplicationServer::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
+    NetHandleResult ReplicationServer::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        // 영역 안이어도 자기 종류가 아니면 넘긴다 — 라우터가 같은 영역의 다음 처리기에 묻는다(`INetMessageHandler` 계약).
-        const bool bMine = size > 0 && ( pData[0] == NetClientServerMessage::kSnapshotAck || pData[0] == NetClientServerMessage::kInput );
-        if ( bMine == false || connectionId < 0 )
-            return false;
-        ClientState& client = acquireClient( connectionId );
-        BitReader    reader( pData + 1, size - 1 );
-        if ( pData[0] == NetClientServerMessage::kSnapshotAck )
+        if ( context._connectionId < 0 )
+            return NetHandleResult::Malformed;
+        ClientState& client = acquireClient( context._connectionId );
+        if ( context._kind == NetClientServerMessage::kSnapshotAck )
         {
-            const uint32 tick = static_cast<uint32>( reader.readVarUint() );
-            if ( reader.hasOverflowed() == false && ( client._bHasAck == SW_FALSE || tick > client._ackedTick ) && tick <= _world._tick )
+            const uint32 tick = static_cast<uint32>( body.readVarUint() );
+            if ( body.hasOverflowed() )
+                return NetHandleResult::Malformed;
+            if ( ( client._bHasAck == SW_FALSE || tick > client._ackedTick ) && tick <= _world._tick )
             {
                 client._ackedTick = tick;
                 client._bHasAck   = SW_TRUE;
             }
+            return NetHandleResult::Handled;
         }
-        else if ( pData[0] == NetClientServerMessage::kInput )
-        {
-            handleInput( client, pData, size );
-        }
-        return true;
+        return handleInput( client, body ) ? NetHandleResult::Handled : NetHandleResult::Malformed;
     }
 
-    void ReplicationServer::handleInput( ClientState& client, const uint8* pData, int32 size )
+    bool ReplicationServer::handleInput( ClientState& client, BitReader& reader )
     {
-        BitReader    reader( pData + 1, size - 1 );
         const uint32 latestTick = static_cast<uint32>( reader.readVarUint() );
         const uint32 viewTick   = static_cast<uint32>( reader.readVarUint() );
         const uint32 count      = static_cast<uint32>( reader.readVarUint() );
         if ( reader.hasOverflowed() || count > 32 )
-            return;
+            return false;
         client._viewTick = static_cast<float32>( viewTick ) / 256.0f;
         // 새 것부터 실려 있다 — 이미 쓴 틱 · 이미 가진 틱은 건너뛴다.
         for ( uint32 index = 0; index < count && index <= latestTick; ++index )
@@ -199,16 +208,17 @@ namespace sw
             if ( bAlreadyUsed || bAlreadyHave )
             {
                 if ( reader.skipBytes( byteCount ) == false )
-                    return;
+                    return false;
                 continue;
             }
             vector<uint8> inputBuffer( static_cast<size_t>( byteCount ) );
             if ( byteCount > 0 && reader.readBytes( inputBuffer.data(), byteCount ) == false )
-                return;
+                return false;
             client._listInput.insert( inputIter, InputEntry{ std::move( inputBuffer ), tick } );
         }
         while ( static_cast<int32>( client._listInput.size() ) > _settings._inputBufferSize )
             client._listInput.pop_front();
+        return true;
     }
 
     bool ReplicationServer::popInput( int32 connectionId, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact )

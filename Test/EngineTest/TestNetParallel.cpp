@@ -120,7 +120,7 @@ namespace
                 while ( cluster._listClient[static_cast<size_t>( index )].receiveMessage( connectionId, channel, buffer ) )
                 {
                     listHash[static_cast<size_t>( index )] = mixBytes( listHash[static_cast<size_t>( index )], buffer );
-                    (void)listReplication[static_cast<size_t>( index )].handleMessage( buffer );
+                    (void)listReplication[static_cast<size_t>( index )].handleMessage( 0, buffer );
                 }
                 listReplication[static_cast<size_t>( index )].update( 1.0f / 60.0f );
             }

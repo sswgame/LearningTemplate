@@ -98,6 +98,7 @@ namespace sw
         , _listReceived{}
         , _flushBatch{}
         , _listDeliver{}
+        , _listDrainScratch{}
         , _settings{}
         , _pTransport{ nullptr }
         , _saltState{ 0 }
@@ -756,6 +757,33 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
+    }
+
+    void NetHost::drainInbound( NetInbound& outInbound )
+    {
+        outInbound.clear();
+        std::scoped_lock<mutex> lock{ _mutex };
+        outInbound._listEvent.swap( _listEvent );
+        const int32 slotCount = static_cast<int32>( _listSlot.size() );
+        for ( int32 index = 0; index < slotCount; ++index )
+        {
+            Slot& slot = _listSlot[static_cast<size_t>( index )];
+            if ( slot._state != NetConnectionState::Connected )
+                continue;
+            for ( int32 channel = 0; channel < static_cast<int32>( NetChannelType::Count ); ++channel )
+            {
+                while ( slot._connection.receiveMessage( static_cast<NetChannelType>( channel ), _listDrainScratch ) )
+                {
+                    NetInboundMessage message;
+                    message._connectionId = index;
+                    message._offset       = static_cast<int32>( outInbound._bytes.size() );
+                    message._size         = static_cast<int32>( _listDrainScratch.size() );
+                    message._channel      = static_cast<NetChannelType>( channel );
+                    outInbound._bytes.insert( outInbound._bytes.end(), _listDrainScratch.begin(), _listDrainScratch.end() );
+                    outInbound._listMessage.push_back( message );
+                }
+            }
+        }
     }
 
     bool NetHost::isServer() const

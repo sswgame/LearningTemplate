@@ -76,6 +76,36 @@ namespace sw
 
 namespace sw
 {
+    /** @brief `NetInbound` 의 메시지 하나 — 바이트는 `NetInbound::_bytes` 의 [_offset, _offset + _size) 입니다(첫 바이트 = 종류). */
+    struct NetInboundMessage
+    {
+        int32          _connectionId{ -1 };
+        int32          _offset{ 0 };
+        int32          _size{ 0 };
+        NetChannelType _channel{ NetChannelType::ReliableOrdered };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `NetHost::drainInbound` 가 잠금 한 번에 꺼낸 연결 사건과 받은 메시지입니다. 다시 쓰면 할당하지 않는다(바이트는 한 아레나에). */
+    struct NetInbound
+    {
+        vector<NetHostEvent>      _listEvent{};
+        vector<NetInboundMessage> _listMessage{};
+        vector<uint8>             _bytes{};
+
+        void clear()
+        {
+            _listEvent.clear();
+            _listMessage.clear();
+            _bytes.clear();
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class NetHost
      * @brief 서버는 `listen`, 클라이언트는 `connect` 로 시작해 `update( 시각 )` 합니다(직접 매 프레임, 또는 `NetHostThread`). 클라이언트의 서버 연결은 id 0 입니다.
@@ -127,6 +157,12 @@ namespace sw
         void               disconnect( int32 connectionId );
         void               disconnectAll();
         void               drainEvents( vector<NetHostEvent>& outListEvent );
+        /**
+         * @brief 쌓인 연결 사건과 받은 메시지를 **잠금 한 번에** 모두 꺼냅니다(@p outInbound 를 비우고 채운다). 사건이 메시지보다 먼저입니다.
+         * @details 닫힌 연결의 받은 메시지는 닫을 때 지워지므로, 꺼낸 메시지는 모두 지금 그 자리의 연결 것이다 — 사건을 먼저 처리하면 같은 자리에 새로 온
+         *          연결의 메시지를 옛 연결의 상태로 읽지 않는다. `receiveMessage` · `drainEvents` 와 섞어 쓰지 않는다(`NetMessageRouter::pump` 가 쓴다).
+         */
+        void drainInbound( NetInbound& outInbound );
 
         bool               isServer() const;
         NetConnectionState getConnectionState( int32 connectionId ) const;
@@ -253,6 +289,7 @@ namespace sw
         vector<ReceivedDatagram>      _listReceived;     ///< `update` 스레드 전용 — 잠금 밖에서 받은 묶음(버퍼를 다시 쓴다)
         OutgoingBatch                 _flushBatch;       ///< `update` 스레드 전용 — 잠금 밖에서 보내는 묶음
         vector<FinishedConnect>       _listDeliver;      ///< `update` 스레드 전용
+        vector<uint8>                 _listDrainScratch; ///< `drainInbound` 가 메시지 하나를 꺼내 두는 자리
         NetHostSettings               _settings;
         INetTransport*                _pTransport;
         uint64                        _saltState;

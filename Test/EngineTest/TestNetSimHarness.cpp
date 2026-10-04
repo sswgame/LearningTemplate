@@ -88,8 +88,6 @@ namespace
         void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
         {
             (void)world;
-            if ( event._kind == NetHostEvent::Kind::Disconnected )
-                _server.onDisconnected( event._connectionId );
             if ( _pRecord != nullptr )
                 _pRecord->_listEvent.push_back( event );
         }

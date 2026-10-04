@@ -47,8 +47,11 @@
     돌아 끊기지 않고 RTT 에 프레임 길이가 섞이지 않는다. 기다리는 일이라 TaskManager 워커가 아니라 전용 스레드(로그 · 파일 감시와 같은 규칙)
   - `NetParallel` — 서버 키트가 연결(관찰자)마다의 일을 `TaskManager::runParallel` 로 나누는 `NetParallelFor` 와 스레드마다의 작업 자리
     `NetParallelScratch<T>`. 매니저가 없으면 지금 스레드가 돈다(결과는 같다)
-  - `NetMessage` — `NetMessageWriter`(종류 바이트 + 몸, 버퍼 재사용), `INetMessageHandler`(영역 하나를 맡는 쪽 — `GF_Net*` 키트의 서버 · 클라이언트),
-    `NetMessageRouter`(첫 바이트 위 4 비트로 처리기를 바로 찾아 `pump( host )` 로 나눠 주고, 아무도 안 받은 것은 돌려준다)
+  - `NetMessage` — `NetMessageWriter`(종류 바이트 + 몸, 버퍼 재사용), `INetMessageHandler`(영역 하나 + 그 안의 **종류 마스크**를 맡는 쪽 — `GF_Net*` 키트의
+    서버 · 클라이언트. 몸은 종류 바이트 뒤의 `BitReader`, 결과는 `NetHandleResult`(Handled · Malformed), 연결 사건 `onConnectionOpened` · `onConnectionClosed`),
+    `NetMessageRouter`(종류 256 칸 표로 맡은 처리기 하나에게 준다. `pump( host )` 는 `NetHost::drainInbound` 로 사건 + 메시지를 잠금 한 번에 꺼내
+    **사건을 먼저** 모든 처리기에 알리고 메시지를 나눈다 — 같은 자리에 새로 온 연결이 옛 상태로 읽히지 않는다. 깨진 메시지는 세고(`getMalformedCount`) 버리고,
+    처리기 없는 것만 돌려준다). 키트는 수신 가드 · `onDisconnected` 같은 손 배선 없이 자기 종류만 읽는다. 손 배달은 `INetMessageHandler::handleMessage`
   - 전송: `INetTransport`(`send` 는 아무 스레드, `receive` · `waitForReceive` 는 `update` 스레드 하나), 실제 UDP(`UdpNetTransport` — 플랫폼 차이는 `PlatformSocketUtil` 한 곳, 송수신 버퍼 1 MB, Windows 는 ICMP 포트 닿지 않음으로
     `recvfrom` 이 실패하지 않게 `SIO_UDP_CONNRESET` 을 끈다), 한 프로세스 루프백 망(`LoopbackNetwork` — 잠금 하나로 끝점마다 다른 스레드가 돌아도 된다. 지연 · 흔들림 · 손실 ·
     중복 · 깨짐을 씨앗으로 흉내, 시험 · 리슨 서버), 네트워크 흉내(`NetEmulationTransport` — 어느 전송(UDP · 루프백)에나 씌워 보내는 쪽에서 지연 · 흔들림 ·
