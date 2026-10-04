@@ -23,6 +23,7 @@
 #include "Engine/Character/SurfaceState.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
@@ -254,6 +255,7 @@ namespace
         static bool                  isFitTables( sw::string_view resourceId ) { return endsWith( resourceId, ".fit.xml" ); }
         static bool                  isPartFit( sw::string_view resourceId ) { return endsWith( resourceId, ".partfit.xml" ); }
         static bool                  isSurfaceChannels( sw::string_view resourceId ) { return endsWith( resourceId, ".surfacechannels.xml" ); }
+        static bool                  isDestructionProfile( sw::string_view resourceId ) { return endsWith( resourceId, ".destruction.xml" ); }
         static bool                  isNotifyTable( sw::string_view resourceId ) { return endsWith( resourceId, ".notifies.xml" ); }
         static bool                  isClipData( sw::string_view resourceId ) { return endsWith( resourceId, ".clips.json" ); }
         /** @brief 모델 임포트 곁 데이터(`<모델>.clips.json`) — 임포터(`ModelImporter::readClipData`)와 같은 키 규칙(모르는 키는 오류)으로 본다. */
@@ -427,6 +429,7 @@ namespace
             {          "fittables",           &isFitTables,                                     &loadFitTables},
             {            "partfit",             &isPartFit,                                       &loadPartFit},
             {    "surfacechannels",     &isSurfaceChannels,              &loadCatalog<sw::SurfaceChannelTable>},
+            {        "destruction",  &isDestructionProfile,               &loadCatalog<sw::DestructionProfile>},
             {              "items",               &isItems,                      &loadCatalog<sw::ItemCatalog>},
             {         "appearance",      &isAppearanceData,                                &loadAppearanceData},
             {           "skeleton",            &isSkeleton,                                      &loadSkeleton},

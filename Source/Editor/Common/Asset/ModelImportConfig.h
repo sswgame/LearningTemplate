@@ -10,6 +10,8 @@
 
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 
+#include "Engine/Destruction/MeshFracture.h"
+
 namespace sw
 {
     class JsonValue;
@@ -36,11 +38,15 @@ namespace sw::editor
      *          `animation_codec`(코덱 이름, `AnimCodecRegistry` 에 없는 이름은 설정 오류) · `animation_sample_rate`(초당 표본) ·
      *          `animation_precision` · `animation_shell_distance`(미터, `AnimCodecSettings`) · `root_motion_bone`(루트 모션 트랙이 될 본 — 비면 없음) ·
      *          `attachments`(불, 기본 참 — 본 아래 스킨 없는 메시를 따로 임포트).
+     *          파쇄 키(JSON): `fracture`(객체 — 있으면 `.mesh` 옆에 `.fracture` 를 쓴다, 스킨 없는 메시만): `pattern`("uniform" · "clustered" ·
+     *          "slices") · `volume`("mesh" 닫힌 메시 · "bounds" · "hull" — 닫히지 않은 모델의 대리 부피) · `pieces` · `seed` · `levels`(묶음 레벨마다 수, 위 → 아래) · `impact_point`(숫자 셋) · `cluster_radius` · `cluster_fraction` ·
+     *          `slices`(축마다 칸 수 셋) · `slice_jitter` · `interior_color`(숫자 넷) · `interior_uv_scale` · `max_hull_points`. 모르는 키 · 틀린 값은 설정 오류입니다.
      */
     struct ModelImportRule
     {
         string                _name;
         AssetImportPathFilter _filter;
+        FractureSettings      _fracture;
         /** @brief 모든 노드의 월드 위치에 더하는 이동입니다(glTF 원본 공간 — 축 변환 전). 원본이 배치 오프셋을 품고 있을 때 씁니다. */
         float32        _arrTranslation[3];
         vector<string> _listClipName;
@@ -52,10 +58,12 @@ namespace sw::editor
         ModelRecenter  _recenter;
         uint8          _bImportAnimations;
         uint8          _bImportAttachments;
+        uint8          _bFracture; ///< 규칙에 `fracture` 가 있으면 참 — `.mesh` 옆에 `.fracture` 를 쓴다
 
         ModelImportRule()
             : _name{}
             , _filter{}
+            , _fracture{}
             , _arrTranslation{ 0.0f, 0.0f, 0.0f }
             , _listClipName{}
             , _animationCodec{ "acl" }
@@ -66,11 +74,14 @@ namespace sw::editor
             , _recenter{ ModelRecenter::None }
             , _bImportAnimations{ SW_TRUE }
             , _bImportAttachments{ SW_TRUE }
+            , _bFracture{ SW_FALSE }
         {
         }
 
         /** @brief 원본 해시에 섞을 애니메이션 · 부착 규칙의 글입니다(규칙만 바꿔도 다시 임포트하게). */
         string makeAnimationHashText() const;
+        /** @brief 원본 해시에 섞을 파쇄 규칙의 글입니다. 파쇄가 없으면 빈 글입니다. */
+        string makeFractureHashText() const;
     };
 } // namespace sw::editor
 
@@ -99,6 +110,8 @@ namespace sw::editor
 
         /** @brief 규칙의 애니메이션 · 부착 키를 읽습니다. 모르는 코덱 · 양수가 아닌 숫자는 false 입니다. */
         [[nodiscard]] static bool parseAnimationKeys( const JsonValue& ruleValue, ModelImportRule& inoutRule );
+        /** @brief 규칙의 `fracture` 객체를 읽습니다. 모르는 키 · 패턴 · 양수가 아닌 수 · 길이가 틀린 배열은 false 입니다. */
+        [[nodiscard]] static bool parseFractureKeys( const JsonValue& fractureValue, ModelImportRule& inoutRule );
 
         /** @brief `recenter` 값 이름을 읽습니다("none" · "xz" · "bottom-center"). 모르는 이름이면 false 입니다. */
         [[nodiscard]] static bool parseRecenter( string_view text, ModelRecenter& outRecenter );
