@@ -24,6 +24,7 @@ namespace sw
             }
             static constexpr int32   kMessageCountMax = 255;
             static constexpr float64 kMinLostAge      = 0.5; ///< 확인이 이보다 늦으면 잃은 것으로 센다 — 유지 간격(0.25 초)보다 길게(답을 잃으면 다음 교환의 묶음이 확인한다)
+            static constexpr float64 kBandwidthWindow = 1.0; ///< 대역폭 통계의 창(초)
 
             /** @brief 메시지 하나가 차지할 비트(채널 · id · 길이 · 몸)입니다. */
             static int32 computeMessageBits( NetChannelType channel, int32 size )
@@ -53,6 +54,8 @@ namespace sw
                 return "ServerFull";
             case NetDisconnectReason::Rejected:
                 return "Rejected";
+            case NetDisconnectReason::VersionMismatch:
+                return "VersionMismatch";
         }
         return "Unknown";
     }
@@ -158,7 +161,12 @@ namespace sw
         return true;
     }
 
-    float64 NetConnection::computeResendDelay() const { return MathUtil::max( 0.1, static_cast<float64>( _stats._rtt ) * 1.5 ); }
+    float64 NetConnection::computeResendDelay() const { return MathUtil::max( 0.1, static_cast<float64>( _stats._rtt ) + kResendMargin ); }
+
+    bool NetConnection::isReliableDue( const OutgoingReliable& message, float64 time, float64 resendDelay ) const
+    {
+        return message._lastSentTime < 0.0 || message._bResendNow != SW_FALSE || time - message._lastSentTime >= resendDelay;
+    }
 
     bool NetConnection::hasDataToSend( float64 time ) const
     {
@@ -168,7 +176,7 @@ namespace sw
         for ( uint16 messageId = _oldestUnackedReliableId; messageId != _nextReliableSendId; ++messageId )
         {
             const OutgoingReliable* pMessage = _outgoingReliable.find( messageId );
-            if ( pMessage != nullptr && ( pMessage->_lastSentTime < 0.0 || time - pMessage->_lastSentTime >= resendDelay ) )
+            if ( pMessage != nullptr && isReliableDue( *pMessage, time, resendDelay ) )
                 return true;
         }
         return false;
@@ -225,7 +233,7 @@ namespace sw
         for ( uint16 messageId = _oldestUnackedReliableId; messageId != _nextReliableSendId; ++messageId )
         {
             OutgoingReliable* pMessage = _outgoingReliable.find( messageId );
-            if ( pMessage == nullptr || ( pMessage->_lastSentTime >= 0.0 && time - pMessage->_lastSentTime < resendDelay ) )
+            if ( pMessage == nullptr || isReliableDue( *pMessage, time, resendDelay ) == false )
                 continue;
             if ( pSent->_reliableCount >= kMaxReliablePerPacket )
                 break;
@@ -234,6 +242,7 @@ namespace sw
             if ( pMessage->_lastSentTime >= 0.0 )
                 ++_stats._resentMessageCount;
             pMessage->_lastSentTime                        = time;
+            pMessage->_bResendNow                          = SW_FALSE;
             pSent->_arrReliableId[pSent->_reliableCount++] = messageId;
         }
         // 2) 순서만 — 종류마다 가장 새 것 하나씩(쌓을 때 옛것은 이미 바뀌었다). 들어가지 않은 것은 다음 패킷에.
@@ -271,14 +280,11 @@ namespace sw
         const uint32 ackBits  = reader.readBits( 32 );
         if ( reader.hasOverflowed() )
             return false;
-        if ( _receivedPackets.exists( sequence ) )
-            return false; // 중복 패킷
-        ReceivedPacket* pReceived = _receivedPackets.insert( sequence );
-        if ( pReceived == nullptr )
-            return false; // 너무 오래된 패킷
-        pReceived->_time = time;
+        if ( _receivedPackets.exists( sequence ) || _receivedPackets.isStale( sequence ) )
+            return false; // 중복 · 너무 오래된 패킷
 
-        // 메시지 — 먼저 모두 읽어 깨진 패킷이면 아무것도 넣지 않는다.
+        // 메시지 — 먼저 모두 읽어 깨진 패킷이면 아무것도 넣지 않는다. 시퀀스도 몸을 다 읽은 뒤에 적는다 — 깨진 패킷을 확인하면 보낸 쪽이
+        // 그 안의 신뢰 메시지를 전달된 것으로 지운다.
         vector<ParsedMessage>& listParsed = _listParsedScratch;
         listParsed.clear();
         while ( reader.readBool() )
@@ -302,7 +308,9 @@ namespace sw
         if ( reader.hasOverflowed() )
             return false;
 
-        pReceived->_byteCount = ( reader.getBitPosition() + 7 ) / 8;
+        ReceivedPacket* pReceived = _receivedPackets.insert( sequence );
+        pReceived->_time          = time;
+        pReceived->_byteCount     = ( reader.getBitPosition() + 7 ) / 8;
         ++_stats._receivedPacketCount;
         if ( bAckRequested )
             _bAckPending = SW_TRUE;
@@ -388,9 +396,30 @@ namespace sw
             for ( int32 index = 0; index < pSent->_reliableCount; ++index )
                 _outgoingReliable.remove( pSent->_arrReliableId[index] );
         }
+        detectLostPackets( ack );
         // 가장 오래된 미확인 신뢰 id 를 앞으로.
         while ( _oldestUnackedReliableId != _nextReliableSendId && _outgoingReliable.exists( _oldestUnackedReliableId ) == false )
             ++_oldestUnackedReliableId;
+    }
+
+    void NetConnection::detectLostPackets( uint16 ack )
+    {
+        // 확인된 가장 새 패킷보다 kFastResendGap 개 넘게 앞인데 확인이 없는 패킷 — 잃었다(그 사이 순서 바뀜은 기다린다). 확인 묶음(32) 안만 본다.
+        if ( _sentPackets.exists( ack ) == false || _sentPackets.find( ack )->_bAcked == SW_FALSE )
+            return;
+        for ( int32 offset = kFastResendGap; offset <= 33; ++offset )
+        {
+            SentPacket* pSent = _sentPackets.find( static_cast<uint16>( ack - offset ) );
+            if ( pSent == nullptr || pSent->_bAcked != SW_FALSE || pSent->_bLossDetected != SW_FALSE )
+                continue;
+            pSent->_bLossDetected = SW_TRUE;
+            for ( int32 index = 0; index < pSent->_reliableCount; ++index )
+            {
+                OutgoingReliable* pMessage = _outgoingReliable.find( pSent->_arrReliableId[index] );
+                if ( pMessage != nullptr && pMessage->_lastSentTime >= 0.0 )
+                    pMessage->_bResendNow = SW_TRUE;
+            }
+        }
     }
 
     void NetConnection::updateStats( float64 time )
@@ -398,12 +427,10 @@ namespace sw
         if ( time - _lastStatsTime < NetConnectionInternal::kStatsInterval )
             return;
         _lastStatsTime = time;
-        // 손실 — RTT 두 배 넘게 확인이 없는 패킷의 몫(최근 창 안).
+        // 손실 — RTT 두 배 넘게 확인이 없는 패킷의 몫(최근 64 패킷).
         const float64 lostAge   = MathUtil::max( NetConnectionInternal::kMinLostAge, static_cast<float64>( _stats._rtt ) * 2.0 );
         int32         lostCount = 0;
         int32         sentCount = 0;
-        int32         sentBytes = 0;
-        int32         recvBytes = 0;
         for ( int32 offset = 1; offset <= 64; ++offset )
         {
             const SentPacket* pSent = _sentPackets.find( static_cast<uint16>( _nextPacketSequence - offset ) );
@@ -412,13 +439,20 @@ namespace sw
                 ++sentCount;
                 lostCount += pSent->_bAcked ? 0 : 1;
             }
-            if ( pSent != nullptr && time - pSent->_time < 1.0 )
+        }
+        // 대역폭 — 최근 1 초의 패킷 모두(기록 고리 크기만큼, 초당 256 패킷까지). 패킷 수로 자르면 보내기 간격이 짧을 때 1 초의 일부만 센다.
+        int32 sentBytes = 0;
+        int32 recvBytes = 0;
+        for ( int32 offset = 1; offset <= _sentPackets.getSize(); ++offset )
+        {
+            const SentPacket* pSent = _sentPackets.find( static_cast<uint16>( _nextPacketSequence - offset ) );
+            if ( pSent != nullptr && time - pSent->_time < NetConnectionInternal::kBandwidthWindow )
                 sentBytes += pSent->_byteCount;
         }
-        for ( int32 offset = 0; offset < 64 && _receivedPackets.hasNewest(); ++offset )
+        for ( int32 offset = 0; offset < _receivedPackets.getSize() && _receivedPackets.hasNewest(); ++offset )
         {
             const ReceivedPacket* pReceived = _receivedPackets.find( static_cast<uint16>( _receivedPackets.getNewest() - offset ) );
-            if ( pReceived != nullptr && time - pReceived->_time < 1.0 )
+            if ( pReceived != nullptr && time - pReceived->_time < NetConnectionInternal::kBandwidthWindow )
                 recvBytes += pReceived->_byteCount;
         }
         if ( sentCount > 0 )

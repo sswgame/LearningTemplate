@@ -39,12 +39,12 @@ namespace sw
     public:
         ReplicationClient();
 
-        void initialize( NetHost* pHost, const ReplicationClientSettings& settings );
-        /** @brief 이 키트의 메시지면 처리하고 true 입니다. */
-        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
-        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
-        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
-        bool handleMessage( const vector<uint8>& buffer ) { return handleNetMessage( -1, buffer.data(), static_cast<int32>( buffer.size() ) ); }
+        void            initialize( NetHost* pHost, const ReplicationClientSettings& settings );
+        uint8           getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
+        uint16          getMessageKindMask() const override { return 1u << ( NetClientServerMessage::kSnapshot - NetKitMessageRange::kClientServer ); }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        /** @brief 서버에 (다시) 연결됐다 — 받은 스냅샷 · 렌더 시각을 새로 시작한다(새 서버의 틱은 옛 것보다 작을 수 있다). */
+        void onConnectionOpened( int32 connectionId ) override;
         /** @brief 렌더 시각을 흘립니다. */
         void update( float32 deltaTime );
         /** @brief 이 틱의 입력을 보냅니다(지난 입력 몇 개와 함께). */
@@ -66,6 +66,7 @@ namespace sw
         bool    hasSnapshot() const { return _bHasSnapshot != SW_FALSE; }
 
     private:
+        void               resetHistory();
         const NetSnapshot* findSnapshot( uint32 tick ) const;
         void               findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, float32& outAlpha ) const;
 

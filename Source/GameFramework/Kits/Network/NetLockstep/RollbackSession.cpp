@@ -167,27 +167,26 @@ namespace sw
         return true;
     }
 
-    bool RollbackSession::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
+    uint16 RollbackSession::getMessageKindMask() const { return 1u << ( NetLockstepMessage::kRollbackInput - NetKitMessageRange::kLockstep ); }
+
+    NetHandleResult RollbackSession::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        if ( size <= 0 || pData[0] != NetLockstepMessage::kRollbackInput )
-            return false;
-        BitReader   reader( pData + 1, size - 1 );
-        const int32 player = static_cast<int32>( reader.readVarUint() );
-        const int32 first  = static_cast<int32>( reader.readVarUint() );
-        const int32 count  = static_cast<int32>( reader.readVarUint() );
-        if ( reader.hasOverflowed() || count < 0 || count > 64 )
-            return true;
-        if ( _pHost != nullptr && _pHost->isServer() && player != connectionId + 1 )
-            return true;
+        const int32 player = static_cast<int32>( body.readVarUint() );
+        const int32 first  = static_cast<int32>( body.readVarUint() );
+        const int32 count  = static_cast<int32>( body.readVarUint() );
+        if ( body.hasOverflowed() || count < 0 || count > 64 )
+            return NetHandleResult::Malformed;
+        if ( _pHost != nullptr && _pHost->isServer() && player != context._connectionId + 1 )
+            return NetHandleResult::Handled;
         for ( int32 index = 0; index < count; ++index )
         {
-            const uint8 input = static_cast<uint8>( reader.readBits( 8 ) );
-            if ( reader.hasOverflowed() )
-                return true;
+            const uint8 input = static_cast<uint8>( body.readBits( 8 ) );
+            if ( body.hasOverflowed() )
+                return NetHandleResult::Malformed;
             receiveInput( player, first + index, input );
         }
         if ( _pHost != nullptr && _pHost->isServer() )
-            (void)_pHost->broadcast( NetChannelType::Unreliable, pData, size, connectionId );
-        return true;
+            (void)_pHost->broadcast( NetChannelType::Unreliable, context._pMessage, context._messageSize, context._connectionId );
+        return NetHandleResult::Handled;
     }
 } // namespace sw

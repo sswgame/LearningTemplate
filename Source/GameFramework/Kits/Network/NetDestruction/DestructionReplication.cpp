@@ -171,14 +171,15 @@ namespace sw
         return DestructionReplicationInternal::resolveFracture( _pManager, entry._component );
     }
 
-    void DestructionReplicationServer::onConnected( int32 connectionId )
+    void DestructionReplicationServer::onConnectionOpened( int32 connectionId )
     {
         for ( const Entry& entry : _listEntry )
             _listRequest.push_back( Request{ connectionId, entry._netId } );
     }
 
-    void DestructionReplicationServer::onDisconnected( int32 connectionId )
+    void DestructionReplicationServer::onConnectionClosed( int32 connectionId, NetDisconnectReason reason )
     {
+        (void)reason;
         for ( size_t index = _listRequest.size(); index > 0; --index )
         {
             if ( _listRequest[index - 1]._connectionId == connectionId )
@@ -186,15 +187,14 @@ namespace sw
         }
     }
 
-    bool DestructionReplicationServer::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
+    NetHandleResult DestructionReplicationServer::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        if ( size <= 0 || pData[0] != NetDestructionMessage::kSnapshotRequest || connectionId < 0 )
-            return false;
-        BitReader    reader( pData + 1, size - 1 );
-        const uint32 netId = static_cast<uint32>( reader.readVarUint() );
-        if ( reader.hasOverflowed() == false && findEntry( netId ) != nullptr )
-            _listRequest.push_back( Request{ connectionId, netId } );
-        return true;
+        const uint32 netId = static_cast<uint32>( body.readVarUint() );
+        if ( body.hasOverflowed() || context._connectionId < 0 )
+            return NetHandleResult::Malformed;
+        if ( findEntry( netId ) != nullptr )
+            _listRequest.push_back( Request{ context._connectionId, netId } );
+        return NetHandleResult::Handled;
     }
 
     int32 DestructionReplicationServer::broadcast( NetChannelType channel )
@@ -470,27 +470,22 @@ namespace sw
         return DestructionReplicationInternal::resolveFracture( _pManager, entry._component );
     }
 
-    bool DestructionReplicationClient::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
+    NetHandleResult DestructionReplicationClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        (void)connectionId;
-        if ( size <= 0 )
-            return false;
-        const uint8 kind  = pData[0];
-        const bool  bMine = kind == NetDestructionMessage::kEvent || kind == NetDestructionMessage::kSnapshotPart || kind == NetDestructionMessage::kPose ||
-                           kind == NetDestructionMessage::kHash;
-        if ( bMine == false )
-            return false;
-        BitReader reader( pData + 1, size - 1 );
+        const uint8 kind   = context._kind;
+        BitReader&  reader = body;
         if ( kind == NetDestructionMessage::kPose )
         {
             const bool bRest = reader.readBool();
             handlePose( reader, bRest );
-            return true;
+            return NetHandleResult::Handled;
         }
-        const uint32 netId  = static_cast<uint32>( reader.readVarUint() );
-        Entry*       pEntry = findEntry( netId );
-        if ( pEntry == nullptr || reader.hasOverflowed() )
-            return true; // 모르는 오브젝트(이 클라이언트에 없다) — 먹고 버린다
+        const uint32 netId = static_cast<uint32>( reader.readVarUint() );
+        if ( reader.hasOverflowed() )
+            return NetHandleResult::Malformed;
+        Entry* pEntry = findEntry( netId );
+        if ( pEntry == nullptr )
+            return NetHandleResult::Handled; // 모르는 오브젝트(이 클라이언트에 없다) — 먹고 버린다
         if ( kind == NetDestructionMessage::kEvent )
         {
             const uint32 serverTick = static_cast<uint32>( reader.readVarUint() );
@@ -524,7 +519,7 @@ namespace sw
             if ( reader.hasOverflowed() == false )
                 pEntry->_listHashCheck.push_back( check );
         }
-        return true;
+        return reader.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
     }
 
     void DestructionReplicationClient::handleEvent( Entry& entry, const BufferedEvent& received )

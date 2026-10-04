@@ -1,8 +1,14 @@
 /**
  * @file NetHost.h
  * @brief 서버 · 클라이언트 끝점 — 연결 핸드셰이크(요청 → 도전 → 응답 → 수락), 체크섬 · 프로토콜 id 로 남의 패킷 거르기, 연결 유지 · 타임아웃 · 끊기, 연결마다의 신뢰성 계층입니다.
- * @details 장르별 네트워크 방식(클라이언트-서버 복제 · 락스텝 · 턴 중계 · MMO)은 이 위에 키트로 얹습니다. 여기는 "누가 연결됐고 어느 채널로 무엇이 왔는가" 까지입니다.
+ * @details 연결 요청에는 게임 id 와 프로토콜 id(게임 id + 와이어 판, `NetProtocol`)가 실린다. 서버는 프로토콜 id 가 다르면 이유를 붙여 거절한다 — 같은 게임의
+ *          다른 판은 `VersionMismatch`, 다른 게임은 `Rejected`(양쪽 로그에 두 값을 남긴다). 요청 · 거절만 판과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로
+ *          싸고, 나머지 패킷은 프로토콜 id 로 싸서 다른 판의 패킷은 체크섬부터 틀린다.
+ *          장르별 네트워크 방식(클라이언트-서버 복제 · 락스텝 · 턴 중계 · MMO)은 이 위에 키트로 얹습니다. 여기는 "누가 연결됐고 어느 채널로 무엇이 왔는가" 까지입니다.
  *          도전(challenge) 단계는 위조한 주소로 서버에 연결 자리를 잡는 것을 막습니다 — 도전 값은 실제 그 주소로 간 패킷에만 들어 있습니다.
+ *          서버는 요청에 상태를 남기지 않습니다(netcode.io connect token · QUIC Retry · 언리얼 StatelessConnectHandlerComponent): 도전 값은
+ *          비밀 키 · 주소 · 클라이언트 소금 · 시간 칸에서 만들어 돌려주기만 하고, 그 값을 되돌려 준 응답이 와야 자리를 잡는다. 응답은 값을 만든 칸과
+ *          다음 칸 안(`kChallengeWindowSeconds` 의 1~2 배)에만 통한다. 값은 키 섞기(splitmix)라 암호학적 MAC 은 아니다 — 위조 주소의 자리 채우기를 막는 데까지다.
  *
  *          **스레드**: 공개 함수는 모두 잠금 하나로 지켜져 아무 스레드에서나 부를 수 있습니다(게임 스레드가 보내고, 작업 스레드가 꺼내고, 네트워크
  *          스레드가 `update` 한다). `update` 는 소켓 받기 · 보내기를 **잠금 밖에서** 묶어 하고 잠금 안에서는 패킷 처리만 하므로, 시스템 호출이
@@ -28,8 +34,9 @@ namespace sw
     /** @brief 호스트 설정입니다. 시간은 초입니다. */
     struct NetHostSettings
     {
-        uint32  _protocolId{ 0x53574E31u }; ///< 게임 · 버전마다 다르게(다르면 서로의 패킷을 버린다)
-        uint64  _saltSeed{ 0 };             ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 시험은 고정해도 된다
+        uint32  _gameId{ NetProtocol::kDefaultGameId }; ///< 게임마다 다르게 — 다르면 연결을 Rejected 로 거절한다
+        uint32  _wireVersion{ 0 };                      ///< 게임 · 키트 층의 판(`NetWireVersion::combine`) — 다르면 VersionMismatch. Core 판은 저절로 섞인다
+        uint64  _saltSeed{ 0 };                         ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 시험은 고정해도 된다
         float64 _timeout{ 5.0 };
         float64 _connectTimeout{ 5.0 };
         float64 _connectRetryInterval{ 0.2 };
@@ -69,6 +76,36 @@ namespace sw
 
 namespace sw
 {
+    /** @brief `NetInbound` 의 메시지 하나 — 바이트는 `NetInbound::_bytes` 의 [_offset, _offset + _size) 입니다(첫 바이트 = 종류). */
+    struct NetInboundMessage
+    {
+        int32          _connectionId{ -1 };
+        int32          _offset{ 0 };
+        int32          _size{ 0 };
+        NetChannelType _channel{ NetChannelType::ReliableOrdered };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `NetHost::drainInbound` 가 잠금 한 번에 꺼낸 연결 사건과 받은 메시지입니다. 다시 쓰면 할당하지 않는다(바이트는 한 아레나에). */
+    struct NetInbound
+    {
+        vector<NetHostEvent>      _listEvent{};
+        vector<NetInboundMessage> _listMessage{};
+        vector<uint8>             _bytes{};
+
+        void clear()
+        {
+            _listEvent.clear();
+            _listMessage.clear();
+            _bytes.clear();
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class NetHost
      * @brief 서버는 `listen`, 클라이언트는 `connect` 로 시작해 `update( 시각 )` 합니다(직접 매 프레임, 또는 `NetHostThread`). 클라이언트의 서버 연결은 id 0 입니다.
@@ -85,7 +122,8 @@ namespace sw
     class SW_API NetHost
     {
     public:
-        static constexpr int32 kMaxDatagramPerUpdate = 512; ///< `update` 한 번에 받는 데이터그램 한도 — 나머지는 다음 번에(소켓 버퍼에 남는다)
+        static constexpr int32   kMaxDatagramPerUpdate   = 512; ///< `update` 한 번에 받는 데이터그램 한도 — 나머지는 다음 번에(소켓 버퍼에 남는다)
+        static constexpr float64 kChallengeWindowSeconds = 5.0; ///< 도전 값의 시간 칸 — 만든 칸과 다음 칸 동안 통한다
 
         NetHost();
 
@@ -119,6 +157,12 @@ namespace sw
         void               disconnect( int32 connectionId );
         void               disconnectAll();
         void               drainEvents( vector<NetHostEvent>& outListEvent );
+        /**
+         * @brief 쌓인 연결 사건과 받은 메시지를 **잠금 한 번에** 모두 꺼냅니다(@p outInbound 를 비우고 채운다). 사건이 메시지보다 먼저입니다.
+         * @details 닫힌 연결의 받은 메시지는 닫을 때 지워지므로, 꺼낸 메시지는 모두 지금 그 자리의 연결 것이다 — 사건을 먼저 처리하면 같은 자리에 새로 온
+         *          연결의 메시지를 옛 연결의 상태로 읽지 않는다. `receiveMessage` · `drainEvents` 와 섞어 쓰지 않는다(`NetMessageRouter::pump` 가 쓴다).
+         */
+        void drainInbound( NetInbound& outInbound );
 
         bool               isServer() const;
         NetConnectionState getConnectionState( int32 connectionId ) const;
@@ -135,8 +179,10 @@ namespace sw
         int32  getClientIndex() const;
         void   collectConnected( vector<int32>& outListConnection ) const;
         uint64 getRejectedPacketCount() const;
+        /** @brief 이 호스트의 프로토콜 id(`NetProtocol::makeProtocolId( 게임 id, 와이어 판 )`)입니다. */
+        uint32 getProtocolId() const;
 
-    private:
+        /** @brief 패킷 몸의 첫 3 비트 — 핸드셰이크 단계 · 데이터 · 끊김입니다. */
         enum class PacketType : uint8
         {
             ConnectRequest = 0,
@@ -149,6 +195,13 @@ namespace sw
             Count
         };
 
+        /** @brief 데이터그램(머리 포함)의 패킷 종류를 엿봅니다 — 체크섬은 보지 않는다. 너무 짧으면 Count 입니다(흉내 거르개 · 진단). */
+        static PacketType peekPacketType( const uint8* pData, int32 size );
+
+    private:
+        /** @brief 판과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로 싸는 패킷 — 요청과 거절뿐입니다. 두 패킷의 배치는 판이 바뀌어도 그대로 둔다. */
+        static bool isHandshakeFramed( PacketType type ) { return type == PacketType::ConnectRequest || type == PacketType::Denied; }
+
         struct Slot
         {
             NetConnection      _connection{};
@@ -158,8 +211,7 @@ namespace sw
             float64            _lastReceiveTime{ 0.0 };
             float64            _lastSendTime{ -1.0 };
             float64            _connectStartTime{ 0.0 };
-            NetConnectionState _state{ NetConnectionState::Disconnected };
-            uint8              _bPendingChallenge{ SW_FALSE }; ///< 서버 — 도전을 보냈고 응답을 기다린다
+            NetConnectionState _state{ NetConnectionState::Disconnected }; ///< 서버의 자리는 Connecting 을 거치지 않는다(응답이 맞아야 잡는다)
         };
 
         /** @brief 보낼 데이터그램 하나 — 바이트는 `OutgoingBatch::_bytes` 의 [_offset, _offset + _size) 입니다. */
@@ -200,8 +252,10 @@ namespace sw
         void handlePacket( float64 time, const NetAddress& from, const uint8* pData, int32 size );
         void updateSlots( float64 time );
         void sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB );
-        /** @brief `_packetWriter` 의 몸에 헤더(프로토콜 · 체크섬)를 붙여 보낼 묶음에 넣습니다. */
-        void sendFramed( const NetAddress& to );
+        /** @brief 연결 요청을 거절합니다 — 이유와 이 호스트의 프로토콜 id, 요청의 클라이언트 소금(위조 거절을 거르는 값)을 싣는다. */
+        void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt );
+        /** @brief `_packetWriter` 의 몸에 헤더(머리 값 · 체크섬)를 붙여 보낼 묶음에 넣습니다. */
+        void sendFramed( const NetAddress& to, uint32 headerId );
         void sendPayload( float64 time, Slot& slot );
         void closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote );
         bool startConnect( const NetAddress& serverAddress );
@@ -219,7 +273,10 @@ namespace sw
         void   unbindAddress( int32 slotIndex );
         int32  findFreeSlot() const;
         uint64 nextSalt();
-        bool   isValidSlot( int32 slotIndex ) const { return slotIndex >= 0 && slotIndex < static_cast<int32>( _listSlot.size() ); }
+        /** @brief 상태 없는 도전 값 — 비밀 키 · 주소 · 클라이언트 소금 · 시간 칸을 섞는다. 0 이 아니다. */
+        uint64       makeChallengeToken( const NetAddress& address, uint64 clientSalt, int64 window ) const;
+        static int64 computeChallengeWindow( float64 time );
+        bool         isValidSlot( int32 slotIndex ) const { return slotIndex >= 0 && slotIndex < static_cast<int32>( _listSlot.size() ); }
 
         mutable mutex                 _mutex; ///< 아래 상태 모두(잠금 밖 전용이라고 적은 것은 빼고)
         vector<Slot>                  _listSlot;
@@ -232,10 +289,14 @@ namespace sw
         vector<ReceivedDatagram>      _listReceived;     ///< `update` 스레드 전용 — 잠금 밖에서 받은 묶음(버퍼를 다시 쓴다)
         OutgoingBatch                 _flushBatch;       ///< `update` 스레드 전용 — 잠금 밖에서 보내는 묶음
         vector<FinishedConnect>       _listDeliver;      ///< `update` 스레드 전용
+        vector<uint8>                 _listDrainScratch; ///< `drainInbound` 가 메시지 하나를 꺼내 두는 자리
         NetHostSettings               _settings;
         INetTransport*                _pTransport;
         uint64                        _saltState;
         uint64                        _rejectedPacketCount;
+        uint64                        _mismatchLogCount;
+        uint64                        _challengeSecret; ///< 서버 — 도전 값의 비밀 키(소금 씨앗에서) ///< 판 · 게임이 다른 요청 수 — 로그는 1 · 2 · 4 · 8 … 번째에만(요청 폭주가 로그를 메우지 않게)
+        uint32                        _protocolId;
         atomic<uint32>                _updateDepth; ///< `update` 를 동시에 두 스레드가 부르는 실수를 잡는다
         int32                         _clientIndex;
         int32                         _receiveCursor; ///< 받기를 연결마다 고르게 돌리는 자리

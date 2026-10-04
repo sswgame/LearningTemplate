@@ -40,6 +40,14 @@ namespace sw
 
             static uint64 makeAddressKey( const NetAddress& address ) { return ( static_cast<uint64>( address._ipv4 ) << 16 ) | address._port; }
 
+            /** @brief splitmix64 의 마무리 섞기입니다. */
+            static uint64 mix64( uint64 value )
+            {
+                value = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
+                value = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
+                return value ^ ( value >> 31 );
+            }
+
             /** @brief 운영체제 난수 64 비트 — 도전 값이 다른 실행 · 다른 호스트와 겹치지 않고 미리 알 수 없게. */
             static uint64 makeRandomSeed()
             {
@@ -52,6 +60,25 @@ namespace sw
             {
                 return static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
                        ( static_cast<uint32>( pData[3] ) << 24 );
+            }
+
+            /** @brief 거절 패킷이 싣는 이유입니다. 모르는 값은 Rejected 로 읽는다(다른 판이 이유를 늘려도 클라이언트는 끊긴다). */
+            static NetDisconnectReason readDeniedReason( uint64 value )
+            {
+                switch ( static_cast<NetDisconnectReason>( value & 0xFFu ) )
+                {
+                    case NetDisconnectReason::ServerFull:
+                        return NetDisconnectReason::ServerFull;
+                    case NetDisconnectReason::VersionMismatch:
+                        return NetDisconnectReason::VersionMismatch;
+                    case NetDisconnectReason::None:
+                    case NetDisconnectReason::Requested:
+                    case NetDisconnectReason::Remote:
+                    case NetDisconnectReason::Timeout:
+                    case NetDisconnectReason::Rejected:
+                        break;
+                }
+                return NetDisconnectReason::Rejected;
             }
         };
     } // namespace
@@ -71,10 +98,14 @@ namespace sw
         , _listReceived{}
         , _flushBatch{}
         , _listDeliver{}
+        , _listDrainScratch{}
         , _settings{}
         , _pTransport{ nullptr }
         , _saltState{ 0 }
         , _rejectedPacketCount{ 0 }
+        , _mismatchLogCount{ 0 }
+        , _challengeSecret{ 0 }
+        , _protocolId{ 0 }
         , _updateDepth{ 0 }
         , _clientIndex{ -1 }
         , _receiveCursor{ 0 }
@@ -89,9 +120,10 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ _mutex };
             finishConnect( NetDisconnectReason::Requested );
-            _pTransport = pTransport;
-            _settings   = settings;
-            _saltState  = settings._saltSeed != 0 ? settings._saltSeed : NetHostInternal::makeRandomSeed();
+            _pTransport      = pTransport;
+            _settings        = settings;
+            _saltState       = settings._saltSeed != 0 ? settings._saltSeed : NetHostInternal::makeRandomSeed();
+            _challengeSecret = nextSalt();
             _listSlot.clear();
             _mapSlotByAddress.clear();
             _packetWriter.reserve( kNetMaxPacketSize );
@@ -99,11 +131,32 @@ namespace sw
             _pendingBatch._bytes.reserve( static_cast<size_t>( kNetMaxPacketSize ) * 4 );
             _listEvent.clear();
             _rejectedPacketCount = 0;
+            _mismatchLogCount    = 0;
+            _protocolId          = NetProtocol::makeProtocolId( settings._gameId, settings._wireVersion );
             _clientIndex         = -1;
             _bServer             = SW_FALSE;
             listFinished.swap( _listFinished );
         }
         deliverFinished( listFinished );
+    }
+
+    NetHost::PacketType NetHost::peekPacketType( const uint8* pData, int32 size )
+    {
+        if ( pData == nullptr || size <= NetHostInternal::kHeaderSize )
+            return PacketType::Count;
+        BitReader    reader( pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize );
+        const uint32 type = reader.readBits( NetHostInternal::kTypeBits );
+        return type < static_cast<uint32>( PacketType::Count ) ? static_cast<PacketType>( type ) : PacketType::Count;
+    }
+
+    int64 NetHost::computeChallengeWindow( float64 time ) { return static_cast<int64>( MathUtil::floor( time / kChallengeWindowSeconds ) ); }
+
+    uint64 NetHost::makeChallengeToken( const NetAddress& address, uint64 clientSalt, int64 window ) const
+    {
+        uint64 value = NetHostInternal::mix64( _challengeSecret ^ NetHostInternal::makeAddressKey( address ) );
+        value        = NetHostInternal::mix64( value ^ clientSalt );
+        value        = NetHostInternal::mix64( value ^ static_cast<uint64>( window ) ^ ( _challengeSecret << 1 ) );
+        return value | 1u; // 0 은 "아직 도전을 못 받았다" 의 뜻
     }
 
     uint64 NetHost::nextSalt()
@@ -205,7 +258,7 @@ namespace sw
         return -1;
     }
 
-    void NetHost::sendFramed( const NetAddress& to )
+    void NetHost::sendFramed( const NetAddress& to, uint32 headerId )
     {
         // 보낼 묶음의 바이트 뒤에 바로 짓는다(헤더 + 몸) — 보내기는 잠금을 푼 뒤 `sendBatch` 가.
         const vector<uint8>& body     = _packetWriter.getBytes();
@@ -215,9 +268,8 @@ namespace sw
         uint8* pPacket = _pendingBatch._bytes.data() + offset;
         if ( bodySize > 0 )
             std::memcpy( pPacket + NetHostInternal::kHeaderSize, body.data(), static_cast<size_t>( bodySize ) );
-        NetHostInternal::writeUint32( _pendingBatch._bytes, offset, _settings._protocolId );
-        NetHostInternal::writeUint32( _pendingBatch._bytes, offset + 4,
-                                      NetHostInternal::computeChecksum( _settings._protocolId, pPacket + NetHostInternal::kHeaderSize, bodySize ) );
+        NetHostInternal::writeUint32( _pendingBatch._bytes, offset, headerId );
+        NetHostInternal::writeUint32( _pendingBatch._bytes, offset + 4, NetHostInternal::computeChecksum( headerId, pPacket + NetHostInternal::kHeaderSize, bodySize ) );
         _pendingBatch._listDatagram.push_back( OutgoingDatagram{ to, static_cast<int32>( offset ), NetHostInternal::kHeaderSize + bodySize } );
     }
 
@@ -270,7 +322,12 @@ namespace sw
         writer.writeBits( static_cast<uint32>( valueA >> 32 ), 32 );
         writer.writeBits( static_cast<uint32>( valueB ), 32 );
         writer.writeBits( static_cast<uint32>( valueB >> 32 ), 32 );
-        sendFramed( to );
+        sendFramed( to, isHandshakeFramed( type ) ? NetProtocol::kHandshakeId : _protocolId );
+    }
+
+    void NetHost::sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt )
+    {
+        sendControl( to, PacketType::Denied, static_cast<uint64>( reason ) | ( static_cast<uint64>( _protocolId ) << 32 ), clientSalt );
     }
 
     void NetHost::sendPayload( float64 time, Slot& slot )
@@ -282,7 +339,7 @@ namespace sw
         const uint64 token = slot._clientSalt ^ slot._serverSalt;
         writer.writeBits( static_cast<uint32>( token ), 32 );
         slot._connection.writePacket( time, writer, kNetMaxPacketSize - NetHostInternal::kHeaderSize, _settings._keepAliveInterval );
-        sendFramed( slot._address );
+        sendFramed( slot._address, _protocolId );
         slot._lastSendTime = time;
     }
 
@@ -357,15 +414,14 @@ namespace sw
                         closeSlot( static_cast<int32>( index ), NetDisconnectReason::Timeout, false );
                         break;
                     }
-                    if ( _bServer )
-                        break; // 서버는 클라이언트의 되풀이를 기다린다
                     if ( slot._lastSendTime < 0.0 || time - slot._lastSendTime >= _settings._connectRetryInterval )
                     {
                         // 도전을 받았으면 응답을, 아니면 요청을 되풀이한다.
                         if ( slot._serverSalt != 0 )
-                            sendControl( slot._address, PacketType::ChallengeResponse, slot._clientSalt ^ slot._serverSalt, 0 );
+                            sendControl( slot._address, PacketType::ChallengeResponse, slot._clientSalt, slot._serverSalt );
                         else
-                            sendControl( slot._address, PacketType::ConnectRequest, slot._clientSalt, _settings._protocolId );
+                            sendControl( slot._address, PacketType::ConnectRequest, slot._clientSalt,
+                                         ( static_cast<uint64>( _settings._gameId ) << 32 ) | _protocolId );
                         slot._lastSendTime = time;
                     }
                     break;
@@ -396,16 +452,17 @@ namespace sw
 
     void NetHost::handlePacket( float64 time, const NetAddress& from, const uint8* pData, int32 size )
     {
-        if ( size <= NetHostInternal::kHeaderSize || NetHostInternal::readUint32( pData ) != _settings._protocolId ||
+        const uint32 headerId = size > NetHostInternal::kHeaderSize ? NetHostInternal::readUint32( pData ) : 0u;
+        if ( size <= NetHostInternal::kHeaderSize || ( headerId != _protocolId && headerId != NetProtocol::kHandshakeId ) ||
              NetHostInternal::readUint32( pData + 4 ) !=
-                 NetHostInternal::computeChecksum( _settings._protocolId, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
+                 NetHostInternal::computeChecksum( headerId, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
         {
-            ++_rejectedPacketCount; // 다른 게임 · 깨진 패킷
+            ++_rejectedPacketCount; // 다른 판 · 다른 게임 · 깨진 패킷
             return;
         }
         BitReader        reader( pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize );
         const PacketType type = static_cast<PacketType>( reader.readBits( NetHostInternal::kTypeBits ) );
-        if ( type >= PacketType::Count )
+        if ( type >= PacketType::Count || isHandshakeFramed( type ) != ( headerId == NetProtocol::kHandshakeId ) )
         {
             ++_rejectedPacketCount;
             return;
@@ -416,19 +473,18 @@ namespace sw
             const uint32 token = reader.readBits( 32 );
             if ( isValidSlot( slotIndex ) == false || _listSlot[static_cast<size_t>( slotIndex )]._state != NetConnectionState::Connected )
             {
-                // 서버가 수락했지만 클라이언트가 Accepted 를 잃었다 — 첫 데이터 패킷이 수락을 대신한다(아래 클라이언트 처리).
-                if ( _bServer == SW_FALSE && isValidSlot( slotIndex ) && _listSlot[0]._state == NetConnectionState::Connecting &&
-                     token == static_cast<uint32>( _listSlot[0]._clientSalt ^ _listSlot[0]._serverSalt ) && _listSlot[0]._serverSalt != 0 )
+                // 서버는 수락했지만 클라이언트가 Accepted 를 잃었다 — 데이터 패킷으로는 연결로 치지 않는다(수락에만 서버가 준 번호가 있다).
+                // 응답을 바로 다시 보내면 서버가 수락을 다시 보낸다. 이 패킷의 신뢰 메시지는 확인하지 않았으니 서버가 다시 보낸다.
+                Slot* pSlot = isValidSlot( slotIndex ) ? &_listSlot[static_cast<size_t>( slotIndex )] : nullptr;
+                if ( _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
+                     token == static_cast<uint32>( pSlot->_clientSalt ^ pSlot->_serverSalt ) )
                 {
-                    _listSlot[0]._state           = NetConnectionState::Connected;
-                    _listSlot[0]._lastReceiveTime = time;
-                    pushEvent( NetHostEvent{ 0, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
-                }
-                else
-                {
-                    ++_rejectedPacketCount;
+                    sendControl( pSlot->_address, PacketType::ChallengeResponse, pSlot->_clientSalt, pSlot->_serverSalt );
+                    pSlot->_lastSendTime = time;
                     return;
                 }
+                ++_rejectedPacketCount;
+                return;
             }
             Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
             if ( token != static_cast<uint32>( slot._clientSalt ^ slot._serverSalt ) )
@@ -454,37 +510,34 @@ namespace sw
             {
                 if ( _bServer == SW_FALSE )
                     return;
-                if ( static_cast<uint32>( valueB ) != _settings._protocolId )
+                const uint32 requestProtocolId = static_cast<uint32>( valueB );
+                if ( requestProtocolId != _protocolId )
                 {
-                    sendControl( from, PacketType::Denied, static_cast<uint64>( NetDisconnectReason::Rejected ), 0 );
+                    const uint32              requestGameId = static_cast<uint32>( valueB >> 32 );
+                    const NetDisconnectReason reason        = requestGameId == _settings._gameId ? NetDisconnectReason::VersionMismatch : NetDisconnectReason::Rejected;
+                    ++_mismatchLogCount;
+                    if ( ( _mismatchLogCount & ( _mismatchLogCount - 1 ) ) == 0 )
+                        SW_LOG_WARNING( "NetHost: refused a connection from %# (%#) — it speaks protocol 0x%08x (game 0x%08x), this server 0x%08x (game 0x%08x); %# such requests so far",
+                                        from.toString().c_str(), toString( reason ), requestProtocolId, requestGameId, _protocolId, _settings._gameId,
+                                        _mismatchLogCount );
+                    sendDenied( from, reason, valueA );
                     return;
                 }
                 if ( isValidSlot( slotIndex ) )
                 {
-                    Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
-                    // 같은 요청의 재전송 — 이미 수락했으면 수락을, 아니면 도전을 다시.
+                    // 이 주소는 이미 연결돼 있다 — 같은 요청의 늦은 재전송이면 수락을 다시, 다른 소금(새로 시작한 클라이언트)이면 옛 연결이 끝날 때까지 답하지 않는다.
+                    const Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
                     if ( slot._clientSalt == valueA )
-                        sendControl( from, slot._state == NetConnectionState::Connected ? PacketType::Accepted : PacketType::Challenge,
-                                     slot._state == NetConnectionState::Connected ? static_cast<uint64>( slotIndex ) : slot._clientSalt, slot._serverSalt );
+                        sendControl( from, PacketType::Accepted, static_cast<uint64>( slotIndex ), slot._serverSalt );
                     return;
                 }
-                const int32 freeIndex = findFreeSlot();
-                if ( freeIndex < 0 )
+                if ( findFreeSlot() < 0 )
                 {
-                    sendControl( from, PacketType::Denied, static_cast<uint64>( NetDisconnectReason::ServerFull ), 0 );
+                    sendDenied( from, NetDisconnectReason::ServerFull, valueA );
                     return;
                 }
-                Slot& slot    = _listSlot[static_cast<size_t>( freeIndex )];
-                slot          = Slot{};
-                slot._address = from;
-                bindAddress( freeIndex, from );
-                slot._clientSalt        = valueA;
-                slot._serverSalt        = nextSalt();
-                slot._state             = NetConnectionState::Connecting;
-                slot._bPendingChallenge = SW_TRUE;
-                slot._connectStartTime  = time;
-                slot._lastSendTime      = time; // 서버의 Connecting 은 다시 보내지 않는다 — 클라이언트가 되풀이한다
-                sendControl( from, PacketType::Challenge, slot._clientSalt, slot._serverSalt );
+                // 자리를 잡지 않는다 — 도전 값만 돌려준다. 그 값은 이 주소로 간 패킷에만 있으므로, 되돌려 준 응답이 와야 주소가 진짜다.
+                sendControl( from, PacketType::Challenge, valueA, makeChallengeToken( from, valueA, computeChallengeWindow( time ) ) );
                 return;
             }
             case PacketType::Challenge:
@@ -495,27 +548,50 @@ namespace sw
                 if ( slot._state != NetConnectionState::Connecting || valueA != slot._clientSalt )
                     return;
                 slot._serverSalt = valueB;
-                sendControl( from, PacketType::ChallengeResponse, slot._clientSalt ^ slot._serverSalt, 0 );
+                sendControl( from, PacketType::ChallengeResponse, slot._clientSalt, slot._serverSalt );
                 slot._lastSendTime = time;
                 return;
             }
             case PacketType::ChallengeResponse:
             {
-                if ( _bServer == SW_FALSE || isValidSlot( slotIndex ) == false )
+                if ( _bServer == SW_FALSE )
                     return;
-                Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
-                if ( valueA != ( slot._clientSalt ^ slot._serverSalt ) )
-                    return;
-                if ( slot._state == NetConnectionState::Connecting )
+                if ( isValidSlot( slotIndex ) )
                 {
-                    slot._state             = NetConnectionState::Connected;
-                    slot._bPendingChallenge = SW_FALSE;
-                    slot._lastReceiveTime   = time;
-                    slot._lastSendTime      = -1.0;
-                    slot._connection.reset();
-                    pushEvent( NetHostEvent{ slotIndex, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
+                    // 이미 연결됐다 — 수락을 잃은 클라이언트의 되풀이다.
+                    Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
+                    if ( slot._clientSalt == valueA && slot._serverSalt == valueB )
+                    {
+                        slot._lastReceiveTime = time;
+                        sendControl( from, PacketType::Accepted, static_cast<uint64>( slotIndex ), slot._serverSalt );
+                    }
+                    return;
                 }
-                sendControl( from, PacketType::Accepted, static_cast<uint64>( slotIndex ), slot._serverSalt );
+                // 도전 값을 다시 만들어 맞춰 본다 — 이번 칸이나 바로 앞 칸에 만든 것만(5~10 초).
+                const int64 window = computeChallengeWindow( time );
+                if ( valueB != makeChallengeToken( from, valueA, window ) && valueB != makeChallengeToken( from, valueA, window - 1 ) )
+                {
+                    ++_rejectedPacketCount; // 위조 · 만료된 응답
+                    return;
+                }
+                const int32 freeIndex = findFreeSlot();
+                if ( freeIndex < 0 )
+                {
+                    sendDenied( from, NetDisconnectReason::ServerFull, valueA );
+                    return;
+                }
+                Slot& slot    = _listSlot[static_cast<size_t>( freeIndex )];
+                slot          = Slot{};
+                slot._address = from;
+                bindAddress( freeIndex, from );
+                slot._clientSalt      = valueA;
+                slot._serverSalt      = valueB;
+                slot._state           = NetConnectionState::Connected;
+                slot._lastReceiveTime = time;
+                slot._lastSendTime    = -1.0;
+                slot._connection.reset();
+                pushEvent( NetHostEvent{ freeIndex, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
+                sendControl( from, PacketType::Accepted, static_cast<uint64>( freeIndex ), slot._serverSalt );
                 return;
             }
             case PacketType::Accepted:
@@ -535,10 +611,15 @@ namespace sw
             }
             case PacketType::Denied:
             {
-                if ( _bServer || isValidSlot( slotIndex ) == false || _listSlot[static_cast<size_t>( slotIndex )]._state != NetConnectionState::Connecting )
+                if ( _bServer || isValidSlot( slotIndex ) == false )
                     return;
-                const NetDisconnectReason reason = valueA == static_cast<uint64>( NetDisconnectReason::ServerFull ) ? NetDisconnectReason::ServerFull
-                                                                                                                    : NetDisconnectReason::Rejected;
+                const Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
+                if ( slot._state != NetConnectionState::Connecting || valueB != slot._clientSalt )
+                    return; // 이 요청에 대한 거절이 아니다(옛 요청 · 위조)
+                const NetDisconnectReason reason = NetHostInternal::readDeniedReason( valueA );
+                if ( reason != NetDisconnectReason::ServerFull )
+                    SW_LOG_WARNING( "NetHost: server %# refused the connection (%#) — it speaks protocol 0x%08x, this client 0x%08x (game 0x%08x)",
+                                    from.toString().c_str(), toString( reason ), static_cast<uint32>( valueA >> 32 ), _protocolId, _settings._gameId );
                 closeSlot( slotIndex, reason, false );
                 return;
             }
@@ -678,6 +759,33 @@ namespace sw
         _listEvent.clear();
     }
 
+    void NetHost::drainInbound( NetInbound& outInbound )
+    {
+        outInbound.clear();
+        std::scoped_lock<mutex> lock{ _mutex };
+        outInbound._listEvent.swap( _listEvent );
+        const int32 slotCount = static_cast<int32>( _listSlot.size() );
+        for ( int32 index = 0; index < slotCount; ++index )
+        {
+            Slot& slot = _listSlot[static_cast<size_t>( index )];
+            if ( slot._state != NetConnectionState::Connected )
+                continue;
+            for ( int32 channel = 0; channel < static_cast<int32>( NetChannelType::Count ); ++channel )
+            {
+                while ( slot._connection.receiveMessage( static_cast<NetChannelType>( channel ), _listDrainScratch ) )
+                {
+                    NetInboundMessage message;
+                    message._connectionId = index;
+                    message._offset       = static_cast<int32>( outInbound._bytes.size() );
+                    message._size         = static_cast<int32>( _listDrainScratch.size() );
+                    message._channel      = static_cast<NetChannelType>( channel );
+                    outInbound._bytes.insert( outInbound._bytes.end(), _listDrainScratch.begin(), _listDrainScratch.end() );
+                    outInbound._listMessage.push_back( message );
+                }
+            }
+        }
+    }
+
     bool NetHost::isServer() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
@@ -694,6 +802,12 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _rejectedPacketCount;
+    }
+
+    uint32 NetHost::getProtocolId() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _protocolId;
     }
 
     bool NetHost::getConnectionStats( int32 connectionId, NetConnectionStats& outStats ) const
