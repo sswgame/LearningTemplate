@@ -12,6 +12,8 @@
 | 보이스(재생 위치 · 피치 리샘플 · 팬 · 페이드 · 가상 진행) | `AudioVoice` |
 | 클립(float 샘플)과 경로 → 클립 캐시 · 비동기 디코드 | `AudioClip` |
 | WAV · OGG 디코드(stb_vorbis) | `AudioClipDecoder` · `AudioVorbisDecode.cpp` |
+| 버스 이펙트(바이쿼드 · 컴프레서 · 리미터 · 리버브 · 딜레이)와 이름 → 종류 등록부 | `Dsp/AudioEffect` |
+| 바이쿼드 계수(RBJ cookbook) · 스테레오 상태 · 크기 응답 | `Dsp/AudioBiquad` |
 | 형식 상수 · dB 변환 · 결정적 난수 · 버스 이름 | `AudioTypes.h` |
 | Windows 출력(XAudio2 스트리밍 보이스) · MP3 대체 디코더(Media Foundation) | `Windows/XAudio2System` |
 | 장치 없는 출력 | `NullAudioSystem` |
@@ -49,6 +51,22 @@
 - **페이더 게인 = 데이터 볼륨(dB) × 사용자 볼륨 × 스냅샷 오프셋(dB) × 음소거/솔로.** 사용자 볼륨은 설정 메뉴(`audio.busVolume` 의 `master` · `music` ·
   `sfx` · `voice` · `ambient` · `ui`)가 `IAudioSystem::setBusVolume` 으로 넣고, 그래프를 바꿔도 이름으로 남습니다. 음소거(`setMute`)는 master 한 곳입니다.
 - 솔로: 하나라도 솔로면 솔로 버스의 조상(신호가 지나는 길)과 자손만 소리를 냅니다(DAW · Wwise 와 같음).
+
+## 이펙트
+
+버스마다 인서트 체인(`AudioBusDesc::_listEffect`)이 있고, 센드 · 페이더 앞에서 순서대로 돕니다. 종류는 `AudioEffectRegistry` 의 표 한 줄씩이고
+데이터는 종류 이름과 파라미터 이름으로만 고릅니다 — 모르는 종류 · 파라미터 · 같은 버스에서 겹친 이펙트 이름은 읽기 오류입니다.
+
+| 종류 | 파라미터(기본) | 메모 |
+|---|---|---|
+| `LowPass` · `HighPass` · `BandPass` · `Peaking` · `LowShelf` · `HighShelf` | `frequencyHz` · `q`(0.707) · `gainDb` | RBJ cookbook 2 차. LowPass 20 kHz · HighPass 10 Hz 는 건너뜀(스냅샷이 내려 쓰는 필터를 평소엔 공짜로) |
+| `Compressor` | `thresholdDb`(-18) · `ratio`(4) · `attackMs`(10) · `releaseMs`(120) · `kneeDb`(6) · `makeupDb`(0) | 피드 포워드, 스테레오 링크 피크, 소프트 니, smooth decoupled peak 검출 |
+| `Limiter` | `ceilingDb`(-1) · `releaseMs`(60) · `lookaheadMs`(2) | 미리 보기 브릭월: 필요 게인의 창(L+1) 최솟값을 L 상자 평균으로 다듬고 소리를 L 늦춘다 — 출력이 천장을 넘지 않는다 |
+| `Reverb` | `roomSize`(0.7) · `damping`(0.5) · `wet`(0.33) · `dry`(0) · `width`(1) · `preDelayMs`(0) | Freeverb(콤 8 + 올패스 4, 채널 벌림 23) — 48 kHz 로 늘린 길이 |
+| `Delay` | `timeMs`(250) · `feedback`(0.35) · `wet`(0.5) · `dry`(1) · `dampingHz`(20000) | 피드백 경로에 한 극 로우패스 |
+
+기본 그래프는 master 에 리미터(-1 dBFS), `reverb` 리턴 버스에 리버브(dry 0)를 두고 sfx · voice · ambient 가 센드로 보냅니다.
+이펙트 이름(`AudioEffectDesc::_name`, 비우면 종류 이름)은 스냅샷이 파라미터를 바꿀 때 씁니다.
 
 ## 재생
 

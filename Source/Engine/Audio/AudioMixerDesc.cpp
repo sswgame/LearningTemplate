@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioMixerDesc.h"
 
+#include "Engine/Audio/Dsp/AudioEffect.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
@@ -65,6 +66,36 @@ namespace sw
             {
                 SW_LOG_ERROR( "%#: bus '%#' names unknown parent '%#'", sourceName, bus._name.c_str(), bus._parent.c_str() );
                 bValid = false;
+            }
+            for ( size_t effectIndex = 0; effectIndex < bus._listEffect.size(); ++effectIndex )
+            {
+                const AudioEffectDesc&     effect    = bus._listEffect[effectIndex];
+                const AudioEffectTypeInfo* pTypeInfo = AudioEffectRegistry::findType( effect._type );
+                if ( pTypeInfo == nullptr )
+                {
+                    SW_LOG_ERROR( "%#: bus '%#' names unknown effect type '%#'", sourceName, bus._name.c_str(), effect._type.c_str() );
+                    bValid = false;
+                    continue;
+                }
+                for ( size_t otherIndex = effectIndex + 1; otherIndex < bus._listEffect.size(); ++otherIndex )
+                {
+                    if ( bus._listEffect[otherIndex].getEffectName() == effect.getEffectName() )
+                    {
+                        SW_LOG_ERROR( "%#: bus '%#' has two effects named '%#' - give one a _name", sourceName, bus._name.c_str(), effect.getEffectName().c_str() );
+                        bValid = false;
+                    }
+                }
+                for ( const AudioEffectParameterDesc& parameter : effect._listParameter )
+                {
+                    bool bKnown = false;
+                    for ( uint32 parameterIndex = 0; parameterIndex < pTypeInfo->_parameterCount; ++parameterIndex )
+                        bKnown = bKnown || parameter._name == hashed_string( pTypeInfo->_pParameter[parameterIndex]._pName );
+                    if ( bKnown == false )
+                    {
+                        SW_LOG_ERROR( "%#: effect '%#' on bus '%#' has no parameter '%#'", sourceName, effect._type.c_str(), bus._name.c_str(), parameter._name.c_str() );
+                        bValid = false;
+                    }
+                }
             }
             for ( const AudioSendDesc& send : bus._listSend )
             {

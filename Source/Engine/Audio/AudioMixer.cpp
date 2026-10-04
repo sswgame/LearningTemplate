@@ -49,6 +49,18 @@ namespace sw
                 send._bPreFader   = sendDesc._bPreFader;
                 bus._listSend.push_back( send );
             }
+            for ( const AudioEffectDesc& effectDesc : busDesc._listEffect )
+            {
+                unique_ptr<IAudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc._type );
+                for ( const AudioEffectParameterDesc& parameter : effectDesc._listParameter )
+                {
+                    const int32 parameterIndex = pEffect->findParameterIndex( parameter._name );
+                    if ( parameterIndex >= 0 )
+                        pEffect->setParameter( static_cast<uint32>( parameterIndex ), parameter._value );
+                }
+                bus._listEffect.push_back( std::move( pEffect ) );
+                bus._listEffectName.push_back( effectDesc.getEffectName() );
+            }
             if ( bus._parentIndex < 0 )
                 _masterIndex = static_cast<uint32>( busIndex );
         }
@@ -103,6 +115,17 @@ namespace sw
                 return send._levelDb;
         }
         return audio::kSilenceDb;
+    }
+
+    IAudioEffect* AudioMixer::findEffect( uint32 busIndex, const hashed_string& effectName ) const
+    {
+        const Bus& bus = _listBusState[busIndex];
+        for ( size_t effectIndex = 0; effectIndex < bus._listEffect.size(); ++effectIndex )
+        {
+            if ( bus._listEffectName[effectIndex] == effectName )
+                return bus._listEffect[effectIndex].get();
+        }
+        return nullptr;
     }
 
     void AudioMixer::refreshSoloPaths()
@@ -160,6 +183,10 @@ namespace sw
         {
             Bus&     bus    = _listBusState[busIndex];
             float32* pInput = bus._listInput.data();
+
+            // 인서트 이펙트 — 센드 · 페이더 앞(채널 스트립과 같은 자리).
+            for ( const unique_ptr<IAudioEffect>& pEffect : bus._listEffect )
+                pEffect->process( pInput, blockFrames );
 
             // 프리 페이더 센드는 페이더 전의 신호를 보낸다.
             for ( Send& send : bus._listSend )

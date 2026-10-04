@@ -1,13 +1,48 @@
 <!--
 	엔진 기본 믹서 그래프(AudioMixerDesc). master 가 유일한 루트이고, 사용자 설정의 버스 볼륨(audio.busVolume)은 이 이름들로 찾아간다.
+	reverb 는 이펙트 리턴 버스다 — sfx · voice · ambient 가 센드로 보낸다(리버브만 나오도록 dry 0).
+	master 의 리미터가 출력 피크를 -1 dBFS 아래로 묶는다.
 -->
 <AudioMixerDesc _maxVoiceCount="256" _maxRealVoiceCount="64" _inaudibleDb="-60">
 	<_listBus>
-		<AudioBusDesc _name="master" />
+		<AudioBusDesc _name="master">
+			<_listEffect>
+				<AudioEffectDesc _type="Limiter">
+					<_listParameter>
+						<AudioEffectParameterDesc _name="ceilingDb" _value="-1" />
+						<AudioEffectParameterDesc _name="lookaheadMs" _value="2" />
+					</_listParameter>
+				</AudioEffectDesc>
+			</_listEffect>
+		</AudioBusDesc>
 		<AudioBusDesc _name="music" _parent="master" />
-		<AudioBusDesc _name="sfx" _parent="master" />
-		<AudioBusDesc _name="voice" _parent="master" />
-		<AudioBusDesc _name="ambient" _parent="master" />
+		<AudioBusDesc _name="sfx" _parent="master">
+			<_listSend>
+				<AudioSendDesc _bus="reverb" _levelDb="-14" />
+			</_listSend>
+		</AudioBusDesc>
+		<AudioBusDesc _name="voice" _parent="master">
+			<_listSend>
+				<AudioSendDesc _bus="reverb" _levelDb="-18" />
+			</_listSend>
+		</AudioBusDesc>
+		<AudioBusDesc _name="ambient" _parent="master">
+			<_listSend>
+				<AudioSendDesc _bus="reverb" _levelDb="-12" />
+			</_listSend>
+		</AudioBusDesc>
 		<AudioBusDesc _name="ui" _parent="master" />
+		<AudioBusDesc _name="reverb" _parent="master">
+			<_listEffect>
+				<AudioEffectDesc _type="Reverb">
+					<_listParameter>
+						<AudioEffectParameterDesc _name="roomSize" _value="0.6" />
+						<AudioEffectParameterDesc _name="damping" _value="0.5" />
+						<AudioEffectParameterDesc _name="wet" _value="0.33" />
+						<AudioEffectParameterDesc _name="dry" _value="0" />
+					</_listParameter>
+				</AudioEffectDesc>
+			</_listEffect>
+		</AudioBusDesc>
 	</_listBus>
 </AudioMixerDesc>

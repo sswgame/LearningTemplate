@@ -39,8 +39,50 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 이펙트 파라미터 값 하나입니다(이름은 이펙트 종류가 서술한 이름). */
+    REFLECT()
+    struct SW_API AudioEffectParameterDesc
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Parameter name the effect type declares (frequencyHz, thresholdDb, roomSize ...)" )
+        hashed_string _name{};
+        PROPERTY( Tooltip = "Value; clamped to the parameter range" )
+        float32 _value{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
-     * @brief 버스(서브믹스) 하나입니다. 입력은 이 버스로 보낸 보이스 · 자식 버스 · 센드의 합이고, 출력은 부모로 갑니다.
+     * @brief 버스의 이펙트 하나입니다. 종류는 `AudioEffectRegistry` 의 이름이고, 적지 않은 파라미터는 종류의 기본값입니다.
+     * @code
+     *     <AudioEffectDesc _type="Compressor" _name="Glue">
+     *         <_listParameter><AudioEffectParameterDesc _name="thresholdDb" _value="-18" /></_listParameter>
+     *     </AudioEffectDesc>
+     * @endcode
+     */
+    REFLECT()
+    struct SW_API AudioEffectDesc
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Effect type: LowPass, HighPass, BandPass, Peaking, LowShelf, HighShelf, Compressor, Limiter, Reverb, Delay" )
+        hashed_string _type{};
+        PROPERTY( Tooltip = "Name snapshots use to reach this effect; empty means the type name" )
+        hashed_string _name{};
+        PROPERTY( Tooltip = "Parameter values" )
+        vector<AudioEffectParameterDesc> _listParameter{};
+
+        /** @brief 스냅샷이 찾는 이름입니다(비었으면 종류 이름). */
+        const hashed_string& getEffectName() const { return _name.empty() ? _type : _name; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 버스(서브믹스) 하나입니다. 입력은 이 버스로 보낸 보이스 · 자식 버스 · 센드의 합이고, 이펙트 체인을 지나 페이더 뒤 부모로 갑니다.
      * @code
      *     <AudioBusDesc _name="sfx" _parent="master" _volumeDb="0">
      *         <_listSend><AudioSendDesc _bus="reverb" _levelDb="-12" /></_listSend>
@@ -58,6 +100,8 @@ namespace sw
         hashed_string _parent{};
         PROPERTY( Tooltip = "Sends to other buses (effect returns)" )
         vector<AudioSendDesc> _listSend{};
+        PROPERTY( Tooltip = "Insert effects, in order, before the sends and the fader" )
+        vector<AudioEffectDesc> _listEffect{};
         PROPERTY( Tooltip = "Bus fader", Meta = "Units=dB" )
         float32 _volumeDb{ 0.0f };
         PROPERTY( Tooltip = "Starts muted" )

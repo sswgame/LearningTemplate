@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/Dsp/AudioEffect.h"
 
 namespace sw
 {
@@ -69,6 +70,9 @@ namespace sw
         /** @brief 센드 레벨(dB)입니다. 그 센드가 없으면 데이터 바닥 값입니다. */
         float32 getSendLevelDb( uint32 busIndex, uint32 targetBusIndex ) const;
 
+        /** @brief 버스의 이펙트를 이름(`AudioEffectDesc::getEffectName`)으로 찾습니다. 없으면 nullptr 입니다. */
+        IAudioEffect* findEffect( uint32 busIndex, const hashed_string& effectName ) const;
+
         /** @brief 이 블록에서 정한 버스 페이더 게인(선형)입니다 — 데이터 × 사용자 × 스냅샷 × 음소거/솔로. */
         float32 computeBusGain( uint32 busIndex ) const;
         /** @brief 마지막 블록의 버스 출력 피크(절댓값 최대)입니다. */
@@ -91,20 +95,22 @@ namespace sw
         /** @brief 버스 하나의 실행 상태입니다. */
         struct Bus
         {
-            vector<float32>        _listInput{};
-            vector<Send>           _listSend{};
-            hashed_string          _name{};
-            int32                  _parentIndex{ -1 };
-            float32                _volumeDb{ 0.0f };
-            float32                _volumeOffsetDb{ 0.0f };
-            float32                _userVolume{ 1.0f };
-            float32                _gain{ 0.0f }; ///< 지난 블록 끝의 페이더 게인(램프 시작점)
-            float32                _peak{ 0.0f };
-            uint8                  _bMuted      : 1;
-            uint8                  _bSolo       : 1;
-            uint8                  _bAudible    : 1; ///< 솔로 규칙으로 소리를 내도 되는지
-            uint8                  _bFirstBlock : 1; ///< 처음 처리 — 게인을 램프하지 않고 바로 건다
-            [[maybe_unused]] uint8 _reservedBus : 4;
+            vector<float32>                  _listInput{};
+            vector<Send>                     _listSend{};
+            vector<unique_ptr<IAudioEffect>> _listEffect{};
+            vector<hashed_string>            _listEffectName{};
+            hashed_string                    _name{};
+            int32                            _parentIndex{ -1 };
+            float32                          _volumeDb{ 0.0f };
+            float32                          _volumeOffsetDb{ 0.0f };
+            float32                          _userVolume{ 1.0f };
+            float32                          _gain{ 0.0f }; ///< 지난 블록 끝의 페이더 게인(램프 시작점)
+            float32                          _peak{ 0.0f };
+            uint8                            _bMuted      : 1;
+            uint8                            _bSolo       : 1;
+            uint8                            _bAudible    : 1; ///< 솔로 규칙으로 소리를 내도 되는지
+            uint8                            _bFirstBlock : 1; ///< 처음 처리 — 게인을 램프하지 않고 바로 건다
+            [[maybe_unused]] uint8           _reservedBus : 4;
 
             Bus()
                 : _bMuted{ SW_FALSE }

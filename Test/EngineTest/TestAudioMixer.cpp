@@ -206,6 +206,8 @@ SW_TEST_CASE( AudioMixerTest, UserSettingsBusVolumeReachesTheMixer )
     SW_EXPECT_FALSE( system.isOutputOpen() );
     sw::AudioEngine& engine = system.getEngine();
     engine.getClipStore().addClip( sw::hashed_string( "test/dc_half" ), test::AudioTestUtil::makeConstantClip( 0.5f, 48000 ) );
+    // 기본 그래프의 리버브 리턴은 이 측정에서 끈다(직류의 리버브 꼬리가 평균에 섞인다).
+    engine.setBusMuted( sw::hashed_string( "reverb" ), true );
 
     system.setBusVolume( sw::hashed_string( "ambient" ), 0.25f );
     SW_EXPECT_NEAR_EQUAL( 0.25f, system.getBusVolume( sw::hashed_string( "ambient" ) ), 1e-6f );
