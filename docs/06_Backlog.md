@@ -166,6 +166,12 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
+- **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`. (1) 메뉴 UI(런타임 UI 프레임워크 뒤) ·
+  `UserSettingsPanel` 대신 키를 눌러 받는 리바인딩 창. (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 그림자 · 시야 거리 · 후처리 ·
+  텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode`(톤맵 패스에 색각 행렬 — 지금 톤맵에 상수 버퍼가 없어 미뤘다) · UI 배율 · 글자 크기 · 자막,
+  카메라 `gv_cameraFieldOfView` · `gv_cameraShakeScale` · `gv_cameraHeadBob`(cam-views 가 읽을 자리). (3) 오디오 버스 `voice` · `ambient` · `ui` 재생 라우팅
+  (`play` 가 버스를 받아야 한다). (4) 해상도 선택지를 모니터 모드에서(선택지 공급자) · GPU 사양 조회(RHI 어댑터 · 전용 메모리)로 품질 자동 선택.
+  (5) 게임 입력이 InputMap 데이터가 되면 게임 스키마에 키 바인딩 설정(Shooter3D 는 지금 키를 직접 묻는다). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 - **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 작은 것: 카탈로그 로더 `GameDataXml::loadFile/loadText` 템플릿(약 50 쌍의 `loadFromResource` · `loadFromXmlText` 래퍼, 우회하던 넷 —
     MonsterCatalog 의 `loadPath` · SpeciesData 의 ERROR · AbilityCatalog · GameSettings). 시험 게임 전환이 같은 카탈로그를 쓰므로 그 병합 뒤에 한다.
@@ -1227,6 +1233,8 @@ cd build/Ninja-Debug/Bin
 - **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. 월드 UI(HP 바 ·
   데미지 숫자)는 저장되지 않는 `SpriteInstanceBatch` 로 그린다 — 자식 컴포넌트로 만들면 씬 · 프리팹 · 스냅샷에 저장돼 다음 시작에 겹친다. 스프라이트 UV · 색은 인스턴스에 싣는다(같은 텍스처는
   한 배치). 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`, 글리프 · 클립은 `Scripts/generate/GenerateSpriteTextures.py`.
+- **사용자 설정 파일(`usersettings.json`)은 배포된 플레이어 데이터다** — 설정 id · 선택지 이름을 바꾸면 스키마 `version` 을 올리고 `<Upgrade>` 를 더한다(별칭 금지
+  규칙의 예외). 화면 변경은 적용기가 요청만 쌓고 App 이 프레임 맨 앞에서 렌더 스레드를 기다린 뒤 한다 — 창 크기는 `App::onResize` 한 길로 스왑체인에 닿는다.
 - **GameSettings** 는 `GameInstanceBase::initialize` 가 서비스로 묶는다. 언어 코드는 `LocalizationManager::normalizeLanguageCode` 의 철자 하나. 로컬라이제이션 조회의 `const utf8*` 는 추가 전용
   `LocalizedTextArena` 에 있어 영구 유효하다. 대화 핀 번호(`nodeId * 100 + offset`)는 디스크 포맷이고 주인은 `DialogueGraphAsset` 하나다.
 - **어빌리티 시스템** — 다른 오브젝트로 가는 적용 · 이벤트는 `applyGameplayEffectSpecToTarget` · `sendGameplayEventToTarget` 로만(틱 중이면 틱 직후로 미룬다 —

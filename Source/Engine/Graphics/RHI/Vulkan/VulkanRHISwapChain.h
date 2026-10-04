@@ -65,6 +65,8 @@ namespace sw
          *          요청을 다시 써야 합니다. 백버퍼 포맷 · 개수를 여기 두는 것과 같은 이유입니다.
          */
         void setRequested( RHIFormat format, uint32 bufferCount, bool bVSync );
+        /** @brief VSync 요청값만 바꿉니다. 다음 `create` 가 present 모드를 다시 고릅니다. */
+        void setRequestedVSync( bool bVSync ) { _bRequestedVSync = bVSync; }
 
         /**
          * @brief 스왑체인과 이미지 뷰를 만듭니다.

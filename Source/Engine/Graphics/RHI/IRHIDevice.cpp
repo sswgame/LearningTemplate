@@ -158,6 +158,14 @@ namespace sw
         return true;
     }
 
+    void IRHIDevice::setVSync( bool bVSync )
+    {
+        if ( _bPreferredVSync == bVSync )
+            return;
+        _bPreferredVSync = bVSync;
+        applyVSyncInternal();
+    }
+
     void IRHIDevice::resize( uint32 width, uint32 height )
     {
         _backBufferWidth  = width;

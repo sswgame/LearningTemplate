@@ -390,8 +390,10 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 ## 성능을 잴 때 — 먼저 VSync 를 확인한다
 
-**프레임 시간이 주사율에 붙어 있으면 CPU 측정은 전부 무의미하다.** VSync 는 설정(`EngineConfig._window._bVSync`) → CLI 순으로
-정해지고, 프레젠트 경로는 `IRHIDevice::isVSyncEnabled()` 를 읽는다.
+**프레임 시간이 주사율에 붙어 있으면 CPU 측정은 전부 무의미하다.** VSync 는 설정(`EngineConfig._window._bVSync`) → 플레이어 사용자 설정
+(`display.vsync` 를 기본값과 다르게 저장했을 때, 사용자 폴더의 `usersettings.json`) → CLI 순으로 정해지고, 프레젠트 경로는 `IRHIDevice::isVSyncEnabled()`
+를 읽는다. 실행 중 변경은 `IRHIDevice::setVSync`(렌더 스레드를 멈춘 뒤 — `UserSettingsHost`)이고, DXGI 스왑체인은 그래서 티어링을 지원하면 늘
+`ALLOW_TEARING` 으로 만든다. 잴 때는 `-vsync=0` 이나 `-gv_userSettingsFile=<빈 시험용 경로>` 로 사용자 파일의 영향을 뺀다.
 
 - 기본은 **꺼짐**(`Config/Engine/EngineConfig.json` 의 `"_bVSync": false`). 켜서 재려면 `-vsync`.
 - DX11·DX12 는 `Present( 0, 0 )` 만으로는 안 꺼진다 — 스왑체인 `ALLOW_TEARING` 플래그와 Present 플래그가

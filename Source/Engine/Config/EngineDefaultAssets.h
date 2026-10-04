@@ -28,6 +28,8 @@ namespace sw
         string _defaultMaterial{ "engine/materials/defaultmaterial.material" }; ///< 씬 폴백 머티리얼
         PROPERTY()
         string _shellInputMap{ "engine/input/default.input.xml" }; ///< App 셸 InputMap
+        PROPERTY()
+        string _userSettingsSchema{ "engine/settings/engine.settings.xml" }; ///< 플레이어 옵션 메뉴의 엔진 설정 스키마(`UserSettingsManager`)
 
         PROPERTY()
         string _defaultForwardPipeline{ "engine/pipeline/forwardpipeline.xml" };

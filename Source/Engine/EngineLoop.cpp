@@ -57,6 +57,9 @@
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneCooker.h"
+#include "Engine/UserSettings/HardwareProbe.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
+#include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
@@ -352,6 +355,42 @@ namespace sw
         }
     };
 
+    struct EngineLoop::UserSettingsStartupStep : EngineInitStepDefaults<EngineLoop>
+    {
+        static EngineInitResult initialize( EngineLoop& loop )
+        {
+            UserSettingsManager& settings = *loop._owned._pUserSettingsManager;
+            UserSettingsTargets  targets;
+            targets._pGlobalVariableManager = loop._owned._pGlobalVariableManager.get();
+            targets._pInputMap              = &loop._owned._pInputManager->getInputMap();
+            targets._pAudioSystem           = loop._audioSystem.get();
+            targets._pLocalizationManager   = loop._owned._pLocalizationManager.get();
+            settings.initialize( targets );
+
+            // 스키마 · 사용자 파일이 틀려도 기동은 멈추지 않는다(오류로 알리고 옵션 메뉴가 비거나 기본값이다). 화면을 못 띄우는 설정 파일 하나로
+            // 게임이 안 뜨면 플레이어가 고칠 길이 없다.
+            const GameConfig& gameConfig = GameConfig::getActive();
+            if ( settings.loadSchema( engine::getEngineDefaultAssets()._userSettingsSchema ) && gameConfig._userSettingsSchema.empty() == false )
+            {
+                const string gameSchema = FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._userSettingsSchema );
+                if ( settings.loadSchema( gameSchema ) == false )
+                    SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", gameSchema.c_str() );
+            }
+            for ( const auto& [settingId, value] : gameConfig._mapUserSettingDefault )
+                (void)settings.setGameDefault( hashed_string( settingId ), value );
+
+            // 사용자 폴더의 파일이다(세이브 게임과 별개). 자동화는 `-gv_userSettingsFile` 로 사용자 폴더를 건드리지 않는다.
+            const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
+            settings.setUserFilePath( gv_userSettingsFile.empty() ? UserSettingsManager::makeDefaultUserFilePath( gameName ) : gv_userSettingsFile );
+            if ( settings.loadUserFile( settings.getUserFilePath() ) == false )
+                (void)settings.applyAutoDetectedPreset( HardwareProbe::probe() );
+            settings.reapplyAll();
+            return EngineInitResult::Succeeded;
+        }
+        static void shutdown( EngineLoop& loop ) { loop._owned._pUserSettingsManager->shutdown(); }
+        static void destroy( EngineLoop& loop ) { loop._owned._pUserSettingsManager.reset(); }
+    };
+
     struct EngineLoop::RHIStartupStep : EngineInitStepDefaults<EngineLoop>
     {
         static EngineInitResult initialize( EngineLoop& loop )
@@ -361,10 +400,12 @@ namespace sw
             if ( RHIBackendUtil::findCommandLineBackend( *loop._owned._pCommandLineManager, commandLineBackend ) == false )
                 gv_rhiBackend = loop._pEngineConfig->_window._defaultRHI;
 
+            // 화면 값의 순서: 엔진 설정(EngineConfig) → 플레이어가 고른 사용자 설정(기본값이 아닌 것) → 명령줄.
+            const DisplaySettingsRequest& display = loop._owned._pUserSettingsManager->getDisplayRequest();
             if ( IWindow::getActiveWindow() == nullptr )
             {
-                uint32 windowWidth  = loop._pEngineConfig->_window._width;
-                uint32 windowHeight = loop._pEngineConfig->_window._height;
+                uint32 windowWidth  = display._bHasResolution ? display._width : loop._pEngineConfig->_window._width;
+                uint32 windowHeight = display._bHasResolution ? display._height : loop._pEngineConfig->_window._height;
                 // 인자를 주지 않으면 getArgument 가 false 를 돌려주므로 설정값이 그대로 남는다.
                 loop._owned._pCommandLineManager->getArgument( CommandLineArgument::WIDTH, windowWidth );
                 loop._owned._pCommandLineManager->getArgument( CommandLineArgument::HEIGHT, windowHeight );
@@ -372,6 +413,9 @@ namespace sw
                 unique_ptr<IWindow> defaultWindow = IWindow::createPlatformWindow();
                 if ( defaultWindow != nullptr && defaultWindow->initializeWindow( loop._pEngineConfig->_window._title.c_str(), windowWidth, windowHeight ) )
                 {
+                    // 전체 화면은 스왑체인을 만들기 전에 고른다 — 스왑체인이 처음부터 모니터 크기다.
+                    if ( display._bHasMode && display._mode != WindowDisplayMode::Windowed )
+                        (void)defaultWindow->setDisplayMode( display._mode, windowWidth, windowHeight );
                     // 소유권은 App::initialize 가 IWindow::getActiveWindow() 로 넘겨받는다.
                     // (App 이 없는 임베드 시나리오라면 부르는 쪽이 getActiveWindow() 를 직접 소유해야 한다.)
                     IWindow::setActiveWindow( defaultWindow.release() );
@@ -379,7 +423,7 @@ namespace sw
             }
 
             loop._rhi = make_unique<RHI>();
-            loop._rhi->setPreferredVSync( loop._pEngineConfig->_window._bVSync );
+            loop._rhi->setPreferredVSync( display._bHasVSync ? display._bVSync : loop._pEngineConfig->_window._bVSync );
             // RHI 는 창 시스템을 모른다. 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 들고 있다.
             if ( loop._rhi->initialize( IWindow::getActiveWindow() ) == false )
                 return EngineInitResult::Failed;

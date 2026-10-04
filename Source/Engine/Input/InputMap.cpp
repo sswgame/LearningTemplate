@@ -147,6 +147,7 @@ namespace sw
         , _navRepeatDelay{ 0.4f }
         , _navRepeatRate{ 0.08f }
         , _totalElapsedTime{ 0.0f }
+        , _stickDeadzoneOverride{ -1.0f }
         , _deadzoneShape{ DeadzoneShape::Radial }
         , _digitalNormalization{ DigitalNormalization::Circular }
         , _bInvertX{ SW_FALSE }
@@ -624,6 +625,40 @@ namespace sw
 
         pEntry->_listBinding[bindIndex]._arrSlot[targetSlot] = newSlot;
         return true;
+    }
+
+    bool InputMap::findRebindSlot( const hashed_string& action, uint32 bindIndex, InputSlot& outSlot ) const
+    {
+        const ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+            return false;
+        const ActionBinding& binding   = pEntry->_listBinding[bindIndex];
+        const uint32         slotIndex = BindingKinds::getRebindSlotIndex( binding._kind );
+        if ( slotIndex == BindingKinds::kNoRebindSlot )
+            return false;
+        outSlot = binding._arrSlot[slotIndex];
+        return true;
+    }
+
+    bool InputMap::findDefaultRebindSlot( const hashed_string& action, uint32 bindIndex, InputSlot& outSlot ) const
+    {
+        const ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr || bindIndex >= pEntry->_listDefaultBinding.size() )
+            return false;
+        const ActionBinding& binding   = pEntry->_listDefaultBinding[bindIndex];
+        const uint32         slotIndex = BindingKinds::getRebindSlotIndex( binding._kind );
+        if ( slotIndex == BindingKinds::kNoRebindSlot )
+            return false;
+        outSlot = binding._arrSlot[slotIndex];
+        return true;
+    }
+
+    hashed_string InputMap::findBindingLayer( const hashed_string& action, uint32 bindIndex ) const
+    {
+        const ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+            return {};
+        return pEntry->_listBinding[bindIndex]._layer;
     }
 
     bool InputMap::hasBindingConflict( const InputSlot& slot, const hashed_string& layer, string& outConflictingAction ) const

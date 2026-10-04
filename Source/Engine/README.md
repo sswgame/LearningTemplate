@@ -19,7 +19,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 | 4 | `Resource` | 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. |
 | 5 | `Graphics`(Renderer 제외) · `Window` | RHI · 셰이더 · 머티리얼 · 메시 · 텍스처 — **디바이스와 GPU 에셋**. 창은 표면(`Common/IRenderSurface`)으로만 RHI 에 보인다. |
 | 6 | `Input` · `Object` | 컴포넌트 모델. 컴포넌트가 머티리얼·메시(5)를 든다 — 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 드는 것과 같은 자리. |
-| 7 | `Scene` · `Sequencer` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈. **월드는 액터를 알고 액터는 월드를 모른다.** |
+| 7 | `Scene` · `Sequencer` · `UserSettings` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈. **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. |
 | 8 | `Graphics/Renderer` · `Module` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Cook)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. |
 | 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
 
@@ -63,6 +63,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Reflection/**: 매크로 · TypeRegistry · Builtins. [Reflection/README.md](Reflection/README.md) · 생성기 [ReflectionParser](../../Tools/ReflectionParser/README.md)
 - **Graphics/**: RHI · Material · Shader · FrameRenderer. [Graphics/README.md](Graphics/README.md)
 - **Input/**: InputManager · InputMap · 장치(Keyboard/Mouse/Gamepad) 추상화. [Input/README.md](Input/README.md)
+- **UserSettings/**: 플레이어 옵션 메뉴의 백엔드 — 데이터 스키마 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기/확인 카운트다운 · 메뉴 바인딩 API. [UserSettings/README.md](UserSettings/README.md)
 - **Resource/**: AssetDatabase · AssetManager · ResourceUtil · ResourcePackManager (VFS .pack) · AssetStreamingQueue
   - **에셋 종류를 늘리는 자리는 `IAssetCache` 다.** 경로를 키로 무언가를 들고 있는 캐시는 그 인터페이스를
     구현하고 `AssetManager::registerAssetCache` 로 올린다. 그러면 종료·비우기·진단이 **등록부를 훑어**

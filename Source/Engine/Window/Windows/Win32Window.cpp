@@ -105,6 +105,44 @@ namespace sw
         return ( _hWnd != nullptr ) ? ( IsWindowVisible( _hWnd ) != FALSE ) : false;
     }
 
+    bool Win32Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
+    {
+        if ( _hWnd == nullptr )
+            return false;
+
+        MONITORINFO monitorInfo{};
+        monitorInfo.cbSize = sizeof( MONITORINFO );
+        if ( GetMonitorInfoW( MonitorFromWindow( _hWnd, MONITOR_DEFAULTTONEAREST ), &monitorInfo ) == FALSE )
+            return false;
+
+        // 스타일을 바꿔도 보이던 창은 보이게, 숨은 창은 숨은 채로 둔다(기동 중에는 아직 숨어 있다).
+        const LONG_PTR visibleStyle = ( IsWindowVisible( _hWnd ) != FALSE ) ? WS_VISIBLE : 0;
+        _displayMode                = mode;
+        if ( mode == WindowDisplayMode::BorderlessFullscreen )
+        {
+            const RECT& monitorRect = monitorInfo.rcMonitor;
+            SetWindowLongPtrW( _hWnd, GWL_STYLE, WS_POPUP | visibleStyle );
+            SetWindowPos( _hWnd, HWND_TOP, monitorRect.left, monitorRect.top, monitorRect.right - monitorRect.left, monitorRect.bottom - monitorRect.top,
+                          SWP_FRAMECHANGED | SWP_NOOWNERZORDER | SWP_NOACTIVATE );
+            SW_LOG_INFO( "Display mode: borderless fullscreen (%#x%#)", monitorRect.right - monitorRect.left, monitorRect.bottom - monitorRect.top );
+            return true;
+        }
+
+        // 창 모드는 요청한 클라이언트 크기로, 그 모니터의 작업 영역 가운데에 놓는다.
+        RECT frameRect = { 0, 0, static_cast<LONG>( width ), static_cast<LONG>( height ) };
+        AdjustWindowRect( &frameRect, WS_OVERLAPPEDWINDOW, FALSE );
+        const LONG  frameWidth  = frameRect.right - frameRect.left;
+        const LONG  frameHeight = frameRect.bottom - frameRect.top;
+        const RECT& workRect    = monitorInfo.rcWork;
+        const LONG  frameX      = workRect.left + ( ( workRect.right - workRect.left ) - frameWidth ) / 2;
+        const LONG  frameY      = workRect.top + ( ( workRect.bottom - workRect.top ) - frameHeight ) / 2;
+        SetWindowLongPtrW( _hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | visibleStyle );
+        SetWindowPos( _hWnd, nullptr, frameX < workRect.left ? workRect.left : frameX, frameY < workRect.top ? workRect.top : frameY, frameWidth, frameHeight,
+                      SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE );
+        SW_LOG_INFO( "Display mode: windowed (%#x%#)", width, height );
+        return true;
+    }
+
     /**
      * @brief 다시 만들기 직전의 창 위치를 `GetWindowRect` 로 `_restoreX` · `_restoreY` 에 담습니다.
      */

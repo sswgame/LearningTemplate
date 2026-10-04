@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Container/map.h"
 #include "Core/Container/string.h"
 
 #include "Engine/Config/IConfig.h"
@@ -30,6 +31,17 @@ namespace sw
          */
         PROPERTY()
         string _startupScene{};
+
+        /** @brief 엔진 스키마에 덧붙이는 게임의 사용자 설정 스키마(팩 상대 경로, 예: `data/usersettings.settings.xml`)입니다. 비면 없습니다. */
+        PROPERTY()
+        string _userSettingsSchema{};
+
+        /**
+         * @brief 게임마다 다른 사용자 설정 기본값입니다(설정 id → 값). 엔진 스키마의 기본값을 덮어씁니다.
+         * @details 플레이어가 바꾸지 않은 값만 따라갑니다. 모르는 id · 받을 수 없는 값은 기동 오류로 알립니다(`UserSettingsManager::setGameDefault`).
+         */
+        PROPERTY()
+        map<string, string> _mapUserSettingDefault{};
 
         /** @brief App/EngineLoop 가 읽은 활성 값을 GameInstance 부트스트랩에 전달합니다. */
         static void              setActive( const GameConfig& config );

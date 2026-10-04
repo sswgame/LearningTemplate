@@ -483,6 +483,13 @@ namespace sw
             _bSwapChainDirty = 1;
     }
 
+    void VulkanRHIDevice::applyVSyncInternal()
+    {
+        _swapChain.setRequestedVSync( isVSyncEnabled() );
+        if ( _width != 0 && _height != 0 )
+            _bSwapChainDirty = 1;
+    }
+
     bool VulkanRHIDevice::recreateSwapChain()
     {
         if ( _device == nullptr || _width == 0 || _height == 0 )

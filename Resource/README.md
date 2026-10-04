@@ -17,6 +17,7 @@
 - 전역 ID: `engine/pipeline/forwardpipeline.xml`, `common/shaders/samplecompute.hlsl`, `game/<pack>/maps/editortest.scene.xml`, `editor/textures/splash.dds`
 - 팩 상대 키: `pipeline/forwardpipeline.xml` → `game/<pack>/` → `common/` → `engine/` → `editor/` 순으로 검색
 - 셸 InputMap: `engine/input/default.input.xml` (폴백). 게임플레이: `game/<pack>/input/default.input.xml`
+- 사용자 설정(옵션 메뉴) 스키마: `engine/settings/engine.settings.xml` + 게임 덧붙이기 `game/<pack>/data/*.settings.xml`(게임 프리셋의 `_userSettingsSchema`) — `Source/Engine/UserSettings/README.md`
 - 데이터는 **지금 형식으로만** 읽습니다 — 옛 판을 짐작해 읽지 않고, 이름을 바꿀 때 별칭(`Alias` · `ValueAlias`)도 두지 않습니다. 이름이나 형식을 바꾸면 이 폴더의 데이터를
   새 모양으로 다시 씁니다. `ResourceDataSchemaTest` 가 이 폴더 데이터 전부가 모르는 이름 없이 읽히는지 단언합니다.
 

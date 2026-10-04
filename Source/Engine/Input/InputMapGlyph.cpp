@@ -197,6 +197,11 @@ namespace sw
         return getGlyphForActionInternal( action, previewDevice );
     }
 
+    string InputMap::getGlyphForSlot( const InputSlot& slot, InputGlyphStyle device )
+    {
+        return string( "[ " ) + InputMapGlyphInternal::slotToGlyph( slot, device ) + " ]";
+    }
+
     string InputMap::getGlyphForActionInternal( const hashed_string& action, InputGlyphStyle device ) const
     {
         const ActionEntry* pEntry = findAction( action );

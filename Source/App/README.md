@@ -34,6 +34,8 @@ ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F
 - **App.cpp / App.h**: 앱 생명주기. App 이 직접 아는 것은 **모듈 로더 배선·창 소유·프레임 순서·콜백 배선** 네 가지뿐입니다(엔진 기동 · 종료 순서는 `EngineLoop` 의 기동 표).
   같은 파일에 `RHIBackendSwitcher` — `gv_rhiBackend` 변경을 받아 프레임 경계에서 백엔드를 교체합니다(App 만 쓴다).
 - **AppConfig.h**: 부팅 때 읽는 설정(올릴 게임플레이 키트). 리플렉션 대상이라 따로 둡니다.
+- **UserSettingsHost.cpp / .h**: 사용자 설정(옵션 메뉴)의 호스트 쪽 — 확인 카운트다운 진행, 화면 요청(창 방식 · 해상도 · VSync)을 렌더 스레드를 기다린 뒤 적용,
+  `-gv_userSettingsApply="id=value;…"`(`-gv_userSettingsApplyFrame` 째 프레임, 메뉴와 같은 보류 → 적용 길, `-gv_userSettingsAutoConfirm=0` 이면 카운트다운이 되돌린다).
 - **FixedTimestep.cpp / .h**: 실시간 경과를 가변 델타와 고정 스텝 수로 나눕니다. AppTest 가 이 파일만 따로 컴파일합니다.
 - **Module/**: 모듈의 수명과 빌드.
   - `ModuleHost` — 모듈 이미지 로드(`loadModuleImages`), 에디터 · 게임 인스턴스의 만들기 · 내리기 · API 표 받기(두 모듈이 같은 템플릿 한 벌),
@@ -51,6 +53,7 @@ ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F
 | 단계 | 왜 그 자리인가 |
 |---|---|
 | `FixedTimestep::advance` | 가변 델타를 잘라내고 이번 프레임의 고정 스텝 수를 확정한다. |
+| `UserSettingsHost::tick` | 사용자 설정의 화면 변경은 OS 리사이즈(`processMessages`)와 같은 자리 — 프레임을 시작하기 전 — 에서 한다. 창 크기 통보는 `App::onResize` 로 간다. |
 | `EngineLoop::beginFrame` → `ModuleHost::beginFrame` | 에디터 Play 상태를 한 번 래치한다. 고정 스텝이 6번 돌아도 DLL 경계를 다시 넘지 않는다. |
 | `pollReloadHotkeys` | (Dev) 셸 액션을 갱신하고 리로드 단축키를 받는다. |
 | `fixedUpdateGame` × N → `updateGame` | 래치된 상태를 읽으므로 모든 스텝이 같은 답을 본다. |

@@ -335,14 +335,20 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 5) 감도 · 축 반전 · 데드존 모드 · 접근성 설정
         // ------------------------------------------------------------------------------
-        void                 setInvertX( bool invert ) { _bInvertX = invert ? SW_TRUE : SW_FALSE; }
-        void                 setInvertY( bool invert ) { _bInvertY = invert ? SW_TRUE : SW_FALSE; }
-        bool                 isInvertX() const { return _bInvertX == SW_TRUE; }
-        bool                 isInvertY() const { return _bInvertY == SW_TRUE; }
-        void                 setMouseSensitivity( float2 sensitivity ) { _mouseSensitivity = sensitivity; }
-        float2               getMouseSensitivity() const { return _mouseSensitivity; }
-        void                 setGamepadSensitivity( float2 sensitivity ) { _gamepadSensitivity = sensitivity; }
-        float2               getGamepadSensitivity() const { return _gamepadSensitivity; }
+        void   setInvertX( bool invert ) { _bInvertX = invert ? SW_TRUE : SW_FALSE; }
+        void   setInvertY( bool invert ) { _bInvertY = invert ? SW_TRUE : SW_FALSE; }
+        bool   isInvertX() const { return _bInvertX == SW_TRUE; }
+        bool   isInvertY() const { return _bInvertY == SW_TRUE; }
+        void   setMouseSensitivity( float2 sensitivity ) { _mouseSensitivity = sensitivity; }
+        float2 getMouseSensitivity() const { return _mouseSensitivity; }
+        void   setGamepadSensitivity( float2 sensitivity ) { _gamepadSensitivity = sensitivity; }
+        float2 getGamepadSensitivity() const { return _gamepadSensitivity; }
+        /**
+         * @brief 게임패드 스틱 바인딩의 안쪽 데드존을 이 값으로 덮어씁니다(사용자 설정). 0 미만이면 바인딩마다의 값(`ActionBinding::_deadzone`)을 씁니다.
+         * @details `clear` · 맵 다시 읽기를 넘어 남습니다 — 감도 · 축 반전과 같은 플레이어 설정입니다.
+         */
+        void                 setStickDeadzoneOverride( float32 deadzone ) { _stickDeadzoneOverride = deadzone; }
+        float32              getStickDeadzoneOverride() const { return _stickDeadzoneOverride; }
         void                 setDeadzoneShape( DeadzoneShape shape ) { _deadzoneShape = shape; }
         DeadzoneShape        getDeadzoneShape() const { return _deadzoneShape; }
         void                 setDigitalNormalization( DigitalNormalization mode ) { _digitalNormalization = mode; }
@@ -373,6 +379,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         string getGlyphForAction( const hashed_string& action ) const;
         string getGlyphForAction( const hashed_string& action, InputGlyphStyle previewDevice ) const;
+        /** @brief 슬롯 하나의 표기(`[ Space ]` · PlayStation 이면 `[ Circle ]`)입니다. 리바인딩 화면이 아직 적용하지 않은 키를 보일 때 씁니다. */
+        static string getGlyphForSlot( const InputSlot& slot, InputGlyphStyle device );
 
         /**
          * @brief 런타임에 액션의 키 바인딩을 바꿉니다. 바인딩 **종류는 그대로**입니다 — Chord 는 방아쇠만 바뀌고 수식 키는 남습니다.
@@ -382,6 +390,15 @@ namespace sw
         bool rebindKey( const hashed_string& action, Key newKey, uint32 bindIndex = 0 );
         bool rebindSlot( const hashed_string& action, InputSlot slot, uint32 bindIndex = 0 );
         bool rebindWithResolution( const hashed_string& action, InputSlot newSlot, ConflictResolution strategy = ConflictResolution::Swap, uint32 bindIndex = 0 );
+        /**
+         * @brief 바인딩 @p bindIndex 가 리바인딩으로 바꾸는 슬롯(`BindingKinds::getRebindSlotIndex`)의 지금 키입니다.
+         * @return 액션 · 바인딩이 없거나 키 하나로 바꿀 수 없는 종류면 false 입니다.
+         */
+        [[nodiscard]] bool findRebindSlot( const hashed_string& action, uint32 bindIndex, InputSlot& outSlot ) const;
+        /** @brief 위와 같되 처음 등록한 기본 바인딩(`resetActionToDefault` 가 되돌리는 것)의 키입니다. */
+        [[nodiscard]] bool findDefaultRebindSlot( const hashed_string& action, uint32 bindIndex, InputSlot& outSlot ) const;
+        /** @brief 바인딩 @p bindIndex 가 놓인 레이어입니다. 없으면 빈 이름입니다. */
+        hashed_string findBindingLayer( const hashed_string& action, uint32 bindIndex ) const;
         /** @brief 같은 레이어 안에서 다른 액션이 이미 그 슬롯을 점유하고 있는지 검사합니다. */
         bool hasBindingConflict( const InputSlot& slot, const hashed_string& layer, string& outConflictingAction ) const;
         /** @brief 지정 액션의 바인딩을 처음 등록한 기본 바인딩으로 되돌립니다. */
@@ -610,6 +627,7 @@ namespace sw
         float32                              _navRepeatDelay;
         float32                              _navRepeatRate;
         float32                              _totalElapsedTime;
+        float32                              _stickDeadzoneOverride;
         DeadzoneShape                        _deadzoneShape;
         DigitalNormalization                 _digitalNormalization;
         uint8                                _bInvertX                   : 1;

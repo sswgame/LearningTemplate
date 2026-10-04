@@ -15,6 +15,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Framework/GameEventUtil.h"
@@ -75,7 +76,14 @@ namespace sw
             SW_LOG_TRACE( "No custom bootstrap in pack '%#' — using defaults.", _bootstrap._packRoot );
         game::bindLocalService<GameSettings>( &_bootstrap._data );
         applyBootstrap();
-        return onInitialize();
+        const bool bInitialized = onInitialize();
+
+        // 플레이어 설정을 다시 넣는다 — 언어 팩 · 입력 맵(키 바인딩 · 누르기/토글)은 위에서 막 생겼다. 엔진 기동 때의 적용은 그 대상이 없을 때였다.
+        // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다.
+        UserSettingsManager* pUserSettings = game::getService<UserSettingsManager>();
+        if ( pUserSettings != nullptr )
+            pUserSettings->reapplyAll();
+        return bInitialized;
     }
 
     void GameInstanceBase::shutdown()

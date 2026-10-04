@@ -4,6 +4,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
@@ -16,6 +17,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Ability/AbilityCatalog.h"
@@ -58,6 +60,7 @@ namespace
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
         static bool isSchedules( sw::string_view resourceId ) { return endsWith( resourceId, ".schedules.xml" ); }
+        static bool isUserSettingsSchema( sw::string_view resourceId ) { return endsWith( resourceId, ".settings.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -107,6 +110,21 @@ namespace
         {
             const sw::shared_ptr<sw::Material> material = sw::Material::create();
             return material != nullptr && material->loadFromFile( resourceId );
+        }
+
+        /**
+         * @brief 사용자 설정 스키마 — 엔진 적용기 이름 · 전역 변수 대상까지 검사한다. 게임 스키마는 엔진 스키마 위에 덧붙인다(기동과 같은 순서).
+         */
+        static bool loadUserSettingsSchema( const sw::string& resourceId )
+        {
+            sw::UserSettingsManager settings;
+            sw::UserSettingsTargets targets;
+            targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
+            settings.initialize( targets );
+            const sw::string& engineSchema = sw::engine::getEngineDefaultAssets()._userSettingsSchema;
+            if ( resourceId != engineSchema && settings.loadSchema( engineSchema ) == false )
+                return false;
+            return settings.loadSchema( resourceId );
         }
 
         static bool loadSpriteClip( const sw::string& resourceId )
@@ -160,6 +178,7 @@ namespace
             {         "spriteclip",          &isSpriteClip,                        &loadSpriteClip},
             {      "camerapresets",       &isCameraPresets,  &loadCatalog<sw::CameraPresetCatalog>},
             {          "schedules",           &isSchedules,      &loadCatalog<sw::ScheduleCatalog>},
+            {       "usersettings",  &isUserSettingsSchema,                &loadUserSettingsSchema},
             {          "abilities",           &isAbilities,       &loadCatalog<sw::AbilityCatalog>},
             {              "crops",               &isCrops,          &loadCatalog<sw::CropCatalog>},
             {               "city",                &isCity,          &loadCatalog<sw::CityCatalog>},
