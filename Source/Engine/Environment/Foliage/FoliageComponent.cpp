@@ -5,6 +5,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
 #include "Engine/Environment/Foliage/WindComponent.h"
@@ -193,10 +194,11 @@ namespace sw
         releaseCells();
         if ( _pPrimitiveRegistry == nullptr )
             return;
-        const float3             origin   = getWorldPosition();
-        GameObject*              pOwner   = getOwner();
-        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        _bBuiltOnTerrain                  = ( pManager != nullptr && TerrainComponent::findTerrainAt( *pManager, origin._x, origin._z ) != nullptr ) ? SW_TRUE : SW_FALSE;
+        [[maybe_unused]] const Stopwatch stopwatch; // 아래 로그에만 쓴다 — Shipping 은 로그가 빠진다
+        const float3                     origin   = getWorldPosition();
+        GameObject*                      pOwner   = getOwner();
+        const GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        _bBuiltOnTerrain                          = ( pManager != nullptr && TerrainComponent::findTerrainAt( *pManager, origin._x, origin._z ) != nullptr ) ? SW_TRUE : SW_FALSE;
 
         // 레이어 머티리얼 — 레이어마다 자기 인스턴스(바람 반응 · 페이드가 레이어 값이다).
         _listLayerMaterial.clear();
@@ -276,6 +278,8 @@ namespace sw
                 _listCell.push_back( std::move( cell ) );
             }
         }
+        SW_LOG_INFO( "Foliage: %# instances in %# cell batches across %# layers (%# us, %#)", _instanceCount, static_cast<uint32>( _listCell.size() ),
+                     static_cast<uint32>( _listLayer.size() ), stopwatch.getElapsedMicroseconds(), _bBuiltOnTerrain == SW_TRUE ? "on terrain" : "flat" );
     }
 
     void FoliageComponent::updateView( const float3& viewPosition )

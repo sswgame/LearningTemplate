@@ -67,6 +67,14 @@ GameFramework `PropScatterComponent` 의 `Rules` 모드(게임플레이 오브�
 - **OpenGL 은 메시를 게임 스레드에서 인라인으로 만든다**(GpuUploadQueue) — 렌더 스레드가 셰이더를 실시간 컴파일하느라 오래 쥐고 있으면 컨텍스트 대기가 시간을 넘겨
   `[Error]` 를 남깁니다. LOD 교체가 런타임에 메시를 만드는 첫 사용자입니다. 쿠킹한 셰이더로는 나지 않습니다(백로그 1-3).
 
+## 쇼케이스
+
+`game/empty/maps/envshowcase.scene.xml` — 256 m 계곡(구릉 · 절벽 · 동굴 구멍) + 호수 + 호수로 흘러드는 강 + 풀 · 꽃 · 덤불 · 나무 · 쓰러진 나무(Kenney Nature Kit, CC0).
+`App.exe "-gv_firstScene=game/empty/maps/envshowcase.scene.xml"`. 원본 데이터는 `Scripts/dev/GenerateTerrainShowcase.py` 가 만듭니다.
+2026-10-04 Release(1280×720, 다른 빌드 열한 개가 같은 기계를 쓰는 중이라 꼬리가 길다): 식생 19,640 인스턴스 · 셀 배치 283 개를 로드 때 46 ms 에 계산,
+씬 instantiate 71–87 ms. DX12 프레임 p50 2.6 ms · p99 3.4–8.4 ms(GPU 가 묶는다 — 그림자 패스 p50 1.4 ms 가 가장 크다: 그림자를 끈 풀도 정점 셰이더는 돈다),
+Vulkan p50 3.7 ms.
+
 ## 물리(Jolt)에 이을 것
 
 - 지형 → Jolt `HeightFieldShape`: `TerrainHeightfield::getHeightSamples()`(N², 행 우선 z 바깥 · x 안쪽, 월드 높이) · `getResolution()` · `getCellSize()` ·
