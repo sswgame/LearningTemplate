@@ -16,6 +16,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
@@ -74,7 +75,9 @@ namespace sw
         static constexpr uint32 kPath     = 1u << 1; ///< 에이전트 경로(모퉁이)
         static constexpr uint32 kVelocity = 1u << 2; ///< 에이전트 실제 · 원한 속도
         static constexpr uint32 kObstacle = 1u << 3; ///< 장애물 발자국
-        static constexpr uint32 kAll      = kMesh | kPath | kVelocity | kObstacle;
+        /** @brief 걷는 면 · 에이전트 경로를 씬의 메시로(편집기 없는 게임 화면 · 스크린샷에도 보인다 — 디버그 선은 편집기 뷰포트만 그린다). */
+        static constexpr uint32 kSolidView = 1u << 4;
+        static constexpr uint32 kAll       = kMesh | kPath | kVelocity | kObstacle | kSolidView;
     };
 } // namespace sw
 
@@ -165,6 +168,11 @@ namespace sw
 
         /** @brief @p flags(`NavDebugDrawFlag`)의 것을 선으로 냅니다. */
         void drawDebug( IPhysicsDebugRenderer& renderer, uint32 flags ) const;
+        /**
+         * @brief `NavDebugDrawFlag::kSolidView` 가 켜졌으면 걷는 면(영역 색 · 폴리곤마다 명암)과 에이전트 경로 띠를 메시 하나로 지어 씬의 오브젝트
+         *        (`NavMeshDebugView` — 베이크에서 빠진다)에 걸고, 꺼졌으면 그 오브젝트를 지웁니다. 게임 스레드, 씬 틱 밖에서 부릅니다(`EngineLoop`).
+         */
+        void updateDebugView( uint32 flags );
 
         /**
          * @brief 씬의 베이크 기하를 모읍니다 — 표면의 규칙(파일 `NavMeshSurfaceComponent.h` 머리말). 표면이 없으면 기본 규칙(메시 + Static 강체)입니다.
@@ -206,6 +214,7 @@ namespace sw
         vector<AABB>                       _listDirtyArea;       ///< `_dirtyLock` 아래
         vector<hashed_string>              _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만
         GameObjectManager*                 _pManager;
+        GameObjectHandle                   _debugView; ///< `updateDebugView` 가 세운 오브젝트
         uint32                             _rebakedTileCount;
         mutable SpinLock                   _dirtyLock; ///< `invalidateArea` 가 아무 스레드에서 온다
         bool                               _bSettingsLoaded;

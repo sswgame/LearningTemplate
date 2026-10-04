@@ -142,7 +142,8 @@ Recast 순서(`RecastNavMesh::bakeTile`):
 ## 9. 디버그 그리기 — `gv_navDebugDraw`
 
 `-gv_navDebugDraw=<비트>`: 1 폴리곤 테두리(바깥 경계는 진하게, 안쪽 이음은 옅게) · 2 에이전트 경로(모퉁이) · 4 에이전트 실제 속도(초록) · 원한 속도(파랑) ·
-8 장애물 발자국. 15 면 모두. 활성 씬의 것을 `DebugDrawQueue` 로 냅니다(물리 디버그와 같은 어댑터 — `EngineLoop`).
+8 장애물 발자국 — 이 넷은 선이라 `DebugDrawQueue` 로 내고 편집기 뷰포트(게임 뷰 포함)가 그립니다(물리 디버그와 같은 어댑터 — `EngineLoop`). 16 은 걷는 면(영역 색 · 폴리곤마다 명암)과
+에이전트 경로 띠를 메시 하나로 지어 씬의 `NavMeshDebugView` 오브젝트에 겁니다 — 편집기 없는 게임 화면 · `-gv_screenshot` 에도 보입니다(베이크에서는 빠진다). 31 이면 모두.
 
 ## 10. 공통 이동 창구 — `INavMover`
 

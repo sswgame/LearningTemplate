@@ -117,7 +117,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
     /** @brief 활성 씬의 강체 물리(바디 셰이프 · 캐릭터 캡슐)를 디버그 선으로 그립니다(`ScenePhysics::drawDebug` → `DebugDrawQueue`). */
     SW_GLOBAL_VARIABLE( bool, gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
-    SW_GLOBAL_VARIABLE( int32, gv_navDebugDraw, 0, "내비메시를 디버그 선으로 그린다 — 비트 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물 (15 = 모두, 0 = 끔)" );
+    SW_GLOBAL_VARIABLE( int32, gv_navDebugDraw, 0, "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔)" );
     /** @brief `-gv_telemetryFolder=<경로>`: 텔레메트리 스풀 폴더입니다(자동화 — 사용자 폴더를 건드리지 않는다). 비면 사용자 설정 파일 옆의 `telemetry/`. */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_telemetryFolder, "", "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)" );
 
@@ -1053,14 +1053,19 @@ namespace sw
             }
         }
 
-        // 내비메시 · 에이전트 경로 · 속도 · 장애물 — 같은 선 출구(물리 디버그 어댑터)를 쓴다.
-        if ( gv_navDebugDraw != 0 && _owned._pSceneManager != nullptr )
+        // 내비메시 · 에이전트 경로 · 속도 · 장애물 — 선은 물리 디버그와 같은 출구로(편집기 뷰포트가 그린다), 비트 16 은 게임 화면에 보이는 메시로.
+        if ( _owned._pSceneManager != nullptr )
         {
-            const Scene* pDebugScene = _owned._pSceneManager->getActiveScene();
+            Scene* pDebugScene = _owned._pSceneManager->getActiveScene();
             if ( pDebugScene != nullptr && pDebugScene->getObjectManager() != nullptr )
             {
-                PhysicsDebugDrawAdapter adapter{ engine::getDebugDrawQueue() };
-                pDebugScene->getObjectManager()->getSceneNavigation().drawDebug( adapter, static_cast<uint32>( gv_navDebugDraw ) );
+                SceneNavigation& navigation = pDebugScene->getObjectManager()->getSceneNavigation();
+                navigation.updateDebugView( static_cast<uint32>( gv_navDebugDraw ) );
+                if ( gv_navDebugDraw != 0 )
+                {
+                    PhysicsDebugDrawAdapter adapter{ engine::getDebugDrawQueue() };
+                    navigation.drawDebug( adapter, static_cast<uint32>( gv_navDebugDraw ) );
+                }
             }
         }
 

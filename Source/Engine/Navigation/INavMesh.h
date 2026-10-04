@@ -161,6 +161,11 @@ namespace sw
         virtual unique_ptr<INavCrowd> createCrowd( uint32 maxAgentCount, float32 maxAgentRadius ) = 0;
         /** @brief 폴리곤 테두리를 선으로 냅니다. */
         virtual void drawDebug( IPhysicsDebugRenderer& renderer, const float4& color ) const = 0;
+        /**
+         * @brief 걷는 면을 삼각형으로 냅니다(높이 디테일까지 — 바닥에 붙는다). 삼각형마다 점 셋을 @p outListCorner 에, 그 폴리곤의 영역 번호를
+         *        @p outListArea 에 하나씩 더합니다. 그리는 쪽(디버그 메시)이 색을 고릅니다.
+         */
+        virtual void collectDebugTriangles( vector<float3>& outListCorner, vector<uint8>& outListArea ) const = 0;
     };
 } // namespace sw
 

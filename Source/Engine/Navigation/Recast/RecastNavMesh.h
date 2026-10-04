@@ -52,6 +52,7 @@ namespace sw
 
         unique_ptr<INavCrowd> createCrowd( uint32 maxAgentCount, float32 maxAgentRadius ) override;
         void                  drawDebug( IPhysicsDebugRenderer& renderer, const float4& color ) const override;
+        void                  collectDebugTriangles( vector<float3>& outListCorner, vector<uint8>& outListArea ) const override;
 
         /** @brief Detour 내비메시입니다(같은 백엔드의 군중만 씁니다). */
         dtNavMesh* getDetourNavMesh() const { return _pNavMesh; }

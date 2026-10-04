@@ -707,6 +707,46 @@ namespace sw
 
 namespace sw
 {
+    void RecastNavMesh::collectDebugTriangles( vector<float3>& outListCorner, vector<uint8>& outListArea ) const
+    {
+        outListCorner.clear();
+        outListArea.clear();
+        if ( _pNavMesh == nullptr )
+            return;
+        const dtNavMesh* const pConst = _pNavMesh;
+        for ( int32 tileIndex = 0; tileIndex < pConst->getMaxTiles(); ++tileIndex )
+        {
+            const dtMeshTile* pTile = pConst->getTile( tileIndex );
+            if ( pTile == nullptr || pTile->header == nullptr )
+                continue;
+            for ( int32 polyIndex = 0; polyIndex < pTile->header->polyCount; ++polyIndex )
+            {
+                const dtPoly& poly = pTile->polys[polyIndex];
+                if ( poly.getType() == DT_POLYTYPE_OFFMESH_CONNECTION || pTile->detailMeshes == nullptr )
+                    continue;
+                // 디테일 삼각형 — 꼭짓점 번호가 폴리곤 꼭짓점 수보다 작으면 폴리곤 꼭짓점, 아니면 디테일 꼭짓점이다.
+                const dtPolyDetail& detail = pTile->detailMeshes[polyIndex];
+                const uint8         area   = poly.getArea();
+                const uint8         engine = ( 1 <= area && area <= NavigationConstant::kMaxAreaCount ) ? static_cast<uint8>( area - 1 ) : 0;
+                for ( uint32 triangleIndex = 0; triangleIndex < detail.triCount; ++triangleIndex )
+                {
+                    const uint8* pTriangle = &pTile->detailTris[( detail.triBase + triangleIndex ) * 4];
+                    for ( uint32 corner = 0; corner < 3; ++corner )
+                    {
+                        const uint8    vertex = pTriangle[corner];
+                        const float32* pPoint = vertex < poly.vertCount ? &pTile->verts[poly.verts[vertex] * 3]
+                                                                        : &pTile->detailVerts[( detail.vertBase + vertex - poly.vertCount ) * 3];
+                        outListCorner.push_back( RecastNavMeshInternal::toFloat3( pPoint ) );
+                    }
+                    outListArea.push_back( engine );
+                }
+            }
+        }
+    }
+} // namespace sw
+
+namespace sw
+{
     const utf8* NavMeshBackend::getBackendName()
     {
         return "recast";
