@@ -1,0 +1,735 @@
+<Scene formatVersion="1" name="HarvestValley">
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="6,16,-10.08"
+					                 _localRotation="0.9272952,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerId="0"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="80"
+					                 _orthoHeight="15"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+					<OrthoCameraRigComponent _componentName="OrthoCameraRigComponent"
+					                         _bActive="true"
+					                         _focus="6,0,1.92"
+					                         _yaw="0"
+					                         _pitch="0.9272952"
+					                         _distance="20"
+					                         _orthoHeight="15"
+					                         _minOrthoHeight="15"
+					                         _maxOrthoHeight="15"
+					                         _zoomStep="0.85"
+					                         _panSpeed="40"
+					                         _panReferenceHeight="15"
+					                         _rotateStep="1.5707964"
+					                         _farPlaneScale="4"
+					                         _bInputEnabled="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.9,0.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerId="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.4"
+					                           _ambient="0.28"
+					                           _shadowExtent="20"
+					                           _shadowDistance="40"
+					                           _bCastShadow="true" />
+					<FarmSunComponent _componentName="FarmSunComponent"
+					                  _bActive="true"
+					                  _director="35"
+					                  _rainDimming="0.55"
+					                  _nightIntensity="0.2" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Meadow">
+			<GameObject _schemaVersion="0" _name="Meadow" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="6,-0.01,3"
+					               _localRotation="0,0,0"
+					               _localScale="34,1,26"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="Plane"
+					               _materialPath="game/harvestvalley/materials/meadow.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="FarmHouse">
+			<GameObject _schemaVersion="0" _name="FarmHouse" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="6,0,-3.5"
+					               _localRotation="0,0,0"
+					               _localScale="5.5,5.5,5.5"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/tent_small_closed.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="ShippingBin">
+			<GameObject _schemaVersion="0" _name="ShippingBin" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="13.4,0.4,1"
+					               _localRotation="0,0,0"
+					               _localScale="1.2,0.8,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="Cube"
+					               _materialPath="game/harvestvalley/materials/shippingbin.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="SeedShop">
+			<GameObject _schemaVersion="0" _name="SeedShop" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-1.6,0,5"
+					               _localRotation="0,1.5707964,0"
+					               _localScale="4,4,4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/tent_detailed_open.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Fence">
+			<GameObject _schemaVersion="0" _name="Fence" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-0.19999999,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,1.6,1.6"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/fence_simple.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Fence_2">
+			<GameObject _schemaVersion="0" _name="Fence_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="1.4000001,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,1.6,1.6"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/fence_simple.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Fence_3">
+			<GameObject _schemaVersion="0" _name="Fence_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="3,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,1.6,1.6"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/fence_simple.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="Fence_4">
+			<GameObject _schemaVersion="0" _name="Fence_4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="4.6,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,1.6,1.6"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/fence_simple.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="Fence_5">
+			<GameObject _schemaVersion="0" _name="Fence_5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="6.2000003,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,1.6,1.6"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/fence_simple.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Fence_6">
+			<GameObject _schemaVersion="0" _name="Fence_6" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="7.8,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,1.6,1.6"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/fence_simple.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="Fence_7">
+			<GameObject _schemaVersion="0" _name="Fence_7" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="9.400001,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,1.6,1.6"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/fence_simple.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="Fence_8">
+			<GameObject _schemaVersion="0" _name="Fence_8" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="11,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,1.6,1.6"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/fence_simple.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="Fence_9">
+			<GameObject _schemaVersion="0" _name="Fence_9" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="12.6,0,9.400001"
+					               _localRotation="0,0,0"
+					               _localScale="1.6,1.6,1.6"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/fence_simple.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="Tree">
+			<GameObject _schemaVersion="0" _name="Tree" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-6.5,0,-1"
+					               _localRotation="0,0,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/tree_default.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="Tree_2">
+			<GameObject _schemaVersion="0" _name="Tree_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-7.5,0,3.5"
+					               _localRotation="0,0.9,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/tree_default_fall.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="18" name="Tree_3">
+			<GameObject _schemaVersion="0" _name="Tree_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-6,0,8"
+					               _localRotation="0,1.8,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/tree_default.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="19" name="Tree_4">
+			<GameObject _schemaVersion="0" _name="Tree_4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-1.5,0,10.8"
+					               _localRotation="0,2.6999998,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/tree_default.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="20" name="Tree_5">
+			<GameObject _schemaVersion="0" _name="Tree_5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="14.5,0,10.5"
+					               _localRotation="0,3.6,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/tree_default_fall.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="21" name="Tree_6">
+			<GameObject _schemaVersion="0" _name="Tree_6" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="18,0,7"
+					               _localRotation="0,4.5,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/tree_default.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="22" name="Tree_7">
+			<GameObject _schemaVersion="0" _name="Tree_7" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="19,0,2"
+					               _localRotation="0,5.3999996,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/tree_default.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="23" name="Tree_8">
+			<GameObject _schemaVersion="0" _name="Tree_8" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="18,0,-3"
+					               _localRotation="0,6.2999997,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/tree_default_fall.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="24" name="Log">
+			<GameObject _schemaVersion="0" _name="Log" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="9.2,0,-3.1"
+					               _localRotation="0,0.3,0"
+					               _localScale="2.5,2.5,2.5"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/log.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="25" name="Stump">
+			<GameObject _schemaVersion="0" _name="Stump" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="9.6,0,-4.6"
+					               _localRotation="0,0,0"
+					               _localScale="2.5,2.5,2.5"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/stump_round.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="26" name="Plant">
+			<GameObject _schemaVersion="0" _name="Plant" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-4,0,-2"
+					               _localRotation="0,0,0"
+					               _localScale="3,3,3"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/plant_bush.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="27" name="Plant_2">
+			<GameObject _schemaVersion="0" _name="Plant_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3.2,0,-1.2"
+					               _localRotation="0,0,0"
+					               _localScale="3,3,3"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/flower_red_a.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="28" name="Plant_3">
+			<GameObject _schemaVersion="0" _name="Plant_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="2.5,0,-4.5"
+					               _localRotation="0,0,0"
+					               _localScale="3,3,3"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/flower_yellow_a.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="29" name="Plant_4">
+			<GameObject _schemaVersion="0" _name="Plant_4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="16,0,4"
+					               _localRotation="0,0,0"
+					               _localScale="3,3,3"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/plant_bush.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="30" name="Plant_5">
+			<GameObject _schemaVersion="0" _name="Plant_5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="15.5,0,6"
+					               _localRotation="0,0,0"
+					               _localScale="3,3,3"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/flower_red_a.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="31" name="Plant_6">
+			<GameObject _schemaVersion="0" _name="Plant_6" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="9.5,0,-4"
+					               _localRotation="0,0,0"
+					               _localScale="3,3,3"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/flower_yellow_a.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="32" name="Plant_7">
+			<GameObject _schemaVersion="0" _name="Plant_7" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3.5,0,9.5"
+					               _localRotation="0,0,0"
+					               _localScale="3,3,3"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/harvestvalley/models/plant_bush.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="33" name="Farmer">
+			<GameObject _schemaVersion="0" _name="Farmer" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="6,0.5,-1.2"
+					               _localRotation="0,0,0"
+					               _localScale="0.5,0.5,0.5"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="Capsule"
+					               _materialPath="game/harvestvalley/materials/farmer.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<FarmerComponent _componentName="FarmerComponent"
+					                 _bActive="true"
+					                 _director="35"
+					                 _heightOffset="0.5"
+					                 _kind="Farmer" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="34" name="FarmTarget">
+			<GameObject _schemaVersion="0" _name="FarmTarget" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.1,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,0.04,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="Cube"
+					               _materialPath="game/harvestvalley/materials/target.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<FarmerComponent _componentName="FarmerComponent"
+					                 _bActive="true"
+					                 _director="35"
+					                 _heightOffset="0.1"
+					                 _kind="Target" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="35" name="FarmDirector">
+			<GameObject _schemaVersion="0" _name="FarmDirector" _bActive="true">
+				<_listComponent>
+					<FarmDirectorComponent _componentName="FarmDirectorComponent"
+					                       _bActive="true"
+					                       _cropDataPath="game/harvestvalley/data/crops.xml"
+					                       _soilPrefab="game/harvestvalley/prefabs/farmsoil.prefab.xml"
+					                       _cropPrefab="game/harvestvalley/prefabs/farmcrop.prefab.xml"
+					                       _grassSoilColor="0.4,0.62,0.28,1"
+					                       _tilledSoilColor="0.58,0.4,0.24,1"
+					                       _wateredSoilColor="0.33,0.22,0.13,1"
+					                       _witheredCropColor="0.55,0.4,0.22,1"
+					                       _cameraRig="1"
+					                       _shippingBin="5"
+					                       _shop="6"
+					                       _playerStart="6,0,-1.2"
+					                       _bAutoPlay="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

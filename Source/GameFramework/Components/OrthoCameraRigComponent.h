@@ -1,6 +1,7 @@
 /**
  * @file OrthoCameraRigComponent.h
- * @brief 비스듬히 내려다보는 직교 카메라 리그 — 초점 둘레를 도는 시점, WASD · 방향키 이동, 휠 확대, Q/E 90° 회전, 외부 시점 덮어쓰기.
+ * @brief 비스듬히 내려다보는 직교 카메라 리그 — 초점 둘레를 도는 시점, WASD · 방향키 이동(범위 제한), 휠 확대, Q/E 90° 회전, 외부 시점 덮어쓰기,
+ *        화면 점 → 땅 점(마우스 고르기).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -10,6 +11,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/RayMath.h"
 
 namespace sw
 {
@@ -38,6 +40,14 @@ namespace sw
         static float3 computePanDirection( float32 yaw, float32 forwardInput, float32 rightInput );
         /** @brief 휠 한 칸만큼 화면 높이를 바꿉니다. 휠이 위(+)면 @p zoomStep 배로 줄이고(확대) 아래면 늘립니다. [min, max] 로 묶습니다. */
         static float32 computeZoomedHeight( float32 orthoHeight, float32 wheel, float32 zoomStep, float32 minHeight, float32 maxHeight );
+        /** @brief 초점의 X · Z 를 [@p focusMin, @p focusMax] 안에 묶습니다(Y 는 그대로). */
+        static float3 clampFocus( const float3& focus, const float3& focusMin, const float3& focusMax );
+        /**
+         * @brief 화면 점(@p mouseNormalized — 왼쪽 위 (0, 0) · 오른쪽 아래 (1, 1))을 지나는 직교 광선입니다. 방향은 카메라 앞 방향이고 시작은 카메라 평면 위입니다.
+         * @param aspect 화면 너비 ÷ 높이. 화면 높이는 @p orthoHeight, 너비는 높이 × @p aspect 입니다.
+         */
+        static GameRay computeScreenRay( const float3& focus, float32 yaw, float32 pitch, float32 distance, float32 orthoHeight, float32 aspect,
+                                         const float2& mouseNormalized );
     };
 } // namespace sw
 
@@ -72,6 +82,15 @@ namespace sw
         void          setFocus( const float3& focus ) { _focus = focus; }
         float32       getYaw() const { return _yaw; }
         float32       getOrthoHeight() const { return _orthoHeight; }
+        /** @brief 직교 화면 높이를 바꿉니다(확대 범위 안으로 묶는다 — 휠과 같은 규칙). */
+        void setOrthoHeight( float32 orthoHeight );
+        /** @brief WASD 로도 움직일지 정합니다(끄면 방향키만 — 게임이 WASD 를 단축키로 쓸 때). */
+        void setWasdPanEnabled( bool bEnabled ) { _bWasdPan = bEnabled; }
+        /**
+         * @brief 화면 점 아래의 땅(y = @p groundHeight) 점입니다. 지금 직교 시점(초점 · 요 · 피치 · 거리 · 화면 높이)으로 광선을 쏩니다. 안 만나면 false 입니다.
+         * @details 다른 오브젝트가 읽어도 됩니다 — 리그는 PostUpdate 에서 쓰므로 앞 그룹(PrePhysics)에서 부르면 지난 프레임의 시점입니다.
+         */
+        [[nodiscard]] bool findGroundPoint( const float2& mouseNormalized, float32 aspect, float32 groundHeight, float3& outPoint ) const;
         /** @brief 지금 값으로 같은 오브젝트의 카메라를 둡니다(틱 밖에서 부르면 바로 보인다). */
         void applyToCamera();
 
@@ -103,8 +122,16 @@ namespace sw
         float32 _rotateStep;
         PROPERTY( Category = "Rig", DisplayName = "Far Plane Scale", Tooltip = "Far plane as a multiple of the distance", Min = 1.0 )
         float32 _farPlaneScale;
+        PROPERTY( Category = "Rig", DisplayName = "Focus Min", Tooltip = "Lowest focus X and Z when Clamp Focus is on", Meta = "Units=m" )
+        float3 _focusMin;
+        PROPERTY( Category = "Rig", DisplayName = "Focus Max", Tooltip = "Highest focus X and Z when Clamp Focus is on", Meta = "Units=m" )
+        float3 _focusMax;
         PROPERTY( Category = "Rig", DisplayName = "Input Enabled", Tooltip = "Read WASD / arrows, wheel and Q/E" )
         bool _bInputEnabled;
+        PROPERTY( Category = "Rig", DisplayName = "WASD Pan", Tooltip = "Pan with WASD as well as the arrow keys" )
+        bool _bWasdPan;
+        PROPERTY( Category = "Rig", DisplayName = "Clamp Focus", Tooltip = "Keep the panned focus inside Focus Min / Max (X and Z)" )
+        bool _bClampFocus;
 
         float3  _overridePosition;
         float3  _overrideEuler;

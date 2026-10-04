@@ -7,9 +7,9 @@
 ## 빌드 · 실행
 
 ```powershell
-cmake --preset Ninja-Debug -DSW_ACTIVE_GAME=HarvestValley   # 기존 빌드 디렉터리는 옛 값을 들고 있으니 다시 구성한다
-cmake --build --preset Ninja-Debug
-cd build/Ninja-Debug/Bin
+cmake --preset Ninja-Debug-HarvestValley        # 빌드 폴더 build/Ninja-Debug-HarvestValley
+cmake --build --preset Ninja-Debug-HarvestValley
+cd build/Ninja-Debug-HarvestValley/Bin
 ./App.exe -dx12
 ./App.exe -dx12 -gv_farmAutoPlay=1      # 농부도 AI — 갈기 → 심기 → 물 → 거두기 → 출하 → 잠(하루 약 2 분)
 ```
@@ -30,9 +30,34 @@ cd build/Ninja-Debug/Bin
 시간은 실제 1 초에 10 분(6:00 – 26:00, 하루 2 분)입니다. 26:00 이 되면 쓰러져 체력이 반만 찬 채 아침을 맞습니다. 규칙(물 받은 날만 자람,
 다시 열림, 계절이 바뀌면 시듦, 비는 갈아 둔 칸에 물)은 키트의 `FarmField` 가 정하고 `FarmingTest` 가 고정합니다.
 
+## 구조 — 씬 · 프리팹 · 컴포넌트
+
+농장은 씬 하나(`Resource/game/harvestvalley/maps/farm.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)입니다. 에디터에서 열면 고정 배치가 계층에 보이고,
+Play 를 누르면 디렉터가 밭을 세우며, Stop 은 플레이 전 씬으로 돌아갑니다. `ThemeParkTycoon` 과 같은 모양입니다(`Source/Games/README.md` 레시피).
+
+| 무엇 | 어디 |
+|------|------|
+| 땅 · 해 · 카메라 · 집 · 출하함 · 가게 · 울타리 · 나무 · 장작 · 덤불 · 꽃 · 농부 · 바라보는 칸 표시 · 디렉터 | 씬(엔티티) — 에디터에서 옮긴다 |
+| 밭 칸의 흙 · 작물(12 × 8) | 프리팹 `prefabs/farmsoil.prefab.xml` · `farmcrop.prefab.xml` — 디렉터가 플레이 시작에 세운다 |
+| 규칙 · 상태(달력 · 밭 · 인벤토리 · 작물 카탈로그) | 키트의 보통 클래스(`FarmCalendar` · `FarmField` · `FarmInventory` · `CropCatalog`) — 씬 없이 시험한다(`FarmingTest`) |
+| 농부 · 도구 · 체력 · 시간 · 가게 · 출하 · 잠 · 날씨 · 자동 농부 | `FarmDirectorComponent`(씬에 하나 — 언리얼 GameMode/GameState 자리) |
+| 모습 | 뷰 `FarmSoilComponent` · `FarmCropComponent`(칸 하나) · `FarmerComponent`(농부 · 바라보는 칸) · `FarmSunComponent`(시각 · 비 → 해) — 디렉터를 **읽기만** 해 자기 오브젝트를 맞춘다 |
+| 카메라 | GameFramework 공용 `OrthoCameraRigComponent`(입력 끔) — 디렉터가 초점을 밭 가운데와 농부 사이에 넣는다 |
+| 머티리얼 | 색 머티리얼 `materials/meadow` · `shippingbin` · `farmer` · `target`(반투명). 흙 세 상태 · 시든 작물 · 작물 색은 디렉터가 만들어 나눠 쓰는 머티리얼 인스턴스 |
+
+**틱.** 디렉터는 `TickGroup::PrePhysics` 에서 입력(또는 자동 농부) · 시간 · 행동을 돌리고 카메라 리그에 초점을 넣습니다. 뷰와 리그는 `PostUpdate` 에서 그 결과를
+읽습니다(그룹은 차례로 돈다). 같은 그룹의 오브젝트는 병렬이므로 뷰는 자기 오브젝트에만 씁니다. 칸은 틱 안에서 세울 수 없으므로 디렉터가 `executeOrDeferPostTick`
+한 번으로 세우고, 효과음도 그때 냅니다. 작물 모델은 디렉터가 미리 쥐고 있어 단계가 바뀔 때 뷰가 워커에서 파일을 읽지 않습니다.
+
+**핫 리로드 · 상태 저장.** 농장 상태는 런타임 상태라 리로드에서 처음부터 다시 섭니다(봄 1 일 — PROPERTY 만 남는다). 상태를 쓰기 전에 게임(`onBeforeStateSerialize`)이
+디렉터가 세운 칸을 걷고, 다시 만든 디렉터가 시작하며 다시 세웁니다.
+
 ## 파일
 
-- `HarvestValleyGame` — 작물 카탈로그(`Resource/game/harvestvalley/data/crops.xml`)를 읽고 게임 서비스로 겁니다.
-- `FarmWorld` — 농부 · 도구 · 체력 · 시간 · 가게 · 출하 · 잠 · 날씨와 그 모습(`PrimitiveStage`).
+- `HarvestValleyGame` — 첫 씬을 열고, 상태 저장 전에 디렉터가 세운 칸을 걷습니다.
+- `FarmDirectorComponent` — 작물 카탈로그 읽기 · 농부 · 도구 · 체력 · 시간 · 가게 · 출하 · 잠 · 날씨 · 자동 농부(`_bAutoPlay`, `-gv_farmAutoPlay=1` 도 켠다) · 로그 · 칸 스폰.
+  작물 데이터 · 프리팹 경로 · 흙 색 · 카메라 리그 · 출하함 · 가게(있으면 그 자리가 농부가 서는 곳) · 농부 시작 자리는 PROPERTY 입니다.
+- `FarmSoilComponent` · `FarmCropComponent` · `FarmerComponent` · `FarmSunComponent` — 뷰.
+- `Resource/game/harvestvalley/maps/farm.scene.xml` · `prefabs/` · `materials/` — 엔진 직렬화기가 쓴 파일입니다(손으로 고치면 씬 · 프리팹 형식을 깨기 쉽다 — 에디터로).
 
 작물 값 · 자라는 날 · 계절은 전부 `crops.xml` 에 있습니다.

@@ -1,0 +1,107 @@
+<Scene formatVersion="1" name="NileCity">
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="26,98.29825,-54.829178"
+					                 _localRotation="0.9599311,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerId="0"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="300"
+					                 _orthoHeight="34"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+					<OrthoCameraRigComponent _componentName="OrthoCameraRigComponent"
+					                         _bActive="true"
+					                         _focus="26,0,14"
+					                         _yaw="0"
+					                         _pitch="0.9599311"
+					                         _distance="120"
+					                         _orthoHeight="34"
+					                         _minOrthoHeight="10"
+					                         _maxOrthoHeight="70"
+					                         _zoomStep="0.85"
+					                         _panSpeed="1.2"
+					                         _panReferenceHeight="1"
+					                         _rotateStep="0"
+					                         _farPlaneScale="2.5"
+					                         _focusMin="0,0,0"
+					                         _focusMax="48,0,40"
+					                         _bInputEnabled="true"
+					                         _bWasdPan="true"
+					                         _bClampFocus="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.95,0.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerId="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.6"
+					                           _ambient="0.28"
+					                           _shadowExtent="60"
+					                           _shadowDistance="120"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="BuildCursor">
+			<GameObject _schemaVersion="0" _name="BuildCursor" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,-5,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,0.12,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="Cube"
+					               _materialPath="game/nilecity/materials/cursor.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="false" />
+					<NileCursorComponent _componentName="NileCursorComponent"
+					                     _bActive="true"
+					                     _director="4"
+					                     _height="0.1"
+					                     _thickness="0.12" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="NileDirector">
+			<GameObject _schemaVersion="0" _name="NileDirector" _bActive="true">
+				<_listComponent>
+					<NileDirectorComponent _componentName="NileDirectorComponent"
+					                       _bActive="true"
+					                       _cityDataPath="game/nilecity/data/city.xml"
+					                       _groundPrefab="game/nilecity/prefabs/ground.prefab.xml"
+					                       _roadPrefab="game/nilecity/prefabs/road.prefab.xml"
+					                       _modelBuildingPrefab="game/nilecity/prefabs/modelbuilding.prefab.xml"
+					                       _blockBuildingPrefab="game/nilecity/prefabs/blockbuilding.prefab.xml"
+					                       _walkerPrefab="game/nilecity/prefabs/walker.prefab.xml"
+					                       _cameraRig="1"
+					                       _startingMoney="1500"
+					                       _serviceDuration="60"
+					                       _bAutoPlay="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

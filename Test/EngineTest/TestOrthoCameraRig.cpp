@@ -14,6 +14,25 @@
 
 using namespace sw;
 
+namespace
+{
+    struct OrthoCameraRigTestInternal
+    {
+        static constexpr float32 kPitch       = 55.0f * MathUtil::DegreeToRadian;
+        static constexpr float32 kOrthoHeight = 34.0f;
+        static constexpr float32 kAspect      = 16.0f / 9.0f;
+
+        /** @brief 화면 점의 광선이 땅(y = 0)에 닿는 점입니다. */
+        static float3 hitGround( const float3& focus, float32 yaw, const float2& mouse )
+        {
+            const GameRay ray      = OrthoCameraRigMath::computeScreenRay( focus, yaw, kPitch, 120.0f, kOrthoHeight, kAspect, mouse );
+            float32       distance = 0.0f;
+            SW_EXPECT_TRUE( RayMath::intersectHorizontalPlane( ray, 0.0f, 1000.0f, distance ) );
+            return ray._origin + ray._direction * distance;
+        }
+    };
+} // namespace
+
 /**
  * @brief [OrthoCameraRigTest] 리그가 놓은 카메라는 어느 요 · 피치에서든 초점을 정면으로 보고, 초점에서 거리만큼 떨어져 있다
  * @details 오일러 → 쿼터니언(엔진의 `createFromYawPitchRoll`)으로 +Z 를 돌려 본 방향이 초점 쪽과 같은지 본다 — 계산식을 다시 쓰지 않고
@@ -103,4 +122,84 @@ SW_TEST_CASE( OrthoCameraRigTest, RigDrivesItsCameraAndHonoursTheOverride )
     pRig->applyToCamera();
     SW_EXPECT_TRUE( pCamera->isOrthographic() );
     SW_EXPECT_NEAR_EQUAL( expected._position._y, pCamera->getLocalPosition()._y, 1.0e-3f );
+}
+
+/**
+ * @brief [OrthoCameraRigTest] 초점 묶기는 X · Z 만 범위 안에 넣고 Y 는 그대로 둔다
+ */
+SW_TEST_CASE( OrthoCameraRigTest, ClampFocusKeepsXzInsideTheBounds )
+{
+    const float3 focusMin{ 0.0f, 0.0f, 0.0f };
+    const float3 focusMax{ 48.0f, 0.0f, 40.0f };
+    const float3 inside = OrthoCameraRigMath::clampFocus( float3{ 10.0f, 3.0f, 20.0f }, focusMin, focusMax );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, inside._x, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, inside._y, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 20.0f, inside._z, 1.0e-6f );
+    const float3 outside = OrthoCameraRigMath::clampFocus( float3{ -5.0f, 7.0f, 99.0f }, focusMin, focusMax );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, outside._x, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, outside._y, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 40.0f, outside._z, 1.0e-6f );
+}
+
+/**
+ * @brief [OrthoCameraRigTest] 화면 가운데의 광선은 초점에 닿고, 오른쪽 끝은 화면 반너비만큼 오른쪽, 위쪽 끝은 반높이 ÷ sin(피치)만큼 앞의 땅에 닿는다
+ * @details 요 0(앞이 +Z)에서 화면 위쪽으로 h 옮긴 광선은 땅에서 h / sin(피치) 만큼 멀리 닿는다(위 벡터 (0, cos p, sin p) · 앞 (0, −sin p, cos p) 로 손으로 푼 값).
+ *          요 90° 에서도 가운데는 초점이다.
+ */
+SW_TEST_CASE( OrthoCameraRigTest, ScreenRayHitsTheGroundUnderTheScreenPoint )
+{
+    using Internal = OrthoCameraRigTestInternal;
+    const float3  focus{ 26.0f, 0.0f, 14.0f };
+    const float32 halfHeight = Internal::kOrthoHeight * 0.5f;
+
+    const float3 center = Internal::hitGround( focus, 0.0f, float2{ 0.5f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( focus._x, center._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( focus._z, center._z, 1.0e-3f );
+    const float3 rightEdge = Internal::hitGround( focus, 0.0f, float2{ 1.0f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( focus._x + halfHeight * Internal::kAspect, rightEdge._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( focus._z, rightEdge._z, 1.0e-3f );
+    const float3 topEdge = Internal::hitGround( focus, 0.0f, float2{ 0.5f, 0.0f } );
+    SW_EXPECT_NEAR_EQUAL( focus._x, topEdge._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( focus._z + halfHeight / MathUtil::sin( Internal::kPitch ), topEdge._z, 1.0e-3f );
+    const float3 turnedCenter = Internal::hitGround( focus, MathUtil::HalfPi, float2{ 0.5f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( focus._x, turnedCenter._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( focus._z, turnedCenter._z, 1.0e-3f );
+    const float3 turnedRight = Internal::hitGround( focus, MathUtil::HalfPi, float2{ 1.0f, 0.5f } ); // 앞이 +X 면 오른쪽은 −Z
+    SW_EXPECT_NEAR_EQUAL( focus._z - halfHeight * Internal::kAspect, turnedRight._z, 1.0e-3f );
+}
+
+/**
+ * @brief [OrthoCameraRigTest] 컴포넌트의 땅 고르기는 자기 초점 · 시점을 쓴다 — 화면 가운데는 초점이다
+ */
+SW_TEST_CASE( OrthoCameraRigTest, FindGroundPointUsesTheRigView )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "RigCamera" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    OrthoCameraRigComponent* pRig = pObject->addComponent<OrthoCameraRigComponent>();
+    SW_ASSERT_NOT_NULL( pRig );
+    pRig->setFocus( float3{ 32.0f, 0.0f, 30.0f } );
+    float3 point{};
+    SW_ASSERT_TRUE( pRig->findGroundPoint( float2{ 0.5f, 0.5f }, 16.0f / 9.0f, 0.0f, point ) );
+    SW_EXPECT_NEAR_EQUAL( 32.0f, point._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, point._y, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 30.0f, point._z, 1.0e-3f );
+}
+
+/**
+ * @brief [OrthoCameraRigTest] 코드가 넣는 화면 높이도 휠과 같은 확대 범위 안으로 묶인다
+ */
+SW_TEST_CASE( OrthoCameraRigTest, SetOrthoHeightStaysInTheZoomRange )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "RigCamera" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    OrthoCameraRigComponent* pRig = pObject->addComponent<OrthoCameraRigComponent>();
+    SW_ASSERT_NOT_NULL( pRig );
+    pRig->setOrthoHeight( 70.0f );
+    SW_EXPECT_NEAR_EQUAL( 70.0f, pRig->getOrthoHeight(), 1.0e-6f );
+    pRig->setOrthoHeight( 1000.0f );
+    SW_EXPECT_NEAR_EQUAL( 220.0f, pRig->getOrthoHeight(), 1.0e-6f ); // 기본 범위 25 ~ 220
+    pRig->setOrthoHeight( 1.0f );
+    SW_EXPECT_NEAR_EQUAL( 25.0f, pRig->getOrthoHeight(), 1.0e-6f );
 }

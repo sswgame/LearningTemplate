@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HarvestValley 팩의 설정 — 시작 맵은 농장 씬이다(게임 프리셋 Config/Game/HarvestValley.json 이 이 파일을 가리킨다). -->
+<GameSettings>
+  <startMap>game/harvestvalley/maps/farm.scene.xml</startMap>
+</GameSettings>

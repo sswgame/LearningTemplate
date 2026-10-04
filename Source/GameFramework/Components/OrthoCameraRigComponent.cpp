@@ -53,6 +53,26 @@ namespace sw
         return MathUtil::clamp( zoomed, minHeight, maxHeight );
     }
 
+    float3 OrthoCameraRigMath::clampFocus( const float3& focus, const float3& focusMin, const float3& focusMax )
+    {
+        return float3{ MathUtil::clamp( focus._x, focusMin._x, focusMax._x ), focus._y, MathUtil::clamp( focus._z, focusMin._z, focusMax._z ) };
+    }
+
+    GameRay OrthoCameraRigMath::computeScreenRay( const float3& focus, float32 yaw, float32 pitch, float32 distance, float32 orthoHeight, float32 aspect,
+                                                  const float2& mouseNormalized )
+    {
+        // 직교 시점 — 화면의 점마다 광선이 카메라 앞 방향과 나란하다. 시작점은 카메라 자리에서 화면 오른쪽 · 위로 옮긴 자리다.
+        const float3  toCamera = computeToCamera( yaw, pitch );
+        const float3  right{ MathUtil::cos( yaw ), 0.0f, -MathUtil::sin( yaw ) };
+        const float3  up{ MathUtil::sin( pitch ) * MathUtil::sin( yaw ), MathUtil::cos( pitch ), MathUtil::sin( pitch ) * MathUtil::cos( yaw ) };
+        const float32 halfHeight = orthoHeight * 0.5f;
+        GameRay       ray;
+        ray._origin = focus + toCamera * distance + right * ( ( mouseNormalized._x * 2.0f - 1.0f ) * halfHeight * aspect ) +
+                      up * ( ( 1.0f - mouseNormalized._y * 2.0f ) * halfHeight );
+        ray._direction = toCamera * -1.0f;
+        return ray;
+    }
+
     OrthoCameraRigComponent::OrthoCameraRigComponent()
         : _focus{ 0.0f, 0.0f, 0.0f }
         , _yaw{ 45.0f * MathUtil::DegreeToRadian }
@@ -66,7 +86,11 @@ namespace sw
         , _panReferenceHeight{ 110.0f }
         , _rotateStep{ MathUtil::HalfPi }
         , _farPlaneScale{ 2.5f }
+        , _focusMin{ 0.0f, 0.0f, 0.0f }
+        , _focusMax{ 0.0f, 0.0f, 0.0f }
         , _bInputEnabled{ true }
+        , _bWasdPan{ true }
+        , _bClampFocus{ false }
         , _overridePosition{ 0.0f, 0.0f, 0.0f }
         , _overrideEuler{ 0.0f, 0.0f, 0.0f }
         , _overrideFieldOfViewY{ CameraComponent::kDefaultFovY }
@@ -107,25 +131,43 @@ namespace sw
         const InputManager* pInput = game::getService<InputManager>();
         if ( pInput == nullptr )
             return;
-        float32 forwardInput = 0.0f;
-        float32 rightInput   = 0.0f;
-        if ( pInput->isKeyDown( Key::W ) || pInput->isKeyDown( Key::Up ) )
+        float32    forwardInput = 0.0f;
+        float32    rightInput   = 0.0f;
+        const bool bWasd        = _bWasdPan;
+        if ( pInput->isKeyDown( Key::Up ) || ( bWasd && pInput->isKeyDown( Key::W ) ) )
             forwardInput += 1.0f;
-        if ( pInput->isKeyDown( Key::S ) || pInput->isKeyDown( Key::Down ) )
+        if ( pInput->isKeyDown( Key::Down ) || ( bWasd && pInput->isKeyDown( Key::S ) ) )
             forwardInput -= 1.0f;
-        if ( pInput->isKeyDown( Key::D ) || pInput->isKeyDown( Key::Right ) )
+        if ( pInput->isKeyDown( Key::Right ) || ( bWasd && pInput->isKeyDown( Key::D ) ) )
             rightInput += 1.0f;
-        if ( pInput->isKeyDown( Key::A ) || pInput->isKeyDown( Key::Left ) )
+        if ( pInput->isKeyDown( Key::Left ) || ( bWasd && pInput->isKeyDown( Key::A ) ) )
             rightInput -= 1.0f;
         // 확대할수록 느리게 — 화면에서 보이는 빠르기가 같다.
         const float32 panScale = _panReferenceHeight > 0.0f ? _orthoHeight / _panReferenceHeight : 1.0f;
         const float3  pan      = OrthoCameraRigMath::computePanDirection( _yaw, forwardInput, rightInput );
         _focus                 = _focus + pan * ( _panSpeed * panScale * deltaTime );
+        if ( _bClampFocus )
+            _focus = OrthoCameraRigMath::clampFocus( _focus, _focusMin, _focusMax );
         if ( pInput->wasKeyPressed( Key::Q ) )
             _yaw -= _rotateStep;
         if ( pInput->wasKeyPressed( Key::E ) )
             _yaw += _rotateStep;
         _orthoHeight = OrthoCameraRigMath::computeZoomedHeight( _orthoHeight, pInput->getMouseWheel(), _zoomStep, _minOrthoHeight, _maxOrthoHeight );
+    }
+
+    void OrthoCameraRigComponent::setOrthoHeight( float32 orthoHeight )
+    {
+        _orthoHeight = MathUtil::clamp( orthoHeight, _minOrthoHeight, _maxOrthoHeight );
+    }
+
+    bool OrthoCameraRigComponent::findGroundPoint( const float2& mouseNormalized, float32 aspect, float32 groundHeight, float3& outPoint ) const
+    {
+        const GameRay ray      = OrthoCameraRigMath::computeScreenRay( _focus, _yaw, _pitch, _distance, _orthoHeight, aspect, mouseNormalized );
+        float32       distance = 0.0f;
+        if ( RayMath::intersectHorizontalPlane( ray, groundHeight, _distance * 3.0f, distance ) == false )
+            return false;
+        outPoint = ray._origin + ray._direction * distance;
+        return true;
     }
 
     void OrthoCameraRigComponent::applyToCamera()
