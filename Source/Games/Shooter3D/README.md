@@ -64,7 +64,9 @@ cd build/Ninja-Debug-Shooter3D/Bin
 
 ## 파일 · 에셋
 
-- `Shooter3DGame` — 무기 카탈로그(`Resource/game/shooter3d/data/weapons.xml`)를 게임 서비스로 걸고, 첫 씬을 열고, 상태 저장 전에 디렉터가 세운 것을 걷습니다.
+- `Shooter3DGame` — 무기 카탈로그(`Resource/game/shooter3d/data/weapons.xml`)를 게임 서비스로 걸고, 사운드 이벤트(`audio/shooter3d.audioevents.xml`)를 올리고,
+  첫 씬을 열고, 상태 저장 전에 디렉터가 세운 것을 걷습니다. 소리는 이벤트 이름으로 냅니다 — 착지 · 명중음은 2D(`Land` · `HitDrone` · `HitCover`), 드론 격추는
+  그 자리 3D(`DroneDown` — 레이어 둘, 벽 뒤면 가림). 클립 · 범위 · 쿨다운 · 상한은 이벤트 파일에 있습니다.
 - `ShooterDirectorComponent` · `ShooterPlayerComponent` · `ShooterDroneComponent` · `ShooterEffectComponent` · `ShooterBlockerComponent` — 위 표.
 - `Resource/game/shooter3d/maps/arena.scene.xml` · `prefabs/` — 엔진 직렬화기가 쓴 파일입니다(손으로 고치면 씬 · 프리팹 형식을 깨기 쉽다 — 에디터로).
 - `textures_raw/crosshair.png` · `hitmarker.png` — Kenney "Starter Kit FPS" 의 스프라이트(CC0), `App --import-textures` 가 DDS 로 굽는다.

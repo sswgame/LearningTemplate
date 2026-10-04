@@ -38,13 +38,14 @@ namespace sw
             static constexpr const utf8* kCrosshairName                                        = "Crosshair";
             static constexpr const utf8* kHitMarkerName                                        = "HitMarker";
 
-            static constexpr float4      kDroneHitColor{ 1.0f, 0.4f, 0.2f, 1.0f };
-            static constexpr float4      kCoverHitColor{ 0.9f, 0.85f, 0.6f, 1.0f };
-            static constexpr float4      kTracerColor{ 1.0f, 0.9f, 0.5f, 1.0f };
-            static constexpr float32     kEffectLifetime = 0.12f;
-            static constexpr const utf8* kSoundLand      = "game/shooter3d/sounds/footstep_concrete_000.ogg";
-            static constexpr const utf8* kSoundHitDrone  = "game/shooter3d/sounds/impact_metal_light_001.ogg";
-            static constexpr const utf8* kSoundHitCover  = "game/shooter3d/sounds/impact_plank_medium_000.ogg";
+            static constexpr float4  kDroneHitColor{ 1.0f, 0.4f, 0.2f, 1.0f };
+            static constexpr float4  kCoverHitColor{ 0.9f, 0.85f, 0.6f, 1.0f };
+            static constexpr float4  kTracerColor{ 1.0f, 0.9f, 0.5f, 1.0f };
+            static constexpr float32 kEffectLifetime = 0.12f;
+            // 사운드 이벤트 이름(shooter3d.audioevents.xml) — 플레이어 자신의 소리라 2D 로 낸다.
+            static constexpr const utf8* kSoundLand     = "Land";
+            static constexpr const utf8* kSoundHitDrone = "HitDrone";
+            static constexpr const utf8* kSoundHitCover = "HitCover";
 
             static float3 flatten( const float3& value ) { return float3{ value._x, 0.0f, value._z }; }
 
@@ -556,8 +557,8 @@ namespace sw
                 pDirector->spawnEffect( effect._position, effect._size, effect._color, Internal::kEffectLifetime );
         }
         _listPendingEffect.clear();
-        for ( const utf8* pPath : _listPendingSound )
-            (void)GameSound::play( pPath );
+        for ( const utf8* pEvent : _listPendingSound )
+            (void)GameSound::postEvent( hashed_string( pEvent ) );
         _listPendingSound.clear();
         if ( _bWeaponModelDirty == SW_TRUE )
         {

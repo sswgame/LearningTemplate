@@ -2,16 +2,12 @@
 
 #include "Engine/Audio/Windows/XAudio2System.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
-
 #include "Engine/Audio/AudioClipDecoder.h"
+#include "Engine/Audio/AudioEngine.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Task/TaskManager.h"
-
     #include "Engine/Common/EnginePlatformHeaders.h"
-    #include "Engine/Common/EngineServices.h"
+    #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
 {
@@ -19,22 +15,10 @@ namespace sw
     {
         struct XAudio2SystemInternal
         {
-            /**
-             * @struct PcmClip
-             * @brief 디코드한 소리 하나입니다. 형식은 **확장형까지** 담습니다(`_format.Format.cbSize` 가 22 면 확장형).
-             * @details 24 비트 · 다채널 · 부동소수 WAV 는 DAW 가 흔히 내보내는 형식인데 `WAVEFORMATEX` 만으로는 그 하위 형식을 전하지 못합니다.
-             */
-            struct PcmClip
-            {
-                WAVEFORMATEXTENSIBLE _format{};
-                vector<uint8>        _listData;
-            };
-
-            struct VoiceBuffer
-            {
-                IXAudio2SourceVoice* _pVoice{ nullptr };
-                shared_ptr<PcmClip>  _pClip{ nullptr };
-            };
+            /** @brief 스트리밍 버퍼 하나의 길이(프레임)입니다 — 10.7 ms. */
+            static constexpr uint32 kStreamBufferFrameCount = 512;
+            /** @brief 장치에 걸어 둘 버퍼 수입니다. 지연은 대략 (수 − 1) × 버퍼 길이입니다. */
+            static constexpr uint32 kStreamBufferCount = 3;
 
             /**
              * @brief 부르는 스레드에서 COM 과 Media Foundation 이 초기화되어 있게 하는 RAII 도우미입니다.
@@ -68,62 +52,19 @@ namespace sw
                 }
             };
 
-            /** @brief 공통 디코더의 결과를 XAudio2 형식으로 옮깁니다. 확장형이었으면 확장형으로 넘깁니다(24 비트 · 다채널 · float). */
-            static void movePcmToClip( AudioPcm&& pcm, PcmClip& outClip )
-            {
-                WAVEFORMATEXTENSIBLE fmt{};
-                fmt.Format.wFormatTag      = pcm._bFloat ? WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
-                fmt.Format.nChannels       = pcm._channelCount;
-                fmt.Format.nSamplesPerSec  = pcm._sampleRate;
-                fmt.Format.wBitsPerSample  = pcm._bitsPerSample;
-                fmt.Format.nBlockAlign     = pcm.getBlockAlign();
-                fmt.Format.nAvgBytesPerSec = pcm._sampleRate * fmt.Format.nBlockAlign;
-                fmt.Format.cbSize          = 0;
-                if ( pcm._bExtensible )
-                {
-                    fmt.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE;
-                    fmt.Format.cbSize               = 22;
-                    fmt.Samples.wValidBitsPerSample = pcm._validBitsPerSample;
-                    fmt.dwChannelMask               = pcm._channelMask;
-                    // KSDATAFORMAT_SUBTYPE_PCM · _IEEE_FLOAT 와 같은 값이다(Data1 이 형식 태그, 나머지는 공통). ksmedia.h 의 GUID 정의를 끌어오지 않는다.
-                    fmt.SubFormat = GUID{
-                        pcm._bFloat ? DWORD{ WAVE_FORMAT_IEEE_FLOAT }
-                                    : DWORD{ WAVE_FORMAT_PCM },
-                        0x0000,
-                        0x0010,
-                        { 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 }
-                    };
-                }
-                outClip._format   = fmt;
-                outClip._listData = std::move( pcm._listData );
-            }
-
             /**
-             * @brief WAV · OGG 를 공통 디코더로 풉니다. 바이트에서 풀므로 팩 안의 파일도 됩니다.
-             * @param path 리소스 상대 경로와 절대 경로를 모두 받습니다. 리소스로 먼저 찾고, 없으면 파일로 읽습니다.
+             * @brief 공통 디코더가 다루지 않는 형식(MP3 · ADPCM WAV 등)을 Media Foundation 으로 16 비트 PCM 으로 풉니다. 클립 캐시의 대체 디코더입니다.
              */
-            [[nodiscard]] static bool loadDecodedClip( string_view path, PcmClip& outClip )
+            static bool decodeWithMediaFoundation( string_view path, AudioPcm& outPcm )
             {
-                vector<uint8> listFile;
-                if ( ResourceUtil::readBinaryResource( path, listFile ) == false && FileUtil::readFile( path, listFile ) == false )
-                    return false;
-                AudioPcm pcm;
-                if ( AudioClipDecoder::decode( path, listFile.data(), listFile.size(), pcm ) == false )
-                    return false;
-                movePcmToClip( std::move( pcm ), outClip );
-                return true;
-            }
+                string absPath = ResourceUtil::getResourcePath( path );
+                if ( absPath.empty() )
+                    absPath = string( path );
 
-            /**
-             * @brief Windows Media Foundation 으로 MP3 등 압축 오디오를 PCM 바이트 스트림으로 디코딩합니다.
-             */
-            [[nodiscard]] static bool loadViaMediaFoundation( string_view absPath, PcmClip& outClip )
-            {
                 ScopedThreadComAndMf threadComScope;
-
-                IMFSourceReader* pReader{ nullptr };
-                const wstring    wpath = StringUtil::utf8ToUtf16( string( absPath ).c_str() );
-                HRESULT          hr    = MFCreateSourceReaderFromURL( wpath.c_str(), nullptr, &pReader );
+                IMFSourceReader*     pReader{ nullptr };
+                const wstring        wpath = StringUtil::utf8ToUtf16( absPath.c_str() );
+                HRESULT              hr    = MFCreateSourceReaderFromURL( wpath.c_str(), nullptr, &pReader );
                 if ( FAILED( hr ) || pReader == nullptr )
                     return false;
 
@@ -146,21 +87,12 @@ namespace sw
                     pReader->Release();
                     return false;
                 }
-
-                const UINT32 channels   = MFGetAttributeUINT32( pNative, MF_MT_AUDIO_NUM_CHANNELS, 2 );
-                const UINT32 sampleRate = MFGetAttributeUINT32( pNative, MF_MT_AUDIO_SAMPLES_PER_SECOND, 44100 );
-                const UINT32 bits       = MFGetAttributeUINT32( pNative, MF_MT_AUDIO_BITS_PER_SAMPLE, 16 );
+                AudioPcm pcm;
+                pcm._channelCount  = static_cast<uint16>( MFGetAttributeUINT32( pNative, MF_MT_AUDIO_NUM_CHANNELS, 2 ) );
+                pcm._sampleRate    = MFGetAttributeUINT32( pNative, MF_MT_AUDIO_SAMPLES_PER_SECOND, 44100 );
+                pcm._bitsPerSample = static_cast<uint16>( MFGetAttributeUINT32( pNative, MF_MT_AUDIO_BITS_PER_SAMPLE, 16 ) );
                 pNative->Release();
 
-                WAVEFORMATEX fmt{};
-                fmt.wFormatTag      = WAVE_FORMAT_PCM;
-                fmt.nChannels       = static_cast<WORD>( channels );
-                fmt.nSamplesPerSec  = sampleRate;
-                fmt.wBitsPerSample  = static_cast<WORD>( bits );
-                fmt.nBlockAlign     = static_cast<WORD>( fmt.nChannels * fmt.wBitsPerSample / 8 );
-                fmt.nAvgBytesPerSec = fmt.nSamplesPerSec * fmt.nBlockAlign;
-
-                vector<uint8> listPcm;
                 for ( ;; )
                 {
                     DWORD           flags{ 0 };
@@ -176,43 +108,56 @@ namespace sw
                     if ( FAILED( hr ) || pBuffer == nullptr )
                         continue;
                     BYTE* pData{ nullptr };
-                    DWORD maxLen = 0, curLen = 0;
-                    pBuffer->Lock( &pData, &maxLen, &curLen );
-                    if ( pData != nullptr && curLen > 0 )
-                        listPcm.insert( listPcm.end(), pData, pData + curLen );
+                    DWORD maxLength     = 0;
+                    DWORD currentLength = 0;
+                    pBuffer->Lock( &pData, &maxLength, &currentLength );
+                    if ( pData != nullptr && currentLength > 0 )
+                        pcm._listData.insert( pcm._listData.end(), pData, pData + currentLength );
                     pBuffer->Unlock();
                     pBuffer->Release();
                 }
-
                 pReader->Release();
-
-                if ( listPcm.empty() )
+                if ( pcm._listData.empty() )
                     return false;
-                outClip._format               = WAVEFORMATEXTENSIBLE{};
-                outClip._format.Format        = fmt;
-                outClip._format.Format.cbSize = 0;
-                outClip._listData             = std::move( listPcm );
+                outPcm = std::move( pcm );
                 return true;
             }
 
-            /** @brief 확장자에 맞는 디코더로 PCM 을 뽑습니다. */
-            [[nodiscard]] static bool loadClip( string_view path, PcmClip& outClip )
+            /**
+             * @brief 스트리밍 보이스의 콜백입니다. 버퍼 하나가 끝날 때마다(XAudio2 처리 스레드) 다음 버퍼를 렌더해 제출합니다.
+             */
+            struct StreamCallback : public IXAudio2VoiceCallback
             {
-                // WAV · OGG 는 공통 디코더가 읽는다(팩 안에서도 된다). 못 푼 OGG 는 실패다 — Media Foundation 은 Vorbis 를 모른다.
-                // 공통 디코더가 못 읽는 WAV(ADPCM 등)와 다른 형식(MP3 등)은 Media Foundation 에 넘긴다.
-                if ( AudioClipDecoder::isSupportedExtension( path ) )
+                AudioEngine*         _pEngine{ nullptr };
+                IXAudio2SourceVoice* _pVoice{ nullptr };
+                vector<float32>      _listBuffer{}; ///< 버퍼 `kStreamBufferCount` 개를 이어 붙인 것
+                uint32               _nextBuffer{ 0 };
+                std::atomic<bool>    _bStopping{ false };
+
+                virtual ~StreamCallback() = default;
+
+                /** @brief 다음 버퍼를 렌더해 제출합니다. */
+                void submitNext()
                 {
-                    if ( loadDecodedClip( path, outClip ) )
-                        return true;
-                    if ( FileUtil::hasExtension( path, ".ogg" ) )
-                        return false;
+                    if ( _bStopping.load( std::memory_order_acquire ) || _pVoice == nullptr )
+                        return;
+                    float32* pBuffer = _listBuffer.data() + static_cast<size_t>( _nextBuffer ) * kStreamBufferFrameCount * audio::kChannelCount;
+                    _pEngine->render( pBuffer, kStreamBufferFrameCount );
+                    XAUDIO2_BUFFER buffer{};
+                    buffer.AudioBytes = kStreamBufferFrameCount * audio::kChannelCount * sizeof( float32 );
+                    buffer.pAudioData = reinterpret_cast<const BYTE*>( pBuffer );
+                    (void)_pVoice->SubmitSourceBuffer( &buffer );
+                    _nextBuffer = ( _nextBuffer + 1 ) % kStreamBufferCount;
                 }
 
-                string absPath = ResourceUtil::getResourcePath( path );
-                if ( absPath.empty() )
-                    absPath = string( path );
-                return loadViaMediaFoundation( absPath, outClip );
-            }
+                void STDMETHODCALLTYPE OnVoiceProcessingPassStart( UINT32 ) noexcept override {}
+                void STDMETHODCALLTYPE OnVoiceProcessingPassEnd() noexcept override {}
+                void STDMETHODCALLTYPE OnStreamEnd() noexcept override {}
+                void STDMETHODCALLTYPE OnBufferStart( void* ) noexcept override {}
+                void STDMETHODCALLTYPE OnBufferEnd( void* ) noexcept override { submitNext(); }
+                void STDMETHODCALLTYPE OnLoopEnd( void* ) noexcept override {}
+                void STDMETHODCALLTYPE OnVoiceError( void*, HRESULT ) noexcept override {}
+            };
         };
     } // namespace
 } // namespace sw
@@ -223,103 +168,47 @@ namespace sw
 
     /**
      * @brief XAudio2 백엔드의 상태 전부입니다. 헤더가 XAudio2 헤더를 끌어오지 않도록 여기 숨깁니다.
-     * @note 볼륨과 음소거는 여기 없습니다. `IAudioSystem` 이 한 자리에서 들고 있고, 이 구조체는
-     *       그 값을 살아 있는 보이스에 반영하기만 합니다.
      */
     struct XAudio2SystemImpl
     {
-        /** @brief 재사용을 위해 들고 있을 유휴 보이스의 최대 개수입니다. */
-        static constexpr size_t kMaxIdleVoices = 32;
-
-        IXAudio2*                                                         _pXAudio;             /**< XAudio2 엔진입니다. */
-        IXAudio2MasteringVoice*                                           _pMasterVoice;        /**< 마스터 보이스입니다. 음소거가 걸리는 유일한 자리입니다. */
-        IXAudio2SourceVoice*                                              _pMusicVoice;         /**< 루프 재생 중인 배경음악 보이스입니다. */
-        shared_ptr<XAudio2SystemInternal::PcmClip>                        _pMusicClip;          /**< 배경음악 보이스가 읽고 있는 PCM 입니다. */
-        vector<XAudio2SystemInternal::VoiceBuffer>                        _listActiveVoice;     /**< 재생 중인 효과음 보이스입니다. */
-        vector<XAudio2SystemInternal::VoiceBuffer>                        _listIdleVoice;       /**< 재사용을 기다리는 보이스입니다. */
-        unordered_map<string, shared_ptr<XAudio2SystemInternal::PcmClip>> _mapClipCache;        /**< 경로 → 디코드된 PCM 캐시입니다. */
-        string                                                            _musicPath;           /**< 마지막으로 요청된 배경음악 경로입니다. */
-        uint64                                                            _musicGeneration;     /**< 배경음악 요청 번호입니다. 늦게 도착한 디코드를 버리는 데 씁니다. */
-        mutex                                                             _clipCacheMutex;      /**< `_mapClipCache` 를 지킵니다. */
-        mutex                                                             _voiceMutex;          /**< 보이스 · `_musicPath` · `_musicGeneration` 을 지킵니다. */
-        uint8                                                             _bInitialized    : 1; /**< initialize 가 끝났는지 여부입니다. */
-        uint8                                                             _bComInitialized : 1; /**< 이 시스템이 COM 을 초기화했는지 여부입니다. */
-        uint8                                                             _bMfInitialized  : 1; /**< 이 시스템이 Media Foundation 을 초기화했는지 여부입니다. */
-        [[maybe_unused]] uint8                                            _reservedAudio   : 5; /**< 비트필드 패딩입니다. */
+        XAudio2SystemInternal::StreamCallback _callback;            /**< 스트리밍 콜백(버퍼 포함)입니다. */
+        IXAudio2*                             _pXAudio;             /**< XAudio2 엔진입니다. */
+        IXAudio2MasteringVoice*               _pMasterVoice;        /**< 마스터링 보이스입니다(볼륨은 엔진의 master 버스가 맡는다). */
+        IXAudio2SourceVoice*                  _pStreamVoice;        /**< 엔진 출력을 흘리는 소스 보이스입니다. */
+        uint8                                 _bComInitialized : 1; /**< 이 시스템이 COM 을 초기화했는지 여부입니다. */
+        uint8                                 _bMfInitialized  : 1; /**< 이 시스템이 Media Foundation 을 초기화했는지 여부입니다. */
+        [[maybe_unused]] uint8                _reservedAudio   : 6; /**< 비트필드 패딩입니다. */
 
         /** @brief 아직 아무 장치도 잡지 않은 상태로 둡니다. */
         XAudio2SystemImpl()
-            : _pXAudio{ nullptr }
+            : _callback{}
+            , _pXAudio{ nullptr }
             , _pMasterVoice{ nullptr }
-            , _pMusicVoice{ nullptr }
-            , _pMusicClip{ nullptr }
-            , _listActiveVoice{}
-            , _listIdleVoice{}
-            , _mapClipCache{}
-            , _musicPath{}
-            , _musicGeneration{ 0 }
-            , _bInitialized{ SW_FALSE }
+            , _pStreamVoice{ nullptr }
             , _bComInitialized{ SW_FALSE }
             , _bMfInitialized{ SW_FALSE }
-            , _reservedAudio{ 0 } {}
-
-        /** @brief 같은 보이스로 재생할 수 있는 포맷인지 봅니다. */
-        static bool isFormatEqual( const WAVEFORMATEXTENSIBLE& lhs, const WAVEFORMATEXTENSIBLE& rhs )
+            , _reservedAudio{ 0 }
         {
-            const bool bSameBase = lhs.Format.wFormatTag == rhs.Format.wFormatTag && lhs.Format.nChannels == rhs.Format.nChannels &&
-                                   lhs.Format.nSamplesPerSec == rhs.Format.nSamplesPerSec && lhs.Format.wBitsPerSample == rhs.Format.wBitsPerSample;
-            if ( bSameBase == false || lhs.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE )
-                return bSameBase;
-            return lhs.dwChannelMask == rhs.dwChannelMask && Memory::compare( &lhs.SubFormat, &rhs.SubFormat, sizeof( lhs.SubFormat ) ) == 0;
-        }
-
-        /** @brief 캐시에 있으면 그것을, 없으면 디코드해 캐시에 넣고 반환합니다. */
-        shared_ptr<XAudio2SystemInternal::PcmClip> getOrLoadClip( string_view path )
-        {
-            const string key( path );
-            {
-                std::scoped_lock<mutex> lock{ _clipCacheMutex };
-                auto                    it = _mapClipCache.find( key );
-                if ( it != _mapClipCache.end() )
-                    return it->second;
-            }
-
-            XAudio2SystemInternal::PcmClip clip{};
-            if ( XAudio2SystemInternal::loadClip( path, clip ) == false )
-                return nullptr;
-
-            auto pShared = make_shared<XAudio2SystemInternal::PcmClip>( std::move( clip ) );
-            {
-                std::scoped_lock<mutex> lock{ _clipCacheMutex };
-                _mapClipCache[key] = pShared;
-            }
-            return pShared;
         }
     };
 
     XAudio2System::XAudio2System()
         : _impl{ make_unique<XAudio2SystemImpl>() }
     {
+        getEngine().getClipStore().setFallbackDecoder( &XAudio2SystemInternal::decodeWithMediaFoundation );
     }
 
     XAudio2System::~XAudio2System()
     {
-        XAudio2System::shutdown();
+        shutdown();
     }
 
-    bool XAudio2System::initialize()
+    bool XAudio2System::openOutput()
     {
-        if ( _impl == nullptr )
-            _impl = make_unique<XAudio2SystemImpl>();
-        if ( _impl->_bInitialized == SW_TRUE )
-            return true;
-
         HRESULT hr = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
         if ( hr == S_OK || hr == S_FALSE )
             _impl->_bComInitialized = SW_TRUE;
-        else if ( hr == RPC_E_CHANGED_MODE )
-            _impl->_bComInitialized = SW_FALSE;
-        else
+        else if ( hr != RPC_E_CHANGED_MODE )
             SW_LOG_WARNING( "CoInitializeEx failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
 
         const HRESULT mfHr = MFStartup( MF_VERSION );
@@ -328,392 +217,89 @@ namespace sw
         else
             SW_LOG_WARNING( "MFStartup failed (0x%#).", Fmt( static_cast<uint32>( mfHr ), Format( 8, Format::Padding::Zero ).hex() ) );
 
-        IXAudio2* pXAudio{ nullptr };
-        hr = XAudio2Create( &pXAudio, 0, XAUDIO2_DEFAULT_PROCESSOR );
-        if ( FAILED( hr ) || pXAudio == nullptr )
+        hr = XAudio2Create( &_impl->_pXAudio, 0, XAUDIO2_DEFAULT_PROCESSOR );
+        if ( FAILED( hr ) || _impl->_pXAudio == nullptr )
         {
-            SW_LOG_WARNING( "XAudio2Create failed (0x%#). Running null audio.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
-            _impl->_bInitialized = SW_TRUE;
-            return true;
+            SW_LOG_WARNING( "XAudio2Create failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+            _impl->_pXAudio = nullptr;
+            closeOutput();
+            return false;
+        }
+        hr = _impl->_pXAudio->CreateMasteringVoice( &_impl->_pMasterVoice, audio::kChannelCount, audio::kSampleRate );
+        if ( FAILED( hr ) || _impl->_pMasterVoice == nullptr )
+        {
+            SW_LOG_WARNING( "CreateMasteringVoice failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+            _impl->_pMasterVoice = nullptr;
+            closeOutput();
+            return false;
         }
 
-        IXAudio2MasteringVoice* pMasterVoice{ nullptr };
-        hr = pXAudio->CreateMasteringVoice( &pMasterVoice );
-        if ( FAILED( hr ) || pMasterVoice == nullptr )
+        WAVEFORMATEX format{};
+        format.wFormatTag      = WAVE_FORMAT_IEEE_FLOAT;
+        format.nChannels       = static_cast<WORD>( audio::kChannelCount );
+        format.nSamplesPerSec  = audio::kSampleRate;
+        format.wBitsPerSample  = 32;
+        format.nBlockAlign     = static_cast<WORD>( audio::kChannelCount * sizeof( float32 ) );
+        format.nAvgBytesPerSec = audio::kSampleRate * format.nBlockAlign;
+        hr                     = _impl->_pXAudio->CreateSourceVoice( &_impl->_pStreamVoice, &format, 0, XAUDIO2_DEFAULT_FREQ_RATIO, &_impl->_callback );
+        if ( FAILED( hr ) || _impl->_pStreamVoice == nullptr )
         {
-            SW_LOG_WARNING( "CreateMasteringVoice failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
-            pXAudio->Release();
-            _impl->_bInitialized = SW_TRUE;
-            return true;
+            SW_LOG_WARNING( "CreateSourceVoice failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+            _impl->_pStreamVoice = nullptr;
+            closeOutput();
+            return false;
         }
 
-        _impl->_pXAudio      = pXAudio;
-        _impl->_pMasterVoice = pMasterVoice;
-        _impl->_pMasterVoice->SetVolume( getEffectiveMasterVolume() );
-        SW_LOG_INFO( "XAudio2 mastering voice ready." );
-
-        _impl->_bInitialized = SW_TRUE;
+        XAudio2SystemInternal::StreamCallback& callback = _impl->_callback;
+        callback._pEngine                               = &getEngine();
+        callback._pVoice                                = _impl->_pStreamVoice;
+        callback._nextBuffer                            = 0;
+        callback._bStopping.store( false, std::memory_order_release );
+        callback._listBuffer.assign( static_cast<size_t>( XAudio2SystemInternal::kStreamBufferFrameCount ) * audio::kChannelCount *
+                                         XAudio2SystemInternal::kStreamBufferCount,
+                                     0.0f );
+        // 처음 버퍼들은 여기서 채운다. 이후는 버퍼가 끝날 때마다 콜백이 하나씩 채운다.
+        for ( uint32 bufferIndex = 0; bufferIndex < XAudio2SystemInternal::kStreamBufferCount; ++bufferIndex )
+            callback.submitNext();
+        _impl->_pStreamVoice->Start( 0 );
+        SW_LOG_INFO( "XAudio2 stream ready (%# Hz, %# frames x %#).", audio::kSampleRate, XAudio2SystemInternal::kStreamBufferFrameCount,
+                     XAudio2SystemInternal::kStreamBufferCount );
         return true;
     }
 
-    /**
-     * @brief 오디오 시스템을 내리고 모든 사운드 보이스와 XAudio2 마스터링 보이스를 파괴합니다.
-     */
-    void XAudio2System::shutdown()
+    void XAudio2System::closeOutput()
     {
-        if ( _impl == nullptr || _impl->_bInitialized == SW_FALSE )
+        if ( _impl == nullptr )
             return;
-        // 소멸자가 `XAudio2System::shutdown()` 을 한정해서 부르므로 파괴 중 가상 디스패치는 없다.
-        // 여기서 `stopMusic()` 까지 한정하면 **정상 종료 경로**에서 파생 재정의가 무시되므로 두지 않는다.
-        // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
-        stopMusic(); // 자기 안에서 `_voiceMutex` 를 잡는다. 여기서 들고 있으면 안 된다.
-
+        // 콜백이 더 제출하지 않게 먼저 표시하고, 보이스를 부순다 — DestroyVoice 는 처리 중인 콜백이 끝날 때까지 기다린다.
+        _impl->_callback._bStopping.store( true, std::memory_order_release );
+        if ( _impl->_pStreamVoice != nullptr )
         {
-            // **잠그고 부순다.** 오디오는 `EngineLoop::shutdown` 에서 **TaskManager 보다 먼저**
-            // 내려가므로, 바로 이 순간에도 워커가 `playDecodedClipTask` 안에서 `_listActiveVoice`
-            // 에 `push_back` 하고 있을 수 있다. 잠금 없이 훑으면 그 push_back 이 벡터를 재할당할 때 아래 루프의 참조가
-            // **해제된 메모리**를 가리키고, 뒤늦게 잠금을 얻은 워커는 이미 `Release()` 한 `_pXAudio` 로 보이스를 만든다.
-            // `_bInitialized` 를 잠금 안에서 **먼저** 내려, 기다리던 워커가 그것을 보고 돌아가게 한다.
-            std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-            _impl->_bInitialized = SW_FALSE;
-
-            for ( XAudio2SystemInternal::VoiceBuffer& voiceBuffer : _impl->_listActiveVoice )
-            {
-                if ( voiceBuffer._pVoice != nullptr )
-                {
-                    voiceBuffer._pVoice->Stop( 0 );
-                    voiceBuffer._pVoice->DestroyVoice();
-                }
-            }
-            _impl->_listActiveVoice.clear();
-            for ( XAudio2SystemInternal::VoiceBuffer& idleBuffer : _impl->_listIdleVoice )
-            {
-                if ( idleBuffer._pVoice != nullptr )
-                {
-                    idleBuffer._pVoice->Stop( 0 );
-                    idleBuffer._pVoice->DestroyVoice();
-                }
-            }
-            _impl->_listIdleVoice.clear();
-            if ( _impl->_pMasterVoice != nullptr )
-            {
-                _impl->_pMasterVoice->DestroyVoice();
-                _impl->_pMasterVoice = nullptr;
-            }
-            if ( _impl->_pXAudio != nullptr )
-            {
-                _impl->_pXAudio->Release();
-                _impl->_pXAudio = nullptr;
-            }
+            _impl->_pStreamVoice->Stop( 0 );
+            _impl->_pStreamVoice->DestroyVoice();
+            _impl->_pStreamVoice = nullptr;
         }
-
-        if ( _impl->_bMfInitialized != SW_FALSE )
+        _impl->_callback._pVoice = nullptr;
+        if ( _impl->_pMasterVoice != nullptr )
+        {
+            _impl->_pMasterVoice->DestroyVoice();
+            _impl->_pMasterVoice = nullptr;
+        }
+        if ( _impl->_pXAudio != nullptr )
+        {
+            _impl->_pXAudio->Release();
+            _impl->_pXAudio = nullptr;
+        }
+        if ( _impl->_bMfInitialized == SW_TRUE )
         {
             MFShutdown();
             _impl->_bMfInitialized = SW_FALSE;
         }
-        if ( _impl->_bComInitialized != SW_FALSE )
+        if ( _impl->_bComInitialized == SW_TRUE )
         {
             CoUninitialize();
             _impl->_bComInitialized = SW_FALSE;
         }
-        {
-            std::scoped_lock<mutex> lock{ _impl->_clipCacheMutex };
-            _impl->_mapClipCache.clear();
-        }
-        SW_LOG_INFO( "Shut down." );
-    }
-
-    bool XAudio2System::isInitialized() const
-    {
-        return _impl != nullptr && _impl->_bInitialized == SW_TRUE;
-    }
-
-    string XAudio2System::getMusicPath() const
-    {
-        if ( _impl == nullptr )
-            return {};
-        std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-        return _impl->_musicPath;
-    }
-
-    /**
-     * @brief 매 프레임 재생이 끝난(큐 버퍼가 0 이 된) 원샷 보이스를 찾아 유휴 풀에 두거나 파괴합니다.
-     */
-    void XAudio2System::update( float32 )
-    {
-        SW_MEMORY_SCOPE( Audio );
-        if ( _impl == nullptr )
-            return;
-        std::scoped_lock<mutex>                     lock{ _impl->_voiceMutex };
-        vector<XAudio2SystemInternal::VoiceBuffer>& voices = _impl->_listActiveVoice;
-        for ( size_t voiceIndex = 0; voiceIndex < voices.size(); )
-        {
-            XAudio2SystemInternal::VoiceBuffer& voiceBuffer = voices[voiceIndex];
-            if ( voiceBuffer._pVoice == nullptr )
-            {
-                if ( voiceIndex + 1 < voices.size() )
-                    voiceBuffer = std::move( voices.back() );
-                voices.pop_back();
-                continue;
-            }
-            XAUDIO2_VOICE_STATE state{};
-            voiceBuffer._pVoice->GetState( &state );
-            if ( state.BuffersQueued == 0 )
-            {
-                voiceBuffer._pVoice->Stop( 0 );
-                voiceBuffer._pVoice->FlushSourceBuffers();
-                if ( _impl->_listIdleVoice.size() < XAudio2SystemImpl::kMaxIdleVoices )
-                    _impl->_listIdleVoice.push_back( std::move( voiceBuffer ) );
-                else
-                    voiceBuffer._pVoice->DestroyVoice();
-                VectorUtil::removeAtSwap( voices, voiceIndex );
-                continue;
-            }
-            ++voiceIndex;
-        }
-    }
-
-    /**
-     * @brief 효과음(SFX)을 한 번 재생합니다. 디코드와 재생은 워커 태스크에서 비동기로 합니다.
-     */
-    bool XAudio2System::play( string_view path )
-    {
-        return playInternal( path, false );
-    }
-
-    bool XAudio2System::preload( string_view path )
-    {
-        SW_MEMORY_SCOPE( Audio );
-        if ( path.empty() || _impl == nullptr )
-            return false;
-        return _impl->getOrLoadClip( path ) != nullptr;
-    }
-
-    /**
-     * @brief 배경음악(BGM)을 루프로 재생합니다. 재생 중인 BGM 이 있으면 교체합니다.
-     */
-    bool XAudio2System::playMusic( string_view path )
-    {
-        if ( path.empty() || _impl == nullptr )
-            return false;
-
-        {
-            std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-            if ( _impl->_musicPath == path && _impl->_pMusicVoice != nullptr )
-                return true;
-        }
-
-        // 있는 곡인지 **멈추기 전에** 본다 — stopMusic() 을 먼저 부르면 없는 곡을 요청했을 때 틀어져 있던 BGM 만 꺼진다.
-        if ( ResourceUtil::hasResource( path ) == false )
-        {
-            SW_LOG_WARNING( "Audio resource not found: %#", path );
-            return false;
-        }
-
-        stopMusic();
-        return playInternal( path, true );
-    }
-
-    /**
-     * @brief 재생 중인 배경음악(BGM)을 멈추고 보이스와 PCM 을 놓습니다.
-     */
-    void XAudio2System::stopMusic()
-    {
-        if ( _impl == nullptr )
-            return;
-        std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-        if ( _impl->_pMusicVoice != nullptr )
-        {
-            _impl->_pMusicVoice->Stop( 0 );
-            _impl->_pMusicVoice->DestroyVoice();
-            _impl->_pMusicVoice = nullptr;
-        }
-        _impl->_pMusicClip.reset();
-        _impl->_musicPath.clear();
-        // 아직 디코드 중인 요청이 뒤늦게 도착해 멈춘 음악을 되살리지 못하게 세대를 올린다.
-        ++_impl->_musicGeneration;
-    }
-
-    void XAudio2System::pauseMusic()
-    {
-        if ( _impl == nullptr )
-            return;
-        std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-        if ( _impl->_pMusicVoice != nullptr )
-            _impl->_pMusicVoice->Stop( 0 );
-    }
-
-    void XAudio2System::resumeMusic()
-    {
-        if ( _impl == nullptr )
-            return;
-        std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-        if ( _impl->_pMusicVoice != nullptr )
-            _impl->_pMusicVoice->Start( 0 );
-    }
-
-    void XAudio2System::applyVolume()
-    {
-        if ( _impl == nullptr )
-            return;
-
-        // 음소거는 **마스터 보이스 한 자리에만** 건다 — 음악 · 효과음 보이스에도 걸면 "음소거 → 볼륨 조절 → 음소거 해제" 뒤
-        // 그 보이스들이 0 인 채로 남는다.
-        if ( _impl->_pMasterVoice != nullptr )
-            _impl->_pMasterVoice->SetVolume( getEffectiveMasterVolume() );
-
-        std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-        if ( _impl->_pMusicVoice != nullptr )
-            _impl->_pMusicVoice->SetVolume( getMusicVolume() );
-
-        const float32 sfxVolume = getSfxVolume();
-        for ( XAudio2SystemInternal::VoiceBuffer& voiceBuffer : _impl->_listActiveVoice )
-        {
-            if ( voiceBuffer._pVoice != nullptr )
-                voiceBuffer._pVoice->SetVolume( sfxVolume );
-        }
-    }
-
-    void XAudio2System::playDecodedClipTask( const TaskArgs& args )
-    {
-        if ( _impl == nullptr || _impl->_pXAudio == nullptr )
-            return;
-
-        const string requestedPath   = args.get<string>( 0 );
-        const bool   bLoop           = args.get<bool>( 1 );
-        const uint64 musicGeneration = args.get<uint64>( 2 );
-
-        shared_ptr<XAudio2SystemInternal::PcmClip> pClip = _impl->getOrLoadClip( requestedPath );
-        if ( pClip == nullptr || pClip->_listData.empty() )
-        {
-            SW_LOG_WARNING( "Failed to decode: %#", requestedPath );
-            return;
-        }
-
-        std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-
-        // 이 함수 첫 줄의 `_pXAudio` 검사는 **잠금 밖**이라 못 믿는다. 디코드(느리다)와 잠금 대기
-        // 사이에 `shutdown()` 이 끝났을 수 있고, 그러면 `_pXAudio` 는 이미 `Release()` 된 것이다.
-        // 잠금 안에서 다시 본다.
-        if ( _impl->_bInitialized == SW_FALSE || _impl->_pXAudio == nullptr )
-            return;
-
-        // 요청 번호로 거른다. 경로로 거르면 A → B → A 처럼 같은 곡으로 돌아올 때 늦게 온 첫 A 도 통과해
-        // 음악 보이스가 둘이 된다(앞의 것은 멈추지도 않는다).
-        if ( bLoop && _impl->_musicGeneration != musicGeneration )
-            return;
-
-        IXAudio2SourceVoice* pVoice{ nullptr };
-        if ( bLoop == false )
-        {
-            for ( size_t idx = 0; idx < _impl->_listIdleVoice.size(); ++idx )
-            {
-                if ( _impl->_listIdleVoice[idx]._pClip != nullptr &&
-                     XAudio2SystemImpl::isFormatEqual( _impl->_listIdleVoice[idx]._pClip->_format, pClip->_format ) )
-                {
-                    pVoice = _impl->_listIdleVoice[idx]._pVoice;
-                    VectorUtil::removeAtSwap( _impl->_listIdleVoice, idx );
-                    break;
-                }
-            }
-        }
-
-        HRESULT hr = S_OK;
-        if ( pVoice == nullptr )
-        {
-            hr = _impl->_pXAudio->CreateSourceVoice( &pVoice, &pClip->_format.Format );
-            if ( FAILED( hr ) || pVoice == nullptr )
-            {
-                SW_LOG_WARNING( "CreateSourceVoice failed (0x%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
-                return;
-            }
-        }
-
-        XAUDIO2_BUFFER audioBuffer{};
-        audioBuffer.AudioBytes = static_cast<UINT32>( pClip->_listData.size() );
-        audioBuffer.pAudioData = std::as_const( pClip->_listData ).data();
-        if ( bLoop )
-        {
-            audioBuffer.LoopCount = XAUDIO2_LOOP_INFINITE;
-            _impl->_pMusicClip    = pClip;
-            _impl->_pMusicVoice   = pVoice;
-            // 음소거는 마스터 보이스가 맡는다. 여기서는 음악 볼륨만 건다.
-            pVoice->SetVolume( getMusicVolume() );
-        }
-        else
-        {
-            audioBuffer.Flags = XAUDIO2_END_OF_STREAM;
-            _impl->_listActiveVoice.push_back( XAudio2SystemInternal::VoiceBuffer{} );
-            XAudio2SystemInternal::VoiceBuffer& slot = _impl->_listActiveVoice.back();
-            slot._pClip                              = pClip;
-            slot._pVoice                             = pVoice;
-            pVoice->SetVolume( getSfxVolume() );
-        }
-
-        hr = pVoice->SubmitSourceBuffer( &audioBuffer );
-        if ( FAILED( hr ) )
-        {
-            SW_LOG_WARNING( "SubmitSourceBuffer failed (0x%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
-            if ( bLoop )
-            {
-                _impl->_pMusicVoice->DestroyVoice();
-                _impl->_pMusicVoice = nullptr;
-                _impl->_pMusicClip.reset();
-                _impl->_musicPath.clear();
-                ++_impl->_musicGeneration;
-            }
-            return;
-        }
-        pVoice->Start( 0 );
-        SW_LOG_TRACE( "Playing %# (%# loop=%#)", requestedPath, static_cast<uint32>( audioBuffer.AudioBytes ),
-                      bLoop ? 1 : 0 );
-    }
-
-    /**
-     * @brief 경로를 확인하고 디코드 · 재생을 워커 태스크(`playDecodedClipTask`)로 넘깁니다. 루프면 음악 경로와 요청 번호를 먼저 적습니다.
-     */
-    bool XAudio2System::playInternal( string_view path, bool bLoop )
-    {
-        SW_MEMORY_SCOPE( Audio );
-        if ( _impl == nullptr || _impl->_bInitialized == SW_FALSE )
-            return false;
-
-        if ( path.empty() )
-            return false;
-
-        if ( ResourceUtil::hasResource( path ) == false )
-        {
-            SW_LOG_WARNING( "Audio resource not found: %#", path );
-            return false;
-        }
-
-        const string requestedPath = string( path );
-
-        // **제출보다 먼저**(잠금 안에서) 기록한다. 클립이 캐시에 있으면 워커가 먼저 도착하므로, 제출 뒤에 적으면 워커가
-        // "요청한 곡이 아니다" 로 판단하고 조용히 돌아가 BGM 이 아무 말 없이 시작되지 않는다.
-        uint64 musicGeneration = 0;
-        if ( bLoop )
-        {
-            std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-            _impl->_musicPath = requestedPath;
-            musicGeneration   = ++_impl->_musicGeneration;
-        }
-
-        if ( _impl->_pXAudio == nullptr )
-        {
-            SW_LOG_TRACE( "play (null audio fallback): %#", path );
-            return true;
-        }
-
-        engine::getTaskManager()
-            .emplaceTask(
-                "XAudio2Play",
-                SW_DELEGATE_METHOD( TaskArgsDelegate, &XAudio2System::playDecodedClipTask, this ),
-                MakeTaskArgs( requestedPath, bLoop, musicGeneration ) )
-            .submit();
-
-        return true;
     }
 } // namespace sw
 #endif

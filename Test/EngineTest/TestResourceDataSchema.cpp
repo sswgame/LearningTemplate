@@ -5,6 +5,9 @@
 
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Audio/AudioEvent.h"
+#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMusic.h"
 #include "Engine/Character/BodyShape.h"
 #include "Engine/Character/FitPartData.h"
 #include "Engine/Character/FitSolver.h"
@@ -92,6 +95,9 @@ namespace
         static bool isTileSet( sw::string_view resourceId ) { return endsWith( resourceId, ".tileset.xml" ); }
         static bool isTileMap( sw::string_view resourceId ) { return endsWith( resourceId, ".tilemap.xml" ); }
         static bool isRender2DSettings( sw::string_view resourceId ) { return endsWith( resourceId, "/data/render2d.xml" ); }
+        static bool isAudioMixer( sw::string_view resourceId ) { return endsWith( resourceId, ".audiomixer.xml" ); }
+        static bool isAudioEvents( sw::string_view resourceId ) { return endsWith( resourceId, ".audioevents.xml" ); }
+        static bool isAudioMusic( sw::string_view resourceId ) { return endsWith( resourceId, ".music.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -329,6 +335,9 @@ namespace
             {              "items",               &isItems,           &loadCatalog<sw::ItemCatalog>},
             {         "appearance",      &isAppearanceData,                     &loadAppearanceData},
             {           "skeleton",            &isSkeleton,                           &loadSkeleton},
+            {         "audiomixer",          &isAudioMixer,        &loadCatalog<sw::AudioMixerDesc>},
+            {        "audioevents",         &isAudioEvents,     &loadCatalog<sw::AudioEventLibrary>},
+            {         "audiomusic",          &isAudioMusic,        &loadCatalog<sw::AudioMusicDesc>},
         };
 
         /**

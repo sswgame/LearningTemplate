@@ -43,6 +43,7 @@ Object/
 │  ├─ DeferredDelegateQueue.*   # 틱이 미룬 일(계층 변경 · 틱 뒤 작업)의 큐 — 넣기는 아무 스레드, 비우기는 게임 스레드
 │  ├─ PrimitiveRegistry.* · LightRegistry.*  # 빛 등록부는 종류(방향광 · 점광 · 스포트)마다 칸 하나
 │  ├─ CameraRegistry.*          # 카메라 등록부 + 역할 · 우선순위 선택 규칙 하나(게임 · 에디터 카메라가 같이 쓴다)
+│  ├─ SceneAudio.*              # 오디오 컴포넌트 등록부 + 프레임마다 리스너 · 에미터 · 가림 · 리버브 존을 오디오 엔진에 넣기(Engine/Audio/README.md)
 │  ├─ MeshInstanceBatch.* · SpriteInstanceBatch.*  # 컴포넌트 없이 인스턴스 N 개를 드는 렌더 프리미티브(PrimitiveRegistry 에 등록)
 │  └─ ObjectStateSerializer.*
 ├─ Animation/          # AnimationSystem — 애니메이션 유닛(SkeletalMeshComponent)을 의존 레벨 · 단계(시간 → 기본 포즈 → 부착 → 후처리 → 팔레트)로 평가.
@@ -54,6 +55,7 @@ Object/
 │  ├─ SceneTransformHierarchy.*  # 씬마다: 더티 루트 · 플러시 · 틱 중 쓰기(대기 칸 목록 · 쓰기 큐)
 │  ├─ ComponentStableKey.*  # `이름(없으면 타입)#n` 키 — 씬 파일의 부착 대상과 에디터 선택 복원이 같은 키
 │  ├─ TagSystem.*       # TagContainer · TagQuery (`TagID` 자체는 Core/String/TagID.h)
+│  ├─ Audio/            # 리스너 · 에미터 · 앰비언트(점 · 상자 · 구) · 리버브 존 컴포넌트, 물리 레이캐스트 가림 질의(틱하지 않고 SceneAudio 에 등록)
 │  └─ 2D/ · 3D/         # Sprite, Mesh, Collider, 빛(`LightComponent` 기반 — 색 · 세기 · 방향 규약 · 등록),
 │                       #   SkeletalMeshComponent(유닛 — 스켈레톤 · 포즈 · 팔레트 · 스킨드 메시) · SkeletalAnimatorComponent(그래프 · 레이어 · 루트 모션) 등
 └─ Prefab/             # PrefabAsset(로드 · 저장 · 스폰) · PrefabCache(프리팹 에셋 캐시, `PrefabAsset.h`) · PrefabOverrides(인스턴스 차이 뽑기 · 다시 얹기)

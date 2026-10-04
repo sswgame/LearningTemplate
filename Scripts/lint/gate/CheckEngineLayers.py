@@ -101,7 +101,6 @@ _kEngineTier: dict[str, int] = {
     # — Core 를 압축 라이브러리에 종속시키지 않으려고 여기 둔다(Source/Engine/CMakeLists.txt 주석 참고).
     "Compression": 0,
     # 1: 리플렉션과, 토대 위의 잎 서브시스템·헬퍼.
-    "Audio": 1,
     "Reflection": 1,
     "Utility": 1,
     # 2: 리플렉션 위에 올라가는 직렬화와 에셋형 잎.
@@ -109,6 +108,8 @@ _kEngineTier: dict[str, int] = {
     "Localization": 2,
     "Serialization": 2,
     # 3: 설정 — 리플렉션·직렬화로 읽힌다. 물리도 같은 자리다 — 설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터다.
+    # 오디오 — 믹서 그래프 · 이벤트 · 음악 데이터를 리플렉션 · 직렬화로 읽는다(설정과 같은 자리).
+    "Audio": 3,
     "Config": 3,
     "Dialogue": 3,
     "Physics": 3,

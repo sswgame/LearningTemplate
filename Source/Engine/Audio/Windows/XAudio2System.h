@@ -1,10 +1,10 @@
 /**
  * @file XAudio2System.h
- * @brief Windows 전용 오디오 파사드입니다(XAudio2 + Media Foundation 디코드).
+ * @brief Windows 오디오 출력입니다 — XAudio2 소스 보이스 하나로 엔진이 렌더한 스테레오 float 를 흘려 보냅니다(스트리밍).
  *
- * @note 이 클래스는 Windows 에서만 만들어집니다. IAudioSystem::create() 가 다른 플랫폼에서는
- *       NullAudioSystem 을 반환합니다. 그래서 구현 .cpp 는 파일 전체가 SW_PLATFORM_WINDOWS 가드
- *       안에 있습니다(Window/Windows · Input/Windows 와 같은 형태).
+ * @note 믹스는 전부 엔진(`AudioEngine`)이 합니다. 이 백엔드는 장치를 열고, XAudio2 처리 스레드의 버퍼 끝 콜백에서 다음 버퍼를 렌더해 제출할 뿐입니다.
+ *       공통 디코더가 다루지 않는 형식(MP3 · ADPCM WAV)은 Media Foundation 대체 디코더로 풉니다.
+ * @note 이 클래스는 Windows 에서만 만들어집니다. 구현 .cpp 는 파일 전체가 SW_PLATFORM_WINDOWS 가드 안에 있습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -17,63 +17,23 @@ namespace sw
 {
     struct XAudio2SystemImpl;
 
-    class TaskArgs;
-
     /**
      * @class XAudio2System
-     * @brief Windows 오디오 백엔드입니다. WAV 는 직접 파싱하고, 그 밖의 형식(MP3 등)은 Media Foundation 으로 디코딩해 재생합니다.
+     * @brief Windows 오디오 백엔드입니다.
      */
     class SW_API XAudio2System : public IAudioSystem
     {
     public:
-        /** @brief 빈 오디오 시스템으로 만듭니다. initialize 를 부르기 전에는 쓸 수 없습니다. */
+        /** @brief 장치를 잡지 않은 채로 만듭니다(대체 디코더만 겁니다). */
         XAudio2System();
-        /** @brief 오디오 시스템을 해제합니다. */
+        /** @brief 장치를 닫고 엔진을 내립니다. */
         ~XAudio2System() override;
 
-        /** @brief 복사를 금지합니다. */
-        XAudio2System( const XAudio2System& ) = delete;
-        /** @brief 대입을 금지합니다. */
-        XAudio2System& operator=( const XAudio2System& ) = delete;
-
-        /** @brief 오디오 백엔드를 초기화합니다. */
-        bool initialize() override;
-        /** @brief 오디오 백엔드를 종료합니다. */
-        void shutdown() override;
-        /** @brief 초기화 여부를 반환합니다. */
-        bool isInitialized() const override;
-        /** @brief 재생이 끝난 보이스를 정리합니다. */
-        void update( float32 deltaSeconds ) override;
-
-        /** @brief 리소스 상대 · 절대 경로를 해석해 효과음(SFX)을 한 번 재생합니다. */
-        bool play( string_view path ) override;
-
-        /** @brief 디코드해 캐시에 올립니다(동기). 첫 재생의 디코드 끊김을 없앱니다. 디코드할 수 없으면 false 입니다. */
-        bool preload( string_view path ) override;
-
-        /** @brief 배경음악(BGM)을 루프 재생하고 이전 음악 보이스는 멈춥니다. 같은 곡이 이미 재생 중이면 다시 시작하지 않습니다. */
-        bool playMusic( string_view path ) override;
-
-        /** @brief 루프 음악 보이스를 멈춥니다. */
-        void stopMusic() override;
-
-        /** @brief 배경음악을 일시정지합니다. */
-        void pauseMusic() override;
-        /** @brief 일시정지된 배경음악을 재개합니다. */
-        void resumeMusic() override;
-
-        /** @brief 마지막으로 요청된 배경음악 경로입니다. */
-        string getMusicPath() const override;
-
     protected:
-        /** @brief 바뀐 볼륨 · 음소거를 마스터 · 음악 · 효과음 보이스에 반영합니다. */
-        void applyVolume() override;
-
-    private:
-        /** @brief 경로를 확인하고 디코드 · 재생을 워커 태스크로 넘깁니다. */
-        bool playInternal( string_view path, bool bLoop );
-        /** @brief 워커에서 클립을 디코드해 재생하는 태스크 본문입니다. TaskArgs 는 요청 경로 · 루프 여부 · 음악 요청 번호입니다. */
-        void playDecodedClipTask( const TaskArgs& args );
+        /** @brief COM · Media Foundation · XAudio2 를 올리고 스트리밍 보이스를 시작합니다. 장치가 없으면 false 입니다. */
+        [[nodiscard]] bool openOutput() override;
+        /** @brief 스트리밍 보이스를 멈추고 장치를 놓습니다. */
+        void closeOutput() override;
 
     private:
         unique_ptr<XAudio2SystemImpl> _impl; /**< Windows 전용 상태입니다. 헤더에서 XAudio2 를 가립니다. */
