@@ -442,9 +442,9 @@ namespace sw
                 MemoryProfiler::captureMemoryLeakBaseline();
                 loop._bHeadless = true;
                 SW_LOG_INFO( "Starting Headless (ImportLipSync)..." );
-                LipSyncSettings lipSyncSettings{};
-                uint32          lipSyncFailedCount = 0;
-                uint32          lipSyncCount       = 0;
+                LipSyncSettings         lipSyncSettings{};
+                uint32                  lipSyncFailedCount = 0;
+                [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
                 if ( lipSyncSettings.loadFromResource( LipSyncSettings::kResourcePath ) )
                     lipSyncCount = LipSyncImport::importAll( ResourceUtil::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
                 else
