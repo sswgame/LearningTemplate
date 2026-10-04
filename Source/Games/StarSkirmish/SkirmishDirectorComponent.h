@@ -77,6 +77,14 @@ namespace sw
             uint32           _stamp{ 0 };
         };
 
+        /** @brief 틱 뒤에 낼 사운드 이벤트 하나입니다. */
+        struct PendingSound
+        {
+            float3      _position{};
+            const utf8* _pEvent{ nullptr };
+            bool        _bSpatial{ false }; ///< 그 자리에서 낸다(아니면 2D)
+        };
+
         /** @brief 색 하나의 머티리얼 인스턴스입니다(같은 색은 나눠 쓴다 — 배치 키가 인스턴스다). */
         struct ColorLook
         {
@@ -96,7 +104,8 @@ namespace sw
         /** @brief 유닛 모습 인스턴스(편 · 자원 × 고름)를 만듭니다(뷰가 워커에서 고른다). */
         void                         prepareUnitLooks( Material* pMaterial );
         shared_ptr<MaterialInstance> acquireColorLook( Material* pMaterial, const float4& color );
-        void                         playSound( const utf8* pPath );
+        /** @brief 이벤트를 틱 뒤에 냅니다. @p pPosition 이 있으면 그 자리(화면 평면 팬), 없으면 2D 입니다. */
+        void playSound( const utf8* pEvent, const float3* pPosition );
 
         /** @brief 보일 유닛(안개 · 죽음)과 세운 모습을 견줘 바뀐 자리를 쌓습니다(PrePhysics). */
         void collectUnitChanges();
@@ -136,7 +145,7 @@ namespace sw
         vector<UnitSlot>                     _listUnitSlot;
         vector<GameObjectHandle>             _listCliffObject;
         vector<int32>                        _listPendingUnit;  ///< 맞출 유닛 자리(틱 뒤)
-        vector<const utf8*>                  _listPendingSound; ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
+        vector<PendingSound>                 _listPendingSound; ///< 낼 사운드 이벤트(틱 뒤 — 오디오는 게임 스레드에서)
         vector<ColorLook>                    _listColorLook;
         vector<shared_ptr<MaterialInstance>> _listUnitLook; ///< (편 · 자원 칸) × 2 + 고름
         float3                               _dragStart;

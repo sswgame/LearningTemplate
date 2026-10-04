@@ -60,6 +60,9 @@ namespace sw
         uint32 _realVoiceCount{ 0 };     ///< 섞은 보이스
         uint32 _virtualVoiceCount{ 0 };  ///< 위치만 진행한 보이스
         uint32 _instanceCount{ 0 };      ///< 살아 있는 이벤트 인스턴스
+        uint32 _peakRealVoiceCount{ 0 }; ///< 지금까지 한 블록에 섞은 보이스의 최대
+        uint64 _playedEventCount{ 0 };   ///< 지금까지 낸 이벤트(인스턴스를 만든 것)
+        uint64 _droppedEventCount{ 0 };  ///< 쿨다운 · 상한(Reject) · 칸 부족으로 버린 이벤트
     };
 } // namespace sw
 
@@ -451,6 +454,7 @@ namespace sw
         LibraryMap                       _mapGameLibrary;      /**< 게임 스레드가 아는 라이브러리입니다. */
         shared_ptr<const AudioMixerDesc> _pGameMixerDesc;      /**< 게임 스레드가 아는 그래프입니다(이름 대조). */
         mutex                            _commandMutex;        /**< `_listPendingCommand` 를 지킵니다. */
+        mutable mutex                    _libraryMutex;        /**< `_mapGameLibrary` · `_pGameMixerDesc` 를 지킵니다(이벤트는 병렬 틱에서도 낸다). */
         atomic<uint64>                   _nextPlayingId;       /**< 다음 재생 id 입니다. */
         // 오디오 스레드
         shared_ptr<AudioMixer>                       _pMixer;                         /**< 지금 그래프입니다. */
@@ -476,6 +480,9 @@ namespace sw
         AudioRandom                                  _random;                         /**< 컨테이너 · 범위 난수입니다. */
         uint64                                       _renderedFrameCount;             /**< 지금까지 렌더한 프레임입니다. */
         uint64                                       _appliedPlayingId;               /**< 적용한 재생 명령의 가장 큰 id 입니다. */
+        uint64                                       _playedEventCount;               /**< 낸 이벤트 수입니다(게시용). */
+        uint64                                       _droppedEventCount;              /**< 버린 이벤트 수입니다(게시용). */
+        uint32                                       _peakRealVoiceCount;             /**< 한 블록에 섞은 보이스의 최대입니다(게시용). */
         uint32                                       _blockCursor;                    /**< `_listBlockOutput` 에서 다음에 내보낼 프레임입니다. */
         // 게시(오디오 스레드 → 게임 스레드)
         vector<AudioPlayingId> _listPublishedPlaying; /**< 살아 있는 재생 id(정렬)입니다. */

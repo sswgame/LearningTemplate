@@ -7,6 +7,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameSound.h"
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 
@@ -15,6 +16,14 @@
 namespace sw
 {
     SW_LOG_CALLER( "Shooter3DGame" );
+
+    namespace
+    {
+        struct Shooter3DGameInternal
+        {
+            static constexpr const utf8* kAudioEvents = "game/shooter3d/audio/shooter3d.audioevents.xml";
+        };
+    } // namespace
 
     Shooter3DGame::Shooter3DGame()
         : _weaponCatalog{}
@@ -25,6 +34,9 @@ namespace sw
 
     bool Shooter3DGame::onInitialize()
     {
+        // 사운드 이벤트 — 게임 코드는 이름만 안다(무슨 클립을 어떻게 낼지는 데이터).
+        if ( GameSound::loadEvents( Shooter3DGameInternal::kAudioEvents ) == false )
+            SW_LOG_WARNING( "[Shooter] %# could not be loaded - sounds stay silent", Shooter3DGameInternal::kAudioEvents );
         if ( _weaponCatalog.loadFromResource( "game/shooter3d/data/weapons.xml" ) == false )
         {
             SW_LOG_WARNING( "[Shooter] weapons.xml could not be loaded - the arena cannot start" );
@@ -39,6 +51,7 @@ namespace sw
 
     void Shooter3DGame::onShutdown()
     {
+        GameSound::unloadEvents( Shooter3DGameInternal::kAudioEvents );
         game::unbindLocalService<WeaponCatalog>();
     }
 

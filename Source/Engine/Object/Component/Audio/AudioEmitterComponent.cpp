@@ -50,7 +50,7 @@ namespace sw
         const GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || pOwner->getManager() == nullptr )
             return nullptr;
-        return pOwner->getManager()->getSceneAudio().getAudioEngine();
+        return pOwner->getManager()->getSceneAudio().findAudioEngine();
     }
 
     AudioPlayingId AudioEmitterComponent::post( const hashed_string& eventName )

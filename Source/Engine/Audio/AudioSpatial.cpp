@@ -69,20 +69,27 @@ namespace sw
     {
         const float3 offset = emitterPosition - listener._position;
         if ( listener._mode == AudioSpatialMode::Screen2D )
-            return MathUtil::sqrt( offset._x * offset._x + offset._y * offset._y );
+        {
+            // 화면 평면 거리 — 시선(앞) 방향 성분(깊이 · 레이어)을 뺀다. 옆에서 본 2D(XY, +Z 를 봄)면 XY 거리, 위에서 본 직교(XZ)면 XZ 거리.
+            const float3 forward = listener._forward.normalize();
+            const float3 planar  = offset - forward * offset.dot( forward );
+            return planar.getLength();
+        }
         return offset.getLength();
     }
 
     float32 AudioSpatializer::computePan( const AudioListenerState& listener, const float3& emitterPosition, float32 centerRadius )
     {
         const float3 offset = emitterPosition - listener._position;
+        // 왼손 좌표(+X 오른쪽 · +Y 위 · +Z 앞): 오른쪽 = 위 × 앞.
+        const float3 right = listener._up.cross( listener._forward ).normalize();
         if ( listener._mode == AudioSpatialMode::Screen2D )
         {
+            // 화면 가로 거리 / 화면 반폭 — 화면 세로(고도)는 팬에 쓰지 않는다.
             const float32 halfWidth = MathUtil::max( 0.01f, listener._screenHalfWidth );
-            return MathUtil::clamp( offset._x / halfWidth, -1.0f, 1.0f );
+            return MathUtil::clamp( offset.dot( right ) / halfWidth, -1.0f, 1.0f );
         }
-        // 왼손 좌표(+X 오른쪽 · +Y 위 · +Z 앞): 오른쪽 = 위 × 앞. 팬은 수평면 위 방향의 오른쪽 성분이다(고도는 쓰지 않는다).
-        const float3  right      = listener._up.cross( listener._forward ).normalize();
+        // 3D 팬은 수평면 위 방향의 오른쪽 성분이다(고도는 쓰지 않는다).
         const float32 side       = offset.dot( right );
         const float32 front      = offset.dot( listener._forward );
         const float32 horizontal = MathUtil::sqrt( side * side + front * front );

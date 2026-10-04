@@ -159,7 +159,10 @@ namespace sw
         // 쿨다운 — 오디오 시각(렌더한 프레임)으로 잰다.
         const uint64 cooldownFrames = static_cast<uint64>( event._cooldownSeconds * static_cast<float32>( audio::kSampleRate ) );
         if ( cooldownFrames > 0 && state._bPostedOnce && _renderedFrameCount - state._lastPostFrame < cooldownFrames )
+        {
+            ++_droppedEventCount;
             return;
+        }
 
         // 동시 재생 상한과 뺏기(Wwise Playback Limit · 언리얼 Sound Concurrency).
         if ( event._maxInstances > 0 )
@@ -208,7 +211,10 @@ namespace sw
             if ( liveCount >= event._maxInstances )
             {
                 if ( event._steal == AudioStealPolicy::Reject || victimIndex < 0 )
+                {
+                    ++_droppedEventCount;
                     return;
+                }
                 EventInstance& victim = _listInstance[static_cast<size_t>( victimIndex )];
                 victim._bStopping     = true;
                 stopVoices( victim._playingId, 0, event._fadeOutSeconds );
@@ -217,7 +223,11 @@ namespace sw
 
         const int32 instanceIndex = allocateInstance();
         if ( instanceIndex < 0 )
+        {
+            ++_droppedEventCount;
             return;
+        }
+        ++_playedEventCount;
         state._bPostedOnce   = true;
         state._lastPostFrame = _renderedFrameCount;
 

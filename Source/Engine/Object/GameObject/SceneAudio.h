@@ -50,7 +50,7 @@ namespace sw
         /** @brief 쓸 엔진을 정합니다(시험). nullptr 이면 서비스의 엔진입니다. */
         void setAudioEngine( AudioEngine* pEngine ) { _pEngineOverride = pEngine; }
         /** @brief 쓸 엔진입니다. 서비스가 없거나 오디오가 내려가 있으면 nullptr 입니다. */
-        AudioEngine* getAudioEngine() const;
+        AudioEngine* findAudioEngine() const;
         /** @brief 가림 질의를 바꿉니다(시험 · 게임의 다른 기하). nullptr 이면 물리 씬의 레이캐스트입니다. */
         void setOcclusionQuery( const IAudioOcclusionQuery* pQuery ) { _pOcclusionOverride = pQuery; }
         /** @brief 마지막 프레임의 첫 리스너 자리입니다(앰비언트 가장 가까운 점 · 리버브 존 판정). */

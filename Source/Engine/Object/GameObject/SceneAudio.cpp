@@ -69,7 +69,7 @@ namespace sw
 
     SceneAudio::~SceneAudio() = default;
 
-    AudioEngine* SceneAudio::getAudioEngine() const
+    AudioEngine* SceneAudio::findAudioEngine() const
     {
         if ( _pEngineOverride != nullptr )
             return _pEngineOverride;
@@ -103,7 +103,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ _mutex };
             (void)_emitter.remove( pEmitter );
         }
-        AudioEngine* pEngine = getAudioEngine();
+        AudioEngine* pEngine = findAudioEngine();
         if ( pEngine != nullptr && pEmitter != nullptr )
             pEngine->removeEmitter( pEmitter->getEmitterId() );
     }
@@ -122,7 +122,7 @@ namespace sw
 
     void SceneAudio::update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsScene3D* pScene3D )
     {
-        AudioEngine* pEngine = getAudioEngine();
+        AudioEngine* pEngine = findAudioEngine();
         if ( pEngine == nullptr )
             return;
         std::scoped_lock<mutex> lock{ _mutex };

@@ -16,6 +16,7 @@ namespace sw
         , _mapGameLibrary{}
         , _pGameMixerDesc{ nullptr }
         , _commandMutex{}
+        , _libraryMutex{}
         , _nextPlayingId{ 1 }
         , _pMixer{ nullptr }
         , _listVoice{}
@@ -40,6 +41,9 @@ namespace sw
         , _random{}
         , _renderedFrameCount{ 0 }
         , _appliedPlayingId{ 0 }
+        , _playedEventCount{ 0 }
+        , _droppedEventCount{ 0 }
+        , _peakRealVoiceCount{ 0 }
         , _blockCursor{ audio::kBlockFrameCount }
         , _listPublishedPlaying{}
         , _publishedStats{}
@@ -90,7 +94,10 @@ namespace sw
         _listSnapshot.clear();
         _mapLibrary.clear();
         _mapEventState.clear();
-        _mapGameLibrary.clear();
+        {
+            std::scoped_lock<mutex> lock{ _libraryMutex };
+            _mapGameLibrary.clear();
+        }
         _mapEmitter.clear();
         _pMusic.reset();
         _musicSegment        = -1;
@@ -108,7 +115,10 @@ namespace sw
         shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
         if ( pMixer->initialize( mixerDesc ) == false )
             return false;
-        _pGameMixerDesc = make_shared<AudioMixerDesc>( mixerDesc );
+        {
+            std::scoped_lock<mutex> lock{ _libraryMutex };
+            _pGameMixerDesc = make_shared<AudioMixerDesc>( mixerDesc );
+        }
         Command command;
         command._type   = CommandType::SwapMixer;
         command._pMixer = std::move( pMixer );
@@ -122,7 +132,8 @@ namespace sw
         if ( library.validate( sourceName ) == false )
             return false;
 
-        bool bValid = true;
+        std::scoped_lock<mutex> lock{ _libraryMutex };
+        bool                    bValid = true;
         for ( const AudioEventDesc& event : library._listEvent )
         {
             if ( _pGameMixerDesc == nullptr || _pGameMixerDesc->findBusIndex( event._bus ) < 0 )
@@ -189,8 +200,11 @@ namespace sw
 
     void AudioEngine::unloadEventLibrary( const hashed_string& libraryName )
     {
-        if ( _mapGameLibrary.erase( libraryName ) == 0 )
-            return;
+        {
+            std::scoped_lock<mutex> lock{ _libraryMutex };
+            if ( _mapGameLibrary.erase( libraryName ) == 0 )
+                return;
+        }
         Command command;
         command._type = CommandType::SetLibrary;
         command._name = libraryName;
@@ -199,6 +213,7 @@ namespace sw
 
     bool AudioEngine::hasEvent( const hashed_string& eventName ) const
     {
+        std::scoped_lock<mutex> lock{ _libraryMutex };
         for ( const auto& entry : _mapGameLibrary )
         {
             if ( entry.second->findEvent( eventName ) != nullptr )
@@ -217,12 +232,20 @@ namespace sw
 
     AudioPlayingId AudioEngine::postEvent( const hashed_string& eventName, AudioEmitterId emitterId )
     {
-        const AudioEventDesc* pEvent = nullptr;
-        for ( const auto& entry : _mapGameLibrary )
+        // 라이브러리를 쥐고 잠금을 푼다 — 다른 스레드가 그 사이에 내려도 서술이 산다.
+        const AudioEventDesc*               pEvent = nullptr;
+        shared_ptr<const AudioEventLibrary> pLibrary;
         {
-            pEvent = entry.second->findEvent( eventName );
-            if ( pEvent != nullptr )
-                break;
+            std::scoped_lock<mutex> lock{ _libraryMutex };
+            for ( const auto& entry : _mapGameLibrary )
+            {
+                pEvent = entry.second->findEvent( eventName );
+                if ( pEvent != nullptr )
+                {
+                    pLibrary = entry.second;
+                    break;
+                }
+            }
         }
         if ( pEvent == nullptr )
         {
@@ -1014,6 +1037,10 @@ namespace sw
         stats._renderedFrameCount = _renderedFrameCount;
         stats._realVoiceCount     = realCount;
         stats._virtualVoiceCount  = virtualCount;
+        _peakRealVoiceCount       = MathUtil::max( _peakRealVoiceCount, realCount );
+        stats._peakRealVoiceCount = _peakRealVoiceCount;
+        stats._playedEventCount   = _playedEventCount;
+        stats._droppedEventCount  = _droppedEventCount;
         for ( const EventInstance& instance : _listInstance )
             stats._instanceCount += instance._bInUse ? 1u : 0u;
 

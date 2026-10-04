@@ -30,7 +30,7 @@ namespace sw
         {
             static constexpr float32     kStatusInterval = 5.0f;
             static constexpr float4      kBurstColor{ 1.0f, 0.6f, 0.15f, 1.0f };
-            static constexpr const utf8* kSoundDroneDown = "game/shooter3d/sounds/impact_metal_medium_000.ogg";
+            static constexpr const utf8* kEventDroneDown = "DroneDown"; ///< shooter3d.audioevents.xml
 
             /** @brief 원(XZ) 가운데에서 가장 가까운 상자 위 점입니다. */
             static float3 closestPointXz( const float3& point, const float3& boxMin, const float3& boxMax )
@@ -107,7 +107,7 @@ namespace sw
         , _listEffect{}
         , _listPendingDrone{}
         , _listPendingEffect{}
-        , _listPendingSound{}
+        , _listPendingDroneDown{}
         , _listColorLook{}
         , _droneLook{}
         , _droneFlashLook{}
@@ -168,7 +168,7 @@ namespace sw
             logStatus( step );
         }
         updatePlayerView();
-        const bool bPending = _listPendingDrone.empty() == false || _listPendingEffect.empty() == false || _listPendingSound.empty() == false || _bAmmoPending == SW_TRUE;
+        const bool bPending = _listPendingDrone.empty() == false || _listPendingEffect.empty() == false || _listPendingDroneDown.empty() == false || _bAmmoPending == SW_TRUE;
         if ( bPending )
             scheduleFlush();
     }
@@ -339,9 +339,9 @@ namespace sw
             if ( pPlayer != nullptr )
                 pPlayer->addWaveAmmo();
         }
-        for ( const utf8* pPath : _listPendingSound )
-            (void)GameSound::play( pPath );
-        _listPendingSound.clear();
+        for ( const float3& position : _listPendingDroneDown )
+            (void)GameSound::postEventAt( hashed_string( ShooterDirectorComponentInternal::kEventDroneDown ), position );
+        _listPendingDroneDown.clear();
     }
 
     void ShooterDirectorComponent::spawnEffectPool( GameObjectManager& manager )
@@ -441,7 +441,7 @@ namespace sw
                     burst._color    = ShooterDirectorComponentInternal::kBurstColor;
                     burst._lifetime = 0.2f;
                     _listPendingEffect.push_back( burst );
-                    _listPendingSound.push_back( ShooterDirectorComponentInternal::kSoundDroneDown );
+                    _listPendingDroneDown.push_back( burst._position );
                     pManager->destroyObject( pObject );
                 }
                 _listDrone[droneIndex] = _listDrone.back();

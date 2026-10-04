@@ -165,7 +165,7 @@ namespace sw
         vector<GameObjectHandle>     _listEffect;
         vector<DroneRequest>         _listPendingDrone;
         vector<EffectRequest>        _listPendingEffect;
-        vector<const utf8*>          _listPendingSound; ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
+        vector<float3>               _listPendingDroneDown; ///< 격추 소리를 낼 자리(틱 뒤 — 오디오 이벤트는 게임 스레드에서)
         vector<ColorLook>            _listColorLook;
         shared_ptr<MaterialInstance> _droneLook;
         shared_ptr<MaterialInstance> _droneFlashLook;

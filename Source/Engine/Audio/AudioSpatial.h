@@ -40,7 +40,7 @@ namespace sw
     enum class AudioSpatialMode : uint8
     {
         World3D = 0, ///< 리스너의 오른쪽 축으로 팬, 3D 거리
-        Screen2D,    ///< 화면 평면(XY): 가로 거리 / 화면 반폭으로 팬, 고도 없음, XY 거리
+        Screen2D,    ///< 화면 평면: 리스너 오른쪽 축 방향 거리 / 화면 반폭으로 팬, 화면 세로는 팬에 쓰지 않음, 거리는 시선 성분을 뺀 화면 평면 거리
     };
 } // namespace sw
 
@@ -189,7 +189,7 @@ namespace sw
          */
         static float32 computeInsideWeight( AudioVolumeShape shape, const float3& center, const float3& halfExtents, float32 radius, float32 fadeDistance,
                                             const float3& point );
-        /** @brief 리스너 공간의 거리입니다(Screen2D 는 XY 거리). */
+        /** @brief 리스너 공간의 거리입니다(Screen2D 는 시선 성분을 뺀 화면 평면 거리 — 옆에서 본 2D 면 XY, 위에서 본 직교면 XZ). */
         static float32 computeDistance( const AudioListenerState& listener, const float3& emitterPosition );
     };
 } // namespace sw

@@ -206,6 +206,12 @@ SW_TEST_CASE( AudioSpatialTest, Screen2DPansOnTheScreenPlane )
     SW_EXPECT_NEAR_EQUAL( -1.0f, sw::AudioSpatializer::computePan( listener, sw::float3( -25.0f, 0.0f, 0.0f ), 0.5f ), 1e-6f );
     // Z(깊이 · 레이어)는 거리에 들지 않는다.
     SW_EXPECT_NEAR_EQUAL( 5.0f, sw::AudioSpatializer::computeDistance( listener, sw::float3( 3.0f, 4.0f, 100.0f ) ), 1e-5f );
+
+    // 위에서 내려다보는 직교 카메라(XZ 세계 — RTS · 경영): 화면 가로는 +X, 시선(높이)은 거리에서 빠진다.
+    listener._forward = sw::float3( 0.0f, -1.0f, 0.0f );
+    listener._up      = sw::float3( 0.0f, 0.0f, 1.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, sw::AudioSpatializer::computePan( listener, sw::float3( 5.0f, -20.0f, 7.0f ), 0.5f ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, sw::AudioSpatializer::computeDistance( listener, sw::float3( 3.0f, -30.0f, 4.0f ) ), 1e-5f );
 }
 
 /**
