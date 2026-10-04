@@ -49,6 +49,19 @@ namespace sw
             _remaining             = interval + lateness;
         }
 
+        /**
+         * @brief 반복 간격 하나를 한 걸음 돌립니다 — `tick` 한 뒤, @p bWant(누르고 있음 · 사정거리 안)이고 끝나 있으면 `restart( interval )` 하고 true(이번 걸음에 한 번)입니다.
+         * @details "흘리고 → 원하고 끝났으면 → 늦음을 이어 다시 건다" 의 한 줄 판입니다. 손으로 `x -= dt; if ( want && x <= 0 ) x = interval;` 을 쓰면 지나친 몫을
+         *          버려 빈도가 걸음 크기에 매인다(0.1 초 걸음 · 0.25 초 간격이면 0.3 초마다).
+         */
+        constexpr bool tickRepeat( float32 deltaTime, float32 interval, bool bWant )
+        {
+            (void)tick( deltaTime ); // 끝난 걸음인지는 아래 isActive 로 본다 — 원하지 않는 걸음에도 시간은 흐른다
+            if ( bWant == false || isActive() )
+                return false;
+            restart( interval );
+            return true;
+        }
         /** @brief 남은 시간을 @p duration 까지 늘립니다 — 이미 더 길게 남았으면 그대로입니다(무적 · 부스트 겹치기). */
         constexpr void extendTo( float32 duration )
         {

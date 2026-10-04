@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/UI/HealthBarComponent.h"
+#include "GameFramework/Combat/HealthListenerComponent.h"
 #include "GameFramework/Utility/OrientationUtil.h"
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
@@ -56,12 +56,11 @@ namespace sw
         , _maxHealth{ 30.0f }
         , _speed{ 3.0f }
         , _phaseTime{ 0.0f }
-        , _attackCooldown{ 0.0f }
+        , _attackCooldown{}
         , _phase{ ShooterEnemyPhase::Rising }
         , _bLaunched{ SW_FALSE }
         , _bHitPending{ SW_FALSE }
         , _bAttackLanded{ SW_FALSE }
-        , _bBarShown{ SW_FALSE }
         , _bAttackStarting{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -70,14 +69,14 @@ namespace sw
 
     void ShooterEnemyComponent::launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed )
     {
-        _director       = director;
-        _position       = position;
-        _yaw            = yaw;
-        _health         = health;
-        _maxHealth      = health;
-        _speed          = speed;
-        _attackCooldown = _attackInterval * 0.5f;
-        _bLaunched      = SW_TRUE;
+        _director  = director;
+        _position  = position;
+        _yaw       = yaw;
+        _health    = health;
+        _maxHealth = health;
+        _speed     = speed;
+        _attackCooldown.start( _attackInterval * 0.5f );
+        _bLaunched = SW_TRUE;
         enterPhase( ShooterEnemyPhase::Rising );
         GameObject*     pOwner = getOwner();
         SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
@@ -86,9 +85,13 @@ namespace sw
             pScene->setLocalPosition( _position );
             pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         }
-        HealthBarComponent* pBar = pOwner != nullptr ? pOwner->getComponent<HealthBarComponent>() : nullptr;
-        if ( pBar != nullptr )
-            pBar->resetRatio( 1.0f );
+        if ( pOwner != nullptr )
+        {
+            HealthChangedEvent event;
+            event._ratio = 1.0f;
+            event._kind  = HealthChangeKind::Reset;
+            HealthListenerComponent::broadcast( *pOwner, event );
+        }
         // 내비메시 에이전트가 있으면 걷기는 그것이 맡는다 — 몸 요는 이 컴포넌트가 돌린다(휘두를 때 플레이어 쪽을 본다).
         NavMeshAgentComponent* pAgent = pOwner != nullptr ? pOwner->getComponent<NavMeshAgentComponent>() : nullptr;
         if ( pAgent != nullptr )
@@ -106,20 +109,16 @@ namespace sw
         if ( isAlive() == false )
             return;
         _health -= amount;
-        GameObject*         pOwner = getOwner();
-        HealthBarComponent* pBar   = pOwner != nullptr ? pOwner->getComponent<HealthBarComponent>() : nullptr;
-        if ( pBar != nullptr )
-        {
-            if ( _bBarShown == SW_FALSE )
-                pBar->setVisible( true );
-            _bBarShown = SW_TRUE;
-            pBar->setTargetRatio( MathUtil::max( 0.0f, _health / MathUtil::max( 1.0f, _maxHealth ) ) );
-        }
+        // 체력 신호 — HP 바가 보이기 · 숨기기를 스스로 정한다(프리팹의 `_bShowWhenHurt` · `_bHideWhenDead`).
+        const GameObject*  pOwner = getOwner();
+        HealthChangedEvent event;
+        event._ratio = MathUtil::max( 0.0f, _health / MathUtil::max( 1.0f, _maxHealth ) );
+        event._kind  = _health <= 0.0f ? HealthChangeKind::Died : HealthChangeKind::Changed;
+        if ( pOwner != nullptr )
+            HealthListenerComponent::broadcast( *pOwner, event );
         if ( _health <= 0.0f )
         {
             enterPhase( ShooterEnemyPhase::Dying );
-            if ( pBar != nullptr )
-                pBar->setVisible( false );
             return;
         }
         // 일어나는 중 · 휘두르는 중에는 클립을 끊지 않는다(맞은 표시는 HP 바).
@@ -149,12 +148,11 @@ namespace sw
             return;
         GameObject*                     pOwner    = getOwner();
         GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ShooterDirectorComponent* pDirector = pManager != nullptr ? ShooterDirectorComponent::resolveDirector( *pManager, _director ) : nullptr;
+        const ShooterDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, _director ) : nullptr;
         if ( pDirector == nullptr )
             return;
         const float32 step = MathUtil::min( deltaTime, 0.1f );
         _phaseTime += step;
-        _attackCooldown -= step;
 
         const float3  target   = pDirector->getPlayerFeet();
         const float3  toTarget = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
@@ -165,6 +163,9 @@ namespace sw
         NavMeshAgentComponent* pAgent = pOwner->getComponent<NavMeshAgentComponent>();
         if ( pAgent != nullptr )
             _position = pAgent->getAgentPosition();
+        // 휘두르기 간격 — 사정거리 안에서 쫓는 동안 간격마다 한 번, 지나친 몫을 잇는다(`Countdown::tickRepeat`). 쿨다운은 어느 단계에서도 흐른다.
+        const bool bWantSwing = _phase == ShooterEnemyPhase::Chasing && distance < _reach && pDirector->isPlayerAlive();
+        const bool bSwing     = _attackCooldown.tickRepeat( step, _attackInterval, bWantSwing );
         switch ( _phase )
         {
             case ShooterEnemyPhase::Rising:
@@ -175,9 +176,8 @@ namespace sw
             }
             case ShooterEnemyPhase::Chasing:
             {
-                if ( distance < _reach && _attackCooldown <= 0.0f && pDirector->isPlayerAlive() )
+                if ( bSwing )
                 {
-                    _attackCooldown = _attackInterval;
                     enterPhase( ShooterEnemyPhase::Attacking );
                     break;
                 }

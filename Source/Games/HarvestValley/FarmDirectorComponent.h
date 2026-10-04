@@ -7,7 +7,7 @@
  *          (`FarmSoilComponent` · `FarmCropComponent` · `FarmerComponent` · `FarmTargetComponent` · `FarmSunComponent`)가 이 컴포넌트를 **읽기만** 해서 합니다.
  *
  *          틱 규칙: 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고 카메라 리그의 초점을 넣으며, 뷰 · 리그는 `PostUpdate` 에서 읽습니다.
- *          스폰은 틱 안에서 할 수 없으므로 요청을 쌓아 두고 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세웁니다. 효과음도 그때 냅니다.
+ *          틱 뒤 스폰 · 상태 바이트 보류 · 걷기 · 효과음은 베이스 `GameDirectorComponent` 가 맡습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -18,9 +18,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Framework/GameDirectorComponent.h"
+#include "GameFramework/Framework/MaterialTintCache.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmCalendar.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmField.h"
@@ -53,7 +54,7 @@ namespace sw
      *          세이브를 넘깁니다(`HarvestValleyGame`). 세운 칸 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Director", Tooltip = "Runs the farm rules, the farmer, time and weather, and spawns the field tiles" )
-    class FarmDirectorComponent : public Component
+    class FarmDirectorComponent : public GameDirectorComponent
     {
     public:
         REFLECT_BODY();
@@ -67,19 +68,8 @@ namespace sw
         FarmDirectorComponent();
         virtual ~FarmDirectorComponent() override;
 
-        void onBeginPlay() override;
-        void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
-
-        /** @brief 세운 칸 오브젝트를 모두 지웁니다(상태 저장 전). 농장 상태는 그대로이고 다음 틱이 그 상태대로 다시 세운다. */
-        void despawnViews();
         /** @brief 농장 상태(달력 · 밭 · 인벤토리 · 농부 · 날씨)를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 의 바이트로 농장을 되살립니다 — `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
-         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 가 데이터를 읽은 뒤 적용합니다. 읽지 못하면 알리고 새 농장으로 시작합니다.
-         */
-        void restoreState( vector<uint8>&& bytes );
+        void writeState( Archive& outArchive ) const override;
 
         // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
         const FarmCalendar& getCalendar() const { return _calendar; }
@@ -94,20 +84,18 @@ namespace sw
         const shared_ptr<MaterialInstance>& findCropLook( const hashed_string& cropId, bool bWithered, bool bCropColored ) const;
         /** @brief 칸 가운데(땅 높이)입니다. 밭은 원점에서 +X · +Z 로 1 m 칸입니다. */
         static float3 computeTileCenter( int32 x, int32 y );
-        /**
-         * @brief 핸들의 오브젝트에 붙은 디렉터입니다. 없으면 nullptr 입니다.
-         * @details 뷰는 이것을 매 프레임 부르고 포인터를 들지 않습니다. 매니저 조회는 잠그지 않습니다(틱 중 여러 워커가 불러도 된다).
-         */
-        static const FarmDirectorComponent* resolveDirector( const GameObjectManager& manager, GameObjectHandle director );
+
+    protected:
+        /** @brief 작물 카탈로그를 읽고 밭 · 달력 · 인벤토리를 새로 둡니다. */
+        [[nodiscard]] bool startGame() override;
+        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive ) override;
+        void               onStateRestored( bool bRestored ) override;
+        void               onGameStarted() override;
+        void               tickGame( float32 deltaTime ) override;
+        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
-        /** @brief 색 하나의 머티리얼 인스턴스입니다(같은 색은 나눠 쓴다 — 배치 키가 인스턴스다). */
-        struct ColorLook
-        {
-            shared_ptr<MaterialInstance> _instance{};
-            float4                       _color{};
-        };
-
         /** @brief 작물 하나의 다 자란 색 모습입니다. */
         struct CropLook
         {
@@ -116,23 +104,9 @@ namespace sw
         };
 
     private:
-        [[nodiscard]] bool loadData();
-        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 이고 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
-        /** @brief 들고 있던 복원 바이트를 적용하고 칸 모습을 다시 세우게 합니다. */
-        void applyPendingState();
-        /** @brief 쌓인 스폰 · 효과음을 틱 뒤 한 번으로 미룹니다(틱 밖이면 바로). */
-        void scheduleFlush();
-        /** @brief 쌓인 요청을 세웁니다. 틱 밖(게임 스레드)에서만 불린다. */
-        void flushPending();
         void spawnField( GameObjectManager& manager );
-        /** @brief 프리팹을 세우고 핸들을 듭니다. 읽지 못하면 nullptr 입니다. */
-        GameObject* spawnPrefab( GameObjectManager& manager, const string& prefabPath, const utf8* pName );
-        /** @brief 색 하나의 인스턴스를 찾거나 만듭니다(게임 스레드). */
-        shared_ptr<MaterialInstance> acquireColorLook( Material* pMaterial, const float4& color );
         /** @brief 흙 · 작물 모습 인스턴스와 작물 메시를 미리 잡습니다(뷰가 워커에서 파일을 읽지 않게). */
         void prepareLooks( Material* pSoilMaterial, Material* pCropMaterial );
-        void playSound( const utf8* pPath );
 
         void updatePlayerInput( float32 deltaTime, const InputManager& input );
         void updateAutoFarmer( float32 deltaTime );
@@ -153,9 +127,7 @@ namespace sw
 
         bool                 isNearShippingBin() const;
         bool                 isNearShop() const;
-        bool                 isAutoPlayOn() const;
         const hashed_string& getSelectedSeed() const;
-        GameObjectManager*   getObjectManager() const;
         /** @brief 핸들의 오브젝트 자리입니다. 풀리지 않으면 @p fallback 입니다. */
         float3 findObjectPosition( GameObjectHandle handle, const float3& fallback ) const;
 
@@ -182,20 +154,15 @@ namespace sw
         GameObjectHandle _shop;
         PROPERTY( Category = "Farmer", DisplayName = "Player Start", Tooltip = "Where the farmer wakes up", Meta = "Units=m" )
         float3 _playerStart;
-        PROPERTY( Category = "Farmer", DisplayName = "Auto Play", Tooltip = "The farmer is AI-driven (-gv_farmAutoPlay=1 also turns it on)" )
-        bool _bAutoPlay;
 
         CropCatalog                  _cropCatalog;
         FarmCalendar                 _calendar;
         FarmField                    _field;
         FarmInventory                _inventory;
-        vector<hashed_string>        _listSeed; ///< 카탈로그 순서의 씨앗 아이템(가게 진열)
-        vector<GameObjectHandle>     _listSpawned;
-        vector<const utf8*>          _listPendingSound; ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
-        vector<ColorLook>            _listColorLook;
+        vector<hashed_string>        _listSeed;  ///< 카탈로그 순서의 씨앗 아이템(가게 진열)
+        MaterialTintCache            _tintCache; ///< 흙 · 작물 색(같은 색은 나눠 쓴다)
         vector<CropLook>             _listCropLook;
-        vector<shared_ptr<Mesh>>     _listCropMesh;      ///< 작물 모델을 쥐고 있는다(단계가 바뀔 때 뷰가 워커에서 읽지 않게)
-        vector<uint8>                _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
+        vector<shared_ptr<Mesh>>     _listCropMesh; ///< 작물 모델을 쥐고 있는다(단계가 바뀔 때 뷰가 워커에서 읽지 않게)
         shared_ptr<MaterialInstance> _arrSoilLook[3];
         shared_ptr<MaterialInstance> _plainCropLook;
         shared_ptr<MaterialInstance> _witheredCropLook;
@@ -209,10 +176,7 @@ namespace sw
         int32                        _selectedSeedIndex;
         int32                        _lastLoggedHour;
         FarmTool                     _tool;
-        uint8                        _bRaining        : 1;
-        uint8                        _bLoaded         : 1;
-        uint8                        _bViewsSpawned   : 1; ///< 칸 모습이 서 있다(걷으면 다음 틱이 다시 세운다)
-        uint8                        _bFlushScheduled : 1;
-        uint8                        _reserved        : 4;
+        uint8                        _bRaining : 1;
+        uint8                        _reserved : 7;
     };
 } // namespace sw

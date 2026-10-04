@@ -16,9 +16,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Framework/GameDirectorComponent.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelWorld.h"
 
 namespace sw
@@ -29,11 +29,11 @@ namespace sw
      * @class VoxelDirectorComponent
      * @brief 월드 한 판입니다. 플레이가 시작되면 씨앗으로 지형을 짓고 청크 오브젝트를 세웁니다.
      * @details 블록(부수고 놓은 것 포함)은 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드 · 세이브를 넘깁니다
-     *          (`VoxelCraftGame`). 세운 청크는 핸들로 들고 상태 저장 전에 걷습니다(`despawnRuntime`) — 남은 디렉터는 다음 틱에 청크를 다시 세우고
+     *          (`VoxelCraftGame`). 세운 청크는 핸들로 들고 상태 저장 전에 걷습니다(`despawnViews`) — 남은 디렉터는 다음 틱에 청크를 다시 세우고
      *          모두 다시 짓는다(블록은 그대로).
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Director", Tooltip = "Owns the voxel world: terrain, block edits, chunk spawns and rebuild scheduling" )
-    class VoxelDirectorComponent : public Component
+    class VoxelDirectorComponent : public GameDirectorComponent
     {
     public:
         REFLECT_BODY();
@@ -44,19 +44,8 @@ namespace sw
         VoxelDirectorComponent();
         virtual ~VoxelDirectorComponent() override;
 
-        void onBeginPlay() override;
-        void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
-
-        /** @brief 세운 청크를 모두 지웁니다(상태 저장 전). */
-        void despawnRuntime();
         /** @brief 블록(부수고 놓은 것 포함)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 의 바이트로 블록을 되살립니다 — `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
-         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 가 지형을 지은 뒤 적용합니다. 읽지 못하면 알리고 씨앗대로의 섬으로 시작합니다.
-         */
-        void restoreState( vector<uint8>&& bytes );
+        void writeState( Archive& outArchive ) const override;
         /** @brief 블록 하나를 바꿉니다 — 틱 뒤 게임 스레드에서만(플레이어 · 청크가 월드를 읽는 동안 쓰지 않는다). 월드 밖이면 false 입니다. */
         [[nodiscard]] bool applyBlockEdit( const VoxelCoord& coord, VoxelBlockIndex block );
 
@@ -64,24 +53,22 @@ namespace sw
         const VoxelWorld& getWorld() const { return _world; }
         /** @brief 가운데부터 나선으로 찾은 첫 땅(물 위가 아닌) 위의 자리입니다. */
         float3 findSpawnPosition() const;
-        bool   isWorldReady() const { return _bWorldReady == SW_TRUE; }
-        /** @brief 걷기 · 부수기 · 놓기도 AI 가 하면 true 입니다(`_bAutoPlay` 또는 `-gv_voxelAutoPlay=1`). */
-        bool isAutoPlayOn() const;
 
-        /** @brief 핸들의 오브젝트에 붙은 디렉터입니다. 없으면 nullptr 입니다. 매니저 조회는 잠그지 않습니다. */
-        static const VoxelDirectorComponent* resolveDirector( const GameObjectManager& manager, GameObjectHandle director );
+    protected:
+        /** @brief 씨앗으로 지형을 짓습니다. 블록 카탈로그가 없으면 false 입니다. */
+        [[nodiscard]] bool startGame() override;
+        [[nodiscard]] bool readState( Archive& archive ) override;
+        void               onStateRestored( bool bRestored ) override;
+        void               onGameStarted() override;
+        void               tickGame( float32 deltaTime ) override;
+        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               onViewsDespawned() override;
 
     private:
-        void initializeWorld();
-        /** @brief 들고 있던 복원 바이트를 적용하고 청크를 다시 세우게 합니다. */
-        void               applyPendingState();
-        void               decorateTerrain();
-        void               scheduleFlush();
-        void               flushPending();
-        void               spawnChunks( GameObjectManager& manager );
-        void               scheduleRebuilds();
-        void               logStatus( float32 deltaTime );
-        GameObjectManager* getObjectManager() const;
+        void decorateTerrain();
+        void spawnChunks( GameObjectManager& manager );
+        void scheduleRebuilds();
+        void logStatus( float32 deltaTime );
 
     private:
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
@@ -92,16 +79,9 @@ namespace sw
         int32 _terrainSeed;
         PROPERTY( Category = "World", DisplayName = "Chunk Builds Per Frame", Tooltip = "Changed chunks handed out for meshing each frame, nearest to the body first", Min = 1 )
         int32 _chunkBuildsPerFrame;
-        PROPERTY( Category = "World", DisplayName = "Auto Play", Tooltip = "Walk, break and place by AI (-gv_voxelAutoPlay=1 also turns it on)" )
-        bool _bAutoPlay;
 
         VoxelWorld               _world;
-        vector<GameObjectHandle> _listChunk;         ///< 청크 번호(z × 청크 수 X + x) 순
-        vector<uint8>            _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
+        vector<GameObjectHandle> _listChunk; ///< 청크 번호(z × 청크 수 X + x) 순
         float32                  _statusTimer;
-        uint8                    _bWorldReady     : 1;
-        uint8                    _bChunksSpawned  : 1; ///< 청크 오브젝트가 서 있다(걷으면 다음 틱이 다시 세운다)
-        uint8                    _bFlushScheduled : 1;
-        uint8                    _reserved        : 5;
     };
 } // namespace sw

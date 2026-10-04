@@ -4,7 +4,6 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Framework/ComponentStateStore.h"
 #include "GameFramework/Framework/GameService.h"
 
 #include "Games/VoxelCraft/VoxelDirectorComponent.h"
@@ -19,6 +18,9 @@ namespace sw
     VoxelCraftGame::VoxelCraftGame()
         : _blockCatalog{}
     {
+        // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
+        registerDirector<VoxelDirectorComponent>();
+        registerStatefulComponent<VoxelPlayerComponent>();
     }
 
     VoxelCraftGame::~VoxelCraftGame() = default;
@@ -42,35 +44,6 @@ namespace sw
         game::unbindLocalService<VoxelBlockCatalog>();
     }
 
-    void VoxelCraftGame::onBeforeStateSerialize()
-    {
-        GameObjectManager* pManager = findActiveObjectManager();
-        if ( pManager == nullptr )
-            return;
-        // 블록(부수고 놓은 것) · 플레이어의 몸 자리 · 핫바는 PROPERTY 가 아니다 — 컴포넌트 섹션에 실어 다시 만든 컴포넌트에 돌려준다.
-        getComponentStateStore().capture<VoxelDirectorComponent>( *pManager );
-        getComponentStateStore().capture<VoxelPlayerComponent>( *pManager );
-        // 청크 오브젝트는 월드의 모습일 뿐이다 — 스냅샷에 실으면 복원된 것이 다시 세운 것과 겹친다.
-        // 순회 콜백 안에서는 오브젝트를 지울 수 없다(매니저 잠금 안) — 디렉터를 모은 뒤 걷는다.
-        vector<ComponentHandle> listDirector;
-        pManager->forEachComponentOfType<VoxelDirectorComponent>( [&listDirector]( VoxelDirectorComponent* pDirector )
-        { listDirector.push_back( pDirector->getHandle() ); } );
-        for ( const ComponentHandle& handle : listDirector )
-        {
-            VoxelDirectorComponent* pDirector = static_cast<VoxelDirectorComponent*>( pManager->resolveComponent( handle ) );
-            if ( pDirector != nullptr )
-                pDirector->despawnRuntime();
-        }
-    }
-
-    void VoxelCraftGame::onAfterStateDeserialize()
-    {
-        GameObjectManager* pManager = findActiveObjectManager();
-        if ( pManager == nullptr )
-            return;
-        getComponentStateStore().restore<VoxelDirectorComponent>( *pManager );
-        getComponentStateStore().restore<VoxelPlayerComponent>( *pManager );
-    }
 } // namespace sw
 
 SW_IMPLEMENT_GAME_MODULE( sw::VoxelCraftGame );

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Components/FirstPersonCameraComponent.h"
+#include "GameFramework/Camera/FirstPersonCameraComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

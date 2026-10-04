@@ -17,6 +17,7 @@
 #include "GameFramework/Combat/Vitality.h"
 #include "GameFramework/Combat/Weapon.h"
 #include "GameFramework/Combat/WeaponMath.h"
+#include "GameFramework/Framework/GameSound.h"
 
 namespace sw
 {
@@ -62,7 +63,7 @@ namespace sw
         /** @brief 수리 보상 — 체력을 채운다(틱 뒤 게임 스레드). */
         void restoreHealth( float32 amount );
         /** @brief 세운 몸을 지웁니다(상태 저장 전). 다음 틱 뒤에 다시 세운다. */
-        void despawnRuntime();
+        void despawnViews();
 
         // ---- 디렉터 · 몸이 읽는 것(이 컴포넌트가 쓰지 않는 그룹) ----
         float3             getEyePosition() const;
@@ -187,7 +188,7 @@ namespace sw
         vector<EnemyHit>         _listPendingHit;
         vector<EffectRequest>    _listPendingEffect;
         vector<TracerRequest>    _listPendingTracer;
-        vector<const utf8*>      _listPendingSound;
+        GameSoundQueue           _soundQueue; ///< 낼 소리(틱 뒤 — 오디오는 게임 스레드에서)
         GameObjectHandle         _body;
         float3                   _position; ///< 발
         float3                   _moveVelocity;

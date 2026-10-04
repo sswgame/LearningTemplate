@@ -21,7 +21,5 @@ namespace sw
 
     protected:
         bool onInitialize() override;
-        void onBeforeStateSerialize() override;
-        void onAfterStateDeserialize() override;
     };
 } // namespace sw

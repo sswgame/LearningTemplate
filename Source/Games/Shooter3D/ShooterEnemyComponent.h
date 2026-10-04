@@ -11,6 +11,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Utility/Countdown.h"
+
 namespace sw
 {
     /** @brief 적 하나의 행동 단계입니다. */
@@ -105,13 +107,12 @@ namespace sw
         float32           _maxHealth;
         float32           _speed;
         float32           _phaseTime;
-        float32           _attackCooldown;
+        Countdown         _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)
         ShooterEnemyPhase _phase;
         uint8             _bLaunched       : 1;
         uint8             _bHitPending     : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
         uint8             _bAttackLanded   : 1; ///< 이번 휘두름이 이미 맞았다
-        uint8             _bBarShown       : 1;
         uint8             _bAttackStarting : 1; ///< 다음 틱에 애니메이터에 Attack 트리거를 건다
-        uint8             _reserved        : 3;
+        uint8             _reserved        : 4;
     };
 } // namespace sw

@@ -21,7 +21,8 @@
 2. 하는 쪽 틱(`PostPhysics`): 씬의 `InteractableComponent` 중 켜짐 · 쿨다운 끝 · 태그 조건(`matchesTags( required, forbidden )`)을 지난 것을 후보로 모아
    고르고, 고른 대상에 강조 요청을 세웁니다(이전 대상은 내림). 새로 누르면 진행을 시작합니다(권한 훅이 걸려 있고 권한이 `Server` 면 먼저 허락).
 3. 진행 중에는 대상을 바꾸지 않습니다. 대상이 사라지거나 고를 거리의 1.25 배 밖이면 취소합니다.
-4. 끝나면 틱 뒤에 대상의 `completeInteraction` — 쿨다운, 같은 오브젝트의 `GimmickSensorComponent` 에 사용 알림(기믹 `Interaction` 센서 → 회로),
+4. 끝나면 틱 뒤에 대상의 `completeInteraction` — 쿨다운, 완료 수 올리기(같은 오브젝트의 `GimmickSensorComponent` 가 `consumeUses` 에서 끌어 읽는다 —
+   기믹 `Interaction` 센서 → 회로. 상호작용은 기믹을 모른다),
    `InteractionCompletedEvent`, 권한 훅의 `notifyInteractionCompleted`.
 
 ## 함정 · 다음에 붙일 것
