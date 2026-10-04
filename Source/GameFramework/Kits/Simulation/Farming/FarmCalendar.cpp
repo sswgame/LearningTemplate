@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 namespace sw
 {
     namespace
@@ -89,5 +91,34 @@ namespace sw
     int32 FarmCalendar::getElapsedDays() const
     {
         return ( ( _year - 1 ) * kFarmSeasonCount + static_cast<int32>( _season ) ) * kDaysPerSeason + ( _day - 1 );
+    }
+
+    void FarmCalendar::writeState( Archive& outArchive ) const
+    {
+        outArchive << _minuteOfDay;
+        outArchive << _year;
+        outArchive << _day;
+        outArchive << static_cast<uint8>( _season );
+    }
+
+    bool FarmCalendar::readState( Archive& archive )
+    {
+        float32 minuteOfDay = 0.0f;
+        int32   year        = 0;
+        int32   day         = 0;
+        uint8   season      = 0;
+        archive >> minuteOfDay;
+        archive >> year;
+        archive >> day;
+        archive >> season;
+        const bool bDayValid    = 1 <= day && day <= kDaysPerSeason;
+        const bool bMinuteValid = kDayStartMinute <= minuteOfDay && minuteOfDay <= kDayEndMinute;
+        if ( archive.isError() || year < 1 || bDayValid == false || bMinuteValid == false || season >= kFarmSeasonCount )
+            return false;
+        _minuteOfDay = minuteOfDay;
+        _year        = year;
+        _day         = day;
+        _season      = static_cast<FarmSeason>( season );
+        return true;
     }
 } // namespace sw

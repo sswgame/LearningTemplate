@@ -564,6 +564,14 @@ namespace sw
             return *this;
         }
 
+        /** @brief 뷰의 글자를 이어 붙입니다(`std::string::append( string_view )` 와 같다). */
+        basic_string& append( std::basic_string_view<CharT> view )
+        {
+            SW_SCOPED_RACE_WRITE();
+            Base::append( view.data(), view.size() );
+            return *this;
+        }
+
         /** @brief [first, last) 를 이어 붙입니다. */
         template <class InputIt>
         basic_string& append( InputIt first, InputIt last )

@@ -125,17 +125,12 @@ namespace sw
 
     bool CityCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "CityCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &CityCatalog::loadRoot, path, "CityCatalog" );
     }
 
     bool CityCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "CityCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &CityCatalog::loadRoot, xmlText, sourceName, "CityCatalog" );
     }
 
     const CityBuildingDef* CityCatalog::findHouseBuilding() const

@@ -23,17 +23,12 @@ namespace sw
 
     bool ParkLayout::loadFromResource( string_view path, const CoasterLayoutCatalog& layouts )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "ParkLayout", root, sourceName ) && loadRoot( root, layouts, sourceName );
+        return GameDataXml::loadFile( *this, &ParkLayout::loadRoot, layouts, path, "ParkLayout" );
     }
 
     bool ParkLayout::loadFromXmlText( string_view xmlText, const CoasterLayoutCatalog& layouts, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "ParkLayout", root ) && loadRoot( root, layouts, sourceName );
+        return GameDataXml::loadText( *this, &ParkLayout::loadRoot, layouts, xmlText, sourceName, "ParkLayout" );
     }
 
     bool ParkLayout::loadRoot( const XmlNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName )

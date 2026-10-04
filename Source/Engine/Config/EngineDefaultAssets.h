@@ -30,6 +30,12 @@ namespace sw
         string _shellInputMap{ "engine/input/default.input.xml" }; ///< App 셸 InputMap
         PROPERTY()
         string _userSettingsSchema{ "engine/settings/engine.settings.xml" }; ///< 플레이어 옵션 메뉴의 엔진 설정 스키마(`UserSettingsManager`)
+        PROPERTY()
+        string _telemetrySchema{ "engine/telemetry/engine.telemetry.xml" }; ///< 엔진 텔레메트리 사건 스키마(`TelemetryService`)
+        PROPERTY()
+        string _cultureTable{ "engine/localization/engine.cultures.json" }; ///< 문화권 표 — 복수형 규칙 · 숫자 · 날짜 형식 · 쓰기 방향 · 글꼴 대체(`LocalizationManager`)
+        PROPERTY()
+        string _localizationProject{ "engine/localization/engine.locproject.json" }; ///< 엔진 문자열(설정 메뉴 등)의 로컬라이제이션 프로젝트
 
         PROPERTY()
         string _defaultForwardPipeline{ "engine/pipeline/forwardpipeline.xml" };

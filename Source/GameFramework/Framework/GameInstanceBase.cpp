@@ -3,6 +3,7 @@
 #include "GameFramework/Framework/GameInstanceBase.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
@@ -18,6 +19,7 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Data/GameStrings.h"
+#include "GameFramework/Framework/ComponentStateStore.h"
 #include "GameFramework/Framework/GameEventUtil.h"
 #include "GameFramework/Framework/GameService.h"
 
@@ -25,35 +27,16 @@ namespace sw
 {
     namespace
     {
-        struct GameInstanceBaseInternal
-        {
-            /**
-             * @brief 활성 씬의 오브젝트 매니저를 반환합니다. 게임 서비스가 묶이지 않았거나 활성 씬이 없으면 nullptr 입니다.
-             * @details 씬 저장과 복원이 함께 씁니다. `areGameServicesBound()` 가 바로 이 서비스(SceneManager 슬롯)를
-             *          보므로 아래 널 검사는 사실상 닿지 않지만, `game::getService<T>()` 가 nullptr 을 반환할 수 있는 함수라
-             *          `CheckNullableServiceUse` 린트가 요구하는 모양을 예외 없이 지킵니다.
-             */
-            static GameObjectManager* findActiveObjectManager()
-            {
-                if ( game::areGameServicesBound() == false )
-                    return nullptr;
-                SceneManager* pSceneManager = game::getService<SceneManager>();
-                if ( pSceneManager == nullptr )
-                    return nullptr;
-                Scene* pActiveScene = pSceneManager->getActiveScene();
-                return ( pActiveScene != nullptr ) ? pActiveScene->getObjectManager() : nullptr;
-            }
-        };
-
         struct StateEnvelopeInternal
         {
             static constexpr uint32 kMagic = 0x53575354u; // 'SWST' (SW State Snapshot)
             /**
              * @brief 봉투 버전입니다. 읽기도 이 판만 받습니다. 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실립니다.
+             *        섹션은 씬 오브젝트 · 파생의 리플렉션 상태 · 컴포넌트 상태(`ComponentStateStore`) 셋입니다.
              * @details 토큰이 지금 프로세스와 같으면(핫 리로드) id 를 되살리고, 다르면(다른 실행의 세이브 파일) 읽고 버립니다.
              *          다른 실행에서 나간 id 를 되살리면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문입니다.
              */
-            static constexpr uint32 kVersion = 2;
+            static constexpr uint32 kVersion = 3;
         };
     } // namespace
 } // namespace sw
@@ -62,10 +45,36 @@ namespace sw
 {
     SW_LOG_CALLER( "GameInstanceBase" );
 
+    GameInstanceBase::GameInstanceBase()
+        : _bootstrap{}
+        , _pWindow{ nullptr }
+        , _pRhiDevice{ nullptr }
+        , _listPendingSceneLoad{}
+        , _pComponentStateStore{ make_unique<ComponentStateStore>() }
+        , _bResumingWorld{ SW_FALSE }
+    {
+    }
+
+    GameInstanceBase::~GameInstanceBase() = default;
+
+    GameObjectManager* GameInstanceBase::findActiveObjectManager()
+    {
+        // `areGameServicesBound()` 가 바로 이 서비스(SceneManager 슬롯)를 보므로 아래 널 검사는 사실상 닿지 않지만,
+        // `game::getService<T>()` 가 nullptr 을 반환할 수 있는 함수라 `CheckNullableServiceUse` 린트가 요구하는 모양을 지킨다.
+        if ( game::areGameServicesBound() == false )
+            return nullptr;
+        SceneManager* pSceneManager = game::getService<SceneManager>();
+        if ( pSceneManager == nullptr )
+            return nullptr;
+        Scene* pActiveScene = pSceneManager->getActiveScene();
+        return ( pActiveScene != nullptr ) ? pActiveScene->getObjectManager() : nullptr;
+    }
+
     bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRhiDevice )
     {
-        _pWindow    = pWindow;
-        _pRhiDevice = pRhiDevice;
+        _pWindow        = pWindow;
+        _pRhiDevice     = pRhiDevice;
+        _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
         configureBootstrap( _bootstrap );
         const GameConfig& gameCfg = GameConfig::getActive();
         if ( gameCfg._packRoot.empty() == false )
@@ -101,16 +110,9 @@ namespace sw
     {
         const GameSettings& data = _bootstrap._data;
 
-        // 다국어 — 팩 폴더가 있으면 그것, 없으면 단일 문자열 파일.
-        if ( data._localizationDirectory.empty() == false )
-        {
-            if ( GameStrings::initialize( data._localizationDirectory, data._defaultLanguage, data._fallbackLanguage ) == false )
-                SW_LOG_WARNING( "GameSettings localization '%#' could not be loaded - strings show their keys", data._localizationDirectory.c_str() );
-        }
-        else if ( data._stringsData.empty() == false && GameStrings::loadFromResource( data._stringsData ) == false )
-        {
-            SW_LOG_WARNING( "GameSettings strings '%#' could not be loaded - strings show their keys", data._stringsData.c_str() );
-        }
+        // 다국어 — 게임의 로컬라이제이션 프로젝트를 올린다(엔진 프로젝트는 엔진이 기동 때 올렸다).
+        if ( data._localizationProject.empty() == false && GameStrings::initialize( data._localizationProject, data._defaultLanguage, data._fallbackLanguage ) == false )
+            SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", data._localizationProject.c_str() );
 
         // 게임플레이 입력 맵 — `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵(`PlayerController` 가 읽는 맵)이다.
         if ( data._inputMap.empty() == false )
@@ -123,8 +125,16 @@ namespace sw
         }
     }
 
+    /**
+     * @brief `"-gv_firstScene=<리소스 경로>"` — 실행 설정의 시작 씬 대신 이 씬을 처음 엽니다(에디터 없이 다른 씬을 띄워 보는 자리 — 환경 쇼케이스).
+     * @note PowerShell 은 점이 든 인자를 쪼갠다 — 따옴표로 감쌀 것.
+     */
+    SW_TEST_GLOBAL_VARIABLE_STRING( gv_firstScene, "", "실행 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)", SW_KEEP_IN_SHIPPING );
+
     const string& GameInstanceBase::getFirstScene() const
     {
+        if ( gv_firstScene.empty() == false )
+            return gv_firstScene;
         const string& runScene = GameConfig::getActive()._startupScene;
         if ( runScene.empty() == false )
             return runScene;
@@ -138,6 +148,11 @@ namespace sw
 
     bool GameInstanceBase::requestFirstScene()
     {
+        if ( _bResumingWorld == SW_TRUE )
+        {
+            SW_LOG_INFO( "The game instance was recreated over a live scene - keeping it instead of loading the first scene" );
+            return false;
+        }
         return requestSceneLoad( getFirstScene(), "first" );
     }
 
@@ -201,7 +216,7 @@ namespace sw
 
     bool GameInstanceBase::serializeSceneObjects( vector<uint8>& outBytes )
     {
-        GameObjectManager* pObjectManager = GameInstanceBaseInternal::findActiveObjectManager();
+        GameObjectManager* pObjectManager = findActiveObjectManager();
         if ( pObjectManager == nullptr )
             return false;
 
@@ -238,7 +253,7 @@ namespace sw
         if ( pData == nullptr || size < sizeof( uint32 ) )
             return false;
 
-        GameObjectManager* pObjectManager = GameInstanceBaseInternal::findActiveObjectManager();
+        GameObjectManager* pObjectManager = findActiveObjectManager();
         if ( pObjectManager == nullptr )
             return false;
 
@@ -320,6 +335,7 @@ namespace sw
         if ( pInOutSize == nullptr )
             return false;
 
+        _pComponentStateStore->clear();
         onBeforeStateSerialize();
 
         Archive arch;
@@ -359,6 +375,12 @@ namespace sw
         {
             arch.writeSection( nullptr, 0 );
         }
+
+        // 3) PROPERTY 가 아닌 컴포넌트 상태(디렉터의 시뮬레이션) — 훅이 실어 둔 것
+        Archive componentArch;
+        _pComponentStateStore->write( componentArch );
+        arch.writeSection( componentArch.getData(), static_cast<uint32>( componentArch.getSize() ) );
+        _pComponentStateStore->clear();
 
         const size_t totalSize = arch.getSize();
         if ( pOutBuffer == nullptr )
@@ -432,10 +454,23 @@ namespace sw
             }
         }
 
+        // 3) 컴포넌트 상태 — 훅이 다시 만든 컴포넌트에 넘긴다. 못 읽으면 알리고 넘어간다(씬은 이미 섰다 — 디렉터는 새 판으로 시작한다).
+        vector<uint8> bytesComponent;
+        if ( arch.readSection( bytesComponent ) == false )
+            return false;
+        _pComponentStateStore->clear();
+        if ( bytesComponent.empty() == false )
+        {
+            Archive componentArch( bytesComponent.data(), bytesComponent.size() );
+            if ( _pComponentStateStore->read( componentArch ) == false )
+                SW_LOG_WARNING( "Component state section could not be read - components start fresh" );
+        }
+
         if ( arch.isError() )
             return false;
 
         onAfterStateDeserialize();
+        _pComponentStateStore->clear();
         return true;
     }
 

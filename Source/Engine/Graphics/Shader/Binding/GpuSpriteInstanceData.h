@@ -1,7 +1,7 @@
 /**
  * @file GpuSpriteInstanceData.h
- * @brief 인스턴스마다 다른 스프라이트 값(UV 사각형 · 색)을 셰이더가 읽는 꼴 그대로 묶은 12 바이트입니다.
- * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `uvStart` · `uvEnd` · `tint` 이고, 푸는 함수는
+ * @brief 인스턴스마다 다른 스프라이트 값(UV 사각형 · 색 · 픽셀 스냅)을 셰이더가 읽는 꼴 그대로 묶은 16 바이트입니다.
+ * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `uvStart` · `uvEnd` · `tint` · `pixelSnap` 이고, 푸는 함수는
  *          `swComputeInstanceUvRect` · `swComputeInstanceTint` 입니다. 이 값은 `GpuInstance` 에 그대로 실리고(오프셋은
  *          ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct 가 쿠킹된 바이너리로 대조합니다), 메시 컴포넌트 ·
  *          인스턴스 배치 항목이 들고 있다가 빌더가 옮깁니다. 컴포넌트 층(Object)이 렌더러(Renderer)를 include 할 수 없어
@@ -11,6 +11,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -31,6 +32,12 @@ namespace sw
         uint32 _uvStart{ 0u };        ///< (u, v) — unorm16 둘, u 가 하위 16비트
         uint32 _uvEnd{ 0xFFFFFFFFu }; ///< (u, v) — unorm16 둘. 기본은 (1, 1)
         uint32 _tint{ 0xFFFFFFFFu };  ///< RGBA8 unorm, r 이 하위 바이트. 기본은 흰색 불투명
+        /**
+         * @brief 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU)입니다. 0 이면 끕니다. sprite2d.hlsl 이 인스턴스 원점의 X · Y 를 이 격자에 붙입니다.
+         * @details 값은 픽셀 퍼펙트 카메라(`PixelPerfectCameraComponent`)가 정하고 메시 컴포넌트가 들고 있습니다 — 프레임 · 색을 바꾸는 쪽(`make`)은
+         *          이 칸을 모릅니다(`MeshComponent::setSpriteInstanceData` 가 지금 값을 지킵니다). 유니티 Pixel Perfect Camera 의 Pixel Snapping 자리입니다.
+         */
+        float32 _pixelSnap{ 0.0f };
 
         /**
          * @brief (u, v, 폭, 높이) 사각형과 색으로 만듭니다. 머티리얼 uvRect 와 같은 꼴입니다.
@@ -80,10 +87,11 @@ namespace sw
                            static_cast<float32>( ( _tint >> 16 ) & 0xFFu ) / 255.0f, static_cast<float32>( _tint >> 24 ) / 255.0f };
         }
 
-        /** @brief 세 칸이 모두 같으면 true 입니다. */
+        /** @brief 네 칸이 모두 같으면 true 입니다(스냅 단위는 비트로 견줍니다). */
         bool operator==( const GpuSpriteInstanceData& other ) const
         {
-            return _uvStart == other._uvStart && _uvEnd == other._uvEnd && _tint == other._tint;
+            return _uvStart == other._uvStart && _uvEnd == other._uvEnd && _tint == other._tint &&
+                   Memory::compare( &_pixelSnap, &other._pixelSnap, sizeof( _pixelSnap ) ) == 0;
         }
         /** @brief operator== 의 부정입니다. */
         bool operator!=( const GpuSpriteInstanceData& other ) const { return ( *this == other ) == false; }

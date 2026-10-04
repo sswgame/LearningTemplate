@@ -1,0 +1,20 @@
+{
+    "_name": "GF_MechArena",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "3인칭 팀 기체 대전 키트(SD건담 캡슐파이터 장르) — 기체 카탈로그 · 부스트 오버히트 · 다운치 · 록온 유도 · 근접 콤보 · 변형 · 스킬 · 코스트 게이지 · 상태 직렬화",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

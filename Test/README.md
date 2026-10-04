@@ -19,6 +19,8 @@
 | **`EditorTest`** | 에디터 로직 유닛 테스트 | 커맨드 스택·선택·뷰포트 수학·문서 dirty 계약 등 `EditorModule` 의 UI 없는 부분을 검증합니다. ImGui 렌더링은 타지 않습니다. |
 | **`EditorUiTest`** | ImGui 컨텍스트가 필요한 에디터 테스트 | `EditorTest` 는 **일부러 ImGui 를 링크하지 않는다** — 그 경계를 지키면서 컨텍스트만 있으면 도는 것(플랫폼 백엔드의 부분 초기화 수습 등)을 여기 담습니다. GPU·창이 필요한 것은 넣지 않습니다. |
 | **`AppTest`** | App(런처) 로직 + **실기동 스모크** | `App` 은 실행 파일이라 링크할 라이브러리가 없어, **소스를 파일 단위로 가져와** 혼자 도는 정책을 검증합니다(`FixedTimestep`, `nogpu`). 여기에 더해 `AppSmokeTest` 가 **진짜 `App.exe` 를 네 백엔드 × 에디터 유무로 띄워** 종료 코드와 `[Error]` 를 봅니다(`hostgpu`) — `EngineLoop` 을 돌리는 유일한 자동 그물입니다. |
+| **`PythonTest`** | 파이썬 도구 유닛 테스트 + QA 러너 | `Test*.py` 하나가 CTest 항목 하나(`PythonTest_<이름>`, `nogpu`) — 에셋 검증 규칙 · XML 에셋 병합 · Blender 애드온의 bpy 없는 부분 · 이미지 지표 · 프로파일 표 읽기. 같은 폴더의 CMake 가 QA 러너를 등록한다: `QaGoldenImages`(`hostgpu`) · `QaSoak`(`soak`) · `QaPerfRegression`(`perf`, Release 만). |
+| **`Qa`** | QA 러너의 데이터 | `Games.json`(게임마다 자동 플레이 인자 · 캡처 프레임), `Golden/<게임>/<백엔드>.png · .json`(축소 기준 이미지 · 지표 · 허용 오차), `Perf/<게임>.json`(기계별 p50 · p99 기준). |
 | **`TestFramework`** | 테스트 공통 프레임워크 | 테스트 등록/실행을 조정하고, `TestContext`(결과 수집)와 `TestFilter`(CLI/glob 선택)를 재사용 가능한 구성요소로 제공합니다. |
 
 
@@ -45,7 +47,8 @@ ctest --test-dir build/Ninja-Debug --output-on-failure
 > 진행** 하므로, `ResourceUtil::initialize()` 를 쓰는 케이스는 그 결과를 `SW_ASSERT_TRUE` 로 감싸 그 자리에서 실패하게 한다.
 
 ### 특정 테스트만 골라서 실행 (Label 활용)
-라벨은 `core`, `editor`, `engine`, `app`, `reflection`, `module`, `unit`, `nogpu`, `hostgpu`, `lint` 입니다.
+라벨은 `core`, `editor`, `engine`, `app`, `reflection`, `module`, `unit`, `nogpu`, `hostgpu`, `lint`, `python`, `qa`, `soak`, `perf` 입니다.
+`soak` · `perf` 는 분 단위라 `hostgpu` 에 넣지 않았다 — 손으로 고른다(`ctest -L soak`).
 `lint` 는 `Scripts/lint/gate/` 의 게이트와 `Scripts/lint/selftest/` 의 자기 검사 전부입니다. 목록은 어디에도 손으로 적지 않습니다 —
 구성 시점에 `Scripts/lint/LintCatalog.py` 가 두 폴더를 훑고 `Scripts/generate/GenerateLintTargets.py` 가 CTest 항목을 만듭니다
 (`sw_registerLintTests`, `cmake/Engine/AssetAndToolTargets.cmake`). 지금 무엇이 도는지는 `ctest --preset Ninja-Debug-lint -N` 으로 봅니다.
@@ -207,3 +210,31 @@ Cleanup은 등록한 역순으로 실행됩니다. AssetManager 전체 shutdown�
 다른 테스트와 엔진 서비스에 영향을 주는 작업은 자동으로 수행하지 않습니다.
 
 **오브젝트는 지역 `GameObjectManager` 로 만듭니다.** 전역 활성 씬을 빌리면 테스트끼리 상태가 샙니다.
+
+
+## QA 자동화 — 골든 이미지 · soak · 성능 · 퍼징
+
+```powershell
+# 골든 이미지: 그 빌드의 활성 게임 자동 플레이를 네 백엔드로 그려 기준과 견준다(hostgpu, `QaGoldenImages`)
+py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe
+py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe --record --runs 3   # 기준을 새로 뜬다
+# soak: 자동 플레이를 오래 — 메모리 · 핸들 증가 기울기와 프레임 p99
+py -3 -m Scripts soak --app build/Ninja-Debug-NileCity/Bin/App.exe --minutes 10 --report soak.json
+# 성능 회귀: Release 에서만 — 이 기계의 기준(Test/Qa/Perf)과 p50 · p99
+py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe [--record]
+# 로더 퍼징: 시드 고정 변이(EngineTest 의 nogpu 스위트) — 오래 사냥할 때
+$env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; build/Ninja-Debug/Bin/EngineTest.exe --test_filter=LoaderFuzzTest.*
+```
+
+- **골든 이미지는 픽셀이 아니라 지표다**(`Scripts/common/ImageMetrics.py`): 모서리에서 배경색을 추정해 빼고, 전경 비율 · 전경 평균색 · (R−B) · 경계 밀도 ·
+  8×4 격자 밝기를 견준다. 자동 플레이는 벽시계를 따라가 같은 프레임 번호에서도 장면이 조금씩 다르므로, 허용 오차는 `--record` 가 같은 조건 여러 판의
+  퍼짐에서 정한다. 기준은 160×90 PNG(사람이 열어 보는 그림) + JSON 이라 작다. 기준이 없는 게임 · 못 도는 백엔드는 건너뛴다(77 → ctest Skipped).
+  네 모서리가 둘씩 갈리는 장면(1 인칭 — 위는 하늘, 아래는 땅)은 배경이 없는 것으로 보고 화면 전체를 전경으로 잰다. 기준은 지금 Empty · NileCity ·
+  StarSkirmish · Shooter3D × 네 백엔드에 있다. 판정이 실제로 무는지는 `--extra-arg=-gv_viewMode=2`(와이어프레임) · `--extra-arg=-gv_benchMeshes=0` 으로
+  망가진 그림을 만들어 본다(그 판에만 쓰고 기준에는 남지 않는다). 진 판의 App 출력은 `%TEMP%/sw_golden_<백엔드>_<회차>_app.log`.
+- **soak** 은 `-gv_profileSeconds=<초>` 로 App 이 그 시간을 재고 스스로 끝나게 하고, 밖에서 사유 메모리 · 작업 집합 · 핸들 · GDI/USER 를 잰다.
+  판정은 워밍업 뒤 최소제곱 기울기(MB/분 · 개/분)다 — 처음과 끝 두 점만 보면 캐시 채우기 같은 계단을 누수로 읽는다.
+- **성능 기준은 기계마다**(호스트 · CPU · 백엔드 키)다. 판들의 중앙값을 쓰고, 판정은 `값 > 기준 × (1 + 허용) + 바닥` 이다.
+- **퍼징 대상 표**는 `EngineTest/LoaderFuzzTargets.cpp` 다(XML · JSON · `.meta` · DDS · `.mesh` · 압축 스트림 · 팩 · 씬 XML/바이너리 · GameObject 상태 ·
+  머티리얼 · 소켓 · 체형 · 표면 채널 · 사용자 설정 스키마 · 스프라이트 · 애님 그래프 · 대화 · 시퀀스 · 문자열 표 · 타일맵 · 입력 스냅숏 · 문자열 풀 · WAV · OGG).
+  씨앗은 저장소의 실제 파일이고, 단언도 결함으로 센다(바깥 데이터로 걸리는 단언은 입력 검증이 먼저 막아야 한다). 찾은 결함은 그 로더의 스위트에 회귀 시험으로 둔다.

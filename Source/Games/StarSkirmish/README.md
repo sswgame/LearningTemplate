@@ -58,12 +58,15 @@ cd build/Ninja-Debug-StarSkirmish/Bin
 쌓습니다. 틱 안에서는 오브젝트를 만들 수 없으므로 `executeOrDeferPostTick` 한 번으로 세우고 지웁니다(효과음도 그때). 뷰는 `PostUpdate` 에서 디렉터의 판을 읽어 자기
 오브젝트만 맞춥니다. 커서는 리그의 시점으로 고르므로 리그가 그 프레임에 움직인 만큼은 한 프레임 늦습니다.
 
-**핫 리로드 · 상태 저장.** 판은 런타임 상태라 리로드에서 처음부터 다시 섭니다(PROPERTY 만 남는다). 상태를 쓰기 전에 게임(`onBeforeStateSerialize`)이 디렉터가 세운
-오브젝트를 걷고, 다시 만든 디렉터가 시작하며 다시 세웁니다.
+**핫 리로드 · 상태 저장.** 판(월드의 유닛 · 명령 · 생산 · 자원 · 안개 · 시간, AI 의 생각 타이머 · 공격 물결 수, 고름 · 부대, 속도)은 PROPERTY 가 아니라
+디렉터의 `writeState` 로 상태 스냅샷의 컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`). 길(경로 · 흐름장)과 행동 트리 진행은 싣지 않습니다 — 움직이던
+유닛은 앞 명령의 길을 다시 구하고, AI 는 트리를 처음부터 다시 고른다. 상태를 쓰기 전에 게임(`onBeforeStateSerialize`)이 판을 싣고 디렉터가 세운 오브젝트를
+걷으며, 다시 만든 디렉터가 판을 되살리고 다시 세웁니다.
 
 ## 파일 · 데이터
 
-- `StarSkirmishGame` — 첫 씬을 열고, 상태 저장 전에 디렉터가 세운 것을 걷습니다.
+- `StarSkirmishGame` — 사운드 이벤트(`audio/starskirmish.audioevents.xml`)를 올리고, 첫 씬을 열고, 상태 저장 전에 디렉터가 세운 것을 걷습니다.
+  알림(`Select` · `Built` · `Blocked`)은 `ui` 버스 2D, 부서진 유닛(`UnitDied`)은 그 자리에서 — 직교 카메라라 리스너가 화면 평면(2D)이 되어 화면 좌우로 팬됩니다.
 - `SkirmishDirectorComponent` — 유닛 데이터 읽기 · 판 · 사람 입력(고르기 · 명령 · 생산 · 건설 · 부대) · 알림 · 스폰. 자동 플레이(`_bAutoPlay`,
   `-gv_skirmishAutoPlay=1` 도 켠다)면 컴퓨터 대 컴퓨터. 유닛 데이터 · 프리팹 경로 · 카메라 리그 · 구경 시점은 PROPERTY 입니다.
 - `SkirmishUnitComponent` · `SkirmishDragComponent` — 뷰. 유닛 → 모델 표는 `SkirmishUnitComponent` 에 있습니다.

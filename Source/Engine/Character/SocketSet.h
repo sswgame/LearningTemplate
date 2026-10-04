@@ -38,6 +38,9 @@ namespace sw
     class SW_API SocketKindTable
     {
     public:
+        /** @brief 엔진 기본 종류 표의 리소스 경로입니다. */
+        static constexpr string_view kDefaultPath = "engine/character/default.socketkinds.xml";
+
         /** @brief XML 텍스트에서 읽습니다(지금 표에 더합니다). 모르는 속성 · 원소 · 겹친 이름은 오류이고 false 입니다. */
         [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */

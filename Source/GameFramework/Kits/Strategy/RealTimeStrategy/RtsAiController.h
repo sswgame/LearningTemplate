@@ -65,6 +65,11 @@ namespace sw
         int32             getAttackWaveCount() const { return _attackWaveCount; }
         const Blackboard& getBlackboard() const { return _blackboard; }
 
+        /** @brief 생각 간격 타이머 · 공격 물결 수를 씁니다. 행동 트리 · 칠판은 쓰지 않습니다 — 읽은 쪽은 트리를 처음부터 다시 고른다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
     private:
         static BehaviorStatus taskDefend( BehaviorContext& context );
         static BehaviorStatus taskGatherIdle( BehaviorContext& context );

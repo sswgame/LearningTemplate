@@ -60,7 +60,10 @@ namespace sw
         void update( float32 deltaTime );
 
         /** @brief 벤치가 씬을 만들어 두었으면 true. */
-        bool isActive() const { return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false || _bCharacterFraming == SW_TRUE; }
+        bool isActive() const
+        {
+            return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false || _bCharacterFraming == SW_TRUE || _listRigBody.empty() == false;
+        }
 
     private:
         /** @brief 씬을 확보하고 큐브 meshCount 개를 격자로 채웁니다. */
@@ -69,6 +72,17 @@ namespace sw
         void spawnCharacters( uint32 characterCount );
         /** @brief 캐릭터 줄이 화면에 차도록 씬의 카메라를 맞춥니다(허리 높이를 봅니다). */
         void frameCharacterCameras( Scene* pScene, float32 halfExtent );
+        /**
+         * @brief `-gv_benchRig=N` — 후처리 리그를 건 KayKit 기사 N 명을 기울기 위에 세웁니다(BenchSceneRig.cpp): 발 디딤 · 머리 시선 ·
+         *        무기 손잡이 왼손 IK · 망토 스프링 본. 무기 · 망토는 각자 유닛(자식 오브젝트)이고 리그가 몸의 본을 따릅니다.
+         */
+        void spawnRigCharacters( uint32 characterCount );
+        /** @brief 리그 데모의 프레임 갱신 — 시선 목표를 돌리고, 몸을 좌우로 틀어 망토가 흔들리게 하고, 거리 LOD 기준점(카메라)을 넣습니다. */
+        void updateRigCharacters( float32 deltaTime );
+        /** @brief 리그 데모 카메라 — 기사 한 명이면 상반신 가까이, 여럿이면 줄 전체. */
+        void frameRigCameras( Scene* pScene );
+        /** @brief `-gv_benchRig` 값입니다(스위치는 BenchSceneRig.cpp 가 선언합니다). */
+        static uint32 getRigCharacterCount();
 
         /** @brief 인덱스로부터 결정적인 밝은 색을 만듭니다. */
         static float4 makeBenchColor( uint32 index );
@@ -165,6 +179,10 @@ namespace sw
         uint32 _benchGridSide;
         /** @brief 늦게 생기는 에디터 카메라까지 한 번 더 맞췄으면 1. */
         uint8 _bRefreshedCameras : 1;
+        /** @brief 리그 데모의 기사 몸 유닛 핸들(몸 돌리기 · 걷기). */
+        vector<ComponentHandle> _listRigBody;
+        /** @brief 리그 데모의 시선 목표(작은 구). */
+        ComponentHandle _rigLookTarget;
         /** @brief 캐릭터 벤치를 세웠으면 1 — 카메라를 캐릭터 기준으로 맞춥니다. */
         uint8                  _bCharacterFraming : 1;
         [[maybe_unused]] uint8 _reserved          : 6;

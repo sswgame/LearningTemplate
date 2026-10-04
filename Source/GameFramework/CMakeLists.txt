@@ -7,6 +7,11 @@
 # 1) GameFramework — Kits/는 별도 타겟이라 GLOB에서 제외
 # export는 sw_configureGfExports (sw_addGfKit와 동일 로직)
 # ------------------------------------------------------------------------------
+sw_skipInactiveModule(GameFramework swSkipGameFramework)
+if(swSkipGameFramework)
+	return()
+endif()
+
 if(SW_SHIPPING_BUILD)
 	set(gfLibType STATIC)
 else()

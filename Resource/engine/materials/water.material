@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 물(WaterBodyComponent). 반투명 — 블렌드 모드와 MATERIAL_BLEND_TRANSLUCENT 퍼뮤테이션은 머티리얼의 성질이다. 파도 · 색 · 시간은 컴포넌트가
+     인스턴스에 싣는다. 프로퍼티 이름 · 타입은 water.hlsl 의 SW_MATERIAL 구조체와 같다(정점 셰이더만 읽는다). -->
+<MaterialDesc formatVersion="0" name="Water" shaderPath="engine/shaders/water.hlsl" blendMode="Transparent">
+	<_properties>
+		<item name="wave0" type="Vector4" shaderType="Float4" defaultValue="0.0 1.0 0.0 0.0" displayName="Wave 0 (Direction, Wavelength, Amplitude, Steepness)" group="Waves"/>
+		<item name="wave1" type="Vector4" shaderType="Float4" defaultValue="0.0 1.0 0.0 0.0" displayName="Wave 1" group="Waves"/>
+		<item name="wave2" type="Vector4" shaderType="Float4" defaultValue="0.0 1.0 0.0 0.0" displayName="Wave 2" group="Waves"/>
+		<item name="wave3" type="Vector4" shaderType="Float4" defaultValue="0.0 1.0 0.0 0.0" displayName="Wave 3" group="Waves"/>
+		<item name="waterParams" type="Vector4" shaderType="Float4" defaultValue="0.0 4.0 0.35 0.35" displayName="Time, Deep Depth, Foam Width, Ripple" group="Water"/>
+		<item name="shallowColor" type="Vector4" shaderType="Float4" defaultValue="0.10 0.45 0.45 0.35" displayName="Shallow Color" group="Water"/>
+		<item name="deepColor" type="Vector4" shaderType="Float4" defaultValue="0.01 0.08 0.16 0.92" displayName="Deep Color" group="Water"/>
+		<item name="skyColor" type="Vector4" shaderType="Float4" defaultValue="0.55 0.70 0.85 1.0" displayName="Sky Color" group="Water"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_BLEND_TRANSLUCENT</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDesc>

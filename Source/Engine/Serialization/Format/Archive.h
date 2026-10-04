@@ -206,8 +206,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 타입 정보를 이용해 객체를 직렬화합니다. */
         [[nodiscard]] bool serializeObject( void* pInstance, const TypeInfo& typeInfo );
+        /** @brief 문맥(세이브 직렬화 등)을 주어 객체를 직렬화합니다. */
+        [[nodiscard]] bool serializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx );
         /** @brief 타입 정보를 이용해 객체를 역직렬화합니다. */
         [[nodiscard]] bool deserializeObject( void* pInstance, const TypeInfo& typeInfo );
+        /** @brief 문맥(세이브 직렬화 등)을 주어 객체를 역직렬화합니다. */
+        [[nodiscard]] bool deserializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx );
 
         /** @brief REFLECT 타입을 직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
         template <typename T>
@@ -217,12 +221,28 @@ namespace sw
             return pTypeInfo != nullptr && serializeObject( const_cast<T*>( &instance ), *pTypeInfo );
         }
 
+        /** @brief 문맥을 주어 REFLECT 타입을 직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
+        template <typename T>
+        [[nodiscard]] bool serializeObject( const T& instance, const SerializeContext& ctx )
+        {
+            const TypeInfo* pTypeInfo = T::StaticType();
+            return pTypeInfo != nullptr && serializeObject( const_cast<T*>( &instance ), *pTypeInfo, ctx );
+        }
+
         /** @brief REFLECT 타입을 역직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
         template <typename T>
         [[nodiscard]] bool deserializeObject( T& instance )
         {
             const TypeInfo* pTypeInfo = T::StaticType();
             return pTypeInfo != nullptr && deserializeObject( &instance, *pTypeInfo );
+        }
+
+        /** @brief 문맥을 주어 REFLECT 타입을 역직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
+        template <typename T>
+        [[nodiscard]] bool deserializeObject( T& instance, const SerializeContext& ctx )
+        {
+            const TypeInfo* pTypeInfo = T::StaticType();
+            return pTypeInfo != nullptr && deserializeObject( &instance, *pTypeInfo, ctx );
         }
 
         // ------------------------------------------------------------------------------

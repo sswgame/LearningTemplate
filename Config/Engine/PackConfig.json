@@ -18,6 +18,7 @@
     "textures_raw",
     "shaders_raw",
     "models_raw",
+    "heightfields_raw",
     "docs",
     ".git",
     ".vs"
@@ -40,7 +41,8 @@
       "exclude_directories": [
         "textures_raw",
         "shaders_raw",
-        "models_raw"
+        "models_raw",
+        "heightfields_raw"
       ],
       "recursive": true
     },

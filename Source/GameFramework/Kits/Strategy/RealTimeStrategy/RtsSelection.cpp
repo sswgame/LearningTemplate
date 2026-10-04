@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Utility/StateArchiveUtil.h"
+
 #include <algorithm>
 
 namespace sw
@@ -31,6 +35,50 @@ namespace sw
 
 namespace sw
 {
+    void RtsSelection::writeState( Archive& outArchive ) const
+    {
+        const auto writeList = [&outArchive]( const vector<RtsUnitId>& listUnit )
+        {
+            outArchive << static_cast<uint32>( listUnit.size() );
+            for ( const RtsUnitId unitId : listUnit )
+                outArchive << unitId.packed();
+        };
+        writeList( _listSelected );
+        for ( const vector<RtsUnitId>& listGroup : _arrGroup )
+            writeList( listGroup );
+    }
+
+    bool RtsSelection::readState( Archive& archive )
+    {
+        const auto readList = [&archive]( vector<RtsUnitId>& outListUnit )
+        {
+            uint32 count = 0;
+            if ( StateArchiveUtil::readCount( archive, sizeof( uint64 ), count ) == false )
+                return false;
+            outListUnit.resize( count );
+            for ( RtsUnitId& unitId : outListUnit )
+            {
+                uint64 packed = 0;
+                archive >> packed;
+                unitId = RtsUnitId::fromPacked( packed );
+            }
+            return archive.isOk();
+        };
+        vector<RtsUnitId> listSelected;
+        vector<RtsUnitId> arrGroup[kGroupCount];
+        if ( readList( listSelected ) == false )
+            return false;
+        for ( vector<RtsUnitId>& listGroup : arrGroup )
+        {
+            if ( readList( listGroup ) == false )
+                return false;
+        }
+        _listSelected = std::move( listSelected );
+        for ( int32 group = 0; group < kGroupCount; ++group )
+            _arrGroup[group] = std::move( arrGroup[group] );
+        return true;
+    }
+
     RtsSelection::RtsSelection()
         : _listSelected{}
         , _arrGroup{}

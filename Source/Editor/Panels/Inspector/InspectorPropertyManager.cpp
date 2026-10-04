@@ -61,17 +61,11 @@ namespace sw::editor
                     pRow->_pFormatValue( pValue, buf.data(), buf.capacity() );
                 drawReadOnlyText( prop, buf.c_str() );
             }
-            bool isSliderRequested( const PropertyInfo& prop )
+            bool isColorRequested( const PropertyInfo& prop ) { return InspectorPropertyLayout::isColorRequested( prop ); }
+            /** @brief 색 편집 플래그입니다. `ColorHdr` 면 1 을 넘는 값을 받는다. */
+            ImGuiColorEditFlags getColorFlags( const PropertyInfo& prop )
             {
-                return prop.findCustomMeta( hashed_string( "Slider" ) ) != nullptr;
-            }
-            bool isColorRequested( const PropertyInfo& prop )
-            {
-                if ( prop.findCustomMeta( hashed_string( "Color" ) ) != nullptr )
-                    return true;
-                if ( StringUtil::stristr( prop._name.c_str(), "color" ) != nullptr )
-                    return true;
-                return false;
+                return ImGuiColorEditFlags_Float | ( prop._metadata._bColorHdr != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
             }
 
             /** @brief 비트필드는 포인터를 잡을 수 없어 값으로 읽고 씁니다. 정수 계열과 bool 이 같은 체크박스를 씁니다. */
@@ -319,14 +313,15 @@ namespace sw::editor
                     return true;
                 }
 
-                // 적힌 쪽만 막는다 — `Min = 0` 만 적은 프로퍼티는 위로 열려 있다(`PropertyMetadata::_bHasMinRange` 설명).
+                // 위젯은 `UiMin` · `UiMax`(없으면 `Min` · `Max`) 안에서 움직이고, 값은 늘 `Min` · `Max` 로 막는다(`InspectorNumericRange`).
                 // 적히지 않은 쪽은 nullptr 이라 ImGui 가 타입의 범위로 막는다(uint8 은 0..255).
-                const T      minValue = static_cast<T>( static_cast<float64>( prop._metadata._minRange ) * scale );
-                const T      maxValue = static_cast<T>( static_cast<float64>( prop._metadata._maxRange ) * scale );
-                const T*     pMin     = ( prop._metadata._bHasMinRange != SW_FALSE ) ? &minValue : nullptr;
-                const T*     pMax     = ( prop._metadata._bHasMaxRange != SW_FALSE ) ? &maxValue : nullptr;
-                const bool   bSlider  = prop._metadata.hasFullRange() && isSliderRequested( prop );
-                const string fmt      = InspectorPropertyLayout::appendUnitSuffix( getNumberFormat<T>(), unit._suffix );
+                const InspectorNumericRange range    = InspectorPropertyLayout::getNumericRange( prop );
+                const T                     minValue = static_cast<T>( range._widgetMin * scale );
+                const T                     maxValue = static_cast<T>( range._widgetMax * scale );
+                const T*                    pMin     = range._bHasWidgetMin ? &minValue : nullptr;
+                const T*                    pMax     = range._bHasWidgetMax ? &maxValue : nullptr;
+                const bool                  bSlider  = range._bSlider;
+                const string                fmt      = InspectorPropertyLayout::appendUnitSuffix( getNumberFormat<T>(), unit._suffix );
 
                 T    widgetValue = kIsInteger ? *pPtr : static_cast<T>( static_cast<float64>( *pPtr ) * scale );
                 bool bChanged    = false;
@@ -335,7 +330,10 @@ namespace sw::editor
                 else
                     bChanged = ImGui::DragScalar( _pLabel, getNumberDataType<T>(), &widgetValue, dragSpeed, pMin, pMax, fmt.c_str() );
                 if ( bChanged )
-                    *pPtr = kIsInteger ? widgetValue : static_cast<T>( static_cast<float64>( widgetValue ) / scale );
+                {
+                    const float64 stored = kIsInteger ? static_cast<float64>( widgetValue ) : static_cast<float64>( widgetValue ) / scale;
+                    *pPtr                = static_cast<T>( InspectorPropertyLayout::clampToAllowedRange( range, stored ) );
+                }
                 showTooltipIfHovered( prop );
                 InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
                 return true;
@@ -419,10 +417,15 @@ namespace sw::editor
                     const AssetFieldAction action = drawAssetPathField(
                         [pPtr]( const utf8* pId )
                     { EditorWidgets::drawTextField( pId, *pPtr ); }, droppedPath );
-                    if ( action == AssetFieldAction::Dropped )
+                    // `FileFilter` 에 맞지 않는 파일은 받지 않는다.
+                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, droppedPath ) )
                         *pPtr = droppedPath;
                     else if ( action == AssetFieldAction::Cleared )
                         pPtr->clear();
+                }
+                else if ( prop._metadata._bMultiline != SW_FALSE )
+                {
+                    EditorWidgets::drawTextFieldMultiline( _pLabel, *pPtr );
                 }
                 else
                 {
@@ -456,7 +459,7 @@ namespace sw::editor
                     const AssetFieldAction action = drawAssetPathField(
                         [pPtr]( const utf8* pId )
                     { drawNameInput( pId, *pPtr ); }, droppedPath );
-                    if ( action == AssetFieldAction::Dropped )
+                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, droppedPath ) )
                         *pPtr = hashed_string( droppedPath.c_str() );
                     else if ( action == AssetFieldAction::Cleared )
                         *pPtr = hashed_string{};
@@ -492,7 +495,7 @@ namespace sw::editor
                     return true;
                 }
                 if ( isColorRequested( prop ) )
-                    ImGui::ColorEdit3( _pLabel, &pPtr->_x, ImGuiColorEditFlags_Float );
+                    ImGui::ColorEdit3( _pLabel, &pPtr->_x, getColorFlags( prop ) );
                 else if ( unit._scale != 1.0f )
                 {
                     float3 shown = *pPtr * unit._scale;
@@ -548,7 +551,7 @@ namespace sw::editor
                     return true;
                 }
                 if ( isColorRequested( prop ) )
-                    ImGui::ColorEdit4( _pLabel, &pPtr->_x, ImGuiColorEditFlags_Float );
+                    ImGui::ColorEdit4( _pLabel, &pPtr->_x, getColorFlags( prop ) );
                 else
                     ImGui::DragFloat4( _pLabel, &pPtr->_x, 0.01f );
                 showTooltipIfHovered( prop );

@@ -252,7 +252,7 @@ namespace sw
             _listScratchBatchInfo[argIndex]._instanceCount   = infoBatch._instanceCount;
             _listScratchBatchInfo[argIndex]._morphVertexBase = infoBatch._morphVertexBase;
             _listScratchBatchInfo[argIndex]._firstVertex     = infoBatch._firstVertex;
-            // 투명은 압축한 뒤 GPU 가 깊이순으로 다시 정렬한다. 한 워크그룹에 안 담기는 큰 배치만
+            // 투명은 압축한 뒤 GPU 가 CPU 정렬 순서로 되돌린다. 한 워크그룹에 안 담기는 큰 배치만
             // 압축을 포기하고 CPU 가 정렬해 둔 순서를 그대로 쓴다.
             GpuBatchSortMode sortMode = GpuBatchSortMode::None;
             if ( infoBatch._blendMode == RHIBlendMode::Transparent )

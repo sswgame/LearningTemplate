@@ -14,6 +14,7 @@
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Utility/Debug/FrameProfileSession.h"
+#include "Engine/Utility/Debug/MemoryBudgetMonitor.h"
 
 namespace sw
 {
@@ -237,6 +238,8 @@ namespace sw
 
         /** @brief `-gv_profileFrames` 계측 한 회분입니다. 판정은 모두 이 안에 있고 루프는 두 줄만 부릅니다. */
         FrameProfileSession _profileSession;
+        /** @brief 메모리 태그 예산 · 보고(배포본에서는 아무 일도 하지 않는다). */
+        MemoryBudgetMonitor _memoryBudgetMonitor;
         /** @brief 기동 단계의 순서(`EngineInitStepList.xxx` 를 위상 정렬)와 초기화한 단계입니다. */
         EngineInitSequence _startup;
         /** @brief Config 단계가 읽은 엔진 설정입니다(`_configManager` 소유). Resource · EngineDefaultAssets · RHI 단계가 읽습니다. */

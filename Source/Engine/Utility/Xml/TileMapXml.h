@@ -10,6 +10,8 @@
 
 namespace sw
 {
+    class TileSetAsset;
+
     /**
      * @brief 칸마다 켜고 끄는 타일 플래그 레이어입니다.
      * @details 레이어를 더하면 값 하나와 `kArrTileFlagLayerInfo` 의 줄 하나를 더합니다. XML 읽기 · 쓰기, 에디터 레이어 목록 · 색 ·
@@ -114,6 +116,16 @@ namespace sw
         vector<Visual>    _listVisual{};
         vector<Warp>      _listWarp{};
         vector<Encounter> _listEncounterEntry{};
+        /**
+         * @brief 타일 레이어의 타일셋(`.tileset.xml`) 경로입니다. 비어 있으면 타일 레이어가 없고 `<tileLayer>` 를 쓰지 않습니다(기존 맵과 바이트까지 같습니다).
+         * @details 타일 레이어는 칸마다 **브러시**(그냥 타일 · 규칙 타일)를 칠합니다. 보일 모습(아틀라스 칸)은 저장하지 않고 읽는 쪽이 규칙으로 고릅니다
+         *          (`TileSetAsset::resolveVisual`) — 이웃을 칠하면 모습이 따라 바뀝니다(유니티 Rule Tile · Godot terrain).
+         */
+        string _tileSetPath{};
+        /** @brief 이 맵이 칠한 브러시 이름들(팔레트)입니다. 칸 값 n 은 n − 1 번째 이름입니다. 이름으로 적어 타일셋의 순서가 바뀌어도 맵이 그대로입니다. */
+        vector<string> _listPaletteName{};
+        /** @brief 칸마다 팔레트 번호 + 1 (0 = 빈 칸), 행 우선(y 는 아래로)입니다. 타일 레이어가 없으면 비어 있습니다. */
+        vector<uint16> _listTileCell{};
 
         /** @brief 레이어 하나의 칸 배열입니다. */
         vector<uint8>& getFlagLayer( TileFlagLayer layer ) { return _arrFlagLayer[static_cast<size_t>( layer )]; }
@@ -124,6 +136,19 @@ namespace sw
          * @return 크기가 `isSizeSupported` 밖이면 아무것도 바꾸지 않고 false 입니다.
          */
         [[nodiscard]] SW_API bool resetTiles( int32 width, int32 height );
+
+        /** @brief 칸에 칠한 브러시 이름입니다. 빈 칸 · 맵 밖이면 빈 글입니다. */
+        SW_API string_view getTileBrushName( int32 x, int32 y ) const;
+        /**
+         * @brief 칸에 브러시를 칠합니다(빈 이름은 지우기). 처음 쓰는 이름은 팔레트에 더합니다. 맵 밖이면 false 입니다.
+         * @details 타일 레이어 배열이 없으면 지금 크기로 만듭니다.
+         */
+        SW_API bool setTileBrush( int32 x, int32 y, string_view brushName );
+        /**
+         * @brief 칸마다 타일셋 브러시 번호 + 1 (0 = 빈 칸)로 옮깁니다 — `TileSetAsset::resolveVisual` 이 받는 꼴입니다.
+         * @return 팔레트의 이름 하나라도 타일셋에 없으면 오류를 남기고 false 입니다(그 칸은 비웁니다).
+         */
+        SW_API bool mapTileCells( const TileSetAsset& tileSet, vector<uint16>& outListBrushIndex ) const;
 
         /** @brief Resource 상대 또는 절대 경로에서 타일맵 XML을 읽습니다. */
         [[nodiscard]] SW_API bool load( string_view path );
@@ -139,4 +164,5 @@ namespace sw
          */
         SW_API string toXml() const;
     };
+
 } // namespace sw

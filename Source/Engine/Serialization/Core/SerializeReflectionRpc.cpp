@@ -190,7 +190,7 @@ namespace sw
         const FunctionInfo* pFunc = pTypeInfo->findMethod( methodName );
         if ( pFunc == nullptr )
             return false;
-        if ( args.getCount() != static_cast<uint32>( pFunc->_listParameterTypeName.size() ) )
+        if ( args.getCount() != pFunc->getParameterCount() )
         {
             SW_LOG_WARNING( "Arg count mismatch for %#::%#", typeFqn.c_str(), methodName.c_str() );
             return false;
@@ -212,7 +212,7 @@ namespace sw
 
         for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
         {
-            if ( ReflectionRpcInternal::packOneArg( out._argumentBytes, pFunc->_listParameterTypeName[argIndex], args.get( argIndex ), serializeContext ) == false )
+            if ( ReflectionRpcInternal::packOneArg( out._argumentBytes, pFunc->_listParameter[argIndex]._typeName, args.get( argIndex ), serializeContext ) == false )
                 return false;
         }
         return true;
@@ -254,12 +254,12 @@ namespace sw
         uint32 count{ 0 };
         Memory::copy( &count, envelope._argumentBytes.data(), sizeof( uint32 ) );
         offset += sizeof( uint32 );
-        if ( count != static_cast<uint32>( pFunc->_listParameterTypeName.size() ) )
+        if ( count != pFunc->getParameterCount() )
             return {};
 
         for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
         {
-            if ( ReflectionRpcInternal::unpackOneArg( unpacked, pFunc->_listParameterTypeName[argIndex], envelope._argumentBytes.data(),
+            if ( ReflectionRpcInternal::unpackOneArg( unpacked, pFunc->_listParameter[argIndex]._typeName, envelope._argumentBytes.data(),
                                                       envelope._argumentBytes.size(), offset, serializeContext ) == false )
                 return {};
         }

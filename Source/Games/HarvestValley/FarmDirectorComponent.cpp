@@ -14,11 +14,13 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
+#include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/HarvestValley/FarmCropComponent.h"
 #include "Games/HarvestValley/FarmSoilComponent.h"
@@ -36,8 +38,10 @@ namespace sw
             static constexpr float32 kNearDistance       = 1.7f; ///< 출하함 · 가게 옆으로 치는 거리(m)
             static constexpr float32 kAutoActionInterval = 0.25f;
             static constexpr float32 kRainChance         = 0.25f;
-            static constexpr int32   kAutoCultivateLimit = 32;   ///< 자동 농부가 가꾸는 칸 수(체력이 하루에 감당하는 만큼)
-            static constexpr float32 kCameraFollow       = 0.4f; ///< 카메라 초점이 밭 가운데에서 농부 쪽으로 가는 비율
+            static constexpr int32   kAutoCultivateLimit = 32;          ///< 자동 농부가 가꾸는 칸 수(체력이 하루에 감당하는 만큼)
+            static constexpr float32 kCameraFollow       = 0.4f;        ///< 카메라 초점이 밭 가운데에서 농부 쪽으로 가는 비율
+            static constexpr uint32  kStateTag           = 0x4D524146u; ///< 'FARM'
+            static constexpr uint32  kStateVersion       = 1;
 
             static constexpr float3 kDefaultShippingBinPosition{ 13.4f, 0.0f, 1.0f };
             static constexpr float3 kDefaultShopPosition{ -1.6f, 0.0f, 5.0f };
@@ -158,6 +162,7 @@ namespace sw
         , _listColorLook{}
         , _listCropLook{}
         , _listCropMesh{}
+        , _pendingStateBytes{}
         , _arrSoilLook{}
         , _plainCropLook{}
         , _witheredCropLook{}
@@ -192,6 +197,8 @@ namespace sw
             SW_LOG_WARNING( "[Farm] %# could not be loaded - the farm cannot start", _cropDataPath.c_str() );
             return;
         }
+        if ( _pendingStateBytes.empty() == false )
+            applyPendingState();
         scheduleFlush();
         updateCameraFocus();
         SW_LOG_INFO( "[Farm] farm is ready - WASD move, Space use tool, 1-4 tool (hoe/can/seeds/hand), Q/E seed, B buy, F ship, Z sleep" );
@@ -246,6 +253,85 @@ namespace sw
         }
         _listSpawned.clear();
         _bViewsSpawned = SW_FALSE;
+    }
+
+    void FarmDirectorComponent::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeHeader( outArchive, FarmDirectorComponentInternal::kStateTag, FarmDirectorComponentInternal::kStateVersion );
+        _calendar.writeState( outArchive );
+        _field.writeState( outArchive );
+        _inventory.writeState( outArchive );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _playerPosition;
+        outArchive << _facing;
+        outArchive << _autoTimer;
+        outArchive << _stamina;
+        outArchive << _selectedSeedIndex;
+        outArchive << static_cast<uint8>( _tool );
+        outArchive << static_cast<uint8>( _bRaining );
+    }
+
+    void FarmDirectorComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( _bLoaded == SW_TRUE )
+            applyPendingState();
+    }
+
+    bool FarmDirectorComponent::readState( Archive& archive )
+    {
+        if ( StateArchiveUtil::readHeader( archive, FarmDirectorComponentInternal::kStateTag, FarmDirectorComponentInternal::kStateVersion ) == false )
+            return false;
+        FarmCalendar  calendar;
+        FarmField     field;
+        FarmInventory inventory;
+        GameRandom    random;
+        field.initialize( kFieldWidth, kFieldHeight, &_cropCatalog );
+        const bool bSimulationRead = calendar.readState( archive ) && field.readState( archive ) && inventory.readState( archive ) &&
+                                     StateArchiveUtil::readRandom( archive, random );
+        if ( bSimulationRead == false )
+            return false;
+        float3  playerPosition{};
+        float3  facing{};
+        float32 autoTimer         = 0.0f;
+        int32   stamina           = 0;
+        int32   selectedSeedIndex = 0;
+        uint8   tool              = 0;
+        uint8   bRaining          = SW_FALSE;
+        archive >> playerPosition;
+        archive >> facing;
+        archive >> autoTimer;
+        archive >> stamina;
+        archive >> selectedSeedIndex;
+        archive >> tool;
+        archive >> bRaining;
+        const bool bToolValid = tool <= static_cast<uint8>( FarmTool::Hand );
+        if ( archive.isError() || archive.getRemainingBytes() != 0 || bToolValid == false )
+            return false;
+        _calendar          = calendar;
+        _field             = std::move( field );
+        _inventory         = std::move( inventory );
+        _random            = random;
+        _playerPosition    = playerPosition;
+        _facing            = facing;
+        _autoTimer         = autoTimer;
+        _stamina           = MathUtil::clamp( stamina, 0, kMaxStamina );
+        _selectedSeedIndex = _listSeed.empty() ? 0 : MathUtil::clamp( selectedSeedIndex, 0, static_cast<int32>( _listSeed.size() ) - 1 );
+        _tool              = static_cast<FarmTool>( tool );
+        _bRaining          = bRaining != SW_FALSE ? SW_TRUE : SW_FALSE;
+        return true;
+    }
+
+    void FarmDirectorComponent::applyPendingState()
+    {
+        Archive archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
+        if ( readState( archive ) )
+            SW_LOG_INFO( "[Farm] farm state restored - %# %#, year %#", toString( _calendar.getSeason() ), _calendar.getDay(), _calendar.getYear() );
+        else
+            SW_LOG_WARNING( "[Farm] the saved farm state does not match this build - starting a new farm" );
+        _pendingStateBytes.clear();
+        despawnViews(); // 지금 상태대로 다시 세운다(다음 틱)
+        _lastLoggedHour = -1;
     }
 
     bool FarmDirectorComponent::findTargetTile( int32& outX, int32& outY ) const

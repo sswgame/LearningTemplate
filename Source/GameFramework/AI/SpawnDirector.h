@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/GameCurve.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Utility/GameRandom.h"
 
@@ -32,16 +33,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 예산 곡선의 점 하나입니다. */
-    struct SpawnCurvePoint
-    {
-        float32 _time{ 0.0f };
-        float32 _scale{ 1.0f };
-    };
-} // namespace sw
-
-namespace sw
-{
     /**
      * @class SpawnTable
      * @brief `<SpawnTable budgetPerMinute="4" maxBudget="12" startBudget="0" refund="false">
@@ -57,22 +48,22 @@ namespace sw
         [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         /** @brief @p time 의 예산 배율입니다 — 곡선 점 사이는 선형, 끝 밖은 끝 값, 곡선이 없으면 1 입니다. */
-        float32 computeScale( float32 time ) const;
+        float32 computeScale( float32 time ) const { return _curve.evaluate( time, 1.0f ); }
 
-        const SpawnEntryDef*           findEntry( const hashed_string& id ) const { return _catalog.find( id ); }
-        int32                          findEntryIndex( const hashed_string& id ) const { return _catalog.findIndex( id ); }
-        const vector<SpawnEntryDef>&   getEntries() const { return _catalog.getAll(); }
-        const vector<SpawnCurvePoint>& getCurve() const { return _listCurvePoint; }
-        float32                        getBudgetPerMinute() const { return _budgetPerMinute; }
-        float32                        getMaxBudget() const { return _maxBudget; }
-        float32                        getStartBudget() const { return _startBudget; }
-        bool                           isRefundOnDespawn() const { return _bRefundOnDespawn == SW_TRUE; }
+        const SpawnEntryDef*         findEntry( const hashed_string& id ) const { return _catalog.find( id ); }
+        int32                        findEntryIndex( const hashed_string& id ) const { return _catalog.findIndex( id ); }
+        const vector<SpawnEntryDef>& getEntries() const { return _catalog.getAll(); }
+        const GameCurve&             getCurve() const { return _curve; }
+        float32                      getBudgetPerMinute() const { return _budgetPerMinute; }
+        float32                      getMaxBudget() const { return _maxBudget; }
+        float32                      getStartBudget() const { return _startBudget; }
+        bool                         isRefundOnDespawn() const { return _bRefundOnDespawn == SW_TRUE; }
 
     private:
         uint32 loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<SpawnEntryDef> _catalog;
-        vector<SpawnCurvePoint>    _listCurvePoint; ///< 시각 순
+        GameCurve                  _curve;
         float32                    _budgetPerMinute;
         float32                    _maxBudget;
         float32                    _startBudget;
@@ -120,6 +111,12 @@ namespace sw
         void setAllowedTags( const vector<hashed_string>& listTag );
         /** @brief 죽은 개체의 비용을 예산으로 돌려줄지입니다(테이블 기본값을 덮는다). */
         void setRefundOnDespawn( bool bRefund ) { _bRefundOnDespawn = bRefund ? SW_TRUE : SW_FALSE; }
+        /**
+         * @brief 쌓이는 예산에 곱할 배율입니다(기본 1). 페이싱(`AiDirector`)이 단계마다 바꿉니다.
+         * @details 0 이하이면 예산이 쌓이지도 쓰이지도 않습니다 — 쉬는 단계에서 모아 둔 예산으로 내지 않게 합니다.
+         */
+        void    setBudgetScale( float32 scale ) { _budgetScale = scale; }
+        float32 getBudgetScale() const { return _budgetScale; }
         /** @brief 시간을 흘리고 낼 수 있는 만큼 냅니다. 이번에 낸 수입니다. */
         int32 update( float32 deltaTime );
         /** @brief 게임 쪽 개체가 사라졌음을 알립니다. 모르는(이미 알린) id 면 false 입니다. */
@@ -152,6 +149,7 @@ namespace sw
         const SpawnTable*     _pTable;
         GameRandom            _random;
         float32               _budget;
+        float32               _budgetScale;
         float32               _time;
         int32                 _pendingIndex; ///< −1 = 골라 둔 것 없음
         uint32                _nextSpawnId;

@@ -63,12 +63,12 @@ SW_TEST_CASE( ReflectionFunctionMacroTest, AnnotatedMethodInvoke )
     } actor;
 
     sw::FunctionInfo funcInfo;
-    funcInfo._name                  = "takeDamage";
-    funcInfo._hashName              = sw::hashed_string( "takeDamage" );
-    funcInfo._returnTypeName        = "void";
-    funcInfo._listParameterTypeName = { "sw::int32" };
-    funcInfo._invoker               = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
-                  {
+    funcInfo._name           = "takeDamage";
+    funcInfo._hashName       = sw::hashed_string( "takeDamage" );
+    funcInfo._returnTypeName = "void";
+    funcInfo._listParameter.push_back( sw::FunctionParameterInfo( "damage", "sw::int32", "", nullptr ) );
+    funcInfo._invoker = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
+    {
         static_cast<FunctionAnnotatedActor*>( pObjPtr )->takeDamage( args.get<int32>( 0 ) );
         return sw::TaskValue{};
     } );
@@ -237,9 +237,9 @@ SW_TEST_CASE( ReflectionComponentTest, ComponentPropertySerialization )
 }
 
 /**
- * @brief [ReflectionComponentTest] 파일 상태 묶음은 옮기지 못하는 핸들(맵 값 · ComponentHandle)을 비우고 알린다 — 같은 실행 상태는 그대로 둔다
- * @details 묶음은 단일 `GameObjectHandle` 과 시퀀스 원소만 저장된 id 에서 이 실행의 오브젝트로 옮긴다. 맵 값 · `ComponentHandle` 에 남은 파일 id 는
- *          이 실행에서 우연히 같은 값을 받은 다른 오브젝트를 가리키므로 비운다. 같은 실행의 상태(`ObjectIdSpace::Live`)는 런타임 id 그대로가 맞다.
+ * @brief [ReflectionComponentTest] 파일 상태 묶음은 옮기지 못하는 핸들(ComponentHandle)을 비우고 알리고, 묶음에 없는 오브젝트를 가리키던 핸들은 없음이 된다 — 같은 실행 상태는 그대로 둔다
+ * @details 묶음은 `GameObjectHandle` 을 어디에 들었든(단일 · 시퀀스 · set · 맵 키 · 값 · 중첩) 저장된 id 에서 이 실행의 오브젝트로 옮긴다. `ComponentHandle` 에 남은
+ *          파일 id 는 이 실행에서 우연히 같은 값을 받은 다른 컴포넌트를 가리키므로 비운다. 같은 실행의 상태(`ObjectIdSpace::Live`)는 런타임 id 그대로가 맞다.
  */
 SW_TEST_CASE( ReflectionComponentTest, LoadBatchClearsHandlesItCannotRemap )
 {
@@ -292,10 +292,86 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchClearsHandlesItCannotRemap )
     SW_ASSERT_NOT_NULL( pFromFile );
     SW_EXPECT_FALSE( pFromFile->_target.isValid() );
     SW_EXPECT_TRUE( pFromFile->_listTarget.size() == 1 && pFromFile->_listTarget[0].isValid() == false );
-    SW_EXPECT_TRUE_MSG( pFromFile->_mapSlotToTarget.empty(), "a file id left in a map value points at whatever object got that id in this run" );
+    // 맵 값도 옮긴다 — 대상이 묶음에 없으니 없음이다(파일 id 가 남아 다른 오브젝트를 가리키지 않는다).
+    SW_EXPECT_TRUE( pFromFile->_mapSlotToTarget.size() == 1 && pFromFile->_mapSlotToTarget.begin()->second.isValid() == false );
     SW_EXPECT_FALSE( pFromFile->_targetComponent.isValid() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "TestHandleHolderComponent::_mapSlotToTarget' holds object handles" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "_mapSlotToTarget' holds object handles" ) == 0, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "TestHandleHolderComponent::_targetComponent' holds object handles" ) == 1, logs.joined().c_str() );
+}
+
+/**
+ * @brief [ReflectionComponentTest] 파일 상태 묶음은 컨테이너 안의 핸들을 모두 이 실행의 오브젝트로 옮긴다 — 시퀀스 · set · 맵 값 · 맵 키 · 중첩, 세 형식 모두
+ * @details 대상 오브젝트를 저장된 id 로 묶음에 넣고(`ObjectStateBatch::add`) 핸들을 든 오브젝트를 읽으면, 어느 자리의 핸들이든 새 대상을 가리켜야 한다.
+ *          set 원소와 맵 키는 정렬 · 해시 자리라 제자리에서 고칠 수 없어 빼고 다시 넣는다(`ObjectStateBatch::remapContainerHandles`).
+ */
+SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pTarget = manager.createGameObject( sw::hashed_string( "RemapTarget" ) );
+    sw::GameObject*       pHolder = manager.createGameObject( sw::hashed_string( "RemapHolder" ) );
+    SW_ASSERT_TRUE( pTarget != nullptr && pHolder != nullptr );
+    sw::TestHandleHolderComponent* pHolderComp = pHolder->addComponent<sw::TestHandleHolderComponent>();
+    SW_ASSERT_NOT_NULL( pHolderComp );
+    const sw::GameObjectHandle target = pTarget->getHandle();
+    pHolderComp->_target              = target;
+    pHolderComp->_listTarget          = { target };
+    pHolderComp->_mapSlotToTarget     = {
+        { 1, target }
+    };
+    pHolderComp->_uniqueTarget     = { target };
+    pHolderComp->_mapTargetToScore = {
+        { target, 77 }
+    };
+    pHolderComp->_listTargetRow = {
+        { target, target }
+    };
+    pHolderComp->_mapGroupToTarget = {
+        { "squad", { target } }
+    };
+
+    sw::vector<uint8> binaryState;
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pHolder, binaryState ) );
+    const sw::string xmlState  = sw::ObjectStateSerializer::saveToXmlString( pHolder );
+    const sw::string jsonState = sw::ObjectStateSerializer::saveToJsonString( pHolder );
+
+    for ( uint32 formatIndex = 0; formatIndex < 3; ++formatIndex )
+    {
+        const utf8*     arrFormatName[] = { "xml", "json", "binary" };
+        sw::GameObject* pNewTarget      = manager.createGameObject( sw::hashed_string( "RemapTargetCopy" ) );
+        sw::GameObject* pNewHolder      = manager.createGameObject( sw::hashed_string( "RemapHolderCopy" ) );
+        SW_ASSERT_TRUE( pNewTarget != nullptr && pNewHolder != nullptr );
+
+        sw::ObjectStateBatch batch( sw::ObjectIdSpace::Saved );
+        batch.add( pNewTarget, pTarget->getObjectId(), sw::hashed_string( "RemapTarget" ), false );
+        sw::ObjectLoadContext context{};
+        context._pBatch  = &batch;
+        context._savedId = 900000101 + formatIndex;
+        bool bLoaded     = false;
+        if ( formatIndex == 0 )
+            bLoaded = sw::ObjectStateSerializer::loadFromXmlString( pNewHolder, xmlState, context );
+        else if ( formatIndex == 1 )
+            bLoaded = sw::ObjectStateSerializer::loadFromJsonString( pNewHolder, jsonState, context );
+        else
+            bLoaded = sw::ObjectStateSerializer::loadFromBinaryBuffer( pNewHolder, binaryState.data(), binaryState.size(), context ) != 0;
+        SW_ASSERT_TRUE_MSG( bLoaded, arrFormatName[formatIndex] );
+        batch.finish();
+
+        const sw::GameObjectHandle           moved   = pNewTarget->getHandle();
+        const sw::TestHandleHolderComponent* pLoaded = pNewHolder->getComponent<sw::TestHandleHolderComponent>();
+        SW_ASSERT_NOT_NULL( pLoaded );
+        SW_EXPECT_TRUE_MSG( pLoaded->_target == moved, arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pLoaded->_listTarget.size() == 1 && pLoaded->_listTarget[0] == moved, arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pLoaded->_mapSlotToTarget.size() == 1 && pLoaded->_mapSlotToTarget.at( 1 ) == moved, arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pLoaded->_uniqueTarget.size() == 1 && *pLoaded->_uniqueTarget.begin() == moved, arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pLoaded->_mapTargetToScore.size() == 1 && pLoaded->_mapTargetToScore.begin()->first == moved &&
+                                pLoaded->_mapTargetToScore.begin()->second == 77,
+                            arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pLoaded->_listTargetRow.size() == 1 && pLoaded->_listTargetRow[0].size() == 2 && pLoaded->_listTargetRow[0][1] == moved,
+                            arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pLoaded->_mapGroupToTarget.size() == 1 && pLoaded->_mapGroupToTarget.at( "squad" ).size() == 1 &&
+                                pLoaded->_mapGroupToTarget.at( "squad" )[0] == moved,
+                            arrFormatName[formatIndex] );
+    }
 }
 
 /**

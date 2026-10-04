@@ -1,5 +1,9 @@
 #include "pch.h"
 
+#include "Core/Memory/Memory.h"
+
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
 #include "GameFramework/Kits/Simulation/ThemePark/ThemePark.h"
 
@@ -171,4 +175,52 @@ SW_TEST_CASE( ThemeParkTest, CoasterStatsBecomeARide )
     SW_EXPECT_NEAR_EQUAL( 6.5f, ride._excitement, 1.0e-4f );
     SW_EXPECT_EQUAL( 12, ride._capacity );
     SW_EXPECT_EQUAL( 13, ride._price );
+}
+
+/**
+ * @brief [ThemeParkTest] 공원 상태를 쓰고 같은 설정으로 연 새 공원에 읽으면 바이트가 같고, 같은 시간을 더 돌려도 같다
+ * @details 핫 리로드 · 세이브가 디렉터의 공원을 이 바이트로 옮긴다. 더 돌린 뒤까지 같아야 줄 · 탑승 · 난수 · 걸음 타이머도 옮겨졌다.
+ */
+SW_TEST_CASE( ThemeParkTest, StateRoundTripContinuesTheSamePark )
+{
+    ThemeParkSettings settings      = makeClosedGateSettings();
+    settings._guestArrivalPerMinute = 30.0f;
+    ThemeParkSimulation park;
+    park.initialize( settings, 5000 );
+    SW_ASSERT_TRUE( park.buildRide( makeThemeParkTestRide( 5.0f, 3.0f, 4, 4, 10.0f ), 600 ) == 0 );
+    SW_ASSERT_TRUE( park.buildRide( makeThemeParkTestRide( 7.0f, 6.0f, 6, 2, 14.0f ), 900 ) == 1 );
+    park.setEntryFee( 3 );
+    for ( int32 stepIndex = 0; stepIndex < 47; ++stepIndex )
+        park.update( 0.7f );
+    SW_ASSERT_TRUE( park.getGuestCount() > 0u );
+
+    Archive written;
+    park.writeState( written );
+    ThemeParkSimulation restored;
+    restored.initialize( settings, 1 );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64( 0 ), reader.getRemainingBytes() );
+    SW_EXPECT_EQUAL( park.getCash(), restored.getCash() );
+    SW_EXPECT_EQUAL( park.getGuestCount(), restored.getGuestCount() );
+    SW_EXPECT_EQUAL( 3, restored.getSettings()._entryFee );
+
+    for ( int32 stepIndex = 0; stepIndex < 60; ++stepIndex )
+    {
+        park.update( 0.5f );
+        restored.update( 0.5f );
+    }
+    Archive laterPark;
+    Archive laterRestored;
+    park.writeState( laterPark );
+    restored.writeState( laterRestored );
+    SW_ASSERT_EQUAL( laterPark.getSize(), laterRestored.getSize() );
+    SW_EXPECT_TRUE( Memory::compare( laterPark.getData(), laterRestored.getData(), laterPark.getSize() ) == 0 );
+
+    ThemeParkSimulation untouched;
+    untouched.initialize( settings, 77 );
+    Archive cut( written.getData(), written.getSize() - 5 );
+    SW_EXPECT_FALSE( untouched.readState( cut ) );
+    SW_EXPECT_EQUAL( 77, untouched.getCash() );
+    SW_EXPECT_TRUE( untouched.getRides().empty() );
 }

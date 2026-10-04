@@ -55,6 +55,11 @@ namespace sw
         void setWorld( uint32 index, const float4x4& world );
         /** @brief 항목의 바운드 반지름을 적고 더티로 표시합니다. */
         void setBoundsRadius( uint32 index, float32 radius );
+        /**
+         * @brief 메시를 바꾸고 항목 모두를 더티로 표시합니다. 같은 메시면 아무것도 하지 않습니다.
+         * @details 항목 수 · 머티리얼은 그대로이고 기하만 바뀌는 자리입니다(지형 청크의 LOD 교체). 이 배치를 가진 컴포넌트의 틱에서 불러도 됩니다.
+         */
+        void setMesh( shared_ptr<Mesh> mesh );
         /** @brief 항목의 GPU 회전 시드를 적고 더티로 표시합니다. */
         void setSpinSeed( uint32 index, uint32 seed );
         /**
@@ -74,6 +79,13 @@ namespace sw
         void setVisible( bool bVisible );
         /** @brief 보이면 true 입니다. */
         bool isVisible() const { return _bVisible != SW_FALSE; }
+        /**
+         * @brief 항목 모두의 투명 정렬 키입니다(`MeshComponent::setSortKey` 와 같은 뜻 — 0 은 `Default` 레이어 · 순서 0). 바뀌면 항목 모두가 더티입니다.
+         * @details 월드 공간 UI(HP 바 · 데미지 숫자)를 `WorldUI` 레이어에 두는 자리입니다 — 같은 Z 의 스프라이트보다 늘 위에 그려집니다.
+         */
+        void setSortKey( uint32 sortKey );
+        /** @brief 항목 모두의 투명 정렬 키입니다. */
+        uint32 getSortKey() const { return _sortKey; }
 
         /** @brief 메시(원시 포인터)입니다. */
         Mesh* getRawMesh() const { return _mesh.get(); }
@@ -100,6 +112,7 @@ namespace sw
         shared_ptr<MaterialInstance> _instance;
         PrimitiveRegistry*           _pRegistry;  ///< 등록된 등록부. 등록부가 먼저 사라지면 등록부가 비웁니다
         uint32                       _firstEntry; ///< 등록부의 인스턴스 항목 목록에서 첫 항목 자리. 등록부가 적습니다
+        uint32                       _sortKey;    ///< 항목 모두의 투명 정렬 키(0 = 기본)
         uint8                        _bVisible;
     };
 } // namespace sw

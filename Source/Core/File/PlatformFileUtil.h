@@ -6,20 +6,30 @@
  *          적으면(`FileUtil` · `Logger` · Engine 의 `ResourcePackReader`) 플랫폼을 하나 더 지원할 때 모두 찾아내 빠짐없이
  *          고쳐야 합니다. 그래서 원시 연산은 여기 한 곳에만 둡니다.
  *
- * @note 분기가 한 줄짜리라 이 `.cpp` 하나가 세 플랫폼을 모두 담습니다. 비동기 IO 나 메모리 매핑처럼 플랫폼별 코드가
- *       커지면 `File/Windows` · `File/Linux` 로 옮기면 됩니다(FileDialog · FileWatcher 가 이미 그 형태입니다).
+ * @note 분기가 짧아 이 `.cpp` 하나가 두 플랫폼을 모두 담습니다. 플랫폼 코드가 큰 것(비동기 IO 백엔드 · FileDialog · FileWatcher)은
+ *       `File/Windows` · `File/Linux` 에 있습니다.
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 
 namespace sw
 {
     /**
+     * @brief OS 파일 핸들(Windows `HANDLE` · POSIX 파일 서술자)을 담는 값입니다. 위치 지정 읽기(`readNativeFileAt`)와 비동기 IO(`AsyncFileIo`)가 씁니다.
+     * @details `FILE*` 와 달리 공유 파일 위치가 없어 여러 스레드가 같은 핸들을 잠금 없이 동시에 읽습니다.
+     */
+    using NativeFileHandle = int64;
+
+    /** @brief 열지 못한 핸들입니다(Windows `INVALID_HANDLE_VALUE` · POSIX -1 과 같은 값). */
+    inline constexpr NativeFileHandle kInvalidNativeFileHandle = -1;
+
+    /**
      * @struct PlatformFileUtil
      * @brief stdio 기반 플랫폼 파일 원시 연산 모음입니다.
      */
-    struct PlatformFileUtil
+    struct SW_API PlatformFileUtil
     {
         /** @brief 오프셋 · 크기 질의가 실패했음을 나타내는 값입니다. */
         static constexpr int64 kInvalidOffset = -1;
@@ -58,5 +68,24 @@ namespace sw
          * @return 바이트 수. 실패하면 kInvalidOffset 입니다.
          */
         static int64 getOpenFileSizeAndRewind( FILE* pFile );
+
+        /**
+         * @brief 읽기 전용으로 OS 핸들을 엽니다. 다른 프로세스의 읽기 · 쓰기 · 삭제를 막지 않습니다(`openFile` 과 같은 공유).
+         * @details Windows 는 `FILE_FLAG_OVERLAPPED` 로 엽니다 — 같은 핸들로 IOCP 비동기 읽기와 `readNativeFileAt` 동기 읽기를 함께 합니다.
+         * @return 열지 못했으면(없음 · 권한 · 디렉터리) `kInvalidNativeFileHandle` 입니다.
+         */
+        static NativeFileHandle openNativeFileForRead( const utf8* pFilePath );
+        /** @brief `openNativeFileForRead` 로 연 핸들을 닫습니다. 잘못된 핸들이면 아무 일도 하지 않습니다. */
+        static void closeNativeFile( NativeFileHandle handle );
+        /** @brief 열린 핸들의 파일 크기입니다. 실패하면 `kInvalidOffset` 입니다. */
+        static int64 getNativeFileSize( NativeFileHandle handle );
+        /**
+         * @brief @p offset 에서 최대 @p size 바이트를 @p pDst 로 읽습니다(동기, 위치 지정 — 공유 파일 위치를 쓰지 않는다).
+         * @details 여러 스레드가 같은 핸들로 동시에 불러도 됩니다. Windows 는 스레드마다 이벤트 하나를 두고 그 낮은 비트를 세워, 핸들이 완료 포트에
+         *          묶여 있어도 이 읽기의 완료가 포트로 가지 않게 합니다.
+         * @param outReadBytes 실제로 읽은 바이트. 파일 끝에서 멈추면 @p size 보다 작습니다.
+         * @return OS 가 실패하면 false 입니다(파일 끝은 실패가 아니다).
+         */
+        [[nodiscard]] static bool readNativeFileAt( NativeFileHandle handle, uint64 offset, void* pDst, size_t size, size_t& outReadBytes );
     };
 } // namespace sw

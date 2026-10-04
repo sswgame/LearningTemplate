@@ -1,0 +1,12 @@
+{
+    "_listBudget": [
+        { "_tag": "Texture", "_megabytes": 1024 },
+        { "_tag": "Mesh", "_megabytes": 512 },
+        { "_tag": "Audio", "_megabytes": 256 },
+        { "_tag": "Animation", "_megabytes": 256 },
+        { "_tag": "Physics", "_megabytes": 128 },
+        { "_tag": "Scene", "_megabytes": 512 },
+        { "_tag": "UI", "_megabytes": 64 },
+        { "_tag": "Script", "_megabytes": 64 }
+    ]
+}

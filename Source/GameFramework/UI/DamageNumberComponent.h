@@ -2,6 +2,7 @@
 #include "Core/Container/string.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/SpriteInstanceBatch.h"
@@ -116,7 +117,9 @@ namespace sw
         PROPERTY( Category = "Style", DisplayName = "Color", Meta = "Color", Tooltip = "Glyph color; alpha is multiplied by the fade" )
         float4 _color;
         PROPERTY( Category = "Style", DisplayName = "Glyph Clip", AssetPath, AssetType = "SpriteClip", Tooltip = "Glyph atlas clip: frames 0-9 are digits, frame 10 is minus" )
-        string                            _digitClipPath;
+        string _digitClipPath;
+        PROPERTY( Category = "Style", DisplayName = "Sorting Layer", Tooltip = "Sorting layer of the glyphs (render2d.xml); world UI draws above sprites" )
+        hashed_string                     _sortingLayer;
         shared_ptr<const SpriteClipAsset> _digitClip;   ///< 읽은 글리프 클립입니다. 저장하지 않습니다
         SpriteInstanceBatch               _spriteBatch; ///< 글자마다 한 장. 저장하지 않습니다
     };

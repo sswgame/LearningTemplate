@@ -1,0 +1,121 @@
+{
+    "culture": "en",
+    "entries": {
+        "Assault Rifle": {
+            "source": "Assault Rifle",
+            "context": "Weapon name",
+            "origins": [
+                "game/shooter3d/data/weapons.xml"
+            ]
+        },
+        "Combat Helmet": {
+            "source": "Combat Helmet",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Fatigues": {
+            "source": "Fatigues",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Field Pack": {
+            "source": "Field Pack",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "M4 Rifle": {
+            "source": "M4 Rifle",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "M9 Pistol": {
+            "source": "M9 Pistol",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Pistol": {
+            "source": "Pistol",
+            "context": "Weapon name",
+            "origins": [
+                "game/shooter3d/data/weapons.xml"
+            ]
+        },
+        "Pump Shotgun": {
+            "source": "Pump Shotgun",
+            "context": "Weapon name",
+            "origins": [
+                "game/shooter3d/data/weapons.xml"
+            ]
+        },
+        "Recon Boots": {
+            "source": "Recon Boots",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Recon Helmet": {
+            "source": "Recon Helmet",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Recon Patch": {
+            "source": "Recon Patch",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Recon Vest": {
+            "source": "Recon Vest",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "settings.gameplay.difficulty": {
+            "source": "Difficulty",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "game/shooter3d/data/shooter3d.settings.xml"
+            ]
+        },
+        "settings.gameplay.difficulty.easy": {
+            "source": "Easy",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "game/shooter3d/data/shooter3d.settings.xml"
+            ]
+        },
+        "settings.gameplay.difficulty.hard": {
+            "source": "Hard",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "game/shooter3d/data/shooter3d.settings.xml"
+            ]
+        },
+        "settings.gameplay.difficulty.normal": {
+            "source": "Normal",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "game/shooter3d/data/shooter3d.settings.xml"
+            ]
+        }
+    }
+}

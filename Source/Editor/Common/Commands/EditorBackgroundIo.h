@@ -61,13 +61,13 @@ namespace sw::editor
 {
     /**
      * @class EditorLocalizationLoadJob
-     * @brief 로컬라이즈 JSON을 워커에서 읽고 게임 스레드에서 적용합니다.
+     * @brief 로컬라이제이션 프로젝트(원문 표 · 번역 표)를 워커에서 읽고 게임 스레드에서 적용합니다.
      */
-    class EditorLocalizationLoadJob final : public EditorBackgroundTask<EditorBackgroundNoInput, vector<LocalizationRecord>>
+    class EditorLocalizationLoadJob final : public EditorBackgroundTask<string, LocalizationSheet>
     {
     public:
-        /** @brief 워커에 JSON 로드를 요청합니다. */
-        void request();
+        /** @brief 워커에 프로젝트 로드를 요청합니다. */
+        void request( string_view projectPath );
 
     private:
         static void runJob( const TaskArgs& args );

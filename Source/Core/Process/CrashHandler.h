@@ -80,6 +80,12 @@ namespace sw
         static void setContextValue( string_view key, string_view value );
 
         /**
+         * @brief 크래시 보고에 붙일 최근 사건 한 줄(빵부스러기)을 넣습니다. 최근 32 줄만 남고, 크래시 때 `crash_<세션>.breadcrumbs.txt` 로 씁니다.
+         * @details 텔레메트리가 사건마다 넣습니다(동의와 상관없이 — 기계 밖으로 나가는 것은 크래시 보고 동의가 정한다). 아무 스레드에서 불러도 됩니다.
+         */
+        static void addBreadcrumb( string_view text );
+
+        /**
          * @brief 이 실행을 식별하는 세션 ID 입니다(프로세스마다 하나이고, 부팅 때 정해집니다).
          * @details 로그 파일 이름과 크래시 리포트에 같은 값이 들어가 둘을 짝지을 수 있습니다. 사용자가 보낸 덤프와 로그가 같은
          *          실행의 것인지 확인하는 유일한 방법입니다.

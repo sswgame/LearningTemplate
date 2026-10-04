@@ -94,6 +94,27 @@ SW_TEST_CASE( ShaderCookRequestTest, PassDefineReachesCookedRequests )
 }
 
 /**
+ * @brief [ShaderCookRequestTest] 머티리얼 셰이더마다 define 없는 VS · PS 를 쿠킹한다 — 머티리얼이 원소 레이아웃을 읽는 변형이다
+ * @details `Material::ensureShaderLayout` 은 define 없이 리플렉션한다. 패스 기본 셰이더(forwardlit)는 패스 몫으로 쿠킹되지만 머티리얼만 쓰는
+ *          셰이더(지형 · 식생 · 물)는 따로 요청하지 않으면 Shipping 에서 매니페스트 미스로 XML 순서 패킹이 된다(`RenderPassGpuTest.VertexStageMaterialSchemaIsUsed`
+ *          가 Shipping 에서만 지던 것).
+ */
+SW_TEST_CASE( ShaderCookRequestTest, MaterialShaderBaseVariantIsRequested )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::vector<sw::ShaderCookRequest> listRequest;
+    sw::ShaderCookDriver::collectAllRequests( sw::ResourceUtil::getRootFolderPath(), listRequest );
+    SW_ASSERT_TRUE( listRequest.empty() == false );
+    const uint64 baseHash    = sw::ShaderCooker::computePermutationHash( sw::vector<sw::string>{} );
+    const utf8*  arrShader[] = { "engine/shaders/water.hlsl", "engine/shaders/terrain.hlsl", "engine/shaders/foliage.hlsl" };
+    for ( const utf8* pShader : arrShader )
+    {
+        SW_EXPECT_TRUE_MSG( hasExactRequestInternal( listRequest, pShader, "VSMain", sw::ShaderStage::Vertex, baseHash ), pShader );
+        SW_EXPECT_TRUE_MSG( hasExactRequestInternal( listRequest, pShader, "PSMain", sw::ShaderStage::Pixel, baseHash ), pShader );
+    }
+}
+
+/**
  * @brief [ShaderCookRequestTest] 요청 목록에 같은 (셰이더·진입점·스테이지·해시) 가 두 번 들지 않는다
  * @details `appendRequestUnique` 의 계약이다. 중복은 그 자체로 치명적이진 않지만 같은 것을 네 번 쿠킹하게
  *          만들고, 무엇보다 "런타임 요청 = 요청" 대조를 흐린다.

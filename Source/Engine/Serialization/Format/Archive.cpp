@@ -523,19 +523,29 @@ namespace sw
 
     bool Archive::serializeObject( void* pInstance, const TypeInfo& typeInfo )
     {
+        return serializeObject( pInstance, typeInfo, SerializeContext::getDefault() );
+    }
+
+    bool Archive::serializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+    {
         if ( pInstance == nullptr )
         {
             _bError = SW_TRUE;
             return false;
         }
 
-        BinarySerializer::serialize( pInstance, typeInfo, _bytes );
+        BinarySerializer::serialize( pInstance, typeInfo, _bytes, ctx );
         _pData    = _bytes.data();
         _dataSize = _bytes.size();
         return true;
     }
 
     bool Archive::deserializeObject( void* pInstance, const TypeInfo& typeInfo )
+    {
+        return deserializeObject( pInstance, typeInfo, SerializeContext::getDefault() );
+    }
+
+    bool Archive::deserializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
     {
         if ( pInstance == nullptr || _pData == nullptr )
         {
@@ -550,7 +560,7 @@ namespace sw
         }
 
         // 객체 끝까지만 읽고 읽기 자리를 옮긴다 — 뒤에 이어 쓴 값을 다음 읽기가 읽는다.
-        return BinarySerializer::deserialize( pInstance, typeInfo, *this );
+        return BinarySerializer::deserialize( pInstance, typeInfo, *this, ctx );
     }
 
     bool Archive::writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecType codecType )

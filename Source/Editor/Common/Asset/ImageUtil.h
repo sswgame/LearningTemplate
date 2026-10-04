@@ -46,5 +46,11 @@ namespace sw::editor
          * @brief 메모리 버퍼의 이미지를 4채널(RGBA) 버퍼로 디코딩합니다.
          */
         [[nodiscard]] static bool loadImageFromMemory( const uint8* pBuffer, size_t bufferSize, RawImageData& outImage );
+
+        /**
+         * @brief 메모리 버퍼의 이미지를 16 비트 회색 한 채널로 디코딩합니다(높이장 원본). 8 비트 원본은 × 257 로 늘어납니다.
+         * @param outListSample 행 우선 너비 × 높이 개입니다.
+         */
+        [[nodiscard]] static bool loadGray16FromMemory( const uint8* pBuffer, size_t bufferSize, vector<uint16>& outListSample, int32& outWidth, int32& outHeight );
     };
 } // namespace sw::editor

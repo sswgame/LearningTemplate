@@ -5,14 +5,20 @@
 #include "Core/Container/deque.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
     {
         struct CitySimulationInternal
         {
-            static constexpr int32 kArrOffsetX[4] = { 1, -1, 0, 0 };
-            static constexpr int32 kArrOffsetY[4] = { 0, 0, 1, -1 };
+            static constexpr uint32 kMinBuildingStateBytes = 64; ///< 건물 하나의 상태가 적어도 쓰는 바이트(개수 상한)
+            static constexpr uint32 kMinWalkerStateBytes   = 56; ///< 일꾼 하나의 상태가 적어도 쓰는 바이트(개수 상한)
+            static constexpr int32  kArrOffsetX[4]         = { 1, -1, 0, 0 };
+            static constexpr int32  kArrOffsetY[4]         = { 0, 0, 1, -1 };
 
             /** @brief 노동 순서 — 물 → 식량 사슬 → 나머지(작을수록 먼저). */
             static int32 computeLaborPriority( const CityBuildingDef& def )
@@ -948,5 +954,234 @@ namespace sw
             total += house._population;
         }
         return total > 0 ? static_cast<float32>( weighted ) / static_cast<float32>( total ) : 0.0f;
+    }
+} // namespace sw
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 상태 쓰기 · 읽기(핫 리로드 · 세이브)
+    // ------------------------------------------------------------------------------
+    void CitySimulation::writeState( Archive& outArchive ) const
+    {
+        outArchive << _width;
+        outArchive << _height;
+        for ( const CityTile& tile : _listTile )
+        {
+            outArchive << tile._buildingIndex;
+            outArchive << tile._roadComponent;
+            outArchive << tile._desirability;
+            outArchive << static_cast<uint8>( tile._terrain );
+            outArchive << tile._bRoad;
+        }
+        outArchive << static_cast<uint32>( _listBuilding.size() );
+        for ( const CityBuilding& building : _listBuilding )
+        {
+            StateArchiveUtil::writeName( outArchive, building._pDef != nullptr ? building._pDef->_id : hashed_string{} );
+            building._stock.writeState( outArchive );
+            StateArchiveUtil::writeInt2( outArchive, building._origin );
+            StateArchiveUtil::writeInt2( outArchive, building._accessTile );
+            outArchive << building._efficiency;
+            outArchive << building._walkerTimer;
+            outArchive << building._productionProgress;
+            for ( const float32 serviceTime : building._arrServiceTime )
+                outArchive << serviceTime;
+            outArchive << building._evolveTimer;
+            outArchive << building._devolveTimer;
+            outArchive << building._immigrationTimer;
+            outArchive << building._assignedWorkers;
+            outArchive << building._activeWalkerCount;
+            outArchive << building._level;
+            outArchive << building._population;
+            outArchive << building._bAlive;
+        }
+        outArchive << static_cast<uint32>( _listWalker.size() );
+        for ( const CityWalker& walker : _listWalker )
+        {
+            outArchive << static_cast<uint32>( walker._listPath.size() );
+            for ( const int2& tile : walker._listPath )
+                StateArchiveUtil::writeInt2( outArchive, tile );
+            outArchive << static_cast<uint32>( walker._listVisited.size() );
+            for ( const int2& tile : walker._listVisited )
+                StateArchiveUtil::writeInt2( outArchive, tile );
+            StateArchiveUtil::writeName( outArchive, walker._cargoGood );
+            StateArchiveUtil::writeInt2( outArchive, walker._tile );
+            StateArchiveUtil::writeInt2( outArchive, walker._previousTile );
+            StateArchiveUtil::writeInt2( outArchive, walker._nextTile );
+            outArchive << walker._progress;
+            outArchive << walker._homeBuilding;
+            outArchive << walker._targetBuilding;
+            outArchive << walker._stepsLeft;
+            outArchive << walker._cargoAmount;
+            outArchive << static_cast<uint8>( walker._kind );
+            outArchive << static_cast<uint8>( walker._service );
+            outArchive << walker._bReturning;
+            outArchive << walker._bAlive;
+        }
+        StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _time;
+        outArchive << _monthTimer;
+        outArchive << _floodFertility;
+        outArchive << _wageDebt;
+        outArchive << _money;
+        outArchive << _monthIncome;
+        outArchive << _workforce;
+        outArchive << _employed;
+        outArchive << _month;
+        outArchive << _year;
+        outArchive << _bRoadsDirty;
+        outArchive << _bDesirabilityDirty;
+    }
+
+    bool CitySimulation::readState( Archive& archive )
+    {
+        int32 width  = 0;
+        int32 height = 0;
+        archive >> width;
+        archive >> height;
+        if ( archive.isError() || width != _width || height != _height || _pCatalog == nullptr )
+            return false;
+
+        const int32      buildingLimit = static_cast<int32>( _listTile.size() ); // 건물은 적어도 한 칸이다
+        vector<CityTile> listTile( _listTile.size() );
+        for ( CityTile& tile : listTile )
+        {
+            uint8 terrain = 0;
+            archive >> tile._buildingIndex;
+            archive >> tile._roadComponent;
+            archive >> tile._desirability;
+            archive >> terrain;
+            archive >> tile._bRoad;
+            if ( archive.isError() || terrain > static_cast<uint8>( CityTerrain::Rock ) || tile._buildingIndex >= buildingLimit )
+                return false;
+            tile._terrain = static_cast<CityTerrain>( terrain );
+        }
+
+        uint32 buildingCount = 0;
+        if ( StateArchiveUtil::readCount( archive, CitySimulationInternal::kMinBuildingStateBytes, buildingCount ) == false )
+            return false;
+        vector<CityBuilding> listBuilding( buildingCount );
+        for ( CityBuilding& building : listBuilding )
+        {
+            hashed_string defId;
+            if ( StateArchiveUtil::readName( archive, defId ) == false )
+                return false;
+            building._pDef = defId.empty() ? nullptr : _pCatalog->findBuilding( defId );
+            if ( defId.empty() == false && building._pDef == nullptr )
+                return false; // 카탈로그에서 빠진 건물 — 도시를 맞출 수 없다
+            if ( building._stock.readState( archive ) == false )
+                return false;
+            StateArchiveUtil::readInt2( archive, building._origin );
+            StateArchiveUtil::readInt2( archive, building._accessTile );
+            archive >> building._efficiency;
+            archive >> building._walkerTimer;
+            archive >> building._productionProgress;
+            for ( float32& serviceTime : building._arrServiceTime )
+                archive >> serviceTime;
+            archive >> building._evolveTimer;
+            archive >> building._devolveTimer;
+            archive >> building._immigrationTimer;
+            archive >> building._assignedWorkers;
+            archive >> building._activeWalkerCount;
+            archive >> building._level;
+            archive >> building._population;
+            archive >> building._bAlive;
+            if ( archive.isError() )
+                return false;
+        }
+
+        uint32 walkerCount = 0;
+        if ( StateArchiveUtil::readCount( archive, CitySimulationInternal::kMinWalkerStateBytes, walkerCount ) == false )
+            return false;
+        vector<CityWalker> listWalker( walkerCount );
+        for ( CityWalker& walker : listWalker )
+        {
+            uint32 pathCount = 0;
+            if ( StateArchiveUtil::readCount( archive, sizeof( int32 ) * 2, pathCount ) == false )
+                return false;
+            walker._listPath.resize( pathCount );
+            for ( int2& tile : walker._listPath )
+                StateArchiveUtil::readInt2( archive, tile );
+            uint32 visitedCount = 0;
+            if ( StateArchiveUtil::readCount( archive, sizeof( int32 ) * 2, visitedCount ) == false )
+                return false;
+            walker._listVisited.resize( visitedCount );
+            for ( int2& tile : walker._listVisited )
+                StateArchiveUtil::readInt2( archive, tile );
+            if ( StateArchiveUtil::readName( archive, walker._cargoGood ) == false )
+                return false;
+            uint8 kind    = 0;
+            uint8 service = 0;
+            StateArchiveUtil::readInt2( archive, walker._tile );
+            StateArchiveUtil::readInt2( archive, walker._previousTile );
+            StateArchiveUtil::readInt2( archive, walker._nextTile );
+            archive >> walker._progress;
+            archive >> walker._homeBuilding;
+            archive >> walker._targetBuilding;
+            archive >> walker._stepsLeft;
+            archive >> walker._cargoAmount;
+            archive >> kind;
+            archive >> service;
+            archive >> walker._bReturning;
+            archive >> walker._bAlive;
+            const bool bHomeValid = -1 <= walker._homeBuilding && walker._homeBuilding < static_cast<int32>( buildingCount );
+            const bool bEnumValid = kind <= static_cast<uint8>( CityWalkerKind::Cart ) && service <= static_cast<uint8>( CityService::Count );
+            if ( archive.isError() || bHomeValid == false || bEnumValid == false )
+                return false;
+            walker._kind    = static_cast<CityWalkerKind>( kind );
+            walker._service = static_cast<CityService>( service );
+        }
+
+        FixedStepTimer stepTimer = _stepTimer;
+        GameRandom     random;
+        if ( StateArchiveUtil::readStepTimer( archive, stepTimer ) == false || StateArchiveUtil::readRandom( archive, random ) == false )
+            return false;
+        float32 time               = 0.0f;
+        float32 monthTimer         = 0.0f;
+        float32 floodFertility     = 0.0f;
+        float32 wageDebt           = 0.0f;
+        int32   money              = 0;
+        int32   monthIncome        = 0;
+        int32   workforce          = 0;
+        int32   employed           = 0;
+        int32   month              = 0;
+        int32   year               = 0;
+        uint8   bRoadsDirty        = SW_FALSE;
+        uint8   bDesirabilityDirty = SW_FALSE;
+        archive >> time;
+        archive >> monthTimer;
+        archive >> floodFertility;
+        archive >> wageDebt;
+        archive >> money;
+        archive >> monthIncome;
+        archive >> workforce;
+        archive >> employed;
+        archive >> month;
+        archive >> year;
+        archive >> bRoadsDirty;
+        archive >> bDesirabilityDirty;
+        if ( archive.isError() )
+            return false;
+
+        _listTile           = std::move( listTile );
+        _listBuilding       = std::move( listBuilding );
+        _listWalker         = std::move( listWalker );
+        _stepTimer          = stepTimer;
+        _random             = random;
+        _time               = time;
+        _monthTimer         = monthTimer;
+        _floodFertility     = floodFertility;
+        _wageDebt           = wageDebt;
+        _money              = money;
+        _monthIncome        = monthIncome;
+        _workforce          = workforce;
+        _employed           = employed;
+        _month              = month;
+        _year               = year;
+        _bRoadsDirty        = bRoadsDirty;
+        _bDesirabilityDirty = bDesirabilityDirty;
+        _listEvent.clear();
+        return true;
     }
 } // namespace sw

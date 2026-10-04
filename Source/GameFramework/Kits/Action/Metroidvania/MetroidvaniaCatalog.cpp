@@ -52,17 +52,12 @@ namespace sw
 
     bool MetroidvaniaCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "Metroidvania", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &MetroidvaniaCatalog::loadRoot, path, "Metroidvania" );
     }
 
     bool MetroidvaniaCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "Metroidvania", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &MetroidvaniaCatalog::loadRoot, xmlText, sourceName, "Metroidvania" );
     }
 
     void MetroidvaniaCatalog::loadRules( const XmlNode& root )

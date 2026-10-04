@@ -126,17 +126,12 @@ namespace sw
 
     bool HorrorCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "HorrorCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &HorrorCatalog::loadRoot, path, "HorrorCatalog" );
     }
 
     bool HorrorCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "HorrorCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &HorrorCatalog::loadRoot, xmlText, sourceName, "HorrorCatalog" );
     }
 
     const RecipeDef* HorrorCatalog::findCombine( const hashed_string& firstItem, const hashed_string& secondItem ) const

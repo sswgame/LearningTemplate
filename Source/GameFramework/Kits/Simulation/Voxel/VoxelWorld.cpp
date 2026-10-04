@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 namespace sw
 {
     namespace
@@ -111,6 +113,68 @@ namespace sw
         VoxelChunk* pChunk = findChunkMutable( chunkX, chunkZ );
         if ( pChunk != nullptr )
             pChunk->_bDirty = SW_FALSE;
+    }
+
+    void VoxelWorld::writeState( Archive& outArchive ) const
+    {
+        outArchive << _chunkCountX;
+        outArchive << _chunkCountZ;
+        for ( const VoxelChunk& chunk : _listChunk )
+        {
+            // 구간 수를 먼저 세지 않고 끝에 0 길이 구간으로 닫는다.
+            size_t index = 0;
+            while ( index < chunk._listBlock.size() )
+            {
+                const VoxelBlockIndex block = chunk._listBlock[index];
+                uint32                run   = 1;
+                while ( index + run < chunk._listBlock.size() && chunk._listBlock[index + run] == block )
+                    ++run;
+                outArchive << block;
+                outArchive << run;
+                index += run;
+            }
+            outArchive << kVoxelAirBlock;
+            outArchive << uint32( 0 );
+        }
+    }
+
+    bool VoxelWorld::readState( Archive& archive )
+    {
+        int32 chunkCountX = 0;
+        int32 chunkCountZ = 0;
+        archive >> chunkCountX;
+        archive >> chunkCountZ;
+        if ( archive.isError() || chunkCountX != _chunkCountX || chunkCountZ != _chunkCountZ || _pCatalog == nullptr )
+            return false;
+        const size_t       blockLimit = _pCatalog->getBlocks().size(); // 0 은 공기, 1 부터 카탈로그 순
+        vector<VoxelChunk> listChunk( _listChunk.size() );
+        for ( VoxelChunk& chunk : listChunk )
+        {
+            chunk._listBlock.reserve( static_cast<size_t>( kVoxelChunkVolume ) );
+            while ( true )
+            {
+                VoxelBlockIndex block = kVoxelAirBlock;
+                uint32          run   = 0;
+                archive >> block;
+                archive >> run;
+                if ( archive.isError() || static_cast<size_t>( block ) > blockLimit )
+                    return false;
+                if ( run == 0 )
+                    break;
+                if ( chunk._listBlock.size() + run > static_cast<size_t>( kVoxelChunkVolume ) )
+                    return false;
+                chunk._listBlock.insert( chunk._listBlock.end(), run, block );
+            }
+            if ( chunk._listBlock.size() != static_cast<size_t>( kVoxelChunkVolume ) )
+                return false;
+        }
+        for ( size_t chunkIndex = 0; chunkIndex < listChunk.size(); ++chunkIndex )
+        {
+            listChunk[chunkIndex]._revision = _listChunk[chunkIndex]._revision + 1; // 지은 메시가 낡았다
+            listChunk[chunkIndex]._bDirty   = SW_TRUE;
+        }
+        _listChunk = std::move( listChunk );
+        return true;
     }
 
     void VoxelWorld::markAllChunksDirty()

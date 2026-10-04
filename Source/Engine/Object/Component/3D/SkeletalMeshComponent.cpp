@@ -304,6 +304,8 @@ namespace sw
         _frameContext._deltaSeconds = deltaSeconds;
         _frameContext._frameIndex   = frameIndex;
         _frameContext._bPoseNeeded  = ( bPoseDirty || ( bOnRate && bOnScreen ) ) ? SW_TRUE : SW_FALSE;
+        for ( IAnimationPhaseTask* pTask : _listTask )
+            pTask->prepareAnimationFrame( *this, _frameContext );
         return true;
     }
 

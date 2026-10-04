@@ -1,0 +1,20 @@
+{
+    "_name": "GF_BattleRoyale",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "배틀로얄 키트(배틀그라운드 장르) — 자기장 단계 · 비행기 · 낙하 · 지점별 전리품 · 보급 상자 · 방어구 · 가방 · 기절 · 팀원 부활 · 순위 · 킬 피드",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

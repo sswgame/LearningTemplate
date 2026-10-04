@@ -59,6 +59,13 @@ namespace sw
         string                          _tooltip;
         string                          _defaultValue;
         string                          _assetType;
+        string                          _repNotify;     ///< `RepNotify = fn` — 같은 타입의 메서드 이름(모양은 `validateMemberFunctions` 가 본다)
+        string                          _validate;      ///< `Validate = fn` — 같은 타입의 `void fn( ValidationContext& )`
+        string                          _configSection; ///< `ConfigSection = "…"`
+        string                          _configKey;     ///< `ConfigKey = "…"`
+        string                          _editCondition; ///< `EditCondition = "…"` — 식은 런타임(`PropertyEditCondition`)이 푼다
+        string                          _fileFilter;    ///< `FileFilter = "*.png;*.dds"`
+        string                          _units;         ///< `Units = m` — 단위 표(`ReflectUnits.h`)에 있어야 한다. 커스텀 메타 `Units` 로 실린다
         vector<pair<string, string>>    _listCustomMeta;
         string                          _containerType;
         string                          _elementTypeName;
@@ -66,6 +73,8 @@ namespace sw
         shared_ptr<ParsedContainerNode> _containerTree;
         float32                         _minRange;
         float32                         _maxRange;
+        float32                         _uiMinRange; ///< `UiMin` — 슬라이더 범위(허용 범위와 따로)
+        float32                         _uiMaxRange;
         ContainerKind                   _containerKind;
         uint8                           _bIsBitField   : 1;
         uint8                           _bReadOnly     : 1;
@@ -83,8 +92,19 @@ namespace sw
          * @brief 값이 객체 밖에 있습니다 — `PROPERTY` 가 필드가 아니라 값 참조(`T&`)를 돌려주는 인자 없는 메서드에 붙었습니다.
          * @details 코드젠은 오프셋 대신 그 메서드를 부르는 `PropertyInfo::_pValueAccessor` 를 냅니다(`_memberName` 이 메서드 이름).
          */
-        uint8                   _bIsAccessor : 1;
-        [[maybe_unused]] uint8  _reserved    : 6;
+        uint8 _bIsAccessor : 1;
+        uint8 _bReplicated : 1;
+        uint8 _bSaveGame   : 1;
+        uint8 _bInterp     : 1;
+        uint8 _bConfig     : 1;
+        /** @brief `RepNotify` 함수가 이전 값을 받는다(`void fn( const T& )`). 선언에서 온 사실이다(애노테이션 줄이 아니다). */
+        uint8                   _bRepNotifyTakesOldValue : 1;
+        uint8                   _bHasUiMinRange          : 1;
+        uint8                   _bHasUiMaxRange          : 1;
+        uint8                   _bEditConditionHides     : 1;
+        uint8                   _bColorHdr               : 1;
+        uint8                   _bMultiline              : 1;
+        [[maybe_unused]] uint8  _reserved                : 4;
         [[maybe_unused]] uint16 _padding;
 
         ParsedPropertyInfo() noexcept
@@ -97,6 +117,13 @@ namespace sw
             , _tooltip{}
             , _defaultValue{}
             , _assetType{}
+            , _repNotify{}
+            , _validate{}
+            , _configSection{}
+            , _configKey{}
+            , _editCondition{}
+            , _fileFilter{}
+            , _units{}
             , _listCustomMeta{}
             , _containerType{}
             , _elementTypeName{}
@@ -104,6 +131,8 @@ namespace sw
             , _containerTree{ nullptr }
             , _minRange{ 0.0f }
             , _maxRange{ 1.0f }
+            , _uiMinRange{ 0.0f }
+            , _uiMaxRange{ 1.0f }
             , _containerKind{ ContainerKind::None }
             , _bIsBitField{ SW_FALSE }
             , _bReadOnly{ SW_FALSE }
@@ -117,10 +146,44 @@ namespace sw
             , _bSkipIfEmpty{ SW_FALSE }
             , _bHideInInspector{ SW_FALSE }
             , _bIsAccessor{ SW_FALSE }
+            , _bReplicated{ SW_FALSE }
+            , _bSaveGame{ SW_FALSE }
+            , _bInterp{ SW_FALSE }
+            , _bConfig{ SW_FALSE }
+            , _bRepNotifyTakesOldValue{ SW_FALSE }
+            , _bHasUiMinRange{ SW_FALSE }
+            , _bHasUiMaxRange{ SW_FALSE }
+            , _bEditConditionHides{ SW_FALSE }
+            , _bColorHdr{ SW_FALSE }
+            , _bMultiline{ SW_FALSE }
             , _reserved{ 0 }
             , _padding{ 0 }
         {
         }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief REFLECT 타입이 선언한 메서드 하나의 모양입니다(FUNCTION 이 없어도). 애노테이션이 메서드 이름을 가리킬 때(`RepNotify` 등) 대조합니다.
+     */
+    struct ParsedMethodSignature
+    {
+        string         _name;
+        vector<string> _listParameterTypeName; ///< 정규 타입 이름 — const · 참조는 벗겼다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 함수 · 이벤트의 인자 하나입니다. */
+    struct ParsedParameterInfo
+    {
+        string _name;     ///< 선언에 적힌 인자 이름. 이름 없이 적었으면 비어 있다
+        string _typeName; ///< 정규 타입 이름(`int32` · `string` · `DamageEvent`) — const · 참조는 벗긴다
+        /** @brief 기본 인자의 C++ 식 그대로(`1.0f` · `"idle"` · `Mode::Fast`). 없으면 비어 있다. 런타임이 글로 읽어 인자 타입으로 바꾼다. */
+        string _defaultValue;
     };
 } // namespace sw
 
@@ -131,7 +194,7 @@ namespace sw
     {
         string                       _name;
         string                       _returnTypeName;
-        vector<string>               _listParameterTypeName;
+        vector<ParsedParameterInfo>  _listParameter;
         string                       _category;
         string                       _displayName;
         string                       _tooltip;
@@ -150,7 +213,7 @@ namespace sw
         ParsedFunctionInfo() noexcept
             : _name{}
             , _returnTypeName{}
-            , _listParameterTypeName{}
+            , _listParameter{}
             , _category{ annotation::kDefaultMethodCategory }
             , _displayName{}
             , _tooltip{}
@@ -172,6 +235,21 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief `PROPERTY()` 가 붙은 멀티캐스트 델리게이트 필드 — 이름으로 찾아 묶을 수 있는 이벤트입니다.
+     * @details 값이 아니라 구독 목록이라 직렬화하지 않습니다. 애노테이션은 프로퍼티 표 그대로 읽고(`_annotation`), 표시 메타
+     *          (`Category` · `DisplayName` · `Tooltip` · `Meta` · `HideInInspector`)만 받습니다 — 나머지는 오류입니다.
+     */
+    struct ParsedEventInfo
+    {
+        string                      _memberName; ///< C++ 필드 이름. 리플렉션 이름은 `_annotation._name`(기본은 이 이름)
+        vector<ParsedParameterInfo> _listParameter;
+        ParsedPropertyInfo          _annotation; ///< 프로퍼티 표로 읽은 애노테이션(표시 메타만 쓴다)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief REFLECT 가 붙은 클래스·구조체 */
     struct ParsedTypeInfo
     {
@@ -182,9 +260,11 @@ namespace sw
         string                       _displayName;
         string                       _tooltip;
         vector<string>               _listAlias;
+        string                       _validate; ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
         vector<pair<string, string>> _listCustomMeta;
         vector<ParsedPropertyInfo>   _listProperty;
         vector<ParsedFunctionInfo>   _listMethod;
+        vector<ParsedEventInfo>      _listEvent;
         uint8                        _bAbstract         : 1;
         uint8                        _bStatic           : 1;
         uint8                        _bReflectBody      : 1;
@@ -200,9 +280,11 @@ namespace sw
             , _displayName{}
             , _tooltip{}
             , _listAlias{}
+            , _validate{}
             , _listCustomMeta{}
             , _listProperty{}
             , _listMethod{}
+            , _listEvent{}
             , _bAbstract{ SW_FALSE }
             , _bStatic{ SW_FALSE }
             , _bReflectBody{ SW_FALSE }

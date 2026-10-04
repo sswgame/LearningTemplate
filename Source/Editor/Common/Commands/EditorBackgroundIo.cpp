@@ -68,9 +68,9 @@ namespace sw::editor
     // EditorLocalizationLoadJob
     // ======================================================================
 
-    void EditorLocalizationLoadJob::request()
+    void EditorLocalizationLoadJob::request( string_view projectPath )
     {
-        const uint32 generation = beginRequest( {} );
+        const uint32 generation = beginRequest( string( projectPath ) );
         EditorBackgroundIoInternal::submitOrRun( "EditorLocalizationLoad",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorLocalizationLoadJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
@@ -81,15 +81,15 @@ namespace sw::editor
         const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
         const uint32            generation = args.get<uint32>( 1 );
 
-        EditorBackgroundNoInput input;
-        if ( readInput( pState, generation, input ) == false )
+        string projectPath;
+        if ( readInput( pState, generation, projectPath ) == false )
             return;
 
-        // 읽지 못한 언어 파일은 경고가 남고 그 칸만 빈다 — 나머지는 그대로 보인다(저장은 그 파일을 덮지 않는다).
-        vector<LocalizationRecord> listRecord;
-        (void)EditorDataTableCommands::loadLocalization( listRecord );
+        // 읽지 못한 표는 경고가 남고 그 칸만 빈다 — 나머지는 그대로 보인다(저장은 그 파일을 덮지 않는다).
+        LocalizationSheet sheet;
+        (void)EditorDataTableCommands::loadLocalizationProject( projectPath, sheet );
 
-        publish( pState, generation, std::move( listRecord ) );
+        publish( pState, generation, std::move( sheet ) );
     }
 
     // ======================================================================

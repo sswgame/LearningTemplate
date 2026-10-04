@@ -144,6 +144,11 @@ namespace sw
         static bool fileExists( string_view fileName );
         /** @brief 경로에 디렉터리가 있는지 반환합니다. */
         static bool directoryExists( string_view path );
+        /**
+         * @brief 파일이 있고 쓰기가 막혀 있으면(읽기 전용 속성 · 소유자 쓰기 권한 없음) true 입니다. 없는 파일은 false 입니다.
+         * @details 버전 관리의 잠금(git LFS lockable 파일은 잠그기 전까지 읽기 전용이다)을 에디터가 보여 주는 데 씁니다.
+         */
+        static bool isReadOnlyFile( string_view fileName );
         /** @brief 현재 작업 디렉터리를 반환합니다. */
         static string getCurrentPath();
         /** @brief 실행 파일의 경로를 반환합니다. */

@@ -39,13 +39,29 @@ SW_REGISTER_ARGUMENT( LANGUAGE, "", false, "lang" )
 SW_REGISTER_ARGUMENT( COOK_SHADERS, false, false, "cook-shaders" )
 SW_REGISTER_ARGUMENT( COOK_SCENES, false, false, "cook-scenes" )
 SW_REGISTER_ARGUMENT( COOKED_DIR, "", false, "cooked-dir" )
+// 등록된 리플렉션 타입(엔진 · GameFramework · 킷 · 게임)으로 Markdown API 문서를 그 폴더에 쓰고 끝난다(헤드리스). 빌드 산출물이라 커밋하지 않는다.
+SW_REGISTER_ARGUMENT( WRITE_REFLECTION_DOCS, "", false, "write-reflection-docs" )
 // 텍스처 원본(`textures_raw/`)을 DDS 로 임포트한다 · 원본과 DDS 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
 SW_REGISTER_ARGUMENT( IMPORT_TEXTURES, false, false, "import-textures" )
 SW_REGISTER_ARGUMENT( CHECK_TEXTURES, false, false, "check-textures" )
 // 모델 원본(`models_raw/` 의 glTF)을 `.mesh` 로 임포트한다 · 원본과 `.mesh` 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
 SW_REGISTER_ARGUMENT( IMPORT_MODELS, false, false, "import-models" )
 SW_REGISTER_ARGUMENT( CHECK_MODELS, false, false, "check-models" )
+// 리타깃 굽기 — 값은 `<프로필 *.retarget.json>,<원본 .animclip>,<출력 .animclip>`. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 굽고 끝낸다(헤드리스).
+SW_REGISTER_ARGUMENT( BAKE_RETARGET, "", false, "bake-retarget" )
 // 프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits).
 SW_REGISTER_ARGUMENT( RENDER_PORTRAITS, "", false, "render-portraits" )
 SW_REGISTER_ARGUMENT( PORTRAIT_SIZE, 256, false, "portrait-size" )
 SW_REGISTER_ARGUMENT( PORTRAIT_DIR, "", false, "portrait-dir" )
+// 높이장 원본(`heightfields_raw/` 의 16 비트 PNG · `.r16`)을 `.heightfield` 로 임포트한다 · 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
+SW_REGISTER_ARGUMENT( IMPORT_HEIGHTFIELDS, false, false, "import-heightfields" )
+SW_REGISTER_ARGUMENT( CHECK_HEIGHTFIELDS, false, false, "check-heightfields" )
+// 로컬라이제이션 글 수집(`LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다(CI). 소스 트리가 있어야 한다.
+// `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다.
+SW_REGISTER_ARGUMENT( GATHER_TEXT, false, false, "gather-text" )
+SW_REGISTER_ARGUMENT( CHECK_TEXT, false, false, "check-text" )
+SW_REGISTER_ARGUMENT( LOC_PROJECT, "", false, "loc-project" )
+// 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`).
+SW_REGISTER_ARGUMENT( EXPORT_PO, false, false, "export-po" )
+SW_REGISTER_ARGUMENT( IMPORT_PO, "", false, "import-po" )
+// 크래시 보고 프로세스 `--crash-reporter=<묶음 폴더>` 는 이 목록에 없다 — App 의 main 이 엔진을 세우기 전에 읽고 끝낸다(`CrashReportService::runReporterFromCommandLine`).

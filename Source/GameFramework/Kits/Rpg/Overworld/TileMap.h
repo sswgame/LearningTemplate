@@ -40,7 +40,7 @@ namespace sw
     /** @brief 맵 조우 테이블의 한 행입니다(가중치 추첨). */
     using TileEncounterEntry = TileMapXmlData::Encounter;
     /** @brief HD-2D 1차: 타일별 가짜 높이 + 틴트입니다(메시 패스 전까지 소프트웨어 · 디버그). */
-    using TileVisual = TileMapXmlData::Visual;
+    using OverworldTileVisual = TileMapXmlData::Visual;
 
     // ------------------------------------------------------------------------------
     // 3) TileMap — XML 그리드 + 워프 목록 + 조우 테이블
@@ -115,7 +115,7 @@ namespace sw
         /** @brief 해당 좌표의 워프를 찾습니다. */
         const TileWarp* findWarp( int32 x, int32 y ) const;
         /** @brief 타일 비주얼을 반환합니다. */
-        TileVisual getTileVisual( int32 x, int32 y ) const;
+        OverworldTileVisual getTileVisual( int32 x, int32 y ) const;
 
         /** @brief 그 칸의 레이어 값을 설정합니다. 맵 밖이면 무시합니다. */
         void setFlag( TileFlagLayer layer, int32 x, int32 y, bool bSet );
@@ -126,7 +126,7 @@ namespace sw
         /** @brief 통과 타일 여부를 설정합니다. */
         void setPassThrough( int32 x, int32 y, bool bPassThrough );
         /** @brief 타일 비주얼을 설정합니다. */
-        void setTileVisual( int32 x, int32 y, const TileVisual& visual );
+        void setTileVisual( int32 x, int32 y, const OverworldTileVisual& visual );
         /** @brief 워프를 추가하거나 갱신합니다. */
         void setOrUpdateWarp( const TileWarp& warp );
         /** @brief 워프를 제거합니다. */

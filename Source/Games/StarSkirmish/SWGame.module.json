@@ -1,0 +1,24 @@
+{
+    "_name": "SWGame",
+    "_version": "1.0.0",
+    "_kind": "Game",
+    "_description": "StarSkirmish — 실시간 전략 시험 게임(스타크래프트 장르) — GF_RealTimeStrategy 키트를 쓴다",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_RealTimeStrategy"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true,
+    "_listModuleOverride": []
+}

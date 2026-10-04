@@ -755,7 +755,7 @@ namespace sw
         /** @brief 씬 배치를 멀티 드로우로 묶을지 반환합니다. `setDrawMergeEnabled` 가 준 값, 없으면 전역 `gv_drawMerge` 입니다. */
         bool isDrawMergeEnabled() const;
         /**
-         * @brief 뷰마다 컬링을 돌리고, 압축된 투명 목록을 깊이순으로 되돌립니다(gpucull/instancesort.hlsl).
+         * @brief 뷰마다 컬링을 돌리고, 압축된 투명 목록을 CPU 정렬 순서로 되돌립니다(gpucull/instancesort.hlsl).
          * @details 컬링 결과는 절두체에 종속이라 뷰(메인 · 그림자)마다 자기 인자 · 목록을 따로 만듭니다.
          */
         void dispatchCullAndSort( uint32 instanceCount );

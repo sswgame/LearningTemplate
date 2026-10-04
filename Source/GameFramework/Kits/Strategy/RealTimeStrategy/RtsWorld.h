@@ -21,6 +21,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 유닛 id 입니다. 죽은 유닛의 자리가 다시 쓰여도 옛 id 는 세대가 달라 찾지 못합니다. */
     using RtsUnitId = SlotHandle;
 
@@ -293,6 +295,18 @@ namespace sw
         float32            getTime() const { return _time; }
         /** @brief 그 칸 왼쪽 아래 건물의 가운데 자리입니다. */
         float3 computeFootprintCenter( const int2& cell, int32 footprint ) const;
+
+        /**
+         * @brief 땅 · 유닛(자리 · 명령 · 생산 · 채취) · 플레이어 · 안개 · 시간을 씁니다(핫 리로드 · 세이브). 설정 · 카탈로그는 쓰지 않습니다.
+         * @details 정의는 카탈로그 id, 유닛 참조는 id(세대 포함)로 적습니다. 길(경로 · 흐름장)은 쓰지 않습니다 — 읽은 쪽이 앞 명령의 길을 다시 구합니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 바꿉니다. `initialize` 한 뒤에 부릅니다(같은 크기 · 카탈로그).
+         * @details 격자는 땅 + 서 있는 건물 · 자원의 발자국으로 다시 칠하고, 움직이던 유닛은 앞 명령을 처음부터 다시 걷습니다(흐름장을 쓰던 무리 이동은 다시 빌린다).
+         * @return 크기가 다르거나, 카탈로그에 없는 유닛이 있거나, 깨졌으면 false 이고 그대로입니다.
+         */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         struct FlowFieldSlot

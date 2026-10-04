@@ -8,7 +8,6 @@
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/array.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/PlatformFileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
@@ -29,7 +28,7 @@ namespace sw
 {
     ResourcePackReader::ResourcePackReader()
         : _fileMutex{}
-        , _pFileHandle{ nullptr }
+        , _file{}
         , _packFilePath{}
         , _header{}
         , _mapEntry{}
@@ -44,7 +43,7 @@ namespace sw
 
     ResourcePackReader::ResourcePackReader( ResourcePackReader&& other ) noexcept
         : _fileMutex{}
-        , _pFileHandle{ nullptr }
+        , _file{}
         , _packFilePath{}
         , _header{}
         , _mapEntry{}
@@ -67,12 +66,12 @@ namespace sw
 
     void ResourcePackReader::takeFromLocked( ResourcePackReader& other )
     {
-        _pFileHandle       = other._pFileHandle;
-        _packFilePath      = std::move( other._packFilePath );
-        _header            = other._header;
-        _mapEntry          = std::move( other._mapEntry );
-        _stringPoolBytes   = std::move( other._stringPoolBytes );
-        other._pFileHandle = nullptr;
+        _file            = std::move( other._file );
+        _packFilePath    = std::move( other._packFilePath );
+        _header          = other._header;
+        _mapEntry        = std::move( other._mapEntry );
+        _stringPoolBytes = std::move( other._stringPoolBytes );
+        other._file.close();
     }
 
     bool ResourcePackReader::open( string_view packFilePath )
@@ -83,20 +82,19 @@ namespace sw
         if ( packFilePath.empty() )
             return false;
 
-        const string normalizedPath = FileUtil::normalizeSeparators( packFilePath );
-        FILE*        pFile          = PlatformFileUtil::openFile( normalizedPath.c_str(), "rb" );
-
-        if ( pFile == nullptr )
+        const string          normalizedPath = FileUtil::normalizeSeparators( packFilePath );
+        const AsyncFileHandle file           = AsyncFileHandle::open( normalizedPath );
+        if ( file.isValid() == false )
         {
             SW_LOG_ERROR( "Failed to open resource pack file: %#", packFilePath );
             return false;
         }
 
-        _pFileHandle  = pFile;
+        _file         = file;
         _packFilePath = normalizedPath;
 
         // 1. 헤더(64B)를 읽는다
-        if ( std::fread( &_header, 1, sizeof( PackHeader ), pFile ) != sizeof( PackHeader ) )
+        if ( _file.readAt( 0, &_header, sizeof( PackHeader ) ) == false )
         {
             SW_LOG_ERROR( "Corrupted pack header: %#", packFilePath );
             close();
@@ -156,11 +154,7 @@ namespace sw
 
     void ResourcePackReader::close()
     {
-        if ( _pFileHandle != nullptr )
-        {
-            std::fclose( static_cast<FILE*>( _pFileHandle ) );
-            _pFileHandle = nullptr;
-        }
+        _file.close();
         _packFilePath.clear();
         _header = PackHeader{};
         _mapEntry.clear();
@@ -170,7 +164,7 @@ namespace sw
     bool ResourcePackReader::isOpen() const
     {
         std::scoped_lock<mutex> lock( _fileMutex );
-        return _pFileHandle != nullptr;
+        return _file.isValid();
     }
 
     bool ResourcePackReader::hasFile( uint64 pathHash ) const
@@ -200,93 +194,81 @@ namespace sw
         return getFileEntry( StringUtil::computeHash64( relativePath ), outEntry );
     }
 
-    bool ResourcePackReader::readFile( uint64 pathHash, vector<uint8>& outBytes ) const
+    bool ResourcePackReader::makeReadPlan( uint64 pathHash, PackReadPlan& outPlan, AsyncFileHandle& outFile ) const
     {
-        PackFileEntry entry{};
+        std::scoped_lock<mutex> lock( _fileMutex );
+        if ( _file.isValid() == false )
+            return false;
+
+        const auto it = _mapEntry.find( pathHash );
+        if ( it == _mapEntry.end() )
+            return false;
+
+        const PackFileEntry& entry = it->second;
+        outPlan._dataOffset        = entry._dataOffset;
+        outPlan._compressedSize    = entry._compressedSize;
+        outPlan._uncompressedSize  = entry._uncompressedSize;
+        outPlan._crc32             = entry._crc32;
+        outPlan._compression       = static_cast<PackCompressionType>( _header._compressionType );
+        outPlan._bVerifyCrc        = ( _header._flags & static_cast<uint16>( PackFlag::HasCrc32 ) ) != 0;
+        outFile                    = _file;
+        return true;
+    }
+
+    bool ResourcePackReader::decodeStoredBytes( const PackReadPlan& plan, const string& packPath, vector<uint8>& storedBytes, vector<uint8>& outBytes )
+    {
+        // 1. 비압축(Raw) 항목은 읽은 버퍼가 곧 결과다(중간 버퍼 할당과 복사가 없다).
+        if ( plan._compression == PackCompressionType::None )
         {
-            std::scoped_lock<mutex> lock( _fileMutex );
-            if ( _pFileHandle == nullptr )
-                return false;
-
-            auto it = _mapEntry.find( pathHash );
-            if ( it == _mapEntry.end() )
-                return false;
-
-            entry = it->second;
-        }
-
-        outBytes.resize( entry._uncompressedSize );
-        const auto compression = static_cast<PackCompressionType>( _header._compressionType );
-
-        // 1. 비압축(Raw) 에셋이면 outBytes 버퍼로 바로 읽는다(중간 버퍼 할당과 복사를 피한다)
-        if ( compression == PackCompressionType::None )
-        {
-            std::scoped_lock<mutex> lock( _fileMutex );
-            if ( _pFileHandle == nullptr )
-                return false;
-
-            auto* pFile = static_cast<FILE*>( _pFileHandle );
-
-            PlatformFileUtil::seekTo( pFile, static_cast<int64>( entry._dataOffset ), SEEK_SET );
-
-            const size_t readBytes = std::fread( outBytes.data(), 1, entry._uncompressedSize, pFile );
-            if ( readBytes != entry._uncompressedSize )
-            {
-                SW_LOG_ERROR( "Read error in pack %# (read %# of %# bytes)", _packFilePath, readBytes, entry._uncompressedSize );
-                outBytes.clear();
-                return false;
-            }
+            if ( &storedBytes != &outBytes )
+                outBytes.swap( storedBytes );
         }
         else
         {
-            vector<uint8> compressedBytes;
-            compressedBytes.resize( entry._compressedSize );
-
+            outBytes.resize( plan._uncompressedSize );
+            if ( decompressData( plan._compression, storedBytes.data(), storedBytes.size(), outBytes.data(), plan._uncompressedSize ) == false )
             {
-                std::scoped_lock<mutex> lock( _fileMutex );
-                if ( _pFileHandle == nullptr )
-                    return false;
-
-                auto* pFile = static_cast<FILE*>( _pFileHandle );
-
-                PlatformFileUtil::seekTo( pFile, static_cast<int64>( entry._dataOffset ), SEEK_SET );
-
-                const size_t readBytes = std::fread( compressedBytes.data(), 1, entry._compressedSize, pFile );
-                if ( readBytes != entry._compressedSize )
-                {
-                    SW_LOG_ERROR( "Read error in pack %# (read %# of %# bytes)", _packFilePath, readBytes, entry._compressedSize );
-                    outBytes.clear();
-                    return false;
-                }
-            }
-
-            // 압축 해제
-            if ( decompressData( compression, compressedBytes.data(), entry._compressedSize, outBytes.data(), entry._uncompressedSize ) == false )
-            {
-                SW_LOG_ERROR( "Decompression failed for entry in pack: %#", _packFilePath );
+                SW_LOG_ERROR( "Decompression failed for entry in pack: %#", packPath );
                 outBytes.clear();
                 return false;
             }
         }
 
-        // CRC32 로 무결성을 검증한다
-        const bool bHasCrc32 = ( ( _header._flags & static_cast<uint16>( PackFlag::HasCrc32 ) ) != 0 );
-
-        // 플래그가 있으면 **늘** 대조한다. 쿠킹하는 쪽은 모든 항목의 CRC 를 적는다(빈 데이터의 CRC 가 0). 저장된 값이 0 일 때 건너뛰면
-        // 그 칸을 0 으로 지우는 것만으로 검사가 꺼진다.
-        if ( bHasCrc32 )
+        // 2. CRC32 로 무결성을 검증한다. 플래그가 있으면 **늘** 대조한다. 쿠킹하는 쪽은 모든 항목의 CRC 를 적는다(빈 데이터의 CRC 가 0).
+        //    저장된 값이 0 일 때 건너뛰면 그 칸을 0 으로 지우는 것만으로 검사가 꺼진다.
+        if ( plan._bVerifyCrc )
         {
             const uint32 computedCrc = StringUtil::computeCrc32( outBytes.data(), outBytes.size() );
-            if ( computedCrc != entry._crc32 )
+            if ( computedCrc != plan._crc32 )
             {
-                SW_LOG_ERROR( "CRC32 checksum mismatch in pack %# (computed 0x%# vs expected 0x%#)", _packFilePath,
-                              Fmt( computedCrc, Format( 8, Format::Padding::Zero ).hex() ), Fmt( entry._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
+                SW_LOG_ERROR( "CRC32 checksum mismatch in pack %# (computed 0x%# vs expected 0x%#)", packPath,
+                              Fmt( computedCrc, Format( 8, Format::Padding::Zero ).hex() ), Fmt( plan._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
                 outBytes.clear();
                 return false;
             }
         }
-
         return true;
+    }
+
+    bool ResourcePackReader::readFile( uint64 pathHash, vector<uint8>& outBytes ) const
+    {
+        PackReadPlan    plan{};
+        AsyncFileHandle file;
+        if ( makeReadPlan( pathHash, plan, file ) == false )
+            return false;
+
+        // 읽기는 잠금 밖이다 — 위치 지정 읽기라 다른 스레드의 읽기와 겹쳐도 된다. 비압축 항목은 부른 쪽 버퍼로 바로 읽는다(그 버퍼의 용량을 다시 쓴다 —
+        // 중간 버퍼를 잡지 않는다).
+        vector<uint8>  compressedBytes;
+        vector<uint8>& storedBytes = plan._compression == PackCompressionType::None ? outBytes : compressedBytes;
+        storedBytes.resize( plan.getStoredSize() );
+        if ( file.readAt( plan._dataOffset, storedBytes.data(), storedBytes.size() ) == false )
+        {
+            SW_LOG_ERROR( "Read error in pack %# (%# bytes at offset %#)", file.getPath(), storedBytes.size(), plan._dataOffset );
+            outBytes.clear();
+            return false;
+        }
+        return decodeStoredBytes( plan, file.getPath(), storedBytes, outBytes );
     }
 
     bool ResourcePackReader::readFile( string_view relativePath, vector<uint8>& outBytes ) const
@@ -303,6 +285,28 @@ namespace sw
         const string_view text = FileUtil::skipUtf8Bom( string_view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() } );
         outText.assign( text.data(), text.size() );
         return true;
+    }
+
+    AsyncReadHandle ResourcePackReader::readFileAsync( AsyncFileIo& io, uint64 pathHash, AsyncIoPriority priority, const ResourceReadCompleteDelegate& onComplete ) const
+    {
+        PackReadPlan    plan{};
+        AsyncFileHandle file;
+        if ( makeReadPlan( pathHash, plan, file ) == false )
+            return AsyncReadHandle{};
+
+        // 완료는 리더가 아니라 계획 · 파일 핸들 사본을 든다 — 그 사이 팩을 내려도 끝까지 읽고 푼다.
+        return io.readRange( file, plan._dataOffset, plan.getStoredSize(), priority,
+                             SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [plan, file, onComplete]( AsyncReadResult& result )
+        {
+            vector<uint8> bytes;
+            bool          bSuccess = false;
+            if ( result.isSucceeded() )
+                bSuccess = decodeStoredBytes( plan, file.getPath(), result._bytes, bytes );
+            else if ( result._status != AsyncIoStatus::Canceled )
+                SW_LOG_ERROR( "Read error in pack %# (%# at offset %#)", file.getPath(), AsyncFileIo::getStatusName( result._status ), plan._dataOffset );
+            if ( onComplete.isBound() )
+                onComplete( bSuccess, bytes );
+        } ) );
     }
 
     const PackHeader& ResourcePackReader::getHeader() const
@@ -331,10 +335,8 @@ namespace sw
 
     bool ResourcePackReader::loadIndexTable()
     {
-        if ( _pFileHandle == nullptr || _header._fileCount == 0 )
+        if ( _file.isValid() == false || _header._fileCount == 0 )
             return true;
-
-        auto* pFile = static_cast<FILE*>( _pFileHandle );
 
         uint64 fileSize{ 0 };
         if ( validateHeaderGeometry( fileSize ) == false )
@@ -348,8 +350,7 @@ namespace sw
         if ( bHasStringPool && _header._stringPoolSize > 0 )
         {
             _stringPoolBytes.resize( _header._stringPoolSize );
-            PlatformFileUtil::seekTo( pFile, static_cast<int64>( _header._stringPoolOffset ), SEEK_SET );
-            if ( std::fread( _stringPoolBytes.data(), 1, _header._stringPoolSize, pFile ) != _header._stringPoolSize )
+            if ( _file.readAt( _header._stringPoolOffset, _stringPoolBytes.data(), _stringPoolBytes.size() ) == false )
             {
                 SW_LOG_ERROR( "Failed to read string pool from pack: %#", _packFilePath );
                 return false;
@@ -360,10 +361,8 @@ namespace sw
         vector<PackFileEntryOnDisk> listDiskEntry;
         listDiskEntry.resize( _header._fileCount );
 
-        PlatformFileUtil::seekTo( pFile, static_cast<int64>( _header._indexOffset ), SEEK_SET );
-
         const size_t expectedBytes = _header._fileCount * sizeof( PackFileEntryOnDisk );
-        if ( std::fread( listDiskEntry.data(), 1, expectedBytes, pFile ) != expectedBytes )
+        if ( _file.readAt( _header._indexOffset, listDiskEntry.data(), expectedBytes ) == false )
         {
             SW_LOG_ERROR( "Failed to read FAT index table from pack: %#", _packFilePath );
             return false;
@@ -408,15 +407,14 @@ namespace sw
 
     bool ResourcePackReader::validateHeaderGeometry( uint64& outFileSize ) const
     {
-        outFileSize          = 0;
-        const int64 fileSize = PlatformFileUtil::getOpenFileSizeAndRewind( static_cast<FILE*>( _pFileHandle ) );
-        if ( fileSize <= 0 )
+        outFileSize            = 0;
+        const uint64 sizeBytes = _file.getSize();
+        if ( sizeBytes == 0 )
         {
             SW_LOG_ERROR( "Cannot determine size of pack: %#", _packFilePath );
             return false;
         }
-        const uint64 sizeBytes = static_cast<uint64>( fileSize );
-        outFileSize            = sizeBytes;
+        outFileSize = sizeBytes;
 
         // 헤더가 인덱스 크기를 **두 번** 말한다. `_indexSize` 로 한 번, `_fileCount` 로 한 번.
         // 둘이 어긋난 팩은 리더와 쿠커가
@@ -481,7 +479,7 @@ namespace sw
         return true;
     }
 
-    bool ResourcePackReader::decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize ) const
+    bool ResourcePackReader::decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize )
     {
         // 풀 것이 없으면 둘 다 0 이어야 한다. `srcSize == 0` 만 보면 압축 크기 0 · 원본 크기 N 인 항목이 0 바이트 N 개로 읽힌다.
         if ( dstSize == 0 )

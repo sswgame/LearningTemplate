@@ -39,6 +39,7 @@ sw_vcpkgWriteManifestStamp()
 include(cmake/Modules/LoadCompileFlags.cmake)
 include(cmake/Engine/BuildLayout.cmake)
 include(cmake/Engine/TargetRules.cmake)
+include(cmake/Engine/ModuleManifest.cmake)
 include(cmake/Engine/ThirdPartyLibs.cmake)
 include(cmake/Engine/RuntimeDependencies.cmake)
 include(cmake/Engine/ReflectionCodeGen.cmake)
@@ -61,6 +62,9 @@ include(cmake/Engine/AssetAndToolTargets.cmake)
 # ------------------------------------------------------------------------------
 # 4) 서브디렉터리 빌드 및 의존성 구성
 # ------------------------------------------------------------------------------
+# 모듈 매니페스트를 먼저 해석한다 — 모듈을 만드는 함수가 "켜져 있는가" 를 묻는다(`cmake/Engine/ModuleManifest.cmake`).
+sw_resolveModuleManifests()
+
 add_subdirectory(Source)
 add_subdirectory(Tools)
 add_subdirectory(Source/Engine)

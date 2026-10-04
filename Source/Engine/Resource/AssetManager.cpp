@@ -15,6 +15,7 @@
 #include "Engine/Resource/AnimationAssetCache.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/IAssetCache.h"
+#include "Engine/Resource/LocalizationReloadCache.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Resource/SpriteClipCache.h"
@@ -33,6 +34,8 @@ namespace sw
         , _meshCache{ make_unique<MeshCache>() }
         , _skeletonCache{ make_unique<SkeletonCache>() }
         , _animClipCache{ make_unique<AnimClipCache>() }
+        , _rigAssetCache{ make_unique<RigAssetCache>() }
+        , _localizationReloadCache{ make_unique<LocalizationReloadCache>() }
         , _fractureCache{ make_unique<FractureAssetCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _registeredAssetCache{}
@@ -46,6 +49,8 @@ namespace sw
         registerAssetCache( _meshCache.get() );
         registerAssetCache( _skeletonCache.get() );
         registerAssetCache( _animClipCache.get() );
+        registerAssetCache( _rigAssetCache.get() );
+        registerAssetCache( _localizationReloadCache.get() );
         registerAssetCache( _fractureCache.get() );
     }
 
@@ -166,7 +171,8 @@ namespace sw
     {
         return pCache != nullptr && ( pCache == _materialCache.get() || pCache == _textureCache.get() || pCache == _prefabCache.get() ||
                                       pCache == _spriteClipCache.get() || pCache == _meshCache.get() || pCache == _skeletonCache.get() ||
-                                      pCache == _animClipCache.get() || pCache == _fractureCache.get() );
+                                      pCache == _animClipCache.get() || pCache == _localizationReloadCache.get() ||
+                                      pCache == _rigAssetCache.get() || pCache == _fractureCache.get() );
     }
 
     void AssetManager::unregisterAssetCache( const IAssetCache* pCache )

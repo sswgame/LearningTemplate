@@ -8,6 +8,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
+#include "GameFramework/Data/GameDataXml.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "GameSettings" );
@@ -76,28 +78,16 @@ namespace sw
         // 주의: 안 비우면 팩을 바꿔 다시 읽을 때 앞 팩의 커스텀 프로퍼티가 그대로 남아,
         // 새 팩에 없는 키를 물으면 **없어진 팩의 값**이 나온다.
         *this = GameSettings{};
+        return GameDataXml::loadFile( *this, &GameSettings::loadRoot, path, "GameSettings" );
+    }
 
-        XmlDocument doc;
-        string      absPath;
-        if ( doc.loadResource( path, &absPath ) == false )
-        {
-            SW_LOG_WARNING( "Failed to parse gamesettings from %# — using built-in defaults.", path );
-            return false;
-        }
-
-        XmlNode root = doc.getRoot( "GameSettings" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <GameSettings> in %# — using defaults.", absPath );
-            return false;
-        }
-
+    bool GameSettings::loadRoot( const XmlNode& root, [[maybe_unused]] string_view sourceName )
+    {
         root.takeChildText( "startMap", _startMap );
         root.takeChildText( "titleScene", _titleScene );
         root.takeChildText( "entranceScene", _entranceScene );
         root.takeChildText( "defaultSavePath", _defaultSavePath );
-        root.takeChildText( "stringsData", _stringsData );
-        root.takeChildText( "localizationDirectory", _localizationDirectory );
+        root.takeChildText( "localizationProject", _localizationProject );
         root.takeChildText( "defaultLanguage", _defaultLanguage );
         root.takeChildText( "fallbackLanguage", _fallbackLanguage );
         root.takeChildText( "inputMap", _inputMap );
@@ -113,8 +103,7 @@ namespace sw
                  StringUtil::equals( pName, "titleScene" ) ||
                  StringUtil::equals( pName, "entranceScene" ) ||
                  StringUtil::equals( pName, "defaultSavePath" ) ||
-                 StringUtil::equals( pName, "stringsData" ) ||
-                 StringUtil::equals( pName, "localizationDirectory" ) ||
+                 StringUtil::equals( pName, "localizationProject" ) ||
                  StringUtil::equals( pName, "defaultLanguage" ) ||
                  StringUtil::equals( pName, "fallbackLanguage" ) ||
                  StringUtil::equals( pName, "inputMap" ) )
@@ -137,7 +126,7 @@ namespace sw
                 _mapCustomProperty[pName] = pText;
         }
 
-        SW_LOG_INFO( "Loaded from %# (start=%#)", absPath, _startMap );
+        SW_LOG_INFO( "Loaded from %# (start=%#)", sourceName, _startMap );
         return true;
     }
 

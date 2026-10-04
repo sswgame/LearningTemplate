@@ -202,11 +202,16 @@
 #define SW_LIGHT_TYPE_DIRECTIONAL      0
 #define SW_LIGHT_TYPE_POINT            1
 #define SW_LIGHT_TYPE_SPOT             2
-#define SW_LIGHT_TYPE_COUNT            3
+// 2D 빛 — 빛 받는 스프라이트(sprite2dlit.hlsl)만 읽는다. 3D 조명 식(swShadeLights)은 건너뛴다.
+#define SW_LIGHT_TYPE_POINT2D          3 // 점 · 스폿(원뿔) 2D 빛 — 안 · 바깥 반경, 감쇠 지수, 노멀 맵 높이
+#define SW_LIGHT_TYPE_GLOBAL2D         4 // 전역 2D 빛 — 빛 받는 스프라이트의 바탕 밝기
+#define SW_LIGHT_TYPE_COUNT            5
+// 빛이 아니라 2D 그림자 가림막 토막 하나(빛 목록 뒤에 붙는다). 등록부의 빛 종류가 아니라 COUNT 밖이다.
+#define SW_LIGHT_TYPE_SHADOW2D         15
 
-// 한 프레임에 GPU 로 보내는 라이트 수 상한. 넘으면 엔진이 잘라 보내고 경고한다 —
+// 한 프레임에 GPU 로 보내는 라이트 수 상한(2D 그림자 토막 포함). 넘으면 엔진이 잘라 보내고 경고한다 —
 // 셰이더 루프가 이 수를 넘게 도는 일은 없다(g_SwLightCount 가 이 값으로 클램프된다).
-#define SW_MAX_FRAME_LIGHT             256
+#define SW_MAX_FRAME_LIGHT             1024
 
 // ------------------------------------------------------------------------------
 // 9) 패스 플래그 — PassCB 의 `g_Flags` 비트. 뷰마다 다른 값이라(다중 뷰: CCTV 는 후처리를 끈다) 셰이더 퍼뮤테이션이 아니라 상수로 싣는다.

@@ -23,6 +23,8 @@ namespace sw
 {
     struct CoasterRideStats;
 
+    class Archive;
+
     // ------------------------------------------------------------------------------
     // 1) 놀이기구
     // ------------------------------------------------------------------------------
@@ -191,6 +193,13 @@ namespace sw
         /** @brief 지금 공원 안 손님 중 그 생각을 하는 수입니다. */
         uint32                   countGuestsThinking( ParkGuestThought thought ) const;
         const ThemeParkSettings& getSettings() const { return _settings; }
+
+        /**
+         * @brief 놀이기구(운행 상태 포함) · 손님 · 돈 · 평가 · 난수 · 입장료를 씁니다(핫 리로드 · 세이브). 나머지 설정은 쓰지 않습니다 — 읽는 쪽이 같은 것으로 `initialize` 합니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void stepFixed( float32 deltaTime );

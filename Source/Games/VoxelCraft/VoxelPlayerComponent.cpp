@@ -7,11 +7,13 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Components/FirstPersonCameraComponent.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
+#include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/VoxelCraft/VoxelDirectorComponent.h"
 
@@ -23,9 +25,11 @@ namespace sw
     {
         struct VoxelPlayerComponentInternal
         {
-            static constexpr const utf8* kSoundLand  = "game/voxelcraft/sounds/footstep_grass_000.ogg";
-            static constexpr const utf8* kSoundBreak = "game/voxelcraft/sounds/impact_soft_medium_000.ogg";
-            static constexpr const utf8* kSoundPlace = "game/voxelcraft/sounds/impact_plank_medium_001.ogg";
+            static constexpr const utf8* kSoundLand    = "game/voxelcraft/sounds/footstep_grass_000.ogg";
+            static constexpr uint32      kStateTag     = 0x52594C50u; ///< 'PLYR'
+            static constexpr uint32      kStateVersion = 1;
+            static constexpr const utf8* kSoundBreak   = "game/voxelcraft/sounds/impact_soft_medium_000.ogg";
+            static constexpr const utf8* kSoundPlace   = "game/voxelcraft/sounds/impact_plank_medium_001.ogg";
 
             /** @brief 부순 블록에서 얻는 블록입니다(풀 → 흙, 돌 → 조약돌, 기반암 · 물은 없음). */
             static VoxelBlockIndex findDrop( const VoxelBlockCatalog& catalog, VoxelBlockIndex block )
@@ -56,6 +60,7 @@ namespace sw
         , _target{}
         , _listPendingEdit{}
         , _listPendingSound{}
+        , _pendingStateBytes{}
         , _breakProgress{ 0.0f }
         , _placeCooldown{ 0.0f }
         , _autoTimer{ 0.0f }
@@ -98,6 +103,56 @@ namespace sw
         }
         if ( pDirector != nullptr && pDirector->isWorldReady() )
             initializeBody( *pDirector );
+        if ( _pendingStateBytes.empty() == false )
+            applyPendingState();
+    }
+
+    void VoxelPlayerComponent::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeHeader( outArchive, VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
+        outArchive << _body.getPosition();
+        _hotbar.writeState( outArchive );
+        outArchive << _brokenCount;
+        outArchive << _placedCount;
+        outArchive << static_cast<uint8>( _bBodyPlaced );
+    }
+
+    void VoxelPlayerComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( hasBegunPlay() )
+            applyPendingState();
+    }
+
+    void VoxelPlayerComponent::applyPendingState()
+    {
+        Archive     archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
+        float3      position{};
+        VoxelHotbar hotbar;
+        uint32      brokenCount = 0;
+        uint32      placedCount = 0;
+        uint8       bBodyPlaced = SW_FALSE;
+        bool        bRead       = StateArchiveUtil::readHeader( archive, VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
+        archive >> position;
+        bRead = bRead && hotbar.readState( archive );
+        archive >> brokenCount;
+        archive >> placedCount;
+        archive >> bBodyPlaced;
+        _pendingStateBytes.clear();
+        if ( bRead == false || archive.isError() || archive.getRemainingBytes() != 0 )
+        {
+            SW_LOG_WARNING( "[Voxel] the saved player state does not match this build - starting at the spawn" );
+            return;
+        }
+        _hotbar      = hotbar;
+        _brokenCount = brokenCount;
+        _placedCount = placedCount;
+        if ( bBodyPlaced != SW_FALSE )
+        {
+            // 몸을 놓기 전에 찍은 것이면 처음 자리(다음 틱)로 둔다.
+            _body.setPosition( position );
+            _bBodyPlaced = SW_TRUE;
+        }
     }
 
     void VoxelPlayerComponent::onTick( float32 deltaTime )

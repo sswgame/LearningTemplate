@@ -29,6 +29,7 @@
 
 namespace sw
 {
+    class Archive;
     class GameObject;
     class GameObjectManager;
     class InputManager;
@@ -48,7 +49,8 @@ namespace sw
     /**
      * @class FarmDirectorComponent
      * @brief 농장 한 판입니다. 플레이가 시작되면 작물 카탈로그를 읽고 밭 · 달력 · 인벤토리를 새로 둡니다(봄 1 일, 첫 씨앗 10 개).
-     * @details 농장 상태는 핫 리로드에서 처음부터 다시 섭니다(PROPERTY 가 아닌 런타임 상태). 세운 칸 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
+     * @details 농장 상태(달력 · 밭 · 인벤토리 · 농부)는 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드 ·
+     *          세이브를 넘깁니다(`HarvestValleyGame`). 세운 칸 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Director", Tooltip = "Runs the farm rules, the farmer, time and weather, and spawns the field tiles" )
     class FarmDirectorComponent : public Component
@@ -71,6 +73,13 @@ namespace sw
 
         /** @brief 세운 칸 오브젝트를 모두 지웁니다(상태 저장 전). 농장 상태는 그대로이고 다음 틱이 그 상태대로 다시 세운다. */
         void despawnViews();
+        /** @brief 농장 상태(달력 · 밭 · 인벤토리 · 농부 · 날씨)를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 농장을 되살립니다 — `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
+         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 가 데이터를 읽은 뒤 적용합니다. 읽지 못하면 알리고 새 농장으로 시작합니다.
+         */
+        void restoreState( vector<uint8>&& bytes );
 
         // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
         const FarmCalendar& getCalendar() const { return _calendar; }
@@ -108,6 +117,10 @@ namespace sw
 
     private:
         [[nodiscard]] bool loadData();
+        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+        /** @brief 들고 있던 복원 바이트를 적용하고 칸 모습을 다시 세우게 합니다. */
+        void applyPendingState();
         /** @brief 쌓인 스폰 · 효과음을 틱 뒤 한 번으로 미룹니다(틱 밖이면 바로). */
         void scheduleFlush();
         /** @brief 쌓인 요청을 세웁니다. 틱 밖(게임 스레드)에서만 불린다. */
@@ -181,7 +194,8 @@ namespace sw
         vector<const utf8*>          _listPendingSound; ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
         vector<ColorLook>            _listColorLook;
         vector<CropLook>             _listCropLook;
-        vector<shared_ptr<Mesh>>     _listCropMesh; ///< 작물 모델을 쥐고 있는다(단계가 바뀔 때 뷰가 워커에서 읽지 않게)
+        vector<shared_ptr<Mesh>>     _listCropMesh;      ///< 작물 모델을 쥐고 있는다(단계가 바뀔 때 뷰가 워커에서 읽지 않게)
+        vector<uint8>                _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         shared_ptr<MaterialInstance> _arrSoilLook[3];
         shared_ptr<MaterialInstance> _plainCropLook;
         shared_ptr<MaterialInstance> _witheredCropLook;

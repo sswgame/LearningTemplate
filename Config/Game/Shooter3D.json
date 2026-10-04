@@ -3,6 +3,7 @@
     "_gameSettingsFile": "data/gamesettings.xml",
     "_startupScene": "",
     "_userSettingsSchema": "data/shooter3d.settings.xml",
+    "_telemetrySchema": "data/shooter3d.telemetry.xml",
     "_mapUserSettingDefault": {
         "gameplay.fieldOfView": "80"
     }

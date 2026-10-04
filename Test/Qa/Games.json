@@ -1,0 +1,41 @@
+{
+  "_comment": "QA runners (Scripts/qa) read this table: how each test game plays itself. arguments go to App as-is; screenshot_frame is the render-thread frame the golden capture takes.",
+  "capture_width": 320,
+  "capture_height": 180,
+  "reference_width": 160,
+  "reference_height": 90,
+  "games": {
+    "Empty": {
+      "arguments": ["-gv_benchMeshes=8", "-gv_benchAnimate=0"],
+      "screenshot_frame": 30
+    },
+    "AbilityArena": {
+      "arguments": ["-gv_arenaAutoPlay=1"],
+      "screenshot_frame": 180
+    },
+    "HarvestValley": {
+      "arguments": ["-gv_farmAutoPlay=1"],
+      "screenshot_frame": 180
+    },
+    "NileCity": {
+      "arguments": ["-gv_nileAutoPlay=1"],
+      "screenshot_frame": 180
+    },
+    "Shooter3D": {
+      "arguments": ["-gv_shooterAutoPlay=1"],
+      "screenshot_frame": 180
+    },
+    "StarSkirmish": {
+      "arguments": ["-gv_skirmishAutoPlay=1"],
+      "screenshot_frame": 180
+    },
+    "ThemeParkTycoon": {
+      "arguments": ["-gv_parkAutoBuild=1"],
+      "screenshot_frame": 180
+    },
+    "VoxelCraft": {
+      "arguments": ["-gv_voxelAutoPlay=1"],
+      "screenshot_frame": 180
+    }
+  }
+}

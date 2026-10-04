@@ -19,6 +19,7 @@ Tarjan SCC 로 줄이고 위상 순서를 티어로 쓰며, 위반은 경고가 
 from __future__ import annotations
 
 import argparse
+import functools
 import re
 import sys
 from pathlib import Path
@@ -40,9 +41,15 @@ from LintGate import GateError, GateResult, LintGate  # noqa: E402
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
 
 
+@functools.lru_cache(maxsize=None)
+def splitNormalizedPathInternal(pathText: str) -> tuple[str, ...]:
+    """`normalizePath` 한 경로를 `/` 로 나눈 조각. include 마다 금지 패턴 수만큼 불리므로 같은 글자는 한 번만 푼다."""
+    return tuple(normalizePath(pathText).split("/"))
+
+
 def includeHitsBanInternal(includePath: str, bannedPattern: str) -> bool:
-    normalizedParts = normalizePath(includePath).split("/")
-    bannedParts = [part for part in normalizePath(bannedPattern).split("/") if part]
+    normalizedParts = list(splitNormalizedPathInternal(includePath))
+    bannedParts = [part for part in splitNormalizedPathInternal(bannedPattern) if part]
     if not bannedParts:
         return False
     for partIndex in range(len(normalizedParts) - len(bannedParts) + 1):
@@ -101,7 +108,6 @@ _kEngineTier: dict[str, int] = {
     # — Core 를 압축 라이브러리에 종속시키지 않으려고 여기 둔다(Source/Engine/CMakeLists.txt 주석 참고).
     "Compression": 0,
     # 1: 리플렉션과, 토대 위의 잎 서브시스템·헬퍼.
-    "Audio": 1,
     "Reflection": 1,
     "Utility": 1,
     # 2: 리플렉션 위에 올라가는 직렬화와 에셋형 잎.
@@ -109,6 +115,8 @@ _kEngineTier: dict[str, int] = {
     "Localization": 2,
     "Serialization": 2,
     # 3: 설정 — 리플렉션·직렬화로 읽힌다. 물리도 같은 자리다 — 설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터다.
+    # 오디오 — 믹서 그래프 · 이벤트 · 음악 데이터를 리플렉션 · 직렬화로 읽는다(설정과 같은 자리).
+    "Audio": 3,
     "Config": 3,
     "Dialogue": 3,
     "Physics": 3,
@@ -128,9 +136,13 @@ _kEngineTier: dict[str, int] = {
     "UserSettings": 7,
     # 캐릭터 외형 형상(소켓 · 피팅 · 병합 · 절단 · 체형)과 소켓 부착 컴포넌트. 컴포넌트 모델(6) 위의 기능 모듈이라 Sequencer 와 같은 자리다.
     "Character": 7,
+    # 지형 · 식생 · 물 — 컴포넌트(6)가 메시 · 머티리얼(5)로 그리는 월드 기능. 씬을 모르고 오브젝트 매니저만 본다.
+    "Environment": 7,
     # 8: 그리는 쪽 · 핫리로드. 씬과 컴포넌트를 읽는다.
     _kGraphicsRendererLayerName: 8,
     "Module": 8,
+    # 텔레메트리 — 동의를 사용자 설정(7)에서 읽는다. 엔진의 다른 곳은 이것을 모른다(EngineLoop 가 프레임 시간을 넘긴다).
+    "Telemetry": 8,
     # 파괴(파쇄 · 연결 그래프 · 피해 · 조각 컴포넌트). 캐릭터 형상의 자르기 도구(7)와 컴포넌트 모델(6) 위에 선다 — 렌더러는 모른다.
     "Destruction": 8,
     # 9: 전부를 엮는 자리.

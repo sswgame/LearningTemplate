@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmCalendar.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmField.h"
@@ -169,4 +171,86 @@ SW_TEST_CASE( FarmingTest, ShippingSellsAtTheEndOfTheDay )
     SW_EXPECT_EQUAL( 40 + 250, inventory.getGold() );
     SW_EXPECT_EQUAL( 0, inventory.getShippedItemCount() );
     SW_EXPECT_EQUAL( 1, inventory.getItemCount( "turnip" ) );
+}
+
+/**
+ * @brief [FarmingTest] 달력 · 밭 · 인벤토리의 상태를 쓰고 새 객체에 읽으면 같은 농장이 이어진다 — 깨진 바이트는 거절하고 그대로 둔다
+ * @details 핫 리로드 · 세이브가 디렉터의 시뮬레이션을 이 바이트로 옮긴다(`ComponentStateStore`). 읽은 쪽과 원본을 같은 하루만큼 더 돌려도 같아야 한다.
+ */
+SW_TEST_CASE( FarmingTest, StateRoundTripContinuesTheSameFarm )
+{
+    CropCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmingTestCropXml, "FarmingTest" ) );
+
+    FarmCalendar calendar;
+    calendar.setDate( 2, FarmSeason::Summer, 5 );
+    (void)calendar.advanceMinutes( 125.0f );
+    FarmField field;
+    field.initialize( 4, 3, &catalog );
+    prepareFarmTile( field, 1, 1, "tomato_seed" );
+    (void)field.till( 2, 2 );
+    field.advanceDay( FarmSeason::Spring, true );
+    FarmInventory inventory;
+    inventory.addGold( 321 );
+    inventory.addItem( "turnip_seed", 7 );
+    inventory.addItem( "tomato", 2 );
+    SW_EXPECT_TRUE( inventory.shipItem( "tomato", 1 ) );
+
+    Archive written;
+    calendar.writeState( written );
+    field.writeState( written );
+    inventory.writeState( written );
+
+    FarmCalendar  readCalendar;
+    FarmField     readField;
+    FarmInventory readInventory;
+    readField.initialize( 4, 3, &catalog );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( readCalendar.readState( reader ) );
+    SW_ASSERT_TRUE( readField.readState( reader ) );
+    SW_ASSERT_TRUE( readInventory.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64( 0 ), reader.getRemainingBytes() );
+
+    SW_EXPECT_EQUAL( 2, readCalendar.getYear() );
+    SW_EXPECT_TRUE( readCalendar.getSeason() == FarmSeason::Summer );
+    SW_EXPECT_EQUAL( 5, readCalendar.getDay() );
+    SW_EXPECT_EQUAL( calendar.getHour(), readCalendar.getHour() );
+    SW_EXPECT_EQUAL( calendar.getMinute(), readCalendar.getMinute() );
+    SW_EXPECT_EQUAL( field.getCropCount(), readField.getCropCount() );
+    SW_EXPECT_NEAR_EQUAL( field.computeGrowthRatio( 1, 1 ), readField.computeGrowthRatio( 1, 1 ), 1.0e-6f );
+    SW_ASSERT_NOT_NULL( readField.findTile( 2, 2 ) );
+    SW_EXPECT_TRUE( readField.findTile( 2, 2 )->_bTilled == SW_TRUE );
+    SW_EXPECT_EQUAL( 321, readInventory.getGold() );
+    SW_EXPECT_EQUAL( 7, readInventory.getItemCount( "turnip_seed" ) );
+    SW_EXPECT_EQUAL( 1, readInventory.getShippedItemCount() );
+
+    // 같은 하루를 더 돌리면 같은 결과다 — 상태가 다 옮겨졌다
+    (void)field.water( 1, 1 );
+    (void)readField.water( 1, 1 );
+    field.advanceDay( FarmSeason::Spring, false );
+    readField.advanceDay( FarmSeason::Spring, false );
+    SW_EXPECT_NEAR_EQUAL( field.computeGrowthRatio( 1, 1 ), readField.computeGrowthRatio( 1, 1 ), 1.0e-6f );
+    SW_EXPECT_EQUAL( inventory.settleShipping( catalog ), readInventory.settleShipping( catalog ) );
+
+    BLOCK( "크기가 다른 밭 · 잘린 바이트는 거절하고 그대로 둔다" )
+    {
+        FarmField smallField;
+        smallField.initialize( 2, 2, &catalog );
+        Archive fieldOnly;
+        field.writeState( fieldOnly );
+        Archive smallReader( fieldOnly.getData(), fieldOnly.getSize() );
+        SW_EXPECT_FALSE( smallField.readState( smallReader ) );
+        SW_EXPECT_EQUAL( uint32( 0 ), smallField.getCropCount() );
+
+        FarmInventory truncated;
+        truncated.addGold( 5 );
+        Archive      cut( written.getData(), written.getSize() - 2 );
+        FarmCalendar skipCalendar;
+        FarmField    skipField;
+        skipField.initialize( 4, 3, &catalog );
+        SW_EXPECT_TRUE( skipCalendar.readState( cut ) );
+        SW_EXPECT_TRUE( skipField.readState( cut ) );
+        SW_EXPECT_FALSE( truncated.readState( cut ) );
+        SW_EXPECT_EQUAL( 5, truncated.getGold() );
+    }
 }

@@ -26,12 +26,14 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "EngineTest/StateReloadTestUtil.h"
+#include "EngineTest/TestGameObjectMocks.h"
 
 #include "GameFramework/Components/DontDestroyOnLoadComponent.h"
 #include "GameFramework/Components/FadeOutComponent.h"
 #include "GameFramework/Components/GravityComponent.h"
 #include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/Data/GameStrings.h"
+#include "GameFramework/Framework/ComponentStateStore.h"
 #include "GameFramework/Framework/GameEvents.h"
 #include "GameFramework/Framework/GameInstanceBase.h"
 #include "GameFramework/Framework/GameService.h"
@@ -978,6 +980,174 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIdsOnlyWithinTheSameProcess )
 }
 
 /**
+ * @brief [GameFrameworkTest] PROPERTY 가 아닌 컴포넌트 상태는 스냅샷의 컴포넌트 섹션으로 다시 만든 컴포넌트에 돌아온다 — 같은 실행은 id 로, 다른 실행은 순서로
+ * @details 디렉터의 시뮬레이션(밭 · 도시 · 전장)이 핫 리로드 · 세이브를 넘는 길이다(`ComponentStateStore`). 씬 섹션만으로는 `_counter` 가 0 으로 돌아온다.
+ */
+SW_TEST_CASE( GameFrameworkTest, ComponentStateRidesTheSnapshotToTheRecreatedComponent )
+{
+    class DirectorStateGameInstance : public GameInstanceBase
+    {
+    protected:
+        void onBeforeStateSerialize() override
+        {
+            GameObjectManager* pManager = findActiveObjectManager();
+            if ( pManager != nullptr )
+                getComponentStateStore().capture<MockRuntimeStateComponent>( *pManager );
+        }
+        void onAfterStateDeserialize() override
+        {
+            GameObjectManager* pManager = findActiveObjectManager();
+            if ( pManager != nullptr )
+                getComponentStateStore().restore<MockRuntimeStateComponent>( *pManager );
+        }
+    };
+
+    RegisterMockComponents();
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "DirectorStateProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    const ScopedSceneGameService scopedService{ sceneManager };
+    GameObjectManager*           pManager = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+
+    GameObject* pFirst  = pManager->createGameObject( hashed_string( "FirstDirector" ) );
+    GameObject* pSecond = pManager->createGameObject( hashed_string( "SecondDirector" ) );
+    SW_ASSERT_NOT_NULL( pFirst );
+    SW_ASSERT_NOT_NULL( pSecond );
+    MockRuntimeStateComponent* pFirstState  = pFirst->addComponent<MockRuntimeStateComponent>();
+    MockRuntimeStateComponent* pSecondState = pSecond->addComponent<MockRuntimeStateComponent>();
+    SW_ASSERT_NOT_NULL( pFirstState );
+    SW_ASSERT_NOT_NULL( pSecondState );
+    pManager->mergePendingAdds();
+    pFirstState->_counter              = 41;
+    pSecondState->_counter             = 77;
+    const ComponentHandle firstHandle  = pFirstState->getHandle();
+    const ComponentHandle secondHandle = pSecondState->getHandle();
+
+    DirectorStateGameInstance instance;
+    vector<uint8>             snapshot;
+    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+
+    BLOCK( "같은 프로세스 — 원래 id 의 컴포넌트가 제 상태를 받는다" )
+    {
+        SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+        pManager->mergePendingAdds();
+        const MockRuntimeStateComponent* pRestoredFirst  = static_cast<const MockRuntimeStateComponent*>( pManager->resolveComponent( firstHandle ) );
+        const MockRuntimeStateComponent* pRestoredSecond = static_cast<const MockRuntimeStateComponent*>( pManager->resolveComponent( secondHandle ) );
+        SW_ASSERT_NOT_NULL( pRestoredFirst );
+        SW_ASSERT_NOT_NULL( pRestoredSecond );
+        SW_EXPECT_EQUAL( 41, pRestoredFirst->_counter );
+        SW_EXPECT_EQUAL( 77, pRestoredSecond->_counter );
+        SW_EXPECT_EQUAL( 1, pRestoredFirst->_restoreCount );
+    }
+
+    BLOCK( "다른 실행의 세이브(토큰이 다르다) — 새 id 라 같은 타입 안의 순서로 짝짓는다" )
+    {
+        vector<uint8> foreign = snapshot;
+        foreign[8] ^= 0xFF; // 토큰의 첫 바이트
+        SW_ASSERT_TRUE( instance.restoreSnapshot( foreign ) );
+        pManager->mergePendingAdds();
+        vector<int32> listCounter;
+        pManager->forEachComponentOfType<MockRuntimeStateComponent>( [&listCounter]( MockRuntimeStateComponent* pComponent )
+        { listCounter.push_back( pComponent->_counter ); } );
+        SW_ASSERT_EQUAL( size_t( 2 ), listCounter.size() );
+        SW_EXPECT_TRUE( ( listCounter[0] == 41 && listCounter[1] == 77 ) || ( listCounter[0] == 77 && listCounter[1] == 41 ) );
+    }
+}
+
+/**
+ * @brief [GameFrameworkTest] 살아 있는 씬 위에 다시 선 게임 인스턴스(핫 리로드 · 백엔드 교체)는 첫 씬을 요청하지 않는다 — 처음 선 인스턴스만 요청한다
+ * @details 요청하면 비동기 로드가 끝나는 순간 스냅샷으로 되살린 씬(또는 에디터가 연 씬)을 새 씬이 덮어써, 되살린 디렉터 상태가 그 자리에서 사라진다.
+ */
+SW_TEST_CASE( GameFrameworkTest, RecreatedGameInstanceKeepsTheLiveScene )
+{
+    class FirstSceneGameInstance : public GameInstanceBase
+    {
+    public:
+        bool _bRequested{ false };
+
+    protected:
+        void configureBootstrap( BootstrapConfig& outConfig ) override { outConfig._data._startMap = "game/none/maps/first.scene.xml"; }
+        bool onInitialize() override
+        {
+            _bRequested = requestFirstScene();
+            return true;
+        }
+    };
+
+    SceneManager sceneManager;
+    SW_ASSERT_TRUE( sceneManager.initialize() );
+    const ScopedSceneGameService    scopedScene{ sceneManager };
+    EventDispatcher                 dispatcher;
+    const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
+    int32                           requestedCount = 0;
+    dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&requestedCount]( const SceneLoadRequestedEvent& )
+    { ++requestedCount; } ) );
+
+    BLOCK( "다시 선 인스턴스 — 활성 씬이 있으면 요청하지 않는다" )
+    {
+        SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "LiveScene" ) );
+        FirstSceneGameInstance recreated;
+        SW_ASSERT_TRUE( recreated.initialize( nullptr, nullptr ) );
+        SW_EXPECT_FALSE( recreated._bRequested );
+        SW_EXPECT_EQUAL( 0, requestedCount );
+        SW_EXPECT_EQUAL( string( "LiveScene" ), sceneManager.getActiveScene()->getName() );
+        recreated.shutdown();
+    }
+
+    BLOCK( "처음 선 인스턴스 — 활성 씬이 없으면 요청한다" )
+    {
+        sceneManager.shutdown();
+        SW_ASSERT_TRUE( sceneManager.initialize() );
+        SW_ASSERT_TRUE( sceneManager.getActiveScene() == nullptr );
+        FirstSceneGameInstance       first;
+        test::ScopedDefensiveTestLog expected( "the first scene file does not exist" );
+        SW_ASSERT_TRUE( first.initialize( nullptr, nullptr ) );
+        SW_EXPECT_TRUE( first._bRequested );
+        SW_EXPECT_EQUAL( 1, requestedCount );
+        engine::getTaskManager().waitAll();
+        first.shutdown();
+    }
+    sceneManager.shutdown();
+}
+
+/**
+ * @brief [GameFrameworkTest] 컴포넌트 상태 섹션의 형식이 맞지 않거나 잘렸으면 읽지 않고 비워 둔다 — 개수를 그대로 잡지 않는다
+ */
+SW_TEST_CASE( GameFrameworkTest, ComponentStateStoreRejectsBrokenBytes )
+{
+    ComponentStateStore store;
+    store.add( hashed_string( "Director" ), 7, vector<uint8>{ 1, 2, 3 } );
+    store.add( hashed_string( "Director" ), 7, vector<uint8>{ 9 } ); // 같은 (타입 · id) 는 바꾼다
+    store.add( hashed_string( "Director" ), 8, vector<uint8>{ 4 } );
+    SW_ASSERT_EQUAL( size_t( 2 ), store.getEntries().size() );
+
+    Archive written;
+    store.write( written );
+    ComponentStateStore readStore;
+    Archive             reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( readStore.read( reader ) );
+    const ComponentStateStore::Entry* pById = readStore.findEntry( hashed_string( "Director" ), 8, 0 );
+    SW_ASSERT_NOT_NULL( pById );
+    SW_EXPECT_EQUAL( size_t( 1 ), pById->_bytes.size() );
+    SW_EXPECT_EQUAL( uint8( 4 ), pById->_bytes[0] );
+    const ComponentStateStore::Entry* pByOrder = readStore.findEntry( hashed_string( "Director" ), 99, 0 );
+    SW_ASSERT_NOT_NULL( pByOrder );
+    SW_EXPECT_EQUAL( uint8( 9 ), pByOrder->_bytes[0] );
+    SW_EXPECT_TRUE( readStore.findEntry( hashed_string( "Other" ), 7, 0 ) == nullptr );
+
+    Archive cut( written.getData(), written.getSize() - 1 );
+    SW_EXPECT_FALSE( readStore.read( cut ) );
+    SW_EXPECT_TRUE( readStore.isEmpty() );
+
+    Archive huge;
+    huge << ComponentStateStore::kFormatVersion;
+    huge << uint32( 0xFFFFFFFFu );
+    Archive hugeReader( huge.getData(), huge.getSize() );
+    SW_EXPECT_FALSE( readStore.read( hugeReader ) );
+}
+
+/**
  * @brief [GameFrameworkTest] 오브젝트 수를 터무니없이 크게 적은 스냅샷은 그 수만큼 잡지 않고 실패한다
  * @details 파일이 말한 개수(40 억)를 그대로 `reserve` 하면 읽기가 잘린 데이터에서 멈추기도 전에 그 한 줄이 수십 GB 를 요구한다.
  *          오브젝트 하나는 적어도 4 바이트라 남은 바이트 / 4 가 상한이다(`GameInstanceBase::deserializeSceneObjects`).
@@ -988,10 +1158,10 @@ SW_TEST_CASE( GameFrameworkTest, SceneObjectCountBeyondTheDataIsNotReserved )
     SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "HugeCountProbe" ) );
     const ScopedSceneGameService scopedService{ sceneManager };
 
-    // 봉투(SWST v2 · 토큰) 안의 씬 섹션 — 첫 4 바이트가 오브젝트 수다. 뒤에는 4 바이트뿐이다.
+    // 봉투(SWST v3 · 토큰) 안의 씬 섹션 — 첫 4 바이트가 오브젝트 수다. 뒤에는 4 바이트뿐이다.
     const uint8 arrSceneSection[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x00, 0x00 };
     Archive     envelope;
-    envelope << static_cast<uint32>( 0x53575354u ) << static_cast<uint32>( 2 ) << static_cast<uint64>( 0 );
+    envelope << static_cast<uint32>( 0x53575354u ) << static_cast<uint32>( 3 ) << static_cast<uint64>( 0 );
     envelope.writeSection( arrSceneSection, static_cast<uint32>( sizeof( arrSceneSection ) ) );
 
     // 할당한 바이트 누계로 본다 — 운영체제가 큰 예약을 받아 주면 그 reserve 는 실패하지 않고 조용히 수십 GB 를 잡는다.
@@ -2949,8 +3119,11 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     GameConfig::setActive( runConfig );
 
     const string localeDir = test::makeTempDirectory( "bootstrap_locale" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "ko_kr.json" ), R"({ "UI_PLAY": "플레이" })" ) );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "en_us.json" ), R"({ "UI_PLAY": "Play", "UI_ONLY_EN": "English" })" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "boot.locproject.json" ),
+                                             R"({ "name": "boot", "sourceCulture": "en_us", "cultures": [ "ko_kr" ], "stringTables": [ "boot.strings.json" ] })" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "boot.strings.json" ),
+                                             R"({ "culture": "en_us", "entries": { "UI_PLAY": { "source": "Play" }, "UI_ONLY_EN": { "source": "English" } } })" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "ko_kr.translation.json" ), R"({ "culture": "ko_kr", "entries": { "UI_PLAY": { "text": "플레이" } } })" ) );
 
     class BootstrapGame : public GameInstanceBase
     {
@@ -2965,7 +3138,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
             data._startMap                          = "game/test/maps/start.scene.xml";
             data._titleScene                        = "game/test/maps/title.scene.xml";
             data._inputMap                          = "engine/input/default.input.xml";
-            data._localizationDirectory             = _localeDir;
+            data._localizationProject               = FileUtil::joinPath( _localeDir, "boot.locproject.json" );
             data._defaultLanguage                   = "ko_KR"; // 파일 이름(ko_kr)과 철자가 다르다
             data._fallbackLanguage                  = "en-US";
             data._defaultSavePath                   = _savePath;

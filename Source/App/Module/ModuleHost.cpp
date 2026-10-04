@@ -16,6 +16,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Renderer/RenderThread.h"
+#include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -198,6 +199,7 @@ namespace sw
         , _listGameSavedState{}
         , _frameState{}
         , _bEnableEditor{ SW_FALSE }
+        , _bEditorModuleActive{ SW_TRUE }
         , _reserved{ 0 }
     {
     }
@@ -207,43 +209,52 @@ namespace sw
         shutdown();
     }
 
-    bool ModuleHost::loadModuleImages( LiveReloadManager* pLiveReloadManager, const vector<GameKitConfig>& listGameKitModule )
+    bool ModuleHost::loadModuleImages( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
-        _pLiveReloadManager = pLiveReloadManager;
+        _pLiveReloadManager  = pLiveReloadManager;
+        _bEditorModuleActive = resolution.isActive( config::kTargetEditorModule ) ? SW_TRUE : SW_FALSE;
 #if defined( SW_SHIPPING )
-        // 게임 · 키트 · GameFramework 는 정적 링크라 올릴 이미지가 없다 — 그 타입은 리플렉션 단계가 이미 모았다.
-        (void)listGameKitModule;
+        // 게임 · 키트 · GameFramework 는 정적 링크라 올릴 이미지가 없다 — 그 타입은 리플렉션 단계가 이미 모았고, 무엇을 링크할지는 CMake 가 같은 매니페스트로 정했다.
+        (void)catalog;
         return true;
 #else
         if ( _pLiveReloadManager == nullptr )
             return true;
 
         SW_MEMORY_SCOPE( Game );
-        const string   gameFrameworkModule = "GameFramework";
-        vector<string> listGameModule{ gameFrameworkModule };
+        vector<string> listGameModule;
 
-        // 공용 모듈을 **먼저** 올려 제 이름으로 등록한다. 키트 · SWGame 이 처음 부를 때 올라오면 그 등록기가 SWGame · 첫 키트의 이름으로
-        // 들어갔다(`LiveReloadManager::loadSharedModule`).
-        if ( _pLiveReloadManager->loadSharedModule( gameFrameworkModule ) == false )
+        // 적재 순서는 매니페스트의 의존이 정한다(의존이 먼저, 동점은 이름 순). 공용 모듈(GameFramework)은 그것을 링크하는 키트 · SWGame 보다 먼저
+        // 오므로 제 이름으로 등록된다(`LiveReloadManager::loadSharedModule` 의 이유).
+        for ( const string& moduleName : resolution._listLoadOrder )
         {
-            SW_LOG_ERROR( "Shared module load failed (%#)", gameFrameworkModule );
-            return false;
-        }
-
-        for ( const GameKitConfig& kitConfig : listGameKitModule )
-        {
-            vector<string> listDep = kitConfig._listDependencyModule;
-            if ( listDep.empty() )
-                listDep.push_back( gameFrameworkModule );
-
-            if ( _pLiveReloadManager->registerModule( kitConfig._name, listDep ) == false )
+            const ModuleManifest* pManifest = catalog.findManifest( moduleName );
+            if ( pManifest == nullptr )
+                continue;
+            if ( pManifest->_kind == ModuleKind::GameFramework )
             {
-                SW_LOG_ERROR( "Kit module register failed (%#)", kitConfig._name );
+                if ( _pLiveReloadManager->loadSharedModule( moduleName ) == false )
+                {
+                    SW_LOG_ERROR( "Shared module load failed (%#)", moduleName );
+                    return false;
+                }
+                listGameModule.push_back( moduleName );
+                continue;
+            }
+            if ( pManifest->_kind != ModuleKind::Kit )
+                continue;
+
+            vector<string> listDependency;
+            for ( const ModuleDependency& dependency : pManifest->_listDependency )
+                listDependency.push_back( dependency._name );
+            if ( _pLiveReloadManager->registerModule( moduleName, listDependency ) == false )
+            {
+                SW_LOG_ERROR( "Kit module register failed (%#)", moduleName );
                 return false;
             }
-            _pLiveReloadManager->setOnBeforeReload( kitConfig._name, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameplayDllReload, this ) );
-            _pLiveReloadManager->setOnAfterReload( kitConfig._name, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameplayDllReload, this ) );
-            listGameModule.push_back( kitConfig._name );
+            _pLiveReloadManager->setOnBeforeReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameplayDllReload, this ) );
+            _pLiveReloadManager->setOnAfterReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameplayDllReload, this ) );
+            listGameModule.push_back( moduleName );
         }
 
         // 게임 모듈은 이미지만 올린다(타입 등록까지). 리로드 직후 콜백 — 인스턴스 생성 — 은 RHI 가 선 뒤 `initialize` 가 걸고 부른다.
@@ -303,6 +314,15 @@ namespace sw
                 }
             }
         }
+
+    #if !defined( SW_SHIPPING )
+        if ( _bEnableEditor == SW_TRUE && _bEditorModuleActive == SW_FALSE )
+        {
+            // -EnableEditor 를 줬는데 매니페스트가 에디터 모듈을 껐다(프로젝트 · 구성) — 에디터 없이 조용히 뜨지 않는다.
+            SW_LOG_ERROR( "-EnableEditor was given, but the module manifests turn %# off for this project", config::kTargetEditorModule );
+            return false;
+        }
+    #endif
 
         if ( _bEnableEditor == SW_TRUE && _pLiveReloadManager != nullptr )
         {

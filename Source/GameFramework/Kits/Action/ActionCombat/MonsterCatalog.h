@@ -15,6 +15,8 @@
 
 namespace sw
 {
+    class XmlNode;
+
     /** @brief 몬스터 AI 행동 양식 아키타입입니다. monsters.xml 의 `archetype` 속성이 열거자 이름 그대로입니다(리플렉션 이름표). */
     ENUM()
     enum class MonsterArchetype : uint8
@@ -106,6 +108,8 @@ namespace sw
 
     private:
         void seedFallback();
+        /** @brief `<MonsterCatalog>` 루트의 `<Monster>` 들을 읽습니다(`GameDataXml::loadFile`). 읽은 수입니다(0 이면 실패). */
+        uint32 loadRoot( const XmlNode& root, string_view sourceName );
 
         /**
          * @brief `archetype` 속성을 열거자로 읽습니다. 속성이 없으면 MeleePatrol 이고, 모르는 이름이면 경고하고 MeleePatrol 입니다.

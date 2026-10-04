@@ -196,6 +196,12 @@ namespace sw
         void resolveObjectReferences( const Entry& entry ) const;
         /** @brief 저장된 핸들 하나가 이 실행에서 가리키는 오브젝트입니다(클래스 설명의 규칙). */
         GameObjectHandle resolveObjectReference( GameObjectHandle savedHandle ) const;
+        /**
+         * @brief 컨테이너 안의 `GameObjectHandle` 을 모두 옮깁니다 — 시퀀스 원소(제자리) · set 원소(빼고 다시 넣기) · 맵 값(제자리) · 맵 키(빼고 다시 넣기) ·
+         *        중첩 컨테이너(재귀).
+         * @return 옮길 수 없는 모양(값을 복사할 줄 모르는 맵 래퍼 · 컨테이너를 원소로 든 set)이면 false — 부르는 쪽이 비우고 알린다
+         */
+        [[nodiscard]] bool remapContainerHandles( void* pContainer, const NestedContainerInfo& shape ) const;
 
         vector<Entry>                        _listEntry;
         unordered_map<uint64, GameObject*>   _mapSavedIdToObject;

@@ -1,0 +1,485 @@
+msgid ""
+msgstr ""
+"Language: ko\n"
+"X-Localization-Project: engine\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Message-Format: ICU\n"
+"X-Generator: SWEngine LocalizationTools\n"
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.foe_fainted"
+msgid "{name} fainted! You won!"
+msgstr "{name}(이)가 쓰러졌다! 승리!"
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.got_away"
+msgid "Got away safely!"
+msgstr "무사히 도망쳤다!"
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.no_move"
+msgid "{name} has no usable move!"
+msgstr "{name}에게는 쓸 수 있는 기술이 없다!"
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.no_pp"
+msgid "{name} has no PP!"
+msgstr "{name}의 PP가 없다!"
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.player_fainted"
+msgid "{name} fainted..."
+msgstr "{name}(이)가 쓰러졌다..."
+
+# 키 이름(Enter · Esc)은 번역하지 않음
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.prompt_fight"
+msgid "Fight: 1/2 moves, Enter=Move0, Esc=Run"
+msgstr "싸운다: 1/2 기술, Enter=기술0, Esc=도망"
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.used_move"
+msgid "{name} used {move}!"
+msgstr "{name}의 {move}!"
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.used_move_dmg"
+msgid "{name} used {move}! ({damage} dmg)"
+msgstr "{name}의 {move}! ({damage} 피해)"
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.what_will"
+msgid "What will {name} do?"
+msgstr "{name}은(는) 무엇을 할까?"
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.wild_appeared"
+msgid "A wild {name} appeared!"
+msgstr "야생의 {name}(이)가 나타났다!"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.colorVision"
+msgid "Color Vision Mode"
+msgstr "색각 보정"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.colorVision.deuteranopia"
+msgid "Deuteranopia"
+msgstr "녹색약"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.colorVision.protanopia"
+msgid "Protanopia"
+msgstr "적색약"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.colorVision.tritanopia"
+msgid "Tritanopia"
+msgstr "청색약"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.reduceFlashing"
+msgid "Reduce Flashing"
+msgstr "번쩍임 줄이기"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.subtitleBackground"
+msgid "Subtitle Background"
+msgstr "자막 배경"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.subtitleSize"
+msgid "Subtitle Size"
+msgstr "자막 크기"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.subtitles"
+msgid "Subtitles"
+msgstr "자막"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.textSize"
+msgid "Text Size"
+msgstr "글자 크기"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.uiScale"
+msgid "UI Scale"
+msgstr "UI 배율"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.ambientVolume"
+msgid "Ambient Volume"
+msgstr "환경음 음량"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.masterVolume"
+msgid "Master Volume"
+msgstr "전체 음량"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.musicVolume"
+msgid "Music Volume"
+msgstr "음악 음량"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.mute"
+msgid "Mute All"
+msgstr "음소거"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.sfxVolume"
+msgid "Effects Volume"
+msgstr "효과음 음량"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.uiVolume"
+msgid "Interface Volume"
+msgstr "인터페이스 음량"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.voiceVolume"
+msgid "Voice Volume"
+msgstr "음성 음량"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.accessibility"
+msgid "Accessibility"
+msgstr "접근성"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.audio"
+msgid "Audio"
+msgstr "오디오"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.controls"
+msgid "Controls"
+msgstr "조작"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.display"
+msgid "Display"
+msgstr "화면"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.gameplay"
+msgid "Gameplay"
+msgstr "게임플레이"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.graphics"
+msgid "Graphics"
+msgstr "그래픽"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.language"
+msgid "Language"
+msgstr "언어"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.common.off"
+msgid "Off"
+msgstr "끔"
+
+#. Display-change confirmation dialog; seconds counts down
+#. Max length: 80
+msgctxt "settings.confirm.keepChanges"
+msgid "Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}."
+msgstr "이 설정을 유지할까요? {seconds}초 뒤에 되돌립니다."
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.aimMode"
+msgid "Aim"
+msgstr "조준"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.crouchMode"
+msgid "Crouch"
+msgstr "앉기"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.gamepadSensitivity"
+msgid "Gamepad Sensitivity"
+msgstr "게임패드 감도"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.hold"
+msgid "Hold"
+msgstr "누르고 있기"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.invertY"
+msgid "Invert Vertical Look"
+msgstr "상하 시점 반전"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.mouseSensitivity"
+msgid "Mouse Sensitivity"
+msgstr "마우스 감도"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.sprintMode"
+msgid "Sprint"
+msgstr "달리기"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.stickDeadzone"
+msgid "Stick Dead Zone"
+msgstr "스틱 데드존"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.toggle"
+msgid "Toggle"
+msgstr "전환"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.resolution"
+msgid "Resolution"
+msgstr "해상도"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.vsync"
+msgid "Vertical Sync"
+msgstr "수직 동기화"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.windowMode"
+msgid "Window Mode"
+msgstr "창 모드"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.windowMode.borderless"
+msgid "Borderless"
+msgstr "테두리 없음"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.windowMode.windowed"
+msgid "Windowed"
+msgstr "창"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.gameplay.cameraShake"
+msgid "Camera Shake"
+msgstr "카메라 흔들림"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.gameplay.fieldOfView"
+msgid "Field of View"
+msgstr "시야각"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.gameplay.headBob"
+msgid "Head Bob"
+msgstr "걸음 흔들림"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.effectsQuality"
+msgid "Effects Quality"
+msgstr "효과 품질"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.foliageDensity"
+msgid "Foliage Density"
+msgstr "초목 밀도"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.motionBlur"
+msgid "Motion Blur"
+msgstr "모션 블러"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.postQuality"
+msgid "Post-Processing Quality"
+msgstr "후처리 품질"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality"
+msgid "Graphics Quality"
+msgstr "그래픽 품질"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality.custom"
+msgid "Custom"
+msgstr "사용자 지정"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality.high"
+msgid "High"
+msgstr "높음"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality.low"
+msgid "Low"
+msgstr "낮음"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality.medium"
+msgid "Medium"
+msgstr "중간"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality.ultra"
+msgid "Ultra"
+msgstr "최고"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.renderScale"
+msgid "Render Scale"
+msgstr "렌더 배율"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.shadowQuality"
+msgid "Shadow Quality"
+msgstr "그림자 품질"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.textureQuality"
+msgid "Texture Quality"
+msgstr "텍스처 품질"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.upscaler"
+msgid "Upscaler"
+msgstr "업스케일러"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.upscaler.spatial"
+msgid "Spatial"
+msgstr "공간"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.viewDistance"
+msgid "View Distance"
+msgstr "시야 거리"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.language.text"
+msgid "Text Language"
+msgstr "표시 언어"
+
+#. Shown after applying settings marked apply=restart
+#. Max length: 80
+msgctxt "settings.restartRequired"
+msgid "{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
+msgstr "설정 {count}개는 다시 시작한 뒤에 적용됩니다."

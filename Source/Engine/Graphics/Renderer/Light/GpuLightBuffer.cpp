@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/LightRegistry.h"
@@ -39,6 +40,13 @@ namespace sw
                     light._params._x = 1.0f;
                 outList.push_back( light );
             }
+        }
+
+        // 2D 그림자 가림막 토막은 빛 **뒤에** 붙는다 — 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting2d.hlsli).
+        for ( const ShadowCaster2DComponent* pCaster : registry.getShadowCasters() )
+        {
+            if ( pCaster != nullptr && pCaster->isActive() )
+                pCaster->appendGpuShadowSegments( outList );
         }
     }
 

@@ -21,7 +21,7 @@
  *         `HostCreated` 면 만드는 방법이 특별해서 호스트가 직접 만들고 직접 연결합니다. 지금은 셋뿐이고 이유가 있습니다.
  *           - IAudioSystem  : 팩토리(`IAudioSystem::create()`)가 플랫폼에 따라 구현을 고릅니다.
  *           - CommandStack  : 배포본에는 **아예 만들지 않습니다**(`#if !defined(SW_SHIPPING)`).
- *           - MemoryProfiler: Debug 에서만 만듭니다.
+ *           - MemoryProfiler: 배포본이 아니면 만듭니다(추적은 Debug · 시험 하네스만 켜 둡니다).
  *         `CheckEngineServiceBinding.py` 가 `Required, …, HostCreated` 행을 호스트가 실제로 채우는지 봅니다.
  *
  * 칸은 숫자가 아니라 낱말입니다. 값이 필요한 곳은 `RuntimeAPI/Service/ServiceListColumns.h` 의 매크로로 바꾸고,
@@ -39,6 +39,8 @@ SW_ENGINE_SERVICE( _pSceneManager, class, SceneManager, getSceneManager, Require
 SW_ENGINE_SERVICE( _pInputManager, class, InputManager, getInputManager, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pAudioSystem, class, IAudioSystem, getAudioSystem, Required, GameVisible, HostCreated )
 SW_ENGINE_SERVICE( _pEventDispatcher, class, EventDispatcher, getEventDispatcher, Required, GameVisible, EngineCreated )
+// 비동기 파일 읽기(IOCP · io_uring · 스레드 풀). 에셋 스트리밍 큐 · 팩 리더가 쓴다. 시작 · 종료는 기동 표의 FileIo 단계다.
+SW_ENGINE_SERVICE( _pAsyncFileIo, class, AsyncFileIo, getAsyncFileIo, Required, HostOnly, EngineCreated )
 SW_ENGINE_SERVICE( _pAssetManager, class, AssetManager, getAssetManager, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pAssetStreamingQueue, class, AssetStreamingQueue, getAssetStreamingQueue, Required, HostOnly, EngineCreated )
 // CommandStack 은 에디터 Undo/Redo 전용이라 Shipping 에서는 아예 만들지 않는다
@@ -56,6 +58,10 @@ SW_ENGINE_SERVICE( _pComponentDefaults, class, ComponentDefaults, getComponentDe
 SW_ENGINE_SERVICE( _pFrameProfiler, class, FrameProfiler, getFrameProfiler, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pUserSettingsManager, class, UserSettingsManager, getUserSettingsManager, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pPhysicsSystem, class, PhysicsSystem, getPhysicsSystem, Required, GameVisible, EngineCreated )
+// 텔레메트리 — 동의(사용자 설정 telemetry.enabled, 기본 꺼짐)가 없으면 아무것도 모으지 않는다. 게임은 진행 사건을 `record` 한다.
+SW_ENGINE_SERVICE( _pTelemetryService, class, TelemetryService, getTelemetryService, Required, GameVisible, EngineCreated )
+// 크래시 보고 — 다음 실행이 지난 크래시를 묶는다. 게임 UI 는 "보낼까요?" 를 `collectReports` · `decide` 로 묻는다(동의가 ask 일 때).
+SW_ENGINE_SERVICE( _pCrashReportService, class, CrashReportService, getCrashReportService, Required, GameVisible, EngineCreated )
 
 
 SW_ENGINE_SERVICE_CONST( _pEngineDefaultAssets, struct, EngineDefaultAssets, getEngineDefaultAssets, Required, HostOnly, EngineCreated )

@@ -1,9 +1,13 @@
 #include "pch.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
+#include "Core/Network/NetEmulation.h"
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetTransport.h"
+
+#include "Engine/Common/EngineServices.h"
 
 #include "GameFramework/Kits/Network/NetClientServer/ClientPrediction.h"
 #include "GameFramework/Kits/Network/NetClientServer/LagCompensation.h"
@@ -286,4 +290,121 @@ SW_TEST_CASE( NetClientServerTest, PredictionReconcilesAndLagCompensationRewinds
     SW_EXPECT_EQUAL( 0, static_cast<int32>( history.raycastAt( 30.0f, origin, forward, 100.0f, 1, distance ) ) ); // 지금은 이미 지나갔다
     SW_ASSERT_TRUE( history.sampleAt( -5.0f, 7, sample ) );                                                       // 기억 밖 — 가장 오래된 끝
     SW_EXPECT_NEAR_EQUAL( 0.0f, sample._position._x, 1.0e-4f );
+}
+
+/**
+ * @brief [NetClientServerTest] 실제 전송 위에 씌운 네트워크 흉내(지연 100 ms · 흔들림 · 손실 5 % · 순서 뒤바뀜 10 % · 회선 64 KB/s)에서도 복제가 되돌아가지 않고 따라온다
+ * @details 루프백 망은 완벽하게 두고 양쪽 끝점에 `NetEmulationTransport` 를 씌운다 — UDP 전송에 씌우는 것과 같은 길이다(`-gv_netEmu*`).
+ */
+SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
+{
+    LoopbackNetwork        network( 21u );
+    NetEmulationTransport  serverTransport( network.createEndpoint( 4100 ), 5u );
+    NetEmulationTransport  clientTransport( network.createEndpoint( 5100 ), 9u );
+    NetEmulationConditions conditions;
+    conditions._latency                 = 0.1;
+    conditions._jitter                  = 0.02;
+    conditions._lossRate                = 0.05f;
+    conditions._reorderRate             = 0.1f;
+    conditions._reorderDelay            = 0.03;
+    conditions._bandwidthBytesPerSecond = 64 * 1024;
+    serverTransport.setDefaultConditions( conditions );
+    clientTransport.setDefaultConditions( conditions );
+    NetHostSettings hostSettings;
+    hostSettings._sendInterval = 1.0 / 60.0;
+    NetHost serverHost;
+    NetHost clientHost;
+    serverHost.initialize( &serverTransport, hostSettings );
+    clientHost.initialize( &clientTransport, hostSettings );
+    SW_ASSERT_TRUE( serverHost.listen() );
+    SW_ASSERT_TRUE( clientHost.connect( NetAddress::makeLoopback( 4100 ) ) );
+
+    ReplicationServer         server;
+    ReplicationClient         client;
+    ReplicationClientSettings clientSettings;
+    clientSettings._tickInterval = 1.0f / 30.0f;
+    server.initialize( &serverHost, ReplicationServerSettings{} );
+    client.initialize( &clientHost, clientSettings );
+
+    float64       time         = 0.0;
+    uint32        serverTick   = 0;
+    float32       lastSampledX = -1.0f;
+    bool          bMonotonic   = true;
+    vector<uint8> buffer;
+    for ( int32 frame = 0; frame < 60 * 6; ++frame )
+    {
+        time += 1.0 / 60.0;
+        serverHost.update( time );
+        clientHost.update( time );
+        network.advance( time );
+        int32          connectionId = -1;
+        NetChannelType channel      = NetChannelType::Unreliable;
+        while ( serverHost.receiveMessage( connectionId, channel, buffer ) )
+            SW_EXPECT_TRUE( server.handleMessage( connectionId, buffer ) );
+        while ( clientHost.receiveMessage( connectionId, channel, buffer ) )
+            SW_EXPECT_TRUE( client.handleMessage( buffer ) );
+        if ( frame % 2 == 0 )
+        {
+            server.beginTick( serverTick );
+            server.setEntity( 1, 1, makeFloatBytes( static_cast<float32>( serverTick ) * 0.1f ) );
+            server.endTick();
+            server.sendSnapshots();
+            ++serverTick;
+        }
+        client.update( 1.0f / 60.0f );
+        const NetEntityState* pFrom = nullptr;
+        const NetEntityState* pTo   = nullptr;
+        float32               alpha = 0.0f;
+        if ( frame > 90 && client.sampleEntity( 1, pFrom, pTo, alpha ) )
+        {
+            const float32 fromX = readFloatBytes( pFrom->_buffer );
+            const float32 toX   = readFloatBytes( pTo->_buffer );
+            const float32 x     = fromX + ( toX - fromX ) * alpha;
+            bMonotonic          = bMonotonic && x >= lastSampledX - 1.0e-4f;
+            lastSampledX        = x;
+        }
+    }
+    SW_EXPECT_TRUE( clientHost.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_EXPECT_TRUE( client.hasSnapshot() );
+    SW_EXPECT_TRUE( bMonotonic );           // 순서가 뒤바뀐 낡은 스냅샷에 되돌아가지 않는다
+    SW_EXPECT_TRUE( lastSampledX > 14.0f ); // 6 초 · 30 Hz 의 끝 근처까지 따라왔다
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( client.getDecodeFailureCount() ) );
+    const NetEmulationStats serverStats = serverTransport.getStats();
+    SW_EXPECT_TRUE( serverStats._droppedCount > 0u );
+    SW_EXPECT_TRUE( serverStats._reorderedCount > 0u );
+}
+
+/**
+ * @brief [NetClientServerTest] `-gv_netEmu*` 전역 변수가 네트워크 흉내 조건이 된다(언리얼 PktLag · PktLoss 의 자리) — 모두 0 이면 꺼짐
+ */
+SW_TEST_CASE( NetClientServerTest, EmulationConditionsComeFromGlobalVariables )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "Test global variables (-gv_netEmu*) are not registered in Shipping" );
+#endif
+    GlobalVariableManager& variables = engine::getGlobalVariableManager();
+    GlobalVariableInfo*    pLatency  = variables.findVariable( "gv_netEmuLatencyMs" );
+    GlobalVariableInfo*    pLoss     = variables.findVariable( "gv_netEmuLossPercent" );
+    GlobalVariableInfo*    pReorder  = variables.findVariable( "gv_netEmuReorderPercent" );
+    GlobalVariableInfo*    pBand     = variables.findVariable( "gv_netEmuBandwidthKilobytesPerSecond" );
+    SW_ASSERT_NOT_NULL( pLatency );
+    SW_ASSERT_NOT_NULL( pLoss );
+    SW_ASSERT_NOT_NULL( pReorder );
+    SW_ASSERT_NOT_NULL( pBand );
+    SW_EXPECT_FALSE( NetEmulationConditions::makeFromGlobalVariables().isActive() );
+
+    SW_ASSERT_TRUE( pLatency->setValueAsInt( 120 ) );
+    SW_ASSERT_TRUE( pLoss->setValueAsInt( 5 ) );
+    SW_ASSERT_TRUE( pReorder->setValueAsInt( 250 ) ); // 100 % 로 묶인다
+    SW_ASSERT_TRUE( pBand->setValueAsInt( 64 ) );
+    const NetEmulationConditions conditions = NetEmulationConditions::makeFromGlobalVariables();
+    (void)pLatency->setValueAsInt( 0 );
+    (void)pLoss->setValueAsInt( 0 );
+    (void)pReorder->setValueAsInt( 0 );
+    (void)pBand->setValueAsInt( 0 );
+    SW_EXPECT_NEAR_EQUAL( 0.12, conditions._latency, 1.0e-9 );
+    SW_EXPECT_NEAR_EQUAL( 0.05f, conditions._lossRate, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, conditions._reorderRate, 1.0e-6f );
+    SW_EXPECT_EQUAL( 64 * 1024, conditions._bandwidthBytesPerSecond );
+    SW_EXPECT_TRUE( conditions.isActive() );
 }

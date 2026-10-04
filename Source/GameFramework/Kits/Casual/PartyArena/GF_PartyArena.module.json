@@ -1,0 +1,20 @@
+{
+    "_name": "GF_PartyArena",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "파티 아레나 키트(바이킹 온 트램펄린 장르) — 트램펄린 튕김 타이밍 · 콤보 높이 · 공중 공격 · 내려찍기 · 링 아웃 점수, 무작위 아이템, 라운드제 점수표",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

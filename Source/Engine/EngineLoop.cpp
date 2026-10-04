@@ -3,19 +3,24 @@
 #include "Engine/EngineLoop.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Common/BuildInfo.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Event/EventDispatcher.h"
+#include "Core/File/AsyncFileIo.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/Process/CrashContext.h"
 #include "Core/Process/CrashHandler.h"
+#include "Core/Process/ModuleBuildId.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/String/string_splitter.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
@@ -23,6 +28,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -51,20 +57,26 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
+#include "Engine/LocalizationTools.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Resource/AssetDatabase.h"
+#include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ImageFileWriter.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneCooker.h"
+#include "Engine/Telemetry/CrashReportService.h"
+#include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -100,6 +112,8 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_STRING( gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
     /** @brief 활성 씬의 강체 물리(바디 셰이프 · 캐릭터 캡슐)를 디버그 선으로 그립니다(`ScenePhysics::drawDebug` → `DebugDrawQueue`). */
     SW_GLOBAL_VARIABLE_BOOL( gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
+    /** @brief `-gv_telemetryFolder=<경로>`: 텔레메트리 스풀 폴더입니다(자동화 — 사용자 폴더를 건드리지 않는다). 비면 사용자 설정 파일 옆의 `telemetry/`. */
+    SW_TEST_GLOBAL_VARIABLE_STRING( gv_telemetryFolder, "", "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)", SW_KEEP_IN_SHIPPING );
 
 } // namespace sw
 
@@ -170,6 +184,9 @@ namespace sw
             const GameConfig* pGameConfig = loop._configManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
             if ( pGameConfig != nullptr )
                 GameConfig::setActive( *pGameConfig );
+
+            // 메모리 태그 예산(데이터). 틀린 표는 오류를 남기고 예산 없이 간다 — 진단 설정 하나로 기동을 세우지 않는다.
+            (void)loop._memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) );
             return EngineInitResult::Succeeded;
         }
         static void destroy( EngineLoop& loop )
@@ -208,6 +225,17 @@ namespace sw
                                                                                                                    : loop._owned._pEngineDefaultAssets->loadFromResource();
             if ( bEngineDefaultAssetsLoaded == false )
                 SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
+
+            // 문화권 표 · 엔진 문자열 — 플레이어 설정(언어)이 이 뒤(`UserSettings`)에 적용되고, 게임은 자기 프로젝트를 위에 올린다.
+            LocalizationManager&       localization  = *loop._owned._pLocalizationManager;
+            const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
+            if ( defaultAssets._cultureTable.empty() == false )
+                (void)localization.loadCultureTable( defaultAssets._cultureTable );
+            if ( defaultAssets._localizationProject.empty() == false && localization.mountProject( defaultAssets._localizationProject, LocalizationScope::Engine ) == false )
+                SW_LOG_ERROR( "Engine localization project '%#' is not (fully) loaded", defaultAssets._localizationProject.c_str() );
+            string commandLineLanguage;
+            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
+                localization.setCurrentLanguage( commandLineLanguage );
             return EngineInitResult::Succeeded;
         }
         static void destroy( EngineLoop& loop ) { loop._owned._pEngineDefaultAssets.reset(); }
@@ -232,6 +260,19 @@ namespace sw
         static void shutdown( EngineLoop& loop ) { loop._owned._pTaskManager->shutdown(); }
         // 소멸자에서 태스크를 기다리는 객체(에셋 스트리밍 큐)는 이 단계에 의존하는 단계(Scene)가 먼저 해제한다.
         static void destroy( EngineLoop& loop ) { loop._owned._pTaskManager.reset(); }
+    };
+
+    struct EngineLoop::FileIoStartupStep : EngineInitStepDefaults<EngineLoop>
+    {
+        static EngineInitResult initialize( EngineLoop& loop )
+        {
+            // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
+            AsyncFileIoSettings settings{};
+            settings._pTaskManager = loop._owned._pTaskManager.get();
+            return loop._owned._pAsyncFileIo->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+        }
+        // 큐를 비우고 걸린 읽기와 완료 콜백(태스크)을 다 기다린다. Task 보다 먼저, 모듈을 내리기 전에 내려간다.
+        static void shutdown( EngineLoop& loop ) { loop._owned._pAsyncFileIo->shutdown(); }
     };
 
     struct EngineLoop::ModuleImagesStartupStep : EngineInitStepDefaults<EngineLoop>
@@ -332,6 +373,31 @@ namespace sw
                 return EngineInitResult::SkipDependents;
             }
 
+            // 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleTypes)라 게임 · 킷의 타입까지 든다.
+            string reflectionDocsDir;
+            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::WRITE_REFLECTION_DOCS, reflectionDocsDir ) && reflectionDocsDir.empty() == false )
+            {
+                loop._bHeadless           = true;
+                loop._bHeadlessTaskFailed = ReflectionDocWriter::writeMarkdown( engine::getTypeRegistry(), reflectionDocsDir ) == 0;
+                return EngineInitResult::SkipDependents;
+            }
+
+            // 리타깃 굽기(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다.
+            string bakeRetarget;
+            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_RETARGET, bakeRetarget ) && bakeRetarget.empty() == false )
+            {
+                MemoryProfiler::captureMemoryLeakBaseline();
+                loop._bHeadless = true;
+                const string_splitter      parts( bakeRetarget, { "," } );
+                const vector<string_view>& listArgument = parts.getSplitList();
+                const bool                 bWellFormed  = listArgument.size() == 3;
+                if ( bWellFormed == false )
+                    SW_LOG_ERROR( "--bake-retarget expects <profile>,<source clip>,<output clip>" );
+                loop._bHeadlessTaskFailed = bWellFormed == false ||
+                                            RetargetBakeUtil::bakeClipFile( StringUtil::trim( listArgument[0] ), StringUtil::trim( listArgument[1] ), StringUtil::trim( listArgument[2] ) ) == false;
+                return EngineInitResult::SkipDependents;
+            }
+
             // 씬 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고,
             // 그것은 엔진 안에만 있어서 `CookAssets.py` 가 이쪽으로 넘겨준다.
             bool bCookScenes = false;
@@ -356,17 +422,49 @@ namespace sw
                 return EngineInitResult::SkipDependents;
             }
 
+            // 로컬라이제이션 글 수집도 같은 자리다 — 리플렉션 프로퍼티(`Meta = "Localizable"`)를 보려면 모든 타입이 올라와 있어야 한다.
+            // 번역 교환(PO)은 수집 뒤에 할 수 있도록 같은 실행에서 수집 → 가져오기 → 내보내기 순으로 돈다.
+            bool   bGatherText = false;
+            bool   bCheckText  = false;
+            bool   bExportPo   = false;
+            string importPoPath;
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::GATHER_TEXT, bGatherText );
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXT, bCheckText );
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
+            if ( bGatherText || bCheckText || bExportPo || importPoPath.empty() == false )
+            {
+                MemoryProfiler::captureMemoryLeakBaseline();
+                loop._bHeadless = true;
+                string projectPath;
+                loop._owned._pCommandLineManager->getArgument( CommandLineArgument::LOC_PROJECT, projectPath );
+                SW_LOG_INFO( "Starting Headless (localization tools)..." );
+                bool bSucceeded = true;
+                if ( bGatherText || bCheckText )
+                    bSucceeded = LocalizationTools::runGatherCommand( bCheckText, projectPath ) && bSucceeded;
+                if ( importPoPath.empty() == false )
+                    bSucceeded = LocalizationTools::runImportCommand( importPoPath, projectPath ) && bSucceeded;
+                if ( bExportPo )
+                    bSucceeded = LocalizationTools::runExportCommand( projectPath ) && bSucceeded;
+                loop._bHeadlessTaskFailed = bSucceeded == false;
+                return EngineInitResult::SkipDependents;
+            }
+
             // 원본 임포트 · 대조(텍스처 · 모델)는 에디터 모듈이 한다(엔진은 에디터를 모른다). 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려
             // 부르는 것은 App 이다(`ModuleHost::importAssetsWithEditorModule`).
-            bool bImportTextures = false;
-            bool bCheckTextures  = false;
-            bool bImportModels   = false;
-            bool bCheckModels    = false;
+            bool bImportTextures     = false;
+            bool bCheckTextures      = false;
+            bool bImportModels       = false;
+            bool bCheckModels        = false;
+            bool bImportHeightfields = false;
+            bool bCheckHeightfields  = false;
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_MODELS, bImportModels );
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_MODELS, bCheckModels );
-            const bool bAnyImport = bImportTextures || bCheckTextures || bImportModels || bCheckModels;
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_HEIGHTFIELDS, bImportHeightfields );
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_HEIGHTFIELDS, bCheckHeightfields );
+            const bool bAnyImport = bImportTextures || bCheckTextures || bImportModels || bCheckModels || bImportHeightfields || bCheckHeightfields;
             if ( bAnyImport )
             {
                 MemoryProfiler::captureMemoryLeakBaseline();
@@ -597,6 +695,58 @@ namespace sw
         static void shutdown( EngineLoop& loop ) { loop._owned._pSceneManager->setRhiDevice( nullptr ); }
     };
 
+    struct EngineLoop::TelemetryStartupStep : EngineInitStepDefaults<EngineLoop>
+    {
+        static EngineInitResult initialize( EngineLoop& loop )
+        {
+            // 문맥은 파일마다 첫 줄 — 크래시 보고 · 로그와 같은 세션 id, 심볼과 짝지을 빌드 id.
+            const GameConfig& gameConfig = GameConfig::getActive();
+            TelemetryContext  context;
+            context._sessionId   = CrashHandler::getSessionId();
+            context._buildConfig = build::kConfigName;
+            context._platform    = build::kPlatformName;
+            context._buildId     = ModuleBuildId::find( nullptr )._id;
+            context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
+            const string folder  = gv_telemetryFolder.empty()
+                                     ? FileUtil::joinPath( FileUtil::getDirectoryPart( loop._owned._pUserSettingsManager->getUserFilePath() ), "telemetry" )
+                                     : string( gv_telemetryFolder );
+
+            TelemetryService& telemetry = *loop._owned._pTelemetryService;
+            // 스키마가 틀려도 기동은 멈추지 않는다 — 스키마에 없는 사건은 기록되지 않을 뿐이다.
+            if ( telemetry.loadSchema( engine::getEngineDefaultAssets()._telemetrySchema ) == false )
+                SW_LOG_ERROR( "Engine telemetry schema '%#' is not loaded", engine::getEngineDefaultAssets()._telemetrySchema.c_str() );
+            if ( gameConfig._telemetrySchema.empty() == false )
+            {
+                const string gameSchema = FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._telemetrySchema );
+                if ( telemetry.loadSchema( gameSchema ) == false )
+                    SW_LOG_ERROR( "Game telemetry schema '%#' is not loaded", gameSchema.c_str() );
+            }
+            telemetry.initialize( folder, context );
+            // 동의는 플레이어 옵션(기본 꺼짐)이다. 꺼져 있으면 지난 실행이 남긴 스풀까지 지운다.
+            telemetry.bindConsentSetting( *loop._owned._pUserSettingsManager );
+
+            // 지난 실행의 크래시를 묶는다(덤프 · 로그 폴더 옆의 Saved/CrashReports). 기본 동의(local)는 묶기만 하고, 보낼 것이 있을 때만 보고 프로세스를 띄운다.
+            const string crashFolder = getCrashReportFolder();
+            if ( crashFolder.empty() == false )
+            {
+                CrashReportService& crashReports = *loop._owned._pCrashReportService;
+                const string        reportsFolder =
+                    FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
+                crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionId() );
+                crashReports.bindConsentSetting( *loop._owned._pUserSettingsManager );
+                crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 kReporterArgument 를 알아듣는다(main.cpp)
+                (void)crashReports.collectNewCrashes();
+                (void)crashReports.launchReporterProcess();
+            }
+            return EngineInitResult::Succeeded;
+        }
+        static void shutdown( EngineLoop& loop )
+        {
+            loop._owned._pCrashReportService->shutdown();
+            loop._owned._pTelemetryService->shutdown();
+        }
+    };
+
     EngineLoop::EngineLoop()
         : _bootstrap{}
         , _configManager{ nullptr }
@@ -634,6 +784,8 @@ namespace sw
         if ( _bootstrap.initialize( _owned, kDiagnostics ) == false )
             return false;
         _bootstrap.parseCommandLine( argc, pArgv );
+        // `-gv_memoryTracking=1` 은 기동의 할당부터 센다(Release 는 추적이 꺼진 채 선다).
+        _memoryBudgetMonitor.applyTrackingSetting();
 
         BLOCK( "Core Services 생성 및 바인딩" )
         {
@@ -686,6 +838,7 @@ namespace sw
 
     void EngineLoop::shutdown()
     {
+        AssetLoadProfiler::get().reportIfRequested( "session" );
         // 단계 본문을 초기화한 것만 역순으로 내린다: 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
         _startup.shutdownAll();
         // 단계가 소유한 객체를 표의 역순으로 해제한다(`<단계>StartupStep::destroy`): 렌더러 쪽 → RHI → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 →
@@ -843,6 +996,10 @@ namespace sw
         BLOCK( "Scene update" )
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick" );
+            // 게임 카메라가 그리는 뷰포트 크기를 틱 전에 적는다 — 픽셀 퍼펙트 카메라가 배율을 고른다(`CameraRegistry::getViewportWidth`).
+            Scene* pTickScene = ( _owned._pSceneManager != nullptr ) ? _owned._pSceneManager->getActiveScene() : nullptr;
+            if ( pTickScene != nullptr && pTickScene->getObjectManager() != nullptr )
+                pTickScene->getObjectManager()->getCameraRegistry().setViewportSize( vpWidth, vpHeight );
             if ( _owned._pSceneManager != nullptr && bTickScene )
                 _owned._pSceneManager->tick( deltaTime );
         }
@@ -855,6 +1012,17 @@ namespace sw
                 PhysicsDebugDrawAdapter adapter{ engine::getDebugDrawQueue() };
                 pDebugScene->getObjectManager()->getScenePhysics().drawDebug( adapter );
             }
+        }
+
+        // 텔레메트리 — 장면별 프레임 시간을 모으고 flush 시간이 되면 쓴다. 동의가 없으면 둘 다 아무 일도 하지 않는다.
+        if ( _owned._pTelemetryService != nullptr )
+        {
+            const Scene* pTelemetryScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
+            string_view  sceneId{};
+            if ( pTelemetryScene != nullptr )
+                sceneId = pTelemetryScene->getSourcePath().empty() ? pTelemetryScene->getName() : pTelemetryScene->getSourcePath();
+            _owned._pTelemetryService->recordFrame( sceneId, deltaTime );
+            _owned._pTelemetryService->update( deltaTime );
         }
 
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).
@@ -921,6 +1089,9 @@ namespace sw
                     packet._cameraPos    = pCam->getCameraPosition();
                     packet._viewProj     = pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) );
                     packet._bHasViewProj = SW_TRUE;
+                    // 투명 정렬의 깊이 — 직교 카메라는 시선 축(같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 바뀌지 않게), 원근은 거리(render2d.xml).
+                    _gpuSceneBuilder->setTransparentSortAxis(
+                        Render2DSettings::getActive().computeTransparentSortAxis( pCam->isOrthographic(), pCam->getCameraForward() ) );
                 }
                 // 추가 뷰(캡처 카메라 · 화면 사각형) — 갱신 주기 · 보이는가 · 예산으로 이번 프레임에 그릴 것을 고른다. 쉬는 뷰도 실린다.
                 _renderViewClock += static_cast<float64>( MathUtil::max( 0.0f, deltaTime ) );
@@ -963,6 +1134,8 @@ namespace sw
         const bool bReportedNow = bReportedBefore == false && _profileSession.hasReported();
         if ( bReportedNow && _rhi != nullptr && _rhi->hasDevice() )
             _rhi->getDevice().getMemoryLedger().report( _rhi->getDevice().getBackendName() );
+
+        _memoryBudgetMonitor.onFrameEnd();
 
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->endFrame();
