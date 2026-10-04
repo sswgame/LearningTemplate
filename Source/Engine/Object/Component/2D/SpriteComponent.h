@@ -163,7 +163,7 @@ namespace sw
         hashed_string _sortingLayer;
         PROPERTY( Category = "Rendering", DisplayName = "Draw Mode", Tooltip = "Simple stretches the quad; Sliced keeps the corners; Tiled repeats the middle" )
         SpriteDrawMode _drawMode;
-        PROPERTY( Category = "Rendering", DisplayName = "Size", Tooltip = "Local width and height of a Sliced or Tiled sprite", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Rendering", DisplayName = "Size", Tooltip = "Local width and height used when the draw mode slices or repeats the sprite", Min = 0.0, Meta = "Units=m" )
         float2 _size;
         PROPERTY( Category = "Rendering", DisplayName = "Slice Border",
                   Tooltip = "9-slice border (left, bottom, right, top) as frame fractions; used when the clip frame has none", Min = 0.0, Max = 1.0 )
