@@ -49,4 +49,7 @@ SW_REGISTER_ARGUMENT( CHECK_MODELS, false, false, "check-models" )
 SW_REGISTER_ARGUMENT( RENDER_PORTRAITS, "", false, "render-portraits" )
 SW_REGISTER_ARGUMENT( PORTRAIT_SIZE, 256, false, "portrait-size" )
 SW_REGISTER_ARGUMENT( PORTRAIT_DIR, "", false, "portrait-dir" )
+// 높이장 원본(`heightfields_raw/` 의 16 비트 PNG · `.r16`)을 `.heightfield` 로 임포트한다 · 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
+SW_REGISTER_ARGUMENT( IMPORT_HEIGHTFIELDS, false, false, "import-heightfields" )
+SW_REGISTER_ARGUMENT( CHECK_HEIGHTFIELDS, false, false, "check-heightfields" )
 // 크래시 보고 프로세스 `--crash-reporter=<묶음 폴더>` 는 이 목록에 없다 — App 의 main 이 엔진을 세우기 전에 읽고 끝낸다(`CrashReportService::runReporterFromCommandLine`).

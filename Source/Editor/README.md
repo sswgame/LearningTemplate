@@ -227,6 +227,13 @@ glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로�
 - 시험: `ModelImporterTest`(좌표계 · 감김 · 노드 변환 · 색 · 스탬프 · 비표준 씬 뿌리 · 규칙 · 스킨드 모델(KayKit 기사 41 본 · 클립 76 · 부착 · 곁 데이터),
   저장소 원본 ↔ 결과 대조), 엔진 쪽은 `MeshAssetTest` · `SkeletalAnimationTest`.
 
+## 높이장도 들일 때 임포트한다
+
+지형 높이장 원본(16 비트 회색 PNG · 작은 엔디언 `.r16`)은 `heightfields_raw/` 에 두고 같은 상대 경로의 `heightfields/<이름>.heightfield` 로 임포트합니다
+(`HeightfieldImporter`, 형식은 Engine `Environment/Terrain/HeightfieldData.h`). 원본 옆 `<이름>_holes.png`(128 미만 = 구멍 칸)는 곁 파일이라 원본으로 세지 않고
+그 원본의 구멍 마스크가 되며 원본 해시에 섞입니다. 헤드리스: `App --import-heightfields` · `--check-heightfields`(같은 `import.stamp` 절차). 임포트 동작을 바꾸면
+`HeightfieldImporterInternal::kImporterVersion` 을 올립니다. 시험: `HeightfieldImporterTest`(16 비트 PNG · `.r16` 값, 구멍, 스탬프, 저장소 원본 ↔ 에셋 대조).
+
 ## UI 스레드가 놓은 GPU 자원
 
 ImGui 텍스처 · 게임 뷰 렌더 타깃은 UI 스레드가 놓지만 그리는 것은 렌더 스레드이고, 렌더 스레드는 UI 가 다음 스냅샷을 내기 전까지 **같은 draw

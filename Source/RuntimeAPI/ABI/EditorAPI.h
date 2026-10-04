@@ -49,8 +49,9 @@ namespace sw
     /** @brief 헤드리스 임포트가 다루는 원본 종류입니다. C ABI 로는 uint32 로 건넵니다. */
     enum class EditorImportKind : uint32
     {
-        Texture = 0, ///< `textures_raw/` 의 이미지 → DDS(`App --import-textures` · `--check-textures`)
-        Model   = 1, ///< `models_raw/` 의 glTF → `.mesh`(`App --import-models` · `--check-models`)
+        Texture     = 0, ///< `textures_raw/` 의 이미지 → DDS(`App --import-textures` · `--check-textures`)
+        Model       = 1, ///< `models_raw/` 의 glTF → `.mesh`(`App --import-models` · `--check-models`)
+        Heightfield = 2, ///< `heightfields_raw/` 의 16 비트 PNG · `.r16` → `.heightfield`(`App --import-heightfields` · `--check-heightfields`)
     };
 
     /** @brief 헤드리스 에셋 임포트 진입점의 형입니다(심볼 이름: `kImportEditorAssetsSymbol`). */

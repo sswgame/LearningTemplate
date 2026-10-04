@@ -189,3 +189,45 @@ SW_TEST_CASE( PropScatterTest, SceneStateFillsTheParams )
     SW_EXPECT_TRUE( params._mode == PropScatterMode::Fill );
     SW_EXPECT_NEAR_EQUAL( 3.0f, params._scaleMax, 1.0e-6f );
 }
+
+/**
+ * @brief [PropScatterTest] 규칙 모드는 배치 코어를 쓴다 — 최소 거리 · 결정성을 지키고, 제외 원은 원 제외 영역이 되며, 모델 비중이 항목 비중이고, 평면 높이는 영역 y 다
+ */
+SW_TEST_CASE( PropScatterTest, RulesModeUsesThePlacementCore )
+{
+    PropScatterParams params  = PropScatterTestUtil::makeParkEdge();
+    params._mode              = PropScatterMode::Rules;
+    params._regionMin         = float3{ 0.0f, 1.5f, 0.0f };
+    params._regionMax         = float3{ 40.0f, 1.5f, 40.0f };
+    params._rule._density     = 0.3f;
+    params._rule._minDistance = 2.0f;
+    params._rule._seed        = 5u;
+    params._listExclusion     = {
+        PropScatterExclusion{ float3{ 20.0f, 0.0f, 20.0f }, 8.0f }
+    };
+    params._listModel[1]._weight = 0.0f; // 두 번째 모델은 뽑히지 않는다
+    vector<PropScatterPlacement> listFirst;
+    vector<PropScatterPlacement> listSecond;
+    PropScatterMath::computePlacements( params, listFirst );
+    PropScatterMath::computePlacements( params, listSecond );
+    SW_ASSERT_TRUE( listFirst.size() > 50 );
+    SW_ASSERT_EQUAL( listFirst.size(), listSecond.size() );
+    bool    bRules  = true;
+    float32 closest = MathUtil::MaxFloat;
+    for ( size_t first = 0; first < listFirst.size(); ++first )
+    {
+        const PropScatterPlacement& placement = listFirst[first];
+        bRules                                = bRules && PropScatterTestUtil::isSamePlacement( placement, listSecond[first] ) && placement._modelIndex != 1 && placement._position._y == 1.5f;
+        const float32 deltaX                  = placement._position._x - 20.0f;
+        const float32 deltaZ                  = placement._position._z - 20.0f;
+        bRules                                = bRules && deltaX * deltaX + deltaZ * deltaZ >= 64.0f;
+        for ( size_t second = first + 1; second < listFirst.size(); ++second )
+        {
+            const float32 gapX = placement._position._x - listFirst[second]._position._x;
+            const float32 gapZ = placement._position._z - listFirst[second]._position._z;
+            closest            = MathUtil::min( closest, MathUtil::sqrt( gapX * gapX + gapZ * gapZ ) );
+        }
+    }
+    SW_EXPECT_TRUE( bRules );
+    SW_EXPECT_TRUE( closest >= 2.0f );
+}

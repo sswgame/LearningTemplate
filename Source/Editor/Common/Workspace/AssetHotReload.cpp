@@ -164,12 +164,11 @@ namespace sw::editor
     bool AssetHotReload::reloadChangedAsset( string_view relativePath )
     {
         const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( relativePath );
-        if ( route._pCacheKindName == nullptr )
-            return false;
-
-        // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다.
+        // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다(그 결과를 읽는 캐시가 없어도 임포트는 한다).
         if ( route._pfnImportSource != nullptr && route._pfnImportSource( relativePath ) )
             return true;
+        if ( route._pCacheKindName == nullptr )
+            return false;
 
         // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 넘겨준 서비스를 쓴다.
         AssetManager* pResources = getService<AssetManager>();

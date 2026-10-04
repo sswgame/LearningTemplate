@@ -128,6 +128,8 @@ _kEngineTier: dict[str, int] = {
     "UserSettings": 7,
     # 캐릭터 외형 형상(소켓 · 피팅 · 병합 · 절단 · 체형)과 소켓 부착 컴포넌트. 컴포넌트 모델(6) 위의 기능 모듈이라 Sequencer 와 같은 자리다.
     "Character": 7,
+    # 지형 · 식생 · 물 — 컴포넌트(6)가 메시 · 머티리얼(5)로 그리는 월드 기능. 씬을 모르고 오브젝트 매니저만 본다.
+    "Environment": 7,
     # 8: 그리는 쪽 · 핫리로드. 씬과 컴포넌트를 읽는다.
     _kGraphicsRendererLayerName: 8,
     "Module": 8,

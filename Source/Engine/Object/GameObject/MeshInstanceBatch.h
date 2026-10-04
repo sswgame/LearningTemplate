@@ -55,6 +55,11 @@ namespace sw
         void setWorld( uint32 index, const float4x4& world );
         /** @brief 항목의 바운드 반지름을 적고 더티로 표시합니다. */
         void setBoundsRadius( uint32 index, float32 radius );
+        /**
+         * @brief 메시를 바꾸고 항목 모두를 더티로 표시합니다. 같은 메시면 아무것도 하지 않습니다.
+         * @details 항목 수 · 머티리얼은 그대로이고 기하만 바뀌는 자리입니다(지형 청크의 LOD 교체). 이 배치를 가진 컴포넌트의 틱에서 불러도 됩니다.
+         */
+        void setMesh( shared_ptr<Mesh> mesh );
         /** @brief 항목의 GPU 회전 시드를 적고 더티로 표시합니다. */
         void setSpinSeed( uint32 index, uint32 seed );
         /**

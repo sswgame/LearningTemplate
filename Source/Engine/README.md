@@ -19,7 +19,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 | 4 | `Resource` · `Spatial` | 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. 공간 분할은 물리의 `AABB` 위에 선다. |
 | 5 | `Graphics`(Renderer 제외) · `Window` | RHI · 셰이더 · 머티리얼 · 메시 · 텍스처 — **디바이스와 GPU 에셋**. 창은 표면(`Common/IRenderSurface`)으로만 RHI 에 보인다. |
 | 6 | `Input` · `Object` | 컴포넌트 모델. 컴포넌트가 머티리얼·메시(5)를 든다 — 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 드는 것과 같은 자리. |
-| 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. |
+| 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` · `Environment` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트 · 지형 · 식생 · 물). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. |
 | 8 | `Graphics/Renderer` · `Module` · `Telemetry` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Cook)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. 텔레메트리 · 크래시 보고는 동의를 사용자 설정(7)에서 읽는다. |
 | 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
 
@@ -60,6 +60,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Object/**: GameObject · Component · Prefab. 틱/구조 동결·사용법은 [Object/README.md](Object/README.md)
 - **Scene/**: Scene · SceneManager · SceneDocument · SceneCooker · ObjectUndoUtil ([Scene/README.md](Scene/README.md))
 - **Character/**: 캐릭터 외형의 형상 쪽 — 소켓 에셋 · 해석된 소켓 표 · 레퍼런스 포즈 덮어쓰기 · 체형 · 장비 피팅(`FitSolver`) · 병합 · 절단 · 표면 상태 · `SocketBindingComponent` ([Character/README.md](Character/README.md))
+- **Environment/**: 지형(높이장 · 청크 LOD · 스플랫 레이어) · 식생(규칙 배치 · GPU 인스턴스 · 바람) · 물(거스트너 · 수면 질의) · 2D/3D 공용 배치 규칙 ([Environment/README.md](Environment/README.md))
 - **Spatial/**: 2D/3D 공간 분할 가속 구조체(BVHTree3D · SpatialHashGrid2D · SpatialQuadTree · SpatialOctree) ([Spatial/README.md](Spatial/README.md))
 - **Reflection/**: 매크로 · TypeRegistry · Builtins. [Reflection/README.md](Reflection/README.md) · 생성기 [ReflectionParser](../../Tools/ReflectionParser/README.md)
 - **Graphics/**: RHI · Material · Shader · FrameRenderer. [Graphics/README.md](Graphics/README.md)

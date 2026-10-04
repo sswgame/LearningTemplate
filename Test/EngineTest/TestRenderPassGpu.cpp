@@ -11,12 +11,15 @@
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Environment/Water/WaterWaveMath.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
@@ -5077,4 +5080,129 @@ SW_TEST_CASE( RenderPassGpuTest, PortraitRendererDrawsAPrefabInIsolation )
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the portrait test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 물 정점 셰이더의 파도 함수(gerstner.hlsli)가 CPU 질의(WaterWaveMath)와 같은 변위를 낸다 — 네 백엔드
+ * @details 컴퓨트 프로브(common/shaders/waterwaveprobe.hlsl)가 water.hlsl 과 같은 `swComputeGerstnerDisplacement` 를 표본 32 자리에서 불러 float 비트를
+ *          RGBA8 텍스처에 싣고, 읽어 CPU 값과 견준다. GPU 의 sin · cos 는 정확도가 낮아 비트가 같지는 않다 — 1 mm 안이면 같은 식이다.
+ *          식 하나(항의 순서 · Q 나누기 · 분산)라도 갈리면 cm 단위로 벌어진다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, WaterWaveShaderMatchesCpu )
+{
+    constexpr uint32  kSampleCount                              = 32;
+    constexpr uint32  kTexelPerRow                              = 8;
+    constexpr float32 kTime                                     = 2.75f;
+    const sw::float4  arrWave[sw::WaterWaveMath::kMaxWaveCount] = {
+        sw::GerstnerWave{ 0.3f, 12.0f, 0.35f, 0.8f}
+            .toVector(),
+        sw::GerstnerWave{ 2.1f,  5.0f, 0.12f, 0.6f}
+            .toVector(),
+        sw::GerstnerWave{-1.0f,  2.5f, 0.05f, 0.5f}
+            .toVector(),
+        sw::float4{ 0.0f,  1.0f,  0.0f, 0.0f}
+    };
+
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const utf8*              pName     = device->getBackendName();
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                           = kTexelPerRow;
+        texDesc._height                          = kSampleCount;
+        texDesc._mipLevels                       = 1;
+        texDesc._format                          = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsShaderResource               = SW_TRUE;
+        texDesc._bIsUnorderedAccess              = SW_TRUE;
+        const sw::RHITextureHandle       texture = pResource->createTexture2D( texDesc );
+        const sw::RHIDescriptorIndex     uav     = texture != 0 ? pResource->registerBindlessTextureUav( texture ) : sw::kInvalidDescriptorIndex;
+        const sw::RHIPipelineStateHandle pso     = pResource->createComputePipelineState( "common/shaders/waterwaveprobe.hlsl" );
+        SW_EXPECT_TRUE_MSG( texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0, pName );
+
+        if ( texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0 )
+        {
+            sw::unique_ptr<sw::IRHICommandList> cmdList = device->createCommandList();
+            SW_ASSERT_NOT_NULL( cmdList );
+            uint32 arrRoot[16]{};
+            arrRoot[0] = device->supportsNativeBindlessSampling() ? static_cast<uint32>( uav ) : 0u;
+            arrRoot[1] = kSampleCount;
+            std::memcpy( &arrRoot[2], &kTime, sizeof( float32 ) );
+            std::memcpy( &arrRoot[4], arrWave, sizeof( sw::float4 ) * 3 );
+            cmdList->beginCommandList();
+            cmdList->prepareTextureForUnorderedAccess( texture );
+            cmdList->setComputePipelineState( pso );
+            cmdList->bindComputeUav( uav, sw::shaderslot::kComputeTextureUav0 );
+            cmdList->setComputeRootConstants( 0, 16, arrRoot, 0 );
+            cmdList->dispatchCompute( 1, 1, 1 );
+            cmdList->endCommandList();
+            device->executeCommandListImmediate( cmdList.get() );
+            device->waitIdle();
+
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            const bool            bRead = pResource->readbackTexture2D( texture, 0, 0, bytes, layout );
+            SW_EXPECT_TRUE_MSG( bRead && layout._rowBytes >= kTexelPerRow * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSampleCount, pName );
+            if ( bRead && layout._rowBytes >= kTexelPerRow * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSampleCount )
+            {
+                float32 worstError{ 0.0f };
+                for ( uint32 sampleIndex = 0; sampleIndex < kSampleCount; ++sampleIndex )
+                {
+                    const uint8* pRow = bytes.data() + static_cast<size_t>( sampleIndex ) * layout._rowBytes;
+                    float32      arrGpu[3]{};
+                    for ( uint32 component = 0; component < 3; ++component )
+                    {
+                        // 텍셀 하나 = 16 비트(G 위 · A 아래 바이트). 성분 하나 = 아래 · 위 16 비트 텍셀 둘.
+                        const uint8* pLow  = pRow + ( component * 2 ) * 4;
+                        const uint8* pHigh = pRow + ( component * 2 + 1 ) * 4;
+                        const uint32 bits  = ( static_cast<uint32>( pLow[1] ) << 8 | pLow[3] ) | ( ( static_cast<uint32>( pHigh[1] ) << 8 | pHigh[3] ) << 16 );
+                        std::memcpy( &arrGpu[component], &bits, sizeof( float32 ) );
+                    }
+                    const sw::float2 origin{ -20.0f + static_cast<float32>( sampleIndex % 8u ) * 5.25f, -15.0f + static_cast<float32>( sampleIndex / 8u ) * 4.125f };
+                    const sw::float3 cpu = sw::WaterWaveMath::computeDisplacement( origin, kTime, arrWave );
+                    worstError           = sw::MathUtil::max( worstError, sw::MathUtil::abs( cpu._x - arrGpu[0] ) );
+                    worstError           = sw::MathUtil::max( worstError, sw::MathUtil::abs( cpu._y - arrGpu[1] ) );
+                    worstError           = sw::MathUtil::max( worstError, sw::MathUtil::abs( cpu._z - arrGpu[2] ) );
+                }
+                SW_EXPECT_TRUE_MSG( worstError < 1.0e-3f, ( sw::string( pName ) + ": GPU wave displacement differs from the CPU by " + sw::to_string( worstError ) ).c_str() );
+                ++comparedCount;
+            }
+        }
+
+        if ( uav != sw::kInvalidDescriptorIndex )
+            pResource->unregisterBindlessUav( uav );
+        if ( texture != 0 )
+            pResource->destroyTexture( texture );
+        if ( pso != 0 )
+            pResource->destroyPipelineState( pso );
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the water wave probe" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 머티리얼을 정점 셰이더만 읽는 셰이더(물 · 식생)도 셰이더의 원소 레이아웃으로 맞춰진다 — 네 백엔드
+ * @details 머티리얼 스키마는 픽셀 스테이지 리플렉션에서 찾는다. 물 · 식생은 GL 이 두 단계의 구조버퍼 읽기를 거절하므로 머티리얼을 정점 셰이더만
+ *          읽는다 — 픽셀에서 못 찾고 멈추면 stride 0 · XML 순서 패킹이 되어 GpuScene 이 원소마다 엉뚱한 자리를 읽는다(파도 · 바람 값이 섞인다).
+ */
+SW_TEST_CASE( RenderPassGpuTest, VertexStageMaterialSchemaIsUsed )
+{
+    uint32                checkedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::shared_ptr<sw::Material> water = sw::Material::create();
+        SW_ASSERT_TRUE( water->initialize( device.get(), "engine/materials/water.material" ) );
+        SW_EXPECT_TRUE_MSG( water->ensureShaderLayout( device.get() ), device->getBackendName() );
+        // water.hlsl 의 SwMaterialData — float4 여덟 = 128 바이트, wave1 은 16 바이트 자리다.
+        SW_EXPECT_EQUAL( 128u, water->getElementStride() );
+        const sw::MaterialProperty* pWave = water->findProperty( sw::hashed_string( "wave1" ) );
+        SW_ASSERT_NOT_NULL( pWave );
+        SW_EXPECT_EQUAL( 16u, pWave->_offset );
+        ++checkedCount;
+    }
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could reflect the water shader" );
 }

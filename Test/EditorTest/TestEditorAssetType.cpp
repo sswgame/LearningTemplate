@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Asset/HeightfieldImporter.h"
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImporter.h"
 #include "Editor/Common/EditorUtil.h"
@@ -390,4 +391,32 @@ SW_TEST_CASE( EditorAssetTypeTest, ImportExtensionsFollowTheImportableColumn )
     SW_EXPECT_FALSE( hasExtension( ".ini" ) );
     SW_EXPECT_FALSE( hasExtension( ".kv" ) );
     SW_EXPECT_FALSE( hasExtension( ".xml" ) );
+}
+
+/**
+ * @brief [EditorAssetTypeTest] `heightfields_raw/` 의 `.png` · `.r16` 은 텍스처가 아니라 높이장 임포트로 간다 — 핫 리로드가 `.r16` 도 본다
+ * @details 높이장 줄이 텍스처 줄보다 뒤에 있으면 높이장 원본 PNG 가 텍스처 임포터로 가 "textures_raw 아래에 있어야" 경고만 남고 다시 임포트되지 않는다.
+ */
+SW_TEST_CASE( EditorAssetTypeTest, RawHeightfieldRoutesToTheHeightfieldImporter )
+{
+    using sw::editor::EditorAssetType;
+    using sw::editor::EditorAssetTypeRegistry;
+
+    SW_EXPECT_TRUE( EditorAssetType::Heightfield == EditorAssetTypeRegistry::findKind( "game/empty/heightfields_raw/valley.png" ) );
+    SW_EXPECT_TRUE( EditorAssetType::Heightfield == EditorAssetTypeRegistry::findKind( "game/empty/heightfields_raw/valley_holes.png" ) );
+    SW_EXPECT_TRUE( EditorAssetType::Heightfield == EditorAssetTypeRegistry::findKind( "game/empty/heightfields_raw/valley.r16" ) );
+    SW_EXPECT_TRUE( EditorAssetType::Heightfield == EditorAssetTypeRegistry::findKind( "game/empty/heightfields/valley.heightfield" ) );
+    SW_EXPECT_TRUE( EditorAssetType::Texture == EditorAssetTypeRegistry::findKind( "game/empty/textures_raw/terrain/grass.png" ) );
+
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "game/empty/heightfields_raw/valley.png" )._pfnImportSource ==
+                    &sw::editor::HeightfieldImporter::importChangedSourceHeightfield );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "game/empty/textures_raw/terrain/grass.png" )._pfnImportSource ==
+                    &sw::editor::TextureImporter::importChangedSourceImage );
+
+    sw::vector<sw::string> listSuffix{};
+    EditorAssetTypeRegistry::appendReloadableSuffixes( listSuffix );
+    bool bWatchesR16 = false;
+    for ( const sw::string& suffix : listSuffix )
+        bWatchesR16 = bWatchesR16 || suffix == ".r16";
+    SW_EXPECT_TRUE( bWatchesR16 );
 }

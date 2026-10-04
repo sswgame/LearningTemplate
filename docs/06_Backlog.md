@@ -133,6 +133,16 @@ cd build/Ninja-Debug/Bin
   큐브 · 배열 bindless 테이블, DX11 · GL TextureCube 슬롯) + `swSampleShadowAtWorld`. 3 단계 전에 큐브 대신 2D 아틀라스(Unity URP · Godot — RHI 변경 없음)로 갈지 먼저 정한다.
 - **컷 준비(프리웜)의 선행 조건 셋**(1-6 카메라 항목의 5 단계가 기다린다) — LOD 시스템이 없다, 밉 단위 텍스처 스트리밍이 없다(`AssetStreamingQueue` 는 에셋
   단위 비동기 읽기), PSO 를 미리 만드는 창구가 없다(DX12 PSO 생성 히치).
+- **환경(지형 · 식생 · 물, `Engine/Environment`)의 남은 것** — 들어간 것과 계약은 [Environment/README.md](../Source/Engine/Environment/README.md).
+  (1) Jolt 가 들어오면 지형 → `HeightFieldShape`(`TerrainHeightfield::getHeightSamples` · 구멍 칸) · 부력(`WaterBodyComponent::computeSurfaceHeight` · `isUnderwater`, 시간은
+  `getWaveTime`)을 잇는다. (2) 강 경로가 점 목록이다 — 스플라인 컴포넌트가 들어오면 그것을 경로로 받는다. (3) 하늘 · 시간 · 높이 안개 + 물속 안개 패스(값은
+  `WaterBodyComponent::findUnderwaterFog` 가 이미 준다) — 다중 뷰 병합 뒤. (4) 물의 굴절 · 화면 공간 두께는 반투명 패스가 장면 색 사본 · 장면 깊이를 입력으로 받는
+  계약이 있어야 한다(지금은 지형 깊이를 정점에 굽는다). (5) 흔드는 식생의 그림자는 흔들리지 않는다(`shadowdepth.hlsl` 이 머티리얼 정점 변형을 모른다 — 풀은 그림자를 끔).
+  (6) 지형 LOD 가 바뀌면 메시 집합이 바뀌어 정점 풀을 통째로 다시 만든다 — Release 에서 바뀌는 프레임의 최악 시간을 재 보고, 크면 LOD 메시를 미리 만들어 두거나
+  청크 정점을 풀에서 부분 갱신한다. 지오모프(LOD 튐) · 레이어 다섯 이상(두 번째 스플랫 — 머티리얼 텍스처 칸이 넷이다) · 에디터 칠하기 도구가 없다.
+- **OpenGL 은 게임 스레드가 메시를 인라인으로 만든다**(`GpuUploadQueue`, 워커 생성 불가) — 렌더 스레드가 컨텍스트를 250 ms 넘게 쥐면(쿠킹 안 된 셰이더를 실시간
+  컴파일) `acquireGraphicsContextBlocking timed out` · `createVertexBuffer failed` 가 `[Error]` 로 남고 그 메시는 렌더 스레드가 다음에 만든다. 지형 LOD 교체가 런타임에 메시를
+  만드는 첫 사용자라 쿠킹 전 Debug `-gl` 쇼케이스에서 드러났다(쿠킹 뒤 0 건). 기다리는 대신 렌더 스레드로 넘기거나(그 프레임 몫으로) 시간을 렌더 프레임 길이에 맞춘다.
 - **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것: 반해상도 패스가 읽는 입력의 텍셀 크기(`g_OutlineParams.yz` 는 프레임 텍셀),
   `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
 
@@ -462,6 +472,7 @@ cd build/Ninja-Debug/Bin
 - **파서를 고친 뒤 "`.gen.cpp` 가 다시 만들어졌나" 를 산출물 시각으로 판단하지 말 것.** 내용이 같으면 파일을 다시 쓰지 않는다.
   다시 만들었는지는 옆의 `<이름>.gen.cpp.stamp` 시각으로 본다.
 - `grep -v` 로 거를 때 이름이 비슷한 다른 것(`TestArchive` 등)까지 걸러지지 않는지 본다.
+- **Windows PowerShell 5.1 의 `Get-Content` · `Set-Content` 로 소스를 고치지 말 것** — UTF-8 한국어 주석을 CP949 로 읽어 되돌릴 수 없게 깨고 BOM 을 붙인다. 파이썬(`encoding='utf-8'`)으로 고친다.
 
 ---
 

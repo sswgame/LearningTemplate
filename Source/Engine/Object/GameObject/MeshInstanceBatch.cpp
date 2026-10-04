@@ -42,6 +42,15 @@ namespace sw
         markDirty( index );
     }
 
+    void MeshInstanceBatch::setMesh( shared_ptr<Mesh> mesh )
+    {
+        if ( mesh == _mesh )
+            return;
+        _mesh = std::move( mesh );
+        for ( uint32 index = 0; index < _listEntry.size(); ++index )
+            markDirty( index );
+    }
+
     void MeshInstanceBatch::setSpinSeed( uint32 index, uint32 seed )
     {
         if ( index >= _listEntry.size() )

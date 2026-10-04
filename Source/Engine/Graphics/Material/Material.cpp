@@ -318,6 +318,17 @@ namespace sw
             SW_LOG_ERROR( "머티리얼 '%#' 의 셰이더 리플렉션을 찾지 못했습니다 ('%#') — XML 순서 패킹으로 남습니다.", _desc._name.c_str(), _desc._shaderPath.c_str() );
             return false;
         }
+        // 머티리얼을 정점 셰이더만 읽는 셰이더(바람에 흔드는 식생 · 파도를 옮기는 물)는 픽셀 스테이지에 스키마가 없다 — 정점 스테이지에서 찾는다.
+        // 두 스테이지가 함께 읽는 셰이더는 GL(ARB_gl_spirv)이 링크를 거절하므로 스키마는 한 스테이지에만 있다.
+        if ( hasMaterialSchema( reflection ) == false )
+        {
+            ShaderCompileDesc    vertexDesc = desc;
+            ShaderReflectionData vertexReflection{};
+            vertexDesc._entryPoint = "VSMain";
+            vertexDesc._stage      = ShaderStage::Vertex;
+            if ( ShaderReflectionLibrary::getOrReflect( vertexDesc, vertexReflection ) && hasMaterialSchema( vertexReflection ) )
+                reflection = std::move( vertexReflection );
+        }
         syncPropertiesFromReflection( reflection );
         return _elementStride != 0;
     }
@@ -326,6 +337,21 @@ namespace sw
     {
         return _bShaderLayoutSynced != SW_FALSE && _shaderLayoutBackend == backend &&
                _shaderLayoutCacheGeneration == ShaderReflectionLibrary::getCacheGeneration();
+    }
+
+    bool Material::hasMaterialSchema( const ShaderReflectionData& reflectionData )
+    {
+        for ( const ShaderBufferInfo& element : reflectionData._listStructuredElement )
+        {
+            if ( element._name == shaderslot::resname::kMaterials && element._listVariable.empty() == false )
+                return true;
+        }
+        for ( const ShaderBufferInfo& cb : reflectionData._listConstantBuffer )
+        {
+            if ( cb._name == shaderslot::cbname::kMaterial && cb._listVariable.empty() == false )
+                return true;
+        }
+        return false;
     }
 
     bool Material::syncPropertiesFromReflection( const ShaderReflectionData& reflectionData )

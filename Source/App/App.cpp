@@ -118,18 +118,24 @@ namespace sw
             bool                      bCheckTextures       = false;
             bool                      bImportModels        = false;
             bool                      bCheckModels         = false;
+            bool                      bImportHeightfields  = false;
+            bool                      bCheckHeightfields   = false;
             if ( pHeadlessCommandLine != nullptr )
             {
                 pHeadlessCommandLine->getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
                 pHeadlessCommandLine->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
                 pHeadlessCommandLine->getArgument( CommandLineArgument::IMPORT_MODELS, bImportModels );
                 pHeadlessCommandLine->getArgument( CommandLineArgument::CHECK_MODELS, bCheckModels );
+                pHeadlessCommandLine->getArgument( CommandLineArgument::IMPORT_HEIGHTFIELDS, bImportHeightfields );
+                pHeadlessCommandLine->getArgument( CommandLineArgument::CHECK_HEIGHTFIELDS, bCheckHeightfields );
             }
             bool bSucceeded = true;
             if ( bImportTextures || bCheckTextures )
                 bSucceeded = ModuleHost::importAssetsWithEditorModule( EditorImportKind::Texture, bCheckTextures ) && bSucceeded;
             if ( bImportModels || bCheckModels )
                 bSucceeded = ModuleHost::importAssetsWithEditorModule( EditorImportKind::Model, bCheckModels ) && bSucceeded;
+            if ( bImportHeightfields || bCheckHeightfields )
+                bSucceeded = ModuleHost::importAssetsWithEditorModule( EditorImportKind::Heightfield, bCheckHeightfields ) && bSucceeded;
             return bSucceeded;
         }
 

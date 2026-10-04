@@ -105,4 +105,30 @@ namespace sw::editor
         stbi_image_free( pDecoded );
         return true;
     }
+
+    bool ImageUtil::loadGray16FromMemory( const uint8* pBuffer, size_t bufferSize, vector<uint16>& outListSample, int32& outWidth, int32& outHeight )
+    {
+        outListSample.clear();
+        outWidth  = 0;
+        outHeight = 0;
+        if ( pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::MaxInt32 ) )
+        {
+            SW_LOG_ERROR( "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
+            return false;
+        }
+        int32   width    = 0;
+        int32   height   = 0;
+        int32   channels = 0;
+        uint16* pDecoded = stbi_load_16_from_memory( pBuffer, static_cast<int32>( bufferSize ), &width, &height, &channels, 1 );
+        if ( pDecoded == nullptr )
+        {
+            SW_LOG_ERROR( "stbi_load_16_from_memory failed: %#", stbi_failure_reason() );
+            return false;
+        }
+        outListSample.assign( pDecoded, pDecoded + static_cast<size_t>( width ) * static_cast<size_t>( height ) );
+        outWidth  = width;
+        outHeight = height;
+        stbi_image_free( pDecoded );
+        return true;
+    }
 } // namespace sw::editor

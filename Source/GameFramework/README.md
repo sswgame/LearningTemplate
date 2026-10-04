@@ -28,7 +28,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 - **Components**: 장르 무관 씬 컴포넌트 — `FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`, 체크포인트 · 보스 앞 · 지역 경계 볼륨
   (`AutosaveTriggerComponent` — 태그가 맞는 활성자가 트리거에 들면 게임 서비스 `AutosaveManager` 에 까닭과 이름을 넘긴다, 한 번), 비스듬히 내려다보는 직교 카메라
   (`OrthoCameraRigComponent` — WASD · 방향키 이동(WASD 끄기 · 초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), Q/E 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)), 장식 흩뿌리기
-  (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽에, 제외 원, 플레이 시작에 세우고 끝에 걷는다). 계산은 `OrthoCameraRigMath` · `PropScatterMath` 로
+  (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(`Rules` 모드 — Engine `Environment/Placement` 의 `PlacementRule`: 밀도 · 최소 거리 ·
+  경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`). 계산은 `OrthoCameraRigMath` · `PropScatterMath` 로
   떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리 · 손에 든 뷰 모델 자리, 계산은
   `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다
 - **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 모드 계산(`CameraMode` — 입력 · 제약 · 프레이밍 · 스프링 암 · 훑기),
