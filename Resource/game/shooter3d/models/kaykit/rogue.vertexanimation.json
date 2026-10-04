@@ -1,0 +1,6 @@
+{
+    "mesh": "game/shooter3d/models/kaykit/rogue.mesh",
+    "skeleton": "game/shooter3d/models/kaykit/rogue/rogue.skeleton.json",
+    "clip_folder": "game/shooter3d/models/kaykit/rogue/clips",
+    "clips": [ "Idle", "Walking_A" ]
+}

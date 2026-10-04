@@ -545,6 +545,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCpuStruct 
         { "uvEnd", static_cast<uint32>( offsetof( sw::GpuInstance, _sprite ) + offsetof( sw::GpuSpriteInstanceData, _uvEnd ) ) },
         { "tint", static_cast<uint32>( offsetof( sw::GpuInstance, _sprite ) + offsetof( sw::GpuSpriteInstanceData, _tint ) ) },
         { "pixelSnap", static_cast<uint32>( offsetof( sw::GpuInstance, _sprite ) + offsetof( sw::GpuSpriteInstanceData, _pixelSnap ) ) },
+        { "vertexAnimationPhase", static_cast<uint32>( offsetof( sw::GpuInstance, _vertexAnimationPhase ) ) },
     };
     // 인스턴스 원소를 담는 버퍼 이름 — 그래픽스(t4)와 컴퓨트 셋(읽기 g_Instances · 고쳐 쓰기 g_InstancesRW).
     const utf8* arrInstanceBufferName[] = { sw::shaderslot::resname::kInstances, "g_Instances", "g_InstancesRW" };
@@ -684,7 +685,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
 
     // 2) 계약 표 밖에서 C++ 가 이름으로 부르는 리소스(meshmorph · meshskin 의 레스트 · 결과 · 가중치 · 팔레트 버퍼)
     const utf8* arrResourceName[] = { sw::shaderslot::resname::kMorphRestVertices, sw::shaderslot::resname::kMorphVerticesRw, sw::shaderslot::resname::kSkinWeights,
-                                      sw::shaderslot::resname::kSkinPalette };
+                                      sw::shaderslot::resname::kSkinPalette, sw::shaderslot::resname::kSkinInstances };
     for ( const utf8* pName : arrResourceName )
         SW_EXPECT_TRUE_MSG( hasName( allNameSet._uniqueBindingName, pName ), ( sw::string( "리소스 '" ) + pName + "' 가 어느 매니페스트에도 없다" ).c_str() );
 
@@ -707,6 +708,8 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
         &passNames._swMorphVertexCount,
         &passNames._swBatchCount,
         &passNames._swLightCount,
+        &passNames._swVertexAnimationCount,
+        &passNames._swVertexAnimationTime,
     };
     for ( const sw::hashed_string* pName : arrMemberName )
         SW_EXPECT_TRUE_MSG( hasName( allNameSet._uniqueMemberName, pName->c_str() ), ( sw::string( "cbuffer 멤버 '" ) + pName->c_str() + "' 가 어느 매니페스트에도 없다" ).c_str() );
@@ -715,6 +718,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
     const sw::hashed_string* arrRegistryName[] = {
         &passNames._swInstances,
         &passNames._swMorphVertices,
+        &passNames._swVertexAnimation,
         &passNames._swVisibleInstanceIds,
         &passNames._swMaterials,
         &passNames._swLights,

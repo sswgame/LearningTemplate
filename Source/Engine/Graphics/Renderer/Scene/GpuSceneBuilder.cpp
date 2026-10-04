@@ -41,18 +41,20 @@ namespace sw
                 return Memory::compare( &instance._world, &raw._world, sizeof( instance._world ) ) != 0 ||
                        Memory::compare( &instance._boundsCenter, &raw._boundsCenter, sizeof( instance._boundsCenter ) ) != 0 ||
                        Memory::compare( &instance._boundsRadius, &raw._boundsRadius, sizeof( instance._boundsRadius ) ) != 0 ||
-                       instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed || instance._sprite != raw._sprite;
+                       instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed || instance._sprite != raw._sprite ||
+                       Memory::compare( &instance._vertexAnimationPhase, &raw._vertexAnimationPhase, sizeof( instance._vertexAnimationPhase ) ) != 0;
             }
 
             /** @brief raw 의 페이로드를 인스턴스에 옮깁니다. `_meshBatchIndex` · `_materialIndex` 는 그대로 둡니다. 배치 구성이 같을 때만 부릅니다. */
             static void copyPayload( const GpuInstance& raw, GpuInstance& outInstance )
             {
-                outInstance._world        = raw._world;
-                outInstance._boundsCenter = raw._boundsCenter;
-                outInstance._boundsRadius = raw._boundsRadius;
-                outInstance._blendMode    = raw._blendMode;
-                outInstance._spinSeed     = raw._spinSeed;
-                outInstance._sprite       = raw._sprite;
+                outInstance._world                = raw._world;
+                outInstance._boundsCenter         = raw._boundsCenter;
+                outInstance._boundsRadius         = raw._boundsRadius;
+                outInstance._blendMode            = raw._blendMode;
+                outInstance._spinSeed             = raw._spinSeed;
+                outInstance._sprite               = raw._sprite;
+                outInstance._vertexAnimationPhase = raw._vertexAnimationPhase;
             }
 
             /**
@@ -249,15 +251,16 @@ namespace sw
 
         // 경계는 컴포넌트와 같은 규칙이다(`MeshComponent::getWorldBounds`): 메시 반지름에 월드의 최대 축 스케일을 곱한다. 반지름을
         // 그대로 실으면 부모나 자기 스케일로 키운 메시가 화면에 있는데도 절두체 컬링에 잘린다.
-        const float4x4 world         = pMeshComp->getWorldMatrix();
-        candidate._world             = world;
-        candidate._boundsCenter      = world.getTranslation();
-        candidate._localBoundsRadius = pMeshComp->getBoundsRadius();
-        candidate._boundsRadius      = candidate._localBoundsRadius * world.getMaximumAxisScale();
-        candidate._bReverseCulling   = GpuSceneBuilderInternal::computeReverseCulling( world );
-        candidate._spinSeed          = pMeshComp->getGpuSpinSeed();
-        candidate._sprite            = pMeshComp->getSpriteInstanceData();
-        candidate._sortKey           = pMeshComp->getSortKey();
+        const float4x4 world            = pMeshComp->getWorldMatrix();
+        candidate._world                = world;
+        candidate._boundsCenter         = world.getTranslation();
+        candidate._localBoundsRadius    = pMeshComp->getBoundsRadius();
+        candidate._boundsRadius         = candidate._localBoundsRadius * world.getMaximumAxisScale();
+        candidate._bReverseCulling      = GpuSceneBuilderInternal::computeReverseCulling( world );
+        candidate._spinSeed             = pMeshComp->getGpuSpinSeed();
+        candidate._sprite               = pMeshComp->getSpriteInstanceData();
+        candidate._vertexAnimationPhase = pMeshComp->getVertexAnimationPhase();
+        candidate._sortKey              = pMeshComp->getSortKey();
         // 소유를 싣는다. RT 가 upload() 에서 역참조한다. 스냅샷은 머티리얼 · 인스턴스의 소유도
         // 함께 싣는다(렌더 스레드가 패킷을 다 쓸 때까지 살아 있어야 한다). 세 줄 모두 **날 포인터로
         // 먼저 비교**한다. 같으면 대입하지 않아 참조 카운트를 건드리지 않는다.
@@ -291,6 +294,7 @@ namespace sw
         candidate._bReverseCulling           = GpuSceneBuilderInternal::computeReverseCulling( item._world );
         candidate._spinSeed                  = item._spinSeed;
         candidate._sprite                    = item._sprite;
+        candidate._vertexAnimationPhase      = 0.0f;
         candidate._sortKey                   = pBatch->getSortKey();
         // 메시 컴포넌트 판과 같은 규칙: 날 포인터로 먼저 견주고, 다르면 소유를 싣는다.
         if ( candidate._mesh.get() != pMesh )
@@ -327,12 +331,13 @@ namespace sw
 
     void GpuSceneBuilder::fillPayload( const DrawCandidate& candidate, GpuInstance& outInstance )
     {
-        outInstance._world        = candidate._world;
-        outInstance._boundsCenter = candidate._boundsCenter;
-        outInstance._boundsRadius = candidate._boundsRadius;
-        outInstance._blendMode    = candidate._blendMode;
-        outInstance._spinSeed     = candidate._spinSeed;
-        outInstance._sprite       = candidate._sprite;
+        outInstance._world                = candidate._world;
+        outInstance._boundsCenter         = candidate._boundsCenter;
+        outInstance._boundsRadius         = candidate._boundsRadius;
+        outInstance._blendMode            = candidate._blendMode;
+        outInstance._spinSeed             = candidate._spinSeed;
+        outInstance._sprite               = candidate._sprite;
+        outInstance._vertexAnimationPhase = candidate._vertexAnimationPhase;
     }
 
     bool GpuSceneBuilder::copyCandidateTransforms( const PrimitiveRegistry& primitives )
@@ -824,20 +829,22 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.GpuScene.build.skinPalettes" );
 
         _snapshot._listSkinPalette.clear();
-        shared_ptr<vector<float4>> listRow = make_shared<vector<float4>>();
-        // 레벨(평가 순서)이 아니라 등록된 유닛 전부를 본다 — 유닛 하나가 빠지면(시체를 걷음) 레벨은 다음 평가까지 비어 있어, 레벨로 모으면
-        // 그 프레임의 모든 스킨드 메시가 팔레트 없이(단위 행렬 = 바인드 포즈) 한 번 그려진다.
-        for ( const SkeletalMeshComponent* pUnit : animation.getUnits() )
+        shared_ptr<vector<float4>>  listRow    = make_shared<vector<float4>>();
+        shared_ptr<vector<float32>> listWeight = make_shared<vector<float32>>();
+        // 행벡터 4x4 의 0 · 1 · 2 열 — 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl). 모프 가중치는 [0, 1] 로 묶어 싣는다.
+        auto appendPalette = [this, &listRow, &listWeight]( const Mesh* pMesh, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight )
         {
-            const Mesh* pMesh = pUnit->getRawMesh();
-            if ( pMesh == nullptr || pMesh->hasSkin() == false )
-                continue;
-            const vector<float4x4>& listPalette = pUnit->getSkinPalette();
-            GpuSkinPalette          entry{};
+            GpuSkinPalette entry{};
             entry._pMesh     = pMesh;
             entry._firstRow  = static_cast<uint32>( listRow->size() );
             entry._boneCount = static_cast<uint32>( listPalette.size() );
-            // 행벡터 4x4 의 0 · 1 · 2 열 — 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl).
+            if ( pListMorphWeight != nullptr && pListMorphWeight->empty() == false )
+            {
+                entry._firstMorphWeight = static_cast<uint32>( listWeight->size() );
+                entry._morphWeightCount = static_cast<uint32>( pListMorphWeight->size() );
+                for ( const float32 weight : *pListMorphWeight )
+                    listWeight->push_back( MathUtil::clamp( weight, 0.0f, 1.0f ) );
+            }
             for ( const float4x4& matrix : listPalette )
             {
                 listRow->push_back( float4{ matrix._11, matrix._21, matrix._31, matrix._41 } );
@@ -845,8 +852,32 @@ namespace sw
                 listRow->push_back( float4{ matrix._13, matrix._23, matrix._33, matrix._43 } );
             }
             _snapshot._listSkinPalette.push_back( entry );
+        };
+        listRow->reserve( _paletteRowCountHint );
+        // 레벨(평가 순서)이 아니라 등록된 유닛 전부를 본다 — 유닛 하나가 빠지면(시체를 걷음) 레벨은 다음 평가까지 비어 있어, 레벨로 모으면
+        // 그 프레임의 모든 스킨드 메시가 팔레트 없이(단위 행렬 = 바인드 포즈) 한 번 그려진다.
+        for ( const SkeletalMeshComponent* pUnit : animation.getUnits() )
+        {
+            // 군중 묶음과 나누는 유닛 · VAT 유닛은 자기 팔레트가 없다 — 묶음이 아래에서 한 번 싣는다.
+            const AnimationCrowdMode mode = pUnit->getCrowdMode();
+            if ( mode == AnimationCrowdMode::Shared || mode == AnimationCrowdMode::VertexAnimation )
+                continue;
+            const Mesh* pMesh = pUnit->getRawMesh();
+            if ( pMesh == nullptr || pMesh->hasSkin() == false )
+                continue;
+            appendPalette( pMesh, pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
         }
+        // 군중 묶음 — 묶음 하나 = 메시 하나 = 결과 구간 하나 = 팔레트 하나(멤버가 몇이든). 가리키는 유닛이 있는 묶음만 그려진다.
+        for ( const unique_ptr<AnimationCrowdBucket>& bucket : animation.getCrowd().getBuckets() )
+        {
+            if ( bucket->getReferenceCount() > 0 && bucket->getMesh() != nullptr )
+                appendPalette( bucket->getMesh().get(), bucket->getSkinPalette(), nullptr );
+        }
+        _paletteRowCountHint           = listRow->size();
         _snapshot._pListSkinPaletteRow = std::move( listRow );
+        _snapshot._pListMorphWeight    = std::move( listWeight );
+        // VAT 시계 — 군중 시계 그대로(인스턴스 시각 오프셋이 이 시계 기준이다).
+        _snapshot._vertexAnimationTime = static_cast<float32>( animation.getCrowd().getClock() );
     }
 
     void GpuSceneBuilder::exportCpuSnapshot( GpuSceneSnapshot& outSnapshot )
