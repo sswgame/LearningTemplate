@@ -36,15 +36,12 @@ namespace sw
     class BoxCollider2DComponent;
     class Component;
     class GameObjectManager;
-    class MeshComponent;
     class SceneComponent;
 
     /// @brief GameObject 등록 · 지연 삭제와 씬의 등록부(트랜스폼 계층 · 프리미티브 · 빛 · 틱)를 소유합니다.
     class SW_API GameObjectManager
     {
         friend class GameObject;
-        friend class SceneComponent;
-        friend class MeshComponent;
 
     public:
         /** @brief 엔진과 모듈의 컴포넌트 팩토리를 등록하며 만듭니다. 오브젝트는 없는 채로 시작합니다. */
