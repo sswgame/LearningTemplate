@@ -130,6 +130,8 @@ namespace sw
         int32 addLayer( const AnimLayerDesc& desc );
         /** @brief 레이어 가중치를 바꿉니다. */
         void setLayerWeight( uint32 layerIndex, float32 weight );
+        /** @brief 레이어 클립을 처음부터 다시 재생합니다(맞음 움찔처럼 한 번 도는 가산 레이어). */
+        void restartLayer( uint32 layerIndex );
         /** @brief 레이어를 모두 뗍니다. */
         void clearLayers();
 

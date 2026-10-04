@@ -91,6 +91,27 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
   [min, max] 안에서 고르고, 남은 몫은 `getStrideScale()`(발 IK 자리 — 값만 낸다). 방향은 이동 방향과 몸 앞의 요 차이(뒤로 가면 반대로 접음, ±최대)를
   뼈 목록의 가중치만큼 캐릭터 위 축으로 돌립니다(후처리 단계).
 
+## 래그돌 · 히트박스 — `RagdollComponent`
+
+캐릭터의 물리 에셋(`*.physics.xml`, 공유 캐시 `PhysicsAssetCache` — 파일을 고치면 바디를 다시 세운다)으로 `PhysicsRagdollBuilder` 가 뼈마다 바디를 세웁니다
+(사용자 값 = 오브젝트 id, 레이어 `Ragdoll`). **바디마다 물리 섞임 가중치 하나**(0 = 애니메이션, 1 = 물리)가 모든 경우를 한 길로 합니다 — 가중치가 0 이면
+키네마틱(이번 프레임 포즈까지 스텝마다 나눠 끌려가 밀린 동적 바디가 속도를 받는다), 0 보다 크면 동적입니다.
+
+| 상태 | 바디 | 포즈 |
+|---|---|---|
+| `Animated` | 키네마틱 히트박스 | 애니메이션 |
+| 맞음 반응(`applyHitReaction` · 치명 아닌 `onHitReceived`) | 맞은 바디 아래만 `_hitReactionSeconds` 동안 동적(중력 0), 그 바디에 충격량 | 가중치 `_hitReactionWeight` → 0 + 가산 움찔 클립(`_flinchClip`) |
+| `Ragdoll`(치명 맞음 · `startRagdoll`) | 모두 동적(애니메이션 속도를 잇는다), 캐릭터 컨트롤러는 꺼진다 | 물리 |
+| `Partial`(`startPartialRagdoll`) | `_partialRootBone` 아래만 동적(관절이 키네마틱 골반에 매달린다) | 그 아래만 물리 |
+| `BlendingBack`(`getUp` · `stopPartialRagdoll`) | 키네마틱 | 시작할 때의 물리 자세에서 `_blendBackSeconds` 동안 애니메이션으로 |
+
+- 포즈는 후처리 단계에서 애니메이션 포즈와 **지난 물리 프레임**의 바디 자세(`readBoneTransforms`)를 뼈 가중치로 섞습니다(바디 없는 뼈는 가장 가까운 조상 바디의 것).
+- **기상**(`getUp`): 가라앉은 뒤(`isSettled` — 모든 바디가 `_settleSpeed` 보다 느리게 `_settleSeconds`) 골반의 앞이 위를 보면 누움 클립, 아니면 엎드림 클립을 고르고,
+  그 클립 첫 자세의 골반 → `_partialRootBone` 방향을 래그돌의 것에 맞추도록 오브젝트를 돌리고 골반 아래로 옮긴 뒤 래그돌 자세에서 섞어 돌아옵니다. 클립이 끝나면 `_getUpExitState`.
+- 히트 존: 맞은 바디 → `findHitZone` → 물리 에셋 바디의 `_hitZone`(이름 · 피해 배율). `CharacterHitUtil::resolveHitZone` 이 래그돌을 먼저 봅니다.
+- KayKit 스켈레톤 리그(41 뼈)의 물리 에셋: `Resource/game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.physics.xml`(16 바디 — 머리 ×2 · 몸통 · 골반 · 팔 ×0.6 ·
+  다리 ×0.7, 셰이프는 스킨 정점이 그 뼈를 따르는 범위에서 골랐다).
+
 ## 맞힘 — `CharacterHitUtil`
 
 광선(3D · 2D) → 맞은 바디 → 오브젝트(바디 사용자 값) → 히트 존(래그돌의 물리 에셋 바디 → 강체 컴포넌트의 `_hitZone`) → `Component::onHitReceived( HitInfo )`.

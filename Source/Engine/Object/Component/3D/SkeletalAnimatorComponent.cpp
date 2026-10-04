@@ -264,6 +264,16 @@ namespace sw
             _listLayer[layerIndex]._desc._weight = MathUtil::clamp( weight, 0.0f, 1.0f );
     }
 
+    void SkeletalAnimatorComponent::restartLayer( uint32 layerIndex )
+    {
+        if ( layerIndex >= _listLayer.size() )
+            return;
+        LayerState& layer = _listLayer[layerIndex];
+        layer._player.play( layer._clip.get(), layer._desc._bLoop == SW_TRUE );
+        if ( _pUnit != nullptr )
+            _pUnit->markPoseDirty();
+    }
+
     void SkeletalAnimatorComponent::clearLayers()
     {
         _listLayer.clear();

@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Character/RagdollComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
@@ -11,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/PhysicsAsset.h"
 
 namespace sw
 {
@@ -137,6 +139,23 @@ namespace sw
         inoutHit._bodyIndex        = -1;
         if ( body.isValid() == false )
             return;
+        // 래그돌 · 히트박스 — 물리 에셋 바디의 히트 존이 먼저다.
+        const RagdollComponent* pRagdoll = target.getComponent<RagdollComponent>();
+        if ( pRagdoll != nullptr )
+        {
+            int32                    bodyIndex = -1;
+            const PhysicsHitZoneDef* pZone     = pRagdoll->findHitZone( body, bodyIndex );
+            if ( bodyIndex >= 0 )
+            {
+                inoutHit._bodyIndex = bodyIndex;
+                if ( pZone != nullptr )
+                {
+                    inoutHit._zone             = pZone->_name;
+                    inoutHit._damageMultiplier = pZone->_damageMultiplier;
+                }
+                return;
+            }
+        }
         for ( const Component* pComponent : target.getComponents() )
         {
             const RigidBodyComponent* pBody3D = castTo<RigidBodyComponent>( pComponent );
