@@ -125,16 +125,25 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 서버 쪽입니다. 관찰자 = 연결 + 그 연결이 조종하는 엔티티(그 자리가 관심의 중심). */
-    class SW_GF_API MmoReplicator
+    /**
+     * @brief 서버 쪽입니다. 관찰자 = 연결 + 그 연결이 조종하는 엔티티(그 자리가 관심의 중심).
+     * @details 받는 메시지는 없다(종류 마스크 0) — 라우터에 달면 연결이 닫힐 때 그 관찰자를 스스로 지운다(`onConnectionClosed`).
+     */
+    class SW_GF_API MmoReplicator : public INetMessageHandler
     {
     public:
         MmoReplicator();
+
+        uint8           getMessageRangeBase() const override { return NetKitMessageRange::kMmo; }
+        uint16          getMessageKindMask() const override { return 0u; }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        void            onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override;
 
         void initialize( NetHost* pHost, const MmoReplicatorSettings& settings, const IInterestPolicy* pPolicy = nullptr );
         void setEntity( const MmoEntity& entity );
         void removeEntity( uint32 entityId );
         void setObserver( int32 connectionId, uint32 entityId );
+        /** @brief 관찰자를 지웁니다(연결이 닫히면 라우터를 통해 저절로 — 연결은 두고 관심만 끊을 때 직접 부른다). */
         void removeObserver( int32 connectionId );
         /**
          * @brief 관찰자마다 들어옴 · 나감 · 갱신을 보냅니다. `setTaskManager` 를 줬으면 관찰자들을 작업 스레드에 나눠 계산한다(관찰자마다 독립 —
@@ -215,10 +224,15 @@ namespace sw
     class SW_GF_API MmoClientView : public INetMessageHandler
     {
     public:
-        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kMmo; }
-        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
-        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
-        bool handleMessage( const vector<uint8>& buffer ) { return handleNetMessage( -1, buffer.data(), static_cast<int32>( buffer.size() ) ); }
+        uint8  getMessageRangeBase() const override { return NetKitMessageRange::kMmo; }
+        uint16 getMessageKindMask() const override
+        {
+            return static_cast<uint16>( ( 1u << ( NetMmoMessage::kEnter - NetKitMessageRange::kMmo ) ) | ( 1u << ( NetMmoMessage::kLeave - NetKitMessageRange::kMmo ) ) |
+                                        ( 1u << ( NetMmoMessage::kUpdate - NetKitMessageRange::kMmo ) ) );
+        }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        /** @brief 서버에 (다시) 연결됐다 — 보이던 엔티티를 비운다(새 연결은 들어옴부터 다시 받는다). */
+        void onConnectionOpened( int32 connectionId ) override;
         void drainEvents( vector<MmoClientEvent>& outListEvent );
 
         const MmoEntity* findEntity( uint32 entityId ) const;

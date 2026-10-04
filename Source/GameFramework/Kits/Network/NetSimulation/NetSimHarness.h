@@ -14,10 +14,10 @@
  *
  *          틱 하나(`step`)의 순서 — 언리얼 NetDriver 의 TickDispatch(받은 것 나눠 주기) → 월드 틱 → TickFlush(보내기):
  *          1. 시각 = 틱 × 간격.
- *          2. 월드마다(서버 → 클라이언트 번호 순): 받은 메시지를 라우터로 나눠 준다 → `INetSimSession::onTickBegin` → 오브젝트 매니저 틱(물리 포함) →
+ *          2. 월드마다(서버 → 클라이언트 번호 순): 라우터가 호스트 사건(연결 · 끊김)과 받은 메시지를 꺼내 처리기에 나눠 준다(사건 먼저) →
+ *             사건을 `INetSimSession::onHostEvent` 로 → `INetSimSession::onTickBegin` → 오브젝트 매니저 틱(물리 포함) →
  *             `INetSimSession::onTickEnd`(보낼 것을 쌓는다).
- *          3. 망: 호스트마다 `update`(쌓인 것을 보낸다) → 흉내 줄에서 때가 된 패킷을 망에 싣고 망을 그 시각까지 배달 → 호스트마다 다시 `update`(받는다) →
- *             호스트 사건(연결 · 끊김)을 `INetSimSession::onHostEvent` 로.
+ *          3. 망: 호스트마다 `update`(쌓인 것을 보낸다) → 흉내 줄에서 때가 된 패킷을 망에 싣고 망을 그 시각까지 배달 → 호스트마다 다시 `update`(받는다).
  *          그래서 조건이 깨끗하면 틱 N 끝에 보낸 메시지를 틱 N + 1 이 받는다. 지연 L 이면 보낸 시각 + L 이 지난 첫 틱이다.
  */
 #pragma once
@@ -145,7 +145,10 @@ namespace sw
             (void)world;
             (void)deltaTime;
         }
-        /** @brief 호스트 사건입니다(서버 — 클라이언트 연결 · 끊김, 클라이언트 — 서버 연결 · 끊김). 망 단계 끝에 불린다. */
+        /**
+         * @brief 호스트 사건입니다(서버 — 클라이언트 연결 · 끊김, 클라이언트 — 서버 연결 · 끊김). 틱 앞, 라우터가 처리기에 사건을 알린 바로 뒤에 불린다.
+         * @details 키트의 연결마다 상태는 라우터가 `INetMessageHandler::onConnectionOpened` · `onConnectionClosed` 로 이미 맞춘다 — 여기는 게임 몫만.
+         */
         virtual void onHostEvent( NetSimWorld& world, const NetHostEvent& event )
         {
             (void)world;
@@ -221,7 +224,6 @@ namespace sw
 
         void start( INetSimGame* pGame );
         void tick( float32 deltaTime );
-        void dispatchEvents();
         void stop();
 
         NetSimTrafficCounter       _counter; ///< 호스트 → 셈 → 흉내 → 루프백 끝점

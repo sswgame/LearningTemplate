@@ -52,9 +52,13 @@ namespace sw
         /** @brief 그 틱을 시뮬레이션한 뒤의 상태 체크섬을 알립니다. */
         void  reportChecksum( uint32 tick, uint32 checksum );
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kLockstep; }
-        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
-        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
-        bool handleMessage( int32 connectionId, const vector<uint8>& buffer ) { return handleNetMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) ); }
+        /** @brief 입력 · 체크섬 — 같은 영역의 롤백 입력은 `RollbackSession` 이 맡는다. */
+        uint16 getMessageKindMask() const override
+        {
+            return static_cast<uint16>( ( 1u << ( NetLockstepMessage::kInput - NetKitMessageRange::kLockstep ) ) |
+                                        ( 1u << ( NetLockstepMessage::kChecksum - NetKitMessageRange::kLockstep ) ) );
+        }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
 
         uint32 getCurrentTick() const { return _currentTick; }
         /** @brief 입력을 기다리며 멈춘 틱 수(누가 느린가 — 화면의 "기다리는 중" 표시)입니다. */
@@ -66,7 +70,7 @@ namespace sw
     private:
         void storeInput( int32 player, uint32 tick, const vector<uint8>& listInput );
         void storeChecksum( int32 player, uint32 tick, uint32 checksum );
-        void relay( int32 fromConnectionId, const uint8* pData, int32 size );
+        void relay( const NetMessageContext& context );
 
         map<uint32, vector<vector<uint8>>> _mapInput;    ///< 틱 → 플레이어마다 입력
         map<uint32, vector<uint8>>         _mapHasInput; ///< 틱 → 플레이어마다 받았나

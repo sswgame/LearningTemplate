@@ -10,6 +10,7 @@
 
 #include "GameFramework/Kits/Network/NetClientServer/ReplicationClient.h"
 #include "GameFramework/Kits/Network/NetClientServer/ReplicationServer.h"
+#include "GameFramework/Kits/Network/NetLockstep/LockstepSession.h"
 #include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
 
 #include "TestFramework/TestFramework.h"
@@ -87,8 +88,6 @@ namespace
         void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
         {
             (void)world;
-            if ( event._kind == NetHostEvent::Kind::Disconnected )
-                _server.onDisconnected( event._connectionId );
             if ( _pRecord != nullptr )
                 _pRecord->_listEvent.push_back( event );
         }
@@ -225,6 +224,98 @@ namespace
         uint64         _droppedCount{ 0 };
     };
 
+    constexpr int32 kLockstepDelay = 3;
+
+    /**
+     * @brief 락스텝 세션 — 플레이어 번호는 서버 0, 클라이언트는 호스트가 준 번호 + 1. 서버는 클라이언트가 다 들어오면, 클라이언트는 연결되면 시작한다
+     *        (빠진 플레이어 없이 틱 0 부터 모두의 입력이 모이게).
+     */
+    class LockstepNetSimSession final : public INetSimSession
+    {
+    public:
+        LockstepNetSimSession( NetSimWorld& world, int32 playerCount )
+            : _session{}
+            , _playerCount{ playerCount }
+            , _advancedCount{ 0 }
+            , _bStarted{ false }
+        {
+            world.getRouter().addHandler( &_session );
+        }
+
+        void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
+        {
+            if ( event._kind != NetHostEvent::Kind::Connected || _bStarted )
+                return;
+            NetHost& host = world.getHost();
+            if ( world.isServer() && host.getConnectedCount() < _playerCount - 1 )
+                return;
+            _session.initialize( &host, _playerCount, world.isServer() ? 0 : host.getClientIndex() + 1, kLockstepDelay );
+            _bStarted = true;
+        }
+
+        void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
+        {
+            (void)deltaTime;
+            if ( _bStarted == false )
+                return;
+            _session.submitLocalInput( vector<uint8>{ static_cast<uint8>( world.getLocalTick() ) } );
+            vector<vector<uint8>> listInput;
+            while ( _session.tryAdvance( listInput ) )
+                ++_advancedCount;
+        }
+
+        int32 getAdvancedCount() const { return _advancedCount; }
+        int32 getLocalPlayer() const { return _session.getLocalPlayer(); }
+
+    private:
+        LockstepSession _session;
+        int32           _playerCount;
+        int32           _advancedCount;
+        bool            _bStarted;
+    };
+
+    class LockstepNetSimGame final : public INetSimGame
+    {
+    public:
+        explicit LockstepNetSimGame( int32 playerCount )
+            : _playerCount{ playerCount }
+        {
+        }
+
+        unique_ptr<INetSimSession> createSession( NetSimWorld& world ) override { return make_unique<LockstepNetSimSession>( world, _playerCount ); }
+
+    private:
+        int32 _playerCount;
+    };
+
+    /** @brief 흉내 거르개 — 서버가 보내는 `Accepted` 를 @p _remaining 개만 버린다. */
+    struct AcceptedDropper
+    {
+        int32 _remaining{ 0 };
+        int32 _droppedCount{ 0 };
+    };
+
+    bool dropAccepted( const NetAddress& to, const uint8* pData, int32 size, void* pContext )
+    {
+        (void)to;
+        AcceptedDropper& dropper = *static_cast<AcceptedDropper*>( pContext );
+        if ( dropper._remaining <= 0 || NetHost::peekPacketType( pData, size ) != NetHost::PacketType::Accepted )
+            return false;
+        --dropper._remaining;
+        ++dropper._droppedCount;
+        return true;
+    }
+
+    /** @brief 흉내 거르개 — 모두 버린다(위조한 주소로 보낸 요청의 답은 공격자에게 오지 않는다). */
+    bool dropEverything( const NetAddress& to, const uint8* pData, int32 size, void* pContext )
+    {
+        (void)to;
+        (void)pData;
+        (void)size;
+        (void)pContext;
+        return true;
+    }
+
     NetSimRunResult runLossyScenario( uint32 seed )
     {
         CrateGame      game;
@@ -357,6 +448,59 @@ SW_TEST_CASE( NetSimHarnessTest, LateJoinConvergesAndLeaveNotifiesServer )
     // 남은 클라이언트는 계속 받는다.
     harness.stepTicks( 30 );
     SW_EXPECT_TRUE( computeProxyError( harness, secondClient ) < 0.01f );
+}
+
+/**
+ * @brief [NetSimHarnessTest] 서버의 `Accepted` 하나를 잃은 클라이언트도 자기 플레이어 번호로 락스텝에 들어와 판이 멈추지 않는다
+ * @details 데이터 패킷이 수락을 대신하던 때는 클라이언트 번호가 −1 로 남아 플레이어 0 으로 입력을 보냈고, 서버가 그것을 위조로 버려 두 쪽 모두 첫 틱들에서 멈췄다.
+ */
+SW_TEST_CASE( NetSimHarnessTest, LostAcceptedStillGivesLockstepPlayersTheirNumber )
+{
+    LockstepNetSimGame game( 2 );
+    NetSimHarness      harness;
+    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    AcceptedDropper      dropper;
+    NetSimLinkConditions lostAccepted;
+    dropper._remaining                           = 1;
+    lostAccepted._downstream._pDropFilter        = &dropAccepted;
+    lostAccepted._downstream._pDropFilterContext = &dropper;
+    const int32 client                           = harness.addClient( lostAccepted );
+    harness.stepTicks( 180 );
+
+    SW_EXPECT_EQUAL( 1, dropper._droppedCount );
+    SW_ASSERT_TRUE( harness.areAllClientsConnected() );
+    const auto& server  = *static_cast<const LockstepNetSimSession*>( harness.getServer().getSession() );
+    const auto& unlucky = *static_cast<const LockstepNetSimSession*>( harness.findClient( client )->getSession() );
+    SW_EXPECT_EQUAL( 1, unlucky.getLocalPlayer() );
+    // 연결된 뒤(몇 틱)부터 매 틱 한 칸씩 — 입력 지연만큼 뒤처질 수 있다.
+    SW_EXPECT_TRUE_MSG( server.getAdvancedCount() > 150, "the server keeps advancing" );
+    SW_EXPECT_TRUE_MSG( unlucky.getAdvancedCount() > 150, "the client that lost Accepted keeps advancing" );
+}
+
+/**
+ * @brief [NetSimHarnessTest] 위조한 주소의 연결 요청은 서버 자리를 잡지 않는다 — 답을 받지 못하는 요청자가 자리 수만큼 있어도 진짜 클라이언트가 들어온다
+ * @details 요청 하나로 자리를 잡던 때는 답(도전)을 받지 못하는 요청 넷이 4 자리 서버를 연결 제한 시간(5 초) 동안 채워 진짜 클라이언트가 ServerFull 로 거절됐다.
+ *          서버는 도전 값을 주소 · 클라이언트 소금 · 시간 칸에서 비밀 키로 만들어 돌려주기만 하고, 그 값을 되돌려 준 응답이 와야 자리를 잡는다.
+ */
+SW_TEST_CASE( NetSimHarnessTest, SpoofedConnectRequestsDoNotFillTheServer )
+{
+    CrateGame      game;
+    NetSimHarness  harness;
+    NetSimSettings settings;
+    settings._hostSettings._maxConnections = 4;
+    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    NetSimLinkConditions spoofed;
+    spoofed._downstream._pDropFilter = &dropEverything;
+    for ( int32 index = 0; index < 4; ++index )
+        SW_ASSERT_TRUE( harness.addClient( spoofed ) > 0 );
+    harness.stepTicks( 30 );
+    SW_EXPECT_EQUAL( 0, harness.getServer().getHost().getConnectedCount() );
+
+    const int32 realClient = harness.addClient( NetSimLinkConditions{} );
+    harness.stepTicks( 30 );
+    SW_ASSERT_NOT_NULL( harness.findClient( realClient ) );
+    SW_EXPECT_TRUE( harness.findClient( realClient )->isConnected() );
+    SW_EXPECT_EQUAL( 1, harness.getServer().getHost().getConnectedCount() );
 }
 
 /**
