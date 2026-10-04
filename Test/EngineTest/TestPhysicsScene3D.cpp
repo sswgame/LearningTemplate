@@ -435,3 +435,54 @@ SW_TEST_CASE( PhysicsScene3DTest, BulkCompoundBodiesCreateAndDestroy )
     SW_EXPECT_FALSE( pScene->isBodyValid( listBody.back() ) );
     SW_EXPECT_TRUE( reused.getSlot().index() == listBody.back().getSlot().index() );
 }
+
+SW_TEST_CASE( PhysicsScene3DTest, StartingAngularVelocityIsClampedToBodyLimit )
+{
+    // 상한을 넘는 시작 각속도는 만들 때 줄인다 — 갈라진 파괴 덩어리가 상한에 붙어 돌던 부모의 운동을 이을 때 생긴다(Jolt 는 단언하고 값을 그대로 둔다).
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    sw::PhysicsBodyDesc3D desc;
+    desc._listShape.push_back( makeSphere( 0.1f ) );
+    desc._position                   = sw::float3{ 0.0f, 3.0f, 0.0f };
+    desc._type                       = sw::PhysicsBodyType::Dynamic;
+    desc._angularVelocity            = sw::float3{ 1000.0f, 0.0f, 0.0f };
+    const sw::PhysicsBodyHandle body = pScene->createBody( desc );
+    SW_ASSERT_TRUE( body.isValid() );
+    const float32 speed = pScene->getAngularVelocity( body ).getLength();
+    SW_EXPECT_TRUE( speed > 1.0f );                              // 방향은 남긴다
+    SW_EXPECT_TRUE( speed <= 0.25f * sw::MathUtil::Pi * 60.0f ); // Jolt 기본 상한(초당 15 바퀴)
+}
+
+/**
+ * @brief [PhysicsScene3DTest] 지어 둔 셰이프를 묶은 컴파운드 — 자식의 로컬 자리가 그대로 들고, 자식을 지워도 산다. 지운 자식으로는 만들지 않는다
+ */
+SW_TEST_CASE( PhysicsScene3DTest, CompoundOfBuiltShapesKeepsChildOffsets )
+{
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    const sw::PhysicsShapeDesc3D lower       = makeBox( sw::float3{ 0.5f, 0.5f, 0.5f } );
+    sw::PhysicsShapeDesc3D       upper       = makeBox( sw::float3{ 0.5f, 0.5f, 0.5f } );
+    upper._localPosition                     = sw::float3{ 0.0f, 1.0f, 0.0f };
+    const sw::PhysicsShapeHandle lowerShape  = pScene->createShape( sw::span<const sw::PhysicsShapeDesc3D>{ &lower, 1 }, sw::hashed_string{} );
+    const sw::PhysicsShapeHandle upperShape  = pScene->createShape( sw::span<const sw::PhysicsShapeDesc3D>{ &upper, 1 }, sw::hashed_string{} );
+    const sw::PhysicsShapeHandle arrChild[2] = { lowerShape, upperShape };
+    const sw::PhysicsShapeHandle compound    = pScene->createCompoundShape( sw::span<const sw::PhysicsShapeHandle>{ arrChild, 2 } );
+    SW_ASSERT_TRUE( compound.isValid() );
+    pScene->destroyShape( lowerShape );
+    pScene->destroyShape( upperShape );
+
+    sw::PhysicsBodyDesc3D desc;
+    desc._sharedShape = compound;
+    desc._type        = sw::PhysicsBodyType::Static;
+    SW_ASSERT_TRUE( pScene->createBody( desc ).isValid() );
+    sw::PhysicsQueryFilter filter;
+    sw::PhysicsCastHit3D   hit;
+    SW_ASSERT_TRUE( pScene->raycast( sw::float3{ 0.0f, 10.0f, 0.0f }, sw::float3{ 0.0f, -1.0f, 0.0f }, 100.0f, filter, hit ) );
+    SW_EXPECT_NEAR_EQUAL( 8.5f, hit._distance, 1e-3f ); // 위 자식의 윗면(y = 1.5)
+    SW_ASSERT_TRUE( pScene->raycast( sw::float3{ 0.0f, -10.0f, 0.0f }, sw::float3{ 0.0f, 1.0f, 0.0f }, 100.0f, filter, hit ) );
+    SW_EXPECT_NEAR_EQUAL( 9.5f, hit._distance, 1e-3f ); // 아래 자식의 밑면(y = -0.5)
+
+    SW_TEST_DEFENSIVE_SCOPE( "a compound of a destroyed shape is rejected" );
+    const sw::PhysicsShapeHandle arrStale[1] = { lowerShape };
+    SW_EXPECT_FALSE( pScene->createCompoundShape( sw::span<const sw::PhysicsShapeHandle>{ arrStale, 1 } ).isValid() );
+}

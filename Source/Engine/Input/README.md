@@ -127,6 +127,11 @@ if ( inputMap.wasActionTriggered( "Jump" ) )
 const sw::float2 move = inputMap.getVector2D( "Move" );
 ```
 
+리소스 XML(`*.input.xml`, 게임은 팩의 `gamesettings.xml` `<inputMap>`)에서는 액션 아래에 `<bind source="key|mouse|gamepad" code=…/>` ·
+`<vector2d up down left right/>` · `<axis1d negative positive/>` · `<stick stick="Left|Right"/>` · `<chord modifier trigger/>` · `<mouseDelta scale="1"/>`
+를 씁니다(예: `Resource/game/shooter3d/data/shooter.input.xml`). **마우스 이동량(`MouseDelta2D`)은 픽셀 단위 상대값이라 액션 값이 [-1, 1] 로 묶이지 않습니다** —
+축 · 버튼 · 스틱 몫만 반전 뒤 묶이고(또는 원으로), 이동량은 그 위에 더해집니다. 축 반전은 이동량에 한 번만 걸립니다.
+
 ### 2) `ActionHandle`로 매 프레임 해시 조회 피하기
 
 이름(`string_view`)으로 매번 찾으면 해시맵 조회가 들지만, `ActionHandle`을 한 번 캐싱해두면

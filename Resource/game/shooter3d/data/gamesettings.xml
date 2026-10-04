@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Shooter3D 팩의 설정 — 시작 맵은 아레나 씬이다(게임 프리셋 Config/Game/Shooter3D.json 이 이 파일을 가리킨다). -->
+<!-- Shooter3D 팩의 설정 — 시작 맵은 아레나 씬이다(게임 프리셋 Config/Game/Shooter3D.json 이 이 파일을 가리킨다).
+     inputMap 은 게임플레이 액션(이동 · 시점 · 사격 · 점프 · 재장전 · 카메라 · 무기)의 기본 바인딩이다. -->
 <GameSettings>
   <startMap>game/shooter3d/maps/arena.scene.xml</startMap>
+  <inputMap>game/shooter3d/data/shooter.input.xml</inputMap>
   <localizationProject>game/shooter3d/data/localization/shooter3d.locproject.json</localizationProject>
 </GameSettings>

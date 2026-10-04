@@ -38,6 +38,10 @@ namespace sw
         /** @brief 재생 속도 배율입니다(음수는 0 으로 막습니다). */
         void    setSpeed( float32 speed ) { _speed = speed > 0.0f ? speed : 0.0f; }
         float32 getSpeed() const { return _speed; }
+        /** @brief 페이드 중에 다른 페이드로 끊긴 횟수입니다 — 끊길 때 섞이던 한 칸이 버려지므로, 포즈를 내는 쪽이 이것이 오르면 직전 포즈에서 이어 섞습니다. */
+        uint32 getInterruptCount() const { return _interruptCount; }
+        /** @brief 지금(또는 마지막) 페이드 길이(초)입니다. */
+        float32 getFadeDuration() const { return _fadeDuration; }
 
         const IAnimPlayable* getCurrentPlayable() const { return _arrSlot[0]._pPlayable; }
         const IAnimPlayable* getNextPlayable() const { return _arrSlot[1]._pPlayable; }
@@ -78,6 +82,7 @@ namespace sw
         float32 _fadeDuration;
         float32 _fadeElapsed;
         float32 _speed;
+        uint32  _interruptCount;
     };
 } // namespace sw
 

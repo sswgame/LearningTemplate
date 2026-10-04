@@ -124,6 +124,36 @@ SW_TEST_CASE( InputMapTest, MouseDeltaLookBinding )
 }
 
 /**
+ * @brief [InputMapTest] 마우스 이동량은 픽셀 단위 상대값이다 — 액션 값이 [-1, 1] 로 묶이지 않고(이름 · 핸들 조회 둘 다), 축 반전은 한 번만 걸린다
+ */
+SW_TEST_CASE( InputMapTest, MouseDeltaIsNotClampedAndInvertsOnce )
+{
+    sw::InputManager input;
+    SW_EXPECT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bindMouseDelta( "Look", 2.0f );
+    const sw::ActionHandle look = inputMap.getActionHandle( "Look" );
+
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 30, 0 ) );
+    input.beginFrame( 0.016f );
+    const sw::float2 raw      = sw::float2{ static_cast<float32>( input.getMouseDelta()._x ), static_cast<float32>( input.getMouseDelta()._y ) };
+    const sw::float2 byName   = inputMap.getVector2D( "Look" );
+    const sw::float2 byHandle = inputMap.getVector2D( look );
+    SW_ASSERT_TRUE( raw._x > 1.0f );
+    SW_EXPECT_NEAR_EQUAL( raw._x * 2.0f, byName._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( raw._x * 2.0f, byHandle._x, 1.0e-4f );
+
+    inputMap.setInvertX( true );
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 60, 0 ) );
+    input.beginFrame( 0.016f );
+    const float32 movedX = static_cast<float32>( input.getMouseDelta()._x );
+    SW_ASSERT_TRUE( movedX > 1.0f );
+    SW_EXPECT_NEAR_EQUAL( -movedX * 2.0f, inputMap.getVector2D( "Look" )._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( -movedX * 2.0f, inputMap.getVector2D( look )._x, 1.0e-4f );
+    input.shutdown();
+}
+
+/**
  * @brief [InputMapTest] 다중 수정자 복합 단축키(Shortcut) 바인딩 검증
  */
 SW_TEST_CASE( InputMapTest, MultiModifierShortcutBinding )

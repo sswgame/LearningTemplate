@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Animation/Skeleton.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -29,10 +30,12 @@
 #include "Engine/Graphics/Renderer/Scene/GpuInstanceRing.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
 #include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
@@ -2324,6 +2327,55 @@ SW_TEST_CASE( GpuSceneTest, SpriteInstanceBatchEntriesCarryFrameTintAndHide )
     batch.shutdown();
     SW_EXPECT_FALSE( batch.isInitialized() );
     SW_EXPECT_EQUAL( 1u, objects->getPrimitiveRegistry().getSlotCount() );
+}
+
+/**
+ * @brief [GpuSceneTest] 유닛 하나가 빠진 프레임에도 남은 스킨드 메시마다 팔레트가 실린다 — 팔레트가 없으면 그 프레임 몸이 바인드 포즈(T 자)로 그려진다
+ * @details 유닛을 빼면(시체를 걷음) 애니메이션 시스템은 평가 레벨을 다음 평가까지 비운다. 팔레트를 레벨에서 모으면 그 프레임 스냅샷에 팔레트가 하나도 없어
+ *          RT 가 모든 스킨드 메시를 단위 행렬로 스키닝했다(Shooter3D 에서 적이 사라질 때마다 플레이어가 한 프레임 T 자로 튐).
+ */
+SW_TEST_CASE( GpuSceneTest, SkinPalettesSurviveAUnitLeavingTheFrame )
+{
+    sw::Scene scene( "GpuSceneSkinPalette" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+    sw::vector<sw::MeshSkinVertex> listSkin( cube->getVertices().size() );
+    sw::Skeleton                   skeleton;
+    (void)skeleton.addBone( sw::hashed_string( "root" ), -1, sw::BoneTransform{}, sw::float4x4::Identity );
+    sw::shared_ptr<const sw::Skeleton> sharedSkeleton = sw::make_shared<sw::Skeleton>( skeleton );
+
+    sw::SkeletalMeshComponent* arrUnit[2]{};
+    for ( uint32 unitIndex = 0; unitIndex < 2; ++unitIndex )
+    {
+        sw::shared_ptr<sw::Mesh> skinned = sw::Mesh::create();
+        skinned->setVertices( cube->getVertices() );
+        skinned->setSkin( listSkin, 1 );
+        sw::GameObject* pObject = objects->createGameObject( sw::hashed_string( unitIndex == 0 ? "Hero" : "Corpse" ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        arrUnit[unitIndex] = pObject->addComponent<sw::SkeletalMeshComponent>();
+        SW_ASSERT_NOT_NULL( arrUnit[unitIndex] );
+        arrUnit[unitIndex]->setSkeleton( sharedSkeleton );
+        arrUnit[unitIndex]->setMesh( skinned );
+        arrUnit[unitIndex]->setVisible( true );
+    }
+    objects->getAnimationSystem().evaluate( 0.016f );
+
+    // 시체를 걷는 프레임 — 평가 뒤에 유닛이 빠지고, 그 다음에 렌더 스냅샷을 짓는다.
+    objects->getAnimationSystem().unregisterUnit( arrUnit[1] );
+    sw::GpuSceneBuilder gpuScene;
+    gpuScene.buildFromScene( &scene, sw::float3{ 0.0f, 0.0f, -5.0f } );
+    sw::GpuSceneSnapshot snapshot;
+    gpuScene.exportCpuSnapshot( snapshot );
+    bool bHeroHasPalette = false;
+    for ( const sw::GpuSkinPalette& palette : snapshot._listSkinPalette )
+    {
+        bHeroHasPalette = bHeroHasPalette || ( palette._pMesh == arrUnit[0]->getRawMesh() && palette._boneCount == 1u );
+    }
+    SW_EXPECT_TRUE( bHeroHasPalette );
+    objects->getAnimationSystem().registerUnit( arrUnit[1] );
 }
 
 /**

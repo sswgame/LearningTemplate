@@ -583,6 +583,11 @@ namespace sw
 
         string getGlyphForActionInternal( const hashed_string& action, InputGlyphStyle device ) const;
         bool   evaluateBindingDown( const ActionBinding& binding, float2& outValue ) const;
+        /**
+         * @brief 바인딩 값의 합으로 액션 값을 냅니다. 축 · 버튼 · 스틱 몫(@p bounded)은 축 반전 뒤 [-1, 1](또는 원)에 묶고, 마우스 이동량 몫(@p relative)은
+         *        묶지 않고 더합니다 — 이동량은 픽셀 단위 상대값이고 반전은 바인딩 평가가 이미 걸었습니다.
+         */
+        float2 composeActionValue( const float2& bounded, const float2& relative ) const;
         bool   evaluateTrigger( ActionTrigger trigger, const ActionBindingState& state, float32 deltaSeconds ) const;
         bool   isBindingLayerActive( const ActionBinding& binding ) const;
         /**

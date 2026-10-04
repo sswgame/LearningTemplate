@@ -163,10 +163,17 @@ namespace sw
             if ( region._size == 0 )
                 continue;
 
+            // 상자 없는 UpdateSubresource 는 버퍼 **전체**(ByteWidth)를 원본에서 읽는다 — 원본이 버퍼보다 짧으면(용량을 남겨 둔 풀이 줄었을 때)
+            // 원본 뒤를 넘어 읽어 드라이버 안에서 죽는다. 버퍼 전체를 덮는 조각일 때만 상자를 뺀다.
             if ( region._dstOffset == 0 && regionCount == 1 )
             {
-                _pDevice->_deviceContext->UpdateSubresource( pResource, 0, nullptr, pBase, region._size, 0 );
-                continue;
+                D3D11_BUFFER_DESC desc{};
+                pResource->GetDesc( &desc );
+                if ( region._size >= desc.ByteWidth )
+                {
+                    _pDevice->_deviceContext->UpdateSubresource( pResource, 0, nullptr, pBase, region._size, 0 );
+                    continue;
+                }
             }
 
             // 부분 갱신은 상자로 준다. 버퍼는 1차원이므로 x 만 쓰고 y · z 는 1 이다.
