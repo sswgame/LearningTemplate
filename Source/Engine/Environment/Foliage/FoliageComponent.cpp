@@ -7,6 +7,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
 #include "Engine/Environment/Foliage/WindComponent.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"

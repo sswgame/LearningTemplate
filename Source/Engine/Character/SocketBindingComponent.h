@@ -22,12 +22,12 @@
 
 #include "Engine/Animation/BlendCurve.h"
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/Component/Physics/SocketPhysicsBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     class GameObject;
+    class ISocketPhysicsBody;
     class SceneComponent;
 
     /** @brief 소켓 부착의 상태입니다. */
