@@ -19,7 +19,9 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Input/InputMap.h"
+#include "Engine/Object/Animation/AnimationCrowd.h"
 #include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Object/Animation/VertexAnimationCooker.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -207,8 +209,10 @@ namespace
         static bool isBoneLod( sw::string_view resourceId ) { return endsWith( resourceId, sw::SkeletonBoneLod::kExtension ); }
         static bool loadBoneLod( const sw::string& resourceId )
         {
-            const sw::string skeletonPath =
-                sw::string{ resourceId.substr( 0, resourceId.size() - sw::SkeletonBoneLod::kExtension.size() ) } + sw::string{ sw::Skeleton::kExtension };
+            sw::string importedPath;
+            sw::string siblingPath;
+            sw::SkeletonBoneLod::makeSkeletonCandidatePaths( resourceId, importedPath, siblingPath );
+            const sw::string&             skeletonPath = sw::ResourceUtil::hasResource( importedPath ) ? importedPath : siblingPath;
             sw::SkeletonBoneLod           boneLod;
             sw::Skeleton                  skeleton;
             sw::vector<sw::vector<uint8>> listMask;
@@ -217,6 +221,10 @@ namespace
 
         /** @brief 애니메이션 LOD 표(주기 단계 · 예산). */
         static bool isAnimationLod( sw::string_view resourceId ) { return resourceId == sw::AnimationLodSettings::kResourcePath; }
+        /** @brief 군중 공유 표(변형 칸 수 · 묶음 유지 · VAT 프레임율). */
+        static bool isAnimationCrowd( sw::string_view resourceId ) { return resourceId == sw::AnimationCrowdSettings::kResourcePath; }
+        /** @brief VAT 쿠킹 목록 — 가리키는 메시 · 스켈레톤 · 클립 파일이 모두 있어야 한다. */
+        static bool isVertexAnimationList( sw::string_view resourceId ) { return endsWith( resourceId, sw::VertexAnimationCookList::kExtension ); }
 
         // 게임 데이터 — 키트 카탈로그가 읽는다(게임 모듈은 읽은 정의를 조립만 한다). 파일 이름은 게임이 여는 그대로다.
         template <typename TCatalog>
@@ -269,42 +277,44 @@ namespace
 
         /** @brief 데이터 종류 표입니다. 앞의 줄이 먼저 맞습니다. */
         static constexpr DataKind kArrDataKind[] = {
-            {              "scene",               &isScene,                              &loadScene},
-            {             "prefab",              &isPrefab,                             &loadPrefab},
-            {           "pipeline",            &isPipeline,                           &loadPipeline},
-            {         "renderpass",          &isRenderPass,                         &loadRenderPass},
-            {"enginedefaultassets", &isEngineDefaultAssets,                &loadEngineDefaultAssets},
-            {           "inputmap",            &isInputMap,                           &loadInputMap},
-            {           "material",            &isMaterial,                           &loadMaterial},
-            {         "spriteclip",          &isSpriteClip,                         &loadSpriteClip},
-            {      "camerapresets",       &isCameraPresets,   &loadCatalog<sw::CameraPresetCatalog>},
-            {       "elementrules",        &isElementRules,      &loadCatalog<sw::ElementRuleTable>},
-            {       "interactions",        &isInteractions,    &loadCatalog<sw::InteractionCatalog>},
-            {    "physicssettings",     &isPhysicsSettings,                    &loadPhysicsSettings},
-            {       "physicsasset",        &isPhysicsAsset,                       &loadPhysicsAsset},
-            {          "schedules",           &isSchedules,       &loadCatalog<sw::ScheduleCatalog>},
-            {       "usersettings",  &isUserSettingsSchema,                 &loadUserSettingsSchema},
-            {          "abilities",           &isAbilities,        &loadCatalog<sw::AbilityCatalog>},
-            {              "crops",               &isCrops,           &loadCatalog<sw::CropCatalog>},
-            {               "city",                &isCity,           &loadCatalog<sw::CityCatalog>},
-            {            "weapons",             &isWeapons,         &loadCatalog<sw::WeaponCatalog>},
-            {           "rtsunits",            &isRtsUnits,            &loadCatalog<sw::RtsCatalog>},
-            {        "voxelblocks",         &isVoxelBlocks,     &loadCatalog<sw::VoxelBlockCatalog>},
-            {           "coasters",            &isCoasters,  &loadCatalog<sw::CoasterLayoutCatalog>},
-            {         "parklayout",          &isParkLayout,                         &loadParkLayout},
-            {       "gamesettings",        &isGameSettings,                       &loadGameSettings},
-            {        "socketkinds",         &isSocketKinds,       &loadCatalog<sw::SocketKindTable>},
-            {            "sockets",             &isSockets,                            &loadSockets},
-            {      "referencepose",       &isReferencePose, &loadCatalog<sw::ReferencePoseOverride>},
-            {          "bodyshape",           &isBodyShape,          &loadCatalog<sw::BodyShapeSet>},
-            {          "fittables",           &isFitTables,                          &loadFitTables},
-            {            "partfit",             &isPartFit,                            &loadPartFit},
-            {    "surfacechannels",     &isSurfaceChannels,   &loadCatalog<sw::SurfaceChannelTable>},
-            {              "items",               &isItems,           &loadCatalog<sw::ItemCatalog>},
-            {         "appearance",      &isAppearanceData,                     &loadAppearanceData},
-            {           "skeleton",            &isSkeleton,                           &loadSkeleton},
-            {            "bonelod",             &isBoneLod,                            &loadBoneLod},
-            {       "animationlod",        &isAnimationLod,  &loadCatalog<sw::AnimationLodSettings>},
+            {              "scene",               &isScene,                                &loadScene},
+            {             "prefab",              &isPrefab,                               &loadPrefab},
+            {           "pipeline",            &isPipeline,                             &loadPipeline},
+            {         "renderpass",          &isRenderPass,                           &loadRenderPass},
+            {"enginedefaultassets", &isEngineDefaultAssets,                  &loadEngineDefaultAssets},
+            {           "inputmap",            &isInputMap,                             &loadInputMap},
+            {           "material",            &isMaterial,                             &loadMaterial},
+            {         "spriteclip",          &isSpriteClip,                           &loadSpriteClip},
+            {      "camerapresets",       &isCameraPresets,     &loadCatalog<sw::CameraPresetCatalog>},
+            {       "elementrules",        &isElementRules,        &loadCatalog<sw::ElementRuleTable>},
+            {       "interactions",        &isInteractions,      &loadCatalog<sw::InteractionCatalog>},
+            {    "physicssettings",     &isPhysicsSettings,                      &loadPhysicsSettings},
+            {       "physicsasset",        &isPhysicsAsset,                         &loadPhysicsAsset},
+            {          "schedules",           &isSchedules,         &loadCatalog<sw::ScheduleCatalog>},
+            {       "usersettings",  &isUserSettingsSchema,                   &loadUserSettingsSchema},
+            {          "abilities",           &isAbilities,          &loadCatalog<sw::AbilityCatalog>},
+            {              "crops",               &isCrops,             &loadCatalog<sw::CropCatalog>},
+            {               "city",                &isCity,             &loadCatalog<sw::CityCatalog>},
+            {            "weapons",             &isWeapons,           &loadCatalog<sw::WeaponCatalog>},
+            {           "rtsunits",            &isRtsUnits,              &loadCatalog<sw::RtsCatalog>},
+            {        "voxelblocks",         &isVoxelBlocks,       &loadCatalog<sw::VoxelBlockCatalog>},
+            {           "coasters",            &isCoasters,    &loadCatalog<sw::CoasterLayoutCatalog>},
+            {         "parklayout",          &isParkLayout,                           &loadParkLayout},
+            {       "gamesettings",        &isGameSettings,                         &loadGameSettings},
+            {        "socketkinds",         &isSocketKinds,         &loadCatalog<sw::SocketKindTable>},
+            {            "sockets",             &isSockets,                              &loadSockets},
+            {      "referencepose",       &isReferencePose,   &loadCatalog<sw::ReferencePoseOverride>},
+            {          "bodyshape",           &isBodyShape,            &loadCatalog<sw::BodyShapeSet>},
+            {          "fittables",           &isFitTables,                            &loadFitTables},
+            {            "partfit",             &isPartFit,                              &loadPartFit},
+            {    "surfacechannels",     &isSurfaceChannels,     &loadCatalog<sw::SurfaceChannelTable>},
+            {              "items",               &isItems,             &loadCatalog<sw::ItemCatalog>},
+            {         "appearance",      &isAppearanceData,                       &loadAppearanceData},
+            {           "skeleton",            &isSkeleton,                             &loadSkeleton},
+            {            "bonelod",             &isBoneLod,                              &loadBoneLod},
+            {       "animationlod",        &isAnimationLod,    &loadCatalog<sw::AnimationLodSettings>},
+            {     "animationcrowd",      &isAnimationCrowd,  &loadCatalog<sw::AnimationCrowdSettings>},
+            {    "vertexanimation", &isVertexAnimationList, &loadCatalog<sw::VertexAnimationCookList>},
         };
 
         /**

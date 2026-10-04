@@ -183,6 +183,27 @@ namespace sw
             outListBone[trackIndex] = skeleton.findBoneIndex( _listTrackName[trackIndex] );
     }
 
+    bool AnimClip::samplePose( float32 time, const vector<int32>& listTrackToBone, Pose& inoutPose, Pose& scratchTrackPose, bool bAnchorRootMotion,
+                               const uint8* pTrackMask ) const
+    {
+        if ( sampleTracks( time, scratchTrackPose, pTrackMask ) == false )
+            return false;
+        copyTracksToPose( scratchTrackPose, listTrackToBone, inoutPose, pTrackMask );
+        // 루트 모션을 뽑으면 그 본은 클립 시작 자리에 묶는다 — 움직임은 오브젝트가 맡는다.
+        const int32 rootTrack = _rootMotionTrack;
+        if ( bAnchorRootMotion == false || rootTrack < 0 || static_cast<size_t>( rootTrack ) >= listTrackToBone.size() || listTrackToBone[static_cast<size_t>( rootTrack )] < 0 )
+            return true;
+        if ( pTrackMask != nullptr && pTrackMask[rootTrack] == 0 )
+            return true;
+        const uint32        rootBone = static_cast<uint32>( listTrackToBone[static_cast<size_t>( rootTrack )] );
+        BoneTransform       anchored = inoutPose.getBoneTransform( rootBone );
+        const BoneTransform anchor   = getRootMotionAnchor();
+        anchored._translation        = anchor._translation;
+        anchored._rotation           = anchor._rotation;
+        inoutPose.setBoneTransform( rootBone, anchored );
+        return true;
+    }
+
     void AnimClip::copyTracksToPose( const Pose& trackPose, const vector<int32>& listTrackToBone, Pose& inoutPose, const uint8* pTrackMask )
     {
         const uint32 trackCount = MathUtil::min( trackPose.getBoneCount(), static_cast<uint32>( listTrackToBone.size() ) );

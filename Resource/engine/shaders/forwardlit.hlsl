@@ -27,10 +27,10 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 	PSInput output;
 	// 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작·정점 풀 시작이 배치 표에 있다.
 	SwInstanceData instance = swLoadInstance(input.instanceSlot);
-	// GPU 가 변형한 정점이 있으면 그걸 쓴다(모프 안 하면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
+	// GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
 	float3 localPosition;
 	float3 localNormal;
-	swLoadMorphedVertex(instance.meshBatchIndex, vertexId, input.position, input.normal, localPosition, localNormal);
+	swLoadAnimatedVertex(instance, vertexId, input.position, input.normal, localPosition, localNormal);
 	// 위치는 깊이 프리패스와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 LessEqual 을 통과한다(binding.hlsli).
 	float4 worldPosition = swComputeWorldPosition(localPosition, instance.world);
 	output.position = swComputeClipPosition(worldPosition, g_ViewProj);

@@ -152,8 +152,28 @@ namespace sw
         constexpr string_view kSkeletonExtension = ".skeleton.json";
         if ( StringUtil::endsWith( skeletonPath, kSkeletonExtension ) == false )
             return string{};
-        string path{ skeletonPath.substr( 0, skeletonPath.size() - kSkeletonExtension.size() ) };
+        const string_view stemPath   = skeletonPath.substr( 0, skeletonPath.size() - kSkeletonExtension.size() );
+        const size_t      slash      = stemPath.find_last_of( '/' );
+        const string_view stem       = ( slash == string_view::npos ) ? stemPath : stemPath.substr( slash + 1 );
+        const string_view folder     = ( slash == string_view::npos ) ? string_view{} : stemPath.substr( 0, slash );
+        const size_t      parentCut  = folder.find_last_of( '/' );
+        const string_view folderName = ( parentCut == string_view::npos ) ? folder : folder.substr( parentCut + 1 );
+        // 임포트 옆 폴더(폴더 이름 = 파일 이름)는 다시 임포트할 때 지워진다 — 그 밖, 메시 곁에 둔다.
+        string path = ( folder.empty() == false && folderName == stem ) ? string{ folder } : string{ stemPath };
         path.append( kExtension.data(), kExtension.size() );
         return path;
+    }
+
+    void SkeletonBoneLod::makeSkeletonCandidatePaths( string_view boneLodPath, string& outImportedPath, string& outSiblingPath )
+    {
+        outImportedPath.clear();
+        outSiblingPath.clear();
+        if ( StringUtil::endsWith( boneLodPath, kExtension ) == false )
+            return;
+        const string_view stemPath = boneLodPath.substr( 0, boneLodPath.size() - kExtension.size() );
+        const size_t      slash    = stemPath.find_last_of( '/' );
+        const string_view stem     = ( slash == string_view::npos ) ? stemPath : stemPath.substr( slash + 1 );
+        outImportedPath            = string{ stemPath } + "/" + string{ stem } + ".skeleton.json";
+        outSiblingPath             = string{ stemPath } + ".skeleton.json";
     }
 } // namespace sw

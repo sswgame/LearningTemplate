@@ -8,6 +8,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -41,6 +43,7 @@
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -54,6 +57,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
 
+#include "EngineTest/AnimationTestUtil.h"
 #include "EngineTest/RHITestDevice.h"
 #include "EngineTest/RHITestImage.h"
 
@@ -5077,4 +5081,170 @@ SW_TEST_CASE( RenderPassGpuTest, PortraitRendererDrawsAPrefabInIsolation )
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the portrait test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 군중 공유 · VAT 의 그림이 캐릭터마다 스키닝한 그림과 같다(네 백엔드)
+ * @details 스킨드 큐브(위쪽 정점 = bone1) 셋이 반복 클립(bone1 사인 회전)을 0 · 0.25 · 0.5 초부터 재생한다. 변형 칸 넷(폭 0.25 초)의 가운데라
+ *          (A) 캐릭터마다 사본 · 포즈 · 팔레트(공유 끔)와 (B) 묶음 공유(묶음 셋, 결과 구간 셋)가 같은 그림이어야 하고, (C) 모두 VAT(15 fps 표의
+ *          정확한 프레임 시각)로 그려도 같아야 한다. (D) 클립 없는 바인드 포즈와는 달라야 한다 — 같으면 팔레트 · 표가 GPU 에 닿지 않는다.
+ *          (B) 가 지면 묶음 팔레트를 싣는 쪽(`GpuSceneBuilder::collectSkinPalettes`) · 인스턴스 표(meshskin.hlsl), (C) 가 지면 VAT 정점 셰이더 경로다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinning )
+{
+    struct Snapshot
+    {
+        uint32             _drawnCount{ 0 };
+        bool               _bOk{ false };
+        test::RHITestImage _image;
+    };
+    auto countDifferentPixels = []( const Snapshot& a, const Snapshot& b ) -> uint32
+    {
+        if ( a._image.getWidth() != b._image.getWidth() || a._image.getHeight() != b._image.getHeight() )
+            return 0xFFFFFFFFu;
+        uint32 count{ 0 };
+        for ( uint32 y = 0; y < a._image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < a._image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixelA = a._image.getPixel( x, y );
+                const test::Rgba8 pixelB = b._image.getPixel( x, y );
+                const auto        isFar  = []( uint8 lhs, uint8 rhs )
+                { return lhs > rhs + 12 || rhs > lhs + 12; };
+                if ( isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b ) )
+                    ++count;
+            }
+        }
+        return count;
+    };
+
+    enum class CrowdCase : uint8
+    {
+        PerUnit,
+        Shared,
+        VertexAnimation,
+        BindPose,
+    };
+
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::shared_ptr<sw::Skeleton> skeleton = sw::make_shared<sw::Skeleton>( test::makeChainSkeleton( 2 ) );
+    // 클립 — 반복, 길이 1 초, bone1 이 Z 축으로 크게 돈다.
+    const sw::string folder = test::makeTempPath( "crowdgpuclips" );
+    {
+        sw::AnimClip clip;
+        clip.setName( sw::hashed_string( "Wave" ) );
+        clip.setLooping( true );
+        SW_ASSERT_TRUE( clip.compressFrom( test::makeChainRawClip( *skeleton, 31, 30.0f, 0.9f ), sw::RawAnimCodec::getInstance(), sw::AnimCodecSettings{}, nullptr ) );
+        SW_ASSERT_TRUE( clip.saveToFile( sw::FileUtil::joinPath( folder, "wave.animclip" ) ) );
+    }
+    sw::shared_ptr<sw::Mesh> bindCube = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( bindCube.get() );
+    sw::vector<sw::MeshSkinVertex> listSkin;
+    for ( const sw::RHIVertex& vertex : bindCube->getVertices() )
+    {
+        sw::MeshSkinVertex skin{};
+        skin._arrJoint[0] = vertex._arrPosition[1] > 0.0f ? 1u : 0u;
+        listSkin.push_back( skin );
+    }
+    sw::shared_ptr<sw::Mesh> skinnedCube = sw::Mesh::create();
+    skinnedCube->setVertices( bindCube->getVertices() );
+    skinnedCube->setSkin( listSkin, 2 );
+
+    const float32 arrStart[3] = { 0.0f, 0.25f, 0.5f };
+    auto          renderCase  = [&]( test::RHITestDevice& device, CrowdCase crowdCase ) -> Snapshot
+    {
+        Snapshot          result{};
+        sw::FrameRenderer renderer;
+        if ( renderer.initialize( device.get() ) == false || renderer.isReady() == false )
+            return result;
+        sw::Scene scene( "CrowdScene" );
+        if ( scene.ensureDefaultCameras() == false )
+            return result;
+        sw::GameObjectManager& manager = *scene.getObjectManager();
+        for ( uint32 index = 0; index < 3; ++index )
+        {
+            const sw::string name    = sw::string( "Crowd" ) + sw::to_string( index ).c_str();
+            sw::GameObject*  pObject = manager.createGameObject( sw::hashed_string( name ) );
+            if ( pObject == nullptr )
+                return result;
+            sw::SkeletalMeshComponent* pUnit = pObject->addComponent<sw::SkeletalMeshComponent>();
+            if ( pUnit == nullptr )
+                return result;
+            pUnit->setShareCrowdPose( crowdCase == CrowdCase::Shared || crowdCase == CrowdCase::VertexAnimation );
+            pUnit->setMesh( skinnedCube );
+            pUnit->resolveRenderAssets();
+            pUnit->setSkeleton( skeleton );
+            pUnit->setBoundsRadius( 2.0f );
+            pUnit->setLocalPosition( sw::float3{ -1.6f + 1.6f * static_cast<float32>( index ), 1.0f, 0.0f } );
+            if ( crowdCase == CrowdCase::VertexAnimation )
+            {
+                sw::AnimationLodState farState{};
+                farState._bVertexAnimation = SW_TRUE;
+                pUnit->applyAnimationLod( farState );
+            }
+            if ( crowdCase == CrowdCase::BindPose )
+                continue;
+            sw::SkeletalAnimatorComponent* pAnimator = pObject->addComponent<sw::SkeletalAnimatorComponent>();
+            if ( pAnimator == nullptr )
+                return result;
+            pAnimator->setClipFolder( folder );
+            pAnimator->setInitialState( "Wave" );
+            pAnimator->setInitialTime( arrStart[index] );
+            pAnimator->dispatchBeginPlay();
+        }
+        manager.flushSceneTransforms();
+        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+        for ( uint32 frame = 0; frame < 4; ++frame )
+        {
+            // 팔레트 · 묶음은 애니메이션 시스템이 틱 뒤에 만든다 — 시험은 틱 대신 평가만 부른다(시간은 흐르지 않는다).
+            manager.getAnimationSystem().evaluate( 0.0f );
+            device->beginFrame( clear );
+            if ( renderer.execute( device.get(), &scene ) == false )
+                return result;
+            device->endFrame( false, false );
+            device->waitIdle();
+        }
+        if ( result._image.readTransient( renderer, "SceneColor" ) == false )
+            return result;
+        for ( uint32 y = 0; y < result._image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < result._image.getWidth(); ++x )
+            {
+                if ( test::RHITestImage::isDefaultClearBackground( result._image.getPixel( x, y ) ) == false )
+                    ++result._drawnCount;
+            }
+        }
+        result._bOk = result._drawnCount > 0;
+        return result;
+    };
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        if ( device->getCapabilities()._bGpuMeshMorph == SW_FALSE )
+            continue;
+        const sw::string label     = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
+        const Snapshot   perUnit   = renderCase( device, CrowdCase::PerUnit );
+        const Snapshot   shared    = renderCase( device, CrowdCase::Shared );
+        const Snapshot   vertexAni = renderCase( device, CrowdCase::VertexAnimation );
+        const Snapshot   bindPose  = renderCase( device, CrowdCase::BindPose );
+        const bool       bAllRead  = perUnit._bOk && shared._bOk && vertexAni._bOk && bindPose._bOk;
+        SW_EXPECT_TRUE_MSG( bAllRead, ( label + ": 그림을 못 읽었다" ).c_str() );
+        if ( bAllRead == false )
+            continue;
+        const uint32 tolerance  = perUnit._drawnCount / 50 + 8;
+        const uint32 sharedDiff = countDifferentPixels( perUnit, shared );
+        const uint32 vatDiff    = countDifferentPixels( perUnit, vertexAni );
+        const uint32 poseDiff   = countDifferentPixels( perUnit, bindPose );
+        SW_EXPECT_TRUE_MSG( poseDiff > perUnit._drawnCount / 10,
+                            ( label + ": 클립을 재생했는데 바인드 포즈와 같다 (달라진 픽셀 " + sw::to_string( poseDiff ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( sharedDiff <= tolerance, ( label + ": 묶음 공유 그림이 캐릭터마다 스키닝한 그림과 다르다 (달라진 픽셀 " + sw::to_string( sharedDiff ) +
+                                                       " / 그려진 " + sw::to_string( perUnit._drawnCount ) + ")" )
+                                                         .c_str() );
+        SW_EXPECT_TRUE_MSG( vatDiff <= tolerance, ( label + ": VAT 그림이 캐릭터마다 스키닝한 그림과 다르다 (달라진 픽셀 " + sw::to_string( vatDiff ) + " / 그려진 " +
+                                                    sw::to_string( perUnit._drawnCount ) + ")" )
+                                                      .c_str() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the crowd sharing test" );
 }

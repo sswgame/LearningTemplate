@@ -67,8 +67,10 @@ namespace sw
         void spawn( uint32 meshCount );
         /** @brief `-gv_benchCharacters=N` — 스킨드 캐릭터 N 명을 한 줄로 세우고 Idle · Walking_A 를 번갈아 재생합니다. */
         void spawnCharacters( uint32 characterCount );
-        /** @brief 캐릭터 줄이 화면에 차도록 씬의 카메라를 맞춥니다(허리 높이를 봅니다). */
+        /** @brief 캐릭터 줄이 화면에 차도록 씬의 카메라를 맞춥니다(허리 높이를 봅니다). 격자면 앞 위에서 내려다봅니다. */
         void frameCharacterCameras( Scene* pScene, float32 halfExtent );
+        /** @brief 캐릭터 줄(격자면 한 행)의 반폭입니다. */
+        static float32 computeCharacterHalfExtent( uint32 characterCount );
 
         /** @brief 인덱스로부터 결정적인 밝은 색을 만듭니다. */
         static float4 makeBenchColor( uint32 index );

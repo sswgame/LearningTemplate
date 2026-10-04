@@ -81,13 +81,15 @@ namespace sw
         /** @brief 스켈레톤입니다. 늘 있습니다(없으면 암묵 스켈레톤). */
         const Skeleton& getSkeleton() const;
 
-        /** @brief 로컬 포즈입니다. 기본 포즈 단계의 일이 여기에 씁니다. */
-        Pose&       getLocalPose() { return _localPose; }
-        const Pose& getLocalPose() const { return _localPose; }
-        /** @brief 모델 공간 본 행렬입니다(단계가 끝날 때마다 다시 구합니다). */
-        const vector<float4x4>& getModelSpaceTransforms() const { return _listModelSpace; }
-        /** @brief 스킨 팔레트(역 바인드 × 모델 공간)입니다. 렌더러가 스냅샷으로 옮깁니다. */
-        const vector<float4x4>& getSkinPalette() const { return _listSkinPalette; }
+        /**
+         * @brief 로컬 포즈입니다. 기본 포즈 단계의 일이 여기에 씁니다. 군중 묶음과 나누는 중이면 묶음의 포즈입니다(그때는 포즈 단계가 돌지 않아 아무도 쓰지 않는다).
+         */
+        Pose&       getLocalPose() { return _pCrowdBucket != nullptr ? const_cast<Pose&>( _pCrowdBucket->getLocalPose() ) : _localPose; }
+        const Pose& getLocalPose() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getLocalPose() : _localPose; }
+        /** @brief 모델 공간 본 행렬입니다(단계가 끝날 때마다 다시 구합니다). 묶음과 나누는 중이면 묶음의 것입니다. */
+        const vector<float4x4>& getModelSpaceTransforms() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getModelSpaceTransforms() : _listModelSpace; }
+        /** @brief 스킨 팔레트(역 바인드 × 모델 공간)입니다. 렌더러가 스냅샷으로 옮깁니다. 묶음과 나누는 중이면 묶음의 것입니다. */
+        const vector<float4x4>& getSkinPalette() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getSkinPalette() : _listSkinPalette; }
         /** @brief 이름의 본의 모델 공간 행렬입니다. 없으면 false 입니다. */
         bool findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const;
         /** @brief 포즈를 다시 만들게 합니다(쉬던 유닛도 다음 프레임 한 번 돕니다). */
@@ -139,6 +141,24 @@ namespace sw
         /** @brief LOD 판정을 받는 얼굴입니다. */
         SkeletalMeshLodClient& getLodClient() { return _lodClient; }
 
+        // --- 군중 공유 (AnimationCrowd.h) ---
+        /**
+         * @brief 군중 공유를 켭니다. 켜면 컴포넌트마다 스킨 사본을 두지 않고, 같은 상태 · 같은 위상의 캐릭터와 포즈 하나 · 결과 구간 하나를 나눕니다.
+         * @details 나눌 수 없는 프레임(섞는 중 · 레이어 · 반복하지 않는 클립 · 후처리 일)은 사본 풀의 메시로 혼자 평가하고, LOD 가 VAT 거리로 보면
+         *          VAT 메시로 넘어갑니다(따르는 유닛이 없을 때만).
+         */
+        void setShareCrowdPose( bool bShare );
+        bool isShareCrowdPose() const { return _bShareCrowdPose == SW_TRUE; }
+        /** @brief 지금 군중 공유의 어디에 있나입니다. */
+        AnimationCrowdMode getCrowdMode() const { return _crowdMode; }
+        /** @brief 나누는 묶음입니다(나누지 않으면 nullptr). */
+        const AnimationCrowdBucket* findCrowdBucket() const { return _pCrowdBucket; }
+        /** @brief 묶음 · 사본 · VAT 를 정합니다(게임 스레드, `AnimationSystem` 이 시간 단계 뒤에 부릅니다). */
+        void updateCrowdMembership( AnimationCrowd& crowd );
+        /** @brief 이 유닛의 포즈를 읽는 유닛(리더 · 부착 의존)이 있는지입니다(`AnimationSystem` 이 레벨을 지을 때 정합니다). */
+        void setHasAnimationDependents( bool bHasDependents ) { _bHasDependents = bHasDependents ? SW_TRUE : SW_FALSE; }
+        bool hasAnimationDependents() const { return _bHasDependents == SW_TRUE; }
+
         // --- AnimationSystem 이 부르는 것 ---
         /** @brief 이번 프레임 할 일과 LOD(포즈를 만드는지)를 정합니다(게임 스레드). 쉬면 false 입니다. */
         [[nodiscard]] bool beginAnimationFrame( float32 deltaSeconds, uint64 frameIndex );
@@ -150,8 +170,10 @@ namespace sw
         void collectSyncPlayers( vector<AnimPlayer*>& inoutListPlayer, vector<float32>& inoutListWeight, vector<hashed_string>& inoutListGroup );
 
     private:
-        /** @brief 스켈레톤을 경로에서 다시 읽습니다. */
+        /** @brief 스켈레톤을 경로에서 다시 읽습니다. 경로가 비었고 런타임에 정한 스켈레톤이면 둡니다. */
         void resolveSkeleton();
+        /** @brief 스켈레톤을 바꾸고 포즈 버퍼를 맞춥니다(출처 표시는 건드리지 않습니다). */
+        void applySkeleton( shared_ptr<const Skeleton> skeleton );
         /** @brief 공유 메시가 스킨을 가지면 컴포넌트 몫 복사본을 만듭니다. */
         void resolveSkinInstanceMesh();
         /** @brief 스켈레톤이 바뀌었으면 포즈 · 행렬 · 리더 표를 맞춥니다. */
@@ -168,6 +190,10 @@ namespace sw
         void refreshBoneLodMasks();
         /** @brief 보간 프레임의 포즈를 만듭니다(직전 표시 포즈 → 마지막 평가 포즈). 스킨 팔레트 단계에서 부릅니다. */
         void applySkippedFrameInterpolation( bool bEvaluatedThisFrame );
+        /** @brief 이번 프레임 포즈를 묶음과 나눌 수 있으면 요청을 채웁니다(일이 애니메이터 하나 · 리더 없음 · 그 일이 나눌 수 있다고 답함). */
+        bool describeSharedPose( AnimSharedPoseRequest& outRequest ) const;
+        /** @brief 묶음 참조 · 사본을 놓습니다(사본은 @p pCrowd 가 있으면 풀로 돌려줍니다). */
+        void leaveCrowd( AnimationCrowd* pCrowd );
 
         PROPERTY( Category = "Animation", DisplayName = "Skeleton", AssetPath, AssetType = "Skeleton", Tooltip = "Skeleton asset; empty uses a one-bone implicit skeleton" )
         string _skeletonPath;
@@ -199,14 +225,22 @@ namespace sw
         uint32                            _updatePhase;
         uint32                            _framesSinceEvaluation; ///< 마지막 평가 뒤 지난 프레임
         uint32                            _effectiveDivisor;      ///< 이번 프레임의 주기(하한 PROPERTY 와 LOD 중 큰 쪽)
+        AnimationCrowdBucket*             _pCrowdBucket;          ///< 나누는 묶음(군중 소유 — 참조 수로 지켜진다)
+        shared_ptr<Mesh>                  _soloMesh;              ///< 혼자 평가할 때 빌린 사본
+        const AnimClip*                   _pVertexAnimationClip;  ///< VAT 로 그리는 클립(바뀌면 시각 오프셋을 다시 적는다)
+        AnimationCrowdMode                _crowdMode;
+        uint8                             _bRuntimeSkeleton; ///< 스켈레톤을 경로가 아니라 `setSkeleton` 으로 정했다(경로가 비어도 암묵 스켈레톤으로 덮지 않는다)
         PROPERTY( Category = "Animation", DisplayName = "Follow Parent Pose", Tooltip = "Use the parent object's skeletal mesh as the leader pose" )
         uint8 _bFollowParentPose : 1;
         PROPERTY( Category = "Animation", DisplayName = "Animate When Offscreen", Tooltip = "Keep building the pose while not visible" )
-        uint8                  _bAnimateWhenOffscreen : 1;
-        uint8                  _bVisibleHint          : 1;
-        uint8                  _bPoseDirty            : 1;
-        uint8                  _bInterpolateFrame     : 1; ///< 이번 프레임은 평가 없이 보간만 한다
-        uint8                  _bInterpolationReady   : 1; ///< 보간할 두 포즈가 있다
-        [[maybe_unused]] uint8 _reserved              : 2;
+        uint8 _bAnimateWhenOffscreen : 1;
+        uint8 _bVisibleHint          : 1;
+        uint8 _bPoseDirty            : 1;
+        uint8 _bInterpolateFrame     : 1; ///< 이번 프레임은 평가 없이 보간만 한다
+        uint8 _bInterpolationReady   : 1; ///< 보간할 두 포즈가 있다
+        PROPERTY( Category = "Animation", DisplayName = "Share Crowd Pose",
+                  Tooltip = "Share one evaluated pose and skinned vertex range with units in the same state (crowds); far units switch to vertex animation" )
+        uint8 _bShareCrowdPose : 1;
+        uint8 _bHasDependents  : 1; ///< 다른 유닛이 이 유닛의 포즈를 읽는다(VAT 로 넘기지 않는다)
     };
 } // namespace sw

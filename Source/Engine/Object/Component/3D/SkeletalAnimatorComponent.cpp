@@ -70,6 +70,21 @@ namespace sw
             _owner._pUnit = nullptr;
     }
 
+    bool SkeletalAnimatorBinding::describeSharedPose( AnimSharedPoseRequest& outRequest ) const
+    {
+        return _owner.describeSharedPose( outRequest );
+    }
+
+    shared_ptr<const AnimClip> SkeletalAnimatorBinding::findSharedPoseClip( const AnimClip* pClip ) const
+    {
+        for ( const auto& [name, clip] : _owner._mapClip )
+        {
+            if ( clip.get() == pClip )
+                return clip;
+        }
+        return nullptr;
+    }
+
     const IAnimPlayable* SkeletalAnimatorBinding::findPlayable( const hashed_string& name ) const
     {
         return _owner.findClip( name );
@@ -105,6 +120,7 @@ namespace sw
         , _pUnit{ nullptr }
         , _sequencerTime{ 0.0f }
         , _sequencerWeight{ 0.0f }
+        , _initialTime{ 0.0f }
         , _bExtractRootMotion{ SW_FALSE }
         , _bPlayOnBegin{ SW_TRUE }
         , _reserved{ 0 }
@@ -130,8 +146,8 @@ namespace sw
         const float32 resumeTime = _stateTime;
         if ( _currentState.empty() == false && play( hashed_string( _currentState ), true, 0.0f ) )
             _graphPlayer.getPlayer().setCurrentTime( resumeTime );
-        else
-            (void)play( hashed_string( _initialState ), true, 0.0f );
+        else if ( play( hashed_string( _initialState ), true, 0.0f ) && _initialTime > 0.0f )
+            _graphPlayer.getPlayer().setCurrentTime( _initialTime );
     }
 
     void SkeletalAnimatorComponent::onEndPlay()
@@ -301,6 +317,20 @@ namespace sw
         return 0.0f;
     }
 
+    bool SkeletalAnimatorComponent::describeSharedPose( AnimSharedPoseRequest& outRequest ) const
+    {
+        const AnimPlayer& player   = _graphPlayer.getPlayer();
+        const AnimClip*   pCurrent = static_cast<const AnimClip*>( player.getCurrentPlayable() );
+        // 섞는 중 · 레이어 · 시퀀서 덮어쓰기는 캐릭터마다 다르다. 반복하지 않는 클립은 시작 시각이 캐릭터마다 달라 칸으로 묶지 않는다.
+        if ( pCurrent == nullptr || player.isCrossfading() || player.isCurrentLooping() == false || _listLayer.empty() == false || _sequencerWeight > 0.0f )
+            return false;
+        outRequest._pClip             = pCurrent;
+        outRequest._time              = player.getCurrentTime();
+        outRequest._playRate          = _playRate * player.getSpeed();
+        outRequest._bAnchorRootMotion = _bExtractRootMotion;
+        return true;
+    }
+
     bool SkeletalAnimatorComponent::isAnimationActive() const
     {
         const bool bPlaying = _graphPlayer.getPlayer().getCurrentPlayable() != nullptr;
@@ -389,20 +419,7 @@ namespace sw
             }
             pTrackMask = _listScratchTrackMask.data();
         }
-        if ( clip.sampleTracks( time, _scratchTrackPose, pTrackMask ) == false )
-            return;
-        AnimClip::copyTracksToPose( _scratchTrackPose, listTrackToBone, inoutPose, pTrackMask );
-        // 루트 모션을 뽑으면 그 본은 클립 시작 자리에 묶는다 — 움직임은 오브젝트가 맡는다.
-        const int32 rootTrack = clip.getRootMotionTrack();
-        if ( _bExtractRootMotion == SW_TRUE && rootTrack >= 0 && listTrackToBone[static_cast<size_t>( rootTrack )] >= 0 )
-        {
-            const uint32        rootBone = static_cast<uint32>( listTrackToBone[static_cast<size_t>( rootTrack )] );
-            BoneTransform       anchored = inoutPose.getBoneTransform( rootBone );
-            const BoneTransform anchor   = clip.getRootMotionAnchor();
-            anchored._translation        = anchor._translation;
-            anchored._rotation           = anchor._rotation;
-            inoutPose.setBoneTransform( rootBone, anchored );
-        }
+        (void)clip.samplePose( time, listTrackToBone, inoutPose, _scratchTrackPose, _bExtractRootMotion == SW_TRUE, pTrackMask );
     }
 
     void SkeletalAnimatorComponent::refreshLayerMask( LayerState& layer, const Skeleton& skeleton )

@@ -551,3 +551,18 @@ SW_TEST_CASE( SkeletalAnimationTest, AnimatorPlaysClipFromFolder )
     SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameRotation( expected.getBoneTransform( 1 )._rotation, pUnit->getLocalPose().getBoneTransform( 1 )._rotation, 1e-3f ) );
     SW_EXPECT_FALSE( TestSkeletalAnimationInternal::isSameRotation( quaternion::Identity, pUnit->getLocalPose().getBoneTransform( 1 )._rotation, 1e-3f ) );
 }
+
+/**
+ * @brief [SkeletalAnimationTest] 런타임에 정한 스켈레톤(`setSkeleton`)은 렌더 에셋을 다시 풀어도(`resolveRenderAssets`) 암묵 스켈레톤으로 덮이지 않는다 — 경로를 정하면 경로가 이긴다
+ */
+SW_TEST_CASE( SkeletalAnimationTest, RuntimeSkeletonSurvivesRenderAssetResolve )
+{
+    GameObjectManager      manager;
+    SkeletalMeshComponent* pUnit = TestSkeletalAnimationInternal::createUnit( manager, "Runtime", 3 );
+    SW_ASSERT_NOT_NULL( pUnit );
+    SW_EXPECT_EQUAL( 3u, pUnit->getSkeleton().getBoneCount() );
+    pUnit->resolveRenderAssets();
+    SW_EXPECT_EQUAL( 3u, pUnit->getSkeleton().getBoneCount() );
+    pUnit->setSkeletonPath( "" ); // 경로를 (빈 값으로) 정하면 런타임 스켈레톤을 놓는다
+    SW_EXPECT_EQUAL( 1u, pUnit->getSkeleton().getBoneCount() );
+}

@@ -78,6 +78,23 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_INT( gv_benchCharacters, 0, "벤치 스킨드 캐릭터 수 (0=사용 안 함, KayKit 기사 · Idle/Walking_A)" );
 
     /**
+     * @brief `-gv_benchCharacterColumns=N` — 벤치 캐릭터를 한 줄이 아니라 N 열 격자로 세웁니다(0 = 한 줄). 천 명은 한 줄이면 1.6 km 다.
+     * @details 카메라는 격자 앞 위에서 내려다본다 — 앞줄은 크고 뒷줄은 작아 애니메이션 LOD 의 단계가 고루 나온다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchCharacterColumns, 0, "벤치 캐릭터를 N 열 격자로 세운다 (0=한 줄)" );
+
+    /**
+     * @brief `-gv_benchCrowdShare=1` — 벤치 캐릭터의 군중 포즈 공유를 켭니다(`SkeletalMeshComponent::setShareCrowdPose`).
+     * @details 끄면(기본) 캐릭터마다 스킨 사본 · 포즈 · 팔레트다. 켜면 같은 상태 · 위상끼리 포즈 하나 · 결과 구간 하나를 나누고, 아주 먼 캐릭터는 VAT 다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchCrowdShare, 0, "벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=묶음 공유 + 먼 캐릭터 VAT)" );
+
+    /**
+     * @brief `-gv_benchCharacterStagger=1` — 벤치 캐릭터의 시작 시각을 인덱스 해시로 흩습니다(군중이 한 프레임으로 맞춰 움직이지 않게).
+     */
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchCharacterStagger, 0, "벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초)" );
+
+    /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
      * @details 배치 키가 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우
      *          경로에 실제 부하를 거는 유일한 방법이다.
@@ -501,7 +518,8 @@ namespace sw
         if ( pObjects == nullptr )
             return;
 
-        const float32 origin = -0.5f * static_cast<float32>( characterCount - 1 ) * kBenchCharacterSpacing;
+        const uint32  columns = ( gv_benchCharacterColumns > 0 ) ? static_cast<uint32>( gv_benchCharacterColumns ) : characterCount;
+        const float32 origin  = -0.5f * static_cast<float32>( MathUtil::min( columns, characterCount ) - 1 ) * kBenchCharacterSpacing;
         for ( uint32 index = 0; index < characterCount; ++index )
         {
             StringBuilder<constant::kMaxBuffer64> nameBuilder;
@@ -513,18 +531,27 @@ namespace sw
             SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
             if ( pMesh == nullptr || pAnimator == nullptr )
                 continue;
+            pMesh->setShareCrowdPose( gv_benchCrowdShare != 0 );
             pMesh->setMeshId( kBenchCharacterMesh );
             pMesh->setSkeletonPath( kBenchCharacterSkeleton );
             pMesh->resolveRenderAssets();
-            // 기사는 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌린다.
-            pMesh->setLocalPosition( float3{ origin + static_cast<float32>( index ) * kBenchCharacterSpacing, 0.0f, 0.0f } );
+            // 기사는 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌린다. 격자면 열 · 행으로 펼친다(행은 +Z 로 멀어진다).
+            const uint32 column = index % columns;
+            const uint32 row    = index / columns;
+            pMesh->setLocalPosition( float3{ origin + static_cast<float32>( column ) * kBenchCharacterSpacing, 0.0f, static_cast<float32>( row ) * kBenchCharacterSpacing } );
             pMesh->setLocalRotation( float3{ 0.0f, MathUtil::Pi, 0.0f } );
             pAnimator->setClipFolder( kBenchCharacterClips );
             pAnimator->setInitialState( kArrBenchCharacterClip[index % SW_COUNT_OF( kArrBenchCharacterClip )] );
+            if ( gv_benchCharacterStagger != 0 )
+            {
+                // 결정적 해시 — 실행마다 같은 그림이어야 비교가 된다.
+                const uint32 hash = ( index + 1u ) * 2654435761u;
+                pAnimator->setInitialTime( static_cast<float32>( hash >> 16 ) / 65535.0f * 2.0f );
+            }
             _listBenchExtra.push_back( pMesh->getHandle() );
         }
 
-        const float32 halfExtent = MathUtil::max( 2.0f, 0.5f * static_cast<float32>( characterCount ) * kBenchCharacterSpacing );
+        const float32 halfExtent = computeCharacterHalfExtent( characterCount );
         spawnLight( pScene, halfExtent );
         spawnGround( pScene, halfExtent );
         _bCharacterFraming = SW_TRUE;
@@ -532,17 +559,34 @@ namespace sw
         SW_LOG_INFO( "[Bench] 씬 '%#' 에 스킨드 캐릭터 %#명을 세웠습니다(%#).", pScene->getName(), characterCount, kBenchCharacterMesh );
     }
 
+    float32 BenchScene::computeCharacterHalfExtent( uint32 characterCount )
+    {
+        const uint32 columns = ( gv_benchCharacterColumns > 0 ) ? MathUtil::min( static_cast<uint32>( gv_benchCharacterColumns ), characterCount ) : characterCount;
+        return MathUtil::max( 2.0f, 0.5f * static_cast<float32>( columns ) * kBenchCharacterSpacing );
+    }
+
     void BenchScene::frameCharacterCameras( Scene* pScene, float32 halfExtent )
     {
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
         // 캐릭터 키(~2 m)가 화면을 채우도록 허리 높이를 본다. 큐브 격자 맞춤(frameOneCamera)은 바닥 높이 원점을 본다.
+        // 격자(`-gv_benchCharacterColumns`)면 앞 위에서 격자 가운데를 내려다본다 — 앞줄은 크고 뒷줄은 작다.
+        const uint32  characterCount = static_cast<uint32>( MathUtil::max( gv_benchCharacters, 1 ) );
+        const uint32  columns        = ( gv_benchCharacterColumns > 0 ) ? static_cast<uint32>( gv_benchCharacterColumns ) : characterCount;
+        const float32 depth          = static_cast<float32>( ( characterCount + columns - 1 ) / columns - 1 ) * kBenchCharacterSpacing;
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
             const float32 tanHalf  = MathUtil::tan( pCamera->getFieldOfViewY() * 0.5f );
             const float32 distance = ( tanHalf > MathUtil::Epsilon ) ? ( halfExtent * 1.2f / tanHalf ) : ( halfExtent * 3.0f );
-            pCamera->setLocalPosition( float3{ 0.0f, 1.4f, -distance } );
-            pCamera->lookAt( float3{ 0.0f, 0.9f, 0.0f } );
+            if ( depth <= 0.0f )
+            {
+                pCamera->setLocalPosition( float3{ 0.0f, 1.4f, -distance } );
+                pCamera->lookAt( float3{ 0.0f, 0.9f, 0.0f } );
+                continue;
+            }
+            pCamera->setLocalPosition( float3{ 0.0f, 0.35f * distance, -distance * 0.6f } );
+            pCamera->setFarPlane( MathUtil::max( pCamera->getFarPlane(), ( distance + depth ) * 2.0f ) );
+            pCamera->lookAt( float3{ 0.0f, 0.9f, depth * 0.4f } );
         }
     }
 
@@ -818,7 +862,7 @@ namespace sw
                 if ( Scene* pScene = pSceneManager->getActiveScene() )
                 {
                     if ( _bCharacterFraming == SW_TRUE )
-                        frameCharacterCameras( pScene, MathUtil::max( 2.0f, 0.5f * static_cast<float32>( gv_benchCharacters ) * kBenchCharacterSpacing ) );
+                        frameCharacterCameras( pScene, computeCharacterHalfExtent( static_cast<uint32>( MathUtil::max( gv_benchCharacters, 1 ) ) ) );
                     else
                         frameCameras( pScene, _benchGridSide, kBenchSpacing );
                 }

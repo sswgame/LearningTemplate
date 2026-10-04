@@ -1,12 +1,12 @@
 SWCOOK 3
 082019df2dbbcbd5 instanceslotprobe.hlsl
 111f7515f60bf571 engine:postbloom.hlsli
-20582feb0045e404 engine:bindingslots.hlsli
 22c00eae8dfcf116 samplecompute.hlsl
 2376b38d79149448 provokingvertex.hlsl
 32ea9f2a4e23abcc engine:lighting.hlsli
 434550571f0a2425 computetexturewrite.hlsl
-778c01cab734f2c6 engine:binding.hlsli
+609f0bf736276638 engine:binding.hlsli
+8ecf34dfab2a1d07 engine:instancedata.hlsli
 980c18c4c174d3fb engine:postoutline.hlsli
 9ee00d8a59ae021e engine:common.hlsli
-d0567b23544cc8a5 engine:instancedata.hlsli
+ad7f7ab786b4a1ce engine:bindingslots.hlsli

@@ -220,8 +220,8 @@ cd build/Ninja-Debug/Bin
   변환 복사 · 거리/범위 제한 · 트위스트 본 분배(팔뚝 비틀림) · 포즈 구동(RBF 포즈 드라이버 — 팔꿈치를 굽히면 보정 모프 · 보정 본). 노드 가중치는
   클립 커브 · 시퀀서 키로 움직인다(샷 중간에 무기를 넘겨 쥐기). 대상은 본 · 소켓 · 다른 오브젝트. glTF 는 제약을 싣지 않으니 엔진에서 저작한다 —
   언리얼 Control Rig · IK Rig, 유니티 Animation Rigging, Maya 제약 ③ 애니메이션 LOD(가시성 · URO · 보간 · 본 LOD · 예산은 들어갔다 —
-  `AnimationLod.h`) — 남은 것: 거리별 IK/물리 끔(PoseModifier · 래그돌이 `AnimationLodState` 를 읽게) · 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기 ④ 군중 공유 — 스킨드 메시는 컴포넌트마다
-  메시 객체(정점 사본 · 모프 풀 구간 하나)라 같은 포즈 · 같은 메시를 나누는 캐시가 없다(언리얼 Animation Sharing) · 되감기 디버거 · 리타기팅(본 이름 표 · 비율) ·
+  `AnimationLod.h`) — 남은 것: 거리별 IK/물리 끔(PoseModifier · 래그돌이 `AnimationLodState` 를 읽게) · 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기 ④ 군중 공유(묶음 · 사본 풀 · VAT 쿠킹은
+  들어갔다 — `AnimationCrowd.h`) — 남은 것: 섞기 묶음(언리얼 Animation Sharing 의 블렌드 액터 — 지금 섞는 유닛은 사본으로 혼자 평가), Shooter3D 군중이 켜기 · 되감기 디버거 · 리타기팅(본 이름 표 · 비율) ·
   얼굴(모프 타깃 임포트 — glTF `weights` 채널은 지금 버린다) ⑤ Jolt 래그돌(전신 · 부분 · 파워드, 래그돌 에셋은 데이터, 포즈 블렌드 · 기상) ·
   2 차 움직임(스프링 본) → 헤어 카드 · 천(Jolt 소프트 바디), 가닥 헤어(TressFX)는 나중 ⑥ KayKit 텍스처(원본 GLB 에 든 `knight_texture` 등)를 `textures_raw/` 로
   옮겨 머티리얼을 만들 것 — 지금 캐릭터는 씬 기본 머티리얼(흰색)로 그려진다. Shooter3D 통합은 다음 웨이브.

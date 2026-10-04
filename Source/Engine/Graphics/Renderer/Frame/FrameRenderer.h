@@ -27,6 +27,7 @@
 #include "Engine/Graphics/Renderer/Scene/GpuMeshMorphPool.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Graphics/Renderer/Scene/GpuVertexAnimationPool.h"
 
 namespace sw
 {
@@ -666,6 +667,8 @@ namespace sw
         RHIConstantBufferSlot _meshSkinCb;
         /// @brief GPU 가 변형한 정점 풀입니다. RT 소유입니다(GpuMeshMorphPool 참고).
         GpuMeshMorphPool _meshMorphPool;
+        /// @brief 정점 애니메이션(VAT) 표 풀입니다. RT 소유입니다(GpuVertexAnimationPool 참고).
+        GpuVertexAnimationPool _vertexAnimationPool;
         /// @brief `setMeshMorphDiag` 가 준 값입니다. 음수면 전역 변수 `gv_morphDiag` 를 따릅니다.
         int32 _meshMorphDiagOverride;
         /// @brief `setDrawMergeEnabled` 가 준 값입니다. 음수면 전역 변수 `gv_drawMerge` 를 따릅니다.
@@ -703,6 +706,8 @@ namespace sw
         vector<Mesh*> _listScratchMorphMesh;
         /// @brief 이번 프레임 스킨드 메시 목록입니다(모프 풀의 스킨 구간 순서, 프레임마다 재사용).
         vector<Mesh*> _listScratchSkinMesh;
+        /// @brief 이번 프레임 VAT 메시 목록입니다(프레임마다 재사용).
+        vector<Mesh*> _listScratchVertexAnimationMesh;
         /// @brief 씬 라이트 구조버퍼입니다. RT 소유이고 포워드 · 디퍼드가 같은 버퍼를 읽습니다.
         GpuLightBuffer _lightBuffer;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 들고 있습니다.

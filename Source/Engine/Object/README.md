@@ -48,6 +48,7 @@ Object/
 ├─ Animation/          # AnimationSystem — 애니메이션 유닛(SkeletalMeshComponent)을 의존 레벨 · 단계(시간 → 기본 포즈 → 부착 → 후처리 → 팔레트)로 평가.
 │                      #   매니저가 소유하고 tick 의 한 단계(틱 뒤 · 트랜스폼 플러시 앞)에서 부른다. 단계 안은 engine::runParallel
 │                      #   AnimationLod — 뷰(절두체들) 가시성 · 화면 크기 → 갱신 주기(URO) · 보간 · 본 LOD · 예산 배분(평가 앞, 게임 스레드)
+│                      #   AnimationCrowd — 군중 포즈 공유: 같은 상태 · 위상 칸의 유닛이 묶음 하나의 포즈 · 메시를 나누고, 먼 유닛은 VAT
 ├─ Component/           # 기반 Component + 엔진 기본 컴포넌트
 │  ├─ Component.h
 │  ├─ SceneComponent.*  # 트랜스폼·부모/자식 (값은 아래 저장소의 칸에 있다)

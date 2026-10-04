@@ -206,6 +206,13 @@ SW_TEST_CASE( AnimationLodTest, BoneLodMasksInheritAndValidate )
     SW_EXPECT_EQUAL( 1u, boneLod.selectLevel( 0.1f ) );
     SW_EXPECT_EQUAL( 2u, boneLod.selectLevel( 0.01f ) );
     SW_EXPECT_TRUE( SkeletonBoneLod::makePathForSkeleton( "a/knight.skeleton.json" ) == "a/knight.bonelod.json" );
+    // 임포트 옆 폴더(이름이 같다)는 다시 임포트할 때 지워진다 — 그 밖에 둔다.
+    SW_EXPECT_TRUE( SkeletonBoneLod::makePathForSkeleton( "a/knight/knight.skeleton.json" ) == "a/knight.bonelod.json" );
+    string importedPath;
+    string siblingPath;
+    SkeletonBoneLod::makeSkeletonCandidatePaths( "a/knight.bonelod.json", importedPath, siblingPath );
+    SW_EXPECT_TRUE( importedPath == "a/knight/knight.skeleton.json" );
+    SW_EXPECT_TRUE( siblingPath == "a/knight.skeleton.json" );
 
     // 자손까지 — bone1 을 빼면 bone2 · bone3 도 빠진다.
     SkeletonBoneLod parentOnly;

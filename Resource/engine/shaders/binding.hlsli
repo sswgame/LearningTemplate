@@ -57,6 +57,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_SwLightCount;              // 그 버퍼의 원소 수 (0 이면 PassCB 키라이트 폴백)
 	uint     g_SwBatchesIndex;            // 씬 배치 표가 걸려 있으면 유효, 아니면 kInvalidIndex (풀스크린·픽스처)
 	uint     g_SwBatchCount;              // 그 표의 원소 수 — 범위 밖 배치 번호를 막는다
+	uint     g_SwVertexAnimationIndex;    // 정점 애니메이션(VAT) 표가 걸려 있으면 유효, 아니면 kInvalidIndex
+	uint     g_SwVertexAnimationCount;    // 그 표의 원소 수 — 범위 밖 번호를 막는다
+	float    g_SwVertexAnimationTime;     // VAT 시계(초) — 게임 스레드의 군중 시계와 같은 값이라 인스턴스 위상이 CPU 시각과 맞는다
 };
 
 // ------------------------------------------------------------------------------
@@ -98,7 +101,7 @@ struct SwBatchData
 	uint sortMode;        // 컬링 전용 (GpuBatchSortMode)
 	uint morphVertexBase; // 모프 정점 풀에서 이 메시의 시작. kInvalidIndex = 모프 안 함
 	uint firstVertex;     // 정점 풀에서 이 메시의 시작 (간접 인자의 startVertex). SV_VertexID 가 이 값을 포함하는지는 API 마다 다르다 — swComputeMorphElement 참고
-	uint pad0;
+	uint vertexAnimationBase; // 정점 애니메이션(VAT) 표에서 이 메시의 머리 원소. kInvalidIndex = VAT 없음 (swLoadAnimatedVertex)
 	uint pad1;
 	uint pad2;
 };
@@ -117,7 +120,7 @@ SwBatchData swLoadBatch( uint batchIndex )
 	batch.sortMode        = 0u;
 	batch.morphVertexBase = kInvalidIndex;
 	batch.firstVertex     = 0u;
-	batch.pad0            = 0u;
+	batch.vertexAnimationBase = kInvalidIndex;
 	batch.pad1            = 0u;
 	batch.pad2            = 0u;
 	const bool bValid = ( g_SwBatchesIndex != kInvalidIndex ) && ( batchIndex < g_SwBatchCount );
@@ -193,6 +196,100 @@ float3 swLoadMorphPosition( uint batchIndex, uint vertexId, float3 restPosition 
 {
 	const uint element = swComputeMorphElement( batchIndex, vertexId );
 	return ( element == kInvalidIndex ) ? restPosition : g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
+}
+
+// ------------------------------------------------------------------------------
+// 1-3) 정점 애니메이션(VAT) — 클립 하나를 미리 스키닝해 구운 프레임 × 정점 표(C++ `MeshVertexAnimation`, `GpuVertexAnimationPool`).
+//      먼 군중은 CPU 포즈 · GPU 스키닝 없이 이 표를 **인스턴스마다 다른 시각**(g_SwVertexAnimationTime + instance.vertexAnimationPhase)으로 읽는다.
+//      원소 하나 = float4(위치 xyz, 노멀을 정수로 담은 w). 메시마다 머리 원소(프레임 수 · 프레임율 · 정점 수 · 반복) 하나 뒤에 프레임 우선 순서다.
+//      텍스처가 아니라 구조버퍼인 것은 모프 풀과 같은 이유다(정점 셰이더가 SV_VertexID 로 읽는다 — 네 백엔드가 같은 길).
+// ------------------------------------------------------------------------------
+SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMATION_SRV );
+// 노멀 한 칸의 해상도(팔면체 12 + 12 비트). C++ MeshVertexAnimation::packNormal 과 같아야 한다.
+#define SW_VERTEX_ANIMATION_NORMAL_STEPS 4096u
+
+/** @brief VAT 의 노멀 칸(2^24 아래 정수를 담은 실수)을 단위 노멀로 푼다. C++ `MeshVertexAnimation::unpackNormal` 과 같은 식이다. */
+float3 swUnpackVertexAnimationNormal( float packed )
+{
+	const uint   integer = (uint)packed;
+	const float  maxStep = (float)( SW_VERTEX_ANIMATION_NORMAL_STEPS - 1u );
+	const float2 octant  = float2( (float)( integer / SW_VERTEX_ANIMATION_NORMAL_STEPS ), (float)( integer % SW_VERTEX_ANIMATION_NORMAL_STEPS ) ) / maxStep * 2.0f - 1.0f;
+	float3       normal  = float3( octant, 1.0f - abs( octant.x ) - abs( octant.y ) );
+	const float2 signs   = float2( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f );
+	const float2 folded  = ( 1.0f - abs( normal.yx ) ) * signs;
+	normal.xy            = ( normal.z < 0.0f ) ? folded : normal.xy;
+	return normalize( normal );
+}
+
+/**
+ * @brief 이 정점의 VAT 두 프레임 원소 번호와 사이 비율. VAT 가 없으면 `outValid` 가 거짓이다.
+ * @details 반복이면 프레임 수로 감고(끝 → 처음 보간), 아니면 마지막 프레임에 멈춘다(C++ `MeshVertexAnimation::samplePosition` 과 같은 식).
+ *          early-return 이 없다 — GL 드라이버 사연은 swComputeMorphElement 참고.
+ */
+void swComputeVertexAnimationElements( SwInstanceData instance, uint vertexId, out bool outValid, out uint outFirstElement, out uint outSecondElement, out float outAlpha )
+{
+	const SwBatchData batch = swLoadBatch( instance.meshBatchIndex );
+#if defined( DX11 ) || defined( DX12 )
+	const uint local = vertexId;
+#else
+	const uint local = vertexId - batch.firstVertex;
+#endif
+	const uint   base        = batch.vertexAnimationBase;
+	const bool   bTable      = ( base != kInvalidIndex ) && ( g_SwVertexAnimationIndex != kInvalidIndex ) && ( base < g_SwVertexAnimationCount );
+	const float4 header      = bTable ? g_SwVertexAnimation[base] : float4( 0.0f, 0.0f, 0.0f, 0.0f );
+	const uint   frameCount  = max( (uint)header.x, 1u );
+	const uint   vertexCount = (uint)header.z;
+	const bool   bLoop       = header.w > 0.5f;
+	const float  frameTotal  = (float)frameCount;
+	const float  framePosition = max( g_SwVertexAnimationTime + instance.vertexAnimationPhase, 0.0f ) * header.y;
+	const float  wrapped     = bLoop ? ( framePosition - floor( framePosition / frameTotal ) * frameTotal ) : min( framePosition, frameTotal - 1.0f );
+	const uint   frame       = min( (uint)wrapped, frameCount - 1u );
+	const uint   nextFrame   = bLoop ? ( ( frame + 1u ) % frameCount ) : min( frame + 1u, frameCount - 1u );
+	outFirstElement          = base + 1u + frame * vertexCount + local;
+	outSecondElement         = base + 1u + nextFrame * vertexCount + local;
+	outAlpha                 = wrapped - (float)frame;
+	outValid                 = bTable && ( header.x > 0.5f ) && ( local < vertexCount ) && ( outFirstElement < g_SwVertexAnimationCount ) &&
+	                           ( outSecondElement < g_SwVertexAnimationCount );
+}
+
+/** @brief VAT 위치 — 깊이 프리패스와 기본 패스가 비트까지 같아야 해 이 함수 하나로 만든다(precise). */
+float3 swComputeVertexAnimationPosition( uint firstElement, uint secondElement, float alpha )
+{
+	precise float3 position = lerp( g_SwVertexAnimation[firstElement].xyz, g_SwVertexAnimation[secondElement].xyz, alpha );
+	return position;
+}
+
+/**
+ * @brief 이 정점의 위치 · 노멀 — VAT 가 걸린 배치면 표에서, 아니면 모프 · 스킨 결과(swLoadMorphedVertex)에서, 그것도 아니면 입력 스트림에서.
+ * @details 지오메트리 패스(forwardlit · gbuffer)가 쓴다. 위치만 필요한 패스는 swLoadAnimatedPosition 이다.
+ */
+void swLoadAnimatedVertex( SwInstanceData instance, uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
+{
+	swLoadMorphedVertex( instance.meshBatchIndex, vertexId, restPosition, restNormal, outPosition, outNormal );
+	bool  bAnimated;
+	uint  firstElement;
+	uint  secondElement;
+	float alpha;
+	swComputeVertexAnimationElements( instance, vertexId, bAnimated, firstElement, secondElement, alpha );
+	if ( bAnimated )
+	{
+		const float3 firstNormal  = swUnpackVertexAnimationNormal( g_SwVertexAnimation[firstElement].w );
+		const float3 secondNormal = swUnpackVertexAnimationNormal( g_SwVertexAnimation[secondElement].w );
+		outPosition               = swComputeVertexAnimationPosition( firstElement, secondElement, alpha );
+		outNormal                 = normalize( lerp( firstNormal, secondNormal, alpha ) );
+	}
+}
+
+/** @brief 위치만 필요한 패스(그림자 · 깊이 프리패스)의 짧은 형태다. 노멀을 읽지 않는다. */
+float3 swLoadAnimatedPosition( SwInstanceData instance, uint vertexId, float3 restPosition )
+{
+	bool  bAnimated;
+	uint  firstElement;
+	uint  secondElement;
+	float alpha;
+	swComputeVertexAnimationElements( instance, vertexId, bAnimated, firstElement, secondElement, alpha );
+	const float3 morphed = swLoadMorphPosition( instance.meshBatchIndex, vertexId, restPosition );
+	return bAnimated ? swComputeVertexAnimationPosition( firstElement, secondElement, alpha ) : morphed;
 }
 
 /**
@@ -277,7 +374,7 @@ SwInstanceData swLoadInstance( uint instanceSlot )
 	instance.uvStart        = 0u;          // (0, 0)
 	instance.uvEnd          = 0xFFFFFFFFu; // (1, 1) — 텍스처 전체
 	instance.tint           = 0xFFFFFFFFu; // 흰색 불투명
-	instance.reserved       = 0u;
+	instance.vertexAnimationPhase = 0.0f;
 	return instance;
 }
 

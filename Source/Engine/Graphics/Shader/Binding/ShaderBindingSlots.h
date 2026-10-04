@@ -81,8 +81,13 @@ namespace sw
          * @details 정점 셰이더가 자기 배치 번호로 읽습니다. 배치마다 바뀌는 값이 모두 여기 있어 루트 상수를 배치마다
          *          다시 걸 필요가 없고, 그래서 같은 PSO 의 배치들이 멀티 드로우 하나로 나갑니다. 컬링 컴퓨트의 t1 과 같은 버퍼입니다.
          */
-        inline constexpr uint32 kBatchBuffer  = SW_SLOT_BATCH_SRV;
-        inline constexpr uint32 kSrvSlotCount = SW_SRV_SLOT_COUNT;
+        inline constexpr uint32 kBatchBuffer = SW_SLOT_BATCH_SRV;
+        /**
+         * @brief 정점 애니메이션(VAT) 표(g_SwVertexAnimation)입니다. 먼 군중의 메시마다 머리 원소 + 프레임 × 정점을 담습니다.
+         * @details 정점 셰이더가 배치 표의 VAT 시작과 인스턴스의 시각 오프셋으로 읽습니다(binding.hlsli `swLoadAnimatedVertex`).
+         */
+        inline constexpr uint32 kVertexAnimationBuffer = SW_SLOT_VERTEX_ANIMATION_SRV;
+        inline constexpr uint32 kSrvSlotCount          = SW_SRV_SLOT_COUNT;
 
         // ------------------------------------------------------------------------------
         // 2-1) 라이트 원소의 타입 값. bindingslots.hlsli 가 기준이다(셰이더와 같은 파일).
@@ -200,10 +205,12 @@ namespace sw
             inline constexpr const utf8* kMorphVertices      = "g_SwMorphVertices";      ///< t11(그래픽스). GPU 가 변형한 정점 풀
             inline constexpr const utf8* kLights             = "g_SwLights";             ///< t12(그래픽스). 씬 라이트 목록
             inline constexpr const utf8* kBatches            = "g_SwBatches";            ///< t13(그래픽스). 씬 배치 표
+            inline constexpr const utf8* kVertexAnimation    = "g_SwVertexAnimation";    ///< t14(그래픽스). 정점 애니메이션(VAT) 표
             inline constexpr const utf8* kMorphRestVertices  = "g_RestVertices";         ///< meshmorph t0. 레스트 포즈
             inline constexpr const utf8* kMorphVerticesRw    = "g_MorphVerticesRW";      ///< meshmorph · meshskin u0. 변형 결과
             inline constexpr const utf8* kSkinWeights        = "g_SkinWeights";          ///< meshskin t1. 스킨 정점의 가중치 · 팔레트 행 번호
             inline constexpr const utf8* kSkinPalette        = "g_SkinPalette";          ///< meshskin t2. 본 팔레트(본 하나 = float4 셋)
+            inline constexpr const utf8* kSkinInstances      = "g_SkinInstances";        ///< meshskin t3. 스킨 인스턴스 표(인스턴스 하나 = uint4 둘)
             inline constexpr const utf8* kCullInstances      = "g_Instances";
             inline constexpr const utf8* kCullBatchInfo      = "g_BatchInfo"; ///< 컬링 t1. 배치의 인스턴스 구간
             inline constexpr const utf8* kCullIndirectArgs   = "g_IndirectArgs";
@@ -221,7 +228,8 @@ namespace sw
         static_assert( kVisibleInstanceBuffer == kMaterialBuffer + 1, "가시 인스턴스 ID 버퍼는 머티리얼 데이터 다음이어야 한다" );
         static_assert( kMorphVertexBuffer == kVisibleInstanceBuffer + 1, "모프 정점 버퍼는 가시 목록 다음이어야 한다" );
         static_assert( kLightBuffer == kMorphVertexBuffer + 1, "라이트 버퍼는 모프 정점 다음이다" );
-        static_assert( kBatchBuffer == kLightBuffer + 1 && kBatchBuffer + 1 == kSrvSlotCount, "배치 표는 라이트 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kBatchBuffer == kLightBuffer + 1, "배치 표는 라이트 다음이다" );
+        static_assert( kVertexAnimationBuffer == kBatchBuffer + 1 && kVertexAnimationBuffer + 1 == kSrvSlotCount, "VAT 표는 배치 표 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
                            kLightTypeSpot < kLightTypeCount,
                        "라이트 타입 값이 타입 수 안에 있어야 한다" );

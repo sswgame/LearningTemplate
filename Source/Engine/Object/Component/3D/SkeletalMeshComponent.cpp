@@ -100,19 +100,26 @@ namespace sw
         , _updatePhase{ 0 }
         , _framesSinceEvaluation{ 0 }
         , _effectiveDivisor{ 1 }
+        , _pCrowdBucket{ nullptr }
+        , _soloMesh{}
+        , _pVertexAnimationClip{ nullptr }
+        , _crowdMode{ AnimationCrowdMode::Own }
+        , _bRuntimeSkeleton{ SW_FALSE }
         , _bFollowParentPose{ SW_FALSE }
         , _bAnimateWhenOffscreen{ SW_FALSE }
         , _bVisibleHint{ SW_TRUE }
         , _bPoseDirty{ SW_TRUE }
         , _bInterpolateFrame{ SW_FALSE }
         , _bInterpolationReady{ SW_FALSE }
-        , _reserved{ 0 }
+        , _bShareCrowdPose{ SW_FALSE }
+        , _bHasDependents{ SW_FALSE }
     {
         resetPoseBuffers();
     }
 
     SkeletalMeshComponent::~SkeletalMeshComponent()
     {
+        leaveCrowd( nullptr );
         // 등록된 일에 알린다 — 일이 이 유닛 포인터를 들고 있으면 놓게 한다.
         for ( IAnimationPhaseTask* pTask : _listTask )
             pTask->onAnimationUnitDetached( *this );
@@ -141,6 +148,7 @@ namespace sw
 
     void SkeletalMeshComponent::onUnregister( GameObjectManager& manager )
     {
+        leaveCrowd( &manager.getAnimationSystem().getCrowd() );
         manager.getAnimationSystem().unregisterLodClient( &_lodClient );
         manager.getAnimationSystem().unregisterUnit( this );
         _pAnimationSystem = nullptr;
@@ -152,10 +160,13 @@ namespace sw
         MeshComponent::onPropertyChanged( propertyName );
         static const hashed_string s_skeletonPathName( "_skeletonPath" );
         static const hashed_string s_divisorName( "_updateRateDivisor" );
+        static const hashed_string s_shareCrowdName( "_bShareCrowdPose" );
         if ( propertyName == s_skeletonPathName )
             resolveSkeleton();
         else if ( propertyName == s_divisorName )
             setUpdateRateDivisor( _updateRateDivisor );
+        else if ( propertyName == s_shareCrowdName )
+            setShareCrowdPose( _bShareCrowdPose == SW_TRUE );
     }
 
     void SkeletalMeshComponent::resolveRenderAssets()
@@ -167,11 +178,18 @@ namespace sw
 
     void SkeletalMeshComponent::setSkeletonPath( string_view path )
     {
-        _skeletonPath = string{ path };
+        _skeletonPath     = string{ path };
+        _bRuntimeSkeleton = SW_FALSE;
         resolveSkeleton();
     }
 
     void SkeletalMeshComponent::setSkeleton( shared_ptr<const Skeleton> skeleton )
+    {
+        _bRuntimeSkeleton = ( skeleton != nullptr ) ? SW_TRUE : SW_FALSE;
+        applySkeleton( std::move( skeleton ) );
+    }
+
+    void SkeletalMeshComponent::applySkeleton( shared_ptr<const Skeleton> skeleton )
     {
         _skeleton = ( skeleton != nullptr ) ? std::move( skeleton ) : SkeletalMeshComponentInternal::getImplicitSkeleton();
         resetPoseBuffers();
@@ -184,6 +202,12 @@ namespace sw
 
     void SkeletalMeshComponent::resolveSkeleton()
     {
+        // 경로가 비었고 런타임에 정한 스켈레톤이면 그대로 둔다 — 렌더 에셋을 다시 풀어도(resolveRenderAssets) 암묵 스켈레톤으로 덮지 않는다.
+        if ( _skeletonPath.empty() && _bRuntimeSkeleton == SW_TRUE )
+        {
+            resolveBoneLod();
+            return;
+        }
         shared_ptr<const Skeleton> skeleton;
         if ( _skeletonPath.empty() == false )
         {
@@ -194,7 +218,7 @@ namespace sw
         if ( skeleton == nullptr )
             skeleton = SkeletalMeshComponentInternal::getImplicitSkeleton();
         if ( skeleton != _skeleton )
-            setSkeleton( std::move( skeleton ) );
+            applySkeleton( std::move( skeleton ) );
         // 본 LOD 는 이 스켈레톤에 맞춰 마스크를 짓는다 — 스켈레톤을 정한 뒤다.
         resolveBoneLod();
     }
@@ -257,6 +281,22 @@ namespace sw
         const shared_ptr<Mesh>& current = getMesh();
         if ( current == nullptr || current->hasSkin() == false )
             return;
+        if ( _bShareCrowdPose == SW_TRUE )
+        {
+            // 군중 공유 — 사본을 두지 않는다. 지금 메시가 원본이거나 군중이 준 것(묶음 · 사본)이고 원본이 그대로면 둔다.
+            const bool bCrowdMesh   = ( _pCrowdBucket != nullptr && current == _pCrowdBucket->getMesh() ) || ( _soloMesh != nullptr && current == _soloMesh );
+            const bool bSourceFresh = _skinSourceMesh != nullptr && _skinSourceMesh->getContentId() == _skinSourceContentId;
+            if ( bSourceFresh && ( current == _skinSourceMesh || bCrowdMesh ) )
+                return;
+            // 원본이 바뀌었다(핫 리로드 · 다른 id) — 묶음을 놓고 새 원본을 그린다. 다음 평가가 다시 묶는다.
+            shared_ptr<Mesh> source = bCrowdMesh ? _skinSourceMesh : current;
+            leaveCrowd( _pAnimationSystem != nullptr ? &_pAnimationSystem->getCrowd() : nullptr );
+            _skinSourceMesh      = source;
+            _skinSourceContentId = source->getContentId();
+            setBoundsRadius( source->getBoundingRadius() * SkeletalMeshComponentInternal::kSkinnedBoundsScale );
+            setMesh( std::move( source ) );
+            return;
+        }
         // 지금 메시가 이미 이 컴포넌트의 복사본이고 원본이 그대로면 둔다. 원본이 바뀌었으면(핫 리로드 · 다른 id) 새 복사본을 만든다 —
         // 옛 복사본은 스냅샷이 쥔 동안 산다(정점 버퍼를 제자리에서 바꾸지 않는다).
         const bool bOwnCopy = _skinSourceMesh != nullptr && current != _skinSourceMesh && _skinSourceMesh->getContentId() == _skinSourceContentId;
@@ -264,11 +304,9 @@ namespace sw
             return;
 
         shared_ptr<Mesh> source   = ( _skinSourceMesh != nullptr && current != _skinSourceMesh ) ? _skinSourceMesh : current;
-        shared_ptr<Mesh> instance = Mesh::create();
-        instance->setVertices( source->getVertices() );
-        instance->setSkin( source->getSkinVertices(), source->getSkinBoneCount() );
-        _skinSourceMesh      = source;
-        _skinSourceContentId = source->getContentId();
+        shared_ptr<Mesh> instance = Mesh::createSkinInstance( *source );
+        _skinSourceMesh           = source;
+        _skinSourceContentId      = source->getContentId();
         setBoundsRadius( source->getBoundingRadius() * SkeletalMeshComponentInternal::kSkinnedBoundsScale );
         setMesh( std::move( instance ) );
     }
@@ -291,10 +329,11 @@ namespace sw
 
     bool SkeletalMeshComponent::findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const
     {
-        const int32 boneIndex = _skeleton->findBoneIndex( boneName );
-        if ( boneIndex < 0 || static_cast<size_t>( boneIndex ) >= _listModelSpace.size() )
+        const int32             boneIndex      = _skeleton->findBoneIndex( boneName );
+        const vector<float4x4>& listModelSpace = getModelSpaceTransforms();
+        if ( boneIndex < 0 || static_cast<size_t>( boneIndex ) >= listModelSpace.size() )
             return false;
-        outTransform = _listModelSpace[static_cast<size_t>( boneIndex )];
+        outTransform = listModelSpace[static_cast<size_t>( boneIndex )];
         return true;
     }
 
@@ -363,6 +402,134 @@ namespace sw
     void SkeletalMeshComponent::setUpdateRateDivisor( uint32 divisor )
     {
         _updateRateDivisor = MathUtil::max( divisor, 1u );
+    }
+
+    void SkeletalMeshComponent::setShareCrowdPose( bool bShare )
+    {
+        const uint8 value = bShare ? SW_TRUE : SW_FALSE;
+        if ( _bShareCrowdPose == value && ( bShare || _crowdMode == AnimationCrowdMode::Own ) )
+            return;
+        _bShareCrowdPose = value;
+        if ( bShare )
+        {
+            // 자기 사본을 원본으로 되돌린다 — 다음 평가가 묶음 · 사본 · VAT 를 정한다.
+            if ( _skinSourceMesh != nullptr && getMesh() != _skinSourceMesh )
+                setMesh( _skinSourceMesh );
+            _bPoseDirty = SW_TRUE;
+            return;
+        }
+        leaveCrowd( _pAnimationSystem != nullptr ? &_pAnimationSystem->getCrowd() : nullptr );
+        // 공유를 끄면 예전처럼 자기 사본을 둔다.
+        if ( _skinSourceMesh != nullptr )
+        {
+            setMesh( _skinSourceMesh );
+            resolveSkinInstanceMesh();
+        }
+        _bPoseDirty = SW_TRUE;
+    }
+
+    bool SkeletalMeshComponent::describeSharedPose( AnimSharedPoseRequest& outRequest ) const
+    {
+        // 리더를 따르거나 후처리 일이 있으면 유닛마다 포즈가 다르다 — 나눌 수 없다.
+        if ( _listTask.size() != 1 || _leader.isValid() )
+            return false;
+        return _listTask[0]->describeSharedPose( outRequest );
+    }
+
+    void SkeletalMeshComponent::leaveCrowd( AnimationCrowd* pCrowd )
+    {
+        if ( _pCrowdBucket != nullptr )
+        {
+            AnimationCrowd::releaseReference( _pCrowdBucket );
+            _pCrowdBucket = nullptr;
+        }
+        if ( _soloMesh != nullptr )
+        {
+            if ( pCrowd != nullptr )
+                pCrowd->releaseSoloMesh( std::move( _soloMesh ) );
+            _soloMesh = nullptr;
+        }
+        _pVertexAnimationClip = nullptr;
+        _crowdMode            = AnimationCrowdMode::Own;
+    }
+
+    void SkeletalMeshComponent::updateCrowdMembership( AnimationCrowd& crowd )
+    {
+        if ( _bShareCrowdPose == SW_FALSE || _skinSourceMesh == nullptr )
+        {
+            if ( _crowdMode != AnimationCrowdMode::Own )
+                setShareCrowdPose( false );
+            return;
+        }
+        const bool                 bVisible = _bVisibleHint == SW_TRUE || _bAnimateWhenOffscreen == SW_TRUE;
+        AnimSharedPoseRequest      request{};
+        shared_ptr<const AnimClip> clip;
+        if ( describeSharedPose( request ) )
+            clip = _listTask[0]->findSharedPoseClip( request._pClip );
+
+        if ( clip != nullptr )
+        {
+            // 아주 멀면 VAT — 따르는 유닛이 없고 재생 속도가 1 일 때(셰이더는 VAT 시계를 그대로 흘린다).
+            if ( _lodState._bVertexAnimation == SW_TRUE && _bHasDependents == SW_FALSE && request._playRate == 1.0f )
+            {
+                shared_ptr<Mesh> vertexMesh =
+                    crowd.findVertexAnimationMesh( _skinSourceMesh, *_skeleton, *clip, request._bAnchorRootMotion == SW_TRUE, getMeshId() );
+                if ( vertexMesh != nullptr )
+                {
+                    const bool bEntering = _crowdMode != AnimationCrowdMode::VertexAnimation || _pVertexAnimationClip != clip.get();
+                    leaveCrowd( &crowd );
+                    _crowdMode            = AnimationCrowdMode::VertexAnimation;
+                    _pVertexAnimationClip = clip.get();
+                    if ( getMesh() != vertexMesh )
+                        setMesh( std::move( vertexMesh ) );
+                    // 들어갈 때 한 번 — VAT 시계 + 오프셋 = 이 유닛의 클립 시각. 그 뒤로 둘이 같은 dt 로 흘러 다시 적지 않는다(인스턴스를 다시 올리지 않는다).
+                    if ( bEntering )
+                        setVertexAnimationPhase( static_cast<float32>( static_cast<float64>( request._time ) - crowd.getClock() ) );
+                    _frameContext._bPoseNeeded = SW_FALSE;
+                    _bInterpolateFrame         = SW_FALSE;
+                    return;
+                }
+            }
+            AnimationCrowdBucket* pBucket = crowd.joinBucket( _pCrowdBucket, request, _skeleton, _skinSourceMesh, clip );
+            if ( pBucket != nullptr )
+            {
+                if ( pBucket != _pCrowdBucket )
+                {
+                    leaveCrowd( &crowd );
+                    AnimationCrowd::addReference( pBucket );
+                    _pCrowdBucket = pBucket;
+                }
+                _crowdMode = AnimationCrowdMode::Shared;
+                if ( getMesh() != pBucket->getMesh() )
+                    setMesh( pBucket->getMesh() );
+                AnimationCrowd::countMember( *pBucket, bVisible );
+                // 묶음이 포즈를 만든다 — 이 유닛은 포즈 단계를 돌지 않는다.
+                _frameContext._bPoseNeeded = SW_FALSE;
+                _bInterpolateFrame         = SW_FALSE;
+                return;
+            }
+        }
+
+        // 혼자 — 사본을 빌려 평가한다. 묶음 · VAT 에서 막 넘어왔으면 이번 프레임 포즈를 만든다(가진 포즈가 없다).
+        const bool bWasShared = _crowdMode != AnimationCrowdMode::Solo;
+        if ( _pCrowdBucket != nullptr )
+        {
+            // 묶음의 마지막 포즈에서 이어 간다(섞기 시작이 튀지 않게).
+            _localPose = _pCrowdBucket->getLocalPose();
+            AnimationCrowd::releaseReference( _pCrowdBucket );
+            _pCrowdBucket = nullptr;
+        }
+        _pVertexAnimationClip = nullptr;
+        if ( _soloMesh == nullptr )
+            _soloMesh = crowd.acquireSoloMesh( _skinSourceMesh );
+        if ( _soloMesh != nullptr && getMesh() != _soloMesh )
+            setMesh( _soloMesh );
+        _crowdMode = AnimationCrowdMode::Solo;
+        if ( bWasShared )
+        {
+            _frameContext._bPoseNeeded = SW_TRUE;
+            _bInterpolationReady       = SW_FALSE;
+        }
     }
 
     void SkeletalMeshComponent::notifyOrderChanged()

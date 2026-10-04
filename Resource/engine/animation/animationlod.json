@@ -8,5 +8,5 @@
     "offscreen_update_rate_divisor": 0,
     "budget_milliseconds": 2.0,
     "max_update_rate_divisor": 16,
-    "vertex_animation_screen_size": 0.0
+    "vertex_animation_screen_size": 0.05
 }

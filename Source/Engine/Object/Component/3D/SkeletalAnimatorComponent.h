@@ -61,12 +61,14 @@ namespace sw
     public:
         explicit SkeletalAnimatorBinding( SkeletalAnimatorComponent& owner );
 
-        bool                 isAnimationActive() const override;
-        void                 runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        AnimPlayer*          findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
-        void                 finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void                 onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
-        const IAnimPlayable* findPlayable( const hashed_string& name ) const override;
+        bool                       isAnimationActive() const override;
+        void                       runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
+        AnimPlayer*                findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
+        void                       finishAnimationFrame( SkeletalMeshComponent& unit ) override;
+        void                       onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        bool                       describeSharedPose( AnimSharedPoseRequest& outRequest ) const override;
+        shared_ptr<const AnimClip> findSharedPoseClip( const AnimClip* pClip ) const override;
+        const IAnimPlayable*       findPlayable( const hashed_string& name ) const override;
 
     private:
         SkeletalAnimatorComponent& _owner;
@@ -109,6 +111,8 @@ namespace sw
         const string& getClipFolder() const { return _clipFolder; }
         /** @brief 시작 상태를 바꿉니다(다음 시작부터). */
         void setInitialState( string_view stateName ) { _initialState = string{ stateName }; }
+        /** @brief 시작 상태를 이 시각(초)부터 재생합니다(다음 시작부터 — 군중이 모두 같은 프레임으로 시작하지 않게). */
+        void setInitialTime( float32 seconds ) { _initialTime = seconds > 0.0f ? seconds : 0.0f; }
         /** @brief 그래프 경로를 바꾸고 다시 읽습니다. */
         void setAnimGraphPath( string_view path );
         /** @brief 클립을 미리 읽어 둡니다(게임 스레드). 워커의 전이는 읽어 둔 클립만 찾습니다. */
@@ -152,6 +156,11 @@ namespace sw
         bool isAnimationActive() const;
         /** @brief 이름의 클립입니다(미리 읽어 둔 것만). 없으면 nullptr 입니다. */
         const AnimClip* findClip( const hashed_string& name ) const;
+        /**
+         * @brief 이번 프레임 포즈를 군중 묶음과 나눌 수 있으면 요청을 채웁니다 — 반복 클립 하나를 섞기 · 레이어 · 시퀀서 덮어쓰기 없이 재생 중일 때입니다.
+         * @details 시간 · 상태 기계 · 알림 · 루트 모션 · 커브는 나눠도 이 애니메이터가 계속 돌립니다(시간 단계). 나누는 것은 포즈뿐입니다.
+         */
+        bool describeSharedPose( AnimSharedPoseRequest& outRequest ) const;
         /** @brief 유닛 · 상태 기계에 보이는 얼굴입니다. */
         SkeletalAnimatorBinding& getBinding() { return _binding; }
 
@@ -226,6 +235,7 @@ namespace sw
         SkeletalMeshComponent*                                   _pUnit;
         float32                                                  _sequencerTime;
         float32                                                  _sequencerWeight;
+        float32                                                  _initialTime; ///< 시작 상태의 첫 시각(초, 저장하지 않는 런타임 값)
         PROPERTY( Category = "Animation", DisplayName = "Extract Root Motion", Tooltip = "Move the object by the clip's root motion track" )
         uint8 _bExtractRootMotion : 1;
         PROPERTY( Category = "Animation", DisplayName = "Play On Begin", Tooltip = "Start the initial state at begin play" )

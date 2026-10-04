@@ -107,6 +107,15 @@ namespace sw
         [[nodiscard]] bool sampleTracks( float32 time, Pose& outTrackPose, const uint8* pTrackMask = nullptr ) const;
         /** @brief 트랙 → 스켈레톤 본 인덱스 표를 만듭니다(없는 본은 -1). 클립 · 스켈레톤 짝마다 한 번 만들어 둡니다. */
         void makeTrackToBoneMap( const Skeleton& skeleton, vector<int32>& outListBone ) const;
+        /**
+         * @brief 클립을 @p time 에 샘플해 본 포즈(레퍼런스 · 리더 포즈로 채워 둔 @p inoutPose)에 씁니다. 애니메이터 · 군중 공유 · VAT 굽기가 함께 쓰는 한 길입니다.
+         * @param listTrackToBone   `makeTrackToBoneMap` 의 표입니다.
+         * @param scratchTrackPose  트랙 순서 포즈를 담을 재사용 자리입니다.
+         * @param bAnchorRootMotion 루트 모션 트랙의 본을 클립 시작 자리에 묶습니다(움직임은 오브젝트가 맡는다).
+         * @param pTrackMask        트랙마다 0 이면 풀지도 옮기지도 않습니다(본 LOD).
+         */
+        [[nodiscard]] bool samplePose( float32 time, const vector<int32>& listTrackToBone, Pose& inoutPose, Pose& scratchTrackPose, bool bAnchorRootMotion,
+                                       const uint8* pTrackMask = nullptr ) const;
         /** @brief 트랙 포즈를 표대로 본 포즈에 옮깁니다. 표에 없는 본과 @p pTrackMask 가 0 인 트랙은 그대로 둡니다. */
         static void copyTracksToPose( const Pose& trackPose, const vector<int32>& listTrackToBone, Pose& inoutPose, const uint8* pTrackMask = nullptr );
         /**

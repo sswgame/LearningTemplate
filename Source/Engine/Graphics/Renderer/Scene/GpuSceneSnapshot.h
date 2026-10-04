@@ -50,7 +50,12 @@ namespace sw
          *          않아 같은 텍스처의 스프라이트가 프레임 · 색이 달라도 한 배치이고, 바뀌면 그 인스턴스만 더티 구간으로 올라갑니다.
          */
         GpuSpriteInstanceData _sprite{};
-        uint32                _reserved{ 0 }; ///< 16 바이트 정렬을 채웁니다(112 바이트). 셰이더의 `reserved` 입니다
+        /**
+         * @brief 정점 애니메이션(VAT) 시각 오프셋(초)입니다. VAT 가 걸린 메시만 읽습니다(binding.hlsli `swLoadAnimatedVertex`).
+         * @details 셰이더는 VAT 시계(`GpuSceneSnapshot::_vertexAnimationTime`)에 이것을 더한 시각의 프레임을 그립니다 — 군중 시스템이 VAT 로 넘길 때
+         *          그 캐릭터의 클립 시각에 맞춰 한 번 적고, 그 뒤로는 바뀌지 않아 인스턴스를 다시 올리지 않습니다. 셰이더의 `vertexAnimationPhase` 입니다.
+         */
+        float32 _vertexAnimationPhase{ 0.0f };
     };
 } // namespace sw
 
@@ -77,7 +82,12 @@ namespace sw
          * @details RT 가 `GpuScene::assignMorphBases` 로 채웁니다. GT 는 GPU 풀을 모릅니다(스냅샷 소유 규칙). upload 가 이 값을
          *          배치 표(`GpuBatchInfo`, g_SwBatches t13)에 옮겨 적고, 정점 셰이더가 자기 배치 번호로 읽습니다(binding.hlsli swComputeMorphElement).
          */
-        uint32       _morphVertexBase{ 0xFFFFFFFFu };
+        uint32 _morphVertexBase{ 0xFFFFFFFFu };
+        /**
+         * @brief 정점 애니메이션(VAT) 표에서 이 배치 메시의 머리 원소입니다. 0xFFFFFFFF = VAT 없음.
+         * @details RT 가 `GpuScene::assignVertexAnimationBases` 로 채웁니다(모프 시작과 같은 길 — 배치 표 `GpuBatchInfo` 에 실린다).
+         */
+        uint32       _vertexAnimationBase{ 0xFFFFFFFFu };
         RHIBlendMode _blendMode = RHIBlendMode::Opaque;
         /**
          * @brief 인스턴스의 월드 행렬식이 음수(거울 변환)인 배치입니다. 이 배치는 컬 모드를 뒤집은 PSO 로 그립니다(언리얼 `bReverseCulling`).
@@ -285,6 +295,11 @@ namespace sw
         shared_ptr<const vector<float4>> _pListSkinPaletteRow;
         /// @brief GPU 회전을 요청한 인스턴스 수입니다(0 이면 애니메이션 디스패치를 건너뜁니다).
         uint32 _spinInstanceCount{ 0 };
+        /**
+         * @brief 정점 애니메이션(VAT) 시계(초)입니다. 게임 스레드의 군중 시계(`AnimationCrowd::getClock`)를 그대로 옮겨, 인스턴스 시각 오프셋과 더하면 CPU 가
+         *        본 클립 시각과 같습니다. 패스마다 PassCB `g_SwVertexAnimationTime` 으로 갑니다.
+         */
+        float32 _vertexAnimationTime{ 0.0f };
         /// @brief 마지막 buildFromScene 이 내용을 바꿨는지입니다. RT 는 0 이면 인스턴스 재업로드를 생략합니다.
         uint8 _bCpuDirty{ SW_TRUE };
         /**

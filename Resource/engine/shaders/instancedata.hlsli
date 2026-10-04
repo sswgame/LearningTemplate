@@ -26,7 +26,7 @@ struct SwInstanceData
 	uint     uvStart;   // 사각형의 왼쪽 위 꼭짓점이 읽는 UV (u, v) — unorm16 둘(u 가 하위 16비트)
 	uint     uvEnd;     // 오른쪽 아래 꼭짓점이 읽는 UV — unorm16 둘. uvEnd.u < uvStart.u 면 좌우가 뒤집힌다
 	uint     tint;      // 인스턴스 색 RGBA8 unorm(r 이 하위 바이트). 머티리얼 색 · 텍스처에 곱한다
-	uint     reserved;  // 16 바이트 정렬을 채운다(0)
+	float    vertexAnimationPhase; // 정점 애니메이션(VAT) 시각 오프셋(초) — VAT 시계에 더해 인스턴스마다 다른 프레임을 고른다(binding.hlsli)
 };
 
 /** @brief unorm16 둘을 [0, 1] 실수 둘로 푼다(하위 16비트가 x). C++ `GpuSpriteInstanceData::makeUnorm16x2` 의 역이다. */

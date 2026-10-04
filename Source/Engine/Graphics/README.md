@@ -378,7 +378,10 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 배치마다 다른 값은 드로우 호출이 아니라 **데이터**가 준다:
 - `GpuMeshVertexPool` — 씬 메시 정점을 한 정점 버퍼에 이어 붙인다. 간접 인자의 `startVertex` 가 풀 오프셋. 메시 집합이 같으면
   다시 만들지 않는다. 못 든 메시는 자기 버퍼(멀티 드로우엔 못 묶인다).
-- `g_SwBatches`(t13, `GpuBatchInfo` 32바이트) — 배치의 인스턴스 시작·모프 풀 시작·정점 풀 시작. 패스당 한 번 건다. 컬링 t1 과 같은 버퍼.
+- `g_SwBatches`(t13, `GpuBatchInfo` 32바이트) — 배치의 인스턴스 시작·모프 풀 시작·정점 풀 시작·VAT 표 시작. 패스당 한 번 건다. 컬링 t1 과 같은 버퍼.
+- `g_SwVertexAnimation`(t14, `GpuVertexAnimationPool`) — 정점 애니메이션(VAT) 표. 메시마다 머리 원소(프레임 수 · 프레임율 · 정점 수 · 반복) + 프레임 × 정점
+  float4(위치, 팔면체 노멀을 담은 정수). 정점 셰이더(`swLoadAnimatedVertex`)가 VAT 시계(PassCB `g_SwVertexAnimationTime` = 게임 스레드 군중 시계) +
+  인스턴스의 `vertexAnimationPhase` 로 두 프레임을 골라 보간한다 — 먼 군중이 CPU 포즈 · GPU 스키닝 없이 인스턴스마다 다른 위상으로 한 드로우.
 - 인스턴스 슬롯 스트림(정점 슬롯 1, `SW_INSTANCESLOT`, uint, 인스턴스 스텝) — `0,1,2,…`. 간접 인자의 `startInstance` 가 배치 시작이라
   입력 어셈블러가 네 API 모두 `startInstance + i` 를 준다. 정점 셰이더는 `swLoadInstance( input.instanceSlot )` 로 자기 인스턴스를,
   `inst.meshBatchIndex` 로 배치 표를 읽는다. **SV_InstanceID 는 쓰지 않는다**(startInstance 포함 여부가 API 마다 달라서).

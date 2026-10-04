@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Object/Animation/AnimationCrowd.h"
 #include "Engine/Object/Animation/AnimationLod.h"
 
 namespace sw
@@ -75,6 +76,21 @@ namespace sw
         }
         /** @brief 모든 단계 뒤 게임 스레드에서 불립니다(루트 모션 적용 등). */
         virtual void finishAnimationFrame( SkeletalMeshComponent& unit ) { (void)unit; }
+        /**
+         * @brief 이번 프레임 포즈를 군중 묶음과 나눌 수 있으면 요청을 채우고 true 입니다(시간 단계 뒤, 게임 스레드).
+         * @details 나눌 수 있는 것: 반복 클립 하나를 섞기 · 레이어 · 시퀀서 덮어쓰기 없이 재생 중. 기본은 나눌 수 없음입니다(IK 같은 후처리 일은 유닛마다다).
+         */
+        virtual bool describeSharedPose( AnimSharedPoseRequest& outRequest ) const
+        {
+            (void)outRequest;
+            return false;
+        }
+        /** @brief 요청의 클립 소유입니다(묶음이 들고 있게). 모르는 클립이면 nullptr 입니다. */
+        virtual shared_ptr<const AnimClip> findSharedPoseClip( const AnimClip* pClip ) const
+        {
+            (void)pClip;
+            return nullptr;
+        }
         /** @brief 유닛이 사라지거나 일을 뗐습니다. 들고 있던 유닛 포인터를 놓습니다. */
         virtual void onAnimationUnitDetached( SkeletalMeshComponent& unit ) { (void)unit; }
     };
@@ -163,6 +179,13 @@ namespace sw
         /** @brief 지난 평가에서 실제로 포즈를 만든 유닛 수입니다. */
         uint32 getPoseEvaluatedUnitCount() const { return _poseEvaluatedUnitCount; }
 
+        // --- 군중 공유 (AnimationCrowd.h) ---
+        /** @brief 군중(묶음 · 사본 풀 · VAT 캐시 · 시계)입니다. */
+        AnimationCrowd&       getCrowd() { return _crowd; }
+        const AnimationCrowd& getCrowd() const { return _crowd; }
+        /** @brief 군중 표를 정합니다(시험 · 게임). 정하지 않으면 처음 쓸 때 `AnimationCrowdSettings::kResourcePath` 를 읽습니다. */
+        void setCrowdSettings( const AnimationCrowdSettings& settings );
+
         /** @brief 등록된 유닛 수입니다. */
         uint32 getUnitCount() const { return static_cast<uint32>( _listUnit.size() ); }
         /** @brief 의존 레벨입니다(0 이 먼저). 시험 · 진단용입니다. */
@@ -183,6 +206,8 @@ namespace sw
         void runPhase( AnimationPhase phase );
         /** @brief 같은 이름의 동기 그룹끼리 위상을 맞춥니다. */
         void synchronizeGroups();
+        /** @brief 군중 공유를 켠 유닛의 묶음 · 사본 · VAT 를 정하고 묶음을 평가합니다(시간 단계 뒤). */
+        void updateCrowd();
 
         vector<SkeletalMeshComponent*>         _listUnit;
         vector<vector<SkeletalMeshComponent*>> _listLevel;
@@ -193,6 +218,7 @@ namespace sw
         vector<AnimationLodState>              _listScratchLodState;   ///< 판정 중 클라이언트마다의 상태(재사용)
         vector<AnimationBudgetItem>            _listScratchBudgetItem; ///< 예산 배분 입력(재사용)
         AnimationLodSettings                   _lodSettings;
+        AnimationCrowd                         _crowd;
         GameObjectManager*                     _pManager;
         uint64                                 _frameIndex;
         float32                                _deltaSeconds;
@@ -202,8 +228,9 @@ namespace sw
         uint32                                 _poseEvaluatedUnitCount;
         uint8                                  _bOrderDirty;
         uint8                                  _bCycle;
-        uint8                                  _bLodViewsSet;      ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
-        uint8                                  _bLodSettingsReady; ///< 표를 정했거나 읽었다
-        uint8                                  _bLodApplied;       ///< 지난 프레임에 판정을 넣었다(꺼질 때 한 번 되돌린다)
+        uint8                                  _bLodViewsSet;        ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
+        uint8                                  _bLodSettingsReady;   ///< 표를 정했거나 읽었다
+        uint8                                  _bLodApplied;         ///< 지난 프레임에 판정을 넣었다(꺼질 때 한 번 되돌린다)
+        uint8                                  _bCrowdSettingsReady; ///< 군중 표를 정했거나 읽었다
     };
 } // namespace sw

@@ -104,7 +104,11 @@
 // 컬링 컴퓨트도 같은 버퍼를 t1 로 읽는다 — gpucull.hlsl 의 GpuBatchInfo 와 레이아웃이 같다.
 #define SW_SLOT_BATCH_SRV              13
 
-#define SW_SRV_SLOT_COUNT              14  // t0..t13 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
+// 정점 애니메이션(VAT) 표 (StructuredBuffer<float4> g_SwVertexAnimation). 먼 군중의 메시마다 머리 원소 + 프레임 × 정점.
+// 정점 셰이더가 배치 표의 vertexAnimationBase 와 인스턴스의 시각 오프셋으로 읽는다(binding.hlsli swLoadAnimatedVertex).
+#define SW_SLOT_VERTEX_ANIMATION_SRV   14
+
+#define SW_SRV_SLOT_COUNT              15  // t0..t14 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
 
 // ------------------------------------------------------------------------------
 // 3) 컴퓨트 — CB 는 b0, 읽기 버퍼 t0..t3, 쓰기 버퍼 u0..u3 (space0)

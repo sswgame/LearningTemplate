@@ -22,6 +22,7 @@
 | `AnimGraphAsset` · `AnimGraphPlayer` | 그래프 JSON(노드 = 상태, 링크 = 전이: 조건 `>` `<` `>=` `<=` `==` `!=` `trigger` · 블렌드 · 노드 반복)과 그것을 돌리는 상태 기계 |
 | `SpriteClipAsset` · `SpriteClipPlayable` | 스프라이트 클립(`.sprite.json`)과 그 이름 붙은 구간을 `IAnimPlayable` 로 보이는 다리(2D 가 같은 재생 코드를 탄다) |
 | `BlendSpace` · `DualQuaternion` | 1D/2D 파라메트릭 블렌딩(행렬 하나), DQ 스키닝 수학(아래 2 · 3 절) |
+| `Graphics/Mesh/MeshVertexAnimation` | VAT 표(프레임 × 정점, 위치 + 팔면체 노멀)와 굽기(`AnimClip::samplePose` → 팔레트 → CPU 스키닝 — meshskin.hlsl 과 같은 식) |
 | `AnimJsonUtil` | 모르는 키를 오류로 보는 JSON 검사 · 본 변환 읽기 · 쓰기(스켈레톤 · 임포트 규칙 · 클립 곁 데이터가 함께 쓴다) |
 
 ## 0.1 파일 형식
@@ -56,8 +57,9 @@ GpuSceneBuilder::buildFromScene → 유닛의 팔레트를 스냅샷으로(`coll
 FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin.hlsl 디스패치 한 번 → 정점 셰이더는 모프와 같은 길로 읽는다
 ```
 
-- **유닛**(`SkeletalMeshComponent`) = 장비 부품 하나 = 오브젝트 하나. 스켈레톤이 없으면 본 하나("root")짜리 암묵 스켈레톤입니다. 스킨드 메시는 컴포넌트마다
-  메시 객체를 따로 둡니다(모프 풀 구간이 메시마다 하나라서) — 군중 공유는 다음 일입니다.
+- **유닛**(`SkeletalMeshComponent`) = 장비 부품 하나 = 오브젝트 하나. 스켈레톤이 없으면 본 하나("root")짜리 암묵 스켈레톤입니다(런타임에 `setSkeleton` 으로
+  정한 스켈레톤은 경로가 비어도 덮지 않는다). 스킨드 메시는 컴포넌트마다 사본(`Mesh::createSkinInstance` — 원본의 스킨 데이터를 나눠 GPU 레스트 · 가중치는
+  한 벌)을 둡니다. 군중 공유를 켜면(`setShareCrowdPose`) 사본 대신 묶음의 메시를 그립니다(아래 "군중 공유").
 - **일**(`IAnimationPhaseTask`)은 유닛에 걸립니다: 애니메이터(`SkeletalAnimatorBinding`)가 Time · BasePose 를 맡고, 나중의 PoseModifier · 소켓 부착이
   Attachment · PostProcess 에 끼어듭니다. 단계 함수는 워커에서 돌므로 자기 유닛과 의존으로 선언한 위 유닛만 읽습니다(`addAnimationDependency`).
 - **LOD**(`Object/Animation/AnimationLod` — 언리얼 URO · Significance Manager · Animation Budget Allocator 의 자리): 엔진 루프가 프레임마다 뷰를 넣고
@@ -73,6 +75,18 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
   - **예산**: 포즈 단계의 벽시계 시간 / 평가한 유닛 수(지수 이동 평균)를 유닛 하나의 비용으로 보고, `Σ 비용 / 주기` 가 예산을 넘으면 화면이 작은 것부터
     주기를 두 배씩(상한까지) 늘리고 보간을 켭니다(`AnimationLodUtil::allocateBudget`).
   - 뷰를 한 번도 받지 않은 시스템(시험 · 서버 · 헤드리스)은 판정하지 않습니다 — 가시성 훅 · 주기를 직접 부르는 쪽을 덮지 않습니다. `-gv_animationLod=0` 이 끕니다.
+- **군중 공유**(`Object/Animation/AnimationCrowd` — 언리얼 Animation Sharing 의 자리, 표 `engine/animation/animationcrowd.json`): `_bShareCrowdPose` 를 켠 유닛은
+  시간 단계 뒤(게임 스레드) 묶음 · 혼자 · VAT 중 하나가 됩니다(`updateCrowdMembership`).
+  - **묶음**: 열쇠 = (스켈레톤, 스킨 원본, 클립, 재생 속도, 루트 묶기, 변형 칸). 칸은 클립 한 바퀴를 `variations_per_clip` 으로 나눈 위상이고 묶음 시각 =
+    군중 시계 × 속도 + 칸 × 폭이라 유닛 시각과 반 칸 안이며 어긋나지 않습니다(같은 상태면 칸을 바꾸지 않는다). 묶음 하나 = 포즈 하나 · 메시(사본) 하나 =
+    결과 구간 하나 · 팔레트 하나 · 배치 하나(멤버 수와 무관). 보이는 멤버가 있는 묶음만 평가합니다(병렬). 멤버는 포즈 단계를 돌지 않고, 포즈 읽기
+    (`getLocalPose` · `getModelSpaceTransforms` · `getSkinPalette`)는 묶음의 것을 돌려줍니다. 시간 · 상태 기계 · 알림 · 루트 모션 · 커브는 유닛마다 그대로입니다.
+  - **혼자**: 섞는 중 · 레이어 · 시퀀서 덮어쓰기 · 반복하지 않는 클립 · 후처리 일 · 리더 따르기면 나눌 수 없어 사본 풀(`acquireSoloMesh`)의 메시로 평가합니다
+    (묶음의 마지막 포즈에서 이어 섞기가 튀지 않는다). 끝나면 사본을 풀에 돌려줍니다.
+  - **VAT**: LOD 가 `vertex_animation_screen_size` 아래로 본 유닛(따르는 유닛 없음 · 속도 1)은 (원본, 클립)의 VAT 메시 하나로 넘어갑니다 — 처음 쓸 때
+    `MeshVertexAnimationBaker` 가 굽고(15 fps, 반복 클립은 한 바퀴가 클립 길이와 같게), 넘어갈 때 한 번 인스턴스 시각 오프셋(유닛 시각 - 군중 시계)을 적습니다.
+  - 멤버 · 참조가 없는 묶음은 `bucket_keep_seconds` 뒤 지웁니다(상태가 오가며 메시를 다시 만들지 않게). 진단: `GT.Animation.crowd*` 카운터 · `RT.Skin.*` 카운터,
+    `-gv_animationForceVertexAnimation=1`(모든 공유 유닛을 VAT 로).
 - **리더 포즈**: `setLeaderPose( 몸 )` 또는 `_bFollowParentPose` — 팔로워는 리더의 로컬 포즈를 본 이름으로 옮겨 받고 리더는 의존이 됩니다.
 
 ## 0.3 2D · 3D 가 함께 쓰는 것

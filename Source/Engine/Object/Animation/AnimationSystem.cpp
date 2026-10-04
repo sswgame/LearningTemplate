@@ -24,6 +24,11 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE_INT( gv_animationLod, 1, "Animation LOD: frustum visibility, update rate, bone LOD and budget (0 = every unit every frame)" );
 
+    /**
+     * @brief `-gv_animationForceVertexAnimation=1` — 군중 공유를 켠 모든 유닛을 거리와 상관없이 VAT 로 그립니다(VAT 경로 검증 · 측정용).
+     */
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_animationForceVertexAnimation, 0, "Draw every crowd-shared unit with vertex animation regardless of distance (verification)" );
+
     namespace
     {
         struct AnimationSystemInternal
@@ -56,6 +61,7 @@ namespace sw
         , _listScratchLodState{}
         , _listScratchBudgetItem{}
         , _lodSettings{}
+        , _crowd{}
         , _pManager{ nullptr }
         , _frameIndex{ 0 }
         , _deltaSeconds{ 0.0f }
@@ -68,7 +74,45 @@ namespace sw
         , _bLodViewsSet{ SW_FALSE }
         , _bLodSettingsReady{ SW_FALSE }
         , _bLodApplied{ SW_FALSE }
+        , _bCrowdSettingsReady{ SW_FALSE }
     {
+    }
+
+    void AnimationSystem::setCrowdSettings( const AnimationCrowdSettings& settings )
+    {
+        _crowd.setSettings( settings );
+        _bCrowdSettingsReady = SW_TRUE;
+    }
+
+    void AnimationSystem::updateCrowd()
+    {
+        bool bAnyShared = false;
+        for ( const SkeletalMeshComponent* pUnit : _listActive )
+            bAnyShared = bAnyShared || pUnit->isShareCrowdPose() || pUnit->getCrowdMode() != AnimationCrowdMode::Own;
+        if ( bAnyShared == false && _crowd.getBuckets().empty() )
+            return;
+        SW_PROFILE_SCOPE( "GT.Animation.crowd" );
+        if ( _bCrowdSettingsReady == SW_FALSE )
+        {
+            _bCrowdSettingsReady = SW_TRUE;
+            AnimationCrowdSettings settings;
+            if ( ResourceUtil::hasResource( AnimationCrowdSettings::kResourcePath ) && settings.loadFromResource( AnimationCrowdSettings::kResourcePath ) )
+                _crowd.setSettings( settings );
+        }
+        // 묶음 · 사본 · VAT 를 정한다(게임 스레드 — 메시를 갈아 끼운다). 나눈 유닛은 이번 프레임 포즈 단계를 돌지 않는다.
+        uint32 arrModeCount[4] = { 0, 0, 0, 0 };
+        for ( SkeletalMeshComponent* pUnit : _listActive )
+        {
+            if ( pUnit->isShareCrowdPose() || pUnit->getCrowdMode() != AnimationCrowdMode::Own )
+                pUnit->updateCrowdMembership( _crowd );
+            ++arrModeCount[static_cast<uint32>( pUnit->getCrowdMode() )];
+        }
+        _crowd.evaluateBuckets();
+        SW_PROFILE_COUNT( "GT.Animation.crowdSharedUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::Shared )] );
+        SW_PROFILE_COUNT( "GT.Animation.crowdSoloUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::Solo )] );
+        SW_PROFILE_COUNT( "GT.Animation.crowdVertexAnimationUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::VertexAnimation )] );
+        SW_PROFILE_COUNT( "GT.Animation.crowdBucketCount", static_cast<uint32>( _crowd.getBuckets().size() ) );
+        SW_PROFILE_COUNT( "GT.Animation.crowdEvaluatedBuckets", _crowd.getEvaluatedBucketCount() );
     }
 
     void AnimationSystem::registerLodClient( IAnimationLodClient* pClient )
@@ -161,6 +205,8 @@ namespace sw
         for ( size_t clientIndex = 0; clientIndex < clientCount; ++clientIndex )
         {
             AnimationLodState& state = _listScratchLodState[clientIndex];
+            if ( gv_animationForceVertexAnimation != 0 )
+                state._bVertexAnimation = SW_TRUE;
             if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
             {
                 const uint32 budgeted = _listScratchBudgetItem[budgetIndex++]._updateRateDivisor;
@@ -208,6 +254,8 @@ namespace sw
 
         vector<vector<uint32>> listDependent( unitCount );
         vector<uint32>         listPendingCount( unitCount, 0 );
+        for ( SkeletalMeshComponent* pUnit : _listUnit )
+            pUnit->setHasAnimationDependents( false );
         for ( size_t unitIndex = 0; unitIndex < unitCount; ++unitIndex )
         {
             for ( const ComponentHandle handle : _listUnit[unitIndex]->getAnimationDependencies() )
@@ -218,6 +266,8 @@ namespace sw
                     continue; // 사라졌거나 다른 씬의 유닛 — 순서를 강제하지 않는다
                 listDependent[it->second].push_back( static_cast<uint32>( unitIndex ) );
                 ++listPendingCount[unitIndex];
+                // 다른 유닛이 이 유닛의 포즈를 읽는다(리더 · 부착) — VAT 로 넘기면 CPU 포즈가 멈춰 따르는 쪽이 굳는다.
+                _listUnit[it->second]->setHasAnimationDependents( true );
             }
         }
 
@@ -271,6 +321,7 @@ namespace sw
             rebuildLevels();
         ++_frameIndex;
         _deltaSeconds = deltaSeconds;
+        _crowd.beginFrame( deltaSeconds );
 
         // 이번 프레임에 일하는 유닛만 레벨 순서로 모은다 — 쉬는 유닛은 여기서 빠져 단계를 돌지 않는다.
         _listActive.clear();
@@ -288,10 +339,14 @@ namespace sw
         _activeUnitCount        = static_cast<uint32>( _listActive.size() );
         _poseEvaluatedUnitCount = 0;
         if ( _listActive.empty() )
+        {
+            _crowd.endFrame();
             return;
+        }
 
         runPhase( AnimationPhase::Time );
         synchronizeGroups();
+        updateCrowd();
 
         // 포즈 단계의 벽시계 시간을 잰다 — 예산 배분이 "유닛 하나에 얼마" 를 이 평균으로 본다(언리얼 예산 배분기도 전체 시간을 재서 나눈다).
         uint32 poseUnitCount = 0;
@@ -303,6 +358,8 @@ namespace sw
         runPhase( AnimationPhase::PostProcess );
         runPhase( AnimationPhase::SkinPalette );
         _poseEvaluatedUnitCount = poseUnitCount;
+        SW_PROFILE_COUNT( "GT.Animation.activeUnits", _activeUnitCount );
+        SW_PROFILE_COUNT( "GT.Animation.poseUnits", poseUnitCount );
         if ( poseUnitCount > 0 )
         {
             const float32 sample           = static_cast<float32>( MonotonicClock::nowNanoseconds() - poseStart ) * 0.001f / static_cast<float32>( poseUnitCount );
@@ -311,6 +368,7 @@ namespace sw
 
         for ( SkeletalMeshComponent* pUnit : _listActive )
             pUnit->finishAnimationFrame();
+        _crowd.endFrame();
     }
 
     void AnimationSystem::runPhase( AnimationPhase phase )

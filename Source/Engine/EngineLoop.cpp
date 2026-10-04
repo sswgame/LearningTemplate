@@ -52,6 +52,8 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
+#include "Engine/Object/Animation/AnimationCrowd.h"
+#include "Engine/Object/Animation/VertexAnimationCooker.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
@@ -350,9 +352,18 @@ namespace sw
                 [[maybe_unused]] const uint32 prefabCount         = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );
                 uint32                        registryFailedCount = 0;
                 [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
-                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures).", sceneCount, sceneFailedCount, prefabCount,
-                             prefabFailedCount, registryCount, registryFailedCount );
-                loop._bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0;
+                // 정점 애니메이션(VAT) — 데이터가 고른 (메시, 클립)을 굽는다. 프레임율은 군중 표의 것이라 런타임 굽기와 같다.
+                AnimationCrowdSettings crowdSettings{};
+                if ( ResourceUtil::hasResource( AnimationCrowdSettings::kResourcePath ) )
+                    (void)crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath );
+                uint32                        vertexAnimationFailedCount = 0;
+                [[maybe_unused]] const uint32 vertexAnimationCount =
+                    VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, vertexAnimationFailedCount );
+                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures).",
+                             sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,
+                             vertexAnimationFailedCount );
+                loop._bHeadlessTaskFailed =
+                    sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 || vertexAnimationFailedCount > 0;
                 return EngineInitResult::SkipDependents;
             }
 

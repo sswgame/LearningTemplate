@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    struct MeshVertexAnimation;
+
     class IRHIDevice;
 
     /**
@@ -75,6 +77,12 @@ namespace sw
          *          Mesh 가 책임지는 것은 **정점 버퍼와 그 수명**뿐입니다.
          */
         static shared_ptr<Mesh> create();
+        /**
+         * @brief 스킨드 메시의 그릴 사본을 만듭니다(정점 · 스킨을 복사하고 **스킨 데이터 번호를 원본과 나눕니다**).
+         * @details GPU 스키닝 결과(모프 풀의 결과 구간)는 메시 객체마다 하나라, 포즈가 다른 캐릭터 · 군중 묶음은 사본을 그립니다. 사본은 원본과
+         *          레스트 정점 · 가중치가 같으므로 모프 풀은 스킨 데이터 번호(`getSkinDataId`)로 원본 데이터를 **한 번만** 올리고 사본은 결과 구간만 받습니다.
+         */
+        static shared_ptr<Mesh> createSkinInstance( const Mesh& source );
 
         /** @brief CPU 정점 배열을 설정합니다. */
         void setVertices( const vector<RHIVertex>& listVertex );
@@ -106,6 +114,19 @@ namespace sw
         bool hasSkin() const { return _skinBoneCount > 0 && _listSkinVertex.size() == _listVertex.size(); }
         /** @brief 스켈레톤 본 수(팔레트 길이)입니다. 스킨이 없으면 0 입니다. */
         uint32 getSkinBoneCount() const { return _skinBoneCount; }
+        /**
+         * @brief 스킨 데이터(레스트 정점 · 가중치)의 정체성입니다. 보통은 내용 번호이고, `createSkinInstance` 의 사본은 원본의 번호를 나눕니다.
+         * @details 모프 풀이 같은 번호의 메시들을 한 원본 구간으로 묶습니다(언리얼 스킨 캐시가 같은 스켈레탈 메시의 정점 팩토리를 나누는 자리).
+         */
+        uint64 getSkinDataId() const { return _sharedSkinDataId != 0 ? _sharedSkinDataId : _contentId; }
+
+        /**
+         * @brief 정점 애니메이션 표(VAT)를 겁니다. 걸린 메시는 스키닝 대신 정점 셰이더가 표를 인스턴스마다의 시각으로 읽습니다(먼 군중). 내용 번호가 바뀝니다.
+         * @details 표는 같은 원본 · 같은 클립을 쓰는 모든 캐릭터가 나눕니다(메시 객체 하나 — 그래서 한 배치 · 한 드로우). 스킨은 걸지 않습니다.
+         */
+        void setVertexAnimation( shared_ptr<const MeshVertexAnimation> animation );
+        /** @brief 정점 애니메이션 표입니다. 없으면 nullptr 입니다. */
+        const MeshVertexAnimation* findVertexAnimation() const { return _vertexAnimation.get(); }
         /** @brief 정점 개수를 반환합니다. */
         uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
         /**
@@ -150,6 +171,10 @@ namespace sw
         vector<MeshSkinVertex> _listSkinVertex;
         /// @brief 스켈레톤 본 수입니다. 0 이면 스킨이 없습니다.
         uint32 _skinBoneCount{ 0 };
+        /// @brief `createSkinInstance` 사본이 나눈 원본의 스킨 데이터 번호입니다. 0 이면 자기 내용 번호입니다(정점 · 스킨을 바꾸면 0 으로 돌아간다).
+        uint64 _sharedSkinDataId{ 0 };
+        /// @brief setVertexAnimation 참고.
+        shared_ptr<const MeshVertexAnimation> _vertexAnimation;
         /// @brief getBoundingRadius 참고. setVertices 가 구합니다.
         float32 _boundingRadius{ 0.0f };
         float3  _localBoundsMin{};
