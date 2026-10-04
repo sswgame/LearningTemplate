@@ -104,7 +104,7 @@ public:
 
 ## 연결된 UI
 
-같은 오브젝트에 `HealthBarComponent` 가 있으면 체력 · 최대 체력이 바뀔 때마다 비율을 맞춥니다. `setShowDamageNumbers( true )` 면 체력이 깎일 때
+체력 · 최대 체력이 바뀔 때마다 같은 오브젝트의 `HealthListenerComponent`(HP 바 `HealthBarComponent` 가 상속한다)에 비율을 알립니다 — 어빌리티 시스템은 바를 모릅니다. `setShowDamageNumbers( true )` 면 체력이 깎일 때
 `DamageNumberComponent` 숫자를 띄웁니다. 어트리뷰트 이름은 `setHealthAttributes` 로 바꿉니다(기본 `Health` · `MaxHealth`).
 
 ## 카탈로그 XML

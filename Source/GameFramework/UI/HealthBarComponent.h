@@ -2,10 +2,10 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/SpriteInstanceBatch.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Combat/HealthListenerComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -14,7 +14,7 @@ namespace sw
      * @class HealthBarComponent
      * @brief 소유 오브젝트 위(+ `_offsetPos`)에 떠 있는 월드 공간 HP 바입니다. 채움 · 피해 흔적 · 바탕 세 조각을 스프라이트로 그립니다.
      * @details 비율 셋의 뜻:
-     *          - `_targetRatio` — 참 HP 비율입니다. 체력 시스템이 `setTargetRatio` 로 넣습니다(입력은 이것 하나입니다).
+     *          - `_targetRatio` — 참 HP 비율입니다. 체력 시스템의 알림(`onHealthChanged` — `HealthListenerComponent::broadcast`)이 넣습니다.
      *          - `_hpRatio` — 채움 조각의 길이입니다. 줄 때는 바로 따라가고(맞은 순간 줄어든다) 늘 때는 `_lerpSpeed` 로 차오릅니다.
      *          - `_remainRatio` — 피해 흔적입니다. 채움보다 길면 `_lerpSpeed` 로 채움까지 줄어들어 "방금 잃은 만큼" 을 잠깐 보입니다.
      *          그리는 조각은 **겹치지 않습니다**: 채움 [0, hp], 흔적 [hp, remain], 바탕 [max(hp, remain), 1]. 같은 깊이의 반투명 조각이 겹치면
@@ -25,7 +25,7 @@ namespace sw
      *          따라갑니다.
      */
     REFLECT( Category = "UI", DisplayName = "Health Bar Component", Tooltip = "Smooth lerping HP Bar floating UI component" )
-    class SW_GF_API HealthBarComponent : public Component
+    class SW_GF_API HealthBarComponent : public HealthListenerComponent
     {
     public:
         REFLECT_BODY();
@@ -49,6 +49,11 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 소유 오브젝트가 꺼지면 조각을 숨깁니다(꺼진 오브젝트는 틱이 돌지 않습니다). */
         void onOwnerActiveInHierarchyChanged() override;
+        /**
+         * @brief 같은 오브젝트의 체력 시스템이 알린 변화입니다 — 다시 두기는 흔적 없이(`resetRatio`), 바뀜은 목표만(`setTargetRatio`).
+         * @details `_bShowWhenHurt` 면 처음 줄 때 보이고, `_bHideWhenDead` 면 쓰러질 때 숨습니다(보이기 정책은 바가 정한다 — 체력 시스템은 바를 모른다).
+         */
+        void onHealthChanged( const HealthChangedEvent& event ) override;
 
         /**
          * @brief 참 HP 비율(0..1)을 넣습니다. 체력 시스템의 입력은 이것 하나입니다. 범위 밖은 묶습니다.
@@ -102,7 +107,11 @@ namespace sw
         PROPERTY( Category = "Style", DisplayName = "Sorting Layer", Tooltip = "Sorting layer of the bar (render2d.xml); world UI draws above sprites" )
         hashed_string _sortingLayer;
         PROPERTY( Category = "Layout", DisplayName = "Visible", Tooltip = "Toggle HP bar visibility" )
-        bool                _bVisible;
+        bool _bVisible;
+        PROPERTY( Category = "Layout", DisplayName = "Show When Hurt", Tooltip = "Show the bar the first time health drops" )
+        bool _bShowWhenHurt;
+        PROPERTY( Category = "Layout", DisplayName = "Hide When Dead", Tooltip = "Hide the bar when the owner dies" )
+        bool                _bHideWhenDead;
         SpriteInstanceBatch _spriteBatch; ///< 조각 셋(채움 · 흔적 · 바탕). 저장하지 않습니다
     };
 } // namespace sw

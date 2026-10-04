@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/UI/HealthBarComponent.h"
+#include "GameFramework/Combat/HealthListenerComponent.h"
 #include "GameFramework/Utility/OrientationUtil.h"
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
@@ -55,7 +55,6 @@ namespace sw
         , _bLaunched{ SW_FALSE }
         , _bHitPending{ SW_FALSE }
         , _bAttackLanded{ SW_FALSE }
-        , _bBarShown{ SW_FALSE }
         , _bAttackStarting{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -80,9 +79,13 @@ namespace sw
             pScene->setLocalPosition( _position );
             pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         }
-        HealthBarComponent* pBar = pOwner != nullptr ? pOwner->getComponent<HealthBarComponent>() : nullptr;
-        if ( pBar != nullptr )
-            pBar->resetRatio( 1.0f );
+        if ( pOwner != nullptr )
+        {
+            HealthChangedEvent event;
+            event._ratio = 1.0f;
+            event._kind  = HealthChangeKind::Reset;
+            HealthListenerComponent::broadcast( *pOwner, event );
+        }
     }
 
     void ShooterEnemyComponent::applyDamage( float32 amount )
@@ -90,20 +93,16 @@ namespace sw
         if ( isAlive() == false )
             return;
         _health -= amount;
-        GameObject*         pOwner = getOwner();
-        HealthBarComponent* pBar   = pOwner != nullptr ? pOwner->getComponent<HealthBarComponent>() : nullptr;
-        if ( pBar != nullptr )
-        {
-            if ( _bBarShown == SW_FALSE )
-                pBar->setVisible( true );
-            _bBarShown = SW_TRUE;
-            pBar->setTargetRatio( MathUtil::max( 0.0f, _health / MathUtil::max( 1.0f, _maxHealth ) ) );
-        }
+        // 체력 신호 — HP 바가 보이기 · 숨기기를 스스로 정한다(프리팹의 `_bShowWhenHurt` · `_bHideWhenDead`).
+        const GameObject*  pOwner = getOwner();
+        HealthChangedEvent event;
+        event._ratio = MathUtil::max( 0.0f, _health / MathUtil::max( 1.0f, _maxHealth ) );
+        event._kind  = _health <= 0.0f ? HealthChangeKind::Died : HealthChangeKind::Changed;
+        if ( pOwner != nullptr )
+            HealthListenerComponent::broadcast( *pOwner, event );
         if ( _health <= 0.0f )
         {
             enterPhase( ShooterEnemyPhase::Dying );
-            if ( pBar != nullptr )
-                pBar->setVisible( false );
             return;
         }
         // 일어나는 중 · 휘두르는 중에는 클립을 끊지 않는다(맞은 표시는 HP 바).

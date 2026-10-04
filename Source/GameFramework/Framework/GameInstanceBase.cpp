@@ -18,10 +18,10 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
-#include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Framework/ComponentStateStore.h"
 #include "GameFramework/Framework/GameEventUtil.h"
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameStrings.h"
 
 namespace sw
 {

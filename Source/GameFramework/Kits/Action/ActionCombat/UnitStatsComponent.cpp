@@ -5,10 +5,10 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Combat/HealthListenerComponent.h"
 #include "GameFramework/Framework/GameEventUtil.h"
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/UI/DamageNumberComponent.h"
-#include "GameFramework/UI/HealthBarComponent.h"
 
 namespace sw
 {
@@ -184,15 +184,13 @@ namespace sw
 
     void UnitStatsComponent::syncHealthBar( bool bReset )
     {
-        GameObject*         pOwner = getOwner();
-        HealthBarComponent* pBar   = ( pOwner != nullptr ) ? pOwner->getComponent<HealthBarComponent>() : nullptr;
-        if ( pBar == nullptr )
+        const GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr )
             return;
-        const float32 ratio = ( _maxHp > 0 ) ? static_cast<float32>( _hp ) / static_cast<float32>( _maxHp ) : 0.0f;
-        if ( bReset )
-            pBar->resetRatio( ratio );
-        else
-            pBar->setTargetRatio( ratio );
+        HealthChangedEvent event;
+        event._ratio = ( _maxHp > 0 ) ? static_cast<float32>( _hp ) / static_cast<float32>( _maxHp ) : 0.0f;
+        event._kind  = bReset ? HealthChangeKind::Reset : HealthChangeKind::Changed;
+        HealthListenerComponent::broadcast( *pOwner, event );
     }
 
     void UnitStatsComponent::spawnDamageNumber( int32 amount )

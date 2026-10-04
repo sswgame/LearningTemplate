@@ -42,6 +42,8 @@ namespace sw
         , _backgroundColor{ 0.08f, 0.08f, 0.1f, 0.8f }
         , _sortingLayer{ "WorldUI" }
         , _bVisible{ false }
+        , _bShowWhenHurt{ false }
+        , _bHideWhenDead{ false }
         , _spriteBatch{}
     {
     }
@@ -101,6 +103,32 @@ namespace sw
     {
         if ( hasBegunPlay() )
             layoutSprites();
+    }
+
+    void HealthBarComponent::onHealthChanged( const HealthChangedEvent& event )
+    {
+        switch ( event._kind )
+        {
+            case HealthChangeKind::Reset:
+            {
+                resetRatio( event._ratio );
+                break;
+            }
+            case HealthChangeKind::Changed:
+            {
+                if ( _bShowWhenHurt && event._ratio < _targetRatio )
+                    setVisible( true );
+                setTargetRatio( event._ratio );
+                break;
+            }
+            case HealthChangeKind::Died:
+            {
+                setTargetRatio( event._ratio );
+                if ( _bHideWhenDead )
+                    setVisible( false );
+                break;
+            }
+        }
     }
 
     void HealthBarComponent::setTargetRatio( float32 ratio )

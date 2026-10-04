@@ -10,7 +10,6 @@
 
 #include "GameFramework/Framework/GameEventUtil.h"
 #include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Gimmick/GimmickSensorComponent.h"
 #include "GameFramework/Interaction/InteractionAuthority.h"
 
 namespace sw
@@ -30,6 +29,7 @@ namespace sw
         , _overrideDef{}
         , _pDef{ nullptr }
         , _seenCatalogReloadCount{ 0 }
+        , _completedCount{ 0 }
         , _bHighlightRequested{ SW_FALSE }
         , _bHasOverride{ SW_FALSE }
     {
@@ -145,10 +145,8 @@ namespace sw
         GameObject*           pOwner = getOwner();
         if ( pDef == nullptr || pOwner == nullptr )
             return;
-        _cooldownRemaining              = pDef->_cooldown;
-        GimmickSensorComponent* pSensor = pOwner->getComponent<GimmickSensorComponent>();
-        if ( pSensor != nullptr )
-            pSensor->notifyUsed();
+        _cooldownRemaining = pDef->_cooldown;
+        _completedCount.fetch_add( 1, std::memory_order_relaxed );
         InteractionCompletedEvent event;
         event._request._interactor        = interactor.getHandle();
         event._request._interactable      = pOwner->getHandle();

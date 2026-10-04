@@ -75,8 +75,8 @@ namespace sw
         void applyTakeDamage( int32 amount, GameObjectHandle instigator );
         void applyHeal( int32 amount );
         /**
-         * @brief 같은 오브젝트의 HP 바(`HealthBarComponent`)를 지금 HP 비율로 맞춥니다. @p bReset 이면 흔적 없이(시작 · 스탯 재설정), 아니면 목표만(피해 · 회복).
-         * @details HP 가 바뀌는 자리(피해 · 회복 · 스탯 설정 · 시작)가 이것을 부른다 — HP 바(`setTargetRatio`)를 움직이는 곳은 여기 하나다.
+         * @brief 같은 오브젝트의 체력 받는 쪽(`HealthListenerComponent` — HP 바)에 지금 HP 비율을 알립니다. @p bReset 이면 흔적 없이(시작 · 스탯 재설정), 아니면 바뀜(피해 · 회복).
+         * @details HP 가 바뀌는 자리(피해 · 회복 · 스탯 설정 · 시작)가 이것을 부른다 — 알리는 곳은 여기 하나다. 바를 모른다.
          */
         void syncHealthBar( bool bReset );
         /** @brief 깎인 피해 @p amount 를 데미지 숫자 오브젝트로 띄웁니다(`_bShowDamageNumbers` 일 때). */

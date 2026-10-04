@@ -109,8 +109,7 @@ namespace sw
         uint8             _bLaunched       : 1;
         uint8             _bHitPending     : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
         uint8             _bAttackLanded   : 1; ///< 이번 휘두름이 이미 맞았다
-        uint8             _bBarShown       : 1;
         uint8             _bAttackStarting : 1; ///< 다음 틱에 애니메이터에 Attack 트리거를 건다
-        uint8             _reserved        : 3;
+        uint8             _reserved        : 4;
     };
 } // namespace sw

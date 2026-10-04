@@ -11,9 +11,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 - **Ability**: 언리얼 Gameplay Ability System 과 같은 어빌리티 시스템 — `AbilitySystemComponent`(어트리뷰트 · 이펙트 · 어빌리티 · 태그 개수),
   `AttributeSet` · `CombatAttributeSet`, `GameplayEffectDef` · `GameplayEffectSpec`(즉시 · 지속 · 무한 · 주기 · 스택 · 실행 계산), `GameplayAbility`
   (태그 조건 · 비용 · 쿨다운 · 트리거 · 입력) · `AbilityTask`, XML 카탈로그(`AbilityCatalog`). 장르를 가리지 않아 키트가 아니라 기반에 있습니다(턴제는
-  틱을 끄고 턴마다 `advanceTime( 1 )`). 같은 오브젝트의 `HealthBarComponent` · `DamageNumberComponent` 와 이어집니다. 자세한 것은 `Ability/README.md`,
+  틱을 끄고 턴마다 `advanceTime( 1 )`). 체력 변화는 같은 오브젝트의 `HealthListenerComponent`(HP 바)에 알리고 피해는 `DamageNumberComponent` 로 띄웁니다. 자세한 것은 `Ability/README.md`,
   쓰는 예는 `Source/Games/AbilityArena`
-- **Framework**: 게임 모듈의 수명과 배선 — `IGame`, `GameInstanceBase`, 서비스 로케이터(`GameService`), 세이브 베이스(`SaveGame`),
+- **Framework**: 게임 모듈의 수명과 배선 — `IGame`, `GameInstanceBase`, 서비스 로케이터(`GameService`), 다국어 창구(`GameStrings` — 엔진 `LocalizationManager` 를 게임 서비스로 부른다), 세이브 베이스(`SaveGame`),
   "game" 채널 이벤트(`GameEvents.h` · 내는 길 `GameEventUtil`), 화면 전환(`ScreenTransitionManager`), 소리(`GameSound` — 이벤트 라이브러리 올리기 · 내리기, 2D 이벤트 `postEvent`, 월드 자리 원샷 `postEventAt`(한 번 쓰는 에미터), 클립 `play( path, bus )`;
   따라 움직이는 · 루프 소리는 엔진의 `AudioEmitterComponent`, 자세한 것은 `Source/Engine/Audio/README.md`). `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료를 그 자리에서 낸다. `onInitialize` 뒤에 사용자 설정을 다시 넣는다(`UserSettingsManager::reapplyAll` — 언어 · 입력 맵이 그때 선다). 공유 타입은 루트의 `GameFrameworkMinimal.h`.
   PROPERTY 가 아닌 컴포넌트 상태(디렉터가 든 키트 시뮬레이션)는 `ComponentStateStore` 가 상태 봉투의 세 번째 섹션으로 실어 핫 리로드 · 세이브를 넘긴다 —
@@ -48,7 +48,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   바꾸고, 정의는 카탈로그 id 로, 유닛 참조는 세대 든 id 로 적으며, 다시 만들 수 있는 것(길 · 격자 발자국 · 흐름장)은 적지 않는다
 - **Input**: 커맨드 입력(`InputCommandParser` — 철권 표기 · `InputCommandBuffer` — 새로 넣기 · 누른 채 · 동시 버튼 · 틱 한도 · 좌우 뒤집기 · 상태 바이트, 결정적),
   타이밍 판정(`TimingJudge` — 리듬 · 타이밍 공격 · 스킬 체크 · 저스트 프레임), 1인칭 시점(`FirstPersonLook`)
-- **Data**: 데이터를 읽고 담는 틀 — `GameSettings`, `GameStrings`, 경로마다 한 번 읽어 나눠 쓰는 표의 캐시(`GameDataCache<T>` — 게임 서비스가 묶이면
+- **Data**: 데이터를 읽고 담는 틀 — `GameSettings`, 경로마다 한 번 읽어 나눠 쓰는 표의 캐시(`GameDataCache<T>` — 게임 서비스가 묶이면
   에셋 캐시 등록부에 올라 에디터 핫 리로드가 새 표로 바꾸고 `getReloadCount` 를 올린다, 옛 표는 모듈이 내릴 때까지 산다), 데이터 XML 읽기(`GameDataXml` — 문서 · 루트 · id 확인 · 숫자 목록 · 토큰 목록,
   카탈로그 로더 템플릿 `loadFile` · `loadText` — 카탈로그의 `loadFromResource` · `loadFromXmlText` 는 `GameDataXml::loadFile( *this, &X::loadRoot, path, "Root" )`
   한 줄이고 루트 읽기는 비공개로 둔다, 읽은 수 0 · false 는 실패), id 카탈로그(`GameCatalog<T>` —
@@ -59,7 +59,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   페이싱 감독(`AI/Director` — `*.director.xml` 긴장도 모델 · 쌓기/절정/쉼 단계와 곡선 · 단계별 스폰 예산 · 조우/보상 가중 풀(단계 진입 · 주기 · 예산) · 쿨다운 ·
   문맥 조건 · 보상 밀도 · 결정성 · 추적 — `AI/Director/README.md`)
 - **Combat**: 무기 정의 · 상태(`WeaponCatalog` · `WeaponState` — 연사 · 탄창 · 재장전 · 퍼짐 · 산탄 · 거리 감쇠 · 머리 배율 · 탄속 · 탄 아이템), 탄 퍼짐(`WeaponMath`),
-  피해 공식(`DamageMath`), 탄도(`Ballistics` — 낙차 · 발사각 · 앞 겨누기), 턴 순서(`TurnOrder` — 라운드제 · 타임라인제), 록온(`LockOnSelector`),
+  체력 신호(`HealthListenerComponent` · `HealthChangedEvent` — 체력 시스템이 같은 오브젝트의 받는 쪽(HP 바)에 알린다), 피해 공식(`DamageMath`), 탄도(`Ballistics` — 낙차 · 발사각 · 앞 겨누기), 턴 순서(`TurnOrder` — 라운드제 · 타임라인제), 록온(`LockOnSelector`),
   체력 상태(`Vitality` — 실드 · 기절 → 출혈 → 부활 · 최대 기절 횟수 · 무적 · 경직 게이지 · 최대 체력 바꾸기), 자원 게이지(`ResourceGauge` — 스태미나 탈진 · 과열 · 회복 배율 · 즉시 깎기),
   프레임 데이터(`MoveCatalog` · `MoveTimeline` — 발생 · 지속 · 경직 · 캔슬 · 히트스톱 · 가드 높이 · 상태 복원), 속성 상성(`ElementChart` — 복합 속성 곱 · 면역 · 상태이상 확률)
   슈터 · 배틀로얄 · 서부극 · 기체 대전 · JRPG · 포켓몬 · 젤다가 함께 쓴다(예전 `GF_Shooter` 키트의 무기는 여기로 옮겼다)
@@ -92,7 +92,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   누적 거리 표 계산(`ArcLengthUtil` — 코스터 트랙도 쓴다). 기믹 무버 · 카메라 레일 · 길이 함께 쓴다. `Spline/README.md`
 - **UI**: 장르 무관 UI 컴포넌트 — `DialogueRunnerComponent`,
   `HealthBarComponent`, `DamageNumberComponent`. HP 바 · 데미지 숫자는 월드 공간 스프라이트(`SpriteInstanceBatch`)로 그린다 — 저장되는
-  컴포넌트를 만들지 않는다. 입력은 `HealthBarComponent::setTargetRatio` · `DamageNumberComponent::setDamageValue` 하나씩이다.
+  컴포넌트를 만들지 않는다. HP 바는 `HealthListenerComponent`(Combat)를 상속해 체력 시스템의 알림(`HealthChangedEvent` — 다시 두기 · 바뀜 · 쓰러짐)을 받는다 —
+  체력 시스템(어빌리티 · 키트 · 게임)은 바를 모른다(Lyra `ULyraHealthComponent::OnHealthChanged` 를 위젯이 받는 자리). 보이기 정책도 바의 것이다
+  (`_bShowWhenHurt` · `_bHideWhenDead`). 데미지 숫자의 입력은 `DamageNumberComponent::setDamageValue` · `spawnNumber`.
   `FadeOutComponent` 의 흐림은 같은 오브젝트 스프라이트들의 색 알파에 곱해진다.
 
 별도 타겟:

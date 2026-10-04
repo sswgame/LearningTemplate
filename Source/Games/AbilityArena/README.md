@@ -29,7 +29,7 @@ cd build/Ninja-Debug-AbilityArena/Bin
 
 적: **Grunt**(붉은 오크) — 다가와 때리고, 맞으면 가시(`GA_Thorns`, 피격 트리거 + `targetEffect` — 데이터만)로 때린 쪽에 고정 피해.
 **Caster**(보랏빛 오크) — 거리를 두고 화염탄. 웨이브가 오를수록 수가 늘고 체력 · 공격력이 오릅니다. 플레이어는 쓰러지면 잠시 뒤 가운데에 다시 섭니다.
-HP 바 · 피해 숫자는 어빌리티 시스템이 같은 오브젝트의 `HealthBarComponent` · `DamageNumberComponent` 로 띄웁니다.
+HP 바는 어빌리티 시스템의 체력 알림(`HealthListenerComponent`)을 받는 같은 오브젝트의 `HealthBarComponent` 이고, 피해 숫자는 `DamageNumberComponent` 로 띄웁니다.
 
 ## 구조 — 씬 · 프리팹 · 컴포넌트
 

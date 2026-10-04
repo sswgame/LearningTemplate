@@ -15,6 +15,7 @@
 
 #include "EngineTest/StateReloadTestUtil.h"
 
+#include "GameFramework/Combat/HealthListenerComponent.h"
 #include "GameFramework/Components/FadeOutComponent.h"
 #include "GameFramework/UI/DamageNumberComponent.h"
 #include "GameFramework/UI/HealthBarComponent.h"
@@ -349,4 +350,38 @@ SW_TEST_CASE( WorldUiTest, DamageNumberReopensItsGlyphClipWhenThePathChanges )
     SW_EXPECT_NEAR_EQUAL( 0.625f, shown._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, shown._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.125f, shown._z, 1e-4f );
+}
+
+/**
+ * @brief [WorldUiTest] HP 바는 같은 오브젝트의 체력 신호(`HealthListenerComponent::broadcast`)로만 움직이고, 보이기 정책은 바가 정한다
+ * @details 체력 시스템은 바를 모른다 — 다시 두기는 흔적 없이, 바뀜은 목표만. `_bShowWhenHurt` 면 처음 줄 때 보이고, `_bHideWhenDead` 면 쓰러질 때 숨는다.
+ */
+SW_TEST_CASE( WorldUiTest, HPBarFollowsHealthSignalAndOwnsItsVisibility )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pEnemy = spawnAnchoredObject( manager, "Enemy", sw::float3{ 0.0f, 0.0f, 0.0f } );
+    SW_ASSERT_NOT_NULL( pEnemy );
+    sw::HealthBarComponent* pBar = pEnemy->addComponent<sw::HealthBarComponent>();
+    SW_ASSERT_NOT_NULL( pBar );
+    SW_ASSERT_TRUE( setReflectedValue( pBar, "_bShowWhenHurt", true ) );
+    SW_ASSERT_TRUE( setReflectedValue( pBar, "_bHideWhenDead", true ) );
+
+    sw::HealthChangedEvent event;
+    event._ratio = 1.0f;
+    event._kind  = sw::HealthChangeKind::Reset;
+    sw::HealthListenerComponent::broadcast( *pEnemy, event );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pBar->getRemainRatio(), 1e-6f ); // 다시 두기는 흔적 없이
+    SW_EXPECT_FALSE( pBar->isVisible() );                        // 아직 맞지 않았다
+
+    event._ratio = 0.6f;
+    event._kind  = sw::HealthChangeKind::Changed;
+    sw::HealthListenerComponent::broadcast( *pEnemy, event );
+    SW_EXPECT_NEAR_EQUAL( 0.6f, pBar->getTargetRatio(), 1e-6f );
+    SW_EXPECT_TRUE( pBar->isVisible() ); // 처음 줄 때 보인다
+
+    event._ratio = 0.0f;
+    event._kind  = sw::HealthChangeKind::Died;
+    sw::HealthListenerComponent::broadcast( *pEnemy, event );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pBar->getTargetRatio(), 1e-6f );
+    SW_EXPECT_FALSE( pBar->isVisible() ); // 쓰러지면 숨는다
 }

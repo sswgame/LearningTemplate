@@ -59,7 +59,7 @@ namespace sw
      *          **다른 오브젝트에** 이펙트를 걸거나 이벤트를 보내면(`applyGameplayEffectSpecToTarget` · `sendGameplayEventToTarget`) 틱 직후로
      *          미룹니다(`UnitStatsComponent::takeDamage` 와 같은 규칙). 체력이 깎일 때 띄우는 피해 숫자도 틱 직후에 만듭니다.
      *
-     *          **연결된 UI**: 같은 오브젝트에 `HealthBarComponent` 가 있으면 체력 · 최대 체력이 바뀔 때마다 비율을 맞춥니다. `_bShowDamageNumbers` 면
+     *          **연결된 UI**: 체력 · 최대 체력이 바뀔 때마다 같은 오브젝트의 `HealthListenerComponent`(HP 바)에 비율을 알립니다(바를 모른다). `_bShowDamageNumbers` 면
      *          체력이 깎일 때 `DamageNumberComponent` 숫자를 띄웁니다. 어트리뷰트 이름은 `_healthAttribute` · `_maxHealthAttribute` 로 바꿀 수 있습니다.
      *
      *          **저장**: PROPERTY 만 저장됩니다(어빌리티 세트 id · 표시 설정). 런타임 상태(어트리뷰트 값 · 이펙트 · 어빌리티)는 저장하지 않고
