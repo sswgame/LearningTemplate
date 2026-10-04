@@ -28,4 +28,54 @@ namespace sw
             return right > 0.0f ? LocomotionDirection::Right : LocomotionDirection::Left;
         return forward < 0.0f ? LocomotionDirection::Backward : LocomotionDirection::Forward;
     }
+
+    LocomotionDirection LocomotionMath::classifyFrom( LocomotionDirection current, const float3& velocity, float32 yaw, bool bOnGround, float32 idleSpeed, float32 sideBias )
+    {
+        const bool    bSideNow = current == LocomotionDirection::Left || current == LocomotionDirection::Right;
+        const float32 bias     = bSideNow ? 1.0f / MathUtil::max( sideBias, 1.0f ) : sideBias;
+        return classify( velocity, yaw, bOnGround, idleSpeed, bias );
+    }
+} // namespace sw
+
+namespace sw
+{
+    LocomotionDirectionFilter::LocomotionDirectionFilter( float32 minHoldSeconds )
+        : _minHoldSeconds{ minHoldSeconds }
+        , _pendingSeconds{ 0.0f }
+        , _direction{ LocomotionDirection::Idle }
+        , _pending{ LocomotionDirection::Idle }
+    {
+    }
+
+    LocomotionDirection LocomotionDirectionFilter::update( LocomotionDirection candidate, float32 deltaSeconds )
+    {
+        // 공중에 뜨고 내리는 것은 바로 — 점프 클립이 늦으면 그것이 튄다.
+        const bool bAirChange = candidate == LocomotionDirection::Airborne || _direction == LocomotionDirection::Airborne;
+        if ( candidate == _direction || bAirChange )
+        {
+            _direction      = candidate;
+            _pending        = candidate;
+            _pendingSeconds = 0.0f;
+            return _direction;
+        }
+        if ( candidate != _pending )
+        {
+            _pending        = candidate;
+            _pendingSeconds = 0.0f;
+        }
+        _pendingSeconds += MathUtil::max( deltaSeconds, 0.0f );
+        if ( _pendingSeconds >= _minHoldSeconds )
+        {
+            _direction      = candidate;
+            _pendingSeconds = 0.0f;
+        }
+        return _direction;
+    }
+
+    void LocomotionDirectionFilter::reset()
+    {
+        _direction      = LocomotionDirection::Idle;
+        _pending        = LocomotionDirection::Idle;
+        _pendingSeconds = 0.0f;
+    }
 } // namespace sw

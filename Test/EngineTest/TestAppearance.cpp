@@ -696,7 +696,8 @@ SW_TEST_CASE( AppearanceTest, StateReresolvesOnlyWhenARevisionChanges )
 }
 
 /**
- * @brief [AppearanceTest] 실제 슈터 데이터 — 읽히고, 정찰병은 세트 완성 표현 · 세트 조건 패치 · 전면 투구 규칙 · 소총 부착물(`MainHand.Rail`) · 멘 상태 · 배낭의 소켓 덮어쓰기
+ * @brief [AppearanceTest] 실제 슈터 데이터(KayKit) — 읽히고, 플레이어는 기사 몸 · 기사 세트 완성 망토 · 투구 · 블래스터(Gun 소켓 · 소켓 에셋) · 푸른 염색,
+ *        해골 전사는 고른 두건을 투구가 감춘다(HelmetHidesHood), 무작위 해골은 씨앗마다 두건이 다르다
  */
 SW_TEST_CASE( AppearanceTest, ShooterSampleDataResolves )
 {
@@ -706,42 +707,57 @@ SW_TEST_CASE( AppearanceTest, ShooterSampleDataResolves )
     AppearanceDatabase database;
     SW_ASSERT_TRUE_MSG( database.loadFromFolder( "game/shooter3d/data/appearance", &items ), database.getReport().joined().c_str() );
 
-    CharacterAppearanceSpec recon;
-    SW_ASSERT_TRUE( database.getPresets().expand( hashed_string( "ReconSoldier" ), 3u, database.getSlotTable(), database.getSets(), database.getSchemas(), recon ) );
+    CharacterAppearanceSpec player;
+    SW_ASSERT_TRUE( database.getPresets().expand( hashed_string( "ShooterPlayer" ), 0u, database.getSlotTable(), database.getSets(), database.getSchemas(), player ) );
     ResolvedAppearance resolved;
-    AppearanceResolver::resolve( database, recon, resolved );
-    SW_EXPECT_TRUE( resolved.findPart( hashed_string( "Body" ), hashed_string( "Ghillie" ) ) != nullptr );
-    SW_EXPECT_FALSE( resolved.hasOwner( hashed_string( "Feet" ) ) );
-    SW_EXPECT_TRUE( resolved.hasOwner( hashed_string( "Shoulder" ) ) );
-    SW_EXPECT_FALSE( resolved.hasOwner( hashed_string( "Hair" ) ) );
-    SW_EXPECT_TRUE( resolved.isRegionHidden( hashed_string( "Scalp" ) ) );
-    vector<hashed_string> listAttachmentSocket;
-    for ( const ResolvedAttachment& attachment : resolved._listAttachment )
+    AppearanceResolver::resolve( database, player, resolved );
+    const ResolvedPart* pBody = resolved.findPart( hashed_string{}, hashed_string( "Body" ) );
+    SW_ASSERT_NOT_NULL( pBody );
+    SW_EXPECT_TRUE( pBody->_asset == hashed_string( "game/shooter3d/models/kaykit/knight.mesh" ) );
+    SW_EXPECT_TRUE( pBody->_socketSet == hashed_string( "game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml" ) );
+    const ResolvedPart* pCape = resolved.findPart( hashed_string( "Back" ), hashed_string( "Cape" ) );
+    SW_ASSERT_NOT_NULL( pCape );
+    SW_EXPECT_TRUE( pCape->_asset == hashed_string( "game/shooter3d/prefabs/kaykit/knight_cape.prefab.xml" ) ); // 기사 세트 완성
+    SW_EXPECT_TRUE( resolved.findPart( hashed_string( "Head" ), hashed_string( "Shell" ) ) != nullptr );
+    const ResolvedPart* pGun = resolved.findPart( hashed_string( "MainHand" ), hashed_string( "Body" ) );
+    SW_ASSERT_NOT_NULL( pGun );
+    SW_EXPECT_TRUE( pGun->_placement._listSocket[0] == hashed_string( "Gun" ) );
+    SW_EXPECT_TRUE( pGun->_socketSet == hashed_string( "game/shooter3d/data/sockets/blaster_d.sockets.xml" ) );
+    bool bDyed = false;
+    for ( const ResolvedMaterialValue& value : resolved._listMaterialValue )
     {
-        listAttachmentSocket.push_back( attachment._placement._listSocket[0] );
+        bDyed = bDyed || ( value._owner.empty() && value._name == hashed_string( "color" ) && value._value._z > value._value._x );
     }
-    SW_EXPECT_TRUE( AppearanceXmlUtil::containsName( listAttachmentSocket, hashed_string( "MainHand.Rail" ) ) );
-    SW_EXPECT_TRUE( AppearanceXmlUtil::containsName( listAttachmentSocket, hashed_string( "MainHand.Muzzle" ) ) );
-    const ResolvedPart* pRifle = resolved.findPart( hashed_string( "MainHand" ), hashed_string( "Body" ) );
-    SW_ASSERT_NOT_NULL( pRifle );
-    SW_EXPECT_TRUE( pRifle->_placement._listSocket[0] == hashed_string( "RifleSling" ) );
-    SW_EXPECT_TRUE( pRifle->_materialVariant == hashed_string( "Woodland" ) );
-    SW_ASSERT_EQUAL( size_t( 1 ), resolved._listSocketOverride.size() );
-    SW_EXPECT_TRUE( resolved._listSocketOverride[0]._name == hashed_string( "RifleSling" ) );
+    SW_EXPECT_TRUE( bDyed );
 
-    // 일반 병사 — 열린 투구는 머리를 누르고(변형), 조준경은 레드닷.
-    CharacterAppearanceSpec soldier;
-    SW_ASSERT_TRUE( database.getPresets().expand( hashed_string( "Soldier" ), 3u, database.getSlotTable(), database.getSets(), database.getSchemas(), soldier ) );
-    AppearanceResolver::resolve( database, soldier, resolved );
-    SW_EXPECT_TRUE( resolved.hasOwner( hashed_string( "Hair" ) ) );
-    SW_EXPECT_TRUE( resolved.findPart( hashed_string( "MainHand" ), hashed_string( "Body" ) )->_placement._listSocket[0] == hashed_string( "handslot.r" ) );
+    // 해골 전사 — 두건을 골랐지만 투구가 덮는다(HelmetHidesHood). 무작위 해골은 씨앗마다 두건이 보이기도 안 보이기도 한다.
+    CharacterAppearanceSpec warrior;
+    SW_ASSERT_TRUE( database.getPresets().expand( hashed_string( "SkeletonWarrior" ), 0u, database.getSlotTable(), database.getSets(), database.getSchemas(), warrior ) );
+    AppearanceResolver::resolve( database, warrior, resolved );
+    SW_EXPECT_TRUE( resolved.hasOwner( hashed_string( "Head" ) ) );
+    SW_EXPECT_FALSE( resolved.hasOwner( hashed_string( "Hood" ) ) );
+    SW_EXPECT_TRUE( resolved.countTrace( hashed_string( "HelmetHidesHood" ) ) > 0u );
+    uint32 hoodedCount = 0;
+    uint32 bareCount   = 0;
+    for ( uint32 seed = 0; seed < 16; ++seed )
+    {
+        CharacterAppearanceSpec raider;
+        SW_ASSERT_TRUE( database.getPresets().expand( hashed_string( "SkeletonRaider" ), seed, database.getSlotTable(), database.getSets(), database.getSchemas(), raider ) );
+        AppearanceResolver::resolve( database, raider, resolved );
+        if ( resolved.hasOwner( hashed_string( "Hood" ) ) )
+            ++hoodedCount;
+        else
+            ++bareCount;
+    }
+    SW_EXPECT_TRUE( hoodedCount > 0u );
+    SW_EXPECT_TRUE( bareCount > 0u );
 
     // 게임플레이 칸 문자열도 같은 표에서 나온다.
     Equipment equipment;
     equipment.initialize( &items, database.getSlotTable().makeEquipmentLayout() );
     equipment.setSetLookup( &database.getSets() );
-    SW_EXPECT_TRUE( equipment.canEquip( hashed_string( "MainHand" ), hashed_string( "rifle_m4" ) ) );
-    SW_EXPECT_TRUE( equipment.evaluateEquip( hashed_string( "Shoulder" ), hashed_string( "recon_patch" ) ) == EquipResult::ConditionNotMet );
+    SW_EXPECT_TRUE( equipment.canEquip( hashed_string( "MainHand" ), hashed_string( "blaster_rifle" ) ) );
+    SW_EXPECT_FALSE( equipment.canEquip( hashed_string( "MainHand" ), hashed_string( "shield_round" ) ) );
 }
 
 /**

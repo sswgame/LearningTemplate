@@ -2,6 +2,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Input/Events/RawInputEvent.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
+
 #include "GameFramework/Combat/Weapon.h"
 #include "GameFramework/Combat/WeaponMath.h"
 #include "GameFramework/Input/FirstPersonLook.h"
@@ -10,7 +14,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 슈터 키트 — 히트스캔(구 · 상자 · 캡슐), 1인칭 시점, 이동 방향 가르기, 무기의 연사 간격 · 탄창 · 재장전 · 반자동 · 산탄 · 탄 퍼짐(씨앗이 같으면 같은 탄).
+// 슈터 키트 — 히트스캔(구 · 상자 · 캡슐), 1인칭 시점, 이동 방향 가르기, Shooter3D 입력 맵, 무기의 연사 간격 · 탄창 · 재장전 · 반자동 · 산탄 · 탄 퍼짐(씨앗이 같으면 같은 탄).
 
 using namespace sw;
 
@@ -260,4 +264,58 @@ SW_TEST_CASE( ShooterTest, LocomotionDirectionFollowsTheFacing )
     const float2 local = LocomotionMath::computeLocalVelocity( float3{ 3.0f, 0.0f, 1.0f }, facingRight );
     SW_EXPECT_NEAR_EQUAL( 3.0f, local._x, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( -1.0f, local._y, 1.0e-5f );
+}
+
+/**
+ * @brief [ShooterTest] Shooter3D 입력 맵(gamesettings 의 inputMap)은 게임이 묻는 액션을 모두 묶고, Look 은 마우스 이동량(`<mouseDelta>`)이다
+ */
+SW_TEST_CASE( ShooterTest, InputMapBindsEveryGameplayAction )
+{
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    InputMap& inputMap = input.getInputMap();
+    SW_ASSERT_TRUE( inputMap.loadFromResource( "game/shooter3d/data/shooter.input.xml" ) );
+    const utf8* const arrAction[] = { "Move", "Look", "Fire", "Jump", "Sprint", "Reload", "CycleCamera", "SwitchWeapon", "Weapon1", "Weapon2", "Weapon3" };
+    for ( const utf8* pAction : arrAction )
+    {
+        SW_EXPECT_TRUE_MSG( inputMap.hasAction( hashed_string( pAction ) ), pAction );
+    }
+    const ActionBinding* pLook = inputMap.getBinding( "Look", 0 );
+    SW_ASSERT_NOT_NULL( pLook );
+    SW_EXPECT_TRUE( pLook->_kind == BindingKind::MouseDelta2D );
+
+    // 마우스를 움직인 프레임에 Look 이 그 이동량(배율 1)을 낸다.
+    input.postRawEvent( RawInputEvent::makeMouseMove( 12, -4 ) );
+    input.beginFrame( 0.016f );
+    const float2 look = inputMap.getVector2D( "Look" );
+    SW_EXPECT_TRUE( look._x > 0.0f );
+    input.shutdown();
+}
+
+/**
+ * @brief [ShooterTest] 이동 방향 거르기 — 대각선 근처는 지금 방향을 지키고(히스테리시스), 바뀐 방향은 유지 시간만큼 이어져야 받아들이며, 공중은 바로다
+ */
+SW_TEST_CASE( ShooterTest, LocomotionFilterHoldsTheDirectionThroughFlicker )
+{
+    const float32 idle = 0.4f;
+    // 오른쪽 성분이 앞 성분의 1.25 배 — 앞으로 가던 중이면 앞(1.3 배를 넘어야 옆), 옆으로 가던 중이면 옆(1/1.3 아래로 내려가야 앞).
+    const float3 diagonal{ 2.5f, 0.0f, 2.0f };
+    SW_EXPECT_TRUE( LocomotionMath::classifyFrom( LocomotionDirection::Forward, diagonal, 0.0f, true, idle ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( LocomotionMath::classifyFrom( LocomotionDirection::Right, diagonal, 0.0f, true, idle ) == LocomotionDirection::Right );
+
+    LocomotionDirectionFilter filter( 0.25f );
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Forward, 0.3f ) == LocomotionDirection::Forward );
+    // 한 프레임씩 오가는 깜빡임은 받아들이지 않는다.
+    for ( uint32 frameIndex = 0; frameIndex < 20; ++frameIndex )
+    {
+        const LocomotionDirection candidate = ( frameIndex % 2u ) == 0u ? LocomotionDirection::Right : LocomotionDirection::Forward;
+        SW_EXPECT_TRUE( filter.update( candidate, 0.05f ) == LocomotionDirection::Forward );
+    }
+    // 이어지면 유지 시간 뒤에 바뀐다.
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Right, 0.1f ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Right, 0.1f ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Right, 0.1f ) == LocomotionDirection::Right );
+    // 공중은 바로, 내려와도 바로.
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Airborne, 0.01f ) == LocomotionDirection::Airborne );
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Idle, 0.01f ) == LocomotionDirection::Idle );
 }

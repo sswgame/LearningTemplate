@@ -174,7 +174,7 @@ cd build/Ninja-Debug/Bin
   텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode`(톤맵 패스에 색각 행렬 — 지금 톤맵에 상수 버퍼가 없어 미뤘다) · UI 배율 · 글자 크기 · 자막,
   카메라 `gv_cameraFieldOfView` · `gv_cameraShakeScale` · `gv_cameraHeadBob`(cam-views 가 읽을 자리). (3) 오디오 버스 `voice` · `ambient` · `ui` 재생 라우팅
   (`play` 가 버스를 받아야 한다). (4) 해상도 선택지를 모니터 모드에서(선택지 공급자) · GPU 사양 조회(RHI 어댑터 · 전용 메모리)로 품질 자동 선택.
-  (5) 게임 입력이 InputMap 데이터가 되면 게임 스키마에 키 바인딩 설정(Shooter3D 는 지금 키를 직접 묻는다). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
+  (5) 게임 스키마에 키 바인딩 설정 — Shooter3D 는 입력 맵(`data/shooter.input.xml`)을 쓰니 그 액션부터. 다른 시험 게임은 아직 키를 직접 묻는다(입력 맵으로 옮길 것). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 - **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 작은 것: `RestaurantSimulation::placeOrder` 의 후보 목록 둘(가중치가 모두 0 일 때 결과가 달라져 손대지 않았다).
   - 중간: `EventBuffer<T>`(drainEvents 27 곳) · `SpatialHashGrid2D` · `GridTopology` + 재사용 스크래치 BFS · NetConnection 메시지 버퍼 재사용 ·
@@ -221,8 +221,8 @@ cd build/Ninja-Debug/Bin
   카메라 절두체 가시성 · 거리별 주기(URO) · 본 LOD · 거리별 IK/물리 끔 · 중요도 매니저 예산 → 스켈레톤 LOD(본 감소) ④ 군중 공유 — 스킨드 메시는 컴포넌트마다
   메시 객체(정점 사본 · 모프 풀 구간 하나)라 같은 포즈 · 같은 메시를 나누는 캐시가 없다(언리얼 Animation Sharing) · 되감기 디버거 · 리타기팅(본 이름 표 · 비율) ·
   얼굴(모프 타깃 임포트 — glTF `weights` 채널은 지금 버린다) ⑤ Jolt 래그돌(전신 · 부분 · 파워드, 래그돌 에셋은 데이터, 포즈 블렌드 · 기상) ·
-  2 차 움직임(스프링 본) → 헤어 카드 · 천(Jolt 소프트 바디), 가닥 헤어(TressFX)는 나중 ⑥ KayKit 텍스처(원본 GLB 에 든 `knight_texture` 등)를 `textures_raw/` 로
-  옮겨 머티리얼을 만들 것 — 지금 캐릭터는 씬 기본 머티리얼(흰색)로 그려진다. Shooter3D 통합은 다음 웨이브.
+  2 차 움직임(스프링 본) → 헤어 카드 · 천(Jolt 소프트 바디), 가닥 헤어(TressFX)는 나중 ⑥ 그래프의 루트 모션 · 속도 맞추기 —
+  Shooter3D 는 이동 속도와 걷기 · 달리기 클립의 발 속도가 맞지 않아 발이 미끄러진다(재생 속도를 이동 속도에 맞추거나 루트 모션 · 거리 매칭).
 - **프리로딩 · LOD · 사전 준비(로드맵).** ① 프리로드 세트(미리 올릴 에셋 + 미리 만들 프리팹 · 우선순위, 쿠킹 때 레벨 · 시퀀스 · 샷의 참조를 따라 자동 수집 —
   `collectReferencedPrefabPaths` 가 있다), `requestPreload` 가 진행률 · 완료를 준다, 프레임 예산(IO · 업로드 · PSO · 인스턴스 수), 참조 수 · LRU 로 내림(지금 캐시는
   약한 참조라 고정 단계가 필요하다) — 언리얼 AssetManager 번들 · Addressables ② 프리팹 풀(숨겨 둔 인스턴스를 켜고 돌려받기 — 탄 · 손님 · 유닛) · 시퀀서
@@ -249,7 +249,7 @@ cd build/Ninja-Debug/Bin
   결과 해시로 병합 결과를 캐시해 같은 차림의 NPC 가 나눠 쓰고 다시 조립하는 동안 이전 외형 유지(비동기), `finishLoad` 에 몸 영역 표 이름 넘기기, 데이터 파일 감시 →
   `AppearanceDatabase` 다시 읽기, 시퀀서 트랙 · 스폰 · 프리팹이 프리셋을 이름으로 가리키기 · 프리로드 세트가 프리셋 참조를 따라 모으기, 편집 창의
   "지금 모습을 프리셋으로 저장" · 썸네일 렌더 · 규칙 설명(`_listTrace`) 표시. 칸 점유(양손 무기)는 아직 외형만 본다 — 게임플레이에서 보조 손을 막을지는
-  게임이 정한다. 슈터 표본 데이터(`shooter3d/data/appearance/`)의 KayKit 메시 · 프리팹 · 소켓 에셋 경로는 임포트 전이다 ⑥ 캐릭터 편집 창(다중 월드 툴 창 위) — 본 트리 + 기즈모 포즈 편집 · 소켓 추가/이동 ·
+  게임이 정한다 ⑥ 캐릭터 편집 창(다중 월드 툴 창 위) — 본 트리 + 기즈모 포즈 편집 · 소켓 추가/이동 ·
   체형 · 얼굴 슬라이더 · 장비 입히기와 체형을 바꿔 가며 피팅 확인(관통 표시 · 잘린 면 · 조임 강도 · 보정 조각 · 숨김 영역) · 장비 조합 미리보기(어느 규칙이 무엇을 숨기고 바꿨는지 설명 · 세트 입히기 · 규칙 충돌 표시) · 제약 리그 미리보기 · 애니메이션
   재생 · 좌우 대칭 편집.
 - **캐릭터 · 환경 병렬 진행(2026-10-04 사용자 지시 — 할 수 있는 것은 에이전트로 병렬, 메인은 지시 응답 · 병합).**
@@ -260,8 +260,6 @@ cd build/Ninja-Debug/Bin
   game-settings(옵션 백엔드) · reflect-ext(함수/이벤트 · Replicated · SaveGame · Interp · Config · 표시 메타 · 검증 · 컨테이너 ·
   문서 생성). **2D · 3D 에 다 쓰이는 기능은 공통 코어로**(사용자 지시).
   **남은 대기열 — 빠른 순(2026-10-04 사용자 지시).** 자리가 나면 위에서부터 띄운다. `[대기: X]` 는 X 병합 전에는 못 시작하므로 그때까지 건너뛴다.
-  예외: **Shooter3D 통합**(KayKit CC0 캐릭터 · 스켈레톤 적 · 장비 · 프리셋 · 카메라 프리셋을 바꿔 가며 4 백엔드 스크린샷 → 사용자 보고)은 사용자에게
-  약속한 결과라 char-anim · char-appear · char-geom · cam-views 가 병합되면 순서와 상관없이 먼저 띄운다.
   - **작음(S)**: 2D 정렬 레이어 · 9-슬라이스 · 시차 레이어 · 픽셀 퍼펙트 카메라 · 에디터 H(assert 대화상자 ·
     버그 리포트 · 시험 패널) · 단축키 편집기 · 환경설정 창 · 모듈 켜고 끄기 · DPI 실물 확인 · 알림 전달(애니메이션 알림 → 소켓 이펙트/사운드) [대기: char-anim].
   - **중간(M)**: 메모리 태깅 · 예산 · 대역폭 프로파일러 · 비동기 파일 IO · 게임플레이 디버거 · 비주얼 로거 · 모듈 패키지 관리 · 점광/스폿 그림자 · SSAO ·
@@ -285,8 +283,14 @@ cd build/Ninja-Debug/Bin
   `game/harvestvalley/data/villagers.schedules.xml` 은 있다, 몸은 `NavAgent` 가 `ScheduleNpcView` 를 따라감, 저장은 `ScheduleSaveState` 를 게임 세이브에).
   (4) 에디터 패널(`dumpTimeline` · `explainNpc` 글을 그대로). (5) 주 단위 · 날짜 범위 일정, 자정을 넘는 칸, 관계 단계(호감도 수치 조건 — 지금은 태그로) 는 없다.
 
+- **Shooter3D 캐릭터 통합의 남은 것(shooter-int, 2026-10-04).** KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵 · 탄도선 풀은 들어갔다(`Source/Games/Shooter3D/README.md`).
+  기다리는 것 — anim-rig 병합 뒤: 왼손을 총에 붙이는 손 IK(목표는 무기 소켓 `MainHand.SupportHand`), 1인칭에서 머리만 숨기기(지금은 몸 전체를 숨긴다 — 본 숨김 ·
+  스케일은 PoseModifier 자리), 스프링 본(망토). anim-gameplay 병합 뒤: 래그돌 쓰러짐(지금은 클립), 부위 히트박스(지금은 발에서 키까지 캡슐 하나, 중심 소켓 `Chest`),
+  물리 질의 히트스캔 · 시야(지금 상자 목록 · 캡슐), 쓰러질 때 무기 떨어뜨리기(`SocketBindingComponent::release( Physics )` — 무기 프리팹에 강체를 더하면 된다),
+  알림으로 휘두름 피해 · 발소리(지금 휘두름 피해는 `_attackHitTime` 초). 그 밖: 외형 부품 풀(스켈레톤마다 프리팹을 세우고 지운다), 1인칭에서 숨긴 몸의 애니메이션
+  LOD(숨겨도 평가한다), 걷기 · 달리기 발 미끄러짐(위 애니메이션 ⑥).
 - **Shooter3D 핫 리로드 · 세이브는 처치 수만 잇는다.** 웨이브를 페이싱 감독(`AiDirector`)이 내게 되면서(ai-telemetry) 웨이브는 감독의 주기라, 되살린 판은
-  드론을 걷고 감독을 처음부터 돈다(quick-gf 의 상태 v1 은 웨이브 번호를 실었다 — v2 는 처치 수뿐). 감독 상태(주기 · 시간 · 단계 · 풀 쿨다운 · 예산 · 난수)를
+  적을 걷고 감독을 처음부터 돈다(quick-gf 의 상태 v1 은 웨이브 번호를 실었다 — v2 는 처치 수뿐). 감독 상태(주기 · 시간 · 단계 · 풀 쿨다운 · 예산 · 난수)를
   `writeState` · `readState` 로 싣고 Shooter3D 가 같이 쓰면 웨이브까지 이어진다.
 
 - **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
@@ -884,8 +888,12 @@ cd build/Ninja-Debug/Bin
 
 - **한 `FrameRenderer` 로 두 씬을 번갈아 그리면 옛 배치가 나온다** — 씬 빌더의 수집 캐시(프리미티브 집합 세대)는 씬마다가 아니라서, 다른 매니저의 같은 세대
   번호를 "그대로" 로 본다. 픽셀 비교 시험은 씬마다 렌더러를 둔다(`RenderPassGpuTest.SkinnedMeshFollowsPaletteLikeCpuSkinning`).
+- **Debug App 의 `--import-textures` 는 BC7 1024² 한 장에 20 분을 넘긴다**(CPU 압축기가 최적화 없이 돈다) — 색 칸 아틀라스(KayKit)는 BC1 규칙
+  (`TextureImportConfig.json` 의 `Character_Atlases`)이라 몇 초다. 큰 BC7 은 Release App 으로 굽는다.
 - **D3D11 `UpdateSubresource` 에 상자가 없으면 버퍼 전체 길이를 원본에서 읽는다** — 용량을 남겨 둔 버퍼에 짧게 올릴 때는 상자를 준다(원본 뒤를 넘어 읽어
   드라이버 안에서 죽는다 — `RenderPassGpuTest.PartialStructuredBufferUploadReadsOnlyTheSourceRange` 가 가드 페이지로 지킨다).
+- **애니메이션이 튀면 본 하나의 프레임 사이 이동량을 재 본다** — Shooter3D 의 튐은 셋이 겹친 것이었다: 반복으로 돌린 겨누기 레이어의 끝 → 처음(1 초마다 32 cm),
+  대각선에서 상태가 오가며 클립을 처음부터 다시 틀기, 끊긴 크로스페이드가 한 칸을 버리기. 튐의 간격이 클립 길이와 맞는지부터 본다.
 - **스킨드 메시는 모프 풀의 뒤 구간이다** — 팔레트는 GT 의 `AnimationSystem` → `GpuSceneBuilder::collectSkinPalettes`(수집 건너뛰기와 무관하게 매 프레임) →
   스냅샷 → `GpuMeshMorphPool::uploadSkinPalettes`(풀 순서) → meshskin.hlsl. 팔레트 행은 행벡터 4x4 의 **열** 셋이다(행을 넣으면 전치된 회전).
 - **다중 뷰(`FrameRendererViews.cpp`)의 함정 셋.** ① 디스패치마다 쓰는 상수버퍼(컬링 · 정렬)는 뷰마다 따로다 — 정렬 CB 하나를 주 뷰 · 추가 뷰가 나눠 쓰면 마지막

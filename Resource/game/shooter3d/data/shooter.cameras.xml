@@ -13,7 +13,7 @@
 
 	<!-- 3인칭 어깨 너머 — 시점을 따라가고, 스프링 암이 상자 · 벽 앞으로 당긴다. -->
 	<Preset id="thirdperson">
-		<View mode="ThirdPerson" offset="0.45 0.1 0" distance="3.2" pitch="6"/>
+		<View mode="ThirdPerson" offset="0.75 0.2 0" distance="3.8" pitch="8"/>
 		<Lens fieldOfViewY="70" near="0.05" far="150"/>
 		<Collision radius="0.25" minDistance="0.4" recoverTime="0.35"/>
 		<Confiner pitchMin="-60" pitchMax="70"/>

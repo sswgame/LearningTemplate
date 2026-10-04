@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 블래스터(Kenney Blaster Kit blaster_d)의 소켓 — 모델 공간(총열이 -Z). Muzzle 은 총구(탄도선 · 총구 섬광이 나오는 자리, +Z 가 총구 방향),
+     SupportHand 는 보조 손이 쥐는 총열 아래(손 IK 가 들어오면 왼손 목표). 해석된 외형에서는 칸 이름이 앞에 붙는다(MainHand.Muzzle). -->
+<SocketSet>
+  <Socket name="Muzzle" translation="0 0.07 -0.454" rotation="0 180 0" kind="EffectSpawn"/>
+  <Socket name="SupportHand" translation="0 0.0 -0.2" kind="Attach"/>
+</SocketSet>

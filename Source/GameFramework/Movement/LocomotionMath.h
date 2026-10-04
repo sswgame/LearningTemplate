@@ -36,5 +36,36 @@ namespace sw
          * @param idleSpeed 이보다 느리면 `Idle` 입니다(m/s).
          */
         static LocomotionDirection classify( const float3& velocity, float32 yaw, bool bOnGround, float32 idleSpeed, float32 sideBias = 1.2f );
+        /**
+         * @brief `classify` 에 히스테리시스를 겁니다 — 지금이 옆걸음이면 앞뒤로 돌아가는 데 옆 성분이 앞뒤 성분의 1 / @p sideBias 배 아래로 내려가야 하고,
+         *        지금이 앞뒤면 @p sideBias 배를 넘어야 옆걸음입니다. 대각선 근처에서 둘을 오가지 않습니다.
+         */
+        static LocomotionDirection classifyFrom( LocomotionDirection current, const float3& velocity, float32 yaw, bool bOnGround, float32 idleSpeed, float32 sideBias = 1.3f );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class LocomotionDirectionFilter
+     * @brief 이동 방향이 바뀐 것을 @p minHoldSeconds 동안 이어져야 받아들입니다(공중 · 착지는 바로). 애니메이터의 이동 상태가 문턱 근처에서
+     *        깜빡이며 클립을 처음부터 다시 트는 것을 막습니다.
+     */
+    class SW_GF_API LocomotionDirectionFilter
+    {
+    public:
+        explicit LocomotionDirectionFilter( float32 minHoldSeconds = 0.25f );
+
+        /** @brief 이번 프레임의 후보를 넣고 받아들인 방향을 돌려줍니다. */
+        LocomotionDirection update( LocomotionDirection candidate, float32 deltaSeconds );
+        LocomotionDirection getDirection() const { return _direction; }
+        /** @brief 처음 상태(서기)로 되돌립니다. */
+        void reset();
+
+    private:
+        float32             _minHoldSeconds;
+        float32             _pendingSeconds; ///< 후보가 지금과 다르게 이어진 시간
+        LocomotionDirection _direction;
+        LocomotionDirection _pending;
     };
 } // namespace sw

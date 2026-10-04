@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 장비 세트. Piece 의 items 는 그 칸에서 조각으로 치는 아이템(첫 것을 프리셋이 입힌다), Variant 는 몸 종류별로 칸의 조각을 바꾼다.
-     Complete 는 세트를 다 갖추면 그 칸들을 한 외형으로 바꾸는 "세트 완성 표현" 이다. 세트 효과(수치)는 어빌리티 데이터 몫이다. -->
+     Complete 는 세트를 다 갖추면 그 칸들을 한 외형으로 바꾸는 "세트 완성 표현" 이다. 세트 효과(수치)는 어빌리티 데이터 몫이다.
+     기사 세트 — 투구 · 망토 · 방패를 다 갖추면 도적 망토 대신 기사 망토(문장)로 보인다. -->
 <EquipSetCatalog>
-  <Set id="Recon">
-    <Piece slot="Head" items="helmet_recon"/>
-    <Piece slot="Body" items="vest_recon"/>
-    <Piece slot="Feet" items="boots_recon"/>
-    <Variant bodyType="Female">
-      <Piece slot="Body" items="vest_recon_f"/>
-    </Variant>
-    <Complete visual="recon_ghillie" slots="Body,Feet"/>
+  <Set id="Knight">
+    <Piece slot="Head" items="helmet_knight"/>
+    <Piece slot="Back" items="cape_rogue"/>
+    <Piece slot="OffHand" items="shield_round"/>
+    <Complete visual="cape_knight" slots="Back"/>
   </Set>
 </EquipSetCatalog>
