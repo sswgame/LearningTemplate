@@ -85,6 +85,8 @@ namespace sw
         void spawnRideView( int32 placementIndex );
         void spawnCoasterView( CoasterView& view, const RidePlacement& placement );
         void spawnPath( const float3& from, const float3& to );
+        /** @brief 정문 광장의 매점 · 벤치 · 휴지통과 잔디 가장자리의 나무를 세웁니다. */
+        void spawnDecoration();
 
         void  updateInput( float32 deltaTime, const InputManager& input );
         void  updateRides( float32 deltaTime );

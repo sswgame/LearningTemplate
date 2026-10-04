@@ -5,11 +5,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/formatString.h"
 
-#include "Engine/Audio/IAudioSystem.h"
-
 #include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameSound.h"
 
 namespace sw
 {
@@ -49,11 +48,7 @@ namespace sw
         {
             const string_view bgm = pGameSettings->getCustomProperty( "battleBgm" );
             if ( bgm.empty() == false )
-            {
-                IAudioSystem* pAudio = game::getService<IAudioSystem>();
-                if ( pAudio != nullptr )
-                    pAudio->playMusic( bgm );
-            }
+                (void)GameSound::playMusic( bgm );
         }
     }
 
