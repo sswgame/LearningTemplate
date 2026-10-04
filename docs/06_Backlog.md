@@ -155,10 +155,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
-- **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 끝난 것: 매 틱 `hashed_string` 리터럴(`88b63828`). 남은 것 —
-  - 작은 것(기계적): 매 프레임 버리는 이벤트 vector 재사용(KartRace · TrampolineArena · GhostMansion · BrMatch) · 롤백 `saveState` 의 매 프레임
-    `BitWriter`(바깥 버퍼에 쓰기) · 정수 가중치 뽑기(`pickWeightedIndexInt`) · 카탈로그 로더 `GameDataXml::loadFile/loadText` 템플릿 ·
-    넷 메시지 id 를 `NetMessageRange::kX + n` 으로 · `ReplicationServer::handleInput` 은 틱 검사 먼저.
+- **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
+  - 작은 것: 카탈로그 로더 `GameDataXml::loadFile/loadText` 템플릿(약 50 쌍의 `loadFromResource` · `loadFromXmlText` 래퍼, 우회하던 넷 —
+    MonsterCatalog 의 `loadPath` · SpeciesData 의 ERROR · AbilityCatalog · GameSettings). 시험 게임 전환이 같은 카탈로그를 쓰므로 그 병합 뒤에 한다.
+    `RestaurantSimulation::placeOrder` 의 후보 목록 둘(가중치가 모두 0 일 때 결과가 달라져 손대지 않았다).
   - 중간: `EventBuffer<T>`(drainEvents 27 곳) · `SpatialHashGrid2D` · `GridTopology` + 재사용 스크래치 BFS · NetConnection 메시지 버퍼 재사용 ·
     `GameFlags` 와 `IFlagStore` 하나로 · TurnBattle 키트 정리.
   - 동작이 바뀌는 것(시험 먼저): `NetPrioritizer` 공유 · 아이템/효과 처리기 등록부 · `TimedModifierSet`.
