@@ -4,7 +4,8 @@
  *
  * @details 빌드: `cmake --preset Ninja-Debug-VoxelCraft`. 조작은 `Source/Games/VoxelCraft/README.md`. `-gv_voxelAutoPlay=1` 이면 걷기 · 점프 · 부수기 · 놓기를 AI 가 한다.
  *          섬은 씬(`game/voxelcraft/maps/island.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `VoxelDirectorComponent` · `VoxelPlayerComponent`
- *          가 섭니다. 이 클래스는 블록 카탈로그를 게임 서비스로 걸고, 첫 씬을 열고, 상태 저장 전에 디렉터가 세운 청크를 걷습니다.
+ *          가 섭니다. 이 클래스는 블록 카탈로그를 게임 서비스로 걸고, 첫 씬을 열고, 상태 저장 전에 블록 · 플레이어 상태를 싣고 디렉터가 세운 청크를
+ *          걷으며, 복원 뒤 그 상태를 돌려줍니다.
  */
 #pragma once
 #include "GameFramework/Framework/GameInstanceBase.h"
@@ -23,6 +24,7 @@ namespace sw
         bool onInitialize() override;
         void onShutdown() override;
         void onBeforeStateSerialize() override;
+        void onAfterStateDeserialize() override;
 
     private:
         VoxelBlockCatalog _blockCatalog;

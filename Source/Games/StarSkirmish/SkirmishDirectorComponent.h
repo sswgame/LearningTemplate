@@ -27,6 +27,7 @@
 
 namespace sw
 {
+    class Archive;
     class GameObject;
     class GameObjectManager;
     class InputManager;
@@ -37,7 +38,8 @@ namespace sw
     /**
      * @class SkirmishDirectorComponent
      * @brief 1 대 1 한 판입니다. 플레이가 시작되면 유닛 데이터를 읽고 판을 엽니다 — 사람(파랑) 대 컴퓨터, 자동 플레이면 컴퓨터 대 컴퓨터.
-     * @details 판은 핫 리로드에서 처음부터 다시 섭니다(PROPERTY 가 아닌 런타임 상태). 세운 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
+     * @details 판(월드 · AI 진행 · 고름 · 속도)은 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드 · 세이브를
+     *          넘깁니다(`StarSkirmishGame`). 움직이던 유닛은 앞 명령의 길을 다시 구합니다. 세운 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Director", Tooltip = "Runs the skirmish match, the human commands and spawns the unit views" )
     class SkirmishDirectorComponent : public Component
@@ -54,6 +56,13 @@ namespace sw
 
         /** @brief 세운 런타임 오브젝트를 모두 지웁니다(상태 저장 전). 판은 그대로이고 다음 틱이 그 상태대로 다시 세운다. */
         void despawnViews();
+        /** @brief 판(월드 · AI 진행 · 고름 · 속도 · 멈춤)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 판을 되살립니다 — `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
+         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 가 데이터를 읽은 뒤 적용합니다. 읽지 못하면 알리고 새 판으로 시작합니다.
+         */
+        void restoreState( vector<uint8>&& bytes );
 
         // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
         const RtsWorld& getWorld() const { return _match.getWorld(); }
@@ -86,6 +95,10 @@ namespace sw
 
     private:
         [[nodiscard]] bool loadData();
+        /** @brief `writeState` 의 바이트를 읽습니다. 끝까지 맞지 않으면 false 입니다(판은 반쯤 바뀌었을 수 있다 — 부르는 쪽이 새 판으로 되돌린다). */
+        [[nodiscard]] bool readState( Archive& archive );
+        /** @brief 들고 있던 복원 바이트를 적용하고 모습을 다시 세우게 합니다. */
+        void applyPendingState();
         /** @brief 쌓인 스폰 · 효과음을 틱 뒤 한 번으로 미룹니다(틱 밖이면 바로). */
         void scheduleFlush();
         /** @brief 쌓인 요청을 세웁니다. 틱 밖(게임 스레드)에서만 불린다. */
@@ -138,7 +151,8 @@ namespace sw
         vector<int32>                        _listPendingUnit;  ///< 맞출 유닛 자리(틱 뒤)
         vector<const utf8*>                  _listPendingSound; ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
         vector<ColorLook>                    _listColorLook;
-        vector<shared_ptr<MaterialInstance>> _listUnitLook; ///< (편 · 자원 칸) × 2 + 고름
+        vector<shared_ptr<MaterialInstance>> _listUnitLook;      ///< (편 · 자원 칸) × 2 + 고름
+        vector<uint8>                        _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         float3                               _dragStart;
         float3                               _dragPoint;
         float32                              _timeScale;

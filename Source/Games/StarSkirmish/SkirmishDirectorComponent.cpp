@@ -12,11 +12,13 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Window/IWindow.h"
 
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
+#include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
 
@@ -28,8 +30,10 @@ namespace sw
     {
         struct SkirmishDirectorComponentInternal
         {
-            static constexpr float32 kClickSlop        = 0.6f; ///< 이보다 짧게 끌면 클릭
-            static constexpr int32   kUnitLookCategory = 5;    ///< 0 번 · 1 번 · 주인 없음 · 광물 · 가스
+            static constexpr float32 kClickSlop        = 0.6f;        ///< 이보다 짧게 끌면 클릭
+            static constexpr int32   kUnitLookCategory = 5;           ///< 0 번 · 1 번 · 주인 없음 · 광물 · 가스
+            static constexpr uint32  kStateTag         = 0x534D5452u; ///< 'RTMS'
+            static constexpr uint32  kStateVersion     = 1;
 
             static constexpr const utf8* kSoundSelect   = "game/starskirmish/sounds/select_004.ogg";
             static constexpr const utf8* kSoundBuilt    = "game/starskirmish/sounds/confirmation_003.ogg";
@@ -94,6 +98,7 @@ namespace sw
         , _listPendingSound{}
         , _listColorLook{}
         , _listUnitLook{}
+        , _pendingStateBytes{}
         , _dragStart{}
         , _dragPoint{}
         , _timeScale{ 1.0f }
@@ -122,6 +127,8 @@ namespace sw
             SW_LOG_WARNING( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
             return;
         }
+        if ( _pendingStateBytes.empty() == false )
+            applyPendingState();
         // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만. 둘 다 AI 면 맵 전체가 보이게 물러서고 WASD 도 카메라다.
         OrthoCameraRigComponent* pRig = findCameraRig();
         if ( pRig != nullptr )
@@ -219,6 +226,57 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 데이터
     // ------------------------------------------------------------------------------
+    void SkirmishDirectorComponent::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeHeader( outArchive, SkirmishDirectorComponentInternal::kStateTag, SkirmishDirectorComponentInternal::kStateVersion );
+        _match.writeState( outArchive );
+        _selection.writeState( outArchive );
+        outArchive << _timeScale;
+        outArchive << static_cast<uint8>( _bPaused );
+    }
+
+    void SkirmishDirectorComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( _bLoaded == SW_TRUE )
+            applyPendingState();
+    }
+
+    bool SkirmishDirectorComponent::readState( Archive& archive )
+    {
+        if ( StateArchiveUtil::readHeader( archive, SkirmishDirectorComponentInternal::kStateTag, SkirmishDirectorComponentInternal::kStateVersion ) == false )
+            return false;
+        if ( _match.readState( archive ) == false || _selection.readState( archive ) == false )
+            return false;
+        float32 timeScale = 1.0f;
+        uint8   bPaused   = SW_FALSE;
+        archive >> timeScale;
+        archive >> bPaused;
+        if ( archive.isError() || archive.getRemainingBytes() != 0 || timeScale <= 0.0f )
+            return false;
+        _timeScale = timeScale;
+        _bPaused   = bPaused != SW_FALSE ? SW_TRUE : SW_FALSE;
+        _listEvent.clear();
+        return true;
+    }
+
+    void SkirmishDirectorComponent::applyPendingState()
+    {
+        Archive archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
+        if ( readState( archive ) )
+        {
+            SW_LOG_INFO( "[Skirmish] match state restored - %#s in", static_cast<int32>( _match.getWorld().getTime() ) );
+        }
+        else
+        {
+            // 판이 반쯤 바뀌었을 수 있다 — 새 판으로 되돌린다.
+            SW_LOG_WARNING( "[Skirmish] the saved match state does not match this build - starting a new match" );
+            (void)loadData();
+        }
+        _pendingStateBytes.clear();
+        despawnViews(); // 지금 상태대로 다시 세운다(다음 틱)
+    }
+
     bool SkirmishDirectorComponent::loadData()
     {
         if ( _catalog.loadFromResource( _unitDataPath ) == false )

@@ -18,6 +18,7 @@
 
 namespace sw
 {
+    class Archive;
     class FirstPersonCameraComponent;
     class InputManager;
     class VoxelBlockCatalog;
@@ -46,7 +47,11 @@ namespace sw
         const VoxelBody&   getBody() const { return _body; }
         const VoxelHotbar& getHotbar() const { return _hotbar; }
         /** @brief 바라보는 블록입니다. 없으면 false 입니다. */
-        bool    findTarget( VoxelCoord& outBlock ) const;
+        bool findTarget( VoxelCoord& outBlock ) const;
+        /** @brief 몸 자리 · 핫바 · 부순/놓은 수를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 되살립니다. 플레이 시작 전이면 들고 있다가 `onBeginPlay` 끝에 적용합니다. 읽지 못하면 처음 자리에서 시작합니다. */
+        void    restoreState( vector<uint8>&& bytes );
         float32 getBreakProgress() const { return _breakProgress; }
         uint32  getBrokenCount() const { return _brokenCount; }
         uint32  getPlacedCount() const { return _placedCount; }
@@ -70,6 +75,8 @@ namespace sw
         void placeBlock( const VoxelDirectorComponent& director, const VoxelBlockCatalog& catalog );
         void scheduleFlush();
         void flushPending();
+        /** @brief 들고 있던 복원 바이트를 적용합니다. */
+        void applyPendingState();
 
     private:
         PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the VoxelDirectorComponent" )
@@ -88,6 +95,7 @@ namespace sw
         VoxelRayHit         _target;
         vector<BlockEdit>   _listPendingEdit;
         vector<const utf8*> _listPendingSound;
+        vector<uint8>       _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         float32             _breakProgress;
         float32             _placeCooldown;
         float32             _autoTimer;

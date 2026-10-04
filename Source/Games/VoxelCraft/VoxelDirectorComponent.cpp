@@ -10,10 +10,12 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelTerrain.h"
+#include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/VoxelCraft/VoxelChunkComponent.h"
 #include "Games/VoxelCraft/VoxelPlayerComponent.h"
@@ -27,6 +29,8 @@ namespace sw
         struct VoxelDirectorComponentInternal
         {
             static constexpr float32 kStatusInterval = 5.0f;
+            static constexpr uint32  kStateTag       = 0x4C584F56u; ///< 'VOXL'
+            static constexpr uint32  kStateVersion   = 1;
 
             static uint32 hashCoord( int32 x, int32 y, int32 z )
             {
@@ -53,6 +57,7 @@ namespace sw
         , _bAutoPlay{ false }
         , _world{}
         , _listChunk{}
+        , _pendingStateBytes{}
         , _statusTimer{ 0.0f }
         , _bWorldReady{ SW_FALSE }
         , _bChunksSpawned{ SW_FALSE }
@@ -72,6 +77,8 @@ namespace sw
         initializeWorld();
         if ( _bWorldReady == SW_FALSE )
             return;
+        if ( _pendingStateBytes.empty() == false )
+            applyPendingState();
         scheduleFlush();
         SW_LOG_INFO( "[Voxel] world is ready - WASD move, mouse look, Space jump, Shift sprint, LMB hold to break, RMB place, 1-9 or wheel hotbar, Esc mouse" );
     }
@@ -145,6 +152,31 @@ namespace sw
     bool VoxelDirectorComponent::isAutoPlayOn() const
     {
         return _bAutoPlay || gv_voxelAutoPlay != 0;
+    }
+
+    void VoxelDirectorComponent::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeHeader( outArchive, VoxelDirectorComponentInternal::kStateTag, VoxelDirectorComponentInternal::kStateVersion );
+        _world.writeState( outArchive );
+    }
+
+    void VoxelDirectorComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( _bWorldReady == SW_TRUE )
+            applyPendingState();
+    }
+
+    void VoxelDirectorComponent::applyPendingState()
+    {
+        Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
+        const bool bHeader = StateArchiveUtil::readHeader( archive, VoxelDirectorComponentInternal::kStateTag, VoxelDirectorComponentInternal::kStateVersion );
+        if ( bHeader && _world.readState( archive ) && archive.getRemainingBytes() == 0 )
+            SW_LOG_INFO( "[Voxel] world state restored - %# chunks", _world.getChunkCountX() * _world.getChunkCountZ() );
+        else
+            SW_LOG_WARNING( "[Voxel] the saved world state does not match this build - keeping the seeded island" );
+        _pendingStateBytes.clear();
+        despawnRuntime(); // 청크를 다시 세운다(다음 틱)
     }
 
     const VoxelDirectorComponent* VoxelDirectorComponent::resolveDirector( const GameObjectManager& manager, GameObjectHandle director )

@@ -58,6 +58,11 @@ namespace sw
         bool  isCommandable( const RtsWorld& world ) const;
         int32 getPlayer() const { return _player; }
 
+        /** @brief 고른 유닛 · 부대를 유닛 id(세대 포함)로 씁니다(핫 리로드 · 세이브 — 같은 id 를 되살린 월드와 함께 읽는다). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. 죽은 유닛은 다음 `prune` 이 거른다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
     private:
         void addUnit( RtsUnitId unitId );
 

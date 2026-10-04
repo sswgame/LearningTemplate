@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 namespace sw
 {
     namespace
@@ -89,6 +91,25 @@ namespace sw
         if ( pDepot != nullptr && RtsAiControllerInternal::computeFlatDistance( pDepot->_position, event._position ) > _settings._defendRadius )
             return;
         _blackboard.setVector( RtsAiControllerInternal::getThreatKey(), event._position );
+    }
+
+    void RtsAiController::writeState( Archive& outArchive ) const
+    {
+        outArchive << _thinkTimer;
+        outArchive << _attackWaveCount;
+    }
+
+    bool RtsAiController::readState( Archive& archive )
+    {
+        float32 thinkTimer      = 0.0f;
+        int32   attackWaveCount = 0;
+        archive >> thinkTimer;
+        archive >> attackWaveCount;
+        if ( archive.isError() || attackWaveCount < 0 )
+            return false;
+        _thinkTimer      = thinkTimer;
+        _attackWaveCount = attackWaveCount;
+        return true;
     }
 
     RtsUnitId RtsAiController::findDepot() const

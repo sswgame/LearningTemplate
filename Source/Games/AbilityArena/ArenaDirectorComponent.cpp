@@ -11,12 +11,14 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Ability/AbilityCatalog.h"
 #include "GameFramework/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Ability/CombatAttributeSet.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
+#include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/AbilityArena/ArenaProjectileComponent.h"
 
@@ -28,7 +30,9 @@ namespace sw
     {
         struct ArenaDirectorComponentInternal
         {
-            static constexpr float32 kStatusLogInterval = 5.0f; ///< 상태 로그 간격(s)
+            static constexpr float32 kStatusLogInterval = 5.0f;        ///< 상태 로그 간격(s)
+            static constexpr uint32  kStateTag          = 0x414E5241u; ///< 'ARNA'
+            static constexpr uint32  kStateVersion      = 1;
             static constexpr float32 kUnitRadius        = 0.5f; ///< 투사체가 쏜 쪽 몸 밖에서 나오는 거리
             static constexpr float32 kProjectileRadius  = 0.25f;
             static constexpr int32   kProjectileTint    = 3; ///< `_arrTint` 의 투사체 칸(앞 셋은 `ArenaUnitKind` 순)
@@ -81,6 +85,7 @@ namespace sw
         , _listProjectile{}
         , _listPendingUnit{}
         , _listPendingSound{}
+        , _pendingStateBytes{}
         , _arrTint{}
         , _playerFocus{ 0.0f, 0.0f, 0.0f }
         , _playerRespawnTimer{ -1.0f }
@@ -110,7 +115,43 @@ namespace sw
         }
         _bStarted = SW_TRUE;
         _wave     = 0;
+        if ( _pendingStateBytes.empty() == false )
+            applyPendingState();
         SW_LOG_INFO( "[Arena] arena is ready - WASD move, J/Space melee, K/2 fireball, L/3 heal, LeftShift/4 dash" );
+    }
+
+    void ArenaDirectorComponent::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeHeader( outArchive, ArenaDirectorComponentInternal::kStateTag, ArenaDirectorComponentInternal::kStateVersion );
+        outArchive << _wave;
+        outArchive << _killCount;
+    }
+
+    void ArenaDirectorComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( _bStarted == SW_TRUE )
+            applyPendingState();
+    }
+
+    void ArenaDirectorComponent::applyPendingState()
+    {
+        Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
+        uint32     wave      = 0;
+        uint32     killCount = 0;
+        const bool bHeader   = StateArchiveUtil::readHeader( archive, ArenaDirectorComponentInternal::kStateTag, ArenaDirectorComponentInternal::kStateVersion );
+        archive >> wave;
+        archive >> killCount;
+        _pendingStateBytes.clear();
+        if ( bHeader == false || archive.isError() || archive.getRemainingBytes() != 0 )
+        {
+            SW_LOG_WARNING( "[Arena] the saved arena state does not match this build - starting from wave 1" );
+            return;
+        }
+        _wave      = wave;
+        _killCount = killCount;
+        despawnRuntime(); // 다음 틱이 플레이어와 이 웨이브를 다시 세운다
+        SW_LOG_INFO( "[Arena] arena state restored - wave %#, %# kills", _wave, _killCount );
     }
 
     void ArenaDirectorComponent::onEndPlay()

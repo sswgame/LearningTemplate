@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "GameFramework/Data/GameSettings.h"
@@ -16,6 +17,8 @@ namespace sw
 {
     struct TypeInfo;
 
+    class ComponentStateStore;
+    class GameObjectManager;
     class Scene;
 
     // ------------------------------------------------------------------------------
@@ -27,9 +30,9 @@ namespace sw
     {
     public:
         /** @brief 윈도우 · RHI · 부트스트랩을 비운 채로 둡니다. */
-        GameInstanceBase() = default;
+        GameInstanceBase();
         /** @brief 파생 인스턴스가 정리할 수 있게 합니다. */
-        virtual ~GameInstanceBase() override = default;
+        virtual ~GameInstanceBase() override;
 
         /**
          * @brief configureBootstrap 으로 부트스트랩을 채우고(게임 프리셋 `Config/Game/<게임>.json` 의 팩 루트가 있으면 그것이 우선) gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
@@ -81,6 +84,9 @@ namespace sw
          * @brief `getFirstScene()` 의 로드를 요청합니다. 열 씬이 없거나 요청이 실패하면 false 입니다(실패는 알립니다).
          * @details 요청이 들어가면 `SceneLoadRequestedEvent` 를 내고, 그 로드가 끝난(활성 씬이 됐거나 실패한) 뒤의 첫 `update` 가
          *          `SceneLoadCompletedEvent` 를 냅니다.
+         *          인스턴스가 살아 있는 월드 위에 다시 섰으면(게임 모듈 핫 리로드 · 백엔드 교체 — `initialize` 때 이미 활성 씬이 있었다) 요청하지 않고
+         *          false 입니다. 그 씬은 곧 스냅샷으로 되살아나거나(핫 리로드) 에디터가 연 씬이다 — 언리얼 핫 리로드도 `GameInstance::Init` 을
+         *          다시 부르지 않는다.
          */
         [[nodiscard]] bool requestFirstScene();
         /** @brief `getEntranceScene()` 의 로드를 요청합니다. 타이틀 화면이 "시작" 에서 부릅니다. 레벨 이벤트는 `requestFirstScene` 과 같습니다. */
@@ -106,10 +112,23 @@ namespace sw
         /** @brief 파생 클래스의 상태 구조체 const 인스턴스 포인터를 반환합니다. */
         virtual const void* getStateInstance() const { return nullptr; }
 
-        /** @brief 상태 스냅샷 직렬화 직전에 부르는 준비 훅입니다. */
+        /**
+         * @brief 상태 스냅샷 직렬화 직전에 부르는 준비 훅입니다.
+         * @details 부르기 전에 `getComponentStateStore()` 를 비웁니다. PROPERTY 가 아닌 컴포넌트 상태(디렉터의 시뮬레이션)는 여기서
+         *          `getComponentStateStore().capture<T>( manager )` 로 싣습니다. 한 번의 캡처에 두 번 불릴 수 있습니다(크기 묻기 + 채우기).
+         */
         virtual void onBeforeStateSerialize() {}
-        /** @brief 상태 스냅샷 역직렬화 직후에 부르는 복원 훅입니다. */
+        /**
+         * @brief 상태 스냅샷 역직렬화 직후에 부르는 복원 훅입니다.
+         * @details 씬 오브젝트가 다시 선 뒤입니다. 실어 둔 컴포넌트 상태는 `getComponentStateStore().restore<T>( manager )` 로 다시 만든 컴포넌트에
+         *          넘깁니다(이 훅이 끝나면 저장소를 비웁니다).
+         */
         virtual void onAfterStateDeserialize() {}
+
+        /** @brief 상태 스냅샷 봉투의 컴포넌트 상태 섹션입니다(`ComponentStateStore`). */
+        ComponentStateStore& getComponentStateStore() { return *_pComponentStateStore; }
+        /** @brief 활성 씬의 오브젝트 매니저입니다. 게임 서비스가 묶이지 않았거나 활성 씬이 없으면 nullptr 입니다. */
+        static GameObjectManager* findActiveObjectManager();
 
         /** @brief `deserializeSceneObjects` 가 읽는 씬 오브젝트 데이터의 형식입니다. */
         enum class SceneObjectFormat : uint8
@@ -127,9 +146,9 @@ namespace sw
         /** @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 되살릴지를 알려 줍니다. */
         [[nodiscard]] bool deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format );
 
-        BootstrapConfig _bootstrap{};           ///< 팩 루트와 gamesettings
-        IWindow*        _pWindow{ nullptr };    ///< 호스트 윈도우 (App 이 소유)
-        IRHIDevice*     _pRhiDevice{ nullptr }; ///< 활성 RHI 디바이스
+        BootstrapConfig _bootstrap;  ///< 팩 루트와 gamesettings
+        IWindow*        _pWindow;    ///< 호스트 윈도우 (App 이 소유)
+        IRHIDevice*     _pRhiDevice; ///< 활성 RHI 디바이스
 
     private:
         /** @brief 맡긴 씬 로드 하나입니다. 끝나면 `update` 가 `SceneLoadCompletedEvent` 를 내고 목록에서 뺍니다. */
@@ -149,6 +168,8 @@ namespace sw
         /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 냅니다(요청 순서). */
         void publishFinishedSceneLoads();
 
-        vector<PendingSceneLoad> _listPendingSceneLoad{}; ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
+        vector<PendingSceneLoad>        _listPendingSceneLoad; ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
+        unique_ptr<ComponentStateStore> _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
+        uint8                           _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

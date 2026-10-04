@@ -13,11 +13,13 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Utility/OrientationUtil.h"
+#include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/ThemeParkTycoon/CoasterCarComponent.h"
 #include "Games/ThemeParkTycoon/FlatRideComponent.h"
@@ -31,7 +33,9 @@ namespace sw
     {
         struct ParkDirectorComponentInternal
         {
-            static constexpr float32 kRailSpacing     = 2.0f; ///< 레일 조각 간격(m)
+            static constexpr float32 kRailSpacing     = 2.0f;        ///< 레일 조각 간격(m)
+            static constexpr uint32  kStateTag        = 0x4B524150u; ///< 'PARK'
+            static constexpr uint32  kStateVersion    = 1;
             static constexpr float32 kSupportSpacing  = 8.0f; ///< 기둥 간격(m)
             static constexpr uint32  kCarCount        = 4;
             static constexpr float32 kStatusInterval  = 10.0f;
@@ -105,6 +109,7 @@ namespace sw
         , _startingCash{ 12000 }
         , _selectedPlacement{ 0 }
         , _ridingCoaster{ -1 }
+        , _pendingStateBytes{}
         , _bLoaded{ SW_FALSE }
         , _bViewsSpawned{ SW_FALSE }
         , _bFlushScheduled{ SW_FALSE }
@@ -126,6 +131,8 @@ namespace sw
             SW_LOG_WARNING( "[Park] park data could not be loaded - the park cannot open" );
             return;
         }
+        if ( _pendingStateBytes.empty() == false )
+            applyPendingState();
         scheduleFlush();
         SW_LOG_INFO( "[Park] park is open - WASD pan, Q/E rotate, wheel zoom, Tab select ride, O open/close, [ ] ride price, - = entry fee, "
                      "B build next, V ride the coaster, G guest thoughts" );
@@ -280,21 +287,15 @@ namespace sw
         {
             // 코스터 — 짓고 시험 운행으로 평가를 받는다. 못 돌면(언덕을 못 넘는다) 짓지 않는다.
             const CoasterLayoutDef* pLayout = _layoutCatalog.findLayout( placement._layoutId );
-            if ( pLayout == nullptr )
+            CoasterRideStats        stats{};
+            pCoaster = createCoaster( placementIndex, stats );
+            if ( pLayout == nullptr || pCoaster == nullptr )
                 return false;
-            CoasterTrackBuilder builder;
-            builder.reset( placement._position + float3{ 0.0f, pLayout->_startHeight, 0.0f }, placement._heading );
-            builder.appendPieces( pLayout->_listPiece );
-            pCoaster                     = make_unique<CoasterRuntime>();
-            pCoaster->_pTrack            = make_unique<CoasterTrack>( builder.makeTrack( true ) );
-            pCoaster->_placementIndex    = placementIndex;
-            const CoasterRideStats stats = CoasterRideAnalyzer::analyze( *pCoaster->_pTrack, CoasterPhysicsParams{} );
             if ( stats._bCompleted == SW_FALSE )
             {
                 SW_LOG_WARNING( "[Park] %# failed its test run (stalled) - not built", pLayout->_name.c_str() );
                 return false;
             }
-            pCoaster->_train.initialize( pCoaster->_pTrack.get(), CoasterPhysicsParams{}, 0.0f );
             ride = ThemeParkSimulation::makeRideFromCoaster( placement._layoutId, pLayout->_name, stats, placement._ride._capacity, placement._loadTime );
             // 줄 입구 — 스테이션 가운데 옆(바깥쪽).
             const CoasterTrackFrame stationFrame = pCoaster->_pTrack->sample( 6.0f );
@@ -317,6 +318,131 @@ namespace sw
         playSound( ParkDirectorComponentInternal::kSoundBuilt );
         _listPendingRideView.push_back( placementIndex );
         return true;
+    }
+
+    unique_ptr<ParkDirectorComponent::CoasterRuntime> ParkDirectorComponent::createCoaster( int32 placementIndex, CoasterRideStats& outStats ) const
+    {
+        if ( placementIndex < 0 || placementIndex >= static_cast<int32>( _listPlacement.size() ) )
+            return nullptr;
+        const RidePlacement&    placement = _listPlacement[static_cast<size_t>( placementIndex )];
+        const CoasterLayoutDef* pLayout   = _layoutCatalog.findLayout( placement._layoutId );
+        if ( pLayout == nullptr )
+            return nullptr;
+        CoasterTrackBuilder builder;
+        builder.reset( placement._position + float3{ 0.0f, pLayout->_startHeight, 0.0f }, placement._heading );
+        builder.appendPieces( pLayout->_listPiece );
+        unique_ptr<CoasterRuntime> pCoaster = make_unique<CoasterRuntime>();
+        pCoaster->_pTrack                   = make_unique<CoasterTrack>( builder.makeTrack( true ) );
+        pCoaster->_placementIndex           = placementIndex;
+        outStats                            = CoasterRideAnalyzer::analyze( *pCoaster->_pTrack, CoasterPhysicsParams{} );
+        pCoaster->_train.initialize( pCoaster->_pTrack.get(), CoasterPhysicsParams{}, 0.0f );
+        return pCoaster;
+    }
+
+    // ------------------------------------------------------------------------------
+    // 상태 쓰기 · 되살리기(핫 리로드 · 세이브)
+    // ------------------------------------------------------------------------------
+    void ParkDirectorComponent::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeHeader( outArchive, ParkDirectorComponentInternal::kStateTag, ParkDirectorComponentInternal::kStateVersion );
+        _simulation.writeState( outArchive );
+        outArchive << static_cast<uint32>( _listPlacement.size() );
+        for ( const RidePlacement& placement : _listPlacement )
+            outArchive << placement._rideIndex;
+        outArchive << static_cast<uint32>( _listCoaster.size() );
+        for ( const unique_ptr<CoasterRuntime>& pCoaster : _listCoaster )
+        {
+            outArchive << pCoaster->_placementIndex;
+            outArchive << pCoaster->_train.getDistance();
+            outArchive << pCoaster->_train.getSpeed();
+        }
+        outArchive << _statusTimer;
+        outArchive << _autoBuildTimer;
+        outArchive << _selectedPlacement;
+    }
+
+    void ParkDirectorComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( _bLoaded == SW_TRUE )
+            applyPendingState();
+    }
+
+    bool ParkDirectorComponent::readState( Archive& archive )
+    {
+        if ( StateArchiveUtil::readHeader( archive, ParkDirectorComponentInternal::kStateTag, ParkDirectorComponentInternal::kStateVersion ) == false )
+            return false;
+        ThemeParkSimulation simulation;
+        simulation.initialize( _settings, _startingCash );
+        uint32 placementCount = 0;
+        if ( simulation.readState( archive ) == false || StateArchiveUtil::readCount( archive, sizeof( int32 ), placementCount ) == false )
+            return false;
+        if ( placementCount != static_cast<uint32>( _listPlacement.size() ) )
+            return false; // 배치 데이터가 바뀌었다 — 지은 것을 맞출 수 없다
+        const int32   rideCount = static_cast<int32>( simulation.getRides().size() );
+        vector<int32> listRideIndex( placementCount );
+        for ( int32& rideIndex : listRideIndex )
+        {
+            archive >> rideIndex;
+            if ( rideIndex < -1 || rideIndex >= rideCount )
+                archive.setError();
+        }
+        uint32 coasterCount = 0;
+        if ( archive.isError() || StateArchiveUtil::readCount( archive, sizeof( int32 ) + sizeof( float32 ) * 2, coasterCount ) == false )
+            return false;
+        vector<unique_ptr<CoasterRuntime>> listCoaster;
+        for ( uint32 coasterIndex = 0; coasterIndex < coasterCount; ++coasterIndex )
+        {
+            int32   placementIndex = -1;
+            float32 distance       = 0.0f;
+            float32 speed          = 0.0f;
+            archive >> placementIndex;
+            archive >> distance;
+            archive >> speed;
+            CoasterRideStats           stats{};
+            unique_ptr<CoasterRuntime> pCoaster = archive.isOk() ? createCoaster( placementIndex, stats ) : nullptr;
+            if ( pCoaster == nullptr )
+                return false;
+            pCoaster->_train.setDistance( distance );
+            pCoaster->_train.setSpeed( speed );
+            listCoaster.push_back( std::move( pCoaster ) );
+        }
+        float32 statusTimer       = 0.0f;
+        float32 autoBuildTimer    = 0.0f;
+        int32   selectedPlacement = 0;
+        archive >> statusTimer;
+        archive >> autoBuildTimer;
+        archive >> selectedPlacement;
+        if ( archive.isError() || archive.getRemainingBytes() != 0 )
+            return false;
+
+        _simulation = std::move( simulation );
+        for ( uint32 placementIndex = 0; placementIndex < placementCount; ++placementIndex )
+        {
+            RidePlacement& placement = _listPlacement[placementIndex];
+            placement._rideIndex     = listRideIndex[placementIndex];
+            if ( placement._rideIndex >= 0 )
+                placement._ride = _simulation.getRides()[static_cast<size_t>( placement._rideIndex )];
+        }
+        _listCoaster       = std::move( listCoaster );
+        _statusTimer       = statusTimer;
+        _autoBuildTimer    = autoBuildTimer;
+        _selectedPlacement = MathUtil::clamp( selectedPlacement, 0, static_cast<int32>( placementCount ) - 1 );
+        _ridingCoaster     = -1;
+        return true;
+    }
+
+    void ParkDirectorComponent::applyPendingState()
+    {
+        Archive archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
+        if ( readState( archive ) )
+            SW_LOG_INFO( "[Park] park state restored - %# guests, $%#, %#s open", _simulation.getGuestCount(), _simulation.getCash(),
+                         static_cast<int32>( _simulation.getElapsedTime() ) );
+        else
+            SW_LOG_WARNING( "[Park] the saved park state does not match this build - opening a new park" );
+        _pendingStateBytes.clear();
+        _listPendingSound.clear();
+        despawnViews(); // 지금 상태대로 다시 세운다(다음 틱)
     }
 
     bool ParkDirectorComponent::buildCheapestRemaining()

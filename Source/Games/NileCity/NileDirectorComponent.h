@@ -27,6 +27,7 @@
 
 namespace sw
 {
+    class Archive;
     class GameObject;
     class GameObjectManager;
     class InputManager;
@@ -55,6 +56,13 @@ namespace sw
 
         /** @brief 세운 런타임 오브젝트를 모두 지웁니다(상태 저장 전). 도시는 그대로이고 다음 틱이 그 상태대로 다시 세운다. */
         void despawnViews();
+        /** @brief 도시 상태(시뮬레이션 · 자동 계획 진행 · 달 수 · 속도 · 고른 도구)를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 도시를 되살립니다 — `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
+         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 가 데이터를 읽은 뒤 적용합니다. 읽지 못하면 알리고 새 도시로 시작합니다.
+         */
+        void restoreState( vector<uint8>&& bytes );
 
         // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
         const CitySimulation& getCity() const { return _city; }
@@ -85,6 +93,12 @@ namespace sw
 
     private:
         [[nodiscard]] bool loadData();
+        /** @brief 이 도시의 시뮬레이션 설정입니다(`loadData` · 복원이 같은 것으로 `initialize` 한다). */
+        CitySettings makeCitySettings() const;
+        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+        /** @brief 들고 있던 복원 바이트를 적용하고 모습을 다시 세우게 합니다. */
+        void applyPendingState();
         /** @brief 쌓인 스폰 · 효과음을 틱 뒤 한 번으로 미룹니다(틱 밖이면 바로). */
         void scheduleFlush();
         /** @brief 쌓인 요청을 세웁니다. 틱 밖(게임 스레드)에서만 불린다. */
@@ -157,6 +171,7 @@ namespace sw
         vector<ColorLook>                    _listColorLook;
         vector<shared_ptr<MaterialInstance>> _listWalkerLook;    ///< 일꾼 종류 × 16 + 서비스
         vector<shared_ptr<Mesh>>             _listModelMesh;     ///< 건물 모델을 쥐고 있는다(집 단계가 바뀔 때 뷰가 워커에서 읽지 않게)
+        vector<uint8>                        _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         size_t                               _wantedWalkerCount; ///< 세울 일꾼 풀 크기(틱이 쓴다)
         int2                                 _cursorTile;
         float32                              _timeScale;

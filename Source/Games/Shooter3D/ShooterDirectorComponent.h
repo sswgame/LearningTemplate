@@ -38,6 +38,7 @@ namespace sw
 
 namespace sw
 {
+    class Archive;
     class GameObjectManager;
     class MaterialInstance;
     class MeshComponent;
@@ -75,6 +76,13 @@ namespace sw
 
         /** @brief 세운 드론 · 효과를 모두 지웁니다(상태 저장 전). */
         void despawnRuntime();
+        /** @brief 판의 진행(웨이브 · 처치 수)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 드론 · 효과는 모습이라 걷고 다시 세운다. */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 진행을 되살립니다 — 다시 만든 디렉터는 웨이브 대기 뒤 그 웨이브를 새로 세웁니다.
+         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 끝에 적용합니다. 읽지 못하면 알리고 웨이브 1 부터 시작합니다.
+         */
+        void restoreState( vector<uint8>&& bytes );
         /** @brief 플레이어가 쓰러졌다 — 드론을 걷고 웨이브 1 부터 다시 기다립니다(틱 뒤 게임 스레드에서 부른다). */
         void restartRound();
         /** @brief 탄착 · 터짐 효과 하나를 풀에서 꺼내 보입니다(게임 스레드). */
@@ -124,6 +132,8 @@ namespace sw
         };
 
     private:
+        /** @brief 들고 있던 복원 바이트를 적용합니다. */
+        void                         applyPendingState();
         void                         collectBoxes();
         void                         requestWave();
         void                         scheduleFlush();
@@ -167,6 +177,7 @@ namespace sw
         vector<EffectRequest>        _listPendingEffect;
         vector<const utf8*>          _listPendingSound; ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
         vector<ColorLook>            _listColorLook;
+        vector<uint8>                _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         shared_ptr<MaterialInstance> _droneLook;
         shared_ptr<MaterialInstance> _droneFlashLook;
         float3                       _playerEye;
