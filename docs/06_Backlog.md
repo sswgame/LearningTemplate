@@ -178,8 +178,6 @@ cd build/Ninja-Debug/Bin
 - **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
   결과(열거값)로 바꾸는 그래픽스 쪽 수정.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
-- **옛 시험 산출물 정리**(사용자 폴더라 두었다): `%TEMP%` 의 `sw_*`, `build/*/Bin` · `TestBin` 의 `prefab_test/` · `TestTemp/` · `temp_gen_*` · `temp_collide/`.
-  옛 규칙으로 지은 바이너리가 남은 프리셋은 다시 지어야 새 규칙을 따른다.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
