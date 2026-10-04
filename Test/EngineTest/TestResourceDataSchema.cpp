@@ -14,6 +14,7 @@
 #include "Engine/Character/SurfaceState.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -174,6 +175,7 @@ namespace
         static bool                  isFitTables( sw::string_view resourceId ) { return endsWith( resourceId, ".fit.xml" ); }
         static bool                  isPartFit( sw::string_view resourceId ) { return endsWith( resourceId, ".partfit.xml" ); }
         static bool                  isSurfaceChannels( sw::string_view resourceId ) { return endsWith( resourceId, ".surfacechannels.xml" ); }
+        static bool                  isDestructionProfile( sw::string_view resourceId ) { return endsWith( resourceId, ".destruction.xml" ); }
         static bool                  loadSockets( const sw::string& resourceId )
         {
             sw::SocketKindTable kinds;
@@ -283,6 +285,7 @@ namespace
             {          "fittables",           &isFitTables,                          &loadFitTables},
             {            "partfit",             &isPartFit,                            &loadPartFit},
             {    "surfacechannels",     &isSurfaceChannels,   &loadCatalog<sw::SurfaceChannelTable>},
+            {        "destruction",  &isDestructionProfile,    &loadCatalog<sw::DestructionProfile>},
             {              "items",               &isItems,           &loadCatalog<sw::ItemCatalog>},
             {         "appearance",      &isAppearanceData,                     &loadAppearanceData},
             {           "skeleton",            &isSkeleton,                           &loadSkeleton},

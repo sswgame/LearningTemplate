@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 나무 상자 · 판자. 가볍고 잘 쪼개진다. -->
+<DestructionProfile density="600" physicsMaterial="Wood">
+  <Strain thresholds="30 25"/>
+  <Links strength="120" supportStrength="20000"/>
+  <Impact impulseToStrain="0.8" minImpulse="15" radius="0.3"/>
+  <Debris lifetime="6" maxBodies="48" smallVolume="0.001" fadeTime="0.4" sleepRemoveTime="1.0" keepCollisionVolume="0.02" hullShrink="0.005"/>
+</DestructionProfile>

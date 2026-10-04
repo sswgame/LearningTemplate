@@ -48,3 +48,26 @@
 | `DestructionRandom` | `DestructionRandom.h` |
 
 시험: `FractureTest`(`Test/EngineTest/TestFracture.cpp`), 임포트는 `ModelImporterTest.FractureRuleWritesFractureAssetBesideTheMesh`.
+
+## 2. 구조 — 계층 · 연결 · 앵커 · 지지(`DestructionState`)
+
+오브젝트 하나의 상태(2D · 3D 공용, 물리 · 렌더를 모른다). 세 가지가 따로 있습니다.
+
+- **계층**은 나눔의 굵기입니다. 활성 노드가 한 몸으로 움직이는 단위이고, 묶음이 갈라지면(`breakNode`) 자식들이 활성이 됩니다 — 갈라졌다고
+  떨어지지는 않습니다(Chaos 의 클러스터 레벨: 큰 덩어리가 먼저, 더 센 피해에 그 안의 조각).
+- **연결**이 떨어짐을 정합니다. 활성 노드가 다른 두 잎 사이의 연결만 끊길 수 있습니다(갈라지지 않은 묶음 안은 한 몸). `detachLeaf` 는 잎이 활성이
+  될 때까지 위를 가르고 그 잎의 연결을 모두 끊고 앵커에서 뗍니다.
+- **앵커**(땅 · 고정 볼륨에 닿은 잎 — 런타임이 정해 넘긴다)가 지지를 정합니다(레드 팩션 게릴라). 그룹 = 끊기지 않은 연결로 이어진 활성 노드들,
+  앵커 잎을 품으면 붙은(정적) 그룹, 아니면 떨어진(동적) 그룹. 붙은 그룹은 **무게를 앵커 쪽으로 흘립니다** — 앵커에서 너비 우선으로 깊이를 매기고,
+  깊은 노드부터 제 무게(부피 × `density` × g) + 받은 하중을 더 얕은 이웃에게 맞닿은 세기(넓이 × `supportStrength`) 비율로 나눠 넘겨, 몫이 세기를
+  넘는 연결을 끊습니다(끊기면 다시 나눠 최대 8 번). 받침이 줄면 위가 무너집니다.
+
+한 덩어리 그대로 남은 그룹은 번호를 지킵니다(묶음이 갈라졌을 뿐이면 바디도 그림도 바뀌지 않는다). 갈라지면 옛 번호가 사라지고 새 번호(늘기만 한다)가
+덩어리마다(가장 작은 노드 순) 생깁니다 — `DestructionChange`(사라진 · 새 그룹, 갈라진 노드 · 끊긴 연결 · 무게로 끊긴 연결 수). 모든 순서가 노드 ·
+연결 · 그룹 번호 순이라 같은 그래프 · 표 · 앵커 · 같은 순서의 조작이면 같은 상태이고 `computeStateHash` 가 같습니다.
+
+**파괴 재질 표**(`*.destruction.xml`, `DestructionProfile`): 깊이별 변형 문턱 · 연결 세기 · 지지 세기 · 밀도 · 물리 재질 · 충격 → 변형 · 파편 예산.
+기본은 `Resource/engine/destruction/default.destruction.xml`(돌), `wood.destruction.xml`(나무). 모르는 원소 · 속성 · 틀린 수 · 같은 원소 두 번은 로드
+오류이고(`CharacterDataReader`), `ResourceDataSchemaTest` 가 저장소의 모든 표를 읽습니다. 같은 `.fracture` 를 표만 바꿔 다르게 부숩니다(다시 쿠킹하지 않는다).
+
+시험: `DestructionStateTest`(`Test/EngineTest/TestDestructionState.cpp`).
