@@ -144,3 +144,7 @@
 (`IFracturePhysics` 의 2D 구현 — 껍질은 8 점 이하 볼록 다각형으로 줄이고, 자세는 XY · Z 축 회전, 깊이는 오브젝트 것).
 
 시험: `Fracture2DTest`(`Test/EngineTest/TestFracture2D.cpp`).
+
+**삼각형 수.** 자를 때마다 앞 막음의 대각선 교점이 다음 막음의 고리에 일직선으로 쌓입니다. 칸마다 자르기를 마치면 안쪽 면을 평면마다 다시 짓습니다
+(`simplifyCaps` — 그 점을 쓰는 **모든** 면이 안쪽 면이고 그 모든 고리에서 일직선인 점만 함께 뺀다, 겉면이 쓰는 점은 그대로). 쪼개기 결과를 바꾸는 고침은
+`MeshFractureUtil::kAlgorithmVersion` 을 올립니다 — 임포트 원본 해시에 섞여 쿠킹한 `.fracture` 가 어긋남이 된다.

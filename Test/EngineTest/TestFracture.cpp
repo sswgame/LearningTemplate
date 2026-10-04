@@ -117,6 +117,9 @@ SW_TEST_CASE( FractureTest, UniformFractureGivesClosedPiecesThatConserveVolume )
     SW_EXPECT_NEAR_EQUAL( 1.0f, TestFractureInternal::sumPieceVolumes( asset ), 1e-3f );
     SW_EXPECT_TRUE( asset.countTriangles( sw::FractureSurfaceSlot::Interior ) > 0 );
     SW_EXPECT_TRUE( asset.countTriangles( sw::FractureSurfaceSlot::Outer ) >= 12 );
+    // 안쪽 면은 일직선 점을 빼고 다시 지어 조각마다 수십 개다(다시 짓지 않으면 자를 때마다 앞 막음의 대각선 교점이 쌓여 수백 개가 된다).
+    SW_LOG_INFO( "Interior triangles per piece: %#", asset.countTriangles( sw::FractureSurfaceSlot::Interior ) / asset.getPieceCount() );
+    SW_EXPECT_TRUE( asset.countTriangles( sw::FractureSurfaceSlot::Interior ) <= asset.getPieceCount() * 40 );
     for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
     {
         SW_EXPECT_TRUE_MSG( sw::MeshFractureUtil::isClosedMesh( asset.getPieceVertices( piece ) ), "every piece must be a closed mesh (caps seal the cut)" );

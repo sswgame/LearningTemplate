@@ -614,6 +614,269 @@ namespace sw
                 }
             }
 
+            /**
+             * @brief 안쪽 면(평면마다 한 무리)의 삼각형을 다시 짓습니다 — 무리 경계 고리에서 일직선 위의 점을 빼고 귀 자르기로 다시 나눕니다.
+             * @details 자를 때마다 앞서 막은 면의 대각선을 가로질러 교점이 생기고, 그 점들이 다음 막음의 고리에 일직선으로 쌓여 조각 하나가 안쪽
+             *          삼각형 수백 개가 됩니다(벽 200 조각 4.7 만 개). 점은 그 점을 쓰는 **모든** 면이 안쪽 면이고 그 모든 무리의 고리에서 일직선일 때만
+             *          함께 뺍니다 — 한쪽만 빼면 이웃과 T 자 이음이 생긴다. 겉면이 쓰는 점은 그대로 둡니다.
+             */
+            static void simplifyCaps( vector<Triangle>& inoutListTriangle, const FractureSettings& settings )
+            {
+                // 무리(태그)마다 삼각형 번호.
+                vector<int32>          listTag;
+                vector<vector<uint32>> listGroupTriangle;
+                for ( uint32 index = 0; index < static_cast<uint32>( inoutListTriangle.size() ); ++index )
+                {
+                    const int32 tag = inoutListTriangle[index]._tag;
+                    if ( tag < 0 )
+                        continue;
+                    size_t group = 0;
+                    while ( group < listTag.size() && listTag[group] != tag )
+                        ++group;
+                    if ( group == listTag.size() )
+                    {
+                        listTag.push_back( tag );
+                        listGroupTriangle.push_back( vector<uint32>{} );
+                    }
+                    listGroupTriangle[group].push_back( index );
+                }
+                if ( listTag.empty() )
+                    return;
+                // 점마다 — 겉면이 쓰는지.
+                unordered_map<uint64, uint8>  mapSurfaceUse;
+                unordered_map<uint64, float3> mapPoint;
+                for ( const Triangle& triangle : inoutListTriangle )
+                {
+                    for ( const RHIVertex& vertex : triangle._arrVertex )
+                    {
+                        const float3 point = getPosition( vertex );
+                        const uint64 key   = makePointKey( point );
+                        mapPoint.emplace( key, point );
+                        uint8& bOuter = mapSurfaceUse[key];
+                        if ( triangle._tag < 0 )
+                            bOuter = SW_TRUE;
+                    }
+                }
+                // 무리마다 경계 고리(점 열쇠) — 무리 안에서 반대 방향이 없는 모서리를 잇는다.
+                vector<vector<vector<uint64>>> listGroupLoop( listTag.size() );
+                for ( size_t group = 0; group < listTag.size(); ++group )
+                {
+                    unordered_map<uint64, uint32> mapEdge;
+                    for ( const uint32 index : listGroupTriangle[group] )
+                    {
+                        for ( uint32 corner = 0; corner < 3; ++corner )
+                        {
+                            const uint64 from = makePointKey( getPosition( inoutListTriangle[index]._arrVertex[corner] ) );
+                            const uint64 to   = makePointKey( getPosition( inoutListTriangle[index]._arrVertex[( corner + 1 ) % 3] ) );
+                            ++mapEdge[makeEdgeKey( from, to )];
+                        }
+                    }
+                    unordered_map<uint64, vector<uint64>> mapNext;
+                    for ( const uint32 index : listGroupTriangle[group] )
+                    {
+                        for ( uint32 corner = 0; corner < 3; ++corner )
+                        {
+                            const uint64 from = makePointKey( getPosition( inoutListTriangle[index]._arrVertex[corner] ) );
+                            const uint64 to   = makePointKey( getPosition( inoutListTriangle[index]._arrVertex[( corner + 1 ) % 3] ) );
+                            if ( mapEdge.find( makeEdgeKey( to, from ) ) == mapEdge.end() )
+                                mapNext[from].push_back( to );
+                        }
+                    }
+                    // 갈래(한 점에서 나가는 경계가 둘 이상)가 있으면 이 무리는 건드리지 않는다.
+                    bool bSimple = true;
+                    for ( const auto& [key, listTo] : mapNext )
+                        bSimple = bSimple && listTo.size() == 1;
+                    if ( bSimple == false )
+                        continue;
+                    unordered_map<uint64, uint8> mapUsed;
+                    for ( const auto& [start, listTo] : mapNext )
+                    {
+                        if ( mapUsed.find( start ) != mapUsed.end() )
+                            continue;
+                        vector<uint64> listLoopKey;
+                        uint64         current = start;
+                        bool           bClosed = false;
+                        for ( size_t guard = 0; guard <= mapNext.size(); ++guard )
+                        {
+                            mapUsed[current] = SW_TRUE;
+                            listLoopKey.push_back( current );
+                            const auto iter = mapNext.find( current );
+                            if ( iter == mapNext.end() )
+                                break;
+                            current = iter->second[0];
+                            if ( current == start )
+                            {
+                                bClosed = true;
+                                break;
+                            }
+                        }
+                        if ( bClosed == false )
+                        {
+                            listGroupLoop[group].clear();
+                            break;
+                        }
+                        listGroupLoop[group].push_back( std::move( listLoopKey ) );
+                    }
+                }
+                // 뺄 점 — 겉면이 쓰지 않고, 그 점이 든 모든 고리에서 일직선이고, 모든 무리가 고리를 지었다.
+                unordered_map<uint64, uint32> mapLoopCount;
+                unordered_map<uint64, uint8>  mapKeep;
+                for ( size_t group = 0; group < listTag.size(); ++group )
+                {
+                    if ( listGroupLoop[group].empty() )
+                    {
+                        for ( const uint32 index : listGroupTriangle[group] )
+                        {
+                            for ( const RHIVertex& vertex : inoutListTriangle[index]._arrVertex )
+                                mapKeep[makePointKey( getPosition( vertex ) )] = SW_TRUE;
+                        }
+                        continue;
+                    }
+                    for ( const vector<uint64>& loop : listGroupLoop[group] )
+                    {
+                        const size_t count = loop.size();
+                        for ( size_t index = 0; index < count; ++index )
+                        {
+                            const float3& prev   = mapPoint[loop[( index + count - 1 ) % count]];
+                            const float3& cur    = mapPoint[loop[index]];
+                            const float3& next   = mapPoint[loop[( index + 1 ) % count]];
+                            const float32 span   = ( next - prev ).getLength();
+                            const float32 offset = span > 0.0f ? ( cur - prev ).cross( next - prev ).getLength() / span : 1.0f;
+                            const bool    bLine  = offset <= 1.0e-5f && ( cur - prev ).dot( next - cur ) > 0.0f;
+                            if ( bLine == false )
+                                mapKeep[loop[index]] = SW_TRUE;
+                            ++mapLoopCount[loop[index]];
+                        }
+                    }
+                }
+                // 고리에 들지 않고 삼각형에만 든 점(무리 안쪽 점)은 남긴다 — 그런 무리는 다시 짓지 않는다.
+                vector<uint8> listRebuild( listTag.size(), SW_FALSE );
+                bool          bAnyRemoved = false;
+                for ( size_t group = 0; group < listTag.size(); ++group )
+                {
+                    if ( listGroupLoop[group].empty() )
+                        continue;
+                    unordered_map<uint64, uint8> mapOnLoop;
+                    for ( const vector<uint64>& loop : listGroupLoop[group] )
+                    {
+                        for ( const uint64 key : loop )
+                            mapOnLoop[key] = SW_TRUE;
+                    }
+                    bool bInnerPoint = false;
+                    for ( const uint32 index : listGroupTriangle[group] )
+                    {
+                        for ( const RHIVertex& vertex : inoutListTriangle[index]._arrVertex )
+                            bInnerPoint = bInnerPoint || mapOnLoop.find( makePointKey( getPosition( vertex ) ) ) == mapOnLoop.end();
+                    }
+                    if ( bInnerPoint )
+                    {
+                        for ( const uint32 index : listGroupTriangle[group] )
+                        {
+                            for ( const RHIVertex& vertex : inoutListTriangle[index]._arrVertex )
+                                mapKeep[makePointKey( getPosition( vertex ) )] = SW_TRUE;
+                        }
+                        listGroupLoop[group].clear();
+                        continue;
+                    }
+                    listRebuild[group] = SW_TRUE;
+                }
+                const auto isRemovable = [&mapKeep, &mapSurfaceUse]( uint64 key )
+                {
+                    return mapKeep.find( key ) == mapKeep.end() && mapSurfaceUse[key] == SW_FALSE;
+                };
+                for ( size_t group = 0; group < listTag.size(); ++group )
+                {
+                    for ( const vector<uint64>& loop : listGroupLoop[group] )
+                    {
+                        for ( const uint64 key : loop )
+                            bAnyRemoved = bAnyRemoved || isRemovable( key );
+                    }
+                }
+                if ( bAnyRemoved == false )
+                    return;
+
+                // 다시 짓기 — 고리에서 뺄 점을 빼고 평면 기준 축으로 귀 자르기. 한 무리라도 막히면 그 무리의 점을 모두 남기고 처음부터 다시 한다
+                // (그 무리만 원래 삼각형을 두면 이웃이 뺀 점과 T 자 이음이 생긴다).
+                vector<uint8>    listDrop( inoutListTriangle.size(), 0 );
+                vector<Triangle> listNew;
+                for ( uint32 attempt = 0; attempt < 4; ++attempt )
+                {
+                    listDrop.assign( inoutListTriangle.size(), 0 );
+                    listNew.clear();
+                    bool bFailed = false;
+                    for ( size_t group = 0; group < listTag.size() && bFailed == false; ++group )
+                    {
+                        if ( listRebuild[group] == SW_FALSE )
+                            continue;
+                        const Triangle& sample = inoutListTriangle[listGroupTriangle[group][0]];
+                        const float3    normal{ sample._arrVertex[0]._arrNormal[0], sample._arrVertex[0]._arrNormal[1], sample._arrVertex[0]._arrNormal[2] };
+                        float3          axisU{};
+                        float3          axisV{};
+                        makePlaneBasis( normal, axisU, axisV );
+                        vector<float3>         listPoint3;
+                        vector<float2>         listPoint2;
+                        vector<vector<uint32>> listLoopIndex;
+                        for ( const vector<uint64>& loop : listGroupLoop[group] )
+                        {
+                            vector<uint32> listLoopCorner;
+                            for ( const uint64 key : loop )
+                            {
+                                if ( isRemovable( key ) )
+                                    continue;
+                                const float3& point = mapPoint[key];
+                                listLoopCorner.push_back( static_cast<uint32>( listPoint3.size() ) );
+                                listPoint3.push_back( point );
+                                listPoint2.push_back( float2{ point.dot( axisU ), point.dot( axisV ) } );
+                            }
+                            listLoopIndex.push_back( std::move( listLoopCorner ) );
+                        }
+                        vector<uint32> listIndex;
+                        if ( PolygonTriangulationUtil::triangulate( listPoint2, listLoopIndex, listIndex ) == false )
+                        {
+                            for ( const vector<uint64>& loop : listGroupLoop[group] )
+                            {
+                                for ( const uint64 key : loop )
+                                    mapKeep[key] = SW_TRUE;
+                            }
+                            listRebuild[group] = SW_FALSE;
+                            bFailed            = true;
+                            break;
+                        }
+                        for ( const uint32 index : listGroupTriangle[group] )
+                            listDrop[index] = 1;
+                        for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
+                        {
+                            Triangle cap;
+                            cap._tag = listTag[group];
+                            for ( uint32 corner = 0; corner < 3; ++corner )
+                            {
+                                const uint32 pointIndex = listIndex[index + corner];
+                                RHIVertex&   vertex     = cap._arrVertex[corner];
+                                vertex                  = sample._arrVertex[0];
+                                setPosition( vertex, listPoint3[pointIndex] );
+                                vertex._arrUv[0] = listPoint2[pointIndex]._x * settings._interiorUvScale;
+                                vertex._arrUv[1] = listPoint2[pointIndex]._y * settings._interiorUvScale;
+                            }
+                            if ( hasDistinctCorners( cap ) )
+                                listNew.push_back( cap );
+                        }
+                    }
+                    if ( bFailed == false )
+                        break;
+                    if ( attempt == 3 )
+                        return; // 계속 막히면 손대지 않는다
+                }
+                vector<Triangle> listResult;
+                listResult.reserve( inoutListTriangle.size() );
+                for ( uint32 index = 0; index < static_cast<uint32>( inoutListTriangle.size() ); ++index )
+                {
+                    if ( listDrop[index] == 0 )
+                        listResult.push_back( inoutListTriangle[index] );
+                }
+                listResult.insert( listResult.end(), listNew.begin(), listNew.end() );
+                inoutListTriangle = std::move( listResult );
+            }
+
             static vector_reference<const RHIVertex> asVertices( const vector<Triangle>& listTriangle, vector<RHIVertex>& outListScratch )
             {
                 outListScratch.clear();
@@ -1060,6 +1323,7 @@ namespace sw
                     }
                 }
             }
+            MeshFractureInternal::simplifyCaps( listPieceTriangle, settings );
             listSitePiece[site]   = std::move( listPieceTriangle );
             listSiteSurface[site] = std::move( listSurfaceTriangle );
         }

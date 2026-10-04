@@ -88,6 +88,8 @@ namespace sw
     /** @brief 메시 쪼개기 함수 모음입니다(전부 static). */
     struct SW_API MeshFractureUtil
     {
+        /** @brief 쪼개기 결과를 바꾸는 고침마다 올립니다 — 임포트 원본 해시에 섞여 쿠킹한 `.fracture` 가 어긋남이 된다(형식 버전과 따로). */
+        static constexpr uint32 kAlgorithmVersion = 1;
         /**
          * @brief 인덱스 없는 삼각형 목록을 쪼개 @p outAsset 을 채웁니다.
          * @details `_volume` 이 Mesh 가 아니면 대리 부피(경계 상자 · 볼록 껍질)를 쪼개 안쪽 면 · 껍질 · 부피를 얻고, 겉면은 원래 메시를 같은 평면으로

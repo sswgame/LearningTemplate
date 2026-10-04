@@ -1466,7 +1466,7 @@ namespace sw::editor
         const string fractureText  = rule.makeFractureHashText();
         if ( fractureText.empty() == false )
         {
-            const string fractureVersion = fractureText + ";format=" + to_string( FractureAsset::kVersion );
+            const string fractureVersion = fractureText + ";format=" + to_string( FractureAsset::kVersion ) + ";algorithm=" + to_string( MeshFractureUtil::kAlgorithmVersion );
             hash                         = StringUtil::computeHash64( fractureVersion.c_str(), fractureVersion.size(), false, hash );
         }
         // 곁 데이터(클립 반복 · 알림 · 커브)를 고쳐도 다시 임포트해야 한다.
