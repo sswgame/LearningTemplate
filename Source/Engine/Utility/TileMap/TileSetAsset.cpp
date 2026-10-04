@@ -7,6 +7,7 @@
 
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Utility/Xml/XmlNameCheck.h"
 
 namespace sw
 {
@@ -16,24 +17,6 @@ namespace sw
     {
         struct TileSetAssetInternal
         {
-            /** @brief 노드의 속성이 모두 @p arrKnown 안에 있는지 봅니다. 모르는 것이 있으면 알리고 false 입니다. */
-            template <size_t kCount>
-            static bool hasOnlyKnownAttributes( const XmlNode& node, const utf8* const ( &arrKnown )[kCount], string_view sourceName )
-            {
-                for ( XmlAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
-                {
-                    bool bKnown = false;
-                    for ( const utf8* pKnown : arrKnown )
-                        bKnown = bKnown || StringUtil::equals( attribute.getName(), pKnown, true );
-                    if ( bKnown == false )
-                    {
-                        SW_LOG_ERROR( "%#: unknown attribute '%#' on <%#>", sourceName, attribute.getName(), node.getName() );
-                        return false;
-                    }
-                }
-                return true;
-            }
-
             /** @brief 공백으로 나뉜 정수 목록을 읽습니다. 숫자가 아닌 것이 있으면 false 입니다. */
             [[nodiscard]] static bool parseIntList( string_view text, vector<int32>& outListValue )
             {
@@ -177,7 +160,7 @@ namespace sw
             return false;
         }
         static constexpr const utf8* kArrRootAttribute[] = { "name", "atlas", "normalAtlas", "columns", "rows", "tileSize" };
-        if ( Internal::hasOnlyKnownAttributes( root, kArrRootAttribute, sourceName ) == false )
+        if ( XmlNameCheck::reportUnknownAttributes( root, kArrRootAttribute, sourceName ) == false )
             return false;
 
         TileSetAsset loaded;
@@ -201,7 +184,7 @@ namespace sw
                 return false;
             }
             static constexpr const utf8* kArrBrushAttribute[] = { "name", "cell", "frames", "fps", "solid", "navCost", "outside" };
-            if ( Internal::hasOnlyKnownAttributes( node, kArrBrushAttribute, sourceName ) == false )
+            if ( XmlNameCheck::reportUnknownAttributes( node, kArrBrushAttribute, sourceName ) == false )
                 return false;
 
             TileBrush         brush{};
@@ -238,7 +221,7 @@ namespace sw
                     return false;
                 }
                 static constexpr const utf8* kArrRuleAttribute[] = { "pattern", "cell", "frames", "fps" };
-                if ( Internal::hasOnlyKnownAttributes( ruleNode, kArrRuleAttribute, sourceName ) == false )
+                if ( XmlNameCheck::reportUnknownAttributes( ruleNode, kArrRuleAttribute, sourceName ) == false )
                     return false;
                 TileRule rule{};
                 if ( Internal::parsePattern( ruleNode.getAttributeText( "pattern" ), rule._arrNeighbor ) == false )

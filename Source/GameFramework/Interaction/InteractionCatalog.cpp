@@ -7,6 +7,7 @@
 
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Utility/Xml/XmlNameCheck.h"
 
 #include "GameFramework/Data/GameDataCache.h"
 #include "GameFramework/Data/GameDataXml.h"
@@ -30,18 +31,7 @@ namespace sw
             template <size_t Count>
             static bool checkAttributes( const XmlNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
             {
-                bool bValid = true;
-                for ( XmlAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-                {
-                    bool bKnown = false;
-                    for ( const utf8* pKnown : arrKnown )
-                        bKnown = bKnown || StringUtil::equals( attribute.getName(), pKnown, true );
-                    if ( bKnown )
-                        continue;
-                    SW_LOG_WARNING( "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), attribute.getName() );
-                    bValid = false;
-                }
-                return bValid;
+                return XmlNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning );
             }
 
             template <typename TEnum>

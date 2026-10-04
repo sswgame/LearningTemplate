@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Utility/Xml/XmlNameCheck.h"
 
 #include "GameFramework/Data/GameDataXml.h"
 
@@ -29,47 +30,18 @@ namespace sw
             static constexpr const utf8* kArrEncounterAttribute[] = { "id", "weight", "cost", "cooldown", "minTime", "minIntensity", "maxIntensity",
                                                                       "scale", "count", "maxCount", "minCycle", "areas", "pacing" };
 
-            template <size_t Count>
-            static bool isKnownName( const utf8* pName, const utf8* const ( &arrKnown )[Count] )
-            {
-                for ( const utf8* pKnown : arrKnown )
-                {
-                    if ( StringUtil::equals( pName, pKnown, true ) )
-                        return true;
-                }
-                return false;
-            }
-
             /** @brief 표에 없는 속성마다 경고합니다. @p bCondition 이면 일정 조건 속성도 받습니다. 모르는 것이 있으면 false 입니다. */
             template <size_t Count>
             static bool validateAttributes( const XmlNode& node, const utf8* const ( &arrKnown )[Count], bool bCondition, string_view sourceName )
             {
-                bool bValid = true;
-                for ( XmlAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-                {
-                    const utf8* pName  = attribute.getName();
-                    const bool  bKnown = isKnownName( pName, arrKnown ) || ( bCondition && ScheduleCondition::isConditionAttribute( pName ) );
-                    if ( bKnown )
-                        continue;
-                    SW_LOG_WARNING( "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), pName );
-                    bValid = false;
-                }
-                return bValid;
+                return XmlNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning, bCondition ? &ScheduleCondition::isConditionAttribute : nullptr );
             }
 
             /** @brief @p node 의 자식 중 @p arrKnown 에 없는 원소마다 경고합니다. 모르는 것이 있으면 false 입니다. */
             template <size_t Count>
             static bool validateChildren( const XmlNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
             {
-                bool bValid = true;
-                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
-                {
-                    if ( isKnownName( child.getName(), arrKnown ) )
-                        continue;
-                    SW_LOG_WARNING( "%#: <%#> has unknown element <%#>", sourceName, node.getName(), child.getName() );
-                    bValid = false;
-                }
-                return bValid;
+                return XmlNameCheck::reportUnknownChildren( node, arrKnown, sourceName, LogLevel::Warning );
             }
 
             template <size_t Count>
