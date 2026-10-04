@@ -384,6 +384,12 @@ cd build/Ninja-Debug/Bin
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
 
+- **커버리지 안내 퍼징(libFuzzer)은 Windows 에서 엔진과 링크되지 않는다** — `clang_rt.fuzzer-x86_64.lib` 가 정적 CRT(/MT)뿐이라 동적 CRT(/MD) 엔진과 LNK2038.
+  `LoaderFuzzTest`(시드 고정 변이)가 같은 대상 표(`Test/EngineTest/LoaderFuzzTargets.cpp`)를 돈다. 리눅스 clang 에서 `LLVMFuzzerTestOneInput` 하나로 그 표를 붙이고
+  ASan 과 같이 돌린다(서드파티 디코더만 떼어 /MT 로 돌리면 Windows 에서도 된다 — stb_vorbis 를 그렇게 확인했다).
+- **stb_vorbis 1.22 는 조작한 설정 헤더(코드북 항목 수)로 수백 MB ~ GB 를 할당한다**(libFuzzer OOM, 주석 헤더 길이 검사 뒤에도 남는다). 죽지는 않지만
+  4 KB 파일 하나로 메모리를 다 쓸 수 있다 — `stb_vorbis_alloc` 고정 버퍼로 상한을 두거나 vcpkg 판을 올린다(CVE-2023-4567x 묶음이 고쳐진 판).
+
 
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
@@ -395,6 +401,7 @@ cd build/Ninja-Debug/Bin
 
 - **`NetworkThreadTest.ConnectionsSurviveStalledGameThread` 의 50 ms 왕복 단언이 `-j 4` 부하에서 한 번 졌다**(2026-10-04 Shipping, 다시 돌리면 통과).
   시간 상한 단언은 부하에 진다 — 다시 지면 상한을 늘리지 말고 "멈춘 게임 스레드에도 연결이 산다" 를 시간 대신 순서로 볼 수 있는지 본다.
+
 - **`-gv_profileFrames=90000` 실행이 약 60 초에 종료 0 · 스크린샷 없이 끝났다**(2026-10-04). 프로파일 세션에 시간 상한이 있는지부터 본다.
 
 - **`ReflectionTest_Shard2` 가 부하 아래에서 30 초 시한에 닿는다**(혼자 18~21 초, CI-Debug `-j 4` 중 다른 빌드와 겹친 1 회 초과). 또 보이면 샤드를 늘린다.
