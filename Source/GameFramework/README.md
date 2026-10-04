@@ -93,7 +93,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   - **시뮬레이션 · 생활** (`Kits/Simulation/`)
     - `Farming`: 농장 생활(하베스트 문 장르) — 달력(`FarmCalendar`: 6:00–26:00 하루 · 28 일 계절 · 해), 작물 XML 카탈로그(`CropCatalog`),
       밭(`FarmField`: 갈기 · 물 · 심기 · 거두기, 물 받은 날만 자람, 다시 열림, 철 지나면 시듦, 비), 인벤토리 · 출하 정산(`FarmInventory`).
-    - `CreatureLife`: 생물 생활(포코피아 · 문스톤 아일랜드 장르) — 칸 패턴 서식지 레시피(회전 · 큰 것 먼저), 시간대 · 날씨 방문(결정적), 생물별 호감도(`ReputationState`) · 부탁(`QuestLog`), 능력 칸 변환 · 하루 횟수, 집 배정, 마을 매력도 단계(`CreatureTown`).
+    - `CreatureLife`: 생물 생활(포코피아 · 문스톤 아일랜드 장르) — 칸 패턴 서식지 레시피(회전 · 큰 것 먼저), 시간대 · 날씨 방문(결정적, 조건은 일정과 같은 `ScheduleCondition`), 생물별 호감도(`ReputationState`) · 부탁(`QuestLog`), 능력 칸 변환 · 하루 횟수, 집 배정, 마을 매력도 단계(`CreatureTown`).
     - `RestaurantSim`: 식당 경영(셰프 RPG 장르) — 메뉴(Crafting 레시피 · 숙련도 품질), 재료 신선도 묶음(`IngredientStock`), 시장 시세, 손님 도착 · 성향 · 인내, 요리사 · 스테이션 병렬 조리, 서빙 · 계산 · 팁, 별점 이동 평균, 일 결산(`RestaurantSimulation`).
     - `ThemePark`: 롤러코스터 타이쿤 — 조각으로 쌓는 코스터 트랙(`CoasterTrackBuilder`: 오르막 체인 · 낙하 · 언덕 · 뱅크 회전 · 클로소이드 루프 ·
       브레이크 · 부스터, XML 레이아웃), 고정 스텝 열차 물리(`CoasterTrain`), 시험 운행으로 흥분 · 강도 · 멀미 평가(`CoasterRideAnalyzer`),

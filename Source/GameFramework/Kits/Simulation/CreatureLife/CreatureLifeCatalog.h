@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/World/WorldClock.h"
@@ -81,11 +82,10 @@ namespace sw
         vector<hashed_string> _listHabitat{}; ///< 좋아하는 서식지(이 서식지가 생기면 찾아온다)
         vector<hashed_string> _listFood{};    ///< 좋아하는 음식(선물 점수 `_foodPoints`)
         vector<hashed_string> _listGift{};    ///< 좋아하는 선물(선물 점수 `_likedGiftPoints`)
-        vector<hashed_string> _listWeather{}; ///< 찾아오는 날씨(비면 언제나)
         vector<hashed_string> _listAbility{};
-        vector<hashed_string> _listRequest{};  ///< 이 생물이 하는 부탁(퀘스트 id)
-        float32               _chance{ 0.5f }; ///< 조건이 맞는 시간마다 찾아올 확률
-        uint8                 _phaseMask{ 0 }; ///< `makeDayPhaseBit` 의 합(0 이면 언제나)
+        vector<hashed_string> _listRequest{};    ///< 이 생물이 하는 부탁(퀘스트 id)
+        ScheduleCondition     _visitCondition{}; ///< 찾아오는 때(`phases`) · 날씨(`weathers`) — 비면 언제나. NPC 일정과 같은 조건 판정이다
+        float32               _chance{ 0.5f };   ///< 조건이 맞는 시간마다 찾아올 확률
 
         bool likesHabitat( const hashed_string& habitatId ) const;
         bool likesFood( const hashed_string& itemId ) const;
@@ -120,9 +120,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 하루의 때 → 마스크 비트입니다. */
-    constexpr uint8 makeDayPhaseBit( DayPhase phase ) { return static_cast<uint8>( 1u << static_cast<uint32>( phase ) ); }
-
     /**
      * @class CreatureLifeCatalog
      * @brief XML 형식입니다.
