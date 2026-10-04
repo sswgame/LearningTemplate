@@ -4,6 +4,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/Defines.h"
+    #include "Core/String/StringUtil.h"
     #include "Core/String/fixed_string.h"
 
     #include "Engine/Input/Devices/GamepadDevice.h"
@@ -239,36 +240,30 @@ namespace sw
             }
             case WM_CHAR:
             {
-                if ( event._wParam > 0 && event._wParam < 0x10000 )
-                {
-                    const utf16 wch = static_cast<utf16>( event._wParam );
-                    if ( wch >= 32 || wch == static_cast<utf16>( '\t' ) || wch == static_cast<utf16>( '\n' ) || wch == static_cast<utf16>( '\r' ) )
-                    {
-                        utf8   arrUtf8[4] = {};
-                        size_t utf8Len    = 0;
-                        if ( wch < 0x80 )
-                        {
-                            arrUtf8[0] = static_cast<utf8>( wch );
-                            utf8Len    = 1;
-                        }
-                        else if ( wch < 0x800 )
-                        {
-                            arrUtf8[0] = static_cast<utf8>( 0xC0 | ( ( wch >> 6 ) & 0x1F ) );
-                            arrUtf8[1] = static_cast<utf8>( 0x80 | ( wch & 0x3F ) );
-                            utf8Len    = 2;
-                        }
-                        else
-                        {
-                            arrUtf8[0] = static_cast<utf8>( 0xE0 | ( ( wch >> 12 ) & 0x0F ) );
-                            arrUtf8[1] = static_cast<utf8>( 0x80 | ( ( wch >> 6 ) & 0x3F ) );
-                            arrUtf8[2] = static_cast<utf8>( 0x80 | ( wch & 0x3F ) );
-                            utf8Len    = 3;
-                        }
+                // BMP 밖 글자(이모지 · 확장 한자)는 높은 · 낮은 서로게이트 WM_CHAR 두 개로 온다. 높은 반쪽은 다음 WM_CHAR 까지 들고 있다가
+                // 짝과 합쳐 한 글자(UTF-8 4 바이트)로 보낸다. 짝 없는 반쪽은 U+FFFD 한 글자다(`StringUtil::utf16ToUtf8` 과 같은 규칙).
+                if ( event._wParam == 0 || event._wParam >= 0x10000 )
+                    break;
+                const uint32 codeUnit         = static_cast<uint32>( event._wParam );
+                const uint32 highSurrogate    = _pendingHighSurrogate;
+                const bool   bIsHighSurrogate = 0xD800 <= codeUnit && codeUnit <= 0xDBFF;
+                const bool   bIsLowSurrogate  = 0xDC00 <= codeUnit && codeUnit <= 0xDFFF;
+                _pendingHighSurrogate         = bIsHighSurrogate ? static_cast<uint16>( codeUnit ) : uint16{ 0 };
 
-                        const string_view svText( reinterpret_cast<const utf8*>( arrUtf8 ), utf8Len );
-                        postRawEvent( RawInputEvent::makeTextInput( svText ) );
-                    }
-                }
+                string text;
+                uint32 codepoint = codeUnit;
+                if ( highSurrogate != 0 && bIsLowSurrogate )
+                    codepoint = 0x10000 + ( ( highSurrogate - 0xD800 ) << 10 ) + ( codeUnit - 0xDC00 );
+                else if ( highSurrogate != 0 )
+                    StringUtil::appendUtf8( text, 0xFFFD ); // 짝을 잃은 앞 반쪽
+                else if ( bIsLowSurrogate )
+                    codepoint = 0xFFFD;
+
+                const bool bIsText = bIsHighSurrogate == false && ( codepoint >= 32 || codepoint == '\t' || codepoint == '\n' || codepoint == '\r' );
+                if ( bIsText )
+                    StringUtil::appendUtf8( text, codepoint );
+                if ( text.empty() == false )
+                    postRawEvent( RawInputEvent::makeTextInput( text ) );
                 break;
             }
             case WM_IME_COMPOSITION:

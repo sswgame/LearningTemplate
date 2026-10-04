@@ -248,6 +248,7 @@ namespace sw
         GamepadConnectionDelegate            _onGamepadConnectionChanged;
         TextInputDelegate                    _onTextInput;
         TextInputDelegate                    _onTextComposition;
+        [[maybe_unused]] uint16              _pendingHighSurrogate; /**< 짝을 기다리는 서로게이트 앞 반쪽(Win32 WM_CHAR). 0 이면 없음. */
         uint8                                _bInitialized : 1;
         uint8                                _bInputMuted  : 1;
         [[maybe_unused]] uint8               _reserved     : 6;

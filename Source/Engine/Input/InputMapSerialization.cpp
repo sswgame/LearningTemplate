@@ -6,6 +6,7 @@
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 /**
@@ -13,7 +14,8 @@
  * @brief InputMap XML 로드(디자인 타임 기본 바인딩)와 유저 바인딩 저장 · 로드(런타임 리매핑 영속화)입니다.
  *
  * 두 XML 포맷은 용도가 다릅니다.
- *  - loadFromResource() : Resource/ 의 InputMap XML(레이어-액션-기본 바인딩 정의)을 읽어 InputMap 을 처음 구성합니다.
+ *  - loadFromResource() / saveToResource() : Resource/ 의 InputMap XML(레이어-액션-기본 바인딩 정의)을 읽어 InputMap 을 처음 구성하고,
+ *    에디터 InputMap 패널이 편집한 정의를 같은 형식 · 같은 자리에 다시 씁니다.
  *  - saveUserBindings()/loadUserBindings() : 플레이어가 키를 리매핑한 결과를 저장 · 복원하는 별도의 유저 바인딩 XML 입니다.
  *  - actionTriggerFromName()/actionTriggerToName() : 두 포맷이 함께 쓰는 ActionTrigger 이름 ↔ enum 변환 표입니다.
  */
@@ -46,6 +48,8 @@ namespace sw
                 static constexpr const utf8* kAttrCode            = "code";
                 static constexpr const utf8* kAttrModifier        = "modifier";
                 static constexpr const utf8* kAttrDeadzone        = "deadzone";
+                static constexpr const utf8* kAttrValueType       = "valueType";
+                static constexpr const utf8* kAttrPad             = "pad";
                 static constexpr const utf8* kSourceKey           = "key";
                 static constexpr const utf8* kSourceGamepad       = "gamepad";
                 static constexpr const utf8* kSourceMouse         = "mouse";
@@ -78,6 +82,142 @@ namespace sw
                 {        "Repeat",         ActionTrigger::Repeat},
                 {     "NavRepeat",         ActionTrigger::Repeat},
             };
+
+            struct ValueTypeNameEntry
+            {
+                const utf8*          _pName;
+                InputActionValueType _valueType;
+            };
+
+            static constexpr ValueTypeNameEntry kArrValueTypeNames[] = {
+                {"Boolean", InputActionValueType::Boolean},
+                { "Axis1D",  InputActionValueType::Axis1D},
+                { "Axis2D",  InputActionValueType::Axis2D},
+            };
+
+            static const utf8* toValueTypeName( InputActionValueType valueType )
+            {
+                for ( const ValueTypeNameEntry& entry : kArrValueTypeNames )
+                {
+                    if ( entry._valueType == valueType )
+                        return entry._pName;
+                }
+                return kArrValueTypeNames[0]._pName;
+            }
+
+            /** @brief 값 종류 이름을 읽습니다. 모르는 이름이면 false 입니다. */
+            [[nodiscard]] static bool tryParseValueType( string_view name, InputActionValueType& outValueType )
+            {
+                for ( const ValueTypeNameEntry& entry : kArrValueTypeNames )
+                {
+                    if ( StringUtil::equals( name, entry._pName, true ) )
+                    {
+                        outValueType = entry._valueType;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            /**
+             * @brief 바인딩 하나를 `<InputMap>` 의 액션 노드 아래에 `loadFromResource` 가 읽는 모양으로 씁니다.
+             * @return `<InputMap>` 형식에 자리가 없는 종류(가상 조이스틱 · 단축키 · 아무 키)면 오류를 남기고 false 입니다 —
+             *         빼고 쓰면 다시 읽을 때 그 바인딩이 조용히 사라진다.
+             */
+            [[nodiscard]] static bool writeDefinitionBinding( XmlNode actionNode, const utf8* pActionName, const ActionBinding& binding )
+            {
+                const utf8* pTriggerName = InputMap::actionTriggerToName( binding._trigger );
+                switch ( binding._kind )
+                {
+                    case BindingKind::SingleSlot:
+                    {
+                        const InputSlot& slot     = binding._arrSlot[0];
+                        XmlNode          bindNode = actionNode.appendChild( InputMapXml::kBind );
+                        if ( slot._deviceKind == InputDeviceKind::Keyboard )
+                        {
+                            bindNode.appendAttribute( InputMapXml::kAttrSource, InputMapXml::kSourceKey );
+                            bindNode.appendAttribute( InputMapXml::kAttrCode, KeyCodeUtil::toName( static_cast<Key>( slot._controlIndex ) ) );
+                        }
+                        else if ( slot._deviceKind == InputDeviceKind::Mouse )
+                        {
+                            bindNode.appendAttribute( InputMapXml::kAttrSource, InputMapXml::kSourceMouse );
+                            bindNode.appendAttribute( InputMapXml::kAttrCode, MouseButtonUtil::toName( static_cast<MouseButton>( slot._controlIndex ) ) );
+                        }
+                        else if ( slot._deviceKind == InputDeviceKind::Gamepad )
+                        {
+                            bindNode.appendAttribute( InputMapXml::kAttrSource, InputMapXml::kSourceGamepad );
+                            bindNode.appendAttribute( InputMapXml::kAttrCode, GamepadButtonUtil::toName( static_cast<GamepadButton>( slot._controlIndex ) ) );
+                            bindNode.appendAttribute( InputMapXml::kAttrPad, static_cast<int32>( slot._deviceIndex ) );
+                        }
+                        else
+                        {
+                            SW_LOG_ERROR( "Action '%#' has a binding on a device the <InputMap> format cannot name - not saved", pActionName );
+                            return false;
+                        }
+                        if ( pTriggerName != nullptr )
+                            bindNode.appendAttribute( InputMapXml::kAttrTrigger, pTriggerName );
+                        bindNode.appendAttribute( InputMapXml::kAttrLayer, binding._layer.c_str() );
+                        return true;
+                    }
+                    case BindingKind::Chord:
+                    {
+                        XmlNode chordNode = actionNode.appendChild( "chord" );
+                        chordNode.appendAttribute( "modifier", KeyCodeUtil::toName( static_cast<Key>( binding._arrSlot[0]._controlIndex ) ) );
+                        chordNode.appendAttribute( "trigger", KeyCodeUtil::toName( static_cast<Key>( binding._arrSlot[1]._controlIndex ) ) );
+                        if ( pTriggerName != nullptr )
+                            chordNode.appendAttribute( "triggerMode", pTriggerName );
+                        chordNode.appendAttribute( InputMapXml::kAttrLayer, binding._layer.c_str() );
+                        return true;
+                    }
+                    case BindingKind::Axis1DComposite:
+                    {
+                        XmlNode axisNode = actionNode.appendChild( "axis1d" );
+                        axisNode.appendAttribute( "negative", KeyCodeUtil::toName( static_cast<Key>( binding._arrSlot[0]._controlIndex ) ) );
+                        axisNode.appendAttribute( "positive", KeyCodeUtil::toName( static_cast<Key>( binding._arrSlot[1]._controlIndex ) ) );
+                        axisNode.appendAttribute( InputMapXml::kAttrLayer, binding._layer.c_str() );
+                        return true;
+                    }
+                    case BindingKind::Vector2DComposite:
+                    {
+                        XmlNode compNode = actionNode.appendChild( "vector2d" );
+                        compNode.appendAttribute( "up", KeyCodeUtil::toName( static_cast<Key>( binding._arrSlot[0]._controlIndex ) ) );
+                        compNode.appendAttribute( "down", KeyCodeUtil::toName( static_cast<Key>( binding._arrSlot[1]._controlIndex ) ) );
+                        compNode.appendAttribute( "left", KeyCodeUtil::toName( static_cast<Key>( binding._arrSlot[2]._controlIndex ) ) );
+                        compNode.appendAttribute( "right", KeyCodeUtil::toName( static_cast<Key>( binding._arrSlot[3]._controlIndex ) ) );
+                        compNode.appendAttribute( InputMapXml::kAttrDeadzone, binding._deadzone );
+                        compNode.appendAttribute( InputMapXml::kAttrLayer, binding._layer.c_str() );
+                        return true;
+                    }
+                    case BindingKind::GamepadStick2D:
+                    {
+                        XmlNode stickNode = actionNode.appendChild( "stick" );
+                        stickNode.appendAttribute( "stick", binding._stick == GamepadStick::Right ? "Right" : "Left" );
+                        stickNode.appendAttribute( InputMapXml::kAttrPad, static_cast<int32>( binding._deviceIndex ) );
+                        stickNode.appendAttribute( InputMapXml::kAttrDeadzone, binding._deadzone );
+                        stickNode.appendAttribute( "outerDeadzone", binding._outerDeadzone );
+                        stickNode.appendAttribute( "responseExponent", binding._responseExponent );
+                        stickNode.appendAttribute( InputMapXml::kAttrLayer, binding._layer.c_str() );
+                        return true;
+                    }
+                    case BindingKind::MouseDelta2D:
+                    {
+                        XmlNode deltaNode = actionNode.appendChild( "mouseDelta" );
+                        deltaNode.appendAttribute( "scale", binding._scale );
+                        deltaNode.appendAttribute( InputMapXml::kAttrLayer, binding._layer.c_str() );
+                        return true;
+                    }
+                    case BindingKind::VirtualJoystick2D:
+                    case BindingKind::Shortcut:
+                    case BindingKind::AnyKey:
+                    case BindingKind::Count:
+                    {
+                        SW_LOG_ERROR( "Action '%#' has a %# binding, which the <InputMap> format cannot hold - not saved", pActionName,
+                                      BindingKinds::toName( binding._kind ) );
+                        return false;
+                    }
+                }
+                return false;
+            }
 
             /**
              * @brief `pad` 속성을 슬롯 범위(0 ~ `kMaxGamepadSlot` - 1)에서 읽습니다. 없으면 0 번 패드입니다.
@@ -166,6 +306,17 @@ namespace sw
             if ( StringUtil::isNullOrEmpty( pActionName ) )
                 return;
 
+            // 값 종류를 적은 액션은 바인딩보다 먼저 만든다 — 바인딩 없이 이름만 있는 액션(에디터의 "Add Action")도 다시 읽힌다.
+            const utf8* pValueTypeAttr = actionNode.findAttribute( InputMapSerializationInternal::InputMapXml::kAttrValueType );
+            if ( pValueTypeAttr != nullptr )
+            {
+                InputActionValueType valueType{ InputActionValueType::Boolean };
+                if ( InputMapSerializationInternal::tryParseValueType( pValueTypeAttr, valueType ) )
+                    createAction( hashed_string( pActionName ), valueType );
+                else
+                    SW_LOG_WARNING( "Action '%#' has an unknown valueType '%#' - the bindings decide it", pActionName, pValueTypeAttr );
+            }
+
             hashed_string layer      = inheritedLayer.empty() ? _defaultLayerName : hashed_string( inheritedLayer );
             const utf8*   pLayerAttr = actionNode.findAttribute( InputMapSerializationInternal::InputMapXml::kAttrLayer );
             if ( StringUtil::isNullOrEmpty( pLayerAttr ) == false )
@@ -249,8 +400,9 @@ namespace sw
                     else
                     {
                         const GamepadButton button = GamepadButtonUtil::fromName( pCode );
-                        if ( button != GamepadButton::Count )
-                            bind( hashed_string( pActionName ), button, trigger, hashed_string( bindLayer.view() ) );
+                        uint8               padIndex{ 0 };
+                        if ( button != GamepadButton::Count && InputMapSerializationInternal::tryGetPadIndex( bindNode, padIndex ) )
+                            bind( hashed_string( pActionName ), InputSlot::fromGamepadButton( button, padIndex ), trigger, hashed_string( bindLayer.view() ) );
                     }
                 }
                 else if ( StringUtil::equals( pSource, InputMapSerializationInternal::InputMapXml::kSourceMouse, true ) )
@@ -381,6 +533,58 @@ namespace sw
             loadAction( actionNode, _defaultLayerName.view() );
         }
 
+        return true;
+    }
+
+    bool InputMap::saveToResource( string_view relativePath ) const
+    {
+        if ( relativePath.empty() )
+            return false;
+
+        using InputMapXml = InputMapSerializationInternal::InputMapXml;
+        XmlDocument doc;
+        XmlNode     root = doc.appendRoot( InputMapXml::kRoot );
+        root.appendAttribute( InputMapXml::kAttrDefaultLayer, _defaultLayerName.c_str() );
+        root.appendAttribute( InputMapXml::kAttrDoubleClick, _doubleClickTime );
+        root.appendAttribute( InputMapXml::kAttrDoubleClickDist, _doubleClickMaxDistance );
+        root.appendAttribute( InputMapXml::kAttrHoldThreshold, _holdThreshold );
+
+        XmlNode layersNode = root.appendChild( InputMapXml::kLayers );
+        for ( const hashed_string& layerName : _listLayerName )
+        {
+            const LayerDefinition* pLayer = findLayer( layerName );
+            if ( pLayer == nullptr )
+                continue;
+            XmlNode layerNode = layersNode.appendChild( InputMapXml::kLayer );
+            layerNode.appendAttribute( InputMapXml::kAttrName, layerName.c_str() );
+            layerNode.appendAttribute( InputMapXml::kAttrPriority, pLayer->_priority );
+            layerNode.appendAttribute( InputMapXml::kAttrEnabled, pLayer->_bEnabled != SW_FALSE );
+            layerNode.appendAttribute( InputMapXml::kAttrBlockLower, pLayer->_bBlockLower != SW_FALSE );
+            layerNode.appendAttribute( InputMapXml::kAttrAlwaysOn, pLayer->_bAlwaysOn != SW_FALSE );
+        }
+
+        // 액션은 등록 순서로 쓴다 — 다시 읽은 맵의 액션 순서가 같다. 바인딩마다 레이어 · 트리거를 적어 액션 기본값에 기대지 않는다.
+        bool bAllWritten = true;
+        for ( const hashed_string& actionName : _listActionName )
+        {
+            const ActionEntry* pEntry = findAction( actionName );
+            if ( pEntry == nullptr )
+                continue;
+            XmlNode actionNode = root.appendChild( InputMapXml::kAction );
+            actionNode.appendAttribute( InputMapXml::kAttrName, actionName.c_str() );
+            actionNode.appendAttribute( InputMapXml::kAttrValueType, InputMapSerializationInternal::toValueTypeName( pEntry->_valueType ) );
+            for ( const ActionBinding& binding : pEntry->_listBinding )
+                bAllWritten = InputMapSerializationInternal::writeDefinitionBinding( actionNode, actionName.c_str(), binding ) && bAllWritten;
+        }
+        if ( bAllWritten == false )
+            return false;
+
+        const string absPath = ResourceUtil::getWritePath( relativePath );
+        if ( doc.saveFile( absPath ) == false )
+        {
+            SW_LOG_ERROR( "Could not write InputMap %#", absPath );
+            return false;
+        }
         return true;
     }
 
