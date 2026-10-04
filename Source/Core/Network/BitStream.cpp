@@ -188,6 +188,17 @@ namespace sw
         return static_cast<int64>( zigZag >> 1 ) ^ -static_cast<int64>( zigZag & 1u );
     }
 
+    bool BitReader::skipBytes( int32 byteCount )
+    {
+        if ( byteCount < 0 || _bitPosition + byteCount * 8 > _bitCapacity )
+        {
+            _bOverflow = SW_TRUE;
+            return false;
+        }
+        _bitPosition += byteCount * 8;
+        return true;
+    }
+
     bool BitReader::readBytes( uint8* pOutData, int32 byteCount )
     {
         if ( byteCount < 0 || _bitPosition + byteCount * 8 > _bitCapacity )

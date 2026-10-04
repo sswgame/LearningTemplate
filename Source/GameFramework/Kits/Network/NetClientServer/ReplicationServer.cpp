@@ -186,17 +186,23 @@ namespace sw
         // 새 것부터 실려 있다 — 이미 쓴 틱 · 이미 가진 틱은 건너뛴다.
         for ( uint32 index = 0; index < count && index <= latestTick; ++index )
         {
-            const uint32  tick = latestTick - index;
-            vector<uint8> inputBuffer( static_cast<size_t>( MathUtil::min<uint64>( 255, reader.readVarUint() ) ) );
-            if ( inputBuffer.empty() == false && reader.readBytes( inputBuffer.data(), static_cast<int32>( inputBuffer.size() ) ) == false )
+            const uint32 tick      = latestTick - index;
+            const int32  byteCount = static_cast<int32>( MathUtil::min<uint64>( 255, reader.readVarUint() ) );
+            // 쓸 틱인지 먼저 본다 — 같은 입력이 여러 패킷에 겹쳐 실려 오므로(최대 32 개) 대부분은 버릴 것이고, 버릴 것에는 버퍼를 잡지 않는다.
+            const auto inputIter    = std::lower_bound( client._listInput.begin(), client._listInput.end(), tick,
+                                                        []( const InputEntry& entry, uint32 value )
+               { return entry._tick < value; } );
+            const bool bAlreadyUsed = client._bHasInput && tick <= client._lastProcessedInputTick;
+            const bool bAlreadyHave = inputIter != client._listInput.end() && inputIter->_tick == tick;
+            if ( bAlreadyUsed || bAlreadyHave )
+            {
+                if ( reader.skipBytes( byteCount ) == false )
+                    return;
+                continue;
+            }
+            vector<uint8> inputBuffer( static_cast<size_t>( byteCount ) );
+            if ( byteCount > 0 && reader.readBytes( inputBuffer.data(), byteCount ) == false )
                 return;
-            if ( client._bHasInput && tick <= client._lastProcessedInputTick )
-                continue;
-            const auto inputIter = std::lower_bound( client._listInput.begin(), client._listInput.end(), tick,
-                                                     []( const InputEntry& entry, uint32 value )
-            { return entry._tick < value; } );
-            if ( inputIter != client._listInput.end() && inputIter->_tick == tick )
-                continue;
             client._listInput.insert( inputIter, InputEntry{ std::move( inputBuffer ), tick } );
         }
         while ( static_cast<int32>( client._listInput.size() ) > _settings._inputBufferSize )

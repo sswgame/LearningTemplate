@@ -140,6 +140,33 @@ SW_TEST_CASE( NetworkTest, BitStreamPacksRangesFloatsVarIntsAndDetectsOverflow )
     SW_EXPECT_TRUE( broken.hasOverflowed() );
 }
 
+/**
+ * @brief [NetworkTest] 필요 없는 페이로드는 읽지 않고 넘긴다 — 그 뒤 필드가 제자리에서 읽히고, 모자라면 움직이지 않는다
+ * @details 서버는 여러 패킷에 겹쳐 실려 오는 입력(최대 32 개) 가운데 이미 가진 틱을 버린다. 버릴 것까지 버퍼를 잡아 읽으면 입력 패킷마다
+ *          할당이 수십 번이다(`ReplicationServer::handleInput`).
+ */
+SW_TEST_CASE( NetworkTest, SkippedBytesLeaveTheFollowingFieldsInPlace )
+{
+    BitWriter writer;
+    writer.writeVarUint( 3 );
+    const uint8 arrPayload[3] = { 9, 8, 7 };
+    writer.writeBytes( arrPayload, 3 );
+    writer.writeVarUint( 4242 );
+
+    BitReader   reader( writer.getBytes().data(), writer.getByteCount() );
+    const int32 byteCount = static_cast<int32>( reader.readVarUint() );
+    SW_ASSERT_TRUE( reader.skipBytes( byteCount ) );
+    SW_EXPECT_EQUAL( 4242, static_cast<int32>( reader.readVarUint() ) );
+    SW_EXPECT_FALSE( reader.hasOverflowed() );
+
+    // 남은 것보다 많이 넘기라면 거부하고 자리를 지킨다.
+    BitReader   shortReader( writer.getBytes().data(), 2 );
+    const int32 position = shortReader.getBitPosition();
+    SW_EXPECT_FALSE( shortReader.skipBytes( 3 ) );
+    SW_EXPECT_EQUAL( position, shortReader.getBitPosition() );
+    SW_EXPECT_TRUE( shortReader.hasOverflowed() );
+}
+
 SW_TEST_CASE( NetworkTest, SequencesWrapAndSequenceBufferForgetsStaleEntries )
 {
     SW_EXPECT_TRUE( NetSequence::isGreater( 1, 65535 ) );

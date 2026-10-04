@@ -89,6 +89,8 @@ namespace sw
         int64              readVarInt();
         /** @brief @p byteCount 바이트를 읽습니다. 모자라면 false 이고 읽지 않습니다. */
         [[nodiscard]] bool readBytes( uint8* pOutData, int32 byteCount );
+        /** @brief @p byteCount 바이트를 읽지 않고 넘깁니다(필요 없는 페이로드 — 받을 버퍼를 잡지 않는다). 모자라면 false 이고 움직이지 않습니다. */
+        [[nodiscard]] bool skipBytes( int32 byteCount );
         void               alignToByte();
 
         bool  hasOverflowed() const { return _bOverflow != SW_FALSE; }

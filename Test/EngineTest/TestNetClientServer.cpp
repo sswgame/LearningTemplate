@@ -97,6 +97,53 @@ SW_TEST_CASE( NetClientServerTest, SnapshotDeltasCarryChangesRemovalsAndRespectB
     SW_EXPECT_EQUAL( static_cast<int32>( partial._listEntity.size() ), static_cast<int32>( partialDecoded._listEntity.size() ) );
 }
 
+/**
+ * @brief [NetClientServerTest] 겹쳐 실려 온 입력 가운데 이미 가진 틱은 넘기고, 그 뒤의 새 틱은 제 페이로드로 받는다
+ * @details 클라이언트는 최근 입력을 새 것부터 여러 개 겹쳐 보낸다. 서버는 이미 가진 틱의 페이로드를 버퍼 없이 넘기는데, 넘기는 길이가 틀리면
+ *          뒤따르는 새 틱이 남의 바이트를 입력으로 받는다.
+ */
+SW_TEST_CASE( NetClientServerTest, RedundantInputsSkipKnownTicksAndKeepLaterPayloads )
+{
+    ReplicationServer server;
+    server.initialize( nullptr, ReplicationServerSettings{}, nullptr );
+    const auto makeInputMessage = []( uint32 latestTick, const vector<vector<uint8>>& listPayload )
+    {
+        BitWriter writer;
+        writer.writeBits( NetClientServerMessage::kInput, 8 );
+        writer.writeVarUint( latestTick );
+        writer.writeVarUint( 0 );
+        writer.writeVarUint( listPayload.size() );
+        for ( const vector<uint8>& payload : listPayload )
+        {
+            writer.writeVarUint( payload.size() );
+            writer.writeBytes( payload.data(), static_cast<int32>( payload.size() ) );
+        }
+        return writer.getBytes();
+    };
+
+    // 틱 5 를 먼저 받는다. 다음 패킷은 6(새) · 5(이미 가짐) · 4(새) — 새 것부터.
+    SW_ASSERT_TRUE( server.handleMessage( 0, makeInputMessage( 5, {
+                                                                      { 5, 5, 5 }
+    } ) ) );
+    SW_ASSERT_TRUE( server.handleMessage( 0, makeInputMessage( 6, {
+                                                                      { 6, 6 },
+                                                                      { 5, 5, 5 },
+                                                                      { 4 }
+    } ) ) );
+
+    vector<uint8> input;
+    bool          bExact = false;
+    SW_ASSERT_TRUE( server.popInput( 0, 4, input, bExact ) );
+    SW_EXPECT_TRUE( bExact );
+    SW_ASSERT_EQUAL( size_t{ 1 }, input.size() );
+    SW_EXPECT_EQUAL( 4, static_cast<int32>( input[0] ) );
+    SW_ASSERT_TRUE( server.popInput( 0, 5, input, bExact ) );
+    SW_EXPECT_EQUAL( size_t{ 3 }, input.size() );
+    SW_ASSERT_TRUE( server.popInput( 0, 6, input, bExact ) );
+    SW_ASSERT_EQUAL( size_t{ 2 }, input.size() );
+    SW_EXPECT_EQUAL( 6, static_cast<int32>( input[1] ) );
+}
+
 SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCarriesRedundantInputs )
 {
     LoopbackNetwork    network( 11u );
