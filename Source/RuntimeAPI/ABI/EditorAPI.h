@@ -46,11 +46,18 @@ namespace sw
     /** @brief EditorModule 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportEditorApi). */
     using PFN_ExportEditorAPI = bool ( * )( EditorAPI* pOutApi );
 
-    /** @brief 헤드리스 텍스처 임포트 진입점의 형입니다(심볼 이름: `kImportEditorTexturesSymbol`). */
-    using PFN_ImportEditorTextures = int32 ( * )( uint32 checkOnly );
+    /** @brief 헤드리스 임포트가 다루는 원본 종류입니다. C ABI 로는 uint32 로 건넵니다. */
+    enum class EditorImportKind : uint32
+    {
+        Texture = 0, ///< `textures_raw/` 의 이미지 → DDS(`App --import-textures` · `--check-textures`)
+        Model   = 1, ///< `models_raw/` 의 glTF → `.mesh`(`App --import-models` · `--check-models`)
+    };
 
-    /** @brief `importEditorTextures` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --import-textures`). */
-    inline constexpr const utf8* kImportEditorTexturesSymbol = "importEditorTextures";
+    /** @brief 헤드리스 에셋 임포트 진입점의 형입니다(심볼 이름: `kImportEditorAssetsSymbol`). */
+    using PFN_ImportEditorAssets = int32 ( * )( uint32 kind, uint32 checkOnly );
+
+    /** @brief `importEditorAssets` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --import-textures` · `--import-models`). */
+    inline constexpr const utf8* kImportEditorAssetsSymbol = "importEditorAssets";
 } // namespace sw
 
 extern "C"
@@ -67,9 +74,9 @@ extern "C"
     SW_MODULE_API bool exportEditorApi( sw::EditorAPI* pOutApi );
 
     /**
-     * @brief 리소스 트리의 텍스처 원본(`textures_raw/`)을 `import.stamp` 와 대조하고, @p checkOnly 가 0 이면 어긋난 것을 DDS 로 임포트합니다.
+     * @brief 리소스 트리의 @p kind(`sw::EditorImportKind`) 원본을 그 폴더의 `import.stamp` 와 대조하고, @p checkOnly 가 0 이면 어긋난 것을 임포트합니다.
      * @details 에디터 인스턴스 · 창 · RHI 없이 부릅니다. 리소스 루트와 로거는 호스트(Engine)가 이미 세워 두었어야 합니다.
-     * @return 남은 문제 수입니다(0 이면 원본과 DDS 가 맞습니다). 설정을 읽지 못하면 음수입니다.
+     * @return 남은 문제 수입니다(0 이면 원본과 임포트 결과가 맞습니다). 설정을 읽지 못하거나 모르는 종류면 음수입니다.
      */
-    SW_MODULE_API int32 importEditorTextures( uint32 checkOnly );
+    SW_MODULE_API int32 importEditorAssets( uint32 kind, uint32 checkOnly );
 }

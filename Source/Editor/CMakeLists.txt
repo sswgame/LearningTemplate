@@ -29,6 +29,8 @@ if(NOT SW_SHIPPING_BUILD)
 			imguizmo
 			implot
 			Microsoft::DirectXTex
+			cgltf
+			meshoptimizer
 			sw_graphics_libs
 			sw_global_options
 	)

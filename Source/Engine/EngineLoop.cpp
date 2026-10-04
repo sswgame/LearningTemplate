@@ -330,17 +330,22 @@ namespace sw
                 return EngineInitResult::SkipDependents;
             }
 
-            // 텍스처 임포트 · 대조는 에디터 모듈이 한다(엔진은 에디터를 모른다). 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려
-            // 부르는 것은 App 이다(`ModuleHost::importTexturesWithEditorModule`).
+            // 원본 임포트 · 대조(텍스처 · 모델)는 에디터 모듈이 한다(엔진은 에디터를 모른다). 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려
+            // 부르는 것은 App 이다(`ModuleHost::importAssetsWithEditorModule`).
             bool bImportTextures = false;
             bool bCheckTextures  = false;
+            bool bImportModels   = false;
+            bool bCheckModels    = false;
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
-            if ( bImportTextures || bCheckTextures )
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_MODELS, bImportModels );
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_MODELS, bCheckModels );
+            const bool bAnyImport = bImportTextures || bCheckTextures || bImportModels || bCheckModels;
+            if ( bAnyImport )
             {
                 MemoryProfiler::captureMemoryLeakBaseline();
                 loop._bHeadless = true;
-                SW_LOG_INFO( "Starting Headless (%#Textures)...", bCheckTextures ? "Check" : "Import" );
+                SW_LOG_INFO( "Starting Headless (asset import/check)..." );
                 return EngineInitResult::SkipDependents;
             }
             return EngineInitResult::Succeeded;

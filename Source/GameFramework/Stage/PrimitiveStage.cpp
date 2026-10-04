@@ -117,24 +117,55 @@ namespace sw
     GameObject* PrimitiveStage::createMeshObject( const utf8* pName, const shared_ptr<Mesh>& mesh, const PrimitiveLook& look, const float3& position,
                                                   const float3& scale, const float3& rotation )
     {
+        if ( mesh == nullptr )
+            return nullptr;
+        MeshComponent* pMesh = addMeshObject( pName );
+        if ( pMesh == nullptr )
+            return nullptr;
+        pMesh->setMesh( mesh );
+        return placeMeshObject( *pMesh, look, position, scale, rotation );
+    }
+
+    GameObject* PrimitiveStage::createModelObject( const utf8* pName, string_view meshPath, const PrimitiveLook& look, const float3& position, const float3& scale,
+                                                   const float3& rotation )
+    {
+        MeshComponent* pMesh = addMeshObject( pName );
+        if ( pMesh == nullptr )
+            return nullptr;
+        pMesh->setMeshId( meshPath );
+        if ( pMesh->getRawMesh() == nullptr )
+        {
+            // 경고는 메시 캐시가 경로마다 한 번 남긴다.
+            GameObjectManager* pManager = getObjectManager();
+            pManager->destroyObject( pMesh->getOwner() );
+            return nullptr;
+        }
+        return placeMeshObject( *pMesh, look, position, scale, rotation );
+    }
+
+    MeshComponent* PrimitiveStage::addMeshObject( const utf8* pName )
+    {
         GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr || mesh == nullptr )
+        if ( pManager == nullptr )
             return nullptr;
         GameObject* pObject = pManager->createGameObject( hashed_string( pName ) );
         if ( pObject == nullptr )
             return nullptr;
         MeshComponent* pMesh = pObject->addComponent<MeshComponent>();
         if ( pMesh == nullptr )
-        {
             pManager->destroyObject( pObject );
-            return nullptr;
-        }
-        pMesh->setMesh( mesh );
-        applyLook( *pMesh, look );
-        pMesh->setLocalPosition( position );
-        pMesh->setLocalRotation( rotation );
-        pMesh->setLocalScale( scale );
-        pMesh->setVisible( true );
+        return pMesh;
+    }
+
+    GameObject* PrimitiveStage::placeMeshObject( MeshComponent& meshComponent, const PrimitiveLook& look, const float3& position, const float3& scale,
+                                                 const float3& rotation )
+    {
+        applyLook( meshComponent, look );
+        meshComponent.setLocalPosition( position );
+        meshComponent.setLocalRotation( rotation );
+        meshComponent.setLocalScale( scale );
+        meshComponent.setVisible( true );
+        GameObject* pObject = meshComponent.getOwner();
         _listObject.push_back( pObject->getHandle() );
         return pObject;
     }

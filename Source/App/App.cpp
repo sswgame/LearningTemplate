@@ -90,18 +90,25 @@ namespace sw
             if ( _engineLoop.didHeadlessTaskFail() )
                 return false;
 
-            // 텍스처 임포트는 에디터 모듈의 일이다. 엔진은 헤드리스로 세우기만 했고, 모듈을 올리는 것은 App 이다.
+            // 원본 임포트(텍스처 · 모델)는 에디터 모듈의 일이다. 엔진은 헤드리스로 세우기만 했고, 모듈을 올리는 것은 App 이다.
             const CommandLineManager* pHeadlessCommandLine = _engineLoop.getCommandLineManager();
             bool                      bImportTextures      = false;
             bool                      bCheckTextures       = false;
+            bool                      bImportModels        = false;
+            bool                      bCheckModels         = false;
             if ( pHeadlessCommandLine != nullptr )
             {
                 pHeadlessCommandLine->getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
                 pHeadlessCommandLine->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
+                pHeadlessCommandLine->getArgument( CommandLineArgument::IMPORT_MODELS, bImportModels );
+                pHeadlessCommandLine->getArgument( CommandLineArgument::CHECK_MODELS, bCheckModels );
             }
+            bool bSucceeded = true;
             if ( bImportTextures || bCheckTextures )
-                return ModuleHost::importTexturesWithEditorModule( bCheckTextures );
-            return true;
+                bSucceeded = ModuleHost::importAssetsWithEditorModule( EditorImportKind::Texture, bCheckTextures ) && bSucceeded;
+            if ( bImportModels || bCheckModels )
+                bSucceeded = ModuleHost::importAssetsWithEditorModule( EditorImportKind::Model, bCheckModels ) && bSucceeded;
+            return bSucceeded;
         }
 
         SplashWindow splash;

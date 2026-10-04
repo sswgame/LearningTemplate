@@ -332,9 +332,10 @@ cmake --build --preset Ninja-Debug
 | `--cook-shaders` | 창 없이 셰이더를 전부 쿠킹하고 끝냅니다(패스 종류 표 × 뷰 모드에서 요청을 모읍니다) |
 | `--cook-scenes --cooked-dir=<폴더>` | 창 없이 씬 · 프리팹 · 에셋 레지스트리를 쿠킹합니다. 소스 트리를 읽고, 모르는 컴포넌트(`MissingComponent`)가 든 씬은 실패로 셉니다 |
 | `--import-textures` · `--check-textures` | 창 없이 `textures_raw/` 의 원본을 DDS 로 임포트하거나, 원본 · 임포트 규칙 · DDS 가 `import.stamp` 와 맞는지 보기만 합니다. 에디터 모듈의 일이라 Dev 빌드에서만 됩니다 |
+| `--import-models` · `--check-models` | 창 없이 `models_raw/` 의 glTF(`.glb` · `.gltf`)를 `models/` 의 `.mesh` 로 임포트하거나, 원본과 `.mesh` 가 `import.stamp` 와 맞는지 보기만 합니다. Dev 빌드에서만 됩니다 |
 | `-gv_<이름>=<값>` | 전역 변수(`gv_*`)를 정합니다. 예: `-gv_rhiBackend=Vulkan` · `-gv_editorStartupScene=<씬 경로>` · `-gv_benchMeshes=8000 -gv_profileFrames=600` |
 
-헤드리스 작업(`--cook-shaders` · `--import-textures` · `--cook-scenes` · `--check-textures`)이 실패하면 `App.exe` 는 0 이 아닌 종료 코드로 끝납니다 — 쿠커 스크립트가 그것을 봅니다.
+헤드리스 작업(`--cook-shaders` · `--import-textures` · `--import-models` · `--cook-scenes` · `--check-textures` · `--check-models`)이 실패하면 `App.exe` 는 0 이 아닌 종료 코드로 끝납니다 — 쿠커 스크립트가 그것을 봅니다.
 `SW_TEST_GLOBAL_VARIABLE_*` 로 선언한 진단 · 벤치 변수는 에디터 패널에 보이지 않고, `SW_KEEP_IN_SHIPPING` 을 준 것만 배포본에 남습니다.
 
 ---

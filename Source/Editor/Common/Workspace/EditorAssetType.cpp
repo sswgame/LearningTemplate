@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImporter.h"
 
 #include "Engine/Resource/AssetFormat.h"
@@ -41,6 +42,8 @@ namespace sw::editor
         constexpr string_view kArrSpriteImageExt[]  = { ".png", ".jpg", ".jpeg", ".dds", ".tga" };
         constexpr string_view kArrSequenceSuffix[]  = { ".seq.json", ".seq" };
         constexpr string_view kArrTileMapSuffix[]   = { ".tilemap.xml", ".tilemap" };
+        constexpr string_view kArrMeshExt[]         = { ".mesh" };
+        constexpr string_view kArrModelSourceExt[]  = { ".glb", ".gltf" }; ///< `models_raw/` 의 원본 — 임포트하는 것이 리로드다
 
         /**
          * @struct AssetMatchRow
@@ -78,6 +81,8 @@ namespace sw::editor
             {   EditorAssetType::SpriteClip,      MatchMode::Extension,  kArrSpriteImageExt,  countOf( kArrSpriteImageExt ),      nullptr,                                    nullptr},
             {      EditorAssetType::TileMap,       MatchMode::EndsWith,   kArrTileMapSuffix,   countOf( kArrTileMapSuffix ),      nullptr,                                    nullptr},
             {     EditorAssetType::Sequence,       MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),      nullptr,                                    nullptr},
+            {         EditorAssetType::Mesh,      MatchMode::Extension,         kArrMeshExt,         countOf( kArrMeshExt ),       "Mesh",                                    nullptr},
+            {         EditorAssetType::Mesh,      MatchMode::Extension,  kArrModelSourceExt,  countOf( kArrModelSourceExt ),       "Mesh",   &ModelImporter::importChangedSourceModel},
             {         EditorAssetType::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),      nullptr,                                    nullptr},
         };
 
@@ -95,6 +100,7 @@ namespace sw::editor
             {   EditorAssetType::SpriteClip, "SpriteClip",    "Sprite",     "Sprite Clip", ICON_FA_PERSON_RUNNING, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
             {      EditorAssetType::TileMap,    "TileMap",  "Tile Map",   "Tile Map Tool",     ICON_FA_BORDER_ALL, { 0.45f, 0.85f, 0.50f, 1.0f }, false,  true,  true},
             {     EditorAssetType::Sequence,   "Sequence",       "Seq",       "Sequencer",           ICON_FA_FILM, { 0.85f, 0.55f, 0.85f, 1.0f }, false,  true,  true},
+            {         EditorAssetType::Mesh,       "Mesh",    "Meshes",           nullptr,           ICON_FA_CUBE, { 0.55f, 0.80f, 0.80f, 1.0f }, false,  true,  true},
             {         EditorAssetType::Data,       "Data",      "Data",           nullptr,          ICON_FA_TABLE, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
         };
 

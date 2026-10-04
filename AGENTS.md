@@ -186,6 +186,8 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   with `App --import-textures` (the editor imports on hot reload too). Commit the DDS together with `textures_raw/import.stamp`;
   `TextureImportStampTest` (and `App --check-textures`) fails when a source, its import rule or its DDS drifts. Delete a
   source nothing references instead of moving it. Enforced by `CheckTextureFolders.py`.
+- Models follow the same rule: glTF sources (`.glb`, `.gltf`) live under `models_raw/` and `App --import-models` writes
+  `models/<name>.mesh` plus `models_raw/import.stamp` (`App --check-models` compares). Commit the `.mesh` with the stamp.
 
 ## C++ structure and includes
 

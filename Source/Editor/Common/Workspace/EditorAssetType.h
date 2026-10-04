@@ -40,6 +40,7 @@ namespace sw::editor
         SpriteClip,
         TileMap,
         Sequence,
+        Mesh,
         Count ///< 종류 수(종류가 아님). 종류 표(EditorAssetType.cpp)가 모든 종류를 한 번씩 담는지 컴파일 때 본다
     };
 

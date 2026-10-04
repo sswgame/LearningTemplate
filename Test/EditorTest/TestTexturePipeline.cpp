@@ -4,6 +4,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
 
+#include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/ImageUtil.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
 #include "Editor/Common/Asset/TextureImporter.h"
@@ -600,8 +601,8 @@ namespace sw::editor
         TextureImportConfig config;
         SW_ASSERT_TRUE( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) );
 
-        const TextureImportSummary summary = TextureImporter::importAllTextures( sw::ResourceUtil::getRootFolderPath(), config, TextureImportMode::CheckOnly );
-        string                     problemText;
+        const AssetImportSummary summary = TextureImporter::importAllTextures( sw::ResourceUtil::getRootFolderPath(), config, AssetImportMode::CheckOnly );
+        string                   problemText;
         for ( const string& problem : summary._listProblem )
         {
             problemText += problem;
@@ -638,47 +639,47 @@ namespace sw::editor
         SW_ASSERT_TRUE( uiConfig.loadFromJsonString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false } ] })" ) );
 
         // 1) 한 번도 임포트하지 않았다 — 보고만 하고 아무것도 쓰지 않는다.
-        TextureImportSummary summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly );
+        AssetImportSummary summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly );
         SW_EXPECT_EQUAL( 1u, summary._sourceCount );
         SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
         SW_EXPECT_FALSE( FileUtil::fileExists( ddsPath ) );
         SW_EXPECT_FALSE( FileUtil::fileExists( stampPath ) );
 
         // 2) 임포트한다 → DDS 와 스탬프가 생기고, 다시 보면 맞는다. 맞는 것은 다시 임포트하지 않는다.
-        summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::ImportStale );
+        summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::ImportStale );
         SW_EXPECT_TRUE( summary.isClean() );
         SW_EXPECT_EQUAL( 1u, summary._importedCount );
         SW_EXPECT_TRUE( FileUtil::fileExists( ddsPath ) );
         SW_EXPECT_TRUE( FileUtil::fileExists( stampPath ) );
-        SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly ).isClean() );
-        SW_EXPECT_EQUAL( 0u, TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::ImportStale )._importedCount );
+        SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly ).isClean() );
+        SW_EXPECT_EQUAL( 0u, TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::ImportStale )._importedCount );
 
         // 3) 원본을 고쳤다.
         SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 4, 4, TestTexturePipelineInternal::makeSolidRgba( 4, 4, 11, 20, 30, 255 ) ) );
-        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly )._listProblem.size() );
-        SW_EXPECT_EQUAL( 1u, TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::ImportStale )._importedCount );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly )._listProblem.size() );
+        SW_EXPECT_EQUAL( 1u, TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::ImportStale )._importedCount );
 
         // 4) 규칙만 바꿨다(원본은 그대로).
         TextureImportConfig srgbConfig;
         SW_ASSERT_TRUE( srgbConfig.loadFromJsonString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false, "srgb": false } ] })" ) );
-        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, srgbConfig, TextureImportMode::CheckOnly )._listProblem.size() );
-        SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly ).isClean() );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, srgbConfig, AssetImportMode::CheckOnly )._listProblem.size() );
+        SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly ).isClean() );
 
         // 5) DDS 를 손으로 바꿨다.
         vector<uint8> ddsBytes;
         SW_ASSERT_TRUE( FileUtil::readFile( ddsPath, ddsBytes ) );
         ddsBytes.back() = static_cast<uint8>( ddsBytes.back() ^ 0xFFu );
         SW_ASSERT_TRUE( FileUtil::writeFile( ddsPath, ddsBytes.data(), ddsBytes.size() ) );
-        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly )._listProblem.size() );
-        SW_EXPECT_EQUAL( 1u, TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::ImportStale )._importedCount );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly )._listProblem.size() );
+        SW_EXPECT_EQUAL( 1u, TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::ImportStale )._importedCount );
 
         // 6) 원본이 사라졌다 — 스탬프 줄이 남은 것이 어긋남이고, 임포트는 그 줄을 지운다(DDS 는 사람이 정리한다).
         SW_ASSERT_TRUE( FileUtil::removeFile( sourcePath ) );
-        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly )._listProblem.size() );
-        summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::ImportStale );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly )._listProblem.size() );
+        summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::ImportStale );
         SW_EXPECT_TRUE( summary.isClean() );
         SW_EXPECT_EQUAL( 0u, summary._sourceCount );
-        SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly ).isClean() );
+        SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly ).isClean() );
         SW_EXPECT_TRUE( FileUtil::fileExists( ddsPath ) );
     }
 
@@ -694,7 +695,7 @@ namespace sw::editor
 
         TextureImportConfig config;
         SW_ASSERT_TRUE( config.loadFromJsonString( R"({ "rules": [ { "name": "Any" } ] })" ) );
-        const TextureImportSummary summary = TextureImporter::importAllTextures( resourceRoot, config, TextureImportMode::ImportStale );
+        const AssetImportSummary summary = TextureImporter::importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
         SW_EXPECT_EQUAL( 1u, summary._sourceCount );
         SW_EXPECT_EQUAL( 0u, summary._importedCount );
         SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );

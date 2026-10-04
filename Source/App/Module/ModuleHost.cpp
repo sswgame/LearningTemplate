@@ -363,11 +363,12 @@ namespace sw
 #endif
     }
 
-    bool ModuleHost::importTexturesWithEditorModule( bool bCheckOnly )
+    bool ModuleHost::importAssetsWithEditorModule( EditorImportKind kind, bool bCheckOnly )
     {
 #if defined( SW_SHIPPING )
+        (void)kind;
         (void)bCheckOnly;
-        SW_LOG_ERROR( "Texture importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
+        SW_LOG_ERROR( "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
         return false;
 #else
         const string modulePath     = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ),
@@ -375,7 +376,7 @@ namespace sw
         void* const  pLibraryModule = FileUtil::fileExists( modulePath ) ? FileUtil::loadDynamicLibrary( modulePath ) : nullptr;
         if ( pLibraryModule == nullptr )
         {
-            SW_LOG_ERROR( "Texture importing needs the editor module next to the executable: %#", modulePath.c_str() );
+            SW_LOG_ERROR( "Asset importing needs the editor module next to the executable: %#", modulePath.c_str() );
             return false;
         }
 
@@ -386,12 +387,12 @@ namespace sw
         if ( ModuleHostInternal::matchesModuleAbi( pLibraryModule, ModuleHostInternal::kEditorSymbols._pVersionSymbol,
                                                    ModuleHostInternal::kEditorSymbols._pStampSymbol, ModuleHostInternal::kEditorSymbols._pModuleLabel ) )
         {
-            const PFN_ImportEditorTextures pfnImport =
-                reinterpret_cast<PFN_ImportEditorTextures>( FileUtil::getDynamicSymbol( pLibraryModule, kImportEditorTexturesSymbol ) );
+            const PFN_ImportEditorAssets pfnImport =
+                reinterpret_cast<PFN_ImportEditorAssets>( FileUtil::getDynamicSymbol( pLibraryModule, kImportEditorAssetsSymbol ) );
             if ( pfnImport == nullptr )
-                SW_LOG_ERROR( "The editor module does not export %#", kImportEditorTexturesSymbol );
+                SW_LOG_ERROR( "The editor module does not export %#", kImportEditorAssetsSymbol );
             else
-                bSucceeded = pfnImport( bCheckOnly ? 1u : 0u ) == 0;
+                bSucceeded = pfnImport( static_cast<uint32>( kind ), bCheckOnly ? 1u : 0u ) == 0;
         }
 
         engine::unregisterModuleTypes( sw::config::kTargetEditorModule );

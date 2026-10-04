@@ -700,11 +700,30 @@ SW_TEST_CASE( AppSmokeTest, VulkanEditorGameViewResizeLeavesNoValidationError )
 /**
  * @brief [AppSmokeTest] `--check-textures` 는 창 · RHI 없이 에디터 모듈만 올려 원본 텍스처와 DDS 를 대조하고 끝난다
  * @details 텍스처 임포트는 에디터 모듈(`TextureImporter`)의 일이고 엔진은 에디터를 모른다. 그래서 엔진은 헤드리스로 세우기만 하고 App 이
- *          모듈을 올려 `importEditorTextures` 를 부른다. 배포본에는 에디터 모듈이 없으므로 이유를 남기고 실패해야 한다.
+ *          모듈을 올려 `importEditorAssets` 를 부른다. 배포본에는 에디터 모듈이 없으므로 이유를 남기고 실패해야 한다.
  */
 SW_TEST_CASE( AppSmokeTest, TextureCheckRunsHeadlessThroughTheEditorModule )
 {
     const AppRunResult result = runApp( "--check-textures", "Texture check:" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
+#if defined( SW_SHIPPING )
+    SW_EXPECT_TRUE( result._exitCode != 0 );
+    SW_EXPECT_TRUE( result._listMarkedLine.empty() );
+#else
+    SW_EXPECT_TRUE_MSG( result._exitCode == 0, result._firstErrorLine.c_str() );
+    SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.c_str() );
+    SW_ASSERT_EQUAL( size_t( 1 ), result._listMarkedLine.size() );
+    SW_EXPECT_TRUE_MSG( result._listMarkedLine[0].find( "0 problems" ) != string::npos, result._listMarkedLine[0].c_str() );
+#endif
+}
+
+/**
+ * @brief [AppSmokeTest] `--check-models` 도 같은 길로 에디터 모듈의 모델 대조(`EditorImportKind::Model`)를 부르고 끝난다
+ * @details 진입점이 종류를 인자로 받으므로 종류 번호가 어긋나면 텍스처를 대조하거나 "모르는 종류" 로 실패한다 — 표시 줄이 "Model check:" 인지 본다.
+ */
+SW_TEST_CASE( AppSmokeTest, ModelCheckRunsHeadlessThroughTheEditorModule )
+{
+    const AppRunResult result = runApp( "--check-models", "Model check:" );
     SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
 #if defined( SW_SHIPPING )
     SW_EXPECT_TRUE( result._exitCode != 0 );

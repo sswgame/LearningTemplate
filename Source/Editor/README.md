@@ -31,8 +31,8 @@
 - **Commands/**: 패널이 쓰는 **ImGui 없는 로직** — 애셋/씬/트랜스폼/데이터테이블 변이와 파일 IO,
   그리고 커맨드 정의를 담는 `EditorCommandRegistry`.
   패널은 UI 만, 실제 동작은 여기입니다 (그래서 테스트가 붙습니다)
-- **Asset/**: 텍스처 임포트·임포트 (`TextureImporter`, `TextureImportConfig`, `ImageUtil`) + 헤드리스 임포트 진입점(`TextureImportEntry.cpp` — 아래
-  "텍스처는 들일 때 임포트한다"). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
+- **Asset/**: 원본 임포트 — 텍스처(`TextureImporter`, `TextureImportConfig`, `ImageUtil`) · 모델(`ModelImporter`)과 둘이 쓰는 스탬프 절차
+  (`AssetImportStamp`), 헤드리스 임포트 진입점(`AssetImportEntry.cpp` — 아래 "텍스처는 들일 때 임포트한다" · "모델도 들일 때 임포트한다"). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
 - **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorToolDefaults`)
 
 ### 기능
@@ -185,12 +185,26 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 - **에디터가 떠 있을 때**: 핫 리로드가 원본 변경을 받으면 `TextureImporter::importChangedSourceImage` 가 임포트하고, 임포트된 DDS 의 쓰기가
   다음 감시 이벤트로 와서 텍스처 캐시가 다시 읽습니다. 임포트 설정(`TextureImportConfig.json`)은 매번 읽습니다.
 - **헤드리스**: `App --import-textures`(어긋난 것을 임포트하고 스탬프 갱신) · `--check-textures`(쓰지 않고 대조만). App 이 에디터 모듈을 인스턴스
-  없이 올려 `importEditorTextures`(`TextureImportEntry.cpp`)를 부릅니다. Dev 빌드에서만 됩니다.
+  없이 올려 `importEditorAssets`(`AssetImportEntry.cpp`, 종류 `EditorImportKind`)를 부릅니다. Dev 빌드에서만 됩니다.
 - **스탬프**: `textures_raw/` 폴더마다 `import.stamp` 에 `<원본 해시> <DDS 해시> <상대 경로>` 한 줄씩. 원본 해시는 원본 바이트 + 적용한 규칙 +
   임포터 버전(`computeSourceHash`)이라 규칙만 바꿔도 어긋남이고, DDS 해시로 손댄 DDS 도 잡힙니다. 판정은 파일 시간이 아니라 **내용**입니다
   (git 이 시간 순서를 뒤집습니다). 원본이 사라진 줄도 어긋남입니다 — `ImportStale` 은 줄만 지우고 남은 DDS 는 사람이 정리합니다.
 - 주의: `.hdr` 는 임포트하지 않고 보고합니다 — 디코더(stb_image)가 8비트라 값이 잘립니다.
 - 시험: `TextureImportStampTest.RepositoryRawTexturesMatchTheirDds`(저장소의 원본과 DDS 가 맞는지), `AppSmokeTest.TextureCheckRunsHeadlessThroughTheEditorModule`.
+- 폴더 훑기 · 스탬프 · 어긋남 판정은 모델과 같은 한 벌입니다(`AssetImportStampUtil` + 종류마다 `IRawAssetImporter`).
+
+## 모델도 들일 때 임포트한다
+
+glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로의 `models/<이름>.mesh` 로 임포트합니다(`ModelImporter`, cgltf + meshoptimizer).
+런타임은 `.mesh` 만 읽고(`MeshCache`), `MeshComponent::_meshId` 에 그 경로를 적거나 `PrimitiveStage::createModelObject` 로 세웁니다.
+
+- **변환**: 기본 씬의 노드 계층을 월드 변환째 한 메시로 합칩니다. glTF(오른손 · +Y 위 · 앞 +Z)를 엔진(왼손 · +Y 위 · 앞 +Z, 앞면 = 시계 방향)으로
+  옮기려고 **X 를 뒤집고 삼각형마다 감김을 뒤집습니다**(노드가 거울상이면 한 번 더). 노멀이 없으면 면 노멀, 색은 baseColorFactor × COLOR_0.
+  삼각형이 아닌 프리미티브는 경고하고 건너뜁니다. 텍스처는 로그로만 알리고, 머티리얼은 게임이 `PrimitiveLook` 으로 고릅니다.
+- **헤드리스 · 스탬프**: `App --import-models` · `--check-models`. `models_raw/import.stamp` 는 텍스처와 같은 형식이고 원본 해시에 임포터 버전 ·
+  `.mesh` 형식 버전 · `.gltf` 의 외부 버퍼가 섞입니다. 임포트 동작을 바꾸면 `ModelImporterInternal::kImporterVersion` 을 올립니다.
+- **핫 리로드**: `models_raw/` 원본이 바뀌면 일괄 임포트하고, 쓰인 `.mesh` 를 메시 캐시가 같은 `Mesh` 에 제자리로 다시 읽습니다.
+- 시험: `ModelImporterTest`(좌표계 · 감김 · 노드 변환 · 색 · 스탬프), 엔진 쪽은 `MeshAssetTest`.
 
 ## UI 스레드가 놓은 GPU 자원
 

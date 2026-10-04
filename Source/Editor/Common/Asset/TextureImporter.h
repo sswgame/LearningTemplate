@@ -6,41 +6,13 @@
 
 namespace sw::editor
 {
+    enum class AssetImportMode : uint8;
+
+    struct AssetImportSummary;
     struct RawImageData;
     struct TextureImportRule;
 
     class TextureImportConfig;
-
-    /**
-     * @enum TextureImportMode
-     * @brief 일괄 임포트(`TextureImporter::importAllTextures`)가 어긋난 원본을 만났을 때 할 일입니다.
-     */
-    enum class TextureImportMode : uint8
-    {
-        ImportStale = 0, ///< 스탬프와 어긋난 원본만 다시 임포트하고 `import.stamp` 를 갱신합니다.
-        CheckOnly,       ///< 아무 파일도 쓰지 않고 어긋난 것만 보고합니다(시험 · CI).
-    };
-
-    /**
-     * @struct TextureImportSummary
-     * @brief 일괄 임포트 한 번의 결과입니다. `_listProblem` 이 비어 있어야 원본과 DDS 가 맞는 것입니다.
-     */
-    struct TextureImportSummary
-    {
-        /** @brief 사람이 읽는 한 줄씩입니다. CheckOnly 는 어긋남, ImportStale 은 임포트하지 못한 것입니다. */
-        vector<string> _listProblem;
-        uint32         _sourceCount;
-        uint32         _importedCount;
-
-        TextureImportSummary()
-            : _listProblem{}
-            , _sourceCount{ 0 }
-            , _importedCount{ 0 }
-        {
-        }
-
-        bool isClean() const { return _listProblem.empty(); }
-    };
 } // namespace sw::editor
 
 namespace sw::editor
@@ -108,7 +80,7 @@ namespace sw::editor
 
         /**
          * @brief 리소스 루트 아래 모든 `textures_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조하고, @p mode 가 ImportStale 이면 어긋난 것을 임포트합니다.
-         * @details 스탬프 한 줄은 `<원본 해시> <DDS 해시> <textures_raw 기준 상대 경로>` 입니다. 원본 해시는 원본 바이트와 적용한 규칙
+         * @details 절차는 `AssetImportStampUtil::importAll` 입니다. 스탬프 한 줄은 `<원본 해시> <DDS 해시> <textures_raw 기준 상대 경로>` 입니다. 원본 해시는 원본 바이트와 적용한 규칙
          *          (`computeSourceHash`)이라 규칙만 바꿔도 어긋남이 됩니다. DDS 해시는 임포트된 결과 그대로라 손으로 바꾼 DDS 도 잡힙니다.
          *          판정은 파일 시간이 아니라 내용입니다 — 원본과 DDS 를 둘 다 커밋하므로 `git` 이 시간 순서를 임의로 뒤집습니다.
          *          원본이 사라진 스탬프 줄도 어긋남입니다(ImportStale 은 줄만 지우고 DDS 는 두므로, 남은 DDS 는 사람이 정리합니다).
@@ -116,7 +88,7 @@ namespace sw::editor
          * @param resourceRoot `Resource/` 의 절대 경로
          * @param config 원본마다 규칙을 고를 임포트 설정(리소스 루트 기준 상대 경로로 매칭합니다)
          */
-        [[nodiscard]] static TextureImportSummary importAllTextures( string_view resourceRoot, const TextureImportConfig& config, TextureImportMode mode );
+        [[nodiscard]] static AssetImportSummary importAllTextures( string_view resourceRoot, const TextureImportConfig& config, AssetImportMode mode );
 
         /**
          * @brief 원본 경로에 대응하는 DDS 경로입니다(`<x>/textures_raw/<y>.png` → `<x>/textures/<y>.dds`). `textures_raw/` 구간이 없으면 빈 문자열입니다.

@@ -72,6 +72,12 @@ namespace sw
         /** @brief 내장 도형(`MeshUtil::acquirePrimitive` — "Cube" · "Sphere" · "Capsule" · "Cylinder" · "Cone" · "Plane")으로 세웁니다. */
         GameObject* createPrimitiveObject( const utf8* pName, string_view meshId, const PrimitiveLook& look, const float3& position,
                                            const float3& scale = float3{ 1.0f, 1.0f, 1.0f }, const float3& rotation = float3{ 0.0f, 0.0f, 0.0f } );
+        /**
+         * @brief 메시 에셋(`.mesh` — `App --import-models` 가 `models_raw/` 의 glTF 에서 만든다)으로 세웁니다. 읽지 못하면 nullptr 입니다.
+         * @details 메시 id 로 경로를 저장하므로(`MeshComponent::setMeshId`) 에디터 핫 리로드가 다시 임포트한 메시를 그 자리에서 보여 줍니다.
+         */
+        GameObject* createModelObject( const utf8* pName, string_view meshPath, const PrimitiveLook& look, const float3& position,
+                                       const float3& scale = float3{ 1.0f, 1.0f, 1.0f }, const float3& rotation = float3{ 0.0f, 0.0f, 0.0f } );
         /** @brief 해(방향광)를 세웁니다. @p euler 는 피치 · 요 · 롤(라디안), @p shadowExtent 는 그림자가 덮는 반지름입니다. */
         GameObject* createSun( const float3& euler, float32 intensity, float32 shadowExtent );
         /** @brief 게임이 직접 만든 오브젝트(스프라이트 · 빛 등)를 추적에 넣습니다 — `clear` 가 함께 지운다. */
@@ -105,6 +111,10 @@ namespace sw
         };
 
         void applyLook( MeshComponent& meshComponent, const PrimitiveLook& look );
+        /** @brief 메시 컴포넌트 하나를 단 오브젝트를 만듭니다. 실패하면 nullptr 이고 만든 것은 지웁니다. */
+        MeshComponent* addMeshObject( const utf8* pName );
+        /** @brief 모습 · 트랜스폼을 걸고 추적에 넣습니다. */
+        GameObject* placeMeshObject( MeshComponent& meshComponent, const PrimitiveLook& look, const float3& position, const float3& scale, const float3& rotation );
 
         vector<GameObjectHandle> _listObject;
         vector<InstanceEntry>    _listInstance;

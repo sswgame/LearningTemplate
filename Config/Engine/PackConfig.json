@@ -17,6 +17,7 @@
   "global_exclude_directories": [
     "textures_raw",
     "shaders_raw",
+    "models_raw",
     "docs",
     ".git",
     ".vs"
@@ -38,7 +39,8 @@
       "name": "Exclude_Raw_Source_Assets",
       "exclude_directories": [
         "textures_raw",
-        "shaders_raw"
+        "shaders_raw",
+        "models_raw"
       ],
       "recursive": true
     },

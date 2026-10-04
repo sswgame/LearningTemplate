@@ -3,12 +3,12 @@
 #include "Editor/Common/Asset/TextureImporter.h"
 
 #include "Core/Common/StdHeaders.h"
-#include "Core/Container/map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/ImageUtil.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
@@ -108,7 +108,7 @@ namespace sw::editor
 
         /**
          * @struct TextureImporterInternal
-         * @brief 원본(`textures_raw/`)과 임포트된 DDS(`textures/`)를 잇는 경로 규칙과 `import.stamp` 읽기 · 쓰기 · 대조입니다.
+         * @brief 원본(`textures_raw/`)과 임포트된 DDS(`textures/`)를 잇는 이름과 버전입니다. 스탬프 절차는 `AssetImportStampUtil` 이 합니다.
          */
         struct TextureImporterInternal
         {
@@ -116,232 +116,56 @@ namespace sw::editor
             static constexpr string_view kRawTextureFolder = "textures_raw";
             /** @brief 임포트된 DDS 가 가는, 원본 폴더 옆 폴더 이름입니다. 런타임은 여기의 DDS 만 읽습니다. */
             static constexpr string_view kImportedTextureFolder = "textures";
-            /** @brief 원본 폴더마다 하나 두는 스탬프 파일 이름입니다. */
-            static constexpr string_view kImportStampFileName = "import.stamp";
             /** @brief 스탬프 머리 줄입니다. 형식이나 판정이 바뀌면 올립니다 — 옛 스탬프는 전부 어긋남이 되어 한 번 다시 임포트합니다. */
             static constexpr string_view kImportStampHeader = "SWTEXIMPORT 1";
             /** @brief 같은 원본 · 규칙에서 다른 바이트를 내게 임포트를 바꾸면 올립니다. 원본 해시에 섞입니다. */
             static constexpr uint32 kImporterVersion = 1;
 
-            /** @brief 스탬프 한 줄입니다. */
-            struct StampEntry
-            {
-                uint64 _sourceHash{ 0 };
-                uint64 _importedHash{ 0 };
-            };
-
             /** @brief 임포트하는 원본 이미지 확장자인지 봅니다. `.dds` · `import.stamp` · `.meta` 같은 것은 원본이 아닙니다. */
             static bool isSourceImage( string_view path ) { return FileUtil::hasAnyExtension( path, { ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".hdr" } ); }
+        };
 
-            /**
-             * @brief 경로를 `.../textures_raw` 와 그 아래 상대 경로로 나눕니다. `textures_raw` 는 경로 구간 경계에서만 찾습니다.
-             */
-            static bool splitRawPath( string_view path, string& outRawFolder, string& outRelativePath )
+        /**
+         * @class TextureRawImporter
+         * @brief 텍스처 원본이 일괄 임포트에 답하는 것들입니다. 원본마다 임포트 설정에서 규칙을 고릅니다.
+         */
+        class TextureRawImporter final : public IRawAssetImporter
+        {
+        public:
+            explicit TextureRawImporter( const TextureImportConfig& config )
+                : _config{ config }
             {
-                const string      normalized = FileUtil::normalizeSeparators( path );
-                const string_view normalizedView{ normalized };
-                for ( size_t pos = normalizedView.find( kRawTextureFolder ); pos != string_view::npos; pos = normalizedView.find( kRawTextureFolder, pos + 1 ) )
-                {
-                    const size_t endPos         = pos + kRawTextureFolder.size();
-                    const bool   bStartsSegment = pos == 0 || normalized[pos - 1] == '/';
-                    const bool   bEndsSegment   = endPos + 1 < normalized.size() && normalized[endPos] == '/';
-                    if ( bStartsSegment && bEndsSegment )
-                    {
-                        outRawFolder    = normalized.substr( 0, endPos );
-                        outRelativePath = normalized.substr( endPos + 1 );
-                        return true;
-                    }
-                }
-                return false;
             }
 
-            /** @brief 파일 바이트 그대로의 FNV-1a 64 입니다. 없거나 비었으면 0 입니다. */
-            static uint64 computeFileHash( string_view path )
+            string_view getRawFolderName() const override { return TextureImporterInternal::kRawTextureFolder; }
+            string_view getStampHeader() const override { return TextureImporterInternal::kImportStampHeader; }
+            string_view getImportedLabel() const override { return "DDS"; }
+            bool        isSourceFile( string_view path ) const override { return TextureImporterInternal::isSourceImage( path ); }
+            string      makeImportedPath( string_view sourcePath ) const override { return TextureImporter::makeImportedTexturePath( sourcePath ); }
+            uint64      computeSourceHash( string_view sourcePath, string_view resourcePath ) const override
             {
-                vector<uint8> bytes;
-                if ( FileUtil::fileExists( path ) == false || FileUtil::readFile( path, bytes ) == false || bytes.empty() )
-                    return 0;
-                return StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
+                return TextureImporter::computeSourceHash( sourcePath, findRule( resourcePath ) );
+            }
+            const utf8* findUnsupportedReason( string_view sourcePath ) const override
+            {
+                return FileUtil::hasExtension( sourcePath, ".hdr" ) ? "HDR 원본은 임포트하지 않습니다 (디코더가 8비트라 값이 잘립니다)" : nullptr;
+            }
+            [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const override
+            {
+                return TextureImporter::importTexture( sourcePath, importedPath, findRule( resourcePath ) );
             }
 
-            static string formatHash( uint64 hash )
+        private:
+            /** @brief 리소스 루트 기준 경로에 맞는 규칙입니다. 없으면 기본 규칙입니다. */
+            TextureImportRule findRule( string_view resourcePath ) const
             {
-                StringBuilder<constant::kMaxBuffer32> text;
-                text.appendFormat( "%#", Fmt( hash, Format( 16, Format::Padding::Zero ).hex() ) );
-                return string( text.c_str(), text.size() );
+                TextureImportRule rule;
+                if ( _config.findMatchingRule( resourcePath, rule ) == false )
+                    rule = TextureImportRule{};
+                return rule;
             }
 
-            /**
-             * @brief 스탬프를 읽습니다. 없거나 머리 줄이 다르면 빈 표입니다(= 모든 원본이 어긋남). 형식이 아닌 줄은 건너뜁니다.
-             */
-            static void readStamp( const string& stampPath, map<string, StampEntry>& outMapEntry )
-            {
-                outMapEntry.clear();
-                string text;
-                if ( FileUtil::fileExists( stampPath ) == false || FileUtil::readTextFile( stampPath, text ) == false )
-                    return;
-
-                bool   bHeaderSeen = false;
-                size_t lineStart   = 0;
-                while ( lineStart < text.size() )
-                {
-                    size_t lineEnd = text.find( '\n', lineStart );
-                    if ( lineEnd == string::npos )
-                        lineEnd = text.size();
-                    const string_view line = StringUtil::trim( string_view( text ).substr( lineStart, lineEnd - lineStart ) );
-                    lineStart              = lineEnd + 1;
-
-                    if ( bHeaderSeen == false )
-                    {
-                        if ( line != kImportStampHeader )
-                            return;
-                        bHeaderSeen = true;
-                        continue;
-                    }
-
-                    const size_t firstSpace  = line.find( ' ' );
-                    const size_t secondSpace = firstSpace == string_view::npos ? string_view::npos : line.find( ' ', firstSpace + 1 );
-                    if ( secondSpace == string_view::npos || secondSpace + 1 >= line.size() )
-                        continue;
-
-                    StampEntry entry;
-                    const bool bSourceParsed   = StringUtil::parseUint64( line.substr( 0, firstSpace ), entry._sourceHash, 16 );
-                    const bool bImportedParsed = StringUtil::parseUint64( line.substr( firstSpace + 1, secondSpace - firstSpace - 1 ), entry._importedHash, 16 );
-                    if ( bSourceParsed && bImportedParsed )
-                        outMapEntry[string( line.substr( secondSpace + 1 ) )] = entry;
-                }
-            }
-
-            /** @brief 스탬프 본문입니다. 줄은 경로 순이라 같은 표는 같은 바이트입니다. */
-            static string makeStampText( const map<string, StampEntry>& mapEntry )
-            {
-                string text = string( kImportStampHeader ) + "\n";
-                for ( const auto& [relativePath, entry] : mapEntry )
-                {
-                    text += formatHash( entry._sourceHash );
-                    text += ' ';
-                    text += formatHash( entry._importedHash );
-                    text += ' ';
-                    text += relativePath;
-                    text += '\n';
-                }
-                return text;
-            }
-
-            /**
-             * @brief 원본 하나가 스탬프와 어긋난 이유입니다. 맞으면 nullptr 입니다.
-             */
-            static const utf8* findDriftReason( const StampEntry* pStamped, const StampEntry& current )
-            {
-                if ( current._sourceHash == 0 )
-                    return "원본을 읽지 못했습니다";
-                if ( current._importedHash == 0 )
-                    return "DDS 가 없습니다";
-                if ( pStamped == nullptr )
-                    return "스탬프에 없습니다 (임포트된 적이 없습니다)";
-                if ( pStamped->_sourceHash != current._sourceHash )
-                    return "원본이나 규칙이 바뀌었는데 다시 임포트하지 않았습니다";
-                if ( pStamped->_importedHash != current._importedHash )
-                    return "DDS 가 임포트된 결과와 다릅니다 (손으로 바꿨습니다)";
-                return nullptr;
-            }
-
-            /**
-             * @brief `textures_raw` 폴더 하나를 그 폴더의 스탬프와 대조하고, ImportStale 이면 어긋난 것을 임포트하고 스탬프를 다시 씁니다.
-             */
-            static void importRawFolder( const string& rootDir, const string& rawFolder, const TextureImportConfig& config, TextureImportMode mode,
-                                         TextureImportSummary& inoutSummary )
-            {
-                const string            stampPath = FileUtil::joinPath( rawFolder, kImportStampFileName );
-                map<string, StampEntry> mapStamped;
-                readStamp( stampPath, mapStamped );
-
-                vector<string> listFile;
-                (void)FileUtil::collectFiles( rawFolder, "", listFile, true ); // 폴더는 방금 훑어서 찾았다
-                std::sort( listFile.begin(), listFile.end() );
-
-                map<string, StampEntry> mapCurrent;
-                for ( const string& file : listFile )
-                {
-                    const string sourcePath = FileUtil::normalizeSeparators( file );
-                    if ( isSourceImage( sourcePath ) == false || sourcePath.size() <= rawFolder.size() + 1 || sourcePath.size() <= rootDir.size() + 1 )
-                        continue;
-
-                    const string relativePath = sourcePath.substr( rawFolder.size() + 1 );
-                    const string resourcePath = sourcePath.substr( rootDir.size() + 1 );
-                    ++inoutSummary._sourceCount;
-
-                    if ( FileUtil::hasExtension( sourcePath, ".hdr" ) )
-                    {
-                        inoutSummary._listProblem.push_back( resourcePath + ": HDR 원본은 임포트하지 않습니다 (디코더가 8비트라 값이 잘립니다)" );
-                        continue;
-                    }
-
-                    TextureImportRule rule;
-                    if ( config.findMatchingRule( resourcePath, rule ) == false )
-                        rule = TextureImportRule{};
-
-                    const string importedPath = TextureImporter::makeImportedTexturePath( sourcePath );
-                    StampEntry   current;
-                    current._sourceHash   = TextureImporter::computeSourceHash( sourcePath, rule );
-                    current._importedHash = computeFileHash( importedPath );
-
-                    const auto        itStamped = mapStamped.find( relativePath );
-                    const utf8* const pReason   = findDriftReason( itStamped != mapStamped.end() ? &itStamped->second : nullptr, current );
-                    if ( pReason == nullptr )
-                    {
-                        mapCurrent[relativePath] = current;
-                        continue;
-                    }
-
-                    if ( mode == TextureImportMode::CheckOnly )
-                    {
-                        inoutSummary._listProblem.push_back( resourcePath + ": " + pReason );
-                        continue;
-                    }
-
-                    if ( TextureImporter::importTexture( sourcePath, importedPath, rule ) == false )
-                    {
-                        inoutSummary._listProblem.push_back( resourcePath + ": 임포트하지 못했습니다" );
-                        continue;
-                    }
-
-                    current._importedHash    = computeFileHash( importedPath );
-                    mapCurrent[relativePath] = current;
-                    ++inoutSummary._importedCount;
-                }
-
-                // 원본이 사라진 줄. 임포트된 DDS 는 다른 것이 참조할 수 있어 지우지 않는다 — 줄만 지운다.
-                for ( const auto& [relativePath, entry] : mapStamped )
-                {
-                    if ( mapCurrent.find( relativePath ) != mapCurrent.end() )
-                        continue;
-                    const string sourcePath = FileUtil::joinPath( rawFolder, relativePath );
-                    if ( FileUtil::fileExists( sourcePath ) )
-                        continue; // 원본은 있다 — 위에서 어긋남 · 실패로 이미 보고했다
-                    if ( mode == TextureImportMode::CheckOnly )
-                        inoutSummary._listProblem.push_back( sourcePath.substr( rootDir.size() + 1 ) + ": 원본이 없는데 스탬프에 남아 있습니다" );
-                }
-
-                if ( mode == TextureImportMode::CheckOnly )
-                    return;
-
-                // 내용이 같으면 쓰지 않는다 — 맞는 트리에서 임포트를 돌려도 작업 트리가 더러워지지 않는다. 체크아웃이 줄 끝을 CRLF 로
-                // 바꿔 둘 수 있으므로 CR 은 빼고 비교한다.
-                const bool bStampExists = FileUtil::fileExists( stampPath );
-                if ( mapCurrent.empty() && bStampExists == false )
-                    return;
-                const string stampText = makeStampText( mapCurrent );
-                string       existingText;
-                if ( bStampExists && FileUtil::readTextFile( stampPath, existingText ) )
-                {
-                    existingText.erase( std::remove( existingText.begin(), existingText.end(), '\r' ), existingText.end() );
-                    if ( existingText == stampText )
-                        return;
-                }
-                if ( FileUtil::writeTextFile( stampPath, stampText ) == false )
-                    inoutSummary._listProblem.push_back( "스탬프를 쓰지 못했습니다: " + stampPath );
-            }
+            const TextureImportConfig& _config;
         };
     } // namespace
 
@@ -560,7 +384,7 @@ namespace sw::editor
         // 설정 파일이 없으면 기본 규칙이다. 깨졌으면 로드가 알리고 기본 규칙으로 임포트한다.
         TextureImportConfig config{};
         (void)config.loadFromFile( EditorUtil::resolveEditorConfigFile( getEditorToolDefaults()._textureImportConfigFile.c_str() ) );
-        const TextureImportSummary summary = importAllTextures( resourceRoot, config, TextureImportMode::ImportStale );
+        const AssetImportSummary summary = importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR( "텍스처 임포트 실패: %#", problem.c_str() );
@@ -570,39 +394,16 @@ namespace sw::editor
         return true;
     }
 
-    TextureImportSummary TextureImporter::importAllTextures( string_view resourceRoot, const TextureImportConfig& config, TextureImportMode mode )
+    AssetImportSummary TextureImporter::importAllTextures( string_view resourceRoot, const TextureImportConfig& config, AssetImportMode mode )
     {
-        TextureImportSummary summary;
-        const string         rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
-
-        vector<string> listFolder;
-        if ( rootDir.empty() || FileUtil::collectFolders( rootDir, listFolder, true ) == false )
-        {
-            summary._listProblem.push_back( "리소스 루트를 훑지 못했습니다: " + rootDir );
-            return summary;
-        }
-
-        std::sort( listFolder.begin(), listFolder.end() );
-        for ( const string& folder : listFolder )
-        {
-            const string normalizedFolder = FileUtil::normalizeSeparators( folder );
-            if ( FileUtil::getFileNamePart( normalizedFolder ) == TextureImporterInternal::kRawTextureFolder )
-                TextureImporterInternal::importRawFolder( rootDir, normalizedFolder, config, mode, summary );
-        }
-        return summary;
+        const TextureRawImporter importer{ config };
+        return AssetImportStampUtil::importAll( resourceRoot, importer, mode );
     }
 
     string TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
     {
-        string rawFolder;
-        string relativePath;
-        if ( TextureImporterInternal::splitRawPath( rawTexturePath, rawFolder, relativePath ) == false )
-            return {};
-
-        const string domainFolder   = FileUtil::getDirectoryPart( rawFolder );
-        const string importedFolder = domainFolder.empty() ? string( TextureImporterInternal::kImportedTextureFolder )
-                                                           : FileUtil::joinPath( domainFolder, TextureImporterInternal::kImportedTextureFolder );
-        return FileUtil::replaceExtension( FileUtil::joinPath( importedFolder, relativePath ), ".dds" );
+        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporterInternal::kRawTextureFolder, TextureImporterInternal::kImportedTextureFolder,
+                                                       ".dds" );
     }
 
     uint64 TextureImporter::computeSourceHash( string_view sourcePath, const TextureImportRule& rule )

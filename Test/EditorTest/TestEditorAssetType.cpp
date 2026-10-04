@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImporter.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
@@ -253,6 +254,16 @@ SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
     SW_ASSERT_NOT_NULL( material._pCacheKindName );
     SW_EXPECT_STREQ( "Material", material._pCacheKindName );
     SW_EXPECT_TRUE( material._pfnImportSource == nullptr );
+
+    // 메시 에셋은 캐시가 다시 읽고, glTF 원본은 모델 임포터를 먼저 탄다(쓰인 `.mesh` 가 다음 이벤트로 온다).
+    const AssetReloadRoute mesh = EditorAssetTypeRegistry::findReloadRoute( "game/empty/models/crate.mesh" );
+    SW_ASSERT_NOT_NULL( mesh._pCacheKindName );
+    SW_EXPECT_STREQ( "Mesh", mesh._pCacheKindName );
+    SW_EXPECT_TRUE( mesh._pfnImportSource == nullptr );
+    const AssetReloadRoute model = EditorAssetTypeRegistry::findReloadRoute( "game/empty/models_raw/crate.glb" );
+    SW_ASSERT_NOT_NULL( model._pCacheKindName );
+    SW_EXPECT_STREQ( "Mesh", model._pCacheKindName );
+    SW_EXPECT_TRUE( model._pfnImportSource == &sw::editor::ModelImporter::importChangedSourceModel );
 
     const AssetReloadRoute prefab = EditorAssetTypeRegistry::findReloadRoute( "prefabs/hero.prefab.xml" );
     SW_ASSERT_NOT_NULL( prefab._pCacheKindName );
