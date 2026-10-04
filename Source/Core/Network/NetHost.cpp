@@ -129,6 +129,15 @@ namespace sw
         deliverFinished( listFinished );
     }
 
+    NetHost::PacketType NetHost::peekPacketType( const uint8* pData, int32 size )
+    {
+        if ( pData == nullptr || size <= NetHostInternal::kHeaderSize )
+            return PacketType::Count;
+        BitReader    reader( pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize );
+        const uint32 type = reader.readBits( NetHostInternal::kTypeBits );
+        return type < static_cast<uint32>( PacketType::Count ) ? static_cast<PacketType>( type ) : PacketType::Count;
+    }
+
     uint64 NetHost::nextSalt()
     {
         // splitmix64
@@ -445,19 +454,18 @@ namespace sw
             const uint32 token = reader.readBits( 32 );
             if ( isValidSlot( slotIndex ) == false || _listSlot[static_cast<size_t>( slotIndex )]._state != NetConnectionState::Connected )
             {
-                // 서버가 수락했지만 클라이언트가 Accepted 를 잃었다 — 첫 데이터 패킷이 수락을 대신한다(아래 클라이언트 처리).
-                if ( _bServer == SW_FALSE && isValidSlot( slotIndex ) && _listSlot[0]._state == NetConnectionState::Connecting &&
-                     token == static_cast<uint32>( _listSlot[0]._clientSalt ^ _listSlot[0]._serverSalt ) && _listSlot[0]._serverSalt != 0 )
+                // 서버는 수락했지만 클라이언트가 Accepted 를 잃었다 — 데이터 패킷으로는 연결로 치지 않는다(수락에만 서버가 준 번호가 있다).
+                // 응답을 바로 다시 보내면 서버가 수락을 다시 보낸다. 이 패킷의 신뢰 메시지는 확인하지 않았으니 서버가 다시 보낸다.
+                Slot* pSlot = isValidSlot( slotIndex ) ? &_listSlot[static_cast<size_t>( slotIndex )] : nullptr;
+                if ( _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
+                     token == static_cast<uint32>( pSlot->_clientSalt ^ pSlot->_serverSalt ) )
                 {
-                    _listSlot[0]._state           = NetConnectionState::Connected;
-                    _listSlot[0]._lastReceiveTime = time;
-                    pushEvent( NetHostEvent{ 0, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
-                }
-                else
-                {
-                    ++_rejectedPacketCount;
+                    sendControl( pSlot->_address, PacketType::ChallengeResponse, pSlot->_clientSalt ^ pSlot->_serverSalt, 0 );
+                    pSlot->_lastSendTime = time;
                     return;
                 }
+                ++_rejectedPacketCount;
+                return;
             }
             Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
             if ( token != static_cast<uint32>( slot._clientSalt ^ slot._serverSalt ) )

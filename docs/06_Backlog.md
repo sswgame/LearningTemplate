@@ -381,8 +381,7 @@ cd build/Ninja-Debug/Bin
   사건을 비신뢰로 겹쳐 보내기(번호가 있어 받는 쪽은 이미 순서를 맞춘다) 또는 NACK 재전송으로 줄인다. ② 롤백(파괴 상태 저장 · 되돌리기, `RollbackSession` 에
   `makeNetworkSnapshot` 바이트 싣기)은 하지 않았다. ③ 부서지기 전 움직이는 파괴 오브젝트(상자 · 드럼통)의 자세는 파괴 키트가 보내지 않는다 — 게임이
   `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ 전용 서버 프로세스 모드(창 · 렌더러 없는 App 서버 +
-  UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다. ⑤ `NetHost` — `Accepted` 를 잃고
-  데이터 패킷으로 연결되면 클라이언트의 `getClientIndex()` 가 −1 로 남는다(네트워크 리팩토링 N2). ⑥ `NetSimDestructionMatrixTest`(나쁜 회선 둘)는 Debug 40 초라
+  UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다. ⑤ `NetSimDestructionMatrixTest`(나쁜 회선 둘)는 Debug 40 초라
   호스트 스위트로 두었다 — `EngineTest_NoGPU` 가 이미 100 초를 넘어(한도 180) `SHARDS` 와 `HOST_SPLIT` 을 함께 쓸 수 있게 되면 nogpu 로 옮긴다.
 
 - **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는

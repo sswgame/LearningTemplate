@@ -142,7 +142,7 @@ namespace sw
         /** @brief 이 호스트의 프로토콜 id(`NetProtocol::makeProtocolId( 게임 id, 와이어 판 )`)입니다. */
         uint32 getProtocolId() const;
 
-    private:
+        /** @brief 패킷 몸의 첫 3 비트 — 핸드셰이크 단계 · 데이터 · 끊김입니다. */
         enum class PacketType : uint8
         {
             ConnectRequest = 0,
@@ -155,6 +155,10 @@ namespace sw
             Count
         };
 
+        /** @brief 데이터그램(머리 포함)의 패킷 종류를 엿봅니다 — 체크섬은 보지 않는다. 너무 짧으면 Count 입니다(흉내 거르개 · 진단). */
+        static PacketType peekPacketType( const uint8* pData, int32 size );
+
+    private:
         /** @brief 판과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로 싸는 패킷 — 요청과 거절뿐입니다. 두 패킷의 배치는 판이 바뀌어도 그대로 둔다. */
         static bool isHandshakeFramed( PacketType type ) { return type == PacketType::ConnectRequest || type == PacketType::Denied; }
 

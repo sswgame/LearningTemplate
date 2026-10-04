@@ -2,6 +2,7 @@
 
 #include "Core/Network/BitStream.h"
 #include "Core/Network/NetConnection.h"
+#include "Core/Network/NetEmulation.h"
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetMessage.h"
 #include "Core/Network/NetTransport.h"
@@ -88,6 +89,24 @@ namespace
         inOutState ^= inOutState >> 17;
         inOutState ^= inOutState << 5;
         return inOutState;
+    }
+
+    /** @brief 흉내 거르개 — 서버가 보내는 `Accepted` 를 @p _remaining 개만 버린다. */
+    struct AcceptedDropper
+    {
+        int32 _remaining{ 0 };
+        int32 _droppedCount{ 0 };
+    };
+
+    bool dropAccepted( const NetAddress& to, const uint8* pData, int32 size, void* pContext )
+    {
+        (void)to;
+        AcceptedDropper& dropper = *static_cast<AcceptedDropper*>( pContext );
+        if ( dropper._remaining <= 0 || NetHost::peekPacketType( pData, size ) != NetHost::PacketType::Accepted )
+            return false;
+        --dropper._remaining;
+        ++dropper._droppedCount;
+        return true;
     }
 
     int32 readMessageValue( const vector<uint8>& buffer )
@@ -509,6 +528,59 @@ SW_TEST_CASE( NetworkTest, WireVersionMismatchIsRefusedWithReason )
     SW_EXPECT_TRUE( listEvent[0]._kind == NetHostEvent::Kind::Disconnected );
     SW_EXPECT_TRUE( listEvent[0]._reason == NetDisconnectReason::VersionMismatch );
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
+}
+
+/**
+ * @brief [NetworkTest] 서버의 `Accepted` 를 잃어도 클라이언트는 서버가 준 자기 번호를 안다 — 먼저 온 데이터 패킷으로는 연결로 치지 않고 응답을 다시 보내 수락을 받는다
+ * @details 첫 데이터 패킷이 수락을 대신하면 번호가 영구히 −1 로 남는다(수락은 다시 오지 않는다). 락스텝 · 롤백은 그 번호 + 1 을 플레이어 번호로 써서
+ *          서버가 그 클라이언트의 입력을 위조로 버리고 판이 멈춘다(`NetSimHarnessTest.LostAcceptedStillGivesLockstepPlayersTheirNumber`).
+ */
+SW_TEST_CASE( NetworkTest, LostAcceptedStillReportsClientIndex )
+{
+    LoopbackNetwork        network( 21u );
+    NetEmulationTransport  serverLink( network.createEndpoint( 4000 ) );
+    AcceptedDropper        dropper;
+    NetEmulationConditions conditions;
+    conditions._pDropFilter        = &dropAccepted;
+    conditions._pDropFilterContext = &dropper;
+    serverLink.setDefaultConditions( conditions );
+    NetHost server;
+    NetHost first;
+    NetHost second;
+    server.initialize( &serverLink, NetHostSettings{} );
+    first.initialize( network.createEndpoint( 5000 ), NetHostSettings{} );
+    second.initialize( network.createEndpoint( 5001 ), NetHostSettings{} );
+    SW_ASSERT_TRUE( server.listen() );
+    float64    time   = 0.0;
+    const auto runAll = [&]( float64 seconds )
+    {
+        for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
+        {
+            time += 1.0 / 60.0;
+            server.update( time );
+            first.update( time );
+            second.update( time );
+        }
+    };
+    // 첫째가 자리 0 을 가져가 둘째의 번호는 1 이다(기본값 0 과 갈린다).
+    SW_ASSERT_TRUE( first.connect( NetAddress::makeLoopback( 4000 ) ) );
+    runAll( 0.3 );
+    SW_ASSERT_EQUAL( 0, first.getClientIndex() );
+    dropper._remaining = 1;
+    SW_ASSERT_TRUE( second.connect( NetAddress::makeLoopback( 4000 ) ) );
+    runAll( 0.5 );
+    SW_EXPECT_EQUAL( 1, dropper._droppedCount );
+    SW_ASSERT_TRUE( second.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_EXPECT_EQUAL( 1, second.getClientIndex() );
+    SW_EXPECT_EQUAL( 2, server.getConnectedCount() );
+    // 수락 앞에 왔던 데이터 패킷의 신뢰 메시지는 재전송이 메운다.
+    SW_ASSERT_TRUE( server.sendMessage( 1, NetChannelType::ReliableOrdered, makeMessage( 4321 ) ) );
+    runAll( 0.5 );
+    int32          connectionId = -1;
+    NetChannelType channel      = NetChannelType::Unreliable;
+    vector<uint8>  buffer;
+    SW_ASSERT_TRUE( second.receiveMessage( connectionId, channel, buffer ) );
+    SW_EXPECT_EQUAL( 4321, readMessageValue( buffer ) );
 }
 
 SW_TEST_CASE( NetworkTest, UdpTransportSendsDatagramsOverLocalhost )
