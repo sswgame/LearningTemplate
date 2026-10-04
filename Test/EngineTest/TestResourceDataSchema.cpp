@@ -35,6 +35,7 @@
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TranslationMemory.h"
+#include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Object/Animation/AnimationCrowd.h"
 #include "Engine/Object/Animation/AnimationLod.h"
 #include "Engine/Object/Animation/VertexAnimationCooker.h"
@@ -105,6 +106,7 @@ namespace
         static bool isTelemetrySchema( sw::string_view resourceId ) { return endsWith( resourceId, ".telemetry.xml" ); }
         static bool isUserSettingsSchema( sw::string_view resourceId ) { return endsWith( resourceId, ".settings.xml" ); }
         static bool isPhysicsSettings( sw::string_view resourceId ) { return endsWith( resourceId, "physicssettings.xml" ); }
+        static bool isNavMeshSettings( sw::string_view resourceId ) { return endsWith( resourceId, "navmeshsettings.xml" ); }
         static bool isPhysicsAsset( sw::string_view resourceId ) { return endsWith( resourceId, ".physics.xml" ); }
         static bool isSkeleton( sw::string_view resourceId ) { return endsWith( resourceId, sw::Skeleton::kExtension ); }
         static bool isAnimGraph( sw::string_view resourceId ) { return endsWith( resourceId, ".animgraph.json" ); }
@@ -438,6 +440,7 @@ namespace
             {       "elementrules",        &isElementRules,                 &loadCatalog<sw::ElementRuleTable>},
             {       "interactions",        &isInteractions,               &loadCatalog<sw::InteractionCatalog>},
             {    "physicssettings",     &isPhysicsSettings,                               &loadPhysicsSettings},
+            {    "navmeshsettings",     &isNavMeshSettings,                  &loadCatalog<sw::NavMeshSettings>},
             {       "physicsasset",        &isPhysicsAsset,                                  &loadPhysicsAsset},
             {          "schedules",           &isSchedules,                  &loadCatalog<sw::ScheduleCatalog>},
             {         "aidirector",          &isAiDirector,                &loadCatalog<sw::AiDirectorProfile>},

@@ -16,7 +16,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 | 1 | `Reflection` · `Utility` | 리플렉션과, 토대 위의 잎 헬퍼. |
 | 2 | `Animation` · `Localization` · `Serialization` | 리플렉션 위에 올라가는 직렬화와 에셋형 잎. |
 | 3 | `Audio` · `Config` · `Dialogue` · `Physics` | 설정 — 리플렉션·직렬화로 읽힌다. 물리(설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터)와 오디오(믹서 그래프 · 이벤트 · 음악 데이터)도 여기다. |
-| 4 | `Resource` · `Spatial` | 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. 공간 분할은 물리의 `AABB` 위에 선다. |
+| 4 | `Resource` · `Spatial` · `Navigation` | 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. 공간 분할은 물리의 `AABB` 위에 선다. 내비메시(Recast 백엔드 · 베이크 입력 · 설정 표)는 물리의 셰이프 서술자를 읽어 베이크하고, 씬의 내비게이션 · 컴포넌트(6)가 쓴다. |
 | 5 | `Graphics`(Renderer 제외) · `Window` | RHI · 셰이더 · 머티리얼 · 메시 · 텍스처 — **디바이스와 GPU 에셋**. 창은 표면(`Common/IRenderSurface`)으로만 RHI 에 보인다. |
 | 6 | `Input` · `Object` | 컴포넌트 모델. 컴포넌트가 머티리얼·메시(5)를 든다 — 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 드는 것과 같은 자리. |
 | 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` · `Environment` · `DevTools` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트 · 지형 · 식생 · 물). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. 개발 도구(`DevTools` — 게임 창 개발 콘솔의 판단)는 입력(6) · 창(5) 위에 선다. |
@@ -62,6 +62,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Character/**: 캐릭터 외형의 형상 쪽 — 소켓 에셋 · 해석된 소켓 표 · 레퍼런스 포즈 덮어쓰기 · 체형 · 장비 피팅(`FitSolver`) · 병합 · 절단 · 표면 상태 · `SocketBindingComponent` ([Character/README.md](Character/README.md))
 - **Destruction/**: 파괴 가능 메시 — 보로노이 파쇄(`.fracture`) · 묶음 계층 · 연결 그래프 · 구조 지지 · 피해 · 조각 컴포넌트 ([Destruction/README.md](Destruction/README.md))
 - **Environment/**: 지형(높이장 · 청크 LOD · 스플랫 레이어) · 식생(규칙 배치 · GPU 인스턴스 · 바람) · 물(거스트너 · 수면 질의) · 2D/3D 공용 배치 규칙 ([Environment/README.md](Environment/README.md))
+- **Navigation/**: 3D 내비메시 — `INavMesh` · `INavCrowd` 인터페이스 뒤의 Recast & Detour(타일 베이크 · 경로 · 레이캐스트 · 군중), 설정 표, 쿠킹본(`.navmesh`). 씬 쪽(`SceneNavigation` · 에이전트 · 표면 · 장애물 컴포넌트)은 Object 에 있다 ([Navigation/README.md](Navigation/README.md))
 - **Spatial/**: 2D/3D 공간 분할 가속 구조체(BVHTree3D · SpatialHashGrid2D · SpatialQuadTree · SpatialOctree) ([Spatial/README.md](Spatial/README.md))
 - **Reflection/**: 매크로 · TypeRegistry · Builtins. [Reflection/README.md](Reflection/README.md) · 생성기 [ReflectionParser](../../Tools/ReflectionParser/README.md)
 - **Graphics/**: RHI · Material · Shader · FrameRenderer. [Graphics/README.md](Graphics/README.md)
