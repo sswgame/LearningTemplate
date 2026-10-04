@@ -92,3 +92,31 @@
 순서를 바꾸면 다른 상태입니다(계약의 일부). 부딪힘 사건은 물리에서 나오므로 기계마다 다를 수 있습니다 — 권한 쪽이 만든 사건만 기록에 싣습니다.
 
 시험: `DestructionDamageTest`(`Test/EngineTest/TestDestructionDamage.cpp`).
+
+## 4. 런타임 — `FractureComponent`(3D) · `FractureComponentBase`
+
+오브젝트 구성: 뿌리 `RigidBodyComponent`(오브젝트 자세를 맡는다 — 벽은 Static, 상자는 Dynamic) + 그릴 `MeshComponent`(`.mesh`) + `FractureComponent`
+(`_fracturePath` 를 비우면 메시 옆 `.fracture`, `_profilePath` 를 비우면 기본 표, 앵커 모드 None · Bottom · World + 앵커 볼륨, 권한).
+**강체가 뿌리여야 합니다** — 메시를 뿌리로 두면 물리는 강체 컴포넌트만 옮기고 오브젝트 자세(쪼갤 때 쓰는)는 그대로다.
+
+- **온전**: 그리기 하나(오브젝트 메시) · 바디 하나(오브젝트 강체), 이 컴포넌트는 상태만 든다.
+- **처음 떨어진 것이 생기면**(그룹이 갈라지면) 쪼갠 상태: 메시를 숨기고 강체를 끄고(그 바디를 곧바로 빼 새 조각과 겹치지 않게), 조각마다 본 하나인
+  **스킨드 메시 둘**(겉면 · 안쪽 면 — `FractureRenderUtil`, 조각이 수백이어도 칸마다 그리기 하나, GPU 스키닝)을 같은 오브젝트에 붙인다. 앵커 그룹의
+  잎은 잎마다 **정적 바디**(미리 지은 잎 껍질 셰이프를 나눠 쓰고 `createBodies` 한 번), 떨어진 그룹은 그룹마다 **동적 바디 하나**(잎 껍질 컴파운드,
+  잎 하나면 그 셰이프). 붙은 그룹이 갈라져도 붙은 잎의 정적 바디는 그대로 둔다(`syncStaticBodies` — 다시 만들지 않는다).
+- **갈라질 때**: 자식 그룹은 부모 바디 자세에서, 부모 질량 중심 속도 + 각속도 × 거리로 태어나고, 사건의 충격량을 받는다(폭발은 바깥 · 거리 감쇠, 맞은
+  자리는 맞은 방향, 씨앗 흩기 — 상태에는 들지 않는다). 같은 오브젝트 조각끼리의 부딪힘은 태어난 지 0.3 초 안이면 피해가 아니다(맞닿은 채 태어난다).
+- **매 물리 프레임**: 동적 바디 자세를 읽어 잎마다 본 로컬(오브젝트 메시 공간: 회전 = 오브젝트⁻¹ × 그룹, 옮김)을 쓰고 `applyExternalPose`(물리가 애니메이션
+  평가보다 늦으므로 그 자리에서 팔레트를 다시 구한다). 수명 · 잠 · 페이드는 이번 프레임에 돈 고정 스텝 시간으로 센다.
+- **정리**: 잠들어 `sleepRemoveTime` 쉰 그룹은 바디를 뺀다(`keepCollisionVolume` 이상은 잠든 바디를 남겨 충돌을 지킨다) · 작은 파편은 `lifetime` 뒤
+  `fadeTime` 동안 본 배율이 0 으로 줄며 사라진다 · 떨어진 그룹 바디가 `maxBodies` 또는 `gv_destructionMaxDebrisBodies`(전역, 기본 512)를 넘으면 오래된
+  것(작은 것 먼저)부터 사라지게 한다 · 30 프레임 동안 움직인 것이 없으면 지금 자세를 **정적 메시 둘에 구워** 스킨드 메시를 숨긴다(프레임 비용 0).
+  다시 움직이면 스킨드로 돌아온다.
+- **피해 입구**(어느 틱에서든 — 잠금 아래 쌓였다가 다음 물리 프레임에 게임 스레드에서): `applyDamage`(메시 공간 — 네트워크로 받은 사건),
+  `applyPointDamageAtWorld`(무기, 맞은 바디가 떨어진 덩어리면 그 그룹만), `applyRadialDamageAtWorld`(폭발 — 붙은 구조와 반경 안의 덩어리마다 그 자세로
+  사건 하나), `applyRaycastDamage`(광선 → 바디 사용자 값 → 오브젝트), 부딪힘(시작 충격량 > `minImpulse`, 권한일 때). 적용한 사건은 `getEventLog()` 에
+  쌓인다 — 받는 쪽(`setAuthority( false )`)은 그것을 같은 순서로 `applyDamage` 하면 같은 구조 상태다(조각의 물리 자세는 각자 — 꾸밈이다).
+- `SkeletalMeshComponent` 에 둘을 더했다: `setSkeleton` 은 런타임 지정이라 경로가 바뀔 때까지 유지(시작의 렌더 에셋 해석이 덮지 않는다),
+  `applyExternalPose`(평가 밖에서 고친 로컬 포즈로 팔레트를 그 자리에서).
+
+시험: `FractureComponentTest`(`Test/EngineTest/TestFractureComponent.cpp`).

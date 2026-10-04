@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/span.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
@@ -37,6 +38,7 @@ namespace sw
         float32               _radius{ 0.0f };  ///< 감쇠 반경(미터). 0 이면 잎 하나
         float32               _impulse{ 0.0f }; ///< 떨어진 조각에 줄 충격량(뉴턴초) — 런타임만 쓴다
         int32                 _leafHint{ -1 };  ///< 맞은 잎(광선이 고른 것). 있으면 그 잎은 감쇠 없이 `_strain`
+        uint32                _groupId{ 0 };    ///< 이 그룹의 잎만(떨어져 다른 곳에 있는 덩어리를 맞힌 것). 0 이면 모든 잎
         DestructionDamageKind _kind{ DestructionDamageKind::Point };
     };
 } // namespace sw
@@ -59,8 +61,10 @@ namespace sw
         /**
          * @brief 사건이 잎마다 주는 변형을 @p outListStrain 에 채웁니다(잎 번호 순, 0 은 빼고). 반경 안은 선형 감쇠 `1 - 거리 / 반경`, 반경 0 이면
          *        `_leafHint` 또는 무게 중심이 가장 가까운 잎 하나입니다.
+         * @param listLeafGroup 잎마다 그룹 번호. 사건에 `_groupId` 가 있으면 그 그룹의 잎만 봅니다(비면 거르지 않는다).
          */
-        static void computeLeafStrain( const FractureGraph& graph, const DestructionDamageEvent& event, vector<DestructionLeafStrain>& outListStrain );
+        static void computeLeafStrain( const FractureGraph& graph, const DestructionDamageEvent& event, vector_reference<const uint32> listLeafGroup,
+                                       vector<DestructionLeafStrain>& outListStrain );
         /**
          * @brief 부딪힘 충격량(뉴턴초)으로 사건을 만듭니다. `minImpulse` 이하이면 변형 0 입니다.
          * @param position · normal 메시 공간

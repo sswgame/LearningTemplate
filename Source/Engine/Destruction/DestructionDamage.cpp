@@ -18,7 +18,7 @@ namespace sw
         struct DestructionDamageInternal
         {
             static constexpr uint8  kArrMagic[4] = { 'S', 'W', 'D', 'E' };
-            static constexpr uint32 kEventSize   = 1 + 4 + 4 * 11;
+            static constexpr uint32 kEventSize   = 1 + 4 + 4 + 4 * 9;
 
             /** @brief 노드와 그 노드에 이번 사건이 준 변형입니다. */
             struct NodeStrain
@@ -68,20 +68,25 @@ namespace sw
 
 namespace sw
 {
-    void DestructionDamageUtil::computeLeafStrain( const FractureGraph& graph, const DestructionDamageEvent& event, vector<DestructionLeafStrain>& outListStrain )
+    void DestructionDamageUtil::computeLeafStrain( const FractureGraph& graph, const DestructionDamageEvent& event, vector_reference<const uint32> listLeafGroup,
+                                                   vector<DestructionLeafStrain>& outListStrain )
     {
         outListStrain.clear();
         if ( event._strain <= 0.0f || graph._leafCount == 0 )
             return;
-        const bool bHint = event._leafHint >= 0 && static_cast<uint32>( event._leafHint ) < graph._leafCount;
+        const bool bFilter = event._groupId != 0 && listLeafGroup.size() == graph._leafCount;
+        const bool bHint   = event._leafHint >= 0 && static_cast<uint32>( event._leafHint ) < graph._leafCount &&
+                           ( bFilter == false || listLeafGroup[static_cast<uint32>( event._leafHint )] == event._groupId );
         if ( event._radius <= 0.0f )
         {
-            uint32 target = bHint ? static_cast<uint32>( event._leafHint ) : 0u;
+            uint32  target = bHint ? static_cast<uint32>( event._leafHint ) : 0u;
+            float32 best   = MathUtil::MaxFloat;
             if ( bHint == false )
             {
-                float32 best = MathUtil::MaxFloat;
                 for ( uint32 leaf = 0; leaf < graph._leafCount; ++leaf )
                 {
+                    if ( bFilter && listLeafGroup[leaf] != event._groupId )
+                        continue;
                     const float32 distance = float3::getDistanceSquared( graph._listNode[leaf]._centroid, event._position );
                     if ( distance < best )
                     {
@@ -90,11 +95,14 @@ namespace sw
                     }
                 }
             }
-            outListStrain.push_back( DestructionLeafStrain{ target, event._strain } );
+            if ( best < MathUtil::MaxFloat || bHint )
+                outListStrain.push_back( DestructionLeafStrain{ target, event._strain } );
             return;
         }
         for ( uint32 leaf = 0; leaf < graph._leafCount; ++leaf )
         {
+            if ( bFilter && listLeafGroup[leaf] != event._groupId )
+                continue;
             float32 strain = 0.0f;
             if ( bHint && static_cast<uint32>( event._leafHint ) == leaf )
             {
@@ -138,8 +146,9 @@ namespace sw
         {
             outBytes.push_back( static_cast<uint8>( event._kind ) );
             Internal::appendUint32( outBytes, static_cast<uint32>( event._leafHint ) );
-            const float32 arrValue[11] = { event._position._x, event._position._y, event._position._z, event._direction._x, event._direction._y, event._direction._z,
-                                           event._strain, event._radius, event._impulse, 0.0f, 0.0f };
+            Internal::appendUint32( outBytes, event._groupId );
+            const float32 arrValue[9] = { event._position._x, event._position._y, event._position._z, event._direction._x, event._direction._y,
+                                          event._direction._z, event._strain, event._radius, event._impulse };
             for ( const float32 value : arrValue )
                 Internal::appendFloat32( outBytes, value );
         }
@@ -176,7 +185,8 @@ namespace sw
             DestructionDamageEvent event;
             event._kind      = static_cast<DestructionDamageKind>( pCursor[0] );
             event._leafHint  = static_cast<int32>( Internal::readUint32( pCursor + 1 ) );
-            const uint8* pF  = pCursor + 5;
+            event._groupId   = Internal::readUint32( pCursor + 5 );
+            const uint8* pF  = pCursor + 9;
             event._position  = float3{ Internal::readFloat32( pF ), Internal::readFloat32( pF + 4 ), Internal::readFloat32( pF + 8 ) };
             event._direction = float3{ Internal::readFloat32( pF + 12 ), Internal::readFloat32( pF + 16 ), Internal::readFloat32( pF + 20 ) };
             event._strain    = Internal::readFloat32( pF + 24 );
@@ -196,7 +206,7 @@ namespace sw
         const FractureGraph& graph = *_pGraph;
         ++_eventCount;
         vector<DestructionLeafStrain> listLeafStrain;
-        DestructionDamageUtil::computeLeafStrain( graph, event, listLeafStrain );
+        DestructionDamageUtil::computeLeafStrain( graph, event, _listLeafGroup, listLeafStrain );
         if ( listLeafStrain.empty() )
             return false;
         _listScratchStrain.assign( graph._leafCount, 0.0f );
