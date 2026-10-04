@@ -25,6 +25,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/SceneAudio.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Object/GameObject/TickRegistry.h"
 #include "Engine/Physics/PhysicsWorld.h"
@@ -304,6 +305,8 @@ namespace sw
          * @details 겹침 월드(`getPhysicsWorld`)와 따로 돕니다 — 둘 다 `stepPhysics` 에서 이 순서(겹침 → 강체)로 한 번씩 진행합니다.
          */
         ScenePhysics& getScenePhysics() { return _scenePhysics; }
+        /** @brief 씬 오디오(리스너 · 에미터 · 가림 · 리버브 존을 엔진에 넣는 자리)입니다. `Scene::tick` 이 틱 뒤에 `update` 를 부릅니다. */
+        SceneAudio& getSceneAudio() { return _sceneAudio; }
         /** @brief 이 씬의 강체 물리입니다. */
         const ScenePhysics& getScenePhysics() const { return _scenePhysics; }
 
@@ -551,6 +554,8 @@ namespace sw
         PhysicsWorld _physicsWorld;
         /** @brief 강체 물리입니다. 컴포넌트보다 늦게 사라지도록 등록부들과 함께 둔다(컴포넌트의 해제가 바디를 놓는다). */
         ScenePhysics _scenePhysics;
+        /** @brief 오디오 컴포넌트 등록부와 엔진 묶기입니다. 물리처럼 소유만 합니다. */
+        SceneAudio _sceneAudio;
         /**
          * @brief 콜라이더 바디를 맞추고 물리를 step 한 뒤 겹침 이벤트를 두 오브젝트의 켜진 컴포넌트에 나눠 줍니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
          * @details 유니티는 물리 갱신 뒤 OnTrigger 를, 언리얼은 움직임이 끝난 뒤 Begin/EndOverlap 을 부른다. 여기서는 그 프레임에 적용된 월드 자리로 잰다.

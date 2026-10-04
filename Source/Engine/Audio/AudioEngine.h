@@ -284,6 +284,7 @@ namespace sw
         {
             AudioEmitterState        _state{};
             vector<EmitterParameter> _listParameter{};
+            bool                     _bRemoved{ false }; ///< 지워 달라고 했다 — 이 자리의 보이스가 끝나면 지운다
         };
 
         /** @brief 파라미터 하나의 실행 상태입니다. */
@@ -387,6 +388,8 @@ namespace sw
         void updateEmitters();
         /** @brief 보이스 하나의 이번 블록 목표(볼륨 · 팬 · 피치 · 로우패스 · 들림)를 정합니다. */
         void updateVoiceTargets( VoiceSlot& slot );
+        /** @brief 지워 달라고 한 에미터 중 보이스가 남지 않은 것을 지웁니다. */
+        void sweepRemovedEmitters();
         /** @brief 게임 스레드가 읽을 상태를 게시합니다. */
         void publishState( uint32 realCount, uint32 virtualCount );
         /** @brief 명령을 쌓습니다. */

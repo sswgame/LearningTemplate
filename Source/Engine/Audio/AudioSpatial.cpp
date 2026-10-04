@@ -108,13 +108,70 @@ namespace sw
         return MathUtil::clamp( scaled, 1.0f / kMaxDopplerRatio, kMaxDopplerRatio );
     }
 
+    float3 AudioSpatializer::computeClosestPoint( AudioVolumeShape shape, const float3& center, const float3& halfExtents, float32 radius, const float3& point )
+    {
+        switch ( shape )
+        {
+            case AudioVolumeShape::Point:
+            {
+                return center;
+            }
+            case AudioVolumeShape::Box:
+            {
+                return float3( MathUtil::clamp( point._x, center._x - halfExtents._x, center._x + halfExtents._x ),
+                               MathUtil::clamp( point._y, center._y - halfExtents._y, center._y + halfExtents._y ),
+                               MathUtil::clamp( point._z, center._z - halfExtents._z, center._z + halfExtents._z ) );
+            }
+            case AudioVolumeShape::Sphere:
+            {
+                const float3  offset   = point - center;
+                const float32 distance = offset.getLength();
+                if ( distance <= radius || distance <= 1e-6f )
+                    return point;
+                return center + offset * ( radius / distance );
+            }
+        }
+        return center;
+    }
+
+    float32 AudioSpatializer::computeInsideWeight( AudioVolumeShape shape, const float3& center, const float3& halfExtents, float32 radius, float32 fadeDistance,
+                                                   const float3& point )
+    {
+        float32 depth = -1.0f;
+        switch ( shape )
+        {
+            case AudioVolumeShape::Point:
+            {
+                return 0.0f;
+            }
+            case AudioVolumeShape::Box:
+            {
+                const float3  offset = point - center;
+                const float32 depthX = halfExtents._x - MathUtil::abs( offset._x );
+                const float32 depthY = halfExtents._y - MathUtil::abs( offset._y );
+                const float32 depthZ = halfExtents._z - MathUtil::abs( offset._z );
+                depth                = MathUtil::min( depthX, MathUtil::min( depthY, depthZ ) );
+                break;
+            }
+            case AudioVolumeShape::Sphere:
+            {
+                depth = radius - ( point - center ).getLength();
+                break;
+            }
+        }
+        if ( depth < 0.0f )
+            return 0.0f;
+        return fadeDistance <= 0.0f ? 1.0f : MathUtil::saturate( depth / fadeDistance );
+    }
+
     AudioSpatialResult AudioSpatializer::compute( const AudioListenerState& listener, const AudioEmitterState& emitter, const AudioAttenuationDesc& attenuation,
                                                   const AudioOcclusionDesc& occlusion )
     {
         AudioSpatialResult result;
-        result._distance   = computeDistance( listener, emitter._position );
-        result._gain       = attenuation.computeGain( result._distance );
-        result._pan        = computePan( listener, emitter._position, attenuation._minDistance * 0.5f );
+        result._distance = computeDistance( listener, emitter._position );
+        result._gain     = attenuation.computeGain( result._distance );
+        // 리스너 0.5 m 안(최소 거리가 더 작으면 그 절반 안)에서는 팬을 가운데로 모은다 — 머리를 지나가는 소리가 좌우로 튀지 않게.
+        result._pan        = computePan( listener, emitter._position, MathUtil::min( attenuation._minDistance * 0.5f, 0.5f ) );
         result._pitchRatio = computeDopplerRatio( listener, emitter, attenuation._dopplerFactor );
         result._lowPassHz  = attenuation.computeLowPassHz( result._distance );
         if ( attenuation._bOcclusion && emitter._occlusion > 0.0f )

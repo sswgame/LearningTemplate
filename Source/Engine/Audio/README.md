@@ -22,6 +22,8 @@
 | 형식 상수 · dB 변환 · 결정적 난수 · 버스 이름 | `AudioTypes.h` |
 | Windows 출력(XAudio2 스트리밍 보이스) · MP3 대체 디코더(Media Foundation) | `Windows/XAudio2System` |
 | 장치 없는 출력 | `NullAudioSystem` |
+| 씬 묶기 — 리스너 · 에미터 자리와 속도 · 가림 · 리버브 존 세기를 프레임마다 엔진에 | `Object/GameObject/SceneAudio` |
+| 오디오 컴포넌트(리스너 · 에미터 · 앰비언트 · 리버브 존) · 물리 레이캐스트 가림 | `Object/Component/Audio/` |
 
 ## 형식과 스레드
 
@@ -80,7 +82,7 @@
 
 - **리스너** `setListener( index, AudioListenerState )` — 최대 4 개(분할 화면). 여럿이면 보이스마다 가장 크게 들리는 리스너로 잽니다(언리얼 · Wwise 의
   "가장 가까운 리스너"). 리스너를 섞어 내는 다중 리스너 믹스는 없습니다.
-- **팬** — 3D(`World3D`): 수평면 위 방향의 오른쪽 성분(오른쪽 = 위 × 앞, 왼손 좌표). 고도는 팬에 쓰지 않습니다. 리스너에 아주 가까우면(최소 거리의 절반 안)
+- **팬** — 3D(`World3D`): 수평면 위 방향의 오른쪽 성분(오른쪽 = 위 × 앞, 왼손 좌표). 고도는 팬에 쓰지 않습니다. 리스너에 아주 가까우면(0.5 m, 최소 거리가 더 작으면 그 절반 안)
   가운데로 모읍니다. 모노는 등전력(가운데 -3 dB, L² + R² 일정), 스테레오는 밸런스. **HRTF(바이노럴) · 서라운드 출력은 없습니다** — 출력은 스테레오입니다.
 - **2D**(`Screen2D`): 팬 = 가로 거리 / 화면 반폭(`_screenHalfWidth`), 세로는 팬에 쓰지 않음(고도 없음), 거리는 XY 거리(Z 는 레이어라 무시).
 - **거리 감쇠** — `Linear` · `Inverse`(OpenAL inverse clamped) · `InverseSquare` · `Custom`(거리, dB 점). 공기 흡수는 (거리, Hz) 점의 보이스 로우패스.
@@ -145,6 +147,25 @@
   클립 디코드가 늦게 끝나면 그만큼 건너뛰어 박을 지킵니다.
 - **세로 레이어**: 레이어마다 게임 파라미터 곡선(파라미터 → dB)이 볼륨을 정하고 `_layerFadeSeconds` 동안 옮깁니다(긴장도가 오르면 드럼이 들어온다).
 - 음악 보이스는 `KeepReal`(가상이 되지 않음) · 우선순위 100 이고, 버스는 `_bus`(비우면 `music`)입니다.
+
+## 씬 묶기 · 환경 오디오
+
+오디오 컴포넌트는 틱하지 않고 씬의 `SceneAudio`(`GameObjectManager` 소유)에 등록합니다. 활성 씬의 틱이 끝나면 `Scene::tick` 이 게임 스레드에서
+`SceneAudio::update( dt, 게임 카메라, 3D 물리 씬 )` 을 한 번 부르고, 그것이 엔진에 넣습니다:
+
+| 컴포넌트 | 하는 일 |
+|---|---|
+| (없음) | 게임 카메라가 리스너 0 — 원근이면 카메라 축(3D), **직교면 `Screen2D`**(화면 평면 팬, 반폭 = 직교 높이 × 16/9 ÷ 2 — 정확한 반폭은 리스너 컴포넌트로) |
+| `AudioListenerComponent` | 리스너를 카메라 대신 그 자리에(3인칭 머리 · 분할 화면 칸 0..3 · 모드 · 2D 반폭). 있으면 카메라를 쓰지 않음 |
+| `AudioEmitterComponent` | 에미터 id = 컴포넌트 id. `_event` 를 시작할 때 내고 끝날 때 멈춤, `post( event )` · `stopAll` · `setParameter`. 자리 · 속도(도플러)를 프레임마다 |
+| `AudioAmbientEmitterComponent` | 루프 환경음 — 점 · 상자 · 구. 리스너 쪽 **가장 가까운 점**에서 소리(안에 서면 리스너 자리). 가림 기본 끔 |
+| `AudioReverbZoneComponent` | 상자 · 구 안으로 들어간 깊이(경계 0 → `_fadeDistance` 안쪽 1)로 스냅샷 세기를 건다(`Cave` · `Hall` · `Underwater`). 같은 스냅샷은 가장 큰 세기 |
+
+- **가림**: 3D 물리 씬이 있으면 `PhysicsAudioOcclusionQuery` — `IPhysicsScene3D::raycast` 레이 셋(가운데 · 좌우 0.4 m, 리스너 0.3 m · 에미터 0.5 m 껍질은
+  세지 않음, 트리거 제외)의 막힌 비율을 프레임마다 에미터 16 개씩 돌아가며 잽니다. 물리 씬이 없거나 2D(Box2D) 씬이면 가림은 0 입니다. `setOcclusionQuery` 로
+  다른 기하(내비메시 · 포털 · 방 그래프)로 바꿀 수 있습니다.
+- 사라진 에미터는 엔진에서 바로 지우지 않습니다 — 그 자리의 원샷이 끝나야 지웁니다(자리를 잃은 소리가 2D 로 돌아가 크게 들리지 않게).
+- 엔진은 서비스(`engine::getAudioSystem`)의 것이고, 시험은 `SceneAudio::setAudioEngine` 으로 장치 없는 엔진을 꽂습니다.
 
 ## 재생
 

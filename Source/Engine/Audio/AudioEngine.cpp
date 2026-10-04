@@ -632,9 +632,10 @@ namespace sw
             }
             case CommandType::SetEmitter:
             {
-                AudioEmitterState& emitter = _mapEmitter[command._emitterId]._state;
-                emitter._position          = command._position;
-                emitter._velocity          = command._velocity;
+                EmitterRecord& record   = _mapEmitter[command._emitterId];
+                record._state._position = command._position;
+                record._state._velocity = command._velocity;
+                record._bRemoved        = false;
                 break;
             }
             case CommandType::SetEmitterOcclusion:
@@ -660,7 +661,10 @@ namespace sw
             }
             case CommandType::RemoveEmitter:
             {
-                _mapEmitter.erase( command._emitterId );
+                // 바로 지우지 않는다 — 그 자리의 원샷이 끝나기 전에 자리를 잃으면 2D 로 돌아가 크게 들린다.
+                const auto it = _mapEmitter.find( command._emitterId );
+                if ( it != _mapEmitter.end() )
+                    it->second._bRemoved = true;
                 break;
             }
             case CommandType::SetParameter:
@@ -976,6 +980,7 @@ namespace sw
                 freeVoice( slot );
         }
         updateInstances();
+        sweepRemovedEmitters();
 
         mixer.process( _listBlockOutput.data(), audio::kBlockFrameCount );
         // 장치는 [-1, 1] 밖을 감아 돌릴 수 있다 — 마지막에 자른다(리미터가 master 에 있으면 여기 닿지 않는다).
@@ -984,6 +989,23 @@ namespace sw
 
         _renderedFrameCount += audio::kBlockFrameCount;
         publishState( realCount, virtualCount );
+    }
+
+    void AudioEngine::sweepRemovedEmitters()
+    {
+        for ( auto it = _mapEmitter.begin(); it != _mapEmitter.end(); )
+        {
+            bool bInUse = false;
+            if ( it->second._bRemoved )
+            {
+                for ( const VoiceSlot& slot : _listVoice )
+                    bInUse = bInUse || ( slot._bInUse && slot._emitterId == it->first );
+            }
+            if ( it->second._bRemoved && bInUse == false )
+                it = _mapEmitter.erase( it );
+            else
+                ++it;
+        }
     }
 
     void AudioEngine::publishState( uint32 realCount, uint32 virtualCount )

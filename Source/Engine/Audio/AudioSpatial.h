@@ -26,6 +26,15 @@ namespace sw
         Custom,        ///< 점(거리, dB) 사이 직선 보간, 끝 점 밖은 끝 값
     };
 
+    /** @brief 앰비언트 에미터 · 리버브 존의 모양입니다. */
+    ENUM()
+    enum class AudioVolumeShape : uint8
+    {
+        Point = 0, ///< 점(앰비언트 에미터만)
+        Box,       ///< 축 정렬 상자(반 크기)
+        Sphere,    ///< 구(반지름)
+    };
+
     /** @brief 리스너가 팬 · 거리를 재는 공간입니다. */
     ENUM()
     enum class AudioSpatialMode : uint8
@@ -169,6 +178,17 @@ namespace sw
         static float32 computePan( const AudioListenerState& listener, const float3& emitterPosition, float32 centerRadius );
         /** @brief 도플러 비(1 = 그대로)입니다. @p factor 0 이면 1 입니다. */
         static float32 computeDopplerRatio( const AudioListenerState& listener, const AudioEmitterState& emitter, float32 factor );
+        /**
+         * @brief 모양 안에서 @p point 에 가장 가까운 점입니다(안에 있으면 그 점) — 넓은 앰비언트(강 · 숲)가 리스너 쪽 가장자리에서 들리게 한다(Wwise · 언리얼 영역 에미터).
+         * @param halfExtents 상자의 반 크기입니다(축 정렬). @param radius 구의 반지름입니다.
+         */
+        static float3 computeClosestPoint( AudioVolumeShape shape, const float3& center, const float3& halfExtents, float32 radius, const float3& point );
+        /**
+         * @brief 모양 안으로 들어간 깊이를 0..1 로 잽니다(리버브 존 블렌드) — 경계에서 0, 경계에서 @p fadeDistance 안쪽부터 1, 밖은 0.
+         * @details 상자는 가장 가까운 면까지의 거리, 구는 반지름 − 중심 거리입니다. @p fadeDistance 가 0 이면 안에서 바로 1 입니다.
+         */
+        static float32 computeInsideWeight( AudioVolumeShape shape, const float3& center, const float3& halfExtents, float32 radius, float32 fadeDistance,
+                                            const float3& point );
         /** @brief 리스너 공간의 거리입니다(Screen2D 는 XY 거리). */
         static float32 computeDistance( const AudioListenerState& listener, const float3& emitterPosition );
     };
