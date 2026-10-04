@@ -120,9 +120,7 @@ namespace sw
         , _bProcessingDestruction{ false }
         , _bDeferredHierarchyChange{ SW_FALSE }
         , _stageTransformApplyCount{ 0 }
-        , _lastStageGeneration{ 0 }
         , _tickStageBuildCount{ 0 }
-        , _listCachedTickStage{}
         , _listPlayWalk{}
         , _bHasBegunPlay{ false }
         , _beginPlayMutex{}
@@ -651,7 +649,6 @@ namespace sw
             _overflowObjectCount.store( 0, std::memory_order_release );
             _objectSlotTable.clear();
             _transformHierarchy.clear();
-            _listCachedTickStage.clear();
         }
 
         for ( GameObject* pObj : listToDestroy )
@@ -670,7 +667,6 @@ namespace sw
             }
         }
 
-        _listCachedTickStage.clear();
         _tickRegistry.clear();
         markTickStagesDirty();
         // 컴포넌트가 바디를 놓았다 — 빈 물리 씬과 쌓인 시간을 버린다(다음 씬은 처음 쓸 때 새로 만든다).

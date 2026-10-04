@@ -65,6 +65,12 @@ namespace sw
     {
         uint64 _componentId{ 0 };
         uint32 _subTickId{ 0 };
+        /**
+         * @brief 그 컴포넌트를 가진 오브젝트입니다. 비교 · 해시에는 쓰지 않습니다.
+         * @details 등록부가 선행 조건이 가리키는 항목을 씬 전체를 훑지 않고 그 오브젝트에서만 찾는 데 씁니다. 0 이면(소유자 없이 만든 핸들)
+         *          선행 조건으로 받지 않습니다.
+         */
+        uint64 _objectId{ 0 };
 
         constexpr bool isValid() const
         {
@@ -422,6 +428,8 @@ namespace sw
         /**
          * @brief 서브틱에 선행 조건을 추가합니다(prerequisiteHandle 이 먼저 실행되어야 합니다).
          * @details 선행 조건이 뒤 그룹에 있으면 이 서브틱이 그 그룹으로 옮겨 가 돕니다(언리얼 `ActualStartTickGroup`). 사슬을 따라 옮깁니다.
+         *          선행 조건을 가진 서브틱만 스테이지로 가고, 이 컴포넌트의 다른 틱과 사슬 밖 오브젝트는 보통 길 그대로입니다. 앞에서 돈 선행 조건이
+         *          쓴 트랜스폼은 이 서브틱이 돌기 전에 적용되어 같은 프레임에 보입니다. 소유자 없이 만든 핸들(`_objectId` 0)은 받지 않습니다(false).
          *          틱 중이면 인자만 보고 틱 직후로 미루며 true(받아 둠)입니다.
          */
         bool addSubTickPrerequisite( uint32 subTickId, const SubTickHandle& prerequisiteHandle );
@@ -528,6 +536,8 @@ namespace sw
 
     private:
         bool isSubTickActiveSlow( uint32 subTickId ) const;
+        /** @brief 이 컴포넌트의 틱 하나(@p subTickId, 0 이면 주 틱)를 가리키는 핸들입니다. 소유 오브젝트 id 를 함께 담습니다(없으면 0). */
+        SubTickHandle makeTickHandle( uint32 subTickId ) const;
         /** @brief 서브틱의 실행 여부를 바로 바꿉니다 — 1~63 은 원자 마스크, 64 번부터는 목록 원소의 원자 칸입니다. 틱 중에도 부를 수 있습니다. */
         void setSubTickRunnable( uint32 subTickId, bool bRunnable );
         /**

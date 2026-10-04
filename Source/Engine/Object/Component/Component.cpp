@@ -103,7 +103,7 @@ namespace sw
         // 틱 중이면 목록 · 마스크 모두 틱 뒤로 — 핸들은 목록과 상관없이 정해지므로 바로 돌려준다(헤더 머리말).
         if ( deferIfStructureFrozen( Delegate<void( Component& )>( [group, subTickId, phase, priority]( Component& self )
         { self.registerSubTick( group, subTickId, phase, priority ); } ) ) )
-            return SubTickHandle{ _componentId, subTickId };
+            return makeTickHandle( subTickId );
 
         for ( SubTickInfo& info : _listSubTick )
         {
@@ -116,7 +116,7 @@ namespace sw
                 setSubTickRunnable( subTickId, true );
                 if ( _pOwner != nullptr )
                     _pOwner->markTickOrderDirty();
-                return SubTickHandle{ _componentId, subTickId };
+                return makeTickHandle( subTickId );
             }
         }
 
@@ -132,7 +132,12 @@ namespace sw
         if ( _pOwner != nullptr )
             _pOwner->markTickOrderDirty();
 
-        return SubTickHandle{ _componentId, subTickId };
+        return makeTickHandle( subTickId );
+    }
+
+    SubTickHandle Component::makeTickHandle( uint32 subTickId ) const
+    {
+        return SubTickHandle{ _componentId, subTickId, ( _pOwner != nullptr ) ? _pOwner->getObjectId() : 0 };
     }
 
     bool Component::unregisterSubTick( uint32 subTickId )
@@ -160,6 +165,12 @@ namespace sw
     {
         if ( subTickId == 0 || prerequisiteHandle.isValid() == false )
             return false;
+        if ( prerequisiteHandle._objectId == 0 )
+        {
+            SW_LOG_WARNING( "Sub-tick %# prerequisite names component %# without its object - take the handle after the component is added to an object",
+                            subTickId, prerequisiteHandle._componentId );
+            return false;
+        }
 
         // 자기 자신을 선행 조건으로 추가하지 못하게 한다
         if ( prerequisiteHandle._componentId == _componentId && prerequisiteHandle._subTickId == subTickId )

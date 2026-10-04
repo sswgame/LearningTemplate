@@ -18,9 +18,11 @@
  * 틱 뒤로 미뤄지고 파괴는 컴포넌트마다 삭제 표시를 세우므로, 틱 도중에 목록이
  * 낡을 일은 컴포넌트의 표시로 다 가려집니다.
  *
- * 선행 조건(`addSubTickPrerequisite`)이 하나라도 등록되어 있으면 매니저가 DAG 스테이지 경로로 갑니다. 오브젝트 단위로는
- * 계층을 넘는 순서를 표현할 수 없기 때문입니다. 그 스테이지도 **이 등록부가 자기 항목으로 짓습니다**(`computePrerequisiteStages`).
- * 그 캐시는 이 등록부의 세대로 무효화됩니다.
+ * **선행 조건(`addSubTickPrerequisite`)을 가진 항목만 스테이지로 갑니다.** 그런 항목은 오브젝트 항목 목록에서 그룹의 끝에 모이고 칸은 그 앞까지만
+ * 들므로, 나머지 항목과 선행 조건이 없는 오브젝트는 모두 보통 길(오브젝트 칸 포크-조인)로 돕니다. 매니저는 그룹마다 보통 길을 먼저, 그 그룹의
+ * 스테이지를 뒤에 돌립니다 — 그래서 선행 조건이 보통 길의 항목(다른 오브젝트의 주 틱 · 서브틱)이어도 순서가 맞습니다. 스테이지는 **이 등록부가
+ * 짓고 듭니다**(`buildStages`). 선행 조건을 가진 오브젝트와 그것이 가리키는 오브젝트가 바뀔 때만 다시 짓습니다 — 사슬 밖 오브젝트의 스폰 ·
+ * 파괴는 스테이지를 건드리지 않습니다. 언리얼이 선행 조건 없는 틱 함수를 그룹 안에서 바로 내고 선행 조건이 있는 것만 기다리게 하는 것과 같습니다.
  *
  * `PhysicsWorld` · `PrimitiveRegistry` · `SceneTransformHierarchy` 와 같은 자리입니다. 능력은 별도 타입이 갖고, 매니저는 순서만 정합니다.
  */
@@ -29,6 +31,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 
 namespace sw
@@ -45,8 +48,9 @@ namespace sw
     {
         Component* _pComponent{ nullptr };
         uint32     _subTickId{ 0 };
-        uint8      _group{ 0 };     ///< `TickGroup`
-        uint8      _orderKey{ 64 }; ///< `TickPhase` + 우선순위(0..63)
+        uint8      _group{ 0 };            ///< `TickGroup`
+        uint8      _orderKey{ 64 };        ///< `TickPhase` + 우선순위(0..63)
+        uint8      _bHasPrerequisite{ 0 }; ///< 선행 조건을 가진 서브틱 — 보통 길이 아니라 스테이지가 돈다
     };
 } // namespace sw
 
@@ -126,7 +130,8 @@ namespace sw
 
         /**
          * @brief 표시된 오브젝트의 항목을 다시 짓고 그룹 목록을 맞춥니다. 게임 스레드에서 틱 밖에 부릅니다.
-         * @return 하나라도 다시 지었으면 true 입니다(DAG 스테이지 캐시를 버리는 신호).
+         * @details 선행 조건에 걸린 오브젝트가 바뀌었으면 이어서 스테이지를 다시 짓습니다(`buildStages`).
+         * @return 하나라도 다시 지었으면 true 입니다.
          */
         bool refresh( GameObjectManager& manager );
 
@@ -137,22 +142,25 @@ namespace sw
 
         /** @brief 이 그룹에서 틱할 것이 있고 계층에서 켜진 오브젝트의 칸들입니다. 디스패치의 유일한 입력입니다. */
         const vector<TickObjectEntry>& getEntries( uint32 group ) const { return _arrListEntry[group]; }
-        /** @brief 선행 조건이 등록된 서브틱이 하나라도 있으면 true 입니다. 그때 매니저가 DAG 스테이지 경로로 갑니다. */
+        /** @brief 선행 조건이 등록된 서브틱이 하나라도 있으면 true 입니다. */
         bool hasPrerequisites() const { return _prerequisiteCount > 0; }
-        /** @brief 항목이 바뀔 때마다 오르는 세대입니다. DAG 스테이지 캐시가 이것으로 무효화됩니다. */
-        uint64 getGeneration() const { return _generation; }
-
-        /**
-         * @brief 선행 조건을 지키는 스테이지 목록을 등록된 항목으로 짓습니다. 그룹 순서대로 짓고, 스테이지 안은 병렬입니다.
-         * @details 먼저 선행 조건이 뒤 그룹에 있는 항목을 그 그룹으로 옮깁니다(사슬을 따라 — 언리얼 `ActualStartTickGroup`).
-         *          그다음 그룹마다: 선행 조건 DAG 를 Kahn 으로 레벨별 스테이지로 가르고(같은 레벨은 순서 키 · 등록 순서로 안정 정렬),
-         *          레벨 하나를 다시 **오브젝트별 스테이지**로 가릅니다. 같은 오브젝트의 항목이 한 스테이지에서 나란히 돌지 않게 합니다.
-         *          순환은 남은 것을 순서 키 순으로 마지막 스테이지에 붙여 방어합니다. `hasPrerequisites()` 일 때만 부를 값이 있습니다.
-         *          아니면 그룹 경로가 더 쌉니다. 세대가 바뀌지 않았으면 부르는 쪽이 캐시를 그대로 씁니다.
-         */
-        void computePrerequisiteStages( vector<TickStage>& outListStage ) const;
+        /** @brief 선행 조건을 가진 항목의 스테이지입니다(그룹 순). 매니저가 그룹마다 보통 길 뒤에 그 그룹의 것을 돕니다. */
+        const vector<TickStage>& getStages() const { return _listStage; }
+        /** @brief 스테이지가 도는 항목 수입니다(선행 조건을 가진 켜진 항목). 나머지는 모두 보통 길입니다. */
+        uint32 getStageItemCount() const { return _stageItemCount; }
+        /** @brief 스테이지를 다시 지은 횟수(누적)입니다. 사슬 밖 오브젝트의 스폰 · 파괴로는 오르지 않습니다. 진단 · 회귀 테스트용입니다. */
+        uint32 getStageBuildCount() const { return _stageBuildCount; }
 
     private:
+        /**
+         * @brief 선행 조건을 가진 항목으로 스테이지 목록을 짓습니다. 그룹 순서대로 짓고, 스테이지 안은 병렬입니다.
+         * @details 먼저 선행 조건이 뒤 그룹에 있는 항목을 그 그룹으로 옮깁니다(사슬을 따라 — 언리얼 `ActualStartTickGroup`). 보통 길에서 도는
+         *          선행 조건은 핸들의 오브젝트 id 로 그 오브젝트의 항목만 찾아 그룹을 봅니다. 그다음 그룹마다: 후보 사이의 선행 조건 DAG 를 Kahn 으로
+         *          레벨별 스테이지로 가르고(같은 레벨은 순서 키 · 등록 순서로 안정 정렬), 레벨 하나를 다시 **오브젝트별 스테이지**로 가릅니다 — 같은
+         *          오브젝트의 항목이 한 스테이지에서 나란히 돌지 않습니다. 기다리는 레벨의 첫 스테이지에 `TickStage::_bApplyBefore` 를 세웁니다.
+         *          순환은 남은 것을 순서 키 순으로 마지막 스테이지에 붙여 방어합니다.
+         */
+        void buildStages( GameObjectManager& manager );
         /** @brief 오브젝트 하나의 항목을 컴포넌트에서 다시 짓고 그룹 멤버십을 맞춥니다. */
         void refreshObject( GameObject* pObj );
         /** @brief 그룹 목록에 넣거나 뺍니다(O(1), 오브젝트가 자기 자리를 듭니다). 넣을 때(이미 있으면 그 자리에) 칸 내용을 @p entry 로 씁니다. */
@@ -164,6 +172,12 @@ namespace sw
         mutex                   _dirtyMutex;                ///< `_listDirtyObjectId` 의 락. 워커에서 표시할 수 있습니다
         atomic<uint8>           _bAllDirty;                 ///< 전부 다시 훑을지 여부
         uint32                  _prerequisiteCount;         ///< 등록된 서브틱 선행 조건의 총수
-        uint64                  _generation;                ///< 항목이 바뀔 때마다 오릅니다
+        uint32                  _stageItemCount;            ///< 스테이지가 도는 항목 수
+        uint32                  _stageBuildCount;           ///< 스테이지를 다시 지은 횟수(진단)
+        uint64                  _stageGeneration;           ///< 선행 조건에 걸린 오브젝트가 바뀔 때마다 오릅니다
+        uint64                  _builtStageGeneration;      ///< `_listStage` 를 지은 세대
+        unordered_set<uint64>   _uniqueDependentObjectId;   ///< 선행 조건을 가진 항목이 있는 오브젝트
+        unordered_set<uint64>   _uniqueReferencedObjectId;  ///< 지난 스테이지 빌드에서 선행 조건이 가리킨 오브젝트 — 바뀌면 다시 짓는다
+        vector<TickStage>       _listStage;                 ///< 선행 조건을 가진 항목의 스테이지(그룹 순)
     };
 } // namespace sw

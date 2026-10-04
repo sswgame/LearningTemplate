@@ -667,6 +667,7 @@ namespace sw
         const GameObject* _pTickingObjectSeen{ nullptr }; ///< 서브틱 안에서 본 `GameObjectManager::getTickingObject()`
         SceneComponent*   _pAttachChild{ nullptr };       ///< 서브틱에서 이 컴포넌트를 `_pAttachParent` 에 `KeepWorld` 로 붙인다(틱 중이라 미뤄진다)
         SceneComponent*   _pAttachParent{ nullptr };
+        GameObject*       _pDestroyObject{ nullptr }; ///< 서브틱에서 이 오브젝트를 파괴한다(틱 중이라 삭제 표시만 선다)
         uint32            _subTickCount{ 0 };
         uint8             _bWriteOnSubTick{ SW_TRUE };
 
@@ -696,6 +697,11 @@ namespace sw
                 setLocalPosition( base + _offset );
             if ( _pAttachChild != nullptr && _pAttachParent != nullptr )
                 (void)_pAttachChild->attachToComponent( _pAttachParent, AttachRule::KeepWorld );
+            if ( _pDestroyObject != nullptr && getOwner() != nullptr && getOwner()->getManager() != nullptr )
+            {
+                getOwner()->getManager()->destroyObject( _pDestroyObject );
+                _pDestroyObject = nullptr;
+            }
         }
     };
 } // namespace sw

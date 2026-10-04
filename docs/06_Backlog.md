@@ -916,6 +916,8 @@ cd build/Ninja-Debug/Bin
 - **플레이 수명주기** — 컴포넌트의 "시작됨" 비트가 시작 · 끝을 한 번씩 짝짓는다. 플레이 중 붙은 컴포넌트는 다음 틱 단계(`GT.Scene.tick.beginPlay`)에서 시작한다. 월드 플레이 상태는
   `SceneManager::setWorldPlaying`. 다시 만든 인스턴스(되돌리기 · 핫 리로드 · DontDestroyOnLoad)는 onBeginPlay 를 다시 받는다 — `markPersistent` 는 같은 id 로 **다시 만든다**.
 - **틱 선언** — 기본은 "`onTick` 을 오버라이드했는가"(`HasOnTickOverride_v<T>`), 우선순위는 `kMaxTickPriority`(63). 다른 그룹의 선행 조건이 있으면 뒤따르는 쪽을 그 그룹으로 옮긴다.
+  **선행 조건을 가진 서브틱만 스테이지로 간다**(그룹마다 보통 길 뒤) — 나머지는 선행 조건이 씬에 있어도 보통 길이다(무버 8000 의 틱 p50 600 → 140 us). 단계
+  (`TickPhase`)는 한 오브젝트 안의 순서일 뿐이다. 선행 조건 핸들은 등록이 준 것을 쓴다 — 소유 오브젝트 id 가 없는 손수 만든 핸들은 거절된다.
 - **기본값은 만들 때 한 번이다**(CDO 자리, `DefaultPatch`). 모듈 등록 · 리로드에서 살아 있는 값에 다시 찍지 말 것. `ComponentDefaults` 의 기본값 파일은 없어도 되는 파일이다
   ("시도했는가" 로 한 번만 연다). 프리팹 형식은 읽을 때 정해 든다(`PrefabStateFormat`), 쓰기는 `PrefabAsset::saveToFile` 하나, 오버라이드는 `타입#n` 키.
 - **찾지 말고 등록받는다.** 매 프레임 씬을 훑던 주광 조회가 GT 의 38 % 였다. 빛은 `LightRegistry`(종류별 칸), 카메라는 `CameraRegistry::selectCamera`(동률은 컴포넌트 id — 등록
