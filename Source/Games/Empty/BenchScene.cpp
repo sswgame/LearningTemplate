@@ -83,7 +83,7 @@ namespace sw
      *        오른손 소켓의 칼이 물리로 떨어진 뒤 900 프레임에 일어납니다(`BenchCombatComponent`). 로그 `[BenchCombat]` 이 맞음 · 발소리 · 래그돌 상태를 적는다.
      * @details 개발 빌드 전용이다 — 에셋이 Shooter3D 의 리소스에 있어 Empty 게임의 배포 팩에는 없다(`gv_benchCharacters` 와 같다).
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchCombat, 0, "벤치 전투 연출 (0=사용 안 함, KayKit 스켈레톤 — 알림 · 히트 존 · 래그돌 · 칼 떨어뜨리기)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCombat, 0, "벤치 전투 연출 (0=사용 안 함, KayKit 스켈레톤 — 알림 · 히트 존 · 래그돌 · 칼 떨어뜨리기)" );
 
     /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
