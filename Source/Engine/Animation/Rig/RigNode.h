@@ -14,10 +14,10 @@
 
 #include "Engine/Animation/Pose.h"
 #include "Engine/Animation/Rig/RigIkSolver.h"
+#include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw
 {
-    class JsonValue;
     class RigInstance;
     class RigPoseBuffer;
     class Skeleton;
@@ -171,10 +171,10 @@ namespace sw
     private:
         JsonValue findMember( string_view key, bool bRequired );
 
-        const JsonValue& _object;
-        vector<string>   _listUsedKey;
-        string           _context;
-        uint8            _bOk;
+        JsonValue      _object; ///< 값으로 든다 — `array.at( i )` 같은 임시를 받아도 리더보다 먼저 죽지 않게(핸들이라 복사가 싸다)
+        vector<string> _listUsedKey;
+        string         _context;
+        uint8          _bOk;
     };
 } // namespace sw
 
