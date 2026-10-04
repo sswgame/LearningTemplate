@@ -402,7 +402,7 @@ namespace sw::editor
             visualizerArgs._pActiveCamera   = pCamera;
             visualizerArgs._pListObject     = &_listSceneObject;
             visualizerArgs._pListCamera     = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getCameraRegistry().getAll() : nullptr;
-            visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getColliders() : nullptr;
+            visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getOverlapWorld2D().getColliders() : nullptr;
             visualizerArgs._pDebugDrawQueue = getService<DebugDrawQueue>();
             visualizerArgs._bFlat2D         = EditorVisualizerGeometryUtil::isFlat2DView( pCamera->isOrthographic(), pCamera->getViewMatrix() );
             EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerMask );

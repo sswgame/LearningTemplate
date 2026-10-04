@@ -27,13 +27,12 @@
 #include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/SceneAudio.h"
+#include "Engine/Object/GameObject/SceneOverlapWorld2D.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Object/GameObject/TickRegistry.h"
-#include "Engine/Physics/PhysicsWorld.h"
 
 namespace sw
 {
-    class BoxCollider2DComponent;
     class Component;
     class GameObjectManager;
     class SceneComponent;
@@ -313,7 +312,7 @@ namespace sw
 
         /**
          * @brief 이 씬의 강체 물리입니다(3D · 2D 물리 씬 · 고정 스텝 · 물리 컴포넌트 · 접촉 이벤트). 처음 쓸 때 씬을 만듭니다.
-         * @details 겹침 월드(`getPhysicsWorld`)와 따로 돕니다 — 둘 다 `stepPhysics` 에서 이 순서(겹침 → 강체)로 한 번씩 진행합니다.
+         * @details 겹침 월드(`getOverlapWorld2D`)와 따로 돕니다 — 둘 다 `stepPhysics` 에서 이 순서(겹침 → 강체)로 한 번씩 진행합니다.
          */
         ScenePhysics& getScenePhysics() { return _scenePhysics; }
         /** @brief 씬 오디오(리스너 · 에미터 · 가림 · 리버브 존을 엔진에 넣는 자리)입니다. `Scene::tick` 이 틱 뒤에 `update` 를 부릅니다. */
@@ -321,10 +320,10 @@ namespace sw
         /** @brief 이 씬의 강체 물리입니다. */
         const ScenePhysics& getScenePhysics() const { return _scenePhysics; }
 
-        /** @brief 이 씬의 AABB 질의 월드입니다. */
-        PhysicsWorld& getPhysicsWorld() { return _physicsWorld; }
-        /** @brief 이 씬의 AABB 질의 월드입니다. */
-        const PhysicsWorld& getPhysicsWorld() const { return _physicsWorld; }
+        /** @brief 이 씬의 겹침 월드입니다(AABB 질의 월드 · 2D 콜라이더 등록 · 겹침 이벤트). 질의는 `getOverlapWorld2D().getPhysicsWorld()` 입니다. */
+        SceneOverlapWorld2D& getOverlapWorld2D() { return _overlapWorld2D; }
+        /** @brief 이 씬의 겹침 월드입니다. */
+        const SceneOverlapWorld2D& getOverlapWorld2D() const { return _overlapWorld2D; }
 
         /**
          * @brief GameObject 를 지연 삭제 큐에 넣습니다.
@@ -382,16 +381,6 @@ namespace sw
 
         /** @brief 이름으로 만들 수 있는 컴포넌트 타입(리플렉션 표에서 `_addComponent` 가 있는 타입)의 짧은 이름 목록입니다. 에디터의 "Add Component" 가 씁니다. */
         static vector<hashed_string> getRegisteredComponentTypeNames();
-
-        /**
-         * @brief 물리 바디를 맞출 콜라이더를 등록합니다(`BoxCollider2DComponent::onRegister`). 매니저가 step 직전에 한 번에 맞춥니다.
-         * @details 콜라이더가 병렬 틱에서 제 바디를 맞추면 같은 그룹에서 겹침을 묻는 쪽이 스케줄에 따라 옛 · 새 자리를 본다.
-         */
-        void registerCollider( BoxCollider2DComponent* pCollider );
-        /** @brief 콜라이더 등록을 풉니다. 멱등입니다. */
-        void unregisterCollider( BoxCollider2DComponent* pCollider );
-        /** @brief 등록된 콜라이더 목록입니다(순서 없음). 틱 밖에서 읽습니다 — 에디터 시각화가 씬 전체를 훑지 않고 이것을 봅니다. */
-        const vector<BoxCollider2DComponent*>& getColliders() const { return _listCollider; }
 
         /** @brief 트랜스폼이 바뀌었음을 알려 세대를 올립니다(`getTransformHierarchy().notifyDirtied()`). */
         void notifyTransformDirtied() { _transformHierarchy.notifyDirtied(); }
@@ -575,19 +564,17 @@ namespace sw
          */
         static atomic<uint64> _s_nextObjectId;
 
-        PhysicsWorld _physicsWorld;
+        /** @brief 겹침 월드입니다. 강체 물리처럼 소유만 합니다. */
+        SceneOverlapWorld2D _overlapWorld2D;
         /** @brief 강체 물리입니다. 컴포넌트보다 늦게 사라지도록 등록부들과 함께 둔다(컴포넌트의 해제가 바디를 놓는다). */
         ScenePhysics _scenePhysics;
         /** @brief 오디오 컴포넌트 등록부와 엔진 묶기입니다. 물리처럼 소유만 합니다. */
         SceneAudio _sceneAudio;
         /**
-         * @brief 콜라이더 바디를 맞추고 물리를 step 한 뒤 겹침 이벤트를 두 오브젝트의 켜진 컴포넌트에 나눠 줍니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
+         * @brief 겹침 월드 → 강체 물리를 한 번씩 진행합니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
          * @details 유니티는 물리 갱신 뒤 OnTrigger 를, 언리얼은 움직임이 끝난 뒤 Begin/EndOverlap 을 부른다. 여기서는 그 프레임에 적용된 월드 자리로 잰다.
          */
         void stepPhysics( float32 deltaTime );
-        /** @brief 겹침 월드(`PhysicsWorld`)만 진행하고 겹침 이벤트를 나눠 줍니다(`stepPhysics` 의 앞 절반). */
-        void                            stepOverlapWorld( float32 deltaTime );
-        vector<BoxCollider2DComponent*> _listCollider; ///< `registerCollider` 한 콜라이더. 콜라이더가 자기 자리(`_colliderIndex`)를 든다
 
         atomic<bool>            _bTicking;                 ///< 컴포넌트 틱 중(`isStructuralMutationFrozen`)
         bool                    _bProcessingDestruction;   ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다

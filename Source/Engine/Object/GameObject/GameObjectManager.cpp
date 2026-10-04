@@ -115,7 +115,7 @@ namespace sw
         , _listProcessingDestroyObject{}
         , _listProcessingDestroyComponent{}
         , _mutex{}
-        , _physicsWorld{}
+        , _overlapWorld2D{}
         , _bTicking{ false }
         , _bProcessingDestruction{ false }
         , _bDeferredHierarchyChange{ SW_FALSE }

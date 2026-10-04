@@ -67,7 +67,7 @@ Jolt 의 대상 기능 옵션(AVX2)과 정의는 Jolt 백엔드 소스에만 붙
 
 ### 0.3 씬의 물리와 컴포넌트
 
-`GameObjectManager` 가 `ScenePhysics` 를 소유하고 `stepPhysics` 에서 겹침 월드 다음에 한 번 진행합니다 — DuringPhysics 틱 · 애니메이션 뒤, PostPhysics 틱 앞(`Engine/Object/GameObject/ScenePhysics.h`).
+`GameObjectManager` 가 `ScenePhysics` 를 소유하고 `stepPhysics` 에서 겹침 월드(`SceneOverlapWorld2D`) 다음에 한 번 진행합니다 — DuringPhysics 틱 · 애니메이션 뒤, PostPhysics 틱 앞(`Engine/Object/GameObject/ScenePhysics.h`).
 3D · 2D 씬은 처음 쓸 때 만듭니다. 컴포넌트(`Engine/Object/Component/Physics/`)는 틱하지 않고 단계(바디 → 관절 → 캐릭터)마다 불립니다:
 
 | 컴포넌트 | 하는 일 |
@@ -204,7 +204,7 @@ if ( physicsWorld.sweepTest( projectileAABB, velocity * deltaTime, 0, hit ) )
 강체가 없으므로 `step` 은 적분하지 않고 **겹침만 다시 잽니다.** 지난 step 과 견줘 새로 겹친 쌍은 시작, 떨어지거나 바디가 사라진 쌍은 끝으로
 `getOverlapEvents()` 에 냅니다(유니티 `OnTriggerEnter2D/Exit2D` · 언리얼 `BeginOverlap/EndOverlap`). 계속 겹친 쌍은 다시 내지 않습니다.
 
-`GameObjectManager` 가 틱 · 트랜스폼 적용이 끝난 뒤 게임 스레드에서 한 번 부릅니다(`stepPhysics`):
+`SceneOverlapWorld2D`(매니저가 소유하는 씬의 겹침 월드, `Engine/Object/GameObject/SceneOverlapWorld2D.h`)가 틱 · 트랜스폼 적용이 끝난 뒤 게임 스레드에서 한 번 부릅니다(`SceneOverlapWorld2D::step`, 매니저의 `stepPhysics` 가 강체 앞에 부른다):
 
 1. 등록된 콜라이더(`BoxCollider2DComponent`)의 바디를 그 프레임의 월드 자리 · 레이어 · 판정 방식(연속 · 트리거)으로 한 번에 맞춘다(`updateBody`) —
    시작 전이거나 꺼진 콜라이더는 빠진다. 그 사이 순간이동했으면(`SceneComponent::teleportTo`) 순간이동으로 맞춘다(4.1).

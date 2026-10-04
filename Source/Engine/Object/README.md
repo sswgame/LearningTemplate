@@ -43,6 +43,7 @@ Object/
 │  ├─ DeferredDelegateQueue.*   # 틱이 미룬 일(계층 변경 · 틱 뒤 작업)의 큐 — 넣기는 아무 스레드, 비우기는 게임 스레드
 │  ├─ PrimitiveRegistry.* · LightRegistry.*  # 빛 등록부는 종류(방향광 · 점광 · 스포트)마다 칸 하나
 │  ├─ CameraRegistry.*          # 카메라 등록부 + 역할 · 우선순위 선택 규칙 하나(게임 · 에디터 카메라가 같이 쓴다)
+│  ├─ SceneOverlapWorld2D.*     # 겹침 월드 — AABB 질의 월드(`PhysicsWorld`) · 2D 콜라이더 등록 · step 직전 바디 맞추기 · 겹침 이벤트 나눠 주기
 │  ├─ SceneAudio.*              # 오디오 컴포넌트 등록부 + 프레임마다 리스너 · 에미터 · 가림 · 리버브 존을 오디오 엔진에 넣기(Engine/Audio/README.md)
 │  ├─ MeshInstanceBatch.* · SpriteInstanceBatch.*  # 컴포넌트 없이 인스턴스 N 개를 드는 렌더 프리미티브(PrimitiveRegistry 에 등록)
 │  ├─ ObjectStateSerializer.*

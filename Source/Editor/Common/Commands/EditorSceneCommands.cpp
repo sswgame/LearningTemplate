@@ -404,7 +404,7 @@ namespace sw::editor
         const float3 displacement{ 0.0f, -2000.0f, 0.0f };
 
         SweepHit sweepHit{};
-        if ( pManager->getPhysicsWorld().sweepTest( movingBox, displacement, 0, sweepHit ) )
+        if ( pManager->getOverlapWorld2D().getPhysicsWorld().sweepTest( movingBox, displacement, 0, sweepHit ) )
         {
             if ( sweepHit._hitObjectId != pObj->getObjectId() )
             {
