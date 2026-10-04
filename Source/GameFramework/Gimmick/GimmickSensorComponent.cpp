@@ -1,0 +1,129 @@
+#include "pch.h"
+
+#include "GameFramework/Gimmick/GimmickSensorComponent.h"
+
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct GimmickSensorComponentInternal
+        {
+            static void addAtomic( atomic<float32>& inoutValue, float32 amount )
+            {
+                float32 expected = inoutValue.load( std::memory_order_relaxed );
+                while ( inoutValue.compare_exchange_weak( expected, expected + amount ) == false )
+                {
+                }
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    GimmickWeightComponent::GimmickWeightComponent()
+        : _weight{ 1.0f }
+    {
+    }
+
+    GimmickSensorComponent::GimmickSensorComponent()
+        : _requiredTags{}
+        , _listOccupant{}
+        , _defaultWeight{ 1.0f }
+        , _bCountTriggers{ false }
+        , _pendingDamage{ 0.0f }
+        , _pendingUse{ 0.0f }
+        , _signal{ 0.0f }
+    {
+    }
+
+    bool GimmickSensorComponent::acceptsOccupant( const GameObject& object ) const
+    {
+        return _requiredTags.getTagCount() == 0 || object.getTags().hasAllTags( _requiredTags );
+    }
+
+    void GimmickSensorComponent::addOccupant( const GameObject& object )
+    {
+        const GameObjectHandle handle = object.getHandle();
+        for ( const GameObjectHandle& occupant : _listOccupant )
+        {
+            if ( occupant == handle )
+                return;
+        }
+        _listOccupant.push_back( handle );
+    }
+
+    void GimmickSensorComponent::removeOccupant( GameObjectHandle handle )
+    {
+        for ( size_t index = 0; index < _listOccupant.size(); ++index )
+        {
+            if ( _listOccupant[index] == handle )
+            {
+                _listOccupant.erase( _listOccupant.begin() + static_cast<ptrdiff_t>( index ) );
+                return;
+            }
+        }
+    }
+
+    void GimmickSensorComponent::onOverlapBegin( const OverlapInfo& overlap )
+    {
+        Component::onOverlapBegin( overlap );
+        const bool bIgnoredTrigger = overlap._bOtherTrigger == SW_TRUE && _bCountTriggers == false;
+        if ( overlap._pOther == nullptr || bIgnoredTrigger || acceptsOccupant( *overlap._pOther ) == false )
+            return;
+        addOccupant( *overlap._pOther );
+    }
+
+    void GimmickSensorComponent::onOverlapEnd( const OverlapInfo& overlap )
+    {
+        Component::onOverlapEnd( overlap );
+        if ( overlap._pOther != nullptr )
+        {
+            removeOccupant( overlap._pOther->getHandle() );
+            return;
+        }
+        // 상대가 사라졌다 — 살아 있지 않은 핸들을 모두 뺀다.
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+            return;
+        for ( size_t index = _listOccupant.size(); index > 0; --index )
+        {
+            if ( pManager->resolveGameObject( _listOccupant[index - 1] ) == nullptr )
+                _listOccupant.erase( _listOccupant.begin() + static_cast<ptrdiff_t>( index - 1 ) );
+        }
+    }
+
+    float32 GimmickSensorComponent::computeOccupantWeight() const
+    {
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+            return 0.0f;
+        float32 total = 0.0f;
+        for ( const GameObjectHandle& handle : _listOccupant )
+        {
+            const GameObject* pOccupant = pManager->resolveGameObject( handle );
+            if ( pOccupant == nullptr )
+                continue;
+            const GimmickWeightComponent* pWeight = pOccupant->getComponent<GimmickWeightComponent>();
+            total += pWeight != nullptr ? pWeight->getWeight() : _defaultWeight;
+        }
+        return total;
+    }
+
+    void GimmickSensorComponent::applyDamage( float32 amount )
+    {
+        if ( amount > 0.0f )
+            GimmickSensorComponentInternal::addAtomic( _pendingDamage, amount );
+    }
+
+    void GimmickSensorComponent::notifyUsed() { GimmickSensorComponentInternal::addAtomic( _pendingUse, 1.0f ); }
+
+    float32 GimmickSensorComponent::consumeDamage() { return _pendingDamage.exchange( 0.0f ); }
+
+    float32 GimmickSensorComponent::consumeUses() { return _pendingUse.exchange( 0.0f ); }
+} // namespace sw
