@@ -108,6 +108,12 @@ cd build/Ninja-Debug/Bin
   따라감, 순환은 로드 오류, 쿠킹은 펼치거나 참조 유지(로드 시간으로 고름), `collectReferencedPrefabPaths` 가 프리로드 수집에 그대로 쓰임.
 
 - **`getAllGameObjects()` 값 반환이 6 곳에 있다(모두 일회성).** 프레임 경로에 들어오면 `getAllGameObjects( out )` 또는 `forEachGameObject` 로 바꾼다(조건부).
+- **강체 물리의 다음 조각.** (1) 볼록 껍질 · 삼각 메시 셰이프를 `.mesh` 에서 채우는 길이 없다 — 지금은 셰이프 서술자에 점 · 인덱스를 직접 적는다
+  (`MeshCache` 의 CPU 정점이 필요하다) (2) 물리 에셋(`*.physics.xml`)의 캐시 · 핫 리로드(바뀌면 래그돌을 다시 세우는 쪽까지)가 없다 — 쓰는 컴포넌트(래그돌 ·
+  히트박스)와 함께 넣는다 (3) 에디터에 물리 컴포넌트의 셰이프 시각화 · 기즈모가 없다(`gv_physicsDebugDraw` 가 게임 뷰의 디버그 선으로만 그린다)
+  (4) Box2D 는 한 스레드로 돈다 — 2D 바디가 수천이 되면 전용 워커를 붙인다 (5) 3D 질의는 가장 가까운 것 하나 · 겹침 목록뿐이다(레이의 모든 닿음 ·
+  스윕 다중 닿음이 필요해지면 더한다) (6) 겹침 월드(`PhysicsWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이
+  Box2D 센서로 옮겨 가면 겹침 월드를 걷어낸다.
 - **`MeshInstanceBatch` 의 한계.** 항목 수가 만들 때 정해지고(resize 없음, `setEntryVisible` 로 숨기기만), 배치 하나 = 메시 · 머티리얼 하나라 항목별
   머티리얼 · 투명 정렬이 없다.
 
@@ -209,11 +215,9 @@ cd build/Ninja-Debug/Bin
 
 
 - **서드파티 셋 — Jolt(3D 물리) · Box2D(2D 물리) · ACL(애니메이션 압축)(2026-10-04 사용자 결정, 이 셋만).** 모두 MIT · vcpkg 에 있다.
-  **나중에 바꿀 수 있게 감싼다** — 엔진 쪽 인터페이스(핸들로 다루는 바디 · 셰이프 · 관절, 질의 · 고정 스텝 · 접촉 이벤트 / 애니메이션 코덱: 쿠킹 때 압축 →
-  코덱 id + 불투명 블롭, 런타임 샘플링)를 두고, 라이브러리 헤더는 백엔드 폴더(`Engine/Physics/Jolt` · `Engine/Physics/Box2D` · `Engine/Animation/Codec/Acl`)
-  에서만 include 한다 — 새 게이트로 막는다(Godot PhysicsServer3D · 언리얼 애니메이션 압축 코덱 모양). vcpkg 를 바꿀 때는 **다른 워크트리가 빌드 중이
-  아닐 때** — 설치 폴더를 나눠 써서, 옛 매니페스트의 워크트리가 configure 하면 새 패키지를 지운다. 2D 물리는 플랫포머 등 2D 키트, Jolt 는 래그돌 ·
-  캐릭터 컨트롤러 · 소프트 바디(천 · 헤어 카드)까지 연다.
+  물리 둘은 감쌌다(`IPhysicsScene3D` · `IPhysicsScene2D`, `Source/Engine/Physics/README.md`) — 경계는 `CheckThirdPartyIsolation.py` 가 지킨다(ACL 도 같은 표에 있다).
+  남은 것: ACL 코덱(쿠킹 때 압축 → 코덱 id + 불투명 블롭, 런타임 샘플링, `Engine/Animation/Codec/Acl`). vcpkg 를 바꿀 때는 **다른 워크트리가 빌드 중이
+  아닐 때** — 설치 폴더를 나눠 써서, 옛 매니페스트의 워크트리가 configure 하면 새 패키지를 지운다. Jolt 소프트 바디(천 · 헤어 카드)는 아직 감싸지 않았다.
 - **애니메이션(로드맵).** 지금: 스켈레톤 · 듀얼 쿼터니언 · 블렌드 스페이스 · 두 칸 크로스페이드 · 그래프 에셋은 있고, 클립 샘플링은 스텁(항등), 스킨드 메시
   렌더링 · glTF 스킨/애니메이션 임포트는 없다(cgltf 가 읽는다). 순서 — ① 임포트 + 스킨드 메시(GPU 스키닝) + 실제 샘플링(포즈는 SoA) ② 압축(ACL 백엔드:
   smallest-three 회전 양자화 · 범위 축소 16 비트 · 상수 트랙 제거 · 가상 정점 오차 기준 키 줄이기 · 가변 비트, 압축률 · 최대 오차 보고) ③ 블렌딩(크로스페이드 ·
@@ -223,7 +227,7 @@ cd build/Ninja-Debug/Bin
   변환 복사 · 거리/범위 제한 · 트위스트 본 분배(팔뚝 비틀림) · 포즈 구동(RBF 포즈 드라이버 — 팔꿈치를 굽히면 보정 모프 · 보정 본). 노드 가중치는
   클립 커브 · 시퀀서 키로 움직인다(샷 중간에 무기를 넘겨 쥐기). 대상은 본 · 소켓 · 다른 오브젝트. glTF 는 제약을 싣지 않으니 엔진에서 저작한다 —
   언리얼 Control Rig · IK Rig, 유니티 Animation Rigging, Maya 제약 ⑤ 애니메이션 LOD(갱신 주기 URO · 화면 밖 생략 ·
-  본 LOD · 거리별 IK/물리 끔 · 중요도 매니저 예산) → 스켈레톤 LOD(본 감소) ⑥ Jolt 래그돌(전신 · 부분 · 파워드, 래그돌 에셋은 데이터, 포즈 블렌드 · 기상) ·
+  본 LOD · 거리별 IK/물리 끔 · 중요도 매니저 예산) → 스켈레톤 LOD(본 감소) ⑥ Jolt 래그돌(물리 에셋 · 빌더는 있다 — `PhysicsAsset` · `PhysicsRagdollBuilder`. 남은 것: 래그돌 컴포넌트 · 전신 · 부분 · 파워드, 포즈 블렌드 · 기상) ·
   2 차 움직임(스프링 본) → 헤어 카드 · 천(Jolt 소프트 바디), 가닥 헤어(TressFX)는 나중.
 - **프리로딩 · LOD · 사전 준비(로드맵).** ① 프리로드 세트(미리 올릴 에셋 + 미리 만들 프리팹 · 우선순위, 쿠킹 때 레벨 · 시퀀스 · 샷의 참조를 따라 자동 수집 —
   `collectReferencedPrefabPaths` 가 있다), `requestPreload` 가 진행률 · 완료를 준다, 프레임 예산(IO · 업로드 · PSO · 인스턴스 수), 참조 수 · LRU 로 내림(지금 캐시는
@@ -303,7 +307,6 @@ cd build/Ninja-Debug/Bin
 - **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.
-- **강체 · 고정 스텝 누적기가 없다.** `PhysicsWorld::step` 은 겹침 이벤트만 낸다. 강체가 생기면 적분과 누적기를 넣는다.
 - **리눅스에서 yad 만 깔린 기계에는 "All files" 필터가 없다**(`LinuxFileDialog.cpp`). `yad --file --file-filter='A | *.txt' --file-filter='All files | *'`
   가 뜨는지 확인한 뒤에만 `buildGtkStyleCommand( ..., true )` 로 바꾼다 — yad 가 인자를 거부하면 다이얼로그가 아예 안 뜬다.
 
@@ -851,6 +854,9 @@ cd build/Ninja-Debug/Bin
 - **물리** — `stepPhysics` 는 틱과 트랜스폼 적용 뒤에 한 번 돈다. 콜라이더는 틱하지 않고 틱 안의 질의는 지난 step 을 본다. `onOverlapBegin( const OverlapInfo& )` 안에서는 스폰 ·
   파괴해도 된다. 순간이동은 `teleportTo` · `BodyMoveType::Teleport`(아니면 연속 바디가 그 길을 쓴다). 셀 범위는 `CellRange` 하나, 셀 순회 변수는 int64(`MaxInt32` 로 접히면 안 끝난다),
   `toCellCoord` 는 float64 로 나눈 뒤 접는다. 공간 색인 규약은 `Source/Engine/Spatial/README.md`.
+- **강체 물리** — `ScenePhysics::step` 이 겹침 월드 다음에 돈다(고정 스텝 → 보간 자세를 트랜스폼에 → 이벤트). 컴포넌트가 쓴 자세와 다른 트랜스폼은 코드가 옮긴 것(순간이동)이다.
+  vcpkg Jolt 는 설치 헤더가 부동소수 예외 비트를 켜고 라이브러리는 끈다 — `JPH::RegisterTypes()` 는 abort 하므로 백엔드가 라이브러리의 ID 로 등록한다(그 비트만 허용).
+  Jolt 임포트 타깃의 `-mavx2` 는 Jolt 백엔드 소스에만 붙인다(`$<LINK_ONLY:>` + 소스 속성). Box2D 의 `totalNormalImpulse` 는 이완 반복까지 더해 약 두 배다.
 - **"바뀌었나" 검사는 제곱 거리를 `MathUtil::EpsilonSquared` 와 비교한다**(`Epsilon` 이면 프레임당 1e-3 아래 움직임이 영원히 삼켜진다). `GpuSceneBuilder::bCamSame` 의 이력은 의도다.
   `float4x4::invert` 는 행렬식이 정확히 0 · NaN 일 때만 항등을 돌려준다(절대 임계값은 작은 부모 · 큰 직교 카메라를 깨뜨렸다).
 - **시퀀서** — "지나갔는가" 는 `previousFrame < start <= frame`, 이전 프레임 없음은 `kNoPreviousFrame`(INT32_MIN — -1 은 frameMin 0 과 겹친다). 프레임은 배 정밀도로 곱하고 천분의 일을

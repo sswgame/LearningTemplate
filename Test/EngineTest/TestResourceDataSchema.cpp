@@ -21,6 +21,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Physics/PhysicsAsset.h"
+#include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -70,6 +72,8 @@ namespace
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
         static bool isSchedules( sw::string_view resourceId ) { return endsWith( resourceId, ".schedules.xml" ); }
         static bool isUserSettingsSchema( sw::string_view resourceId ) { return endsWith( resourceId, ".settings.xml" ); }
+        static bool isPhysicsSettings( sw::string_view resourceId ) { return endsWith( resourceId, "physicssettings.xml" ); }
+        static bool isPhysicsAsset( sw::string_view resourceId ) { return endsWith( resourceId, ".physics.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -134,6 +138,18 @@ namespace
             if ( resourceId != engineSchema && settings.loadSchema( engineSchema ) == false )
                 return false;
             return settings.loadSchema( resourceId );
+        }
+
+        static bool loadPhysicsSettings( const sw::string& resourceId )
+        {
+            sw::PhysicsSettings settings;
+            return settings.loadFromResource( resourceId );
+        }
+
+        static bool loadPhysicsAsset( const sw::string& resourceId )
+        {
+            sw::PhysicsAsset asset;
+            return asset.loadFromResource( resourceId );
         }
 
         static bool loadSpriteClip( const sw::string& resourceId )
@@ -252,78 +268,82 @@ namespace
             {    "surfacechannels",     &isSurfaceChannels,   &loadCatalog<sw::SurfaceChannelTable>},
             {              "items",               &isItems,           &loadCatalog<sw::ItemCatalog>},
             {         "appearance",      &isAppearanceData,                     &loadAppearanceData},
-        };
-
-        /**
-         * @brief 게임 모듈(`Source/Games` 아래 헤더)이 `REFLECT` 로 선언한 타입 이름을 모읍니다.
-         * @details EngineTest 는 게임 모듈을 링크하지 않는다 — 게임 팩의 씬 · 프리팹에 놓인 게임 컴포넌트는 여기서 모르는 타입이다. 그 이름이 실제로
-         *          게임 소스에 선언된 것일 때만 그 경고를 넘긴다(오타 · 지운 타입은 그대로 실패다). 게임 모듈의 타입은 게임 빌드의 쿠킹이 본다.
-         */
-        static void collectGameModuleTypeNames( const sw::string& resourceRoot, sw::vector<sw::string>& outListTypeName )
-        {
-            outListTypeName.clear();
-            const sw::string       repositoryRoot = sw::FileUtil::getDirectoryPart( sw::FileUtil::trimTrailingSlashes( resourceRoot ) );
-            sw::vector<sw::string> listHeader;
-            if ( sw::FileUtil::collectFiles( sw::FileUtil::joinPath( repositoryRoot, "Source/Games" ), ".h", listHeader, true ) == false )
-                return;
-            for ( const sw::string& headerPath : listHeader )
-            {
-                sw::string text;
-                if ( sw::FileUtil::readTextFile( headerPath, text ) == false )
-                    continue;
-                for ( size_t reflectPos = text.find( "REFLECT(" ); reflectPos != sw::string::npos; reflectPos = text.find( "REFLECT(", reflectPos + 1 ) )
-                {
-                    const size_t classPos = text.find( "class ", reflectPos );
-                    if ( classPos == sw::string::npos )
-                        break;
-                    size_t nameStart = classPos + 6;
-                    size_t nameEnd   = nameStart;
-                    while ( nameEnd < text.size() && ( std::isalnum( static_cast<uint8>( text[nameEnd] ) ) != 0 || text[nameEnd] == '_' ) )
-                        ++nameEnd;
-                    if ( nameEnd > nameStart )
-                        outListTypeName.push_back( text.substr( nameStart, nameEnd - nameStart ) );
-                }
-            }
         }
 
-        /** @brief 모은 경고에서 게임 모듈 타입의 "모르는 타입" 줄을 뺀 나머지입니다. */
-        static sw::string removeGameModuleTypeWarnings( const sw::string& joined, const sw::vector<sw::string>& listGameTypeName )
-        {
-            sw::string result;
-            size_t     lineStart = 0;
-            while ( lineStart < joined.size() )
-            {
-                size_t lineEnd = joined.find( "\n  ", lineStart + 1 );
-                if ( lineEnd == sw::string::npos )
-                    lineEnd = joined.size();
-                const sw::string line        = joined.substr( lineStart, lineEnd - lineStart );
-                bool             bGameModule = false;
-                for ( const sw::string& typeName : listGameTypeName )
-                    bGameModule = bGameModule || line.find( "of unknown type '" + typeName + "'" ) != sw::string::npos;
-                if ( bGameModule == false )
-                    result += line;
-                lineStart = lineEnd;
-            }
-            return result;
-        }
-
-        /** @brief 데이터로 보는 확장자입니다. 이 확장자인데 표의 어느 줄에도 맞지 않는 파일은 시험이 집니다(새 종류가 검사를 비켜 가지 않게). */
-        static bool isDataFile( sw::string_view resourceId )
-        {
-            return endsWith( resourceId, ".xml" ) || endsWith( resourceId, ".json" ) || endsWith( resourceId, ".material" );
-        }
-
-        /** @brief @p resourceId 의 종류입니다. 표에 없으면 nullptr 입니다. */
-        static const DataKind* findKind( sw::string_view resourceId )
-        {
-            for ( const DataKind& kind : kArrDataKind )
-            {
-                if ( kind._pIsKind( resourceId ) )
-                    return &kind;
-            }
-            return nullptr;
-        }
+        { "scene", &isScene, &loadScene },
+                                  { "prefab", &isPrefab, &loadPrefab }, { "pipeline", &isPipeline, &loadPipeline }, { "renderpass", &isRenderPass, &loadRenderPass }, { "enginedefaultassets", &isEngineDefaultAssets, &loadEngineDefaultAssets }, { "inputmap", &isInputMap, &loadInputMap }, { "material", &isMaterial, &loadMaterial }, { "spriteclip", &isSpriteClip, &loadSpriteClip }, { "camerapresets", &isCameraPresets, &loadCatalog<sw::CameraPresetCatalog> }, { "physicssettings", &isPhysicsSettings, &loadPhysicsSettings }, { "physicsasset", &isPhysicsAsset, &loadPhysicsAsset }, { "abilities", &isAbilities, &loadCatalog<sw::AbilityCatalog> }, { "crops", &isCrops, &loadCatalog<sw::CropCatalog> }, { "city", &isCity, &loadCatalog<sw::CityCatalog> }, { "weapons", &isWeapons, &loadCatalog<sw::WeaponCatalog> }, { "rtsunits", &isRtsUnits, &loadCatalog<sw::RtsCatalog> }, { "voxelblocks", &isVoxelBlocks, &loadCatalog<sw::VoxelBlockCatalog> }, { "coasters", &isCoasters, &loadCatalog<sw::CoasterLayoutCatalog> }, { "parklayout", &isParkLayout, &loadParkLayout }, { "gamesettings", &isGameSettings, &loadGameSettings },
     };
+
+    /**
+     * @brief 게임 모듈(`Source/Games` 아래 헤더)이 `REFLECT` 로 선언한 타입 이름을 모읍니다.
+     * @details EngineTest 는 게임 모듈을 링크하지 않는다 — 게임 팩의 씬 · 프리팹에 놓인 게임 컴포넌트는 여기서 모르는 타입이다. 그 이름이 실제로
+     *          게임 소스에 선언된 것일 때만 그 경고를 넘긴다(오타 · 지운 타입은 그대로 실패다). 게임 모듈의 타입은 게임 빌드의 쿠킹이 본다.
+     */
+    static void collectGameModuleTypeNames( const sw::string& resourceRoot, sw::vector<sw::string>& outListTypeName )
+    {
+        outListTypeName.clear();
+        const sw::string       repositoryRoot = sw::FileUtil::getDirectoryPart( sw::FileUtil::trimTrailingSlashes( resourceRoot ) );
+        sw::vector<sw::string> listHeader;
+        if ( sw::FileUtil::collectFiles( sw::FileUtil::joinPath( repositoryRoot, "Source/Games" ), ".h", listHeader, true ) == false )
+            return;
+        for ( const sw::string& headerPath : listHeader )
+        {
+            sw::string text;
+            if ( sw::FileUtil::readTextFile( headerPath, text ) == false )
+                continue;
+            for ( size_t reflectPos = text.find( "REFLECT(" ); reflectPos != sw::string::npos; reflectPos = text.find( "REFLECT(", reflectPos + 1 ) )
+            {
+                const size_t classPos = text.find( "class ", reflectPos );
+                if ( classPos == sw::string::npos )
+                    break;
+                size_t nameStart = classPos + 6;
+                size_t nameEnd   = nameStart;
+                while ( nameEnd < text.size() && ( std::isalnum( static_cast<uint8>( text[nameEnd] ) ) != 0 || text[nameEnd] == '_' ) )
+                    ++nameEnd;
+                if ( nameEnd > nameStart )
+                    outListTypeName.push_back( text.substr( nameStart, nameEnd - nameStart ) );
+            }
+        }
+    }
+
+    /** @brief 모은 경고에서 게임 모듈 타입의 "모르는 타입" 줄을 뺀 나머지입니다. */
+    static sw::string removeGameModuleTypeWarnings( const sw::string& joined, const sw::vector<sw::string>& listGameTypeName )
+    {
+        sw::string result;
+        size_t     lineStart = 0;
+        while ( lineStart < joined.size() )
+        {
+            size_t lineEnd = joined.find( "\n  ", lineStart + 1 );
+            if ( lineEnd == sw::string::npos )
+                lineEnd = joined.size();
+            const sw::string line        = joined.substr( lineStart, lineEnd - lineStart );
+            bool             bGameModule = false;
+            for ( const sw::string& typeName : listGameTypeName )
+                bGameModule = bGameModule || line.find( "of unknown type '" + typeName + "'" ) != sw::string::npos;
+            if ( bGameModule == false )
+                result += line;
+            lineStart = lineEnd;
+        }
+        return result;
+    }
+
+    /** @brief 데이터로 보는 확장자입니다. 이 확장자인데 표의 어느 줄에도 맞지 않는 파일은 시험이 집니다(새 종류가 검사를 비켜 가지 않게). */
+    static bool isDataFile( sw::string_view resourceId )
+    {
+        return endsWith( resourceId, ".xml" ) || endsWith( resourceId, ".json" ) || endsWith( resourceId, ".material" );
+    }
+
+    /** @brief @p resourceId 의 종류입니다. 표에 없으면 nullptr 입니다. */
+    static const DataKind* findKind( sw::string_view resourceId )
+    {
+        for ( const DataKind& kind : kArrDataKind )
+        {
+            if ( kind._pIsKind( resourceId ) )
+                return &kind;
+        }
+        return nullptr;
+    }
+};
 } // namespace
 
 /**

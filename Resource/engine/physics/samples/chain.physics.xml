@@ -1,0 +1,32 @@
+<!--
+	물리 에셋 견본 — 세로 사슬 pelvis → spine → head 의 래그돌 · 히트박스. 셰이프 · 관절 축은 뼈 로컬이다.
+	관절은 그 뼈의 바디를 부모 사슬에서 가장 가까운 바디가 있는 뼈에 잇는다(루트 바디의 관절은 쓰지 않는다).
+	PhysicsRagdollTest.SampleAssetLoadsAndBuilds 가 읽는다.
+-->
+<PhysicsAsset _defaultLayer="Ragdoll" _bDisableJointedCollision="true">
+	<_listBody>
+		<PhysicsAssetBodyDef _bone="pelvis" _mass="10" _material="Flesh">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Capsule" _radius="0.1" _halfHeight="0.12" _localPosition="0,0.25,0" />
+			</_listShape>
+			<_hitZone _name="Torso" _damageMultiplier="1" />
+		</PhysicsAssetBodyDef>
+		<PhysicsAssetBodyDef _bone="spine" _mass="10" _material="Flesh">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Capsule" _radius="0.1" _halfHeight="0.12" _localPosition="0,0.25,0" />
+			</_listShape>
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.4" _swingLimitPlane="0.4" _twistMin="-0.3" _twistMax="0.3" />
+			<_hitZone _name="Torso" _damageMultiplier="1" />
+		</PhysicsAssetBodyDef>
+		<PhysicsAssetBodyDef _bone="head" _mass="5" _material="Flesh">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Sphere" _radius="0.15" _localPosition="0,0.15,0" />
+			</_listShape>
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.6" _swingLimitPlane="0.6" _twistMin="-0.5" _twistMax="0.5" />
+			<_hitZone _name="Head" _damageMultiplier="2.5" />
+		</PhysicsAssetBodyDef>
+	</_listBody>
+	<_listDisabledPair>
+		<PhysicsAssetPairDef _boneA="pelvis" _boneB="head" />
+	</_listDisabledPair>
+</PhysicsAsset>
