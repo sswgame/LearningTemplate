@@ -36,6 +36,25 @@ namespace
         ray._direction = float3{ 0.0f, 0.0f, 1.0f };
         return ray;
     }
+
+    /** @brief 고정 dt 로 @p seconds 동안 방아쇠를 당긴 채 쏜 발 수입니다(프레임마다 시간을 흘리고 한 번 당긴다 — 게임 루프 순서). */
+    int32 countShotsHeldFor( const WeaponDef& weapon, float32 framesPerSecond, float32 seconds )
+    {
+        WeaponState state;
+        state.equip( weapon, 0 );
+        WeaponShot    shot;
+        const GameRay aim        = makeForwardRay();
+        const float32 deltaTime  = 1.0f / framesPerSecond;
+        const int32   frameCount = static_cast<int32>( seconds * framesPerSecond + 0.5f );
+        int32         shotCount  = 0;
+        for ( int32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
+            state.update( deltaTime );
+            if ( state.pullTrigger( aim, frameIndex == 0, shot ) == WeaponFireResult::Fired )
+                ++shotCount;
+        }
+        return shotCount;
+    }
 } // namespace
 
 /**
@@ -120,6 +139,40 @@ SW_TEST_CASE( ShooterTest, WeaponCyclesMagazineAndReload )
     (void)weapon.pullTrigger( aim, false, shot );
     weapon.update( 0.1f );
     SW_EXPECT_TRUE( weapon.pullTrigger( aim, false, shot ) == WeaponFireResult::OutOfAmmo );
+}
+
+/**
+ * @brief [ShooterTest] 연사 속도가 프레임률에 매이지 않는다 — 30 · 60 · 144 fps 로 10 초 쏜 발 수가 설계값(10 / 간격) ±1 발 안이다
+ * @details 쿨다운이 0 아래로 내려간 몫을 다음 발 간격에서 뺀다. 버리면 간격이 `ceil( 간격 / dt ) × dt` 로 늘어 라이플(0.095 s)이
+ *          30 · 60 fps 에서 10.0 발/초, 144 fps 에서 10.3 발/초가 된다(설계 10.53). 한 번 당기면 한 발이라 fps 가 1 / 간격보다
+ *          낮으면 프레임마다 한 발로 떨어진다 — 멈춘 프레임 뒤에 몰아 쏘지 않는다. 쉬다가 다시 당긴 첫 발도 쉰 시간을 잇지 않는다.
+ */
+SW_TEST_CASE( ShooterTest, FireRateDoesNotDependOnFrameRate )
+{
+    WeaponDef rifle       = makeShooterTestRifle();
+    rifle._fireInterval   = 0.095f;
+    rifle._magazineSize   = 100000;
+    rifle._spreadPerShot  = 0.0f;
+    const float32 seconds = 10.0f;
+    const float32 design  = seconds / rifle._fireInterval; // 105.26 발
+    for ( const float32 framesPerSecond : { 30.0f, 60.0f, 144.0f } )
+        SW_EXPECT_NEAR_EQUAL( design, static_cast<float32>( countShotsHeldFor( rifle, framesPerSecond, seconds ) ), 1.0f );
+
+    // 간격보다 긴 프레임(5 fps · 200 ms)은 프레임마다 한 발 — 50 발이고 따라잡으려 몰아 쏘지 않는다.
+    SW_EXPECT_EQUAL( 50, countShotsHeldFor( rifle, 5.0f, seconds ) );
+
+    // 쉬다가 당긴 첫 발 뒤에는 온전한 간격을 기다린다 — 쉬는 동안의 시간을 다음 발로 잇지 않는다.
+    WeaponState state;
+    state.equip( rifle, 0 );
+    WeaponShot    shot;
+    const GameRay aim = makeForwardRay();
+    for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+        state.update( 0.05f );
+    SW_EXPECT_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
+    state.update( 0.05f );
+    SW_EXPECT_TRUE( state.pullTrigger( aim, false, shot ) == WeaponFireResult::Cooling );
+    state.update( 0.05f );
+    SW_EXPECT_TRUE( state.pullTrigger( aim, false, shot ) == WeaponFireResult::Fired );
 }
 
 /**
