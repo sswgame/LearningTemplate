@@ -11,14 +11,11 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Components/OrthoCameraRigComponent.h"
+#include "GameFramework/Camera/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Utility/OrientationUtil.h"
 #include "GameFramework/Utility/StateArchiveUtil.h"
 
@@ -95,65 +92,35 @@ namespace sw
         , _cameraRig{}
         , _gate{}
         , _autoBuildInterval{ 20.0f }
-        , _bAutoBuild{ false }
         , _simulation{}
         , _layoutCatalog{}
         , _settings{}
         , _listPlacement{}
         , _listCoaster{}
-        , _listSpawned{}
         , _listPendingRideView{}
-        , _listPendingSound{}
-        , _listColorLook{}
+        , _tintCache{}
         , _arrGuestLook{}
         , _statusTimer{ 0.0f }
         , _autoBuildTimer{ 0.0f }
         , _startingCash{ 12000 }
         , _selectedPlacement{ 0 }
         , _ridingCoaster{ -1 }
-        , _pendingStateBytes{}
-        , _bLoaded{ SW_FALSE }
-        , _bViewsSpawned{ SW_FALSE }
-        , _bFlushScheduled{ SW_FALSE }
         , _bWasRiding{ SW_FALSE }
         , _reserved{ 0 }
     {
-        setCanEverTick( true );
     }
 
     ParkDirectorComponent::~ParkDirectorComponent() = default;
 
-    void ParkDirectorComponent::onBeginPlay()
+    void ParkDirectorComponent::onGameStarted()
     {
-        Component::onBeginPlay();
-        // 규칙 · 입력 · 짓기는 앞 그룹 — 뷰 · 카메라 리그(PostUpdate)가 같은 프레임에 이 결과를 읽는다.
-        setTickGroup( TickGroup::PrePhysics );
-        if ( loadData() == false )
-        {
-            SW_LOG_WARNING( "[Park] park data could not be loaded - the park cannot open" );
-            return;
-        }
-        if ( _pendingStateBytes.empty() == false )
-            applyPendingState();
-        scheduleFlush();
         SW_LOG_INFO( "[Park] park is open - WASD pan, Q/E rotate, wheel zoom, Tab select ride, O open/close, [ ] ride price, - = entry fee, "
                      "B build next, V ride the coaster, G guest thoughts" );
         logStatus( 0.0f, true );
     }
 
-    void ParkDirectorComponent::onEndPlay()
+    void ParkDirectorComponent::tickGame( float32 deltaTime )
     {
-        despawnViews();
-        Component::onEndPlay();
-    }
-
-    void ParkDirectorComponent::onTick( float32 deltaTime )
-    {
-        Component::onTick( deltaTime );
-        if ( _bLoaded == SW_FALSE )
-            return;
-        if ( _bViewsSpawned == SW_FALSE )
-            scheduleFlush(); // 상태 저장 전에 걷었다 — 지금 상태대로 다시 세운다
         if ( deltaTime <= 0.0f )
             return;
 
@@ -161,7 +128,7 @@ namespace sw
         const InputManager* pInput = game::getService<InputManager>();
         if ( pInput != nullptr )
             updateInput( *pInput );
-        if ( isAutoBuildOn() )
+        if ( isAutoPlayOn() )
         {
             _autoBuildTimer += deltaTime;
             if ( _autoBuildTimer >= _autoBuildInterval )
@@ -173,25 +140,11 @@ namespace sw
         updateRides( deltaTime );
         updateCameraOverride();
         logStatus( deltaTime, false );
-        if ( _listPendingRideView.empty() == false || _listPendingSound.empty() == false )
-            scheduleFlush();
     }
 
-    void ParkDirectorComponent::despawnViews()
+    void ParkDirectorComponent::onViewsDespawned()
     {
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager != nullptr )
-        {
-            for ( const GameObjectHandle& handle : _listSpawned )
-            {
-                GameObject* pObject = pManager->resolveGameObject( handle );
-                if ( pObject != nullptr )
-                    pManager->destroyObject( pObject );
-            }
-        }
-        _listSpawned.clear();
         _listPendingRideView.clear();
-        _bViewsSpawned = SW_FALSE;
     }
 
     const shared_ptr<MaterialInstance>& ParkDirectorComponent::getGuestLook( int32 bucket ) const
@@ -215,20 +168,17 @@ namespace sw
         return happiness >= 0.35f ? 1 : 2;
     }
 
-    const ParkDirectorComponent* ParkDirectorComponent::resolveDirector( const GameObjectManager& manager, GameObjectHandle director )
-    {
-        const GameObject* pObject = manager.resolveGameObject( director );
-        return pObject != nullptr ? pObject->getComponent<ParkDirectorComponent>() : nullptr;
-    }
-
     // ------------------------------------------------------------------------------
     // 데이터 · 짓기
     // ------------------------------------------------------------------------------
-    bool ParkDirectorComponent::loadData()
+    bool ParkDirectorComponent::startGame()
     {
         ParkLayout layout;
         if ( _layoutCatalog.loadFromResource( _coasterDataPath ) == false || layout.loadFromResource( _parkDataPath, _layoutCatalog ) == false )
+        {
+            SW_LOG_WARNING( "[Park] park data could not be loaded - the park cannot open" );
             return false;
+        }
         _settings._gatePosition = layout.getGatePosition();
         _settings._entryFee     = layout.getEntryFee();
         _startingCash           = layout.getStartingCash();
@@ -247,10 +197,12 @@ namespace sw
             _listPlacement.push_back( ride );
         }
         if ( _listPlacement.empty() )
+        {
+            SW_LOG_WARNING( "[Park] %# places no rides - the park cannot open", _parkDataPath.c_str() );
             return false;
+        }
         _simulation.initialize( _settings, _startingCash );
         _listCoaster.clear();
-        _bLoaded = SW_TRUE;
 
         // 처음 공원 — 가장 싼 평지 놀이기구 하나와 가장 싼 코스터 하나.
         int32 cheapestFlat    = -1;
@@ -279,7 +231,7 @@ namespace sw
         if ( _simulation.getCash() < placement._buildCost )
         {
             SW_LOG_INFO( "[Park] not enough cash for %# ($%# needed, $%# in the bank)", placement._ride._name.c_str(), placement._buildCost, _simulation.getCash() );
-            playSound( ParkDirectorComponentInternal::kSoundError );
+            getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundError );
             return false;
         }
 
@@ -317,7 +269,7 @@ namespace sw
         if ( pCoaster != nullptr )
             _listCoaster.push_back( std::move( pCoaster ) );
         SW_LOG_INFO( "[Park] built %# for $%# - ticket $%#, $%# left", ride._name.c_str(), placement._buildCost, ride._price, _simulation.getCash() );
-        playSound( ParkDirectorComponentInternal::kSoundBuilt );
+        getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundBuilt );
         _listPendingRideView.push_back( placementIndex );
         return true;
     }
@@ -361,13 +313,6 @@ namespace sw
         outArchive << _statusTimer;
         outArchive << _autoBuildTimer;
         outArchive << _selectedPlacement;
-    }
-
-    void ParkDirectorComponent::restoreState( vector<uint8>&& bytes )
-    {
-        _pendingStateBytes = std::move( bytes );
-        if ( _bLoaded == SW_TRUE )
-            applyPendingState();
     }
 
     bool ParkDirectorComponent::readState( Archive& archive )
@@ -434,17 +379,13 @@ namespace sw
         return true;
     }
 
-    void ParkDirectorComponent::applyPendingState()
+    void ParkDirectorComponent::onStateRestored( bool bRestored )
     {
-        Archive archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        if ( readState( archive ) )
+        if ( bRestored )
             SW_LOG_INFO( "[Park] park state restored - %# guests, $%#, %#s open", _simulation.getGuestCount(), _simulation.getCash(),
                          static_cast<int32>( _simulation.getElapsedTime() ) );
         else
             SW_LOG_WARNING( "[Park] the saved park state does not match this build - opening a new park" );
-        _pendingStateBytes.clear();
-        _listPendingSound.clear();
-        despawnViews(); // 지금 상태대로 다시 세운다(다음 틱)
     }
 
     bool ParkDirectorComponent::buildCheapestRemaining()
@@ -466,61 +407,24 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 스폰(틱 뒤 · 게임 스레드)
     // ------------------------------------------------------------------------------
-    void ParkDirectorComponent::scheduleFlush()
+    void ParkDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
-        if ( _bFlushScheduled == SW_TRUE )
-            return;
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr )
-            return;
-        _bFlushScheduled = SW_TRUE;
-        // 틱 안이면 틱 뒤로 미뤄진다. 그 사이에 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
-        {
-            ParkDirectorComponent* pDirector = static_cast<ParkDirectorComponent*>( pManager->resolveComponent( self ) );
-            if ( pDirector != nullptr )
-                pDirector->flushPending();
-        } );
-    }
-
-    void ParkDirectorComponent::flushPending()
-    {
-        _bFlushScheduled            = SW_FALSE;
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr || _bLoaded == SW_FALSE )
-            return;
-        if ( _bViewsSpawned == SW_FALSE )
+        if ( bRespawnViews )
         {
             // 처음(또는 걷은 뒤) — 손님 풀과 지은 것 모두. 쌓인 개별 요청은 여기에 들어 있다.
-            spawnGuestPool( *pManager );
+            spawnGuestPool( manager );
             for ( int32 placementIndex = 0; placementIndex < static_cast<int32>( _listPlacement.size() ); ++placementIndex )
             {
                 if ( _listPlacement[static_cast<size_t>( placementIndex )]._rideIndex >= 0 )
-                    spawnRideView( *pManager, placementIndex );
+                    spawnRideView( manager, placementIndex );
             }
-            _bViewsSpawned = SW_TRUE;
         }
         else
         {
             for ( const int32 placementIndex : _listPendingRideView )
-                spawnRideView( *pManager, placementIndex );
+                spawnRideView( manager, placementIndex );
         }
         _listPendingRideView.clear();
-        for ( const utf8* pPath : _listPendingSound )
-            (void)GameSound::play( pPath );
-        _listPendingSound.clear();
-    }
-
-    GameObject* ParkDirectorComponent::spawnPrefab( GameObjectManager& manager, const string& prefabPath, const utf8* pName )
-    {
-        AssetManager* pAssetManager = game::getService<AssetManager>();
-        if ( pAssetManager == nullptr || prefabPath.empty() )
-            return nullptr;
-        GameObject* pObject = pAssetManager->getPrefabCache().spawn( &manager, prefabPath, pName );
-        if ( pObject != nullptr )
-            _listSpawned.push_back( pObject->getHandle() );
-        return pObject;
     }
 
     void ParkDirectorComponent::spawnGuestPool( GameObjectManager& manager )
@@ -566,9 +470,7 @@ namespace sw
                 return;
             pMesh->setMeshId( placement._shape );
             pMesh->setLocalScale( placement._size );
-            const shared_ptr<MaterialInstance> look = acquireColorLook( *pMesh, placement._color );
-            if ( look != nullptr )
-                pMesh->setMaterialInstance( look );
+            _tintCache.apply( *pMesh, placement._color );
             FlatRideComponent* pView = pObject->getComponent<FlatRideComponent>();
             if ( pView != nullptr )
                 pView->assignRide( getOwner()->getHandle(), placement._rideIndex, placement._spin );
@@ -642,32 +544,6 @@ namespace sw
             pPath->setLocalScale( float3{ 2.4f, 0.3f, length + 2.4f } );
     }
 
-    shared_ptr<MaterialInstance> ParkDirectorComponent::acquireColorLook( MeshComponent& mesh, const float4& color )
-    {
-        Material* pMaterial = mesh.getMaterial();
-        if ( pMaterial == nullptr )
-            return nullptr;
-        for ( const ColorLook& look : _listColorLook )
-        {
-            const bool bSameColor = look._color._x == color._x && look._color._y == color._y && look._color._z == color._z && look._color._w == color._w;
-            if ( bSameColor )
-                return look._instance;
-        }
-        ColorLook look;
-        look._instance = MaterialInstance::create( pMaterial );
-        if ( look._instance == nullptr )
-            return nullptr;
-        look._instance->setVectorParameter( hashed_string( "color" ), color );
-        look._color = color;
-        _listColorLook.push_back( look );
-        return look._instance;
-    }
-
-    void ParkDirectorComponent::playSound( const utf8* pPath )
-    {
-        _listPendingSound.push_back( pPath );
-    }
-
     // ------------------------------------------------------------------------------
     // 갱신(PrePhysics — 워커)
     // ------------------------------------------------------------------------------
@@ -676,7 +552,7 @@ namespace sw
         if ( input.wasKeyPressed( Key::Tab ) && _listPlacement.empty() == false )
         {
             _selectedPlacement = ( _selectedPlacement + 1 ) % static_cast<int32>( _listPlacement.size() );
-            playSound( ParkDirectorComponentInternal::kSoundSelect );
+            getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundSelect );
             [[maybe_unused]] const RidePlacement& placement = _listPlacement[static_cast<size_t>( _selectedPlacement )];
             SW_LOG_INFO( "[Park] selected %# (%#)", placement._ride._name.c_str(), placement._rideIndex >= 0 ? "built" : "not built - B to build" );
         }
@@ -795,16 +671,5 @@ namespace sw
         if ( _selectedPlacement < 0 || _selectedPlacement >= static_cast<int32>( _listPlacement.size() ) )
             return -1;
         return _listPlacement[static_cast<size_t>( _selectedPlacement )]._rideIndex;
-    }
-
-    bool ParkDirectorComponent::isAutoBuildOn() const
-    {
-        return _bAutoBuild || GameAutoplay::isOn();
-    }
-
-    GameObjectManager* ParkDirectorComponent::getObjectManager() const
-    {
-        GameObject* pOwner = getOwner();
-        return pOwner != nullptr ? pOwner->getManager() : nullptr;
     }
 } // namespace sw

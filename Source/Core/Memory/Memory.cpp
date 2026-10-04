@@ -3,6 +3,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 
@@ -19,7 +20,8 @@ namespace sw
     {
         size_t    _size;      ///< 요청한 사용자 데이터 크기(바이트)
         MemoryTag _tag;       ///< 할당 시점 스레드의 용도 태그(`MemoryTag`). 해제는 이 값으로 뺀다
-        uint8     _arrPad[7]; ///< 16바이트 경계 정렬용 패딩
+        uint8     _bObserved; ///< 할당 관찰자(`setAllocationObserver`)에 알린 블록이면 SW_TRUE — 해제도 그때만 알린다
+        uint8     _arrPad[6]; ///< 16바이트 경계 정렬용 패딩
         uint64    _hash;      ///< 할당 시점 콜 스택의 해시
         uint64    _magic;     ///< 유효성 검증용 매직 넘버
         void*     _pRawPtr;   ///< OS 가 준 원래 할당 시작 주소(정렬 패딩 이전)
@@ -33,6 +35,9 @@ namespace sw
 
     namespace
     {
+        /** @brief 걸린 할당 관찰자입니다. 할당마다 relaxed 읽기 하나입니다. */
+        atomic<const MemoryAllocationObserver*> s_pAllocationObserver{ nullptr };
+
         struct MemoryInternal
         {
             /**
@@ -47,10 +52,18 @@ namespace sw
                 pHeader->_magic      = kAllocMagic;
                 pHeader->_hash       = 0;
                 pHeader->_pRawPtr    = pRawPtr;
+                pHeader->_bObserved  = SW_FALSE;
 
                 MemoryProfiler* pProfiler = MemoryProfiler::getActive();
                 if ( pProfiler != nullptr )
                     pHeader->_hash = pProfiler->recordAllocation( pUserPtr, size, pHeader->_tag );
+
+                const MemoryAllocationObserver* pObserver = s_pAllocationObserver.load( std::memory_order_acquire );
+                if ( pObserver != nullptr )
+                {
+                    pHeader->_bObserved = SW_TRUE;
+                    pObserver->_pOnAllocate( pUserPtr, size, tag );
+                }
                 return pUserPtr;
             }
 
@@ -77,6 +90,14 @@ namespace sw
                 MemoryProfiler* pProfiler = MemoryProfiler::getActive();
                 if ( pProfiler != nullptr )
                     pProfiler->recordFree( pUserPtr, pHeader->_size, pHeader->_tag, pHeader->_hash );
+
+                // 관찰 중에 할당된 블록만 알린다. 관찰자가 그 사이 떨어졌으면 알릴 곳이 없다.
+                if ( pHeader->_bObserved == SW_TRUE )
+                {
+                    const MemoryAllocationObserver* pObserver = s_pAllocationObserver.load( std::memory_order_acquire );
+                    if ( pObserver != nullptr )
+                        pObserver->_pOnFree( pUserPtr, pHeader->_tag );
+                }
 
                 pHeader->_magic = 0;
                 return pHeader->_pRawPtr;
@@ -220,6 +241,13 @@ namespace sw
         return 0;
 #else
         return sizeof( AllocHeader );
+#endif
+    }
+
+    void Memory::setAllocationObserver( [[maybe_unused]] const MemoryAllocationObserver* pObserver )
+    {
+#if !defined( SW_SHIPPING )
+        s_pAllocationObserver.store( pObserver, std::memory_order_release );
 #endif
     }
 

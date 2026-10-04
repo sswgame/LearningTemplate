@@ -5,6 +5,7 @@
         { "_tag": "Audio", "_megabytes": 256 },
         { "_tag": "Animation", "_megabytes": 256 },
         { "_tag": "Physics", "_megabytes": 128 },
+        { "_tag": "Navigation", "_megabytes": 64 },
         { "_tag": "Scene", "_megabytes": 512 },
         { "_tag": "UI", "_megabytes": 64 },
         { "_tag": "Script", "_megabytes": 64 }

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Data/GameStrings.h"
+#include "GameFramework/Framework/GameStrings.h"
 
 #include "Core/Common/StdHeaders.h"
 

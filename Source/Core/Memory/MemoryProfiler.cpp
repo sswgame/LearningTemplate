@@ -91,6 +91,7 @@ namespace sw
                 "Animation",
                 "Audio",
                 "Physics",
+                "Navigation",
                 "RenderCpu",
                 "UI",
                 "Script",

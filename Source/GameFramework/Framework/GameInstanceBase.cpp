@@ -18,10 +18,10 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
-#include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Framework/ComponentStateStore.h"
 #include "GameFramework/Framework/GameEventUtil.h"
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameStrings.h"
 
 namespace sw
 {
@@ -50,6 +50,7 @@ namespace sw
         , _pWindow{ nullptr }
         , _pRhiDevice{ nullptr }
         , _listPendingSceneLoad{}
+        , _listStatefulType{}
         , _pComponentStateStore{ make_unique<ComponentStateStore>() }
         , _bResumingWorld{ SW_FALSE }
     {
@@ -330,12 +331,43 @@ namespace sw
         return true;
     }
 
+    void GameInstanceBase::captureStatefulComponents()
+    {
+        GameObjectManager* pManager = findActiveObjectManager();
+        if ( pManager == nullptr )
+            return;
+        // 모두 싣고 나서 걷는다 — 걷기가 다른 타입의 상태(플레이어가 읽는 디렉터)를 바꾸지 않게.
+        for ( const StatefulComponentType& type : _listStatefulType )
+        {
+            if ( type._pCapture != nullptr )
+                type._pCapture( *_pComponentStateStore, *pManager );
+        }
+        for ( const StatefulComponentType& type : _listStatefulType )
+        {
+            if ( type._pDespawn != nullptr )
+                type._pDespawn( *pManager );
+        }
+    }
+
+    void GameInstanceBase::restoreStatefulComponents()
+    {
+        GameObjectManager* pManager = findActiveObjectManager();
+        if ( pManager == nullptr )
+            return;
+        for ( const StatefulComponentType& type : _listStatefulType )
+        {
+            if ( type._pRestore != nullptr )
+                type._pRestore( *_pComponentStateStore, *pManager );
+        }
+    }
+
     bool GameInstanceBase::serializeState( void* pOutBuffer, uint32* pInOutSize )
     {
         if ( pInOutSize == nullptr )
             return false;
 
         _pComponentStateStore->clear();
+        captureStatefulComponents();
         onBeforeStateSerialize();
 
         Archive arch;
@@ -469,6 +501,7 @@ namespace sw
         if ( arch.isError() )
             return false;
 
+        restoreStatefulComponents();
         onAfterStateDeserialize();
         _pComponentStateStore->clear();
         return true;

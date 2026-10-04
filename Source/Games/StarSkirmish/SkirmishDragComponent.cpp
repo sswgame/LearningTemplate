@@ -31,7 +31,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const SkirmishDirectorComponent* pDirector = SkirmishDirectorComponent::resolveDirector( *pManager, _director );
+        const SkirmishDirectorComponent* pDirector = GameDirectorComponent::resolve<SkirmishDirectorComponent>( *pManager, _director );
         float3                           center{};
         float3                           scale{};
         const bool                       bShown = pDirector != nullptr && pDirector->findDragBox( center, scale );

@@ -59,7 +59,7 @@ namespace sw
             tickDeath( deltaTime, *pMesh );
             return;
         }
-        const ArenaDirectorComponent* pDirector = ArenaDirectorComponent::resolveDirector( *pManager, _director );
+        const ArenaDirectorComponent* pDirector = GameDirectorComponent::resolve<ArenaDirectorComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
 

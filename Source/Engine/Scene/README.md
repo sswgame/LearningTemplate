@@ -134,7 +134,8 @@ classDiagram
 
 ## 4. 씬 쿠킹 (`SceneCooker`)
 
-`App.exe --cook-scenes [--cooked-dir <dir>]` 가 헤드리스 단계에서 `SceneCooker::cookAllScenes` 를 부릅니다(프리팹은 같은 실행에서 `PrefabCache::cookAllPrefabs`).
+`App.exe --cook-scenes [--cooked-dir <dir>]` 가 헤드리스 단계에서 `SceneCooker::cookAllScenes` 를 부릅니다(프리팹은 같은 실행에서 `PrefabCache::cookAllPrefabs`,
+내비 표면이 놓인 씬의 내비메시는 `SceneNavigationCooker::cookAll` — `Source/Engine/Navigation/README.md` 7 절).
 
 - **입력은 소스 트리입니다.** 쿠킹이면 Resource 단계가 `AssetManager::mountContent( …, ContentSource::SourceTree )` 로 섭니다 — 팩을 마운트하지 않고
   느슨한 파일을 읽으며, 배포 구성(Shipping)에서도 소스 프리팹(XML · JSON)을 읽습니다. 지난 빌드의 팩을 입력으로 삼지 않습니다

@@ -10,9 +10,13 @@
  * 여기서는 **누적만** 하고, 보고는 요청할 때 한 번 합니다.
  *
  * [비용]
- * 꺼져 있으면 스코프 진입 · 이탈이 bool 검사 하나입니다. 켜져 있으면 시계 두 번 + relaxed
+ * 꺼져 있으면 스코프 진입 · 이탈이 bool 검사 하나와 외부 출력 포인터 읽기 하나입니다. 켜져 있으면 시계 두 번 + relaxed
  * fetch_add 두 번입니다. 패스 · 프레임 단위로만 걸고 드로우 단위에는 걸지 마십시오. 측정이 측정 대상을
  * 바꾸면 의미가 없습니다.
+ *
+ * [두 출력]
+ * `SW_PROFILE_SCOPE` 한 줄이 이 표(프로세스 안 집계 — 성능 회귀 · 에디터 패널 · Shipping 오버레이)와 외부 프로파일러
+ * (`ProfilerBackend` — Tracy 타임라인)에 함께 기록합니다. 외부 출력은 Shipping 에서 컴파일되지 않습니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -20,6 +24,23 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Log/Logger.h"
+
+#include "Engine/Utility/Profiling/ProfilerBackend.h"
+
+namespace sw
+{
+    /**
+     * @struct ProfileScopeId
+     * @brief 계측 지점 하나의 등록 결과입니다 — 이 표의 슬롯과 외부 출력의 지점. 매크로가 static 으로 한 번 받습니다.
+     */
+    struct ProfileScopeId
+    {
+        uint32 _slot; ///< `FrameProfiler` 슬롯(없으면 `kInvalidSlot`)
+#if SW_PROFILER_BACKEND_COMPILED
+        const ProfileZoneSite* _pSite; ///< 외부 출력 지점(프로세스 수명, 없으면 nullptr)
+#endif
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -61,6 +82,12 @@ namespace sw
          */
         uint32 registerScope( const utf8* pName );
 
+        /**
+         * @brief `SW_PROFILE_SCOPE` 의 등록입니다. 이 표의 슬롯과 외부 출력 지점을 함께 받습니다.
+         * @details 함수 · 파일 · 줄은 외부 출력(Tracy 소스 위치)에만 씁니다. Shipping 에서는 슬롯만 받습니다.
+         */
+        ProfileScopeId registerScopeSite( const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line );
+
         /** @brief 구간에 경과 나노초와 호출 1회를 더합니다. 스레드 안전합니다. */
         void addSample( uint32 slot, uint64 nanos );
         /** @brief 구간에 임의의 수를 더합니다(드로우 수 등). 시간이 아닌 카운터입니다. */
@@ -78,6 +105,20 @@ namespace sw
 
         /** @brief endFrame 이 불린 횟수입니다. */
         uint64 getFrameCount() const { return _frameCount.load( std::memory_order_relaxed ); }
+
+        // ------------------------------------------------------------------------------
+        // 실시간 조회 — 에디터 프로파일러 패널이 프레임마다 읽는다(게임 스레드가 쓰는 중에 다른 스레드가 읽어도 된다)
+        // ------------------------------------------------------------------------------
+        /** @brief 등록된 구간 수입니다(`kMaxScope` 이하). */
+        uint32 getScopeCount() const;
+        /** @brief 슬롯의 구간 이름입니다. 아직 이름이 실리지 않았거나 범위 밖이면 nullptr 입니다. */
+        const utf8* findScopeName( uint32 slot ) const;
+        /** @brief 슬롯이 카운터(`SW_PROFILE_COUNT`)면 true 입니다. 카운터는 시간이 아니라 프레임당 합(`getLastFrameCount`)을 봅니다. */
+        bool isCounterScope( uint32 slot ) const;
+        /** @brief 마지막으로 접힌 프레임(`endFrame`)의 구간 시간(나노초)입니다. 그 프레임에 안 불렸으면 0 입니다. */
+        uint64 getLastFrameNanos( uint32 slot ) const;
+        /** @brief 마지막으로 접힌 프레임의 호출 수 · 카운터 합입니다. */
+        uint64 getLastFrameCount( uint32 slot ) const;
 
         /**
          * @brief 구간의 프레임 값 분포에서 @p percent 백분위(나노초)를 반환합니다.
@@ -110,7 +151,12 @@ namespace sw
             atomic<const utf8*> _pName{ nullptr };
             atomic<uint64>      _frameNanos{ 0 }; ///< 이번 프레임 누적 (endFrame 에서 비움)
             atomic<uint64>      _frameCalls{ 0 }; ///< 이번 프레임 호출/카운트
-            uint64              _totalNanos{ 0 }; ///< 전체 프레임 누적
+            atomic<uint64>      _lastNanos{ 0 };  ///< 마지막으로 접힌 프레임의 시간(실시간 조회용, endFrame 이 쓴다)
+            atomic<uint64>      _lastCalls{ 0 };  ///< 마지막으로 접힌 프레임의 호출 수 · 카운터 합
+            /** @brief 외부 출력 그래프 이름(프로세스 수명 사본). 카운터가 처음 그래프로 나갈 때 채웁니다. */
+            atomic<const utf8*> _pPlotName{ nullptr };
+            atomic<bool>        _bCounter{ false }; ///< `addCount` 로 쌓인 적이 있다
+            uint64              _totalNanos{ 0 };   ///< 전체 프레임 누적
             uint64              _totalCalls{ 0 };
             uint64              _minNanos{ 0 }; ///< 프레임 단위 최소/최대
             uint64              _maxNanos{ 0 };
@@ -122,6 +168,11 @@ namespace sw
             uint32 _arrBucket[kBucketCount]{};
         };
 
+    private:
+        /** @brief 카운터 구간의 프레임 합을 외부 출력 그래프 한 점으로 냅니다(`endFrame`, 게임 스레드). */
+        static void plotCounter( IProfilerBackend& backend, Scope& scope, uint64 value );
+
+    private:
         Scope          _arrScope[kMaxScope];
         atomic<uint32> _scopeCount{ 0 };
         atomic<uint64> _frameCount{ 0 };
@@ -138,9 +189,9 @@ namespace sw
     class SW_API ScopedFrameProfile final
     {
     public:
-        /** @brief 계측이 켜져 있을 때만 시작 시각을 읽습니다. */
-        explicit ScopedFrameProfile( uint32 slot ) noexcept;
-        /** @brief 경과를 슬롯에 더합니다. */
+        /** @brief 계측이 켜져 있을 때만 시작 시각을 읽고, 외부 출력이 있으면 그 구간을 엽니다. */
+        explicit ScopedFrameProfile( const ProfileScopeId& scopeId ) noexcept;
+        /** @brief 경과를 슬롯에 더하고 외부 구간을 닫습니다. */
         ~ScopedFrameProfile() noexcept;
 
         ScopedFrameProfile( const ScopedFrameProfile& )            = delete;
@@ -148,6 +199,10 @@ namespace sw
 
     private:
         uint64 _startNanos;
+#if SW_PROFILER_BACKEND_COMPILED
+        IProfilerBackend* _pBackend;  ///< 구간을 연 출력(닫을 때 같은 출력으로 닫는다). 없으면 nullptr
+        uint64            _zoneToken; ///< 그 출력이 돌려준 구간 값
+#endif
         uint32 _slot;
     };
 } // namespace sw
@@ -166,15 +221,15 @@ namespace sw
 #define SW_PROFILE_CONCAT( a, b ) SW_PROFILE_CONCAT_INNER( a, b )
 
 /**
- * @brief 이 스코프의 CPU 시간을 name 구간에 누적합니다.
- * @details 슬롯 번호는 함수 지역 static 으로 한 번만 받습니다(C++11 이후 스레드 안전 초기화).
+ * @brief 이 스코프의 CPU 시간을 name 구간에 누적하고, 외부 프로파일러(Tracy)가 켜져 있으면 같은 이름의 구간을 남깁니다.
+ * @details 슬롯 번호 · 외부 지점은 함수 지역 static 으로 한 번만 받습니다(C++11 이후 스레드 안전 초기화).
  */
-#define SW_PROFILE_SCOPE( name )                                            \
-    static const uint32 SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ ) =     \
-        ::sw::engine::getFrameProfiler().registerScope( name );             \
-    ::sw::ScopedFrameProfile SW_PROFILE_CONCAT( swProfileScope_, __LINE__ ) \
-    {                                                                       \
-        SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ )                       \
+#define SW_PROFILE_SCOPE( name )                                                                                         \
+    static const ::sw::ProfileScopeId SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ ) =                                    \
+        ::sw::engine::getFrameProfiler().registerScopeSite( name, __func__, __FILE__, static_cast<uint32>( __LINE__ ) ); \
+    ::sw::ScopedFrameProfile SW_PROFILE_CONCAT( swProfileScope_, __LINE__ )                                              \
+    {                                                                                                                    \
+        SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ )                                                                    \
     }
 
 /** @brief name 카운터에 value 를 더합니다(드로우 수 등). 시간이 아닙니다. */

@@ -4,7 +4,6 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Framework/ComponentStateStore.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
 
@@ -30,6 +29,9 @@ namespace sw
         , _itemCatalog{}
         , _appearanceDatabase{}
     {
+        // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
+        registerDirector<ShooterDirectorComponent>();
+        registerViewOwner<ShooterPlayerComponent>();
     }
 
     Shooter3DGame::~Shooter3DGame() = default;
@@ -65,41 +67,6 @@ namespace sw
             game::unbindLocalService<AppearanceDatabase>();
     }
 
-    void Shooter3DGame::onBeforeStateSerialize()
-    {
-        GameObjectManager* pManager = findActiveObjectManager();
-        if ( pManager == nullptr )
-            return;
-        // 판의 진행(웨이브 · 처치 수)는 PROPERTY 가 아니다 — 컴포넌트 섹션에 실어 다시 만든 디렉터에 돌려준다.
-        getComponentStateStore().capture<ShooterDirectorComponent>( *pManager );
-        // 디렉터가 세운 적 · 효과, 플레이어의 몸은 판의 모습일 뿐이다 — 스냅샷에 실으면 복원된 것이 다시 세운 것과 겹친다.
-        // 순회 콜백 안에서는 오브젝트를 지울 수 없다(매니저 잠금 안) — 디렉터를 모은 뒤 걷는다.
-        vector<ComponentHandle> listDirector;
-        pManager->forEachComponentOfType<ShooterDirectorComponent>( [&listDirector]( ShooterDirectorComponent* pDirector )
-        { listDirector.push_back( pDirector->getHandle() ); } );
-        for ( const ComponentHandle& handle : listDirector )
-        {
-            ShooterDirectorComponent* pDirector = static_cast<ShooterDirectorComponent*>( pManager->resolveComponent( handle ) );
-            if ( pDirector != nullptr )
-                pDirector->despawnRuntime();
-        }
-        vector<ComponentHandle> listPlayer;
-        pManager->forEachComponentOfType<ShooterPlayerComponent>( [&listPlayer]( ShooterPlayerComponent* pPlayer )
-        { listPlayer.push_back( pPlayer->getHandle() ); } );
-        for ( const ComponentHandle& handle : listPlayer )
-        {
-            ShooterPlayerComponent* pPlayer = static_cast<ShooterPlayerComponent*>( pManager->resolveComponent( handle ) );
-            if ( pPlayer != nullptr )
-                pPlayer->despawnRuntime();
-        }
-    }
-
-    void Shooter3DGame::onAfterStateDeserialize()
-    {
-        GameObjectManager* pManager = findActiveObjectManager();
-        if ( pManager != nullptr )
-            getComponentStateStore().restore<ShooterDirectorComponent>( *pManager );
-    }
 } // namespace sw
 
 SW_IMPLEMENT_GAME_MODULE( sw::Shooter3DGame );

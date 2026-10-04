@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Components/DontDestroyOnLoadComponent.h"
+#include "GameFramework/World/DontDestroyOnLoadComponent.h"
 
 #include "Engine/Scene/SceneManager.h"
 

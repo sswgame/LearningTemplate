@@ -6,8 +6,8 @@
  *          `CoasterTrackBuilder` · `CoasterTrain` · `CoasterRideAnalyzer` 가 맡고, 여기는 무엇을 언제 짓는지와 그 모습(프리팹)을 어디에 세우는지를 압니다.
  *          모습을 매 프레임 맞추는 일은 뷰 컴포넌트(`ParkGuestComponent` · `CoasterCarComponent` · `FlatRideComponent`)가 이 컴포넌트를 **읽기만** 해서 합니다.
  *
- *          틱 규칙: 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고, 뷰 · 카메라 리그는 `PostUpdate` 에서 읽습니다(그룹은 차례로 돈다).
- *          스폰은 틱 안에서 할 수 없으므로 요청을 쌓아 두고 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세웁니다. 효과음도 그때 냅니다.
+ *          틱 규칙 · 틱 뒤 스폰 · 상태 바이트 보류 · 걷기는 베이스 `GameDirectorComponent` 가 맡습니다 — 디렉터는 `PrePhysics` 에서 상태를 쓰고,
+ *          뷰 · 카메라 리그는 `PostUpdate` 에서 읽습니다(그룹은 차례로 돈다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -17,9 +17,10 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Framework/GameDirectorComponent.h"
+#include "GameFramework/Framework/MaterialTintCache.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
 #include "GameFramework/Kits/Simulation/ThemePark/ParkLayout.h"
@@ -42,7 +43,7 @@ namespace sw
      *          넘깁니다(`ThemeParkTycoonGame`). 코스터 트랙은 배치 데이터에서 다시 짓습니다. 세운 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
      */
     REFLECT( Category = "ThemePark", DisplayName = "Park Director", Tooltip = "Runs the park simulation, building, input and the runtime spawns" )
-    class ParkDirectorComponent : public Component
+    class ParkDirectorComponent : public GameDirectorComponent
     {
     public:
         REFLECT_BODY();
@@ -50,19 +51,8 @@ namespace sw
         ParkDirectorComponent();
         virtual ~ParkDirectorComponent() override;
 
-        void onBeginPlay() override;
-        void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
-
-        /** @brief 세운 런타임 오브젝트를 모두 지웁니다(상태 저장 전). 시뮬레이션은 그대로이고 다음 틱이 그 상태대로 다시 세운다. */
-        void despawnViews();
         /** @brief 공원 상태(시뮬레이션 · 지은 배치 · 열차 자리 · 타이머 · 고른 배치)를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 의 바이트로 공원을 되살립니다 — `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
-         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 가 데이터를 읽은 뒤 적용합니다. 읽지 못하면 알리고 새 공원으로 시작합니다.
-         */
-        void restoreState( vector<uint8>&& bytes );
+        void writeState( Archive& outArchive ) const override;
 
         // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
         const ThemeParkSimulation& getSimulation() const { return _simulation; }
@@ -72,11 +62,18 @@ namespace sw
         const CoasterTrain* findCoasterTrain( int32 coasterIndex ) const;
         /** @brief 행복도 → 색 칸입니다. */
         static int32 computeHappinessBucket( float32 happiness );
-        /**
-         * @brief 핸들의 오브젝트에 붙은 디렉터입니다. 없으면 nullptr 입니다.
-         * @details 뷰는 이것을 매 프레임 부르고 포인터를 들지 않습니다. 매니저 조회는 잠그지 않습니다(틱 중 여러 워커가 불러도 된다).
-         */
-        static const ParkDirectorComponent* resolveDirector( const GameObjectManager& manager, GameObjectHandle director );
+
+    protected:
+        /** @brief 배치 데이터를 읽고 공원을 열어 처음 둘(가장 싼 평지 · 코스터)을 짓습니다. */
+        [[nodiscard]] bool startGame() override;
+        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive ) override;
+        void               onStateRestored( bool bRestored ) override;
+        void               onGameStarted() override;
+        void               tickGame( float32 deltaTime ) override;
+        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               onViewsDespawned() override;
+        bool               hasPendingSpawn() const override { return _listPendingRideView.empty() == false; }
 
     private:
         /** @brief 지을 수 있는 놀이기구 하나 — 키트의 배치 정의에 지은 뒤의 번호를 더한다. */
@@ -93,19 +90,7 @@ namespace sw
             int32                    _placementIndex{ -1 };
         };
 
-        /** @brief 평지 놀이기구 색 하나의 머티리얼 인스턴스입니다(같은 색은 나눠 쓴다 — 배치 키가 인스턴스다). */
-        struct ColorLook
-        {
-            shared_ptr<MaterialInstance> _instance{};
-            float4                       _color{};
-        };
-
     private:
-        [[nodiscard]] bool loadData();
-        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 이고 그대로입니다. */
-        [[nodiscard]] bool readState( Archive& archive );
-        /** @brief 들고 있던 복원 바이트를 적용하고 모습을 다시 세우게 합니다. */
-        void applyPendingState();
         /**
          * @brief 배치의 코스터(트랙 · 열차)를 짓고 시험 운행 결과를 @p outStats 에 냅니다. 배치 · 설계가 없으면 nullptr 입니다.
          * @details 짓기(`buildPlacement`)와 복원이 같은 트랙을 짓습니다 — 열차는 트랙을 가리키므로 트랙째 힙에 있다.
@@ -115,28 +100,17 @@ namespace sw
         bool buildPlacement( int32 placementIndex );
         /** @brief 아직 안 지은 것 중 가장 싼 것을 짓습니다. */
         bool buildCheapestRemaining();
-        /** @brief 쌓인 스폰 · 효과음을 틱 뒤 한 번으로 미룹니다(틱 밖이면 바로). */
-        void scheduleFlush();
-        /** @brief 쌓인 요청을 세웁니다. 틱 밖(게임 스레드)에서만 불린다. */
-        void flushPending();
         void spawnGuestPool( GameObjectManager& manager );
         void spawnRideView( GameObjectManager& manager, int32 placementIndex );
         void spawnCoasterView( GameObjectManager& manager, int32 coasterIndex );
         void spawnPath( GameObjectManager& manager, const float3& from, const float3& to );
-        /** @brief 프리팹을 세우고 핸들을 듭니다. 읽지 못하면 nullptr 입니다. */
-        GameObject* spawnPrefab( GameObjectManager& manager, const string& prefabPath, const utf8* pName );
-        /** @brief 색 하나의 인스턴스를 찾거나 만듭니다(게임 스레드). */
-        shared_ptr<MaterialInstance> acquireColorLook( MeshComponent& mesh, const float4& color );
-        void                         playSound( const utf8* pPath );
 
-        void               updateInput( const InputManager& input );
-        void               updateRides( float32 deltaTime );
-        void               updateCameraOverride();
-        void               logStatus( float32 deltaTime, bool bForce );
-        void               logThoughts() const;
-        int32              findSelectedRideIndex() const;
-        bool               isAutoBuildOn() const;
-        GameObjectManager* getObjectManager() const;
+        void  updateInput( const InputManager& input );
+        void  updateRides( float32 deltaTime );
+        void  updateCameraOverride();
+        void  logStatus( float32 deltaTime, bool bForce );
+        void  logThoughts() const;
+        int32 findSelectedRideIndex() const;
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Coaster Layouts", AssetPath, Tooltip = "Coaster layout XML" )
@@ -171,31 +145,23 @@ namespace sw
         GameObjectHandle _cameraRig;
         PROPERTY( Category = "Scene", DisplayName = "Gate", Tooltip = "Object whose position is the park gate; empty uses the park layout" )
         GameObjectHandle _gate;
-        PROPERTY( Category = "Build", DisplayName = "Auto Build Interval", Tooltip = "Seconds between automatic builds", Min = 1.0, Meta = "Units=s" )
+        PROPERTY( Category = "Build", DisplayName = "Auto Build Interval", Tooltip = "Seconds between automatic builds when auto play is on", Min = 1.0, Meta = "Units=s" )
         float32 _autoBuildInterval;
-        PROPERTY( Category = "Build", DisplayName = "Auto Build", Tooltip = "Build the cheapest remaining ride whenever cash allows (-gv_parkAutoBuild=1 also turns it on)" )
-        bool _bAutoBuild;
 
         ThemeParkSimulation                _simulation;
         CoasterLayoutCatalog               _layoutCatalog;
         ThemeParkSettings                  _settings;
         vector<RidePlacement>              _listPlacement;
         vector<unique_ptr<CoasterRuntime>> _listCoaster;
-        vector<GameObjectHandle>           _listSpawned;
         vector<int32>                      _listPendingRideView; ///< 모습을 세울 배치 번호(틱 뒤)
-        vector<const utf8*>                _listPendingSound;    ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
-        vector<ColorLook>                  _listColorLook;
+        MaterialTintCache                  _tintCache;           ///< 평지 놀이기구 색(같은 색은 나눠 쓴다 — 배치 키가 인스턴스다)
         shared_ptr<MaterialInstance>       _arrGuestLook[3];
         float32                            _statusTimer;
         float32                            _autoBuildTimer;
         int32                              _startingCash;
         int32                              _selectedPlacement;
-        int32                              _ridingCoaster;     ///< 0 이상이면 그 코스터에 타고 있다
-        vector<uint8>                      _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
-        uint8                              _bLoaded         : 1;
-        uint8                              _bViewsSpawned   : 1; ///< 손님 풀과 지은 것의 모습이 서 있다(걷으면 다음 틱이 다시 세운다)
-        uint8                              _bFlushScheduled : 1;
-        uint8                              _bWasRiding      : 1;
-        uint8                              _reserved        : 4;
+        int32                              _ridingCoaster; ///< 0 이상이면 그 코스터에 타고 있다
+        uint8                              _bWasRiding : 1;
+        uint8                              _reserved   : 7;
     };
 } // namespace sw

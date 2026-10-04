@@ -7,6 +7,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Interaction/InteractableComponent.h"
+
 namespace sw
 {
     namespace
@@ -38,6 +40,7 @@ namespace sw
         , _bCountTriggers{ false }
         , _pendingDamage{ 0.0f }
         , _pendingUse{ 0.0f }
+        , _seenCompletedCount{ 0 }
         , _signal{ 0.0f }
     {
     }
@@ -137,5 +140,17 @@ namespace sw
 
     float32 GimmickSensorComponent::consumeDamage() { return _pendingDamage.exchange( 0.0f ); }
 
-    float32 GimmickSensorComponent::consumeUses() { return _pendingUse.exchange( 0.0f ); }
+    float32 GimmickSensorComponent::consumeUses()
+    {
+        // 상호작용은 센서를 모른다 — 같은 오브젝트의 완료 수를 끌어 읽어 지난번 뒤로 늘어난 만큼을 사용으로 센다.
+        const GameObject*            pOwner        = getOwner();
+        const InteractableComponent* pInteractable = pOwner != nullptr ? pOwner->getComponent<InteractableComponent>() : nullptr;
+        uint32                       newCompleted  = 0;
+        if ( pInteractable != nullptr )
+        {
+            const uint32 completedCount = pInteractable->getCompletedCount();
+            newCompleted                = completedCount - _seenCompletedCount.exchange( completedCount );
+        }
+        return _pendingUse.exchange( 0.0f ) + static_cast<float32>( newCompleted );
+    }
 } // namespace sw

@@ -47,7 +47,7 @@ cd build/Ninja-Debug-VoxelCraft/Bin
 틱 뒤에만 바뀐다. 블록 표시는 `PostUpdate` 에서 플레이어의 겨눔을 읽습니다.
 
 **핫 리로드 · 상태 저장.** 블록(부수고 놓은 것 포함 — 같은 블록이 이어지는 구간으로 적는다)과 플레이어의 몸 자리 · 핫바 · 부순/놓은 수는 디렉터 · 플레이어의
-`writeState` 로 상태 스냅샷의 컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`). 상태를 쓰기 전에 게임(`onBeforeStateSerialize`)이 둘을 싣고 디렉터가 세운
+`writeState` 로 상태 스냅샷의 컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`). 상태를 쓰기 전에 게임 인스턴스(생성자의 `registerDirector` 한 줄 — `GameInstanceBase`)가 둘을 싣고 디렉터가 세운
 청크 오브젝트를 걷으며, 다시 만든 디렉터는 지형을 지은 뒤 블록을 되살리고 청크를 다시 세워 모두 다시 짓습니다.
 
 ## 파일 · 에셋

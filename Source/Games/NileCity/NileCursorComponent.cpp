@@ -33,7 +33,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const NileDirectorComponent* pDirector = NileDirectorComponent::resolveDirector( *pManager, _director );
+        const NileDirectorComponent* pDirector = GameDirectorComponent::resolve<NileDirectorComponent>( *pManager, _director );
         int2                         tile{};
         int32                        size   = 1;
         const bool                   bShown = pDirector != nullptr && pDirector->findCursor( tile, size );

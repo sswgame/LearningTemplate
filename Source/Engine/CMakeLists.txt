@@ -170,6 +170,39 @@ set_source_files_properties(${swJoltBackendSources} PROPERTIES
 )
 
 # ------------------------------------------------------------------------------
+# 2-2) Tracy — 엔진 프로파일러의 두 번째 출력(Utility/Profiling). 헤더는 Utility/Profiling/Tracy 에서만 include 한다(CheckThirdPartyIsolation.py).
+# Shipping 은 링크하지 않는다(SW_ENABLE_TRACY 를 무시). 클라이언트는 프로세스에 하나 — Engine 만 링크하고, RHI 백엔드 · 모듈은 엔진
+# 인터페이스(IProfilerBackend)만 본다. GPU 구간은 엔진이 이미 모으는 타임스탬프를 넘기므로 백엔드 DLL 이 Tracy 를 알 필요가 없다.
+# 임포트 타깃의 정의(TRACY_ENABLE · TRACY_IMPORTS …) · include 경로는 Tracy 구현 소스에만 붙인다(Jolt 와 같은 방식).
+# Windows 는 DLL 을 지연 로드한다 — `-gv_tracy` 로 켜기 전에는 올라오지 않는다(C API 함수만 쓰므로 지연 로드가 된다).
+# ------------------------------------------------------------------------------
+if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
+    target_link_libraries(Engine PRIVATE $<LINK_ONLY:tracy>)
+    target_compile_definitions(Engine PRIVATE SW_PROFILER_TRACY)
+    file(GLOB swTracyBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Utility/Profiling/Tracy/*.cpp")
+    # include 경로는 시스템 경로로 준다 — Tracy C API 의 `___tracy_*` 이름이 -Wreserved-identifier 경고를 낸다.
+    get_target_property(swTracyIncludeDir Tracy::TracyClient INTERFACE_INCLUDE_DIRECTORIES)
+    if(MSVC)
+        set(swTracyIncludeOption "/external:I${swTracyIncludeDir}")
+    else()
+        set(swTracyIncludeOption "-isystem${swTracyIncludeDir}")
+    endif()
+    set_source_files_properties(${swTracyBackendSources} PROPERTIES
+        COMPILE_DEFINITIONS "$<TARGET_PROPERTY:Tracy::TracyClient,INTERFACE_COMPILE_DEFINITIONS>"
+        COMPILE_OPTIONS "${swTracyIncludeOption}"
+        SKIP_PRECOMPILE_HEADERS ON
+    )
+    if(WIN32)
+        target_link_options(Engine PRIVATE /DELAYLOAD:TracyClient.dll)
+    endif()
+    message(STATUS "[Engine] Tracy profiler client linked (delay-loaded on Windows)")
+endif()
+# 2-3) 내비메시 백엔드 — Recast & Detour(정적 라이브러리, 굽기 · 질의 · 군중). 헤더는 Navigation/Recast 에서만 include 한다
+# (CheckThirdPartyIsolation.py) — 다른 코드는 엔진 인터페이스(INavMesh · INavCrowd)만 본다.
+# ------------------------------------------------------------------------------
+target_link_libraries(Engine PRIVATE recastnavigation)
+
+# ------------------------------------------------------------------------------
 # 3) RHI 링크 — Shipping 은 백엔드 하나를 Engine 에 정적 링크, Dev 는 RHI_* MODULE 을 런타임에 로드
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD)

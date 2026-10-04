@@ -18,12 +18,13 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/AI/Director/AiDirector.h"
 #include "GameFramework/AI/Director/AiDirectorProfile.h"
 #include "GameFramework/AI/SpawnDirector.h"
+#include "GameFramework/Framework/GameDirectorComponent.h"
+#include "GameFramework/Framework/MaterialTintCache.h"
 
 #include "Games/Shooter3D/ShooterBlockerComponent.h"
 
@@ -66,10 +67,10 @@ namespace sw
      * @details 감독이 쌓기 → 절정 → 쉼을 돌며 적 스폰(예산) · 무리(절정 진입) · 탄 채우기(쉼 진입) · 수리(예산)를 정하고, 여기는 그 사건을 스켈레톤 ·
      *          탄 · 체력으로 바꿉니다. 스켈레톤은 프리팹 `_enemyPrefab` 이고 모습은 외형 프리셋(`_listEnemyPreset` 을 차례로, 정예는 `_eliteEnemyPreset`)
      *          + 스폰 순번 씨앗입니다. 긴장도 신호는 맞은 피해(`reportPlayerDamage`) · 쓰러뜨린 적 · 가까운 적 수 · 탄 부족입니다. 웨이브 번호는
-     *          감독의 순환 수 + 1 입니다. 세운 적 · 효과는 핸들로 들고 상태 저장 전에 걷습니다(`despawnRuntime` — 감독도 처음으로 돌아간다).
+     *          감독의 순환 수 + 1 입니다. 세운 적 · 효과는 핸들로 들고 상태 저장 전에 걷습니다(`despawnViews` — 감독도 처음으로 돌아간다).
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Director", Tooltip = "Runs the skeleton waves, kills, blockers, the effect pools and the runtime spawns" )
-    class ShooterDirectorComponent : public Component
+    class ShooterDirectorComponent : public GameDirectorComponent
     {
     public:
         REFLECT_BODY();
@@ -77,19 +78,11 @@ namespace sw
         ShooterDirectorComponent();
         virtual ~ShooterDirectorComponent() override;
 
-        void onBeginPlay() override;
+        /** @brief 움직임 기록(`-gv_shooterMotionTrace`)을 파일로 쓰고 판을 닫습니다. */
         void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
 
-        /** @brief 세운 적 · 효과를 모두 지웁니다(상태 저장 전). */
-        void despawnRuntime();
         /** @brief 판의 진행(처치 수)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 적 · 효과는 모습이라 걷고, 페이싱 감독은 처음부터 다시 돈다. */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 의 바이트로 처치 수를 되살립니다 — 적을 걷고 감독을 처음부터 돌립니다(감독 상태는 싣지 않는다).
-         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 끝에 적용합니다. 읽지 못하면 알리고 새 판으로 시작합니다.
-         */
-        void restoreState( vector<uint8>&& bytes );
+        void writeState( Archive& outArchive ) const override;
         /** @brief 플레이어가 쓰러졌다 — 적을 걷고 감독을 처음부터 다시 돌립니다(틱 뒤 게임 스레드에서 부른다). */
         void restartRound();
         /** @brief 플레이어가 맞았다 — 감독의 긴장도 신호로 넣습니다(틱 뒤 게임 스레드에서 부른다). */
@@ -113,11 +106,18 @@ namespace sw
         uint32            getWave() const { return static_cast<uint32>( _director.getCycle() + 1 ); }
         const AiDirector& getPacingDirector() const { return _director; }
         uint32            getKillCount() const { return _killCount; }
-        /** @brief 조준 · 사격 · 이동도 AI 가 하면 true 입니다(`_bAutoPlay` 또는 `-gv_shooterAutoPlay=1`). */
-        bool isAutoPlayOn() const;
 
-        /** @brief 핸들의 오브젝트에 붙은 디렉터입니다. 없으면 nullptr 입니다. 매니저 조회는 잠그지 않습니다. */
-        static const ShooterDirectorComponent* resolveDirector( const GameObjectManager& manager, GameObjectHandle director );
+    protected:
+        /** @brief 막는 상자를 모으고 페이싱 감독을 시작합니다(데이터를 못 읽으면 적이 오지 않을 뿐 판은 연다). */
+        [[nodiscard]] bool startGame() override;
+        /** @brief 처치 수만 읽습니다 — 적은 걷히고 감독은 처음부터 다시 돈다(감독 상태는 싣지 않는다). */
+        [[nodiscard]] bool readState( Archive& archive ) override;
+        void               onStateRestored( bool bRestored ) override;
+        void               onGameStarted() override;
+        void               tickGame( float32 deltaTime ) override;
+        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               onViewsDespawned() override;
+        bool               hasPendingSpawn() const override;
 
     private:
         /** @brief 세울 적 하나 — 틱 뒤에 프리팹으로 선다. 자리는 그때 스폰 자리 순번(`_slot`)으로 정한다. */
@@ -154,36 +154,22 @@ namespace sw
             uint32                   _cursor{ 0 }; ///< 다음에 볼 자리(다 쓰고 있으면 이 자리를 다시 쓴다)
         };
 
-        /** @brief 효과 색 하나의 머티리얼 인스턴스입니다(같은 색은 나눠 쓴다 — 배치 키가 인스턴스다). */
-        struct ColorLook
-        {
-            shared_ptr<MaterialInstance> _instance{};
-            float4                       _color{};
-        };
-
     private:
-        /** @brief 들고 있던 복원 바이트를 적용합니다. */
-        void applyPendingState();
         void collectBoxes();
         void startPacing();
         void applyDirectorEvents();
         void requestEnemies( int32 count, float32 healthScale, uint32 spawnId, bool bElite );
-        void scheduleFlush();
-        void flushPending();
         void spawnEffectPools( GameObjectManager& manager );
         void spawnPool( GameObjectManager& manager, const string& prefab, int32 count, const utf8* pName, EffectPool& outPool );
-        void despawnPool( GameObjectManager& manager, EffectPool& inoutPool );
         /** @brief 풀에서 숨어 있는 것 하나를 꺼냅니다. 다 쓰고 있으면 순번 자리의 것을 다시 씁니다. 없으면 nullptr 입니다. */
-        MeshComponent*               acquirePooledMesh( GameObjectManager& manager, EffectPool& inoutPool, float32 lifetime );
-        void                         spawnEnemy( GameObjectManager& manager, const EnemyRequest& request );
-        shared_ptr<MaterialInstance> acquireColorLook( MeshComponent& mesh, const float4& color );
-        void                         updateEnemies();
-        void                         updatePlayerView();
-        void                         clearEnemies();
-        void                         logStatus( float32 deltaTime );
+        MeshComponent* acquirePooledMesh( GameObjectManager& manager, EffectPool& inoutPool, float32 lifetime );
+        void           spawnEnemy( GameObjectManager& manager, const EnemyRequest& request );
+        void           updateEnemies();
+        void           updatePlayerView();
+        void           clearEnemies();
+        void           logStatus( float32 deltaTime );
         /** @brief `-gv_shooterMotionTrace=<경로>` — 지난 프레임에 그려진 플레이어 몸 · 본 · 카메라 · 적 하나의 자리를 CSV 한 줄로 쌓습니다. */
-        void               appendMotionTrace( float32 deltaTime );
-        GameObjectManager* getObjectManager() const;
+        void appendMotionTrace( float32 deltaTime );
 
     private:
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "Skeleton enemy (skeletal mesh, animator, appearance, ShooterEnemyComponent)" )
@@ -212,8 +198,6 @@ namespace sw
         int32 _effectPoolSize;
         PROPERTY( Category = "Arena", DisplayName = "Tracer Pool Size", Tooltip = "Tracer boxes kept hidden and reused", Min = 1 )
         int32 _tracerPoolSize;
-        PROPERTY( Category = "Arena", DisplayName = "Auto Play", Tooltip = "Aim, shoot and move by AI (-gv_shooterAutoPlay=1 also turns it on)" )
-        bool _bAutoPlay;
 
         vector<ShooterArenaBox>  _listBox;
         vector<ShooterEnemyView> _listEnemyView;
@@ -226,24 +210,19 @@ namespace sw
         EffectPool               _tracerPool;
         vector<EnemyRequest>     _listPendingEnemy;
         vector<EffectRequest>    _listPendingEffect;
-        vector<float3>           _listPendingEnemyDown; ///< 처치 소리를 낼 자리(틱 뒤 — 오디오 이벤트는 게임 스레드에서)
-        vector<ColorLook>        _listColorLook;
-        vector<uint8>            _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
-        string                   _motionTrace;       ///< 움직임 기록 CSV(진단 — 끝날 때 파일로)
+        MaterialTintCache        _tintCache;   ///< 효과 색(같은 색은 나눠 쓴다)
+        string                   _motionTrace; ///< 움직임 기록 CSV(진단 — 끝날 때 파일로)
         float3                   _playerEye;
         float3                   _playerFeet;
         float32                  _statusTimer;
         float32                  _pendingHeal; ///< 감독의 수리 보상 — 틱 뒤에 플레이어 체력으로
         uint32                   _spawnCursor; ///< 다음 적의 스폰 자리 순번
         uint32                   _killCount;
-        uint32                   _traceFrame; ///< 움직임 기록의 프레임 번호
-        uint8                    _bStarted        : 1;
-        uint8                    _bPoolSpawned    : 1; ///< 효과 풀이 서 있다(걷으면 다음 틱이 다시 세운다)
-        uint8                    _bFlushScheduled : 1;
-        uint8                    _bAmmoPending    : 1; ///< 탄 보상 — 틱 뒤에 플레이어 탄을 채운다
-        uint8                    _bPacingReady    : 1; ///< 프로필 · 스폰 테이블을 읽었다
-        uint8                    _bPacingRestart  : 1; ///< 적을 걷었다 — 다음 틱에 감독을 처음부터
-        uint8                    _bPlayerAlive    : 1;
-        uint8                    _reserved        : 1;
+        uint32                   _traceFrame;         ///< 움직임 기록의 프레임 번호
+        uint8                    _bAmmoPending   : 1; ///< 탄 보상 — 틱 뒤에 플레이어 탄을 채운다
+        uint8                    _bPacingReady   : 1; ///< 프로필 · 스폰 테이블을 읽었다
+        uint8                    _bPacingRestart : 1; ///< 적을 걷었다 — 다음 틱에 감독을 처음부터
+        uint8                    _bPlayerAlive   : 1;
+        uint8                    _reserved       : 4;
     };
 } // namespace sw

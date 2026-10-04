@@ -17,9 +17,10 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Framework/GameDirectorComponent.h"
+#include "GameFramework/Framework/MaterialTintCache.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsSelection.h"
 
@@ -42,7 +43,7 @@ namespace sw
      *          넘깁니다(`StarSkirmishGame`). 움직이던 유닛은 앞 명령의 길을 다시 구합니다. 세운 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Director", Tooltip = "Runs the skirmish match, the human commands and spawns the unit views" )
-    class SkirmishDirectorComponent : public Component
+    class SkirmishDirectorComponent : public GameDirectorComponent
     {
     public:
         REFLECT_BODY();
@@ -50,19 +51,8 @@ namespace sw
         SkirmishDirectorComponent();
         virtual ~SkirmishDirectorComponent() override;
 
-        void onBeginPlay() override;
-        void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
-
-        /** @brief 세운 런타임 오브젝트를 모두 지웁니다(상태 저장 전). 판은 그대로이고 다음 틱이 그 상태대로 다시 세운다. */
-        void despawnViews();
         /** @brief 판(월드 · AI 진행 · 고름 · 속도 · 멈춤)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 의 바이트로 판을 되살립니다 — `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
-         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 가 데이터를 읽은 뒤 적용합니다. 읽지 못하면 알리고 새 판으로 시작합니다.
-         */
-        void restoreState( vector<uint8>&& bytes );
+        void writeState( Archive& outArchive ) const override;
 
         // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
         const RtsWorld& getWorld() const { return _match.getWorld(); }
@@ -71,11 +61,18 @@ namespace sw
         const shared_ptr<MaterialInstance>& findUnitLook( const RtsUnit& unit, bool bSelected ) const;
         /** @brief 끌어 고르는 중이면 true 이고 땅 위 상자의 가운데 · 크기를 줍니다. */
         bool findDragBox( float3& outCenter, float3& outScale ) const;
-        /**
-         * @brief 핸들의 오브젝트에 붙은 디렉터입니다. 없으면 nullptr 입니다.
-         * @details 뷰는 이것을 매 프레임 부르고 포인터를 들지 않습니다. 매니저 조회는 잠그지 않습니다(틱 중 여러 워커가 불러도 된다).
-         */
-        static const SkirmishDirectorComponent* resolveDirector( const GameObjectManager& manager, GameObjectHandle director );
+
+    protected:
+        /** @brief 유닛 데이터를 읽고 판을 엽니다 — 사람(파랑) 대 컴퓨터, 자동 플레이면 컴퓨터 대 컴퓨터. */
+        [[nodiscard]] bool startGame() override;
+        /** @brief `writeState` 의 바이트를 읽습니다. 끝까지 맞지 않으면 false 입니다(판은 반쯤 바뀌었을 수 있다 — `onStateRestored` 가 새 판으로 되돌린다). */
+        [[nodiscard]] bool readState( Archive& archive ) override;
+        void               onStateRestored( bool bRestored ) override;
+        void               onGameStarted() override;
+        void               tickGame( float32 deltaTime ) override;
+        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               onViewsDespawned() override;
+        bool               hasPendingSpawn() const override { return _listPendingUnit.empty() == false; }
 
     private:
         /** @brief 유닛 id 자리 하나의 모습입니다. 틱이 보일 유닛을 정하고 틱 뒤에 오브젝트를 맞춘다. */
@@ -86,39 +83,11 @@ namespace sw
             uint32           _stamp{ 0 };
         };
 
-        /** @brief 틱 뒤에 낼 사운드 이벤트 하나입니다. */
-        struct PendingSound
-        {
-            float3      _position{};
-            const utf8* _pEvent{ nullptr };
-            bool        _bSpatial{ false }; ///< 그 자리에서 낸다(아니면 2D)
-        };
-
-        /** @brief 색 하나의 머티리얼 인스턴스입니다(같은 색은 나눠 쓴다 — 배치 키가 인스턴스다). */
-        struct ColorLook
-        {
-            shared_ptr<MaterialInstance> _instance{};
-            float4                       _color{};
-        };
-
     private:
-        [[nodiscard]] bool loadData();
-        /** @brief `writeState` 의 바이트를 읽습니다. 끝까지 맞지 않으면 false 입니다(판은 반쯤 바뀌었을 수 있다 — 부르는 쪽이 새 판으로 되돌린다). */
-        [[nodiscard]] bool readState( Archive& archive );
-        /** @brief 들고 있던 복원 바이트를 적용하고 모습을 다시 세우게 합니다. */
-        void applyPendingState();
-        /** @brief 쌓인 스폰 · 효과음을 틱 뒤 한 번으로 미룹니다(틱 밖이면 바로). */
-        void scheduleFlush();
-        /** @brief 쌓인 요청을 세웁니다. 틱 밖(게임 스레드)에서만 불린다. */
-        void flushPending();
         void spawnCliffs( GameObjectManager& manager );
         void spawnUnit( GameObjectManager& manager, int32 slotIndex );
-        void destroySpawned( GameObjectManager& manager, GameObjectHandle& inoutHandle );
         /** @brief 유닛 모습 인스턴스(편 · 자원 × 고름)를 만듭니다(뷰가 워커에서 고른다). */
-        void                         prepareUnitLooks( Material* pMaterial );
-        shared_ptr<MaterialInstance> acquireColorLook( Material* pMaterial, const float4& color );
-        /** @brief 이벤트를 틱 뒤에 냅니다. @p pPosition 이 있으면 그 자리(화면 평면 팬), 없으면 2D 입니다. */
-        void playSound( const utf8* pEvent, const float3* pPosition );
+        void prepareUnitLooks( Material* pMaterial );
 
         /** @brief 보일 유닛(안개 · 죽음)과 세운 모습을 견줘 바뀐 자리를 쌓습니다(PrePhysics). */
         void collectUnitChanges();
@@ -132,8 +101,6 @@ namespace sw
         /** @brief 마우스가 가리키는 땅(y = 0) 자리입니다. 맵 밖이면 false 입니다. */
         [[nodiscard]] bool       findGroundPoint( const InputManager& input, float3& outPoint ) const;
         OrthoCameraRigComponent* findCameraRig() const;
-        bool                     isAutoPlayOn() const;
-        GameObjectManager*       getObjectManager() const;
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Unit Data", AssetPath, Tooltip = "Unit catalog XML" )
@@ -148,20 +115,15 @@ namespace sw
         float3 _watchFocus;
         PROPERTY( Category = "Scene", DisplayName = "Watch Ortho Height", Tooltip = "Camera height when both players are AI", Min = 0.1, Meta = "Units=m" )
         float32 _watchOrthoHeight;
-        PROPERTY( Category = "Match", DisplayName = "Auto Play", Tooltip = "Both players are AI (-gv_skirmishAutoPlay=1 also turns it on)" )
-        bool _bAutoPlay;
 
         RtsCatalog                           _catalog;
         SkirmishMatch                        _match;
         RtsSelection                         _selection;
         vector<RtsEvent>                     _listEvent;
         vector<UnitSlot>                     _listUnitSlot;
-        vector<GameObjectHandle>             _listCliffObject;
-        vector<int32>                        _listPendingUnit;  ///< 맞출 유닛 자리(틱 뒤)
-        vector<PendingSound>                 _listPendingSound; ///< 낼 사운드 이벤트(틱 뒤 — 오디오는 게임 스레드에서)
-        vector<ColorLook>                    _listColorLook;
-        vector<shared_ptr<MaterialInstance>> _listUnitLook;      ///< (편 · 자원 칸) × 2 + 고름
-        vector<uint8>                        _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
+        vector<int32>                        _listPendingUnit; ///< 맞출 유닛 자리(틱 뒤)
+        MaterialTintCache                    _tintCache;       ///< 유닛 색(같은 색은 나눠 쓴다)
+        vector<shared_ptr<MaterialInstance>> _listUnitLook;    ///< (편 · 자원 칸) × 2 + 고름
         float3                               _dragStart;
         float3                               _dragPoint;
         float32                              _timeScale;
@@ -171,8 +133,6 @@ namespace sw
         uint8                                _bDragPointValid    : 1;
         uint8                                _bAttackMovePending : 1;
         uint8                                _bPaused            : 1;
-        uint8                                _bLoaded            : 1;
-        uint8                                _bViewsSpawned      : 1; ///< 절벽 · 유닛 모습이 서 있다(걷으면 다음 틱이 다시 세운다)
-        uint8                                _bFlushScheduled    : 1;
+        uint8                                _reserved           : 3;
     };
 } // namespace sw

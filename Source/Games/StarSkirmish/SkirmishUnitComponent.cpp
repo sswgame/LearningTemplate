@@ -106,7 +106,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const SkirmishDirectorComponent* pDirector = SkirmishDirectorComponent::resolveDirector( *pManager, _director );
+        const SkirmishDirectorComponent* pDirector = GameDirectorComponent::resolve<SkirmishDirectorComponent>( *pManager, _director );
         const RtsUnit*                   pUnit     = pDirector != nullptr ? pDirector->getWorld().findUnit( _unitId ) : nullptr;
         if ( pUnit == nullptr )
             return;

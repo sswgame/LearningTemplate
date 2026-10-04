@@ -51,14 +51,14 @@ Play 를 누르면 디렉터가 공원을 열며, Stop 은 플레이 전 씬으�
 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세웁니다. 뷰는 디렉터를 `GameObjectHandle` 로 들고 매 프레임 풉니다.
 
 **핫 리로드 · 상태 저장.** 시뮬레이션(놀이기구 운행 · 손님 · 돈 · 평가 · 난수 · 입장료), 지은 배치, 코스터 열차 자리 · 속도는 PROPERTY 가 아니라 디렉터의
-`writeState` 로 상태 스냅샷의 컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`). 코스터 트랙은 배치 데이터에서 다시 짓습니다. 상태를 쓰기 전에 게임
-(`onBeforeStateSerialize`)이 공원을 싣고 디렉터가 세운 오브젝트를 걷으며, 다시 만든 디렉터가 공원을 되살리고 다시 세웁니다. 배치 데이터가 바뀌어 지은 것을
+`writeState` 로 상태 스냅샷의 컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`). 코스터 트랙은 배치 데이터에서 다시 짓습니다. 상태를 쓰기 전에 게임 인스턴스
+(생성자의 `registerDirector` 한 줄 — `GameInstanceBase`)가 공원을 싣고 디렉터가 세운 오브젝트를 걷으며, 다시 만든 디렉터가 공원을 되살리고 다시 세웁니다. 배치 데이터가 바뀌어 지은 것을
 맞출 수 없으면 알리고 새 공원으로 시작합니다. 나무는 흩뿌리기 컴포넌트가 핸들 목록(PROPERTY)으로 알아보고 한 벌 더 세우지 않습니다.
 
 ## 파일 · 데이터
 
 - `ThemeParkTycoonGame` — 첫 씬을 열고, 상태 저장 전에 디렉터가 세운 것을 걷습니다.
-- `ParkDirectorComponent` — 데이터 읽기 · 짓기(코스터는 시험 운행) · 입력 · 자동 짓기(`_bAutoBuild`, `-gv_parkAutoBuild=1` 도 켠다) · 로그 · 스폰. 프리팹 경로 ·
+- `ParkDirectorComponent` — 데이터 읽기 · 짓기(코스터는 시험 운행) · 입력 · 자동 짓기(베이스의 `_bAutoPlay`, `-gv_parkAutoBuild=1` 도 켠다) · 로그 · 스폰. 프리팹 경로 ·
   손님 색 · 카메라 리그 · 정문(있으면 그 자리가 손님이 드나드는 정문)은 PROPERTY 입니다.
 - `ParkGuestComponent` · `CoasterCarComponent` · `FlatRideComponent` — 손님 한 명 · 차 한 칸 · 평지 놀이기구 하나의 모습.
 - `Resource/game/themepark/data/coasters.xml` — 코스터 레이아웃(조각 목록). 세 레이아웃은 회로가 닫히고 한 바퀴를 도는지, 평가가 어떻게 나오는지 엔진 밖

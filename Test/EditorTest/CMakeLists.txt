@@ -45,6 +45,7 @@ sw_addTestExecutable(EditorTest
 		TestHeightfieldImporter.cpp
 		TestEditorSelection.cpp
 		TestModelImporter.cpp
+		TestProfilerScopeHistory.cpp
 		TestTexturePipeline.cpp
 		TestVrmMaterialImporter.cpp
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/EditorDrawReleaseQueue.cpp"
@@ -59,6 +60,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorViewportPreview.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorTransformCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorToolAssetCommands.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorTracyLauncher.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorInspectorCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorToolDefaults.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.cpp"
@@ -67,6 +69,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorListFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorBuiltinValue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerScopeHistory.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/AssetHotReload.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/ConfigHotReload.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetType.cpp"

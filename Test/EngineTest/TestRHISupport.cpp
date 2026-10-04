@@ -241,7 +241,9 @@ SW_TEST_CASE( RHIIndexFreeListTest, DoubleReleaseIsRejected )
 }
 
 /**
- * @brief [RHIGpuTimestampTest] 기준점은 가장 이른 틱이고, 안 적힌 칸은 음수다
+ * @brief [RHIGpuTimestampTest] 기준점은 가장 이른 틱이고, 안 적힌 칸은 음수다. 기준점은 GPU 시계 나노초로도 남는다
+ * @details 외부 프로파일러(Tracy)는 기준점 + 칸 값으로 절대 GPU 시각을 만들어 `readGpuClockNanos` 로 맞춘 CPU 시계 위에 놓는다.
+ *          기준점의 환산이 칸 값과 다르면 GPU 구간이 타임라인에서 통째로 밀린다.
  */
 SW_TEST_CASE( RHIGpuTimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegative )
 {
@@ -251,17 +253,20 @@ SW_TEST_CASE( RHIGpuTimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegat
     arrTick[31]            = 1600;
     const uint32 readyMask = ( 1u << 0 ) | ( 1u << 5 ) | ( 1u << 31 );
 
-    sw::vector<float32> listMicro;
-    SW_ASSERT_TRUE( sw::RHIGpuTimestamp::resolveMicro( arrTick, readyMask, 0.5, listMicro ) );
+    sw::RHIGpuTimestampFrame frame;
+    SW_ASSERT_TRUE( sw::RHIGpuTimestamp::resolve( arrTick, readyMask, 500.0, frame ) ); // 틱 하나 = 500 ns = 0.5 us
+    const sw::vector<float32>& listMicro = frame._listMicro;
     SW_ASSERT_TRUE( listMicro.size() == sw::constant::kMaxGpuTimestampSlot );
+    SW_EXPECT_EQUAL( int64( 400 * 500 ), frame._originNanos );
+    SW_EXPECT_EQUAL( int64( 1000 * 500 ), sw::RHIGpuTimestamp::convertTickToNanos( 1000, 500.0 ) );
     SW_EXPECT_NEAR_EQUAL( 300.0f, listMicro[0], 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, listMicro[5], 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 600.0f, listMicro[31], 1e-3f );
     SW_EXPECT_TRUE( listMicro[1] < 0.0f && listMicro[30] < 0.0f );
 
     // 준비된 칸이 없으면 비운다 — 호출자는 빈 목록을 "이번 프레임 없음" 으로 읽는다.
-    SW_EXPECT_TRUE( sw::RHIGpuTimestamp::resolveMicro( arrTick, 0, 0.5, listMicro ) == false );
-    SW_EXPECT_TRUE( listMicro.empty() );
+    SW_EXPECT_TRUE( sw::RHIGpuTimestamp::resolve( arrTick, 0, 500.0, frame ) == false );
+    SW_EXPECT_TRUE( frame._listMicro.empty() );
 }
 
 /**
