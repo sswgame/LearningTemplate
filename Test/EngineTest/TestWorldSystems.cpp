@@ -6,9 +6,9 @@
 
 #include "GameFramework/AI/SpawnDirector.h"
 #include "GameFramework/Input/TimingJudge.h"
+#include "GameFramework/Interaction/InteractionProgress.h"
 #include "GameFramework/World/AreaGraph.h"
 #include "GameFramework/World/GameFlags.h"
-#include "GameFramework/World/InteractionProgress.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -20,10 +20,10 @@
 #include "GameFramework/Combat/Vitality.h"
 #include "GameFramework/Data/StatBlock.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Interaction/InteractionProgress.h"
 #include "GameFramework/Kits/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Match/MatchState.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
-#include "GameFramework/World/InteractionProgress.h"
 
 namespace sw
 {

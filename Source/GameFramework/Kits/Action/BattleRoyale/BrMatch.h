@@ -11,6 +11,7 @@
 
 #include "GameFramework/Combat/Vitality.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Interaction/InteractionProgress.h"
 #include "GameFramework/Inventory/Inventory.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrGear.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrLoot.h"
@@ -18,7 +19,6 @@
 #include "GameFramework/Match/MatchState.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 #include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/World/InteractionProgress.h"
 
 namespace sw
 {

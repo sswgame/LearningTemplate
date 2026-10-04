@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 공용 상호작용 표 — InteractableComponent · SmartObjectComponent 가 기본으로 읽는다(InteractionCatalog). 각은 도, 시간은 초다.
+     prompt 는 지역화 표의 키다. alignment 는 하는 쪽이 맞춰 설 마커 이름(모션 워핑)이다. -->
+<Interactions>
+  <Interaction id="Use" prompt="ui.interact.use" mode="Press" maxDistance="2" maxAngle="70" cooldown="0.3" alignment="Front"/>
+  <Interaction id="Open" prompt="ui.interact.open" mode="Press" maxDistance="2" maxAngle="70" cooldown="0.5" alignment="Handle" authority="Server"/>
+  <Interaction id="Unlock" prompt="ui.interact.unlock" mode="Hold" duration="1" maxDistance="2" maxAngle="70" requiredTags="Item.Key" alignment="Handle" authority="Server"/>
+  <Interaction id="SwipeKeycard" prompt="ui.interact.keycard" mode="Press" maxDistance="1.5" maxAngle="60" requiredTags="Item.Keycard" alignment="Reader"/>
+  <Interaction id="PickUp" prompt="ui.interact.pickup" mode="Press" maxDistance="1.5" highlight="Outline"/>
+  <Interaction id="Push" prompt="ui.interact.push" mode="Hold" duration="0.4" maxDistance="1.2" maxAngle="45" alignment="Back"/>
+  <Interaction id="Revive" prompt="ui.interact.revive" mode="Hold" duration="3" maxParticipants="2" maxDistance="1.5" forbiddenTags="State.Downed"/>
+  <Interaction id="ForceOpen" prompt="ui.interact.force" mode="Mash" presses="8" decay="0.4" maxDistance="1.5" maxAngle="60" alignment="Front"/>
+  <Interaction id="Hide" prompt="ui.interact.hide" mode="Press" maxDistance="1.5" maxAngle="80" alignment="Entry" highlight="Sense"/>
+  <Interaction id="Gather" prompt="ui.interact.gather" mode="Hold" duration="1.5" maxDistance="1.8" alignment="Front"/>
+  <Interaction id="Sit" prompt="ui.interact.sit" mode="Press" maxDistance="1.5"/>
+  <Interaction id="Craft" maxDistance="1.5" alignment="Front">
+    <Step prompt="ui.craft.gather" mode="Hold" duration="1"/>
+    <Step prompt="ui.craft.hammer" mode="Mash" presses="6" decay="0.5"/>
+  </Interaction>
+  <SmartObject id="Bench">
+    <Slot id="Left" offset="-0.5 0 0.3" yaw="180" tags="Activity.Sit"/>
+    <Slot id="Right" offset="0.5 0 0.3" yaw="180" tags="Activity.Sit"/>
+  </SmartObject>
+  <SmartObject id="LowCover">
+    <Slot id="Left" offset="-0.6 0 -0.5" yaw="0" tags="Cover.Low"/>
+    <Slot id="Right" offset="0.6 0 -0.5" yaw="0" tags="Cover.Low"/>
+  </SmartObject>
+  <SmartObject id="Workbench">
+    <Slot id="Front" offset="0 0 0.8" yaw="180" tags="Activity.Craft"/>
+  </SmartObject>
+  <SmartObject id="HidingSpot">
+    <Slot id="Inside" offset="0 0 0" yaw="0" tags="Activity.Hide"/>
+  </SmartObject>
+</Interactions>

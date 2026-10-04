@@ -22,6 +22,7 @@
 #include "GameFramework/Combat/Weapon.h"
 #include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/Gimmick/ElementRuleTable.h"
+#include "GameFramework/Interaction/InteractionCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Simulation/ThemePark/ParkLayout.h"
@@ -58,6 +59,7 @@ namespace
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
         static bool isElementRules( sw::string_view resourceId ) { return endsWith( resourceId, ".elements.xml" ); }
+        static bool isInteractions( sw::string_view resourceId ) { return endsWith( resourceId, ".interactions.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -160,6 +162,7 @@ namespace
             {         "spriteclip",          &isSpriteClip,                        &loadSpriteClip},
             {      "camerapresets",       &isCameraPresets,  &loadCatalog<sw::CameraPresetCatalog>},
             {       "elementrules",        &isElementRules,     &loadCatalog<sw::ElementRuleTable>},
+            {       "interactions",        &isInteractions,   &loadCatalog<sw::InteractionCatalog>},
             {          "abilities",           &isAbilities,       &loadCatalog<sw::AbilityCatalog>},
             {              "crops",               &isCrops,          &loadCatalog<sw::CropCatalog>},
             {               "city",                &isCity,          &loadCatalog<sw::CityCatalog>},

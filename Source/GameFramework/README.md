@@ -49,8 +49,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `ReputationState`), 로그라이트 지도(`RunMap`)
 - **Quest**: 퀘스트(`QuestCatalog` · `QuestLog` — 선행 · 레벨 · 단계 · 목표 · 선택 목표 · 분기 · 보상 알림 · 시간 제한 · 반복)
 - **World**: 시계(`WorldClock` — 시 · 때 · 날 · 계절 · 해 · 햇빛 · 잠), 날씨(`WeatherCatalog` · `WeatherSystem` — 계절 가중치 · 섞기 · 예보),
-  방 · 지역 그래프(`AreaGraph` — 잠금 조건 · 일방통행 · 발견 · 탐색률 · 막힌 경계 · 코드로 짓기 · 다른 XML 안에 적기), 진행형 상호작용(`InteractionProgress` — 여럿 · 끊김 · 퇴행 · 스킬 체크),
+  방 · 지역 그래프(`AreaGraph` — 잠금 조건 · 일방통행 · 발견 · 탐색률 · 막힌 경계 · 코드로 짓기 · 다른 XML 안에 적기),
   월드 플래그와 조건식(`GameFlags` — `a && !b || count>=3`), 광선 · 시야 질의(`WorldQuery` — 물리 백엔드 서비스 또는 `PhysicsWorld` 폴백)
+- **Interaction**: 상호작용 — 데이터 정의(`InteractionCatalog` — 누름 · 누르고 있기 · 연타 · 단계 · 거리 · 시야각 · 시야 · 쿨다운 · 태그 조건 · 맞춤 마커 · 강조 · 권한),
+  고르기(`InteractionSelector`) · 진행(`InteractionSession`, 진행형 `InteractionProgress` — 여럿 · 끊김 · 퇴행 · 스킬 체크), 컴포넌트(`InteractableComponent` ·
+  `InteractorComponent` · `SmartObjectComponent` · `GrabberComponent`), 권한 훅(`IInteractionAuthority`). 2D · 3D 공용. `Interaction/README.md`
 - **Gimmick**: 데이터로 배선하는 레벨 장치 — 센서 · 연산자(AND · OR · NOT · 카운터 · 래치 · 지연 · 시퀀스) · 액추에이터(문 · 무버 · 엘리베이터 · 회전 · 스포너 ·
   위험 지대 · 빛 · 소리 · 켜기) 노드 등록부(`GimmickNodeRegistry`), 검증 · 고정 스텝 · 상태 바이트 회로(`GimmickCircuit`), 씬 컴포넌트(`GimmickCircuitComponent` ·
   `GimmickSensorComponent`), 원소 상호작용 규칙표(`ElementRuleTable` · `ElementGrid` — 기본표 `common/data/elements/default.elements.xml`). 2D · 3D 공용. `Gimmick/README.md`

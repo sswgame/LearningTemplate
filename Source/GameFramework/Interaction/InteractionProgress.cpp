@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/World/InteractionProgress.h"
+#include "GameFramework/Interaction/InteractionProgress.h"
 
 #include "Core/Math/MathUtil.h"
 
