@@ -275,6 +275,13 @@ namespace sw
         void clear();
         /** @brief 리소스 상대 경로에서 InputMap XML 을 로드합니다. */
         [[nodiscard]] bool loadFromResource( string_view relativePath );
+        /**
+         * @brief 레이어 · 액션 · 현재 바인딩을 `loadFromResource` 가 읽는 `<InputMap>` 정의로 씁니다(에디터 InputMap 패널의 저장).
+         * @param relativePath 리소스 id · 절대 경로(`ResourceUtil::getWritePath` 로 쓸 자리를 정한다 — 작업 폴더 기준이 아니다).
+         * @return 형식에 자리가 없는 바인딩(가상 조이스틱 · 단축키 · 아무 키)이 있거나 쓰지 못하면 false 이고 파일을 건드리지 않습니다.
+         * @details 플레이어 리매핑은 여기가 아니라 UserSettings 의 `keyBinding` 설정(사용자 파일)입니다.
+         */
+        [[nodiscard]] bool saveToResource( string_view relativePath ) const;
         /** @brief 한 프레임의 입력 상태를 평가하고 델리게이트를 디스패치합니다. */
         void update( float32 deltaSeconds );
 
@@ -576,6 +583,11 @@ namespace sw
 
         string getGlyphForActionInternal( const hashed_string& action, InputGlyphStyle device ) const;
         bool   evaluateBindingDown( const ActionBinding& binding, float2& outValue ) const;
+        /**
+         * @brief 바인딩 값의 합으로 액션 값을 냅니다. 축 · 버튼 · 스틱 몫(@p bounded)은 축 반전 뒤 [-1, 1](또는 원)에 묶고, 마우스 이동량 몫(@p relative)은
+         *        묶지 않고 더합니다 — 이동량은 픽셀 단위 상대값이고 반전은 바인딩 평가가 이미 걸었습니다.
+         */
+        float2 composeActionValue( const float2& bounded, const float2& relative ) const;
         bool   evaluateTrigger( ActionTrigger trigger, const ActionBindingState& state, float32 deltaSeconds ) const;
         bool   isBindingLayerActive( const ActionBinding& binding ) const;
         /**

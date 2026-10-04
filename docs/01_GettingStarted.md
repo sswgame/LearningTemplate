@@ -104,7 +104,7 @@ ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
 | 짧은 이름이 같은 타입 둘 | 경고 `Reflected type name 'X' now means a::X and no longer b::X` |
 | 디버거 없이 `SW_ASSERT` 가 멈춘 자리 | stderr 의 `[SW_ASSERT] 식 / at 파일:줄 / in 함수`, 크래시면 `Saved/Logs/crash_*` 의 스택 |
 | 로그에 이상한 바이트가 섞였다 | 잘못된 UTF-8 바이트만 `\xNN` 으로 남고 나머지 글은 그대로다 |
-| 화면에 무엇이 나갔나 | `-gv_screenshot=out.ppm` (`-gv_screenshotFrame=N`) |
+| 화면에 무엇이 나갔나 | `-gv_screenshot=out.ppm` (`-gv_screenshotFrame=N`, 연속이면 `-gv_screenshotCount=N -gv_screenshotInterval=K`) |
 
 시험을 쓸 때의 도우미(`Test/TestFramework/TestFramework.h`):
 

@@ -76,7 +76,7 @@ namespace sw
         /** @brief 스켈레톤 에셋 경로를 바꾸고 읽습니다. 빈 경로면 본 하나짜리 암묵 스켈레톤입니다. */
         void          setSkeletonPath( string_view path );
         const string& getSkeletonPath() const { return _skeletonPath; }
-        /** @brief 스켈레톤을 런타임에 정합니다(저장되지 않습니다 — 시험 · 절차 생성). 경로가 빈 동안 렌더 에셋을 다시 풀어도 유지됩니다. */
+        /** @brief 스켈레톤을 런타임에 정합니다(저장되지 않습니다 — 시험 · 절차 생성 · 파괴 조각). 경로가 빈 동안 렌더 에셋을 다시 풀어도 유지됩니다. */
         void setSkeleton( shared_ptr<const Skeleton> skeleton );
         /** @brief 스켈레톤입니다. 늘 있습니다(없으면 암묵 스켈레톤). */
         const Skeleton& getSkeleton() const;
@@ -101,6 +101,12 @@ namespace sw
         [[nodiscard]] bool applyRewindPose( const Pose& pose );
         /** @brief 걸린 일들의 진단 상태(그래프 상태 · 알림 · 커브 · 루트 모션)를 모읍니다(게임 스레드, 평가 뒤). */
         void collectDebugState( AnimationDebugState& inoutState ) const;
+        /**
+         * @brief 애니메이션 평가 밖에서 로컬 포즈를 고친 쪽이 모델 공간 · 스킨 팔레트를 바로 다시 구합니다(게임 스레드, 그 프레임의 평가 뒤).
+         * @details 물리가 모는 유닛(파괴 조각 — 물리 단계가 평가보다 늦다)이 씁니다. 포즈를 깨끗하게 두므로 할 일이 없는 유닛은 다음 평가에서 쉬고
+         *          레퍼런스 포즈로 덮이지 않습니다. 렌더 스냅샷은 틱 뒤에 팔레트를 옮기므로 같은 프레임에 그려집니다.
+         */
+        void applyExternalPose();
 
         /** @brief 리더를 정합니다(nullptr 이면 뗍니다). 리더는 의존이 됩니다. */
         void setLeaderPose( SkeletalMeshComponent* pLeader );

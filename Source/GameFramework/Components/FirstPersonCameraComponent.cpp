@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -37,6 +38,7 @@ namespace sw
         , _pitch{ 0.0f }
         , _maxPitch{ 85.0f * MathUtil::DegreeToRadian }
         , _mouseSensitivity{ 0.0022f }
+        , _lookAction{}
         , _bMouseLook{ true }
         , _bLockMouse{ true }
         , _fieldOfViewY{ 75.0f * MathUtil::DegreeToRadian }
@@ -91,8 +93,16 @@ namespace sw
             const bool bReadMouse = _bLockMouse == false || _bMouseLocked == SW_TRUE;
             if ( bReadMouse )
             {
-                const int2 mouseDelta = pInput->getMouseDelta();
-                addMouseDelta( static_cast<float32>( mouseDelta._x ), static_cast<float32>( mouseDelta._y ) );
+                if ( _lookAction.empty() == false )
+                {
+                    const float2 lookDelta = pInput->getInputMap().getVector2D( _lookAction );
+                    addMouseDelta( lookDelta._x, lookDelta._y );
+                }
+                else
+                {
+                    const int2 mouseDelta = pInput->getMouseDelta();
+                    addMouseDelta( static_cast<float32>( mouseDelta._x ), static_cast<float32>( mouseDelta._y ) );
+                }
             }
         }
         else if ( _bLockApplied == SW_TRUE )
@@ -145,7 +155,7 @@ namespace sw
         if ( pCamera != nullptr )
         {
             // 1인칭은 카메라 모드(`CameraPresetMode::FirstPerson`)다 — 눈 자리와 시점을 대상으로 넣어 디렉터 · 데이터 프리셋과 같은 계산으로 푼다.
-            // 시점의 피치는 위가 + 이고 모드의 피치는 아래가 + 다.
+            // 시점의 피치는 위가 + 이고 모드의 피치는 아래가 + 다. 눈 자리는 카메라의 부모 공간 값이라 포즈도 로컬로 쓴다(부모가 움직이면 따라간다).
             CameraPresetDef def;
             def._view._mode         = CameraPresetMode::FirstPerson;
             def._lens._fieldOfViewY = _fieldOfViewY;
@@ -155,7 +165,7 @@ namespace sw
             target._focus = _eyePosition;
             target._yaw   = _look.getYaw();
             target._pitch = -_look.getPitch();
-            CameraPoseUtil::applyToCamera( *pCamera, evaluatePreset( def, target ) );
+            CameraPoseUtil::applyToCameraLocal( *pCamera, evaluatePreset( def, target ) );
         }
         MeshComponent* pViewModel = findViewModel();
         if ( pViewModel == nullptr || pCamera == nullptr )

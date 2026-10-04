@@ -99,6 +99,9 @@ namespace sw
      * @class WeaponState
      * @brief 총 한 자루를 들고 있는 상태입니다 — 탄창 · 예비탄 · 연사 쿨다운 · 재장전 · 퍼짐.
      * @details 시간은 `update` 로만 흐릅니다(시험 · 일시정지에서 그대로 멈춘다). 퍼짐 난수는 상태가 들고 있어 씨앗이 같으면 같은 탄이 나갑니다.
+     *          연사: 쿨다운이 프레임 안에서 0 을 지나친 몫(늦음)을 다음 발 간격에서 빼므로 연사 속도가 fps 와 무관합니다. `pullTrigger` 한 번에
+     *          한 발이고 잇는 몫은 한 간격까지라, fps 가 1 / 간격보다 낮으면 프레임마다 한 발로 떨어집니다(멈춘 프레임 뒤에 몰아 쏘지 않는다 —
+     *          CS 의 "한 틱 안의 늦음만 잇는다" 와 같은 규칙). 쉬다가 당긴 첫 발은 쉰 시간을 잇지 않습니다.
      */
     class SW_GF_API WeaponState
     {
@@ -129,7 +132,7 @@ namespace sw
     private:
         WeaponDef  _def;
         GameRandom _random;
-        float32    _cooldown;
+        float32    _cooldown; ///< 다음 발까지 남은 시간(s). 음수는 이번 프레임 안에서 준비된 뒤 지난 시간(늦음 — 다음 간격에서 뺀다)
         float32    _reloadRemaining;
         float32    _currentSpread;
         int32      _magazineAmmo;

@@ -105,6 +105,7 @@ namespace sw
         bool   _bLastImmediateSubmit;
         uint8  _bScreenshotTaken;       ///< -gv_screenshot 은 한 장만 찍는다
         uint32 _screenshotFrameCounter; ///< 씬이 채워질 때까지 몇 프레임 기다린다
+        uint32 _screenshotShotCount;    ///< 지금까지 찍은 장 수(`-gv_screenshotCount` 연속 촬영)
         uint32 _budgetFrameCounter;     ///< 드라이버 GPU 메모리 값을 몇 프레임마다 묻는다(`_s_kBudgetRefreshFrames`)
 
         static constexpr uint32 _s_kRingCapacity{ constant::kRenderFrameQueueDepth };

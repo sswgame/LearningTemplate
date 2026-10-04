@@ -89,7 +89,27 @@ namespace sw
             return true;
         }
 
-        /** @brief 이 표에서 제자리로 다시 읽은 횟수입니다. 쓰는 쪽은 값이 바뀌면 지은 것을 다시 짓습니다. */
+        /**
+         * @brief 사용 중이면 다시 읽히는지 본 뒤 표에서 떼어 내고 다시 읽은 횟수를 올립니다. 읽지 못하면 그대로이고 false 입니다.
+         * @details 내용을 제자리에서 바꾸면 안 되는 에셋(그 위에 바디 · 메시를 지은 파쇄 에셋)용입니다 — 쥔 쪽은 옛 객체를 그대로 쥐고, 횟수가 바뀐 것을
+         *          보고 다시 `acquire` 하면 새로 읽은 객체를 받습니다.
+         */
+        [[nodiscard]] bool detachShared( string_view path, LoadFunction load )
+        {
+            if ( findLive( path ) == nullptr || load == nullptr )
+                return false;
+            AssetType fresh;
+            if ( load( path, fresh ) == false )
+                return false;
+            {
+                std::scoped_lock<mutex> lock{ _mutex };
+                _mapAsset.erase( makeKey( path ) );
+            }
+            _reloadCount.fetch_add( 1, std::memory_order_release );
+            return true;
+        }
+
+        /** @brief 이 표에서 다시 읽은(또는 떼어 낸) 횟수입니다. 쓰는 쪽은 값이 바뀌면 지은 것을 다시 짓습니다. */
         uint32 getReloadCount() const { return _reloadCount.load( std::memory_order_acquire ); }
 
         /** @brief 살아 있는 항목 수입니다. */

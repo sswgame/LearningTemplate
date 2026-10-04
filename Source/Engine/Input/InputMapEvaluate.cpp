@@ -63,6 +63,7 @@ namespace sw
             bool    anyTriggered{ false };
             float32 maxHold{ 0.0f };
             float2  totalAccumValue{ 0.0f, 0.0f };
+            float2  relativeValue{ 0.0f, 0.0f }; ///< 마우스 이동량 — 묶지 않는다
 
             for ( size_t bindIndex = 0; bindIndex < bindCount; ++bindIndex )
             {
@@ -146,8 +147,9 @@ namespace sw
 
                 if ( bRawDown )
                 {
-                    totalAccumValue._x += bindingValue._x;
-                    totalAccumValue._y += bindingValue._y;
+                    float2& accumulator = binding._kind == BindingKind::MouseDelta2D ? relativeValue : totalAccumValue;
+                    accumulator._x += bindingValue._x;
+                    accumulator._y += bindingValue._y;
                 }
             }
 
@@ -158,28 +160,8 @@ namespace sw
             actionEntry._bTriggered   = anyTriggered ? SW_TRUE : SW_FALSE;
             actionEntry._holdDuration = maxHold;
 
-            // 모디파이어를 적용한다(축 반전, 클램핑 또는 원형 정규화)
-            if ( _bInvertX == SW_TRUE )
-                totalAccumValue._x = -totalAccumValue._x;
-            if ( _bInvertY == SW_TRUE )
-                totalAccumValue._y = -totalAccumValue._y;
-
-            if ( _digitalNormalization == DigitalNormalization::Circular )
-            {
-                const float32 lenSq = totalAccumValue._x * totalAccumValue._x + totalAccumValue._y * totalAccumValue._y;
-                if ( lenSq > 1.0f )
-                {
-                    const float32 invLen = 1.0f / MathUtil::sqrt( lenSq );
-                    totalAccumValue._x *= invLen;
-                    totalAccumValue._y *= invLen;
-                }
-            }
-            else
-            {
-                totalAccumValue._x = totalAccumValue._x < -1.0f ? -1.0f : ( totalAccumValue._x > 1.0f ? 1.0f : totalAccumValue._x );
-                totalAccumValue._y = totalAccumValue._y < -1.0f ? -1.0f : ( totalAccumValue._y > 1.0f ? 1.0f : totalAccumValue._y );
-            }
-            actionEntry._currentValue = totalAccumValue;
+            // 모디파이어를 적용한다(축 반전, 클램핑 또는 원형 정규화 — 마우스 이동량은 빼고).
+            actionEntry._currentValue = composeActionValue( totalAccumValue, relativeValue );
 
             // --------------------------------------------------------------------------
             // ActionPhase 상태 머신 전이
@@ -254,6 +236,31 @@ namespace sw
                 }
             }
         }
+    }
+
+    float2 InputMap::composeActionValue( const float2& bounded, const float2& relative ) const
+    {
+        float2 value = bounded;
+        if ( _bInvertX == SW_TRUE )
+            value._x = -value._x;
+        if ( _bInvertY == SW_TRUE )
+            value._y = -value._y;
+        if ( _digitalNormalization == DigitalNormalization::Circular )
+        {
+            const float32 lenSq = value._x * value._x + value._y * value._y;
+            if ( lenSq > 1.0f )
+            {
+                const float32 invLen = 1.0f / MathUtil::sqrt( lenSq );
+                value._x *= invLen;
+                value._y *= invLen;
+            }
+        }
+        else
+        {
+            value._x = MathUtil::clamp( value._x, -1.0f, 1.0f );
+            value._y = MathUtil::clamp( value._y, -1.0f, 1.0f );
+        }
+        return float2{ value._x + relative._x, value._y + relative._y };
     }
 
     bool InputMap::evaluateBindingDown( const ActionBinding& binding, float2& outValue ) const

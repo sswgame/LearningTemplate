@@ -118,6 +118,8 @@ namespace sw
         , _scratchTrackPose{}
         , _scratchLayerPose{}
         , _listScratchTrackMask{}
+        , _lastBasePose{}
+        , _carryOverPose{}
         , _sequencerClip{}
         , _rootMotionDelta{}
         , _pUnit{ nullptr }
@@ -126,9 +128,14 @@ namespace sw
         , _sequencerTime{ 0.0f }
         , _sequencerWeight{ 0.0f }
         , _initialTime{ 0.0f }
+        , _carryOverElapsed{ 0.0f }
+        , _carryOverDuration{ 0.0f }
+        , _seenInterruptCount{ 0 }
         , _bExtractRootMotion{ SW_FALSE }
         , _bPlayOnBegin{ SW_TRUE }
         , _bRootMotionThroughController{ SW_TRUE }
+        , _bLastBasePoseValid{ SW_FALSE }
+        , _bCarryingOver{ SW_FALSE }
         , _reserved{ 0 }
     {
         _graphPlayer.setPlayableSource( &_binding );
@@ -337,8 +344,8 @@ namespace sw
     {
         const AnimPlayer& player   = _graphPlayer.getPlayer();
         const AnimClip*   pCurrent = static_cast<const AnimClip*>( player.getCurrentPlayable() );
-        // 섞는 중 · 레이어 · 시퀀서 덮어쓰기는 캐릭터마다 다르다. 반복하지 않는 클립은 시작 시각이 캐릭터마다 달라 칸으로 묶지 않는다.
-        if ( pCurrent == nullptr || player.isCrossfading() || player.isCurrentLooping() == false || _listLayer.empty() == false || _sequencerWeight > 0.0f )
+        // 섞는 중(끊긴 페이드를 이어 섞는 중 포함) · 레이어 · 시퀀서 덮어쓰기는 캐릭터마다 다르다. 반복하지 않는 클립은 시작 시각이 캐릭터마다 달라 칸으로 묶지 않는다.
+        if ( pCurrent == nullptr || player.isCrossfading() || _bCarryingOver == SW_TRUE || player.isCurrentLooping() == false || _listLayer.empty() == false || _sequencerWeight > 0.0f )
             return false;
         outRequest._pClip             = pCurrent;
         outRequest._time              = player.getCurrentTime();
@@ -442,10 +449,30 @@ namespace sw
         for ( LayerState& layer : _listLayer )
             layer._player.update( deltaSeconds, &_listFiredNotify );
 
-        const AnimPlayer& player   = _graphPlayer.getPlayer();
-        const AnimClip*   pCurrent = static_cast<const AnimClip*>( player.getCurrentPlayable() );
-        const AnimClip*   pNext    = static_cast<const AnimClip*>( player.getNextPlayable() );
-        const float32     alpha    = player.getBlendAlpha();
+        // 페이드가 다른 페이드로 끊기면 플레이어는 섞이던 한 칸을 버린다(최대 절반이 한 프레임에 사라져 튄다). 끊긴 순간의 포즈(지난 기본 포즈)를
+        // 새 페이드 길이 동안 지금 포즈 위에서 사라지게 해 이어 붙인다 — 상태가 짧게 오가도 포즈는 이어진다.
+        const AnimPlayer& player = _graphPlayer.getPlayer();
+        if ( player.getInterruptCount() != _seenInterruptCount )
+        {
+            _seenInterruptCount = player.getInterruptCount();
+            if ( _bLastBasePoseValid == SW_TRUE )
+            {
+                _carryOverPose     = _lastBasePose;
+                _carryOverElapsed  = 0.0f;
+                _carryOverDuration = MathUtil::max( player.getFadeDuration(), 1.0e-3f );
+                _bCarryingOver     = SW_TRUE;
+            }
+        }
+        else if ( _bCarryingOver == SW_TRUE )
+        {
+            _carryOverElapsed += deltaSeconds;
+            if ( _carryOverElapsed >= _carryOverDuration )
+                _bCarryingOver = SW_FALSE;
+        }
+
+        const AnimClip* pCurrent = static_cast<const AnimClip*>( player.getCurrentPlayable() );
+        const AnimClip* pNext    = static_cast<const AnimClip*>( player.getNextPlayable() );
+        const float32   alpha    = player.getBlendAlpha();
 
         // 루트 모션 — 두 칸의 움직임을 섞임 가중치로 섞는다.
         _rootMotionDelta = BoneTransform{};
@@ -560,6 +587,10 @@ namespace sw
             sampleClipIntoPose( *pNext, player.getNextTime(), skeleton, _scratchPose, pMask );
             Pose::blend( pose, _scratchPose, player.getBlendAlpha(), pose );
         }
+        if ( _bCarryingOver == SW_TRUE && _carryOverPose.getBoneCount() == pose.getBoneCount() )
+            Pose::blend( _carryOverPose, pose, MathUtil::saturate( _carryOverElapsed / _carryOverDuration ), pose );
+        _lastBasePose       = pose;
+        _bLastBasePoseValid = SW_TRUE;
 
         for ( LayerState& layer : _listLayer )
         {

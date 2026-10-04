@@ -854,19 +854,18 @@ namespace sw
             _snapshot._listSkinPalette.push_back( entry );
         };
         listRow->reserve( _paletteRowCountHint );
-        for ( const vector<SkeletalMeshComponent*>& level : animation.getLevels() )
+        // 레벨(평가 순서)이 아니라 등록된 유닛 전부를 본다 — 유닛 하나가 빠지면(시체를 걷음) 레벨은 다음 평가까지 비어 있어, 레벨로 모으면
+        // 그 프레임의 모든 스킨드 메시가 팔레트 없이(단위 행렬 = 바인드 포즈) 한 번 그려진다.
+        for ( const SkeletalMeshComponent* pUnit : animation.getUnits() )
         {
-            for ( const SkeletalMeshComponent* pUnit : level )
-            {
-                // 군중 묶음과 나누는 유닛 · VAT 유닛은 자기 팔레트가 없다 — 묶음이 아래에서 한 번 싣는다.
-                const AnimationCrowdMode mode = pUnit->getCrowdMode();
-                if ( mode == AnimationCrowdMode::Shared || mode == AnimationCrowdMode::VertexAnimation )
-                    continue;
-                const Mesh* pMesh = pUnit->getRawMesh();
-                if ( pMesh == nullptr || pMesh->hasSkin() == false )
-                    continue;
-                appendPalette( pMesh, pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
-            }
+            // 군중 묶음과 나누는 유닛 · VAT 유닛은 자기 팔레트가 없다 — 묶음이 아래에서 한 번 싣는다.
+            const AnimationCrowdMode mode = pUnit->getCrowdMode();
+            if ( mode == AnimationCrowdMode::Shared || mode == AnimationCrowdMode::VertexAnimation )
+                continue;
+            const Mesh* pMesh = pUnit->getRawMesh();
+            if ( pMesh == nullptr || pMesh->hasSkin() == false )
+                continue;
+            appendPalette( pMesh, pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
         }
         // 군중 묶음 — 묶음 하나 = 메시 하나 = 결과 구간 하나 = 팔레트 하나(멤버가 몇이든). 가리키는 유닛이 있는 묶음만 그려진다.
         for ( const unique_ptr<AnimationCrowdBucket>& bucket : animation.getCrowd().getBuckets() )

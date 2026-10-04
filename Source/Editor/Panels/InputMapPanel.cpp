@@ -1160,7 +1160,9 @@ namespace sw::editor
 
     bool InputMapPanel::saveToFile()
     {
-        if ( _inputMap.saveUserBindings( _inputMapPath.c_str() ) == false )
+        // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다 — 다시 읽기(`reloadFromFile`)와 같은 형식 · 같은 자리에 쓴다.
+        // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 든다.
+        if ( _inputMap.saveToResource( _inputMapPath.c_str() ) == false )
         {
             SW_LOG_WARNING( "Failed to save InputMap to %#", _inputMapPath.c_str() );
             return false;

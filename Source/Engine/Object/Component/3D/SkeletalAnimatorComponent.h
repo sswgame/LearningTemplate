@@ -257,6 +257,8 @@ namespace sw
         Pose                                                     _scratchTrackPose;
         Pose                                                     _scratchLayerPose;
         vector<uint8>                                            _listScratchTrackMask; ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
+        Pose                                                     _lastBasePose;         ///< 지난 기본 포즈(레이어 전) — 페이드가 끊기면 여기서 이어 섞는다
+        Pose                                                     _carryOverPose;        ///< 끊긴 순간의 포즈 — 새 페이드 길이 동안 지금 포즈로 섞여 사라진다
         shared_ptr<const AnimClip>                               _sequencerClip;
         BoneTransform                                            _rootMotionDelta;
         SkeletalMeshComponent*                                   _pUnit;
@@ -265,6 +267,9 @@ namespace sw
         float32                                                  _sequencerTime;
         float32                                                  _sequencerWeight;
         float32                                                  _initialTime; ///< 시작 상태의 첫 시각(초, 저장하지 않는 런타임 값)
+        float32                                                  _carryOverElapsed;
+        float32                                                  _carryOverDuration;
+        uint32                                                   _seenInterruptCount; ///< 플레이어의 끊긴 수를 마지막으로 본 값
         PROPERTY( Category = "Animation", DisplayName = "Extract Root Motion", Tooltip = "Move the object by the clip's root motion track" )
         uint8 _bExtractRootMotion : 1;
         PROPERTY( Category = "Animation", DisplayName = "Play On Begin", Tooltip = "Start the initial state at begin play" )
@@ -272,6 +277,8 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Root Motion Through Controller",
                   Tooltip = "Move by root motion through the sibling character controller (collides, climbs steps) instead of writing the transform" )
         uint8                  _bRootMotionThroughController : 1;
-        [[maybe_unused]] uint8 _reserved                     : 5;
+        uint8                  _bLastBasePoseValid           : 1;
+        uint8                  _bCarryingOver                : 1;
+        [[maybe_unused]] uint8 _reserved                     : 3;
     };
 } // namespace sw

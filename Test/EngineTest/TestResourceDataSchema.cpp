@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Animation/AnimGraphAsset.h"
 #include "Engine/Animation/AnimJsonUtil.h"
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
@@ -25,6 +26,7 @@
 #include "Engine/Character/SurfaceState.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
@@ -105,6 +107,13 @@ namespace
         static bool isPhysicsSettings( sw::string_view resourceId ) { return endsWith( resourceId, "physicssettings.xml" ); }
         static bool isPhysicsAsset( sw::string_view resourceId ) { return endsWith( resourceId, ".physics.xml" ); }
         static bool isSkeleton( sw::string_view resourceId ) { return endsWith( resourceId, sw::Skeleton::kExtension ); }
+        static bool isAnimGraph( sw::string_view resourceId ) { return endsWith( resourceId, ".animgraph.json" ); }
+        /** @brief 애니메이션 그래프(상태 기계) — 모르는 조건 표기는 로드 오류, 노드가 하나도 없으면 빈 그래프다. */
+        static bool loadAnimGraph( const sw::string& resourceId )
+        {
+            sw::AnimGraphAsset graph;
+            return graph.loadFromFile( resourceId ) && graph._listNode.empty() == false;
+        }
         static bool isElementRules( sw::string_view resourceId ) { return endsWith( resourceId, ".elements.xml" ); }
         static bool isInteractions( sw::string_view resourceId ) { return endsWith( resourceId, ".interactions.xml" ); }
         static bool isTileSet( sw::string_view resourceId ) { return endsWith( resourceId, ".tileset.xml" ); }
@@ -252,6 +261,7 @@ namespace
         static bool                  isFitTables( sw::string_view resourceId ) { return endsWith( resourceId, ".fit.xml" ); }
         static bool                  isPartFit( sw::string_view resourceId ) { return endsWith( resourceId, ".partfit.xml" ); }
         static bool                  isSurfaceChannels( sw::string_view resourceId ) { return endsWith( resourceId, ".surfacechannels.xml" ); }
+        static bool                  isDestructionProfile( sw::string_view resourceId ) { return endsWith( resourceId, ".destruction.xml" ); }
         static bool                  isNotifyTable( sw::string_view resourceId ) { return endsWith( resourceId, ".notifies.xml" ); }
         static bool                  isClipData( sw::string_view resourceId ) { return endsWith( resourceId, ".clips.json" ); }
         /** @brief 모델 임포트 곁 데이터(`<모델>.clips.json`) — 임포터(`ModelImporter::readClipData`)와 같은 키 규칙(모르는 키는 오류)으로 본다. */
@@ -450,9 +460,11 @@ namespace
             {          "fittables",           &isFitTables,                                     &loadFitTables},
             {            "partfit",             &isPartFit,                                       &loadPartFit},
             {    "surfacechannels",     &isSurfaceChannels,              &loadCatalog<sw::SurfaceChannelTable>},
+            {        "destruction",  &isDestructionProfile,               &loadCatalog<sw::DestructionProfile>},
             {              "items",               &isItems,                      &loadCatalog<sw::ItemCatalog>},
             {         "appearance",      &isAppearanceData,                                &loadAppearanceData},
             {           "skeleton",            &isSkeleton,                                      &loadSkeleton},
+            {          "animgraph",           &isAnimGraph,                                     &loadAnimGraph},
             {         "audiomixer",          &isAudioMixer,                   &loadCatalog<sw::AudioMixerDesc>},
             {        "audioevents",         &isAudioEvents,                &loadCatalog<sw::AudioEventLibrary>},
             {         "audiomusic",          &isAudioMusic,                   &loadCatalog<sw::AudioMusicDesc>},

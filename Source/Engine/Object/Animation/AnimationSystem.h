@@ -213,6 +213,8 @@ namespace sw
 
         /** @brief 등록된 유닛 수입니다. */
         uint32 getUnitCount() const { return static_cast<uint32>( _listUnit.size() ); }
+        /** @brief 등록된 유닛 전부입니다(평가 순서 아님). 레벨은 유닛이 빠지는 순간 비워지므로 "지금 있는 유닛" 은 이것으로 봅니다. */
+        const vector<SkeletalMeshComponent*>& getUnits() const { return _listUnit; }
         /** @brief 의존 레벨입니다(0 이 먼저). 시험 · 진단용입니다. */
         const vector<vector<SkeletalMeshComponent*>>& getLevels() const { return _listLevel; }
         /** @brief 마지막으로 지은 레벨에 의존 고리가 있었는지입니다. */

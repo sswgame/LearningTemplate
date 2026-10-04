@@ -35,7 +35,7 @@
       "check": "naming",
       "severity": "error",
       "include_patterns": ["*/models/*"],
-      "allowed_suffixes": [".mesh", ".sockets.xml", ".refpose.xml", ".skeleton.json", ".animclip"]
+      "allowed_suffixes": [".mesh", ".sockets.xml", ".refpose.xml", ".skeleton.json", ".animclip", ".fracture"]
     },
     {
       "name": "model-source-folder",

@@ -39,6 +39,7 @@ namespace sw
         , _onGamepadConnectionChanged{}
         , _onTextInput{}
         , _onTextComposition{}
+        , _pendingHighSurrogate{ 0 }
         , _bInitialized{ SW_FALSE }
         , _bInputMuted{ SW_FALSE }
         , _reserved{ 0 }

@@ -299,6 +299,36 @@ namespace sw
         return PhysicsShapeHandle::fromSlot( _shapes.insert( std::move( record ) ) );
     }
 
+    PhysicsShapeHandle Box2DPhysicsScene::createCompoundShape( span<const PhysicsShapeHandle> listChild )
+    {
+        if ( listChild.empty() )
+        {
+            SW_LOG_ERROR( "createCompoundShape: no child shapes" );
+            return PhysicsShapeHandle{};
+        }
+        // Box2D 바디는 셰이프를 여럿 붙이므로 자식 서술자를 이어 붙인다 — 재질을 적지 않은 자식 셰이프에는 그 자식의 재질을 적어 둔다.
+        ShapeDescList listDesc;
+        for ( const PhysicsShapeHandle& child : listChild )
+        {
+            const ShapeRecord* pChild = _shapes.get( child.getSlot() );
+            if ( pChild == nullptr )
+            {
+                SW_LOG_ERROR( "createCompoundShape: a child shape handle is stale" );
+                return PhysicsShapeHandle{};
+            }
+            for ( PhysicsShapeDesc2D shape : *pChild->_pListShape )
+            {
+                if ( shape._material.empty() )
+                    shape._material = pChild->_material;
+                listDesc.push_back( std::move( shape ) );
+            }
+        }
+        ShapeRecord record;
+        record._material   = _shapes.get( listChild[0].getSlot() )->_material;
+        record._pListShape = make_shared<const ShapeDescList>( std::move( listDesc ) );
+        return PhysicsShapeHandle::fromSlot( _shapes.insert( std::move( record ) ) );
+    }
+
     void Box2DPhysicsScene::destroyShape( PhysicsShapeHandle shape )
     {
         _shapes.erase( shape.getSlot() );
