@@ -56,7 +56,7 @@ namespace sw
     /** @brief 서버 설정입니다. */
     struct ReplicationServerSettings
     {
-        int32 _snapshotBudgetBytes{ 1000 }; ///< 클라이언트 · 틱마다 스냅샷 메시지 상한
+        int32 _snapshotBudgetBytes{ 1000 }; ///< 클라이언트 · 틱마다 스냅샷 메시지 상한(종류 바이트 · 머리 · 사라진 목록 포함, `NetConnection::kMaxMessageSize` 로 잘린다)
         int32 _historySize{ 64 };           ///< 클라이언트마다 기억하는 보낸 스냅샷(기준 후보) 수
         int32 _inputBufferSize{ 64 };
     };
@@ -83,6 +83,7 @@ namespace sw
 
         void initialize( NetHost* pHost, const ReplicationServerSettings& settings, const IReplicationPolicy* pPolicy = nullptr );
         void beginTick( uint32 tick );
+        /** @brief 이 틱의 엔티티입니다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 복제하지 않는다(처음 한 번 경고, 그 뒤로는 센다). */
         void setEntity( uint32 entityId, uint32 typeId, const vector<uint8>& buffer );
         void endTick();
         /**
@@ -108,6 +109,8 @@ namespace sw
         float32            getClientViewTick( int32 connectionId ) const;
         uint32             getAckedTick( int32 connectionId ) const;
         const NetSnapshot& getWorldSnapshot() const { return _world; }
+        /** @brief 상한을 넘어 복제하지 않은 `setEntity` 수입니다. */
+        uint64 getOversizedEntityCount() const;
 
     private:
         struct InputEntry
@@ -154,7 +157,8 @@ namespace sw
         NetParallelScratch<SnapshotScratch> _snapshotScratch;       ///< 스레드마다 하나
         vector<int32>                       _listConnectionScratch; ///< 이번 틱에 보낼 연결
         vector<ClientState*>                _listClientScratch;     ///< 위 연결의 상태 — 나누기 전에 모두 잡아 둔다(나누는 중에 목록이 자라지 않게)
-        const int32*                        _pRangeConnection;      ///< 나눈 본문이 읽는 `_listConnectionScratch.data()` — 워커는 컨테이너를 만지지 않는다
-        ClientState* const*                 _ppRangeClient;         ///< 나눈 본문이 읽는 `_listClientScratch.data()`
+        uint64                              _oversizedEntityCount;
+        const int32*                        _pRangeConnection; ///< 나눈 본문이 읽는 `_listConnectionScratch.data()` — 워커는 컨테이너를 만지지 않는다
+        ClientState* const*                 _ppRangeClient;    ///< 나눈 본문이 읽는 `_listClientScratch.data()`
     };
 } // namespace sw
