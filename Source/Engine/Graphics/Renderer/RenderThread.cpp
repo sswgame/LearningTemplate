@@ -406,7 +406,7 @@ namespace sw
             // 제출과 Present. GPU 가 밀리면 여기서 기다린다.
             SW_PROFILE_SCOPE( "RT.Present" );
             // VSync 는 **디바이스가 채택한 값**이다. 여기 true 를 못박아 두면 EngineConfig 의
-            // `_window._bVSync` 와 CLI `--VSYNC` 가 둘 다 무시되고 프레임이 모니터 주사율에 붙는다.
+            // `_window._bVSync` 와 CLI `-vsync` 가 둘 다 무시되고 프레임이 모니터 주사율에 붙는다.
             _pDevice->endFrame( _pDevice->isVSyncEnabled() );
         }
 

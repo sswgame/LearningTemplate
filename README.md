@@ -320,15 +320,15 @@ cmake --build --preset Ninja-Debug
 ### 실행 인자
 
 명령줄 인자의 정본은 `Source/Core/Predefined/ArgumentList.xxx` 입니다. 키 앞의 `-` · `--` 는 떼고 읽으며, 값은 `-key=value` 로 줍니다
-(bool 인자만 `-key` 로 켤 수 있습니다). 이름은 대소문자를 구별합니다.
+(bool 인자만 `-key` 로 켤 수 있습니다). 이름은 대소문자를 구별하고, 인자마다 철자는 하나입니다(코드의 열거자 이름 `WIDTH` 등은 키가 아닙니다).
 
 | 인자 | 하는 일 |
 | :--- | :--- |
-| `-W=<폭>` · `-H=<높이>` (`-WIDTH` · `-HEIGHT`) | 창 크기. 주지 않으면 `EngineConfig` 의 창 설정을 씁니다 |
+| `-W=<폭>` · `-H=<높이>` | 창 크기. 주지 않으면 `EngineConfig` 의 창 설정을 씁니다 |
 | `-vsync` | 수직 동기화를 켭니다 |
 | `-dx11` · `-dx12` · `-vk` · `-gl` (별칭 `d3d11` · `directx11` · `d3d12` · `directx12` · `vulkan` · `spirv` · `opengl`) | RHI 백엔드. 목록 · 별칭 · 기본값(`DirectX12`)은 쿠킹 표 `Config/Engine/CookContract.json` 에서 옵니다 |
 | `-EnableEditor` | 에디터 모듈을 올립니다(Dev 전용). 주지 않으면 에디터 없이 뜹니다 |
-| `-lang=<코드>` · `-language=<코드>` | 시작 언어 |
+| `-lang=<코드>` | 시작 언어 |
 | `--cook-shaders` | 창 없이 셰이더를 전부 쿠킹하고 끝냅니다(패스 종류 표 × 뷰 모드에서 요청을 모읍니다) |
 | `--cook-scenes --cooked-dir=<폴더>` | 창 없이 씬 · 프리팹 · 에셋 레지스트리를 쿠킹합니다. 소스 트리를 읽고, 모르는 컴포넌트(`MissingComponent`)가 든 씬은 실패로 셉니다 |
 | `--import-textures` · `--check-textures` | 창 없이 `textures_raw/` 의 원본을 DDS 로 임포트하거나, 원본 · 임포트 규칙 · DDS 가 `import.stamp` 와 맞는지 보기만 합니다. 에디터 모듈의 일이라 Dev 빌드에서만 됩니다 |

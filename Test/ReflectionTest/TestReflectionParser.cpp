@@ -532,6 +532,44 @@ SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
 }
 
 /**
+ * @brief [ReflectionParserTest] 옛 이름 키는 `Alias` 하나다 — `PreviousName` · `PreviousNames` 는 모르는 토큰이다
+ * @details 같은 필드에 철자가 셋이면 헤더마다 다른 철자가 퍼지고, 옛 이름을 찾는 grep 이 한 철자만 보고 끝난다.
+ */
+SW_TEST_CASE( ReflectionParserTest, AliasHasOneSpelling )
+{
+#if defined( SW_DEBUG )
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "AliasSpellingSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT( PreviousName = \"OldSample\" )\n"
+                                                       "\tstruct AliasSpellingSampleActor\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t};\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct AliasSpellingSampleHolder\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY( PreviousNames = \"hp\" )\n"
+                                                       "\t\tint32 _health{ 0 };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "unknown token 'PreviousName" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "unknown token 'PreviousNames" ) != sw::string::npos, run._log.c_str() );
+#else
+    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
+#endif
+}
+
+/**
  * @brief [ReflectionParserTest] 한 타입의 애노테이션 오류는 첫 하나에서 멈추지 않고 모두 알린다
  * @details 오류마다 빌드를 한 번씩 되풀이하지 않게 한 번의 실행이 그 타입의 오류를 전부 적는다. 오류 난 멤버는 코드젠에 넣지 않으므로
  *          실행은 여전히 실패로 끝난다.

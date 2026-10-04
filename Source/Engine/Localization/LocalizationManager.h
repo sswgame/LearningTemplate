@@ -36,7 +36,7 @@ namespace sw
         /**
          * @brief 언어 코드의 정본 철자입니다 — 소문자, `-` 는 `_`(`ko-KR` · `ko_KR` → `ko_kr`). 표에 넣고 찾는 모든 길이 이것을 지납니다.
          * @details `Resource/` 는 소문자만 받아 파일 이름에서 읽은 코드는 `ko_kr` 인데, 기본값(`GameStrings` 의 "ko_KR")과 명령줄
-         *          (`-language=ko-KR`)은 다른 철자다. 대소문자를 그대로 키로 쓰면 기본 언어를 찾지 못하고 아무 언어나 고른다.
+         *          (`-lang=ko-KR`)은 다른 철자다. 대소문자를 그대로 키로 쓰면 기본 언어를 찾지 못하고 아무 언어나 고른다.
          */
         static string normalizeLanguageCode( string_view languageCode );
 

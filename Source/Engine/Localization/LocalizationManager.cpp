@@ -210,8 +210,7 @@ namespace sw
         if ( engine::areEngineServicesBound() )
         {
             const CommandLineManager& cmd = engine::getCommandLineManager();
-            if ( cmd.getArgument( CommandLineArgument::LANGUAGE, preferredLang ) == false || preferredLang.empty() )
-                cmd.getArgument( "lang", preferredLang );
+            cmd.getArgument( CommandLineArgument::LANGUAGE, preferredLang );
         }
 
         if ( preferredLang.empty() || hasLanguage( preferredLang ) == false )

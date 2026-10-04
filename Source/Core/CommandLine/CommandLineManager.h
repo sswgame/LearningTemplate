@@ -64,7 +64,7 @@ namespace sw
 
             /**
              * @brief `-key` 처럼 **값 없이** 적을 수 있는 인자인지 확인합니다.
-             * @details 그럴 수 있는 것은 bool 뿐입니다. 값 없는 `-dx12` 는 "true" 라는 뜻이 되지만, 값 없는 `-WIDTH` 나
+             * @details 그럴 수 있는 것은 bool 뿐입니다. 값 없는 `-dx12` 는 "true" 라는 뜻이 되지만, 값 없는 `-W` 나
              *          `-gv_benchMeshes` 에는 그런 뜻이 없습니다. 판단은 타입이 합니다(별도 칸을 두지 않습니다) — 값을 빠뜨린
              *          `-gv_benchMeshes` 를 받아 주면 int32 자리에 bool 이 들어가고, `readValue` 의 `get_if<int32>` 가 nullptr 을
              *          반환해 **경고 한 줄 없이 아무 일도 일어나지 않습니다.**
@@ -114,8 +114,8 @@ namespace sw
         /**
          * @brief 문자열 키로 파싱된 인자 값을 찾습니다.
          * @tparam T 가져올 값의 타입(bool, 정수, 부동소수, sw::string, string_view)
-         * @param key 등록된 이름이나 별칭(예: "WIDTH", "W"). 앞의 하이픈은 파싱할 때 떼어 내므로 **조회 키에는 붙이지
-         *            않습니다.** `"--WIDTH"` 로는 찾지 못합니다.
+         * @param key 등록된 명령줄 철자(예: "W", "lang"). 앞의 하이픈은 파싱할 때 떼어 내므로 **조회 키에는 붙이지
+         *            않습니다.** `"--W"` 로는 찾지 못합니다. 열거자 이름("WIDTH")은 키가 아닙니다.
          * @param outValue 찾은 값을 받을 변수
          * @return 키가 있고 타입 변환에 성공하면 true
          */
@@ -169,7 +169,7 @@ namespace sw
         /** @brief 인자 한 줄(예: "--width=1280", "-fullscreen")을 파싱해 표에 반영합니다. */
         void parseArgumentLine( string_view argumentLine );
 
-        /** @brief 등록된 이름이나 별칭으로 인자를 찾습니다. 없으면 nullptr 입니다. */
+        /** @brief 등록된 명령줄 철자로 인자를 찾습니다. 없으면 nullptr 입니다. */
         const ArgumentInfo* findArgument( string_view key ) const;
 
         /** @brief 열거값을 `_listArgument` 인덱스로 바로 씁니다(initialize 가 그 일치를 보장합니다). */
@@ -190,7 +190,7 @@ namespace sw
         static constexpr auto kGlobalVariablePrefix = "gv_";
 
         vector<ArgumentInfo> _listArgument;
-        /** @brief 이름 · 별칭 → `_listArgument` 인덱스입니다. 기본 해시가 transparent 라 string_view 로 할당 없이 조회됩니다. */
+        /** @brief 명령줄 철자 → `_listArgument` 인덱스입니다. 기본 해시가 transparent 라 string_view 로 할당 없이 조회됩니다. */
         unordered_map<string, uint32> _mapArgument;
         /** @brief 등록된 인자가 없어 보류해 둔 `gv_` 키 → 값입니다. 모듈이 나중에 선언할 때 꺼내 씁니다. */
         unordered_map<string, string> _mapPendingGlobal;

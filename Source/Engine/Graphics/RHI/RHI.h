@@ -77,7 +77,7 @@ namespace sw
          *                 백엔드 교체(`recreateDevice`)도 같은 표면을 다시 씁니다.
          */
         bool initialize( IRenderSurface* pSurface );
-        /** @brief CLI 에 --VSYNC 가 없을 때 쓸 스왑체인 VSync 를 정합니다. initialize 전에 부릅니다. */
+        /** @brief CLI 에 -vsync 가 없을 때 쓸 스왑체인 VSync 를 정합니다. initialize 전에 부릅니다. */
         void setPreferredVSync( bool bVSync ) { _bPreferredVSync = bVSync ? SW_TRUE : SW_FALSE; }
         /** @brief 디바이스를 종료하고 모듈을 언로드합니다. */
         void shutdown();

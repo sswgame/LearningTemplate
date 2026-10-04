@@ -23,14 +23,14 @@ flag.Abstract = Abstract, abstract
 flag.Static = Static, static
 flag.HideInMenu = HideInMenu, HiddenInMenu, EditorHidden
 # 직렬화 · 핫 리로드용 옛 타입 이름. 여러 개면 Alias="OldA, OldB"
-string.Alias = Alias, PreviousName, PreviousNames
+string.Alias = Alias
 string.Category = Category
 string.DisplayName = DisplayName
 string.Tooltip = Tooltip
 string.Meta = Meta, meta, CustomMeta
 
 [ENUM]
-string.Alias = Alias, PreviousName, PreviousNames
+string.Alias = Alias
 # 열거자 이름 변경: ValueAlias="OldIdle:Idle, OldMoving:Moving"
 string.ValueAlias = ValueAlias, EnumeratorAlias
 string.Meta = Meta, meta, CustomMeta
@@ -50,7 +50,7 @@ flag.Transient = Transient, transient, NonSerialized, nonSerialized
 flag.SkipIfEmpty = SkipIfEmpty, skipIfEmpty
 flag.HideInInspector = HideInInspector, hideInInspector, HiddenInInspector, EditorHidden
 # 여러 개면 Alias="hp, HitPoints" (따옴표가 필요하다. 그래야 콤마가 토큰 구분자로 읽히지 않는다)
-string.Alias = Alias, PreviousName, PreviousNames
+string.Alias = Alias
 # 리플렉션 이름(직렬화 키)을 멤버 이름과 다르게 준다. 값이 객체 밖에 있는 프로퍼티(참조를 돌려주는 메서드에 붙인 PROPERTY)가 옛 필드 이름을 이어 쓸 때 쓴다
 string.Name = Name
 string.Category = Category

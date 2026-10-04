@@ -93,32 +93,6 @@ cd build/Ninja-Debug/Bin
 영역별로 묶었다. 영역 안에서는 위에 있을수록 먼저 볼 것이다. 줄 번호는 2026-10-03 기준이라 어긋날 수 있다 — 함수 이름으로 찾는다.
 "확인 필요" 가 붙은 항목은 열려 있는지부터 확인하고 시작한다.
 
-### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
-
-- **클래스 이름 일관화 — 감사 목록 전부**(사용자: "일관되게 바꿔봐"). **별칭은 두지 않는다**(사용자: 아직 실제 게임이 없다) — 씬 · 데이터 XML 의 타입 · 루트 이름,
-  스크립트 · CI 의 CLI 플래그까지 새 이름으로 다시 쓰고 옛 이름은 어디에도 남기지 않는다.
-  묶음: (1) `IRHIResource`→`IRHIResourceFactory`(`getResourceFactory`), `ActionMap`→`InputMap`, `InputDeviceType`→`InputGlyphStyle`,
-  `ShaderResourceBind`→`ShaderResourceBindOp` · `ShaderResourceBinding`→`ShaderReflectedBinding`, `PrefabManager`→`PrefabCache`, `HPBarBaseComponent`→`HealthBarComponent`,
-  `AttackBaseComponent`→`MeleeHitboxComponent`, `EffectBaseComponent`→`FadeOutComponent`, `DamageUIComponent`→`DamageNumberComponent`, `ObjectSnapshotCommand`→`ObjectUndoUtil`,
-  `Cpu*` 시간 → `MonotonicClock` · `Stopwatch` · `Deadline` · `GameTimer` · `ScopedTimer`, `RenderPassManager`/`RenderPassResource`/`RenderPipelineResource`→
-  `RenderPipelineAssetCache`/`RenderPassAsset`/`RenderPipelineAsset`, `EditorAssetKind`→`EditorAssetType`, `IModuleCodeHolder`→`IModuleUnloadListener`(`onModuleUnloading`);
-  (2) 런타임 정보 행 `*Traits`→`*Info`, `ShaderBindingBinder`→`ShaderParameterBinder`, `GpuMaterialGpu`→`GpuMaterialGroupBuffer`, `RHIConstantBufferShadow`→`RHIConstantBufferMirror`,
-  `ReloadFileManager`→`FileWatchDispatcher`, `LiveShaderManager`→`ShaderRecompiler`, `FrameTimeline`→`FixedTimestep`, `FadeService`→`ScreenFade`,
-  `BackendSwapController`→`RHIBackendSwitcher`, `KeyCodes`/`MouseButtons`/`GamepadButtons`→`*Util`, `GamepadXInput`/`GamepadJoystick`→`XInputGamepadDevice`/`LinuxJoystickGamepadDevice`,
-  `CCD`→`ContinuousCollision`, `ColliderTileComponent`→`TileColliderComponent`, `OverridesOnTick`→`HasOnTickOverride`, `ShaderBindingContract`→`ShaderBindingValidator`,
-  `RenderPassInputContract`→`RenderPassInputSignature`, `EngineOwnedServices`→`EngineServiceCollection`, `EngineStartup*`→`EngineInit*`, `MonsterDataCatalog`→`MonsterCatalog`,
-  `ZoneRuntime`→`ZoneTracker`, `SelectionManager`→`EditorSelection`; (3) `AnimationGraph*`→`AnimGraph*`, `LevelLoad*Event`→`SceneLoad*Event`, `Load/SaveCompletedEvent`→
-  `SaveGameLoaded/SavedEvent`, `SceneDocument::EntityNode`→`SceneObjectNode`, `EditorBackgroundJob`→`EditorBackgroundTask`, `SpatialElement`→`SpatialElement2D`,
-  `InputMapEditorPanel`/`PrefabEditorPanel`→`InputMapPanel`/`PrefabPanel`, ReflectionParser 소문자 구조체 → 소문자 네임스페이스(`tpl`→`template`), `framres`/`commandmod`→
-  `frameresource`/`commandmodifier`; (4) Bake · Cook 용어(사용자 지시 — 상용 엔진 기준): **Cook = 배포 · 실행용 플랫폼 데이터로 바꾸기**(UE Cook), **Import = 원본 →
-  엔진 형식**(UE Factory · Unity Importer), **Bake = 미리 계산한 결과**(라이트맵 · 내비 · 애니메이션 굽기 — 지금은 없음, 그때만 쓴다), **Generate = 빌드가 만드는 코드 ·
-  헤더**. 그래서 `ShaderBaker` · `ShaderBakeDriver` · `ShaderBakeRequest` · `ShaderBakeStamp`→`ShaderCooker` · `ShaderCookDriver` · `ShaderCookRequest` · `ShaderCookStamp`,
-  `Renderer/Bake/`→`Renderer/Cook/`, `--bake-shaders`→`--cook-shaders`(옛 철자 없음), `bake.stamp`→`cook.stamp`, `TextureBaker`→`TextureImporter`(이미 `TextureImportConfig` ·
-  `TextureImportRule` 과 짝), `BakeShippingHostDefaults.py`→`GenerateShippingHostDefaults.py`, 주석 · 문서의 "굽다"도 같은 구분으로. `ResourceManager`→`AssetManager`
-  ("Resource" 는 디스크 트리 · 팩, "Asset" 은 읽은 객체), `EngineData`/`GameData`/`EditorData`→`EngineDefaultAssets`/`GameSettings`/`EditorToolDefaults`.
-  CLI 철자도 하나로 — 하이픈 없는 철자(`bakeshaders` 등 다섯)는 10-04 에 지웠다. 남은 것: 열거자 이름 자동 등록으로 생기는 중복 키(`-WIDTH` 와 `-W`,
-  `-lang` 과 `-language`), 리플렉션 주석 키 `Alias` 의 동의어 `PreviousName` · `PreviousNames`(사용처 0).
-
 ### 1-1. 직렬화 · 리플렉션
 
 - **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
@@ -255,6 +229,7 @@ cd build/Ninja-Debug/Bin
   직역어 대신 표준 용어(thundering herd · 락 컨보이 · 브로드캐스트 · 조인 · continuation · 오버플로 · 분기)를 쓴다. 식별자 · 로그 ·
   assert 문자열 · `NOLINT` 줄은 그대로 둔다. 주석을 고치기 전에 구현을 읽는다 — 복사해 붙인 설명이 실제 동작과 다른 곳이 많았다.
   규칙은 [AGENTS.md](../AGENTS.md) 와 [04_CodingGuidelines.md](04_CodingGuidelines.md).
+- **자산 처리 용어는 넷이다(상용 엔진 기준).** Cook = 배포 · 실행용 플랫폼 데이터로 바꾸기(셰이더 · 씬 · 프리팹 · 팩, `--cook-*`), Import = 원본 → 엔진 형식(텍스처, `--import-textures`), Generate = 빌드가 만드는 코드 · 헤더, Bake = 미리 계산한 결과(라이트맵 · 내비 — 지금은 없다). 한국어 "굽다" 는 쓰지 않는다. 이름을 바꿀 때 별칭(`Alias` · 옛 CLI 철자 · 옛 형식 리더)을 두지 않고 데이터를 다시 쓴다.
 - **이 문서는 같은 커밋에서 고친다.** 끝낸 항목은 지운다. 남길 교훈이 있으면 3절에 한두 줄로 옮긴다. 여러 PC 에서 고치는 문서라
   작업 중에 pull · 충돌이 날 수 있다 — 커밋 전에 받아서 합친다.
 
@@ -436,6 +411,8 @@ cd build/Ninja-Debug/Bin
 
 - **주석 정리에서 마커(예전 · 날짜 · 백로그)로만 뽑으면 과거형 경위("~를 각자 들고 있었습니다")가 영역마다 ~10 % 남는다** — `(었|았|였)(는데|다|습니다)` 로 한 번 더 훑는다.
   빌드가 도는 동안 헤더를 고치면 PCH 크기 불일치("modified since the precompiled header")로 빌드가 진다 — 편집과 빌드를 겹치지 말 것.
+
+- **명령줄 철자는 인자마다 하나다** — `ArgumentList.xxx` 의 줄에 적은 것만 키이고 열거자 이름(`WIDTH` · `COOK_SHADERS`)은 키가 아니다(`CommandLineTest.EnumeratorNameIsNotACommandLineKey`). RHI 백엔드 줄만 쿠킹 표(`CookContract.json`)의 별칭 여럿을 받는다.
 
 - **`git mv` 로 옮긴 시험 파일은 pre-commit 의 `CheckIncludeOrder` · `CheckTestSuites` 가 "변경 없음" 으로 건너뛴다** — 옮긴 뒤에는 `ctest -L lint` 로 확인할 것.
 

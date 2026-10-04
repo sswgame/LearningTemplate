@@ -11,7 +11,8 @@ namespace sw
 {
     // ============================================================================
     // initialize
-    // 미리 정의된 커맨드라인 인자 표(ArgumentList.xxx)를 읽어, 모든 인자의 초기 정보와 별칭을 _mapArgument 에 등록한다.
+    // 미리 정의된 커맨드라인 인자 표(ArgumentList.xxx)를 읽어, 모든 인자의 초기 정보와 명령줄 철자를 _mapArgument 에 등록한다.
+    // 열거자 이름(WIDTH · COOK_SHADERS …)은 등록하지 않는다 — 명령줄 철자는 표의 줄마다 적은 것 하나다.
     //
     // 줄마다 "지금 넣는 자리 == 그 줄의 열거값" 인지 확인한다. 이 일치 덕분에 findArgument(enum) 이 이름 없이 O(1)
     // 인덱싱으로 끝난다. 이 일치가 깨지는 경우는 하나뿐이다. initialize 를 두 번 부르거나, 그 전에 addArgument 를
@@ -30,7 +31,7 @@ namespace sw
 #define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... )                      \
     SW_LOG_ASSERT( _listArgument.size() == static_cast<size_t>( CommandLineArgument::name ),  \
                    "인자 등록 순서가 CommandLineArgument 열거값과 어긋났습니다: %#", #name ); \
-    addArgument( { #name, __VA_ARGS__ }, defaultValue, useDefaultValue );
+    addArgument( { __VA_ARGS__ }, defaultValue, useDefaultValue );
 #include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
@@ -133,7 +134,7 @@ namespace sw
 
         ArgumentInfo& argument = _listArgument[iter->second];
 
-        // 필수 값이 빠졌는지 검사한다. 값 없이 적어도 되는 것은 bool 뿐이다. `-dx12` 는 "true" 라는 뜻이지만 `-WIDTH` 나
+        // 필수 값이 빠졌는지 검사한다. 값 없이 적어도 되는 것은 bool 뿐이다. `-dx12` 는 "true" 라는 뜻이지만 `-W` 나
         // `-gv_benchMeshes` 에는 그런 뜻이 없다. 판단은 타입이 한다(`isFlagArgument`) — 받아 주면 값을 빠뜨린 `-gv_benchMeshes` 가
         // int32 자리에 bool 을 밀어 넣고 **경고 한 줄 없이 아무 일도 하지 않는다**(readValue 의 get_if 가 nullptr).
         if ( bHasValue == false && argument.isFlagArgument() == false )
@@ -209,7 +210,7 @@ namespace sw
      * @brief 문자열 값을 대상 인자의 기본값 타입에 맞게 변환해 저장합니다.
      *
      * StringUtil::parse* 로 임시 문자열을 할당하지 않고 바로 변환합니다. 변환에 실패하면 0 이 조용히 들어가지 않도록
-     * 경고를 남깁니다. `-WIDTH=abc` 가 아무 말 없이 폭 0 이 되면 창이 왜 뜨지 않는지 알 길이 없기 때문입니다.
+     * 경고를 남깁니다. `-W=abc` 가 아무 말 없이 폭 0 이 되면 창이 왜 뜨지 않는지 알 길이 없기 때문입니다.
      */
     void CommandLineManager::setValue( ArgumentInfo& argument, string_view key, string_view newValue )
     {

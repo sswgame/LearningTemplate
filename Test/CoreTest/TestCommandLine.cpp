@@ -5,7 +5,7 @@
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
-// 1) Engine_CommandLine — 기본값·별칭·RHI 플래그
+// 1) Engine_CommandLine — 기본값·철자·RHI 플래그
 // ------------------------------------------------------------------------------
 /**
  * @brief [CommandLineTest] Width 기본값 존재
@@ -37,7 +37,7 @@ SW_TEST_CASE( CommandLineTest, ParseWidthArgument )
 
     utf8* argv[] = {
         const_cast<utf8*>( "TestApp.exe" ),
-        const_cast<utf8*>( "WIDTH=1920" ),
+        const_cast<utf8*>( "W=1920" ),
     };
     cmdManager.parse( 2, argv );
 
@@ -48,23 +48,51 @@ SW_TEST_CASE( CommandLineTest, ParseWidthArgument )
 }
 
 /**
- * @brief [CommandLineTest] 별칭 인자 파싱
+ * @brief [CommandLineTest] 열거자 이름은 명령줄 키가 아니다 — 인자마다 철자는 표에 적은 하나다
+ * @details 열거자 이름까지 키로 받으면 같은 인자에 철자가 둘씩 생긴다(`-WIDTH` · `-W`, `-LANGUAGE` · `-lang`). 문서 · 스크립트가
+ *          서로 다른 철자를 쓰기 시작하면 어느 쪽이 정본인지 알 수 없다.
  */
-SW_TEST_CASE( CommandLineTest, ParseAliasArgument )
+SW_TEST_CASE( CommandLineTest, EnumeratorNameIsNotACommandLineKey )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
 
     utf8* argv[] = {
         const_cast<utf8*>( "TestApp.exe" ),
-        const_cast<utf8*>( "W=800" ),
+        const_cast<utf8*>( "-WIDTH=800" ),
+        const_cast<utf8*>( "-LANGUAGE=ko_kr" ),
+        const_cast<utf8*>( "-language=ko_kr" ),
+        const_cast<utf8*>( "-VSYNC" ),
+        const_cast<utf8*>( "-ENABLE_EDITOR" ),
+        const_cast<utf8*>( "-COOK_SHADERS" ),
     };
-    cmdManager.parse( 2, argv );
+    cmdManager.parse( 7, argv );
+
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::WIDTH ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::LANGUAGE ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::VSYNC ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::ENABLE_EDITOR ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOK_SHADERS ) );
+
+    utf8* spellingArgv[] = {
+        const_cast<utf8*>( "TestApp.exe" ),
+        const_cast<utf8*>( "-W=800" ),
+        const_cast<utf8*>( "-lang=ko_kr" ),
+        const_cast<utf8*>( "-vsync" ),
+        const_cast<utf8*>( "-EnableEditor" ),
+        const_cast<utf8*>( "--cook-shaders" ),
+    };
+    cmdManager.parse( 6, spellingArgv );
 
     int32 width{ 0 };
-    bool  hasWidth = cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width );
-    SW_EXPECT_TRUE( hasWidth );
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width ) );
     SW_EXPECT_EQUAL( 800, width );
+    sw::string language;
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::LANGUAGE, language ) );
+    SW_EXPECT_STREQ( "ko_kr", language.c_str() );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::VSYNC ) );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::ENABLE_EDITOR ) );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOK_SHADERS ) );
 }
 
 /**
@@ -135,12 +163,12 @@ SW_TEST_CASE( CommandLineTest, StringKeyAndUtf16Parse )
 
     utf16* wargv[] = {
         const_cast<utf16*>( L"TestApp.exe" ),
-        const_cast<utf16*>( L"WIDTH=2560" ),
+        const_cast<utf16*>( L"W=2560" ),
     };
     cmdManager.parse( 2, wargv );
 
     int32 width{ 0 };
-    bool  hasWidth = cmdManager.getArgument( std::string_view( "WIDTH" ), width );
+    bool  hasWidth = cmdManager.getArgument( std::string_view( "W" ), width );
     SW_EXPECT_TRUE( hasWidth );
     SW_EXPECT_EQUAL( 2560, width );
 }
@@ -155,7 +183,7 @@ SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlagsAndAliases )
         cmdManager.initialize();
         utf8* argv[] = {
             const_cast<utf8*>( "TestApp.exe" ),
-            const_cast<utf8*>( "VULKAN" ),
+            const_cast<utf8*>( "vulkan" ),
         };
         cmdManager.parse( 2, argv );
 
@@ -230,7 +258,7 @@ SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )
 
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
-        const_cast<utf8*>( "HEIGHT=1080" ),
+        const_cast<utf8*>( "H=1080" ),
         const_cast<utf8*>( "custom_level=DesertStage" ),
         const_cast<utf8*>( "enable_profiler" ),
     };
@@ -328,7 +356,7 @@ SW_TEST_CASE( CommandLineTest, EnumLookupMatchesStringLookup )
 
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
-        const_cast<utf8*>( "-HEIGHT=1440" ),
+        const_cast<utf8*>( "-H=1440" ),
         const_cast<utf8*>( "-lang=ko" ),
     };
     cmdManager.parse( 3, argv );
@@ -336,7 +364,7 @@ SW_TEST_CASE( CommandLineTest, EnumLookupMatchesStringLookup )
     int32 heightByEnum{ 0 };
     int32 heightByName{ 0 };
     SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::HEIGHT, heightByEnum ) );
-    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "HEIGHT" ), heightByName ) );
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "H" ), heightByName ) );
     SW_EXPECT_EQUAL( 1440, heightByEnum );
     SW_EXPECT_EQUAL( heightByName, heightByEnum );
 
@@ -469,7 +497,7 @@ SW_TEST_CASE( CommandLineTest, InitializeIsNotShiftedByEarlierArguments )
     // 표가 제자리이므로 평소의 파싱이 그대로 된다.
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
-        const_cast<utf8*>( "-WIDTH=1920" ),
+        const_cast<utf8*>( "-W=1920" ),
         const_cast<utf8*>( "-dx12" ),
     };
     cmdManager.parse( 3, argv );

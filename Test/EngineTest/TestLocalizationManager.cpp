@@ -468,7 +468,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeIsReturnedByValue )
 /**
  * @brief [LocalizationManagerTest] 언어 코드는 철자가 달라도 한 언어다 — `ko-KR` · `ko_KR` · `ko_kr` 는 같다
  * @details 파일 이름에서 읽은 코드(`Resource/` 는 소문자만 받는다 → `ko_kr`)와 기본값(`GameStrings` 의 "ko_KR" · `GameSettings` 의 "ko_kr") · 명령줄
- *          (`-language=ko-KR`)의 철자가 다를 수 있다. 표가 대소문자를 그대로 키로 쓰면 기본 언어를 찾지 못해 아무 언어나 고르고, 폴백 "en_US" 표가 없어
+ *          (`-lang=ko-KR`)의 철자가 다를 수 있다. 표가 대소문자를 그대로 키로 쓰면 기본 언어를 찾지 못해 아무 언어나 고르고, 폴백 "en_US" 표가 없어
  *          현재 언어에 없는 키는 늘 빈 글이 된다.
  */
 SW_TEST_CASE( LocalizationManagerTest, LanguageCodeSpellingsNameOneLanguage )

@@ -2,13 +2,14 @@
  * @file ArgumentList.xxx
  * @brief 엔진이 아는 커맨드라인 인자 목록입니다(CommandLineArgument 열거와 등록 정보가 함께 씁니다).
  * @details include 하기 전에 SW_REGISTER_ARGUMENT( Name, defaultValue, bUseDefaultValue, ... ) 를 정의하십시오.
- *          Name             : 열거자 이름. 그대로 별칭 하나로도 등록됩니다.
+ *          Name             : 열거자 이름. 코드가 쓰는 이름이고 명령줄 키가 아닙니다.
  *          defaultValue     : bUseDefaultValue 가 켜져 있을 때 반환할 값. 저장 타입은 bool · int32 · float32 · string
  *                             넷뿐입니다. **이 값의 타입이 곧 "값을 반드시 적어야 하는가" 입니다.** bool 은 `-key` 만 적을
  *                             수 있고(그때 true), 나머지는 `-key=value` 를 요구합니다(별도 칸을 두지 않습니다).
  *          bUseDefaultValue : 인자를 **주지 않아도** getArgument 가 true 를 반환하고 defaultValue 를 채워 줄지 여부.
  *                             아래 경고를 먼저 읽으십시오.
- *          ...              : 추가 별칭. 없으면 비워 둡니다.
+ *          ...              : 명령줄 철자. 줄마다 하나입니다(RHI 백엔드 줄만 쿠킹 표의 별칭을 함께 받습니다 — 셰이더 폴더 ·
+ *                             쿠커 --target-rhi 와 같은 이름이다).
  *
  *          줄 순서 = CommandLineArgument 열거값 = _listArgument 인덱스이고, 이 일치 덕분에 findArgument 가 이름 조회 없이
  *          O(1) 인덱싱으로 끝납니다. initialize() 가 줄마다 이 일치를 확인합니다.
@@ -34,7 +35,7 @@ SW_REGISTER_ARGUMENT( VSYNC, false, false, "vsync" )
 SW_RHI_BACKEND_TABLE( SW_REGISTER_RHI_BACKEND_ARGUMENT )
 #undef SW_REGISTER_RHI_BACKEND_ARGUMENT
 SW_REGISTER_ARGUMENT( ENABLE_EDITOR, false, false, "EnableEditor" )
-SW_REGISTER_ARGUMENT( LANGUAGE, "", false, "lang", "language" )
+SW_REGISTER_ARGUMENT( LANGUAGE, "", false, "lang" )
 SW_REGISTER_ARGUMENT( COOK_SHADERS, false, false, "cook-shaders" )
 SW_REGISTER_ARGUMENT( COOK_SCENES, false, false, "cook-scenes" )
 SW_REGISTER_ARGUMENT( COOKED_DIR, "", false, "cooked-dir" )

@@ -282,10 +282,10 @@ namespace sw
 
         /** @brief 스왑체인을 걸 표면을 저장합니다. `initialize` 가 핸들·크기를 여기서 읽습니다. */
         void setRenderSurface( IRenderSurface* pSurface ) { _pSurface = pSurface; }
-        /** @brief CLI 에 --VSYNC 가 없을 때 쓸 스왑체인 VSync 를 정합니다. `initialize` 전에 부릅니다. */
+        /** @brief CLI 에 -vsync 가 없을 때 쓸 스왑체인 VSync 를 정합니다. `initialize` 전에 부릅니다. */
         void setPreferredVSync( bool bVSync ) { _bPreferredVSync = bVSync; }
         /**
-         * @brief 실제로 채택된 VSync 값입니다(설정값 → CLI `--VSYNC` 순으로 정해집니다).
+         * @brief 실제로 채택된 VSync 값입니다(설정값 → CLI `-vsync` 순으로 정해집니다).
          * @details **프레젠트 경로가 읽어야 하는 값이 이것입니다.** 주의: `endFrame` 의 vsync 인자를 상수로 박으면 설정도
          *          CLI 도 효과가 없어 프레임이 모니터 주사율에 묶입니다.
          */
