@@ -291,6 +291,15 @@ cd build/Ninja-Debug/Bin
   재생 · 좌우 대칭 편집.
 - **시험 게임 셋의 상태가 핫 리로드에서 처음부터 다시 선다** — HarvestValley · NileCity · StarSkirmish 는 컴포넌트 전환 전에는 리로드를 넘어 시뮬레이션이
   남았다(ThemePark 도 지금은 같다). 디렉터의 시뮬레이션을 게임 인스턴스 상태(`getStateTypeInfo`)나 리플렉션 PROPERTY 로 실어 되살린다.
+- **캐릭터 · 환경 병렬 진행(2026-10-04 사용자 지시 — 할 수 있는 것은 에이전트로 병렬, 메인은 지시 응답).** 1 차(진행 중, 워크트리 `LT-wt/<이름>`):
+  char-anim(임포트 · 런타임 · GPU 스키닝 · ACL 코덱 · 2D/3D 공통 재생 코어) · char-phys(Jolt/Box2D 인터페이스 · 컴포넌트 · 물리 에셋 · 격리 게이트) ·
+  char-appear(슬롯 · 세트 · 아이템 외형 · 규칙 · 프리셋 · 장착 조건 · 커스터마이징 · 플레이어 프리셋 저장 · 네트워크 동기화) · char-geom(소켓 ·
+  SocketBindingComponent · 체형 · FitSolver · MeshMerger · 절단 · 표면 상태) · cam-views(카메라 2~4 단계 · 컷 신호 · 초상화 렌더) · editor-dev(1-4 의 B · D · E) ·
+  gimmick(상호작용 · 스마트 오브젝트 · 센서/신호/작동기 배선 · 스플라인 · 원소 규칙 · 장르 기믹 프리팹) · env-world(지형 · 식생 배치 규칙 · 물).
+  2 차(char-anim 병합 뒤): PoseModifierComponent(IK · 제약 · 스프링 본) · 리타게팅 · 알림 전달 · 모션 워핑/이동 보정 · 래그돌 · 히트박스 · 절단 런타임 ·
+  얼굴(표정 커브 · 립싱크 · 깜빡임/시선) · 군중 포즈 공유 · 되감기 디버거. cam-views 병합 뒤: 파티클/VFX · 데칼 · 하늘/시간대/높이 안개(WorldClock ·
+  WeatherSystem 을 렌더에 연결). 그 뒤: 월드 파티션 · GI/반사 프로브 · 환경 오디오, 1-4 의 C · F. 마지막: Shooter3D 통합(KayKit CC0 캐릭터 · 스켈레톤
+  적 · 장비 · 프리셋 · 카메라 프리셋을 바꿔 가며 4 백엔드 스크린샷). **2D · 3D 에 다 쓰이는 기능은 공통 코어로**(사용자 지시) — 각 에이전트가 맡는다.
 - **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
   스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
 - **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** (1) `CameraControllerComponent`(Overworld) · `UnitStatsComponent`(ActionCombat)는 장르 무관이라
