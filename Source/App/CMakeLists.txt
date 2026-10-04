@@ -47,4 +47,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	sw_copyVulkanValidationRuntime(App)
 endif()
 
+# Tracy 클라이언트(개발 빌드 · Windows). Engine 이 지연 로드하므로 `-gv_tracy` 를 켜기 전에는 올라오지 않는다.
+sw_copyTracyRuntime(App)
+
 sw_emitRuntimeCopies(App)

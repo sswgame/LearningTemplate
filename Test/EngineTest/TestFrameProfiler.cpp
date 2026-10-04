@@ -127,3 +127,34 @@ SW_TEST_CASE( FrameProfilerTest, ScopeNameIsCopiedNotBorrowed )
     SW_EXPECT_EQUAL( slot, profiler.registerScope( "Scope.Borrowed" ) );
     SW_EXPECT_TRUE( profiler.registerScope( "Zcope.Borrowed" ) != slot );
 }
+
+/**
+ * @brief [FrameProfilerTest] 마지막으로 접힌 프레임의 값은 다음 endFrame 까지 그대로 읽힌다(에디터 패널의 실시간 표)
+ * @details 누적(`_frameNanos`)은 endFrame 이 비우므로 패널이 그것을 읽으면 프레임 어디서 읽었느냐에 따라 0 이 나온다. 접힌 값은 따로 둔다.
+ */
+SW_TEST_CASE( FrameProfilerTest, LastFrameValuesSurviveUntilNextFold )
+{
+    sw::FrameProfiler profiler;
+    const uint32      slot = profiler.registerScope( "Live" );
+    SW_ASSERT_TRUE( slot != sw::FrameProfiler::kInvalidSlot );
+    profiler.setEnabled( true );
+
+    profiler.beginFrame();
+    profiler.addSample( slot, 2000 );
+    profiler.addSample( slot, 500 );
+    profiler.endFrame();
+    profiler.beginFrame();
+    profiler.addSample( slot, 9999 ); // 아직 접히지 않은 다음 프레임 — 실시간 값을 바꾸지 않는다
+    SW_EXPECT_EQUAL( uint64( 2500 ), profiler.getLastFrameNanos( slot ) );
+    SW_EXPECT_EQUAL( uint64( 2 ), profiler.getLastFrameCount( slot ) );
+    SW_EXPECT_FALSE( profiler.isCounterScope( slot ) );
+    SW_EXPECT_EQUAL( 1u, profiler.getScopeCount() );
+    SW_EXPECT_TRUE( sw::string( profiler.findScopeName( slot ) ) == "Live" );
+    SW_EXPECT_TRUE( profiler.findScopeName( 1 ) == nullptr );
+
+    // 안 불린 프레임은 0 으로 접힌다 — 지난 값이 남아 있으면 패널이 멈춘 구간을 계속 비싸다고 보여 준다.
+    profiler.endFrame();
+    profiler.beginFrame();
+    profiler.endFrame();
+    SW_EXPECT_EQUAL( uint64( 0 ), profiler.getLastFrameNanos( slot ) );
+}

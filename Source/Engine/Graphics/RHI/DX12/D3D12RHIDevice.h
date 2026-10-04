@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
+#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
@@ -249,7 +250,9 @@ namespace sw
 
         void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         uint32             getTimestampSlotCount() const override;
-        [[nodiscard]] bool readTimestampsMicros( vector<float32>& outListMicro ) override;
+        [[nodiscard]] bool readTimestamps( RHIGpuTimestampFrame& outFrame ) override;
+        [[nodiscard]] bool readGpuClockNanos( int64& outGpuNanos ) override;
+        bool               isGpuClockReadCheap() const override { return true; }
 
         /** @brief 타임스탬프 쿼리 힙을 반환합니다. 준비되지 않았으면 nullptr 입니다. */
         ID3D12QueryHeap* getTimestampHeap() const { return _timestampHeap.Get(); }
@@ -546,7 +549,7 @@ namespace sw
         atomic<uint32> _timestampWrittenMask;
         /// @brief 링 슬롯별로 굳힌 비트입니다. 그 슬롯이 다시 돌아왔을 때 어느 칸이 진짜 값인지 가립니다.
         uint32               _arrTimestampMask[constant::kMaxFrameCountInFlight];
-        vector<float32>      _listTimestampMicro;
+        RHIGpuTimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
         StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
 
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;

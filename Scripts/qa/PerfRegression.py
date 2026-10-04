@@ -29,8 +29,9 @@ from common import getProjectRoot  # noqa: E402
 from common.AppRun import (kBackendSwitch, kSkipExitCode, findBuildDirOfApp, loadGameTable, parseProfileTable,  # noqa: E402
                            parseProfileWall, readCMakeCacheValue, runApp)
 
-#: 기준으로 들고 있는 구간 — 프레임 전체(게임 · 렌더 스레드)와 그 아래 큰 덩어리.
-kTrackedScope: tuple[str, ...] = ("GT.Frame", "RT.Frame", "GT.Scene.tick", "GT.Game.update", "RT.ExecutePacket")
+#: 기준으로 들고 있는 구간 — 프레임 전체(게임 · 렌더 스레드 · GPU)와 그 아래 큰 덩어리. `GPU.Frame` 은 네 백엔드의 타임스탬프(프레임 첫 명령 ~ 마지막 패스 끝)다 —
+#: 기준에 없는 구간은 비교하지 않으므로(`compareInternal` 은 기준을 돈다) 새로 뜬 기준부터 잡힌다.
+kTrackedScope: tuple[str, ...] = ("GT.Frame", "RT.Frame", "GPU.Frame", "GT.Scene.tick", "GT.Game.update", "RT.ExecutePacket")
 
 
 def makeMachineKey() -> str:

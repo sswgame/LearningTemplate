@@ -19,10 +19,24 @@ namespace sw
         return ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE ) ? constant::kMaxGpuTimestampSlot : 0u;
     }
 
-    bool OpenGLRHIDevice::readTimestampsMicros( vector<float32>& outListMicro )
+    bool OpenGLRHIDevice::readTimestamps( RHIGpuTimestampFrame& outFrame )
     {
-        outListMicro = _listTimestampMicro;
-        return outListMicro.empty() == false;
+        outFrame = _timestampFrame;
+        return outFrame._listMicro.empty() == false;
+    }
+
+    bool OpenGLRHIDevice::readGpuClockNanos( int64& outGpuNanos )
+    {
+        outGpuNanos = 0;
+        // GL_TIMESTAMP 는 기다리지 않고 지금 GPU 시계(나노초, 쿼리 타임스탬프와 같은 시계)를 준다. 컨텍스트를 쥔 스레드에서만 부른다.
+        if ( _bInitialized == SW_FALSE || glGetInteger64v == nullptr )
+            return false;
+        GLint64 now{ 0 };
+        glGetInteger64v( GL_TIMESTAMP, &now );
+        if ( now <= 0 )
+            return false;
+        outGpuNanos = RHIGpuTimestamp::convertTickToNanos( static_cast<uint64>( now ), 1.0 );
+        return true;
     }
 
     void OpenGLRHIDevice::writeTimestampSlot( uint32 slotIndex )
@@ -53,7 +67,7 @@ namespace sw
 
     void OpenGLRHIDevice::collectTimestampsForSlot()
     {
-        _listTimestampMicro.clear();
+        _timestampFrame._listMicro.clear();
         const uint32 writtenMask = _arrTimestampMask[_timestampFrameIndex];
         if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || writtenMask == 0 )
             return;
@@ -79,7 +93,7 @@ namespace sw
             readyMask |= ( 1u << slotIndex );
         }
         // GL 타임스탬프는 나노초다.
-        RHIGpuTimestamp::resolveMicro( arrTick, readyMask, 0.001, _listTimestampMicro );
+        RHIGpuTimestamp::resolve( arrTick, readyMask, 1.0, _timestampFrame );
     }
 
     void OpenGLRHIDevice::beginFrame( const float4& clearColor )

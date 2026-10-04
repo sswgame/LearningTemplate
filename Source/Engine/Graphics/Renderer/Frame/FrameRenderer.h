@@ -12,8 +12,10 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/FrameResourceRegistry.h"
+#include "Engine/Graphics/Renderer/Frame/GpuTimelineExporter.h"
 #include "Engine/Graphics/Renderer/Frame/PassConstantRing.h"
 #include "Engine/Graphics/Renderer/Frame/PassConstantValues.h"
 #include "Engine/Graphics/Renderer/Frame/RenderPsoCache.h"
@@ -684,13 +686,14 @@ namespace sw
         int32 _vertexPoolOverride;
         /// @brief 이번 프레임의 씬 간접 드로우 호출 수입니다. 패스가 병렬로 기록하므로 원자입니다.
         atomic<uint32> _indirectDrawCallCount;
-        /** @brief 지난 프레임의 타임스탬프입니다(마이크로초, 프레임 시작 기준 누적). */
-        vector<float32> _listGpuTimestampMicro;
-        /** @brief 패스 하나의 GPU 스코프입니다. 그 칸을 만든 패스 이름과 프로파일러 슬롯을 담습니다. */
+        /** @brief 지난 프레임의 타임스탬프입니다(마이크로초, 프레임 시작 기준 누적 + 기준점의 GPU 시계). 엔진 표와 Tracy 가 같은 값을 쓴다. */
+        RHIGpuTimestampFrame _gpuTimestampFrame;
+        /** @brief 패스 하나의 GPU 스코프입니다. 그 칸을 만든 패스 이름과 프로파일러 슬롯 · 외부 프로파일러 지점을 담습니다. */
         struct GpuPassScope
         {
-            string _passName;
-            uint32 _profilerSlot{ 0xFFFFFFFFu };
+            string                 _passName;
+            const ProfileZoneSite* _pZoneSite{ nullptr }; ///< Tracy GPU 구간 이름(패스 이름, 프로세스 수명 사본)
+            uint32                 _profilerSlot{ 0xFFFFFFFFu };
         };
         /**
          * @brief 패스 번호 → GPU 스코프 슬롯입니다. 패스 이름이 그대로면 매 프레임 슬롯만 꺼냅니다.
@@ -703,6 +706,12 @@ namespace sw
         /// @brief `GPU.Compute` · `GPU.Frame` 의 프로파일러 슬롯입니다. 처음 한 번 등록합니다(프레임마다 선형 탐색을 하지 않습니다).
         uint32 _gpuComputeScopeSlot;
         uint32 _gpuFrameScopeSlot;
+        /// @brief 외부 프로파일러(Tracy) GPU 타임라인입니다. 엔진 표와 같은 타임스탬프를 쓴다(쿼리는 한 벌).
+        GpuTimelineExporter _gpuTimeline;
+        /// @brief 패스 번호 → Tracy 지점입니다. `_listGpuPassScope` 에서 프레임마다 채운다(할당을 되풀이하지 않게 든다).
+        vector<const ProfileZoneSite*> _listGpuPassSite;
+        /// @brief GPU 시계를 읽지 못한 디바이스입니다. 막히는 읽기(DX11 · Vulkan)를 프레임마다 다시 하지 않는다.
+        const IRHIDevice* _pGpuTimelineFailedDevice;
         /// @brief 마지막 프레임의 값입니다(getLastIndirectDrawCallCount).
         uint32 _lastIndirectDrawCallCount;
         /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트입니다. 그 역할의 입력은 걸지 않습니다.
@@ -733,6 +742,11 @@ namespace sw
          *          추측하거나 패스를 지워 가며 차이로 구해야 하고, 그런 추측(클리어 · 포맷 비용 같은)은 쉽게 틀립니다.
          */
         void reportGpuPassTimes( IRHIDevice* pDevice );
+        /**
+         * @brief 방금 읽은 타임스탬프를 외부 프로파일러(Tracy)의 GPU 타임라인으로 냅니다. 출력이 꺼져 있으면 아무것도 하지 않습니다.
+         * @details 디바이스가 바뀌면 GPU 컨텍스트를 새로 열고(그때 GPU 시계를 한 번 읽는다), 싼 시계(DX12 · GL)는 몇 프레임마다 다시 맞춘다.
+         */
+        void exportGpuTimeline( IRHIDevice* pDevice );
         /**
          * @brief 패스 @p passIndex 의 `GPU.<패스>` 프로파일러 슬롯입니다. 그 칸의 패스 이름이 바뀌었을 때만 다시 등록합니다.
          * @details 파이프라인을 다시 읽어 패스 구성이 바뀌어도 이름 비교가 알아챕니다(칸마다 문자열 비교 한 번).

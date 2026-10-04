@@ -11,6 +11,7 @@
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 
@@ -94,7 +95,9 @@ namespace sw
 
         void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         uint32             getTimestampSlotCount() const override;
-        [[nodiscard]] bool readTimestampsMicros( vector<float32>& outListMicro ) override;
+        [[nodiscard]] bool readTimestamps( RHIGpuTimestampFrame& outFrame ) override;
+        [[nodiscard]] bool readGpuClockNanos( int64& outGpuNanos ) override;
+        bool               isGpuClockReadCheap() const override { return true; }
         /**
          * @brief 커맨드 리스트가 부르는 기록 지점입니다. GL 은 커맨드 버퍼가 없어 그 자리에서 발행합니다.
          * @details 그래서 락이 없습니다. GL 호출은 컨텍스트를 쥔 한 스레드에서만 나갑니다.
@@ -350,10 +353,10 @@ namespace sw
          * @details 읽기는 그 묶음을 **다시 쓰기 직전**(= 링 한 바퀴 뒤)에 GL_QUERY_RESULT_AVAILABLE
          *          로 먼저 물어보고 준비된 칸만 풉니다. 준비 안 된 칸을 바로 읽으면 GL 이 거기서 막습니다.
          */
-        uint32          _arrTimestampQuery[constant::kMaxGpuTimestampSlot * constant::kMaxFrameCountInFlight];
-        uint32          _arrTimestampMask[constant::kMaxFrameCountInFlight];
-        uint32          _timestampFrameIndex;
-        vector<float32> _listTimestampMicro;
+        uint32               _arrTimestampQuery[constant::kMaxGpuTimestampSlot * constant::kMaxFrameCountInFlight];
+        uint32               _arrTimestampMask[constant::kMaxFrameCountInFlight];
+        uint32               _timestampFrameIndex;
+        RHIGpuTimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
 
         uint32 _arrComputeRootConstantShadow[kMaxComputeRootConstantDwords];
 
