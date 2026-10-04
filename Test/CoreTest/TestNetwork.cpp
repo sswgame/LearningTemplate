@@ -583,6 +583,77 @@ SW_TEST_CASE( NetworkTest, LostAcceptedStillReportsClientIndex )
     SW_EXPECT_EQUAL( 4321, readMessageValue( buffer ) );
 }
 
+/**
+ * @brief [NetworkTest] 몸이 깨진 패킷은 확인하지 않는다 — 그 안의 신뢰 메시지는 확인되지 않았으니 다시 보내져 도착한다
+ * @details 시퀀스를 받은 표에 먼저 넣고 몸을 읽으면, 읽기에 실패해도 다음 답의 확인에 그 시퀀스가 실린다. 보낸 쪽은 그 패킷의 신뢰 메시지를 전달된 것으로
+ *          지우고 다시 보내지 않는다 — 체크섬은 맞고 몸이 틀린 패킷(다른 빌드 · 악의) 하나가 메시지를 영영 없앤다.
+ */
+SW_TEST_CASE( NetworkTest, MalformedPayloadIsNotAcknowledged )
+{
+    NetConnection       sender;
+    NetConnection       receiver;
+    const vector<uint8> message = makeMessage( 777, 40 );
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
+    BitWriter packet;
+    sender.writePacket( 0.0, packet, 300 );
+    // 머리(시퀀스 · 확인)는 온전하고 메시지 몸이 잘렸다.
+    SW_ASSERT_TRUE( packet.getByteCount() > 40 );
+    BitReader truncated( packet.getBytes().data(), 20 );
+    SW_EXPECT_FALSE( receiver.readPacket( 0.05, truncated ) );
+
+    vector<uint8> buffer;
+    int32         receivedCount = 0;
+    float64       time          = 0.1;
+    for ( int32 round = 0; round < 40 && receivedCount == 0; ++round )
+    {
+        time += 0.05;
+        BitWriter reply;
+        receiver.writePacket( time, reply, 300 );
+        BitReader replyReader( reply.getBytes().data(), reply.getByteCount() );
+        (void)sender.readPacket( time + 0.01, replyReader );
+        BitWriter next;
+        sender.writePacket( time + 0.02, next, 300 );
+        BitReader nextReader( next.getBytes().data(), next.getByteCount() );
+        (void)receiver.readPacket( time + 0.03, nextReader );
+        while ( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) )
+            ++receivedCount;
+    }
+    SW_ASSERT_EQUAL( 1, receivedCount );
+    SW_EXPECT_EQUAL( 777, readMessageValue( buffer ) );
+    // 이번에는 온전한 패킷이 확인된다.
+    BitWriter finalReply;
+    receiver.writePacket( time + 0.05, finalReply, 300 );
+    BitReader finalReader( finalReply.getBytes().data(), finalReply.getByteCount() );
+    SW_ASSERT_TRUE( sender.readPacket( time + 0.06, finalReader ) );
+    SW_EXPECT_EQUAL( 0, sender.getPendingReliableCount() );
+}
+
+/**
+ * @brief [NetworkTest] 대역폭 통계는 최근 1 초에 보내고 받은 패킷을 모두 센다 — 보내기 간격이 짧아도(120 Hz) 덜 재지 않는다
+ * @details 최근 64 패킷만 보면 1/64 초보다 짧은 간격에서는 1 초 창의 일부만 센다(120 Hz 면 절반 남짓).
+ */
+SW_TEST_CASE( NetworkTest, BandwidthStatCountsEveryPacketInTheLastSecond )
+{
+    NetConnection       sender;
+    NetConnection       receiver;
+    const vector<uint8> payload     = makeMessage( 1, 100 );
+    int32               packetBytes = 0;
+    for ( int32 frame = 0; frame <= 240; ++frame )
+    {
+        const float64 time = static_cast<float64>( frame ) / 120.0;
+        SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::Unreliable, payload.data(), static_cast<int32>( payload.size() ) ) );
+        BitWriter packet;
+        sender.writePacket( time, packet, 1200 );
+        packetBytes = packet.getByteCount();
+        BitReader reader( packet.getBytes().data(), packet.getByteCount() );
+        SW_ASSERT_TRUE( receiver.readPacket( time + 0.01, reader ) );
+    }
+    // 120 패킷 × 바이트 × 8 비트 / 1000 = 초당 킬로비트.
+    const float32 expectedKilobits = 120.0f * static_cast<float32>( packetBytes ) * 8.0f / 1000.0f;
+    SW_EXPECT_NEAR_EQUAL( expectedKilobits, sender.getStats()._sentBandwidth, expectedKilobits * 0.05f );
+    SW_EXPECT_NEAR_EQUAL( expectedKilobits, receiver.getStats()._receivedBandwidth, expectedKilobits * 0.05f );
+}
+
 SW_TEST_CASE( NetworkTest, UdpTransportSendsDatagramsOverLocalhost )
 {
     UdpNetTransport server;
