@@ -11,6 +11,7 @@
 #include "Engine/Window/IWindow.h"
 
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Utility/RayMath.h"
 
 namespace sw
@@ -27,6 +28,90 @@ namespace sw
             static constexpr float32 kCameraDistance = 120.0f;
             static constexpr float32 kPanSpeed       = 1.2f; ///< 화면 높이에 곱한다(초당)
             static constexpr float32 kWalkerHeight   = 0.35f;
+            /**
+             * @brief Kenney City Kit Suburban 모델의 칸당 배율입니다. 가장 넓은 집(`building_type_b`, 폭 1.82)이 한 칸(1 m) 안에 들게 0.5 이고,
+             *        n×n 건물은 n 배다. 길 조각(`path_short`, 0.2)은 이 배율이 아니라 칸을 채우게 따로 늘린다.
+             */
+            static constexpr float32     kModelScale      = 0.5f;
+            static constexpr float32     kDecorationScale = 3.0f; ///< 나무 · 화분은 집보다 작게 만들어져 있어 칸을 채우게 더 키운다
+            static constexpr float32     kRoadTileScale   = 4.8f; ///< 0.2 × 4.8 = 0.96 m(칸 사이 틈은 옛 상자와 같다)
+            static constexpr const utf8* kPaletteTexture  = "game/nilecity/textures/suburban_colormap.dds";
+
+            static string makeModelPath( const utf8* pName ) { return string( "game/nilecity/models/" ) + pName + ".mesh"; }
+
+            /** @brief 팔레트 텍스처에 @p tint 를 곱한 모습입니다(흰 벽이 그 색이 된다 — 서비스 색이 건물 종류를 말한다). */
+            static PrimitiveLook makeModelLook( const float4& tint )
+            {
+                PrimitiveLook look = PrimitiveLook::makeColor( tint );
+                look._texturePath  = kPaletteTexture;
+                return look;
+            }
+
+            /** @brief 집 단계(0..7)마다 커지는 집 모델 — 작은 단층에서 넓은 이층까지. 빈 땅은 낮은 울타리입니다. */
+            static const utf8* findHouseModel( int32 level, bool bInhabited )
+            {
+                constexpr const utf8* kArrHouseModel[] = { "building_type_h", "building_type_a", "building_type_g", "building_type_c",
+                                                           "building_type_e", "building_type_f", "building_type_b", "building_type_d" };
+                if ( bInhabited == false )
+                    return "fence_low";
+                return kArrHouseModel[MathUtil::clamp( level, 0, 7 )];
+            }
+
+            /** @brief 건물 정의의 모델입니다. 내장 도형으로 남는 것(밭 · 조각상)은 nullptr 입니다. */
+            static const utf8* findBuildingModel( const CityBuildingDef& def, int32 level, bool bInhabited )
+            {
+                switch ( def._kind )
+                {
+                    case CityBuildingKind::House:
+                    {
+                        return findHouseModel( level, bInhabited );
+                    }
+                    case CityBuildingKind::Service:
+                    {
+                        return def._size == 1 ? "building_type_h" : "building_type_c";
+                    }
+                    case CityBuildingKind::Producer:
+                    {
+                        return def._bRequiresTerrain != SW_FALSE ? nullptr : "building_type_g";
+                    }
+                    case CityBuildingKind::Storage:
+                    {
+                        return "building_type_d";
+                    }
+                    case CityBuildingKind::Market:
+                    {
+                        return "building_type_f";
+                    }
+                    case CityBuildingKind::Decoration:
+                    {
+                        if ( def._id == hashed_string( "garden" ) )
+                            return "tree_large";
+                        return def._id == hashed_string( "plaza" ) ? "planter" : nullptr;
+                    }
+                }
+                return nullptr;
+            }
+
+            /** @brief 모델에 곱할 색입니다 — 서비스는 서비스 색을 흰 쪽으로 반쯤 섞어 벽이 그 색으로 읽히고, 집 · 나무 · 화분은 팔레트 그대로입니다. */
+            static float4 computeModelTint( const CityBuildingDef& def )
+            {
+                const float4 white{ 1.0f, 1.0f, 1.0f, 1.0f };
+                switch ( def._kind )
+                {
+                    case CityBuildingKind::Service:
+                        return ( computeServiceColor( def._service ) + white ) * 0.5f;
+                    case CityBuildingKind::Producer:
+                        return float4{ 0.85f, 0.65f, 0.5f, 1.0f };
+                    case CityBuildingKind::Storage:
+                        return float4{ 0.8f, 0.68f, 0.55f, 1.0f };
+                    case CityBuildingKind::Market:
+                        return float4{ 1.0f, 0.75f, 0.55f, 1.0f };
+                    case CityBuildingKind::House:
+                    case CityBuildingKind::Decoration:
+                        break;
+                }
+                return white;
+            }
 
             static float4 computeTerrainColor( CityTerrain terrain )
             {
@@ -302,7 +387,10 @@ namespace sw
 
     void NileCityWorld::syncRoads()
     {
-        const PrimitiveLook roadLook = PrimitiveLook::makeColor( float4{ 0.72f, 0.66f, 0.55f, 1.0f } );
+        // 도로 칸 — 보도 조각을 칸만 하게 늘린다.
+        using Internal               = NileCityWorldInternal;
+        const PrimitiveLook roadLook = Internal::makeModelLook( float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
+        const string        roadPath = Internal::makeModelPath( "path_short" );
         for ( int32 y = 0; y < _city.getHeight(); ++y )
         {
             for ( int32 x = 0; x < _city.getWidth(); ++x )
@@ -317,8 +405,8 @@ namespace sw
                     handle = GameObjectHandle{};
                     continue;
                 }
-                GameObject* pRoad = _stage.createPrimitiveObject( "NileRoad", "Cube", roadLook, float3{ static_cast<float32>( x ) + 0.5f, 0.03f, static_cast<float32>( y ) + 0.5f },
-                                                                  float3{ 0.96f, 0.06f, 0.96f } );
+                GameObject* pRoad = _stage.createModelObject( "NileRoad", roadPath, roadLook, float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f },
+                                                              float3{ Internal::kRoadTileScale } );
                 handle            = pRoad != nullptr ? pRoad->getHandle() : GameObjectHandle{};
             }
         }
@@ -344,14 +432,26 @@ namespace sw
             view = BuildingView{};
             if ( bAlive == false )
                 continue;
-            const CityBuildingDef& def    = *building._pDef;
-            const float32          size   = static_cast<float32>( def._size );
-            const float32          height = NileCityWorldInternal::computeBuildingHeight( def, building._level, bInhabit );
-            const utf8*            pShape = def._kind == CityBuildingKind::Decoration ? "Cylinder" : "Cube";
-            GameObject*            pBuilding =
-                _stage.createPrimitiveObject( "NileBuilding", pShape, PrimitiveLook::makeColor( NileCityWorldInternal::computeBuildingColor( def, building._level, bInhabit ) ),
-                                              float3{ static_cast<float32>( building._origin._x ) + size * 0.5f, height * 0.5f, static_cast<float32>( building._origin._y ) + size * 0.5f },
-                                              float3{ size - 0.15f, height, size - 0.15f } );
+            // 모델이 있는 건물은 바닥 가운데를 칸 묶음 가운데에, 정면을 카메라(남쪽 -Z) 쪽으로 돌려 둔다. 밭 · 조각상은 내장 도형 그대로다.
+            using Internal                   = NileCityWorldInternal;
+            const CityBuildingDef& def       = *building._pDef;
+            const float32          size      = static_cast<float32>( def._size );
+            const float3           center    = float3{ static_cast<float32>( building._origin._x ) + size * 0.5f, 0.0f, static_cast<float32>( building._origin._y ) + size * 0.5f };
+            const utf8*            pModel    = Internal::findBuildingModel( def, building._level, bInhabit );
+            GameObject*            pBuilding = nullptr;
+            if ( pModel != nullptr )
+            {
+                pBuilding = _stage.createModelObject( "NileBuilding", Internal::makeModelPath( pModel ), Internal::makeModelLook( Internal::computeModelTint( def ) ), center,
+                                                      float3{ Internal::kModelScale * size * ( def._kind == CityBuildingKind::Decoration ? Internal::kDecorationScale : 1.0f ) },
+                                                      float3{ 0.0f, Internal::kPi, 0.0f } );
+            }
+            else
+            {
+                const float32 height = Internal::computeBuildingHeight( def, building._level, bInhabit );
+                const utf8*   pShape = def._kind == CityBuildingKind::Decoration ? "Cylinder" : "Cube";
+                pBuilding            = _stage.createPrimitiveObject( "NileBuilding", pShape, PrimitiveLook::makeColor( Internal::computeBuildingColor( def, building._level, bInhabit ) ),
+                                                                     center + float3{ 0.0f, height * 0.5f, 0.0f }, float3{ size - 0.15f, height, size - 0.15f } );
+            }
             view._object     = pBuilding != nullptr ? pBuilding->getHandle() : GameObjectHandle{};
             view._pDef       = building._pDef;
             view._level      = building._level;
@@ -431,6 +531,7 @@ namespace sw
         {
             [[maybe_unused]] const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
             SW_LOG_INFO( "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _pCatalog->getRoadCost() );
+            (void)GameSound::play( "game/nilecity/sounds/select_003.ogg" );
         }
         if ( input.wasKeyPressed( Key::Space ) )
         {
@@ -514,9 +615,15 @@ namespace sw
         }
         const CityPlaceResult result = _city.placeBuilding( pDef->_id, _cursorTile._x, _cursorTile._y );
         if ( result == CityPlaceResult::Ok )
+        {
             SW_LOG_INFO( "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _city.getMoney() );
+            (void)GameSound::play( "game/nilecity/sounds/confirmation_002.ogg" );
+        }
         else
+        {
             SW_LOG_INFO( "[Nile] cannot build %# at (%#, %#): %#", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, toString( result ) );
+            (void)GameSound::play( "game/nilecity/sounds/error_002.ogg" );
+        }
     }
 
     // ------------------------------------------------------------------------------
@@ -526,6 +633,7 @@ namespace sw
     {
         _listEvent.clear(); // drainEvents 는 뒤에 붙인다
         _city.drainEvents( _listEvent );
+        bool bHouseEvolved = false;
         for ( const CityEvent& event : _listEvent )
         {
             switch ( event._kind )
@@ -542,6 +650,7 @@ namespace sw
                 case CityEvent::Kind::HouseEvolved:
                 {
                     ++_evolvedCount;
+                    bHouseEvolved = true;
                     break;
                 }
                 case CityEvent::Kind::Flood:
@@ -556,6 +665,9 @@ namespace sw
                 }
             }
         }
+        // 한 프레임에 여럿이 올라도 소리는 한 번.
+        if ( bHouseEvolved )
+            (void)GameSound::play( "game/nilecity/sounds/drop_003.ogg" );
     }
 
     void NileCityWorld::logStatus() const
