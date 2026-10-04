@@ -1347,8 +1347,8 @@ namespace sw::editor
             SW_LOG_ERROR( "Failed to write skeleton %#", skeletonPath.c_str() );
             return false;
         }
-        uint64 rawByteTotal        = 0;
-        uint64 compressedByteTotal = 0;
+        [[maybe_unused]] uint64 rawByteTotal        = 0;
+        [[maybe_unused]] uint64 compressedByteTotal = 0;
         for ( const ModelImportClip& imported : result._listClip )
         {
             const string clipPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImporterInternal::kClipFolder ), imported._fileStem + string( AnimClip::kExtension ) );
