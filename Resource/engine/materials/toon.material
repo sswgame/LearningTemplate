@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 셀 셰이딩(툰) 머티리얼 — VRM MToon 1.0 의 파라미터 체계(toon.hlsl). 프로퍼티 이름 · 타입은 toon.hlsl 의 SW_MATERIAL 구조체와 같다.
-     정적 스위치: AlphaCutoff(MATERIAL_ALPHA_CUTOFF) ·
+     정적 스위치: Outline(MATERIAL_OUTLINE — 메시 외곽선 패스가 이 머티리얼을 그린다) · AlphaCutoff(MATERIAL_ALPHA_CUTOFF) ·
      TwoSided(MATERIAL_TWO_SIDED — 컬링을 끄고 뒷면 노멀을 뒤집는다). 반투명은 blendMode="Transparent" + _alwaysDefines 의 MATERIAL_BLEND_TRANSLUCENT. -->
 <MaterialDesc formatVersion="0" name="Toon" shaderPath="engine/shaders/toon.hlsl" blendMode="Opaque">
 	<_properties>
@@ -32,6 +32,7 @@
 			<item>MATERIAL_DOMAIN_SURFACE</item>
 		</_alwaysDefines>
 		<_staticSwitches>
+			<item name="Outline" keyword="MATERIAL_OUTLINE" bEnabled="0" bShaderFeature="1"/>
 			<item name="AlphaCutoff" keyword="MATERIAL_ALPHA_CUTOFF" bEnabled="0" bShaderFeature="1"/>
 			<item name="TwoSided" keyword="MATERIAL_TWO_SIDED" bEnabled="0" bShaderFeature="1"/>
 		</_staticSwitches>

@@ -1007,3 +1007,32 @@ SW_TEST_CASE( RenderPassTest, AnimationTimeOverrideIsCompiledOutOfShipping )
     SW_EXPECT_TRUE( HasAnimationTimeOverride<sw::FrameRenderer>::value );
 #endif
 }
+
+/**
+ * @brief 메시 외곽선 패스는 외곽선 스위치를 켠 머티리얼의 배치만 그린다 — 드로우 · 머티리얼 PSO 변형 · 쿠커가 같은 판정(`drawsMaterialInPass`)을 쓴다
+ * @details 머티리얼이 없는 배치 · 스위치를 끈 툰 · 다른 셰이더(forwardlit)는 빠지고, 다른 메시 패스는 거르지 않는다. 패스는 앞면 컬링이 기본이고
+ *          파이프라인 XML 의 `_type` 으로 쓸 수 있다.
+ */
+SW_TEST_CASE( RenderPassTest, MeshOutlineDrawsOnlyMaterialsWithOutline )
+{
+    const sw::RenderPassTypeInfo& info = sw::getRenderPassTypeInfo( sw::RenderPassType::MeshOutline );
+    SW_EXPECT_TRUE( sw::isPipelinePassType( sw::RenderPassType::MeshOutline ) );
+    SW_EXPECT_TRUE( info.hasFlag( sw::RenderPassTraitFlag::kCullFront ) );
+    SW_EXPECT_TRUE( info.hasFlag( sw::RenderPassTraitFlag::kUsesMaterialShader ) );
+    SW_EXPECT_FALSE( info.hasFlag( sw::RenderPassTraitFlag::kDrawsTransparentBatch ) );
+
+    sw::shared_ptr<sw::Material> toon = sw::Material::create();
+    SW_ASSERT_TRUE( toon->loadFromFile( "engine/materials/toon.material" ) );
+    sw::shared_ptr<sw::Material> lit = sw::Material::create();
+    SW_ASSERT_TRUE( lit->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+
+    SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::MeshOutline, nullptr ) );
+    SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::MeshOutline, &toon->getCachedShaderDefines() ) );
+    SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::MeshOutline, &lit->getCachedShaderDefines() ) );
+    toon->setStaticSwitch( sw::hashed_string( "Outline" ), true );
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::MeshOutline, &toon->getCachedShaderDefines() ) );
+
+    // 다른 메시 패스는 머티리얼로 거르지 않는다(머티리얼이 없는 배치도 그린다).
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::ForwardOpaque, nullptr ) );
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::Shadow, &lit->getCachedShaderDefines() ) );
+}

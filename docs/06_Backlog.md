@@ -1003,6 +1003,7 @@ cd build/Ninja-Debug/Bin
 - **패스 종류 하나 = `RenderPassType` 한 값 + `RenderPassTypeInfo.cpp` 의 case 하나**(기본 셰이더 · define · 포맷 · 클리어 · 입력 계약 · 플래그). 전용 실행이
   필요할 때만 `executePass` 의 switch 에 case. 런타임 PSO 와 쿠커가 같은 `selectRenderPassShader` 를 부른다. 마지막 열거자를 바꾸면
   `kRenderPassTypeCount` 를 직접 고친다(`RenderPassTest.TypeInfoTableCoversEveryEnumValue` 가 잡는다). 리플렉션 매니페스트는 키 순서로 쓴다(결정적).
+- **패스가 머티리얼로 배치를 거르면(메시 외곽선의 `_pRequiredMaterialDefine`) 드로우 · 머티리얼 PSO 변형 · 쿠커가 같은 `drawsMaterialInPass` 를 본다** — 하나라도 빠지면 쿠킹 안 된 변형을 런타임이 찾거나(Shipping 매니페스트 미스) 외곽선을 모르는 셰이더가 앞면 컬링으로 그려진다. 툰 구 시험은 정점 색을 흰색으로 둔다(생성기의 검증 색이 계단 위에 그라데이션을 얹는다).
 - **인스펙터 위젯 · CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나**(`InspectorBuiltinValue.h`) — 내장 타입을 더하면 `InspectorWidgetFor<T>` 특수화가
   없으면 컴파일이 선다. .xxx 의 문자열 줄은 `std::string`, 프로퍼티는 `sw::string`(`InspectorBuiltinCppType` 이 메운다).
 

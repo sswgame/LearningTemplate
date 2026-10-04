@@ -37,8 +37,20 @@ namespace sw
     inline constexpr const utf8* kPassDepthPrepassDefine = "SW_PASS_DEPTH_PREPASS=1";
 
     /**
+     * @brief 메시 외곽선 패스가 머티리얼 셰이더에 얹는 define 입니다. 정점을 노멀 방향으로 밀고 외곽선 색 하나를 내는 퍼뮤테이션을 고릅니다(toon.hlsl).
+     */
+    inline constexpr const utf8* kPassMeshOutlineDefine = "SW_PASS_MESH_OUTLINE=1";
+
+    /**
+     * @brief 메시 외곽선 패스가 그리는 배치의 머티리얼 define 입니다. 퍼뮤테이션에 이것이 없는 배치는 그 패스에서 빠집니다.
+     * @details 머티리얼의 정적 스위치(`Outline`)가 켭니다. 외곽선을 아는 셰이더만 이 스위치를 가지므로 다른 셰이더가 외곽선 define 으로
+     *          그려질 일이 없습니다(언리얼이 메시 패스 프로세서에서 머티리얼의 성질로 드로우를 거르는 자리입니다).
+     */
+    inline constexpr const utf8* kMaterialOutlineDefine = "MATERIAL_OUTLINE";
+
+    /**
      * @brief 양면 머티리얼의 define 입니다. 머티리얼 변형 PSO 가 후면 컬링을 끕니다(언리얼 머티리얼의 Two Sided).
-     * @details 후면 컬링 패스에만 적용합니다 — 앞면 컬링이나 컬링 없는 패스는 그대로 둡니다.
+     * @details 앞면 컬링을 쓰는 패스(메시 외곽선)는 그대로 둡니다 — 껍질은 양면이어도 뒤집어 그려야 외곽선이 됩니다.
      */
     inline constexpr const utf8* kMaterialTwoSidedDefine = "MATERIAL_TWO_SIDED";
 
@@ -63,6 +75,7 @@ namespace sw
         static constexpr uint32 kCompute               = SW_BIT( 9 );  ///< 컴퓨트 PSO 다(`CSMain`)
         static constexpr uint32 kRequiresGpuCulling    = SW_BIT( 10 ); ///< 컴퓨트 PSO 를 `_bGpuCulling` 일 때만 만든다(아니면 `_bCompute`)
         static constexpr uint32 kHasInputContract      = SW_BIT( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다
+        static constexpr uint32 kCullFront             = SW_BIT( 12 ); ///< PSO 기본값: 앞면 컬링(뒤집은 껍질 외곽선). XML 은 None 으로만 바꿀 수 있다
     };
 } // namespace sw
 
@@ -78,6 +91,11 @@ namespace sw
         string EngineDefaultAssets::* _pDefaultShader{ nullptr };
         /** @brief 패스가 셰이더에 얹는 define 입니다. 파이프라인 XML 의 `_listPermutation` 뒤에 붙습니다. nullptr 이면 없습니다. */
         const utf8* _pPassDefine{ nullptr };
+        /**
+         * @brief 이 패스가 그리는 배치의 머티리얼 퍼뮤테이션에 있어야 하는 define 입니다. nullptr 이면 모든 배치를 그립니다.
+         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우 · 머티리얼 PSO 변형 · 셰이더 쿠킹에서 함께 빠집니다(`FrameRendererUtil::drawsBatchInPass`).
+         */
+        const utf8* _pRequiredMaterialDefine{ nullptr };
         /** @brief 고정 컬러 포맷(`_colorTargetCount` 개)입니다. nullptr 이면 패스가 선언한 출력의 포맷을 씁니다. */
         const RHIFormat* _pColorFormat{ nullptr };
         /** @brief 풀스크린 패스가 타깃 첨부의 클리어 색 선언이 없을 때 쓰는 색입니다. nullptr 이면 렌더러의 클리어 색입니다. */

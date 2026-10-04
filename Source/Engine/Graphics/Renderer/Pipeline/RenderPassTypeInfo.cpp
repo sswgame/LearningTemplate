@@ -139,6 +139,16 @@ namespace sw
                         info._flags          = Flag::kHasInputContract;
                         break;
                     }
+                    case RenderPassType::MeshOutline:
+                    {
+                        // 뒤집은 껍질 — 머티리얼 셰이더(toon.hlsl)의 외곽선 퍼뮤테이션으로, 외곽선을 켠 머티리얼의 배치만 앞면을 컬링해 그린다.
+                        // 깊이는 테스트 · 쓰기 모두 한다(뒤에 오는 반투명이 외곽선에 가려진다). 뷰 모드는 받지 않는다(와이어프레임에서는 패스가 빠진다).
+                        info._pDefaultShader          = &EngineDefaultAssets::_shaderToon;
+                        info._pPassDefine             = kPassMeshOutlineDefine;
+                        info._pRequiredMaterialDefine = kMaterialOutlineDefine;
+                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kDrawsSceneMeshes | Flag::kUsesMaterialShader | Flag::kCullFront;
+                        break;
+                    }
                     case RenderPassType::ForwardOpaqueNoDepthWrite:
                     {
                         // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 한다.
@@ -209,8 +219,11 @@ namespace sw
                     if ( row._pColorFormat != nullptr && row._colorTargetCount == 0 )
                         return false;
                     // 머티리얼 셰이더 · 뷰 모드 · 반투명 배치는 씬 메시를 그리는 패스의 성질이다.
-                    const uint32 kMeshOnlyFlags = Flag::kUsesMaterialShader | Flag::kAppliesViewMode | Flag::kDrawsTransparentBatch | Flag::kDepthOnly;
+                    const uint32 kMeshOnlyFlags = Flag::kUsesMaterialShader | Flag::kAppliesViewMode | Flag::kDrawsTransparentBatch | Flag::kDepthOnly | Flag::kCullFront;
                     if ( row.hasFlag( kMeshOnlyFlags ) && row.hasFlag( Flag::kDrawsSceneMeshes ) == false )
+                        return false;
+                    // 머티리얼로 배치를 거르는 것도 씬 메시 패스의 성질이다.
+                    if ( row._pRequiredMaterialDefine != nullptr && row.hasFlag( Flag::kDrawsSceneMeshes ) == false )
                         return false;
                     // 일반 풀스크린 실행은 선언한 입력을 계약대로 건다.
                     if ( row.hasFlag( Flag::kGenericFullscreen ) && row.hasFlag( Flag::kHasInputContract ) == false )

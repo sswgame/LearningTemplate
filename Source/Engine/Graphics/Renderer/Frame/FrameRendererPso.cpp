@@ -118,8 +118,10 @@ namespace sw
         // 주의: 이 기본값은 XML 에 패스를 적어 둔 경우에도 풀스크린 패스에 적용돼야 한다. XML 의 `Back` 을
         // 그대로 따르면 풀스크린 패스(Shading · SSAO · Bloom · Outline · TAA · Tonemap · Present)가 오류도
         // 경고도 없이 아무것도 그리지 않아 화면이 배경색뿐이다.
-        const bool bFullscreenPass = ( FrameRendererUtil::drawsSceneMeshes( passType ) == false );
-        desc._cullMode             = bFullscreenPass ? RHICullMode::None : RHICullMode::Back;
+        // 뒤집은 껍질 외곽선은 앞면을 컬링한다(표의 kCullFront) — XML 의 "Back" 은 그 기본값을 바꾸지 않는다.
+        const bool        bFullscreenPass = ( FrameRendererUtil::drawsSceneMeshes( passType ) == false );
+        const RHICullMode meshCullMode    = info.hasFlag( RenderPassTraitFlag::kCullFront ) ? RHICullMode::Front : RHICullMode::Back;
+        desc._cullMode                    = bFullscreenPass ? RHICullMode::None : meshCullMode;
         if ( pPassDesc != nullptr )
         {
             if ( bFullscreenPass == false )
@@ -188,7 +190,7 @@ namespace sw
         bool bChanged{ false };
         if ( pPermutation != nullptr )
         {
-            // 양면 머티리얼은 후면 컬링을 끈다(언리얼 머티리얼의 Two Sided). 셰이더는 뒷면의 노멀을 뒤집어 칠한다(toon.hlsl).
+            // 양면 머티리얼은 후면 컬링을 끈다(언리얼 머티리얼의 Two Sided). 앞면 컬링 패스(외곽선 껍질)는 그대로다 — 껍질은 뒤집어 그려야 외곽선이다.
             const bool bTwoSided = std::find( pPermutation->_listDefine.begin(), pPermutation->_listDefine.end(), string( kMaterialTwoSidedDefine ) ) !=
                                    pPermutation->_listDefine.end();
             if ( bTwoSided && desc._cullMode == RHICullMode::Back )
@@ -311,6 +313,11 @@ namespace sw
             for ( const MaterialPsoRequest& request : listRequest )
             {
                 const bool bReverseCulling = ( request._bReverseCulling != SW_FALSE );
+                // 이 패스가 그리지 않는 배치(외곽선을 켜지 않은 머티리얼)의 변형은 만들지 않는다 — 쿠커도 그것을 쿠킹하지 않는다.
+                const GpuShaderPermutation* pRequestPermutation =
+                    ( request._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( request._shaderPermutation );
+                if ( FrameRendererUtil::drawsMaterialInPass( passType, pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
+                    continue;
                 if ( request._shaderPermutation == kInvalidShaderPermutation )
                 {
                     // 퍼뮤테이션이 없는 배치를 위한 변형. 얹는 것이 뷰 모드 · 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
@@ -367,6 +374,15 @@ namespace sw
         const RHIPipelineStateHandle variant =
             _psoCache.findMaterialPso( RenderPsoCache::materialPsoKey( passPso, permutationHash, viewMode, bReverseCulling ) );
         return ( variant != 0 ) ? variant : passPso;
+    }
+
+    bool FrameRenderer::drawsBatchInPass( RenderPassType passType, const GpuMeshBatch& batch ) const
+    {
+        if ( getRenderPassTypeInfo( passType )._pRequiredMaterialDefine == nullptr )
+            return true;
+        const GpuShaderPermutation* pPermutation =
+            ( batch._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( batch._shaderPermutation );
+        return FrameRendererUtil::drawsMaterialInPass( passType, pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
     }
 
     void FrameRenderer::setViewMode( RenderViewMode viewMode )

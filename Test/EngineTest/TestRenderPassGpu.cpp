@@ -443,15 +443,23 @@ namespace
 
         /**
          * @brief toon.material 을 같은 주황색 · 어두운 그림자색으로, 계단을 칼같이(toony 1) 둔 것입니다. 림 · 맷캡 · 발광은 없습니다.
+         * @param bOutline 켜면 검은 외곽선(화면 높이의 1 %, 빛 섞기 0)을 그립니다.
          */
-        static sw::shared_ptr<sw::Material> makeToonMaterial()
+        static sw::shared_ptr<sw::Material> makeToonMaterial( bool bOutline )
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
             const bool                   bLoaded  = material->loadFromFile( "engine/materials/toon.material" );
             const bool                   bSet     = bLoaded && material->setParameter( nullptr, sw::hashed_string( "baseColor" ), "0.9 0.5 0.25 1.0" ) &&
                               material->setParameter( nullptr, sw::hashed_string( "shadeColor" ), "0.35 0.2 0.3 1.0" ) &&
-                              material->setParameter( nullptr, sw::hashed_string( "shadingToony" ), "1.0" );
-            return bSet ? material : nullptr;
+                              material->setParameter( nullptr, sw::hashed_string( "shadingToony" ), "1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "outlineColor" ), "0.0 0.0 0.0 1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "outlineWidth" ), "0.01" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "outlineWidthMode" ), "1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "outlineLightingMix" ), "0.0" );
+            if ( bSet == false )
+                return nullptr;
+            material->setStaticSwitch( sw::hashed_string( "Outline" ), bOutline );
+            return material;
         }
 
         /** @brief 카메라 · 주광 · 구를 채웁니다. 하나라도 못 만들면 false 입니다. */
@@ -571,6 +579,63 @@ namespace
         return outImage.readTransient( renderer, pAttachment );
     }
 
+    /**
+     * @brief 외곽선을 켠 그림과 끈 그림의 차이 — 실루엣 둘레의 고리입니다.
+     * @details 고리 = 끈 그림에서 배경이고 켠 그림에서 그려진 픽셀. 구의 화면 반지름은 끈 그림의 면적에서 구한다(√(면적/π)).
+     */
+    struct OutlineRing
+    {
+        uint32  _sphereCount{ 0 };    ///< 끈 그림의 구 픽셀 수
+        uint32  _ringCount{ 0 };      ///< 고리 픽셀 수
+        uint32  _inBandCount{ 0 };    ///< 고리 중 실루엣 띠(반지름 R - 2 ~ R + 두께 + 3) 안의 수
+        uint32  _interiorDiffer{ 0 }; ///< 두 그림 모두 구인데 색이 30 넘게 다른 픽셀 수 — 외곽선이 구 안쪽을 덮으면 크다
+        float64 _ringMeanLuma{ 0.0 }; ///< 고리의 평균 밝기
+        float32 _radius{ 0.0f };      ///< 구의 화면 반지름(픽셀)
+
+        static OutlineRing measure( const test::RHITestImage& imageOff, const test::RHITestImage& imageOn, float32 ringWidthPixel )
+        {
+            OutlineRing     ring{};
+            const DrawnMask maskOff( imageOff );
+            const DrawnMask maskOn( imageOn );
+            ring._sphereCount = maskOff._drawnCount;
+            ring._radius      = sw::MathUtil::sqrt( static_cast<float32>( maskOff._drawnCount ) / sw::MathUtil::Pi );
+            if ( maskOff._width != maskOn._width || maskOff._height != maskOn._height )
+                return ring;
+            uint64 lumaSum{ 0 };
+            for ( uint32 y = 0; y < maskOff._height; ++y )
+            {
+                for ( uint32 x = 0; x < maskOff._width; ++x )
+                {
+                    const bool bOff = maskOff.isDrawn( x, y );
+                    const bool bOn  = maskOn.isDrawn( x, y );
+                    if ( bOff && bOn )
+                    {
+                        if ( test::RHITestImage::getColorDistance( imageOff.getPixel( x, y ), imageOn.getPixel( x, y ) ) > 30 )
+                            ++ring._interiorDiffer;
+                        continue;
+                    }
+                    if ( bOff || bOn == false )
+                        continue;
+                    ++ring._ringCount;
+                    lumaSum += computeLuma( imageOn.getPixel( x, y ) );
+                    const float32 dx     = static_cast<float32>( x ) - maskOff._centroid._x;
+                    const float32 dy     = static_cast<float32>( y ) - maskOff._centroid._y;
+                    const float32 radius = sw::MathUtil::sqrt( dx * dx + dy * dy );
+                    if ( ring._radius - 2.0f <= radius && radius <= ring._radius + ringWidthPixel + 3.0f )
+                        ++ring._inBandCount;
+                }
+            }
+            if ( ring._ringCount > 0 )
+                ring._ringMeanLuma = static_cast<float64>( lumaSum ) / static_cast<float64>( ring._ringCount );
+            return ring;
+        }
+
+        sw::string describe() const
+        {
+            return sw::string( "구 " ) + sw::to_string( _sphereCount ) + " px · 반지름 " + sw::to_string( _radius ) + " · 고리 " + sw::to_string( _ringCount ) +
+                   " px(띠 안 " + sw::to_string( _inBandCount ) + ", 평균 밝기 " + sw::to_string( _ringMeanLuma ) + ") · 안쪽 차이 " + sw::to_string( _interiorDiffer );
+        }
+    };
 } // namespace
 
 /**
@@ -5653,7 +5718,7 @@ SW_TEST_CASE( RenderPassGpuTest, ToonShadingHasFewerBrightnessLevelsThanLit )
         ToonSphereScene  litScene;
         ToonSphereScene  toonScene;
         SW_ASSERT_TRUE_MSG( litScene.populate( ToonSphereScene::makeLitMaterial() ), ( label + "램버트 무대를 못 만들었다" ).c_str() );
-        SW_ASSERT_TRUE_MSG( toonScene.populate( ToonSphereScene::makeToonMaterial() ), ( label + "툰 무대를 못 만들었다" ).c_str() );
+        SW_ASSERT_TRUE_MSG( toonScene.populate( ToonSphereScene::makeToonMaterial( false ) ), ( label + "툰 무대를 못 만들었다" ).c_str() );
 
         // 씬마다 렌더러를 따로 둔다(한 렌더러의 씬 빌더는 그리던 씬의 수집 캐시를 든다).
         sw::FrameRenderer  litRenderer;
@@ -5689,6 +5754,207 @@ SW_TEST_CASE( RenderPassGpuTest, ToonShadingHasFewerBrightnessLevelsThanLit )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 메시 외곽선 패스(뒤집은 껍질)가 실루엣 둘레에 어두운 고리를 그리고 안쪽은 건드리지 않는다 — 네 백엔드 × 포워드 · 디퍼드
+ * @details 같은 툰 구를 외곽선 스위치만 바꿔 그린다. 고리 = 끈 그림의 배경이 켠 그림에서 그려진 픽셀이다.
+ *          (1) 고리가 있다 — 둘레 × 두께의 절반 이상. 외곽선을 끈 머티리얼까지 패스가 그리면(머티리얼 거르기가 빠지면) 끈 그림에도 고리가 생겨 0 이 된다.
+ *          (2) 고리는 실루엣 띠(구의 화면 반지름 R ~ R + 두께) 안에 있다. (3) 어둡다(외곽선 색 검정, 빛 섞기 0).
+ *          (4) 구 안쪽은 같다 — 앞면 컬링이 빠지면 부풀린 껍질의 앞면이 구를 덮는다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MeshOutlineDrawsDarkRingAroundSilhouette )
+{
+    struct PipelineCase
+    {
+        const utf8* _pPath;
+        const utf8* _pColor;
+    };
+    const PipelineCase kArrCase[] = {
+        { "engine/pipeline/forwardpipeline.xml", "SceneColor"},
+        {"engine/pipeline/deferredpipeline.xml",   "LitColor"},
+    };
+    constexpr float32 kOutlineWidth  = 0.01f; // makeToonMaterial 의 화면 높이 비율
+    constexpr float64 kMaxRingLuma   = 40.0;
+    constexpr uint32  kBandPercent   = 95;
+    constexpr uint32  kInteriorRatio = 100; // 안쪽 차이는 구 픽셀의 1 % 이하
+
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        for ( const PipelineCase& pipelineCase : kArrCase )
+        {
+            const sw::string label = sw::string( device->getBackendName() ) + " " + pipelineCase._pPath + ": ";
+            ToonSphereScene  offScene;
+            ToonSphereScene  onScene;
+            SW_ASSERT_TRUE_MSG( offScene.populate( ToonSphereScene::makeToonMaterial( false ) ) && onScene.populate( ToonSphereScene::makeToonMaterial( true ) ),
+                                ( label + "무대를 못 만들었다" ).c_str() );
+
+            sw::FrameRenderer  offRenderer;
+            sw::FrameRenderer  onRenderer;
+            test::RHITestImage offImage;
+            test::RHITestImage onImage;
+            const bool         bOk = offRenderer.initialize( device.get(), pipelineCase._pPath ) && onRenderer.initialize( device.get(), pipelineCase._pPath ) &&
+                             renderAndReadAttachment( offRenderer, device.get(), offScene._scene, pipelineCase._pColor, offImage ) &&
+                             renderAndReadAttachment( onRenderer, device.get(), onScene._scene, pipelineCase._pColor, onImage );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+            if ( bOk == false )
+                continue;
+
+            const float32     widthPixel = kOutlineWidth * static_cast<float32>( onImage.getHeight() );
+            const OutlineRing ring       = OutlineRing::measure( offImage, onImage, widthPixel );
+            SW_LOG_INFO( "%#%#", label, ring.describe() );
+            SW_EXPECT_TRUE_MSG( ring._sphereCount > 2000, ( label + "구가 그려지지 않았다 — " + ring.describe() ).c_str() );
+            if ( ring._sphereCount <= 2000 )
+                continue;
+
+            ++comparedCount;
+            const float32 expectedRing = 2.0f * sw::MathUtil::Pi * ring._radius * widthPixel;
+            SW_EXPECT_TRUE_MSG( static_cast<float32>( ring._ringCount ) >= expectedRing * 0.5f,
+                                ( label + "외곽선 고리가 없다(기대 약 " + sw::to_string( expectedRing ) + " px) — " + ring.describe() ).c_str() );
+            SW_EXPECT_TRUE_MSG( ring._inBandCount * 100u >= ring._ringCount * kBandPercent, ( label + "고리가 실루엣 띠 밖에 있다 — " + ring.describe() ).c_str() );
+            SW_EXPECT_TRUE_MSG( ring._ringMeanLuma <= kMaxRingLuma, ( label + "고리가 어둡지 않다 — " + ring.describe() ).c_str() );
+            SW_EXPECT_TRUE_MSG( ring._interiorDiffer * kInteriorRatio <= ring._sphereCount, ( label + "외곽선이 구 안쪽을 덮었다 — " + ring.describe() ).c_str() );
+        }
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the mesh outline test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 스킨드 메시의 외곽선이 스키닝된 자리를 따른다 — GPU 스키닝으로 옮긴 구의 고리가 CPU 로 옮긴 정적 구의 고리와 같다(네 백엔드)
+ * @details 구의 모든 정점을 본 1 에 묶고 본 1 을 옆으로 옮긴다. 외곽선 껍질이 레스트 정점(입력 스트림)으로 밀면 고리가 옛 자리에 남아
+ *          옮긴 구의 고리와 어긋난다. 두 그림의 어두운 고리 마스크(그려졌고 밝기 40 이하)의 차이를 고리 크기와 견준다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MeshOutlineFollowsSkinnedPose )
+{
+    /**
+     * @class ShiftTask
+     * @brief 기본 포즈 단계에서 본 1 을 옆으로 옮기는 일입니다.
+     */
+    class ShiftTask final : public sw::IAnimationPhaseTask
+    {
+    public:
+        explicit ShiftTask( const sw::float3& offset )
+            : _offset{ offset }
+        {
+        }
+        bool isAnimationActive() const override { return true; }
+        void runAnimationPhase( sw::AnimationPhase phase, sw::SkeletalMeshComponent& unit, const sw::AnimationFrameContext& context ) override
+        {
+            (void)context;
+            if ( phase != sw::AnimationPhase::BasePose )
+                return;
+            sw::BoneTransform bone = unit.getLocalPose().getBoneTransform( 1 );
+            bone._translation      = _offset;
+            unit.getLocalPose().setBoneTransform( 1, bone );
+        }
+        sw::float3 _offset;
+    };
+
+    /// @brief 어두운 고리 마스크(그려졌고 밝기 40 이하)를 셉니다. @p pOther 가 있으면 둘 중 한쪽만 고리인 픽셀 수입니다.
+    auto countDarkRing = []( const test::RHITestImage& image, const test::RHITestImage* pOther ) -> uint32
+    {
+        const test::Rgba8 corner      = image.getPixel( 0, 0 );
+        const test::Rgba8 otherCorner = pOther != nullptr ? pOther->getPixel( 0, 0 ) : corner;
+        uint32            count{ 0 };
+        for ( uint32 y = 0; y < image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixel = image.getPixel( x, y );
+                const bool        bRing = test::RHITestImage::getColorDistance( pixel, corner ) > DrawnMask::kBackgroundDistance && computeLuma( pixel ) <= 40u;
+                if ( pOther == nullptr )
+                {
+                    count += bRing ? 1u : 0u;
+                    continue;
+                }
+                const test::Rgba8 otherPixel = pOther->getPixel( x, y );
+                const bool        bOtherRing = test::RHITestImage::getColorDistance( otherPixel, otherCorner ) > DrawnMask::kBackgroundDistance && computeLuma( otherPixel ) <= 40u;
+                count += ( bRing != bOtherRing ) ? 1u : 0u;
+            }
+        }
+        return count;
+    };
+
+    sw::shared_ptr<sw::Skeleton> skeleton = sw::make_shared<sw::Skeleton>();
+    (void)skeleton->addBone( sw::hashed_string( "base" ), -1, sw::BoneTransform{}, sw::float4x4::Identity );
+    (void)skeleton->addBone( sw::hashed_string( "body" ), 0, sw::BoneTransform{}, sw::float4x4::Identity );
+    skeleton->computeInverseBindFromReference();
+    // 메시 공간 이동이다(컴포넌트 스케일 전) — 화면에서 0.45 m 옆이다.
+    constexpr float32 kLocalShift = 0.45f / ToonSphereScene::kSphereScale;
+
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer skinnedRenderer;
+        sw::FrameRenderer staticRenderer;
+        const bool        bReady = skinnedRenderer.initialize( device.get() ) && staticRenderer.initialize( device.get() );
+        SW_EXPECT_TRUE_MSG( bReady, ( label + "렌더러를 못 만들었다" ).c_str() );
+        if ( bReady == false || device->getCapabilities()._bGpuMeshMorph == SW_FALSE )
+            continue;
+
+        // 스킨드 구(모든 정점이 본 1)와, 같은 이동을 CPU 로 정점에 걸어 둔 정적 구.
+        ToonSphereScene skinnedScene;
+        ToonSphereScene staticScene;
+        SW_ASSERT_TRUE_MSG( skinnedScene.populate( ToonSphereScene::makeToonMaterial( true ) ) && staticScene.populate( ToonSphereScene::makeToonMaterial( true ) ),
+                            ( label + "무대를 못 만들었다" ).c_str() );
+        const sw::vector<sw::RHIVertex>& listBind = skinnedScene._mesh->getVertices();
+        sw::vector<sw::MeshSkinVertex>   listSkin( listBind.size() );
+        sw::vector<sw::RHIVertex>        listShifted = listBind;
+        for ( size_t index = 0; index < listBind.size(); ++index )
+        {
+            listSkin[index]._arrJoint[0] = 1u;
+            listShifted[index]._arrPosition[0] += kLocalShift;
+        }
+        sw::shared_ptr<sw::Mesh> skinnedMesh = sw::Mesh::create();
+        skinnedMesh->setVertices( listBind );
+        skinnedMesh->setSkin( listSkin, 2 );
+        sw::shared_ptr<sw::Mesh> shiftedMesh = sw::Mesh::create();
+        shiftedMesh->setVertices( listShifted );
+
+        // 스킨드 구는 스켈레탈 메시 컴포넌트로 그린다(무대의 정적 구는 숨긴다).
+        skinnedScene._pSphere->setVisible( false );
+        sw::GameObject*            pSkinnedObject = skinnedScene._scene.getObjectManager()->createGameObject( sw::hashed_string( "SkinnedSphere" ) );
+        sw::SkeletalMeshComponent* pSkinned       = pSkinnedObject != nullptr ? pSkinnedObject->addComponent<sw::SkeletalMeshComponent>() : nullptr;
+        SW_ASSERT_NOT_NULL( pSkinned );
+        pSkinned->setSkeleton( skeleton );
+        pSkinned->setMesh( skinnedMesh );
+        pSkinned->setMaterial( skinnedScene._material.get() );
+        pSkinned->setBoundsRadius( 2.0f );
+        pSkinned->setLocalScale( sw::float3{ ToonSphereScene::kSphereScale, ToonSphereScene::kSphereScale, ToonSphereScene::kSphereScale } );
+        ShiftTask task( sw::float3{ kLocalShift, 0.0f, 0.0f } );
+        pSkinned->addAnimationPhaseTask( &task );
+        staticScene._pSphere->setMesh( shiftedMesh );
+
+        test::RHITestImage skinnedImage;
+        test::RHITestImage staticImage;
+        const bool         bOk = renderAndReadAttachment( skinnedRenderer, device.get(), skinnedScene._scene, "SceneColor", skinnedImage ) &&
+                         renderAndReadAttachment( staticRenderer, device.get(), staticScene._scene, "SceneColor", staticImage );
+        pSkinned->removeAnimationPhaseTask( &task );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+        if ( bOk == false )
+            continue;
+
+        const uint32 staticRingCount = countDarkRing( staticImage, nullptr );
+        const uint32 ringMismatch    = countDarkRing( skinnedImage, &staticImage );
+        SW_LOG_INFO( "%#outline ring %# px, skinned vs static mismatch %# px", label, staticRingCount, ringMismatch );
+        SW_EXPECT_TRUE_MSG( staticRingCount > 300, ( label + "정적 구에 외곽선 고리가 없다 (" + sw::to_string( staticRingCount ) + " px)" ).c_str() );
+        if ( staticRingCount <= 300 )
+            continue;
+        ++comparedCount;
+        SW_EXPECT_TRUE_MSG( ringMismatch * 5u <= staticRingCount,
+                            ( label + "스킨드 구의 외곽선이 옮긴 자리와 어긋난다 (어긋난 " + sw::to_string( ringMismatch ) + " / 고리 " + sw::to_string( staticRingCount ) +
+                              " px)" )
+                                .c_str() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the skinned outline test" );
+}
+
+/**
  * @brief [RenderPassGpuTest] 양면 머티리얼(`MATERIAL_TWO_SIDED`)은 뒷면도 그린다 — 머티리얼 변형 PSO 가 후면 컬링을 끈다(네 백엔드)
  * @details 카메라를 등진 사각형을 툰 머티리얼로 그린다. 스위치를 끄면 후면 컬링으로 아무것도 안 그려지고, 켜면 사각형이 보인다
  *          (머리카락 카드 · 치마 같은 VRM 양면 머티리얼이 뒤에서 사라지지 않게).
@@ -5719,7 +5985,7 @@ SW_TEST_CASE( RenderPassGpuTest, TwoSidedMaterialDrawsBackFaces )
         for ( uint32 caseIndex = 0; caseIndex < 3 && bOk; ++caseIndex )
         {
             ToonSphereScene              scene;
-            sw::shared_ptr<sw::Material> material = ToonSphereScene::makeToonMaterial();
+            sw::shared_ptr<sw::Material> material = ToonSphereScene::makeToonMaterial( false );
             bOk                                   = material != nullptr && scene.populate( material );
             if ( bOk == false )
                 break;
