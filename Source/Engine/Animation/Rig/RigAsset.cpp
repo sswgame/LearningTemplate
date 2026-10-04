@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Rig/RigAsset.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
 
@@ -12,6 +13,19 @@
 namespace sw
 {
     SW_LOG_CALLER( "RigAsset" );
+
+    namespace
+    {
+        struct RigAssetInternal
+        {
+            /** @brief 다음 내용 번호입니다(0 은 "읽지 않음"). */
+            static uint64 allocateContentId()
+            {
+                static atomic<uint64> s_nextContentId{ 1 };
+                return s_nextContentId.fetch_add( 1, std::memory_order_relaxed );
+            }
+        };
+    } // namespace
 
     RigNodeRegistry& RigNodeRegistry::getInstance()
     {
@@ -46,17 +60,36 @@ namespace sw
     RigAsset::RigAsset()
         : _listTarget{}
         , _listNode{}
+        , _contentId{ 0 }
         , _bPlanar{ SW_FALSE }
     {
     }
 
     RigAsset::~RigAsset() = default;
 
+    RigAsset::RigAsset( RigAsset&& other ) noexcept
+        : _listTarget{ std::move( other._listTarget ) }
+        , _listNode{ std::move( other._listNode ) }
+        , _contentId{ other._contentId }
+        , _bPlanar{ other._bPlanar }
+    {
+    }
+
+    RigAsset& RigAsset::operator=( RigAsset&& other ) noexcept
+    {
+        _listTarget = std::move( other._listTarget );
+        _listNode   = std::move( other._listNode );
+        _contentId  = other._contentId;
+        _bPlanar    = other._bPlanar;
+        return *this;
+    }
+
     void RigAsset::clear()
     {
         _listTarget.clear();
         _listNode.clear();
-        _bPlanar = SW_FALSE;
+        _contentId = 0;
+        _bPlanar   = SW_FALSE;
     }
 
     int32 RigAsset::findTargetIndex( const hashed_string& name ) const
@@ -80,7 +113,10 @@ namespace sw
             return false;
         }
         if ( parseRoot( document.getRoot(), sourceLabel ) )
+        {
+            _contentId = RigAssetInternal::allocateContentId();
             return true;
+        }
         clear();
         return false;
     }

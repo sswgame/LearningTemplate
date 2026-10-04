@@ -41,7 +41,7 @@ GameObjectManager::tick
   ├─ 컴포넌트 틱(게임 코드가 애니메이터 파라미터를 쓴다)
   ├─ AnimationSystem::evaluate( dt )            ← 틱 뒤, 트랜스폼 플러시 앞
   │    0) 의존이 바뀌었으면 레벨을 다시 짓는다(위상 정렬, 고리는 오류)
-  │    1) 유닛마다 할 일 · LOD — 쉬는 유닛은 여기서 빠진다(비용 0)
+  │    1) 유닛마다 할 일 · LOD — 쉬는 유닛은 여기서 빠진다(비용 0). 일하는 유닛은 일들의 prepareAnimationFrame(게임 스레드 — 월드 행렬 · 물리 질의)
   │    2) 단계마다 레벨 순서로 engine::runParallel:
   │         Time(상태 기계 · 알림 · 루트 모션 · 커브) → [동기 그룹] → BasePose(샘플 · 크로스페이드 · 레이어 · 리더 포즈) →
   │         Attachment(부착 자리) → PostProcess(PoseModifier 자리) → SkinPalette
@@ -53,8 +53,9 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
 
 - **유닛**(`SkeletalMeshComponent`) = 장비 부품 하나 = 오브젝트 하나. 스켈레톤이 없으면 본 하나("root")짜리 암묵 스켈레톤입니다. 스킨드 메시는 컴포넌트마다
   메시 객체를 따로 둡니다(모프 풀 구간이 메시마다 하나라서) — 군중 공유는 다음 일입니다.
-- **일**(`IAnimationPhaseTask`)은 유닛에 걸립니다: 애니메이터(`SkeletalAnimatorBinding`)가 Time · BasePose 를 맡고, 나중의 PoseModifier · 소켓 부착이
-  Attachment · PostProcess 에 끼어듭니다. 단계 함수는 워커에서 돌므로 자기 유닛과 의존으로 선언한 위 유닛만 읽습니다(`addAnimationDependency`).
+- **일**(`IAnimationPhaseTask`)은 유닛에 걸립니다: 애니메이터(`SkeletalAnimatorBinding`)가 Time · BasePose 를, 후처리 리그(`PoseModifierBinding`,
+  `Engine/Character`)가 PostProcess 를 맡고, 소켓 부착이 Attachment 에 끼어듭니다. 단계 앞의 게임 스레드 준비는 `prepareAnimationFrame` 입니다. 단계 함수는 워커에서 돌므로 자기 유닛과 의존으로 선언한 위 유닛만 읽습니다(`addAnimationDependency`).
+- **거리 LOD 기준**: `AnimationSystem::setLodViewPosition`(카메라를 가진 쪽이 넣는다) — 스프링 본의 `lod_distance` 가 읽는다.
 - **LOD 훅**: `setUpdateRateDivisor(N)`(포즈를 N 프레임에 한 번, 시간 · 알림은 매 프레임), `setVisibleHint(false)` + `_bAnimateWhenOffscreen` 아님 →
   포즈를 건너뜀. 가시성 판정(카메라 절두체 · 중요도 예산)은 이 훅을 부르는 쪽의 일입니다(아직 없음).
 - **리더 포즈**: `setLeaderPose( 몸 )` 또는 `_bFollowParentPose` — 팔로워는 리더의 로컬 포즈를 본 이름으로 옮겨 받고 리더는 의존이 됩니다.

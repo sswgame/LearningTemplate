@@ -32,6 +32,7 @@ namespace sw
         , _meshCache{ make_unique<MeshCache>() }
         , _skeletonCache{ make_unique<SkeletonCache>() }
         , _animClipCache{ make_unique<AnimClipCache>() }
+        , _rigAssetCache{ make_unique<RigAssetCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _registeredAssetCache{}
         , _contentSource{ ContentSource::Cooked }
@@ -44,6 +45,7 @@ namespace sw
         registerAssetCache( _meshCache.get() );
         registerAssetCache( _skeletonCache.get() );
         registerAssetCache( _animClipCache.get() );
+        registerAssetCache( _rigAssetCache.get() );
     }
 
     AssetManager::~AssetManager() = default;
@@ -163,7 +165,7 @@ namespace sw
     {
         return pCache != nullptr && ( pCache == _materialCache.get() || pCache == _textureCache.get() || pCache == _prefabCache.get() ||
                                       pCache == _spriteClipCache.get() || pCache == _meshCache.get() || pCache == _skeletonCache.get() ||
-                                      pCache == _animClipCache.get() );
+                                      pCache == _animClipCache.get() || pCache == _rigAssetCache.get() );
     }
 
     void AssetManager::unregisterAssetCache( const IAssetCache* pCache )

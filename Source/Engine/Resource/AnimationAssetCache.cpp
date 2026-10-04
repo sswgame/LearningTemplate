@@ -8,6 +8,7 @@
 #include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeleton.h"
 
 namespace sw
@@ -106,6 +107,12 @@ namespace sw
                 static SharedTable<AnimClip> s_table;
                 return s_table;
             }
+
+            static SharedTable<RigAsset>& getRigTable()
+            {
+                static SharedTable<RigAsset> s_table;
+                return s_table;
+            }
         };
     } // namespace
 } // namespace sw
@@ -172,5 +179,36 @@ namespace sw
     void AnimClipCache::clear()
     {
         AnimationAssetCacheInternal::getClipTable().clear();
+    }
+
+    shared_ptr<const RigAsset> RigAssetCache::acquire( string_view path )
+    {
+        return AnimationAssetCacheInternal::getRigTable().acquire( path );
+    }
+
+    bool RigAssetCache::reloadShared( string_view path )
+    {
+        return AnimationAssetCacheInternal::getRigTable().reloadShared( path );
+    }
+
+    bool RigAssetCache::isCached( string_view relativePath ) const
+    {
+        return AnimationAssetCacheInternal::getRigTable().findLive( relativePath ) != nullptr;
+    }
+
+    void RigAssetCache::reload( string_view relativePath, IRHIDevice* pDevice )
+    {
+        (void)pDevice;
+        (void)reloadShared( relativePath );
+    }
+
+    size_t RigAssetCache::getCachedCount() const
+    {
+        return AnimationAssetCacheInternal::getRigTable().countLive();
+    }
+
+    void RigAssetCache::clear()
+    {
+        AnimationAssetCacheInternal::getRigTable().clear();
     }
 } // namespace sw

@@ -97,7 +97,7 @@ namespace sw
         uint32 getPoseEvaluationCount() const { return _poseEvaluationCount; }
 
         // --- AnimationSystem 이 부르는 것 ---
-        /** @brief 이번 프레임 할 일과 LOD(포즈를 만드는지)를 정합니다(게임 스레드). 쉬면 false 입니다. */
+        /** @brief 이번 프레임 할 일과 LOD(포즈를 만드는지)를 정하고, 일하면 일들의 `prepareAnimationFrame` 을 부릅니다(게임 스레드). 쉬면 false 입니다. */
         [[nodiscard]] bool beginAnimationFrame( float32 deltaSeconds, uint64 frameIndex );
         /** @brief 단계 하나를 합니다(워커). */
         void runAnimationPhase( AnimationPhase phase );

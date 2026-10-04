@@ -2,7 +2,7 @@
  * @file AssetManager.h
  * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab · Mesh)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 로 소유합니다.
  * @note
- *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, SpriteClipCache, MeshCache, SkeletonCache, AnimClipCache, ResourcePackManager.
+ *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, SpriteClipCache, MeshCache, SkeletonCache, AnimClipCache, RigAssetCache, ResourcePackManager.
  *   제외(수명이 다름):
  *   - ResourceUtil: Resource/ 경로 해석만 합니다(소유권 없음)
  *   - ShaderCache: 셰이더 컴파일 결과 캐시(RHI)
@@ -30,6 +30,7 @@ namespace sw
     class MeshCache;
     class PrefabCache;
     class ResourcePackManager;
+    class RigAssetCache;
     class SkeletonCache;
     class SpriteClipCache;
     class TextureCache;
@@ -188,6 +189,7 @@ namespace sw
         unique_ptr<MeshCache>           _meshCache;       ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<SkeletonCache>       _skeletonCache;   ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<AnimClipCache>       _animClipCache;   ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
+        unique_ptr<RigAssetCache>       _rigAssetCache;   ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<ResourcePackManager> _pPackManager;
         /**
          * @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 캐시는 위 멤버가, 모듈이 올린 것은 그 모듈이 소유합니다).

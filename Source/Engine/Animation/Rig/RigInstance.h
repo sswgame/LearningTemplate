@@ -21,7 +21,15 @@ namespace sw
 {
     class RigAsset;
 
-    /** @brief 자기 유닛의 소켓 이름을 (부모 본, 로컬 변환)으로 푸는 창구입니다(소켓 에셋을 가진 쪽이 구현). */
+    /** @brief 소켓 이름을 푼 결과입니다. */
+    enum class RigSocketLookup : uint8
+    {
+        Missing = 0, ///< 없는 소켓
+        OwnUnit,     ///< 이 유닛의 소켓 — 부모 본 · 로컬로 작업 포즈에서 바로 읽는다
+        OtherUnit,   ///< 해석된 외형의 다른 유닛 소켓(`MainHand.Grip`) — 호스트가 바깥 대상 값으로 넣는다
+    };
+
+    /** @brief 유닛의 소켓 이름을 (부모 본, 로컬 변환)으로 푸는 창구입니다(소켓 에셋 · 해석된 소켓 표를 가진 쪽이 구현). */
     class SW_API IRigSocketResolver
     {
     public:
@@ -30,8 +38,8 @@ namespace sw
         IRigSocketResolver( const IRigSocketResolver& )            = delete;
         IRigSocketResolver& operator=( const IRigSocketResolver& ) = delete;
 
-        /** @brief 소켓의 부모 본과 부모 기준 로컬 변환입니다. 없으면 false 입니다. */
-        virtual bool findSocket( const hashed_string& socketName, hashed_string& outParentBone, BoneTransform& outLocal ) const = 0;
+        /** @brief 소켓의 부모 본과 부모 기준 로컬 변환입니다(자기 유닛일 때). 다른 유닛 소켓이면 `OtherUnit` 만 알립니다. */
+        virtual RigSocketLookup findSocket( const hashed_string& socketName, hashed_string& outParentBone, BoneTransform& outLocal ) const = 0;
     };
 } // namespace sw
 
@@ -71,7 +79,9 @@ namespace sw
         const RigTargetDef& getTargetDef( uint32 targetIndex ) const { return _listTargetDef[targetIndex]; }
         /** @brief 이름의 대상 번호입니다. 없으면 -1 입니다. */
         int32 findTargetIndex( const hashed_string& name ) const;
-        /** @brief 바깥 대상의 이번 프레임 값을 넣습니다(게임 스레드, 평가 전). */
+        /** @brief 호스트가 값을 넣어야 하는 대상인지입니다(다른 유닛 · 오브젝트 · 다른 유닛의 해석된 소켓). */
+        bool isTargetExternal( uint32 targetIndex ) const { return _listTargetBone[targetIndex] == kExternalBone; }
+        /** @brief 바깥 대상의 이번 프레임 값을 넣습니다(평가 전). */
         void setExternalTarget( uint32 targetIndex, const RigTargetValue& value );
         /** @brief 대상의 지금 모델 공간 변환입니다(워커). 값이 없으면 false 입니다. */
         [[nodiscard]] bool resolveTarget( uint32 targetIndex, RigPoseBuffer& pose, float3& outPosition, quaternion& outRotation ) const;
@@ -116,6 +126,9 @@ namespace sw
         uint32 getEvaluationCount() const { return _evaluationCount; }
 
     private:
+        static constexpr int32 kExternalBone    = -1; ///< `_listTargetBone` — 호스트가 값을 넣는 대상
+        static constexpr int32 kModelOriginBone = -2; ///< `_listTargetBone` — 유닛 뿌리(모델 원점) 기준 소켓
+
         struct SlotWeight
         {
             hashed_string _name{};
@@ -125,7 +138,7 @@ namespace sw
         shared_ptr<const RigAsset>  _asset;
         vector<RigTargetDef>        _listTargetDef;
         vector<RigTargetValue>      _listTargetValue;
-        vector<int32>               _listTargetBone;   ///< 자기 유닛 대상의 본(바깥 대상은 -1)
+        vector<int32>               _listTargetBone;   ///< 자기 유닛 대상의 본(`kExternalBone` · `kModelOriginBone` 도 있다)
         vector<BoneTransform>       _listTargetOffset; ///< 자기 유닛 대상의 본 기준 오프셋(소켓 로컬 · 데이터 오프셋)
         vector<unique_ptr<RigNode>> _listNode;
         vector<vector<uint32>>      _listNodeWrittenBone;

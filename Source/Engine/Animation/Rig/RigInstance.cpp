@@ -66,7 +66,7 @@ namespace sw
 
         _listTargetDef = asset->getTargets();
         _listTargetValue.assign( _listTargetDef.size(), RigTargetValue{} );
-        _listTargetBone.assign( _listTargetDef.size(), -1 );
+        _listTargetBone.assign( _listTargetDef.size(), kExternalBone );
         _listTargetOffset.assign( _listTargetDef.size(), BoneTransform{} );
         bool bOk = true;
         for ( size_t targetIndex = 0; targetIndex < _listTargetDef.size(); ++targetIndex )
@@ -84,8 +84,11 @@ namespace sw
             BoneTransform offset   = target._offset;
             if ( target._kind == RigTargetKind::Socket )
             {
-                BoneTransform socketLocal{};
-                if ( pOwnSockets == nullptr || pOwnSockets->findSocket( target._socket, boneName, socketLocal ) == false )
+                BoneTransform         socketLocal{};
+                const RigSocketLookup lookup = ( pOwnSockets != nullptr ) ? pOwnSockets->findSocket( target._socket, boneName, socketLocal ) : RigSocketLookup::Missing;
+                if ( lookup == RigSocketLookup::OtherUnit )
+                    continue; // 해석된 외형의 다른 유닛 소켓 — 호스트가 값을 넣는다
+                if ( lookup == RigSocketLookup::Missing )
                 {
                     SW_LOG_ERROR( "Rig '%#': target '%#' names unknown socket '%#'", label, target._name.c_str(), target._socket.c_str() );
                     bOk = false;
@@ -93,6 +96,13 @@ namespace sw
                 }
                 // 데이터 오프셋은 소켓 공간에서 먼저 걸린다(행벡터: 오프셋 × 소켓 로컬).
                 offset = BoneTransform::makeFromMatrix( target._offset.toMatrix() * socketLocal.toMatrix() );
+            }
+            if ( boneName.empty() && target._kind == RigTargetKind::Socket )
+            {
+                // 부모가 빈 소켓은 유닛 뿌리(모델 원점) 기준이다.
+                _listTargetBone[targetIndex]   = kModelOriginBone;
+                _listTargetOffset[targetIndex] = offset;
+                continue;
             }
             const int32 boneIndex = skeleton.findBoneIndex( boneName );
             if ( boneIndex < 0 )
@@ -167,6 +177,12 @@ namespace sw
         if ( targetIndex >= _listTargetDef.size() )
             return false;
         const int32 bone = _listTargetBone[targetIndex];
+        if ( bone == kModelOriginBone )
+        {
+            outPosition = _listTargetOffset[targetIndex]._translation;
+            outRotation = _listTargetOffset[targetIndex]._rotation;
+            return true;
+        }
         if ( bone >= 0 )
         {
             const BoneTransform& offset = _listTargetOffset[targetIndex];
