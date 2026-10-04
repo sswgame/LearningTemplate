@@ -19,11 +19,11 @@ namespace sw
             static constexpr float32 kGlobalDefaultIntensity{ 0.25f };
             static constexpr float32 kMinimumRadius{ 0.01f };
 
-            /** @brief 전체 각(도)의 반각 cos 입니다. 360 이상이면 −1(원뿔 없음)입니다. */
-            static float32 computeHalfAngleCos( float32 angleDeg )
+            /** @brief 전체 각(라디안)의 반각 cos 입니다. 2π 이상이면 −1(원뿔 없음)입니다. */
+            static float32 computeHalfAngleCos( float32 angle )
             {
-                const float32 clamped = MathUtil::clamp( angleDeg, 0.0f, 360.0f );
-                return MathUtil::cos( clamped * 0.5f * MathUtil::Pi / 180.0f );
+                const float32 clamped = MathUtil::clamp( angle, 0.0f, 2.0f * MathUtil::Pi );
+                return MathUtil::cos( clamped * 0.5f );
             }
         };
     } // namespace
@@ -33,8 +33,8 @@ namespace sw
         , _innerRadius{ 0.0f }
         , _outerRadius{ 4.0f }
         , _falloffExponent{ 1.0f }
-        , _innerAngleDeg{ 360.0f }
-        , _outerAngleDeg{ 360.0f }
+        , _innerAngle{ 2.0f * MathUtil::Pi }
+        , _outerAngle{ 2.0f * MathUtil::Pi }
         , _normalMapHeight{ 1.0f }
         , _bCastShadows{ true }
     {
@@ -56,10 +56,10 @@ namespace sw
         _innerRadius = MathUtil::clamp( innerRadius, 0.0f, _outerRadius );
     }
 
-    void PointLight2DComponent::setConeAngles( float32 innerAngleDeg, float32 outerAngleDeg )
+    void PointLight2DComponent::setConeAngles( float32 innerAngle, float32 outerAngle )
     {
-        _outerAngleDeg = MathUtil::clamp( outerAngleDeg, 0.0f, 360.0f );
-        _innerAngleDeg = MathUtil::clamp( innerAngleDeg, 0.0f, _outerAngleDeg );
+        _outerAngle = MathUtil::clamp( outerAngle, 0.0f, 2.0f * MathUtil::Pi );
+        _innerAngle = MathUtil::clamp( innerAngle, 0.0f, _outerAngle );
     }
 
     void PointLight2DComponent::writeGpuLightKindFields( GpuLight& outLight ) const
@@ -74,8 +74,8 @@ namespace sw
         // 칸의 뜻은 lighting2d.hlsli 머리 주석의 표 — z 는 2D 거리에 쓰이지 않아 노멀 맵 높이를 싣는다.
         outLight._positionRadius = float4{ position._x, position._y, MathUtil::max( _normalMapHeight, 1e-3f ), _outerRadius };
         outLight._directionType  = float4{ direction2D._x, direction2D._y, _innerRadius, outLight._directionType._w };
-        outLight._params         = float4{ _bCastShadows ? 1.0f : 0.0f, Internal::computeHalfAngleCos( _outerAngleDeg ),
-                                   Internal::computeHalfAngleCos( _innerAngleDeg ), MathUtil::max( _falloffExponent, 1e-3f ) };
+        outLight._params         = float4{ _bCastShadows ? 1.0f : 0.0f, Internal::computeHalfAngleCos( _outerAngle ),
+                                   Internal::computeHalfAngleCos( _innerAngle ), MathUtil::max( _falloffExponent, 1e-3f ) };
     }
 
     GlobalLight2DComponent::GlobalLight2DComponent()

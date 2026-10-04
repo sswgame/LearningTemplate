@@ -52,14 +52,14 @@
 		<entity id="7" name="Torch">
 			<GameObject _schemaVersion="0" _name="Torch" _bActive="true">
 				<_listComponent>
-					<PointLight2DComponent _localPosition="11.5,-6.0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.78,0.5" _intensity="2.4" _innerRadius="0.5" _outerRadius="9" _falloffExponent="1.2" _innerAngleDeg="360" _outerAngleDeg="360" _normalMapHeight="1.5" _bCastShadows="true" />
+					<PointLight2DComponent _localPosition="11.5,-6.0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.78,0.5" _intensity="2.4" _innerRadius="0.5" _outerRadius="9" _falloffExponent="1.2" _innerAngle="6.2831853" _outerAngle="6.2831853" _normalMapHeight="1.5" _bCastShadows="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="8" name="SpotLight">
 			<GameObject _schemaVersion="0" _name="SpotLight" _bActive="true">
 				<_listComponent>
-					<PointLight2DComponent _localPosition="20,-0.5,0" _localRotation="0,0,-1.5707964" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="0.45,0.7,1" _intensity="3" _innerRadius="0" _outerRadius="9" _falloffExponent="1" _innerAngleDeg="30" _outerAngleDeg="55" _normalMapHeight="2" _bCastShadows="true" />
+					<PointLight2DComponent _localPosition="20,-0.5,0" _localRotation="0,0,-1.5707964" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="0.45,0.7,1" _intensity="3" _innerRadius="0" _outerRadius="9" _falloffExponent="1" _innerAngle="0.5235988" _outerAngle="0.9599311" _normalMapHeight="2" _bCastShadows="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

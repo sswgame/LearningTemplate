@@ -51,7 +51,7 @@ SW_TEST_CASE( Light2DTest, CollectWritesLightsThenShadowSegments )
     SW_ASSERT_NOT_NULL( pLight );
     pLight->setLocalPosition( sw::float3{ -1.0f, 2.0f, 0.0f } );
     pLight->setRadius( 0.5f, 5.0f );
-    pLight->setConeAngles( 60.0f, 90.0f );
+    pLight->setConeAngles( 60.0f * sw::MathUtil::DegreeToRadian, 90.0f * sw::MathUtil::DegreeToRadian );
     pLight->setFalloffExponent( 2.0f );
     pLight->setNormalMapHeight( 0.75f );
     sw::GameObject* pAmbientObject = pManager->createGameObject( sw::hashed_string( "Ambient" ) );

@@ -34,8 +34,8 @@ namespace sw
 
         void setRadius( float32 innerRadius, float32 outerRadius );
         void setFalloffExponent( float32 exponent ) { _falloffExponent = exponent; }
-        /** @brief 원뿔의 안 · 바깥 전체 각(도)입니다. 360 이면 원뿔이 없습니다. */
-        void    setConeAngles( float32 innerAngleDeg, float32 outerAngleDeg );
+        /** @brief 원뿔의 안 · 바깥 전체 각(라디안)입니다. 2π 면 원뿔이 없습니다. */
+        void    setConeAngles( float32 innerAngle, float32 outerAngle );
         void    setCastShadows( bool bCastShadows ) { _bCastShadows = bCastShadows; }
         void    setNormalMapHeight( float32 height ) { _normalMapHeight = height; }
         float32 getOuterRadius() const { return _outerRadius; }
@@ -50,11 +50,11 @@ namespace sw
         float32 _outerRadius;
         PROPERTY( Category = "Light", DisplayName = "Falloff Exponent", Min = 0.01, Tooltip = "1 fades linearly, larger values fade faster near the edge" )
         float32 _falloffExponent;
-        PROPERTY( Category = "Light", DisplayName = "Inner Angle", Min = 0.0, Max = 360.0, Tooltip = "Full intensity inside this cone angle", Meta = "Units=deg" )
-        float32 _innerAngleDeg;
-        PROPERTY( Category = "Light", DisplayName = "Outer Angle", Min = 0.0, Max = 360.0, Tooltip = "Cone angle where the light reaches zero; 360 is a point light",
-                  Meta = "Units=deg" )
-        float32 _outerAngleDeg;
+        PROPERTY( Category = "Light", DisplayName = "Inner Angle", Min = 0.0, Max = 6.2831853, Tooltip = "Full intensity inside this cone angle", Meta = "Units=rad" )
+        float32 _innerAngle;
+        PROPERTY( Category = "Light", DisplayName = "Outer Angle", Min = 0.0, Max = 6.2831853, Tooltip = "Cone angle where the light reaches zero; a full turn is a point light",
+                  Meta = "Units=rad" )
+        float32 _outerAngle;
         PROPERTY( Category = "Light", DisplayName = "Normal Map Height", Min = 0.0, Tooltip = "How far in front of the sprite plane the light sits for normal maps",
                   Meta = "Units=m" )
         float32 _normalMapHeight;
