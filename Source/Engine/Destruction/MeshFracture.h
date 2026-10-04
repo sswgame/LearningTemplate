@@ -38,6 +38,21 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 무엇을 부피로 보고 쪼갤지입니다. 게임 모델은 대개 닫혀 있지 않습니다(판자 · 겹친 부품 · 열린 바닥) — 그때는 닫힌 대리 부피를 쪼개
+     *        안쪽 면 · 물리 껍질 · 부피를 얻고, 겉면은 원래 메시를 같은 평면으로 (막지 않고) 잘라 씁니다.
+     */
+    ENUM()
+    enum class FractureVolume : uint8
+    {
+        Mesh = 0, ///< 메시 자체(닫혀 있어야 한다)
+        Bounds,   ///< 메시의 경계 상자
+        Hull,     ///< 메시 정점의 볼록 껍질
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 쪼개기 설정입니다(모델 임포트 규칙 `fracture` 가 채운다). */
     struct SW_API FractureSettings
     {
@@ -53,6 +68,7 @@ namespace sw
         uint32          _arrSliceCount[3]; ///< Slices: 축마다 칸 수
         uint32          _maxHullPoint;     ///< 조각 껍질 점의 상한(넘으면 고른 방향의 끝점만)
         FracturePattern _pattern;
+        FractureVolume  _volume; ///< 부피(닫히지 않은 모델은 Bounds · Hull)
 
         FractureSettings();
 
@@ -60,6 +76,10 @@ namespace sw
         [[nodiscard]] static bool parsePattern( string_view text, FracturePattern& outPattern );
         /** @brief 이름입니다. */
         static string_view getPatternName( FracturePattern pattern );
+        /** @brief 이름("mesh" · "bounds" · "hull")을 읽습니다. 모르는 이름이면 false 입니다. */
+        [[nodiscard]] static bool parseVolume( string_view text, FractureVolume& outVolume );
+        /** @brief 이름입니다. */
+        static string_view getVolumeName( FractureVolume volume );
     };
 } // namespace sw
 
@@ -70,7 +90,9 @@ namespace sw
     {
         /**
          * @brief 인덱스 없는 삼각형 목록을 쪼개 @p outAsset 을 채웁니다.
-         * @return 입력이 닫혀 있지 않거나 삼각형이 없거나 조각이 하나도 남지 않으면 false 이고 @p outError 에 까닭입니다.
+         * @details `_volume` 이 Mesh 가 아니면 대리 부피(경계 상자 · 볼록 껍질)를 쪼개 안쪽 면 · 껍질 · 부피를 얻고, 겉면은 원래 메시를 같은 평면으로
+         *          막지 않고 잘라 조각마다 붙입니다 — 열린 판자 · 겹친 부품으로 된 모델(Kenney 상자)도 쪼갭니다.
+         * @return 입력이 (Mesh 부피인데) 닫혀 있지 않거나 삼각형이 없거나 조각이 하나도 남지 않으면 false 이고 @p outError 에 까닭입니다.
          */
         [[nodiscard]] static bool fracture( vector_reference<const RHIVertex> listVertex, const FractureSettings& settings, FractureAsset& outAsset, string& outError );
         /** @brief 삼각형 목록이 닫혔는지입니다 — 자리가 비트까지 같은 점만 같은 정점으로 봅니다(쪼갠 조각이 정확히 닫혔는지). */
@@ -79,6 +101,8 @@ namespace sw
         static bool isClosedWithinTolerance( vector_reference<const RHIVertex> listVertex );
         /** @brief 닫힌 삼각형 목록의 부피(감은 방향 무관 절댓값)와 무게 중심입니다. */
         static float32 computeVolume( vector_reference<const RHIVertex> listVertex, float3& outCentroid );
+        /** @brief 정점들의 볼록 껍질(닫힌 삼각형 목록, 바깥 반시계)입니다. 점이 한 평면에 있으면 비어 있습니다. */
+        static void makeConvexHull( vector_reference<const RHIVertex> listVertex, vector<RHIVertex>& outListVertex );
         /** @brief 점이 닫힌 삼각형 목록 안에 있는지입니다(감음 수 — 구면각 합). */
         static bool isPointInside( vector_reference<const RHIVertex> listVertex, const float3& point );
     };

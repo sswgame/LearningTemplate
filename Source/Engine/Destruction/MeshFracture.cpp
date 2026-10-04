@@ -22,6 +22,7 @@ namespace sw
         struct MeshFractureInternal
         {
             static constexpr int32   kOuterTag          = -1;
+            static constexpr int32   kSurfaceTag        = -2; ///< 대리 부피를 쪼갤 때의 원래 겉면(막지 않고 자른다)
             static constexpr uint32  kSiteAttemptFactor = 200;
             static constexpr float32 kPlaneEpsilon      = 1.0e-5f; ///< 이 거리(미터) 안의 정점은 자르는 평면 위로 본다
 
@@ -244,7 +245,7 @@ namespace sw
              * @return 닫히지 않은 고리 수(입력이 닫혔으면 0)입니다.
              */
             static uint32 clipPiece( const vector<Triangle>& listInput, const float3& normal, float32 offset, int32 tag, const FractureSettings& settings,
-                                     vector<Triangle>& outListOutput, bool& outbNearDuplicate )
+                                     vector<Triangle>& outListOutput, bool& outbNearDuplicate, bool bCap = true )
             {
                 outbNearDuplicate = false;
                 outListOutput.clear();
@@ -309,7 +310,7 @@ namespace sw
                     if ( isSamePoint( exitPoint, entryPoint ) == false )
                         listSegment.push_back( Segment{ exitPoint, entryPoint } );
                 }
-                if ( listSegment.empty() || outListOutput.empty() )
+                if ( listSegment.empty() || outListOutput.empty() || bCap == false )
                     return 0;
 
                 // 자른 자리에 아주 가까운 두 점이 생겼는지 본다 — 칸 꼭짓점(세 평면이 만나는 점)은 서로 다른 모서리에서 따로 구해져 1e-7 m 쯤 어긋난
@@ -563,6 +564,56 @@ namespace sw
                 }
             }
 
+            static void addFace( vector<RHIVertex>& inoutList, const float3& a, const float3& b, const float3& c )
+            {
+                const float3 normal = CharacterGeometryUtil::makeUnitOr( ( b - a ).cross( c - a ), float3{ 0.0f, 1.0f, 0.0f } );
+                for ( const float3* pPoint : { &a, &b, &c } )
+                {
+                    RHIVertex vertex{};
+                    vertex._arrPosition[0] = pPoint->_x;
+                    vertex._arrPosition[1] = pPoint->_y;
+                    vertex._arrPosition[2] = pPoint->_z;
+                    vertex._arrNormal[0]   = normal._x;
+                    vertex._arrNormal[1]   = normal._y;
+                    vertex._arrNormal[2]   = normal._z;
+                    for ( float32& channel : vertex._arrColor )
+                        channel = 1.0f;
+                    inoutList.push_back( vertex );
+                }
+            }
+
+            /** @brief 경계 상자(바깥 반시계)입니다. */
+            static void makeBoundsVolume( vector_reference<const RHIVertex> listVertex, vector<RHIVertex>& outListVertex )
+            {
+                float3 lo{};
+                float3 hi{};
+                collectBounds( listVertex, lo, hi );
+                outListVertex.clear();
+                const float3 arrCorner[8] = {
+                    float3{lo._x, lo._y, lo._z},
+                    float3{hi._x, lo._y, lo._z},
+                    float3{hi._x, hi._y, lo._z},
+                    float3{lo._x, hi._y, lo._z},
+                    float3{lo._x, lo._y, hi._z},
+                    float3{hi._x, lo._y, hi._z},
+                    float3{hi._x, hi._y, hi._z},
+                    float3{lo._x, hi._y, hi._z}
+                };
+                const uint32 arrQuad[6][4] = {
+                    {1, 2, 6, 5},
+                    {4, 7, 3, 0},
+                    {3, 7, 6, 2},
+                    {4, 0, 1, 5},
+                    {4, 5, 6, 7},
+                    {1, 0, 3, 2}
+                };
+                for ( const auto& quad : arrQuad )
+                {
+                    addFace( outListVertex, arrCorner[quad[0]], arrCorner[quad[1]], arrCorner[quad[2]] );
+                    addFace( outListVertex, arrCorner[quad[0]], arrCorner[quad[2]], arrCorner[quad[3]] );
+                }
+            }
+
             static vector_reference<const RHIVertex> asVertices( const vector<Triangle>& listTriangle, vector<RHIVertex>& outListScratch )
             {
                 outListScratch.clear();
@@ -593,6 +644,7 @@ namespace sw
         , _arrSliceCount{ 4, 1, 1 }
         , _maxHullPoint{ 48 }
         , _pattern{ FracturePattern::Uniform }
+        , _volume{ FractureVolume::Mesh }
     {
     }
 
@@ -621,6 +673,170 @@ namespace sw
                 return "slices";
         }
         return "uniform";
+    }
+
+    bool FractureSettings::parseVolume( string_view text, FractureVolume& outVolume )
+    {
+        if ( text == "mesh" )
+            outVolume = FractureVolume::Mesh;
+        else if ( text == "bounds" )
+            outVolume = FractureVolume::Bounds;
+        else if ( text == "hull" )
+            outVolume = FractureVolume::Hull;
+        else
+            return false;
+        return true;
+    }
+
+    string_view FractureSettings::getVolumeName( FractureVolume volume )
+    {
+        switch ( volume )
+        {
+            case FractureVolume::Mesh:
+                return "mesh";
+            case FractureVolume::Bounds:
+                return "bounds";
+            case FractureVolume::Hull:
+                return "hull";
+        }
+        return "mesh";
+    }
+
+    void MeshFractureUtil::makeConvexHull( vector_reference<const RHIVertex> listVertex, vector<RHIVertex>& outListVertex )
+    {
+        outListVertex.clear();
+        // 고유 점.
+        vector<float3>                listPoint;
+        unordered_map<uint64, uint32> mapSeen;
+        for ( const RHIVertex& vertex : listVertex )
+        {
+            const float3 point = MeshFractureInternal::getPosition( vertex );
+            if ( mapSeen.emplace( MeshFractureInternal::makePointKey( point ), 0u ).second )
+                listPoint.push_back( point );
+        }
+        if ( listPoint.size() < 4 )
+            return;
+        float3 lo{};
+        float3 hi{};
+        MeshFractureInternal::collectBounds( listVertex, lo, hi );
+        const float32 epsilon = MathUtil::max( ( hi - lo ).getLength(), 1.0e-3f ) * 1.0e-6f;
+        // 처음 사면체 — 가장 먼 점들.
+        uint32 arrStart[4] = { 0, 0, 0, 0 };
+        for ( uint32 index = 1; index < static_cast<uint32>( listPoint.size() ); ++index )
+        {
+            if ( listPoint[index]._x < listPoint[arrStart[0]]._x )
+                arrStart[0] = index;
+        }
+        float32 best = -1.0f;
+        for ( uint32 index = 0; index < static_cast<uint32>( listPoint.size() ); ++index )
+        {
+            const float32 distance = float3::getDistanceSquared( listPoint[index], listPoint[arrStart[0]] );
+            if ( distance > best )
+            {
+                best        = distance;
+                arrStart[1] = index;
+            }
+        }
+        best = -1.0f;
+        for ( uint32 index = 0; index < static_cast<uint32>( listPoint.size() ); ++index )
+        {
+            const float32 area = ( listPoint[arrStart[1]] - listPoint[arrStart[0]] ).cross( listPoint[index] - listPoint[arrStart[0]] ).getLengthSquared();
+            if ( area > best )
+            {
+                best        = area;
+                arrStart[2] = index;
+            }
+        }
+        const float3 baseNormal = ( listPoint[arrStart[1]] - listPoint[arrStart[0]] ).cross( listPoint[arrStart[2]] - listPoint[arrStart[0]] );
+        best                    = -1.0f;
+        for ( uint32 index = 0; index < static_cast<uint32>( listPoint.size() ); ++index )
+        {
+            const float32 height = MathUtil::abs( baseNormal.dot( listPoint[index] - listPoint[arrStart[0]] ) );
+            if ( height > best )
+            {
+                best        = height;
+                arrStart[3] = index;
+            }
+        }
+        if ( best <= epsilon * baseNormal.getLength() )
+            return;
+
+        struct Face
+        {
+            uint32 _arrIndex[3];
+            uint8  _bAlive;
+        };
+        vector<Face> listFace;
+        const float3 inside         = ( listPoint[arrStart[0]] + listPoint[arrStart[1]] + listPoint[arrStart[2]] + listPoint[arrStart[3]] ) * 0.25f;
+        const auto   addFaceOutward = [&listFace, &listPoint, &inside]( uint32 a, uint32 b, uint32 c )
+        {
+            const float3 normal = ( listPoint[b] - listPoint[a] ).cross( listPoint[c] - listPoint[a] );
+            if ( normal.dot( listPoint[a] - inside ) < 0.0f )
+                listFace.push_back( Face{
+                    { a, c, b },
+                    SW_TRUE
+                } );
+            else
+                listFace.push_back( Face{
+                    { a, b, c },
+                    SW_TRUE
+                } );
+        };
+        addFaceOutward( arrStart[0], arrStart[1], arrStart[2] );
+        addFaceOutward( arrStart[0], arrStart[1], arrStart[3] );
+        addFaceOutward( arrStart[0], arrStart[2], arrStart[3] );
+        addFaceOutward( arrStart[1], arrStart[2], arrStart[3] );
+
+        // 점마다 — 보이는 면을 지우고 지평선 모서리마다 그 점과 새 면을 잇는다.
+        unordered_map<uint64, uint32> mapEdgeFace;
+        for ( uint32 point = 0; point < static_cast<uint32>( listPoint.size() ); ++point )
+        {
+            vector<uint32> listVisible;
+            for ( uint32 face = 0; face < static_cast<uint32>( listFace.size() ); ++face )
+            {
+                if ( listFace[face]._bAlive == SW_FALSE )
+                    continue;
+                const float3& a      = listPoint[listFace[face]._arrIndex[0]];
+                const float3  normal = ( listPoint[listFace[face]._arrIndex[1]] - a ).cross( listPoint[listFace[face]._arrIndex[2]] - a );
+                if ( normal.dot( listPoint[point] - a ) > epsilon * normal.getLength() )
+                    listVisible.push_back( face );
+            }
+            if ( listVisible.empty() )
+                continue;
+            mapEdgeFace.clear();
+            for ( const uint32 face : listVisible )
+            {
+                for ( uint32 corner = 0; corner < 3; ++corner )
+                {
+                    const uint64 from                = listFace[face]._arrIndex[corner];
+                    const uint64 to                  = listFace[face]._arrIndex[( corner + 1 ) % 3];
+                    mapEdgeFace[( from << 32 ) | to] = face;
+                }
+            }
+            vector<std::pair<uint32, uint32>> listHorizon;
+            for ( const uint32 face : listVisible )
+            {
+                for ( uint32 corner = 0; corner < 3; ++corner )
+                {
+                    const uint32 from = listFace[face]._arrIndex[corner];
+                    const uint32 to   = listFace[face]._arrIndex[( corner + 1 ) % 3];
+                    if ( mapEdgeFace.find( ( static_cast<uint64>( to ) << 32 ) | from ) == mapEdgeFace.end() )
+                        listHorizon.emplace_back( from, to );
+                }
+            }
+            for ( const uint32 face : listVisible )
+                listFace[face]._bAlive = SW_FALSE;
+            for ( const std::pair<uint32, uint32>& edge : listHorizon )
+                listFace.push_back( Face{
+                    { edge.first, edge.second, point },
+                    SW_TRUE
+                } );
+        }
+        for ( const Face& face : listFace )
+        {
+            if ( face._bAlive == SW_TRUE )
+                MeshFractureInternal::addFace( outListVertex, listPoint[face._arrIndex[0]], listPoint[face._arrIndex[1]], listPoint[face._arrIndex[2]] );
+        }
     }
 
     bool MeshFractureUtil::isClosedMesh( vector_reference<const RHIVertex> listVertex )
@@ -739,41 +955,59 @@ namespace sw
             outError = "the mesh has no triangles";
             return false;
         }
-        if ( isClosedWithinTolerance( listVertex ) == false )
+        const bool bProxy = settings._volume != FractureVolume::Mesh;
+        if ( bProxy == false && isClosedWithinTolerance( listVertex ) == false )
         {
-            outError = "the mesh is not closed (every edge must be shared by exactly two triangles)";
+            outError = "the mesh is not closed (every edge must be shared by exactly two triangles) - use \"volume\": \"bounds\" or \"hull\"";
             return false;
         }
 
         // 용접 — 허용 오차 안의 자리를 한 자리로 맞춘다. 자르기는 자리가 비트까지 같아야 이웃 삼각형의 교점이 같다.
         vector<RHIVertex> listWelded( listVertex.begin(), listVertex.end() );
         MeshFractureInternal::weldPositions( listWelded );
-        vector<Triangle> listSource;
-        listSource.reserve( listWelded.size() / 3 );
-        for ( size_t index = 0; index + 2 < listWelded.size(); index += 3 )
+        // 쪼갤 부피 — 메시 자체, 또는 닫힌 대리(경계 상자 · 볼록 껍질). 대리면 원래 겉면은 따로 막지 않고 자른다.
+        vector<RHIVertex> listVolume;
+        if ( settings._volume == FractureVolume::Hull )
+            makeConvexHull( listWelded, listVolume );
+        if ( settings._volume == FractureVolume::Bounds || ( settings._volume == FractureVolume::Hull && listVolume.empty() ) )
+            MeshFractureInternal::makeBoundsVolume( listWelded, listVolume );
+        if ( bProxy == false )
+            listVolume = listWelded;
+        const auto makeTriangles = []( const vector<RHIVertex>& listInput, int32 tag, vector<Triangle>& outListTriangle )
         {
-            Triangle triangle;
-            triangle._arrVertex[0] = listWelded[index];
-            triangle._arrVertex[1] = listWelded[index + 1];
-            triangle._arrVertex[2] = listWelded[index + 2];
-            triangle._tag          = MeshFractureInternal::kOuterTag;
-            listSource.push_back( triangle );
-        }
+            outListTriangle.reserve( listInput.size() / 3 );
+            for ( size_t index = 0; index + 2 < listInput.size(); index += 3 )
+            {
+                Triangle triangle;
+                triangle._arrVertex[0] = listInput[index];
+                triangle._arrVertex[1] = listInput[index + 1];
+                triangle._arrVertex[2] = listInput[index + 2];
+                triangle._tag          = tag;
+                outListTriangle.push_back( triangle );
+            }
+        };
+        vector<Triangle> listSource;
+        vector<Triangle> listSurfaceSource;
+        makeTriangles( listVolume, MeshFractureInternal::kOuterTag, listSource );
+        if ( bProxy )
+            makeTriangles( listWelded, MeshFractureInternal::kSurfaceTag, listSurfaceSource );
 
         vector<float3> listSite;
-        MeshFractureInternal::placeSites( listWelded, settings, listSite );
+        MeshFractureInternal::placeSites( listVolume, settings, listSite );
         if ( listSite.empty() )
             listSite.push_back( float3{} );
         const uint32 siteCount = static_cast<uint32>( listSite.size() );
 
         // 칸마다 — 가까운 이웃부터 이등분 평면으로 자른다.
         vector<vector<Triangle>>           listSitePiece( siteCount );
+        vector<vector<Triangle>>           listSiteSurface( siteCount );
         uint32                             openLoopCount = 0;
         vector<Triangle>                   listScratch;
         vector<std::pair<float32, uint32>> listOrder;
         for ( uint32 site = 0; site < siteCount; ++site )
         {
-            vector<Triangle> listPieceTriangle = listSource;
+            vector<Triangle> listPieceTriangle   = listSource;
+            vector<Triangle> listSurfaceTriangle = listSurfaceSource;
             if ( siteCount > 1 )
             {
                 listOrder.clear();
@@ -810,6 +1044,12 @@ namespace sw
                     if ( bNearDuplicate )
                         MeshFractureInternal::cleanPiece( listScratch );
                     listPieceTriangle.swap( listScratch );
+                    if ( listSurfaceTriangle.empty() == false )
+                    {
+                        (void)MeshFractureInternal::clipPiece( listSurfaceTriangle, normal, offset, MeshFractureInternal::kSurfaceTag, settings, listScratch, bNearDuplicate,
+                                                               false );
+                        listSurfaceTriangle.swap( listScratch );
+                    }
                     if ( listPieceTriangle.empty() )
                         break;
                     radiusSquared = 0.0f;
@@ -820,7 +1060,8 @@ namespace sw
                     }
                 }
             }
-            listSitePiece[site] = std::move( listPieceTriangle );
+            listSitePiece[site]   = std::move( listPieceTriangle );
+            listSiteSurface[site] = std::move( listSurfaceTriangle );
         }
         if ( openLoopCount > 0 )
             SW_LOG_WARNING( "Fracture left %# cut loops open (non-manifold input) - those pieces may have holes", openLoopCount );
@@ -889,16 +1130,27 @@ namespace sw
         MeshFractureInternal::collectBounds( listWelded, outAsset._boundsMin, outAsset._boundsMax );
         for ( uint32 leaf = 0; leaf < pieceCount; ++leaf )
         {
-            const vector<Triangle>& listTriangle = listSitePiece[listSiteOfPiece[listLeafOrder[leaf]]];
+            const uint32            site         = listSiteOfPiece[listLeafOrder[leaf]];
+            const vector<Triangle>& listTriangle = listSitePiece[site];
             FracturePiece           piece;
             piece._firstVertex = static_cast<uint32>( outAsset._listVertex.size() );
-            piece._vertexCount = static_cast<uint32>( listTriangle.size() * 3 );
-            for ( const Triangle& triangle : listTriangle )
+            // 그림 — 메시 부피면 조각 그대로, 대리 부피면 원래 겉면 조각 + 대리의 안쪽 면(대리의 바깥 면은 그리지 않는다).
+            const auto appendTriangle = [&outAsset]( const Triangle& triangle, FractureSurfaceSlot slot )
             {
                 for ( const RHIVertex& vertex : triangle._arrVertex )
                     outAsset._listVertex.push_back( vertex );
-                outAsset._listTriangleSlot.push_back( static_cast<uint8>( triangle._tag < 0 ? FractureSurfaceSlot::Outer : FractureSurfaceSlot::Interior ) );
+                outAsset._listTriangleSlot.push_back( static_cast<uint8>( slot ) );
+            };
+            for ( const Triangle& triangle : listSiteSurface[site] )
+                appendTriangle( triangle, FractureSurfaceSlot::Outer );
+            for ( const Triangle& triangle : listTriangle )
+            {
+                if ( triangle._tag >= 0 )
+                    appendTriangle( triangle, FractureSurfaceSlot::Interior );
+                else if ( bProxy == false )
+                    appendTriangle( triangle, FractureSurfaceSlot::Outer );
             }
+            piece._vertexCount = static_cast<uint32>( outAsset._listVertex.size() ) - piece._firstVertex;
             MeshFractureInternal::collectBounds( vector_reference<const RHIVertex>{ outAsset._listVertex.data() + piece._firstVertex, piece._vertexCount }, piece._boundsMin,
                                                  piece._boundsMax );
             vector<float3> listHull;

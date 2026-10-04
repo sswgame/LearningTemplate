@@ -348,3 +348,45 @@ SW_TEST_CASE( FractureTest, ManySeedsGiveOnlyClosedPieces )
     SW_EXPECT_EQUAL( 240u, pieceCount );
     SW_EXPECT_EQUAL( 0u, openCount );
 }
+
+/**
+ * @brief [FractureTest] 닫히지 않은 모델(한 면이 빠진 상자)도 대리 부피(경계 상자)로 쪼갠다 — 부피 · 안쪽 면 · 껍질은 대리에서, 겉면은 원래 메시를 잘라
+ *        조각마다 붙인다(대리의 바깥 면은 그리지 않는다). 볼록 껍질 대리는 오목 L 을 볼록하게 감싼다
+ */
+SW_TEST_CASE( FractureTest, OpenModelFracturesThroughAProxyVolume )
+{
+    sw::vector<sw::RHIVertex> listOpen = test::DestructionTestUtil::makeBox( sw::float3{ 1.0f, 0.5f, 0.25f } );
+    listOpen.resize( listOpen.size() - 6 ); // -Z 면을 뺀다
+    sw::FractureSettings settings;
+    settings._pieceCount = 12;
+    settings._seed       = 5;
+    sw::FractureAsset asset;
+    sw::string        error;
+    {
+        test::ScopedDefensiveTestLog expected( "a mesh volume needs a closed mesh" );
+        SW_EXPECT_FALSE( sw::MeshFractureUtil::fracture( listOpen, settings, asset, error ) );
+    }
+    settings._volume = sw::FractureVolume::Bounds;
+    SW_ASSERT_TRUE_MSG( sw::MeshFractureUtil::fracture( listOpen, settings, asset, error ), error.c_str() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, TestFractureInternal::sumPieceVolumes( asset ), 1e-3f );
+    SW_EXPECT_TRUE( asset.countTriangles( sw::FractureSurfaceSlot::Interior ) > 0 );
+    // 겉면 넓이 = 원래 메시 넓이(겉넓이 7 에서 빠진 -Z 면 2 를 뺀 5) — 대리 상자의 바깥 면이 섞이면 7 이 된다.
+    float32 outerArea = 0.0f;
+    for ( size_t triangle = 0; triangle < asset._listTriangleSlot.size(); ++triangle )
+    {
+        if ( asset._listTriangleSlot[triangle] != static_cast<uint8>( sw::FractureSurfaceSlot::Outer ) )
+            continue;
+        const sw::RHIVertex* pVertex = &asset._listVertex[triangle * 3];
+        const sw::float3     a{ pVertex[0]._arrPosition[0], pVertex[0]._arrPosition[1], pVertex[0]._arrPosition[2] };
+        const sw::float3     b{ pVertex[1]._arrPosition[0], pVertex[1]._arrPosition[1], pVertex[1]._arrPosition[2] };
+        const sw::float3     c{ pVertex[2]._arrPosition[0], pVertex[2]._arrPosition[1], pVertex[2]._arrPosition[2] };
+        outerArea += ( b - a ).cross( c - a ).getLength() * 0.5f;
+    }
+    SW_EXPECT_NEAR_EQUAL( 5.0f, outerArea, 1e-3f );
+
+    sw::vector<sw::RHIVertex> listHull;
+    sw::MeshFractureUtil::makeConvexHull( test::DestructionTestUtil::makeLPrism( 0.5f ), listHull );
+    SW_EXPECT_TRUE( sw::MeshFractureUtil::isClosedMesh( listHull ) );
+    sw::float3 centroid{};
+    SW_EXPECT_NEAR_EQUAL( 3.5f * 0.5f, sw::MeshFractureUtil::computeVolume( listHull, centroid ), 1e-4f );
+}

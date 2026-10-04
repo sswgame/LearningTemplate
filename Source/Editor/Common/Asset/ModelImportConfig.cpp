@@ -44,6 +44,8 @@ namespace sw::editor
             return {};
         string text = "fracture=";
         text += FractureSettings::getPatternName( _fracture._pattern );
+        text += ";volume=";
+        text += FractureSettings::getVolumeName( _fracture._volume );
         text += ";pieces=" + to_string( _fracture._pieceCount ) + ";seed=" + to_string( _fracture._seed ) + ";hull=" + to_string( _fracture._maxHullPoint ) + ";levels=";
         for ( const uint32 count : _fracture._listLevelCount )
             text += to_string( count ) + ",";
@@ -208,12 +210,21 @@ namespace sw::editor
             return false;
         }
         const bool bKnownKeys = AnimJsonUtil::hasOnlyKnownKeys( fractureValue,
-                                                                { "pattern", "pieces", "seed", "levels", "impact_point", "cluster_radius", "cluster_fraction", "slices",
+                                                                { "pattern", "volume", "pieces", "seed", "levels", "impact_point", "cluster_radius", "cluster_fraction", "slices",
                                                                   "slice_jitter", "interior_color", "interior_uv_scale", "max_hull_points" },
                                                                 context );
         if ( bKnownKeys == false )
             return false;
         FractureSettings& settings = inoutRule._fracture;
+        if ( fractureValue.has( "volume" ) )
+        {
+            const string volumeText = fractureValue.get( "volume" ).asString();
+            if ( FractureSettings::parseVolume( volumeText, settings._volume ) == false )
+            {
+                SW_LOG_ERROR( "%#: unknown volume '%#' (mesh | bounds | hull).", context.c_str(), volumeText.c_str() );
+                return false;
+            }
+        }
         if ( fractureValue.has( "pattern" ) )
         {
             const string patternText = fractureValue.get( "pattern" ).asString();
