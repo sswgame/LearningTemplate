@@ -1,15 +1,18 @@
 #include "pch.h"
 
+#include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/NetEmulation.h"
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetTransport.h"
 
 #include "GameFramework/Kits/Network/NetMmo/MmoReplicator.h"
+#include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
 
 #include "TestFramework/TestFramework.h"
 
 // MMO 네트워크 키트 — 격자 반경 질의, 관심 영역의 들어옴 · 나감(히스테리시스), 대역폭 예산 안에서 가까운 것을 더 자주 갱신,
-// 멀어도 굶지 않음, 늘 보이기 정책.
+// 멀어도 굶지 않음, 늘 보이기 정책. 가상 서버 하니스 위에서 — 대량 나감 · 순서가 뒤바뀐 갱신 · 상한을 넘는 상태.
 
 using namespace sw;
 
@@ -25,6 +28,142 @@ namespace
             return entity._typeId == 9; // 파티원
         }
     };
+
+    constexpr uint32 kMmoObserverId = 1;
+
+    /** @brief 시험이 틱 사이에 바꾸는 서버 쪽 엔티티 표입니다. 표의 엔티티를 틱마다 `setEntity` 하고, 빠진 것은 지운다. */
+    struct MmoTable
+    {
+        vector<MmoEntity>     _listEntity{};
+        vector<uint32>        _listRemoved{};
+        MmoReplicatorSettings _settings{};
+        uint8                 _bStampTick{ SW_FALSE }; ///< 상태 앞 4 바이트에 서버 틱(틱마다 바뀐다 — 받는 쪽이 되돌아감을 잰다)
+    };
+
+    /** @brief 서버 — 연결마다 관찰자 엔티티(`kMmoObserverId`)를 중심으로 관심 영역을 돌린다. 연결이 닫히면 라우터가 관찰자를 지운다. */
+    class MmoServerSession final : public INetSimSession
+    {
+    public:
+        MmoServerSession( NetSimWorld& world, MmoTable* pTable )
+            : _server{}
+            , _pTable{ pTable }
+        {
+            _server.initialize( &world.getHost(), pTable->_settings );
+            world.getRouter().addHandler( &_server );
+        }
+
+        void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
+        {
+            (void)world;
+            if ( event._kind == NetHostEvent::Kind::Connected )
+                _server.setObserver( event._connectionId, kMmoObserverId );
+        }
+
+        void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
+        {
+            const uint32 tick = world.getLocalTick();
+            for ( MmoEntity& entity : _pTable->_listEntity )
+            {
+                if ( _pTable->_bStampTick == SW_TRUE && entity._listState.size() >= 4 )
+                {
+                    for ( size_t index = 0; index < 4; ++index )
+                        entity._listState[index] = static_cast<uint8>( tick >> ( 8 * index ) );
+                }
+                _server.setEntity( entity );
+            }
+            for ( const uint32 entityId : _pTable->_listRemoved )
+                _server.removeEntity( entityId );
+            _pTable->_listRemoved.clear();
+            _server.update( deltaTime );
+        }
+
+        const MmoReplicator& getServer() const { return _server; }
+
+    private:
+        MmoReplicator _server;
+        MmoTable*     _pTable;
+    };
+
+    /** @brief 클라이언트 — 보이는 엔티티와, 틱 도장이 있는 상태가 뒤로 간 횟수(옛 갱신이 새 것을 덮음)를 센다. */
+    class MmoClientSession final : public INetSimSession
+    {
+    public:
+        explicit MmoClientSession( NetSimWorld& world )
+            : _view{}
+            , _listEvent{}
+            , _mapLastStamp{}
+            , _regressionCount{ 0 }
+        {
+            world.getRouter().addHandler( &_view );
+        }
+
+        void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
+        {
+            (void)world;
+            (void)deltaTime;
+            _listEvent.clear();
+            _view.drainEvents( _listEvent );
+            for ( const MmoClientEvent& event : _listEvent )
+            {
+                if ( event._kind == MmoClientEvent::Kind::Left )
+                {
+                    _mapLastStamp.erase( event._entityId );
+                    continue;
+                }
+                const MmoEntity* pEntity = _view.findEntity( event._entityId );
+                if ( pEntity == nullptr || pEntity->_listState.size() < 4 )
+                    continue;
+                uint32 stamp = 0;
+                for ( size_t index = 0; index < 4; ++index )
+                    stamp |= static_cast<uint32>( pEntity->_listState[index] ) << ( 8 * index );
+                const auto stampIter = _mapLastStamp.find( event._entityId );
+                if ( stampIter != _mapLastStamp.end() && stamp < stampIter->second )
+                    ++_regressionCount;
+                _mapLastStamp[event._entityId] = stamp;
+            }
+        }
+
+        const MmoClientView& getView() const { return _view; }
+        int32                getRegressionCount() const { return _regressionCount; }
+
+    private:
+        MmoClientView                 _view;
+        vector<MmoClientEvent>        _listEvent;
+        unordered_map<uint32, uint32> _mapLastStamp;
+        int32                         _regressionCount;
+    };
+
+    class MmoNetSimGame final : public INetSimGame
+    {
+    public:
+        unique_ptr<INetSimSession> createSession( NetSimWorld& world ) override
+        {
+            if ( world.isServer() )
+                return make_unique<MmoServerSession>( world, &_table );
+            return make_unique<MmoClientSession>( world );
+        }
+
+        MmoTable _table;
+    };
+
+    const MmoServerSession& getMmoServer( const NetSimHarness& harness ) { return *static_cast<const MmoServerSession*>( harness.getServer().getSession() ); }
+
+    const MmoClientSession& getMmoClient( const NetSimHarness& harness, int32 worldIndex )
+    {
+        return *static_cast<const MmoClientSession*>( harness.findClient( worldIndex )->getSession() );
+    }
+
+    struct MmoCountGoal
+    {
+        int32 _worldIndex{ 0 };
+        int32 _entityCount{ 0 };
+    };
+
+    bool hasMmoEntityCount( const NetSimHarness& harness, void* pContext )
+    {
+        const MmoCountGoal& goal = *static_cast<const MmoCountGoal*>( pContext );
+        return getMmoClient( harness, goal._worldIndex ).getView().getEntityCount() == goal._entityCount;
+    }
 } // namespace
 
 SW_TEST_CASE( NetMmoTest, InterestGridQueriesOnlyNearbyCells )
@@ -175,4 +314,115 @@ SW_TEST_CASE( NetMmoTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
     server.removeEntity( 1001 );
     runFor( 0.5, false );
     SW_EXPECT_TRUE( view.findEntity( 1001 ) == nullptr );
+}
+
+/**
+ * @brief [NetMmoTest] 관찰자가 멀리 순간 이동해 수백 개가 한꺼번에 나가도 클라이언트에 유령이 남지 않는다 — 나감을 메시지 상한 안에서 쪼갠다
+ * @details 나감 하나에 모두 담던 때는 5 바이트 id 300 개 = 1500 B 가 상한을 넘어 보내기에서 버려졌는데, 서버는 보이는 목록에서 먼저 지워 다시 보내지 않았다.
+ */
+SW_TEST_CASE( NetMmoTest, TeleportLeavesWithoutGhosts )
+{
+    constexpr uint32 kNeighborCount = 300;
+    constexpr uint32 kFirstId       = 0x10000000; // 가변 정수 5 바이트
+    MmoNetSimGame    game;
+    game._table._listEntity.push_back( MmoEntity{
+        vector<uint8>{},
+        float3{ 0.0f, 0.0f, 0.0f },
+        kMmoObserverId, 0, 1.0f
+    } );
+    for ( uint32 index = 0; index < kNeighborCount; ++index )
+        game._table._listEntity.push_back(
+            MmoEntity{
+                vector<uint8>{ 1 },
+                float3{ static_cast<float32>( index % 20 ) * 2.0f, 0.0f, static_cast<float32>( index / 20 ) * 2.0f },
+                kFirstId + index, 1, 1.0f
+        } );
+    NetSimHarness harness;
+    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    const int32 client = harness.addClient( NetSimLinkConditions{} );
+
+    MmoCountGoal all{ client, static_cast<int32>( kNeighborCount + 1 ) };
+    SW_ASSERT_TRUE_MSG( harness.stepUntil( &hasMmoEntityCount, &all, 300 ) > 0, "every neighbor enters" );
+
+    game._table._listEntity[0]._position = float3{ 10000.0f, 0.0f, 10000.0f };
+    MmoCountGoal alone{ client, 1 };
+    const int32  leaveTicks = harness.stepUntil( &hasMmoEntityCount, &alone, 120 );
+    SW_LOG_INFO( "[NetMmo] teleport away from %# neighbors: client left with %# entities after %# ticks (-1 = never)", kNeighborCount,
+                 getMmoClient( harness, client ).getView().getEntityCount(), leaveTicks );
+    SW_EXPECT_TRUE_MSG( 0 < leaveTicks && leaveTicks < 10, "every neighbor leaves the client within a few ticks" );
+    SW_EXPECT_EQUAL( 1, getMmoServer( harness ).getServer().getVisibleCount( 0 ) );
+}
+
+/**
+ * @brief [NetMmoTest] 순서가 뒤바뀐 비신뢰 갱신이 더 새 상태를 덮지 않는다 — 갱신에 서버 틱을 싣고, 클라이언트는 엔티티마다 마지막으로 적용한 틱보다 옛것을 버린다
+ */
+SW_TEST_CASE( NetMmoTest, ReorderedUpdateDoesNotOverwriteNewer )
+{
+    MmoNetSimGame game;
+    game._table._bStampTick                  = SW_TRUE;
+    game._table._settings._updateBudgetBytes = 1000;
+    game._table._listEntity.push_back( MmoEntity{
+        vector<uint8>( 4, 0 ), float3{ 0.0f, 0.0f, 0.0f },
+        kMmoObserverId, 0, 1.0f
+    } );
+    for ( uint32 index = 0; index < 20; ++index )
+        game._table._listEntity.push_back( MmoEntity{
+            vector<uint8>( 4, 0 ), float3{ static_cast<float32>( index ), 0.0f, 3.0f },
+            100 + index, 1, 1.0f
+        } );
+    NetSimSettings settings;
+    settings._hostSettings._sendInterval = 1.0 / 60.0;
+    NetSimHarness harness;
+    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    NetEmulationConditions reorder;
+    reorder._latency      = 0.03;
+    reorder._jitter       = 0.02;
+    reorder._reorderRate  = 0.3f;
+    reorder._reorderDelay = 0.05;
+    NetSimLinkConditions link;
+    link._downstream   = reorder;
+    const int32 client = harness.addClient( link );
+    harness.stepTicks( 600 );
+
+    const MmoClientSession& session = getMmoClient( harness, client );
+    SW_LOG_INFO( "[NetMmo] 30 percent reordered downstream over 600 ticks: %# state regressions on the client, %# stale updates dropped", session.getRegressionCount(),
+                 session.getView().getStaleUpdateCount() );
+    SW_EXPECT_EQUAL( 21, session.getView().getEntityCount() );
+    SW_EXPECT_EQUAL( 0, session.getRegressionCount() );
+    SW_EXPECT_TRUE( session.getView().getStaleUpdateCount() > 0 ); // 실제로 뒤바뀐 것이 왔다
+}
+
+/**
+ * @brief [NetMmoTest] 상태 상한(512 B)을 넘는 엔티티는 서버가 받지 않는다 — 클라이언트가 거절할 크기를 보내 두 쪽 보이는 목록이 어긋나지 않게
+ * @details 서버가 그대로 보내던 때는 클라이언트가 들어옴을 깨짐으로 버려, 서버는 보인다고 알고 클라이언트에는 없는 채로 남았다.
+ */
+SW_TEST_CASE( NetMmoTest, OversizedStateIsRefusedByTheServer )
+{
+    MmoNetSimGame game;
+    game._table._listEntity.push_back( MmoEntity{
+        vector<uint8>{},
+        float3{ 0.0f, 0.0f, 0.0f },
+        kMmoObserverId, 0, 1.0f
+    } );
+    game._table._listEntity.push_back( MmoEntity{
+        vector<uint8>( 600, 3 ), float3{ 2.0f, 0.0f, 0.0f },
+        50, 1, 1.0f
+    } );
+    game._table._listEntity.push_back( MmoEntity{
+        vector<uint8>( NetMmoMessage::kMaxStateBytes, 4 ), float3{ 3.0f, 0.0f, 0.0f },
+        51, 1, 1.0f
+    } );
+    NetSimHarness harness;
+    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    const int32 client = harness.addClient( NetSimLinkConditions{} );
+    harness.stepTicks( 60 );
+
+    const MmoReplicator& server = getMmoServer( harness ).getServer();
+    const MmoClientView& view   = getMmoClient( harness, client ).getView();
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( harness.findClient( client )->getRouter().getMalformedCount() ) );
+    SW_EXPECT_EQUAL( server.getVisibleCount( 0 ), view.getEntityCount() );
+    SW_EXPECT_NULL( view.findEntity( 50 ) );
+    SW_ASSERT_NOT_NULL( view.findEntity( 51 ) );
+    SW_EXPECT_EQUAL( size_t{ NetMmoMessage::kMaxStateBytes }, view.findEntity( 51 )->_listState.size() );
+    SW_EXPECT_TRUE( server.getOversizedEntityCount() > 0 );
 }
