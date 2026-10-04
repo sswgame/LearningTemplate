@@ -11,6 +11,7 @@
 #include "Engine/Window/IWindow.h"
 
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Utility/RayMath.h"
 
 namespace sw
@@ -38,58 +39,87 @@ namespace sw
                 return float4{ 0.7f, 0.7f, 0.7f, 1.0f };
             }
 
-            static float4 computeUnitColor( const RtsUnit& unit, bool bSelected )
+            /**
+             * @brief Kenney Space Kit 모델을 맵 칸에 맞추는 비율입니다. 키트 모델은 크기가 제각각이라(안테나 0.75 · 격납고 3.3) 모델마다 가로 폭을
+             *        표에 두고, 건물은 차지하는 칸(footprint)의 0.9 배, 유닛은 충돌 지름의 1.6 배(위에서 내려다볼 때 원보다 조금 커야 배 모양이 읽힌다)로 늘린다.
+             */
+            static constexpr float32 kFootprintFill = 0.9f;
+            static constexpr float32 kUnitFill      = 1.6f;
+
+            /** @brief 유닛 정의 → 모델 이름 · 모델의 가로 폭(가장 넓은 수평 축)입니다. */
+            struct UnitModel
             {
-                float4 color{};
+                const utf8* _pUnitId;
+                const utf8* _pModel;
+                float32     _width;
+            };
+
+            static const UnitModel* findUnitModel( const hashed_string& unitId )
+            {
+                static constexpr UnitModel kArrUnitModel[] = {
+                    {      "minerals",     "rock_crystals", 0.85f},
+                    { "rich_minerals",     "rock_crystals", 0.85f},
+                    {        "geyser",            "crater", 0.83f},
+                    {"command_center",    "hangar_large_a",  3.0f},
+                    {  "supply_depot", "machine_generator",  0.7f},
+                    {      "refinery",         "structure",  1.0f},
+                    {      "barracks",    "hangar_small_a",  2.0f},
+                    {       "academy",  "machine_wireless", 0.75f},
+                    {       "factory",    "hangar_round_a", 3.27f},
+                    {      "starport",    "platform_large",  2.0f},
+                    {        "bunker",     "turret_double",  0.9f},
+                    {"missile_turret",     "turret_single", 0.72f},
+                    {        "worker",       "craft_miner",  2.6f},
+                    {        "marine",   "craft_speeder_a",  2.1f},
+                    {       "firebat",   "craft_speeder_b", 2.03f},
+                    {       "vulture",       "craft_racer", 2.03f},
+                    {          "tank",     "craft_cargo_a", 2.45f},
+                    {       "goliath",   "craft_speeder_b", 2.03f},
+                    {        "wraith",       "craft_racer", 2.03f},
+                };
+                for ( const UnitModel& entry : kArrUnitModel )
+                {
+                    if ( unitId == hashed_string( entry._pUnitId ) )
+                        return &entry;
+                }
+                return nullptr;
+            }
+
+            static string makeModelPath( const utf8* pName ) { return string( "game/starskirmish/models/" ) + pName + ".mesh"; }
+
+            /**
+             * @brief 모델에 곱할 색입니다 — 키트의 흰 · 회색 몸체가 편 색(파랑 · 빨강)으로, 자원은 광물 하늘색 · 가스 초록으로 읽힌다.
+             * @details 건물 · 일꾼을 어둡게 · 밝게 가르던 것은 모델이 대신하므로 편 색을 그대로 곱한다(곱하면 이미 어두워진다). 고르면 흰 쪽으로 반.
+             */
+            static float4 computeModelTint( const RtsUnit& unit, bool bSelected )
+            {
+                float4 color = computePlayerColor( unit._owner );
                 if ( unit.isResource() )
                     color = unit._pDef->_resourceType == RtsResourceType::Gas ? float4{ 0.3f, 0.8f, 0.4f, 1.0f } : float4{ 0.35f, 0.85f, 1.0f, 1.0f };
-                else
-                {
-                    color = computePlayerColor( unit._owner );
-                    if ( unit.isBuilding() )
-                        color = float4{ color._x * 0.7f, color._y * 0.7f, color._z * 0.7f, 1.0f };
-                    else if ( unit._pDef->_bWorker != SW_FALSE )
-                        color = float4{ 0.5f + color._x * 0.5f, 0.5f + color._y * 0.5f, 0.5f + color._z * 0.5f, 1.0f };
-                }
                 if ( bSelected )
                     color = float4{ 0.5f + color._x * 0.5f, 0.5f + color._y * 0.5f, 0.5f + color._z * 0.5f, 1.0f };
                 return color;
             }
 
-            static const utf8* findShape( const RtsUnit& unit )
-            {
-                if ( unit.isResource() )
-                    return unit._pDef->_resourceType == RtsResourceType::Gas ? "Cylinder" : "Cube";
-                if ( unit.isBuilding() )
-                    return "Cube";
-                return unit._pDef->_bWorker != SW_FALSE ? "Sphere" : "Capsule";
-            }
-
-            /** @brief 유닛의 크기 · 자리입니다(건물은 지은 만큼 솟고, 광물은 남은 만큼 낮아진다). */
-            static void computePlacement( const RtsUnit& unit, float3& outPosition, float3& outScale )
+            /** @brief 유닛의 크기 · 자리입니다(모델 바닥이 원점이다). 건물은 지은 만큼 솟고, 광물은 남은 만큼 낮아진다. */
+            static void computePlacement( const RtsUnit& unit, float32 modelWidth, float3& outPosition, float3& outScale )
             {
                 const RtsUnitDef& def = *unit._pDef;
-                if ( unit.isResource() )
+                if ( unit.isResource() || unit.isBuilding() )
                 {
-                    const float32 left   = def._resourceAmount > 0 ? static_cast<float32>( unit._resourceLeft ) / static_cast<float32>( def._resourceAmount ) : 1.0f;
-                    const float32 height = def._resourceType == RtsResourceType::Gas ? 0.4f : 0.3f + 0.6f * left;
-                    const float32 width  = static_cast<float32>( def._footprint ) * 0.8f;
-                    outScale             = float3{ width, height, width };
-                    outPosition          = float3{ unit._position._x, height * 0.5f, unit._position._z };
+                    const float32 scale  = static_cast<float32>( def._footprint ) * kFootprintFill / modelWidth;
+                    float32       height = 1.0f;
+                    if ( unit.isResource() && def._resourceType != RtsResourceType::Gas )
+                        height = 0.4f + 0.6f * ( def._resourceAmount > 0 ? static_cast<float32>( unit._resourceLeft ) / static_cast<float32>( def._resourceAmount ) : 1.0f );
+                    else if ( unit.isBuilding() )
+                        height = 0.2f + 0.8f * MathUtil::clamp( unit._buildProgress, 0.0f, 1.0f );
+                    outScale    = float3{ scale, scale * height, scale };
+                    outPosition = float3{ unit._position._x, 0.0f, unit._position._z };
                     return;
                 }
-                if ( unit.isBuilding() )
-                {
-                    const float32 fullHeight = 0.6f + 0.35f * static_cast<float32>( def._footprint );
-                    const float32 height     = fullHeight * ( 0.2f + 0.8f * MathUtil::clamp( unit._buildProgress, 0.0f, 1.0f ) );
-                    const float32 width      = static_cast<float32>( def._footprint ) - 0.2f;
-                    outScale                 = float3{ width, height, width };
-                    outPosition              = float3{ unit._position._x, height * 0.5f, unit._position._z };
-                    return;
-                }
-                const float32 size = def._radius * 2.0f;
-                outScale           = float3{ size, size, size };
-                outPosition        = float3{ unit._position._x, ( def._bAir != SW_FALSE ? kAirHeight : 0.0f ) + size * 0.5f, unit._position._z };
+                const float32 scale = def._radius * 2.0f * kUnitFill / modelWidth;
+                outScale            = float3{ scale, scale, scale };
+                outPosition         = float3{ unit._position._x, def._bAir != SW_FALSE ? kAirHeight : 0.0f, unit._position._z };
             }
 
             static float3 computeCameraForward() { return RayMath::computeLookDirection( kCameraYaw, -kCameraPitch ); }
@@ -248,31 +278,44 @@ namespace sw
             const size_t slot = static_cast<size_t>( unit._id.index() );
             if ( _listUnitView.size() <= slot )
                 _listUnitView.resize( slot + 1 );
-            UnitView&   view      = _listUnitView[slot];
+            using Internal                    = SkirmishWorldInternal;
+            UnitView&                  view   = _listUnitView[slot];
+            const Internal::UnitModel* pModel = Internal::findUnitModel( unit._pDef->_id );
+            if ( pModel == nullptr )
+                return;
             const bool  bSelected = _selection.isSelected( unit._id );
             const int32 lookKey   = bSelected ? 1 : 0;
             float3      position{};
             float3      scale{};
-            SkirmishWorldInternal::computePlacement( unit, position, scale );
+            Internal::computePlacement( unit, pModel->_width, position, scale );
             if ( view._id != unit._id || view._object.isValid() == false )
             {
                 if ( view._object.isValid() )
                     _stage.destroyObject( view._object );
-                GameObject* pObject = _stage.createPrimitiveObject( "SkirmishUnit", SkirmishWorldInternal::findShape( unit ),
-                                                                    PrimitiveLook::makeColor( SkirmishWorldInternal::computeUnitColor( unit, bSelected ) ), position, scale );
+                GameObject* pObject = _stage.createModelObject( "SkirmishUnit", Internal::makeModelPath( pModel->_pModel ),
+                                                                PrimitiveLook::makeColor( Internal::computeModelTint( unit, bSelected ) ), position, scale );
                 view._id            = unit._id;
                 view._object        = pObject != nullptr ? pObject->getHandle() : GameObjectHandle{};
                 view._lookKey       = lookKey;
+                view._lastPosition  = position;
+                view._yaw           = Internal::kPi; // 처음엔 카메라(남쪽) 쪽을 본다
             }
+            // 움직이는 유닛은 움직인 쪽을 본다(키트 모델의 앞이 +Z). 멈추면 마지막 방향을 지킨다.
+            const float32 moveX = position._x - view._lastPosition._x;
+            const float32 moveZ = position._z - view._lastPosition._z;
+            if ( unit.isBuilding() == false && unit.isResource() == false && moveX * moveX + moveZ * moveZ > 1.0e-6f )
+                view._yaw = MathUtil::atan2( moveX, moveZ );
+            view._lastPosition   = position;
             view._stamp          = _frameStamp;
             MeshComponent* pMesh = _stage.findMesh( view._object );
             if ( pMesh == nullptr )
                 return;
             pMesh->setLocalPosition( position );
             pMesh->setLocalScale( scale );
+            pMesh->setLocalRotation( float3{ 0.0f, view._yaw, 0.0f } );
             if ( view._lookKey != lookKey )
             {
-                _stage.setLook( *pMesh, PrimitiveLook::makeColor( SkirmishWorldInternal::computeUnitColor( unit, bSelected ) ) );
+                _stage.setLook( *pMesh, PrimitiveLook::makeColor( Internal::computeModelTint( unit, bSelected ) ) );
                 view._lookKey = lookKey;
             }
         } );
@@ -453,7 +496,10 @@ namespace sw
             _selection.selectInRect( world, _dragStart, end, bShift );
         const RtsUnit* pPrimary = world.findUnit( _selection.getPrimary() );
         if ( pPrimary != nullptr )
+        {
             SW_LOG_INFO( "[Skirmish] selected %# (%# units)", pPrimary->_pDef->_name.c_str(), static_cast<int32>( _selection.getSelected().size() ) );
+            (void)GameSound::play( "game/starskirmish/sounds/select_004.ogg" );
+        }
     }
 
     void SkirmishWorld::issueRightClick( const float3& point, bool bQueue )
@@ -556,6 +602,15 @@ namespace sw
     {
         _listEvent.clear(); // drainEvents 는 뒤에 붙인다
         _match.drainEvents( _listEvent );
+        // 유닛이 부서지면 누구 것이든 쇳소리 — 한 프레임에 여럿이어도 한 번(구경하는 AI 대 AI 판에서도 들린다).
+        for ( const RtsEvent& event : _listEvent )
+        {
+            if ( event._kind == RtsEvent::Kind::UnitDied )
+            {
+                (void)GameSound::play( "game/starskirmish/sounds/impact_metal_heavy_000.ogg" );
+                break;
+            }
+        }
         if ( _bHuman == SW_FALSE )
             return;
         // 사람 쪽(0 번)에 알릴 것만 — 나머지는 판이 로그로 남긴다.
@@ -570,6 +625,7 @@ namespace sw
                 case RtsEvent::Kind::ConstructionComplete:
                 {
                     SW_LOG_INFO( "[Skirmish] %# complete", pName );
+                    (void)GameSound::play( "game/starskirmish/sounds/confirmation_003.ogg" );
                     break;
                 }
                 case RtsEvent::Kind::ProductionComplete:
@@ -580,6 +636,7 @@ namespace sw
                 case RtsEvent::Kind::SupplyBlocked:
                 {
                     SW_LOG_INFO( "[Skirmish] not enough supply - build a Supply Depot (B)" );
+                    (void)GameSound::play( "game/starskirmish/sounds/error_003.ogg" );
                     break;
                 }
                 case RtsEvent::Kind::UnderAttack:

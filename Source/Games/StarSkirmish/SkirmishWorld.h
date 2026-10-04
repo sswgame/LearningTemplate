@@ -47,8 +47,10 @@ namespace sw
         /** @brief 유닛 자리(id 의 index) 하나의 모습입니다. */
         struct UnitView
         {
+            float3           _lastPosition{}; ///< 지난 프레임 자리(움직인 쪽으로 돌린다)
             RtsUnitId        _id{};
             GameObjectHandle _object{};
+            float32          _yaw{ 0.0f };
             uint32           _stamp{ 0 };
             int32            _lookKey{ -1 };
         };
