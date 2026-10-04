@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/Common.h"
+#include "Engine/Reflection/ReflectUnits.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
 #include "ReflectionParser/AnnotationApply.h"
@@ -490,6 +491,19 @@ namespace sw
                 if ( type.kind == CXType_Invalid )
                     return node;
 
+                // C 고정 배열(`int32 _arr[4]`)은 `std::array` 와 같은 고정 시퀀스다 — 래퍼(`ArrayWrapper`)가 둘을 같이 다룬다.
+                if ( type.kind == CXType_ConstantArray )
+                {
+                    const CXType elementType = clang_getArrayElementType( type );
+                    markContainer( *node, ContainerKind::Sequence, string( annotation::kFixedArrayWrapperStem ) );
+                    node->_typeName        = annotation::kFixedArrayTypeName;
+                    node->_elementTypeName = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( elementType ) ) );
+                    node->_elementNested   = makeContainerFromType( elementType, session );
+                    if ( node->_elementNested != nullptr && node->_elementNested->_bIsContainer == SW_FALSE )
+                        node->_elementNested.reset();
+                    return node;
+                }
+
                 const string             spelling = takeString( clang_getTypeSpelling( type ) );
                 const ContainerTypeRule* rule     = session._containerTypeMap.match( spelling );
 
@@ -960,7 +974,7 @@ namespace sw
                     return;
                 }
                 fillContainerDetails( prop, fieldType, session );
-                if ( isInterpAllowed( prop, owner ) == false )
+                if ( isInterpAllowed( prop, owner ) == false || applyDisplayMeta( prop, fieldType, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
                     return;
@@ -1014,7 +1028,7 @@ namespace sw
                     collector._bHasError = SW_TRUE;
                     return;
                 }
-                if ( isInterpAllowed( prop, owner ) == false )
+                if ( isInterpAllowed( prop, owner ) == false || applyDisplayMeta( prop, valueType, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
                     return;
@@ -1171,6 +1185,81 @@ namespace sw
                     }
                     prop._bRepNotifyTakesOldValue = bTakesOld ? SW_TRUE : SW_FALSE;
                 }
+            }
+
+            /**
+             * @brief 표시 메타를 검사하고 정리합니다 — `Units` 는 단위 표에 있어야 하고(커스텀 메타 `Units` 로 싣는다), `EditCondition` 은 네 꼴 중 하나여야 하며,
+             *        C 고정 배열의 원소는 컨테이너일 수 없습니다.
+             * @details 조건식이 가리키는 이름은 기반 클래스의 것일 수 있어 여기서는 꼴만 본다 — 이름은 등록된 뒤 `PropertyEditCondition::parse` 가 보고,
+             *          `ReflectionDisplayMetaTest.EveryEditConditionResolves` 가 모든 타입을 대조한다.
+             */
+            static bool applyDisplayMeta( ParsedPropertyInfo& prop, const CXType fieldType, const string_view owner )
+            {
+                if ( prop._units.empty() == false )
+                {
+                    if ( ReflectUnitUtil::findUnit( prop._units ) == nullptr )
+                    {
+                        SW_LOG_ERROR( "ERROR: PROPERTY( Units = %# ) on '%#' - unknown unit. Known: %#. A free-form label is written Meta = \"Units=…\".",
+                                      prop._units, owner, ReflectUnitUtil::makeUnitList() );
+                        return false;
+                    }
+                    for ( const auto& [key, value] : prop._listCustomMeta )
+                    {
+                        if ( key == "Units" )
+                        {
+                            SW_LOG_ERROR( "ERROR: '%#' gives Units twice (Units = %# and Meta = \"Units=%#\").", owner, prop._units, value );
+                            return false;
+                        }
+                    }
+                    prop._listCustomMeta.emplace_back( "Units", prop._units );
+                }
+
+                if ( prop._editCondition.empty() == false && isEditConditionWellFormed( prop._editCondition ) == false )
+                {
+                    SW_LOG_ERROR( "ERROR: PROPERTY( EditCondition = \"%#\" ) on '%#' - use name, !name, name == Value or name != Value.", prop._editCondition, owner );
+                    return false;
+                }
+
+                if ( fieldType.kind == CXType_ConstantArray && prop._containerTree != nullptr && prop._containerTree->_elementNested != nullptr )
+                {
+                    SW_LOG_ERROR( "ERROR: PROPERTY() on '%#' is a fixed array of containers - use a container of containers (vector<array<…>>) instead.", owner );
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 식별자(영문 · 숫자 · `_`, 숫자로 시작하지 않는다)인지 봅니다. */
+            static bool isIdentifier( const string_view text ) noexcept
+            {
+                if ( text.empty() || ( '0' <= text.front() && text.front() <= '9' ) )
+                    return false;
+                for ( const utf8 character : text )
+                {
+                    const bool bWord = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' ) ||
+                                       character == '_';
+                    if ( bWord == false )
+                        return false;
+                }
+                return true;
+            }
+
+            /** @brief `name` · `!name` · `name == Value` · `name != Value` 꼴인지 봅니다(값은 식별자 · 정수 · `Enum::Value`). */
+            static bool isEditConditionWellFormed( const string_view text )
+            {
+                const string_view trimmed = StringUtil::trim( text );
+                const size_t      opPos   = trimmed.find( "==" ) != string_view::npos ? trimmed.find( "==" ) : trimmed.find( "!=" );
+                if ( opPos == string_view::npos )
+                {
+                    const string_view name = ( trimmed.empty() == false && trimmed.front() == '!' ) ? StringUtil::trim( trimmed.substr( 1 ) ) : trimmed;
+                    return isIdentifier( name );
+                }
+                const string_view name  = StringUtil::trim( trimmed.substr( 0, opPos ) );
+                string_view       value = StringUtil::trim( trimmed.substr( opPos + 2 ) );
+                const size_t      scope = value.rfind( "::" );
+                if ( scope != string_view::npos )
+                    value = value.substr( scope + 2 );
+                int64 number{ 0 };
+                return isIdentifier( name ) && ( isIdentifier( value ) || StringUtil::parseInt64( value, number ) );
             }
 
             /** @brief `Interp` 는 시퀀서가 섞을 수 있는 타입에만 — 컨테이너 · 비트필드 · 그 밖의 타입은 그 헤더를 멈춥니다. */

@@ -61,6 +61,20 @@ string.AssetType = AssetType
 string.Meta = Meta, meta, CustomMeta
 float.MinRange = Min
 float.MaxRange = Max
+# 인스펙터 슬라이더 · 드래그 범위(허용 범위 Min/Max 와 따로). 둘 다 적으면 슬라이더로 그리고, 값은 여전히 Min/Max 로 막는다
+float.UiMinRange = UiMin
+float.UiMaxRange = UiMax
+# 저장된 값의 단위 — ReflectUnits.h 의 표(mm cm m km deg rad ms s min h percent ratio m/s km/h deg/s rad/s m/s2 Hz fps g kg N). 표에 없으면 파서 오류
+string.Units = Units
+# 다른 프로퍼티가 참일 때만 고친다: "bEnabled" · "!bLocked" · "mode == Orbit" · "mode != Off". 거짓이면 인스펙터가 막는다(EditConditionHides 면 숨긴다)
+string.EditCondition = EditCondition
+flag.EditConditionHides = EditConditionHides
+# float3/float4 색을 HDR(1 을 넘는 값)로 고친다. 색 선택기이기도 하다
+flag.ColorHdr = ColorHdr
+# 여러 줄 글 칸(string)
+flag.Multiline = Multiline
+# 경로 칸이 받는 파일: "*.png;*.dds". 끌어다 놓은 경로가 맞지 않으면 받지 않는다
+string.FileFilter = FileFilter
 # 네트워크 복제 대상(`PropertyRoleUtil::collectReplicatedProperties`). RepNotify 를 적으면 Replicated 이기도 하다
 flag.Replicated = Replicated
 # 받은 값으로 바꾼 뒤 부를 같은 타입의 메서드 — void fn() 또는 void fn( const T& oldValue ). 없거나 모양이 다르면 파서 오류

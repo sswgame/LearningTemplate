@@ -1585,3 +1585,51 @@ SW_TEST_CASE( ReflectionParserTest, PropertyRoleAnnotationsAreValidated )
     SW_EXPECT_TRUE_MSG( run._log.find( "PROPERTY( Interp ) on 'sw::RoleInterpSampleActor::_label'" ) != sw::string::npos, run._log.c_str() );
 #endif
 }
+
+/**
+ * @brief [ReflectionParserTest] 표시 메타 — `Units` 는 단위 표에 있어야 하고(커스텀 메타 `Units` 로 실린다), `EditCondition` 은 네 꼴 중 하나, C 고정 배열의 원소는 컨테이너가 아니다
+ */
+SW_TEST_CASE( ReflectionParserTest, DisplayMetadataIsValidated )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    sw::vector<TempHeader> listHeader;
+    listHeader.push_back( TempHeader{ "DisplayGoodSample", makeReflectedHeader( "DisplayGoodSampleActor", "Units = m/s, UiMin = 0, UiMax = 30, EditCondition = \"!_bLocked\"", "float32" ) } );
+    listHeader.push_back( TempHeader{ "DisplayUnitSample", makeReflectedHeader( "DisplayUnitSampleActor", "Units = furlong", "float32" ) } );
+    listHeader.push_back( TempHeader{ "DisplayConditionSample", makeReflectedHeader( "DisplayConditionSampleActor", "EditCondition = \"a && b\"", "float32" ) } );
+    listHeader.push_back( TempHeader{ "DisplayArraySample", "#pragma once\n"
+                                                            "#include \"Core/Common/Types.h\"\n"
+                                                            "#include \"Core/Container/vector.h\"\n"
+                                                            "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                            "namespace sw\n"
+                                                            "{\n"
+                                                            "\tREFLECT()\n"
+                                                            "\tstruct DisplayArraySampleActor\n"
+                                                            "\t{\n"
+                                                            "\t\tREFLECT_BODY();\n"
+                                                            "\t\tPROPERTY()\n"
+                                                            "\t\tint32 _arrGood[4];\n"
+                                                            "\t\tPROPERTY()\n"
+                                                            "\t\tvector<int32> _arrBad[2];\n"
+                                                            "\t};\n"
+                                                            "}\n" } );
+    const ParserRunResult run = runParserOnTempHeaders( parserExe, listHeader );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 4 ), run._listGeneratedCpp.size() );
+
+    const sw::string& generated = run._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "{ ::sw::hashed_string( \"Units\" ), \"m/s\" }," ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._uiMaxRange   = 30.000000f;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._editCondition = \"!_bLocked\";" ) != sw::string::npos, generated.c_str() );
+
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    for ( size_t brokenIndex = 1; brokenIndex < 4; ++brokenIndex )
+        SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[brokenIndex].find( "struct Registrar" ) == sw::string::npos, run._listGeneratedCpp[brokenIndex].c_str() );
+#if defined( SW_DEBUG )
+    SW_EXPECT_TRUE_MSG( run._log.find( "Units = furlong" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "EditCondition = \"a && b\"" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "DisplayArraySampleActor::_arrBad" ) != sw::string::npos, run._log.c_str() );
+#endif
+}

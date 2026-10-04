@@ -95,12 +95,24 @@ namespace sw
                             {       prop._bSaveGame,        "SaveGame"},
                             {         prop._bInterp,          "Interp"},
                             {         prop._bConfig,          "Config"},
+                            {       prop._bColorHdr,        "ColorHdr"},
+                            {      prop._bMultiline,       "Multiline"},
                         };
                         for ( const auto& [bSet, pFlagName] : arrFlag )
                         {
                             if ( bSet == SW_TRUE )
                                 out.appendFormat( "  [%#]", pFlagName );
                         }
+                        if ( prop._bHasUiMinRange == SW_TRUE )
+                            out.appendFormat( "  UiMin=%#", prop._uiMinRange );
+                        if ( prop._bHasUiMaxRange == SW_TRUE )
+                            out.appendFormat( "  UiMax=%#", prop._uiMaxRange );
+                        if ( prop._units.empty() == false )
+                            out.appendFormat( "  Units=%#", prop._units );
+                        if ( prop._editCondition.empty() == false )
+                            out.appendFormat( "  EditCondition=\"%#\"%#", prop._editCondition, prop._bEditConditionHides == SW_TRUE ? "(hides)" : "" );
+                        if ( prop._fileFilter.empty() == false )
+                            out.appendFormat( "  FileFilter=\"%#\"", prop._fileFilter );
                         if ( prop._repNotify.empty() == false )
                             out.appendFormat( "  RepNotify=%#%#", prop._repNotify, prop._bRepNotifyTakesOldValue == SW_TRUE ? "(old)" : "()" );
                         if ( prop._configSection.empty() == false || prop._configKey.empty() == false )

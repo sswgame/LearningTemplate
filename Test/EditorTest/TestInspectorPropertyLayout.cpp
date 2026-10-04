@@ -183,4 +183,67 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, ParameterListShowsNamesAndDefaults )
     SW_EXPECT_EQUAL( string( "int32 amount, uint8, float32 scale = 1.5f" ), InspectorPropertyLayout::formatParameterList( listParameter ) );
 }
 
+/**
+ * @brief [InspectorPropertyLayoutTest] 위젯 범위(UiMin · UiMax)와 허용 범위(Min · Max)는 따로다 — 위젯은 Ui 범위로 움직이고 값은 Min · Max 로 막는다
+ */
+SW_TEST_CASE( InspectorPropertyLayoutTest, SliderRangeIsSeparateFromAllowedRange )
+{
+    PropertyInfo height;
+    height._metadata._minRange       = 0.0f;
+    height._metadata._maxRange       = 1000.0f;
+    height._metadata._bHasMinRange   = SW_TRUE;
+    height._metadata._bHasMaxRange   = SW_TRUE;
+    height._metadata._uiMinRange     = 50.0f;
+    height._metadata._uiMaxRange     = 250.0f;
+    height._metadata._bHasUiMinRange = SW_TRUE;
+    height._metadata._bHasUiMaxRange = SW_TRUE;
+
+    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( height );
+    SW_EXPECT_TRUE( range._bSlider );
+    SW_EXPECT_NEAR_EQUAL( 50.0, range._widgetMin, 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 250.0, range._widgetMax, 1e-9 );
+    // 직접 입력한 400 은 슬라이더 밖이지만 허용 범위 안이다 — 그대로. 2000 은 1000 으로 막는다.
+    SW_EXPECT_NEAR_EQUAL( 400.0, InspectorPropertyLayout::clampToAllowedRange( range, 400.0 ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 1000.0, InspectorPropertyLayout::clampToAllowedRange( range, 2000.0 ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 0.0, InspectorPropertyLayout::clampToAllowedRange( range, -5.0 ), 1e-9 );
+
+    // Ui 범위가 없으면 위젯도 허용 범위, 슬라이더는 `Meta = "Slider"` 일 때만(지금 규칙 그대로)
+    PropertyInfo ratio;
+    ratio._metadata._minRange     = 0.0f;
+    ratio._metadata._maxRange     = 1.0f;
+    ratio._metadata._bHasMinRange = SW_TRUE;
+    ratio._metadata._bHasMaxRange = SW_TRUE;
+    InspectorNumericRange plain   = InspectorPropertyLayout::getNumericRange( ratio );
+    SW_EXPECT_FALSE( plain._bSlider );
+    SW_EXPECT_NEAR_EQUAL( 1.0, plain._widgetMax, 1e-9 );
+    ratio._metadata._mapCustomMeta[hashed_string( "Slider" )] = "1";
+    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( ratio )._bSlider );
+
+    // 한쪽만 적은 범위는 그쪽만 막는다
+    PropertyInfo lowOnly;
+    lowOnly._metadata._minRange     = 1.0f;
+    lowOnly._metadata._bHasMinRange = SW_TRUE;
+    const InspectorNumericRange low = InspectorPropertyLayout::getNumericRange( lowOnly );
+    SW_EXPECT_FALSE( low._bHasWidgetMax );
+    SW_EXPECT_NEAR_EQUAL( 99999.0, InspectorPropertyLayout::clampToAllowedRange( low, 99999.0 ), 1e-9 );
+}
+
+/**
+ * @brief [InspectorPropertyLayoutTest] 파일 필터(`*.png;*.dds`)는 확장자를 대소문자 없이 본다 · HDR 색은 색 선택기다
+ */
+SW_TEST_CASE( InspectorPropertyLayoutTest, FileFilterAndHdrColor )
+{
+    SW_EXPECT_TRUE( InspectorPropertyLayout::matchesFileFilter( "*.png;*.dds", "game/textures/hero.DDS" ) );
+    SW_EXPECT_TRUE( InspectorPropertyLayout::matchesFileFilter( "*.png, *.dds", "a.png" ) );
+    SW_EXPECT_FALSE( InspectorPropertyLayout::matchesFileFilter( "*.png;*.dds", "a.tga" ) );
+    SW_EXPECT_TRUE( InspectorPropertyLayout::matchesFileFilter( "", "anything.bin" ) );
+    SW_EXPECT_TRUE( InspectorPropertyLayout::matchesFileFilter( "*", "anything.bin" ) );
+
+    PropertyInfo emissive;
+    emissive._name = hashed_string( "_emissive" );
+    SW_EXPECT_FALSE( InspectorPropertyLayout::isColorRequested( emissive ) );
+    emissive._metadata._bColorHdr = SW_TRUE;
+    SW_EXPECT_TRUE( InspectorPropertyLayout::isColorRequested( emissive ) );
+}
+
 #endif // !SW_SHIPPING

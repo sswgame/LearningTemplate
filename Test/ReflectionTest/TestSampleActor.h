@@ -790,6 +790,64 @@ namespace sw
     };
 } // namespace sw
 
+namespace sw
+{
+    /** @brief 표시 메타 샘플의 모드입니다. */
+    ENUM()
+    enum class DisplayMetaMode : uint8
+    {
+        Off,
+        Orbit,
+        Follow,
+    };
+
+    /** @brief 표시 메타(EditCondition · 단위 · 슬라이더 범위 · HDR 색 · 여러 줄 · 파일 필터 · C 고정 배열) 샘플입니다(`ReflectionDisplayMetaTest`). */
+    REFLECT()
+    struct DisplayMetaActor
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        bool _bEnabled = false;
+
+        PROPERTY()
+        DisplayMetaMode _mode = DisplayMetaMode::Off;
+
+        PROPERTY( EditCondition = "_bEnabled" )
+        float32 _speed = 1.0f;
+
+        PROPERTY( EditCondition = "!_bEnabled", EditConditionHides )
+        int32 _fallback = 0;
+
+        PROPERTY( EditCondition = "_mode == Orbit" )
+        float32 _orbitRadius = 5.0f;
+
+        PROPERTY( EditCondition = "_mode != DisplayMetaMode::Off" )
+        float32 _blend = 0.5f;
+
+        PROPERTY( Units = cm, Min = 0, Max = 1000, UiMin = 50, UiMax = 250 )
+        float32 _height = 180.0f;
+
+        PROPERTY( ColorHdr )
+        float3 _emissive{};
+
+        PROPERTY( Multiline )
+        string _notes;
+
+        PROPERTY( AssetPath, FileFilter = "*.png;*.dds" )
+        string _texture;
+
+        PROPERTY()
+        int32 _arrSlot[3] = { 1, 2, 3 };
+
+        PROPERTY()
+        float3 _arrPoint[2]{};
+
+        PROPERTY()
+        int32 _after = 0; ///< 배열 뒤의 칸 — 배열을 읽다 스트림이 어긋나면 여기가 틀린다
+    };
+} // namespace sw
+
 // ------------------------------------------------------------------------------
 // 5) ENUM Flags — 전역 비트플래그 샘플
 // ------------------------------------------------------------------------------

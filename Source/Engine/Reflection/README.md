@@ -50,6 +50,8 @@ flowchart LR
 | `ReflectAny.*` | 타입 소거 값 상자 |
 | `ReflectValue.*` | 타입 이름이 붙은 값(`ReflectValue`)과 인자 타입마다의 변환 표(`ReflectTypeOpsOf<T>`) |
 | `ReflectionInvoke.*` | 이름으로 부르기 · 이벤트 묶기/부르기(`ReflectionInvoke`) — 콘솔 · 비주얼 스크립팅 · 기믹 배선 · 에디터가 쓴다 |
+| `PropertyEditCondition.*` | `EditCondition` 식을 풀고 판정(인스펙터가 막거나 숨긴다) — ImGui 를 모른다 |
+| `ReflectUnits.h` | `Units = …` 단위 표와 단위 사이 변환(헤더 전용 — 파서도 같은 표로 철자를 본다) |
 | `PropertyRoleUtil.*` | 역할 플래그(`Replicated` · `RepNotify` · `SaveGame` · `Interp` · `Config`)를 읽는 쪽의 도우미 — 모으기 · RepNotify 부르기 · 값 섞기 · 설정 묶음 |
 | `Rpc/` | RPC용 리플렉션 보조(`ReflectionRpc.h`) |
 
@@ -205,6 +207,34 @@ float32 _masterVolume = 1.0f;
 | 시퀀서 | `collectInterpProperties` · `isInterpolatable` · `applyInterpolated( prop, pInstance, &from, &to, alpha )`(정수 반올림 · quaternion slerp) |
 | 설정 | `collectConfigBindings( type, out )` → (섹션 · 키 · 프로퍼티). 값은 `SerializerUtil::applyPropertyText` · `valueToText` 로 글과 오간다 |
 
+### 8) 표시 메타 — 인스펙터
+
+```cpp
+PROPERTY()
+bool _bEnabled = false;
+PROPERTY( EditCondition = "_bEnabled" )                 // 거짓이면 막는다. "!name" · "mode == Orbit" · "mode != Off" 도 된다
+float32 _speed = 1.0f;
+PROPERTY( EditCondition = "!_bEnabled", EditConditionHides ) // 막지 않고 숨긴다
+int32 _fallback = 0;
+PROPERTY( Units = cm, Min = 0, Max = 1000, UiMin = 50, UiMax = 250 ) // 단위 · 허용 범위 · 슬라이더 범위(따로)
+float32 _height = 180.0f;
+PROPERTY( ColorHdr )                                    // HDR 색 선택기
+float3 _emissive{};
+PROPERTY( Multiline )                                   // 여러 줄 글
+string _notes;
+PROPERTY( AssetPath, FileFilter = "*.png;*.dds" )        // 끌어다 놓는 경로를 거른다
+string _texture;
+PROPERTY()
+int32 _arrSlot[3] = { 1, 2, 3 };                        // C 고정 배열 = std::array 와 같은 고정 시퀀스(인스펙터는 더하기 · 비우기를 그리지 않는다)
+```
+
+- `Units` 는 **저장된 값의 단위**이고 `ReflectUnits.h` 의 표에 있어야 합니다(없으면 파서 오류). 커스텀 메타 `Units` 로 실리므로 인스펙터의 표시
+  규칙(`rad` → 도, `ratio` → 백분율)은 그대로이고, 다른 단위로 적힌 글은 `ReflectUnitUtil::parseValueInUnit( "150 cm", "m", out )` 으로 바꿉니다.
+  게임 고유의 글자(`HP`)처럼 표에 없는 표시는 `Meta = "Units=HP"` 로 적습니다.
+- `EditCondition` 이 가리키는 이름은 기반 클래스의 것일 수 있어 파서는 꼴만 봅니다. 이름 · 열거자는 `PropertyEditCondition::parse` 가 풀고,
+  `ReflectionDisplayMetaTest.EveryEditConditionResolves` 가 등록된 모든 타입을 대조합니다.
+- 위젯은 `UiMin` · `UiMax`(없으면 `Min` · `Max`) 안에서 움직이고, 값은 늘 `Min` · `Max` 로 막습니다(`InspectorPropertyLayout::getNumericRange`).
+
 ---
 
 ## 런타임에서 쓰기
@@ -258,6 +288,7 @@ CMake 헬퍼: `cmake/Engine/ReflectionCodeGen.cmake` (`sw_addReflectionStep`)
 | `FUNCTION(...)` | 함수. RPC용 `Server`/`Client`/`Multicast` 등. 인자 이름 · 기본 인자는 선언에서 읽는다 |
 | `PROPERTY()` + `MulticastDelegate<void(…)>` | 이벤트(6절) |
 | `PROPERTY( Replicated · RepNotify · SaveGame · Interp · Config … )` | 역할 플래그(7절) |
+| `PROPERTY( EditCondition · Units · UiMin/UiMax · ColorHdr · Multiline · FileFilter )` | 표시 메타(8절) |
 | `ENUM(...)` | 열거형. `Flags`, `Invalid=`, `Count=` |
 | `REFLECT_CONTAINER(...)` | 커스텀 컨테이너를 Sequence/Map으로 |
 

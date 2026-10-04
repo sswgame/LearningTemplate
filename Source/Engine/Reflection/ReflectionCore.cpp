@@ -140,6 +140,16 @@ namespace sw
         , _displayName{}
         , _tooltip{}
         , _mapCustomMeta{}
+        , _editCondition{}
+        , _fileFilter{}
+        , _uiMinRange{ 0.0f }
+        , _uiMaxRange{ 1.0f }
+        , _bHasUiMinRange{ SW_FALSE }
+        , _bHasUiMaxRange{ SW_FALSE }
+        , _bEditConditionHides{ SW_FALSE }
+        , _bColorHdr{ SW_FALSE }
+        , _bMultiline{ SW_FALSE }
+        , _reservedDisplay{ 0 }
         , _defaultValue{}
 #else
         : _defaultValue{}

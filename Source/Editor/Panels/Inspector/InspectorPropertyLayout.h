@@ -37,6 +37,27 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /**
+     * @brief 숫자 프로퍼티의 두 범위 — 위젯(슬라이더 · 드래그)이 움직이는 범위와 값이 머무는 허용 범위입니다. 값은 저장 단위입니다.
+     * @details 위젯 범위는 `UiMin` · `UiMax` 가 있으면 그것, 없으면 허용 범위(`Min` · `Max`)입니다. 허용 범위는 늘 `Min` · `Max` 이고, 위젯이
+     *          그 밖의 값을 냈으면(직접 입력) 그 안으로 막습니다 — 언리얼 `UIMin`/`ClampMin` 의 나눔과 같습니다.
+     */
+    struct InspectorNumericRange
+    {
+        float64 _widgetMin{ 0.0 };
+        float64 _widgetMax{ 0.0 };
+        float64 _clampMin{ 0.0 };
+        float64 _clampMax{ 0.0 };
+        bool    _bHasWidgetMin{ false };
+        bool    _bHasWidgetMax{ false };
+        bool    _bHasClampMin{ false };
+        bool    _bHasClampMax{ false };
+        bool    _bSlider{ false }; ///< 슬라이더로 그린다(UiMin · UiMax 둘 다, 또는 Min · Max 둘 다 + `Meta = "Slider"`)
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /** @brief 인스펙터가 한 카테고리로 묶어 그리는 반사 프로퍼티입니다. */
     struct InspectorPropertyGroup
     {
@@ -91,5 +112,19 @@ namespace sw::editor
 
         /** @brief 함수 · 이벤트의 인자 목록을 `int32 amount, float32 scale = 1.5f` 꼴로 씁니다(이름 · 기본 인자가 없으면 뺀다). */
         static string formatParameterList( const vector<FunctionParameterInfo>& listParameter );
+
+        /** @brief 숫자 프로퍼티의 위젯 범위 · 허용 범위입니다(`InspectorNumericRange`). */
+        static InspectorNumericRange getNumericRange( const PropertyInfo& prop );
+        /** @brief 값을 허용 범위 안으로 막습니다. 적힌 쪽만 막습니다. */
+        static float64 clampToAllowedRange( const InspectorNumericRange& range, float64 value );
+
+        /** @brief 색 선택기로 그릴지 — `ColorHdr` · `Meta = "Color"` · 이름에 color 가 든 float3/float4 입니다. */
+        static bool isColorRequested( const PropertyInfo& prop );
+
+        /**
+         * @brief 경로가 `FileFilter`(`"*.png;*.dds"` — `;` · `,` 로 나눈 와일드카드)에 맞는지 봅니다. 필터가 비면 늘 맞습니다. 대소문자는 가리지 않습니다.
+         * @details 경로 칸이 끌어다 놓은 경로를 받을지 정합니다.
+         */
+        static bool matchesFileFilter( string_view filter, string_view path );
     };
 } // namespace sw::editor

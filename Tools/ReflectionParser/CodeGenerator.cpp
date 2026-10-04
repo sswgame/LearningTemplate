@@ -247,6 +247,22 @@ namespace sw
             emit.linef( "p._metadata._maxRange     = %#f;", prop._maxRange );
             emit.assign( "p._metadata._bHasMaxRange", "SW_TRUE" );
         }
+        // 슬라이더 범위는 에디터 메타다(Shipping 에 멤버가 없다).
+        if ( prop._bHasUiMinRange != SW_FALSE || prop._bHasUiMaxRange != SW_FALSE )
+        {
+            emit.line( "#if !defined( SW_SHIPPING )" );
+            if ( prop._bHasUiMinRange != SW_FALSE )
+            {
+                emit.linef( "p._metadata._uiMinRange   = %#f;", prop._uiMinRange );
+                emit.assign( "p._metadata._bHasUiMinRange", "SW_TRUE" );
+            }
+            if ( prop._bHasUiMaxRange != SW_FALSE )
+            {
+                emit.linef( "p._metadata._uiMaxRange   = %#f;", prop._uiMaxRange );
+                emit.assign( "p._metadata._bHasUiMaxRange", "SW_TRUE" );
+            }
+            emit.line( "#endif" );
+        }
     }
 
     void CodeGenerator::emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo,

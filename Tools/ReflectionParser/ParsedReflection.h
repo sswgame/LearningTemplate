@@ -62,6 +62,9 @@ namespace sw
         string                          _repNotify;     ///< `RepNotify = fn` — 같은 타입의 메서드 이름(모양은 `validateMemberFunctions` 가 본다)
         string                          _configSection; ///< `ConfigSection = "…"`
         string                          _configKey;     ///< `ConfigKey = "…"`
+        string                          _editCondition; ///< `EditCondition = "…"` — 식은 런타임(`PropertyEditCondition`)이 푼다
+        string                          _fileFilter;    ///< `FileFilter = "*.png;*.dds"`
+        string                          _units;         ///< `Units = m` — 단위 표(`ReflectUnits.h`)에 있어야 한다. 커스텀 메타 `Units` 로 실린다
         vector<pair<string, string>>    _listCustomMeta;
         string                          _containerType;
         string                          _elementTypeName;
@@ -69,6 +72,8 @@ namespace sw
         shared_ptr<ParsedContainerNode> _containerTree;
         float32                         _minRange;
         float32                         _maxRange;
+        float32                         _uiMinRange; ///< `UiMin` — 슬라이더 범위(허용 범위와 따로)
+        float32                         _uiMaxRange;
         ContainerKind                   _containerKind;
         uint8                           _bIsBitField   : 1;
         uint8                           _bReadOnly     : 1;
@@ -93,7 +98,12 @@ namespace sw
         uint8 _bConfig     : 1;
         /** @brief `RepNotify` 함수가 이전 값을 받는다(`void fn( const T& )`). 선언에서 온 사실이다(애노테이션 줄이 아니다). */
         uint8                   _bRepNotifyTakesOldValue : 1;
-        [[maybe_unused]] uint8  _reserved                : 1;
+        uint8                   _bHasUiMinRange          : 1;
+        uint8                   _bHasUiMaxRange          : 1;
+        uint8                   _bEditConditionHides     : 1;
+        uint8                   _bColorHdr               : 1;
+        uint8                   _bMultiline              : 1;
+        [[maybe_unused]] uint8  _reserved                : 4;
         [[maybe_unused]] uint16 _padding;
 
         ParsedPropertyInfo() noexcept
@@ -109,6 +119,9 @@ namespace sw
             , _repNotify{}
             , _configSection{}
             , _configKey{}
+            , _editCondition{}
+            , _fileFilter{}
+            , _units{}
             , _listCustomMeta{}
             , _containerType{}
             , _elementTypeName{}
@@ -116,6 +129,8 @@ namespace sw
             , _containerTree{ nullptr }
             , _minRange{ 0.0f }
             , _maxRange{ 1.0f }
+            , _uiMinRange{ 0.0f }
+            , _uiMaxRange{ 1.0f }
             , _containerKind{ ContainerKind::None }
             , _bIsBitField{ SW_FALSE }
             , _bReadOnly{ SW_FALSE }
@@ -134,6 +149,11 @@ namespace sw
             , _bInterp{ SW_FALSE }
             , _bConfig{ SW_FALSE }
             , _bRepNotifyTakesOldValue{ SW_FALSE }
+            , _bHasUiMinRange{ SW_FALSE }
+            , _bHasUiMaxRange{ SW_FALSE }
+            , _bEditConditionHides{ SW_FALSE }
+            , _bColorHdr{ SW_FALSE }
+            , _bMultiline{ SW_FALSE }
             , _reserved{ 0 }
             , _padding{ 0 }
         {

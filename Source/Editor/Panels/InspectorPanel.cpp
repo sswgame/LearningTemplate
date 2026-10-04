@@ -30,6 +30,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/PropertyEditCondition.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -488,6 +489,11 @@ namespace sw::editor
 
                 for ( const PropertyInfo* prop : props )
                 {
+                    // `EditCondition` 이 거짓이면 숨기거나(EditConditionHides) 막는다. 판정은 ImGui 를 모르는 `PropertyEditCondition` 이 한다.
+                    const PropertyEditState editState = PropertyEditCondition::getEditState( *pTypeInfo, *prop, pInstance );
+                    if ( editState == PropertyEditState::Hidden )
+                        continue;
+
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
 
@@ -535,7 +541,9 @@ namespace sw::editor
                     ImGui::TableNextColumn();
                     ImGui::PushID( prop->_name.c_str() );
                     ImGui::SetNextItemWidth( -FLT_MIN );
+                    ImGui::BeginDisabled( editState == PropertyEditState::Disabled );
                     drawPropertyWidget( pInstance, *prop );
+                    ImGui::EndDisabled();
                     ImGui::PopID();
                 }
                 ImGui::EndTable();
@@ -756,7 +764,8 @@ namespace sw::editor
 
         if ( ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) )
         {
-            if ( bReadOnly == false )
+            // 고정 배열은 칸 수가 정해져 있다 — 더하기 · 비우기는 아무 일도 하지 않으므로 그리지 않는다.
+            if ( bReadOnly == false && pSeq->isFixedSize() == false )
             {
                 if ( ImGui::SmallButton( "+ Add" ) )
                 {
@@ -978,12 +987,17 @@ namespace sw::editor
         {
             pFieldType->forEachProperty( [&]( const PropertyInfo& nestedProp )
             {
+                const PropertyEditState editState = PropertyEditCondition::getEditState( *pFieldType, nestedProp, pNestedPtr );
+                if ( editState == PropertyEditState::Hidden )
+                    return;
                 ImGui::PushID( nestedProp._name.c_str() );
                 ImGui::AlignTextToFramePadding();
                 ImGui::BulletText( "%s", InspectorPropertyLayout::getPropertyLabel( nestedProp ) );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( -FLT_MIN );
+                ImGui::BeginDisabled( editState == PropertyEditState::Disabled );
                 drawPropertyWidget( pNestedPtr, nestedProp );
+                ImGui::EndDisabled();
                 ImGui::PopID();
             }, true ); // 구조체의 기반 필드도 그린다(컴포넌트와 같은 규칙)
             ImGui::TreePop();

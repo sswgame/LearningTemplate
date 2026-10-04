@@ -80,6 +80,9 @@ namespace sw
          */
         virtual bool allowsInPlaceElementWrite() const { return true; }
 
+        /** @brief 크기가 정해진 컨테이너(고정 배열)면 true 입니다. 인스펙터가 더하기 · 비우기를 그리지 않습니다. */
+        virtual bool isFixedSize() const { return false; }
+
         /** @brief @p index 번째 원소를 지웁니다. 범위 밖이거나 지울 수 없는 컨테이너(고정 배열)면 false 입니다. */
         virtual bool eraseAt( void* pContainer, size_t index ) const = 0;
 
@@ -435,11 +438,13 @@ namespace sw
     using UnorderedSetWrapper = SetWrapper<TContainer>;
 
     template <typename TContainer>
-    /// @brief 고정 배열 시퀀스 래퍼 (add/clear 없음)
+    /// @brief 고정 배열 시퀀스 래퍼 (add/clear 없음). `std::array` 와 C 배열(`T[N]`) 둘 다 받는다
     struct ArrayWrapper : ISequenceContainerWrapper
     {
         /** @brief 원소 개수. */
-        size_t getSize( const void* pContainer ) const override { return static_cast<const TContainer*>( pContainer )->size(); }
+        size_t getSize( const void* pContainer ) const override { return std::size( *static_cast<const TContainer*>( pContainer ) ); }
+        /** @brief 자라지도 줄지도 않는다 — 인스펙터가 더하기 · 비우기를 그리지 않는다. */
+        bool isFixedSize() const override { return true; }
         /** @brief 인덱스 원소 포인터. */
         void* getElement( void* pContainer, size_t index ) const override
         {
@@ -456,9 +461,32 @@ namespace sw
 
         /** @brief 비웁니다. 고정 배열은 크기가 줄지 않으므로 할 일이 없습니다. */
         void clear( void* ) const override {}
-        /** @brief 0 으로 채운 저장소에 빈 컨테이너를 placement new 로 만듭니다. */
-        void constructEmpty( void* pContainer ) const override { sw_placement_new( pContainer ) TContainer{}; }
-        void destroyContainer( void* pContainer ) const override { static_cast<TContainer*>( pContainer )->~TContainer(); }
+        /**
+         * @brief 0 으로 채운 저장소에 빈 컨테이너를 만듭니다.
+         * @details C 배열은 배열 placement new 를 쓰지 않는다 — 구현이 앞에 개수 칸을 둘 수 있어 자리가 어긋난다. 원소마다 값 초기화한다.
+         */
+        void constructEmpty( void* pContainer ) const override
+        {
+            if constexpr ( std::is_array_v<TContainer> )
+            {
+                TContainer& arr = *static_cast<TContainer*>( pContainer );
+                std::uninitialized_value_construct( std::begin( arr ), std::end( arr ) );
+            }
+            else
+                sw_placement_new( pContainer ) TContainer{};
+        }
+
+        void destroyContainer( void* pContainer ) const override
+        {
+            if constexpr ( std::is_array_v<TContainer> )
+            {
+                TContainer& arr = *static_cast<TContainer*>( pContainer );
+                std::destroy( std::begin( arr ), std::end( arr ) );
+            }
+            else
+                static_cast<TContainer*>( pContainer )->~TContainer();
+        }
+
         /** @brief 고정 배열은 **자랄 수 없으므로** 아무 일도 하지 않습니다. */
         void addElementDefault( void* ) const override {}
 
