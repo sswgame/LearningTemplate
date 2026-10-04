@@ -21,6 +21,7 @@ namespace sw
         , _glyphSize{ 0.3f, 0.4f }
         , _color{ 1.0f, 0.85f, 0.25f, 1.0f }
         , _digitClipPath{ "engine/textures/ui/digits.sprite.json" }
+        , _sortingLayer{ "WorldUI" }
         , _digitClip{}
         , _spriteBatch{}
     {
@@ -180,6 +181,7 @@ namespace sw
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         // 클립을 못 읽으면 로더가 이유를 남겼다. 숫자 없이 수명만 돈다(오브젝트는 그대로 지워진다).
         _digitClip = SpriteClipCache::acquire( _digitClipPath );
+        _spriteBatch.setSorting( _sortingLayer, 0 );
         if ( _digitClip != nullptr && pManager != nullptr && _spriteBatch.initialize( *pManager, _digitClip->_atlasPath, kMaxGlyphCount ) == false )
             SW_LOG_WARNING( "Damage number sprites could not be created" );
     }

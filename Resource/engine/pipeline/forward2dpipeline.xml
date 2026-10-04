@@ -1,0 +1,74 @@
+<!--
+	2D 게임용 포워드 파이프라인 — 그림자 맵 패스가 없고(2D 그림자는 sprite2dlit 의 가림막 토막이 맡는다) Present 가 톤맵 · 블룸 · 외곽선을 하지 않는다.
+	톤맵(Reinhard)은 흰색을 0.5 로 누른다 — 픽셀 아트의 색이 그대로 나와야 하는 2D 에는 맞지 않는다(유니티 2D URP 의 기본도 톤맵 없음).
+	고르는 법: `-gv_renderPipeline=engine/pipeline/forward2dpipeline.xml` (FrameRenderer 초기화).
+-->
+<RenderPipelineDesc _name="Forward2DPipeline" _shadingModel="Forward">
+	<_listAttachment>
+		<RenderPassAttachment _name="SceneColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
+		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
+	</_listAttachment>
+	<_listPass>
+		<RenderGraphPassDesc _name="ForwardOpaque"
+		                     _type="ForwardOpaque"
+		                     _depthAttachment="SceneDepth"
+		                     _shaderPath="engine/shaders/forwardlit.hlsl"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true"
+		                     _bEnableBlend="false">
+			<_listInput />
+			<_listOutput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listOutput>
+			<_listPermutation>
+				<item>SW_FORWARD=1</item>
+			</_listPermutation>
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Transparent"
+		                     _type="Transparent"
+		                     _depthAttachment="SceneDepth"
+		                     _shaderPath="engine/shaders/forwardlit.hlsl"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="true">
+			<_listInput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneColor</item>
+			</_listOutput>
+			<_listPermutation>
+				<item>SW_TRANSPARENT=1</item>
+			</_listPermutation>
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Present"
+		                     _type="Present"
+		                     _shaderPath="engine/shaders/postchain.hlsl"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>Swapchain</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+	</_listPass>
+	<_listRenderPassRef>
+		<item>engine/renderpass/defaultrenderpass.xml</item>
+	</_listRenderPassRef>
+</RenderPipelineDesc>

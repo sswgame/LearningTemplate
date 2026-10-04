@@ -22,8 +22,17 @@ namespace sw
     struct SpriteClipFrame
     {
         float4 _uvRect{ 0.0f, 0.0f, 1.0f, 1.0f };
+        /**
+         * @brief 9-슬라이스 테두리 (왼쪽, 아래, 오른쪽, 위) — 이 프레임에 대한 비율(0..1)입니다. 모두 0 이면 테두리가 없습니다.
+         * @details JSON 키 "border" 는 숫자 넷의 배열이고, 테두리가 없는 프레임은 쓰지 않습니다(그 키가 없는 파일과 바이트까지 같습니다).
+         *          스프라이트의 자연 크기가 1 × 1 이라 비율이 곧 모서리의 월드 크기입니다(`SlicedSpriteDesc`). 유니티 Sprite Border · Godot patch margin 의 자리입니다.
+         */
+        float4 _border{ 0.0f, 0.0f, 0.0f, 0.0f };
         /** @brief 이 프레임을 보여 줄 시간(ms)입니다. 0 이하면 애니메이터의 프레임 속도를 씁니다(`getFrameDurationSeconds`). */
         int32 _durationMs{ 100 };
+
+        /** @brief 테두리가 하나라도 있으면 true 입니다. */
+        bool hasBorder() const { return _border._x > 0.0f || _border._y > 0.0f || _border._z > 0.0f || _border._w > 0.0f; }
     };
 } // namespace sw
 

@@ -1,14 +1,17 @@
 #include "common.hlsli"
 
 /**
- * instancesort.hlsl — 배치 안의 **가시 인스턴스를 깊이순으로 정렬**한다 (컴퓨트).
+ * instancesort.hlsl — 배치 안의 **가시 인스턴스를 CPU 정렬 순서로 되돌린다** (컴퓨트).
  *
  * 컬링이 압축을 하면 자리 번호가 원자 연산의 **완료 순서**로 정해진다. 불투명은 상관없지만 투명은 그
  * 순서가 곧 블렌딩 순서라 그림이 틀린다. 투명을 압축하지 않고 CPU 정렬 순서를 쓰면 순서는 지켜지지만 **투명은 컬링
  * 이득을 통째로 포기**한다.
  *
- * 여기서는 압축을 그대로 두고 **정렬을 GPU 로 옮긴다**. 컬링 뒤에 배치마다 워크그룹 하나가 붙어 그 배치의
- * 가시 목록을 카메라에서 먼 것부터 정렬한다. 그러면 투명도 컬링을 받으면서 순서가 맞는다.
+ * 여기서는 압축을 그대로 두고 **순서를 GPU 에서 되돌린다**. 투명 순서는 CPU 가 이미 정했다(GpuSceneBuilder::sortTransparent —
+ * 정렬 레이어 키 → 깊이 → 후보 번호의 전순서)이고, 배치 안의 인스턴스는 그 순서대로 연속으로 놓인다. 그래서 **인스턴스 번호가
+ * 곧 그리는 순서**다. 컬링 뒤에 배치마다 워크그룹 하나가 그 배치의 가시 목록을 인스턴스 번호 오름차순으로 정렬한다.
+ * 깊이를 여기서 다시 재면 (1) 정렬 레이어를 모르고 (2) 같은 깊이를 불안정하게 가르며 (3) 직교 카메라의 시선 축 깊이를 모른다 —
+ * CPU 와 GPU 가 다른 순서를 낸다. 정렬 기준은 CPU 한 곳뿐이다.
  *
  * 정렬은 그룹공유 메모리 안의 **바이토닉 정렬**이다. 워크그룹 하나에 담기는 만큼(SW_SORT_MAX_ELEMENTS)만
  * 다룰 수 있다 — 그보다 큰 투명 배치는 CPU 가 정렬한 제자리 매핑을 그대로 쓴다(GpuScene 이 그런 배치에
@@ -40,7 +43,7 @@ struct GpuBatchInfo
 {
 	uint instanceBase;
 	uint instanceCount;
-	uint sortMode;        // 0 = 없음(불투명), 1 = CPU 순서 유지, 2 = 압축 뒤 GPU 깊이 정렬
+	uint sortMode;        // 0 = 없음(불투명), 1 = CPU 순서 유지, 2 = 압축 뒤 CPU 순서로 되돌림
 	uint morphVertexBase; // 정점 셰이더용 — 여기서는 안 읽는다 (binding.hlsli SwBatchData 와 같은 표)
 	uint firstVertex;     // 정점 셰이더용 — 여기서는 안 읽는다
 	uint pad0;
@@ -61,9 +64,8 @@ SW_DECLARE_STRUCTURED_BUFFER( GpuBatchInfo, g_BatchInfo, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIds, 1 );
 
-// 키와 값이 같이 움직여야 하므로 둘을 나란히 둔다. 키는 카메라까지의 거리 제곱(뒤에서 앞으로).
-groupshared float s_arrKey[SW_SORT_MAX_ELEMENTS];
-groupshared uint  s_arrId[SW_SORT_MAX_ELEMENTS];
+// 정렬할 값은 인스턴스 번호 하나다 — 번호가 곧 CPU 가 정한 그리는 순서다(위 주석).
+groupshared uint s_arrId[SW_SORT_MAX_ELEMENTS];
 
 [numthreads(SW_SORT_THREADS, 1, 1)]
 void CSMain(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID)
@@ -91,31 +93,13 @@ void CSMain(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID)
 	while (sortLength < count)
 		sortLength <<= 1u;
 
-	// 그룹공유로 올린다. sortLength 밖의 자리는 키를 -1 로 둬 뒤로 밀어 두고, 되쓸 때 count 까지만 쓴다.
+	// 그룹공유로 올린다. count 밖의 자리는 가장 큰 값으로 둬 뒤로 밀어 두고, 되쓸 때 count 까지만 쓴다.
+	// 인스턴스 번호가 범위를 벗어나도(있어선 안 되지만) 값 그대로 정렬된다 — 그리는 쪽이 g_SwInstanceCount 로 막는다.
 	for (uint loadIndex = groupThreadId.x; loadIndex < (uint)SW_SORT_MAX_ELEMENTS; loadIndex += SW_SORT_THREADS)
-	{
-		if (loadIndex < count)
-		{
-			const uint instanceId = g_VisibleInstanceIds[base + loadIndex];
-			s_arrId[loadIndex]    = instanceId;
-			// 인스턴스 번호가 범위를 벗어나면(있어선 안 되지만) 맨 뒤로 보낸다.
-			if (instanceId < g_InstanceCount)
-			{
-				const float3 toCamera = g_Instances[instanceId].boundsCenter - g_CameraPos.xyz;
-				s_arrKey[loadIndex]   = dot(toCamera, toCamera);
-			}
-			else
-				s_arrKey[loadIndex] = -1.0f;
-		}
-		else
-		{
-			s_arrId[loadIndex]  = 0u;
-			s_arrKey[loadIndex] = -1.0f;
-		}
-	}
+		s_arrId[loadIndex] = (loadIndex < count) ? g_VisibleInstanceIds[base + loadIndex] : 0xFFFFFFFFu;
 	GroupMemoryBarrierWithGroupSync();
 
-	// 바이토닉 정렬 — **내림차순**(먼 것이 앞). 투명은 뒤에서 앞으로 그려야 블렌딩이 맞는다.
+	// 바이토닉 정렬 — **오름차순**(번호가 작은 것 = CPU 순서에서 먼저 그릴 것이 앞).
 	// blockSize 는 이 단계에서 정렬되는 구간의 길이, compareDistance 는 그 안에서 짝을 짓는 거리다.
 	for (uint blockSize = 2u; blockSize <= (uint)SW_SORT_MAX_ELEMENTS; blockSize <<= 1u)
 	{
@@ -127,17 +111,14 @@ void CSMain(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID)
 				const uint partner = elementIndex ^ compareDistance;
 				if (partner > elementIndex)
 				{
-					// (elementIndex & blockSize) == 0 이면 이 구간은 내림차순으로 맞춘다.
-					const bool bDescending = ((elementIndex & blockSize) == 0u);
-					const bool bSwap       = bDescending ? (s_arrKey[elementIndex] < s_arrKey[partner]) : (s_arrKey[elementIndex] > s_arrKey[partner]);
+					// (elementIndex & blockSize) == 0 이면 이 구간은 오름차순으로 맞춘다.
+					const bool bAscending = ((elementIndex & blockSize) == 0u);
+					const bool bSwap      = bAscending ? (s_arrId[elementIndex] > s_arrId[partner]) : (s_arrId[elementIndex] < s_arrId[partner]);
 					if (bSwap)
 					{
-						const float swapKey    = s_arrKey[elementIndex];
-						s_arrKey[elementIndex] = s_arrKey[partner];
-						s_arrKey[partner]      = swapKey;
-						const uint swapId      = s_arrId[elementIndex];
-						s_arrId[elementIndex]  = s_arrId[partner];
-						s_arrId[partner]       = swapId;
+						const uint swapId     = s_arrId[elementIndex];
+						s_arrId[elementIndex] = s_arrId[partner];
+						s_arrId[partner]      = swapId;
 					}
 				}
 			}

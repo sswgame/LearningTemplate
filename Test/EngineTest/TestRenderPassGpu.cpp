@@ -41,6 +41,9 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
+#include "Engine/Object/Component/2D/Light2DComponent.h"
+#include "Engine/Object/Component/2D/PixelPerfectCameraComponent.h"
+#include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -5205,4 +5208,275 @@ SW_TEST_CASE( RenderPassGpuTest, VertexStageMaterialSchemaIsUsed )
     }
     if ( checkedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could reflect the water shader" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 픽셀 아트 스프라이트는 자산 픽셀 격자에 붙고(픽셀 스냅) 텍셀 경계가 번지지 않는다(점 필터) — 4 백엔드
+ * @details PPU 8 · 배율 4 라 자산 픽셀 하나가 화면 픽셀 4 칸이다(`PixelPerfectCameraComponent`). 8 × 8 줄무늬(흰 · 파랑 번갈아) 스프라이트를
+ *          x = 0 · 0.3 · 0.7 자산 픽셀에 놓는다. 스냅이 켜져 있으면 0.3 은 0 과 같은 화면 픽셀에서 시작하고 0.7 은 정확히 4 픽셀(자산 픽셀 하나) 옆이다.
+ *          스냅을 끄면 0.3 자산 픽셀 = 1.2 화면 픽셀만큼 밀린다 — 래스터화는 화면 픽셀로만 반올림하므로 스냅이 없으면 아트 픽셀이 어긋난다.
+ *          점 필터(`sprite2dpixel.material`)면 스프라이트 안의 모든 픽셀이 두 색 중 하나이고 줄무늬 한 칸이 정확히 4 픽셀이다. 선형 필터면 경계에
+ *          섞인 색이 생긴다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, PixelArtSpritesSnapToTheAssetPixelGrid )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    constexpr const utf8* kStripeTexture = "engine/textures/test/pixelstripes.dds";
+    constexpr float32     kPixelsPerUnit = 8.0f;
+    constexpr int32       kZoom          = 4;
+    const test::Rgba8     white{ 255, 255, 255, 255 };
+    const test::Rgba8     blue{ 20, 40, 160, 255 };
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene                        scene( "PixelArtScene" );
+        sw::PixelPerfectCameraComponent* pPixel  = nullptr;
+        sw::SpriteComponent*             pSprite = nullptr;
+        if ( bOk )
+        {
+            sw::GameObject*      pCameraObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "PixelCamera" ) );
+            sw::CameraComponent* pCamera       = pCameraObject->addComponent<sw::CameraComponent>();
+            pCamera->setRole( sw::CameraRole::Game );
+            pCamera->setLocalPosition( sw::float3{ 0.0f, 0.0f, -4.0f } );
+            pPixel = pCameraObject->addComponent<sw::PixelPerfectCameraComponent>();
+            bOk    = pPixel != nullptr && scene.ensureDefaultCameras();
+        }
+        if ( bOk )
+        {
+            sw::GameObject* pSpriteObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "Stripes" ) );
+            pSprite                       = pSpriteObject->addComponent<sw::SpriteComponent>();
+            pSprite->setMaterialPath( "engine/materials/sprite2dpixel.material" );
+            pSprite->setTextureName( kStripeTexture );
+            pSprite->resolveRenderAssets();
+            sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
+            // 첫 프레임으로 그리는 크기를 안다 — 배율 4 가 되게 기준 해상도를 그 크기의 4 분의 1 로 둔다.
+            bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        }
+        test::RHITestImage firstImage;
+        bOk = bOk && firstImage.readTransient( renderer, "SceneColor" );
+        if ( bOk == false )
+        {
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "준비 실패" ).c_str() );
+            continue;
+        }
+        const uint32 width  = firstImage.getWidth();
+        const uint32 height = firstImage.getHeight();
+        pPixel->setPixelsPerUnit( kPixelsPerUnit );
+        pPixel->setReferenceResolution( sw::float2{ static_cast<float32>( width / kZoom ), static_cast<float32>( height / kZoom ) } );
+        const sw::PixelPerfectLayout layout = pPixel->applyToCamera( width, height );
+        SW_EXPECT_EQUAL( kZoom, layout._zoom );
+
+        // 스프라이트를 x(자산 픽셀)에 놓고 그린 뒤 가운데 줄에서 그려진 구간의 시작 픽셀 · 그 줄을 돌려준다.
+        const int32 row        = static_cast<int32>( height / 2 );
+        const auto  renderSpan = [&]( float32 assetPixelX, sw::vector<test::Rgba8>& outListPixel )
+        {
+            pSprite->setLocalPosition( sw::float3{ assetPixelX / kPixelsPerUnit, 0.0f, 0.0f } );
+            scene.getObjectManager()->flushSceneTransforms();
+            sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
+            for ( uint32 frame = 0; frame < 3; ++frame )
+                (void)renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            test::RHITestImage image;
+            outListPixel.clear();
+            if ( image.readTransient( renderer, "SceneColor" ) == false )
+                return -1;
+            int32 start = -1;
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixel = image.getPixel( x, static_cast<uint32>( row ) );
+                if ( test::RHITestImage::isDefaultClearBackground( pixel ) )
+                    continue;
+                if ( start < 0 )
+                    start = static_cast<int32>( x );
+                outListPixel.push_back( pixel );
+            }
+            return start;
+        };
+
+        sw::vector<test::Rgba8> listAtZero;
+        sw::vector<test::Rgba8> listScratch;
+        const int32             startZero = renderSpan( 0.0f, listAtZero );
+        const int32             startNear = renderSpan( 0.3f, listScratch );
+        const int32             startNext = renderSpan( 0.7f, listScratch );
+        SW_EXPECT_TRUE_MSG( startZero >= 0, ( label + "스프라이트가 그려지지 않았다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( startNear == startZero,
+                            ( label + "스냅을 켰는데 0.3 자산 픽셀이 다른 화면 픽셀에서 시작한다 (" + sw::to_string( startNear ) + " vs " + sw::to_string( startZero ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( startNext == startZero + kZoom,
+                            ( label + "0.7 자산 픽셀이 자산 픽셀 하나(4 화면 픽셀) 옆이 아니다 (" + sw::to_string( startNext ) + " vs " + sw::to_string( startZero ) + ")" ).c_str() );
+
+        // 점 필터: 스프라이트 안의 모든 픽셀이 두 색 중 하나이고 줄무늬 한 칸이 배율만큼(4 픽셀)이다.
+        uint32 blendedCount = 0;
+        int32  runLength    = 0;
+        bool   bRunsExact   = true;
+        for ( size_t index = 0; index < listAtZero.size(); ++index )
+        {
+            const test::Rgba8& pixel  = listAtZero[index];
+            const bool         bWhite = test::RHITestImage::getColorDistance( pixel, white ) < 24;
+            const bool         bBlue  = test::RHITestImage::getColorDistance( pixel, blue ) < 24;
+            if ( bWhite == false && bBlue == false )
+                ++blendedCount;
+            const bool bSameAsPrevious = index > 0 && test::RHITestImage::getColorDistance( pixel, listAtZero[index - 1] ) < 24;
+            if ( index > 0 && bSameAsPrevious == false )
+            {
+                if ( runLength != kZoom )
+                    bRunsExact = false;
+                runLength = 0;
+            }
+            ++runLength;
+        }
+        SW_EXPECT_TRUE_MSG( blendedCount == 0, ( label + "점 필터인데 섞인 색이 " + sw::to_string( blendedCount ) + " 픽셀 있다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( bRunsExact && listAtZero.size() == static_cast<size_t>( 8 * kZoom ),
+                            ( label + "줄무늬 칸이 4 픽셀씩이 아니다 (폭 " + sw::to_string( listAtZero.size() ) + ")" ).c_str() );
+
+        // 스냅을 끄면 0.3 자산 픽셀(1.2 화면 픽셀)만큼 밀린다 — 래스터화만으로는 아트 픽셀이 격자에 서지 않는다.
+        pPixel->setPixelSnapping( false );
+        (void)pPixel->applyToCamera( width, height );
+        const int32 startUnsnapped = renderSpan( 0.3f, listScratch );
+        SW_EXPECT_TRUE_MSG( startUnsnapped == startZero + 1,
+                            ( label + "스냅을 끈 0.3 자산 픽셀이 1 화면 픽셀 밀리지 않았다 (" + sw::to_string( startUnsnapped ) + ")" ).c_str() );
+
+        // 선형 필터(기본 스프라이트 머티리얼)면 줄무늬 경계에 섞인 색이 생긴다 — 점 필터가 실제로 일을 했다는 대조.
+        pSprite->setMaterialPath( "engine/materials/sprite2d.material" );
+        sw::vector<test::Rgba8> listLinear;
+        (void)renderSpan( 0.0f, listLinear );
+        uint32 linearBlended = 0;
+        for ( const test::Rgba8& pixel : listLinear )
+        {
+            if ( test::RHITestImage::getColorDistance( pixel, white ) >= 24 && test::RHITestImage::getColorDistance( pixel, blue ) >= 24 )
+                ++linearBlended;
+        }
+        SW_EXPECT_TRUE_MSG( linearBlended > 0, ( label + "선형 필터인데 섞인 색이 없다 — 점 필터 대조가 눈을 감았다" ).c_str() );
+        SW_LOG_INFO( "%#pixel art: start %# / %# / %# (unsnapped %#), point-filter blended %#, linear blended %#", label, startZero, startNear, startNext,
+                     startUnsnapped, blendedCount, linearBlended );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend available for the pixel art test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 2D 점광의 감쇠가 식과 같고, 2D 가림막 뒤는 어둡고 가림막 안쪽은 밝다 — 4 백엔드
+ * @details 직교 카메라(높이 4) 앞의 흰 빛 받는 스프라이트(`sprite2dlit.material`) 6 × 6 을 원점의 점광(바깥 반경 2, 안 0, 지수 1)이 비춘다. 가운데 줄의 픽셀을
+ *          월드 X 로 옮겨 `PointLight2DComponent::computeAttenuation` × 255 와 견준다. 그다음 (1, 0) 에 0.2 × 1 상자 가림막을 두면 x > 1.1 은 0 이 되고,
+ *          가림막 안(x = 1)은 빛 쪽 변에 가려지지 않아 식 그대로다(자기 그림자 없음). 빛 쪽(x < 0.9)은 바뀌지 않는다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, Light2DFalloffAndShadowOnEveryBackend )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    constexpr float32 kOrthoHeight = 4.0f;
+    constexpr float32 kOuterRadius = 2.0f;
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene                    scene( "Light2DGpuScene" );
+        sw::ShadowCaster2DComponent* pCaster = nullptr;
+        if ( bOk )
+        {
+            sw::GameObject*      pCameraObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "Camera2D" ) );
+            sw::CameraComponent* pCamera       = pCameraObject->addComponent<sw::CameraComponent>();
+            pCamera->setRole( sw::CameraRole::Game );
+            pCamera->setOrthographic( true );
+            pCamera->setOrthoHeight( kOrthoHeight );
+            pCamera->setLocalPosition( sw::float3{ 0.0f, 0.0f, -4.0f } );
+
+            sw::GameObject*      pGround = scene.getObjectManager()->createGameObject( sw::hashed_string( "LitGround" ) );
+            sw::SpriteComponent* pSprite = pGround->addComponent<sw::SpriteComponent>();
+            pSprite->setMaterialPath( "engine/materials/sprite2dlit.material" );
+            pSprite->setLocalScale( sw::float3{ 6.0f, 6.0f, 1.0f } );
+            pSprite->resolveRenderAssets();
+
+            sw::GameObject*            pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "Lamp" ) );
+            sw::PointLight2DComponent* pLight       = pLightObject->addComponent<sw::PointLight2DComponent>();
+            pLight->setColor( sw::float3{ 1.0f, 1.0f, 1.0f } );
+            pLight->setIntensity( 1.0f );
+            pLight->setRadius( 0.0f, kOuterRadius );
+            pLight->setFalloffExponent( 1.0f );
+
+            sw::GameObject*     pCasterObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "Pillar" ) );
+            sw::SceneComponent* pCasterRoot   = pCasterObject->addComponent<sw::SceneComponent>();
+            pCasterRoot->setLocalPosition( sw::float3{ 1.0f, 0.0f, 0.0f } );
+            pCaster = pCasterObject->addComponent<sw::ShadowCaster2DComponent>();
+            pCaster->setSize( sw::float2{ 0.2f, 1.0f } );
+            pCaster->setActive( false );
+
+            bOk = scene.ensureDefaultCameras();
+            scene.getObjectManager()->flushSceneTransforms();
+            sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
+        }
+
+        // 가운데 줄을 그려 읽고, 픽셀 X → 월드 X 로 옮긴 값의 빨강을 돌려준다.
+        const auto renderRow = [&]( sw::vector<float32>& outListWorldX, sw::vector<int32>& outListRed )
+        {
+            outListWorldX.clear();
+            outListRed.clear();
+            for ( uint32 frame = 0; frame < 4 && bOk; ++frame )
+                bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            test::RHITestImage image;
+            if ( bOk == false || image.readTransient( renderer, "SceneColor" ) == false )
+                return false;
+            const float32 unit = kOrthoHeight / static_cast<float32>( image.getHeight() );
+            const uint32  row  = image.getHeight() / 2;
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
+            {
+                outListWorldX.push_back( ( static_cast<float32>( x ) + 0.5f - 0.5f * static_cast<float32>( image.getWidth() ) ) * unit );
+                outListRed.push_back( static_cast<int32>( image.getPixel( x, row )._r ) );
+            }
+            return true;
+        };
+
+        sw::vector<float32> listWorldX;
+        sw::vector<int32>   listOpen;
+        sw::vector<int32>   listShadowed;
+        bOk = bOk && renderRow( listWorldX, listOpen );
+        if ( bOk )
+        {
+            pCaster->setActive( true );
+            bOk = renderRow( listWorldX, listShadowed );
+        }
+        if ( bOk == false )
+        {
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 실패" ).c_str() );
+            continue;
+        }
+
+        int32 worstFalloffError  = 0;
+        int32 worstLitSideChange = 0;
+        int32 brightestBehind    = 0;
+        int32 insideValue        = -1;
+        int32 insideExpected     = -1;
+        for ( size_t index = 0; index < listWorldX.size(); ++index )
+        {
+            const float32 worldX   = listWorldX[index];
+            const int32   expected = static_cast<int32>( sw::PointLight2DComponent::computeAttenuation( sw::MathUtil::abs( worldX ), 0.0f, kOuterRadius, 1.0f ) * 255.0f + 0.5f );
+            worstFalloffError      = sw::MathUtil::max( worstFalloffError, sw::MathUtil::abs( listOpen[index] - expected ) );
+            if ( worldX < 0.85f )
+                worstLitSideChange = sw::MathUtil::max( worstLitSideChange, sw::MathUtil::abs( listShadowed[index] - listOpen[index] ) );
+            if ( worldX > 1.2f )
+                brightestBehind = sw::MathUtil::max( brightestBehind, listShadowed[index] );
+            if ( insideValue < 0 && worldX >= 0.98f )
+            {
+                insideValue    = listShadowed[index];
+                insideExpected = expected;
+            }
+        }
+        SW_EXPECT_TRUE_MSG( worstFalloffError <= 6, ( label + "감쇠가 식과 다르다 (최대 차이 " + sw::to_string( worstFalloffError ) + "/255)" ).c_str() );
+        SW_EXPECT_TRUE_MSG( worstLitSideChange <= 2, ( label + "가림막이 빛 쪽 픽셀을 바꿨다 (" + sw::to_string( worstLitSideChange ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( brightestBehind <= 2, ( label + "가림막 뒤가 밝다 (" + sw::to_string( brightestBehind ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( insideValue - insideExpected ) <= 6,
+                            ( label + "가림막 안쪽이 자기 그림자를 받았다 (" + sw::to_string( insideValue ) + " vs " + sw::to_string( insideExpected ) + ")" ).c_str() );
+        SW_LOG_INFO( "%#2D light: falloff max error %#, lit side change %#, behind caster max %#, inside caster %# (expected %#)", label, worstFalloffError,
+                     worstLitSideChange, brightestBehind, insideValue, insideExpected );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend available for the 2D light test" );
 }

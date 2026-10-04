@@ -26,6 +26,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -58,6 +59,7 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Physics/PhysicsSystem.h"
@@ -908,6 +910,10 @@ namespace sw
         BLOCK( "Scene update" )
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick" );
+            // 게임 카메라가 그리는 뷰포트 크기를 틱 전에 적는다 — 픽셀 퍼펙트 카메라가 배율을 고른다(`CameraRegistry::getViewportWidth`).
+            Scene* pTickScene = ( _owned._pSceneManager != nullptr ) ? _owned._pSceneManager->getActiveScene() : nullptr;
+            if ( pTickScene != nullptr && pTickScene->getObjectManager() != nullptr )
+                pTickScene->getObjectManager()->getCameraRegistry().setViewportSize( vpWidth, vpHeight );
             if ( _owned._pSceneManager != nullptr && bTickScene )
                 _owned._pSceneManager->tick( deltaTime );
         }
@@ -997,6 +1003,9 @@ namespace sw
                     packet._cameraPos    = pCam->getCameraPosition();
                     packet._viewProj     = pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) );
                     packet._bHasViewProj = SW_TRUE;
+                    // 투명 정렬의 깊이 — 직교 카메라는 시선 축(같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 바뀌지 않게), 원근은 거리(render2d.xml).
+                    _gpuSceneBuilder->setTransparentSortAxis(
+                        Render2DSettings::getActive().computeTransparentSortAxis( pCam->isOrthographic(), pCam->getCameraForward() ) );
                 }
                 // 추가 뷰(캡처 카메라 · 화면 사각형) — 갱신 주기 · 보이는가 · 예산으로 이번 프레임에 그릴 것을 고른다. 쉬는 뷰도 실린다.
                 _renderViewClock += static_cast<float64>( MathUtil::max( 0.0f, deltaTime ) );

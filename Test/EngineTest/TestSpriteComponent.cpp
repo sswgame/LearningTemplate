@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -251,4 +253,52 @@ SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
     // 아무도 쓰지 않는 경로는 다시 읽을 것이 없다(다음 `acquire` 가 새 내용을 읽는다).
     SW_EXPECT_FALSE( sw::SpriteClipCache::reloadShared( test::makeTempPath( "nobody_holds.sprite.json" ) ) );
     SW_EXPECT_FALSE( pCache->isCached( test::makeTempPath( "nobody_holds.sprite.json" ) ) );
+}
+
+/**
+ * @brief [SpriteComponentTest] Sliced · Tiled 는 크기 · 테두리가 같은 스프라이트끼리 슬라이스 메시 하나를 나눠 쓰고, 테두리는 클립 프레임(에셋)이 먼저다
+ * @details 유니티 `SpriteRenderer.drawMode` 와 같은 세 방식이다. 테두리는 스프라이트 에셋(클립 프레임의 "border")에 있고, 클립이 없는 텍스처 스프라이트만
+ *          컴포넌트의 `_sliceBorder` 를 쓴다. Simple 로 돌아가면 공유 사각형으로 돌아가야 같은 텍스처의 다른 스프라이트와 다시 한 배치다.
+ */
+SW_TEST_CASE( SpriteComponentTest, SlicedSpritesShareTheSliceMeshAndReadTheBorderFromTheClip )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::GameObjectManager manager;
+    sw::SpriteComponent*  pPanelA = spawnSprite( manager, "PanelA", kTextureA );
+    sw::SpriteComponent*  pPanelB = spawnSprite( manager, "PanelB", kTextureA );
+    SW_ASSERT_NOT_NULL( pPanelA );
+    SW_ASSERT_NOT_NULL( pPanelB );
+    const sw::shared_ptr<sw::Mesh> quad = pPanelA->getMesh();
+
+    const sw::float4 border{ 0.25f, 0.25f, 0.25f, 0.25f };
+    for ( sw::SpriteComponent* pPanel : { pPanelA, pPanelB } )
+    {
+        pPanel->setSliceBorder( border );
+        pPanel->setSize( sw::float2{ 4.0f, 2.0f } );
+        pPanel->setDrawMode( sw::SpriteDrawMode::Sliced );
+    }
+    SW_ASSERT_NOT_NULL( pPanelA->getRawMesh() );
+    SW_EXPECT_EQUAL( 9u * 12u, pPanelA->getRawMesh()->getVertexCount() );
+    SW_EXPECT_TRUE( pPanelA->getMesh() == pPanelB->getMesh() );
+    // 경계 구는 크기를 따른다(단위 사각형의 반대각선이 아니다).
+    sw::float3 center{};
+    float32    radius{ 0.0f };
+    SW_ASSERT_TRUE( pPanelA->getWorldBounds( center, radius ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f * sw::MathUtil::sqrt( 20.0f ), radius, 1e-4f );
+
+    pPanelB->setDrawMode( sw::SpriteDrawMode::Tiled );
+    SW_EXPECT_TRUE( pPanelA->getMesh() != pPanelB->getMesh() );
+    pPanelB->setDrawMode( sw::SpriteDrawMode::Simple );
+    SW_EXPECT_TRUE( pPanelB->getMesh() == quad ); // 공유 사각형으로 돌아간다
+
+    // 클립 프레임의 테두리가 컴포넌트 값을 이긴다.
+    const sw::string    clipPath = test::makeTempPath( "panel.sprite.json" );
+    sw::SpriteClipAsset clip;
+    clip._atlasPath = kTextureB;
+    clip._listFrame.resize( 1 );
+    clip._listFrame[0]._border = sw::float4{ 0.1f, 0.2f, 0.3f, 0.4f };
+    SW_ASSERT_TRUE( clip.saveToFile( clipPath ) );
+    pPanelA->setClipPath( clipPath );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, pPanelA->getEffectiveSliceBorder()._w, 1e-5f );
+    SW_EXPECT_TRUE( pPanelA->getMesh() != pPanelB->getMesh() );
 }

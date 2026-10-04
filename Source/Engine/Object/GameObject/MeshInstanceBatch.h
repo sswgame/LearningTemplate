@@ -79,6 +79,13 @@ namespace sw
         void setVisible( bool bVisible );
         /** @brief 보이면 true 입니다. */
         bool isVisible() const { return _bVisible != SW_FALSE; }
+        /**
+         * @brief 항목 모두의 투명 정렬 키입니다(`MeshComponent::setSortKey` 와 같은 뜻 — 0 은 `Default` 레이어 · 순서 0). 바뀌면 항목 모두가 더티입니다.
+         * @details 월드 공간 UI(HP 바 · 데미지 숫자)를 `WorldUI` 레이어에 두는 자리입니다 — 같은 Z 의 스프라이트보다 늘 위에 그려집니다.
+         */
+        void setSortKey( uint32 sortKey );
+        /** @brief 항목 모두의 투명 정렬 키입니다. */
+        uint32 getSortKey() const { return _sortKey; }
 
         /** @brief 메시(원시 포인터)입니다. */
         Mesh* getRawMesh() const { return _mesh.get(); }
@@ -105,6 +112,7 @@ namespace sw
         shared_ptr<MaterialInstance> _instance;
         PrimitiveRegistry*           _pRegistry;  ///< 등록된 등록부. 등록부가 먼저 사라지면 등록부가 비웁니다
         uint32                       _firstEntry; ///< 등록부의 인스턴스 항목 목록에서 첫 항목 자리. 등록부가 적습니다
+        uint32                       _sortKey;    ///< 항목 모두의 투명 정렬 키(0 = 기본)
         uint8                        _bVisible;
     };
 } // namespace sw

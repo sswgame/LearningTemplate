@@ -154,3 +154,39 @@ SW_TEST_CASE( SpriteClipAssetTest, CacheSharesOneClipPerPath )
     SW_EXPECT_TRUE( sw::SpriteClipCache::acquire( test::makeTempPath( "never_written.sprite.json" ) ) == nullptr );
     SW_EXPECT_TRUE( sw::SpriteClipCache::acquire( "" ) == nullptr );
 }
+
+/**
+ * @brief [SpriteClipAssetTest] 9-슬라이스 테두리("border": [왼, 아래, 오른, 위])는 프레임마다 왕복하고, 없는 프레임은 키를 쓰지 않는다
+ * @details 테두리는 스프라이트 에셋에 산다(유니티 Sprite Border). 키가 없는 프레임을 다시 쓸 때 "border" 가 생기면 테두리를 안 쓰는 모든 클립 파일이
+ *          저장할 때마다 바뀐다. 숫자 넷의 배열이 아니면 데이터 오류라 알리고 테두리 없이 읽는다.
+ */
+SW_TEST_CASE( SpriteClipAssetTest, SliceBorderRoundTripsPerFrame )
+{
+    constexpr const utf8* kBorderClip = R"({
+  "atlas": "engine/textures/test/checker.dds",
+  "frames": [
+    { "u": 0.0, "v": 0.0, "w": 1.0, "h": 1.0, "durationMs": 0, "border": [0.125, 0.25, 0.375, 0.5] },
+    { "u": 0.0, "v": 0.0, "w": 1.0, "h": 1.0, "durationMs": 0 }
+  ],
+  "transformKeys": []
+})";
+    sw::SpriteClipAsset   clip;
+    SW_ASSERT_TRUE( clip.parseJson( kBorderClip ) );
+    SW_ASSERT_EQUAL( 2, clip.getFrameCount() );
+    SW_EXPECT_TRUE( clip._listFrame[0].hasBorder() );
+    SW_EXPECT_NEAR_EQUAL( 0.125f, clip._listFrame[0]._border._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, clip._listFrame[0]._border._w, 1e-6f );
+    SW_EXPECT_FALSE( clip._listFrame[1].hasBorder() );
+
+    const sw::string written = clip.toJson();
+    SW_EXPECT_TRUE( written.find( "border" ) == written.rfind( "border" ) ); // 테두리가 있는 프레임 하나만 키를 쓴다
+    sw::SpriteClipAsset reread;
+    SW_ASSERT_TRUE( reread.parseJson( written ) );
+    SW_EXPECT_NEAR_EQUAL( 0.375f, reread._listFrame[0]._border._z, 1e-6f );
+    SW_EXPECT_FALSE( reread._listFrame[1].hasBorder() );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a border that is not four numbers is a data error" );
+    sw::SpriteClipAsset malformed;
+    SW_ASSERT_TRUE( malformed.parseJson( R"({ "atlas": "a.dds", "frames": [ { "u": 0, "v": 0, "w": 1, "h": 1, "border": [0.1, 0.2] } ] })" ) );
+    SW_EXPECT_FALSE( malformed._listFrame[0].hasBorder() );
+}

@@ -17,6 +17,18 @@ namespace sw
     class SpriteClipAsset;
 
     /**
+     * @enum SpriteDrawMode
+     * @brief 스프라이트를 어떤 메시로 그리는가입니다(유니티 `SpriteDrawMode`).
+     */
+    ENUM()
+    enum class SpriteDrawMode : uint8
+    {
+        Simple = 0, ///< 단위 사각형 하나를 트랜스폼 스케일로 늘립니다
+        Sliced = 1, ///< 9-슬라이스 — 모서리는 자연 크기, 변 · 가운데가 `_size` 까지 늘어납니다
+        Tiled  = 2, ///< 모서리는 자연 크기, 변 · 가운데가 자연 크기 칸으로 되풀이됩니다
+    };
+
+    /**
      * @class SpriteComponent
      * @brief 텍스처를 입힌 사각형을 그립니다(2D). 메시는 사각형, 머티리얼은 스프라이트 머티리얼(`sprite2d.material`)이 기본입니다.
      * @details 텍스처는 그 머티리얼의 **인스턴스**가 덮어쓰고(`albedoMap`), 같은 (머티리얼, 텍스처)의 스프라이트는 인스턴스 하나를 나눠 씁니다 —
@@ -52,6 +64,11 @@ namespace sw
         /** @brief 텍스처를 바꾸고 인스턴스를 다시 맞춥니다. */
         void setTextureName( string_view texture );
 
+        /** @brief 노멀 맵 텍스처 경로입니다(빛 받는 머티리얼 `sprite2dlit.material` 이 읽는다). 비어 있으면 N·L 없이 비춥니다. */
+        const string& getNormalMapName() const { return _normalMapName; }
+        /** @brief 노멀 맵을 바꾸고 텍스처 인스턴스를 다시 맞춥니다. */
+        void setNormalMapName( string_view normalMap );
+
         /** @brief 스프라이트 클립(`.sprite.json`) 경로입니다. 비어 있으면 클립 없이 `_uvRect` 를 보입니다. */
         const string& getClipPath() const { return _clipPath; }
         /** @brief 클립을 바꾸고 읽습니다(같은 클립은 스프라이트끼리 나눠 갖습니다 — `SpriteClipCache::acquire`). */
@@ -74,6 +91,30 @@ namespace sw
         /** @brief 색을 정합니다(머티리얼 색 · 텍스처에 곱합니다). 페이드 · 피격 색은 여기입니다 — 머티리얼 인스턴스를 만들지 않습니다. */
         void setTint( const float4& tint );
 
+        /** @brief 정렬 레이어 이름입니다(`render2d.xml` 의 표). 기본은 `Default` 입니다. */
+        const hashed_string& getSortingLayer() const { return _sortingLayer; }
+        /** @brief 정렬 레이어를 정합니다. 모르는 이름은 오류를 남기고 `Default` 로 그립니다. */
+        void setSortingLayer( const hashed_string& layerName );
+        /** @brief 레이어 안 순서입니다. 클수록 위에 그려집니다. */
+        int32 getOrderInLayer() const { return _orderInLayer; }
+        /** @brief 레이어 안 순서를 정합니다([-32767, 32767] 로 묶습니다). */
+        void setOrderInLayer( int32 order );
+
+        /** @brief 그리기 방식입니다(Simple · Sliced · Tiled). */
+        SpriteDrawMode getDrawMode() const { return _drawMode; }
+        /** @brief 그리기 방식을 바꾸고 메시를 다시 고릅니다. */
+        void setDrawMode( SpriteDrawMode mode );
+        /** @brief Sliced · Tiled 의 로컬 크기(폭, 높이)입니다. Simple 은 보지 않습니다(트랜스폼 스케일이 크기). */
+        const float2& getSize() const { return _size; }
+        /** @brief Sliced · Tiled 의 크기를 정합니다(음수는 0). */
+        void setSize( const float2& size );
+        /** @brief 클립 프레임에 테두리가 없을 때 쓰는 9-슬라이스 테두리 (왼쪽, 아래, 오른쪽, 위, 프레임 비율)입니다. */
+        const float4& getSliceBorder() const { return _sliceBorder; }
+        /** @brief 클립 프레임에 테두리가 없을 때 쓰는 테두리를 정합니다. */
+        void setSliceBorder( const float4& border );
+        /** @brief 지금 쓰는 테두리입니다 — 보이는 클립 프레임에 테두리가 있으면 그것(에셋), 없으면 `_sliceBorder` 입니다. */
+        float4 getEffectiveSliceBorder() const;
+
         /** @brief 지금 보이는 UV 사각형입니다 — 클립이 있으면 그 프레임의 것, 없으면 `_uvRect` 입니다. */
         float4 getDisplayedUvRect() const;
 
@@ -93,12 +134,22 @@ namespace sw
         void refreshClip();
         /** @brief 보일 프레임 · 색을 GPU 인스턴스 칸으로 묶어 넘깁니다(`MeshComponent::setSpriteInstanceData`). */
         void refreshSpriteInstanceData();
+        /**
+         * @brief 그리기 방식 · 크기 · 테두리에 맞는 메시를 겁니다. Sliced · Tiled 는 `SpriteMeshBuilder::acquireSlicedMesh`(같은 값끼리 나눠 씀),
+         *        Simple 은 공유 사각형입니다. 같은 메시면 아무것도 하지 않습니다.
+         */
+        void refreshDrawModeMesh();
+        /** @brief 정렬 레이어 · 순서를 정렬 키로 풀어 메시 컴포넌트에 넘깁니다(`MeshComponent::setSortKey`). */
+        void refreshSortKey();
         /** @brief 텍스처 칸이 비었으면 클립의 아틀라스, 아니면 텍스처 칸입니다. */
         string_view getEffectiveTexture() const;
 
         PROPERTY( Category = "Rendering", DisplayName = "Texture", AssetPath, AssetType = "Texture", Tooltip = "Texture asset name; empty uses the clip atlas" )
-        string        _textureName;
-        hashed_string _appliedTexture; ///< 이 컴포넌트가 건 텍스처 인스턴스의 텍스처. 비어 있으면 건 것이 없다
+        string _textureName;
+        PROPERTY( Category = "Rendering", DisplayName = "Normal Map", AssetPath, AssetType = "Texture", Tooltip = "Normal map read by the lit sprite material" )
+        string        _normalMapName;
+        hashed_string _appliedTexture;   ///< 이 컴포넌트가 건 텍스처 인스턴스의 텍스처. 비어 있으면 건 것이 없다
+        hashed_string _appliedNormalMap; ///< 그 인스턴스의 노멀 맵
         /**
          * @brief 스프라이트 클립(`.sprite.json`) 경로입니다. 보일 프레임은 번호(`_clipFrame`)로 따로 듭니다 — 프레임마다 문자열을 만들어
          *        파싱하지 않고 번호 하나를 넘깁니다.
@@ -111,7 +162,24 @@ namespace sw
         PROPERTY( Category = "Rendering", DisplayName = "UV Rect", Tooltip = "Atlas rectangle (u, v, width, height) shown when there is no clip" )
         float4 _uvRect;
         PROPERTY( Category = "Rendering", DisplayName = "Tint", Meta = "Color", Tooltip = "Color multiplied into the sprite; alpha is opacity" )
-        float4                            _tint;
+        float4 _tint;
+        /**
+         * @brief 정렬 레이어 이름입니다. 투명 큐는 레이어 → 레이어 안 순서 → 깊이 순으로 그립니다(유니티 Sorting Layer · Godot CanvasLayer).
+         * @details 같은 Z 의 월드 UI 와 스프라이트처럼 깊이가 같은 것의 앞뒤를 데이터로 정합니다. 이름은 `render2d.xml` 의 표에 있어야 합니다.
+         */
+        PROPERTY( Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml; earlier layers draw first" )
+        hashed_string _sortingLayer;
+        PROPERTY( Category = "Rendering", DisplayName = "Draw Mode", Tooltip = "Simple stretches the quad; Sliced keeps the corners; Tiled repeats the middle" )
+        SpriteDrawMode _drawMode;
+        PROPERTY( Category = "Rendering", DisplayName = "Size", Tooltip = "Local width and height used when the draw mode slices or repeats the sprite", Min = 0.0, Meta = "Units=m" )
+        float2 _size;
+        PROPERTY( Category = "Rendering", DisplayName = "Slice Border",
+                  Tooltip = "9-slice border (left, bottom, right, top) as frame fractions; used when the clip frame has none", Min = 0.0, Max = 1.0 )
+        float4 _sliceBorder;
+        uint8  _bSliceMeshApplied; ///< 슬라이스 메시를 건 상태인가(Simple 로 돌아갈 때 사각형을 다시 건다). 저장하지 않습니다
+        PROPERTY( Category = "Sorting", DisplayName = "Order In Layer", Tooltip = "Draw order inside the sorting layer; higher draws on top", Min = -32767.0,
+                  Max = 32767.0 )
+        int32                             _orderInLayer;
         shared_ptr<const SpriteClipAsset> _clip;           ///< 읽은 클립(나눠 가진 것). 저장하지 않습니다
         string                            _loadedClipPath; ///< `_clip` 이 어느 경로의 것인지(실패한 경로도 — 같은 실패를 되풀이해 읽지 않습니다)
     };

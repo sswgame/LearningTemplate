@@ -47,6 +47,22 @@ namespace sw
         (void)_arrRegisteredLight[pLight->getLightType()].remove( pLight ); // 두 번 빼도 된다 — 없으면 할 일이 없다
     }
 
+    void LightRegistry::addShadowCaster( ShadowCaster2DComponent* pCaster )
+    {
+        if ( pCaster == nullptr )
+            return;
+        std::scoped_lock<mutex> lock{ _mutex };
+        (void)_registeredShadowCaster.add( pCaster ); // 이미 있으면 목록이 거절한다
+    }
+
+    void LightRegistry::removeShadowCaster( ShadowCaster2DComponent* pCaster )
+    {
+        if ( pCaster == nullptr )
+            return;
+        std::scoped_lock<mutex> lock{ _mutex };
+        (void)_registeredShadowCaster.remove( pCaster ); // 없으면 할 일이 없다
+    }
+
     const vector<LightComponent*>& LightRegistry::getAll( uint32 lightType ) const
     {
         if ( LightRegistryInternal::isValidType( lightType ) == false )
