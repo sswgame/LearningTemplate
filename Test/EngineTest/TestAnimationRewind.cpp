@@ -19,6 +19,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#if SW_ANIMATION_REWIND_ENABLED // 되감기 기록기는 Shipping 에 없다
+
 using namespace sw;
 
 // AnimationRewindTest — 되감기 기록기: 포즈 압축 · 창 · 상태(그래프 · 알림 · 커브) · 되감기 동안 평가 멈춤 · 사라진 유닛의 기록.
@@ -266,3 +268,5 @@ SW_TEST_CASE( AnimationRewindTest, TrackOutlivesItsUnitUntilTheWindowPasses )
     system.evaluate( 0.1f );
     SW_EXPECT_NULL( system.getRewind().findTrack( handle ) );
 }
+
+#endif // SW_ANIMATION_REWIND_ENABLED

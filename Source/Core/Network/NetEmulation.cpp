@@ -20,12 +20,12 @@ namespace sw
         };
     } // namespace
 
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_netEmuLatencyMs, 0, "네트워크 흉내: 한쪽 지연(ms) — 언리얼 PktLag" );
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_netEmuJitterMs, 0, "네트워크 흉내: ± 흔들림(ms) — PktLagVariance" );
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_netEmuLossPercent, 0, "네트워크 흉내: 손실(%) — PktLoss" );
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_netEmuDuplicatePercent, 0, "네트워크 흉내: 중복(%) — PktDup" );
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_netEmuReorderPercent, 0, "네트워크 흉내: 순서 뒤바뀜(%) — PktOrder" );
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_netEmuBandwidthKilobytesPerSecond, 0, "네트워크 흉내: 회선 속도(KB/s, 0=제한 없음)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuLatencyMs, 0, "네트워크 흉내: 한쪽 지연(ms) — 언리얼 PktLag" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuJitterMs, 0, "네트워크 흉내: ± 흔들림(ms) — PktLagVariance" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuLossPercent, 0, "네트워크 흉내: 손실(%) — PktLoss" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuDuplicatePercent, 0, "네트워크 흉내: 중복(%) — PktDup" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuReorderPercent, 0, "네트워크 흉내: 순서 뒤바뀜(%) — PktOrder" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuBandwidthKilobytesPerSecond, 0, "네트워크 흉내: 회선 속도(KB/s, 0=제한 없음)" );
 } // namespace sw
 
 namespace sw

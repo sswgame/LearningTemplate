@@ -34,6 +34,8 @@ Renderer/
   엔진 PSO 등록(`ensurePassResources`) · 셰이더 쿠킹 요청 · `executePass` 디스패치 · 파이프라인 검증이 모두 이 표를
   enum 으로 읽습니다. 새 포스트 패스는 enum 한 줄 + 표의 case 하나이고, 전용 실행 코드가 필요한 패스만
   `executePass` 의 switch 에 case 를 더합니다.
+  씬 메시 패스는 **그릴 머티리얼을 define 으로 거를 수 있다**(`_pRequiredMaterialDefine` — 메시 외곽선 `MeshOutline` 은 `MATERIAL_OUTLINE` 이 있는 배치만).
+  드로우 · 머티리얼 PSO 변형 · 쿠킹이 같은 판정(`FrameRendererUtil::drawsMaterialInPass`)을 쓴다 — [Graphics/README.md](../README.md) "셀 셰이딩" 절.
 - `RenderPassInputSignature` — 패스 입력의 **역할**(필수/선택). 타입마다의 목록은 위 표의 칸이고, 검증과 실행이 같은
   칸을 보므로 "선언은 했는데 안 걸리는 입력" 이 생길 자리가 없습니다.
 

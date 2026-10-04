@@ -1,0 +1,115 @@
+<!--
+	셀 셰이딩(툰)용 포워드 파이프라인 — forwardpipeline.xml 과 같은 패스(그림자 · 불투명 · 메시 외곽선 · 반투명)이고 Present 가 블룸 · 화면 외곽선 · 톤맵을 하지 않는다.
+	툰은 빛 쪽이 기본색 그대로가 목표다 — 톤맵(Reinhard)은 흰색을 0.5 로 누르고, 블룸은 계단 경계를 번지게 한다(forward2dpipeline.xml 과 같은 이유).
+	외곽선은 메시 외곽선 패스(MeshOutline, 머티리얼이 켠 것)가 그린다.
+	고르는 법: `-gv_renderPipeline=engine/pipeline/forwardtoonpipeline.xml` (FrameRenderer 초기화).
+-->
+<RenderPipelineDesc _name="ForwardToonPipeline" _shadingModel="Forward">
+	<_listAttachment>
+		<RenderPassAttachment _name="SceneColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
+		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
+		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
+	</_listAttachment>
+	<_listPass>
+		<RenderGraphPassDesc _name="Shadow"
+		                     _type="Shadow"
+		                     _depthAttachment="ShadowMap"
+		                     _shaderPath="engine/shaders/shadowdepth.hlsl"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true"
+		                     _bEnableBlend="false">
+			<_listInput />
+			<_listOutput>
+				<item>ShadowMap</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="ForwardOpaque"
+		                     _type="ForwardOpaque"
+		                     _depthAttachment="SceneDepth"
+		                     _shaderPath="engine/shaders/forwardlit.hlsl"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>ShadowMap</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listOutput>
+			<_listPermutation>
+				<item>SW_FORWARD=1</item>
+			</_listPermutation>
+		</RenderGraphPassDesc>
+		<!-- 뒤집은 껍질 외곽선(toon.hlsl 의 외곽선 퍼뮤테이션) — 외곽선을 켠 머티리얼(MATERIAL_OUTLINE)의 배치만 앞면을 컬링해 그린다.
+		     불투명 깊이를 읽는 패스보다 뒤, 반투명보다 앞이다(외곽선이 깊이를 써서 뒤의 반투명을 가린다). -->
+		<RenderGraphPassDesc _name="MeshOutline"
+		                     _type="MeshOutline"
+		                     _depthAttachment="SceneDepth"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Front"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Transparent"
+		                     _type="Transparent"
+		                     _depthAttachment="SceneDepth"
+		                     _shaderPath="engine/shaders/forwardlit.hlsl"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="true">
+			<_listInput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneColor</item>
+			</_listOutput>
+			<_listPermutation>
+				<item>SW_TRANSPARENT=1</item>
+			</_listPermutation>
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Present"
+		                     _type="Present"
+		                     _shaderPath="engine/shaders/postchain.hlsl"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>Swapchain</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+	</_listPass>
+	<_listRenderPassRef>
+		<item>engine/renderpass/defaultrenderpass.xml</item>
+	</_listRenderPassRef>
+</RenderPipelineDesc>

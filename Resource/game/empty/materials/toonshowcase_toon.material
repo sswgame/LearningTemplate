@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 툰 쇼케이스(toonshowcase.scene.xml)의 툰 구 — PBR 구와 같은 기본색, 칼같은 계단 · 푸른 그림자색 · 림 · 화면 기준 외곽선. -->
+<MaterialDesc formatVersion="0" name="ToonShowcaseToon" shaderPath="engine/shaders/toon.hlsl" blendMode="Opaque">
+	<_properties>
+		<item name="baseColor" type="Color" shaderType="Float4" defaultValue="0.95 0.55 0.35 1.0" displayName="Base Color" group="Shading" bHdr="0" bSrgb="1"/>
+		<item name="shadeColor" type="Color" shaderType="Float4" defaultValue="0.45 0.3 0.55 1.0" displayName="Shade Color" group="Shading" bHdr="0" bSrgb="1"/>
+		<item name="emissiveColor" type="Color" shaderType="Float4" defaultValue="0.0 0.0 0.0 1.0" displayName="Emissive Color" group="Emission" bHdr="1" bSrgb="1"/>
+		<item name="rimColor" type="Color" shaderType="Float4" defaultValue="0.25 0.2 0.15 1.0" displayName="Rim Color" group="Rim" bHdr="1" bSrgb="1"/>
+		<item name="matcapColor" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="MatCap Color" group="Rim" bHdr="1" bSrgb="1"/>
+		<item name="outlineColor" type="Color" shaderType="Float4" defaultValue="0.12 0.05 0.08 1.0" displayName="Outline Color" group="Outline" bHdr="0" bSrgb="1"/>
+		<item name="shadingShift" type="Range" shaderType="Float" defaultValue="-0.1" min="-1.0" max="1.0" displayName="Shading Shift" group="Shading"/>
+		<item name="shadingToony" type="Range" shaderType="Float" defaultValue="0.95" min="0.0" max="1.0" displayName="Shading Toony" group="Shading"/>
+		<item name="shadowReceive" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="1.0" displayName="Receive Shadow" group="Shading"/>
+		<item name="emissiveStrength" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="16.0" displayName="Emissive Strength" group="Emission"/>
+		<item name="rimFresnelPower" type="Range" shaderType="Float" defaultValue="4.0" min="0.0" max="100.0" displayName="Rim Fresnel Power" group="Rim"/>
+		<item name="rimLift" type="Range" shaderType="Float" defaultValue="0.05" min="0.0" max="1.0" displayName="Rim Lift" group="Rim"/>
+		<item name="rimLightingMix" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="1.0" displayName="Rim Lighting Mix" group="Rim"/>
+		<item name="outlineWidth" type="Range" shaderType="Float" defaultValue="0.005" min="0.0" max="0.1" displayName="Outline Width (m or screen height)" group="Outline"/>
+		<item name="outlineWidthMode" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="1.0" displayName="Outline Width Mode (0 world, 1 screen)" group="Outline"/>
+		<item name="outlineLightingMix" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" displayName="Outline Lighting Mix" group="Outline"/>
+		<item name="outlineMaxDistance" type="Range" shaderType="Float" defaultValue="1000.0" min="0.0" max="1000.0" displayName="Outline Max Distance" group="Outline"/>
+		<item name="alphaCutoff" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" displayName="Alpha Cutoff" group="Surface"/>
+		<item name="baseColorMap" type="Texture2D" displayName="Base Color" group="Shading" bSrgb="1"/>
+		<item name="shadeMap" type="Texture2D" displayName="Shade" group="Shading" bSrgb="1"/>
+		<item name="emissiveMap" type="Texture2D" displayName="Emissive" group="Emission" bSrgb="1"/>
+		<item name="matcapMap" type="Texture2D" displayName="MatCap" group="Rim" bSrgb="1"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+		</_alwaysDefines>
+		<_staticSwitches>
+			<item name="Outline" keyword="MATERIAL_OUTLINE" bEnabled="1" bShaderFeature="1"/>
+			<item name="AlphaCutoff" keyword="MATERIAL_ALPHA_CUTOFF" bEnabled="0" bShaderFeature="1"/>
+			<item name="TwoSided" keyword="MATERIAL_TWO_SIDED" bEnabled="0" bShaderFeature="1"/>
+		</_staticSwitches>
+	</_permutations>
+</MaterialDesc>

@@ -23,7 +23,7 @@ namespace sw
     class IRenderSurface;
 
     /** @brief `-gv_rhiBackend`: 쓸 RHI 백엔드입니다. App 의 백엔드 교체(`RHIBackendSwitcher`)는 심볼이 아니라 매니저로 읽고 씁니다. */
-    SW_EXTERN_GLOBAL_VARIABLE_ENUM( gv_rhiBackend, RHIBackend );
+    SW_EXTERN_GLOBAL_VARIABLE( RHIBackend, gv_rhiBackend );
 
     /**
      * @struct RHIBackendUtil
