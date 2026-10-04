@@ -53,6 +53,8 @@ namespace sw
                 return "ServerFull";
             case NetDisconnectReason::Rejected:
                 return "Rejected";
+            case NetDisconnectReason::VersionMismatch:
+                return "VersionMismatch";
         }
         return "Unknown";
     }

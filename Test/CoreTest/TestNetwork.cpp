@@ -410,7 +410,7 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     first.initialize( network.createEndpoint( 5001 ), settings );
     second.initialize( network.createEndpoint( 5002 ), settings );
     NetHostSettings otherGame = settings;
-    otherGame._protocolId     = 0xDEADBEEFu;
+    otherGame._gameId         = 0xDEADBEEFu;
     foreign.initialize( network.createEndpoint( 5003 ), otherGame );
     SW_EXPECT_TRUE( network.createEndpoint( 4000 ) == nullptr );
     SW_ASSERT_TRUE( server.listen() );
@@ -440,12 +440,12 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     second.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.size() == 1 );
     SW_EXPECT_TRUE( listEvent[0]._reason == NetDisconnectReason::ServerFull );
-    SW_EXPECT_TRUE( foreign.getConnectionState( 0 ) == NetConnectionState::Connecting ); // 서버는 남의 패킷에 답하지 않는다
-    SW_EXPECT_TRUE( server.getRejectedPacketCount() > 0 );
-    runAll( 5.0, true, true );
+    // 다른 게임의 요청은 이유를 붙여 거절한다(타임아웃을 기다리지 않는다). 그 게임의 다른 패킷은 체크섬부터 틀린다.
     listEvent.clear();
     foreign.drainEvents( listEvent );
-    SW_EXPECT_TRUE( listEvent.size() == 1 && listEvent[0]._reason == NetDisconnectReason::Timeout );
+    SW_EXPECT_TRUE( listEvent.size() == 1 && listEvent[0]._reason == NetDisconnectReason::Rejected );
+    SW_EXPECT_TRUE( foreign.getConnectionState( 0 ) == NetConnectionState::Disconnected );
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
 
     // 끊기 — 클라이언트가 끊으면 서버가 알고, 자리가 빈다.
     first.disconnect( 0 );
@@ -466,6 +466,49 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     first.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.empty() == false );
     SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::Timeout );
+}
+
+/**
+ * @brief [NetworkTest] 와이어 판이 다른 같은 게임의 클라이언트는 VersionMismatch 로 바로 거절된다 — 연결 요청 · 거절은 판과 상관없는 머리로 싸여 서로 읽힌다
+ * @details 판(`NetWireVersion` · 키트 판)은 프로토콜 id 에 섞인다. 다른 판의 패킷은 체크섬부터 틀려 버려지므로, 요청까지 버리면 클라이언트는 5 초 뒤
+ *          Timeout 만 알고 왜 안 되는지 모른다.
+ */
+SW_TEST_CASE( NetworkTest, WireVersionMismatchIsRefusedWithReason )
+{
+    static_assert( NetProtocol::makeProtocolId( 7u, 1u ) != NetProtocol::makeProtocolId( 7u, 2u ), "the wire version is part of the protocol id" );
+    static_assert( NetProtocol::makeProtocolId( 7u, 1u ) != NetProtocol::makeProtocolId( 8u, 1u ), "the game id is part of the protocol id" );
+    static_assert( NetWireVersion::combine( { 1u, 2u } ) != NetWireVersion::combine( { 2u, 1u } ), "layer order is part of the version" );
+
+    NetHostSettings serverSettings;
+    serverSettings._wireVersion = NetWireVersion::combine( { 1u, 4u } );
+    NetHostSettings oldSettings = serverSettings;
+    oldSettings._wireVersion    = NetWireVersion::combine( { 1u, 3u } );
+    LoopbackNetwork network( 9u );
+    NetHost         server;
+    NetHost         current;
+    NetHost         outdated;
+    server.initialize( network.createEndpoint( 4000 ), serverSettings );
+    current.initialize( network.createEndpoint( 5001 ), serverSettings );
+    outdated.initialize( network.createEndpoint( 5002 ), oldSettings );
+    SW_EXPECT_TRUE( current.getProtocolId() != outdated.getProtocolId() );
+    SW_ASSERT_TRUE( server.listen() );
+    SW_ASSERT_TRUE( current.connect( NetAddress::makeLoopback( 4000 ) ) );
+    SW_ASSERT_TRUE( outdated.connect( NetAddress::makeLoopback( 4000 ) ) );
+    float64 time = 0.0;
+    for ( int32 frame = 0; frame < 20; ++frame )
+    {
+        time += 1.0 / 60.0;
+        server.update( time );
+        current.update( time );
+        outdated.update( time );
+    }
+    SW_EXPECT_TRUE( current.getConnectionState( 0 ) == NetConnectionState::Connected );
+    vector<NetHostEvent> listEvent;
+    outdated.drainEvents( listEvent );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._kind == NetHostEvent::Kind::Disconnected );
+    SW_EXPECT_TRUE( listEvent[0]._reason == NetDisconnectReason::VersionMismatch );
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
 }
 
 SW_TEST_CASE( NetworkTest, UdpTransportSendsDatagramsOverLocalhost )

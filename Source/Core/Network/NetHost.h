@@ -1,7 +1,10 @@
 /**
  * @file NetHost.h
  * @brief 서버 · 클라이언트 끝점 — 연결 핸드셰이크(요청 → 도전 → 응답 → 수락), 체크섬 · 프로토콜 id 로 남의 패킷 거르기, 연결 유지 · 타임아웃 · 끊기, 연결마다의 신뢰성 계층입니다.
- * @details 장르별 네트워크 방식(클라이언트-서버 복제 · 락스텝 · 턴 중계 · MMO)은 이 위에 키트로 얹습니다. 여기는 "누가 연결됐고 어느 채널로 무엇이 왔는가" 까지입니다.
+ * @details 연결 요청에는 게임 id 와 프로토콜 id(게임 id + 와이어 판, `NetProtocol`)가 실린다. 서버는 프로토콜 id 가 다르면 이유를 붙여 거절한다 — 같은 게임의
+ *          다른 판은 `VersionMismatch`, 다른 게임은 `Rejected`(양쪽 로그에 두 값을 남긴다). 요청 · 거절만 판과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로
+ *          싸고, 나머지 패킷은 프로토콜 id 로 싸서 다른 판의 패킷은 체크섬부터 틀린다.
+ *          장르별 네트워크 방식(클라이언트-서버 복제 · 락스텝 · 턴 중계 · MMO)은 이 위에 키트로 얹습니다. 여기는 "누가 연결됐고 어느 채널로 무엇이 왔는가" 까지입니다.
  *          도전(challenge) 단계는 위조한 주소로 서버에 연결 자리를 잡는 것을 막습니다 — 도전 값은 실제 그 주소로 간 패킷에만 들어 있습니다.
  *
  *          **스레드**: 공개 함수는 모두 잠금 하나로 지켜져 아무 스레드에서나 부를 수 있습니다(게임 스레드가 보내고, 작업 스레드가 꺼내고, 네트워크
@@ -28,8 +31,9 @@ namespace sw
     /** @brief 호스트 설정입니다. 시간은 초입니다. */
     struct NetHostSettings
     {
-        uint32  _protocolId{ 0x53574E31u }; ///< 게임 · 버전마다 다르게(다르면 서로의 패킷을 버린다)
-        uint64  _saltSeed{ 0 };             ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 시험은 고정해도 된다
+        uint32  _gameId{ NetProtocol::kDefaultGameId }; ///< 게임마다 다르게 — 다르면 연결을 Rejected 로 거절한다
+        uint32  _wireVersion{ 0 };                      ///< 게임 · 키트 층의 판(`NetWireVersion::combine`) — 다르면 VersionMismatch. Core 판은 저절로 섞인다
+        uint64  _saltSeed{ 0 };                         ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 시험은 고정해도 된다
         float64 _timeout{ 5.0 };
         float64 _connectTimeout{ 5.0 };
         float64 _connectRetryInterval{ 0.2 };
@@ -135,6 +139,8 @@ namespace sw
         int32  getClientIndex() const;
         void   collectConnected( vector<int32>& outListConnection ) const;
         uint64 getRejectedPacketCount() const;
+        /** @brief 이 호스트의 프로토콜 id(`NetProtocol::makeProtocolId( 게임 id, 와이어 판 )`)입니다. */
+        uint32 getProtocolId() const;
 
     private:
         enum class PacketType : uint8
@@ -148,6 +154,9 @@ namespace sw
             Disconnect,
             Count
         };
+
+        /** @brief 판과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로 싸는 패킷 — 요청과 거절뿐입니다. 두 패킷의 배치는 판이 바뀌어도 그대로 둔다. */
+        static bool isHandshakeFramed( PacketType type ) { return type == PacketType::ConnectRequest || type == PacketType::Denied; }
 
         struct Slot
         {
@@ -200,8 +209,10 @@ namespace sw
         void handlePacket( float64 time, const NetAddress& from, const uint8* pData, int32 size );
         void updateSlots( float64 time );
         void sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB );
-        /** @brief `_packetWriter` 의 몸에 헤더(프로토콜 · 체크섬)를 붙여 보낼 묶음에 넣습니다. */
-        void sendFramed( const NetAddress& to );
+        /** @brief 연결 요청을 거절합니다 — 이유와 이 호스트의 프로토콜 id, 요청의 클라이언트 소금(위조 거절을 거르는 값)을 싣는다. */
+        void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt );
+        /** @brief `_packetWriter` 의 몸에 헤더(머리 값 · 체크섬)를 붙여 보낼 묶음에 넣습니다. */
+        void sendFramed( const NetAddress& to, uint32 headerId );
         void sendPayload( float64 time, Slot& slot );
         void closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote );
         bool startConnect( const NetAddress& serverAddress );
@@ -236,6 +247,8 @@ namespace sw
         INetTransport*                _pTransport;
         uint64                        _saltState;
         uint64                        _rejectedPacketCount;
+        uint64                        _mismatchLogCount; ///< 판 · 게임이 다른 요청 수 — 로그는 1 · 2 · 4 · 8 … 번째에만(요청 폭주가 로그를 메우지 않게)
+        uint32                        _protocolId;
         atomic<uint32>                _updateDepth; ///< `update` 를 동시에 두 스레드가 부르는 실수를 잡는다
         int32                         _clientIndex;
         int32                         _receiveCursor; ///< 받기를 연결마다 고르게 돌리는 자리
