@@ -62,7 +62,7 @@ namespace sw
         , _soundQueue{}
         , _pendingStateBytes{}
         , _breakProgress{ 0.0f }
-        , _placeCooldown{ 0.0f }
+        , _placeCooldown{}
         , _autoTimer{ 0.0f }
         , _brokenCount{ 0 }
         , _placedCount{ 0 }
@@ -191,12 +191,9 @@ namespace sw
 
         updateTarget( *pDirector, *pCamera );
         updateBreaking( step, *pCatalog, bBreak );
-        _placeCooldown -= step;
-        if ( bPlace && _placeCooldown <= 0.0f )
-        {
+        // 누르고 있으면 간격마다 하나 — 지나친 몫을 이어 놓기 빈도가 걸음 크기에 매이지 않는다(`Countdown::tickRepeat`).
+        if ( _placeCooldown.tickRepeat( step, _placeInterval, bPlace ) )
             placeBlock( *pDirector, *pCatalog );
-            _placeCooldown = _placeInterval;
-        }
         if ( _listPendingEdit.empty() == false || _soundQueue.isEmpty() == false )
             scheduleFlush();
     }
@@ -240,7 +237,7 @@ namespace sw
         outJump   = input.isKeyDown( Key::Space );
         outSprint = input.isKeyDown( Key::LeftShift );
         outBreak  = input.isMouseButtonDown( MouseButton::Left );
-        outPlace  = input.wasMouseButtonPressed( MouseButton::Right ) || ( input.isMouseButtonDown( MouseButton::Right ) && _placeCooldown <= 0.0f );
+        outPlace  = input.isMouseButtonDown( MouseButton::Right ); // 처음 누름도 누름이다 — 간격은 `_placeCooldown` 이 거른다
 
         constexpr Key kArrSlotKey[VoxelHotbar::kSlotCount] = { Key::Digit1, Key::Digit2, Key::Digit3, Key::Digit4, Key::Digit5,
                                                                Key::Digit6, Key::Digit7, Key::Digit8, Key::Digit9 };

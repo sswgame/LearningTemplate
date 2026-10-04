@@ -16,6 +16,7 @@
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBody.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelHotbar.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelRaycast.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -98,7 +99,7 @@ namespace sw
         GameSoundQueue    _soundQueue;        ///< 낼 소리(틱 뒤 — 오디오는 게임 스레드에서)
         vector<uint8>     _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         float32           _breakProgress;
-        float32           _placeCooldown;
+        Countdown         _placeCooldown; ///< 누르고 있을 때의 놓기 간격(늦음을 잇는다)
         float32           _autoTimer;
         uint32            _brokenCount;
         uint32            _placedCount;

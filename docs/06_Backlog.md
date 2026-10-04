@@ -1393,7 +1393,7 @@ cd build/Ninja-Debug/Bin
   흐른 시간만큼 렌더한다. 볼륨 · 음소거는 같은 이름 버스의 사용자 볼륨, 음소거는 master 한 곳. 소리 동작은 `AudioEngine::render` 로 버퍼에 렌더해 숫자로 잰다(`Audio/README.md`).
 - **반복 간격(연사 · 스폰 · 자동 공격)은 끝난 걸음에 `Countdown::restart`** — 간격으로 덮으면(`start` · `= 간격`) 지나친 몫을 버려 빈도가 fps · 고정 걸음에
   매이고, float 로 걸음을 빼면 0 에 조금 못 미쳐 한 걸음을 더 기다린다(RTS 0.05 초 걸음에서 1.2 초 → 1.25 초). 잇는 몫은 한 간격까지라 몰아 내지 않는다.
-  시험 게임의 Voxel 블록 놓기 · Shooter3D 적 공격은 아직 손으로 센다(디렉터 베이스 작업과 겹쳐 옮기지 않았다).
+  "원하는 동안 간격마다 한 번" 은 `Countdown::tickRepeat( dt, interval, bWant )` 한 줄이다(Voxel 블록 놓기 · Shooter3D 적 휘두르기).
 - **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. 월드 UI(HP 바 ·
   데미지 숫자)는 저장되지 않는 `SpriteInstanceBatch` 로 그린다 — 자식 컴포넌트로 만들면 씬 · 프리팹 · 스냅샷에 저장돼 다음 시작에 겹친다. 스프라이트 UV · 색은 인스턴스에 싣는다(같은 텍스처는
   한 배치). 체력 시스템은 HP 바를 모른다 — 같은 오브젝트의 `HealthListenerComponent` 에 `broadcast` 하고, 보이기 정책은 바의 PROPERTY 다. 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`, 글리프 · 클립은 `Scripts/generate/GenerateSpriteTextures.py`.

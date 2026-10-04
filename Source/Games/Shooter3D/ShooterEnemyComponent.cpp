@@ -50,7 +50,7 @@ namespace sw
         , _maxHealth{ 30.0f }
         , _speed{ 3.0f }
         , _phaseTime{ 0.0f }
-        , _attackCooldown{ 0.0f }
+        , _attackCooldown{}
         , _phase{ ShooterEnemyPhase::Rising }
         , _bLaunched{ SW_FALSE }
         , _bHitPending{ SW_FALSE }
@@ -63,14 +63,14 @@ namespace sw
 
     void ShooterEnemyComponent::launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed )
     {
-        _director       = director;
-        _position       = position;
-        _yaw            = yaw;
-        _health         = health;
-        _maxHealth      = health;
-        _speed          = speed;
-        _attackCooldown = _attackInterval * 0.5f;
-        _bLaunched      = SW_TRUE;
+        _director  = director;
+        _position  = position;
+        _yaw       = yaw;
+        _health    = health;
+        _maxHealth = health;
+        _speed     = speed;
+        _attackCooldown.start( _attackInterval * 0.5f );
+        _bLaunched = SW_TRUE;
         enterPhase( ShooterEnemyPhase::Rising );
         GameObject*     pOwner = getOwner();
         SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
@@ -137,13 +137,15 @@ namespace sw
             return;
         const float32 step = MathUtil::min( deltaTime, 0.1f );
         _phaseTime += step;
-        _attackCooldown -= step;
 
         const float3  target   = pDirector->getPlayerFeet();
         const float3  toTarget = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
         const float32 distance = toTarget.getLength();
         float32       moveCode = Internal::kMoveIdle;
         float32       wantYaw  = distance > 1.0e-4f ? MathUtil::atan2( toTarget._x, toTarget._z ) : _yaw;
+        // 휘두르기 간격 — 사정거리 안에서 쫓는 동안 간격마다 한 번, 지나친 몫을 잇는다(`Countdown::tickRepeat`). 쿨다운은 어느 단계에서도 흐른다.
+        const bool bWantSwing = _phase == ShooterEnemyPhase::Chasing && distance < _reach && pDirector->isPlayerAlive();
+        const bool bSwing     = _attackCooldown.tickRepeat( step, _attackInterval, bWantSwing );
         switch ( _phase )
         {
             case ShooterEnemyPhase::Rising:
@@ -154,9 +156,8 @@ namespace sw
             }
             case ShooterEnemyPhase::Chasing:
             {
-                if ( distance < _reach && _attackCooldown <= 0.0f && pDirector->isPlayerAlive() )
+                if ( bSwing )
                 {
-                    _attackCooldown = _attackInterval;
                     enterPhase( ShooterEnemyPhase::Attacking );
                     break;
                 }
