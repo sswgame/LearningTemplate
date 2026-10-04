@@ -6,6 +6,7 @@
  *       `StdHeaders.h` 를 include 하지 말 것 — 비트플래그 연산자를 쓰려는 쪽이 `<regex>` 같은 무거운 헤더까지 끌어옵니다.
  */
 #pragma once
+#include "Core/Common/BitFlagTrait.h"
 #include "Core/Common/Macros.h"
 
 #include <type_traits>
@@ -66,20 +67,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) IsBitFlagEnum — ENUM(Flags) opt-in 트레이트 (기본 false)
-    // ------------------------------------------------------------------------------
-    /**
-     * @brief ENUM(Flags) 로 선언한 타입만 true 로 특수화됩니다(ReflectionParser 가 enum 하나마다 한 줄씩 생성합니다).
-     * @details 아래 |, &, ^, ~, |=, &=, ^= 연산자는 이 트레이트가 true 인 타입에만 열려 있습니다. 그래서 opt-in 하지 않은
-     *          enum class 에는 적용되지 않고, `Color::Red | Color::Green` 같은 뜻 없는 조합은 여전히 컴파일 오류입니다.
-     */
-    template <typename E>
-    struct IsBitFlagEnum : std::false_type
-    {
-    };
-
-    // ------------------------------------------------------------------------------
-    // 3) 비트플래그 연산자 — sw::IsBitFlagEnum<E>로 opt-in 된 타입에만 적용
+    // 2) 비트플래그 연산자 — sw::IsBitFlagEnum<E>로 opt-in 된 타입에만 적용
     // ------------------------------------------------------------------------------
     /**
      * @details 연산자를 `namespace sw` 안에 정의하고 전역에는 using 으로 다시 내놓는 이유는 이름 조회 규칙 때문입니다.
@@ -141,7 +129,7 @@ namespace sw
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// 4) 전역 스코프로 다시 내놓기 — 네임스페이스 없이 선언한 enum(예: 전역 TestFlag)용
+// 3) 전역 스코프로 다시 내놓기 — 네임스페이스 없이 선언한 enum(예: 전역 TestFlag)용
 // ------------------------------------------------------------------------------
 /** @brief 위 sw:: 연산자를 그대로 끌어옵니다. 로직은 여기 없고 전부 sw:: 쪽에만 있습니다. */
 using sw::operator|;

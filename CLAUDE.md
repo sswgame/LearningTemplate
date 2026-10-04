@@ -180,7 +180,8 @@ py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its rules st
   sweep or an include cleanup. **Keep force-included headers thin:** the generated `FlagOps.gen.h` is
   force-included (`/FI`) into every TU of a target, so anything it `#include`s is "already there" everywhere
   and hides every omission. It carries only opaque enum forward declarations plus the `IsBitFlagEnum`
-  specializations, which is all the trait needs.
+  specializations, and includes nothing but `Core/Common/BitFlagTrait.h` (`<type_traits>` only) — `EnumUtil.h`
+  would drag `Macros.h` into every TU (`ReflectionParserTest.FlagTraitHeaderIncludesOnlyTheTrait`).
 - **Grepping a build for `warning:` does not work.** A warning is printed only when that TU is compiled,
   and ninja never recompiles unchanged files — so an existing warning is invisible on every build after
   the one that introduced it. `RunBuildWarnings.py` re-asks the question over the whole tree
