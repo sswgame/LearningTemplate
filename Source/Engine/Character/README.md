@@ -79,6 +79,18 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
   처리기는 늘 게임 스레드입니다(스폰 · 물리 질의 · 맞음 알림).
 - 처리기가 한 일은 `getActions()` 에 남습니다(진단 · 시험).
 
+## 모션 워핑 · 이동 보정 — `MotionWarpingComponent` · `LocomotionWarpingComponent`
+
+- **모션 워핑**(언리얼 Motion Warping 의 Skew Warp): 게임플레이가 이름 붙은 목표(월드 자리 · 요)를 넣고(`setWarpTarget` — 상호작용 시작이 맞춤 마커를 넣는다),
+  클립의 `MotionWarp` 구간 알림이 창을 엽니다. 애니메이터가 루트 모션을 옮기기 전에(`IRootMotionModifier`) 남은 루트 모션(지금 → 창 끝, 루트 모션 트랙)과
+  목표까지 필요한 이동의 차이를 남은 시간 몫만큼 더합니다 — 창 끝 프레임에 몫이 1 이라 정확히 닿습니다. 요도 같습니다. 끝 알림은 루트 모션보다 먼저 처리되므로
+  창은 끝 프레임까지 휘고 닫힙니다. `vertical` 이 아니면 높이는 클립 그대로입니다.
+- **루트 모션 → 캐릭터 컨트롤러**: 같은 오브젝트에 `CharacterControllerComponent` 가 있으면(애니메이터 `_bRootMotionThroughController`, 기본 켬) 이동은
+  `addRootMotionDisplacement` 로 넘어가 다음 물리 프레임의 스텝들이 나눠 움직입니다(벽에 막히고 턱을 오른다, 수평만 — 중력은 컨트롤러). 회전은 트랜스폼에 씁니다.
+- **이동 보정**(Stride · Orientation Warping 의 단순형, 모두 PROPERTY): 보폭은 클립 커브(`_speedCurve`, 기본 `Speed`)와 실제 수평 속도로 재생 배율을
+  [min, max] 안에서 고르고, 남은 몫은 `getStrideScale()`(발 IK 자리 — 값만 낸다). 방향은 이동 방향과 몸 앞의 요 차이(뒤로 가면 반대로 접음, ±최대)를
+  뼈 목록의 가중치만큼 캐릭터 위 축으로 돌립니다(후처리 단계).
+
 ## 맞힘 — `CharacterHitUtil`
 
 광선(3D · 2D) → 맞은 바디 → 오브젝트(바디 사용자 값) → 히트 존(래그돌의 물리 에셋 바디 → 강체 컴포넌트의 `_hitZone`) → `Component::onHitReceived( HitInfo )`.

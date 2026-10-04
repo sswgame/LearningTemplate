@@ -9,7 +9,7 @@
 | `InteractionSelector` | 후보 고르기 — 거리 · 시야각 안, 우선도 → 가까운 순, 시야(가림)는 가까운 순으로 묻는다. 2D 는 XY 평면 |
 | `InteractionSession` | 한 번의 진행 — `Press` · `Hold`(떼면 취소, 진행은 처음부터 — `InteractionProgress`) · `Mash`(누를 때마다 오르고 쉬면 준다), 여러 단계 |
 | `InteractionProgress` | 진행형 상호작용(여럿이 붙기 · 끊김 · 퇴행 · 스킬 체크 — 발전기 수리 · 동료 부활). 예전 `World/` 에서 옮겼다 |
-| `InteractableComponent` | 쓸 수 있는 오브젝트 — 종류 id, 맞춤 지점(`computeAlignmentPoint`), 쿨다운, 강조 요청 깃발(`getHighlightRequest` — 렌더러 · UI 가 읽는다), 완료 처리 |
+| `InteractableComponent` | 쓸 수 있는 오브젝트 — 종류 id, 맞춤 지점(`computeAlignmentPoint` — 소켓 표의 마커), 쿨다운, 강조 요청 깃발(`getHighlightRequest` — 렌더러 · UI 가 읽는다), 완료 처리 |
 | `InteractorComponent` | 쓰는 쪽 — 후보 모으기 · 고르기 · 진행, UI 안내(`InteractionPrompt`), 2D/3D(`InteractionSpace`) |
 | `SmartObjectComponent` · `SmartObjectSlots` | 오브젝트 위 자리(벤치 · 엄폐 · 작업대 · 숨는 곳)를 플레이어와 AI 가 같은 함수로 차지 · 비움(태그로 빈자리 찾기) |
 | `GrabberComponent` · `IGrabPhysics` | 집기 · 던지기 · 붙이기. 물리 백엔드 서비스가 없으면 트랜스폼 폴백(`TransformGrabPhysics`) |
@@ -26,8 +26,9 @@
 
 ## 함정 · 다음에 붙일 것
 
-- **맞춤 지점은 지금 컴포넌트의 로컬 오프셋 · 요입니다.** 정의의 `alignment` 마커 이름을 오브젝트의 소켓 · 마커 표(`*.sockets.xml`)에서 찾는 것은 그 표가 들어오면
-  `InteractableComponent::computeAlignmentPoint` 한 곳에 붙입니다. 애니메이션의 모션 워핑이 이 자리 · 방향을 목표로 씁니다.
+- **맞춤 지점은 정의의 `alignment` 마커**를 대상 오브젝트의 소켓 · 마커 표(`SocketSetComponent` · `*.sockets.xml`, 마커의 +Z 가 하는 쪽이 볼 방향)에서 찾습니다.
+  없으면 오브젝트 원점 · 앞입니다. 상호작용을 시작하면 하는 쪽의 `MotionWarpingComponent` 에 그 자리 · 요를 마커 이름(없으면 `Interaction`)의 워프 목표로 넣어,
+  상호작용 클립의 `MotionWarp` 창이 손을 문고리에 맞춥니다.
 - 후보는 하는 쪽마다 틱에 씬의 `InteractableComponent` 를 훑습니다(`forEachComponentOfType` — 오브젝트 수에 비례). 하는 쪽이 많아지면 공간 격자 등록부로 바꿉니다.
 - 시야는 `WorldQuery`(물리 백엔드 서비스, 없으면 `PhysicsWorld` AABB 폴백 — 트리거는 막지 않는다)입니다.
 - 강조 요청은 깃발뿐입니다 — 외곽선 · 감각 모드 패스는 렌더러가 `getHighlightRequest` 를 읽어 그릴 때 붙습니다.

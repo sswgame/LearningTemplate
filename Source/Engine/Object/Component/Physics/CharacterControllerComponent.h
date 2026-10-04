@@ -36,6 +36,11 @@ namespace sw
         void setMoveVelocity( const float3& velocity );
         /** @brief 위로 @p speed(미터/초)를 줍니다. 다음 스텝에 듭니다. */
         void jump( float32 speed );
+        /**
+         * @brief 애니메이션 루트 모션의 이번 프레임 이동(월드, 미터)을 더합니다. 다음 물리 프레임의 스텝들이 나눠 움직입니다(벽에 막히고 턱을 오른다).
+         * @details 수평(XZ)만 씁니다 — 수직은 중력 · 점프가 정합니다. 스텝이 없는 프레임이면 다음 프레임으로 넘깁니다. 아무 스레드에서 불러도 됩니다.
+         */
+        void addRootMotionDisplacement( const float3& worldDisplacement );
         /** @brief 마지막 스텝에 바닥을 딛고 있었는지입니다. */
         bool isGrounded() const { return _state._bGrounded; }
         /** @brief 마지막 스텝의 바닥 법선입니다. */
@@ -81,7 +86,9 @@ namespace sw
         PhysicsCharacterHandle  _character;
         PhysicsCharacterState3D _state;
         mutable SpinLock        _commandLock;
-        float3                  _moveVelocity; ///< 요청된 수평 속도(`_commandLock`)
+        float3                  _moveVelocity;            ///< 요청된 수평 속도(`_commandLock`)
+        float3                  _pendingRootMotion;       ///< 아직 스텝에 넘기지 않은 루트 모션 이동(`_commandLock`)
+        float3                  _frameRootMotionVelocity; ///< 이번 물리 프레임의 스텝마다 더할 루트 모션 속도
         float3                  _previousPosition;
         float3                  _writtenPosition;
         quaternion              _writtenRotation;

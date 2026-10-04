@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Character/MotionWarpingComponent.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -361,4 +362,35 @@ SW_TEST_CASE( InteractionTest, CatalogReadsStepsTagsAndSlots )
     SW_TEST_DEFENSIVE_SCOPE( "interaction table with an unknown mode and attribute" );
     SW_EXPECT_FALSE( broken.loadFromXmlText( R"(<Interactions><Interaction id="X" mode="Tap"/></Interactions>)", "mode.interactions.xml" ) );
     SW_EXPECT_FALSE( broken.loadFromXmlText( R"(<Interactions><Interaction id="Y" range="3"/></Interactions>)", "attribute.interactions.xml" ) );
+}
+
+/**
+ * @brief [InteractionTest] 상호작용을 시작하면 하는 쪽의 모션 워핑에 대상의 맞춤 지점이 정의의 마커 이름으로 워프 목표가 된다
+ */
+SW_TEST_CASE( InteractionTest, BeginningInteractionSetsAlignmentWarpTarget )
+{
+    GameObjectManager manager;
+    GameObject*       pPlayer = manager.createGameObject( hashed_string( "Player" ) );
+    pPlayer->addComponent<SceneComponent>();
+    InteractorComponent* pInteractor = pPlayer->addComponent<InteractorComponent>();
+    pInteractor->setEyeOffset( float3{} );
+    MotionWarpingComponent* pWarping = pPlayer->addComponent<MotionWarpingComponent>();
+    SW_ASSERT_NOT_NULL( pWarping );
+
+    InteractionDef def   = InteractionTestInternal::makeDef( "Open", InteractionInputMode::Hold );
+    def._alignmentMarker = hashed_string( "Handle" );
+    GameObject* pDoor    = manager.createGameObject( hashed_string( "Door" ) );
+    pDoor->addComponent<SceneComponent>()->setLocalPosition( float3{ 0.5f, 0.0f, 1.0f } );
+    pDoor->addComponent<InteractableComponent>()->setDefinition( def );
+
+    manager.beginPlay();
+    InteractionTestInternal::tickFrames( manager, 2, pInteractor, false );
+    SW_EXPECT_TRUE( pWarping->findWarpTarget( hashed_string( "Handle" ) ) == nullptr );
+    InteractionTestInternal::tickFrames( manager, 3, pInteractor, true );
+    SW_EXPECT_TRUE( pInteractor->isInteracting() );
+    const MotionWarpTarget* pTarget = pWarping->findWarpTarget( hashed_string( "Handle" ) );
+    SW_ASSERT_NOT_NULL( pTarget );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pTarget->_position._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pTarget->_position._z, 1.0e-4f );
+    manager.endPlay();
 }

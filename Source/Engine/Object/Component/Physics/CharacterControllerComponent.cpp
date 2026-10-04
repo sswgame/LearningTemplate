@@ -20,6 +20,8 @@ namespace sw
         , _state{}
         , _commandLock{}
         , _moveVelocity{}
+        , _pendingRootMotion{}
+        , _frameRootMotionVelocity{}
         , _previousPosition{}
         , _writtenPosition{}
         , _writtenRotation{}
@@ -39,6 +41,12 @@ namespace sw
     {
         std::scoped_lock<SpinLock> lock{ _commandLock };
         _pendingJumpSpeed = speed;
+    }
+
+    void CharacterControllerComponent::addRootMotionDisplacement( const float3& worldDisplacement )
+    {
+        std::scoped_lock<SpinLock> lock{ _commandLock };
+        _pendingRootMotion += float3{ worldDisplacement._x, 0.0f, worldDisplacement._z };
     }
 
     void CharacterControllerComponent::setRadius( float32 radius )
@@ -119,8 +127,6 @@ namespace sw
 
     void CharacterControllerComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
     {
-        (void)stepIndex;
-        (void)stepCount;
         IPhysicsScene3D* pScene = physics.findScene3D();
         if ( pScene == nullptr || _character.isValid() == false )
             return;
@@ -131,7 +137,15 @@ namespace sw
             moveVelocity      = _moveVelocity;
             jumpSpeed         = _pendingJumpSpeed;
             _pendingJumpSpeed = 0.0f;
+            // 루트 모션은 프레임의 첫 스텝에 꺼내 이 프레임의 스텝 수로 나눈다 — 프레임이 끝날 때 다 간다.
+            if ( stepIndex == 0 )
+            {
+                const float32 frameSeconds = fixedDeltaTime * static_cast<float32>( stepCount > 0 ? stepCount : 1 );
+                _frameRootMotionVelocity   = _pendingRootMotion * ( 1.0f / frameSeconds );
+                _pendingRootMotion         = float3{};
+            }
         }
+        moveVelocity = moveVelocity + _frameRootMotionVelocity;
         // 서 있으면 떨어지는 속도를 지우고, 떠 있으면 중력을 쌓는다. 점프는 그 위에 덮는다.
         if ( _state._bGrounded && _verticalSpeed < 0.0f )
             _verticalSpeed = 0.0f;

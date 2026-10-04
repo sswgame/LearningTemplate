@@ -10,6 +10,7 @@
  *          | `HitWindow` | 구간 — 두 소켓 사이 칼날을 프레임마다 쓸어(지난 자리 → 지금) 맞은 오브젝트에 한 번씩 `onHitReceived` | socketA · socketB(필수) · radius · damage · impulse · samples |
  *          | `CameraShake` | 카메라 충격 요청(`getCameraShakeRequested` 를 듣는 카메라가 받는다) | amplitude · duration · frequency · radius · socket |
  *          | `GameplayEvent` | 같은 오브젝트의 컴포넌트에 `onAnimNotify`(구간이면 시작 · 끝) | event(필수) |
+ *          | `MotionWarp` | 구간 — `MotionWarpingComponent` 에 워프 창을 열어 구간 끝에 이름 붙은 목표에 닿게 루트 모션을 휜다 | target(필수) · translation · rotation · vertical |
  */
 #pragma once
 #include "Core/Common/Macros.h"

@@ -9,6 +9,7 @@
 #include "Engine/Character/AnimNotifyComponent.h"
 #include "Engine/Character/AnimNotifyTable.h"
 #include "Engine/Character/CharacterHit.h"
+#include "Engine/Character/MotionWarpingComponent.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -316,6 +317,51 @@ namespace sw
                     { "event", AnimNotifyParamKind::Name, true },
                 };
             };
+
+            /**
+             * @class MotionWarpHandler
+             * @brief 구간 동안 같은 오브젝트의 `MotionWarpingComponent` 에 워프 창을 엽니다 — 창 끝(구간 끝)에 이름 붙은 목표에 닿게 루트 모션을 휩니다.
+             */
+            class MotionWarpHandler final : public IAnimNotifyHandler
+            {
+            public:
+                vector_reference<const AnimNotifyParamDef> getParams() const override { return vector_reference<const AnimNotifyParamDef>{ kArrParam }; }
+                bool                                       supportsState() const override { return true; }
+                void                                       onNotifyBegin( AnimNotifyContext& context ) const override
+                {
+                    static const hashed_string s_target( "target" );
+                    static const hashed_string s_translation( "translation" );
+                    static const hashed_string s_rotation( "rotation" );
+                    static const hashed_string s_vertical( "vertical" );
+                    MotionWarpingComponent*    pWarping = context._owner.getComponent<MotionWarpingComponent>();
+                    if ( pWarping == nullptr || context._fired._pSource == nullptr )
+                        return;
+                    MotionWarpWindow window;
+                    window._target       = context._entry.getNameParam( s_target );
+                    window._pClip        = context._fired._pSource;
+                    window._endTime      = MathUtil::min( context._fired._time + context._fired._duration, context._fired._pSource->getPlayLength() );
+                    window._bTranslation = context._entry.getBoolParam( s_translation, true );
+                    window._bRotation    = context._entry.getBoolParam( s_rotation, true );
+                    window._bVertical    = context._entry.getBoolParam( s_vertical, false );
+                    pWarping->beginWindow( window );
+                    record( context, window._target, context._component.findSocketWorldPosition( hashed_string{} ), 0, AnimNotifyPhase::Begin );
+                }
+                void onNotifyEnd( AnimNotifyContext& context ) const override
+                {
+                    static const hashed_string s_target( "target" );
+                    MotionWarpingComponent*    pWarping = context._owner.getComponent<MotionWarpingComponent>();
+                    if ( pWarping != nullptr )
+                        pWarping->endWindow( context._entry.getNameParam( s_target ), context._fired._pSource );
+                }
+
+            private:
+                static constexpr AnimNotifyParamDef kArrParam[] = {
+                    {     "target", AnimNotifyParamKind::Name,  true},
+                    {"translation", AnimNotifyParamKind::Bool, false},
+                    {   "rotation", AnimNotifyParamKind::Bool, false},
+                    {   "vertical", AnimNotifyParamKind::Bool, false},
+                };
+            };
         };
     } // namespace
 } // namespace sw
@@ -330,6 +376,7 @@ namespace sw
         registry.registerHandler( hashed_string( "HitWindow" ), make_unique<AnimNotifyHandlersInternal::HitWindowHandler>() );
         registry.registerHandler( hashed_string( "CameraShake" ), make_unique<AnimNotifyHandlersInternal::CameraShakeHandler>() );
         registry.registerHandler( hashed_string( "GameplayEvent" ), make_unique<AnimNotifyHandlersInternal::GameplayEventHandler>() );
+        registry.registerHandler( hashed_string( "MotionWarp" ), make_unique<AnimNotifyHandlersInternal::MotionWarpHandler>() );
         return true;
     }
 

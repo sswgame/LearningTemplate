@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Character/SocketSetComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
@@ -22,8 +23,6 @@ namespace sw
     InteractableComponent::InteractableComponent()
         : _interactionId{}
         , _catalogPath{}
-        , _alignmentOffset{}
-        , _alignmentYaw{ 0.0f }
         , _lastInteractor{}
         , _cooldownRemaining{ 0.0f }
         , _priority{ 0 }
@@ -92,33 +91,33 @@ namespace sw
         resolveDefinition();
     }
 
-    void InteractableComponent::setAlignment( const float3& localOffset, float32 localYawRadians )
-    {
-        _alignmentOffset = localOffset;
-        _alignmentYaw    = localYawRadians;
-    }
-
     bool InteractableComponent::isAvailableFor( const GameObject& interactor ) const
     {
         const InteractionDef* pDef = getDefinition();
         return pDef != nullptr && _bEnabled && _cooldownRemaining <= 0.0f && pDef->allowsInteractor( interactor.getTags() );
     }
 
-    void InteractableComponent::computeAlignmentPoint( float3& outPosition, float32& outYaw ) const
+    bool InteractableComponent::computeAlignmentPoint( float3& outPosition, float32& outYaw ) const
     {
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr )
         {
-            outPosition = _alignmentOffset;
-            outYaw      = _alignmentYaw;
-            return;
+            outPosition = float3{};
+            outYaw      = 0.0f;
+            return false;
         }
-        const float4x4 world = pScene->getWorldMatrix();
-        outPosition          = float3::transform( _alignmentOffset, world );
-        // 오브젝트의 요(월드 회전의 앞 방향)에 로컬 요를 더한다.
+        // 정의의 마커를 이 오브젝트의 소켓 · 마커 표에서 찾는다 — 마커의 +Z 가 하는 쪽이 볼 방향이다. 없으면 오브젝트 원점 · 앞.
+        const InteractionDef* pDef  = getDefinition();
+        float4x4              world = pScene->getWorldMatrix();
+        const bool            bMarker =
+            pDef != nullptr && pDef->_alignmentMarker.empty() == false && SocketLookupUtil::findSocketWorldTransform( *pOwner, pDef->_alignmentMarker, world );
+        if ( bMarker == false )
+            world = pScene->getWorldMatrix();
+        outPosition          = world.getTranslation();
         const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
-        outYaw               = MathUtil::atan2( forward._x, forward._z ) + _alignmentYaw;
+        outYaw               = MathUtil::atan2( forward._x, forward._z );
+        return bMarker;
     }
 
     InteractionHighlight InteractableComponent::getHighlightRequest() const

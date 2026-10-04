@@ -183,8 +183,8 @@ namespace sw
 {
     /**
      * @class AnimNotifyHandlerRegistry
-     * @brief 이름 → 처리기 표입니다. `getDefault` 가 엔진 내장 처리기(PlaySound · SpawnPrefab · Footstep · HitWindow · CameraShake · GameplayEvent)
-     *        를 듭니다. 더한 처리기는 엔진이 끝날 때까지 삽니다 — 핫 리로드되는 모듈의 처리기는 더하지 말고 이벤트(`GameplayEvent`)로 받습니다.
+     * @brief 이름 → 처리기 표입니다. `getDefault` 가 엔진 내장 처리기(PlaySound · SpawnPrefab · Footstep · HitWindow · CameraShake · GameplayEvent ·
+     *        MotionWarp)를 듭니다. 더한 처리기는 엔진이 끝날 때까지 삽니다 — 핫 리로드되는 모듈의 처리기는 더하지 말고 이벤트(`GameplayEvent`)로 받습니다.
      */
     class SW_API AnimNotifyHandlerRegistry
     {

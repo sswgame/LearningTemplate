@@ -11,6 +11,7 @@
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Object/Animation/AnimNotifyListener.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
+#include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Resource/AnimationAssetCache.h"
 
@@ -83,6 +84,7 @@ namespace sw
         , _listLayer{}
         , _listFiredNotify{}
         , _listActivePlayable{}
+        , _listRootMotionModifier{}
         , _listCurveName{}
         , _listCurveValue{}
         , _scratchPose{}
@@ -97,6 +99,7 @@ namespace sw
         , _sequencerWeight{ 0.0f }
         , _bExtractRootMotion{ SW_FALSE }
         , _bPlayOnBegin{ SW_TRUE }
+        , _bRootMotionThroughController{ SW_TRUE }
         , _reserved{ 0 }
     {
         _graphPlayer.setPlayableSource( &_binding );
@@ -325,24 +328,56 @@ namespace sw
         _pNotifyListener->onAnimNotifiesFired( frame );
     }
 
+    void SkeletalAnimatorComponent::addRootMotionModifier( IRootMotionModifier* pModifier )
+    {
+        if ( pModifier != nullptr && std::find( _listRootMotionModifier.begin(), _listRootMotionModifier.end(), pModifier ) == _listRootMotionModifier.end() )
+            _listRootMotionModifier.push_back( pModifier );
+    }
+
+    void SkeletalAnimatorComponent::removeRootMotionModifier( IRootMotionModifier* pModifier )
+    {
+        const auto it = std::find( _listRootMotionModifier.begin(), _listRootMotionModifier.end(), pModifier );
+        if ( it != _listRootMotionModifier.end() )
+            _listRootMotionModifier.erase( it );
+    }
+
     void SkeletalAnimatorComponent::applyRootMotion( SkeletalMeshComponent& unit )
     {
         // 루트 모션은 오브젝트 트랜스폼에 쓴다 — 게임 스레드에서, 모든 단계가 끝난 뒤다(아래 트랜스폼 플러시가 반영한다).
         if ( _bExtractRootMotion == SW_FALSE || unit.getOwner() == nullptr )
             return;
-        const BoneTransform& delta = _rootMotionDelta;
-        if ( delta._translation.getLengthSquared() <= 0.0f && delta._rotation == quaternion::Identity )
-            return;
         SceneComponent* pRoot = unit.getOwner()->getPrimarySceneComponent();
         if ( pRoot == nullptr )
             return;
-        // 움직임은 캐릭터 공간(루트 본의 부모 = 모델 공간)의 값이다 — 오브젝트의 로컬 회전 · 스케일로 돌려 부모 공간 이동으로 바꾼다.
-        const float3     localRotation = pRoot->getLocalRotation();
-        const float4x4   orientation   = float4x4::createTrs( float3{}, localRotation, pRoot->getLocalScale() );
-        const float3     parentMove    = float3::transformVector( delta._translation, orientation );
-        const quaternion turned        = ( quaternion::createFromYawPitchRoll( localRotation ) * delta._rotation ).normalize();
-        pRoot->setLocalPosition( pRoot->getLocalPosition() + parentMove );
-        pRoot->setLocalRotation( turned.getEulerAngles() );
+        // 움직임은 캐릭터 공간(루트 본의 부모 = 모델 공간)의 값이다 — 오브젝트의 월드 회전 · 배율로 돌려 월드 이동으로 바꾼다.
+        const AnimPlayer&   player = _graphPlayer.getPlayer();
+        const AnimTimeStep& step   = player.getCurrentStep();
+        RootMotionFrame     frame{};
+        frame._worldTranslation = float3::transformVector( _rootMotionDelta._translation, pRoot->getWorldMatrix() );
+        frame._rotation         = _rootMotionDelta._rotation;
+        frame._pClip            = player.getCurrentPlayable();
+        frame._previousClipTime = step._previousTime;
+        frame._clipTime         = step._currentTime;
+        frame._deltaSeconds     = _lastDeltaSeconds;
+        frame._bClipWrapped     = step._wrapCount > 0 ? SW_TRUE : SW_FALSE;
+        for ( IRootMotionModifier* pModifier : _listRootMotionModifier )
+            pModifier->modifyRootMotion( *this, frame );
+
+        const bool bMoves = frame._worldTranslation.getLengthSquared() > 0.0f;
+        if ( bMoves )
+        {
+            CharacterControllerComponent* pController =
+                _bRootMotionThroughController == SW_TRUE ? unit.getOwner()->getComponent<CharacterControllerComponent>() : nullptr;
+            if ( pController != nullptr && pController->hasBegunPlay() )
+                pController->addRootMotionDisplacement( frame._worldTranslation );
+            else
+                pRoot->setWorldPosition( pRoot->getWorldPosition() + frame._worldTranslation );
+        }
+        if ( frame._rotation != quaternion::Identity )
+        {
+            const quaternion turned = ( quaternion::createFromYawPitchRoll( pRoot->getLocalRotation() ) * frame._rotation ).normalize();
+            pRoot->setLocalRotation( turned.getEulerAngles() );
+        }
     }
 
     void SkeletalAnimatorComponent::advanceTime( const AnimationFrameContext& context )

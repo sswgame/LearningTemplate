@@ -276,7 +276,7 @@ cd build/Ninja-Debug/Bin
     (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · UI 시험 입력 흉내 · 패키징 UI · 에디터 자동화 ·
     타일맵 확장 · 2D 조명/그림자 · 로딩 흐름 · 입력 확장 · 에셋 공정(검증 · XML 비교/병합 · 잠금 · DCC 내보내기) · QA 자동화(봇 · 내구 · 골든 이미지 · 성능 CI ·
     퍼징) · AI 디렉터 · 텔레메트리 · 크래시 보고 업로드 · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 [대기: cam-views] · 하늘/시간대/높이
-    안개 [대기: cam-views] · 2D 스켈레탈 · 리타게팅 · 모션 워핑/이동 보정 · 래그돌 + 히트박스 · 절단 런타임 · 군중 포즈 공유 · 되감기 디버거 [넷 다: char-anim,
+    안개 [대기: cam-views] · 2D 스켈레탈 · 리타게팅 · 래그돌 + 히트박스 · 절단 런타임 · 군중 포즈 공유 · 되감기 디버거 [넷 다: char-anim,
     래그돌은 char-phys 도] · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서 — reflect-ext 의 문서 생성 뒤) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
     [넷 다: 런타임 UI].
   - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 현지화 공정 · PoseModifierComponent(IK · 제약 ·
@@ -330,8 +330,7 @@ cd build/Ninja-Debug/Bin
     `GimmickSensorComponent` 가 그대로 받는다 — 안 오면 센서에 붙인다. 눌림판 무게는 `RigidBodyComponent` 질량(지금 `GimmickWeightComponent`), 발사대 ·
     컨베이어는 `CharacterControllerComponent` 가 `GimmickLaunchEvent` · `getSurfaceVelocity` 를 읽게, 기믹 프리팹의 `BoxCollider2DComponent` 는 3D 게임용
     3D 트리거 · 강체 콜라이더 변형을 더한다(`Resource/common/prefabs/gimmicks`).
-  - 애니메이션 · 소켓: `InteractableComponent::computeAlignmentPoint` 가 정의의 `alignment` 마커 이름을 오브젝트 소켓 · 마커 표(`*.sockets.xml`)에서 찾게
-    하고(지금 로컬 오프셋 · 요), 모션 워핑이 그 자리를 목표로. 상호작용 단계에 몽타주 · 알림을 이름으로 잇기.
+  - 애니메이션: 상호작용 단계에 몽타주(클립)를 이름으로 잇기 — 맞춤 마커 → 워프 목표는 들어갔다(`InteractorComponent` 가 시작할 때 넣는다).
   - 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
   - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
   - 네트워크: 회로 상태 바이트(`GimmickCircuit::saveState`)를 `NetClientServer` 스냅샷 · `RollbackSession` 상태에 싣기(모양은 준비됨, 배선 없음).
