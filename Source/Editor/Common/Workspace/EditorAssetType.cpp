@@ -45,6 +45,7 @@ namespace sw::editor
         constexpr string_view kArrMeshExt[]         = { ".mesh" };
         constexpr string_view kArrSkeletonSuffix[]  = { ".skeleton.json" };
         constexpr string_view kArrAnimClipExt[]     = { ".animclip" };
+        constexpr string_view kArrFractureExt[]     = { ".fracture" };
         constexpr string_view kArrModelSourceExt[]  = { ".glb", ".gltf" }; ///< `models_raw/` 의 원본 — 임포트하는 것이 리로드다
 
         /**
@@ -87,6 +88,7 @@ namespace sw::editor
             {         EditorAssetType::Mesh,      MatchMode::Extension,  kArrModelSourceExt,  countOf( kArrModelSourceExt ),       "Mesh",   &ModelImporter::importChangedSourceModel},
             {     EditorAssetType::Skeleton,       MatchMode::EndsWith,  kArrSkeletonSuffix,  countOf( kArrSkeletonSuffix ),   "Skeleton",                                    nullptr},
             {     EditorAssetType::AnimClip,      MatchMode::Extension,     kArrAnimClipExt,     countOf( kArrAnimClipExt ),   "AnimClip",                                    nullptr},
+            {     EditorAssetType::Fracture,      MatchMode::Extension,     kArrFractureExt,     countOf( kArrFractureExt ),   "Fracture",                                    nullptr},
             {         EditorAssetType::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),      nullptr,                                    nullptr},
         };
 
@@ -107,6 +109,7 @@ namespace sw::editor
             {         EditorAssetType::Mesh,       "Mesh",    "Meshes",           nullptr,           ICON_FA_CUBE, { 0.55f, 0.80f, 0.80f, 1.0f }, false,  true,  true},
             {     EditorAssetType::Skeleton,   "Skeleton", "Skeletons",           nullptr,           ICON_FA_BONE, { 0.90f, 0.85f, 0.70f, 1.0f }, false,  true,  true},
             {     EditorAssetType::AnimClip,   "AnimClip",     "Clips",           nullptr, ICON_FA_PERSON_WALKING, { 1.00f, 0.70f, 0.35f, 1.0f }, false,  true,  true},
+            {     EditorAssetType::Fracture,   "Fracture", "Fractures",           nullptr,          ICON_FA_BURST, { 0.85f, 0.50f, 0.40f, 1.0f }, false,  true,  true},
             {         EditorAssetType::Data,       "Data",      "Data",           nullptr,          ICON_FA_TABLE, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
         };
 

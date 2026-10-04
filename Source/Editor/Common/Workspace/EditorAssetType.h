@@ -43,6 +43,7 @@ namespace sw::editor
         Mesh,
         Skeleton, ///< 임포트가 쓴 스켈레톤(`.skeleton.json`) — 스켈레톤 캐시가 핫 리로드한다
         AnimClip, ///< 임포트가 쓴 애니메이션 클립(`.animclip`) — 클립 캐시가 핫 리로드한다
+        Fracture, ///< 임포트가 쓴 파쇄 에셋(`.fracture`) — 파쇄 캐시가 핫 리로드한다
         Count     ///< 종류 수(종류가 아님). 종류 표(EditorAssetType.cpp)가 모든 종류를 한 번씩 담는지 컴파일 때 본다
     };
 

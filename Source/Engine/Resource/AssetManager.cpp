@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Destruction/FractureAssetCache.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -32,6 +33,7 @@ namespace sw
         , _meshCache{ make_unique<MeshCache>() }
         , _skeletonCache{ make_unique<SkeletonCache>() }
         , _animClipCache{ make_unique<AnimClipCache>() }
+        , _fractureCache{ make_unique<FractureAssetCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _registeredAssetCache{}
         , _contentSource{ ContentSource::Cooked }
@@ -44,6 +46,7 @@ namespace sw
         registerAssetCache( _meshCache.get() );
         registerAssetCache( _skeletonCache.get() );
         registerAssetCache( _animClipCache.get() );
+        registerAssetCache( _fractureCache.get() );
     }
 
     AssetManager::~AssetManager() = default;
@@ -163,7 +166,7 @@ namespace sw
     {
         return pCache != nullptr && ( pCache == _materialCache.get() || pCache == _textureCache.get() || pCache == _prefabCache.get() ||
                                       pCache == _spriteClipCache.get() || pCache == _meshCache.get() || pCache == _skeletonCache.get() ||
-                                      pCache == _animClipCache.get() );
+                                      pCache == _animClipCache.get() || pCache == _fractureCache.get() );
     }
 
     void AssetManager::unregisterAssetCache( const IAssetCache* pCache )

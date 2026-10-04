@@ -19,6 +19,8 @@
 
 #include "Engine/Animation/AnimJsonUtil.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
+#include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -1320,6 +1322,35 @@ namespace sw::editor
             SW_LOG_ERROR( "Failed to write mesh asset %#", outputPath );
             return false;
         }
+        // 파쇄 — 규칙에 `fracture` 가 있으면 `.mesh` 옆에 `.fracture` 를 쓰고, 없으면 옛 것을 지운다(규칙에서 빠진 파쇄가 남지 않게).
+        const string fracturePath = FractureAsset::makePathForMesh( outputPath );
+        if ( rule._bFracture == SW_TRUE )
+        {
+            if ( result._bSkinned == SW_TRUE )
+            {
+                SW_LOG_ERROR( "Fracture rule '%#' matched skinned model %# - only static meshes fracture", rule._name.c_str(), sourcePath );
+                return false;
+            }
+            FractureAsset fracture;
+            string        error;
+            if ( MeshFractureUtil::fracture( result._mesh._listVertex, rule._fracture, fracture, error ) == false )
+            {
+                SW_LOG_ERROR( "Fracture of %# failed: %#", sourcePath, error.c_str() );
+                return false;
+            }
+            if ( fracture.saveToFile( fracturePath ) == false )
+            {
+                SW_LOG_ERROR( "Failed to write fracture asset %#", fracturePath.c_str() );
+                return false;
+            }
+            SW_LOG_INFO( "Fractured %# -> %# (%# pieces, %# links, %# levels, %# interior triangles)", sourcePath, fracturePath.c_str(), fracture.getPieceCount(),
+                         fracture._graph._listLink.size(), fracture._graph.getDepthCount(), fracture.countTriangles( FractureSurfaceSlot::Interior ) );
+        }
+        else if ( FileUtil::fileExists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
+        {
+            SW_LOG_ERROR( "Failed to remove stale fracture asset %#", fracturePath.c_str() );
+            return false;
+        }
         if ( result._bSkinned == SW_FALSE )
         {
             SW_LOG_INFO( "Imported model: %# -> %# (%# triangles)", sourcePath, outputPath, result._mesh._listVertex.size() / 3 );
@@ -1432,6 +1463,12 @@ namespace sw::editor
         hash                       = StringUtil::computeHash64( reinterpret_cast<const utf8*>( rule._arrTranslation ), sizeof( rule._arrTranslation ), false, hash );
         const string animationText = rule.makeAnimationHashText();
         hash                       = StringUtil::computeHash64( animationText.c_str(), animationText.size(), false, hash );
+        const string fractureText  = rule.makeFractureHashText();
+        if ( fractureText.empty() == false )
+        {
+            const string fractureVersion = fractureText + ";format=" + to_string( FractureAsset::kVersion );
+            hash                         = StringUtil::computeHash64( fractureVersion.c_str(), fractureVersion.size(), false, hash );
+        }
         // 곁 데이터(클립 반복 · 알림 · 커브)를 고쳐도 다시 임포트해야 한다.
         vector<uint8> clipDataBytes;
         const string  clipDataPath = makeClipDataPath( sourcePath );
@@ -1468,6 +1505,13 @@ namespace sw::editor
         uint64 hash = AssetImportStampUtil::computeFileHash( importedMeshPath );
         if ( hash == 0 )
             return 0;
+        // 옆의 `.fracture` 도 결과다 — 지워지거나 바뀌면 어긋남이다.
+        const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
+        if ( FileUtil::fileExists( fracturePath ) )
+        {
+            const uint64 fractureHash = AssetImportStampUtil::computeFileHash( fracturePath );
+            hash                      = StringUtil::computeHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
+        }
         // 옆 폴더의 파일을 이름순으로 섞는다 — 이름도 섞어 파일이 사라지거나 바뀌면 다른 값이 된다.
         const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
         if ( FileUtil::directoryExists( sideFolder ) == false )

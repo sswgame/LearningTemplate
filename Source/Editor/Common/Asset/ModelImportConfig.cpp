@@ -11,6 +11,7 @@
 
 #include "Engine/Animation/AnimJsonUtil.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
+#include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw::editor
@@ -28,6 +29,30 @@ namespace sw::editor
             text += clipName + ",";
         // 실수는 비트 그대로 섞는다 — 글자로 반올림하면 작은 변경이 같은 해시가 된다.
         const float32 arrValue[3] = { _animationSampleRate, _animationPrecision, _animationShellDistance };
+        for ( const float32 value : arrValue )
+        {
+            uint32 bits = 0;
+            Memory::copy( &bits, &value, sizeof( bits ) );
+            text += ";" + to_string( bits );
+        }
+        return text;
+    }
+
+    string ModelImportRule::makeFractureHashText() const
+    {
+        if ( _bFracture == SW_FALSE )
+            return {};
+        string text = "fracture=";
+        text += FractureSettings::getPatternName( _fracture._pattern );
+        text += ";pieces=" + to_string( _fracture._pieceCount ) + ";seed=" + to_string( _fracture._seed ) + ";hull=" + to_string( _fracture._maxHullPoint ) + ";levels=";
+        for ( const uint32 count : _fracture._listLevelCount )
+            text += to_string( count ) + ",";
+        text += ";slices=";
+        for ( const uint32 count : _fracture._arrSliceCount )
+            text += to_string( count ) + ",";
+        const float32 arrValue[11] = { _fracture._impactPoint._x, _fracture._impactPoint._y, _fracture._impactPoint._z, _fracture._clusterRadius,
+                                       _fracture._clusterFraction, _fracture._sliceJitter, _fracture._interiorUvScale, _fracture._interiorColor._x,
+                                       _fracture._interiorColor._y, _fracture._interiorColor._z, _fracture._interiorColor._w };
         for ( const float32 value : arrValue )
         {
             uint32 bits = 0;
@@ -90,9 +115,14 @@ namespace sw::editor
             const bool bKnownKeys = AnimJsonUtil::hasOnlyKnownKeys( ruleValue,
                                                                     { "name", "include_patterns", "exclude_patterns", "include_paths", "exclude_paths", "translation", "recenter", "animations", "clips",
                                                                       "animation_codec", "animation_sample_rate", "animation_precision", "animation_shell_distance",
-                                                                      "root_motion_bone", "attachments" },
+                                                                      "root_motion_bone", "attachments", "fracture" },
                                                                     "ModelImportConfig rule" );
             if ( bKnownKeys == false || parseAnimationKeys( ruleValue, rule ) == false )
+            {
+                _listRule.clear();
+                return false;
+            }
+            if ( ruleValue.has( "fracture" ) && parseFractureKeys( ruleValue.get( "fracture" ), rule ) == false )
             {
                 _listRule.clear();
                 return false;
@@ -166,6 +196,107 @@ namespace sw::editor
             }
             *arrNumberValue[keyIndex] = static_cast<float32>( value.asFloat() );
         }
+        return true;
+    }
+
+    bool ModelImportConfig::parseFractureKeys( const JsonValue& fractureValue, ModelImportRule& inoutRule )
+    {
+        const string context = "ModelImportConfig rule '" + inoutRule._name + "' fracture";
+        if ( fractureValue.isObject() == false )
+        {
+            SW_LOG_ERROR( "%#: must be an object.", context.c_str() );
+            return false;
+        }
+        const bool bKnownKeys = AnimJsonUtil::hasOnlyKnownKeys( fractureValue,
+                                                                { "pattern", "pieces", "seed", "levels", "impact_point", "cluster_radius", "cluster_fraction", "slices",
+                                                                  "slice_jitter", "interior_color", "interior_uv_scale", "max_hull_points" },
+                                                                context );
+        if ( bKnownKeys == false )
+            return false;
+        FractureSettings& settings = inoutRule._fracture;
+        if ( fractureValue.has( "pattern" ) )
+        {
+            const string patternText = fractureValue.get( "pattern" ).asString();
+            if ( FractureSettings::parsePattern( patternText, settings._pattern ) == false )
+            {
+                SW_LOG_ERROR( "%#: unknown pattern '%#' (uniform | clustered | slices).", context.c_str(), patternText.c_str() );
+                return false;
+            }
+        }
+        const utf8* const arrIntegerKey[3] = { "pieces", "seed", "max_hull_points" };
+        uint64            arrInteger[3]    = { settings._pieceCount, settings._seed, settings._maxHullPoint };
+        for ( uint32 keyIndex = 0; keyIndex < 3; ++keyIndex )
+        {
+            if ( fractureValue.has( arrIntegerKey[keyIndex] ) == false )
+                continue;
+            const JsonValue value = fractureValue.get( arrIntegerKey[keyIndex] );
+            if ( value.isNumber() == false || value.asFloat() < 1.0 )
+            {
+                SW_LOG_ERROR( "%#: %# must be a positive integer.", context.c_str(), arrIntegerKey[keyIndex] );
+                return false;
+            }
+            arrInteger[keyIndex] = static_cast<uint64>( value.asFloat() );
+        }
+        settings._pieceCount                = static_cast<uint32>( arrInteger[0] );
+        settings._seed                      = arrInteger[1];
+        settings._maxHullPoint              = static_cast<uint32>( arrInteger[2] );
+        const utf8* const arrNumberKey[4]   = { "cluster_radius", "cluster_fraction", "slice_jitter", "interior_uv_scale" };
+        float32* const    arrNumberValue[4] = { &settings._clusterRadius, &settings._clusterFraction, &settings._sliceJitter, &settings._interiorUvScale };
+        for ( uint32 keyIndex = 0; keyIndex < 4; ++keyIndex )
+        {
+            if ( fractureValue.has( arrNumberKey[keyIndex] ) == false )
+                continue;
+            const JsonValue value = fractureValue.get( arrNumberKey[keyIndex] );
+            if ( value.isNumber() == false || value.asFloat() < 0.0 )
+            {
+                SW_LOG_ERROR( "%#: %# must be a non-negative number.", context.c_str(), arrNumberKey[keyIndex] );
+                return false;
+            }
+            *arrNumberValue[keyIndex] = static_cast<float32>( value.asFloat() );
+        }
+        if ( fractureValue.has( "impact_point" ) && AnimJsonUtil::readFloats( fractureValue.get( "impact_point" ), &settings._impactPoint._x, 3 ) == false )
+        {
+            SW_LOG_ERROR( "%#: impact_point must be an array of three numbers.", context.c_str() );
+            return false;
+        }
+        if ( fractureValue.has( "interior_color" ) && AnimJsonUtil::readFloats( fractureValue.get( "interior_color" ), &settings._interiorColor._x, 4 ) == false )
+        {
+            SW_LOG_ERROR( "%#: interior_color must be an array of four numbers.", context.c_str() );
+            return false;
+        }
+        if ( fractureValue.has( "slices" ) )
+        {
+            float32    arrSlice[3] = { 0.0f, 0.0f, 0.0f };
+            const bool bRead       = AnimJsonUtil::readFloats( fractureValue.get( "slices" ), arrSlice, 3 );
+            if ( bRead == false || arrSlice[0] < 1.0f || arrSlice[1] < 1.0f || arrSlice[2] < 1.0f )
+            {
+                SW_LOG_ERROR( "%#: slices must be three positive integers.", context.c_str() );
+                return false;
+            }
+            for ( uint32 axis = 0; axis < 3; ++axis )
+                settings._arrSliceCount[axis] = static_cast<uint32>( arrSlice[axis] );
+        }
+        if ( fractureValue.has( "levels" ) )
+        {
+            const JsonValue levels = fractureValue.get( "levels" );
+            const size_t    count  = levels.isArray() ? levels.size() : 0;
+            if ( levels.isArray() == false )
+            {
+                SW_LOG_ERROR( "%#: levels must be an array of positive integers.", context.c_str() );
+                return false;
+            }
+            for ( size_t levelIndex = 0; levelIndex < count; ++levelIndex )
+            {
+                const JsonValue level = levels.at( levelIndex );
+                if ( level.isNumber() == false || level.asFloat() < 1.0 )
+                {
+                    SW_LOG_ERROR( "%#: levels must be an array of positive integers.", context.c_str() );
+                    return false;
+                }
+                settings._listLevelCount.push_back( static_cast<uint32>( level.asFloat() ) );
+            }
+        }
+        inoutRule._bFracture = SW_TRUE;
         return true;
     }
 

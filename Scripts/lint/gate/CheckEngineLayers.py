@@ -131,6 +131,8 @@ _kEngineTier: dict[str, int] = {
     # 8: 그리는 쪽 · 핫리로드. 씬과 컴포넌트를 읽는다.
     _kGraphicsRendererLayerName: 8,
     "Module": 8,
+    # 파괴(파쇄 · 연결 그래프 · 피해 · 조각 컴포넌트). 캐릭터 형상의 자르기 도구(7)와 컴포넌트 모델(6) 위에 선다 — 렌더러는 모른다.
+    "Destruction": 8,
     # 9: 전부를 엮는 자리.
     _kRootLayerName: 9,
 }
