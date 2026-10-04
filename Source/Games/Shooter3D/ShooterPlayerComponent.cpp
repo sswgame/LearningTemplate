@@ -11,6 +11,8 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Telemetry/TelemetryEvent.h"
+#include "Engine/Telemetry/TelemetryService.h"
 
 #include "GameFramework/Components/FirstPersonCameraComponent.h"
 #include "GameFramework/Framework/GameService.h"
@@ -177,16 +179,27 @@ namespace sw
         if ( _bRoundJustRestarted == SW_TRUE )
             return;
         _health -= amount;
-        _damageCooldown = _regenDelay;
-        if ( _health > 0.0f )
-            return;
+        _damageCooldown                     = _regenDelay;
         GameObject*               pOwner    = getOwner();
         GameObjectManager*        pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const GameObject*         pObject   = pManager != nullptr ? pManager->resolveGameObject( _director ) : nullptr;
         ShooterDirectorComponent* pDirector = pObject != nullptr ? pObject->getComponent<ShooterDirectorComponent>() : nullptr;
         if ( pDirector != nullptr )
+            pDirector->reportPlayerDamage( amount );
+        if ( _health > 0.0f )
+            return;
+        if ( pDirector != nullptr )
         {
             SW_LOG_INFO( "[Shooter] you were overrun on wave %# after %# kills - starting over", pDirector->getWave(), pDirector->getKillCount() );
+            TelemetryService* pTelemetry = game::getService<TelemetryService>();
+            if ( pTelemetry != nullptr )
+            {
+                TelemetryEvent roundEnded( "progression.roundEnded" );
+                roundEnded.setInt( "wave", pDirector->getWave() ).setInt( "kills", pDirector->getKillCount() );
+                roundEnded.setFloat( "seconds", static_cast<float64>( pDirector->getPacingDirector().getTime() ) );
+                roundEnded.setFloat( "accuracy", _shotCount > 0u ? static_cast<float64>( _hitCount ) / static_cast<float64>( _shotCount ) : 0.0 );
+                (void)pTelemetry->record( roundEnded );
+            }
             pDirector->restartRound();
         }
         resetRound();
@@ -196,6 +209,19 @@ namespace sw
     {
         for ( WeaponState& weapon : _arrWeapon )
             weapon.addReserveAmmo( weapon.getDef()._magazineSize * 2 );
+    }
+
+    void ShooterPlayerComponent::restoreHealth( float32 amount )
+    {
+        _health = MathUtil::min( _maxHealth, _health + MathUtil::max( 0.0f, amount ) );
+    }
+
+    float32 ShooterPlayerComponent::computeAmmoShortage() const
+    {
+        const WeaponState& weapon   = _arrWeapon[_weaponIndex];
+        const float32      wanted   = static_cast<float32>( MathUtil::max( 1, weapon.getDef()._magazineSize * 4 ) );
+        const float32      carrying = static_cast<float32>( weapon.getMagazineAmmo() + weapon.getReserveAmmo() );
+        return MathUtil::clamp( 1.0f - carrying / wanted, 0.0f, 1.0f );
     }
 
     float3 ShooterPlayerComponent::getEyePosition() const

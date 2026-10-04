@@ -224,6 +224,7 @@ namespace
         using RenderThreadStartupStep  = Defaults;
         using LiveShaderStartupStep    = Defaults;
         using SceneRhiStartupStep      = Defaults;
+        using TelemetryStartupStep     = Defaults;
     };
 } // namespace
 

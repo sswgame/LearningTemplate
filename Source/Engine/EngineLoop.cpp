@@ -3,6 +3,7 @@
 #include "Engine/EngineLoop.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Common/BuildInfo.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
@@ -10,7 +11,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/Process/CrashContext.h"
 #include "Core/Process/CrashHandler.h"
+#include "Core/Process/ModuleBuildId.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/String/string_splitter.h"
@@ -66,6 +69,8 @@
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneCooker.h"
+#include "Engine/Telemetry/CrashReportService.h"
+#include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -101,6 +106,8 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_STRING( gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
     /** @brief 활성 씬의 강체 물리(바디 셰이프 · 캐릭터 캡슐)를 디버그 선으로 그립니다(`ScenePhysics::drawDebug` → `DebugDrawQueue`). */
     SW_GLOBAL_VARIABLE_BOOL( gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
+    /** @brief `-gv_telemetryFolder=<경로>`: 텔레메트리 스풀 폴더입니다(자동화 — 사용자 폴더를 건드리지 않는다). 비면 사용자 설정 파일 옆의 `telemetry/`. */
+    SW_TEST_GLOBAL_VARIABLE_STRING( gv_telemetryFolder, "", "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)", SW_KEEP_IN_SHIPPING );
 
 } // namespace sw
 
@@ -598,6 +605,58 @@ namespace sw
         static void shutdown( EngineLoop& loop ) { loop._owned._pSceneManager->setRhiDevice( nullptr ); }
     };
 
+    struct EngineLoop::TelemetryStartupStep : EngineInitStepDefaults<EngineLoop>
+    {
+        static EngineInitResult initialize( EngineLoop& loop )
+        {
+            // 문맥은 파일마다 첫 줄 — 크래시 보고 · 로그와 같은 세션 id, 심볼과 짝지을 빌드 id.
+            const GameConfig& gameConfig = GameConfig::getActive();
+            TelemetryContext  context;
+            context._sessionId   = CrashHandler::getSessionId();
+            context._buildConfig = build::kConfigName;
+            context._platform    = build::kPlatformName;
+            context._buildId     = ModuleBuildId::find( nullptr )._id;
+            context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
+            const string folder  = gv_telemetryFolder.empty()
+                                     ? FileUtil::joinPath( FileUtil::getDirectoryPart( loop._owned._pUserSettingsManager->getUserFilePath() ), "telemetry" )
+                                     : string( gv_telemetryFolder );
+
+            TelemetryService& telemetry = *loop._owned._pTelemetryService;
+            // 스키마가 틀려도 기동은 멈추지 않는다 — 스키마에 없는 사건은 기록되지 않을 뿐이다.
+            if ( telemetry.loadSchema( engine::getEngineDefaultAssets()._telemetrySchema ) == false )
+                SW_LOG_ERROR( "Engine telemetry schema '%#' is not loaded", engine::getEngineDefaultAssets()._telemetrySchema.c_str() );
+            if ( gameConfig._telemetrySchema.empty() == false )
+            {
+                const string gameSchema = FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._telemetrySchema );
+                if ( telemetry.loadSchema( gameSchema ) == false )
+                    SW_LOG_ERROR( "Game telemetry schema '%#' is not loaded", gameSchema.c_str() );
+            }
+            telemetry.initialize( folder, context );
+            // 동의는 플레이어 옵션(기본 꺼짐)이다. 꺼져 있으면 지난 실행이 남긴 스풀까지 지운다.
+            telemetry.bindConsentSetting( *loop._owned._pUserSettingsManager );
+
+            // 지난 실행의 크래시를 묶는다(덤프 · 로그 폴더 옆의 Saved/CrashReports). 기본 동의(local)는 묶기만 하고, 보낼 것이 있을 때만 보고 프로세스를 띄운다.
+            const string crashFolder = getCrashReportFolder();
+            if ( crashFolder.empty() == false )
+            {
+                CrashReportService& crashReports = *loop._owned._pCrashReportService;
+                const string        reportsFolder =
+                    FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
+                crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionId() );
+                crashReports.bindConsentSetting( *loop._owned._pUserSettingsManager );
+                crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 kReporterArgument 를 알아듣는다(main.cpp)
+                (void)crashReports.collectNewCrashes();
+                (void)crashReports.launchReporterProcess();
+            }
+            return EngineInitResult::Succeeded;
+        }
+        static void shutdown( EngineLoop& loop )
+        {
+            loop._owned._pCrashReportService->shutdown();
+            loop._owned._pTelemetryService->shutdown();
+        }
+    };
+
     EngineLoop::EngineLoop()
         : _bootstrap{}
         , _configManager{ nullptr }
@@ -857,6 +916,17 @@ namespace sw
                 PhysicsDebugDrawAdapter adapter{ engine::getDebugDrawQueue() };
                 pDebugScene->getObjectManager()->getScenePhysics().drawDebug( adapter );
             }
+        }
+
+        // 텔레메트리 — 장면별 프레임 시간을 모으고 flush 시간이 되면 쓴다. 동의가 없으면 둘 다 아무 일도 하지 않는다.
+        if ( _owned._pTelemetryService != nullptr )
+        {
+            const Scene* pTelemetryScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
+            string_view  sceneId{};
+            if ( pTelemetryScene != nullptr )
+                sceneId = pTelemetryScene->getSourcePath().empty() ? pTelemetryScene->getName() : pTelemetryScene->getSourcePath();
+            _owned._pTelemetryService->recordFrame( sceneId, deltaTime );
+            _owned._pTelemetryService->update( deltaTime );
         }
 
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).

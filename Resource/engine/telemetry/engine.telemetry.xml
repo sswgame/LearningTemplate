@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 텔레메트리 스키마 — TelemetryService 가 읽는다(Source/Engine/Telemetry/README.md). 게임은 게임 프리셋(Config/Game/<Game>.json)의
+  _telemetrySchema 로 사건을 덧붙인다. 스키마에 없는 사건 · 필드는 기록되지 않는다. 동의(사용자 설정 telemetry.enabled, 기본 꺼짐)가 없으면
+  아무것도 모으지도 쓰지도 보내지도 않는다.
+
+  <Pipeline> 속성
+    batchEvents    이만큼 모이면 스풀 파일에 쓴다
+    flushSeconds   이만큼 지나면 모인 것을 쓴다
+    maxFileBytes   파일 하나의 상한 — 넘으면 닫고(올릴 대상) 다음 번호로 회전
+    maxFiles · maxTotalBytes  스풀 전체 상한 — 넘으면 가장 오래된 닫힌 파일을 보내지 못한 채 지운다
+    sessionSample  이 비율의 세션만 남긴다(세션 id 해시)
+    breadcrumbs    크래시 보고에 붙일 최근 사건 수
+  <Event> id · category · sample(0..1, 줄에 적혀 받는 쪽이 무게를 준다), <Field> name · type(bool int float string) · required
+-->
+<TelemetrySchema version="1">
+	<Pipeline batchEvents="32" flushSeconds="30" maxFileBytes="262144" maxFiles="16" maxTotalBytes="2097152" sessionSample="1" breadcrumbs="32"/>
+
+	<!-- 세션 — 문맥(세션 id · 빌드 · 플랫폼 · 빌드 id · 게임)은 파일마다 첫 줄에 있다. -->
+	<Event id="session.start" category="session"/>
+	<Event id="session.end" category="session">
+		<Field name="seconds" type="float" required="true"/>
+	</Event>
+
+	<!-- 성능 — 장면이 바뀌거나 세션이 끝날 때 그 장면의 프레임 시간 요약 하나. -->
+	<Event id="perf.sceneSummary" category="perf">
+		<Field name="scene" type="string" required="true"/>
+		<Field name="frames" type="int" required="true"/>
+		<Field name="seconds" type="float"/>
+		<Field name="avgMs" type="float"/>
+		<Field name="p50Ms" type="float" required="true"/>
+		<Field name="p99Ms" type="float" required="true"/>
+		<Field name="maxMs" type="float"/>
+	</Event>
+</TelemetrySchema>

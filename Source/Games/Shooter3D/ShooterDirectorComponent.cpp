@@ -13,6 +13,8 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Telemetry/TelemetryEvent.h"
+#include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Framework/GameService.h"
@@ -31,9 +33,16 @@ namespace sw
     {
         struct ShooterDirectorComponentInternal
         {
-            static constexpr float32     kStatusInterval = 5.0f;
-            static constexpr uint32      kStateTag       = 0x544F4853u; ///< 'SHOT'
-            static constexpr uint32      kStateVersion   = 1;
+            static constexpr float32 kStatusInterval = 5.0f;
+            static constexpr uint32  kStateTag       = 0x544F4853u; ///< 'SHOT'
+            static constexpr uint32  kStateVersion   = 2;
+            /** @brief 이 거리(m) 안의 드론이 "가까운 드론" 신호입니다. */
+            static constexpr float32 kNearDistance = 7.0f;
+            /** @brief 수리 보상의 scale 1 이 채우는 체력입니다. */
+            static constexpr float32 kRepairPerScale = 10.0f;
+            /** @brief 이 게임이 아는 조우 · 보상 · 스폰 id 입니다 — 프로필이 다른 이름을 쓰면 시작할 때 알린다. */
+            static constexpr const utf8* kArrKnownEncounter[] = { "swarm", "elite", "ammo", "repair" };
+            static constexpr const utf8* kArrKnownSpawn[]     = { "drone" };
             static constexpr float4      kBurstColor{ 1.0f, 0.6f, 0.15f, 1.0f };
             static constexpr const utf8* kSoundDroneDown = "game/shooter3d/sounds/impact_metal_medium_000.ogg";
 
@@ -46,6 +55,17 @@ namespace sw
             static bool isSameColor( const float4& lhs, const float4& rhs )
             {
                 return lhs._x == rhs._x && lhs._y == rhs._y && lhs._z == rhs._z && lhs._w == rhs._w;
+            }
+
+            template <size_t Count>
+            static bool isKnownId( const hashed_string& id, const utf8* const ( &arrKnown )[Count] )
+            {
+                for ( const utf8* pKnown : arrKnown )
+                {
+                    if ( id == hashed_string( pKnown ) )
+                        return true;
+                }
+                return false;
             }
         };
     } // namespace
@@ -103,12 +123,18 @@ namespace sw
         , _listSpawnPoint{}
         , _arenaHalfSize{ 20.0f }
         , _droneHeight{ 1.4f }
-        , _waveDelay{ 3.0f }
+        , _pacingProfile{}
+        , _spawnTable{}
+        , _pacingSeed{ 1 }
         , _effectPoolSize{ 32 }
         , _droneFlashTint{ 1.0f, 0.35f, 0.3f, 1.0f }
         , _bAutoPlay{ false }
         , _listBox{}
         , _listDroneView{}
+        , _profile{}
+        , _table{}
+        , _director{}
+        , _listDirectorEvent{}
         , _listDrone{}
         , _listEffect{}
         , _listPendingDrone{}
@@ -119,14 +145,16 @@ namespace sw
         , _droneLook{}
         , _droneFlashLook{}
         , _playerEye{ 0.0f, 1.6f, -16.0f }
-        , _waveTimer{ 3.0f }
         , _statusTimer{ 0.0f }
-        , _wave{ 0 }
+        , _pendingHeal{ 0.0f }
+        , _spawnCursor{ 0 }
         , _killCount{ 0 }
         , _bStarted{ SW_FALSE }
         , _bPoolSpawned{ SW_FALSE }
         , _bFlushScheduled{ SW_FALSE }
         , _bAmmoPending{ SW_FALSE }
+        , _bPacingReady{ SW_FALSE }
+        , _bPacingRestart{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -140,9 +168,8 @@ namespace sw
         // 판의 규칙은 앞 그룹 — 플레이어 · 드론이 같은 프레임에 이 결과를 읽는다.
         setTickGroup( TickGroup::PrePhysics );
         collectBoxes();
+        startPacing();
         _bStarted  = SW_TRUE;
-        _waveTimer = _waveDelay;
-        _wave      = 0;
         _killCount = 0;
         if ( _pendingStateBytes.empty() == false )
             applyPendingState();
@@ -153,7 +180,6 @@ namespace sw
     void ShooterDirectorComponent::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeHeader( outArchive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion );
-        outArchive << _wave;
         outArchive << _killCount;
     }
 
@@ -167,22 +193,19 @@ namespace sw
     void ShooterDirectorComponent::applyPendingState()
     {
         Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        uint32     wave      = 0;
         uint32     killCount = 0;
         const bool bHeader   = StateArchiveUtil::readHeader( archive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion );
-        archive >> wave;
         archive >> killCount;
         _pendingStateBytes.clear();
         if ( bHeader == false || archive.isError() || archive.getRemainingBytes() != 0 )
         {
-            SW_LOG_WARNING( "[Shooter] the saved arena state does not match this build - starting from wave 1" );
+            SW_LOG_WARNING( "[Shooter] the saved arena state does not match this build - starting a new round" );
             return;
         }
-        // 드론은 걷었다 — 웨이브 대기 뒤 `requestWave` 가 하나 올리므로 하나 앞에 둔다(같은 웨이브를 새로 세운다).
-        _wave      = wave > 0 ? wave - 1 : 0;
+        // 드론은 걷고(`despawnRuntime` 이 다음 틱에 감독도 처음부터 돌리게 한다) 처치 수만 잇는다 — 감독의 주기 · 시간 · 풀은 싣지 않는다.
         _killCount = killCount;
         despawnRuntime();
-        SW_LOG_INFO( "[Shooter] arena state restored - wave %#, %# kills", wave, _killCount );
+        SW_LOG_INFO( "[Shooter] arena state restored - %# kills", _killCount );
     }
 
     void ShooterDirectorComponent::onEndPlay()
@@ -200,19 +223,24 @@ namespace sw
         if ( _bPoolSpawned == SW_FALSE )
             scheduleFlush(); // 상태 저장 전에 걷었다 — 효과 풀을 다시 세운다
         const float32 step = MathUtil::min( deltaTime, 0.1f );
+        updatePlayerView();
         if ( step > 0.0f )
         {
             updateDrones();
-            if ( _listDrone.empty() && _listPendingDrone.empty() )
+            if ( _bPacingReady == SW_TRUE && _bPacingRestart == SW_TRUE )
             {
-                _waveTimer -= step;
-                if ( _waveTimer <= 0.0f )
-                    requestWave();
+                _bPacingRestart = SW_FALSE;
+                _director.restart();
+            }
+            if ( _bPacingReady == SW_TRUE )
+            {
+                _director.update( step );
+                applyDirectorEvents();
             }
             logStatus( step );
         }
-        updatePlayerView();
-        const bool bPending = _listPendingDrone.empty() == false || _listPendingEffect.empty() == false || _listPendingSound.empty() == false || _bAmmoPending == SW_TRUE;
+        const bool bPending = _listPendingDrone.empty() == false || _listPendingEffect.empty() == false || _listPendingSound.empty() == false || _bAmmoPending == SW_TRUE ||
+                              _pendingHeal > 0.0f;
         if ( bPending )
             scheduleFlush();
     }
@@ -222,9 +250,9 @@ namespace sw
         GameObjectManager* pManager = getObjectManager();
         if ( pManager != nullptr )
         {
-            for ( const GameObjectHandle& handle : _listDrone )
+            for ( const DroneRecord& drone : _listDrone )
             {
-                GameObject* pObject = pManager->resolveGameObject( handle );
+                GameObject* pObject = pManager->resolveGameObject( drone._object );
                 if ( pObject != nullptr )
                     pManager->destroyObject( pObject );
             }
@@ -240,25 +268,38 @@ namespace sw
         _listDroneView.clear();
         _listPendingDrone.clear();
         _listPendingEffect.clear();
-        _waveTimer    = _waveDelay;
-        _bPoolSpawned = SW_FALSE;
+        _bPoolSpawned   = SW_FALSE;
+        _bPacingRestart = SW_TRUE; // 걷은 드론의 스폰 id 를 돌려줄 수 없다 — 다음 틱에 감독도 처음부터
     }
 
     void ShooterDirectorComponent::restartRound()
     {
+        clearDrones();
+        _killCount   = 0;
+        _pendingHeal = 0.0f;
+        if ( _bPacingReady == SW_TRUE )
+            _director.restart();
+        _listDirectorEvent.clear();
+    }
+
+    void ShooterDirectorComponent::clearDrones()
+    {
         GameObjectManager* pManager = getObjectManager();
-        for ( const GameObjectHandle& handle : _listDrone )
+        for ( const DroneRecord& drone : _listDrone )
         {
-            GameObject* pObject = pManager != nullptr ? pManager->resolveGameObject( handle ) : nullptr;
+            GameObject* pObject = pManager != nullptr ? pManager->resolveGameObject( drone._object ) : nullptr;
             if ( pObject != nullptr )
                 pManager->destroyObject( pObject );
         }
         _listDrone.clear();
         _listDroneView.clear();
         _listPendingDrone.clear();
-        _wave      = 0;
-        _killCount = 0;
-        _waveTimer = _waveDelay;
+    }
+
+    void ShooterDirectorComponent::reportPlayerDamage( float32 amount )
+    {
+        if ( _bPacingReady == SW_TRUE )
+            (void)_director.getBuiltinIntensityModel().addSignal( hashed_string( "damageTaken" ), amount );
     }
 
     void ShooterDirectorComponent::spawnEffect( const float3& position, float32 size, const float4& color, float32 lifetime )
@@ -316,31 +357,101 @@ namespace sw
         { listBox.push_back( pBlocker->computeBox() ); } );
     }
 
-    void ShooterDirectorComponent::requestWave()
+    void ShooterDirectorComponent::startPacing()
     {
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr || _listSpawnPoint.empty() )
-            return;
-        ++_wave;
-        const uint32  droneCount = 3u + 2u * _wave;
-        const float32 health     = 30.0f + 10.0f * static_cast<float32>( _wave );
-        const float32 speed      = MathUtil::min( 6.5f, 2.6f + 0.3f * static_cast<float32>( _wave ) );
-        const uint32  pointCount = static_cast<uint32>( _listSpawnPoint.size() );
-        for ( uint32 droneIndex = 0; droneIndex < droneCount; ++droneIndex )
+        using Internal  = ShooterDirectorComponentInternal;
+        _bPacingReady   = SW_FALSE;
+        _bPacingRestart = SW_FALSE;
+        if ( _profile.loadFromResource( _pacingProfile ) == false || _table.loadFromResource( _spawnTable ) == false )
         {
-            const GameObject*     pPoint = pManager->resolveGameObject( _listSpawnPoint[droneIndex % pointCount] );
-            const SceneComponent* pScene = pPoint != nullptr ? pPoint->getPrimarySceneComponent() : nullptr;
-            const float3          base   = pScene != nullptr ? pScene->getWorldPosition() : float3{ 0.0f, 0.0f, 0.0f };
-            DroneRequest          request;
-            request._position = base + float3{ static_cast<float32>( droneIndex / pointCount ) * 1.2f, _droneHeight, 0.0f };
+            SW_LOG_ERROR( "[Shooter] pacing data '%#' / '%#' could not be loaded - no drones will come", _pacingProfile.c_str(), _spawnTable.c_str() );
+            return;
+        }
+        // 감독은 id 만 낸다 — 이 게임이 모르는 id 는 아무 일도 하지 않으므로 데이터 오타를 여기서 알린다.
+        vector<hashed_string> listId;
+        _profile.collectEncounterIds( listId );
+        for ( const hashed_string& id : listId )
+        {
+            if ( Internal::isKnownId( id, Internal::kArrKnownEncounter ) == false )
+                SW_LOG_ERROR( "[Shooter] pacing profile '%#' names encounter '%#' this game does not know", _pacingProfile.c_str(), id.c_str() );
+        }
+        for ( const SpawnEntryDef& entry : _table.getEntries() )
+        {
+            if ( Internal::isKnownId( entry._id, Internal::kArrKnownSpawn ) == false )
+                SW_LOG_ERROR( "[Shooter] spawn table '%#' names '%#' this game does not know", _spawnTable.c_str(), entry._id.c_str() );
+        }
+        _director.initialize( &_profile, &_table, static_cast<uint32>( _pacingSeed ) );
+        _bPacingReady = SW_TRUE;
+        applyDirectorEvents(); // 시작 단계 사건
+    }
+
+    void ShooterDirectorComponent::requestDrones( int32 count, float32 healthScale, uint32 spawnId )
+    {
+        // 웨이브(감독 순환 + 1)마다 체력 · 속도가 오른다 — 감독이 정하는 것은 언제 · 몇 기이고, 드론 한 기의 세기는 게임 규칙이다.
+        const float32 wave   = static_cast<float32>( getWave() );
+        const float32 health = ( 30.0f + 10.0f * wave ) * MathUtil::max( 0.1f, healthScale );
+        const float32 speed  = MathUtil::min( 6.5f, 2.6f + 0.3f * wave );
+        for ( int32 droneIndex = 0; droneIndex < count; ++droneIndex )
+        {
+            DroneRequest request;
             request._health   = health;
             request._speed    = speed;
-            request._bobPhase = static_cast<float32>( droneIndex ) * 1.3f;
+            request._bobPhase = static_cast<float32>( _spawnCursor ) * 1.3f;
+            request._slot     = _spawnCursor++;
+            request._spawnId  = spawnId;
             _listPendingDrone.push_back( request );
         }
-        _bAmmoPending = SW_TRUE; // 웨이브마다 탄을 조금 채운다(틱 뒤 — 플레이어는 다른 오브젝트다)
-        _waveTimer    = _waveDelay;
-        SW_LOG_INFO( "[Shooter] wave %# - %# drones (%# HP, %# m/s)", _wave, droneCount, static_cast<int32>( health ), speed );
+    }
+
+    void ShooterDirectorComponent::applyDirectorEvents()
+    {
+        using Internal = ShooterDirectorComponentInternal;
+        _listDirectorEvent.clear();
+        _director.drainEvents( _listDirectorEvent );
+        for ( const AiDirectorEvent& event : _listDirectorEvent )
+        {
+            switch ( event._kind )
+            {
+                case AiDirectorEventKind::PhaseChanged:
+                {
+                    // 쌓기로 돌아왔다 = 새 웨이브. 진행 사건(동의가 없으면 텔레메트리가 버린다).
+                    TelemetryService* pTelemetry = game::getService<TelemetryService>();
+                    const bool        bNewWave   = event._source.empty() == false && event._id == _profile.getPhases()[static_cast<size_t>( _profile.getStartPhaseIndex() )]._id;
+                    if ( pTelemetry != nullptr && bNewWave )
+                    {
+                        TelemetryEvent waveReached( "progression.waveReached" );
+                        waveReached.setInt( "wave", getWave() ).setInt( "kills", _killCount ).setFloat( "seconds", static_cast<float64>( _director.getTime() ) );
+                        (void)pTelemetry->record( waveReached );
+                    }
+                    SW_LOG_INFO( "[Shooter] pacing '%#' -> '%#' (wave %#, intensity %.2f)", event._source.empty() ? "start" : event._source.c_str(), event._id.c_str(), getWave(),
+                                 event._intensity );
+                    break;
+                }
+                case AiDirectorEventKind::Spawned:
+                {
+                    requestDrones( 1, 1.0f, event._spawnId );
+                    break;
+                }
+                case AiDirectorEventKind::Encounter:
+                {
+                    requestDrones( event._count, event._scale, 0 );
+                    SW_LOG_INFO( "[Shooter] %# - %# drones (x%.1f health) on wave %#", event._id.c_str(), event._count, event._scale, getWave() );
+                    break;
+                }
+                case AiDirectorEventKind::Reward:
+                {
+                    if ( event._id == hashed_string( "ammo" ) )
+                        _bAmmoPending = SW_TRUE;
+                    else if ( event._id == hashed_string( "repair" ) )
+                        _pendingHeal += event._scale * Internal::kRepairPerScale;
+                    break;
+                }
+                case AiDirectorEventKind::Despawned:
+                {
+                    break;
+                }
+            }
+        }
     }
 
     void ShooterDirectorComponent::scheduleFlush()
@@ -375,13 +486,17 @@ namespace sw
         for ( const EffectRequest& effect : _listPendingEffect )
             spawnEffect( effect._position, effect._size, effect._color, effect._lifetime );
         _listPendingEffect.clear();
-        if ( _bAmmoPending == SW_TRUE )
+        const bool bPlayerPending = _bAmmoPending == SW_TRUE || _pendingHeal > 0.0f;
+        if ( bPlayerPending )
         {
-            _bAmmoPending                   = SW_FALSE;
             const GameObject*       pObject = pManager->resolveGameObject( _player );
             ShooterPlayerComponent* pPlayer = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
-            if ( pPlayer != nullptr )
+            if ( pPlayer != nullptr && _bAmmoPending == SW_TRUE )
                 pPlayer->addWaveAmmo();
+            if ( pPlayer != nullptr && _pendingHeal > 0.0f )
+                pPlayer->restoreHealth( _pendingHeal );
+            _bAmmoPending = SW_FALSE;
+            _pendingHeal  = 0.0f;
         }
         for ( const utf8* pPath : _listPendingSound )
             (void)GameSound::play( pPath );
@@ -418,11 +533,26 @@ namespace sw
         {
             if ( pObject != nullptr )
                 manager.destroyObject( pObject );
+            if ( request._spawnId != 0 && _bPacingReady == SW_TRUE )
+                (void)_director.notifyDespawned( request._spawnId ); // 서지 못한 드론의 예산 자리를 돌려준다
             return;
         }
         applyDroneLook( *pMesh );
-        pDrone->launch( getOwner()->getHandle(), request._position, request._health, request._speed, request._bobPhase );
-        _listDrone.push_back( pObject->getHandle() );
+        // 스폰 자리를 차례로 돈다. 한 바퀴를 돌 때마다 옆으로 1.2 m 비켜 같은 자리에 겹쳐 서지 않는다.
+        float3 position{ 0.0f, _droneHeight, 0.0f };
+        if ( _listSpawnPoint.empty() == false )
+        {
+            const uint32          pointCount = static_cast<uint32>( _listSpawnPoint.size() );
+            const GameObject*     pPoint     = manager.resolveGameObject( _listSpawnPoint[request._slot % pointCount] );
+            const SceneComponent* pScene     = pPoint != nullptr ? pPoint->getPrimarySceneComponent() : nullptr;
+            const float3          base       = pScene != nullptr ? pScene->getWorldPosition() : float3{ 0.0f, 0.0f, 0.0f };
+            position                         = base + float3{ static_cast<float32>( request._slot / pointCount % 3u ) * 1.2f, _droneHeight, 0.0f };
+        }
+        pDrone->launch( getOwner()->getHandle(), position, request._health, request._speed, request._bobPhase );
+        DroneRecord record;
+        record._object  = pObject->getHandle();
+        record._spawnId = request._spawnId;
+        _listDrone.push_back( record );
     }
 
     void ShooterDirectorComponent::applyDroneLook( MeshComponent& mesh )
@@ -470,12 +600,17 @@ namespace sw
         _listDroneView.clear();
         if ( pManager == nullptr )
             return;
+        int32 nearCount = 0;
         for ( size_t droneIndex = 0; droneIndex < _listDrone.size(); )
         {
-            GameObject*                  pObject = pManager->resolveGameObject( _listDrone[droneIndex] );
+            GameObject*                  pObject = pManager->resolveGameObject( _listDrone[droneIndex]._object );
             const ShooterDroneComponent* pDrone  = pObject != nullptr ? pObject->getComponent<ShooterDroneComponent>() : nullptr;
             if ( pDrone == nullptr || pDrone->isDead() )
             {
+                if ( _bPacingReady == SW_TRUE && _listDrone[droneIndex]._spawnId != 0 )
+                    (void)_director.notifyDespawned( _listDrone[droneIndex]._spawnId );
+                if ( _bPacingReady == SW_TRUE && pDrone != nullptr )
+                    (void)_director.getBuiltinIntensityModel().addSignal( hashed_string( "droneKilled" ), 1.0f );
                 if ( pDrone != nullptr )
                 {
                     ++_killCount;
@@ -493,12 +628,16 @@ namespace sw
                 continue;
             }
             ShooterDroneView view;
-            view._object   = _listDrone[droneIndex];
+            view._object   = _listDrone[droneIndex]._object;
             view._position = pDrone->getPosition();
             view._radius   = pDrone->getRadius();
             _listDroneView.push_back( view );
+            const float3 toPlayer = view._position - _playerEye;
+            nearCount += toPlayer.getLength() < ShooterDirectorComponentInternal::kNearDistance ? 1 : 0;
             ++droneIndex;
         }
+        if ( _bPacingReady == SW_TRUE )
+            (void)_director.getBuiltinIntensityModel().setSignal( hashed_string( "dronesNear" ), static_cast<float32>( nearCount ) );
     }
 
     void ShooterDirectorComponent::updatePlayerView()
@@ -506,8 +645,11 @@ namespace sw
         GameObjectManager*            pManager = getObjectManager();
         const GameObject*             pObject  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
         const ShooterPlayerComponent* pPlayer  = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
-        if ( pPlayer != nullptr )
-            _playerEye = pPlayer->getEyePosition();
+        if ( pPlayer == nullptr )
+            return;
+        _playerEye = pPlayer->getEyePosition();
+        if ( _bPacingReady == SW_TRUE )
+            (void)_director.getBuiltinIntensityModel().setSignal( hashed_string( "lowAmmo" ), pPlayer->computeAmmoShortage() );
     }
 
     void ShooterDirectorComponent::logStatus( float32 deltaTime )
@@ -523,8 +665,9 @@ namespace sw
             return;
         [[maybe_unused]] const WeaponState& weapon  = pPlayer->getCurrentWeapon();
         [[maybe_unused]] const uint32       percent = pPlayer->getShotCount() > 0u ? pPlayer->getHitCount() * 100u / pPlayer->getShotCount() : 0u;
-        SW_LOG_INFO( "[Shooter] wave %# · kills %# · HP %# · %# %#/%# · drones %# · accuracy %#%%", _wave, _killCount, static_cast<int32>( pPlayer->getHealth() ),
-                     weapon.getDef()._name.c_str(), weapon.getMagazineAmmo(), weapon.getReserveAmmo(), static_cast<uint32>( _listDrone.size() ), percent );
+        SW_LOG_INFO( "[Shooter] wave %# (%#, intensity %.2f) · kills %# · HP %# · %# %#/%# · drones %# · accuracy %#%%", getWave(), _director.getPhase().c_str(),
+                     _director.getIntensity(), _killCount, static_cast<int32>( pPlayer->getHealth() ), weapon.getDef()._name.c_str(), weapon.getMagazineAmmo(),
+                     weapon.getReserveAmmo(), static_cast<uint32>( _listDrone.size() ), percent );
     }
 
     GameObjectManager* ShooterDirectorComponent::getObjectManager() const

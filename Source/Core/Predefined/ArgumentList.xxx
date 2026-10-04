@@ -49,3 +49,4 @@ SW_REGISTER_ARGUMENT( CHECK_MODELS, false, false, "check-models" )
 SW_REGISTER_ARGUMENT( RENDER_PORTRAITS, "", false, "render-portraits" )
 SW_REGISTER_ARGUMENT( PORTRAIT_SIZE, 256, false, "portrait-size" )
 SW_REGISTER_ARGUMENT( PORTRAIT_DIR, "", false, "portrait-dir" )
+// 크래시 보고 프로세스 `--crash-reporter=<묶음 폴더>` 는 이 목록에 없다 — App 의 main 이 엔진을 세우기 전에 읽고 끝낸다(`CrashReportService::runReporterFromCommandLine`).

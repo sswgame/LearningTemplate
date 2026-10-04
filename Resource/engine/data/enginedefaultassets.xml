@@ -1,6 +1,7 @@
 <EngineDefaultAssets _defaultMaterial="engine/materials/defaultmaterial.material"
                      _shellInputMap="engine/input/default.input.xml"
                      _userSettingsSchema="engine/settings/engine.settings.xml"
+                     _telemetrySchema="engine/telemetry/engine.telemetry.xml"
                      _defaultForwardPipeline="engine/pipeline/forwardpipeline.xml"
                      _defaultDeferredPipeline="engine/pipeline/deferredpipeline.xml"
                      _defaultRenderPass="engine/renderpass/defaultrenderpass.xml"

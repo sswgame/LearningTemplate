@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shooter3D 진행 사건 — 엔진 텔레메트리 스키마(engine/telemetry/engine.telemetry.xml)에 덧붙는다(게임 프리셋 _telemetrySchema).
+     ShooterDirectorComponent 가 남긴다: 새 웨이브에 들어설 때, 판이 끝날 때(쓰러짐). -->
+<TelemetrySchema version="1">
+	<Event id="progression.waveReached" category="progression">
+		<Field name="wave" type="int" required="true"/>
+		<Field name="kills" type="int" required="true"/>
+		<Field name="seconds" type="float"/>
+	</Event>
+	<Event id="progression.roundEnded" category="progression">
+		<Field name="wave" type="int" required="true"/>
+		<Field name="kills" type="int" required="true"/>
+		<Field name="seconds" type="float"/>
+		<Field name="accuracy" type="float"/>
+	</Event>
+</TelemetrySchema>

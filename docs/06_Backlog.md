@@ -269,7 +269,7 @@ cd build/Ninja-Debug/Bin
     HZB 가림 컬링 · 메시 LOD(meshopt) · PSO 미리 만들기 · 에디터 G(프로파일러 표 · GPU 타임스탬프 · RenderDoc · 보기 모드) · 에디터 C(확장 지점) · 에디터 F
     (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · UI 시험 입력 흉내 · 패키징 UI · 에디터 자동화 ·
     타일맵 확장 · 2D 조명/그림자 · 로딩 흐름 · 입력 확장 · 에셋 공정(검증 · XML 비교/병합 · 잠금 · DCC 내보내기) · QA 자동화(봇 · 내구 · 골든 이미지 · 성능 CI ·
-    퍼징) · AI 디렉터 · 텔레메트리 · 크래시 보고 업로드 · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 [대기: cam-views] · 하늘/시간대/높이
+    퍼징) · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 [대기: cam-views] · 하늘/시간대/높이
     안개 [대기: cam-views] · 2D 스켈레탈 · 리타게팅 · 모션 워핑/이동 보정 · 래그돌 + 히트박스 · 절단 런타임 · 군중 포즈 공유 · 되감기 디버거 [넷 다: char-anim,
     래그돌은 char-phys 도] · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서 — reflect-ext 의 문서 생성 뒤) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
     [넷 다: 런타임 UI].
@@ -285,6 +285,10 @@ cd build/Ninja-Debug/Bin
   `IScheduleActivityAnimator` 구현 — `_animation` 이름을 애니메이터 그래프 상태로. (3) 쓰는 게임이 없다 — HarvestValley 마을 사람(데이터
   `game/harvestvalley/data/villagers.schedules.xml` 은 있다, 몸은 `NavAgent` 가 `ScheduleNpcView` 를 따라감, 저장은 `ScheduleSaveState` 를 게임 세이브에).
   (4) 에디터 패널(`dumpTimeline` · `explainNpc` 글을 그대로). (5) 주 단위 · 날짜 범위 일정, 자정을 넘는 칸, 관계 단계(호감도 수치 조건 — 지금은 태그로) 는 없다.
+
+- **Shooter3D 핫 리로드 · 세이브는 처치 수만 잇는다.** 웨이브를 페이싱 감독(`AiDirector`)이 내게 되면서(ai-telemetry) 웨이브는 감독의 주기라, 되살린 판은
+  드론을 걷고 감독을 처음부터 돈다(quick-gf 의 상태 v1 은 웨이브 번호를 실었다 — v2 는 처치 수뿐). 감독 상태(주기 · 시간 · 단계 · 풀 쿨다운 · 예산 · 난수)를
+  `writeState` · `readState` 로 싣고 Shooter3D 가 같이 쓰면 웨이브까지 이어진다.
 
 - **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
   스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
@@ -367,6 +371,11 @@ cd build/Ninja-Debug/Bin
 - **ReflectionParser 강제 include PCH**(`CoreMinimal.h` 를 PCH 로 — 타깃당 ~0.4 s). 캐시 위치 · 무효화가 필요하다. 값이 작아 보류.
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
+
+- **Shipping 은 심볼 없이 링크한다(/DEBUG · PDB 없음).** 그래서 배포본 크래시 묶음의 `buildId` 가 비고(덤프의 모듈에 RSDS 서명이 없다) 덤프를 심볼과 짝지을
+  수 없다. 상용 엔진처럼 Shipping 도 `/Z7`(또는 `/Zi`) + `/DEBUG:FULL` 로 PDB 를 만들고 패키지에서는 빼서 심볼 저장소에 넣는 단계가 필요하다
+  (`Source/Engine/Telemetry/README.md` "심볼 · 빌드 id 짝짓기"). 빌드 시간 · 캐시에 닿는 결정이라 미뤘다 — 정하면 `ModuleBuildIdTest` · `CrashBundleTest` 의
+  `SW_SHIPPING` 예외를 지운다.
 
 
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
@@ -1173,6 +1182,8 @@ cd build/Ninja-Debug/Bin
 - **크래시** — 엔진이 만드는 스레드는 시작할 때 `CrashHandler::initializeCurrentThread()`(빠뜨리면 스택 오버플로 덤프가 0 바이트). Windows 덤프는 보고 스레드가 `PssCaptureSnapshot` 으로
   쓴다(살아 있는 자기 프로세스를 `MiniDumpWriteDump` 하면 로더 락에 멈춘다 — 재현은 자식 12 개 × 400 회). 크래시 경로 로그는 `Logger::flushGlobalForCrash`(락을 못 잡으면 포기).
   시한은 `setReportDeadline`(20 초), POSIX 는 `alarm` + SIGALRM, `backtrace()` 예열. 실물 확인 `-gv_crashTest=1..5`. 크래시 보고 본문은 `CrashContext.cpp` 의 `writeCrashReport`.
+  묶음 · 올리기는 다음 실행의 `CrashReportService`(Engine/Telemetry). 보고 프로세스는 `setReporterExecutable` 을 정한 호스트(App)만 띄운다 — 경로를
+  `getExecutablePath` 로 잡았더니 시험 실행 파일이 `--crash-reporter=` 를 모른 채 자기를 끝없이 다시 띄웠다(실측).
 - **프로세스** — 자식 상속은 Windows `PROC_THREAD_ATTRIBUTE_HANDLE_LIST`, POSIX CLOEXEC + `close_range`(아니면 동시에 띄운 자식이 서로의 파이프를 문다). 띄우기만 할 때는 `Process::launchDetached`
   (`execute` 는 UI 스레드를 세운다, `explorer.exe /select,` 는 성공해도 1). POSIX: `isRunning` 은 `waitid(..., WNOWAIT)`, `terminate` 는 그룹째, pid 는 한 번만 읽는다(0 이면 `kill(-0)`).
 - **파일** — 쓰기는 원자적이다(`writeAtomically` → 같은 폴더 임시 파일 → `replaceFile`, Windows 는 `FileRenameInfoEx` POSIX 의미). Windows 읽기는 Win32(`readRange`) — `fopen_s` 는 ANSI 라

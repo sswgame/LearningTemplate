@@ -197,6 +197,32 @@ namespace sw
         ++_entryCount;
     }
 
+    CrashBreadcrumbStore& CrashBreadcrumbStore::get()
+    {
+        static CrashBreadcrumbStore s_store{};
+        return s_store;
+    }
+
+    void CrashBreadcrumbStore::add( string_view text )
+    {
+        const uint32 slot = _pushedCount.fetch_add( 1 ) % kMaxBreadcrumb;
+        _arrEntry[slot]   = text.size() < kMaxLength ? text : text.substr( 0, kMaxLength - 1 );
+    }
+
+    uint32 CrashBreadcrumbStore::writeText( utf8* pOutText, uint32 capacity ) const
+    {
+        if ( pOutText == nullptr || capacity == 0 )
+            return 0;
+        pOutText[0]         = '\0';
+        const uint32 pushed = _pushedCount.load();
+        const uint32 count  = pushed < kMaxBreadcrumb ? pushed : kMaxBreadcrumb;
+        const uint32 first  = pushed - count;
+        uint32       length = 0;
+        for ( uint32 index = 0; index < count; ++index )
+            appendLine( pOutText, capacity, length, "%#\n", _arrEntry[( first + index ) % kMaxBreadcrumb].c_str() );
+        return length;
+    }
+
     const utf8* getCrashSessionId()
     {
         return makeSessionId();
@@ -254,6 +280,19 @@ namespace sw
         }
 
         writeWholeFile( arrPath, arrReport, length );
+        // 빵부스러기도 할당 없는 단계에서 쓴다 — 컨텍스트 파일과 같은 자리(심볼 변환 · 스택 보고보다 먼저).
+        writeCrashBreadcrumbFile();
+    }
+
+    void writeCrashBreadcrumbFile()
+    {
+        utf8         arrText[CrashBreadcrumbStore::kMaxBreadcrumb * CrashBreadcrumbStore::kMaxLength]{};
+        const uint32 length = CrashBreadcrumbStore::get().writeText( arrText, static_cast<uint32>( sizeof( arrText ) ) );
+        if ( length == 0 )
+            return;
+        utf8 arrPath[constant::kMaxBuffer1024]{};
+        buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "breadcrumbs.txt" );
+        writeWholeFile( arrPath, arrText, length );
     }
 
     void writeCrashStackFile( const utf8* pStackText )
@@ -384,6 +423,11 @@ namespace sw
     void CrashHandler::setContextValue( string_view key, string_view value )
     {
         CrashContextStore::get().set( key, value );
+    }
+
+    void CrashHandler::addBreadcrumb( string_view text )
+    {
+        CrashBreadcrumbStore::get().add( text );
     }
 
     const utf8* CrashHandler::getSessionId()

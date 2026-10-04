@@ -22,6 +22,8 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Telemetry/CrashReportService.h"
+#include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"

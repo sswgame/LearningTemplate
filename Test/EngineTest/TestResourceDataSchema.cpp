@@ -27,9 +27,12 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "GameFramework/AI/Director/AiDirectorProfile.h"
 #include "GameFramework/AI/Schedule/ScheduleCatalog.h"
+#include "GameFramework/AI/SpawnDirector.h"
 #include "GameFramework/Ability/AbilityCatalog.h"
 #include "GameFramework/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Camera/CameraPreset.h"
@@ -74,6 +77,9 @@ namespace
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
         static bool isSchedules( sw::string_view resourceId ) { return endsWith( resourceId, ".schedules.xml" ); }
+        static bool isAiDirector( sw::string_view resourceId ) { return endsWith( resourceId, ".director.xml" ); }
+        static bool isSpawnTable( sw::string_view resourceId ) { return endsWith( resourceId, ".spawns.xml" ); }
+        static bool isTelemetrySchema( sw::string_view resourceId ) { return endsWith( resourceId, ".telemetry.xml" ); }
         static bool isUserSettingsSchema( sw::string_view resourceId ) { return endsWith( resourceId, ".settings.xml" ); }
         static bool isPhysicsSettings( sw::string_view resourceId ) { return endsWith( resourceId, "physicssettings.xml" ); }
         static bool isPhysicsAsset( sw::string_view resourceId ) { return endsWith( resourceId, ".physics.xml" ); }
@@ -266,6 +272,9 @@ namespace
             {    "physicssettings",     &isPhysicsSettings,                    &loadPhysicsSettings},
             {       "physicsasset",        &isPhysicsAsset,                       &loadPhysicsAsset},
             {          "schedules",           &isSchedules,       &loadCatalog<sw::ScheduleCatalog>},
+            {         "aidirector",          &isAiDirector,     &loadCatalog<sw::AiDirectorProfile>},
+            {         "spawntable",          &isSpawnTable,            &loadCatalog<sw::SpawnTable>},
+            {    "telemetryschema",     &isTelemetrySchema,       &loadCatalog<sw::TelemetrySchema>},
             {       "usersettings",  &isUserSettingsSchema,                 &loadUserSettingsSchema},
             {          "abilities",           &isAbilities,        &loadCatalog<sw::AbilityCatalog>},
             {              "crops",               &isCrops,           &loadCatalog<sw::CropCatalog>},
