@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 
 namespace sw
@@ -33,6 +34,42 @@ namespace sw
             static constexpr float3 kShippingBinPosition{ 13.4f, 0.0f, 1.0f };
             static constexpr float3 kShopPosition{ -1.6f, 0.0f, 5.0f };
             static constexpr float3 kPlayerStart{ 6.0f, 0.0f, -1.2f };
+
+            /**
+             * @brief Kenney Nature Kit 모델의 배율입니다. 키트는 밭 한 줄(`crops_dirt_row`)이 1 이라 키트 1 칸이 밭 1 칸이지만, 위에서 비스듬히 보는
+             *        직교 카메라에서 작물 · 울타리가 콩알만 해서 1.6 배로 키운다(작물 폭 0.35 → 0.56 m, 칸 안에 들어간다).
+             * @details 모델은 바닥이 원점보다 0.05 아래다(키트 노드가 내려 둔 값) — 흙 윗면에 얹을 때 그만큼 올린다.
+             */
+            static constexpr float32 kModelScale = 1.6f;
+            static constexpr float32 kModelFloor = 0.05f;
+            static constexpr float32 kSoilTop    = 0.08f;
+            static constexpr float32 kHouseScale = 5.5f; ///< 작은 천막(폭 0.55)을 집 크기(폭 3 m)로 — 더 크면 앞줄 밭을 가린다
+            static constexpr float32 kShopScale  = 4.0f; ///< 열린 천막(가게) — 농부(키 1 m)가 들어설 만큼
+            static constexpr float32 kTreeScale  = 2.4f; ///< 나무 키 1.7 → 4 m
+
+            static string makeModelPath( const utf8* pName ) { return string( "game/harvestvalley/models/" ) + pName + ".mesh"; }
+
+            /** @brief 다 자란 작물이 따로 모델을 가졌으면 그 이름, 아니면 nullptr 입니다(잎 모델에 작물 색을 입힌다). */
+            static const utf8* findReadyCropModel( const hashed_string& cropId )
+            {
+                if ( cropId == hashed_string( "turnip" ) || cropId == hashed_string( "onion" ) )
+                    return "crop_turnip";
+                if ( cropId == hashed_string( "carrot" ) )
+                    return "crop_carrot";
+                if ( cropId == hashed_string( "pumpkin" ) )
+                    return "crop_pumpkin";
+                if ( cropId == hashed_string( "corn" ) )
+                    return "crops_corn_stage_d";
+                return nullptr;
+            }
+
+            /** @brief 자라는 중인 작물의 모델입니다 — 옥수수는 제 단계 모델, 나머지는 잎 두 단계. */
+            static const utf8* findGrowingCropModel( const hashed_string& cropId, int32 stage )
+            {
+                if ( cropId == hashed_string( "corn" ) )
+                    return stage <= 1 ? "crops_corn_stage_a" : ( stage == 2 ? "crops_corn_stage_b" : "crops_corn_stage_c" );
+                return stage <= 1 ? "crops_leafs_stage_a" : "crops_leafs_stage_b";
+            }
 
             static int32 getToolStaminaCost( FarmTool tool )
             {
@@ -176,17 +213,18 @@ namespace sw
         if ( _stage.begin( "HarvestValley" ) == false )
             return false;
 
-        // 땅 · 집 · 출하함 · 가게.
+        // 땅 · 집(천막) · 출하함 · 가게(열린 천막). 모델은 키트의 머티리얼 색을 정점 색으로 들고 있어 텍스처 없이 흰 모습이다.
+        using Internal                = FarmWorldInternal;
+        const PrimitiveLook modelLook = PrimitiveLook{};
         (void)_stage.createPrimitiveObject( "FarmMeadow", "Plane", PrimitiveLook::makeColor( float4{ 0.42f, 0.62f, 0.30f, 1.0f } ), float3{ 6.0f, -0.01f, 3.0f },
                                             float3{ 34.0f, 1.0f, 26.0f } );
-        (void)_stage.createPrimitiveObject( "FarmHouse", "Cube", PrimitiveLook::makeColor( float4{ 0.85f, 0.75f, 0.60f, 1.0f } ),
-                                            FarmWorldInternal::kHousePosition + float3{ 0.0f, 1.25f, 0.0f }, float3{ 4.0f, 2.5f, 3.0f } );
-        (void)_stage.createPrimitiveObject( "FarmRoof", "Cone", PrimitiveLook::makeColor( float4{ 0.70f, 0.22f, 0.18f, 1.0f } ),
-                                            FarmWorldInternal::kHousePosition + float3{ 0.0f, 3.2f, 0.0f }, float3{ 5.0f, 1.4f, 4.0f } );
+        (void)_stage.createModelObject( "FarmHouse", Internal::makeModelPath( "tent_small_closed" ), modelLook, Internal::kHousePosition,
+                                        float3{ Internal::kHouseScale } );
         (void)_stage.createPrimitiveObject( "FarmShippingBin", "Cube", PrimitiveLook::makeColor( float4{ 0.55f, 0.35f, 0.18f, 1.0f } ),
-                                            FarmWorldInternal::kShippingBinPosition + float3{ 0.0f, 0.4f, 0.0f }, float3{ 1.2f, 0.8f, 1.0f } );
-        (void)_stage.createPrimitiveObject( "FarmShop", "Cube", PrimitiveLook::makeColor( float4{ 0.30f, 0.45f, 0.85f, 1.0f } ),
-                                            FarmWorldInternal::kShopPosition + float3{ 0.0f, 0.75f, 0.0f }, float3{ 2.0f, 1.5f, 2.0f } );
+                                            Internal::kShippingBinPosition + float3{ 0.0f, 0.4f, 0.0f }, float3{ 1.2f, 0.8f, 1.0f } );
+        (void)_stage.createModelObject( "FarmShop", Internal::makeModelPath( "tent_detailed_open" ), modelLook, Internal::kShopPosition, float3{ Internal::kShopScale },
+                                        float3{ 0.0f, Internal::kPi * 0.5f, 0.0f } );
+        spawnDecoration();
 
         // 칸마다 흙 · 작물. 모습은 refreshViews 가 상태에 맞춰 칠한다.
         _listTileView.assign( static_cast<size_t>( kFieldWidth * kFieldHeight ), TileView{} );
@@ -197,7 +235,8 @@ namespace sw
                 TileView&    view   = _listTileView[static_cast<size_t>( y * kFieldWidth + x )];
                 const float3 center = FarmWorldInternal::getTileCenter( x, y );
                 GameObject*  pSoil  = _stage.createPrimitiveObject( "FarmSoil", "Cube", PrimitiveLook{}, center + float3{ 0.0f, 0.04f, 0.0f }, float3{ 0.96f, 0.08f, 0.96f } );
-                GameObject*  pCrop  = _stage.createPrimitiveObject( "FarmCrop", "Sphere", PrimitiveLook{}, center + float3{ 0.0f, 0.2f, 0.0f }, float3{ 0.2f } );
+                GameObject*  pCrop  = _stage.createModelObject( "FarmCrop", Internal::makeModelPath( "crops_leafs_stage_a" ), modelLook, center,
+                                                                float3{ Internal::kModelScale } );
                 view._soil          = pSoil != nullptr ? pSoil->getHandle() : GameObjectHandle{};
                 view._crop          = pCrop != nullptr ? pCrop->getHandle() : GameObjectHandle{};
             }
@@ -218,6 +257,59 @@ namespace sw
         SW_LOG_INFO( "[Farm] farm is ready - WASD move, Space use tool, 1-4 tool (hoe/can/seeds/hand), Q/E seed, B buy, F ship, Z sleep" );
         logStatus( true );
         return true;
+    }
+
+    void FarmWorld::spawnDecoration()
+    {
+        // 밭 뒤(북쪽) 울타리 한 줄. 조각은 칸의 -Z 가장자리에 서 있어 칸 가운데를 +Z 로 반 칸 민 자리에 둔다.
+        using Internal                 = FarmWorldInternal;
+        const PrimitiveLook modelLook  = PrimitiveLook{};
+        const float32       scale      = Internal::kModelScale;
+        const float32       fenceZ     = static_cast<float32>( kFieldHeight ) + 0.6f;
+        const int32         pieceCount = static_cast<int32>( MathUtil::ceil( ( static_cast<float32>( kFieldWidth ) + 2.0f ) / scale ) );
+        for ( int32 pieceIndex = 0; pieceIndex < pieceCount; ++pieceIndex )
+        {
+            const float32 x = -1.0f + ( static_cast<float32>( pieceIndex ) + 0.5f ) * scale;
+            (void)_stage.createModelObject( "FarmFence", Internal::makeModelPath( "fence_simple" ), modelLook, float3{ x, 0.0f, fenceZ + 0.5f * scale },
+                                            float3{ scale } );
+        }
+
+        // 밭 양옆 · 울타리 뒤 나무 · 집 옆 장작 · 그루터기 · 덤불과 꽃. 자리는 고정이라 실행마다 같다.
+        constexpr float3 kArrTreePosition[] = {
+            {-6.5f, 0.0f, -1.0f},
+            {-7.5f, 0.0f,  3.5f},
+            {-6.0f, 0.0f,  8.0f},
+            {-1.5f, 0.0f, 10.8f},
+            {14.5f, 0.0f, 10.5f},
+            {18.0f, 0.0f,  7.0f},
+            {19.0f, 0.0f,  2.0f},
+            {18.0f, 0.0f, -3.0f},
+        };
+        for ( int32 treeIndex = 0; treeIndex < 8; ++treeIndex )
+        {
+            (void)_stage.createModelObject( "FarmTree", Internal::makeModelPath( treeIndex % 3 == 1 ? "tree_default_fall" : "tree_default" ), modelLook,
+                                            kArrTreePosition[treeIndex], float3{ Internal::kTreeScale }, float3{ 0.0f, static_cast<float32>( treeIndex ) * 0.9f, 0.0f } );
+        }
+        (void)_stage.createModelObject( "FarmLog", Internal::makeModelPath( "log" ), modelLook, Internal::kHousePosition + float3{ 3.2f, 0.0f, 0.4f }, float3{ 2.5f },
+                                        float3{ 0.0f, 0.3f, 0.0f } );
+        (void)_stage.createModelObject( "FarmStump", Internal::makeModelPath( "stump_round" ), modelLook, Internal::kHousePosition + float3{ 3.6f, 0.0f, -1.1f },
+                                        float3{ 2.5f } );
+        struct Plant
+        {
+            const utf8* _pModel;
+            float3      _position;
+        };
+        const Plant kArrPlant[] = {
+            {     "plant_bush", float3{ -4.0f, 0.0f, -2.0f }},
+            {   "flower_red_a", float3{ -3.2f, 0.0f, -1.2f }},
+            {"flower_yellow_a",  float3{ 2.5f, 0.0f, -4.5f }},
+            {     "plant_bush",  float3{ 16.0f, 0.0f, 4.0f }},
+            {   "flower_red_a",  float3{ 15.5f, 0.0f, 6.0f }},
+            {"flower_yellow_a",  float3{ 9.5f, 0.0f, -4.0f }},
+            {     "plant_bush",  float3{ -3.5f, 0.0f, 9.5f }},
+        };
+        for ( const Plant& plant : kArrPlant )
+            (void)_stage.createModelObject( "FarmPlant", Internal::makeModelPath( plant._pModel ), modelLook, plant._position, float3{ 3.0f } );
     }
 
     void FarmWorld::despawn()
@@ -282,6 +374,7 @@ namespace sw
             {
                 _tool = kArrTool[toolIndex];
                 SW_LOG_INFO( "[Farm] tool: %#", FarmWorldInternal::toToolName( _tool ) );
+                (void)GameSound::play( "game/harvestvalley/sounds/select_002.ogg" );
             }
         }
         if ( input.wasKeyPressed( Key::Q ) )
@@ -489,6 +582,8 @@ namespace sw
                 result = _field.plant( x, y, seed, _calendar.getSeason() );
                 if ( result == FarmActionResult::Done && _inventory.removeItem( seed, 1 ) == false )
                     SW_LOG_WARNING( "[Farm] planted without a seed in the bag" );
+                if ( result == FarmActionResult::Done )
+                    (void)GameSound::play( "game/harvestvalley/sounds/drop_002.ogg" );
                 break;
             }
             case FarmTool::Hand:
@@ -500,6 +595,7 @@ namespace sw
                 {
                     _inventory.addItem( produce, count );
                     SW_LOG_INFO( "[Farm] harvested %# x%#", produce.c_str(), count );
+                    (void)GameSound::play( "game/harvestvalley/sounds/pluck_001.ogg" );
                 }
                 break;
             }
@@ -525,7 +621,10 @@ namespace sw
                 shipped += count;
         }
         if ( shipped > 0 )
+        {
             SW_LOG_INFO( "[Farm] shipped %# items - paid tonight", shipped );
+            (void)GameSound::play( "game/harvestvalley/sounds/confirmation_001.ogg" );
+        }
         return shipped;
     }
 
@@ -642,18 +741,20 @@ namespace sw
                 pCrop->setVisible( pTile->hasCrop() );
                 if ( pTile->hasCrop() == false )
                     continue;
-                float4  color = float4{ 0.35f, 0.75f, 0.30f, 1.0f };
-                float32 size  = 0.18f + 0.35f * ratio;
+                // 모델은 단계마다 바꾸고, 색은 정점 색 그대로(흰 모습). 시든 작물은 갈색으로, 제 모델이 없는 작물은 다 자라면 잎에 작물 색을 입힌다.
+                using Internal          = FarmWorldInternal;
+                const utf8* pReadyModel = pTile->_bReady != SW_FALSE ? Internal::findReadyCropModel( pTile->_cropId ) : nullptr;
+                const utf8* pModel      = pReadyModel != nullptr ? pReadyModel : Internal::findGrowingCropModel( pTile->_cropId, stage );
+                float4      color       = float4{ 1.0f, 1.0f, 1.0f, 1.0f };
                 if ( pTile->_bWithered != SW_FALSE )
-                    color = float4{ 0.45f, 0.35f, 0.20f, 1.0f };
-                else if ( pTile->_bReady != SW_FALSE )
-                {
-                    color = FarmWorldInternal::findCropColor( pTile->_cropId );
-                    size  = 0.6f;
-                }
+                    color = float4{ 0.55f, 0.40f, 0.22f, 1.0f };
+                else if ( pTile->_bReady != SW_FALSE && pReadyModel == nullptr )
+                    color = Internal::findCropColor( pTile->_cropId );
+                const float32 size = Internal::kModelScale * ( pTile->_bReady != SW_FALSE ? 1.0f : 0.7f + 0.3f * ratio );
+                pCrop->setMeshId( Internal::makeModelPath( pModel ) );
                 _stage.setLook( *pCrop, PrimitiveLook::makeColor( color ) );
                 pCrop->setLocalScale( float3{ size } );
-                pCrop->setLocalPosition( FarmWorldInternal::getTileCenter( x, y ) + float3{ 0.0f, 0.08f + size * 0.5f, 0.0f } );
+                pCrop->setLocalPosition( Internal::getTileCenter( x, y ) + float3{ 0.0f, Internal::kSoilTop + Internal::kModelFloor * size, 0.0f } );
             }
         }
 

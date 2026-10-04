@@ -74,6 +74,8 @@ namespace sw
             int32            _cropState{ -1 };
         };
 
+        /** @brief 울타리 · 나무 · 장작 · 덤불 · 꽃을 세웁니다(모습만, 규칙과 무관). */
+        void spawnDecoration();
         void updatePlayerInput( float32 deltaTime, const InputManager& input );
         void updateAutoFarmer( float32 deltaTime );
         /** @brief 농부를 @p direction 으로 움직이고 바라보는 쪽을 네 방향으로 맞춥니다. */
