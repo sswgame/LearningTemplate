@@ -32,7 +32,10 @@
 			                           _syncWeight="1"
 			                           _bExtractRootMotion="false"
 			                           _bPlayOnBegin="true" />
-			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetId="ShooterPlayer" _seed="0" />
+			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
+			                              _bActive="true"
+			                              _presetId="ShooterPlayer"
+			                              _seed="0" />
 			<ShooterAvatarComponent _componentName="ShooterAvatarComponent"
 			                        _bActive="true"
 			                        _player="0"
