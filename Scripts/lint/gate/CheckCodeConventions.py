@@ -490,7 +490,9 @@ def isPluralWordInternal(word: str) -> bool:
 # 백만 번이 넘어 초 단위가 된다. 줄마다 부르는 패턴은 여기서 미리 컴파일한다.
 _kTrailingArraySuffixRe = re.compile(r'\[[^\]]*\]$')
 _kTrailingIdentifierRe = re.compile(r'([A-Za-z0-9_]+)$')
-_kParameterTypeRe = re.compile(r'^(?:(?:const|volatile|register)\s+)?(?:[A-Za-z0-9_:]+(?:<[^>]+>)?(?:\s*[*&]+)?\s*)+$')
+# 식별자 뒤의 `(?![A-Za-z0-9_:])` 는 식별자를 끝까지 먹게 한다 — 없으면 반복 안의 `[...]+` 와 빈 `\s*` 가 식별자를 몇 조각으로든
+# 나눌 수 있어 맞지 않는 입력에서 역추적이 지수로 는다(`const Name<T> ( &` 한 줄에 7 초). 받는 문자열 집합은 같다.
+_kParameterTypeRe = re.compile(r'^(?:(?:const|volatile|register)\s+)?(?:[A-Za-z0-9_:]+(?![A-Za-z0-9_:])(?:<[^>]+>)?(?:\s*[*&]+)?\s*)+$')
 _kTemplateArgumentRe = re.compile(r'<[^>]*>')
 _kStringLiteralStripRe = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
 _kFunctionSignatureTailRe = re.compile(r'\([a-zA-Z0-9_,\s*&:<>=./"-]*\)\s*(?:const|override|final|noexcept|SW_\w*API)*\s*[{;=]')
@@ -1323,6 +1325,42 @@ def readHeaderClassMembersInternal(headerPath: Path) -> dict:
         return {}
 
 
+#: 줄 안에서 블록 주석 상태를 바꾸거나 막는 자리 — 문자열 · 문자 리터럴(그 안의 `/*` 는 주석이 아니다), `//`, `/*`.
+_kBlockCommentTokenRe = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|//|/\*')
+
+
+def endsInsideBlockCommentInternal(line: str, bInsideAtStart: bool) -> bool:
+    """
+    줄 하나를 왼쪽부터 읽어, 줄이 끝날 때 블록 주석 안인지 돌려줍니다(`bInsideAtStart` 는 줄을 시작할 때의 상태).
+
+    주석 밖에서는 문자열 · 문자 리터럴을 건너뛴다 — `"a/*b"` 의 `/*` 를 주석 시작으로 읽으면 그 뒤 `*/` 가 나올 때까지 모든 줄이
+    검사에서 빠진다. `//` 뒤는 줄 끝까지 주석이다. 주석 안에서는 `*/` 만 찾는다(주석 안의 따옴표는 문자열이 아니다).
+    """
+    index = 0
+    bInside = bInsideAtStart
+    while True:
+        if bInside:
+            closeAt = line.find("*/", index)
+            if closeAt < 0:
+                return True
+            bInside = False
+            index = closeAt + 2
+        tokenMatch = _kBlockCommentTokenRe.search(line, index)
+        if tokenMatch is None:
+            return False
+        token = tokenMatch.group()
+        if token == "//":
+            return False
+        bInside = token == "/*"
+        index = tokenMatch.end()
+
+
+@functools.lru_cache(maxsize=None)
+def compileHeaderCtorReInternal(className: str) -> re.Pattern:
+    """헤더 클래스 본문의 생성자 선언(`Name(...)`). 클래스 이름이 수천 개라 `re` 모듈 캐시(512)로는 줄마다 다시 컴파일된다."""
+    return re.compile(rf'\b{className}\s*\([^)]*\)')
+
+
 def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[ConventionViolation]:
     violations: list[ConventionViolation] = []
     relPath = normalizePath(filePath.relative_to(rootDir))
@@ -1373,13 +1411,12 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
     for lineNum, line in enumerate(lines, start=1):
         trimmed = line.strip()
 
-        # 블록 주석 처리
-        if "/*" in trimmed and "*/" not in trimmed:
-            inBlockComment = True
-            continue
+        # 블록 주석 처리 — 주석을 여는 줄 · 닫는 줄은 통째로 건너뛴다. 문자열 · `//` 안의 `/*` 는 주석을 열지 않는다.
         if inBlockComment:
-            if "*/" in trimmed:
-                inBlockComment = False
+            inBlockComment = endsInsideBlockCommentInternal(trimmed, True)
+            continue
+        if "/*" in trimmed and endsInsideBlockCommentInternal(trimmed, False):
+            inBlockComment = True
             continue
         if trimmed.startswith("//") or not trimmed:
             continue
@@ -1445,7 +1482,7 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                 ctorInitStartLine = lineNum
                 inCtorInitList = False
         else:
-            if classStack and (ctorMatch := re.search(rf'\b{classStack[-1][0]}\s*\([^)]*\)', trimmed)):
+            if classStack and classStack[-1][0] in trimmed and compileHeaderCtorReInternal(classStack[-1][0]).search(trimmed):
                 if not trimmed.endswith(";"):
                     currentCtorClass = classStack[-1][0]
                     ctorInitMembers = []
@@ -1811,6 +1848,9 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
         except OSError:
             continue
         for line in lines:
+            # 세 선언 정규식 모두 `_b` 이름(`_kBoolNamePattern`)을 요구한다.
+            if "_b" not in line:
+                continue
             stripped = line.strip()
             if stripped.startswith(("//", "*", "/*")):
                 continue
@@ -1847,7 +1887,11 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
             relPath = normalizePath(filePath.relative_to(projectRoot))
         except ValueError:
             relPath = normalizePath(filePath)
+        if "_b" not in content:
+            continue
         for lineNum, line in enumerate(content.splitlines(), start=1):
+            if "_b" not in line:
+                continue
             stripped = line.strip()
             if stripped.startswith(("//", "*", "/*")):
                 continue
@@ -1897,62 +1941,68 @@ _kCtorOutOfLineRe = re.compile(
     r"^\s*(?:template\s*<.*>\s*)?(?:(?:inline|constexpr)\s+)*((?:[A-Za-z_]\w*(?:<[^<>]*>)?::)*)([A-Za-z_]\w*)(?:<[^<>]*>)?::(\2)\s*\(")
 
 
+#: 평범한 코드 사이에서 멈출 자리 — 주석 시작 · 날 문자열 · 따옴표 · 줄바꿈. 그 사이는 덩어리째 옮긴다.
+_kCtorStripStopRe = re.compile(r'/\*|//|R"|["\'\n]')
+#: 문자열 · 문자 리터럴 본문 — 백슬래시는 다음 글자(줄바꿈 포함)와 함께 건너뛴다. 닫는 따옴표 · 줄바꿈 앞에서 멈춘다.
+_kCtorStripDoubleQuoteBodyRe = re.compile(r'(?:\\[\s\S]|[^"\\\n])*')
+_kCtorStripSingleQuoteBodyRe = re.compile(r"(?:\\[\s\S]|[^'\\\n])*")
+
+
 def stripCodeForCtorScanInternal(content: str) -> list[str]:
     """
     주석 · 문자열 · 문자 리터럴을 지운 줄 목록(줄 번호는 그대로). 중괄호 깊이와 초기화 목록을 글자 단위로 세려면 필요하다.
+
+    글자마다 파이썬 루프를 돌지 않고 멈출 자리(`_kCtorStripStopRe`)까지 덩어리째 옮긴다 — 글자 루프는 트리 전체에서 수십 초가
+    든다. 날 문자열이 여러 줄이면 그 줄 수만큼 빈 줄을 **앞에** 넣고 닫힌 뒤의 글자는 그 줄에 이어 붙인다(줄 수만 맞춘다).
     """
     listOut: list[str] = []
     current: list[str] = []
     index = 0
     length = len(content)
-    bInBlockComment = False
     while index < length:
-        character = content[index]
-        if bInBlockComment:
-            if content.startswith("*/", index):
-                bInBlockComment = False
-                index += 2
-                continue
-            if character == "\n":
-                listOut.append("".join(current))
-                current = []
-            index += 1
-            continue
-        if content.startswith("/*", index):
-            bInBlockComment = True
-            index += 2
-            continue
-        if content.startswith("//", index):
-            newline = content.find("\n", index)
-            index = length if newline < 0 else newline
-            continue
-        if character == "R" and content.startswith('R"', index) and (index == 0 or not (content[index - 1].isalnum() or content[index - 1] == "_")):
-            openParen = content.find("(", index + 2)
-            if openParen > 0:
-                delimiter = ")" + content[index + 2:openParen] + '"'
-                closeAt = content.find(delimiter, openParen)
-                if closeAt > 0:
-                    current.append('""')
-                    listOut.extend([""] * content.count("\n", index, closeAt))
-                    index = closeAt + len(delimiter)
-                    continue
-        if character in ('"', "'"):
-            quote = character
-            index += 1
-            while index < length and content[index] != quote and content[index] != "\n":
-                index += 2 if content[index] == "\\" else 1
-            index += 1
-            current.append('""' if quote == '"' else "' '")
-            continue
-        if character == "\n":
+        stopMatch = _kCtorStripStopRe.search(content, index)
+        if stopMatch is None:
+            current.append(content[index:])
+            break
+        start = stopMatch.start()
+        if start > index:
+            current.append(content[index:start])
+        token = stopMatch.group()
+        if token == "\n":
             listOut.append("".join(current))
             current = []
+            index = start + 1
+        elif token == "/*":
+            closeAt = content.find("*/", start + 2)
+            end = length if closeAt < 0 else closeAt
+            newlineCount = content.count("\n", start + 2, end)
+            if newlineCount:
+                listOut.append("".join(current))
+                current = []
+                listOut.extend([""] * (newlineCount - 1))
+            index = length if closeAt < 0 else closeAt + 2
+        elif token == "//":
+            newline = content.find("\n", start)
+            index = length if newline < 0 else newline
+        elif token == 'R"':
+            index = start
+            if index == 0 or not (content[index - 1].isalnum() or content[index - 1] == "_"):
+                openParen = content.find("(", index + 2)
+                if openParen > 0:
+                    delimiter = ")" + content[index + 2:openParen] + '"'
+                    closeAt = content.find(delimiter, openParen)
+                    if closeAt > 0:
+                        current.append('""')
+                        listOut.extend([""] * content.count("\n", index, closeAt))
+                        index = closeAt + len(delimiter)
+                        continue
+            current.append("R")
             index += 1
-            continue
-        current.append(character)
-        index += 1
+        else:
+            bodyRe = _kCtorStripDoubleQuoteBodyRe if token == '"' else _kCtorStripSingleQuoteBodyRe
+            index = bodyRe.match(content, start + 1).end() + 1
+            current.append('""' if token == '"' else "' '")
     listOut.append("".join(current))
-
     return listOut
 
 
@@ -2118,6 +2168,12 @@ def isDefaultConstructorParameterListInternal(text: str, openParenIndex: int) ->
     return inner in ("", "void")
 
 
+@functools.lru_cache(maxsize=None)
+def compileInClassCtorReInternal(className: str) -> re.Pattern:
+    """클래스 본문 안의 생성자 선언 머리(`explicit Name(`). 클래스 이름이 수천 개라 `re` 모듈 캐시(512)로는 다시 컴파일된다 — 이름마다 한 번 만든다."""
+    return re.compile(r"^\s*(?:(?:explicit|constexpr|inline|SW_\w+)\s+)*(?:explicit\s*\([^)]*\)\s*)?" + re.escape(className) + r"\s*\(")
+
+
 def scanCtorFileInternal(relPath: str, listLine: list[str], listCondition: list[CtorConditionStack]) -> tuple[list[CtorScanClass], list[tuple[tuple[str, ...], CtorScanConstructor]]]:
     """
     파일 하나에서 클래스(멤버 · 클래스 안 생성자)와 클래스 밖 생성자 정의(`A::B::B(`)를 모은다.
@@ -2134,7 +2190,7 @@ def scanCtorFileInternal(relPath: str, listLine: list[str], listCondition: list[
         depthAtStart = depth
 
         if stripped:
-            headMatch = _kCtorClassHeadRe.match(line)
+            headMatch = _kCtorClassHeadRe.match(line) if ("class" in line or "struct" in line) else None
             if headMatch is not None and not stripped.endswith(";") and not re.match(r"^\s*enum\b", line) \
                     and not re.search(r"\bfriend\b", line):
                 pendingName = headMatch.group(1)
@@ -2143,7 +2199,7 @@ def scanCtorFileInternal(relPath: str, listLine: list[str], listCondition: list[
             bAtMemberDepth = topClass is not None and depthAtStart == classStack[-1][1] + 1
             if bAtMemberDepth:
                 className = topClass.chain[-1]
-                ctorMatch = re.match(r"^\s*(?:(?:explicit|constexpr|inline|SW_\w+)\s+)*(?:explicit\s*\([^)]*\)\s*)?" + re.escape(className) + r"\s*\(", line)
+                ctorMatch = compileInClassCtorReInternal(className).match(line) if className in line else None
                 if ctorMatch is not None:
                     joined = "\n".join(listLine[lineIndex:lineIndex + 80])
                     openParen = ctorMatch.end() - 1
@@ -2182,7 +2238,7 @@ def scanCtorFileInternal(relPath: str, listLine: list[str], listCondition: list[
                                 conditions=listCondition[lineIndex],
                             ))
             elif not classStack or depthAtStart <= classStack[-1][1]:
-                outMatch = _kCtorOutOfLineRe.match(line)
+                outMatch = _kCtorOutOfLineRe.match(line) if "::" in line else None
                 if outMatch is not None:
                     chain = tuple(part.split("<")[0] for part in outMatch.group(1).split("::") if part) + (outMatch.group(2),)
                     joined = "\n".join(listLine[lineIndex:lineIndex + 80])
@@ -2194,6 +2250,11 @@ def scanCtorFileInternal(relPath: str, listLine: list[str], listCondition: list[
                             lineNum, relPath, kind, isDefaultConstructorParameterListInternal(joined, openParen), bDelegating, uniqueInit,
                             listCondition[lineIndex])))
 
+        if "{" not in line and "}" not in line:
+            # 중괄호가 없는 줄은 깊이가 그대로라 `;` 하나만 본다(아래 글자 루프와 같은 판정).
+            if pendingName is not None and ";" in line:
+                pendingName = None
+            continue
         for character in line:
             if character == "{":
                 if pendingName is not None:
@@ -2290,7 +2351,9 @@ def checkConstructorInitializesEveryFieldInternal(filesToScan: list[Path], proje
         mapPathToLine[filePath] = listLine
     uniqueScalar = collectCtorScalarNamesInternal(mapPathToLine)
 
-    mapDirStemToClass: dict[tuple[Path, str], list[CtorScanClass]] = {}
+    # 폴더 → (파일 이름 줄기 → 클래스). 클래스 밖 생성자는 같은 폴더의 줄기만 보므로 폴더로 먼저 가른다 — 트리 전체 열쇠를 생성자마다
+    # 훑으면 생성자 수 × 파일 수다.
+    mapDirToStemClass: dict[Path, dict[str, list[CtorScanClass]]] = {}
     listOutOfLineSite: list[tuple[Path, tuple[str, ...], CtorScanConstructor]] = []
     listAllClass: list[CtorScanClass] = []
     for filePath, listLine in mapPathToLine.items():
@@ -2300,14 +2363,15 @@ def checkConstructorInitializesEveryFieldInternal(filesToScan: list[Path], proje
             relPath = normalizePath(filePath)
         listClass, listOutOfLine = scanCtorFileInternal(relPath, listLine, mapPathToCondition[filePath])
         listAllClass.extend(listClass)
-        mapDirStemToClass.setdefault((filePath.parent, filePath.stem), []).extend(listClass)
+        mapDirToStemClass.setdefault(filePath.parent, {}).setdefault(filePath.stem, []).extend(listClass)
         listOutOfLineSite.extend((filePath, chain, constructor) for chain, constructor in listOutOfLine)
 
     # 클래스 밖 생성자를 그 클래스에 붙인다: 같은 파일, 또는 같은 폴더에서 이름이 파일 이름의 앞부분인 헤더(FrameRendererCompute.cpp → FrameRenderer.h).
     for filePath, chain, constructor in listOutOfLineSite:
         listCandidate: list[CtorScanClass] = []
-        for (directory, stem), listClass in mapDirStemToClass.items():
-            if directory != filePath.parent or filePath.stem.startswith(stem) is False:
+        fileStem = filePath.stem
+        for stem, listClass in mapDirToStemClass.get(filePath.parent, {}).items():
+            if fileStem.startswith(stem) is False:
                 continue
             listCandidate.extend(scanned for scanned in listClass if scanned.chain[-len(chain):] == chain)
         if not listCandidate:
@@ -2363,6 +2427,10 @@ def checkConstructorInitializesEveryFieldInternal(filesToScan: list[Path], proje
 
 # --- 줄 단위 규칙 구현 ---------------------------------------------------------
 
+# 줄 규칙의 `"글자" in ctx.line and 정규식` 앞부분은 그 정규식이 반드시 품는 글자다 — 없는 줄에는 정규식을 부르지 않는다(결과는 같다).
+# 정규식을 바꿀 때 그 글자가 여전히 필수인지 함께 볼 것.
+
+
 class IncludePathCasingRule( ConventionRule ):
     """Include/PathCasing"""
     category = "Include/PathCasing"
@@ -2401,7 +2469,7 @@ class LoopVariableNameRule( ConventionRule ):
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
         # 단일 문자 루프 카운터(i, j, k) 검사
-        if loopMatch := _kLoopIndexRe.search(ctx.line):
+        if "for" in ctx.line and (loopMatch := _kLoopIndexRe.search(ctx.line)):
             violations.append(
                 ConventionViolation(
                     file_path=ctx.relPath,
@@ -2423,7 +2491,7 @@ class AutoOnLiteralRule( ConventionRule ):
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
         # 리터럴/원시 타입 직접 대입 시 auto 사용 검사
-        if autoMatch := _kLiteralAutoRe.search(ctx.line):
+        if "auto" in ctx.line and (autoMatch := _kLiteralAutoRe.search(ctx.line)):
             violations.append(
                 ConventionViolation(
                     file_path=ctx.relPath,
@@ -2445,7 +2513,7 @@ class LogFormatSpecRule( ConventionRule ):
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
         # 타입세이프 포매터가 못 읽는 스펙 검사 (동적 폭 `%*d`, 16진 부동소수 `%a`, `%n`)
-        if _kFormatterCallRe.search(ctx.line):
+        if ("SW_" in ctx.line or "ormat" in ctx.line) and _kFormatterCallRe.search(ctx.line):
             for strMatch in _kStringLiteralRe.finditer(ctx.line):
                 badSpec = _kBadPrintfSpecRe.search(strMatch.group(1))
                 if badSpec:
@@ -2476,7 +2544,7 @@ class ExplicitTrueCompareRule( ConventionRule ):
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
         # 불필요한 '== true' 명시 검사
-        if _kExplicitTrueRe.search(ctx.line):
+        if "true" in ctx.line and _kExplicitTrueRe.search(ctx.line):
             violations.append(
                 ConventionViolation(
                     file_path=ctx.relPath,
@@ -2561,7 +2629,7 @@ class NegatedConditionRule( ConventionRule ):
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
         # 부정(!expr) 조건문 검사
-        if negatedMatch := _kNegatedConditionRe.search(ctx.line):
+        if "!" in ctx.line and (negatedMatch := _kNegatedConditionRe.search(ctx.line)):
             expr = negatedMatch.group(1).strip()
             if _kPointerNamePrefixRe.match(expr) or "->" in expr:
                 msg = f"포인터 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == nullptr )' 비교를 사용하세요."
@@ -2593,7 +2661,7 @@ class ImplicitPointerNullRule( ConventionRule ):
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
         # 암시적 포인터 널 검사
-        if ptrMatch := _kImplicitPointerNullRe.search(ctx.line):
+        if "get" in ctx.line and (ptrMatch := _kImplicitPointerNullRe.search(ctx.line)):
             violations.append(
                 ConventionViolation(
                     file_path=ctx.relPath,
@@ -2615,7 +2683,7 @@ class ConstantNameRule( ConventionRule ):
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
         # 상수 네이밍 검사
-        if constMatch := _kConstantNamingRe.search(ctx.line):
+        if "constexpr" in ctx.line and (constMatch := _kConstantNamingRe.search(ctx.line)):
             varName = constMatch.group(1)
             if "Math" not in ctx.relPath:
                 if not varName.startswith("k") or (len(varName) > 1 and not varName[1].isupper()):
@@ -2664,7 +2732,7 @@ class PlacementNewRule( ConventionRule ):
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
         # 매크로 정의(`sw_placement_new` · `sw_new` 자신)는 맨 new 를 쓸 수밖에 없다.
-        if ctx.trimmed.startswith("#"):
+        if ctx.trimmed.startswith("#") or "new" not in ctx.codeWithoutStrings:
             return violations
         for newMatch in _kRawPlacementNewRe.finditer(ctx.codeWithoutStrings):
             # `operator new( size_t, ... )` 는 할당 함수 선언이지 객체 생성이 아니다.
@@ -2695,7 +2763,7 @@ class RawNewRule( ConventionRule ):
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
         # 매크로 정의(`sw_new` 자신)는 맨 new 를 쓸 수밖에 없다.
-        if ctx.trimmed.startswith("#"):
+        if ctx.trimmed.startswith("#") or "new" not in ctx.codeWithoutStrings:
             return violations
         for newMatch in _kRawNewRe.finditer(ctx.codeWithoutStrings):
             # `operator new[]( size_t, ... )` 는 할당 함수 선언이지 객체 생성이 아니다.
@@ -2869,7 +2937,8 @@ class TriplePointerRule( ConventionRule ):
         violations: list[ConventionViolation] = []
         # 삼중 포인터 이상(ppp, ***) 검사
         if not ctx.trimmed.startswith("#") and "Types.h" not in ctx.relPath:
-            if tripleMatch := _kTriplePointerRe.search(ctx.codeWithoutStrings):
+            code = ctx.codeWithoutStrings
+            if ("ppp" in code or "*" in code) and (tripleMatch := _kTriplePointerRe.search(code)):
                 matchedStr = tripleMatch.group(0)
                 violations.append(
                     ConventionViolation(
@@ -2892,8 +2961,10 @@ class OutParameterNameRule( ConventionRule ):
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
         # 출력 매개변수 명명 규칙 검사
-        if not ctx.trimmed.startswith("#") and "Types.h" not in ctx.relPath:
-            for outMatch in _kOutParamNamingRe.finditer(ctx.codeWithoutStrings):
+        # 이름 후보(`_kOutParamNamingRe`)는 전부 `out` 이나 `Out` 을 품는다 — 없는 줄에는 식별자마다 역추적하는 정규식을 돌리지 않는다.
+        code = ctx.codeWithoutStrings
+        if not ctx.trimmed.startswith("#") and "Types.h" not in ctx.relPath and ("out" in code or "Out" in code):
+            for outMatch in _kOutParamNamingRe.finditer(code):
                 paramCandidate = outMatch.group(1)
                 fixResult = getSuggestedOutParamFixInternal(paramCandidate)
                 if fixResult is not None:
@@ -2998,12 +3069,18 @@ def runConventionsCheck(rootDir: Path | None = None,
 _kExcludedDirNames: frozenset[str] = frozenset({"ThirdParty", "build", ".vcpkg"})
 
 
+def checkFileTargetInternal(target: tuple[Path, Path]) -> list[ConventionViolation]:
+    """`--files` 항목 하나 — (파일, 상대 경로의 기준 폴더). 프로세스로 넘기려고 모듈 최상위에 둔다."""
+    return checkFileConventionsInternal(target[0], target[1])
+
+
 def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] | None) -> list[ConventionViolation]:
     projectRoot = rootDir or Path(getProjectRoot())
     getExactPathMapInternal(projectRoot)
     allViolations: list[ConventionViolation] = []
 
     if specificFiles:
+        listTarget: list[tuple[Path, Path]] = []
         for fileString in specificFiles:
             filePath = Path(fileString).resolve()
             if not filePath.is_file():
@@ -3025,7 +3102,9 @@ def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] |
                         relRootDir = parent
                         break
 
-            allViolations.extend(checkFileConventionsInternal(filePath, relRootDir))
+            listTarget.append((filePath, relRootDir))
+        # 커밋 훅이 파일을 수백 개 넘기는 경우(큰 커밋)도 전체 스캔과 같이 프로세스 덩어리로 나눈다 — 적으면 이 프로세스에서 돈다.
+        allViolations.extend(flatMapInProcesses(checkFileTargetInternal, listTarget))
         return allViolations
 
     searchDirs = getLintSearchDirs(projectRoot)
