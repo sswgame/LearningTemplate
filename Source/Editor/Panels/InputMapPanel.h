@@ -1,5 +1,5 @@
 /**
- * @file InputMapEditorPanel.h
+ * @file InputMapPanel.h
  * @brief InputMap XML 을 시각적으로 편집하는 ImGui 패널입니다.
  */
 #pragma once
@@ -15,14 +15,14 @@
 namespace sw::editor
 {
     /**
-     * @class InputMapEditorPanel
+     * @class InputMapPanel
      * @brief 액션, 레이어, 바인딩, 트리거, 모디파이어를 시각적으로 편집하고, 입력 장치 상태를 실시간으로 보여 주는 에디터 패널입니다.
      */
-    class InputMapEditorPanel : public IEditorPanel
+    class InputMapPanel : public IEditorPanel
     {
     public:
-        InputMapEditorPanel();
-        virtual ~InputMapEditorPanel() override = default;
+        InputMapPanel();
+        virtual ~InputMapPanel() override = default;
 
         const utf8* getPanelTitle() const override { return "Input Map Editor"; }
         void        drawContent() override;

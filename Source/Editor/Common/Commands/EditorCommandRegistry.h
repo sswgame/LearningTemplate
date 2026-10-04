@@ -76,7 +76,7 @@ namespace sw::editor
     static_assert( static_cast<uint8>( EditorCommandKey::Space ) == 39, "EditorCommandKey::Space 의 자리가 바뀌었습니다" );
 
     /** @brief 단축키 수정자 비트 */
-    namespace commandmod
+    namespace commandmodifier
     {
         inline constexpr uint8 kNone  = 0;
         inline constexpr uint8 kCtrl  = static_cast<uint8>( SW_BIT( 0 ) );
@@ -88,7 +88,7 @@ namespace sw::editor
          *          건너뜁니다. 처리하는 척하는 라벨이 남지 않게 합니다.
          */
         inline constexpr uint8 kDisplayOnly = static_cast<uint8>( SW_BIT( 3 ) );
-    } // namespace commandmod
+    } // namespace commandmodifier
 
     /** @brief 메뉴 경로의 약속입니다. 경로는 `"<부모>/<메뉴 이름>"` 이고, 메인 메뉴바의 메뉴는 부모가 `kMainMenuBar` 입니다. */
     namespace commandmenu
@@ -110,7 +110,7 @@ namespace sw::editor
     struct EditorCommandShortcut
     {
         EditorCommandKey _key{ EditorCommandKey::None };
-        uint8            _modifier{ commandmod::kNone };
+        uint8            _modifier{ commandmodifier::kNone };
     };
 } // namespace sw::editor
 
@@ -216,7 +216,7 @@ namespace sw::editor
         /** @brief 우리가 실제로 처리하는 조합이면 true입니다 (키가 있고 DisplayOnly 가 아닙니다). */
         static bool isHandledShortcut( const EditorCommandShortcut& shortcut );
         /**
-         * @brief 지금 눌린 수정자 @p pressedModifier(`commandmod` 비트)가 @p shortcut 이 요구하는 것과 **정확히** 같으면 true입니다.
+         * @brief 지금 눌린 수정자 @p pressedModifier(`commandmodifier` 비트)가 @p shortcut 이 요구하는 것과 **정확히** 같으면 true입니다.
          * @details 요구하지 않은 수정자가 눌려 있어도 false 입니다 — 필요한 것만 보면 Ctrl+Shift+Z 가 Ctrl+Z(undo)까지 함께 발동합니다.
          *          Super(Win 키)는 대응하는 수정자가 없어 눌려 있으면 늘 false 입니다(Win+Z 가 Ctrl+Z 로 발동하지 않게).
          */

@@ -54,7 +54,7 @@ SW_TEST_CASE( SpatialTest, SpatialQuadTreeInsertAndRangeQuery )
     SW_EXPECT_EQUAL( size_t( 3 ), tree.getTotalElements() );
 
     // 범위 쿼리 (좌하단 영역)
-    sw::vector<sw::SpatialElement> listResults;
+    sw::vector<sw::SpatialElement2D> listResults;
     tree.queryRange( sw::AABB2D{
                          sw::float2{  0.0f,   0.0f},
                          sw::float2{200.0f, 200.0f}
@@ -210,7 +210,7 @@ SW_TEST_CASE( SpatialTest, SpatialOctreeAndQuadTreeNodeCollapse )
     }
     SW_EXPECT_EQUAL( size_t( 1 ), quadTree.getTotalElements() );
 
-    sw::vector<sw::SpatialElement> listQuadResults;
+    sw::vector<sw::SpatialElement2D> listQuadResults;
     quadTree.queryRange( sw::AABB2D{
                              sw::float2{ 0.0f,  0.0f},
                              sw::float2{50.0f, 50.0f}
@@ -490,7 +490,7 @@ SW_TEST_CASE( SpatialTest, FailedUpdateKeepsElement )
     SW_EXPECT_FALSE( tree.update( 42, outsideWorld ) );
 
     SW_EXPECT_EQUAL( size_t( 1 ), tree.getTotalElements() );
-    sw::vector<sw::SpatialElement> listFound;
+    sw::vector<sw::SpatialElement2D> listFound;
     tree.queryRange( originalBounds, listFound );
     SW_ASSERT_EQUAL( size_t( 1 ), listFound.size() );
     SW_EXPECT_EQUAL( uint64( 42 ), listFound[0]._id );
@@ -648,7 +648,7 @@ SW_TEST_CASE( SpatialTest, QueriesOverwriteTheOutListInsteadOfAppending )
             sw::float2{2.0f, 2.0f}
         };
 
-        sw::vector<sw::SpatialElement> listElement;
+        sw::vector<sw::SpatialElement2D> listElement;
         tree.queryRange( range, listElement );
         SW_EXPECT_EQUAL( size_t( 1 ), listElement.size() );
 

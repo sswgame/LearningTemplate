@@ -43,11 +43,11 @@ namespace
         const sw::string text = sw::string( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"1\" name=\"" ) + pSceneName +
                                 "\">\n  <entities>\n    <entity id=\"101\" name=\"Boss\"/>\n  </entities>\n</Scene>\n";
         // 쿠킹한 바이너리도 쿠커와 같은 이름으로 둔다(`AssetCookPath`) — Shipping 은 바이너리 씬(.scene.bin)만 읽는다.
-        sw::SceneDocument             doc{};
-        sw::SceneDocument::EntityNode boss{};
+        sw::SceneDocument                  doc{};
+        sw::SceneDocument::SceneObjectNode boss{};
         doc._name  = pSceneName;
         boss._name = "Boss";
-        doc._listEntityNode.push_back( std::move( boss ) );
+        doc._listSceneObjectNode.push_back( std::move( boss ) );
         const bool bWritten = sw::FileUtil::writeTextFile( path, text ) && doc.saveBinary( sw::AssetCookPath::toCookedPath( path ) );
         return bWritten ? path : sw::string{};
     }

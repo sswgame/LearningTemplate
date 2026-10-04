@@ -14,7 +14,7 @@ namespace sw
 {
     struct TileMapXmlData;
 
-    class AnimationGraphAsset;
+    class AnimGraphAsset;
     class DialogueGraphAsset;
     class GameObject;
     class SequenceAsset;
@@ -48,9 +48,9 @@ namespace sw::editor
     {
     public:
         /** @brief 애니메이션 그래프 JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. */
-        static ToolAssetLoadResult loadAnimationGraph( AnimationGraphAsset& outData, string_view path = {} );
+        static ToolAssetLoadResult loadAnimGraph( AnimGraphAsset& outData, string_view path = {} );
         /** @brief 애니메이션 그래프 JSON을 씁니다. */
-        [[nodiscard]] static bool saveAnimationGraph( const AnimationGraphAsset& data, string_view path = {} );
+        [[nodiscard]] static bool saveAnimGraph( const AnimGraphAsset& data, string_view path = {} );
         /** @brief 대화 그래프 JSON을 읽습니다. path가 비면 기본 대화 파일을 씁니다. */
         static ToolAssetLoadResult loadDialogueGraph( DialogueGraphAsset& outData, string_view path = {} );
         /** @brief 대화 그래프 JSON을 씁니다. */

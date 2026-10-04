@@ -48,13 +48,13 @@ namespace sw::editor
                 return pScene->getObjectManager();
             }
 
-            static bool matchesAnimationGraphPath( const SpriteAnimatorComponent* pAnimator, string_view graphPath )
+            static bool matchesAnimGraphPath( const SpriteAnimatorComponent* pAnimator, string_view graphPath )
             {
                 if ( pAnimator == nullptr )
                     return false;
                 if ( graphPath.empty() )
                     return true;
-                const string& animatorPath = pAnimator->getAnimationGraphPath();
+                const string& animatorPath = pAnimator->getAnimGraphPath();
                 if ( animatorPath.empty() )
                     return true;
                 return FileUtil::pathsEqualNormalized( animatorPath, graphPath );
@@ -105,7 +105,7 @@ namespace sw::editor
             if ( pObject == nullptr || pObject == pPrimary )
                 continue;
             SpriteAnimatorComponent* pAnimator = pObject->getComponent<SpriteAnimatorComponent>();
-            if ( EditorViewportPreviewInternal::matchesAnimationGraphPath( pAnimator, graphPath ) == false )
+            if ( EditorViewportPreviewInternal::matchesAnimGraphPath( pAnimator, graphPath ) == false )
                 continue;
             pAnimator->play( nodeNameStr, false );
         }

@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Engine/Animation/AnimationGraphPlayer.h"
+#include "Engine/Animation/AnimGraphPlayer.h"
 
 #include "Engine/Animation/AnimClip.h"
 
 namespace sw
 {
-    AnimationGraphPlayer::AnimationGraphPlayer()
+    AnimGraphPlayer::AnimGraphPlayer()
         : _graph{}
         , _player{}
         , _listClip{}
@@ -16,19 +16,19 @@ namespace sw
     {
     }
 
-    bool AnimationGraphPlayer::loadGraph( string_view path )
+    bool AnimGraphPlayer::loadGraph( string_view path )
     {
         stop();
         return _graph.loadFromFile( path );
     }
 
-    void AnimationGraphPlayer::setGraph( const AnimationGraphAsset& graph )
+    void AnimGraphPlayer::setGraph( const AnimGraphAsset& graph )
     {
         stop();
         _graph = graph;
     }
 
-    void AnimationGraphPlayer::registerClip( string_view nodeName, const AnimClip* pClip )
+    void AnimGraphPlayer::registerClip( string_view nodeName, const AnimClip* pClip )
     {
         if ( nodeName.empty() )
             return;
@@ -45,14 +45,14 @@ namespace sw
         _listClip.push_back( std::move( binding ) );
     }
 
-    void AnimationGraphPlayer::clearClips()
+    void AnimGraphPlayer::clearClips()
     {
         _listClip.clear();
     }
 
-    bool AnimationGraphPlayer::play( string_view nodeName, bool bLoopClip )
+    bool AnimGraphPlayer::play( string_view nodeName, bool bLoopClip )
     {
-        const AnimationGraphNode* pNode = nullptr;
+        const AnimGraphNode* pNode = nullptr;
         if ( nodeName.empty() == false )
             pNode = _graph.findNodeByName( nodeName );
         if ( pNode == nullptr )
@@ -62,14 +62,14 @@ namespace sw
         return playNode( pNode->_id, bLoopClip, false );
     }
 
-    void AnimationGraphPlayer::stop()
+    void AnimGraphPlayer::stop()
     {
         _player.play( nullptr, false );
         _currentNodeId = 0;
         _currentNodeName.clear();
     }
 
-    bool AnimationGraphPlayer::advance()
+    bool AnimGraphPlayer::advance()
     {
         if ( _currentNodeId <= 0 )
             return play( {}, false );
@@ -79,7 +79,7 @@ namespace sw
         return playNode( nextId, false, true );
     }
 
-    void AnimationGraphPlayer::update( float32 deltaSeconds )
+    void AnimGraphPlayer::update( float32 deltaSeconds )
     {
         _player.update( deltaSeconds );
         if ( _player.hasFinished() == false )
@@ -93,17 +93,17 @@ namespace sw
         playNode( nextId, false, true );
     }
 
-    AnimSample AnimationGraphPlayer::evaluate() const
+    AnimSample AnimGraphPlayer::evaluate() const
     {
         return _player.evaluate();
     }
 
-    void AnimationGraphPlayer::setCrossfadeSeconds( float32 seconds )
+    void AnimGraphPlayer::setCrossfadeSeconds( float32 seconds )
     {
         _crossfadeSeconds = ( seconds > 0.0f ) ? seconds : 0.0f;
     }
 
-    const AnimClip* AnimationGraphPlayer::findClip( string_view nodeName ) const
+    const AnimClip* AnimGraphPlayer::findClip( string_view nodeName ) const
     {
         for ( const ClipBinding& binding : _listClip )
         {
@@ -113,9 +113,9 @@ namespace sw
         return nullptr;
     }
 
-    bool AnimationGraphPlayer::playNode( int32 nodeId, bool bLoopClip, bool bCrossfade )
+    bool AnimGraphPlayer::playNode( int32 nodeId, bool bLoopClip, bool bCrossfade )
     {
-        const AnimationGraphNode* pNode = _graph.findNode( nodeId );
+        const AnimGraphNode* pNode = _graph.findNode( nodeId );
         if ( pNode == nullptr )
             return false;
 

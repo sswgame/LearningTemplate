@@ -6,7 +6,7 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 
-#include "Engine/Animation/AnimationGraphAsset.h"
+#include "Engine/Animation/AnimGraphAsset.h"
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
@@ -116,14 +116,14 @@ namespace
  * @details 실패 경로가 **로그 없이** `false` 만 돌려주면, 패널이 그 값을 버리는 순간 저장이 실패해도
  *          사용자에게는 아무 신호가 없다.
  */
-SW_TEST_CASE( EditorToolAssetCommandsTest, AnimationGraphSaveFailureIsReported )
+SW_TEST_CASE( EditorToolAssetCommandsTest, AnimGraphSaveFailureIsReported )
 {
     const string unwritable = makeUnwritablePath();
 
-    AnimationGraphAsset asset;
+    AnimGraphAsset asset;
 
     ScopedErrorLogCollector collector;
-    SW_EXPECT_FALSE( EditorToolAssetCommands::saveAnimationGraph( asset, unwritable ) );
+    SW_EXPECT_FALSE( EditorToolAssetCommands::saveAnimGraph( asset, unwritable ) );
     SW_EXPECT_TRUE( collector.getErrorCount() > 0 );
 }
 
@@ -149,10 +149,10 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, SuccessfulSaveIsQuiet )
 {
     const string path = test::makeTempPath( "sw_test_animgraph_ok.animgraph.json" );
 
-    AnimationGraphAsset asset;
+    AnimGraphAsset asset;
 
     ScopedErrorLogCollector collector;
-    const bool              bSaved = EditorToolAssetCommands::saveAnimationGraph( asset, path );
+    const bool              bSaved = EditorToolAssetCommands::saveAnimGraph( asset, path );
     SW_EXPECT_TRUE( bSaved );
     SW_EXPECT_EQUAL( 0, collector.getErrorCount() );
 }
@@ -170,15 +170,15 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, GraphLoadTellsMissingFromMalformed )
     const string goodPath    = FileUtil::joinPath( folder, "good.animgraph.json" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( brokenPath, "{ this is not json" ) );
 
-    AnimationGraphAsset good;
-    SW_ASSERT_TRUE( EditorToolAssetCommands::saveAnimationGraph( good, goodPath ) );
+    AnimGraphAsset good;
+    SW_ASSERT_TRUE( EditorToolAssetCommands::saveAnimGraph( good, goodPath ) );
 
-    AnimationGraphAsset data;
-    SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimationGraph( data, missingPath ) == ToolAssetLoadResult::Missing );
-    SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimationGraph( data, goodPath ) == ToolAssetLoadResult::Loaded );
+    AnimGraphAsset data;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimGraph( data, missingPath ) == ToolAssetLoadResult::Missing );
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimGraph( data, goodPath ) == ToolAssetLoadResult::Loaded );
     {
         test::ScopedDefensiveTestLog expected( "a graph file that is not JSON" );
-        SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimationGraph( data, brokenPath ) == ToolAssetLoadResult::Malformed );
+        SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimGraph( data, brokenPath ) == ToolAssetLoadResult::Malformed );
 
         DialogueGraphAsset dialogue;
         SW_EXPECT_TRUE( EditorToolAssetCommands::loadDialogueGraph( dialogue, brokenPath ) == ToolAssetLoadResult::Malformed );
@@ -320,11 +320,11 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
 
     SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
-    SceneDocument             authored;
-    SceneDocument::EntityNode entity;
+    SceneDocument                  authored;
+    SceneDocument::SceneObjectNode entity;
     entity._name   = "Crate";
     entity._prefab = prefabPath;
-    authored._listEntityNode.push_back( entity );
+    authored._listSceneObjectNode.push_back( entity );
     Scene* pPlaced = manager.createScene( "RevertWorld" );
     SW_ASSERT_TRUE( pPlaced->instantiate( authored ) );
     GameObject* pPlacedCrate = pPlaced->getObjectManager()->findGameObjectByName( hashed_string( "Crate" ) );
@@ -332,7 +332,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
     pPlacedCrate->getPrimarySceneComponent()->setLocalPosition( float3( 4.0f, 4.0f, 4.0f ) );
     SceneDocument saved;
     SW_ASSERT_TRUE( pPlaced->serializeToDocument( saved ) );
-    SW_ASSERT_TRUE( saved._listEntityNode.size() == 1 && saved._listEntityNode[0]._prefabOverrideXml.empty() == false );
+    SW_ASSERT_TRUE( saved._listSceneObjectNode.size() == 1 && saved._listSceneObjectNode[0]._prefabOverrideXml.empty() == false );
 
     // 다시 연 인스턴스 — 덮어쓴 위치가 원형 위에 얹혀 있다.
     Scene* pReopened = manager.createScene( "RevertWorldReopened" );
@@ -360,9 +360,9 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
 
     SceneDocument resaved;
     SW_ASSERT_TRUE( pReopened->serializeToDocument( resaved ) );
-    SW_ASSERT_EQUAL( size_t( 1 ), resaved._listEntityNode.size() );
-    SW_EXPECT_TRUE_MSG( resaved._listEntityNode[0]._prefabOverrideXml.empty(), resaved._listEntityNode[0]._prefabOverrideXml.c_str() );
-    SW_EXPECT_TRUE( resaved._listEntityNode[0]._embeddedXml.empty() );
+    SW_ASSERT_EQUAL( size_t( 1 ), resaved._listSceneObjectNode.size() );
+    SW_EXPECT_TRUE_MSG( resaved._listSceneObjectNode[0]._prefabOverrideXml.empty(), resaved._listSceneObjectNode[0]._prefabOverrideXml.c_str() );
+    SW_EXPECT_TRUE( resaved._listSceneObjectNode[0]._embeddedXml.empty() );
     manager.shutdown();
 }
 
@@ -389,7 +389,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EverySaveFailureHasTheSameShape )
         listCase.push_back( SaveCase{ pLabel, bSaved, collector.getErrors().size(), collector.getErrors().empty() ? string{} : collector.getErrors()[0] } );
     };
     runCase( "animation graph", [&]()
-    { return EditorToolAssetCommands::saveAnimationGraph( AnimationGraphAsset{}, unwritable ); } );
+    { return EditorToolAssetCommands::saveAnimGraph( AnimGraphAsset{}, unwritable ); } );
     runCase( "dialogue graph", [&]()
     { return EditorToolAssetCommands::saveDialogueGraph( DialogueGraphAsset{}, unwritable ); } );
     runCase( "tile map", [&]()
@@ -428,8 +428,8 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EveryUnreadableDocumentIsReportedTheS
     test::ScopedDefensiveTestLog expected( "tool documents that cannot be read" );
     ScopedLogMessageCollector    collector;
 
-    AnimationGraphAsset animationGraph;
-    SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimationGraph( animationGraph, broken ) == ToolAssetLoadResult::Malformed );
+    AnimGraphAsset animGraph;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadAnimGraph( animGraph, broken ) == ToolAssetLoadResult::Malformed );
     DialogueGraphAsset dialogueGraph;
     SW_EXPECT_TRUE( EditorToolAssetCommands::loadDialogueGraph( dialogueGraph, broken ) == ToolAssetLoadResult::Malformed );
     string         tileStatus;

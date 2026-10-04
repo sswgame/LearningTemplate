@@ -57,9 +57,9 @@ namespace sw
             }
 
             /** @brief 문서에서 이름이 @p pName 인 엔티티입니다. */
-            static const SceneDocument::EntityNode* findEntity( const SceneDocument& doc, const utf8* pName )
+            static const SceneDocument::SceneObjectNode* findEntity( const SceneDocument& doc, const utf8* pName )
             {
-                for ( const SceneDocument::EntityNode& entity : doc._listEntityNode )
+                for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
                 {
                     if ( entity._name == pName )
                         return &entity;
@@ -131,10 +131,10 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     sw::SceneDocument authored;
     for ( const utf8* pName : { "CrateA", "CrateB" } )
     {
-        sw::SceneDocument::EntityNode entity;
+        sw::SceneDocument::SceneObjectNode entity;
         entity._name   = pName;
         entity._prefab = prefabPath;
-        authored._listEntityNode.push_back( entity );
+        authored._listSceneObjectNode.push_back( entity );
     }
     sw::Scene* pScene = manager.createScene( "PrefabEditWorld" );
     SW_ASSERT_TRUE( pScene->instantiate( authored ) );
@@ -144,8 +144,8 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
 
     sw::SceneDocument saved;
     SW_ASSERT_TRUE( pScene->serializeToDocument( saved ) );
-    const sw::SceneDocument::EntityNode* pSavedA = sw::PrefabOverridesTestInternal::findEntity( saved, "CrateA" );
-    const sw::SceneDocument::EntityNode* pSavedB = sw::PrefabOverridesTestInternal::findEntity( saved, "CrateB" );
+    const sw::SceneDocument::SceneObjectNode* pSavedA = sw::PrefabOverridesTestInternal::findEntity( saved, "CrateA" );
+    const sw::SceneDocument::SceneObjectNode* pSavedB = sw::PrefabOverridesTestInternal::findEntity( saved, "CrateB" );
     SW_ASSERT_TRUE( pSavedA != nullptr && pSavedB != nullptr );
     SW_EXPECT_TRUE( pSavedA->_embeddedXml.empty() && pSavedB->_embeddedXml.empty() ); // 전체 상태를 싣지 않는다
     SW_EXPECT_TRUE_MSG( pSavedA->_prefabOverrideXml.find( "_localPosition" ) != sw::string::npos, pSavedA->_prefabOverrideXml.c_str() );
@@ -186,7 +186,7 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     SW_ASSERT_TRUE( reopened.saveBinary( binPath ) );
     sw::SceneDocument cooked;
     SW_ASSERT_TRUE( cooked.loadBinary( binPath ) );
-    const sw::SceneDocument::EntityNode* pCookedA = sw::PrefabOverridesTestInternal::findEntity( cooked, "CrateA" );
+    const sw::SceneDocument::SceneObjectNode* pCookedA = sw::PrefabOverridesTestInternal::findEntity( cooked, "CrateA" );
     SW_ASSERT_NOT_NULL( pCookedA );
     SW_EXPECT_TRUE( pCookedA->_embeddedStateBytes.empty() && pCookedA->_prefabOverrideXml.empty() == false );
     sw::Scene* pCooked = manager.createScene( "PrefabEditWorldCooked" );
@@ -241,7 +241,7 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
 
     sw::SceneDocument resaved;
     SW_ASSERT_TRUE( pOpened->serializeToDocument( resaved ) );
-    const sw::SceneDocument::EntityNode* pResaved = sw::PrefabOverridesTestInternal::findEntity( resaved, "Old" );
+    const sw::SceneDocument::SceneObjectNode* pResaved = sw::PrefabOverridesTestInternal::findEntity( resaved, "Old" );
     SW_ASSERT_NOT_NULL( pResaved );
     SW_EXPECT_TRUE( pResaved->_embeddedXml.empty() );
     SW_EXPECT_TRUE_MSG( pResaved->_prefabOverrideXml.find( "<Remove key=\"MeshComponent#0\"" ) != sw::string::npos, pResaved->_prefabOverrideXml.c_str() );
@@ -285,7 +285,7 @@ SW_TEST_CASE( PrefabOverridesTest, CookedSceneOfAnotherVersionIsRefused )
         test::ScopedDefensiveTestLog expected( "a cooked scene of another binary version" );
         sw::SceneDocument            doc;
         SW_EXPECT_FALSE( doc.loadBinary( path ) );
-        SW_EXPECT_TRUE( doc._listEntityNode.empty() );
+        SW_EXPECT_TRUE( doc._listSceneObjectNode.empty() );
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "Unsupported binary version 2" ) == 1, logs.joined().c_str() );
 }

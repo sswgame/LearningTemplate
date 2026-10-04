@@ -469,7 +469,7 @@ sw::GameObject* pProp = sw::engine::getResourceManager().getPrefabCache().spawn(
 sw::SpatialQuadTree quadTree( sw::AABB2D{ sw::float2{ -5000.0f, -5000.0f }, sw::float2{ 5000.0f, 5000.0f } } );
 quadTree.insert( pObject->getObjectId(), sw::AABB2D{ sw::float2{ 100.0f, 100.0f }, sw::float2{ 150.0f, 150.0f } }, pObject );
 
-sw::vector<sw::SpatialElement> listVisible2D;
+sw::vector<sw::SpatialElement2D> listVisible2D;
 quadTree.queryRange( sw::AABB2D{ sw::float2{ 0.0f, 0.0f }, sw::float2{ 800.0f, 600.0f } }, listVisible2D );
 
 // 2. 3D 옥트리 (3D 월드 AABB / 구체(Sphere) 반경 쿼리)

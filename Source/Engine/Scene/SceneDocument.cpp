@@ -37,7 +37,7 @@ namespace sw
              * @brief 프리팹 GUID 로 경로를 다시 풉니다. 파일 이동 · 이름 변경을 자동으로 따라갑니다.
              * @details XML 로더와 바이너리 로더가 함께 씁니다 — 한쪽만 고치면 그 포맷으로 읽은 씬만 옮긴 프리팹을 못 찾습니다.
              */
-            static void resolvePrefabPathByGuid( SceneDocument::EntityNode& node )
+            static void resolvePrefabPathByGuid( SceneDocument::SceneObjectNode& node )
             {
                 if ( node._prefabGuid.empty() || engine::areEngineServicesBound() == false )
                     return;
@@ -97,17 +97,17 @@ namespace sw
 
         if ( entities.isValid() )
         {
-            for ( XmlNode entityNode = entities.findChild( SceneDocumentInternal::kEntity ); entityNode.isValid();
-                  entityNode         = entityNode.findNextSibling( SceneDocumentInternal::kEntity ) )
+            for ( XmlNode sceneObjectNode = entities.findChild( SceneDocumentInternal::kEntity ); sceneObjectNode.isValid();
+                  sceneObjectNode         = sceneObjectNode.findNextSibling( SceneDocumentInternal::kEntity ) )
             {
-                EntityNode  node{};
-                const utf8* pName = entityNode.findAttribute( SceneDocumentInternal::kName );
+                SceneObjectNode node{};
+                const utf8*     pName = sceneObjectNode.findAttribute( SceneDocumentInternal::kName );
                 if ( pName != nullptr )
                     node._name = pName;
 
                 // 엔티티마다 0 이 아닌 파일 id 가 있다(`Scene::serializeToDocument` 가 늘 적는다). 없거나 못 읽는 문서는 받지 않는다 —
                 // 부착 · 핸들이 이 값으로 부모를 가리키고, 쿠커는 이 값으로 엔티티를 찾는다.
-                const utf8* pFileId = entityNode.findAttribute( SceneDocumentInternal::kFileId );
+                const utf8* pFileId = sceneObjectNode.findAttribute( SceneDocumentInternal::kFileId );
                 if ( pFileId == nullptr || StringUtil::parseUint64( pFileId, node._fileId ) == false || node._fileId == 0 )
                 {
                     SW_LOG_ERROR( "Entity '%#' has no valid id ('%#') in %# - the scene is not loaded", node._name, pFileId != nullptr ? pFileId : "",
@@ -116,21 +116,21 @@ namespace sw
                     return false;
                 }
 
-                const utf8* pPrefabGuid = entityNode.findAttribute( "prefabGuid" );
+                const utf8* pPrefabGuid = sceneObjectNode.findAttribute( "prefabGuid" );
                 if ( pPrefabGuid != nullptr )
                     node._prefabGuid = pPrefabGuid;
 
-                const utf8* pPrefab = entityNode.findAttribute( SceneDocumentInternal::kPrefab );
+                const utf8* pPrefab = sceneObjectNode.findAttribute( SceneDocumentInternal::kPrefab );
                 if ( pPrefab != nullptr )
                     node._prefab = pPrefab;
 
                 SceneDocumentInternal::resolvePrefabPathByGuid( node );
 
-                const XmlNode overrideNode = entityNode.findChild( PrefabOverrides::kRootName );
+                const XmlNode overrideNode = sceneObjectNode.findChild( PrefabOverrides::kRootName );
                 if ( overrideNode.isValid() )
                     node._prefabOverrideXml = overrideNode.toString();
 
-                XmlNode stateNode = entityNode.findChild( SceneDocumentInternal::kGameObject );
+                XmlNode stateNode = sceneObjectNode.findChild( SceneDocumentInternal::kGameObject );
                 // 서브트리는 XML 문서가 쓴다(`XmlNode::toString`) — 손으로 쓰면 속성 값의 줄바꿈이 그대로 적혀 다시 읽을 때 공백이 된다
                 // (XML 속성 값 정규화 — 여러 줄 대사 · 설명이 한 줄로).
                 if ( stateNode.isValid() )
@@ -138,13 +138,13 @@ namespace sw
 
                 if ( node._name.empty() )
                     node._name = SceneDocumentInternal::kDefaultEntity;
-                _listEntityNode.push_back( std::move( node ) );
+                _listSceneObjectNode.push_back( std::move( node ) );
             }
         }
 
         _bValid = true;
         SW_LOG_INFO( "Loaded '%#' (%# entities) from %#",
-                     _name, static_cast<uint32>( _listEntityNode.size() ), absPath );
+                     _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath );
         return true;
     }
 
@@ -156,7 +156,7 @@ namespace sw
         root.appendAttribute( "name", _name );
         XmlNode entities = root.appendChild( SceneDocumentInternal::kEntities );
 
-        for ( const EntityNode& entity : _listEntityNode )
+        for ( const SceneObjectNode& entity : _listSceneObjectNode )
         {
             // 읽는 쪽(`loadXml`)이 받지 않는 모양은 쓰지 않는다.
             if ( entity._fileId == 0 )
@@ -164,28 +164,28 @@ namespace sw
                 SW_LOG_ERROR( "Entity '%#' has no id - scene '%#' is not saved", entity._name, _name );
                 return false;
             }
-            XmlNode      entityNode = entities.appendChild( SceneDocumentInternal::kEntity );
+            XmlNode      sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
             utf8         arrFileIdText[constant::kMaxBuffer32]{};
             const uint32 fileIdLength = StringUtil::formatNumber( arrFileIdText, constant::kMaxBuffer32, entity._fileId, 10 );
-            entityNode.appendAttribute( SceneDocumentInternal::kFileId, string_view( arrFileIdText, fileIdLength ) );
-            entityNode.appendAttribute( SceneDocumentInternal::kName, entity._name );
+            sceneObjectNode.appendAttribute( SceneDocumentInternal::kFileId, string_view( arrFileIdText, fileIdLength ) );
+            sceneObjectNode.appendAttribute( SceneDocumentInternal::kName, entity._name );
             if ( entity._prefab.empty() == false )
-                entityNode.appendAttribute( SceneDocumentInternal::kPrefab, entity._prefab );
+                sceneObjectNode.appendAttribute( SceneDocumentInternal::kPrefab, entity._prefab );
             if ( entity._prefabGuid.empty() == false )
             {
-                entityNode.appendAttribute( "prefabGuid", entity._prefabGuid );
+                sceneObjectNode.appendAttribute( "prefabGuid", entity._prefabGuid );
             }
             else if ( entity._prefab.empty() == false && engine::areEngineServicesBound() )
             {
                 Uuid prefabGuid{};
                 if ( engine::getResourceManager().getAssetDatabase().tryGetGuid( entity._prefab, prefabGuid ) && prefabGuid.isNull() == false )
-                    entityNode.appendAttribute( "prefabGuid", prefabGuid.toString() );
+                    sceneObjectNode.appendAttribute( "prefabGuid", prefabGuid.toString() );
             }
             if ( entity._prefabOverrideXml.empty() == false )
             {
                 XmlDocument overrideDoc;
                 if ( overrideDoc.parse( entity._prefabOverrideXml ) && overrideDoc.getRoot().isValid() )
-                    entityNode.appendClone( overrideDoc.getRoot() );
+                    sceneObjectNode.appendClone( overrideDoc.getRoot() );
                 else
                     SW_LOG_ERROR( "Entity '%#' has prefab overrides that are not XML - they are not written", entity._name );
             }
@@ -196,7 +196,7 @@ namespace sw
                 {
                     XmlNode goRoot = goDoc.getRoot();
                     if ( goRoot.isValid() )
-                        entityNode.appendClone( goRoot );
+                        sceneObjectNode.appendClone( goRoot );
                 }
             }
         }
@@ -214,7 +214,7 @@ namespace sw
             return false;
         }
         SW_LOG_INFO( "Saved '%#' (%# entities) -> %#",
-                     _name, static_cast<uint32>( _listEntityNode.size() ), absPath );
+                     _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath );
         return true;
     }
 
@@ -284,10 +284,10 @@ namespace sw
             return false;
         }
 
-        _listEntityNode.reserve( entityCount );
+        _listSceneObjectNode.reserve( entityCount );
         for ( uint32 entityIndex = 0; entityIndex < entityCount; ++entityIndex )
         {
-            EntityNode node{};
+            SceneObjectNode node{};
             arch >> node._name >> node._prefab >> node._prefabGuid >> node._embeddedXml >> node._embeddedStateBytes >> node._fileId >> node._prefabOverrideXml;
             // 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를 쌓는 일일 뿐이다.
             if ( arch.isError() )
@@ -295,7 +295,7 @@ namespace sw
 
             SceneDocumentInternal::resolvePrefabPathByGuid( node );
 
-            _listEntityNode.push_back( std::move( node ) );
+            _listSceneObjectNode.push_back( std::move( node ) );
         }
 
         if ( arch.isError() )
@@ -307,7 +307,7 @@ namespace sw
 
         _bValid = true;
         SW_LOG_INFO( "Loaded '%#' (%# entities) from binary %#",
-                     _name, static_cast<uint32>( _listEntityNode.size() ), absPath );
+                     _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath );
         return true;
     }
 
@@ -317,9 +317,9 @@ namespace sw
         arch << SceneDocumentInternal::kSceneBinMagic;
         arch << SceneDocumentInternal::kSceneBinVersion;
         arch << _name;
-        arch << static_cast<uint32>( _listEntityNode.size() );
+        arch << static_cast<uint32>( _listSceneObjectNode.size() );
 
-        for ( const EntityNode& entity : _listEntityNode )
+        for ( const SceneObjectNode& entity : _listSceneObjectNode )
         {
             string prefabGuid = entity._prefabGuid;
             if ( prefabGuid.empty() && entity._prefab.empty() == false && engine::areEngineServicesBound() )
@@ -348,7 +348,7 @@ namespace sw
         const bool bOk = arch.saveFile( absPath );
         if ( bOk )
             SW_LOG_INFO( "Saved binary '%#' (%# entities) -> %#",
-                         _name, static_cast<uint32>( _listEntityNode.size() ), absPath );
+                         _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath );
         return bOk;
     }
 

@@ -45,7 +45,7 @@ namespace sw
             {
                 if ( session._emitTemplateStore.loadDirectory( options._emitTemplatesDir, session._config._emitTemplateExtension ) )
                     return true;
-                SW_LOG_ERROR( "Failed to load %#: %#", cliConstants::kEmitTemplates, options._emitTemplatesDir );
+                SW_LOG_ERROR( "Failed to load %#: %#", cli::kEmitTemplates, options._emitTemplatesDir );
                 return false;
             }
 
@@ -58,17 +58,17 @@ namespace sw
                 session._typeNameMap.setStripPrefixes( session._config._listTypeStripPrefix );
                 if ( options._builtinsPath.empty() )
                 {
-                    SW_LOG_WARNING( "No %#; scalar aliases / std containers will not be registered.", cliConstants::kBuiltins );
+                    SW_LOG_WARNING( "No %#; scalar aliases / std containers will not be registered.", cli::kBuiltins );
                 }
                 else if ( loadReflectBuiltins( options._builtinsPath, session ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to load %#: %#", cliConstants::kBuiltins, options._builtinsPath );
+                    SW_LOG_ERROR( "Failed to load %#: %#", cli::kBuiltins, options._builtinsPath );
                     return false;
                 }
 
                 if ( session._annotationMeta.loadFile( options._annotationMetaPath ) == false )
                 {
-                    SW_LOG_ERROR( "Failed to load %#: %#", cliConstants::kAnnotationMeta, options._annotationMetaPath );
+                    SW_LOG_ERROR( "Failed to load %#: %#", cli::kAnnotationMeta, options._annotationMetaPath );
                     return false;
                 }
                 if ( AnnotationFields::validateBindings( session._annotationMeta ) == false )

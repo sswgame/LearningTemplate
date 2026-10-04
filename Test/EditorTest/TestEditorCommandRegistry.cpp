@@ -69,14 +69,14 @@ SW_TEST_CASE( EditorCommandRegistryTest, ShortcutLabelUsesFixedModifierOrder )
     fixed_string<constant::kMaxBuffer64> label;
 
     EditorCommandDesc single{};
-    single._shortcut = EditorCommandShortcut{ EditorCommandKey::B, commandmod::kCtrl | commandmod::kShift };
+    single._shortcut = EditorCommandShortcut{ EditorCommandKey::B, commandmodifier::kCtrl | commandmodifier::kShift };
     EditorCommandRegistry::formatShortcutLabel( single, label );
     SW_EXPECT_STREQ( "Ctrl+Shift+B", label.c_str() );
 
     EditorCommandDesc ctrlAlt{};
-    ctrlAlt._shortcut = EditorCommandShortcut{ EditorCommandKey::F11, commandmod::kCtrl | commandmod::kAlt };
+    ctrlAlt._shortcut = EditorCommandShortcut{ EditorCommandKey::F11, commandmodifier::kCtrl | commandmodifier::kAlt };
     // 보조 조합은 수정자 없이 F7 하나다 — 라벨에서 보조 조합이 빠지면 이 키는 메뉴 어디에도 보이지 않는다.
-    ctrlAlt._altShortcut = EditorCommandShortcut{ EditorCommandKey::F7, commandmod::kNone };
+    ctrlAlt._altShortcut = EditorCommandShortcut{ EditorCommandKey::F7, commandmodifier::kNone };
     EditorCommandRegistry::formatShortcutLabel( ctrlAlt, label );
     SW_EXPECT_STREQ( "Ctrl+Alt+F11 / F7", label.c_str() );
 
@@ -161,7 +161,7 @@ SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesDuplicateIdAndChord )
     clean.registerCommand( makeCommand( "test.a" ) );
 
     EditorCommandDesc withChord = makeCommand( "test.b" );
-    withChord._shortcut         = EditorCommandShortcut{ EditorCommandKey::Z, commandmod::kCtrl };
+    withChord._shortcut         = EditorCommandShortcut{ EditorCommandKey::Z, commandmodifier::kCtrl };
     clean.registerCommand( std::move( withChord ) );
 
     string report;
@@ -176,13 +176,13 @@ SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesDuplicateIdAndChord )
 
     EditorCommandRegistry duplicateChord;
     EditorCommandDesc     undo = makeCommand( "test.undo" );
-    undo._shortcut             = EditorCommandShortcut{ EditorCommandKey::Z, commandmod::kCtrl };
+    undo._shortcut             = EditorCommandShortcut{ EditorCommandKey::Z, commandmodifier::kCtrl };
     duplicateChord.registerCommand( std::move( undo ) );
 
     // 보조 조합끼리의 충돌도 잡아야 한다 — 주 조합만 보면 Ctrl+Z 를 보조로 든 커맨드를 놓친다.
     EditorCommandDesc redo = makeCommand( "test.redo" );
-    redo._shortcut         = EditorCommandShortcut{ EditorCommandKey::Y, commandmod::kCtrl };
-    redo._altShortcut      = EditorCommandShortcut{ EditorCommandKey::Z, commandmod::kCtrl };
+    redo._shortcut         = EditorCommandShortcut{ EditorCommandKey::Y, commandmodifier::kCtrl };
+    redo._altShortcut      = EditorCommandShortcut{ EditorCommandKey::Z, commandmodifier::kCtrl };
     duplicateChord.registerCommand( std::move( redo ) );
 
     SW_EXPECT_FALSE( duplicateChord.validate( report ) );
@@ -194,8 +194,8 @@ SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesDuplicateIdAndChord )
  */
 SW_TEST_CASE( EditorCommandRegistryTest, DisplayOnlyShortcutIsNeverHandled )
 {
-    const EditorCommandShortcut displayOnly{ EditorCommandKey::F4, commandmod::kAlt | commandmod::kDisplayOnly };
-    const EditorCommandShortcut handled{ EditorCommandKey::F4, commandmod::kAlt };
+    const EditorCommandShortcut displayOnly{ EditorCommandKey::F4, commandmodifier::kAlt | commandmodifier::kDisplayOnly };
+    const EditorCommandShortcut handled{ EditorCommandKey::F4, commandmodifier::kAlt };
 
     SW_EXPECT_FALSE( EditorCommandRegistry::isHandledShortcut( displayOnly ) );
     SW_EXPECT_TRUE( EditorCommandRegistry::isHandledShortcut( handled ) );
@@ -230,21 +230,21 @@ SW_TEST_CASE( EditorCommandRegistryTest, DisplayOnlyShortcutIsNeverHandled )
  */
 SW_TEST_CASE( EditorCommandRegistryTest, ShortcutModifiersMustMatchExactly )
 {
-    const EditorCommandShortcut undo{ EditorCommandKey::Z, commandmod::kCtrl };
-    const EditorCommandShortcut redo{ EditorCommandKey::Z, commandmod::kCtrl | commandmod::kShift };
+    const EditorCommandShortcut undo{ EditorCommandKey::Z, commandmodifier::kCtrl };
+    const EditorCommandShortcut redo{ EditorCommandKey::Z, commandmodifier::kCtrl | commandmodifier::kShift };
 
-    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmod::kCtrl, false ) );
-    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmod::kCtrl | commandmod::kShift, false ) );
-    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( redo, commandmod::kCtrl | commandmod::kShift, false ) );
-    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmod::kNone, false ) );
+    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmodifier::kCtrl, false ) );
+    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmodifier::kCtrl | commandmodifier::kShift, false ) );
+    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( redo, commandmodifier::kCtrl | commandmodifier::kShift, false ) );
+    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmodifier::kNone, false ) );
 
     // Super 는 Ctrl 대신이 아니고, Ctrl 과 함께 눌려도 다른 조합이다.
-    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmod::kNone, true ) );
-    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmod::kCtrl, true ) );
+    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmodifier::kNone, true ) );
+    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmodifier::kCtrl, true ) );
 
     // DisplayOnly 비트는 수정자 비교에 들지 않는다(처리 여부는 `isHandledShortcut` 이 가린다).
-    const EditorCommandShortcut displayOnly{ EditorCommandKey::F4, commandmod::kAlt | commandmod::kDisplayOnly };
-    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( displayOnly, commandmod::kAlt, false ) );
+    const EditorCommandShortcut displayOnly{ EditorCommandKey::F4, commandmodifier::kAlt | commandmodifier::kDisplayOnly };
+    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( displayOnly, commandmodifier::kAlt, false ) );
 }
 
 /**

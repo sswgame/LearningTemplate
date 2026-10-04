@@ -35,7 +35,7 @@ namespace sw::editor
         Shader,
         Audio,
         Data,
-        AnimationGraph,
+        AnimGraph,
         DialogueGraph,
         SpriteClip,
         TileMap,
@@ -125,7 +125,7 @@ namespace sw::editor
 
         /**
          * @brief 경로가 속한 종류 하나입니다. 걸리는 종류가 없으면 `Unknown` 입니다.
-         * @details 판정 표의 순서대로 처음 맞는 줄이 이긴다 — `.anim.json` 은 Data 보다 앞선 AnimationGraph, 이미지는 SpriteClip 보다 앞선 Texture 다.
+         * @details 판정 표의 순서대로 처음 맞는 줄이 이긴다 — `.anim.json` 은 Data 보다 앞선 AnimGraph, 이미지는 SpriteClip 보다 앞선 Texture 다.
          *          아이콘 · 색 · 퀵 런처 분류 · 카탈로그 · 썸네일 · 열기 · 드롭이 모두 이것 하나로 종류를 정한다.
          */
         static EditorAssetType findKind( string_view path );

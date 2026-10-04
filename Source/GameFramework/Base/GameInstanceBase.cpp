@@ -156,7 +156,7 @@ namespace sw
         }
         _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, std::move( future ) } );
 
-        LevelLoadRequestedEvent event{};
+        SceneLoadRequestedEvent event{};
         event._levelName = scenePath;
         GameEventUtil::send( event );
         return true;
@@ -176,7 +176,7 @@ namespace sw
                 ++keptCount;
                 continue;
             }
-            LevelLoadCompletedEvent event{};
+            SceneLoadCompletedEvent event{};
             event._levelName = pending._scenePath;
             event._bSuccess  = ( pending._future.get() != nullptr );
             GameEventUtil::send( event );
@@ -459,7 +459,7 @@ namespace sw
         vector<uint8> snapshotBytes;
         const bool    bSaved = captureSnapshot( snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
 
-        SaveCompletedEvent event{};
+        SaveGameSavedEvent event{};
         event._savePath = string( path );
         event._bSuccess = bSaved;
         GameEventUtil::send( event );
@@ -477,7 +477,7 @@ namespace sw
         vector<uint8> snapshotBytes;
         const bool    bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( snapshotBytes );
 
-        LoadCompletedEvent event{};
+        SaveGameLoadedEvent event{};
         event._savePath = string( path );
         event._bSuccess = bLoaded;
         GameEventUtil::send( event );

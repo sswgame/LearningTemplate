@@ -41,7 +41,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief PROPERTY(...) 가 붙은 멤버 필드, 또는 값 참조를 돌려주는 메서드(값이 객체 밖에 있는 프로퍼티) */
     struct ParsedPropertyInfo
     {
@@ -119,7 +122,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief FUNCTION(...) 가 붙은 메서드(또는 자동 등록 생성자) */
     struct ParsedFunctionInfo
     {
@@ -145,7 +151,7 @@ namespace sw
             : _name{}
             , _returnTypeName{}
             , _listParameterTypeName{}
-            , _category{ annotationConstants::kDefaultMethodCategory }
+            , _category{ annotation::kDefaultMethodCategory }
             , _displayName{}
             , _tooltip{}
             , _editorPreview{}
@@ -162,7 +168,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief REFLECT 가 붙은 클래스·구조체 */
     struct ParsedTypeInfo
     {
@@ -206,14 +215,20 @@ namespace sw
         bool requiresTypeApi() const noexcept { return _bReflectBody == SW_TRUE; }
         bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 열거형 안의 개별 enumerator */
     struct ParsedEnumeratorInfo
     {
         string _name;
         int64  _value{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief ENUM(...) 가 붙은 열거형 */
     struct ParsedEnumInfo
     {
@@ -249,7 +264,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 입력 헤더 하나에서 모은 것입니다. `.gen.cpp` / `.gen.h` 한 벌이 이것 하나에서 나옵니다.
      * @details 번역 단위 하나가 헤더 여럿을 담을 수 있으므로(한 TU 로 묶어 파싱) 결과는 헤더 단위로 나눠 둡니다.

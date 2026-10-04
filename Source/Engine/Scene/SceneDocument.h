@@ -16,7 +16,7 @@ namespace sw
     struct SceneDocument
     {
         /** @brief 씬 문서 안의 엔티티 하나입니다(프리팹 참조 또는 임베디드 GameObject 상태). */
-        struct EntityNode
+        struct SceneObjectNode
         {
             /**
              * @brief 이 파일 안에서 엔티티를 가리키는 id 입니다(유니티의 fileID 자리). 파일에 적힌 엔티티는 늘 0 이 아닙니다.
@@ -43,10 +43,10 @@ namespace sw
             string _prefabOverrideXml;
         };
 
-        string             _name;
-        string             _sourcePath;
-        vector<EntityNode> _listEntityNode;
-        bool               _bValid{ false };
+        string                  _name;
+        string                  _sourcePath;
+        vector<SceneObjectNode> _listSceneObjectNode;
+        bool                    _bValid{ false };
 
         /** @brief 빌드(Shipping/Dev)와 파일 존재 여부에 따라 알맞은 포맷(바이너리 우선)으로 로드합니다. */
         [[nodiscard]] SW_API bool load( string_view path );

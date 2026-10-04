@@ -40,7 +40,7 @@ namespace sw
         bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) final;
         /** @brief onShutdown 뒤에 `GameData` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
         void shutdown() final;
-        /** @brief 끝난 씬 로드마다 `LevelLoadCompletedEvent` 를 낸 뒤 onUpdate 로 한 프레임을 넘깁니다. */
+        /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 낸 뒤 onUpdate 로 한 프레임을 넘깁니다. */
         void update( float32 deltaTime ) final;
 
         // --------------------------------------------------------------------------
@@ -60,13 +60,13 @@ namespace sw
 
         /**
          * @brief Shipping/Gameplay: 씬과 게임 상태 전체를 바이너리 파일로 저장합니다. 경로를 비우면 기본 세이브 경로(`GameData::_defaultSavePath`)입니다.
-         * @details 경로가 정해졌으면 성공 · 실패와 함께 `SaveCompletedEvent` 를 "game" 채널에 냅니다. 경로가 없으면 알리고 아무것도 내지 않습니다.
+         * @details 경로가 정해졌으면 성공 · 실패와 함께 `SaveGameSavedEvent` 를 "game" 채널에 냅니다. 경로가 없으면 알리고 아무것도 내지 않습니다.
          */
         [[nodiscard]] bool saveStateToFile( string_view filePath = {} );
 
         /**
          * @brief Shipping/Gameplay: 바이너리 파일로부터 씬과 게임 상태 전체를 복원합니다. 경로를 비우면 기본 세이브 경로입니다.
-         * @details 경로가 정해졌으면 성공 · 실패와 함께 `LoadCompletedEvent` 를 "game" 채널에 냅니다.
+         * @details 경로가 정해졌으면 성공 · 실패와 함께 `SaveGameLoadedEvent` 를 "game" 채널에 냅니다.
          */
         [[nodiscard]] bool loadStateFromFile( string_view filePath = {} );
 
@@ -79,8 +79,8 @@ namespace sw
         const string& getEntranceScene() const;
         /**
          * @brief `getFirstScene()` 의 로드를 요청합니다. 열 씬이 없거나 요청이 실패하면 false 입니다(실패는 알립니다).
-         * @details 요청이 들어가면 `LevelLoadRequestedEvent` 를 내고, 그 로드가 끝난(활성 씬이 됐거나 실패한) 뒤의 첫 `update` 가
-         *          `LevelLoadCompletedEvent` 를 냅니다.
+         * @details 요청이 들어가면 `SceneLoadRequestedEvent` 를 내고, 그 로드가 끝난(활성 씬이 됐거나 실패한) 뒤의 첫 `update` 가
+         *          `SceneLoadCompletedEvent` 를 냅니다.
          */
         [[nodiscard]] bool requestFirstScene();
         /** @brief `getEntranceScene()` 의 로드를 요청합니다. 타이틀 화면이 "시작" 에서 부릅니다. 레벨 이벤트는 `requestFirstScene` 과 같습니다. */
@@ -132,7 +132,7 @@ namespace sw
         IRHIDevice*     _pRhiDevice{ nullptr }; ///< 활성 RHI 디바이스
 
     private:
-        /** @brief 맡긴 씬 로드 하나입니다. 끝나면 `update` 가 `LevelLoadCompletedEvent` 를 내고 목록에서 뺍니다. */
+        /** @brief 맡긴 씬 로드 하나입니다. 끝나면 `update` 가 `SceneLoadCompletedEvent` 를 내고 목록에서 뺍니다. */
         struct PendingSceneLoad
         {
             string             _scenePath;
@@ -142,11 +142,11 @@ namespace sw
         /** @brief `GameData` 의 다국어 · 입력 맵 칸을 적용합니다. 못 읽은 것은 알리고 넘어갑니다(게임은 뜬다). */
         void applyBootstrap();
         /**
-         * @brief @p scenePath 의 로드를 `SceneManager` 에 맡기고 `LevelLoadRequestedEvent` 를 냅니다.
+         * @brief @p scenePath 의 로드를 `SceneManager` 에 맡기고 `SceneLoadRequestedEvent` 를 냅니다.
          * @return 경로가 비었으면 조용히 false, 맡기지 못했으면 알리고 false 입니다(그때는 이벤트도 없습니다).
          */
         [[nodiscard]] bool requestSceneLoad( const string& scenePath, const utf8* pWhich );
-        /** @brief 끝난 씬 로드마다 `LevelLoadCompletedEvent` 를 냅니다(요청 순서). */
+        /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 냅니다(요청 순서). */
         void publishFinishedSceneLoads();
 
         vector<PendingSceneLoad> _listPendingSceneLoad{}; ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드

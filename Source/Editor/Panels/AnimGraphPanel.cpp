@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/AnimationGraphPanel.h"
+#include "Editor/Panels/AnimGraphPanel.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/EditorViewportPreview.h"
@@ -12,7 +12,7 @@
 #include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/AnimationGraphAsset.h"
+#include "Engine/Animation/AnimGraphAsset.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -28,7 +28,7 @@ namespace sw::editor
          * @details 핀 번호는 `노드 id * kPinScale + 오프셋` 입니다. 푸는 쪽을 따로 적으면 자릿수 기준을 바꿀 때 한쪽만 따라가서
          *          **링크가 엉뚱한 노드에 붙습니다.** `DialogueGraphAsset` 도 같은 이유로 한곳에 둡니다(그 파일의 "핀 번호 계약" 절).
          */
-        struct AnimationGraphPanelInternal
+        struct AnimGraphPanelInternal
         {
             /** @brief 핀 번호의 자릿수 기준입니다. 한 노드가 가질 수 있는 핀 오프셋 개수이기도 합니다. */
             static constexpr int32 kPinScale = 10;
@@ -61,22 +61,22 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "AnimationGraph" );
-    SW_EDITOR_PANEL( AnimationGraphPanel, "animation_graph", EditorPanelCategory::Tool, 1100 );
+    SW_LOG_CALLER( "AnimGraph" );
+    SW_EDITOR_PANEL( AnimGraphPanel, "animation_graph", EditorPanelCategory::Tool, 1100 );
 
-    AnimationGraphPanel::AnimationGraphPanel()
-        : EditorGraphDocumentPanel{ EditorAssetType::AnimationGraph, "Move Animation Graph Nodes", "anim-graph-layout" }
+    AnimGraphPanel::AnimGraphPanel()
+        : EditorGraphDocumentPanel{ EditorAssetType::AnimGraph, "Move Animation Graph Nodes", "anim-graph-layout" }
         , _previewPlayer{}
         , _listPreviewClip{}
     {
     }
 
-    void AnimationGraphPanel::shutdown( IRHIDevice* /*pRhiDevice*/ )
+    void AnimGraphPanel::shutdown( IRHIDevice* /*pRhiDevice*/ )
     {
         _nodeGraph.shutdown();
     }
 
-    void AnimationGraphPanel::drawContent()
+    void AnimGraphPanel::drawContent()
     {
         updateFocusedDocument();
         ensureDocumentLoaded();
@@ -88,7 +88,7 @@ namespace sw::editor
         drawAnimationCanvas();
     }
 
-    void AnimationGraphPanel::drawAnimationToolbar()
+    void AnimGraphPanel::drawAnimationToolbar()
     {
         if ( EditorChrome::beginToolbar( "##AnimGraphToolbar" ) )
         {
@@ -156,15 +156,15 @@ namespace sw::editor
                                      _listNode.size(), _listLink.size() );
             else
                 ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNode.size(), _listLink.size(),
-                                     getEditorData()._animationGraphDataFile.c_str() );
+                                     getEditorData()._animGraphDataFile.c_str() );
         }
         EditorChrome::endToolbar();
     }
 
-    void AnimationGraphPanel::drawAnimationCanvas()
+    void AnimGraphPanel::drawAnimationCanvas()
     {
-        if ( _nodeGraph.beginCanvas( "AnimationGraphCanvas",
-                                     getEditorData()._animationGraphSettingsFile.c_str() ) == false )
+        if ( _nodeGraph.beginCanvas( "AnimGraphCanvas",
+                                     getEditorData()._animGraphSettingsFile.c_str() ) == false )
         {
             ImGui::TextUnformatted( "Failed to create Animation Graph editor context." );
             return;
@@ -178,11 +178,11 @@ namespace sw::editor
                 ImGui::TextColored( ImVec4( 0.4f, 0.9f, 0.5f, 1.0f ), "%s", node._name.c_str() );
             else
                 ImGui::TextUnformatted( node._name.c_str() );
-            ed::BeginPin( toPinId( AnimationGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
+            ed::BeginPin( toPinId( AnimGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
             ImGui::TextUnformatted( "-> In" );
             ed::EndPin();
             ImGui::SameLine();
-            ed::BeginPin( toPinId( AnimationGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
+            ed::BeginPin( toPinId( AnimGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
             ImGui::TextUnformatted( "Out ->" );
             ed::EndPin();
             ed::EndNode();
@@ -193,7 +193,7 @@ namespace sw::editor
 
         for ( const GraphLink& link : _listLink )
         {
-            ed::Link( toLinkId( link._id ), toPinId( AnimationGraphPanelInternal::pinOut( link._fromNode ) ), toPinId( AnimationGraphPanelInternal::pinIn( link._toNode ) ) );
+            ed::Link( toLinkId( link._id ), toPinId( AnimGraphPanelInternal::pinOut( link._fromNode ) ), toPinId( AnimGraphPanelInternal::pinIn( link._toNode ) ) );
         }
 
         if ( ed::BeginCreate() )
@@ -208,9 +208,9 @@ namespace sw::editor
                     link._id          = nextLinkId();
                     const int32 ap    = static_cast<int32>( a.Get() );
                     const int32 bp    = static_cast<int32>( b.Get() );
-                    const int32 aNode = AnimationGraphPanelInternal::pinNodeId( ap );
-                    const int32 bNode = AnimationGraphPanelInternal::pinNodeId( bp );
-                    if ( AnimationGraphPanelInternal::isOutputPin( ap ) )
+                    const int32 aNode = AnimGraphPanelInternal::pinNodeId( ap );
+                    const int32 bNode = AnimGraphPanelInternal::pinNodeId( bp );
+                    if ( AnimGraphPanelInternal::isOutputPin( ap ) )
                     {
                         link._fromNode = aNode;
                         link._toNode   = bNode;
@@ -236,7 +236,7 @@ namespace sw::editor
         _nodeGraph.endCanvas();
     }
 
-    void AnimationGraphPanel::ensureDefaults()
+    void AnimGraphPanel::ensureDefaults()
     {
         if ( _listNode.empty() == false )
             return;
@@ -249,18 +249,18 @@ namespace sw::editor
         _listLink.push_back( GraphLink{ 100, 1, 2 } );
     }
 
-    ToolAssetLoadResult AnimationGraphPanel::loadDocument()
+    ToolAssetLoadResult AnimGraphPanel::loadDocument()
     {
-        AnimationGraphAsset       data;
-        const ToolAssetLoadResult result = EditorToolAssetCommands::loadAnimationGraph( data, getLoadedAssetPath() );
+        AnimGraphAsset            data;
+        const ToolAssetLoadResult result = EditorToolAssetCommands::loadAnimGraph( data, getLoadedAssetPath() );
         adoptLoadedGraph( std::move( data ), result );
         _previewPlayer.stop();
         return result;
     }
 
-    bool AnimationGraphPanel::saveGraphData()
+    bool AnimGraphPanel::saveGraphData()
     {
-        AnimationGraphAsset data = captureGraphData();
+        AnimGraphAsset data = captureGraphData();
         if ( _nodeGraph.bind() )
         {
             for ( GraphNode& node : data._listNode )
@@ -274,7 +274,7 @@ namespace sw::editor
         }
         // **저장이 실패하면 아무것도 지우지 않는다.** 실패를 "저장됨" 으로 표시하면 문서를 바꾸거나 에디터를 닫을 때
         // 종료 확인이 뜨지 않고 편집이 조용히 사라진다.
-        if ( EditorToolAssetCommands::saveAnimationGraph( data, getLoadedAssetPath() ) == false )
+        if ( EditorToolAssetCommands::saveAnimGraph( data, getLoadedAssetPath() ) == false )
             return false;
 
         clearDocumentDirty();
@@ -282,14 +282,14 @@ namespace sw::editor
         return true;
     }
 
-    bool AnimationGraphPanel::saveDocument()
+    bool AnimGraphPanel::saveDocument()
     {
         return saveGraphData();
     }
 
-    void AnimationGraphPanel::syncPreviewGraph()
+    void AnimGraphPanel::syncPreviewGraph()
     {
-        AnimationGraphAsset asset = captureGraphData();
+        AnimGraphAsset asset = captureGraphData();
         _previewPlayer.setGraph( asset );
         _previewPlayer.clearClips();
         _listPreviewClip.clear();
@@ -300,7 +300,7 @@ namespace sw::editor
             _previewPlayer.registerClip( clip.getName(), &clip );
     }
 
-    void AnimationGraphPanel::tickPreview( float32 deltaSeconds )
+    void AnimGraphPanel::tickPreview( float32 deltaSeconds )
     {
         if ( _bPreviewPlaying == SW_FALSE )
             return;
@@ -314,7 +314,7 @@ namespace sw::editor
             EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName(), getLoadedAssetPath() );
     }
 
-    void AnimationGraphPanel::addNamedNode( const utf8* pName )
+    void AnimGraphPanel::addNamedNode( const utf8* pName )
     {
         GraphNode n{};
         n._id          = nextNodeId();

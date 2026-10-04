@@ -13,11 +13,11 @@ namespace sw::editor
     /**
      * @brief 프리팹 인스턴스의 오버라이드를 살펴보고 되돌리거나 적용하며, 중첩 프리팹을 보여 주는 도구입니다.
      */
-    class PrefabEditorPanel : public IEditorPanel
+    class PrefabPanel : public IEditorPanel
     {
     public:
-        PrefabEditorPanel();
-        ~PrefabEditorPanel() override = default;
+        PrefabPanel();
+        ~PrefabPanel() override = default;
 
         bool        isToolPanel() const override { return true; }
         const utf8* getPanelTitle() const override

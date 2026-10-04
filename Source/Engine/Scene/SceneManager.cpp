@@ -271,7 +271,7 @@ namespace sw
                 SW_LOG_WARNING( "[SceneLoad] '%#' could not be instantiated", pathStr );
         }
 
-        SW_LOG_INFO( "[SceneLoad] '%#' 엔티티 %#개", pathStr, static_cast<uint32>( doc._listEntityNode.size() ) );
+        SW_LOG_INFO( "[SceneLoad] '%#' 엔티티 %#개", pathStr, static_cast<uint32>( doc._listSceneObjectNode.size() ) );
 
         if ( slot->_bAccepting.load( std::memory_order_acquire ) == false )
         {

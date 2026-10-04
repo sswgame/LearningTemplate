@@ -84,9 +84,9 @@ namespace sw::editor
         string _windowsIniFile{ "windows.ini" };
 
         PROPERTY()
-        string _animationGraphSettingsFile{ "AnimationGraph.json" };
+        string _animGraphSettingsFile{ "AnimGraph.json" };
         PROPERTY()
-        string _animationGraphDataFile{ "AnimationGraphData.json" };
+        string _animGraphDataFile{ "AnimGraphData.json" };
         PROPERTY()
         string _dialogueGraphDataFile{ "DialogueGraphData.json" };
         PROPERTY()

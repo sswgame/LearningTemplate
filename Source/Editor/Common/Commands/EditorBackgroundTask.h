@@ -1,5 +1,5 @@
 /**
- * @file EditorBackgroundJob.h
+ * @file EditorBackgroundTask.h
  * @brief 워커가 만들고 게임 스레드가 가져가는 에디터 백그라운드 잡의 공통 뼈대입니다.
  *
  * @details 에디터의 파일 스캔 · 로컬라이즈 로드 같은 잡은 모두 같은 규약을 씁니다. 게임 스레드가 `request()` 로 입력을
@@ -27,7 +27,7 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @class EditorBackgroundJob
+     * @class EditorBackgroundTask
      * @brief 워커가 만들고 게임 스레드가 가져가는 잡의 공통 뼈대입니다(잠금 · 세대 · 완료 플래그).
      * @details 상태를 `shared_ptr` 로 들고 워커에 넘깁니다. 잡 객체(패널 멤버)가 먼저 사라져도 워커는 유효한 메모리에 쓰고
      *          끝납니다. 세대 번호는 "요청이 갱신됐으니 낡은 워커의 결과는 버린다" 는 뜻입니다.
@@ -35,11 +35,11 @@ namespace sw::editor
      * @tparam TResult 워커가 만들어 낼 결과
      */
     template <typename TInput, typename TResult>
-    class EditorBackgroundJob
+    class EditorBackgroundTask
     {
     public:
         /** @brief 빈 잡을 만듭니다. */
-        EditorBackgroundJob()
+        EditorBackgroundTask()
             : _pState{ sw::make_shared<State>() }
         {
         }

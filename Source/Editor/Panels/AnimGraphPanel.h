@@ -6,19 +6,19 @@
 #include "Editor/Common/Gui/EditorGraphDocumentPanel.h"
 
 #include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/AnimationGraphAsset.h"
-#include "Engine/Animation/AnimationGraphPlayer.h"
+#include "Engine/Animation/AnimGraphAsset.h"
+#include "Engine/Animation/AnimGraphPlayer.h"
 
 namespace sw::editor
 {
     /** @brief imgui-node-editor 로 만든 애니메이션 그래프 편집 패널입니다. */
-    class AnimationGraphPanel : public EditorGraphDocumentPanel<AnimationGraphAsset>
+    class AnimGraphPanel : public EditorGraphDocumentPanel<AnimGraphAsset>
     {
     public:
         /** @brief 애니메이션 그래프 도구를 생성합니다. */
-        AnimationGraphPanel();
+        AnimGraphPanel();
         /** @brief 노드 에디터 컨텍스트를 해제합니다. */
-        virtual ~AnimationGraphPanel() override = default;
+        virtual ~AnimGraphPanel() override = default;
 
         // ------------------------------------------------------------------------------
         // 1) IEditorPanel — 제목/그리기
@@ -53,7 +53,7 @@ namespace sw::editor
         void tickPreview( float32 deltaSeconds );
 
     private:
-        AnimationGraphPlayer _previewPlayer;
-        vector<AnimClip>     _listPreviewClip;
+        AnimGraphPlayer  _previewPlayer;
+        vector<AnimClip> _listPreviewClip;
     };
 } // namespace sw::editor

@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Animation/AnimationGraphAsset.h"
+#include "Engine/Animation/AnimGraphAsset.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -21,7 +21,7 @@ namespace sw
      * @class SpriteAnimatorComponent
      * @brief 같은 오브젝트의 `SpriteComponent` 가 든 클립(`.sprite.json`)의 프레임을 시간에 맞춰 넘깁니다.
      * @details 애니메이션 이름은 클립의 이름 붙은 구간(`SpriteClipAsset::findFrameRange`)을 고르고, 프레임 수 · 프레임마다의 시간도 클립에서 옵니다.
-     *          프레임에 시간이 없으면(0) `_frameRate` 로 넘깁니다. 그래프(`_animationGraphPath`)는 애니메이션 이름과 "끝나면 다음" 을 줍니다.
+     *          프레임에 시간이 없으면(0) `_frameRate` 로 넘깁니다. 그래프(`_animGraphPath`)는 애니메이션 이름과 "끝나면 다음" 을 줍니다.
      *          넘긴 프레임은 스프라이트의 프레임 번호(`SpriteComponent::setClipFrame`)로 갑니다.
      *
      *          **트랜스폼 키(`transformKeys`).** 클립에 키가 있으면 재생 중 스프라이트의 로컬 위치 x · y 와 Z 축 회전을 키 값으로 정합니다
@@ -43,7 +43,7 @@ namespace sw
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
         /**
-         * @brief 그래프 경로(`_animationGraphPath`)가 바뀌면(인스펙터 · 에셋 핫 리로드 알림 — 값이 같아도) 그래프를 다시 읽습니다.
+         * @brief 그래프 경로(`_animGraphPath`)가 바뀌면(인스펙터 · 에셋 핫 리로드 알림 — 값이 같아도) 그래프를 다시 읽습니다.
          * @details 재생 중이면 지금 애니메이션이 새 그래프에도 있을 때 그대로 잇고, 없으면 새 목록의 첫 애니메이션을 처음부터 재생합니다.
          */
         void onPropertyChanged( hashed_string propertyName ) override;
@@ -63,7 +63,7 @@ namespace sw
 
         string        getCurrentAnimation() const;
         void          setCurrentAnimation( const string& anim );
-        const string& getAnimationGraphPath() const { return _animationGraphPath; }
+        const string& getAnimGraphPath() const { return _animGraphPath; }
 
         bool isRepeating() const;
         void setRepeat( bool bLoop );
@@ -83,7 +83,7 @@ namespace sw
         bool  isPaused() const;
 
     private:
-        void               tryLoadAnimationGraph();
+        void               tryLoadAnimGraph();
         [[nodiscard]] bool tryAdvanceGraphNode();
         /** @brief 같은 오브젝트의 스프라이트입니다. 없으면 nullptr 입니다. */
         SpriteComponent* findSprite() const;
@@ -103,9 +103,9 @@ namespace sw
         /** @brief 클립의 트랜스폼 키를 지금 시각에서 읽어 스프라이트의 로컬 위치 x · y · Z 회전에 씁니다. 키가 없거나 스프라이트가 루트면 쓰지 않습니다. */
         void applyTransformKeys();
 
-        PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "Animation graph asset used by this animator" )
-        string              _animationGraphPath;
-        AnimationGraphAsset _graph;
+        PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimGraph", Tooltip = "Animation graph asset used by this animator" )
+        string         _animGraphPath;
+        AnimGraphAsset _graph;
         PROPERTY( Category = "Animation", DisplayName = "Current Animation", Tooltip = "Currently playing animation name" )
         string _currentAnimation;
         PROPERTY( Category = "Animation", DisplayName = "Animation List", Tooltip = "Available animation names" )

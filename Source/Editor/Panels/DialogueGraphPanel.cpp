@@ -355,7 +355,7 @@ namespace sw::editor
     bool DialogueGraphPanel::saveGraphData()
     {
         DialogueGraphAsset data = captureGraphData();
-        // 실패하면 아무것도 지우지 않는다. AnimationGraphPanel 쪽 주석 참고.
+        // 실패하면 아무것도 지우지 않는다. AnimGraphPanel 쪽 주석 참고.
         if ( EditorToolAssetCommands::saveDialogueGraph( data, getLoadedAssetPath() ) == false )
             return false;
 

@@ -34,12 +34,12 @@ SW_TEST_CASE( EditorResourceIndexTest, CategoryComesFromTheKindTable )
         EditorAssetType _kind;
     };
     const Expectation arrExpectation[] = {
-        {       "Resource/game/empty/maps/town.scene.xml",          EditorAssetType::Scene},
-        {       "Resource/game/empty/anim/idle.anim.json", EditorAssetType::AnimationGraph},
-        {"Resource/game/empty/maps/overworld.tilemap.xml",        EditorAssetType::TileMap},
-        {       "Resource/engine/materials/hero.material",       EditorAssetType::Material},
-        {             "Resource/game/empty/audio/hit.wav",          EditorAssetType::Audio},
-        {        "Resource/game/empty/cut/intro.seq.json",       EditorAssetType::Sequence},
+        {       "Resource/game/empty/maps/town.scene.xml",     EditorAssetType::Scene},
+        {       "Resource/game/empty/anim/idle.anim.json", EditorAssetType::AnimGraph},
+        {"Resource/game/empty/maps/overworld.tilemap.xml",   EditorAssetType::TileMap},
+        {       "Resource/engine/materials/hero.material",  EditorAssetType::Material},
+        {             "Resource/game/empty/audio/hit.wav",     EditorAssetType::Audio},
+        {        "Resource/game/empty/cut/intro.seq.json",  EditorAssetType::Sequence},
     };
     for ( const Expectation& expectation : arrExpectation )
     {
@@ -88,7 +88,7 @@ SW_TEST_CASE( EditorResourceIndexTest, CatalogCountsEveryKindOfTheTable )
         total += row._count;
         size_t expected{ 0 };
         if ( row._kind == EditorAssetType::Scene || row._kind == EditorAssetType::Shader || row._kind == EditorAssetType::Data ||
-             row._kind == EditorAssetType::AnimationGraph )
+             row._kind == EditorAssetType::AnimGraph )
             expected = 1;
         else if ( row._kind == EditorAssetType::Prefab || row._kind == EditorAssetType::Texture )
             expected = 2;

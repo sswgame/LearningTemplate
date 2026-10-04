@@ -73,15 +73,15 @@ namespace sw
                         continue;
 
                     BuiltinRow row;
-                    if ( StringUtil::startsWith( line, builtinMacroConstants::kType ) )
+                    if ( StringUtil::startsWith( line, builtinmacro::kType ) )
                     {
-                        if ( parseMacroLine( line, builtinMacroConstants::kType, row._listArgument ) )
+                        if ( parseMacroLine( line, builtinmacro::kType, row._listArgument ) )
                             outListRow.push_back( std::move( row ) );
                     }
-                    else if ( StringUtil::startsWith( line, builtinMacroConstants::kContainer ) )
+                    else if ( StringUtil::startsWith( line, builtinmacro::kContainer ) )
                     {
                         row._bContainer = SW_TRUE;
-                        if ( parseMacroLine( line, builtinMacroConstants::kContainer, row._listArgument ) )
+                        if ( parseMacroLine( line, builtinmacro::kContainer, row._listArgument ) )
                             outListRow.push_back( std::move( row ) );
                     }
                 }
@@ -91,7 +91,7 @@ namespace sw
             /** @brief TYPE 줄의 네임스페이스 칸입니다. `-` 면 비어 있습니다. */
             static string_view getNamespace( const vector<string>& listArgument )
             {
-                return listArgument[3] == builtinMacroConstants::kSkipNamespace ? string_view{} : string_view( listArgument[3] );
+                return listArgument[3] == builtinmacro::kSkipNamespace ? string_view{} : string_view( listArgument[3] );
             }
 
             /** @brief TYPE 줄의 별칭들입니다(5번째 칸부터). `_` 는 빈 자리 표시라 뺍니다. */
@@ -100,7 +100,7 @@ namespace sw
                 vector<string> listAlias;
                 for ( size_t argIndex = 4; argIndex < listArgument.size(); ++argIndex )
                 {
-                    if ( listArgument[argIndex] != builtinMacroConstants::kSkipAlias )
+                    if ( listArgument[argIndex] != builtinmacro::kSkipAlias )
                         listAlias.push_back( listArgument[argIndex] );
                 }
                 return listAlias;
@@ -182,16 +182,16 @@ namespace sw
             return false;
 
         const EmitTemplateStore& tpls = session._emitTemplateStore;
-        if ( tpls.isLoaded() == false || tpls.has( tplConstants::kBuiltinFileHeader ) == false ||
-             tpls.has( tplConstants::kBuiltinTypeRegistrar ) == false || tpls.has( tplConstants::kBuiltinFileFooter ) == false )
+        if ( tpls.isLoaded() == false || tpls.has( templatefile::kBuiltinFileHeader ) == false ||
+             tpls.has( templatefile::kBuiltinTypeRegistrar ) == false || tpls.has( templatefile::kBuiltinFileFooter ) == false )
         {
-            SW_LOG_ERROR( "emit requires %# (%# / %# / %#).", cliConstants::kEmitTemplates, tplConstants::kBuiltinFileHeader,
-                          tplConstants::kBuiltinTypeRegistrar, tplConstants::kBuiltinFileFooter );
+            SW_LOG_ERROR( "emit requires %# (%# / %# / %#).", cli::kEmitTemplates, templatefile::kBuiltinFileHeader,
+                          templatefile::kBuiltinTypeRegistrar, templatefile::kBuiltinFileFooter );
             return false;
         }
 
-        string out       = tpls.render( tplConstants::kBuiltinFileHeader, {
-                                                                        { templateKeyConstants::kSourcePath, builtinsAbsPath }
+        string out       = tpls.render( templatefile::kBuiltinFileHeader, {
+                                                                        { templatekey::kSourcePath, builtinsAbsPath }
         } );
         uint32 typeCount = 0;
         for ( const ReflectBuiltinsLoaderInternal::BuiltinRow& row : listRow )
@@ -210,12 +210,12 @@ namespace sw
 
             StringBuilder<constant::kMaxBuffer128> id;
             id.appendFormat( "Builtin_%#", canonical );
-            out += tpls.render( tplConstants::kBuiltinTypeRegistrar,
+            out += tpls.render( templatefile::kBuiltinTypeRegistrar,
                                 {
-                                    {       templateKeyConstants::kId,            id.view()},
-                                    {     templateKeyConstants::kName,            canonical},
-                                    {  templateKeyConstants::kCppType, row._listArgument[1]},
-                                    {templateKeyConstants::kAliasRegs,     aliasRegs.view()}
+                                    {       templatekey::kId,            id.view()},
+                                    {     templatekey::kName,            canonical},
+                                    {  templatekey::kCppType, row._listArgument[1]},
+                                    {templatekey::kAliasRegs,     aliasRegs.view()}
             } );
             ++typeCount;
         }
@@ -225,7 +225,7 @@ namespace sw
             SW_LOG_WARNING( "emit: no TYPE rows in %#", builtinsAbsPath );
             return false;
         }
-        out += tpls.render( tplConstants::kBuiltinFileFooter, {} );
+        out += tpls.render( templatefile::kBuiltinFileFooter, {} );
 
         if ( GeneratedFileUtil::writeIfChanged( string( outCppAbsPath ), out ) == false )
             return false;

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/AnimationGraphAsset.h"
+#include "Engine/Animation/AnimGraphAsset.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
@@ -9,7 +9,7 @@
 
 namespace sw
 {
-    bool AnimationGraphAsset::loadFromFile( string_view path )
+    bool AnimGraphAsset::loadFromFile( string_view path )
     {
         SW_MEMORY_SCOPE( Animation );
         _listNode.clear();
@@ -25,7 +25,7 @@ namespace sw
         return true;
     }
 
-    bool AnimationGraphAsset::saveToFile( string_view path ) const
+    bool AnimGraphAsset::saveToFile( string_view path ) const
     {
         if ( path.empty() )
             return false;
@@ -33,7 +33,7 @@ namespace sw
         return FileUtil::writeTextFile( path, toJson() );
     }
 
-    bool AnimationGraphAsset::parseJson( string_view jsonView )
+    bool AnimGraphAsset::parseJson( string_view jsonView )
     {
         _listNode.clear();
         _listLink.clear();
@@ -46,11 +46,11 @@ namespace sw
         return true;
     }
 
-    void AnimationGraphAsset::parseRoot( const JsonValue& root )
+    void AnimGraphAsset::parseRoot( const JsonValue& root )
     {
         forEachObjectInArray( root, "nodes", [this]( const JsonValue& nodeJson, size_t /*nodeIndex*/ )
         {
-            AnimationGraphNode node{};
+            AnimGraphNode node{};
             node._id          = static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
             node._name        = nodeJson.get( "name" ).asString();
             node._position._x = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
@@ -61,7 +61,7 @@ namespace sw
 
         forEachObjectInArray( root, "links", [this]( const JsonValue& linkJson, size_t /*linkIndex*/ )
         {
-            AnimationGraphLink link{};
+            AnimGraphLink link{};
             link._id       = static_cast<int32>( linkJson.get( "id" ).asInt( 0 ) );
             link._fromNode = static_cast<int32>( linkJson.get( "from" ).asInt( 0 ) );
             link._toNode   = static_cast<int32>( linkJson.get( "to" ).asInt( 0 ) );
@@ -70,14 +70,14 @@ namespace sw
         } );
     }
 
-    string AnimationGraphAsset::toJson() const
+    string AnimGraphAsset::toJson() const
     {
         JsonDocument    doc;
         const JsonValue root = doc.makeObject();
 
         const JsonValue nodesVal = root.set( "nodes" );
         nodesVal.setArray();
-        for ( const AnimationGraphNode& node : _listNode )
+        for ( const AnimGraphNode& node : _listNode )
         {
             const JsonValue nodeJson = nodesVal.pushBack();
             nodeJson.setObject();
@@ -89,7 +89,7 @@ namespace sw
 
         const JsonValue linksVal = root.set( "links" );
         linksVal.setArray();
-        for ( const AnimationGraphLink& link : _listLink )
+        for ( const AnimGraphLink& link : _listLink )
         {
             const JsonValue linkJson = linksVal.pushBack();
             linkJson.setObject();
@@ -101,20 +101,20 @@ namespace sw
         return doc.dump( 2 );
     }
 
-    void AnimationGraphAsset::collectNodeNames( vector<string>& outListName ) const
+    void AnimGraphAsset::collectNodeNames( vector<string>& outListName ) const
     {
         outListName.clear();
         outListName.reserve( _listNode.size() );
-        for ( const AnimationGraphNode& node : _listNode )
+        for ( const AnimGraphNode& node : _listNode )
         {
             if ( node._name.empty() == false )
                 outListName.push_back( node._name );
         }
     }
 
-    const AnimationGraphNode* AnimationGraphAsset::findNode( int32 nodeId ) const
+    const AnimGraphNode* AnimGraphAsset::findNode( int32 nodeId ) const
     {
-        for ( const AnimationGraphNode& node : _listNode )
+        for ( const AnimGraphNode& node : _listNode )
         {
             if ( node._id == nodeId )
                 return &node;
@@ -122,11 +122,11 @@ namespace sw
         return nullptr;
     }
 
-    const AnimationGraphNode* AnimationGraphAsset::findNodeByName( string_view name ) const
+    const AnimGraphNode* AnimGraphAsset::findNodeByName( string_view name ) const
     {
         if ( name.empty() )
             return nullptr;
-        for ( const AnimationGraphNode& node : _listNode )
+        for ( const AnimGraphNode& node : _listNode )
         {
             if ( node._name == name )
                 return &node;
@@ -134,12 +134,12 @@ namespace sw
         return nullptr;
     }
 
-    const AnimationGraphNode* AnimationGraphAsset::findEntryNode() const
+    const AnimGraphNode* AnimGraphAsset::findEntryNode() const
     {
-        for ( const AnimationGraphNode& node : _listNode )
+        for ( const AnimGraphNode& node : _listNode )
         {
             bool bHasIncoming = false;
-            for ( const AnimationGraphLink& link : _listLink )
+            for ( const AnimGraphLink& link : _listLink )
             {
                 if ( link._toNode != node._id )
                     continue;
@@ -154,9 +154,9 @@ namespace sw
         return &_listNode.front();
     }
 
-    int32 AnimationGraphAsset::findFirstOutgoingNodeId( int32 fromNodeId ) const
+    int32 AnimGraphAsset::findFirstOutgoingNodeId( int32 fromNodeId ) const
     {
-        for ( const AnimationGraphLink& link : _listLink )
+        for ( const AnimGraphLink& link : _listLink )
         {
             if ( link._fromNode == fromNodeId )
                 return link._toNode;

@@ -531,7 +531,7 @@ cd build/Ninja-Debug/Bin
   `ReflectionSerializationTest.EveryPropertyHasATypeTheSerializersCanCarry`, 모듈판은 SmokeTest 의 `ModuleApiTest`). enum 에 `ENUM()` 이 없으면 `"null"` 로 저장된다.
   런타임 핸들(`void*`)은 `Transient`. `PROPERTY()` 를 빼먹은 필드는 매 실행 "모르는 필드" 경고를 내고 값은 기본값으로 돈다.
 - **모르는 칸 · 모르는 열거자는 그 칸만 실패한다**(컨테이너면 그 원소, 맵이면 그 항목) — 세 형식이 같은 규칙이다. 기록 타입 해시를 모르는 칸(지운 enum · 타입)은 크기로
-  짐작해 읽지 않는다. 모르는 타입의 컴포넌트는 `MissingComponent` 가 원문을 맡아 같은 형식으로 다시 쓴다. 프리팹을 못 찾은 엔티티는 `SceneDocument::EntityNode` 로 보존한다.
+  짐작해 읽지 않는다. 모르는 타입의 컴포넌트는 `MissingComponent` 가 원문을 맡아 같은 형식으로 다시 쓴다. 프리팹을 못 찾은 엔티티는 `SceneDocument::SceneObjectNode` 로 보존한다.
 - **바이너리는 enum 을 열거자 이름 해시로 싣는다**(플래그는 켜진 이름 수 + 해시, 이름 없는 값만 `0 + int64`). 열거자 이름을 바꾸면 데이터를 다시 쓴다(옛 바이너리는
   읽히지 않는다 — 실제 게임 데이터가 생긴 뒤라면 `ValueAlias`). 한 enum 안의 `Red` · `RED` 는 해시가 같다 — `registerEnum` 이 알린다. 판 `BinaryWireVersion` 은 스트림 머리마다 있다. `kObjectReflectedSchemaVersion` 은 일부러
   올리지 않았다(올리면 옛 상태가 모두 거절된다).
@@ -599,7 +599,7 @@ cd build/Ninja-Debug/Bin
 - **GPU 메모리는 `RHIMemoryLedger` 가 센다** — 생성은 핸들 표에 넣는 자리, 해제는 지연 해제 콜백에서만 적는다(destroy 요청 시점이 아니다). 새 자원 경로를
   더하면 거기서 `recordAllocation` / `recordFree` 를 부른다. Vulkan `heapUsage`(이 AMD 드라이버)는 `vkAllocateMemory` 합뿐이라 "엔진 밖" ≈ 0 — 스왑체인 몫은
   DX12 · DX11 수치로 본다. GL 은 벤더 확장이 없으면 사용량이 "모름" 이다. DX11 · GL 은 할당 크기 API 가 없어 논리 크기다.
-- **씬 엔티티는 0 이 아닌 `id` 가 필수다** — `SceneDocument::loadXml` · `saveXml` · 쿠커가 거절한다. 손으로 씬 XML 이나 `EntityNode` 를 지을 때 `_fileId` 를 빠뜨리지 말 것.
+- **씬 엔티티는 0 이 아닌 `id` 가 필수다** — `SceneDocument::loadXml` · `saveXml` · 쿠커가 거절한다. 손으로 씬 XML 이나 `SceneObjectNode` 를 지을 때 `_fileId` 를 빠뜨리지 말 것.
   이름만 남은 부착(id 0 + 이름)은 찾지 못한 부모 참조를 다른 id 공간으로 옮겨 적은 **지금 형식**이라(`SceneComponent::syncAttachSerializeFields`) 지우면 안 된다.
 - **씬 · 프리팹 손 XML 을 쓰지 말 것** — 임베디드 오브젝트 XML 은 리플렉션 산출물이다. 머티리얼 XML 에서 `_permutations` 를 빼먹으면 네 백엔드가 제각각 무너져 렌더러 버그로 오인한다
   — 실제 에셋 + `setPropertyValue` 로 간다.

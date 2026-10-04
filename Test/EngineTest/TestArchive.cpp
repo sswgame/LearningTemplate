@@ -462,31 +462,31 @@ SW_TEST_CASE( ArchiveTest, SceneAndPrefabBinaryArchiveRoundTrip )
         sw::SceneDocument sceneWrite;
         sceneWrite._name = "BinaryTestScene";
 
-        sw::SceneDocument::EntityNode node1{};
+        sw::SceneDocument::SceneObjectNode node1{};
         node1._name        = "Player";
         node1._prefab      = "prefabs/player.prefab.xml";
         node1._prefabGuid  = "guid-1234-abcd";
         node1._embeddedXml = "<Transform x=\"10\" y=\"20\"/>";
 
-        sw::SceneDocument::EntityNode node2{};
+        sw::SceneDocument::SceneObjectNode node2{};
         node2._name        = "Monster";
         node2._prefab      = "prefabs/goblin.prefab.xml";
         node2._prefabGuid  = "guid-5678-ef01";
         node2._embeddedXml = "<Transform x=\"50\" y=\"60\"/>";
 
-        sceneWrite._listEntityNode.push_back( node1 );
-        sceneWrite._listEntityNode.push_back( node2 );
+        sceneWrite._listSceneObjectNode.push_back( node1 );
+        sceneWrite._listSceneObjectNode.push_back( node2 );
 
         SW_EXPECT_TRUE( sceneWrite.saveBinary( tempSceneBin ) );
 
         sw::SceneDocument sceneRead;
         SW_EXPECT_TRUE( sceneRead.loadBinary( tempSceneBin ) );
         SW_EXPECT_EQUAL( sw::string( "BinaryTestScene" ), sceneRead._name );
-        SW_EXPECT_EQUAL( 2u, static_cast<uint32>( sceneRead._listEntityNode.size() ) );
-        SW_EXPECT_EQUAL( node1._name, sceneRead._listEntityNode[0]._name );
-        SW_EXPECT_EQUAL( node1._prefab, sceneRead._listEntityNode[0]._prefab );
-        SW_EXPECT_EQUAL( node2._name, sceneRead._listEntityNode[1]._name );
-        SW_EXPECT_EQUAL( node2._embeddedXml, sceneRead._listEntityNode[1]._embeddedXml );
+        SW_EXPECT_EQUAL( 2u, static_cast<uint32>( sceneRead._listSceneObjectNode.size() ) );
+        SW_EXPECT_EQUAL( node1._name, sceneRead._listSceneObjectNode[0]._name );
+        SW_EXPECT_EQUAL( node1._prefab, sceneRead._listSceneObjectNode[0]._prefab );
+        SW_EXPECT_EQUAL( node2._name, sceneRead._listSceneObjectNode[1]._name );
+        SW_EXPECT_EQUAL( node2._embeddedXml, sceneRead._listSceneObjectNode[1]._embeddedXml );
     }
 
     // 2) PrefabAsset 바이너리 저장 및 로드

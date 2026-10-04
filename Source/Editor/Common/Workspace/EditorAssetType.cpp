@@ -66,36 +66,36 @@ namespace sw::editor
 
         // 줄 순서가 곧 **판정 우선순위**다 — 처음 맞는 줄이 이긴다(`findKind` · `findReloadRoute`).
         constexpr AssetMatchRow kArrAssetMatch[] = {
-            {         EditorAssetType::Scene, MatchMode::CookableSource,             nullptr,                              0,      nullptr,                                 nullptr},
-            {        EditorAssetType::Prefab, MatchMode::CookableSource,             nullptr,                              0,     "Prefab",                                 nullptr},
-            {       EditorAssetType::Texture,      MatchMode::Extension,      kArrTextureExt,      countOf( kArrTextureExt ),    "Texture", &TextureBaker::importChangedSourceImage},
-            {        EditorAssetType::Shader,      MatchMode::Extension,       kArrShaderExt,       countOf( kArrShaderExt ),      nullptr,                                 nullptr},
-            {      EditorAssetType::Material,      MatchMode::Extension,     kArrMaterialExt,     countOf( kArrMaterialExt ),   "Material",                                 nullptr},
-            {         EditorAssetType::Audio,      MatchMode::Extension,        kArrAudioExt,        countOf( kArrAudioExt ),      nullptr,                                 nullptr},
-            {EditorAssetType::AnimationGraph,       MatchMode::EndsWith,      kArrAnimSuffix,      countOf( kArrAnimSuffix ),      nullptr,                                 nullptr},
-            { EditorAssetType::DialogueGraph,       MatchMode::EndsWith,  kArrDialogueSuffix,  countOf( kArrDialogueSuffix ),      nullptr,                                 nullptr},
-            {    EditorAssetType::SpriteClip,       MatchMode::EndsWith, kArrSpriteDocSuffix, countOf( kArrSpriteDocSuffix ), "SpriteClip",                                 nullptr},
-            {    EditorAssetType::SpriteClip,      MatchMode::Extension,  kArrSpriteImageExt,  countOf( kArrSpriteImageExt ),      nullptr,                                 nullptr},
-            {       EditorAssetType::TileMap,       MatchMode::EndsWith,   kArrTileMapSuffix,   countOf( kArrTileMapSuffix ),      nullptr,                                 nullptr},
-            {      EditorAssetType::Sequence,       MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),      nullptr,                                 nullptr},
-            {          EditorAssetType::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),      nullptr,                                 nullptr},
+            {        EditorAssetType::Scene, MatchMode::CookableSource,             nullptr,                              0,      nullptr,                                 nullptr},
+            {       EditorAssetType::Prefab, MatchMode::CookableSource,             nullptr,                              0,     "Prefab",                                 nullptr},
+            {      EditorAssetType::Texture,      MatchMode::Extension,      kArrTextureExt,      countOf( kArrTextureExt ),    "Texture", &TextureBaker::importChangedSourceImage},
+            {       EditorAssetType::Shader,      MatchMode::Extension,       kArrShaderExt,       countOf( kArrShaderExt ),      nullptr,                                 nullptr},
+            {     EditorAssetType::Material,      MatchMode::Extension,     kArrMaterialExt,     countOf( kArrMaterialExt ),   "Material",                                 nullptr},
+            {        EditorAssetType::Audio,      MatchMode::Extension,        kArrAudioExt,        countOf( kArrAudioExt ),      nullptr,                                 nullptr},
+            {    EditorAssetType::AnimGraph,       MatchMode::EndsWith,      kArrAnimSuffix,      countOf( kArrAnimSuffix ),      nullptr,                                 nullptr},
+            {EditorAssetType::DialogueGraph,       MatchMode::EndsWith,  kArrDialogueSuffix,  countOf( kArrDialogueSuffix ),      nullptr,                                 nullptr},
+            {   EditorAssetType::SpriteClip,       MatchMode::EndsWith, kArrSpriteDocSuffix, countOf( kArrSpriteDocSuffix ), "SpriteClip",                                 nullptr},
+            {   EditorAssetType::SpriteClip,      MatchMode::Extension,  kArrSpriteImageExt,  countOf( kArrSpriteImageExt ),      nullptr,                                 nullptr},
+            {      EditorAssetType::TileMap,       MatchMode::EndsWith,   kArrTileMapSuffix,   countOf( kArrTileMapSuffix ),      nullptr,                                 nullptr},
+            {     EditorAssetType::Sequence,       MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),      nullptr,                                 nullptr},
+            {         EditorAssetType::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),      nullptr,                                 nullptr},
         };
 
         // 종류마다 한 줄. 줄 순서가 곧 **브라우저 필터 · 도구 패널 · 리소스 카탈로그의 표시 순서**다.
         // 칸: 종류 · 이름(단수) · 브라우저 라벨 · 패널 제목 · 아이콘 · 색 · 액센트 색 · Other 제외 · 임포트
         constexpr EditorAssetTypeInfo kArrKindInfo[] = {
-            {         EditorAssetType::Scene,      "Scene",    "Scenes",           nullptr,   ICON_FA_CLAPPERBOARD,                style::kAccent,  true,  true, false},
-            {        EditorAssetType::Prefab,     "Prefab",   "Prefabs",   "Prefab Editor",          ICON_FA_CUBES, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
-            {       EditorAssetType::Texture,    "Texture",  "Textures",           nullptr,          ICON_FA_IMAGE, { 0.35f, 0.85f, 0.45f, 1.0f }, false,  true,  true},
-            {        EditorAssetType::Shader,     "Shader",   "Shaders",           nullptr,           ICON_FA_CODE, { 0.95f, 0.45f, 0.35f, 1.0f }, false,  true,  true},
-            {      EditorAssetType::Material,   "Material", "Materials",        "Material",        ICON_FA_DROPLET, { 0.80f, 0.45f, 0.95f, 1.0f }, false,  true,  true},
-            {         EditorAssetType::Audio,      "Audio",     "Audio",           nullptr,          ICON_FA_MUSIC, { 0.95f, 0.85f, 0.25f, 1.0f }, false,  true,  true},
-            {EditorAssetType::AnimationGraph,  "AnimGraph",      "Anim", "Animation Graph", ICON_FA_PERSON_RUNNING, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
-            { EditorAssetType::DialogueGraph,   "Dialogue",  "Dialogue",  "Dialogue Graph",       ICON_FA_COMMENTS, { 0.40f, 0.75f, 1.00f, 1.0f }, false,  true,  true},
-            {    EditorAssetType::SpriteClip, "SpriteClip",    "Sprite",     "Sprite Clip", ICON_FA_PERSON_RUNNING, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
-            {       EditorAssetType::TileMap,    "TileMap",  "Tile Map",   "Tile Map Tool",     ICON_FA_BORDER_ALL, { 0.45f, 0.85f, 0.50f, 1.0f }, false,  true,  true},
-            {      EditorAssetType::Sequence,   "Sequence",       "Seq",       "Sequencer",           ICON_FA_FILM, { 0.85f, 0.55f, 0.85f, 1.0f }, false,  true,  true},
-            {          EditorAssetType::Data,       "Data",      "Data",           nullptr,          ICON_FA_TABLE, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
+            {        EditorAssetType::Scene,      "Scene",    "Scenes",           nullptr,   ICON_FA_CLAPPERBOARD,                style::kAccent,  true,  true, false},
+            {       EditorAssetType::Prefab,     "Prefab",   "Prefabs",   "Prefab Editor",          ICON_FA_CUBES, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
+            {      EditorAssetType::Texture,    "Texture",  "Textures",           nullptr,          ICON_FA_IMAGE, { 0.35f, 0.85f, 0.45f, 1.0f }, false,  true,  true},
+            {       EditorAssetType::Shader,     "Shader",   "Shaders",           nullptr,           ICON_FA_CODE, { 0.95f, 0.45f, 0.35f, 1.0f }, false,  true,  true},
+            {     EditorAssetType::Material,   "Material", "Materials",        "Material",        ICON_FA_DROPLET, { 0.80f, 0.45f, 0.95f, 1.0f }, false,  true,  true},
+            {        EditorAssetType::Audio,      "Audio",     "Audio",           nullptr,          ICON_FA_MUSIC, { 0.95f, 0.85f, 0.25f, 1.0f }, false,  true,  true},
+            {    EditorAssetType::AnimGraph,  "AnimGraph",      "Anim", "Animation Graph", ICON_FA_PERSON_RUNNING, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
+            {EditorAssetType::DialogueGraph,   "Dialogue",  "Dialogue",  "Dialogue Graph",       ICON_FA_COMMENTS, { 0.40f, 0.75f, 1.00f, 1.0f }, false,  true,  true},
+            {   EditorAssetType::SpriteClip, "SpriteClip",    "Sprite",     "Sprite Clip", ICON_FA_PERSON_RUNNING, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
+            {      EditorAssetType::TileMap,    "TileMap",  "Tile Map",   "Tile Map Tool",     ICON_FA_BORDER_ALL, { 0.45f, 0.85f, 0.50f, 1.0f }, false,  true,  true},
+            {     EditorAssetType::Sequence,   "Sequence",       "Seq",       "Sequencer",           ICON_FA_FILM, { 0.85f, 0.55f, 0.85f, 1.0f }, false,  true,  true},
+            {         EditorAssetType::Data,       "Data",      "Data",           nullptr,          ICON_FA_TABLE, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
         };
 
         /** @brief 종류 표가 `Unknown` 을 뺀 모든 종류를 꼭 한 번씩 담고, 이름 · 라벨 · 아이콘 칸이 비지 않았는지입니다. */

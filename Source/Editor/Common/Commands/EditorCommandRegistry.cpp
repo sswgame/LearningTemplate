@@ -37,11 +37,11 @@ namespace sw::editor
                 if ( shortcut._key == EditorCommandKey::None )
                     return;
 
-                if ( ( shortcut._modifier & commandmod::kCtrl ) != 0 )
+                if ( ( shortcut._modifier & commandmodifier::kCtrl ) != 0 )
                     outLabel.append( "Ctrl+" );
-                if ( ( shortcut._modifier & commandmod::kShift ) != 0 )
+                if ( ( shortcut._modifier & commandmodifier::kShift ) != 0 )
                     outLabel.append( "Shift+" );
-                if ( ( shortcut._modifier & commandmod::kAlt ) != 0 )
+                if ( ( shortcut._modifier & commandmodifier::kAlt ) != 0 )
                     outLabel.append( "Alt+" );
 
                 outLabel.append( EditorCommandRegistry::getKeyName( shortcut._key ) );
@@ -323,7 +323,7 @@ namespace sw::editor
 
     bool EditorCommandRegistry::isSameShortcut( const EditorCommandShortcut& lhs, const EditorCommandShortcut& rhs )
     {
-        constexpr uint8 kChordMask    = commandmod::kCtrl | commandmod::kShift | commandmod::kAlt;
+        constexpr uint8 kChordMask    = commandmodifier::kCtrl | commandmodifier::kShift | commandmodifier::kAlt;
         const bool      bSameKey      = ( lhs._key == rhs._key );
         const bool      bSameModifier = ( ( lhs._modifier & kChordMask ) == ( rhs._modifier & kChordMask ) );
         return bSameKey && bSameModifier;
@@ -332,7 +332,7 @@ namespace sw::editor
     bool EditorCommandRegistry::isHandledShortcut( const EditorCommandShortcut& shortcut )
     {
         const bool bHasKey      = ( shortcut._key != EditorCommandKey::None );
-        const bool bDisplayOnly = ( ( shortcut._modifier & commandmod::kDisplayOnly ) != 0 );
+        const bool bDisplayOnly = ( ( shortcut._modifier & commandmodifier::kDisplayOnly ) != 0 );
         return bHasKey && bDisplayOnly == false;
     }
 
@@ -340,7 +340,7 @@ namespace sw::editor
     {
         if ( bSuperDown )
             return false;
-        constexpr uint8 kChordMask = commandmod::kCtrl | commandmod::kShift | commandmod::kAlt;
+        constexpr uint8 kChordMask = commandmodifier::kCtrl | commandmodifier::kShift | commandmodifier::kAlt;
         return ( shortcut._modifier & kChordMask ) == ( pressedModifier & kChordMask );
     }
 } // namespace sw::editor

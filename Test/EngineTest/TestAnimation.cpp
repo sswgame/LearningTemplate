@@ -4,8 +4,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/AnimGraphAsset.h"
 #include "Engine/Animation/AnimPlayer.h"
-#include "Engine/Animation/AnimationGraphAsset.h"
 #include "Engine/Animation/BlendSpace.h"
 #include "Engine/Animation/DualQuaternion.h"
 #include "Engine/Animation/Skeleton.h"
@@ -26,11 +26,11 @@ namespace
     /** @brief 이름 붙은 노드만 가진 그래프를 @p path 에 씁니다(링크 없음). */
     bool writeNamedGraph( const string& path, std::initializer_list<const utf8*> listName )
     {
-        AnimationGraphAsset graph;
-        int32               nodeId = 1;
+        AnimGraphAsset graph;
+        int32          nodeId = 1;
         for ( const utf8* pName : listName )
         {
-            AnimationGraphNode node{};
+            AnimGraphNode node{};
             node._id   = nodeId++;
             node._name = pName;
             graph._listNode.push_back( node );
@@ -41,11 +41,11 @@ namespace
     /** @brief 애니메이터의 그래프 경로 PROPERTY 를 쓰고, 인스펙터 · 에셋 핫 리로드처럼 바뀐 칸을 알립니다. */
     bool writeGraphPath( SpriteAnimatorComponent* pAnimator, const string& path )
     {
-        const PropertyInfo* pProperty = pAnimator->getTypeInfo()->findPropertyInHierarchy( hashed_string( "_animationGraphPath" ) );
+        const PropertyInfo* pProperty = pAnimator->getTypeInfo()->findPropertyInHierarchy( hashed_string( "_animGraphPath" ) );
         if ( pProperty == nullptr )
             return false;
         pProperty->setValue<string>( pAnimator, path );
-        pAnimator->onPropertyChanged( hashed_string( "_animationGraphPath" ) );
+        pAnimator->onPropertyChanged( hashed_string( "_animGraphPath" ) );
         return true;
     }
 } // namespace

@@ -32,14 +32,14 @@ namespace sw
 namespace sw
 {
     /// @brief 엔진이 예약한 프레임 리소스 이름입니다(registerPassTexture 호출용 상수).
-    namespace framres
+    namespace frameresource
     {
         inline constexpr const utf8* kSceneColor    = "SceneColor";
         inline constexpr const utf8* kSceneDepth    = "SceneDepth";
         inline constexpr const utf8* kShadowMap     = "ShadowMap";
         inline constexpr const utf8* kGBufferAlbedo = "GBufferAlbedo";
         inline constexpr const utf8* kGBufferNormal = "GBufferNormal";
-    } // namespace framres
+    } // namespace frameresource
 
     /**
      * @class FrameResourceRegistry

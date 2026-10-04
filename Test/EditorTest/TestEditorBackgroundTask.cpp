@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/EditorBackgroundJob.h"
+#include "Editor/Common/Commands/EditorBackgroundTask.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -21,7 +21,7 @@ namespace
      * @details 실제 잡은 TaskManager 워커에서 runJob 을 돌리지만, 검증 대상은 스케줄링이 아니라
      *          잠금·세대 처리이므로 여기서는 워커 단계를 손으로 부른다.
      */
-    class TestBackgroundJob final : public EditorBackgroundJob<TestJobInput, vector<int32>>
+    class TestBackgroundJob final : public EditorBackgroundTask<TestJobInput, vector<int32>>
     {
     public:
         /** @brief 게임 스레드: 요청을 올리고 워커에 넘길 세대를 돌려줍니다. */
@@ -47,9 +47,9 @@ namespace
 } // namespace
 
 /**
- * @brief [EditorBackgroundJobTest] 요청 → 워커 발행 → 수거의 정상 흐름과 플래그 전이 검증
+ * @brief [EditorBackgroundTaskTest] 요청 → 워커 발행 → 수거의 정상 흐름과 플래그 전이 검증
  */
-SW_TEST_CASE( EditorBackgroundJobTest, RequestPublishTakeRoundTrip )
+SW_TEST_CASE( EditorBackgroundTaskTest, RequestPublishTakeRoundTrip )
 {
     TestBackgroundJob job;
 
@@ -79,11 +79,11 @@ SW_TEST_CASE( EditorBackgroundJobTest, RequestPublishTakeRoundTrip )
 }
 
 /**
- * @brief [EditorBackgroundJobTest] 재요청이 낡은 세대의 워커 결과를 버리는지 검증
+ * @brief [EditorBackgroundTaskTest] 재요청이 낡은 세대의 워커 결과를 버리는지 검증
  * @details 폴더를 빠르게 옮겨 다니면 이전 스캔이 나중에 끝나 도착한다. 세대가 이것을 막지 못하면
  *          Content Browser 가 방금 연 폴더 대신 이전 폴더의 목록을 보여준다.
  */
-SW_TEST_CASE( EditorBackgroundJobTest, StaleGenerationResultIsDropped )
+SW_TEST_CASE( EditorBackgroundTaskTest, StaleGenerationResultIsDropped )
 {
     TestBackgroundJob job;
 
@@ -113,9 +113,9 @@ SW_TEST_CASE( EditorBackgroundJobTest, StaleGenerationResultIsDropped )
 }
 
 /**
- * @brief [EditorBackgroundJobTest] 재요청이 이전 결과를 지워 낡은 값이 새 요청에 섞이지 않는지 검증
+ * @brief [EditorBackgroundTaskTest] 재요청이 이전 결과를 지워 낡은 값이 새 요청에 섞이지 않는지 검증
  */
-SW_TEST_CASE( EditorBackgroundJobTest, RequestClearsPreviousResult )
+SW_TEST_CASE( EditorBackgroundTaskTest, RequestClearsPreviousResult )
 {
     TestBackgroundJob job;
 

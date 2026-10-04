@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/InputMapEditorPanel.h"
+#include "Editor/Panels/InputMapPanel.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -26,12 +26,12 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( InputMapEditorPanel, "input_map", EditorPanelCategory::Tool, 1800 );
+    SW_EDITOR_PANEL( InputMapPanel, "input_map", EditorPanelCategory::Tool, 1800 );
 
     namespace
     {
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
-        struct InputMapEditorPanelInternal
+        struct InputMapPanelInternal
         {
             /** @brief 표의 열 하나입니다. 폭이 0 이면 남는 폭을 나눠 가집니다(Stretch). */
             struct TableColumn
@@ -198,9 +198,9 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_LOG_CALLER( "InputMapEditorPanel" );
+    SW_LOG_CALLER( "InputMapPanel" );
 
-    InputMapEditorPanel::InputMapEditorPanel()
+    InputMapPanel::InputMapPanel()
         : _inputMap{}
         , _replay{}
         , _inputMapPath{ "engine/input/default.input.xml" }
@@ -229,7 +229,7 @@ namespace sw::editor
     {
     }
 
-    void InputMapEditorPanel::drawContent()
+    void InputMapPanel::drawContent()
     {
         if ( _bLoaded == SW_FALSE )
         {
@@ -339,7 +339,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawInputMapTab()
+    void InputMapPanel::drawInputMapTab()
     {
         ImGui::Text( "InputMap Resource:" );
         ImGui::SameLine();
@@ -376,23 +376,23 @@ namespace sw::editor
         drawCaptureModal();
     }
 
-    void InputMapEditorPanel::drawLayerList()
+    void InputMapPanel::drawLayerList()
     {
         const vector<hashed_string>& listLayer = _inputMap.getLayerNames();
 
         if ( ImGui::CollapsingHeader( "Input Layers", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            static constexpr InputMapEditorPanelInternal::TableColumn kArrLayerColumn[] = {
+            static constexpr InputMapPanelInternal::TableColumn kArrLayerColumn[] = {
                 {  "Layer Name",   0.0f},
                 {      "Active",  60.0f},
                 {    "Priority",  60.0f},
                 {"Stack Status", 110.0f}
             };
-            if ( InputMapEditorPanelInternal::beginColumnTable( "LayerTable", kArrLayerColumn, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
+            if ( InputMapPanelInternal::beginColumnTable( "LayerTable", kArrLayerColumn, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
             {
                 for ( const hashed_string& layerName : listLayer )
                 {
-                    InputMapEditorPanelInternal::beginNamedRow( layerName );
+                    InputMapPanelInternal::beginNamedRow( layerName );
                     ImGui::PushID( layerName.c_str() );
                     bool bEnabled = _inputMap.isLayerEnabled( layerName );
                     if ( ImGui::Checkbox( "##Enabled", &bEnabled ) )
@@ -418,11 +418,11 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawActionTable()
+    void InputMapPanel::drawActionTable()
     {
         const vector<hashed_string>& listAction = _inputMap.getActionNames();
 
-        static constexpr InputMapEditorPanelInternal::TableColumn kArrActionColumn[] = {
+        static constexpr InputMapPanelInternal::TableColumn kArrActionColumn[] = {
             {       "Action",   0.0f},
             {      "Trigger", 110.0f},
             {     "UI Glyph",  90.0f},
@@ -431,12 +431,12 @@ namespace sw::editor
             {       "Rebind",  75.0f},
             {        "Reset",  60.0f}
         };
-        if ( InputMapEditorPanelInternal::beginColumnTable( "ActionTable", kArrActionColumn,
-                                                            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
+        if ( InputMapPanelInternal::beginColumnTable( "ActionTable", kArrActionColumn,
+                                                      ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
         {
             for ( const hashed_string& actionName : listAction )
             {
-                InputMapEditorPanelInternal::beginNamedRow( actionName );
+                InputMapPanelInternal::beginNamedRow( actionName );
                 const ActionTrigger trigger      = _inputMap.getBindingTrigger( actionName, 0 );
                 const utf8*         pTriggerName = InputMap::actionTriggerToName( trigger );
                 ImGui::TextUnformatted( pTriggerName != nullptr ? pTriggerName : "Unknown" );
@@ -492,7 +492,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawAddActionSection()
+    void InputMapPanel::drawAddActionSection()
     {
         if ( ImGui::CollapsingHeader( "Add New Action / Layer" ) )
         {
@@ -515,7 +515,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawCaptureModal()
+    void InputMapPanel::drawCaptureModal()
     {
         if ( _bCapturingKey == SW_FALSE )
             return;
@@ -528,7 +528,7 @@ namespace sw::editor
             ImGui::Separator();
 
             // 실시간 활성 입력 감지 — 모달이 떠 있는 동안 키는 ImGui 로만 온다(`findPressedKey` 설명).
-            const Key pressedKey = InputMapEditorPanelInternal::findPressedKey();
+            const Key pressedKey = InputMapPanelInternal::findPressedKey();
             if ( pressedKey != Key::Unknown )
             {
                 rebindSelectedAction( pressedKey );
@@ -567,7 +567,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::rebindSelectedAction( sw::Key newKey )
+    void InputMapPanel::rebindSelectedAction( sw::Key newKey )
     {
         // 어느 레이어에서 충돌을 따져야 하는지는 그 바인딩 자신이 안다.
         const sw::ActionBinding* pBinding = _inputMap.getBinding( sw::hashed_string( _selectedAction.c_str() ), _capturingBindIndex );
@@ -585,7 +585,7 @@ namespace sw::editor
             markDocumentDirty();
     }
 
-    void InputMapEditorPanel::drawDeviceMonitorTab()
+    void InputMapPanel::drawDeviceMonitorTab()
     {
         InputManager* pInput = getService<InputManager>();
         if ( pInput == nullptr )
@@ -596,7 +596,7 @@ namespace sw::editor
 
         // 1) 활성 장치 상태
         const InputGlyphStyle devType   = pInput->getActiveGlyphStyle();
-        const utf8*           pTypeName = InputMapEditorPanelInternal::glyphStyleName( devType );
+        const utf8*           pTypeName = InputMapPanelInternal::glyphStyleName( devType );
 
         ImGui::Text( "Active Device:" );
 
@@ -611,7 +611,7 @@ namespace sw::editor
         drawGamepadMonitor();
     }
 
-    void InputMapEditorPanel::drawKeyboardMonitor()
+    void InputMapPanel::drawKeyboardMonitor()
     {
         InputManager* pInput = getService<InputManager>();
         if ( pInput == nullptr )
@@ -644,7 +644,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawMouseMonitor()
+    void InputMapPanel::drawMouseMonitor()
     {
         InputManager* pInput = getService<InputManager>();
         if ( pInput == nullptr )
@@ -684,7 +684,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawGamepadMonitor()
+    void InputMapPanel::drawGamepadMonitor()
     {
         InputManager* pInput = getService<InputManager>();
         if ( pInput == nullptr )
@@ -697,7 +697,7 @@ namespace sw::editor
             if ( pGamepad != nullptr && pGamepad->isConnected() )
             {
                 const GamepadBatteryInfo batteryInfo = pGamepad->getBatteryInfo();
-                ImGui::Text( "Battery: %s", InputMapEditorPanelInternal::batteryLevelName( batteryInfo._level ) );
+                ImGui::Text( "Battery: %s", InputMapPanelInternal::batteryLevelName( batteryInfo._level ) );
 
                 float32      lx = 0.0f, ly = 0.0f, rx = 0.0f, ry = 0.0f;
                 const float2 vecLeftStick3  = pGamepad->getLeftStick();
@@ -740,7 +740,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawGamepadStickVisualizer( const utf8* pLabel, float32 stickX, float32 stickY, float32 deadzone )
+    void InputMapPanel::drawGamepadStickVisualizer( const utf8* pLabel, float32 stickX, float32 stickY, float32 deadzone )
     {
         ImGui::BeginGroup();
         ImGui::Text( "%s", pLabel );
@@ -761,7 +761,7 @@ namespace sw::editor
         ImGui::EndGroup();
     }
 
-    void InputMapEditorPanel::drawConflictMatrixTab()
+    void InputMapPanel::drawConflictMatrixTab()
     {
         ImGui::Text( "Key Binding Conflict Matrix & One-Click Resolver" );
         ImGui::TextDisabled( "Detects duplicated key bindings across actions and provides instant collision resolution." );
@@ -770,14 +770,14 @@ namespace sw::editor
         const vector<hashed_string>& listAction     = _inputMap.getActionNames();
         bool                         bFoundConflict = false;
 
-        static constexpr InputMapEditorPanelInternal::TableColumn kArrConflictColumn[] = {
+        static constexpr InputMapPanelInternal::TableColumn kArrConflictColumn[] = {
             {     "Action A",   0.0f},
             {     "Action B",   0.0f},
             {"Colliding Key", 100.0f},
             {         "Swap",  75.0f},
             {   "Override B",  85.0f}
         };
-        if ( InputMapEditorPanelInternal::beginColumnTable( "ConflictTable", kArrConflictColumn, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
+        if ( InputMapPanelInternal::beginColumnTable( "ConflictTable", kArrConflictColumn, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
         {
 
             for ( size_t idxA = 0; idxA < listAction.size(); ++idxA )
@@ -836,7 +836,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawInputGraphTab()
+    void InputMapPanel::drawInputGraphTab()
     {
         ImGui::Text( "Real-Time Input Graphs (Last 120 Frames)" );
         ImGui::SameLine( 450.0f );
@@ -861,7 +861,7 @@ namespace sw::editor
         ImGui::PlotLines( "dY", _arrPlotMouseDeltaY, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Delta Y", -100.0f, 100.0f, ImVec2( 0, 60 ) );
     }
 
-    void InputMapEditorPanel::drawInputSimulatorTab()
+    void InputMapPanel::drawInputSimulatorTab()
     {
         InputManager* pInput = getService<InputManager>();
         if ( pInput == nullptr )
@@ -935,7 +935,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawInputReplayTab()
+    void InputMapPanel::drawInputReplayTab()
     {
         InputManager* pInput = getService<InputManager>();
 
@@ -1030,7 +1030,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawGlyphPreviewerTab()
+    void InputMapPanel::drawGlyphPreviewerTab()
     {
         ImGui::Text( "Multi-Platform Action UI Glyph & Button Prompt Previewer" );
         ImGui::TextDisabled( "Preview how button prompts appear across Xbox, PlayStation, Nintendo Switch, and PC Keyboards." );
@@ -1044,18 +1044,18 @@ namespace sw::editor
         const InputGlyphStyle previewDevice = kArrPreviewDevice[platformIndex];
         ImGui::Separator();
 
-        const vector<hashed_string>&                              listAction        = _inputMap.getActionNames();
-        static constexpr InputMapEditorPanelInternal::TableColumn kArrGlyphColumn[] = {
+        const vector<hashed_string>&                        listAction        = _inputMap.getActionNames();
+        static constexpr InputMapPanelInternal::TableColumn kArrGlyphColumn[] = {
             {      "Action Name",   0.0f},
             {      "Key Binding", 120.0f},
             {"UI Prompt (Glyph)", 140.0f},
             {   "Platform Style", 140.0f}
         };
-        if ( InputMapEditorPanelInternal::beginColumnTable( "GlyphTable", kArrGlyphColumn, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
+        if ( InputMapPanelInternal::beginColumnTable( "GlyphTable", kArrGlyphColumn, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
         {
             for ( const hashed_string& actionName : listAction )
             {
-                InputMapEditorPanelInternal::beginNamedRow( actionName );
+                InputMapPanelInternal::beginNamedRow( actionName );
                 const string glyph = _inputMap.getGlyphForAction( sw::hashed_string( actionName.view() ) );
                 ImGui::TextUnformatted( glyph.c_str() );
 
@@ -1077,7 +1077,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawViewportOverlayTab()
+    void InputMapPanel::drawViewportOverlayTab()
     {
         ImGui::Text( "Game Viewport On-Screen Controller Overlay HUD Settings" );
         ImGui::Separator();
@@ -1114,7 +1114,7 @@ namespace sw::editor
             config._bShowCommandHistory = bShowHistory ? SW_TRUE : SW_FALSE;
     }
 
-    void InputMapEditorPanel::drawCombosAndBufferTab()
+    void InputMapPanel::drawCombosAndBufferTab()
     {
         ImGui::Text( "Fighting Game Combo Tester & Input Buffer Inspector" );
         ImGui::Separator();
@@ -1146,7 +1146,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::reloadFromFile()
+    void InputMapPanel::reloadFromFile()
     {
         // 못 읽으면 편집 중인 바인딩과 dirty 를 그대로 둔다(dirty 를 지우고 "다시 읽었다" 고 하지 않는다).
         if ( _inputMap.loadFromResource( _inputMapPath.c_str() ) == false )
@@ -1158,7 +1158,7 @@ namespace sw::editor
         SW_LOG_INFO( "Reloaded InputMap from %#", _inputMapPath.c_str() );
     }
 
-    bool InputMapEditorPanel::saveToFile()
+    bool InputMapPanel::saveToFile()
     {
         if ( _inputMap.saveUserBindings( _inputMapPath.c_str() ) == false )
         {
@@ -1170,12 +1170,12 @@ namespace sw::editor
         return true;
     }
 
-    bool InputMapEditorPanel::saveDocument()
+    bool InputMapPanel::saveDocument()
     {
         return saveToFile();
     }
 
-    void InputMapEditorPanel::revertDocument()
+    void InputMapPanel::revertDocument()
     {
         reloadFromFile();
     }

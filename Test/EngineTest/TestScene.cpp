@@ -128,24 +128,24 @@ SW_TEST_CASE( SceneTest, CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad )
     // 2) 문서에 싣고 굽는다.
     sw::SceneDocument doc{};
     doc._name = "CookedScene";
-    sw::SceneDocument::EntityNode node{};
+    sw::SceneDocument::SceneObjectNode node{};
     node._name        = "CookedHero";
     node._fileId      = 1;
     node._embeddedXml = sourceXml;
-    doc._listEntityNode.push_back( node );
+    doc._listSceneObjectNode.push_back( node );
 
     SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookEntityState( doc ) );
-    SW_ASSERT_TRUE( doc._listEntityNode[0]._embeddedStateBytes.empty() == false );
-    SW_EXPECT_TRUE( doc._listEntityNode[0]._embeddedXml.empty() );
+    SW_ASSERT_TRUE( doc._listSceneObjectNode[0]._embeddedStateBytes.empty() == false );
+    SW_EXPECT_TRUE( doc._listSceneObjectNode[0]._embeddedXml.empty() );
 
     // 3) 파일을 건너도 상태가 남는지 — 여기서 실패하면 SCN1 이 그 필드를 안 싣는 것이다.
     SW_ASSERT_TRUE( doc.saveBinary( tempScenePath ) );
 
     sw::SceneDocument loaded{};
     SW_ASSERT_TRUE( loaded.loadBinary( tempScenePath ) );
-    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( loaded._listEntityNode.size() ) );
-    SW_ASSERT_TRUE( loaded._listEntityNode[0]._embeddedStateBytes.empty() == false );
-    SW_EXPECT_TRUE( loaded._listEntityNode[0]._embeddedXml.empty() );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( loaded._listSceneObjectNode.size() ) );
+    SW_ASSERT_TRUE( loaded._listSceneObjectNode[0]._embeddedStateBytes.empty() == false );
+    SW_EXPECT_TRUE( loaded._listSceneObjectNode[0]._embeddedXml.empty() );
 
     // 4) 로더가 그 바이너리를 실제로 쓰는지 — XML 이 비었으니 다른 길은 없다.
     sw::Scene scene{ "CookedScene" };
@@ -326,10 +326,10 @@ SW_TEST_CASE( SceneTest, SerializeWritesPrefabSourcePath )
 
     sw::SceneDocument doc{};
     SW_ASSERT_TRUE( scene.serializeToDocument( doc ) );
-    SW_EXPECT_FALSE( doc._listEntityNode.empty() );
+    SW_EXPECT_FALSE( doc._listSceneObjectNode.empty() );
 
     bool bFoundPrefab{ false };
-    for ( const sw::SceneDocument::EntityNode& node : doc._listEntityNode )
+    for ( const sw::SceneDocument::SceneObjectNode& node : doc._listSceneObjectNode )
     {
         if ( node._name != "Hero" )
             continue;
@@ -369,13 +369,13 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
     sw::SceneDocument doc{};
     doc._name = "GuidTestScene";
 
-    sw::SceneDocument::EntityNode node{};
+    sw::SceneDocument::SceneObjectNode node{};
     node._name              = "HeroInstance";
     node._fileId            = 2;
     node._prefab            = "prefabs/old_hero.prefab.xml";
     const sw::Uuid heroGuid = sw::Uuid::generate();
     node._prefabGuid        = heroGuid.toString();
-    doc._listEntityNode.push_back( node );
+    doc._listSceneObjectNode.push_back( node );
 
     const sw::string tempSceneXml = test::makeTempPath( "guid_scene.scene.xml" );
     SW_ASSERT_TRUE( doc.saveXml( tempSceneXml ) );
@@ -385,21 +385,21 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
 
     sw::SceneDocument loadedDoc{};
     SW_ASSERT_TRUE( loadedDoc.loadXml( tempSceneXml ) );
-    SW_ASSERT_FALSE( loadedDoc._listEntityNode.empty() );
-    SW_EXPECT_STREQ( "HeroInstance", loadedDoc._listEntityNode[0]._name.c_str() );
-    SW_EXPECT_STREQ( heroGuid.toString().c_str(), loadedDoc._listEntityNode[0]._prefabGuid.c_str() );
+    SW_ASSERT_FALSE( loadedDoc._listSceneObjectNode.empty() );
+    SW_EXPECT_STREQ( "HeroInstance", loadedDoc._listSceneObjectNode[0]._name.c_str() );
+    SW_EXPECT_STREQ( heroGuid.toString().c_str(), loadedDoc._listSceneObjectNode[0]._prefabGuid.c_str() );
     if ( sw::engine::areEngineServicesBound() )
-        SW_EXPECT_STREQ( "prefabs/new_hero.prefab.xml", loadedDoc._listEntityNode[0]._prefab.c_str() );
+        SW_EXPECT_STREQ( "prefabs/new_hero.prefab.xml", loadedDoc._listSceneObjectNode[0]._prefab.c_str() );
 
     // 바이너리(SCN1)도 같은 풀이를 지난다 — 두 로더가 GUID 풀이를 각자 들면 한쪽만 어긋나도 Dev 테스트로는 드러나지 않는다.
     const sw::string tempSceneBin = test::makeTempPath( "guid_scene.scene.bin" );
     SW_ASSERT_TRUE( doc.saveBinary( tempSceneBin ) );
     sw::SceneDocument loadedBinaryDoc{};
     SW_ASSERT_TRUE( loadedBinaryDoc.loadBinary( tempSceneBin ) );
-    SW_ASSERT_FALSE( loadedBinaryDoc._listEntityNode.empty() );
-    SW_EXPECT_STREQ( heroGuid.toString().c_str(), loadedBinaryDoc._listEntityNode[0]._prefabGuid.c_str() );
+    SW_ASSERT_FALSE( loadedBinaryDoc._listSceneObjectNode.empty() );
+    SW_EXPECT_STREQ( heroGuid.toString().c_str(), loadedBinaryDoc._listSceneObjectNode[0]._prefabGuid.c_str() );
     if ( sw::engine::areEngineServicesBound() )
-        SW_EXPECT_STREQ( "prefabs/new_hero.prefab.xml", loadedBinaryDoc._listEntityNode[0]._prefab.c_str() );
+        SW_EXPECT_STREQ( "prefabs/new_hero.prefab.xml", loadedBinaryDoc._listSceneObjectNode[0]._prefab.c_str() );
 }
 
 /**
@@ -415,7 +415,7 @@ SW_TEST_CASE( SceneTest, EditorTestSceneResolvesMovedPrefabByGuid )
     SW_ASSERT_TRUE( doc.load( "game/empty/maps/editortest.scene.xml" ) );
 
     bool bFound = false;
-    for ( const sw::SceneDocument::EntityNode& node : doc._listEntityNode )
+    for ( const sw::SceneDocument::SceneObjectNode& node : doc._listSceneObjectNode )
     {
         if ( node._name != "TestProp" )
             continue;
@@ -678,19 +678,19 @@ SW_TEST_CASE( SceneTest, SceneEntityWithoutAnIdIsRejected )
 
     sw::SceneDocument doc;
     SW_ASSERT_TRUE( doc.loadXml( withIdPath ) );
-    SW_ASSERT_EQUAL( size_t( 1 ), doc._listEntityNode.size() );
-    SW_EXPECT_EQUAL( uint64( 1 ), doc._listEntityNode[0]._fileId );
+    SW_ASSERT_EQUAL( size_t( 1 ), doc._listSceneObjectNode.size() );
+    SW_EXPECT_EQUAL( uint64( 1 ), doc._listSceneObjectNode[0]._fileId );
 
-    sw::SceneDocument::EntityNode noIdEntity{};
+    sw::SceneDocument::SceneObjectNode noIdEntity{};
     noIdEntity._name = "NoId";
     {
         SW_TEST_DEFENSIVE_SCOPE( "a scene entity without an id" );
         SW_EXPECT_FALSE( doc.loadXml( noIdPath ) );
-        SW_EXPECT_TRUE( doc._listEntityNode.empty() ); // 반쯤 읽은 문서를 남기지 않는다
+        SW_EXPECT_TRUE( doc._listSceneObjectNode.empty() ); // 반쯤 읽은 문서를 남기지 않는다
         SW_EXPECT_FALSE( doc.loadXml( zeroIdPath ) );
 
         SW_ASSERT_TRUE( doc.loadXml( withIdPath ) );
-        doc._listEntityNode.push_back( noIdEntity );
+        doc._listSceneObjectNode.push_back( noIdEntity );
         SW_EXPECT_FALSE( doc.saveXml( test::makeTempPath( "no_id_written.scene.xml" ) ) );
         SW_EXPECT_EQUAL( 0u, sw::SceneCooker::cookEntityState( doc ) );
     }
@@ -707,10 +707,10 @@ SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
     // 멀쩡한 씬 하나를 굽고, 헤더의 엔티티 수만 터무니없는 값으로 바꾼다.
     sw::SceneDocument doc{};
     doc._name = "BoundedScene";
-    sw::SceneDocument::EntityNode node{};
+    sw::SceneDocument::SceneObjectNode node{};
     node._name   = "Root";
     node._fileId = 3;
-    doc._listEntityNode.push_back( std::move( node ) );
+    doc._listSceneObjectNode.push_back( std::move( node ) );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
     sw::vector<uint8> bytes;
@@ -733,7 +733,7 @@ SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
         test::ScopedLogSuppressor suppressor;
         SW_EXPECT_FALSE( corrupted.loadBinary( binPath ) );
     }
-    SW_EXPECT_TRUE( corrupted._listEntityNode.empty() );
+    SW_EXPECT_TRUE( corrupted._listSceneObjectNode.empty() );
 }
 
 /**
@@ -764,7 +764,7 @@ SW_TEST_CASE( SceneTest, SavedSceneKeepsChildObjects )
 
     sw::SceneDocument saved;
     SW_ASSERT_TRUE( pScene->serializeToDocument( saved ) );
-    SW_EXPECT_EQUAL( size_t( 3 ), saved._listEntityNode.size() );
+    SW_EXPECT_EQUAL( size_t( 3 ), saved._listSceneObjectNode.size() );
 
     sw::Scene* pReloaded = manager.createScene( "HierarchyWorldReloaded" );
     SW_ASSERT_NOT_NULL( pReloaded );
@@ -884,11 +884,11 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
     }
     sw::SceneDocument doc;
     doc._name = "UnknownType";
-    sw::SceneDocument::EntityNode node{};
+    sw::SceneDocument::SceneObjectNode node{};
     node._name        = "Lamp";
     node._fileId      = 4;
     node._embeddedXml = xml;
-    doc._listEntityNode.push_back( node );
+    doc._listSceneObjectNode.push_back( node );
     const sw::string scenePath = sw::FileUtil::joinPath( root, "game/demo/maps/unknown.scene.xml" );
     sw::FileUtil::ensureParentDirectoryExists( scenePath );
     SW_ASSERT_TRUE( doc.saveXml( scenePath ) );
@@ -934,10 +934,10 @@ SW_TEST_CASE( SceneTest, CookedSceneKeepsAChildWrittenBeforeItsParent )
 
     sw::SceneDocument doc;
     SW_ASSERT_TRUE( pScene->serializeToDocument( doc ) );
-    SW_ASSERT_EQUAL( size_t( 2 ), doc._listEntityNode.size() );
-    SW_EXPECT_STREQ( "Sword", doc._listEntityNode[0]._name.c_str() );
+    SW_ASSERT_EQUAL( size_t( 2 ), doc._listSceneObjectNode.size() );
+    SW_EXPECT_STREQ( "Sword", doc._listSceneObjectNode[0]._name.c_str() );
     SW_EXPECT_EQUAL( 2u, sw::SceneCooker::cookEntityState( doc ) );
-    SW_EXPECT_TRUE( doc._listEntityNode[0]._embeddedXml.empty() ); // 구운 상태로만 읽힌다
+    SW_EXPECT_TRUE( doc._listSceneObjectNode[0]._embeddedXml.empty() ); // 구운 상태로만 읽힌다
 
     // 배포본처럼 바이너리 씬 파일을 건너 읽는다 — 엔티티의 파일 id 도 파일에 실려야 한다.
     const sw::string cookedPath = test::makeTempPath( "cook_order.scene.bin" );
@@ -1038,12 +1038,12 @@ SW_TEST_CASE( SceneTest, FileIdsStayTheSameAcrossSaveAndReload )
     sw::SceneDocument second;
     SW_ASSERT_TRUE( pReloaded->serializeToDocument( second ) );
 
-    SW_ASSERT_EQUAL( first._listEntityNode.size(), second._listEntityNode.size() );
-    for ( const sw::SceneDocument::EntityNode& before : first._listEntityNode )
+    SW_ASSERT_EQUAL( first._listSceneObjectNode.size(), second._listSceneObjectNode.size() );
+    for ( const sw::SceneDocument::SceneObjectNode& before : first._listSceneObjectNode )
     {
         SW_EXPECT_TRUE( before._fileId != 0 );
-        const sw::SceneDocument::EntityNode* pAfter = nullptr;
-        for ( const sw::SceneDocument::EntityNode& candidate : second._listEntityNode )
+        const sw::SceneDocument::SceneObjectNode* pAfter = nullptr;
+        for ( const sw::SceneDocument::SceneObjectNode& candidate : second._listSceneObjectNode )
         {
             if ( candidate._name == before._name )
                 pAfter = &candidate;
@@ -1085,7 +1085,7 @@ SW_TEST_CASE( SceneTest, ChildrenOfSameNamedEntitiesFindTheirOwnParent )
     SW_ASSERT_TRUE( pScene->serializeToDocument( doc ) );
     // 두 적의 이름을 같게 만든다(병합 · 손 편집으로 생기는 문서) — 상태의 이름 · 자식의 부모 이름까지.
     const sw::string renamed = pEnemyB->getName().c_str();
-    for ( sw::SceneDocument::EntityNode& entity : doc._listEntityNode )
+    for ( sw::SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
     {
         if ( entity._name == renamed )
             entity._name = "Enemy";
@@ -1130,7 +1130,7 @@ SW_TEST_CASE( SceneTest, ChildOfAMissingPrefabEntityKeepsItsParentReference )
     sw::SceneDocument authored;
     SW_ASSERT_TRUE( pScene->serializeToDocument( authored ) );
     sw::SceneDocument withMissingPrefab = authored;
-    for ( sw::SceneDocument::EntityNode& entity : withMissingPrefab._listEntityNode )
+    for ( sw::SceneDocument::SceneObjectNode& entity : withMissingPrefab._listSceneObjectNode )
     {
         if ( entity._name == "Ghost" )
             entity._prefab = "prefabs/test_missing_ghost_parent.prefab.xml";
@@ -1140,7 +1140,7 @@ SW_TEST_CASE( SceneTest, ChildOfAMissingPrefabEntityKeepsItsParentReference )
     SW_ASSERT_NOT_NULL( pOpened );
     // 고스트의 **파일 id** 와 같은 **런타임 id** 를 가진 다른 오브젝트가 이 씬에 있다 — 파일 id 는 파일 안에서만 뜻이 있으니 이것에 붙으면 안 된다.
     uint64 ghostFileId = 0;
-    for ( const sw::SceneDocument::EntityNode& entity : withMissingPrefab._listEntityNode )
+    for ( const sw::SceneDocument::SceneObjectNode& entity : withMissingPrefab._listSceneObjectNode )
     {
         if ( entity._name == "Ghost" )
             ghostFileId = entity._fileId;
@@ -1166,7 +1166,7 @@ SW_TEST_CASE( SceneTest, ChildOfAMissingPrefabEntityKeepsItsParentReference )
     SW_ASSERT_TRUE( pOpened->serializeToDocument( resaved ) );
 
     // 프리팹이 돌아왔다(여기서는 고스트를 다시 상태만 든 엔티티로) — 다시 열면 자식이 부모에 붙는다.
-    for ( sw::SceneDocument::EntityNode& entity : resaved._listEntityNode )
+    for ( sw::SceneDocument::SceneObjectNode& entity : resaved._listSceneObjectNode )
     {
         if ( entity._name == "Ghost" )
             entity._prefab.clear();
@@ -1342,13 +1342,13 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
     SW_ASSERT_NOT_NULL( pScene );
     sw::RegisterMockComponents();
 
-    sw::SceneDocument             doc;
-    sw::SceneDocument::EntityNode entity;
+    sw::SceneDocument                  doc;
+    sw::SceneDocument::SceneObjectNode entity;
     entity._name        = "Lifecycle";
     entity._fileId      = 5;
     entity._prefab      = prefabPath;
     entity._embeddedXml = savedState;
-    doc._listEntityNode.push_back( entity );
+    doc._listSceneObjectNode.push_back( entity );
 
     const int32 constructedBefore = sw::MockPoolLifecycleComponent::s_ctorCount.load();
     SW_ASSERT_TRUE( pScene->instantiate( doc ) );
@@ -1375,18 +1375,18 @@ SW_TEST_CASE( SceneTest, EntityWhosePrefabIsMissingSurvivesSave )
     sw::Scene* pScene = manager.createScene( "MissingPrefabWorld" );
     SW_ASSERT_NOT_NULL( pScene );
 
-    sw::SceneDocument             doc;
-    sw::SceneDocument::EntityNode ghost;
+    sw::SceneDocument                  doc;
+    sw::SceneDocument::SceneObjectNode ghost;
     ghost._name        = "Ghost";
     ghost._fileId      = 6;
     ghost._prefab      = "prefabs/test_missing_for_scene_test.prefab.xml";
     ghost._prefabGuid  = "0b7c2a9e-4f1d-4c3a-9e8b-1d2c3b4a5f60";
     ghost._embeddedXml = "<GameObject _name=\"Ghost\" />";
-    doc._listEntityNode.push_back( ghost );
-    sw::SceneDocument::EntityNode plain;
+    doc._listSceneObjectNode.push_back( ghost );
+    sw::SceneDocument::SceneObjectNode plain;
     plain._name   = "Plain";
     plain._fileId = 7;
-    doc._listEntityNode.push_back( plain );
+    doc._listSceneObjectNode.push_back( plain );
 
     {
         test::ScopedDefensiveTestLog expected( "prefab of 'Ghost' does not exist" );
@@ -1396,8 +1396,8 @@ SW_TEST_CASE( SceneTest, EntityWhosePrefabIsMissingSurvivesSave )
 
     sw::SceneDocument saved;
     SW_ASSERT_TRUE( pScene->serializeToDocument( saved ) );
-    const sw::SceneDocument::EntityNode* pSavedGhost = nullptr;
-    for ( const sw::SceneDocument::EntityNode& node : saved._listEntityNode )
+    const sw::SceneDocument::SceneObjectNode* pSavedGhost = nullptr;
+    for ( const sw::SceneDocument::SceneObjectNode& node : saved._listSceneObjectNode )
     {
         if ( node._name == "Ghost" )
             pSavedGhost = &node;
@@ -1406,7 +1406,7 @@ SW_TEST_CASE( SceneTest, EntityWhosePrefabIsMissingSurvivesSave )
     SW_EXPECT_STREQ( ghost._prefab.c_str(), pSavedGhost->_prefab.c_str() );
     SW_EXPECT_STREQ( ghost._prefabGuid.c_str(), pSavedGhost->_prefabGuid.c_str() );
     SW_EXPECT_STREQ( ghost._embeddedXml.c_str(), pSavedGhost->_embeddedXml.c_str() );
-    SW_EXPECT_EQUAL( size_t( 2 ), saved._listEntityNode.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), saved._listSceneObjectNode.size() );
 
     manager.shutdown();
 }
@@ -1482,8 +1482,8 @@ SW_TEST_CASE( SceneTest, XmlAssetsLoadWithoutEngineServices )
         sw::SceneDocument document;
         SW_EXPECT_TRUE( document.loadXml( scenePath ) );
         SW_EXPECT_EQUAL( sw::string( "Standalone" ), document._name );
-        SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), document._listEntityNode.size() );
-        SW_EXPECT_EQUAL( sw::string( "game/demo/prefabs/crate.prefab.xml" ), document._listEntityNode[0]._prefab );
+        SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), document._listSceneObjectNode.size() );
+        SW_EXPECT_EQUAL( sw::string( "game/demo/prefabs/crate.prefab.xml" ), document._listSceneObjectNode[0]._prefab );
 
         {
             test::ScopedDefensiveTestLog expected( "a scene file newer than this build" );
@@ -1561,7 +1561,7 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
     SW_ASSERT_TRUE( fromXml.saveBinary( binPath ) );
     sw::SceneDocument fromBinary;
     SW_ASSERT_TRUE( fromBinary.loadBinary( binPath ) );
-    SW_ASSERT_TRUE( fromBinary._listEntityNode.empty() == false && fromBinary._listEntityNode[0]._embeddedStateBytes.empty() == false );
+    SW_ASSERT_TRUE( fromBinary._listSceneObjectNode.empty() == false && fromBinary._listSceneObjectNode[0]._embeddedStateBytes.empty() == false );
     sw::Scene* pFromBinary = manager.createScene( "NamedComponentWorldBinary" );
     SW_ASSERT_TRUE( pFromBinary->instantiate( fromBinary ) );
     Check::run( pFromBinary, "binary" );
@@ -1652,7 +1652,7 @@ SW_TEST_CASE( SceneTest, SceneDocumentReadsValuesOnlyFromAttributes )
     sw::SceneDocument document;
     SW_ASSERT_TRUE( document.loadXml( scenePath ) );
     SW_EXPECT_STREQ( "childtext.scene", document._name.c_str() ); // 이름 속성이 없으면 파일 이름이다
-    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), document._listEntityNode.size() );
-    SW_EXPECT_STREQ( "Entity", document._listEntityNode[0]._name.c_str() );
-    SW_EXPECT_TRUE( document._listEntityNode[0]._prefab.empty() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), document._listSceneObjectNode.size() );
+    SW_EXPECT_STREQ( "Entity", document._listSceneObjectNode[0]._name.c_str() );
+    SW_EXPECT_TRUE( document._listSceneObjectNode[0]._prefab.empty() );
 }

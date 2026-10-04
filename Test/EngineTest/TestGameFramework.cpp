@@ -633,7 +633,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
 }
 
 /**
- * @brief [GameFrameworkTest] `GameInstanceBase` 의 세이브 · 로드는 끝난 자리에서 "game" 채널에 `SaveCompletedEvent` · `LoadCompletedEvent` 를 낸다
+ * @brief [GameFrameworkTest] `GameInstanceBase` 의 세이브 · 로드는 끝난 자리에서 "game" 채널에 `SaveGameSavedEvent` · `SaveGameLoadedEvent` 를 낸다
  * @details 성공 · 실패 모두 경로와 결과를 싣는다. 경로가 정해지지 않은 저장(인자 없음 · GameData 기본 경로 없음)은 시도가 아니므로 내지 않는다.
  */
 SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSaveAndLoadCompleted )
@@ -644,11 +644,11 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSaveAndLoadCompleted )
 
     EventDispatcher                 dispatcher;
     const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
-    vector<SaveCompletedEvent>      listSaved;
-    vector<LoadCompletedEvent>      listLoaded;
-    dispatcher.subscribe<SaveCompletedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveCompletedEvent& )>, [&listSaved]( const SaveCompletedEvent& event )
+    vector<SaveGameSavedEvent>      listSaved;
+    vector<SaveGameLoadedEvent>     listLoaded;
+    dispatcher.subscribe<SaveGameSavedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveGameSavedEvent& )>, [&listSaved]( const SaveGameSavedEvent& event )
     { listSaved.push_back( event ); } ) );
-    dispatcher.subscribe<LoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const LoadCompletedEvent& )>, [&listLoaded]( const LoadCompletedEvent& event )
+    dispatcher.subscribe<SaveGameLoadedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveGameLoadedEvent& )>, [&listLoaded]( const SaveGameLoadedEvent& event )
     { listLoaded.push_back( event ); } ) );
 
     PlainGameInstance gameInstance;
@@ -675,10 +675,10 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSaveAndLoadCompleted )
 }
 
 /**
- * @brief [GameFrameworkTest] `GameInstanceBase` 가 맡긴 씬 로드는 맡긴 자리에서 `LevelLoadRequestedEvent`, 끝난 뒤 첫 `update` 에서 `LevelLoadCompletedEvent` 를 낸다
+ * @brief [GameFrameworkTest] `GameInstanceBase` 가 맡긴 씬 로드는 맡긴 자리에서 `SceneLoadRequestedEvent`, 끝난 뒤 첫 `update` 에서 `SceneLoadCompletedEvent` 를 낸다
  * @details 성공이면 완료 이벤트가 올 때 그 씬이 이미 활성 씬이다. 읽지 못한 씬은 실패(`_bSuccess` false)로 끝난다.
  */
-SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesLevelLoadEvents )
+SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
 {
     class SceneGameInstance : public GameInstanceBase
     {
@@ -696,9 +696,9 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesLevelLoadEvents )
     // Shipping 은 XML 대신 같은 이름의 바이너리(.scene.bin)를 읽는다 — 둘 다 둔다(SceneAsyncTest 와 같다).
     SceneDocument document{};
     document._name = "LevelEvents";
-    SceneDocument::EntityNode entity{};
+    SceneDocument::SceneObjectNode entity{};
     entity._name = "Hero";
-    document._listEntityNode.push_back( std::move( entity ) );
+    document._listSceneObjectNode.push_back( std::move( entity ) );
     SW_ASSERT_TRUE( document.saveBinary( test::makeTempPath( "level_events.scene.bin" ) ) );
 
     SceneManager sceneManager;
@@ -707,11 +707,11 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesLevelLoadEvents )
     EventDispatcher                 dispatcher;
     const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
     vector<string>                  listRequested;
-    vector<LevelLoadCompletedEvent> listCompleted;
+    vector<SceneLoadCompletedEvent> listCompleted;
     string                          activeSceneAtCompletion;
-    dispatcher.subscribe<LevelLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const LevelLoadRequestedEvent& )>, [&listRequested]( const LevelLoadRequestedEvent& event )
+    dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&listRequested]( const SceneLoadRequestedEvent& event )
     { listRequested.push_back( event._levelName ); } ) );
-    dispatcher.subscribe<LevelLoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const LevelLoadCompletedEvent& )>, [&]( const LevelLoadCompletedEvent& event )
+    dispatcher.subscribe<SceneLoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadCompletedEvent& )>, [&]( const SceneLoadCompletedEvent& event )
     {
         listCompleted.push_back( event );
         const Scene* pActive    = sceneManager.getActiveScene();

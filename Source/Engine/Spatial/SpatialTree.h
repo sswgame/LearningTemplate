@@ -78,10 +78,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct SpatialElement
+     * @struct SpatialElement2D
      * @brief 2D 공간 트리에 등록되는 단위 객체입니다.
      */
-    struct SpatialElement
+    struct SpatialElement2D
     {
         uint64 _id{ 0 };
         AABB2D _bounds{};
@@ -112,7 +112,7 @@ namespace sw
     struct QuadTreeTraits
     {
         using BoundsType                     = AABB2D;
-        using ElementType                    = SpatialElement;
+        using ElementType                    = SpatialElement2D;
         using PointType                      = float2;
         static constexpr size_t kChildCount  = 4;
         static constexpr size_t kMaxElements = 16;

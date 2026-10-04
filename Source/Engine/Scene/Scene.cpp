@@ -178,7 +178,7 @@ namespace sw
         // 프리팹마다 원형 상태를 한 번만 짓는다(같은 프리팹을 여럿 놓은 씬).
         unordered_map<string, string> mapPrefabBaseState;
 
-        for ( const SceneDocument::EntityNode& entity : doc._listEntityNode )
+        for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
         {
             SW_LOG_TRACE( "Spawning entity '%#' prefab '%#'", entity._name, entity._prefab );
             GameObject* pGo{ nullptr };
@@ -268,7 +268,7 @@ namespace sw
 
         outDoc._name       = _name;
         outDoc._sourcePath = _sourcePath;
-        outDoc._listEntityNode.clear();
+        outDoc._listSceneObjectNode.clear();
         outDoc._bValid = true;
 
         // 파일 id 를 먼저 모두 정한다 — 자식의 부착이 부모의 파일 id 를 적으므로, 쓰는 동안 부모의 id 가 이미 있어야 한다.
@@ -298,7 +298,7 @@ namespace sw
             CameraComponent* pCamera = pGo->getComponent<CameraComponent>();
             if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Editor )
                 return;
-            SceneDocument::EntityNode node{};
+            SceneDocument::SceneObjectNode node{};
             node._name           = pGo->getName().c_str();
             const auto savedIdIt = mapSavedId.find( pGo->getObjectId() );
             node._fileId         = ( savedIdIt != mapSavedId.end() ) ? savedIdIt->second : 0;
@@ -323,11 +323,11 @@ namespace sw
                 node._embeddedXml = state;
             }
             if ( node._embeddedXml.empty() == false || node._prefab.empty() == false )
-                outDoc._listEntityNode.push_back( std::move( node ) );
+                outDoc._listSceneObjectNode.push_back( std::move( node ) );
         } );
         // 프리팹을 찾지 못한 엔티티는 읽은 그대로 다시 쓴다(`instantiate` 설명). 파일 id 도 그대로다 — 그 자식들이 그 id 로 가리킨다.
-        for ( const SceneDocument::EntityNode& unresolved : _listUnresolvedEntity )
-            outDoc._listEntityNode.push_back( unresolved );
+        for ( const SceneDocument::SceneObjectNode& unresolved : _listUnresolvedEntity )
+            outDoc._listSceneObjectNode.push_back( unresolved );
         return true;
     }
 
@@ -345,7 +345,7 @@ namespace sw
             (void)objectId;
             nextFileId = MathUtil::max( nextFileId, fileId + 1 );
         }
-        for ( const SceneDocument::EntityNode& unresolved : _listUnresolvedEntity )
+        for ( const SceneDocument::SceneObjectNode& unresolved : _listUnresolvedEntity )
             nextFileId = MathUtil::max( nextFileId, unresolved._fileId + 1 );
 
         vector<GameObject*> listObject;

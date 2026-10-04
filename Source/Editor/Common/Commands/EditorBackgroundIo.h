@@ -2,7 +2,7 @@
  * @file EditorBackgroundIo.h
  * @brief 에디터의 파일 스캔 · 로컬라이즈 로드를 TaskManager 워커에서 하는 잡들입니다.
  *
- * @details 공통 규약(잠금 · 세대 · 완료 플래그)은 EditorBackgroundJob 에 있습니다. 여기 있는 잡들은 입력 타입과 실제
+ * @details 공통 규약(잠금 · 세대 · 완료 플래그)은 EditorBackgroundTask 에 있습니다. 여기 있는 잡들은 입력 타입과 실제
  *          작업 본문만 갖습니다.
  */
 #pragma once
@@ -11,7 +11,7 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
-#include "Editor/Common/Commands/EditorBackgroundJob.h"
+#include "Editor/Common/Commands/EditorBackgroundTask.h"
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
 #include "Editor/Common/Commands/EditorResourceIndex.h"
 
@@ -46,7 +46,7 @@ namespace sw::editor
      * @class EditorFileCollectJob
      * @brief 폴더 파일 목록을 워커에서 모으고 게임 스레드에서 꺼냅니다.
      */
-    class EditorFileCollectJob final : public EditorBackgroundJob<EditorFileCollectInput, vector<string>>
+    class EditorFileCollectJob final : public EditorBackgroundTask<EditorFileCollectInput, vector<string>>
     {
     public:
         /** @brief 워커에 폴더 스캔을 요청합니다. 이미 대기 중이면 세대를 올립니다. */
@@ -63,7 +63,7 @@ namespace sw::editor
      * @class EditorLocalizationLoadJob
      * @brief 로컬라이즈 JSON을 워커에서 읽고 게임 스레드에서 적용합니다.
      */
-    class EditorLocalizationLoadJob final : public EditorBackgroundJob<EditorBackgroundNoInput, vector<LocalizationRecord>>
+    class EditorLocalizationLoadJob final : public EditorBackgroundTask<EditorBackgroundNoInput, vector<LocalizationRecord>>
     {
     public:
         /** @brief 워커에 JSON 로드를 요청합니다. */
@@ -80,7 +80,7 @@ namespace sw::editor
      * @class EditorGameDataScanJob
      * @brief 게임 데이터 XML 파일 목록을 워커에서 모읍니다.
      */
-    class EditorGameDataScanJob final : public EditorBackgroundJob<EditorBackgroundNoInput, vector<GameDataFileEntry>>
+    class EditorGameDataScanJob final : public EditorBackgroundTask<EditorBackgroundNoInput, vector<GameDataFileEntry>>
     {
     public:
         /** @brief 워커에 XML 목록 스캔을 요청합니다. */
@@ -97,7 +97,7 @@ namespace sw::editor
      * @class EditorResourceIndexJob
      * @brief Resource 트리 분류 인덱스를 워커에서 만듭니다.
      */
-    class EditorResourceIndexJob final : public EditorBackgroundJob<EditorBackgroundNoInput, vector<EditorResourceIndexEntry>>
+    class EditorResourceIndexJob final : public EditorBackgroundTask<EditorBackgroundNoInput, vector<EditorResourceIndexEntry>>
     {
     public:
         /** @brief 워커에 Resource 스캔을 요청합니다. */
@@ -114,7 +114,7 @@ namespace sw::editor
      * @class EditorFolderListingJob
      * @brief Content Browser 폴더 직속 항목을 워커에서 모읍니다.
      */
-    class EditorFolderListingJob final : public EditorBackgroundJob<EditorFolderListingInput, vector<EditorFolderListingEntry>>
+    class EditorFolderListingJob final : public EditorBackgroundTask<EditorFolderListingInput, vector<EditorFolderListingEntry>>
     {
     public:
         /** @brief 워커에 폴더 목록 스캔을 요청합니다. */
@@ -131,7 +131,7 @@ namespace sw::editor
      * @class EditorResourceCatalogJob
      * @brief 프로파일러 리소스 카탈로그 개수를 워커에서 셉니다.
      */
-    class EditorResourceCatalogJob final : public EditorBackgroundJob<EditorBackgroundNoInput, EditorResourceCatalogCounts>
+    class EditorResourceCatalogJob final : public EditorBackgroundTask<EditorBackgroundNoInput, EditorResourceCatalogCounts>
     {
     public:
         /** @brief 워커에 카탈로그 스캔을 요청합니다. */

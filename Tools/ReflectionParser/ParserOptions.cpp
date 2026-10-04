@@ -23,15 +23,15 @@ namespace sw
         };
 
         constexpr OptionRow kArrOptionRow[] = {
-            {          cliConstants::kInput,                              nullptr,   &ParserOptions::_listInputFile,            "<header.h>",                                     "header to parse (repeatable)"},
-            {         cliConstants::kOutput,           &ParserOptions::_outputDir,                          nullptr,                 "<dir>",                         "directory for .gen.cpp / .gen.h / stamps"},
-            {        cliConstants::kInclude,                              nullptr, &ParserOptions::_listIncludePath,                 "<dir>",                                  "clang include path (repeatable)"},
-            {       cliConstants::kBuiltins,        &ParserOptions::_builtinsPath,                          nullptr, "<ReflectBuiltins.xxx>",                               "scalar aliases and container rules"},
-            { cliConstants::kAnnotationMeta,  &ParserOptions::_annotationMetaPath,                          nullptr,  "<AnnotationMeta.txt>",                                       "annotation token spellings"},
-            {  cliConstants::kEmitTemplates,    &ParserOptions::_emitTemplatesDir,                          nullptr,                 "<dir>",                                        "Templates/*.tpl directory"},
-            {     cliConstants::kSourceRoot,          &ParserOptions::_sourceRoot,                          nullptr,                 "<dir>",                        "module rules match paths relative to this"},
-            {cliConstants::kEmitBuiltinsGen, &ParserOptions::_emitBuiltinsGenPath,                          nullptr,            "<file.cpp>",                      "only write ReflectBuiltins.gen.cpp and exit"},
-            {        cliConstants::kDepfile,         &ParserOptions::_depfilePath,                          nullptr,              "<file.d>", "write the headers the inputs include as a Makefile-style depfile"},
+            {          cli::kInput,                              nullptr,   &ParserOptions::_listInputFile,            "<header.h>",                                     "header to parse (repeatable)"},
+            {         cli::kOutput,           &ParserOptions::_outputDir,                          nullptr,                 "<dir>",                         "directory for .gen.cpp / .gen.h / stamps"},
+            {        cli::kInclude,                              nullptr, &ParserOptions::_listIncludePath,                 "<dir>",                                  "clang include path (repeatable)"},
+            {       cli::kBuiltins,        &ParserOptions::_builtinsPath,                          nullptr, "<ReflectBuiltins.xxx>",                               "scalar aliases and container rules"},
+            { cli::kAnnotationMeta,  &ParserOptions::_annotationMetaPath,                          nullptr,  "<AnnotationMeta.txt>",                                       "annotation token spellings"},
+            {  cli::kEmitTemplates,    &ParserOptions::_emitTemplatesDir,                          nullptr,                 "<dir>",                                        "Templates/*.tpl directory"},
+            {     cli::kSourceRoot,          &ParserOptions::_sourceRoot,                          nullptr,                 "<dir>",                        "module rules match paths relative to this"},
+            {cli::kEmitBuiltinsGen, &ParserOptions::_emitBuiltinsGenPath,                          nullptr,            "<file.cpp>",                      "only write ReflectBuiltins.gen.cpp and exit"},
+            {        cli::kDepfile,         &ParserOptions::_depfilePath,                          nullptr,              "<file.d>", "write the headers the inputs include as a Makefile-style depfile"},
         };
 
         /** @brief 값 없이 켜는 플래그 한 줄입니다. */
@@ -118,19 +118,19 @@ namespace sw
 
         if ( isBuiltinsGenMode() )
         {
-            return ParserOptionsInternal::isGiven( _builtinsPath, cliConstants::kBuiltins, cliConstants::kEmitBuiltinsGen ) &&
-                   ParserOptionsInternal::isGiven( _emitTemplatesDir, cliConstants::kEmitTemplates, cliConstants::kEmitBuiltinsGen );
+            return ParserOptionsInternal::isGiven( _builtinsPath, cli::kBuiltins, cli::kEmitBuiltinsGen ) &&
+                   ParserOptionsInternal::isGiven( _emitTemplatesDir, cli::kEmitTemplates, cli::kEmitBuiltinsGen );
         }
 
         if ( _listInputFile.empty() )
         {
-            SW_LOG_ERROR( "No %# files specified.", cliConstants::kInput );
+            SW_LOG_ERROR( "No %# files specified.", cli::kInput );
             return false;
         }
         // 철자 표가 없으면 모든 애노테이션 토큰이 "모르는 토큰" 이 되어 빌드가 선다. 시작할 때 이유를 알린다.
-        return ParserOptionsInternal::isGiven( _outputDir, cliConstants::kOutput, cliConstants::kInput ) &&
-               ParserOptionsInternal::isGiven( _emitTemplatesDir, cliConstants::kEmitTemplates, cliConstants::kInput ) &&
-               ParserOptionsInternal::isGiven( _annotationMetaPath, cliConstants::kAnnotationMeta, cliConstants::kInput );
+        return ParserOptionsInternal::isGiven( _outputDir, cli::kOutput, cli::kInput ) &&
+               ParserOptionsInternal::isGiven( _emitTemplatesDir, cli::kEmitTemplates, cli::kInput ) &&
+               ParserOptionsInternal::isGiven( _annotationMetaPath, cli::kAnnotationMeta, cli::kInput );
     }
 
     void ParserOptions::printUsage()

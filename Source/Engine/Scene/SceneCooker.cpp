@@ -92,7 +92,7 @@ namespace sw
         // 그 연결을 지운다(배포본에서 자식이 루트가 된다). 그래서 문서 전체를 `Scene::instantiate`(프리팹 스폰 · 묶음 부착까지 런타임과
         // 같은 길)로 짓고, 구운 문서를 다시 지어 엔티티마다 상태 전체를 견준다(컴포넌트 타입 목록만 보면 값이 어긋나도 통과한다).
         // 엔티티는 파일 id 로 찾는다 — 구운 상태의 부착도 파일 id 로만 부모를 가리킨다. id 없는 엔티티는 읽는 쪽이 받지 않는 문서다.
-        for ( const SceneDocument::EntityNode& entity : inoutDoc._listEntityNode )
+        for ( const SceneDocument::SceneObjectNode& entity : inoutDoc._listSceneObjectNode )
         {
             if ( entity._fileId == 0 )
             {
@@ -117,7 +117,7 @@ namespace sw
         saveOptions._pSavedIdMap = &mapSourceSavedId;
 
         SceneDocument cooked = inoutDoc;
-        for ( SceneDocument::EntityNode& entity : cooked._listEntityNode )
+        for ( SceneDocument::SceneObjectNode& entity : cooked._listSceneObjectNode )
         {
             if ( entity._embeddedXml.empty() )
                 continue;
@@ -142,10 +142,10 @@ namespace sw
         SceneCookerInternal::makeObjectByFileId( verify, mapVerifyByFileId );
 
         uint32 cookedCount{ 0 };
-        for ( size_t entityIndex = 0; entityIndex < inoutDoc._listEntityNode.size(); ++entityIndex )
+        for ( size_t entityIndex = 0; entityIndex < inoutDoc._listSceneObjectNode.size(); ++entityIndex )
         {
-            SceneDocument::EntityNode&       entity      = inoutDoc._listEntityNode[entityIndex];
-            const SceneDocument::EntityNode& cookedState = cooked._listEntityNode[entityIndex];
+            SceneDocument::SceneObjectNode&       entity      = inoutDoc._listSceneObjectNode[entityIndex];
+            const SceneDocument::SceneObjectNode& cookedState = cooked._listSceneObjectNode[entityIndex];
             if ( cookedState._embeddedStateBytes.empty() )
             {
                 if ( entity._embeddedXml.empty() == false )
@@ -222,7 +222,7 @@ namespace sw
 
             // 굽기 전에 "상태가 있는 엔티티" 수를 세 둔다. 굽고 나면 XML 이 비워져 셀 수 없다.
             uint32 statefulCount{ 0 };
-            for ( const SceneDocument::EntityNode& entity : doc._listEntityNode )
+            for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
             {
                 if ( entity._embeddedXml.empty() == false )
                     ++statefulCount;
@@ -268,7 +268,7 @@ namespace sw
             }
 
             SW_LOG_INFO( "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath, outputPath,
-                         static_cast<uint32>( doc._listEntityNode.size() ), cookedCount );
+                         static_cast<uint32>( doc._listSceneObjectNode.size() ), cookedCount );
             ++writtenCount;
         }
 

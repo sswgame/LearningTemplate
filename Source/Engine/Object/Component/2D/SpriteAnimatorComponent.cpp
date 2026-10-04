@@ -12,14 +12,14 @@ namespace sw
     SW_LOG_CALLER( "SpriteAnimator" );
 
     // 컴포넌트는 오브젝트마다 만들어진다. 필드 크기 합(베이스 + 필드 + 비트필드 한 바이트)을 정렬로 올린 값을 넘으면 필드 사이에 구멍이 생긴 것이다.
-    static_assert( sizeof( SpriteAnimatorComponent ) <= ( sizeof( SceneComponent ) + sizeof( string ) * 2 + sizeof( AnimationGraphAsset ) +
+    static_assert( sizeof( SpriteAnimatorComponent ) <= ( sizeof( SceneComponent ) + sizeof( string ) * 2 + sizeof( AnimGraphAsset ) +
                                                           sizeof( vector<string> ) + sizeof( float32 ) * 2 + sizeof( int32 ) * 3 +
                                                           sizeof( const SpriteClipAsset* ) + sizeof( uint8 ) + alignof( SpriteAnimatorComponent ) - 1 ) /
                                                             alignof( SpriteAnimatorComponent ) * alignof( SpriteAnimatorComponent ),
                    "SpriteAnimatorComponent has padding between fields (or a field was added without adding its size here)" );
 
     SpriteAnimatorComponent::SpriteAnimatorComponent()
-        : _animationGraphPath{}
+        : _animGraphPath{}
         , _graph{}
         , _currentAnimation{}
         , _listAnimation{}
@@ -44,7 +44,7 @@ namespace sw
         SceneComponent::onBeginPlay();
         setTickGroup( TickGroup::PostPhysics );
 
-        tryLoadAnimationGraph();
+        tryLoadAnimGraph();
 
         // 그래프가 없으면 클립의 이름 붙은 구간이 애니메이션 목록이다. 구간 이름이 없는 클립은 프레임 전체가 애니메이션 하나다.
         const SpriteClipAsset* pClip = findClip();
@@ -113,11 +113,11 @@ namespace sw
     void SpriteAnimatorComponent::onPropertyChanged( hashed_string propertyName )
     {
         SceneComponent::onPropertyChanged( propertyName );
-        static const hashed_string s_graphPathName( "_animationGraphPath" );
+        static const hashed_string s_graphPathName( "_animGraphPath" );
         if ( propertyName != s_graphPathName )
             return;
 
-        tryLoadAnimationGraph();
+        tryLoadAnimGraph();
         if ( _bPlaying == SW_FALSE || _bGraphLoaded == SW_FALSE )
             return;
         // 지금 애니메이션이 새 그래프에도 있으면 그대로 잇는다. 없으면 그 이름은 이제 "끝나면 다음" 을 찾지 못한다 — 새 목록의 처음으로.
@@ -222,13 +222,13 @@ namespace sw
         return _bPaused == SW_TRUE;
     }
 
-    void SpriteAnimatorComponent::tryLoadAnimationGraph()
+    void SpriteAnimatorComponent::tryLoadAnimGraph()
     {
         _bGraphLoaded = SW_FALSE;
-        _graph        = AnimationGraphAsset{};
-        if ( _animationGraphPath.empty() )
+        _graph        = AnimGraphAsset{};
+        if ( _animGraphPath.empty() )
             return;
-        if ( _graph.loadFromFile( _animationGraphPath ) == false )
+        if ( _graph.loadFromFile( _animGraphPath ) == false )
             return;
         _bGraphLoaded = SW_TRUE;
         _graph.collectNodeNames( _listAnimation );
@@ -238,11 +238,11 @@ namespace sw
     {
         if ( _bGraphLoaded == SW_FALSE )
             return false;
-        const AnimationGraphNode* pNode = _graph.findNodeByName( _currentAnimation );
+        const AnimGraphNode* pNode = _graph.findNodeByName( _currentAnimation );
         if ( pNode == nullptr )
             return false;
-        const int32               nextId = _graph.findFirstOutgoingNodeId( pNode->_id );
-        const AnimationGraphNode* pNext  = _graph.findNode( nextId );
+        const int32          nextId = _graph.findFirstOutgoingNodeId( pNode->_id );
+        const AnimGraphNode* pNext  = _graph.findNode( nextId );
         if ( pNext == nullptr || pNext->_name.empty() )
             return false;
         play( pNext->_name, false );

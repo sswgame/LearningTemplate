@@ -213,7 +213,7 @@ namespace sw
             static string_view getBoundFieldId( const AnnotationBinding& binding ) noexcept
             {
                 if ( binding._kind == AnnotationBinding::Kind::NetRole )
-                    return annotationConstants::kNetRoleField;
+                    return annotation::kNetRoleField;
                 return binding._field;
             }
 
@@ -364,13 +364,13 @@ namespace sw
 #undef SW_ANNOTATION_TARGET_Function
 
         constexpr AnnotationScope<ParsedTypeInfo> kReflectScope{
-            &annotationConstants::kReflect, kArrReflectField, static_cast<uint32>( std::size( kArrReflectField ) ) };
+            &annotation::kReflect, kArrReflectField, static_cast<uint32>( std::size( kArrReflectField ) ) };
         constexpr AnnotationScope<ParsedEnumInfo> kEnumScope{
-            &annotationConstants::kEnum, kArrEnumField, static_cast<uint32>( std::size( kArrEnumField ) ) };
+            &annotation::kEnum, kArrEnumField, static_cast<uint32>( std::size( kArrEnumField ) ) };
         constexpr AnnotationScope<ParsedPropertyInfo> kPropertyScope{
-            &annotationConstants::kProperty, kArrPropertyField, static_cast<uint32>( std::size( kArrPropertyField ) ) };
+            &annotation::kProperty, kArrPropertyField, static_cast<uint32>( std::size( kArrPropertyField ) ) };
         constexpr AnnotationScope<ParsedFunctionInfo> kFunctionScope{
-            &annotationConstants::kFunction, kArrFunctionField, static_cast<uint32>( std::size( kArrFunctionField ) ) };
+            &annotation::kFunction, kArrFunctionField, static_cast<uint32>( std::size( kArrFunctionField ) ) };
     } // namespace
 } // namespace sw
 

@@ -164,7 +164,7 @@ namespace sw
             string_view fieldId = pBinding->_field;
             if ( pBinding->_kind == AnnotationBinding::Kind::NetRole )
             {
-                fieldId = annotationConstants::kNetRoleField;
+                fieldId = annotation::kNetRoleField;
                 value   = pBinding->_field;
             }
 

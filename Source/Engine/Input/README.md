@@ -51,7 +51,7 @@ Input/
 ├─ Utils/VirtualJoystick.h # 마우스 드래그/터치 좌표 -> 2D 축 벡터 계산기 (InputMap의 VirtualJoystick2D 바인딩이 사용)
 ├─ Windows/                # Win32/XInput 구현 (InputManagerWin32.cpp, XInputGamepadDevice.*, InputKeyMapWin32.cpp)
 ├─ Linux/                  # X11/커널 조이스틱 구현 (InputManagerX11.cpp, LinuxJoystickGamepadDevice.*, InputKeyMapX11.cpp)
-└─ (Editor 연동은 Source/Editor/Panels/InputMapEditorPanel.cpp)
+└─ (Editor 연동은 Source/Editor/Panels/InputMapPanel.cpp)
 ```
 
 ### 플랫폼 추상화 규칙
@@ -177,4 +177,4 @@ inputMap.bindVirtualJoystick2D( "Move", sw::MouseButton::Left, /*radius*/ 100.0f
 - `InputMap.h` — `BindingKind`/`ActionTrigger`/`ActionPhase` 등 스키마 enum 주석
 - `Events/RawInputEvent.h` — `RawInputEvent::makeXxx()` 팩토리 함수 목록
 - `Test/EngineTest/TestInput.cpp` — 각 기능의 실제 사용 예시(테스트 코드가 곧 예제입니다)
-- `Source/Editor/Panels/InputMapEditorPanel.cpp` — 액션 바인딩을 시각적으로 편집/테스트하는 에디터 패널
+- `Source/Editor/Panels/InputMapPanel.cpp` — 액션 바인딩을 시각적으로 편집/테스트하는 에디터 패널

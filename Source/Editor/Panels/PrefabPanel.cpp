@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/PrefabEditorPanel.h"
+#include "Editor/Panels/PrefabPanel.h"
 
 #include "Core/Log/Logger.h"
 
@@ -21,7 +21,7 @@ namespace sw::editor
 {
     namespace
     {
-        struct PrefabEditorPanelInternal
+        struct PrefabPanelInternal
         {
             static GameObject* getPrefabTargetInstance()
             {
@@ -37,9 +37,9 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "PrefabTool" );
-    SW_EDITOR_PANEL( PrefabEditorPanel, "prefab_editor", EditorPanelCategory::Tool, 1400 );
+    SW_EDITOR_PANEL( PrefabPanel, "prefab_editor", EditorPanelCategory::Tool, 1400 );
 
-    PrefabEditorPanel::PrefabEditorPanel()
+    PrefabPanel::PrefabPanel()
         : _selectedPrefabPath{}
         , _selectedInstanceName{}
         , _lastScanKey{}
@@ -50,14 +50,14 @@ namespace sw::editor
         scanPrefabOverrides( nullptr );
     }
 
-    void PrefabEditorPanel::scanPrefabOverrides( const utf8* pPrefabPath )
+    void PrefabPanel::scanPrefabOverrides( const utf8* pPrefabPath )
     {
         const string_view path = ( pPrefabPath != nullptr ) ? string_view{ pPrefabPath } : string_view{};
-        EditorToolAssetCommands::collectPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), path, _selectedPrefabPath,
+        EditorToolAssetCommands::collectPrefabOverrides( PrefabPanelInternal::getPrefabTargetInstance(), path, _selectedPrefabPath,
                                                          _selectedInstanceName, _listOverride, _listNestedPrefab );
     }
 
-    void PrefabEditorPanel::drawContent()
+    void PrefabPanel::drawContent()
     {
         EditorContext* pContext = EditorContext::get();
         const utf8*    pScanPath{ nullptr };
@@ -114,7 +114,7 @@ namespace sw::editor
 
         if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f, 0.0f ) ) )
         {
-            if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
+            if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
                 SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
             else
                 SW_LOG_ERROR( "Could not apply overrides to template %s", _selectedPrefabPath.c_str() );
@@ -124,7 +124,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f, 0.0f ) ) )
         {
-            if ( EditorToolAssetCommands::revertAllPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
+            if ( EditorToolAssetCommands::revertAllPrefabOverrides( PrefabPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
                 SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
             else
                 SW_LOG_ERROR( "Could not revert overrides on %s", _selectedInstanceName.c_str() );
@@ -135,7 +135,7 @@ namespace sw::editor
             ImGui::EndDisabled();
     }
 
-    void PrefabEditorPanel::drawNestedPrefabSection()
+    void PrefabPanel::drawNestedPrefabSection()
     {
         if ( ImGui::CollapsingHeader( "Nested Prefabs & Sub-Assets", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
@@ -158,7 +158,7 @@ namespace sw::editor
             scanPrefabOverrides( _selectedPrefabPath.c_str() );
     }
 
-    void PrefabEditorPanel::drawOverrideTable()
+    void PrefabPanel::drawOverrideTable()
     {
         if ( ImGui::BeginTable( "PrefabOverridesTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
         {
@@ -207,7 +207,7 @@ namespace sw::editor
                     ImGui::PushID( static_cast<int32>( overrideIndex ) );
                     if ( ImGui::SmallButton( "Revert" ) )
                     {
-                        EditorToolAssetCommands::revertPrefabOverride( PrefabEditorPanelInternal::getPrefabTargetInstance(), item, _selectedPrefabPath );
+                        EditorToolAssetCommands::revertPrefabOverride( PrefabPanelInternal::getPrefabTargetInstance(), item, _selectedPrefabPath );
                         SW_LOG_TRACE( "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
                         scanPrefabOverrides( _selectedPrefabPath.c_str() );
                     }

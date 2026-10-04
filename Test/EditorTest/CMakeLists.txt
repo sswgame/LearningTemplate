@@ -14,7 +14,7 @@ sw_addTestExecutable(EditorTest
 		TestAssetHotReload.cpp
 		TestEditorAssetType.cpp
 		TestEditorAssetTypeActions.cpp
-		TestEditorBackgroundJob.cpp
+		TestEditorBackgroundTask.cpp
 		TestEditorCommandRegistry.cpp
 		TestEditorDataTableCommands.cpp
 		TestEditorDrawReleaseQueue.cpp

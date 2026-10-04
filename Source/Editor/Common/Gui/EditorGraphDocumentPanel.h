@@ -3,7 +3,7 @@
  * @brief 노드 그래프를 문서로 여닫는 패널의 공통 뼈대입니다.
  *
  * [왜 있는가]
- * `AnimationGraphPanel` 과 `DialogueGraphPanel` 은 **같은 패널**입니다. 노드 · 링크 목록을 들고, 캔버스를 하나
+ * `AnimGraphPanel` 과 `DialogueGraphPanel` 은 **같은 패널**입니다. 노드 · 링크 목록을 들고, 캔버스를 하나
  * 소유하고, JSON 으로 읽고 쓰고, 노드를 옮기면 dirty 로 표시합니다. 뼈대를 패널마다 복사하면 복사본이 **조용히
  * 갈라집니다**("움직였는가" 판단의 `||` · `&&` 가 갈리면 수평 이동만 한 레이아웃이 저장되지 않는 식 — 판단 자체는
  * `EditorSessionPolicy::hasNodeMoved` 로 올려 테스트가 지킵니다). `EditorNodeGraphId.h` 가 id 변환을 모은 것과 같은
@@ -29,7 +29,7 @@ namespace sw::editor
     /**
      * @class EditorGraphDocumentPanel
      * @brief 노드 그래프 문서 패널의 공통 상태와 절차입니다.
-     * @tparam AssetType 이 패널이 읽고 쓰는 그래프 애셋 (`AnimationGraphAsset` 등).
+     * @tparam AssetType 이 패널이 읽고 쓰는 그래프 애셋 (`AnimGraphAsset` 등).
      */
     template <typename AssetType>
     class EditorGraphDocumentPanel : public EditorDocumentPanel

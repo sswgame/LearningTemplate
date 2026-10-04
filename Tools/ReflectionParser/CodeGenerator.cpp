@@ -59,7 +59,7 @@ namespace sw
             static string makeCtorLookupName( const ParsedFunctionInfo& method, const ParserSession& session )
             {
                 StringBuilder<constant::kMaxBuffer1024> b;
-                b.append( annotationConstants::kCtorLookupName );
+                b.append( annotation::kCtorLookupName );
                 if ( method._listParameterTypeName.empty() == false )
                 {
                     b.append( '(' );
@@ -198,22 +198,22 @@ namespace sw
 
     void CodeGenerator::emitFileHeader( CodeEmitBuffer& out ) const
     {
-        appendTemplate( out, tplConstants::kFileHeader, {
-                                                            { templateKeyConstants::kSourcePath, _sourceFilePath }
+        appendTemplate( out, templatefile::kFileHeader, {
+                                                            { templatekey::kSourcePath, _sourceFilePath }
         } );
     }
 
     void CodeGenerator::emitReflectTypeTraits( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
     {
-        appendTemplate( out, tplConstants::kReflectTypeTraits, {
-                                                                   { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName }
+        appendTemplate( out, templatefile::kReflectTypeTraits, {
+                                                                   { templatekey::kFqn, typeInfo._fullyQualifiedName }
         } );
     }
 
     void CodeGenerator::emitTypeInfoAccessors( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
     {
-        appendTemplate( out, tplConstants::kTypeInfoAccessors, {
-                                                                   { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName }
+        appendTemplate( out, templatefile::kTypeInfoAccessors, {
+                                                                   { templatekey::kFqn, typeInfo._fullyQualifiedName }
         } );
     }
 
@@ -390,7 +390,7 @@ namespace sw
         if ( method._bStatic != SW_FALSE && method._bConstructor == SW_FALSE )
         {
             emit.line( "(void)objPtr;" );
-            if ( returnType == annotationConstants::kVoidTypeName )
+            if ( returnType == annotation::kVoidTypeName )
             {
                 emit.linef( "%#::%#(%#);", typeInfo._fullyQualifiedName, method._name, callArgs );
                 emit.line( "return ::sw::TaskValue{};" );
@@ -408,7 +408,7 @@ namespace sw
                 emit.linef( "sw_placement_new( self ) %#(%#);", typeInfo._fullyQualifiedName, callArgs ); // `Style/PlacementNew` 와 같은 모양
                 emit.line( "return ::sw::TaskValue{};" );
             }
-            else if ( returnType == annotationConstants::kVoidTypeName )
+            else if ( returnType == annotation::kVoidTypeName )
             {
                 emit.linef( "self->%#(%#);", method._name, callArgs );
                 emit.line( "return ::sw::TaskValue{};" );
@@ -435,7 +435,7 @@ namespace sw
             emit.line( "{" );
             emit.push();
             emit.line( "::sw::FunctionInfo funcInfo;" );
-            emit.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != SW_FALSE ) ? annotationConstants::kCtorLookupName : method._name ) );
+            emit.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != SW_FALSE ) ? annotation::kCtorLookupName : method._name ) );
             emit.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
             emit.assign( "funcInfo._returnTypeName", CodeEmit::quoted( returnType ) );
             emit.assign( "funcInfo._listParameterTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParameterTypeName, _session ) );
@@ -491,13 +491,13 @@ namespace sw
             fe.flagIf( typeInfo.requiresComponentFactory(), "info._addComponent", "&::sw::GameObject::addComponentTo<" + typeInfo._fullyQualifiedName + ">" );
         }
 
-        appendTemplate( out, tplConstants::kTypeRegistrarBegin, {
-                                                                    {        templateKeyConstants::kId,                registrarName},
-                                                                    {       templateKeyConstants::kFqn, typeInfo._fullyQualifiedName},
-                                                                    {      templateKeyConstants::kName,               typeInfo._name},
-                                                                    { templateKeyConstants::kParentFqn,          typeInfo._parentFQN},
-                                                                    {templateKeyConstants::kModuleName,                  _moduleName},
-                                                                    {     templateKeyConstants::kFlags,    string( flagsBuf.view() )},
+        appendTemplate( out, templatefile::kTypeRegistrarBegin, {
+                                                                    {        templatekey::kId,                registrarName},
+                                                                    {       templatekey::kFqn, typeInfo._fullyQualifiedName},
+                                                                    {      templatekey::kName,               typeInfo._name},
+                                                                    { templatekey::kParentFqn,          typeInfo._parentFQN},
+                                                                    {templatekey::kModuleName,                  _moduleName},
+                                                                    {     templatekey::kFlags,    string( flagsBuf.view() )},
         } );
 
         CodeEmit emit( out );
@@ -519,11 +519,11 @@ namespace sw
         if ( typeInfo._listMethod.empty() == false )
             emitMethodList( emit, typeInfo );
 
-        appendTemplate( out, tplConstants::kTypeRegistrarEnd,
+        appendTemplate( out, templatefile::kTypeRegistrarEnd,
                         {
-                            { templateKeyConstants::kId, registrarName },
-                            { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName },
-                            { templateKeyConstants::kAliasRegs,
+                            { templatekey::kId, registrarName },
+                            { templatekey::kFqn, typeInfo._fullyQualifiedName },
+                            { templatekey::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) }
         } );
     }
@@ -542,16 +542,16 @@ namespace sw
             return "static_cast<int64>( ::" + enumInfo._fullyQualifiedName + "::" + enumerator._name + " )";
         };
 
-        appendTemplate( out, tplConstants::kEnumRegistrarBegin, {
-                                                                    {          templateKeyConstants::kId,                                                  registrarName},
-                                                                    {         templateKeyConstants::kFqn,                                   enumInfo._fullyQualifiedName},
-                                                                    {        templateKeyConstants::kName,                                                 enumInfo._name},
-                                                                    {  templateKeyConstants::kModuleName,                                                    _moduleName},
-                                                                    {   templateKeyConstants::kIsBitFlag,                        enumInfo._bIsBitFlag ? "true" : "false"},
-                                                                    {  templateKeyConstants::kHasInvalid,                        invalidEn != nullptr ? "true" : "false"},
-                                                                    {templateKeyConstants::kInvalidValue, invalidEn != nullptr ? valueExpr( *invalidEn ) : string( "0" )},
-                                                                    {    templateKeyConstants::kHasCount,                          countEn != nullptr ? "true" : "false"},
-                                                                    {  templateKeyConstants::kCountValue,     countEn != nullptr ? valueExpr( *countEn ) : string( "0" )},
+        appendTemplate( out, templatefile::kEnumRegistrarBegin, {
+                                                                    {          templatekey::kId,                                                  registrarName},
+                                                                    {         templatekey::kFqn,                                   enumInfo._fullyQualifiedName},
+                                                                    {        templatekey::kName,                                                 enumInfo._name},
+                                                                    {  templatekey::kModuleName,                                                    _moduleName},
+                                                                    {   templatekey::kIsBitFlag,                        enumInfo._bIsBitFlag ? "true" : "false"},
+                                                                    {  templatekey::kHasInvalid,                        invalidEn != nullptr ? "true" : "false"},
+                                                                    {templatekey::kInvalidValue, invalidEn != nullptr ? valueExpr( *invalidEn ) : string( "0" )},
+                                                                    {    templatekey::kHasCount,                          countEn != nullptr ? "true" : "false"},
+                                                                    {  templatekey::kCountValue,     countEn != nullptr ? valueExpr( *countEn ) : string( "0" )},
         } );
 
         CodeEmit emit( out );
@@ -592,11 +592,11 @@ namespace sw
             emit.line( "}" );
         }
 
-        appendTemplate( out, tplConstants::kEnumRegistrarEnd,
+        appendTemplate( out, templatefile::kEnumRegistrarEnd,
                         {
-                            { templateKeyConstants::kId, registrarName },
-                            { templateKeyConstants::kFqn, enumInfo._fullyQualifiedName },
-                            { templateKeyConstants::kAliasRegs,
+                            { templatekey::kId, registrarName },
+                            { templatekey::kFqn, enumInfo._fullyQualifiedName },
+                            { templatekey::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) }
         } );
     }

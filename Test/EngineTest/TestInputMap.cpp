@@ -15,7 +15,7 @@
 // InputMap — 바인딩 · 레이어 · 조합 키 · 벡터 축 합성. 장치가 아니라 **매핑 규칙**을 본다.
 /**
  * @brief [InputMapTest] 같은 레이어에서 이미 쓰는 키를 찾아낸다.
- * @details 에디터의 Rebind(`InputMapEditorPanel::rebindSelectedAction`)가 이것을 불러 이미 쓰는 키로 바꾸는 것을 알린다.
+ * @details 에디터의 Rebind(`InputMapPanel::rebindSelectedAction`)가 이것을 불러 이미 쓰는 키로 바꾸는 것을 알린다.
  *          계약을 여기서 고정한다.
  */
 SW_TEST_CASE( InputMapTest, DetectsBindingConflictInSameLayer )
