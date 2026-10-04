@@ -71,3 +71,24 @@
 오류이고(`CharacterDataReader`), `ResourceDataSchemaTest` 가 저장소의 모든 표를 읽습니다. 같은 `.fracture` 를 표만 바꿔 다르게 부숩니다(다시 쿠킹하지 않는다).
 
 시험: `DestructionStateTest`(`Test/EngineTest/TestDestructionState.cpp`).
+
+## 3. 피해 — 변형 문턱 · 사건 · 네트워크(`DestructionDamage.h`, `DestructionState::applyDamage`)
+
+사건(`DestructionDamageEvent`)은 **메시 공간**의 중심 · 변형 · 반경 · 맞은 잎(선택) · 방향 · 충격량입니다. 종류: `Point`(무기 — 광선이 고른 잎에
+감쇠 없이), `Radial`(폭발 — 반경 안 선형 감쇠 `1 - 거리 / 반경`, 떨어진 조각을 바깥으로 민다), `Impact`(물리 접촉의 시작 충격량 —
+`makeImpactEvent`: `minImpulse` 를 넘은 몫 × `impulseToStrain`, 반경 `Impact.radius`).
+
+적용 순서(모두 노드 · 연결 번호 순):
+
+1. 잎마다 변형(`computeLeafStrain`).
+2. 활성 노드마다 그 잎들의 최대 변형을 쌓고(`getNodeStrain`), 깊이의 문턱(`Strain thresholds` — 깊이 0 이 뿌리)을 넘으면 묶음은 자식으로 갈라지고
+   **넘친 몫의 비율**(`(쌓인 값 - 문턱) / 이번 변형`)만큼 자식에게 다시 줍니다. 센 피해 한 번은 여러 레벨을 지나고, 약한 피해는 쌓여 큰 덩어리만
+   가릅니다. 잎이 문턱을 넘으면 떨어져 나갑니다(`detachLeaf` 와 같다).
+3. 활성 노드가 다른 두 잎 사이의 연결은 두 잎 변형의 평균을 쌓고 넓이 × `Links strength` 를 넘으면 끊깁니다 — 조각이 깨지지 않아도 떨어질 수 있다.
+4. 맞은 그룹을 다시 나누고 지지를 잽니다(2 절).
+
+**결정성 · 네트워크.** 같은 그래프(같은 씨앗으로 쿠킹) · 표 · 앵커에 같은 순서의 사건이면 어느 기계에서도 같은 상태입니다(`computeStateHash`,
+`getEventCount`). 그래서 보내는 것은 변환이 아니라 `DestructionEventLog`(씨앗 + 사건열, `SWDE` 바이트)이고 받는 쪽이 같은 순서로 `applyDamage` 합니다.
+순서를 바꾸면 다른 상태입니다(계약의 일부). 부딪힘 사건은 물리에서 나오므로 기계마다 다를 수 있습니다 — 권한 쪽이 만든 사건만 기록에 싣습니다.
+
+시험: `DestructionDamageTest`(`Test/EngineTest/TestDestructionDamage.cpp`).

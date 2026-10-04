@@ -93,6 +93,8 @@ namespace sw
         , _listLeafLinkIndex{}
         , _listGroup{}
         , _nextGroupId{ 1 }
+        , _eventCount{ 0 }
+        , _listScratchStrain{}
     {
     }
 
@@ -147,6 +149,7 @@ namespace sw
             group._bAnchored = ( group._bAnchored == SW_TRUE || bAnchored != SW_FALSE ) ? SW_TRUE : SW_FALSE;
         _listGroup.push_back( std::move( group ) );
         _nextGroupId = 2;
+        _eventCount  = 0;
     }
 
     vector_reference<const uint32> DestructionState::getLeafLinks( uint32 leaf ) const
@@ -518,6 +521,7 @@ namespace sw
         }
         for ( const uint8 bAnchored : _listLeafAnchored )
             hash = Internal::mixHash( hash, bAnchored );
+        hash = Internal::mixHash( hash, _eventCount );
         for ( const DestructionGroup& group : _listGroup )
         {
             hash = Internal::mixHash( hash, group._id );

@@ -23,6 +23,7 @@
 
 namespace sw
 {
+    struct DestructionDamageEvent;
     struct FractureGraph;
 
     /** @brief 한 몸으로 움직이는 활성 노드들입니다. */
@@ -89,6 +90,14 @@ namespace sw
         bool detachLeaf( uint32 leaf, DestructionChange& outChange );
         /** @brief 연결 하나를 끊습니다. 이미 끊겼거나 두 잎이 같은 활성 노드 안이면 false 입니다. */
         bool breakLink( uint32 link, DestructionChange& outChange );
+        /**
+         * @brief 피해 사건 하나를 적용합니다(`DestructionDamage.cpp`). 바뀐 것이 있으면 true 입니다.
+         * @details 1) 잎마다 변형(`DestructionDamageUtil::computeLeafStrain`). 2) 활성 노드마다 그 잎들의 최대 변형을 쌓고, 깊이의 문턱을 넘으면 묶음은
+         *          자식으로 갈라지며 넘친 몫(쌓인 값 - 문턱)의 비율만큼 자식에게 다시 준다 — 센 피해 한 번은 여러 레벨을 지나고, 약한 피해는 큰 덩어리만
+         *          가른다. 잎이 문턱을 넘으면 떨어져 나간다(`detachLeaf` 와 같다). 3) 활성 노드가 다른 두 잎 사이 연결은 두 잎 변형의 평균을 쌓아
+         *          넓이 × `linkStrength` 를 넘으면 끊긴다. 4) 맞은 그룹을 다시 나누고 지지를 잰다. 모든 순서는 노드 · 연결 번호 순입니다.
+         */
+        [[nodiscard]] bool applyDamage( const DestructionDamageEvent& event, DestructionChange& outChange );
 
         const vector<DestructionGroup>& getGroups() const { return _listGroup; }
         /** @brief 번호의 그룹입니다. 없으면 nullptr 입니다. */
@@ -110,6 +119,8 @@ namespace sw
         float32 computeGroupMass( const DestructionGroup& group, float3& outCenter ) const;
         /** @brief 상태 전체의 해시입니다(변형 · 끊김 · 그룹). 같은 사건열이면 같은 값입니다. */
         uint64 computeStateHash() const;
+        /** @brief 적용한 피해 사건 수입니다. */
+        uint32 getEventCount() const { return _eventCount; }
 
     private:
         /** @brief 잎의 연결 번호들입니다. */
@@ -145,5 +156,7 @@ namespace sw
         vector<uint32>           _listLeafLinkIndex;
         vector<DestructionGroup> _listGroup; ///< 번호 오름차순
         uint32                   _nextGroupId;
+        uint32                   _eventCount;        ///< 적용한 피해 사건 수(해시에 든다)
+        vector<float32>          _listScratchStrain; ///< applyDamage 의 잎별 변형(재사용)
     };
 } // namespace sw
