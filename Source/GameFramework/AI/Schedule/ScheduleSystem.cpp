@@ -151,7 +151,7 @@ namespace sw
     } // namespace
 
     /** @brief `-gv_scheduleTrace=<npc id | *>` — 값이 바뀌면 그 NPC 의 "왜 여기 있나" 와 오늘 시간표를 로그에 한 번 남깁니다. */
-    SW_TEST_GLOBAL_VARIABLE_STRING( gv_scheduleTrace, "", "Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_scheduleTrace, "", "Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes" );
 } // namespace sw
 
 namespace sw

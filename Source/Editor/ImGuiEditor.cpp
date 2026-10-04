@@ -125,14 +125,14 @@ namespace sw::editor
      *          Profiler 분포표 · 씬 세대 변경 훅)가 실행되지 않습니다. 이 스위치로 테스트 씬을 열면 그 경로가 모두 켜집니다.
      *          예: `-gv_editorStartupScene=game/empty/maps/editortest.scene.xml`
      */
-    SW_GLOBAL_VARIABLE_STRING( gv_editorStartupScene, "", "에디터 시작 시 열 씬의 리소스 경로 (비우면 열지 않는다)" );
+    SW_GLOBAL_VARIABLE( sw::string, gv_editorStartupScene, "", "에디터 시작 시 열 씬의 리소스 경로 (비우면 열지 않는다)" );
 
     /**
      * @brief `-gv_editorUiScale=<배율>`: 에디터 UI 배율입니다. 0 이면 창이 놓인 모니터의 DPI 를 따릅니다.
      * @details 언리얼 Editor Preferences 의 UI 배율 · 유니티 UI Scaling 설정과 같은 자리입니다. 모니터 DPI 와 상관없이 크게 · 작게 보고
      *          싶을 때, 그리고 고해상도 모니터가 없는 기계에서 배율 경로를 확인할 때 씁니다.
      */
-    SW_GLOBAL_VARIABLE_FLOAT( gv_editorUiScale, 0.0f, "에디터 UI 배율 (0 = 모니터 DPI 를 따름)" );
+    SW_GLOBAL_VARIABLE( float32, gv_editorUiScale, 0.0f, "에디터 UI 배율 (0 = 모니터 DPI 를 따름)" );
 
     ImGuiEditor::ImGuiEditor()
         : _platformBackend{ nullptr }

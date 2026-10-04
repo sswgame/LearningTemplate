@@ -56,7 +56,7 @@ namespace sw
      * @brief `-gv_reloadGameAtFrame=N`: N 번째 프레임에 게임 모듈(SWGame) 핫 리로드를 한 번 요청합니다(리로드 단축키와 같은 길).
      * @details 디렉터의 시뮬레이션이 리로드를 넘는지 손 없이 확인하는 스위치입니다 — 로그의 `[ReloadProbe]` 앞뒤 상태 줄을 견준다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_reloadGameAtFrame, 0, "이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_reloadGameAtFrame, 0, "이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함)" );
 #endif
 } // namespace sw
 
@@ -66,9 +66,9 @@ namespace sw
 
 #if !defined( SW_SHIPPING )
     /** @brief `-gv_devConsoleExec="timescale 0.5;gv_viewMode 2"`: 시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령(`;` 로 나눈다). 자동화 · 재현용입니다. */
-    SW_TEST_GLOBAL_VARIABLE_STRING( gv_devConsoleExec, "", "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_devConsoleExec, "", "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)" );
     /** @brief `-gv_devConsoleOpen=1`: 에디터 없이 띄울 때 게임 창의 개발 콘솔을 연 채로 시작합니다(화면 확인용). */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_devConsoleOpen, 0, "게임 창 개발 콘솔을 연 채로 시작 (1=열기)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_devConsoleOpen, 0, "게임 창 개발 콘솔을 연 채로 시작 (1=열기)" );
 #endif
 
     App::App()

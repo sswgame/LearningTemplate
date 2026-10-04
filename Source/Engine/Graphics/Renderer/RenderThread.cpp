@@ -26,10 +26,10 @@ namespace sw
      *          PPM 은 인코더가 필요 없어 의존성이 늘지 않습니다. `-gv_profileFrames` 와 같이 쓰면 찍고 종료합니다.
      * @note 셋 모두 이 파일이 유일한 소비자라 여기서 정의합니다. 다른 파일에서 `extern` 으로 끌어 쓰면 타입이 어긋나도 링커까지 가야 걸립니다.
      */
-    SW_TEST_GLOBAL_VARIABLE_STRING( gv_screenshot, "", "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_screenshot, "", "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
 
     /** @brief `-gv_screenshotAttachment=<이름>` 입니다. 덤프할 트랜지언트 첨부 이름이며, 비면 Present 캡처(없으면 Present 가 읽는 첨부)를 찍습니다. */
-    SW_TEST_GLOBAL_VARIABLE_STRING( gv_screenshotAttachment, "", "Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_screenshotAttachment, "", "Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과)" );
 
     /**
      * @brief `-gv_screenshotFrame=<N>` 입니다. 몇 번째 프레임에서 찍을지 정합니다(기본 10, 10 보다 작으면 10).
@@ -37,17 +37,17 @@ namespace sw
      *          필요합니다. 주의: `-gv_profileFrames` 는 찍는 시각을 바꾸지 않습니다 — 같은 프레임 번호끼리 비교하면
      *          "움직이지 않는다" 는 잘못된 결론이 나옵니다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)" );
 
     // 커맨드 리스트를 프레임 끝에 모아 한 번에 제출할지(기본), 잘릴 때마다 바로 제출할지. 이 파일이 프레임마다 디바이스로 밀어 넣는다.
     // 두 모드 모두 기록 순서 = 실행 순서다. 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고
     // 제출 '시점'만 달라진다. 즉시 모드는 제출 횟수가 늘어 오버헤드가 크지만, GPU 오류(DEVICE_HUNG,
     // 검증 레이어)가 어느 제출에서 났는지 좁히기 쉬워 디버깅에 쓴다.
-    SW_GLOBAL_VARIABLE_BOOL( gv_rhiImmediateSubmit, false,
-                             "RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼)" );
+    SW_GLOBAL_VARIABLE( bool, gv_rhiImmediateSubmit, false,
+                        "RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼)" );
 
     // 전용 렌더 스레드를 쓸지(false 면 게임 스레드가 바로 제출한다). 읽는 곳은 이 파일뿐이다(`attach` · `submit`).
-    SW_GLOBAL_VARIABLE_BOOL( gv_useRenderThread, true, "전용 RenderThread 사용 (false = 게임 스레드 인라인 submit)" );
+    SW_GLOBAL_VARIABLE( bool, gv_useRenderThread, true, "전용 RenderThread 사용 (false = 게임 스레드 인라인 submit)" );
 
     RenderThread::RenderThread()
         : _pDevice{ nullptr }
