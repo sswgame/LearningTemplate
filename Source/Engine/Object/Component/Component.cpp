@@ -197,6 +197,32 @@ namespace sw
         return false;
     }
 
+    bool Component::removeSubTickPrerequisite( uint32 subTickId, const SubTickHandle& prerequisiteHandle )
+    {
+        if ( subTickId == 0 || prerequisiteHandle.isValid() == false )
+            return false;
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickId, prerequisiteHandle]( Component& self )
+        { (void)self.removeSubTickPrerequisite( subTickId, prerequisiteHandle ); } ) ) )
+            return true;
+
+        for ( SubTickInfo& info : _listSubTick )
+        {
+            if ( info._subTickId != subTickId )
+                continue;
+            for ( size_t index = 0; index < info._listPrerequisite.size(); ++index )
+            {
+                if ( info._listPrerequisite[index] != prerequisiteHandle )
+                    continue;
+                info._listPrerequisite.erase( info._listPrerequisite.begin() + static_cast<ptrdiff_t>( index ) );
+                if ( _pOwner != nullptr )
+                    _pOwner->markTickOrderDirty();
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
     void Component::setSubTickActive( uint32 subTickId, bool bActive )
     {
         if ( subTickId == 0 )

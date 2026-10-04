@@ -285,3 +285,39 @@ SW_TEST_CASE( TickPrerequisiteTest, ChainSurvivesRebuildAndReplacedPrerequisite 
     manager.tick( 0.016f );
     SW_EXPECT_TRUE( isNear( pFollower->_observedLocal, sw::float3{ 5.0f, 0.0f, 0.0f } ) );
 }
+
+/**
+ * @brief [TickPrerequisiteTest] 다른 컴포넌트의 주 틱(`getTickHandle`)을 선행 조건으로 걸면 그 `onTick` 이 옮긴 자리를 같은 프레임에 읽고, 떼면 보통 길로 돌아간다
+ * @details 언리얼 `AddTickPrerequisiteComponent` 의 자리다. 대상이 바뀌면 떼고 다시 거는 모양(`removeSubTickPrerequisite`)도 본다.
+ */
+SW_TEST_CASE( TickPrerequisiteTest, MainTickOfAnotherComponentIsAPrerequisite )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents();
+    const sw::TickRegistry& registry = manager.getTickRegistry();
+
+    sw::GameObject*             pLeaderObj = manager.createGameObject( sw::hashed_string( "MainTickLeader" ) );
+    sw::MockTickSceneComponent* pLeader    = pLeaderObj->addComponent<sw::MockTickSceneComponent>();
+    pLeader->_bWriteLocalOnTick            = SW_TRUE;
+    pLeader->_tickLocalPos                 = sw::float3{ 8.0f, 0.0f, 0.0f };
+
+    sw::SubTickHandle              followerTick{};
+    sw::MockSubTickMoverComponent* pFollower  = createMover( manager, "MainTickFollower", sw::float3{ 0.0f, 0.0f, 1.0f }, pLeader, followerTick );
+    const sw::SubTickHandle        leaderTick = pLeader->getTickHandle();
+    SW_EXPECT_EQUAL( 0u, leaderTick._subTickId );
+    SW_EXPECT_EQUAL( pLeaderObj->getObjectId(), leaderTick._objectId );
+    SW_ASSERT_TRUE( pFollower->addSubTickPrerequisite( kMove, leaderTick ) );
+
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 1u, registry.getStageItemCount() );
+    SW_EXPECT_TRUE( isNear( pFollower->_observedLocal, sw::float3{ 8.0f, 0.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNear( pFollower->getLocalPosition(), sw::float3{ 8.0f, 0.0f, 1.0f } ) );
+
+    // 떼면 다시 보통 길 — 다른 오브젝트가 같은 그룹에서 쓴 값은 틱 전 값으로 읽힌다.
+    SW_ASSERT_TRUE( pFollower->removeSubTickPrerequisite( kMove, leaderTick ) );
+    pLeader->_tickLocalPos = sw::float3{ 9.0f, 0.0f, 0.0f };
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 0u, registry.getStageItemCount() );
+    SW_EXPECT_TRUE( isNear( pFollower->_observedLocal, sw::float3{ 8.0f, 0.0f, 0.0f } ) );
+    SW_EXPECT_FALSE( pFollower->removeSubTickPrerequisite( kMove, leaderTick ) );
+}

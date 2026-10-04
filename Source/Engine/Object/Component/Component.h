@@ -59,7 +59,7 @@ namespace sw
 
     /**
      * @struct SubTickHandle
-     * @brief 서브틱을 식별하고 선행 조건(prerequisite)을 잇는 데 쓰는 핸들입니다.
+     * @brief 컴포넌트의 틱 하나(서브틱, `_subTickId` 0 이면 주 틱 `onTick`)를 식별하고 선행 조건(prerequisite)을 잇는 데 쓰는 핸들입니다.
      */
     struct SubTickHandle
     {
@@ -74,7 +74,7 @@ namespace sw
 
         constexpr bool isValid() const
         {
-            return _componentId != 0 && _subTickId != 0;
+            return _componentId != 0;
         }
 
         constexpr bool operator==( const SubTickHandle& other ) const
@@ -433,6 +433,13 @@ namespace sw
          *          틱 중이면 인자만 보고 틱 직후로 미루며 true(받아 둠)입니다.
          */
         bool addSubTickPrerequisite( uint32 subTickId, const SubTickHandle& prerequisiteHandle );
+        /** @brief 선행 조건 하나를 뗍니다. 있었으면 true 입니다. 틱 중이면 틱 직후로 미루며 true(받아 둠)입니다 — 대상이 바뀌면 갈아 걸 때 씁니다. */
+        [[nodiscard]] bool removeSubTickPrerequisite( uint32 subTickId, const SubTickHandle& prerequisiteHandle );
+        /**
+         * @brief 이 컴포넌트의 주 틱(`onTick`)을 가리키는 핸들입니다. 다른 컴포넌트의 서브틱 선행 조건으로 겁니다(언리얼 `AddTickPrerequisiteComponent` 의 대상).
+         * @details 오브젝트에 붙은 뒤에 얻으십시오(소유 오브젝트 id 가 든다). 그 컴포넌트가 틱하지 않거나 꺼져 있으면 순서를 만들지 않습니다.
+         */
+        SubTickHandle getTickHandle() const { return makeTickHandle( 0 ); }
         /** @brief 서브틱의 활성 여부를 설정합니다. 틱 중이면 마스크(1~63)만 바로 바꾸고 목록의 값은 틱 직후로 미룹니다. */
         void setSubTickActive( uint32 subTickId, bool bActive );
         /** @brief 서브틱이 활성 상태인지 확인합니다(비트마스크로 O(1)). */
