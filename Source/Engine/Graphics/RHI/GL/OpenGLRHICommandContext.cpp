@@ -55,10 +55,15 @@ namespace sw
             dstH   = pDstRecord->_height;
         }
 
+        // 행 순서: FBO 는 UPPER_LEFT 로 그려 0 행이 화면 위다(beginRenderPass). 창(기본 프레임버퍼)은 0 행이 **아래**라,
+        // 창으로 옮길 때는 대상 y 를 뒤집어야 화면에 바로 선다. 텍스처끼리는 행 순서가 같아 그대로 옮긴다.
+        // 주의: 창 쪽 반전은 오프스크린 텍스처를 읽는 스크린샷으로는 보이지 않는다(`-gv_screenshot` 이 이 경로를 쓴다).
+        const GLint dstY0 = dstFbo == 0 ? static_cast<GLint>( dstH ) : 0;
+        const GLint dstY1 = dstFbo == 0 ? 0 : static_cast<GLint>( dstH );
         glBindFramebuffer( GL_READ_FRAMEBUFFER, pSrcRecord->_fbo );
         glBindFramebuffer( GL_DRAW_FRAMEBUFFER, dstFbo );
         glBlitFramebuffer( 0, 0, static_cast<GLint>( pSrcRecord->_width ), static_cast<GLint>( pSrcRecord->_height ),
-                           0, 0, static_cast<GLint>( dstW ), static_cast<GLint>( dstH ),
+                           0, dstY0, static_cast<GLint>( dstW ), dstY1,
                            GL_COLOR_BUFFER_BIT, GL_LINEAR );
         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
     }
