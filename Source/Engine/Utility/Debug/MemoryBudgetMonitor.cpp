@@ -26,7 +26,7 @@ namespace sw
         struct MemoryBudgetMonitorInternal
         {
             /** @brief 바이트를 KB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
-            static constexpr uint64 toKilobytesX10( uint64 bytes ) { return ( bytes * 10 ) / 1024; }
+            [[maybe_unused]] static constexpr uint64 toKilobytesX10( uint64 bytes ) { return ( bytes * 10 ) / 1024; }
 
             /** @brief 한 메가바이트입니다. */
             static constexpr uint64 kBytesPerMegabyte = 1024ull * 1024ull;

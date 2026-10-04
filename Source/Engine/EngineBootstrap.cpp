@@ -47,11 +47,18 @@ namespace sw
         // `-gv_memoryTracking=1` 로 켠다 — 꺼져 있으면 할당마다 분기 하나다. 플랫폼 누수 검사는 진단 구성만.
         if ( bDiagnostics )
             MemoryProfiler::enableMemoryLeakChecks();
-#if !defined( SW_SHIPPING )
-        _memoryProfiler = make_unique<MemoryProfiler>();
-        _memoryProfiler->initialize();
-        _memoryProfiler->setTrackingEnabled( bDiagnostics );
+        // 배포본에는 할당 헤더가 없어 셀 것이 없다 — 시험 하네스(진단 구성)만 같은 API 를 쓰려고 세운다.
+#if defined( SW_SHIPPING )
+        const bool bCreateMemoryProfiler = bDiagnostics;
+#else
+        const bool bCreateMemoryProfiler = true;
 #endif
+        if ( bCreateMemoryProfiler )
+        {
+            _memoryProfiler = make_unique<MemoryProfiler>();
+            _memoryProfiler->initialize();
+            _memoryProfiler->setTrackingEnabled( bDiagnostics );
+        }
         HashedStringPool::initialize();
 
         _logger = make_unique<Logger>();
