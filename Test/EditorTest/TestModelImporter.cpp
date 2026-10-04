@@ -7,6 +7,8 @@
 #include "Editor/Common/Asset/ModelImportConfig.h"
 #include "Editor/Common/Asset/ModelImporter.h"
 
+#include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -152,6 +154,47 @@ namespace
                     return true;
             }
             return false;
+        }
+    };
+
+    struct TestModelFractureInternal
+    {
+        static void appendQuad( sw::vector<float32>& inoutList, const sw::float3& a, const sw::float3& b, const sw::float3& c, const sw::float3& d )
+        {
+            for ( const sw::float3& point : { a, b, c, a, c, d } )
+            {
+                inoutList.push_back( point._x );
+                inoutList.push_back( point._y );
+                inoutList.push_back( point._z );
+            }
+        }
+
+        /** @brief 반 크기 (1, 0.5, 0.25) 의 닫힌 상자(바깥에서 보아 반시계, 인덱스 없음) glTF 입니다. */
+        static sw::string makeBoxGltf()
+        {
+            const sw::float3    lo{ -1.0f, -0.5f, -0.25f };
+            const sw::float3    hi{ 1.0f, 0.5f, 0.25f };
+            sw::vector<float32> list;
+            appendQuad( list, sw::float3{ hi._x, lo._y, lo._z }, sw::float3{ hi._x, hi._y, lo._z }, sw::float3{ hi._x, hi._y, hi._z }, sw::float3{ hi._x, lo._y, hi._z } );
+            appendQuad( list, sw::float3{ lo._x, lo._y, hi._z }, sw::float3{ lo._x, hi._y, hi._z }, sw::float3{ lo._x, hi._y, lo._z }, sw::float3{ lo._x, lo._y, lo._z } );
+            appendQuad( list, sw::float3{ lo._x, hi._y, lo._z }, sw::float3{ lo._x, hi._y, hi._z }, sw::float3{ hi._x, hi._y, hi._z }, sw::float3{ hi._x, hi._y, lo._z } );
+            appendQuad( list, sw::float3{ lo._x, lo._y, hi._z }, sw::float3{ lo._x, lo._y, lo._z }, sw::float3{ hi._x, lo._y, lo._z }, sw::float3{ hi._x, lo._y, hi._z } );
+            appendQuad( list, sw::float3{ lo._x, lo._y, hi._z }, sw::float3{ hi._x, lo._y, hi._z }, sw::float3{ hi._x, hi._y, hi._z }, sw::float3{ lo._x, hi._y, hi._z } );
+            appendQuad( list, sw::float3{ hi._x, lo._y, lo._z }, sw::float3{ lo._x, lo._y, lo._z }, sw::float3{ lo._x, hi._y, lo._z }, sw::float3{ hi._x, hi._y, lo._z } );
+            const size_t     byteCount = list.size() * sizeof( float32 );
+            const sw::string base64    = TestModelImporterInternal::encodeBase64( reinterpret_cast<const uint8*>( list.data() ), byteCount );
+            sw::string       json      = R"({ "asset": { "version": "2.0" }, "scene": 0, "scenes": [ { "nodes": [ 0 ] } ], "nodes": [ { "mesh": 0 } ],
+  "meshes": [ { "primitives": [ { "attributes": { "POSITION": 0 } } ] } ],
+  "accessors": [ { "bufferView": 0, "componentType": 5126, "count": 36, "type": "VEC3", "min": [ -1, -0.5, -0.25 ], "max": [ 1, 0.5, 0.25 ] } ],
+  "bufferViews": [ { "buffer": 0, "byteLength": )";
+            json += std::to_string( byteCount ).c_str();
+            json += R"( } ],
+  "buffers": [ { "byteLength": )";
+            json += std::to_string( byteCount ).c_str();
+            json += R"(, "uri": "data:application/octet-stream;base64,)";
+            json += base64;
+            json += R"(" } ] })";
+            return json;
         }
     };
 } // namespace
@@ -484,4 +527,51 @@ SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments 
     SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animashions": false } ] })" ) );
     SW_EXPECT_TRUE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "raw", "clips": [ "Idle" ] } ] })" ) );
     SW_EXPECT_EQUAL( sw::string( "raw" ), config.getRules()[0]._animationCodec );
+}
+
+/**
+ * @brief [ModelImporterTest] 규칙에 `fracture` 가 있으면 `.mesh` 옆에 `.fracture` 를 쓰고(스탬프가 그 파일까지 본다), 규칙에서 빠지면 지운다.
+ *        모르는 파쇄 키 · 패턴은 설정을 거부한다
+ */
+SW_TEST_CASE( ModelImporterTest, FractureRuleWritesFractureAssetBesideTheMesh )
+{
+    sw::editor::ModelImportConfig fractureConfig;
+    SW_ASSERT_TRUE( fractureConfig.loadFromJsonString( R"({ "rules": [ { "name": "Wall", "include_patterns": [ "*/probe/models_raw/*" ],
+        "fracture": { "pattern": "slices", "slices": [ 3, 1, 1 ], "slice_jitter": 0, "levels": [ 2 ], "seed": 5, "interior_color": [ 1, 0, 0, 1 ] } } ] })" ) );
+    const sw::editor::ModelImportRule rule = fractureConfig.findMatchingRule( "game/probe/models_raw/box.gltf" );
+    SW_EXPECT_TRUE( rule._bFracture == SW_TRUE );
+    SW_EXPECT_TRUE( rule._fracture._pattern == sw::FracturePattern::Slices );
+    SW_EXPECT_EQUAL( 5ull, rule._fracture._seed );
+    {
+        test::ScopedDefensiveTestLog  expected( "an unknown fracture key or pattern rejects the whole config" );
+        sw::editor::ModelImportConfig brokenConfig;
+        SW_EXPECT_FALSE( brokenConfig.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "fracture": { "piece": 4 } } ] })" ) );
+        SW_EXPECT_FALSE( brokenConfig.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "fracture": { "pattern": "shatter" } } ] })" ) );
+        SW_EXPECT_FALSE( brokenConfig.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "fracture": { "slices": [ 3, 0, 1 ] } } ] })" ) );
+    }
+
+    const sw::string resourceRoot = test::makeTempDirectory( "model_import_fracture_resource" );
+    const sw::string sourcePath   = sw::FileUtil::joinPath( resourceRoot, "game/probe/models_raw/box.gltf" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( sourcePath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, TestModelFractureInternal::makeBoxGltf() ) );
+    SW_EXPECT_EQUAL( 1u, sw::editor::ModelImporter::importAllModels( resourceRoot, fractureConfig, sw::editor::AssetImportMode::ImportStale )._importedCount );
+    const sw::string  fracturePath = sw::FileUtil::joinPath( resourceRoot, "game/probe/models/box.fracture" );
+    sw::FractureAsset asset;
+    SW_ASSERT_TRUE( asset.loadFromResource( fracturePath ) );
+    SW_EXPECT_EQUAL( 3u, asset.getPieceCount() );
+    SW_EXPECT_EQUAL( size_t( 2 ), asset._graph._listLink.size() );
+    SW_EXPECT_EQUAL( 5ull, asset._seed );
+    SW_EXPECT_TRUE( asset.countTriangles( sw::FractureSurfaceSlot::Interior ) > 0 );
+    SW_EXPECT_TRUE( sw::editor::ModelImporter::importAllModels( resourceRoot, fractureConfig, sw::editor::AssetImportMode::CheckOnly ).isClean() );
+
+    // `.fracture` 를 손으로 지우면 어긋남이다.
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( fracturePath ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), sw::editor::ModelImporter::importAllModels( resourceRoot, fractureConfig, sw::editor::AssetImportMode::CheckOnly )._listProblem.size() );
+    SW_EXPECT_EQUAL( 1u, sw::editor::ModelImporter::importAllModels( resourceRoot, fractureConfig, sw::editor::AssetImportMode::ImportStale )._importedCount );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( fracturePath ) );
+
+    // 규칙에서 파쇄를 빼면 다시 임포트가 옛 `.fracture` 를 지운다.
+    const sw::editor::ModelImportConfig noRuleConfig;
+    SW_EXPECT_EQUAL( 1u, sw::editor::ModelImporter::importAllModels( resourceRoot, noRuleConfig, sw::editor::AssetImportMode::ImportStale )._importedCount );
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( fracturePath ) );
 }

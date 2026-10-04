@@ -134,6 +134,14 @@ namespace sw
         assignSkeleton( std::move( skeleton ) );
     }
 
+    void SkeletalMeshComponent::applyExternalPose()
+    {
+        _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
+        Pose::computeSkinPalette( *_skeleton, _listModelSpace, _listSkinPalette );
+        ++_poseEvaluationCount;
+        _bPoseDirty = SW_FALSE;
+    }
+
     void SkeletalMeshComponent::assignSkeleton( shared_ptr<const Skeleton> skeleton )
     {
         _skeleton = ( skeleton != nullptr ) ? std::move( skeleton ) : SkeletalMeshComponentInternal::getImplicitSkeleton();

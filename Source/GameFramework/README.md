@@ -31,14 +31,14 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (`OrthoCameraRigComponent` — WASD · 방향키 이동(WASD 끄기 · 초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), Q/E 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)), 장식 흩뿌리기
   (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(`Rules` 모드 — Engine `Environment/Placement` 의 `PlacementRule`: 밀도 · 최소 거리 ·
   경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`). 계산은 `OrthoCameraRigMath` · `PropScatterMath` 로
-  떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리 · 손에 든 뷰 모델 자리, 계산은
+  떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스(또는 입력 맵 액션 `_lookAction`) 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리(카메라의 부모 공간) · 손에 든 뷰 모델 자리, 계산은
   `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다
 - **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 모드 계산(`CameraMode` — 입력 · 제약 · 프레이밍 · 스프링 암 · 훑기),
   흔들림(`CameraShake` — 펄린 손떨림 · 충격), 암 충돌 질의(`ICameraCollisionProbe`), 포즈 섞기(`blendPoses`, 곡선은 엔진 `BlendCurveSpec` · `evaluateBlendWeight`) · 블렌드 진행(`CameraPoseBlender`), 상태 기계
   (`CameraDirector`), 그것을 카메라에 쓰는 `CameraDirectorComponent`, 플레이어마다 뷰 타깃을 바꾸는 `CameraManagerComponent`. 아래 "카메라" 절
 - **Stage**: 절차로 무대를 세우는 도우미(`PrimitiveStage` — 활성 씬 잡기 · 세운 오브젝트 추적 · 색 · 텍스처 머티리얼 인스턴스 캐시 · 해 · 카메라). 시험 게임이 쓴다
 - **Utility**: 장르 무관 계산 도구 — 씨앗 고정 난수 · 좌표 해시(`GameRandom` · `GameHash` — 가중치 고르기 `pickWeightedIndex` · 섞기 `shuffle`), 값 노이즈(`ValueNoise`),
-  광선 판정(`RayMath` — 구 · 상자 · 바닥 평면 · 원뿔), 앞 · 위 → 오일러(`OrientationUtil` — 롤이 있는 차량 · 카메라), 2D 네 방향(`FacingDir`),
+  광선 판정(`RayMath` — 구 · 상자 · 캡슐 · 바닥 평면 · 원뿔), 앞 · 위 → 오일러(`OrientationUtil` — 롤이 있는 차량 · 카메라), 2D 네 방향(`FacingDir`),
   고정 스텝 누적기(`FixedStepTimer`), 게임 시간 타이머(`TimerQueue`), 시뮬레이션 상태 바이트의 공통 모양(`StateArchiveUtil` — 머리(표 · 버전) · 이름 ·
   남은 바이트로 상한을 둔 개수 · 난수 · 걸음 타이머). 셋 이상의 키트에 같은 것이 따로 있던 것을 모았다(아래 "새 장르 키트").
   키트 시뮬레이션의 `writeState` · `readState`(`FarmField` · `CitySimulation` · `RtsWorld` · `ThemeParkSimulation` · `VoxelWorld` …)는 임시에 읽어 끝까지 맞을 때만
@@ -64,10 +64,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   지갑 · 가게(`Wallet` · `ShopCatalog` · `ShopState` — 여러 통화 · 재고 · 재입고 · 매입 시세 하락과 회복 · 조건은 `IShopConditionEvaluator`)
 - **Appearance**: 캐릭터 외형 데이터와 해석 — 슬롯 표 · 장비 세트 · 아이템 외형(부품 · 상태 · 피해 단계) · 꾸미기 스키마(캐릭터 · 아이템 공용) ·
   외형 규칙 · 프리셋(`CharacterAppearance`), 순수 해석기(`AppearanceResolver` — 결과 해시가 캐시 키), 외형 상태(`CharacterAppearanceState`),
-  공유 코드 · 플레이어 프리셋 세이브 · 네트워크 동기화(`AppearanceSelection`). 2D 스프라이트와 3D 메시가 같은 길이다. 자세한 것은 `Appearance/README.md`
+  공유 코드 · 플레이어 프리셋 세이브 · 네트워크 동기화(`AppearanceSelection`), 그리고 그것을 오브젝트로 조립하는 외형 컴포넌트(`CharacterAppearanceComponent` —
+  몸 메시 · 소켓 부착 부품 · 염색, 소켓 이름 공간 `AppearanceSocketRig`). 2D 스프라이트와 3D 메시가 같은 길이다. 자세한 것은 `Appearance/README.md`
 - **Match**: 판 규칙(`MatchState` — 팀 · 역할 · 점수 · 도움 · 부활 대기 · 코스트 게이지 · 탈락 순위 · 시간 제한 · 목표로 끝내기)
 - **Movement**: 2D 플랫포머 몸(`PlatformerMotor2D` · `PlatformTileMap` — 점프 높이 · 짧은 점프 · 코요테 · 미리 누르기 · 벽 점프 · 대시 · 다단 점프 · 한쪽 발판 · 사다리),
-  아케이드 차량(`ArcadeVehicleMotor` — 속도에 따른 조향 · 드리프트 미니터보 단계 · 니트로 · 오프로드 · 점프, 지면은 `IVehicleGround`)
+  아케이드 차량(`ArcadeVehicleMotor` — 속도에 따른 조향 · 드리프트 미니터보 단계 · 니트로 · 오프로드 · 점프, 지면은 `IVehicleGround`),
+  보는 쪽 기준 이동 방향(`LocomotionMath` — 서기 · 앞 · 뒤 · 옆걸음 · 공중, 애니메이터 이동 상태의 입력)
 - **Navigation**: 격자(`NavGrid`), A*(`GridPathfinder`), 흐름장(`FlowField`), 걷는 행위자(`NavAgent` · `Steering`), SRPG 이동 범위(`GridReachability`)
 - **Progression**: 경험치 곡선 · 레벨(`ExperienceCurve` · `LevelProgress`), 스킬 트리(`SkillTreeCatalog` · `SkillTreeState`), 평판 · 호감도(`ReputationCatalog` ·
   `ReputationState`), 로그라이트 지도(`RunMap`), 로컬 통계(`StatCatalog` · `PlayerStats` — `<Stats><Stat id kind="Counter|Max|Min|Time" max/>` 정의, `increment` ·
@@ -183,7 +185,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   모르는 함수라 시퀀서 · 소켓 부착의 되돌아가기(`SocketBindingComponent`)도 같은 곡선을 쓴다. 직교 ↔ 원근은 섞지 않고 가중치 0.5 에서 바꾼다.
 - **블렌드는 지금 화면에서 출발한다**(`CameraPoseBlender` — 디렉터 · 매니저가 같이 쓴다): 나가는 쪽은 블렌드 동안 계속 살아 있고, 블렌드 도중 다시 바꾸면 그 순간의 섞인
   포즈를 고정해 출발점으로 둔다. 포즈를 내던 중의 **컷**(곡선 `Cut` · 길이 0)은 카메라에 컷 표시(`CameraComponent::markCut`)를 남겨 렌더러가 TAA 기록을 버린다.
-- **`CameraDirectorComponent`**: `CameraComponent` 와 같은 오브젝트에 붙이고 프리셋 경로 · 시작 프리셋 · 대상(또는 묶음 `_listGroupTarget`) · 돌리기 키(`_cyclePresetKey`)를
+- **`CameraDirectorComponent`**: `CameraComponent` 와 같은 오브젝트에 붙이고 프리셋 경로 · 시작 프리셋 · 대상(또는 묶음 `_listGroupTarget`) · 돌리기 키(`_cyclePresetKey`) · 돌리기 입력 맵 액션(`_cycleAction`)을
   준다. `PostPhysics` 에서 입력만 읽고 **포즈는 틱 뒤에 쓴다**(`executeOrDeferPostTick`) — 틱 중의 트랜스폼 쓰기는 틱 뒤에 적용되므로 틱 안에서 대상을 읽으면 한 프레임
   늦다. `-gv_cameraPreset=<id>` 가 시작 프리셋을 고른다(캡처 카메라 제외 — 스크린샷용).
 - **`CameraManagerComponent`**(언리얼 `SetViewTargetWithBlend` · Cinemachine Brain): 로컬 플레이어마다 하나, 플레이어가 실제로 그리는 카메라에 붙는다. 뷰 타깃 = 다른

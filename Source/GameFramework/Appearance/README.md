@@ -1,7 +1,7 @@
 # Appearance — 캐릭터 외형 데이터와 해석
 
 입힌 장비 목록 → 실제로 그릴 외형. 모두 사람이 고치는 데이터이고, 코드는 데이터를 읽고 정해진 순서로 한 번 푸는 해석기뿐이다.
-그리기는 없다 — 결과(`ResolvedAppearance`)를 형상 쪽(`Engine/Character` — 소켓 · 체형 · 피팅 · 병합)과 외형 컴포넌트(웨이브 3)가 쓴다.
+결과(`ResolvedAppearance`)를 형상 쪽(`Engine/Character` — 소켓 · 체형 · 피팅 · 병합)과 외형 컴포넌트(`CharacterAppearanceComponent` — 아래 "오브젝트로 조립")가 쓴다.
 2D(스프라이트 종이 인형)와 3D(메시)가 같은 길을 탄다 — 부품 종류만 다르다.
 
 ## 파일과 형식 (`<게임>/data/appearance/`, 예: `Resource/game/shooter3d/data/appearance/`)
@@ -109,7 +109,25 @@
 - `UserAppearancePresetStore`(`SaveGame`) — 이름 칸 · 즐겨찾기 · 썸네일 경로 · 내용(공유 코드 한 줄)을 `key=value` 로. **플레이어 세이브는 배포된
   데이터라 옛 판을 읽는다**(엔진 데이터의 "옛 형식 리더 없음" 규칙과 다르다) — `formatVersion` 마다 다음 판으로 올리는 단계가 있다(판 1 → 2).
 
-## 형상 쪽(`Engine/Character`) · 웨이브 3 이 쓰는 것
+## 오브젝트로 조립 — `CharacterAppearanceComponent` · `AppearanceSocketRig`
+
+몸 유닛(같은 오브젝트의 `SkeletalMeshComponent`)에 붙이고 프리셋 id · 씨앗을 준다. 외형 데이터는 게임 서비스 `AppearanceDatabase`(게임이 `loadFromFolder` 로 읽어 건다)다.
+
+- **조립**(틱 뒤 게임 스레드): 프리셋을 펼치고 칸 덮어쓰기(`setSlotItem` — 무기 바꾸기)를 얹어 해석한다. 몸 부품(주인이 빈 첫 `Skinned`)은 이 오브젝트의
+  유닛에 메시 · 스켈레톤 · 머티리얼로, 다른 `Skinned` 부품은 몸을 리더로 따르는 자식 유닛으로, `SocketPrefab` 부품은 프리팹을 세워 `SocketBindingComponent` 로
+  소켓에 붙인다. 다시 조립할 때 같은 부품(주인 · 이름 · 에셋)은 오브젝트를 그대로 둔다(무기를 바꿔도 투구는 그대로).
+- **소켓 이름 공간**(`AppearanceSocketRig`, 값 타입 — 씬 없이 시험): 유닛 0 = 몸(몸 부품의 소켓 에셋 + 외형의 소켓 덮어쓰기), 그 뒤 소켓 에셋을 가진 부품마다
+  강체 유닛(본 하나 `root`)이 칸 이름을 앞에 달고 들어온다(`MainHand.Muzzle`). 부품 자리 = 배치 오프셋 × 소켓 × 지금 본. 같은 이름은 다시 지어도 같은 번호다.
+- **포즈를 따라감**: 몸 유닛에 단계 일(`CharacterAppearanceSocketTask`)을 걸어 몸의 포즈가 끝난 프레임(`finishAnimationFrame`, 게임 스레드)에 몸 소켓에
+  붙은 부품의 자리를 고친다. 할 일이 있다고 말하지 않으므로 몸이 쉬면 비용이 없다. 본 배열은 `CharacterPoseUtil`(`Engine/Character`)이 옮긴다.
+- **질의**: `findSocketWorldTransform( "MainHand.Muzzle" )`(지난 프레임의 포즈 · 부품 월드 — 틱 안에서 읽기만), `findBindSocketTransform( "Eyes" )`(바인드 포즈 —
+  흔들리지 않는 눈높이).
+- **염색**: 해석의 머티리얼 값 중 `Parameter`(꾸미기 `MaterialColor` · `MaterialScalar`)를 주인의 부품마다 메시 몫 머티리얼 인스턴스에 건다(몸은 주인이 빈 값).
+  `DyeChannel` · `PaletteSwap` 은 그것을 읽는 머티리얼이 생기면 건다.
+- 세운 부품은 판의 모습이라 상태 저장 전에 `despawnParts` 로 걷는다(끝날 때도 걷는다). 아직 없는 것: 병합 메시(`MeshMerger`) · 피팅 · 체형 모프 · 본 비율을
+  GPU 로, 떨어져 나감 이벤트 → `SocketBindingComponent` ReleasedPhysics, 데이터 핫 리로드 → 다시 조립, 같은 해시의 NPC 가 결과 나눠 쓰기.
+
+## 형상 쪽(`Engine/Character`)이 쓰는 것
 
 - `ResolvedAppearance::_listPart` — 부품마다 주인 · 아이템 · 에셋(변형 · 규칙 반영) · 머티리얼 · 스켈레톤 · 소켓 에셋 · 배치(소켓 후보 + 오프셋 · 회전) ·
   `_bDeforms` · 상태 · 피해 단계. `_listSocketSource` 로 소켓 이름 공간을 짓고(주인 이름 앞머리), `_listSocketOverride` 를 외형 층으로 덮는다.

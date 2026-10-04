@@ -184,13 +184,16 @@ KayKit 리그의 영역 표: `Resource/game/shooter3d/characters/skeleton_warrio
 
 - `MeshMerger::merge` — 같은 애니메이션 단위(`_skeletonId`)의 부품만(다르면 실패). 보임 마스크로 잘린 삼각형을 빼고 쓰는 정점만 남기며(원래 순서 유지), 피팅 델타를 싣고,
   머티리얼 묶음(`IMeshMergeHooks` — 아틀라스 · UV 옮김)별 구간을 냅니다. 쉬는 강체 부품은 쉬는 변환으로 옮겨 소켓 본에 가중치 1 로 묶고, `extractPart` 가 다시 떼어 냅니다.
-- `GeometryCutUtil` — 형상 입력 → 형상 출력 도우미(마스크로 나누기 · 경계 고리 · 캡 · 닫힘 검사 · 이어 붙이기). 절단 · 찢김 · 병합 · 나중의 파괴 가능 메시가 같이 씁니다.
+- `GeometryCutUtil` — 형상 입력 → 형상 출력 도우미(마스크로 나누기 · 경계 고리 · 캡 · 닫힘 검사 · 이어 붙이기). 절단 · 찢김 · 병합 · 파괴(`Destruction` — 파쇄 입력의 닫힘 검사)가 같이 씁니다. 용접 키는 성분을 차례로 섞습니다 — 곱해 XOR 로 합치면 부호만 다른 대칭 꼭짓점이 같은 키가 된다.
 - `DismembermentUtil::severRegions` — 몸 영역(피팅 표의 영역)을 잘라 남은 몸 · 떨어진 조각 + 자른 자리만 막는 캡 둘. 잘린 삼각형 마스크는 `FitPartResult::hideTriangles` 로
   잘라 내기와 같은 보임 마스크 길을 탑니다. 떨어진 조각은 자기 형상이라 파괴 · 물리 단계가 그대로 띄웁니다.
 - `CharacterSurfaceState` — 영역 × 채널 값(머티리얼 파라미터, `getRegionParameters`)과 부품 × 채널 UV 마스크(`SurfaceMask` — 맞은 자리 `stampHit` 도장, 감쇠).
   찢김 채널은 머티리얼이 알파로 자르고, 다 찢긴 삼각형은 `SurfaceMaskUtil::markTornTriangles` → `hideTriangles` 로 메시에서 뺍니다.
 
 ## 통합이 할 일(해석된 외형 + 메시 · 포즈 → 그린 결과)
+
+지금 있는 것: 스켈레톤 · 유닛 포즈 → 본 배열 다리(`CharacterPoseUtil::makeBindBones` · `copyUnitPose`)와, 그것으로 소켓 이름 공간을 짓고 부품을 소켓에 붙여
+포즈를 따라가게 하는 외형 컴포넌트(`GameFramework/Appearance` 의 `CharacterAppearanceComponent` · `AppearanceSocketRig` — 5 의 소켓 부분). 남은 것은 아래 1 의 형상 쪽, 2 ~ 4, 6 이다.
 
 1. 유닛(부품 GameObject)마다 `Mesh` · 스켈레톤을 `AppearanceGeometry` · `CharacterBoneArray` 로 바꾼다(레퍼런스 포즈 덮어쓰기 `apply` → 바인드 본).
 2. 체형: `BodyShapeSet::evaluate` → 몸 형상에 `BodyShapeUtil::applyMorphs`, 바인드 본에 `BoneProportion::apply` → `BodyShapeUtil::skinToPose` 로 체형 바인드 형상.

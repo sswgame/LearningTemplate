@@ -64,6 +64,18 @@ namespace sw
                 return limit < JPH::cDefaultConvexRadius ? limit : JPH::cDefaultConvexRadius;
             }
 
+            /**
+             * @brief 만들 때 넘기는 각속도를 바디 상한 안으로 줄입니다.
+             * @details Jolt 는 상한을 넘는 시작 각속도에 단언한다. 상한에 붙어 돌던 바디에서 읽은 값(갈라진 파괴 덩어리가 부모 운동을 이을 때)도
+             *          길이를 다시 재면 반올림으로 상한을 한 ulp 넘을 수 있어 조금 안쪽으로 줄인다.
+             */
+            static JPH::Vec3 clampAngularVelocity( const JPH::Vec3& velocity, float32 maxLength )
+            {
+                const float32 limit    = maxLength * 0.999f;
+                const float32 lengthSq = velocity.LengthSq();
+                return lengthSq > limit * limit ? velocity * ( limit / ::sqrtf( lengthSq ) ) : velocity;
+            }
+
             static float32 combineFriction( float32 frictionA, float32 frictionB ) { return ::sqrtf( frictionA * frictionB ); }
             static float32 combineRestitution( float32 restitutionA, float32 restitutionB ) { return restitutionA > restitutionB ? restitutionA : restitutionB; }
 
@@ -344,6 +356,40 @@ namespace sw
         return PhysicsShapeHandle::fromSlot( _shapes.insert( std::move( record ) ) );
     }
 
+    PhysicsShapeHandle JoltPhysicsScene::createCompoundShape( span<const PhysicsShapeHandle> listChild )
+    {
+        if ( listChild.empty() )
+        {
+            SW_LOG_ERROR( "createCompoundShape: no child shapes" );
+            return PhysicsShapeHandle{};
+        }
+        JPH::StaticCompoundShapeSettings compound;
+        compound.SetEmbedded();
+        ShapeDescList listDesc; // 선 그리기용 — 자식 서술자를 이어 붙인다
+        for ( const PhysicsShapeHandle& child : listChild )
+        {
+            const ShapeRecord* pChild = _shapes.get( child.getSlot() );
+            if ( pChild == nullptr )
+            {
+                SW_LOG_ERROR( "createCompoundShape: a child shape handle is stale" );
+                return PhysicsShapeHandle{};
+            }
+            compound.AddShape( JPH::Vec3::sZero(), JPH::Quat::sIdentity(), pChild->_pShape.GetPtr() );
+            if ( pChild->_pListShape != nullptr )
+                listDesc.insert( listDesc.end(), pChild->_pListShape->begin(), pChild->_pListShape->end() );
+        }
+        JPH::Shape::ShapeResult result = compound.Create();
+        if ( result.HasError() )
+        {
+            SW_LOG_ERROR( "Jolt rejected a compound shape: %#", result.GetError().c_str() );
+            return PhysicsShapeHandle{};
+        }
+        ShapeRecord record;
+        record._pShape     = result.Get();
+        record._pListShape = make_shared<const ShapeDescList>( std::move( listDesc ) );
+        return PhysicsShapeHandle::fromSlot( _shapes.insert( std::move( record ) ) );
+    }
+
     void JoltPhysicsScene::destroyShape( PhysicsShapeHandle shape )
     {
         _shapes.erase( shape.getSlot() );
@@ -420,7 +466,7 @@ namespace sw
         settings.mAllowDynamicOrKinematic = desc._bAllowTypeChange;
         settings.mMotionQuality           = desc._bContinuous ? JPH::EMotionQuality::LinearCast : JPH::EMotionQuality::Discrete;
         settings.mLinearVelocity          = JoltUtil::toJolt( desc._linearVelocity );
-        settings.mAngularVelocity         = JoltUtil::toJolt( desc._angularVelocity );
+        settings.mAngularVelocity         = JoltPhysicsSceneInternal::clampAngularVelocity( JoltUtil::toJolt( desc._angularVelocity ), settings.mMaxAngularVelocity );
         if ( desc._bLockRotation )
             settings.mAllowedDOFs = JPH::EAllowedDOFs::TranslationX | JPH::EAllowedDOFs::TranslationY | JPH::EAllowedDOFs::TranslationZ;
         if ( desc._mass > 0.0f && bMoving )

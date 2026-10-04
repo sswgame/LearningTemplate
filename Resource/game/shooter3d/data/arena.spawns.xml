@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shooter3D 스켈레톤 스폰 예산(SpawnTable — GameFramework/AI/SpawnDirector.h). 페이싱 감독(arena.director.xml)이 단계마다 예산 배율과 태그를 바꾼다.
+     budgetPerMinute 는 배율 1 일 때 분당 쌓이는 예산, maxBudget 은 쌓이는 상한, 곡선은 판 시작 뒤 시간(초) → 배율이다. -->
+<SpawnTable budgetPerMinute="20" maxBudget="5" startBudget="4">
+  <Entry id="skeleton" cost="1" weight="1" max="6" tags="Skeleton"/>
+  <Curve time="0" scale="0.8"/>
+  <Curve time="300" scale="1.6"/>
+</SpawnTable>

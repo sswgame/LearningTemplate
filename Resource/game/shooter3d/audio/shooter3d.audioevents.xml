@@ -1,6 +1,6 @@
 <!--
 	Shooter3D 사운드 이벤트(AudioEventLibrary). 게임 코드는 이벤트 이름만 안다 — 클립 · 범위 · 상한은 여기서 정한다.
-	플레이어 자신의 소리(착지 · 명중 확인음)는 2D, 드론 격추는 그 자리에서 3D(Default 감쇠 · 벽 뒤 가림).
+	플레이어 자신의 소리(착지 · 명중 확인음)는 2D, 적 처치는 그 자리에서 3D(Default 감쇠 · 벽 뒤 가림).
 -->
 <AudioEventLibrary>
 	<_listEvent>
@@ -19,7 +19,7 @@
 				<AudioClipEntry _path="game/shooter3d/sounds/footstep_concrete_000.ogg" />
 			</_listClip>
 		</AudioEventDesc>
-		<AudioEventDesc _name="HitDrone"
+		<AudioEventDesc _name="HitEnemy"
 		                _bus="sfx"
 		                _container="Random"
 		                _priority="55"
@@ -49,7 +49,7 @@
 				<AudioClipEntry _path="game/shooter3d/sounds/impact_plank_medium_000.ogg" />
 			</_listClip>
 		</AudioEventDesc>
-		<AudioEventDesc _name="DroneDown"
+		<AudioEventDesc _name="EnemyDown"
 		                _bus="sfx"
 		                _attenuation="Default"
 		                _container="Layer"

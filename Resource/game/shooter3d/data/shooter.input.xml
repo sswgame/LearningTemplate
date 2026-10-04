@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstanceBase 가 통합 맵(InputManager::getInputMap)에 읽는다.
+  게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다(키 바꾸기는 이 파일 · 사용자 설정의 키 바인딩).
+  Look 은 마우스 이동량(1인칭 카메라의 _lookAction), CycleCamera 는 시점 카메라 디렉터의 _cycleAction 이 읽는다.
+-->
+<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
+	<layers>
+		<layer name="Gameplay" enabled="1" blockLower="0"/>
+	</layers>
+
+	<action name="Move" layer="Gameplay">
+		<vector2d up="W" down="S" left="A" right="D"/>
+		<stick stick="Left" deadzone="0.15"/>
+	</action>
+	<action name="Look" layer="Gameplay">
+		<mouseDelta scale="1"/>
+	</action>
+	<action name="Fire" layer="Gameplay" trigger="Pressed">
+		<bind source="mouse" code="Left"/>
+		<bind source="gamepad" code="RightShoulder"/>
+	</action>
+	<action name="Jump" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Space"/>
+		<bind source="gamepad" code="A"/>
+	</action>
+	<action name="Sprint" layer="Gameplay" trigger="Down">
+		<bind source="key" code="LeftShift"/>
+		<bind source="gamepad" code="LeftThumb"/>
+	</action>
+	<action name="Reload" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="R"/>
+		<bind source="gamepad" code="X"/>
+	</action>
+	<action name="CycleCamera" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="C"/>
+		<bind source="gamepad" code="Back"/>
+	</action>
+	<action name="SwitchWeapon" layer="Gameplay" trigger="Pressed">
+		<axis1d negative="Q" positive="E"/>
+	</action>
+	<action name="Weapon1" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit1"/>
+	</action>
+	<action name="Weapon2" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit2"/>
+	</action>
+	<action name="Weapon3" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit3"/>
+	</action>
+</InputMap>

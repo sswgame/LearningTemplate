@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- KayKit 41 관절 리그(기사 · 도적 · 스켈레톤 셋이 같은 리그)의 몸 소켓. 임포트가 적은 본 부착 표(<이름>.skeleton.json 의 attachments)에서 옮겨 적었다 —
+     Helmet · Back · Blade · Shield 는 원본에서 투구 · 망토 · 한손검 · 둥근 방패가 붙어 있던 자리, Gun 은 한손 석궁 자리에 블래스터 크기(0.85)를 맞춘 것이다.
+     소켓은 임포트 산출물(.mesh · 스켈레톤)과 따로 둔 원본이다 — 재임포트가 지우지 않는다. 회전은 도 단위 "피치 요 롤".
+     Eyes 는 1인칭 눈높이(카메라), Chest 는 히트박스 중심(래그돌 · 맞은 부위가 들어오면 그쪽이 읽는다). -->
+<SocketSet>
+  <Socket name="Eyes" parent="head" translation="0 0.36 0.24" kind="LockOn"/>
+  <Socket name="Helmet" parent="head" translation="0 -0.0256 0" kind="Attach"/>
+  <Socket name="Back" parent="chest" translation="0 0.2432 0" kind="Attach"/>
+  <Socket name="Gun" parent="handslot.r" translation="0.1046 -0.0104 0" rotation="0 -90 0" scale="0.85 0.85 0.85" kind="Attach"/>
+  <Socket name="Blade" parent="handslot.r" translation="0 0.0333 0" rotation="0 180 0" kind="Attach"/>
+  <Socket name="Shield" parent="handslot.l" translation="0 0.017 0.1559" kind="Attach"/>
+  <Socket name="Chest" parent="chest" translation="0 0.15 0" kind="HitboxCenter"/>
+</SocketSet>

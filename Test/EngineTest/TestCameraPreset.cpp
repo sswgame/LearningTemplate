@@ -2,6 +2,9 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Input/Events/RawInputEvent.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -13,6 +16,7 @@
 #include "GameFramework/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Camera/CameraPreset.h"
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
+#include "GameFramework/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -394,4 +398,41 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentDrivesItsCamera )
     SW_EXPECT_NEAR_EQUAL( 30.0f, pCamera->getOrthoHeight(), 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 50.0f, pCamera->getWorldPosition()._y, 1.0e-2f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pCamera->getWorldPosition()._x, 1.0e-2f );
+}
+
+/**
+ * @brief [CameraPresetTest] 디렉터는 입력 맵 액션(돌리기 키 없이)이 발동한 프레임에 카탈로그 순서로 다음 프리셋을 켠다
+ */
+SW_TEST_CASE( CameraPresetTest, CycleActionSwitchesToTheNextPreset )
+{
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    game::bindLocalService<InputManager>( &input );
+    input.getInputMap().bind( "CycleCamera", Key::C );
+
+    GameObjectManager manager;
+    GameObject*       pCameraObject = manager.createGameObject( hashed_string( "DirectedCamera" ) );
+    SW_ASSERT_NOT_NULL( pCameraObject );
+    SW_ASSERT_NOT_NULL( pCameraObject->addComponent<CameraComponent>() );
+    CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
+    SW_ASSERT_NOT_NULL( pDirector );
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXmlText( R"(<CameraPresets>
+        <Preset id="first"><View mode="Orbit" distance="5"/></Preset>
+        <Preset id="second"><View mode="Orbit" distance="9"/></Preset>
+    </CameraPresets>)",
+                                                             "cycle-action-test" ) );
+    pDirector->setCycleAction( hashed_string( "CycleCamera" ) );
+    manager.beginPlay();
+    SW_EXPECT_TRUE( pDirector->getActivePresetId() == hashed_string( "first" ) );
+
+    pDirector->onTick( 0.016f ); // 누르지 않았다 — 그대로
+    SW_EXPECT_TRUE( pDirector->getActivePresetId() == hashed_string( "first" ) );
+    input.postRawEvent( RawInputEvent::makeKeyDown( Key::C ) );
+    input.beginFrame( 0.016f );
+    pDirector->onTick( 0.016f );
+    SW_EXPECT_TRUE( pDirector->getActivePresetId() == hashed_string( "second" ) );
+
+    manager.endPlay();
+    game::unbindLocalService<InputManager>();
+    input.shutdown();
 }

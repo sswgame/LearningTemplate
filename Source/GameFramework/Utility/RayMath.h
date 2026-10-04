@@ -34,6 +34,12 @@ namespace sw
         [[nodiscard]] static bool intersectSphere( const GameRay& ray, const float3& center, float32 radius, float32 maxDistance, float32& outDistance );
         /** @brief 광선이 축 정렬 상자와 만나는 가장 가까운 앞쪽 거리입니다(슬랩 판정). 시작점이 안이면 0 입니다. */
         [[nodiscard]] static bool intersectAabb( const GameRay& ray, const float3& boxMin, const float3& boxMax, float32 maxDistance, float32& outDistance );
+        /**
+         * @brief 광선이 캡슐(선분 @p segmentStart – @p segmentEnd 둘레 반지름 @p radius)과 만나는 가장 가까운 앞쪽 거리입니다 — 사람 크기 히트박스.
+         * @details 옆면(원기둥)과 양 끝 반구를 함께 봅니다. 시작점이 캡슐 안이면 0 입니다. 선분 길이가 0 이면 구입니다.
+         */
+        [[nodiscard]] static bool intersectCapsule( const GameRay& ray, const float3& segmentStart, const float3& segmentEnd, float32 radius, float32 maxDistance,
+                                                    float32& outDistance );
         /** @brief 광선이 평면(y = @p height)과 만나는 앞쪽 거리입니다 — 바닥 클릭 · 탄착. */
         [[nodiscard]] static bool intersectHorizontalPlane( const GameRay& ray, float32 height, float32 maxDistance, float32& outDistance );
         /** @brief 요 · 피치(라디안, 피치 + 가 위)의 바라보는 단위 방향입니다. */
