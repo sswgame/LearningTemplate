@@ -426,6 +426,17 @@ cd build/Ninja-Debug/Bin
 - **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
   결과(열거값)로 바꾸는 그래픽스 쪽 수정.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
+- **폴더 구조 정리(2026-10-05 점검, 사용자 승인) — 진행 중인 브랜치가 모두 병합되고 gv 매크로까지 들어간 뒤 한 번에.** 파일 이동은 진행 중인
+  브랜치와 거의 모두 충돌하므로 조용한 창에 에이전트 하나로 한다.
+  ① `Engine/Character` 60 개 평면 → 하위 폴더(`Socket/` — `Socket*` 일곱 · `Fit/` — `Fit*` · `BodyShape` · `Surface*` · `GeometryCut` ·
+  `MeshMerger` · `CharacterGeometry` · `Hit/` — 피격 · 절단 · 래그돌), 애니메이션 기능(`AnimNotify*` · `MotionWarping` · `LocomotionWarping` ·
+  `PoseModifier` · `CharacterPoseUtil` · `ReferencePoseOverride`)은 데이터는 `Animation/`, 컴포넌트 · 시스템은 `Object/Animation/` 으로
+  ② 엔진 루트의 `LocalizationTools.cpp/.h` → `Localization/`, `EngineDevCommands.cpp` → `Utility/Console/`(층은 `CheckEngineLayers` 로 확인 —
+  루트는 `EngineLoop` 급만) ③ 파일 하나짜리 폴더 `Input/Events` · `Input/Utils` · `Reflection/Rpc` 를 위로 합치기 ④ 이름이 겹쳐 헷갈리는
+  `Utility/Format` ↔ `Serialization/Format`, `Graphics/Renderer/Debug` ↔ `Utility/Debug` 정리(`Core/Compression` ↔ `Engine/Compression` 은
+  의도 — 코덱 틀은 Core, 서드파티 코덱은 Engine) ⑤ `Test/EngineTest` 229 개 · `CoreTest` 40 · `EditorTest` 37 평면 → 소스 폴더를 따르는 하위 폴더
+  (`CheckTestSuites` · CMake 글롭 확인) ⑥ 다시 생기지 않게: 폴더당 파일 수 상한 보고서 + 엔진 루트 허용 목록 게이트.
+  함정: `git mv` 는 mtime 을 안 바꿔 ReflectionParser 가 옛 경로 `.gen.cpp` 를 최신으로 본다 — 이동 뒤 re-configure 하고 생성 폴더를 지워 확인.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
@@ -493,7 +504,8 @@ cd build/Ninja-Debug/Bin
 - **지금 하지 않는 구조 후보 — 다시 볼 조건과 함께**(2026-10-03 상용 엔진 비교로 결정): 트랜스폼 SoA 2 단계(UE 액터도 AoS, 측정 근거가 생기면) ·
   선행 조건 스케줄러(시스템이 서로의 결과에 기대기 시작하면 — UE `AddTickPrerequisite` 모양) · 에셋 로더 등록제(종류가 대여섯이 되면 — UE `UFactory`) ·
   참조 카운트 RHI 핸들(한 리소스를 여럿이 나눠 들기 시작하면 — UE `TRefCountPtr`) · Mesh/Material `SlotHandle`(하지 않는다 — `shared_ptr` 이 수명과 RT 안전을 한 번에
-  준다) · `ResourceUtil` 소유 객체화(하지 않는다 — UE `FPaths` 도 정적) · 링크 단위 분할(증분 링크 시간이 문제가 되면 별도 PR) · API 통합 남은 판단(다음 훑기).
+  준다) · `ResourceUtil` 소유 객체화(하지 않는다 — UE `FPaths` 도 정적) · 링크 단위 분할(증분 링크 시간이 문제가 되면 별도 PR) — GameFramework 기반(22 폴더, 약 58k 줄)을 `GFS_*` DLL 여럿으로 쪼개는 안도 같은 이유로 하지 않는다(2026-10-05 재확인). 키트가 기반의
+  어느 층까지 보는지는 폴더 층 게이트(`CheckGameFrameworkLayers`, GF 정리 웨이브 2)로 지킨다. · API 통합 남은 판단(다음 훑기).
 
 - **도구 버전을 "최신 자동" 으로 두는 것.** 네트워크 의존이 생기고 빌드 재현성이 떨어진다. 버전 키 하나로 고정하고 올릴 때만 의도적으로
   올린다. clang-format 은 버전이 곧 출력이라 고정이 아니면 안 된다.
