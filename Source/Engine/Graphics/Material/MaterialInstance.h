@@ -3,6 +3,7 @@
  * @brief 마스터 Material 위에 드로우 · 액터 단위로 덮어쓰는 오버라이드입니다.
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Material/Material.h"
@@ -165,6 +166,12 @@ namespace sw
 
         Material*            _pParentMaterial;
         MaterialInstanceDesc _desc;
+
+        /**
+         * @brief 덮어쓰기 목록 · 더러움 비트를 게임 스레드 세터와 렌더 스레드 `updateRhi` · `collectTextureSlotSrvs` 가 나눠 쓰는 잠금입니다.
+         * @details 지형 · 식생 · 물처럼 매 틱 값을 넣는 컴포넌트가 있어, 렌더 스레드가 목록을 읽는 동안 세터가 목록을 다시 잡을 수 있다.
+         */
+        mutable mutex _overrideMutex;
 
         vector<pair<hashed_string, string>>            _listValueOverride;
         vector<pair<hashed_string, float32>>           _listScalarOverride;

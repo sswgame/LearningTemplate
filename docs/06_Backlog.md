@@ -119,10 +119,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
-- **머티리얼 해제가 렌더 스레드의 병렬 기록과 겹친다.** 마지막 참조가 게임 스레드에서 놓이면(`GpuSceneBuilder::buildFromScene` 의 후보 교체 →
-  `~Material` → `releaseRhi`) `unregisterBindlessResource` 가 렌더 스레드의 병렬 기록 중에 돌 수 있다(`assertRegistryMutableNow` — 플래그 읽기가 경합이라 단언이
-  늘 서지는 않는다). 올리기 쪽은 `EngineLoop` 가 기다린다(3-7). 해제도 렌더 스레드 · 펜스 뒤로 미루거나 같은 자리에서 기다려야 한다. 지금 피하는 법: 런타임에
-  쓰는 머티리얼은 씬의 오브젝트가 늘 들고 있게 하고, 색만 다른 것은 머티리얼 인스턴스로(`AbilityArena` 의 편 색).
+- **DX11 + 환경 쇼케이스에서 bindless 버퍼 SRV 표 경합** — `-dx11 -gv_firstScene=game/empty/maps/envshowcase.scene.xml -gv_profileFrames=2500` 5 번 중 1 번
+  DataRaceDetector 로 종료 3: 렌더 스레드 `D3D11RHICommandContext::findBindlessBufferSrv`(ShaderParameterBinder::bindGraphics)가 표를 읽는 동안 다른 스레드가 쓴다.
+  쓰는 쪽은 스택에 없다 — 지형 · 식생 · 물 컴포넌트가 게임 스레드에서 GPU 버퍼를 만들거나(`registerBindlessResource`) 내리는 자리를 먼저 본다(3-7 의 "bindless 표를
+  바꾸는 일은 병렬 기록과 겹치면 안 된다"). 같은 실행의 MaterialInstance 덮어쓰기 목록 경합은 잠금으로 닫았다.
 
 - **`.hdr` 원본 임포트가 없다** — 지금 임포트는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
