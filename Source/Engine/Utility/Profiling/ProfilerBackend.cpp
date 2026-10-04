@@ -112,12 +112,12 @@ namespace sw
      * @brief `-gv_tracy=1`: 기동부터 Tracy 로 계측을 내보냅니다(뷰어는 `tracy-profiler.exe -a 127.0.0.1` 로 붙는다).
      * @details 끄면(기본) TracyClient.dll 을 올리지도 않는다. 에디터 프로파일러 패널의 "Tracy 열기" 는 실행 중에 켠다.
      */
-    SW_TEST_GLOBAL_VARIABLE_BOOL( gv_tracy, false, "Tracy 프로파일러로 계측을 내보낸다(기동부터, 뷰어는 localhost 로 붙는다)" );
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_tracy, false, "Tracy 프로파일러로 계측을 내보낸다(기동부터, 뷰어는 localhost 로 붙는다)" );
     /**
      * @brief `-gv_tracyMemory=1`: Tracy 에 할당 · 해제를 메모리 태그별로 보냅니다. 할당마다 큐 기록이 붙어 느려집니다.
      * @details Tracy 를 켜기 **전에** 잡힌 블록의 해제는 보내지 않습니다(짝 없는 해제는 뷰어가 기록을 멈춘다).
      */
-    SW_TEST_GLOBAL_VARIABLE_BOOL( gv_tracyMemory, false, "Tracy 에 할당 · 해제를 메모리 태그별로 보낸다(느림, gv_tracy 와 같이)" );
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_tracyMemory, false, "Tracy 에 할당 · 해제를 메모리 태그별로 보낸다(느림, gv_tracy 와 같이)" );
 
     bool ProfilerBackend::initialize()
     {
