@@ -62,6 +62,7 @@ namespace sw
         , _viewCameraProvider{}
         , _initializeStartMicro{ 0 }
         , _bEnableEditor{ SW_FALSE }
+        , _bQuitAfterInitialize{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -153,6 +154,19 @@ namespace sw
         }
 
         warnUnknownGlobalOverrides();
+
+        // 초상화 굽기(`--render-portraits=a.prefab.xml,b.prefab.xml`) — 게임 컴포넌트 타입이 올라온 지금 그리고 끝낸다(창은 띄우지 않는다).
+        string portraitList;
+        if ( pCommandLineManager->getArgument( CommandLineArgument::RENDER_PORTRAITS, portraitList ) && portraitList.empty() == false )
+        {
+            int32  portraitSize = 256;
+            string portraitDir;
+            pCommandLineManager->getArgument( CommandLineArgument::PORTRAIT_SIZE, portraitSize );
+            pCommandLineManager->getArgument( CommandLineArgument::PORTRAIT_DIR, portraitDir );
+            splash.dismiss();
+            _bQuitAfterInitialize = SW_TRUE;
+            return _engineLoop.renderPortraits( portraitList, portraitDir, static_cast<uint32>( portraitSize > 0 ? portraitSize : 256 ) );
+        }
 
         // 4. 창 콜백과 이벤트 전달을 설정한다
         splash.updateStatus( "Finalizing Setup...", 0.95f );
@@ -318,7 +332,7 @@ namespace sw
     {
         // 루프는 창이 있어야 돈다. 헤드리스 부팅(예: --cook-shaders)은 창을 만들지 않으므로 여기서 끝난다. 모드 플래그가 아니라
         // 실제 선행 조건으로 적는다.
-        if ( _window == nullptr )
+        if ( _window == nullptr || _bQuitAfterInitialize == SW_TRUE )
             return;
 
         // 시작 시간: `initialize` 첫 줄부터 여기까지의 경과 시간이다. 표준 출력 로그는 에러가 아니면 버퍼에 머물러 있어 밖에서는 시각을 잴 수 없다.

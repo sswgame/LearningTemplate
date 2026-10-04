@@ -7,6 +7,7 @@
 #include "Core/Math/Frustum.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -22,9 +23,61 @@ namespace sw
     {
         Main   = 0, ///< 게임 카메라
         Shadow = 1, ///< 그림자 라이트
-        Count  = 2
+        Count  = 2  ///< 고정 뷰의 수 — 추가 뷰(CCTV · PiP)의 컬링 칸은 이 뒤에 붙는다(`kFirstExtraCullView`)
     };
 
+    /// @brief 추가 뷰의 첫 컬링 칸입니다. 칸 0 은 주 시점, 1 은 그림자 라이트입니다.
+    inline constexpr uint32 kFirstExtraCullView = static_cast<uint32>( RenderViewType::Count );
+    /// @brief 한 프레임에 들 수 있는 추가 뷰의 최대 수입니다(컬링 칸 · 상수버퍼 · 트랜지언트 풀이 뷰마다 하나다).
+    inline constexpr uint32 kMaxExtraRenderView = 8;
+
+    /** @brief 추가 뷰의 그림이 가는 곳입니다. */
+    enum class RenderViewOutputKind : uint8
+    {
+        ScreenRect    = 0, ///< 주 출력(백버퍼 · 게임 뷰)의 사각형 — 주 시점 위에 겹친다(분할 화면 · PiP)
+        RenderTexture = 1, ///< 렌더 텍스처(`rendertarget/<이름>`) — 머티리얼이 읽는다(CCTV 모니터 · 백미러)
+    };
+
+    /**
+     * @struct RenderViewSettings
+     * @brief 뷰 하나의 출력 사각형 · 해상도 배율 · 끌 기능 · 컷 표시입니다. 주 시점과 추가 뷰가 같은 묶음을 씁니다(값, 게임 스레드 → 렌더 스레드).
+     */
+    struct RenderViewSettings
+    {
+        float4  _screenRect{ 0.0f, 0.0f, 1.0f, 1.0f }; ///< 출력 안의 사각형(x, y, 너비, 높이 — 0..1, 왼쪽 위 원점). 렌더 텍스처는 늘 전체
+        float32 _resolutionScale{ 1.0f };              ///< 출력 크기에 곱하는 내부 해상도
+        uint8   _bShadows{ SW_TRUE };                  ///< 그림자를 그린다(끄면 그림자 맵을 지우기만 한다 — 모두 밝다)
+        uint8   _bPostProcess{ SW_TRUE };              ///< 후처리(블룸 · 외곽선 · 톤맵 · TAA)를 건다
+        uint8   _bCut{ SW_FALSE };                     ///< 이번 프레임에 화면이 끊겼다(언리얼 `bCameraCut`) — TAA 기록을 버린다
+
+        /** @brief 사각형이 출력 전체인지입니다. */
+        bool isFullRect() const { return _screenRect._x <= 0.0f && _screenRect._y <= 0.0f && _screenRect._z >= 1.0f && _screenRect._w >= 1.0f; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct RenderViewRequest
+     * @brief 이번 프레임의 추가 뷰 하나(게임 스레드가 카메라에서 만들어 패킷에 싣는다)입니다. 값만 들고 씬을 가리키지 않습니다.
+     * @details 살아 있는 추가 뷰는 갱신 주기로 쉬는 프레임에도 실린다(`_bRender` = 0) — 렌더러가 그 뷰의 풀 · 텍스처 · 컬링 칸을 들고 있게.
+     */
+    struct RenderViewRequest
+    {
+        float4x4             _viewProj{};
+        float3               _position{};
+        RenderViewSettings   _settings{};
+        hashed_string        _renderTexture{};  ///< `RenderTexture` 의 경로(`rendertarget/<이름>`)
+        uint64               _viewId{ 0 };      ///< 카메라 컴포넌트 id — 렌더러가 뷰마다의 상태를 이것으로 찾는다
+        uint32               _outputWidth{ 0 }; ///< 출력 크기(렌더 텍스처 크기, 화면 사각형이면 그 픽셀 크기)
+        uint32               _outputHeight{ 0 };
+        RenderViewOutputKind _outputKind{ RenderViewOutputKind::RenderTexture };
+        uint8                _bRender{ SW_TRUE }; ///< 이번 프레임에 그린다(갱신 주기 · 보이는가 · 예산이 정한다)
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct RenderView
      * @brief 뷰 하나가 갖는 상태입니다. 행렬, 절두체, 그리고 **자기 상수버퍼**를 담습니다.
@@ -49,6 +102,11 @@ namespace sw
          *          내용을 덮어씁니다. CPU 는 디스패치 사이에 쓰지만 GPU 는 제출 뒤에 읽기 때문입니다.
          */
         RHIConstantBufferSlot _cullCb;
+        /**
+         * @brief 이 뷰 전용 인스턴스 정렬 상수버퍼입니다(투명 깊이 정렬 — 정렬 키가 이 뷰의 눈까지의 거리다).
+         * @details 컬링 상수버퍼와 같은 이유로 뷰마다 하나다. 하나를 나눠 쓰면 모든 뷰가 마지막 뷰의 눈 자리로 정렬한다.
+         */
+        RHIConstantBufferSlot _sortCb;
 
         /** @brief 컬링을 돌릴 준비가 됐는지(상수버퍼가 있는지) 반환합니다. */
         bool isReadyForCulling() const { return _cullCb.isValid(); }

@@ -234,7 +234,7 @@ namespace sw
             constexpr RHIBufferUsage kVisibleUsage =
                 RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
             SW_PROFILE_SCOPE( "RT.GpuScene.visibleBuffers" );
-            for ( GpuCullViewResources& view : _arrCullView )
+            for ( GpuCullViewResources& view : _listCullView )
             {
                 view._visibleInstances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), instanceCount, kVisibleUsage, true,
                                                        true, nullptr );
@@ -306,7 +306,7 @@ namespace sw
         // 간접 인자도 **뷰마다** 하나다. 뷰별로 개수가 다르게 나오기 때문이다.
         constexpr RHIBufferUsage kArgsUsage =
             RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
-        for ( GpuCullViewResources& view : _arrCullView )
+        for ( GpuCullViewResources& view : _listCullView )
         {
             if ( view._indirectArgs.ensureCapacity( pDevice, static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), argsCount,
                                                     kArgsUsage, false, true, _listScratchIndirectCmd.data() ) )
@@ -333,7 +333,7 @@ namespace sw
 
     bool GpuScene::hasAllVisibleBuffers() const
     {
-        for ( const GpuCullViewResources& view : _arrCullView )
+        for ( const GpuCullViewResources& view : _listCullView )
         {
             if ( view._visibleInstances._buffer == 0 )
                 return false;
@@ -343,7 +343,7 @@ namespace sw
 
     bool GpuScene::hasAllCullViewBuffers() const
     {
-        for ( const GpuCullViewResources& view : _arrCullView )
+        for ( const GpuCullViewResources& view : _listCullView )
         {
             if ( view._indirectArgs._buffer == 0 || view._visibleInstances._buffer == 0 )
                 return false;
@@ -364,13 +364,28 @@ namespace sw
                                    ( static_cast<GpuBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GpuBatchSortMode::Preserve );
             _listScratchIndirectCmd[argIndex]._instanceCount = bPreserve ? _snapshot._listAllBatch[argIndex]._instanceCount : 0u;
         }
-        for ( GpuCullViewResources& view : _arrCullView )
+        for ( GpuCullViewResources& view : _listCullView )
         {
             if ( view._indirectArgs._buffer == 0 )
                 continue;
             pDevice->getResourceFactory()->updateStructuredBuffer( view._indirectArgs._buffer, _listScratchIndirectCmd.data(),
                                                                    argsCount * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
         }
+    }
+
+    void GpuScene::setCullViewCount( IRHIDevice* pDevice, uint32 count )
+    {
+        const size_t wanted = MathUtil::max( count, static_cast<uint32>( RenderViewType::Count ) );
+        if ( wanted == _listCullView.size() )
+            return;
+        for ( size_t index = wanted; index < _listCullView.size(); ++index )
+        {
+            _listCullView[index]._visibleInstances.release( pDevice );
+            _listCullView[index]._indirectArgs.release( pDevice );
+        }
+        _listCullView.resize( wanted );
+        // 새 칸의 버퍼는 다음 업로드가 만든다 — 스냅샷이 그대로여도 다시 올리게 한다.
+        _snapshot._bCpuDirty = SW_TRUE;
     }
 
     void GpuScene::setIndirectCountsFilledByGpu( bool bByGpu )
@@ -408,7 +423,7 @@ namespace sw
             batch._vertexBuffer = 0; // 풀을 놓았다. 다음 upload 가 다시 정한다
             batch._firstVertex  = 0;
         }
-        for ( GpuCullViewResources& view : _arrCullView )
+        for ( GpuCullViewResources& view : _listCullView )
         {
             view._visibleInstances.release( pDevice );
             view._indirectArgs.release( pDevice );

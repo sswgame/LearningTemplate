@@ -106,8 +106,8 @@ namespace sw
     class SW_API GpuScene
     {
     public:
-        GpuScene() noexcept = default;
-        ~GpuScene()         = default;
+        GpuScene()  = default;
+        ~GpuScene() = default;
 
         GpuScene( GpuScene&& other ) noexcept            = default;
         GpuScene& operator=( GpuScene&& other ) noexcept = default;
@@ -172,7 +172,15 @@ namespace sw
          */
         RHIDescriptorIndex getInstanceUav() const { return _instances._uav; }
         /** @brief 뷰 하나의 컬링 산출물(간접 인자 + 가시 목록)을 반환합니다. */
-        const GpuCullViewResources& getCullView( RenderViewType view ) const { return _arrCullView[static_cast<uint32>( view )]; }
+        const GpuCullViewResources& getCullView( RenderViewType view ) const { return _listCullView[static_cast<uint32>( view )]; }
+        /** @brief 컬링 칸 @p cullViewIndex 의 산출물입니다(0 주 시점 · 1 그림자 · `kFirstExtraCullView` 부터 추가 뷰). */
+        const GpuCullViewResources& getCullView( uint32 cullViewIndex ) const { return _listCullView[cullViewIndex]; }
+        uint32                      getCullViewCount() const { return static_cast<uint32>( _listCullView.size() ); }
+        /**
+         * @brief 컬링 칸 수를 맞춥니다(고정 둘 + 추가 뷰 수, 업로드 **전에** RT 가 부른다). 늘면 다음 업로드가 새 칸의 버퍼를 만들고, 줄면 남는 칸을 놓습니다.
+         * @details 칸마다 간접 인자 · 가시 목록이 따로 있어야 한다 — 컬링은 개수를 0 에서 세므로 두 뷰가 한 칸을 나눠 쓰면 앞 뷰의 개수 위에 뒤 뷰가 더한다.
+         */
+        void setCullViewCount( IRHIDevice* pDevice, uint32 count );
         /** @brief 배치 표 버퍼의 SRV 를 반환합니다(컬링 컴퓨트 t1 · 그래픽스 t13 g_SwBatches). */
         RHIDescriptorIndex getBatchInfoSrv() const { return _batchInfo._srv; }
         /** @brief 배치 표 버퍼 핸들을 반환합니다. */
@@ -212,7 +220,7 @@ namespace sw
          */
         bool areIndirectCountsGpuFilled() const { return _bGpuFillsIndirectCounts != SW_FALSE; }
         /** @brief 메인 뷰의 간접 인자 버퍼를 반환합니다. 뷰를 가리지 않는 검사(upload 의 재업로드 판정 · 반환값)에 씁니다. */
-        RHIBufferHandle getIndirectArgsBuffer() const { return _arrCullView[static_cast<uint32>( RenderViewType::Main )]._indirectArgs._buffer; }
+        RHIBufferHandle getIndirectArgsBuffer() const { return _listCullView[static_cast<uint32>( RenderViewType::Main )]._indirectArgs._buffer; }
         /** @brief 간접 커맨드 개수를 반환합니다. */
         uint32 getIndirectCommandCount() const { return _indirectCommandCount; }
         /** @brief 인스턴스 버퍼가 GPU 에 올라갔는지 반환합니다. */
@@ -250,10 +258,10 @@ namespace sw
          *          입력 어셈블러가 준 인스턴스 슬롯(간접 인자의 startInstance + 인스턴스 서수)으로
          *          `g_SwVisibleInstanceIds[슬롯]` 을 읽습니다(binding.hlsli swResolveInstanceId). 이것이 없으면 컬링이
          *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라집니다**(보이는 것을 고를 수가 없습니다).
-         *          목록은 절두체에 종속이므로 메인 카메라와 그림자 라이트가 **각자** 갖습니다.
+         *          목록은 절두체에 종속이므로 메인 카메라와 그림자 라이트 · 추가 뷰가 **각자** 갖습니다(칸 0 · 1 은 늘 있다).
          */
-        GpuCullViewResources    _arrCullView[static_cast<uint32>( RenderViewType::Count )];
-        RHIStructuredBufferSlot _batchInfo;
+        vector<GpuCullViewResources> _listCullView = vector<GpuCullViewResources>( static_cast<size_t>( RenderViewType::Count ) );
+        RHIStructuredBufferSlot      _batchInfo;
         /**
          * @brief 씬 메시 정점을 모은 풀입니다(RT 소유). 배치는 이 버퍼와 자기 시작 오프셋으로 그립니다.
          * @details 메시 집합이 바뀔 때만 다시 만듭니다. 풀에 못 든 메시는 자기 정점 버퍼로 그립니다(멀티 드로우에는 못 묶입니다).

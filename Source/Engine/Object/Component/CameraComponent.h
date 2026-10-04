@@ -158,7 +158,8 @@ namespace sw
 
         /** @brief 출력 설정(렌더 텍스처 · 화면 사각형 · 갱신 주기 · 끌 기능)입니다. */
         const CameraRenderOutput& getRenderOutput() const { return _renderOutput; }
-        void                      setRenderOutput( const CameraRenderOutput& output ) { _renderOutput = output; }
+        /** @brief 출력 설정을 바꿉니다. 렌더 텍스처면 그 크기를 텍스처 캐시에 알립니다. */
+        void setRenderOutput( const CameraRenderOutput& output );
 
         /**
          * @brief 이 카메라의 화면이 이번 프레임에 **끊어** 바뀌었다고 표시합니다(언리얼 `bCameraCut`). 렌더러가 시간 누적(TAA 기록)을 버린다.
@@ -172,6 +173,10 @@ namespace sw
             _bCutPending    = SW_FALSE;
             return bCut;
         }
+
+    private:
+        /** @brief 렌더 텍스처 출력이면 그 크기를 텍스처 캐시에 알립니다(`TextureCache::declareRenderTarget`). */
+        void declareRenderTexture() const;
 
     private:
         PROPERTY( Category = "Projection", DisplayName = "Field Of View", Tooltip = "Vertical FOV (radians)", Min = 0.1, Max = 3.14, Meta = "Units=rad" )

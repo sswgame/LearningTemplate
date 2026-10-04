@@ -28,7 +28,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | **Mesh/** | CPU 메시 에셋(`Mesh`)과 기본 도형 생성기(`MeshUtil`), 메시 에셋 파일(`.mesh` — `MeshAssetFormat`)과 경로 캐시(`MeshCache`). GPU 풀은 여기 없다 — Renderer/Scene/ |
 | **Texture/** | `Texture2D` 에셋과 `TextureCache`(참조 수 + unique_ptr) |
 | **Upload/** | `GpuUploadQueue` — 게임 스레드가 스냅샷을 내보내기 **전에** 워커가 GPU 리소스를 만든다 |
-| **Renderer/** | [Renderer/README.md](Renderer/README.md). `Frame/` FrameRenderer 와 그 소유물 셋(PassConstantRing · RenderPsoCache · TransientAttachmentPool) · `Graph/` RenderGraph · `Pipeline/` 패스·파이프라인 리소스·입력 계약 · `Scene/` GpuSceneBuilder(GT) → GpuSceneSnapshot → GpuScene(RT) + GPU 정점/모프 풀 · `Light/` 라이트 버퍼 · `Debug/` 에디터가 읽는 통로(RenderTargetRegistry · DebugDrawQueue) · RenderThread |
+| **Renderer/** | [Renderer/README.md](Renderer/README.md). `Frame/` FrameRenderer 와 그 소유물 셋(PassConstantRing · RenderPsoCache · TransientAttachmentPool) · `Graph/` RenderGraph · `Pipeline/` 패스·파이프라인 리소스·입력 계약 · `Scene/` GpuSceneBuilder(GT) → GpuSceneSnapshot → GpuScene(RT) + GPU 정점/모프 풀 · `Light/` 라이트 버퍼 · `Debug/` 에디터가 읽는 통로(RenderTargetRegistry · DebugDrawQueue) · `Capture/` 격리 스튜디오 렌더(PortraitRenderer) · RenderThread |
 
 ---
 
@@ -80,6 +80,8 @@ DX11 · DX12 · OpenGL · Vulkan
 | `Texture2D` · `TextureCache` | Texture/ | 텍스처 에셋 · 캐시 |
 | `GpuUploadQueue` | Upload/ | GPU 리소스를 그리기 전에 워커로 만든다 |
 | `FrameRenderer` · `RenderView` | Renderer/Frame/ | 한 프레임 오케스트레이션과 뷰 |
+| `RenderViewCollector` · `RenderViewScheduler` | Renderer/Frame/ | 다중 뷰 — 씬 카메라에서 추가 뷰 요청을 모으고(GT), 갱신 주기 · 보임 · 예산으로 이번 프레임에 그릴 뷰를 고른다 |
+| `PortraitRenderer` | Renderer/Capture/ | 프리팹 하나를 격리 스튜디오(등록 안 한 씬 + 별도 FrameRenderer)에서 그려 읽어 온다 — 초상화 · 썸네일 |
 | `PassConstantRing` · `RenderPsoCache` · `TransientAttachmentPool` | Renderer/Frame/ | FrameRenderer 가 소유하는 셋 — 드로우별 상수버퍼 슬롯 링 · PSO 저장소(해제 순서) · 이름으로 찾는 첨부 풀 |
 | `FrameRendererCompute` | Renderer/Frame/ | 컴퓨트 프리패스 넷 — 인스턴스 애니메이션 · 메시 모프 · GPU 컬링 · 인스턴스 정렬. 그래프 패스가 아니라 그리기 전에 직접 걸린다 |
 | `RenderGraph` | Renderer/Graph/ | 패스 의존성 정렬·배리어 추론 |

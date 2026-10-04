@@ -86,7 +86,7 @@ namespace sw
         // 컬링이 실제로 목록을 만들었을 때만 건다. 안 걸리면 셰이더가 g_SwVisibleInstanceIdsIndex 로 알아채고
         // 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 모두 0 번 인스턴스를 그린다. 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
-        const GpuCullViewResources& cullView = _gpuScene.getCullView( ctx._cullView );
+        const GpuCullViewResources& cullView = _gpuScene.getCullView( ctx._cullViewIndex );
         if ( _bGpuCullingActive != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
              cullView._visibleInstances._srv != kInvalidDescriptorIndex )
         {
@@ -284,7 +284,7 @@ namespace sw
             return true;
         };
 
-        const RHIBufferHandle argsBuffer = _gpuScene.getCullView( ctx._cullView )._indirectArgs._buffer;
+        const RHIBufferHandle argsBuffer = _gpuScene.getCullView( ctx._cullViewIndex )._indirectArgs._buffer;
         // 인스턴스 슬롯 스트림(슬롯 1). 패스당 한 번 건다. 씬 드로우는 모두 이 스트림에서 자기 자리를 읽는다.
         if ( _gpuScene.getInstanceSlotStream() != 0 )
             ctx._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, _gpuScene.getInstanceSlotStream(), constant::kInstanceSlotStreamStride, 0 );

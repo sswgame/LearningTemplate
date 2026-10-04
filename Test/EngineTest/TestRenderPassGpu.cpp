@@ -9,6 +9,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -18,6 +19,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/Renderer/Capture/PortraitRenderer.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
@@ -47,6 +49,7 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
 
 #include "EngineTest/RHITestDevice.h"
@@ -292,6 +295,120 @@ namespace
     {
         return sw::string( "(" ) + sw::to_string( value._x ) + ", " + sw::to_string( value._y ) + ", " + sw::to_string( value._z ) + ")";
     }
+
+    /**
+     * @brief 다중 뷰 시험 무대 — 붉은 큐브(−X 멀리) · 푸른 큐브(+X 멀리), 주광, 주 카메라(원점을 본다), 큐브마다 그것만 보는 캡처 카메라를 둘 수 있다.
+     * @details 머티리얼은 실제 에셋을 읽어 색만 바꾼다(손으로 지은 XML 은 퍼뮤테이션이 빠져 쿠킹된 변형과 맞지 않는다).
+     */
+    struct MultiViewScene
+    {
+        static constexpr float32 kCubeDistance = 30.0f; ///< 주 카메라 화면 밖 — 캡처 카메라만 본다
+
+        sw::Scene                    _scene{ "MultiViewScene" };
+        sw::shared_ptr<sw::Material> _materialRed;
+        sw::shared_ptr<sw::Material> _materialBlue;
+        sw::shared_ptr<sw::Mesh>     _meshRed;
+        sw::shared_ptr<sw::Mesh>     _meshBlue;
+        sw::MeshComponent*           _pCubeRed{ nullptr };
+
+        static sw::shared_ptr<sw::Material> makeMaterial( const utf8* pColor )
+        {
+            sw::shared_ptr<sw::Material> material = sw::Material::create();
+            if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
+                 material->setParameter( nullptr, sw::hashed_string( "color" ), pColor ) == false )
+                material.reset();
+            return material;
+        }
+
+        bool populate()
+        {
+            if ( _scene.ensureDefaultCameras() == false )
+                return false;
+            sw::GameObject* pLightObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
+            if ( pLightObject == nullptr || pLightObject->addComponent<sw::DirectionalLightComponent>() == nullptr )
+                return false;
+            _materialRed  = makeMaterial( "1.0 0.02 0.02 1.0" );
+            _materialBlue = makeMaterial( "0.02 0.02 1.0 1.0" );
+            _meshRed      = sw::MeshUtil::createUnitCube();
+            _meshBlue     = sw::MeshUtil::createUnitCube();
+            if ( _materialRed == nullptr || _materialBlue == nullptr || _meshRed == nullptr || _meshBlue == nullptr )
+                return false;
+            _pCubeRed = addCube( "CubeRed", _meshRed, _materialRed.get(), sw::float3{ -kCubeDistance, 0.0f, 0.0f } );
+            return _pCubeRed != nullptr && addCube( "CubeBlue", _meshBlue, _materialBlue.get(), sw::float3{ kCubeDistance, 0.0f, 0.0f } ) != nullptr;
+        }
+
+        sw::MeshComponent* addCube( const utf8* pName, const sw::shared_ptr<sw::Mesh>& mesh, sw::Material* pMaterial, const sw::float3& position )
+        {
+            sw::GameObject*    pObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( pName ) );
+            sw::MeshComponent* pMesh   = pObject != nullptr ? pObject->addComponent<sw::MeshComponent>() : nullptr;
+            if ( pMesh == nullptr )
+                return nullptr;
+            pMesh->setMesh( mesh );
+            pMesh->setMaterial( pMaterial );
+            pMesh->setLocalPosition( position );
+            pMesh->setLocalScale( sw::float3{ 2.0f, 2.0f, 2.0f } );
+            return pMesh;
+        }
+
+        /** @brief @p target 을 2.5 m 앞에서 보는 카메라를 둡니다(출력은 @p output). */
+        sw::CameraComponent* addViewCamera( const utf8* pName, const sw::float3& target, const sw::CameraRenderOutput& output, sw::CameraRole role )
+        {
+            sw::GameObject*      pObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( pName ) );
+            sw::CameraComponent* pCamera = pObject != nullptr ? pObject->addComponent<sw::CameraComponent>() : nullptr;
+            if ( pCamera == nullptr )
+                return nullptr;
+            pCamera->setRole( role );
+            pCamera->setLocalPosition( target + sw::float3{ 0.0f, 1.5f, -4.0f } );
+            pCamera->lookAt( target );
+            pCamera->setRenderOutput( output );
+            return pCamera;
+        }
+
+        static sw::CameraRenderOutput makeTextureOutput( const utf8* pPath, float32 updateRate )
+        {
+            sw::CameraRenderOutput output;
+            output._target              = sw::CameraOutputTarget::RenderTexture;
+            output._renderTexture       = pPath;
+            output._renderTextureWidth  = 64;
+            output._renderTextureHeight = 48;
+            output._updateRate          = updateRate;
+            return output;
+        }
+
+        /** @brief 렌더 텍스처를 되읽어 그려진(모서리와 다른) 픽셀의 평균 (R − B)와 그 수를 냅니다. 실패면 false 입니다. */
+        static bool readTextureRedMinusBlue( sw::IRHIDevice* pDevice, const utf8* pPath, int64& outMeanRedMinusBlue, uint32& outDrawnCount,
+                                             uint32& outWidth )
+        {
+            outMeanRedMinusBlue           = 0;
+            outDrawnCount                 = 0;
+            const sw::Texture2D* pTexture = sw::engine::getAssetManager().getTextureManager().find( pPath );
+            if ( pTexture == nullptr || pTexture->isRhiValid() == false )
+                return false;
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            if ( pDevice->getResourceFactory()->readbackTexture2D( pTexture->getHandle(), 0, 0, bytes, layout ) == false )
+                return false;
+            test::RHITestImage image;
+            image.assign( std::move( bytes ), layout, pTexture->getFormat() );
+            outWidth                 = image.getWidth();
+            const test::Rgba8 corner = image.getPixel( 0, 0 );
+            int64             sum    = 0;
+            for ( uint32 y = 0; y < image.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < image.getWidth(); ++x )
+                {
+                    const test::Rgba8 pixel = image.getPixel( x, y );
+                    if ( test::RHITestImage::getColorDistance( pixel, corner ) < 24 )
+                        continue;
+                    sum += static_cast<int64>( pixel._r ) - static_cast<int64>( pixel._b );
+                    ++outDrawnCount;
+                }
+            }
+            if ( outDrawnCount > 0 )
+                outMeanRedMinusBlue = sum / static_cast<int64>( outDrawnCount );
+            return true;
+        }
+    };
 } // namespace
 
 /**
@@ -4457,4 +4574,314 @@ SW_TEST_CASE( RenderPassGpuTest, HalfResolutionAttachmentCoversItsWholeTarget )
 
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run the half-resolution bloom pipeline" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 캡처 카메라 둘이 각자의 렌더 텍스처에 각자 본 것을 그린다(4 백엔드)
+ * @details 붉은 큐브만 보는 카메라 → `rendertarget/test_red`, 푸른 큐브만 보는 카메라 → `rendertarget/test_blue`. 두 텍스처를 되읽어 한쪽은 붉고
+ *          한쪽은 푸른지 본다. 뷰가 컬링 칸 · 상수버퍼 · 풀을 나눠 쓰면 둘이 같은 그림이 되거나(뒤 뷰의 절두체로 거른다) 비어 있다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MultiViewRendersEachCaptureCameraToItsTexture )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        MultiViewScene    stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        bOk                   = bOk && stage.addViewCamera( "CameraRed", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f },
+                                                            MultiViewScene::makeTextureOutput( "rendertarget/test_red", 0.0f ), sw::CameraRole::Capture ) != nullptr;
+        bOk                   = bOk && stage.addViewCamera( "CameraBlue", sw::float3{ MultiViewScene::kCubeDistance, 0.0f, 0.0f },
+                                                            MultiViewScene::makeTextureOutput( "rendertarget/test_blue", 0.0f ), sw::CameraRole::Capture ) != nullptr;
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        SW_EXPECT_EQUAL( 2u, renderer.getExtraViewCount() );
+        SW_EXPECT_EQUAL( 2u, renderer.getLastRenderedExtraViewCount() );
+
+        int64  redDiff   = 0;
+        int64  blueDiff  = 0;
+        uint32 redDrawn  = 0;
+        uint32 blueDrawn = 0;
+        uint32 width     = 0;
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), "rendertarget/test_red", redDiff, redDrawn, width ),
+                            ( label + "붉은 뷰 텍스처를 읽지 못했다" ).c_str() );
+        SW_EXPECT_EQUAL( 64u, width ); // 카메라가 알린 크기
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), "rendertarget/test_blue", blueDiff, blueDrawn, width ),
+                            ( label + "푸른 뷰 텍스처를 읽지 못했다" ).c_str() );
+        SW_LOG_INFO( "%#red view drawn %# R-B %#, blue view drawn %# R-B %#", label, redDrawn, redDiff, blueDrawn, blueDiff );
+        SW_EXPECT_TRUE_MSG( redDrawn > 100 && blueDrawn > 100, ( label + "뷰에 큐브가 그려지지 않았다" ).c_str() );
+        // 조명 · 톤맵이 채도를 줄이므로 절댓값보다 두 뷰의 차이를 본다.
+        SW_EXPECT_TRUE_MSG( redDiff > 10, ( label + "붉은 뷰가 붉지 않다 (R-B " + sw::to_string( redDiff ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( blueDiff < -10, ( label + "푸른 뷰가 푸르지 않다 (R-B " + sw::to_string( blueDiff ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( redDiff > blueDiff + 40, ( label + "두 뷰가 같은 그림이다" ).c_str() );
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the multi-view test" );
+}
+
+/**
+ * @brief 후처리를 끈 뷰는 포스트 체인을 건너뛴다 — 같은 큐브를 같은 자리에서 보는 두 뷰(후처리 켬 · 끔)의 그림이 다르다.
+ * @details 끈 뷰는 `SW_PASS_FLAG_SKIP_POST` 로 포스트 체인이 원본(톤맵 전 장면 색)을 고른다. 플래그를 무시하면 두 그림이 같아진다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, PostProcessOffViewSkipsThePostChain )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string       label     = sw::string( device->getBackendName() ) + ": ";
+        const sw::float3       redTarget = sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f };
+        sw::FrameRenderer      renderer;
+        MultiViewScene         stage;
+        sw::CameraRenderOutput outputOff = MultiViewScene::makeTextureOutput( "rendertarget/test_post_off", 0.0f );
+        outputOff._bPostProcess          = false;
+        bool bOk                         = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        bOk                              = bOk && stage.addViewCamera( "CameraPostOn", redTarget, MultiViewScene::makeTextureOutput( "rendertarget/test_post_on", 0.0f ),
+                                                                       sw::CameraRole::Capture ) != nullptr;
+        bOk                              = bOk && stage.addViewCamera( "CameraPostOff", redTarget, outputOff, sw::CameraRole::Capture ) != nullptr;
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+
+        int64  onDiff   = 0;
+        int64  offDiff  = 0;
+        uint32 onDrawn  = 0;
+        uint32 offDrawn = 0;
+        uint32 width    = 0;
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), "rendertarget/test_post_on", onDiff, onDrawn, width ),
+                            ( label + "후처리 켠 뷰를 읽지 못했다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), "rendertarget/test_post_off", offDiff, offDrawn, width ),
+                            ( label + "후처리 끈 뷰를 읽지 못했다" ).c_str() );
+        SW_LOG_INFO( "%#post on drawn %# R-B %#, post off drawn %# R-B %#", label, onDrawn, onDiff, offDrawn, offDiff );
+        SW_EXPECT_TRUE_MSG( onDrawn > 100 && offDrawn > 100, ( label + "뷰에 큐브가 그려지지 않았다" ).c_str() );
+        const int64 gap = onDiff > offDiff ? onDiff - offDiff : offDiff - onDiff;
+        SW_EXPECT_TRUE_MSG( gap > 15, ( label + "후처리를 꺼도 그림이 같다 (켬 " + sw::to_string( onDiff ) + " · 끔 " + sw::to_string( offDiff ) + ")" ).c_str() );
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the post-off view test" );
+}
+
+#if !defined( SW_SHIPPING ) // 렌더러 시계 고정(`setAnimationTimeOverride`)은 배포본에 없다
+/**
+ * @brief [RenderPassGpuTest] 갱신 주기가 있는 뷰는 쉬는 프레임에 다시 그리지 않는다 — 텍스처가 지난 그림을 지킨다
+ * @details 1 Hz 캡처 카메라. 0 초에 붉은 큐브를 그린 뒤 큐브를 푸르게 바꾸고 0.1 초에 그리면 쉬는 프레임이라 텍스처는 여전히 붉다. 1.1 초에는
+ *          다시 그려 푸르다. 쉬지 않으면(주기를 무시하면) 0.1 초에 이미 푸르다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ExtraViewSkipsFramesByItsUpdateRate )
+{
+    test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "No RHI backend for the update-rate test" );
+
+    sw::FrameRenderer renderer;
+    MultiViewScene    stage;
+    SW_ASSERT_TRUE( renderer.initialize( device.get() ) && stage.populate() );
+    SW_ASSERT_NOT_NULL( stage.addViewCamera( "CameraRed", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f },
+                                             MultiViewScene::makeTextureOutput( "rendertarget/test_rate", 1.0f ), sw::CameraRole::Capture ) );
+    const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+    int64            diff  = 0;
+    uint32           drawn = 0;
+    uint32           width = 0;
+
+    renderer.setAnimationTimeOverride( 0.0f );
+    SW_ASSERT_TRUE( renderSceneFrame( renderer, device.get(), stage._scene, clear ) );
+    SW_EXPECT_EQUAL( 1u, renderer.getLastRenderedExtraViewCount() );
+    SW_ASSERT_TRUE( MultiViewScene::readTextureRedMinusBlue( device.get(), "rendertarget/test_rate", diff, drawn, width ) );
+    SW_EXPECT_TRUE_MSG( diff > 10, ( "첫 그림이 붉지 않다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
+
+    stage._pCubeRed->setMaterial( stage._materialBlue.get() );
+    renderer.setAnimationTimeOverride( 0.1f );
+    SW_ASSERT_TRUE( renderSceneFrame( renderer, device.get(), stage._scene, clear ) );
+    SW_EXPECT_EQUAL( 0u, renderer.getLastRenderedExtraViewCount() );
+    SW_ASSERT_TRUE( MultiViewScene::readTextureRedMinusBlue( device.get(), "rendertarget/test_rate", diff, drawn, width ) );
+    SW_EXPECT_TRUE_MSG( diff > 10, ( "쉬는 프레임에 다시 그렸다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
+
+    renderer.setAnimationTimeOverride( 1.1f );
+    SW_ASSERT_TRUE( renderSceneFrame( renderer, device.get(), stage._scene, clear ) );
+    SW_EXPECT_EQUAL( 1u, renderer.getLastRenderedExtraViewCount() );
+    SW_ASSERT_TRUE( MultiViewScene::readTextureRedMinusBlue( device.get(), "rendertarget/test_rate", diff, drawn, width ) );
+    SW_EXPECT_TRUE_MSG( diff < -10, ( "주기가 지났는데 다시 그리지 않았다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
+    renderer.shutdown();
+}
+#endif
+
+/**
+ * @brief [RenderPassGpuTest] 화면 사각형 뷰(PiP)는 주 출력의 그 사각형 안에만 그린다(4 백엔드, Present 캡처)
+ * @details 주 카메라는 빈 쪽을 보고, PiP 카메라는 붉은 큐브를 본다. 캡처의 오른쪽 아래 사각형(0.55..0.95)만 붉어야 한다 — 뷰포트를 안 걸면 화면
+ *          전체가 붉고, 위아래가 뒤집히면(GL 원점) 오른쪽 위가 붉다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ScreenRectViewDrawsOnlyInsideItsRectangle )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string       label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer      renderer;
+        MultiViewScene         stage;
+        bool                   bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        sw::CameraRenderOutput output;
+        output._target     = sw::CameraOutputTarget::ScreenRect;
+        output._screenRect = sw::float4{ 0.55f, 0.55f, 0.4f, 0.4f };
+        bOk                = bOk && stage.addViewCamera( "PictureInPicture", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f }, output, sw::CameraRole::Game ) != nullptr;
+        renderer.setPresentCaptureEnabled( true );
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        bOk = bOk && renderer.readbackPresentCapture( bytes, layout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 캡처" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage image;
+            image.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+            // 사각형 안 · 밖의 붉은 픽셀(R 이 B 보다 확연히 크다) 수.
+            uint32 insideRed  = 0;
+            uint32 outsideRed = 0;
+            for ( uint32 y = 0; y < image.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < image.getWidth(); ++x )
+                {
+                    const test::Rgba8 pixel   = image.getPixel( x, y );
+                    const bool        bRed    = pixel._r > pixel._b + 60 && pixel._r > pixel._g + 40;
+                    const float32     u       = ( static_cast<float32>( x ) + 0.5f ) / static_cast<float32>( image.getWidth() );
+                    const float32     v       = ( static_cast<float32>( y ) + 0.5f ) / static_cast<float32>( image.getHeight() );
+                    const bool        bInside = 0.55f <= u && u <= 0.95f && 0.55f <= v && v <= 0.95f;
+                    if ( bRed && bInside )
+                        ++insideRed;
+                    else if ( bRed )
+                        ++outsideRed;
+                }
+            }
+            SW_LOG_INFO( "%#PiP red inside %#, outside %# (of %#x%#)", label, insideRed, outsideRed, image.getWidth(), image.getHeight() );
+            SW_EXPECT_TRUE_MSG( insideRed > image.getPixelCount() / 200, ( label + "사각형 안에 PiP 그림이 없다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( outsideRed * 50 < insideRed, ( label + "PiP 가 사각형 밖에 그려졌다 (밖 " + sw::to_string( outsideRed ) + ")" ).c_str() );
+        }
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the screen-rect view test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 컷 표시는 TAA 기록을 버린다 — 큐브 색을 바꾼 컷 프레임의 TaaColor 에 지난 색이 섞이지 않는다(4 백엔드, 디퍼드)
+ * @details TAA 는 이번 원본과 기록을 0.1 : 0.9 로 섞는다. 붉은 큐브를 몇 프레임 그린 뒤 푸르게 바꾸면 컷이 없을 때 TaaColor 는 여전히 붉은 쪽이고,
+ *          주 카메라에 컷을 표시하면 그 프레임부터 푸르다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, CameraCutResetsTaaHistory )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+        int64            arrDiff[2]{};
+        bool             bOk = true;
+        for ( uint32 caseIndex = 0; caseIndex < 2 && bOk; ++caseIndex )
+        {
+            const bool        bCut = caseIndex == 1;
+            sw::FrameRenderer renderer;
+            LitCubeScene      stage;
+            bOk = renderer.initialize( device.get(), sw::engine::getEngineDefaultAssets()._defaultDeferredPipeline ) && renderer.isReady() && stage.populate();
+            bOk = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.02 0.02 1.0" );
+            for ( uint32 frameIndex = 0; frameIndex < 4 && bOk; ++frameIndex )
+                bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            bOk                          = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "color" ), "0.02 0.02 1.0 1.0" );
+            sw::CameraComponent* pCamera = stage._scene.getActiveGameCamera();
+            bOk                          = bOk && pCamera != nullptr;
+            if ( bOk && bCut )
+                pCamera->markCut();
+            bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            test::RHITestImage image;
+            bOk = bOk && image.readTransient( renderer, "TaaColor" );
+            if ( bOk )
+            {
+                const test::Rgba8 corner = image.getPixel( 0, 0 );
+                int64             sum    = 0;
+                uint32            count  = 0;
+                for ( uint32 y = 0; y < image.getHeight(); ++y )
+                {
+                    for ( uint32 x = 0; x < image.getWidth(); ++x )
+                    {
+                        const test::Rgba8 pixel = image.getPixel( x, y );
+                        if ( test::RHITestImage::getColorDistance( pixel, corner ) < 24 )
+                            continue;
+                        sum += static_cast<int64>( pixel._r ) - static_cast<int64>( pixel._b );
+                        ++count;
+                    }
+                }
+                bOk                = count > 100;
+                arrDiff[caseIndex] = count > 0 ? sum / static_cast<int64>( count ) : 0;
+            }
+            renderer.shutdown();
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "디퍼드 TAA 그리기 · 되읽기" ).c_str() );
+        if ( bOk == false )
+            continue;
+        SW_LOG_INFO( "%#TaaColor R-B without cut %#, with cut %#", label, arrDiff[0], arrDiff[1] );
+        SW_EXPECT_TRUE_MSG( arrDiff[0] > 0, ( label + "컷 없이도 지난 색이 남지 않았다 — 시험이 TAA 기록을 재지 못한다 (R-B " + sw::to_string( arrDiff[0] ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( arrDiff[1] < -20, ( label + "컷 프레임에 지난 색이 섞였다 (R-B " + sw::to_string( arrDiff[1] ) + ")" ).c_str() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the camera-cut TAA test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 초상화 렌더러는 프리팹을 따로 떨어진 스튜디오(자기 씬 · 카메라 · 조명 · 렌더러)에서 그리고, 그 그림에 대상이 화면 가운데를 채운다(4 백엔드)
+ * @details 활성 씬은 건드리지 않는다 — 씬 매니저의 활성 씬이 그대로이고 스튜디오 오브젝트가 그 씬에 생기지 않는다. 경계 구에 맞춘 카메라라 대상이 가운데에
+ *          있고 가장자리는 배경이다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, PortraitRendererDrawsAPrefabInIsolation )
+{
+    constexpr const utf8* kPrefab = "game/abilityarena/prefabs/player.prefab.xml";
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string     label        = sw::string( device->getBackendName() ) + ": ";
+        sw::SceneManager&    sceneManager = sw::engine::getSceneManager();
+        const sw::Scene*     pActive      = sceneManager.getActiveScene();
+        const size_t         activeCount  = pActive != nullptr && pActive->getObjectManager() != nullptr ? pActive->getObjectManager()->getAllGameObjects().size() : 0;
+        sw::PortraitRenderer portrait;
+        bool                 bOk = portrait.initialize( device.get() );
+        sw::PortraitRequest  request;
+        request._prefabPath = kPrefab;
+        request._width      = 96;
+        request._height     = 96;
+        sw::vector<uint8> rgba;
+        bOk = bOk && portrait.renderPrefab( request, rgba );
+        portrait.shutdown();
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "초상화 그리기" ).c_str() );
+        SW_EXPECT_TRUE( sceneManager.getActiveScene() == pActive );
+        const size_t activeCountAfter = pActive != nullptr && pActive->getObjectManager() != nullptr ? pActive->getObjectManager()->getAllGameObjects().size() : 0;
+        SW_EXPECT_EQUAL( activeCount, activeCountAfter );
+        if ( bOk == false )
+            continue;
+        SW_ASSERT_EQUAL( size_t{ 96u * 96u * 4u }, rgba.size() );
+        // 가운데 사분의 일에 대상(배경과 다른 픽셀)이 많고, 맨 가장자리 줄은 배경이다.
+        const uint8* pCorner     = rgba.data();
+        uint32       centerDrawn = 0;
+        uint32       borderDrawn = 0;
+        for ( uint32 y = 0; y < 96; ++y )
+        {
+            for ( uint32 x = 0; x < 96; ++x )
+            {
+                const uint8* pPixel   = rgba.data() + ( static_cast<size_t>( y ) * 96 + x ) * 4;
+                const int32  distance = sw::MathUtil::abs( static_cast<int32>( pPixel[0] ) - pCorner[0] ) + sw::MathUtil::abs( static_cast<int32>( pPixel[1] ) - pCorner[1] ) +
+                                       sw::MathUtil::abs( static_cast<int32>( pPixel[2] ) - pCorner[2] );
+                if ( distance < 24 )
+                    continue;
+                const bool bCenter = 24 <= x && x < 72 && 24 <= y && y < 72;
+                const bool bBorder = x == 0 || y == 0 || x == 95 || y == 95;
+                centerDrawn += bCenter ? 1u : 0u;
+                borderDrawn += bBorder ? 1u : 0u;
+            }
+        }
+        SW_LOG_INFO( "%#portrait center drawn %# / 2304, border drawn %#", label, centerDrawn, borderDrawn );
+        // 사람 모양이라 가로로 좁다 — 가운데 사분의 일(2304 픽셀)의 일부를 채운다.
+        SW_EXPECT_TRUE_MSG( centerDrawn > 150, ( label + "대상이 가운데에 없다 (" + sw::to_string( centerDrawn ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( borderDrawn < 20, ( label + "대상이 화면을 넘친다 (" + sw::to_string( borderDrawn ) + ")" ).c_str() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the portrait test" );
 }

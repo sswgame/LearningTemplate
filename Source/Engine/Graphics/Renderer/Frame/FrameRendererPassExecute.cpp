@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
@@ -159,7 +160,8 @@ namespace sw
         // resolve 와 읽기가 붙는다. 그래서 (1) Shipping 에서는 이 블록이 통째로 사라지고,
         // (2) Dev 에서도 프로파일러가 켜져 있을 때만 찍는다(`-gv_profileFrames`).
         const uint32 timestampBegin = static_cast<uint32>( passIndex ) * 2u;
-        const bool   bWriteGpuTime  = _pDevice != nullptr && passCtx._pCmd != nullptr &&
+        // 패스 슬롯은 패스 번호로 고정이라 주 시점만 적는다(추가 뷰가 같은 칸을 다시 쓰면 주 시점의 시간이 덮인다).
+        const bool bWriteGpuTime = _pDevice != nullptr && passCtx._pCmd != nullptr && isRenderingExtraView() == false &&
                                    engine::getFrameProfiler().isEnabled() &&
                                    static_cast<uint32>( passIndex ) < FrameRendererUtil::kGpuTimedPassCapacity &&
                                    ( timestampBegin + 1u ) < _pDevice->getTimestampSlotCount();
@@ -318,7 +320,36 @@ namespace sw
 
             // 기본 클리어는 표의 값(SSAO 는 흰색 = 가림 없음)이고 없으면 렌더러의 클리어 색이다. 첨부가 클리어 색을 선언했으면 그것이 우선이다.
             const float4 defaultClear = info._pDefaultClear != nullptr ? *info._pDefaultClear : _clearColor;
-            executeFullscreenPass( pso, *pTarget, getAttachmentClearColorOrDefault( pTarget->view(), defaultClear ) );
+            const float4 targetClear  = getAttachmentClearColorOrDefault( pTarget->view(), defaultClear );
+            // 후처리를 끈 뷰(CCTV): 효과 패스(SSAO · 블룸 · 외곽선)는 그리지 않는다 — 원본을 그대로 넘기거나(포맷이 같으면 복사) 지우기만 한다(SSAO 는 흰색 = 가림 없음).
+            // 조명 · 톤맵은 효과가 아니라 그림을 만드는 단계라 그대로 돈다.
+            const bool bSkipEffect = _pActiveView->_settings._bPostProcess == SW_FALSE &&
+                                     ( passType == RenderPassType::SSAO || passType == RenderPassType::Bloom || passType == RenderPassType::Outline );
+            if ( bSkipEffect )
+            {
+                RHITextureHandle source{ 0 };
+                for ( const RenderGraphPassDesc::ResolvedAttachment& input : pPassDesc->_listResolvedInput )
+                {
+                    if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor )
+                        source = findTransient( input._attachment.view() );
+                }
+                const RHITextureHandle target = findTransient( pTarget->view() );
+                const bool             bCopy  = source != 0 && target != 0 && source != target &&
+                                   _pDevice->getResourceFactory()->getTextureFormat( source ) == _pDevice->getResourceFactory()->getTextureFormat( target );
+                if ( bCopy )
+                {
+                    ctx._pCmd->blitTexture( source, target );
+                    (void)markAttachmentCleared( *pTarget );
+                }
+                else if ( beginColorPass( ctx, pTarget->view(), "", targetClear, RHIRenderPassLoadOp::Clear, RHIRenderPassLoadOp::Load ) )
+                {
+                    ctx._pCmd->endRenderPass();
+                }
+            }
+            else
+            {
+                executeFullscreenPass( pso, *pTarget, targetClear );
+            }
         }
         else
         {
@@ -329,10 +360,15 @@ namespace sw
                     // 클리어 값은 실제로 거는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
                     const float4 clearVal = getAttachmentClearColorOrDefault( passDepth.view(), float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
                     beginDepthOnlyPass( ctx, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
-                    // 그림자는 라이트 절두체로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링과 같은 자리).
-                    ctx._cullView = RenderViewType::Shadow;
-                    drawSceneMeshes( ctx, getEnginePso( RenderPassType::Shadow ), passCb, bTransparentBatch );
-                    ctx._cullView = RenderViewType::Main;
+                    // 그림자를 끈 뷰는 지우기만 한다 — 깊이 1(가장 멀다)이면 모두 빛을 받는다.
+                    if ( _pActiveView->_settings._bShadows == SW_TRUE )
+                    {
+                        // 그림자는 라이트 절두체로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링과 같은 자리). 끝나면 지금 뷰의 칸으로 돌아간다.
+                        const uint32 viewCull = ctx._cullViewIndex;
+                        ctx._cullViewIndex    = static_cast<uint32>( RenderViewType::Shadow );
+                        drawSceneMeshes( ctx, getEnginePso( RenderPassType::Shadow ), passCb, bTransparentBatch );
+                        ctx._cullViewIndex = viewCull;
+                    }
                     ctx._pCmd->endRenderPass();
                     break;
                 }
@@ -452,9 +488,25 @@ namespace sw
                         }
                     }
                     // 히스토리 생성 · bindless 등록은 ensureTaaHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
-                    // 병렬 기록에서 태스크 스레드가 돌리므로 여기서 레지스트리를 건드리면 안 된다.
-                    if ( _taaHistory != 0 )
-                        ctx._resourceRegistry.registerTexture( attachmentNames()._gbufferAlbedo, _taaHistory, _taaHistorySrv );
+                    // 병렬 기록에서 태스크 스레드가 돌리므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
+                    const ViewTarget&      activeView = *_pActiveView;
+                    const RHITextureHandle source     = pSrcName != nullptr ? findTransient( pSrcName ) : RHITextureHandle{ 0 };
+                    // 후처리를 끈 뷰는 시간 누적 없이 원본을 넘긴다(히스토리도 건드리지 않는다).
+                    if ( activeView._settings._bPostProcess == SW_FALSE )
+                    {
+                        const RHITextureHandle target = findTransient( taaTarget.view() );
+                        if ( source != 0 && target != 0 && source != target )
+                            ctx._pCmd->blitTexture( source, target );
+                        break;
+                    }
+                    // 컷 프레임(언리얼 `bCameraCut`): 지난 화면의 기록을 버린다 — 이번 프레임은 기록 자리에 **이번 원본**을 걸어 섞어도 이번 그림만 남게
+                    // 한다. 원본을 기록 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8 · 기록 R16G16B16A16 — D3D 의 복사는 같은
+                    // 포맷만 받는다). 패스 끝의 복사(TAA 출력 → 기록)가 기록을 새로 채운다.
+                    const bool bCut = activeView._settings._bCut == SW_TRUE && pSrcName != nullptr;
+                    if ( bCut )
+                        registerPassTexture( ctx, attachmentNames()._gbufferAlbedo, pSrcName );
+                    else if ( activeView._taaHistory != 0 )
+                        ctx._resourceRegistry.registerTexture( attachmentNames()._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySrv );
                     if ( beginColorPass( ctx, taaTarget.view(), "", _clearColor, colorLoadFor( taaTarget, false ), RHIRenderPassLoadOp::Load ) )
                     {
                         const RHIPipelineStateHandle taaPso = getEnginePso( RenderPassType::TAA );
@@ -466,18 +518,33 @@ namespace sw
                     }
 
                     const RHITextureHandle taaOut = findTransient( taaTarget.view() );
-                    if ( taaOut != 0 && _taaHistory != 0 )
-                        ctx._pCmd->blitTexture( taaOut, _taaHistory );
+                    if ( taaOut != 0 && activeView._taaHistory != 0 )
+                        ctx._pCmd->blitTexture( taaOut, activeView._taaHistory );
                     break;
                 }
                 case RenderPassType::Present:
                 {
                     const string           srcName = resolvePresentSource();
                     const RHITextureHandle src     = srcName.empty() ? 0 : findTransient( srcName );
+                    // 출력은 뷰가 정한다 — 렌더 텍스처 뷰는 자기 텍스처 전체, 주 시점 · 화면 사각형 뷰는 주 출력(백버퍼 · 게임 뷰 RT)의 사각형이다.
                     // 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고 끝에 복사한다. 백버퍼는 핸들이 없어
                     // 읽을 수 없고, 후처리가 Present 안에서 끝나면 그 결과를 볼 길이 그것뿐이다.
-                    const bool             bCapture  = ( _outputRenderTarget == 0 ) && isPresentCaptureEnabled();
-                    const RHITextureHandle dstTarget = bCapture ? _presentCapture : _outputRenderTarget;
+                    const ViewTarget& activeView     = *_pActiveView;
+                    const bool        bRenderTexture = activeView._outputKind == RenderViewOutputKind::RenderTexture && isRenderingExtraView() &&
+                                                activeView._pOutputTexture != nullptr;
+                    const bool bCapture = bRenderTexture == false && ( _outputRenderTarget == 0 ) && isPresentCaptureEnabled();
+                    // 캡처를 백버퍼로 옮기는 것은 출력이 곧 백버퍼일 때만이다 — 크기를 덮어쓴 출력(초상화 굽기)은 화면에 나가지 않는다(크기가 다르면 복사도 안 된다).
+                    const bool             bCaptureToBack = bCapture && _outputWidth == _pDevice->getBackBufferWidth() && _outputHeight == _pDevice->getBackBufferHeight();
+                    const RHITextureHandle dstTarget      = bRenderTexture ? activeView._pOutputTexture->getHandle()
+                                                          : bCapture       ? _presentCapture
+                                                                           : _outputRenderTarget;
+                    const uint32           outputWidth    = bRenderTexture ? activeView._outputWidth : _outputWidth;
+                    const uint32           outputHeight   = bRenderTexture ? activeView._outputHeight : _outputHeight;
+                    const bool             bFullRect      = bRenderTexture || activeView._settings.isFullRect();
+                    // 주 시점이 사각형 하나만 쓰면 바깥은 지운다. 화면 사각형 뷰는 주 시점 위에 겹치므로 남긴다.
+                    const RHIRenderPassLoadOp outputLoad = ( isRenderingExtraView() && bRenderTexture == false ) ? RHIRenderPassLoadOp::Load
+                                                         : bFullRect                                             ? RHIRenderPassLoadOp::DontCare
+                                                                                                                 : RHIRenderPassLoadOp::Clear;
                     // PSO 는 대상의 실제 포맷으로 고른다. 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과),
                     // GameView RT 는 텍스처가 기록한 포맷이다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
                     const RHIFormat              targetFormat = ( dstTarget == 0 ) ? _pDevice->getBackBufferFormat()
@@ -494,19 +561,31 @@ namespace sw
                         beginInfo._bBindColor        = SW_TRUE;
                         beginInfo._arrColorTarget[0] = dstTarget;
                         beginInfo._colorTargetCount  = 1;
-                        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::DontCare;
-                        beginInfo._width             = _transientPool.getWidth();
-                        beginInfo._height            = _transientPool.getHeight();
+                        beginInfo._arrLoadOp[0]      = outputLoad;
+                        beginInfo._arrClearColor[0]  = _clearColor;
+                        beginInfo._width             = outputWidth;
+                        beginInfo._height            = outputHeight;
                         ctx._pCmd->beginRenderPass( beginInfo );
+                        // 사각형이면 뷰포트로 그 안에만 그린다 — 전체 화면 삼각형이 사각형을 채우고 원본 전체를 그 안에 늘인다.
+                        if ( bFullRect == false )
+                        {
+                            const float4& rect = activeView._settings._screenRect;
+                            RHIViewport   viewport{};
+                            viewport._x      = rect._x * static_cast<float32>( outputWidth );
+                            viewport._y      = rect._y * static_cast<float32>( outputHeight );
+                            viewport._width  = rect._z * static_cast<float32>( outputWidth );
+                            viewport._height = rect._w * static_cast<float32>( outputHeight );
+                            ctx._pCmd->setViewport( viewport );
+                        }
                         drawFullscreen( ctx, psoBlit, passCb );
                         ctx._pCmd->endRenderPass();
-                        if ( bCapture )
+                        if ( bCaptureToBack )
                             ctx._pCmd->blitTexture( dstTarget, 0 );
                     }
                     else if ( src != 0 )
                     {
                         ctx._pCmd->blitTexture( src, dstTarget );
-                        if ( bCapture )
+                        if ( bCaptureToBack )
                             ctx._pCmd->blitTexture( dstTarget, 0 );
                     }
                     else
@@ -562,8 +641,8 @@ namespace sw
         beginInfo._depthLoadOp      = depthLoad;
         beginInfo._clearDepth       = 1.0f;
         beginInfo._depthTarget      = depthName.empty() ? 0 : findTransient( depthName );
-        beginInfo._width            = _transientPool.getWidth();
-        beginInfo._height           = _transientPool.getHeight();
+        beginInfo._width            = activePool().getWidth();
+        beginInfo._height           = activePool().getHeight();
         beginInfo._colorTargetCount = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
         for ( uint32 colorTargetIndex = 0; colorTargetIndex < beginInfo._colorTargetCount; ++colorTargetIndex )
         {
@@ -603,8 +682,8 @@ namespace sw
         beginInfo._depthTarget                          = depth._texture;
         beginInfo._depthLoadOp                          = depthLoad;
         beginInfo._clearDepth                           = clearDepth;
-        beginInfo._width                                = depth._texture != 0 ? depth._width : _transientPool.getWidth();
-        beginInfo._height                               = depth._texture != 0 ? depth._height : _transientPool.getHeight();
+        beginInfo._width                                = depth._texture != 0 ? depth._width : activePool().getWidth();
+        beginInfo._height                               = depth._texture != 0 ? depth._height : activePool().getHeight();
         ctx._pCmd->beginRenderPass( beginInfo );
     }
 

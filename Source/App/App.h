@@ -153,7 +153,8 @@ namespace sw
         /// @brief `initialize` 가 시작된 시각(마이크로초, steady_clock)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64 _initializeStartMicro;
 
-        uint8                  _bEnableEditor : 1;
-        [[maybe_unused]] uint8 _reserved      : 7;
+        uint8                  _bEnableEditor        : 1;
+        uint8                  _bQuitAfterInitialize : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다 — 루프에 들어가지 않는다
+        [[maybe_unused]] uint8 _reserved             : 6;
     };
 } // namespace sw

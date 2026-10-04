@@ -6,6 +6,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/CameraComponent.h"
 
 namespace sw
@@ -55,27 +56,36 @@ namespace sw
         }
         ctx._passValues.setMatrix( passConstantNames()._world, ctx._world );
 
-        const float32 outlineY = _transientPool.getWidth() > 0 ? ( 1.0f / static_cast<float32>( _transientPool.getWidth() ) ) : 0.001f;
-        const float32 outlineZ = _transientPool.getHeight() > 0 ? ( 1.0f / static_cast<float32>( _transientPool.getHeight() ) ) : 0.001f;
-
         ctx._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
         ctx._passValues.setFloat4( passConstantNames()._keyLightColor, _frameLight._colorAmbient );
         ctx._passValues.setFloat4( passConstantNames()._shadowParams, kDefaultShadowParams );
         ctx._passValues.setFloat4( passConstantNames()._bloomParams, kDefaultBloomParams );
         ctx._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
+        applyViewPassConstants( ctx );
+    }
+
+    void FrameRenderer::applyViewPassConstants( FramePassContext& ctx )
+    {
+        // 화면 텍셀 크기는 지금 그리는 뷰의 풀 크기다(뷰마다 해상도가 다르다).
+        const TransientAttachmentPool& pool     = activePool();
+        const float32                  outlineY = pool.getWidth() > 0 ? ( 1.0f / static_cast<float32>( pool.getWidth() ) ) : 0.001f;
+        const float32                  outlineZ = pool.getHeight() > 0 ? ( 1.0f / static_cast<float32>( pool.getHeight() ) ) : 0.001f;
         ctx._passValues.setFloat4( passConstantNames()._outlineParams, float4{ 0.02f, outlineY, outlineZ, 0.0f } );
-        ctx._passValues.setUint( passConstantNames()._flags,
-                                 ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u );
+        // 패스 플래그 — 비트는 bindingslots.hlsli 의 SW_PASS_FLAG_*(C++ 는 shaderslot::kPassFlag*)가 정본이다. 후처리는 뷰마다 끌 수 있다(CCTV).
+        uint32 flags = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? shaderslot::kPassFlagNativeBindless : 0u;
+        if ( _pActiveView->_settings._bPostProcess == SW_FALSE )
+            flags |= shaderslot::kPassFlagSkipPost;
+        ctx._passValues.setUint( passConstantNames()._flags, flags );
     }
 
     void FrameRenderer::applyViewFromCamera( FramePassContext& ctx, CameraComponent* pCamera )
     {
         if ( pCamera == nullptr )
             return;
-        const float32  aspect   = ( _transientPool.getHeight() > 0 )
-                                    ? ( static_cast<float32>( _transientPool.getWidth() ) / static_cast<float32>( _transientPool.getHeight() ) )
-                                    : ( 16.0f / 9.0f );
-        const float4x4 viewProj = pCamera->getViewProjectionMatrix( aspect );
+        const TransientAttachmentPool& pool     = activePool();
+        const float32                  aspect   = ( pool.getHeight() > 0 ) ? ( static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) )
+                                                                           : ( 16.0f / 9.0f );
+        const float4x4                 viewProj = pCamera->getViewProjectionMatrix( aspect );
         applyViewProjection( ctx, viewProj );
     }
 
@@ -85,8 +95,8 @@ namespace sw
         // 역행렬은 **여기서만** 만든다. 디퍼드 조명이 깊이에서 월드 위치를 복원하는 데 쓰는데,
         // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고 그 증상은 "빛이 한 프레임 늦게 따라온다" 다.
         ctx._passValues.setMatrix( passConstantNames()._invViewProj, viewProj.invert() );
-        // 컬링은 기록 시작 전에 도는데 그때는 상수버퍼에서 도로 꺼낼 수 없다. 뷰에 같은 값을 남긴다.
-        view( RenderViewType::Main ).setViewProjection( viewProj );
+        // 컬링은 기록 시작 전에 도는데 그때는 상수버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다.
+        activeCullInput().setViewProjection( viewProj );
     }
 
     void FrameRenderer::buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const
@@ -123,9 +133,9 @@ namespace sw
         // 떨어져 아무것도 그려지지 않는다.
         constexpr float3 eye{ 2.15f, 1.55f, 2.65f };
 
-        const float32 aspect = ( _transientPool.getHeight() > 0 )
-                                 ? ( static_cast<float32>( _transientPool.getWidth() ) / static_cast<float32>( _transientPool.getHeight() ) )
-                                 : ( 16.0f / 9.0f );
+        const TransientAttachmentPool& pool   = activePool();
+        const float32                  aspect = ( pool.getHeight() > 0 ) ? ( static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) )
+                                                                         : ( 16.0f / 9.0f );
 
         outMat = float4x4::createLookAt( eye, float3::Zero, float3::Up ) * float4x4::createPerspectiveFieldOfView( kFallbackFovY, aspect, kFallbackNearZ, kFallbackFarZ );
     }

@@ -199,6 +199,8 @@ namespace sw
             }
         }
         _pDevice->_recordingState._boundTextureUnitMask = 0;
+        _pDevice->_recordingState._renderTargetHeight   = targetHeight;
+        _pDevice->_recordingState._bDefaultFramebuffer  = fbo == 0 ? SW_TRUE : SW_FALSE;
         glViewport( 0, 0, static_cast<GLsizei>( targetWidth ), static_cast<GLsizei>( targetHeight ) );
 
         if ( bHasDepth || bDepthOnly )
@@ -599,8 +601,14 @@ namespace sw
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
+        // RHIViewport 는 왼쪽 위 원점이다(DX 규약). 기본 프레임버퍼는 glClipControl( GL_LOWER_LEFT )라 창 좌표가 아래 원점이므로 y 를 뒤집는다 —
+        // 안 뒤집으면 화면 사각형 뷰(PiP · 분할 화면)가 위아래가 바뀐 자리에 그려진다. 오프스크린 FBO(GL_UPPER_LEFT)는 그대로다.
+        const OpenGLRecordingState& state   = _pDevice->_recordingState;
+        const float32               originY = ( state._bDefaultFramebuffer == SW_TRUE && state._renderTargetHeight > 0 )
+                                                ? static_cast<float32>( state._renderTargetHeight ) - viewport._y - viewport._height
+                                                : viewport._y;
         glViewport( static_cast<GLint>( viewport._x ),
-                    static_cast<GLint>( viewport._y ),
+                    static_cast<GLint>( originY ),
                     static_cast<GLsizei>( viewport._width ),
                     static_cast<GLsizei>( viewport._height ) );
     }

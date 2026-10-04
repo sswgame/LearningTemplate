@@ -41,6 +41,7 @@ namespace sw
     class IRHIDevice;
     class RenderTargetRegistry;
     class RenderThread;
+    class RenderViewScheduler;
     class RHI;
     class RHIBackendRegistry;
     class SceneManager;
@@ -154,6 +155,12 @@ namespace sw
         RHI*                getRhi() const { return _rhi.get(); }
         RenderThread*       getRenderThread() const { return _renderThread.get(); }
         bool                isHeadless() const { return _bHeadless; }
+        /**
+         * @brief 프리팹마다 초상화를 그려 @p outputDirectory 에 `<이름>.portrait.dds` · `.png` 로 씁니다(`--render-portraits`).
+         * @details 렌더 스레드가 쉬는 동안 이 스레드가 그래픽스 컨텍스트를 잡고 `PortraitRenderer`(따로 만든 스튜디오 씬 · 렌더러)로 그린다. 모듈(게임
+         *          컴포넌트 타입)이 올라온 뒤에 부른다. 하나라도 실패하면 false 입니다.
+         */
+        [[nodiscard]] bool renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size );
         /** @brief 헤드리스 작업(셰이더 쿠킹 · 씬 쿠킹)이 실패했는지 반환합니다. 부르는 쪽은 이것을 종료 코드로 내보냅니다. */
         bool didHeadlessTaskFail() const { return _bHeadlessTaskFailed; }
 
@@ -214,6 +221,10 @@ namespace sw
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack>   _commandStack;
         unique_ptr<GpuUploadQueue> _gpuUploadQueue;
+        /** @brief 추가 뷰(CCTV · 백미러 · PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기 · 예산)입니다. FrameRenderer 단계가 만들고 해제합니다. */
+        unique_ptr<RenderViewScheduler> _renderViewScheduler;
+        /** @brief 스케줄러의 시각(초) — 프레임 델타의 누적입니다. */
+        float64 _renderViewClock;
 
         bool _bShellActionsBound;
         bool _bHeadless;

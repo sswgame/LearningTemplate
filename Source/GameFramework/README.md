@@ -150,6 +150,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `findCamerasByRole`(플레이어 시점 `Game` · 보조 `Custom` · 캡처 `Capture`), 플레이어별 매니저는 `findForPlayer`.
 - **기존 리그도 모드다.** `OrthoCameraRigComponent` 는 자기 값으로 `OrthoTopDown` 프리셋을 지어 디렉터로 풀어(덮어쓴 탑승 시점은 `Fixed`), 탑승 시점으로 들어가고 나올 때
   `_overrideBlend` 로 블렌드하고 Q/E 는 `_rotateTime` 으로 돈다. `FirstPersonCameraComponent` 는 눈 자리 · 시점을 `FirstPerson` 모드로 푼다.
+- **출력은 엔진 카메라가 고른다**(`CameraComponent::setRenderOutput` — 화면 전체 · 화면 사각형(분할 화면 · PiP) · 렌더 텍스처(`rendertarget/<이름>`, 머티리얼이
+  텍스처로 읽는다), 갱신 주기 · 해상도 배율 · 그림자 · 후처리 · 보임 기준 오브젝트). 디렉터 · 매니저는 포즈 · 렌즈만 쓰므로 CCTV 도 디렉터 + `Fixed` 프리셋 +
+  렌더 텍스처 출력이다. 렌더러 쪽은 `Source/Engine/Graphics/Renderer/README.md` "다중 뷰".
 
 ## 새 장르 키트를 만들 때
 

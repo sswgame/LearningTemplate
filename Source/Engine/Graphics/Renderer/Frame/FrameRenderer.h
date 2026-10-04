@@ -18,6 +18,7 @@
 #include "Engine/Graphics/Renderer/Frame/PassConstantValues.h"
 #include "Engine/Graphics/Renderer/Frame/RenderPsoCache.h"
 #include "Engine/Graphics/Renderer/Frame/RenderView.h"
+#include "Engine/Graphics/Renderer/Frame/RenderViewScheduler.h"
 #include "Engine/Graphics/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
@@ -42,6 +43,7 @@ namespace sw
     class ShaderBindingLayout;
     class TaskArgs;
     class TaskManager;
+    class Texture2D;
 
     /** @brief FrameRenderer 초기화 · 파이프라인 상태입니다. */
     enum class FrameRendererStatus : uint8
@@ -54,6 +56,9 @@ namespace sw
     /**
      * @class FrameRenderer
      * @brief 프레임 경로입니다: RenderPipeline XML → RenderGraph → GpuScene / MeshComponents → IRHIDevice
+     * @details **뷰가 여럿입니다.** 주 시점 하나 + 추가 뷰(`RenderViewRequest` — CCTV · 백미러 · 미니맵 렌더 텍스처, 분할 화면 · PiP 화면 사각형)를 같은
+     *          그래프로 한 번씩 그립니다. 뷰마다 트랜지언트 풀 · 컬링 칸(간접 인자 · 가시 목록 · 컬링 상수버퍼) · TAA 기록 · 커맨드 리스트를 따로 듭니다
+     *          (`ViewTarget`). 순서: 컴퓨트 프리패스(모든 뷰의 컬링) → 렌더 텍스처 뷰(주 시점이 그 텍스처를 읽는다) → 주 시점 → 화면 사각형 뷰(주 시점 위에 겹친다).
      */
     class SW_API FrameRenderer
     {
@@ -210,8 +215,21 @@ namespace sw
          *          차이(알파 경로가 컴파일됐는가 같은)를 테스트가 여기서 확인합니다.
          */
         bool findPsoDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
-        /** @brief TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단 · 시험용). */
-        RHITextureHandle getTaaHistory() const { return _taaHistory; }
+        /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단 · 시험용). */
+        RHITextureHandle getTaaHistory() const { return _mainView._taaHistory; }
+        /**
+         * @brief 씬 직접 경로(`execute( pScene )`)의 출력 크기를 정합니다(0 이면 백버퍼). 초상화 굽기처럼 창과 다른 크기로 그릴 때 씁니다.
+         * @details 패킷 경로는 패킷의 뷰포트 크기를 따르므로 이 값을 보지 않습니다.
+         */
+        void setOutputSizeOverride( uint32 width, uint32 height )
+        {
+            _directOutputWidth  = width;
+            _directOutputHeight = height;
+        }
+        /** @brief 마지막 프레임에 실제로 그린 추가 뷰 수입니다(갱신 주기 · 예산으로 쉰 뷰는 빠진다 — 진단 · 시험). */
+        uint32 getLastRenderedExtraViewCount() const { return _lastRenderedExtraViewCount; }
+        /** @brief 들고 있는 추가 뷰 수입니다(쉬는 뷰 포함). */
+        uint32 getExtraViewCount() const { return static_cast<uint32>( _listExtraView.size() ); }
 
     private:
         /**
@@ -248,11 +266,11 @@ namespace sw
              */
             RHIPipelineStateHandle _lastBindPso{ 0 };
             /**
-             * @brief 이 패스가 어떤 뷰의 컬링 결과를 쓸지 정합니다.
-             * @details 그림자 패스만 Shadow 이고 나머지는 Main 입니다. 컬링 결과는 절두체에 종속이라
+             * @brief 이 패스가 어떤 컬링 칸의 결과를 쓸지 정합니다(0 주 시점 · 1 그림자 · `kFirstExtraCullView` 부터 추가 뷰).
+             * @details 그림자 패스만 그림자 칸이고 나머지는 지금 그리는 뷰의 칸입니다. 컬링 결과는 절두체에 종속이라
              *          뷰를 잘못 고르면 그림자 드리우개가 사라지거나 화면 밖 물체를 그립니다.
              */
-            RenderViewType _cullView{ RenderViewType::Main };
+            uint32 _cullViewIndex{ 0 };
             /// @brief 이 드로우 그룹의 루트 상수 값(머티리얼 원소 수)입니다. 배치마다 다른 값(인스턴스 시작 · 모프 풀 · 정점 풀)은
             ///        배치 표(g_SwBatches)와 인스턴스 슬롯 스트림이 주므로 그룹 안에서 루트 상수를 다시 걸지 않습니다.
             ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어씁니다(binding.hlsli 1-0 참고).
@@ -280,6 +298,30 @@ namespace sw
             }
         };
 
+        /**
+         * @brief 뷰 하나가 프레임을 넘어 드는 것입니다 — 트랜지언트 풀 · 컬링 입력(추가 뷰) · TAA 기록 · 직렬 커맨드 리스트 · 출력 텍스처.
+         * @details 주 시점은 `_mainView` 이고(컬링 입력은 `_arrView[Main]`), 추가 뷰는 카메라 id(`_viewId`)로 찾습니다. 패스 코드는 지금 그리는 뷰
+         *          (`_pActiveView`)의 것만 봅니다 — 뷰가 바뀌면 트랜지언트 이름(SceneColor …)이 다른 텍스처를 가리킵니다.
+         */
+        struct ViewTarget
+        {
+            TransientAttachmentPool     _transientPool;
+            RenderView                  _cullInput;   ///< 추가 뷰의 컬링 입력(행렬 · 절두체 · 자기 컬링 상수버퍼)
+            unique_ptr<IRHICommandList> _commandList; ///< 이 뷰를 직렬로 기록하는 리스트(주 시점은 병렬 경로가 아닐 때만)
+            RenderViewSettings          _settings;
+            hashed_string               _outputPath;                ///< 렌더 텍스처 경로
+            Texture2D*                  _pOutputTexture{ nullptr }; ///< 빌려 든 렌더 텍스처(`TextureCache`)
+            uint64                      _viewId{ 0 };
+            RHITextureHandle            _taaHistory{ 0 }; ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)
+            RHIDescriptorIndex          _taaHistorySrv{ kInvalidDescriptorIndex };
+            uint32                      _cullSlot{ 0 };
+            uint32                      _outputWidth{ 0 }; ///< 출력 크기(렌더 텍스처 · 화면 사각형)
+            uint32                      _outputHeight{ 0 };
+            RenderViewOutputKind        _outputKind{ RenderViewOutputKind::ScreenRect };
+            uint8                       _bRenderThisFrame{ SW_FALSE };
+            uint8                       _bSeenThisFrame{ SW_FALSE };
+        };
+
         // ------------------------------------------------------------------------------
         // 4) 패스 자원 · 콜백 · 드로우
         // ------------------------------------------------------------------------------
@@ -299,8 +341,8 @@ namespace sw
             uint32                 _byteSize{ 0 };
             const utf8*            _pUsage{ nullptr };
         };
-        /// @brief 컴퓨트 상수버퍼 수입니다: 뷰마다 컬링 하나 + 인스턴스 애니메이션 · 메시 모프 · 인스턴스 정렬.
-        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewType::Count ) + 3;
+        /// @brief 컴퓨트 상수버퍼 수입니다: 고정 뷰마다 컬링 · 정렬 하나씩 + 인스턴스 애니메이션 · 메시 모프. 추가 뷰의 것은 그 뷰가 든다.
+        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewType::Count ) * 2 + 2;
         /** @brief 컴퓨트 상수버퍼 표를 채웁니다. 새 컴퓨트 상수버퍼는 여기 한 줄을 더합니다 — 만들기와 놓기를 따로 적지 않습니다. */
         void collectComputeConstantBuffers( ComputeConstantBufferRow ( &outArrRow )[_s_kComputeConstantBufferCount] );
         /**
@@ -327,15 +369,35 @@ namespace sw
         void acquirePassCb( FramePassContext& ctx );
         /** @brief 프레임 시작마다 패스 상수 슬롯 커서를 되감고 시드를 0번 슬롯에 맞춥니다. */
         void resetPassCbRing();
-        /** @brief 일시 텍스처를 확보합니다. */
+        /** @brief 주 시점의 일시 텍스처를 확보합니다(출력 크기 × 사각형 × 해상도 배율). 출력 크기는 덮어쓴 크기, 없으면 백버퍼입니다. */
         void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
+        /** @brief 뷰 하나의 트랜지언트를 이 크기로 맞춥니다(같으면 그대로). 다시 만들었으면 true 입니다. */
+        bool ensureViewTransients( ViewTarget& view, uint32 width, uint32 height );
+        /** @brief 뷰 하나의 트랜지언트 · TAA 기록을 놓습니다(디바이스가 없으면 핸들만 잊는다). */
+        void releaseViewTransients( ViewTarget& view );
+        /** @brief 추가 뷰 하나를 통째로 놓습니다(트랜지언트 · 컬링 상수버퍼 · 리스트 · 빌린 렌더 텍스처). */
+        void releaseExtraView( ViewTarget& view );
         /**
-         * @brief TAA 히스토리 텍스처를 **셋업 단계에서** 만들어 둡니다.
+         * @brief 이번 프레임의 추가 뷰 요청을 뷰 상태로 맞춥니다 — 새 뷰를 만들고, 사라진 뷰를 놓고, 출력 텍스처 · 풀 크기 · 컬링 입력을 맞추고,
+         *        GpuScene 의 컬링 칸 수를 정합니다. **업로드 전에**(셋업 단계) 부릅니다 — 버퍼 · 텍스처 생성은 기록 중에 할 수 없다.
+         */
+        void prepareExtraViews( const vector<RenderViewRequest>& listRequest );
+        /** @brief 추가 뷰 하나를 그래프로 그립니다(직렬, 자기 리스트). 지금 뷰를 그 뷰로 바꿨다가 주 시점으로 돌려놓습니다. */
+        void renderExtraView( IRHIDevice* pDevice, ViewTarget& view );
+        /** @brief 지금 그리는 뷰의 트랜지언트 풀입니다. */
+        TransientAttachmentPool&       activePool() { return _pActiveView->_transientPool; }
+        const TransientAttachmentPool& activePool() const { return _pActiveView->_transientPool; }
+        /** @brief 지금 그리는 뷰의 컬링 입력입니다(주 시점은 `_arrView[Main]`). */
+        RenderView& activeCullInput() { return _pActiveView == &_mainView ? view( RenderViewType::Main ) : _pActiveView->_cullInput; }
+        /** @brief 지금 그리는 뷰가 추가 뷰면 true 입니다. */
+        bool isRenderingExtraView() const { return _pActiveView != &_mainView; }
+        /**
+         * @brief 뷰의 TAA 히스토리 텍스처를 **셋업 단계에서** 만들어 둡니다.
          * @details 주의: TAA 패스 콜백은 병렬 기록에서 태스크 스레드가 돌리므로, 거기서 만들고 bindless 에 등록하면
          *          다른 스레드가 같은 레지스트리를 읽는 와중에 레지스트리가 resize 됩니다. 파이프라인이 TAA 를
          *          선언했는지, 대상 첨부의 포맷이 무엇인지는 셋업 시점에 이미 다 알 수 있습니다.
          */
-        void ensureTaaHistory();
+        void ensureTaaHistory( ViewTarget& view );
         /** @brief Present 캡처 텍스처를 한 번만 만듭니다(켜져 있을 때만). */
         void ensurePresentCapture();
         /** @brief 일시 텍스처를 해제합니다. */
@@ -368,6 +430,8 @@ namespace sw
         const hashed_string& inputRoleName( RenderPassInputRole role ) const;
         /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드 · 바인딩은 ShaderParameterBinder 가 합니다. */
         void updatePassConstants( FramePassContext& ctx );
+        /** @brief 지금 그리는 뷰에 따라 다른 패스 상수(외곽선 텍셀 크기 · 패스 플래그 — 후처리 끄기)를 채웁니다. */
+        void applyViewPassConstants( FramePassContext& ctx );
 
         /**
          * @brief 이번 프레임의 주광 값입니다. 패킷이 실어 주면 그 값, 아니면 기본값입니다.
@@ -417,8 +481,9 @@ namespace sw
         void drawGpuBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief 풀스크린 삼각형을 그립니다. */
         void drawFullscreen( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
-        /** @brief 일시 텍스처를 할당합니다. */
-        void allocateTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 resolutionDivisor = 1 );
+        /** @brief 뷰의 풀에 일시 텍스처를 할당합니다. */
+        void allocateTransient( TransientAttachmentPool& pool, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
+                                uint32 resolutionDivisor = 1 );
         /** @brief 컬러(+깊이) 패스를 시작합니다. 열지 못하면 false 이고, 그때는 그리거나 닫지 않습니다(`beginColorPassMrt`). */
         bool beginColorPass( FramePassContext& ctx, string_view colorName, string_view depthName, const float4& clearColor,
                              RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );
@@ -551,8 +616,12 @@ namespace sw
         RenderGraph         _graph;
         string              _pipelinePath;
         float4              _clearColor;
-        /// @brief 파이프라인이 선언한 첨부들입니다. 창 크기로 만들고 구성이 바뀔 때만 다시 만듭니다.
-        TransientAttachmentPool _transientPool;
+        /// @brief 주 시점 — 파이프라인이 선언한 첨부(창 크기로 만들고 구성이 바뀔 때만 다시 만든다) · TAA 기록 · 직렬 리스트 · 출력 사각형.
+        ViewTarget _mainView;
+        /// @brief 추가 뷰들(카메라 id 순서가 아니라 처음 본 순서). 뷰마다 자기 풀 · 컬링 칸을 든다.
+        vector<unique_ptr<ViewTarget>> _listExtraView;
+        /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 늘 `_mainView` 입니다.
+        ViewTarget* _pActiveView;
         /**
          * @brief 프레임 단위 패스 상태입니다(직렬 경로에서 쓰고, 병렬 패스의 시드가 됩니다).
          * @details 병렬 기록에서는 패스마다 이것을 복사해 각자의 커맨드 리스트 · 상수 버퍼를 붙입니다.
@@ -567,6 +636,11 @@ namespace sw
         vector<FramePassContext> _listPassContext;
         /// @brief 씬 직접 경로가 내보내는 스냅샷입니다. 바꿔치기로 저장소가 돌아옵니다.
         GpuSceneSnapshot _sceneSnapshotScratch;
+        /// @brief 주 시점의 패스 시드입니다. 추가 뷰가 이것에서 출발해 자기 값(뷰 행렬 · 플래그 · 컬링 칸)만 덮어씁니다. 프레임마다 대입이라 용량이 남습니다.
+        FramePassContext _mainSeedScratch;
+        /// @brief 씬 직접 경로(`execute( pScene )`)가 추가 뷰를 고르는 스케줄러와 요청 목록입니다(패킷 경로에서는 EngineLoop 의 것).
+        RenderViewScheduler       _directViewScheduler;
+        vector<RenderViewRequest> _listDirectViewScratch;
         /** @brief 이번 프레임 배치가 쓰는 PSO 변형 하나의 조건(퍼뮤테이션, 컬 반전)입니다. 퍼뮤테이션이 없으면 kInvalidShaderPermutation 입니다. */
         struct MaterialPsoRequest
         {
@@ -629,8 +703,7 @@ namespace sw
         /// @brief 씬 라이트 구조버퍼입니다. RT 소유이고 포워드 · 디퍼드가 같은 버퍼를 읽습니다.
         GpuLightBuffer _lightBuffer;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 들고 있습니다.
-        vector<GpuLight>      _listScratchLight;
-        RHIConstantBufferSlot _instanceSortCb;
+        vector<GpuLight> _listScratchLight;
 
         /** @brief 뷰 하나를 얻습니다. 그 뷰의 행렬 · 절두체 · 상수버퍼가 함께 옵니다. */
         RenderView&       view( RenderViewType type ) { return _arrView[static_cast<uint32>( type )]; }
@@ -678,6 +751,8 @@ namespace sw
          * @details 컬링 결과는 절두체에 종속이라 뷰(메인 · 그림자)마다 자기 인자 · 목록을 따로 만듭니다.
          */
         void dispatchCullAndSort( uint32 instanceCount );
+        /** @brief 컬링 칸 하나를 컬링 · 정렬합니다(그 뷰의 절두체 · 자기 상수버퍼). 돌렸으면 true 입니다. */
+        bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount );
         /**
          * @brief 인스턴스 애니메이션에 넣는 절대 시간(초)입니다.
          * @details 각도를 프레임마다 누적하지 않고 **이 절대 시간에서 매번 새로 만듭니다**. 누적하면 프레임
@@ -702,7 +777,6 @@ namespace sw
         RenderPsoCache                       _psoCache;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         RHITextureHandle                     _outputRenderTarget;
-        RHITextureHandle                     _taaHistory; ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)
         /**
          * @brief Present 결과를 받아 두는 텍스처입니다(0 = 안 받음). 스크린샷이 **최종 화면**을 보게 하는 길입니다.
          * @details 스크린샷은 트랜지언트만 읽을 수 있고 백버퍼는 핸들이 없습니다. 주의: Present 가 **읽는** 첨부를
@@ -713,8 +787,18 @@ namespace sw
         RenderGraphExecutionContext _graphContext;
 
         // 아래는 8 바이트보다 작은 필드입니다. 사이에 끼면 패딩이 생기므로 큰 것부터 끝에 모아 둡니다.
-        FrameLightState    _frameLight;    ///< 크기가 8 의 배수가 아니라(100) 4 바이트 필드와 짝을 짓습니다
-        RHIDescriptorIndex _taaHistorySrv; ///< `_taaHistory` 의 bindless SRV(프레임마다 다시 등록하지 않음)
+        FrameLightState _frameLight; ///< 크기가 8 의 배수가 아니라(100) 4 바이트 필드와 짝을 짓습니다
+        /// @brief 주 출력(백버퍼 · 게임 뷰 RT)의 크기입니다. 주 시점의 풀은 이것 × 사각형 × 해상도 배율이고, 화면 사각형 뷰 · Present 캡처는 이 크기다.
+        uint32 _outputWidth;
+        uint32 _outputHeight;
+        /// @brief Present 캡처 텍스처의 크기입니다(출력 크기가 바뀌면 다시 만든다).
+        uint32 _presentCaptureWidth;
+        uint32 _presentCaptureHeight;
+        /// @brief 마지막 프레임에 그린 추가 뷰 수입니다.
+        uint32 _lastRenderedExtraViewCount;
+        /// @brief 씬 직접 경로의 출력 크기(`setOutputSizeOverride`, 0 이면 백버퍼)입니다.
+        uint32 _directOutputWidth;
+        uint32 _directOutputHeight;
 #if !defined( SW_SHIPPING )
         /// @brief `setAnimationTimeOverride` 가 준 시각(초)입니다. 음수면 `_animTimer` 를 따릅니다.
         float32 _animationTimeOverride;
