@@ -5,6 +5,7 @@
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/CharacterHit.h"
 #include "Engine/Character/SocketSetComponent.h"
+#include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -40,6 +41,7 @@ namespace sw
         , _pendingDeltaSeconds{ 0.0f }
         , _seenTableReloadCount{ 0 }
         , _bPendingFrame{ SW_FALSE }
+        , _bPendingRestarted{ SW_FALSE }
     {
         // 애니메이터가 부른다 — 자기 틱은 없다.
         setCanEverTick( false );
@@ -100,13 +102,20 @@ namespace sw
     {
         GameObject*                pOwner    = getOwner();
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
-        if ( pAnimator == nullptr )
+        if ( pAnimator != nullptr )
         {
-            SW_LOG_WARNING( "'%#': anim notify has no animator on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+            pAnimator->setNotifyListener( &_binding );
+            _animator = pAnimator->getHandle();
             return;
         }
-        pAnimator->setNotifyListener( &_binding );
-        _animator = pAnimator->getHandle();
+        SpriteAnimatorComponent* pSprite = pOwner != nullptr ? pOwner->getComponent<SpriteAnimatorComponent>() : nullptr;
+        if ( pSprite != nullptr )
+        {
+            pSprite->setNotifyListener( &_binding );
+            _animator = pSprite->getHandle();
+            return;
+        }
+        SW_LOG_WARNING( "'%#': anim notify has no animator on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
     }
 
     void AnimNotifyComponent::unbindFromAnimator()
@@ -118,6 +127,9 @@ namespace sw
         SkeletalAnimatorComponent* pSkeletal = castTo<SkeletalAnimatorComponent>( pTarget );
         if ( pSkeletal != nullptr && pSkeletal->getNotifyListener() == &_binding )
             pSkeletal->setNotifyListener( nullptr );
+        SpriteAnimatorComponent* pSprite = castTo<SpriteAnimatorComponent>( pTarget );
+        if ( pSprite != nullptr && pSprite->getNotifyListener() == &_binding )
+            pSprite->setNotifyListener( nullptr );
     }
 
     const AnimNotifyEntry* AnimNotifyComponent::findEntry( const hashed_string& notify ) const
@@ -131,6 +143,7 @@ namespace sw
         _listPendingFired.assign( frame._listFired.begin(), frame._listFired.end() );
         _listPendingActive.assign( frame._listActivePlayable.begin(), frame._listActivePlayable.end() );
         _pendingDeltaSeconds        = frame._deltaSeconds;
+        _bPendingRestarted          = ( _bPendingRestarted == SW_TRUE || frame._bRestarted == SW_TRUE ) ? SW_TRUE : SW_FALSE;
         const bool bScheduled       = _bPendingFrame == SW_TRUE;
         _bPendingFrame              = SW_TRUE;
         GameObject*        pOwner   = getOwner();
@@ -155,6 +168,8 @@ namespace sw
         frame._listFired          = vector_reference<const AnimFiredNotify>{ _listPendingFired.data(), _listPendingFired.size() };
         frame._listActivePlayable = vector_reference<const IAnimPlayable* const>{ _listPendingActive.data(), _listPendingActive.size() };
         frame._deltaSeconds       = _pendingDeltaSeconds;
+        frame._bRestarted         = _bPendingRestarted;
+        _bPendingRestarted        = SW_FALSE;
         processFrame( frame );
     }
 
@@ -213,6 +228,9 @@ namespace sw
         if ( _notifyTablePath.empty() == false && _seenTableReloadCount != AnimNotifyTableCache::getReloadCount() )
             loadNotifyTable();
 
+        // 0) 재생할 것이 바뀌었다(스프라이트가 같은 객체를 다른 구간으로) — 옛 구간의 열린 알림은 모두 끊긴 것이다.
+        if ( frame._bRestarted == SW_TRUE )
+            closeAllStates();
         // 1) 클립이 재생에서 빠진 구간은 끊긴 것이다 — 끝을 대신 낸다.
         for ( size_t stateIndex = _listActiveState.size(); stateIndex > 0; --stateIndex )
         {

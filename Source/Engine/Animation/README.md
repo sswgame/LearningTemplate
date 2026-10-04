@@ -65,7 +65,8 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
 | 재생할 것 | `SpriteClipPlayable`(구간 = 프레임 시간의 합) | `AnimClip` |
 | 시간 · 반복 · 끝 | `AnimClipCursor` · `AnimPlayer` | 같음 |
 | 상태 기계 · "끝나면 다음" · 조건 전이 | `AnimGraphPlayer` + `AnimGraphAsset` | 같음 |
-| 알림 · 동기 그룹 | `AnimNotifyTrack` · `AnimSyncGroup`(스프라이트 클립에 알림 형식은 아직 없음) | 같음 |
+| 알림 · 동기 그룹 | `AnimNotifyTrack`(구간마다 `animations[].notifies` — 구간 시작 기준 초) · `AnimSyncGroup` | 같음 |
+| 알림 디스패치 | `SpriteAnimatorComponent::setNotifyListener` — 틱(워커)에서 넘기고 받는 쪽이 틱 뒤로, 구간이 바뀐 틱은 `_bRestarted` | `setNotifyListener` — 게임 스레드 마무리 |
 | 샘플 | 재생 시각 → 구간 안 프레임 · 트랜스폼 키 시각 | 재생 시각 → 코덱 → 본 포즈 |
 
 ## 0.4 함정

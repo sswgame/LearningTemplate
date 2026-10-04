@@ -27,7 +27,8 @@ namespace sw
         vector_reference<const AnimFiredNotify>      _listFired;
         vector_reference<const IAnimPlayable* const> _listActivePlayable;
         float32                                      _deltaSeconds{ 0.0f };
-        uint8                                        _bFromTick{ SW_FALSE }; ///< 병렬 틱 워커에서 불렸다 — 월드를 바꾸는 일은 틱 뒤로 미룬다
+        uint8                                        _bFromTick{ SW_FALSE };  ///< 병렬 틱 워커에서 불렸다 — 월드를 바꾸는 일은 틱 뒤로 미룬다
+        uint8                                        _bRestarted{ SW_FALSE }; ///< 재생할 것이 바뀌었다(같은 객체를 다른 구간으로 다시 쓰는 스프라이트) — 받는 쪽은 열린 구간을 먼저 닫는다
     };
 } // namespace sw
 

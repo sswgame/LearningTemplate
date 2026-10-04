@@ -154,6 +154,7 @@ namespace sw
         ComponentHandle                   _animator;            ///< 받는 쪽으로 붙은 애니메이터(스켈레탈 또는 스프라이트)
         float32                           _pendingDeltaSeconds; ///< 2D: 베낀 프레임의 걸음
         uint32                            _seenTableReloadCount;
-        uint8                             _bPendingFrame; ///< 2D: 처리를 기다리는 프레임이 있다
+        uint8                             _bPendingFrame;     ///< 2D: 처리를 기다리는 프레임이 있다
+        uint8                             _bPendingRestarted; ///< 2D: 베낀 프레임 중 재생할 것이 바뀐 것이 있었다
     };
 } // namespace sw
