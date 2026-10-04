@@ -310,6 +310,14 @@ namespace sw
         _hWnd = nullptr;
     }
 
+    bool Win32Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
+    {
+        (void)width;
+        (void)height;
+        _displayMode = mode;
+        return false;
+    }
+
     void Win32Window::captureRestorePosition()
     {
     }

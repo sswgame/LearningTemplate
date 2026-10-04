@@ -689,6 +689,8 @@ cd build/Ninja-Debug/Bin
 - **X11 헤더는 X11 을 쓰는 `.cpp` 에서만**(`Core/Common/X11Headers.h`, 게이트 `CheckX11Isolation.py`). `PlatformOsHeaders.h` 가 X11 을 들고 있을 때 PCH 로
   모든 TU 에 `Convex` · `None` 같은 매크로가 퍼져 Jolt(`EShapeType::Convex`)가 리눅스 다섯 잡을 세웠다 — Windows 빌드는 원리상 못 본다. 유니티 빌드는 X11 `.cpp` 를
   include 줄을 보고 묶음에서 뺀다(`sw_skipUnityForX11Sources`).
+- **플랫폼 스텁도 인터페이스를 따라간다** — `IWindow` 에 가상 함수를 더하면 `Win32Window` 의 비-Windows `#else` 스텁에도 정의를 둔다(빠지면 리눅스 링크만 진다).
+  실행 파일 · 공유 라이브러리 이름은 `FileUtil::formatSharedLibraryName` 으로 고른다 — `Engine.dll` 을 글자로 찾던 시험이 리눅스에서 늘 건너뛰어 "아무것도 검증하지 않은 스위트" 로 졌다.
 - **리눅스 CI 는 ubuntu-22.04 의 `libclang-dev`(16 미만)다.** 파서에 새 libclang API 를 쓰면 리눅스 잡만 선다 — `CINDEX_VERSION` 으로 가른다. CI 러너 파이썬은 3.10 이라
   f-string 식 안의 백슬래시 · 여러 줄 식이 configure 를 죽인다(`CheckPythonMinimumVersion.py`). GH Windows 러너는 cp1252 라 한글을 print 하는 스크립트가 빌드째 죽는다
   (증상: `sccache stats: 0 hits, 0 misses`) — 스크립트는 `Scripts/common` 을 import 한다(UTF-8 stdout). 재현은 `PYTHONIOENCODING=cp1252`.
