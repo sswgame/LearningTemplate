@@ -173,11 +173,11 @@ namespace sw
 
         if ( pDevice != nullptr )
         {
-            IRHIResourceFactory* pResource = pDevice->getResourceFactory();
+            // 마지막 소유가 게임 스레드에서 놓일 수 있다(머티리얼과 함께) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
             if ( _srv != kInvalidDescriptorIndex )
-                pResource->unregisterBindlessTexture( _srv );
+                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, _srv );
             if ( _handle != 0 )
-                pResource->destroyTexture( _handle );
+                pDevice->releaseHandle( RHIHandleKind::Texture, _handle );
         }
         _handle   = 0;
         _srv      = kInvalidDescriptorIndex;

@@ -12,6 +12,7 @@
 namespace sw
 {
 
+    struct RHIDeferredHandleQueue;
     struct RHIGpuMemoryBudget;
 
     class IRenderSurface;
@@ -19,6 +20,15 @@ namespace sw
     class IRHICommandList;
     class IRHIResourceFactory;
     class RHIMemoryLedger;
+
+    /** @brief `IRHIDevice::releaseHandle` 이 내리는 핸들의 종류입니다(어느 팩터리 함수로 내릴지). */
+    enum class RHIHandleKind : uint8
+    {
+        BindlessResource = 0, ///< `registerBindlessResource` 의 인덱스 → `unregisterBindlessResource`
+        BindlessTexture,      ///< `registerBindlessTexture` 의 인덱스 → `unregisterBindlessTexture`
+        Buffer,               ///< `createBuffer` 의 핸들 → `destroyBuffer`
+        Texture               ///< `createTexture` 의 핸들 → `destroyTexture`
+    };
 
     /** @brief `RHINativeHandles` 의 판 번호입니다. 필드 · 순서 · 뜻이 바뀌면 올립니다. */
     inline constexpr uint32 kRHINativeHandlesVersion = 2;
@@ -125,6 +135,24 @@ namespace sw
          * @param renderThreadId   렌더 스레드. 이 스레드에서 부른 `waitIdle` 은 자기 자신을 기다리지 않는다.
          */
         void setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadId );
+
+        /**
+         * @brief 자원 핸들 하나를 내립니다. 렌더 스레드가 프레임을 들고 있는 동안 다른 스레드가 부르면, 그 프레임이 끝난 자리(병렬 기록 밖)까지 미룹니다.
+         * @details 게임 스레드가 GPU 자원을 든 객체(`Material` · `MaterialInstance` · `Texture2D`)의 마지막 소유를 아무 때나 놓을 수 있다 — GpuScene 후보를
+         *          덮는 수집 잡, 핫 리로드로 걷은 뷰. 그 순간 렌더 스레드가 지난 프레임을 병렬로 기록 중이면 bindless 표를 바꾸면 안 된다
+         *          (`setParallelRecording`). 그래서 객체의 소멸은 그 자리에서, 핸들의 반환은 렌더 스레드가 프레임을 끝낸 뒤 한다 — 언리얼
+         *          `FDeferredCleanupInterface` · `BeginReleaseResource` 의 자리입니다. 렌더 스레드가 쉬고 있거나(들고 있는 프레임 없음) 렌더 스레드 자신이면 바로 내립니다.
+         *          객체가 이미 사라졌으므로 핸들만 듭니다. 마지막 소유를 놓는 쪽은 그 핸들을 쓰는 프레임이 없다(패킷이 소유를 함께 싣는다).
+         */
+        void releaseHandle( RHIHandleKind kind, uint64 handle );
+        /** @brief 미뤄 둔 핸들을 모두 내립니다. 렌더 스레드가 프레임을 끝낸 뒤 · `waitIdle` · 렌더 스레드를 풀 때 · `shutdown` 이 부릅니다. */
+        void flushDeferredHandleReleases();
+        /** @brief 렌더 스레드에 프레임 하나를 넘겼습니다(`RenderThread::submit`). 끝날 때까지 다른 스레드의 `releaseHandle` 은 미뤄집니다. */
+        void notifyRenderFrameQueued();
+        /** @brief 렌더 스레드가 프레임 하나를 끝냈습니다. */
+        void notifyRenderFrameRetired();
+        /** @brief 아직 내리지 않은(미뤄 둔) 핸들 수입니다(진단 · 시험). */
+        size_t getDeferredHandleCount() const;
 
         // ------------------------------------------------------------------------------
         // 2) 능력 · 스레드 — 백엔드 종류, bindless, 컨텍스트 소유
@@ -423,5 +451,7 @@ namespace sw
         bool _bParallelRecording;
         /// @brief GPU 자원 장부입니다(getMemoryLedger 참고). 해제 큐가 비워지는 백엔드 소멸자보다 오래 삽니다(기반 클래스 멤버).
         unique_ptr<RHIMemoryLedger> _memoryLedger;
+        /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 렌더 스레드가 든 프레임 수입니다(releaseHandle 참고).
+        unique_ptr<RHIDeferredHandleQueue> _pDeferredHandleQueue;
     };
 } // namespace sw

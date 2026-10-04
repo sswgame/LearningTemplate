@@ -118,6 +118,10 @@ RHI/
   DX12 · Vulkan 은 GPU 펜스, DX11 · GL 은 프레임 지연 기준이라 엔진 자원과 같은 시점에 사라집니다. **프레임을 기록하는 스레드(렌더 스레드)에서**
   부릅니다(펜스 값을 올리는 스레드가 읽어야 "이 프레임" 이 맞다). 에디터는 `EditorDrawReleaseQueue` 가 놓은 ImGui 디스크립터 · 렌더 타깃을
   그것을 그린 마지막 프레임 뒤에 이 창구로 넘깁니다.
+- **엔진 자원 객체(`Material` · `MaterialInstance` · `Texture2D`)가 자기 bindless 인덱스 · 버퍼 · 텍스처를 내릴 때는 `IRHIDevice::releaseHandle( kind, handle )`**
+  입니다. 마지막 소유는 게임 스레드(GpuScene 후보를 덮는 수집 잡 · 걷은 뷰)가 아무 때나 놓으므로, 렌더 스레드가 프레임을 들고 있으면(`RenderThread::submit` 이
+  `notifyRenderFrameQueued`) 핸들만 줄에 두었다가 렌더 스레드가 그 프레임을 끝낸 자리(병렬 기록 밖) · `waitIdle` · 렌더 스레드를 풀 때 · `shutdown` 에서 내립니다.
+  렌더 스레드 자신이거나 쉬고 있으면 바로 내립니다. `RHIDeferredHandleTest` 가 고정합니다.
 
 ## Vulkan 최소 판 — 1.3
 

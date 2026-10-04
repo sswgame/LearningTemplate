@@ -273,10 +273,11 @@ namespace sw
         releaseTextureAssets( pRhi );
         if ( pRhi != nullptr )
         {
+            // 마지막 소유를 게임 스레드가 놓을 수 있다(GpuScene 후보 · 걷은 뷰) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
             if ( _descriptorIndex != kInvalidDescriptorIndex )
-                pRhi->getResourceFactory()->unregisterBindlessResource( _descriptorIndex );
+                pRhi->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
             if ( _constantBuffer != 0 )
-                pRhi->getResourceFactory()->destroyBuffer( _constantBuffer );
+                pRhi->releaseHandle( RHIHandleKind::Buffer, _constantBuffer );
         }
         _constantBuffer  = 0;
         _descriptorIndex = kInvalidDescriptorIndex;
