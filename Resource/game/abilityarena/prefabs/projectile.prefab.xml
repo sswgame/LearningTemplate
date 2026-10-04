@@ -1,0 +1,26 @@
+<Prefab formatVersion="0" name="ArenaProjectile">
+	<GameObject _schemaVersion="0" _name="ArenaProjectile" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.5,0.5,0.5"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="None"
+			               _meshId="Sphere"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<ArenaProjectileComponent _componentName="ArenaProjectileComponent"
+			                          _bActive="true"
+			                          _director="0"
+			                          _radius="0.25"
+			                          _unitRadius="0.5"
+			                          _visualLift="0.9" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

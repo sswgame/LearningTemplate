@@ -41,8 +41,8 @@ namespace sw
 {
     /**
      * @brief 대시 이펙트(`dashEffect` — 이동 속도 · 무적)를 자기에게 걸고 `duration` 초 기다렸다가 끝납니다.
-     * @details 시간이 걸리는 어빌리티의 예입니다(`waitDelay`). 도는 동안 설정의 `BlockTag` 가 공격을 막고, 이동은 `ArenaWorld` 가 `State.Dashing`
-     *          을 보고 바라보는 쪽으로 밀어 줍니다.
+     * @details 시간이 걸리는 어빌리티의 예입니다(`waitDelay`). 도는 동안 설정의 `BlockTag` 가 공격을 막고, 이동은 플레이어 컨트롤러가
+     *          `State.Dashing` 을 보고 바라보는 쪽으로 밀어 줍니다.
      */
     class ArenaDashAbility final : public GameplayAbility
     {

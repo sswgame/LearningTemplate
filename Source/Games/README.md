@@ -59,7 +59,8 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 ## 새 게임 = 씬 + 프리팹 + 디렉터 · 뷰 컴포넌트
 
 게임 클래스(`XxxWorld`)가 코드로 오브젝트를 만들고 매 프레임 밀어 넣는 대신, 상용 엔진처럼 나눕니다. `ThemeParkTycoon` 이 이 모양입니다
-(`ThemeParkTycoon/README.md`). 다른 시험 게임(`PrimitiveStage` 를 쓰는 다섯)은 아직 옛 모양입니다.
+(`ThemeParkTycoon/README.md`). `AbilityArena` 도 이 모양입니다 — 유닛마다 입력 · AI 컨트롤러 컴포넌트가 붙고, 어빌리티는 그 컨트롤러가 든 디렉터 핸들로
+디렉터를 찾습니다. 다른 시험 게임(`PrimitiveStage` 를 쓰는 다섯)은 아직 옛 모양입니다.
 
 | 무엇 | 어디 |
 |------|------|
@@ -68,6 +69,7 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 | 규칙 · 상태 | 키트의 보통 클래스 — 씬 없이 시험한다(컴포넌트로 만들지 않는다) |
 | 규칙을 돌리고 스폰을 지시 | 디렉터 컴포넌트 하나(언리얼 GameMode/GameState) — `TickGroup::PrePhysics` |
 | 엔티티의 모습 | 뷰 컴포넌트 — 디렉터를 읽기만 하고 자기 오브젝트에만 쓴다, `TickGroup::PostUpdate` |
+| 엔티티 하나의 입력 · AI | 컨트롤러 컴포넌트 — 뷰와 같은 규칙(디렉터를 읽기만, 자기 오브젝트에만 쓴다), 기본 그룹 `DuringPhysics` |
 | 장르 무관 카메라 · 장식 | GameFramework `Components/`(`OrthoCameraRigComponent` · `PropScatterComponent` …) |
 | 게임 클래스 | `requestFirstScene()` 과, 상태 저장 전에 디렉터가 세운 것을 걷는 일 |
 
@@ -76,6 +78,8 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 - **틱 안에서는 구조를 바꾸지 않는다.** 디렉터는 스폰 요청을 쌓고 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세운다(틱 안의 `addComponent` 는 nullptr).
 - **같은 그룹은 병렬이다.** 뷰는 자기 오브젝트에만 쓰고, 남의 컨테이너는 첨자(`operator[]` — Debug 경합 검출기가 쓰기로 센다) 대신 `data()` · const 참조로 읽는다.
   다른 오브젝트에 값을 넣어야 하면(디렉터 → 카메라 리그) 읽는 쪽보다 **앞 그룹**에서 넣는다.
+- **런타임에만 쓰는 머티리얼 에셋을 두지 않는다.** 프리팹만 가리키는 머티리얼은 처음 스폰할 때 올라가고 마지막 것이 사라질 때 내려간다 — 색만 다르면
+  씬이 늘 들고 있는 머티리얼(팔레트 · 엔진 기본)에서 디렉터가 머티리얼 인스턴스를 만들어 나눠 쓴다(백로그 1-3).
 - **프레임을 넘겨 드는 것은 핸들이다.** 디렉터 · 카메라 · 세운 오브젝트를 `GameObjectHandle` 로 들고 매 프레임 푼다. 씬의 다른 엔티티를 가리키는 PROPERTY 는
   `GameObjectHandle` 이면 파일 id 로 저장되고 로드 · 쿠킹 뒤에도 이어진다.
 - **씬 · 프리팹 파일은 엔진 직렬화기로 쓴다**(에디터, 또는 오브젝트를 지어 `SceneManager::saveActiveScene` · `PrefabAsset::saveToXmlFile`). 손으로 쓴 XML 은 형식을 깨기 쉽다.
