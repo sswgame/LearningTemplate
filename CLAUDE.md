@@ -208,8 +208,8 @@ world does not know the renderer, the renderer reads the scene. Engine code must
 `GameFramework/`, or `Games/`; reach the editor through RuntimeAPI, delegates, or events instead. The tier
 table is in `Source/Engine/README.md` (recompute it with `Scripts/lint/report/RunEngineLayerGraph.py`).
 
-**Startup and shutdown are one table.** `Source/Engine/EngineStartupStepList.xxx` lists every step with the
-steps it waits for; `EngineStartupSequence` sorts it, brings steps up in that order and down in reverse, and each
+**Startup and shutdown are one table.** `Source/Engine/EngineInitStepList.xxx` lists every step with the
+steps it waits for; `EngineInitSequence` sorts it, brings steps up in that order and down in reverse, and each
 step is one struct (`initialize` / `shutdown` / `destroy`). `EngineLoop` and the test harness share
 `EngineBootstrap`. Scenes load only after `ModuleTypes` (every type provider registered), and `ModuleHost` brings
 the game up before the editor. Engine services are the rows of `Source/Engine/Common/EngineServiceList.xxx`.
@@ -224,10 +224,10 @@ To see what the parser extracted from a header (why a property is missing, a ran
 
 **Resources.** `Resource/` splits into `engine/`, `common/`, and `game/<active game>/`. Paths are global ids
 including the domain (`engine/pipeline/forwardpipeline.xml`) and are lowercased via `normalizePath` at lookup —
-hence the enforced lowercase rule. Rendering separates `RenderPassResource` (bind template: formats/clears,
-under `renderpass/`) from `RenderPipelineResource` (the frame graph ordering passes, under `pipeline/`);
+hence the enforced lowercase rule. Rendering separates `RenderPassAsset` (bind template: formats/clears,
+under `renderpass/`) from `RenderPipelineAsset` (the frame graph ordering passes, under `pipeline/`);
 `FrameRenderer` builds a `RenderGraph` from the pipeline and topologically sorts it at runtime. Textures are read
-as DDS only — source images live in `textures_raw/` and are baked with `App --bake-textures`. Data is read in
+as DDS only — source images live in `textures_raw/` and are imported with `App --import-textures`. Data is read in
 its current shape only: no old-format readers, and a rename rewrites the data instead of adding `Alias` / `ValueAlias` (those are for after shipped data exists)
 (`ResourceDataSchemaTest`). Command-line arguments are listed in `Source/Core/Predefined/ArgumentList.xxx`.
 
