@@ -91,6 +91,25 @@ namespace
         }
         input.shutdown();
     }
+
+    /** @brief 키보드 포커스 주인마다 받은 글자를 따로 모읍니다. */
+    struct FocusTextRecorder
+    {
+        sw::string _game;
+        sw::string _console;
+
+        void onGameText( sw::string_view text ) { _game.append( text.data(), text.size() ); }
+        void onConsoleText( sw::string_view text ) { _console.append( text.data(), text.size() ); }
+    };
+
+    void runInputFrame( sw::InputManager& input, std::initializer_list<sw::RawInputEvent> listEvent )
+    {
+        for ( const sw::RawInputEvent& event : listEvent )
+        {
+            (void)input.postRawEvent( event );
+        }
+        input.beginFrame( 0.016f );
+    }
 } // namespace
 // 액션 맵 자체의 규칙은 TestInputMap.cpp, 스트레스·리플레이·경계는 TestInputRobustness.cpp.
 
@@ -1256,11 +1275,11 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
 #if defined( SW_PLATFORM_WINDOWS )
 namespace
 {
-    sw::string s_lastTextInput; ///< 글자 입력 콜백이 마지막으로 받은 글자
+    sw::string s_receivedText; ///< 글자 입력 콜백이 받은 글자를 받은 순서대로 이은 것
 
     void onRecordTextInput( sw::string_view text )
     {
-        s_lastTextInput = sw::string( text );
+        s_receivedText.append( text.data(), text.size() );
     }
 } // namespace
 
@@ -1274,23 +1293,65 @@ SW_TEST_CASE( InputManagerTest, WmCharReachesTheTextInputCallback )
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     input.setTextInputCallback( SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onRecordTextInput ) );
-    s_lastTextInput.clear();
+    s_receivedText.clear();
 
     sw::NativeWindowEvent charEvent{};
     charEvent._message = WM_CHAR;
     charEvent._wParam  = 0xAC00; // '가'
     input.processNativeEvent( charEvent );
-    SW_EXPECT_TRUE( s_lastTextInput.empty() ); // 프레임이 시작해야 적용된다
+    SW_EXPECT_TRUE( s_receivedText.empty() ); // 프레임이 시작해야 적용된다
     input.beginFrame( 0.016f );
-    SW_EXPECT_TRUE( s_lastTextInput == "\xEA\xB0\x80" );
+    SW_EXPECT_TRUE( s_receivedText == "\xEA\xB0\x80" );
     input.endFrame();
 
-    s_lastTextInput.clear();
+    s_receivedText.clear();
     charEvent._wParam = 0x08; // 백스페이스
     input.processNativeEvent( charEvent );
     input.beginFrame( 0.016f );
-    SW_EXPECT_TRUE( s_lastTextInput.empty() );
+    SW_EXPECT_TRUE( s_receivedText.empty() );
     input.endFrame();
+
+    input.setTextInputCallback( {} );
+    input.shutdown();
+}
+
+/**
+ * @brief [InputManagerTest] 서로게이트 쌍으로 온 WM_CHAR 두 개는 UTF-8 4 바이트 한 글자가 되고, 짝 없는 서로게이트는 U+FFFD 한 글자가 된다
+ * @details Windows 는 BMP 밖 글자(이모지 · 확장 한자)를 높은 · 낮은 서로게이트 WM_CHAR 두 개로 보낸다. 반쪽마다 따로 인코딩하면 3 바이트 둘 —
+ *          UTF-8 이 아닌 글(CESU-8)이 된다. 짝 없는 반쪽은 버리지 않고 U+FFFD 로 바꾼다(`StringUtil::utf16ToUtf8` 과 같은 규칙).
+ */
+SW_TEST_CASE( InputManagerTest, WmCharSurrogatePairBecomesOneUtf8Character )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.setTextInputCallback( SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onRecordTextInput ) );
+
+    const auto sendChars = [&input]( std::initializer_list<WPARAM> listCodeUnit ) -> sw::string
+    {
+        s_receivedText.clear();
+        sw::NativeWindowEvent charEvent{};
+        charEvent._message = WM_CHAR;
+        for ( const WPARAM codeUnit : listCodeUnit )
+        {
+            charEvent._wParam = codeUnit;
+            input.processNativeEvent( charEvent );
+        }
+        input.beginFrame( 0.016f );
+        input.endFrame();
+        return s_receivedText;
+    };
+
+    SW_EXPECT_TRUE( sendChars( { 0xD83D, 0xDE00 } ) == "\xF0\x9F\x98\x80" ); // U+1F600
+    SW_EXPECT_TRUE( sendChars( { 0xD840, 0xDC0B } ) == "\xF0\xA0\x80\x8B" ); // U+2000B(확장 한자)
+    SW_EXPECT_TRUE( sendChars( { 0xDE00 } ) == "\xEF\xBF\xBD" );             // 높은 반쪽 없는 낮은 반쪽
+    SW_EXPECT_TRUE( sendChars( { 0xD83D, 'a' } ) == "\xEF\xBF\xBD"
+                                                    "a" ); // 낮은 반쪽 대신 다른 글자
+    SW_EXPECT_TRUE( sendChars( { 0xD83D, 0xD83D, 0xDE00 } ) == "\xEF\xBF\xBD"
+                                                               "\xF0\x9F\x98\x80" );
+
+    // 쌍이 프레임 경계에 걸려도 한 글자다 — 반쪽은 큐가 아니라 메시지를 받는 쪽이 들고 있다.
+    SW_EXPECT_TRUE( sendChars( { 0xD83D } ).empty() );
+    SW_EXPECT_TRUE( sendChars( { 0xDE00 } ) == "\xF0\x9F\x98\x80" );
 
     input.setTextInputCallback( {} );
     input.shutdown();
@@ -1330,5 +1391,90 @@ SW_TEST_CASE( InputManagerTest, UnregisterDeviceFallsBackToTheRemainingDeviceOfT
     SW_EXPECT_TRUE( input.getDevice( sw::InputDeviceKind::Mouse ) == nullptr );
     input.beginFrame( 0.016f ); // 마우스가 없어도 프레임이 돈다
     input.endFrame();
+    input.shutdown();
+}
+
+/**
+ * @brief [InputManagerTest] 키보드 포커스가 게임이 아니면 게임 쪽 키 조회 · 통합 InputMap 의 키 바인딩이 "안 눌림" 이고, 포커스를 무시하는 맵 · 장치는 그대로 본다
+ * @details 개발 콘솔이 열린 동안 게임 코드의 `isKeyDown` 직접 조회까지 막는 장치다 — InputMap 레이어만으로는 그 조회를 막지 못한다.
+ *          포커스를 넘기기 전부터 눌려 있던 키는 돌아오면 다시 보이고, 넘긴 동안 눌린 키는 뗄 때까지 가린다(눌림 · 뗌 둘 다).
+ */
+SW_TEST_CASE( InputManagerTest, KeyboardFocusHidesKeysFromGame )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& gameMap = input.getInputMap();
+    gameMap.bind( "Forward", sw::Key::W, sw::ActionTrigger::Down );
+    gameMap.bind( "Jump", sw::Key::Space, sw::ActionTrigger::Pressed );
+    gameMap.bindAnyKey( "AnyKey" );
+    sw::InputMap shellMap;
+    shellMap.setInputManager( &input );
+    shellMap.setKeyboardFocusIgnored( true );
+    shellMap.bind( "ShellForward", sw::Key::W, sw::ActionTrigger::Down );
+
+    runInputFrame( input, { sw::RawInputEvent::makeKeyDown( sw::Key::W ) } );
+    shellMap.update( 0.016f );
+    SW_EXPECT_TRUE( input.isKeyDown( sw::Key::W ) );
+    SW_EXPECT_TRUE( gameMap.isActionDown( "Forward" ) );
+    input.endFrame();
+
+    input.setKeyboardFocus( sw::InputKeyboardFocus::DevConsole );
+    runInputFrame( input, { sw::RawInputEvent::makeKeyDown( sw::Key::Space ) } );
+    shellMap.update( 0.016f );
+    SW_EXPECT_FALSE( input.isKeyDown( sw::Key::W ) );
+    SW_EXPECT_FALSE( input.isKeyDown( sw::Key::Space ) );
+    SW_EXPECT_FALSE( input.wasKeyPressed( sw::Key::Space ) );
+    SW_EXPECT_FALSE( input.wasAnyInputPressed() );
+    SW_EXPECT_FALSE( gameMap.isActionDown( "Forward" ) );
+    SW_EXPECT_FALSE( gameMap.wasActionTriggered( "Jump" ) );
+    SW_EXPECT_FALSE( gameMap.wasActionTriggered( "AnyKey" ) );
+    SW_EXPECT_TRUE( shellMap.isActionDown( "ShellForward" ) );          // 셸 맵은 포커스를 무시한다
+    SW_EXPECT_TRUE( input.getKeyboard()->isKeyDown( sw::Key::Space ) ); // 장치 상태는 계속 갱신된다
+    input.endFrame();
+
+    input.setKeyboardFocus( sw::InputKeyboardFocus::Game );
+    runInputFrame( input, {} );
+    SW_EXPECT_TRUE( input.isKeyDown( sw::Key::W ) );      // 넘기기 전부터 눌려 있던 키
+    SW_EXPECT_FALSE( input.isKeyDown( sw::Key::Space ) ); // 넘긴 동안 눌린 키는 뗄 때까지 가린다
+    SW_EXPECT_TRUE( gameMap.isActionDown( "Forward" ) );
+    SW_EXPECT_FALSE( gameMap.wasActionTriggered( "Jump" ) );
+    input.endFrame();
+
+    runInputFrame( input, { sw::RawInputEvent::makeKeyUp( sw::Key::Space ) } );
+    SW_EXPECT_FALSE( input.wasKeyReleased( sw::Key::Space ) );
+    input.endFrame();
+
+    runInputFrame( input, { sw::RawInputEvent::makeKeyDown( sw::Key::Space ) } ); // 돌아온 뒤 새로 누르면 게임 것이다
+    SW_EXPECT_TRUE( input.wasKeyPressed( sw::Key::Space ) );
+    SW_EXPECT_TRUE( gameMap.wasActionTriggered( "Jump" ) );
+    input.endFrame();
+    input.shutdown();
+}
+
+/**
+ * @brief [InputManagerTest] 글자 입력은 키보드 포커스를 가진 쪽의 콜백에만 간다
+ */
+SW_TEST_CASE( InputManagerTest, TextInputGoesToFocusOwner )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    FocusTextRecorder recorder;
+    input.setTextInputCallback( SW_DELEGATE_METHOD( sw::InputManager::TextInputDelegate, &FocusTextRecorder::onGameText, &recorder ) );
+    input.setTextInputCallback( SW_DELEGATE_METHOD( sw::InputManager::TextInputDelegate, &FocusTextRecorder::onConsoleText, &recorder ), sw::InputKeyboardFocus::DevConsole );
+
+    runInputFrame( input, { sw::RawInputEvent::makeTextInput( "a" ) } );
+    input.endFrame();
+    input.setKeyboardFocus( sw::InputKeyboardFocus::DevConsole );
+    runInputFrame( input, { sw::RawInputEvent::makeTextInput( "b" ) } );
+    input.endFrame();
+    input.setKeyboardFocus( sw::InputKeyboardFocus::Game );
+    runInputFrame( input, { sw::RawInputEvent::makeTextInput( "c" ) } );
+    input.endFrame();
+
+    SW_EXPECT_STREQ( "ac", recorder._game.c_str() );
+    SW_EXPECT_STREQ( "b", recorder._console.c_str() );
+
+    input.setTextInputCallback( {} );
+    input.setTextInputCallback( {}, sw::InputKeyboardFocus::DevConsole );
     input.shutdown();
 }

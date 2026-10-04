@@ -1,8 +1,12 @@
 SWMODELIMPORT 1
-ad050db9bc9ae1c9 b20cb67da9a3813e flower_red_a.glb
-c9c5246d4866f2ae 38c9128d10275118 flower_yellow_a.glb
-ccd5a1c408e09ac3 9580247944934056 log.glb
-50ab49bf65bcd383 1bd37f231ccaa1ab plant_bush.glb
-6df8abcce5600738 4f86e18c1f78570a stump_round.glb
-b777941917a3da57 4d3f59d44b40841a tree_default.glb
-ea6f1fd63d721750 4a263d95bc2ade19 tree_default_fall.glb
+86acd62af5a773f9 24b91ab1ec3b12ee barrel.gltf
+c1d713a4f320b1d0 97eb9b0a19d21f12 brick_wall.gltf
+d08de80170bc8918 8286871e322828b8 crate_medium.glb
+e3d8473c581f3c24 b20cb67da9a3813e flower_red_a.glb
+939dcd0a99abec5b 38c9128d10275118 flower_yellow_a.glb
+aacfc4031f428b16 9580247944934056 log.glb
+be5882073941cbd6 1bd37f231ccaa1ab plant_bush.glb
+ab1270e6b554380d 4f86e18c1f78570a stump_round.glb
+bbb00eefdc359539 59010f8fb02a24d3 testhead.gltf
+07d2c377f248dcda 4d3f59d44b40841a tree_default.glb
+89d7589fe9324fe5 4a263d95bc2ade19 tree_default_fall.glb

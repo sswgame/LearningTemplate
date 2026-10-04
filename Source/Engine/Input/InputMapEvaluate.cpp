@@ -63,6 +63,7 @@ namespace sw
             bool    anyTriggered{ false };
             float32 maxHold{ 0.0f };
             float2  totalAccumValue{ 0.0f, 0.0f };
+            float2  relativeValue{ 0.0f, 0.0f }; ///< 마우스 이동량 — 묶지 않는다
 
             for ( size_t bindIndex = 0; bindIndex < bindCount; ++bindIndex )
             {
@@ -146,8 +147,9 @@ namespace sw
 
                 if ( bRawDown )
                 {
-                    totalAccumValue._x += bindingValue._x;
-                    totalAccumValue._y += bindingValue._y;
+                    float2& accumulator = binding._kind == BindingKind::MouseDelta2D ? relativeValue : totalAccumValue;
+                    accumulator._x += bindingValue._x;
+                    accumulator._y += bindingValue._y;
                 }
             }
 
@@ -158,28 +160,8 @@ namespace sw
             actionEntry._bTriggered   = anyTriggered ? SW_TRUE : SW_FALSE;
             actionEntry._holdDuration = maxHold;
 
-            // 모디파이어를 적용한다(축 반전, 클램핑 또는 원형 정규화)
-            if ( _bInvertX == SW_TRUE )
-                totalAccumValue._x = -totalAccumValue._x;
-            if ( _bInvertY == SW_TRUE )
-                totalAccumValue._y = -totalAccumValue._y;
-
-            if ( _digitalNormalization == DigitalNormalization::Circular )
-            {
-                const float32 lenSq = totalAccumValue._x * totalAccumValue._x + totalAccumValue._y * totalAccumValue._y;
-                if ( lenSq > 1.0f )
-                {
-                    const float32 invLen = 1.0f / MathUtil::sqrt( lenSq );
-                    totalAccumValue._x *= invLen;
-                    totalAccumValue._y *= invLen;
-                }
-            }
-            else
-            {
-                totalAccumValue._x = totalAccumValue._x < -1.0f ? -1.0f : ( totalAccumValue._x > 1.0f ? 1.0f : totalAccumValue._x );
-                totalAccumValue._y = totalAccumValue._y < -1.0f ? -1.0f : ( totalAccumValue._y > 1.0f ? 1.0f : totalAccumValue._y );
-            }
-            actionEntry._currentValue = totalAccumValue;
+            // 모디파이어를 적용한다(축 반전, 클램핑 또는 원형 정규화 — 마우스 이동량은 빼고).
+            actionEntry._currentValue = composeActionValue( totalAccumValue, relativeValue );
 
             // --------------------------------------------------------------------------
             // ActionPhase 상태 머신 전이
@@ -256,6 +238,70 @@ namespace sw
         }
     }
 
+    float2 InputMap::composeActionValue( const float2& bounded, const float2& relative ) const
+    {
+        float2 value = bounded;
+        if ( _bInvertX == SW_TRUE )
+            value._x = -value._x;
+        if ( _bInvertY == SW_TRUE )
+            value._y = -value._y;
+        if ( _digitalNormalization == DigitalNormalization::Circular )
+        {
+            const float32 lenSq = value._x * value._x + value._y * value._y;
+            if ( lenSq > 1.0f )
+            {
+                const float32 invLen = 1.0f / MathUtil::sqrt( lenSq );
+                value._x *= invLen;
+                value._y *= invLen;
+            }
+        }
+        else
+        {
+            value._x = MathUtil::clamp( value._x, -1.0f, 1.0f );
+            value._y = MathUtil::clamp( value._y, -1.0f, 1.0f );
+        }
+        return float2{ value._x + relative._x, value._y + relative._y };
+    }
+
+    bool InputMap::isKeyboardKeyDown( Key key ) const
+    {
+        if ( _pInput == nullptr )
+            return false;
+        if ( _bKeyboardFocusIgnored == SW_TRUE )
+            return _pInput->getKeyboard() != nullptr && _pInput->getKeyboard()->isKeyDown( key );
+        return _pInput->isKeyDown( key );
+    }
+
+    bool InputMap::wasKeyboardKeyPressed( Key key ) const
+    {
+        if ( _pInput == nullptr )
+            return false;
+        if ( _bKeyboardFocusIgnored == SW_TRUE )
+            return _pInput->getKeyboard() != nullptr && _pInput->getKeyboard()->wasKeyPressed( key );
+        return _pInput->wasKeyPressed( key );
+    }
+
+    bool InputMap::isSlotDown( const InputSlot& slot ) const
+    {
+        const IInputDevice* pDevice = _pInput != nullptr ? _pInput->getDevice( slot._deviceKind, slot._deviceIndex ) : nullptr;
+        if ( pDevice == nullptr )
+            return false;
+        // 키보드는 포커스를 따른다 — 개발 콘솔이 키보드를 쥔 동안 게임 맵의 키 바인딩은 "안 눌림" 이다.
+        if ( slot._deviceKind == InputDeviceKind::Keyboard && _bKeyboardFocusIgnored == SW_FALSE && _pInput->isKeyVisibleToGame( static_cast<Key>( slot._controlIndex ) ) == false )
+            return false;
+        return pDevice->isControlDown( slot._controlIndex );
+    }
+
+    bool InputMap::wasSlotPressed( const InputSlot& slot ) const
+    {
+        const IInputDevice* pDevice = _pInput != nullptr ? _pInput->getDevice( slot._deviceKind, slot._deviceIndex ) : nullptr;
+        if ( pDevice == nullptr )
+            return false;
+        if ( slot._deviceKind == InputDeviceKind::Keyboard && _bKeyboardFocusIgnored == SW_FALSE && _pInput->isKeyVisibleToGame( static_cast<Key>( slot._controlIndex ) ) == false )
+            return false;
+        return pDevice->wasControlPressed( slot._controlIndex );
+    }
+
     bool InputMap::evaluateBindingDown( const ActionBinding& binding, float2& outValue ) const
     {
         if ( _pInput == nullptr )
@@ -265,10 +311,9 @@ namespace sw
         {
             case BindingKind::SingleSlot:
             {
-                IInputDevice* pDevice = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
                 // isControlDown() 만 보면 같은 프레임 안에서 Down 과 Up 이 모두 처리된 순간 탭(예: 매크로 주입, 초고속 입력)을
                 // 놓친다. wasControlPressed() 를 함께 확인해 그 프레임에는 "눌렸었다" 로 취급한다.
-                if ( pDevice != nullptr && ( pDevice->isControlDown( binding._arrSlot[0]._controlIndex ) || pDevice->wasControlPressed( binding._arrSlot[0]._controlIndex ) ) )
+                if ( isSlotDown( binding._arrSlot[0] ) || wasSlotPressed( binding._arrSlot[0] ) )
                 {
                     if ( _bSuppressBaseActionOnChord == SW_TRUE && binding._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
                     {
@@ -276,8 +321,8 @@ namespace sw
                         const bool bIsModifierKey = ( key == Key::LeftControl || key == Key::RightControl || key == Key::LeftShift || key == Key::RightShift || key == Key::LeftAlt || key == Key::RightAlt || key == Key::LeftSuper || key == Key::RightSuper );
                         if ( bIsModifierKey == false )
                         {
-                            const bool bCtrlHeld = _pInput->isKeyDown( Key::LeftControl ) || _pInput->isKeyDown( Key::RightControl );
-                            const bool bAltHeld  = _pInput->isKeyDown( Key::LeftAlt ) || _pInput->isKeyDown( Key::RightAlt );
+                            const bool bCtrlHeld = isKeyboardKeyDown( Key::LeftControl ) || isKeyboardKeyDown( Key::RightControl );
+                            const bool bAltHeld  = isKeyboardKeyDown( Key::LeftAlt ) || isKeyboardKeyDown( Key::RightAlt );
                             if ( bCtrlHeld || bAltHeld )
                                 return false;
                         }
@@ -289,31 +334,24 @@ namespace sw
             }
             case BindingKind::Axis1DComposite:
             {
-                IInputDevice* pNegativeDevice = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
-                IInputDevice* pPosDev         = _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
-                float32       axisValue       = 0.0f;
-                if ( pNegativeDevice != nullptr && pNegativeDevice->isControlDown( binding._arrSlot[0]._controlIndex ) )
+                float32 axisValue = 0.0f;
+                if ( isSlotDown( binding._arrSlot[0] ) )
                     axisValue -= 1.0f;
-                if ( pPosDev != nullptr && pPosDev->isControlDown( binding._arrSlot[1]._controlIndex ) )
+                if ( isSlotDown( binding._arrSlot[1] ) )
                     axisValue += 1.0f;
                 outValue = float2{ axisValue, 0.0f };
                 return axisValue != 0.0f;
             }
             case BindingKind::Vector2DComposite:
             {
-                IInputDevice* pUpDev    = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
-                IInputDevice* pDownDev  = _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
-                IInputDevice* pLeftDev  = _pInput->getDevice( binding._arrSlot[2]._deviceKind, binding._arrSlot[2]._deviceIndex );
-                IInputDevice* pRightDev = _pInput->getDevice( binding._arrSlot[3]._deviceKind, binding._arrSlot[3]._deviceIndex );
-
                 float2 kbdVec{ 0.0f, 0.0f };
-                if ( pUpDev != nullptr && pUpDev->isControlDown( binding._arrSlot[0]._controlIndex ) )
+                if ( isSlotDown( binding._arrSlot[0] ) )
                     kbdVec._y += 1.0f;
-                if ( pDownDev != nullptr && pDownDev->isControlDown( binding._arrSlot[1]._controlIndex ) )
+                if ( isSlotDown( binding._arrSlot[1] ) )
                     kbdVec._y -= 1.0f;
-                if ( pLeftDev != nullptr && pLeftDev->isControlDown( binding._arrSlot[2]._controlIndex ) )
+                if ( isSlotDown( binding._arrSlot[2] ) )
                     kbdVec._x -= 1.0f;
-                if ( pRightDev != nullptr && pRightDev->isControlDown( binding._arrSlot[3]._controlIndex ) )
+                if ( isSlotDown( binding._arrSlot[3] ) )
                     kbdVec._x += 1.0f;
 
                 const float32 lenSq = kbdVec._x * kbdVec._x + kbdVec._y * kbdVec._y;
@@ -381,17 +419,10 @@ namespace sw
             }
             case BindingKind::Chord:
             {
-                IInputDevice* pModifierDevice = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
-                IInputDevice* pTriggerDevice  = _pInput->getDevice( binding._arrSlot[1]._deviceKind, binding._arrSlot[1]._deviceIndex );
-                if ( pModifierDevice != nullptr && pTriggerDevice != nullptr )
+                if ( isSlotDown( binding._arrSlot[0] ) && isSlotDown( binding._arrSlot[1] ) )
                 {
-                    const bool bModifierDown = pModifierDevice->isControlDown( binding._arrSlot[0]._controlIndex );
-                    const bool bTriggerDown  = pTriggerDevice->isControlDown( binding._arrSlot[1]._controlIndex );
-                    if ( bModifierDown && bTriggerDown )
-                    {
-                        outValue = float2{ 1.0f, 0.0f };
-                        return true;
-                    }
+                    outValue = float2{ 1.0f, 0.0f };
+                    return true;
                 }
                 return false;
             }
@@ -406,8 +437,7 @@ namespace sw
             }
             case BindingKind::VirtualJoystick2D:
             {
-                IInputDevice* pActivationDevice = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
-                const bool    bActivationDown   = pActivationDevice != nullptr && pActivationDevice->isControlDown( binding._arrSlot[0]._controlIndex );
+                const bool bActivationDown = isSlotDown( binding._arrSlot[0] );
 
                 if ( bActivationDown == false )
                 {
@@ -432,19 +462,18 @@ namespace sw
             {
                 bool bModifierMatch = true;
                 if ( ( binding._modifierMask & ModifierKey::Ctrl ) != 0 )
-                    bModifierMatch = bModifierMatch && ( _pInput->isKeyDown( Key::LeftControl ) || _pInput->isKeyDown( Key::RightControl ) );
+                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftControl ) || isKeyboardKeyDown( Key::RightControl ) );
                 if ( ( binding._modifierMask & ModifierKey::Shift ) != 0 )
-                    bModifierMatch = bModifierMatch && ( _pInput->isKeyDown( Key::LeftShift ) || _pInput->isKeyDown( Key::RightShift ) );
+                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftShift ) || isKeyboardKeyDown( Key::RightShift ) );
                 if ( ( binding._modifierMask & ModifierKey::Alt ) != 0 )
-                    bModifierMatch = bModifierMatch && ( _pInput->isKeyDown( Key::LeftAlt ) || _pInput->isKeyDown( Key::RightAlt ) );
+                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftAlt ) || isKeyboardKeyDown( Key::RightAlt ) );
                 if ( ( binding._modifierMask & ModifierKey::Super ) != 0 )
-                    bModifierMatch = bModifierMatch && ( _pInput->isKeyDown( Key::LeftSuper ) || _pInput->isKeyDown( Key::RightSuper ) );
+                    bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftSuper ) || isKeyboardKeyDown( Key::RightSuper ) );
 
                 if ( bModifierMatch == false )
                     return false;
 
-                IInputDevice* pDev = _pInput->getDevice( binding._arrSlot[0]._deviceKind, binding._arrSlot[0]._deviceIndex );
-                if ( pDev != nullptr && pDev->isControlDown( binding._arrSlot[0]._controlIndex ) )
+                if ( isSlotDown( binding._arrSlot[0] ) )
                 {
                     outValue = float2{ 1.0f, 0.0f };
                     return true;

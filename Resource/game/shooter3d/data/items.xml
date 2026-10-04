@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Shooter3D 의 장비 아이템(게임플레이 정의). 외형은 visual 이 가리키는 data/appearance/itemvisuals.xml 의 항목이다 — 아티스트는 이 파일을 건드리지 않는다.
-     recon_patch 는 정찰 세트를 모두 입어야 낀다(Requires) — 세트 한 조각을 벗으면 낀 채 숨긴다(breakPolicy="KeepHidden"). -->
+     블래스터 셋은 플레이어 무기(weapons.xml 의 rifle · shotgun · pistol)의 외형이다 — 무기를 바꾸면 MainHand 칸의 아이템이 바뀐다. -->
 <ItemCatalog>
-  <Item id="helmet_combat" name="Combat Helmet" category="Armor" slot="Head" visual="helmet_combat" tags="Armor.Light" durability="100"><Stats armor="2"/></Item>
-  <Item id="helmet_recon" name="Recon Helmet" category="Armor" slot="Head" visual="helmet_recon" tags="Armor.Light,Set.Recon"><Stats armor="3"/></Item>
-  <Item id="fatigues" name="Fatigues" category="Armor" slot="Body" visual="fatigues" tags="Cloth"/>
-  <Item id="vest_recon" name="Recon Vest" category="Armor" slot="Body" visual="vest_recon" tags="Armor.Medium,Set.Recon"><Stats armor="5"/></Item>
-  <Item id="vest_recon_f" name="Recon Vest" category="Armor" slot="Body" visual="vest_recon_f" tags="Armor.Medium,Set.Recon"><Stats armor="5"/></Item>
-  <Item id="boots_recon" name="Recon Boots" category="Armor" slot="Feet" visual="boots_recon" tags="Set.Recon"/>
-  <Item id="recon_patch" name="Recon Patch" category="Accessory" slot="Shoulder" visual="recon_patch" breakPolicy="KeepHidden"><Requires set="Recon"/></Item>
-  <Item id="backpack" name="Field Pack" category="Gear" slot="Back" visual="backpack"/>
-  <Item id="rifle_m4" name="M4 Rifle" category="Weapon" slot="Weapon" visual="rifle_m4" durability="100"/>
-  <Item id="pistol_m9" name="M9 Pistol" category="Weapon" slot="Sidearm" visual="pistol_m9"/>
+  <Item id="helmet_knight" name="Knight Helmet" category="Armor" slot="Head" visual="helmet_knight" tags="Armor.Heavy,Set.Knight"><Stats armor="3"/></Item>
+  <Item id="cape_rogue" name="Travel Cape" category="Armor" slot="Back" visual="cape_rogue" tags="Cloth,Set.Knight"/>
+  <Item id="shield_round" name="Round Shield" category="Armor" slot="Shield" visual="shield_round" tags="Armor.Light,Set.Knight"><Stats armor="2"/></Item>
+  <Item id="blaster_rifle" name="Assault Blaster" category="Weapon" slot="Weapon" visual="blaster_rifle"/>
+  <Item id="blaster_shotgun" name="Scatter Blaster" category="Weapon" slot="Weapon" visual="blaster_shotgun"/>
+  <Item id="blaster_pistol" name="Sidearm Blaster" category="Weapon" slot="Weapon" visual="blaster_pistol"/>
+  <Item id="helmet_skeleton" name="Rusted Helm" category="Armor" slot="Head" visual="helmet_skeleton" tags="Armor.Heavy"/>
+  <Item id="cape_skeleton" name="Tattered Cape" category="Armor" slot="Back" visual="cape_skeleton" tags="Cloth"/>
+  <Item id="shield_skeleton" name="Bone Shield" category="Armor" slot="Shield" visual="shield_skeleton" tags="Armor.Light"/>
+  <Item id="blade_skeleton" name="Notched Blade" category="Weapon" slot="Weapon" visual="blade_skeleton"/>
+  <Item id="axe_skeleton" name="Bone Axe" category="Weapon" slot="Weapon" visual="axe_skeleton"/>
 </ItemCatalog>

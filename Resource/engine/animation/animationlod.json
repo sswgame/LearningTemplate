@@ -1,0 +1,12 @@
+{
+    "rate_levels": [
+        { "min_screen_size": 0.25, "update_rate_divisor": 1, "interpolate": false },
+        { "min_screen_size": 0.10, "update_rate_divisor": 2, "interpolate": true },
+        { "min_screen_size": 0.04, "update_rate_divisor": 4, "interpolate": true },
+        { "min_screen_size": 0.0, "update_rate_divisor": 8, "interpolate": false }
+    ],
+    "offscreen_update_rate_divisor": 0,
+    "budget_milliseconds": 2.0,
+    "max_update_rate_divisor": 16,
+    "vertex_animation_screen_size": 0.05
+}

@@ -16,7 +16,7 @@
 | `GimmickCircuitComponent` | 씬 · 프리팹에 저장되는 회로. 노드마다 대상 오브젝트(핸들, 비면 소유자)에서 센서를 읽고 액추에이터를 건다 |
 | `GimmickSensorComponent` · `GimmickWeightComponent` | 대상 쪽 상태 — 겹친 것(태그 거르기) · 무게 · 피해 · 사용 · 신호 |
 | `GimmickDamageUtil` · `GimmickDamageEvent` | 기믹이 주는 피해의 한 길("game" 채널 + 대상 센서의 Damage — 폭발 사슬) |
-| `ElementRuleTable` · `ElementGrid` | 원소 상호작용 표(재질 깃발 · 상태 · 자극 · 걸음 규칙)와 그 표를 따르는 결정적 셀 자동자. 오브젝트 하나는 1 × 1 격자 |
+| `ElementRuleTable` · `ElementGrid` | 원소 상호작용 표(재질 깃발 · 상태 · 자극 · 걸음 규칙)와 그 표를 따르는 결정적 셀 자동자. 오브젝트 하나는 1 × 1 격자. 공유 표는 `findShared`(`GameDataCache` "ElementRuleTable" — 파일을 고치면 `ElementStatusComponent` 가 다음 틱에 새 표로 다시 짓는다) |
 | `WorldQuery`(`World/`) | 광선 · 시야. 서비스가 걸리면 그것, 없으면 씬의 강체 물리(Jolt · Box2D)와 `PhysicsWorld` AABB 폴백 중 가까운 것 |
 
 ## 내장 노드 종류
@@ -101,7 +101,7 @@ floodStatus + through), 걸음 규칙(`Expire` — 상태가 재질 수치만큼
 |------|--------|----------------|
 | 플랫포머 | movingplatform · crumbleplatform · onewayplatform · spring · conveyor · ladder · rope | `SplineComponent` + `Mover`, `CrumblePlatformComponent`, `OneWayPlatformComponent`(`isSolidFor`), `LaunchPadComponent`, `ConveyorComponent`, `ClimbZoneComponent`(`findClimbZone`) |
 | 어드벤처 | pushblock · floorswitch · lever · lockeddoor · torch | `PushBlockComponent`(칸 단위, 막히면 서고 Push 상호작용으로 민다), 센서만(레벨 회로가 배선), `Unlock` → `Latch` → `Door`, `ElementStatusComponent`(원소표의 1 × 1 칸) + `Signal` → `Light` |
-| 슈터 | explosivebarrel · jumppad · keycarddoor · turret · destructiblecover | `ExplosiveBarrelComponent`(사슬), `LaunchPadComponent`, `SwipeKeycard` → `Pulse` → `Door`, `TurretComponent`(고르기 · 시야 · 회전 · 히트스캔), `DestructibleComponent`(단계 · 파괴 훅) + 엄폐 스마트 오브젝트 |
+| 슈터 | explosivebarrel · jumppad · keycarddoor · turret · destructiblecover | `ExplosiveBarrelComponent`(사슬 — 반경에 닿은 파괴 오브젝트를 그 자리에서 깬다, `_fuseTime` 이 있으면 플레이 시작부터 그만큼 지나 스스로 터진다), `LaunchPadComponent`, `SwipeKeycard` → `Pulse` → `Door`, `TurretComponent`(고르기 · 시야 · 회전 · 히트스캔), `DestructibleComponent`(단계 · 파괴 훅 — 파괴 컴포넌트가 있으면 단계마다 깎고 마지막에 조각으로) + 엄폐 스마트 오브젝트 |
 | 레이싱 | boostpad · itembox | `BoostPadComponent`(`GimmickBoostEvent`), `ItemBoxComponent`(씨앗 + 연 횟수 가중치 뽑기, 숨었다 되살아남) |
 | 공포 | scaretrigger · flickerlight · hidingspot | `ScareTriggerComponent`(연출 신호 · 소리, 한 번), `FlickerLightComponent`(퀘이크 빛 스타일 문자열), `HidingSpotComponent`(스마트 오브젝트 자리 + `State.Hidden`) |
 | 잠입 | squeakyfloor | `NoiseEmitterComponent`(올라서면 · 주기 · 직접 — `GimmickNoiseEvent`, `AiStimulus::_noiseRadius`), `LightExposure::computeExposure`(점 · 스폿 · 방향광, 가림) |
@@ -117,3 +117,7 @@ floodStatus + through), 걸음 규칙(`Expire` — 상태가 재질 수치만큼
 - 이벤트("game" 채널): `GimmickLaunchEvent` · `GimmickBoostEvent` · `GimmickItemEvent` · `GimmickCueEvent`(연출 이름 — Scare · Explosion · Stage · Destroyed) ·
   `GimmickNoiseEvent` · `GimmickDamageEvent`. 받는 쪽(이동 몸 · 차량 · 인벤토리 · 카메라 · 오디오)은 게임 · 키트입니다.
 - 프리팹의 콜라이더는 지금 `BoxCollider2DComponent`(트리거 겹침 폴백)입니다. 3D 물리 백엔드가 들어오면 3D 트리거 · 강체 콜라이더로 바꿉니다.
+- **파괴(`Engine/Destruction`)와 잇기.** 오브젝트에 파괴 컴포넌트(`FractureComponent` · 2D `Fracture2DComponent`)가 있고 파쇄 데이터가 있으면 몸을 끄는 대신 조각으로
+  부서집니다. 폭발 드럼통은 반경이 경계에 닿은 파괴 오브젝트(자기 포함)에 자리 있는 폭발(`applyRadialDamageAtWorld` — 중심 변형 `_fractureStrain`, 충격량
+  `_blastImpulse`)을 주므로 사슬 폭발이 근처 벽 · 상자를 그 자리에서 깹니다. 엄폐물(`DestructibleComponent`)은 단계마다 중심에 `_stageStrain` × 단계 비율로
+  조각을 깎고 마지막 단계에 `_shatterStrain` 으로 부숩니다(단계 · 신호 · 연출은 그대로). 시험: `GimmickFractureTest`(`Test/EngineTest/TestGimmickFracture.cpp`).

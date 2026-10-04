@@ -49,6 +49,8 @@ Object/
 │  └─ ObjectValidation.*        # 컴포넌트의 리플렉션 검증 함수(`Validate = fn`)를 돌려 ValidationIssueLog 에 둔다 — 로드(묶음 끝) · 글 저장 · 인스펙터 편집
 ├─ Animation/          # AnimationSystem — 애니메이션 유닛(SkeletalMeshComponent)을 의존 레벨 · 단계(시간 → 기본 포즈 → 부착 → 후처리 → 팔레트)로 평가.
 │                      #   매니저가 소유하고 tick 의 한 단계(틱 뒤 · 트랜스폼 플러시 앞)에서 부른다. 단계 안은 engine::runParallel
+│                      #   AnimationLod — 뷰(절두체들) 가시성 · 화면 크기 → 갱신 주기(URO) · 보간 · 본 LOD · 예산 배분(평가 앞, 게임 스레드)
+│                      #   AnimationCrowd — 군중 포즈 공유: 같은 상태 · 위상 칸의 유닛이 묶음 하나의 포즈 · 메시를 나누고, 먼 유닛은 VAT
 ├─ Component/           # 기반 Component + 엔진 기본 컴포넌트
 │  ├─ Component.h
 │  ├─ SceneComponent.*  # 트랜스폼·부모/자식 (값은 아래 저장소의 칸에 있다)
@@ -58,7 +60,8 @@ Object/
 │  ├─ TagSystem.*       # TagContainer · TagQuery (`TagID` 자체는 Core/String/TagID.h)
 │  ├─ Audio/            # 리스너 · 에미터 · 앰비언트(점 · 상자 · 구) · 리버브 존 컴포넌트, 물리 레이캐스트 가림 질의(틱하지 않고 SceneAudio 에 등록)
 │  └─ 2D/ · 3D/         # Sprite, Mesh, Collider, 빛(`LightComponent` 기반 — 색 · 세기 · 방향 규약 · 등록),
-│                       #   SkeletalMeshComponent(유닛 — 스켈레톤 · 포즈 · 팔레트 · 스킨드 메시) · SkeletalAnimatorComponent(그래프 · 레이어 · 루트 모션) · PoseRetargetComponent(다른 유닛 포즈를 리타깃) 등
+│                       #   SkeletalMeshComponent(유닛 — 스켈레톤 · 포즈 · 팔레트 · 스킨드 메시 · 모프 가중치) · SkeletalAnimatorComponent(그래프 · 레이어 · 루트 모션) ·
+│                       #   FacialAnimationComponent(표정 · 립싱크 · 깜빡임 · 시선 — 유닛의 후처리 일) · PoseRetargetComponent(다른 유닛 포즈를 리타깃) 등
 └─ Prefab/             # PrefabAsset(로드 · 저장 · 스폰) · PrefabCache(프리팹 에셋 캐시, `PrefabAsset.h`) · PrefabOverrides(인스턴스 차이 뽑기 · 다시 얹기)
 ```
 

@@ -116,7 +116,8 @@ namespace sw
     {
         if ( deltaTime <= 0.0f )
             return;
-        _cooldown      = MathUtil::max( 0.0f, _cooldown - deltaTime );
+        // 이번 프레임 안에서 준비된 총만 0 아래로 내려가 늦은 몫을 든다. 이미 준비돼 있던 총(쉬는 중)은 0 에 머문다 — 쉰 시간을 다음 발로 잇지 않는다.
+        _cooldown      = _cooldown > 0.0f ? _cooldown - deltaTime : 0.0f;
         _currentSpread = MathUtil::max( _def._minSpread, _currentSpread - _def._spreadRecovery * deltaTime );
 
         if ( _reloadRemaining > 0.0f )
@@ -153,7 +154,8 @@ namespace sw
         }
 
         --_magazineAmmo;
-        _cooldown                   = _def._fireInterval;
+        // 늦은 몫을 다음 간격에서 뺀다(연사가 fps 에 매이지 않는다). 몫은 한 간격까지만 — 결과가 0 이상이라 한 번 당기면 한 발이다.
+        _cooldown                   = MathUtil::max( _cooldown, -_def._fireInterval ) + _def._fireInterval;
         const float32 coneHalfAngle = _currentSpread * WeaponInternal::kDegreeToRadian;
         for ( int32 pelletIndex = 0; pelletIndex < _def._pelletCount; ++pelletIndex )
         {

@@ -63,12 +63,15 @@ namespace sw
     public:
         explicit SkeletalAnimatorBinding( SkeletalAnimatorComponent& owner );
 
-        bool                 isAnimationActive() const override;
-        void                 runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        AnimPlayer*          findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
-        void                 finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void                 onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
-        const IAnimPlayable* findPlayable( const hashed_string& name ) const override;
+        bool                       isAnimationActive() const override;
+        void                       runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
+        AnimPlayer*                findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
+        void                       finishAnimationFrame( SkeletalMeshComponent& unit ) override;
+        void                       onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        bool                       describeSharedPose( AnimSharedPoseRequest& outRequest ) const override;
+        shared_ptr<const AnimClip> findSharedPoseClip( const AnimClip* pClip ) const override;
+        const IAnimPlayable*       findPlayable( const hashed_string& name ) const override;
+        void                       collectDebugState( AnimationDebugState& inoutState ) const override;
 
     private:
         SkeletalAnimatorComponent& _owner;
@@ -113,6 +116,8 @@ namespace sw
         const string& getClipFolder() const { return _clipFolder; }
         /** @brief 시작 상태를 바꿉니다(다음 시작부터). */
         void setInitialState( string_view stateName ) { _initialState = string{ stateName }; }
+        /** @brief 시작 상태를 이 시각(초)부터 재생합니다(다음 시작부터 — 군중이 모두 같은 프레임으로 시작하지 않게). */
+        void setInitialTime( float32 seconds ) { _initialTime = seconds > 0.0f ? seconds : 0.0f; }
         /** @brief 그래프 경로를 바꾸고 다시 읽습니다. */
         void setAnimGraphPath( string_view path );
         /** @brief 클립을 미리 읽어 둡니다(게임 스레드). 워커의 전이는 읽어 둔 클립만 찾습니다. */
@@ -172,6 +177,11 @@ namespace sw
         bool isAnimationActive() const;
         /** @brief 이름의 클립입니다(미리 읽어 둔 것만). 없으면 nullptr 입니다. */
         const AnimClip* findClip( const hashed_string& name ) const;
+        /**
+         * @brief 이번 프레임 포즈를 군중 묶음과 나눌 수 있으면 요청을 채웁니다 — 반복 클립 하나를 섞기 · 레이어 · 시퀀서 덮어쓰기 없이 재생 중일 때입니다.
+         * @details 시간 · 상태 기계 · 알림 · 루트 모션 · 커브는 나눠도 이 애니메이터가 계속 돌립니다(시간 단계). 나누는 것은 포즈뿐입니다.
+         */
+        bool describeSharedPose( AnimSharedPoseRequest& outRequest ) const;
         /** @brief 유닛 · 상태 기계에 보이는 얼굴입니다. */
         SkeletalAnimatorBinding& getBinding() { return _binding; }
 
@@ -193,8 +203,11 @@ namespace sw
         void loadGraph();
         /** @brief 클립의 트랙 → 본 표입니다(유닛 스켈레톤 기준, 처음 쓸 때 짓습니다). */
         const vector<int32>& getTrackMap( const AnimClip& clip, const Skeleton& skeleton );
-        /** @brief 클립을 @p time 에 샘플해 @p inoutPose(레퍼런스로 시작한 본 포즈)에 씁니다. */
-        void sampleClipIntoPose( const AnimClip& clip, float32 time, const Skeleton& skeleton, Pose& inoutPose );
+        /**
+         * @brief 클립을 @p time 에 샘플해 @p inoutPose(레퍼런스로 시작한 본 포즈)에 씁니다.
+         * @param pBoneMask 본 LOD 마스크(본 수, 0 = 풀지 않고 레퍼런스로 둔다). nullptr 이면 모든 본입니다.
+         */
+        void sampleClipIntoPose( const AnimClip& clip, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask = nullptr );
         /** @brief 레이어의 본 마스크를 스켈레톤에 맞춥니다. */
         void refreshLayerMask( LayerState& layer, const Skeleton& skeleton );
         /** @brief 시간 단계입니다. */
@@ -243,6 +256,9 @@ namespace sw
         Pose                                                     _scratchPose;
         Pose                                                     _scratchTrackPose;
         Pose                                                     _scratchLayerPose;
+        vector<uint8>                                            _listScratchTrackMask; ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
+        Pose                                                     _lastBasePose;         ///< 지난 기본 포즈(레이어 전) — 페이드가 끊기면 여기서 이어 섞는다
+        Pose                                                     _carryOverPose;        ///< 끊긴 순간의 포즈 — 새 페이드 길이 동안 지금 포즈로 섞여 사라진다
         shared_ptr<const AnimClip>                               _sequencerClip;
         BoneTransform                                            _rootMotionDelta;
         SkeletalMeshComponent*                                   _pUnit;
@@ -250,6 +266,10 @@ namespace sw
         float32                                                  _lastDeltaSeconds; ///< 마지막 시간 단계의 걸음(배율 적용)
         float32                                                  _sequencerTime;
         float32                                                  _sequencerWeight;
+        float32                                                  _initialTime; ///< 시작 상태의 첫 시각(초, 저장하지 않는 런타임 값)
+        float32                                                  _carryOverElapsed;
+        float32                                                  _carryOverDuration;
+        uint32                                                   _seenInterruptCount; ///< 플레이어의 끊긴 수를 마지막으로 본 값
         PROPERTY( Category = "Animation", DisplayName = "Extract Root Motion", Tooltip = "Move the object by the clip's root motion track" )
         uint8 _bExtractRootMotion : 1;
         PROPERTY( Category = "Animation", DisplayName = "Play On Begin", Tooltip = "Start the initial state at begin play" )
@@ -257,6 +277,8 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Root Motion Through Controller",
                   Tooltip = "Move by root motion through the sibling character controller (collides, climbs steps) instead of writing the transform" )
         uint8                  _bRootMotionThroughController : 1;
-        [[maybe_unused]] uint8 _reserved                     : 5;
+        uint8                  _bLastBasePoseValid           : 1;
+        uint8                  _bCarryingOver                : 1;
+        [[maybe_unused]] uint8 _reserved                     : 3;
     };
 } // namespace sw

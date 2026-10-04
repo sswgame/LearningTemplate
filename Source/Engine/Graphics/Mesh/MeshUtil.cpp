@@ -2,13 +2,12 @@
 
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 
-#include "Core/Concurrency/mutex.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Resource/WeakInternCache.h"
 
 namespace sw
 {
@@ -157,6 +156,21 @@ namespace sw
             pushTriangle( outList, sideLower0, sideUpper0, sideLower1 );
             pushTriangle( outList, sideLower1, sideUpper0, sideUpper1 );
         }
+
+        struct MeshUtilInternal
+        {
+            using PrimitiveCache = WeakInternCache<hashed_string, Mesh>;
+
+            /** @brief 기준 이름(`canonicalPrimitiveIdVal`)으로 흰색 도형을 짓습니다. */
+            static shared_ptr<Mesh> createSharedPrimitive( const hashed_string& canonicalId ) { return MeshUtil::createPrimitive( canonicalId.c_str() ); }
+
+            /** @brief 내장 도형 표입니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않는다). */
+            static PrimitiveCache& getPrimitiveCache()
+            {
+                static PrimitiveCache s_cache{ "PrimitiveMesh" };
+                return s_cache;
+            }
+        };
     } // namespace
 
     shared_ptr<Mesh> MeshUtil::createUnitCube()
@@ -290,23 +304,12 @@ namespace sw
 
         // 캐시는 **약한 참조**다. 소유는 쓰는 쪽에 있고, 마지막 사용자가 놓으면 메시도 같이 사라진다.
         // 그래서 디바이스가 내려갈 때 이 표가 붙들고 있는 GPU 자원이 없다.
-        static mutex                                        s_mutexPrimitive;
-        static unordered_map<hashed_string, weak_ptr<Mesh>> s_mapPrimitive;
+        return MeshUtilInternal::getPrimitiveCache().acquire( hashed_string( pCanonical ), &MeshUtilInternal::createSharedPrimitive );
+    }
 
-        const hashed_string key( pCanonical );
-
-        std::scoped_lock<mutex> lock{ s_mutexPrimitive };
-        auto                    iter = s_mapPrimitive.find( key );
-        if ( iter != s_mapPrimitive.end() )
-        {
-            if ( shared_ptr<Mesh> pShared = iter->second.lock() )
-                return pShared;
-        }
-
-        shared_ptr<Mesh> pMesh = createPrimitive( meshId );
-        if ( pMesh != nullptr )
-            s_mapPrimitive[key] = pMesh;
-        return pMesh;
+    IAssetCache& MeshUtil::getPrimitiveCache()
+    {
+        return MeshUtilInternal::getPrimitiveCache();
     }
 
     shared_ptr<Mesh> MeshUtil::createSphere( uint32 stackCount, uint32 sliceCount )

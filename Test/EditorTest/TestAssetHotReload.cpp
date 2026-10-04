@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Workspace/AssetHotReload.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
@@ -16,6 +17,41 @@
 #include "TestFramework/TestFramework.h"
 
 // AssetHotReloadTest — 에디터 핫 리로드의 씬 알림(누가 그 에셋을 쓰는지 리플렉션으로 찾는다).
+
+namespace
+{
+    /** @brief 이름을 에디터가 모르는 모듈 캐시 흉내 — 한 경로만 들고 있다. */
+    class HeldPathProbeCache final : public sw::IAssetCache
+    {
+    public:
+        const utf8* getAssetKindName() const override { return "HeldPathProbe"; }
+        bool        isCached( sw::string_view relativePath ) const override { return relativePath == "data/held.interactions.xml"; }
+        void        reload( sw::string_view, sw::IRHIDevice* ) override { ++_reloadCount; }
+        size_t      getCachedCount() const override { return 1u; }
+        void        clear() override {}
+
+        uint32 _reloadCount{ 0 };
+    };
+} // namespace
+
+/**
+ * @brief [AssetHotReloadTest] 모듈이 올린 데이터 표(상호작용 · 원소 규칙)는 이름 대신 그 경로를 든 캐시가 다시 읽는다
+ * @details 에디터는 GameFramework 를 몰라 캐시 이름을 표에 적을 수 없다. 표 줄은 "그 경로를 든 캐시 모두" 를 뜻하고, 감시 목록에도 든다.
+ */
+SW_TEST_CASE( AssetHotReloadTest, ModuleDataTableReloadsInTheCacheHoldingItsPath )
+{
+    const sw::editor::AssetReloadRoute route = sw::editor::EditorAssetTypeRegistry::findReloadRoute( "data/held.interactions.xml" );
+    SW_ASSERT_NOT_NULL( route._pCacheKindName );
+    SW_EXPECT_TRUE( sw::string_view( route._pCacheKindName ).empty() );
+
+    sw::AssetManager   resources;
+    HeldPathProbeCache probe;
+    resources.registerAssetCache( &probe );
+    SW_EXPECT_EQUAL( 1u, sw::editor::AssetHotReload::reloadInCachesHolding( resources, "data/held.interactions.xml", nullptr ) );
+    SW_EXPECT_EQUAL( 0u, sw::editor::AssetHotReload::reloadInCachesHolding( resources, "data/other.interactions.xml", nullptr ) );
+    SW_EXPECT_EQUAL( 1u, probe._reloadCount );
+    resources.unregisterAssetCache( &probe );
+}
 /**
  * @brief [AssetHotReloadTest] 다시 읽은 에셋은 그 경로를 에셋 경로 프로퍼티로 든 컴포넌트에만 `onPropertyChanged` 로 알려진다
  * @details 컴포넌트에는 리로드 전용 코드가 없다 — 에디터가 `PROPERTY( AssetPath )` 값을 보고 인스펙터 편집과 같은 알림을 보낸다.

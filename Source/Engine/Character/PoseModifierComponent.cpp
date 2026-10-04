@@ -668,5 +668,12 @@ namespace sw
             _instance.setExternalTarget( targetIndex, value );
         }
         _instance.evaluate( unit.getLocalPose(), unit.getSkeleton().getParentIndices(), _worldFromModel );
+        // 포즈 구동의 보정 모프 — 이름이 그리는 메시의 모프 타깃과 같으면 그 가중치에 더한다(GPU 모프 풀이 스키닝 앞에 건다). 기본 포즈 단계가 비운 뒤다.
+        for ( const RigMorphWeight& morph : _instance.getMorphWeights() )
+        {
+            const int32 targetIndex = unit.findMorphTargetIndex( morph._name );
+            if ( targetIndex >= 0 )
+                unit.addMorphWeight( static_cast<uint32>( targetIndex ), morph._weight );
+        }
     }
 } // namespace sw

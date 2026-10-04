@@ -63,7 +63,6 @@ namespace sw
          * @brief 처치 보상입니다(보상 이름 → 수량).
          * @details 보상 종류를 코드가 정하지 않습니다 — 소울 · 탄약 · 파편을 주는 게임도 이 킷을 씁니다.
          *          `<Drop exp="10" gold="5" souls="3"/>` 처럼 **속성 이름이 곧 보상 이름**입니다.
-         *          같은 프레임워크의 RuntimeHud 가 게이지를 이름 맵으로 다루는 것과 같은 방식입니다.
          */
         unordered_map<hashed_string, int32> _mapDrop{};
 

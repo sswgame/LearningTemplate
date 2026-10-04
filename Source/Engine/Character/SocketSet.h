@@ -24,6 +24,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     struct CharacterBoneArray;
@@ -63,6 +65,7 @@ namespace sw
 namespace sw
 {
     /** @brief 소켓이 무엇을 따라 움직이는가입니다. */
+    ENUM()
     enum class SocketAnchor : uint8
     {
         Bone = 0, ///< 부모 본(또는 뿌리)을 따른다 — 본 비율 보정(`BoneProportion`)이 그대로 옮긴다

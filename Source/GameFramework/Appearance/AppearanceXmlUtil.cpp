@@ -6,6 +6,7 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Utility/Xml/XmlNameCheck.h"
 
 #include "GameFramework/Appearance/AppearanceTypes.h"
 #include "GameFramework/Data/GameDataXml.h"
@@ -44,21 +45,12 @@ namespace sw
 
     bool AppearanceXmlUtil::reportUnknownAttributes( const XmlNode& node, const utf8* const* ppKnownName, uint32 knownCount, AppearanceLoadReport& report, string_view sourceName )
     {
-        bool bAllKnown = true;
-        for ( XmlAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-        {
-            bool bKnown = false;
-            for ( uint32 index = 0; index < knownCount && bKnown == false; ++index )
-            {
-                bKnown = StringUtil::equals( attribute.getName(), ppKnownName[index], true );
-            }
-            if ( bKnown == false )
-            {
-                report.addError( "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), attribute.getName() );
-                bAllKnown = false;
-            }
-        }
-        return bAllKnown;
+        vector<const utf8*> listUnknown;
+        if ( XmlNameCheck::collectUnknownAttributes( node, ppKnownName, knownCount, listUnknown ) == 0 )
+            return true;
+        for ( const utf8* pName : listUnknown )
+            report.addError( "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), pName );
+        return false;
     }
 
     void AppearanceXmlUtil::reportUnknownChild( const XmlNode& parent, const XmlNode& child, AppearanceLoadReport& report, string_view sourceName )

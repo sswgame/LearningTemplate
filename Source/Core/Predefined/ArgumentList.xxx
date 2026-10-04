@@ -47,6 +47,8 @@ SW_REGISTER_ARGUMENT( CHECK_TEXTURES, false, false, "check-textures" )
 // 모델 원본(`models_raw/` 의 glTF)을 `.mesh` 로 임포트한다 · 원본과 `.mesh` 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
 SW_REGISTER_ARGUMENT( IMPORT_MODELS, false, false, "import-models" )
 SW_REGISTER_ARGUMENT( CHECK_MODELS, false, false, "check-models" )
+// 음성(`voice/` 폴더의 .wav · .ogg)을 분석해 곁에 비즘 트랙(`.visemes.json`)을 쓴다 — 립싱크 오프라인 분석(엔진 일, 헤드리스).
+SW_REGISTER_ARGUMENT( IMPORT_LIPSYNC, false, false, "import-lipsync" )
 // 리타깃 굽기 — 값은 `<프로필 *.retarget.json>,<원본 .animclip>,<출력 .animclip>`. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 굽고 끝낸다(헤드리스).
 SW_REGISTER_ARGUMENT( BAKE_RETARGET, "", false, "bake-retarget" )
 // 프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits).

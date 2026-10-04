@@ -31,6 +31,7 @@ namespace sw
         , _blendMode{ RHIBlendMode::Opaque }
         , _gpuSpinSeed{ 0 }
         , _spriteInstanceData{}
+        , _vertexAnimationPhase{ 0.0f }
         , _sortKey{ 0 }
         , _pPrimitiveRegistry{ nullptr }
         , _primitiveIndex{ kInvalidPrimitiveIndex }
@@ -247,6 +248,14 @@ namespace sw
     void MeshComponent::setGpuSpinSeed( uint32 seed )
     {
         _gpuSpinSeed = seed;
+        markRenderStateDirty();
+    }
+
+    void MeshComponent::setVertexAnimationPhase( float32 phaseSeconds )
+    {
+        if ( Memory::compare( &_vertexAnimationPhase, &phaseSeconds, sizeof( phaseSeconds ) ) == 0 )
+            return;
+        _vertexAnimationPhase = phaseSeconds;
         markRenderStateDirty();
     }
 
