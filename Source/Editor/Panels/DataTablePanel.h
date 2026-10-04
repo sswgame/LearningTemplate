@@ -1,6 +1,6 @@
 /**
  * @file DataTablePanel.h
- * @brief 다국어 로컬라이제이션 테이블 및 게임 XML 데이터 테이블 편집기 패널
+ * @brief 로컬라이제이션 프로젝트 표(원문 · 문화권 번역 · 낡음/검토 상태) 및 게임 XML 데이터 테이블 편집기 패널
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -16,7 +16,9 @@ namespace sw::editor
 {
     /**
      * @class DataTablePanel
-     * @brief 로컬라이제이션 JSON 파일(ko_KR, en_US, ja_JP)과 데이터 XML 파일을 실시간으로 살펴보고 편집 · 저장하는 에디터 창입니다.
+     * @brief 로컬라이제이션 프로젝트(엔진 · 게임)의 원문 표와 문화권 번역을 한 표로 편집하고, 데이터 XML 파일을 살펴보고 편집 · 저장하는 에디터 창입니다.
+     * @details 번역 칸의 색이 상태입니다 — 주황은 원문이 바뀐 뒤의 번역(낡음), 노랑은 검토 표시, 빨강 테두리 글은 최대 길이를 넘은 번역입니다.
+     *          저장하면 실행 중인 게임이 그 프로젝트를 다시 읽습니다.
      */
     class DataTablePanel : public IEditorPanel
     {
@@ -44,6 +46,8 @@ namespace sw::editor
         void drawLocalizationToolbar();
         /** @brief 로컬라이즈 레코드 표를 그립니다. */
         void drawLocalizationTable();
+        /** @brief 번역 칸 하나를 상태 색 · 길이 경고 · 맥락 툴팁과 함께 그립니다. 고쳤으면 true 입니다. */
+        bool drawTranslationCell( LocalizationRecord& record, size_t cultureIndex );
         void drawGameDataTab();
 
         void reloadLocalization();
@@ -61,7 +65,8 @@ namespace sw::editor
     private:
         fixed_string<constant::kMaxBuffer128> _localizationFilter;
         fixed_string<constant::kMaxBuffer128> _newKeyBuffer;
-        vector<LocalizationRecord>            _listLocalizationRecord;
+        LocalizationSheet                     _localizationSheet;
+        vector<string>                        _listLocalizationProject;
         /** @brief 이번 프레임에 보일 행의 인덱스입니다. 프레임마다 지우고 다시 채우는 재사용 버퍼입니다. */
         vector<size_t>            _listVisibleLocalizationIndex;
         vector<GameDataFileEntry> _listGameDataFile;
@@ -70,6 +75,7 @@ namespace sw::editor
         EditorLocalizationLoadJob _localizationJob;
         EditorGameDataScanJob     _gameDataJob;
         int32                     _selectedGameDataIndex;
+        int32                     _selectedProjectIndex;
         uint8                     _bLocalizationLoaded : 1;
         uint8                     _bGameDataLoaded     : 1;
         uint8                     _bLocalizationDirty  : 1;

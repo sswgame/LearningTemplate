@@ -1,0 +1,69 @@
+{
+    "culture": "ko",
+    "entries": {
+        "Assault Rifle": {
+            "text": "돌격 소총",
+            "sourceHash": "67220abc0f738d9a"
+        },
+        "Combat Helmet": {
+            "text": "전투 헬멧",
+            "sourceHash": "2303b7804f9dfe66"
+        },
+        "Fatigues": {
+            "text": "전투복",
+            "sourceHash": "728d81eb958c7a97"
+        },
+        "Field Pack": {
+            "text": "야전 배낭",
+            "sourceHash": "87f6d035c0554860"
+        },
+        "M4 Rifle": {
+            "text": "M4 소총",
+            "sourceHash": "6b94badaba2bc352"
+        },
+        "M9 Pistol": {
+            "text": "M9 권총",
+            "sourceHash": "8925941681912d42"
+        },
+        "Pistol": {
+            "text": "권총",
+            "sourceHash": "9fbfefa835da8476"
+        },
+        "Pump Shotgun": {
+            "text": "펌프 산탄총",
+            "sourceHash": "91f761c37c27a1e1"
+        },
+        "Recon Boots": {
+            "text": "정찰 부츠",
+            "sourceHash": "e17ce5e4e40da5bd"
+        },
+        "Recon Helmet": {
+            "text": "정찰 헬멧",
+            "sourceHash": "aa322a7503e1b319"
+        },
+        "Recon Patch": {
+            "text": "정찰 패치",
+            "sourceHash": "3d9d11178db5593a"
+        },
+        "Recon Vest": {
+            "text": "정찰 조끼",
+            "sourceHash": "f24c27b3472a97e6"
+        },
+        "settings.gameplay.difficulty": {
+            "text": "난이도",
+            "sourceHash": "c43eabc5a66b8450"
+        },
+        "settings.gameplay.difficulty.easy": {
+            "text": "쉬움",
+            "sourceHash": "483d9e6c1ccd1f9b"
+        },
+        "settings.gameplay.difficulty.hard": {
+            "text": "어려움",
+            "sourceHash": "58c7b5d87587287c"
+        },
+        "settings.gameplay.difficulty.normal": {
+            "text": "보통",
+            "sourceHash": "9ff3121d30f88d52"
+        }
+    }
+}

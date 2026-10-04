@@ -5,8 +5,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
+
 #include "GameFramework/Data/GameSettings.h"
-#include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
 
@@ -40,8 +42,7 @@ namespace sw
         _phase                         = BattlePhase::Intro;
         _phaseTimer                    = 0.55f;
         _bPlayerWon                    = SW_FALSE;
-        formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.wild_appeared", "A wild %# appeared!" ),
-                      _foe._nickname.c_str() );
+        setStatusText( SW_LOCFORMAT( "battle", "wild_appeared", "A wild {name} appeared!", TextArgumentList().addText( "name", _foe._nickname ) ) );
         SW_LOG_TRACE( "%#", _statusText.c_str() );
         const GameSettings* pGameSettings = game::getService<GameSettings>();
         if ( pGameSettings != nullptr )
@@ -67,7 +68,7 @@ namespace sw
         if ( _phase == BattlePhase::Intro )
         {
             _phase = BattlePhase::PlayerChoice;
-            formatstring( _statusText.data(), _statusText.capacity(), "%#", GameStrings::get( "battle.prompt_fight", "Fight: 1/2 moves, Enter=Move0, Esc=Run" ) );
+            setStatusText( SW_LOCTEXT( "battle", "prompt_fight", "Fight: 1/2 moves, Enter=Move0, Esc=Run" ) );
             SW_LOG_TRACE( "%#", _statusText.c_str() );
         }
         else if ( _phase == BattlePhase::ResolvePlayer )
@@ -76,8 +77,7 @@ namespace sw
             {
                 _bPlayerWon = SW_TRUE;
                 _player._exp += 10;
-                formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.foe_fainted", "%# fainted! You won!" ),
-                              _foe._nickname.c_str() );
+                setStatusText( SW_LOCFORMAT( "battle", "foe_fainted", "{name} fainted! You won!", TextArgumentList().addText( "name", _foe._nickname ) ) );
                 _phase      = BattlePhase::Ended;
                 _phaseTimer = 0.4f;
                 SW_LOG_TRACE( "%#", _statusText.c_str() );
@@ -92,16 +92,14 @@ namespace sw
             if ( _player._hp <= 0 )
             {
                 _bPlayerWon = SW_FALSE;
-                formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.player_fainted", "%# fainted..." ),
-                              _player._nickname.c_str() );
+                setStatusText( SW_LOCFORMAT( "battle", "player_fainted", "{name} fainted...", TextArgumentList().addText( "name", _player._nickname ) ) );
                 _phase      = BattlePhase::Ended;
                 _phaseTimer = 0.4f;
                 SW_LOG_TRACE( "%#", _statusText.c_str() );
                 return;
             }
             _phase = BattlePhase::PlayerChoice;
-            formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.what_will", "What will %# do?" ),
-                          _player._nickname.c_str() );
+            setStatusText( SW_LOCFORMAT( "battle", "what_will", "What will {name} do?", TextArgumentList().addText( "name", _player._nickname ) ) );
         }
         else if ( _phase == BattlePhase::Ended )
         {
@@ -123,11 +121,16 @@ namespace sw
     {
         if ( _phase != BattlePhase::PlayerChoice )
             return;
-        formatstring( _statusText.data(), _statusText.capacity(), "%#", GameStrings::get( "battle.got_away", "Got away safely!" ) );
+        setStatusText( SW_LOCTEXT( "battle", "got_away", "Got away safely!" ) );
         SW_LOG_TRACE( "%#", _statusText.c_str() );
         _bPlayerWon = SW_FALSE;
         _phase      = BattlePhase::Ended;
         _phaseTimer = 0.3f;
+    }
+
+    void BattleState::setStatusText( string_view text )
+    {
+        formatstring( _statusText.data(), _statusText.capacity(), "%#", text );
     }
 
     void BattleState::endBattle()
@@ -146,8 +149,7 @@ namespace sw
         // 슬롯 수는 데이터가 정하므로 없는 슬롯을 고를 수 있다. PP 가 없는 것과 같이 다룬다.
         if ( slot >= attacker._listPp.size() )
         {
-            formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.no_pp", "%# has no PP!" ),
-                          attacker._nickname.c_str() );
+            setStatusText( SW_LOCFORMAT( "battle", "no_pp", "{name} has no PP!", TextArgumentList().addText( "name", attacker._nickname ) ) );
             return;
         }
 
@@ -157,16 +159,14 @@ namespace sw
         // 없을 때와 같은 취급이다.
         if ( pMove == nullptr )
         {
-            formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.no_move", "%# has no usable move!" ),
-                          attacker._nickname.c_str() );
+            setStatusText( SW_LOCFORMAT( "battle", "no_move", "{name} has no usable move!", TextArgumentList().addText( "name", attacker._nickname ) ) );
             return;
         }
 
         int32& pp = attacker._listPp[slot];
         if ( pp <= 0 )
         {
-            formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.no_pp", "%# has no PP!" ),
-                          attacker._nickname.c_str() );
+            setStatusText( SW_LOCFORMAT( "battle", "no_pp", "{name} has no PP!", TextArgumentList().addText( "name", attacker._nickname ) ) );
             return;
         }
         --pp;
@@ -175,13 +175,12 @@ namespace sw
         if ( dmg > 0 )
         {
             defender._hp = MathUtil::max( defender._hp - dmg, 0 );
-            formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.used_move_dmg", "%# used %#! (%# dmg)" ),
-                          attacker._nickname.c_str(), pMove->_name.c_str(), dmg );
+            setStatusText( SW_LOCFORMAT( "battle", "used_move_dmg", "{name} used {move}! ({damage} dmg)",
+                                         TextArgumentList().addText( "name", attacker._nickname ).addText( "move", pMove->_name ).addInteger( "damage", dmg ) ) );
         }
         else
         {
-            formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.used_move", "%# used %#!" ),
-                          attacker._nickname.c_str(), pMove->_name.c_str() );
+            setStatusText( SW_LOCFORMAT( "battle", "used_move", "{name} used {move}!", TextArgumentList().addText( "name", attacker._nickname ).addText( "move", pMove->_name ) ) );
         }
         (void)playerSide;
         SW_LOG_TRACE( "%#", _statusText.c_str() );

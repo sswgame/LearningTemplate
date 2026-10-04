@@ -17,7 +17,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Input/InputSnapshot.h"
-#include "Engine/Localization/StringTable.h"
+#include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/DdsLoader.h"
@@ -205,8 +205,8 @@ namespace test
             }
             static void runStringTable( const uint8* pData, size_t size )
             {
-                StringTable table;
-                (void)table.loadFromJsonText( asText( pData, size ) );
+                SourceStringTable table;
+                (void)table.loadFromJsonText( asText( pData, size ), "fuzz.strings.json" );
             }
             static void runTileMap( const uint8* pData, size_t size )
             {
@@ -354,7 +354,8 @@ namespace test
             }
             static void seedStringTable( vector<vector<uint8>>& outListSeed )
             {
-                appendTextSeed( R"({"greeting":"Hello","farewell":"Bye {0}","nested":{"a":"b"}})", outListSeed );
+                appendResourceSeeds( SourceStringTable::kFileSuffix, 2, outListSeed );
+                appendTextSeed( R"({"culture":"en","entries":{"Menu.Start":{"source":"Start","maxLength":12},"Greeting":{"source":"Hi {name}"}}})", outListSeed );
             }
             static void seedTileMap( vector<vector<uint8>>& outListSeed )
             {

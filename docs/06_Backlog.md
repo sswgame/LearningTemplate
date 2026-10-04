@@ -350,6 +350,10 @@ cd build/Ninja-Debug/Bin
   **같은 빌드에서 GameFramework 폴더 재배치(2026-10-03)도 처음 확인한다** — `Base/` 를 `Framework` · `Components` · `Stage` · `Utility` · `Input` 으로 쪼개고
   (`Transition` · `Control` 은 합침, `ItemBag` → `Inventory`, `GameFlags` → `World`), 키트를 `Kits/<장르 묶음>/<키트>` 로 옮겼다. 재구성(`cmake --preset`)으로
   GLOB · 리플렉션 헤더 목록을 다시 모아야 한다 — 낡은 빌드 폴더의 `generated/**/Base/*.gen.cpp` 가 남아 같은 타입이 두 번 등록되면 그 폴더를 지운다.
+- **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글꼴 렌더러가 생기면: `getFontFallback( culture )` 의 가족 목록으로 CJK ·
+  아랍 글리프 대체를 고르고, `isRightToLeft()` 로 배치를 뒤집고, `getTextRevision()` 이 바뀌면 글을 다시 묻는다(언리얼 FText 처럼 키를 든 UI 글 컴포넌트 —
+  `Meta = "Localizable"` 프로퍼티 + `getStringByText`). 아직 없는 것: `selectordinal`(서수) · 화폐 · 시간대 · XLIFF · 쿠킹된 이진 표(언리얼 `.locres` — 지금은 JSON 을
+  그대로 읽는다) · 아랍어 이외 RTL 문화권 데이터 · `ja` 번역. 아이템 · 무기 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 `getStringByText` 를 거치지 않는다.
 
 - **상호작용 · 기믹(2026-10-04 들어감 — `GameFramework/Interaction` · `Gimmick` · `Spline`) 병합 뒤 남은 것.**
   - 물리(Jolt · Box2D 병합 뒤): `IWorldQuery`(광선 — 상호작용 시야 · 레이저 · 포탑 · 밀기 블록) · `IGrabPhysics`(집기 · 던지기 — 강체를 키네마틱/관절로 손에 묶고
@@ -673,8 +677,8 @@ cd build/Ninja-Debug/Bin
 - **LLVM 을 다시 깔면 PCH 가 전부 낡는다**(`… has been modified since the precompiled header was built`). `.pch` 와 짝 `cmake_pch.cxx.obj` 를 같이 지운다(`SetupLlvm.py` 가 한다).
 - **LTO 함정** — clang `-flto` obj 는 MSVC `lib.exe` 가 못 읽는다(LNK1107). 아카이버는 "지금 컴파일러 옆" 을 먼저 본다(리눅스 `/usr/bin` 에는 llvm-ar 이 없어 LTO 가 조용히 꺼진다).
   CMake 는 IPO 아카이브 명령을 `project()` 때 정해 두고, `check_ipo_supported` 는 거짓 NO 를 내서 직접 판정한다(`cmake/Environment/ToolchainBinaries.cmake`). `SW_ENABLE_LTO` 하나가 Release · Shipping.
-- **임포트 산출물은 줄끝 변환을 받지 않는다**(`.gitattributes` 의 `Resource/**/models{,_raw}/** -text`). 스탬프는 원본 · 결과를 바이트 해시로 대조하는데,
-  `core.autocrlf=true` 체크아웃이 `*.skeleton.json` 을 CRLF 로 바꾸면 그것을 임포트한 워크트리 밖에서만 "손으로 바꿨다" 가 된다. 텍스트 산출물을 새로 만들면 같은 규칙에 든다.
+- **임포트 · 수집 산출물은 줄끝 변환을 받지 않는다**(`.gitattributes` 의 `Resource/**/models{,_raw}/** -text` · `Resource/**/localization/** -text`). 스탬프는 원본 · 결과를 바이트 해시로 대조하는데,
+  `core.autocrlf=true` 체크아웃이 `*.skeleton.json` 을 CRLF 로 바꾸면 그것을 임포트한 워크트리 밖에서만 "손으로 바꿨다" 가 된다. 텍스트 산출물을 새로 만들면 같은 규칙에 든다(`App --check-text` 도 CRLF 체크아웃에서 "OUT OF DATE" 였다).
 - **GPU · 드라이버** — 반복 TDR 은 어댑터를 망가뜨린다(재부팅 필요). DX12 는 실패 지점에서 InfoQueue · DRED 를 강제로 뽑는다. 이름 없는 객체("Unnamed")가 보이면 `SetName` 부터 붙인다.
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
 
@@ -1274,7 +1278,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
 
-- **언어 파일은 JSON(`StringTable::kFileExtension`) 하나뿐이다** — 쿠킹된 로컬라이제이션 형식은 없고, 다른 확장자는 표를 만들기 전에 거절한다. 셸 InputMap 을 못 읽으면
+- **로컬라이제이션의 정본은 원문 표(`*.strings.json`)이고 번역 표(`<culture>.translation.json`)는 번역할 때의 원문 해시를 든다** — 해시가 다르면(원문이
+  바뀌었으면) 그 번역은 화면에 나오지 않는다. 표 파일은 프로젝트(`*.locproject.json`)가 이름으로 부른다(폴더를 훑지 않아 팩 안에서도 같다). 코드 · 데이터의 글을 고치면
+  `App --gather-text` 결과(원문 표 · 번역 표 · `tm/`)를 같이 커밋한다 — `TextGathererTest.RepositoryProjectsAreUpToDate` 가 막는다. 셸 InputMap 을 못 읽으면
   오류를 알리고 빈 맵이다(손 바인딩으로 바꿔 끼우지 않는다). 입력 리플레이 파일은 `RawInputEvent` 를 통째로 적으므로 배치가 바뀌면 `kReplayVersion` 을 올린다(지금 3).
 
 - **통합 `InputMap` 은 `InputManager::beginFrame` 이 갱신한다** — 게임 코드가 `update()` 를 다시 부르면 한 프레임에 두 번 흐른다(Input README 예제가 그랬다).

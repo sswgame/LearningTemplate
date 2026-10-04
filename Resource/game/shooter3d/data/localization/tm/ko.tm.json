@@ -1,0 +1,69 @@
+{
+    "culture": "ko",
+    "entries": [
+        {
+            "source": "Assault Rifle",
+            "text": "돌격 소총"
+        },
+        {
+            "source": "Combat Helmet",
+            "text": "전투 헬멧"
+        },
+        {
+            "source": "Difficulty",
+            "text": "난이도"
+        },
+        {
+            "source": "Easy",
+            "text": "쉬움"
+        },
+        {
+            "source": "Fatigues",
+            "text": "전투복"
+        },
+        {
+            "source": "Field Pack",
+            "text": "야전 배낭"
+        },
+        {
+            "source": "Hard",
+            "text": "어려움"
+        },
+        {
+            "source": "M4 Rifle",
+            "text": "M4 소총"
+        },
+        {
+            "source": "M9 Pistol",
+            "text": "M9 권총"
+        },
+        {
+            "source": "Normal",
+            "text": "보통"
+        },
+        {
+            "source": "Pistol",
+            "text": "권총"
+        },
+        {
+            "source": "Pump Shotgun",
+            "text": "펌프 산탄총"
+        },
+        {
+            "source": "Recon Boots",
+            "text": "정찰 부츠"
+        },
+        {
+            "source": "Recon Helmet",
+            "text": "정찰 헬멧"
+        },
+        {
+            "source": "Recon Patch",
+            "text": "정찰 패치"
+        },
+        {
+            "source": "Recon Vest",
+            "text": "정찰 조끼"
+        }
+    ]
+}

@@ -2,4 +2,5 @@
 <!-- Shooter3D 팩의 설정 — 시작 맵은 아레나 씬이다(게임 프리셋 Config/Game/Shooter3D.json 이 이 파일을 가리킨다). -->
 <GameSettings>
   <startMap>game/shooter3d/maps/arena.scene.xml</startMap>
+  <localizationProject>game/shooter3d/data/localization/shooter3d.locproject.json</localizationProject>
 </GameSettings>

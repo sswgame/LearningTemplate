@@ -3,14 +3,8 @@
 #include "Engine/Localization/StringTable.h"
 
 #include "Core/Common/StdHeaders.h"
-#include "Core/File/FileUtil.h"
-#include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Json/JsonDocument.h"
-
-SW_LOG_CALLER( "StringTable" );
 namespace sw
 {
     namespace
@@ -80,84 +74,6 @@ namespace sw
 
 namespace sw
 {
-    bool StringTable::isLanguageFile( string_view path )
-    {
-        return FileUtil::hasExtension( path, kFileExtension );
-    }
-
-    bool StringTable::loadFromFile( const string& filePath )
-    {
-        if ( isLanguageFile( filePath ) == false )
-        {
-            SW_LOG_WARNING( "Not a language file (expected %#): %#", kFileExtension, filePath.c_str() );
-            return false;
-        }
-
-        string text;
-        if ( ResourceUtil::readTextResource( filePath, text ) == false && FileUtil::readTextFile( filePath, text ) == false )
-        {
-            SW_LOG_WARNING( "Failed to open StringTable file: %#", filePath.c_str() );
-            return false;
-        }
-
-        const bool bSuccess = loadFromJsonText( text );
-
-        if ( bSuccess )
-            SW_LOG_INFO( "Loaded %# strings from %#.", _mapTable.size(), filePath.c_str() );
-
-        return bSuccess;
-    }
-
-    bool StringTable::loadFromJsonText( string_view jsonText )
-    {
-        jsonText = FileUtil::skipUtf8Bom( jsonText );
-
-        JsonDocument doc;
-        if ( doc.parse( jsonText ) == false )
-        {
-            SW_LOG_WARNING( "Failed to parse StringTable JSON text." );
-            return false;
-        }
-
-        const JsonValue root = doc.getRoot();
-        if ( root.isObject() == false )
-        {
-            SW_LOG_WARNING( "StringTable root is not an object in JSON text." );
-            return false;
-        }
-
-        std::unique_lock<std::shared_mutex> lock( _mutex );
-        for ( const string& key : root.getMemberNames() )
-        {
-            const JsonValue value = root.get( key, false );
-            if ( value.isValid() == false || value.isObject() || value.isArray() )
-                continue;
-            // 키는 intern 하지 않는다 — 해시만 같으면 된다(`computeHash` 는 `getHash` 와 같은 값). 파일의 키로 전역 이름 표를 채우지 않는다.
-            _mapTable[hashed_string::computeHash( key )] = LocalizedTextArena::get().store( value.asString() );
-        }
-
-        return true;
-    }
-
-    bool StringTable::loadFromResource( string_view assetRelativePath )
-    {
-        if ( isLanguageFile( assetRelativePath ) == false )
-        {
-            SW_LOG_WARNING( "Not a language file (expected %#): %#", kFileExtension, assetRelativePath );
-            return false;
-        }
-
-        string text;
-        string absPath;
-        if ( ResourceUtil::readTextResource( assetRelativePath, text, &absPath ) == false )
-        {
-            SW_LOG_WARNING( "Failed to read resource StringTable: %#", assetRelativePath );
-            return false;
-        }
-
-        return loadFromJsonText( text );
-    }
-
     const utf8* StringTable::getString( const hashed_string& key ) const
     {
         return findByHash( key.getHash() );
@@ -197,6 +113,13 @@ namespace sw
         const utf8* const                   pStored = LocalizedTextArena::get().store( value );
         std::unique_lock<std::shared_mutex> lock( _mutex );
         _mapTable[key.getHash()] = pStored;
+    }
+
+    void StringTable::setStringByHash( uint64 keyHash, string_view value )
+    {
+        const utf8* const                   pStored = LocalizedTextArena::get().store( value );
+        std::unique_lock<std::shared_mutex> lock( _mutex );
+        _mapTable[keyHash] = pStored;
     }
 
     void StringTable::clear()
