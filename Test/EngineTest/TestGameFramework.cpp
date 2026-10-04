@@ -2949,8 +2949,11 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     GameConfig::setActive( runConfig );
 
     const string localeDir = test::makeTempDirectory( "bootstrap_locale" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "ko_kr.json" ), R"({ "UI_PLAY": "플레이" })" ) );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "en_us.json" ), R"({ "UI_PLAY": "Play", "UI_ONLY_EN": "English" })" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "boot.locproject.json" ),
+                                             R"({ "name": "boot", "sourceCulture": "en_us", "cultures": [ "ko_kr" ], "stringTables": [ "boot.strings.json" ] })" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "boot.strings.json" ),
+                                             R"({ "culture": "en_us", "entries": { "UI_PLAY": { "source": "Play" }, "UI_ONLY_EN": { "source": "English" } } })" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "ko_kr.translation.json" ), R"({ "culture": "ko_kr", "entries": { "UI_PLAY": { "text": "플레이" } } })" ) );
 
     class BootstrapGame : public GameInstanceBase
     {
@@ -2965,7 +2968,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
             data._startMap                          = "game/test/maps/start.scene.xml";
             data._titleScene                        = "game/test/maps/title.scene.xml";
             data._inputMap                          = "engine/input/default.input.xml";
-            data._localizationDirectory             = _localeDir;
+            data._localizationProject               = FileUtil::joinPath( _localeDir, "boot.locproject.json" );
             data._defaultLanguage                   = "ko_KR"; // 파일 이름(ko_kr)과 철자가 다르다
             data._fallbackLanguage                  = "en-US";
             data._defaultSavePath                   = _savePath;

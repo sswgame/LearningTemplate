@@ -1,0 +1,249 @@
+{
+    "culture": "ko",
+    "entries": {
+        "settings.accessibility.colorVision": {
+            "text": "색각 보정",
+            "sourceHash": "dbb8616605f92363"
+        },
+        "settings.accessibility.colorVision.deuteranopia": {
+            "text": "녹색약",
+            "sourceHash": "eaffd5d797c0d636"
+        },
+        "settings.accessibility.colorVision.protanopia": {
+            "text": "적색약",
+            "sourceHash": "ebd58127ad3cb56a"
+        },
+        "settings.accessibility.colorVision.tritanopia": {
+            "text": "청색약",
+            "sourceHash": "0cb4b4d963fc5f44"
+        },
+        "settings.accessibility.reduceFlashing": {
+            "text": "번쩍임 줄이기",
+            "sourceHash": "81cf7ea1fe1b0e77"
+        },
+        "settings.accessibility.subtitleBackground": {
+            "text": "자막 배경",
+            "sourceHash": "2b9911a132958e47"
+        },
+        "settings.accessibility.subtitleSize": {
+            "text": "자막 크기",
+            "sourceHash": "6b7868a86e8badfa"
+        },
+        "settings.accessibility.subtitles": {
+            "text": "자막",
+            "sourceHash": "8d4efa71fde7e9be"
+        },
+        "settings.accessibility.textSize": {
+            "text": "글자 크기",
+            "sourceHash": "e92d136588dd09a3"
+        },
+        "settings.accessibility.uiScale": {
+            "text": "UI 배율",
+            "sourceHash": "deba5e3543cd9735"
+        },
+        "settings.audio.ambientVolume": {
+            "text": "환경음 음량",
+            "sourceHash": "7083aeea6de6277b"
+        },
+        "settings.audio.masterVolume": {
+            "text": "전체 음량",
+            "sourceHash": "14ade2902b12eee3"
+        },
+        "settings.audio.musicVolume": {
+            "text": "음악 음량",
+            "sourceHash": "9f650daa8068041e"
+        },
+        "settings.audio.mute": {
+            "text": "음소거",
+            "sourceHash": "675ad12a7174c7e7"
+        },
+        "settings.audio.sfxVolume": {
+            "text": "효과음 음량",
+            "sourceHash": "1c5962fcd2ea2f59"
+        },
+        "settings.audio.uiVolume": {
+            "text": "인터페이스 음량",
+            "sourceHash": "b821b9172a51c8c2"
+        },
+        "settings.audio.voiceVolume": {
+            "text": "음성 음량",
+            "sourceHash": "1424176a6e3d6685"
+        },
+        "settings.category.accessibility": {
+            "text": "접근성",
+            "sourceHash": "11fdceabe7befeff"
+        },
+        "settings.category.audio": {
+            "text": "오디오",
+            "sourceHash": "08e6bd98452e6bb9"
+        },
+        "settings.category.controls": {
+            "text": "조작",
+            "sourceHash": "83cd32b685ccc9b7"
+        },
+        "settings.category.display": {
+            "text": "화면",
+            "sourceHash": "1125d159f7e64df5"
+        },
+        "settings.category.gameplay": {
+            "text": "게임플레이",
+            "sourceHash": "28235c3f4dd70e95"
+        },
+        "settings.category.graphics": {
+            "text": "그래픽",
+            "sourceHash": "6cc99c2f3cbc7008"
+        },
+        "settings.category.language": {
+            "text": "언어",
+            "sourceHash": "efcf950b3cc4fc3b"
+        },
+        "settings.common.off": {
+            "text": "끔",
+            "sourceHash": "302cbb19bf9a174a"
+        },
+        "settings.confirm.keepChanges": {
+            "text": "이 설정을 유지할까요? {seconds}초 뒤에 되돌립니다.",
+            "sourceHash": "d8bd8dfcd7e97078"
+        },
+        "settings.controls.aimMode": {
+            "text": "조준",
+            "sourceHash": "f9a3e0199ffcbd16"
+        },
+        "settings.controls.crouchMode": {
+            "text": "앉기",
+            "sourceHash": "cd7743f6969479eb"
+        },
+        "settings.controls.gamepadSensitivity": {
+            "text": "게임패드 감도",
+            "sourceHash": "524014273006eb8b"
+        },
+        "settings.controls.hold": {
+            "text": "누르고 있기",
+            "sourceHash": "6ab6f7d87fdbe998"
+        },
+        "settings.controls.invertY": {
+            "text": "상하 시점 반전",
+            "sourceHash": "e9c878ae44ea1e14"
+        },
+        "settings.controls.mouseSensitivity": {
+            "text": "마우스 감도",
+            "sourceHash": "67b03bcb89cd52cf"
+        },
+        "settings.controls.sprintMode": {
+            "text": "달리기",
+            "sourceHash": "f3b65f24b2611635"
+        },
+        "settings.controls.stickDeadzone": {
+            "text": "스틱 데드존",
+            "sourceHash": "7b03bd1e88a3ce47"
+        },
+        "settings.controls.toggle": {
+            "text": "전환",
+            "sourceHash": "2729d39ee6c0cca5"
+        },
+        "settings.display.resolution": {
+            "text": "해상도",
+            "sourceHash": "f74160a9dc86ab8f"
+        },
+        "settings.display.vsync": {
+            "text": "수직 동기화",
+            "sourceHash": "b08b0fa02c4c669e"
+        },
+        "settings.display.windowMode": {
+            "text": "창 모드",
+            "sourceHash": "74e7a95114592520"
+        },
+        "settings.display.windowMode.borderless": {
+            "text": "테두리 없음",
+            "sourceHash": "60c26ddb9c7ef1fa"
+        },
+        "settings.display.windowMode.windowed": {
+            "text": "창",
+            "sourceHash": "c73eba7da7d67b64"
+        },
+        "settings.gameplay.cameraShake": {
+            "text": "카메라 흔들림",
+            "sourceHash": "0d4412b117d8c5c4"
+        },
+        "settings.gameplay.fieldOfView": {
+            "text": "시야각",
+            "sourceHash": "cfc03af4e2ec2dd9"
+        },
+        "settings.gameplay.headBob": {
+            "text": "걸음 흔들림",
+            "sourceHash": "6b009c84219aa0f8"
+        },
+        "settings.graphics.effectsQuality": {
+            "text": "효과 품질",
+            "sourceHash": "2f1d73eefe0d67e4"
+        },
+        "settings.graphics.foliageDensity": {
+            "text": "초목 밀도",
+            "sourceHash": "2fbb57da1cea22f8"
+        },
+        "settings.graphics.motionBlur": {
+            "text": "모션 블러",
+            "sourceHash": "bb0dd4796cb70d98"
+        },
+        "settings.graphics.postQuality": {
+            "text": "후처리 품질",
+            "sourceHash": "25d945a94bd08004"
+        },
+        "settings.graphics.quality": {
+            "text": "그래픽 품질",
+            "sourceHash": "207b31ba362cec89"
+        },
+        "settings.graphics.quality.custom": {
+            "text": "사용자 지정",
+            "sourceHash": "f0cab2483f66aa2e"
+        },
+        "settings.graphics.quality.high": {
+            "text": "높음",
+            "sourceHash": "9deeefd89ca8a81d"
+        },
+        "settings.graphics.quality.low": {
+            "text": "낮음",
+            "sourceHash": "24f3a319b88552c1"
+        },
+        "settings.graphics.quality.medium": {
+            "text": "중간",
+            "sourceHash": "ac6bdc71f750ac96"
+        },
+        "settings.graphics.quality.ultra": {
+            "text": "최고",
+            "sourceHash": "311b3da2e76753d5"
+        },
+        "settings.graphics.renderScale": {
+            "text": "렌더 배율",
+            "sourceHash": "c17a07578d87a8f7"
+        },
+        "settings.graphics.shadowQuality": {
+            "text": "그림자 품질",
+            "sourceHash": "d055b83933ce0048"
+        },
+        "settings.graphics.textureQuality": {
+            "text": "텍스처 품질",
+            "sourceHash": "8dec707fb7d9325d"
+        },
+        "settings.graphics.upscaler": {
+            "text": "업스케일러",
+            "sourceHash": "523e5f717170c790"
+        },
+        "settings.graphics.upscaler.spatial": {
+            "text": "공간",
+            "sourceHash": "07d754eb51a3ee43"
+        },
+        "settings.graphics.viewDistance": {
+            "text": "시야 거리",
+            "sourceHash": "f2a71c8e84cbc543"
+        },
+        "settings.language.text": {
+            "text": "표시 언어",
+            "sourceHash": "8b38f66b7ca61de8"
+        },
+        "settings.restartRequired": {
+            "text": "설정 {count}개는 다시 시작한 뒤에 적용됩니다.",
+            "sourceHash": "6462a7414eb6a4f5"
+        }
+    }
+}

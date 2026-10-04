@@ -200,6 +200,17 @@ namespace sw
                                                                                                                    : loop._owned._pEngineDefaultAssets->loadFromResource();
             if ( bEngineDefaultAssetsLoaded == false )
                 SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
+
+            // 문화권 표 · 엔진 문자열 — 플레이어 설정(언어)이 이 뒤(`UserSettings`)에 적용되고, 게임은 자기 프로젝트를 위에 올린다.
+            LocalizationManager&       localization  = *loop._owned._pLocalizationManager;
+            const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
+            if ( defaultAssets._cultureTable.empty() == false )
+                (void)localization.loadCultureTable( defaultAssets._cultureTable );
+            if ( defaultAssets._localizationProject.empty() == false && localization.mountProject( defaultAssets._localizationProject, LocalizationScope::Engine ) == false )
+                SW_LOG_ERROR( "Engine localization project '%#' is not (fully) loaded", defaultAssets._localizationProject.c_str() );
+            string commandLineLanguage;
+            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
+                localization.setCurrentLanguage( commandLineLanguage );
             return EngineInitResult::Succeeded;
         }
         static void destroy( EngineLoop& loop ) { loop._owned._pEngineDefaultAssets.reset(); }

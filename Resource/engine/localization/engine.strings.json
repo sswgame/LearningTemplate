@@ -1,0 +1,310 @@
+{
+    "culture": "en",
+    "entries": {
+        "settings.accessibility.colorVision": {
+            "source": "Color Vision Mode",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.accessibility.colorVision.deuteranopia": {
+            "source": "Deuteranopia",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.accessibility.colorVision.protanopia": {
+            "source": "Protanopia",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.accessibility.colorVision.tritanopia": {
+            "source": "Tritanopia",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.accessibility.reduceFlashing": {
+            "source": "Reduce Flashing",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.accessibility.subtitleBackground": {
+            "source": "Subtitle Background",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.accessibility.subtitleSize": {
+            "source": "Subtitle Size",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.accessibility.subtitles": {
+            "source": "Subtitles",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.accessibility.textSize": {
+            "source": "Text Size",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.accessibility.uiScale": {
+            "source": "UI Scale",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.audio.ambientVolume": {
+            "source": "Ambient Volume",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.audio.masterVolume": {
+            "source": "Master Volume",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.audio.musicVolume": {
+            "source": "Music Volume",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.audio.mute": {
+            "source": "Mute All",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.audio.sfxVolume": {
+            "source": "Effects Volume",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.audio.uiVolume": {
+            "source": "Interface Volume",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.audio.voiceVolume": {
+            "source": "Voice Volume",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.category.accessibility": {
+            "source": "Accessibility",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.category.audio": {
+            "source": "Audio",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.category.controls": {
+            "source": "Controls",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.category.display": {
+            "source": "Display",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.category.gameplay": {
+            "source": "Gameplay",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.category.graphics": {
+            "source": "Graphics",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.category.language": {
+            "source": "Language",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.common.off": {
+            "source": "Off",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.confirm.keepChanges": {
+            "source": "Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}.",
+            "comment": "Display-change confirmation dialog; seconds counts down",
+            "maxLength": 80
+        },
+        "settings.controls.aimMode": {
+            "source": "Aim",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.controls.crouchMode": {
+            "source": "Crouch",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.controls.gamepadSensitivity": {
+            "source": "Gamepad Sensitivity",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.controls.hold": {
+            "source": "Hold",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.controls.invertY": {
+            "source": "Invert Vertical Look",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.controls.mouseSensitivity": {
+            "source": "Mouse Sensitivity",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.controls.sprintMode": {
+            "source": "Sprint",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.controls.stickDeadzone": {
+            "source": "Stick Dead Zone",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.controls.toggle": {
+            "source": "Toggle",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.display.resolution": {
+            "source": "Resolution",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.display.vsync": {
+            "source": "Vertical Sync",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.display.windowMode": {
+            "source": "Window Mode",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.display.windowMode.borderless": {
+            "source": "Borderless",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.display.windowMode.windowed": {
+            "source": "Windowed",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.gameplay.cameraShake": {
+            "source": "Camera Shake",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.gameplay.fieldOfView": {
+            "source": "Field of View",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.gameplay.headBob": {
+            "source": "Head Bob",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.effectsQuality": {
+            "source": "Effects Quality",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.foliageDensity": {
+            "source": "Foliage Density",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.motionBlur": {
+            "source": "Motion Blur",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.postQuality": {
+            "source": "Post-Processing Quality",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.quality": {
+            "source": "Graphics Quality",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.quality.custom": {
+            "source": "Custom",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.quality.high": {
+            "source": "High",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.quality.low": {
+            "source": "Low",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.quality.medium": {
+            "source": "Medium",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.quality.ultra": {
+            "source": "Ultra",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.renderScale": {
+            "source": "Render Scale",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.shadowQuality": {
+            "source": "Shadow Quality",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.textureQuality": {
+            "source": "Texture Quality",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.upscaler": {
+            "source": "Upscaler",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.upscaler.spatial": {
+            "source": "Spatial",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.graphics.viewDistance": {
+            "source": "View Distance",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.language.text": {
+            "source": "Text Language",
+            "context": "Options menu label",
+            "maxLength": 32
+        },
+        "settings.restartRequired": {
+            "source": "{count, plural, one {# setting takes} other {# settings take}} effect after a restart.",
+            "comment": "Shown after applying settings marked apply=restart",
+            "maxLength": 80
+        }
+    }
+}

@@ -1746,3 +1746,32 @@ SW_TEST_CASE( StringTest, FixedStringAssignFromItsOwnInterior )
     text = sw::string_view( text.c_str() + 1, 2 );
     SW_EXPECT_STREQ( "de", text.c_str() );
 }
+
+/**
+ * @brief [StringTest] decodeUtf8 · appendUtf8 는 글자 단위로 왕복하고, 잘못된 바이트는 U+FFFD 로 읽고도 앞으로 나아간다
+ * @details 의사 로컬라이제이션 · 메시지 포맷이 글자 단위로 글을 바꾼다 — 바이트 단위로 바꾸면 한글 · 이모지가 깨진다.
+ */
+SW_TEST_CASE( StringTest, Utf8DecodeAndAppendRoundTrip )
+{
+    const sw::string_view kText = "a\xC3\xA9\xEA\xB0\x80\xF0\x9F\x9A\x80"; // a é 가 🚀
+    size_t                offset{ 0 };
+    SW_EXPECT_EQUAL( uint32( 'a' ), sw::StringUtil::decodeUtf8( kText, offset ) );
+    SW_EXPECT_EQUAL( uint32( 0xE9 ), sw::StringUtil::decodeUtf8( kText, offset ) );
+    SW_EXPECT_EQUAL( uint32( 0xAC00 ), sw::StringUtil::decodeUtf8( kText, offset ) );
+    SW_EXPECT_EQUAL( uint32( 0x1F680 ), sw::StringUtil::decodeUtf8( kText, offset ) );
+    SW_EXPECT_EQUAL( kText.size(), offset );
+    SW_EXPECT_EQUAL( uint32( 0 ), sw::StringUtil::decodeUtf8( kText, offset ) );
+
+    sw::string rebuilt;
+    for ( const uint32 codepoint : { uint32( 'a' ), uint32( 0xE9 ), uint32( 0xAC00 ), uint32( 0x1F680 ) } )
+    {
+        sw::StringUtil::appendUtf8( rebuilt, codepoint );
+    }
+    SW_EXPECT_TRUE( rebuilt == kText );
+
+    const sw::string_view kBroken = "\xC2x";
+    size_t                brokenOffset{ 0 };
+    SW_EXPECT_EQUAL( uint32( 0xFFFD ), sw::StringUtil::decodeUtf8( kBroken, brokenOffset ) );
+    SW_EXPECT_TRUE( brokenOffset >= 1u );
+    SW_EXPECT_EQUAL( uint32( 'x' ), sw::StringUtil::decodeUtf8( kBroken, brokenOffset ) );
+}

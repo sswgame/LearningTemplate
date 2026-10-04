@@ -17,38 +17,7 @@ namespace sw
         static const string s_emptyString{};
     } // namespace
 
-    bool GameStrings::loadFromResource( string_view assetRelativePath )
-    {
-        clear();
-
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
-        if ( pLoc == nullptr )
-        {
-            SW_LOG_ERROR( "LocalizationManager service is not bound." );
-            return false;
-        }
-
-        const bool bLoaded = pLoc->loadLanguageResource( "default", assetRelativePath );
-        if ( bLoaded )
-            pLoc->setCurrentLanguage( "default" );
-        return bLoaded;
-    }
-
-    bool GameStrings::initialize( string_view directoryOrResourcePath, string_view defaultLanguage, string_view fallbackLanguage )
-    {
-        clear();
-
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
-        if ( pLoc == nullptr )
-        {
-            SW_LOG_ERROR( "LocalizationManager service is not bound." );
-            return false;
-        }
-
-        return pLoc->initialize( directoryOrResourcePath, defaultLanguage, fallbackLanguage );
-    }
-
-    bool GameStrings::loadLanguageFile( string_view languageCode, string_view filePath )
+    bool GameStrings::initialize( string_view projectPath, string_view defaultLanguage, string_view fallbackLanguage )
     {
         LocalizationManager* pLoc = game::getService<LocalizationManager>();
         if ( pLoc == nullptr )
@@ -57,19 +26,7 @@ namespace sw
             return false;
         }
 
-        return pLoc->loadLanguageFile( languageCode, filePath );
-    }
-
-    bool GameStrings::loadLanguageDirectory( string_view directoryPath, string_view filterExtension, bool bRecursive )
-    {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
-        if ( pLoc == nullptr )
-        {
-            SW_LOG_ERROR( "LocalizationManager service is not bound." );
-            return false;
-        }
-
-        return pLoc->loadLanguageDirectory( directoryPath, filterExtension, bRecursive );
+        return pLoc->initialize( projectPath, defaultLanguage, fallbackLanguage );
     }
 
     bool GameStrings::setLanguage( string_view languageCode )
@@ -168,6 +125,6 @@ namespace sw
     {
         LocalizationManager* pLoc = game::getService<LocalizationManager>();
         if ( pLoc != nullptr )
-            pLoc->clear();
+            pLoc->unmountProjects( LocalizationScope::Game );
     }
 } // namespace sw

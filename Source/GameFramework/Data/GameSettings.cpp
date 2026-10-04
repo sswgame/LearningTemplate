@@ -96,8 +96,7 @@ namespace sw
         root.takeChildText( "titleScene", _titleScene );
         root.takeChildText( "entranceScene", _entranceScene );
         root.takeChildText( "defaultSavePath", _defaultSavePath );
-        root.takeChildText( "stringsData", _stringsData );
-        root.takeChildText( "localizationDirectory", _localizationDirectory );
+        root.takeChildText( "localizationProject", _localizationProject );
         root.takeChildText( "defaultLanguage", _defaultLanguage );
         root.takeChildText( "fallbackLanguage", _fallbackLanguage );
         root.takeChildText( "inputMap", _inputMap );
@@ -113,8 +112,7 @@ namespace sw
                  StringUtil::equals( pName, "titleScene" ) ||
                  StringUtil::equals( pName, "entranceScene" ) ||
                  StringUtil::equals( pName, "defaultSavePath" ) ||
-                 StringUtil::equals( pName, "stringsData" ) ||
-                 StringUtil::equals( pName, "localizationDirectory" ) ||
+                 StringUtil::equals( pName, "localizationProject" ) ||
                  StringUtil::equals( pName, "defaultLanguage" ) ||
                  StringUtil::equals( pName, "fallbackLanguage" ) ||
                  StringUtil::equals( pName, "inputMap" ) )

@@ -1,0 +1,11 @@
+{
+    "name": "engine",
+    "sourceCulture": "en",
+    "cultures": [
+        "ko",
+        "ja"
+    ],
+    "stringTables": [
+        "engine.strings.json"
+    ]
+}

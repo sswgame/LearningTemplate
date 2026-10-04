@@ -1,0 +1,566 @@
+{
+    "cultures": {
+        "ar": {
+            "nativeName": "العربية",
+            "pluralRule": "arabic",
+            "rightToLeft": true,
+            "digits": "arab",
+            "decimalSeparator": "٫",
+            "groupSeparator": "٬",
+            "percentPattern": "#٪؜",
+            "datePatterns": {
+                "short": "d‏/M‏/y",
+                "medium": "dd‏/MM‏/y",
+                "long": "d MMMM y"
+            },
+            "timePatterns": {
+                "short": "h:mm a",
+                "medium": "h:mm:ss a"
+            },
+            "monthNames": [
+                "يناير",
+                "فبراير",
+                "مارس",
+                "أبريل",
+                "مايو",
+                "يونيو",
+                "يوليو",
+                "أغسطس",
+                "سبتمبر",
+                "أكتوبر",
+                "نوفمبر",
+                "ديسمبر"
+            ],
+            "monthAbbreviations": [
+                "يناير",
+                "فبراير",
+                "مارس",
+                "أبريل",
+                "مايو",
+                "يونيو",
+                "يوليو",
+                "أغسطس",
+                "سبتمبر",
+                "أكتوبر",
+                "نوفمبر",
+                "ديسمبر"
+            ],
+            "dayPeriods": [
+                "ص",
+                "م"
+            ],
+            "fonts": [
+                "Noto Sans Arabic",
+                "Segoe UI",
+                "Noto Sans"
+            ]
+        },
+        "de": {
+            "nativeName": "Deutsch",
+            "pluralRule": "english",
+            "decimalSeparator": ",",
+            "groupSeparator": ".",
+            "percentPattern": "# %",
+            "datePatterns": {
+                "short": "dd.MM.yy",
+                "medium": "dd.MM.y",
+                "long": "d. MMMM y"
+            },
+            "timePatterns": {
+                "short": "HH:mm",
+                "medium": "HH:mm:ss"
+            },
+            "monthNames": [
+                "Januar",
+                "Februar",
+                "März",
+                "April",
+                "Mai",
+                "Juni",
+                "Juli",
+                "August",
+                "September",
+                "Oktober",
+                "November",
+                "Dezember"
+            ],
+            "monthAbbreviations": [
+                "Jan.",
+                "Feb.",
+                "März",
+                "Apr.",
+                "Mai",
+                "Juni",
+                "Juli",
+                "Aug.",
+                "Sept.",
+                "Okt.",
+                "Nov.",
+                "Dez."
+            ],
+            "dayPeriods": [
+                "AM",
+                "PM"
+            ],
+            "fonts": [
+                "Noto Sans",
+                "Arial"
+            ]
+        },
+        "en": {
+            "nativeName": "English",
+            "pluralRule": "english",
+            "rightToLeft": false,
+            "digits": "latn",
+            "decimalSeparator": ".",
+            "groupSeparator": ",",
+            "percentPattern": "#%",
+            "datePatterns": {
+                "short": "M/d/yy",
+                "medium": "MMM d, y",
+                "long": "MMMM d, y"
+            },
+            "timePatterns": {
+                "short": "h:mm a",
+                "medium": "h:mm:ss a"
+            },
+            "monthNames": [
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December"
+            ],
+            "monthAbbreviations": [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "May",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Oct",
+                "Nov",
+                "Dec"
+            ],
+            "dayPeriods": [
+                "AM",
+                "PM"
+            ],
+            "fonts": [
+                "Noto Sans",
+                "Arial"
+            ]
+        },
+        "en_gb": {
+            "parent": "en",
+            "nativeName": "English (UK)",
+            "datePatterns": {
+                "short": "dd/MM/y",
+                "medium": "d MMM y",
+                "long": "d MMMM y"
+            },
+            "timePatterns": {
+                "short": "HH:mm",
+                "medium": "HH:mm:ss"
+            },
+            "dayPeriods": [
+                "am",
+                "pm"
+            ]
+        },
+        "es": {
+            "nativeName": "Español",
+            "pluralRule": "english",
+            "decimalSeparator": ",",
+            "groupSeparator": ".",
+            "percentPattern": "# %",
+            "datePatterns": {
+                "short": "d/M/yy",
+                "medium": "d MMM y",
+                "long": "d 'de' MMMM 'de' y"
+            },
+            "timePatterns": {
+                "short": "H:mm",
+                "medium": "H:mm:ss"
+            },
+            "monthNames": [
+                "enero",
+                "febrero",
+                "marzo",
+                "abril",
+                "mayo",
+                "junio",
+                "julio",
+                "agosto",
+                "septiembre",
+                "octubre",
+                "noviembre",
+                "diciembre"
+            ],
+            "monthAbbreviations": [
+                "ene",
+                "feb",
+                "mar",
+                "abr",
+                "may",
+                "jun",
+                "jul",
+                "ago",
+                "sept",
+                "oct",
+                "nov",
+                "dic"
+            ],
+            "dayPeriods": [
+                "a. m.",
+                "p. m."
+            ],
+            "fonts": [
+                "Noto Sans",
+                "Arial"
+            ]
+        },
+        "fr": {
+            "nativeName": "Français",
+            "pluralRule": "french",
+            "decimalSeparator": ",",
+            "groupSeparator": " ",
+            "percentPattern": "# %",
+            "datePatterns": {
+                "short": "dd/MM/y",
+                "medium": "d MMM y",
+                "long": "d MMMM y"
+            },
+            "timePatterns": {
+                "short": "HH:mm",
+                "medium": "HH:mm:ss"
+            },
+            "monthNames": [
+                "janvier",
+                "février",
+                "mars",
+                "avril",
+                "mai",
+                "juin",
+                "juillet",
+                "août",
+                "septembre",
+                "octobre",
+                "novembre",
+                "décembre"
+            ],
+            "monthAbbreviations": [
+                "janv.",
+                "févr.",
+                "mars",
+                "avr.",
+                "mai",
+                "juin",
+                "juil.",
+                "août",
+                "sept.",
+                "oct.",
+                "nov.",
+                "déc."
+            ],
+            "dayPeriods": [
+                "AM",
+                "PM"
+            ],
+            "fonts": [
+                "Noto Sans",
+                "Arial"
+            ]
+        },
+        "ja": {
+            "nativeName": "日本語",
+            "pluralRule": "none",
+            "datePatterns": {
+                "short": "y/MM/dd",
+                "medium": "y/MM/dd",
+                "long": "y年M月d日"
+            },
+            "timePatterns": {
+                "short": "H:mm",
+                "medium": "H:mm:ss"
+            },
+            "monthNames": [
+                "1月",
+                "2月",
+                "3月",
+                "4月",
+                "5月",
+                "6月",
+                "7月",
+                "8月",
+                "9月",
+                "10月",
+                "11月",
+                "12月"
+            ],
+            "monthAbbreviations": [
+                "1月",
+                "2月",
+                "3月",
+                "4月",
+                "5月",
+                "6月",
+                "7月",
+                "8月",
+                "9月",
+                "10月",
+                "11月",
+                "12月"
+            ],
+            "dayPeriods": [
+                "午前",
+                "午後"
+            ],
+            "fonts": [
+                "Noto Sans JP",
+                "Yu Gothic UI",
+                "Meiryo",
+                "Noto Sans"
+            ]
+        },
+        "ko": {
+            "nativeName": "한국어",
+            "pluralRule": "none",
+            "datePatterns": {
+                "short": "yy. M. d.",
+                "medium": "y. M. d.",
+                "long": "y년 M월 d일"
+            },
+            "timePatterns": {
+                "short": "a h:mm",
+                "medium": "a h:mm:ss"
+            },
+            "monthNames": [
+                "1월",
+                "2월",
+                "3월",
+                "4월",
+                "5월",
+                "6월",
+                "7월",
+                "8월",
+                "9월",
+                "10월",
+                "11월",
+                "12월"
+            ],
+            "monthAbbreviations": [
+                "1월",
+                "2월",
+                "3월",
+                "4월",
+                "5월",
+                "6월",
+                "7월",
+                "8월",
+                "9월",
+                "10월",
+                "11월",
+                "12월"
+            ],
+            "dayPeriods": [
+                "오전",
+                "오후"
+            ],
+            "fonts": [
+                "Noto Sans KR",
+                "Malgun Gothic",
+                "Apple SD Gothic Neo",
+                "Noto Sans"
+            ]
+        },
+        "pl": {
+            "nativeName": "Polski",
+            "pluralRule": "polish",
+            "decimalSeparator": ",",
+            "groupSeparator": " ",
+            "percentPattern": "#%",
+            "datePatterns": {
+                "short": "d.MM.y",
+                "medium": "d MMM y",
+                "long": "d MMMM y"
+            },
+            "timePatterns": {
+                "short": "HH:mm",
+                "medium": "HH:mm:ss"
+            },
+            "monthNames": [
+                "stycznia",
+                "lutego",
+                "marca",
+                "kwietnia",
+                "maja",
+                "czerwca",
+                "lipca",
+                "sierpnia",
+                "września",
+                "października",
+                "listopada",
+                "grudnia"
+            ],
+            "monthAbbreviations": [
+                "sty",
+                "lut",
+                "mar",
+                "kwi",
+                "maj",
+                "cze",
+                "lip",
+                "sie",
+                "wrz",
+                "paź",
+                "lis",
+                "gru"
+            ],
+            "dayPeriods": [
+                "AM",
+                "PM"
+            ],
+            "fonts": [
+                "Noto Sans",
+                "Arial"
+            ]
+        },
+        "qps_ploc": {
+            "parent": "en",
+            "nativeName": "[Ƥşḗŭḓǿ Ȧƈƈḗƞŧḗḓ]",
+            "pseudo": "accented"
+        },
+        "qps_plocm": {
+            "parent": "en",
+            "nativeName": "[Ƥşḗŭḓǿ Ḿīřřǿřḗḓ]",
+            "pseudo": "mirrored",
+            "rightToLeft": true
+        },
+        "ru": {
+            "nativeName": "Русский",
+            "pluralRule": "russian",
+            "decimalSeparator": ",",
+            "groupSeparator": " ",
+            "percentPattern": "# %",
+            "datePatterns": {
+                "short": "dd.MM.y",
+                "medium": "d MMM y 'г'.",
+                "long": "d MMMM y 'г'."
+            },
+            "timePatterns": {
+                "short": "HH:mm",
+                "medium": "HH:mm:ss"
+            },
+            "monthNames": [
+                "января",
+                "февраля",
+                "марта",
+                "апреля",
+                "мая",
+                "июня",
+                "июля",
+                "августа",
+                "сентября",
+                "октября",
+                "ноября",
+                "декабря"
+            ],
+            "monthAbbreviations": [
+                "янв.",
+                "февр.",
+                "мар.",
+                "апр.",
+                "мая",
+                "июн.",
+                "июл.",
+                "авг.",
+                "сент.",
+                "окт.",
+                "нояб.",
+                "дек."
+            ],
+            "dayPeriods": [
+                "AM",
+                "PM"
+            ],
+            "fonts": [
+                "Noto Sans",
+                "Arial"
+            ]
+        },
+        "zh": {
+            "nativeName": "简体中文",
+            "pluralRule": "none",
+            "datePatterns": {
+                "short": "y/M/d",
+                "medium": "y年M月d日",
+                "long": "y年M月d日"
+            },
+            "timePatterns": {
+                "short": "HH:mm",
+                "medium": "HH:mm:ss"
+            },
+            "monthNames": [
+                "一月",
+                "二月",
+                "三月",
+                "四月",
+                "五月",
+                "六月",
+                "七月",
+                "八月",
+                "九月",
+                "十月",
+                "十一月",
+                "十二月"
+            ],
+            "monthAbbreviations": [
+                "1月",
+                "2月",
+                "3月",
+                "4月",
+                "5月",
+                "6月",
+                "7月",
+                "8月",
+                "9月",
+                "10月",
+                "11月",
+                "12月"
+            ],
+            "dayPeriods": [
+                "上午",
+                "下午"
+            ],
+            "fonts": [
+                "Noto Sans SC",
+                "Microsoft YaHei",
+                "Noto Sans"
+            ]
+        },
+        "zh_tw": {
+            "parent": "zh",
+            "nativeName": "繁體中文",
+            "timePatterns": {
+                "short": "a h:mm",
+                "medium": "a h:mm:ss"
+            },
+            "fonts": [
+                "Noto Sans TC",
+                "Microsoft JhengHei",
+                "Noto Sans"
+            ]
+        }
+    }
+}
