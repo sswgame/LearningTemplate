@@ -87,13 +87,17 @@ namespace sw
         /** @brief 햇빛 세기(0 밤 .. 1 한낮) — 새벽 · 해질녘에 부드럽게 바뀝니다(조명 · 하늘색). */
         float32 computeDaylight() const;
         /** @brief 해의 각도(도) — 6 시 0°, 12 시 90°, 18 시 180° 입니다. */
-        float32 computeSunAngle() const;
-        float32 getTimeScale() const { return _timeScale; }
-        bool    isPaused() const { return _bPaused != SW_FALSE; }
-        void    drainEvents( vector<WorldClockEvent>& outListEvent );
+        float32                   computeSunAngle() const;
+        float32                   getTimeScale() const { return _timeScale; }
+        const WorldClockSettings& getSettings() const { return _settings; }
+        bool                      isPaused() const { return _bPaused != SW_FALSE; }
+        void                      drainEvents( vector<WorldClockEvent>& outListEvent );
+
+        /** @brief @p settings 의 시계에서 @p hour 시의 때입니다 — 시계가 그 시각에 있을 때의 `getDayPhase` 와 같습니다(일정이 미래 시각을 판정할 때). */
+        static DayPhase computePhaseAt( const WorldClockSettings& settings, float32 hour );
 
     private:
-        DayPhase computePhase( float32 hour ) const;
+        DayPhase computePhase( float32 hour ) const { return computePhaseAt( _settings, hour ); }
         void     advanceGameSeconds( float32 gameSeconds );
 
         WorldClockSettings      _settings;

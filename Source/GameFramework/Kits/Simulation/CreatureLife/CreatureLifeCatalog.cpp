@@ -48,31 +48,6 @@ namespace sw
                 return object == hashed_string( "empty" ) ? hashed_string{} : object;
             }
 
-            /** @brief "Dawn,Day" 를 때 마스크로 읽습니다. */
-            static uint8 parsePhaseMask( string_view text, string_view sourceName, const utf8* pSpeciesId )
-            {
-                (void)sourceName;
-                (void)pSpeciesId;
-                uint8 mask = 0;
-                GameDataXml::forEachToken( text, ",;| ", [&]( string_view token )
-                {
-                    const hashed_string name( token );
-                    bool                bFound = false;
-                    for ( uint32 phaseIndex = 0; phaseIndex <= static_cast<uint32>( DayPhase::Dusk ); ++phaseIndex )
-                    {
-                        const DayPhase phase = static_cast<DayPhase>( phaseIndex );
-                        if ( name == hashed_string( toString( phase ) ) )
-                        {
-                            mask   = static_cast<uint8>( mask | makeDayPhaseBit( phase ) );
-                            bFound = true;
-                        }
-                    }
-                    if ( bFound == false )
-                        SW_LOG_WARNING( "%#: species '%#' has an unknown phase '%#'", sourceName, pSpeciesId, token );
-                } );
-                return mask;
-            }
-
             /** @brief `<Key>` · `<Row>` 로 패턴을 읽습니다. 행 길이가 다르거나 모르는 기호면 false 입니다. */
             [[nodiscard]] static bool parsePattern( const XmlNode& node, string_view sourceName, const utf8* pHabitatId, HabitatDef& outHabitat )
             {
@@ -175,9 +150,10 @@ namespace sw
 
     bool CreatureSpeciesDef::comesIn( DayPhase phase, const hashed_string& weatherId ) const
     {
-        if ( _phaseMask != 0 && ( _phaseMask & makeDayPhaseBit( phase ) ) == 0 )
-            return false;
-        return _listWeather.empty() || CreatureLifeCatalogInternal::contains( _listWeather, weatherId );
+        ScheduleConditionContext context;
+        context._phase   = phase;
+        context._weather = weatherId;
+        return _visitCondition.matches( context );
     }
 
     CreatureLifeCatalog::CreatureLifeCatalog()
@@ -291,10 +267,10 @@ namespace sw
             CreatureLifeCatalogInternal::parseIdList( node.getAttributeText( "habitats" ), species._listHabitat );
             CreatureLifeCatalogInternal::parseIdList( node.getAttributeText( "foods" ), species._listFood );
             CreatureLifeCatalogInternal::parseIdList( node.getAttributeText( "gifts" ), species._listGift );
-            CreatureLifeCatalogInternal::parseIdList( node.getAttributeText( "weathers" ), species._listWeather );
+            ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), species._visitCondition._listWeather );
             CreatureLifeCatalogInternal::parseIdList( node.getAttributeText( "abilities" ), species._listAbility );
             CreatureLifeCatalogInternal::parseIdList( node.getAttributeText( "requests" ), species._listRequest );
-            species._phaseMask = CreatureLifeCatalogInternal::parsePhaseMask( node.getAttributeText( "phases" ), sourceName, pId );
+            species._visitCondition._phaseMask = ScheduleCondition::parsePhaseMask( node.getAttributeText( "phases" ), sourceName, pId );
             if ( species._listHabitat.empty() )
                 SW_LOG_WARNING( "%#: species '%#' likes no habitat - it will never come", sourceName, pId );
             for ( const hashed_string& abilityId : species._listAbility )

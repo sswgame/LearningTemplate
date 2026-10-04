@@ -145,6 +145,49 @@ SW_TEST_CASE( CreatureLifeTest, CatalogReadsPatternsAndOrdersBySize )
 }
 
 /**
+ * @brief [CreatureLifeTest] 방문 조건(때 · 날씨)은 데이터에 적은 그대로다 — 모든 때 × 날씨 × 종에서 "때 목록이 비었거나 그 때를 담고, 날씨 목록이 비었거나
+ *        그 날씨를 담는다" 와 같다(일정 조건 `ScheduleCondition` 으로 옮겨도 판정이 바뀌지 않았다는 증거)
+ */
+SW_TEST_CASE( CreatureLifeTest, VisitConditionMatchesThePhaseWeatherTable )
+{
+    CreatureLifeTestWorld world;
+    SW_ASSERT_TRUE( world.load() );
+    struct Expectation
+    {
+        const utf8*     _pSpecies;
+        const DayPhase* _pPhaseBegin;
+        size_t          _phaseCount;
+        const utf8*     _pWeather; ///< 비면 언제나
+    };
+    const DayPhase    arrSproutPhase[] = { DayPhase::Dawn, DayPhase::Day };
+    const DayPhase    arrFrogPhase[]   = { DayPhase::Night };
+    const Expectation arrExpectation[] = {
+        {"sprout", arrSproutPhase, 2, "sunny"},
+        {  "frog",   arrFrogPhase, 1,  "rain"},
+        {  "newt",        nullptr, 0,      ""},
+    };
+    const utf8* const arrWeather[] = { "sunny", "rain", "storm", "" };
+    for ( const Expectation& expectation : arrExpectation )
+    {
+        const CreatureSpeciesDef* pSpecies = world._catalog.findSpecies( hashed_string( expectation._pSpecies ) );
+        SW_ASSERT_NOT_NULL( pSpecies );
+        for ( uint32 phaseIndex = 0; phaseIndex <= static_cast<uint32>( DayPhase::Dusk ); ++phaseIndex )
+        {
+            const DayPhase phase       = static_cast<DayPhase>( phaseIndex );
+            bool           bPhaseMatch = expectation._phaseCount == 0;
+            for ( size_t listIndex = 0; listIndex < expectation._phaseCount; ++listIndex )
+                bPhaseMatch = bPhaseMatch || expectation._pPhaseBegin[listIndex] == phase;
+            for ( const utf8* pWeather : arrWeather )
+            {
+                const bool bWeatherMatch = expectation._pWeather[0] == '\0' || StringUtil::equals( expectation._pWeather, pWeather );
+                const bool bExpected     = bPhaseMatch && bWeatherMatch;
+                SW_EXPECT_EQUAL( bExpected, pSpecies->comesIn( phase, hashed_string( pWeather ) ) );
+            }
+        }
+    }
+}
+
+/**
  * @brief [CreatureLifeTest] 풀 4 칸은 꽃밭 둘이지만 나무가 더해지면 큰 풀숲 하나가 칸을 모두 차지한다 — 90° 돌린 모양도 같은 서식지다
  */
 SW_TEST_CASE( CreatureLifeTest, HabitatsMatchRotatedPatternsAndLargestWins )

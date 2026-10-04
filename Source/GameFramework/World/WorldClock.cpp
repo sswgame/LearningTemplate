@@ -89,13 +89,13 @@ namespace sw
         return _day / ( _settings._daysPerSeason * static_cast<int32>( _settings._listSeason.size() ) ) + 1;
     }
 
-    DayPhase WorldClock::computePhase( float32 hour ) const
+    DayPhase WorldClock::computePhaseAt( const WorldClockSettings& settings, float32 hour )
     {
-        if ( hour >= _settings._nightHour || hour < _settings._dawnHour )
+        if ( hour >= settings._nightHour || hour < settings._dawnHour )
             return DayPhase::Night;
-        if ( hour < _settings._dayHour )
+        if ( hour < settings._dayHour )
             return DayPhase::Dawn;
-        if ( hour < _settings._duskHour )
+        if ( hour < settings._duskHour )
             return DayPhase::Day;
         return DayPhase::Dusk;
     }
