@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Engine default InputMap — Title Confirm/Continue/Cancel + Debug reload actions.
+  Engine default InputMap (shell map) — Title Confirm/Continue/Cancel, Debug reload actions and the game-window dev console.
   Debug reload actions use Ctrl+F6, Ctrl+F7, Ctrl+F8 chords to prevent collision with gameplay F1~F12 skills.
+  The dev console toggle lives on the always-on Debug layer; its editing actions live on the DevConsole layer,
+  which DevConsoleController enables only while the console is open. Typed characters are text input, not actions.
 -->
 <InputMap defaultLayer="Title" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
 	<layers>
 		<layer name="Title" enabled="1" blockLower="1"/>
 		<layer name="Gameplay" enabled="0" blockLower="0"/>
 		<layer name="Debug" enabled="1" blockLower="0" alwaysOn="1"/>
+		<layer name="DevConsole" enabled="0" blockLower="0"/>
 	</layers>
 
 	<action name="Confirm" layer="Title" trigger="Pressed">
@@ -29,6 +32,36 @@
 		</action>
 		<action name="ReloadGame" trigger="Pressed">
 			<bind source="key" modifier="Ctrl" code="F7"/>
+		</action>
+		<action name="DevConsoleToggle" trigger="Pressed">
+			<bind source="key" code="Grave"/>
+			<bind source="gamepad" code="Back"/>
+			<bind source="key" modifier="Ctrl" code="F1"/>
+		</action>
+	</layer>
+	<layer name="DevConsole" enabled="0" blockLower="0">
+		<action name="DevConsoleClose" trigger="Pressed">
+			<bind source="key" code="Escape"/>
+			<bind source="gamepad" code="B"/>
+		</action>
+		<action name="DevConsoleSubmit" trigger="Pressed">
+			<bind source="key" code="Enter"/>
+			<bind source="key" code="NumpadEnter"/>
+			<bind source="gamepad" code="A"/>
+		</action>
+		<action name="DevConsoleComplete" trigger="Pressed">
+			<bind source="key" code="Tab"/>
+		</action>
+		<action name="DevConsoleHistoryBack" trigger="Repeat">
+			<bind source="key" code="Up"/>
+			<bind source="gamepad" code="DPadUp"/>
+		</action>
+		<action name="DevConsoleHistoryForward" trigger="Repeat">
+			<bind source="key" code="Down"/>
+			<bind source="gamepad" code="DPadDown"/>
+		</action>
+		<action name="DevConsoleDeleteBackward" trigger="Repeat">
+			<bind source="key" code="Backspace"/>
 		</action>
 	</layer>
 </InputMap>

@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/BitStream.h"
 
 #include "Engine/Destruction/FractureGraph.h"
 
@@ -13,6 +14,60 @@ namespace sw
     {
         struct DestructionStateInternal
         {
+            static constexpr uint32 kSnapshotMagic   = 0x53574453u; ///< 'SWDS'
+            static constexpr uint32 kSnapshotVersion = 1;
+            static constexpr uint32 kNoActiveNode    = 0xFFFFFFFFu;
+
+            /** @brief 0/1 바이트 목록을 비트로 씁니다. */
+            static void writeFlagBits( BitWriter& writer, const vector<uint8>& listFlag )
+            {
+                for ( const uint8 flag : listFlag )
+                    writer.writeBits( flag != 0 ? 1u : 0u, 1 );
+            }
+
+            static void readFlagBits( BitReader& reader, vector<uint8>& outListFlag, size_t count )
+            {
+                outListFlag.assign( count, SW_FALSE );
+                for ( size_t index = 0; index < count; ++index )
+                    outListFlag[index] = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
+            }
+
+            /** @brief 0 이 아닌 값만 (앞 자리와의 차, 비트 그대로) 로 씁니다. */
+            static void writeSparseFloats( BitWriter& writer, const vector<float32>& listValue )
+            {
+                uint64 count = 0;
+                for ( const float32 value : listValue )
+                    count += value != 0.0f ? 1u : 0u;
+                writer.writeVarUint( count );
+                size_t previous = 0;
+                for ( size_t index = 0; index < listValue.size(); ++index )
+                {
+                    if ( listValue[index] == 0.0f )
+                        continue;
+                    writer.writeVarUint( index - previous );
+                    writer.writeFloat( listValue[index] );
+                    previous = index;
+                }
+            }
+
+            [[nodiscard]] static bool readSparseFloats( BitReader& reader, vector<float32>& outListValue, size_t count )
+            {
+                outListValue.assign( count, 0.0f );
+                const uint64 valueCount = reader.readVarUint();
+                if ( valueCount > count )
+                    return false;
+                uint64 index = 0;
+                for ( uint64 entry = 0; entry < valueCount; ++entry )
+                {
+                    index += reader.readVarUint();
+                    const float32 value = reader.readFloat();
+                    if ( index >= count || reader.hasOverflowed() )
+                        return false;
+                    outListValue[static_cast<size_t>( index )] = value;
+                }
+                return reader.hasOverflowed() == false;
+            }
+
             static uint32 findRoot( vector<uint32>& inoutListParent, uint32 item )
             {
                 uint32 root = item;
@@ -530,5 +585,126 @@ namespace sw
                 hash = Internal::mixHash( hash, node );
         }
         return hash;
+    }
+
+    void DestructionState::writeSnapshot( vector<uint8>& outBytes ) const
+    {
+        using Internal = DestructionStateInternal;
+        BitWriter writer;
+        writer.writeUint32( Internal::kSnapshotMagic );
+        writer.writeVarUint( Internal::kSnapshotVersion );
+        writer.writeVarUint( _listNodeBroken.size() );
+        writer.writeVarUint( _listLinkBroken.size() );
+        writer.writeVarUint( _listLeafAnchored.size() );
+        writer.writeVarUint( _eventCount );
+        writer.writeVarUint( _nextGroupId );
+        Internal::writeFlagBits( writer, _listNodeBroken );
+        Internal::writeFlagBits( writer, _listLinkBroken );
+        Internal::writeFlagBits( writer, _listLeafAnchored );
+        Internal::writeSparseFloats( writer, _listNodeStrain );
+        Internal::writeSparseFloats( writer, _listLinkStrain );
+        writer.writeVarUint( _listGroup.size() );
+        for ( const DestructionGroup& group : _listGroup )
+        {
+            writer.writeVarUint( group._id );
+            writer.writeVarUint( group._parentId );
+            writer.writeBits( group._bAnchored == SW_TRUE ? 1u : 0u, 1 );
+            writer.writeVarUint( group._listNode.size() );
+            uint32 previous = 0;
+            for ( const uint32 node : group._listNode )
+            {
+                writer.writeVarUint( node - previous ); // 활성 노드는 오름차순
+                previous = node;
+            }
+        }
+        outBytes = writer.releaseBytes();
+    }
+
+    bool DestructionState::readSnapshot( const uint8* pData, size_t size )
+    {
+        using Internal = DestructionStateInternal;
+        if ( _pGraph == nullptr || pData == nullptr || size == 0 || size > static_cast<size_t>( MathUtil::MaxInt32 ) )
+            return false;
+        const FractureGraph& graph = *_pGraph;
+        BitReader            reader( pData, static_cast<int32>( size ) );
+        if ( reader.readUint32() != Internal::kSnapshotMagic || reader.readVarUint() != Internal::kSnapshotVersion )
+            return false;
+        const uint64 nodeCount = reader.readVarUint();
+        const uint64 linkCount = reader.readVarUint();
+        const uint64 leafCount = reader.readVarUint();
+        if ( nodeCount != graph._listNode.size() || linkCount != graph._listLink.size() || leafCount != graph._leafCount )
+            return false;
+        const uint32 eventCount  = static_cast<uint32>( reader.readVarUint() );
+        const uint32 nextGroupId = static_cast<uint32>( reader.readVarUint() );
+
+        vector<uint8>   listNodeBroken;
+        vector<uint8>   listLinkBroken;
+        vector<uint8>   listLeafAnchored;
+        vector<float32> listNodeStrain;
+        vector<float32> listLinkStrain;
+        Internal::readFlagBits( reader, listNodeBroken, graph._listNode.size() );
+        Internal::readFlagBits( reader, listLinkBroken, graph._listLink.size() );
+        Internal::readFlagBits( reader, listLeafAnchored, graph._leafCount );
+        const bool bNodeStrainRead = Internal::readSparseFloats( reader, listNodeStrain, graph._listNode.size() );
+        const bool bLinkStrainRead = Internal::readSparseFloats( reader, listLinkStrain, graph._listLink.size() );
+        if ( bNodeStrainRead == false || bLinkStrainRead == false )
+            return false;
+
+        // 그룹 — 활성 노드가 잎을 하나씩 정확히 덮어야 한다.
+        const uint64 groupCount = reader.readVarUint();
+        if ( groupCount == 0 || groupCount > graph._listNode.size() )
+            return false;
+        vector<DestructionGroup> listGroup;
+        vector<uint32>           listLeafActive( graph._leafCount, Internal::kNoActiveNode );
+        vector<uint32>           listLeafGroup( graph._leafCount, 0 );
+        for ( uint64 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
+        {
+            DestructionGroup group;
+            group._id                = static_cast<uint32>( reader.readVarUint() );
+            group._parentId          = static_cast<uint32>( reader.readVarUint() );
+            group._bAnchored         = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
+            const uint64 activeCount = reader.readVarUint();
+            const bool   bBadGroup   = reader.hasOverflowed() || activeCount == 0 || activeCount > graph._listNode.size() || group._id == 0 || group._id >= nextGroupId;
+            if ( bBadGroup )
+                return false;
+            uint64 node = 0;
+            for ( uint64 entry = 0; entry < activeCount; ++entry )
+            {
+                node += reader.readVarUint();
+                if ( node >= graph._listNode.size() || reader.hasOverflowed() )
+                    return false;
+                const FractureNode& data = graph._listNode[static_cast<size_t>( node )];
+                for ( uint32 leaf = data._firstLeaf; leaf < data._firstLeaf + data._leafCount; ++leaf )
+                {
+                    if ( leaf >= graph._leafCount || listLeafActive[leaf] != Internal::kNoActiveNode )
+                        return false;
+                    listLeafActive[leaf] = static_cast<uint32>( node );
+                    listLeafGroup[leaf]  = group._id;
+                }
+                group._leafCount += data._leafCount;
+                group._listNode.push_back( static_cast<uint32>( node ) );
+            }
+            listGroup.push_back( std::move( group ) );
+        }
+        if ( reader.hasOverflowed() )
+            return false;
+        for ( const uint32 active : listLeafActive )
+        {
+            if ( active == Internal::kNoActiveNode )
+                return false;
+        }
+
+        _listNodeBroken   = std::move( listNodeBroken );
+        _listLinkBroken   = std::move( listLinkBroken );
+        _listLeafAnchored = std::move( listLeafAnchored );
+        _listNodeStrain   = std::move( listNodeStrain );
+        _listLinkStrain   = std::move( listLinkStrain );
+        _listLinkLoad.assign( graph._listLink.size(), 0.0f );
+        _listLeafActive = std::move( listLeafActive );
+        _listLeafGroup  = std::move( listLeafGroup );
+        _listGroup      = std::move( listGroup );
+        _nextGroupId    = nextGroupId;
+        _eventCount     = eventCount;
+        return true;
     }
 } // namespace sw

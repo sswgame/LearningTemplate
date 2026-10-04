@@ -241,6 +241,7 @@ class MeshInfo:
 _kMeshVersion = 2
 _kMeshHeaderSize = 24
 _kMeshSkinVertexSize = 24
+_kMeshChunkTags = (b"MRPH",)
 
 
 def readMeshInfo(data: bytes) -> MeshInfo:
@@ -253,8 +254,19 @@ def readMeshInfo(data: bytes) -> MeshInfo:
     if vertexCount == 0 or vertexCount % 3 != 0:
         raise ValueError(f"vertex count {vertexCount} is not a non-zero multiple of 3")
     skinSize = vertexCount * _kMeshSkinVertexSize if skinBoneCount > 0 else 0
-    if len(data) != _kMeshHeaderSize + vertexCount * vertexSize + skinSize:
+    baseSize = _kMeshHeaderSize + vertexCount * vertexSize + skinSize
+    if len(data) < baseSize:
         raise ValueError(f"file size {len(data)} does not match the header ({vertexCount} x {vertexSize} bytes + {skinSize} skin bytes + {_kMeshHeaderSize})")
+    # 정점 뒤의 선택 덩어리(태그 4 바이트 + 길이 uint32 + 본문 — 지금은 모프 `MRPH`)가 파일 끝에 꼭 맞아야 한다.
+    cursor = baseSize
+    while cursor < len(data):
+        if len(data) - cursor < 8:
+            raise ValueError(f"truncated chunk header at byte {cursor}")
+        tag = data[cursor:cursor + 4]
+        (chunkLength,) = struct.unpack_from("<I", data, cursor + 4)
+        if tag not in _kMeshChunkTags or cursor + 8 + chunkLength > len(data):
+            raise ValueError(f"unknown or truncated chunk {tag!r} at byte {cursor}")
+        cursor += 8 + chunkLength
     return MeshInfo(vertexCount, vertexCount // 3, boundingRadius)
 
 

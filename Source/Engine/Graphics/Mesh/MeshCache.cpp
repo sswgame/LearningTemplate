@@ -85,6 +85,8 @@ namespace sw
         loaded->setVertices( std::move( data._listVertex ) );
         if ( data._skinBoneCount > 0 )
             loaded->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
+        if ( data._listMorphTarget.empty() == false )
+            loaded->setMorphTargets( std::move( data._listMorphTarget ) );
 
         return MeshCacheInternal::getSharedTable().insertOrGetLive( MeshCacheInternal::makeKey( path ), std::move( loaded ) );
     }
@@ -110,6 +112,7 @@ namespace sw
             pDevice->waitIdle();
         live->setVertices( std::move( data._listVertex ) );
         live->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
+        live->setMorphTargets( std::move( data._listMorphTarget ) );
         return true;
     }
 

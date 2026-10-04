@@ -554,6 +554,21 @@ SW_TEST_CASE( SkeletalAnimationTest, AnimatorPlaysClipFromFolder )
 }
 
 /**
+ * @brief [SkeletalAnimationTest] 런타임에 정한 스켈레톤(`setSkeleton`)은 렌더 에셋을 다시 풀어도(`resolveRenderAssets`) 암묵 스켈레톤으로 덮이지 않는다 — 경로를 정하면 경로가 이긴다
+ */
+SW_TEST_CASE( SkeletalAnimationTest, RuntimeSkeletonSurvivesRenderAssetResolve )
+{
+    GameObjectManager      manager;
+    SkeletalMeshComponent* pUnit = TestSkeletalAnimationInternal::createUnit( manager, "Runtime", 3 );
+    SW_ASSERT_NOT_NULL( pUnit );
+    SW_EXPECT_EQUAL( 3u, pUnit->getSkeleton().getBoneCount() );
+    pUnit->resolveRenderAssets();
+    SW_EXPECT_EQUAL( 3u, pUnit->getSkeleton().getBoneCount() );
+    pUnit->setSkeletonPath( "" ); // 경로를 (빈 값으로) 정하면 런타임 스켈레톤을 놓는다
+    SW_EXPECT_EQUAL( 1u, pUnit->getSkeleton().getBoneCount() );
+}
+
+/**
  * @brief [SkeletalAnimationTest] 페이드가 다른 페이드로 끊겨도 포즈가 튀지 않는다 — 끊긴 순간의 포즈에서 이어 섞인다
  * @details 루트 이동이 X 0 · 1 · 2 로 고정된 세 클립. A → B 페이드(0.2 초)의 반쯤(X ≈ 0.5)에서 C 로 넘어가면, 플레이어는 섞이던 한 칸을 버린다 —
  *          그대로 그리면 한 프레임에 X 가 0.5 에서 1 로 뛴다(애니메이션이 튄다). 끊긴 순간의 포즈를 새 페이드 동안 섞어 사라지게 하면 X 는 이어진다.

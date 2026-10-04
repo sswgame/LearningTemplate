@@ -154,7 +154,9 @@ namespace sw
 
     bool ReplicationServer::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
-        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetKitMessageRange::kClientServer ) == false || connectionId < 0 )
+        // 영역 안이어도 자기 종류가 아니면 넘긴다 — 라우터가 같은 영역의 다음 처리기에 묻는다(`INetMessageHandler` 계약).
+        const bool bMine = size > 0 && ( pData[0] == NetClientServerMessage::kSnapshotAck || pData[0] == NetClientServerMessage::kInput );
+        if ( bMine == false || connectionId < 0 )
             return false;
         ClientState& client = acquireClient( connectionId );
         BitReader    reader( pData + 1, size - 1 );

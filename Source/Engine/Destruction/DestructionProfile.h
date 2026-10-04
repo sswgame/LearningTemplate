@@ -8,6 +8,7 @@
  *       <Links strength="400" supportStrength="30000"/>
  *       <Impact impulseToStrain="0.4" minImpulse="40" radius="0.35"/>
  *       <Debris lifetime="10" maxBodies="96" smallVolume="0.002" fadeTime="0.5" sleepRemoveTime="1.5" keepCollisionVolume="0.05" hullShrink="0.01"/>
+ *       <Network poseRate="10"/>                      <!-- 선택. 덩어리(keepCollisionVolume 이상) 자세를 서버가 보내는 빈도(Hz) -->
  *     </DestructionProfile>
  * @endcode
  */
@@ -41,9 +42,10 @@ namespace sw
         float32         _smallDebrisVolume;   ///< 이보다 작은 떨어진 덩어리는 작은 파편(수명 · 페이드)
         float32         _fadeTime;            ///< 사라질 때 줄어드는 시간(초)
         float32         _sleepRemoveTime;     ///< 잠든 덩어리가 이만큼 쉬면 바디를 빼고 정적 그림에 합친다(초)
-        float32         _keepCollisionVolume; ///< 이보다 큰 덩어리는 쉬어도 바디(충돌)를 남긴다
+        float32         _keepCollisionVolume; ///< 이보다 큰 덩어리는 쉬어도 바디(충돌)를 남긴다. 네트워크에서도 이 선이 덩어리(서버 자세 복제 · 플레이어와 부딪힘)와 파편(클라이언트 꾸밈 · Debris 레이어)을 가른다
         float32         _hullShrink;          ///< 조각 껍질을 무게 중심 쪽으로 줄이는 거리(미터) — 이웃 조각과 겹쳐 튀지 않게
         uint32          _maxDebrisBody;       ///< 한 오브젝트가 동시에 드는 떨어진 덩어리 바디의 상한(넘으면 오래된 작은 것부터 사라진다)
+        float32         _networkPoseRate;     ///< 네트워크 — 서버가 움직이는 덩어리 자세를 보내는 빈도(Hz). 멈추면 최종 자세를 한 번 확정한다
 
         DestructionProfile();
 

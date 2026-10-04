@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -232,4 +233,81 @@ SW_TEST_CASE( MeshAssetTest, SkinStreamRoundTripsAndRejectsOutOfRangeJoints )
     sw::MeshAssetFormat::makeBytes( written, bytes );
     SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), read ) );
     SW_EXPECT_FALSE( read.hasSkin() );
+}
+
+/**
+ * @brief [MeshAssetTest] 모프 타깃 덩어리(MRPH)가 이름 · 정점 번호 · 위치 · 노멀 차이를 그대로 오가고, 모프가 없는 메시는 덩어리 없이 이전과 같은 바이트다
+ * @details 깨진 덩어리 — 모르는 이름 · 길이가 파일을 넘음 · 정점 범위 밖 번호 · 길이와 내용이 어긋남 — 는 모두 읽기 실패이고 결과는 비어 있다.
+ */
+SW_TEST_CASE( MeshAssetTest, MorphTargetChunkRoundTripsAndRejectsMalformedChunks )
+{
+    sw::MeshAssetData written{};
+    written._listVertex = makeTestTriangles( 2, 0.5f );
+    sw::vector<uint8> plainBytes;
+    sw::MeshAssetFormat::makeBytes( written, plainBytes );
+    SW_EXPECT_EQUAL( size_t( sw::MeshAssetFormat::kHeaderSize + written._listVertex.size() * sw::MeshAssetFormat::kVertexSize ), plainBytes.size() );
+
+    auto makeDelta = []( uint32 vertexIndex, const sw::float3& position, const sw::float3& normal )
+    {
+        sw::MeshMorphDelta delta{};
+        delta._vertexIndex = vertexIndex;
+        delta._position    = position;
+        delta._normal      = normal;
+        return delta;
+    };
+    sw::MeshMorphTarget jaw{};
+    jaw._name = sw::hashed_string( "jawOpen" );
+    jaw._listDelta.push_back( makeDelta( 1u, sw::float3( 0.0f, -0.25f, 0.5f ), sw::float3( 0.0f, 0.1f, 0.0f ) ) );
+    jaw._listDelta.push_back( makeDelta( 4u, sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3() ) );
+    sw::MeshMorphTarget blink{};
+    blink._name = sw::hashed_string( "blinkLeft" );
+    blink._listDelta.push_back( makeDelta( 5u, sw::float3( 0.0f, 0.0f, -1.0f ), sw::float3( 0.0f, 0.0f, 0.5f ) ) );
+    written._listMorphTarget = { jaw, blink };
+
+    sw::vector<uint8> bytes;
+    sw::MeshAssetFormat::makeBytes( written, bytes );
+    SW_ASSERT_TRUE( bytes.size() > plainBytes.size() );
+    SW_EXPECT_TRUE( sw::Memory::compare( bytes.data(), plainBytes.data(), plainBytes.size() ) == 0 );
+    sw::MeshAssetData read{};
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), read ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), read._listMorphTarget.size() );
+    SW_EXPECT_TRUE( read._listMorphTarget[0]._name == sw::hashed_string( "jawOpen" ) );
+    SW_EXPECT_TRUE( read._listMorphTarget[1]._name == sw::hashed_string( "blinkLeft" ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), read._listMorphTarget[0]._listDelta.size() );
+    SW_EXPECT_EQUAL( 4u, read._listMorphTarget[0]._listDelta[1]._vertexIndex );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, read._listMorphTarget[0]._listDelta[1]._position._z, 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.1f, read._listMorphTarget[0]._listDelta[0]._normal._y, 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, read._listMorphTarget[1]._listDelta[0]._normal._z, 0.0f );
+
+    // 캐시가 메시에 타깃을 싣는다(이름 → 번호).
+    const sw::string path = test::makeTempPath( "morph.mesh" );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, written ) );
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshCache::acquire( path );
+    SW_ASSERT_NOT_NULL( mesh.get() );
+    SW_EXPECT_EQUAL( 2u, mesh->getMorphTargetCount() );
+    SW_EXPECT_EQUAL( 1, mesh->findMorphTargetIndex( sw::hashed_string( "blinkLeft" ) ) );
+
+    test::ScopedDefensiveTestLog expected( "malformed morph target chunks are rejected" );
+    const size_t                 chunkStart     = plainBytes.size();
+    auto                         expectRejected = [&]( sw::vector<uint8> listBroken )
+    {
+        sw::MeshAssetData result{};
+        SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( listBroken.data(), listBroken.size(), result ) );
+        SW_EXPECT_TRUE( result._listVertex.empty() && result._listMorphTarget.empty() );
+    };
+    sw::vector<uint8> unknownName = bytes;
+    unknownName[chunkStart]       = 'X';
+    expectRejected( unknownName );
+    sw::vector<uint8> truncated( bytes.begin(), bytes.end() - 3 );
+    expectRejected( truncated );
+    // 첫 타깃의 첫 정점 번호(덩어리 머리 8 + 타깃 수 4 + 이름 길이 4 + "jawOpen" 7 + 정점 수 4)를 정점 수 밖으로.
+    sw::vector<uint8> outOfRange        = bytes;
+    const size_t      firstVertexOffset = chunkStart + 8 + 4 + 4 + 7 + 4;
+    outOfRange[firstVertexOffset]       = 0xFF;
+    outOfRange[firstVertexOffset + 1]   = 0xFF;
+    expectRejected( outOfRange );
+    sw::vector<uint8> trailing = bytes;
+    trailing[chunkStart + 4]   = static_cast<uint8>( trailing[chunkStart + 4] + 4 );
+    trailing.insert( trailing.end(), { 0, 0, 0, 0 } );
+    expectRejected( trailing );
 }

@@ -14,11 +14,12 @@ namespace sw
     {
         struct DestructionProfileInternal
         {
-            static constexpr const utf8* kArrRootAttribute[]   = { "density", "physicsMaterial" };
-            static constexpr const utf8* kArrStrainAttribute[] = { "thresholds" };
-            static constexpr const utf8* kArrLinkAttribute[]   = { "strength", "supportStrength" };
-            static constexpr const utf8* kArrImpactAttribute[] = { "impulseToStrain", "minImpulse", "radius" };
-            static constexpr const utf8* kArrDebrisAttribute[] = { "lifetime", "maxBodies", "smallVolume", "fadeTime", "sleepRemoveTime", "keepCollisionVolume", "hullShrink" };
+            static constexpr const utf8* kArrRootAttribute[]    = { "density", "physicsMaterial" };
+            static constexpr const utf8* kArrStrainAttribute[]  = { "thresholds" };
+            static constexpr const utf8* kArrLinkAttribute[]    = { "strength", "supportStrength" };
+            static constexpr const utf8* kArrImpactAttribute[]  = { "impulseToStrain", "minImpulse", "radius" };
+            static constexpr const utf8* kArrDebrisAttribute[]  = { "lifetime", "maxBodies", "smallVolume", "fadeTime", "sleepRemoveTime", "keepCollisionVolume", "hullShrink" };
+            static constexpr const utf8* kArrNetworkAttribute[] = { "poseRate" };
 
             /** @brief 같은 원소가 두 번 나오면 오류입니다(뒤 것이 앞 것을 조용히 덮지 않게). */
             static bool claimElement( const XmlNode& node, CharacterDataReader& reader, uint8& inoutSeen )
@@ -53,6 +54,7 @@ namespace sw
         , _keepCollisionVolume{ 0.05f }
         , _hullShrink{ 0.01f }
         , _maxDebrisBody{ 96 }
+        , _networkPoseRate{ 10.0f }
     {
     }
 
@@ -93,12 +95,13 @@ namespace sw
     {
         using Internal = DestructionProfileInternal;
         reader.reportUnknownAttributes( root, Internal::kArrRootAttribute );
-        _density          = reader.readFloat( root, "density", _density );
-        _physicsMaterial  = reader.readName( root, "physicsMaterial", false );
-        uint8 bStrainSeen = SW_FALSE;
-        uint8 bLinkSeen   = SW_FALSE;
-        uint8 bImpactSeen = SW_FALSE;
-        uint8 bDebrisSeen = SW_FALSE;
+        _density           = reader.readFloat( root, "density", _density );
+        _physicsMaterial   = reader.readName( root, "physicsMaterial", false );
+        uint8 bStrainSeen  = SW_FALSE;
+        uint8 bLinkSeen    = SW_FALSE;
+        uint8 bImpactSeen  = SW_FALSE;
+        uint8 bDebrisSeen  = SW_FALSE;
+        uint8 bNetworkSeen = SW_FALSE;
         for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Strain", true ) )
@@ -158,6 +161,13 @@ namespace sw
                 else
                     _maxDebrisBody = static_cast<uint32>( maxBody );
             }
+            else if ( StringUtil::equals( child.getName(), "Network", true ) )
+            {
+                if ( Internal::claimElement( child, reader, bNetworkSeen ) == false )
+                    continue;
+                reader.reportUnknownAttributes( child, Internal::kArrNetworkAttribute );
+                _networkPoseRate = reader.readFloat( child, "poseRate", _networkPoseRate );
+            }
             else
             {
                 reader.reportUnknownElement( child );
@@ -165,8 +175,8 @@ namespace sw
         }
         const bool bPositive = _density > 0.0f && _linkStrength > 0.0f && _supportStrength > 0.0f && _impulseToStrain >= 0.0f && _minImpulse >= 0.0f &&
                                _impactRadius >= 0.0f && _debrisLifetime > 0.0f && _smallDebrisVolume >= 0.0f && _fadeTime >= 0.0f && _sleepRemoveTime >= 0.0f &&
-                               _keepCollisionVolume >= 0.0f && _hullShrink >= 0.0f;
+                               _keepCollisionVolume >= 0.0f && _hullShrink >= 0.0f && _networkPoseRate > 0.0f;
         if ( bPositive == false )
-            reader.addError( root, "density, strengths and lifetime must be positive; the other numbers must not be negative" );
+            reader.addError( root, "density, strengths, lifetime and pose rate must be positive; the other numbers must not be negative" );
     }
 } // namespace sw

@@ -7,6 +7,8 @@
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Character/PoseModifierComponent.h"
 #include "Engine/Character/SocketSet.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
@@ -360,4 +362,64 @@ SW_TEST_CASE( PoseModifierTest, PhysicsAssetShapesBecomeSpringColliders )
     }
     SW_EXPECT_TRUE( arrClearance[0] < 0.15f );
     SW_EXPECT_TRUE( arrClearance[1] >= 0.15f + 0.02f - 1e-3f );
+}
+
+/**
+ * @brief [PoseModifierTest] 포즈 구동(RBF)의 보정 모프가 그리는 메시의 같은 이름 모프 타깃 가중치가 된다 — 굽힘 포즈면 1, 쉬는 포즈면 0
+ * @details 유닛의 메시는 모프 타깃 `ElbowBend` 를 가진 스킨드 큐브다. 가중치는 기본 포즈 단계가 비우고 후처리(리그)가 더하므로, 굽힘을 풀면 다음 프레임에 0 이다.
+ */
+SW_TEST_CASE( PoseModifierTest, PoseDriverCorrectiveMorphDrivesMeshMorphWeight )
+{
+    GameObjectManager      manager;
+    SkeletalMeshComponent* pUnit = TestPoseModifierInternal::createUnit( manager, "Arm", float3{} );
+    SW_ASSERT_NOT_NULL( pUnit );
+    shared_ptr<Mesh>       cube = MeshUtil::createUnitCube();
+    vector<MeshSkinVertex> listSkin( cube->getVertices().size(), MeshSkinVertex{} );
+    MeshMorphTarget        bend{};
+    bend._name = hashed_string( "ElbowBend" );
+    MeshMorphDelta delta{};
+    delta._vertexIndex = 0;
+    delta._position    = float3{ 0.0f, 0.1f, 0.0f };
+    bend._listDelta.push_back( delta );
+    shared_ptr<Mesh> mesh = Mesh::create();
+    mesh->setVertices( cube->getVertices() );
+    mesh->setSkin( listSkin, 3 );
+    mesh->setMorphTargets( { bend } );
+    pUnit->setMesh( mesh );
+    pUnit->resolveRenderAssets();
+    SW_ASSERT_EQUAL( 0, pUnit->findMorphTargetIndex( hashed_string( "ElbowBend" ) ) );
+
+    /** @brief 기본 포즈 단계에서 bone1 을 피치로 굽힌다. */
+    class ElbowTask final : public IAnimationPhaseTask
+    {
+    public:
+        bool isAnimationActive() const override { return true; }
+        void runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
+        {
+            (void)context;
+            if ( phase != AnimationPhase::BasePose )
+                return;
+            BoneTransform elbow = unit.getLocalPose().getBoneTransform( 1 );
+            elbow._rotation     = quaternion::createFromYawPitchRoll( 0.0f, _degrees * MathUtil::DegreeToRadian, 0.0f );
+            unit.getLocalPose().setBoneTransform( 1, elbow );
+        }
+        float32 _degrees{ 90.0f };
+    };
+    ElbowTask elbow;
+    pUnit->addAnimationPhaseTask( &elbow );
+    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pUnit, R"({ "nodes": [ { "type": "PoseDriver", "name": "Elbow", "driver": "bone1",
+        "radius_degrees": 60, "poses": [ { "name": "Rest", "rotation": [0, 0, 0] },
+        { "name": "Bent", "rotation": [90, 0, 0], "morphs": [ { "morph": "ElbowBend", "weight": 1 } ] } ] } ] })" );
+    SW_ASSERT_NOT_NULL( pModifier );
+    pModifier->dispatchBeginPlay();
+
+    manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
+    SW_ASSERT_EQUAL( size_t( 1 ), pUnit->getMorphWeights().size() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pUnit->getMorphWeights()[0], 1e-4f );
+
+    elbow._degrees = 0.0f;
+    pUnit->markPoseDirty();
+    manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pUnit->getMorphWeights()[0], 1e-4f );
+    pUnit->removeAnimationPhaseTask( &elbow );
 }

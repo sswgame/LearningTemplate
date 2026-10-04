@@ -66,6 +66,7 @@ namespace sw
         , _listOutgoingSequenced{}
         , _listOutgoingUnreliable{}
         , _listParsedScratch{}
+        , _listSequencedReceive{}
         , _stats{}
         , _lastStatsTime{ 0.0 }
         , _lastAckRequestTime{ -1.0e9 }
@@ -74,8 +75,6 @@ namespace sw
         , _oldestUnackedReliableId{ 0 }
         , _nextReliableReceiveId{ 0 }
         , _nextSequencedSendId{ 0 }
-        , _lastSequencedReceiveId{ 0 }
-        , _bHasSequencedReceive{ SW_FALSE }
         , _bAckPending{ SW_FALSE }
     {
     }
@@ -90,6 +89,7 @@ namespace sw
             listIncoming.clear();
         _listOutgoingSequenced.clear();
         _listOutgoingUnreliable.clear();
+        _listSequencedReceive.clear();
         _stats                   = NetConnectionStats{};
         _lastStatsTime           = 0.0;
         _lastAckRequestTime      = -1.0e9;
@@ -98,8 +98,6 @@ namespace sw
         _oldestUnackedReliableId = 0;
         _nextReliableReceiveId   = 0;
         _nextSequencedSendId     = 0;
-        _lastSequencedReceiveId  = 0;
-        _bHasSequencedReceive    = SW_FALSE;
         _bAckPending             = SW_FALSE;
     }
 
@@ -124,6 +122,16 @@ namespace sw
             }
             case NetChannelType::UnreliableSequenced:
             {
+                // 흐름은 메시지 첫 바이트(종류)마다 — 같은 종류의 아직 안 나간 옛것만 새것으로 바꾼다(다른 종류는 서로 지우지 않는다).
+                for ( vector<uint8>& pending : _listOutgoingSequenced )
+                {
+                    const bool bSameStream = pending.empty() == buffer.empty() && ( buffer.empty() || pending[0] == buffer[0] );
+                    if ( bSameStream )
+                    {
+                        pending = std::move( buffer );
+                        return true;
+                    }
+                }
                 _listOutgoingSequenced.push_back( std::move( buffer ) );
                 return true;
             }
@@ -228,17 +236,15 @@ namespace sw
             pMessage->_lastSentTime                        = time;
             pSent->_arrReliableId[pSent->_reliableCount++] = messageId;
         }
-        // 2) 순서만 — 가장 새 것만 의미가 있으니 마지막 것 하나를 싣고 옛것은 버린다(들어가지 않으면 다음 패킷에 그 새 것을).
-        if ( _listOutgoingSequenced.empty() == false &&
-             writeMessage( NetChannelType::UnreliableSequenced, _nextSequencedSendId, _listOutgoingSequenced.back() ) )
+        // 2) 순서만 — 종류마다 가장 새 것 하나씩(쌓을 때 옛것은 이미 바뀌었다). 들어가지 않은 것은 다음 패킷에.
+        size_t sequencedWritten = 0;
+        while ( sequencedWritten < _listOutgoingSequenced.size() &&
+                writeMessage( NetChannelType::UnreliableSequenced, _nextSequencedSendId, _listOutgoingSequenced[sequencedWritten] ) )
         {
             ++_nextSequencedSendId;
-            _listOutgoingSequenced.clear();
+            ++sequencedWritten;
         }
-        else if ( _listOutgoingSequenced.size() > 1 )
-        {
-            _listOutgoingSequenced.erase( _listOutgoingSequenced.begin(), _listOutgoingSequenced.end() - 1 );
-        }
+        _listOutgoingSequenced.erase( _listOutgoingSequenced.begin(), _listOutgoingSequenced.begin() + static_cast<std::ptrdiff_t>( sequencedWritten ) );
         // 3) 비신뢰 — 들어가는 만큼, 못 들어간 것은 다음 패킷으로.
         while ( _listOutgoingUnreliable.empty() == false )
         {
@@ -319,10 +325,22 @@ namespace sw
                 }
                 case NetChannelType::UnreliableSequenced:
                 {
-                    if ( _bHasSequencedReceive && NetSequence::isGreater( message._id, _lastSequencedReceiveId ) == false )
+                    // 번호는 연결 하나에서 늘기만 하므로 종류마다 마지막 번호와 비교한다 — 늦게 온 같은 종류의 옛것만 버린다.
+                    const uint8      kind    = message._buffer.empty() ? static_cast<uint8>( 0 ) : message._buffer[0];
+                    SequencedStream* pStream = nullptr;
+                    for ( SequencedStream& stream : _listSequencedReceive )
+                    {
+                        if ( stream._kind == kind )
+                            pStream = &stream;
+                    }
+                    if ( pStream != nullptr && NetSequence::isGreater( message._id, pStream->_lastId ) == false )
                         break; // 늦게 온 옛것
-                    _lastSequencedReceiveId = message._id;
-                    _bHasSequencedReceive   = SW_TRUE;
+                    if ( pStream == nullptr )
+                    {
+                        _listSequencedReceive.push_back( SequencedStream{ message._id, kind } );
+                        pStream = &_listSequencedReceive.back();
+                    }
+                    pStream->_lastId = message._id;
                     _arrIncoming[static_cast<int32>( NetChannelType::UnreliableSequenced )].push_back( std::move( message._buffer ) );
                     break;
                 }
