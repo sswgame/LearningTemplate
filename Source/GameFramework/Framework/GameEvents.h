@@ -6,8 +6,7 @@
  *          - `SaveGameSavedEvent` · `SaveGameLoadedEvent` — `GameInstanceBase::saveStateToFile` · `loadStateFromFile` 이 끝난 자리(성공 · 실패 모두).
  *          - `SceneLoadRequestedEvent` — `GameInstanceBase::requestFirstScene` · `requestEntranceScene` 이 씬 로드를 맡긴 자리.
  *          - `SceneLoadCompletedEvent` — 그 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstanceBase::update`.
- *          - `GamePausedEvent` · `GameResumedEvent` — `GameModeStateMachine` 이 `GameModes::paused()` 로 들어가거나 거기서 나간 자리.
- *          언리얼 `FCoreUObjectDelegates::PreLoadMap` · `PostLoadMapWithWorld`, `AGameModeBase::SetPause` · `ClearPause` 와 같은 자리입니다.
+ *          언리얼 `FCoreUObjectDelegates::PreLoadMap` · `PostLoadMapWithWorld` 와 같은 자리입니다. 낼 자리가 없는 이벤트(일시정지 등)는 두지 않습니다.
  *          다른 채널 이벤트는 킷이 자기 헤더에 둡니다(`ActionCombatEvents.h` 의 피해 · 룸 이벤트).
  *          `SceneManager` 를 직접 부른 씬 로드는 레벨 이벤트를 내지 않습니다 — 엔진은 GameFramework 를 모릅니다.
  */
@@ -76,26 +75,5 @@ namespace sw
         string _levelName;        ///< 요청했던 씬 경로
         bool   _bSuccess{ true }; ///< 활성 씬이 되었으면 true. 읽지 못했거나 뒤 요청에 밀렸으면 false
         SW_DECLARE_GAMEPLAY_EVENT( SceneLoadCompletedEvent );
-    };
-} // namespace sw
-
-namespace sw
-{
-    // ------------------------------------------------------------------------------
-    // 4) 일시정지 — GameModeStateMachine
-    // ------------------------------------------------------------------------------
-    /** @brief 게임 모드가 `GameModes::paused()` 로 들어갔음을 알립니다. */
-    struct SW_GF_API GamePausedEvent final : IEvent
-    {
-        SW_DECLARE_GAMEPLAY_EVENT( GamePausedEvent );
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 게임 모드가 `GameModes::paused()` 에서 나갔음을 알립니다(다른 모드로 · 리셋 · 핸들러 해제 모두). */
-    struct SW_GF_API GameResumedEvent final : IEvent
-    {
-        SW_DECLARE_GAMEPLAY_EVENT( GameResumedEvent );
     };
 } // namespace sw

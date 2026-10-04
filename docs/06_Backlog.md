@@ -1300,7 +1300,7 @@ cd build/Ninja-Debug/Bin
   시퀀서 이벤트는 `SequencePlayerComponent::registerSequenceEvent` 로 받는다.
 
 - **`GameEvents.h` 의 이벤트는 프레임워크가 그 자리에서 낸다**(세이브 · 로드 완료 = `GameInstanceBase::save/loadStateToFile`, 레벨 로드 요청 · 완료 =
-  `requestFirstScene` · `requestEntranceScene`, 일시정지 = `GameModeStateMachine`). `SceneManager` 를 직접 부른 로드는 LevelLoad 이벤트를 내지 않는다.
+  `requestFirstScene` · `requestEntranceScene`). `SceneManager` 를 직접 부른 로드는 LevelLoad 이벤트를 내지 않는다.
   낼 자리가 없는 이벤트는 두지 않는다.
 - **스프라이트 클립 키(`transformKeys`)는 클립 타임라인의 초이고 루트(primary) 스프라이트에는 적용하지 않는다**(경고) — 움직일 스프라이트는 루트 아래에.
 

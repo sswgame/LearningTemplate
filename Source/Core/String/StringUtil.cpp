@@ -231,84 +231,6 @@ namespace sw
                 }
             }
 
-            /** @brief 로케일 변환이 실패했음을 나타내는 값입니다(C 런타임 규약). */
-            static constexpr size_t kConversionFailed = static_cast<size_t>( -1 );
-
-            /**
-             * @brief wide → 로케일 멀티바이트 변환 원시 연산입니다.
-             * @param pOutBuffer nullptr 이면 변환하지 않고 필요한 크기만 반환합니다.
-             * @return 널 종료를 포함한 바이트 수. 실패하면 kConversionFailed
-             * @details 플랫폼 분기를 이 한 줄짜리 함수에만 둡니다. "크기 질의 → 버퍼 준비 → 변환" 은 두 방향(utf16 → locale,
-             *          locale → utf16)이 함께 씁니다.
-             */
-            static size_t wideToMultiByteInternal( utf8* pOutBuffer, size_t bufferSize, const utf16* pInput )
-            {
-#if defined( SW_PLATFORM_WINDOWS )
-                size_t convertedSize{ 0 };
-                if ( wcstombs_s( &convertedSize, pOutBuffer, bufferSize, pInput, bufferSize ) != 0 )
-                    return kConversionFailed;
-                return convertedSize;
-#elif defined( SW_PLATFORM_LINUX )
-                const size_t writtenSize = wcstombs( pOutBuffer, pInput, bufferSize );
-                if ( writtenSize == kConversionFailed )
-                    return kConversionFailed;
-                // POSIX 는 널 종료를 세지 않는다. Windows 쪽과 같은 규칙으로 맞춘다.
-                return writtenSize + 1;
-#else
-    #error "Unsupported platform"
-#endif
-            }
-
-            /**
-             * @brief 로케일 멀티바이트 → wide 변환 원시 연산입니다.
-             * @param pOutBuffer nullptr 이면 변환하지 않고 필요한 문자 수만 반환합니다.
-             * @return 널 종료를 포함한 문자 수. 실패하면 kConversionFailed
-             */
-            static size_t multiByteToWideInternal( utf16* pOutBuffer, size_t bufferSize, const utf8* pInput )
-            {
-#if defined( SW_PLATFORM_WINDOWS )
-                size_t convertedSize{ 0 };
-                if ( mbstowcs_s( &convertedSize, pOutBuffer, bufferSize, pInput, bufferSize ) != 0 )
-                    return kConversionFailed;
-                return convertedSize;
-#elif defined( SW_PLATFORM_LINUX )
-                const size_t writtenSize = mbstowcs( pOutBuffer, pInput, bufferSize );
-                if ( writtenSize == kConversionFailed )
-                    return kConversionFailed;
-                return writtenSize + 1;
-#else
-    #error "Unsupported platform"
-#endif
-            }
-
-            static string utf16ToLocaleInternal( const utf16* pInput )
-            {
-                if ( pInput == nullptr || *pInput == L'\0' )
-                    return {};
-
-                const size_t requiredSize = wideToMultiByteInternal( nullptr, 0, pInput );
-                if ( requiredSize == 0 || requiredSize == kConversionFailed )
-                    return {};
-
-                string buffer( requiredSize - 1, '\0' );
-                wideToMultiByteInternal( buffer.data(), requiredSize, pInput );
-                return buffer;
-            }
-
-            static wstring localeToUtf16Internal( const utf8* pInput )
-            {
-                if ( pInput == nullptr || *pInput == '\0' )
-                    return {};
-
-                const size_t requiredSize = multiByteToWideInternal( nullptr, 0, pInput );
-                if ( requiredSize == 0 || requiredSize == kConversionFailed )
-                    return {};
-
-                wstring buffer( requiredSize - 1, L'\0' );
-                multiByteToWideInternal( buffer.data(), requiredSize, pInput );
-                return buffer;
-            }
-
             template <typename T>
             static string integerToString( T value )
             {
@@ -612,41 +534,6 @@ namespace sw
 
         SW_LOG_ASSERT( isValidUtf8( result.c_str() ), "UTF8 문자열이 아닙니다" );
         return result;
-    }
-
-    string StringUtil::utf16ToLocale( const utf16* pInput )
-    {
-        return StringUtilInternal::utf16ToLocaleInternal( pInput );
-    }
-
-    wstring StringUtil::localeToUtf16( const utf8* pInput )
-    {
-        if ( isNullOrEmpty( pInput ) )
-            return {};
-        if ( isValidUtf8( pInput ) )
-            return utf8ToUtf16( pInput );
-
-        return StringUtilInternal::localeToUtf16Internal( pInput );
-    }
-
-    string StringUtil::localeToUtf8( const utf8* pInput )
-    {
-        if ( isNullOrEmpty( pInput ) )
-            return {};
-        if ( isValidUtf8( pInput ) )
-            return string{ pInput };
-
-        const wstring wideStr = StringUtilInternal::localeToUtf16Internal( pInput );
-        return utf16ToUtf8( wideStr.c_str() );
-    }
-
-    string StringUtil::utf8ToLocale( const utf8* pInput )
-    {
-        if ( isNullOrEmpty( pInput ) )
-            return {};
-
-        const wstring wideStr = utf8ToUtf16( pInput );
-        return StringUtilInternal::utf16ToLocaleInternal( wideStr.c_str() );
     }
 
     string StringUtil::toUpper( const utf8* pInput )
