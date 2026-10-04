@@ -1,0 +1,20 @@
+{
+    "_name": "GF_ThemePark",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "테마파크(롤러코스터 타이쿤) 키트 — 코스터 트랙 조각 · 열차 물리 · 승차 평가 · 손님과 공원 경영 시뮬레이션",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

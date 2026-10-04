@@ -1,0 +1,16 @@
+{
+    "_name": "GameFramework",
+    "_version": "1.0.0",
+    "_kind": "GameFramework",
+    "_description": "장르 비의존 게임플레이 프레임워크(공유 모듈 — 키트 · 게임이 링크한다)",
+    "_listDependency": [],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

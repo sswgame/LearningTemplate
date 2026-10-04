@@ -54,7 +54,7 @@ namespace
 
     /** @brief 표의 줄을 거꾸로 적은 단계 이름입니다 — 해제는 기동이 어디서 멈췄든 이 순서로 모든 단계를 돈다. */
     constexpr const utf8* kFullDestroyOrder =
-        "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+        "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
         "Config Reflection Compression";
 
     string joinStepNames( const vector<EngineInitStep>& listStep )
@@ -176,7 +176,7 @@ SW_TEST_CASE( EngineInitSequenceTest, ShutdownRunsInReverseOfInitialization )
 
     sequence.shutdownAll();
     SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
-    SW_EXPECT_STREQ( "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+    SW_EXPECT_STREQ( "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
                      "Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 
@@ -195,11 +195,11 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedStepStopsAndShutsDownOnlyInitialized
     recorder._resultStep = EngineInitStep::Scene;
     recorder._result     = EngineInitResult::Failed;
     SW_EXPECT_FALSE( sequence.initializeAll( recorder ) );
-    SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineDefaultAssets ShaderCache Task ModuleImages Audio Input ModuleTypes Physics Scene",
+    SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineDefaultAssets ShaderCache Task ModuleImages Audio FileIo Input ModuleTypes Physics Scene",
                      joinStepNames( recorder._listInitialized ).c_str() );
 
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Physics ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
+    SW_EXPECT_STREQ( "Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 
     // 해제는 실패한 단계(Scene — 종료는 받지 않았다)와 닿지 못한 단계까지 모두 돈다. 부트스트랩이 미리 만든 객체가 있기 때문이다.
@@ -218,11 +218,11 @@ SW_TEST_CASE( EngineInitSequenceTest, SkipDependentsSkipsEveryDependentStep )
     recorder._resultStep = EngineInitStep::Headless;
     recorder._result     = EngineInitResult::SkipDependents;
     SW_EXPECT_TRUE( sequence.initializeAll( recorder ) );
-    SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineDefaultAssets ShaderCache Task ModuleImages Audio Input ModuleTypes Physics Scene Headless",
+    SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineDefaultAssets ShaderCache Task ModuleImages Audio FileIo Input ModuleTypes Physics Scene Headless",
                      joinStepNames( recorder._listInitialized ).c_str() );
 
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Headless Scene Physics ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
+    SW_EXPECT_STREQ( "Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 
     // 건너뛴 단계(RHI 이후)도 해제는 받는다 — 그 단계의 서비스가 부트스트랩에서 만들어져 있을 수 있다.
@@ -348,7 +348,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies 
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+    SW_EXPECT_STREQ( "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
                      "Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 }
@@ -369,7 +369,7 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Telemetry FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
+    SW_EXPECT_STREQ( "Telemetry FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 }
 

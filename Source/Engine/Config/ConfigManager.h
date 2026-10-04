@@ -41,7 +41,7 @@ namespace sw
         /**
          * @brief 상대 Config 경로의 기준 디렉터리(보통 프로젝트 루트)를 지정합니다.
          * @details `Config/...` 는 상대 경로입니다. 실행 파일은 `build/<preset>/Bin` 에서 도는데 `Config/` 는 프로젝트 루트에 있어,
-         *          **현재 작업 디렉터리 기준**으로 찾으면 EngineConfig/GameConfig/AppConfig 가 모두 "없음" 으로 떨어지고 생성된
+         *          **현재 작업 디렉터리 기준**으로 찾으면 EngineConfig/GameConfig/EditorConfig 가 모두 "없음" 으로 떨어지고 생성된
          *          기본값으로 조용히 대체됩니다(창 크기 · VSync · 리소스 우선순위 · 게임 키트 모듈 목록이 모두 무시됨).
          *          `Resource/` 처럼 거슬러 올라가 찾은 루트(`ResourceUtil`)를 여기에 넣어 줍니다.
          */

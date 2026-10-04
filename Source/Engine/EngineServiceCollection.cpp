@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Event/EventDispatcher.h"
+#include "Core/File/AsyncFileIo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
@@ -97,6 +98,8 @@ namespace sw
         constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<AssetManager> = MemoryTag::Asset;
         template <>
         constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<AssetStreamingQueue> = MemoryTag::Asset;
+        template <>
+        constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<AsyncFileIo> = MemoryTag::Asset;
         template <>
         constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<ShaderCache> = MemoryTag::Shader;
         template <>

@@ -2,28 +2,21 @@
 
 #include "EngineTest/ResourcePackTestUtil.h"
 
+#include "Core/Compression/ICompressionCodec.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Resource/PackCompressionUtil.h"
-#include "Engine/Resource/ResourcePackTypes.h"
 
-#include <cstdio>
-
-namespace sw
+namespace sw::test
 {
-    bool createTestPackFile( const string& packPath, uint32 dlcAppId, PackCompressionType compression, const vector<sw::pair<string, string>>& listFileContent,
-                             bool bIncludeDebugStringPool )
+    bool ResourcePackTestUtil::createPackFile( const string& packPath, uint32 dlcAppId, PackCompressionType compression, const vector<pair<string, string>>& listFileContent, bool bIncludeDebugStringPool )
     {
         FileUtil::ensureParentDirectoryExists( packPath );
 
-        FILE* pFile{ nullptr };
-#if defined( SW_PLATFORM_WINDOWS )
-        fopen_s( &pFile, packPath.c_str(), "wb" );
-#else
-        pFile = fopen( packPath.c_str(), "wb" );
-#endif
+        FILE* pFile = PlatformFileUtil::openFile( packPath.c_str(), "wb" );
         if ( pFile == nullptr )
             return false;
 
@@ -140,4 +133,4 @@ namespace sw
         std::fclose( pFile );
         return true;
     }
-} // namespace sw
+} // namespace sw::test

@@ -5,7 +5,7 @@
 
 ## 디렉터리
 - **Common/**: `Types.h` · `Macros.h` · `Defines.h`(버퍼 크기 상수) · `StdHeaders.h` · `PlatformOsHeaders.h` · `EnumUtil.h` · `VarIntUtil.h`(LEB128 · ZigZag) ·
-  `BuildInfo.h`(`sw::build::kConfigName` · `kPlatformName` — 값은 CMake 가 정한다) · `TargetMacroCheck.h`(아래 "타깃 매크로") ·
+  `BuildInfo.h`(`sw::build::kConfigName` · `kPlatformName` — 값은 CMake 가 정한다) · `TopologicalSortUtil`(의존 위상 정렬 — 동점은 이름 순, 순환 경로 찾기. 엔진 기동 단계 · 모듈 적재 순서가 함께 쓴다) · `TargetMacroCheck.h`(아래 "타깃 매크로") ·
   `X11MacroUndef.h`(Xlib · GLX 를 포함한 바로 뒤에 다시 include)
 - **Predefined/**: 엔진과 ReflectionParser 가 함께 include 하는 X-매크로 표(`*.xxx` — 명령줄 인자 · 고정 이름 · 컨테이너 종류 · 애노테이션 종류)와 `AnnotationMeta.txt`
 - **Memory/**: `Memory`(`allocateAligned` · 바이트 유틸) · `sw_new` / `sw_delete` · `sw_new_array` / `sw_delete_array` · `make_unique<T>` / `make_unique<T[]>`(`Memory.h`) ·
@@ -21,10 +21,7 @@
 - **Event/**: `EventDispatcher` · `EventType`(엔진 예약 이벤트 ID — 이벤트 타입은 그 개념이 사는 층에 둔다)
 - **Module/**: `IModuleUnloadListener`(`ModuleUnloadListener.h`) — 모듈 이미지를 내리기 전에 그 코드(델리게이트 스텁 · vtable)를 떼야 하는 등록부의 공통 계약과 목록.
   같은 수명 계약의 Engine 쪽은 `Engine/Module`, App 쪽(라이브 리로드)은 `App/Module` 이다.
-- **File/**: `FileUtil` · `PlatformFileUtil` · `IFileWatcher` + 플랫폼 폴더(`Windows/` · `Linux/` — 파일 다이얼로그 · 워처)
-- **Process/**: `Process` · `CallStackCapture` · `CrashContext`(컨텍스트 키-값 · 빵부스러기 고리 `CrashBreadcrumbStore` — 크래시 때 할당 없이 `crash_<세션>.breadcrumbs.txt`) ·
-  `CrashHandler` · `ModuleBuildId`(PE RSDS GUID + age · ELF GNU build-id — 심볼 서버 열쇠) + 플랫폼 폴더(`Windows/` · `Posix/`).
-  `Process::terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불러도 된다(pid 는 원자). 자식은 출력 파이프 하나만 물려받는다(남의 핸들 · 서술자 상속 없음). 기다리지 않는 실행은 `Process::launchDetached`.
+-  `Process::terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불러도 된다(pid 는 원자). 자식은 출력 파이프 하나만 물려받는다(남의 핸들 · 서술자 상속 없음). 기다리지 않는 실행은 `Process::launchDetached`.
 - **Compression/**: `ICompressionCodec` · `CompressionCodecRegistry` · `CompressionStream` · `NullCompressionCodec` · `RleCompressionCodec`
   (zlib · zstd · LZ4 코덱은 외부 라이브러리를 쓰므로 `Engine/Compression` 에 있다)
 - **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
@@ -89,6 +86,24 @@
   `SW_PLATFORM_WINDOWS` 로 묻는다(Windows 는 MS ABI 툴체인으로만 짓는다).
 - 빌드 구성 · 플랫폼 **이름** 문자열은 `BuildInfo.h` 의 `sw::build::kConfigName` · `kPlatformName` 을 쓴다. `#if` 사슬로 다시 만들지 않는다.
 
+## 비동기 파일 IO
+- `AsyncFileIo`(`File/AsyncFileIo.h`)는 읽기 요청(파일 전체 `readFile` · 구간 `readRange` · 연 파일의 구간)을 우선순위 큐에 넣고, 백엔드가 높은 우선순위부터
+  꺼내 OS 에 겁니다(UE `IAsyncReadFileHandle` + IoStore 우선순위 큐 · Unity `AsyncReadManager` 자리). 동시에 OS 에 걸린 수는 `_maxInFlightCount` 로 묶여
+  뒤에 온 급한 요청이 대량 요청 뒤에 줄 서지 않습니다. 같은 우선순위는 들어온 순서입니다.
+- 백엔드: Windows 오버랩드 IO + 완료 포트(`File/Windows/WindowsAsyncFileIoBackend.cpp`), 리눅스 io_uring(`File/Linux/LinuxAsyncFileIoBackend.cpp` — liburing 없이
+  시스템 호출 직접, `IORING_OP_READV`), 어디서나 도는 스레드 풀(`AsyncFileIo.cpp`). `Auto` 는 플랫폼 것을 고르고, io_uring 을 쓸 수 없으면(ENOSYS · EPERM —
+  옛 커널 · WSL1 · 컨테이너 seccomp) 로그 한 줄과 함께 스레드 풀로 내려갑니다. 명시한 백엔드를 쓸 수 없으면 `initialize` 가 실패합니다(폴백하지 않는다).
+- 정책(우선순위 · 상한 · 취소 · 파일 열기와 버퍼 준비 · 완료 전달)은 `AsyncFileIoQueue`(`File/AsyncFileIoBackend.h`) 한 곳이고, 백엔드는 "꺼내 걸고, 끝나면 알린다" 만 합니다.
+- 파일 열기 · 크기 확인 · 버퍼 할당은 IO 스레드가 합니다. 버퍼는 **요청한 스레드의 메모리 태그**로 셉니다.
+- 완료 콜백은 요청마다 한 번(성공 · 실패 · 취소). `TaskManager` 를 넘기면 그 워커에서(Low · Normal → `TaskPriority::Low`, High · Critical → `Normal` — High 줄은 렌더 · 물리 몫),
+  아니면 IO 스레드에서 돕니다. `readFileFuture` 는 결과를 `TaskFuture` 로 돌려줍니다.
+- 결과: `Succeeded` · `Canceled` · `FileNotFound` · `OutOfRange`(구간이 파일 끝을 넘으면 짧게 읽지 않고 실패) · `ReadFailed` · `ShutDown`(시작 전 · 내린 뒤 요청).
+- 취소: 큐에 있으면 OS 에 넘기지 않고, 이미 걸렸으면 읽은 뒤 결과를 버립니다(진행 중 취소는 "최선" — UE · Unity 와 같다).
+- 엔진은 서비스 하나(`engine::getAsyncFileIo()`)를 기동 단계 `FileIo` 에서 세우고 Task · 모듈 이미지보다 먼저 내립니다(걸린 읽기와 완료 태스크를 다 기다린다).
+  주의: 완료 콜백이 핫 리로드되는 모듈의 코드를 가리키면, 그 모듈을 내리기 전에 핸들을 취소하고 기다려야 합니다(델리게이트와 같은 규칙).
+- `PlatformFileUtil::openNativeFileForRead` · `readNativeFileAt` 은 공유 파일 위치가 없는 위치 지정 읽기입니다 — 여러 스레드가 한 핸들을 잠금 없이 읽습니다. Windows 는
+  `FILE_FLAG_OVERLAPPED` 로 열고, 동기 읽기는 낮은 비트를 세운 이벤트로 기다려 완료 포트에 묶인 핸들에서도 패킷이 가지 않게 합니다.
+
 ## 메모리
 - **맨 `new` 는 쓰지 않는다**(`Style/RawNew` 린트). 객체는 `sw_new T( ... )` · `make_unique<T>`, 배열은 `sw_new_array<T>( n )` /
   `sw_delete_array( p, n )` · `make_unique<T[]>( n )` · `vector<T>`. CRT `new` 는 메모리 태그 · 누수 검사에 보이지 않는다.
@@ -98,12 +113,18 @@
 - 외부 라이브러리(pugixml · JSON · zlib · zstd · LZ4 · stb_image · ImGui)도 할당 훅으로 sw 할당자에 보낸다 — 태그 보고에 잡히게.
 
 ## 메모리 태그
-- `MemoryTag`(`Memory/MemoryTag.h`)는 할당을 **용도**로 나눈다(UE LLM 의 태그와 같은 역할). 스레드 로컬 값 하나를 할당 헤더에 적고
+- `MemoryTag`(`Memory/MemoryTag.h`)는 할당을 **용도**로 나눈다(UE LLM 의 태그와 같은 역할 — Texture · Mesh · Audio · Animation · Physics · UI · Script …). 스레드 로컬 값 하나를 할당 헤더에 적고
   `MemoryProfiler` 가 태그별로 센다. 해제는 헤더의 태그로 빼므로 어느 스레드에서 풀어도 같은 줄에서 빠진다.
 - 거는 자리는 하위 시스템의 **진입점**(기동 단계 · 서비스 생성 · 에셋 종류별 로드 · 씬 로드 · 렌더러 · 모듈 호출)이다 — `SW_MEMORY_SCOPE( Tag )` / `ScopedMemoryTag`.
 - 태스크는 만든 쪽의 태그를 노드에 담아 실행 중에 쓰고(`Task/README.md`), 엔진이 띄우는 스레드는 띄운 쪽의 태그를 받아 첫 줄에서 건다.
   새 스레드는 `Unknown` 에서 시작한다 — `Unknown` 줄이 크면 진입점이 빠진 것이다.
-- 태그를 읽는 것은 `SW_DEBUG` 구성의 `MemoryProfiler` 뿐이라 다른 구성에서는 스코프 비용이 0 이다.
+- 스코프 · 할당 헤더 · `MemoryProfiler` 는 배포본이 아닌 모든 구성에 있다. 추적은 Debug · 시험 하네스에서 켜져 있고 Release 는 꺼 둔 채 `-gv_memoryTracking=1` 로 켠다 —
+  꺼져 있으면 할당마다 분기 하나다(Release 64 B 할당 + 해제 63 ns → 켜면 73 ns, `MemoryTagBenchTest`). 배포본에는 헤더도 프로파일러도 없다.
+- 명시 태그: 잡는 곳과 쓰는 하위 시스템이 다른 버퍼는 `Memory::allocate( size, tag )` · `allocateAligned( size, align, tag )` 로 그 자리에서 태그를 준다.
+- 태그마다 살아 있는 바이트 · 블록, **최고치**(`_peakAllocatedBytes` · `resetPeaks`), **예산**(`setBudget` · `reportExceededBudgets` — 넘을 때 경고 한 번, 90 % 아래로 내려가면 다시 건다)을 든다.
+  예산 데이터 · 프레임 검사 · 표 보고(`-gv_memoryReport=1`) · FrameProfiler 카운터(`Mem.LiveKB` · 예산 있는 태그의 `Mem.<태그>KB`)는 Engine 의 `MemoryBudgetMonitor` 가 한다.
+- 누수 보고: `captureMemoryLeakBaseline` 이 태그별 기준선도 찍고, Debug 종료 끝(`EngineBootstrap::shutdown`, 프로파일러만 남은 때)에 기준선보다 늘어난 태그를
+  stderr 로 남긴다(`[MemoryLeak] shutdown - tag …`). CRT 검사는 힙 **합계**만 견주므로 서비스가 내려가 합계가 줄면 남은 블록을 보지 못한다 — 태그 보고는 본다.
 - 새 태그를 더하면 `MemoryProfiler::getMemoryTagName` 의 이름 표에도 한 줄을 더한다(줄 수는 static_assert 가 본다).
 
 ## 시간

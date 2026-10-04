@@ -15,7 +15,16 @@ if(SW_SHIPPING_BUILD)
 	sw_declareUnbuiltSources(${EDITOR_SOURCES})
 endif()
 
+# 배포본이 아니어도 프로젝트가 에디터 모듈을 끌 수 있다(매니페스트 `EditorModule.module.json`).
+set(swBuildEditorModule OFF)
 if(NOT SW_SHIPPING_BUILD)
+	sw_skipInactiveModule(EditorModule swSkipEditor)
+	if(NOT swSkipEditor)
+		set(swBuildEditorModule ON)
+	endif()
+endif()
+
+if(swBuildEditorModule)
 	add_library(EditorModule MODULE ${EDITOR_SOURCES})
 
 	target_include_directories(EditorModule PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")

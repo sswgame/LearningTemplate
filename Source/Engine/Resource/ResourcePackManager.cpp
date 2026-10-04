@@ -218,7 +218,7 @@ namespace sw
         if ( effectivePriority <= 0 )
             effectivePriority = ResourcePackManagerInternal::computePackDefaultPriority( packFilePath, ResourceUtil::getSearchPriority() );
 
-        auto pReader = make_unique<ResourcePackReader>();
+        shared_ptr<ResourcePackReader> pReader = sw::make_shared<ResourcePackReader>();
         if ( pReader->open( normalizedPath ) == false )
         {
             SW_LOG_ERROR( "Failed to open and mount pack: %#", packFilePath );
@@ -313,15 +313,30 @@ namespace sw
         { return true; } );
     }
 
+    shared_ptr<ResourcePackReader> ResourcePackManager::findReaderWithFile( string_view relativePath, uint64& outPathHash, string_view& outPathInPack ) const
+    {
+        shared_ptr<ResourcePackReader> pFound;
+        std::scoped_lock<mutex>        lock( _vfsMutex );
+        ResourcePackManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
+                                                         [&]( const MountedPack& mounted, uint64 pathHash, string_view pathInPack )
+        {
+            pFound        = mounted._pReader;
+            outPathHash   = pathHash;
+            outPathInPack = pathInPack;
+            return true;
+        } );
+        return pFound;
+    }
+
     bool ResourcePackManager::readFile( string_view relativePath, vector<uint8>& outBytes ) const
     {
         if ( relativePath.empty() )
             return false;
 
-        std::scoped_lock<mutex> lock( _vfsMutex );
-        return ResourcePackManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
-                                                                [&outBytes]( const MountedPack& mounted, uint64 pathHash, string_view )
-        { return mounted._pReader->readFile( pathHash, outBytes ); } );
+        uint64                               pathHash{ 0 };
+        string_view                          pathInPack;
+        const shared_ptr<ResourcePackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
+        return pReader != nullptr && pReader->readFile( pathHash, outBytes );
     }
 
     bool ResourcePackManager::readTextFile( string_view relativePath, string& outText, string* pOutMountedPackPath ) const
@@ -329,16 +344,27 @@ namespace sw
         if ( relativePath.empty() )
             return false;
 
-        std::scoped_lock<mutex> lock( _vfsMutex );
-        return ResourcePackManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
-                                                                [&outText, pOutMountedPackPath]( const MountedPack& mounted, uint64, string_view pathInPack )
-        {
-            if ( mounted._pReader->readTextFile( pathInPack, outText ) == false )
-                return false;
-            if ( pOutMountedPackPath != nullptr )
-                *pOutMountedPackPath = mounted._pReader->getPackPath();
-            return true;
-        } );
+        uint64                               pathHash{ 0 };
+        string_view                          pathInPack;
+        const shared_ptr<ResourcePackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
+        if ( pReader == nullptr || pReader->readTextFile( pathInPack, outText ) == false )
+            return false;
+        if ( pOutMountedPackPath != nullptr )
+            *pOutMountedPackPath = pReader->getPackPath();
+        return true;
+    }
+
+    AsyncReadHandle ResourcePackManager::readFileAsync( AsyncFileIo& io, string_view relativePath, AsyncIoPriority priority, const ResourceReadCompleteDelegate& onComplete ) const
+    {
+        if ( relativePath.empty() )
+            return AsyncReadHandle{};
+
+        uint64                               pathHash{ 0 };
+        string_view                          pathInPack;
+        const shared_ptr<ResourcePackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
+        if ( pReader == nullptr )
+            return AsyncReadHandle{};
+        return pReader->readFileAsync( io, pathHash, priority, onComplete );
     }
 
     void ResourcePackManager::setDlcEntitlementValidator( DlcEntitlementDelegate validator )

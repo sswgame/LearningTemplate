@@ -18,7 +18,6 @@ kFileSearchPaths = "search_paths.json"
 kFileSearchPathsDefaults = "search_paths.defaults.json"
 
 kFileRuntimeEngineConfig = "Config/Engine/EngineConfig.json"
-kFileRuntimeAppConfig = "Config/App/AppConfig.json"
 kFileRuntimeEditorConfig = "Config/Editor/EditorConfig.json"
 # 게임 프리셋 폴더 — 게임마다 `<SW_ACTIVE_GAME>.json` 하나(팩 루트 · gamesettings · 시작 씬). 활성 게임이 어느 것을 쓸지 고른다.
 kDirRuntimeGamePreset = "Config/Game"

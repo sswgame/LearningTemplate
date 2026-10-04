@@ -1,0 +1,20 @@
+{
+    "_name": "GF_CreatureLife",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "생물 생활 키트(포코피아 · 문스톤 아일랜드 장르) — 서식지 레시피 패턴 · 생물 방문 · 호감도 · 부탁 · 능력 세계 편집 · 집 · 마을 매력도",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

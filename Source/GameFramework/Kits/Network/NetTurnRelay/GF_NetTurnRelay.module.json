@@ -1,0 +1,20 @@
+{
+    "_name": "GF_NetTurnRelay",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "턴제 중계 네트워크 키트 — 방 · 자리 · 턴 정책 · 행동 기록 방송 · 재접속 복구 (카드 · 보드 · SRPG · 턴제 RPG)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

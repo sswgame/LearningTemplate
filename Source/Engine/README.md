@@ -69,6 +69,8 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Telemetry/**: 텔레메트리(동의 · 스키마 · 표본 · 묶음 · JSON lines 스풀 · 회전 · 올리기 · 장면별 프레임 시간 요약)와 크래시 보고(다음 실행의 묶음 ·
   동의 local/ask/send · 보고 프로세스 · multipart 업로드). 바깥으로는 `IHttpClient` 창구로만 나가고 기본 창구는 보내지 않는다. [Telemetry/README.md](Telemetry/README.md)
 - **Resource/**: AssetDatabase · AssetManager · ResourceUtil · ResourcePackManager (VFS .pack) · AssetStreamingQueue · AssetLoadProfiler
+  (팩 리더는 위치 지정 읽기라 여러 스레드가 잠금 없이 읽고 — 매니저는 리더를 찾는 동안만 잠근다 — `readFileAsync` 로 `AsyncFileIo` 에 구간 읽기를 걸어 해제 · CRC 를 태스크 워커에서 한다.
+  스트리밍 큐의 바이트 요청은 `ResourceUtil::readBinaryResourceAsync` 로 간다)
   - **에셋 로드 시간은 `AssetLoadScope` 로 잰다**(`AssetLoadProfiler` — 종류별 수 · 바이트 · IO / 해석 / GPU 올리기 시간 · 가장 긴 로드 · 비동기(워커 스레드)
     · 실패, 가장 느린 16 개, 프레임 프로파일러 구간 `Asset.<종류>.<단계>` · `Asset.Bytes`). 텍스처 · 메시 · 머티리얼 · 프리팹 · 씬 로더가 연다 — 새 로더도
     `AssetLoadScope scope( "Kind", path )` → `beginPhase` → `setBytes` → `setSucceeded`(안 부르면 실패). `-gv_assetLoadProfile=0` 은 끄고,
@@ -100,9 +102,12 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   섀도 복사본을 묻는 창구) · `DelayLoadNotifyHook.cpp`(모듈 DLL 마다 컴파일되는 지연 로드 훅) · `EngineAbiStamp`(핫 리로드의 엔진 ABI 도장).
   감시 · 섀도 복사 · 다시 로드(`LiveReloadManager`)는 App 의 `App/Module`, 에셋 파일 감시(`FileWatchDispatcher`)는 에디터의
   `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleUnloadListener`)은 `Core/Module` 이다.
+- **Module/** 의 `ModuleCatalog` 는 모듈 매니페스트(`<모듈>.module.json`)를 읽고 켜짐 · 플랫폼 · 구성 · 의존 · 버전 · 순환을 보고 적재 순서를 정한다(App 이 쓴다 — CMake 와 같은 규칙).
 - **Utility/**: Format (KeyValueFile), Json, Xml, CommandStack, Debug, `GameTimeScale`(게임 시간 배율 `gv_timeScale` — 호스트의 프레임 시간이
   곱한다), `GameAutoplay`(게임의 자동 플레이 스위치 계약 — `SW_GAME_AUTOPLAY`, `Source/Games/README.md`), Console(개발 콘솔 — 아래), TileMap(타일셋 · 규칙 타일 해석 · 충돌 사각형 병합 · 외곽선 · 이동 비용) — 진짜 최하위
   헬퍼만 둡니다.
+  `Debug/MemoryBudgetMonitor` 는 메모리 태그 예산(`Config/Engine/MemoryBudget.json`, 모르는 태그 · 키는 오류) · 프레임 끝 예산 검사 · `-gv_memoryReport` 표 ·
+  FrameProfiler 카운터를 맡습니다(`EngineLoop::endFrame`, 표는 `-gv_profileFrames` 보고와 같은 함수).
 - **개발 콘솔 · 개발 명령(Shipping 에는 없다 — `SW_DEV_COMMANDS_ENABLED`)**: `Utility/Console/DevCommandRegistry` 가 명령 등록부(Engine 하나, 모듈을 내리면
   그 모듈의 명령이 빠진다)이고, 명령은 자기 .cpp 에 `SW_DEV_COMMAND( 변수, "이름", "사용법", "설명", &본문 )` 한 줄로 등록합니다 — 본문은
   `#if SW_DEV_COMMANDS_ENABLED` 안에 둡니다. 게임 · 키트의 치트(무적 · 아이템 주기 …)도 그렇게 그 게임 · 키트에 둡니다. `Utility/Console/DevConsole`

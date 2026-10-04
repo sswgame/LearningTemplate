@@ -578,10 +578,13 @@ SW_TEST_CASE( ResourceTest, AssetStreamingQueueDataRequest )
 
     SW_ASSERT_TRUE( bEnqueued );
 
-    if ( sw::engine::areEngineServicesBound() )
-        sw::engine::getTaskManager().waitAll();
-
-    queue.update( 32 );
+    // 바이트 읽기는 비동기 IO 라 태스크를 기다리는 것만으로는 끝나지 않는다 — 완료가 올 때까지 펌프한다.
+    const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 10000 );
+    while ( bCallbackInvoked == false && deadline.isExpired() == false )
+    {
+        queue.update( 32 );
+        std::this_thread::yield();
+    }
 
     SW_EXPECT_TRUE( bCallbackInvoked );
     SW_EXPECT_TRUE( bSuccessResult );

@@ -283,7 +283,7 @@ namespace test
                 for ( const PackCompressionType compression : kArrCompression )
                 {
                     vector<uint8> bytes;
-                    if ( createTestPackFile( path, 0, compression, listFile, true ) && FileUtil::readFile( path, bytes ) )
+                    if ( sw::test::ResourcePackTestUtil::createPackFile( path, 0, compression, listFile, true ) && FileUtil::readFile( path, bytes ) )
                         outListSeed.push_back( std::move( bytes ) );
                 }
             }

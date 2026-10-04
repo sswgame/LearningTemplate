@@ -15,6 +15,7 @@
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/EngineLoop.h"
+#include "Engine/Module/ModuleCatalog.h"
 
 namespace sw
 {
@@ -156,7 +157,10 @@ namespace sw
         unique_ptr<DevConsoleOverlay> _devConsoleOverlay;
 #endif
         unique_ptr<ModuleHost> _moduleHost;
-        unique_ptr<IWindow>    _window;
+        /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석 — 무엇을 어떤 순서로 올릴지(Dev). */
+        ModuleCatalog       _moduleCatalog;
+        ModuleResolution    _moduleResolution;
+        unique_ptr<IWindow> _window;
 
         FixedTimestep      _fixedTimestep;
         RHIBackendSwitcher _backendSwap;

@@ -1,0 +1,20 @@
+{
+    "_name": "GF_Metroidvania",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "메트로배니아 · 2D 소울라이크 키트 — 능력 잠금(몸 설정 · 길 잠금) · 지도(탐색률 · 지도 구매 · 아이템 표시 · 지점) · 휴식 · 시체 · 물약 · 스태미나 · 패리 · 강인도 · 부적",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

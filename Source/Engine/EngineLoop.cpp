@@ -6,6 +6,7 @@
 #include "Core/Common/BuildInfo.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Event/EventDispatcher.h"
+#include "Core/File/AsyncFileIo.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -181,6 +182,9 @@ namespace sw
             const GameConfig* pGameConfig = loop._configManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
             if ( pGameConfig != nullptr )
                 GameConfig::setActive( *pGameConfig );
+
+            // 메모리 태그 예산(데이터). 틀린 표는 오류를 남기고 예산 없이 간다 — 진단 설정 하나로 기동을 세우지 않는다.
+            (void)loop._memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) );
             return EngineInitResult::Succeeded;
         }
         static void destroy( EngineLoop& loop )
@@ -243,6 +247,19 @@ namespace sw
         static void shutdown( EngineLoop& loop ) { loop._owned._pTaskManager->shutdown(); }
         // 소멸자에서 태스크를 기다리는 객체(에셋 스트리밍 큐)는 이 단계에 의존하는 단계(Scene)가 먼저 해제한다.
         static void destroy( EngineLoop& loop ) { loop._owned._pTaskManager.reset(); }
+    };
+
+    struct EngineLoop::FileIoStartupStep : EngineInitStepDefaults<EngineLoop>
+    {
+        static EngineInitResult initialize( EngineLoop& loop )
+        {
+            // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
+            AsyncFileIoSettings settings{};
+            settings._pTaskManager = loop._owned._pTaskManager.get();
+            return loop._owned._pAsyncFileIo->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+        }
+        // 큐를 비우고 걸린 읽기와 완료 콜백(태스크)을 다 기다린다. Task 보다 먼저, 모듈을 내리기 전에 내려간다.
+        static void shutdown( EngineLoop& loop ) { loop._owned._pAsyncFileIo->shutdown(); }
     };
 
     struct EngineLoop::ModuleImagesStartupStep : EngineInitStepDefaults<EngineLoop>
@@ -710,6 +727,8 @@ namespace sw
         if ( _bootstrap.initialize( _owned, kDiagnostics ) == false )
             return false;
         _bootstrap.parseCommandLine( argc, pArgv );
+        // `-gv_memoryTracking=1` 은 기동의 할당부터 센다(Release 는 추적이 꺼진 채 선다).
+        _memoryBudgetMonitor.applyTrackingSetting();
 
         BLOCK( "Core Services 생성 및 바인딩" )
         {
@@ -1058,6 +1077,8 @@ namespace sw
         const bool bReportedNow = bReportedBefore == false && _profileSession.hasReported();
         if ( bReportedNow && _rhi != nullptr && _rhi->hasDevice() )
             _rhi->getDevice().getMemoryLedger().report( _rhi->getDevice().getBackendName() );
+
+        _memoryBudgetMonitor.onFrameEnd();
 
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->endFrame();

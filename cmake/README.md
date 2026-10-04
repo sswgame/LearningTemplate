@@ -34,6 +34,7 @@ cmake/
     ├── BuildLayout.cmake         — 산출물이 어디 놓이나: 출력 경로 · sw_global_options · IPO · 런타임 복사 큐
     │                               (include 되는 순간 실행된다 — TargetRules 보다 먼저여야 한다)
     ├── TargetRules.cmake         — 타겟을 어떻게 만드나: DLL export, RHI·키트·게임·테스트 팩토리, delay-load
+    ├── ModuleManifest.cmake      — 모듈 매니페스트(`<모듈>.module.json`) 해석: 켜짐 · 플랫폼 · 구성 · 의존 · 순환, 꺼진 모듈은 짓지 않고 `Bin/Modules/` 에 복사
     ├── ThirdPartyLibs.cmake      — 서드파티를 어떻게 붙이나: SYSTEM include, vcpkg CONFIG, STATIC 폴백
     ├── AssetAndToolTargets.cmake— 에셋 쿠킹, Doxygen 문서, 린트 타겟 및 CTest 등록 헬퍼
     ├── ReflectionCodeGen.cmake  — ReflectionParser 코드 생성 파이프라인 (sw_addReflectionStep)
@@ -62,6 +63,9 @@ cmake/
 | `sw_addRhiBackendModule` | RHI 그래픽스 백엔드(`RHI_DX11` 등) MODULE 타겟 정의 및 공통 속성 바인딩 |
 | `sw_registerDynamicModule` / `sw_getDynamicModules` | 동적 모듈 레지스트리. **모듈 이름을 적는 곳은 타겟을 만드는 자리 하나뿐이다** — App·EngineTest·SmokeTest 는 목록을 묻는다 (`KINDS rhi` 처럼 종류로 고른다) |
 | `sw_excludeUnbuiltSources` / `sw_declareUnbuiltSources` | 이 구성이 **일부러 짓지 않는** 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드)를 빼는 자리에서 적는다. 구성 끝에 `sw_writeUnbuiltSourceList` 가 빌드 트리(`generated/sw/config/UnbuiltSources.txt`)에 쓰고 `CheckSourceGlob` 이 읽는다 — 게이트가 빼기 규칙을 따로 들지 않는다. 다른 타겟으로 옮겨 짓는 것에는 쓰지 않는다 |
+| `sw_resolveModuleManifests` / `sw_readModuleManifest` | 모듈 매니페스트를 모두 읽고 해석한다(`Source/**/<모듈>.module.json`, 고른 게임의 `SWGame.module.json` 이 켜기/끄기 표). 없는 의존 · 꺼진 의존 · 낮은 버전 · 순환 · 모르는 이름이면 구성이 선다. Dev 는 매니페스트와 적재 순서(`ResolvedModules.txt`)를 `Bin/Modules/` 에 두고 App 이 같은 규칙(`ModuleCatalog`)으로 다시 해석한다 |
+| `sw_isModuleActive` / `sw_skipInactiveModule` | 모듈이 켜져 있나 · 꺼졌으면 그 폴더를 "짓지 않는다" 로 적고 건너뛴다(모듈을 만드는 함수의 첫 줄). 매니페스트가 없는 동적 모듈은 `sw_registerDynamicModule` 에서 구성이 선다 |
+| `sw_excludeSourcesOfInactiveKits` | 꺼진 키트의 헤더를 include 하는 소스를 목록에서 뺀다(EngineTest — 키트를 끄면 그 시험도 짓지 않는다) |
 | `sw_addGameFrameworkKit` | GameFramework 장르 키트(`GF_Overworld` 등) 라이브러리 정의 및 리플렉션/딜레이로드 자동화 |
 | `sw_registerLintTests` | 린트 CTest 일괄 등록. **목록은 여기 없다** — `Scripts/lint/gate/` · `selftest/` 폴더가 목록이고, `GenerateLintTargets.py` 가 만든 `LintTargets.cmake` 를 부른다 |
 | `sw_addReflectionStep` | ReflectionParser 코드 생성 스텝 자동 연결 |

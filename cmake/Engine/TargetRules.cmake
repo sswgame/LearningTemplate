@@ -91,6 +91,11 @@ endfunction()
 #   KIND: rhi | kit | game | gameframework | editor
 # ------------------------------------------------------------------------------
 function(sw_registerDynamicModule TARGET_NAME KIND)
+	# 모든 동적 모듈은 매니페스트를 갖는다(없으면 여기서 구성이 선다) — App 이 그것으로 적재 순서를 정한다.
+	sw_isModuleActive(${TARGET_NAME} swModuleActive)
+	if(NOT swModuleActive)
+		message(FATAL_ERROR "[Module] ${TARGET_NAME} is registered but its manifest says it is off — the creating function must skip it (sw_skipInactiveModule)")
+	endif()
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${TARGET_NAME})
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES_${KIND} ${TARGET_NAME})
 	sw_addModuleEngineStamp(${TARGET_NAME})
@@ -302,6 +307,10 @@ endfunction()
 # RHI 그래픽스 백엔드 MODULE 타겟을 정의하고 공통 속성을 바인딩합니다.
 function(sw_addRhiBackendModule BACKEND_NAME GRAPHICS_LIB)
 	cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
+	sw_skipInactiveModule(${BACKEND_NAME} swSkip)
+	if(swSkip)
+		return()
+	endif()
 	add_library(${BACKEND_NAME} MODULE "${CMAKE_CURRENT_SOURCE_DIR}/ModuleEntry.cpp" ${ARG_SOURCES})
 
 	target_include_directories(${BACKEND_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -327,6 +336,11 @@ endfunction()
 
 # GameFramework 장르 키트 라이브러리 타겟을 정의하고 빌드 모드에 맞게 구성합니다.
 function(sw_addGameFrameworkKit KIT_NAME)
+	# 꺼진 키트(프로젝트가 껐거나 이 플랫폼 · 구성에 없는 것)는 짓지 않는다 — 매니페스트(`<키트>.module.json`)가 정한다.
+	sw_skipInactiveModule(${KIT_NAME} swSkip)
+	if(swSkip)
+		return()
+	endif()
 	if(SW_SHIPPING_BUILD)
 		set(kitType STATIC)
 	else()
@@ -372,7 +386,18 @@ endfunction()
 
 # 게임 팩 모듈(SWGame) 타겟을 정의하고 링크 및 리플렉션/딜레이로드를 구성합니다.
 function(sw_addGameModule TARGET_NAME)
-	cmake_parse_arguments(ARG "" "" "KITS;HEADERS;EXCLUDE" ${ARGN})
+	cmake_parse_arguments(ARG "" "" "HEADERS;EXCLUDE" ${ARGN})
+
+	# 게임이 링크하는 키트는 게임 매니페스트(`SWGame.module.json`)의 의존 가운데 Kit 인 것이다 — 목록을 CMake 에 다시 적지 않는다.
+	sw_isModuleActive(${TARGET_NAME} swGameActive)
+	get_property(swGameDependencies GLOBAL PROPERTY SW_MODULE_${TARGET_NAME}_DEPENDENCIES)
+	set(ARG_KITS "")
+	foreach(swDependency IN LISTS swGameDependencies)
+		get_property(swDependencyKind GLOBAL PROPERTY SW_MODULE_${swDependency}_KIND)
+		if(swDependencyKind STREQUAL "Kit")
+			list(APPEND ARG_KITS ${swDependency})
+		endif()
+	endforeach()
 
 	if(SW_SHIPPING_BUILD)
 		set(gameLibType STATIC)
