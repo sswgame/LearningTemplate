@@ -384,7 +384,7 @@ cd build/Ninja-Debug/Bin
 - **`GpuInstance` 96 → 112 B 의 비용을 재지 않았다.**
 - **조건부 후보 묶음.** 병렬 틱 문턱의 교차점 · GameObject 레이아웃 · 적응형 틱 문턱 · 스폰 비용(~1.1 us, 잠금 여섯) · 시퀀서 성능 수치. TickItem 인라인
   재시도는 오브젝트의 틱 부기 49 B 를 먼저 줄여야 한다. 측정해서 이기면 한다.
-- **Core 에서 미룬 결정.** 전역 소형 블록 할당자(프레임당 할당이 0 근처가 된 뒤 로드 시간으로 판단 — 지금 ~10 회/프레임), 비동기 파일 IO(오버랩드 · io_uring).
+- **Core 에서 미룬 결정.** 전역 소형 블록 할당자(프레임당 할당이 0 근처가 된 뒤 로드 시간으로 판단 — 지금 ~10 회/프레임).
 - **필드 재배치로 8 B 이상 줄일 수 있는 타입이 남아 있다**(`RunPaddingReport.py` 로 보고만 함). 많이 만들어지는 것: GameObject 200→192, Mesh 112→104,
   MaterialInstance · Material · InputMap::ActionEntry 16, MaterialProperty · ShaderBindingSlot · InlineSuccessorList · GlobalVariableInfo/Registrar 8. 싱글턴(InputManager ·
   Logger 64 등)은 이득이 작다. PROPERTY 필드는 직렬화 순서라 옮기지 않는다. 위치 초기화 표(EditorAssetTypeInfo · AssetMatchRow · CommandRow)는 모든 행을 같이 바꿔야 한다.
@@ -1154,6 +1154,10 @@ cd build/Ninja-Debug/Bin
 - **STL 구성(`SW_ENABLE_STL_CONTAINER=ON`, CI `CI-Debug-STL`)은 C++17 이라 std 해시 컨테이너에 이종 조회 · `contains` 가 없다** — sw 쪽 얇은 클래스가 메운다.
   커스텀 컨테이너 전용 시험은 그 구성에서 건너뛴다.
 
+- **완료를 모으는 줄에 고정 용량 큐(`ConcurrentQueue`)를 쓰지 말 것** — 가득 차면 `enqueue` 가 false 를 돌려주고 그 완료는 말없이 사라진다. 에셋 스트리밍 큐가 그랬다(한 경로에 편승한
+  콜백 1024 개 초과분 유실, `AssetStreamingTest.ManyCallbacksOnOnePathAreAllDelivered`). 상한 없는 잠금 + deque 로 둔다.
+- **비동기 IO 의 완료 콜백은 IO 스레드가 아니라 태스크 워커에서 돈다(엔진 설정)** — 팩 해제 · CRC 가 IO 스레드를 막지 않게. 그래서 `AsyncFileIo::shutdown` 은 Task 보다 먼저(기동 단계
+  `FileIo` 가 Task · ModuleImages 에 의존), 콜백 안에서 자기 큐의 잠금을 쥔 채 IO 를 걸지 말 것(내린 뒤 요청은 그 스레드에서 바로 완료된다 — `AssetStreamingQueue::issueDataRead`).
 - **스트리밍 I/O 를 `TaskPriority::High` 에 싣지 말 것** — 그 줄은 병렬 그룹의 청크 사이에서도 비우므로 파일 읽기가 프레임 일을 막는다(High · Immediate → Normal,
   Low · Normal → 백그라운드).
 

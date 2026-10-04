@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/AsyncFileIo.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
@@ -430,4 +431,78 @@ SW_TEST_CASE( AssetStreamingTest, HighPriorityRequestOvertakesAnEarlierNormalOne
     SW_ASSERT_EQUAL( size_t( 2 ), listCompleted.size() );
     SW_EXPECT_EQUAL( highPath, listCompleted[0] );
     SW_EXPECT_EQUAL( normalPath, listCompleted[1] );
+}
+
+/**
+ * @brief [AssetStreamingTest] 한 경로에 몰린 데이터 콜백이 1024 개를 넘어도 모두 불린다
+ * @details 완료 줄이 고정 용량(1024)이면 같은 경로에 편승한 콜백이 한꺼번에 들어갈 때 넘친 것을 말없이 버린다 — 요청한 쪽은 영영 답을 받지 못한다.
+ */
+SW_TEST_CASE( AssetStreamingTest, ManyCallbacksOnOnePathAreAllDelivered )
+{
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
+
+    const sw::string        assetPath = test::makeTempPath( "sw_stream_fanout.bin" );
+    const sw::vector<uint8> payload( 1024, uint8{ 0x5A } );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPath, payload.data(), payload.size() ) );
+
+    constexpr uint32    kCallbackCount = 1500;
+    std::atomic<uint32> okCount{ 0 };
+    std::atomic<uint32> callbackCount{ 0 };
+    for ( uint32 index = 0; index < kCallbackCount; ++index )
+    {
+        SW_ASSERT_TRUE( queue.requestAssetData( assetPath, sw::StreamingPriority::Normal,
+                                                SW_DELEGATE_LAMBDA( sw::OnStreamingDataCompleteDelegate, [&]( sw::string_view, bool bSuccess, const sw::vector<uint8>& bytes )
+        {
+            callbackCount.fetch_add( 1 );
+            if ( bSuccess && bytes.size() == 1024 && bytes[0] == 0x5A )
+                okCount.fetch_add( 1 );
+        } ) ) );
+    }
+
+    const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 10000 );
+    while ( callbackCount.load() < kCallbackCount && deadline.isExpired() == false )
+    {
+        queue.update( kCallbackCount );
+        std::this_thread::yield();
+    }
+    SW_EXPECT_EQUAL( callbackCount.load(), kCallbackCount );
+    SW_EXPECT_EQUAL( okCount.load(), kCallbackCount );
+    queue.shutdown();
+}
+
+/**
+ * @brief [AssetStreamingTest] 데이터 요청을 취소하면 실패로 한 번만 끝나고, 늦게 끝난 읽기는 다시 부르지 않는다
+ */
+SW_TEST_CASE( AssetStreamingTest, CanceledDataRequestCompletesOnceAsFailure )
+{
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
+
+    const sw::string        assetPath = test::makeTempPath( "sw_stream_cancel.bin" );
+    const sw::vector<uint8> payload( 256 * 1024, uint8{ 0x11 } );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPath, payload.data(), payload.size() ) );
+
+    std::atomic<uint32> callbackCount{ 0 };
+    std::atomic<uint32> successCount{ 0 };
+    SW_ASSERT_TRUE( queue.requestAssetData( assetPath, sw::StreamingPriority::Low,
+                                            SW_DELEGATE_LAMBDA( sw::OnStreamingDataCompleteDelegate, [&]( sw::string_view, bool bSuccess, const sw::vector<uint8>& )
+    {
+        callbackCount.fetch_add( 1 );
+        if ( bSuccess )
+            successCount.fetch_add( 1 );
+    } ) ) );
+    queue.cancelRequest( assetPath );
+    SW_EXPECT_FALSE( queue.isStreaming( assetPath ) );
+
+    // 걸려 있던 읽기가 끝날 시간을 준다 — 그 완료는 세대가 지나 버려져야 한다.
+    sw::engine::getAsyncFileIo().waitIdle();
+    sw::engine::getTaskManager().waitAll();
+    for ( uint32 pump = 0; pump < 4; ++pump )
+        queue.update();
+
+    SW_EXPECT_EQUAL( callbackCount.load(), 1u );
+    SW_EXPECT_EQUAL( successCount.load(), 0u );
+    SW_EXPECT_FALSE( queue.isLoaded( assetPath ) );
+    queue.shutdown();
 }

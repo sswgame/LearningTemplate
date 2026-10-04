@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Event/EventDispatcher.h"
+#include "Core/File/AsyncFileIo.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MatrixMath.h"
@@ -216,6 +217,19 @@ namespace sw
         static void shutdown( EngineLoop& loop ) { loop._owned._pTaskManager->shutdown(); }
         // 소멸자에서 태스크를 기다리는 객체(에셋 스트리밍 큐)는 이 단계에 의존하는 단계(Scene)가 먼저 해제한다.
         static void destroy( EngineLoop& loop ) { loop._owned._pTaskManager.reset(); }
+    };
+
+    struct EngineLoop::FileIoStartupStep : EngineInitStepDefaults<EngineLoop>
+    {
+        static EngineInitResult initialize( EngineLoop& loop )
+        {
+            // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
+            AsyncFileIoSettings settings{};
+            settings._pTaskManager = loop._owned._pTaskManager.get();
+            return loop._owned._pAsyncFileIo->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+        }
+        // 큐를 비우고 걸린 읽기와 완료 콜백(태스크)을 다 기다린다. Task 보다 먼저, 모듈을 내리기 전에 내려간다.
+        static void shutdown( EngineLoop& loop ) { loop._owned._pAsyncFileIo->shutdown(); }
     };
 
     struct EngineLoop::ModuleImagesStartupStep : EngineInitStepDefaults<EngineLoop>

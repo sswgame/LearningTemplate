@@ -39,6 +39,8 @@ SW_ENGINE_SERVICE( _pSceneManager, class, SceneManager, getSceneManager, Require
 SW_ENGINE_SERVICE( _pInputManager, class, InputManager, getInputManager, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pAudioSystem, class, IAudioSystem, getAudioSystem, Required, GameVisible, HostCreated )
 SW_ENGINE_SERVICE( _pEventDispatcher, class, EventDispatcher, getEventDispatcher, Required, GameVisible, EngineCreated )
+// 비동기 파일 읽기(IOCP · io_uring · 스레드 풀). 에셋 스트리밍 큐 · 팩 리더가 쓴다. 시작 · 종료는 기동 표의 FileIo 단계다.
+SW_ENGINE_SERVICE( _pAsyncFileIo, class, AsyncFileIo, getAsyncFileIo, Required, HostOnly, EngineCreated )
 SW_ENGINE_SERVICE( _pAssetManager, class, AssetManager, getAssetManager, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pAssetStreamingQueue, class, AssetStreamingQueue, getAssetStreamingQueue, Required, HostOnly, EngineCreated )
 // CommandStack 은 에디터 Undo/Redo 전용이라 Shipping 에서는 아예 만들지 않는다
