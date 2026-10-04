@@ -1,12 +1,14 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Pose.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigIkSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Skeleton.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -398,4 +400,74 @@ SW_TEST_CASE( RigAssetTest, PlanarRigStaysInPlane )
     for ( const float4x4& model : listModel )
         SW_EXPECT_NEAR_EQUAL( 0.0f, model.getTranslation()._z, 1e-3f );
     SW_EXPECT_TRUE( TestRigAssetInternal::isNear( float3{ 1.2f, 1.0f, 0.0f }, listModel[2].getTranslation(), 5e-3f ) );
+}
+
+/**
+ * @brief [RigAssetTest] 데모 리그 비용 — 기사(`knight.rig.json`, 41 본: 발 디딤 · 시선 · 왼손 IK · 팔뚝 비틀림)와 망토(스프링 사슬)를 한 번 평가하는 시간을 잰다
+ * @details 숫자를 남기는 시험이다(Release 로 돌려 읽는다). 단언은 넉넉한 상한 하나 — 회귀가 몇 배로 커졌을 때만 걸린다.
+ */
+SW_TEST_CASE( RigAssetTest, KnightRigEvaluationCost )
+{
+    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    Skeleton knight;
+    SW_ASSERT_TRUE( knight.loadFromResource( "game/shooter3d/models/kaykit/knight/knight.skeleton.json" ) );
+    shared_ptr<RigAsset> asset = make_shared<RigAsset>();
+    SW_ASSERT_TRUE( asset->loadFromResource( "game/shooter3d/rigs/knight.rig.json" ) );
+    RigInstance instance;
+    SW_ASSERT_TRUE( instance.initialize( asset, knight, nullptr, "knight" ) );
+    instance.setExternalTarget( static_cast<uint32>( instance.findTargetIndex( "LookTarget" ) ), TestRigAssetInternal::makeTargetAt( float3{ 0.5f, 1.4f, 1.2f } ) );
+    RigTargetValue grip = TestRigAssetInternal::makeTargetAt( float3{ 0.0f, -0.04f, 0.5f } );
+    grip._relativeBone  = knight.findBoneIndex( "handslot.r" );
+    instance.setExternalTarget( static_cast<uint32>( instance.findTargetIndex( "Grip" ) ), grip );
+    TestRigAssetInternal::SlopeGround ground;
+    RigPrepareContext                 prepare{};
+    prepare._worldFromModel = float4x4::Identity;
+    prepare._pGroundQuery   = &ground;
+    prepare._deltaSeconds   = 1.0f / 60.0f;
+
+    Pose reference;
+    reference.setToReference( knight );
+    Pose pose;
+#if defined( SW_DEBUG )
+    // Debug(· ASAN)는 수십 배 느리다 — 숫자는 Release 에서 읽고, 여기서는 돌기만 하는지 본다.
+    const uint32  kIteration = 200;
+    const float64 kLimit     = 20000.0;
+#else
+    const uint32  kIteration = 2000;
+    const float64 kLimit     = 500.0;
+#endif
+    const Stopwatch stopwatch;
+    for ( uint32 iteration = 0; iteration < kIteration; ++iteration )
+    {
+        instance.prepare( prepare );
+        pose = reference;
+        instance.evaluate( pose, knight.getParentIndices(), float4x4::Identity );
+    }
+    const float64 microseconds = static_cast<float64>( stopwatch.getElapsedNanoseconds() ) / 1000.0 / static_cast<float64>( kIteration );
+    SW_LOG_INFO( "Knight rig (4 nodes, 41 bones): %# us per prepare + evaluate", microseconds );
+    SW_EXPECT_TRUE( microseconds < kLimit );
+
+    // 망토 리그(뿌리 고정 + 스프링 사슬 4 본 · 캡슐 하나) — 프레임 시간 1/60 이라 스텝 하나씩.
+    Skeleton cape;
+    SW_ASSERT_TRUE( cape.loadFromResource( "game/shooter3d/rigs/knight_cape.skeleton.json" ) );
+    shared_ptr<RigAsset> capeAsset = make_shared<RigAsset>();
+    SW_ASSERT_TRUE( capeAsset->loadFromResource( "game/shooter3d/rigs/knight_cape.rig.json" ) );
+    RigInstance capeInstance;
+    SW_ASSERT_TRUE( capeInstance.initialize( capeAsset, cape, nullptr, "cape" ) );
+    Pose capeReference;
+    capeReference.setToReference( cape );
+    Pose            capePose;
+    const Stopwatch capeStopwatch;
+    for ( uint32 iteration = 0; iteration < kIteration; ++iteration )
+    {
+        // 어깨가 원을 그리며 움직인다 — 스프링이 매 스텝 일한다.
+        const float32 angle = static_cast<float32>( iteration ) * 0.05f;
+        capeInstance.setExternalTarget( 0, TestRigAssetInternal::makeTargetAt( float3{ 0.3f * MathUtil::sin( angle ), 1.2f, 0.3f * MathUtil::cos( angle ) } ) );
+        capeInstance.prepare( prepare );
+        capePose = capeReference;
+        capeInstance.evaluate( capePose, cape.getParentIndices(), float4x4::Identity );
+    }
+    const float64 capeMicroseconds = static_cast<float64>( capeStopwatch.getElapsedNanoseconds() ) / 1000.0 / static_cast<float64>( kIteration );
+    SW_LOG_INFO( "Cape rig (spring chain 4 bones, 1 capsule): %# us per prepare + evaluate", capeMicroseconds );
+    SW_EXPECT_TRUE( capeMicroseconds < kLimit );
 }

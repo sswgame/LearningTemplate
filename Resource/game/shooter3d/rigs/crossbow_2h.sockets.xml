@@ -1,0 +1,4 @@
+<SocketSet>
+  <!-- 왼손 손잡이 — 쇠뇌 몸통 앞쪽 아래(메시 공간: 길이 축 +Z, 활 팔 X). 리그의 왼손 IK(knight.rig.json "LeftHandGrip")가 이 자리를 잡는다. -->
+  <Socket name="Grip" parent="root" kind="Attach" translation="0 -0.04 0.5"/>
+</SocketSet>

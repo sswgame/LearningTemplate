@@ -321,3 +321,43 @@ SW_TEST_CASE( PoseModifierTest, HotReloadRebindsRig )
     manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ -1.0f, 0.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pUnit, 2 ), 1e-4f ) );
 }
+
+/**
+ * @brief [PoseModifierTest] 물리 에셋의 구 · 캡슐이 스프링 공유 충돌체가 된다 — 머리 구(견본 `chain.physics.xml`)가 매달린 꼬리를 밀어낸다(없으면 꼬리가 머리를 지난다)
+ */
+SW_TEST_CASE( PoseModifierTest, PhysicsAssetShapesBecomeSpringColliders )
+{
+    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    Skeleton skeleton;
+    (void)skeleton.addBone( "pelvis", -1, test::makeBoneTransform( float3{} ), float4x4::Identity );
+    (void)skeleton.addBone( "spine", 0, test::makeBoneTransform( float3{ 0.0f, 0.5f, 0.0f } ), float4x4::Identity );
+    (void)skeleton.addBone( "head", 1, test::makeBoneTransform( float3{ 0.0f, 0.5f, 0.0f } ), float4x4::Identity );
+    (void)skeleton.addBone( "tail0", 2, test::makeBoneTransform( float3{ 0.0f, 0.5f, 0.0f } ), float4x4::Identity );
+    (void)skeleton.addBone( "tail1", 3, test::makeBoneTransform( float3{ 0.4f, 0.0f, 0.0f } ), float4x4::Identity );
+    skeleton.computeInverseBindFromReference();
+    const string_view json = R"({ "nodes": [ { "type": "SpringChain", "name": "Tail", "bones": ["tail0", "tail1"], "stiffness": 0, "damping": 0.2,
+        "use_shared_colliders": true } ] })";
+
+    float32 arrClearance[2]{};
+    for ( uint32 bShared = 0; bShared < 2; ++bShared )
+    {
+        GameObjectManager manager;
+        GameObject*       pObject = manager.createGameObject( "Creature" );
+        SW_ASSERT_NOT_NULL( pObject );
+        SkeletalMeshComponent* pUnit = pObject->addComponent<SkeletalMeshComponent>();
+        SW_ASSERT_NOT_NULL( pUnit );
+        pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
+        PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pUnit, json );
+        SW_ASSERT_NOT_NULL( pModifier );
+        if ( bShared == 1 )
+            pModifier->setPhysicsAssetPath( "engine/physics/samples/chain.physics.xml" );
+        pModifier->dispatchBeginPlay();
+        SW_EXPECT_EQUAL( bShared == 1 ? 3u : 0u, static_cast<uint32>( pModifier->getRigInstance().getSharedColliders().size() ) );
+        for ( uint32 frame = 0; frame < 120; ++frame )
+            manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
+        // 머리 구: 머리 본(y 1.0) + (0, 0.15, 0), 반지름 0.15. 꼬리 끝(본 4)은 꼬리 뿌리(y 1.5)에서 0.4 아래로 매달려 그 안을 지난다.
+        arrClearance[bShared] = ( TestPoseModifierInternal::getBoneModel( *pUnit, 4 ) - float3{ 0.0f, 1.15f, 0.0f } ).getLength();
+    }
+    SW_EXPECT_TRUE( arrClearance[0] < 0.15f );
+    SW_EXPECT_TRUE( arrClearance[1] >= 0.15f + 0.02f - 1e-3f );
+}

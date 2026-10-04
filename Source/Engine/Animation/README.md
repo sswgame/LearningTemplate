@@ -218,6 +218,12 @@ for ( const sw::AnimFiredNotify& fired : pAnimator->getFiredNotifies() ) { /* �
 | `PoseDriver` | `driver` · `radius_degrees` · `poses`(`[{ "name", "rotation", "morphs": [{ "morph", "weight" }], "bones": [{ "bone", "rotation", "translation" }] }]`) — 가우스 RBF, 보간 행렬을 묶을 때 푼다 |
 | `SpringChain` | `bones` · `stiffness` · `damping` · `gravity` · `particle_radius` · `fixed_step` · `max_substeps` · `teleport_distance` · `lod_distance` · `colliders`(`[{ "bone", "shape": "Sphere"/"Capsule", "a", "b", "radius" }]`) · `use_shared_colliders` |
 
+**데모.** `App -gv_benchRig=1`(Empty 게임 벤치, `Source/Games/Empty/BenchSceneRig.cpp`) — KayKit 기사가 기울기(정적 강체) 위에서 쇠뇌를 겨눈다:
+발 디딤(`FootPlacement`) · 움직이는 구를 보는 머리(`Aim` + 가슴 나눔) · 쇠뇌 `Grip` 소켓을 잡는 왼손(`TwoBoneIk`, `space: handslot.r`) · 팔뚝 비틀림
+(`TwistDistribution`). 쇠뇌는 오른손 소켓을 따르는 유닛(`CopyTransform`), 망토는 가슴을 따르는 뿌리 + 스프링 사슬 유닛이다. 데이터는
+`game/shooter3d/rigs/`(`knight.rig.json` · `knight_weapon.rig.json` · `knight_cape.rig.json` · `knight_cape.skeleton.json` · `crossbow_2h.sockets.xml`).
+`-gv_benchRigView=0..3` 카메라, `-gv_benchRigEnabled=0` 리그 끔(비용 대조군), `-gv_benchRig=N` 이면 N 명.
+
 **2D.** `"planar": true` 인 리그는 모든 풀이를 XY 평면 · Z 축 회전으로 돕니다(`RigSolveSpace`) — 위치를 평면에 투영하고, 스프링 입자도 평면에 남깁니다. 같은 노드 · 같은 데이터 형식입니다.
 
 **함정.**
