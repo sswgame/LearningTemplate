@@ -54,6 +54,8 @@ namespace sw
         InstanceSort,
         /// @brief 레스트 정점을 읽어 변형 결과를 쓰는 컴퓨트(meshmorph.hlsl)입니다. 정점 셰이더가 그 결과를 풀링합니다.
         MeshMorph,
+        /// @brief 스킨드 메시의 바인드 포즈 정점을 본 팔레트로 섞어 모프 풀의 스킨 구간에 쓰는 컴퓨트(meshskin.hlsl)입니다.
+        MeshSkin,
     };
 
     /**

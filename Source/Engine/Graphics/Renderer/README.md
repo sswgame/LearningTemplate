@@ -60,7 +60,10 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
   재구축 판단 캐시와 머티리얼 원소의 영속 ID 가 여기 산다. GPU 핸들은 하나도 없다.
 - `GpuSceneSnapshot` — GT → RT 로 옮겨지는 **전부**. 여기 없는 값은 옮겨질 수 없다(소유 규칙은 Graphics/README "소유와 수명").
 - `GpuScene` (렌더 스레드) — 스냅샷을 받아 인스턴스 구조버퍼·배치 표·간접 인자·머티리얼 버퍼로 올린다. 씬을 볼 수 없다.
-- `GpuMeshVertexPool` · `GpuMeshMorphPool` — RT 소유 GPU 풀. 씬 메시 정점을 한 버퍼에 잇고(멀티 드로우), 모프 결과를 담는다.
+- `GpuMeshVertexPool` · `GpuMeshMorphPool` — RT 소유 GPU 풀. 씬 메시 정점을 한 버퍼에 잇고(멀티 드로우), 모프 · 스키닝 결과를 담는다. 모프 풀은 두 구간
+  [모프 메시][스킨드 메시]이고, 스킨 구간에는 정점마다 가중치 · 팔레트 행 번호(팔레트 시작을 미리 더함)가 한 번, 팔레트(본 하나 = float4 셋 —
+  행벡터 4x4 의 0 · 1 · 2 열)가 프레임마다 올라간다(`uploadSkinPalettes`, 스냅샷의 `GpuSkinPalette` 를 풀 순서로). 팔레트는 GT 의 `AnimationSystem` 이 만들고
+  `GpuSceneBuilder::collectSkinPalettes` 가 매 프레임(수집 건너뛰기와 무관하게) 스냅샷으로 옮긴다.
 
 언리얼의 GPUScene 과 같은 발상으로, per-instance 월드 행렬을 구조버퍼에 올려 VS 가 직접 읽습니다.
 `FrameRenderer::execute( pScene )`(에디터·테스트의 직접 경로)도 자기 빌더로 스냅샷을 만들어 **같은 길**로 올립니다.
@@ -72,7 +75,8 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
   - `FrameRendererResources` — 패스 자원의 수명. 기록 **전에** 만들어야 하는 것들(엔진 PSO 등록 · 상수버퍼 링 · 머티리얼 폴백 · Present 변종)
   - `FrameRendererTransients` — 첨부(렌더타깃)의 수명과 조회. 창 크기·파이프라인이 바뀔 때만 다시 만든다
   - `FrameRendererReadback` — 첨부를 CPU 로 읽는 길(테스트 픽셀 비교 · `-gv_screenshot` PPM). **프레임 경로가 아니다** — GPU 를 기다린다
-  - `FrameRendererCompute` — 컴퓨트 프리패스 넷(인스턴스 애니메이션 · 메시 모프 · GPU 컬링 · 인스턴스 정렬). 그래프 패스가 아니라 그리기 전에 직접 걸린다
+  - `FrameRendererCompute` — 컴퓨트 프리패스 다섯(인스턴스 애니메이션 · 메시 모프 · 메시 스킨(meshskin.hlsl, 디스패치 하나) · GPU 컬링 · 인스턴스 정렬).
+    그래프 패스가 아니라 그리기 전에 직접 걸린다
   - `FrameRendererConstants` — 뷰/라이트 행렬 등 **프레임 상수 시드** (프레임당 1회)
   - `FrameRendererPassExecute` — 패스 타입별 실행 분기
   - `FrameRendererDraw` — 드로우 루프

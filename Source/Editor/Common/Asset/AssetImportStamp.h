@@ -71,6 +71,12 @@ namespace sw::editor
         virtual string makeImportedPath( string_view sourcePath ) const = 0;
         /** @brief 원본 바이트 · 적용한 규칙 · 임포터 버전을 섞은 해시입니다. 읽지 못하면 0 입니다. */
         virtual uint64 computeSourceHash( string_view sourcePath, string_view resourcePath ) const = 0;
+        /**
+         * @brief 임포트 결과의 해시입니다. 결과가 없으면 0 입니다. 기본은 결과 파일 하나의 바이트입니다.
+         * @details 결과가 여러 파일인 종류(스킨드 모델 — 메시 + 옆 폴더의 스켈레톤 · 클립)는 그것을 모두 섞어 답합니다. 그래야 옆 파일을 손대거나
+         *          지워도 어긋남으로 잡힙니다.
+         */
+        virtual uint64 computeImportedHash( string_view importedPath ) const;
         /** @brief 임포트하지 않는 원본이면 그 이유, 아니면 nullptr 입니다(텍스처의 `.hdr`). */
         virtual const utf8* findUnsupportedReason( string_view sourcePath ) const = 0;
         /** @brief 원본 하나를 결과 경로로 임포트합니다. */

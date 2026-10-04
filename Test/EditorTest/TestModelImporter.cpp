@@ -408,3 +408,80 @@ SW_TEST_CASE( ModelImporterTest, RepositoryRawModelsMatchTheirMeshes )
     SW_EXPECT_TRUE_MSG( summary.isClean(), problemText.c_str() );
     SW_EXPECT_EQUAL( 0u, summary._importedCount );
 }
+
+/**
+ * @brief [ModelImporterTest] 스킨드 모델(KayKit 기사) — 스켈레톤 41 본 · 부모 · 부착 메시 · 클립 76 개(저장소 결과), 규칙의 클립 목록 · 곁 데이터 알림
+ * @details 원본을 그대로 다시 읽어(`readModelAsset`, 규칙으로 클립 둘만) 본 · 부착 · 스킨 정점을 보고, 저장소에 커밋된 임포트 결과(스켈레톤 JSON ·
+ *          클립 폴더)로 전체 수를 본다. 원본 옆 곁 데이터(`<y>.clips.json`)의 알림이 클립에 실리고, 원본에 없는 클립 이름(규칙 · 곁 데이터)은 임포트 오류다.
+ */
+SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const sw::string resourceRoot = sw::ResourceUtil::getRootFolderPath();
+    const sw::string knightPath   = sw::FileUtil::joinPath( resourceRoot, "game/shooter3d/models_raw/kaykit/knight.glb" );
+
+    sw::editor::ModelImportRule rule;
+    rule._listClipName = { "Idle", "Walking_A" };
+    sw::editor::ModelImportResult result;
+    SW_ASSERT_TRUE( sw::editor::ModelImporter::readModelAsset( knightPath, rule, result ) );
+    SW_EXPECT_TRUE( result._bSkinned == SW_TRUE );
+    SW_EXPECT_EQUAL( 41u, result._skeleton.getBoneCount() );
+    const int32 hips = result._skeleton.findBoneIndex( sw::hashed_string( "hips" ) );
+    SW_ASSERT_TRUE( hips > 0 );
+    SW_EXPECT_EQUAL( result._skeleton.findBoneIndex( sw::hashed_string( "root" ) ), result._skeleton.getBone( static_cast<uint32>( hips ) )._parentIndex );
+    for ( uint32 boneIndex = 0; boneIndex < result._skeleton.getBoneCount(); ++boneIndex )
+        SW_EXPECT_TRUE( result._skeleton.getBone( boneIndex )._parentIndex < static_cast<int32>( boneIndex ) ); // 부모가 앞
+    SW_EXPECT_TRUE( result._mesh.hasSkin() );
+    SW_EXPECT_EQUAL( 41u, result._mesh._skinBoneCount );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( result._listClip.size() ) );
+    bool bSwordOnRightHand = false;
+    for ( const sw::editor::ModelImportAttachment& attachment : result._listAttachment )
+        bSwordOnRightHand = bSwordOnRightHand || ( attachment._name == "1H_Sword" && attachment._parentBone == sw::hashed_string( "handslot.r" ) );
+    SW_EXPECT_TRUE( bSwordOnRightHand );
+    // 클립 길이 · 압축(ACL) — 오차 1 mm 아래
+    for ( const sw::editor::ModelImportClip& imported : result._listClip )
+    {
+        SW_EXPECT_TRUE( imported._clip.getDuration() > 0.5f );
+        SW_EXPECT_TRUE( imported._stats._maxError < 0.001f );
+        SW_EXPECT_EQUAL( 41u, imported._clip.getTrackCount() );
+    }
+
+    // 저장소의 임포트 결과 — 스켈레톤과 클립 76 개.
+    sw::Skeleton committed;
+    SW_ASSERT_TRUE( committed.loadFromResource( "game/shooter3d/models/kaykit/knight/knight.skeleton.json" ) );
+    SW_EXPECT_EQUAL( 41u, committed.getBoneCount() );
+    SW_EXPECT_TRUE( committed.getAttachments().empty() == false );
+    sw::vector<sw::string> listClipFile;
+    SW_ASSERT_TRUE( sw::FileUtil::collectFiles( sw::FileUtil::joinPath( resourceRoot, "game/shooter3d/models/kaykit/knight/clips" ), ".animclip", listClipFile, false ) );
+    SW_EXPECT_EQUAL( 76u, static_cast<uint32>( listClipFile.size() ) );
+
+    // 곁 데이터의 알림 · 반복이 클립에 실린다.
+    const sw::string tempRoot   = test::makeTempDirectory( "skinned_import" );
+    const sw::string copiedPath = sw::FileUtil::joinPath( tempRoot, "knight.glb" );
+    SW_ASSERT_TRUE( sw::FileUtil::copyFile( knightPath, copiedPath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::editor::ModelImporter::makeClipDataPath( copiedPath ),
+                                                 R"({ "clips": { "Walking_A": { "loop": false, "notifies": [ { "name": "FootL", "time": 0.25 } ], "curves": { "Speed": [ [ 0, 0 ], [ 1, 2 ] ] } } } })" ) );
+    sw::editor::ModelImportRule walkRule;
+    walkRule._listClipName = { "Walking_A" };
+    SW_ASSERT_TRUE( sw::editor::ModelImporter::readModelAsset( copiedPath, walkRule, result ) );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( result._listClip.size() ) );
+    const sw::AnimClip& walk = result._listClip[0]._clip;
+    SW_EXPECT_FALSE( walk.isLoopingByDefault() );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( walk.getNotifyTrack().getEvents().size() ) );
+    SW_EXPECT_TRUE( walk.getNotifyTrack().getEvents()[0]._name == sw::hashed_string( "FootL" ) );
+    SW_EXPECT_NOT_NULL( walk.findCurve( sw::hashed_string( "Speed" ) ) );
+
+    // 원본에 없는 이름은 오류다 — 규칙의 클립 목록도, 곁 데이터의 클립 이름도.
+    test::ScopedDefensiveTestLog expected( "unknown clip names in the rule or the clip data fail the import" );
+    sw::editor::ModelImportRule  missingRule;
+    missingRule._listClipName = { "Moonwalk" };
+    SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( copiedPath, missingRule, result ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::editor::ModelImporter::makeClipDataPath( copiedPath ), R"({ "clips": { "Walking_Z": { "loop": true } } })" ) );
+    SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( copiedPath, walkRule, result ) );
+    // 모르는 규칙 키 · 코덱은 설정 오류다.
+    sw::editor::ModelImportConfig config;
+    SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "zip" } ] })" ) );
+    SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animashions": false } ] })" ) );
+    SW_EXPECT_TRUE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "raw", "clips": [ "Idle" ] } ] })" ) );
+    SW_EXPECT_EQUAL( sw::string( "raw" ), config.getRules()[0]._animationCodec );
+}

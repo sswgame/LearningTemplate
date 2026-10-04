@@ -4,15 +4,38 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
 
+#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/Codec/AnimCodec.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw::editor
 {
     SW_LOG_CALLER( "ModelImportConfig" );
+
+    string ModelImportRule::makeAnimationHashText() const
+    {
+        string text = "anim=";
+        text += _bImportAnimations == SW_TRUE ? "1" : "0";
+        text += ";attach=";
+        text += _bImportAttachments == SW_TRUE ? "1" : "0";
+        text += ";codec=" + _animationCodec + ";root=" + _rootMotionBone + ";clips=";
+        for ( const string& clipName : _listClipName )
+            text += clipName + ",";
+        // 실수는 비트 그대로 섞는다 — 글자로 반올림하면 작은 변경이 같은 해시가 된다.
+        const float32 arrValue[3] = { _animationSampleRate, _animationPrecision, _animationShellDistance };
+        for ( const float32 value : arrValue )
+        {
+            uint32 bits = 0;
+            Memory::copy( &bits, &value, sizeof( bits ) );
+            text += ";" + to_string( bits );
+        }
+        return text;
+    }
 
     ModelImportConfig::ModelImportConfig()
         : _listRule{}
@@ -63,6 +86,17 @@ namespace sw::editor
             ModelImportRule rule;
             if ( ruleValue.has( "name" ) )
                 rule._name = ruleValue.get( "name" ).asString();
+            // 모르는 키는 설정 오류다 — 철자가 틀린 규칙이 조용히 기본값이 되지 않게.
+            const bool bKnownKeys = AnimJsonUtil::hasOnlyKnownKeys( ruleValue,
+                                                                    { "name", "include_patterns", "exclude_patterns", "include_paths", "exclude_paths", "translation", "recenter", "animations", "clips",
+                                                                      "animation_codec", "animation_sample_rate", "animation_precision", "animation_shell_distance",
+                                                                      "root_motion_bone", "attachments" },
+                                                                    "ModelImportConfig rule" );
+            if ( bKnownKeys == false || parseAnimationKeys( ruleValue, rule ) == false )
+            {
+                _listRule.clear();
+                return false;
+            }
             rule._filter.parse( ruleValue );
             if ( ruleValue.has( "translation" ) )
             {
@@ -91,6 +125,46 @@ namespace sw::editor
                 }
             }
             _listRule.push_back( rule );
+        }
+        return true;
+    }
+
+    bool ModelImportConfig::parseAnimationKeys( const JsonValue& ruleValue, ModelImportRule& inoutRule )
+    {
+        if ( ruleValue.has( "animations" ) )
+            inoutRule._bImportAnimations = ruleValue.get( "animations" ).asBool( true ) ? SW_TRUE : SW_FALSE;
+        if ( ruleValue.has( "attachments" ) )
+            inoutRule._bImportAttachments = ruleValue.get( "attachments" ).asBool( true ) ? SW_TRUE : SW_FALSE;
+        if ( ruleValue.has( "root_motion_bone" ) )
+            inoutRule._rootMotionBone = ruleValue.get( "root_motion_bone" ).asString();
+        if ( ruleValue.has( "clips" ) )
+        {
+            const JsonValue clips = ruleValue.get( "clips" );
+            for ( size_t clipIndex = 0; clips.isArray() && clipIndex < clips.size(); ++clipIndex )
+                inoutRule._listClipName.push_back( clips.at( clipIndex ).asString() );
+        }
+        if ( ruleValue.has( "animation_codec" ) )
+        {
+            inoutRule._animationCodec = ruleValue.get( "animation_codec" ).asString();
+            if ( AnimCodecRegistry::findCodecByName( inoutRule._animationCodec ) == nullptr )
+            {
+                SW_LOG_ERROR( "ModelImportConfig rule '%#': unknown animation_codec '%#' (raw | acl).", inoutRule._name.c_str(), inoutRule._animationCodec.c_str() );
+                return false;
+            }
+        }
+        const utf8* const arrNumberKey[3]   = { "animation_sample_rate", "animation_precision", "animation_shell_distance" };
+        float32* const    arrNumberValue[3] = { &inoutRule._animationSampleRate, &inoutRule._animationPrecision, &inoutRule._animationShellDistance };
+        for ( uint32 keyIndex = 0; keyIndex < 3; ++keyIndex )
+        {
+            if ( ruleValue.has( arrNumberKey[keyIndex] ) == false )
+                continue;
+            const JsonValue value = ruleValue.get( arrNumberKey[keyIndex] );
+            if ( value.isNumber() == false || value.asFloat() <= 0.0 )
+            {
+                SW_LOG_ERROR( "ModelImportConfig rule '%#': %# must be a positive number.", inoutRule._name.c_str(), arrNumberKey[keyIndex] );
+                return false;
+            }
+            *arrNumberValue[keyIndex] = static_cast<float32>( value.asFloat() );
         }
         return true;
     }

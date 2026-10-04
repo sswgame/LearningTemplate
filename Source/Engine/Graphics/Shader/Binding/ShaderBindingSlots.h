@@ -197,7 +197,9 @@ namespace sw
             inline constexpr const utf8* kLights             = "g_SwLights";             ///< t12(그래픽스). 씬 라이트 목록
             inline constexpr const utf8* kBatches            = "g_SwBatches";            ///< t13(그래픽스). 씬 배치 표
             inline constexpr const utf8* kMorphRestVertices  = "g_RestVertices";         ///< meshmorph t0. 레스트 포즈
-            inline constexpr const utf8* kMorphVerticesRw    = "g_MorphVerticesRW";      ///< meshmorph u0. 변형 결과
+            inline constexpr const utf8* kMorphVerticesRw    = "g_MorphVerticesRW";      ///< meshmorph · meshskin u0. 변형 결과
+            inline constexpr const utf8* kSkinWeights        = "g_SkinWeights";          ///< meshskin t1. 스킨 정점의 가중치 · 팔레트 행 번호
+            inline constexpr const utf8* kSkinPalette        = "g_SkinPalette";          ///< meshskin t2. 본 팔레트(본 하나 = float4 셋)
             inline constexpr const utf8* kCullInstances      = "g_Instances";
             inline constexpr const utf8* kCullBatchInfo      = "g_BatchInfo"; ///< 컬링 t1. 배치의 인스턴스 구간
             inline constexpr const utf8* kCullIndirectArgs   = "g_IndirectArgs";

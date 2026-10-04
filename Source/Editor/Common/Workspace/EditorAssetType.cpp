@@ -43,6 +43,8 @@ namespace sw::editor
         constexpr string_view kArrSequenceSuffix[]  = { ".seq.json", ".seq" };
         constexpr string_view kArrTileMapSuffix[]   = { ".tilemap.xml", ".tilemap" };
         constexpr string_view kArrMeshExt[]         = { ".mesh" };
+        constexpr string_view kArrSkeletonSuffix[]  = { ".skeleton.json" };
+        constexpr string_view kArrAnimClipExt[]     = { ".animclip" };
         constexpr string_view kArrModelSourceExt[]  = { ".glb", ".gltf" }; ///< `models_raw/` 의 원본 — 임포트하는 것이 리로드다
 
         /**
@@ -83,6 +85,8 @@ namespace sw::editor
             {     EditorAssetType::Sequence,       MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),      nullptr,                                    nullptr},
             {         EditorAssetType::Mesh,      MatchMode::Extension,         kArrMeshExt,         countOf( kArrMeshExt ),       "Mesh",                                    nullptr},
             {         EditorAssetType::Mesh,      MatchMode::Extension,  kArrModelSourceExt,  countOf( kArrModelSourceExt ),       "Mesh",   &ModelImporter::importChangedSourceModel},
+            {     EditorAssetType::Skeleton,       MatchMode::EndsWith,  kArrSkeletonSuffix,  countOf( kArrSkeletonSuffix ),   "Skeleton",                                    nullptr},
+            {     EditorAssetType::AnimClip,      MatchMode::Extension,     kArrAnimClipExt,     countOf( kArrAnimClipExt ),   "AnimClip",                                    nullptr},
             {         EditorAssetType::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),      nullptr,                                    nullptr},
         };
 
@@ -101,6 +105,8 @@ namespace sw::editor
             {      EditorAssetType::TileMap,    "TileMap",  "Tile Map",   "Tile Map Tool",     ICON_FA_BORDER_ALL, { 0.45f, 0.85f, 0.50f, 1.0f }, false,  true,  true},
             {     EditorAssetType::Sequence,   "Sequence",       "Seq",       "Sequencer",           ICON_FA_FILM, { 0.85f, 0.55f, 0.85f, 1.0f }, false,  true,  true},
             {         EditorAssetType::Mesh,       "Mesh",    "Meshes",           nullptr,           ICON_FA_CUBE, { 0.55f, 0.80f, 0.80f, 1.0f }, false,  true,  true},
+            {     EditorAssetType::Skeleton,   "Skeleton", "Skeletons",           nullptr,           ICON_FA_BONE, { 0.90f, 0.85f, 0.70f, 1.0f }, false,  true,  true},
+            {     EditorAssetType::AnimClip,   "AnimClip",     "Clips",           nullptr, ICON_FA_PERSON_WALKING, { 1.00f, 0.70f, 0.35f, 1.0f }, false,  true,  true},
             {         EditorAssetType::Data,       "Data",      "Data",           nullptr,          ICON_FA_TABLE, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
         };
 

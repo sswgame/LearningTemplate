@@ -216,19 +216,22 @@ cd build/Ninja-Debug/Bin
 
 - **서드파티 셋 — Jolt(3D 물리) · Box2D(2D 물리) · ACL(애니메이션 압축)(2026-10-04 사용자 결정, 이 셋만).** 모두 MIT · vcpkg 에 있다.
   물리 둘은 감쌌다(`IPhysicsScene3D` · `IPhysicsScene2D`, `Source/Engine/Physics/README.md`) — 경계는 `CheckThirdPartyIsolation.py` 가 지킨다(ACL 도 같은 표에 있다).
-  남은 것: ACL 코덱(쿠킹 때 압축 → 코덱 id + 불투명 블롭, 런타임 샘플링, `Engine/Animation/Codec/Acl`). vcpkg 를 바꿀 때는 **다른 워크트리가 빌드 중이
+  ACL 코덱은 `Engine/Animation/Codec/Acl`(쿠킹 때 압축 → 코덱 id + 불투명 블롭). vcpkg 를 바꿀 때는 **다른 워크트리가 빌드 중이
   아닐 때** — 설치 폴더를 나눠 써서, 옛 매니페스트의 워크트리가 configure 하면 새 패키지를 지운다. Jolt 소프트 바디(천 · 헤어 카드)는 아직 감싸지 않았다.
-- **애니메이션(로드맵).** 지금: 스켈레톤 · 듀얼 쿼터니언 · 블렌드 스페이스 · 두 칸 크로스페이드 · 그래프 에셋은 있고, 클립 샘플링은 스텁(항등), 스킨드 메시
-  렌더링 · glTF 스킨/애니메이션 임포트는 없다(cgltf 가 읽는다). 순서 — ① 임포트 + 스킨드 메시(GPU 스키닝) + 실제 샘플링(포즈는 SoA) ② 압축(ACL 백엔드:
-  smallest-three 회전 양자화 · 범위 축소 16 비트 · 상수 트랙 제거 · 가상 정점 오차 기준 키 줄이기 · 가변 비트, 압축률 · 최대 오차 보고) ③ 블렌딩(크로스페이드 ·
-  가산 · 본 마스크 레이어) · 상태 기계 · 루트 모션 · 알림 · 동기 그룹 · 커브 ④ 후처리 리그 — IK 와 제약을 한 줄의 노드
-  목록(데이터, 순서가 결과를 바꾸므로 순서를 적는다)으로 그래프 뒤 · 스키닝 전에 돈다, 캐릭터마다 잡 병렬. IK: 2 본 · FABRIK/CCD · 조준/시선 · 발 디딤 ·
+- **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/README.md`(임포트 · 코덱 · 재생 · 상태 기계 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생).
+  남은 것 — ① 알림 디스패치(이름 → 처리기 등록부 · 데이터로 고름, 지금은 `getFiredNotifies()` 목록만) · 그래프의 블렌드 스페이스 노드(지금 `BlendSpace` 는 행렬 하나라
+  포즈 블렌드 스페이스로 다시 짓는다) · 그래프에 레이어 · 동기 그룹을 데이터로(지금 레이어는 `addLayer` 코드) · 에디터 그래프 패널이 조건 · 블렌드를 편집
+  ② 후처리 리그 — IK 와 제약을 한 줄의 노드
+  목록(데이터, 순서가 결과를 바꾸므로 순서를 적는다)으로 그래프 뒤 · 스키닝 전에 돈다(`PoseModifierComponent` — `AnimationPhase::PostProcess` 자리가 비어 있다), 캐릭터마다 잡 병렬. IK: 2 본 · FABRIK/CCD · 조준/시선 · 발 디딤 ·
   손 IK(사슬 · 목표 · 가중치 · 관절 제한). 제약: 부모 바꾸기(무기를 손 ↔ 등으로 — 공간 전환, 바뀔 때 튀지 않게 오프셋 유지) · 위치 · 회전 · 조준 ·
   변환 복사 · 거리/범위 제한 · 트위스트 본 분배(팔뚝 비틀림) · 포즈 구동(RBF 포즈 드라이버 — 팔꿈치를 굽히면 보정 모프 · 보정 본). 노드 가중치는
   클립 커브 · 시퀀서 키로 움직인다(샷 중간에 무기를 넘겨 쥐기). 대상은 본 · 소켓 · 다른 오브젝트. glTF 는 제약을 싣지 않으니 엔진에서 저작한다 —
-  언리얼 Control Rig · IK Rig, 유니티 Animation Rigging, Maya 제약 ⑤ 애니메이션 LOD(갱신 주기 URO · 화면 밖 생략 ·
-  본 LOD · 거리별 IK/물리 끔 · 중요도 매니저 예산) → 스켈레톤 LOD(본 감소) ⑥ Jolt 래그돌(물리 에셋 · 빌더는 있다 — `PhysicsAsset` · `PhysicsRagdollBuilder`. 남은 것: 래그돌 컴포넌트 · 전신 · 부분 · 파워드, 포즈 블렌드 · 기상) ·
-  2 차 움직임(스프링 본) → 헤어 카드 · 천(Jolt 소프트 바디), 가닥 헤어(TressFX)는 나중.
+  언리얼 Control Rig · IK Rig, 유니티 Animation Rigging, Maya 제약 ③ 애니메이션 LOD — 훅(`setUpdateRateDivisor` · `setVisibleHint`)은 있다, 부르는 쪽이 없다:
+  카메라 절두체 가시성 · 거리별 주기(URO) · 본 LOD · 거리별 IK/물리 끔 · 중요도 매니저 예산 → 스켈레톤 LOD(본 감소) ④ 군중 공유 — 스킨드 메시는 컴포넌트마다
+  메시 객체(정점 사본 · 모프 풀 구간 하나)라 같은 포즈 · 같은 메시를 나누는 캐시가 없다(언리얼 Animation Sharing) · 되감기 디버거 · 리타기팅(본 이름 표 · 비율) ·
+  얼굴(모프 타깃 임포트 — glTF `weights` 채널은 지금 버린다) ⑤ Jolt 래그돌(전신 · 부분 · 파워드, 래그돌 에셋은 데이터, 포즈 블렌드 · 기상) ·
+  2 차 움직임(스프링 본) → 헤어 카드 · 천(Jolt 소프트 바디), 가닥 헤어(TressFX)는 나중 ⑥ KayKit 텍스처(원본 GLB 에 든 `knight_texture` 등)를 `textures_raw/` 로
+  옮겨 머티리얼을 만들 것 — 지금 캐릭터는 씬 기본 머티리얼(흰색)로 그려진다. Shooter3D 통합은 다음 웨이브.
 - **프리로딩 · LOD · 사전 준비(로드맵).** ① 프리로드 세트(미리 올릴 에셋 + 미리 만들 프리팹 · 우선순위, 쿠킹 때 레벨 · 시퀀스 · 샷의 참조를 따라 자동 수집 —
   `collectReferencedPrefabPaths` 가 있다), `requestPreload` 가 진행률 · 완료를 준다, 프레임 예산(IO · 업로드 · PSO · 인스턴스 수), 참조 수 · LRU 로 내림(지금 캐시는
   약한 참조라 고정 단계가 필요하다) — 언리얼 AssetManager 번들 · Addressables ② 프리팹 풀(숨겨 둔 인스턴스를 켜고 돌려받기 — 탄 · 손님 · 유닛) · 시퀀서
@@ -242,7 +245,7 @@ cd build/Ninja-Debug/Bin
   프리팹(격리 월드) · 머티리얼(미리보기 구체) · 메시/모델(LOD 비교) · 애니메이션(스켈레톤 · 타임라인 · 압축 오차) · 카메라 프리셋(블렌드 미리보기) ·
   래그돌/물리 에셋(관절 한계) · 이펙트 · 장르 도구(코스터 트랙 · 리듬 차트). 언리얼 FPreviewScene · 애셋 에디터 툴킷, 유니티 PreviewRenderUtility · Prefab Stage.
 - **캐릭터 외형 편집(로드맵).** 지금: 형상 쪽(아래 ①~④ · ⑤ 의 소켓 이름 공간)은 `Source/Engine/Character` 에 있다(README "통합이 할 일"), GPU 모프 풀(`Mesh::setGpuMorphEnabled`)은
-  있다, 스켈레톤은 계층 · 스키닝 행렬뿐이고 편집 창구가 없다.
+  있다, 스켈레톤 에셋(`.skeleton.json`)은 본 · 레퍼런스 포즈 · 역 바인드와 임포트가 적은 본 부착 메시 표(소켓 파일을 처음 만들 근거)뿐이고 편집 창구가 없다.
   ①~④ 남은 것 — **통합**: `Mesh` · 포즈 ↔ `AppearanceGeometry` · `CharacterBoneArray` 변환, 체형 모프 · 피팅 델타(`FitPartResult::_listVertexDelta`)를 GPU 모프 풀에
   싣기(스키닝 앞), 병합 결과(`MeshMerger`)를 인덱스 · 정점 버퍼와 구간 그리기로, 애니메이션 시스템이 본이 움직인 프레임에만 `SocketBindingComponent::updateSocketTransform`,
   강체 컴포넌트가 `ISocketPhysicsBody` 를 구현해 `setPhysicsBody`, 표면 상태(`CharacterSurfaceState`)를 머티리얼 파라미터 · 마스크 텍스처로. **쿠킹**: 장비 정점 → 몸 전이
@@ -607,6 +610,8 @@ cd build/Ninja-Debug/Bin
 - **LLVM 을 다시 깔면 PCH 가 전부 낡는다**(`… has been modified since the precompiled header was built`). `.pch` 와 짝 `cmake_pch.cxx.obj` 를 같이 지운다(`SetupLlvm.py` 가 한다).
 - **LTO 함정** — clang `-flto` obj 는 MSVC `lib.exe` 가 못 읽는다(LNK1107). 아카이버는 "지금 컴파일러 옆" 을 먼저 본다(리눅스 `/usr/bin` 에는 llvm-ar 이 없어 LTO 가 조용히 꺼진다).
   CMake 는 IPO 아카이브 명령을 `project()` 때 정해 두고, `check_ipo_supported` 는 거짓 NO 를 내서 직접 판정한다(`cmake/Environment/ToolchainBinaries.cmake`). `SW_ENABLE_LTO` 하나가 Release · Shipping.
+- **임포트 산출물은 줄끝 변환을 받지 않는다**(`.gitattributes` 의 `Resource/**/models{,_raw}/** -text`). 스탬프는 원본 · 결과를 바이트 해시로 대조하는데,
+  `core.autocrlf=true` 체크아웃이 `*.skeleton.json` 을 CRLF 로 바꾸면 그것을 임포트한 워크트리 밖에서만 "손으로 바꿨다" 가 된다. 텍스트 산출물을 새로 만들면 같은 규칙에 든다.
 - **GPU · 드라이버** — 반복 TDR 은 어댑터를 망가뜨린다(재부팅 필요). DX12 는 실패 지점에서 InfoQueue · DRED 를 강제로 뽑는다. 이름 없는 객체("Unnamed")가 보이면 `SetName` 부터 붙인다.
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
 
@@ -865,6 +870,11 @@ cd build/Ninja-Debug/Bin
   태그 ID 를 만들고, 계층 비교(`Faction` → `Faction.Player`)에는 문자열이 같이 필요하다.
 
 ### 3-7. 그래픽스 · RHI · 셰이더
+
+- **한 `FrameRenderer` 로 두 씬을 번갈아 그리면 옛 배치가 나온다** — 씬 빌더의 수집 캐시(프리미티브 집합 세대)는 씬마다가 아니라서, 다른 매니저의 같은 세대
+  번호를 "그대로" 로 본다. 픽셀 비교 시험은 씬마다 렌더러를 둔다(`RenderPassGpuTest.SkinnedMeshFollowsPaletteLikeCpuSkinning`).
+- **스킨드 메시는 모프 풀의 뒤 구간이다** — 팔레트는 GT 의 `AnimationSystem` → `GpuSceneBuilder::collectSkinPalettes`(수집 건너뛰기와 무관하게 매 프레임) →
+  스냅샷 → `GpuMeshMorphPool::uploadSkinPalettes`(풀 순서) → meshskin.hlsl. 팔레트 행은 행벡터 4x4 의 **열** 셋이다(행을 넣으면 전치된 회전).
 
 - **bindless 표를 바꾸는 일은 렌더 스레드의 병렬 기록과 겹치면 안 된다**(`IRHIDevice::setParallelRecording`). 게임 스레드의 `MaterialCache::initializePending`
   (씬 로드 · 처음 쓰는 머티리얼의 스폰)은 렌더 스레드가 지난 프레임을 기록하는 동안 돈다 — `EngineLoop` 는 올릴 것이 있는 프레임(`hasPendingInitialize`)만

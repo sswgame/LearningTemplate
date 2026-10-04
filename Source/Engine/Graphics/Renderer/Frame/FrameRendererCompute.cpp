@@ -1,6 +1,6 @@
 /**
  * @file FrameRendererCompute.cpp
- * @brief 프레임의 컴퓨트 프리패스 넷입니다: 인스턴스 애니메이션 · 메시 모프 · GPU 컬링 · 인스턴스 정렬.
+ * @brief 프레임의 컴퓨트 프리패스 다섯입니다: 인스턴스 애니메이션 · 메시 모프 · 메시 스킨 · GPU 컬링 · 인스턴스 정렬.
  * @details 넷 다 그래프(RenderGraph)의 패스가 아닙니다. 그리기 **전에** 프레임 커맨드 리스트에 직접 걸리고, 그 순서가
  *          곧 GPU 타임라인의 순서입니다. 애니메이션이 바운드를 바꾸고, 컬링이 그 바운드로 거르고, 정렬이 컬링 결과를
  *          되돌립니다. 그래서 순서와 배리어가 한 파일 안에 나란히 보여야 합니다.
@@ -112,27 +112,25 @@ namespace sw
             return;
 
         // 풀은 **배치가 든 메시**에서 만든다. 스냅샷 배치가 소유를 들고 있으므로 이 프레임 동안 살아 있다.
+        // 스킨드 메시는 스킨 구간(뒤)으로, 모프를 켠 메시는 모프 구간(앞)으로 간다.
         _listScratchMorphMesh.clear();
+        _listScratchSkinMesh.clear();
         for ( const GpuMeshBatch& batch : _gpuScene.getAllBatches() )
         {
             Mesh* pMesh = batch._mesh.get();
-            if ( pMesh == nullptr || pMesh->isGpuMorphEnabled() == false )
+            if ( pMesh == nullptr )
+                continue;
+            const bool bSkin = pMesh->hasSkin();
+            if ( bSkin == false && pMesh->isGpuMorphEnabled() == false )
                 continue;
             // 같은 메시가 여러 배치에 나올 수 있다(불투명 · 투명 · 뷰). 풀에는 한 번만 넣는다.
-            bool bAlready = false;
-            for ( const Mesh* pExisting : _listScratchMorphMesh )
-            {
-                if ( pExisting == pMesh )
-                {
-                    bAlready = true;
-                    break;
-                }
-            }
-            if ( bAlready == false )
-                _listScratchMorphMesh.push_back( pMesh );
+            vector<Mesh*>& listTarget = bSkin ? _listScratchSkinMesh : _listScratchMorphMesh;
+            if ( std::find( listTarget.begin(), listTarget.end(), pMesh ) == listTarget.end() )
+                listTarget.push_back( pMesh );
         }
 
-        _meshMorphPool.build( _pDevice, _listScratchMorphMesh );
+        _meshMorphPool.build( _pDevice, _listScratchMorphMesh, _listScratchSkinMesh );
+        _meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows() );
 
         // 배치에 구간을 적어 둔다. upload() 가 배치 표(g_SwBatches)에 싣는다. 풀에 못 들어간 메시는 kInvalidBase 라
         // 셰이더가 레스트 포즈로 그린다.
@@ -191,7 +189,9 @@ namespace sw
         morphParams._time        = getAnimationTime();
         morphParams._amplitude   = FrameRendererUtil::kMeshMorphAmplitude;
         morphParams._frequency   = FrameRendererUtil::kMeshMorphFrequency;
-        morphParams._vertexCount = _meshMorphPool.getVertexCount();
+        morphParams._vertexCount = _meshMorphPool.getMorphVertexCount();
+        if ( morphParams._vertexCount == 0 )
+            return;
         _meshMorphCb.update( *_pCmd, &morphParams, sizeof( morphParams ) );
 
         // 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로. 정점 셰이더가 이 버퍼를 읽으므로 배리어가 빠지면
@@ -204,6 +204,41 @@ namespace sw
         const uint32 morphGroups = ( morphParams._vertexCount + 63u ) / 64u;
         if ( morphGroups > 0 )
             _pCmd->dispatchCompute( morphGroups, 1, 1 );
+        _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
+    }
+
+    void FrameRenderer::dispatchMeshSkin()
+    {
+        if ( _pDevice == nullptr || _pCmd == nullptr )
+            return;
+        const int32 morphDiag = getEffectiveMeshMorphDiag();
+        // 진단 2 · 3 은 레스트 버퍼를 그대로 물려 "컴퓨트 없이" 를 본다 — 스키닝도 돌리지 않는다(바인드 포즈).
+        if ( ( _pDevice->getCapabilities()._bGpuMeshMorph == SW_FALSE && morphDiag == 0 ) || morphDiag == 2 || morphDiag == 3 )
+            return;
+        if ( _meshMorphPool.isSkinDispatchable() == false )
+            return;
+        const RHIPipelineStateHandle skinPso = getEnginePso( RenderPassType::MeshSkin );
+        if ( skinPso == 0 || _meshSkinCb.isValid() == false )
+            return;
+
+        FrameRendererUtil::GpuSkinParams skinParams{};
+        skinParams._skinVertexBase  = _meshMorphPool.getSkinVertexBase();
+        skinParams._skinVertexCount = _meshMorphPool.getSkinVertexCount();
+        skinParams._skinBoneCount   = _meshMorphPool.getSkinBoneCount();
+        _meshSkinCb.update( *_pCmd, &skinParams, sizeof( skinParams ) );
+
+        // 모프와 같은 결과 버퍼의 뒤 구간에 쓴다. 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로(배리어가 빠지면 DX12 · Vulkan 에서 예전 값이 나온다).
+        _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
+        _pCmd->setComputePipelineState( skinPso );
+        // SkinParams(b0) / g_RestVertices(t0) / g_SkinWeights(t1) / g_SkinPalette(t2) / g_MorphVerticesRW(u0). meshskin.hlsl 레지스터와 1:1 대응.
+        _pCmd->bindComputeConstantBuffer( _meshSkinCb._index, 0 );
+        _pCmd->bindComputeShaderResource( _meshMorphPool.getRestBuffer()._srv, 0 );
+        _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinWeightBuffer()._srv, 1 );
+        _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinPaletteBuffer()._srv, 2 );
+        _pCmd->bindComputeUav( _meshMorphPool.getMorphBuffer()._uav, 0 );
+        const uint32 skinGroups = ( skinParams._skinVertexCount + 63u ) / 64u;
+        if ( skinGroups > 0 )
+            _pCmd->dispatchCompute( skinGroups, 1, 1 );
         _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
     }
 

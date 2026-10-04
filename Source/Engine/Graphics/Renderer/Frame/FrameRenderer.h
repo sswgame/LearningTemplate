@@ -299,8 +299,8 @@ namespace sw
             uint32                 _byteSize{ 0 };
             const utf8*            _pUsage{ nullptr };
         };
-        /// @brief 컴퓨트 상수버퍼 수입니다: 뷰마다 컬링 하나 + 인스턴스 애니메이션 · 메시 모프 · 인스턴스 정렬.
-        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewType::Count ) + 3;
+        /// @brief 컴퓨트 상수버퍼 수입니다: 뷰마다 컬링 하나 + 인스턴스 애니메이션 · 메시 모프 · 메시 스킨 · 인스턴스 정렬.
+        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewType::Count ) + 4;
         /** @brief 컴퓨트 상수버퍼 표를 채웁니다. 새 컴퓨트 상수버퍼는 여기 한 줄을 더합니다 — 만들기와 놓기를 따로 적지 않습니다. */
         void collectComputeConstantBuffers( ComputeConstantBufferRow ( &outArrRow )[_s_kComputeConstantBufferCount] );
         /**
@@ -589,6 +589,7 @@ namespace sw
 
         RHIConstantBufferSlot _instanceAnimCb;
         RHIConstantBufferSlot _meshMorphCb;
+        RHIConstantBufferSlot _meshSkinCb;
         /// @brief GPU 가 변형한 정점 풀입니다. RT 소유입니다(GpuMeshMorphPool 참고).
         GpuMeshMorphPool _meshMorphPool;
         /// @brief `setMeshMorphDiag` 가 준 값입니다. 음수면 전역 변수 `gv_morphDiag` 를 따릅니다.
@@ -626,6 +627,8 @@ namespace sw
         vector<GpuMorphVertex> _listScratchMorphTag;
         /// @brief 이번 프레임 모프 대상 메시입니다. 프레임마다 할당하지 않으려고 들고 있습니다.
         vector<Mesh*> _listScratchMorphMesh;
+        /// @brief 이번 프레임 스킨드 메시 목록입니다(모프 풀의 스킨 구간 순서, 프레임마다 재사용).
+        vector<Mesh*> _listScratchSkinMesh;
         /// @brief 씬 라이트 구조버퍼입니다. RT 소유이고 포워드 · 디퍼드가 같은 버퍼를 읽습니다.
         GpuLightBuffer _lightBuffer;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 들고 있습니다.
@@ -662,6 +665,11 @@ namespace sw
          *          뒤에 두면 컬링이 한 프레임 늦은 모양으로 판정합니다.
          */
         void dispatchMeshMorph();
+        /**
+         * @brief 스킨드 메시들의 정점을 GPU 가 본 팔레트로 섞습니다(바인드 포즈 → 모프 풀의 스킨 구간). 모프와 같이 **컬링보다 앞**입니다.
+         * @details 디스패치 하나가 모든 스킨드 메시를 돕니다 — 정점마다의 팔레트 행 번호에 메시의 팔레트 시작이 이미 더해져 있습니다.
+         */
+        void dispatchMeshSkin();
         /**
          * @brief 모프 풀을 이번 프레임의 배치 메시에 맞추고 배치에 풀 오프셋을 적습니다. **업로드 전에** 부릅니다.
          * @details 오프셋은 배치 표(g_SwBatches)에 실려 upload() 가 올리므로 표는 업로드 시점에 완성돼야 합니다. 디스패치(dispatchMeshMorph)는 커맨드 리스트가 열린 뒤 따로 돕니다.

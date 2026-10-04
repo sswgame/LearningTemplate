@@ -4,6 +4,14 @@
       "name": "StarSkirmish_KitLayoutOffset",
       "include_patterns": ["*/starskirmish/models_raw/*"],
       "translation": [-2.0, 0.0, -1.5]
+    },
+    {
+      "name": "KayKit_Characters",
+      "include_patterns": ["*/shooter3d/models_raw/kaykit/*"],
+      "animation_codec": "acl",
+      "animation_sample_rate": 30,
+      "animation_precision": 0.0001,
+      "animation_shell_distance": 0.1
     }
   ]
 }

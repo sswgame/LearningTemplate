@@ -178,7 +178,7 @@ namespace sw::editor
                     const string importedPath = importer.makeImportedPath( sourcePath );
                     StampEntry   current;
                     current._sourceHash   = importer.computeSourceHash( sourcePath, resourcePath );
-                    current._importedHash = AssetImportStampUtil::computeFileHash( importedPath );
+                    current._importedHash = importer.computeImportedHash( importedPath );
 
                     const auto   itStamped = mapStamped.find( relativePath );
                     const string reason    = findDriftReason( itStamped != mapStamped.end() ? &itStamped->second : nullptr, current, importer.getImportedLabel() );
@@ -200,7 +200,7 @@ namespace sw::editor
                         continue;
                     }
 
-                    current._importedHash    = AssetImportStampUtil::computeFileHash( importedPath );
+                    current._importedHash    = importer.computeImportedHash( importedPath );
                     mapCurrent[relativePath] = current;
                     ++inoutSummary._importedCount;
                 }
@@ -227,6 +227,11 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    uint64 IRawAssetImporter::computeImportedHash( string_view importedPath ) const
+    {
+        return AssetImportStampUtil::computeFileHash( importedPath );
+    }
+
     AssetImportSummary AssetImportStampUtil::importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode )
     {
         AssetImportSummary summary;

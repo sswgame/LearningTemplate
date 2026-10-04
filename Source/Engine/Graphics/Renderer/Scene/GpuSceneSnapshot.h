@@ -224,6 +224,21 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct GpuSkinPalette
+     * @brief 스킨드 메시 하나의 팔레트 구간입니다. 행은 `GpuSceneSnapshot::_pListSkinPaletteRow` 의 float4 이고 본 하나가 셋입니다(행벡터 4x4 의 0 · 1 · 2 열).
+     */
+    // SW_OWNERSHIP_RAW_OK: 정체성 키다. RT 의 모프 풀이 자기 구간과 짝짓는 데만 쓰고 역참조하지 않는다 — 메시 소유는 배치(`GpuMeshBatch::_mesh`)가 싣는다.
+    struct GpuSkinPalette
+    {
+        const Mesh* _pMesh{ nullptr };
+        uint32      _firstRow{ 0 };
+        uint32      _boneCount{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct GpuSceneSnapshot
      * @brief 게임 스레드가 만들고 렌더 패킷에 실어 렌더 스레드로 **옮기는 전부**입니다.
      *
@@ -261,6 +276,13 @@ namespace sw
          *          빌더는 새 퍼뮤테이션이 나타날 때만 목록을 새로 만들어 바꿔 끼웁니다(copy-on-write). RT 는 읽기만 합니다.
          */
         shared_ptr<const vector<GpuShaderPermutation>> _pListShaderPermutation;
+        /// @brief 스킨드 메시마다의 팔레트 구간입니다(작아서 복사한다).
+        vector<GpuSkinPalette> _listSkinPalette;
+        /**
+         * @brief 이번 프레임의 스킨 팔레트 행 전부입니다(본 하나 = float4 셋). **공유합니다** — RT 는 읽기만 하고, GT 는 프레임마다 새 배열을 만듭니다.
+         * @details 팔레트는 애니메이션 시스템이 틱 뒤에 만들고 빌더가 여기로 옮깁니다. RT 가 모프 풀의 스킨 구간 순서로 다시 올립니다(`GpuMeshMorphPool::uploadSkinPalettes`).
+         */
+        shared_ptr<const vector<float4>> _pListSkinPaletteRow;
         /// @brief GPU 회전을 요청한 인스턴스 수입니다(0 이면 애니메이션 디스패치를 건너뜁니다).
         uint32 _spinInstanceCount{ 0 };
         /// @brief 마지막 buildFromScene 이 내용을 바꿨는지입니다. RT 는 0 이면 인스턴스 재업로드를 생략합니다.

@@ -45,6 +45,8 @@ Object/
 │  ├─ CameraRegistry.*          # 카메라 등록부 + 역할 · 우선순위 선택 규칙 하나(게임 · 에디터 카메라가 같이 쓴다)
 │  ├─ MeshInstanceBatch.* · SpriteInstanceBatch.*  # 컴포넌트 없이 인스턴스 N 개를 드는 렌더 프리미티브(PrimitiveRegistry 에 등록)
 │  └─ ObjectStateSerializer.*
+├─ Animation/          # AnimationSystem — 애니메이션 유닛(SkeletalMeshComponent)을 의존 레벨 · 단계(시간 → 기본 포즈 → 부착 → 후처리 → 팔레트)로 평가.
+│                      #   매니저가 소유하고 tick 의 한 단계(틱 뒤 · 트랜스폼 플러시 앞)에서 부른다. 단계 안은 engine::runParallel
 ├─ Component/           # 기반 Component + 엔진 기본 컴포넌트
 │  ├─ Component.h
 │  ├─ SceneComponent.*  # 트랜스폼·부모/자식 (값은 아래 저장소의 칸에 있다)
@@ -52,7 +54,8 @@ Object/
 │  ├─ SceneTransformHierarchy.*  # 씬마다: 더티 루트 · 플러시 · 틱 중 쓰기(대기 칸 목록 · 쓰기 큐)
 │  ├─ ComponentStableKey.*  # `이름(없으면 타입)#n` 키 — 씬 파일의 부착 대상과 에디터 선택 복원이 같은 키
 │  ├─ TagSystem.*       # TagContainer · TagQuery (`TagID` 자체는 Core/String/TagID.h)
-│  └─ 2D/ · 3D/         # Sprite, Mesh, Collider, 빛(`LightComponent` 기반 — 색 · 세기 · 방향 규약 · 등록) 등
+│  └─ 2D/ · 3D/         # Sprite, Mesh, Collider, 빛(`LightComponent` 기반 — 색 · 세기 · 방향 규약 · 등록),
+│                       #   SkeletalMeshComponent(유닛 — 스켈레톤 · 포즈 · 팔레트 · 스킨드 메시) · SkeletalAnimatorComponent(그래프 · 레이어 · 루트 모션) 등
 └─ Prefab/             # PrefabAsset(로드 · 저장 · 스폰) · PrefabCache(프리팹 에셋 캐시, `PrefabAsset.h`) · PrefabOverrides(인스턴스 차이 뽑기 · 다시 얹기)
 ```
 

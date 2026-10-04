@@ -9,14 +9,35 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Animation/AnimGraphAsset.h"
+#include "Engine/Animation/AnimGraphPlayer.h"
+#include "Engine/Animation/SpriteClipPlayable.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class SpriteAnimatorComponent;
     class SpriteClipAsset;
     class SpriteComponent;
 
+    /**
+     * @class SpriteAnimatorClipSource
+     * @brief 상태 기계(`AnimGraphPlayer`)가 상태 이름을 재생할 것으로 풀 때 애니메이터의 구간(`SpriteClipPlayable`)을 그 이름으로 맞춰 줍니다.
+     * @details 리플렉션 컴포넌트는 기반 클래스 하나만 두므로 인터페이스는 이 작은 객체가 구현합니다(스켈레탈 애니메이터의 `SkeletalAnimatorBinding` 과 같은 자리).
+     */
+    class SW_API SpriteAnimatorClipSource final : public IAnimPlayableSource
+    {
+    public:
+        explicit SpriteAnimatorClipSource( SpriteAnimatorComponent& owner );
+        const IAnimPlayable* findPlayable( const hashed_string& name ) const override;
+
+    private:
+        SpriteAnimatorComponent& _owner;
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class SpriteAnimatorComponent
      * @brief 같은 오브젝트의 `SpriteComponent` 가 든 클립(`.sprite.json`)의 프레임을 시간에 맞춰 넘깁니다.
@@ -34,6 +55,8 @@ namespace sw
     REFLECT( Category = "Animation 2D", DisplayName = "Sprite Animator Component", Tooltip = "2D Sprite frame animation controller" )
     class SW_API SpriteAnimatorComponent : public SceneComponent
     {
+        friend class SpriteAnimatorClipSource;
+
     public:
         REFLECT_BODY();
         SpriteAnimatorComponent();
@@ -83,22 +106,23 @@ namespace sw
         bool  isPaused() const;
 
     private:
-        void               tryLoadAnimGraph();
-        [[nodiscard]] bool tryAdvanceGraphNode();
+        void tryLoadAnimGraph();
+        /** @brief 상태 기계가 다른 상태로 넘어갔으면(끝나면 다음) 이름 · 반복 · 구간을 따라 맞춥니다. */
+        void syncStateFromPlayer();
         /** @brief 같은 오브젝트의 스프라이트입니다. 없으면 nullptr 입니다. */
         SpriteComponent* findSprite() const;
         /** @brief 같은 오브젝트 스프라이트의 클립입니다. 없으면 nullptr 입니다. */
         const SpriteClipAsset* findClip() const;
         /**
-         * @brief 지금 애니메이션 이름의 구간(시작 · 개수 · 반복)을 클립에서 잡습니다. 이름이 클립에 없으면 한 번 알리고 프레임 0 하나로 둡니다.
-         * @param bTakeLoopFromClip true 면 반복 여부도 클립 구간의 것으로 정합니다.
+         * @brief 이름의 구간(시작 · 개수 · 반복)을 클립에서 잡아 `_playable` 에 맞춥니다. 이름이 클립에 없으면 한 번 알리고 프레임 0 하나로 둡니다.
+         * @return 클립이 정한 반복 여부입니다(구간 이름이 없는 클립은 반복).
          */
-        void resolveFrameRange( bool bTakeLoopFromClip );
-        /** @brief 구간 안의 프레임 하나를 보일 시간(초)입니다. 클립 프레임의 시간, 없으면 1 / `_frameRate` 입니다. */
-        float32 getFrameDuration( int32 frameInRange ) const;
+        bool configurePlayable( const string& animName );
+        /** @brief 클립이 없을 때 · 시간이 없는 프레임이 머무는 시간(1 / `_frameRate`)입니다. */
+        float32 getFallbackFrameSeconds() const;
         /** @brief 스프라이트에 지금 프레임(구간 시작 + 지금 프레임)을 넘깁니다. */
         void updateSpriteFrame();
-        /** @brief 클립 타임라인의 지금 시각(초)입니다 — 지금 프레임의 시작 시각 + 그 프레임 안에서 흐른 시간(프레임 시간을 넘지 않습니다). */
+        /** @brief 클립 타임라인의 지금 시각(초)입니다 — 구간 시작 시각 + 재생 시각(구간 길이를 넘지 않습니다). */
         float32 computeClipTime() const;
         /** @brief 클립의 트랜스폼 키를 지금 시각에서 읽어 스프라이트의 로컬 위치 x · y · Z 회전에 씁니다. 키가 없거나 스프라이트가 루트면 쓰지 않습니다. */
         void applyTransformKeys();
@@ -112,8 +136,10 @@ namespace sw
         vector<string> _listAnimation;
         PROPERTY( Category = "Playback", DisplayName = "Frame Rate", Tooltip = "Playback speed in FPS for frames without their own duration", Min = 1.0, Max = 120.0,
                   Meta = "Units=fps" )
-        float32 _frameRate;
-        float32 _frameTimer;
+        float32                  _frameRate;
+        SpriteAnimatorClipSource _clipSource;  ///< 상태 이름 → `_playable` 풀이
+        SpriteClipPlayable       _playable;    ///< 지금 구간(재생할 것). 스프라이트는 섞지 않으므로 하나면 된다
+        AnimGraphPlayer          _graphPlayer; ///< 시간 · 반복 · 끝 · 다음 상태 — 스켈레탈 애니메이터와 같은 코드다
         PROPERTY( Category = "Playback", DisplayName = "Current Frame", Tooltip = "Current playback frame index within the animation", Min = 0.0 )
         int32 _currentFrame;
         PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Frame count of the active animation, taken from the sprite clip", ReadOnly )

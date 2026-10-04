@@ -68,6 +68,7 @@ namespace sw
         , _arrView{}
         , _instanceAnimCb{}
         , _meshMorphCb{}
+        , _meshSkinCb{}
         , _meshMorphDiagOverride{ -1 }
         , _drawMergeOverride{ -1 }
         , _vertexPoolOverride{ -1 }
@@ -423,6 +424,7 @@ namespace sw
         const uint32 animInstanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
         dispatchInstanceAnimation( animInstanceCount );
         dispatchMeshMorph();
+        dispatchMeshSkin();
         dispatchCullAndSort( animInstanceCount );
 
 #if SW_PROFILE_COMPILED

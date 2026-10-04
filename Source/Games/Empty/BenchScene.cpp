@@ -14,6 +14,8 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
+#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
+#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -49,6 +51,14 @@ namespace sw
          *       기존 측정·스크린샷과 비교할 수 있다.
          */
         constexpr const utf8* kArrBenchShape[] = { "Cube", "Sphere", "Cylinder", "Capsule", "Cone" };
+        /** @brief 벤치 캐릭터(KayKit 기사, CC0) — 스킨드 메시 · 스켈레톤 · 클립 폴더입니다(`App --import-models` 가 만든다). */
+        constexpr const utf8* kBenchCharacterMesh     = "game/shooter3d/models/kaykit/knight.mesh";
+        constexpr const utf8* kBenchCharacterSkeleton = "game/shooter3d/models/kaykit/knight/knight.skeleton.json";
+        constexpr const utf8* kBenchCharacterClips    = "game/shooter3d/models/kaykit/knight/clips";
+        /** @brief 벤치 캐릭터가 번갈아 재생하는 클립입니다(짝수 · 홀수 번째). */
+        constexpr const utf8* kArrBenchCharacterClip[] = { "Idle", "Walking_A" };
+        /** @brief 캐릭터 사이 간격(미터)입니다. */
+        constexpr float32 kBenchCharacterSpacing = 1.6f;
     } // namespace
 
     // ------------------------------------------------------------------------------
@@ -59,6 +69,13 @@ namespace sw
      * @details 이것이 0 이 아니면 `EmptyGame` 은 `GameConfig` 의 시작 씬 대신 벤치 씬을 세운다.
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)", SW_KEEP_IN_SHIPPING );
+
+    /**
+     * @brief `-gv_benchCharacters=N` — 스킨드 캐릭터(KayKit 기사) N 명을 한 줄로 세워 짝수는 Idle, 홀수는 Walking_A 를 재생합니다.
+     * @details GPU 스키닝(모프 풀의 스킨 구간 · meshskin.hlsl)과 애니메이션 시스템을 실제 에셋으로 태우는 스위치다. `-gv_screenshotFrame` 을 둘
+     *          다르게 찍으면 포즈가 달라야 한다. 개발 빌드 전용이다 — 에셋이 Shooter3D 의 리소스에 있어 Empty 게임의 배포 팩에는 없다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchCharacters, 0, "벤치 스킨드 캐릭터 수 (0=사용 안 함, KayKit 기사 · Idle/Walking_A)" );
 
     /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
@@ -214,6 +231,7 @@ namespace sw
         , _benchElapsed{ 0.0f }
         , _benchGridSide{ 0 }
         , _bRefreshedCameras{ SW_FALSE }
+        , _bCharacterFraming{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -225,10 +243,13 @@ namespace sw
         // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는
         // **이 모듈이 선언한다**(이 파일 위). 그래서 이름으로 조회하지 않고 그대로 읽는다 —
         // 주의: 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽힌다.
-        if ( gv_benchMeshes <= 0 )
+        if ( gv_benchMeshes <= 0 && gv_benchCharacters <= 0 )
             return false;
 
-        spawn( static_cast<uint32>( gv_benchMeshes ) );
+        if ( gv_benchMeshes > 0 )
+            spawn( static_cast<uint32>( gv_benchMeshes ) );
+        if ( gv_benchCharacters > 0 )
+            spawnCharacters( static_cast<uint32>( gv_benchCharacters ) );
         return isActive();
     }
 
@@ -277,6 +298,7 @@ namespace sw
         _listInstanceBatch.clear(); // 소멸자가 등록부에서 빠진다
         _instanceCubeCount = 0;
         _listBenchExtra.clear();
+        _bCharacterFraming = SW_FALSE;
         _listChurnInstance.clear();
         _keyLight = {};
     }
@@ -459,6 +481,69 @@ namespace sw
                      meshVariantCount, shapeCount );
         SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 %#×%# 격자로 만들었습니다.",
                      pScene->getName(), static_cast<uint32>( _listBenchMesh.size() ), side, side );
+    }
+
+    void BenchScene::spawnCharacters( uint32 characterCount )
+    {
+        SceneManager* pSceneManager = game::getService<SceneManager>();
+        if ( pSceneManager == nullptr )
+            return;
+        Scene* pScene = pSceneManager->getActiveScene();
+        if ( pScene == nullptr )
+            pScene = pSceneManager->createEmptyActiveScene( "BenchScene" );
+        if ( pScene == nullptr )
+        {
+            SW_LOG_ERROR( "[Bench] 씬을 만들지 못했습니다." );
+            return;
+        }
+        pScene->ensureDefaultCameras();
+        GameObjectManager* pObjects = pScene->getObjectManager();
+        if ( pObjects == nullptr )
+            return;
+
+        const float32 origin = -0.5f * static_cast<float32>( characterCount - 1 ) * kBenchCharacterSpacing;
+        for ( uint32 index = 0; index < characterCount; ++index )
+        {
+            StringBuilder<constant::kMaxBuffer64> nameBuilder;
+            nameBuilder.append( "BenchCharacter_" ).append( index );
+            GameObject* pObject = pObjects->createGameObject( hashed_string( nameBuilder.c_str(), nameBuilder.size() ) );
+            if ( pObject == nullptr )
+                continue;
+            SkeletalMeshComponent*     pMesh     = pObject->addComponent<SkeletalMeshComponent>();
+            SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
+            if ( pMesh == nullptr || pAnimator == nullptr )
+                continue;
+            pMesh->setMeshId( kBenchCharacterMesh );
+            pMesh->setSkeletonPath( kBenchCharacterSkeleton );
+            pMesh->resolveRenderAssets();
+            // 기사는 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌린다.
+            pMesh->setLocalPosition( float3{ origin + static_cast<float32>( index ) * kBenchCharacterSpacing, 0.0f, 0.0f } );
+            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::Pi, 0.0f } );
+            pAnimator->setClipFolder( kBenchCharacterClips );
+            pAnimator->setInitialState( kArrBenchCharacterClip[index % SW_COUNT_OF( kArrBenchCharacterClip )] );
+            _listBenchExtra.push_back( pMesh->getHandle() );
+        }
+
+        const float32 halfExtent = MathUtil::max( 2.0f, 0.5f * static_cast<float32>( characterCount ) * kBenchCharacterSpacing );
+        spawnLight( pScene, halfExtent );
+        spawnGround( pScene, halfExtent );
+        _bCharacterFraming = SW_TRUE;
+        frameCharacterCameras( pScene, halfExtent );
+        SW_LOG_INFO( "[Bench] 씬 '%#' 에 스킨드 캐릭터 %#명을 세웠습니다(%#).", pScene->getName(), characterCount, kBenchCharacterMesh );
+    }
+
+    void BenchScene::frameCharacterCameras( Scene* pScene, float32 halfExtent )
+    {
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+        // 캐릭터 키(~2 m)가 화면을 채우도록 허리 높이를 본다. 큐브 격자 맞춤(frameOneCamera)은 바닥 높이 원점을 본다.
+        for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
+        {
+            const float32 tanHalf  = MathUtil::tan( pCamera->getFieldOfViewY() * 0.5f );
+            const float32 distance = ( tanHalf > MathUtil::Epsilon ) ? ( halfExtent * 1.2f / tanHalf ) : ( halfExtent * 3.0f );
+            pCamera->setLocalPosition( float3{ 0.0f, 1.4f, -distance } );
+            pCamera->lookAt( float3{ 0.0f, 0.9f, 0.0f } );
+        }
     }
 
     MeshComponent* BenchScene::spawnCube( GameObjectManager* pObjects, Material* pSceneMaterial, uint32 index, uint32 side, float32 origin )
@@ -731,7 +816,12 @@ namespace sw
             if ( SceneManager* pSceneManager = game::getService<SceneManager>() )
             {
                 if ( Scene* pScene = pSceneManager->getActiveScene() )
-                    frameCameras( pScene, _benchGridSide, kBenchSpacing );
+                {
+                    if ( _bCharacterFraming == SW_TRUE )
+                        frameCharacterCameras( pScene, MathUtil::max( 2.0f, 0.5f * static_cast<float32>( gv_benchCharacters ) * kBenchCharacterSpacing ) );
+                    else
+                        frameCameras( pScene, _benchGridSide, kBenchSpacing );
+                }
             }
         }
 

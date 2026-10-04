@@ -8,6 +8,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Animation/Skeleton.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -38,6 +39,7 @@
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
@@ -2618,6 +2620,197 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
         SW_TEST_SKIP( "No RHI backend for the morph pool identity test" );
 }
 #endif
+
+/**
+ * @brief [RenderPassGpuTest] GPU 스키닝 — 스킨드 메시는 유닛의 팔레트대로 휘고, 그 그림이 CPU 로 미리 스키닝한 메시의 그림과 같다(네 백엔드)
+ * @details 단위 큐브의 위쪽 정점(y > 0)은 본 1, 아래쪽은 본 0 에 가중치 1 로 묶고, 본 1 을 Z 축으로 50° 돌린다. (A) 바인드 포즈(팔레트 단위)는
+ *          스킨 없는 큐브와 같아야 하고, (B) 돌린 포즈는 바인드 포즈와 **달라야** 하며, (C) 같은 회전을 CPU 에서 정점에 걸어 둔 정적 큐브와 같아야 한다.
+ *          (C) 가 지면 팔레트 행 · 팔레트 시작 · 행렬 열 순서 중 하나가 GPU 와 CPU 에서 다르다(meshskin.hlsl · `GpuMeshMorphPool::uploadSkinPalettes`).
+ */
+SW_TEST_CASE( RenderPassGpuTest, SkinnedMeshFollowsPaletteLikeCpuSkinning )
+{
+    struct Snapshot
+    {
+        uint32             _drawnCount{ 0 };
+        bool               _bOk{ false };
+        test::RHITestImage _image;
+    };
+    /// @brief 두 그림에서 어느 채널이든 12 넘게 다른 픽셀 수입니다.
+    auto countDifferentPixels = []( const Snapshot& a, const Snapshot& b ) -> uint32
+    {
+        if ( a._image.getWidth() != b._image.getWidth() || a._image.getHeight() != b._image.getHeight() )
+            return 0xFFFFFFFFu;
+        uint32 count{ 0 };
+        for ( uint32 y = 0; y < a._image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < a._image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixelA = a._image.getPixel( x, y );
+                const test::Rgba8 pixelB = b._image.getPixel( x, y );
+                const auto        isFar  = []( uint8 lhs, uint8 rhs )
+                { return lhs > rhs + 12 || rhs > lhs + 12; };
+                if ( isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b ) )
+                    ++count;
+            }
+        }
+        return count;
+    };
+    auto snapshot = []( sw::FrameRenderer& renderer, sw::IRHIDevice& device, sw::Scene& scene ) -> Snapshot
+    {
+        Snapshot         result{};
+        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+        for ( uint32 frame = 0; frame < 4; ++frame )
+        {
+            // 팔레트는 애니메이션 시스템이 틱 뒤에 만든다 — 시험은 틱 대신 평가만 부른다.
+            scene.getObjectManager()->getAnimationSystem().evaluate( 0.0f );
+            device.beginFrame( clear );
+            if ( renderer.execute( &device, &scene ) == false )
+                return result;
+            device.endFrame( false, false );
+            device.waitIdle();
+        }
+        if ( result._image.readTransient( renderer, "SceneColor" ) == false )
+            return result;
+        for ( uint32 y = 0; y < result._image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < result._image.getWidth(); ++x )
+            {
+                if ( test::RHITestImage::isDefaultClearBackground( result._image.getPixel( x, y ) ) == false )
+                    ++result._drawnCount;
+            }
+        }
+        result._bOk = result._drawnCount > 0;
+        return result;
+    };
+
+    /**
+     * @class BendTask
+     * @brief 기본 포즈 단계에서 본 1 을 정해진 각만큼 Z 축으로 돌리는 일입니다.
+     */
+    class BendTask final : public sw::IAnimationPhaseTask
+    {
+    public:
+        explicit BendTask( float32 angle )
+            : _angle{ angle }
+        {
+        }
+        bool isAnimationActive() const override { return true; }
+        void runAnimationPhase( sw::AnimationPhase phase, sw::SkeletalMeshComponent& unit, const sw::AnimationFrameContext& context ) override
+        {
+            (void)context;
+            if ( phase != sw::AnimationPhase::BasePose )
+                return;
+            sw::BoneTransform bone = unit.getLocalPose().getBoneTransform( 1 );
+            bone._rotation         = sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, _angle );
+            unit.getLocalPose().setBoneTransform( 1, bone );
+        }
+        float32 _angle;
+    };
+
+    constexpr float32            kBendAngle = 0.87f; // 약 50°
+    sw::shared_ptr<sw::Skeleton> skeleton   = sw::make_shared<sw::Skeleton>();
+    (void)skeleton->addBone( sw::hashed_string( "base" ), -1, sw::BoneTransform{}, sw::float4x4::Identity );
+    (void)skeleton->addBone( sw::hashed_string( "top" ), 0, sw::BoneTransform{}, sw::float4x4::Identity );
+    skeleton->computeInverseBindFromReference();
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
+        // 씬마다 렌더러를 따로 둔다 — 한 렌더러의 씬 빌더는 그리던 씬의 수집 캐시를 들고 있어 씬을 바꿔 그리면 옛 배치가 남는다.
+        sw::FrameRenderer renderer;
+        sw::FrameRenderer staticRenderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && staticRenderer.initialize( device.get() ) && staticRenderer.isReady();
+        if ( bOk && device->getCapabilities()._bGpuMeshMorph == SW_FALSE )
+            continue;
+
+        // 스킨드 큐브와, 같은 정점에 CPU 스키닝을 걸어 둔 정적 큐브를 따로 둔 두 씬.
+        sw::shared_ptr<sw::Mesh> bindCube = sw::MeshUtil::createUnitCube();
+        SW_ASSERT_NOT_NULL( bindCube.get() );
+        sw::vector<sw::MeshSkinVertex> listSkin;
+        sw::vector<sw::RHIVertex>      listCpuSkinned = bindCube->getVertices();
+        const sw::float4x4             bend           = sw::float4x4::createFromQuaternion( sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, kBendAngle ) );
+        for ( sw::RHIVertex& vertex : listCpuSkinned )
+        {
+            sw::MeshSkinVertex skin{};
+            skin._arrJoint[0] = vertex._arrPosition[1] > 0.0f ? 1u : 0u;
+            listSkin.push_back( skin );
+            if ( skin._arrJoint[0] == 0 )
+                continue;
+            const sw::float3 position = sw::float3::transform( sw::float3{ vertex._arrPosition }, bend );
+            const sw::float3 normal   = sw::float3::transformVector( sw::float3{ vertex._arrNormal }, bend );
+            vertex._arrPosition[0]    = position._x;
+            vertex._arrPosition[1]    = position._y;
+            vertex._arrPosition[2]    = position._z;
+            vertex._arrNormal[0]      = normal._x;
+            vertex._arrNormal[1]      = normal._y;
+            vertex._arrNormal[2]      = normal._z;
+        }
+        sw::shared_ptr<sw::Mesh> skinnedCube = sw::Mesh::create();
+        skinnedCube->setVertices( bindCube->getVertices() );
+        skinnedCube->setSkin( listSkin, 2 );
+        sw::shared_ptr<sw::Mesh> cpuCube = sw::Mesh::create();
+        cpuCube->setVertices( listCpuSkinned );
+
+        sw::Scene skinnedScene( "SkinnedCubeScene" );
+        sw::Scene staticScene( "CpuSkinnedCubeScene" );
+        bOk                                 = bOk && skinnedScene.ensureDefaultCameras() && staticScene.ensureDefaultCameras();
+        sw::SkeletalMeshComponent* pSkinned = nullptr;
+        sw::MeshComponent*         pStatic  = nullptr;
+        if ( bOk )
+        {
+            sw::GameObject* pSkinnedObject = skinnedScene.getObjectManager()->createGameObject( sw::hashed_string( "Skinned" ) );
+            sw::GameObject* pStaticObject  = staticScene.getObjectManager()->createGameObject( sw::hashed_string( "Static" ) );
+            bOk                            = pSkinnedObject != nullptr && pStaticObject != nullptr;
+            if ( bOk )
+            {
+                pSkinned = pSkinnedObject->addComponent<sw::SkeletalMeshComponent>();
+                pStatic  = pStaticObject->addComponent<sw::MeshComponent>();
+                bOk      = pSkinned != nullptr && pStatic != nullptr;
+            }
+        }
+        if ( bOk )
+        {
+            pSkinned->setSkeleton( skeleton );
+            pSkinned->setMesh( skinnedCube );
+            pSkinned->setBoundsRadius( 2.0f );
+            pSkinned->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+            pStatic->setMesh( bindCube );
+            pStatic->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + ": 씬·렌더러 준비 실패" ).c_str() );
+        if ( bOk == false )
+            continue;
+
+        // (A) 바인드 포즈 = 스킨 없는 큐브
+        const Snapshot bindSkinned = snapshot( renderer, *device, skinnedScene );
+        const Snapshot bindStatic  = snapshot( staticRenderer, *device, staticScene );
+        SW_EXPECT_TRUE_MSG( bindSkinned._bOk && bindStatic._bOk, ( label + ": 바인드 포즈 그림을 못 읽었다" ).c_str() );
+        const uint32 bindDiff = countDifferentPixels( bindSkinned, bindStatic );
+        SW_EXPECT_TRUE_MSG( bindDiff <= bindStatic._drawnCount / 50 + 8,
+                            ( label + ": 바인드 포즈의 스킨드 큐브가 정적 큐브와 다르다 (달라진 픽셀 " + sw::to_string( bindDiff ) + ")" ).c_str() );
+
+        // (B) · (C) 본 1 을 돌린다.
+        BendTask task( kBendAngle );
+        pSkinned->addAnimationPhaseTask( &task );
+        pStatic->setMesh( cpuCube );
+        const Snapshot bentSkinned = snapshot( renderer, *device, skinnedScene );
+        const Snapshot bentStatic  = snapshot( staticRenderer, *device, staticScene );
+        SW_EXPECT_TRUE_MSG( bentSkinned._bOk && bentStatic._bOk, ( label + ": 굽힌 포즈 그림을 못 읽었다" ).c_str() );
+        const uint32 poseDiff = countDifferentPixels( bindSkinned, bentSkinned );
+        SW_EXPECT_TRUE_MSG( poseDiff > bindStatic._drawnCount / 10,
+                            ( label + ": 본을 돌렸는데 스킨드 큐브가 그대로다 (달라진 픽셀 " + sw::to_string( poseDiff ) + ") — 팔레트가 GPU 에 닿지 않는다" ).c_str() );
+        const uint32 cpuDiff = countDifferentPixels( bentSkinned, bentStatic );
+        SW_EXPECT_TRUE_MSG( cpuDiff <= bentStatic._drawnCount / 50 + 8,
+                            ( label + ": GPU 스키닝이 CPU 스키닝과 다르다 (달라진 픽셀 " + sw::to_string( cpuDiff ) + " / 그려진 " +
+                              sw::to_string( bentStatic._drawnCount ) + ")" )
+                                .c_str() );
+        pSkinned->removeAnimationPhaseTask( &task );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the GPU skinning test" );
+}
 
 /**
  * @brief [RenderPassGpuTest] 정점 · 모프 풀은 메시 **내용**이 바뀌면 다시 만든다 — 포인터가 같아도
