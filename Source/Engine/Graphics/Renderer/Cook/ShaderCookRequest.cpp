@@ -237,6 +237,7 @@ namespace sw
                 const vector<string> listEngineShader = {
                     engineDefaultAssets._shaderFullscreenTriangle,
                     "engine/shaders/sprite2d.hlsl",
+                    "engine/shaders/sprite2dlit.hlsl",
                     "common/shaders/provokingvertex.hlsl",
                     "common/shaders/instanceslotprobe.hlsl" };
                 for ( const string& path : listEngineShader )
