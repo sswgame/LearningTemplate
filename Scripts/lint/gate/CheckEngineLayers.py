@@ -126,6 +126,8 @@ _kEngineTier: dict[str, int] = {
     "Sequencer": 7,
     # 플레이어 옵션 — 입력 · 오디오 · 언어 · 창 방식 값을 그 서브시스템에 넣는다(위층은 렌더러를 모른다 — 화면 변경은 호스트가 한다).
     "UserSettings": 7,
+    # 캐릭터 외형 형상(소켓 · 피팅 · 병합 · 절단 · 체형)과 소켓 부착 컴포넌트. 컴포넌트 모델(6) 위의 기능 모듈이라 Sequencer 와 같은 자리다.
+    "Character": 7,
     # 8: 그리는 쪽 · 핫리로드. 씬과 컴포넌트를 읽는다.
     _kGraphicsRendererLayerName: 8,
     "Module": 8,

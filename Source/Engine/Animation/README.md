@@ -10,6 +10,7 @@
 | `AnimClip` · `AnimPlayer` | 이름 · 길이를 가진 클립(샘플은 아직 항등 변환 스텁)과 두 칸 크로스페이드 플레이어 |
 | `AnimGraphAsset` · `AnimGraphPlayer` | 에디터와 런타임이 함께 쓰는 애니메이션 그래프 JSON 에셋과, 그 노드를 클립에 묶어 재생하는 플레이어 |
 | `SpriteClipAsset` | 스프라이트 클립(`.sprite.json`) — 아틀라스 · 프레임(UV 사각형 + 시간) · 이름 붙은 애니메이션. 캐시(`SpriteClipCache`)는 `IAssetCache` 라 `Resource/` 에 있다 |
+| `BlendCurve` | 전환 곡선 · 길이(`BlendCurveSpec`)와 시간 → 가중치(`evaluateBlendWeight`). 카메라 디렉터 · 시퀀서 · 소켓 부착의 되돌아가기가 같은 구현을 쓴다 |
 
 ---
 

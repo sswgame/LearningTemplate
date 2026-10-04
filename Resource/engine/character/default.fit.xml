@@ -1,0 +1,50 @@
+<!-- 장비 피팅 기본 표 — FitTables 가 읽는다(FitSolver). 겹(순서가 작을수록 안쪽) · 몸 영역(칠한 정점 그룹) · 피팅 프로필(단단함 0..1) ·
+     상호작용(안쪽 프로필 × 바깥 프로필 → 연산 이름 + 인자). 연산 이름은 등록부(Shrink · Push · Cut · Report)에 있어야 한다. -->
+<FitTables>
+    <Layer name="Body" order="0"/>
+    <Layer name="Underwear" order="5"/>
+    <Layer name="Shirt" order="10"/>
+    <Layer name="Pants" order="10"/>
+    <Layer name="Jacket" order="20"/>
+    <Layer name="Armor" order="30"/>
+    <Layer name="Boots" order="35"/>
+    <Layer name="Gloves" order="35"/>
+    <Layer name="Belt" order="40"/>
+    <Layer name="Bracelet" order="45"/>
+    <Layer name="Cloak" order="50"/>
+
+    <Region name="Head" group="Head"/>
+    <Region name="Neck" group="Neck"/>
+    <Region name="Torso" group="Torso"/>
+    <Region name="Belly" group="Belly"/>
+    <Region name="UpperArm_L" group="UpperArm_L"/>
+    <Region name="UpperArm_R" group="UpperArm_R"/>
+    <Region name="Forearm_L" group="Forearm_L"/>
+    <Region name="Forearm_R" group="Forearm_R"/>
+    <Region name="Hand_L" group="Hand_L"/>
+    <Region name="Hand_R" group="Hand_R"/>
+    <Region name="Thigh_L" group="Thigh_L"/>
+    <Region name="Thigh_R" group="Thigh_R"/>
+    <Region name="Shin_L" group="Shin_L"/>
+    <Region name="Shin_R" group="Shin_R"/>
+    <Region name="Foot_L" group="Foot_L"/>
+    <Region name="Foot_R" group="Foot_R"/>
+
+    <Profile name="Skin" rigidity="0" coverageDistance="0.02"/>
+    <Profile name="Cloth" rigidity="0" shrinkStrength="1" pushDistance="0.004" falloffWidth="0.05" coverageDistance="0.02"/>
+    <Profile name="Leather" rigidity="0.5" shrinkStrength="0.6" pushDistance="0.003" falloffWidth="0.04" coverageDistance="0.015"/>
+    <Profile name="Rigid" rigidity="1" pushDistance="0.002" coverageDistance="0.01"/>
+
+    <Interaction inner="Cloth" outer="Rigid" operator="Shrink"/>
+    <Interaction inner="Leather" outer="Rigid" operator="Shrink"/>
+    <Interaction inner="Rigid" outer="Cloth" operator="Push"/>
+    <Interaction inner="Rigid" outer="Leather" operator="Push"/>
+    <Interaction inner="Skin" outer="Cloth" operator="Cut"/>
+    <Interaction inner="Skin" outer="Leather" operator="Cut"/>
+    <Interaction inner="Skin" outer="Rigid" operator="Cut"/>
+    <Interaction inner="Cloth" outer="Cloth" operator="Cut"/>
+    <Interaction inner="Cloth" outer="Leather" operator="Cut"/>
+    <Interaction inner="Cloth" outer="Rigid" operator="Cut"/>
+    <Interaction inner="Leather" outer="Rigid" operator="Cut"/>
+    <Interaction inner="Rigid" outer="Rigid" operator="Report" args="tolerance=0.001"/>
+</FitTables>

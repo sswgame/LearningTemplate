@@ -1,0 +1,10 @@
+<!-- 소켓 종류 표 — SocketKindTable 이 읽는다. 종류 하나를 더하는 것이 줄 하나다(소켓 에셋의 kind 가 이 이름을 쓴다, 모르면 로드 오류). -->
+<SocketKinds>
+    <Kind name="Attach"/>
+    <Kind name="GroundPoint"/>
+    <Kind name="HitboxCenter"/>
+    <Kind name="LockOn"/>
+    <Kind name="EffectSpawn"/>
+    <Kind name="TrailStart"/>
+    <Kind name="TrailEnd"/>
+</SocketKinds>

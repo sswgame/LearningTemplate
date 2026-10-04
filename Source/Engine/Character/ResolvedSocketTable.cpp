@@ -1,0 +1,254 @@
+#include "pch.h"
+
+#include "Engine/Character/ResolvedSocketTable.h"
+
+#include "Engine/Character/CharacterGeometry.h"
+#include "Engine/Character/SurfaceBvh.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct ResolvedSocketTableInternal
+        {
+            /** @brief 표면 소켓이 바인드 형상에서 표면을 찾는 거리입니다(이보다 멀면 본을 따릅니다). */
+            static constexpr float32 kSurfaceSearchDistance = 0.5f;
+
+            static const hashed_string& getEmptyName()
+            {
+                static const hashed_string s_emptyName{};
+                return s_emptyName;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    ResolvedSocketTable::ResolvedSocketTable()
+        : _listSlot{}
+        , _listUnit{}
+        , _mapNameToSocket{}
+    {
+    }
+
+    void ResolvedSocketTable::beginResolve()
+    {
+        for ( Slot& slot : _listSlot )
+        {
+            slot._bActive  = SW_FALSE;
+            slot._redirect = kInvalidSocketId;
+        }
+        _listUnit.clear();
+    }
+
+    hashed_string ResolvedSocketTable::makeFullName( const hashed_string& prefix, const hashed_string& name ) const
+    {
+        if ( prefix.empty() )
+            return name;
+        string fullName( prefix.view() );
+        fullName += ".";
+        fullName += name.view();
+        return hashed_string( string_view( fullName ) );
+    }
+
+    SocketId ResolvedSocketTable::findOrAddSlot( const hashed_string& fullName )
+    {
+        const auto found = _mapNameToSocket.find( fullName );
+        if ( found != _mapNameToSocket.end() )
+            return found->second;
+        const SocketId socketId = static_cast<SocketId>( _listSlot.size() );
+        _listSlot.emplace_back();
+        _listSlot.back()._fullName = fullName;
+        _mapNameToSocket.emplace( fullName, socketId );
+        return socketId;
+    }
+
+    const ResolvedSocketTable::Unit* ResolvedSocketTable::findUnit( uint32 unitIndex ) const
+    {
+        for ( const Unit& unit : _listUnit )
+        {
+            if ( unit._unitIndex == unitIndex )
+                return &unit;
+        }
+        return nullptr;
+    }
+
+    bool ResolvedSocketTable::addUnit( const hashed_string& prefix, uint32 unitIndex, const SocketSet& sockets, const CharacterBoneArray& bindBones,
+                                       const AppearanceGeometry* pBindGeometry, string* pOutError )
+    {
+        if ( sockets.validateBones( bindBones, pOutError ) == false )
+            return false;
+        Unit unit;
+        unit._sockets   = sockets;
+        unit._prefix    = prefix;
+        unit._unitIndex = unitIndex;
+        _listUnit.push_back( std::move( unit ) );
+        const Unit& addedUnit = _listUnit.back();
+
+        SurfaceBvh bindSurface;
+        bool       bSurfaceBuilt = false;
+        for ( uint32 unitSlot = 0; unitSlot < addedUnit._sockets.getSockets().size(); ++unitSlot )
+        {
+            const SocketDef& def      = addedUnit._sockets.getSockets()[unitSlot];
+            const SocketId   socketId = findOrAddSlot( makeFullName( prefix, def._name ) );
+            Slot&            slot     = _listSlot[socketId];
+            slot._def                 = def;
+            slot._unit                = unitIndex;
+            slot._unitSlot            = unitSlot;
+            slot._bActive             = SW_TRUE;
+            slot._redirect            = kInvalidSocketId;
+            slot._surfaceBinding      = SurfaceBinding{};
+            slot._shapeOffsetLocal    = float3::Zero;
+
+            // 부모의 바인드 모델 변환 — 표면 보정 델타를 부모 축으로 옮겨 애니메이션을 따르게 한다.
+            SocketDef parentOnly    = def;
+            parentOnly._translation = float3::Zero;
+            parentOnly._rotation    = quaternion::Identity;
+            parentOnly._scale       = float3( 1.0f );
+            (void)addedUnit._sockets.computeSocketTransform( parentOnly, bindBones, slot._bindParentModel );
+
+            const bool bWantsSurface = def._anchor == SocketAnchor::Surface && pBindGeometry != nullptr && pBindGeometry->getTriangleCount() > 0;
+            if ( bWantsSurface == false )
+                continue;
+            if ( bSurfaceBuilt == false )
+            {
+                bindSurface.addSurface( 0, pBindGeometry->_listPosition, pBindGeometry->_listIndex );
+                bindSurface.build();
+                bSurfaceBuilt = true;
+            }
+            float4x4 bindTransform;
+            if ( addedUnit._sockets.computeSocketTransform( def, bindBones, bindTransform ) == false )
+                continue;
+            const float3           bindPoint = bindTransform.getTranslation();
+            vector<SurfaceBinding> listBinding;
+            SurfaceTransferUtil::bindPoints( *pBindGeometry, bindSurface, vector_reference<const float3>( &bindPoint, 1 ),
+                                             ResolvedSocketTableInternal::kSurfaceSearchDistance, listBinding );
+            slot._surfaceBinding   = listBinding.front();
+            slot._surfacePointBind = bindPoint;
+        }
+        return true;
+    }
+
+    void ResolvedSocketTable::endResolve()
+    {
+        for ( Slot& slot : _listSlot )
+        {
+            if ( slot._bActive == SW_FALSE || slot._def._listFallback.empty() )
+                continue;
+            const Unit* pUnit = findUnit( slot._unit );
+            for ( const hashed_string& candidate : slot._def._listFallback )
+            {
+                SocketId candidateId = findSocket( candidate );
+                if ( ( candidateId == kInvalidSocketId || isSocketActive( candidateId ) == false ) && pUnit != nullptr && pUnit->_prefix.empty() == false )
+                    candidateId = findSocket( makeFullName( pUnit->_prefix, candidate ) );
+                if ( candidateId != kInvalidSocketId && isSocketActive( candidateId ) && &_listSlot[candidateId] != &slot )
+                {
+                    slot._redirect = candidateId;
+                    break;
+                }
+            }
+        }
+    }
+
+    void ResolvedSocketTable::applyShapedGeometry( uint32 unitIndex, const AppearanceGeometry& shapedGeometry )
+    {
+        for ( Slot& slot : _listSlot )
+        {
+            if ( slot._bActive == SW_FALSE || slot._unit != unitIndex || slot._surfaceBinding._bBound == SW_FALSE )
+                continue;
+            if ( slot._surfaceBinding._triangle >= shapedGeometry.getTriangleCount() )
+                continue;
+            const float3 shapedPoint = SurfaceTransferUtil::evaluatePoint( shapedGeometry, slot._surfaceBinding );
+            const float3 delta       = shapedPoint - slot._surfacePointBind;
+            slot._shapeOffsetLocal   = float3::transformVector( delta, slot._bindParentModel.invert() );
+        }
+    }
+
+    SocketId ResolvedSocketTable::findSocket( const hashed_string& fullName ) const
+    {
+        const auto found = _mapNameToSocket.find( fullName );
+        return found == _mapNameToSocket.end() ? kInvalidSocketId : found->second;
+    }
+
+    SocketId ResolvedSocketTable::findFirstActiveSocket( vector_reference<const hashed_string> listCandidate ) const
+    {
+        for ( const hashed_string& candidate : listCandidate )
+        {
+            const SocketId socketId = findSocket( candidate );
+            if ( isSocketActive( socketId ) )
+                return socketId;
+        }
+        return kInvalidSocketId;
+    }
+
+    bool ResolvedSocketTable::isSocketActive( SocketId socketId ) const
+    {
+        return socketId < _listSlot.size() && _listSlot[socketId]._bActive == SW_TRUE;
+    }
+
+    SocketId ResolvedSocketTable::resolveTarget( SocketId socketId ) const
+    {
+        if ( isSocketActive( socketId ) == false )
+            return kInvalidSocketId;
+        // 후보가 다시 후보를 가리킬 수 있다 — 순환이면 소켓 수만큼 걷고 멈춘다.
+        SocketId current = socketId;
+        for ( size_t step = 0; step < _listSlot.size(); ++step )
+        {
+            const SocketId next = _listSlot[current]._redirect;
+            if ( next == kInvalidSocketId || isSocketActive( next ) == false )
+                return current;
+            current = next;
+        }
+        return socketId;
+    }
+
+    uint32 ResolvedSocketTable::getSocketUnit( SocketId socketId ) const
+    {
+        return socketId < _listSlot.size() ? _listSlot[socketId]._unit : 0;
+    }
+
+    const hashed_string& ResolvedSocketTable::getSocketName( SocketId socketId ) const
+    {
+        return socketId < _listSlot.size() ? _listSlot[socketId]._fullName : ResolvedSocketTableInternal::getEmptyName();
+    }
+
+    const SocketDef* ResolvedSocketTable::findSocketDef( SocketId socketId ) const
+    {
+        return socketId < _listSlot.size() ? &_listSlot[socketId]._def : nullptr;
+    }
+
+    bool ResolvedSocketTable::computeUnitTransform( SocketId socketId, const CharacterBoneArray& unitBones, float4x4& outUnitTransform ) const
+    {
+        const SocketId target = resolveTarget( socketId );
+        if ( target == kInvalidSocketId )
+            return false;
+        const Slot& slot  = _listSlot[target];
+        const Unit* pUnit = findUnit( slot._unit );
+        if ( pUnit == nullptr )
+            return false;
+        SocketDef corrected = slot._def;
+        corrected._translation += slot._shapeOffsetLocal;
+        return pUnit->_sockets.computeSocketTransform( corrected, unitBones, outUnitTransform );
+    }
+
+    bool ResolvedSocketTable::getSocketTransform( const hashed_string& fullName, const SocketPoseView& pose, float4x4& outWorldTransform ) const
+    {
+        return getSocketTransform( findSocket( fullName ), pose, outWorldTransform );
+    }
+
+    bool ResolvedSocketTable::getSocketTransform( SocketId socketId, const SocketPoseView& pose, float4x4& outWorldTransform ) const
+    {
+        const SocketId target = resolveTarget( socketId );
+        if ( target == kInvalidSocketId )
+            return false;
+        const uint32 unitIndex = _listSlot[target]._unit;
+        if ( unitIndex >= pose._listUnitBones.size() || pose._listUnitBones[unitIndex] == nullptr )
+            return false;
+        float4x4 unitTransform;
+        if ( computeUnitTransform( target, *pose._listUnitBones[unitIndex], unitTransform ) == false )
+            return false;
+        outWorldTransform = unitIndex < pose._listUnitWorld.size() ? unitTransform * pose._listUnitWorld[unitIndex] : unitTransform;
+        return true;
+    }
+} // namespace sw

@@ -1,0 +1,9 @@
+<!-- 몸 표면 상태 채널 — SurfaceChannelTable 이 읽는다. 감쇠는 초당, maskResolution 이 0 이 아니면 부품마다 UV 마스크(맞은 자리 도장)가 있고,
+     clip 은 머티리얼이 알파로 잘라 구멍을 내는 채널(찢김)이다. -->
+<SurfaceChannels>
+    <Channel name="Wet" decayPerSecond="0.05"/>
+    <Channel name="Dirt" decayPerSecond="0.002" maskResolution="64"/>
+    <Channel name="Blood" decayPerSecond="0.01" maskResolution="128"/>
+    <Channel name="Wound" maskResolution="128"/>
+    <Channel name="Tear" maskResolution="128" clip="true"/>
+</SurfaceChannels>

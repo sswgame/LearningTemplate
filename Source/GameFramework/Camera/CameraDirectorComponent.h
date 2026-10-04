@@ -41,7 +41,7 @@ namespace sw
         /** @brief 프리셋을 카탈로그의 블렌드로 켭니다. 없는 id 면 false 입니다. */
         [[nodiscard]] bool activatePreset( const hashed_string& id );
         /** @brief 프리셋을 @p blend 로 켭니다(블렌드 표를 무시한다). */
-        [[nodiscard]] bool activatePreset( const hashed_string& id, const CameraBlendSpec& blend );
+        [[nodiscard]] bool activatePreset( const hashed_string& id, const BlendCurveSpec& blend );
 
         /** @brief 카메라가 따라갈 오브젝트입니다. 비우면 초점은 원점 · 요 · 피치 0 입니다. */
         void                    setTarget( const GameObjectHandle& target ) { _target = target; }

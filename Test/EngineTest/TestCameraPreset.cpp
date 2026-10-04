@@ -24,21 +24,21 @@ namespace
 {
     struct CameraPresetTestInternal
     {
-        static CameraBlendSpec makeBlend( CameraBlendCurve curve, float32 duration = 1.0f, float32 exponent = 2.0f )
+        static BlendCurveSpec makeBlend( BlendCurve curve, float32 duration = 1.0f, float32 exponent = 2.0f )
         {
-            CameraBlendSpec spec;
+            BlendCurveSpec spec;
             spec._curve    = curve;
             spec._duration = duration;
             spec._exponent = exponent;
             return spec;
         }
 
-        static CameraBlendSpec makeCustomBlend()
+        static BlendCurveSpec makeCustomBlend()
         {
-            CameraBlendSpec spec = makeBlend( CameraBlendCurve::Custom );
-            spec._listCustomKey.push_back( CameraBlendKey{ 0.0f, 0.0f } );
-            spec._listCustomKey.push_back( CameraBlendKey{ 0.5f, 0.8f } );
-            spec._listCustomKey.push_back( CameraBlendKey{ 1.0f, 1.0f } );
+            BlendCurveSpec spec = makeBlend( BlendCurve::Custom );
+            spec._listCustomKey.push_back( BlendCurveKey{ 0.0f, 0.0f } );
+            spec._listCustomKey.push_back( BlendCurveKey{ 0.5f, 0.8f } );
+            spec._listCustomKey.push_back( BlendCurveKey{ 1.0f, 1.0f } );
             return spec;
         }
 
@@ -48,7 +48,7 @@ namespace
             def._id             = hashed_string( pId );
             def._view._mode     = CameraPresetMode::Fixed;
             def._view._offset   = position;
-            def._blendIn        = makeBlend( CameraBlendCurve::Linear );
+            def._blendIn        = makeBlend( BlendCurve::Linear );
             def._lens._farPlane = 200.0f;
             return def;
         }
@@ -62,13 +62,13 @@ namespace
  */
 SW_TEST_CASE( CameraPresetTest, EveryCurveRunsFromZeroToOneWithoutGoingBack )
 {
-    const CameraBlendCurve arrCurve[] = { CameraBlendCurve::Cut, CameraBlendCurve::Linear, CameraBlendCurve::EaseIn, CameraBlendCurve::EaseOut,
-                                          CameraBlendCurve::EaseInOut, CameraBlendCurve::Cubic, CameraBlendCurve::Exponential, CameraBlendCurve::Spring,
-                                          CameraBlendCurve::SmoothStep, CameraBlendCurve::Custom };
-    for ( const CameraBlendCurve curve : arrCurve )
+    const BlendCurve arrCurve[] = { BlendCurve::Cut, BlendCurve::Linear, BlendCurve::EaseIn, BlendCurve::EaseOut,
+                                    BlendCurve::EaseInOut, BlendCurve::Cubic, BlendCurve::Exponential, BlendCurve::Spring,
+                                    BlendCurve::SmoothStep, BlendCurve::Custom };
+    for ( const BlendCurve curve : arrCurve )
     {
-        const CameraBlendSpec spec  = curve == CameraBlendCurve::Custom ? CameraPresetTestInternal::makeCustomBlend() : CameraPresetTestInternal::makeBlend( curve );
-        const utf8*           pName = engine::getTypeRegistry().enumToString( curve );
+        const BlendCurveSpec spec  = curve == BlendCurve::Custom ? CameraPresetTestInternal::makeCustomBlend() : CameraPresetTestInternal::makeBlend( curve );
+        const utf8*          pName = engine::getTypeRegistry().enumToString( curve );
         SW_EXPECT_NEAR_EQUAL( 0.0f, evaluateBlendWeight( spec, 0.0f ), 1.0e-6f );
         SW_EXPECT_NEAR_EQUAL( 1.0f, evaluateBlendWeight( spec, 1.0f ), 1.0e-5f );
         float32 previous = 0.0f;
@@ -88,27 +88,27 @@ SW_TEST_CASE( CameraPresetTest, EveryCurveRunsFromZeroToOneWithoutGoingBack )
 SW_TEST_CASE( CameraPresetTest, CurvesHitTheirKnownMidpoints )
 {
     using Internal = CameraPresetTestInternal;
-    SW_EXPECT_NEAR_EQUAL( 0.5f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::Linear ), 0.5f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::SmoothStep ), 0.5f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.15625f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::SmoothStep ), 0.25f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.25f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::EaseIn ), 0.5f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.125f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::EaseIn, 1.0f, 3.0f ), 0.5f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.75f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::EaseOut ), 0.5f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.125f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::EaseInOut ), 0.25f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.875f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::EaseInOut ), 0.75f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.0625f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::Cubic ), 0.25f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::Cubic ), 0.5f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::Linear ), 0.5f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::SmoothStep ), 0.5f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.15625f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::SmoothStep ), 0.25f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::EaseIn ), 0.5f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.125f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::EaseIn, 1.0f, 3.0f ), 0.5f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::EaseOut ), 0.5f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.125f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::EaseInOut ), 0.25f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.875f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::EaseInOut ), 0.75f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0625f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::Cubic ), 0.25f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::Cubic ), 0.5f ), 1.0e-6f );
     // 지수 2: (1 − e^−1) / (1 − e^−2) = 1 / (1 + e^−1)
-    SW_EXPECT_NEAR_EQUAL( 0.7310586f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::Exponential ), 0.5f ), 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.7310586f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::Exponential ), 0.5f ), 1.0e-5f );
     // 임계 감쇠 1 Hz · 1 s: x(t) = 1 − (1 + 2πt)e^(−2πt), 끝값으로 나눈다 — x(0.5) = 1 − (1 + π)e^−π = 0.821026, x(1) = 0.986399
-    SW_EXPECT_NEAR_EQUAL( 0.821026f / 0.986399f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::Spring ), 0.5f ), 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.821026f / 0.986399f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::Spring ), 0.5f ), 1.0e-4f );
     // 키 (0,0) (0.5,0.8) (1,1) 사이 직선
     SW_EXPECT_NEAR_EQUAL( 0.4f, evaluateBlendWeight( Internal::makeCustomBlend(), 0.25f ), 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.9f, evaluateBlendWeight( Internal::makeCustomBlend(), 0.75f ), 1.0e-6f );
     // 키 없는 Custom 은 Linear
-    SW_EXPECT_NEAR_EQUAL( 0.3f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::Custom ), 0.3f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.3f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::Custom ), 0.3f ), 1.0e-6f );
     // Cut 은 0 보다 크면 바로 1
-    SW_EXPECT_NEAR_EQUAL( 1.0f, evaluateBlendWeight( Internal::makeBlend( CameraBlendCurve::Cut ), 0.01f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, evaluateBlendWeight( Internal::makeBlend( BlendCurve::Cut ), 0.01f ), 1.0e-6f );
 }
 
 /**
@@ -265,7 +265,7 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
     SW_EXPECT_NEAR_EQUAL( 60.0f * MathUtil::DegreeToRadian, pA->_lens._fieldOfViewY, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 300.0f, pA->_lens._farPlane, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.3f, pA->_damping._positionTime, 1.0e-6f );
-    SW_EXPECT_TRUE( pA->_blendIn._curve == CameraBlendCurve::EaseIn );
+    SW_EXPECT_TRUE( pA->_blendIn._curve == BlendCurve::EaseIn );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pA->_blendIn._exponent, 1.0e-6f );
 
     const CameraPresetDef* pC = catalog.findPreset( "c" );
@@ -273,12 +273,12 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
     SW_ASSERT_EQUAL( size_t{ 2 }, pC->_blendIn._listCustomKey.size() );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pC->_blendIn._listCustomKey[0]._time, 1.0e-6f );
 
-    SW_EXPECT_TRUE( catalog.getBlend( "a", "b" )._curve == CameraBlendCurve::Cut );          // 정확히 맞는 줄
-    SW_EXPECT_TRUE( catalog.getBlend( "c", "b" )._curve == CameraBlendCurve::Spring );       // from="*" 가 to="*" 보다 먼저
-    SW_EXPECT_TRUE( catalog.getBlend( "c", "a" )._curve == CameraBlendCurve::Cubic );        // to="*"
-    SW_EXPECT_TRUE( catalog.getBlend( "b", "a" )._curve == CameraBlendCurve::EaseIn );       // a 의 들어오기
-    SW_EXPECT_TRUE( catalog.getBlend( "a", "missing" )._curve == CameraBlendCurve::Linear ); // 기본
-    SW_EXPECT_NEAR_EQUAL( 2.0f, catalog.findPreset( "b" )->_blendIn._duration, 1.0e-6f );    // <BlendIn> 이 없으면 기본
+    SW_EXPECT_TRUE( catalog.getBlend( "a", "b" )._curve == BlendCurve::Cut );             // 정확히 맞는 줄
+    SW_EXPECT_TRUE( catalog.getBlend( "c", "b" )._curve == BlendCurve::Spring );          // from="*" 가 to="*" 보다 먼저
+    SW_EXPECT_TRUE( catalog.getBlend( "c", "a" )._curve == BlendCurve::Cubic );           // to="*"
+    SW_EXPECT_TRUE( catalog.getBlend( "b", "a" )._curve == BlendCurve::EaseIn );          // a 의 들어오기
+    SW_EXPECT_TRUE( catalog.getBlend( "a", "missing" )._curve == BlendCurve::Linear );    // 기본
+    SW_EXPECT_NEAR_EQUAL( 2.0f, catalog.findPreset( "b" )->_blendIn._duration, 1.0e-6f ); // <BlendIn> 이 없으면 기본
 
     test::ScopedLogCollector logs;
     {
@@ -342,9 +342,9 @@ SW_TEST_CASE( CameraPresetTest, DirectorKeepsTheOutgoingPresetLive )
 
     CameraDirector director;
     CameraTarget   target;
-    director.activatePreset( follow, CameraPresetTestInternal::makeBlend( CameraBlendCurve::Cut ) );
+    director.activatePreset( follow, CameraPresetTestInternal::makeBlend( BlendCurve::Cut ) );
     (void)director.step( 0.016f, target );
-    director.activatePreset( fixed, CameraPresetTestInternal::makeBlend( CameraBlendCurve::Linear ) );
+    director.activatePreset( fixed, CameraPresetTestInternal::makeBlend( BlendCurve::Linear ) );
     target._focus          = float3{ 20.0f, 0.0f, 0.0f };
     const CameraPose blend = director.step( 0.5f, target );
     SW_EXPECT_NEAR_EQUAL( 10.0f, blend._position._x, 1.0e-3f );

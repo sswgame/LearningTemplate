@@ -4,6 +4,13 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Character/BodyShape.h"
+#include "Engine/Character/FitPartData.h"
+#include "Engine/Character/FitSolver.h"
+#include "Engine/Character/FitTables.h"
+#include "Engine/Character/ReferencePoseOverride.h"
+#include "Engine/Character/SocketSet.h"
+#include "Engine/Character/SurfaceState.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -133,6 +140,36 @@ namespace
             return clip.loadFromFile( resourceId );
         }
 
+        // 캐릭터 데이터 — 소켓은 엔진 기본 종류 표에, 부품 피팅은 엔진 기본 피팅 표에 대조한다(모르는 이름은 로드 오류).
+        static constexpr const utf8* kDefaultSocketKinds = "engine/character/default.socketkinds.xml";
+        static constexpr const utf8* kDefaultFitTables   = "engine/character/default.fit.xml";
+        static bool                  isSocketKinds( sw::string_view resourceId ) { return endsWith( resourceId, ".socketkinds.xml" ); }
+        static bool                  isSockets( sw::string_view resourceId ) { return endsWith( resourceId, ".sockets.xml" ); }
+        static bool                  isReferencePose( sw::string_view resourceId ) { return endsWith( resourceId, ".refpose.xml" ); }
+        static bool                  isBodyShape( sw::string_view resourceId ) { return endsWith( resourceId, ".bodyshape.xml" ); }
+        static bool                  isFitTables( sw::string_view resourceId ) { return endsWith( resourceId, ".fit.xml" ); }
+        static bool                  isPartFit( sw::string_view resourceId ) { return endsWith( resourceId, ".partfit.xml" ); }
+        static bool                  isSurfaceChannels( sw::string_view resourceId ) { return endsWith( resourceId, ".surfacechannels.xml" ); }
+        static bool                  loadSockets( const sw::string& resourceId )
+        {
+            sw::SocketKindTable kinds;
+            sw::SocketSet       sockets;
+            return kinds.loadFromResource( kDefaultSocketKinds ) && sockets.loadFromResource( resourceId, kinds );
+        }
+        static bool loadFitTables( const sw::string& resourceId )
+        {
+            const sw::FitSolver solver;
+            sw::FitTables       tables;
+            return tables.loadFromResource( resourceId, solver.getOperatorRegistry() );
+        }
+        static bool loadPartFit( const sw::string& resourceId )
+        {
+            const sw::FitSolver solver;
+            sw::FitTables       tables;
+            sw::FitPartData     data;
+            return tables.loadFromResource( kDefaultFitTables, solver.getOperatorRegistry() ) && data.loadFromResource( resourceId, tables );
+        }
+
         // 게임 데이터 — 키트 카탈로그가 읽는다(게임 모듈은 읽은 정의를 조립만 한다). 파일 이름은 게임이 여는 그대로다.
         template <typename TCatalog>
         static bool loadCatalog( const sw::string& resourceId )
@@ -168,26 +205,33 @@ namespace
 
         /** @brief 데이터 종류 표입니다. 앞의 줄이 먼저 맞습니다. */
         static constexpr DataKind kArrDataKind[] = {
-            {              "scene",               &isScene,                             &loadScene},
-            {             "prefab",              &isPrefab,                            &loadPrefab},
-            {           "pipeline",            &isPipeline,                          &loadPipeline},
-            {         "renderpass",          &isRenderPass,                        &loadRenderPass},
-            {"enginedefaultassets", &isEngineDefaultAssets,               &loadEngineDefaultAssets},
-            {           "inputmap",            &isInputMap,                          &loadInputMap},
-            {           "material",            &isMaterial,                          &loadMaterial},
-            {         "spriteclip",          &isSpriteClip,                        &loadSpriteClip},
-            {      "camerapresets",       &isCameraPresets,  &loadCatalog<sw::CameraPresetCatalog>},
-            {          "schedules",           &isSchedules,      &loadCatalog<sw::ScheduleCatalog>},
-            {       "usersettings",  &isUserSettingsSchema,                &loadUserSettingsSchema},
-            {          "abilities",           &isAbilities,       &loadCatalog<sw::AbilityCatalog>},
-            {              "crops",               &isCrops,          &loadCatalog<sw::CropCatalog>},
-            {               "city",                &isCity,          &loadCatalog<sw::CityCatalog>},
-            {            "weapons",             &isWeapons,        &loadCatalog<sw::WeaponCatalog>},
-            {           "rtsunits",            &isRtsUnits,           &loadCatalog<sw::RtsCatalog>},
-            {        "voxelblocks",         &isVoxelBlocks,    &loadCatalog<sw::VoxelBlockCatalog>},
-            {           "coasters",            &isCoasters, &loadCatalog<sw::CoasterLayoutCatalog>},
-            {         "parklayout",          &isParkLayout,                        &loadParkLayout},
-            {       "gamesettings",        &isGameSettings,                      &loadGameSettings},
+            {              "scene",               &isScene,                              &loadScene},
+            {             "prefab",              &isPrefab,                             &loadPrefab},
+            {           "pipeline",            &isPipeline,                           &loadPipeline},
+            {         "renderpass",          &isRenderPass,                         &loadRenderPass},
+            {"enginedefaultassets", &isEngineDefaultAssets,                &loadEngineDefaultAssets},
+            {           "inputmap",            &isInputMap,                           &loadInputMap},
+            {           "material",            &isMaterial,                           &loadMaterial},
+            {         "spriteclip",          &isSpriteClip,                         &loadSpriteClip},
+            {      "camerapresets",       &isCameraPresets,   &loadCatalog<sw::CameraPresetCatalog>},
+            {          "schedules",           &isSchedules,       &loadCatalog<sw::ScheduleCatalog>},
+            {       "usersettings",  &isUserSettingsSchema,                 &loadUserSettingsSchema},
+            {          "abilities",           &isAbilities,        &loadCatalog<sw::AbilityCatalog>},
+            {              "crops",               &isCrops,           &loadCatalog<sw::CropCatalog>},
+            {               "city",                &isCity,           &loadCatalog<sw::CityCatalog>},
+            {            "weapons",             &isWeapons,         &loadCatalog<sw::WeaponCatalog>},
+            {           "rtsunits",            &isRtsUnits,            &loadCatalog<sw::RtsCatalog>},
+            {        "voxelblocks",         &isVoxelBlocks,     &loadCatalog<sw::VoxelBlockCatalog>},
+            {           "coasters",            &isCoasters,  &loadCatalog<sw::CoasterLayoutCatalog>},
+            {         "parklayout",          &isParkLayout,                         &loadParkLayout},
+            {       "gamesettings",        &isGameSettings,                       &loadGameSettings},
+            {        "socketkinds",         &isSocketKinds,       &loadCatalog<sw::SocketKindTable>},
+            {            "sockets",             &isSockets,                            &loadSockets},
+            {      "referencepose",       &isReferencePose, &loadCatalog<sw::ReferencePoseOverride>},
+            {          "bodyshape",           &isBodyShape,          &loadCatalog<sw::BodyShapeSet>},
+            {          "fittables",           &isFitTables,                          &loadFitTables},
+            {            "partfit",             &isPartFit,                            &loadPartFit},
+            {    "surfacechannels",     &isSurfaceChannels,   &loadCatalog<sw::SurfaceChannelTable>},
         };
 
         /**
