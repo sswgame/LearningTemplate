@@ -153,7 +153,7 @@ namespace sw
             if ( piece._firstVertex != expectedVertex || piece._vertexCount % 3 != 0 || piece._vertexCount == 0 )
                 return fail( "piece vertex ranges must be contiguous triangle lists" );
             expectedVertex += piece._vertexCount;
-            if ( static_cast<size_t>( piece._firstHullPoint ) + piece._hullPointCount > _listHullPoint.size() || piece._hullPointCount < 4 )
+            if ( static_cast<size_t>( piece._firstHullPoint ) + piece._hullPointCount > _listHullPoint.size() || piece._hullPointCount < 3 )
                 return fail( "piece hull out of range or too small" );
         }
         if ( expectedVertex != _listVertex.size() )

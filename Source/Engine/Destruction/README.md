@@ -127,3 +127,16 @@
 `_blastImpulse`)를 주고, 자기에게 파쇄 데이터가 있으면 몸을 끄지 않고 스스로 부서집니다 — 사슬 폭발이 근처 벽 · 상자를 그 자리에서 깹니다.
 `DestructibleComponent` 는 단계마다 중심에 변형을 주어 깎고 마지막 단계에 통째로 부숩니다(파쇄 데이터가 없으면 예전처럼 몸을 끈다).
 `GameFramework/Gimmick/README.md` 참고. 시험: `GimmickFractureTest`.
+
+## 6. 2D — `Fracture2DComponent` · `PolygonFractureUtil`
+
+2D 는 **쪼개기의 출처와 물리 씬만 다르고 나머지는 같은 코드**입니다(그래프 · 묶음 계층 · 구조 · 지지 · 피해 · 사건 기록 · 런타임 · 스킨드 조각 그림).
+`PolygonFractureUtil` 이 XY 다각형(오목 가능, 시계면 뒤집는다)을 같은 `FractureSettings`(uniform · clustered · slices 의 X · Y 칸)로 반평면마다 잘라
+`FractureAsset` 을 냅니다 — 부피 칸은 넓이, 연결은 맞닿은 변 길이, 그림은 Z = 0 의 앞뒤 두 면(UV 는 경계 상자로 [0, 1]), 껍질은 조각 꼭짓점.
+쪼개기가 싸서 시작할 때 합니다(씨앗 `_fractureSeed` + 모양이 같으면 모든 기계에서 같은 조각 — 씨앗과 사건만 보낸다).
+
+오브젝트 구성: 뿌리 `RigidBody2DComponent`(온전할 때의 충돌) + `Fracture2DComponent`(`_listBorder` 또는 `_size` 상자 — 바닥 가운데가 원점,
+`_pieceCount` · `_pattern` · `_listLevelCount`). 그릴 메시가 없으면 쉬는 조각을 구운 평평한 메시를 `MeshComponent` 로 더합니다. 조각 바디는 Box2D
+(`IFracturePhysics` 의 2D 구현 — 껍질은 8 점 이하 볼록 다각형으로 줄이고, 자세는 XY · Z 축 회전, 깊이는 오브젝트 것).
+
+시험: `Fracture2DTest`(`Test/EngineTest/TestFracture2D.cpp`).

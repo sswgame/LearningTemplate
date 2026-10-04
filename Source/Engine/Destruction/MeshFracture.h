@@ -20,12 +20,14 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     struct FractureAsset;
 
     /** @brief 씨앗점을 놓는 방식입니다. */
+    ENUM()
     enum class FracturePattern : uint8
     {
         Uniform = 0, ///< 메시 안에 고르게
