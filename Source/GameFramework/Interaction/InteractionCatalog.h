@@ -144,10 +144,13 @@ namespace sw
         const vector<SmartObjectDef>& getSmartObjects() const { return _smartObjectCatalog.getAll(); }
 
         /**
-         * @brief 경로의 표를 한 번 읽어 프로세스 동안 나눠 씁니다. 읽지 못했으면 nullptr 입니다(다음 호출이 다시 읽지 않는다 — 오류는 한 번).
-         * @details 여러 스레드에서 불려도 됩니다. 돌려준 표는 바뀌지 않습니다.
+         * @brief 경로의 표를 한 번 읽어 나눠 씁니다. 읽지 못했으면 nullptr 입니다(다음 호출이 다시 읽지 않는다 — 오류는 한 번).
+         * @details 여러 스레드에서 불려도 됩니다. 돌려준 표는 바뀌지 않고 GameFramework 모듈이 내릴 때까지 삽니다. 파일을 고치면 에디터 핫 리로드가
+         *          캐시("InteractionCatalog", `GameDataCache`)로 새 표를 읽고 `getSharedReloadCount` 를 올립니다 — 쓰는 쪽은 그때 정의를 다시 찾습니다.
          */
         static const InteractionCatalog* findShared( string_view path );
+        /** @brief `findShared` 의 표를 다시 읽은 횟수입니다. */
+        static uint32 getSharedReloadCount();
 
     private:
         [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );

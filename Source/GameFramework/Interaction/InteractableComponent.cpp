@@ -29,6 +29,7 @@ namespace sw
         , _bEnabled{ true }
         , _overrideDef{}
         , _pDef{ nullptr }
+        , _seenCatalogReloadCount{ 0 }
         , _bHighlightRequested{ SW_FALSE }
         , _bHasOverride{ SW_FALSE }
     {
@@ -41,7 +42,8 @@ namespace sw
             _pDef = &_overrideDef;
             return;
         }
-        _pDef = nullptr;
+        _pDef                   = nullptr;
+        _seenCatalogReloadCount = InteractionCatalog::getSharedReloadCount();
         if ( _interactionId.empty() )
             return;
         const InteractionCatalog* pCatalog = InteractionCatalog::findShared( _catalogPath.empty() ? string_view( InteractionCatalog::kDefaultPath ) : string_view( _catalogPath ) );
@@ -72,6 +74,9 @@ namespace sw
     void InteractableComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
+        // 상호작용 표 파일을 고쳤다 — 새 표에서 정의를 다시 찾는다(옛 표는 캐시가 살려 두므로 이 프레임에 옛 정의를 읽은 쪽도 안전하다).
+        if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != InteractionCatalog::getSharedReloadCount() )
+            resolveDefinition();
         if ( _cooldownRemaining > 0.0f )
             _cooldownRemaining = MathUtil::max( 0.0f, _cooldownRemaining - deltaTime );
     }
@@ -88,6 +93,12 @@ namespace sw
     void InteractableComponent::setInteractionId( const hashed_string& id )
     {
         _interactionId = id;
+        resolveDefinition();
+    }
+
+    void InteractableComponent::setCatalogPath( string_view path )
+    {
+        _catalogPath = string( path );
         resolveDefinition();
     }
 

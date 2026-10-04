@@ -95,7 +95,11 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
     등록부는 **포인터만** 든다. 모듈 DLL 이 내려가면 그 포인터도 가상 함수 표도 같이 사라지므로,
     내리지 않고 사라지면 다음 비우기가 죽은 코드로 뛴다(엔진 쪽 "Statics die on hot reload" 와 같은 함정).
     두고 가면 종료가 **이름으로** 경고한다 — 등록 시점에 이름을 복사해 두므로 그 진단은 죽은
-    포인터를 건드리지 않는다.
+    포인터를 건드리지 않는다. GameFramework 의 데이터 표 캐시(`GameDataCache` — 상호작용 · 원소 규칙 표)는 게임 서비스가 묶이고 풀릴 때 이 짝을 부른다.
+  - **"같은 키면 같은 객체, 마지막 사용자가 놓으면 사라짐" 표는 `WeakInternTable` 하나다.** 경로로 읽는 에셋(`SharedAssetTable` — 스켈레톤 · 클립 · 리그 ·
+    스프라이트 클립 · 캐릭터 데이터)도, 코드로 짓는 값(`WeakInternCache` — 내장 도형 `MeshUtil::acquirePrimitive` · 9-슬라이스 메시 · 스프라이트 텍스처 인스턴스)도
+    이것 위에 선다. 함수 정적 표를 등록부 밖에 따로 두지 않는다 — `WeakInternCache` 는 `IAssetCache` 라 `AssetManager` 가 생성자에서 내장 캐시로 올리고(목록
+    `_listBuiltInAssetCache` 하나), 종료의 비우기가 그 표의 약한 칸까지 지운다.
   - **티어 때문에 Resource 에 사는 것 셋**: `SpriteClipCache` · `AnimationAssetCache`(스켈레톤 · 애니메이션 클립)는 `IAssetCache` 를 구현하므로 Animation(티어 2)이 아니라 Resource(티어 4)에,
     `LocalizationReloadCache`(로컬라이제이션 파일의 핫 리로드 창구 — 글은 `LocalizationManager` 가 갖고 `clear()` 는 아무것도 지우지 않는다)도 같은 이유로 여기에,
     `PackCompressionUtil` 은 팩 타입(`ResourcePackTypes.h`)을 쓰므로 Compression(티어 0)이 아니라 Resource 에 둔다.

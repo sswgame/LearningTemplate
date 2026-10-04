@@ -2,13 +2,13 @@
 
 #include "GameFramework/Interaction/InteractionCatalog.h"
 
-#include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
+#include "GameFramework/Data/GameDataCache.h"
 #include "GameFramework/Data/GameDataXml.h"
 
 namespace sw
@@ -81,8 +81,12 @@ namespace sw
             }
         };
 
-        std::mutex                                            s_sharedCatalogMutex{};
-        unordered_map<string, unique_ptr<InteractionCatalog>> s_mapSharedCatalog{};
+        /** @brief 경로마다 한 번 읽어 나눠 쓰는 표입니다(GameFramework 모듈 정적 — 등록부는 `GameDataCacheRegistry` 가 맞춘다). */
+        GameDataCache<InteractionCatalog>& getSharedCatalogCache()
+        {
+            static GameDataCache<InteractionCatalog> s_cache{ "InteractionCatalog" };
+            return s_cache;
+        }
     } // namespace
 } // namespace sw
 
@@ -210,16 +214,11 @@ namespace sw
 
     const InteractionCatalog* InteractionCatalog::findShared( string_view path )
     {
-        std::lock_guard<std::mutex> lock( s_sharedCatalogMutex );
-        const string                key( path );
-        const auto                  mapIter = s_mapSharedCatalog.find( key );
-        if ( mapIter != s_mapSharedCatalog.end() )
-            return mapIter->second.get();
-        unique_ptr<InteractionCatalog> catalog = make_unique<InteractionCatalog>();
-        if ( catalog->loadFromResource( path ) == false )
-            catalog.reset();
-        const InteractionCatalog* pCatalog = catalog.get();
-        s_mapSharedCatalog[key]            = std::move( catalog );
-        return pCatalog;
+        return getSharedCatalogCache().find( path );
+    }
+
+    uint32 InteractionCatalog::getSharedReloadCount()
+    {
+        return getSharedCatalogCache().getReloadCount();
     }
 } // namespace sw

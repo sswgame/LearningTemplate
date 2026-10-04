@@ -8,9 +8,12 @@
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Graphics/2D/SpriteMeshBuilder.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
+#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AnimationAssetCache.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
@@ -40,22 +43,29 @@ namespace sw
         , _rigAssetCache{ make_unique<RigAssetCache>() }
         , _localizationReloadCache{ make_unique<LocalizationReloadCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
+        , _listBuiltInAssetCache{}
         , _registeredAssetCache{}
         , _contentSource{ ContentSource::Cooked }
     {
-        // 내장 캐시도 **등록부를 통해서만** 훑는다 — 이름으로 캐시를 적는 경로를 따로 두지 말 것.
-        registerAssetCache( _materialCache.get() );
-        registerAssetCache( _textureCache.get() );
-        registerAssetCache( _prefabCache.get() );
-        registerAssetCache( _spriteClipCache.get() );
-        registerAssetCache( _meshCache.get() );
-        registerAssetCache( _skeletonCache.get() );
-        registerAssetCache( _animClipCache.get() );
-        registerAssetCache( _socketSetCache.get() );
-        registerAssetCache( _notifyTableCache.get() );
-        registerAssetCache( _physicsAssetCache.get() );
-        registerAssetCache( _rigAssetCache.get() );
-        registerAssetCache( _localizationReloadCache.get() );
+        // 내장 캐시는 이 목록 하나에 적는다 — 등록 · "내장인가" 판정이 모두 이것을 본다. 내장 캐시도 **등록부를 통해서만** 훑는다.
+        // 코드로 짓는 값 표(내장 도형 · 9-슬라이스 메시 · 스프라이트 텍스처 인스턴스)는 Engine.dll 의 정적 객체다 — 매니저보다 오래 산다.
+        _listBuiltInAssetCache = { _materialCache.get(),
+                                   _textureCache.get(),
+                                   _prefabCache.get(),
+                                   _spriteClipCache.get(),
+                                   _meshCache.get(),
+                                   _skeletonCache.get(),
+                                   _animClipCache.get(),
+                                   _socketSetCache.get(),
+                                   _notifyTableCache.get(),
+                                   _physicsAssetCache.get(),
+                                   _rigAssetCache.get(),
+                                   _localizationReloadCache.get(),
+                                   &MeshUtil::getPrimitiveCache(),
+                                   &SpriteMeshBuilder::getSlicedMeshCache(),
+                                   &SpriteRenderUtil::getTextureInstanceCache() };
+        for ( IAssetCache* pCache : _listBuiltInAssetCache )
+            registerAssetCache( pCache );
     }
 
     AssetManager::~AssetManager() = default;
@@ -173,10 +183,12 @@ namespace sw
 
     bool AssetManager::isBuiltInAssetCache( const IAssetCache* pCache ) const
     {
-        return pCache != nullptr && ( pCache == _materialCache.get() || pCache == _textureCache.get() || pCache == _prefabCache.get() ||
-                                      pCache == _spriteClipCache.get() || pCache == _meshCache.get() || pCache == _skeletonCache.get() ||
-                                      pCache == _animClipCache.get() || pCache == _socketSetCache.get() || pCache == _notifyTableCache.get() ||
-                                      pCache == _physicsAssetCache.get() || pCache == _rigAssetCache.get() || pCache == _localizationReloadCache.get() );
+        for ( const IAssetCache* pBuiltIn : _listBuiltInAssetCache )
+        {
+            if ( pBuiltIn == pCache )
+                return pCache != nullptr;
+        }
+        return false;
     }
 
     void AssetManager::unregisterAssetCache( const IAssetCache* pCache )
