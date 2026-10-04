@@ -25,6 +25,7 @@
 	<Category id="gameplay" text="settings.category.gameplay"/>
 	<Category id="accessibility" text="settings.category.accessibility"/>
 	<Category id="language" text="settings.category.language"/>
+	<Category id="privacy" text="settings.category.privacy"/>
 
 	<!-- 화면 — 창 · 스왑체인은 호스트가 프레임 맨 앞에서 바꾼다(렌더 스레드를 기다린 뒤). 방식 · 해상도는 15 초 안에 확인하지 않으면 되돌린다. -->
 	<Setting id="display.windowMode" category="display" type="enum" default="windowed" confirmSeconds="15" target="applier:display.windowMode" text="settings.display.windowMode">
@@ -180,4 +181,8 @@
 
 	<!-- 언어 — 빈 값은 게임 기본 언어(gamesettings.xml 의 defaultLanguage)다. 선택지는 게임이 읽은 언어 팩. -->
 	<Setting id="language.text" category="language" type="enum" default="" optionsFrom="localization.languages" apply="immediate" target="applier:localization.language" text="settings.language.text"/>
+
+	<!-- 개인 정보 — 아무것도 기본으로 켜지 않는다. 꺼져 있으면 텔레메트리는 모으지도 쓰지도 보내지도 않고, 끄는 순간 보내지 않은 스풀을 지운다(Engine/Telemetry).
+	     대상이 없다 — TelemetryService 가 적용 · 되돌리기 · 로드 통보로 확정 값을 읽는다. -->
+	<Setting id="telemetry.enabled" category="privacy" type="bool" default="false" text="settings.privacy.telemetry" description="settings.privacy.telemetry.description"/>
 </UserSettingsSchema>

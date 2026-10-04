@@ -11,6 +11,8 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Telemetry/TelemetryEvent.h"
+#include "Engine/Telemetry/TelemetryService.h"
 
 #include "GameFramework/Components/FirstPersonCameraComponent.h"
 #include "GameFramework/Framework/GameService.h"
@@ -189,6 +191,15 @@ namespace sw
         if ( pDirector != nullptr )
         {
             SW_LOG_INFO( "[Shooter] you were overrun on wave %# after %# kills - starting over", pDirector->getWave(), pDirector->getKillCount() );
+            TelemetryService* pTelemetry = game::getService<TelemetryService>();
+            if ( pTelemetry != nullptr )
+            {
+                TelemetryEvent roundEnded( "progression.roundEnded" );
+                roundEnded.setInt( "wave", pDirector->getWave() ).setInt( "kills", pDirector->getKillCount() );
+                roundEnded.setFloat( "seconds", static_cast<float64>( pDirector->getPacingDirector().getTime() ) );
+                roundEnded.setFloat( "accuracy", _shotCount > 0u ? static_cast<float64>( _hitCount ) / static_cast<float64>( _shotCount ) : 0.0 );
+                (void)pTelemetry->record( roundEnded );
+            }
             pDirector->restartRound();
         }
         resetRound();

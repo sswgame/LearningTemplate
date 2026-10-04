@@ -12,6 +12,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Telemetry/TelemetryEvent.h"
+#include "Engine/Telemetry/TelemetryService.h"
 
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
@@ -372,6 +374,15 @@ namespace sw
             {
                 case AiDirectorEventKind::PhaseChanged:
                 {
+                    // 쌓기로 돌아왔다 = 새 웨이브. 진행 사건(동의가 없으면 텔레메트리가 버린다).
+                    TelemetryService* pTelemetry = game::getService<TelemetryService>();
+                    const bool        bNewWave   = event._source.empty() == false && event._id == _profile.getPhases()[static_cast<size_t>( _profile.getStartPhaseIndex() )]._id;
+                    if ( pTelemetry != nullptr && bNewWave )
+                    {
+                        TelemetryEvent waveReached( "progression.waveReached" );
+                        waveReached.setInt( "wave", getWave() ).setInt( "kills", _killCount ).setFloat( "seconds", static_cast<float64>( _director.getTime() ) );
+                        (void)pTelemetry->record( waveReached );
+                    }
                     SW_LOG_INFO( "[Shooter] pacing '%#' -> '%#' (wave %#, intensity %.2f)", event._source.empty() ? "start" : event._source.c_str(), event._id.c_str(), getWave(),
                                  event._intensity );
                     break;

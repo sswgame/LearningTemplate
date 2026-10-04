@@ -131,6 +131,8 @@ _kEngineTier: dict[str, int] = {
     # 8: 그리는 쪽 · 핫리로드. 씬과 컴포넌트를 읽는다.
     _kGraphicsRendererLayerName: 8,
     "Module": 8,
+    # 텔레메트리 — 동의를 사용자 설정(7)에서 읽는다. 엔진의 다른 곳은 이것을 모른다(EngineLoop 가 프레임 시간을 넘긴다).
+    "Telemetry": 8,
     # 9: 전부를 엮는 자리.
     _kRootLayerName: 9,
 }

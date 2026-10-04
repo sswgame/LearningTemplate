@@ -24,6 +24,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/AI/Director/AiDirectorProfile.h"
@@ -73,6 +74,7 @@ namespace
         static bool isSchedules( sw::string_view resourceId ) { return endsWith( resourceId, ".schedules.xml" ); }
         static bool isAiDirector( sw::string_view resourceId ) { return endsWith( resourceId, ".director.xml" ); }
         static bool isSpawnTable( sw::string_view resourceId ) { return endsWith( resourceId, ".spawns.xml" ); }
+        static bool isTelemetrySchema( sw::string_view resourceId ) { return endsWith( resourceId, ".telemetry.xml" ); }
         static bool isUserSettingsSchema( sw::string_view resourceId ) { return endsWith( resourceId, ".settings.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
@@ -239,6 +241,7 @@ namespace
             {          "schedules",           &isSchedules,       &loadCatalog<sw::ScheduleCatalog>},
             {         "aidirector",          &isAiDirector,     &loadCatalog<sw::AiDirectorProfile>},
             {         "spawntable",          &isSpawnTable,            &loadCatalog<sw::SpawnTable>},
+            {    "telemetryschema",     &isTelemetrySchema,       &loadCatalog<sw::TelemetrySchema>},
             {       "usersettings",  &isUserSettingsSchema,                 &loadUserSettingsSchema},
             {          "abilities",           &isAbilities,        &loadCatalog<sw::AbilityCatalog>},
             {              "crops",               &isCrops,           &loadCatalog<sw::CropCatalog>},

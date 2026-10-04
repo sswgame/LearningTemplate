@@ -98,4 +98,5 @@ settings.registerEventListener( SW_DELEGATE_METHOD( UserSettingEventListener, &M
 - 지금 아무도 읽지 않는 대상: `gv_renderScale` · `gv_upscaler` · 그림자 · 시야 거리 · 후처리 · 텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode`(톤맵 셰이더 미구현) ·
   UI 배율 · 자막. 오디오 버스 `voice` · `ambient` · `ui` 는 `IAudioSystem::setBusVolume` 에 값만 남습니다(재생 API 가 버스를 받지 않음).
 - 해상도 선택지는 데이터의 고정 목록입니다(모니터 모드 열거 없음). 전용 전체 화면은 없고 `borderless`(모니터를 덮는 창)입니다.
+- 개인 정보(`privacy`): `telemetry.enabled`(기본 false)는 대상이 없다 — `TelemetryService::bindConsentSetting` 이 확정 값을 읽는다(`Engine/Telemetry/README.md`).
 - 키 바인딩의 빈 값은 "입력 맵의 기본 바인딩" 입니다 — 카테고리 기본값으로 되돌리면 지난 리바인딩이 남지 않습니다.
