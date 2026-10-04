@@ -69,7 +69,7 @@ namespace sw
      * @struct TickStage
      * @brief 선행 조건 경로의 스테이지 하나입니다. 같은 오브젝트의 항목이 한 스테이지에 둘 이상 오지 않습니다(스테이지 안은 병렬).
      * @details `_bApplyBefore` 가 서 있으면 매니저가 이 스테이지를 돌기 **전에** 그때까지 쌓인 틱 중 트랜스폼 쓰기를 적용합니다
-     *          (`GameObjectManager::applyStageTransforms`) — 앞에서 돈 선행 조건이 옮긴 자리를 이 스테이지가 같은 프레임에 읽습니다.
+     *          (`SceneTickScheduler`) — 앞에서 돈 선행 조건이 옮긴 자리를 이 스테이지가 같은 프레임에 읽습니다.
      *          기다리는 항목이 없는 스테이지(레벨 0, 같은 레벨을 오브젝트별로 가른 둘째 이후)에는 서지 않습니다.
      */
     struct TickStage

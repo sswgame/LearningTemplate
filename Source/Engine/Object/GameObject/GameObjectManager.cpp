@@ -117,8 +117,6 @@ namespace sw
         , _mutex{}
         , _overlapWorld2D{}
         , _bProcessingDestruction{ false }
-        , _stageTransformApplyCount{ 0 }
-        , _tickStageBuildCount{ 0 }
         , _listPlayWalk{}
         , _bHasBegunPlay{ false }
         , _beginPlayMutex{}
@@ -130,7 +128,7 @@ namespace sw
         , _lightRegistry{}
         , _cameraRegistry{}
         , _animationSystem{}
-        , _tickRegistry{}
+        , _tickScheduler{ *this, _transformHierarchy, _primitiveRegistry, _structuralChangeBuffer }
     {
         _animationSystem.setObjectManager( this );
     }
@@ -501,7 +499,7 @@ namespace sw
         _listPendingDestroyComponent.push_back( pComp->getHandle() );
         // 틱에 참여하던 컴포넌트면 소유 오브젝트의 항목을 다시 짓게 한다. 나머지는 등록부와 무관하다.
         if ( pComp->hasTickWork() )
-            _tickRegistry.markObjectDirty( pComp->getOwner() );
+            _tickScheduler.getTickRegistry().markObjectDirty( pComp->getOwner() );
     }
 
     void GameObjectManager::destroyComponentInstance( Component* pComp )
@@ -606,7 +604,7 @@ namespace sw
             if ( pObj == nullptr )
                 continue;
             // 메모리를 놓기 전에 등록부의 그룹 목록에서 뺀다. 지운 컴포넌트 쪽은 소유 오브젝트가 표시되어 틱 전에 다시 지어진다.
-            _tickRegistry.unregisterObject( pObj );
+            _tickScheduler.getTickRegistry().unregisterObject( pObj );
             _poolGameObject.destroy( pObj );
         }
         _listProcessingDestroyObject.clear();
@@ -663,7 +661,7 @@ namespace sw
             }
         }
 
-        _tickRegistry.clear();
+        _tickScheduler.getTickRegistry().clear();
         markTickStagesDirty();
         // 컴포넌트가 바디를 놓았다 — 빈 물리 씬과 쌓인 시간을 버린다(다음 씬은 처음 쓸 때 새로 만든다).
         _scenePhysics.shutdown();

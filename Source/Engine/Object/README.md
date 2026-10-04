@@ -38,7 +38,8 @@ Object/
 │  ├─ GameObject.*              # 액터 — 컴포넌트 목록 · 태그 · 활성 · 계층. 매니저 헤더를 포함하지 **않는다**
 │  ├─ GameObjectManager.h
 │  ├─ GameObjectManager.cpp     # 수명: 생성 · 이름 · id 표 · 조회 · 파괴 · 이름으로 컴포넌트 만들기(TypeInfo 의 생성 함수)
-│  ├─ GameObjectManagerTick.cpp # 프레임: tick 의 단계 · 병렬 틱 디스패치 · 트랜스폼 배치/큐 · 지연 큐
+│  ├─ GameObjectManagerTick.cpp # 프레임: tick 의 단계 · 물리 · 트랜스폼 배치/큐 전달
+│  ├─ SceneTickScheduler.*      # 틱 디스패치(FTickTaskManager 자리) — 틱 등록부 소유 · 그룹 포크-조인 · 선행 조건 스테이지 · 경계의 트랜스폼 적용
 │  ├─ TickRegistry.*            # 틱 등록부 — 오브젝트별 항목 · 그룹 목록 · 선행 종속성 스테이지
 │  ├─ StructuralChangeBuffer.*  # 틱 중 규칙(DOTS ECB 자리) — 동결 플래그 하나 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서(`drain`) · 스레드별 틱 상태
 │  ├─ DeferredDelegateQueue.*   # 틱이 미룬 일(계층 변경 · 틱 뒤 작업)의 큐 — 넣기는 아무 스레드, 비우기는 게임 스레드
@@ -136,7 +137,7 @@ B·I 의 "씬 트랜스폼 flush" 는 매니저의 알고리즘이 아니라 **`
   로컬 · 월드 값은 **마지막 적용 지점**의 값이다 — 단계 시작, 또는 그 단계에서 이미 지난 선행 조건 스테이지 경계(아래). 같은 스레드가 같은
   컴포넌트에 잇따라 쓴 값은 마지막이 이기고, 다른 스레드가 같은 컴포넌트를 쓴 경우는 순서가 없다.
 - **선행 조건 스테이지 경계는 적용 지점이다.** 기다리는 스테이지(앞에서 돈 선행 조건이 있는 레벨의 첫 스테이지) 앞에서 그때까지의 쓰기를 적용하고
-  플러시한다(`GameObjectManager::applyStageTransforms`). 그래서 서브틱은 선행 조건이 옮긴 자리를 같은 프레임에 읽는다. 구조 변경 · 틱 뒤 큐는 그대로
+  플러시한다(`SceneTickScheduler::applyStageTransforms`). 그래서 서브틱은 선행 조건이 옮긴 자리를 같은 프레임에 읽는다. 구조 변경 · 틱 뒤 큐는 그대로
   단계 끝이다. 주의: 그 단계에 attach · detach 가 미뤄졌으면(`deferHierarchyChange`) 그 뒤로는 앞당기지 않는다 — 미룬 `KeepWorld` 부착보다 뒤에 부른
   쓰기가 먼저 적용되면 부착이 로컬 값을 다시 구해 덮는다(규칙: 구조 변경 뒤에 쓰기).
 

@@ -28,8 +28,8 @@
 #include "Engine/Object/GameObject/SceneAudio.h"
 #include "Engine/Object/GameObject/SceneOverlapWorld2D.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
+#include "Engine/Object/GameObject/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/StructuralChangeBuffer.h"
-#include "Engine/Object/GameObject/TickRegistry.h"
 
 namespace sw
 {
@@ -225,7 +225,7 @@ namespace sw
         void deferStructuralChange( StructuralChangeDelegate func ) { _structuralChangeBuffer.deferStructuralChange( std::move( func ) ); }
         /**
          * @brief 틱 중의 계층 변경(attach · detach)을 구조 변경 큐에 넣고, 이번 단계에 계층 변경이 미뤄졌다고 적습니다.
-         * @details 그 뒤로는 스테이지 경계의 트랜스폼 적용(`applyStageTransforms`)을 하지 않습니다(`StructuralChangeBuffer::deferHierarchyChange`).
+         * @details 그 뒤로는 스테이지 경계의 트랜스폼 적용(`SceneTickScheduler`)을 하지 않습니다(`StructuralChangeBuffer::deferHierarchyChange`).
          */
         void deferHierarchyChange( StructuralChangeDelegate func ) { _structuralChangeBuffer.deferHierarchyChange( std::move( func ) ); }
 
@@ -296,12 +296,12 @@ namespace sw
 
         /**
          * @brief 틱에 참여하는 오브젝트의 등록부입니다(언리얼 `FTickTaskManager` 의 자리). 자세한 사연은 TickRegistry.h 에 있습니다.
-         * @details 같은 규칙으로 소유만 합니다. 컴포넌트가 틱을 켜고 끄면 소유 오브젝트가 여기에 표시하고, `tick` 이 디스패치 전에
-         *          표시된 오브젝트만 다시 훑습니다. 씬 전체를 훑어 스테이지를 다시 짓던 0.5~1 ms 가 사라진 자리입니다.
+         * @details 틱 디스패치(`SceneTickScheduler`)가 소유합니다. 컴포넌트가 틱을 켜고 끄면 소유 오브젝트가 여기에 표시하고, 디스패치 전에
+         *          표시된 오브젝트만 다시 훑습니다.
          */
-        TickRegistry& getTickRegistry() { return _tickRegistry; }
+        TickRegistry& getTickRegistry() { return _tickScheduler.getTickRegistry(); }
         /** @brief 틱에 참여하는 오브젝트의 등록부입니다. */
-        const TickRegistry& getTickRegistry() const { return _tickRegistry; }
+        const TickRegistry& getTickRegistry() const { return _tickScheduler.getTickRegistry(); }
 
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. */
         Component* resolveComponent( ComponentHandle handle );
@@ -368,15 +368,15 @@ namespace sw
         Component* addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning = true );
 
         /** @brief 모든 오브젝트의 틱 항목을 다음 틱 전에 다시 짓게 합니다(타입 재바인딩 · 씬 초기화). */
-        void markTickStagesDirty() { _tickRegistry.markAllDirty(); }
+        void markTickStagesDirty() { _tickScheduler.getTickRegistry().markAllDirty(); }
         /**
          * @brief 틱 등록부가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다.
          * @details 틱에 참여하는 컴포넌트(`Component::hasTickWork`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 합니다.
          *          틱하지 않는 MeshComponent 를 붙였다 떼는 것으로는 오르지 않습니다. 다시 지을 때도 바뀐 오브젝트의 컴포넌트 몇 개만 훑습니다.
          */
-        uint32 getTickStageBuildCount() const { return _tickStageBuildCount.load( std::memory_order_relaxed ); }
+        uint32 getTickStageBuildCount() const { return _tickScheduler.getStageBuildCount(); }
         /** @brief 선행 조건 스테이지 경계에서 틱 중 트랜스폼 쓰기를 적용한 횟수(누적)입니다. 진단 · 회귀 테스트용입니다. */
-        uint32 getStageTransformApplyCount() const { return _stageTransformApplyCount; }
+        uint32 getStageTransformApplyCount() const { return _tickScheduler.getStageTransformApplyCount(); }
 
         /** @brief 이름으로 만들 수 있는 컴포넌트 타입(리플렉션 표에서 `_addComponent` 가 있는 타입)의 짧은 이름 목록입니다. 에디터의 "Add Component" 가 씁니다. */
         static vector<hashed_string> getRegisteredComponentTypeNames();
@@ -412,27 +412,10 @@ namespace sw
             vector<uint32> _listFreeSuffix{}; ///< 지운 오브젝트가 돌려준 번호들입니다
         };
 
-        /**
-         * @brief 등록부의 오브젝트를 TickGroup 순으로 틱합니다.
-         * @details 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나누고(한 오브젝트의 항목은 한 워커가 순서대로), 이어서 그 그룹의 선행 조건
-         *          스테이지(등록부가 짓는다 — 선행 조건을 가진 항목만)를 차례로 돕니다.
-         */
-        void tickComponents( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
         /** @brief 플레이 중에 붙어 줄을 선 컴포넌트의 onBeginPlay 를 부릅니다(게임 스레드, 틱 밖). 도는 중에 선 것은 다음 번에 돕니다. */
         void dispatchPendingBeginPlay();
         /** @brief 플레이 중에 붙은 컴포넌트를 시작 줄에 세웁니다(`GameObject::attachCreatedComponent`). 핸들로 들어 그새 해체돼도 안전합니다. */
         void queueBeginPlay( ComponentHandle handle );
-        /**
-         * @brief `tick` 의 컴포넌트 단계 하나입니다 — 플러시 → 쓰기 큐 준비 → 틱 중 표시 → `tickComponents`(그룹 [@p firstGroup, @p endGroup)) → 표시 해제.
-         *        오브젝트가 있을 때만 돕니다. 물리 앞(PrePhysics · DuringPhysics)과 뒤(PostPhysics · PostUpdate)에 한 번씩 불립니다.
-         */
-        void tickComponentsPhase( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
-        /**
-         * @brief 선행 조건 스테이지 사이(게임 스레드, 동결 중)에서 그때까지 쌓인 틱 중 트랜스폼 쓰기를 적용하고 플러시합니다.
-         * @details 기다리는 항목이 있는 스테이지 앞에서만 불립니다(`TickStage::_bApplyBefore`). 구조 변경 · 틱 뒤 큐는 그대로 단계 끝이고,
-         *          이번 단계에 계층 변경이 미뤄졌으면(`deferHierarchyChange`) 아무것도 하지 않습니다.
-         */
-        void applyStageTransforms();
         /** @brief 새 ObjectId 를 발급합니다. */
         uint64 generateNewId();
         /** @brief `_mutex` 를 쥔 채 @p objectId 로 오브젝트를 만들어 이름 맵 · id 표 · 병합 대기 목록에 올립니다. */
@@ -573,14 +556,12 @@ namespace sw
          */
         void stepPhysics( float32 deltaTime );
 
-        bool                    _bProcessingDestruction;   ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다
-        uint32                  _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
-        atomic<uint32>          _tickStageBuildCount;      ///< 등록부가 항목을 다시 지은 틱의 수(진단)
-        vector<GameObject*>     _listPlayWalk;             ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)
-        atomic<bool>            _bHasBegunPlay;            ///< 플레이 중(`hasBegunPlay`)
-        mutex                   _beginPlayMutex;           ///< 시작 줄을 지킵니다(비동기 씬 로드는 워커에서 붙입니다)
-        vector<ComponentHandle> _listPendingBeginPlay;     ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
-        vector<ComponentHandle> _listProcessingBeginPlay;  ///< 도는 중인 시작 줄(할당 재사용)
+        bool                    _bProcessingDestruction;  ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다
+        vector<GameObject*>     _listPlayWalk;            ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)
+        atomic<bool>            _bHasBegunPlay;           ///< 플레이 중(`hasBegunPlay`)
+        mutex                   _beginPlayMutex;          ///< 시작 줄을 지킵니다(비동기 씬 로드는 워커에서 붙입니다)
+        vector<ComponentHandle> _listPendingBeginPlay;    ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
+        vector<ComponentHandle> _listProcessingBeginPlay; ///< 도는 중인 시작 줄(할당 재사용)
         /** @brief 틱 중 규칙(동결 플래그 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
         StructuralChangeBuffer _structuralChangeBuffer;
 
@@ -594,7 +575,7 @@ namespace sw
         CameraRegistry _cameraRegistry;
         /** @brief 애니메이션 시스템입니다. 같은 규칙으로 소유만 합니다. */
         AnimationSystem _animationSystem;
-        /** @brief 틱에 참여하는 오브젝트의 등록부입니다. 같은 규칙으로 소유만 합니다. */
-        TickRegistry _tickRegistry;
+        /** @brief 컴포넌트 틱 디스패치(틱 등록부 · 그룹 포크-조인 · 선행 조건 스테이지)입니다. 같은 규칙으로 소유만 합니다. */
+        SceneTickScheduler _tickScheduler;
     };
 } // namespace sw
