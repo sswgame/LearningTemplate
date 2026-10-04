@@ -74,6 +74,15 @@ namespace sw
         /** @brief 색을 정합니다(머티리얼 색 · 텍스처에 곱합니다). 페이드 · 피격 색은 여기입니다 — 머티리얼 인스턴스를 만들지 않습니다. */
         void setTint( const float4& tint );
 
+        /** @brief 정렬 레이어 이름입니다(`render2d.xml` 의 표). 기본은 `Default` 입니다. */
+        const hashed_string& getSortingLayer() const { return _sortingLayer; }
+        /** @brief 정렬 레이어를 정합니다. 모르는 이름은 오류를 남기고 `Default` 로 그립니다. */
+        void setSortingLayer( const hashed_string& layerName );
+        /** @brief 레이어 안 순서입니다. 클수록 위에 그려집니다. */
+        int32 getOrderInLayer() const { return _orderInLayer; }
+        /** @brief 레이어 안 순서를 정합니다([-32767, 32767] 로 묶습니다). */
+        void setOrderInLayer( int32 order );
+
         /** @brief 지금 보이는 UV 사각형입니다 — 클립이 있으면 그 프레임의 것, 없으면 `_uvRect` 입니다. */
         float4 getDisplayedUvRect() const;
 
@@ -93,6 +102,8 @@ namespace sw
         void refreshClip();
         /** @brief 보일 프레임 · 색을 GPU 인스턴스 칸으로 묶어 넘깁니다(`MeshComponent::setSpriteInstanceData`). */
         void refreshSpriteInstanceData();
+        /** @brief 정렬 레이어 · 순서를 정렬 키로 풀어 메시 컴포넌트에 넘깁니다(`MeshComponent::setSortKey`). */
+        void refreshSortKey();
         /** @brief 텍스처 칸이 비었으면 클립의 아틀라스, 아니면 텍스처 칸입니다. */
         string_view getEffectiveTexture() const;
 
@@ -111,7 +122,16 @@ namespace sw
         PROPERTY( Category = "Rendering", DisplayName = "UV Rect", Tooltip = "Atlas rectangle (u, v, width, height) shown when there is no clip" )
         float4 _uvRect;
         PROPERTY( Category = "Rendering", DisplayName = "Tint", Meta = "Color", Tooltip = "Color multiplied into the sprite; alpha is opacity" )
-        float4                            _tint;
+        float4 _tint;
+        /**
+         * @brief 정렬 레이어 이름입니다. 투명 큐는 레이어 → 레이어 안 순서 → 깊이 순으로 그립니다(유니티 Sorting Layer · Godot CanvasLayer).
+         * @details 같은 Z 의 월드 UI 와 스프라이트처럼 깊이가 같은 것의 앞뒤를 데이터로 정합니다. 이름은 `render2d.xml` 의 표에 있어야 합니다.
+         */
+        PROPERTY( Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml; earlier layers draw first" )
+        hashed_string _sortingLayer;
+        PROPERTY( Category = "Sorting", DisplayName = "Order In Layer", Tooltip = "Draw order inside the sorting layer; higher draws on top", Min = -32767.0,
+                  Max = 32767.0 )
+        int32                             _orderInLayer;
         shared_ptr<const SpriteClipAsset> _clip;           ///< 읽은 클립(나눠 가진 것). 저장하지 않습니다
         string                            _loadedClipPath; ///< `_clip` 이 어느 경로의 것인지(실패한 경로도 — 같은 실패를 되풀이해 읽지 않습니다)
     };

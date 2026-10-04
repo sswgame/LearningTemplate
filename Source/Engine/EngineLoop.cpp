@@ -22,6 +22,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -772,6 +773,9 @@ namespace sw
                             : ( 16.0f / 9.0f );
                     packet._viewProj     = pCam->getViewProjectionMatrix( aspect );
                     packet._bHasViewProj = SW_TRUE;
+                    // 투명 정렬의 깊이 — 직교 카메라는 시선 축(같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 바뀌지 않게), 원근은 거리(render2d.xml).
+                    _gpuSceneBuilder->setTransparentSortAxis(
+                        Render2DSettings::getActive().computeTransparentSortAxis( pCam->isOrthographic(), pCam->getCameraForward() ) );
                 }
                 _gpuSceneBuilder->buildFromScene( pActiveScene, packet._cameraPos );
 

@@ -16,6 +16,7 @@ namespace sw
         , _instance{ std::move( instance ) }
         , _pRegistry{ nullptr }
         , _firstEntry{ 0 }
+        , _sortKey{ 0 }
         , _bVisible{ SW_TRUE }
     {
     }
@@ -73,6 +74,15 @@ namespace sw
         if ( _bVisible == newValue )
             return;
         _bVisible = newValue;
+        for ( uint32 index = 0; index < _listEntry.size(); ++index )
+            markDirty( index );
+    }
+
+    void MeshInstanceBatch::setSortKey( uint32 sortKey )
+    {
+        if ( _sortKey == sortKey )
+            return;
+        _sortKey = sortKey;
         for ( uint32 index = 0; index < _listEntry.size(); ++index )
             markDirty( index );
     }

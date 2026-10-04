@@ -31,5 +31,11 @@ namespace sw
          *          싣지 않는다(`GpuSpriteInstanceData`). 그것까지 덮으면 스프라이트마다 인스턴스가 갈려 배치가 하나씩 생긴다.
          */
         static shared_ptr<MaterialInstance> acquireTextureInstance( Material* pParent, hashed_string texture );
+
+        /**
+         * @brief 정렬 레이어 이름 · 레이어 안 순서를 활성 표(`Render2DSettings::getActive`)로 정렬 키로 풉니다.
+         * @details 모르는 레이어 이름은 데이터 오류라 @p ownerLabel 과 함께 오류를 남기고 `Default` 레이어로 그립니다.
+         */
+        static uint32 resolveSortKey( const hashed_string& layerName, int32 orderInLayer, string_view ownerLabel );
     };
 } // namespace sw

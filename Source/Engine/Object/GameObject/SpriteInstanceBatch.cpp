@@ -22,6 +22,7 @@ namespace sw
     SpriteInstanceBatch::SpriteInstanceBatch()
         : _batch{}
         , _acquiredMaterialPath{}
+        , _sortKey{ 0 }
     {
     }
 
@@ -65,8 +66,16 @@ namespace sw
             _batch->setBoundsRadius( index, kUnitQuadHalfDiagonal );
             _batch->setEntryVisible( index, false );
         }
+        _batch->setSortKey( _sortKey );
         manager.getPrimitiveRegistry().addInstanceBatch( _batch.get() );
         return true;
+    }
+
+    void SpriteInstanceBatch::setSorting( const hashed_string& layerName, int32 orderInLayer )
+    {
+        _sortKey = SpriteRenderUtil::resolveSortKey( layerName, orderInLayer, "SpriteInstanceBatch" );
+        if ( _batch != nullptr )
+            _batch->setSortKey( _sortKey );
     }
 
     void SpriteInstanceBatch::shutdown()

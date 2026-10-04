@@ -6,8 +6,10 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Resource/SpriteClipCache.h"
 
 namespace sw
@@ -21,6 +23,8 @@ namespace sw
         , _clipFrame{ 0 }
         , _uvRect{ 0.0f, 0.0f, 1.0f, 1.0f }
         , _tint{ 1.0f, 1.0f, 1.0f, 1.0f }
+        , _sortingLayer{ "Default" }
+        , _orderInLayer{ 0 }
         , _clip{}
         , _loadedClipPath{}
     {
@@ -38,6 +42,7 @@ namespace sw
         refreshClip();
         refreshTextureInstance();
         refreshSpriteInstanceData();
+        refreshSortKey();
     }
 
     void SpriteComponent::onPropertyChanged( hashed_string propertyName )
@@ -48,6 +53,8 @@ namespace sw
         static const hashed_string s_clipFrame( "_clipFrame" );
         static const hashed_string s_uvRect( "_uvRect" );
         static const hashed_string s_tint( "_tint" );
+        static const hashed_string s_sortingLayer( "_sortingLayer" );
+        static const hashed_string s_orderInLayer( "_orderInLayer" );
         if ( propertyName == s_clipPath )
         {
             refreshClip();
@@ -61,6 +68,10 @@ namespace sw
         else if ( propertyName == s_clipFrame || propertyName == s_uvRect || propertyName == s_tint )
         {
             refreshSpriteInstanceData();
+        }
+        else if ( propertyName == s_sortingLayer || propertyName == s_orderInLayer )
+        {
+            refreshSortKey();
         }
     }
 
@@ -94,6 +105,18 @@ namespace sw
     {
         _tint = tint;
         refreshSpriteInstanceData();
+    }
+
+    void SpriteComponent::setSortingLayer( const hashed_string& layerName )
+    {
+        _sortingLayer = layerName;
+        refreshSortKey();
+    }
+
+    void SpriteComponent::setOrderInLayer( int32 order )
+    {
+        _orderInLayer = MathUtil::clamp( order, Render2DSettings::kMinOrderInLayer, Render2DSettings::kMaxOrderInLayer );
+        refreshSortKey();
     }
 
     float4 SpriteComponent::getDisplayedUvRect() const
@@ -148,6 +171,13 @@ namespace sw
             return;
         _appliedTexture = texture;
         setMaterialInstance( SpriteRenderUtil::acquireTextureInstance( pMaterial, texture ) );
+    }
+
+    void SpriteComponent::refreshSortKey()
+    {
+        const GameObject*   pOwner    = getOwner();
+        const hashed_string ownerName = ( pOwner != nullptr ) ? pOwner->getName() : hashed_string( "SpriteComponent" );
+        setSortKey( SpriteRenderUtil::resolveSortKey( _sortingLayer, _orderInLayer, ownerName.c_str() ) );
     }
 
     void SpriteComponent::refreshSpriteInstanceData()

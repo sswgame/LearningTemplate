@@ -92,6 +92,15 @@ namespace sw
         return float4x4::createLookAt( eye, target, up );
     }
 
+    float3 CameraComponent::getCameraForward() const
+    {
+        float3 forward = float3::transformVector( float3( 0.0f, 0.0f, 1.0f ), getWorldMatrix() );
+        if ( forward.getLengthSquared() <= MathUtil::Epsilon )
+            return float3( 0.0f, 0.0f, 1.0f );
+        forward.normalize();
+        return forward;
+    }
+
     float4x4 CameraComponent::getProjectionMatrix( float32 aspectRatio ) const
     {
         const float32 aspect = aspectRatio > 1e-4f ? aspectRatio : ( 16.0f / 9.0f );

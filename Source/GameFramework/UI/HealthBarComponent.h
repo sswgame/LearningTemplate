@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Math/VectorMath.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/SpriteInstanceBatch.h"
@@ -98,6 +99,8 @@ namespace sw
         float4 _trailColor;
         PROPERTY( Category = "Style", DisplayName = "Background Color", Meta = "Color", Tooltip = "Color of the missing HP" )
         float4 _backgroundColor;
+        PROPERTY( Category = "Style", DisplayName = "Sorting Layer", Tooltip = "Sorting layer of the bar (render2d.xml); world UI draws above sprites" )
+        hashed_string _sortingLayer;
         PROPERTY( Category = "Layout", DisplayName = "Visible", Tooltip = "Toggle HP bar visibility" )
         bool                _bVisible;
         SpriteInstanceBatch _spriteBatch; ///< 조각 셋(채움 · 흔적 · 바탕). 저장하지 않습니다

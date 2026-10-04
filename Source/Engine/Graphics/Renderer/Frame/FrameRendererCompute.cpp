@@ -259,8 +259,8 @@ namespace sw
                     const uint32 groups = ( cullParams._instanceCount + 63u ) / 64u;
                     if ( groups > 0 )
                         _pCmd->dispatchCompute( groups, 1, 1 );
-                    // 압축이 끝났으면 투명 배치의 순서를 깊이순으로 되돌린다. 원자 연산이 준 자리 번호는
-                    // 완료 순서라 그대로 두면 블렌딩이 틀린다. 정렬이 GPU 에서 돌므로 투명도 압축 · 컬링 이득을 받는다.
+                    // 압축이 끝났으면 투명 배치의 순서를 CPU 가 정한 순서(인스턴스 번호 오름차순)로 되돌린다. 원자 연산이 준 자리 번호는
+                    // 완료 순서라 그대로 두면 블렌딩이 틀린다. 되돌리기가 GPU 에서 돌므로 투명도 압축 · 컬링 이득을 받는다(instancesort.hlsl).
                     // 컬링이 채운 목록을 정렬이 바로 읽는다. 상태가 그대로라 transitionBuffer 는
                     // 아무것도 하지 않으므로 **UAV 배리어**를 따로 걸어야 한다. 없으면 정렬이 아직
                     // 안 채워진 목록을 읽는다(백엔드마다 결과가 달라 재현이 어렵다).
@@ -272,7 +272,7 @@ namespace sw
                          cullParams._batchCount > 0 )
                     {
                         FrameRendererUtil::GpuSortParams sortParams{};
-                        // 정렬 키는 **그 뷰의 눈까지의 거리**다. 뷰가 자기 위치를 들고 있다.
+                        // 셰이더는 인스턴스 번호로 정렬한다(정렬 기준은 CPU 한 곳 — 정렬 레이어 · 시선 축). 카메라 위치는 상수버퍼 꼴을 지키려 그대로 싣는다.
                         sortParams._arrCameraPos[0] = renderView._position._x;
                         sortParams._arrCameraPos[1] = renderView._position._y;
                         sortParams._arrCameraPos[2] = renderView._position._z;

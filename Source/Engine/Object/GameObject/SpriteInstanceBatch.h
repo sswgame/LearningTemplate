@@ -66,6 +66,12 @@ namespace sw
         /** @brief 항목 전체를 숨기거나 다시 보입니다(각 항목의 보임 여부는 그대로입니다). */
         void setVisible( bool bVisible );
 
+        /**
+         * @brief 정렬 레이어 · 레이어 안 순서를 정합니다(`initialize` 앞뒤 어느 쪽이든). 모르는 레이어는 오류를 남기고 `Default` 입니다.
+         * @details 월드 공간 UI 는 `WorldUI` 에 둡니다 — 같은 Z 의 스프라이트와 거리로 가리면 카메라가 움직일 때 앞뒤가 뒤집힙니다.
+         */
+        void setSorting( const hashed_string& layerName, int32 orderInLayer );
+
         /** @brief 감싼 배치입니다. 시험과 빌더가 항목을 읽습니다. 없으면 nullptr 입니다. */
         const MeshInstanceBatch* getBatch() const { return _batch.get(); }
 
@@ -75,5 +81,6 @@ namespace sw
     private:
         unique_ptr<MeshInstanceBatch> _batch;
         hashed_string                 _acquiredMaterialPath; ///< 캐시에서 잡은 머티리얼 경로입니다. 비어 있으면 잡은 것이 없습니다
+        uint32                        _sortKey;              ///< 항목 모두의 투명 정렬 키(0 = 기본). 배치를 다시 만들어도 남습니다
     };
 } // namespace sw

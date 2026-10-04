@@ -40,6 +40,7 @@ namespace sw
         , _fillColor{ 0.25f, 0.85f, 0.3f, 1.0f }
         , _trailColor{ 0.95f, 0.8f, 0.25f, 1.0f }
         , _backgroundColor{ 0.08f, 0.08f, 0.1f, 0.8f }
+        , _sortingLayer{ "WorldUI" }
         , _bVisible{ false }
         , _spriteBatch{}
     {
@@ -59,6 +60,7 @@ namespace sw
         {
             GameObjectManager* pManager = pOwner->getManager();
             // 바탕만 있는 단색 조각이라 텍스처가 없다(머티리얼의 흰색 × 조각 색).
+            _spriteBatch.setSorting( _sortingLayer, 0 );
             if ( pManager != nullptr && _spriteBatch.initialize( *pManager, {}, kEntryCount ) == false )
                 SW_LOG_WARNING( "HP bar sprites could not be created" );
         }

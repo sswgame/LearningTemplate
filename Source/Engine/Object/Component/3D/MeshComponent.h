@@ -119,6 +119,15 @@ namespace sw
          */
         const GpuSpriteInstanceData& getSpriteInstanceData() const { return _spriteInstanceData; }
 
+        /**
+         * @brief 투명 큐의 정렬 키입니다(`Render2DSettings::makeSortKey` — 정렬 레이어 · 레이어 안 순서). 0 은 `Default` 레이어 · 순서 0 입니다.
+         * @details 투명 물체는 이 키가 작은 것부터 그려지고, 키가 같을 때만 깊이로 가립니다(유니티 `Renderer.sortingLayerID` · `sortingOrder`).
+         *          저장하지 않습니다 — 저장되는 이름 · 순서는 파생(`SpriteComponent`)이 들고 여기로 풀어 넣습니다. 불투명은 이 키를 보지 않습니다.
+         */
+        void setSortKey( uint32 sortKey );
+        /** @brief 투명 큐의 정렬 키입니다. 0 은 기본(`Default` 레이어 · 순서 0)입니다. */
+        uint32 getSortKey() const { return _sortKey; }
+
         /** @brief 바운드 반지름(메시 공간)의 최소값을 설정합니다. 메시가 아는 경계보다 작으면 메시의 것이 쓰입니다(키우기만 한다). */
         void setBoundsRadius( float32 radius );
         /** @brief 바운드 반지름(메시 공간)입니다 — 적어 둔 값과 메시의 경계(`Mesh::getBoundingRadius`) 중 큰 쪽. 월드 반지름은 `getWorldBounds` 입니다. */
@@ -189,6 +198,8 @@ namespace sw
         uint32 _gpuSpinSeed;
         /** @brief GPU 인스턴스의 스프라이트 칸입니다. 저장하지 않습니다 — 파생의 저장되는 값(프레임 · 색)에서 만듭니다. */
         GpuSpriteInstanceData _spriteInstanceData;
+        /** @brief 투명 큐의 정렬 키입니다(0 = 기본). 저장하지 않습니다. */
+        uint32 _sortKey;
         /** @brief 등록 시점에 받은 등록부입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */
         PrimitiveRegistry* _pPrimitiveRegistry;
         /** @brief 등록부 슬롯입니다. 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. */

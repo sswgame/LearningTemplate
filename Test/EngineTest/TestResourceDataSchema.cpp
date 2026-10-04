@@ -5,6 +5,7 @@
 
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -58,6 +59,7 @@ namespace
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
         static bool isSchedules( sw::string_view resourceId ) { return endsWith( resourceId, ".schedules.xml" ); }
+        static bool isRender2DSettings( sw::string_view resourceId ) { return endsWith( resourceId, "/data/render2d.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -109,6 +111,12 @@ namespace
             return material != nullptr && material->loadFromFile( resourceId );
         }
 
+        static bool loadRender2DSettings( const sw::string& resourceId )
+        {
+            sw::Render2DSettings settings;
+            return settings.loadFromResource( resourceId );
+        }
+
         static bool loadSpriteClip( const sw::string& resourceId )
         {
             sw::SpriteClipAsset clip;
@@ -158,6 +166,7 @@ namespace
             {           "inputmap",            &isInputMap,                          &loadInputMap},
             {           "material",            &isMaterial,                          &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                        &loadSpriteClip},
+            {           "render2d",    &isRender2DSettings,                  &loadRender2DSettings},
             {      "camerapresets",       &isCameraPresets,  &loadCatalog<sw::CameraPresetCatalog>},
             {          "schedules",           &isSchedules,      &loadCatalog<sw::ScheduleCatalog>},
             {          "abilities",           &isAbilities,       &loadCatalog<sw::AbilityCatalog>},

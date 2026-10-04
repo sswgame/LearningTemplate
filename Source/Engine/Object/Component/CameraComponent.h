@@ -100,6 +100,8 @@ namespace sw
 
         /** @brief 카메라 월드 위치를 반환합니다. */
         float3 getCameraPosition() const { return getWorldPosition(); }
+        /** @brief 카메라가 보는 방향(월드, 정규화)입니다 — 로컬 +Z 를 월드 회전으로 돌린 것으로 뷰 행렬과 같은 축입니다. */
+        float3 getCameraForward() const;
 
     private:
         PROPERTY( Category = "Projection", DisplayName = "Field Of View", Tooltip = "Vertical FOV (radians)", Min = 0.1, Max = 3.14, Meta = "Units=rad" )

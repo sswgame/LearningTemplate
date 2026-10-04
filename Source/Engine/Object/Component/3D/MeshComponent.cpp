@@ -30,6 +30,7 @@ namespace sw
         , _blendMode{ RHIBlendMode::Opaque }
         , _gpuSpinSeed{ 0 }
         , _spriteInstanceData{}
+        , _sortKey{ 0 }
         , _pPrimitiveRegistry{ nullptr }
         , _primitiveIndex{ kInvalidPrimitiveIndex }
         , _bVisible{ SW_TRUE }
@@ -178,6 +179,14 @@ namespace sw
         if ( _spriteInstanceData == data )
             return;
         _spriteInstanceData = data;
+        markRenderStateDirty();
+    }
+
+    void MeshComponent::setSortKey( uint32 sortKey )
+    {
+        if ( _sortKey == sortKey )
+            return;
+        _sortKey = sortKey;
         markRenderStateDirty();
     }
 

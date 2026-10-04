@@ -10,6 +10,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -2164,6 +2165,43 @@ namespace
         pSprite->resolveRenderAssets();
         return pSprite;
     }
+
+    /** @brief 투명 정렬 시험의 장면 — 반투명 에셋 하나 · 큐브 하나를 나눠 쓰는 메시들(같은 배치에 들어가 배치 안 순서가 그대로 보인다). */
+    struct TransparentSortFixture
+    {
+        sw::Scene                    _scene{ "GpuSceneSortingLayers" };
+        sw::shared_ptr<sw::Mesh>     _cube{ sw::MeshUtil::createUnitCube() };
+        sw::shared_ptr<sw::Material> _glass{ sw::Material::create() };
+
+        bool initialize() { return _scene.ensureDefaultCameras() && _glass->loadFromFile( "engine/materials/glassmaterial.material" ); }
+
+        sw::MeshComponent* addMesh( const utf8* pName, const sw::float3& position, uint32 sortKey )
+        {
+            sw::GameObject* pObj = _scene.getObjectManager()->createGameObject( sw::hashed_string( pName ) );
+            if ( pObj == nullptr )
+                return nullptr;
+            sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
+            if ( pMesh == nullptr )
+                return nullptr;
+            pMesh->setMesh( _cube );
+            pMesh->setMaterial( _glass.get() );
+            pMesh->setLocalPosition( position );
+            pMesh->setSortKey( sortKey );
+            return pMesh;
+        }
+
+        /** @brief 투명 인스턴스의 X 를 그리는 순서대로 모읍니다(투명 배치들을 순서대로 펼친 것). */
+        static sw::vector<float32> collectTransparentX( const sw::GpuSceneBuilder& builder )
+        {
+            sw::vector<float32> listX;
+            for ( const sw::GpuMeshBatch& batch : builder.getTransparentBatches() )
+            {
+                for ( uint32 index = 0; index < batch._instanceCount; ++index )
+                    listX.push_back( builder.getInstances()[batch._instanceBase + index]._boundsCenter._x );
+            }
+            return listX;
+        }
+    };
 } // namespace
 
 /**
@@ -2286,4 +2324,103 @@ SW_TEST_CASE( GpuSceneTest, SpriteInstanceBatchEntriesCarryFrameTintAndHide )
     batch.shutdown();
     SW_EXPECT_FALSE( batch.isInitialized() );
     SW_EXPECT_EQUAL( 1u, objects->getPrimitiveRegistry().getSlotCount() );
+}
+
+/**
+ * @brief [GpuSceneTest] 투명 큐는 정렬 레이어 → 레이어 안 순서 → 깊이 순이다 — 먼 Foreground 가 가까운 Default 위에, 더 먼 WorldUI 가 맨 위에 그려진다
+ * @details 정렬 키가 깊이보다 앞선다(유니티 Sorting Layer · Order in Layer). 넷은 같은 메시 · 머티리얼이라 한 배치로 합쳐지고, 배치 안의 인스턴스
+ *          순서가 곧 그리는 순서다(GPU 는 인스턴스 번호로 되돌린다 — instancesort.hlsl). 키 0 은 Default 레이어 · 순서 0 으로 읽힌다.
+ */
+SW_TEST_CASE( GpuSceneTest, SortingLayerOrdersTransparentBeforeDepth )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    TransparentSortFixture fixture;
+    SW_ASSERT_TRUE( fixture.initialize() );
+    const sw::Render2DSettings& settings = sw::Render2DSettings::getActive();
+    uint32                      foregroundKey{ 0 };
+    uint32                      worldUiKey{ 0 };
+    uint32                      defaultMinusOneKey{ 0 };
+    SW_ASSERT_TRUE( settings.resolveSortKey( sw::hashed_string( "Foreground" ), 0, foregroundKey ) );
+    SW_ASSERT_TRUE( settings.resolveSortKey( sw::hashed_string( "WorldUI" ), 0, worldUiKey ) );
+    SW_ASSERT_TRUE( settings.resolveSortKey( sw::hashed_string( "Default" ), -1, defaultMinusOneKey ) );
+
+    // 카메라는 원점에서 -Z 를 본다. 거리만 보면 그리는 순서는 x=4(가장 멂) → 3 → 2 → 1 이다.
+    SW_ASSERT_NOT_NULL( fixture.addMesh( "WorldUiFarthest", sw::float3{ 4.0f, 0.0f, -20.0f }, worldUiKey ) );
+    SW_ASSERT_NOT_NULL( fixture.addMesh( "ForegroundFar", sw::float3{ 3.0f, 0.0f, -10.0f }, foregroundKey ) );
+    SW_ASSERT_NOT_NULL( fixture.addMesh( "DefaultNear", sw::float3{ 2.0f, 0.0f, -2.0f }, sw::Render2DSettings::kDefaultSortKeyPlaceholder ) );
+    SW_ASSERT_NOT_NULL( fixture.addMesh( "DefaultBelowNearer", sw::float3{ 1.0f, 0.0f, -1.0f }, defaultMinusOneKey ) );
+
+    sw::GpuSceneBuilder builder;
+    builder.buildFromScene( &fixture._scene, sw::float3{ 0.0f, 0.0f, 0.0f } );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( builder.getTransparentBatches().size() ) );
+    const sw::vector<float32> listX = TransparentSortFixture::collectTransparentX( builder );
+    SW_ASSERT_EQUAL( 4u, static_cast<uint32>( listX.size() ) );
+    // Default 순서 -1(가장 가까워도 먼저) → Default 0 → Foreground → WorldUI.
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listX[0], 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, listX[1], 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, listX[2], 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, listX[3], 1e-4f );
+}
+
+/**
+ * @brief [GpuSceneTest] 같은 Z 의 두 스프라이트와 월드 UI — 직교 시선 축으로 재면 카메라가 어디로 가도 순서가 그대로다
+ * @details 백로그 함정: "깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다". 거리로 재면 카메라가 왼쪽에 있을 때와
+ *          오른쪽에 있을 때 같은 Z 의 두 스프라이트의 앞뒤가 바뀐다(첫 블록이 그 함정을 보인다). 시선 축(직교 카메라의 Auto)으로 재면 깊이가 같아
+ *          등록 순서로 가르므로 늘 같고, 월드 UI(WorldUI 레이어)는 거리와 상관없이 맨 위다.
+ */
+SW_TEST_CASE( GpuSceneTest, EqualDepthTransparentOrderIsStableUnderViewAxis )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    TransparentSortFixture fixture;
+    SW_ASSERT_TRUE( fixture.initialize() );
+    uint32 worldUiKey{ 0 };
+    SW_ASSERT_TRUE( sw::Render2DSettings::getActive().resolveSortKey( sw::hashed_string( "WorldUI" ), 0, worldUiKey ) );
+
+    SW_ASSERT_NOT_NULL( fixture.addMesh( "SpriteLeft", sw::float3{ -1.0f, 0.0f, 0.0f }, 0 ) );
+    SW_ASSERT_NOT_NULL( fixture.addMesh( "SpriteRight", sw::float3{ 1.0f, 0.0f, 0.0f }, 0 ) );
+    // 월드 UI 는 컴포넌트가 아니라 인스턴스 배치(HP 바 · 데미지 숫자와 같은 길)다. 같은 Z.
+    sw::unique_ptr<sw::MeshInstanceBatch> pWorldUi = sw::make_unique<sw::MeshInstanceBatch>( fixture._cube, fixture._glass.get(), nullptr, 1u );
+    pWorldUi->setWorld( 0, sw::float4x4::createTrs( sw::float3( 0.5f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 1.0f, 1.0f, 1.0f ) ) );
+    pWorldUi->setSortKey( worldUiKey );
+    fixture._scene.getObjectManager()->getPrimitiveRegistry().addInstanceBatch( pWorldUi.get() );
+
+    const sw::float3 cameraLeft{ -6.0f, 0.0f, -8.0f };
+    const sw::float3 cameraRight{ 6.0f, 0.0f, -8.0f };
+
+    // 거리(원근 카메라의 기준)로 재면 같은 Z 의 둘이 카메라를 따라 뒤집힌다 — 2D 직교 카메라에서 이 기준을 쓰면 안 되는 이유.
+    {
+        sw::GpuSceneBuilder distanceBuilder;
+        distanceBuilder.buildFromScene( &fixture._scene, cameraLeft );
+        const sw::vector<float32> leftOrder = TransparentSortFixture::collectTransparentX( distanceBuilder );
+        distanceBuilder.buildFromScene( &fixture._scene, cameraRight );
+        const sw::vector<float32> rightOrder = TransparentSortFixture::collectTransparentX( distanceBuilder );
+        SW_ASSERT_EQUAL( 3u, static_cast<uint32>( leftOrder.size() ) );
+        SW_ASSERT_EQUAL( 3u, static_cast<uint32>( rightOrder.size() ) );
+        SW_EXPECT_FALSE( sw::MathUtil::nearEqual( leftOrder[0], rightOrder[0] ) );
+        SW_EXPECT_NEAR_EQUAL( 0.5f, leftOrder[2], 1e-4f ); // 월드 UI 는 거리로 재도 레이어 덕에 맨 위다
+        SW_EXPECT_NEAR_EQUAL( 0.5f, rightOrder[2], 1e-4f );
+    }
+
+    // 시선 축(+Z)으로 재면 둘의 깊이가 같아 등록 순서(왼쪽 먼저)로 가르고, 카메라를 옮겨도 그대로다.
+    sw::GpuSceneBuilder axisBuilder;
+    axisBuilder.setTransparentSortAxis( sw::Render2DSettings::getActive().computeTransparentSortAxis( true, sw::float3{ 0.0f, 0.0f, 1.0f } ) );
+    const sw::float3 arrCameraPos[] = {
+        cameraLeft, cameraRight, sw::float3{ 0.0f, 3.0f, -8.0f }
+    };
+    for ( const sw::float3& cameraPos : arrCameraPos )
+    {
+        axisBuilder.buildFromScene( &fixture._scene, cameraPos );
+        const sw::vector<float32> order = TransparentSortFixture::collectTransparentX( axisBuilder );
+        SW_ASSERT_EQUAL( 3u, static_cast<uint32>( order.size() ) );
+        SW_EXPECT_NEAR_EQUAL( -1.0f, order[0], 1e-4f );
+        SW_EXPECT_NEAR_EQUAL( 1.0f, order[1], 1e-4f );
+        SW_EXPECT_NEAR_EQUAL( 0.5f, order[2], 1e-4f );
+    }
+
+    // 시선 축에서 뒤에 있는 것(+Z 쪽)은 레이어 · 순서가 같을 때 먼저 그려진다.
+    SW_ASSERT_NOT_NULL( fixture.addMesh( "SpriteBehind", sw::float3{ 3.0f, 0.0f, 2.0f }, 0 ) );
+    axisBuilder.buildFromScene( &fixture._scene, cameraLeft );
+    const sw::vector<float32> withBehind = TransparentSortFixture::collectTransparentX( axisBuilder );
+    SW_ASSERT_EQUAL( 4u, static_cast<uint32>( withBehind.size() ) );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, withBehind[0], 1e-4f );
 }

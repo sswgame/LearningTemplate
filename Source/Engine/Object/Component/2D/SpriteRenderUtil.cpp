@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 
 namespace sw
@@ -35,6 +36,8 @@ namespace sw
 
 namespace sw
 {
+    SW_LOG_CALLER( "SpriteRenderUtil" );
+
     hashed_string SpriteRenderUtil::getSpriteMaterialPath()
     {
         static const hashed_string s_spriteMaterial( "engine/materials/sprite2d.material" );
@@ -68,5 +71,14 @@ namespace sw
         instance->setTextureParameter( hashed_string( "albedoMap" ), texture.c_str() );
         s_mapInstance[key] = instance;
         return instance;
+    }
+
+    uint32 SpriteRenderUtil::resolveSortKey( const hashed_string& layerName, int32 orderInLayer, string_view ownerLabel )
+    {
+        const Render2DSettings& settings = Render2DSettings::getActive();
+        uint32                  sortKey  = 0;
+        if ( settings.resolveSortKey( layerName, orderInLayer, sortKey ) == false )
+            SW_LOG_ERROR( "'%#': unknown sorting layer '%#' - drawn in 'Default' (layers are listed in render2d.xml)", ownerLabel, layerName.c_str() );
+        return sortKey;
     }
 } // namespace sw
