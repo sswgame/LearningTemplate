@@ -217,15 +217,22 @@ namespace sw
         Pose                                                     _scratchPose;
         Pose                                                     _scratchTrackPose;
         Pose                                                     _scratchLayerPose;
+        Pose                                                     _lastBasePose;  ///< 지난 기본 포즈(레이어 전) — 페이드가 끊기면 여기서 이어 섞는다
+        Pose                                                     _carryOverPose; ///< 끊긴 순간의 포즈 — 새 페이드 길이 동안 지금 포즈로 섞여 사라진다
         shared_ptr<const AnimClip>                               _sequencerClip;
         BoneTransform                                            _rootMotionDelta;
         SkeletalMeshComponent*                                   _pUnit;
         float32                                                  _sequencerTime;
         float32                                                  _sequencerWeight;
+        float32                                                  _carryOverElapsed;
+        float32                                                  _carryOverDuration;
+        uint32                                                   _seenInterruptCount; ///< 플레이어의 끊긴 수를 마지막으로 본 값
         PROPERTY( Category = "Animation", DisplayName = "Extract Root Motion", Tooltip = "Move the object by the clip's root motion track" )
         uint8 _bExtractRootMotion : 1;
         PROPERTY( Category = "Animation", DisplayName = "Play On Begin", Tooltip = "Start the initial state at begin play" )
-        uint8                  _bPlayOnBegin : 1;
-        [[maybe_unused]] uint8 _reserved     : 6;
+        uint8                  _bPlayOnBegin       : 1;
+        uint8                  _bLastBasePoseValid : 1;
+        uint8                  _bCarryingOver      : 1;
+        [[maybe_unused]] uint8 _reserved           : 4;
     };
 } // namespace sw
