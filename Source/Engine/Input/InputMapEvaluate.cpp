@@ -335,7 +335,7 @@ namespace sw
                     float32      stickX = stick._x;
                     float32      stickY = stick._y;
 
-                    const float32 inDeadzone  = binding._deadzone;
+                    const float32 inDeadzone  = _stickDeadzoneOverride >= 0.0f ? _stickDeadzoneOverride : binding._deadzone;
                     const float32 outDeadzone = binding._outerDeadzone > inDeadzone ? binding._outerDeadzone : 1.0f;
                     const float32 deadRange   = outDeadzone - inDeadzone;
 

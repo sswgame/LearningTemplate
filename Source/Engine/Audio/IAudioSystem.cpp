@@ -43,6 +43,52 @@ namespace sw
         applyVolume();
     }
 
+    void IAudioSystem::setBusVolume( const hashed_string& bus, float32 volume )
+    {
+        if ( bus == hashed_string( AudioBusNames::kMaster ) )
+        {
+            setMasterVolume( volume );
+            return;
+        }
+        if ( bus == hashed_string( AudioBusNames::kMusic ) )
+        {
+            setMusicVolume( volume );
+            return;
+        }
+        if ( bus == hashed_string( AudioBusNames::kSfx ) )
+        {
+            setSfxVolume( volume );
+            return;
+        }
+
+        const float32 clamped = MathUtil::clamp( volume, 0.0f, 1.0f );
+        for ( AudioBusVolume& busVolume : _listBusVolume )
+        {
+            if ( busVolume._bus == bus )
+            {
+                busVolume._volume = clamped;
+                return;
+            }
+        }
+        _listBusVolume.push_back( AudioBusVolume{ bus, clamped } );
+    }
+
+    float32 IAudioSystem::getBusVolume( const hashed_string& bus ) const
+    {
+        if ( bus == hashed_string( AudioBusNames::kMaster ) )
+            return _masterVolume;
+        if ( bus == hashed_string( AudioBusNames::kMusic ) )
+            return _musicVolume;
+        if ( bus == hashed_string( AudioBusNames::kSfx ) )
+            return _sfxVolume;
+        for ( const AudioBusVolume& busVolume : _listBusVolume )
+        {
+            if ( busVolume._bus == bus )
+                return busVolume._volume;
+        }
+        return 1.0f;
+    }
+
     void IAudioSystem::setMute( bool bMute )
     {
         _bMuted = bMute;

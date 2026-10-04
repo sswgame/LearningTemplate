@@ -10,7 +10,34 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
+
+namespace sw
+{
+    /**
+     * @brief 이름 붙인 볼륨 버스입니다. 세 버스(`master` · `music` · `sfx`)는 기존 볼륨 칸으로 가고, 나머지 이름은 `IAudioSystem` 의 표에 남습니다.
+     * @details 버스 목록은 데이터(사용자 설정 스키마의 `audio.busVolume` 대상)가 정합니다. 재생 API 는 아직 버스를 받지 않으므로(`play` 는
+     *          효과음 · `playMusic` 은 음악) 그 밖의 버스(`voice` · `ambient` · `ui`)는 값만 기억되고 소리에는 닿지 않습니다.
+     */
+    struct AudioBusVolume
+    {
+        hashed_string _bus{};          ///< 버스 이름
+        float32       _volume{ 1.0f }; ///< 버스 볼륨 [0,1]
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 엔진이 아는 버스 이름입니다. 기존 세 볼륨 칸으로 가는 이름입니다. */
+    namespace AudioBusNames
+    {
+        inline constexpr utf8 kMaster[] = "master";
+        inline constexpr utf8 kMusic[]  = "music";
+        inline constexpr utf8 kSfx[]    = "sfx";
+    } // namespace AudioBusNames
+} // namespace sw
 
 namespace sw
 {
@@ -101,14 +128,23 @@ namespace sw
         /** @brief 마스터 보이스에 실제로 걸 볼륨입니다. 음소거면 0 입니다. */
         float32 getEffectiveMasterVolume() const { return _bMuted ? 0.0f : _masterVolume; }
 
+        /**
+         * @brief 이름 붙인 버스의 볼륨을 설정합니다. 0~1 밖의 값은 잘립니다.
+         * @details `master` · `music` · `sfx` 는 위 세 setter 와 같고, 다른 이름은 표(`getBusVolume`)에만 남습니다(`AudioBusVolume` 참고).
+         */
+        void setBusVolume( const hashed_string& bus, float32 volume );
+        /** @brief 버스 볼륨입니다. 설정한 적 없는 버스는 1 입니다. */
+        float32 getBusVolume( const hashed_string& bus ) const;
+
     protected:
         /** @brief 볼륨이나 음소거가 바뀐 뒤 불립니다. 백엔드가 살아 있는 보이스에 반영합니다. */
         virtual void applyVolume() {}
 
     private:
-        float32 _masterVolume{ 1.0f }; /**< 마스터 볼륨 [0,1] 입니다. */
-        float32 _musicVolume{ 1.0f };  /**< 배경음악 볼륨 [0,1] 입니다. */
-        float32 _sfxVolume{ 1.0f };    /**< 효과음 볼륨 [0,1] 입니다. */
-        bool    _bMuted{ false };      /**< 음소거 상태입니다. */
+        float32                _masterVolume{ 1.0f }; /**< 마스터 볼륨 [0,1] 입니다. */
+        float32                _musicVolume{ 1.0f };  /**< 배경음악 볼륨 [0,1] 입니다. */
+        float32                _sfxVolume{ 1.0f };    /**< 효과음 볼륨 [0,1] 입니다. */
+        bool                   _bMuted{ false };      /**< 음소거 상태입니다. */
+        vector<AudioBusVolume> _listBusVolume{};      /**< 세 기본 버스 밖의 버스 볼륨입니다. */
     };
 } // namespace sw
