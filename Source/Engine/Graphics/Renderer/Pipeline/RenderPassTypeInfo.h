@@ -36,6 +36,12 @@ namespace sw
      */
     inline constexpr const utf8* kPassDepthPrepassDefine = "SW_PASS_DEPTH_PREPASS=1";
 
+    /**
+     * @brief 양면 머티리얼의 define 입니다. 머티리얼 변형 PSO 가 후면 컬링을 끕니다(언리얼 머티리얼의 Two Sided).
+     * @details 후면 컬링 패스에만 적용합니다 — 앞면 컬링이나 컬링 없는 패스는 그대로 둡니다.
+     */
+    inline constexpr const utf8* kMaterialTwoSidedDefine = "MATERIAL_TWO_SIDED";
+
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(시험이 리플렉션의 열거자 수와 대조합니다). */
     inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::MeshSkin ) + 1;
 

@@ -151,6 +151,8 @@ cd build/Ninja-Debug/Bin
 - **OpenGL 은 게임 스레드가 메시를 인라인으로 만든다**(`GpuUploadQueue`, 워커 생성 불가) — 렌더 스레드가 컨텍스트를 250 ms 넘게 쥐면(쿠킹 안 된 셰이더를 실시간
   컴파일) `acquireGraphicsContextBlocking timed out` · `createVertexBuffer failed` 가 `[Error]` 로 남고 그 메시는 렌더 스레드가 다음에 만든다. 지형 LOD 교체가 런타임에 메시를
   만드는 첫 사용자라 쿠킹 전 Debug `-gl` 쇼케이스에서 드러났다(쿠킹 뒤 0 건). 기다리는 대신 렌더 스레드로 넘기거나(그 프레임 몫으로) 시간을 렌더 프레임 길이에 맞춘다.
+- **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — 노멀 맵(정점에 탄젠트가 없다) · UV 스크롤 애니메이션 · 셰이딩 시프트 / 림 곱 / 외곽선 두께 텍스처(머티리얼 텍스처 칸이 넷이라 기본 · 그림자 · 발광 · 맷캡만 받는다) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다) · 그림자 패스의 알파 컷오프
+  (`shadowdepth.hlsl` 은 픽셀 스테이지가 없어 머리카락 카드가 사각형 그림자를 드리운다 — 모든 컷오프 머티리얼이 같다).
 - **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것: 반해상도 패스가 읽는 입력의 텍셀 크기(`g_OutlineParams.yz` 는 프레임 텍셀),
   `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
 

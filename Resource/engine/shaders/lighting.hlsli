@@ -72,6 +72,57 @@ float3 swComputeWorldPositionFromDepth( float2 uv, float deviceDepth )
 }
 
 /**
+ * @brief 3D 빛 하나가 이 위치에 닿는 방향과 감쇠를 구합니다. 2D 빛 · 2D 그림자 토막이면 false 입니다.
+ * @param outToLight 표면에서 빛으로 가는 단위 방향
+ * @param outAttenuation 거리 · 원뿔 감쇠(방향광은 1). 세기와 색은 곱하지 않는다
+ * @details 조명 식이 둘(이 파일의 `swShadeLights` · 셀 셰이딩 `toon.hlsl`)이어도 "빛이 어디서 얼마나 오는가" 는 한 벌이다 —
+ *          감쇠를 두 곳에 적으면 같은 점광이 두 머티리얼에 다른 반경으로 닿는다.
+ * @note early-return 이 없다 — GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다(binding.hlsli swComputeMorphElement).
+ */
+bool swComputeLightIncidence( SwLightData light, float3 worldPosition, out float3 outToLight, out float outAttenuation )
+{
+	const uint lightType = (uint)( light.directionType.w + 0.5f );
+	// 2D 빛 · 그림자 토막은 빛 받는 스프라이트(lighting2d.hlsli)의 것이다.
+	const bool bLight3d    = ( lightType <= SW_LIGHT_TYPE_SPOT );
+	float3     toLight     = -light.directionType.xyz;
+	float      attenuation = 1.0f;
+	if ( bLight3d && lightType != SW_LIGHT_TYPE_DIRECTIONAL )
+	{
+		// 점광과 스폿은 거리 감쇠가 같다 — 스폿은 거기에 원뿔을 곱할 뿐이다.
+		const float3 delta    = light.positionRadius.xyz - worldPosition;
+		const float  distance = length( delta );
+		// 반경이 0 이면 나눗셈이 터진다. 반경 밖은 0 이 되어 그 빛이 계산에서 빠진다.
+		const float radius = max( light.positionRadius.w, 1e-4f );
+		toLight            = delta / max( distance, 1e-4f );
+		// 역제곱을 반경에서 자른 형태 — 언리얼의 `InverseSquaredFalloff` 와 같은 모양이다.
+		// 물리적으로 정확한 역제곱만 쓰면 빛이 영원히 닿아 타일 컬링이 의미를 잃는다.
+		const float normalized = saturate( 1.0f - ( distance / radius ) );
+		attenuation            = normalized * normalized;
+
+		if ( lightType == SW_LIGHT_TYPE_SPOT )
+		{
+			// 원뿔 감쇠. `dot(빛이 나아가는 방향, 빛에서 표면으로 가는 방향)` 이 1 에 가까울수록
+			// 원뿔 중심이다. 안쪽 각 안은 1, 바깥 각 밖은 0, 사이는 부드럽게 떨어진다.
+			const float cosAngle = dot( light.directionType.xyz, -toLight );
+			const float cosOuter = light.params.y;
+			const float cosInner = light.params.z;
+			// 안쪽과 바깥쪽이 같으면 0 으로 나눈다 — 그 경우 경계가 칼같이 끊긴다.
+			const float cone = saturate( ( cosAngle - cosOuter ) / max( cosInner - cosOuter, 1e-4f ) );
+			attenuation *= cone * cone;
+		}
+	}
+	outToLight     = toLight;
+	outAttenuation = attenuation;
+	return bLight3d;
+}
+
+/** @brief 이번 패스에 걸린 라이트 수입니다. 라이트 버퍼가 안 걸렸으면 0 이다(키라이트 폴백). */
+uint swComputeLightCount()
+{
+	return ( g_SwLightsIndex == kInvalidIndex ) ? 0u : g_SwLightCount;
+}
+
+/**
  * @brief 이 표면을 씬의 **모든 라이트**로 셰이딩합니다.
  * @param albedo   표면 색 (앰비언트에도 곱해진다)
  * @param worldPosition 월드 위치 — 점광의 거리 감쇠에 쓴다
@@ -85,7 +136,7 @@ float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float 
 	// 앰비언트는 빛 목록과 무관하게 **한 번만** 더한다 — 라이트마다 더하면 빛을 늘릴수록 화면이 바랜다.
 	float3 lit = albedo * g_KeyLightColor.rgb * g_KeyLightColor.a;
 
-	const uint lightCount = ( g_SwLightsIndex == kInvalidIndex ) ? 0u : g_SwLightCount;
+	const uint lightCount = swComputeLightCount();
 	// 3D 빛이 하나도 없으면(빛 목록이 비었거나 2D 빛 · 그림자 토막뿐) 키라이트 하나로 폴백한다 — 2D 빛을 둔 씬의 3D 물체가 까맣게 죽지 않게.
 	bool bAnyLight3d = false;
 
@@ -93,39 +144,11 @@ float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float 
 	{
 		const SwLightData light = g_SwLights[lightIndex];
 
-		const uint lightType = (uint)( light.directionType.w + 0.5f );
-		// 2D 빛 · 그림자 토막은 빛 받는 스프라이트(lighting2d.hlsli)의 것이다.
-		if ( lightType > SW_LIGHT_TYPE_SPOT )
+		float3 toLight;
+		float  attenuation;
+		if ( swComputeLightIncidence( light, worldPosition, toLight, attenuation ) == false )
 			continue;
 		bAnyLight3d = true;
-
-		float3 toLight     = -light.directionType.xyz;
-		float  attenuation = 1.0f;
-		if ( lightType != SW_LIGHT_TYPE_DIRECTIONAL )
-		{
-			// 점광과 스폿은 거리 감쇠가 같다 — 스폿은 거기에 원뿔을 곱할 뿐이다.
-			const float3 delta    = light.positionRadius.xyz - worldPosition;
-			const float  distance = length( delta );
-			// 반경이 0 이면 나눗셈이 터진다. 반경 밖은 0 이 되어 그 빛이 계산에서 빠진다.
-			const float radius = max( light.positionRadius.w, 1e-4f );
-			toLight            = delta / max( distance, 1e-4f );
-			// 역제곱을 반경에서 자른 형태 — 언리얼의 `InverseSquaredFalloff` 와 같은 모양이다.
-			// 물리적으로 정확한 역제곱만 쓰면 빛이 영원히 닿아 타일 컬링이 의미를 잃는다.
-			const float normalized = saturate( 1.0f - ( distance / radius ) );
-			attenuation            = normalized * normalized;
-
-			if ( lightType == SW_LIGHT_TYPE_SPOT )
-			{
-				// 원뿔 감쇠. `dot(빛이 나아가는 방향, 빛에서 표면으로 가는 방향)` 이 1 에 가까울수록
-				// 원뿔 중심이다. 안쪽 각 안은 1, 바깥 각 밖은 0, 사이는 부드럽게 떨어진다.
-				const float cosAngle = dot( light.directionType.xyz, -toLight );
-				const float cosOuter = light.params.y;
-				const float cosInner = light.params.z;
-				// 안쪽과 바깥쪽이 같으면 0 으로 나눈다 — 그 경우 경계가 칼같이 끊긴다.
-				const float cone = saturate( ( cosAngle - cosOuter ) / max( cosInner - cosOuter, 1e-4f ) );
-				attenuation *= cone * cone;
-			}
-		}
 
 		const float normalDotLight = saturate( dot( normal, toLight ) );
 		if ( normalDotLight * attenuation <= 0.0f )

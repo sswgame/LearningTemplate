@@ -384,6 +384,27 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 있는지는 함수 포인터로 판단한다 — `#ifdef GL_CLIP_CONTROL` 같은 토큰은 없어서 그렇게 감싸면 블록이 통째로 빠진다. 안 걸리면 화면이 상하 반전되고
 깊이 정밀도가 절반이 된다. 패리티 시험은 비대칭 장면에서 **그려진 픽셀의 무게중심이 위쪽인지**를 단언한다(평균 · 픽셀 수는 반전에 무관하다).
 
+## 셀 셰이딩(툰) 머티리얼 — `toon.hlsl` · `engine/materials/toon.material`
+
+파라미터 체계는 VRM MToon 1.0(`VRMC_materials_mtoon`)이다. 머티리얼 · 퍼뮤테이션 체계 위에 얹은 머티리얼 셰이더 하나라 따로 도는 경로가 없다.
+
+```text
+shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shadingShift ) × lerp( 1, 그림자, shadowReceive )
+색      = Σ빛 lerp( 그림자색, 기본색, shading ) × 빛 색 · 세기 · 감쇠 + 기본색 × 환경광
+        + ( 프레넬 림 + 맷캡 ) × lerp( 1, 직접광 + 환경광, rimLightingMix ) + 발광 × emissiveStrength
+```
+
+- **빛은 포워드 경로가 보는 목록 그대로다**(방향광 · 점광 · 스폿, 빛마다 같은 계단). 감쇠는 `lighting.hlsli` 의 `swComputeLightIncidence` 하나를 함께 쓴다
+  (조명 식은 둘이어도 "빛이 어디서 얼마나 오는가" 는 한 벌). 그림자 맵은 그림자를 드리우는 빛 하나에만 곱한다.
+- **카메라 위치는 PassCB 에 없다** — 시선은 그 화면 점의 가까운 · 먼 평면 두 점을 `g_InvViewProj` 로 되짚어 구한다(원근 · 직교 모두 맞다).
+- 텍스처 칸은 넷(기본 · 그림자 · 발광 · 맷캡 — 머티리얼 텍스처 슬롯 t5..t8 이 넷이다). 맷캡은 텍스처가 있을 때만 더한다(없으면 흰색이라 화면이 바랜다).
+- 정적 스위치: `AlphaCutoff`(`MATERIAL_ALPHA_CUTOFF` — `alphaCutoff` 아래를 버린다) · `TwoSided`(`MATERIAL_TWO_SIDED`). 반투명은 다른 머티리얼처럼 `blendMode="Transparent"` +
+  `MATERIAL_BLEND_TRANSLUCENT`.
+- **양면은 머티리얼의 성질이다**(언리얼 Two Sided): 머티리얼 변형 PSO(`createMaterialPsoVariant`)가 퍼뮤테이션의 `MATERIAL_TWO_SIDED` 를 보고 후면 컬링을 끈다(후면 컬링
+  패스만 — 그림자 패스도 양면으로 드리운다). 셰이더는 뒷면의 노멀을 `SV_IsFrontFace` 로 뒤집는다(`RenderPassGpuTest.TwoSidedMaterialDrawsBackFaces`).
+- **디퍼드에서는 램버트다** — G버퍼 패스는 표면(기본색 · 노멀)만 적고 계단 셰이딩은 포워드 경로의 것이다.
+- 밝기 단계 수는 `RenderPassGpuTest.ToonShadingHasFewerBrightnessLevelsThanLit` 가 픽셀로 본다(밝기 히스토그램에서 1 % 넘는 칸 수 — 툰 2 · 램버트 34).
+
 ## 씬 드로우 경로 — 정점 풀 · 배치 표 · 인스턴스 슬롯 스트림
 
 같은 PSO·머티리얼(버퍼·CB·텍스처·원소 수)의 연속 배치는 `drawIndirect( args, offset, count )` 한 번(멀티 드로우)이다.

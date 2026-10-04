@@ -417,6 +417,160 @@ namespace
             return true;
         }
     };
+
+    /**
+     * @brief 툰 · 외곽선 시험 무대 — 기본 카메라(원점을 본다), 옆에서 비스듬히 드는 주광, 원점의 구 하나.
+     * @details 머티리얼은 실제 에셋(defaultmaterial · toon)을 읽어 값만 바꾼다(손으로 지은 XML 은 퍼뮤테이션이 빠져 쿠킹된 변형과 맞지 않는다).
+     */
+    struct ToonSphereScene
+    {
+        static constexpr float32 kSphereScale = 1.6f;
+
+        sw::Scene                    _scene{ "ToonSphereScene" };
+        sw::shared_ptr<sw::Material> _material;
+        sw::shared_ptr<sw::Mesh>     _mesh;
+        sw::MeshComponent*           _pSphere{ nullptr };
+
+        /** @brief 기본 머티리얼(forwardlit — 램버트)을 주황색으로 둔 것입니다. */
+        static sw::shared_ptr<sw::Material> makeLitMaterial()
+        {
+            sw::shared_ptr<sw::Material> material = sw::Material::create();
+            if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
+                 material->setParameter( nullptr, sw::hashed_string( "color" ), "0.9 0.5 0.25 1.0" ) == false )
+                material.reset();
+            return material;
+        }
+
+        /**
+         * @brief toon.material 을 같은 주황색 · 어두운 그림자색으로, 계단을 칼같이(toony 1) 둔 것입니다. 림 · 맷캡 · 발광은 없습니다.
+         */
+        static sw::shared_ptr<sw::Material> makeToonMaterial()
+        {
+            sw::shared_ptr<sw::Material> material = sw::Material::create();
+            const bool                   bLoaded  = material->loadFromFile( "engine/materials/toon.material" );
+            const bool                   bSet     = bLoaded && material->setParameter( nullptr, sw::hashed_string( "baseColor" ), "0.9 0.5 0.25 1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "shadeColor" ), "0.35 0.2 0.3 1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "shadingToony" ), "1.0" );
+            return bSet ? material : nullptr;
+        }
+
+        /** @brief 카메라 · 주광 · 구를 채웁니다. 하나라도 못 만들면 false 입니다. */
+        bool populate( const sw::shared_ptr<sw::Material>& material )
+        {
+            _material = material;
+            if ( _material == nullptr || _scene.ensureDefaultCameras() == false )
+                return false;
+            sw::GameObject*                pLightObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
+            sw::DirectionalLightComponent* pLight       = pLightObject != nullptr ? pLightObject->addComponent<sw::DirectionalLightComponent>() : nullptr;
+            if ( pLight == nullptr )
+                return false;
+            // 옆에서 들어 화면의 구 절반쯤이 그늘이다 — 계단 경계가 구 한가운데를 지난다.
+            pLight->setLocalRotation( sw::float3{ 0.0f, 1.3f, 0.0f } );
+            pLight->setIntensity( 1.5f );
+            pLight->setCastShadow( false );
+
+            // 정점 색은 흰색이다 — 생성기의 검증 색(무지개)이 그대로 남으면 계단 위에 색 그라데이션이 얹혀 단계 수를 셀 수 없다.
+            _mesh = sw::MeshUtil::createPrimitive( "sphere", sw::PrimitiveVertexColor::White );
+            if ( _mesh == nullptr )
+                return false;
+            sw::GameObject* pObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "Sphere" ) );
+            _pSphere                = pObject != nullptr ? pObject->addComponent<sw::MeshComponent>() : nullptr;
+            if ( _pSphere == nullptr )
+                return false;
+            _pSphere->setMesh( _mesh );
+            _pSphere->setMaterial( _material.get() );
+            _pSphere->setLocalScale( sw::float3{ kSphereScale, kSphereScale, kSphereScale } );
+            return true;
+        }
+    };
+
+    /**
+     * @brief 그려진 픽셀 마스크 — 모서리 픽셀(배경)과 색 거리가 문턱을 넘는 픽셀입니다. 클리어 색 · 톤매핑과 무관하게 배경을 걷어 냅니다.
+     */
+    struct DrawnMask
+    {
+        static constexpr uint32 kBackgroundDistance = 24;
+
+        sw::vector<uint8> _listDrawn;
+        uint32            _width{ 0 };
+        uint32            _height{ 0 };
+        uint32            _drawnCount{ 0 };
+        sw::float2        _centroid{};
+
+        explicit DrawnMask( const test::RHITestImage& image )
+            : _listDrawn{}
+            , _width{ image.getWidth() }
+            , _height{ image.getHeight() }
+        {
+            // 크기 · 값 생성자는 중괄호로 부르면 원소 둘짜리 목록이 된다 — 본문에서 늘린다.
+            _listDrawn.resize( image.getPixelCount(), SW_FALSE );
+            const test::Rgba8 corner = image.getPixel( 0, 0 );
+            float64           sumX{ 0.0 };
+            float64           sumY{ 0.0 };
+            for ( uint32 y = 0; y < _height; ++y )
+            {
+                for ( uint32 x = 0; x < _width; ++x )
+                {
+                    if ( test::RHITestImage::getColorDistance( image.getPixel( x, y ), corner ) <= kBackgroundDistance )
+                        continue;
+                    _listDrawn[static_cast<size_t>( y ) * _width + x] = SW_TRUE;
+                    ++_drawnCount;
+                    sumX += x;
+                    sumY += y;
+                }
+            }
+            if ( _drawnCount > 0 )
+                _centroid = sw::float2{ static_cast<float32>( sumX / _drawnCount ), static_cast<float32>( sumY / _drawnCount ) };
+        }
+
+        bool isDrawn( uint32 x, uint32 y ) const { return _listDrawn[static_cast<size_t>( y ) * _width + x] == SW_TRUE; }
+    };
+
+    /** @brief 픽셀의 밝기(R · G · B 평균, 0~255)입니다. */
+    uint32 computeLuma( const test::Rgba8& pixel )
+    {
+        return ( static_cast<uint32>( pixel._r ) + pixel._g + pixel._b ) / 3u;
+    }
+
+    /**
+     * @brief 그려진 픽셀의 밝기 단계 수 — 밝기 64 칸 히스토그램에서 그려진 픽셀의 1 % 이상이 든 칸의 수입니다.
+     * @details 셀 셰이딩은 빛 · 그늘 두 단계(+ 경계의 몇 픽셀)라 몇 칸에 몰리고, 램버트는 구 표면을 따라 고르게 퍼져 여러 칸을 채운다.
+     *          특정 색의 픽셀 수가 아니라 분포의 모양을 보므로 클리어 색 · 톤매핑 · 백엔드 반올림에 흔들리지 않는다.
+     */
+    uint32 countBrightnessLevels( const test::RHITestImage& image, const DrawnMask& mask )
+    {
+        constexpr uint32 kBinCount = 64;
+        uint32           arrBin[kBinCount]{};
+        for ( uint32 y = 0; y < mask._height; ++y )
+        {
+            for ( uint32 x = 0; x < mask._width; ++x )
+            {
+                if ( mask.isDrawn( x, y ) )
+                    ++arrBin[computeLuma( image.getPixel( x, y ) ) * kBinCount / 256u];
+            }
+        }
+        uint32 levelCount{ 0 };
+        for ( const uint32 binCount : arrBin )
+        {
+            if ( binCount * 100u >= mask._drawnCount && binCount > 0 )
+                ++levelCount;
+        }
+        return levelCount;
+    }
+
+    /** @brief 씬을 몇 프레임 그리고(첫 프레임은 업로드 전이다) 첨부 하나를 읽습니다. 실패면 false 입니다. */
+    bool renderAndReadAttachment( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene, const utf8* pAttachment, test::RHITestImage& outImage )
+    {
+        constexpr uint32 kFrameCount = 4;
+        for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+        {
+            scene.getObjectManager()->getAnimationSystem().evaluate( 0.0f );
+            if ( renderSceneFrame( renderer, pDevice, scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } ) == false )
+                return false;
+        }
+        return outImage.readTransient( renderer, pAttachment );
+    }
+
 } // namespace
 
 /**
@@ -5479,4 +5633,135 @@ SW_TEST_CASE( RenderPassGpuTest, Light2DFalloffAndShadowOnEveryBackend )
 
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for the 2D light test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 셀 셰이딩(toon.material)의 밝기 단계 수가 램버트(기본 머티리얼)보다 확실히 적다 — 네 백엔드
+ * @details 같은 구 · 같은 색 · 같은 빛을 두 머티리얼로 그리고, 그려진 픽셀(모서리 기준 배경 제거)의 밝기 히스토그램에서 1 % 이상이 든 칸을 센다.
+ *          램버트는 표면을 따라 고르게 퍼지고, 계단을 칼같이(toony 1) 둔 툰은 빛 · 그늘 두 무리에 몰린다. 툰이 단계 넷을 넘거나 램버트의 절반을
+ *          넘으면 계단(linearstep)이 GPU 에 닿지 않은 것이다(머티리얼 버퍼 레이아웃이 어긋나 shadingToony 가 0 으로 읽혀도 그렇다).
+ */
+SW_TEST_CASE( RenderPassGpuTest, ToonShadingHasFewerBrightnessLevelsThanLit )
+{
+    constexpr uint32 kMaxToonLevelCount = 4;
+
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+        ToonSphereScene  litScene;
+        ToonSphereScene  toonScene;
+        SW_ASSERT_TRUE_MSG( litScene.populate( ToonSphereScene::makeLitMaterial() ), ( label + "램버트 무대를 못 만들었다" ).c_str() );
+        SW_ASSERT_TRUE_MSG( toonScene.populate( ToonSphereScene::makeToonMaterial() ), ( label + "툰 무대를 못 만들었다" ).c_str() );
+
+        // 씬마다 렌더러를 따로 둔다(한 렌더러의 씬 빌더는 그리던 씬의 수집 캐시를 든다).
+        sw::FrameRenderer  litRenderer;
+        sw::FrameRenderer  toonRenderer;
+        test::RHITestImage litImage;
+        test::RHITestImage toonImage;
+        const bool         bOk = litRenderer.initialize( device.get() ) && toonRenderer.initialize( device.get() ) &&
+                         renderAndReadAttachment( litRenderer, device.get(), litScene._scene, "SceneColor", litImage ) &&
+                         renderAndReadAttachment( toonRenderer, device.get(), toonScene._scene, "SceneColor", toonImage );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+        if ( bOk == false )
+            continue;
+
+        const DrawnMask litMask( litImage );
+        const DrawnMask toonMask( toonImage );
+        SW_EXPECT_TRUE_MSG( litMask._drawnCount > 2000 && toonMask._drawnCount > 2000,
+                            ( label + "구가 그려지지 않았다 (램버트 " + sw::to_string( litMask._drawnCount ) + " · 툰 " + sw::to_string( toonMask._drawnCount ) + " px)" ).c_str() );
+        if ( litMask._drawnCount <= 2000 || toonMask._drawnCount <= 2000 )
+            continue;
+
+        ++comparedCount;
+        const uint32 litLevelCount  = countBrightnessLevels( litImage, litMask );
+        const uint32 toonLevelCount = countBrightnessLevels( toonImage, toonMask );
+        SW_LOG_INFO( "%#brightness levels lit %# · toon %#", label, litLevelCount, toonLevelCount );
+        SW_EXPECT_TRUE_MSG( toonLevelCount <= kMaxToonLevelCount,
+                            ( label + "툰 구의 밝기 단계가 " + sw::to_string( toonLevelCount ) + " 개다 — 계단이 아니다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( toonLevelCount * 2u < litLevelCount,
+                            ( label + "툰 " + sw::to_string( toonLevelCount ) + " 단계 · 램버트 " + sw::to_string( litLevelCount ) + " 단계 — 툰이 확실히 적지 않다" ).c_str() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the toon shading test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 양면 머티리얼(`MATERIAL_TWO_SIDED`)은 뒷면도 그린다 — 머티리얼 변형 PSO 가 후면 컬링을 끈다(네 백엔드)
+ * @details 카메라를 등진 사각형을 툰 머티리얼로 그린다. 스위치를 끄면 후면 컬링으로 아무것도 안 그려지고, 켜면 사각형이 보인다
+ *          (머리카락 카드 · 치마 같은 VRM 양면 머티리얼이 뒤에서 사라지지 않게).
+ */
+SW_TEST_CASE( RenderPassGpuTest, TwoSidedMaterialDrawsBackFaces )
+{
+    struct QuadCase
+    {
+        bool    _bTwoSided;
+        float32 _yaw;
+    };
+    // [0] 등진 단면 · [1] 등진 양면 · [2] 마주 본 단면(기준 셰이딩)
+    const QuadCase kArrCase[] = {
+        {false, sw::MathUtil::Pi},
+        { true, sw::MathUtil::Pi},
+        {false,             0.0f},
+    };
+    constexpr uint32 kMaxMeanDelta = 6;
+
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+        uint32           arrDrawn[3]{};
+        uint32           arrMeanLuma[3]{};
+        bool             bOk = true;
+        for ( uint32 caseIndex = 0; caseIndex < 3 && bOk; ++caseIndex )
+        {
+            ToonSphereScene              scene;
+            sw::shared_ptr<sw::Material> material = ToonSphereScene::makeToonMaterial();
+            bOk                                   = material != nullptr && scene.populate( material );
+            if ( bOk == false )
+                break;
+            material->setStaticSwitch( sw::hashed_string( "TwoSided" ), kArrCase[caseIndex]._bTwoSided );
+            // 사각형(앞면 +Z)을 반 바퀴 돌리면 카메라(+Z 쪽)를 등진다.
+            scene._mesh = sw::MeshUtil::createRectMesh();
+            scene._pSphere->setMesh( scene._mesh );
+            scene._pSphere->setLocalRotation( sw::float3{ 0.0f, kArrCase[caseIndex]._yaw, 0.0f } );
+
+            sw::FrameRenderer  renderer;
+            test::RHITestImage image;
+            bOk = renderer.initialize( device.get() ) && renderAndReadAttachment( renderer, device.get(), scene._scene, "SceneColor", image );
+            if ( bOk == false )
+                break;
+            const DrawnMask mask( image );
+            uint64          lumaSum{ 0 };
+            for ( uint32 y = 0; y < mask._height; ++y )
+            {
+                for ( uint32 x = 0; x < mask._width; ++x )
+                {
+                    if ( mask.isDrawn( x, y ) )
+                        lumaSum += computeLuma( image.getPixel( x, y ) );
+                }
+            }
+            arrDrawn[caseIndex]    = mask._drawnCount;
+            arrMeanLuma[caseIndex] = mask._drawnCount > 0 ? static_cast<uint32>( lumaSum / mask._drawnCount ) : 0u;
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+        if ( bOk == false )
+            continue;
+        ++comparedCount;
+        SW_LOG_INFO( "%#quad one-sided back %# px · two-sided back %# px (luma %#) · front %# px (luma %#)", label, arrDrawn[0], arrDrawn[1], arrMeanLuma[1],
+                     arrDrawn[2], arrMeanLuma[2] );
+        SW_EXPECT_TRUE_MSG( arrDrawn[0] < 50, ( label + "단면 머티리얼인데 뒷면이 그려졌다 (" + sw::to_string( arrDrawn[0] ) + " px)" ).c_str() );
+        SW_EXPECT_TRUE_MSG( arrDrawn[1] > 2000, ( label + "양면 머티리얼의 뒷면이 그려지지 않았다 (" + sw::to_string( arrDrawn[1] ) + " px)" ).c_str() );
+        // 뒷면은 노멀을 뒤집어 칠한다 — 뒤집은 노멀은 마주 본 사각형의 노멀과 같으므로 밝기도 같아야 한다.
+        const uint32 meanDelta = arrMeanLuma[1] > arrMeanLuma[2] ? arrMeanLuma[1] - arrMeanLuma[2] : arrMeanLuma[2] - arrMeanLuma[1];
+        SW_EXPECT_TRUE_MSG( meanDelta <= kMaxMeanDelta, ( label + "뒷면 셰이딩이 앞면과 다르다 — 노멀을 뒤집지 않았다 (" + sw::to_string( arrMeanLuma[1] ) + " vs " +
+                                                          sw::to_string( arrMeanLuma[2] ) + ")" )
+                                                            .c_str() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the two-sided material test" );
 }

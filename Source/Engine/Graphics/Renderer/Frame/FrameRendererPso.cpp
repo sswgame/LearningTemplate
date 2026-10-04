@@ -188,6 +188,14 @@ namespace sw
         bool bChanged{ false };
         if ( pPermutation != nullptr )
         {
+            // 양면 머티리얼은 후면 컬링을 끈다(언리얼 머티리얼의 Two Sided). 셰이더는 뒷면의 노멀을 뒤집어 칠한다(toon.hlsl).
+            const bool bTwoSided = std::find( pPermutation->_listDefine.begin(), pPermutation->_listDefine.end(), string( kMaterialTwoSidedDefine ) ) !=
+                                   pPermutation->_listDefine.end();
+            if ( bTwoSided && desc._cullMode == RHICullMode::Back )
+            {
+                desc._cullMode = RHICullMode::None;
+                bChanged       = true;
+            }
             // 머티리얼 셰이더를 쓰는 패스만 경로를 갈아탄다(그림자 · 뎁스는 자기 지오메트리 셰이더가 기준이다).
             if ( FrameRendererUtil::usesMaterialShader( passType ) && pPermutation->_shaderPath.empty() == false &&
                  pPermutation->_shaderPath != desc._vertexShaderPath )
