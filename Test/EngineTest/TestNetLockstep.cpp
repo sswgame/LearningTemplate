@@ -7,6 +7,7 @@
 
 #include "GameFramework/Kits/Network/NetLockstep/LockstepSession.h"
 #include "GameFramework/Kits/Network/NetLockstep/RollbackSession.h"
+#include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -126,6 +127,189 @@ namespace
         // 사람처럼 — 몇십 프레임마다 바꾼다.
         const int32 phase = ( frame / ( 17 + player * 6 ) + player ) % 4;
         return static_cast<uint8>( phase == 0 ? 1 : ( phase == 1 ? 0 : ( phase == 2 ? 2 : 3 ) ) );
+    }
+
+    /** @brief 하니스 위 롤백 — 서버가 플레이어 0, 클라이언트는 받은 번호 + 1. 연결되고 @p startDelayTicks 틱 뒤에 시작해 매 틱 한 프레임을 넣는다. */
+    class RollbackNetSimSession final : public INetSimSession
+    {
+    public:
+        RollbackNetSimSession( NetSimWorld& world, const RollbackSettings& settings, int32 startDelayTicks )
+            : _game{}
+            , _session{}
+            , _settings{ settings }
+            , _player{ -1 }
+            , _startDelayTicks{ startDelayTicks }
+            , _localFrame{ 0 }
+        {
+            world.getRouter().addHandler( &_session );
+        }
+
+        void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
+        {
+            (void)deltaTime;
+            NetHost& host = world.getHost();
+            if ( _player < 0 )
+            {
+                const bool bConnected = world.isServer() ? host.getConnectedCount() > 0 : world.isConnected();
+                if ( bConnected == false || _startDelayTicks-- > 0 )
+                    return;
+                _player = world.isServer() ? 0 : host.getClientIndex() + 1;
+                _session.initialize( &host, &_game, 2, _player, _settings );
+            }
+            if ( _session.advanceFrame( scriptInput( _player, _localFrame ) ) )
+                ++_localFrame;
+        }
+
+        TrackedDuel      _game;
+        RollbackSession  _session;
+        RollbackSettings _settings;
+        int32            _player;
+        int32            _startDelayTicks;
+        int32            _localFrame;
+    };
+
+    class RollbackNetSimGame final : public INetSimGame
+    {
+    public:
+        RollbackNetSimGame( const RollbackSettings& settings, int32 clientStartDelayTicks )
+            : _settings{ settings }
+            , _clientStartDelayTicks{ clientStartDelayTicks }
+        {
+        }
+
+        unique_ptr<INetSimSession> createSession( NetSimWorld& world ) override
+        {
+            return make_unique<RollbackNetSimSession>( world, _settings, world.isServer() ? 0 : _clientStartDelayTicks );
+        }
+
+    private:
+        RollbackSettings _settings;
+        int32            _clientStartDelayTicks;
+    };
+
+    /** @brief 흉내 거르개 — 하니스 틱이 [_beginTick, _endTick) 안이면 모두 버린다(한 방향 연속 손실). */
+    struct BurstDropper
+    {
+        const NetSimHarness* _pHarness{ nullptr };
+        uint32               _beginTick{ 0 };
+        uint32               _endTick{ 0 };
+        int32                _droppedCount{ 0 };
+    };
+
+    bool dropDuringBurst( const NetAddress& to, const uint8* pData, int32 size, void* pContext )
+    {
+        (void)to;
+        (void)pData;
+        (void)size;
+        BurstDropper& dropper = *static_cast<BurstDropper*>( pContext );
+        const uint32  tick    = dropper._pHarness->getTick();
+        if ( tick < dropper._beginTick || dropper._endTick <= tick )
+            return false;
+        ++dropper._droppedCount;
+        return true;
+    }
+
+    /** @brief 두 롤백 세션을 하니스에서 돌린 결과 — 양쪽이 확정한 프레임까지의 상태 차이와 되감기 수입니다. */
+    struct RollbackRunResult
+    {
+        vector<int64> _listConfirmedState;
+        int32         _arrFrame[2]{};
+        int32         _arrRollbackCount[2]{};
+        int32         _arrResimulatedFrameCount[2]{};
+        int32         _confirmedFrame{ 0 };
+        int32         _mismatchCount{ 0 };
+        int32         _droppedCount{ 0 };
+    };
+
+    RollbackRunResult collectRollbackRun( const NetSimHarness& harness, int32 clientWorld )
+    {
+        RollbackRunResult            result;
+        const RollbackNetSimSession* arrSession[2] = { static_cast<const RollbackNetSimSession*>( harness.getServer().getSession() ),
+                                                       static_cast<const RollbackNetSimSession*>( harness.findClient( clientWorld )->getSession() ) };
+        for ( int32 index = 0; index < 2; ++index )
+        {
+            result._arrFrame[index]                 = arrSession[index]->_session.getFrame();
+            result._arrRollbackCount[index]         = arrSession[index]->_session.getRollbackCount();
+            result._arrResimulatedFrameCount[index] = arrSession[index]->_session.getResimulatedFrameCount();
+        }
+        result._confirmedFrame                 = std::min( arrSession[0]->_session.getConfirmedFrame(), arrSession[1]->_session.getConfirmedFrame() );
+        const map<int32, int64>& serverHistory = arrSession[0]->_game._game._mapHistory;
+        const map<int32, int64>& clientHistory = arrSession[1]->_game._game._mapHistory;
+        for ( int32 frame = 0; frame < result._confirmedFrame; ++frame )
+        {
+            const auto serverIter = serverHistory.find( frame );
+            const auto clientIter = clientHistory.find( frame );
+            const bool bSame      = serverIter != serverHistory.end() && clientIter != clientHistory.end() && serverIter->second == clientIter->second;
+            result._mismatchCount += bSame ? 0 : 1;
+            result._listConfirmedState.push_back( serverIter != serverHistory.end() ? serverIter->second : -1 );
+        }
+        return result;
+    }
+
+    /** @brief 클라이언트 → 서버가 틱 [120, 150) 동안 모두 사라지는 회선(그 밖은 지연 30 ms · 손실 2 %)에서 720 틱을 돌립니다. */
+    RollbackRunResult runRollbackBurstLoss( uint32 seed )
+    {
+        RollbackNetSimGame game( RollbackSettings{}, 0 );
+        NetSimHarness      harness;
+        NetSimSettings     settings;
+        settings._seed                       = seed;
+        settings._hostSettings._sendInterval = 1.0 / 60.0;
+        if ( harness.initialize( settings, &game ) == false )
+            return RollbackRunResult{};
+        BurstDropper dropper;
+        dropper._pHarness  = &harness;
+        dropper._beginTick = 120;
+        dropper._endTick   = 150;
+        NetSimLinkConditions link;
+        link._downstream._latency          = 0.03;
+        link._downstream._lossRate         = 0.02f;
+        link._upstream                     = link._downstream;
+        link._upstream._pDropFilter        = &dropDuringBurst;
+        link._upstream._pDropFilterContext = &dropper;
+        const int32 client                 = harness.addClient( link );
+        harness.stepTicks( 720 );
+        RollbackRunResult result = collectRollbackRun( harness, client );
+        result._droppedCount     = dropper._droppedCount;
+        return result;
+    }
+    /** @brief 프레임마다 쓴 입력을 남기는 게임입니다(되감기는 덮어쓴다). */
+    class InputRecordingGame final : public IRollbackGame
+    {
+    public:
+        void saveState( vector<uint8>& outStateBuffer ) override
+        {
+            outStateBuffer.assign( 1, static_cast<uint8>( _frame ) );
+        }
+
+        void loadState( const vector<uint8>& stateBuffer ) override { _frame = stateBuffer[0]; }
+
+        void advanceFrame( const vector<uint8>& listInput, bool bResimulating ) override
+        {
+            (void)bResimulating;
+            _mapInput[_frame++] = listInput;
+        }
+
+        int32                     _frame{ 0 };
+        map<int32, vector<uint8>> _mapInput{};
+    };
+
+    /** @brief 플레이어 1 의 롤백 입력 메시지 — 확인 · 이점은 비우고 [@p first, @p first + 입력 수) 프레임을 싣는다. */
+    void sendRollbackInput( RollbackSession& session, int32 first, const vector<uint8>& listInput )
+    {
+        NetMessageWriter writer;
+        BitWriter&       body = writer.begin( NetLockstepMessage::kRollbackInput );
+        body.writeVarUint( 1 );
+        body.writeVarUint( 0 );
+        for ( int32 player = 0; player < 2; ++player )
+        {
+            body.writeVarUint( 0 );
+            body.writeVarInt( 0 );
+        }
+        body.writeVarUint( static_cast<uint64>( first ) );
+        body.writeVarUint( listInput.size() );
+        for ( const uint8 input : listInput )
+            body.writeBits( input, 8 );
+        SW_EXPECT_TRUE( NetHandleResult::Handled == session.handleMessage( 0, writer.getBytes() ) );
     }
 } // namespace
 
@@ -259,4 +443,72 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
         (void)arrSession[0].advanceFrame( 0 );
     SW_EXPECT_TRUE( arrSession[0].getFrame() - before <= settings._maxPrediction + 2 );
     SW_EXPECT_TRUE( arrSession[0].getStallCount() > 0 );
+}
+
+/**
+ * @brief [NetLockstepTest] 클라이언트 → 서버가 30 틱 동안 모두 사라져도 롤백이 멈추지 않고 양쪽 확정 상태가 같다 — 같은 씨앗이면 되감기 수까지 같은 실행
+ * @details 보내는 쪽은 상대가 확인한 다음 프레임부터 싣는다. "최근 N 개" 만 겹쳐 보내면 연속 손실이 N 을 넘을 때 빈 프레임이 다시 오지 않아
+ *          서버의 확인 프레임이 멈추고, 두 쪽 모두 최대 예측에서 영원히 멈춘다.
+ */
+SW_TEST_CASE( NetLockstepTest, RollbackSurvivesBurstLossLongerThanRedundancy )
+{
+    const RollbackRunResult first = runRollbackBurstLoss( 7u );
+    SW_EXPECT_TRUE( first._droppedCount > 20 );
+    SW_EXPECT_TRUE_MSG( first._arrFrame[0] > 600 && first._arrFrame[1] > 600, "both sides keep advancing after the burst" );
+    SW_EXPECT_TRUE( first._confirmedFrame > 550 );
+    SW_EXPECT_EQUAL( 0, first._mismatchCount );
+
+    const RollbackRunResult second = runRollbackBurstLoss( 7u );
+    for ( int32 index = 0; index < 2; ++index )
+    {
+        SW_EXPECT_EQUAL( first._arrFrame[index], second._arrFrame[index] );
+        SW_EXPECT_EQUAL( first._arrRollbackCount[index], second._arrRollbackCount[index] );
+        SW_EXPECT_EQUAL( first._arrResimulatedFrameCount[index], second._arrResimulatedFrameCount[index] );
+    }
+    SW_EXPECT_TRUE( first._listConfirmedState == second._listConfirmedState );
+}
+
+/**
+ * @brief [NetLockstepTest] 늦게 시작한 상대보다 앞선 쪽이 시간 동기로 쉬어 두 프레임이 `_maxFrameAdvantage` 안으로 모이고, 확정 상태는 같다
+ * @details 앞선 쪽이 쉬지 않으면 최대 예측 가까이 앞선 채로 굳어, 상대 입력이 바뀔 때마다 그만큼 되감는다.
+ */
+SW_TEST_CASE( NetLockstepTest, RollbackLeadingPeerWaitsForTheOther )
+{
+    RollbackNetSimGame game( RollbackSettings{}, 12 );
+    NetSimHarness      harness;
+    NetSimSettings     settings;
+    settings._hostSettings._sendInterval = 1.0 / 60.0;
+    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    NetSimLinkConditions link;
+    link._upstream._latency = 0.05;
+    link._downstream        = link._upstream;
+    const int32 client      = harness.addClient( link );
+    harness.stepTicks( 600 );
+
+    const RollbackSession& server = static_cast<const RollbackNetSimSession*>( harness.getServer().getSession() )->_session;
+    const RollbackSession& other  = static_cast<const RollbackNetSimSession*>( harness.findClient( client )->getSession() )->_session;
+    const int32            lead   = server.getFrame() - other.getFrame();
+    SW_EXPECT_TRUE( server.getTimeSyncWaitCount() > 0 );
+    SW_EXPECT_TRUE_MSG( -3 <= lead && lead <= RollbackSettings{}._maxFrameAdvantage + 1, "the leading side waited until the two frames met" );
+    SW_EXPECT_TRUE( other.getFrame() > 500 );
+    const RollbackRunResult result = collectRollbackRun( harness, client );
+    SW_EXPECT_TRUE( result._confirmedFrame > 480 );
+    SW_EXPECT_EQUAL( 0, result._mismatchCount );
+}
+
+/**
+ * @brief [NetLockstepTest] 받는 창 [지금 − 64, 지금 + 64) 밖의 롤백 입력은 버린다 — 고리 칸(프레임 % 128)이 같은 먼 프레임이 받아 둔 입력을 덮지 않는다
+ */
+SW_TEST_CASE( NetLockstepTest, RollbackIgnoresInputsOutsideTheFrameWindow )
+{
+    InputRecordingGame game;
+    RollbackSession    session;
+    session.initialize( nullptr, &game, 2, 0, RollbackSettings{} );
+    sendRollbackInput( session, 2, vector<uint8>{ 2, 3, 4, 5 } );
+    sendRollbackInput( session, 3 + RollbackSession::kHistorySize, vector<uint8>{ 9 } );
+    for ( int32 frame = 0; frame < 6; ++frame )
+        SW_EXPECT_TRUE( session.advanceFrame( 0 ) );
+    SW_EXPECT_EQUAL( 5, session.getConfirmedFrame() );
+    for ( int32 frame = 2; frame < 6; ++frame )
+        SW_EXPECT_EQUAL( frame, static_cast<int32>( game._mapInput[frame][1] ) );
 }
