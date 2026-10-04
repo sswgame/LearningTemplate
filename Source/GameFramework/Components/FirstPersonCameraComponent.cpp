@@ -145,7 +145,7 @@ namespace sw
         if ( pCamera != nullptr )
         {
             // 1인칭은 카메라 모드(`CameraPresetMode::FirstPerson`)다 — 눈 자리와 시점을 대상으로 넣어 디렉터 · 데이터 프리셋과 같은 계산으로 푼다.
-            // 시점의 피치는 위가 + 이고 모드의 피치는 아래가 + 다.
+            // 시점의 피치는 위가 + 이고 모드의 피치는 아래가 + 다. 눈 자리는 카메라의 부모 공간 값이라 포즈도 로컬로 쓴다(부모가 움직이면 따라간다).
             CameraPresetDef def;
             def._view._mode         = CameraPresetMode::FirstPerson;
             def._lens._fieldOfViewY = _fieldOfViewY;
@@ -155,7 +155,7 @@ namespace sw
             target._focus = _eyePosition;
             target._yaw   = _look.getYaw();
             target._pitch = -_look.getPitch();
-            CameraPoseUtil::applyToCamera( *pCamera, evaluatePreset( def, target ) );
+            CameraPoseUtil::applyToCameraLocal( *pCamera, evaluatePreset( def, target ) );
         }
         MeshComponent* pViewModel = findViewModel();
         if ( pViewModel == nullptr || pCamera == nullptr )

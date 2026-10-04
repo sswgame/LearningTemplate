@@ -4,6 +4,7 @@
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -118,4 +119,54 @@ SW_TEST_CASE( FirstPersonCameraTest, ComponentDrivesItsCameraAndViewModel )
     pRig->applyToCamera();
     SW_EXPECT_TRUE( pRig->getLook().getYaw() > yawBefore );
     SW_EXPECT_NEAR_EQUAL( pRig->getLook().getYaw(), pCamera->getLocalRotation()._y, 1.0e-5f );
+}
+
+/**
+ * @brief [FirstPersonCameraTest] 눈 자리는 카메라의 부모 공간이다 — 부모(몸)를 옮기고 돌리면 카메라는 부모 × 눈 자리, 손에 든 모델은 그 카메라 앞 오프셋에 있다
+ */
+SW_TEST_CASE( FirstPersonCameraTest, CameraFollowsItsParentWhenTheEyeIsLocal )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Rider" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SceneComponent*  pBody      = pObject->addComponent<SceneComponent>(); // 첫 씬 컴포넌트 — 카메라 · 손에 든 모델의 부모
+    CameraComponent* pCamera    = pObject->addComponent<CameraComponent>();
+    MeshComponent*   pViewModel = pObject->addComponent<MeshComponent>();
+    SW_ASSERT_TRUE( pBody != nullptr && pCamera != nullptr && pViewModel != nullptr );
+    pViewModel->setComponentName( hashed_string( "ViewWeapon" ) );
+    FirstPersonCameraComponent* pRig = pObject->addComponent<FirstPersonCameraComponent>();
+    SW_ASSERT_NOT_NULL( pRig );
+    if ( pCamera->getParent() != pBody )
+        SW_ASSERT_TRUE( pCamera->attachToComponent( pBody, AttachRule::KeepRelative ) );
+    manager.beginPlay();
+
+    const float3 offset{ 0.16f, -0.15f, 0.42f };
+    pRig->setViewModel( hashed_string( "ViewWeapon" ), offset, MathUtil::Pi );
+    pBody->setLocalPosition( float3{ 5.0f, 0.0f, 3.0f } );
+    pBody->setLocalRotation( float3{ 0.0f, MathUtil::HalfPi, 0.0f } ); // 몸이 +X 를 본다
+    const float3 eye{ 0.0f, 1.6f, 0.2f };
+    pRig->setAngles( 0.0f, 0.0f );
+    pRig->setEyePosition( eye );
+
+    // 카메라 월드 = 몸 월드 × 눈 자리 — 눈의 앞 0.2 는 몸이 돈 쪽(+X)으로 간다.
+    const float3 expectedEye = float3::transform( eye, pBody->getWorldMatrix() );
+    SW_EXPECT_NEAR_EQUAL( expectedEye._x, pCamera->getWorldPosition()._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( expectedEye._y, pCamera->getWorldPosition()._y, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( expectedEye._z, pCamera->getWorldPosition()._z, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 5.2f, pCamera->getWorldPosition()._x, 1.0e-4f );
+    // 손에 든 모델 = 카메라 월드 × 오프셋, 총구(-Z)는 카메라 앞(+X)을 본다.
+    const float4x4 viewModelWorld = pViewModel->getWorldMatrix();
+    const float3   expectedModel  = float3::transform( offset, pCamera->getWorldMatrix() );
+    SW_EXPECT_NEAR_EQUAL( expectedModel._x, viewModelWorld.getTranslation()._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( expectedModel._y, viewModelWorld.getTranslation()._y, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( expectedModel._z, viewModelWorld.getTranslation()._z, 1.0e-4f );
+    float3 muzzle = float3::transformVector( float3{ 0.0f, 0.0f, -1.0f }, viewModelWorld );
+    muzzle        = muzzle * ( 1.0f / muzzle.getLength() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, muzzle._x, 1.0e-4f );
+
+    // 몸이 다시 움직이면 다음에 둘 때 카메라도 따라간다.
+    pBody->setLocalPosition( float3{ -2.0f, 0.0f, 0.0f } );
+    pRig->setEyePosition( eye );
+    SW_EXPECT_NEAR_EQUAL( -2.0f + 0.2f, pCamera->getWorldPosition()._x, 1.0e-4f );
+    manager.endPlay();
 }

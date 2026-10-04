@@ -62,7 +62,7 @@ namespace sw
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
 
-        /** @brief 눈 자리를 넣고 카메라 · 뷰 모델을 바로 다시 둡니다(같은 오브젝트의 게임 컴포넌트가 걷고 난 뒤 부른다). */
+        /** @brief 눈 자리(카메라의 부모 공간 — 루트 카메라면 월드)를 넣고 카메라 · 뷰 모델을 바로 다시 둡니다(같은 오브젝트의 게임 컴포넌트가 걷고 난 뒤 부른다). */
         void          setEyePosition( const float3& eyePosition );
         const float3& getEyePosition() const { return _eyePosition; }
         /** @brief 시점을 정합니다(라디안, 피치는 위가 +). 카메라를 바로 다시 둔다. */
