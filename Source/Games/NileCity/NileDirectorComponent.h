@@ -1,0 +1,174 @@
+/**
+ * @file NileDirectorComponent.h
+ * @brief NileCity 의 규칙을 돌리는 컴포넌트 — 도시 시뮬레이션 · 자동 계획 · 마우스 짓기/허물기 · 속도 · 달 로그, 그리고 땅 · 도로 · 건물 · 일꾼(프리팹) 스폰 지시입니다.
+ *
+ * @details 언리얼 GameMode/GameState 의 자리입니다. 씬에 하나 둡니다. 규칙(노동 · 순회 일꾼 · 물자 사슬 · 집 진화 · 범람)은 키트의 `CitySimulation`,
+ *          땅 모양과 자동 계획은 `NileCityPlanner` 가 맡고, 여기는 무엇을 언제 짓는지와 그 모습(프리팹)을 어디에 세우는지를 압니다.
+ *          모습을 매 프레임 맞추는 일은 뷰 컴포넌트(`NileBuildingComponent` · `NileWalkerComponent` · `NileCursorComponent`)가 이 컴포넌트를 **읽기만** 해서 합니다.
+ *
+ *          틱 규칙: 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고, 뷰 · 카메라 리그는 `PostUpdate` 에서 읽습니다(그룹은 차례로 돈다).
+ *          스폰은 틱 안에서 할 수 없으므로 바뀐 도로 칸 · 건물 칸을 쌓아 두고 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세웁니다. 효과음도 그때 냅니다.
+ */
+#pragma once
+#include "Core/Common/Types.h"
+#include "Core/Container/GameObjectHandle.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
+
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
+#include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
+
+#include "Games/NileCity/NileCityPlanner.h"
+
+namespace sw
+{
+    class GameObject;
+    class GameObjectManager;
+    class InputManager;
+    class Material;
+    class MaterialInstance;
+    class Mesh;
+    class MeshComponent;
+
+    /**
+     * @class NileDirectorComponent
+     * @brief 도시 한 판입니다. 플레이가 시작되면 도시 데이터를 읽고 땅을 칠한 새 도시를 엽니다.
+     * @details 도시는 핫 리로드에서 처음부터 다시 섭니다(PROPERTY 가 아닌 런타임 상태). 세운 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
+     */
+    REFLECT( Category = "CityBuilder", DisplayName = "Nile Director", Tooltip = "Runs the Nile city simulation, the auto plan and mouse building, and spawns the city views" )
+    class NileDirectorComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        NileDirectorComponent();
+        virtual ~NileDirectorComponent() override;
+
+        void onBeginPlay() override;
+        void onEndPlay() override;
+        void onTick( float32 deltaTime ) override;
+
+        /** @brief 세운 런타임 오브젝트를 모두 지웁니다(상태 저장 전). 도시는 그대로이고 다음 틱이 그 상태대로 다시 세운다. */
+        void despawnViews();
+
+        // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
+        const CitySimulation& getCity() const { return _city; }
+        /** @brief 커서가 땅 위에 있으면 true 이고 @p outTile · @p outSize 에 칸과 고른 것의 크기(칸 수)를 줍니다. */
+        bool findCursor( int2& outTile, int32& outSize ) const;
+        /** @brief 일꾼 종류 · 서비스의 모습입니다. 아직 없으면 비어 있다. */
+        const shared_ptr<MaterialInstance>& findWalkerLook( const CityWalker& walker ) const;
+        /**
+         * @brief 핸들의 오브젝트에 붙은 디렉터입니다. 없으면 nullptr 입니다.
+         * @details 뷰는 이것을 매 프레임 부르고 포인터를 들지 않습니다. 매니저 조회는 잠그지 않습니다(틱 중 여러 워커가 불러도 된다).
+         */
+        static const NileDirectorComponent* resolveDirector( const GameObjectManager& manager, GameObjectHandle director );
+
+    private:
+        /** @brief 시뮬레이션 건물 칸 하나의 모습입니다(같은 번호). 칸이 다른 건물로 다시 쓰이면 오브젝트를 바꿔 세운다. */
+        struct BuildingSlot
+        {
+            GameObjectHandle       _object{};
+            const CityBuildingDef* _pShownDef{ nullptr }; ///< 세웠거나 세울 건물(nullptr 이면 없다) — 틱이 쓰고 틱 뒤에 맞춘다
+        };
+
+        /** @brief 색 하나의 머티리얼 인스턴스입니다(같은 색은 나눠 쓴다 — 배치 키가 인스턴스다). */
+        struct ColorLook
+        {
+            shared_ptr<MaterialInstance> _instance{};
+            float4                       _color{};
+        };
+
+    private:
+        [[nodiscard]] bool loadData();
+        /** @brief 쌓인 스폰 · 효과음을 틱 뒤 한 번으로 미룹니다(틱 밖이면 바로). */
+        void scheduleFlush();
+        /** @brief 쌓인 요청을 세웁니다. 틱 밖(게임 스레드)에서만 불린다. */
+        void flushPending();
+        /** @brief 처음(또는 걷은 뒤) — 땅 · 모든 도로 · 모든 건물 · 일꾼 풀. */
+        void spawnAll( GameObjectManager& manager );
+        void spawnTerrain( GameObjectManager& manager );
+        void spawnRoad( GameObjectManager& manager, int32 tileIndex );
+        void spawnBuilding( GameObjectManager& manager, int32 buildingIndex );
+        void spawnWalkers( GameObjectManager& manager, size_t count );
+        void destroySpawned( GameObjectManager& manager, GameObjectHandle& inoutHandle );
+        /** @brief 프리팹을 세웁니다. 읽지 못하면 nullptr 입니다(세운 것은 부르는 쪽이 목록에 든다). */
+        GameObject* spawnPrefab( GameObjectManager& manager, const string& prefabPath, const utf8* pName );
+        /** @brief 일꾼 종류 · 서비스마다 모습 인스턴스를 만듭니다(뷰가 워커에서 고른다). */
+        void prepareWalkerLooks( Material* pMaterial );
+        /** @brief 건물 모델을 미리 잡습니다(집 단계가 바뀔 때 뷰가 워커에서 파일을 읽지 않게). */
+        void preloadModels();
+        /** @brief 메시의 머티리얼에 색을 입힌 인스턴스를 겁니다(게임 스레드). */
+        void applyColorLook( MeshComponent& mesh, const float4& color );
+        /** @brief 색 하나의 인스턴스를 찾거나 만듭니다(게임 스레드). */
+        shared_ptr<MaterialInstance> acquireColorLook( Material* pMaterial, const float4& color );
+        void                         playSound( const utf8* pPath );
+
+        void updateInput( float32 deltaTime, const InputManager& input );
+        void updateCursor( const InputManager& input );
+        void placeSelected();
+        void drainEvents();
+        /** @brief 시뮬레이션과 세운 모습을 견줘 바뀐 도로 칸 · 건물 칸 · 모자란 일꾼 수를 쌓습니다(PrePhysics). */
+        void               collectViewChanges();
+        void               logStatus() const;
+        const utf8*        getToolName() const;
+        bool               isAutoPlanOn() const;
+        GameObjectManager* getObjectManager() const;
+
+    private:
+        PROPERTY( Category = "Data", DisplayName = "City Data", AssetPath, Tooltip = "City catalog XML" )
+        string _cityDataPath;
+        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
+        string _groundPrefab;
+        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
+        string _roadPrefab;
+        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "Building drawn with a kit model (palette material)" )
+        string _modelBuildingPrefab;
+        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "Building drawn as a coloured block (fields, statues)" )
+        string _blockBuildingPrefab;
+        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
+        string _walkerPrefab;
+        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the OrthoCameraRigComponent the mouse cursor is picked through" )
+        GameObjectHandle _cameraRig;
+        PROPERTY( Category = "City", DisplayName = "Starting Money", Min = 0 )
+        int32 _startingMoney;
+        PROPERTY( Category = "City", DisplayName = "Service Duration", Tooltip = "Seconds a walker's service lasts at a house", Min = 1.0, Meta = "Units=s" )
+        float32 _serviceDuration;
+        PROPERTY( Category = "City", DisplayName = "Auto Play", Tooltip = "Follow the auto plan (-gv_nileAutoPlay=1 also turns it on)" )
+        bool _bAutoPlay;
+
+        CityCatalog                          _catalog;
+        CitySimulation                       _city;
+        NileCityPlanner                      _planner;
+        vector<CityEvent>                    _listEvent;
+        vector<const CityBuildingDef*>       _listTool; ///< 0 은 도로(nullptr)
+        vector<GameObjectHandle>             _listTerrainObject;
+        vector<GameObjectHandle>             _listRoadObject; ///< 칸마다(도로가 아니면 무효) — 틱 뒤에만 바뀐다
+        vector<uint8>                        _listRoadShown;  ///< 칸마다 세웠거나 세울 도로 — 틱이 쓴다
+        vector<BuildingSlot>                 _listBuildingSlot;
+        vector<GameObjectHandle>             _listWalkerObject;
+        vector<int32>                        _listPendingRoad;     ///< 세우거나 지울 도로 칸(틱 뒤)
+        vector<int32>                        _listPendingBuilding; ///< 다시 세울 건물 칸(틱 뒤)
+        vector<const utf8*>                  _listPendingSound;    ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
+        vector<ColorLook>                    _listColorLook;
+        vector<shared_ptr<MaterialInstance>> _listWalkerLook;    ///< 일꾼 종류 × 16 + 서비스
+        vector<shared_ptr<Mesh>>             _listModelMesh;     ///< 건물 모델을 쥐고 있는다(집 단계가 바뀔 때 뷰가 워커에서 읽지 않게)
+        size_t                               _wantedWalkerCount; ///< 세울 일꾼 풀 크기(틱이 쓴다)
+        int2                                 _cursorTile;
+        float32                              _timeScale;
+        int32                                _selectedTool;
+        int32                                _monthCount;
+        int32                                _evolvedCount; ///< 이번 달 오른 집 수(달 끝 로그)
+        uint8                                _bCursorValid    : 1;
+        uint8                                _bPaused         : 1;
+        uint8                                _bAutoPlanToggle : 1; ///< P 로 켠 자동 계획(PROPERTY · 전역 변수와 별개)
+        uint8                                _bLoaded         : 1;
+        uint8                                _bViewsSpawned   : 1; ///< 모습이 서 있다(걷으면 다음 틱이 다시 세운다)
+        uint8                                _bFlushScheduled : 1;
+        uint8                                _reserved        : 2;
+    };
+} // namespace sw

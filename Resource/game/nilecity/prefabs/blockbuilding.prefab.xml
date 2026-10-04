@@ -1,0 +1,21 @@
+<Prefab formatVersion="0" name="NileBlock">
+	<GameObject _schemaVersion="0" _name="NileBlock" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="1,1,1"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="None"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="false" />
+			<NileBuildingComponent _componentName="NileBuildingComponent" _bActive="true" _director="0" _buildingIndex="-1" />
+		</_listComponent>
+	</GameObject>
+</Prefab>
