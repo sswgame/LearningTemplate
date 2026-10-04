@@ -59,6 +59,9 @@
     "stb",
     "cgltf",
     "meshoptimizer",
+    "joltphysics",
+    "box2d",
+    "nfrechette-acl",
     "zlib",
     "lz4",
     "zstd"

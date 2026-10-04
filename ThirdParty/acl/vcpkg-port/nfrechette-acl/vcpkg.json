@@ -1,0 +1,10 @@
+{
+  "name": "nfrechette-acl",
+  "version": "2.1.0",
+  "description": "Animation Compression Library — header-only skeletal animation compression",
+  "homepage": "https://github.com/nfrechette/acl",
+  "license": "MIT",
+  "dependencies": [
+    "nfrechette-rtm"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "nfrechette-rtm",
+  "version": "2.2.0",
+  "description": "Realtime Math — header-only SIMD math for animation (ACL dependency)",
+  "homepage": "https://github.com/nfrechette/rtm",
+  "license": "MIT"
+}
