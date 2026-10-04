@@ -450,6 +450,89 @@ SW_TEST_CASE( InputMapTest, BindingKindTableCoversEveryKind )
     SW_EXPECT_TRUE( sw::BindingKinds::fromName( "" ) == sw::BindingKind::Count );
 }
 
+namespace
+{
+    /** @brief 두 맵의 바인딩이 같은지 봅니다 — 액션 이름 · 순서, 바인딩마다 종류 · 레이어 · 트리거 · 슬롯 · 스틱 · 데드존 · 응답 곡선. */
+    void expectSameBindings( const sw::InputMap& expected, const sw::InputMap& actual )
+    {
+        SW_ASSERT_EQUAL( expected.getActionNames().size(), actual.getActionNames().size() );
+        for ( size_t actionIndex = 0; actionIndex < expected.getActionNames().size(); ++actionIndex )
+        {
+            const sw::hashed_string& action = expected.getActionNames()[actionIndex];
+            SW_EXPECT_TRUE_MSG( actual.getActionNames()[actionIndex] == action, action.c_str() );
+            SW_ASSERT_EQUAL( expected.getBindingCount( action ), actual.getBindingCount( action ) );
+            for ( uint32 bindIndex = 0; bindIndex < expected.getBindingCount( action ); ++bindIndex )
+            {
+                const sw::ActionBinding* pExpected = expected.getBinding( action, bindIndex );
+                const sw::ActionBinding* pActual   = actual.getBinding( action, bindIndex );
+                SW_ASSERT_NOT_NULL( pExpected );
+                SW_ASSERT_NOT_NULL( pActual );
+                SW_EXPECT_TRUE_MSG( pExpected->_kind == pActual->_kind, action.c_str() );
+                SW_EXPECT_TRUE_MSG( pExpected->_layer == pActual->_layer, action.c_str() );
+                SW_EXPECT_TRUE_MSG( pExpected->_trigger == pActual->_trigger, action.c_str() );
+                SW_EXPECT_TRUE_MSG( pExpected->_stick == pActual->_stick, action.c_str() );
+                SW_EXPECT_NEAR_EQUAL( pExpected->_deadzone, pActual->_deadzone, 1.0e-5f );
+                SW_EXPECT_NEAR_EQUAL( pExpected->_outerDeadzone, pActual->_outerDeadzone, 1.0e-5f );
+                SW_EXPECT_NEAR_EQUAL( pExpected->_responseExponent, pActual->_responseExponent, 1.0e-5f );
+                for ( uint32 slotIndex = 0; slotIndex < 4; ++slotIndex )
+                {
+                    SW_EXPECT_TRUE_MSG( pExpected->_arrSlot[slotIndex]._deviceKind == pActual->_arrSlot[slotIndex]._deviceKind, action.c_str() );
+                    SW_EXPECT_EQUAL( static_cast<int32>( pExpected->_arrSlot[slotIndex]._deviceIndex ), static_cast<int32>( pActual->_arrSlot[slotIndex]._deviceIndex ) );
+                    SW_EXPECT_EQUAL( pExpected->_arrSlot[slotIndex]._controlIndex, pActual->_arrSlot[slotIndex]._controlIndex );
+                }
+            }
+        }
+    }
+} // namespace
+
+/**
+ * @brief [InputMapTest] 에디터 InputMap 패널이 저장한 정의를 다시 읽으면 같은 바인딩이다 — 저장과 다시 읽기가 같은 `<InputMap>` 형식 · 같은 자리다
+ * @details 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다(액션 만들기 · 키 다시 잡기 · 기본값으로 되돌리기). 플레이어의 리매핑은
+ *          UserSettings 의 `keyBinding` 설정이 사용자 파일에 따로 든다. 패널의 저장(`InputMapPanel::saveToFile`)과 다시 읽기(`reloadFromFile`)를
+ *          그대로 따라 한다 — 키를 다시 잡고 저장한 뒤 새 맵이 같은 파일을 읽는다. 다시 저장한 글이 처음 저장한 글과 바이트까지 같아야 한다
+ *          (읽기가 빠뜨리는 특성이 있으면 여기서 갈린다).
+ */
+SW_TEST_CASE( InputMapTest, EditorSavedDefinitionReloadsWithTheSameBindings )
+{
+    sw::InputMap edited;
+    SW_ASSERT_TRUE( edited.loadFromResource( "engine/input/default.input.xml" ) );
+    edited.registerLayer( "Vehicle", 5, false, true, false );
+    SW_EXPECT_TRUE( edited.rebindKey( "Confirm", sw::Key::F, 0 ) );
+    edited.bind( "Fire", sw::MouseButton::Left, sw::ActionTrigger::Down, "Gameplay" );
+    edited.bind( "Jump", sw::InputSlot::fromGamepadButton( sw::GamepadButton::A, 2 ), sw::ActionTrigger::Pressed, "Gameplay" );
+    edited.bind( "Interact", sw::Key::E, sw::ActionTrigger::HoldThreshold, "Gameplay" );
+    edited.bindAxis1DComposite( "Throttle", sw::Key::S, sw::Key::W, "Vehicle" );
+    edited.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D, 0.2f, "Gameplay" );
+    edited.bindGamepadStick2D( "Look", sw::GamepadStick::Right, 0.2f, "Gameplay", 1, 0.9f, 1.5f );
+    edited.bindChord( "QuickSave", sw::Key::LeftControl, sw::Key::S, sw::ActionTrigger::Released, "Debug" );
+    edited.createAction( "Steer", sw::InputActionValueType::Axis1D ); // 바인딩 없이 이름만 만든 액션(패널의 "Add Action")
+
+    const sw::string savedPath = test::makeTempPath( "edited.input.xml" );
+    SW_ASSERT_TRUE( edited.saveToResource( savedPath ) );
+
+    sw::InputMap reloaded;
+    SW_ASSERT_TRUE( reloaded.loadFromResource( savedPath ) );
+    expectSameBindings( edited, reloaded );
+
+    sw::InputSlot confirmSlot{};
+    SW_ASSERT_TRUE( reloaded.findRebindSlot( "Confirm", 0, confirmSlot ) );
+    SW_EXPECT_EQUAL( static_cast<uint16>( sw::Key::F ), confirmSlot._controlIndex );
+    SW_EXPECT_TRUE( reloaded.hasAction( "Steer" ) );
+    SW_EXPECT_EQUAL( reloaded.getLayerPriority( "Vehicle" ), 5 );
+    SW_EXPECT_FALSE( reloaded.isLayerEnabled( "Vehicle" ) );
+    SW_EXPECT_TRUE( reloaded.getDefaultLayerName() == edited.getDefaultLayerName() );
+    SW_EXPECT_NEAR_EQUAL( edited.getHoldThreshold(), reloaded.getHoldThreshold(), 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( edited.getDoubleClickTime(), reloaded.getDoubleClickTime(), 1.0e-5f );
+
+    const sw::string resavedPath = test::makeTempPath( "resaved.input.xml" );
+    SW_ASSERT_TRUE( reloaded.saveToResource( resavedPath ) );
+    sw::string savedText;
+    sw::string resavedText;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( savedPath, savedText ) );
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( resavedPath, resavedText ) );
+    SW_EXPECT_TRUE( savedText == resavedText );
+}
+
 /**
  * @brief [InputMapTest] XML 유저 바인딩 전면 직렬화 및 역직렬화 검증 (모든 BindingKind)
  */

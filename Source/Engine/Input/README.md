@@ -42,7 +42,7 @@ Input/
 ├─ InputMap.h             # InputMap의 선언 전부 (구현은 아래 5개 .cpp에 나뉨)
 ├─ InputMap.cpp           #   핵심: 생성자, bind*() 등록, 레이어 스택, 리바인드, is/wasActionXxx() 조회
 ├─ InputMapEvaluate.cpp   #   매 프레임 상태 머신: update() / evaluateBindingDown() / evaluateTrigger()
-├─ InputMapSerialization.cpp # InputMap XML 로드 + 유저 키 리매핑 저장/로드
+├─ InputMapSerialization.cpp # `<InputMap>` 정의 로드 · 저장(에디터 InputMap 패널의 저장 = `saveToResource`) + 유저 바인딩 XML
 ├─ InputMapCombo.cpp      #   선입력 버퍼링 + 격투 게임식 커맨드 시퀀스/패턴 판정
 ├─ InputMapGlyph.cpp      #   액션 -> UI 프롬프트 문자열("[ E ]" 등) 변환
 ├─ InputSnapshot.*         # 롤백 넷코드/리플레이용 프레임 스냅샷 링버퍼

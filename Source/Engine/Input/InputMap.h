@@ -275,6 +275,13 @@ namespace sw
         void clear();
         /** @brief 리소스 상대 경로에서 InputMap XML 을 로드합니다. */
         [[nodiscard]] bool loadFromResource( string_view relativePath );
+        /**
+         * @brief 레이어 · 액션 · 현재 바인딩을 `loadFromResource` 가 읽는 `<InputMap>` 정의로 씁니다(에디터 InputMap 패널의 저장).
+         * @param relativePath 리소스 id · 절대 경로(`ResourceUtil::getWritePath` 로 쓸 자리를 정한다 — 작업 폴더 기준이 아니다).
+         * @return 형식에 자리가 없는 바인딩(마우스 델타 · 가상 조이스틱 · 단축키 · 아무 키)이 있거나 쓰지 못하면 false 이고 파일을 건드리지 않습니다.
+         * @details 플레이어 리매핑은 여기가 아니라 UserSettings 의 `keyBinding` 설정(사용자 파일)입니다.
+         */
+        [[nodiscard]] bool saveToResource( string_view relativePath ) const;
         /** @brief 한 프레임의 입력 상태를 평가하고 델리게이트를 디스패치합니다. */
         void update( float32 deltaSeconds );
 
