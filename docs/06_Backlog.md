@@ -383,7 +383,7 @@ cd build/Ninja-Debug/Bin
   Mesh 0.7 KB(6) · Material 0.2 KB(4) 가 살아 있다(`[MemoryLeak] shutdown - tag …`). CRT 검사는 합계만 봐 "no CRT leaks" 라고 한다. 정적 캐시인지 진짜 누수인지
   가린다 — 세부 추적(`setDetailedTrackingEnabled`)을 켜고 `destroyAll` 뒤 `getTopCallStacks( LiveBytes )`.
   그중 Mesh 2 블록은 등록부 밖 함수 정적 표(내장 도형 · 9-슬라이스 메시)의 버킷이었다 — 표를 등록부에 올리고 비우기가 버킷까지 돌려줘 사라졌다(2026-10-05,
-  Mesh 448 B · 4 → 192 B · 2). 남은 Mesh 2 · Material 8 · Scene · Unknown 은 그대로다.
+  `41154e107` 기준 Mesh 448 B · 4 → 192 B · 2). 남은 Mesh 2 · Material 8 · Scene · Unknown 은 그대로다. 파괴 병합(`a8b1ed7ae`) 뒤에는 Mesh 가 6.3 KB · 4 블록이다 — 그 몫을 가린다.
 
 ### 1-8. 성능 (재고 나서 정할 것)
 
