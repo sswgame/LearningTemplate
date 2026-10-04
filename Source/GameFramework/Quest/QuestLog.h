@@ -9,10 +9,15 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Quest/QuestCatalog.h"
 
 namespace sw
 {
+    struct QuestDef;
+    struct QuestReward;
+    struct QuestStage;
+
+    class QuestCatalog;
+
     /** @brief 퀘스트 상태입니다. */
     enum class QuestStatus : uint8
     {

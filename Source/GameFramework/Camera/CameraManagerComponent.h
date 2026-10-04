@@ -8,7 +8,6 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Character/AnimNotifyHandlers.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
@@ -21,6 +20,8 @@
 
 namespace sw
 {
+    struct CameraShakeRequest;
+
     class GameObjectManager;
 
     /**
