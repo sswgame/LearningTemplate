@@ -51,7 +51,7 @@ namespace sw
         /** @brief 스켈레톤 에셋 경로를 바꾸고 읽습니다. 빈 경로면 본 하나짜리 암묵 스켈레톤입니다. */
         void          setSkeletonPath( string_view path );
         const string& getSkeletonPath() const { return _skeletonPath; }
-        /** @brief 스켈레톤을 런타임에 정합니다(저장되지 않습니다 — 시험 · 절차 생성). */
+        /** @brief 스켈레톤을 런타임에 정합니다(저장되지 않습니다 — 시험 · 절차 생성). 경로가 빈 동안 렌더 에셋을 다시 풀어도 유지됩니다. */
         void setSkeleton( shared_ptr<const Skeleton> skeleton );
         /** @brief 스켈레톤입니다. 늘 있습니다(없으면 암묵 스켈레톤). */
         const Skeleton& getSkeleton() const;
@@ -97,7 +97,7 @@ namespace sw
         uint32 getPoseEvaluationCount() const { return _poseEvaluationCount; }
 
         // --- AnimationSystem 이 부르는 것 ---
-        /** @brief 이번 프레임 할 일과 LOD(포즈를 만드는지)를 정합니다(게임 스레드). 쉬면 false 입니다. */
+        /** @brief 이번 프레임 할 일과 LOD(포즈를 만드는지)를 정하고, 일하면 일들의 `prepareAnimationFrame` 을 부릅니다(게임 스레드). 쉬면 false 입니다. */
         [[nodiscard]] bool beginAnimationFrame( float32 deltaSeconds, uint64 frameIndex );
         /** @brief 단계 하나를 합니다(워커). */
         void runAnimationPhase( AnimationPhase phase );
@@ -107,8 +107,10 @@ namespace sw
         void collectSyncPlayers( vector<AnimPlayer*>& inoutListPlayer, vector<float32>& inoutListWeight, vector<hashed_string>& inoutListGroup );
 
     private:
-        /** @brief 스켈레톤을 경로에서 다시 읽습니다. */
+        /** @brief 스켈레톤을 경로에서 다시 읽습니다. 경로가 비고 코드가 정한 스켈레톤이 있으면 그대로 둡니다. */
         void resolveSkeleton();
+        /** @brief 스켈레톤을 바꾸고 포즈 버퍼를 맞춥니다(nullptr 이면 암묵 스켈레톤). */
+        void assignSkeleton( shared_ptr<const Skeleton> skeleton );
         /** @brief 공유 메시가 스킨을 가지면 컴포넌트 몫 복사본을 만듭니다. */
         void resolveSkinInstanceMesh();
         /** @brief 스켈레톤이 바뀌었으면 포즈 · 행렬 · 리더 표를 맞춥니다. */
@@ -145,6 +147,7 @@ namespace sw
         uint8                  _bAnimateWhenOffscreen : 1;
         uint8                  _bVisibleHint          : 1;
         uint8                  _bPoseDirty            : 1;
-        [[maybe_unused]] uint8 _reserved              : 4;
+        uint8                  _bRuntimeSkeleton      : 1; ///< 스켈레톤을 코드가 정했다(`setSkeleton`) — 빈 경로로 다시 풀 때 지키지 않는다
+        [[maybe_unused]] uint8 _reserved              : 3;
     };
 } // namespace sw

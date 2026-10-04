@@ -20,6 +20,12 @@ namespace sw
         , _state{}
         , _commandLock{}
         , _moveVelocity{}
+        , _pendingRootMotion{}
+        , _frameRootMotionVelocity{}
+        , _pendingSurfaceVelocity{}
+        , _frameSurfaceVelocity{}
+        , _pendingLaunch{}
+        , _airVelocity{}
         , _previousPosition{}
         , _writtenPosition{}
         , _writtenRotation{}
@@ -39,6 +45,24 @@ namespace sw
     {
         std::scoped_lock<SpinLock> lock{ _commandLock };
         _pendingJumpSpeed = speed;
+    }
+
+    void CharacterControllerComponent::addRootMotionDisplacement( const float3& worldDisplacement )
+    {
+        std::scoped_lock<SpinLock> lock{ _commandLock };
+        _pendingRootMotion += float3{ worldDisplacement._x, 0.0f, worldDisplacement._z };
+    }
+
+    void CharacterControllerComponent::launch( const float3& velocity )
+    {
+        std::scoped_lock<SpinLock> lock{ _commandLock };
+        _pendingLaunch = velocity;
+    }
+
+    void CharacterControllerComponent::addSurfaceVelocity( const float3& velocity )
+    {
+        std::scoped_lock<SpinLock> lock{ _commandLock };
+        _pendingSurfaceVelocity += float3{ velocity._x, 0.0f, velocity._z };
     }
 
     void CharacterControllerComponent::setRadius( float32 radius )
@@ -119,8 +143,6 @@ namespace sw
 
     void CharacterControllerComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
     {
-        (void)stepIndex;
-        (void)stepCount;
         IPhysicsScene3D* pScene = physics.findScene3D();
         if ( pScene == nullptr || _character.isValid() == false )
             return;
@@ -131,7 +153,23 @@ namespace sw
             moveVelocity      = _moveVelocity;
             jumpSpeed         = _pendingJumpSpeed;
             _pendingJumpSpeed = 0.0f;
+            // 루트 모션은 프레임의 첫 스텝에 꺼내 이 프레임의 스텝 수로 나눈다 — 프레임이 끝날 때 다 간다. 면 속도도 프레임마다 꺼낸다.
+            if ( stepIndex == 0 )
+            {
+                const float32 frameSeconds = fixedDeltaTime * static_cast<float32>( stepCount > 0 ? stepCount : 1 );
+                _frameRootMotionVelocity   = _pendingRootMotion * ( 1.0f / frameSeconds );
+                _pendingRootMotion         = float3{};
+                _frameSurfaceVelocity      = _pendingSurfaceVelocity;
+                _pendingSurfaceVelocity    = float3{};
+            }
+            if ( _pendingLaunch.getLengthSquared() > 0.0f )
+            {
+                jumpSpeed      = _pendingLaunch._y;
+                _airVelocity   = float3{ _pendingLaunch._x, 0.0f, _pendingLaunch._z };
+                _pendingLaunch = float3{};
+            }
         }
+        moveVelocity = moveVelocity + _frameRootMotionVelocity + _frameSurfaceVelocity + _airVelocity;
         // 서 있으면 떨어지는 속도를 지우고, 떠 있으면 중력을 쌓는다. 점프는 그 위에 덮는다.
         if ( _state._bGrounded && _verticalSpeed < 0.0f )
             _verticalSpeed = 0.0f;
@@ -143,7 +181,10 @@ namespace sw
         _state            = pScene->moveCharacter( _character, float3{ moveVelocity._x, _verticalSpeed, moveVelocity._z }, fixedDeltaTime );
         // 천장에 막혔으면 오르던 속도가 줄었다 — 실제로 난 수직 속도를 잇는다. 디디면 수직 속도는 0 이다.
         if ( _state._bGrounded && _verticalSpeed <= 0.0f )
+        {
             _verticalSpeed = 0.0f;
+            _airVelocity   = float3{}; // 발사가 끝났다 — 다시 디뎠다
+        }
         else if ( _verticalSpeed > 0.0f && _state._velocity._y < _verticalSpeed )
             _verticalSpeed = _state._velocity._y;
     }

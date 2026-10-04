@@ -131,6 +131,12 @@ says when it should run: `preCommitPattern` (fnmatch globs against staged repo-r
 means always), `preCommitFileArgument` (`"--files"`, `"positional"`, or `""` for whole-tree gates), and
 `preCommitSkipReason` for a gate the hook cannot run (`CheckSourceGlob` needs a build directory). A commit
 that touches only `.cmake`, `.py` or data still runs every gate whose pattern matches it.
+**A merge commit checks only new content file by file**: while `MERGE_HEAD` exists, the file-argument gates,
+the fixers and clang-format get only the staged files whose blob differs from that path in *every* parent
+(conflict resolutions, auto-merged files) — a file byte-identical to one parent was checked when that parent
+was committed. Whole-tree gates still run. Cross-file relations between files taken from different parents
+are what `ctest -L lint` (and CI) re-checks over the whole tree after the merge. `CheckMergeCommitScope.py`
+guards the reduction with a throwaway git repository.
 
 **Adding a fixer is dropping a file into `lint/fixer/`.** A fixer is one `LintFixer` subclass whose
 `listPass` holds its text transforms (`(text) -> (newText, bChanged)`) plus what to call each one under

@@ -27,6 +27,7 @@
 
 #include "GameFramework/Framework/GameService.h"
 
+#include "Games/Empty/BenchCombatComponent.h"
 #include "Games/Empty/BenchMoverComponent.h"
 
 namespace sw
@@ -76,6 +77,13 @@ namespace sw
      *          다르게 찍으면 포즈가 달라야 한다. 개발 빌드 전용이다 — 에셋이 Shooter3D 의 리소스에 있어 Empty 게임의 배포 팩에는 없다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCharacters, 0, "벤치 스킨드 캐릭터 수 (0=사용 안 함, KayKit 기사 · Idle/Walking_A)" );
+
+    /**
+     * @brief `-gv_benchCombat=1` — KayKit 스켈레톤 적이 걸으며(발소리 알림 · 바닥 재질) 무기 레이캐스트를 맞고(히트 존 · 움찔), 180 프레임에 치명적 맞음으로 래그돌이 되고
+     *        오른손 소켓의 칼이 물리로 떨어진 뒤 900 프레임에 일어납니다(`BenchCombatComponent`). 로그 `[BenchCombat]` 이 맞음 · 발소리 · 래그돌 상태를 적는다.
+     * @details 개발 빌드 전용이다 — 에셋이 Shooter3D 의 리소스에 있어 Empty 게임의 배포 팩에는 없다(`gv_benchCharacters` 와 같다).
+     */
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchCombat, 0, "벤치 전투 연출 (0=사용 안 함, KayKit 스켈레톤 — 알림 · 히트 존 · 래그돌 · 칼 떨어뜨리기)" );
 
     /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
@@ -231,6 +239,8 @@ namespace sw
         , _benchElapsed{ 0.0f }
         , _benchGridSide{ 0 }
         , _bRefreshedCameras{ SW_FALSE }
+        , _listRigBody{}
+        , _rigLookTarget{}
         , _bCharacterFraming{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -243,13 +253,17 @@ namespace sw
         // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는
         // **이 모듈이 선언한다**(이 파일 위). 그래서 이름으로 조회하지 않고 그대로 읽는다 —
         // 주의: 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽힌다.
-        if ( gv_benchMeshes <= 0 && gv_benchCharacters <= 0 )
+        if ( gv_benchMeshes <= 0 && gv_benchCharacters <= 0 && getRigCharacterCount() == 0 && gv_benchCombat <= 0 )
             return false;
 
         if ( gv_benchMeshes > 0 )
             spawn( static_cast<uint32>( gv_benchMeshes ) );
         if ( gv_benchCharacters > 0 )
             spawnCharacters( static_cast<uint32>( gv_benchCharacters ) );
+        if ( getRigCharacterCount() > 0 )
+            spawnRigCharacters( getRigCharacterCount() );
+        if ( gv_benchCombat > 0 )
+            spawnCombat();
         return isActive();
     }
 
@@ -299,6 +313,8 @@ namespace sw
         _instanceCubeCount = 0;
         _listBenchExtra.clear();
         _bCharacterFraming = SW_FALSE;
+        _listRigBody.clear();
+        _rigLookTarget = {};
         _listChurnInstance.clear();
         _keyLight = {};
     }
@@ -530,6 +546,32 @@ namespace sw
         _bCharacterFraming = SW_TRUE;
         frameCharacterCameras( pScene, halfExtent );
         SW_LOG_INFO( "[Bench] 씬 '%#' 에 스킨드 캐릭터 %#명을 세웠습니다(%#).", pScene->getName(), characterCount, kBenchCharacterMesh );
+    }
+
+    void BenchScene::spawnCombat()
+    {
+        SceneManager* pSceneManager = game::getService<SceneManager>();
+        if ( pSceneManager == nullptr )
+            return;
+        Scene* pScene = pSceneManager->getActiveScene();
+        if ( pScene == nullptr )
+            pScene = pSceneManager->createEmptyActiveScene( "BenchScene" );
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+        pScene->ensureDefaultCameras();
+        vector<GameObjectHandle> listObject;
+        BenchCombatComponent::spawnScene( *pScene, listObject );
+        for ( const GameObjectHandle& handle : listObject )
+        {
+            GameObject* pObject = pScene->getObjectManager()->resolveGameObject( handle );
+            Component*  pFirst  = ( pObject != nullptr && pObject->getComponents().empty() == false ) ? pObject->getComponents().front() : nullptr;
+            if ( pFirst != nullptr )
+                _listBenchExtra.push_back( pFirst->getHandle() );
+        }
+        spawnLight( pScene, 2.5f );
+        _bCharacterFraming = SW_TRUE;
+        frameCharacterCameras( pScene, 2.5f );
+        SW_LOG_INFO( "[Bench] 씬 '%#' 에 전투 연출(KayKit 스켈레톤 · 칼 · 바닥)을 세웠습니다.", pScene->getName() );
     }
 
     void BenchScene::frameCharacterCameras( Scene* pScene, float32 halfExtent )
@@ -817,7 +859,9 @@ namespace sw
             {
                 if ( Scene* pScene = pSceneManager->getActiveScene() )
                 {
-                    if ( _bCharacterFraming == SW_TRUE )
+                    if ( _listRigBody.empty() == false )
+                        frameRigCameras( pScene );
+                    else if ( _bCharacterFraming == SW_TRUE )
                         frameCharacterCameras( pScene, MathUtil::max( 2.0f, 0.5f * static_cast<float32>( gv_benchCharacters ) * kBenchCharacterSpacing ) );
                     else
                         frameCameras( pScene, _benchGridSide, kBenchSpacing );
@@ -835,6 +879,7 @@ namespace sw
 
         updateMaterialChurn( pObjects );
         updateSpawnChurn( pObjects, pScene );
+        updateRigCharacters( deltaTime );
 
         // 멈춰 세운 격자는 프레임마다 같은 그림을 낸다 — 픽셀 비교 검증의 전제다.
         // 회전(컴퓨트)만 끄고 이 사인파를 남기면 여전히 흔들린다.

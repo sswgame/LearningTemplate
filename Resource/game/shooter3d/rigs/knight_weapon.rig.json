@@ -1,0 +1,8 @@
+{
+  "targets": [
+    { "name": "RightHand", "bone": "handslot.r", "unit": "Body", "translation": [0.1046, -0.0104, 0.0], "rotation": [0, -90, 0] }
+  ],
+  "nodes": [
+    { "type": "CopyTransform", "name": "Hold", "bone": "root", "target": "RightHand" }
+  ]
+}

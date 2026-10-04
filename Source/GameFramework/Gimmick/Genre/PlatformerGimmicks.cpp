@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -115,6 +116,10 @@ namespace sw
         GravityComponent* pGravity = target.getComponent<GravityComponent>();
         if ( pGravity != nullptr )
             pGravity->jump( _launchVelocity._y );
+        // 캐릭터 컨트롤러는 쏜 속도를 그대로 받는다(수직은 덮고, 수평은 다시 디딜 때까지).
+        CharacterControllerComponent* pController = target.getComponent<CharacterControllerComponent>();
+        if ( pController != nullptr )
+            pController->launch( _launchVelocity );
         GimmickLaunchEvent event;
         event._target   = target.getHandle();
         event._source   = getOwner() != nullptr ? getOwner()->getHandle() : GameObjectHandle{};
@@ -137,9 +142,10 @@ namespace sw
         if ( _bMoveOccupants == false || pManager == nullptr || pSensor == nullptr )
             return;
         // 겹친 것이 제 틱에서 쓴 자리 위에 더한다 — 틱 뒤 게임 스레드에서(같은 틱에서 쓰면 그쪽 쓰기와 순서가 정해지지 않는다).
-        const ComponentHandle self   = getHandle();
-        const float3          offset = _velocity * deltaTime;
-        pManager->executeOrDeferPostTick( [pManager, self, offset]()
+        const ComponentHandle self     = getHandle();
+        const float3          offset   = _velocity * deltaTime;
+        const float3          velocity = _velocity;
+        pManager->executeOrDeferPostTick( [pManager, self, offset, velocity]()
         {
             const ConveyorComponent*      pConveyor   = static_cast<const ConveyorComponent*>( pManager->resolveComponent( self ) );
             const GameObject*             pBelt       = pConveyor != nullptr ? pConveyor->getOwner() : nullptr;
@@ -148,9 +154,13 @@ namespace sw
                 return;
             for ( const GameObjectHandle& handle : pBeltSensor->getOccupants() )
             {
-                GameObject*     pOccupant = pManager->resolveGameObject( handle );
-                SceneComponent* pScene    = pOccupant != nullptr ? pOccupant->getPrimarySceneComponent() : nullptr;
-                if ( pScene != nullptr )
+                GameObject*                   pOccupant   = pManager->resolveGameObject( handle );
+                CharacterControllerComponent* pController = pOccupant != nullptr ? pOccupant->getComponent<CharacterControllerComponent>() : nullptr;
+                SceneComponent*               pScene      = pOccupant != nullptr ? pOccupant->getPrimarySceneComponent() : nullptr;
+                // 컨트롤러는 면 속도로 — 트랜스폼을 옮기면 순간이동이라 벽을 지난다.
+                if ( pController != nullptr )
+                    pController->addSurfaceVelocity( velocity );
+                else if ( pScene != nullptr )
                     pScene->setWorldPosition( pScene->getWorldPosition() + offset );
             }
         } );

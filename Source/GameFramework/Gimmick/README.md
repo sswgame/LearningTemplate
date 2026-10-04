@@ -17,7 +17,7 @@
 | `GimmickSensorComponent` · `GimmickWeightComponent` | 대상 쪽 상태 — 겹친 것(태그 거르기) · 무게 · 피해 · 사용 · 신호 |
 | `GimmickDamageUtil` · `GimmickDamageEvent` | 기믹이 주는 피해의 한 길("game" 채널 + 대상 센서의 Damage — 폭발 사슬) |
 | `ElementRuleTable` · `ElementGrid` | 원소 상호작용 표(재질 깃발 · 상태 · 자극 · 걸음 규칙)와 그 표를 따르는 결정적 셀 자동자. 오브젝트 하나는 1 × 1 격자 |
-| `WorldQuery`(`World/`) | 광선 · 시야. Jolt 서비스가 걸리면 그것, 없으면 `PhysicsWorld` AABB 폴백 |
+| `WorldQuery`(`World/`) | 광선 · 시야. 서비스가 걸리면 그것, 없으면 씬의 강체 물리(Jolt · Box2D)와 `PhysicsWorld` AABB 폴백 중 가까운 것 |
 
 ## 내장 노드 종류
 
@@ -112,6 +112,8 @@ floodStatus + through), 걸음 규칙(`Expire` — 상태가 재질 수치만큼
 - 장르 컴포넌트의 시간은 60 Hz 걸음 수로 셉니다(`GenreGimmickUtil::makeClock`). 몸 숨기기(`setBodyActive` — 씬 컴포넌트를 켜고 끔)와 상호작용 켜기는 틱 뒤로 미룹니다.
 - **기믹이 주는 피해(`GimmickDamageUtil`)는 틱 뒤에 대상 센서에 들어갑니다** — 병렬 틱에서 바로 넣으면 대상이 이번 틱에 먹을지가 스케줄에 달려 사슬 폭발 · 롤백이
   결정적이지 않다. 늘 다음 틱에 먹습니다.
+- 눌림판 무게는 `GimmickWeightComponent`(데이터) → 강체 질량(`RigidBodyComponent` · `RigidBody2DComponent`) → 센서 기본 무게 순입니다. 발사대는 캐릭터 컨트롤러에
+  `launch`(수직은 덮고 수평은 다시 디딜 때까지), 컨베이어는 `addSurfaceVelocity`(트랜스폼을 옮기지 않아 벽에 막힌다)로 넘깁니다.
 - 이벤트("game" 채널): `GimmickLaunchEvent` · `GimmickBoostEvent` · `GimmickItemEvent` · `GimmickCueEvent`(연출 이름 — Scare · Explosion · Stage · Destroyed) ·
   `GimmickNoiseEvent` · `GimmickDamageEvent`. 받는 쪽(이동 몸 · 차량 · 인벤토리 · 카메라 · 오디오)은 게임 · 키트입니다.
 - 프리팹의 콜라이더는 지금 `BoxCollider2DComponent`(트리거 겹침 폴백)입니다. 3D 물리 백엔드가 들어오면 3D 트리거 · 강체 콜라이더로 바꿉니다.

@@ -1,0 +1,17 @@
+{
+  "source_skeleton": "game/shooter3d/models/kaykit/knight/knight.skeleton.json",
+  "target_skeleton": "game/shooter3d/models/kaykit/skeleton_minion/skeleton_minion.skeleton.json",
+  "root": { "source": "root", "target": "root" },
+  "pelvis": { "source": "hips", "target": "hips" },
+  "translation": "ScaleByPelvisHeight",
+  "chains": [
+    { "name": "Spine", "source": ["spine", "chest"], "target": ["spine", "chest"] },
+    { "name": "Head", "source": ["head"], "target": ["head"] },
+    { "name": "LeftArm", "source": ["upperarm.l", "lowerarm.l", "wrist.l", "hand.l"], "target": ["upperarm.l", "lowerarm.l", "wrist.l", "hand.l"] },
+    { "name": "RightArm", "source": ["upperarm.r", "lowerarm.r", "wrist.r", "hand.r"], "target": ["upperarm.r", "lowerarm.r", "wrist.r", "hand.r"] },
+    { "name": "LeftLeg", "source": ["upperleg.l", "lowerleg.l", "foot.l"], "target": ["upperleg.l", "lowerleg.l", "foot.l"], "ik_goal": true },
+    { "name": "RightLeg", "source": ["upperleg.r", "lowerleg.r", "foot.r"], "target": ["upperleg.r", "lowerleg.r", "foot.r"], "ik_goal": true },
+    { "name": "LeftToe", "source": ["toes.l"], "target": ["toes.l"] },
+    { "name": "RightToe", "source": ["toes.r"], "target": ["toes.r"] }
+  ]
+}

@@ -3,11 +3,16 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/Retarget/PoseRetargeter.h"
+#include "Engine/Animation/Retarget/RetargetProfile.h"
+#include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioMusic.h"
+#include "Engine/Character/AnimNotifyTable.h"
 #include "Engine/Character/BodyShape.h"
 #include "Engine/Character/FitPartData.h"
 #include "Engine/Character/FitSolver.h"
@@ -22,6 +27,9 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Input/InputMap.h"
+#include "Engine/Localization/CultureInfo.h"
+#include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Localization/TranslationMemory.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -33,6 +41,7 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
+#include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/TileMap/TileSetAsset.h"
 #include "Engine/Utility/Xml/TileMapXml.h"
 
@@ -98,6 +107,11 @@ namespace
         static bool isAudioMixer( sw::string_view resourceId ) { return endsWith( resourceId, ".audiomixer.xml" ); }
         static bool isAudioEvents( sw::string_view resourceId ) { return endsWith( resourceId, ".audioevents.xml" ); }
         static bool isAudioMusic( sw::string_view resourceId ) { return endsWith( resourceId, ".music.xml" ); }
+        static bool isCultureTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::CultureTable::kFileSuffix ); }
+        static bool isLocalizationProject( sw::string_view resourceId ) { return endsWith( resourceId, sw::LocalizationProject::kFileSuffix ); }
+        static bool isSourceStringTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::SourceStringTable::kFileSuffix ); }
+        static bool isTranslationTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationTable::kFileSuffix ); }
+        static bool isTranslationMemory( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationMemory::kFileSuffix ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -201,6 +215,21 @@ namespace
             return settings.loadFromResource( resourceId );
         }
 
+        /** @brief 로컬라이제이션 JSON 문서(`loadFromJsonText( text, name, &error )` 모양)를 읽습니다. 모르는 칸은 오류 글로 돌아온다. */
+        template <typename TDocument>
+        static bool loadLocalizationDocument( const sw::string& resourceId )
+        {
+            sw::string text;
+            if ( sw::ResourceUtil::readTextResource( resourceId, text ) == false )
+                return false;
+            TDocument  document;
+            sw::string error;
+            if ( document.loadFromJsonText( text, resourceId, &error ) )
+                return true;
+            SW_LOG_WARNING( "%#", error.c_str() );
+            return false;
+        }
+
         static bool loadSpriteClip( const sw::string& resourceId )
         {
             sw::SpriteClipAsset clip;
@@ -217,7 +246,42 @@ namespace
         static bool                  isFitTables( sw::string_view resourceId ) { return endsWith( resourceId, ".fit.xml" ); }
         static bool                  isPartFit( sw::string_view resourceId ) { return endsWith( resourceId, ".partfit.xml" ); }
         static bool                  isSurfaceChannels( sw::string_view resourceId ) { return endsWith( resourceId, ".surfacechannels.xml" ); }
-        static bool                  loadSockets( const sw::string& resourceId )
+        static bool                  isNotifyTable( sw::string_view resourceId ) { return endsWith( resourceId, ".notifies.xml" ); }
+        static bool                  isClipData( sw::string_view resourceId ) { return endsWith( resourceId, ".clips.json" ); }
+        /** @brief 모델 임포트 곁 데이터(`<모델>.clips.json`) — 임포터(`ModelImporter::readClipData`)와 같은 키 규칙(모르는 키는 오류)으로 본다. */
+        static bool loadClipData( const sw::string& resourceId )
+        {
+            sw::JsonDocument document;
+            // models_raw/ 는 팩에 실리지 않아 Shipping 에서는 리소스 id 로 못 찾는다 — 임포터처럼 원본 트리에서 파일로 읽는다.
+            if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), resourceId ) ) == false )
+                return false;
+            const sw::JsonValue root = document.getRoot();
+            if ( sw::AnimJsonUtil::hasOnlyKnownKeys( root, { "clips" }, resourceId ) == false || root.get( "clips" ).isObject() == false )
+                return false;
+            const sw::JsonValue clips = root.get( "clips" );
+            for ( const sw::string& clipName : clips.getMemberNames() )
+            {
+                const sw::JsonValue clip = clips.get( clipName, false );
+                if ( sw::AnimJsonUtil::hasOnlyKnownKeys( clip, { "loop", "notifies", "curves" }, resourceId ) == false )
+                    return false;
+                const sw::JsonValue notifies = clip.get( "notifies" );
+                for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
+                {
+                    const sw::JsonValue notify = notifies.at( notifyIndex );
+                    if ( sw::AnimJsonUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, resourceId ) == false || notify.get( "name" ).isString() == false ||
+                         notify.get( "time" ).isNumber() == false )
+                        return false;
+                }
+            }
+            return true;
+        }
+        /** @brief 알림 표 — 처리기 이름 · 인자를 엔진 기본 처리기 등록부에 대조한다. */
+        static bool loadNotifyTable( const sw::string& resourceId )
+        {
+            sw::AnimNotifyTable table;
+            return table.loadFromResource( resourceId, sw::AnimNotifyHandlerRegistry::getDefault() );
+        }
+        static bool loadSockets( const sw::string& resourceId )
         {
             sw::SocketKindTable kinds;
             sw::SocketSet       sockets;
@@ -235,6 +299,29 @@ namespace
             sw::FitTables       tables;
             sw::FitPartData     data;
             return tables.loadFromResource( kDefaultFitTables, solver.getOperatorRegistry() ) && data.loadFromResource( resourceId, tables );
+        }
+
+        /** @brief 후처리 리그(대상 · 노드) — 모르는 노드 종류 · 키 · 겹친 이름은 로드 오류다. */
+        static bool isRig( sw::string_view resourceId ) { return endsWith( resourceId, sw::RigAsset::kExtension ); }
+        static bool loadRig( const sw::string& resourceId )
+        {
+            sw::RigAsset rig;
+            return rig.loadFromResource( resourceId );
+        }
+
+        /** @brief 리타깃 프로필 — 모르는 키 · 이동 방법 · 겹친 사슬은 로드 오류이고, 적힌 두 스켈레톤에 프로필의 본이 모두 있어야 한다. */
+        static bool isRetargetProfile( sw::string_view resourceId ) { return endsWith( resourceId, sw::RetargetProfile::kExtension ); }
+        static bool loadRetargetProfile( const sw::string& resourceId )
+        {
+            sw::RetargetProfile profile;
+            if ( profile.loadFromResource( resourceId ) == false )
+                return false;
+            sw::Skeleton source;
+            sw::Skeleton target;
+            if ( source.loadFromResource( profile.getSourceSkeletonPath() ) == false || target.loadFromResource( profile.getTargetSkeletonPath() ) == false )
+                return false;
+            sw::PoseRetargeter retargeter;
+            return retargeter.initialize( profile, source, target, nullptr );
         }
 
         /** @brief 임포트가 쓴 스켈레톤(본 · 부착 표) — 모르는 키 · 없는 본 이름은 로드 오류다. */
@@ -295,49 +382,58 @@ namespace
 
         /** @brief 데이터 종류 표입니다. 앞의 줄이 먼저 맞습니다. */
         static constexpr DataKind kArrDataKind[] = {
-            {              "scene",               &isScene,                              &loadScene},
-            {             "prefab",              &isPrefab,                             &loadPrefab},
-            {           "pipeline",            &isPipeline,                           &loadPipeline},
-            {         "renderpass",          &isRenderPass,                         &loadRenderPass},
-            {"enginedefaultassets", &isEngineDefaultAssets,                &loadEngineDefaultAssets},
-            {           "inputmap",            &isInputMap,                           &loadInputMap},
-            {           "material",            &isMaterial,                           &loadMaterial},
-            {         "spriteclip",          &isSpriteClip,                         &loadSpriteClip},
-            {      "camerapresets",       &isCameraPresets,   &loadCatalog<sw::CameraPresetCatalog>},
-            {           "render2d",    &isRender2DSettings,                   &loadRender2DSettings},
-            {            "tileset",             &isTileSet,                            &loadTileSet},
-            {            "tilemap",             &isTileMap,                            &loadTileMap},
-            {       "elementrules",        &isElementRules,      &loadCatalog<sw::ElementRuleTable>},
-            {       "interactions",        &isInteractions,    &loadCatalog<sw::InteractionCatalog>},
-            {    "physicssettings",     &isPhysicsSettings,                    &loadPhysicsSettings},
-            {       "physicsasset",        &isPhysicsAsset,                       &loadPhysicsAsset},
-            {          "schedules",           &isSchedules,       &loadCatalog<sw::ScheduleCatalog>},
-            {         "aidirector",          &isAiDirector,     &loadCatalog<sw::AiDirectorProfile>},
-            {         "spawntable",          &isSpawnTable,            &loadCatalog<sw::SpawnTable>},
-            {    "telemetryschema",     &isTelemetrySchema,       &loadCatalog<sw::TelemetrySchema>},
-            {       "usersettings",  &isUserSettingsSchema,                 &loadUserSettingsSchema},
-            {          "abilities",           &isAbilities,        &loadCatalog<sw::AbilityCatalog>},
-            {              "crops",               &isCrops,           &loadCatalog<sw::CropCatalog>},
-            {               "city",                &isCity,           &loadCatalog<sw::CityCatalog>},
-            {            "weapons",             &isWeapons,         &loadCatalog<sw::WeaponCatalog>},
-            {           "rtsunits",            &isRtsUnits,            &loadCatalog<sw::RtsCatalog>},
-            {        "voxelblocks",         &isVoxelBlocks,     &loadCatalog<sw::VoxelBlockCatalog>},
-            {           "coasters",            &isCoasters,  &loadCatalog<sw::CoasterLayoutCatalog>},
-            {         "parklayout",          &isParkLayout,                         &loadParkLayout},
-            {       "gamesettings",        &isGameSettings,                       &loadGameSettings},
-            {        "socketkinds",         &isSocketKinds,       &loadCatalog<sw::SocketKindTable>},
-            {            "sockets",             &isSockets,                            &loadSockets},
-            {      "referencepose",       &isReferencePose, &loadCatalog<sw::ReferencePoseOverride>},
-            {          "bodyshape",           &isBodyShape,          &loadCatalog<sw::BodyShapeSet>},
-            {          "fittables",           &isFitTables,                          &loadFitTables},
-            {            "partfit",             &isPartFit,                            &loadPartFit},
-            {    "surfacechannels",     &isSurfaceChannels,   &loadCatalog<sw::SurfaceChannelTable>},
-            {              "items",               &isItems,           &loadCatalog<sw::ItemCatalog>},
-            {         "appearance",      &isAppearanceData,                     &loadAppearanceData},
-            {           "skeleton",            &isSkeleton,                           &loadSkeleton},
-            {         "audiomixer",          &isAudioMixer,        &loadCatalog<sw::AudioMixerDesc>},
-            {        "audioevents",         &isAudioEvents,     &loadCatalog<sw::AudioEventLibrary>},
-            {         "audiomusic",          &isAudioMusic,        &loadCatalog<sw::AudioMusicDesc>},
+            {              "scene",               &isScene,                                         &loadScene},
+            {             "prefab",              &isPrefab,                                        &loadPrefab},
+            {           "pipeline",            &isPipeline,                                      &loadPipeline},
+            {         "renderpass",          &isRenderPass,                                    &loadRenderPass},
+            {"enginedefaultassets", &isEngineDefaultAssets,                           &loadEngineDefaultAssets},
+            {           "inputmap",            &isInputMap,                                      &loadInputMap},
+            {           "material",            &isMaterial,                                      &loadMaterial},
+            {         "spriteclip",          &isSpriteClip,                                    &loadSpriteClip},
+            {      "camerapresets",       &isCameraPresets,              &loadCatalog<sw::CameraPresetCatalog>},
+            {           "render2d",    &isRender2DSettings,                              &loadRender2DSettings},
+            {            "tileset",             &isTileSet,                                       &loadTileSet},
+            {            "tilemap",             &isTileMap,                                       &loadTileMap},
+            {       "elementrules",        &isElementRules,                 &loadCatalog<sw::ElementRuleTable>},
+            {       "interactions",        &isInteractions,               &loadCatalog<sw::InteractionCatalog>},
+            {    "physicssettings",     &isPhysicsSettings,                               &loadPhysicsSettings},
+            {       "physicsasset",        &isPhysicsAsset,                                  &loadPhysicsAsset},
+            {          "schedules",           &isSchedules,                  &loadCatalog<sw::ScheduleCatalog>},
+            {         "aidirector",          &isAiDirector,                &loadCatalog<sw::AiDirectorProfile>},
+            {         "spawntable",          &isSpawnTable,                       &loadCatalog<sw::SpawnTable>},
+            {    "telemetryschema",     &isTelemetrySchema,                  &loadCatalog<sw::TelemetrySchema>},
+            {       "usersettings",  &isUserSettingsSchema,                            &loadUserSettingsSchema},
+            {          "abilities",           &isAbilities,                   &loadCatalog<sw::AbilityCatalog>},
+            {              "crops",               &isCrops,                      &loadCatalog<sw::CropCatalog>},
+            {               "city",                &isCity,                      &loadCatalog<sw::CityCatalog>},
+            {            "weapons",             &isWeapons,                    &loadCatalog<sw::WeaponCatalog>},
+            {           "rtsunits",            &isRtsUnits,                       &loadCatalog<sw::RtsCatalog>},
+            {        "voxelblocks",         &isVoxelBlocks,                &loadCatalog<sw::VoxelBlockCatalog>},
+            {           "coasters",            &isCoasters,             &loadCatalog<sw::CoasterLayoutCatalog>},
+            {         "parklayout",          &isParkLayout,                                    &loadParkLayout},
+            {       "gamesettings",        &isGameSettings,                                  &loadGameSettings},
+            {        "socketkinds",         &isSocketKinds,                  &loadCatalog<sw::SocketKindTable>},
+            {            "sockets",             &isSockets,                                       &loadSockets},
+            {      "referencepose",       &isReferencePose,            &loadCatalog<sw::ReferencePoseOverride>},
+            {          "bodyshape",           &isBodyShape,                     &loadCatalog<sw::BodyShapeSet>},
+            {          "fittables",           &isFitTables,                                     &loadFitTables},
+            {            "partfit",             &isPartFit,                                       &loadPartFit},
+            {    "surfacechannels",     &isSurfaceChannels,              &loadCatalog<sw::SurfaceChannelTable>},
+            {              "items",               &isItems,                      &loadCatalog<sw::ItemCatalog>},
+            {         "appearance",      &isAppearanceData,                                &loadAppearanceData},
+            {           "skeleton",            &isSkeleton,                                      &loadSkeleton},
+            {         "audiomixer",          &isAudioMixer,                   &loadCatalog<sw::AudioMixerDesc>},
+            {        "audioevents",         &isAudioEvents,                &loadCatalog<sw::AudioEventLibrary>},
+            {         "audiomusic",          &isAudioMusic,                   &loadCatalog<sw::AudioMusicDesc>},
+            {       "culturetable",        &isCultureTable,        &loadLocalizationDocument<sw::CultureTable>},
+            {"localizationproject", &isLocalizationProject, &loadLocalizationDocument<sw::LocalizationProject>},
+            {        "stringtable",   &isSourceStringTable,   &loadLocalizationDocument<sw::SourceStringTable>},
+            {   "translationtable",    &isTranslationTable,    &loadLocalizationDocument<sw::TranslationTable>},
+            {  "translationmemory",   &isTranslationMemory,   &loadLocalizationDocument<sw::TranslationMemory>},
+            {                "rig",                 &isRig,                                           &loadRig},
+            {    "retargetprofile",     &isRetargetProfile,                               &loadRetargetProfile},
+            {        "notifytable",         &isNotifyTable,                                   &loadNotifyTable},
+            {           "clipdata",            &isClipData,                                      &loadClipData},
         };
 
         /**

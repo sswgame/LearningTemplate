@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -14,6 +15,7 @@
 #include "Engine/Resource/AnimationAssetCache.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/IAssetCache.h"
+#include "Engine/Resource/LocalizationReloadCache.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Resource/SpriteClipCache.h"
@@ -32,6 +34,11 @@ namespace sw
         , _meshCache{ make_unique<MeshCache>() }
         , _skeletonCache{ make_unique<SkeletonCache>() }
         , _animClipCache{ make_unique<AnimClipCache>() }
+        , _socketSetCache{ make_unique<SocketSetCache>() }
+        , _notifyTableCache{ make_unique<AnimNotifyTableCache>() }
+        , _physicsAssetCache{ make_unique<PhysicsAssetCache>() }
+        , _rigAssetCache{ make_unique<RigAssetCache>() }
+        , _localizationReloadCache{ make_unique<LocalizationReloadCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _registeredAssetCache{}
         , _contentSource{ ContentSource::Cooked }
@@ -44,6 +51,11 @@ namespace sw
         registerAssetCache( _meshCache.get() );
         registerAssetCache( _skeletonCache.get() );
         registerAssetCache( _animClipCache.get() );
+        registerAssetCache( _socketSetCache.get() );
+        registerAssetCache( _notifyTableCache.get() );
+        registerAssetCache( _physicsAssetCache.get() );
+        registerAssetCache( _rigAssetCache.get() );
+        registerAssetCache( _localizationReloadCache.get() );
     }
 
     AssetManager::~AssetManager() = default;
@@ -163,7 +175,8 @@ namespace sw
     {
         return pCache != nullptr && ( pCache == _materialCache.get() || pCache == _textureCache.get() || pCache == _prefabCache.get() ||
                                       pCache == _spriteClipCache.get() || pCache == _meshCache.get() || pCache == _skeletonCache.get() ||
-                                      pCache == _animClipCache.get() );
+                                      pCache == _animClipCache.get() || pCache == _socketSetCache.get() || pCache == _notifyTableCache.get() ||
+                                      pCache == _physicsAssetCache.get() || pCache == _rigAssetCache.get() || pCache == _localizationReloadCache.get() );
     }
 
     void AssetManager::unregisterAssetCache( const IAssetCache* pCache )

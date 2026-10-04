@@ -36,7 +36,7 @@ namespace sw
     {
     public:
         /** @brief 등록할 수 있는 구간 수입니다. 넘으면 새 구간은 조용히 무시됩니다(측정이 실행을 막으면 안 되기 때문입니다). */
-        static constexpr uint32 kMaxScope = 64;
+        static constexpr uint32 kMaxScope = 128;
         /** @brief 슬롯을 받지 못했을 때의 값입니다. */
         static constexpr uint32 kInvalidSlot = 0xFFFFFFFFu;
         /** @brief 분포 히스토그램에서 옥타브(2배 구간) 하나를 나누는 비트 수입니다. 3 이면 옥타브당 8 칸, 해상도는 약 9% 입니다. */
@@ -117,7 +117,7 @@ namespace sw
             uint64              _sampledFrames{ 0 };
             /**
              * @brief 프레임 값의 분포입니다. 옥타브마다 `kSubBucketCount` 칸이라 해상도는 약 ±9% 입니다.
-             * @details `endFrame` 만 씁니다(게임 스레드 하나). 그래서 원자가 아니어도 됩니다. 구간 64 × 칸 512 × 4 바이트 = 128 KB.
+             * @details `endFrame` 만 씁니다(게임 스레드 하나). 그래서 원자가 아니어도 됩니다. 구간 128 × 칸 512 × 4 바이트 = 256 KB.
              */
             uint32 _arrBucket[kBucketCount]{};
         };

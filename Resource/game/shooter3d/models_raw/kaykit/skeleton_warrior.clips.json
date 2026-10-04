@@ -1,0 +1,22 @@
+{
+  "clips": {
+    "Walking_A": {
+      "notifies": [
+        { "name": "FootL", "time": 0.27 },
+        { "name": "FootR", "time": 0.8 }
+      ]
+    },
+    "Running_A": {
+      "notifies": [
+        { "name": "FootL", "time": 0.2 },
+        { "name": "FootR", "time": 0.6 }
+      ]
+    },
+    "1H_Melee_Attack_Slice_Horizontal": {
+      "notifies": [
+        { "name": "Swing", "time": 0.35, "duration": 0.25 },
+        { "name": "Impact", "time": 0.5 }
+      ]
+    }
+  }
+}

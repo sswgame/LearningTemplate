@@ -58,7 +58,7 @@ Object/
 │  ├─ TagSystem.*       # TagContainer · TagQuery (`TagID` 자체는 Core/String/TagID.h)
 │  ├─ Audio/            # 리스너 · 에미터 · 앰비언트(점 · 상자 · 구) · 리버브 존 컴포넌트, 물리 레이캐스트 가림 질의(틱하지 않고 SceneAudio 에 등록)
 │  └─ 2D/ · 3D/         # Sprite, Mesh, Collider, 빛(`LightComponent` 기반 — 색 · 세기 · 방향 규약 · 등록),
-│                       #   SkeletalMeshComponent(유닛 — 스켈레톤 · 포즈 · 팔레트 · 스킨드 메시) · SkeletalAnimatorComponent(그래프 · 레이어 · 루트 모션) 등
+│                       #   SkeletalMeshComponent(유닛 — 스켈레톤 · 포즈 · 팔레트 · 스킨드 메시) · SkeletalAnimatorComponent(그래프 · 레이어 · 루트 모션) · PoseRetargetComponent(다른 유닛 포즈를 리타깃) 등
 └─ Prefab/             # PrefabAsset(로드 · 저장 · 스폰) · PrefabCache(프리팹 에셋 캐시, `PrefabAsset.h`) · PrefabOverrides(인스턴스 차이 뽑기 · 다시 얹기)
 ```
 
@@ -237,7 +237,9 @@ public:
 };
 ```
 
-`TickGroup` 순서(대략): `PrePhysics` → `DuringPhysics`(기본) → `PostPhysics` → `PostUpdate`.
+`TickGroup` 순서: `PrePhysics` → `DuringPhysics`(기본) → **[틱 결과 적용 → 애니메이션 평가 → 물리(겹침 월드 · 강체, 이벤트)]** → `PostPhysics` →
+`PostUpdate` → 틱 결과 적용. PostPhysics 이후의 틱은 이번 프레임의 바디 자세 · 겹침을 본다(언리얼 `TG_PostPhysics`). 애니메이션은 물리 앞이라
+키네마틱 히트박스가 이번 포즈를 쫓고, 루트 모션이 캐릭터 컨트롤러로 같은 프레임에 들어간다 — PostPhysics 이후에 쓴 애니메이터 파라미터는 다음 프레임 포즈다.
 
 **언제 불리나.** 월드가 플레이 중일 때(`SceneManager::setWorldPlaying` — 에디터 없는 App · Shipping 은 처음부터, 에디터는 Play · Stop 이
 켜고 끈다) 활성 씬의 컴포넌트마다 `onBeginPlay` 가 **한 번**, 플레이 중에 붙은 컴포넌트는 **다음 틱 단계**(틱 전 · 틱 뒤 병합 뒤)에서 한 번

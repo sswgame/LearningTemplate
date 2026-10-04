@@ -262,6 +262,38 @@ _kWholeScanCleanCase: dict[str, str] = {
 }
 
 
+# 블록 주석 범위 추적 — 줄 규칙은 블록 주석 안의 줄을 건너뛴다. `/*` 를 주석 시작으로 잘못 읽으면 그 뒤 `*/` 가 나올 때까지 **모든 줄이
+# 검사에서 빠진다**(위반 0 이라 조용하다). 조각마다 까다로운 줄 다음에 루프 변수 위반을 두고, 그것이 잡혀야(True) 하는지 주석 안이라
+# 안 잡혀야(False) 하는지 적는다. False 조각은 위반 뒤에서 주석을 닫는다.
+_kLoopViolationLine = "    for ( int32 i = 0; i < 4; ++i )\n    {\n    }\n"
+_kBlockCommentScopeCases: list[tuple[str, str, bool]] = [
+    ("문자열 안의 /*", '    SW_LOG_INFO( "glob Source/*.h" );\n', True),
+    ("문자 리터럴 · 짧은 문자열 안의 /*", "    probeChar( '/', '*' );\n    probeText( \"/*\" );\n", True),
+    ("// 주석 안의 /*", "    // 패턴 예: Source/*\n", True),
+    ("한 줄에 닫히는 주석 뒤", "    probe(); /* 짧은 주석 */\n", True),
+    ("닫힌 뒤 다시 여는 주석", "    probe(); /* 하나 */ /* 둘이 열린 채\n", False),
+    ("여러 줄 주석", "    /* 여러 줄\n", False),
+]
+
+
+def checkBlockCommentScopeInternal(tempRoot: Path, bVerbose: bool) -> list[str]:
+    """블록 주석 범위를 문자열 · `//` · 한 줄 주석에 속지 않고 따라가는지 봅니다(`_kBlockCommentScopeCases`)."""
+    listError: list[str] = []
+    for caseIndex, (label, trickyLines, bExpectCaught) in enumerate(_kBlockCommentScopeCases):
+        closeComment = "" if bExpectCaught else "    */\n"
+        content = '#include "pch.h"\n\nvoid probe()\n{\n' + trickyLines + _kLoopViolationLine + closeComment + "}\n"
+        caseRoot = tempRoot / f"comment_scope_{caseIndex}"
+        path = writeFixtureInternal(caseRoot, "Source/Probe/CommentScope.cpp", content)
+        resetPathMapCacheInternal()
+        bCaught = "Naming/LoopVariable" in categoriesForFileInternal(caseRoot, path)
+        if bVerbose:
+            print(f"  [블록 주석 범위: {label}] caught={bCaught}")
+        if bCaught != bExpectCaught:
+            reason = "놓쳤습니다 — 주석이 아닌 곳을 주석으로 읽었다" if bExpectCaught else "잡았습니다 — 주석 안을 코드로 읽었다"
+            listError.append(f"블록 주석 범위({label}): 다음 줄의 루프 변수 위반을 {reason}")
+    return listError
+
+
 def resetPathMapCacheInternal() -> None:
     """
     `CheckCodeConventions` 의 경로 맵 캐시를 비웁니다.
@@ -365,6 +397,9 @@ def main(argv: list[str] | None = None) -> int:
 
         # --- 체크아웃 경로에 제외 폴더 이름(`build`)이 든 저장소 ---
         errors.extend(checkCheckoutPathWithExcludedWordInternal(tempRoot))
+
+        # --- 블록 주석 범위 (문자열 · `//` 안의 `/*`) ---
+        errors.extend(checkBlockCommentScopeInternal(tempRoot, args.verbose))
 
         # --- 오탐 확인 (파일 단위) ---
         cleanRoot = tempRoot / "clean"

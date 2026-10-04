@@ -33,23 +33,25 @@ namespace sw::editor
         // 씬 · 프리팹은 여기 적지 않는다 — 쿠커가 쿠킹하는 이름이 곧 에디터가 여는 이름이다(`AssetCookPath`). 여기 따로 적으면
         // 쿠커가 쿠킹하지 않는 이름(`_scene.xml` · 아무 `.xml` · 확장자 없는 `.scene` 등)도 씬 · 프리팹으로 열고 저장하게 되어 에디터에서는 되고
         // 배포본에는 없다. 쿠킹된 산출물(`.prefab.bin`)은 `.spv` 처럼 에셋이 아니다(`PrefabAsset::saveToFile` 은 소스만 쓴다).
-        constexpr string_view kArrTextureExt[]        = { ".png", ".jpg", ".jpeg", ".tga", ".dds", ".hdr", ".bmp" };
-        constexpr string_view kArrMaterialExt[]       = { ".material" };
-        constexpr string_view kArrShaderExt[]         = { ".hlsl", ".hlsli" };
-        constexpr string_view kArrAudioExt[]          = { ".wav" };
-        constexpr string_view kArrDataExt[]           = { ".xml", ".json", ".ini", ".kv" };
-        constexpr string_view kArrAnimSuffix[]        = { ".anim.json", ".anim" };
-        constexpr string_view kArrDialogueSuffix[]    = { ".dialogue.json", ".dialogue" };
-        constexpr string_view kArrSpriteDocSuffix[]   = { ".sprite.json", ".sprite" };
-        constexpr string_view kArrSpriteImageExt[]    = { ".png", ".jpg", ".jpeg", ".dds", ".tga" };
-        constexpr string_view kArrSequenceSuffix[]    = { ".seq.json", ".seq" };
-        constexpr string_view kArrTileMapSuffix[]     = { ".tilemap.xml", ".tilemap" };
-        constexpr string_view kArrMeshExt[]           = { ".mesh" };
-        constexpr string_view kArrSkeletonSuffix[]    = { ".skeleton.json" };
-        constexpr string_view kArrAnimClipExt[]       = { ".animclip" };
-        constexpr string_view kArrModelSourceExt[]    = { ".glb", ".gltf" }; ///< `models_raw/` 의 원본 — 임포트하는 것이 리로드다
-        constexpr string_view kArrHeightfieldRawExt[] = { ".png", ".r16" };  ///< `heightfields_raw/` 의 원본 · 구멍 마스크 — 임포트하는 것이 리로드다
-        constexpr string_view kArrHeightfieldExt[]    = { ".heightfield" };
+        constexpr string_view kArrTextureExt[]         = { ".png", ".jpg", ".jpeg", ".tga", ".dds", ".hdr", ".bmp" };
+        constexpr string_view kArrMaterialExt[]        = { ".material" };
+        constexpr string_view kArrShaderExt[]          = { ".hlsl", ".hlsli" };
+        constexpr string_view kArrAudioExt[]           = { ".wav" };
+        constexpr string_view kArrDataExt[]            = { ".xml", ".json", ".ini", ".kv" };
+        constexpr string_view kArrAnimSuffix[]         = { ".anim.json", ".anim" };
+        constexpr string_view kArrDialogueSuffix[]     = { ".dialogue.json", ".dialogue" };
+        constexpr string_view kArrSpriteDocSuffix[]    = { ".sprite.json", ".sprite" };
+        constexpr string_view kArrSpriteImageExt[]     = { ".png", ".jpg", ".jpeg", ".dds", ".tga" };
+        constexpr string_view kArrSequenceSuffix[]     = { ".seq.json", ".seq" };
+        constexpr string_view kArrTileMapSuffix[]      = { ".tilemap.xml", ".tilemap" };
+        constexpr string_view kArrMeshExt[]            = { ".mesh" };
+        constexpr string_view kArrSkeletonSuffix[]     = { ".skeleton.json" };
+        constexpr string_view kArrRigSuffix[]          = { ".rig.json" };
+        constexpr string_view kArrAnimClipExt[]        = { ".animclip" };
+        constexpr string_view kArrModelSourceExt[]     = { ".glb", ".gltf" }; ///< `models_raw/` 의 원본 — 임포트하는 것이 리로드다
+        constexpr string_view kArrHeightfieldRawExt[]  = { ".png", ".r16" };  ///< `heightfields_raw/` 의 원본 · 구멍 마스크 — 임포트하는 것이 리로드다
+        constexpr string_view kArrHeightfieldExt[]     = { ".heightfield" };
+        constexpr string_view kArrLocalizationSuffix[] = { ".strings.json", ".translation.json", ".locproject.json" }; ///< 올린 프로젝트를 다시 읽는다(`LocalizationManager`)
         /**
          * @struct AssetMatchRow
          * @brief 경로 판정 규칙 한 줄입니다 — 어느 종류인지, 그리고 핫 리로드가 그 파일을 어떻게 다시 읽는지.
@@ -74,25 +76,27 @@ namespace sw::editor
 
         // 줄 순서가 곧 **판정 우선순위**다 — 처음 맞는 줄이 이긴다(`findKind` · `findReloadRoute`).
         constexpr AssetMatchRow kArrAssetMatch[] = {
-            {        EditorAssetType::Scene, MatchMode::CookableSource,               nullptr,                                0,      nullptr,                                              nullptr},
-            {       EditorAssetType::Prefab, MatchMode::CookableSource,               nullptr,                                0,     "Prefab",                                              nullptr},
-            {  EditorAssetType::Heightfield, MatchMode::RawHeightfield, kArrHeightfieldRawExt, countOf( kArrHeightfieldRawExt ),      nullptr, &HeightfieldImporter::importChangedSourceHeightfield},
-            {      EditorAssetType::Texture,      MatchMode::Extension,        kArrTextureExt,        countOf( kArrTextureExt ),    "Texture",           &TextureImporter::importChangedSourceImage},
-            {       EditorAssetType::Shader,      MatchMode::Extension,         kArrShaderExt,         countOf( kArrShaderExt ),      nullptr,                                              nullptr},
-            {     EditorAssetType::Material,      MatchMode::Extension,       kArrMaterialExt,       countOf( kArrMaterialExt ),   "Material",                                              nullptr},
-            {        EditorAssetType::Audio,      MatchMode::Extension,          kArrAudioExt,          countOf( kArrAudioExt ),      nullptr,                                              nullptr},
-            {    EditorAssetType::AnimGraph,       MatchMode::EndsWith,        kArrAnimSuffix,        countOf( kArrAnimSuffix ),      nullptr,                                              nullptr},
-            {EditorAssetType::DialogueGraph,       MatchMode::EndsWith,    kArrDialogueSuffix,    countOf( kArrDialogueSuffix ),      nullptr,                                              nullptr},
-            {   EditorAssetType::SpriteClip,       MatchMode::EndsWith,   kArrSpriteDocSuffix,   countOf( kArrSpriteDocSuffix ), "SpriteClip",                                              nullptr},
-            {   EditorAssetType::SpriteClip,      MatchMode::Extension,    kArrSpriteImageExt,    countOf( kArrSpriteImageExt ),      nullptr,                                              nullptr},
-            {      EditorAssetType::TileMap,       MatchMode::EndsWith,     kArrTileMapSuffix,     countOf( kArrTileMapSuffix ),      nullptr,                                              nullptr},
-            {     EditorAssetType::Sequence,       MatchMode::EndsWith,    kArrSequenceSuffix,    countOf( kArrSequenceSuffix ),      nullptr,                                              nullptr},
-            {         EditorAssetType::Mesh,      MatchMode::Extension,           kArrMeshExt,           countOf( kArrMeshExt ),       "Mesh",                                              nullptr},
-            {         EditorAssetType::Mesh,      MatchMode::Extension,    kArrModelSourceExt,    countOf( kArrModelSourceExt ),       "Mesh",             &ModelImporter::importChangedSourceModel},
-            {     EditorAssetType::Skeleton,       MatchMode::EndsWith,    kArrSkeletonSuffix,    countOf( kArrSkeletonSuffix ),   "Skeleton",                                              nullptr},
-            {     EditorAssetType::AnimClip,      MatchMode::Extension,       kArrAnimClipExt,       countOf( kArrAnimClipExt ),   "AnimClip",                                              nullptr},
-            {  EditorAssetType::Heightfield,      MatchMode::Extension,    kArrHeightfieldExt,    countOf( kArrHeightfieldExt ),      nullptr,                                              nullptr},
-            {         EditorAssetType::Data,      MatchMode::Extension,           kArrDataExt,           countOf( kArrDataExt ),      nullptr,                                              nullptr},
+            {        EditorAssetType::Scene, MatchMode::CookableSource,                nullptr,                                 0,       nullptr,                                              nullptr},
+            {       EditorAssetType::Prefab, MatchMode::CookableSource,                nullptr,                                 0,      "Prefab",                                              nullptr},
+            {  EditorAssetType::Heightfield, MatchMode::RawHeightfield,  kArrHeightfieldRawExt,  countOf( kArrHeightfieldRawExt ),       nullptr, &HeightfieldImporter::importChangedSourceHeightfield},
+            {      EditorAssetType::Texture,      MatchMode::Extension,         kArrTextureExt,         countOf( kArrTextureExt ),     "Texture",           &TextureImporter::importChangedSourceImage},
+            {       EditorAssetType::Shader,      MatchMode::Extension,          kArrShaderExt,          countOf( kArrShaderExt ),       nullptr,                                              nullptr},
+            {     EditorAssetType::Material,      MatchMode::Extension,        kArrMaterialExt,        countOf( kArrMaterialExt ),    "Material",                                              nullptr},
+            {        EditorAssetType::Audio,      MatchMode::Extension,           kArrAudioExt,           countOf( kArrAudioExt ),       nullptr,                                              nullptr},
+            {    EditorAssetType::AnimGraph,       MatchMode::EndsWith,         kArrAnimSuffix,         countOf( kArrAnimSuffix ),       nullptr,                                              nullptr},
+            {EditorAssetType::DialogueGraph,       MatchMode::EndsWith,     kArrDialogueSuffix,     countOf( kArrDialogueSuffix ),       nullptr,                                              nullptr},
+            {   EditorAssetType::SpriteClip,       MatchMode::EndsWith,    kArrSpriteDocSuffix,    countOf( kArrSpriteDocSuffix ),  "SpriteClip",                                              nullptr},
+            {   EditorAssetType::SpriteClip,      MatchMode::Extension,     kArrSpriteImageExt,     countOf( kArrSpriteImageExt ),       nullptr,                                              nullptr},
+            {      EditorAssetType::TileMap,       MatchMode::EndsWith,      kArrTileMapSuffix,      countOf( kArrTileMapSuffix ),       nullptr,                                              nullptr},
+            {     EditorAssetType::Sequence,       MatchMode::EndsWith,     kArrSequenceSuffix,     countOf( kArrSequenceSuffix ),       nullptr,                                              nullptr},
+            {         EditorAssetType::Mesh,      MatchMode::Extension,            kArrMeshExt,            countOf( kArrMeshExt ),        "Mesh",                                              nullptr},
+            {         EditorAssetType::Mesh,      MatchMode::Extension,     kArrModelSourceExt,     countOf( kArrModelSourceExt ),        "Mesh",             &ModelImporter::importChangedSourceModel},
+            {     EditorAssetType::Skeleton,       MatchMode::EndsWith,     kArrSkeletonSuffix,     countOf( kArrSkeletonSuffix ),    "Skeleton",                                              nullptr},
+            {          EditorAssetType::Rig,       MatchMode::EndsWith,          kArrRigSuffix,          countOf( kArrRigSuffix ),         "Rig",                                              nullptr},
+            {     EditorAssetType::AnimClip,      MatchMode::Extension,        kArrAnimClipExt,        countOf( kArrAnimClipExt ),    "AnimClip",                                              nullptr},
+            {  EditorAssetType::Heightfield,      MatchMode::Extension,     kArrHeightfieldExt,     countOf( kArrHeightfieldExt ),       nullptr,                                              nullptr},
+            {         EditorAssetType::Data,       MatchMode::EndsWith, kArrLocalizationSuffix, countOf( kArrLocalizationSuffix ), "StringTable",                                              nullptr},
+            {         EditorAssetType::Data,      MatchMode::Extension,            kArrDataExt,            countOf( kArrDataExt ),       nullptr,                                              nullptr},
         };
 
         // 종류마다 한 줄. 줄 순서가 곧 **브라우저 필터 · 도구 패널 · 리소스 카탈로그의 표시 순서**다.
@@ -112,6 +116,7 @@ namespace sw::editor
             {         EditorAssetType::Mesh,        "Mesh",       "Meshes",           nullptr,           ICON_FA_CUBE, { 0.55f, 0.80f, 0.80f, 1.0f }, false,  true,  true},
             {     EditorAssetType::Skeleton,    "Skeleton",    "Skeletons",           nullptr,           ICON_FA_BONE, { 0.90f, 0.85f, 0.70f, 1.0f }, false,  true,  true},
             {     EditorAssetType::AnimClip,    "AnimClip",        "Clips",           nullptr, ICON_FA_PERSON_WALKING, { 1.00f, 0.70f, 0.35f, 1.0f }, false,  true,  true},
+            {          EditorAssetType::Rig,         "Rig",         "Rigs",           nullptr,           ICON_FA_BONE, { 0.95f, 0.75f, 0.55f, 1.0f }, false,  true,  true},
             {  EditorAssetType::Heightfield, "Heightfield", "Heightfields",           nullptr,       ICON_FA_MOUNTAIN, { 0.65f, 0.60f, 0.45f, 1.0f }, false,  true, false},
             {         EditorAssetType::Data,        "Data",         "Data",           nullptr,          ICON_FA_TABLE, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
         };

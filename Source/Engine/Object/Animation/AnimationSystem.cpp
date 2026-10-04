@@ -44,12 +44,28 @@ namespace sw
         , _listActive{}
         , _listLevelStart{}
         , _pManager{ nullptr }
+        , _lodViewPosition{}
         , _frameIndex{ 0 }
         , _deltaSeconds{ 0.0f }
         , _activeUnitCount{ 0 }
         , _bOrderDirty{ SW_FALSE }
         , _bCycle{ SW_FALSE }
+        , _bHasLodViewPosition{ SW_FALSE }
     {
+    }
+
+    void AnimationSystem::setLodViewPosition( const float3& position )
+    {
+        _lodViewPosition     = position;
+        _bHasLodViewPosition = SW_TRUE;
+    }
+
+    bool AnimationSystem::findLodViewPosition( float3& outPosition ) const
+    {
+        if ( _bHasLodViewPosition == SW_FALSE )
+            return false;
+        outPosition = _lodViewPosition;
+        return true;
     }
 
     void AnimationSystem::registerUnit( SkeletalMeshComponent* pUnit )

@@ -1,0 +1,13 @@
+{
+    "name": "shooter3d",
+    "sourceCulture": "en",
+    "cultures": [ "ko" ],
+    "stringTables": [ "shooter3d.strings.json" ],
+    "codeRoots": [ "Source/Games/Shooter3D" ],
+    "assetRoots": [ "game/shooter3d" ],
+    "assetRules": [
+        { "files": "items.xml", "elements": [ "Item" ], "attribute": "name", "kind": "text", "context": "Item name" },
+        { "files": "weapons.xml", "elements": [ "Weapon" ], "attribute": "name", "kind": "text", "context": "Weapon name" },
+        { "files": ".settings.xml", "elements": [ "Setting", "Option" ], "attribute": "text", "kind": "key" }
+    ]
+}

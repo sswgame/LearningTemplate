@@ -77,6 +77,8 @@ namespace sw
     private:
         /** @brief 기술을 적용합니다. */
         void applyMove( PartyMember& attacker, PartyMember& defender, int32 moveSlot, bool playerSide );
+        /** @brief HUD 한 줄을 바꿉니다(로컬라이즈 · 포맷을 거친 글 — `SW_LOCTEXT` · `SW_LOCFORMAT`). */
+        void setStatusText( string_view text );
         /** @brief 적이 쓸 기술 슬롯을 고릅니다. */
         int32 pickFoeMoveSlot() const;
 
