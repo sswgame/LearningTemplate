@@ -82,6 +82,8 @@ namespace sw
         void          setFocus( const float3& focus ) { _focus = focus; }
         float32       getYaw() const { return _yaw; }
         float32       getOrthoHeight() const { return _orthoHeight; }
+        /** @brief 직교 화면 높이를 바꿉니다(확대 범위 안으로 묶는다 — 휠과 같은 규칙). */
+        void setOrthoHeight( float32 orthoHeight );
         /** @brief WASD 로도 움직일지 정합니다(끄면 방향키만 — 게임이 WASD 를 단축키로 쓸 때). */
         void setWasdPanEnabled( bool bEnabled ) { _bWasdPan = bEnabled; }
         /**

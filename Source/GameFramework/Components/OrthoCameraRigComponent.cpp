@@ -155,6 +155,11 @@ namespace sw
         _orthoHeight = OrthoCameraRigMath::computeZoomedHeight( _orthoHeight, pInput->getMouseWheel(), _zoomStep, _minOrthoHeight, _maxOrthoHeight );
     }
 
+    void OrthoCameraRigComponent::setOrthoHeight( float32 orthoHeight )
+    {
+        _orthoHeight = MathUtil::clamp( orthoHeight, _minOrthoHeight, _maxOrthoHeight );
+    }
+
     bool OrthoCameraRigComponent::findGroundPoint( const float2& mouseNormalized, float32 aspect, float32 groundHeight, float3& outPoint ) const
     {
         const GameRay ray      = OrthoCameraRigMath::computeScreenRay( _focus, _yaw, _pitch, _distance, _orthoHeight, aspect, mouseNormalized );

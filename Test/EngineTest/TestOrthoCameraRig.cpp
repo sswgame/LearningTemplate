@@ -185,3 +185,21 @@ SW_TEST_CASE( OrthoCameraRigTest, FindGroundPointUsesTheRigView )
     SW_EXPECT_NEAR_EQUAL( 0.0f, point._y, 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( 30.0f, point._z, 1.0e-3f );
 }
+
+/**
+ * @brief [OrthoCameraRigTest] 코드가 넣는 화면 높이도 휠과 같은 확대 범위 안으로 묶인다
+ */
+SW_TEST_CASE( OrthoCameraRigTest, SetOrthoHeightStaysInTheZoomRange )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "RigCamera" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    OrthoCameraRigComponent* pRig = pObject->addComponent<OrthoCameraRigComponent>();
+    SW_ASSERT_NOT_NULL( pRig );
+    pRig->setOrthoHeight( 70.0f );
+    SW_EXPECT_NEAR_EQUAL( 70.0f, pRig->getOrthoHeight(), 1.0e-6f );
+    pRig->setOrthoHeight( 1000.0f );
+    SW_EXPECT_NEAR_EQUAL( 220.0f, pRig->getOrthoHeight(), 1.0e-6f ); // 기본 범위 25 ~ 220
+    pRig->setOrthoHeight( 1.0f );
+    SW_EXPECT_NEAR_EQUAL( 25.0f, pRig->getOrthoHeight(), 1.0e-6f );
+}
