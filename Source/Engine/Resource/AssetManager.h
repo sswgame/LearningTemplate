@@ -25,14 +25,17 @@
 namespace sw
 {
     class AnimClipCache;
+    class AnimNotifyTableCache;
     class IAssetCache;
     class LocalizationReloadCache;
     class MaterialCache;
     class MeshCache;
+    class PhysicsAssetCache;
     class PrefabCache;
     class ResourcePackManager;
     class RigAssetCache;
     class SkeletonCache;
+    class SocketSetCache;
     class SpriteClipCache;
     class TextureCache;
 
@@ -190,6 +193,9 @@ namespace sw
         unique_ptr<MeshCache>               _meshCache;               ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<SkeletonCache>           _skeletonCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<AnimClipCache>           _animClipCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
+        unique_ptr<SocketSetCache>          _socketSetCache;          ///< 캐릭터 데이터(소켓 에셋) — 등록부에 보이는 창구
+        unique_ptr<AnimNotifyTableCache>    _notifyTableCache;        ///< 캐릭터 데이터(알림 표)
+        unique_ptr<PhysicsAssetCache>       _physicsAssetCache;       ///< 물리 에셋(래그돌 · 히트박스)
         unique_ptr<RigAssetCache>           _rigAssetCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<LocalizationReloadCache> _localizationReloadCache; ///< 로컬라이제이션 파일의 핫 리로드 창구 — 글은 `LocalizationManager` 가 갖는다
         unique_ptr<ResourcePackManager>     _pPackManager;

@@ -88,7 +88,8 @@ namespace sw
 {
     /**
      * @struct AnimNotifyEvent
-     * @brief 클립 시각에 붙은 이름 하나입니다(발소리 · 칼 휘두름 시작). `_duration` 이 0 보다 크면 구간 알림입니다(시작에서 한 번 울립니다).
+     * @brief 클립 시각에 붙은 이름 하나입니다(발소리 · 칼 휘두름 시작). `_duration` 이 0 보다 크면 구간 알림(NotifyState)입니다 —
+     *        시작 시각을 지날 때 `Begin`, 끝 시각(시작 + 길이, 한 바퀴 끝을 넘지 않음)을 지날 때 `End` 가 울립니다.
      */
     struct AnimNotifyEvent
     {
@@ -101,14 +102,34 @@ namespace sw
 namespace sw
 {
     /**
+     * @enum AnimNotifyPhase
+     * @brief 울린 알림의 종류입니다. 길이 없는 알림은 `Instant` 하나, 구간 알림은 `Begin` 과 `End` 가 따로 울립니다(언리얼 AnimNotify · AnimNotifyState).
+     * @details 구간 사이의 매 프레임(`Tick`)은 트랙이 아니라 구간을 열어 둔 쪽(알림 디스패치)이 셉니다 — 트랙은 지나간 시각만 압니다.
+     */
+    enum class AnimNotifyPhase : uint8
+    {
+        Instant = 0,
+        Begin,
+        End,
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct AnimFiredNotify
      * @brief 이번 갱신에 울린 알림 하나입니다. `_weight` 는 그 클립의 섞임 가중치입니다(크로스페이드 중 두 클립 모두 울립니다).
+     * @details `_pSource` · `_eventIndex` 가 구간 알림 하나를 가립니다(같은 클립의 같은 알림이 `Begin` 과 `End` 에서 같은 값). `_time` 은 `End` 면 끝 시각입니다.
      */
     struct AnimFiredNotify
     {
-        hashed_string _name;
-        float32       _time{ 0.0f };
-        float32       _weight{ 1.0f };
+        hashed_string        _name;
+        const IAnimPlayable* _pSource{ nullptr };
+        float32              _time{ 0.0f };
+        float32              _weight{ 1.0f };
+        float32              _duration{ 0.0f };
+        uint32               _eventIndex{ 0 };
+        AnimNotifyPhase      _phase{ AnimNotifyPhase::Instant };
     };
 } // namespace sw
 
@@ -132,14 +153,18 @@ namespace sw
         /** @brief 모두 지웁니다. */
         void clear() { _listEvent.clear(); }
         /**
-         * @brief 걸음 @p step 이 지난 알림을 @p outListFired 에 덧붙입니다.
+         * @brief 걸음 @p step 이 지난 알림을 @p outListFired 에 시각 순서로 덧붙입니다. @p pSource 는 이 트랙을 가진 재생할 것입니다.
          * @details 반복을 한 번 넘으면 (이전, 끝] 과 [0, 지금] 을, 여러 번 넘으면 그 사이의 온 바퀴도 셉니다. 한 시각의 알림은 한 바퀴에 한 번입니다.
+         *          구간 알림은 시작 시각에서 `Begin`, 끝 시각에서 `End` 를 냅니다 — 같은 시각이면 `End` 가 먼저입니다(앞 구간이 닫히고 다음이 열린다).
          */
-        void collectFired( const AnimTimeStep& step, float32 playLength, float32 weight, vector<AnimFiredNotify>& outListFired ) const;
+        void collectFired( const AnimTimeStep& step, float32 playLength, float32 weight, const IAnimPlayable* pSource, vector<AnimFiredNotify>& outListFired ) const;
 
     private:
-        /** @brief 구간 [from, to] 의 알림을 덧붙입니다. @p bIncludeFrom 이 거짓이면 from 은 뺍니다. */
-        void collectRange( float32 fromTime, float32 toTime, bool bIncludeFrom, float32 weight, vector<AnimFiredNotify>& outListFired ) const;
+        /** @brief 구간 [from, to] 의 알림 시작 · 끝을 덧붙입니다. @p bIncludeFrom 이 거짓이면 from 은 뺍니다. */
+        void collectRange( float32 fromTime, float32 toTime, bool bIncludeFrom, float32 playLength, float32 weight, const IAnimPlayable* pSource,
+                           vector<AnimFiredNotify>& outListFired ) const;
+        /** @brief 구간 알림의 끝 시각입니다(한 바퀴 끝을 넘지 않습니다). */
+        static float32 computeEndTime( const AnimNotifyEvent& event, float32 playLength );
 
         vector<AnimNotifyEvent> _listEvent;
     };

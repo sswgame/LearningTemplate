@@ -48,7 +48,8 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
 
 상태: `Bound` · `ReleasedAnimated` · `ReleasedPhysics` · `Returning`. **붙어 있으면 비용이 없습니다** — 주인 루트를 holder 루트에 붙이고 소켓 변환을 로컬로
 적을 뿐이라 트랜스폼 계층이 나머지를 하고 틱이 꺼져 있습니다. holder 의 본이 움직이면 애니메이션 시스템이 그 단위를 평가한 뒤 `updateSocketTransform` 을 부릅니다(같은
-값이면 아무것도 안 함). 떼기는 월드 자리를 지키고(첫 프레임 = 붙어 있던 자리), 물리는 `ISocketPhysicsBody`(강체 컴포넌트가 구현, `setPhysicsBody` 로 넘김)에 맡기며,
+값이면 아무것도 안 함). 떼기는 월드 자리를 지키고(첫 프레임 = 붙어 있던 자리), 물리는 `ISocketPhysicsBody`(`Object/Component/Physics/SocketPhysicsBody.h` — 강체 컴포넌트가 구현하고
+시작할 때 같은 오브젝트의 `RigidBodyComponent` 를 저절로 건다: 붙은 동안 키네마틱으로 손을 따르고, 떼면 동적 + 시작 속도, 되돌아가면 다시 키네마틱. 강체는 단위의 루트에 둔다)에 맡기며,
 되돌아가기는 지금 월드에서 소켓까지 `BlendCurveSpec`(카메라 블렌드와 같은 구현, `Engine/Animation/BlendCurve.h`)으로 섞습니다. `transferTo` 는 다시 스폰하지 않고
 주인을 바꿉니다(땅의 줍기 오브젝트 · 다른 캐릭터). 2D 도 같습니다 — 2D 오브젝트도 씬 컴포넌트(X · Y, Z 축 회전)입니다.
 
@@ -72,6 +73,87 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
   거기에 잇는 것은 얼굴 · 모프 임포트와 같은 다음 일입니다. 보정 본은 지금 바로 포즈에 듭니다.
 - **비용 0**: `setRigEnabled( false )` 면 쉬는 유닛처럼 빠집니다. 스프링 사슬은 `AnimationSystem::setLodViewPosition` 기준 `lod_distance` 밖에서 꺼지고 다시 켜지면
   애니메이션 자세에서 시작합니다.
+
+## 소켓 표 컴포넌트 · 찾기 — `SocketSetComponent` · `SocketLookupUtil`
+
+오브젝트 하나의 소켓 · 마커 표(`*.sockets.xml`, 공유 캐시 `SocketSetCache`)를 듭니다. 소켓은 같은 오브젝트의 유닛(`SkeletalMeshComponent`)의 지금 본을 따르고, 유닛이 없으면
+(문 · 레버) 오브젝트 루트 기준입니다. `SocketLookupUtil::findSocketWorldTransform( 오브젝트, 이름 )` 은 표에서 먼저, 없으면 유닛의 본 이름으로 찾습니다(`foot.l`) —
+알림 처리기 · 상호작용 맞춤 마커 · 무기 총구가 같은 길입니다. 부모 본은 시작할 때 유닛 스켈레톤과 대조합니다(모르는 본은 오류).
+
+## 애니메이션 알림 디스패치 — `AnimNotifyComponent` · `AnimNotifyTable`(`*.notifies.xml`)
+
+클립은 알림의 이름 · 시각 · 길이만 듭니다(임포트 곁 데이터 `<모델>.clips.json`). 이름이 무엇을 하는지는 캐릭터마다 알림 표 한 줄이고, 코드에는 처리기 **종류**만
+있습니다(`AnimNotifyHandlerRegistry` — 모르는 처리기 · 인자 · 빠진 필수 인자는 읽기 오류). 표는 공유 캐시(`AnimNotifyTableCache`)에서 받고 파일을 고치면 열린 구간을
+닫고 새 표로 잇습니다.
+
+| 처리기 | 하는 일 | 인자 |
+|---|---|---|
+| `PlaySound` | 소켓 자리에서 소리 | sound · socket |
+| `SpawnPrefab` | 소켓 변환에 프리팹(이펙트) | prefab · socket · offset · attach |
+| `Footstep` | 발 소켓 아래 광선이 맞은 **물리 재질** = 바닥 종류, 소리 경로의 `{surface}` 를 그 이름으로 | socket · distance · sound |
+| `HitWindow` | 구간 — 두 소켓 사이 칼날을 프레임마다(지난 자리 → 지금 + 지금 칼날) 쓸어 맞은 오브젝트에 구간당 한 번 `onHitReceived` | socketA · socketB · radius · damage · impulse · samples |
+| `CameraShake` | 카메라 충격 요청(`AnimNotifyHandlerUtil::getCameraShakeRequested` — 게임프레임워크의 `CameraManagerComponent` 가 듣는다) | amplitude · duration · frequency · radius · socket |
+| `GameplayEvent` | 같은 오브젝트의 컴포넌트에 `onAnimNotify`(구간이면 시작 · 끝) | event |
+
+- **한 번씩**: 트랙의 의미 그대로(지나간 것을 정확히 한 번, 반복 경계 포함). 구간 알림은 `Begin` → 프레임마다 틱 → `End` 이고, 클립이 재생에서 빠지면(전이 · 정지)
+  `End` 를 대신 냅니다. 처리 순서는 (1) 끊긴 구간 닫기 (2) 지난 프레임부터 열린 구간의 틱 (3) 이번 알림을 시각 순서로 — 끝나는 구간도 마지막 움직임을 잰다.
+- **스레드**: 3D 는 애니메이션 시스템의 게임 스레드 마무리(`finishAnimationFrame`, 루트 모션 적용 **전**)에서, 2D 는 스프라이트 틱(워커)에서 베껴 틱 뒤 게임 스레드로.
+  처리기는 늘 게임 스레드입니다(스폰 · 물리 질의 · 맞음 알림).
+- 처리기가 한 일은 `getActions()` 에 남습니다(진단 · 시험).
+
+## 모션 워핑 · 이동 보정 — `MotionWarpingComponent` · `LocomotionWarpingComponent`
+
+- **모션 워핑**(언리얼 Motion Warping 의 Skew Warp): 게임플레이가 이름 붙은 목표(월드 자리 · 요)를 넣고(`setWarpTarget` — 상호작용 시작이 맞춤 마커를 넣는다),
+  클립의 `MotionWarp` 구간 알림이 창을 엽니다. 애니메이터가 루트 모션을 옮기기 전에(`IRootMotionModifier`) 남은 루트 모션(지금 → 창 끝, 루트 모션 트랙)과
+  목표까지 필요한 이동의 차이를 남은 시간 몫만큼 더합니다 — 창 끝 프레임에 몫이 1 이라 정확히 닿습니다. 요도 같습니다. 끝 알림은 루트 모션보다 먼저 처리되므로
+  창은 끝 프레임까지 휘고 닫힙니다. `vertical` 이 아니면 높이는 클립 그대로입니다.
+- **루트 모션 → 캐릭터 컨트롤러**: 같은 오브젝트에 `CharacterControllerComponent` 가 있으면(애니메이터 `_bRootMotionThroughController`, 기본 켬) 이동은
+  `addRootMotionDisplacement` 로 넘어가 다음 물리 프레임의 스텝들이 나눠 움직입니다(벽에 막히고 턱을 오른다, 수평만 — 중력은 컨트롤러). 회전은 트랜스폼에 씁니다.
+- **이동 보정**(Stride · Orientation Warping 의 단순형, 모두 PROPERTY): 보폭은 클립 커브(`_speedCurve`, 기본 `Speed`)와 실제 수평 속도로 재생 배율을
+  [min, max] 안에서 고르고, 남은 몫은 `getStrideScale()`(발 IK 자리 — 값만 낸다). 방향은 이동 방향과 몸 앞의 요 차이(뒤로 가면 반대로 접음, ±최대)를
+  뼈 목록의 가중치만큼 캐릭터 위 축으로 돌립니다(후처리 단계).
+
+## 래그돌 · 히트박스 — `RagdollComponent`
+
+캐릭터의 물리 에셋(`*.physics.xml`, 공유 캐시 `PhysicsAssetCache` — 파일을 고치면 바디를 다시 세운다)으로 `PhysicsRagdollBuilder` 가 뼈마다 바디를 세웁니다
+(사용자 값 = 오브젝트 id, 레이어 `Ragdoll`). **바디마다 물리 섞임 가중치 하나**(0 = 애니메이션, 1 = 물리)가 모든 경우를 한 길로 합니다 — 가중치가 0 이면
+키네마틱(이번 프레임 포즈까지 스텝마다 나눠 끌려가 밀린 동적 바디가 속도를 받는다), 0 보다 크면 동적입니다.
+
+| 상태 | 바디 | 포즈 |
+|---|---|---|
+| `Animated` | 키네마틱 히트박스 | 애니메이션 |
+| 맞음 반응(`applyHitReaction` · 치명 아닌 `onHitReceived`) | 맞은 바디 아래만 `_hitReactionSeconds` 동안 동적(중력 0), 그 바디에 충격량 | 가중치 `_hitReactionWeight` → 0 + 가산 움찔 클립(`_flinchClip`) |
+| `Ragdoll`(치명 맞음 · `startRagdoll`) | 모두 동적(애니메이션 속도를 잇는다), 캐릭터 컨트롤러는 꺼진다 | 물리 |
+| `Partial`(`startPartialRagdoll`) | `_partialRootBone` 아래만 동적(관절이 키네마틱 골반에 매달린다) | 그 아래만 물리 |
+| `BlendingBack`(`getUp` · `stopPartialRagdoll`) | 키네마틱 | 시작할 때의 물리 자세에서 `_blendBackSeconds` 동안 애니메이션으로 |
+
+- 포즈는 후처리 단계에서 애니메이션 포즈와 **지난 물리 프레임**의 바디 자세(`readBoneTransforms`)를 뼈 가중치로 섞습니다(바디 없는 뼈는 가장 가까운 조상 바디의 것).
+- **기상**(`getUp`): 가라앉은 뒤(`isSettled` — 모든 바디가 `_settleSpeed` 보다 느리게 `_settleSeconds`) 골반의 앞이 위를 보면 누움 클립, 아니면 엎드림 클립을 고르고,
+  그 클립 첫 자세의 골반 → `_partialRootBone` 방향을 래그돌의 것에 맞추도록 오브젝트를 돌리고 골반 아래로 옮긴 뒤 래그돌 자세에서 섞어 돌아옵니다. 클립이 끝나면 `_getUpExitState`.
+- 히트 존: 맞은 바디 → `findHitZone` → 물리 에셋 바디의 `_hitZone`(이름 · 피해 배율). `CharacterHitUtil::resolveHitZone` 이 래그돌을 먼저 봅니다.
+- KayKit 스켈레톤 리그(41 뼈)의 물리 에셋: `Resource/game/shooter3d/characters/skeleton_warrior/skeleton_warrior.physics.xml`(16 바디 — 머리 ×2 · 몸통 · 골반 · 팔 ×0.6 ·
+  다리 ×0.7, 셰이프는 스킨 정점이 그 뼈를 따르는 범위에서 골랐다).
+
+## 절단 런타임 — `DismembermentComponent`
+
+치명적 맞음(`HitInfo::_bFatal`)이 잘라 낼 수 있는 영역(`_listSeverableRegion`)의 뼈(래그돌 바디 → 물리 에셋 뼈 → 몸 영역 표 `*.fit.xml` 의 `<Region bones=…>`)에 들면
+`severRegion` 합니다(코드가 바로 불러도 된다):
+
+1. 유닛의 지금 스킨드 메시(인덱스 없는 삼각형 목록)를 자리로 이어 위상을 얻고, 영역 표로 정점마다 영역을 매겨 `DismembermentUtil::severRegions`.
+2. 남은 몸 = 원래 정점(UV 이음매 그대로)에서 잘린 삼각형을 빼고 남은 몸 캡을 스킨 정점으로 붙인 새 메시(`setMesh` — 보임 마스크 길).
+3. 떨어진 조각 = 잘린 삼각형 + 조각 캡을 지금 포즈로 CPU 스키닝한 정적 메시 + 그 정점의 볼록 껍질 강체(`_pieceLayer` · `_pieceMaterial` · `_pieceMass`)를 가진
+   새 오브젝트, 맞은 방향 × 충격량. 래그돌이 있으면 그 영역 뼈의 바디를 떼어 냅니다(`RagdollComponent::detachBoneBodies` — 시뮬레이션에서 빼고 그 바디에 걸린 관절을 지운다. 빠진 바디를 잇는 관절이
+   남으면 Jolt 솔버가 넓은 단계 밖의 바디를 만져 단언이 선다).
+4. 표면 상태(`CharacterSurfaceState`, 엔진 기본 채널 표)의 그 영역 `_bloodChannel` = 1 — 머티리얼 파라미터로 싣는 일은 외형 통합의 몫입니다.
+
+자른 자리 캡은 남은 쪽 · 떨어진 쪽이 **정점을 나눠 쓸 때만**(이어진 몸) 생깁니다 — KayKit 해골 · 기사처럼 부위마다 떨어진 껍질인 메시는 캡이 없습니다.
+KayKit 리그의 영역 표: `Resource/game/shooter3d/characters/skeleton_warrior/skeleton_warrior.fit.xml`(Head · Arm_L/R · Leg_L/R · Torso).
+
+## 맞힘 — `CharacterHitUtil`
+
+광선(3D · 2D) → 맞은 바디 → 오브젝트(바디 사용자 값) → 히트 존(래그돌의 물리 에셋 바디 → 강체 컴포넌트의 `_hitZone`) → `Component::onHitReceived( HitInfo )`.
+쏘는 오브젝트의 바디는 모두 건너뜁니다(`PhysicsQueryFilter::_ignoreUserData` — 래그돌 뼈 · 든 무기). 무기 한 발은 `traceWeaponHit`. 엔진은 체력을 모릅니다 —
+피해 × 배율을 어떻게 쓸지는 받는 컴포넌트가 정합니다.
 
 ## 체형
 

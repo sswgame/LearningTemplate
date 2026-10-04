@@ -10,6 +10,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Animation/AnimPlayback.h"
+
 namespace sw
 {
     class JsonValue;
@@ -61,10 +63,11 @@ namespace sw
      */
     struct SpriteClipAnimation
     {
-        string _name;
-        int32  _firstFrame{ 0 };
-        int32  _frameCount{ 0 };
-        uint8  _bLoop{ SW_TRUE };
+        string                  _name;
+        vector<AnimNotifyEvent> _listNotify; ///< 구간 시작 기준 시각(초)의 알림 — 스켈레탈 클립의 알림과 같은 의미(길이 > 0 이면 구간 알림)
+        int32                   _firstFrame{ 0 };
+        int32                   _frameCount{ 0 };
+        uint8                   _bLoop{ SW_TRUE };
     };
 } // namespace sw
 
@@ -74,7 +77,8 @@ namespace sw
      * @class SpriteClipAsset
      * @brief `.sprite.json` 하나입니다. 에디터(SpriteClipPanel)가 쓰고 런타임(SpriteComponent · SpriteAnimatorComponent)이 읽는 **한 벌의 파서**입니다.
      * @details 형식(키 이름)은 에디터가 처음부터 쓰던 그대로입니다:
-     *          `{ "atlas": 경로, "frames": [ { "u", "v", "w", "h", "durationMs" } ], "transformKeys": [ { "time", "x", "y", "angleDeg" } ] }`.
+     *          `{ "atlas": 경로, "frames": [ { "u", "v", "w", "h", "durationMs" } ], "transformKeys": [ { "time", "x", "y", "angleDeg" } ],
+     *            "animations": [ { "name", "start", "count", "loop", "notifies": [ { "name", "time", "duration" } ] } ] }` — 알림 시각은 구간 시작 기준 초입니다.
      *          여기에 선택 배열 `"animations": [ { "name", "start", "count", "loop" } ]` 이 붙습니다. 이 배열이 없는 파일은 **프레임 전체가 이름
      *          없는 애니메이션 하나**입니다(`findFrameRange`).
      */

@@ -114,11 +114,23 @@ namespace sw
             const int64 requestedFirst = animationJson.get( "start" ).asInt( 0 );
             const int64 requestedCount = animationJson.get( "count" ).asInt( 0 );
             animation._bLoop           = animationJson.get( "loop" ).asBool( true ) ? SW_TRUE : SW_FALSE;
-            const int64 firstFrame     = MathUtil::clamp<int64>( requestedFirst, 0, frameCount );
-            const int64 lastFrame      = MathUtil::clamp<int64>( requestedFirst + requestedCount, firstFrame, frameCount );
-            animation._firstFrame      = static_cast<int32>( firstFrame );
-            animation._frameCount      = static_cast<int32>( lastFrame - firstFrame );
-            const bool bRangeKept      = ( firstFrame == requestedFirst ) && ( lastFrame - firstFrame == requestedCount );
+            // 알림 — 구간 시작 기준 시각(초) · 길이(구간 알림). 스켈레탈 클립 곁 데이터(`clips.json`)와 같은 키다.
+            const JsonValue notifies = animationJson.get( "notifies" );
+            for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
+            {
+                const JsonValue notify = notifies.at( notifyIndex );
+                AnimNotifyEvent event{};
+                event._name     = hashed_string( notify.get( "name" ).asString() );
+                event._time     = static_cast<float32>( notify.get( "time" ).asFloat( 0.0 ) );
+                event._duration = static_cast<float32>( notify.get( "duration" ).asFloat( 0.0 ) );
+                if ( event._name.empty() == false )
+                    animation._listNotify.push_back( event );
+            }
+            const int64 firstFrame = MathUtil::clamp<int64>( requestedFirst, 0, frameCount );
+            const int64 lastFrame  = MathUtil::clamp<int64>( requestedFirst + requestedCount, firstFrame, frameCount );
+            animation._firstFrame  = static_cast<int32>( firstFrame );
+            animation._frameCount  = static_cast<int32>( lastFrame - firstFrame );
+            const bool bRangeKept  = ( firstFrame == requestedFirst ) && ( lastFrame - firstFrame == requestedCount );
             if ( bRangeKept == false )
                 ++clampedCount;
             if ( animation._name.empty() || animation._frameCount <= 0 )
@@ -183,6 +195,18 @@ namespace sw
                 animationJson.set( "start" ).setInt( animation._firstFrame );
                 animationJson.set( "count" ).setInt( animation._frameCount );
                 animationJson.set( "loop" ).setBool( animation._bLoop == SW_TRUE );
+                if ( animation._listNotify.empty() )
+                    continue;
+                const JsonValue notifiesVal = animationJson.set( "notifies" );
+                notifiesVal.setArray();
+                for ( const AnimNotifyEvent& event : animation._listNotify )
+                {
+                    const JsonValue notifyJson = notifiesVal.pushBack();
+                    notifyJson.setObject();
+                    notifyJson.set( "name" ).setString( event._name.c_str() );
+                    notifyJson.set( "time" ).setFloat( static_cast<float64>( event._time ) );
+                    notifyJson.set( "duration" ).setFloat( static_cast<float64>( event._duration ) );
+                }
             }
         }
 

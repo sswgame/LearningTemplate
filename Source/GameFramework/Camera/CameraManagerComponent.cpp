@@ -28,6 +28,7 @@ namespace sw
         , _previousTarget{}
         , _blender{}
         , _impulseListener{}
+        , _shakeSubscription{}
         , _pendingDeltaTime{ 0.0f }
     {
         setCanEverTick( true );
@@ -39,6 +40,25 @@ namespace sw
         // 뷰 타깃을 움직이는 디렉터 · 리그(PostPhysics 까지)가 미룬 쓰기 다음에 읽는다.
         setTickGroup( TickGroup::PostUpdate );
         updateCamera( 0.0f );
+        _shakeSubscription = AnimNotifyHandlerUtil::getCameraShakeRequested().add(
+            SW_DELEGATE_METHOD( CameraShakeRequestCallback, &CameraManagerComponent::onCameraShakeRequested, this ) );
+    }
+
+    void CameraManagerComponent::onEndPlay()
+    {
+        AnimNotifyHandlerUtil::getCameraShakeRequested().remove( _shakeSubscription );
+        _shakeSubscription = DelegateHandle{};
+        Component::onEndPlay();
+    }
+
+    void CameraManagerComponent::onCameraShakeRequested( const CameraShakeRequest& request )
+    {
+        CameraImpulseDef def;
+        def._amplitude     = request._amplitude;
+        def._duration      = request._duration;
+        def._frequency     = request._frequency;
+        def._falloffRadius = request._falloffRadius;
+        _impulseListener.addImpulse( def, request._origin );
     }
 
     void CameraManagerComponent::onTick( float32 deltaTime )

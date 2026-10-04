@@ -199,6 +199,8 @@ namespace sw
             quaternion rotation{};
             PhysicsRagdollInternal::decomposePose( skeleton._listModelSpaceBone[boneIndex] * worldFromModel, position, rotation );
             const PhysicsBodyHandle body = ragdoll._listBody[bodyIndex];
+            if ( scene.isBodyEnabled( body ) == false )
+                continue; // 시뮬레이션에서 뺀 바디(잘려 나간 영역)는 움직이지 않는다
             if ( deltaTime > 0.0f && scene.getBodyType( body ) == PhysicsBodyType::Kinematic )
                 scene.moveKinematic( body, position, rotation, deltaTime );
             else

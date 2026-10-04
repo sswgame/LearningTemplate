@@ -36,6 +36,20 @@ namespace sw
         void setMoveVelocity( const float3& velocity );
         /** @brief 위로 @p speed(미터/초)를 줍니다. 다음 스텝에 듭니다. */
         void jump( float32 speed );
+        /**
+         * @brief 애니메이션 루트 모션의 이번 프레임 이동(월드, 미터)을 더합니다. 다음 물리 프레임의 스텝들이 나눠 움직입니다(벽에 막히고 턱을 오른다).
+         * @details 수평(XZ)만 씁니다 — 수직은 중력 · 점프가 정합니다. 스텝이 없는 프레임이면 다음 프레임으로 넘깁니다. 아무 스레드에서 불러도 됩니다.
+         */
+        void addRootMotionDisplacement( const float3& worldDisplacement );
+        /**
+         * @brief 발사대 · 스프링이 쏩니다 — 수직은 그 속도로 덮고, 수평은 땅에 다시 닿을 때까지 이동 속도에 더합니다. 다음 스텝에 듭니다. 아무 스레드에서 불러도 됩니다.
+         */
+        void launch( const float3& velocity );
+        /**
+         * @brief 딛고 선 면의 속도(컨베이어 · 흐르는 물, 월드 m/s)를 이번 물리 프레임에 더합니다. 프레임마다 다시 불러야 이어집니다(여럿이면 합).
+         * @details 아무 스레드에서 불러도 됩니다. 트랜스폼을 직접 옮기면 순간이동이라 벽을 지나므로, 면이 나르는 것은 이것으로 넘깁니다.
+         */
+        void addSurfaceVelocity( const float3& velocity );
         /** @brief 마지막 스텝에 바닥을 딛고 있었는지입니다. */
         bool isGrounded() const { return _state._bGrounded; }
         /** @brief 마지막 스텝의 바닥 법선입니다. */
@@ -81,7 +95,13 @@ namespace sw
         PhysicsCharacterHandle  _character;
         PhysicsCharacterState3D _state;
         mutable SpinLock        _commandLock;
-        float3                  _moveVelocity; ///< 요청된 수평 속도(`_commandLock`)
+        float3                  _moveVelocity;            ///< 요청된 수평 속도(`_commandLock`)
+        float3                  _pendingRootMotion;       ///< 아직 스텝에 넘기지 않은 루트 모션 이동(`_commandLock`)
+        float3                  _frameRootMotionVelocity; ///< 이번 물리 프레임의 스텝마다 더할 루트 모션 속도
+        float3                  _pendingSurfaceVelocity;  ///< 이번 프레임에 쌓인 면 속도(`_commandLock`)
+        float3                  _frameSurfaceVelocity;    ///< 이번 물리 프레임의 면 속도
+        float3                  _pendingLaunch;           ///< 0 이 아니면 다음 스텝에 쏜다(`_commandLock`)
+        float3                  _airVelocity;             ///< 발사의 수평 속도 — 땅에 다시 닿으면 0
         float3                  _previousPosition;
         float3                  _writtenPosition;
         quaternion              _writtenRotation;

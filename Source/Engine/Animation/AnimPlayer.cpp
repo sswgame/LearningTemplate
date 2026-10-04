@@ -54,7 +54,7 @@ namespace sw
             slot._lastStep                = slot._cursor.advance( delta, playLength, slot._bLoop == SW_TRUE );
             const AnimNotifyTrack* pTrack = slot._pPlayable->findNotifyTrack();
             if ( pTrack != nullptr && pOutListFired != nullptr )
-                pTrack->collectFired( slot._lastStep, playLength, slotIndex == 0 ? 1.0f - alpha : alpha, *pOutListFired );
+                pTrack->collectFired( slot._lastStep, playLength, slotIndex == 0 ? 1.0f - alpha : alpha, slot._pPlayable, *pOutListFired );
         }
 
         if ( _arrSlot[1]._pPlayable == nullptr )

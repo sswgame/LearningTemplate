@@ -237,7 +237,9 @@ public:
 };
 ```
 
-`TickGroup` 순서(대략): `PrePhysics` → `DuringPhysics`(기본) → `PostPhysics` → `PostUpdate`.
+`TickGroup` 순서: `PrePhysics` → `DuringPhysics`(기본) → **[틱 결과 적용 → 애니메이션 평가 → 물리(겹침 월드 · 강체, 이벤트)]** → `PostPhysics` →
+`PostUpdate` → 틱 결과 적용. PostPhysics 이후의 틱은 이번 프레임의 바디 자세 · 겹침을 본다(언리얼 `TG_PostPhysics`). 애니메이션은 물리 앞이라
+키네마틱 히트박스가 이번 포즈를 쫓고, 루트 모션이 캐릭터 컨트롤러로 같은 프레임에 들어간다 — PostPhysics 이후에 쓴 애니메이터 파라미터는 다음 프레임 포즈다.
 
 **언제 불리나.** 월드가 플레이 중일 때(`SceneManager::setWorldPlaying` — 에디터 없는 App · Shipping 은 처음부터, 에디터는 Play · Stop 이
 켜고 끈다) 활성 씬의 컴포넌트마다 `onBeginPlay` 가 **한 번**, 플레이 중에 붙은 컴포넌트는 **다음 틱 단계**(틱 전 · 틱 뒤 병합 뒤)에서 한 번

@@ -109,8 +109,7 @@ cd build/Ninja-Debug/Bin
 
 - **`getAllGameObjects()` 값 반환이 6 곳에 있다(모두 일회성).** 프레임 경로에 들어오면 `getAllGameObjects( out )` 또는 `forEachGameObject` 로 바꾼다(조건부).
 - **강체 물리의 다음 조각.** (1) 볼록 껍질 · 삼각 메시 셰이프를 `.mesh` 에서 채우는 길이 없다 — 지금은 셰이프 서술자에 점 · 인덱스를 직접 적는다
-  (`MeshCache` 의 CPU 정점이 필요하다) (2) 물리 에셋(`*.physics.xml`)의 캐시 · 핫 리로드(바뀌면 래그돌을 다시 세우는 쪽까지)가 없다 — 쓰는 컴포넌트(래그돌 ·
-  히트박스)와 함께 넣는다 (3) 에디터에 물리 컴포넌트의 셰이프 시각화 · 기즈모가 없다(`gv_physicsDebugDraw` 가 게임 뷰의 디버그 선으로만 그린다)
+  (`MeshCache` 의 CPU 정점이 필요하다) (3) 에디터에 물리 컴포넌트의 셰이프 시각화 · 기즈모가 없다(`gv_physicsDebugDraw` 가 게임 뷰의 디버그 선으로만 그린다)
   (4) Box2D 는 한 스레드로 돈다 — 2D 바디가 수천이 되면 전용 워커를 붙인다 (5) 3D 질의는 가장 가까운 것 하나 · 겹침 목록뿐이다(레이의 모든 닿음 ·
   스윕 다중 닿음이 필요해지면 더한다) (6) 겹침 월드(`PhysicsWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이
   Box2D 센서로 옮겨 가면 겹침 월드를 걷어낸다.
@@ -231,14 +230,15 @@ cd build/Ninja-Debug/Bin
   ACL 코덱은 `Engine/Animation/Codec/Acl`(쿠킹 때 압축 → 코덱 id + 불투명 블롭). vcpkg 를 바꿀 때는 **다른 워크트리가 빌드 중이
   아닐 때** — 설치 폴더를 나눠 써서, 옛 매니페스트의 워크트리가 configure 하면 새 패키지를 지운다. Jolt 소프트 바디(천 · 헤어 카드)는 아직 감싸지 않았다.
 - **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/README.md`(임포트 · 코덱 · 재생 · 상태 기계 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생).
-  남은 것 — ① 알림 디스패치(이름 → 처리기 등록부 · 데이터로 고름, 지금은 `getFiredNotifies()` 목록만) · 그래프의 블렌드 스페이스 노드(지금 `BlendSpace` 는 행렬 하나라
+  알림 디스패치(구간 알림 · 처리기 등록부 · `*.notifies.xml`)는 `Source/Engine/Character/README.md`.
+  남은 것 — ① 그래프의 블렌드 스페이스 노드(지금 `BlendSpace` 는 행렬 하나라
   포즈 블렌드 스페이스로 다시 짓는다) · 그래프에 레이어 · 동기 그룹을 데이터로(지금 레이어는 `addLayer` 코드) · 에디터 그래프 패널이 조건 · 블렌드를 편집
   ② 후처리 리그 — 들어갔다(`PoseModifierComponent`, `Source/Engine/Animation/README.md` 5 절 · `Source/Engine/Character/README.md`). 남은 것: 포즈 구동의
   보정 모프 가중치를 GPU 모프 풀로(이름 붙은 모프 타깃 임포트가 먼저 — 지금은 `getMorphWeights()` 로만 나온다), 시퀀서 트랙이 `setSlotWeight` 를 쓰기(칸은 있다),
   해석된 소켓 표의 표면 기준 소켓 체형 보정을 리그 대상에도, 에디터 리그 패널(노드 목록 · 대상 · 기즈모) ③ 애니메이션 LOD — 훅(`setUpdateRateDivisor` · `setVisibleHint`)은 있다, 부르는 쪽이 없다:
   카메라 절두체 가시성 · 거리별 주기(URO) · 본 LOD · 거리별 IK/물리 끔 · 중요도 매니저 예산 → 스켈레톤 LOD(본 감소) ④ 군중 공유 — 스킨드 메시는 컴포넌트마다
   메시 객체(정점 사본 · 모프 풀 구간 하나)라 같은 포즈 · 같은 메시를 나누는 캐시가 없다(언리얼 Animation Sharing) · 되감기 디버거 ·
-  얼굴(모프 타깃 임포트 — glTF `weights` 채널은 지금 버린다) ⑤ Jolt 래그돌(전신 · 부분 · 파워드, 래그돌 에셋은 데이터, 포즈 블렌드 · 기상) ·
+  얼굴(모프 타깃 임포트 — glTF `weights` 채널은 지금 버린다) ⑤ 파워드 래그돌(관절 모터가 애니메이션 포즈를 쫓음 — 전신 · 부분 래그돌 · 맞음 반응 · 기상 섞기는 `RagdollComponent`) ·
   2 차 움직임: 스프링 본은 들어갔다(리그 노드 `SpringChain`) → 헤어 카드 · 천(Jolt 소프트 바디), 가닥 헤어(TressFX)는 나중 ⑥ KayKit 텍스처(원본 GLB 에 든 `knight_texture` 등)를 `textures_raw/` 로
   옮겨 머티리얼을 만들 것 — 지금 캐릭터는 씬 기본 머티리얼(흰색)로 그려진다. Shooter3D 통합은 다음 웨이브.
 - **프리로딩 · LOD · 사전 준비(로드맵).** ① 프리로드 세트(미리 올릴 에셋 + 미리 만들 프리팹 · 우선순위, 쿠킹 때 레벨 · 시퀀스 · 샷의 참조를 따라 자동 수집 —
@@ -256,8 +256,7 @@ cd build/Ninja-Debug/Bin
 - **캐릭터 외형 편집(로드맵).** 지금: 형상 쪽(아래 ①~④ · ⑤ 의 소켓 이름 공간)은 `Source/Engine/Character` 에 있다(README "통합이 할 일"), GPU 모프 풀(`Mesh::setGpuMorphEnabled`)은
   있다, 스켈레톤 에셋(`.skeleton.json`)은 본 · 레퍼런스 포즈 · 역 바인드와 임포트가 적은 본 부착 메시 표(소켓 파일을 처음 만들 근거)뿐이고 편집 창구가 없다.
   ①~④ 남은 것 — **통합**: `Mesh` · 포즈 ↔ `AppearanceGeometry` · `CharacterBoneArray` 변환, 체형 모프 · 피팅 델타(`FitPartResult::_listVertexDelta`)를 GPU 모프 풀에
-  싣기(스키닝 앞), 병합 결과(`MeshMerger`)를 인덱스 · 정점 버퍼와 구간 그리기로, 애니메이션 시스템이 본이 움직인 프레임에만 `SocketBindingComponent::updateSocketTransform`,
-  강체 컴포넌트가 `ISocketPhysicsBody` 를 구현해 `setPhysicsBody`, 표면 상태(`CharacterSurfaceState`)를 머티리얼 파라미터 · 마스크 텍스처로. **쿠킹**: 장비 정점 → 몸 전이
+  싣기(스키닝 앞), 병합 결과(`MeshMerger`)를 인덱스 · 정점 버퍼와 구간 그리기로, 애니메이션 시스템이 본이 움직인 프레임에만 `SocketBindingComponent::updateSocketTransform`, 표면 상태(`CharacterSurfaceState`)를 머티리얼 파라미터 · 마스크 텍스처로. **쿠킹**: 장비 정점 → 몸 전이
   (`SurfaceTransferUtil` — 모프 · 스킨 가중치)를 임포트 · 쿠킹 단계에, 아틀라스 굽기(`IMeshMergeHooks` 구현). **핫 리로드**: 소켓 · 레퍼런스 포즈 · 체형 · 피팅 표 · 부품
   피팅 · 표면 채널 파일을 고치면 외형을 다시 조립 — 소비자(외형 컴포넌트)가 `IAssetCache` 로 올린다(로더는 다 있다). **나중**: 천 시뮬레이션(Jolt 소프트 바디)이 같은 겹
   정보를 충돌체로(Mutable 의 Clip with Mesh · Clip Deform 이 같은 문제를 푼다), 파괴 가능 메시(미리 쪼갠 조각)가 `GeometryCutUtil` 을 그대로 쓴다. 참고: 언리얼 Mutable(Customizable Object) ·
@@ -282,13 +281,13 @@ cd build/Ninja-Debug/Bin
   예외: **Shooter3D 통합**(KayKit CC0 캐릭터 · 스켈레톤 적 · 장비 · 프리셋 · 카메라 프리셋을 바꿔 가며 4 백엔드 스크린샷 → 사용자 보고)은 사용자에게
   약속한 결과라 char-anim · char-appear · char-geom · cam-views 가 병합되면 순서와 상관없이 먼저 띄운다.
   - **작음(S)**: 에디터 H(assert 대화상자 ·
-    버그 리포트 · 시험 패널) · 단축키 편집기 · 환경설정 창 · 모듈 켜고 끄기 · DPI 실물 확인 · 알림 전달(애니메이션 알림 → 소켓 이펙트/사운드) [대기: char-anim].
+    버그 리포트 · 시험 패널) · 단축키 편집기 · 환경설정 창 · 모듈 켜고 끄기 · DPI 실물 확인.
   - **중간(M)**: 메모리 태깅 · 예산 · 대역폭 프로파일러 · 비동기 파일 IO · 게임플레이 디버거 · 비주얼 로거 · 모듈 패키지 관리 · 점광/스폿 그림자 · SSAO ·
     HZB 가림 컬링 · 메시 LOD(meshopt) · PSO 미리 만들기 · 에디터 G(프로파일러 표 · GPU 타임스탬프 · RenderDoc · 보기 모드) · 에디터 C(확장 지점) · 에디터 F
     (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · UI 시험 입력 흉내 · 패키징 UI · 에디터 자동화 ·
     로딩 흐름 · 입력 확장 · 에셋 공정(검증 · XML 비교/병합 · 잠금 · DCC 내보내기) · QA 자동화(봇 · 내구 · 골든 이미지 · 성능 CI ·
     퍼징) · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 [대기: cam-views] · 하늘/시간대/높이
-    안개 [대기: cam-views] · 2D 스켈레탈 · 모션 워핑/이동 보정 · 래그돌 + 히트박스 · 절단 런타임 · 군중 포즈 공유 · 되감기 디버거 [넷 다: char-anim,
+    안개 [대기: cam-views] · 2D 스켈레탈 · 군중 포즈 공유 · 되감기 디버거 [넷 다: char-anim,
     래그돌은 char-phys 도] · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서 — reflect-ext 의 문서 생성 뒤) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
     [넷 다: 런타임 UI].
   - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 현지화 공정 · 제약 ·
@@ -353,13 +352,9 @@ cd build/Ninja-Debug/Bin
   그대로 읽는다) · 아랍어 이외 RTL 문화권 데이터 · `ja` 번역. 아이템 · 무기 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 `getStringByText` 를 거치지 않는다.
 
 - **상호작용 · 기믹(2026-10-04 들어감 — `GameFramework/Interaction` · `Gimmick` · `Spline`) 병합 뒤 남은 것.**
-  - 물리(Jolt · Box2D 병합 뒤): `IWorldQuery`(광선 — 상호작용 시야 · 레이저 · 포탑 · 밀기 블록) · `IGrabPhysics`(집기 · 던지기 — 강체를 키네마틱/관절로 손에 묶고
-    놓을 때 속도)를 백엔드가 게임 서비스로 건다(지금은 `PhysicsWorld` AABB · 트랜스폼 폴백). 3D 트리거 이벤트가 `Component::onOverlapBegin/End` 로 오면
-    `GimmickSensorComponent` 가 그대로 받는다 — 안 오면 센서에 붙인다. 눌림판 무게는 `RigidBodyComponent` 질량(지금 `GimmickWeightComponent`), 발사대 ·
-    컨베이어는 `CharacterControllerComponent` 가 `GimmickLaunchEvent` · `getSurfaceVelocity` 를 읽게, 기믹 프리팹의 `BoxCollider2DComponent` 는 3D 게임용
-    3D 트리거 · 강체 콜라이더 변형을 더한다(`Resource/common/prefabs/gimmicks`).
-  - 애니메이션 · 소켓: `InteractableComponent::computeAlignmentPoint` 가 정의의 `alignment` 마커 이름을 오브젝트 소켓 · 마커 표(`*.sockets.xml`)에서 찾게
-    하고(지금 로컬 오프셋 · 요), 모션 워핑이 그 자리를 목표로. 상호작용 단계에 몽타주 · 알림을 이름으로 잇기.
+  - 물리: 기믹 프리팹의 `BoxCollider2DComponent` 에 3D 게임용 3D 트리거 · 강체 콜라이더 변형을 더한다(`Resource/common/prefabs/gimmicks`). 월드 질의 · 카메라 암 ·
+    집기 · 눌림판 무게 · 발사대 · 컨베이어는 강체 물리에 이어졌다(`GameFramework/Interaction` · `Gimmick` README).
+  - 애니메이션: 상호작용 단계에 몽타주(클립)를 이름으로 잇기 — 맞춤 마커 → 워프 목표는 들어갔다(`InteractorComponent` 가 시작할 때 넣는다).
   - 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
   - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
   - 네트워크: 회로 상태 바이트(`GimmickCircuit::saveState`)를 `NetClientServer` 스냅샷 · `RollbackSession` 상태에 싣기(모양은 준비됨, 배선 없음).
@@ -866,6 +861,10 @@ cd build/Ninja-Debug/Bin
 
 ### 3-6. 오브젝트 · 씬 · 틱
 
+- **모델 임포트의 옆 폴더(`models/<모델>/`)는 임포트마다 통째로 지워진다**(`ModelImporter::importModel`) — 손으로 쓴 캐릭터 데이터(소켓 · 알림 표 · 물리 에셋 ·
+  몸 영역)는 `game/<게임>/characters/<캐릭터>/` 처럼 임포트 산출물 밖에 둔다. 클립 알림은 원본 옆 `<모델>.clips.json` 에 적고 `App --import-models`.
+- **물리는 DuringPhysics 와 PostPhysics 틱 사이에 돈다**(그 앞에 틱 결과 적용 → 애니메이션). PostPhysics 이후 틱은 이번 프레임의 바디 자세 · 겹침을 보고,
+  그 그룹에서 쓴 애니메이터 파라미터 · 트랜스폼은 다음 프레임의 포즈 · 물리에 든다(`PhysicsComponentTest.PostPhysicsTickSeesThisFramesBodyPose`).
 - **한 오브젝트의 두 번째 씬 컴포넌트는 첫 씬 컴포넌트(루트)에 붙는다** — 저장하면 `_attachComponent="CameraComponent#0"` 처럼 남는다. 카메라와 같은 오브젝트의 뷰 모델 ·
   조준선은 로컬 자리(카메라 기준)로 다룬다 — 월드 자리를 `setLocalPosition` 에 넣으면 카메라 자리만큼 두 번 밀린다(`FirstPersonCameraComponent`).
 - **씬 작성 코드의 `createEmptyActiveScene` 은 `GameCamera` 엔티티를 둔다.** 자기 카메라를 들고 오는 씬(1인칭 플레이어)은 저장 전에 지운다 — 같은 역할 · 우선순위의

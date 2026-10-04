@@ -70,6 +70,8 @@ namespace sw
         void spawn( uint32 meshCount );
         /** @brief `-gv_benchCharacters=N` — 스킨드 캐릭터 N 명을 한 줄로 세우고 Idle · Walking_A 를 번갈아 재생합니다. */
         void spawnCharacters( uint32 characterCount );
+        /** @brief `-gv_benchCombat=1` — 전투 연출(KayKit 스켈레톤 적 · 칼 · 강체 바닥 · 연출 컴포넌트)을 세웁니다. */
+        void spawnCombat();
         /** @brief 캐릭터 줄이 화면에 차도록 씬의 카메라를 맞춥니다(허리 높이를 봅니다). */
         void frameCharacterCameras( Scene* pScene, float32 halfExtent );
         /**
