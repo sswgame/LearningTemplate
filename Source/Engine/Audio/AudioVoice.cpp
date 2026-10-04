@@ -26,13 +26,15 @@ namespace sw
         , _bPaused{ SW_FALSE }
         , _bStopAtFade{ SW_FALSE }
         , _bFirstBlock{ SW_TRUE }
+        , _bRampIn{ SW_TRUE }
         , _reservedVoice{ 0 }
     {
     }
 
-    void AudioVoice::start( shared_ptr<const AudioClipData> pClip, bool bLoop, uint32 startDelayFrames )
+    void AudioVoice::start( shared_ptr<const AudioClipData> pClip, bool bLoop, uint32 startDelayFrames, bool bRampIn )
     {
         reset();
+        _bRampIn          = bRampIn ? SW_TRUE : SW_FALSE;
         _pClip            = std::move( pClip );
         _bLoop            = bLoop ? SW_TRUE : SW_FALSE;
         _startDelayFrames = startDelayFrames;
@@ -62,8 +64,8 @@ namespace sw
         }
         if ( _bFirstBlock == SW_TRUE )
         {
-            _gainLeft  = 0.0f;
-            _gainRight = 0.0f;
+            _gainLeft  = _bRampIn == SW_TRUE ? 0.0f : _targetGainLeft;
+            _gainRight = _bRampIn == SW_TRUE ? 0.0f : _targetGainRight;
         }
     }
 
@@ -234,6 +236,22 @@ namespace sw
             if ( _bFinished == SW_TRUE )
                 return;
         }
+    }
+
+    void AudioVoice::setPosition( float64 clipFrame )
+    {
+        if ( _pClip == nullptr )
+            return;
+        const float64 clipFrames = static_cast<float64>( _pClip->_frameCount );
+        _position                = MathUtil::max( 0.0, clipFrame );
+        if ( _position < clipFrames )
+            return;
+        if ( _bLoop == SW_FALSE )
+        {
+            _bFinished = SW_TRUE;
+            return;
+        }
+        _position -= clipFrames * MathUtil::floor( _position / clipFrames );
     }
 
     void AudioVoice::advancePosition( uint32 frameCount )

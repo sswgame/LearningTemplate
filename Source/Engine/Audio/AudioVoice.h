@@ -28,8 +28,9 @@ namespace sw
         /**
          * @brief 클립으로 재생을 시작합니다. 게인은 0 에서 첫 블록의 목표로 램프합니다(클릭 없음).
          * @param startDelayFrames 이 블록의 시작에서 몇 프레임 뒤에 소리를 낼지입니다(박자에 맞춘 시작). 그동안 위치는 진행하지 않습니다.
+         * @param bRampIn false 면 첫 블록에서 게인을 0 에서 램프하지 않고 바로 겁니다 — 박에 맞춰 시작하는 음악 레이어(첫 샘플이 정확해야 한다).
          */
-        void start( shared_ptr<const AudioClipData> pClip, bool bLoop, uint32 startDelayFrames );
+        void start( shared_ptr<const AudioClipData> pClip, bool bLoop, uint32 startDelayFrames, bool bRampIn = true );
         /** @brief 보이스를 비웁니다(클립을 놓습니다). */
         void reset();
 
@@ -48,6 +49,8 @@ namespace sw
         void setLowPass( float32 cutoffHz );
         /** @brief 지금 로우패스 컷오프입니다. */
         float32 getLowPassHz() const { return _lowPassHz; }
+        /** @brief 재생 위치(클립 프레임)를 옮깁니다. 루프면 감고, 아니면 끝을 넘을 때 끝냅니다. */
+        void setPosition( float64 clipFrame );
         /** @brief 재생 속도 비입니다(클립 샘플레이트 / 출력 샘플레이트 × 피치). */
         void setPlaybackRate( float64 framesPerOutputFrame ) { _rate = framesPerOutputFrame; }
         /**
@@ -101,6 +104,7 @@ namespace sw
         uint8                           _bPaused       : 1; /**< 일시정지 중입니다. */
         uint8                           _bStopAtFade   : 1; /**< 페이드가 목표에 닿으면 끝냅니다. */
         uint8                           _bFirstBlock   : 1; /**< 아직 한 번도 섞지 않았습니다 — 게인을 0 에서 램프합니다. */
-        [[maybe_unused]] uint8          _reservedVoice : 3; /**< 비트필드 패딩입니다. */
+        uint8                           _bRampIn       : 1; /**< 첫 블록에서 게인을 0 에서 램프합니다. */
+        [[maybe_unused]] uint8          _reservedVoice : 2; /**< 비트필드 패딩입니다. */
     };
 } // namespace sw

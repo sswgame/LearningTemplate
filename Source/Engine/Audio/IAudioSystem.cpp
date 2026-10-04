@@ -7,6 +7,7 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/NullAudioSystem.h"
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -154,7 +155,10 @@ namespace sw
         }
         const bool bCrossfade = _musicPlayingId != 0;
         if ( bCrossfade )
+        {
             _pEngine->stop( _musicPlayingId, IAudioSystemInternal::kMusicCrossfadeSeconds );
+            _pEngine->stopMusic( IAudioSystemInternal::kMusicCrossfadeSeconds );
+        }
 
         AudioClipPlayParams params;
         params._bLoop         = true;
@@ -164,10 +168,27 @@ namespace sw
         return _musicPlayingId != 0;
     }
 
+    bool IAudioSystem::playAdaptiveMusic( string_view path )
+    {
+        if ( _bInitialized == false || path.empty() )
+            return false;
+        if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingId ) )
+            return true;
+        shared_ptr<AudioMusicDesc> pMusic = make_shared<AudioMusicDesc>();
+        if ( pMusic->loadFromResource( path ) == false )
+            return false;
+        if ( _musicPlayingId != 0 )
+            _pEngine->stop( _musicPlayingId, IAudioSystemInternal::kMusicCrossfadeSeconds );
+        _musicPath      = string( path );
+        _musicPlayingId = _pEngine->startMusic( std::move( pMusic ), IAudioSystemInternal::kMusicCrossfadeSeconds );
+        return _musicPlayingId != 0;
+    }
+
     void IAudioSystem::stopMusic()
     {
         if ( _musicPlayingId != 0 )
             _pEngine->stop( _musicPlayingId, 0.0f );
+        _pEngine->stopMusic( 0.0f );
         _musicPlayingId = 0;
         _musicPath.clear();
     }

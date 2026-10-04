@@ -16,6 +16,8 @@
 | 바이쿼드 계수(RBJ cookbook) · 스테레오 상태 · 크기 응답 | `Dsp/AudioBiquad` |
 | 공간화 — 리스너 · 에미터 · 감쇠 프리셋 · 팬 · 도플러 · 가림 · 가림 질의 창구 | `AudioSpatial` |
 | 사운드 이벤트 · 파라미터 데이터(`*.audioevents.xml`) | `AudioEvent` |
+| 적응형 음악 데이터(`*.music.xml` — 템포 · 구간 · 레이어 · 전환) | `AudioMusic` |
+| 적응형 음악 실행 — 맞춤 지점 계산 · 샘플 단위 전환 · 스팅어 · 레이어 페이드 | `AudioEngineMusic.cpp` |
 | 이벤트 실행 — 쿨다운 · 상한 · 뺏기 · 컨테이너 · 파라미터 seek · 스냅샷 · 실제/가상 보이스 고르기 | `AudioEngineEvents.cpp` |
 | 형식 상수 · dB 변환 · 결정적 난수 · 버스 이름 | `AudioTypes.h` |
 | Windows 출력(XAudio2 스트리밍 보이스) · MP3 대체 디코더(Media Foundation) | `Windows/XAudio2System` |
@@ -129,6 +131,20 @@
 `startSnapshot` / `stopSnapshot` 은 `_fadeInSeconds` / `_fadeOutSeconds` 로 세기 0 ↔ 1 을 옮기며, `setSnapshotIntensity` 는 세기를 바로 정합니다(리버브 존의 경계 블렌드).
 버스 오프셋은 세기 × dB 를 **더하고**, 센드 · 이펙트 파라미터는 데이터 값에서 시작해 **켠 순서대로** 세기만큼 보간합니다(주파수 파라미터는 로그 축). 다 빠지면
 데이터 값으로 돌아옵니다. 기본 그래프: `Underwater`(master Muffle 600 Hz · sfx -4 dB) · `PauseMenu` · `Cave` · `Hall`(리버브 센드 · 방 크기).
+
+## 적응형 음악
+
+`*.music.xml`(`AudioMusicDesc`) — Wwise Interactive Music(Segment · Transition Matrix · Stinger) · FMOD transition marker 의 자리입니다.
+`IAudioSystem::playAdaptiveMusic( path )` 또는 `AudioEngine::startMusic( desc, fade )` 로 시작하고, `setMusicSegment( name )` 으로 구간을 바꿉니다.
+
+- **템포 메타데이터**: 음악의 `_tempo` · `_beatsPerBar`(구간이 덮어쓸 수 있음). 구간 길이 = 마디 × 박자 × 박 길이(클립은 이 길이로 만든다).
+  `getMusicStatus()` 가 지금 구간 · 박(소수) · 마디 · 템포를 게시합니다(박에 맞춘 게임플레이 · 연출).
+- **가로 재배치**: 전환 규칙(`_listTransition`, 구간을 적은 규칙이 `*` 보다 먼저)의 맞춤 지점 `Immediate` · `NextBeat` · `NextBar` · `SegmentEnd` 를 렌더 프레임으로
+  계산하고, 새 구간 레이어는 그 프레임까지 늦춰 시작하고(시작 지연, 첫 블록 게인 램프 없음), 옛 레이어는 그 프레임부터 페이드아웃합니다 — **샘플 단위로 정확**합니다.
+  그 자리에서 스팅어(원샷)가 납니다. 기다리는 동안 다른 구간을 요청하면 경계는 그대로 두고 목적지만 바꿉니다. 루프하지 않는 구간은 끝에서 `_next` 로 잇습니다.
+  클립 디코드가 늦게 끝나면 그만큼 건너뛰어 박을 지킵니다.
+- **세로 레이어**: 레이어마다 게임 파라미터 곡선(파라미터 → dB)이 볼륨을 정하고 `_layerFadeSeconds` 동안 옮깁니다(긴장도가 오르면 드럼이 들어온다).
+- 음악 보이스는 `KeepReal`(가상이 되지 않음) · 우선순위 100 이고, 버스는 `_bus`(비우면 `music`)입니다.
 
 ## 재생
 

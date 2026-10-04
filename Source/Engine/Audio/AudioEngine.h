@@ -23,6 +23,7 @@
 
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioEvent.h"
+#include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/AudioVoice.h"
@@ -59,6 +60,19 @@ namespace sw
         uint32 _realVoiceCount{ 0 };     ///< 섞은 보이스
         uint32 _virtualVoiceCount{ 0 };  ///< 위치만 진행한 보이스
         uint32 _instanceCount{ 0 };      ///< 살아 있는 이벤트 인스턴스
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 적응형 음악의 지금 자리입니다(마지막 블록에서 게시). */
+    struct AudioMusicStatus
+    {
+        hashed_string _segment{};     ///< 지금 구간(전환을 기다리는 동안은 옛 구간)
+        float64       _beat{ 0.0 };   ///< 구간 시작에서 센 박(소수)
+        uint64        _bar{ 0 };      ///< 구간 시작에서 센 마디
+        float32       _tempo{ 0.0f }; ///< 지금 템포(BPM)
+        bool          _bPlaying{ false };
     };
 } // namespace sw
 
@@ -128,6 +142,20 @@ namespace sw
         void stopEmitter( AudioEmitterId emitterId, float32 fadeSeconds );
         /** @brief 재생을 일시정지 · 재개합니다. */
         void setPaused( AudioPlayingId playingId, bool bPaused );
+
+        // --- 게임 스레드: 적응형 음악 ------------------------------------------------------------------------------------
+
+        /**
+         * @brief 적응형 음악을 시작합니다(시작 구간부터, 지금 음악은 @p fadeSeconds 로 빠짐). 레이어 클립의 디코드를 요청해 둡니다.
+         * @return 음악의 재생 id 입니다(구간이 바뀌어도 같다). 서술이 nullptr 이면 0 입니다.
+         */
+        AudioPlayingId startMusic( shared_ptr<const AudioMusicDesc> pMusic, float32 fadeSeconds );
+        /** @brief 구간을 바꿉니다 — 전환 규칙의 맞춤 지점(박 · 마디 · 구간 끝)에서 샘플 단위로 바꾸고 스팅어를 냅니다. 같은 구간이면 아무것도 하지 않습니다. */
+        void setMusicSegment( const hashed_string& segment );
+        /** @brief 음악을 @p fadeSeconds 동안 줄여 멈춥니다. */
+        void stopMusic( float32 fadeSeconds );
+        /** @brief 음악의 지금 자리(구간 · 박 · 마디)입니다. */
+        AudioMusicStatus getMusicStatus() const;
 
         // --- 게임 스레드: 믹스 ------------------------------------------------------------------------------------------
 
@@ -209,6 +237,9 @@ namespace sw
             StartSnapshot,
             StopSnapshot,
             SetSnapshotIntensity,
+            StartMusic,
+            SetMusicSegment,
+            StopMusic,
         };
 
         /** @brief 게임 스레드가 쌓는 명령 하나입니다. 종류마다 쓰는 칸만 채웁니다. */
@@ -216,6 +247,7 @@ namespace sw
         {
             shared_ptr<AudioMixer>              _pMixer{};     ///< SwapMixer
             shared_ptr<const AudioEventLibrary> _pLibrary{};   ///< SetLibrary(nullptr 이면 내림)
+            shared_ptr<const AudioMusicDesc>    _pMusic{};     ///< StartMusic
             hashed_string                       _name{};       ///< 버스 · 이벤트 · 파라미터 · 스냅샷 · 라이브러리
             hashed_string                       _path{};       ///< 클립 경로
             AudioClipPlayParams                 _clipParams{}; ///< PlayClip
@@ -318,6 +350,10 @@ namespace sw
             int32            _attenuationIndex{ -1 }; ///< 감쇠 표 번호(-1 = 2D)
             int32            _instanceIndex{ -1 };    ///< 이벤트 인스턴스(-1 = 클립 재생)
             int32            _priority{ 50 };
+            int32            _musicSegment{ -1 }; ///< 음악 레이어의 구간(-1 = 음악 아님)
+            int32            _musicLayer{ -1 };   ///< 음악 레이어 번호
+            float32          _musicGain{ 1.0f };  ///< 파라미터로 페이드하는 레이어 게인
+            uint64           _startFrame{ 0 };    ///< 음악: 소리가 시작할 렌더 프레임(클립이 늦게 와도 박을 지킨다)
             AudioVirtualMode _virtualMode{ AudioVirtualMode::Virtualize };
             bool             _bLoop{ false };
             bool             _bInUse{ false };
@@ -384,6 +420,22 @@ namespace sw
         /** @brief 빈 인스턴스 칸을 잡습니다. */
         int32 allocateInstance();
 
+        // AudioEngineMusic.cpp — 적응형 음악
+        /** @brief 음악을 시작합니다(지금 블록에서 시작 구간). */
+        void applyStartMusic( const Command& command );
+        /** @brief 구간 전환을 맞춤 지점에 예약합니다(@p bAtSegmentEnd 면 규칙과 상관없이 구간 끝 — 루프하지 않는 구간의 다음). */
+        void applySetMusicSegment( const hashed_string& segment, bool bAtSegmentEnd );
+        /** @brief 음악 보이스를 @p fadeSeconds 로 멈춥니다. */
+        void applyStopMusic( float32 fadeSeconds );
+        /** @brief 예약된 전환의 시각이 오면 구간을 넘기고, 루프하지 않는 구간의 끝을 다음 구간으로 잇고, 레이어 게인을 파라미터로 옮깁니다. */
+        void updateMusic();
+        /** @brief 지금 구간에서 @p sync 의 다음 맞춤 지점(렌더 프레임)입니다. */
+        uint64 computeMusicSyncFrame( AudioMusicSync sync ) const;
+        /** @brief 구간의 레이어 보이스를 @p startFrame 에 시작하도록 만듭니다. */
+        void scheduleMusicSegment( int32 segmentIndex, uint64 startFrame, float32 fadeInSeconds );
+        /** @brief 레이어의 목표 게인(선형)입니다 — 볼륨 + 파라미터 곡선. */
+        float32 computeMusicLayerGain( int32 segmentIndex, int32 layerIndex ) const;
+
     private:
         using LibraryMap   = unordered_map<hashed_string, shared_ptr<const AudioEventLibrary>, hashed_string::HashFunc>;
         using EventMap     = unordered_map<hashed_string, EventState, hashed_string::HashFunc>;
@@ -407,6 +459,12 @@ namespace sw
         vector<float32>                              _listVoiceScratch;               /**< 보이스 로우패스 작업 버퍼입니다(블록 길이). */
         vector<AudioAttenuationDesc>                 _listAttenuation;                /**< 감쇠 표(그래프 프리셋 + 라이브러리 프리셋)입니다. */
         vector<SnapshotState>                        _listSnapshot;                   /**< 켠 스냅샷(켠 순서)입니다. */
+        shared_ptr<const AudioMusicDesc>             _pMusic;                         /**< 지금 음악입니다. */
+        AudioPlayingId                               _musicPlayingId;                 /**< 음악의 재생 id 입니다. */
+        uint64                                       _musicSegmentStart;              /**< 지금 구간의 0 박이 든 렌더 프레임입니다. */
+        uint64                                       _musicPendingFrame;              /**< 예약된 전환의 렌더 프레임입니다. */
+        int32                                        _musicSegment;                   /**< 지금 구간입니다(-1 = 없음). */
+        int32                                        _musicPendingSegment;            /**< 예약된 다음 구간입니다(-1 = 없음). */
         LibraryMap                                   _mapLibrary;                     /**< 올린 라이브러리입니다. */
         EventMap                                     _mapEventState;                  /**< 이벤트 이름 → 상태입니다. */
         ParameterMap                                 _mapParameter;                   /**< 파라미터 이름 → 상태입니다. */
@@ -419,6 +477,7 @@ namespace sw
         // 게시(오디오 스레드 → 게임 스레드)
         vector<AudioPlayingId> _listPublishedPlaying; /**< 살아 있는 재생 id(정렬)입니다. */
         AudioEngineStats       _publishedStats;       /**< 마지막 블록의 상태입니다. */
+        AudioMusicStatus       _publishedMusic;       /**< 마지막 블록의 음악 자리입니다. */
         atomic<uint64>         _publishedAppliedId;   /**< 게시 시점에 적용된 재생 id 입니다. */
         mutable mutex          _publishMutex;         /**< 게시 사본을 지킵니다. */
         atomic<bool>           _bInitialized;         /**< 초기화되었는지입니다. */

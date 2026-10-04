@@ -82,6 +82,11 @@ namespace sw
 
         /** @brief 배경음악(BGM)을 `music` 버스에서 루프로 재생합니다. 같은 곡이 재생 중이면 다시 시작하지 않고, 다른 곡이면 짧게 크로스페이드합니다. */
         bool playMusic( string_view path );
+        /**
+         * @brief 적응형 음악(`*.music.xml` — 구간 · 레이어 · 전환)을 시작합니다. 구간은 `getEngine().setMusicSegment`, 레이어는 게임 파라미터가 움직입니다.
+         * @return 파일을 못 읽거나 검사를 통과하지 못하면 false 입니다.
+         */
+        bool playAdaptiveMusic( string_view path );
         /** @brief 현재 재생 중인 배경음악(BGM)을 중지합니다. */
         void stopMusic();
         /** @brief 배경음악을 일시정지합니다. */

@@ -26,6 +26,12 @@ namespace sw
         , _listVoiceScratch{}
         , _listAttenuation{}
         , _listSnapshot{}
+        , _pMusic{ nullptr }
+        , _musicPlayingId{ 0 }
+        , _musicSegmentStart{ 0 }
+        , _musicPendingFrame{ 0 }
+        , _musicSegment{ -1 }
+        , _musicPendingSegment{ -1 }
         , _mapLibrary{}
         , _mapEventState{}
         , _mapParameter{}
@@ -37,6 +43,7 @@ namespace sw
         , _blockCursor{ audio::kBlockFrameCount }
         , _listPublishedPlaying{}
         , _publishedStats{}
+        , _publishedMusic{}
         , _publishedAppliedId{ 0 }
         , _publishMutex{}
         , _bInitialized{ false }
@@ -85,6 +92,9 @@ namespace sw
         _mapEventState.clear();
         _mapGameLibrary.clear();
         _mapEmitter.clear();
+        _pMusic.reset();
+        _musicSegment        = -1;
+        _musicPendingSegment = -1;
         _pMixer.reset();
         {
             std::scoped_lock<mutex> lock{ _publishMutex };
@@ -276,6 +286,50 @@ namespace sw
         command._playingId = playingId;
         command._bFlag     = bPaused;
         pushCommand( std::move( command ) );
+    }
+
+    AudioPlayingId AudioEngine::startMusic( shared_ptr<const AudioMusicDesc> pMusic, float32 fadeSeconds )
+    {
+        if ( pMusic == nullptr )
+            return 0;
+        for ( const AudioMusicSegmentDesc& segment : pMusic->_listSegment )
+        {
+            for ( const AudioMusicLayerDesc& layer : segment._listLayer )
+                _clipStore.requestClip( layer._path );
+        }
+        for ( const AudioMusicTransitionDesc& transition : pMusic->_listTransition )
+            _clipStore.requestClip( transition._stinger );
+        Command command;
+        command._type   = CommandType::StartMusic;
+        command._pMusic = std::move( pMusic );
+        command._value  = fadeSeconds;
+        std::scoped_lock<mutex> lock{ _commandMutex };
+        command._playingId             = _nextPlayingId.fetch_add( 1 );
+        const AudioPlayingId playingId = command._playingId;
+        _listPendingCommand.push_back( std::move( command ) );
+        return playingId;
+    }
+
+    void AudioEngine::setMusicSegment( const hashed_string& segment )
+    {
+        Command command;
+        command._type = CommandType::SetMusicSegment;
+        command._name = segment;
+        pushCommand( std::move( command ) );
+    }
+
+    void AudioEngine::stopMusic( float32 fadeSeconds )
+    {
+        Command command;
+        command._type  = CommandType::StopMusic;
+        command._value = fadeSeconds;
+        pushCommand( std::move( command ) );
+    }
+
+    AudioMusicStatus AudioEngine::getMusicStatus() const
+    {
+        std::scoped_lock<mutex> lock{ _publishMutex };
+        return _publishedMusic;
     }
 
     void AudioEngine::setBusUserVolume( const hashed_string& bus, float32 volume )
@@ -642,6 +696,22 @@ namespace sw
                 }
                 break;
             }
+            case CommandType::StartMusic:
+            {
+                _appliedPlayingId = MathUtil::max( _appliedPlayingId, command._playingId );
+                applyStartMusic( command );
+                break;
+            }
+            case CommandType::SetMusicSegment:
+            {
+                applySetMusicSegment( command._name, false );
+                break;
+            }
+            case CommandType::StopMusic:
+            {
+                applyStopMusic( command._value );
+                break;
+            }
             case CommandType::SetSnapshotIntensity:
             {
                 SnapshotState* pSnapshot = findOrAddSnapshot( command._name );
@@ -713,7 +783,20 @@ namespace sw
         if ( pClip == nullptr )
             return;
 
-        slot._voice.start( std::move( pClip ), slot._bLoop, 0 );
+        // 음악 레이어 · 스팅어는 정해진 렌더 프레임에 샘플 단위로 시작한다 — 아직 이르면 그만큼 늦추고, 클립이 늦게 왔으면 그만큼 건너뛰어 박을 지킨다.
+        const bool bScheduled = slot._musicSegment != -1;
+        uint32     delay      = 0;
+        float64    skipFrames = 0.0;
+        if ( bScheduled )
+        {
+            if ( slot._startFrame >= _renderedFrameCount )
+                delay = static_cast<uint32>( slot._startFrame - _renderedFrameCount );
+            else
+                skipFrames = static_cast<float64>( _renderedFrameCount - slot._startFrame ) * static_cast<float64>( pClip->_sampleRate ) / static_cast<float64>( audio::kSampleRate );
+        }
+        slot._voice.start( std::move( pClip ), slot._bLoop, delay, bScheduled == false );
+        if ( skipFrames > 0.0 )
+            slot._voice.setPosition( skipFrames );
         slot._voice.setPaused( slot._bPausedRequest );
         if ( slot._fadeInSeconds > 0.0f )
         {
@@ -772,7 +855,7 @@ namespace sw
 
     void AudioEngine::updateVoiceTargets( VoiceSlot& slot )
     {
-        float32 volume    = slot._volume;
+        float32 volume    = slot._volume * slot._musicGain;
         float32 pan       = slot._pan;
         float32 pitch     = slot._pitchRatio;
         float32 lowPassHz = audio::kFilterOpenHz;
@@ -854,6 +937,7 @@ namespace sw
         updateParameters();
         updateSnapshots();
         updateEmitters();
+        updateMusic();
 
         AudioMixer& mixer = *_pMixer;
         mixer.beginBlock( audio::kBlockFrameCount );
@@ -922,6 +1006,18 @@ namespace sw
         }
         std::sort( _listPublishedPlaying.begin(), _listPublishedPlaying.end() );
         _publishedStats = stats;
+        _publishedMusic = AudioMusicStatus{};
+        if ( _pMusic != nullptr && _musicSegment >= 0 )
+        {
+            const uint32  segmentIndex  = static_cast<uint32>( _musicSegment );
+            const float64 framesPerBeat = _pMusic->computeFramesPerBeat( segmentIndex );
+            const float64 elapsed       = static_cast<float64>( _renderedFrameCount ) - static_cast<float64>( _musicSegmentStart );
+            _publishedMusic._segment    = _pMusic->_listSegment[segmentIndex]._name;
+            _publishedMusic._beat       = elapsed / framesPerBeat;
+            _publishedMusic._bar        = elapsed <= 0.0 ? 0u : static_cast<uint64>( _publishedMusic._beat ) / _pMusic->getBeatsPerBar( segmentIndex );
+            _publishedMusic._tempo      = static_cast<float32>( 60.0 * static_cast<float64>( audio::kSampleRate ) / framesPerBeat );
+            _publishedMusic._bPlaying   = true;
+        }
         _publishedAppliedId.store( _appliedPlayingId, std::memory_order_release );
     }
 } // namespace sw
