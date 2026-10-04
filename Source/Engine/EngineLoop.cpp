@@ -147,6 +147,8 @@ namespace sw
             // 모두 "없음" 이 되어 조용히 기본값으로 떨어지므로, Resource/ 를 찾을 때 알아낸 프로젝트 루트를 넘긴다.
             loop._configManager = make_unique<ConfigManager>();
             loop._configManager->setRootDirectory( ResourceUtil::getProjectFolderPath() );
+            ConfigManager::setPrimary( loop._configManager.get() );
+            loop._configManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &EngineLoop::onConfigReloaded, &loop ) );
 
             loop._pEngineConfig = loop._configManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
             if ( loop._pEngineConfig == nullptr )
@@ -161,6 +163,7 @@ namespace sw
         {
             // `_pEngineConfig` 는 설정 매니저가 든 객체를 가리킨다. 같이 놓는다.
             loop._pEngineConfig = nullptr;
+            ConfigManager::setPrimary( nullptr );
             loop._configManager.reset();
         }
     };
@@ -623,6 +626,20 @@ namespace sw
         _bootstrap.shutdown();
 
         MemoryProfiler::reportMemoryLeaks( "EngineLoop::shutdown" );
+    }
+
+    void EngineLoop::onConfigReloaded( const hashed_string& configTypeName )
+    {
+        if ( configTypeName == GameConfig::StaticType()->_fullyQualifiedName )
+        {
+            const GameConfig* pGameConfig = _configManager != nullptr ? _configManager->getConfig<GameConfig>() : nullptr;
+            if ( pGameConfig != nullptr )
+                GameConfig::setActive( *pGameConfig );
+            return;
+        }
+        // 수직 동기화는 다음에 스왑체인을 만들 때(창 크기 변경 · 백엔드 교체) 적용된다.
+        if ( configTypeName == EngineConfig::StaticType()->_fullyQualifiedName && _rhi != nullptr && _pEngineConfig != nullptr )
+            _rhi->setPreferredVSync( _pEngineConfig->_window._bVSync );
     }
 
     void EngineLoop::beginFrame( float32 deltaSeconds )

@@ -633,6 +633,9 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|gameView.resizeEveryFrame",
         "EditorSelfTest|PASS|gameView.debugDraw",
         "EditorSelfTest|PASS|gameView.debugOverlay",
+        "EditorSelfTest|PASS|console.tagFilter",
+        "EditorSelfTest|PASS|hierarchy.selectAllWith",
+        "EditorSelfTest|PASS|layout.namedRoundTrip",
         "EditorSelfTest|PASS|profiler.gpuMemoryTab",
     };
 

@@ -4,10 +4,18 @@
  */
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/String/TagID.h"
 
+#include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Gui/EditorDockLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorLayoutStore.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/ConsolePanel.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/GameViewPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
@@ -16,10 +24,17 @@
 
 #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
+
+#include <imgui.h>
+#include <imgui_internal.h>
 
 namespace sw::editor
 {
+    SW_LOG_CALLER( "SelfTestDevTools" );
+
     namespace
     {
         struct EditorSelfTestDevToolsInternal
@@ -27,6 +42,7 @@ namespace sw::editor
             static constexpr const utf8* kGameViewPanelId = "game_view";
             static constexpr uint32      kMaxWaitFrame    = 60;
             static constexpr const utf8* kOverlayKey      = "selftest.overlay";
+            static constexpr const utf8* kProbeTag        = "SelfTestDevTools";
 
             /** @brief Game View 를 열고 그 패널을 돌려줍니다. 없으면 실패로 적고 nullptr 입니다. */
             static GameViewPanel* openGameView( EditorSelfTestContext& context )
@@ -101,9 +117,119 @@ namespace sw::editor
                 pOverlay->remove( hashed_string( kOverlayKey ) );
                 return EditorSelfTestStep::Done;
             }
+
+            // ------------------------------------------------------------------------------
+            // console.tagFilter — 숨긴 태그의 로그 줄은 Output Log 에 나오지 않고, 다시 켜면 나온다
+            // ------------------------------------------------------------------------------
+            static EditorSelfTestStep runConsoleTagFilter( EditorSelfTestContext& context )
+            {
+                constexpr const utf8* kProbeMessage = "console tag filter probe";
+                EditorContext*        pContext      = EditorContext::get();
+                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
+                    return EditorSelfTestStep::Done;
+                (void)pContext->getPanelManager().setPanelOpen( "console", true );
+                ConsolePanel* pConsole = static_cast<ConsolePanel*>( pContext->getPanelManager().findPanel( "console" ) );
+                if ( context.expect( pConsole != nullptr, "no console panel" ) == false )
+                    return EditorSelfTestStep::Done;
+
+                const uint32 stepIndex = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    pConsole->getTagFilter().setTagVisible( kProbeTag, false );
+                    SW_LOG_INFO( "%#", kProbeMessage );
+                    return EditorSelfTestStep::Continue;
+                }
+                // 로거는 비동기다 — 줄이 패널에 닿을 때까지 기다린다.
+                if ( pConsole->isMessageInSnapshot( kProbeMessage ) == false && stepIndex < kMaxWaitFrame )
+                    return EditorSelfTestStep::Continue;
+                if ( pConsole->getTagFilter().isTagVisible( kProbeTag ) == false )
+                {
+                    (void)context.expect( pConsole->isMessageInSnapshot( kProbeMessage ), "the probe log line never reached the console" );
+                    (void)context.expect( pConsole->isMessageVisible( kProbeMessage ) == false, "a hidden tag's line is still listed" );
+                    pConsole->getTagFilter().setTagVisible( kProbeTag, true );
+                    return EditorSelfTestStep::Continue;
+                }
+                (void)context.expect( pConsole->isMessageVisible( kProbeMessage ), "showing the tag again did not bring its line back" );
+                return EditorSelfTestStep::Done;
+            }
+
+            // ------------------------------------------------------------------------------
+            // hierarchy.selectAllWith — 같은 태그를 단 오브젝트를 모두 고르면 에디터 선택이 그 수가 된다
+            // ------------------------------------------------------------------------------
+            static EditorSelfTestStep runSelectAllWithTag( EditorSelfTestContext& context )
+            {
+                EditorContext*     pContext = EditorContext::get();
+                GameObjectManager* pManager = editor::getActiveObjectManager();
+                if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
+                    return EditorSelfTestStep::Done;
+                const TagID tag    = TagID::request( "SwSelfTest.SelectAll" );
+                GameObject* pFirst = pManager->createGameObject( hashed_string( "SelfTestSelectA" ) );
+                GameObject* pOther = pManager->createGameObject( hashed_string( "SelfTestSelectB" ) );
+                if ( context.expect( pFirst != nullptr && pOther != nullptr, "could not create the probe objects" ) == false )
+                    return EditorSelfTestStep::Done;
+                pFirst->addTag( tag );
+                pOther->addTag( tag );
+                pManager->mergePendingAdds();
+
+                vector<GameObject*> listMatch;
+                EditorSceneCommands::collectObjectsWithTag( *pManager, tag, listMatch );
+                (void)context.expect( EditorSceneCommands::selectObjects( listMatch ) == 2, "selectObjects did not take both tagged objects" );
+                (void)context.expect( pContext->getEditorSelection().getSelectedObjectCount() == 2, "the editor selection does not hold both tagged objects" );
+
+                pContext->getWorkspace().clearSelection();
+                pManager->destroyObject( pFirst );
+                pManager->destroyObject( pOther );
+                return EditorSelfTestStep::Done;
+            }
+
+            // ------------------------------------------------------------------------------
+            // layout.namedRoundTrip — 이름 붙인 레이아웃을 저장했다 불러오면 패널 가시성이 돌아오고 코어 패널은 도킹된 채다
+            // ------------------------------------------------------------------------------
+            static EditorSelfTestStep runNamedLayoutRoundTrip( EditorSelfTestContext& context )
+            {
+                constexpr const utf8* kPanelId    = "history";
+                constexpr const utf8* kLayoutName = "selftest";
+                EditorContext*        pContext    = EditorContext::get();
+                EditorDockLayout*     pDock       = pContext != nullptr ? pContext->findDockLayout() : nullptr;
+                if ( context.expect( pDock != nullptr, "no dock layout" ) == false )
+                    return EditorSelfTestStep::Done;
+                const string folder = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_editor_selftest_layouts" );
+
+                const uint32 stepIndex = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    (void)pContext->getPanelManager().setPanelOpen( kPanelId, true );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex == 1 )
+                {
+                    if ( context.expect( pDock->saveNamedLayout( kLayoutName, folder ), "could not save the named layout" ) == false )
+                        return EditorSelfTestStep::Done;
+                    string iniText;
+                    (void)FileUtil::readTextFile( EditorLayoutStore::makeImguiIniPath( folder, kLayoutName ), iniText ); // 없으면 아래 단언이 알린다
+                    (void)context.expect( iniText.find( "[Docking]" ) != string::npos && iniText.find( "[Window][Hierarchy]" ) != string::npos,
+                                          "the saved layout has no docking section or no hierarchy window" );
+                    (void)pContext->getPanelManager().setPanelOpen( kPanelId, false );
+                    (void)context.expect( pDock->requestLoadNamedLayout( kLayoutName, folder ), "could not load the named layout" );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex < 4 )
+                    return EditorSelfTestStep::Continue; // 다음 프레임 시작에 적용되고, 그 프레임에 창이 다시 선다
+
+                const IEditorPanel* pPanel = pContext->getPanelManager().findPanel( kPanelId );
+                (void)context.expect( pPanel != nullptr && pPanel->isOpen(), "loading the layout did not reopen the panel it saved open" );
+                const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( "Hierarchy" );
+                (void)context.expect( pHierarchy != nullptr && pHierarchy->DockId != 0, "the hierarchy is no longer docked after loading the layout" );
+                (void)pContext->getPanelManager().setPanelOpen( kPanelId, false );
+                (void)EditorLayoutStore::remove( folder, kLayoutName ); // 임시 폴더 — 남아도 다음 실행이 덮어쓴다
+                return EditorSelfTestStep::Done;
+            }
         };
     } // namespace
 
     SW_EDITOR_SELF_TEST( GameViewDebugDraw, "gameView.debugDraw", 710, &EditorSelfTestDevToolsInternal::runDebugDrawReachesTheGameView );
     SW_EDITOR_SELF_TEST( GameViewDebugOverlay, "gameView.debugOverlay", 720, &EditorSelfTestDevToolsInternal::runDebugOverlayIsDrawn );
+    SW_EDITOR_SELF_TEST( ConsoleTagFilter, "console.tagFilter", 730, &EditorSelfTestDevToolsInternal::runConsoleTagFilter );
+    SW_EDITOR_SELF_TEST( HierarchySelectAllWith, "hierarchy.selectAllWith", 740, &EditorSelfTestDevToolsInternal::runSelectAllWithTag );
+    SW_EDITOR_SELF_TEST( NamedLayout, "layout.namedRoundTrip", 750, &EditorSelfTestDevToolsInternal::runNamedLayoutRoundTrip );
 } // namespace sw::editor

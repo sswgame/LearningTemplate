@@ -118,7 +118,7 @@ namespace sw
 
         splash.updateStatus( "Loading Configuration & Display...", 0.40f );
 
-        const ConfigManager*      pConfigManager      = _engineLoop.getConfigManager();
+        ConfigManager*            pConfigManager      = _engineLoop.getConfigManager();
         const CommandLineManager* pCommandLineManager = _engineLoop.getCommandLineManager();
         if ( pConfigManager == nullptr || pCommandLineManager == nullptr )
         {
@@ -136,6 +136,8 @@ namespace sw
         _fixedTimestep.configure( pEngineConfig->_maxFrameDeltaTime,
                                   pEngineConfig->_fixedDeltaTime,
                                   pEngineConfig->_maxFixedStepPerFrame );
+        // 에디터가 Config/ 를 감시해 다시 읽으면(ConfigManager::reloadConfigFile) 프레임 시간 정책도 따라간다.
+        pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &App::onConfigReloaded, this ) );
 
         // 2. 창 소유권을 가져온다(초기화 중에는 숨긴 상태로 시작한다)
         splash.updateStatus( "Initializing Platform Window & Graphics...", 0.60f );
@@ -424,6 +426,16 @@ namespace sw
             pRenderThread->waitIdle();
 
         pRHI->getDevice().resize( width, height );
+    }
+
+    void App::onConfigReloaded( const hashed_string& configTypeName )
+    {
+        if ( configTypeName != EngineConfig::StaticType()->_fullyQualifiedName )
+            return;
+        const ConfigManager* pConfigManager = _engineLoop.getConfigManager();
+        const EngineConfig*  pEngineConfig  = pConfigManager != nullptr ? pConfigManager->getConfig<EngineConfig>() : nullptr;
+        if ( pEngineConfig != nullptr )
+            _fixedTimestep.configure( pEngineConfig->_maxFrameDeltaTime, pEngineConfig->_fixedDeltaTime, pEngineConfig->_maxFixedStepPerFrame );
     }
 
     bool App::onWindowMessage( const NativeWindowEvent& event )

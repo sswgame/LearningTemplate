@@ -77,7 +77,7 @@ namespace sw
         shutdown();
     }
 
-    bool FileWatchDispatcher::initialize()
+    bool FileWatchDispatcher::initialize( string_view watchRootPath )
     {
 #if defined( SW_PLATFORM_WINDOWS )
         _fileWatcher = make_unique<WindowsFileWatcher>();
@@ -86,7 +86,7 @@ namespace sw
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
-        const string& rootPath = ResourceUtil::getRootFolderPath();
+        const string rootPath = watchRootPath.empty() ? ResourceUtil::getRootFolderPath() : string( watchRootPath );
         if ( rootPath.empty() == false )
         {
             if ( _fileWatcher->startWatching( rootPath, true ) == false )

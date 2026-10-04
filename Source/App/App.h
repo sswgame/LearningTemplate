@@ -121,6 +121,8 @@ namespace sw
 
         /** @brief 창 크기 변경 콜백입니다. */
         void onResize( const uint32 width, const uint32 height );
+        /** @brief 설정 파일을 다시 읽었습니다. EngineConfig 면 프레임 시간 정책(최대 델타 · 고정 스텝)을 다시 정합니다. */
+        void onConfigReloaded( const hashed_string& configTypeName );
         /** @brief 네이티브 창 이벤트를 전달합니다. */
         bool onWindowMessage( const NativeWindowEvent& event );
         /** @brief tick 안에서 필요할 때 조회하는 에디터 뷰 카메라입니다. */

@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/EngineBootstrap.h"
 #include "Engine/EngineInitSequence.h"
@@ -164,6 +165,8 @@ namespace sw
         ShaderRecompiler* getShaderRecompiler() const;
         /** @brief 셰이더 강제 리로드 핫키를 처리합니다. Engine 자신의 개발 도구이므로 여기서 끝냅니다. */
         void pollShaderReloadHotkey();
+        /** @brief 설정 파일을 다시 읽었습니다(`ConfigManager::onConfigReloaded`). 게임 설정 활성본 · 선호 수직 동기화를 다시 맞춥니다. */
+        void onConfigReloaded( const hashed_string& configTypeName );
 
         // 기동 단계의 본문이다(`EngineLoop.cpp`). 표(`EngineInitStepList.xxx`)의 줄마다 `<단계>StartupStep` 하나이고, 빠지면 컴파일 오류다.
         // 중첩 타입이라 이 클래스의 private 을 그대로 쓰고, 바깥에서는 본문 표(`EngineInitStepTable`)만 이름을 본다.

@@ -4,6 +4,7 @@
 
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorUtil.h"
@@ -19,6 +20,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/ContinuousCollision.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -280,6 +282,53 @@ namespace sw::editor
             return;
 
         pContext->getWorkspace().selectGameObject( pObj, mode );
+    }
+
+    void EditorSceneCommands::collectObjectsWithComponent( GameObjectManager& manager, const TypeInfo* pComponentType, vector<GameObject*>& outListObject )
+    {
+        outListObject.clear();
+        if ( pComponentType == nullptr )
+            return;
+        manager.forEachGameObject( [pComponentType, &outListObject]( GameObject* pObj )
+        {
+            if ( pObj == nullptr || pObj->isPendingDestroy() )
+                return;
+            for ( const Component* pComponent : pObj->getComponents() )
+            {
+                const TypeInfo* pType = pComponent != nullptr && pComponent->isPendingDestroy() == false ? pComponent->getTypeInfo() : nullptr;
+                if ( pType != nullptr && pType->isDerivedFrom( pComponentType ) )
+                {
+                    outListObject.push_back( pObj );
+                    return;
+                }
+            }
+        } );
+    }
+
+    void EditorSceneCommands::collectObjectsWithTag( GameObjectManager& manager, TagID tag, vector<GameObject*>& outListObject )
+    {
+        outListObject.clear();
+        if ( tag.isValid() == false )
+            return;
+        manager.forEachGameObject( [tag, &outListObject]( GameObject* pObj )
+        {
+            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag ) )
+                outListObject.push_back( pObj );
+        } );
+    }
+
+    uint32 EditorSceneCommands::selectObjects( const vector<GameObject*>& listObject )
+    {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr || listObject.empty() )
+            return 0;
+        EditorWorkspace& workspace = pContext->getWorkspace();
+        workspace.selectGameObject( listObject[0], SelectionMode::Replace );
+        for ( size_t index = 1; index < listObject.size(); ++index )
+        {
+            workspace.selectGameObject( listObject[index], SelectionMode::Add );
+        }
+        return static_cast<uint32>( listObject.size() );
     }
 
     bool EditorSceneCommands::wouldCreateParentCycle( GameObject* pChild, GameObject* pNewParent )

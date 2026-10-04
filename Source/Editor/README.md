@@ -263,6 +263,25 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
 - 시험: `EditorPlaySessionTest`(Simulate · Step N · 카메라에서 시작), `DebugDrawQueueTest`, `DebugOverlayStateTest`, `FixedTimestepTest.TimeScale…`,
   에디터 자체 시험 `gameView.debugDraw` · `gameView.debugOverlay`.
 
+## Output Log · 설정 · 선택 · 레이아웃
+
+- **로그 줄 → IDE**: 줄을 더블 클릭(또는 오른쪽 클릭 `Open in IDE`)하면 그 줄이 가리키는 소스 위치를 IDE 로 연다. 메시지 안의 위치
+  (`경로(줄,열)` · `경로:줄:열` — 컴파일러 · 셰이더 오류)가 먼저, 없으면 로그를 쓴 자리다. 명령 틀은 `editortooldefaults.json` 의
+  `_ideOpenCommand`(`{file}` · `{line}`), 비우면 VS Code(`code -g`, Windows 는 `cmd /c`)다. 판정은 `Common/Commands/EditorLogCommands`.
+- **카테고리 필터**: 툴바 `Tags` 팝업이 로그 카테고리(로그를 쓴 자리 `SW_LOG_CALLER`, 없으면 모듈 태그)마다 보이기를 켜고 끈다(`EditorLogTagFilter`).
+- **설정 파일 핫 리로드**: `Common/Workspace/ConfigHotReload` 가 `Config/` 의 `.json` 을 감시한다(에셋과 같은 `FileWatchDispatcher`, 루트만 다름).
+  호스트 설정(`ConfigManager` 가 파일에서 읽은 EngineConfig · GameConfig)은 `ConfigManager::reloadConfigFile` 이 **제자리에서** 다시 읽고
+  `onConfigReloaded` 로 알린다 — App 은 프레임 시간 정책, EngineLoop 는 게임 설정 활성본 · 선호 수직 동기화(다음 스왑체인부터). 에디터 도구 시드
+  (`editortooldefaults.json`)는 에디터가 다시 읽는다. 앱이 다시 쓰는 `EditorConfig.json` 은 다시 읽지 않는다.
+- **같은 종류 · 태그 모두 선택**: Hierarchy 오른쪽 클릭 `Select All With` — 그 오브젝트의 컴포넌트 종류(파생 포함) · 태그(아래 계층 포함)마다
+  (`EditorSceneCommands::collectObjectsWithComponent` · `collectObjectsWithTag` · `selectObjects`).
+- **이름 붙인 레이아웃**: `Panel > Layouts` — 이름을 적고 Save, 목록에서 고르면 불러오고 `x` 로 지운다. 도킹 배치(`<이름>.imgui.ini`)와 패널
+  가시성(`<이름>.windows.ini`)이 `Config/Editor/Layouts/` 에 남는다(git 무시). 불러오기는 다음 프레임 `NewFrame` 앞에서 한다
+  (`EditorDockLayout::applyPendingNamedLayout`) — 프레임 안에서 ImGui 설정을 읽으면 이미 있는 창 · 도킹 노드에 적용되지 않는다.
+- 시험: `EditorLogCommandsTest` · `ConfigHotReloadTest` · `EditorLayoutStoreTest` · `EditorSceneCommandsTest.CollectObjectsByComponentTypeAndTag`
+  (EditorTest), `ConfigManagerTest.ReloadConfigFileUpdatesInPlaceAndNotifies`(EngineTest), 에디터 자체 시험 `console.tagFilter` ·
+  `hierarchy.selectAllWith` · `layout.namedRoundTrip`.
+
 ## ⚠️ 핵심 특징 및 규칙
 - **Dev 모드 전용**: 이 폴더의 코드는 개발(Dev) 모드에서만 `MODULE DLL`로 빌드되고 동작합니다. 배포(Shipping) 빌드를 할 때는 **코드가 통째로 날아갑니다.**
 - **게임 로직 분리**: **절대 게임(Game) 로직이 이 폴더의 코드에 의존해서는 안 됩니다.** 게임 코드에서 `#include "Editor/"` 등을 호출하면 Shipping 빌드가 100% 터집니다.

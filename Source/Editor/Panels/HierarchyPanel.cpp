@@ -3,6 +3,8 @@
 #include "Editor/Panels/HierarchyPanel.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/String/TagID.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
@@ -251,6 +253,35 @@ namespace sw::editor
                 ImGui::EndMenu();
             }
 
+            /** @brief 이 오브젝트의 컴포넌트 종류 · 태그마다 "그것을 가진 오브젝트 모두 선택" 을 고르는 메뉴입니다. */
+            static void drawSelectSameMenu( GameObject* pObj, GameObjectManager* pManager )
+            {
+                if ( pObj == nullptr || pManager == nullptr || ImGui::BeginMenu( "Select All With" ) == false )
+                    return;
+                vector<GameObject*> listMatch;
+                for ( const Component* pComponent : pObj->getComponents() )
+                {
+                    const TypeInfo* pType = pComponent != nullptr ? pComponent->getTypeInfo() : nullptr;
+                    if ( pType == nullptr || ImGui::MenuItem( pType->_name.c_str() ) == false )
+                        continue;
+                    EditorSceneCommands::collectObjectsWithComponent( *pManager, pType, listMatch );
+                    (void)EditorSceneCommands::selectObjects( listMatch ); // 이 오브젝트가 늘 들어 있어 0 이 아니다
+                }
+                const vector<TagID>& listTag = pObj->getTags().getTags();
+                if ( listTag.empty() == false )
+                    ImGui::Separator();
+                for ( const TagID tag : listTag )
+                {
+                    fixed_string<constant::kMaxBuffer128> label;
+                    formatstring( label.data(), label.capacity(), "Tag %s", tag.getString() );
+                    if ( ImGui::MenuItem( label.c_str() ) == false )
+                        continue;
+                    EditorSceneCommands::collectObjectsWithTag( *pManager, tag, listMatch );
+                    (void)EditorSceneCommands::selectObjects( listMatch ); // 이 오브젝트가 늘 들어 있어 0 이 아니다
+                }
+                ImGui::EndMenu();
+            }
+
             static void drawGameObjectContextMenu( GameObject* pObj, GameObjectManager* pManager )
             {
                 if ( ImGui::BeginPopupContextItem( "GOCtx" ) == false )
@@ -270,6 +301,7 @@ namespace sw::editor
                     EditorSceneCommands::duplicate( pManager, pObj );
 
                 drawAddComponentMenu( pObj );
+                drawSelectSameMenu( pObj, pManager );
 
                 ImGui::Separator();
 

@@ -88,6 +88,7 @@ Config/search_paths.json
 # Editor user layouts (committed: EditorConfig.json, editortooldefaults.json)
 Config/Editor/imgui.ini
 Config/Editor/windows.ini
+Config/Editor/Layouts/
 Config/Editor/*.local.json
 Config/Editor/AnimGraph.json
 Config/Editor/DialogueGraphEditor.json
