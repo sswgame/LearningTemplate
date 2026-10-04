@@ -197,7 +197,9 @@ cd build/Ninja-Debug/Bin
   (5) 게임 스키마에 키 바인딩 설정 — Shooter3D 는 입력 맵(`data/shooter.input.xml`)을 쓰니 그 액션부터. 다른 시험 게임은 아직 키를 직접 묻는다(입력 맵으로 옮길 것). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 - **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 작은 것: `RestaurantSimulation::placeOrder` 의 후보 목록 둘(가중치가 모두 0 일 때 결과가 달라져 손대지 않았다).
-  - 중간: `SpatialHashGrid2D` · `GridTopology` + 재사용 스크래치 BFS · NetConnection 메시지 버퍼 재사용 ·
+  - 중간: `SpatialHashGrid2D`(RTS 버킷 · NetMmo 관심 격자 — 둘의 질의 모양이 달라 함께 뽑을 이득을 아직 못 봤다) · 키트의 칸 저장소를
+    `GridTopology` 위로(CreatureTown · FarmField · TileMap · ActionPlatformerBody 의 `y × 너비 + x` 손셈 — 이웃 표 · 탐색은 이미 옮겼다) ·
+    NetConnection 메시지 버퍼 재사용 ·
     `GameFlags` 와 `IFlagStore` 하나로 · TurnBattle 키트 정리.
   - 동작이 바뀌는 것(시험 먼저): `NetPrioritizer` 공유 · 아이템/효과 처리기 등록부 · `TimedModifierSet`.
 

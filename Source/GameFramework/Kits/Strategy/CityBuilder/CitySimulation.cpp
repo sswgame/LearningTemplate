@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 
-#include "Core/Container/deque.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -17,8 +16,6 @@ namespace sw
         {
             static constexpr uint32 kMinBuildingStateBytes = 64; ///< 건물 하나의 상태가 적어도 쓰는 바이트(개수 상한)
             static constexpr uint32 kMinWalkerStateBytes   = 56; ///< 일꾼 하나의 상태가 적어도 쓰는 바이트(개수 상한)
-            static constexpr int32  kArrOffsetX[4]         = { 1, -1, 0, 0 };
-            static constexpr int32  kArrOffsetY[4]         = { 0, 0, 1, -1 };
 
             /** @brief 노동 순서 — 물 → 식량 사슬 → 나머지(작을수록 먼저). */
             static int32 computeLaborPriority( const CityBuildingDef& def )
@@ -73,6 +70,7 @@ namespace sw
         , _listBuilding{}
         , _listWalker{}
         , _eventBuffer{}
+        , _roadSearch{}
         , _pCatalog{ nullptr }
         , _settings{}
         , _stepTimer{}
@@ -319,8 +317,9 @@ namespace sw
     {
         for ( CityTile& tile : _listTile )
             tile._roadComponent = -1;
-        int32       component = 0;
-        deque<int2> listQueue;
+        // 도로 조각마다 너비 우선 — 큐는 길 찾기와 같은 재사용 스크래치(조각 번호가 칸의 "봤다" 표시다).
+        const GridTopology topology{ _width, _height };
+        int32              component = 0;
         for ( int32 y = 0; y < _height; ++y )
         {
             for ( int32 x = 0; x < _width; ++x )
@@ -329,21 +328,22 @@ namespace sw
                 if ( seed._bRoad == SW_FALSE || seed._roadComponent >= 0 )
                     continue;
                 seed._roadComponent = component;
-                listQueue.push_back( int2{ x, y } );
-                while ( listQueue.empty() == false )
+                _roadSearch.begin( topology.getCellCount() );
+                _roadSearch.visit( topology.toIndex( int2{ x, y } ), -1 );
+                while ( _roadSearch.hasNext() )
                 {
-                    const int2 tile = listQueue.front();
-                    listQueue.pop_front();
-                    for ( int32 direction = 0; direction < 4; ++direction )
+                    const int32 index = _roadSearch.popNext();
+                    const int2  tile  = topology.toCell( index );
+                    for ( int32 direction = 0; direction < GridTopology::kOrthogonalCount; ++direction )
                     {
-                        const int2 next{ tile._x + CitySimulationInternal::kArrOffsetX[direction], tile._y + CitySimulationInternal::kArrOffsetY[direction] };
+                        const int2 next = GridTopology::getNeighbor( tile, direction );
                         if ( isRoad( next._x, next._y ) == false )
                             continue;
-                        CityTile& nextTile = _listTile[static_cast<size_t>( next._y * _width + next._x )];
+                        CityTile& nextTile = _listTile[static_cast<size_t>( topology.toIndex( next ) )];
                         if ( nextTile._roadComponent >= 0 )
                             continue;
                         nextTile._roadComponent = component;
-                        listQueue.push_back( next );
+                        _roadSearch.visit( topology.toIndex( next ), index );
                     }
                 }
                 ++component;
@@ -622,29 +622,28 @@ namespace sw
         outListPath.clear();
         if ( isRoad( from._x, from._y ) == false || isRoad( to._x, to._y ) == false || getRoadComponent( from ) != getRoadComponent( to ) )
             return false;
-        vector<int32> listParent( static_cast<size_t>( _width * _height ), -2 );
-        deque<int2>   listQueue;
-        listParent[static_cast<size_t>( from._y * _width + from._x )] = -1;
-        listQueue.push_back( from );
-        while ( listQueue.empty() == false )
+        // 칸 표시 · 부모 · 큐는 재사용 스크래치에 — 일꾼을 내보낼 때마다 W × H 를 새로 잡지 않는다.
+        const GridTopology topology{ _width, _height };
+        const int32        goal = topology.toIndex( to );
+        _roadSearch.begin( topology.getCellCount() );
+        _roadSearch.visit( topology.toIndex( from ), -1 );
+        while ( _roadSearch.hasNext() )
         {
-            const int2 tile = listQueue.front();
-            listQueue.pop_front();
-            if ( tile == to )
+            const int32 index = _roadSearch.popNext();
+            if ( index == goal )
                 break;
-            for ( int32 direction = 0; direction < 4; ++direction )
+            const int2 tile = topology.toCell( index );
+            for ( int32 direction = 0; direction < GridTopology::kOrthogonalCount; ++direction )
             {
-                const int2 next{ tile._x + CitySimulationInternal::kArrOffsetX[direction], tile._y + CitySimulationInternal::kArrOffsetY[direction] };
-                if ( isRoad( next._x, next._y ) == false || listParent[static_cast<size_t>( next._y * _width + next._x )] != -2 )
-                    continue;
-                listParent[static_cast<size_t>( next._y * _width + next._x )] = tile._y * _width + tile._x;
-                listQueue.push_back( next );
+                const int2 next = GridTopology::getNeighbor( tile, direction );
+                if ( isRoad( next._x, next._y ) )
+                    _roadSearch.visit( topology.toIndex( next ), index );
             }
         }
-        if ( listParent[static_cast<size_t>( to._y * _width + to._x )] == -2 )
+        if ( _roadSearch.isVisited( goal ) == false )
             return false;
-        for ( int32 index = to._y * _width + to._x; index >= 0; index = listParent[static_cast<size_t>( index )] )
-            outListPath.push_back( int2{ index % _width, index / _width } );
+        for ( int32 index = goal; index >= 0; index = _roadSearch.getParent( index ) )
+            outListPath.push_back( topology.toCell( index ) );
         std::reverse( outListPath.begin(), outListPath.end() );
         outListPath.erase( outListPath.begin() ); // 지금 칸은 빼고 다음 칸부터
         return true;
@@ -711,9 +710,9 @@ namespace sw
         int32 candidateCount = 0;
         for ( int32 pass = 0; pass < 2 && candidateCount == 0; ++pass )
         {
-            for ( int32 direction = 0; direction < 4; ++direction )
+            for ( int32 direction = 0; direction < GridTopology::kOrthogonalCount; ++direction )
             {
-                const int2 next{ walker._tile._x + CitySimulationInternal::kArrOffsetX[direction], walker._tile._y + CitySimulationInternal::kArrOffsetY[direction] };
+                const int2 next = GridTopology::getNeighbor( walker._tile, direction );
                 if ( isRoad( next._x, next._y ) == false || next == walker._previousTile )
                     continue;
                 const bool bVisited = std::find( walker._listVisited.begin(), walker._listVisited.end(), next ) != walker._listVisited.end();

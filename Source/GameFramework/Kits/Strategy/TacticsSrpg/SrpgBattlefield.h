@@ -16,6 +16,7 @@
 #include "GameFramework/Progression/LevelProgress.h"
 #include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
+#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {
@@ -246,6 +247,7 @@ namespace sw
         vector<const SrpgTerrainDef*> _listTerrain; ///< 칸 → 지형
         vector<SrpgUnit>              _listUnit;
         EventBuffer<SrpgEvent>        _eventBuffer;
+        mutable GridSearchScratch     _cellMarks; ///< `collectThreatCells` 의 "한 칸 한 번" 표시
         SrpgSettings                  _settings;
         TurnOrder                     _turnOrder;
         GameRandom                    _random;

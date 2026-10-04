@@ -14,6 +14,7 @@
 #include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 #include "GameFramework/Utility/GameRandom.h"
+#include "GameFramework/Utility/GridTopology.h"
 #include "GameFramework/Utility/RayMath.h"
 
 #include "TestFramework/TestFramework.h"
@@ -47,6 +48,24 @@ namespace
             cooldown.restart( interval );
         }
         return count;
+    }
+
+    /** @brief @p start 에서 @p blocked 한 칸만 막은 격자를 네 이웃 너비 우선으로 훑습니다. */
+    void runGridSearch( GridSearchScratch& outSearch, const GridTopology& topology, const int2& start, const int2& blocked )
+    {
+        outSearch.begin( topology.getCellCount() );
+        outSearch.visit( topology.toIndex( start ), -1 );
+        while ( outSearch.hasNext() )
+        {
+            const int32 index = outSearch.popNext();
+            for ( int32 direction = 0; direction < GridTopology::kOrthogonalCount; ++direction )
+            {
+                const int2 next  = GridTopology::getNeighbor( topology.toCell( index ), direction );
+                const bool bOpen = topology.isInside( next ) && ( next._x != blocked._x || next._y != blocked._y );
+                if ( bOpen )
+                    outSearch.visit( topology.toIndex( next ), index );
+            }
+        }
     }
 } // namespace
 
@@ -235,6 +254,43 @@ SW_TEST_CASE( GameFrameworkUtilTest, EventBufferSwapsIntoAnEmptyListAndAppendsTo
     vector<int32> listOther;
     buffer.drainTo( listOther );
     SW_EXPECT_TRUE( listOther.empty() );
+}
+
+/**
+ * @brief [GameFrameworkUtilTest] 격자 모양은 칸 번호 · 경계 · 이웃 순서(직교 넷 → 대각선 넷)가 하나이고, 탐색 스크래치는 세대만 올려 다시 쓴다
+ * @details 너비 우선 결과(거리 · 부모 · 방문 순서)는 이웃 순서에 매인다. 두 번째 탐색은 첫 탐색의 표시를 보지 않고, 저장소를 다시 잡지 않는다.
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, GridTopologyAndSearchScratchReuseTheirStorage )
+{
+    const GridTopology topology{ 4, 3 };
+    SW_EXPECT_EQUAL( 12, topology.getCellCount() );
+    SW_EXPECT_EQUAL( 6, topology.toIndex( int2{ 2, 1 } ) );
+    SW_EXPECT_TRUE( topology.toCell( 6 ) == int2( 2, 1 ) );
+    SW_EXPECT_TRUE( topology.isInside( int2{ 3, 2 } ) );
+    SW_EXPECT_FALSE( topology.isInside( int2{ 4, 0 } ) );
+    SW_EXPECT_FALSE( topology.isInside( -1, 0 ) );
+    SW_EXPECT_TRUE( GridTopology::getNeighbor( int2{ 1, 1 }, 0 ) == int2( 2, 1 ) );
+    SW_EXPECT_TRUE( GridTopology::getNeighbor( int2{ 1, 1 }, 3 ) == int2( 1, 0 ) );
+    SW_EXPECT_TRUE( GridTopology::getNeighbor( int2{ 1, 1 }, 7 ) == int2( 0, 0 ) );
+
+    // 가운데 줄의 (1,1) 을 막은 4 × 3 — (0,0) 에서 (3,2) 까지 너비 우선.
+    GridSearchScratch search;
+    runGridSearch( search, topology, int2{ 0, 0 }, int2{ 1, 1 } );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 11 ), search.getVisitOrder().size() );
+    SW_EXPECT_FALSE( search.isVisited( topology.toIndex( int2{ 1, 1 } ) ) );
+    int32 pathLength = 0;
+    for ( int32 index = topology.toIndex( int2{ 3, 2 } ); index >= 0; index = search.getParent( index ) )
+        ++pathLength;
+    SW_EXPECT_EQUAL( 6, pathLength );                // 맨해튼 5 걸음 + 시작 칸
+    SW_EXPECT_EQUAL( 1, search.getVisitOrder()[1] ); // 첫 이웃은 +x 쪽
+
+    // 다시 — 지난 표시는 사라지고 저장소는 그대로다.
+    const int32* pOrder = search.getVisitOrder().data();
+    runGridSearch( search, topology, int2{ 3, 2 }, int2{ 2, 2 } );
+    SW_EXPECT_TRUE( search.isVisited( topology.toIndex( int2{ 1, 1 } ) ) );
+    SW_EXPECT_FALSE( search.isVisited( topology.toIndex( int2{ 2, 2 } ) ) );
+    SW_EXPECT_EQUAL( -1, search.getParent( topology.toIndex( int2{ 3, 2 } ) ) );
+    SW_EXPECT_TRUE( search.getVisitOrder().data() == pOrder );
 }
 
 /**
