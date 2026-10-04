@@ -8,8 +8,6 @@
 
 #include "GameFramework/Data/GameDataXml.h"
 
-#include <algorithm>
-
 namespace sw
 {
     bool SpawnEntryDef::hasAnyTag( const vector<hashed_string>& listTag ) const
@@ -27,7 +25,7 @@ namespace sw
 
     SpawnTable::SpawnTable()
         : _catalog{}
-        , _listCurvePoint{}
+        , _curve{}
         , _budgetPerMinute{ 1.0f }
         , _maxBudget{ 10.0f }
         , _startBudget{ 0.0f }
@@ -53,7 +51,7 @@ namespace sw
     uint32 SpawnTable::loadRoot( const XmlNode& root, string_view sourceName )
     {
         _catalog.clear();
-        _listCurvePoint.clear();
+        _curve.clear();
         _budgetPerMinute  = MathUtil::max( 0.0f, root.getAttributeFloat( "budgetPerMinute", _budgetPerMinute ) );
         _maxBudget        = MathUtil::max( 0.0f, root.getAttributeFloat( "maxBudget", _maxBudget ) );
         _startBudget      = MathUtil::clamp( root.getAttributeFloat( "startBudget", _startBudget ), 0.0f, _maxBudget );
@@ -73,35 +71,8 @@ namespace sw
             { entry._listTag.push_back( hashed_string( token ) ); } );
             (void)_catalog.add( entry );
         }
-        for ( XmlNode node = root.findChild( "Curve" ); node; node = node.findNextSibling( "Curve" ) )
-        {
-            SpawnCurvePoint point;
-            point._time  = node.getAttributeFloat( "time", point._time );
-            point._scale = MathUtil::max( 0.0f, node.getAttributeFloat( "scale", point._scale ) );
-            _listCurvePoint.push_back( point );
-        }
-        std::stable_sort( _listCurvePoint.begin(), _listCurvePoint.end(), []( const SpawnCurvePoint& lhs, const SpawnCurvePoint& rhs )
-        { return lhs._time < rhs._time; } );
+        (void)_curve.readPoints( root, "Curve", "scale", 0.0f );
         return static_cast<uint32>( _catalog.getCount() );
-    }
-
-    float32 SpawnTable::computeScale( float32 time ) const
-    {
-        if ( _listCurvePoint.empty() )
-            return 1.0f;
-        if ( time <= _listCurvePoint.front()._time )
-            return _listCurvePoint.front()._scale;
-        for ( size_t index = 1; index < _listCurvePoint.size(); ++index )
-        {
-            const SpawnCurvePoint& next = _listCurvePoint[index];
-            if ( time > next._time )
-                continue;
-            const SpawnCurvePoint& previous = _listCurvePoint[index - 1];
-            const float32          span     = next._time - previous._time;
-            const float32          alpha    = span > 0.0f ? ( time - previous._time ) / span : 1.0f;
-            return previous._scale + ( next._scale - previous._scale ) * alpha;
-        }
-        return _listCurvePoint.back()._scale;
     }
 
     SpawnDirector::SpawnDirector()
@@ -112,6 +83,7 @@ namespace sw
         , _pTable{ nullptr }
         , _random{}
         , _budget{ 0.0f }
+        , _budgetScale{ 1.0f }
         , _time{ 0.0f }
         , _pendingIndex{ -1 }
         , _nextSpawnId{ 1 }
@@ -127,6 +99,7 @@ namespace sw
         _listEvent.clear();
         _listAliveCount.assign( pTable != nullptr ? pTable->getEntries().size() : 0, 0 );
         _budget           = pTable != nullptr ? pTable->getStartBudget() : 0.0f;
+        _budgetScale      = 1.0f;
         _time             = 0.0f;
         _pendingIndex     = -1;
         _nextSpawnId      = 1;
@@ -176,8 +149,10 @@ namespace sw
         if ( _pTable == nullptr || deltaTime < 0.0f )
             return 0;
         // 구간 가운데의 배율로 쌓는다 — 프레임 길이가 달라도 같은 시간이면 거의 같은 예산.
-        const float32 midScale = _pTable->computeScale( _time + deltaTime * 0.5f );
+        const float32 midScale = _pTable->computeScale( _time + deltaTime * 0.5f ) * _budgetScale;
         _time += deltaTime;
+        if ( _budgetScale <= 0.0f )
+            return 0; // 쉬는 중 — 쌓지도 쓰지도 않는다
         _budget = MathUtil::min( _pTable->getMaxBudget(), _budget + _pTable->getBudgetPerMinute() / 60.0f * midScale * deltaTime );
 
         int32 spawnCount = 0;

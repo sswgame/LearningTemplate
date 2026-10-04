@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shooter3D 페이싱 감독(GameFramework/AI/Director/README.md). 긴장도는 맞은 피해 · 쓰러뜨린 드론 · 가까운 드론 · 탄 부족에서 온다.
+     쌓기(드론이 조금씩) → 절정(밀려오는 무리) → 쉼(내지 않고 탄을 채운다) → 쌓기. 조우 id 의 뜻은 ShooterDirectorComponent 가 안다:
+     swarm · elite = 드론 count 기를 한꺼번에(체력 × scale), ammo = 탄 채우기, repair = 체력 회복(scale × 10).
+     쉼에 들어서면 탄 · 수리를 하나씩(항목 쿨다운 1 초라 두 번 고르기가 같은 것을 두 번 고르지 않는다). -->
+<AiDirector startPhase="BuildUp">
+  <Intensity max="1" decayPerSecond="0.06" decayDelay="4">
+    <Signal id="damageTaken" kind="impulse" scale="0.012" combat="true"/>
+    <Signal id="droneKilled" kind="impulse" scale="0.035" combat="true"/>
+    <Signal id="dronesNear" kind="rate" scale="0.01" max="0.08" combat="true"/>
+    <Signal id="lowAmmo" kind="level" scale="0.25"/>
+  </Intensity>
+  <Phase id="BuildUp" spawnScale="1" spawnTags="Drone">
+    <Curve time="0" scale="0.6"/>
+    <Curve time="30" scale="1.5"/>
+    <Exit to="Peak" intensityAbove="0.7" minTime="8"/>
+    <Exit to="Peak" minTime="45"/>
+  </Phase>
+  <Phase id="Peak" spawnScale="1" spawnTags="Drone">
+    <Exit to="Relax" minTime="6"/>
+  </Phase>
+  <Phase id="Relax" spawnScale="0" rewardScale="2">
+    <Exit to="BuildUp" intensityBelow="0.3" calmFor="4" minTime="6"/>
+    <Exit to="BuildUp" minTime="20"/>
+  </Phase>
+  <Pool id="surge" trigger="phaseEnter" phase="Peak">
+    <Encounter id="swarm" weight="3" count="3"/>
+    <Encounter id="elite" weight="1" count="2" scale="2" minCycle="1" cooldown="60"/>
+  </Pool>
+  <Pool id="resupply" kind="reward" trigger="phaseEnter" phase="Relax" picks="2">
+    <Encounter id="ammo" cooldown="1"/>
+    <Encounter id="repair" scale="3" cooldown="1"/>
+  </Pool>
+  <Pool id="field" kind="reward" trigger="budget" perMinute="1" maxBudget="2" need="lowAmmo" needScale="2" pacing="BuildUp,Relax">
+    <Encounter id="repair" cost="1" scale="2" maxIntensity="0.6"/>
+  </Pool>
+</AiDirector>

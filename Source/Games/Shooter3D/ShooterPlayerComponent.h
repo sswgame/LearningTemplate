@@ -43,17 +43,21 @@ namespace sw
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;
 
-        /** @brief 드론에 맞았다(틱 뒤 게임 스레드). 바닥나면 웨이브 1 부터 다시 시작한다. */
+        /** @brief 드론에 맞았다(틱 뒤 게임 스레드). 디렉터의 긴장도 신호가 되고, 바닥나면 판을 처음부터 다시 시작한다. */
         void takeDamage( float32 amount );
-        /** @brief 새 웨이브 — 탄을 조금 채운다(틱 뒤 게임 스레드). */
+        /** @brief 탄 보상 — 무기마다 탄창 두 개를 채운다(틱 뒤 게임 스레드). */
         void addWaveAmmo();
+        /** @brief 수리 보상 — 체력을 최대치까지 채운다(틱 뒤 게임 스레드). */
+        void restoreHealth( float32 amount );
 
         // ---- 디렉터가 읽는 것(PrePhysics — 이 컴포넌트가 쓰지 않는 그룹) ----
         float3             getEyePosition() const;
         float32            getHealth() const { return _health; }
         const WeaponState& getCurrentWeapon() const { return _arrWeapon[_weaponIndex]; }
-        uint32             getShotCount() const { return _shotCount; }
-        uint32             getHitCount() const { return _hitCount; }
+        /** @brief 지금 무기의 탄(탄창 + 예비)이 탄창 네 개에 얼마나 모자란가 — 0(넉넉) .. 1(없음). 디렉터의 "탄 부족" 신호입니다. */
+        float32 computeAmmoShortage() const;
+        uint32  getShotCount() const { return _shotCount; }
+        uint32  getHitCount() const { return _hitCount; }
 
     private:
         /** @brief 잠깐 그리는 탄도선입니다(디버그 선 — 에디터 게임 뷰에서만 보인다). 고정 칸을 돌려 쓴다. */

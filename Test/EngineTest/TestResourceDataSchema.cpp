@@ -26,7 +26,9 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "GameFramework/AI/Director/AiDirectorProfile.h"
 #include "GameFramework/AI/Schedule/ScheduleCatalog.h"
+#include "GameFramework/AI/SpawnDirector.h"
 #include "GameFramework/Ability/AbilityCatalog.h"
 #include "GameFramework/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Camera/CameraPreset.h"
@@ -69,6 +71,8 @@ namespace
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
         static bool isSchedules( sw::string_view resourceId ) { return endsWith( resourceId, ".schedules.xml" ); }
+        static bool isAiDirector( sw::string_view resourceId ) { return endsWith( resourceId, ".director.xml" ); }
+        static bool isSpawnTable( sw::string_view resourceId ) { return endsWith( resourceId, ".spawns.xml" ); }
         static bool isUserSettingsSchema( sw::string_view resourceId ) { return endsWith( resourceId, ".settings.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
@@ -233,6 +237,8 @@ namespace
             {         "spriteclip",          &isSpriteClip,                         &loadSpriteClip},
             {      "camerapresets",       &isCameraPresets,   &loadCatalog<sw::CameraPresetCatalog>},
             {          "schedules",           &isSchedules,       &loadCatalog<sw::ScheduleCatalog>},
+            {         "aidirector",          &isAiDirector,     &loadCatalog<sw::AiDirectorProfile>},
+            {         "spawntable",          &isSpawnTable,            &loadCatalog<sw::SpawnTable>},
             {       "usersettings",  &isUserSettingsSchema,                 &loadUserSettingsSchema},
             {          "abilities",           &isAbilities,        &loadCatalog<sw::AbilityCatalog>},
             {              "crops",               &isCrops,           &loadCatalog<sw::CropCatalog>},

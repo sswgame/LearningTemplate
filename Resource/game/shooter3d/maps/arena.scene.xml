@@ -976,7 +976,9 @@
 					                          _player="50"
 					                          _arenaHalfSize="20"
 					                          _droneHeight="1.4"
-					                          _waveDelay="3"
+					                          _pacingProfile="game/shooter3d/data/drones.director.xml"
+					                          _spawnTable="game/shooter3d/data/drones.spawns.xml"
+					                          _pacingSeed="1"
 					                          _effectPoolSize="32"
 					                          _droneFlashTint="1,0.35,0.3,1"
 					                          _bAutoPlay="false">
