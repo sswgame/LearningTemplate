@@ -17,6 +17,18 @@ namespace sw
     class SpriteClipAsset;
 
     /**
+     * @enum SpriteDrawMode
+     * @brief 스프라이트를 어떤 메시로 그리는가입니다(유니티 `SpriteDrawMode`).
+     */
+    ENUM()
+    enum class SpriteDrawMode : uint8
+    {
+        Simple = 0, ///< 단위 사각형 하나를 트랜스폼 스케일로 늘립니다
+        Sliced = 1, ///< 9-슬라이스 — 모서리는 자연 크기, 변 · 가운데가 `_size` 까지 늘어납니다
+        Tiled  = 2, ///< 모서리는 자연 크기, 변 · 가운데가 자연 크기 칸으로 되풀이됩니다
+    };
+
+    /**
      * @class SpriteComponent
      * @brief 텍스처를 입힌 사각형을 그립니다(2D). 메시는 사각형, 머티리얼은 스프라이트 머티리얼(`sprite2d.material`)이 기본입니다.
      * @details 텍스처는 그 머티리얼의 **인스턴스**가 덮어쓰고(`albedoMap`), 같은 (머티리얼, 텍스처)의 스프라이트는 인스턴스 하나를 나눠 씁니다 —
@@ -83,6 +95,21 @@ namespace sw
         /** @brief 레이어 안 순서를 정합니다([-32767, 32767] 로 묶습니다). */
         void setOrderInLayer( int32 order );
 
+        /** @brief 그리기 방식입니다(Simple · Sliced · Tiled). */
+        SpriteDrawMode getDrawMode() const { return _drawMode; }
+        /** @brief 그리기 방식을 바꾸고 메시를 다시 고릅니다. */
+        void setDrawMode( SpriteDrawMode mode );
+        /** @brief Sliced · Tiled 의 로컬 크기(폭, 높이)입니다. Simple 은 보지 않습니다(트랜스폼 스케일이 크기). */
+        const float2& getSize() const { return _size; }
+        /** @brief Sliced · Tiled 의 크기를 정합니다(음수는 0). */
+        void setSize( const float2& size );
+        /** @brief 클립 프레임에 테두리가 없을 때 쓰는 9-슬라이스 테두리 (왼쪽, 아래, 오른쪽, 위, 프레임 비율)입니다. */
+        const float4& getSliceBorder() const { return _sliceBorder; }
+        /** @brief 클립 프레임에 테두리가 없을 때 쓰는 테두리를 정합니다. */
+        void setSliceBorder( const float4& border );
+        /** @brief 지금 쓰는 테두리입니다 — 보이는 클립 프레임에 테두리가 있으면 그것(에셋), 없으면 `_sliceBorder` 입니다. */
+        float4 getEffectiveSliceBorder() const;
+
         /** @brief 지금 보이는 UV 사각형입니다 — 클립이 있으면 그 프레임의 것, 없으면 `_uvRect` 입니다. */
         float4 getDisplayedUvRect() const;
 
@@ -102,6 +129,11 @@ namespace sw
         void refreshClip();
         /** @brief 보일 프레임 · 색을 GPU 인스턴스 칸으로 묶어 넘깁니다(`MeshComponent::setSpriteInstanceData`). */
         void refreshSpriteInstanceData();
+        /**
+         * @brief 그리기 방식 · 크기 · 테두리에 맞는 메시를 겁니다. Sliced · Tiled 는 `SpriteMeshBuilder::acquireSlicedMesh`(같은 값끼리 나눠 씀),
+         *        Simple 은 공유 사각형입니다. 같은 메시면 아무것도 하지 않습니다.
+         */
+        void refreshDrawModeMesh();
         /** @brief 정렬 레이어 · 순서를 정렬 키로 풀어 메시 컴포넌트에 넘깁니다(`MeshComponent::setSortKey`). */
         void refreshSortKey();
         /** @brief 텍스처 칸이 비었으면 클립의 아틀라스, 아니면 텍스처 칸입니다. */
@@ -129,6 +161,14 @@ namespace sw
          */
         PROPERTY( Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml; earlier layers draw first" )
         hashed_string _sortingLayer;
+        PROPERTY( Category = "Rendering", DisplayName = "Draw Mode", Tooltip = "Simple stretches the quad; Sliced keeps the corners; Tiled repeats the middle" )
+        SpriteDrawMode _drawMode;
+        PROPERTY( Category = "Rendering", DisplayName = "Size", Tooltip = "Local width and height of a Sliced or Tiled sprite", Min = 0.0, Meta = "Units=m" )
+        float2 _size;
+        PROPERTY( Category = "Rendering", DisplayName = "Slice Border",
+                  Tooltip = "9-slice border (left, bottom, right, top) as frame fractions; used when the clip frame has none", Min = 0.0, Max = 1.0 )
+        float4 _sliceBorder;
+        uint8  _bSliceMeshApplied; ///< 슬라이스 메시를 건 상태인가(Simple 로 돌아갈 때 사각형을 다시 건다). 저장하지 않습니다
         PROPERTY( Category = "Sorting", DisplayName = "Order In Layer", Tooltip = "Draw order inside the sorting layer; higher draws on top", Min = -32767.0,
                   Max = 32767.0 )
         int32                             _orderInLayer;
