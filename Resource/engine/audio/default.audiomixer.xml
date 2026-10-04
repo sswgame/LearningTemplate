@@ -1,0 +1,13 @@
+<!--
+	엔진 기본 믹서 그래프(AudioMixerDesc). master 가 유일한 루트이고, 사용자 설정의 버스 볼륨(audio.busVolume)은 이 이름들로 찾아간다.
+-->
+<AudioMixerDesc _maxVoiceCount="256" _maxRealVoiceCount="64" _inaudibleDb="-60">
+	<_listBus>
+		<AudioBusDesc _name="master" />
+		<AudioBusDesc _name="music" _parent="master" />
+		<AudioBusDesc _name="sfx" _parent="master" />
+		<AudioBusDesc _name="voice" _parent="master" />
+		<AudioBusDesc _name="ambient" _parent="master" />
+		<AudioBusDesc _name="ui" _parent="master" />
+	</_listBus>
+</AudioMixerDesc>

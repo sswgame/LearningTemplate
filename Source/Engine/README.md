@@ -13,9 +13,9 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 | 티어 | 폴더 | 뜻 |
 |---|---|---|
 | 0 | `Common` · `Compression` | 토대. Engine 의 어느 것도 참조하지 않는다. |
-| 1 | `Audio` · `Reflection` · `Utility` | 리플렉션과, 토대 위의 잎 서브시스템·헬퍼. |
+| 1 | `Reflection` · `Utility` | 리플렉션과, 토대 위의 잎 헬퍼. |
 | 2 | `Animation` · `Localization` · `Serialization` | 리플렉션 위에 올라가는 직렬화와 에셋형 잎. |
-| 3 | `Config` · `Dialogue` · `Physics` | 설정 — 리플렉션·직렬화로 읽힌다. 물리(설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터)도 여기다. |
+| 3 | `Audio` · `Config` · `Dialogue` · `Physics` | 설정 — 리플렉션·직렬화로 읽힌다. 물리(설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터)와 오디오(믹서 그래프 · 이벤트 · 음악 데이터)도 여기다. |
 | 4 | `Resource` · `Spatial` | 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. 공간 분할은 물리의 `AABB` 위에 선다. |
 | 5 | `Graphics`(Renderer 제외) · `Window` | RHI · 셰이더 · 머티리얼 · 메시 · 텍스처 — **디바이스와 GPU 에셋**. 창은 표면(`Common/IRenderSurface`)으로만 RHI 에 보인다. |
 | 6 | `Input` · `Object` | 컴포넌트 모델. 컴포넌트가 머티리얼·메시(5)를 든다 — 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 드는 것과 같은 자리. |
