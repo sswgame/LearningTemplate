@@ -61,7 +61,8 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 게임 클래스(`XxxWorld`)가 코드로 오브젝트를 만들고 매 프레임 밀어 넣는 대신, 상용 엔진처럼 나눕니다. `ThemeParkTycoon` 이 이 모양입니다
 (`ThemeParkTycoon/README.md`). `AbilityArena` 도 이 모양입니다 — 유닛마다 입력 · AI 컨트롤러 컴포넌트가 붙고, 어빌리티는 그 컨트롤러가 든 디렉터 핸들로
 디렉터를 찾습니다. `Shooter3D` 도 이 모양입니다 — 1인칭 시점은 GameFramework `FirstPersonCameraComponent` 이고, 플레이어 컴포넌트가 같은 오브젝트에서
-그 시점으로 걷고 쏩니다. 다른 시험 게임(`PrimitiveStage` 를 쓰는 넷)은 아직 옛 모양입니다.
+그 시점으로 걷고 쏩니다. `VoxelCraft` 도 같다 — 청크 메시는 프리팹 스폰이 아니라 청크마다 `VoxelChunkComponent` 가 절차로 짓습니다.
+다른 시험 게임(`PrimitiveStage` 를 쓰는 셋)은 아직 옛 모양입니다.
 
 | 무엇 | 어디 |
 |------|------|

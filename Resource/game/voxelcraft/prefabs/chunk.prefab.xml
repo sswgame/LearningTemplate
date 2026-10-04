@@ -1,0 +1,40 @@
+<Prefab formatVersion="0" name="VoxelChunk">
+	<GameObject _schemaVersion="0" _name="VoxelChunk" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="1,1,1"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="None"
+			               _meshId=""
+			               _materialPath="game/voxelcraft/materials/blocks.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="false" />
+			<MeshComponent _componentName="Water"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="1,1,1"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="MeshComponent#0"
+			               _meshId=""
+			               _materialPath="game/voxelcraft/materials/water.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="false" />
+			<VoxelChunkComponent _componentName="VoxelChunkComponent"
+			                     _bActive="true"
+			                     _director="0"
+			                     _chunkX="0"
+			                     _chunkZ="0"
+			                     _waterMeshName="Water" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

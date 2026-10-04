@@ -145,7 +145,8 @@ cd build/Ninja-Debug/Bin
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
 - **나머지 시험 게임을 씬 · 프리팹 · 디렉터/뷰 컴포넌트로** — `ThemeParkTycoon` 이 본보기다(`Source/Games/README.md` 레시피). `PrimitiveStage` 를 쓰는 다섯
-  (HarvestValley · NileCity · StarSkirmish · VoxelCraft). AbilityArena · Shooter3D 는 끝났다(유닛마다 컨트롤러 컴포넌트 · 1인칭은 `FirstPersonCameraComponent`). 그대로 쓰는 것: `OrthoCameraRigComponent`(HarvestValley · NileCity · StarSkirmish 의
+  (HarvestValley · NileCity · StarSkirmish). AbilityArena · Shooter3D · VoxelCraft 는 끝났다(유닛마다 컨트롤러 컴포넌트 · 1인칭은 `FirstPersonCameraComponent` ·
+  복셀 청크는 `VoxelChunkComponent`). 그대로 쓰는 것: `OrthoCameraRigComponent`(HarvestValley · NileCity · StarSkirmish 의
   직교 시점), `PropScatterComponent`(나무 · 바위), 디렉터의 "요청을 쌓고 `executeOrDeferPostTick` 한 번" 모양, 뷰의 PostUpdate · `data()` 읽기. 함정: 씬 · 프리팹은 엔진
   직렬화기로 쓴다(오브젝트를 지어 `saveActiveScene` · `PrefabAsset::saveToXmlFile` — ThemePark 는 한 번 돌리고 지운 작성 코드로 썼다), 씬의 다른 엔티티는
   `GameObjectHandle` PROPERTY 로 가리킨다, 1인칭 · 복셀 청크처럼 매 프레임 메시를 다시 짓는 것은 프리팹 스폰이 아니라 컴포넌트 안의 메시다.
@@ -640,6 +641,10 @@ cd build/Ninja-Debug/Bin
 
 ### 3-6. 오브젝트 · 씬 · 틱
 
+- **한 오브젝트의 두 번째 씬 컴포넌트는 첫 씬 컴포넌트(루트)에 붙는다** — 저장하면 `_attachComponent="CameraComponent#0"` 처럼 남는다. 카메라와 같은 오브젝트의 뷰 모델 ·
+  조준선은 로컬 자리(카메라 기준)로 다룬다 — 월드 자리를 `setLocalPosition` 에 넣으면 카메라 자리만큼 두 번 밀린다(`FirstPersonCameraComponent`).
+- **씬 작성 코드의 `createEmptyActiveScene` 은 `GameCamera` 엔티티를 둔다.** 자기 카메라를 들고 오는 씬(1인칭 플레이어)은 저장 전에 지운다 — 같은 역할 · 우선순위의
+  카메라가 둘이면 어느 쪽이 활성일지가 등록 순서에 걸린다.
 - **이름으로 컴포넌트를 만드는 길은 `TypeInfo::_addComponent` 하나다**(팩토리 표 없음 — UE `UClass`). 코드젠이 구체 컴포넌트마다 채우고 모듈 해제가 비운다.
   손으로 만든 시험 TypeInfo 는 이 칸을 채워야 `addComponentByName` · 씬 로드가 만든다. 스레드별 이름 캐시는 `TypeRegistry::getGeneration` 으로 무효화된다.
   전체 상태가 실린 옛 프리팹 엔티티는 원형을 짓지 않는다(프리팹이 있는지만 본다).
