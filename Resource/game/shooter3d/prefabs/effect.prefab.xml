@@ -1,0 +1,21 @@
+<Prefab formatVersion="0" name="ShotEffect">
+	<GameObject _schemaVersion="0" _name="ShotEffect" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.1,0.1,0.1"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="None"
+			               _meshId="Sphere"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="false" />
+			<ShooterEffectComponent _componentName="ShooterEffectComponent" _bActive="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

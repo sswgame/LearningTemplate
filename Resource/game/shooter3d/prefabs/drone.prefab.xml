@@ -1,0 +1,42 @@
+<Prefab formatVersion="0" name="Drone">
+	<GameObject _schemaVersion="0" _name="Drone" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="5,5,5"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="None"
+			               _meshId="game/shooter3d/models/target_small.mesh"
+			               _materialPath="game/shooter3d/materials/palette.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<HealthBarComponent _componentName="HealthBarComponent"
+			                    _bActive="true"
+			                    _hpRatio="0"
+			                    _remainRatio="0"
+			                    _targetRatio="0"
+			                    _lerpSpeed="5"
+			                    _offsetPos="0,0"
+			                    _barSize="1,0.12"
+			                    _fillColor="0.25,0.85,0.3,1"
+			                    _trailColor="0.95,0.8,0.25,1"
+			                    _backgroundColor="0.08,0.08,0.1,0.8"
+			                    _bVisible="false" />
+			<ShooterDroneComponent _componentName="ShooterDroneComponent"
+			                       _bActive="true"
+			                       _director="0"
+			                       _radius="0.5"
+			                       _reach="1.4"
+			                       _damage="8"
+			                       _attackInterval="0.8"
+			                       _hoverHeight="1.4"
+			                       _bobAmplitude="0.25"
+			                       _modelYawOffset="-1.5707964" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

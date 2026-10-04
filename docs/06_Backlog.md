@@ -145,7 +145,7 @@ cd build/Ninja-Debug/Bin
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
 - **나머지 시험 게임을 씬 · 프리팹 · 디렉터/뷰 컴포넌트로** — `ThemeParkTycoon` 이 본보기다(`Source/Games/README.md` 레시피). `PrimitiveStage` 를 쓰는 다섯
-  (HarvestValley · NileCity · Shooter3D · StarSkirmish · VoxelCraft). AbilityArena 는 끝났다(유닛마다 컨트롤러 컴포넌트). 그대로 쓰는 것: `OrthoCameraRigComponent`(HarvestValley · NileCity · StarSkirmish 의
+  (HarvestValley · NileCity · StarSkirmish · VoxelCraft). AbilityArena · Shooter3D 는 끝났다(유닛마다 컨트롤러 컴포넌트 · 1인칭은 `FirstPersonCameraComponent`). 그대로 쓰는 것: `OrthoCameraRigComponent`(HarvestValley · NileCity · StarSkirmish 의
   직교 시점), `PropScatterComponent`(나무 · 바위), 디렉터의 "요청을 쌓고 `executeOrDeferPostTick` 한 번" 모양, 뷰의 PostUpdate · `data()` 읽기. 함정: 씬 · 프리팹은 엔진
   직렬화기로 쓴다(오브젝트를 지어 `saveActiveScene` · `PrefabAsset::saveToXmlFile` — ThemePark 는 한 번 돌리고 지운 작성 코드로 썼다), 씬의 다른 엔티티는
   `GameObjectHandle` PROPERTY 로 가리킨다, 1인칭 · 복셀 청크처럼 매 프레임 메시를 다시 짓는 것은 프리팹 스폰이 아니라 컴포넌트 안의 메시다.

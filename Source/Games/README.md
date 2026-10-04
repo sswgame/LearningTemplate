@@ -60,7 +60,8 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 
 게임 클래스(`XxxWorld`)가 코드로 오브젝트를 만들고 매 프레임 밀어 넣는 대신, 상용 엔진처럼 나눕니다. `ThemeParkTycoon` 이 이 모양입니다
 (`ThemeParkTycoon/README.md`). `AbilityArena` 도 이 모양입니다 — 유닛마다 입력 · AI 컨트롤러 컴포넌트가 붙고, 어빌리티는 그 컨트롤러가 든 디렉터 핸들로
-디렉터를 찾습니다. 다른 시험 게임(`PrimitiveStage` 를 쓰는 다섯)은 아직 옛 모양입니다.
+디렉터를 찾습니다. `Shooter3D` 도 이 모양입니다 — 1인칭 시점은 GameFramework `FirstPersonCameraComponent` 이고, 플레이어 컴포넌트가 같은 오브젝트에서
+그 시점으로 걷고 쏩니다. 다른 시험 게임(`PrimitiveStage` 를 쓰는 넷)은 아직 옛 모양입니다.
 
 | 무엇 | 어디 |
 |------|------|
@@ -70,7 +71,7 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 | 규칙을 돌리고 스폰을 지시 | 디렉터 컴포넌트 하나(언리얼 GameMode/GameState) — `TickGroup::PrePhysics` |
 | 엔티티의 모습 | 뷰 컴포넌트 — 디렉터를 읽기만 하고 자기 오브젝트에만 쓴다, `TickGroup::PostUpdate` |
 | 엔티티 하나의 입력 · AI | 컨트롤러 컴포넌트 — 뷰와 같은 규칙(디렉터를 읽기만, 자기 오브젝트에만 쓴다), 기본 그룹 `DuringPhysics` |
-| 장르 무관 카메라 · 장식 | GameFramework `Components/`(`OrthoCameraRigComponent` · `PropScatterComponent` …) |
+| 장르 무관 카메라 · 장식 | GameFramework `Components/`(`OrthoCameraRigComponent` · `FirstPersonCameraComponent` · `PropScatterComponent` …) |
 | 게임 클래스 | `requestFirstScene()` 과, 상태 저장 전에 디렉터가 세운 것을 걷는 일 |
 
 지킬 것:
