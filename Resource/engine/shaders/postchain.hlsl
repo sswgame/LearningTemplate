@@ -40,7 +40,8 @@ float4 PSMain(PSInput input) : SV_TARGET
 {
 	float2 texel = g_OutlineParams.yz;
 	// 화면과 1:1 이라 UV 가 텍셀 중심에 정확히 떨어진다 — 섞을 것이 없으니 점 샘플러로 읽는다.
-	float3 color = swSampleSourcePoint(input.uv).rgb;
+	float3 source = swSampleSourcePoint(input.uv).rgb;
+	float3 color  = source;
 
 #if defined( SW_POST_BLOOM )
 	color = swApplyBloom(input.uv, texel, color);
@@ -56,5 +57,8 @@ float4 PSMain(PSInput input) : SV_TARGET
 #if defined( SW_POST_TONEMAP )
 	color = color / (color + 1.0f);
 #endif
-	return float4(color, 1.0f);
+	// 후처리를 끈 뷰(CCTV · 미니맵)는 원본을 낸다 — 뷰마다 달라서 퍼뮤테이션이 아니라 패스 플래그다. 고르기는 early-return 이 아니라
+	// 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — binding.hlsli swComputeMorphElement).
+	const bool bSkipPost = (g_Flags & SW_PASS_FLAG_SKIP_POST) != 0u;
+	return float4(bSkipPost ? source : color, 1.0f);
 }

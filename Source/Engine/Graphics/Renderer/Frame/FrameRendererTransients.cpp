@@ -38,35 +38,49 @@ namespace sw
             if ( _pDevice->getBackBufferHeight() > 0 )
                 height = _pDevice->getBackBufferHeight();
         }
+        _outputWidth  = width;
+        _outputHeight = height;
 
-        if ( width == _transientPool.getWidth() && height == _transientPool.getHeight() && _transientPool.isEmpty() == false )
-            return;
+        // 주 시점의 풀은 출력 × 사각형 × 해상도 배율이다(분할 화면의 한 칸 · 낮춘 해상도). 비율을 지키려고 둘 다 같은 배율로 줄인다.
+        const RenderViewSettings& settings   = _mainView._settings;
+        const uint32              poolWidth  = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z * settings._resolutionScale + 0.5f ) );
+        const uint32              poolHeight = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w * settings._resolutionScale + 0.5f ) );
+        if ( ensureViewTransients( _mainView, poolWidth, poolHeight ) )
+            publishRenderTargets();
+        ensurePresentCapture();
+    }
 
-        releaseTransientResources();
-        _transientPool.setSize( width, height );
+    bool FrameRenderer::ensureViewTransients( ViewTarget& view, uint32 width, uint32 height )
+    {
+        TransientAttachmentPool& pool = view._transientPool;
+        if ( width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false )
+            return false;
+
+        releaseViewTransients( view );
+        pool.setSize( width, height );
 
         for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
         {
             const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( attachment._format );
-            allocateTransient( attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment._clearColor, attachment._resolutionDivisor );
+            allocateTransient( pool, attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment._clearColor, attachment._resolutionDivisor );
         }
 
         auto ensureNamed = [&]( string_view name )
         {
-            if ( _transientPool.contains( name ) || name == FrameRendererUtil::Attachment::kSwapchain )
+            if ( pool.contains( name ) || name == FrameRendererUtil::Attachment::kSwapchain )
                 return;
 
             float4     clearColor{};
             const bool bHasClear = tryGetAttachmentClearColor( name, clearColor );
 
             if ( name == FrameRendererUtil::Attachment::kShadowMap || name == FrameRendererUtil::Attachment::kSceneDepth )
-                allocateTransient( name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : FrameRendererUtil::kDepthClear );
+                allocateTransient( pool, name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : FrameRendererUtil::kDepthClear );
             else if ( name == FrameRendererUtil::Attachment::kGBufferNormal || name == FrameRendererUtil::Attachment::kLitColor || name == FrameRendererUtil::Attachment::kBloomColor || name == FrameRendererUtil::Attachment::kBloomBright )
-                allocateTransient( name, RHIFormat::R16G16B16A16_FLOAT, false, bHasClear ? clearColor : FrameRendererUtil::kBloomClear );
+                allocateTransient( pool, name, RHIFormat::R16G16B16A16_FLOAT, false, bHasClear ? clearColor : FrameRendererUtil::kBloomClear );
             else if ( name == FrameRendererUtil::Attachment::kSceneColor )
-                allocateTransient( name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kSceneClear );
+                allocateTransient( pool, name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kSceneClear );
             else
-                allocateTransient( name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kBlackClear );
+                allocateTransient( pool, name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kBlackClear );
         };
 
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
@@ -81,14 +95,13 @@ namespace sw
             }
         }
 
-        ensureTaaHistory();
-        ensurePresentCapture();
-        publishRenderTargets();
+        ensureTaaHistory( view );
+        return true;
     }
 
-    void FrameRenderer::ensureTaaHistory()
+    void FrameRenderer::ensureTaaHistory( ViewTarget& view )
     {
-        if ( _pDevice == nullptr || _taaHistory != 0 )
+        if ( _pDevice == nullptr || view._taaHistory != 0 )
             return;
 
         // 파이프라인에 TAA 패스가 없으면 히스토리도 필요 없다.
@@ -106,11 +119,12 @@ namespace sw
 
         // 히스토리는 TAA 출력의 복사본이다. CopyResource 는 포맷이 정확히 같아야 하므로 대상 첨부의 포맷을 그대로 따라간다.
         // 대상은 TAA 패스가 선언한 출력 중 있는 것이다(실행과 같은 규칙). 아래 이름은 선언이 없을 때의 폴백이다.
-        string_view taaTarget = _transientPool.contains( string_view{ "TaaColor" } ) ? string_view{ "TaaColor" }
-                                                                                     : string_view{ FrameRendererUtil::Attachment::kSceneColor };
+        const TransientAttachmentPool& pool      = view._transientPool;
+        string_view                    taaTarget = pool.contains( string_view{ "TaaColor" } ) ? string_view{ "TaaColor" }
+                                                                                              : string_view{ FrameRendererUtil::Attachment::kSceneColor };
         for ( const hashed_string& output : pTaaPass->_listResolvedOutput )
         {
-            if ( _transientPool.contains( output.view() ) )
+            if ( pool.contains( output.view() ) )
             {
                 taaTarget = output.view();
                 break;
@@ -118,15 +132,15 @@ namespace sw
         }
 
         RHITextureDesc historyDesc{};
-        historyDesc._width             = _transientPool.getWidth() != 0 ? _transientPool.getWidth() : FrameRendererUtil::kDefaultTransientSize;
-        historyDesc._height            = _transientPool.getHeight() != 0 ? _transientPool.getHeight() : FrameRendererUtil::kDefaultTransientSize;
+        historyDesc._width             = pool.getWidth() != 0 ? pool.getWidth() : FrameRendererUtil::kDefaultTransientSize;
+        historyDesc._height            = pool.getHeight() != 0 ? pool.getHeight() : FrameRendererUtil::kDefaultTransientSize;
         historyDesc._format            = attachmentFormatOrDefault( taaTarget, constant::kBackBufferFormat );
         historyDesc._bIsRenderTarget   = SW_TRUE;
         historyDesc._bIsShaderResource = SW_TRUE;
 
-        _taaHistory = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
-        if ( _taaHistory != 0 )
-            _taaHistorySrv = _pDevice->getResourceFactory()->registerBindlessTexture( _taaHistory );
+        view._taaHistory = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
+        if ( view._taaHistory != 0 )
+            view._taaHistorySrv = _pDevice->getResourceFactory()->registerBindlessTexture( view._taaHistory );
     }
 
     void FrameRenderer::setPresentCaptureEnabled( bool bEnabled )
@@ -148,18 +162,30 @@ namespace sw
 
     void FrameRenderer::ensurePresentCapture()
     {
-        if ( _pDevice == nullptr || _bPresentCaptureEnabled == SW_FALSE || _presentCapture != 0 )
+        if ( _pDevice == nullptr || _bPresentCaptureEnabled == SW_FALSE )
             return;
+        // 캡처는 주 출력과 크기가 같아야 한다(주 시점 · 화면 사각형 뷰가 그 안에 그린다). 출력 크기가 바뀌었으면 다시 만든다.
+        const uint32 outputWidth  = _outputWidth != 0 ? _outputWidth : FrameRendererUtil::kDefaultTransientSize;
+        const uint32 outputHeight = _outputHeight != 0 ? _outputHeight : FrameRendererUtil::kDefaultTransientSize;
+        if ( _presentCapture != 0 )
+        {
+            if ( _presentCaptureWidth == outputWidth && _presentCaptureHeight == outputHeight )
+                return;
+            _pDevice->getResourceFactory()->destroyTexture( _presentCapture );
+            _presentCapture = 0;
+        }
 
         // 포맷은 **계약값**이다. 백버퍼가 실제로 무엇을 채택했든(Vulkan 은 서피스 협상 결과) 캡처는
         // 늘 같은 포맷이라 PPM 으로 푸는 쪽이 한 가지만 알면 된다. Present PSO 변종에도 이 포맷이 있다.
         RHITextureDesc captureDesc{};
-        captureDesc._width             = _transientPool.getWidth() != 0 ? _transientPool.getWidth() : FrameRendererUtil::kDefaultTransientSize;
-        captureDesc._height            = _transientPool.getHeight() != 0 ? _transientPool.getHeight() : FrameRendererUtil::kDefaultTransientSize;
+        captureDesc._width             = outputWidth;
+        captureDesc._height            = outputHeight;
         captureDesc._format            = constant::kBackBufferFormat;
         captureDesc._bIsRenderTarget   = SW_TRUE;
         captureDesc._bIsShaderResource = SW_TRUE;
         _presentCapture                = _pDevice->getResourceFactory()->createTexture2D( captureDesc );
+        _presentCaptureWidth           = outputWidth;
+        _presentCaptureHeight          = outputHeight;
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -168,50 +194,54 @@ namespace sw
         if ( RenderTargetRegistry* pRegistry = engine::getRenderTargetRegistry(); pRegistry != nullptr )
             pRegistry->clear();
 
+        releaseViewTransients( _mainView );
+        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+            releaseViewTransients( *pView );
+        // 캡처도 트랜지언트와 크기가 같아야 한다. 같이 버리고 ensurePresentCapture 가 새 크기로 만든다.
+        if ( _presentCapture != 0 && _pDevice != nullptr )
+            _pDevice->getResourceFactory()->destroyTexture( _presentCapture );
+        _presentCapture = 0;
+    }
+
+    void FrameRenderer::releaseViewTransients( ViewTarget& view )
+    {
         if ( _pDevice == nullptr )
         {
-            _transientPool.forget();
-            _taaHistory     = 0;
-            _taaHistorySrv  = kInvalidDescriptorIndex;
-            _presentCapture = 0;
+            view._transientPool.forget();
+            view._taaHistory    = 0;
+            view._taaHistorySrv = kInvalidDescriptorIndex;
             return;
         }
 
         // 히스토리는 TAA 출력의 복사본이라 크기가 정확히 같아야 한다(CopyResource 제약). 트랜지언트가
         // 새 크기로 다시 잡히면 이것도 같이 버려야 ensureTaaHistory 가 새 크기로 다시 만든다.
-        if ( _taaHistorySrv != kInvalidDescriptorIndex )
+        if ( view._taaHistorySrv != kInvalidDescriptorIndex )
         {
-            _pDevice->getResourceFactory()->unregisterBindlessTexture( _taaHistorySrv );
-            _taaHistorySrv = kInvalidDescriptorIndex;
+            _pDevice->getResourceFactory()->unregisterBindlessTexture( view._taaHistorySrv );
+            view._taaHistorySrv = kInvalidDescriptorIndex;
         }
-        if ( _taaHistory != 0 )
+        if ( view._taaHistory != 0 )
         {
-            _pDevice->getResourceFactory()->destroyTexture( _taaHistory );
-            _taaHistory = 0;
+            _pDevice->getResourceFactory()->destroyTexture( view._taaHistory );
+            view._taaHistory = 0;
         }
-        // 캡처도 트랜지언트와 크기가 같아야 한다. 같이 버리고 ensurePresentCapture 가 새 크기로 만든다.
-        if ( _presentCapture != 0 )
-        {
-            _pDevice->getResourceFactory()->destroyTexture( _presentCapture );
-            _presentCapture = 0;
-        }
-
-        _transientPool.release( _pDevice );
+        view._transientPool.release( _pDevice );
     }
 
-    void FrameRenderer::allocateTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 resolutionDivisor )
+    void FrameRenderer::allocateTransient( TransientAttachmentPool& pool, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
+                                           uint32 resolutionDivisor )
     {
-        _transientPool.allocate( _pDevice, name, format, bDepth, clearColor, resolutionDivisor );
+        pool.allocate( _pDevice, name, format, bDepth, clearColor, resolutionDivisor );
     }
 
     bool FrameRenderer::markAttachmentCleared( const hashed_string& key )
     {
-        return _transientPool.markCleared( key );
+        return activePool().markCleared( key );
     }
 
     void FrameRenderer::resetClearedAttachments()
     {
-        _transientPool.resetCleared();
+        activePool().resetCleared();
     }
 
     bool FrameRenderer::tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const
@@ -236,12 +266,12 @@ namespace sw
 
     TransientAttachmentPool::Attachment FrameRenderer::findTransientAttachment( string_view name ) const
     {
-        return _transientPool.find( name );
+        return activePool().find( name );
     }
 
     RHITextureHandle FrameRenderer::findTransient( string_view name ) const
     {
-        return _transientPool.findTexture( name );
+        return activePool().findTexture( name );
     }
 
     void FrameRenderer::publishRenderTargets() const
@@ -255,8 +285,8 @@ namespace sw
         const string_view presented = getPresentedAttachmentName();
 
         vector<RenderTargetInfo> listTarget;
-        listTarget.reserve( _transientPool.getAll().size() );
-        for ( const auto& [name, attachment] : _transientPool.getAll() )
+        listTarget.reserve( _mainView._transientPool.getAll().size() );
+        for ( const auto& [name, attachment] : _mainView._transientPool.getAll() )
         {
             if ( attachment._texture == 0 )
                 continue;
@@ -305,7 +335,7 @@ namespace sw
         }
         // 선언이 없을 때의 폴백. 가장 나중에 만들어지는 컬러부터 본다.
         const utf8* pName = FrameRendererUtil::pickFirstExisting(
-            _transientPool.getAll(),
+            activePool().getAll(),
             { "TonemapColor", "OutlineColor", "BloomColor", "TaaColor",
               "TransparentColor", "LitColor", "SceneColor", "GBufferAlbedo" } );
         return pName != nullptr ? string( pName ) : string{};

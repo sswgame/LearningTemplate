@@ -89,11 +89,13 @@ namespace sw
         // 뷰마다 하나씩. 절두체가 다르므로 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
         uint32 rowIndex{ 0 };
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
+        {
             outArrRow[rowIndex++] = { &_arrView[viewIndex]._cullCb, sizeof( FrameRendererUtil::GpuCullParams ), "cull" };
+            outArrRow[rowIndex++] = { &_arrView[viewIndex]._sortCb, sizeof( FrameRendererUtil::GpuSortParams ), "instance sort" };
+        }
         outArrRow[rowIndex++] = { &_instanceAnimCb, sizeof( FrameRendererUtil::GpuAnimParams ), "instance animation" };
         outArrRow[rowIndex++] = { &_meshMorphCb, sizeof( FrameRendererUtil::GpuMorphParams ), "mesh morph" };
         outArrRow[rowIndex++] = { &_meshSkinCb, sizeof( FrameRendererUtil::GpuSkinParams ), "mesh skin" };
-        outArrRow[rowIndex++] = { &_instanceSortCb, sizeof( FrameRendererUtil::GpuSortParams ), "instance sort" };
         SW_LOG_ASSERT( rowIndex == _s_kComputeConstantBufferCount, "compute constant buffer table has %# rows, expected %#", rowIndex,
                        _s_kComputeConstantBufferCount );
     }
@@ -121,6 +123,12 @@ namespace sw
         collectComputeConstantBuffers( arrComputeCb );
         for ( const ComputeConstantBufferRow& row : arrComputeCb )
             row._pSlot->release( _pDevice );
+        // 추가 뷰의 컬링 · 정렬 상수버퍼도 이 디바이스의 것이다(다음 프레임의 prepareExtraViews 가 다시 만든다).
+        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            pView->_cullInput._cullCb.release( _pDevice );
+            pView->_cullInput._sortCb.release( _pDevice );
+        }
         _meshMorphPool.release( _pDevice );
         _lightBuffer.release( _pDevice );
         for ( auto& [fallbackStride, fallbackSlot] : _mapMaterialFallback )

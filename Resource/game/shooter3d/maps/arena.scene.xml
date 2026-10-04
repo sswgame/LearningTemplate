@@ -994,5 +994,95 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<entity id="52" name="ViewCamera">
+			<GameObject _schemaVersion="0" _name="ViewCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,1.6,-16"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerId="0"
+					                 _attachComponent="None"
+					                 _fovY="1.3089969"
+					                 _nearZ="0.05"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="10"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					                         _bActive="true"
+					                         _catalogPath="game/shooter3d/data/shooter.cameras.xml"
+					                         _initialPreset="firstperson"
+					                         _target="50"
+					                         _cyclePresetKey="C"
+					                         _bReadInput="true">
+						<_listGroupTarget />
+					</CameraDirectorComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="53" name="CctvCamera">
+			<GameObject _schemaVersion="0" _name="CctvCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="-17,8,-17"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerId="0"
+					                 _attachComponent="None"
+					                 _fovY="1.0471976"
+					                 _nearZ="0.1"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Capture"
+					                 _bOrthographic="false">
+						<_renderOutput _screenRect="0,0,1,1"
+						               _renderTexture="rendertarget/shooter_cctv"
+						               _renderTextureWidth="320"
+						               _renderTextureHeight="180"
+						               _resolutionScale="1"
+						               _updateRate="10"
+						               _visibilityObject="54"
+						               _target="RenderTexture"
+						               _bShadows="false"
+						               _bPostProcess="false" />
+					</CameraComponent>
+					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					                         _bActive="true"
+					                         _catalogPath="game/shooter3d/data/cctv.cameras.xml"
+					                         _initialPreset="cctv_sweep"
+					                         _cyclePresetKey="Unknown"
+					                         _bReadInput="false">
+						<_listGroupTarget />
+					</CameraDirectorComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="54" name="CctvMonitor">
+			<GameObject _schemaVersion="0" _name="CctvMonitor" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,2.1,19.85"
+					               _localRotation="0,0,0"
+					               _localScale="7,3.6,0.2"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="Cube"
+					               _materialPath="game/shooter3d/materials/cctvmonitor.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

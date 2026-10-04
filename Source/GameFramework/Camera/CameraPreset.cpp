@@ -20,13 +20,20 @@ namespace sw
         {
             static constexpr const utf8* kAnyPreset = "*";
 
-            static constexpr const utf8* kArrPresetAttribute[]  = { "id" };
-            static constexpr const utf8* kArrViewAttribute[]    = { "mode", "pitch", "yaw", "distance", "offset" };
-            static constexpr const utf8* kArrLensAttribute[]    = { "fieldOfViewY", "orthoHeight", "near", "far", "orthographic" };
-            static constexpr const utf8* kArrDampingAttribute[] = { "position", "orientation" };
-            static constexpr const utf8* kArrBlendAttribute[]   = { "curve", "duration", "exponent", "springFrequency", "springDamping" };
-            static constexpr const utf8* kArrRuleAttribute[]    = { "from", "to", "curve", "duration", "exponent", "springFrequency", "springDamping" };
-            static constexpr const utf8* kArrKeyAttribute[]     = { "time", "value" };
+            static constexpr const utf8* kArrPresetAttribute[]    = { "id" };
+            static constexpr const utf8* kArrViewAttribute[]      = { "mode", "pitch", "yaw", "distance", "offset", "aim", "lookAt" };
+            static constexpr const utf8* kArrLensAttribute[]      = { "fieldOfViewY", "orthoHeight", "near", "far", "orthographic" };
+            static constexpr const utf8* kArrDampingAttribute[]   = { "position", "orientation" };
+            static constexpr const utf8* kArrBlendAttribute[]     = { "curve", "duration", "exponent", "springFrequency", "springDamping" };
+            static constexpr const utf8* kArrRuleAttribute[]      = { "from", "to", "curve", "duration", "exponent", "springFrequency", "springDamping" };
+            static constexpr const utf8* kArrKeyAttribute[]       = { "time", "value" };
+            static constexpr const utf8* kArrInputAttribute[]     = { "sensitivity", "zoomStep", "panSpeed", "rotateStep", "rotateTime", "lookWhileHeld" };
+            static constexpr const utf8* kArrConfinerAttribute[]  = { "pitchMin", "pitchMax", "zoomMin", "zoomMax", "boundsMin", "boundsMax" };
+            static constexpr const utf8* kArrFramingAttribute[]   = { "compose", "screenX", "screenY", "deadZoneWidth", "deadZoneHeight", "softZoneWidth",
+                                                                      "softZoneHeight", "damping", "lookAhead", "lookAheadSmoothing", "groupPadding" };
+            static constexpr const utf8* kArrCollisionAttribute[] = { "radius", "minDistance", "recoverTime" };
+            static constexpr const utf8* kArrNoiseAttribute[]     = { "position", "rotation", "frequency", "seed" };
+            static constexpr const utf8* kArrSweepAttribute[]     = { "yaw", "period", "phase" };
 
             struct BlendKeyTimeLess
             {
@@ -110,6 +117,89 @@ namespace sw
                 outView._yaw      = readDegrees( node, "yaw", outView._yaw );
                 outView._distance = MathUtil::max( 0.0f, node.getAttributeFloat( "distance", outView._distance ) );
                 outView._offset   = GameDataXml::parseFloat3( node.getAttributeText( "offset" ), outView._offset );
+                readEnum( node, "aim", outView._aim, sourceName );
+                if ( node.findAttribute( "lookAt" ) != nullptr )
+                {
+                    outView._lookAt = GameDataXml::parseFloat3( node.getAttributeText( "lookAt" ), outView._lookAt );
+                    // 점을 적었으면 그것을 본다 — `aim` 을 따로 적지 않아도 된다.
+                    if ( node.findAttribute( "aim" ) == nullptr )
+                        outView._aim = CameraAimMode::Point;
+                }
+            }
+
+            static void readInput( const XmlNode& node, CameraInputDef& outInput, string_view sourceName )
+            {
+                warnUnknownAttributes( node, kArrInputAttribute, sourceName );
+                outInput._lookSensitivity = MathUtil::max( 0.0f, node.getAttributeFloat( "sensitivity", outInput._lookSensitivity ) );
+                outInput._zoomStep        = MathUtil::clamp( node.getAttributeFloat( "zoomStep", outInput._zoomStep ), 0.0f, 0.99f );
+                outInput._panSpeed        = MathUtil::max( 0.0f, node.getAttributeFloat( "panSpeed", outInput._panSpeed ) );
+                outInput._rotateStep      = readDegrees( node, "rotateStep", outInput._rotateStep );
+                outInput._rotateTime      = MathUtil::max( 0.0f, node.getAttributeFloat( "rotateTime", outInput._rotateTime ) );
+                outInput._bLookWhileHeld  = node.getAttributeBool( "lookWhileHeld", outInput._bLookWhileHeld );
+            }
+
+            static void readConfiner( const XmlNode& node, CameraConfinerDef& outConfiner, string_view sourceName )
+            {
+                warnUnknownAttributes( node, kArrConfinerAttribute, sourceName );
+                outConfiner._pitchMin = readDegrees( node, "pitchMin", outConfiner._pitchMin );
+                outConfiner._pitchMax = MathUtil::max( outConfiner._pitchMin, readDegrees( node, "pitchMax", outConfiner._pitchMax ) );
+                outConfiner._zoomMin  = MathUtil::max( 0.0f, node.getAttributeFloat( "zoomMin", outConfiner._zoomMin ) );
+                outConfiner._zoomMax  = MathUtil::max( 0.0f, node.getAttributeFloat( "zoomMax", outConfiner._zoomMax ) );
+                const bool bHasMin    = node.findAttribute( "boundsMin" ) != nullptr;
+                const bool bHasMax    = node.findAttribute( "boundsMax" ) != nullptr;
+                if ( bHasMin != bHasMax )
+                    SW_LOG_WARNING( "%#: <Confiner> needs both boundsMin and boundsMax - the box is ignored", sourceName );
+                if ( bHasMin && bHasMax )
+                {
+                    outConfiner._boundsMin = GameDataXml::parseFloat3( node.getAttributeText( "boundsMin" ), outConfiner._boundsMin );
+                    outConfiner._boundsMax = GameDataXml::parseFloat3( node.getAttributeText( "boundsMax" ), outConfiner._boundsMax );
+                    outConfiner._bBounds   = true;
+                }
+            }
+
+            static void readFraming( const XmlNode& node, CameraFramingDef& outFraming, string_view sourceName )
+            {
+                warnUnknownAttributes( node, kArrFramingAttribute, sourceName );
+                outFraming._bCompose          = node.getAttributeBool( "compose", outFraming._bCompose );
+                outFraming._screenPosition._x = MathUtil::saturate( node.getAttributeFloat( "screenX", outFraming._screenPosition._x ) );
+                outFraming._screenPosition._y = MathUtil::saturate( node.getAttributeFloat( "screenY", outFraming._screenPosition._y ) );
+                outFraming._deadZone._x       = MathUtil::saturate( node.getAttributeFloat( "deadZoneWidth", outFraming._deadZone._x ) );
+                outFraming._deadZone._y       = MathUtil::saturate( node.getAttributeFloat( "deadZoneHeight", outFraming._deadZone._y ) );
+                outFraming._softZone._x =
+                    MathUtil::max( outFraming._deadZone._x, MathUtil::saturate( node.getAttributeFloat( "softZoneWidth", outFraming._softZone._x ) ) );
+                outFraming._softZone._y =
+                    MathUtil::max( outFraming._deadZone._y, MathUtil::saturate( node.getAttributeFloat( "softZoneHeight", outFraming._softZone._y ) ) );
+                outFraming._damping            = MathUtil::max( 0.0f, node.getAttributeFloat( "damping", outFraming._damping ) );
+                outFraming._lookAheadTime      = MathUtil::max( 0.0f, node.getAttributeFloat( "lookAhead", outFraming._lookAheadTime ) );
+                outFraming._lookAheadSmoothing = MathUtil::max( 0.0f, node.getAttributeFloat( "lookAheadSmoothing", outFraming._lookAheadSmoothing ) );
+                outFraming._groupPadding       = MathUtil::max( 0.0f, node.getAttributeFloat( "groupPadding", outFraming._groupPadding ) );
+            }
+
+            static void readCollision( const XmlNode& node, CameraCollisionDef& outCollision, string_view sourceName )
+            {
+                warnUnknownAttributes( node, kArrCollisionAttribute, sourceName );
+                outCollision._bEnabled    = true;
+                outCollision._radius      = MathUtil::max( 0.0f, node.getAttributeFloat( "radius", outCollision._radius ) );
+                outCollision._minDistance = MathUtil::max( 0.0f, node.getAttributeFloat( "minDistance", outCollision._minDistance ) );
+                outCollision._recoverTime = MathUtil::max( 0.0f, node.getAttributeFloat( "recoverTime", outCollision._recoverTime ) );
+            }
+
+            static void readNoise( const XmlNode& node, CameraNoiseDef& outNoise, string_view sourceName )
+            {
+                warnUnknownAttributes( node, kArrNoiseAttribute, sourceName );
+                outNoise._positionAmplitude  = GameDataXml::parseFloat3( node.getAttributeText( "position" ), outNoise._positionAmplitude );
+                const float3 rotationDegrees = GameDataXml::parseFloat3( node.getAttributeText( "rotation" ), outNoise._rotationAmplitude * MathUtil::RadianToDegree );
+                outNoise._rotationAmplitude  = rotationDegrees * MathUtil::DegreeToRadian;
+                outNoise._frequency          = MathUtil::max( 0.0f, node.getAttributeFloat( "frequency", outNoise._frequency ) );
+                outNoise._seed               = static_cast<uint32>( MathUtil::max( 0, node.getAttributeInt( "seed", static_cast<int32>( outNoise._seed ) ) ) );
+            }
+
+            static void readSweep( const XmlNode& node, CameraSweepDef& outSweep, string_view sourceName )
+            {
+                warnUnknownAttributes( node, kArrSweepAttribute, sourceName );
+                outSweep._yawAmplitude = MathUtil::max( 0.0f, readDegrees( node, "yaw", outSweep._yawAmplitude ) );
+                outSweep._period       = MathUtil::max( 0.01f, node.getAttributeFloat( "period", outSweep._period ) );
+                outSweep._phase        = MathUtil::saturate( node.getAttributeFloat( "phase", outSweep._phase ) );
             }
 
             static void readLens( const XmlNode& node, CameraLensDef& outLens, string_view sourceName )
@@ -152,84 +242,54 @@ namespace sw
                         warnUnknownAttributes( child, kArrBlendAttribute, sourceName );
                         readBlend( child, inoutDef._blendIn, sourceName );
                     }
+                    else if ( StringUtil::equals( pName, "Input", true ) )
+                    {
+                        readInput( child, inoutDef._input, sourceName );
+                    }
+                    else if ( StringUtil::equals( pName, "Confiner", true ) )
+                    {
+                        readConfiner( child, inoutDef._confiner, sourceName );
+                    }
+                    else if ( StringUtil::equals( pName, "Framing", true ) )
+                    {
+                        readFraming( child, inoutDef._framing, sourceName );
+                    }
+                    else if ( StringUtil::equals( pName, "Collision", true ) )
+                    {
+                        readCollision( child, inoutDef._collision, sourceName );
+                    }
+                    else if ( StringUtil::equals( pName, "Noise", true ) )
+                    {
+                        readNoise( child, inoutDef._noise, sourceName );
+                    }
+                    else if ( StringUtil::equals( pName, "Sweep", true ) )
+                    {
+                        readSweep( child, inoutDef._sweep, sourceName );
+                    }
                     else
                     {
                         SW_LOG_WARNING( "%#: preset '%#' has unknown section <%#>", sourceName, inoutDef._id.c_str(), pName );
                     }
                 }
             }
-
-            static float32 computeDampingAlpha( float32 timeConstant, float32 deltaTime )
-            {
-                if ( timeConstant <= 0.0f || deltaTime <= 0.0f )
-                    return timeConstant <= 0.0f ? 1.0f : 0.0f;
-                return 1.0f - ::expf( -deltaTime / timeConstant );
-            }
-
-            static float3 rotateByYaw( const float3& value, float32 yaw ) { return float3::transform( value, quaternion::createFromYawPitchRoll( yaw, 0.0f, 0.0f ) ); }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    CameraPose evaluatePreset( const CameraPresetDef& def, const CameraTarget& target )
+    float32 computeDampingAlpha( float32 timeConstant, float32 deltaTime )
     {
-        const CameraViewDef& view = def._view;
-        CameraPose           pose;
-        pose._fieldOfViewY  = def._lens._fieldOfViewY;
-        pose._orthoHeight   = def._lens._orthoHeight;
-        pose._nearPlane     = def._lens._nearPlane;
-        pose._farPlane      = def._lens._farPlane;
-        pose._bOrthographic = def._lens._bOrthographic ? SW_TRUE : SW_FALSE;
-
-        float32 yaw   = view._yaw;
-        float32 pitch = view._pitch;
-        float3  pivot = target._focus + view._offset;
-        switch ( view._mode )
-        {
-            case CameraPresetMode::Fixed:
-            {
-                pose._rotation = quaternion::createFromYawPitchRoll( yaw, pitch, 0.0f );
-                pose._position = view._offset;
-                return pose;
-            }
-            case CameraPresetMode::FirstPerson:
-            {
-                yaw            = target._yaw + view._yaw;
-                pitch          = target._pitch + view._pitch;
-                pose._rotation = quaternion::createFromYawPitchRoll( yaw, pitch, 0.0f );
-                pose._position = target._focus + CameraPresetInternal::rotateByYaw( view._offset, target._yaw );
-                return pose;
-            }
-            case CameraPresetMode::Follow:
-            {
-                yaw   = target._yaw + view._yaw;
-                pivot = target._focus + CameraPresetInternal::rotateByYaw( view._offset, target._yaw );
-                break;
-            }
-            case CameraPresetMode::OrthoTopDown:
-            {
-                pose._bOrthographic = SW_TRUE;
-                break;
-            }
-            case CameraPresetMode::Orbit:
-            {
-                break;
-            }
-        }
-        // 피벗을 보는 방향(요 · 피치)의 반대쪽으로 거리만큼 물러난다 — 보는 방향의 요 · 피치가 곧 카메라 회전이다.
-        pose._rotation       = quaternion::createFromYawPitchRoll( yaw, pitch, 0.0f );
-        const float3 forward = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, pose._rotation );
-        pose._position       = pivot - forward * view._distance;
-        return pose;
+        if ( timeConstant <= 0.0f || deltaTime <= 0.0f )
+            return timeConstant <= 0.0f ? 1.0f : 0.0f;
+        return 1.0f - ::expf( -deltaTime / timeConstant );
     }
 
     CameraPose dampPose( const CameraPose& current, const CameraPose& target, const CameraDampingDef& damping, float32 deltaTime )
     {
         CameraPose pose = target;
-        pose._position  = float3::lerp( current._position, target._position, CameraPresetInternal::computeDampingAlpha( damping._positionTime, deltaTime ) );
-        pose._rotation  = quaternion::slerp( current._rotation, target._rotation, CameraPresetInternal::computeDampingAlpha( damping._orientationTime, deltaTime ) );
+        pose._position  = float3::lerp( current._position, target._position, computeDampingAlpha( damping._positionTime, deltaTime ) );
+        pose._rotation  = quaternion::slerp( current._rotation, target._rotation, computeDampingAlpha( damping._orientationTime, deltaTime ) );
         return pose;
     }
 

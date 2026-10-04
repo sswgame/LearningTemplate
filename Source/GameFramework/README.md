@@ -21,8 +21,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽에, 제외 원, 플레이 시작에 세우고 끝에 걷는다). 계산은 `OrthoCameraRigMath` · `PropScatterMath` 로
   떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리 · 손에 든 뷰 모델 자리, 계산은
   `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다
-- **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 포즈 섞기(`blendPoses`, 곡선은 엔진 `BlendCurveSpec` · `evaluateBlendWeight`), 블렌드 · 감쇠
-  상태 기계(`CameraDirector`), 그것을 카메라에 쓰는 `CameraDirectorComponent`. 아래 "카메라" 절
+- **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 모드 계산(`CameraMode` — 입력 · 제약 · 프레이밍 · 스프링 암 · 훑기),
+  흔들림(`CameraShake` — 펄린 손떨림 · 충격), 암 충돌 질의(`ICameraCollisionProbe`), 포즈 섞기(`blendPoses`, 곡선은 엔진 `BlendCurveSpec` · `evaluateBlendWeight`) · 블렌드 진행(`CameraPoseBlender`), 상태 기계
+  (`CameraDirector`), 그것을 카메라에 쓰는 `CameraDirectorComponent`, 플레이어마다 뷰 타깃을 바꾸는 `CameraManagerComponent`. 아래 "카메라" 절
 - **Stage**: 절차로 무대를 세우는 도우미(`PrimitiveStage` — 활성 씬 잡기 · 세운 오브젝트 추적 · 색 · 텍스처 머티리얼 인스턴스 캐시 · 해 · 카메라). 시험 게임이 쓴다
 - **Utility**: 장르 무관 계산 도구 — 씨앗 고정 난수 · 좌표 해시(`GameRandom` · `GameHash` — 가중치 고르기 `pickWeightedIndex` · 섞기 `shuffle`), 값 노이즈(`ValueNoise`),
   광선 판정(`RayMath` — 구 · 상자 · 바닥 평면 · 원뿔), 앞 · 위 → 오일러(`OrientationUtil` — 롤이 있는 차량 · 카메라), 2D 네 방향(`FacingDir`),
@@ -132,22 +133,39 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       - `NetTurnRelay`: 턴제 중계(카드 · 보드 · SRPG) — 방 · 자리 · 표, `ITurnPolicy`(차례 · 허락 · 방향), 행동 기록 방송, 재접속 시 놓친 행동.
       - `NetMmo`: MMO — 관심 영역 격자(`InterestGrid`, 들어옴 · 나감 히스테리시스), 우선도 누적 대역폭 예산, `IInterestPolicy`(늘 보이기 · 우선도).
 
-## 카메라: 프리셋 데이터 + 블렌드 + 디렉터
+## 카메라: 프리셋 데이터 + 모드 + 블렌드 + 뷰 타깃
 
 카메라 시점은 코드가 아니라 `<CameraPresets>` XML 이다(Cinemachine 가상 카메라 + Custom Blends, 언리얼 카메라 모드의 자리). 예시는
-`Resource/engine/cameras/default.cameras.xml`.
+`Resource/engine/cameras/default.cameras.xml` · `Resource/game/shooter3d/data/shooter.cameras.xml`(1인칭 · 3인칭 · 궤도 · CCTV).
 
-- **프리셋 하나 = 섹션 원소 몇 개.** `<View>`(모드 `Fixed` · `OrthoTopDown` · `Orbit` · `Follow` · `FirstPerson`, 피치 · 요 · 거리 · 오프셋) · `<Lens>`(시야각 ·
-  직교 높이 · 투영 · 근/원평면) · `<Damping>`(자리 · 회전 시간 상수) · `<BlendIn>`. 섹션마다 구조체 하나(`CameraViewDef` …)라 프레이밍 · 제약 · 충돌 · 흔들림 같은
-  다음 섹션은 구조체 하나와 원소 하나를 더하면 된다. XML 의 각은 도, 정의는 라디안이다. 모르는 속성 · 원소 · 열거자는 경고한다.
+- **프리셋 하나 = 섹션 원소 몇 개.** `<View>`(모드 · 피치 · 요 · 거리 · 오프셋 · `aim`/`lookAt`) · `<Lens>` · `<Damping>` · `<BlendIn>` · `<Input>`(마우스 감도 ·
+  휠 배율 · 이동 속도 · Q/E 회전 칸 · 오른쪽 버튼 끌기) · `<Confiner>`(피치 · 줌 범위, 상자) · `<Framing>`(화면 위치 · 데드존 · 소프트존 · look-ahead · 그룹 맞추기) ·
+  `<Collision>`(스프링 암) · `<Noise>`(펄린 손떨림) · `<Sweep>`(CCTV 요 훑기). 섹션마다 구조체 하나(`CameraViewDef` …). XML 의 각은 도, 정의는 라디안이다.
+  모르는 속성 · 원소 · 열거자는 경고한다(`ResourceDataSchemaTest` 가 `*.cameras.xml` 을 읽는다).
+- **모드**(`CameraMode.h` — 컴포넌트를 모르는 순수 계산): `Fixed`(CCTV — 자리 고정, 각 · 점 · 대상을 보고 훑는다) · `OrthoTopDown` · `Orbit` · `Follow` · `FirstPerson` ·
+  `ThirdPerson`(어깨 너머, 대상의 시점을 따른다). 입력은 `applyCameraInput` 이 모드 상태(`CameraModeState` — 돌린 각 · 줌 · 팬 · 암 길이 · 조준 · look-ahead)에 넣고,
+  `evaluateCameraMode` 가 대상 · 상태로 포즈를 낸다. 순서: 줌 · 그룹 맞추기 → 각(+ 입력 + 훑기, 피치는 제약) → 피벗 → 자리 → 스프링 암 → 프레이밍 → 상자.
+- **스프링 암**: 피벗에서 카메라까지 구를 쓸어(`ICameraCollisionProbe::sweepSphere`) 막히면 **바로** 당기고 풀리면 `recoverTime` 으로 돌아간다. 질의는 인터페이스라
+  물리 백엔드가 바뀌어도 카메라는 그대로다 — 지금 구현은 상자 목록(`CameraBoxCollisionProbe`)과 매니저의 `PhysicsWorld` 바디(`PhysicsWorldCameraProbe`, 대상 자신은 뺀다).
+- **흔들림**(`CameraShake.h`): 손떨림은 프리셋의 `<Noise>`(채널마다 다른 시드 줄기의 1D 펄린, 같은 시드 · 시간 = 같은 값), 충격은 `CameraImpulseListener::addImpulse`
+  (크기 × 남은 비율 × e^(−t/감쇠), 길이 끝에 정확히 0, 반지름 안에서 거리에 따라 선형 감쇠). 흔들림은 포즈 위에 얹는 오프셋이라 블렌드 · 감쇠가 섞지 않는다.
+  오버월드 키트의 `CameraControllerComponent::shake` 도 같은 충격 식을 쓴다.
 - **블렌드 고르기**: `<Blend from to>` 표(정확히 → `from="*"` → `to="*"`) → 들어가는 프리셋의 `<BlendIn>` → `<DefaultBlend>`. 곡선은 엔진의 `BlendCurve`
   (Cut · Linear · EaseIn/Out/InOut · SmoothStep · Cubic · Exponential · Spring · Custom 키, `Engine/Animation/BlendCurve.h`). `evaluateBlendWeight` · `blendPoses` 는 컴포넌트를
   모르는 함수라 시퀀서 · 소켓 부착의 되돌아가기(`SocketBindingComponent`)도 같은 곡선을 쓴다. 직교 ↔ 원근은 섞지 않고 가중치 0.5 에서 바꾼다.
-- **블렌드는 지금 화면에서 출발한다**(`CameraDirector`): 나가는 프리셋은 블렌드 동안 대상을 계속 따라가고, 블렌드 도중 다시 켜면 그 순간의 섞인 포즈를 고정해 출발점으로
-  둔다 — 어느 쪽이든 켠 순간 튀지 않는다. 감쇠는 지수 감쇠(1 − e^(−dt/τ))라 프레임 수와 상관없다.
-- **컴포넌트**: `CameraDirectorComponent` 를 `CameraComponent` 와 같은 오브젝트에 붙이고 프리셋 경로 · 시작 프리셋 · 대상(`GameObjectHandle`)을 준다.
-  `TickGroup::PostUpdate` 에서 자기 카메라만 월드 값으로 쓰고 대상은 읽기만 한다. 게임은 `activatePreset( id )` 로 바꾼다.
-- 기존 `OrthoCameraRigComponent` · 1인칭 카메라는 아직 따로 돈다 — 모드로 옮기는 것은 `docs/06_Backlog.md` 1-6 의 카메라 항목.
+- **블렌드는 지금 화면에서 출발한다**(`CameraPoseBlender` — 디렉터 · 매니저가 같이 쓴다): 나가는 쪽은 블렌드 동안 계속 살아 있고, 블렌드 도중 다시 바꾸면 그 순간의 섞인
+  포즈를 고정해 출발점으로 둔다. 포즈를 내던 중의 **컷**(곡선 `Cut` · 길이 0)은 카메라에 컷 표시(`CameraComponent::markCut`)를 남겨 렌더러가 TAA 기록을 버린다.
+- **`CameraDirectorComponent`**: `CameraComponent` 와 같은 오브젝트에 붙이고 프리셋 경로 · 시작 프리셋 · 대상(또는 묶음 `_listGroupTarget`) · 돌리기 키(`_cyclePresetKey`)를
+  준다. `PostPhysics` 에서 입력만 읽고 **포즈는 틱 뒤에 쓴다**(`executeOrDeferPostTick`) — 틱 중의 트랜스폼 쓰기는 틱 뒤에 적용되므로 틱 안에서 대상을 읽으면 한 프레임
+  늦다. `-gv_cameraPreset=<id>` 가 시작 프리셋을 고른다(캡처 카메라 제외 — 스크린샷용).
+- **`CameraManagerComponent`**(언리얼 `SetViewTargetWithBlend` · Cinemachine Brain): 로컬 플레이어마다 하나, 플레이어가 실제로 그리는 카메라에 붙는다. 뷰 타깃 = 다른
+  오브젝트의 카메라(보통 보조 `CameraRole::Custom`)이고 그 포즈 · 렌즈를 블렌드로 따라간다. `PostUpdate` 에서 틱 뒤로 미뤄 디렉터 다음에 읽는다. 용도별 목록은
+  `findCamerasByRole`(플레이어 시점 `Game` · 보조 `Custom` · 캡처 `Capture`), 플레이어별 매니저는 `findForPlayer`.
+- **기존 리그도 모드다.** `OrthoCameraRigComponent` 는 자기 값으로 `OrthoTopDown` 프리셋을 지어 디렉터로 풀어(덮어쓴 탑승 시점은 `Fixed`), 탑승 시점으로 들어가고 나올 때
+  `_overrideBlend` 로 블렌드하고 Q/E 는 `_rotateTime` 으로 돈다. `FirstPersonCameraComponent` 는 눈 자리 · 시점을 `FirstPerson` 모드로 푼다.
+- **출력은 엔진 카메라가 고른다**(`CameraComponent::setRenderOutput` — 화면 전체 · 화면 사각형(분할 화면 · PiP) · 렌더 텍스처(`rendertarget/<이름>`, 머티리얼이
+  텍스처로 읽는다), 갱신 주기 · 해상도 배율 · 그림자 · 후처리 · 보임 기준 오브젝트). 디렉터 · 매니저는 포즈 · 렌즈만 쓰므로 CCTV 도 디렉터 + `Fixed` 프리셋 +
+  렌더 텍스처 출력이다. 렌더러 쪽은 `Source/Engine/Graphics/Renderer/README.md` "다중 뷰".
 
 ## 새 장르 키트를 만들 때
 

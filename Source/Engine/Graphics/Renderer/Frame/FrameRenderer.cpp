@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Graphics/Renderer/Frame/RenderViewCollector.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -62,8 +63,13 @@ namespace sw
         , _graph{}
         , _pipelinePath{}
         , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
-        , _transientPool{}
+        , _mainView{}
+        , _listExtraView{}
+        , _pActiveView{ &_mainView }
         , _frameCtx{}
+        , _mainSeedScratch{}
+        , _directViewScheduler{}
+        , _listDirectViewScratch{}
         , _passCbRing{}
         , _arrView{}
         , _instanceAnimCb{}
@@ -77,15 +83,20 @@ namespace sw
         , _gpuFrameScopeSlot{ FrameProfiler::kInvalidSlot }
         , _lastIndirectDrawCallCount{ 0 }
         , _disabledInputRoleMask{ 0 }
-        , _instanceSortCb{}
         , _mapMaterialFallback{}
         , _psoCache{}
         , _outputRenderTarget{ 0 }
-        , _taaHistory{ 0 }
         , _presentCapture{ 0 }
         , _statusMessage{}
         , _graphContext{}
-        , _taaHistorySrv{ kInvalidDescriptorIndex }
+        , _frameLight{}
+        , _outputWidth{ 0 }
+        , _outputHeight{ 0 }
+        , _presentCaptureWidth{ 0 }
+        , _presentCaptureHeight{ 0 }
+        , _lastRenderedExtraViewCount{ 0 }
+        , _directOutputWidth{ 0 }
+        , _directOutputHeight{ 0 }
 #if !defined( SW_SHIPPING )
         , _animationTimeOverride{ -1.0f }
 #endif
@@ -276,6 +287,12 @@ namespace sw
         _gpuScene.clear();
         _sceneBuilder.clear();
 
+        // 추가 뷰는 통째로 놓는다(빌린 렌더 텍스처 · 컬링 상수버퍼 · 리스트). 주 시점의 리스트도 이 디바이스의 것이다.
+        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+            releaseExtraView( *pView );
+        _listExtraView.clear();
+        _mainView._commandList.reset();
+        _directViewScheduler.clear();
         releaseTransientResources();
         releasePassResources();
         _graph.clear();
@@ -367,7 +384,13 @@ namespace sw
     bool FrameRenderer::prepareCommandList( IRHIDevice* pDevice, [[maybe_unused]] const utf8* pCallerName )
     {
         if ( _frameCmd && _pCmdOwnerDevice != pDevice )
+        {
+            // 리스트는 만든 디바이스의 것이다 — 뷰마다의 리스트도 함께 버린다.
             _frameCmd.reset();
+            _mainView._commandList.reset();
+            for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+                pView->_commandList.reset();
+        }
 
         if ( _frameCmd == nullptr )
             _frameCmd = pDevice->createCommandList();
@@ -420,7 +443,7 @@ namespace sw
 #endif
 
         // GPU 드리븐 프리패스. **애니메이션이 먼저고 컬링이 나중이다.** 순서가 뒤집히면 컬링이
-        // 이번 프레임에 회전하기 전의 바운드로 판정한다.
+        // 이번 프레임에 회전하기 전의 바운드로 판정한다. 컬링은 이번 프레임에 그리는 **모든 뷰**의 칸을 돈다.
         const uint32 animInstanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
         dispatchInstanceAnimation( animInstanceCount );
         dispatchMeshMorph();
@@ -432,30 +455,63 @@ namespace sw
             _pCmd->writeTimestamp( FrameRendererUtil::kGpuTimestampSlotComputeEnd );
 #endif
 
-        // 병렬 기록이 가능하면(백엔드 capability + TaskManager + 레벨이 나올 만큼 컴파일된 그래프)
-        // 컬링 디스패치(위에서 _pCmd 에 이미 기록됨)를 먼저 닫아 GPU 큐에 제출해서, 각 패스의 독립
-        // 커맨드 리스트보다 인다이렉트 인자 준비가 GPU 타임라인에서 먼저 끝나도록 순서를 보장한다
-        // (같은 큐에 대한 ExecuteCommandLists 호출 순서 = 실행 순서). 첫 프레임처럼 그래프가 아직
-        // 컴파일 안 됐으면(getExecutionOrder() 가 비어 있으면) 안전하게 직렬 경로로 폴백한다.
-        // executeParallel 안에서 compile() 이 그때 한 번 일어난다.
+        // 프리패스 리스트를 먼저 닫아 큐에 낸다 — 뷰마다의 리스트 · 병렬 패스 리스트보다 인다이렉트 인자 준비가 GPU 타임라인에서 먼저 끝나도록
+        // (같은 큐의 ExecuteCommandLists 호출 순서 = 실행 순서).
+        _pCmd->endCommandList();
+        pDevice->executeCommandList( _pCmd );
+        _pCmd = nullptr;
+
+        // 주 시점이 읽는 렌더 텍스처(CCTV 모니터)를 먼저 그린다. 주 시점의 패스 시드는 추가 뷰가 덮어쓰므로 지켜 둔다.
+        _mainSeedScratch          = _frameCtx;
+        uint32 renderedExtraCount = 0;
+        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_outputKind != RenderViewOutputKind::RenderTexture )
+                continue;
+            renderExtraView( pDevice, *pView );
+            ++renderedExtraCount;
+        }
+        // 주 시점의 시드 · 클리어 기록으로 돌아온다(추가 뷰가 자기 값을 덮어썼다).
+        _frameCtx = _mainSeedScratch;
+        _bHasExecutedDepthPrepass.store( 0 );
+
+        // 병렬 기록이 가능하면(백엔드 capability + TaskManager + 레벨이 나올 만큼 컴파일된 그래프) 레벨마다 여러 리스트로 기록한다.
+        // 첫 프레임처럼 그래프가 아직 컴파일 안 됐으면(getExecutionOrder() 가 비어 있으면) 직렬 경로로 간다.
         const bool bCanRunParallel = _pTaskManager != nullptr &&
                                      pDevice->getCapabilities()._bParallelCommandRecording != SW_FALSE &&
                                      _graph.getExecutionOrder().size() > 1;
+        bool bOk = false;
         if ( bCanRunParallel )
         {
-            _pCmd->endCommandList();
-            pDevice->executeCommandList( _pCmd );
-            _pCmd = nullptr;
-            return _graph.executeParallel( _graphContext, _pTaskManager, pDevice );
+            bOk = _graph.executeParallel( _graphContext, _pTaskManager, pDevice );
+        }
+        else
+        {
+            // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다.
+            if ( _mainView._commandList == nullptr )
+                _mainView._commandList = pDevice->createCommandList();
+            IRHICommandList* pMainCmd = _mainView._commandList.get();
+            if ( pMainCmd != nullptr )
+            {
+                // 직렬 경로의 패스는 시드의 리스트에 기록한다(그래프가 패스에 리스트를 주지 않는다) — 시드를 이 리스트로 돌린다.
+                _frameCtx._pCmd = pMainCmd;
+                pMainCmd->beginCommandList();
+                bOk = _graph.execute( _graphContext, pMainCmd );
+                pMainCmd->endCommandList();
+                pDevice->executeCommandList( pMainCmd );
+            }
         }
 
-        // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다.
-        // 병렬 경로처럼 레벨 앞머리로 몰 수 없다(직렬은 순서가 곧 리스트 안의 위치다).
-        const bool bOk = _graph.execute( _graphContext, _pCmd );
-        _pCmd->endCommandList();
-        pDevice->executeCommandList( _pCmd );
-        // _frameCmd 는 다음 프레임 prepareCommandList 에서 다시 쓴다. _pCmd 만 비운다.
-        _pCmd = nullptr;
+        // 화면 사각형 뷰(분할 화면 · PiP)는 주 시점 위에 겹친다.
+        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_outputKind != RenderViewOutputKind::ScreenRect )
+                continue;
+            renderExtraView( pDevice, *pView );
+            ++renderedExtraCount;
+        }
+        _frameCtx                   = _mainSeedScratch;
+        _lastRenderedExtraViewCount = renderedExtraCount;
         return bOk;
     }
 
@@ -469,6 +525,14 @@ namespace sw
         _pDevice            = pDevice;
         _pScene             = pScene;
         _outputRenderTarget = 0;
+        // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능 · 컷)은 패킷 경로와 같은 규칙으로 카메라에서 읽는다.
+        CameraComponent* pMainCamera = nullptr;
+        if ( pScene != nullptr )
+        {
+            pScene->ensureDefaultCameras();
+            pMainCamera = pScene->getActiveGameCamera();
+        }
+        _mainView._settings = RenderViewCollector::makeMainSettings( pMainCamera );
         // 씬 직접 경로(에디터 · 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
         // 다르면 에디터에서 본 그림과 게임 화면이 갈린다.
         collectSceneLights( pScene, _listScratchLight );
@@ -492,7 +556,7 @@ namespace sw
             _frameLight = FrameLightState{};
         }
         ensurePassResources();
-        ensureTransientResources();
+        ensureTransientResources( _directOutputWidth, _directOutputHeight );
         resetPassCbRing();
         setIdentityWorld( _frameCtx );
 
@@ -501,14 +565,18 @@ namespace sw
         _bHasExecutedDepthPrepass.store( 0 );
 
         float3 cameraPos{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
-        if ( pScene != nullptr )
-        {
-            pScene->ensureDefaultCameras();
-            CameraComponent* pCam = pScene->getActiveGameCamera();
-            if ( pCam != nullptr )
-                cameraPos = pCam->getCameraPosition();
-        }
+        if ( pMainCamera != nullptr )
+            cameraPos = pMainCamera->getCameraPosition();
         view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다
+        // 추가 뷰(캡처 카메라 · 화면 사각형) — 패킷 경로(EngineLoop)와 같은 수집기 · 스케줄러로 고른다. 시각은 렌더러 시계(시험은 고정할 수 있다).
+        _listDirectViewScratch.clear();
+        if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
+        {
+            RenderViewCollector::collectExtraViews( *pScene->getObjectManager(), pMainCamera, view( RenderViewType::Main )._viewProj, _outputWidth, _outputHeight,
+                                                    static_cast<float64>( getAnimationTime() ), RenderViewCollector::getDefaultBudget(), _directViewScheduler,
+                                                    _listDirectViewScratch );
+        }
+        prepareExtraViews( _listDirectViewScratch );
         // 패킷 경로와 **같은 길**이다. 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GpuScene 에는 씬을 읽는 메서드가 없다.
         _sceneBuilder.buildFromScene( pScene, cameraPos );
         {
@@ -529,6 +597,7 @@ namespace sw
         _pDevice            = pDevice;
         _pScene             = nullptr;
         _outputRenderTarget = packet._gameRenderTarget;
+        _mainView._settings = packet._mainView;
         // _gpuScene 은 FrameRenderer 가 프레임 사이에 계속 소유한다(GPU 버퍼 · 핸들 · 머티리얼 데이터 버퍼 보존).
         // 패킷에서는 CPU 스냅샷(인스턴스 · 배치 목록)만 옮겨 온다. 주의: 통째로 move 하면 직전 프레임에 업로드한
         // GPU 버퍼 · 디스크립터를 releaseGpu() 없이 잃어버려 매 프레임 새로 만드는 누수가 된다.
@@ -560,6 +629,9 @@ namespace sw
         updatePassConstants( _frameCtx );
         if ( packet._bHasViewProj != SW_FALSE )
             applyViewProjection( _frameCtx, packet._viewProj ); // 역행렬 · 절두체도 함께 갱신된다
+        view( RenderViewType::Main )._position = packet._cameraPos;
+        // 추가 뷰의 풀 · 텍스처 · 컬링 칸을 업로드 전에 맞춘다(기록 중에는 만들 수 없다).
+        prepareExtraViews( packet._listView );
         // 값 업로드 · 바인딩은 드로우 직전 ShaderParameterBinder 가 한다. 여기서는 시드만 채운다.
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );

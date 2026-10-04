@@ -14,6 +14,7 @@ Renderer/
   Light/      씬 라이트를 한 구조버퍼로 (GpuLightBuffer) — 포워드·디퍼드가 같이 읽는다
   Debug/      에디터가 읽는 통로 — RenderTargetRegistry(프레임 렌더타깃 목록) · DebugDrawQueue(선 · 구 · 상자 · 화살표 · 글자,
               지속 시간 · 카테고리. 넣은 것은 `endFrame` 에 확정돼 다음 에디터 프레임에 보이고, 씬이 멈춘 프레임은 시간이 흐르지 않는다)
+  Capture/    격리 스튜디오 렌더 — PortraitRenderer(프리팹 초상화 · 썸네일 굽기)
   Cook/       오프라인 셰이더 쿠킹의 정책 — 무엇을 쿠킹할지(요청: 파이프라인 XML · 패스 종류 표 × 뷰 모드 · 머티리얼) · 전부 쿠킹(드라이버).
               Shader/ 는 한 장을 쿠킹하는 법만 안다
   RenderThread.cpp/h   위를 구동하는 스레드
@@ -81,6 +82,7 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
   - `FrameRendererConstants` — 뷰/라이트 행렬 등 **프레임 상수 시드** (프레임당 1회)
   - `FrameRendererPassExecute` — 패스 타입별 실행 분기
   - `FrameRendererDraw` — 드로우 루프
+  - `FrameRendererViews` — 추가 뷰(카메라마다 하나)의 자원 준비 · 해제 · 그리기. 아래 "다중 뷰"
   - `FrameRendererPso` — 머티리얼 PSO 생성. 뷰 모드(`RenderViewMode` — Lit · Unlit · Wireframe)가 얹는 define 은
     `FrameRendererUtil::findViewModeDefine` 하나가 정하고 셰이더 쿠킹 요청도 같은 함수를 부릅니다 — 쿠커가 쿠킹하지 않은 define 은 Shipping 에서 PSO 를 못 만듭니다
 - `FrameRenderer` 가 **소유하는 셋** — 각자 뮤텍스와 수명을 가진 상태라 클래스로 떼어 두었습니다:
@@ -88,13 +90,39 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
   - `RenderPsoCache` — 엔진 패스 PSO · Present 포맷별 PSO · 머티리얼 퍼뮤테이션 변형과 바인딩 레이아웃.
     만드는 일은 `FrameRendererPso` 가, 소유와 해제 순서(변형 → 패스 → Present)는 캐시가 안다
   - `TransientAttachmentPool` — 이름으로 찾는 프레임 첨부(렌더타깃) 풀과 "이번 프레임에 이미 클리어했는가"
-- `RenderView` — 뷰 하나의 행렬·절두체·컬링 상수버퍼. 메인 카메라와 그림자 라이트가 각자 갖는다
+- `RenderView` — 뷰 하나의 행렬·절두체·컬링 · 정렬 상수버퍼. 메인 카메라 · 그림자 라이트 · 추가 뷰가 각자 갖는다.
+  `RenderViewSettings`(출력 · 화면 사각형 · 해상도 배율 · 그림자 · 후처리 · 컷)와 `RenderViewRequest`(게임 스레드가 만드는 추가 뷰 하나)도 여기 있다
+- `RenderViewCollector` — 게임 스레드에서 씬의 카메라를 훑어 주 뷰 설정과 추가 뷰 요청 목록을 만든다(`collectExtraViews`)
+- `RenderViewScheduler` — 추가 뷰 중 이번 프레임에 그릴 것을 고른다: 갱신 주기 · 보임 · 예산(`gv_renderViewBudget`, 늦은 것 먼저, 같으면 덜 그린 것)
 - `ShaderParameterBinder` — 셰이더 리플렉션이 알려준 슬롯에 실제 값을 바인딩
 - `PassConstantValues` — 이름으로 담아 두는 패스 상수 값 저장소
 - `FrameResourceRegistry` — 패스 스코프 이름→리소스 매핑
 - `RenderFramePacket` — 게임 스레드 → 렌더 스레드로 넘기는 프레임 데이터
 - 컴퓨트 디스패치(애니메이션·컬링·정렬)는 `FrameRenderer::dispatchInstanceAnimation` / `dispatchCullAndSort` 가
   커맨드 리스트에 직접 건다 — 별도 래퍼 클래스는 없다
+
+### 다중 뷰 — 카메라마다 출력 하나
+
+`CameraComponent::setRenderOutput` 로 카메라가 출력을 고릅니다 — **화면 전체**(주 카메라), **화면 사각형**(분할 화면 · PiP),
+**렌더 텍스처**(CCTV 모니터 · 백미러 · 미니맵, 언리얼 SceneCapture2D). 렌더 텍스처 이름은 `rendertarget/` 으로 시작하고(`TextureCache::isRenderTargetPath`),
+머티리얼은 그 이름을 보통 텍스처처럼 적어 읽습니다 — 카메라가 등록될 때 크기를 알려(`declareRenderTarget`) 캐시가 렌더 타깃 텍스처로 만듭니다.
+
+- 뷰 하나(`FrameRenderer::ViewTarget`)가 **자기 것**으로 갖는 것: 트랜지언트 풀(해상도 배율이 곱해진 크기) · 컬링 입력(컬링 · 정렬 CB) · TAA 기록 · 커맨드 리스트 ·
+  출력 텍스처. GpuScene 의 컬링 칸은 0 = 주 · 1 = 그림자 · 2.. = 추가 뷰(`kFirstExtraCullView`, 최대 `kMaxExtraRenderView`).
+- 프레임 순서: 프리패스(애니메이션 · 모프 · 이번에 그릴 모든 뷰의 컬링) → 렌더 텍스처 뷰 → 주 뷰 → 화면 사각형 뷰(주 화면 위에 덮는다).
+  패스 상수는 주 뷰의 시드에서 출발해 뷰-투영 · 풀 크기 · 플래그 · 컬링 칸만 덮어씁니다. 라이트 · 그림자 행렬은 프레임 공통입니다.
+- 끌 기능: 그림자를 끈 뷰는 그림자 맵을 지우기만 하고, 후처리를 끈 뷰는 `SW_PASS_FLAG_SKIP_POST` 로 포스트 체인이 원본을 고릅니다.
+- **컷 프레임**(`RenderViewSettings::_bCut`, `CameraComponent::markCut` → `consumeCut`): TAA 가 기록 자리에 이번 원본을 겁니다 — 지난 화면이 섞이지 않습니다.
+  모션 벡터 · 자동 노출은 렌더러에 아직 없습니다.
+- 직렬 경로의 패스는 `_frameCtx._pCmd` 에 기록합니다 — 뷰마다 그 리스트를 바꿔 둡니다.
+
+### Capture/ — 초상화 굽기
+
+`PortraitRenderer` 는 프리팹 하나를 **격리된 스튜디오**에서 그려 RGBA8 로 읽어 옵니다(`App --render-portraits=<prefab,..> [--portrait-size=N] [--portrait-dir=D]`,
+런타임은 `EngineLoop::renderPortraits`). 격리는 둘입니다 — `SceneManager` 에 등록하지 않은 별도 `Scene`(게임 씬의 빛 · 안개 · 오브젝트가 끼어들지 않고,
+게임 틱 · 저장 · 에디터가 보지 않는다)과 별도 `FrameRenderer` 인스턴스(주 렌더러의 TAA 기록 · 풀 · GpuScene 을 건드리지 않는다, 직접 경로
+`execute( pScene )` 에 출력 크기 덮어쓰기). 같은 디바이스를 쓰므로 렌더 스레드를 멈추고(`RenderThread::waitIdle`) 그립니다. 프레이밍은 메시 로컬 경계 상자를
+월드로 옮긴 것을 덮는 구로 정하고, 스튜디오의 키 라이트 하나 + 환경광만 비춥니다. 파일은 `Resource/ImageFileWriter`(PNG · DDS)로 씁니다.
 
 ### RenderThread
 

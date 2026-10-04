@@ -91,6 +91,10 @@ namespace sw
         inline constexpr uint32 kLightTypePoint       = SW_LIGHT_TYPE_POINT;
         inline constexpr uint32 kLightTypeSpot        = SW_LIGHT_TYPE_SPOT;
         inline constexpr uint32 kLightTypeCount       = SW_LIGHT_TYPE_COUNT;
+
+        // 패스 플래그 — PassCB `g_Flags` 의 비트(bindingslots.hlsli 9).
+        inline constexpr uint32 kPassFlagNativeBindless = SW_PASS_FLAG_NATIVE_BINDLESS;
+        inline constexpr uint32 kPassFlagSkipPost       = SW_PASS_FLAG_SKIP_POST;
         /// @brief 한 프레임에 GPU 로 보내는 라이트 수 상한입니다. 넘으면 엔진이 잘라 보내고 경고합니다.
         inline constexpr uint32 kMaxFrameLight = SW_MAX_FRAME_LIGHT;
 

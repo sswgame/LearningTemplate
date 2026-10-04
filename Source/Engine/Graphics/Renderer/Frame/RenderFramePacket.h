@@ -6,6 +6,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
+#include "Engine/Graphics/Renderer/Frame/RenderView.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
 
@@ -30,12 +31,16 @@ namespace sw
          *          라이트 목록이 비어도 키라이트 하나로 그리는 폴백 경로이기도 합니다.
          */
         vector<GpuLight> _listLight;
-        RHITextureHandle _gameRenderTarget; ///< 0 = 백버퍼 경로
-        uint32           _viewportWidth;
-        uint32           _viewportHeight;
-        uint64           _frameIndex;
-        uint8            _bHasViewProj : 1;
-        uint8            _bValid       : 1;
+        /** @brief 이번 프레임의 추가 뷰(CCTV · 백미러 · 분할 화면 · PiP)입니다. 쉬는 뷰도 실린다(`RenderViewRequest::_bRender`). */
+        vector<RenderViewRequest> _listView;
+        /** @brief 주 시점의 출력 사각형 · 해상도 배율 · 끌 기능 · 컷 표시입니다. */
+        RenderViewSettings _mainView;
+        RHITextureHandle   _gameRenderTarget; ///< 0 = 백버퍼 경로
+        uint32             _viewportWidth;
+        uint32             _viewportHeight;
+        uint64             _frameIndex;
+        uint8              _bHasViewProj : 1;
+        uint8              _bValid       : 1;
         /** @brief 씬에 DirectionalLightComponent 가 있어 라이트 필드가 유효하면 1 입니다. */
         uint8                  _bHasLight : 1;
         [[maybe_unused]] uint8 _reserved  : 5;
@@ -48,6 +53,8 @@ namespace sw
             , _lightViewProj{}
             , _lightDirIntensity{}
             , _lightColorAmbient{}
+            , _listView{}
+            , _mainView{}
             , _gameRenderTarget{ 0 }
             , _viewportWidth{ 0 }
             , _viewportHeight{ 0 }
@@ -74,6 +81,8 @@ namespace sw
             _lightDirIntensity = float4{};
             _lightColorAmbient = float4{};
             _listLight.clear();
+            _listView.clear();
+            _mainView         = RenderViewSettings{};
             _gameRenderTarget = 0;
             _viewportWidth    = 0;
             _viewportHeight   = 0;

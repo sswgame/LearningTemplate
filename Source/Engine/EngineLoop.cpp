@@ -7,6 +7,7 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
@@ -30,12 +31,15 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/Renderer/Capture/PortraitRenderer.h"
 #include "Engine/Graphics/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Renderer/Debug/PhysicsDebugDrawAdapter.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Graphics/Renderer/Frame/RenderViewCollector.h"
+#include "Engine/Graphics/Renderer/Frame/RenderViewScheduler.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Renderer/RenderThread.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
@@ -57,6 +61,7 @@
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/ImageFileWriter.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneCooker.h"
@@ -481,6 +486,8 @@ namespace sw
                 loop._packetScratch = make_unique<RenderFramePacket>();
             if ( loop._gpuUploadQueue == nullptr )
                 loop._gpuUploadQueue = make_unique<GpuUploadQueue>();
+            if ( loop._renderViewScheduler == nullptr )
+                loop._renderViewScheduler = make_unique<RenderViewScheduler>();
             // GT 쪽 GpuScene 이 배치를 만든다. 텍스처를 인덱스로 고를 수 있는 백엔드면 머티리얼이 달라도
             // 셰이더 타입 단위로 합친다(언리얼 GPUScene).
             loop._gpuSceneBuilder->setMergeBatchesAcrossMaterials( loop._rhi->getDevice().supportsNativeBindlessSampling() );
@@ -503,6 +510,7 @@ namespace sw
         static void destroy( EngineLoop& loop )
         {
             loop._gpuUploadQueue.reset();
+            loop._renderViewScheduler.reset();
             loop._packetScratch.reset();
             loop._gpuSceneBuilder.reset();
             loop._frameRenderer.reset();
@@ -601,6 +609,8 @@ namespace sw
         , _packetScratch{ nullptr }
         , _commandStack{ nullptr }
         , _gpuUploadQueue{ nullptr }
+        , _renderViewScheduler{ nullptr }
+        , _renderViewClock{ 0.0 }
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
@@ -699,6 +709,56 @@ namespace sw
         // 수직 동기화는 다음에 스왑체인을 만들 때(창 크기 변경 · 백엔드 교체) 적용된다.
         if ( configTypeName == EngineConfig::StaticType()->_fullyQualifiedName && _rhi != nullptr && _pEngineConfig != nullptr )
             _rhi->setPreferredVSync( _pEngineConfig->_window._bVSync );
+    }
+
+    bool EngineLoop::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )
+    {
+        if ( _rhi == nullptr || _rhi->hasDevice() == false || prefabList.empty() )
+            return false;
+        // 렌더 스레드가 받은 일을 모두 끝내게 하고, 컨텍스트가 스레드에 묶이는 백엔드(GL · DX11)는 이 스레드가 잡는다.
+        if ( _renderThread != nullptr )
+            _renderThread->waitIdle();
+        IRHIDevice& device     = _rhi->getDevice();
+        const bool  bExclusive = device.requiresExclusiveContextThread();
+        if ( bExclusive && device.bindGraphicsContext() == false )
+        {
+            SW_LOG_ERROR( "Portrait: could not bind the graphics context" );
+            return false;
+        }
+        const string directory = outputDirectory.empty() ? string( "Saved/Portraits" ) : string( outputDirectory );
+        (void)FileUtil::ensureDirectoryExists( directory );
+
+        PortraitRenderer      portrait;
+        bool                  bAllSucceeded = portrait.initialize( &device );
+        const string_splitter parts( prefabList, { "," } );
+        for ( const string_view part : parts.getSplitList() )
+        {
+            const string_view path = StringUtil::trim( part );
+            if ( path.empty() || bAllSucceeded == false )
+                continue;
+            PortraitRequest request;
+            request._prefabPath = string( path );
+            request._width      = MathUtil::clamp( size, 16u, 4096u );
+            request._height     = request._width;
+            vector<uint8> rgbaBytes;
+            if ( portrait.renderPrefab( request, rgbaBytes ) == false )
+            {
+                bAllSucceeded = false;
+                continue;
+            }
+            // 이름은 경로의 마지막 조각에서 첫 점 앞까지다(`hero.prefab.xml` → `hero`).
+            string_view stem  = path.substr( path.find_last_of( '/' ) == string_view::npos ? 0 : path.find_last_of( '/' ) + 1 );
+            stem              = stem.substr( 0, stem.find( '.' ) );
+            const string base = directory + "/" + string( stem ) + ".portrait";
+            const bool   bDds = ImageFileWriter::writeDdsRgba8( base + ".dds", rgbaBytes, request._width, request._height );
+            const bool   bPng = ImageFileWriter::writePngRgba8( base + ".png", rgbaBytes, request._width, request._height );
+            bAllSucceeded     = bAllSucceeded && bDds && bPng;
+            SW_LOG_INFO( "Portrait '%#' -> %#.dds / .png (%#x%#)", string( path ).c_str(), base.c_str(), request._width, request._height );
+        }
+        portrait.shutdown();
+        if ( bExclusive )
+            device.unbindGraphicsContext();
+        return bAllSucceeded;
     }
 
     void EngineLoop::beginFrame( float32 deltaSeconds )
@@ -851,15 +911,23 @@ namespace sw
                 CameraComponent* pCam = viewCameraProvider.isBound() ? viewCameraProvider() : nullptr;
                 if ( pCam == nullptr || pCam->isActive() == false )
                     pCam = pActiveScene->getActiveGameCamera();
+                // 주 출력의 크기 — 게임 뷰 RT 면 그 크기, 백버퍼 경로면 스왑체인 크기다(화면 사각형 뷰 · 주 시점 사각형의 비율이 이것을 본다).
+                const uint32 outputWidth  = packet._viewportWidth > 0 ? packet._viewportWidth : _rhi->getDevice().getBackBufferWidth();
+                const uint32 outputHeight = packet._viewportHeight > 0 ? packet._viewportHeight : _rhi->getDevice().getBackBufferHeight();
                 if ( pCam != nullptr )
                 {
-                    packet._cameraPos = pCam->getCameraPosition();
-                    const float32 aspect =
-                        ( packet._viewportHeight > 0 )
-                            ? ( static_cast<float32>( packet._viewportWidth ) / static_cast<float32>( packet._viewportHeight ) )
-                            : ( 16.0f / 9.0f );
-                    packet._viewProj     = pCam->getViewProjectionMatrix( aspect );
+                    // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능)과 컷 표시. 비율은 사각형의 것이다(분할 화면의 한 칸).
+                    packet._mainView     = RenderViewCollector::makeMainSettings( pCam );
+                    packet._cameraPos    = pCam->getCameraPosition();
+                    packet._viewProj     = pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) );
                     packet._bHasViewProj = SW_TRUE;
+                }
+                // 추가 뷰(캡처 카메라 · 화면 사각형) — 갱신 주기 · 보이는가 · 예산으로 이번 프레임에 그릴 것을 고른다. 쉬는 뷰도 실린다.
+                _renderViewClock += static_cast<float64>( MathUtil::max( 0.0f, deltaTime ) );
+                if ( _renderViewScheduler != nullptr && pActiveScene->getObjectManager() != nullptr )
+                {
+                    RenderViewCollector::collectExtraViews( *pActiveScene->getObjectManager(), pCam, packet._viewProj, outputWidth, outputHeight,
+                                                            _renderViewClock, RenderViewCollector::getDefaultBudget(), *_renderViewScheduler, packet._listView );
                 }
                 _gpuSceneBuilder->buildFromScene( pActiveScene, packet._cameraPos );
 

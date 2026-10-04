@@ -19,6 +19,7 @@ namespace sw
         , _height{ 0 }
         , _mipCount{ 0 }
         , _format{ RHIFormat::Unknown }
+        , _bRenderTarget{ SW_FALSE }
     {
     }
 
@@ -145,6 +146,46 @@ namespace sw
         return true;
     }
 
+    bool Texture2D::createRenderTarget( IRHIDevice* pDevice, string_view name, uint32 width, uint32 height, RHIFormat format )
+    {
+        if ( pDevice == nullptr || name.empty() || width == 0 || height == 0 )
+            return false;
+        if ( _handle != 0 )
+            releaseRhi( pDevice );
+
+        RHITextureDesc desc{};
+        desc._width                    = width;
+        desc._height                   = height;
+        desc._mipLevels                = 1;
+        desc._format                   = format;
+        desc._bIsRenderTarget          = SW_TRUE;
+        desc._bIsShaderResource        = SW_TRUE;
+        IRHIResourceFactory* pResource = pDevice->getResourceFactory();
+        _handle                        = pResource->createTexture2D( desc );
+        if ( _handle == 0 )
+        {
+            SW_LOG_ERROR( "Texture2D: createTexture2D failed for render target '%#' (%#×%#)", name, width, height );
+            return false;
+        }
+        _srv = pResource->registerBindlessTexture( _handle );
+        if ( _srv == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for render target '%#'", name );
+            pResource->destroyTexture( _handle );
+            _handle = 0;
+            return false;
+        }
+        _pDevice       = pDevice;
+        _path          = string{ name };
+        _width         = width;
+        _height        = height;
+        _mipCount      = 1;
+        _format        = format;
+        _bRenderTarget = SW_TRUE;
+        SW_LOG_INFO( "Texture2D render target '%#' ready: %#×%#, srv %#", _path.c_str(), _width, _height, _srv );
+        return true;
+    }
+
     bool Texture2D::initRhi( IRHIDevice* pDevice )
     {
         // 머티리얼이 먼저 살아나며 이 텍스처를 이미 올려 놓았을 수 있다. 두 번 올리면 그대로 새는 것이다.
@@ -152,6 +193,9 @@ namespace sw
             return true;
         if ( pDevice == nullptr || _path.empty() )
             return true;
+        // 렌더 타깃은 파일이 없다 — 같은 크기 · 포맷으로 다시 만든다(그림은 다음에 그 뷰를 그릴 때 채워진다).
+        if ( _bRenderTarget == SW_TRUE )
+            return createRenderTarget( pDevice, _path, _width, _height, _format );
         return loadFromResource( pDevice, _path );
     }
 
@@ -179,9 +223,12 @@ namespace sw
             if ( _handle != 0 )
                 pResource->destroyTexture( _handle );
         }
-        _handle   = 0;
-        _srv      = kInvalidDescriptorIndex;
-        _pDevice  = nullptr;
+        _handle  = 0;
+        _srv     = kInvalidDescriptorIndex;
+        _pDevice = nullptr;
+        // 렌더 타깃은 크기 · 포맷이 곧 정의다 — 새 디바이스에서 다시 만들 때(`initRhi`) 쓴다.
+        if ( _bRenderTarget == SW_TRUE )
+            return;
         _width    = 0;
         _height   = 0;
         _mipCount = 0;

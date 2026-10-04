@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Camera/CameraShake.h"
+
 namespace sw
 {
     CameraControllerComponent::CameraControllerComponent()
@@ -59,11 +61,14 @@ namespace sw
         if ( _shakeDuration <= 0.0f || _shakeTotalDuration <= 0.0f )
             return float2{ 0.0f, 0.0f };
 
-        // 크기는 **남은 비율**로 잦아들고, 위상은 **흐른 시간**으로 간다. 주의: 위상을 남은 시간으로
-        // 계산하면 끝나기 직전에 `cos` 항이 최대(=1)가 되어 가장 크게 튀고 그 다음 프레임에 0 으로 끊긴다.
-        const float32 amplitude = _shakeIntensity * MathUtil::saturate( _shakeDuration / _shakeTotalDuration );
-        return float2{ MathUtil::sin( _shakeElapsed * _shakeFrequency ) * amplitude,
-                       MathUtil::cos( _shakeElapsed * ( _shakeFrequency * 1.3f ) ) * ( amplitude * 0.75f ) };
+        // 흔들림 모양은 카메라 충격(`CameraImpulse`)과 같은 식이다 — 크기는 남은 비율로 잦아들고 위상은 흐른 시간으로 간다.
+        CameraImpulse impulse;
+        impulse._def._amplitude        = _shakeIntensity;
+        impulse._def._duration         = _shakeTotalDuration;
+        impulse._def._frequency        = _shakeFrequency;
+        impulse._elapsed               = _shakeElapsed;
+        const CameraShakeOffset offset = impulse.computeOffset( impulse._origin );
+        return float2{ offset._position._x, offset._position._y };
     }
 
     void CameraControllerComponent::shake( float32 intensity, float32 duration, float32 frequency )

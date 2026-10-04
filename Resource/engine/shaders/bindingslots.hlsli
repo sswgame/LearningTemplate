@@ -208,4 +208,11 @@
 // 셰이더 루프가 이 수를 넘게 도는 일은 없다(g_SwLightCount 가 이 값으로 클램프된다).
 #define SW_MAX_FRAME_LIGHT             256
 
+// ------------------------------------------------------------------------------
+// 9) 패스 플래그 — PassCB 의 `g_Flags` 비트. 뷰마다 다른 값이라(다중 뷰: CCTV 는 후처리를 끈다) 셰이더 퍼뮤테이션이 아니라 상수로 싣는다.
+//    C++(FrameRenderer::updatePassConstants)와 셰이더가 같은 비트를 본다.
+// ------------------------------------------------------------------------------
+#define SW_PASS_FLAG_NATIVE_BINDLESS   1   // 네이티브 bindless(DX12 · Vulkan) — 텍스처 배열을 인덱스로 읽는다
+#define SW_PASS_FLAG_SKIP_POST         2   // 이 뷰는 후처리를 끈다 — postchain 이 블룸 · 외곽선 · 톤맵을 건너뛰고 원본을 낸다
+
 #endif // SW_ENGINE_BINDINGSLOTS_HLSLI

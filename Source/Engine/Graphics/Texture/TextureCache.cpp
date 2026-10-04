@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -22,9 +23,15 @@ namespace sw
             unique_ptr<Texture2D> _texture;
             uint32                _refCount{ 0 };
         };
-        unordered_map<string, Entry> _mapEntry;
-        std::shared_mutex            _mutex;
-        atomic<uint32>               _reloadGeneration{ 0 }; ///< reload 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
+        struct RenderTargetSize
+        {
+            uint32 _width{ TextureCache::kDefaultRenderTargetSize };
+            uint32 _height{ TextureCache::kDefaultRenderTargetSize };
+        };
+        unordered_map<string, Entry>            _mapEntry;
+        unordered_map<string, RenderTargetSize> _mapRenderTargetSize; ///< `declareRenderTarget` 이 알린 크기
+        std::shared_mutex                       _mutex;
+        atomic<uint32>                          _reloadGeneration{ 0 }; ///< reload 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
     };
 
     TextureCache::TextureCache()
@@ -45,7 +52,19 @@ namespace sw
         Impl::Entry&                        entry = _impl->_mapEntry[key];
         if ( entry._texture == nullptr )
             entry._texture = make_unique<Texture2D>();
-        if ( entry._texture->isRhiValid() == false && entry._texture->loadFromResource( pDevice, key ) == false )
+        bool bReady = entry._texture->isRhiValid();
+        if ( bReady == false && isRenderTargetPath( key ) )
+        {
+            // 렌더 텍스처 — 파일이 없다. 알린 크기(없으면 기본)로 렌더 타깃을 만든다.
+            const auto                   sizeIter = _impl->_mapRenderTargetSize.find( key );
+            const Impl::RenderTargetSize size     = sizeIter != _impl->_mapRenderTargetSize.end() ? sizeIter->second : Impl::RenderTargetSize{};
+            bReady                                = entry._texture->createRenderTarget( pDevice, key, size._width, size._height, constant::kOffscreenColorFormat );
+        }
+        else if ( bReady == false )
+        {
+            bReady = entry._texture->loadFromResource( pDevice, key );
+        }
+        if ( bReady == false )
         {
             if ( entry._refCount == 0 )
                 _impl->_mapEntry.erase( key );
@@ -55,10 +74,27 @@ namespace sw
         return entry._texture.get();
     }
 
+    bool TextureCache::isRenderTargetPath( string_view relativePath )
+    {
+        return StringUtil::startsWith( relativePath, string_view{ kRenderTargetPrefix }, true );
+    }
+
+    void TextureCache::declareRenderTarget( string_view relativePath, uint32 width, uint32 height )
+    {
+        if ( _impl == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0 )
+            return;
+        const string                        key = FileUtil::normalizePath( relativePath );
+        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+        Impl::RenderTargetSize&             size = _impl->_mapRenderTargetSize[key];
+        size._width                              = width;
+        size._height                             = height;
+    }
+
     void TextureCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         SW_MEMORY_SCOPE( Texture );
-        if ( relativePath.empty() || _impl == nullptr || pDevice == nullptr )
+        // 렌더 텍스처는 디스크에 없다 — 다시 읽을 것이 없다.
+        if ( relativePath.empty() || _impl == nullptr || pDevice == nullptr || isRenderTargetPath( relativePath ) )
             return;
         const string key = FileUtil::normalizePath( relativePath );
 

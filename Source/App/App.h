@@ -170,6 +170,7 @@ namespace sw
 
         uint8                  _bEnableEditor          : 1;
         uint8                  _bDevConsoleExecPending : 1; ///< `-gv_devConsoleExec` 를 아직 돌리지 않았다
-        [[maybe_unused]] uint8 _reserved               : 6;
+        uint8                  _bQuitAfterInitialize   : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다 — 루프에 들어가지 않는다
+        [[maybe_unused]] uint8 _reserved               : 5;
     };
 } // namespace sw

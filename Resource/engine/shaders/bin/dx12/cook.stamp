@@ -1,9 +1,10 @@
 SWCOOK 3
 00366b6bd91c13af taa.hlsl
+0b4a864a2bc2814c postchain.hlsl
 111f7515f60bf571 postbloom.hlsli
-139dad64d8b20d3a postchain.hlsl
 18912cf2a9b4c732 gbuffer.hlsl
 1e3724ca37ee3050 shadowdepth.hlsl
+20582feb0045e404 bindingslots.hlsli
 24362e689a6eb15b gpucull.hlsl
 32ea9f2a4e23abcc lighting.hlsli
 3cad4317ad1020e8 sprite2d.hlsl
@@ -22,5 +23,4 @@ b54c618d8734fa38 tonemap.hlsl
 bfc1abf7672a9a07 ssao.hlsl
 d0567b23544cc8a5 instancedata.hlsli
 d38de88a21415ca3 postbloom.hlsl
-d8d56eeae58c4ae4 bindingslots.hlsli
 df99ce7308ca1787 fullscreentriangle.hlsl

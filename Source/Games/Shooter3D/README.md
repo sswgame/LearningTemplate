@@ -11,6 +11,7 @@ cmake --build --preset Ninja-Debug-Shooter3D
 cd build/Ninja-Debug-Shooter3D/Bin
 ./App.exe -dx12
 ./App.exe -dx12 -gv_shooterAutoPlay=1   # 조준 · 사격 · 이동도 AI(가까우면 산탄총, 멀면 소총)
+./App.exe -dx12 -gv_cameraPreset=thirdperson   # 시작 카메라 프리셋(firstperson · thirdperson · orbit · cctv) — 프리셋마다 스크린샷을 찍을 때
 ./App.exe -dx12 -EnableEditor "-gv_editorStartupScene=game/shooter3d/maps/arena.scene.xml"
 ```
 
@@ -23,6 +24,7 @@ cd build/Ninja-Debug-Shooter3D/Bin
 | R | 재장전(빈 탄창은 저절로) |
 | 1 · 2 · 3 · 휠 | 소총 · 산탄총 · 권총 |
 | Space · LeftShift | 점프 · 달리기 |
+| C | 카메라 프리셋 돌리기 — 1인칭 → 3인칭(어깨 너머, 스프링 암) → 궤도(오른쪽 버튼 끌기 · 휠) → CCTV(모서리에서 따라 보기) |
 
 드론(과녁, 늘 플레이어 쪽을 본다)은 다가와 부딪히며 체력을 깎습니다. 맞으면 잠깐 붉게 번쩍이고 HP 바(`HealthBarComponent`)가 줄어듭니다. 체력은 맞지 않고 4 초가 지나면 다시
 차고, 바닥나면 웨이브 1 부터 다시 시작합니다. 웨이브마다 드론 수 · 체력 · 속도가 오르고 탄이 조금 채워집니다. 탄도선은 디버그 선이라 에디터 게임 뷰에서만 보입니다.
@@ -39,6 +41,8 @@ cd build/Ninja-Debug-Shooter3D/Bin
 | 웨이브 · 쓰러뜨린 수 · 효과 풀 · 로그 | `ShooterDirectorComponent`(씬에 하나 — 언리얼 GameMode/GameState 자리) |
 | 이동 · 점프 · 무기 셋 · 히트스캔 · 체력 · 조준선 · 탄도선 | `ShooterPlayerComponent` — 플레이어 오브젝트(카메라 · 손에 든 총 · 조준선 스프라이트와 같은 오브젝트) |
 | 1인칭 시점 · 마우스 잠금 · 손에 든 총 자리 | GameFramework `FirstPersonCameraComponent`(같은 오브젝트) — 손에 든 총(`ViewWeapon`) · 조준선은 카메라의 자식이라 시점을 따라간다 |
+| 화면에 나가는 시점 | `ViewCamera` 오브젝트(우선순위 10)의 `CameraDirectorComponent` — 프리셋 `data/shooter.cameras.xml`, 대상은 플레이어(카메라가 루트라 대상 = 눈 · 시점). 1인칭 프리셋은 플레이어 카메라와 정확히 겹친다 |
+| 감시 카메라 · 모니터 | `CctvCamera`(캡처 카메라, 렌더 텍스처 `rendertarget/shooter_cctv` 320×180 · 10 Hz · 그림자 · 후처리 끔, 모니터가 주 카메라 절두체에 있을 때만) 의 디렉터가 `data/cctv.cameras.xml` 의 `cctv_sweep`(남서 모서리에서 좌우로 훑기)을 쓴다. 북쪽 벽 `CctvMonitor` 의 `materials/cctvmonitor.material` 이 그 텍스처를 읽는다 |
 | 드론 하나 | `ShooterDroneComponent` — 플레이어 눈 쪽으로 오며 이웃과 떨어지고 상자를 돌아간다, 맞으면 번쩍 · HP 바 |
 | 모습 | 팔레트 머티리얼 `materials/palette.material`(상자 · 총 · 드론), 바닥 · 벽 `floor.material` · `wall.material`. 드론의 맞은 색 · 효과 색은 디렉터가 만든 머티리얼 인스턴스 |
 

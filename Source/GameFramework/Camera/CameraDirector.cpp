@@ -9,17 +9,17 @@ namespace sw
     CameraDirector::CameraDirector()
         : _activeDef{}
         , _fromDef{}
-        , _blend{}
+        , _activeState{}
+        , _fromState{}
+        , _blender{}
+        , _impulseListener{}
         , _activePose{}
         , _fromPose{}
         , _outputPose{}
-        , _blendElapsed{ 0.0f }
-        , _blendWeight{ 1.0f }
+        , _pProbe{ nullptr }
         , _bHasActive{ SW_FALSE }
         , _bActivePoseFresh{ SW_FALSE }
-        , _bBlending{ SW_FALSE }
-        , _bFromLive{ SW_FALSE }
-        , _bHasPose{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
@@ -44,75 +44,53 @@ namespace sw
 
     void CameraDirector::activatePreset( const CameraPresetDef& def, const BlendCurveSpec& blend )
     {
-        // 낸 포즈가 있으면 켠 프리셋도 있다 — 블렌드는 둘 다 있을 때만 한다.
-        const bool bCut = _bHasPose == SW_FALSE || blend._curve == BlendCurve::Cut || blend._duration <= 0.0f;
-        if ( bCut )
+        // 나가는 쪽을 살려 두는 블렌드면 지금 프리셋과 그 모드 상태를 그대로 넘겨 계속 굴린다.
+        if ( _blender.start( blend ) )
         {
-            _bBlending   = SW_FALSE;
-            _blendWeight = 1.0f;
+            _fromDef   = _activeDef;
+            _fromState = _activeState;
+            _fromPose  = _activePose;
         }
-        else
-        {
-            if ( _bBlending == SW_TRUE )
-            {
-                // 블렌드 도중 — 지금 내보내는 섞인 포즈를 고정해 출발점으로 둔다(나가는 둘을 다시 섞지 않는다).
-                _fromPose  = _outputPose;
-                _bFromLive = SW_FALSE;
-            }
-            else
-            {
-                // 나가는 프리셋은 대상을 계속 따라간다 — 켠 순간의 값은 지금 내보내는 포즈와 같다.
-                _fromDef   = _activeDef;
-                _fromPose  = _outputPose;
-                _bFromLive = SW_TRUE;
-            }
-            _blend        = blend;
-            _blendElapsed = 0.0f;
-            _blendWeight  = 0.0f;
-            _bBlending    = SW_TRUE;
-        }
-        _activeDef        = def;
+        _activeDef = def;
+        _activeState.reset();
         _bHasActive       = SW_TRUE;
         _bActivePoseFresh = SW_TRUE;
+    }
+
+    void CameraDirector::applyInput( const CameraModeInput& input, float32 deltaTime )
+    {
+        if ( _bHasActive == SW_TRUE )
+            applyCameraInput( _activeDef, input, deltaTime, _activeState );
+    }
+
+    CameraPose CameraDirector::evaluateLayer( const CameraPresetDef& def, CameraModeState& inoutState, CameraPose& inoutDampedPose, bool bFresh,
+                                              float32 deltaTime, const CameraTarget& target ) const
+    {
+        const CameraPose evaluated = evaluateCameraMode( def, target, deltaTime, inoutState, _pProbe );
+        inoutDampedPose            = bFresh ? evaluated : dampPose( inoutDampedPose, evaluated, def._damping, deltaTime );
+        return applyCameraShake( inoutDampedPose, computeCameraNoise( def._noise, inoutState._time ) );
     }
 
     const CameraPose& CameraDirector::step( float32 deltaTime, const CameraTarget& target )
     {
         if ( _bHasActive == SW_FALSE )
             return _outputPose;
-        const float32    elapsed   = MathUtil::max( 0.0f, deltaTime );
-        const CameraPose evaluated = evaluatePreset( _activeDef, target );
-        if ( _bActivePoseFresh == SW_TRUE )
-        {
-            _activePose       = evaluated;
-            _bActivePoseFresh = SW_FALSE;
-        }
-        else
-        {
-            _activePose = dampPose( _activePose, evaluated, _activeDef._damping, elapsed );
-        }
+        const float32    elapsed = MathUtil::max( 0.0f, deltaTime );
+        const CameraPose active  = evaluateLayer( _activeDef, _activeState, _activePose, _bActivePoseFresh == SW_TRUE, elapsed, target );
+        _bActivePoseFresh        = SW_FALSE;
 
-        if ( _bBlending == SW_TRUE )
+        CameraPose        liveFrom{};
+        const CameraPose* pLiveFrom = nullptr;
+        if ( _blender.isFromLive() )
         {
-            if ( _bFromLive == SW_TRUE )
-                _fromPose = dampPose( _fromPose, evaluatePreset( _fromDef, target ), _fromDef._damping, elapsed );
-            _blendElapsed += elapsed;
-            const float32 normalizedTime = _blend._duration > 0.0f ? MathUtil::saturate( _blendElapsed / _blend._duration ) : 1.0f;
-            _blendWeight                 = evaluateBlendWeight( _blend, normalizedTime );
-            _outputPose                  = blendPoses( _fromPose, _activePose, _blendWeight );
-            if ( normalizedTime >= 1.0f )
-            {
-                _bBlending   = SW_FALSE;
-                _bFromLive   = SW_FALSE;
-                _blendWeight = 1.0f;
-                _outputPose  = _activePose;
-            }
+            liveFrom  = evaluateLayer( _fromDef, _fromState, _fromPose, false, elapsed, target );
+            pLiveFrom = &liveFrom;
         }
-        else
-        {
-            _outputPose = _activePose;
-        }
-        _bHasPose = SW_TRUE;
+        const CameraPose& blended = _blender.step( elapsed, active, pLiveFrom );
+
+        // 충격은 섞인 포즈 위에 마지막으로 — 블렌드가 흔들림을 고정해 출발점에 싣지 않게.
+        _impulseListener.step( elapsed );
+        _outputPose = _impulseListener.isActive() ? applyCameraShake( blended, _impulseListener.computeOffset( blended._position ) ) : blended;
         return _outputPose;
     }
 } // namespace sw
