@@ -37,6 +37,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorViewportPreview.cpp
 		TestEditorVisualizerGeometry.cpp
 		TestFileWatchDispatcher.cpp
+		TestHeightfieldImporter.cpp
 		TestEditorSelection.cpp
 		TestModelImporter.cpp
 		TestTexturePipeline.cpp
@@ -70,6 +71,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorSelection.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/AssetImportPathFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/AssetImportStamp.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/HeightfieldImporter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImportConfig.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImporter.cpp"

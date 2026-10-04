@@ -247,7 +247,8 @@ namespace sw
 
                 const vector<string> listEngineComputeShader = {
                     "common/shaders/samplecompute.hlsl",
-                    "common/shaders/computetexturewrite.hlsl" };
+                    "common/shaders/computetexturewrite.hlsl",
+                    "common/shaders/waterwaveprobe.hlsl" };
                 for ( const string& path : listEngineComputeShader )
                 {
                     appendRequestUnique( outListRequest, path, "CSMain", ShaderStage::Compute, {} );

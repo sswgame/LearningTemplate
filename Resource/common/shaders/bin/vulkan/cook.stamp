@@ -1,6 +1,8 @@
 SWCOOK 3
 082019df2dbbcbd5 instanceslotprobe.hlsl
+0d43b1a5e612b7ae engine:gerstner.hlsli
 111f7515f60bf571 engine:postbloom.hlsli
+127dbc1c25c3d712 waterwaveprobe.hlsl
 22c00eae8dfcf116 samplecompute.hlsl
 2376b38d79149448 provokingvertex.hlsl
 32ea9f2a4e23abcc engine:lighting.hlsli

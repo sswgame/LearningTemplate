@@ -197,6 +197,12 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 쓴다. 새 엔진 텍스처가 필요하면 `binding.hlsli` PassCB 에 `uint g_<Name>Index;` 추가 + 엔진이
 `FrameResourceRegistry` 에 `"<Name>"` 등록. `#if VULKAN/OPENGL` 분기 금지 — `binding.hlsli` 가 처리한다.
 
+**머티리얼은 한 스테이지에서만 읽는다.** GL(ARB_gl_spirv)은 구조버퍼(`g_SwMaterials`)를 정점 · 픽셀 두 단계에서 읽으면 링크를 거절한다. 보통은 픽셀이 읽고,
+정점을 옮기는 셰이더(식생 `foliage.hlsl` · 물 `water.hlsl`)는 정점이 읽어 픽셀이 쓸 값을 보간 칸으로 넘긴다 — 머티리얼 스키마는 픽셀에서 못 찾으면 정점
+스테이지에서 찾는다(`Material::ensureShaderLayout`, `RenderPassGpuTest.VertexStageMaterialSchemaIsUsed`). 그림자 · 깊이 프리패스는 머티리얼 셰이더가 아니라
+`shadowdepth.hlsl` 이 그리므로 정점 변형을 모른다 — 머티리얼 define `MATERIAL_SHADOW_CAST_OFF` 는 그림자에서, `MATERIAL_VERTEX_DEFORM` 은 깊이 프리패스에서 그 드로우를
+뺀다(클립 밖 한 점으로 모은다).
+
 **정점을 받는 셰이더는 `SwVertexInput`(common.hlsli) 하나만 쓴다.** DX 는 시맨틱 이름으로 묶지만 Vulkan·GL 은
 **선언 순서로 location** 을 매긴다 — `struct VSInput { pos; col }` 처럼 중간 속성을 빼면 col 이 노멀을 읽는다.
 리플렉션이 정점 입력(시맨틱·location)을 읽고

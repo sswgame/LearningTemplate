@@ -1,7 +1,7 @@
 /**
  * @file AssetImportEntry.cpp
  * @brief 에디터 모듈의 헤드리스 에셋 임포트 진입점(`importEditorAssets`)입니다. `App --import-textures` · `--check-textures` ·
- *        `--import-models` · `--check-models` 가 부릅니다.
+ *        `--import-models` · `--check-models` · `--import-heightfields` · `--check-heightfields` 가 부릅니다.
  * @note 모듈 전용입니다. `EditorTest` 는 이 파일을 넣지 않고 `TextureImporter::importAllTextures` · `ModelImporter::importAllModels` 를 바로 부릅니다.
  */
 #include "pch.h"
@@ -9,6 +9,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/HeightfieldImporter.h"
 #include "Editor/Common/Asset/ModelImportConfig.h"
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
@@ -58,6 +59,12 @@ namespace sw::editor
                         }
                         summary    = ModelImporter::importAllModels( ResourceUtil::getRootFolderPath(), config, mode );
                         pKindLabel = "Model";
+                        break;
+                    }
+                    case EditorImportKind::Heightfield:
+                    {
+                        summary    = HeightfieldImporter::importAllHeightfields( ResourceUtil::getRootFolderPath(), mode );
+                        pKindLabel = "Heightfield";
                         break;
                     }
                 }
