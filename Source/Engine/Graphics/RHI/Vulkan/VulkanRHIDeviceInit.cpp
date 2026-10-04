@@ -197,7 +197,7 @@ namespace sw
 
         for ( const VkPhysicalDevice& device : devices )
         {
-            // 셰이더는 요구 판(VulkanRHIApiVersion) 타깃의 SPIR-V 로 굽는다. 그보다 낮은 디바이스는 그 모듈을 하나도 받지 못한다.
+            // 셰이더는 요구 판(VulkanRHIApiVersion) 타깃의 SPIR-V 로 쿠킹한다. 그보다 낮은 디바이스는 그 모듈을 하나도 받지 못한다.
             VkPhysicalDeviceProperties candidateProperties{};
             vkGetPhysicalDeviceProperties( device, &candidateProperties );
             if ( VulkanRHIApiVersion::isApiVersionSupported( candidateProperties.apiVersion ) == false )
@@ -347,12 +347,12 @@ namespace sw
         vulkan12Features.shaderSampledImageArrayNonUniformIndexing     = available12.shaderSampledImageArrayNonUniformIndexing;
         vulkan12Features.runtimeDescriptorArray                        = available12.runtimeDescriptorArray;
         vulkan12Features.drawIndirectCount                             = available12.drawIndirectCount;
-        // 셰이더는 DX 패킹(-fvk-use-dx-layout)으로 굽는다. relaxed block layout(1.1 코어)으로 대부분 충분하지만
+        // 셰이더는 DX 패킹(-fvk-use-dx-layout)으로 쿠킹한다. relaxed block layout(1.1 코어)으로 대부분 충분하지만
         // 스칼라 정렬까지 허용해 두면 어떤 구조체든 DX 와 같은 오프셋을 쓸 수 있다.
         vulkan12Features.scalarBlockLayout = available12.scalarBlockLayout;
         _bDrawIndirectCount                = available12.drawIndirectCount ? 1 : 0;
 
-        // 셰이더는 -fspv-target-env=vulkan1.3 으로 굽고, 그 타깃에서 DXC 는 HLSL `discard` 를 OpKill 이 아니라
+        // 셰이더는 -fspv-target-env=vulkan1.3 으로 쿠킹하고, 그 타깃에서 DXC 는 HLSL `discard` 를 OpKill 이 아니라
         // OpDemoteToHelperInvocation 으로 낸다(deferredlighting.hlsl · sprite2d.hlsl 의 ALPHA_TEST). 이 기능을 켜지 않으면
         // vkCreateShaderModule 이 검증 오류를 낸다(VUID-VkShaderModuleCreateInfo-pCode-08740). Vulkan 1.3 의 필수 기능이라
         // 1.3 디바이스에는 늘 있다 — 없다고 답하는 드라이버는 스펙을 어긴 것이라 디바이스를 만들지 않는다.

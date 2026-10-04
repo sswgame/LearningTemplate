@@ -28,7 +28,7 @@
 | 에셋 | `AssetRegistry` · `FStreamableManager` · 패키지 | `Resources` · `ResourceLoader` | `Engine/Resource` (AssetDatabase · 팩 · `IAssetCache` 등록부 · 스트리밍 큐) | **같다.** 종류를 늘리는 자리가 인터페이스 하나다. |
 | 디바이스 | `RHI` — `void*` 창 핸들로 `FRHIViewport` 를 만든다. 창 시스템(Slate)은 RHI 위 | Godot `RenderingDevice` | `Graphics/RHI` (4 백엔드) | **같다.** RHI 는 창을 모른다 — `Common/IRenderSurface` 를 `IWindow` 가 구현하고 `EngineLoop` 이 넘긴다. |
 | GPU 에셋 | `Engine` 의 `UMaterialInterface` · `UStaticMesh` — 컴포넌트가 든다 | Unity `Material` · `Mesh` | `Graphics/Material` · `Mesh` · `Texture` · `Shader` | **같다.** 컴포넌트가 머티리얼·메시를 드는 것은 상용 엔진의 모양이다 — 이 엣지는 결함이 아니다. |
-| 렌더러 | `Renderer` — `Engine` 을 보고(프록시·씬) 그린다. `Engine` 은 `RendererInterface` 만 안다 | Unity SRP · Godot `RenderingServer` | `Graphics/Renderer` (FrameRenderer · RenderGraph · GpuScene · RenderThread) | **같다.** (1) 렌더 패스 *에셋* 캐시(`RenderPipelineAssetCache`)는 `FrameRenderer` 가 소유한다 — RHI 는 Renderer 를 모른다. (2) "무엇을 구울지" 의 정책은 `Renderer/Bake/ShaderBakeDriver` 에 있고 `Shader/Compile` 은 렌더러를 모른다. |
+| 렌더러 | `Renderer` — `Engine` 을 보고(프록시·씬) 그린다. `Engine` 은 `RendererInterface` 만 안다 | Unity SRP · Godot `RenderingServer` | `Graphics/Renderer` (FrameRenderer · RenderGraph · GpuScene · RenderThread) | **같다.** (1) 렌더 패스 *에셋* 캐시(`RenderPipelineAssetCache`)는 `FrameRenderer` 가 소유한다 — RHI 는 Renderer 를 모른다. (2) "무엇을 쿠킹할지" 의 정책은 `Renderer/Cook/ShaderCookDriver` 에 있고 `Shader/Compile` 은 렌더러를 모른다. |
 | 월드 | `UWorld` → `AActor` → `UActorComponent`. 액터는 `GWorld` 전역으로 월드를 찾는다 | Godot `SceneTree` → `Node` | `Scene` → `Object`(GameObject · Component) | **더 좁다.** Object 는 Scene 을 모른다. 활성 월드 전역(`GWorld`)도 없다 — 핸들은 그것을 푸는 쪽이 든 `GameObjectManager` 가 푼다(`resolveGameObject` · `resolveComponent`). |
 | 월드 ↔ 렌더러 | `UWorld` 는 `FScene`(렌더 씬 인터페이스)만 안다. 렌더러 본체를 모른다 | Godot 노드는 `RenderingServer` 에 RID 로만 말한다 | `SceneManager` | **같다.** 씬은 렌더러를 모른다 — 렌더러는 호스트가 내주는 선택 서비스(`EngineServiceList.xxx`)다. |
 | 기능 모듈 | `LevelSequence` · `MovieScene` 은 `Engine` 위의 모듈 — 액터를 알고, 액터는 모른다 | Godot `AnimationPlayer` 는 `scene/` 안의 노드 | `Sequencer` | **같다.** `SequencePlayerComponent` 는 `Sequencer/` 에 있다 — Sequencer 가 Object 를 알고, Object 는 Sequencer 를 모른다. |
@@ -54,9 +54,9 @@
 4. **Scene 은 Renderer 를 모른다.** 월드는 그리는 쪽을 모른다. → `EngineServiceList.xxx` 의
    `SW_ENGINE_SERVICE_OPT( _pFrameRenderer, class, FrameRenderer, getFrameRenderer, HostOnly, HostCreated )`.
    호스트(`EngineLoop`)가 꽂고, 에디터는 `editor::getService<FrameRenderer>()` 로 받는다. 테스트 하네스에는 없다(선택 행).
-5. **Object 는 Sequencer 를, Shader 는 Renderer 를 모른다.** `SequencePlayerComponent` 는 `Sequencer/` 에 있다. 베이크의
-   "무엇을 구울지"(`collectAllRequests` — 패스 종류 표 전체 × 뷰 모드, `FrameRendererUtil::getPassDefine`)와 "전부 굽기"
-   (`bakeAllShaders`)는 `Renderer/Bake/ShaderBakeDriver` 에 있고, `Shader/Compile/ShaderBaker` 에는 한 장 굽기 · 이름 짓기 ·
+5. **Object 는 Sequencer 를, Shader 는 Renderer 를 모른다.** `SequencePlayerComponent` 는 `Sequencer/` 에 있다. 쿠킹의
+   "무엇을 쿠킹할지"(`collectAllRequests` — 패스 종류 표 전체 × 뷰 모드, `FrameRendererUtil::getPassDefine`)와 "전부 쿠킹"
+   (`cookAllShaders`)는 `Renderer/Cook/ShaderCookDriver` 에 있고, `Shader/Compile/ShaderCooker` 에는 한 장 쿠킹 · 이름 짓기 ·
    최신 판정만 있다. → 언리얼의 ShaderCore(한 장 컴파일) 와 Renderer/Engine(무엇을 컴파일할지) 의 선.
 
 그리고 **게이트가 그 선을 지킨다.** `CheckEngineLayers.py` 의 티어 표는 DAG 이고, `Graphics/Renderer` 를 최상위

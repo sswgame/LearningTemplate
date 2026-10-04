@@ -160,7 +160,7 @@ namespace sw
         }
 
         // 레벨 0 은 zlib 에서 "무압축" 이라 의미가 다르다. 우리 계약의 0 은 "기본" 이므로 9 로 읽는다
-        // (굽는 쪽 파이썬도 level=9 로 쓴다).
+        // (쿠킹하는 쪽 파이썬도 level=9 로 쓴다).
         const int32 level = ( compressionLevel != 0 ) ? compressionLevel : Z_BEST_COMPRESSION;
 
         size_t      written{ 0 };

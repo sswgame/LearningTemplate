@@ -22,7 +22,7 @@
 using namespace sw;
 
 // 실제 App.exe 를 띄운다 — GPU · 창 · 셰이더가 필요하다. CI 러너엔 없다.
-SW_TEST_REQUIRES_HOST( AppSmokeTest, "launches the real App.exe, which needs a GPU, a window and baked shaders" );
+SW_TEST_REQUIRES_HOST( AppSmokeTest, "launches the real App.exe, which needs a GPU, a window and cooked shaders" );
 
 // ------------------------------------------------------------------------------
 // 1) AppSmokeTest — "실기동 게이트" 를 자동화한 것
@@ -699,8 +699,8 @@ SW_TEST_CASE( AppSmokeTest, VulkanEditorGameViewResizeLeavesNoValidationError )
 
 /**
  * @brief [AppSmokeTest] `--check-textures` 는 창 · RHI 없이 에디터 모듈만 올려 원본 텍스처와 DDS 를 대조하고 끝난다
- * @details 텍스처 굽기는 에디터 모듈(`TextureBaker`)의 일이고 엔진은 에디터를 모른다. 그래서 엔진은 헤드리스로 세우기만 하고 App 이
- *          모듈을 올려 `bakeEditorTextures` 를 부른다. 배포본에는 에디터 모듈이 없으므로 이유를 남기고 실패해야 한다.
+ * @details 텍스처 임포트는 에디터 모듈(`TextureImporter`)의 일이고 엔진은 에디터를 모른다. 그래서 엔진은 헤드리스로 세우기만 하고 App 이
+ *          모듈을 올려 `importEditorTextures` 를 부른다. 배포본에는 에디터 모듈이 없으므로 이유를 남기고 실패해야 한다.
  */
 SW_TEST_CASE( AppSmokeTest, TextureCheckRunsHeadlessThroughTheEditorModule )
 {

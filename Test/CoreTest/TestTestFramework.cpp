@@ -370,7 +370,7 @@ SW_TEST_CASE( TestFrameworkTest, AssertCaptureCountsInsteadOfBreaking )
 
 /**
  * @brief [TestFrameworkTest] 케이스가 만든 임시 경로를 남겨 둔다 — 바로 다음 케이스가 그것이 지워졌는지 본다
- * @details 파일 · 폴더(안에 파일) · 테스트가 알려 주지 않은 옆 파일(엔진이 구워 두는 `.bin` · `.meta` 를 흉내) 셋을 만든다.
+ * @details 파일 · 폴더(안에 파일) · 테스트가 알려 주지 않은 옆 파일(엔진이 쿠킹해 두는 `.bin` · `.meta` 를 흉내) 셋을 만든다.
  *          지우는 것은 케이스가 **끝난 뒤** 프레임워크라 같은 케이스 안에서는 볼 수 없다.
  */
 SW_TEST_CASE( TestFrameworkTest, TempPathsOfACaseAreCreated )

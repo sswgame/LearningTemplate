@@ -30,7 +30,7 @@ namespace sw
             static constexpr const utf8* kDefaultEntity = "Entity";
             static constexpr uint32      kSceneBinMagic = 0x53434E31u; // 'SCN1'
             // 엔티티 하나: 이름 · 프리팹 · GUID · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXml`).
-            // 쿠킹본은 쿠커가 매번 다시 굽는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
+            // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
             static constexpr uint32 kSceneBinVersion = 3;
 
             /**
@@ -354,7 +354,7 @@ namespace sw
 
     bool SceneDocument::load( string_view path )
     {
-        // 쿠킹본 이름은 쿠커와 같은 규칙 하나다(`AssetCookPath`). 씬 이름(`.scene.xml`)이 아니면 쿠킹본이 없다 — 쿠커가 굽지 않는다.
+        // 쿠킹본 이름은 쿠커와 같은 규칙 하나다(`AssetCookPath`). 씬 이름(`.scene.xml`)이 아니면 쿠킹본이 없다 — 쿠커가 쿠킹하지 않는다.
         const string binPath = AssetCookPath::toCookedPath( path );
 
 #if defined( SW_SHIPPING )

@@ -99,7 +99,7 @@ namespace sw
 /**
  * @brief [SceneTest] 쿠킹된 바이너리 엔티티 상태가 파일을 건너 살아남고, 로더가 그것을 쓰는지 검증
  *
- * @details `SceneCooker` 는 엔티티마다 든 `<GameObject ...>` XML 을 리플렉션 바이너리로 굽고 XML 을 비운다.
+ * @details `SceneCooker` 는 엔티티마다 든 `<GameObject ...>` XML 을 리플렉션 바이너리로 쿠킹하고 XML 을 비운다.
  *          쿠킹된 씬이 XML 문자열을 그대로 담으면 바깥 파싱만 줄고 비싼 생성 단계는 그대로 남는다.
  *
  *          **`_embeddedXml` 이 비어 있다는 것이 이 테스트의 핵심이다** — 마지막에 컴포넌트가
@@ -125,7 +125,7 @@ SW_TEST_CASE( SceneTest, CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad )
         SW_ASSERT_TRUE( sourceXml.empty() == false );
     }
 
-    // 2) 문서에 싣고 굽는다.
+    // 2) 문서에 싣고 쿠킹한다.
     sw::SceneDocument doc{};
     doc._name = "CookedScene";
     sw::SceneDocument::SceneObjectNode node{};
@@ -657,7 +657,7 @@ SW_TEST_CASE( SceneTest, SceneLightCollectionCarriesTypeAndShadowFlag )
 }
 
 /**
- * @brief [SceneTest] 엔티티 id 가 없는 씬은 읽지도 쓰지도 굽지도 않는다 — 파일의 엔티티는 늘 0 이 아닌 id 를 든다
+ * @brief [SceneTest] 엔티티 id 가 없는 씬은 읽지도 쓰지도 쿠킹하지도 않는다 — 파일의 엔티티는 늘 0 이 아닌 id 를 든다
  * @details 부착 · 핸들은 부모를 파일 id 로 가리키고 쿠커는 그 id 로 엔티티를 찾는다. 씬을 쓰는 쪽(`Scene::serializeToDocument`)은 모든 엔티티에
  *          id 를 주므로 id 없는 엔티티는 지금 형식이 아니다 — 읽는 쪽이 id 를 지어 주지 않고 거절한다.
  */
@@ -704,7 +704,7 @@ SW_TEST_CASE( SceneTest, SceneEntityWithoutAnIdIsRejected )
 SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
 {
     const sw::string binPath = test::makeTempPath( "sw_test_scene_badcount.bin" );
-    // 멀쩡한 씬 하나를 굽고, 헤더의 엔티티 수만 터무니없는 값으로 바꾼다.
+    // 멀쩡한 씬 하나를 쿠킹하고, 헤더의 엔티티 수만 터무니없는 값으로 바꾼다.
     sw::SceneDocument doc{};
     doc._name = "BoundedScene";
     sw::SceneDocument::SceneObjectNode node{};
@@ -784,8 +784,8 @@ SW_TEST_CASE( SceneTest, SavedSceneKeepsChildObjects )
 }
 
 /**
- * @brief [SceneTest] 씬 쿠킹은 굽지 못한 씬을 센다 — 하나라도 있으면 쿠킹이 실패다
- * @details 읽거나 쓰지 못한 씬을 건너뛰기만 하고 "구운 씬이 0 개" 일 때만 실패로 보면, 깨진 씬 하나가 배포본에서 빠지고 그 씬을 열 때에야
+ * @brief [SceneTest] 씬 쿠킹은 쿠킹하지 못한 씬을 센다 — 하나라도 있으면 쿠킹이 실패다
+ * @details 읽거나 쓰지 못한 씬을 건너뛰기만 하고 "쿠킹된 씬이 0 개" 일 때만 실패로 보면, 깨진 씬 하나가 배포본에서 빠지고 그 씬을 열 때에야
  *          "Shipping requires cooked binary scene" 으로 멈춘다. 쿠킹본 이름은 로더와 같은 규칙(`AssetCookPath`)이다.
  */
 SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
@@ -801,7 +801,7 @@ SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
     sw::FileUtil::ensureParentDirectoryExists( goodPath );
     SW_ASSERT_TRUE( good.saveXml( goodPath ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "game/demo/maps/broken.scene.xml" ), "<Scene name=\"Broken\"><Entity" ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "game/demo/maps/good.scene.xml.bak" ), "<Scene" ) ); // 굽는 것이 아니다
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "game/demo/maps/good.scene.xml.bak" ), "<Scene" ) ); // 쿠킹하는 것이 아니다
 
     uint32 failedCount = 0;
     {
@@ -863,9 +863,9 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
 }
 
 /**
- * @brief [SceneTest] 씬 쿠킹은 모르는 타입의 컴포넌트가 든 씬을 굽지 않고 실패로 센다
+ * @brief [SceneTest] 씬 쿠킹은 모르는 타입의 컴포넌트가 든 씬을 쿠킹하지 않고 실패로 센다
  * @details 모르는 타입은 `MissingComponent` 가 원문을 맡아 바이너리 왕복 검증을 통과하므로, 경고 한 줄로 넘기면 배포본에 동작하지 않는
- *          컴포넌트가 실린다(GameFramework 타입 없이 구운 spriteui 의 `HealthBarComponent` · `DamageNumberComponent` 등). 그 씬은 쓰지 않고, 실패가 빌드를 세운다.
+ *          컴포넌트가 실린다(GameFramework 타입 없이 쿠킹된 spriteui 의 `HealthBarComponent` · `DamageNumberComponent` 등). 그 씬은 쓰지 않고, 실패가 빌드를 세운다.
  */
 SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
 {
@@ -937,7 +937,7 @@ SW_TEST_CASE( SceneTest, CookedSceneKeepsAChildWrittenBeforeItsParent )
     SW_ASSERT_EQUAL( size_t( 2 ), doc._listSceneObjectNode.size() );
     SW_EXPECT_STREQ( "Sword", doc._listSceneObjectNode[0]._name.c_str() );
     SW_EXPECT_EQUAL( 2u, sw::SceneCooker::cookEntityState( doc ) );
-    SW_EXPECT_TRUE( doc._listSceneObjectNode[0]._embeddedXml.empty() ); // 구운 상태로만 읽힌다
+    SW_EXPECT_TRUE( doc._listSceneObjectNode[0]._embeddedXml.empty() ); // 쿠킹된 상태로만 읽힌다
 
     // 배포본처럼 바이너리 씬 파일을 건너 읽는다 — 엔티티의 파일 id 도 파일에 실려야 한다.
     const sw::string cookedPath = test::makeTempPath( "cook_order.scene.bin" );
@@ -1555,7 +1555,7 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
     SW_ASSERT_TRUE( pFromXml->instantiate( fromXml ) );
     Check::run( pFromXml, "xml" );
 
-    // 쿠커는 엔티티 상태를 리플렉션 바이너리로 굽는다 — 그 길에도 실려야 배포본이 같은 이름표를 본다.
+    // 쿠커는 엔티티 상태를 리플렉션 바이너리로 쿠킹한다 — 그 길에도 실려야 배포본이 같은 이름표를 본다.
     SW_EXPECT_EQUAL( 2u, sw::SceneCooker::cookEntityState( fromXml ) );
     const sw::string binPath = test::makeTempPath( "named_components.scene.bin" );
     SW_ASSERT_TRUE( fromXml.saveBinary( binPath ) );

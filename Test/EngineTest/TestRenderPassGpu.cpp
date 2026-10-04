@@ -328,7 +328,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererInitializeAndExecuteSmoke )
 
 /**
  * @brief [RenderPassGpuTest] 셰이더 핫리로드가 PSO 를 **실제로 다시 만드는지** 검증.
- * @details PSO 는 바이트코드를 구워 넣은 객체다. onShaderRecompiled 가 바인딩 레이아웃만
+ * @details PSO 는 바이트코드를 박아 넣은 객체다. onShaderRecompiled 가 바인딩 레이아웃만
  *          새로 만들면 셰이더를 고쳐도 화면이 시작 시 컴파일된 그대로다 —
  *          로그는 "Recompilation Succeeded" 를 찍는데 그림은 안 바뀌니 눈치채기 어렵다.
  *          LiveShaderTest 는 등록과 리로드 큐만 보므로 이 경로를 잡지 못한다.
@@ -678,7 +678,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelLevels )
 /**
  * @brief [RenderPassGpuTest] 머티리얼의 퍼뮤테이션이 실제로 그 배치의 PSO 가 되는지 (4 백엔드).
  * @details 머티리얼은 자기 셰이더 변형을 선언한다(유리는 MATERIAL_BLEND_TRANSLUCENT 를 always-define 으로
- *          들고 있다). 그런데 드로우가 **패스 PSO 하나로** 전부 그리면 그 선언은 구워지기만 하고 한 번도
+ *          들고 있다). 그런데 드로우가 **패스 PSO 하나로** 전부 그리면 그 선언은 쿠킹되기만 하고 한 번도
  *          걸리지 않는다. 반투명 패스 PSO 에 그 define 을 직접 박으면 이것이 가려진다 —
  *          "반투명 패스에 들어온 것은 무조건 반투명" 이 되어 머티리얼이 뭘 선언했는지는 상관이 없어진다.
  *
@@ -794,7 +794,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
                         SW_EXPECT_TRUE_MSG( shadowBatchDesc._vertexShaderPath == shadowDesc._vertexShaderPath,
                                             ( label + ": 그림자 패스가 머티리얼 셰이더로 갈아탔다" ).c_str() );
                         // 컬러 출력이 없는 패스는 픽셀 스테이지가 없고, 머티리얼 변형도 그대로 물려받아야 한다.
-                        // 여기에 PS 가 남으면 (shadowdepth · PSMain · 머티리얼 define) 조합을 베이커는 굽지 않으므로
+                        // 여기에 PS 가 남으면 (shadowdepth · PSMain · 머티리얼 define) 조합을 쿠커는 쿠킹하지 않으므로
                         // Shipping 이 매니페스트 미스([Error])를 낸다.
                         SW_EXPECT_TRUE_MSG( shadowDesc._numRenderTargets == 0 && shadowDesc._pixelShaderPath.empty(),
                                             ( label + ": 그림자 패스 PSO 에 픽셀 스테이지가 있다" ).c_str() );
@@ -819,9 +819,9 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
 
 /**
  * @brief [RenderPassGpuTest] 스프라이트는 스프라이트 셰이더(`sprite2d.hlsl`)의 반투명 배치로 그려진다 (4 백엔드)
- * @details 스프라이트가 씬 기본 머티리얼의 단위 큐브로 그려지면 `sprite2d.material` 과 그 셰이더는 구워지기만 하고 한 번도 걸리지 않는다.
+ * @details 스프라이트가 씬 기본 머티리얼의 단위 큐브로 그려지면 `sprite2d.material` 과 그 셰이더는 쿠킹되기만 하고 한 번도 걸리지 않는다.
  *          스프라이트가 사각형 + 스프라이트 머티리얼 + 텍스처 인스턴스로 풀리면, 엔진 루프가 패킷 전에 그 머티리얼을 올리고(`initializePending`)
- *          배치 PSO 가 스프라이트 셰이더가 된다. Shipping 에서는 그 퍼뮤테이션이 구워져 있어야 한다(베이크 구멍이면 여기서 진다).
+ *          배치 PSO 가 스프라이트 셰이더가 된다. Shipping 에서는 그 퍼뮤테이션이 쿠킹돼 있어야 한다(쿠킹 구멍이면 여기서 진다).
  */
 SW_TEST_CASE( RenderPassGpuTest, SpriteDrawsWithTheSpriteShader )
 {
@@ -1244,7 +1244,7 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
         if ( bOk )
             bOk = scene.ensureDefaultCameras();
 
-        // 머티리얼은 **실제 에셋**을 읽어 색만 바꾼다 — 손으로 지은 XML 은 퍼뮤테이션 선언이 빠져 구워둔
+        // 머티리얼은 **실제 에셋**을 읽어 색만 바꾼다 — 손으로 지은 XML 은 퍼뮤테이션 선언이 빠져 쿠킹해 둔
         // 셰이더 변형과 맞지 않는다(그러면 드로우가 통째로 사라져 검증이 무의미해진다).
         // initialize 가 아니라 loadFromFile 을 쓴다 — initialize 는 텍스처 에셋 해석까지 하므로 에셋
         // 시스템이 없는 테스트 프로세스에서는 못 쓴다. GPUScene 은 머티리얼 상수버퍼가 아니라
@@ -1814,7 +1814,7 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
                 if ( shadowPso != 0 && renderer.findPsoDesc( renderer.psoForBatch( shadowPso, batch ), shadowDesc ) )
                 {
                     SW_EXPECT_TRUE_MSG( shadowDesc._fillMode == sw::RHIFillMode::Solid,
-                                        ( label + ": 그림자 패스가 와이어프레임으로 구워진다" ).c_str() );
+                                        ( label + ": 그림자 패스가 와이어프레임으로 만들어진다" ).c_str() );
                 }
 
                 // ── Unlit ────────────────────────────────────────────────────
@@ -2845,7 +2845,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
             SW_ASSERT_TRUE( firstBuffer != 0 );
             SW_ASSERT_TRUE( firstSize > 0 );
 
-            // 셰이더를 다시 구워 레이아웃이 커진 상황을 만든다 — 부모 상수버퍼가 256 을 넘게 한다.
+            // 셰이더를 다시 쿠킹해 레이아웃이 커진 상황을 만든다 — 부모 상수버퍼가 256 을 넘게 한다.
             sw::ShaderReflectionData reflection{};
             sw::ShaderBufferInfo     cb{};
             cb._name      = "MaterialCB";
@@ -2928,7 +2928,7 @@ SW_TEST_CASE( RenderPassGpuTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
             SW_ASSERT_TRUE( instance->updateRhi( device.get() ) );
             SW_EXPECT_NEAR_EQUAL( 0.125f, readFloat( instance->getBuffer(), 16 ), 1e-6f );
 
-            // 리플렉션 캐시를 비우면(다시 굽기 · 라이브 셰이더 편집) 맞춘 레이아웃은 낡은 것이다 — 다시 맞춘다.
+            // 리플렉션 캐시를 비우면(다시 쿠킹 · 라이브 셰이더 편집) 맞춘 레이아웃은 낡은 것이다 — 다시 맞춘다.
             sw::ShaderReflectionLibrary::clearCache();
             SW_EXPECT_FALSE( parent->isShaderLayoutSynced( device.getBackend() ) );
             SW_EXPECT_TRUE( parent->ensureShaderLayout( device.get() ) );

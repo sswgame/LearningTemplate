@@ -82,25 +82,25 @@ namespace sw
             return false;
         }
 
-        // 헤드리스 모드(예: --bake-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
+        // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
         // 작업이 실패했으면 **초기화 실패로 반환한다.** 그래야 종료 코드가 0 이 아니고, 이것을 부르는 `CookAssets.py` 가
-        // "굽지 못했다" 를 알아챌 수 있다.
+        // "쿠킹하지 못했다" 를 알아챌 수 있다.
         if ( _engineLoop.isHeadless() )
         {
             if ( _engineLoop.didHeadlessTaskFail() )
                 return false;
 
-            // 텍스처 굽기는 에디터 모듈의 일이다. 엔진은 헤드리스로 세우기만 했고, 모듈을 올리는 것은 App 이다.
+            // 텍스처 임포트는 에디터 모듈의 일이다. 엔진은 헤드리스로 세우기만 했고, 모듈을 올리는 것은 App 이다.
             const CommandLineManager* pHeadlessCommandLine = _engineLoop.getCommandLineManager();
-            bool                      bBakeTextures        = false;
+            bool                      bImportTextures      = false;
             bool                      bCheckTextures       = false;
             if ( pHeadlessCommandLine != nullptr )
             {
-                pHeadlessCommandLine->getArgument( CommandLineArgument::BAKE_TEXTURES, bBakeTextures );
+                pHeadlessCommandLine->getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
                 pHeadlessCommandLine->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
             }
-            if ( bBakeTextures || bCheckTextures )
-                return ModuleHost::bakeTexturesWithEditorModule( bCheckTextures );
+            if ( bImportTextures || bCheckTextures )
+                return ModuleHost::importTexturesWithEditorModule( bCheckTextures );
             return true;
         }
 
@@ -309,7 +309,7 @@ namespace sw
 
     void App::run()
     {
-        // 루프는 창이 있어야 돈다. 헤드리스 부팅(예: --bake-shaders)은 창을 만들지 않으므로 여기서 끝난다. 모드 플래그가 아니라
+        // 루프는 창이 있어야 돈다. 헤드리스 부팅(예: --cook-shaders)은 창을 만들지 않으므로 여기서 끝난다. 모드 플래그가 아니라
         // 실제 선행 조건으로 적는다.
         if ( _window == nullptr )
             return;

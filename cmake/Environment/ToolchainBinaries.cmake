@@ -89,7 +89,7 @@ macro(sw_bindPinnedArchiver)
 			endif()
 
 			# **변수만 고쳐서는 안 된다.** CMake 는 IPO 용 아카이브 명령을 `project()` 시점의
-			# `CMAKE_<LANG>_COMPILER_AR` 로 **문자열에 구워 둔다**(Modules/Compiler/Clang.cmake).
+			# `CMAKE_<LANG>_COMPILER_AR` 로 **문자열로 박아 둔다**(Modules/Compiler/Clang.cmake).
 			# 그때 NOTFOUND 였으면 나중에 변수를 고쳐도 규칙은 그대로
 			# `"CMAKE_CXX_COMPILER_AR-NOTFOUND" qc ...` 다 — 실측으로 확인했다.
 			foreach(swPosixLang IN ITEMS C CXX)

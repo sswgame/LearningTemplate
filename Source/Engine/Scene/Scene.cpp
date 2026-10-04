@@ -227,7 +227,7 @@ namespace sw
                 ObjectLoadContext context{};
                 context._pBatch  = &batch;
                 context._savedId = entity._fileId;
-                // **구워진 바이너리 상태가 있으면 그것이 기준이다.** 쿠커가 왕복 검증에 성공한
+                // **쿠킹된 바이너리 상태가 있으면 그것이 기준이다.** 쿠커가 왕복 검증에 성공한
                 // 엔티티만 이쪽에 담고 XML 을 비우므로, 둘 다 차 있는 문서는 없다.
                 if ( entity._embeddedStateBytes.empty() == false )
                 {

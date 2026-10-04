@@ -4,7 +4,7 @@ Scripts/generate/GenerateCookContract.py
 Config/Engine/CookContract.json(쿠킹 표의 단일 출처)을 읽어 C++ 헤더(sw/config/CookContract.gen.h)를 생성합니다.
 
 생성물은 X-macro 둘이다 — `SW_RHI_BACKEND_TABLE( X )` 와 `SW_COOK_SUFFIX_TABLE( X )`. 쓰는 쪽(ArgumentList.xxx ·
-RHIBackendUtil · ShaderBaker · AssetCookPath)이 X 를 정의해 펼치므로, 줄이 늘면 그 자리들이 같이 늘어난다. Python 쿠커
+RHIBackendUtil · ShaderCooker · AssetCookPath)이 X 를 정의해 펼치므로, 줄이 늘면 그 자리들이 같이 늘어난다. Python 쿠커
 (CookAssets.py)는 같은 파일을 `CookContractSpec` 으로 읽는다.
 
 Usage:
@@ -62,7 +62,7 @@ def makeHeaderText(spec: CookContractSpec) -> str:
 /**
  * @brief 쿡 접미사 표입니다. 긴 접미사가 먼저입니다(`.scene.xml` 이 `.scene` 보다 먼저 맞아야 한다).
  * @details X( SourceSuffix, CookedSuffix, Kind, bAuthoringSource ) — Kind = AssetKind 열거자,
- *          bAuthoringSource = 쿠커가 굽는 저작 소스인가.
+ *          bAuthoringSource = 쿠커가 쿠킹하는 저작 소스인가.
  */
 {emitMacroInternal("SW_COOK_SUFFIX_TABLE", listSuffixRow)}
 """

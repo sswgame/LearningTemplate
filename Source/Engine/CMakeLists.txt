@@ -50,7 +50,7 @@ foreach(exPattern IN LISTS coreExclude)
     list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
 endforeach()
 
-# 셰이더 라이브 리로드는 개발 도구다. Shipping 은 구워진 셰이더만 읽으므로 감시할 것이 없다.
+# 셰이더 라이브 리로드는 개발 도구다. Shipping 은 쿠킹된 셰이더만 읽으므로 감시할 것이 없다.
 # 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다. 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
 # (위 `coreExclude` 는 다른 타겟이 짓는 것 — RHI 모듈 · 지연 로드 훅 — 이라 적지 않는다.)
 if(SW_SHIPPING_BUILD)
@@ -97,7 +97,7 @@ endif()
 
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
 
-# 핫 리로드 ABI 도장 — Engine 이 자기 헤더 지문을 굽는다(`Engine/Module/EngineAbiStamp.cpp`). 모듈도 같은 값을 굽는다.
+# 핫 리로드 ABI 도장 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineAbiStamp.cpp`). 모듈도 같은 값을 박는다.
 sw_defineEngineAbiStamp()
 add_dependencies(Engine SwEngineAbiStamp)
 target_include_directories(Engine PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
@@ -228,7 +228,7 @@ endif()
 # 유니티가 꺼져 있어 조용히 지나가 CI 에서만 터진다.
 #
 # "익명 네임스페이스가 합쳐져 이름이 부딪친다" 는 **이름 규칙으로 막혀 있다**. 익명 네임스페이스의 도우미는
-# 클래스가 아니라 **TU 이름**을 딴다(`ShaderBakeStampInternal` 등, AGENTS.md). `CheckCodeConventions` 의
+# 클래스가 아니라 **TU 이름**을 딴다(`ShaderCookStampInternal` 등, AGENTS.md). `CheckCodeConventions` 의
 # `Naming/DuplicateInternalHelper` 가 그것을 검사한다. 목록이 아니라 린트가 지킨다.
 #
 # 다시 넣고 싶어지면 먼저 `cmake --build --preset CI-Debug` 로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.

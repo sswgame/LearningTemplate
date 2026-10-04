@@ -57,13 +57,13 @@ SW_TEST_CASE( ConfigManagerTest, ConfigTableIsKeyedByType )
 /**
  * @brief [ConfigManagerTest] 상대 경로를 루트 디렉터리 기준으로 찾는지 검증
  * @details 실행 파일은 `build/<preset>/Bin` 에서 돌고 `Config/` 는 프로젝트 루트에 있다. 작업 디렉터리 기준으로만
- *          찾으면 설정 셋이 **매 실행마다 전부 "없음"** 이 되어 베이크된 기본값으로 조용히 떨어진다(창 크기·VSync·
+ *          찾으면 설정 셋이 **매 실행마다 전부 "없음"** 이 되어 생성된 기본값으로 조용히 떨어진다(창 크기·VSync·
  *          리소스 우선순위가 전부 무시된다). `setRootDirectory` 가 그것을 막는다.
  */
 SW_TEST_CASE( ConfigManagerTest, RelativePathResolvesAgainstRootDirectory )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "Shipping 은 디스크의 Config/ 를 보지 않는다 — 베이크된 JSON 만 쓴다" );
+    SW_TEST_SKIP( "Shipping 은 디스크의 Config/ 를 보지 않는다 — 생성된 JSON 만 쓴다" );
 #else
     test::ScopedLogSuppressor suppressor;
 
@@ -102,26 +102,26 @@ SW_TEST_CASE( ConfigManagerTest, RelativePathResolvesAgainstRootDirectory )
 }
 
 /**
- * @brief [ConfigManagerTest] 파일이 없을 때 베이크된 JSON → C++ 기본값 순으로 떨어지는지 검증
+ * @brief [ConfigManagerTest] 파일이 없을 때 생성된 JSON → C++ 기본값 순으로 떨어지는지 검증
  * @details 설정이 없다고 기동을 멈추지 않는다. 다만 **무엇으로 떨어졌는지** 는 값으로 드러나야 한다.
  */
-SW_TEST_CASE( ConfigManagerTest, MissingFileFallsBackToBakedThenCppDefaults )
+SW_TEST_CASE( ConfigManagerTest, MissingFileFallsBackToGeneratedThenCppDefaults )
 {
     test::ScopedLogSuppressor suppressor;
 
     const string missingPath = test::makeTempPath( "sw_config_that_does_not_exist.json" );
     SW_ASSERT_TRUE( FileUtil::removeFile( missingPath ) );
 
-    // 1) 베이크된 JSON 이 있으면 그것으로 떨어진다.
+    // 1) 생성된 JSON 이 있으면 그것으로 떨어진다.
     {
         ConfigManager manager;
-        const string  baked         = makeEngineConfigJson( 640, 480 );
-        EngineConfig* pEngineConfig = manager.ensureConfig<EngineConfig>( missingPath, baked.c_str() );
+        const string  generated     = makeEngineConfigJson( 640, 480 );
+        EngineConfig* pEngineConfig = manager.ensureConfig<EngineConfig>( missingPath, generated.c_str() );
         SW_EXPECT_NOT_NULL( pEngineConfig );
         SW_EXPECT_EQUAL( 640u, pEngineConfig->_window._width );
     }
 
-    // 2) 베이크된 JSON 도 없으면 C++ 기본값이다 — nullptr 이 아니다.
+    // 2) 생성된 JSON 도 없으면 C++ 기본값이다 — nullptr 이 아니다.
     {
         ConfigManager manager;
         EngineConfig* pEngineConfig = manager.ensureConfig<EngineConfig>( missingPath, nullptr );

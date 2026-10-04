@@ -1,6 +1,6 @@
 /**
  * @file ShaderBindingValidator.h
- * @brief 구운 셰이더의 리플렉션이 바인딩 계약(bindingslots.hlsli)과 맞는지 검사합니다.
+ * @brief 쿠킹된 셰이더의 리플렉션이 바인딩 계약(bindingslots.hlsli)과 맞는지 검사합니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -58,7 +58,7 @@ namespace sw
      * @brief 바인딩 계약 검증기입니다.
      * @details 백엔드 불일치는 대개 "셰이더가 선언한 위치 ≠ 엔진이 거는 위치" 이고, 어느 쪽도
      *          검증 에러를 내지 않아 화면이 검게 나오거나 비는 것으로만 드러납니다. 이 검사는 그 어긋남을
-     *          **바이너리를 읽는 순간**(PSO 레이아웃 빌드 · 베이킹 · 테스트)에 이름과 숫자로 보고합니다.
+     *          **바이너리를 읽는 순간**(PSO 레이아웃 빌드 · 쿠킹 · 테스트)에 이름과 숫자로 보고합니다.
      *
      *          검사 항목(백엔드별 이름공간 기준):
      *           1. 예약 리소스(PassCB, MaterialCB, g_SwInstances, g_SwMaterials, g_SwBindlessTex2D, g_SwSlot#, …)의 종류와

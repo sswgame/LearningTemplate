@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Asset/TextureBaker.h"
+#include "Editor/Common/Asset/TextureImporter.h"
 
 #include "Engine/Resource/AssetFormat.h"
 
@@ -19,17 +19,17 @@ namespace sw::editor
         {
             EndsWith = 0,
             Extension,
-            CookableSource ///< 엔진의 쿠킹 규칙(`AssetCookPath`) — 쿠커가 굽는 저작 소스만. 접미사는 엔진 표에서 온다
+            CookableSource ///< 엔진의 쿠킹 규칙(`AssetCookPath`) — 쿠커가 쿠킹하는 저작 소스만. 접미사는 엔진 표에서 온다
         };
 
         // 여기 적힌 확장자는 **이 저장소가 실제로 읽거나 쓰는 것만** 둔다 — 엔진은 HLSL 전용이고(`.glsl` 등 없음),
         // 오디오는 XAudio2 가 읽는 `.wav` 뿐이다. 셰이더는 공유 헤더 `.hlsli` 도 소스다.
-        // `.spv` 는 넣지 않는다. 그것은 **구운 산출물**이라(`Resource/common/shaders/bin/`) 셰이더
+        // `.spv` 는 넣지 않는다. 그것은 **쿠킹된 산출물**이라(`Resource/common/shaders/bin/`) 셰이더
         // 소스로 세면 콘텐츠 브라우저가 빌드 출력 수백 개를 애셋으로 보여 준다.
         //
-        // 씬 · 프리팹은 여기 적지 않는다 — 쿠커가 굽는 이름이 곧 에디터가 여는 이름이다(`AssetCookPath`). 여기 따로 적으면
-        // 쿠커가 굽지 않는 이름(`_scene.xml` · 아무 `.xml` · 확장자 없는 `.scene` 등)도 씬 · 프리팹으로 열고 저장하게 되어 에디터에서는 되고
-        // 배포본에는 없다. 구운 산출물(`.prefab.bin`)은 `.spv` 처럼 에셋이 아니다(`PrefabAsset::saveToFile` 은 소스만 쓴다).
+        // 씬 · 프리팹은 여기 적지 않는다 — 쿠커가 쿠킹하는 이름이 곧 에디터가 여는 이름이다(`AssetCookPath`). 여기 따로 적으면
+        // 쿠커가 쿠킹하지 않는 이름(`_scene.xml` · 아무 `.xml` · 확장자 없는 `.scene` 등)도 씬 · 프리팹으로 열고 저장하게 되어 에디터에서는 되고
+        // 배포본에는 없다. 쿠킹된 산출물(`.prefab.bin`)은 `.spv` 처럼 에셋이 아니다(`PrefabAsset::saveToFile` 은 소스만 쓴다).
         constexpr string_view kArrTextureExt[]      = { ".png", ".jpg", ".jpeg", ".tga", ".dds", ".hdr", ".bmp" };
         constexpr string_view kArrMaterialExt[]     = { ".material" };
         constexpr string_view kArrShaderExt[]       = { ".hlsl", ".hlsli" };
@@ -55,7 +55,7 @@ namespace sw::editor
             const string_view*      _pSuffix;
             uint32                  _suffixCount;
             const utf8*             _pCacheKindName;  ///< 이 줄의 파일을 들고 있는 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아닙니다
-            AssetSourceImporterFunc _pfnImportSource; ///< 캐시가 읽기 전에 소스를 굽는 임포터. nullptr 이면 바로 캐시가 다시 읽습니다
+            AssetSourceImporterFunc _pfnImportSource; ///< 캐시가 읽기 전에 소스를 임포트하는 임포터. nullptr 이면 바로 캐시가 다시 읽습니다
         };
 
         template <size_t N>
@@ -66,19 +66,19 @@ namespace sw::editor
 
         // 줄 순서가 곧 **판정 우선순위**다 — 처음 맞는 줄이 이긴다(`findKind` · `findReloadRoute`).
         constexpr AssetMatchRow kArrAssetMatch[] = {
-            {        EditorAssetType::Scene, MatchMode::CookableSource,             nullptr,                              0,      nullptr,                                 nullptr},
-            {       EditorAssetType::Prefab, MatchMode::CookableSource,             nullptr,                              0,     "Prefab",                                 nullptr},
-            {      EditorAssetType::Texture,      MatchMode::Extension,      kArrTextureExt,      countOf( kArrTextureExt ),    "Texture", &TextureBaker::importChangedSourceImage},
-            {       EditorAssetType::Shader,      MatchMode::Extension,       kArrShaderExt,       countOf( kArrShaderExt ),      nullptr,                                 nullptr},
-            {     EditorAssetType::Material,      MatchMode::Extension,     kArrMaterialExt,     countOf( kArrMaterialExt ),   "Material",                                 nullptr},
-            {        EditorAssetType::Audio,      MatchMode::Extension,        kArrAudioExt,        countOf( kArrAudioExt ),      nullptr,                                 nullptr},
-            {    EditorAssetType::AnimGraph,       MatchMode::EndsWith,      kArrAnimSuffix,      countOf( kArrAnimSuffix ),      nullptr,                                 nullptr},
-            {EditorAssetType::DialogueGraph,       MatchMode::EndsWith,  kArrDialogueSuffix,  countOf( kArrDialogueSuffix ),      nullptr,                                 nullptr},
-            {   EditorAssetType::SpriteClip,       MatchMode::EndsWith, kArrSpriteDocSuffix, countOf( kArrSpriteDocSuffix ), "SpriteClip",                                 nullptr},
-            {   EditorAssetType::SpriteClip,      MatchMode::Extension,  kArrSpriteImageExt,  countOf( kArrSpriteImageExt ),      nullptr,                                 nullptr},
-            {      EditorAssetType::TileMap,       MatchMode::EndsWith,   kArrTileMapSuffix,   countOf( kArrTileMapSuffix ),      nullptr,                                 nullptr},
-            {     EditorAssetType::Sequence,       MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),      nullptr,                                 nullptr},
-            {         EditorAssetType::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),      nullptr,                                 nullptr},
+            {        EditorAssetType::Scene, MatchMode::CookableSource,             nullptr,                              0,      nullptr,                                    nullptr},
+            {       EditorAssetType::Prefab, MatchMode::CookableSource,             nullptr,                              0,     "Prefab",                                    nullptr},
+            {      EditorAssetType::Texture,      MatchMode::Extension,      kArrTextureExt,      countOf( kArrTextureExt ),    "Texture", &TextureImporter::importChangedSourceImage},
+            {       EditorAssetType::Shader,      MatchMode::Extension,       kArrShaderExt,       countOf( kArrShaderExt ),      nullptr,                                    nullptr},
+            {     EditorAssetType::Material,      MatchMode::Extension,     kArrMaterialExt,     countOf( kArrMaterialExt ),   "Material",                                    nullptr},
+            {        EditorAssetType::Audio,      MatchMode::Extension,        kArrAudioExt,        countOf( kArrAudioExt ),      nullptr,                                    nullptr},
+            {    EditorAssetType::AnimGraph,       MatchMode::EndsWith,      kArrAnimSuffix,      countOf( kArrAnimSuffix ),      nullptr,                                    nullptr},
+            {EditorAssetType::DialogueGraph,       MatchMode::EndsWith,  kArrDialogueSuffix,  countOf( kArrDialogueSuffix ),      nullptr,                                    nullptr},
+            {   EditorAssetType::SpriteClip,       MatchMode::EndsWith, kArrSpriteDocSuffix, countOf( kArrSpriteDocSuffix ), "SpriteClip",                                    nullptr},
+            {   EditorAssetType::SpriteClip,      MatchMode::Extension,  kArrSpriteImageExt,  countOf( kArrSpriteImageExt ),      nullptr,                                    nullptr},
+            {      EditorAssetType::TileMap,       MatchMode::EndsWith,   kArrTileMapSuffix,   countOf( kArrTileMapSuffix ),      nullptr,                                    nullptr},
+            {     EditorAssetType::Sequence,       MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),      nullptr,                                    nullptr},
+            {         EditorAssetType::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),      nullptr,                                    nullptr},
         };
 
         // 종류마다 한 줄. 줄 순서가 곧 **브라우저 필터 · 도구 패널 · 리소스 카탈로그의 표시 순서**다.

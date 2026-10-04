@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Asset/TextureBaker.h"
+#include "Editor/Common/Asset/TextureImporter.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/map.h"
@@ -107,30 +107,30 @@ namespace sw::editor
         }
 
         /**
-         * @struct TextureBakerInternal
-         * @brief 원본(`textures_raw/`)과 구운 DDS(`textures/`)를 잇는 경로 규칙과 `bake.stamp` 읽기 · 쓰기 · 대조입니다.
+         * @struct TextureImporterInternal
+         * @brief 원본(`textures_raw/`)과 임포트된 DDS(`textures/`)를 잇는 경로 규칙과 `import.stamp` 읽기 · 쓰기 · 대조입니다.
          */
-        struct TextureBakerInternal
+        struct TextureImporterInternal
         {
             /** @brief 원본 이미지를 두는 폴더 이름입니다. 쿠킹이 팩에서 뺍니다(`Config/Engine/PackConfig.json`). */
             static constexpr string_view kRawTextureFolder = "textures_raw";
-            /** @brief 구운 DDS 가 가는, 원본 폴더 옆 폴더 이름입니다. 런타임은 여기의 DDS 만 읽습니다. */
-            static constexpr string_view kBakedTextureFolder = "textures";
+            /** @brief 임포트된 DDS 가 가는, 원본 폴더 옆 폴더 이름입니다. 런타임은 여기의 DDS 만 읽습니다. */
+            static constexpr string_view kImportedTextureFolder = "textures";
             /** @brief 원본 폴더마다 하나 두는 스탬프 파일 이름입니다. */
-            static constexpr string_view kBakeStampFileName = "bake.stamp";
-            /** @brief 스탬프 머리 줄입니다. 형식이나 판정이 바뀌면 올립니다 — 옛 스탬프는 전부 어긋남이 되어 한 번 다시 굽습니다. */
-            static constexpr string_view kBakeStampHeader = "SWTEXBAKE 1";
-            /** @brief 같은 원본 · 규칙에서 다른 바이트를 내게 굽기를 바꾸면 올립니다. 원본 해시에 섞입니다. */
-            static constexpr uint32 kBakerVersion = 1;
+            static constexpr string_view kImportStampFileName = "import.stamp";
+            /** @brief 스탬프 머리 줄입니다. 형식이나 판정이 바뀌면 올립니다 — 옛 스탬프는 전부 어긋남이 되어 한 번 다시 임포트합니다. */
+            static constexpr string_view kImportStampHeader = "SWTEXIMPORT 1";
+            /** @brief 같은 원본 · 규칙에서 다른 바이트를 내게 임포트를 바꾸면 올립니다. 원본 해시에 섞입니다. */
+            static constexpr uint32 kImporterVersion = 1;
 
             /** @brief 스탬프 한 줄입니다. */
             struct StampEntry
             {
                 uint64 _sourceHash{ 0 };
-                uint64 _bakedHash{ 0 };
+                uint64 _importedHash{ 0 };
             };
 
-            /** @brief 굽는 원본 이미지 확장자인지 봅니다. `.dds` · `bake.stamp` · `.meta` 같은 것은 원본이 아닙니다. */
+            /** @brief 임포트하는 원본 이미지 확장자인지 봅니다. `.dds` · `import.stamp` · `.meta` 같은 것은 원본이 아닙니다. */
             static bool isSourceImage( string_view path ) { return FileUtil::hasAnyExtension( path, { ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".hdr" } ); }
 
             /**
@@ -193,7 +193,7 @@ namespace sw::editor
 
                     if ( bHeaderSeen == false )
                     {
-                        if ( line != kBakeStampHeader )
+                        if ( line != kImportStampHeader )
                             return;
                         bHeaderSeen = true;
                         continue;
@@ -205,9 +205,9 @@ namespace sw::editor
                         continue;
 
                     StampEntry entry;
-                    const bool bSourceParsed = StringUtil::parseUint64( line.substr( 0, firstSpace ), entry._sourceHash, 16 );
-                    const bool bBakedParsed  = StringUtil::parseUint64( line.substr( firstSpace + 1, secondSpace - firstSpace - 1 ), entry._bakedHash, 16 );
-                    if ( bSourceParsed && bBakedParsed )
+                    const bool bSourceParsed   = StringUtil::parseUint64( line.substr( 0, firstSpace ), entry._sourceHash, 16 );
+                    const bool bImportedParsed = StringUtil::parseUint64( line.substr( firstSpace + 1, secondSpace - firstSpace - 1 ), entry._importedHash, 16 );
+                    if ( bSourceParsed && bImportedParsed )
                         outMapEntry[string( line.substr( secondSpace + 1 ) )] = entry;
                 }
             }
@@ -215,12 +215,12 @@ namespace sw::editor
             /** @brief 스탬프 본문입니다. 줄은 경로 순이라 같은 표는 같은 바이트입니다. */
             static string makeStampText( const map<string, StampEntry>& mapEntry )
             {
-                string text = string( kBakeStampHeader ) + "\n";
+                string text = string( kImportStampHeader ) + "\n";
                 for ( const auto& [relativePath, entry] : mapEntry )
                 {
                     text += formatHash( entry._sourceHash );
                     text += ' ';
-                    text += formatHash( entry._bakedHash );
+                    text += formatHash( entry._importedHash );
                     text += ' ';
                     text += relativePath;
                     text += '\n';
@@ -235,24 +235,24 @@ namespace sw::editor
             {
                 if ( current._sourceHash == 0 )
                     return "원본을 읽지 못했습니다";
-                if ( current._bakedHash == 0 )
+                if ( current._importedHash == 0 )
                     return "DDS 가 없습니다";
                 if ( pStamped == nullptr )
-                    return "스탬프에 없습니다 (구운 적이 없습니다)";
+                    return "스탬프에 없습니다 (임포트된 적이 없습니다)";
                 if ( pStamped->_sourceHash != current._sourceHash )
-                    return "원본이나 규칙이 바뀌었는데 다시 굽지 않았습니다";
-                if ( pStamped->_bakedHash != current._bakedHash )
-                    return "DDS 가 구운 결과와 다릅니다 (손으로 바꿨습니다)";
+                    return "원본이나 규칙이 바뀌었는데 다시 임포트하지 않았습니다";
+                if ( pStamped->_importedHash != current._importedHash )
+                    return "DDS 가 임포트된 결과와 다릅니다 (손으로 바꿨습니다)";
                 return nullptr;
             }
 
             /**
-             * @brief `textures_raw` 폴더 하나를 그 폴더의 스탬프와 대조하고, BakeStale 이면 어긋난 것을 굽고 스탬프를 다시 씁니다.
+             * @brief `textures_raw` 폴더 하나를 그 폴더의 스탬프와 대조하고, ImportStale 이면 어긋난 것을 임포트하고 스탬프를 다시 씁니다.
              */
-            static void bakeRawFolder( const string& rootDir, const string& rawFolder, const TextureImportConfig& config, TextureBakeMode mode,
-                                       TextureBakeSummary& inoutSummary )
+            static void importRawFolder( const string& rootDir, const string& rawFolder, const TextureImportConfig& config, TextureImportMode mode,
+                                         TextureImportSummary& inoutSummary )
             {
-                const string            stampPath = FileUtil::joinPath( rawFolder, kBakeStampFileName );
+                const string            stampPath = FileUtil::joinPath( rawFolder, kImportStampFileName );
                 map<string, StampEntry> mapStamped;
                 readStamp( stampPath, mapStamped );
 
@@ -273,7 +273,7 @@ namespace sw::editor
 
                     if ( FileUtil::hasExtension( sourcePath, ".hdr" ) )
                     {
-                        inoutSummary._listProblem.push_back( resourcePath + ": HDR 원본은 굽지 않습니다 (디코더가 8비트라 값이 잘립니다)" );
+                        inoutSummary._listProblem.push_back( resourcePath + ": HDR 원본은 임포트하지 않습니다 (디코더가 8비트라 값이 잘립니다)" );
                         continue;
                     }
 
@@ -281,10 +281,10 @@ namespace sw::editor
                     if ( config.findMatchingRule( resourcePath, rule ) == false )
                         rule = TextureImportRule{};
 
-                    const string bakedPath = TextureBaker::makeBakedTexturePath( sourcePath );
+                    const string importedPath = TextureImporter::makeImportedTexturePath( sourcePath );
                     StampEntry   current;
-                    current._sourceHash = TextureBaker::computeSourceHash( sourcePath, rule );
-                    current._bakedHash  = computeFileHash( bakedPath );
+                    current._sourceHash   = TextureImporter::computeSourceHash( sourcePath, rule );
+                    current._importedHash = computeFileHash( importedPath );
 
                     const auto        itStamped = mapStamped.find( relativePath );
                     const utf8* const pReason   = findDriftReason( itStamped != mapStamped.end() ? &itStamped->second : nullptr, current );
@@ -294,24 +294,24 @@ namespace sw::editor
                         continue;
                     }
 
-                    if ( mode == TextureBakeMode::CheckOnly )
+                    if ( mode == TextureImportMode::CheckOnly )
                     {
                         inoutSummary._listProblem.push_back( resourcePath + ": " + pReason );
                         continue;
                     }
 
-                    if ( TextureBaker::bakeTexture( sourcePath, bakedPath, rule ) == false )
+                    if ( TextureImporter::importTexture( sourcePath, importedPath, rule ) == false )
                     {
-                        inoutSummary._listProblem.push_back( resourcePath + ": 굽지 못했습니다" );
+                        inoutSummary._listProblem.push_back( resourcePath + ": 임포트하지 못했습니다" );
                         continue;
                     }
 
-                    current._bakedHash       = computeFileHash( bakedPath );
+                    current._importedHash    = computeFileHash( importedPath );
                     mapCurrent[relativePath] = current;
-                    ++inoutSummary._bakedCount;
+                    ++inoutSummary._importedCount;
                 }
 
-                // 원본이 사라진 줄. 구운 DDS 는 다른 것이 참조할 수 있어 지우지 않는다 — 줄만 지운다.
+                // 원본이 사라진 줄. 임포트된 DDS 는 다른 것이 참조할 수 있어 지우지 않는다 — 줄만 지운다.
                 for ( const auto& [relativePath, entry] : mapStamped )
                 {
                     if ( mapCurrent.find( relativePath ) != mapCurrent.end() )
@@ -319,14 +319,14 @@ namespace sw::editor
                     const string sourcePath = FileUtil::joinPath( rawFolder, relativePath );
                     if ( FileUtil::fileExists( sourcePath ) )
                         continue; // 원본은 있다 — 위에서 어긋남 · 실패로 이미 보고했다
-                    if ( mode == TextureBakeMode::CheckOnly )
+                    if ( mode == TextureImportMode::CheckOnly )
                         inoutSummary._listProblem.push_back( sourcePath.substr( rootDir.size() + 1 ) + ": 원본이 없는데 스탬프에 남아 있습니다" );
                 }
 
-                if ( mode == TextureBakeMode::CheckOnly )
+                if ( mode == TextureImportMode::CheckOnly )
                     return;
 
-                // 내용이 같으면 쓰지 않는다 — 맞는 트리에서 굽기를 돌려도 작업 트리가 더러워지지 않는다. 체크아웃이 줄 끝을 CRLF 로
+                // 내용이 같으면 쓰지 않는다 — 맞는 트리에서 임포트를 돌려도 작업 트리가 더러워지지 않는다. 체크아웃이 줄 끝을 CRLF 로
                 // 바꿔 둘 수 있으므로 CR 은 빼고 비교한다.
                 const bool bStampExists = FileUtil::fileExists( stampPath );
                 if ( mapCurrent.empty() && bStampExists == false )
@@ -345,9 +345,9 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_LOG_CALLER( "TextureBaker" );
+    SW_LOG_CALLER( "TextureImporter" );
 
-    bool TextureBaker::bakeTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureBakeResult* pOutResult )
+    bool TextureImporter::importTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult )
     {
         if ( pOutResult != nullptr )
         {
@@ -384,7 +384,7 @@ namespace sw::editor
         baseImage.slicePitch           = baseImage.rowPitch * static_cast<size_t>( rawImage._height );
         baseImage.pixels               = rawImage._bytes.data();
 
-        // WIC 필터는 Windows 에만 있고 결과가 OS 구현에 달렸다. 구운 DDS 를 커밋하고 그 해시를 스탬프에 적으므로, 어디서 굽든 같은
+        // WIC 필터는 Windows 에만 있고 결과가 OS 구현에 달렸다. 임포트된 DDS 를 커밋하고 그 해시를 스탬프에 적으므로, 어디서 임포트하든 같은
         // 바이트가 나오는 DirectXTex 자체 필터만 쓴다.
         constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = DirectX::TEX_FILTER_DEFAULT | DirectX::TEX_FILTER_FORCE_NON_WIC;
 
@@ -496,14 +496,14 @@ namespace sw::editor
             pOutResult->_bSuccess        = SW_TRUE;
         }
 
-        SW_LOG_INFO( "Baked texture: %# -> %# (Format: %d, Mips: %u, %llu -> %llu bytes)",
+        SW_LOG_INFO( "Imported texture: %# -> %# (Format: %d, Mips: %u, %llu -> %llu bytes)",
                      sourcePath.data(), outputPath.data(), targetFormat, mipCount,
                      FileUtil::getFileSize( sourcePath ), outputSizeBytes );
 
         return true;
     }
 
-    void TextureBaker::applyChannelManipulations( RawImageData& rawImage, const TextureImportRule& rule, size_t totalPixels )
+    void TextureImporter::applyChannelManipulations( RawImageData& rawImage, const TextureImportRule& rule, size_t totalPixels )
     {
         if ( rawImage._bytes.size() < totalPixels * 4 )
             return;
@@ -536,44 +536,44 @@ namespace sw::editor
         }
     }
 
-    bool TextureBaker::importChangedSourceImage( string_view relativePath )
+    bool TextureImporter::importChangedSourceImage( string_view relativePath )
     {
         if ( FileUtil::hasExtension( relativePath, ".dds" ) )
             return false;
 
         if ( FileUtil::hasExtension( relativePath, ".hdr" ) )
         {
-            SW_LOG_WARNING( "HDR 은 자동 베이크 대상이 아닙니다 (8비트로 잘린다): %#", relativePath );
+            SW_LOG_WARNING( "HDR 은 자동 임포트 대상이 아닙니다 (8비트로 잘린다): %#", relativePath );
             return true;
         }
 
         const string& resourceRoot = ResourceUtil::getRootFolderPath();
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
-        if ( makeBakedTexturePath( normalized ).empty() )
+        if ( makeImportedTexturePath( normalized ).empty() )
         {
-            SW_LOG_WARNING( "소스 이미지는 `%#` 아래에 있어야 구워집니다: %#", TextureBakerInternal::kRawTextureFolder, relativePath );
+            SW_LOG_WARNING( "소스 이미지는 `%#` 아래에 있어야 임포트됩니다: %#", TextureImporterInternal::kRawTextureFolder, relativePath );
             return true;
         }
 
-        // 바뀐 파일 하나가 아니라 어긋난 것 전부를 일괄 굽기로 굽는다 — 스탬프를 적는 길이 하나여야 에디터에서 구운 것과
-        // `App --bake-textures` 로 구운 것이 같은 판정을 받는다. 내용이 그대로면(저장만 다시 했다) 굽지 않는다.
-        // 설정 파일이 없으면 기본 규칙이다. 깨졌으면 로드가 알리고 기본 규칙으로 굽는다.
+        // 바뀐 파일 하나가 아니라 어긋난 것 전부를 일괄 임포트로 임포트한다 — 스탬프를 적는 길이 하나여야 에디터에서 임포트된 것과
+        // `App --import-textures` 로 임포트된 것이 같은 판정을 받는다. 내용이 그대로면(저장만 다시 했다) 임포트하지 않는다.
+        // 설정 파일이 없으면 기본 규칙이다. 깨졌으면 로드가 알리고 기본 규칙으로 임포트한다.
         TextureImportConfig config{};
         (void)config.loadFromFile( EditorUtil::resolveEditorConfigFile( getEditorData()._textureImportConfigFile.c_str() ) );
-        const TextureBakeSummary summary = bakeAllTextures( resourceRoot, config, TextureBakeMode::BakeStale );
+        const TextureImportSummary summary = importAllTextures( resourceRoot, config, TextureImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
-            SW_LOG_ERROR( "텍스처 베이크 실패: %#", problem.c_str() );
+            SW_LOG_ERROR( "텍스처 임포트 실패: %#", problem.c_str() );
         }
 
-        SW_LOG_INFO( "텍스처 일괄 굽기: %# 바뀜 -> %#개 구움", relativePath, summary._bakedCount );
+        SW_LOG_INFO( "텍스처 일괄 임포트: %# 바뀜 -> %#개 임포트함", relativePath, summary._importedCount );
         return true;
     }
 
-    TextureBakeSummary TextureBaker::bakeAllTextures( string_view resourceRoot, const TextureImportConfig& config, TextureBakeMode mode )
+    TextureImportSummary TextureImporter::importAllTextures( string_view resourceRoot, const TextureImportConfig& config, TextureImportMode mode )
     {
-        TextureBakeSummary summary;
-        const string       rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        TextureImportSummary summary;
+        const string         rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
 
         vector<string> listFolder;
         if ( rootDir.empty() || FileUtil::collectFolders( rootDir, listFolder, true ) == false )
@@ -586,26 +586,26 @@ namespace sw::editor
         for ( const string& folder : listFolder )
         {
             const string normalizedFolder = FileUtil::normalizeSeparators( folder );
-            if ( FileUtil::getFileNamePart( normalizedFolder ) == TextureBakerInternal::kRawTextureFolder )
-                TextureBakerInternal::bakeRawFolder( rootDir, normalizedFolder, config, mode, summary );
+            if ( FileUtil::getFileNamePart( normalizedFolder ) == TextureImporterInternal::kRawTextureFolder )
+                TextureImporterInternal::importRawFolder( rootDir, normalizedFolder, config, mode, summary );
         }
         return summary;
     }
 
-    string TextureBaker::makeBakedTexturePath( string_view rawTexturePath )
+    string TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
     {
         string rawFolder;
         string relativePath;
-        if ( TextureBakerInternal::splitRawPath( rawTexturePath, rawFolder, relativePath ) == false )
+        if ( TextureImporterInternal::splitRawPath( rawTexturePath, rawFolder, relativePath ) == false )
             return {};
 
-        const string domainFolder = FileUtil::getDirectoryPart( rawFolder );
-        const string bakedFolder  = domainFolder.empty() ? string( TextureBakerInternal::kBakedTextureFolder )
-                                                         : FileUtil::joinPath( domainFolder, TextureBakerInternal::kBakedTextureFolder );
-        return FileUtil::replaceExtension( FileUtil::joinPath( bakedFolder, relativePath ), ".dds" );
+        const string domainFolder   = FileUtil::getDirectoryPart( rawFolder );
+        const string importedFolder = domainFolder.empty() ? string( TextureImporterInternal::kImportedTextureFolder )
+                                                           : FileUtil::joinPath( domainFolder, TextureImporterInternal::kImportedTextureFolder );
+        return FileUtil::replaceExtension( FileUtil::joinPath( importedFolder, relativePath ), ".dds" );
     }
 
-    uint64 TextureBaker::computeSourceHash( string_view sourcePath, const TextureImportRule& rule )
+    uint64 TextureImporter::computeSourceHash( string_view sourcePath, const TextureImportRule& rule )
     {
         vector<uint8> bytes;
         if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
@@ -614,8 +614,8 @@ namespace sw::editor
         // 규칙은 **해석한 결과**로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시다.
         const SwizzleLayoutInternal&           layout = swizzleLayoutInternal( rule._swizzle );
         StringBuilder<constant::kMaxBuffer256> ruleText;
-        ruleText.appendFormat( "baker=%#;format=%#;channel=%#%#%#%#;opaque=%#;mips=%#;srgb=%#;invertGreen=%#",
-                               TextureBakerInternal::kBakerVersion,
+        ruleText.appendFormat( "importer=%#;format=%#;channel=%#%#%#%#;opaque=%#;mips=%#;srgb=%#;invertGreen=%#",
+                               TextureImporterInternal::kImporterVersion,
                                static_cast<uint32>( resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE ) ),
                                static_cast<uint32>( layout._arrSourceChannel[0] ), static_cast<uint32>( layout._arrSourceChannel[1] ),
                                static_cast<uint32>( layout._arrSourceChannel[2] ), static_cast<uint32>( layout._arrSourceChannel[3] ),
@@ -626,7 +626,7 @@ namespace sw::editor
         return StringUtil::computeHash64( ruleText.c_str(), ruleText.size(), false, contentHash );
     }
 
-    string TextureBaker::makeDefaultImportConfigPath()
+    string TextureImporter::makeDefaultImportConfigPath()
     {
         const EditorData defaults{};
         const string     projectRoot = EditorUtil::getProjectRootPath();

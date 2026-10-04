@@ -933,7 +933,7 @@ SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndAreFreed )
 SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
 {
     // 머티리얼은 **실제 에셋**을 읽어 색만 바꾼다. XML 을 손으로 지어내면 퍼뮤테이션 선언(_permutations)이
-    // 빠져 구워둔 셰이더 변형과 맞지 않는 머티리얼이 만들어진다 — 그러면 검증하려던 것과 다른 걸 재게 된다.
+    // 빠져 쿠킹해 둔 셰이더 변형과 맞지 않는 머티리얼이 만들어진다 — 그러면 검증하려던 것과 다른 걸 재게 된다.
     auto makeMaterial = []( const utf8* pColor ) -> sw::shared_ptr<sw::Material>
     {
         // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
@@ -1006,7 +1006,7 @@ SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
  * @details 배치는 **PSO 하나로** 그린다. 그래서 배치를 묶는 키에 셰이더 퍼뮤테이션이 들어 있지 않으면,
  *          같은 .hlsl 을 쓰지만 정적 스위치가 다른 두 머티리얼이 한 배치로 접히고 한쪽 퍼뮤테이션이
  *          통째로 사라진다 — 키가 셰이더 **경로**뿐이면 머티리얼이 선언한 MATERIAL_BLEND_TRANSLUCENT 같은 것이
- *          구워지기만 하고 한 번도 걸리지 않는다.
+ *          쿠킹되기만 하고 한 번도 걸리지 않는다.
  *
  *          화면으로는 잡기 어렵다(퍼뮤테이션이 빠져도 그림은 그럴듯하게 나온다). 그래서 배치가 갈리는지와
  *          배치가 가리키는 퍼뮤테이션의 define 을 CPU 에서 직접 본다.

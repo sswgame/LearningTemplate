@@ -167,7 +167,7 @@ namespace sw::editor
         if ( route._pCacheKindName == nullptr )
             return false;
 
-        // 소스를 굽는 종류는 굽는 것이 리로드다 — 구운 결과의 쓰기가 다음 감시 이벤트로 온다.
+        // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다.
         if ( route._pfnImportSource != nullptr && route._pfnImportSource( relativePath ) )
             return true;
 

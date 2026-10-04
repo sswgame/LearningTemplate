@@ -44,22 +44,22 @@ namespace sw
 
     /**
      * @brief 저작 소스 경로와 쿠킹본 경로 사이의 이름 규칙입니다. 로더(씬 · 프리팹)와 쿠커가 모두 여기를 지납니다.
-     * @details 규칙은 여기 한 벌입니다 — 씬 로더 · 씬 쿠커 · 프리팹 로더 · 프리팹 쿠커가 각자 확장자를 바꾸면 굽는 이름과 읽는 이름이 어긋난다.
+     * @details 규칙은 여기 한 벌입니다 — 씬 로더 · 씬 쿠커 · 프리팹 로더 · 프리팹 쿠커가 각자 확장자를 바꾸면 쿠킹하는 이름과 읽는 이름이 어긋난다.
      */
     struct SW_API AssetCookPath
     {
         /**
-         * @brief 경로의 쿠킹본 경로입니다. 굽는 것이 아니면 빈 글입니다.
+         * @brief 경로의 쿠킹본 경로입니다. 쿠킹하는 것이 아니면 빈 글입니다.
          * @details `.scene.xml` → `.scene.bin`, `.prefab.xml` · `.prefab.json` → `.prefab.bin`. 이미 쿠킹본이면 그대로, 확장자 없는
          *          `.scene` · `.prefab` 은 `.bin` 을 붙입니다. 대소문자는 가리지 않습니다.
          */
         static string toCookedPath( string_view path );
-        /** @brief 쿠커가 굽는 저작 소스(`.scene.xml` · `.prefab.xml` · `.prefab.json`)이면 true 입니다. */
+        /** @brief 쿠커가 쿠킹하는 저작 소스(`.scene.xml` · `.prefab.xml` · `.prefab.json`)이면 true 입니다. */
         static bool isCookableSource( string_view path );
         /**
          * @brief @p path 가 @p kind(`Scene` · `Prefab`)의 저작 소스이면 true 입니다. 다른 종류는 늘 false 입니다.
          * @details 에디터가 "이것은 씬 · 프리팹인가" 를 이것으로 묻는다(`EditorAssetTypeRegistry`). 에디터가 접미사 표를 따로 들면
-         *          쿠커가 굽지 않는 이름(`_scene.xml` · 확장자 없는 `.scene` · 쿠킹본 `.prefab.bin` 등)도 씬 · 프리팹으로 열고 저장해,
+         *          쿠커가 쿠킹하지 않는 이름(`_scene.xml` · 확장자 없는 `.scene` · 쿠킹본 `.prefab.bin` 등)도 씬 · 프리팹으로 열고 저장해,
          *          에디터에서는 되는데 배포본에는 없게 된다.
          */
         static bool isCookableSource( string_view path, AssetKind kind );
@@ -69,7 +69,7 @@ namespace sw
          * @brief @p path 를 @p kind 의 저작 소스 이름으로 만듭니다 — 이미 그렇다면 그대로, 쿠킹본 · 확장자 없는 이름(`.scene.bin` · `.scene`)은 정본 접미사로
          *        바꾸고, 그 밖에는 정본 접미사(`.scene.xml`)를 붙입니다(끝의 `.xml` 은 겹치지 않게 그 자리에서). 씬 · 프리팹이 아니면 그대로입니다.
          * @details 씬을 쓰는 자리(`SceneManager::saveActiveScene`)가 이것을 지난다 — 저장 대화상자에 "level" 을 적거나 `.scene.bin` 을 다시
-         *          저장해도 쿠커가 굽는 이름이 된다.
+         *          저장해도 쿠커가 쿠킹하는 이름이 된다.
          */
         static string toSourcePath( string_view path, AssetKind kind );
     };

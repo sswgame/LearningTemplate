@@ -8,7 +8,7 @@ namespace sw
 {
     /**
      * @brief Dev 호스트의 활성 게임 팩 선택입니다(배포 콘텐츠는 Resource/.../data).
-     * @details Shipping 은 베이크된 JSON 기본값을 쓰며 디스크의 Config/Game 을 요구하지 않습니다.
+     * @details Shipping 은 생성된 JSON 기본값을 쓰며 디스크의 Config/Game 을 요구하지 않습니다.
      */
     REFLECT()
     struct SW_API GameConfig : IConfig

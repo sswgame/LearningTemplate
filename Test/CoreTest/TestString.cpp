@@ -26,7 +26,7 @@ SW_TEST_CASE( StringTest, WideCharHashIsNotTruncatedToOneByte )
     SW_EXPECT_TRUE( sw::StringUtil::computeHash64( arrWideA, 1 ) != sw::StringUtil::computeHash64( arrWideB, 1 ) );
     SW_EXPECT_TRUE( sw::StringUtil::computeHash32( arrWideA, 1 ) != sw::StringUtil::computeHash32( arrWideB, 1 ) );
 
-    // ASCII utf8 값은 바뀌면 안 된다 — 셰이더 베이크 스탬프 같은 것이 이 값으로 디스크에 남는다.
+    // ASCII utf8 값은 바뀌면 안 된다 — 셰이더 쿠킹 스탬프 같은 것이 이 값으로 디스크에 남는다.
     SW_EXPECT_EQUAL( sw::StringUtil::kOffset64, sw::StringUtil::computeHash64( "", 0, false ) );
     SW_EXPECT_EQUAL( ( sw::StringUtil::kOffset64 ^ uint64{ 'a' } ) * sw::StringUtil::kPrime64,
                      sw::StringUtil::computeHash64( "a", 1, false ) );

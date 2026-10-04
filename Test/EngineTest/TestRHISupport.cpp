@@ -375,8 +375,8 @@ SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatching
 }
 
 /**
- * @brief [VulkanApiVersionTest] 물리 디바이스 선택이 요구 판(셰이더 굽기 타깃) 미만의 디바이스를 거른다.
- * @details 셰이더는 vulkan1.3 타깃(SPIR-V 1.6)으로 굽는다. 1.2 디바이스는 SPIR-V 1.5 까지만 받으므로 그 디바이스를 고르면 셰이더 모듈 전부가 무효다.
+ * @brief [VulkanApiVersionTest] 물리 디바이스 선택이 요구 판(셰이더 쿠킹 타깃) 미만의 디바이스를 거른다.
+ * @details 셰이더는 vulkan1.3 타깃(SPIR-V 1.6)으로 쿠킹한다. 1.2 디바이스는 SPIR-V 1.5 까지만 받으므로 그 디바이스를 고르면 셰이더 모듈 전부가 무효다.
  *          맨 위 변형 비트는 판 비교에 넣지 않는다.
  */
 SW_TEST_CASE( VulkanApiVersionTest, DeviceBelowTheShaderTargetIsRejected )
@@ -394,11 +394,11 @@ SW_TEST_CASE( VulkanApiVersionTest, DeviceBelowTheShaderTargetIsRejected )
 }
 
 /**
- * @brief [VulkanApiVersionTest] 구운 Vulkan SPIR-V 의 판이 디바이스 요구 판의 타깃과 같다.
- * @details 셰이더 굽기 타깃(`-fspv-target-env`)과 물리 디바이스의 최소 판은 `VulkanRHIApiVersion` 하나에서 나온다. 한쪽만 바꾸거나 다시 굽지 않으면
+ * @brief [VulkanApiVersionTest] 쿠킹된 Vulkan SPIR-V 의 판이 디바이스 요구 판의 타깃과 같다.
+ * @details 셰이더 쿠킹 타깃(`-fspv-target-env`)과 물리 디바이스의 최소 판은 `VulkanRHIApiVersion` 하나에서 나온다. 한쪽만 바꾸거나 다시 쿠킹하지 않으면
  *          디바이스가 받지 못하는 판의 모듈이 남는다. 커밋된 vulkan 폴더 .spv 헤더의 판을 읽어 대조한다.
  */
-SW_TEST_CASE( VulkanApiVersionTest, BakedVulkanSpirvMatchesTheRequiredApi )
+SW_TEST_CASE( VulkanApiVersionTest, CookedVulkanSpirvMatchesTheRequiredApi )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
@@ -426,12 +426,12 @@ SW_TEST_CASE( VulkanApiVersionTest, BakedVulkanSpirvMatchesTheRequiredApi )
             std::memcpy( &magic, bytes.data(), sizeof( magic ) );
             std::memcpy( &version, bytes.data() + sizeof( magic ), sizeof( version ) );
             SW_EXPECT_TRUE_MSG( magic == kSpirvMagic, ( spirvPath + ": SPIR-V 가 아니다" ).c_str() );
-            SW_EXPECT_TRUE_MSG( version == expectedVersion, ( spirvPath + ": 디바이스 요구 판과 다른 SPIR-V 판으로 구워졌다 — 다시 구울 것" ).c_str() );
+            SW_EXPECT_TRUE_MSG( version == expectedVersion, ( spirvPath + ": 디바이스 요구 판과 다른 SPIR-V 판으로 쿠킹됐다 — 다시 쿠킹할 것" ).c_str() );
             ++checkedCount;
         }
     }
     if ( checkedCount == 0 )
-        SW_TEST_SKIP( "No baked Vulkan SPIR-V found (App.exe --bake-shaders)" );
+        SW_TEST_SKIP( "No cooked Vulkan SPIR-V found (App.exe --cook-shaders)" );
 }
 
 /**

@@ -39,7 +39,7 @@ namespace sw
                 }
             }
 
-            /** @brief 오브젝트의 상태를 파일 id 로 적은 XML 입니다. 굽기 전 · 구운 뒤의 상태를 견주는 기준입니다. */
+            /** @brief 오브젝트의 상태를 파일 id 로 적은 XML 입니다. 쿠킹 전 · 쿠킹된 뒤의 상태를 견주는 기준입니다. */
             static string makeStateText( const Scene& scene, const GameObject* pObject )
             {
                 ObjectSavedIdMap mapSavedId;
@@ -51,7 +51,7 @@ namespace sw
 
             /**
              * @brief 씬에서 모르는 타입으로 지어진 컴포넌트(`MissingComponent`)를 오브젝트 · 원래 타입 이름과 함께 오류로 알리고 그 수를 돌려줍니다.
-             * @details 그 컴포넌트는 원문 그대로 구워져 배포본에서도 `MissingComponent` 로 읽힌다 — 동작하지 않는 컴포넌트가 실린다.
+             * @details 그 컴포넌트는 원문 그대로 쿠킹돼 배포본에서도 `MissingComponent` 로 읽힌다 — 동작하지 않는 컴포넌트가 실린다.
              */
             static uint32 reportMissingComponents( const Scene& scene )
             {
@@ -88,10 +88,10 @@ namespace sw
     {
         if ( pOutMissingComponentCount != nullptr )
             *pOutMissingComponentCount = 0;
-        // **런타임이 읽는 그대로 짓고 굽는다.** 엔티티를 하나씩 따로 읽으면 부모가 문서에서 뒤에 있는 자식이 부모를 찾지 못하고 저장이
+        // **런타임이 읽는 그대로 짓고 쿠킹한다.** 엔티티를 하나씩 따로 읽으면 부모가 문서에서 뒤에 있는 자식이 부모를 찾지 못하고 저장이
         // 그 연결을 지운다(배포본에서 자식이 루트가 된다). 그래서 문서 전체를 `Scene::instantiate`(프리팹 스폰 · 묶음 부착까지 런타임과
-        // 같은 길)로 짓고, 구운 문서를 다시 지어 엔티티마다 상태 전체를 견준다(컴포넌트 타입 목록만 보면 값이 어긋나도 통과한다).
-        // 엔티티는 파일 id 로 찾는다 — 구운 상태의 부착도 파일 id 로만 부모를 가리킨다. id 없는 엔티티는 읽는 쪽이 받지 않는 문서다.
+        // 같은 길)로 짓고, 쿠킹된 문서를 다시 지어 엔티티마다 상태 전체를 견준다(컴포넌트 타입 목록만 보면 값이 어긋나도 통과한다).
+        // 엔티티는 파일 id 로 찾는다 — 쿠킹된 상태의 부착도 파일 id 로만 부모를 가리킨다. id 없는 엔티티는 읽는 쪽이 받지 않는 문서다.
         for ( const SceneDocument::SceneObjectNode& entity : inoutDoc._listSceneObjectNode )
         {
             if ( entity._fileId == 0 )
@@ -101,7 +101,7 @@ namespace sw
             }
         }
 
-        // 쿠킹 전용 씬이다. 실제 씬 매니저의 것을 쓰면 굽는 동안 만든 임시 오브젝트가 실제 씬에 남는다.
+        // 쿠킹 전용 씬이다. 실제 씬 매니저의 것을 쓰면 쿠킹하는 동안 만든 임시 오브젝트가 실제 씬에 남는다.
         Scene source{ "SceneCooker.Source" };
         if ( source.instantiate( inoutDoc ) == false )
             return 0;
@@ -133,7 +133,7 @@ namespace sw
             }
         }
 
-        // **구운 것을 다시 지어 본다.** 모르는 컴포넌트 타입 · 값이 바뀌는 필드 · 부모를 잃는 부착이 있으면 그 엔티티의 상태가 어긋나고, 그
+        // **쿠킹된 것을 다시 지어 본다.** 모르는 컴포넌트 타입 · 값이 바뀌는 필드 · 부모를 잃는 부착이 있으면 그 엔티티의 상태가 어긋나고, 그
         // 엔티티는 XML 로 남는다. 쿠킹이 조용히 무언가를 떨어뜨리지 않는다.
         Scene verify{ "SceneCooker.Verify" };
         if ( verify.instantiate( cooked ) == false )
@@ -192,7 +192,7 @@ namespace sw
             return 0;
         }
 
-        // 굽는 것은 씬을 짓는 일이다 — 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleTypes`)라야 컴포넌트가 제 타입으로 지어진다.
+        // 쿠킹하는 것은 씬을 짓는 일이다 — 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleTypes`)라야 컴포넌트가 제 타입으로 지어진다.
         if ( engine::getTypeRegistry().areAllModuleTypesRegistered() == false )
         {
             SW_LOG_ERROR( "Scene cook ran before every module registered its types - nothing is cooked (cook after the ModuleTypes startup step)" );
@@ -220,7 +220,7 @@ namespace sw
                 continue;
             }
 
-            // 굽기 전에 "상태가 있는 엔티티" 수를 세 둔다. 굽고 나면 XML 이 비워져 셀 수 없다.
+            // 쿠킹 전에 "상태가 있는 엔티티" 수를 세 둔다. 쿠킹하고 나면 XML 이 비워져 셀 수 없다.
             uint32 statefulCount{ 0 };
             for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
             {
@@ -230,7 +230,7 @@ namespace sw
 
             uint32       missingComponentCount{ 0 };
             const uint32 cookedCount = cookEntityState( doc, &missingComponentCount );
-            // 모르는 타입의 컴포넌트는 원문 그대로 구워져 배포본에서도 동작하지 않는다. 그 씬은 쓰지 않고 실패로 센다 — 빌드가 선다.
+            // 모르는 타입의 컴포넌트는 원문 그대로 쿠킹돼 배포본에서도 동작하지 않는다. 그 씬은 쓰지 않고 실패로 센다 — 빌드가 선다.
             if ( missingComponentCount > 0 )
             {
                 SW_LOG_ERROR( "Scene cook: '%#' has %# components of unknown type - not cooked", scenePath, missingComponentCount );
@@ -238,7 +238,7 @@ namespace sw
                 continue;
             }
             // 이 비교는 **모든 빌드에서** 돌아야 한다. 아래 요약은 `SW_LOG_INFO` 라 Shipping 에서
-            // 통째로 사라지는데, "구웠다고 했지만 실은 XML 그대로" 는 그때도 알아야 할 일이다.
+            // 통째로 사라지는데, "쿠킹했다고 했지만 실은 XML 그대로" 는 그때도 알아야 할 일이다.
             if ( cookedCount < statefulCount )
             {
                 SW_LOG_WARNING( "Scene '%#': %# of %# entities could not be cooked to binary state - they keep XML.",

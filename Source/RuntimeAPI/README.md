@@ -21,8 +21,8 @@
 ## C-ABI 경계
 
 - 모듈이 내보내는 진입점은 `extern "C"` + `SW_MODULE_API` 함수뿐이다 — `get<Game|Editor>ModuleAbiVersion` · `get…ModuleAbiStamp` ·
-  `export<Game|Editor>Api`(함수 포인터 표 `GameAPI` · `EditorAPI` 를 채운다). 에디터 모듈은 헤드리스 텍스처 굽기 진입점
-  `bakeEditorTextures`(`kBakeEditorTexturesSymbol`, `App --bake-textures` · `--check-textures`)도 내보낸다.
+  `export<Game|Editor>Api`(함수 포인터 표 `GameAPI` · `EditorAPI` 를 채운다). 에디터 모듈은 헤드리스 텍스처 임포트 진입점
+  `importEditorTextures`(`kImportEditorTexturesSymbol`, `App --import-textures` · `--check-textures`)도 내보낸다.
 - 호스트는 표를 받기 전에 버전 · 스탬프(`ABI/ModuleAbi.h` 의 `kModuleAbiVersion` · `kModuleAbiStamp`)를 대조하고, 다르면 그 이미지를 쓰지 않는다.
   주의: `GameAPI` · `EditorAPI` 에 항목을 더하거나 순서를 바꾸면 `kModuleAbiVersion` 을 올리고 스탬프를 고친다.
 - 경계를 넘는 객체는 불투명 핸들(`ABI/RuntimeHandles.h` — `WindowHandle` · `RHIDeviceHandle` · `EditorHandle` · `GameHandle` · `TextureHandle`)이다.

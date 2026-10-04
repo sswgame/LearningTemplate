@@ -6,7 +6,7 @@
  * 조명 식은 포워드와 **같은 함수**(lighting.hlsli 의 swShadeLights)를 부른다. 두 경로가 각자
  * 식을 들고 있으면 반드시 갈라진다("경로마다 다른 그림").
  *
- * 월드 위치는 깊이에서 복원한다(swComputeWorldPositionFromDepth). G버퍼에 위치를 굽지 않는 이유는
+ * 월드 위치는 깊이에서 복원한다(swComputeWorldPositionFromDepth). G버퍼에 위치를 저장하지 않는 이유는
  * 첨부 하나를 통째로 아끼기 때문이고, 언리얼도 같은 선택을 한다.
  */
 

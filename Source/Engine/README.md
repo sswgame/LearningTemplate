@@ -20,7 +20,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 | 5 | `Graphics`(Renderer 제외) · `Window` | RHI · 셰이더 · 머티리얼 · 메시 · 텍스처 — **디바이스와 GPU 에셋**. 창은 표면(`Common/IRenderSurface`)으로만 RHI 에 보인다. |
 | 6 | `Input` · `Object` | 컴포넌트 모델. 컴포넌트가 머티리얼·메시(5)를 든다 — 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 드는 것과 같은 자리. |
 | 7 | `Scene` · `Sequencer` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈. **월드는 액터를 알고 액터는 월드를 모른다.** |
-| 8 | `Graphics/Renderer` · `Module` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Bake)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. |
+| 8 | `Graphics/Renderer` · `Module` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Cook)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. |
 | 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
 
 강결합 묶음은 없습니다 — 이 표는 DAG 이고 `CheckEngineLayers` 가 그대로 강제합니다.
@@ -37,8 +37,8 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - RHI 와 렌더러는 창을 `Common/IRenderSurface` 로만 봅니다. `IWindow` 가 구현하고 `EngineLoop` 이 넘깁니다(`RHI::initialize( pSurface )`).
   렌더러의 첨부 크기는 창이 아니라 디바이스의 백버퍼 크기(`IRHIDevice::getBackBufferWidth`)입니다.
 - 렌더러는 호스트가 내주는 선택 서비스입니다(`EngineServiceList.xxx` 의 `_pFrameRenderer`) — Scene 이 `FrameRenderer*` 를 들지 않습니다.
-- 기능 모듈은 오브젝트 위에(`SequencePlayerComponent` 는 `Sequencer/`), 정책은 메커니즘 위에(셰이더 굽기의 "무엇을 · 전부"는
-  `Renderer/Bake/ShaderBakeDriver`, 컴파일 메커니즘은 `Graphics/Shader`) 있습니다.
+- 기능 모듈은 오브젝트 위에(`SequencePlayerComponent` 는 `Sequencer/`), 정책은 메커니즘 위에(셰이더 쿠킹의 "무엇을 · 전부"는
+  `Renderer/Cook/ShaderCookDriver`, 컴파일 메커니즘은 `Graphics/Shader`) 있습니다.
 - 리플렉션 타입의 **인코딩**(`ReflectAny` · `Rpc`)은 Serialization 이 갖습니다. Core 기능만 쓰는 값 타입은 Core 에 둡니다
   (`Core/String/TagID.h` · `Core/Container/ComponentHandle.h`). 설정은 `RHITypes.h` 대신 `Config/RHIBackendType.h` 만 봅니다.
 
@@ -96,7 +96,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   - `EngineInitStepList.xxx`: 기동 단계의 등록표(X-macro). 줄 순서가 초기화 순서이고, 줄마다 단계 이름 · 그 초기화에 거는 메모리 태그 ·
     먼저 서야 하는 단계 `{ A, B }` 를 적습니다. 의존이 자기보다 아래 줄이거나 오타면 컴파일 오류이고(`EngineInitSequence.cpp` 의 static_assert),
     의존만으로 위상 정렬한 순서가 줄 순서와 같아야 합니다(`EngineInitSequenceTest.TableIsWrittenInStartupOrder`).
-    `ModuleTypes` 단계(호스트가 타입 공급자 — GF · 킷 · 게임 모듈 — 를 올려 등록을 끝냄)가 서야 씬을 읽고 굽습니다(`Headless` 가 그 뒤).
+    `ModuleTypes` 단계(호스트가 타입 공급자 — GF · 킷 · 게임 모듈 — 를 올려 등록을 끝냄)가 서야 씬을 읽고 쿠킹합니다(`Headless` 가 그 뒤).
   - `EngineInitSequence`: 표를 읽어 초기화(`initializeAll`) → 초기화한 단계만 역순 종료(`shutdownAll`) → **모든 단계**를 역순 해제(`destroyAll`).
     단계 본문은 호스트가 줄마다 구조체 하나 `<단계>StartupStep`(`initialize` · `shutdown` · `destroy`, `EngineInitStepDefaults` 상속)로 줍니다 —
     `EngineLoop.cpp` 와 시험 하네스(`Test/TestFramework/main.cpp`)가 같은 표를 씁니다. 구조체가 빠지면 컴파일 오류입니다.

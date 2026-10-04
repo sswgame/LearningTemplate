@@ -498,8 +498,8 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
 }
 
 /**
- * @brief [PrefabTest] 엔진이 저작 프리팹(XML · JSON, 하위 폴더 포함)을 쿠킹본(.prefab.bin)으로 굽는다 — 읽지 못한 것 · 같은 쿠킹본을 쓰는 둘은 실패로 센다
- * @details 씬처럼 엔진이 굽는다(`App --cook-scenes` 가 함께 부른다, 언리얼 쿡 커맨드렛 자리). 형식을 따로 드는 외부 쿠커는 한 형식만 굽기 쉽다 —
+ * @brief [PrefabTest] 엔진이 저작 프리팹(XML · JSON, 하위 폴더 포함)을 쿠킹본(.prefab.bin)으로 쿠킹한다 — 읽지 못한 것 · 같은 쿠킹본을 쓰는 둘은 실패로 센다
+ * @details 씬처럼 엔진이 쿠킹한다(`App --cook-scenes` 가 함께 부른다, 언리얼 쿡 커맨드렛 자리). 형식을 따로 드는 외부 쿠커는 한 형식만 쿠킹 쉽다 —
  *          `.prefab.json` 이 빠지면 Shipping 에서 쿠킹본이 없어 스폰이 실패한다.
  */
 SW_TEST_CASE( PrefabTest, EngineCooksXmlAndJsonPrefabs )

@@ -97,7 +97,7 @@ namespace sw
         if ( canonical.empty() )
             return string( path );
 
-        // 같은 종류의 굽지 않는 이름(쿠킹본 · 확장자 없는 이름)은 그 접미사를 정본으로 바꾼다.
+        // 같은 종류의 쿠킹하지 않는 이름(쿠킹본 · 확장자 없는 이름)은 그 접미사를 정본으로 바꾼다.
         for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
         {
             if ( suffix._bSource == false && suffix._kind == kind && StringUtil::endsWith( path, suffix._source, true ) )

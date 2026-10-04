@@ -65,7 +65,7 @@ kDirToolsReflectionTemplates = "Tools/ReflectionParser/Templates"
 
 kScriptSetupVcpkg = "Scripts/setup/SetupVcpkg.py"
 kScriptSetupEnvironment = "Scripts/setup/SetupEnvironment.py"
-kScriptGenerateBakeShippingHostDefaults = "Scripts/generate/BakeShippingHostDefaults.py"
+kScriptGenerateShippingHostDefaults = "Scripts/generate/GenerateShippingHostDefaults.py"
 kScriptCookAssets = "Scripts/generate/CookAssets.py"
 kScriptGenerateDocs = "Scripts/generate/GenerateDocs.py"
 

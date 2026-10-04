@@ -175,16 +175,16 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   An exemption from the rules above is a named entry with its reason in the gate (`kStringBoundName`).
 - **Renaming a string-bound name changes C++ in the same commit.** `ShaderBindingValidator::validate` skips
   a reflected name it does not know, so a one-sided rename silently switches that resource's check off;
-  `ShaderBindingValidatorTest.EveryBoundNameIsInBakedReflection` fails instead when a name C++ binds is missing
-  from the baked `reflection.manifest`.
+  `ShaderBindingValidatorTest.EveryBoundNameIsInCookedReflection` fails instead when a name C++ binds is missing
+  from the cooked `reflection.manifest`.
 
 ### Resource Assets
 
 - All files and directories under `Resource/` MUST use strictly lowercase names (`[a-z0-9_.-]+`, e.g. `inventory.anim`, `0.title.scene.xml`, `ghost.prefab.json`). Uppercase characters are strictly prohibited (except documentation `README.md`). Enforced automatically by `CheckResourceCasing.py` and Git pre-commit hooks.
 - The runtime reads textures only as DDS. A runtime texture folder (`textures/`) holds `.dds` and data (`.sprite.json`,
-  `.meta`) only; source images (PNG, JPG, TGA, ...) live under `textures_raw/` at the same relative path and are baked
-  with `App --bake-textures` (the editor bakes on hot reload too). Commit the DDS together with `textures_raw/bake.stamp`;
-  `TextureBakeStampTest` (and `App --check-textures`) fails when a source, its import rule or its DDS drifts. Delete a
+  `.meta`) only; source images (PNG, JPG, TGA, ...) live under `textures_raw/` at the same relative path and are imported
+  with `App --import-textures` (the editor imports on hot reload too). Commit the DDS together with `textures_raw/import.stamp`;
+  `TextureImportStampTest` (and `App --check-textures`) fails when a source, its import rule or its DDS drifts. Delete a
   source nothing references instead of moving it. Enforced by `CheckTextureFolders.py`.
 
 ## C++ structure and includes

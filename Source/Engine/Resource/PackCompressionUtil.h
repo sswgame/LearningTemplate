@@ -28,7 +28,7 @@ namespace sw
         };
 
         /**
-         * @brief 팩이 아는 코덱 종류입니다. `Custom` 은 팩을 구운 쪽이 정의하는 것이라 엔진이 모르므로 줄이 없습니다.
+         * @brief 팩이 아는 코덱 종류입니다. `Custom` 은 팩을 쿠킹한 쪽이 정의하는 것이라 엔진이 모르므로 줄이 없습니다.
          * @details 팩 종류를 늘리면 여기 한 줄입니다. 빠뜨리면 `ResourcePackTest.EveryPackCodecRoundTrips` 가 리플렉션된
          *          `PackCompressionType` 의 모든 값을 돌며 짚습니다.
          */

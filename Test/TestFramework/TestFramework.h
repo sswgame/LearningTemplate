@@ -24,7 +24,10 @@ namespace test
         /** @brief `Suite.Test` 전체 이름을 반환합니다. */
         sw::string fullName() const { return _groupName + "." + _testName; }
     };
+} // namespace test
 
+namespace test
+{
     /**
      * @brief 호스트 스위트에서 아직 고치지 못한 Error 로그 하나(`SW_TEST_KNOWN_ERROR_LOG`).
      * @details 그 스위트의 케이스가 남긴 Error 중 `_substring` 을 담은 줄은 예상 밖 Error 로 세지 않고 `_hitCount` 에 센다.
@@ -37,7 +40,10 @@ namespace test
         sw::string _reason;
         uint32     _hitCount{ 0 };
     };
+} // namespace test
 
+namespace test
+{
     /** @brief 케이스 하나를 돌린 결과. */
     enum class CaseResult : uint8
     {
@@ -141,7 +147,10 @@ namespace test
         uint32                          _shardCount{ 1 }; /**< 샤드 수(1 = 나누지 않는다) */
         bool                            _bInvalidArgument{ false };
     };
+} // namespace test
 
+namespace test
+{
     /**
      * @brief 스코프 안의 단언 실패를 현재 케이스 대신 여기에 모읍니다 — **단언 자체를 검사할 때만** 씁니다.
      * @details 실패하는 단언을 일부러 불러 "실패를 기록하는가 · 무엇이라 찍는가 · ASSERT 가 멈추는가" 를 보려면 그 실패가
@@ -169,7 +178,10 @@ namespace test
         sw::vector<TestFailure>  _listFailure;
         sw::vector<TestFailure>* _pPreviousCapture{ nullptr };
     };
+} // namespace test
 
+namespace test
+{
     /** @brief 스코프 내에서 전역 로그 출력을 임시 억제하는 RAII 헬퍼 */
     class ScopedLogSuppressor
     {
@@ -191,7 +203,10 @@ namespace test
     private:
         sw::ILogSink* _pOldSink;
     };
+} // namespace test
 
+namespace test
+{
     /** @brief 스코프 내에서 Error/Warning 로그에 [Expected Defensive Test] 표기를 부착하는 테스트용 싱크 프록시 */
     class DefensiveTestLogSink final : public sw::ILogSink
     {
@@ -263,7 +278,10 @@ namespace test
         sw::ILogSink* _pWrappedSink{ nullptr };
         sw::string    _reason;
     };
+} // namespace test
 
+namespace test
+{
     /** @brief 스코프 내에서 발생하는 Error/Warning 로그를 의도된 방어/예외 테스트(Expected)로 마킹하는 RAII 헬퍼 */
     class ScopedDefensiveTestLog
     {
@@ -302,7 +320,10 @@ namespace test
         sw::ILogSink*        _pOldSink{ nullptr };
         DefensiveTestLogSink _defensiveSink;
     };
+} // namespace test
 
+namespace test
+{
     /**
      * @brief 스코프 동안 단언(`SW_ASSERT` · `SW_LOG_ASSERT`)이 멈추지 않고 세어지게 하는 RAII 헬퍼입니다.
      * @details Debug 의 단언은 디버거에서 멈추므로(`SW_DEBUG_BREAK`) 단언이 걸리는 입력을 시험하면 프로세스가 죽는다. 이 스코프 안에서는
@@ -342,7 +363,10 @@ namespace test
         uint32 getCount() const { return 0; }
 #endif
     };
+} // namespace test
 
+namespace test
+{
     /**
      * @brief 스코프 동안 남은 Warning · Error 로그를 모아 "이 경고가 나왔나" 를 묻는 RAII 헬퍼입니다.
      * @details 시험마다 `Logger::addGlobalListener` 리스너를 손으로 만들지 않게 한 자리에 둔다. 리스너는 남기는 스레드에서
@@ -399,7 +423,10 @@ namespace test
         sw::vector<sw::string> _listMessage;
         sw::DelegateHandle     _handle;
     };
+} // namespace test
 
+namespace test
+{
     // ------------------------------------------------------------------------------
     // 실패 보고 — 단언 매크로가 부르는 **바깥** 함수들
     //
@@ -451,7 +478,10 @@ namespace test
         sw::string_view _text;
         bool            _bNull{ false };
     };
+} // namespace test
 
+namespace test
+{
     /** @brief 널에도 안전하게 비교용 글을 만듭니다. 받는 형태는 이 셋이다 — 나머지는 이 중 하나로 바뀌어 들어온다. */
     inline ComparableText toComparableText( const utf8* pText ) { return pText != nullptr ? ComparableText{ pText, false } : ComparableText{ {}, true }; }
     inline ComparableText toComparableText( const sw::string& text ) { return ComparableText{ text, false }; }
@@ -470,7 +500,7 @@ namespace test
      *          **한 프로세스 안에서 같은 이름을 쓰는 두 케이스**도 서로를 안 밟는다.
      *
      *          **케이스가 끝나면 프레임워크가 그 케이스 폴더를 통째로 지운다** — `SW_TEST_DEFER_CLEANUP` 이 돈 뒤에. 엔진이 옆에
-     *          구워 둔 `.bin` · `.meta` 도 같은 폴더라 함께 지워진다. 케이스가 끝에서 `removeFile` 을 손으로 부르면 단언으로 일찍
+     *          쿠킹해 둔 `.bin` · `.meta` 도 같은 폴더라 함께 지워진다. 케이스가 끝에서 `removeFile` 을 손으로 부르면 단언으로 일찍
      *          빠질 때 그 줄에 닿지 않아 남는다.
      *          못 지우면(열린 핸들) 그 케이스가 진다. 폴더를 케이스마다 두는 것은 정리가 **훑기 없이** 끝나게 하려는 것이다
      *          (임시 폴더 전체를 이름으로 훑으면 케이스마다 수십 ms 가 든다).
@@ -495,7 +525,10 @@ namespace test
             TestRegistry::getInstance().registerTest( pSuiteName, pTestName, func );
         }
     };
+} // namespace test
 
+namespace test
+{
     /** @brief 정적 초기화로 알려진 Error 로그 선언을 레지스트리에 붙입니다. */
     class KnownErrorLogRegistrar
     {
@@ -506,7 +539,10 @@ namespace test
             TestRegistry::getInstance().registerKnownErrorLog( pSuiteName, pSubstring, pReason );
         }
     };
+} // namespace test
 
+namespace test
+{
     /** @brief 정적 초기화로 호스트 스위트 선언을 레지스트리에 붙입니다. */
     class HostSuiteRegistrar
     {

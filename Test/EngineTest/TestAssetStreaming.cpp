@@ -35,7 +35,7 @@ SW_TEST_CASE( AssetStreamingTest, AssetStreamingQueueAsyncOperations )
 /**
  * @brief [AssetStreamingTest] 실패한 요청은 "로드됨" 이 아니며, 다시 요청하면 재시도된다
  * @details 결과 표에는 성공도 실패도 들어간다. 키의 존재만 보면 둘을 구별하지 못한다 —
- *          그러면 아직 굽지 않은 셰이더나 늦게 마운트되는 팩을 한 번 헛읽은 뒤로 영원히
+ *          그러면 아직 쿠킹하지 않은 셰이더나 늦게 마운트되는 팩을 한 번 헛읽은 뒤로 영원히
  *          "이미 로드됨, 성공" 이라고 답하고 다시는 디스크를 보지 않는다.
  */
 SW_TEST_CASE( AssetStreamingTest, FailedRequestIsNotLoadedAndRetries )

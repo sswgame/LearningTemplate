@@ -54,9 +54,9 @@ namespace sw
 {
     /**
      * @struct ShaderEngineCbMember
-     * @brief 엔진 CB 멤버 하나를 채우는 데 필요한 것입니다. **드로우 전에 미리 구워 둡니다.**
+     * @brief 엔진 CB 멤버 하나를 채우는 데 필요한 것입니다. **드로우 전에 미리 계산해 둡니다.**
      * @details 멤버 이름의 `hashed_string`(전역 intern 테이블 조회), `"Index"` 부분 문자열 찾기, canonical 이름 할당은
-     *          모두 레이아웃에만 달린 값이라 드로우마다 하지 않고 PSO 마다 한 번 굽습니다.
+     *          모두 레이아웃에만 달린 값이라 드로우마다 하지 않고 PSO 마다 한 번 계산합니다.
      */
     struct ShaderEngineCbMember
     {
@@ -71,7 +71,7 @@ namespace sw
 {
     /**
      * @struct ShaderResourceBindOp
-     * @brief 텍스처 · 구조버퍼 슬롯 하나의 바인딩에 필요한 것입니다. 마찬가지로 미리 구워 둡니다.
+     * @brief 텍스처 · 구조버퍼 슬롯 하나의 바인딩에 필요한 것입니다. 마찬가지로 미리 계산해 둡니다.
      */
     struct ShaderResourceBindOp
     {

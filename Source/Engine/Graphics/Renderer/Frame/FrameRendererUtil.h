@@ -207,7 +207,7 @@ namespace sw
 
         /**
          * @brief 패스의 `_listOutput` 에서 컬러 어태치먼트 포맷을 순서대로 모읍니다. 반환값은 컬러 RT 수입니다.
-         * @details PSO 생성(createPsoForPassType)과 셰이더 베이커가 **같은 답**을 내야 하는 규칙입니다. 컬러
+         * @details PSO 생성(createPsoForPassType)과 셰이더 쿠커가 **같은 답**을 내야 하는 규칙입니다. 컬러
          *          출력이 하나도 없으면 뎁스만 쓰는 패스이고, 그 패스에는 픽셀 스테이지가 없습니다. 출력 선언이
          *          아예 없으면 여기서는 알 수 없으므로 fallbackCount 를 반환합니다(부르는 쪽이 패스 타입으로 정한 값).
          *          선언은 있는데 어태치먼트를 하나도 못 찾아도 같은 값입니다.
@@ -254,12 +254,12 @@ namespace sw
 
         /**
          * @brief 이 패스에 픽셀 스테이지가 있는지 반환합니다. 컬러 출력이 하나라도 있어야 합니다.
-         * @details 셰이더 베이커가 "이 패스의 PS 를 굽는가" 를 정할 때 씁니다. 런타임은 같은 규칙을
-         *          createPsoForPassType 이 RT 수로 적용합니다(RT 0 개 → PS 경로를 비웁니다). 주의: 베이커와 런타임이
+         * @details 셰이더 쿠커가 "이 패스의 PS 를 쿠킹하는가" 를 정할 때 씁니다. 런타임은 같은 규칙을
+         *          createPsoForPassType 이 RT 수로 적용합니다(RT 0 개 → PS 경로를 비웁니다). 주의: 쿠커와 런타임이
          *          다른 규칙을 쓰면 그림자 패스에 머티리얼 define 을 얹은 변형이 PS 리플렉션을 요구하는데 매니페스트엔
          *          그 조합이 없습니다(Shipping 의 `리플렉션 매니페스트에 'shadowdepth.hlsl' 가 없습니다`).
          * @note 언리얼은 그림자 깊이에도 **마스크드 머티리얼일 때만** PS 를 붙입니다(clip 을 위해). 알파 마스크가
-         *       들어오면 이 규칙에 "머티리얼이 픽셀 폐기를 요구하는가" 축이 더해져야 합니다. 베이커도 이 함수를
+         *       들어오면 이 규칙에 "머티리얼이 픽셀 폐기를 요구하는가" 축이 더해져야 합니다. 쿠커도 이 함수를
          *       보므로 그때도 고칠 자리는 여기 하나입니다.
          */
         static bool hasPixelStage( const RenderGraphPassDesc& pass, const vector<RenderPassAttachment>& listAttachment )
@@ -291,7 +291,7 @@ namespace sw
         /**
          * @brief 이 패스 타입이 셰이더에 **얹는 define** 입니다. 파이프라인 XML 의 `_listPermutation` 위에 더해집니다.
          * @details G버퍼 패스는 픽셀 출력 서명을 MRT 로 바꾸려고 `SW_PASS_GBUFFER=1` 을 C++ 에서 얹습니다. 그래서 "이 패스의
-         *          define 집합" 은 XML 만 보고 답하면 런타임과 어긋납니다. 런타임과 베이커가 같은 표(`RenderPassTypeInfo`)를 봅니다.
+         *          define 집합" 은 XML 만 보고 답하면 런타임과 어긋납니다. 런타임과 쿠커가 같은 표(`RenderPassTypeInfo`)를 봅니다.
          */
         static vector<string> getPassDefine( RenderPassType passType )
         {
@@ -317,8 +317,8 @@ namespace sw
 
         /**
          * @brief 이 뷰 모드가 셰이더에 얹는 define 입니다. 셰이더를 바꾸지 않는 모드(Lit · Wireframe)는 nullptr 입니다.
-         * @details 런타임 PSO 변형(`FrameRenderer::createMaterialPsoVariant`)과 셰이더 베이커가 함께 보는 정본입니다. 베이커는
-         *          `RenderViewMode` 를 끝까지 훑어 define 이 있는 모드마다 변형을 굽습니다 — 모드를 더하면 굽는 목록이 따라옵니다.
+         * @details 런타임 PSO 변형(`FrameRenderer::createMaterialPsoVariant`)과 셰이더 쿠커가 함께 보는 정본입니다. 쿠커는
+         *          `RenderViewMode` 를 끝까지 훑어 define 이 있는 모드마다 변형을 쿠킹합니다 — 모드를 더하면 쿠킹하는 목록이 따라옵니다.
          */
         static const utf8* findViewModeDefine( RenderViewMode viewMode )
         {
@@ -328,7 +328,7 @@ namespace sw
         /**
          * @brief 패스 서술 없이 패스 종류 표만으로 만든 엔진 PSO 에 픽셀 스테이지가 있는지 반환합니다.
          * @details 파이프라인에 그 종류의 패스가 없으면 `createPsoForPassType` 은 표의 컬러 타깃 수로 PSO 를 만들고, 0 이면 PS 를
-         *          붙이지 않습니다. 베이커가 같은 판정으로 굽습니다. 서술이 있는 패스는 `hasPixelStage( pass, listAttachment )` 입니다.
+         *          붙이지 않습니다. 쿠커가 같은 판정으로 쿠킹합니다. 서술이 있는 패스는 `hasPixelStage( pass, listAttachment )` 입니다.
          */
         static bool hasPixelStage( RenderPassType passType )
         {

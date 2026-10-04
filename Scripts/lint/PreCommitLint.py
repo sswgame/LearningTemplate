@@ -39,7 +39,7 @@ from common import (
     getProjectRoot,
     getStagedCppFiles,
     runClangFormatBatch,
-    runShaderBake,
+    runShaderCook,
     useUtf8Stdout,
 )
 
@@ -121,13 +121,13 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
     # 그 프리셋만 빌드해 둔 사람은 이 검증을 통째로 건너뛴다.
     appExe = findAppExecutable(projectRoot)
     if appExe is None:
-        print("  [Warning] App.exe를 찾을 수 없어 셰이더 베이킹 검증을 건너뜁니다. (빌드 후 다시 시도하세요)")
+        print("  [Warning] App.exe를 찾을 수 없어 셰이더 쿠킹 검증을 건너뜁니다. (빌드 후 다시 시도하세요)")
         return True
 
-    res = runShaderBake(appExe, cwd=projectRoot, bCapture=True)
+    res = runShaderCook(appExe, cwd=projectRoot, bCapture=True)
 
     if res.returncode != 0:
-        print(f"  [Error] App.exe --bake-shaders 실행 실패 (종료 코드: {res.returncode})")
+        print(f"  [Error] App.exe --cook-shaders 실행 실패 (종료 코드: {res.returncode})")
         if res.stdout:
             print(res.stdout)
         if res.stderr:

@@ -31,8 +31,8 @@
 - **Commands/**: 패널이 쓰는 **ImGui 없는 로직** — 애셋/씬/트랜스폼/데이터테이블 변이와 파일 IO,
   그리고 커맨드 정의를 담는 `EditorCommandRegistry`.
   패널은 UI 만, 실제 동작은 여기입니다 (그래서 테스트가 붙습니다)
-- **Asset/**: 텍스처 임포트·베이크 (`TextureBaker`, `TextureImportConfig`, `ImageUtil`) + 헤드리스 굽기 진입점(`TextureBakeEntry.cpp` — 아래
-  "텍스처는 들일 때 굽는다"). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
+- **Asset/**: 텍스처 임포트·임포트 (`TextureImporter`, `TextureImportConfig`, `ImageUtil`) + 헤드리스 임포트 진입점(`TextureImportEntry.cpp` — 아래
+  "텍스처는 들일 때 임포트한다"). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
 - **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorData`)
 
 ### 기능
@@ -177,20 +177,20 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 구현과 스위치 선언은 `Common/Gui/EditorPanelDump.*` 에 있습니다 — 모듈의 전역 변수도 모듈을 올릴 때 커맨드라인 값을 받습니다.
 기준선과 비교 방법은 [docs/06_Backlog.md](../../docs/06_Backlog.md) 0절에 있습니다.
 
-## 텍스처는 들일 때 굽는다
+## 텍스처는 들일 때 임포트한다
 
-런타임은 DDS 만 읽습니다. 원본 이미지(PNG · JPG …)는 `textures_raw/` 에 두고, 같은 상대 경로의 `textures/*.dds` 로 굽습니다
-(`TextureBaker::makeBakedTexturePath`, 폴더 규칙은 `Scripts/lint/gate/CheckTextureFolders.py`).
+런타임은 DDS 만 읽습니다. 원본 이미지(PNG · JPG …)는 `textures_raw/` 에 두고, 같은 상대 경로의 `textures/*.dds` 로 임포트합니다
+(`TextureImporter::makeImportedTexturePath`, 폴더 규칙은 `Scripts/lint/gate/CheckTextureFolders.py`).
 
-- **에디터가 떠 있을 때**: 핫 리로드가 원본 변경을 받으면 `TextureBaker::importChangedSourceImage` 가 굽고, 구운 DDS 의 쓰기가
+- **에디터가 떠 있을 때**: 핫 리로드가 원본 변경을 받으면 `TextureImporter::importChangedSourceImage` 가 임포트하고, 임포트된 DDS 의 쓰기가
   다음 감시 이벤트로 와서 텍스처 캐시가 다시 읽습니다. 임포트 설정(`TextureImportConfig.json`)은 매번 읽습니다.
-- **헤드리스**: `App --bake-textures`(어긋난 것을 굽고 스탬프 갱신) · `--check-textures`(쓰지 않고 대조만). App 이 에디터 모듈을 인스턴스
-  없이 올려 `bakeEditorTextures`(`TextureBakeEntry.cpp`)를 부릅니다. Dev 빌드에서만 됩니다.
-- **스탬프**: `textures_raw/` 폴더마다 `bake.stamp` 에 `<원본 해시> <DDS 해시> <상대 경로>` 한 줄씩. 원본 해시는 원본 바이트 + 적용한 규칙 +
-  베이커 버전(`computeSourceHash`)이라 규칙만 바꿔도 어긋남이고, DDS 해시로 손댄 DDS 도 잡힙니다. 판정은 파일 시간이 아니라 **내용**입니다
-  (git 이 시간 순서를 뒤집습니다). 원본이 사라진 줄도 어긋남입니다 — `BakeStale` 은 줄만 지우고 남은 DDS 는 사람이 정리합니다.
-- 주의: `.hdr` 는 굽지 않고 보고합니다 — 디코더(stb_image)가 8비트라 값이 잘립니다.
-- 시험: `TextureBakeStampTest.RepositoryRawTexturesMatchTheirDds`(저장소의 원본과 DDS 가 맞는지), `AppSmokeTest.TextureCheckRunsHeadlessThroughTheEditorModule`.
+- **헤드리스**: `App --import-textures`(어긋난 것을 임포트하고 스탬프 갱신) · `--check-textures`(쓰지 않고 대조만). App 이 에디터 모듈을 인스턴스
+  없이 올려 `importEditorTextures`(`TextureImportEntry.cpp`)를 부릅니다. Dev 빌드에서만 됩니다.
+- **스탬프**: `textures_raw/` 폴더마다 `import.stamp` 에 `<원본 해시> <DDS 해시> <상대 경로>` 한 줄씩. 원본 해시는 원본 바이트 + 적용한 규칙 +
+  임포터 버전(`computeSourceHash`)이라 규칙만 바꿔도 어긋남이고, DDS 해시로 손댄 DDS 도 잡힙니다. 판정은 파일 시간이 아니라 **내용**입니다
+  (git 이 시간 순서를 뒤집습니다). 원본이 사라진 줄도 어긋남입니다 — `ImportStale` 은 줄만 지우고 남은 DDS 는 사람이 정리합니다.
+- 주의: `.hdr` 는 임포트하지 않고 보고합니다 — 디코더(stb_image)가 8비트라 값이 잘립니다.
+- 시험: `TextureImportStampTest.RepositoryRawTexturesMatchTheirDds`(저장소의 원본과 DDS 가 맞는지), `AppSmokeTest.TextureCheckRunsHeadlessThroughTheEditorModule`.
 
 ## UI 스레드가 놓은 GPU 자원
 

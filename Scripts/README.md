@@ -30,7 +30,7 @@ Scripts/
   │     ├── Host.py                   # Git 연동 및 clang-format 배치 실행
   │     ├── Parallel.py               # 동시 처리 한 자리 — 워커 수 정책과 map/flatMap (스레드인 이유가 적혀 있다)
   │     ├── TranslationUnits.py       # 컴파일 DB 를 읽어 TU 를 골라 하나씩 돌리는 자리 (clang-tidy · 경고 스윕)
-  │     ├── AppBinary.py              # 빌드된 App 을 찾고 헤드리스로 셰이더를 굽는 자리
+  │     ├── AppBinary.py              # 빌드된 App 을 찾고 헤드리스로 셰이더를 쿠킹하는 자리
   │     ├── AssetPipeline.py          # 쿠커의 기본 출력 폴더 찾기 — 가장 최근에 구성된 build/*/Bin/<subDir>
   │     ├── CookContract.py           # 쿠킹 표(`Config/Engine/CookContract.json`)를 읽은 결과 — 헤더 생성기 · 쿠커 · 게이트가 같은 객체를 쓴다
   │     └── PackFormat.py             # `.pack` 바이너리 계약(Config/Engine/PackFormat.json)을 읽은 결과
@@ -47,7 +47,7 @@ Scripts/
   ├── generate/                       # [생성] 정본(JSON · Constants.py · 폴더 목록)에서 파일을 만들어 낸다 — 대부분 구성 · 빌드가 부르고,
   │                                   #        결과를 커밋하는 것(GenerateSpriteTextures)은 손으로 돌린다
   │     ├── CookAssets.py             # ★ Prefab, Scene, Resource Pack을 일괄/선택 쿠킹하는 단일 통합 쿠커
-  │     ├── BakeShippingHostDefaults.py # 런타임 JSON → Shipping 용 C++ 헤더
+  │     ├── GenerateShippingHostDefaults.py # 런타임 JSON → Shipping 용 C++ 헤더
   │     ├── GeneratePackFormat.py     # PackFormat.json → C++ 헤더
   │     ├── GenerateCookContract.py   # CookContract.json → C++ X-매크로 헤더(RHI 백엔드 표 · 쿡 접미사 표)
   │     ├── GenerateCMakeConstants.py # Constants.py → CMake set() 목록
@@ -135,7 +135,7 @@ py -3 Scripts/setup/SetupEnvironment.py
 py -3 Scripts/generate/CookAssets.py --all
 py -3 Scripts/lint/gate/CheckEngineLayers.py
 py -3 Scripts/lint/fixer/RunClangFormat.py
-py -3 Scripts/generate/BakeShippingHostDefaults.py build/Ninja-Shipping/generated/sw/config/ShippingHostDefaults.h  # 빌드가 읽는 자리(<빌드 폴더>/generated)
+py -3 Scripts/generate/GenerateShippingHostDefaults.py build/Ninja-Shipping/generated/sw/config/ShippingHostDefaults.h  # 빌드가 읽는 자리(<빌드 폴더>/generated)
 ```
 
 `SetupLlvm` / `SetupEnvironment` 는 최소 LLVM 키트에 `clang-format` 을 포함·보완합니다 (기존 키트에 없으면 캐시된 LLVM tar에서 bin만 추출).

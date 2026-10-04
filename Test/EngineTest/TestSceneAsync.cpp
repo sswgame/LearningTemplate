@@ -72,7 +72,7 @@ namespace sw
             registry.registerClass( *LateQueuedModuleComponent::StaticType() );
         }
 
-        /** @brief 이름 하나짜리 컴포넌트를 든 씬 XML 을 쓰고 옆에 구운 바이너리도 둡니다(배포 구성은 바이너리만 읽는다). 성공하면 true 입니다. */
+        /** @brief 이름 하나짜리 컴포넌트를 든 씬 XML 을 쓰고 옆에 쿠킹된 바이너리도 둡니다(배포 구성은 바이너리만 읽는다). 성공하면 true 입니다. */
         bool writeSceneWithComponent( const string& xmlPath, const string& binPath, const utf8* pSceneName, const utf8* pComponentName )
         {
             string xmlStr = "<Scene formatVersion=\"1\" name=\"";
@@ -705,8 +705,8 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 }
 
 /**
- * @brief [SceneAsyncTest] 씬은 쿠커가 굽는 이름으로만 저장된다 — 확장자 없는 이름은 `.scene.xml` 이 붙고, 경로가 전혀 없으면 쓰지 않는다
- * @details 저장 대화상자에 "level" 을 적은 이름을 그대로 저장하면 에디터에서는 열리는데 쿠커가 굽지 않아 배포본에 없다. 경로도 출처도 없는 씬에
+ * @brief [SceneAsyncTest] 씬은 쿠커가 쿠킹하는 이름으로만 저장된다 — 확장자 없는 이름은 `.scene.xml` 이 붙고, 경로가 전혀 없으면 쓰지 않는다
+ * @details 저장 대화상자에 "level" 을 적은 이름을 그대로 저장하면 에디터에서는 열리는데 쿠커가 쿠킹하지 않아 배포본에 없다. 경로도 출처도 없는 씬에
  *          `Resource/` 밖의 이름을 지어내 쓰면 안 된다.
  */
 SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
@@ -727,7 +727,7 @@ SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
 
     const sw::string bareName = test::makeTempPath( "level" );
     {
-        test::ScopedDefensiveTestLog expected( "a scene saved under a name the cooker does not bake" );
+        test::ScopedDefensiveTestLog expected( "a scene saved under a name the cooker does not cook" );
         SW_EXPECT_TRUE( manager.saveActiveScene( bareName ) );
     }
     SW_EXPECT_FALSE( sw::FileUtil::fileExists( bareName ) );

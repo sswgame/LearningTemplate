@@ -48,8 +48,8 @@ Core (STATIC)     — 로그·파일·문자열·메모리. OBJECT를 Engine과 
 - `Resource/engine/` — 엔진 기본 셰이더, 기본 텍스처, 파이프라인 에셋
 - `Resource/common/` — 공유 공통 에셋
 - `Resource/game/<게임>/` — 활성 게임별 프로젝트 에셋 (지금은 `empty`)
-- 런타임 텍스처 폴더(`textures/`)에는 DDS 만 두고, 원본 이미지는 같은 상대 경로의 `textures_raw/` 에 둡니다(`App --bake-textures` 로 굽고
-  `textures_raw/bake.stamp` 와 함께 커밋, `CheckTextureFolders.py` 가 검사).
+- 런타임 텍스처 폴더(`textures/`)에는 DDS 만 두고, 원본 이미지는 같은 상대 경로의 `textures_raw/` 에 둡니다(`App --import-textures` 로 임포트하고
+  `textures_raw/import.stamp` 와 함께 커밋, `CheckTextureFolders.py` 가 검사).
 
 ### 외부 의존성 (ThirdParty & Vcpkg)
 프로젝트의 의존성은 주로 `vcpkg` 매니페스트(`vcpkg.json`)를 통해 통합 관리됩니다. `Scripts/setup/SetupVcpkg.py`가 필요한 의존성을 설치하며, 커스텀 패키지(예: `imgui-node-editor`)나 직접 소스 포함이 필요한 일부 라이브러리들은 `ThirdParty/` 디렉터리에 위치합니다.
@@ -71,11 +71,11 @@ App은 게임이나 에디터 클래스를 직접 알지 못하며 오직 C-ABI(
 ### 3. RHI (Render Hardware Interface)
 DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입니다.
 - **동작 원리**: `IRHIDevice` 인터페이스를 통해 RHI 백엔드를 DLL 형태로 동적으로 불러옵니다(Dev. Shipping 은 하나를 정적 링크).
-- **Caps**: 현재 모든 백엔드는 Bindless(바인드리스) 텍스처 접근과 Compute Root Constants(작은 UBO/CB)를 에뮬레이션 또는 네이티브로 지원합니다. Vulkan 은 1.3 이상(셰이더 굽기 타깃)인 물리 디바이스만 고릅니다.
+- **Caps**: 현재 모든 백엔드는 Bindless(바인드리스) 텍스처 접근과 Compute Root Constants(작은 UBO/CB)를 에뮬레이션 또는 네이티브로 지원합니다. Vulkan 은 1.3 이상(셰이더 쿠킹 타깃)인 물리 디바이스만 고릅니다.
 - **수명**: 디바이스 종료는 `IRHIDevice::shutdown` 템플릿 메서드가 공통 단계 순서를 갖고, 백엔드는 단계 훅만 구현합니다. 엔진 밖 모듈(에디터)은 백엔드 클래스로 캐스팅하지 않고
   판 번호 든 `RHINativeHandles` 를 디바이스에서 조회하며, 다 쓴 네이티브 자원은 `IRHIDevice::enqueueGpuRelease` 로 백엔드 해제 큐(GPU 펜스 뒤)에 넘깁니다
   (에디터는 `EditorDrawReleaseQueue` 로 그 자원을 그린 마지막 프레임 뒤에 놓습니다).
-- **바인딩 계약**: 레지스터 ↔ 백엔드 바인딩 위치의 정본은 `Resource/engine/shaders/bindingslots.hlsli` 하나입니다. HLSL 과 C++(`ShaderBindingSlots.h`)가 같은 파일을 include 하고, 4 백엔드는 그 상수로만 바인딩합니다. 바인딩 모델은 **언리얼 GPUScene 방식**입니다 — 셰이더는 네 백엔드에서 똑같이 `register(b#/t#/u#)` 로 선언하고(`SW_DECLARE_CBUFFER`, `SW_DECLARE_STRUCTURED_BUFFER` …), 드로우마다 바뀌는 데이터는 슬롯이 아니라 **버퍼의 원소**입니다: 인스턴스(월드 행렬·머티리얼 인덱스)는 `StructuredBuffer<SwInstanceData> g_SwInstances`(t4) 를 `SV_InstanceID` 로, 머티리얼 파라미터는 셰이더 타입별 `StructuredBuffer<SwMaterialData> g_SwMaterials`(t9, `SW_MATERIAL_BEGIN/END` 로 선언) 를 인스턴스의 `_materialIndex` 로 읽습니다. 그래서 바인딩은 패스·배치 단위로만 일어나고, 패스 상수 `PassCB`(b0) 는 진짜 상수버퍼입니다. 텍스처만 백엔드가 갈립니다 — DX12/Vulkan 은 무제한 배열 `Texture2D g_SwBindlessTex2D[]`(DX12 t0 space1 / Vulkan set 1) 을 PassCB 의 `g_<Name>Index` 나 머티리얼 원소의 인덱스로 고르고, DX11/GL 은 t0..t8 슬롯에 드로우 직전 겁니다. 엔진 텍스처 슬롯(t0..t3)은 네 백엔드가 계약 샘플러 하나(`SW_ENGINE_TEXTURE_SAMPLER` = 선형 · 클램프)로 읽습니다. SM6.6 `ResourceDescriptorHeap` 은 쓰지 않습니다. 백엔드 쪽 구현: DX12 는 루트 시그니처 하나(b0..b2 루트 CBV, t0..t9 슬롯 테이블, u0..u3 슬롯 테이블, 텍스처 배열 테이블 1개, 루트 상수 16 dword, 정적 샘플러 s0..s7 — 25/64 dword, `shaderslot::dx12`) 로, 언리얼 `FD3D12DescriptorCache` 처럼 등록 때 오프라인 힙에 만든 뷰를 드로우/디스패치 직전 온라인 힙 블록에 복사해 테이블로 겁니다(`flushSlotTables`). Vulkan 은 set 0 이 슬롯 세트(binding = 종류별 시프트 + 번호: b 0..15 / t 16..31 / u 32..47, DXC `-fvk-*-shift`) 이고 언리얼 Vulkan RHI 처럼 바인딩이 바뀐 드로우 직전 **커맨드 버퍼 자신의 풀 묶음**(`VulkanDescriptorPoolSet`, 펜스 뒤 통째로 리셋, 락 없음)에서 세트를 하나 할당해 씁니다(`flushSlotSet`); set 1 은 텍스처 배열 + immutable sampler 입니다. 렌더타깃 포맷은 PSO 의 일부라 백버퍼에 그리는 PSO 는 디바이스가 실제 채택한 포맷(`getBackBufferFormat`, Vulkan 은 서피스와 협상)으로, 오프스크린은 `getTextureFormat` 으로 만듭니다(`FrameRenderer::ensurePresentPso`). `ShaderBindingValidator::validate` 가 PSO 레이아웃 빌드·베이킹·테스트(`ShaderBindingValidatorTest.AllBakedShadersMatchContract`, nogpu)에서 구운 바이너리의 리플렉션을 계약과 대조하므로, 셰이더 선언·헤더·백엔드 상수 어느 쪽이 어긋나도 이름과 숫자로 실패합니다. 상수버퍼는 `draw()` 인자가 아니라 `bindConstantBuffer( index, shaderslot::k*ConstantBuffer )` 로만 겁니다. 그 밖의 언리얼식 장치: 정적 샘플러 세트 s0..s7(`g_SwSamplers`/`swSampleIndexWith`, DX12 는 개별 정적 샘플러·Vulkan 은 immutable sampler 배열), 컴퓨트 전용 RW 텍스처 배열(`swStoreRwTexture2D`, DX12 u0 space1 / Vulkan set 1 binding 3, DX11/GL 은 u4..u7 슬롯, `registerBindlessTextureUav` + `prepareTextureForUnorderedAccess`), 루트 상수 블록 `SW_ROOT_CONSTANTS_BEGIN/END` + `SW_ROOT(field)`(DX12 b0 space2 / Vulkan 푸시 상수 / DX11·GL b2), 머티리얼 원소 레이아웃의 정본은 셰이더(`Material::ensureShaderLayout` 이 디바이스 백엔드의 리플렉션으로 stride·오프셋을 맞추고, SPIR-V 는 `-fvk-use-dx-layout` 으로 DX 와 같은 패킹), 인스턴스마다 자기 머티리얼 원소를 가지므로 DX12/Vulkan 은 배치를 셰이더 타입 단위로 합칩니다(`GpuSceneBuilder::setMergeBatchesAcrossMaterials`). bindless 인덱스는 GPU 펜스 뒤에 재사용되고(실행 중인 프레임이 새 리소스를 읽지 않도록), 머티리얼 없는 배치는 0 채운 폴백 원소를 걸어 DX12 루트 SRV 가 빈 채로 나가지 않습니다. OpenGL 은 SPIR-V 의 `InstanceIndex`/`VertexIndex` 를 `InstanceId`/`VertexId` 로 바꿔 굽습니다 — 주의: ARB_gl_spirv 는 앞의 둘을 지원하지 않아 바꾸지 않으면 인스턴스 id 가 0 으로 읽힙니다.
+- **바인딩 계약**: 레지스터 ↔ 백엔드 바인딩 위치의 정본은 `Resource/engine/shaders/bindingslots.hlsli` 하나입니다. HLSL 과 C++(`ShaderBindingSlots.h`)가 같은 파일을 include 하고, 4 백엔드는 그 상수로만 바인딩합니다. 바인딩 모델은 **언리얼 GPUScene 방식**입니다 — 셰이더는 네 백엔드에서 똑같이 `register(b#/t#/u#)` 로 선언하고(`SW_DECLARE_CBUFFER`, `SW_DECLARE_STRUCTURED_BUFFER` …), 드로우마다 바뀌는 데이터는 슬롯이 아니라 **버퍼의 원소**입니다: 인스턴스(월드 행렬·머티리얼 인덱스)는 `StructuredBuffer<SwInstanceData> g_SwInstances`(t4) 를 `SV_InstanceID` 로, 머티리얼 파라미터는 셰이더 타입별 `StructuredBuffer<SwMaterialData> g_SwMaterials`(t9, `SW_MATERIAL_BEGIN/END` 로 선언) 를 인스턴스의 `_materialIndex` 로 읽습니다. 그래서 바인딩은 패스·배치 단위로만 일어나고, 패스 상수 `PassCB`(b0) 는 진짜 상수버퍼입니다. 텍스처만 백엔드가 갈립니다 — DX12/Vulkan 은 무제한 배열 `Texture2D g_SwBindlessTex2D[]`(DX12 t0 space1 / Vulkan set 1) 을 PassCB 의 `g_<Name>Index` 나 머티리얼 원소의 인덱스로 고르고, DX11/GL 은 t0..t8 슬롯에 드로우 직전 겁니다. 엔진 텍스처 슬롯(t0..t3)은 네 백엔드가 계약 샘플러 하나(`SW_ENGINE_TEXTURE_SAMPLER` = 선형 · 클램프)로 읽습니다. SM6.6 `ResourceDescriptorHeap` 은 쓰지 않습니다. 백엔드 쪽 구현: DX12 는 루트 시그니처 하나(b0..b2 루트 CBV, t0..t9 슬롯 테이블, u0..u3 슬롯 테이블, 텍스처 배열 테이블 1개, 루트 상수 16 dword, 정적 샘플러 s0..s7 — 25/64 dword, `shaderslot::dx12`) 로, 언리얼 `FD3D12DescriptorCache` 처럼 등록 때 오프라인 힙에 만든 뷰를 드로우/디스패치 직전 온라인 힙 블록에 복사해 테이블로 겁니다(`flushSlotTables`). Vulkan 은 set 0 이 슬롯 세트(binding = 종류별 시프트 + 번호: b 0..15 / t 16..31 / u 32..47, DXC `-fvk-*-shift`) 이고 언리얼 Vulkan RHI 처럼 바인딩이 바뀐 드로우 직전 **커맨드 버퍼 자신의 풀 묶음**(`VulkanDescriptorPoolSet`, 펜스 뒤 통째로 리셋, 락 없음)에서 세트를 하나 할당해 씁니다(`flushSlotSet`); set 1 은 텍스처 배열 + immutable sampler 입니다. 렌더타깃 포맷은 PSO 의 일부라 백버퍼에 그리는 PSO 는 디바이스가 실제 채택한 포맷(`getBackBufferFormat`, Vulkan 은 서피스와 협상)으로, 오프스크린은 `getTextureFormat` 으로 만듭니다(`FrameRenderer::ensurePresentPso`). `ShaderBindingValidator::validate` 가 PSO 레이아웃 빌드·쿠킹·테스트(`ShaderBindingValidatorTest.AllCookedShadersMatchContract`, nogpu)에서 쿠킹된 바이너리의 리플렉션을 계약과 대조하므로, 셰이더 선언·헤더·백엔드 상수 어느 쪽이 어긋나도 이름과 숫자로 실패합니다. 상수버퍼는 `draw()` 인자가 아니라 `bindConstantBuffer( index, shaderslot::k*ConstantBuffer )` 로만 겁니다. 그 밖의 언리얼식 장치: 정적 샘플러 세트 s0..s7(`g_SwSamplers`/`swSampleIndexWith`, DX12 는 개별 정적 샘플러·Vulkan 은 immutable sampler 배열), 컴퓨트 전용 RW 텍스처 배열(`swStoreRwTexture2D`, DX12 u0 space1 / Vulkan set 1 binding 3, DX11/GL 은 u4..u7 슬롯, `registerBindlessTextureUav` + `prepareTextureForUnorderedAccess`), 루트 상수 블록 `SW_ROOT_CONSTANTS_BEGIN/END` + `SW_ROOT(field)`(DX12 b0 space2 / Vulkan 푸시 상수 / DX11·GL b2), 머티리얼 원소 레이아웃의 정본은 셰이더(`Material::ensureShaderLayout` 이 디바이스 백엔드의 리플렉션으로 stride·오프셋을 맞추고, SPIR-V 는 `-fvk-use-dx-layout` 으로 DX 와 같은 패킹), 인스턴스마다 자기 머티리얼 원소를 가지므로 DX12/Vulkan 은 배치를 셰이더 타입 단위로 합칩니다(`GpuSceneBuilder::setMergeBatchesAcrossMaterials`). bindless 인덱스는 GPU 펜스 뒤에 재사용되고(실행 중인 프레임이 새 리소스를 읽지 않도록), 머티리얼 없는 배치는 0 채운 폴백 원소를 걸어 DX12 루트 SRV 가 빈 채로 나가지 않습니다. OpenGL 은 SPIR-V 의 `InstanceIndex`/`VertexIndex` 를 `InstanceId`/`VertexId` 로 바꿔 쿠킹합니다 — 주의: ARB_gl_spirv 는 앞의 둘을 지원하지 않아 바꾸지 않으면 인스턴스 id 가 0 으로 읽힙니다.
 - **명령 기록 (Command List)**: 렌더 스레드 또는 메인 스레드에서 GPU 명령을 모은 뒤, 한 번에 큐에 제출(Submit)하는 지연(Deferred) 방식을 씁니다.
 
 ### 4. RenderPass vs Render Pipeline
@@ -83,8 +83,8 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
 - **RenderPass (`RenderPassAsset`)**: "어떤 포맷의 텍스처에 그릴 것인가?", "그리기 전에 화면을 지울(Clear) 것인가?" 등 바인딩 템플릿 역할. (`renderpass/` 경로에 저장)
 - **Render Pipeline (`RenderPipelineAsset`)**: "이번 프레임은 [그림자 패스] → [메인 패스] → [포스트 프로세스 패스] 순서로 그린다"를 정의하는 전체 프레임 그래프. (`pipeline/` 경로에 저장)
 - **RenderGraph**: 파이프라인 파일을 읽어들여 렌더링 순서와 자원 의존성(Read/Write)을 런타임에 자동으로 정렬해주는 시스템입니다.
-- **셰이더 굽기**: `App --bake-shaders` 는 파이프라인 XML 이 아니라 **패스 종류 표 전체 × 뷰 모드 enum** 에서 메시 패스 변형을 모아 굽고,
-  구운 매니페스트가 그 요청을 모두 담는지 시험이 확인합니다. 빌드는 HLSL 을 다시 굽지 않으므로 셰이더를 고쳤으면 직접 굽습니다.
+- **셰이더 쿠킹**: `App --cook-shaders` 는 파이프라인 XML 이 아니라 **패스 종류 표 전체 × 뷰 모드 enum** 에서 메시 패스 변형을 모아 쿠킹하고,
+  쿠킹된 매니페스트가 그 요청을 모두 담는지 시험이 확인합니다. 빌드는 HLSL 을 다시 쿠킹하지 않으므로 셰이더를 고쳤으면 직접 쿠킹합니다.
 
 ### 5. 리플렉션과 직렬화 (Reflection & Serialization)
 - **리플렉션 생성**: C++ 소스 코드에 `REFLECT`, `PROPERTY` 매크로를 달아두면 `Tools/ReflectionParser`가 코드를 읽어서 `*.gen.cpp`(메타데이터)를 만들어줍니다.
@@ -97,8 +97,8 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
 - **GameObject**: 씬을 구성하는 기본 단위.
 - **Component**: 게임 오브젝트에 붙어 동작하는 로직(예: `MeshComponent`, `CameraComponent`). C++ RTTI 대신 리플렉션 타입(`TypeInfo`)을 통해 관리됩니다.
 - **Prefab**: 미리 구성해 둔 오브젝트의 템플릿. `PrefabCache::spawn` 으로 짓고, 씬에 놓인 인스턴스는 **덮어쓴 값만** 저장해 로드가 프리팹 원형 위에 얹습니다(`PrefabOverrides`).
-- **쿠킹**: `App --cook-scenes --cooked-dir=<폴더>` 는 소스 트리(`ContentSource::SourceTree`)를 올려 씬 · 프리팹을 바이너리로 굽습니다. 모르는 타입의 컴포넌트
-  (`MissingComponent`)가 든 씬은 굽지 않고 실패로 셉니다. 확장자 · 백엔드 표는 `Config/Engine/CookContract.json` 하나입니다.
+- **쿠킹**: `App --cook-scenes --cooked-dir=<폴더>` 는 소스 트리(`ContentSource::SourceTree`)를 올려 씬 · 프리팹을 바이너리로 쿠킹합니다. 모르는 타입의 컴포넌트
+  (`MissingComponent`)가 든 씬은 쿠킹하지 않고 실패로 셉니다. 확장자 · 백엔드 표는 `Config/Engine/CookContract.json` 하나입니다.
 
 ---
 

@@ -9,7 +9,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -21,14 +21,14 @@ namespace sw
     {
         struct ShaderCacheInternal
         {
-            /** @brief 베이커가 쓰는 파일 이름 그대로입니다(스템 · 스테이지 · 진입점 · 퍼뮤테이션 해시). 규칙은 한 곳(ShaderBaker)뿐입니다. */
+            /** @brief 쿠커가 쓰는 파일 이름 그대로입니다(스템 · 스테이지 · 진입점 · 퍼뮤테이션 해시). 규칙은 한 곳(ShaderCooker)뿐입니다. */
             static string makeBinaryFileName( const ShaderCompileDesc& desc )
             {
                 const string fileName = FileUtil::getFileNamePart( desc._filePath );
                 const string stem     = StringUtil::toLower( FileUtil::removeExtension( fileName ).c_str() );
-                return ShaderBaker::computeBinaryFileName( stem, desc._stage, desc._entryPoint,
-                                                           ShaderBaker::computePermutationHash( desc._listDefine ),
-                                                           ShaderBaker::getExtensionForFormat( desc._targetFormat ) );
+                return ShaderCooker::computeBinaryFileName( stem, desc._stage, desc._entryPoint,
+                                                            ShaderCooker::computePermutationHash( desc._listDefine ),
+                                                            ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
             }
         };
     } // namespace
@@ -36,10 +36,10 @@ namespace sw
 
 namespace sw
 {
-    string ShaderCache::makePrebakedRelativePath( const ShaderCompileDesc& desc )
+    string ShaderCache::makePrecookedRelativePath( const ShaderCompileDesc& desc )
     {
         const string      norm      = FileUtil::normalizeSeparators( desc._filePath );
-        const string_view rhiFolder = ShaderBaker::getSubfolderForFormat( desc._targetFormat );
+        const string_view rhiFolder = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
         const string      fileName  = ShaderCacheInternal::makeBinaryFileName( desc );
 
         const size_t pos = norm.find( "shaders/" );
@@ -54,15 +54,15 @@ namespace sw
     string ShaderCache::makeLocalCachePath( const ShaderCompileDesc& desc )
     {
         // **경로에 유효 소스 해시를 한 칸 끼운다.** "캐시 파일이 소스보다 새것인가" 를 파일 시간으로 보면 안 된다 —
-        // 이 저장소는 산출물까지 커밋해서 `git pull` 이 시간 순서를 임의로 뒤집는다(ShaderBaker::computeEffectiveSourceHash
+        // 이 저장소는 산출물까지 커밋해서 `git pull` 이 시간 순서를 임의로 뒤집는다(ShaderCooker::computeEffectiveSourceHash
         // 주석). 경로가 다르면 낡은 것은 애초에
         // 찾히지 않으므로 시간 비교가 필요 없다. 남는 폴더는 Saved/ 안이라 버려도 그만이다.
         //
-        // **파일 이름이 아니라 폴더**에 넣는 이유는 이름이 베이커가 굽는 이름과 글자 단위로 같아야
-        // 하기 때문이다(규칙이 둘이면 그중 하나가 기준을 이긴다. `ShaderBakerTest` 가 지키는 계약이다).
-        const string_view rhiFolder  = ShaderBaker::getSubfolderForFormat( desc._targetFormat );
+        // **파일 이름이 아니라 폴더**에 넣는 이유는 이름이 쿠커가 쿠킹하는 이름과 글자 단위로 같아야
+        // 하기 때문이다(규칙이 둘이면 그중 하나가 기준을 이긴다. `ShaderCookerTest` 가 지키는 계약이다).
+        const string_view rhiFolder  = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
         const string      absPath    = ResourceUtil::getResourcePath( desc._filePath );
-        const uint64      sourceHash = absPath.empty() ? 0u : ShaderBaker::computeEffectiveSourceHash( absPath );
+        const uint64      sourceHash = absPath.empty() ? 0u : ShaderCooker::computeEffectiveSourceHash( absPath );
 
         StringBuilder<constant::kMaxBuffer64> sb;
         sb.appendFormat( "%#", Fmt( sourceHash, Format( 16, Format::Padding::Zero ).hex() ) );
@@ -126,7 +126,7 @@ namespace sw
         cacheKey.assign( sb.c_str(), sb.size() );
 
         if ( absPath.empty() == false )
-            currentSourceHash = ShaderBaker::computeEffectiveSourceHash( absPath );
+            currentSourceHash = ShaderCooker::computeEffectiveSourceHash( absPath );
 
         // 0) 인메모리 캐시 조회
         {
@@ -164,36 +164,36 @@ namespace sw
         // 2순위(Git 사전 컴파일 정식 바이너리 패스트 패스: Resource/<domain>/shaders/bin/<rhi>/ 또는 .pack)
         //
         // **지금 소스에서 나오지 않은(낡은) 바이너리는 쓰지 않는다.** 있기만 하면 이기게 두면 HLSL 을 고쳐도 화면이
-        // 그대로이고(리베이크 전까지), 엔진 셰이더에 대해 라이브 컴파일 경로가 사실상 도달 불가가 된다.
-        const string prebakedRelPath = makePrebakedRelativePath( desc );
-        bool         bPrebakedUsable = true;
+        // 그대로이고(다시 쿠킹 전까지), 엔진 셰이더에 대해 라이브 컴파일 경로가 사실상 도달 불가가 된다.
+        const string precookedRelPath = makePrecookedRelativePath( desc );
+        bool         bPrecookedUsable = true;
 #if !defined( SW_SHIPPING )
-        // **신선도는 `bake.stamp` 의 내용 해시로 본다.** mtime 비교는 안 된다 — 이 저장소는 구운 바이너리까지 커밋하므로
+        // **신선도는 `cook.stamp` 의 내용 해시로 본다.** mtime 비교는 안 된다 — 이 저장소는 쿠킹된 바이너리까지 커밋하므로
         // `git pull` 이 둘의 시간 순서를 임의로 뒤집어, 소스가 바뀌었는데도 "바이너리가 더 새것" 이라 낡은 것을 쓴다.
         // 검사는 개발 빌드 전용이다. 배포에는 다시 컴파일할 길이 없어
         // 거부하면 폴백이 아니라 빈 화면이고, 배포물의 신선도는 쿠킹이 같은 스탬프로 이미 막는다
         // (CookAssets.py --verify-shaders).
         if ( absPath.empty() == false )
         {
-            const string prebakedAbsPath = ResourceUtil::getResourcePath( prebakedRelPath );
-            if ( prebakedAbsPath.empty() == false && FileUtil::fileExists( prebakedAbsPath ) )
+            const string precookedAbsPath = ResourceUtil::getResourcePath( precookedRelPath );
+            if ( precookedAbsPath.empty() == false && FileUtil::fileExists( precookedAbsPath ) )
             {
-                const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( prebakedAbsPath ) );
-                if ( ShaderBaker::isBakedOutputCurrent( binDirAbs, absPath ) == false )
+                const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( precookedAbsPath ) );
+                if ( ShaderCooker::isCookedOutputCurrent( binDirAbs, absPath ) == false )
                 {
-                    SW_LOG_TRACE( "Pre-baked shader does not match the current source — recompiling: %#", prebakedRelPath.c_str() );
-                    bPrebakedUsable = false;
+                    SW_LOG_TRACE( "Pre-cooked shader does not match the current source — recompiling: %#", precookedRelPath.c_str() );
+                    bPrecookedUsable = false;
                 }
             }
         }
 #endif
 
-        vector<uint8> prebakedBytes;
-        if ( bPrebakedUsable && ResourceUtil::readBinaryResource( prebakedRelPath, prebakedBytes ) && prebakedBytes.empty() == false )
+        vector<uint8> precookedBytes;
+        if ( bPrecookedUsable && ResourceUtil::readBinaryResource( precookedRelPath, precookedBytes ) && precookedBytes.empty() == false )
         {
-            SW_LOG_TRACE( "Loaded pre-baked shader binary: %# (%zu bytes)", prebakedRelPath.c_str(), prebakedBytes.size() );
+            SW_LOG_TRACE( "Loaded pre-cooked shader binary: %# (%zu bytes)", precookedRelPath.c_str(), precookedBytes.size() );
             ShaderCompileResult result{};
-            result._bytecode = std::move( prebakedBytes );
+            result._bytecode = std::move( precookedBytes );
             result._bSuccess = true;
 
             storeEntry( std::move( cacheKey ), desc, result, currentSourceHash );
@@ -204,7 +204,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
         BLOCK( "캐시 미스: HLSL 컴파일 및 로컬 캐시 업데이트" )
         // 라이브 컴파일은 Debug 에서 디버그 코드젠으로 한다(makeLiveCompileDesc). RenderDoc 에서 셰이더를 한 줄씩 볼 수 있어야 한다.
-        // 베이커는 이 경로를 타지 않으므로 구운 바이너리는 빌드 구성과 무관하게 늘 최적화된 것이다.
+        // 쿠커는 이 경로를 타지 않으므로 쿠킹된 바이너리는 빌드 구성과 무관하게 늘 최적화된 것이다.
         ShaderCompileResult compiledResult = ShaderCompiler::compileHlsl( liveDesc );
         if ( compiledResult._bSuccess )
         {
@@ -220,7 +220,7 @@ namespace sw
 #else
         // 빠진 것은 파일이 아니라 (경로 · 스테이지 · 진입점 · 퍼뮤테이션) 조합이다. 찾던 이름(RHI 폴더 포함) 그대로 적는다.
         SW_LOG_ERROR( "Precompiled shader binary not found in shipping pack: '%#' [%#] — %#",
-                      desc._filePath.c_str(), desc._entryPoint.c_str(), prebakedRelPath.c_str() );
+                      desc._filePath.c_str(), desc._entryPoint.c_str(), precookedRelPath.c_str() );
         ShaderCompileResult failedResult{};
         failedResult._bSuccess     = false;
         failedResult._errorMessage = "Shader binary missing in shipping pack";

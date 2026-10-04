@@ -9,7 +9,7 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #if defined( SW_HAS_DXC_API )
@@ -30,8 +30,8 @@ namespace sw
                 if ( shaderDir.empty() == false )
                     outListDir.push_back( FileUtil::normalizeSeparators( shaderDir ) );
 
-                // 베이크 스탬프도 같은 표의 헤더를 본다(`ShaderBaker::kArrIncludeRootDomain`).
-                for ( const utf8* pDomain : ShaderBaker::kArrIncludeRootDomain )
+                // 쿠킹 스탬프도 같은 표의 헤더를 본다(`ShaderCooker::kArrIncludeRootDomain`).
+                for ( const utf8* pDomain : ShaderCooker::kArrIncludeRootDomain )
                 {
                     const string domainShaders = ResourceUtil::getDomainFolderPath( pDomain, "shaders" );
                     if ( domainShaders.empty() == false )
@@ -221,8 +221,8 @@ namespace sw
                 // 주 소스 바이트만 해시하면 **include 된 .hlsli 는 키에 없다**. common.hlsli 의 상수버퍼 바인딩을 고쳐도
                 // 이 캐시가 옛 바이트를 그대로 돌려줬고, ShaderCache 는 그것을 "새로 컴파일한 것" 으로 알고 라이브 캐시에
                 // 다시 써서 GL 이 set 10 짜리 옛 SPIR-V 를 계속 썼다. 스테일 판정 기준은 하나여야 하므로
-                // ShaderBaker 의 유효 소스 해시(모든 .hlsli 포함)를 키에 섞는다.
-                hash = StringUtil::computeHash64( to_string( ShaderBaker::computeEffectiveSourceHash( absPathStr ) ), false, hash );
+                // ShaderCooker 의 유효 소스 해시(모든 .hlsli 포함)를 키에 섞는다.
+                hash = StringUtil::computeHash64( to_string( ShaderCooker::computeEffectiveSourceHash( absPathStr ) ), false, hash );
                 // 디버그 코드젠 여부도 키다. 같은 소스라도 바이트코드가 다르다.
                 // string_view 로 넘긴다. 리터럴을 그대로 주면 (pStr, length, bIgnoreCase) 오버로드에 묶여 length=0 · seed 무시로
                 // 키가 상수가 된다(실제로 그래서 모든 셰이더가 한 파일을 공유했다).

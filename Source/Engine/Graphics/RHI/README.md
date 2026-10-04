@@ -34,7 +34,7 @@ RHI/
   DX11/ DX12/ GL/ Vulkan/   백엔드 구현
                      Vulkan/VulkanRHIHandle.h 는 Vulkan C 핸들의 전방 선언 묶음이다 —
                      백엔드 **헤더**에 <vulkan/vulkan.h> 가 새어 들어가지 않게 한다
-                     Vulkan/VulkanRHIApiVersion.h 는 요구 API 판(1.3) 하나 — 셰이더 굽기 타깃과 물리 디바이스 선택이 같이 본다
+                     Vulkan/VulkanRHIApiVersion.h 는 요구 API 판(1.3) 하나 — 셰이더 쿠킹 타깃과 물리 디바이스 선택이 같이 본다
 ```
 
 ## 백엔드 폴더의 파일 구성
@@ -121,9 +121,9 @@ RHI/
 
 ## Vulkan 최소 판 — 1.3
 
-`VulkanRHIApiVersion`(1.3) 하나가 셰이더 굽기 타깃(`-fspv-target-env=vulkan1.3` → SPIR-V 1.6)이자 디바이스 최소 판입니다. 물리 디바이스 선택은
-이 판에 못 미치는 디바이스를 건너뜁니다 — 구운 SPIR-V 모듈을 하나도 받지 못하기 때문입니다. 1.3 에서는 HLSL `discard` 가 내는
-`OpDemoteToHelperInvocation` 의 기능이 필수라 따로 확인하지 않습니다. 판을 바꾸면 이 헤더 하나만 고치고 셰이더를 다시 굽습니다.
+`VulkanRHIApiVersion`(1.3) 하나가 셰이더 쿠킹 타깃(`-fspv-target-env=vulkan1.3` → SPIR-V 1.6)이자 디바이스 최소 판입니다. 물리 디바이스 선택은
+이 판에 못 미치는 디바이스를 건너뜁니다 — 쿠킹된 SPIR-V 모듈을 하나도 받지 못하기 때문입니다. 1.3 에서는 HLSL `discard` 가 내는
+`OpDemoteToHelperInvocation` 의 기능이 필수라 따로 확인하지 않습니다. 판을 바꾸면 이 헤더 하나만 고치고 셰이더를 다시 쿠킹합니다.
 
 ## 스왑체인 — 같은 개념, 다른 무게
 

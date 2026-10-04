@@ -31,7 +31,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	float4x4 g_LightViewProj;
 	float4x4 g_ViewProj;
 	// 뷰-투영의 역행렬 — 디퍼드 조명이 **깊이에서 월드 위치를 복원**하는 데 쓴다(G버퍼에 위치를
-	// 따로 굽지 않는다: 첨부 하나를 통째로 아끼고, 언리얼도 깊이에서 복원한다). 점광은 위치가
+	// 따로 저장하지 않는다: 첨부 하나를 통째로 아끼고, 언리얼도 깊이에서 복원한다). 점광은 위치가
 	// 있어야 거리 감쇠를 계산할 수 있으므로 이게 없으면 디퍼드에 점광을 넣을 수 없다.
 	float4x4 g_InvViewProj;
 	float4x4 g_World;
@@ -291,8 +291,8 @@ float4x4 swLoadInstanceWorld( uint instanceSlot )
 //      SW_MATERIAL_BEGIN { float4 color; uint albedoMap; } SW_MATERIAL_END
 //      ... SW_MATERIAL( instance.materialIndex ).color
 //      리플렉션 이름 g_SwMaterials(t9) ↔ 레지스트리 "SwMaterials" (배치마다 그 셰이더 타입의 버퍼를 등록한다).
-//      원소 레이아웃은 네 백엔드가 같다 — SPIR-V 도 DX 패킹(-fvk-use-dx-layout, ShaderCompiler.cpp)으로 굽고
-//      ShaderBindingValidatorTest.ReflectionNamesAreUniformAcrossBackends 가 구운 바이너리로 확인한다.
+//      원소 레이아웃은 네 백엔드가 같다 — SPIR-V 도 DX 패킹(-fvk-use-dx-layout, ShaderCompiler.cpp)으로 쿠킹하고
+//      ShaderBindingValidatorTest.ReflectionNamesAreUniformAcrossBackends 가 쿠킹된 바이너리로 확인한다.
 //      인덱스는 g_SwMaterialCount 로 클램프한다 — 잘못된 인덱스가 백엔드마다 다른 OOB 결과를 내지 않도록.
 //      **머티리얼은 픽셀 단계에서만 읽는다.** 정점 · 픽셀 두 단계가 g_SwMaterials 를 함께 읽으면 GL(ARB_gl_spirv) 드라이버가 구조 버퍼의
 //      이름 없는 멤버를 단계마다 다른 SPIR-V id 로 이름 짓고("_struct14_member0" · "_struct19_member0") 링크를 거절한다 — 그 배치는 패스
@@ -644,7 +644,7 @@ struct SwSurfaceOutput
 /**
  * @brief 표면을 **패스가 원하는 모양**으로 내보낸다.
  * @details 포워드는 셰이딩한 색 하나, G버퍼는 알베도와 월드 노멀 둘. 노멀 인코딩은 한 군데뿐이어야
- *          한다 — 굽는 쪽(여기)과 읽는 쪽(deferredlighting)이 어긋나면 조명이 조용히 틀린다.
+ *          한다 — 쓰는 쪽(여기)과 읽는 쪽(deferredlighting)이 어긋나면 조명이 조용히 틀린다.
  */
 SW_SURFACE_OUTPUT swStoreSurface( float4 litColor, float4 albedo, float3 worldNormal )
 {

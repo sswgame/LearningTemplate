@@ -817,7 +817,7 @@ SW_TEST_CASE( GameObjectManagerTest, CodegenFillsCreationFunctionForConcreteComp
 #if !defined( SW_SHIPPING )
 namespace sw
 {
-    /** @brief 키트 모듈의 컴포넌트를 흉내 냅니다. 생성 코드처럼 모듈 이름을 "GameFramework" 로 구운 TypeInfo 를 씁니다. */
+    /** @brief 키트 모듈의 컴포넌트를 흉내 냅니다. 생성 코드처럼 모듈 이름을 "GameFramework" 로 박은 TypeInfo 를 씁니다. */
     class KitProbeComponent : public Component
     {
     public:
@@ -850,7 +850,7 @@ namespace sw
 
 namespace
 {
-    /** @brief 키트의 코드젠이 만드는 것과 같은 모양의 줄입니다(구운 모듈 이름 · 생성 함수). */
+    /** @brief 키트의 코드젠이 만드는 것과 같은 모양의 줄입니다(박힌 모듈 이름 · 생성 함수). */
     TypeInfo makeKitProbeTypeInfo()
     {
         TypeInfo info{};
@@ -895,18 +895,18 @@ const TypeInfo* sw::ShadowProbeRightComponent::StaticType()
     return &s_info;
 }
 
-/** @brief 코드젠의 `StaticType()` 처럼 레지스트리의 줄(올린 모듈 이름이 적힌 것)을 돌려줍니다. 아직 오르지 않았거나 내려갔으면 구운 사본입니다. */
+/** @brief 코드젠의 `StaticType()` 처럼 레지스트리의 줄(올린 모듈 이름이 적힌 것)을 돌려줍니다. 아직 오르지 않았거나 내려갔으면 박아 둔 사본입니다. */
 const TypeInfo* sw::KitProbeComponent::StaticType()
 {
-    static const TypeInfo s_bakedInfo = makeKitProbeTypeInfo();
-    const TypeInfo*       pRegistered = engine::getTypeRegistry().findType( hashed_string( "sw::KitProbeComponent" ) );
-    return ( pRegistered != nullptr ) ? pRegistered : &s_bakedInfo;
+    static const TypeInfo s_embeddedInfo = makeKitProbeTypeInfo();
+    const TypeInfo*       pRegistered    = engine::getTypeRegistry().findType( hashed_string( "sw::KitProbeComponent" ) );
+    return ( pRegistered != nullptr ) ? pRegistered : &s_embeddedInfo;
 }
 
 /**
  * @brief [GameObjectManagerTest] 생성 함수는 타입 표 하나에 있다 — 먼저 만든 매니저도 나중에 오른 모듈 타입을 만들고, 모듈을 내리면 어느 매니저도 못 만든다
  * @details 매니저마다 만들 때 팩토리 표를 모으면 씬에 속하지 않은 매니저(비동기 로드의 워커 · 시험)는 나중에 오른 모듈을 모르고, 내린
- *          모듈의 람다를 그대로 든다. 그리고 생성 함수의 모듈은 구운 이름("GameFramework")이 아니라 **올린 모듈**("GF_TestKit")이다 — 그래야
+ *          모듈의 람다를 그대로 든다. 그리고 생성 함수의 모듈은 박힌 이름("GameFramework")이 아니라 **올린 모듈**("GF_TestKit")이다 — 그래야
  *          키트를 내릴 때 같이 걷힌다. 걷힌 뒤에는 미리 들고 있던 `TypeInfo*` 의 칸도 비어 있어야 한다(내려간 이미지를 가리키면 안 된다).
  */
 SW_TEST_CASE( GameObjectManagerTest, CreationFunctionLivesInTheTypeTableAndLeavesWithItsModule )

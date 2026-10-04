@@ -875,9 +875,9 @@ SW_TEST_CASE( ResourceTest, CookedPathsComeFromOneRule )
 }
 
 /**
- * @brief [ResourceTest] 저작 소스 이름도 같은 표에서 나온다 — 굽지 않는 이름은 쿠커가 굽는 이름이 된다
+ * @brief [ResourceTest] 저작 소스 이름도 같은 표에서 나온다 — 쿠킹하지 않는 이름은 쿠커가 쿠킹하는 이름이 된다
  * @details 씬 저장이 대화상자에 적은 이름(`level`) · Shipping 이 읽은 쿠킹본(`.scene.bin`)을 그대로 쓰면 에디터에서는 열리는데 쿠커가
- *          굽지 않아 배포본에 없다.
+ *          쿠킹하지 않아 배포본에 없다.
  */
 SW_TEST_CASE( ResourceTest, SourcePathsComeFromTheSameRule )
 {

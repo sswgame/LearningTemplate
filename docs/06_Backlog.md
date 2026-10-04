@@ -80,8 +80,8 @@ cd build/Ninja-Debug/Bin
 - 에디터는 `-EnableEditor` 를 줘야 뜬다. 없이 돌린 검증은 에디터 OFF 검증이다 — 로그로 실제로 로드됐는지 본다.
 - Shipping 테스트 바이너리는 `build/Ninja-Shipping/TestBin/` 에 있고 작업 디렉터리는 `Bin/` 이다. `Bin/` 에 남은 낡은 테스트 exe 사본을
   실행하지 말 것.
-- 셰이더 소스(.hlsl/.hlsli)를 고쳤으면 다시 굽는다. 빌드는 HLSL 을 다시 굽지 않는다 — `App.exe --bake-shaders` 뒤에 재고 비교한다.
-  Shipping 쿠킹은 `bake.stamp` 의 내용 해시로 검증하고 어긋나면 빌드를 세운다(`Scripts/generate/CookAssets.py --verify-shaders`).
+- 셰이더 소스(.hlsl/.hlsli)를 고쳤으면 다시 쿠킹한다. 빌드는 HLSL 을 다시 쿠킹하지 않는다 — `App.exe --cook-shaders` 뒤에 재고 비교한다.
+  Shipping 쿠킹은 `cook.stamp` 의 내용 해시로 검증하고 어긋나면 빌드를 세운다(`Scripts/generate/CookAssets.py --verify-shaders`).
 - 비결정적 실패는 한 번 재현으로 "확정" 이라 부르지 않는다. 3~5 회 다시 돌려 재현율을 본다. 간헐 실패를 보면
   `--output-on-failure` 출력 전체를 파일로 남긴다(요약만 남으면 어느 케이스인지 모른다).
 - 직접 실행으로 통과해도 CTest 에서 질 수 있다(병렬 부하 · 시한). 끝내기 전 검증은 CTest 로 한다. 멈추면 `LastTest.log` 의 마지막 `[ RUN ]` 을 본다.
@@ -135,7 +135,7 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
-- **`.hdr` 원본 굽기가 없다** — 지금 굽기는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
+- **`.hdr` 원본 임포트가 없다** — 지금 임포트는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
 - **2D 정렬 레이어가 없다.** 깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다.
 - **점광 · 스폿 그림자** — RHI 텍스처 차원(배열 · 큐브, 면 단위 타깃 · 올리기 · 읽기)은 있다. 남은 것: 그림자 패스 다중 뷰(면 여섯) → 셰이더 쪽(DX12 · Vulkan
@@ -213,7 +213,7 @@ cd build/Ninja-Debug/Bin
 
 - **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩). 09-23 에 고친 DX11 기록 컨텍스트 결함과 모양은 같지만 단정하지 않았다.
   이제 시험 실행 파일에 크래시 핸들러가 있어 다음에는 스택이 남는다 — 직접 실행해 전체 출력을 파일로 받는다.
-- **Shipping `CoreTest` 의 `Failed to deserialize config from: shipping_host_baked`**(한 번, 3 회 재실행 통과). `ConfigManager::loadConfigFromJson`.
+- **Shipping `CoreTest` 의 `Failed to deserialize config from: shipping_host_generated`**(한 번, 3 회 재실행 통과). `ConfigManager::loadConfigFromJson`.
 - **WSL lavapipe 의 첫 `vkAcquireNextImageKHR` 가 가끔 `VK_ERROR_SURFACE_LOST_KHR`** 로 진다(`AppTest_HostOnly`, 43 회 중 3 회, 환경 탓으로 판단 — 미확정).
   다시 보이면 기준선과 번갈아 돌려 가른다. App 로그는 `build/WSL-Debug/Bin/Saved/Logs`.
 - **CI Windows 러너(WARP)에서 픽셀 시험이 지던 원인은 판정하지 않았다**(`RenderPassGpuTest` 를 host 스위트로 빼서 우회). 실패 값이 `좌 0, 우 0` 이면 WARP 가
@@ -305,13 +305,13 @@ cd build/Ninja-Debug/Bin
 - **GPU 비용은 `GPU.<패스>` 타임스탬프로 나눈다.** 패스를 지워서 나누면 타깃 사슬이 바뀌어 답이 뒤집힌다(추정 38 us, 실측 123 us). `RT.BeginFrame` 은 GPU 시간의 대리값이 아니다.
 - **재기 전에 VSync 가 꺼졌는지 본다** — 1/RT.Frame 이 주사율과 같으면 VSync 다. DXGI 는 스왑체인 생성과 `ResizeBuffers` **둘 다**에 `ALLOW_TEARING` +
   `Present( 0, DXGI_PRESENT_ALLOW_TEARING )`(짝이 안 맞으면 `INVALID_CALL`, `RHI/DX/RHIDxgiTearing.h`). Vulkan 은 present 모드. CLI 는 `-vsync`.
-- **셰이더를 고쳤으면 재기 전에 `App.exe --bake-shaders`.** 빌드는 HLSL 을 다시 굽지 않는다.
+- **셰이더를 고쳤으면 재기 전에 `App.exe --cook-shaders`.** 빌드는 HLSL 을 다시 쿠킹하지 않는다.
 - **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` ·
   `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
   `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.
 - **프레임당 힙 할당**은 `-gv_profileFrames` 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 재지 말 것).
 - **씬 로드 측정**: `Scripts/dev/GenerateStressScene.py` 로 큰 씬(도형 섞기) → `GameConfig.json` `_startupScene` → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지
-  않으므로 쿠킹 효과는 `--cooked-dir=<repo>/Resource` 로 굽고 재고 지운다. `[SceneLoad]` 가 `.xml` 을 가리키면 쿠킹본을 안 읽은 것이다.
+  않으므로 쿠킹 효과는 `--cooked-dir=<repo>/Resource` 로 쿠킹하고 재고 지운다. `[SceneLoad]` 가 `.xml` 을 가리키면 쿠킹본을 안 읽은 것이다.
 - **벤치가 상태를 공유하면 단계 순서를 잰다.** 손대지 않은 대조군이 움직이면 하니스를 의심한다. 벤치 메시가 공유라 배치 결함을 가린 적이 있다 — 씬에서 온 메시로도 본다.
 - **GPU 업로드 비용은 호출당이다**(DX12 ~3.3 us) — 쪼개면 느려진다. 구간을 배열로 묶어 한 번에.
 - **워커가 쓴 데이터를 다른 코어가 읽으면** 캐시 이동이 항목당 일(~40 ns)보다 비싸다. 쓰는 스레드와 읽는 스레드를 같게 둔다.
@@ -428,7 +428,7 @@ cd build/Ninja-Debug/Bin
   `sw_skipUnitySources` 가 다시 길어지면 규칙이 깨지고 있다는 신호다.
 - **LLVM 을 다시 깔면 PCH 가 전부 낡는다**(`… has been modified since the precompiled header was built`). `.pch` 와 짝 `cmake_pch.cxx.obj` 를 같이 지운다(`SetupLlvm.py` 가 한다).
 - **LTO 함정** — clang `-flto` obj 는 MSVC `lib.exe` 가 못 읽는다(LNK1107). 아카이버는 "지금 컴파일러 옆" 을 먼저 본다(리눅스 `/usr/bin` 에는 llvm-ar 이 없어 LTO 가 조용히 꺼진다).
-  CMake 는 IPO 아카이브 명령을 `project()` 때 굽고, `check_ipo_supported` 는 거짓 NO 를 내서 직접 판정한다(`cmake/Environment/ToolchainBinaries.cmake`). `SW_ENABLE_LTO` 하나가 Release · Shipping.
+  CMake 는 IPO 아카이브 명령을 `project()` 때 정해 두고, `check_ipo_supported` 는 거짓 NO 를 내서 직접 판정한다(`cmake/Environment/ToolchainBinaries.cmake`). `SW_ENABLE_LTO` 하나가 Release · Shipping.
 - **GPU · 드라이버** — 반복 TDR 은 어댑터를 망가뜨린다(재부팅 필요). DX12 는 실패 지점에서 InfoQueue · DRED 를 강제로 뽑는다. 이름 없는 객체("Unnamed")가 보이면 `SetName` 부터 붙인다.
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
 
@@ -538,7 +538,7 @@ cd build/Ninja-Debug/Bin
 - **버전 절차는 `runVersionedDeserialize` 한 벌**이고 형식 사이 차이는 `SchemaVersionSource` · `SchemaOrphanPolicy` 두 enum 뿐이다. 버린 orphan 은 로드마다 한 줄 알린다 —
   새 이관도 `findOrphan` · `findOrphanHash` · `applyOrphanTo…` 로 찾아야 경고에서 빠진다(`_bClaimed`). 이관은 기록 타입이 같을 때만 제자리, 스칼라 → 스칼라는 텍스트를 거쳐
   (`tryCoerceBinaryPayload`), 비트 재해석은 금지다. 판단은 전선이 싣고 온 타입 해시로(payload 크기로 짐작하면 `1.5f` 가 `1069547520` 이 된다).
-- **실패는 버릴 수 없다.** 실패할 수 있는 동사(load · save · read · write · parse · (de)serialize · apply · restore · import · export · cook · compile · bake · revert · convert ·
+- **실패는 버릴 수 없다.** 실패할 수 있는 동사(load · save · read · write · parse · (de)serialize · apply · restore · import · export · cook · compile · revert · convert ·
   try · open · attach · spawn · instantiate · reload · remove · copy · create · delete · move · rename)의 bool 은 `[[nodiscard]]` — `-Werror=unused-result` + `CheckFallibleNodiscard`.
   의도된 버림은 `(void)` + 이유. `Archive` 읽기 연산자는 끈적한 `isError` 상태라 버려도 된다.
 - **제자리 로드는 원자적이다**(`ObjectLoadContext::_bRestorePreviousOnFailure`). `BinarySerializer::deserialize` 자체는 실패해도 되돌리지 않는다 — 원자성이 필요한 쪽이 스냅샷을 뜬다.
@@ -555,7 +555,7 @@ cd build/Ninja-Debug/Bin
   `hashed_string::findInterned`, 해시만 필요하면 `computeHash( string_view )`. 진단은 `getInternedCount`. 같은 이름 번호는 밑 이름별로 되쓴다(`SameNameChurnKeepsInternPoolBounded`).
 - **`hashed_string` 은 FName 규칙이다** — 같음 · 해시는 대소문자 무시, `c_str()` 은 적은 철자, `operator<` 없음(`HashedStringLexicalLess` · `HashedStringFastLess`), 대소문자만 바꾸는
   이름 변경은 `isEqual( …, NameCase::CaseSensitive )`. FName 과 일부러 다른 셋은 되돌리지 말 것: 해시는 실행마다 같은 FNV(저장된다), 철자 보존은 모든 구성, 숫자 꼬리 없음.
-- **문자열 해시 식을 바꾸지 말 것.** `StringUtil::computeHash64`(FNV-1a, 문자를 `make_unsigned_t<CharT>` 로 넓힌다)에 쿠킹 산출물 · 셰이더 베이크 스탬프 · 파이썬 쿠커가 걸려 있다.
+- **문자열 해시 식을 바꾸지 말 것.** `StringUtil::computeHash64`(FNV-1a, 문자를 `make_unsigned_t<CharT>` 로 넓힌다)에 쿠킹 산출물 · 셰이더 쿠킹 스탬프 · 파이썬 쿠커가 걸려 있다.
   `RuntimeStringHash` 는 프로세스 안 전용이다. `computeHash64( "리터럴", false, seed )` 는 포인터 오버로드에 묶여 키가 상수가 된다 — `string_view` 로 넘긴다.
 - **`sw::unordered_map` 은 밀집 배열, `sw::map` 은 정렬 벡터다**(`SW_ENABLE_STL_CONTAINER` 꺼짐). 삽입 · 삭제가 원소를 옮기므로 표 안 원소의 포인터를 잠금 밖으로 내주지 말 것 —
   복사로 주거나 값을 `unique_ptr` 로 든다. 짧은 이름(SSO) `string` 의 `c_str()` 도 이동 뒤 빈자리를 가리킨다(프로파일러 이름은 intern 아레나에).
@@ -673,14 +673,14 @@ cd build/Ninja-Debug/Bin
 - **주의: DX12 `enqueueGpuRelease`(`_fenceValue`)** — 다른 스레드의 `waitForQueueDrain` 이 같은 값을 먼저 Signal 하면 기록 중인 프레임이 제출되기 전에 해제가 돌 수 있다.
   기존 DX12 해제 경로 전부에 해당한다(열린 일).
 
-- **셰이더 굽기는 패스 종류 표 전체 × (머티리얼 없음 + 머티리얼) × `RenderViewMode` 를 굽는다** — 파이프라인 XML 에 나오는 패스만 곱하면 런타임
-  (`ensurePassResources`)이 만드는 변형이 빠진다. 뷰 모드 define 의 정본은 `FrameRendererUtil::findViewModeDefine`, `ShaderBakeRequestTest.BakedManifestHoldsEveryRequest` 가
-  커밋된 매니페스트를 대조한다. Vulkan 최소 판과 굽기 타깃(`-fspv-target-env`)은 `VulkanRHIApiVersion.h` 하나 — 1.3 미만 디바이스는 고르지 않는다(SPIR-V 1.6).
+- **셰이더 쿠킹은 패스 종류 표 전체 × (머티리얼 없음 + 머티리얼) × `RenderViewMode` 를 쿠킹한다** — 파이프라인 XML 에 나오는 패스만 곱하면 런타임
+  (`ensurePassResources`)이 만드는 변형이 빠진다. 뷰 모드 define 의 정본은 `FrameRendererUtil::findViewModeDefine`, `ShaderCookRequestTest.CookedManifestHoldsEveryRequest` 가
+  커밋된 매니페스트를 대조한다. Vulkan 최소 판과 쿠킹 타깃(`-fspv-target-env`)은 `VulkanRHIApiVersion.h` 하나 — 1.3 미만 디바이스는 고르지 않는다(SPIR-V 1.6).
 
-- **텍스처는 들일 때 굽는다(사용자 결정 2026-10-03 — UE 임포트 방식).** 런타임은 DDS 만 읽고, 원본은 `<domain>/textures_raw/` 에만 둔다(`CheckTextureFolders`).
-  원본 ↔ DDS 대조는 원본 폴더마다 `bake.stamp`(원본 바이트 + 해석한 규칙 + 베이커 버전의 해시, DDS 해시) — `App --bake-textures` · `--check-textures`(헤드리스로
-  에디터 모듈을 올린다, Shipping 은 이유를 남기고 실패), CI 대조는 `TextureBakeStampTest`. 함정: 굽기 동작을 바꾸면 `TextureBakerInternal::kBakerVersion` 을 올려야
-  모든 스탬프가 어긋남이 된다. Debug 의 DirectXTex BC7 은 블록당 수백 ms 라 큰 원본은 Release App 으로 굽는다. 밉 · 변환은 `TEX_FILTER_FORCE_NON_WIC`(결정적).
+- **텍스처는 들일 때 임포트한다(사용자 결정 2026-10-03 — UE 임포트 방식).** 런타임은 DDS 만 읽고, 원본은 `<domain>/textures_raw/` 에만 둔다(`CheckTextureFolders`).
+  원본 ↔ DDS 대조는 원본 폴더마다 `import.stamp`(원본 바이트 + 해석한 규칙 + 임포터 버전의 해시, DDS 해시) — `App --import-textures` · `--check-textures`(헤드리스로
+  에디터 모듈을 올린다, Shipping 은 이유를 남기고 실패), CI 대조는 `TextureImportStampTest`. 함정: 임포트 동작을 바꾸면 `TextureImporterInternal::kImporterVersion` 을 올려야
+  모든 스탬프가 어긋남이 된다. Debug 의 DirectXTex BC7 은 블록당 수백 ms 라 큰 원본은 Release App 으로 임포트한다. 밉 · 변환은 `TEX_FILTER_FORCE_NON_WIC`(결정적).
 
 - **디바이스 종료 순서는 `IRHIDevice::shutdown`(비가상 템플릿 메서드) 하나가 정한다** — releaseAllFor → `waitIdleInternal` → `detachCommandRecordingInternal` →
   `shutdownInternal`. 백엔드는 훅만 채우고 앞부분을 다시 적지 않는다(네 벌일 때 DX12 · DX11 이 이미 어긋나 있었다). 리스트 떼기는 `RHILiveCommandListUtil::detachAll`.
@@ -701,7 +701,7 @@ cd build/Ninja-Debug/Bin
 - **머티리얼 텍스처 슬롯(t5..t8)의 샘플러는 `shaderslot::kMaterialTextureSampler`(LINEAR_WRAP) 하나** — GL 은 샘플러 객체를 유닛에 `glBindSampler`, DX11 은 정적 세트.
 
 - **패스 종류 하나 = `RenderPassType` 한 값 + `RenderPassTypeInfo.cpp` 의 case 하나**(기본 셰이더 · define · 포맷 · 클리어 · 입력 계약 · 플래그). 전용 실행이
-  필요할 때만 `executePass` 의 switch 에 case. 런타임 PSO 와 베이커가 같은 `selectRenderPassShader` 를 부른다. 마지막 열거자를 바꾸면
+  필요할 때만 `executePass` 의 switch 에 case. 런타임 PSO 와 쿠커가 같은 `selectRenderPassShader` 를 부른다. 마지막 열거자를 바꾸면
   `kRenderPassTypeCount` 를 직접 고친다(`RenderPassTest.TypeInfoTableCoversEveryEnumValue` 가 잡는다). 리플렉션 매니페스트는 키 순서로 쓴다(결정적).
 - **인스펙터 위젯 · CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나**(`InspectorBuiltinValue.h`) — 내장 타입을 더하면 `InspectorWidgetFor<T>` 특수화가
   없으면 컴파일이 선다. .xxx 의 문자열 줄은 `std::string`, 프로퍼티는 `sw::string`(`InspectorBuiltinCppType` 이 메운다).
@@ -709,23 +709,23 @@ cd build/Ninja-Debug/Bin
 - **셰이더 이름 규칙은 C++ 와 같다**(AGENTS.md "### HLSL", `CheckShaderConventions` 게이트): 함수 camelCase(공유 헤더는 `sw…`), 타입 PascalCase
   (공유 헤더는 `Sw…`, `_t` 없음), 필드는 C++ 멤버 이름에서 `_` 를 뺀 것. `g_*` · cbuffer · 시맨틱 · 진입점(`VSMain` · `PSMain` · `CSMain`)은 C++ 가
   문자열로 묶으므로 바꾸면 같은 커밋에서 C++ 도 바꾼다. **셰이더 쪽 개명은 계약 검사를 조용히 끌 수 있다**(`validate` 는 표에 없는 이름을 건너뛴다) —
-  `ShaderBindingValidatorTest.EveryBoundNameIsInBakedReflection` 이 C++ 가 아는 이름이 구운 매니페스트에 있는지 본다.
+  `ShaderBindingValidatorTest.EveryBoundNameIsInCookedReflection` 이 C++ 가 아는 이름이 쿠킹된 매니페스트에 있는지 본다.
 
 - **렌더 스레드는 씬을 못 본다** — 런타임 경로의 `_pScene` 은 늘 null, `GpuSceneSnapshot` 이 유일한 통로다. CPU 폴백을 다시 만들지 말 것. 스레드 경계 타입은 `GpuSceneBuilder`(GT, GPU
   핸들 0) / `GpuSceneSnapshot` / `GpuScene`(RT)이다. 스냅샷은 GT 가 만든 것만 옮긴다 — RT 가 파생하는 값(`_indirectCommandCount`)을 실으면 GT 의 0 이 덮는다(증상: "카메라를 움직일
   때만 메시가 보인다"). 패킷은 자기완결이어야 하고 소유(`shared_ptr`)를 싣는다 — 생포인터는 `CheckRenderOwnership` 이 막고 예외는 `// SW_OWNERSHIP_RAW_OK: <이유>`.
-- **셰이더 바인딩 계약의 정본은 `bindingslots.hlsli` 하나**(HLSL · C++ 같은 파일 include). 백엔드는 shaderslot 상수만 쓰고 바인딩 숫자 리터럴은 금지, `ShaderBindingValidator` 가 구운
+- **셰이더 바인딩 계약의 정본은 `bindingslots.hlsli` 하나**(HLSL · C++ 같은 파일 include). 백엔드는 shaderslot 상수만 쓰고 바인딩 숫자 리터럴은 금지, `ShaderBindingValidator` 가 쿠킹된
   바이너리를 대조한다(nogpu). `draw()` 에 CB 인자는 없다. 백엔드 간 공유 상수는 `RHITypes.h` `constant` 블록 하나 — 지금 값이 같아도 바뀔 수 있으면 공유하고 별칭도 금지.
 - **상수버퍼를 드로우 · 디스패치가 나눠 쓰면 안 된다**(같은 함정이 두 번: 패스 CB, 컬링 CB). 값이 바뀔 때만 쓰는 CB 는 `RHIConstantBufferMirror` 로 링의 모든 칸에 채운다(안 그러면
   DX12 · Vulkan 이 세 프레임 중 둘을 0 으로 그린다). `updateConstantBuffer` 크기는 만든 크기를 넘으면 안 된다(GL 만 막는다) — 셰이더를 다시 구우면 머티리얼 CB 가 커질 수 있어
   `MaterialInstance` 가 `_constantByteSize` 로 다시 만든다. CB 칸 크기는 리플렉션, 쓰는 크기는 XML `shaderType` — 어긋나면 옆 프로퍼티 색이 오염된다(`writeBoundedValue`).
-- **셰이더 산출물 스테일 판정은 내용 해시 하나다**(`ShaderBaker::computeEffectiveSourceHash`, mtime 금지 — 구운 바이너리를 커밋하므로 git 이 mtime 을 섞는다). 스탬프 헤더 `SWBAKE 3`,
-  `bake.stamp` 는 CR 을 뗀 바이트로. 매니페스트가 바이너리보다 낡으면 바인더가 빈 레이아웃으로 그려 DX12 DEVICE_HUNG 이다 — `CookAssets.py --verify-shaders`. 백엔드 하나만 다른
+- **셰이더 산출물 스테일 판정은 내용 해시 하나다**(`ShaderCooker::computeEffectiveSourceHash`, mtime 금지 — 쿠킹된 바이너리를 커밋하므로 git 이 mtime 을 섞는다). 스탬프 헤더 `SWCOOK 3`,
+  `cook.stamp` 는 CR 을 뗀 바이트로. 매니페스트가 바이너리보다 낡으면 바인더가 빈 레이아웃으로 그려 DX12 DEVICE_HUNG 이다 — `CookAssets.py --verify-shaders`. 백엔드 하나만 다른
   그림을 내면 ① 셰이더 산출물 ② 엔진 바깥을 다 되읽었는데 맞으면 셰이더 **코드 모양**(GL 드라이버가 DXC early-return 을 잘못 컴파일했다)을 의심한다. 프로브는 `nointerpolation`
   슬롯에 정수를 싣고, 모프 진단은 `-gv_morphDiag=1|2|3`.
-- **베이크 바이너리 이름은 `ShaderBaker::computeBinaryFileName` 하나**(퍼뮤테이션 해시 포함 — 빠지면 define 이 GPU 에 안 닿는데 리플렉션은 맞아 보인다). 패스 define 의 정본은
-  `FrameRendererUtil::getPassDefine`(런타임 PSO 와 베이커가 같이 부른다 — 갈리면 Shipping 에서만 그 드로우가 사라진다). "컬러 출력 없는 패스에는 픽셀 스테이지가 없다" 는
-  `hasPixelStage` 하나. 실시간 컴파일 요청은 `ShaderCache::makeLiveCompileDesc`(경로 `Saved/ShaderCache/<rhi>/<해시>-<opt|dbg>/`), 베이커는 늘 최적화다. 셰이더 리로드 대상은
+- **쿠킹 바이너리 이름은 `ShaderCooker::computeBinaryFileName` 하나**(퍼뮤테이션 해시 포함 — 빠지면 define 이 GPU 에 안 닿는데 리플렉션은 맞아 보인다). 패스 define 의 정본은
+  `FrameRendererUtil::getPassDefine`(런타임 PSO 와 쿠커가 같이 부른다 — 갈리면 Shipping 에서만 그 드로우가 사라진다). "컬러 출력 없는 패스에는 픽셀 스테이지가 없다" 는
+  `hasPixelStage` 하나. 실시간 컴파일 요청은 `ShaderCache::makeLiveCompileDesc`(경로 `Saved/ShaderCache/<rhi>/<해시>-<opt|dbg>/`), 쿠커는 늘 최적화다. 셰이더 리로드 대상은
   `ShaderCache::collectCompiledDescs`, 바이트코드가 같으면 로컬 캐시에 쓰지 않는다.
 - **정점 입력의 정본은 `constant::arrVertexAttribute`**(POSITION · NORMAL · TEXCOORD · COLOR, 48 B), 셰이더는 `common.hlsli` 의 `SwVertexInput` 만 쓴다(Vulkan · GL 은 선언 순서로
   location 을 매긴다). `SV_VertexID` 는 Vulkan · GL 에서 startVertex 를 포함하고 D3D 는 0 기반이다. 인스턴스 자리는 정점 슬롯 1(`SW_INSTANCESLOT`)로 넘기므로 `SV_InstanceID` 를 쓰지
@@ -763,7 +763,7 @@ cd build/Ninja-Debug/Bin
   업로드 복사 리스트는 열어 두고 기록만 하며 `flushPendingUploads` 가 프레임에 한 번 내보낸다(`_uploadSlotMutex`). bindless 인덱스는 `acquireBindlessIndex(lock)` 로 집는 일과 뷰 생성을
   한 임계 구역에. CBV 는 256 B 정렬. drawIndirect 가 메시 VB 를 덮어쓴 적이 있다 — 렌더 변경은 스크린샷까지 본다.
 - **Vulkan** — acquire 한 이미지는 present 로만 돌려준다(present 없는 프레임마다 acquire 하면 `UINT64_MAX` acquire 로 교착). 리소스 해제는 실제 GPU 펜스(단조 세대)와 이어야 한다.
-  일회성 업로드는 `VulkanOneShotCommands` · 전용 풀 · `_queueMutex`. `vulkan1.3` DXC 는 `discard` 를 demote 로 내므로 기능을 켠다 — 구운 셰이더가 바뀌면 검증 레이어 로그를 다시 읽는다.
+  일회성 업로드는 `VulkanOneShotCommands` · 전용 풀 · `_queueMutex`. `vulkan1.3` DXC 는 `discard` 를 demote 로 내므로 기능을 켠다 — 쿠킹된 셰이더가 바뀌면 검증 레이어 로그를 다시 읽는다.
   와이어프레임은 `fillModeNonSolid`. 백버퍼 블릿의 이전 레이아웃은 `UNDEFINED`.
 - **GL** — 컨텍스트는 렌더 워커가 프레임마다 쥐었다 놓는다(다른 스레드 생성은 `acquireGraphicsContextBlocking`). `ARB_gl_spirv` 가 없으면 초기화에서 끊는다(다른 백엔드로 넘어가지
   않는다). `glClipControl` 은 `#ifdef GL_CLIP_CONTROL`(없는 토큰) 같은 가드 뒤에 두지 말 것(상하 반전이 오래 숨었다). MRT 클리어는 `glClearBufferfv`, `R16G16B16A16_FLOAT` 는
@@ -787,7 +787,7 @@ cd build/Ninja-Debug/Bin
   셰이더에 `SW_PASS_GBUFFER` 를 얹는다(출력은 양쪽 다 구조체).
 - **RHI 백엔드에 .cpp 를 더하면** `cmake/Engine/RhiBackendSources.cmake` 에도. 파일은 `<Backend>RHIDevice` · `…DeviceInit` · `…DeviceSubmission` 축으로. 백엔드는 별도 MODULE DLL 이라 Engine
   전역 변수를 extern 으로 못 쓴다 — 정책은 Engine, 메커니즘은 디바이스.
-- **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 굽지 않는다(8 비트 경로).
+- **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 임포트하지 않는다(8 비트 경로).
 
 ### 3-8. 에디터
 
@@ -850,7 +850,7 @@ cd build/Ninja-Debug/Bin
   거절한다. 모듈 이미지 · 타입 등록은 그 단계에서 App 로더(`ModuleHost::loadModuleImages`)가 하고, 인스턴스는 RHI 뒤에 **게임 → 에디터** 순(그래야
   `-gv_editorStartupScene` 이 마지막 요청이 된다). Shipping 통째 링크(/WHOLEARCHIVE) 목록은 `sw_configureAppDependencies`(모듈 등록 뒤)에서만 읽는다 — App 이 GF · 게임보다
   먼저 add_subdirectory 되어 GF · 킷 · 게임의 등록기가 배포본에서 빠져 있었다. 쿠킹은 `ContentSource::SourceTree`(팩은 산출물이라 입력이 아니다)이고, MissingComponent 가
-  든 씬은 굽지 않고 실패(종료 코드 → CookAssets)로 센다.
+  든 씬은 쿠킹하지 않고 실패(종료 코드 → CookAssets)로 센다.
 
 - **엔진 기동 · 종료 순서는 `EngineInitStepList.xxx` 의 의존 칸이 정하고, 표는 그 순서대로 적는다**(UE `USubsystem` 의존 선언). 의존은 식별자 목록
   `{ A, B }` 라 오타 · 아래 줄 의존은 컴파일 오류(static_assert), 정렬은 의존만 보고 동점은 이름 순, 그 결과가 줄 순서와 같은지
@@ -869,7 +869,7 @@ cd build/Ninja-Debug/Bin
   엔진(또는 App) 코드가 만들고 생성자를 .cpp 에 둔다 — 모듈 안에서 만든 보유자가 모듈보다 오래 살면 훑기가 내려간 vtable 로 뛴다.
 
 - **에셋 핫 리로드의 경계: 임포트 · 감시 · 씬 알림은 에디터, 런타임 파일의 제자리 다시 읽기는 엔진 캐시.** `AssetHotReload` 에 종류별 코드를 넣지
-  말 것 — 새 종류는 엔진에 `IAssetCache` 등록 + `EditorAssetTypeRegistry` 줄의 `_pCacheKindName`(· 굽는 종류는 `_pfnImportSource`).
+  말 것 — 새 종류는 엔진에 `IAssetCache` 등록 + `EditorAssetTypeRegistry` 줄의 `_pCacheKindName`(· 임포트하는 종류는 `_pfnImportSource`).
   컴포넌트 알림은 `AssetHotReload::notifyAssetUsers` 가 `PROPERTY( AssetPath )` 값으로 찾아 `onPropertyChanged` 를 부른다 — 에셋에서 계산한 상태는
   `onPropertyChanged` 가 **값이 같아도** 다시 맞춰야 한다. 리로드 전용 컴포넌트 훅 · `#if !SW_SHIPPING` 가드는 두지 않는다.
 
@@ -995,7 +995,7 @@ cd build/Ninja-Debug/Bin
   `LocalizedTextArena` 에 있어 영구 유효하다. 대화 핀 번호(`nodeId * 100 + offset`)는 디스크 포맷이고 주인은 `DialogueGraphAsset` 하나다.
 - **키트 소속은 의존 관계로 판별되지 않는다**(전부 Engine 만 include). 다른 장르도 쓰는 것(HP 바 · 데미지 숫자 · 중력)은 `UI/` · `Base/`. 리플렉션 대상 헤더는 소스와 같은 재귀 규칙으로
   모은다(다르면 새 폴더의 `REFLECT` 타입이 컴파일되고 등록만 안 된다).
-- **설정 표의 열쇠는 타입이다**(`ensureConfig<T>( path, baked )`). Shipping 은 디스크의 `Config/` 를 보지 않는다. 고정 스텝 상한은 `EngineConfig::_fixedDeltaTime` · `_maxFixedStepPerFrame`
+- **설정 표의 열쇠는 타입이다**(`ensureConfig<T>( path, generated )`). Shipping 은 디스크의 `Config/` 를 보지 않는다. 고정 스텝 상한은 `EngineConfig::_fixedDeltaTime` · `_maxFixedStepPerFrame`
   (넘친 잔액은 버린다). `ModuleFrameState` 래치 지점이 둘인 것은 의도다(옮기면 에디터 Step 한 칸이 틱 없이 소비된다).
 - **리눅스 스플래시** — `XPutImage` 는 1:1 이라 우리가 줄인다, `Expose` 마다 지워지므로 배경 픽스맵, `override_redirect` 창은 XWayland 에서 안 뜬다(EWMH `_NET_WM_WINDOW_TYPE_SPLASH`).
   서버가 "정상" 이어도 화면에 없을 수 있다 — 최종 확인은 사람 눈이다. 창의 `isVisible()`(지금 화면에 있나)과 `isVisibleRequested()`(의도)는 다른 질문이다.
@@ -1034,7 +1034,7 @@ cd build/Ninja-Debug/Bin
 | `precede` · `succeed` | `runBefore` · `runAfter` |
 | lane | queue |
 | `retire*` · `retireImage` | `deferImageUnload` · `free*` |
-| `*Recipe`(`D3D12RHIResourceRecipe` · `VulkanRHISamplerRecipe`) | `*Preset` · `ShaderBakeRequest` |
+| `*Recipe`(`D3D12RHIResourceRecipe` · `VulkanRHISamplerRecipe`) | `*Preset` · `ShaderCookRequest` |
 | `poisonLiveReload` | `markGraphBroken` |
 | Vulkan band | range(`SW_VK_SLOT_RANGE_SIZE`) |
 | `HandleTable` · `ObjectHandle` | `SlotHandleTable` · `SlotHandle` |
@@ -1045,4 +1045,4 @@ cd build/Ninja-Debug/Bin
 | `-gv_editorOpenAllPanels=1` | `-gv_editorOpenPanel=all` |
 | `RenderResourceXml` | `Serialization/Format/ReflectedXmlFile` |
 
-일부러 둔 용어: stamp · kit · bake · cook · orphan · chord · pin.
+일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.

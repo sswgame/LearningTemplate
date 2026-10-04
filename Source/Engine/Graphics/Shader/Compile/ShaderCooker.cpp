@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
@@ -28,7 +28,7 @@ namespace sw
 {
     namespace
     {
-        struct ShaderBakerInternal
+        struct ShaderCookerInternal
         {
             /** @brief 백엔드 하나의 셰이더 타깃 · 바이너리 폴더 · 별칭입니다. 쿠킹 표(`SW_RHI_BACKEND_TABLE`)의 줄마다 하나입니다. */
             struct BackendFolder
@@ -40,9 +40,9 @@ namespace sw
             };
 
             static constexpr BackendFolder kArrBackendFolder[] = {
-#define SW_SHADER_BAKER_BACKEND_ROW( Backend, ShaderFolder, ShaderTarget, Argument, ... ) { ShaderFolder, { __VA_ARGS__ }, ShaderTargetFormat::ShaderTarget, RHIBackend::Backend == RHIBackend::SW_RHI_BACKEND_DEFAULT },
-                SW_RHI_BACKEND_TABLE( SW_SHADER_BAKER_BACKEND_ROW )
-#undef SW_SHADER_BAKER_BACKEND_ROW
+#define SW_SHADER_COOKER_BACKEND_ROW( Backend, ShaderFolder, ShaderTarget, Argument, ... ) { ShaderFolder, { __VA_ARGS__ }, ShaderTargetFormat::ShaderTarget, RHIBackend::Backend == RHIBackend::SW_RHI_BACKEND_DEFAULT },
+                SW_RHI_BACKEND_TABLE( SW_SHADER_COOKER_BACKEND_ROW )
+#undef SW_SHADER_COOKER_BACKEND_ROW
             };
             static_assert( std::size( kArrBackendFolder ) == static_cast<size_t>( ShaderTargetFormat::Count ),
                            "Config/Engine/CookContract.json needs one rhi_backends row per ShaderTargetFormat" );
@@ -59,21 +59,21 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShaderBaker" );
+    SW_LOG_CALLER( "ShaderCooker" );
 
-    string ShaderBaker::getStemLower( string_view filePath )
+    string ShaderCooker::getStemLower( string_view filePath )
     {
-        return ShaderBakerInternal::getStemLower( filePath );
+        return ShaderCookerInternal::getStemLower( filePath );
     }
 
-    uint64 ShaderBaker::computePermutationHash( const vector<string>& listPermutation )
+    uint64 ShaderCooker::computePermutationHash( const vector<string>& listPermutation )
     {
         if ( listPermutation.empty() )
             return 0;
 
         // `FOO` 와 `FOO=1` 은 컴파일러에게 같은 것이다. 런타임은 ShaderMacroDefine::parse 로 값 없는
         // define 에 "1" 을 채운 **뒤** 해시하므로, 여기서 원문 그대로 해시하면 같은 퍼뮤테이션이
-        // 베이크와 런타임에서 서로 다른 해시가 된다. 그러면 구워둔 변형을 아무도 못 찾는다(값을 적은
+        // 쿠킹과 런타임에서 서로 다른 해시가 된다. 그러면 쿠킹해 둔 변형을 아무도 못 찾는다(값을 적은
         // `SW_FORWARD=1` 은 맞고 값 없는 머티리얼 define 만 어긋나 눈에 덜 띈다). 두 오버로드가 같은 문자열을 보도록 여기서 맞춘다.
         vector<string> listSorted;
         listSorted.reserve( listPermutation.size() );
@@ -101,7 +101,7 @@ namespace sw
         return hash;
     }
 
-    uint64 ShaderBaker::computePermutationHash( const vector<ShaderMacroDefine>& listDefine )
+    uint64 ShaderCooker::computePermutationHash( const vector<ShaderMacroDefine>& listDefine )
     {
         if ( listDefine.empty() )
             return 0;
@@ -120,8 +120,8 @@ namespace sw
         return computePermutationHash( listString );
     }
 
-    string ShaderBaker::computeBinaryFileName( string_view stemLower, ShaderStage stage,
-                                               string_view entryPoint, uint64 permutationHash, string_view ext )
+    string ShaderCooker::computeBinaryFileName( string_view stemLower, ShaderStage stage,
+                                                string_view entryPoint, uint64 permutationHash, string_view ext )
     {
         const string_view stageTag          = getShaderStageInfo( stage )._pTag;
         const string_view defaultEntryPoint = getShaderStageInfo( stage )._pEntryPoint;
@@ -144,10 +144,10 @@ namespace sw
         return basePart;
     }
 
-    string_view ShaderBaker::getSubfolderForFormat( ShaderTargetFormat format )
+    string_view ShaderCooker::getSubfolderForFormat( ShaderTargetFormat format )
     {
         string_view defaultFolder;
-        for ( const ShaderBakerInternal::BackendFolder& row : ShaderBakerInternal::kArrBackendFolder )
+        for ( const ShaderCookerInternal::BackendFolder& row : ShaderCookerInternal::kArrBackendFolder )
         {
             if ( row._format == format )
                 return row._folder;
@@ -157,7 +157,7 @@ namespace sw
         return defaultFolder;
     }
 
-    string_view ShaderBaker::getExtensionForFormat( ShaderTargetFormat format )
+    string_view ShaderCooker::getExtensionForFormat( ShaderTargetFormat format )
     {
         switch ( format )
         {
@@ -176,11 +176,11 @@ namespace sw
         return ".bin";
     }
 
-    ShaderTargetFormat ShaderBaker::getFormatForSubfolder( string_view subfolder )
+    ShaderTargetFormat ShaderCooker::getFormatForSubfolder( string_view subfolder )
     {
         if ( subfolder.empty() )
             return ShaderTargetFormat::Count;
-        for ( const ShaderBakerInternal::BackendFolder& row : ShaderBakerInternal::kArrBackendFolder )
+        for ( const ShaderCookerInternal::BackendFolder& row : ShaderCookerInternal::kArrBackendFolder )
         {
             for ( const string_view alias : row._arrAlias )
             {
@@ -191,10 +191,10 @@ namespace sw
         return ShaderTargetFormat::Count;
     }
 
-    bool ShaderBaker::bakeShader( string_view sourcePath, string_view outputPath, string_view entryPoint,
-                                  ShaderStage stage, ShaderTargetFormat targetFormat,
-                                  const vector<string>* pListPermutation,
-                                  ShaderBakeResult*     pOutResult )
+    bool ShaderCooker::cookShader( string_view sourcePath, string_view outputPath, string_view entryPoint,
+                                   ShaderStage stage, ShaderTargetFormat targetFormat,
+                                   const vector<string>* pListPermutation,
+                                   ShaderCookResult*     pOutResult )
     {
         if ( pOutResult != nullptr )
         {
@@ -251,7 +251,7 @@ namespace sw
 
         if ( FileUtil::writeFile( outputPath, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
         {
-            SW_LOG_ERROR( "Failed to write baked bytecode to %#", outputPath );
+            SW_LOG_ERROR( "Failed to write cooked bytecode to %#", outputPath );
             return false;
         }
 
@@ -261,7 +261,7 @@ namespace sw
             pOutResult->_bSuccess     = SW_TRUE;
         }
 
-        SW_LOG_INFO( "Baked shader '%#' [%#] -> '%#' (%zu bytes)",
+        SW_LOG_INFO( "Cooked shader '%#' [%#] -> '%#' (%zu bytes)",
                      sourcePath.data(), entryPoint.data(), outputPath.data(), compileResult._bytecode.size() );
         return true;
     }

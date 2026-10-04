@@ -45,7 +45,7 @@ namespace sw
              * @details `GameAPI` · `EditorAPI` 는 함수 포인터를 순서대로 늘어놓은 구조체입니다. 모듈은 자기가 아는 자리에 채우고 호스트는
              *          자기가 아는 자리에서 읽으므로, 서로 다른 헤더로 빌드되면 **호스트가 엉뚱한 함수를 부릅니다.** 아래의
              *          `create != nullptr && destroy != nullptr` 만으로는 막지 못합니다 — 그 둘은 **맨 앞**에 있어서 가운데에 끼워 넣어도
-             *          채워집니다. 핫 리로드는 모듈만 다시 굽는 기능이라 이런 어긋남이 생기는 바로 그 상황입니다. RHI 경계의
+             *          채워집니다. 핫 리로드는 모듈만 다시 빌드하는 기능이라 이런 어긋남이 생기는 바로 그 상황입니다. RHI 경계의
              *          `RHIModuleAbi.h` 와 같은 대조입니다.
              */
             static bool matchesModuleAbi( void* pLibraryModule, const utf8* pVersionSymbol, const utf8* pStampSymbol,
@@ -363,11 +363,11 @@ namespace sw
 #endif
     }
 
-    bool ModuleHost::bakeTexturesWithEditorModule( bool bCheckOnly )
+    bool ModuleHost::importTexturesWithEditorModule( bool bCheckOnly )
     {
 #if defined( SW_SHIPPING )
         (void)bCheckOnly;
-        SW_LOG_ERROR( "Texture baking needs the editor module, which a Shipping build does not have - run it from a Dev build." );
+        SW_LOG_ERROR( "Texture importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
         return false;
 #else
         const string modulePath     = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ),
@@ -375,7 +375,7 @@ namespace sw
         void* const  pLibraryModule = FileUtil::fileExists( modulePath ) ? FileUtil::loadDynamicLibrary( modulePath ) : nullptr;
         if ( pLibraryModule == nullptr )
         {
-            SW_LOG_ERROR( "Texture baking needs the editor module next to the executable: %#", modulePath.c_str() );
+            SW_LOG_ERROR( "Texture importing needs the editor module next to the executable: %#", modulePath.c_str() );
             return false;
         }
 
@@ -386,12 +386,12 @@ namespace sw
         if ( ModuleHostInternal::matchesModuleAbi( pLibraryModule, ModuleHostInternal::kEditorSymbols._pVersionSymbol,
                                                    ModuleHostInternal::kEditorSymbols._pStampSymbol, ModuleHostInternal::kEditorSymbols._pModuleLabel ) )
         {
-            const PFN_BakeEditorTextures pfnBake =
-                reinterpret_cast<PFN_BakeEditorTextures>( FileUtil::getDynamicSymbol( pLibraryModule, kBakeEditorTexturesSymbol ) );
-            if ( pfnBake == nullptr )
-                SW_LOG_ERROR( "The editor module does not export %#", kBakeEditorTexturesSymbol );
+            const PFN_ImportEditorTextures pfnImport =
+                reinterpret_cast<PFN_ImportEditorTextures>( FileUtil::getDynamicSymbol( pLibraryModule, kImportEditorTexturesSymbol ) );
+            if ( pfnImport == nullptr )
+                SW_LOG_ERROR( "The editor module does not export %#", kImportEditorTexturesSymbol );
             else
-                bSucceeded = pfnBake( bCheckOnly ? 1u : 0u ) == 0;
+                bSucceeded = pfnImport( bCheckOnly ? 1u : 0u ) == 0;
         }
 
         engine::unregisterModuleTypes( sw::config::kTargetEditorModule );

@@ -207,8 +207,8 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 ### 리소스 에셋
 - `Resource/` 아래 파일 · 폴더 이름은 전부 소문자(`[a-z0-9_.-]+`)입니다(문서 `README.md` 만 예외). `CheckResourceCasing.py` 와 커밋 훅이 검사합니다.
 - 런타임은 텍스처를 DDS 로만 읽습니다. 런타임 텍스처 폴더(`textures/`)에는 `.dds` 와 데이터(`.sprite.json` · `.meta`)만 두고, 원본 이미지(PNG · JPG · TGA …)는
-  같은 상대 경로의 `textures_raw/` 에 두어 `App --bake-textures` 로 굽습니다(에디터는 핫 리로드 때도 굽습니다). DDS 는 `textures_raw/bake.stamp` 와
-  같이 커밋합니다. 원본 · 굽기 규칙 · DDS 가 어긋나면 `TextureBakeStampTest`(와 `App --check-textures`)가 집니다. 아무도 참조하지 않는 원본은
+  같은 상대 경로의 `textures_raw/` 에 두어 `App --import-textures` 로 임포트합니다(에디터는 핫 리로드 때도 임포트합니다). DDS 는 `textures_raw/import.stamp` 와
+  같이 커밋합니다. 원본 · 임포트 규칙 · DDS 가 어긋나면 `TextureImportStampTest`(와 `App --check-textures`)가 집니다. 아무도 참조하지 않는 원본은
   옮기지 말고 지웁니다. `CheckTextureFolders.py` 가 검사합니다.
 
 ## 3. CMake 및 빌드 규칙
@@ -260,7 +260,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
   규칙을 적용하지 않는다. 규칙에서 빼야 하는 이름은 게이트의 `kStringBoundName` 에 **이유와 함께** 적는다(지금은 진입점 셋).
 - **문자열로 묶인 이름을 바꾸려면 같은 커밋에서 C++ 도 바꾼다.** `ShaderBindingValidator::validate` 는 계약 표에 없는 리플렉션
   이름을 조용히 건너뛰어서, 셰이더 쪽만 이름을 바꾸면 그 리소스의 검사가 아무 말 없이 꺼진다.
-  `ShaderBindingValidatorTest.EveryBoundNameIsInBakedReflection` 이 반대 방향(C++ 가 아는 이름이 구운 `reflection.manifest`
+  `ShaderBindingValidatorTest.EveryBoundNameIsInCookedReflection` 이 반대 방향(C++ 가 아는 이름이 쿠킹된 `reflection.manifest`
   에 있는가)을 봐서 그 개명을 실패로 만든다.
 
 ---

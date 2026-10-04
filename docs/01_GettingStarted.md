@@ -67,8 +67,8 @@ cmake --build --preset Ninja-Debug
 ```
 실행 인자 전체는 [README 4절](../README.md#실행-인자)(정본: `Source/Core/Predefined/ArgumentList.xxx`)에 있습니다.
 
-> **셰이더 · 텍스처는 빌드가 굽지 않습니다.** HLSL 을 고쳤으면 `App.exe --bake-shaders`, `Resource/**/textures_raw/` 의 원본 이미지를
-> 고쳤으면 `App.exe --bake-textures`(Dev 빌드)로 굽고, 구운 결과(셰이더 바이너리 · DDS + `bake.stamp`)를 같이 커밋합니다.
+> **셰이더 · 텍스처는 빌드가 쿠킹 · 임포트하지 않습니다.** HLSL 을 고쳤으면 `App.exe --cook-shaders`, `Resource/**/textures_raw/` 의 원본 이미지를
+> 고쳤으면 `App.exe --import-textures`(Dev 빌드)로 쿠킹 · 임포트하고, 결과(셰이더 바이너리 + `cook.stamp` · DDS + `import.stamp`)를 같이 커밋합니다.
 
 ### 자동화 테스트 실행 (CTest)
 엔진 코어나 리플렉션 시스템이 정상적으로 동작하는지 확인하려면 다음 명령어를 사용하세요:

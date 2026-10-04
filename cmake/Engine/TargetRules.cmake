@@ -101,7 +101,7 @@ endfunction()
 #
 # 핫 리로드는 모듈만 갈아 끼우고 Engine 은 그대로다. Engine 헤더를 고친 빌드에서 `Engine.dll` 은 실행 중이라
 # 다시 링크되지 못해도(잠김) 모듈은 **새 헤더로** 써질 수 있고, 그 모듈을 올리면 구조체 배치 · vtable 이 어긋나
-# 조용히 망가진다. 그래서 Engine 과 모듈이 같은 지문을 굽고 `LiveReloadManager` 가 섀도 복사본을 올리기 **전에**
+# 조용히 망가진다. 그래서 Engine 과 모듈이 같은 지문을 박고 `LiveReloadManager` 가 섀도 복사본을 올리기 **전에**
 # 파일 바이트에서 찾아 대조한다(`ModuleImagePatch::findEngineAbiStamp`). 헤더 내용이 같으면 스크립트가 파일을
 # 다시 쓰지 않으므로(Ninja restat) 뒤따르는 재빌드가 없다.
 # ------------------------------------------------------------------------------
@@ -138,7 +138,7 @@ function(sw_defineEngineAbiStamp)
 	set_target_properties(SwEngineAbiStamp PROPERTIES FOLDER "CMakePredefinedTargets")
 endfunction()
 
-# 모듈이 자기가 빌드된 엔진 헤더의 지문을 굽는다(Dev 의 공유 라이브러리만). 상수 하나가 두 가지 일을 한다.
+# 모듈이 자기가 빌드된 엔진 헤더의 지문을 박는다(Dev 의 공유 라이브러리만). 상수 하나가 두 가지 일을 한다.
 #   - **도장** — 핫 리로드는 심볼이 아니라 파일 바이트에서 표식 문자열을 찾는다(모듈 코드가 돌기 전에).
 #     내보내는 이유는 링커가 참조 없는 자료를 지우지 못하게 하려는 것이다.
 #   - **결속 표식(리눅스)** — `LiveReloadManager::verifyModuleBindings` 는 "이 모듈이 의존을 어느 이미지에 묶었나" 를
@@ -272,7 +272,7 @@ function(sw_configureAppDependencies TARGET_NAME)
 		add_dependencies(${TARGET_NAME} ${mod})
 	endforeach()
 
-	# 2) Shipping 은 게임을 정적으로 링크하고, App 이 서면 에셋을 굽는다.
+	# 2) Shipping 은 게임을 정적으로 링크하고, App 이 서면 에셋을 쿠킹한다.
 	#    (Dev 는 delay-load 라 링크하지 않는다 — 빌드 순서는 위 1) 이 이미 걸어 두었다.)
 	#    쿠킹이 App 뒤인 이유: 씬 쿠킹이 App --cook-scenes 라서다. 반대로 걸면 깨끗한 트리에서 App 이
 	#    없는 채로 쿠커가 돌아 죽는다(리눅스 CI). 기본 빌드(all)에 넣어 `cmake --build` 한 번이면 팩까지 선다.

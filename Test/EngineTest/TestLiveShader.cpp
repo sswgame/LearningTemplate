@@ -7,7 +7,7 @@
 
     #include "Engine/Common/EngineServices.h"
     #include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
-    #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
+    #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
@@ -16,7 +16,7 @@
     #include <chrono>
     #include <filesystem>
 
-// 셰이더 핫 리로드 — 디스크의 .hlsli 를 고치고 바이트코드가 실제로 다시 구워지는지 본다.
+// 셰이더 핫 리로드 — 디스크의 .hlsli 를 고치고 바이트코드가 실제로 다시 쿠킹되는지 본다.
 //
 // 재컴파일에 DXC 가 필요하고, 공유 헤더 캐시를 더럽혔다 되돌리므로 같은 프로세스의 다른 셰이더 테스트와 순서를 탄다.
 SW_TEST_REQUIRES_HOST( LiveShaderTest, "recompiles shaders with DXC and edits the shared include cache" );
@@ -81,7 +81,7 @@ SW_TEST_CASE( LiveShaderTest, ManualReloadWithNoTargetsIsNoop )
 /**
  * @brief [LiveShaderTest] `.hlsli` 만 고쳐도 수동 리로드가 새 바이트코드를 만드는지 검증.
  * @details 이게 이 기능의 전부다. 함정은 `ShaderCompiler` 의 디스크 캐시인데, 키에 드는 공유 헤더 해시
- *          (`ShaderBaker::getSharedHeaderContentHash`)는 `.hlsli` 집합을 한 번 훑고 **캐시된다**.
+ *          (`ShaderCooker::getSharedHeaderContentHash`)는 `.hlsli` 집합을 한 번 훑고 **캐시된다**.
  *          `.hlsli` 만 고치면 키가 그대로라 옛 바이트코드가 그대로 돌아온다 —
  *          로그는 "Succeeded" 를 찍는데 화면은 안 바뀌는, 가장 조용한 종류의 어긋남이다.
  *          그래서 리로드는 그 캐시를 한 번 버린다(`invalidateSharedHeaderCache`) — 컴파일 캐시를 통째로 우회하지는 않는다.
@@ -111,9 +111,9 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( includeAbs ) );
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( shaderAbs ) );
         // **파일만 지우면 부족하다.** 공유 헤더 해시는 `.hlsli` 집합을 한 번 훑고 캐시하므로, 프로브가 있던
-        // 동안의 값이 다음 테스트로 샌다 — `ShaderBakeStampTest` 가 그 값을 기준으로 잡고 스스로 무효화한 뒤
+        // 동안의 값이 다음 테스트로 샌다 — `ShaderCookStampTest` 가 그 값을 기준으로 잡고 스스로 무효화한 뒤
         // 비교하면 진다. `.hlsli` 를 건드린 쪽이 자기가 더럽힌 캐시를 비운다.
-        sw::ShaderBaker::invalidateSharedHeaderCache();
+        sw::ShaderCooker::invalidateSharedHeaderCache();
     } ) );
 
     sw::ShaderCompileDesc desc{};
@@ -121,7 +121,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     desc._entryPoint = "VSMain";
     desc._stage      = sw::ShaderStage::Vertex;
 
-    // **이 케이스가 보는 것은 포맷이 아니라 "`.hlsli` 를 고치면 다시 구운 바이트코드가 달라지는가"** 다.
+    // **이 케이스가 보는 것은 포맷이 아니라 "`.hlsli` 를 고치면 다시 쿠킹된 바이트코드가 달라지는가"** 다.
     // DXBC 를 낼 수 있는 것은 윈도우의 FXC 뿐이라 타깃을 `DXBC_D3D11` 로 고정하면 **리눅스에서는 늘 진다**.
     // 포맷을 플랫폼이 낼 수 있는 것으로 고르면 같은 계약을 양쪽에서 실제로 검사한다.
     #if defined( SW_PLATFORM_WINDOWS )
@@ -159,7 +159,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     // 수동 리로드가 하는 것과 같다 — 공유 헤더 해시를 한 번 버리면 키가 달라져 실제로 다시 컴파일된다.
     // **캐시를 우회하지 않는다**는 점이 중요하다. 우회하면 이번 편집과 무관한 셰이더까지 전부
     // 다시 컴파일된다.
-    sw::ShaderBaker::invalidateSharedHeaderCache();
+    sw::ShaderCooker::invalidateSharedHeaderCache();
     const sw::ShaderCompileResult reloaded = sw::ShaderCompiler::compileHlsl( desc );
 
     SW_ASSERT_TRUE( reloaded._bSuccess );
@@ -174,7 +174,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
  */
 SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
 {
-    // 구운 바이너리가 없는 셰이더라야 실시간 컴파일을 탄다.
+    // 쿠킹된 바이너리가 없는 셰이더라야 실시간 컴파일을 탄다.
     const sw::string engineFolder = sw::ResourceUtil::getDomainFolderPath( "engine" );
     SW_ASSERT_FALSE( engineFolder.empty() );
     const sw::string shaderAbs = sw::FileUtil::joinPath( engineFolder, "shaders/livecodegenprobe.hlsl" );

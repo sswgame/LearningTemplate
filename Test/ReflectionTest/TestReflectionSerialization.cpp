@@ -771,7 +771,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenThe
 /**
  * @brief [ReflectionSerializationTest] 바이너리는 지금 판(`kCurrentBinaryWireVersion`)만 읽는다 — 판이 없던(0) 스트림 · 앞선 빌드의 판은 읽지 않는다
  * @details 아래 16진 두 줄은 enum 을 int64 값으로 싣던 판(0)의 바이트다(태그 · 컴팩트 — 머리의 판 자리가 0). 그 판을 쓰던 세이브 · 쿠킹 씬은
- *          저장소에 없고 쿠킹본은 매번 다시 굽는다. 판을 짐작해 값으로 읽어 주면 열거자 순서가 바뀐 뒤 다른 열거자가 된다 — 읽지 않고 알린다.
+ *          저장소에 없고 쿠킹본은 매번 다시 쿠킹한다. 판을 짐작해 값으로 읽어 주면 열거자 순서가 바뀐 뒤 다른 열거자가 된다 — 읽지 않고 알린다.
  *          지금 빌드가 쓰는 바이트(골든)도 같이 둔다 — 머리의 판이 1 이고 enum 은 이름 해시다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, OnlyTheCurrentWireVersionIsRead )

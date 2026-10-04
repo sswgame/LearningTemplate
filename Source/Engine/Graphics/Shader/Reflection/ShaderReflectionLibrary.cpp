@@ -10,9 +10,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -25,7 +25,7 @@ namespace sw
 
         /// @brief 'SRFM' 매니페스트 매직입니다.
         constexpr uint32 kManifestMagic = 0x4D465253;
-        /// @brief 매니페스트 포맷 버전입니다. 굽는 쪽과 읽는 쪽이 같은 파일에 있으므로 한 곳만 올리면 됩니다.
+        /// @brief 매니페스트 포맷 버전입니다. 쿠킹하는 쪽과 읽는 쪽이 같은 파일에 있으므로 한 곳만 올리면 됩니다.
         constexpr uint32 kManifestVersion = 2; ///< 2: 구조버퍼 원소 레이아웃(_listStructuredElement) 추가
 
         void writeReflectionInternal( Archive& archive, const ShaderReflectionData& reflection )
@@ -165,7 +165,7 @@ namespace sw
             return string( "shaders/bin/" ) + string( rhiFolder ) + "/";
         }
 
-        /// @brief 소스 경로에서 소문자 스템을 뽑습니다(베이커의 파일 이름 규칙과 같아야 합니다).
+        /// @brief 소스 경로에서 소문자 스템을 뽑습니다(쿠커의 파일 이름 규칙과 같아야 합니다).
         string getStemLowerInternal( string_view filePath )
         {
             const string fileName = FileUtil::getFileNamePart( filePath );
@@ -243,7 +243,7 @@ namespace sw
         if ( absDirectory.empty() )
             return false;
 
-        // 항목은 **키 순서로** 쓴다. 맵은 넣은 순서로 돌므로 그대로 쓰면 같은 항목 집합이라도 베이커가 요청을 모은 순서에 따라
+        // 항목은 **키 순서로** 쓴다. 맵은 넣은 순서로 돌므로 그대로 쓰면 같은 항목 집합이라도 쿠커가 요청을 모은 순서에 따라
         // 파일 바이트가 달라진다. 이 파일은 커밋되는 산출물이라, 요청 순서만 바꾼 변경이 매니페스트 넷을 바꿔 놓으면 진짜 변경을 가린다.
         vector<const EntryMap::value_type*> listEntry;
         listEntry.reserve( mapEntry.size() );
@@ -293,17 +293,17 @@ namespace sw
     bool ShaderReflectionLibrary::tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
     {
         SW_MEMORY_SCOPE( Shader );
-        const string_view rhiFolder = ShaderBaker::getSubfolderForFormat( desc._targetFormat );
-        const string_view ext       = ShaderBaker::getExtensionForFormat( desc._targetFormat );
+        const string_view rhiFolder = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
+        const string_view ext       = ShaderCooker::getExtensionForFormat( desc._targetFormat );
         const string      binDirRel = makeBinDirRelativeInternal( desc._filePath, rhiFolder );
 
-        // 키는 베이커가 만든 바이너리 파일 이름 그대로다. 진입점과 퍼뮤테이션 해시가 반영된다.
-        const uint64 permutationHash = ShaderBaker::computePermutationHash( desc._listDefine );
-        const string key             = ShaderBaker::computeBinaryFileName( getStemLowerInternal( desc._filePath ), desc._stage,
-                                                                           desc._entryPoint, permutationHash, ext );
+        // 키는 쿠커가 만든 바이너리 파일 이름 그대로다. 진입점과 퍼뮤테이션 해시가 반영된다.
+        const uint64 permutationHash = ShaderCooker::computePermutationHash( desc._listDefine );
+        const string key             = ShaderCooker::computeBinaryFileName( getStemLowerInternal( desc._filePath ), desc._stage,
+                                                                            desc._entryPoint, permutationHash, ext );
 
 #if !defined( SW_SHIPPING )
-        // **지금 소스에서 나오지 않은(낡은) 매니페스트는 쓰지 않는다.** ShaderCache 의 베이크 바이너리와 같은 규칙이다.
+        // **지금 소스에서 나오지 않은(낡은) 매니페스트는 쓰지 않는다.** ShaderCache 의 쿠킹 바이너리와 같은 규칙이다.
         // 둘이 어긋나면 증상이 아주 멀리서 난다:
         // 바이너리는 새로 컴파일돼 b1(MaterialCB)을 참조하는데 레이아웃은 낡은 매니페스트라 그 슬롯이
         // 없고, 바인더가 b1 을 아예 안 걸어서 DX12 가 비어 있는 루트 디스크립터를 읽고 GPU 페이지
@@ -313,10 +313,10 @@ namespace sw
             const string manifestAbs = ResourceUtil::getResourcePath( binDirRel + getManifestFileName() );
             if ( sourceAbs.empty() == false && manifestAbs.empty() == false )
             {
-                // 판정 기준은 ShaderCache 와 **같은 것 하나**, bake.stamp 의 내용 해시다. 파일 시간으로
-                // 보면 안 되는 이유는 ShaderBaker::computeEffectiveSourceHash 주석에 있다.
+                // 판정 기준은 ShaderCache 와 **같은 것 하나**, cook.stamp 의 내용 해시다. 파일 시간으로
+                // 보면 안 되는 이유는 ShaderCooker::computeEffectiveSourceHash 주석에 있다.
                 const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( manifestAbs ) );
-                if ( ShaderBaker::isBakedOutputCurrent( binDirAbs, sourceAbs ) == false )
+                if ( ShaderCooker::isCookedOutputCurrent( binDirAbs, sourceAbs ) == false )
                 {
                     SW_LOG_TRACE( "리플렉션 매니페스트가 지금 소스에서 나온 것이 아님 — 런타임 리플렉션으로 폴백: %#",
                                   string( desc._filePath ).c_str() );
@@ -350,17 +350,17 @@ namespace sw
     bool ShaderReflectionLibrary::getOrReflect( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
     {
         SW_MEMORY_SCOPE( Shader );
-        // 1순위: 쿠킹 시점에 구운 매니페스트. 배포 빌드는 이 경로만 쓴다. DXIL 리플렉션은
+        // 1순위: 쿠킹 시점에 쿠킹된 매니페스트. 배포 빌드는 이 경로만 쓴다. DXIL 리플렉션은
         // dxcompiler.dll 이 필요해서 런타임에 하면 컴파일러를 같이 배포해야 한다.
         if ( tryGet( desc, outReflection ) )
             return true;
 
 #if defined( SW_SHIPPING )
-        // 빠진 것은 파일이 아니라 (경로 · 스테이지 · 진입점 · 퍼뮤테이션) 조합이다. 베이커가 쓰는 파일 이름 그대로
-        // 적어야 "그 셰이더는 구웠는데?" 로 끝나지 않는다. define 목록까지 붙여 어느 조합인지 바로 보이게 한다.
-        const string missingKey = ShaderBaker::computeBinaryFileName( getStemLowerInternal( desc._filePath ), desc._stage, desc._entryPoint,
-                                                                      ShaderBaker::computePermutationHash( desc._listDefine ),
-                                                                      ShaderBaker::getExtensionForFormat( desc._targetFormat ) );
+        // 빠진 것은 파일이 아니라 (경로 · 스테이지 · 진입점 · 퍼뮤테이션) 조합이다. 쿠커가 쓰는 파일 이름 그대로
+        // 적어야 "그 셰이더는 쿠킹했는데?" 로 끝나지 않는다. define 목록까지 붙여 어느 조합인지 바로 보이게 한다.
+        const string missingKey = ShaderCooker::computeBinaryFileName( getStemLowerInternal( desc._filePath ), desc._stage, desc._entryPoint,
+                                                                       ShaderCooker::computePermutationHash( desc._listDefine ),
+                                                                       ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
         string       defineList;
         for ( const ShaderMacroDefine& define : desc._listDefine )
         {
@@ -370,12 +370,12 @@ namespace sw
             defineList += '=';
             defineList += define._value;
         }
-        SW_LOG_ERROR( "리플렉션 매니페스트에 '%#' (%#, define: %#) 가 없습니다 — 셰이더를 다시 베이킹해야 합니다.",
+        SW_LOG_ERROR( "리플렉션 매니페스트에 '%#' (%#, define: %#) 가 없습니다 — 셰이더를 다시 쿠킹해야 합니다.",
                       string( desc._filePath ).c_str(), missingKey.c_str(), defineList.c_str() );
         return false;
 #else
         // 2순위(개발 빌드 전용): 바이트코드를 얻어 그 자리에서 리플렉션한다. 셰이더를 막 고쳐 아직
-        // 베이킹하지 않았거나, 매니페스트가 지금 소스와 맞지 않는 상태를 위한 폴백이다.
+        // 쿠킹하지 않았거나, 매니페스트가 지금 소스와 맞지 않는 상태를 위한 폴백이다.
         const ShaderCompileResult result = engine::areEngineServicesBound()
                                              ? engine::getShaderCache().getOrCompile( desc )
                                              : ShaderCompiler::compileHlsl( desc );

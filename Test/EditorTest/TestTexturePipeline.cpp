@@ -5,8 +5,8 @@
 #include "Core/Memory/MemoryProfiler.h"
 
 #include "Editor/Common/Asset/ImageUtil.h"
-#include "Editor/Common/Asset/TextureBaker.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
+#include "Editor/Common/Asset/TextureImporter.h"
 
 #include "Engine/Resource/DdsLoader.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -87,7 +87,7 @@ namespace sw::editor
                 return rgbaBytes;
             }
 
-            /** @brief 구운 DDS 를 DirectXTex 로 풀어 첫 픽셀을 RGBA 로 돌려줍니다(sRGB 형식은 sRGB 바이트 그대로). */
+            /** @brief 임포트된 DDS 를 DirectXTex 로 풀어 첫 픽셀을 RGBA 로 돌려줍니다(sRGB 형식은 sRGB 바이트 그대로). */
             static bool decodeFirstPixel( const string& ddsPath, uint8 ( &outArrRgba )[4] )
             {
                 vector<uint8> bytes;
@@ -220,9 +220,9 @@ namespace sw::editor
     }
 
     /**
-     * @brief [EditorTexturePipelineTest] ImageUtil 디코딩, TextureBaker 변환 및 DdsLoader 로딩 E2E 검증
+     * @brief [EditorTexturePipelineTest] ImageUtil 디코딩, TextureImporter 변환 및 DdsLoader 로딩 E2E 검증
      */
-    SW_TEST_CASE( EditorTexturePipelineTest, ImageUtilAndTextureBakerEndToEnd )
+    SW_TEST_CASE( EditorTexturePipelineTest, ImageUtilAndTextureImporterEndToEnd )
     {
         SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
         const string rawSplashPath = sw::ResourceUtil::getResourcePath( "textures_raw/splash.jpg" );
@@ -244,7 +244,7 @@ namespace sw::editor
         SW_EXPECT_EQUAL( 768, rawImage._height );
         SW_EXPECT_EQUAL( 4, rawImage._channels );
 
-        // 2. Bake to DDS via TextureBaker
+        // 2. Import to DDS via TextureImporter
         TextureImportRule rule;
         rule._name          = "Test_Splash";
         rule._format        = "B8G8R8A8_UNORM";
@@ -252,13 +252,13 @@ namespace sw::editor
         rule._bGenerateMips = SW_FALSE;
         rule._bSrgb         = SW_TRUE;
 
-        const string      tempOutDds = test::makeTempPath( "test_output_splash.dds" );
-        TextureBakeResult bakeResult;
-        SW_ASSERT_TRUE( TextureBaker::bakeTexture( srcPath, tempOutDds, rule, &bakeResult ) );
-        SW_EXPECT_TRUE( bakeResult._bSuccess );
-        SW_EXPECT_EQUAL( 1376u, bakeResult._width );
-        SW_EXPECT_EQUAL( 768u, bakeResult._height );
-        SW_EXPECT_EQUAL( 1u, bakeResult._mipCount );
+        const string        tempOutDds = test::makeTempPath( "test_output_splash.dds" );
+        TextureImportResult importResult;
+        SW_ASSERT_TRUE( TextureImporter::importTexture( srcPath, tempOutDds, rule, &importResult ) );
+        SW_EXPECT_TRUE( importResult._bSuccess );
+        SW_EXPECT_EQUAL( 1376u, importResult._width );
+        SW_EXPECT_EQUAL( 768u, importResult._height );
+        SW_EXPECT_EQUAL( 1u, importResult._mipCount );
         SW_EXPECT_TRUE( FileUtil::fileExists( tempOutDds ) );
 
         // 3. Verify generated DDS with Engine DdsLoader
@@ -292,7 +292,7 @@ namespace sw::editor
             const utf8*    _pName;
             uint8          _arrExpected[4];
             const utf8*    _pFormat;            ///< 이 배치를 부르는 가져오기 규칙의 포맷 이름
-            uint32         _expectedDxgiFormat; ///< sRGB 없이 구운 DDS 가 들고 있어야 할 포맷
+            uint32         _expectedDxgiFormat; ///< sRGB 없이 임포트된 DDS 가 들고 있어야 할 포맷
         };
 
         // BGRA 와 ARGB 는 **같은 것**이다. D3D9 의 D3DFMT_A8R8G8B8 은 메모리에서 B,G,R,A 이고,
@@ -314,7 +314,7 @@ namespace sw::editor
             TextureImportRule rule;
             rule._swizzle = testCase._swizzle;
 
-            TextureBaker::applyChannelManipulations( image, rule, 1 );
+            TextureImporter::applyChannelManipulations( image, rule, 1 );
 
             for ( size_t channel = 0; channel < 4; ++channel )
             {
@@ -322,14 +322,14 @@ namespace sw::editor
             }
 
             // 그 배치를 부르는 포맷으로 구우면 DDS 는 그 포맷을 달고 바이트는 섞인 그대로다. 배치와 포맷 이름이 어긋나면
-            // 굽기의 포맷 변환이 바이트를 한 번 더 섞는다.
+            // 임포트의 포맷 변환이 바이트를 한 번 더 섞는다.
             const string sourcePath = test::makeTempPath( string( testCase._pName ) + ".tga" );
             SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 1, 1, vector<uint8>( arrSourcePixel, arrSourcePixel + 4 ) ) );
             rule._format         = testCase._pFormat;
             rule._bSrgb          = SW_FALSE;
             rule._bGenerateMips  = SW_FALSE;
             const string ddsPath = test::makeTempPath( string( testCase._pName ) + ".dds" );
-            SW_ASSERT_TRUE_MSG( TextureBaker::bakeTexture( sourcePath, ddsPath, rule ), testCase._pName );
+            SW_ASSERT_TRUE_MSG( TextureImporter::importTexture( sourcePath, ddsPath, rule ), testCase._pName );
 
             DdsImageData dds;
             SW_ASSERT_TRUE_MSG( DdsLoader::loadFromFile( ddsPath, dds ), testCase._pName );
@@ -367,7 +367,7 @@ namespace sw::editor
             rule._swizzle      = swizzle;
             rule._bInvertGreen = SW_TRUE;
 
-            TextureBaker::applyChannelManipulations( image, rule, 1 );
+            TextureImporter::applyChannelManipulations( image, rule, 1 );
 
             // 초록(20)은 어디에 놓이든 235 가 되어야 하고, 나머지 채널은 그대로다.
             bool bFoundInvertedGreen = false;
@@ -385,7 +385,7 @@ namespace sw::editor
      * @brief [EditorTexturePipelineTest] 찾지 못한 inherits 는 조용히 넘어가지 않는다
      * @details `inherits` 해석은 프리셋 쪽과 규칙 쪽이 한 자리를 쓰고, 못 찾으면 경고를 남긴다. 그냥 넘어가면
      *          이름 오타나 **부모를 아래쪽에 적는 것**(찾기는 그 시점까지 파싱된 프리셋만 본다)이 상속을 통째로
-     *          지우고, 그 텍스처는 아무 말 없이 기본값으로 구워진다.
+     *          지우고, 그 텍스처는 아무 말 없이 기본값으로 임포트된다.
      */
     SW_TEST_CASE( EditorTexturePipelineTest, UnresolvedInheritsIsReported )
     {
@@ -535,7 +535,7 @@ namespace sw::editor
         rule._bSrgb         = SW_TRUE;
 
         const string bgraPath = test::makeTempPath( "srgb_bgra.dds" );
-        SW_ASSERT_TRUE( TextureBaker::bakeTexture( sourcePath, bgraPath, rule ) );
+        SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, bgraPath, rule ) );
 
         DdsImageData bgraImage;
         SW_ASSERT_TRUE( DdsLoader::loadFromFile( bgraPath, bgraImage ) );
@@ -550,7 +550,7 @@ namespace sw::editor
         rule._swizzle = TextureSwizzle::RGBA;
 
         const string bc7Path = test::makeTempPath( "srgb_bc7.dds" );
-        SW_ASSERT_TRUE( TextureBaker::bakeTexture( sourcePath, bc7Path, rule ) );
+        SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, bc7Path, rule ) );
 
         uint8 arrRgba[4] = {};
         SW_ASSERT_TRUE( TestTexturePipelineInternal::decodeFirstPixel( bc7Path, arrRgba ) );
@@ -561,20 +561,20 @@ namespace sw::editor
 
     /**
      * @brief [EditorTexturePipelineTest] 같은 원본 · 같은 규칙은 같은 바이트를 낸다(밉 · BC7 포함)
-     * @details 구운 DDS 를 커밋하고 그 해시를 스탬프에 적으므로 굽기가 흔들리면 스탬프가 매번 어긋난다. 밉은 WIC 를 쓰지 않는
+     * @details 임포트된 DDS 를 커밋하고 그 해시를 스탬프에 적으므로 임포트가 흔들리면 스탬프가 매번 어긋난다. 밉은 WIC 를 쓰지 않는
      *          필터로 만들어 Windows · Linux 에서도 같은 결과를 낸다.
      */
-    SW_TEST_CASE( EditorTexturePipelineTest, BakingTheSameSourceTwiceGivesTheSameBytes )
+    SW_TEST_CASE( EditorTexturePipelineTest, ImportingTheSameSourceTwiceGivesTheSameBytes )
     {
         const string sourcePath = test::makeTempPath( "determinism_source.tga" );
         SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 8, 8, TestTexturePipelineInternal::makeGradientRgba( 8, 8 ) ) );
 
-        TextureImportRule rule; // 기본 규칙: BC7 sRGB + 밉
-        const string      firstPath  = test::makeTempPath( "determinism_first.dds" );
-        const string      secondPath = test::makeTempPath( "determinism_second.dds" );
-        TextureBakeResult result;
-        SW_ASSERT_TRUE( TextureBaker::bakeTexture( sourcePath, firstPath, rule, &result ) );
-        SW_ASSERT_TRUE( TextureBaker::bakeTexture( sourcePath, secondPath, rule ) );
+        TextureImportRule   rule; // 기본 규칙: BC7 sRGB + 밉
+        const string        firstPath  = test::makeTempPath( "determinism_first.dds" );
+        const string        secondPath = test::makeTempPath( "determinism_second.dds" );
+        TextureImportResult result;
+        SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, firstPath, rule, &result ) );
+        SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, secondPath, rule ) );
         SW_EXPECT_EQUAL( 4u, result._mipCount ); // 8 → 1 (Debug 의 BC7 은 블록당 수백 ms 라 작게 둔다)
 
         vector<uint8> firstBytes;
@@ -586,22 +586,22 @@ namespace sw::editor
     }
 
     // ------------------------------------------------------------------------------
-    // TextureBakeStampTest — 원본(textures_raw)과 구운 DDS(textures)가 맞는지 내용 해시로 본다
+    // TextureImportStampTest — 원본(textures_raw)과 임포트된 DDS(textures)가 맞는지 내용 해시로 본다
     // ------------------------------------------------------------------------------
 
     /**
-     * @brief [TextureBakeStampTest] 저장소의 모든 원본 텍스처가 커밋된 DDS 와 스탬프로 맞는다
-     * @details 깨끗한 클론 · CI 에서 "원본을 고치고 굽지 않았다" 를 잡는 자리다. 지면 `App --bake-textures` 로 굽고 DDS 와
-     *          `textures_raw/bake.stamp` 를 함께 커밋한다.
+     * @brief [TextureImportStampTest] 저장소의 모든 원본 텍스처가 커밋된 DDS 와 스탬프로 맞는다
+     * @details 깨끗한 클론 · CI 에서 "원본을 고치고 임포트하지 않았다" 를 잡는 자리다. 지면 `App --import-textures` 로 임포트하고 DDS 와
+     *          `textures_raw/import.stamp` 를 함께 커밋한다.
      */
-    SW_TEST_CASE( TextureBakeStampTest, RepositoryRawTexturesMatchTheirDds )
+    SW_TEST_CASE( TextureImportStampTest, RepositoryRawTexturesMatchTheirDds )
     {
         SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
         TextureImportConfig config;
-        SW_ASSERT_TRUE( config.loadFromFile( TextureBaker::makeDefaultImportConfigPath() ) );
+        SW_ASSERT_TRUE( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) );
 
-        const TextureBakeSummary summary = TextureBaker::bakeAllTextures( sw::ResourceUtil::getRootFolderPath(), config, TextureBakeMode::CheckOnly );
-        string                   problemText;
+        const TextureImportSummary summary = TextureImporter::importAllTextures( sw::ResourceUtil::getRootFolderPath(), config, TextureImportMode::CheckOnly );
+        string                     problemText;
         for ( const string& problem : summary._listProblem )
         {
             problemText += problem;
@@ -609,94 +609,94 @@ namespace sw::editor
         }
         SW_EXPECT_TRUE( summary._sourceCount > 0 ); // editor/textures_raw/splash.jpg
         SW_EXPECT_TRUE_MSG( summary.isClean(), problemText.c_str() );
-        SW_EXPECT_EQUAL( 0u, summary._bakedCount );
+        SW_EXPECT_EQUAL( 0u, summary._importedCount );
     }
 
     /**
-     * @brief [TextureBakeStampTest] 원본 경로는 같은 도메인의 `textures/` 아래 `.dds` 로 대응한다
+     * @brief [TextureImportStampTest] 원본 경로는 같은 도메인의 `textures/` 아래 `.dds` 로 대응한다
      */
-    SW_TEST_CASE( TextureBakeStampTest, RawPathMapsToTheTexturesFolder )
+    SW_TEST_CASE( TextureImportStampTest, RawPathMapsToTheTexturesFolder )
     {
-        SW_EXPECT_STREQ( "editor/textures/splash.dds", TextureBaker::makeBakedTexturePath( "editor/textures_raw/splash.jpg" ).c_str() );
-        SW_EXPECT_STREQ( "D:/r/game/x/textures/ui/hud/icon.dds", TextureBaker::makeBakedTexturePath( "D:\\r\\game\\x\\textures_raw\\ui\\hud\\icon.png" ).c_str() );
-        SW_EXPECT_TRUE( TextureBaker::makeBakedTexturePath( "engine/textures/white.png" ).empty() );
-        SW_EXPECT_TRUE( TextureBaker::makeBakedTexturePath( "engine/my_textures_raw_backup/a.png" ).empty() );
+        SW_EXPECT_STREQ( "editor/textures/splash.dds", TextureImporter::makeImportedTexturePath( "editor/textures_raw/splash.jpg" ).c_str() );
+        SW_EXPECT_STREQ( "D:/r/game/x/textures/ui/hud/icon.dds", TextureImporter::makeImportedTexturePath( "D:\\r\\game\\x\\textures_raw\\ui\\hud\\icon.png" ).c_str() );
+        SW_EXPECT_TRUE( TextureImporter::makeImportedTexturePath( "engine/textures/white.png" ).empty() );
+        SW_EXPECT_TRUE( TextureImporter::makeImportedTexturePath( "engine/my_textures_raw_backup/a.png" ).empty() );
     }
 
     /**
-     * @brief [TextureBakeStampTest] 굽지 않은 원본 · 고친 원본 · 바꾼 규칙 · 손댄 DDS · 사라진 원본을 모두 어긋남으로 잡고, 굽기가 그것을 닫는다
+     * @brief [TextureImportStampTest] 임포트하지 않은 원본 · 고친 원본 · 바꾼 규칙 · 손댄 DDS · 사라진 원본을 모두 어긋남으로 잡고, 임포트가 그것을 닫는다
      */
-    SW_TEST_CASE( TextureBakeStampTest, CheckReportsEveryKindOfDriftAndBakeClosesIt )
+    SW_TEST_CASE( TextureImportStampTest, CheckReportsEveryKindOfDriftAndImportClosesIt )
     {
-        const string resourceRoot = test::makeTempDirectory( "bake_stamp_resource" );
+        const string resourceRoot = test::makeTempDirectory( "import_stamp_resource" );
         const string sourcePath   = FileUtil::joinPath( resourceRoot, "game/probe/textures_raw/ui/icon.tga" );
         const string ddsPath      = FileUtil::joinPath( resourceRoot, "game/probe/textures/ui/icon.dds" );
-        const string stampPath    = FileUtil::joinPath( resourceRoot, "game/probe/textures_raw/bake.stamp" );
+        const string stampPath    = FileUtil::joinPath( resourceRoot, "game/probe/textures_raw/import.stamp" );
         SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 4, 4, TestTexturePipelineInternal::makeSolidRgba( 4, 4, 10, 20, 30, 255 ) ) );
 
         TextureImportConfig uiConfig;
         SW_ASSERT_TRUE( uiConfig.loadFromJsonString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false } ] })" ) );
 
-        // 1) 한 번도 굽지 않았다 — 보고만 하고 아무것도 쓰지 않는다.
-        TextureBakeSummary summary = TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly );
+        // 1) 한 번도 임포트하지 않았다 — 보고만 하고 아무것도 쓰지 않는다.
+        TextureImportSummary summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly );
         SW_EXPECT_EQUAL( 1u, summary._sourceCount );
         SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
         SW_EXPECT_FALSE( FileUtil::fileExists( ddsPath ) );
         SW_EXPECT_FALSE( FileUtil::fileExists( stampPath ) );
 
-        // 2) 굽는다 → DDS 와 스탬프가 생기고, 다시 보면 맞는다. 맞는 것은 다시 굽지 않는다.
-        summary = TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::BakeStale );
+        // 2) 임포트한다 → DDS 와 스탬프가 생기고, 다시 보면 맞는다. 맞는 것은 다시 임포트하지 않는다.
+        summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::ImportStale );
         SW_EXPECT_TRUE( summary.isClean() );
-        SW_EXPECT_EQUAL( 1u, summary._bakedCount );
+        SW_EXPECT_EQUAL( 1u, summary._importedCount );
         SW_EXPECT_TRUE( FileUtil::fileExists( ddsPath ) );
         SW_EXPECT_TRUE( FileUtil::fileExists( stampPath ) );
-        SW_EXPECT_TRUE( TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly ).isClean() );
-        SW_EXPECT_EQUAL( 0u, TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::BakeStale )._bakedCount );
+        SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly ).isClean() );
+        SW_EXPECT_EQUAL( 0u, TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::ImportStale )._importedCount );
 
         // 3) 원본을 고쳤다.
         SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 4, 4, TestTexturePipelineInternal::makeSolidRgba( 4, 4, 11, 20, 30, 255 ) ) );
-        SW_EXPECT_EQUAL( size_t( 1 ), TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly )._listProblem.size() );
-        SW_EXPECT_EQUAL( 1u, TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::BakeStale )._bakedCount );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly )._listProblem.size() );
+        SW_EXPECT_EQUAL( 1u, TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::ImportStale )._importedCount );
 
         // 4) 규칙만 바꿨다(원본은 그대로).
         TextureImportConfig srgbConfig;
         SW_ASSERT_TRUE( srgbConfig.loadFromJsonString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false, "srgb": false } ] })" ) );
-        SW_EXPECT_EQUAL( size_t( 1 ), TextureBaker::bakeAllTextures( resourceRoot, srgbConfig, TextureBakeMode::CheckOnly )._listProblem.size() );
-        SW_EXPECT_TRUE( TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly ).isClean() );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, srgbConfig, TextureImportMode::CheckOnly )._listProblem.size() );
+        SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly ).isClean() );
 
         // 5) DDS 를 손으로 바꿨다.
         vector<uint8> ddsBytes;
         SW_ASSERT_TRUE( FileUtil::readFile( ddsPath, ddsBytes ) );
         ddsBytes.back() = static_cast<uint8>( ddsBytes.back() ^ 0xFFu );
         SW_ASSERT_TRUE( FileUtil::writeFile( ddsPath, ddsBytes.data(), ddsBytes.size() ) );
-        SW_EXPECT_EQUAL( size_t( 1 ), TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly )._listProblem.size() );
-        SW_EXPECT_EQUAL( 1u, TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::BakeStale )._bakedCount );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly )._listProblem.size() );
+        SW_EXPECT_EQUAL( 1u, TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::ImportStale )._importedCount );
 
-        // 6) 원본이 사라졌다 — 스탬프 줄이 남은 것이 어긋남이고, 굽기는 그 줄을 지운다(DDS 는 사람이 정리한다).
+        // 6) 원본이 사라졌다 — 스탬프 줄이 남은 것이 어긋남이고, 임포트는 그 줄을 지운다(DDS 는 사람이 정리한다).
         SW_ASSERT_TRUE( FileUtil::removeFile( sourcePath ) );
-        SW_EXPECT_EQUAL( size_t( 1 ), TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly )._listProblem.size() );
-        summary = TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::BakeStale );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly )._listProblem.size() );
+        summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::ImportStale );
         SW_EXPECT_TRUE( summary.isClean() );
         SW_EXPECT_EQUAL( 0u, summary._sourceCount );
-        SW_EXPECT_TRUE( TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly ).isClean() );
+        SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, TextureImportMode::CheckOnly ).isClean() );
         SW_EXPECT_TRUE( FileUtil::fileExists( ddsPath ) );
     }
 
     /**
-     * @brief [TextureBakeStampTest] HDR 원본은 8비트로 잘라 굽지 않고 실패로 보고한다
+     * @brief [TextureImportStampTest] HDR 원본은 8비트로 잘라 임포트하지 않고 실패로 보고한다
      */
-    SW_TEST_CASE( TextureBakeStampTest, HdrSourceIsReportedNotTruncated )
+    SW_TEST_CASE( TextureImportStampTest, HdrSourceIsReportedNotTruncated )
     {
-        const string resourceRoot = test::makeTempDirectory( "bake_stamp_hdr" );
+        const string resourceRoot = test::makeTempDirectory( "import_stamp_hdr" );
         const string sourcePath   = FileUtil::joinPath( resourceRoot, "engine/textures_raw/sky.hdr" );
         FileUtil::ensureParentDirectoryExists( sourcePath );
         SW_ASSERT_TRUE( FileUtil::writeTextFile( sourcePath, "#?RADIANCE\n" ) );
 
         TextureImportConfig config;
         SW_ASSERT_TRUE( config.loadFromJsonString( R"({ "rules": [ { "name": "Any" } ] })" ) );
-        const TextureBakeSummary summary = TextureBaker::bakeAllTextures( resourceRoot, config, TextureBakeMode::BakeStale );
+        const TextureImportSummary summary = TextureImporter::importAllTextures( resourceRoot, config, TextureImportMode::ImportStale );
         SW_EXPECT_EQUAL( 1u, summary._sourceCount );
-        SW_EXPECT_EQUAL( 0u, summary._bakedCount );
+        SW_EXPECT_EQUAL( 0u, summary._importedCount );
         SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
         SW_EXPECT_FALSE( FileUtil::fileExists( FileUtil::joinPath( resourceRoot, "engine/textures/sky.dds" ) ) );
     }

@@ -59,7 +59,7 @@ classDiagram
    씬은 그리는 쪽을 모릅니다 — `render()` 는 없고, 게임 스레드가 씬에서 스냅샷을 뽑아 렌더러에 넘깁니다(Graphics/README "소유와 수명").
 2. **`SceneDocument`**: 씬 파일(`.scene.xml`, `.scene.bin`)의 데이터 모델. 씬 메타데이터와 엔티티 노드(`SceneDocument::SceneObjectNode`) 목록을 담으며, XML 및 바이너리(SCN1) 포맷 직렬화/역직렬화를 담당합니다.
 3. **`SceneManager`**: 로드된 씬들의 수명주기, 활성 씬(`ActiveScene`) 추적 및 멀티스레드 비동기 씬 로딩/트랜지션을 제어하는 중앙 관리자입니다.
-4. **`SceneCooker`**: 씬 XML 을 SCN1 바이너리로 굽는 오프라인 단계(아래 4절).
+4. **`SceneCooker`**: 씬 XML 을 SCN1 바이너리로 쿠킹하는 오프라인 단계(아래 4절).
 5. **`ObjectUndoUtil`**: 오브젝트 상태 스냅샷을 되돌리는 Undo 명령(`CommandStack` 의 명령)입니다. 되돌릴 때 씬과 그 매니저를 찾아야 하므로
    (`Scene.h` · `SceneManager.h`) `Utility/CommandStack` 옆(티어 1)이 아니라 씬(티어 7)에 둡니다.
 
@@ -98,7 +98,7 @@ classDiagram
 - 프리팹을 읽지 못한 채 저장한 프리팹 엔티티는 `<GameObject>` 전체 상태를 싣습니다. 그 상태가 그대로 기준이고, 프리팹이 있을 때 다시 저장하면 덮어쓴 것만 씁니다.
   프리팹을 찾지 못한 엔티티는 버리지 않고 문서 그대로 들고 있다가 저장 때 다시 씁니다(유니티의 "Missing Prefab" 자리).
 - 엔티티 사이의 부착은 이름이 아니라 **파일 id**(`id` 속성 = `SceneObjectNode::_fileId`)로 가리킵니다. 런타임 오브젝트 id 와 다른 공간이고, 저장할 때마다 같은 값을 다시 씁니다.
-  엔티티마다 0 이 아닌 `id` 가 있어야 합니다 — 없거나 0 인 엔티티가 있는 문서는 읽지도(`loadXml`) 쓰지도(`saveXml`) 굽지도 않습니다.
+  엔티티마다 0 이 아닌 `id` 가 있어야 합니다 — 없거나 0 인 엔티티가 있는 문서는 읽지도(`loadXml`) 쓰지도(`saveXml`) 쿠킹하지도 않습니다.
 - 씬 · 엔티티의 값은 **속성에만** 있습니다(`saveXml` 이 쓰는 모양). 자식 원소(`<name>` 등)로 적은 값은 읽지 않습니다.
 - `formatVersion` 이 지금 판(`AssetFormatVersions::kScene` = 1)이 아닌 문서는 읽지 않습니다(없으면 0). 이관 단계는 하나도 없습니다 — 판을 올리면
   `AssetFormatRegistry::registerXmlMigrator` 로 N → N+1 단계를 등록합니다.
@@ -107,10 +107,10 @@ classDiagram
 ### 2.2 바이너리 포맷 (`.scene.bin` — SCN1)
 배포(Shipping) 빌드 및 고속 스트리밍을 위한 바이너리 쿠킹 포맷입니다:
 - **Magic**: `0x53434E31` (`SCN1`)
-- **Version**: `3` (읽기도 이 판만 — 쿠킹본은 매번 다시 굽는다)
+- **Version**: `3` (읽기도 이 판만 — 쿠킹본은 매번 다시 쿠킹한다)
 - **Name**: `u32 length` + `UTF-8 bytes`
 - **Entities**: `u32 count` + 각 엔티티(`name`, `prefabPath`, `prefabGuid`, `embeddedXml`, `embeddedStateBytes`, `fileId`, `prefabOverrideXml`)
-- 구운 엔티티는 `embeddedStateBytes`(리플렉션 바이너리 상태)만 싣고 XML 을 비웁니다 — 둘이 함께 실리는 일은 없습니다.
+- 쿠킹된 엔티티는 `embeddedStateBytes`(리플렉션 바이너리 상태)만 싣고 XML 을 비웁니다 — 둘이 함께 실리는 일은 없습니다.
 
 ---
 
@@ -139,7 +139,7 @@ classDiagram
 - **입력은 소스 트리입니다.** 쿠킹이면 Resource 단계가 `ResourceManager::mountContent( …, ContentSource::SourceTree )` 로 섭니다 — 팩을 마운트하지 않고
   느슨한 파일을 읽으며, 배포 구성(Shipping)에서도 소스 프리팹(XML · JSON)을 읽습니다. 지난 빌드의 팩을 입력으로 삼지 않습니다
   (`ResourceTest.SourceTreeContentMountsNoPackAndReadsLooseFiles`, `AppCookTest.SceneCookReadsTheSourceTreeCleanly`).
-- **왕복 검증 뒤에만 바이너리로 바꿉니다.** 엔티티 상태를 구운 바이트를 즉시 되읽어 같은지 본 뒤 XML 을 버립니다.
+- **왕복 검증 뒤에만 바이너리로 바꿉니다.** 엔티티 상태를 쿠킹한 바이트를 즉시 되읽어 같은지 본 뒤 XML 을 버립니다.
 - **모르는 타입의 컴포넌트(`MissingComponent`)가 든 씬은 쓰지 않고 실패로 셉니다.** `MissingComponent` 는 원문을 들고 있어 왕복 검증을 통과하므로
   따로 셉니다(`SceneTest.SceneCookFailsOnAComponentOfUnknownType`). 실패는 App 종료 코드 → `CookAssets.py` 로 이어져 Shipping 빌드를 세웁니다.
 - 산출물은 `<cookedDir>/<상대경로>/<이름>.scene.bin` 이고 소스 옆에 두지 않습니다 — 낡은 `.bin` 이 남아 Dev 런타임이 그것으로 물러나 실패를 가리지 않게.

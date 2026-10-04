@@ -30,7 +30,7 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
-#include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
+#include "Engine/Graphics/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
@@ -293,12 +293,12 @@ namespace sw
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
-            bool bBakeShaders = false;
-            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_SHADERS, bBakeShaders ) && bBakeShaders )
+            bool bCookShaders = false;
+            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SHADERS, bCookShaders ) && bCookShaders )
             {
                 loop._bHeadless = true;
-                SW_LOG_INFO( "Starting Headless (BakeShaders)..." );
-                const ShaderBakeSummary summary = ShaderBakeDriver::bakeAllShaders();
+                SW_LOG_INFO( "Starting Headless (CookShaders)..." );
+                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
                 loop._bHeadlessTaskFailed       = summary.isClean() == false;
                 return EngineInitResult::SkipDependents;
             }
@@ -326,16 +326,16 @@ namespace sw
                 return EngineInitResult::SkipDependents;
             }
 
-            // 텍스처 굽기 · 대조는 에디터 모듈이 한다(엔진은 에디터를 모른다). 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려
-            // 부르는 것은 App 이다(`ModuleHost::bakeTexturesWithEditorModule`).
-            bool bBakeTextures  = false;
-            bool bCheckTextures = false;
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_TEXTURES, bBakeTextures );
+            // 텍스처 임포트 · 대조는 에디터 모듈이 한다(엔진은 에디터를 모른다). 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려
+            // 부르는 것은 App 이다(`ModuleHost::importTexturesWithEditorModule`).
+            bool bImportTextures = false;
+            bool bCheckTextures  = false;
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
-            if ( bBakeTextures || bCheckTextures )
+            if ( bImportTextures || bCheckTextures )
             {
                 loop._bHeadless = true;
-                SW_LOG_INFO( "Starting Headless (%#Textures)...", bCheckTextures ? "Check" : "Bake" );
+                SW_LOG_INFO( "Starting Headless (%#Textures)...", bCheckTextures ? "Check" : "Import" );
                 return EngineInitResult::SkipDependents;
             }
             return EngineInitResult::Succeeded;
@@ -590,7 +590,7 @@ namespace sw
         const bool bStarted = _startup.initializeAll( *this );
         if ( bStarted == false )
             return false;
-        // 헤드리스 작업(베이크 · 쿠킹)은 RHI 이후 단계를 건너뛰고 여기서 끝난다.
+        // 헤드리스 작업(쿠킹 · 쿠킹)은 RHI 이후 단계를 건너뛰고 여기서 끝난다.
         if ( _bHeadless )
             return true;
 

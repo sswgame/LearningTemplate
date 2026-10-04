@@ -34,7 +34,7 @@ namespace sw
             }
 
             // Unlit 은 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이라 그림자 샘플링 · 림 라이트까지
-            // 같이 빠진다. define 은 베이커와 같은 정본(findViewModeDefine)에서 얻는다 — 베이커가 굽지 않은 define 은 Shipping 에서 PSO 를 못 만든다.
+            // 같이 빠진다. define 은 쿠커와 같은 정본(findViewModeDefine)에서 얻는다 — 쿠커가 쿠킹하지 않은 define 은 Shipping 에서 PSO 를 못 만든다.
             const utf8* pViewModeDefine = FrameRendererUtil::findViewModeDefine( viewMode );
             if ( pViewModeDefine == nullptr )
                 return bChanged;
@@ -74,7 +74,7 @@ namespace sw
             return 0;
 
         // 셰이더 · define · 기본 렌더 상태는 패스 종류의 표(RenderPassTypeInfo)가 정하고, 파이프라인 XML 의 패스 서술이 그 위를 조정한다.
-        // 셰이더와 define 은 베이커와 **같은 함수**(selectRenderPassShader)로 정한다 — 어긋나면 Shipping 에서 매니페스트 미스가 난다.
+        // 셰이더와 define 은 쿠커와 **같은 함수**(selectRenderPassShader)로 정한다 — 어긋나면 Shipping 에서 매니페스트 미스가 난다.
         const RenderPassTypeInfo&       info               = getRenderPassTypeInfo( passType );
         const RenderGraphPassDesc*      pPassDesc          = findPassDescByType( passType );
         const RenderPassShaderSelection shader             = selectRenderPassShader( passType, pPassDesc, engine::getEngineData() );
@@ -145,7 +145,7 @@ namespace sw
         }
         else if ( pPassDesc != nullptr && pPassDesc->_listOutput.empty() == false )
         {
-            // 출력 선언에서 컬러 RT 를 센다. 베이커가 픽셀 스테이지 유무를 판정하는 것과 **같은 함수**다.
+            // 출력 선언에서 컬러 RT 를 센다. 쿠커가 픽셀 스테이지 유무를 판정하는 것과 **같은 함수**다.
             // 컬러를 못 찾으면 부르는 쪽이 넘긴 수로 물러난다(못 찾은 자리의 포맷은 desc 기본값 그대로).
             desc._numRenderTargets = FrameRendererUtil::collectColorOutputFormats(
                 *pPassDesc, _pipelineResource.getDesc()._listAttachment, desc._arrRtvFormat, kMaxColorAttachments, numRenderTargets );
@@ -160,8 +160,8 @@ namespace sw
 
         // 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)는 픽셀 스테이지가 없다. 셰이더에 PSMain 이 있어도 붙이지
         // 않는다. 주의: 여기서 정하지 않으면 백엔드마다 판단이 갈리고, 그 위에 머티리얼 define 을 얹은 변형
-        // (createMaterialPsoVariant 는 이 desc 를 그대로 물려받는다)은 베이커가 굽지 않아 Shipping 에서 매니페스트 미스로
-        // 떨어진다. 베이커 쪽 같은 규칙은 FrameRendererUtil::hasPixelStage 다.
+        // (createMaterialPsoVariant 는 이 desc 를 그대로 물려받는다)은 쿠커가 쿠킹하지 않아 Shipping 에서 매니페스트 미스로
+        // 떨어진다. 쿠커 쪽 같은 규칙은 FrameRendererUtil::hasPixelStage 다.
         if ( desc._numRenderTargets == 0 )
         {
             desc._pixelShaderPath.clear();

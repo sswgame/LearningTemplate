@@ -90,35 +90,35 @@ SW_TEST_CASE( CommandLineTest, MultiWordArgumentAcceptsOnlyHyphenatedSpelling )
 
     utf8* argv[] = {
         const_cast<utf8*>( "TestApp.exe" ),
-        const_cast<utf8*>( "--bakeshaders" ),
+        const_cast<utf8*>( "--cookshaders" ),
         const_cast<utf8*>( "--cookscenes" ),
         const_cast<utf8*>( "--cookeddir=out" ),
-        const_cast<utf8*>( "--baketextures" ),
+        const_cast<utf8*>( "--importtextures" ),
         const_cast<utf8*>( "--checktextures" ),
         const_cast<utf8*>( "-IP=127.0.0.1" ),
         const_cast<utf8*>( "-PORT=7777" ),
     };
     cmdManager.parse( 8, argv );
 
-    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::BAKE_SHADERS ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOK_SHADERS ) );
     SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOK_SCENES ) );
     SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOKED_DIR ) );
-    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::BAKE_TEXTURES ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::IMPORT_TEXTURES ) );
     SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::CHECK_TEXTURES ) );
     SW_EXPECT_FALSE( cmdManager.isArgumentProvided( "IP" ) );
     SW_EXPECT_FALSE( cmdManager.isArgumentProvided( "PORT" ) );
 
     utf8* hyphenArgv[] = {
         const_cast<utf8*>( "TestApp.exe" ),
-        const_cast<utf8*>( "--bake-shaders" ),
+        const_cast<utf8*>( "--cook-shaders" ),
         const_cast<utf8*>( "--cooked-dir=out" ),
         const_cast<utf8*>( "--check-textures" ),
     };
     cmdManager.parse( 4, hyphenArgv );
 
-    bool bBakeShaders{ false };
-    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::BAKE_SHADERS, bBakeShaders ) );
-    SW_EXPECT_TRUE( bBakeShaders );
+    bool bCookShaders{ false };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::COOK_SHADERS, bCookShaders ) );
+    SW_EXPECT_TRUE( bCookShaders );
     sw::string cookedDir;
     SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::COOKED_DIR, cookedDir ) );
     SW_EXPECT_STREQ( "out", cookedDir.c_str() );

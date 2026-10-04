@@ -141,29 +141,29 @@ tm.waitAll();
 
 ```cpp
 TaskHandle load = tm.emplaceTask( "Load", [](){ /* ... */ } );
-TaskHandle bake = tm.emplaceTask( "Bake", [](){ /* ... */ } );
+TaskHandle cook = tm.emplaceTask( "Cook", [](){ /* ... */ } );
 TaskHandle upload = tm.emplaceTask( "Upload", [](){ /* ... */ },
                                     TaskThreadAffinity::MainThread );
 
-// load 가 끝난 뒤 bake, bake 가 끝난 뒤 upload
-load.runBefore( bake );
-bake.runBefore( upload );
+// load 가 끝난 뒤 cook, cook 가 끝난 뒤 upload
+load.runBefore( cook );
+cook.runBefore( upload );
 
 load.submit();
-bake.submit();
+cook.submit();
 upload.submit();
 ```
 
 같은 뜻의 다른 표현:
 
 ```cpp
-bake.runAfter( load );           // bake 는 load 다음
-load.then( [](){ /* bake 역할 */ } );  // 체이닝으로 후속 생성
+cook.runAfter( load );           // cook 는 load 다음
+load.then( [](){ /* cook 역할 */ } );  // 체이닝으로 후속 생성
 ```
 
 ```mermaid
 flowchart LR
-  L[Load] --> B[Bake] --> U[Upload<br/>MainThread]
+  L[Load] --> B[Cook] --> U[Upload<br/>MainThread]
 ```
 
 “여러 개 다 끝나면” / “하나라도 끝나면” 후속을 걸려면 `tm.whenAll( listTask, continuation )` / `tm.whenAny( listTask, continuation )`

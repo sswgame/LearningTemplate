@@ -24,7 +24,7 @@ DX11 · DX12 · OpenGL · Vulkan
 |------|------|
 | **RHI/** | 백엔드 추상화·구현·(옵션) RHI DLL 모듈. 자세한 것은 [RHI/README.md](RHI/README.md) |
 | **Material/** | 머티리얼 정의·인스턴스·캐시. 파일이 곧 주제다 — `MaterialXml`(XML 읽기/쓰기) · `MaterialPacking`(타입 표·CB 패킹) · `MaterialPermutation`(define 조립·세대) |
-| **Shader/** | [Shader/README.md](Shader/README.md). `Compile/` 컴파일·캐시·베이크·핫리로드 · `Reflection/` 리플렉션과 매니페스트 · `Binding/` 슬롯 계약과 셰이더가 읽는 꼴 그대로의 값 묶음(`GpuLight` · `GpuSpriteInstanceData` — 컴포넌트가 채우므로 Renderer 아래에 둔다) |
+| **Shader/** | [Shader/README.md](Shader/README.md). `Compile/` 컴파일·캐시·쿠킹·핫리로드 · `Reflection/` 리플렉션과 매니페스트 · `Binding/` 슬롯 계약과 셰이더가 읽는 꼴 그대로의 값 묶음(`GpuLight` · `GpuSpriteInstanceData` — 컴포넌트가 채우므로 Renderer 아래에 둔다) |
 | **Mesh/** | CPU 메시 에셋(`Mesh`)과 기본 도형 생성기(`MeshUtil`). GPU 풀은 여기 없다 — Renderer/Scene/ |
 | **Texture/** | `Texture2D` 에셋과 `TextureCache`(참조 수 + unique_ptr) |
 | **Upload/** | `GpuUploadQueue` — 게임 스레드가 스냅샷을 내보내기 **전에** 워커가 GPU 리소스를 만든다 |
@@ -71,10 +71,10 @@ DX11 · DX12 · OpenGL · Vulkan
 | `RHIStructuredBufferSlot` · `RHIConstantBufferSlot` | RHI/ | 버퍼 + 뷰/인덱스 한 벌 — 만들기·갱신·해제 순서를 타입이 안다. 구조버퍼는 용량이 변하고(`ensureCapacity`) 상수버퍼는 안 변한다(`create`) |
 | `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |
 | `ShaderCompiler` · `ShaderCache` · `ShaderRecompiler` | Shader/Compile/ | HLSL → 바이트코드, 디스크 캐시, 수동 리로드 |
-| `ShaderBakeStamp` · `ShaderBaker` | Shader/Compile/ | 오프라인 베이크의 **메커니즘** — 이미 최신인지(내용 해시) · 한 장 굽고 이름 짓기 |
-| `ShaderBakeDriver` (+ `ShaderBakeRequest.cpp`) | Renderer/Bake/ | 오프라인 베이크의 **정책** — 무엇을 구울지(파이프라인 XML · 패스 종류 표 × 뷰 모드 · 머티리얼 → 요청) · 전부 굽기. 패스 종류를 아는 렌더러의 지식이라 여기 있다 |
-| `ShaderReflection` · `ShaderReflectionLibrary` | Shader/Reflection/ | 바이트코드 리플렉션과 구운 매니페스트 |
-| `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingValidator` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 구운 바이너리 대조 |
+| `ShaderCookStamp` · `ShaderCooker` | Shader/Compile/ | 오프라인 쿠킹의 **메커니즘** — 이미 최신인지(내용 해시) · 한 장 쿠킹하고 이름 짓기 |
+| `ShaderCookDriver` (+ `ShaderCookRequest.cpp`) | Renderer/Cook/ | 오프라인 쿠킹의 **정책** — 무엇을 쿠킹할지(파이프라인 XML · 패스 종류 표 × 뷰 모드 · 머티리얼 → 요청) · 전부 쿠킹. 패스 종류를 아는 렌더러의 지식이라 여기 있다 |
+| `ShaderReflection` · `ShaderReflectionLibrary` | Shader/Reflection/ | 바이트코드 리플렉션과 쿠킹된 매니페스트 |
+| `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingValidator` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 쿠킹된 바이너리 대조 |
 | `Mesh` · `MeshUtil` | Mesh/ | 메시 버퍼 · 기본 도형 생성 |
 | `Texture2D` · `TextureCache` | Texture/ | 텍스처 에셋 · 캐시 |
 | `GpuUploadQueue` | Upload/ | GPU 리소스를 그리기 전에 워커로 만든다 |
@@ -348,7 +348,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
   materialIndex 가 엉뚱한 원소를 가리키게 된다). `GpuSceneTest.MaterialElementIdsPersistAcrossBuildsAndAreFreed`.
 - **머티리얼 폴백 버퍼는 stride 마다 하나**(`ensureMaterialFallbackBuffers`, stride 는 `ShaderBindingSlot::_elementStride`) — SRV 의 구조 stride 는
   셰이더 선언과 같아야 한다(RDG 더미 버퍼와 같은 규칙).
-- **인스턴스 원소 레이아웃은 시험이 대조한다.** `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 구운 바이너리의
+- **인스턴스 원소 레이아웃은 시험이 대조한다.** `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 쿠킹된 바이너리의
   stride · 필드 오프셋을 `GpuInstance` 와, 컴퓨트 쪽 이름(`g_Instances` · `g_InstancesRW`)까지 같은 표로 본다.
 - **스프라이트 프레임 · 색은 인스턴스 칸**(`GpuInstance::_sprite` = `GpuSpriteInstanceData` 12 바이트, Custom Primitive Data 자리). 배치 키를
   건드리지 않아 같은 텍스처의 스프라이트는 한 드로우다. 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)이고 UV 는 메시의 것이다
@@ -418,7 +418,7 @@ build/Ninja-Release/Bin/App.exe -gv_benchMeshes=2000 -gv_benchMeshVariants=200 -
 
 ```powershell
 cmake --build --preset Ninja-Debug
-build/Ninja-Debug/Bin/App.exe --bake-shaders                                   # 구운 바이너리 + reflection.manifest 갱신 (계약 테스트가 이걸 읽는다)
+build/Ninja-Debug/Bin/App.exe --cook-shaders                                   # 쿠킹된 바이너리 + reflection.manifest 갱신 (계약 테스트가 이걸 읽는다)
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=ShaderBindingValidatorTest.*   # 계약 + 네 백엔드 리플렉션 레이아웃 일치
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=RHIDeviceTest.*               # 컴퓨트 RW 텍스처 쓰기→읽기(4 백엔드) 포함
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=GpuSceneTest.*,RenderPassTest.*,RenderPassGpuTest.*   # 스냅샷 규칙 · 그래프 · 픽셀 패리티(FrameRendererParityAllBackends)
@@ -433,8 +433,8 @@ py -3 Scripts/dev/BackendSmoke.py                                               
   `[Error]`, 중간 심각도가 `[Warning]` 으로 나온다(알림은 끈다).
 - Vulkan 렌더패스는 `VulkanRHIRenderPassCache::RenderPassSpec` + `createRenderPassFromSpec` 한 자리에서만 만든다(스왑체인 CLEAR/LOAD · 오프스크린 ·
   PSO 호환 · 합성 · desc 여섯 자리가 그것을 채운다). 첨부/의존성을 손으로 적는 자리를 다시 만들지 말 것.
-- 셰이더 .hlsli 를 고쳤으면 반드시 `--bake-shaders` 를 다시 돌린다 — 개발 빌드 런타임은 매니페스트가 지금 소스에서 나온 것이 아니면(`bake.stamp` 내용 해시)
-  런타임 리플렉션으로 폴백하지만, 테스트와 배포본은 구운 바이너리 · 매니페스트를 본다.
+- 셰이더 .hlsli 를 고쳤으면 반드시 `--cook-shaders` 를 다시 돌린다 — 개발 빌드 런타임은 매니페스트가 지금 소스에서 나온 것이 아니면(`cook.stamp` 내용 해시)
+  런타임 리플렉션으로 폴백하지만, 테스트와 배포본은 쿠킹된 바이너리 · 매니페스트를 본다.
 - **스왑체인·프레젠트를 건드렸으면 창을 실제로 흔들어야 한다.** `ResizeBuffers` 의 플래그가 생성 때와
   어긋나면 그 뒤의 Present 가 `INVALID_CALL` 이 되는데, 리사이즈를 안 하면 영원히 드러나지 않는다.
   확인은 스크린샷 크기로 한다 — 창을 700×520 으로 바꾸고 `-gv_screenshot` 을 찍으면 PPM 헤더가

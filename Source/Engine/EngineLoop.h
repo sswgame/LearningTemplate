@@ -154,7 +154,7 @@ namespace sw
         RHI*                getRhi() const { return _rhi.get(); }
         RenderThread*       getRenderThread() const { return _renderThread.get(); }
         bool                isHeadless() const { return _bHeadless; }
-        /** @brief 헤드리스 작업(셰이더 베이크 · 씬 쿠킹)이 실패했는지 반환합니다. 부르는 쪽은 이것을 종료 코드로 내보냅니다. */
+        /** @brief 헤드리스 작업(셰이더 쿠킹 · 씬 쿠킹)이 실패했는지 반환합니다. 부르는 쪽은 이것을 종료 코드로 내보냅니다. */
         bool didHeadlessTaskFail() const { return _bHeadlessTaskFailed; }
 
     private:

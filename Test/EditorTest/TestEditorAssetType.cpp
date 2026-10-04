@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/Asset/TextureBaker.h"
+#include "Editor/Common/Asset/TextureImporter.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
@@ -26,7 +26,7 @@ SW_TEST_CASE( EditorAssetTypeTest, MatchesKnownSuffixes )
 
 /**
  * @brief [EditorAssetTypeTest] 씬 · 프리팹 판정은 쿠커의 규칙 하나다(`AssetCookPath`)
- * @details 에디터가 접미사 표를 따로 들면 쿠커가 굽지 않는 이름도 씬 · 프리팹으로 본다 — `.scene` 이 어디든 든 `.xml`(`forest.scenery.xml`),
+ * @details 에디터가 접미사 표를 따로 들면 쿠커가 쿠킹하지 않는 이름도 씬 · 프리팹으로 본다 — `.scene` 이 어디든 든 `.xml`(`forest.scenery.xml`),
  *          `_scene.xml`, 확장자 없는 `.scene` · `.prefab`. 그런 파일은 에디터에서는 열리고 저장되지만 배포본에서는 "Shipping requires cooked binary"
  *          로 멈춘다. 쿠킹본 `.prefab.bin` 이 프리팹 편집기로 열리면 저장이 거절되고(`PrefabAsset::saveToFile` 은 소스만 쓴다), 카탈로그가 프리팹을
  *          `.prefab.xml` 하나로 세면 JSON 프리팹이 빠진다.
@@ -58,7 +58,7 @@ SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
         SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, pPath ) == bCookedPrefab, pPath );
     }
 
-    // 규칙 자체가 비어 있으면 위의 대조는 아무것도 지키지 않는다 — 소스는 맞고, 쿠커가 굽지 않는 이름은 아니다.
+    // 규칙 자체가 비어 있으면 위의 대조는 아무것도 지키지 않는다 — 소스는 맞고, 쿠커가 쿠킹하지 않는 이름은 아니다.
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetType::Scene, "maps/TOWN.SCENE.XML" ) );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, "prefabs/hero.prefab.json" ) );
     SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Scene, "maps/forest.scenery.xml" ) );
@@ -82,7 +82,7 @@ SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listSceneSuffix.size() );
     SW_EXPECT_STREQ( ".scene.xml", listSceneSuffix[0].c_str() );
 
-    // 카탈로그가 세는 길 — JSON 프리팹도 세고, 쿠킹본 · 굽지 않는 이름은 세지 않는다.
+    // 카탈로그가 세는 길 — JSON 프리팹도 세고, 쿠킹본 · 쿠킹하지 않는 이름은 세지 않는다.
     const sw::string folder = test::makeTempDirectory( "assetkind" );
     for ( const utf8* pName : { "a.prefab.xml", "b.prefab.json", "c.prefab.bin", "d.scene.xml", "e.scenery.xml" } )
         SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( folder + "/" + pName, "<x/>" ) );
@@ -148,7 +148,7 @@ SW_TEST_CASE( EditorAssetTypeTest, AllAssetKindsAndMatchesAny )
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Texture, "textures/normal.dds" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Shader, "shaders/pbr.hlsl" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Shader, "shaders/common.hlsli" ) );
-    // 구운 산출물은 셰이더 소스가 아니다.
+    // 쿠킹된 산출물은 셰이더 소스가 아니다.
     SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Shader, "shaders/bin/opengl/pbr_ps.spv" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Audio, "audio/bgm.wav" ) );
     SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Audio, "audio/sfx.ogg" ) );
@@ -232,7 +232,7 @@ SW_TEST_CASE( EditorAssetTypeTest, ProjectRelativePathLeavesAbsoluteAlone )
 /**
  * @brief [EditorAssetTypeTest] 핫 리로드 경로는 표가 정한다 — 파일 종류마다 다시 읽을 엔진 캐시와(있으면) 먼저 돌릴 임포터
  * @details `AssetHotReload` 에는 종류별 코드가 없으므로, 종류를 더하거나 빼는 일은 이 표의 한 줄로 끝나야 한다.
- *          이미지는 SpriteClip 이미지 줄보다 앞선 Texture 줄로 가서 굽는 임포터를 탄다. `.dds` 는 임포터가 넘기고 캐시가 다시 읽는다.
+ *          이미지는 SpriteClip 이미지 줄보다 앞선 Texture 줄로 가서 임포트하는 임포터를 탄다. `.dds` 는 임포터가 넘기고 캐시가 다시 읽는다.
  */
 SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
 {
@@ -242,8 +242,8 @@ SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
     const AssetReloadRoute texture = EditorAssetTypeRegistry::findReloadRoute( "game/empty/textures/hero.dds" );
     SW_ASSERT_NOT_NULL( texture._pCacheKindName );
     SW_EXPECT_STREQ( "Texture", texture._pCacheKindName );
-    SW_EXPECT_TRUE( texture._pfnImportSource == &sw::editor::TextureBaker::importChangedSourceImage );
-    SW_EXPECT_FALSE( texture._pfnImportSource( "game/empty/textures/hero.dds" ) ); // 구운 결과는 캐시가 다시 읽는다
+    SW_EXPECT_TRUE( texture._pfnImportSource == &sw::editor::TextureImporter::importChangedSourceImage );
+    SW_EXPECT_FALSE( texture._pfnImportSource( "game/empty/textures/hero.dds" ) ); // 임포트된 결과는 캐시가 다시 읽는다
 
     const AssetReloadRoute spriteImage = EditorAssetTypeRegistry::findReloadRoute( "game/empty/sprites/hero.png" );
     SW_ASSERT_NOT_NULL( spriteImage._pCacheKindName );

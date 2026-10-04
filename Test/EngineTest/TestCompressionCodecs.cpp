@@ -93,7 +93,7 @@ namespace
 
 /**
  * @brief [CompressionCodecTest] LZ4 · Zstd · Zlib 왕복이 원본과 **바이트까지** 같은가.
- * @details Zlib 은 **리소스 팩이 실제로 쓰는 코덱**이라 팩을 굽는 김에 간접적으로만 지나가게 두지 않고 직접 왕복을 본다.
+ * @details Zlib 은 **리소스 팩이 실제로 쓰는 코덱**이라 팩을 쿠킹하는 김에 간접적으로만 지나가게 두지 않고 직접 왕복을 본다.
  */
 SW_TEST_CASE( CompressionCodecTest, ExternalCodecRoundTrip )
 {

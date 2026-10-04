@@ -306,7 +306,7 @@ namespace sw
          *          어긋나면 한 프로세스에서 같은 모듈이 두 벌 돌고(정적 상태 · 타입 등록이 갈린다), 옛 이미지를 내리는 순간 그리로 뛰는
          *          코드가 죽습니다. 등록과 연쇄 리로드 끝에 부르고, 어긋나면 그래프를 막습니다 — 섞인 채 조용히 도는 것보다 낫습니다.
          *          Windows 에서 아직 풀리지 않은 지연 로드는 어긋남이 아닙니다(풀릴 때 훅이 그때의 복사본을 돌려줍니다).
-         *          리눅스는 모듈마다 구운 도장 상수(`sw_moduleEngineAbiStamp_<이름>`, `sw_registerDynamicModule` 이 넣는다)의 주소로
+         *          리눅스는 모듈마다 박힌 도장 상수(`sw_moduleEngineAbiStamp_<이름>`, `sw_registerDynamicModule` 이 넣는다)의 주소로
          *          가립니다.
          */
         bool verifyModuleBindings() const;

@@ -4,8 +4,8 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Resource/AssetFormat.h"
 
 #include "TestFramework/TestFramework.h"
@@ -65,7 +65,7 @@ namespace
 
 /**
  * @brief [CookContractTest] 쿠킹 표의 백엔드 별칭은 명령줄 플래그 · 셰이더 폴더 역산에서 모두 그 백엔드를 고른다
- * @details 별칭을 읽는 셋 — `ArgumentList.xxx`(명령줄), `ShaderBaker::getFormatForSubfolder`, `CookAssets.py` — 이 `Config/Engine/CookContract.json` 의
+ * @details 별칭을 읽는 셋 — `ArgumentList.xxx`(명령줄), `ShaderCooker::getFormatForSubfolder`, `CookAssets.py` — 이 `Config/Engine/CookContract.json` 의
  *          같은 줄을 읽는다. 따로 들면 한쪽(예: 명령줄이 `-directx11` · `-directx12` · `-spirv` 를 모르는 식)이 어긋난다.
  */
 SW_TEST_CASE( CookContractTest, EveryBackendAliasSelectsItsBackend )
@@ -73,14 +73,14 @@ SW_TEST_CASE( CookContractTest, EveryBackendAliasSelectsItsBackend )
     SW_EXPECT_EQUAL( static_cast<size_t>( ShaderTargetFormat::Count ), std::size( kArrContractBackend ) );
     for ( const ContractBackendRow& row : kArrContractBackend )
     {
-        SW_EXPECT_EQUAL( row._shaderFolder, ShaderBaker::getSubfolderForFormat( row._shaderTarget ) );
+        SW_EXPECT_EQUAL( row._shaderFolder, ShaderCooker::getSubfolderForFormat( row._shaderTarget ) );
         uint32 aliasCount = 0;
         for ( const string_view alias : row._arrAlias )
         {
             if ( alias.empty() )
                 continue;
             ++aliasCount;
-            SW_EXPECT_TRUE_MSG( ShaderBaker::getFormatForSubfolder( alias ) == row._shaderTarget, alias.data() );
+            SW_EXPECT_TRUE_MSG( ShaderCooker::getFormatForSubfolder( alias ) == row._shaderTarget, alias.data() );
 
             RHIBackend backend = RHIBackend::DirectX11;
             const bool bChosen = findBackendForFlag( alias, backend );
@@ -91,7 +91,7 @@ SW_TEST_CASE( CookContractTest, EveryBackendAliasSelectsItsBackend )
     }
 
     // 표 밖의 이름은 아무 백엔드도 고르지 않는다.
-    SW_EXPECT_TRUE( ShaderBaker::getFormatForSubfolder( "metal" ) == ShaderTargetFormat::Count );
+    SW_EXPECT_TRUE( ShaderCooker::getFormatForSubfolder( "metal" ) == ShaderTargetFormat::Count );
     RHIBackend backend = RHIBackend::DirectX11;
     SW_EXPECT_FALSE( findBackendForFlag( "metal", backend ) );
 }

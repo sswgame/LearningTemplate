@@ -181,7 +181,7 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     Check::run( pReopened, "xml" );
 
     // 쿠킹한 씬도 같은 뜻이다 — 프리팹 엔티티는 덮어쓴 것을 SCN1 에 싣고, 로드가 쿠킹한 프리팹 위에 얹는다.
-    (void)sw::SceneCooker::cookEntityState( reopened ); // 프리팹 엔티티는 굽지 않는다(덮어쓴 것 그대로 실린다)
+    (void)sw::SceneCooker::cookEntityState( reopened ); // 프리팹 엔티티는 쿠킹하지 않는다(덮어쓴 것 그대로 실린다)
     const sw::string binPath = test::makeTempPath( "prefab_edit.scene.bin" );
     SW_ASSERT_TRUE( reopened.saveBinary( binPath ) );
     sw::SceneDocument cooked;
@@ -264,7 +264,7 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
 
 /**
  * @brief [PrefabOverridesTest] 지금 판이 아닌 쿠킹 씬(SCN1 v2)은 읽지 않고 다시 구우라고 알린다 — 바이트를 v2 의 배치대로 손으로 쓴다
- * @details 쿠킹본은 쿠커가 매번 다시 굽는 산출물이다. 옛 배치를 읽어 주는 갈래를 두지 않는다 — 판이 다르면 배치를 짐작하지 않고 거절한다.
+ * @details 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이다. 옛 배치를 읽어 주는 갈래를 두지 않는다 — 판이 다르면 배치를 짐작하지 않고 거절한다.
  */
 SW_TEST_CASE( PrefabOverridesTest, CookedSceneOfAnotherVersionIsRefused )
 {

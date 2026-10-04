@@ -337,7 +337,7 @@ namespace sw
             return false;
         }
 
-        // 경로가 없으면 씬이 온 곳에 쓴다. 둘 다 없으면 쓰지 않는다(경로를 지어내지 않는다). 쓰는 이름은 쿠커가 굽는 씬 이름이다
+        // 경로가 없으면 씬이 온 곳에 쓴다. 둘 다 없으면 쓰지 않는다(경로를 지어내지 않는다). 쓰는 이름은 쿠커가 쿠킹하는 씬 이름이다
         // (`AssetCookPath::toSourcePath`).
         const string_view requestedPath = path.empty() ? string_view( pScene->getSourcePath() ) : path;
         if ( requestedPath.empty() )
@@ -347,7 +347,7 @@ namespace sw
         }
         const string outPath = AssetCookPath::toSourcePath( requestedPath, AssetKind::Scene );
         if ( outPath != requestedPath )
-            SW_LOG_WARNING( "Scene path '%#' is not a name the cooker bakes - saving as '%#'", requestedPath, outPath.c_str() );
+            SW_LOG_WARNING( "Scene path '%#' is not a name the cooker cooks - saving as '%#'", requestedPath, outPath.c_str() );
 
         SceneDocument doc{};
         if ( pScene->serializeToDocument( doc ) == false )

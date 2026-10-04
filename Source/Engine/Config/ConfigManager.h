@@ -32,7 +32,7 @@ namespace sw
         /**
          * @brief 상대 Config 경로의 기준 디렉터리(보통 프로젝트 루트)를 지정합니다.
          * @details `Config/...` 는 상대 경로입니다. 실행 파일은 `build/<preset>/Bin` 에서 도는데 `Config/` 는 프로젝트 루트에 있어,
-         *          **현재 작업 디렉터리 기준**으로 찾으면 EngineConfig/GameConfig/AppConfig 가 모두 "없음" 으로 떨어지고 베이크된
+         *          **현재 작업 디렉터리 기준**으로 찾으면 EngineConfig/GameConfig/AppConfig 가 모두 "없음" 으로 떨어지고 생성된
          *          기본값으로 조용히 대체됩니다(창 크기 · VSync · 리소스 우선순위 · 게임 키트 모듈 목록이 모두 무시됨).
          *          `Resource/` 처럼 거슬러 올라가 찾은 루트(`ResourceUtil`)를 여기에 넣어 줍니다.
          */
@@ -50,7 +50,7 @@ namespace sw
             string resolvedPath;
             if ( resolveConfigPath( filePath, resolvedPath ) == false )
             {
-                // 존재하지 않는 설정 파일은 오류가 아니다. 호출부(ensureConfig)가 베이크된 기본값으로
+                // 존재하지 않는 설정 파일은 오류가 아니다. 호출부(ensureConfig)가 생성된 기본값으로
                 // 정상 폴백한다. 여기서 곧바로 readTextFile 을 부르면 FileUtil 이 [Error] 를 남겨서
                 // "정상 기동인데 매번 오류 3건" 이 되어 진짜 오류를 가린다.
                 SW_LOG_WARNING( "Failed to load config from: %#", filePath.c_str() );
@@ -86,12 +86,12 @@ namespace sw
         }
 
         /**
-         * @brief 파일을 읽으면 그 값을, 실패하면 bakedJson(있으면) 또는 T{} 를 등록하고 포인터를 반환합니다.
+         * @brief 파일을 읽으면 그 값을, 실패하면 generatedJson(있으면) 또는 T{} 를 등록하고 포인터를 반환합니다.
          * @details 파일이 없거나 JSON 이 깨져도 기동을 멈추지 않습니다(Shipping · Dev 모두).
-         *          **Shipping 은 디스크의 `Config/` 를 아예 보지 않습니다.** 베이크된 JSON 만 씁니다.
+         *          **Shipping 은 디스크의 `Config/` 를 아예 보지 않습니다.** 생성된 JSON 만 씁니다.
          */
         template <typename T>
-        T* ensureConfig( const string& filePath, const utf8* pBakedJson = nullptr )
+        T* ensureConfig( const string& filePath, const utf8* pGeneratedJson = nullptr )
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
@@ -99,11 +99,11 @@ namespace sw
 
 #if defined( SW_SHIPPING )
             (void)filePath;
-            if ( StringUtil::isNullOrEmpty( pBakedJson ) == false )
+            if ( StringUtil::isNullOrEmpty( pGeneratedJson ) == false )
             {
-                if ( loadConfigFromJson<T>( string( pBakedJson ), "shipping_host_baked" ) )
+                if ( loadConfigFromJson<T>( string( pGeneratedJson ), "shipping_host_generated" ) )
                 {
-                    SW_LOG_TRACE( "%# source=baked", pTypeName );
+                    SW_LOG_TRACE( "%# source=generated", pTypeName );
                     return getConfig<T>();
                 }
             }
@@ -113,11 +113,11 @@ namespace sw
                 SW_LOG_TRACE( "%# source=file (%#)", pTypeName, filePath.c_str() );
                 return getConfig<T>();
             }
-            if ( StringUtil::isNullOrEmpty( pBakedJson ) == false )
+            if ( StringUtil::isNullOrEmpty( pGeneratedJson ) == false )
             {
-                if ( loadConfigFromJson<T>( string( pBakedJson ), "shipping_host_baked_fallback" ) )
+                if ( loadConfigFromJson<T>( string( pGeneratedJson ), "shipping_host_generated_fallback" ) )
                 {
-                    SW_LOG_WARNING( "%# missing %# — using baked defaults", pTypeName, filePath.c_str() );
+                    SW_LOG_WARNING( "%# missing %# — using generated defaults", pTypeName, filePath.c_str() );
                     return getConfig<T>();
                 }
             }

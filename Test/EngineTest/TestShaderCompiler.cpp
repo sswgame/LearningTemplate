@@ -16,7 +16,7 @@
 // DXC(dxcompiler.dll)를 불러 실제로 컴파일한다. 컴파일러가 없으면 케이스가 스스로 SW_TEST_SKIP 하지만, 그러면 CI 는
 // **아무것도 검증하지 않고** 초록이 된다 — 조용히 비는 것보다 CI 집합에서 빼는 편이 정직하다.
 //
-// 굽기·스테이지 비트·캐시 동시성처럼 컴파일러가 필요 없는 것은 TestShader.cpp 에 있다.
+// 쿠킹·스테이지 비트·캐시 동시성처럼 컴파일러가 필요 없는 것은 TestShader.cpp 에 있다.
 
 SW_TEST_REQUIRES_HOST( ShaderCompilerTest, "compiles HLSL with DXC, which CI runners do not ship" );
 

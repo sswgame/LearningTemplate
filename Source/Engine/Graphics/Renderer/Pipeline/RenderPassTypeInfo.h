@@ -2,7 +2,7 @@
  * @file RenderPassTypeInfo.h
  * @brief 패스 종류(`RenderPassType`) 하나에 대한 사실을 한 줄에 모은 표입니다.
  * @details 기본 셰이더 · PSO 상태 · 패스 define · 그리는 대상(씬 메시 · 풀스크린 · 컴퓨트) · 입력 계약이 여기 있습니다.
- *          엔진 PSO 등록(`FrameRenderer::ensurePassResources`), 셰이더 베이크 요청(`ShaderBakeDriver`), 패스 실행
+ *          엔진 PSO 등록(`FrameRenderer::ensurePassResources`), 셰이더 쿠킹 요청(`ShaderCookDriver`), 패스 실행
  *          (`FrameRenderer::executePass`), 파이프라인 검증(`RenderPipelineAsset::validate`)이 모두 이 표를 enum 으로 읽습니다.
  *          패스 종류를 하나 더하는 일은 enum 한 줄 + 이 표의 case 하나입니다(전용 실행 코드가 필요한 패스만 executePass 에 case 를 더합니다).
  */
@@ -108,10 +108,10 @@ namespace sw
     };
 
     /**
-     * @brief 패스 PSO 의 셰이더 경로와 define 을 정합니다. 런타임 PSO 생성과 셰이더 베이커가 함께 부릅니다.
+     * @brief 패스 PSO 의 셰이더 경로와 define 을 정합니다. 런타임 PSO 생성과 셰이더 쿠커가 함께 부릅니다.
      * @details 경로는 패스 서술의 `_shaderPath` 가 먼저이고 비어 있으면 표의 기본 셰이더입니다. define 은 패스 서술의
      *          `_listPermutation` 뒤에 표의 패스 define 을 (겹치지 않게) 붙인 것입니다. 둘이 어긋나면 런타임이 찾는 해시를
-     *          아무도 굽지 않아 Shipping 에서 그 패스의 드로우가 사라집니다.
+     *          아무도 쿠킹하지 않아 Shipping 에서 그 패스의 드로우가 사라집니다.
      * @param pPassDesc 파이프라인의 패스 서술(nullptr 이면 표의 기본값만 씁니다)
      */
     SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const EngineData& engineData );

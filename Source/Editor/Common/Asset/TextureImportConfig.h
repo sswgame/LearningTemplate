@@ -120,7 +120,7 @@ namespace sw::editor
         /**
          * @brief `inherits` 가 가리키는 프리셋을 @p inoutRule 의 바탕으로 깔아 줍니다.
          * @details **찾지 못하면 경고를 남깁니다.** 프리셋 쪽과 규칙 쪽이 함께 씁니다. `inherits` 에 오타가 있거나 부모를 아래쪽에
-         *          적으면(찾기는 그 시점까지 파싱된 것만 봅니다) 상속이 통째로 사라진 채 기본값으로 구워지므로, 조용히 넘어가면
+         *          적으면(찾기는 그 시점까지 파싱된 것만 봅니다) 상속이 통째로 사라진 채 기본값으로 임포트되므로, 조용히 넘어가면
          *          아무도 알 수 없습니다.
          */
         void applyInheritance( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule ) const;

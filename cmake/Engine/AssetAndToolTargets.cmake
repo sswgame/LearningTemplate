@@ -59,10 +59,10 @@ if(Python3_Interpreter_FOUND)
 		message(FATAL_ERROR "[CookAssets] CMAKE_RUNTIME_OUTPUT_DIRECTORY is empty — pack output path would resolve to the filesystem root.")
 	endif()
 
-	# 배포 빌드는 런타임 셰이더 컴파일이 없다 — 구워둔 바이너리가 소스와 어긋나 있으면 화면이
+	# 배포 빌드는 런타임 셰이더 컴파일이 없다 — 쿠킹해 둔 바이너리가 소스와 어긋나 있으면 화면이
 	# 통째로 비고, 그 사실이 실행해 보기 전까지 드러나지 않는다. 그래서 Shipping 쿠킹에서만
-	# 검증을 켠다: bake.stamp 의 내용 해시로 확인하고, 베이커(App.exe)가 있으면 스스로 다시
-	# 굽고, 그래도 어긋나면 패킹하지 않고 빌드를 세운다. Dev 빌드는 런타임 컴파일이 있으므로
+	# 검증을 켠다: cook.stamp 의 내용 해시로 확인하고, 쿠커(App.exe)가 있으면 스스로 다시
+	# 쿠킹하고, 그래도 어긋나면 패킹하지 않고 빌드를 세운다. Dev 빌드는 런타임 컴파일이 있으므로
 	# 이 검사를 걸 이유가 없다.
 	# 프리팹·씬 쿠킹 산출물은 소스 트리(Resource/)가 아니라 빌드 폴더에 스테이징한다 — 소스 옆에 두면
 	# 낡은 .bin 이 남아 Dev 런타임이 그것으로 물러나 실패를 가린다. 팩 안 경로는 같다(cookPack 이 병합).

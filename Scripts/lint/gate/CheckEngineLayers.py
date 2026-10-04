@@ -89,7 +89,7 @@ _kGraphicsRendererLayerName = "Graphics/Renderer"
 # 소유하거나, RHI 가 IWindow 전역을 읽는 식. 처방은 Source/Engine/README.md 와 docs/07_EngineStructureVsCommercial.md.
 #
 # `Graphics` 만 최상위 폴더보다 잘게 본다: `Graphics/Renderer`(FrameRenderer · RenderGraph · GpuScene ·
-# RenderThread · Bake)는 씬과 컴포넌트를 **읽어서 그리는 쪽**이라 그 위(8)이고, 나머지 `Graphics`(RHI ·
+# RenderThread · Cook)는 씬과 컴포넌트를 **읽어서 그리는 쪽**이라 그 위(8)이고, 나머지 `Graphics`(RHI ·
 # Shader · Material · Mesh · Texture · Upload)는 컴포넌트가 드는 **디바이스와 GPU 에셋**이라 그 아래(5)
 # 다 — 언리얼의 RHI/RenderCore 와 Renderer 사이의 선이다. 그래서 RHI·Shader 가 Renderer 를 include 하면
 # 실패한다(`engineLayerOfInternal` 참고).

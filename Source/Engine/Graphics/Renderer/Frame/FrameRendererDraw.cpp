@@ -38,7 +38,7 @@ namespace sw
 
         _psoCache.invalidateLayoutsByShaderPath( shaderPath );
 
-        // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 구워 넣은
+        // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 박아 넣은
         // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다.
         //
         // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 ShaderRecompiler 가 ShaderCache 를 비웠고(수동 리로드)
@@ -315,7 +315,7 @@ namespace sw
             }
 
             // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
-            // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 구워지기만 하고 한 번도 걸리지 않는다.
+            // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
             // 캐시는 ensureMaterialPsos 가 기록 전에 채운다. 여기서는 조회만 한다.
             const RHIPipelineStateHandle batchPso = psoForBatch( pso, head );
             if ( batchPso != boundPso && batchPso != 0 )

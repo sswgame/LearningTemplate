@@ -5,12 +5,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
+#include "Engine/Graphics/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -18,7 +18,7 @@
 
 #include <thread>
 
-// 셰이더 주변 — 스테이지 비트 연산 · 굽기(퍼뮤테이션 해시·파일 이름) · 캐시 동시성 · 굽기 도장.
+// 셰이더 주변 — 스테이지 비트 연산 · 쿠킹(퍼뮤테이션 해시·파일 이름) · 캐시 동시성 · 쿠킹 도장.
 // 전부 디스크와 순수 계산만 본다. 실제 컴파일은 TestShaderCompiler.cpp (CI 가 못 돌린다).
 /**
  * @brief [ShaderStageTest] 8대 스테이지 플래그 변환 및 경계값/오버플로 엣지 케이스 검증
@@ -137,22 +137,22 @@ SW_TEST_CASE( ShaderStageTest, BitwiseStressEvaluation )
 }
 
 /**
- * @brief [ShaderBakerTest] 순열 해시 순서 불변성, 빈 원소 무시, 구조체 오버로드 일관성 검증
+ * @brief [ShaderCookerTest] 순열 해시 순서 불변성, 빈 원소 무시, 구조체 오버로드 일관성 검증
  */
-SW_TEST_CASE( ShaderBakerTest, PermutationHashOrderInvarianceAndEdgeCases )
+SW_TEST_CASE( ShaderCookerTest, PermutationHashOrderInvarianceAndEdgeCases )
 {
     // 1) 빈 순열은 0 반환
     const sw::vector<sw::string> listEmpty;
-    SW_EXPECT_EQUAL( 0ull, sw::ShaderBaker::computePermutationHash( listEmpty ) );
+    SW_EXPECT_EQUAL( 0ull, sw::ShaderCooker::computePermutationHash( listEmpty ) );
 
     // 2) 순서 불변성 (Order Invariance): 정의 순서가 달라도 동일 해시 산출
     const sw::vector<sw::string> listPerm1 = { "FEATURE_A=1", "FEATURE_B=2", "USE_HDR=1" };
     const sw::vector<sw::string> listPerm2 = { "USE_HDR=1", "FEATURE_A=1", "FEATURE_B=2" };
     const sw::vector<sw::string> listPerm3 = { "FEATURE_B=2", "USE_HDR=1", "FEATURE_A=1" };
 
-    const uint64 hash1 = sw::ShaderBaker::computePermutationHash( listPerm1 );
-    const uint64 hash2 = sw::ShaderBaker::computePermutationHash( listPerm2 );
-    const uint64 hash3 = sw::ShaderBaker::computePermutationHash( listPerm3 );
+    const uint64 hash1 = sw::ShaderCooker::computePermutationHash( listPerm1 );
+    const uint64 hash2 = sw::ShaderCooker::computePermutationHash( listPerm2 );
+    const uint64 hash3 = sw::ShaderCooker::computePermutationHash( listPerm3 );
 
     SW_EXPECT_TRUE( hash1 != 0ull );
     SW_EXPECT_EQUAL( hash1, hash2 );
@@ -160,7 +160,7 @@ SW_TEST_CASE( ShaderBakerTest, PermutationHashOrderInvarianceAndEdgeCases )
 
     // 3) 빈 문자열 원소 무시 안전성
     const sw::vector<sw::string> listWithEmpty = { "", "FEATURE_A=1", "", "FEATURE_B=2", "USE_HDR=1", "" };
-    SW_EXPECT_EQUAL( hash1, sw::ShaderBaker::computePermutationHash( listWithEmpty ) );
+    SW_EXPECT_EQUAL( hash1, sw::ShaderCooker::computePermutationHash( listWithEmpty ) );
 
     // 4) vector<ShaderMacroDefine> 오버로드와 vector<string> 간의 해시 일치
     const sw::vector<sw::ShaderMacroDefine> listDefine = {
@@ -168,91 +168,91 @@ SW_TEST_CASE( ShaderBakerTest, PermutationHashOrderInvarianceAndEdgeCases )
         {"FEATURE_B", "2"},
         {  "USE_HDR", "1"}
     };
-    SW_EXPECT_EQUAL( hash1, sw::ShaderBaker::computePermutationHash( listDefine ) );
+    SW_EXPECT_EQUAL( hash1, sw::ShaderCooker::computePermutationHash( listDefine ) );
 
     // 5) 값이 빈 매크로 ("DEBUG_MODE")의 단일 문자열 vs 구조체 일치
     const sw::vector<sw::string>            listValueless    = { "DEBUG_MODE" };
     const sw::vector<sw::ShaderMacroDefine> listDefValueless = {
         { "DEBUG_MODE", "" }
     };
-    SW_EXPECT_EQUAL( sw::ShaderBaker::computePermutationHash( listValueless ),
-                     sw::ShaderBaker::computePermutationHash( listDefValueless ) );
+    SW_EXPECT_EQUAL( sw::ShaderCooker::computePermutationHash( listValueless ),
+                     sw::ShaderCooker::computePermutationHash( listDefValueless ) );
 }
 
 /**
- * @brief [ShaderBakerTest] 8대 스테이지 표준 태그, 커스텀 진입점, 해시 접미사 및 대소문자 정규화 검증
+ * @brief [ShaderCookerTest] 8대 스테이지 표준 태그, 커스텀 진입점, 해시 접미사 및 대소문자 정규화 검증
  */
-SW_TEST_CASE( ShaderBakerTest, BinaryFileNameGenerationAndStageTags )
+SW_TEST_CASE( ShaderCookerTest, BinaryFileNameGenerationAndStageTags )
 {
     // 1) 8대 스테이지 기본 진입점 축약 태그 검증
     SW_EXPECT_EQUAL( sw::string( "forwardlit_vs.dxil" ),
-                     sw::ShaderBaker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "VSMain", 0ull, ".dxil" ) );
+                     sw::ShaderCooker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "VSMain", 0ull, ".dxil" ) );
     SW_EXPECT_EQUAL( sw::string( "deferredlighting_ps.spv" ),
-                     sw::ShaderBaker::computeBinaryFileName( "deferredlighting", sw::ShaderStage::Pixel, "PSMain", 0ull, ".spv" ) );
+                     sw::ShaderCooker::computeBinaryFileName( "deferredlighting", sw::ShaderStage::Pixel, "PSMain", 0ull, ".spv" ) );
     SW_EXPECT_EQUAL( sw::string( "gpucull_cs.dxbc" ),
-                     sw::ShaderBaker::computeBinaryFileName( "gpucull", sw::ShaderStage::Compute, "CSMain", 0ull, ".dxbc" ) );
+                     sw::ShaderCooker::computeBinaryFileName( "gpucull", sw::ShaderStage::Compute, "CSMain", 0ull, ".dxbc" ) );
     SW_EXPECT_EQUAL( sw::string( "terrain_gs.dxil" ),
-                     sw::ShaderBaker::computeBinaryFileName( "terrain", sw::ShaderStage::Geometry, "GSMain", 0ull, ".dxil" ) );
+                     sw::ShaderCooker::computeBinaryFileName( "terrain", sw::ShaderStage::Geometry, "GSMain", 0ull, ".dxil" ) );
     SW_EXPECT_EQUAL( sw::string( "tess_hs.spv" ),
-                     sw::ShaderBaker::computeBinaryFileName( "tess", sw::ShaderStage::Hull, "HSMain", 0ull, ".spv" ) );
+                     sw::ShaderCooker::computeBinaryFileName( "tess", sw::ShaderStage::Hull, "HSMain", 0ull, ".spv" ) );
     SW_EXPECT_EQUAL( sw::string( "tess_ds.spv" ),
-                     sw::ShaderBaker::computeBinaryFileName( "tess", sw::ShaderStage::Domain, "DSMain", 0ull, ".spv" ) );
+                     sw::ShaderCooker::computeBinaryFileName( "tess", sw::ShaderStage::Domain, "DSMain", 0ull, ".spv" ) );
     SW_EXPECT_EQUAL( sw::string( "cluster_ms.dxil" ),
-                     sw::ShaderBaker::computeBinaryFileName( "cluster", sw::ShaderStage::Mesh, "MSMain", 0ull, ".dxil" ) );
+                     sw::ShaderCooker::computeBinaryFileName( "cluster", sw::ShaderStage::Mesh, "MSMain", 0ull, ".dxil" ) );
     SW_EXPECT_EQUAL( sw::string( "cluster_as.dxil" ),
-                     sw::ShaderBaker::computeBinaryFileName( "cluster", sw::ShaderStage::Amplification, "ASMain", 0ull, ".dxil" ) );
+                     sw::ShaderCooker::computeBinaryFileName( "cluster", sw::ShaderStage::Amplification, "ASMain", 0ull, ".dxil" ) );
 
     // 2) 커스텀 진입점 전달 시 소문자 결합
     SW_EXPECT_EQUAL( sw::string( "forwardlit_customentry.dxil" ),
-                     sw::ShaderBaker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "CustomEntry", 0ull, ".dxil" ) );
+                     sw::ShaderCooker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "CustomEntry", 0ull, ".dxil" ) );
 
     // 3) 기본 진입점 대소문자 무시 (vsmain -> vs)
     SW_EXPECT_EQUAL( sw::string( "forwardlit_vs.dxil" ),
-                     sw::ShaderBaker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "vsmain", 0ull, ".dxil" ) );
+                     sw::ShaderCooker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "vsmain", 0ull, ".dxil" ) );
 
     // 4) 순열 해시 접미사 (_%08x)
-    const sw::string fileNameWithHash = sw::ShaderBaker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "VSMain", 0x1234ABCDull, ".dxil" );
+    const sw::string fileNameWithHash = sw::ShaderCooker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "VSMain", 0x1234ABCDull, ".dxil" );
     SW_EXPECT_EQUAL( sw::string( "forwardlit_vs_1234abcd.dxil" ), fileNameWithHash );
 }
 
 /**
- * @brief [ShaderBakerTest] 4대 RHI 서브폴더, 확장자 매핑 및 별칭 역산출 검증
+ * @brief [ShaderCookerTest] 4대 RHI 서브폴더, 확장자 매핑 및 별칭 역산출 검증
  */
-SW_TEST_CASE( ShaderBakerTest, SubfolderAndFormatMappingAliases )
+SW_TEST_CASE( ShaderCookerTest, SubfolderAndFormatMappingAliases )
 {
     // 서브폴더 및 확장자
-    SW_EXPECT_EQUAL( sw::string_view( "dx11" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::DXBC_D3D11 ) );
-    SW_EXPECT_EQUAL( sw::string_view( "dx12" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::DXIL_D3D12 ) );
-    SW_EXPECT_EQUAL( sw::string_view( "vulkan" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) );
-    SW_EXPECT_EQUAL( sw::string_view( "opengl" ), sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_OpenGL ) );
+    SW_EXPECT_EQUAL( sw::string_view( "dx11" ), sw::ShaderCooker::getSubfolderForFormat( sw::ShaderTargetFormat::DXBC_D3D11 ) );
+    SW_EXPECT_EQUAL( sw::string_view( "dx12" ), sw::ShaderCooker::getSubfolderForFormat( sw::ShaderTargetFormat::DXIL_D3D12 ) );
+    SW_EXPECT_EQUAL( sw::string_view( "vulkan" ), sw::ShaderCooker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) );
+    SW_EXPECT_EQUAL( sw::string_view( "opengl" ), sw::ShaderCooker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_OpenGL ) );
 
-    SW_EXPECT_EQUAL( sw::string_view( ".dxbc" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::DXBC_D3D11 ) );
-    SW_EXPECT_EQUAL( sw::string_view( ".dxil" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::DXIL_D3D12 ) );
-    SW_EXPECT_EQUAL( sw::string_view( ".spv" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) );
-    SW_EXPECT_EQUAL( sw::string_view( ".spv" ), sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_OpenGL ) );
+    SW_EXPECT_EQUAL( sw::string_view( ".dxbc" ), sw::ShaderCooker::getExtensionForFormat( sw::ShaderTargetFormat::DXBC_D3D11 ) );
+    SW_EXPECT_EQUAL( sw::string_view( ".dxil" ), sw::ShaderCooker::getExtensionForFormat( sw::ShaderTargetFormat::DXIL_D3D12 ) );
+    SW_EXPECT_EQUAL( sw::string_view( ".spv" ), sw::ShaderCooker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) );
+    SW_EXPECT_EQUAL( sw::string_view( ".spv" ), sw::ShaderCooker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_OpenGL ) );
 
     // 별칭 역산출
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "dx11" ) == sw::ShaderTargetFormat::DXBC_D3D11 );
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "d3d11" ) == sw::ShaderTargetFormat::DXBC_D3D11 );
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "directx11" ) == sw::ShaderTargetFormat::DXBC_D3D11 );
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "dx12" ) == sw::ShaderTargetFormat::DXIL_D3D12 );
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "d3d12" ) == sw::ShaderTargetFormat::DXIL_D3D12 );
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "directx12" ) == sw::ShaderTargetFormat::DXIL_D3D12 );
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "vulkan" ) == sw::ShaderTargetFormat::SPIRV_Vulkan );
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "vk" ) == sw::ShaderTargetFormat::SPIRV_Vulkan );
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "spirv" ) == sw::ShaderTargetFormat::SPIRV_Vulkan );
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "opengl" ) == sw::ShaderTargetFormat::SPIRV_OpenGL );
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "gl" ) == sw::ShaderTargetFormat::SPIRV_OpenGL );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "dx11" ) == sw::ShaderTargetFormat::DXBC_D3D11 );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "d3d11" ) == sw::ShaderTargetFormat::DXBC_D3D11 );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "directx11" ) == sw::ShaderTargetFormat::DXBC_D3D11 );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "dx12" ) == sw::ShaderTargetFormat::DXIL_D3D12 );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "d3d12" ) == sw::ShaderTargetFormat::DXIL_D3D12 );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "directx12" ) == sw::ShaderTargetFormat::DXIL_D3D12 );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "vulkan" ) == sw::ShaderTargetFormat::SPIRV_Vulkan );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "vk" ) == sw::ShaderTargetFormat::SPIRV_Vulkan );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "spirv" ) == sw::ShaderTargetFormat::SPIRV_Vulkan );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "opengl" ) == sw::ShaderTargetFormat::SPIRV_OpenGL );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "gl" ) == sw::ShaderTargetFormat::SPIRV_OpenGL );
 
     // 미지원/미지의 서브폴더 -> Count
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "unknown" ) == sw::ShaderTargetFormat::Count );
-    SW_EXPECT_TRUE( sw::ShaderBaker::getFormatForSubfolder( "" ) == sw::ShaderTargetFormat::Count );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "unknown" ) == sw::ShaderTargetFormat::Count );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "" ) == sw::ShaderTargetFormat::Count );
 }
 
 /**
- * @brief [ShaderBakerTest] 1만 건 순열 해시 무결성 및 충돌 스트레스 테스트
+ * @brief [ShaderCookerTest] 1만 건 순열 해시 무결성 및 충돌 스트레스 테스트
  */
-SW_TEST_CASE( ShaderBakerTest, PermutationHashCollisionStressTest )
+SW_TEST_CASE( ShaderCookerTest, PermutationHashCollisionStressTest )
 {
     constexpr uint32                  kPermutationCount = 10000;
     sw::unordered_map<uint64, uint32> mapHashToId;
@@ -263,7 +263,7 @@ SW_TEST_CASE( ShaderBakerTest, PermutationHashCollisionStressTest )
     {
         sw::formatstring( defBuf.data(), defBuf.capacity(), "PERM_MACRO_%u=%u", index, ( index * 31u + 7u ) );
         const sw::vector<sw::string> listPerm = { "COMMON_DEFINE=1", defBuf.c_str() };
-        const uint64                 hash     = sw::ShaderBaker::computePermutationHash( listPerm );
+        const uint64                 hash     = sw::ShaderCooker::computePermutationHash( listPerm );
 
         SW_EXPECT_TRUE( hash != 0ull );
         auto iter = mapHashToId.find( hash );
@@ -274,43 +274,43 @@ SW_TEST_CASE( ShaderBakerTest, PermutationHashCollisionStressTest )
 }
 
 /**
- * @brief [ShaderBakerTest] 소스 해시 캐시는 파일이 바뀌면 다시 읽는다
- * @details 셰이더 요청 하나가 같은 소스를 여러 번 해시한다(메모리 캐시 확인 · 로컬 캐시 경로 · 굽기 신선도). 그래서 내용 해시는
+ * @brief [ShaderCookerTest] 소스 해시 캐시는 파일이 바뀌면 다시 읽는다
+ * @details 셰이더 요청 하나가 같은 소스를 여러 번 해시한다(메모리 캐시 확인 · 로컬 캐시 경로 · 쿠킹 신선도). 그래서 내용 해시는
  *          파일의 크기 · 쓰기 시각과 함께 캐시되고, 두 번째부터는 파일을 열지 않는다. 캐시가 편집을 놓치면 **바뀐 셰이더가 옛
  *          바이너리로 그려진다** — 로그는 성공을 찍는 가장 조용한 어긋남이다. 되돌린 내용은 처음과 같은 해시로 돌아와야 한다(내용 해시).
  */
-SW_TEST_CASE( ShaderBakerTest, CachedSourceHashNoticesEditedFile )
+SW_TEST_CASE( ShaderCookerTest, CachedSourceHashNoticesEditedFile )
 {
     const sw::string dir  = test::makeTempDirectory( "SwShaderSourceHashDir" );
     const sw::string path = sw::FileUtil::joinPath( dir, "edit.hlsl" );
 
     const sw::string original = "float4 main() : SV_Target { return 1; }\n";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( original.data() ), original.size() ) );
-    const uint64 firstHash = sw::ShaderBaker::computeEffectiveSourceHash( path );
+    const uint64 firstHash = sw::ShaderCooker::computeEffectiveSourceHash( path );
     SW_ASSERT_TRUE( firstHash != 0u );
-    SW_EXPECT_EQUAL( firstHash, sw::ShaderBaker::computeEffectiveSourceHash( path ) ); // 캐시 적중
+    SW_EXPECT_EQUAL( firstHash, sw::ShaderCooker::computeEffectiveSourceHash( path ) ); // 캐시 적중
 
     const sw::string edited = "float4 main() : SV_Target { return float4( 0.25, 0.5, 0.75, 1.0 ); }\n";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( edited.data() ), edited.size() ) );
-    const uint64 editedHash = sw::ShaderBaker::computeEffectiveSourceHash( path );
+    const uint64 editedHash = sw::ShaderCooker::computeEffectiveSourceHash( path );
     SW_EXPECT_TRUE( editedHash != 0u );
     SW_EXPECT_TRUE( editedHash != firstHash );
 
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( original.data() ), original.size() ) );
-    SW_EXPECT_EQUAL( firstHash, sw::ShaderBaker::computeEffectiveSourceHash( path ) );
+    SW_EXPECT_EQUAL( firstHash, sw::ShaderCooker::computeEffectiveSourceHash( path ) );
 
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( path ) );
-    SW_EXPECT_EQUAL( uint64( 0 ), sw::ShaderBaker::computeEffectiveSourceHash( path ) );
+    SW_EXPECT_EQUAL( uint64( 0 ), sw::ShaderCooker::computeEffectiveSourceHash( path ) );
 }
 
 /**
- * @brief [ShaderBakerTest] 굽지 못한 소스는 도장에서 빠진다 — 다음 베이크가 그것을 최신으로 보지 않고 다시 굽는다
- * @details 컴파일에 실패해도 베이크가 폴더 전체의 지금 소스 해시로 도장을 찍으면 그 셰이더의 **옛 바이너리**가 최신으로 판정된다 — 다음 베이크도
- *          건너뛰고 `--bake-shaders` 는 종료 코드 0 이라 배포본에 옛 바이너리가 실린다.
+ * @brief [ShaderCookerTest] 쿠킹하지 못한 소스는 도장에서 빠진다 — 다음 쿠킹이 그것을 최신으로 보지 않고 다시 쿠킹한다
+ * @details 컴파일에 실패해도 쿠킹이 폴더 전체의 지금 소스 해시로 도장을 찍으면 그 셰이더의 **옛 바이너리**가 최신으로 판정된다 — 다음 쿠킹도
+ *          건너뛰고 `--cook-shaders` 는 종료 코드 0 이라 배포본에 옛 바이너리가 실린다.
  */
-SW_TEST_CASE( ShaderBakerTest, FailedSourcesAreLeftOutOfTheBakeStamp )
+SW_TEST_CASE( ShaderCookerTest, FailedSourcesAreLeftOutOfTheCookStamp )
 {
-    const sw::string shadersDir = sw::FileUtil::joinPath( test::makeTempDirectory( "bake_stamp" ), "shaders" );
+    const sw::string shadersDir = sw::FileUtil::joinPath( test::makeTempDirectory( "cook_stamp" ), "shaders" );
     const sw::string binDir     = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shadersDir, "bin" ), "dx12" );
     const sw::string goodPath   = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( shadersDir, "good.hlsl" ) );
     const sw::string brokenPath = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( shadersDir, "broken.hlsl" ) );
@@ -319,22 +319,22 @@ SW_TEST_CASE( ShaderBakerTest, FailedSourcesAreLeftOutOfTheBakeStamp )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, "float4 main() : SV_Target { return }\n" ) );
 
     const sw::unordered_set<sw::string> uniqueFailedSource{ brokenPath };
-    sw::ShaderBaker::writeBakeStamp( binDir, &uniqueFailedSource );
-    sw::ShaderBaker::invalidateSharedHeaderCache(); // 도장 읽기 캐시를 비워 방금 쓴 도장을 읽게 한다
+    sw::ShaderCooker::writeCookStamp( binDir, &uniqueFailedSource );
+    sw::ShaderCooker::invalidateSharedHeaderCache(); // 도장 읽기 캐시를 비워 방금 쓴 도장을 읽게 한다
 
-    SW_EXPECT_TRUE( sw::ShaderBaker::isBakedOutputCurrent( binDir, goodPath ) );
-    SW_EXPECT_FALSE( sw::ShaderBaker::isBakedOutputCurrent( binDir, brokenPath ) );
+    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( binDir, goodPath ) );
+    SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( binDir, brokenPath ) );
 }
 
 /**
- * @brief [ShaderBakerTest] 잘못된 파일 경로 및 디렉터리에 대한 방어적 실패 처리 검증
+ * @brief [ShaderCookerTest] 잘못된 파일 경로 및 디렉터리에 대한 방어적 실패 처리 검증
  */
-SW_TEST_CASE( ShaderBakerTest, DefensiveFileOperations )
+SW_TEST_CASE( ShaderCookerTest, DefensiveFileOperations )
 {
     test::ScopedLogSuppressor suppressor;
 
-    sw::ShaderBakeResult result{};
-    const bool           bBakeInvalid = sw::ShaderBaker::bakeShader(
+    sw::ShaderCookResult result{};
+    const bool           bCookInvalid = sw::ShaderCooker::cookShader(
         "non_existent_shader_file_12345.hlsl",
         "output_dummy.bin",
         "VSMain",
@@ -343,14 +343,14 @@ SW_TEST_CASE( ShaderBakerTest, DefensiveFileOperations )
         nullptr,
         &result );
 
-    SW_EXPECT_FALSE( bBakeInvalid );
+    SW_EXPECT_FALSE( bCookInvalid );
     SW_EXPECT_FALSE( result._bSuccess == SW_TRUE );
 
-    const sw::ShaderBakeSummary summary = sw::ShaderBakeDriver::bakeAllShaders(
+    const sw::ShaderCookSummary summary = sw::ShaderCookDriver::cookAllShaders(
         "invalid_resource_root_path_99999",
         sw::ShaderTargetFormat::DXIL_D3D12,
         false );
-    SW_EXPECT_EQUAL( 0u, summary._bakedCount );
+    SW_EXPECT_EQUAL( 0u, summary._cookedCount );
 }
 
 /**
@@ -463,12 +463,12 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
 }
 
 /**
- * @brief [ShaderBakerTest] 컬러 출력이 없는 패스(그림자·뎁스 프리패스)에는 픽셀 스테이지가 없다.
- * @details 베이커와 런타임이 둘 다 `FrameRendererUtil::hasPixelStage` 하나를 본다. 베이커가 타입 **문자열**로 "그림자엔 PS 없음" 을 정하고
+ * @brief [ShaderCookerTest] 컬러 출력이 없는 패스(그림자·뎁스 프리패스)에는 픽셀 스테이지가 없다.
+ * @details 쿠커와 런타임이 둘 다 `FrameRendererUtil::hasPixelStage` 하나를 본다. 쿠커가 타입 **문자열**로 "그림자엔 PS 없음" 을 정하고
  *          런타임이 PS 경로를 늘 채우면, 머티리얼 define 을 얹은 그림자 변형이 DX12 에서 PS 리플렉션을 요구해 Shipping 실기동이
  *          "리플렉션 매니페스트에 없다" 로 진다. 실제 파이프라인 XML 둘과 합성 선언으로 그 규칙을 고정한다. GPU 가 필요 없다(nogpu).
  */
-SW_TEST_CASE( ShaderBakerTest, DepthOnlyPassesHaveNoPixelStage )
+SW_TEST_CASE( ShaderCookerTest, DepthOnlyPassesHaveNoPixelStage )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
@@ -547,11 +547,11 @@ SW_TEST_CASE( ShaderBakerTest, DepthOnlyPassesHaveNoPixelStage )
 }
 
 /**
- * @brief [ShaderBakerTest] 파이프라인 XML 의 첨부 포맷 이름은 RHIFormat 의 모든 열거자를 그 이름 그대로 읽는다
+ * @brief [ShaderCookerTest] 파이프라인 XML 의 첨부 포맷 이름은 RHIFormat 의 모든 열거자를 그 이름 그대로 읽는다
  * @details 로드 검증(`RenderPipelineAsset::validate`)과 실제 생성(`parseAttachmentFormat`)이 같은 이름표를 봐야 한다. 이름표가 둘이면
  *          검증은 통과하는 "R32_FLOAT" 가 생성에서 조용히 R8G8B8A8_UNORM 이 된다. 이름 → 값 → 이름이 열거자마다 제자리로 돌아오는지 본다.
  */
-SW_TEST_CASE( ShaderBakerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )
+SW_TEST_CASE( ShaderCookerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )
 {
     for ( uint32 value = 0; value <= static_cast<uint32>( sw::RHIFormat::BC7_UNORM ); ++value )
     {
@@ -568,12 +568,12 @@ SW_TEST_CASE( ShaderBakerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )
 }
 
 /**
- * @brief [ShaderBakerTest] 셰이더 캐시가 읽는 파일 이름은 베이커가 쓰는 이름과 같고, 퍼뮤테이션마다 다르다.
- * @details 캐시가 스템과 스테이지만으로 이름을 만들면 **모든 퍼뮤테이션이 해시 0 바이너리를 읽는다** — 베이크 바이너리가
+ * @brief [ShaderCookerTest] 셰이더 캐시가 읽는 파일 이름은 쿠커가 쓰는 이름과 같고, 퍼뮤테이션마다 다르다.
+ * @details 캐시가 스템과 스테이지만으로 이름을 만들면 **모든 퍼뮤테이션이 해시 0 바이너리를 읽는다** — 쿠킹 바이너리가
  *          있는 한 SW_FORWARD·MATERIAL_BLEND_TRANSLUCENT·SW_VIEWMODE_UNLIT 이 GPU 에 닿지 않는다. 리플렉션 매니페스트는
  *          해시로 찾으므로 레이아웃만 맞고 바이트코드는 틀린 어긋남이라 그림으로만 드러난다. GPU 가 필요 없다(nogpu).
  */
-SW_TEST_CASE( ShaderBakerTest, CachePathCarriesPermutationHash )
+SW_TEST_CASE( ShaderCookerTest, CachePathCarriesPermutationHash )
 {
     sw::ShaderCompileDesc plain{};
     plain._filePath     = "engine/shaders/forwardlit.hlsl";
@@ -585,111 +585,111 @@ SW_TEST_CASE( ShaderBakerTest, CachePathCarriesPermutationHash )
     unlit._listDefine.push_back( sw::ShaderMacroDefine::parse( "SW_FORWARD=1" ) );
     unlit._listDefine.push_back( sw::ShaderMacroDefine::parse( "SW_VIEWMODE_UNLIT=1" ) );
 
-    const sw::string plainPath = sw::ShaderCache::makePrebakedRelativePath( plain );
-    const sw::string unlitPath = sw::ShaderCache::makePrebakedRelativePath( unlit );
+    const sw::string plainPath = sw::ShaderCache::makePrecookedRelativePath( plain );
+    const sw::string unlitPath = sw::ShaderCache::makePrecookedRelativePath( unlit );
     SW_EXPECT_STREQ( "engine/shaders/bin/vulkan/forwardlit_ps.spv", plainPath.c_str() );
     SW_EXPECT_TRUE_MSG( unlitPath != plainPath, "퍼뮤테이션이 다른데 같은 바이너리를 읽는다 — define 이 GPU 에 닿지 않는다" );
 
-    // 베이커가 굽는 이름과 글자 단위로 같아야 한다(다른 규칙이 하나라도 있으면 그 규칙이 정본을 이긴다).
-    const sw::string bakedName = sw::ShaderBaker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Pixel, "PSMain",
-                                                                         sw::ShaderBaker::computePermutationHash( unlit._listDefine ), ".spv" );
-    SW_EXPECT_STREQ( ( sw::string( "engine/shaders/bin/vulkan/" ) + bakedName ).c_str(), unlitPath.c_str() );
+    // 쿠커가 쿠킹하는 이름과 글자 단위로 같아야 한다(다른 규칙이 하나라도 있으면 그 규칙이 정본을 이긴다).
+    const sw::string cookedName = sw::ShaderCooker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Pixel, "PSMain",
+                                                                           sw::ShaderCooker::computePermutationHash( unlit._listDefine ), ".spv" );
+    SW_EXPECT_STREQ( ( sw::string( "engine/shaders/bin/vulkan/" ) + cookedName ).c_str(), unlitPath.c_str() );
 
     // 로컬 라이브 캐시도 같은 이름을 쓴다 — 처음 컴파일된 퍼뮤테이션이 나머지를 덮으면 안 된다.
     const sw::string plainLocal = sw::ShaderCache::makeLocalCachePath( plain );
     const sw::string unlitLocal = sw::ShaderCache::makeLocalCachePath( unlit );
     SW_EXPECT_TRUE( plainLocal != unlitLocal );
-    SW_EXPECT_TRUE( unlitLocal.find( bakedName ) != sw::string::npos );
+    SW_EXPECT_TRUE( unlitLocal.find( cookedName ) != sw::string::npos );
 
     // define 순서는 해시에 영향이 없다 — 런타임이 어떤 순서로 얹든 같은 파일이어야 한다.
     sw::ShaderCompileDesc reordered = plain;
     reordered._listDefine.push_back( sw::ShaderMacroDefine::parse( "SW_VIEWMODE_UNLIT=1" ) );
     reordered._listDefine.push_back( sw::ShaderMacroDefine::parse( "SW_FORWARD=1" ) );
-    SW_EXPECT_STREQ( unlitPath.c_str(), sw::ShaderCache::makePrebakedRelativePath( reordered ).c_str() );
+    SW_EXPECT_STREQ( unlitPath.c_str(), sw::ShaderCache::makePrecookedRelativePath( reordered ).c_str() );
 }
 
 /**
- * @brief 구운 산출물의 신선도를 **파일 시간이 아니라 내용 해시**로 판정하는지 봅니다.
- * @details 이 저장소는 구운 바이너리까지 커밋하므로 `git pull` 이 소스와 산출물의 mtime 을 임의의
+ * @brief 쿠킹된 산출물의 신선도를 **파일 시간이 아니라 내용 해시**로 판정하는지 봅니다.
+ * @details 이 저장소는 쿠킹된 바이너리까지 커밋하므로 `git pull` 이 소스와 산출물의 mtime 을 임의의
  *          순서로 덮어쓴다. `산출물 mtime >= 소스 mtime` 으로 판정하면 그때 "이미 최신" 이라 답해 낡은 바이너리가
  *          커밋된 채 돌고, 한 백엔드만 다른 그림을 내는 것이 백엔드 버그처럼 보인다. 여기서 막는다.
  */
-SW_TEST_CASE( ShaderBakeStampTest, FreshnessIsJudgedByContentNotFileTime )
+SW_TEST_CASE( ShaderCookStampTest, FreshnessIsJudgedByContentNotFileTime )
 {
     const sw::string shaderPath = sw::ResourceUtil::getResourcePath( "engine/shaders/forwardlit.hlsl" );
     const sw::string binDir     = sw::ResourceUtil::getResourcePath( "engine/shaders/bin/dx12" );
-    // 구운 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
+    // 쿠킹된 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
     if ( shaderPath.empty() || binDir.empty() )
         return;
 
-    SW_EXPECT_TRUE( sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath ) );
+    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath ) );
 
     // 스탬프에 없는 소스는 최신일 수 없다 — "파일이 있으니 최신" 으로 새지 않는지 본다.
     const sw::string shadersDir = sw::FileUtil::getDirectoryPart( sw::FileUtil::normalizeSeparators( shaderPath ) );
-    SW_EXPECT_FALSE( sw::ShaderBaker::isBakedOutputCurrent( binDir, sw::FileUtil::joinPath( shadersDir, "nosuchshader.hlsl" ) ) );
+    SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( binDir, sw::FileUtil::joinPath( shadersDir, "nosuchshader.hlsl" ) ) );
 
     // 유효 소스 해시는 셰이더마다 달라야 한다(같으면 캐시 키가 셰이더를 못 가른다).
-    const uint64 hashForward = sw::ShaderBaker::computeEffectiveSourceHash( shaderPath );
-    const uint64 hashTonemap = sw::ShaderBaker::computeEffectiveSourceHash( sw::FileUtil::joinPath( shadersDir, "tonemap.hlsl" ) );
+    const uint64 hashForward = sw::ShaderCooker::computeEffectiveSourceHash( shaderPath );
+    const uint64 hashTonemap = sw::ShaderCooker::computeEffectiveSourceHash( sw::FileUtil::joinPath( shadersDir, "tonemap.hlsl" ) );
     SW_EXPECT_TRUE( hashForward != 0 );
     SW_EXPECT_TRUE( hashTonemap != 0 );
     SW_EXPECT_TRUE( hashForward != hashTonemap );
 
     // **공유 헤더가 바뀌면 전부 낡은 것이 되어야 한다.** `.hlsl` 은 그대로인데 include 한 `.hlsli` 만
     // 바뀌는 경우다 — 파일 시간으로는 이 조합이 조용히 통과한다.
-    const sw::string tempHeader = sw::FileUtil::joinPath( shadersDir, "baketemp.hlsli" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeader, "// bake staleness test\n" ) );
-    sw::ShaderBaker::invalidateSharedHeaderCache();
-    const bool   bCurrentAfterHeaderAdded = sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath );
-    const uint64 hashAfterHeaderAdded     = sw::ShaderBaker::computeEffectiveSourceHash( shaderPath );
+    const sw::string tempHeader = sw::FileUtil::joinPath( shadersDir, "cooktemp.hlsli" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeader, "// cook staleness test\n" ) );
+    sw::ShaderCooker::invalidateSharedHeaderCache();
+    const bool   bCurrentAfterHeaderAdded = sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath );
+    const uint64 hashAfterHeaderAdded     = sw::ShaderCooker::computeEffectiveSourceHash( shaderPath );
 
     // 넣은 헤더는 반드시 되돌린다 — 실패해도 소스 트리를 더럽힌 채 끝나면 안 된다.
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( tempHeader ) );
-    sw::ShaderBaker::invalidateSharedHeaderCache();
+    sw::ShaderCooker::invalidateSharedHeaderCache();
 
     SW_EXPECT_FALSE( bCurrentAfterHeaderAdded );
     SW_EXPECT_TRUE( hashAfterHeaderAdded != hashForward );
     // 되돌리면 다시 최신이다.
-    SW_EXPECT_TRUE( sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath ) );
-    SW_EXPECT_EQUAL( hashForward, sw::ShaderBaker::computeEffectiveSourceHash( shaderPath ) );
+    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath ) );
+    SW_EXPECT_EQUAL( hashForward, sw::ShaderCooker::computeEffectiveSourceHash( shaderPath ) );
 }
 
 /**
- * @brief [ShaderBakeStampTest] 다른 include 루트(engine)의 헤더가 바뀌면 common 셰이더 산출물도 낡은 것이 된다
+ * @brief [ShaderCookStampTest] 다른 include 루트(engine)의 헤더가 바뀌면 common 셰이더 산출물도 낡은 것이 된다
  * @details common 셰이더는 `common.hlsli` · `binding.hlsli` 를 engine/shaders 에서 include 한다. 스탬프가 자기 도메인 헤더만 보면 engine 헤더를
  *          고쳐도 common 바이너리가 "최신" 으로 남아, 한쪽만 옛 바인딩으로 도는 바이너리가 커밋된다.
  */
-SW_TEST_CASE( ShaderBakeStampTest, HeaderInAnotherIncludeRootMakesOutputStale )
+SW_TEST_CASE( ShaderCookStampTest, HeaderInAnotherIncludeRootMakesOutputStale )
 {
     const sw::string shaderPath       = sw::ResourceUtil::getResourcePath( "common/shaders/samplecompute.hlsl" );
     const sw::string binDir           = sw::ResourceUtil::getResourcePath( "common/shaders/bin/dx12" );
     const sw::string engineShadersDir = sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" );
-    // 구운 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
+    // 쿠킹된 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
     if ( shaderPath.empty() || binDir.empty() || engineShadersDir.empty() )
         return;
 
-    sw::ShaderBaker::invalidateSharedHeaderCache();
-    SW_ASSERT_TRUE_MSG( sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath ), "common 산출물이 지금 소스와 다르다 — App --bake-shaders 로 다시 굽고 시작한다" );
+    sw::ShaderCooker::invalidateSharedHeaderCache();
+    SW_ASSERT_TRUE_MSG( sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath ), "common 산출물이 지금 소스와 다르다 — App --cook-shaders 로 다시 쿠킹하고 시작한다" );
 
-    const sw::string tempHeader = sw::FileUtil::joinPath( engineShadersDir, "baketemp_otherroot.hlsli" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeader, "// bake staleness test (another include root)\n" ) );
-    sw::ShaderBaker::invalidateSharedHeaderCache();
-    const bool bCurrentAfterEngineHeaderAdded = sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath );
+    const sw::string tempHeader = sw::FileUtil::joinPath( engineShadersDir, "cooktemp_otherroot.hlsli" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeader, "// cook staleness test (another include root)\n" ) );
+    sw::ShaderCooker::invalidateSharedHeaderCache();
+    const bool bCurrentAfterEngineHeaderAdded = sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath );
 
     // 넣은 헤더는 반드시 되돌린다 — 실패해도 소스 트리를 더럽힌 채 끝나면 안 된다.
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( tempHeader ) );
-    sw::ShaderBaker::invalidateSharedHeaderCache();
+    sw::ShaderCooker::invalidateSharedHeaderCache();
 
     SW_EXPECT_FALSE( bCurrentAfterEngineHeaderAdded );
-    SW_EXPECT_TRUE( sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath ) );
+    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath ) );
 }
 
 /**
- * @brief [ShaderBakerTest] 리플렉션 매니페스트의 바이트는 항목을 넣은 순서와 상관없다
- * @details 베이커는 요청을 모은 순서대로 매니페스트 맵에 넣고, 맵은 넣은 순서로 돈다. 그 순서로 파일을 쓰면 같은 항목 집합이라도
- *          요청 순서만 바뀐 변경(베이커가 패스 표를 훑는 순서 등)이 커밋된 매니페스트 넷을 모두 바꿔 놓는다. 키 순서로 써야 같은 바이트다.
+ * @brief [ShaderCookerTest] 리플렉션 매니페스트의 바이트는 항목을 넣은 순서와 상관없다
+ * @details 쿠커는 요청을 모은 순서대로 매니페스트 맵에 넣고, 맵은 넣은 순서로 돈다. 그 순서로 파일을 쓰면 같은 항목 집합이라도
+ *          요청 순서만 바뀐 변경(쿠커가 패스 표를 훑는 순서 등)이 커밋된 매니페스트 넷을 모두 바꿔 놓는다. 키 순서로 써야 같은 바이트다.
  */
-SW_TEST_CASE( ShaderBakerTest, ReflectionManifestBytesIgnoreInsertionOrder )
+SW_TEST_CASE( ShaderCookerTest, ReflectionManifestBytesIgnoreInsertionOrder )
 {
     const utf8*      arrKey[]  = { "forwardlit_vs_vsmain_0.dxil", "bloom_ps_psmain_0.dxil", "shadowdepth_vs_vsmain_1.dxil",
                                    "tonemap_ps_psmain_0.dxil", "gbuffer_ps_psmain_7.dxil", "ssao_vs_vsmain_0.dxil" };

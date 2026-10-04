@@ -61,7 +61,7 @@ float swSampleShadowAtWorld( float3 worldPosition )
 
 /**
  * @brief 화면 UV와 깊이에서 월드 위치를 복원합니다 (디퍼드 전용).
- * @details G버퍼에 위치를 굽지 않는다 — 첨부 하나를 통째로 아끼고, 복원은 역행렬 곱 하나다.
+ * @details G버퍼에 위치를 저장하지 않는다 — 첨부 하나를 통째로 아끼고, 복원은 역행렬 곱 하나다.
  *          이 엔진은 행벡터 규약이라 `mul( 벡터, 행렬 )` 이다(`mul( worldPosition, g_ViewProj )` 와 같은 순서).
  */
 float3 swComputeWorldPositionFromDepth( float2 uv, float deviceDepth )

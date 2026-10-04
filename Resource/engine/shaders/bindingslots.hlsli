@@ -4,7 +4,7 @@
  * 이 파일은 순수 전처리기 정의만 담는다(#define 정수 + 주석). 그래서 HLSL 과 C++ 가 **같은 파일을
  * include** 한다 — C++ 쪽은 Source/Engine/Graphics/Shader/Binding/ShaderBindingSlots.h 가 이 파일을 include 해
  * 같은 값을 constexpr 로 노출하고, 4개 백엔드(DX11/DX12/Vulkan/GL)는 그 상수로만 바인딩한다.
- * ShaderBindingValidator::validate 가 구운 바이너리의 리플렉션을 이 표와 대조한다.
+ * ShaderBindingValidator::validate 가 쿠킹된 바이너리의 리플렉션을 이 표와 대조한다.
  *
  * 규칙: 이 파일에는 #define 과 주석만 둔다 (C++ 컴파일러가 그대로 읽는다). 산술식·함수형 매크로 금지.
  *

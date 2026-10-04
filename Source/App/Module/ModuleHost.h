@@ -125,12 +125,12 @@ namespace sw
         void shutdown();
 
         /**
-         * @brief 에디터 인스턴스 없이 에디터 모듈만 올려 텍스처를 굽거나 대조합니다(`App --bake-textures` · `--check-textures`).
+         * @brief 에디터 인스턴스 없이 에디터 모듈만 올려 텍스처를 임포트하거나 대조합니다(`App --import-textures` · `--check-textures`).
          * @details 헤드리스 부팅(창 · RHI 없음)에서 부릅니다. 모듈 ABI 를 대조하고, 모듈 타입을 등록했다가 걷은 뒤 모듈을 내립니다.
          *          Shipping 에는 에디터 모듈이 없어 실패합니다.
-         * @return 원본과 DDS 가 맞으면(굽기는 모두 성공하면) true
+         * @return 원본과 DDS 가 맞으면(임포트는 모두 성공하면) true
          */
-        [[nodiscard]] static bool bakeTexturesWithEditorModule( bool bCheckOnly );
+        [[nodiscard]] static bool importTexturesWithEditorModule( bool bCheckOnly );
 
         // 2) 프레임 단위 처리
         /**

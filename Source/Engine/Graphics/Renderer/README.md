@@ -13,8 +13,8 @@ Renderer/
   Frame/      실제로 그리는 것
   Light/      씬 라이트를 한 구조버퍼로 (GpuLightBuffer) — 포워드·디퍼드가 같이 읽는다
   Debug/      에디터가 읽는 통로 — RenderTargetRegistry(프레임 렌더타깃 목록) · DebugDrawQueue(라인/스피어 큐)
-  Bake/       오프라인 셰이더 베이크의 정책 — 무엇을 구울지(요청: 파이프라인 XML · 패스 종류 표 × 뷰 모드 · 머티리얼) · 전부 굽기(드라이버).
-              Shader/ 는 한 장을 굽는 법만 안다
+  Cook/       오프라인 셰이더 쿠킹의 정책 — 무엇을 쿠킹할지(요청: 파이프라인 XML · 패스 종류 표 × 뷰 모드 · 머티리얼) · 전부 쿠킹(드라이버).
+              Shader/ 는 한 장을 쿠킹하는 법만 안다
   RenderThread.cpp/h   위를 구동하는 스레드
 ```
 
@@ -29,7 +29,7 @@ Renderer/
   해석되고, 해석되지 않으면 `RenderPipelineAsset::validate` 가 잡습니다.
 - `RenderPassTypeInfo` — 패스 종류 하나의 사실을 **enum 값마다 한 줄**로 모은 표입니다. 기본 셰이더(EngineData 칸) ·
   PSO 기본 상태 · 패스 define · 컬러 RT 수 · 그리는 대상(씬 메시 · 일반 풀스크린 · 컴퓨트) · 대신할 PSO · 입력 계약.
-  엔진 PSO 등록(`ensurePassResources`) · 셰이더 베이크 요청 · `executePass` 디스패치 · 파이프라인 검증이 모두 이 표를
+  엔진 PSO 등록(`ensurePassResources`) · 셰이더 쿠킹 요청 · `executePass` 디스패치 · 파이프라인 검증이 모두 이 표를
   enum 으로 읽습니다. 새 포스트 패스는 enum 한 줄 + 표의 case 하나이고, 전용 실행 코드가 필요한 패스만
   `executePass` 의 switch 에 case 를 더합니다.
 - `RenderPassInputSignature` — 패스 입력의 **역할**(필수/선택). 타입마다의 목록은 위 표의 칸이고, 검증과 실행이 같은
@@ -77,7 +77,7 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
   - `FrameRendererPassExecute` — 패스 타입별 실행 분기
   - `FrameRendererDraw` — 드로우 루프
   - `FrameRendererPso` — 머티리얼 PSO 생성. 뷰 모드(`RenderViewMode` — Lit · Unlit · Wireframe)가 얹는 define 은
-    `FrameRendererUtil::findViewModeDefine` 하나가 정하고 셰이더 베이크 요청도 같은 함수를 부릅니다 — 베이커가 굽지 않은 define 은 Shipping 에서 PSO 를 못 만듭니다
+    `FrameRendererUtil::findViewModeDefine` 하나가 정하고 셰이더 쿠킹 요청도 같은 함수를 부릅니다 — 쿠커가 쿠킹하지 않은 define 은 Shipping 에서 PSO 를 못 만듭니다
 - `FrameRenderer` 가 **소유하는 셋** — 각자 뮤텍스와 수명을 가진 상태라 클래스로 떼어 두었습니다:
   - `PassConstantRing` — 드로우마다 하나씩 나눠 주는 패스 상수버퍼 슬롯 링(원자 커서, 프레임마다 되감기)
   - `RenderPsoCache` — 엔진 패스 PSO · Present 포맷별 PSO · 머티리얼 퍼뮤테이션 변형과 바인딩 레이아웃.

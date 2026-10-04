@@ -1,7 +1,7 @@
 /**
- * @file ShaderBakeRequest.cpp
- * @brief **무엇을 구울지** 정합니다. 파이프라인 XML 과 머티리얼을 훑어 (셰이더 · 진입점 · define) 목록을 만듭니다.
- * @details 굽는 일(`Shader/Compile/ShaderBaker.cpp`)과 나누는 이유는 입력이 다르기 때문입니다. 여기 입력은 **에셋**(파이프라인 · 머티리얼)이고
+ * @file ShaderCookRequest.cpp
+ * @brief **무엇을 쿠킹할지** 정합니다. 파이프라인 XML 과 머티리얼을 훑어 (셰이더 · 진입점 · define) 목록을 만듭니다.
+ * @details 쿠킹하는 일(`Shader/Compile/ShaderCooker.cpp`)과 나누는 이유는 입력이 다르기 때문입니다. 여기 입력은 **에셋**(파이프라인 · 머티리얼)이고
  *          저쪽 입력은 요청 하나입니다. 런타임이 만드는 퍼뮤테이션과 여기서 만드는 요청이 어긋나면 Shipping 에서
  *          매니페스트 미스로 떨어지므로, define 을 합치는 규칙(`mergeDefines`)과 패스 기본 셰이더를 고르는 규칙이
  *          런타임과 같은 자리를 봐야 합니다. 그 대조가 이 파일의 일입니다.
@@ -13,12 +13,12 @@
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
+#include "Engine/Graphics/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
@@ -26,9 +26,9 @@ namespace sw
 {
     namespace
     {
-        struct ShaderBakeRequestInternal
+        struct ShaderCookRequestInternal
         {
-            static void appendRequestUnique( vector<ShaderBakeRequest>& outListRequest,
+            static void appendRequestUnique( vector<ShaderCookRequest>& outListRequest,
                                              string_view                shaderPath,
                                              string_view                entryPoint,
                                              ShaderStage                stage,
@@ -37,10 +37,10 @@ namespace sw
                 if ( shaderPath.empty() || entryPoint.empty() )
                     return;
 
-                const uint64 permutationHash = ShaderBaker::computePermutationHash( listPermutation );
+                const uint64 permutationHash = ShaderCooker::computePermutationHash( listPermutation );
                 const string normPath        = FileUtil::normalizeSeparators( shaderPath );
 
-                for ( const ShaderBakeRequest& existing : outListRequest )
+                for ( const ShaderCookRequest& existing : outListRequest )
                 {
                     if ( existing._stage == stage &&
                          existing._permutationHash == permutationHash &&
@@ -49,7 +49,7 @@ namespace sw
                         return;
                 }
 
-                ShaderBakeRequest request;
+                ShaderCookRequest request;
                 request._shaderPath      = normPath;
                 request._entryPoint      = string( entryPoint );
                 request._stage           = stage;
@@ -71,7 +71,7 @@ namespace sw
             };
 
             /** @brief 메시 패스 하나가 이 셰이더 · define 으로 그릴 때의 VS(그리고 픽셀 스테이지가 있으면 PS) 요청을 더합니다. */
-            static void appendMeshPassRequest( vector<ShaderBakeRequest>& outListRequest, const MeshPassInfo& passInfo, string_view shaderPath,
+            static void appendMeshPassRequest( vector<ShaderCookRequest>& outListRequest, const MeshPassInfo& passInfo, string_view shaderPath,
                                                const vector<string>& listDefine )
             {
                 appendRequestUnique( outListRequest, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listDefine );
@@ -109,11 +109,11 @@ namespace sw
                 return listMerged;
             }
 
-            static void collectAllRequests( string_view rootDir, vector<ShaderBakeRequest>& outListRequest )
+            static void collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
             {
                 EngineData engineData;
                 if ( engineData.loadFromResource() == false )
-                    SW_LOG_WARNING( "Engine data could not be read - baking with the built-in default passes" );
+                    SW_LOG_WARNING( "Engine data could not be read - cooking with the built-in default passes" );
 
                 vector<MeshPassInfo>        listMeshPass;
                 vector<MaterialVariantInfo> listMaterialVariant;
@@ -143,7 +143,7 @@ namespace sw
                             continue;
                         const vector<string>& listPassDefine = passShader._listDefine;
 
-                        // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 구워야 한다(아래 4단계).
+                        // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 쿠킹해야 한다(아래 4단계).
                         if ( FrameRendererUtil::drawsSceneMeshes( pass._resolvedType ) )
                         {
                             MeshPassInfo passInfo;
@@ -201,7 +201,7 @@ namespace sw
                 }
 
                 // 2) 패스 종류 표(RenderPassTypeInfo)의 엔진 셰이더. 런타임이 패스 서술 없이도 만드는 PSO 의 셰이더다.
-                //    컴퓨트 패스는 CSMain, 나머지는 VSMain · PSMain 을 define 없이 굽는다.
+                //    컴퓨트 패스는 CSMain, 나머지는 VSMain · PSMain 을 define 없이 쿠킹한다.
                 //    런타임(FrameRenderer::ensurePassResources)은 로드한 파이프라인과 무관하게 표의 **모든** 패스 종류로 엔진 PSO 를 만들고,
                 //    씬 메시 패스면 그 위에 머티리얼 · 뷰 모드 변형을 얹는다. 파이프라인에 그 종류가 없으면 서술 없이 표만으로 만든다 —
                 //    그 메시 패스도 아래 4) 의 곱에 넣는다. XML 에 나오는 패스만 곱하면 어느 파이프라인에도 없는 종류의 변형이 빠진다.
@@ -260,7 +260,7 @@ namespace sw
                 {
                     // **머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다.** 주의: XML 의 `_alwaysDefines` 만
                     // 손으로 긁으면 런타임이 얹는 품질 · SHADER_LOD · usage · 정적 스위치 · 멀티 컴파일이 빠져,
-                    // 구운 변형이 런타임이 **한 번도 요청하지 않는** 해시가 된다. 같은 함수를 부르면 어긋날 자리가 없다.
+                    // 쿠킹된 변형이 런타임이 **한 번도 요청하지 않는** 해시가 된다. 같은 함수를 부르면 어긋날 자리가 없다.
                     const shared_ptr<Material> material = Material::create();
                     if ( material->loadFromFile( matPath ) == false )
                         continue;
@@ -280,7 +280,7 @@ namespace sw
                 //
                 // FrameRenderer::createMaterialPsoVariant 는 패스 PSO 의 define 위에 머티리얼 define 을, 그 위에 뷰 모드 define 을
                 // 얹어 변형 PSO 를 만든다. 런타임이 찾는 것은 셋의 합집합이고, 머티리얼이 없는 배치(ensureMaterialPsos 의 퍼뮤테이션 없는
-                // 요청)도 패스 define 위에 뷰 모드를 얹는다. 굽지 않은 조합은 Shipping 에서 PSO 생성이 실패하고 패스 PSO 로 물러나
+                // 요청)도 패스 define 위에 뷰 모드를 얹는다. 쿠킹하지 않은 조합은 Shipping 에서 PSO 생성이 실패하고 패스 PSO 로 물러나
                 // **조용히 Lit 으로** 그려지거나(뷰 모드) 드로우가 사라진다(머티리얼).
                 // 뷰 모드 define 은 런타임과 같은 FrameRendererUtil::findViewModeDefine 에서 얻는다. Wireframe 처럼 래스터라이저 상태만
                 // 바꾸는 모드는 define 이 없어 새 바이트코드가 필요 없다.
@@ -320,10 +320,10 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ShaderBaker" );
+    SW_LOG_CALLER( "ShaderCooker" );
 
-    void ShaderBakeDriver::collectAllRequests( string_view rootDir, vector<ShaderBakeRequest>& outListRequest )
+    void ShaderCookDriver::collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
     {
-        ShaderBakeRequestInternal::collectAllRequests( rootDir, outListRequest );
+        ShaderCookRequestInternal::collectAllRequests( rootDir, outListRequest );
     }
 } // namespace sw

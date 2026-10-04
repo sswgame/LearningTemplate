@@ -43,7 +43,7 @@ namespace sw::editor
         Count ///< 종류 수(종류가 아님). 종류 표(EditorAssetType.cpp)가 모든 종류를 한 번씩 담는지 컴파일 때 본다
     };
 
-    /** @brief 소스 파일을 굽는 임포터입니다. 처리했으면(구웠거나 굽지 않는다고 알렸으면) true — 그 파일의 캐시 리로드는 하지 않습니다. */
+    /** @brief 소스 파일을 임포트하는 임포터입니다. 처리했으면(임포트했거나 임포트하지 않는다고 알렸으면) true — 그 파일의 캐시 리로드는 하지 않습니다. */
     using AssetSourceImporterFunc = bool ( * )( string_view relativePath );
 
     /**

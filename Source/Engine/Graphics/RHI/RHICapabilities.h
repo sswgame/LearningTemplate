@@ -142,8 +142,8 @@ namespace sw
                     caps._bOffscreenRT    = SW_TRUE;
                     caps._bIndirectDraw   = SW_TRUE;
                     caps._bGpuCulling     = SW_TRUE;
-                    // 주의: 백엔드 하나가 다른 그림을 내면 **구운 셰이더 산출물이 낡았는지부터 의심할 것**
-                    // (`App.exe --bake-shaders` 로 다시 굽고 견준다). Vulkan 의 모프는 DX12 · DX11 과 픽셀 수가 같다.
+                    // 주의: 백엔드 하나가 다른 그림을 내면 **쿠킹된 셰이더 산출물이 낡았는지부터 의심할 것**
+                    // (`App.exe --cook-shaders` 로 다시 쿠킹하고 견준다). Vulkan 의 모프는 DX12 · DX11 과 픽셀 수가 같다.
                     caps._bGpuMeshMorph      = SW_TRUE;
                     caps._bMultiDrawIndirect = SW_TRUE;
                     // 리스트가 자기 VkCommandPool + VkCommandBuffer + 기록 상태를 소유한다.

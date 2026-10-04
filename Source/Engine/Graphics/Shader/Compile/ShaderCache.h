@@ -54,13 +54,13 @@ namespace sw
         void collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const;
 
         /**
-         * @brief 이 컴파일 요청이 읽을 사전 베이크 바이너리의 리소스 상대 경로입니다(`<domain>/shaders/bin/<rhi>/<이름>`).
-         * @details 파일 이름은 `ShaderBaker::computeBinaryFileName` 그대로입니다(스템 · 스테이지 · 진입점 · **퍼뮤테이션 해시**).
-         *          주의: 해시를 빼면 베이커는 퍼뮤테이션마다 다른 파일을 구워 두는데 캐시는 늘 해시 0(define 없음) 파일을 읽어,
+         * @brief 이 컴파일 요청이 읽을 쿠킹된 바이너리의 리소스 상대 경로입니다(`<domain>/shaders/bin/<rhi>/<이름>`).
+         * @details 파일 이름은 `ShaderCooker::computeBinaryFileName` 그대로입니다(스템 · 스테이지 · 진입점 · **퍼뮤테이션 해시**).
+         *          주의: 해시를 빼면 쿠커는 퍼뮤테이션마다 다른 파일을 쿠킹해 두는데 캐시는 늘 해시 0(define 없음) 파일을 읽어,
          *          어떤 define 도 GPU 에 닿지 않습니다. 리플렉션 매니페스트(ShaderReflectionLibrary::tryGet)는 해시를 넣은 키로
          *          찾으므로 레이아웃은 맞고 바이트코드만 틀린, 가장 조용한 종류의 어긋남이 됩니다.
          */
-        static string makePrebakedRelativePath( const ShaderCompileDesc& desc );
+        static string makePrecookedRelativePath( const ShaderCompileDesc& desc );
         /**
          * @brief 이 컴파일 요청의 로컬 라이브 캐시 경로입니다(`Saved/ShaderCache/<rhi>/<유효 소스 해시>-<opt|dbg>/<이름>`). 이름 규칙은 위와 같습니다.
          * @details 런타임 컴파일 결과와 ShaderRecompiler 의 재컴파일 결과가 같은 자리에 쓰입니다. 여기도 해시가 빠져
@@ -71,12 +71,12 @@ namespace sw
          * @brief 실시간 컴파일이 실제로 쓰는 요청입니다. Debug 는 디버그 코드젠(RenderDoc 에서 한 줄씩 볼 수 있게), 그 밖은 요청 그대로입니다.
          * @details 캐시의 실시간 컴파일과 `ShaderRecompiler` 의 재컴파일이 **이 하나**로 코드젠을 정하고, 로컬 캐시 경로도 이것으로 만듭니다.
          *          둘이 따로 정하면 Debug 의 한 폴더에 두 코드젠이 섞이고, 핫 리로드한 셰이더만 디버그 정보를 잃습니다.
-         *          사전 베이크 바이너리는 이 규칙을 타지 않습니다(베이커는 늘 최적화 코드젠).
+         *          쿠킹된 바이너리는 이 규칙을 타지 않습니다(쿠커는 늘 최적화 코드젠).
          */
         static ShaderCompileDesc makeLiveCompileDesc( const ShaderCompileDesc& desc );
 
     private:
-        /** @brief 인메모리 캐시에 넣습니다. 로컬 캐시 · 사전 베이크 · 라이브 컴파일 세 갈래가 같은 항목을 만듭니다. */
+        /** @brief 인메모리 캐시에 넣습니다. 로컬 캐시 · 쿠킹된 · 라이브 컴파일 세 갈래가 같은 항목을 만듭니다. */
         void storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result, uint64 sourceHash );
 
         unordered_map<string, ShaderCacheEntry> _mapCache;

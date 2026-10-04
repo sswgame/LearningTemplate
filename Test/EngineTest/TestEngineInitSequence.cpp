@@ -124,7 +124,7 @@ namespace
 /**
  * @brief [EngineInitSequenceTest] 씬을 읽는 단계(헤드리스 씬 쿠킹)는 모든 타입 공급자가 등록을 끝낸 뒤(`ModuleTypes`)에만 선다
  * @details `Headless` 의 의존 칸이 `ModuleTypes` 를 적고, 그 단계가 실패하면 쿠킹은 돌지 않는다. 쿠킹이 GameFramework · 킷 · 게임 모듈의 타입이
- *          오르기 전에 씬을 읽으면 그 컴포넌트를 `MissingComponent` 로 굽는다. 의존을 빼면 이 시험이 진다.
+ *          오르기 전에 씬을 읽으면 그 컴포넌트를 `MissingComponent` 로 쿠킹한다. 의존을 빼면 이 시험이 진다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, SceneReadingStepWaitsForModuleTypes )
 {
@@ -208,7 +208,7 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedStepStopsAndShutsDownOnlyInitialized
 
 /**
  * @brief [EngineInitSequenceTest] `SkipDependents`(헤드리스 작업)가 그 단계에 의존하는 단계만 건너뛰는지 검증
- * @details 셰이더 베이크 · 씬 쿠킹은 RHI · 렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬 디바이스를 세우지 않는다. 건너뛴 단계는 종료도 하지 않는다.
+ * @details 셰이더 쿠킹 · 씬 쿠킹은 RHI · 렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬 디바이스를 세우지 않는다. 건너뛴 단계는 종료도 하지 않는다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, SkipDependentsSkipsEveryDependentStep )
 {

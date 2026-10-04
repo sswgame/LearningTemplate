@@ -2,7 +2,7 @@
  * @file ShaderBindingSlots.h
  * @brief 셰이더 바인딩 계약의 C++ 쪽입니다. `Resource/engine/shaders/bindingslots.hlsli` 를 **그대로 include** 합니다.
  * @details 번호는 이 파일에 없습니다. HLSL 과 C++ 가 같은 파일을 읽으므로 "수동 동기" 가 없습니다.
- *          백엔드 4개는 여기 constexpr 로만 바인딩 위치를 정하고, ShaderBindingValidator 가 구운 바이너리의
+ *          백엔드 4개는 여기 constexpr 로만 바인딩 위치를 정하고, ShaderBindingValidator 가 쿠킹된 바이너리의
  *          리플렉션을 이 값과 대조합니다(런타임 로드 시 + 테스트).
  *
  *          모델(언리얼 GPUScene 식): 셰이더 선언은 네 백엔드에서 같고(register b#/t#/u#), 드로우별 데이터는

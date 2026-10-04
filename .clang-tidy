@@ -30,7 +30,7 @@ Checks: >
 # -performance-enum-size
 #     "열거형의 기반 타입이 값 범위에 비해 크다" 를 150건 짚는다. 이 저장소에서 열거형 크기는
 #     **바꾸면 안 되는 것**이다 — RHI ABI 스탬프(RHIModuleAbi.h)와 직렬화된 데이터가 그 폭에
-#     달려 있다. 줄이는 순간 구운 파일과 백엔드 DLL 이 조용히 어긋난다. 영구 오탐이다.
+#     달려 있다. 줄이는 순간 디스크에 쓴 파일과 백엔드 DLL 이 조용히 어긋난다. 영구 오탐이다.
 #
 # -performance-no-int-to-ptr
 #     Win32 의 `GetWindowLongPtr`/`SetWindowLongPtr` 왕복을 29건 짚는다. 그 API 가 정수로

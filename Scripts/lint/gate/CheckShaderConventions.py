@@ -44,7 +44,7 @@ kShaderSuffix = (".hlsl", ".hlsli")
 kStringBoundName = {
     "VSMain": "정점 진입점 — ShaderCompiler 기본값 · 파이프라인 XML(_vertexEntryPoint)이 문자열로 부른다",
     "PSMain": "픽셀 진입점 — ShaderCompiler 기본값 · 파이프라인 XML(_pixelEntryPoint)이 문자열로 부른다",
-    "CSMain": "컴퓨트 진입점 — createComputePipelineState · ShaderBakeRequest 가 문자열로 부른다",
+    "CSMain": "컴퓨트 진입점 — createComputePipelineState · ShaderCookRequest 가 문자열로 부른다",
 }
 
 #: 불투명한 줄임말 — 이름을 camelCase 단어로 쪼갰을 때 이 단어가 하나라도 있으면 위반이다(`texColor` · `restNrm` · `instId`).

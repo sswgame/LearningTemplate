@@ -1048,7 +1048,7 @@ SW_TEST_CASE( ArchitectureTest, DeferredUnloadImagesStayMappedUntilTheirBatchIsE
 
 /**
  * @brief [ArchitectureTest] 빌드된 모듈은 돌고 있는 엔진과 같은 ABI 도장을 들고 있다
- * @details 도장은 Core · Engine 헤더 내용의 지문이고 Engine 과 모듈이 같은 생성 헤더로 굽는다. 이 테스트는 빌드 연결(생성 소스가 모듈마다
+ * @details 도장은 Core · Engine 헤더 내용의 지문이고 Engine 과 모듈이 같은 생성 헤더로 박는다. 이 테스트는 빌드 연결(생성 소스가 모듈마다
  *          들어가고, 링커가 지우지 않는다)을 실제 파일로 확인한다.
  */
 SW_TEST_CASE( ArchitectureTest, ModulesCarryTheRunningEngineAbiStamp )

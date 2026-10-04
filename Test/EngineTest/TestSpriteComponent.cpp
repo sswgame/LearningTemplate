@@ -45,7 +45,7 @@ namespace
  * @brief [SpriteComponentTest] 스프라이트는 스프라이트 머티리얼을 입은 사각형으로 그려지고, 텍스처는 그 머티리얼의 인스턴스가 덮어쓴다
  * @details 유니티 `SpriteRenderer`(스프라이트 기본 머티리얼 · 텍스처는 머티리얼 프로퍼티 블록) · 언리얼 Paper2D(`UPaperSpriteComponent` — 사각형 +
  *          스프라이트 머티리얼 + 텍스처)와 같은 모양이다. 스프라이트가 메시 컴포넌트의 기본을 그대로 따르면 **씬 기본 머티리얼의 단위 큐브**로
- *          그려지고 `sprite2d.material` 과 그 셰이더는 구워지기만 한다.
+ *          그려지고 `sprite2d.material` 과 그 셰이더는 쿠킹되기만 한다.
  */
 SW_TEST_CASE( SpriteComponentTest, SpriteDrawsATexturedQuadWithTheSpriteMaterial )
 {

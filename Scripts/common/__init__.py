@@ -2,7 +2,7 @@
 Scripts/common package
 
 도메인별로 분리된 스크립트 공통 모듈:
-  - AppBinary: 빌드된 App.exe 를 찾고 헤드리스로 셰이더를 굽는 자리 (쿠커·커밋 훅 공용)
+  - AppBinary: 빌드된 App.exe 를 찾고 헤드리스로 셰이더를 쿠킹하는 자리 (쿠커·커밋 훅 공용)
   - Constants: 고정 경로, 파일명, C++ 확장자 세트, JSON 스키마 키
   - Paths: 프로젝트 루트, 경로 정규화, 플랫폼 판별
   - Config: JSON 설정 읽기/쓰기/병합

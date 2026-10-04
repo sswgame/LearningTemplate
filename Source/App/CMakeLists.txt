@@ -39,7 +39,7 @@ sw_addReflectionStep(App
 # ------------------------------------------------------------------------------
 
 # DXC(dxcompiler/dxil)는 런타임 HLSL 컴파일과 DXIL 리플렉션에 쓰이는데, 배포 빌드는 둘 다
-# 하지 않는다. 셰이더는 미리 굽고(ShaderCache), 바인딩 리플렉션도 쿠킹할 때 구워 둔
+# 하지 않는다. 셰이더는 미리 쿠킹하고(ShaderCache), 바인딩 리플렉션도 쿠킹할 때 쿠킹해 둔
 # 매니페스트를 읽는다(ShaderReflectionLibrary). 상용 엔진이 셰이더 컴파일러를 배포하지 않는
 # 것과 같은 구조다.
 if(NOT SW_SHIPPING_BUILD)

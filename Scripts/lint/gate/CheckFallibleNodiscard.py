@@ -3,13 +3,13 @@
 """실패를 bool 로 알리는 함수 선언에 `[[nodiscard]]` 가 있는지 본다 — 결과를 버리는 호출을 컴파일러가 짚게.
 
 주의: 가장 흔한 결함 모양 하나가 **조용한 실패**다. 읽기 · 쓰기 · 적용의 false 를 부른 쪽이 버리면 성공한 것처럼 진행한다 —
-읽기 실패를 버린 되돌리기는 빈 인스턴스를 만들고, 컴파일 실패를 버린 굽기는 낡은 셰이더 바이너리를 최신으로 도장 찍고,
+읽기 실패를 버린 되돌리기는 빈 인스턴스를 만들고, 컴파일 실패를 버린 쿠킹은 낡은 셰이더 바이너리를 최신으로 도장 찍고,
 깨진 언어 파일을 읽은 척하면 빈 칸으로 다시 써 번역이 지워진다.
 
 규칙: 이름이 아래 동사로(또는 `re` + 동사로 — `recreate` · `reopen`) 시작하고 bool 을 돌려주는 선언은 `[[nodiscard]]` 를 단다. 컴파일러는 `-Werror=unused-result`
 (cmake/Modules/Compiler/Clang.cmake · GCC.cmake)로 버리는 호출에서 빌드를 세운다. 일부러 버릴 때는 `(void)호출();` 과 이유 한 줄.
 
-  load · save · read · write · parse · deserialize · serialize · apply · restore · import · export · cook · compile · bake
+  load · save · read · write · parse · deserialize · serialize · apply · restore · import · export · cook · compile
   revert · convert · try · open · attach · spawn · instantiate · reload
   remove · copy · create · delete · move · rename
 
@@ -41,7 +41,7 @@ from LintGate import GateResult, LintGate  # noqa: E402
 
 _kListFallibleVerb = (
     "load", "save", "read", "write", "parse", "deserialize", "serialize", "apply", "restore", "import", "export",
-    "cook", "compile", "bake", "revert", "convert", "try", "open", "attach", "spawn", "instantiate", "reload",
+    "cook", "compile", "revert", "convert", "try", "open", "attach", "spawn", "instantiate", "reload",
     "remove", "copy", "create", "delete", "move", "rename",
 )
 

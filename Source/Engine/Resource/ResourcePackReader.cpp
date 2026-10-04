@@ -272,7 +272,7 @@ namespace sw
         // CRC32 로 무결성을 검증한다
         const bool bHasCrc32 = ( ( _header._flags & static_cast<uint16>( PackFlag::HasCrc32 ) ) != 0 );
 
-        // 플래그가 있으면 **늘** 대조한다. 굽는 쪽은 모든 항목의 CRC 를 적는다(빈 데이터의 CRC 가 0). 저장된 값이 0 일 때 건너뛰면
+        // 플래그가 있으면 **늘** 대조한다. 쿠킹하는 쪽은 모든 항목의 CRC 를 적는다(빈 데이터의 CRC 가 0). 저장된 값이 0 일 때 건너뛰면
         // 그 칸을 0 으로 지우는 것만으로 검사가 꺼진다.
         if ( bHasCrc32 )
         {

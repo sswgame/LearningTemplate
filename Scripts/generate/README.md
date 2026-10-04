@@ -8,8 +8,8 @@
 
 | 스크립트 | 역할 | 출력/대상 |
 |---|---|---|
-| `CookAssets.py` | 씬 · 프리팹을 `App --cook-scenes` 로 굽게 하고(SCN1 · PFB2 — 리플렉션이 엔진 안에 있어서 엔진이 굽는다), Resource 도메인을 `.pack` 으로 패킹(SWPK, 4KB 섹터 정렬). 구운 씬 · 프리팹은 소스 옆이 아니라 스테이징 폴더에 쓰고 팩에 같은 상대 경로로 넣는다 | `--cooked-dir`(기본 `build/*/Bin/Cooked`), `build/*/Bin/Packs/*.pack` |
-| `BakeShippingHostDefaults.py` | 커밋된 런타임 JSON 설정을 읽어 Shipping 및 Fallback용 C++ 헤더로 베이킹 | `build/.../ShippingHostDefaults.h` |
+| `CookAssets.py` | 씬 · 프리팹을 `App --cook-scenes` 로 쿠킹하게 하고(SCN1 · PFB2 — 리플렉션이 엔진 안에 있어서 엔진이 쿠킹한다), Resource 도메인을 `.pack` 으로 패킹(SWPK, 4KB 섹터 정렬). 쿠킹된 씬 · 프리팹은 소스 옆이 아니라 스테이징 폴더에 쓰고 팩에 같은 상대 경로로 넣는다 | `--cooked-dir`(기본 `build/*/Bin/Cooked`), `build/*/Bin/Packs/*.pack` |
+| `GenerateShippingHostDefaults.py` | 커밋된 런타임 JSON 설정을 읽어 Shipping 및 Fallback용 C++ 헤더로 생성 | `build/.../ShippingHostDefaults.h` |
 | `GenerateDocs.py` | Doxygen을 구동하여 C++ API 레퍼런스 문서 생성 | `Docs/Doxygen/html/index.html` |
 | `GeneratePackFormat.py` | 팩 바이너리 계약(`Config/Engine/PackFormat.json`)을 C++ 헤더로 | `build/.../PackFormat.gen.h` |
 | `GenerateCookContract.py` | 쿠킹 표(`Config/Engine/CookContract.json`)를 C++ X-매크로 헤더로 — RHI 백엔드 표 · 쿡 접미사 표 (구성 시점). 쿠커는 같은 표를 `common/CookContract.py` 로 읽는다 | `build/.../CookContract.gen.h` |
@@ -22,7 +22,7 @@
 `setup/` 은 **외부 도구를 찾아 설치하는** 폴더이고, 정본에서 파일을 만들어 내는 일은 구성 시점이든 빌드 시점이든 여기다.
 
 > **씬 쿠킹은 소스 트리를 읽습니다.** `App --cook-scenes` 는 팩을 마운트하지 않고 소스 트리(`ContentSource::SourceTree`)를 올려, 배포 구성에서도
-> 느슨한 파일 · 소스 프리팹을 읽습니다. 모르는 타입의 컴포넌트(`MissingComponent`)가 든 씬은 굽지 않고 실패로 세며, 실패가 하나라도 있으면
+> 느슨한 파일 · 소스 프리팹을 읽습니다. 모르는 타입의 컴포넌트(`MissingComponent`)가 든 씬은 쿠킹하지 않고 실패로 세며, 실패가 하나라도 있으면
 > App 이 0 이 아닌 코드로 끝나 쿠커가 멈춥니다.
 
 ## 팩 압축 코덱 고르기
@@ -40,7 +40,7 @@
 | `LZ4` | `py -3 -m pip install lz4` | 해제 속도가 로딩 시간인 자리 |
 | `Zstd` | `py -3 -m pip install zstandard` | 배포물 크기를 줄이고 싶을 때 |
 
-> **모듈이 없으면 쿠킹이 그 자리에서 멈춥니다.** 설정은 LZ4 인데 zlib 으로 구워 버리면 설정과
+> **모듈이 없으면 쿠킹이 그 자리에서 멈춥니다.** 설정은 LZ4 인데 zlib 으로 쿠킹해 버리면 설정과
 > 산출물이 달라지고, 그 사실은 한참 뒤 배포본에서야 드러납니다.
 
 **실측 — 이 프로젝트의 실제 팩에서는 코덱 차이가 거의 없습니다**:
@@ -61,8 +61,8 @@
 ```bash
 py -3 -m Scripts cook --all
 # 또는 직접 실행:
-py -3 Scripts/generate/CookAssets.py [--all] [--prefabs-only] [--scenes-only] [--packs-only] [--app <App 실행 파일>] [--cooked-dir <폴더>] [--target-rhi <백엔드>] [--bake-shaders]
+py -3 Scripts/generate/CookAssets.py [--all] [--prefabs-only] [--scenes-only] [--packs-only] [--app <App 실행 파일>] [--cooked-dir <폴더>] [--target-rhi <백엔드>] [--cook-shaders]
 # 씬 쿠킹은 App --cook-scenes 라 App 이 먼저 서 있어야 한다. CMake 의 CookAssets 타겟은 App 뒤에 돌며 경로를 --app 으로 넘긴다.
-py -3 Scripts/generate/BakeShippingHostDefaults.py <output_header_path>
+py -3 Scripts/generate/GenerateShippingHostDefaults.py <output_header_path>
 py -3 Scripts/generate/GenerateDocs.py [--open]
 ```

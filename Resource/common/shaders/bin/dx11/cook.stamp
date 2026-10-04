@@ -1,12 +1,12 @@
-SWBAKE 3
+SWCOOK 3
 082019df2dbbcbd5 instanceslotprobe.hlsl
 111f7515f60bf571 engine:postbloom.hlsli
 22c00eae8dfcf116 samplecompute.hlsl
 2376b38d79149448 provokingvertex.hlsl
-33f13d9d6e4daf83 engine:lighting.hlsli
-4183e5f6ec8ad907 engine:bindingslots.hlsli
+32ea9f2a4e23abcc engine:lighting.hlsli
 434550571f0a2425 computetexturewrite.hlsl
-5bd3ddf4300a6170 engine:binding.hlsli
+778c01cab734f2c6 engine:binding.hlsli
 980c18c4c174d3fb engine:postoutline.hlsli
 9ee00d8a59ae021e engine:common.hlsli
-b88b74eb86263770 engine:instancedata.hlsli
+d0567b23544cc8a5 engine:instancedata.hlsli
+d8d56eeae58c4ae4 engine:bindingslots.hlsli

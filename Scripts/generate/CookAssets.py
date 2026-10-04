@@ -4,7 +4,7 @@
 Scripts/generate/CookAssets.py
 
 SW Engine 통합 에셋 쿠커:
-  1. Scenes · Prefabs: 엔진(`App --cook-scenes`)이 굽는다 — 리플렉션 · 형식이 엔진 안에 있다.
+  1. Scenes · Prefabs: 엔진(`App --cook-scenes`)이 쿠킹한다 — 리플렉션 · 형식이 엔진 안에 있다.
        Resource/**/*.scene.xml                  -> <cooked-dir>/**/<name>.scene.bin  (SCN1 바이너리)
        Resource/**/*.prefab.xml · *.prefab.json -> <cooked-dir>/**/<name>.prefab.bin (PFB2 바이너리)
      (산출물은 소스 옆이 아니라 스테이징 폴더에 쓰고, 팩에는 같은 상대 경로로 병합한다)
@@ -46,7 +46,7 @@ from common import (
     readJsonDictInternal,
     resolveDefaultOutputDir,
     runSceneCook,
-    runShaderBake,
+    runShaderCook,
 )
 
 # ==============================================================================
@@ -71,7 +71,7 @@ _gCookContract = CookContractSpec.load()
 # ==============================================================================
 
 def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None, appExePath: Path | None = None) -> int:
-    """씬과 프리팹을 `App.exe --cook-scenes` 로 굽습니다 (씬은 엔티티 상태까지 바이너리로, 프리팹은 XML · JSON 모두).
+    """씬과 프리팹을 `App.exe --cook-scenes` 로 쿠킹합니다 (씬은 엔티티 상태까지 바이너리로, 프리팹은 XML · JSON 모두).
 
     **프리팹도 여기다.** 프리팹 바이너리 형식을 쓰는 곳은 엔진(`PrefabAsset::saveToBinaryFile`) 하나다 — 파이썬이 형식을
     따로 들면 엔진과 어긋나고 한쪽 원본 형식(`.prefab.json` 등)을 빠뜨려 배포본에서 스폰이 실패한다. 산출물은 소스 옆이 아니라 스테이징 폴더에 쓴다 — 소스 옆에 두면 `.gitignore` 로 가려야 하고, 소스가 옮겨지거나
@@ -79,7 +79,7 @@ def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None, 
 
     **왜 파이썬이 직접 안 쓰는가.** 파이썬이 쓸 수 있는 것은 엔티티마다 XML 문자열을 그대로 담은 컨테이너뿐이라,
     로드에서 비싼 엔티티 생성 단계(로드의 대부분)를 줄이지 못한다. 상태를 진짜 바이너리로 만들려면
-    리플렉션이 필요하고 그것은 엔진 안에만 있으므로, 이 단계는 셰이더 베이크와 같은 방식으로
+    리플렉션이 필요하고 그것은 엔진 안에만 있으므로, 이 단계는 셰이더 쿠킹과 같은 방식으로
     엔진에 넘긴다. 포맷을 쓰는 곳도 그래서 하나다.
     """
     projectRoot = getProjectRoot()
@@ -91,7 +91,7 @@ def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None, 
 
     appExe = findAppExecutable(projectRoot, appExePath)
     if appExe is None:
-        print("[CookScenes Error] App 실행 파일을 찾지 못해 씬을 굽지 못했습니다.", file=sys.stderr)
+        print("[CookScenes Error] App 실행 파일을 찾지 못해 씬을 쿠킹하지 못했습니다.", file=sys.stderr)
         print("                   씬 쿠킹은 리플렉션이 필요해 엔진 안에서 돕니다 - 먼저 App 을 빌드하세요.", file=sys.stderr)
         if appExePath is not None:
             print(f"                   (--app {appExePath} 가 없습니다 - CookAssets 는 App 뒤에 돌아야 합니다.)", file=sys.stderr)
@@ -146,7 +146,7 @@ def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> by
             import lz4.block  # type: ignore
         except ImportError as exc:
             raise SystemExit(
-                "[Pack] LZ4 로 굽도록 설정돼 있는데 파이썬 lz4 모듈이 없습니다.  py -3 -m pip install lz4"
+                "[Pack] LZ4 로 쿠킹하도록 설정돼 있는데 파이썬 lz4 모듈이 없습니다.  py -3 -m pip install lz4"
             ) from exc
         # 리더는 raw LZ4 블록을 기대한다(엔트리 헤더에 원본 크기가 이미 있다).
         mode = "high_compression" if level > 0 else "default"
@@ -159,7 +159,7 @@ def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> by
             import zstandard  # type: ignore
         except ImportError as exc:
             raise SystemExit(
-                "[Pack] Zstd 로 굽도록 설정돼 있는데 파이썬 zstandard 모듈이 없습니다.  py -3 -m pip install zstandard"
+                "[Pack] Zstd 로 쿠킹하도록 설정돼 있는데 파이썬 zstandard 모듈이 없습니다.  py -3 -m pip install zstandard"
             ) from exc
         compressor = zstandard.ZstdCompressor(level=level if level > 0 else 3)
         return compressor.compress(rawBytes)
@@ -187,19 +187,19 @@ def resolveTargetRhi(config: dict, cliRhi: str = "", projectRoot: Path | None = 
     return backend.shaderFolder
 
 
-def bakeShadersInternal(projectRoot: Path, appExePath: Path | None = None) -> bool:
-    """App --bake-shaders 를 헤드리스 모드로 실행하여 바이너리를 일괄 빌드합니다."""
+def cookShadersInternal(projectRoot: Path, appExePath: Path | None = None) -> bool:
+    """App --cook-shaders 를 헤드리스 모드로 실행하여 바이너리를 일괄 빌드합니다."""
     appExe = findAppExecutable(projectRoot, appExePath)
     if appExe is None:
-        print("[CookAssets Warning] App executable not found to run --bake-shaders", file=sys.stderr)
+        print("[CookAssets Warning] App executable not found to run --cook-shaders", file=sys.stderr)
         return False
 
-    print(f"[CookAssets] Running headless shader bake: {appExe} --bake-shaders")
-    return runShaderBake(appExe).returncode == 0
+    print(f"[CookAssets] Running headless shader cook: {appExe} --cook-shaders")
+    return runShaderCook(appExe).returncode == 0
 
 
-_kBakeStampFileName = "bake.stamp"
-_kBakeStampHeader = "SWBAKE 3"
+_kCookStampFileName = "cook.stamp"
+_kCookStampHeader = "SWCOOK 3"
 _kFnv1a64Offset = 14695981039346656037
 _kFnv1a64Prime = 1099511628211
 
@@ -217,7 +217,7 @@ def collectShaderSourceHashesInternal(shadersDir: Path) -> dict[str, str]:
 
     CR 을 뺀 바이트로 해싱합니다(스탬프 버전 3). 저장소에 `.gitattributes` 가 없어 체크아웃마다 줄
     끝이 달라질 수 있고, 바이트를 그대로 해싱하면 같은 소스가 PC 마다 다른 값을 냅니다 — 그러면
-    Shipping 빌드가 매번 스탬프를 다시 써서 작업 트리가 더러워집니다. `ShaderBaker::writeBakeStamp`
+    Shipping 빌드가 매번 스탬프를 다시 써서 작업 트리가 더러워집니다. `ShaderCooker::writeCookStamp`
     가 같은 정규화를 합니다.
     """
     result: dict[str, str] = {}
@@ -240,7 +240,7 @@ def collectStampedSourceHashesInternal(resourceDir: Path, shadersDir: Path) -> d
     """스탬프가 담아야 할 { 키: hex } 입니다 — 자기 도메인의 .hlsl/.hlsli 와, 다른 include 루트 도메인의 .hlsli.
 
     셰이더는 자기 폴더 밖 include 루트(engine · common)의 헤더도 include 한다. 다른 도메인 헤더의 키는
-    `<도메인>:<상대 경로>` 다. `ShaderBakeStamp.cpp` 의 `collectStampedSources` 와 같은 규칙이다.
+    `<도메인>:<상대 경로>` 다. `ShaderCookStamp.cpp` 의 `collectStampedSources` 와 같은 규칙이다.
     """
     result = collectShaderSourceHashesInternal(shadersDir)
     for domain in _kIncludeRootDomains:
@@ -253,12 +253,12 @@ def collectStampedSourceHashesInternal(resourceDir: Path, shadersDir: Path) -> d
     return result
 
 
-def verifyShaderBakeInternal(projectRoot: Path, targetRhi: str) -> list[str]:
-    """구워둔 셰이더가 **지금 소스에서 나온 것인지** 확인하고 문제 목록을 돌려줍니다.
+def verifyShaderCookInternal(projectRoot: Path, targetRhi: str) -> list[str]:
+    """쿠킹해 둔 셰이더가 **지금 소스에서 나온 것인지** 확인하고 문제 목록을 돌려줍니다.
 
-    파일 시간이 아니라 bake.stamp 의 내용 해시로 본다 — git clone 은 모든 파일의 mtime 을
+    파일 시간이 아니라 cook.stamp 의 내용 해시로 본다 — git clone 은 모든 파일의 mtime 을
     체크아웃 시각으로 덮어써서 시간 비교가 무의미하다. Shipping 은 런타임 컴파일이 없어
-    구운 것이 낡으면 화면이 통째로 비므로, 여기서 막지 못하면 그대로 배포된다.
+    쿠킹된 것이 낡으면 화면이 통째로 비므로, 여기서 막지 못하면 그대로 배포된다.
     """
     problems: list[str] = []
     resourceDir = projectRoot / "Resource"
@@ -284,17 +284,17 @@ def verifyShaderBakeInternal(projectRoot: Path, targetRhi: str) -> list[str]:
         label = f"{domainDir.name}/shaders"
         binDir = shadersDir / "bin" / targetRhi
         if not binDir.is_dir():
-            problems.append(f"{label}: '{targetRhi}' 바이너리 폴더가 없습니다 (한 번도 베이킹하지 않았습니다)")
+            problems.append(f"{label}: '{targetRhi}' 바이너리 폴더가 없습니다 (한 번도 쿠킹하지 않았습니다)")
             continue
 
-        stampPath = binDir / _kBakeStampFileName
+        stampPath = binDir / _kCookStampFileName
         if not stampPath.is_file():
-            problems.append(f"{label}: {_kBakeStampFileName} 이 없습니다 (베이커가 남기는 파일입니다)")
+            problems.append(f"{label}: {_kCookStampFileName} 이 없습니다 (쿠커가 남기는 파일입니다)")
             continue
 
         lines = stampPath.read_text(encoding="utf-8").splitlines()
-        if not lines or lines[0].strip() != _kBakeStampHeader:
-            problems.append(f"{label}: {_kBakeStampFileName} 형식을 알 수 없습니다")
+        if not lines or lines[0].strip() != _kCookStampHeader:
+            problems.append(f"{label}: {_kCookStampFileName} 형식을 알 수 없습니다")
             continue
 
         stamped: dict[str, str] = {}
@@ -309,9 +309,9 @@ def verifyShaderBakeInternal(projectRoot: Path, targetRhi: str) -> list[str]:
 
         for rel, digest in sorted(expected.items()):
             if rel not in stamped:
-                problems.append(f"{label}/{rel}: 베이킹한 적 없는 셰이더입니다")
+                problems.append(f"{label}/{rel}: 쿠킹한 적 없는 셰이더입니다")
             elif stamped[rel] != digest:
-                problems.append(f"{label}/{rel}: 소스가 바뀌었는데 다시 굽지 않았습니다")
+                problems.append(f"{label}/{rel}: 소스가 바뀌었는데 다시 쿠킹하지 않았습니다")
         for rel in sorted(set(stamped) - set(expected)):
             problems.append(f"{label}/{rel}: 사라진 셰이더가 스탬프에 남아 있습니다")
 
@@ -322,7 +322,7 @@ def verifyShaderBakeInternal(projectRoot: Path, targetRhi: str) -> list[str]:
             problems.append(f"{label}: '{targetRhi}' 리플렉션 매니페스트가 없습니다")
         else:
             # 바이너리는 있는데 매니페스트에 그 키가 없는 조합을 잡는다. 스탬프는 **소스**가 바뀌었는지만 보므로
-            # 베이커의 레시피 목록이 늘어난 경우(새 퍼뮤테이션 축)는 여기가 아니면 못 잡는다 — 실제로 Unlit x
+            # 쿠커의 레시피 목록이 늘어난 경우(새 퍼뮤테이션 축)는 여기가 아니면 못 잡는다 — 실제로 Unlit x
             # 머티리얼 바이너리가 커밋돼 있는데 매니페스트에는 없어서, 배포 빌드가 맞는 바이트코드를 리플렉션
             # 없이 바인딩하고 DX12 가 DEVICE_HUNG 으로 죽었다. 매니페스트 키는 바이너리 파일 이름 그대로라
             # 바이트 검색으로 충분하다. 다시 구우면 매니페스트는 현재 레시피로 새로 쓰이므로, 그 뒤에도 남는
@@ -336,7 +336,7 @@ def verifyShaderBakeInternal(projectRoot: Path, targetRhi: str) -> list[str]:
             if uncovered:
                 sample = ", ".join(uncovered[:3]) + (" ..." if len(uncovered) > 3 else "")
                 # 메시지에 cp949 밖 문자(—)를 쓰지 않는다 — Windows 콘솔에서 print 자체가 죽는다.
-                problems.append(f"{label}: '{targetRhi}' 매니페스트에 없는 바이너리 {len(uncovered)}개 ({sample}): 다시 굽거나 낡은 파일을 지우십시오")
+                problems.append(f"{label}: '{targetRhi}' 매니페스트에 없는 바이너리 {len(uncovered)}개 ({sample}): 다시 쿠킹하거나 낡은 파일을 지우십시오")
 
     return problems
 
@@ -411,7 +411,7 @@ class PackWriter:
 
     네 상태를 한 함수가 루프 여러 개로 나눠 굴리면 "루프들이 같은 순서로 돈다" 는 전제가 코드에 안 보이게 숨는다.
 
-    여기서는 순서가 메서드 이름이다: `add*` 로 담고 `writeTo` 로 굽는다. 스트링 풀도 TOC 와 같은
+    여기서는 순서가 메서드 이름이다: `add*` 로 담고 `writeTo` 로 쿠킹한다. 스트링 풀도 TOC 와 같은
     루프에서 같은 순서로 쌓이므로 인덱스를 맞출 일이 없다.
     """
 
@@ -444,7 +444,7 @@ class PackWriter:
         return len(self._listEntry)
 
     def writeTo(self, outPackPath: Path) -> int:
-        """담긴 항목으로 팩을 굽고 만들어진 파일 크기를 돌려줍니다."""
+        """담긴 항목으로 팩을 쿠킹하고 만들어진 파일 크기를 돌려줍니다."""
         spec = self._spec
 
         # 리더는 경로 해시로 TOC 를 이진 탐색한다 — 반드시 해시 오름차순이다.
@@ -649,7 +649,7 @@ def cookAllPacks(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="SW Engine 통합 에셋 쿠커 (Prefabs, Scenes, Packs)")
     parser.add_argument("--all", action="store_true", help="프리팹, 씬, 리소스 팩 전체를 순서대로 쿠킹 (기본 동작)")
-    parser.add_argument("--prefabs-only", action="store_true", help="프리팹 · 씬 바이너리만 쿠킹(같은 엔진 실행이 둘 다 굽는다)")
+    parser.add_argument("--prefabs-only", action="store_true", help="프리팹 · 씬 바이너리만 쿠킹(같은 엔진 실행이 둘 다 쿠킹한다)")
     parser.add_argument("--scenes-only", action="store_true", help="씬 바이너리(.scene.bin)만 쿠킹")
     parser.add_argument("--packs-only", action="store_true", help="리소스 팩(.pack)만 쿠킹")
     parser.add_argument("--output", type=str, default="", help="팩 출력 디렉터리")
@@ -657,16 +657,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", type=str, default="", help="PackConfig.json 경로")
     parser.add_argument("--include-debug-names", action="store_true", help="팩 내부에 파일 경로 디버그 문자열 포함")
     parser.add_argument("--target-rhi", type=str, default="", help=f"타깃 RHI 백엔드 ({', '.join(backend.name for backend in _gCookContract.listBackend)} 또는 그 별칭)")
-    parser.add_argument("--bake-shaders", action="store_true", help="패킹 전 App.exe --bake-shaders 를 실행하여 셰이더 일괄 사전 빌드")
-    parser.add_argument("--verify-shaders", action="store_true", help="구운 셰이더가 현재 소스에서 나온 것인지 확인하고, 아니면 쿠킹을 중단")
-    parser.add_argument("--app", type=str, default="", help="씬 쿠킹·셰이더 베이크에 쓸 App 실행 파일 (CMake 가 $<TARGET_FILE:App> 을 넘긴다; 없으면 빌드 폴더를 뒤진다)")
+    parser.add_argument("--cook-shaders", action="store_true", help="패킹 전 App.exe --cook-shaders 를 실행하여 셰이더 일괄 사전 빌드")
+    parser.add_argument("--verify-shaders", action="store_true", help="쿠킹된 셰이더가 현재 소스에서 나온 것인지 확인하고, 아니면 쿠킹을 중단")
+    parser.add_argument("--app", type=str, default="", help="씬 쿠킹·셰이더 쿠킹에 쓸 App 실행 파일 (CMake 가 $<TARGET_FILE:App> 을 넘긴다; 없으면 빌드 폴더를 뒤진다)")
 
     args = parser.parse_args(argv)
     projectRoot = getProjectRoot()
     appExePath = Path(args.app) if args.app else None
 
-    if args.bake_shaders:
-        bakeShadersInternal(projectRoot, appExePath)
+    if args.cook_shaders:
+        cookShadersInternal(projectRoot, appExePath)
 
     doPrefabs = args.prefabs_only or (not args.scenes_only and not args.packs_only)
     doScenes = args.scenes_only or (not args.prefabs_only and not args.packs_only)
@@ -675,7 +675,7 @@ def main(argv: list[str] | None = None) -> int:
     cookedDir = Path(args.cooked_dir) if args.cooked_dir else resolveDefaultOutputDir(projectRoot, "Cooked")
 
     exitCode = 0
-    # 씬과 프리팹은 같은 엔진 실행이 굽는다.
+    # 씬과 프리팹은 같은 엔진 실행이 쿠킹한다.
     if doPrefabs or doScenes:
         exitCode = cookScenes(cookedDir=cookedDir, appExePath=appExePath) or exitCode
     if doPacks:
@@ -689,19 +689,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[CookAssets] Target RHI for shader packaging: {targetRhi}")
 
         if args.verify_shaders:
-            problems = verifyShaderBakeInternal(projectRoot, targetRhi)
-            # 낡았을 뿐이라면 베이커가 있는 자리에서는 스스로 고친다 — 로컬 Shipping 빌드가
-            # 셰이더 한 줄 고칠 때마다 손으로 --bake-shaders 를 부르라고 요구할 이유는 없다.
-            if problems and not args.bake_shaders and bakeShadersInternal(projectRoot, appExePath):
-                problems = verifyShaderBakeInternal(projectRoot, targetRhi)
+            problems = verifyShaderCookInternal(projectRoot, targetRhi)
+            # 낡았을 뿐이라면 쿠커가 있는 자리에서는 스스로 고친다 — 로컬 Shipping 빌드가
+            # 셰이더 한 줄 고칠 때마다 손으로 --cook-shaders 를 부르라고 요구할 이유는 없다.
+            if problems and not args.cook_shaders and cookShadersInternal(projectRoot, appExePath):
+                problems = verifyShaderCookInternal(projectRoot, targetRhi)
             if problems:
-                print("[CookAssets Error] 구워둔 셰이더가 현재 소스와 맞지 않습니다.", file=sys.stderr)
+                print("[CookAssets Error] 쿠킹해 둔 셰이더가 현재 소스와 맞지 않습니다.", file=sys.stderr)
                 print("                   배포 빌드는 런타임 컴파일이 없어 이대로 패킹하면 화면이 비게 됩니다.", file=sys.stderr)
                 for problem in problems[:20]:
                     print(f"                   - {problem}", file=sys.stderr)
                 if len(problems) > 20:
                     print(f"                   ... 외 {len(problems) - 20}건", file=sys.stderr)
-                print("                   해결: build/Ninja-Debug/Bin/App.exe --bake-shaders", file=sys.stderr)
+                print("                   해결: build/Ninja-Debug/Bin/App.exe --cook-shaders", file=sys.stderr)
                 return 1
         outDir = Path(args.output) if args.output else resolveDefaultOutputDir(projectRoot, "Packs")
         success = cookAllPacks(projectRoot, outDir, isShipping=stripNames, packConfig=packConfig, targetRhi=targetRhi, cookedDir=cookedDir)

@@ -457,7 +457,7 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
             return ""
         print(f"[SetupLlvm] Minimal kit ready: {tools}")
 
-        # 헤더가 바뀌었으니 이 툴체인으로 구운 PCH 는 전부 못 쓴다 (헬퍼 독스트링 참고).
+        # 헤더가 바뀌었으니 이 툴체인으로 만든 PCH 는 전부 못 쓴다 (헬퍼 독스트링 참고).
         staleCount = invalidatePrecompiledHeadersInternal(getProjectRoot())
         if staleCount > 0:
             print(f"[SetupLlvm] Invalidated {staleCount} stale precompiled-header file(s) under build/")

@@ -27,7 +27,7 @@ SW_ENGINE_STARTUP_STEP( Audio,         Audio,      { ModuleImages, Task } )     
 SW_ENGINE_STARTUP_STEP( Input,         EngineMisc, { ModuleImages } )                      // 모듈이 등록한 장치 · 콜백을 든다
 SW_ENGINE_STARTUP_STEP( ModuleTypes,   Reflection, { Config, ModuleImages, Reflection } )  // 호스트가 타입 공급자(GF · 킷 · 게임 모듈)를 올려 등록을 끝낸다 — 씬을 읽는 일은 이 뒤
 SW_ENGINE_STARTUP_STEP( Scene,         Scene,      { Audio, Input, ModuleImages, Resource, Task } ) // 컴포넌트가 입력 · 오디오 · 모듈 코드 · 에셋을 든다
-SW_ENGINE_STARTUP_STEP( Headless,      EngineMisc, { EngineData, ModuleTypes, Scene, ShaderCache } ) // 셰이더 베이크 · 씬 쿠킹(모든 컴포넌트 타입이 있어야 굽는다) — 하면 뒤 단계(창 · RHI · 렌더러)를 건너뛴다
+SW_ENGINE_STARTUP_STEP( Headless,      EngineMisc, { EngineData, ModuleTypes, Scene, ShaderCache } ) // 셰이더 쿠킹 · 씬 쿠킹(모든 컴포넌트 타입이 있어야 쿠킹한다) — 하면 뒤 단계(창 · RHI · 렌더러)를 건너뛴다
 SW_ENGINE_STARTUP_STEP( RHI,           RenderCpu,  { Config, Headless } )                  // 백엔드 선택 · 창 · 디바이스
 SW_ENGINE_STARTUP_STEP( FrameRenderer, RenderCpu,  { RHI, Task } )                         //
 SW_ENGINE_STARTUP_STEP( RenderThread,  RenderCpu,  { FrameRenderer } )                     //

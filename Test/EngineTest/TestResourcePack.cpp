@@ -1082,7 +1082,7 @@ SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
 
 /**
  * @brief [ResourcePackTest] 저장된 CRC 를 0 으로 지워도 검사가 꺼지지 않는다
- * @details 저장된 CRC 가 0 이라고 검사를 건너뛰면 그 칸을 지우고 페이로드를 바꾸는 변조가 통과한다(굽는 쪽은 모든 항목의 CRC 를
+ * @details 저장된 CRC 가 0 이라고 검사를 건너뛰면 그 칸을 지우고 페이로드를 바꾸는 변조가 통과한다(쿠킹하는 쪽은 모든 항목의 CRC 를
  *          적는다 — 빈 데이터의 CRC 가 0).
  */
 SW_TEST_CASE( ResourcePackTest, ZeroedCrcDoesNotDisableTheCheck )

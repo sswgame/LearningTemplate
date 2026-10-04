@@ -38,9 +38,9 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 	"${CMAKE_SOURCE_DIR}/Config/Engine/CookContract.json"
 )
 
-# 6. Shipping/Dev 폴백용 호스트 기본값 베이크 (커밋된 Engine/Game Config JSON)
+# 6. Shipping/Dev 폴백용 호스트 기본값 생성 (커밋된 Engine/Game Config JSON)
 set(SW_SHIPPING_HOST_DEFAULTS_H "${CMAKE_BINARY_DIR}/generated/sw/config/ShippingHostDefaults.h")
-sw_executePythonScript("Scripts/generate/BakeShippingHostDefaults.py"
+sw_executePythonScript("Scripts/generate/GenerateShippingHostDefaults.py"
 	ARGS "${SW_SHIPPING_HOST_DEFAULTS_H}"
 	REQUIRED
 )

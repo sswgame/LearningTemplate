@@ -100,7 +100,7 @@ namespace sw
         LiveReloadManager* getLiveReloadManager() const;
         /**
          * @brief 기동 단계 `ModuleTypes` 의 호스트 로더입니다 — 타입 공급자 모듈(GameFramework · 키트 · SWGame)의 이미지를 올려 그 타입을 등록합니다.
-         * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임 · 키트 컴포넌트를 제 타입으로 굽습니다. 인스턴스는 `startModules` 가 만듭니다.
+         * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임 · 키트 컴포넌트를 제 타입으로 쿠킹합니다. 인스턴스는 `startModules` 가 만듭니다.
          */
         [[nodiscard]] bool loadModuleImages();
         /** @brief ModuleHost 를 세워 게임 · 에디터 인스턴스를 만듭니다(모듈 이미지는 `loadModuleImages` 가 이미 올렸다). */

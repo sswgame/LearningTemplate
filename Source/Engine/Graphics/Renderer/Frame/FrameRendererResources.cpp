@@ -39,7 +39,7 @@ namespace sw
         }
 
         // 엔진 PSO 는 패스 종류의 표(RenderPassTypeInfo)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
-        // 표의 EngineData 경로는 마지막 폴백일 뿐이다. 셰이더 베이커가 같은 표를 훑는다.
+        // 표의 EngineData 경로는 마지막 폴백일 뿐이다. 셰이더 쿠커가 같은 표를 훑는다.
         const EngineData&     engineData = engine::getEngineData();
         const RHICapabilities caps       = _pDevice->getCapabilities();
         for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )

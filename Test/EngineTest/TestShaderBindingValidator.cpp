@@ -1,6 +1,6 @@
 /**
  * @file TestShaderBindingValidator.cpp
- * @brief 바인딩 계약 검증기 — 합성 위반을 잡는지, 그리고 구운 바이너리 전부가 계약과 맞는지.
+ * @brief 바인딩 계약 검증기 — 합성 위반을 잡는지, 그리고 쿠킹된 바이너리 전부가 계약과 맞는지.
  * @details GPU 가 필요 없다 (바이트코드 리플렉션만). 그래서 nogpu 라벨의 EngineTest_NoGPU 에 포함된다 —
  *          셰이더/헤더/백엔드 상수 어느 쪽이 어긋나도 CI 에서 이름과 숫자로 실패한다.
  */
@@ -17,8 +17,8 @@
 #include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
-#include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -66,15 +66,15 @@ namespace
         return false;
     }
 
-    /// @brief 구운 리플렉션 매니페스트에 나오는 이름들 — 바인딩(cbuffer · 리소스 · 구조버퍼 원소) 이름과 cbuffer 멤버 이름.
-    struct BakedNameSet
+    /// @brief 쿠킹된 리플렉션 매니페스트에 나오는 이름들 — 바인딩(cbuffer · 리소스 · 구조버퍼 원소) 이름과 cbuffer 멤버 이름.
+    struct CookedNameSet
     {
         sw::unordered_set<sw::string> _uniqueBindingName;
         sw::unordered_set<sw::string> _uniqueMemberName;
         uint32                        _entryCount{ 0 };
     };
 
-    void collectBakedNames( const sw::ShaderReflectionLibrary::EntryMap& mapEntry, BakedNameSet& outNameSet )
+    void collectCookedNames( const sw::ShaderReflectionLibrary::EntryMap& mapEntry, CookedNameSet& outNameSet )
     {
         for ( const auto& entry : mapEntry )
         {
@@ -282,10 +282,10 @@ SW_TEST_CASE( ShaderBindingValidatorTest, SyntheticViolationsAreDetected )
 }
 
 /**
- * @brief 리포지토리에 구운 4백엔드 바이너리 전부가 계약과 맞는다.
- * @details 셰이더를 고치고 리베이크하지 않았거나, 헤더 매크로/백엔드 상수를 한쪽만 바꾸면 여기서 실패한다.
+ * @brief 리포지토리에 쿠킹된 4백엔드 바이너리 전부가 계약과 맞는다.
+ * @details 셰이더를 고치고 다시 쿠킹하지 않았거나, 헤더 매크로/백엔드 상수를 한쪽만 바꾸면 여기서 실패한다.
  */
-SW_TEST_CASE( ShaderBindingValidatorTest, AllBakedShadersMatchContract )
+SW_TEST_CASE( ShaderBindingValidatorTest, AllCookedShadersMatchContract )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
@@ -311,11 +311,11 @@ SW_TEST_CASE( ShaderBindingValidatorTest, AllBakedShadersMatchContract )
         for ( const Target& target : arrTarget )
         {
             const sw::string binDir = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shaderDir, "bin" ),
-                                                              sw::string( sw::ShaderBaker::getSubfolderForFormat( target._format ) ) );
+                                                              sw::string( sw::ShaderCooker::getSubfolderForFormat( target._format ) ) );
             if ( sw::FileUtil::directoryExists( binDir ) == false )
                 continue;
             sw::vector<sw::string> listFile;
-            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderBaker::getExtensionForFormat( target._format ) ), listFile, false );
+            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( target._format ) ), listFile, false );
             for ( const sw::string& path : listFile )
             {
                 sw::vector<uint8> bytecode;
@@ -337,17 +337,17 @@ SW_TEST_CASE( ShaderBindingValidatorTest, AllBakedShadersMatchContract )
     }
 
     if ( checkedCount == 0 )
-        SW_TEST_SKIP( "구운 셰이더 바이너리를 찾지 못했습니다 (App.exe --bake-shaders 필요)" );
+        SW_TEST_SKIP( "쿠킹된 셰이더 바이너리를 찾지 못했습니다 (App.exe --cook-shaders 필요)" );
     SW_EXPECT_TRUE_MSG( checkedCount >= 8, "네 백엔드 × 엔진 셰이더가 있어야 한다" );
     SW_EXPECT_EQUAL( 0u, violationCount );
 }
 
 /**
- * @brief 구운 바이너리의 리플렉션이 네 백엔드에서 **같은 레이아웃**을 준다 — PassCB 멤버(이름·오프셋), 그리고 머티리얼
+ * @brief 쿠킹된 바이너리의 리플렉션이 네 백엔드에서 **같은 레이아웃**을 준다 — PassCB 멤버(이름·오프셋), 그리고 머티리얼
  *        데이터 구조버퍼(g_SwMaterials)의 원소 레이아웃(이름·오프셋·크기·stride).
  * @details 엔진은 머티리얼 바이트를 리플렉션 하나로 패킹해 네 백엔드에 그대로 올린다. SPIR-V 를 std430 으로 구우면
  *          float3 정렬과 struct stride 가 DX 자연 패킹과 달라져 원소 1 부터 어긋난다 — 그래서 ShaderCompiler 가
- *          -fvk-use-dx-layout 으로 굽고, 이 테스트가 같은 셰이더의 네 바이너리를 비교해 어긋남을 이름과 숫자로 보고한다.
+ *          -fvk-use-dx-layout 으로 쿠킹하고, 이 테스트가 같은 셰이더의 네 바이너리를 비교해 어긋남을 이름과 숫자로 보고한다.
  */
 SW_TEST_CASE( ShaderBindingValidatorTest, ReflectionNamesAreUniformAcrossBackends )
 {
@@ -376,10 +376,10 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReflectionNamesAreUniformAcrossBackend
     {
         const sw::ShaderTargetFormat format = arrFormat[formatIndex];
         const sw::string             binDir = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shaderDir, "bin" ),
-                                                                      sw::string( sw::ShaderBaker::getSubfolderForFormat( format ) ) );
+                                                                      sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
         sw::vector<sw::string>       listFile;
         if ( sw::FileUtil::directoryExists( binDir ) )
-            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderBaker::getExtensionForFormat( format ) ), listFile, false );
+            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
         for ( const sw::string& path : listFile )
         {
             sw::vector<uint8> bytecode;
@@ -394,7 +394,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReflectionNamesAreUniformAcrossBackend
             // **리플렉션이 빈 것은 "레이아웃이 없다" 가 아니라 "이 플랫폼에 그 포맷의 리플렉터가 없다" 다.**
             // DXBC/DXIL 리플렉션은 Windows 전용(FXC/DXC)이라 리눅스에서는 dx11·dx12 바이너리가 통째로 빈
             // 결과를 낸다. 그걸 "찾았다" 로 세면 g_SwMaterials 가 없다며 리눅스에서만 진다 — 셰이더가
-            // 아니라 도구가 없어서 나는 실패다. AllBakedShadersMatchContract 가 이미 같은 규칙을 쓴다.
+            // 아니라 도구가 없어서 나는 실패다. AllCookedShadersMatchContract 가 이미 같은 규칙을 쓴다.
             if ( reflection._listConstantBuffer.empty() && reflection._listResource.empty() &&
                  reflection._listStructuredElement.empty() )
                 continue;
@@ -489,7 +489,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReflectionNamesAreUniformAcrossBackend
         }
     }
     if ( comparedCount == 0 )
-        SW_TEST_SKIP( "같은 셰이더의 바이너리를 둘 이상 찾지 못했습니다 (App.exe --bake-shaders 필요)" );
+        SW_TEST_SKIP( "같은 셰이더의 바이너리를 둘 이상 찾지 못했습니다 (App.exe --cook-shaders 필요)" );
     SW_EXPECT_TRUE_MSG( bForwardLitChecked, "forwardlit_ps 의 g_SwMaterials 원소를 찾지 못했다" );
 }
 
@@ -511,10 +511,10 @@ SW_TEST_CASE( ShaderBindingValidatorTest, Dx12RootSignatureFitsBudget )
 }
 
 /**
- * @brief [ShaderBindingValidatorTest] GPUScene 인스턴스 원소 레이아웃이 C++ `GpuInstance` 와 같다 (구운 바이너리, 4 백엔드, 그래픽스 · 컴퓨트 셋).
+ * @brief [ShaderBindingValidatorTest] GPUScene 인스턴스 원소 레이아웃이 C++ `GpuInstance` 와 같다 (쿠킹된 바이너리, 4 백엔드, 그래픽스 · 컴퓨트 셋).
  * @details `g_SwInstances`(t4)는 **C++ 이 쓰고 셰이더가 읽는** 유일한 구조체다 — 한쪽만 바뀌면 컴파일도 검증 레이어도
  *          아무 말을 하지 않고 월드 행렬·머티리얼 인덱스가 원소 1 부터 어긋난다(stride 가 어긋난 구조 버퍼와 같은 함정).
- *          그래서 stride 와 필드 오프셋을 구운 바이너리의 리플렉션에서 읽어 C++ 구조체와 대조한다. GPU 가 필요 없다.
+ *          그래서 stride 와 필드 오프셋을 쿠킹한 바이너리의 리플렉션에서 읽어 C++ 구조체와 대조한다. GPU 가 필요 없다.
  *          컴퓨트 셋(gpucull · instancesort 의 `g_Instances`, instanceanim 의 `g_InstancesRW`)도 같은 원소를 읽고 쓴다. 셋 다 `instancedata.hlsli`
  *          하나를 쓰고, 여기서 세 이름을 모두 대조한다 — 구조체를 각자 베끼면 칸을 더할 때 한 곳만 고쳐 컬링 · 정렬 · 회전이 원소 1 부터
  *          어긋난다. 이름마다 적어도 한
@@ -560,10 +560,10 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCpuStruct 
     {
         const sw::ShaderTargetFormat format = arrFormat[formatIndex];
         const sw::string             binDir = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shaderDir, "bin" ),
-                                                                      sw::string( sw::ShaderBaker::getSubfolderForFormat( format ) ) );
+                                                                      sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
         sw::vector<sw::string>       listFile;
         if ( sw::FileUtil::directoryExists( binDir ) )
-            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderBaker::getExtensionForFormat( format ) ), listFile, false );
+            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
 
         for ( const sw::string& path : listFile )
         {
@@ -612,25 +612,25 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCpuStruct 
     }
 
     if ( checkedCount == 0 )
-        SW_TEST_SKIP( "g_SwInstances 를 선언한 구운 셰이더가 없습니다 (--bake-shaders 를 먼저 돌리세요)" );
+        SW_TEST_SKIP( "g_SwInstances 를 선언한 쿠킹된 셰이더가 없습니다 (--cook-shaders 를 먼저 돌리세요)" );
     for ( uint32 nameIndex = 0; nameIndex < 3; ++nameIndex )
-        SW_EXPECT_TRUE_MSG( arrCheckedPerName[nameIndex] > 0, ( sw::string( arrInstanceBufferName[nameIndex] ) + " 를 담은 구운 셰이더가 없다 — 이름이 바뀌어 검사가 눈을 감았다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( arrCheckedPerName[nameIndex] > 0, ( sw::string( arrInstanceBufferName[nameIndex] ) + " 를 담은 쿠킹된 셰이더가 없다 — 이름이 바뀌어 검사가 눈을 감았다" ).c_str() );
 }
 
 /**
- * @brief [ShaderBindingValidatorTest] C++ 가 이름으로 묶는 셰이더 이름이 구운 리플렉션(reflection.manifest)에 **실제로 있다**.
+ * @brief [ShaderBindingValidatorTest] C++ 가 이름으로 묶는 셰이더 이름이 쿠킹된 리플렉션(reflection.manifest)에 **실제로 있다**.
  * @details validate 는 리플렉션의 이름을 계약 표에서 찾고, 표에 없는 이름은 **조용히 지나친다**. 그래서 셰이더 쪽에서
  *          `g_SwBatches` 를 다른 이름으로 바꾸면 그 리소스의 자리 · 종류 검사가 통째로 꺼지고(위반 0), 엔진의 이름 바인딩도
  *          아무 말 없이 빈다. 셰이더 이름을 고칠 때 문자열로 묶인 이름이 그렇게 사라질 수 있다.
  *          여기서는 반대 방향을 본다. C++ 가 아는 이름 — 계약 표, 계약 표 밖의 예약 리소스 이름, PassCB · 루트 상수 멤버
  *          (`PassConstantNames`), 레지스트리 이름(`g_<이름>`), 패스 텍스처 역할(`g_<역할>Index`) — 이 매니페스트 어딘가에 나와야 한다.
  *          계약 표에서 샘플러가 아닌 이름은 **그 백엔드 계약에 선언된 백엔드마다** 그 백엔드의 매니페스트에 있어야 한다.
- *          샘플러는 두 이유로 백엔드마다 빠질 수 있어, 같은 번호 묶음(`g_SwSampler#`)이 어딘가 구워져 있으면 된다.
+ *          샘플러는 두 이유로 백엔드마다 빠질 수 있어, 같은 번호 묶음(`g_SwSampler#`)이 어딘가 쿠킹돼 있으면 된다.
  *          컴파일러가 안 쓰는 샘플러를 리플렉션에서 지우고(DX12 정적 샘플러 s1 · s2 · s4..s6 은 지금 어느 셰이더도 고르지 않는다),
  *          GL 은 결합 이미지 샘플러를 텍스처 이름 하나로 보고한다. 묶음의 이름을 바꾸면 여전히 걸린다.
  *          매니페스트는 리플렉터 없이 읽히므로 DXBC · DXIL 리플렉터가 없는 플랫폼에서도 네 백엔드를 다 본다.
  */
-SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInBakedReflection )
+SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
@@ -640,22 +640,22 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInBakedReflection )
     const utf8* arrFormatName[kFormatCount] = { "dx11", "dx12", "vulkan", "opengl" };
     const utf8* arrDomain[]                 = { "engine", "common" };
 
-    BakedNameSet arrNameSet[kFormatCount];
-    BakedNameSet allNameSet;
+    CookedNameSet arrNameSet[kFormatCount];
+    CookedNameSet allNameSet;
     for ( uint32 formatIndex = 0; formatIndex < kFormatCount; ++formatIndex )
     {
         for ( const utf8* pDomain : arrDomain )
         {
-            const sw::string                      binDirectory = sw::string( pDomain ) + "/shaders/bin/" + sw::string( sw::ShaderBaker::getSubfolderForFormat( arrFormat[formatIndex] ) );
+            const sw::string                      binDirectory = sw::string( pDomain ) + "/shaders/bin/" + sw::string( sw::ShaderCooker::getSubfolderForFormat( arrFormat[formatIndex] ) );
             sw::ShaderReflectionLibrary::EntryMap mapEntry;
             if ( sw::ShaderReflectionLibrary::loadManifest( binDirectory, mapEntry ) == false )
                 continue;
-            collectBakedNames( mapEntry, arrNameSet[formatIndex] );
-            collectBakedNames( mapEntry, allNameSet );
+            collectCookedNames( mapEntry, arrNameSet[formatIndex] );
+            collectCookedNames( mapEntry, allNameSet );
         }
     }
     if ( allNameSet._entryCount == 0 )
-        SW_TEST_SKIP( "구운 리플렉션 매니페스트를 찾지 못했습니다 (App.exe --bake-shaders 필요)" );
+        SW_TEST_SKIP( "쿠킹된 리플렉션 매니페스트를 찾지 못했습니다 (App.exe --cook-shaders 필요)" );
     for ( uint32 formatIndex = 0; formatIndex < kFormatCount; ++formatIndex )
         SW_EXPECT_TRUE_MSG( arrNameSet[formatIndex]._entryCount > 0, ( sw::string( arrFormatName[formatIndex] ) + " 매니페스트가 없다 — 그 백엔드의 이름은 검사되지 않는다" ).c_str() );
 
@@ -774,7 +774,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EverySceneStructuredBufferSlotIsReserv
 /**
  * @brief [ShaderBindingValidatorTest] 계약 표 자체의 일관성 — 이름이 비지 않고 겹치지 않는다. 자리 충돌은 백엔드별로 뜻이 달라
  *        (DX11 은 g_SwSlot0Sampler=s0, DX12 는 g_SwSampler0=s0 처럼 서로 다른 셰이더에 산다) 여기서
- *        따지지 않고 AllBakedShadersMatchContract 가 실제 바이너리로 잡는다.
+ *        따지지 않고 AllCookedShadersMatchContract 가 실제 바이너리로 잡는다.
  */
 SW_TEST_CASE( ShaderBindingValidatorTest, ReservedTableIsConsistent )
 {
@@ -789,7 +789,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReservedTableIsConsistent )
 }
 
 /**
- * @brief [ShaderBindingValidatorTest] PSO 가 거는 정점 속성은 정점 셰이더가 읽는 것뿐이다 — 구운 Vulkan 정점 셰이더마다 마스크 = 리플렉션 입력
+ * @brief [ShaderBindingValidatorTest] PSO 가 거는 정점 속성은 정점 셰이더가 읽는 것뿐이다 — 쿠킹된 Vulkan 정점 셰이더마다 마스크 = 리플렉션 입력
  * @details 셰이더는 모두 `SwVertexInput` 을 선언하지만 컴파일러가 안 쓰는 입력을 뗀다. Vulkan PSO 가 표 전체를 걸면 검증 레이어가
  *          "Vertex attribute at location N not consumed by vertex shader" 를 PSO 마다 낸다. 풀스크린 삼각형은 위치만 읽고, 씬 셰이더는
  *          위치 · 노멀 · 인스턴스 슬롯을 읽는다. 셰이더가 읽는 속성을 마스크가 빠뜨리면(반대 방향) 미정의라, 비트 수가 입력 수와 같은지도 본다.
@@ -799,7 +799,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ConsumedVertexAttributeMaskFollowsShad
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const sw::string binDir = sw::FileUtil::joinPath(
         sw::FileUtil::joinPath( sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" ), "bin" ),
-        sw::string( sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) ) );
+        sw::string( sw::ShaderCooker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) ) );
     auto maskOf = [&binDir]( const utf8* pFileName, uint32& outInputCount ) -> uint32
     {
         sw::vector<uint8> bytecode;
@@ -830,9 +830,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ConsumedVertexAttributeMaskFollowsShad
     SW_EXPECT_TRUE( ( sceneMask & bitOf( "NORMAL" ) ) != 0 );
     SW_EXPECT_TRUE( ( sceneMask & bitOf( "SW_INSTANCESLOT" ) ) != 0 );
 
-    // 구운 Vulkan 정점 셰이더 전부: 셰이더가 읽는 입력은 모두 마스크에 있다(입력 수 = 비트 수).
+    // 쿠킹된 Vulkan 정점 셰이더 전부: 셰이더가 읽는 입력은 모두 마스크에 있다(입력 수 = 비트 수).
     sw::vector<sw::string> listFile;
-    sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) ), listFile, false );
+    sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) ), listFile, false );
     uint32 checkedCount{ 0 };
     for ( const sw::string& path : listFile )
     {
