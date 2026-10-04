@@ -52,6 +52,7 @@ flowchart LR
 | `ReflectionInvoke.*` | 이름으로 부르기 · 이벤트 묶기/부르기(`ReflectionInvoke`) — 콘솔 · 비주얼 스크립팅 · 기믹 배선 · 에디터가 쓴다 |
 | `PropertyEditCondition.*` | `EditCondition` 식을 풀고 판정(인스펙터가 막거나 숨긴다) — ImGui 를 모른다 |
 | `ReflectUnits.h` | `Units = …` 단위 표와 단위 사이 변환(헤더 전용 — 파서도 같은 표로 철자를 본다) |
+| `ReflectionDocWriter.*` | 등록된 타입 · 열거형 → Markdown API 문서(`App --write-reflection-docs=<폴더>`, 빌드 산출물 — 커밋하지 않는다) |
 | `ReflectionValidation.*` | 검증 함수(`Validate = fn`)를 돌리고(`ReflectionValidation`) 결과를 모은다(`ValidationContext` · `ValidationIssueLog`) |
 | `PropertyRoleUtil.*` | 역할 플래그(`Replicated` · `RepNotify` · `SaveGame` · `Interp` · `Config`)를 읽는 쪽의 도우미 — 모으기 · RepNotify 부르기 · 값 섞기 · 설정 묶음 |
 | `Rpc/` | RPC용 리플렉션 보조(`ReflectionRpc.h`) |
@@ -258,6 +259,16 @@ struct SpawnerComponent : public Component
 - 오브젝트는 `ObjectValidation::reportGameObject` 가 컴포넌트마다 돌려 `ValidationIssueLog`(출처 = 오브젝트 id)에서 바꿉니다. 로드(`ObjectStateBatch::finish` —
   값을 다 읽고 `onPostLoad` 뒤) · 글 저장(`ObjectStateSerializer::saveToText` — 씬 · 프리팹 저작) · 인스펙터 편집 뒤에 불립니다. 바이너리 상태(플레이 · 되돌리기
   스냅숏)는 보지 않습니다. 검증은 결과만 적고 값을 고치거나 로드 · 저장을 멈추지 않습니다. 맵 검사 패널이 `ValidationIssueLog::collectIssues` 를 읽습니다.
+
+### 10) API 문서 만들기
+
+```bash
+cd build/Ninja-Debug/Bin && ./App.exe --write-reflection-docs=../Docs/Reflection
+```
+
+헤드리스로 돌아 모든 타입 공급자(엔진 · GameFramework · 킷 · 게임 모듈)가 등록을 끝낸 뒤(`ModuleTypes`) `index.md` 와 모듈마다 한 장을 씁니다 — 타입(부모 ·
+컴포넌트 여부 · 분류 · 설명), 프로퍼티 표(타입 · 기본값 · 범위 · 역할 플래그 · 단위 · EditCondition · 설명), 함수(인자 이름 · 기본 인자 · 넷 역할), 이벤트,
+열거형 값. 타입은 이름 순이라 같은 등록이면 같은 바이트입니다. 에디터 메타(분류 · 설명 · 단위)는 Shipping 빌드에 없어 Dev 빌드에서 만듭니다.
 
 ---
 
