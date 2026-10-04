@@ -34,21 +34,11 @@ namespace sw
         if ( _random.nextChance( pArea->_rate ) == false )
             return nullptr;
 
-        int32 totalWeight = 0;
-        for ( const JrpgEncounterGroup& group : pArea->_listGroup )
-            totalWeight += group._weight;
-        if ( totalWeight <= 0 )
+        const int32 groupIndex = _random.pickWeightedIndexInt( pArea->_listGroup, []( const JrpgEncounterGroup& group )
+        { return group._weight; } );
+        if ( groupIndex < 0 )
             return nullptr;
-        int32 pick = _random.nextInt( 0, totalWeight - 1 );
-        for ( const JrpgEncounterGroup& group : pArea->_listGroup )
-        {
-            if ( pick < group._weight )
-            {
-                _stepsSinceEncounter = 0;
-                return &group;
-            }
-            pick -= group._weight;
-        }
-        return nullptr;
+        _stepsSinceEncounter = 0;
+        return pArea->_listGroup.data() + groupIndex;
     }
 } // namespace sw

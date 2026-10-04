@@ -80,38 +80,17 @@ namespace sw
 
             static const ScavengerScrapDef* pickScrap( const ScavengerCatalog& catalog, const ScavengerMoonDef& moon, GameRandom& random )
             {
-                float32 total = 0.0f;
+                // 달이 목록을 주면 그 안에서, 아니면 카탈로그 전체에서 — 가중치 뽑기 하나(`nextFloat` 한 번)를 같이 쓴다.
                 if ( moon._listScrap.empty() )
                 {
-                    for ( const ScavengerScrapDef& def : catalog.getScraps() )
-                        total += def._spawnWeight;
+                    const vector<ScavengerScrapDef>& listScrap = catalog.getScraps();
+                    const int32                      index     = random.pickWeightedIndex( listScrap, []( const ScavengerScrapDef& def )
+                                             { return def._spawnWeight; } );
+                    return index >= 0 ? listScrap.data() + index : nullptr;
                 }
-                else
-                {
-                    for ( const hashed_string& scrapId : moon._listScrap )
-                        total += catalog.findScrap( scrapId )->_spawnWeight;
-                }
-                if ( total <= 0.0f )
-                    return nullptr;
-                float32 pick = random.nextFloat() * total;
-                if ( moon._listScrap.empty() )
-                {
-                    for ( const ScavengerScrapDef& def : catalog.getScraps() )
-                    {
-                        pick -= def._spawnWeight;
-                        if ( pick < 0.0f && def._spawnWeight > 0.0f )
-                            return &def;
-                    }
-                    return &catalog.getScraps().back();
-                }
-                for ( const hashed_string& scrapId : moon._listScrap )
-                {
-                    const ScavengerScrapDef* pDef = catalog.findScrap( scrapId );
-                    pick -= pDef->_spawnWeight;
-                    if ( pick < 0.0f && pDef->_spawnWeight > 0.0f )
-                        return pDef;
-                }
-                return catalog.findScrap( moon._listScrap.back() );
+                const int32 index = random.pickWeightedIndex( moon._listScrap, [&catalog]( const hashed_string& scrapId )
+                { return catalog.findScrap( scrapId )->_spawnWeight; } );
+                return index >= 0 ? catalog.findScrap( moon._listScrap[static_cast<size_t>( index )] ) : nullptr;
             }
         };
     } // namespace

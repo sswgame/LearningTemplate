@@ -70,6 +70,38 @@ namespace sw
             return last; // 부동소수 끝자락 — 마지막 양수 원소
         }
 
+        /**
+         * @brief 정수 가중치로 하나를 고릅니다(`nextInt( 0, 합 − 1 )` 한 번). 음수는 0, 합이 0 이하이면 −1 입니다.
+         * @details 정수 가중치(조우표 · 드롭표)는 이것을 쓴다 — 정수 합 · 정수 비교로 걸어 부동소수 누적 오차가 없고(가중치 합이 커도 비율이 정확하다),
+         *          손으로 걷던 조우표와 난수 흐름이 같다.
+         */
+        template <typename TList, typename TGetWeight>
+        int32 pickWeightedIndexInt( const TList& list, TGetWeight&& getWeight )
+        {
+            int32 total = 0;
+            for ( const auto& element : list )
+            {
+                const int32 weight = static_cast<int32>( getWeight( element ) );
+                total += weight > 0 ? weight : 0;
+            }
+            if ( total <= 0 )
+                return -1;
+            int32 roll  = nextInt( 0, total - 1 );
+            int32 index = 0;
+            for ( const auto& element : list )
+            {
+                const int32 weight = static_cast<int32>( getWeight( element ) );
+                if ( weight > 0 )
+                {
+                    if ( roll < weight )
+                        return index;
+                    roll -= weight;
+                }
+                ++index;
+            }
+            return -1;
+        }
+
         /** @brief Fisher-Yates 로 섞습니다(뒤에서부터 [0, i] 의 한 자리와 바꾼다 — 원소 수 − 1 번 `nextInt`). */
         template <typename TList>
         void shuffle( TList& inoutList )

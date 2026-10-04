@@ -223,6 +223,37 @@ SW_TEST_CASE( GameFrameworkUtilTest, StatBlockReadsAttributesAndMerges )
     SW_EXPECT_FALSE( stats.hasValue( hashed_string( "label" ) ) );
 }
 
+/**
+ * @brief [GameFrameworkUtilTest] 정수 가중치 뽑기는 `nextInt( 0, 합 − 1 )` 한 번 — 손으로 걷던 조우표와 같은 씨앗에서 같은 결과다
+ * @details 조우표 · 드롭표가 손으로 쓰던 걷기(정수 합 → `nextInt` → 가중치를 빼며 걷기)를 공용으로 옮겼다. 옮긴 뒤에도 같은 씨앗의
+ *          리플레이 · 결정성 시험이 그대로이도록 난수 흐름이 손 걷기와 정확히 같은지를 본다. 0 · 음수는 뽑히지 않고 합이 0 이면 −1 이다.
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, IntegerWeightedPickMatchesTheHandWalkStream )
+{
+    const vector<int32> listWeight{ 3, 0, 5, -4, 2 };
+    GameRandom          shared( 11u );
+    GameRandom          reference( 11u );
+    for ( int32 roll = 0; roll < 500; ++roll )
+    {
+        const int32 index = shared.pickWeightedIndexInt( listWeight, []( int32 weight )
+        { return weight; } );
+        // 손 걷기 — 음수는 0 으로 친다.
+        int32 pick     = reference.nextInt( 0, 3 + 5 + 2 - 1 );
+        int32 expected = -1;
+        for ( int32 slot = 0; slot < static_cast<int32>( listWeight.size() ) && expected < 0; ++slot )
+        {
+            const int32 weight = listWeight.data()[slot] > 0 ? listWeight.data()[slot] : 0;
+            if ( pick < weight )
+                expected = slot;
+            pick -= weight;
+        }
+        SW_ASSERT_EQUAL( expected, index );
+    }
+    const vector<int32> listNone{ 0, -1 };
+    SW_EXPECT_EQUAL( -1, shared.pickWeightedIndexInt( listNone, []( int32 weight )
+    { return weight; } ) );
+}
+
 SW_TEST_CASE( GameFrameworkUtilTest, WeightedPickShuffleConeAndCosts )
 {
     // 가중치 — 0 · 음수는 뽑히지 않고, 비율은 가중치를 따른다. 같은 씨앗이면 같은 순서.

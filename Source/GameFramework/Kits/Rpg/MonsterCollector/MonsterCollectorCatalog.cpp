@@ -193,40 +193,51 @@ namespace sw
     bool MonsterCollectorCatalog::rollEncounter( const hashed_string& area, const hashed_string& timeOfDay, GameRandom& random, hashed_string& outSpeciesId,
                                                  int32& outLevel ) const
     {
-        vector<const MonsterEncounterSlot*> listCandidate;
-        int32                               totalWeight = 0;
-        for ( const MonsterEncounterDef& table : _encounterCatalog.getAll() )
+        // 후보를 목록에 모으지 않고 같은 순서로 두 번 훑는다(합 → 고르기). 조우마다 할당이 없다.
+        const auto forEachCandidate = [&]( auto&& visit )
         {
-            if ( table._area != area )
-                continue;
-            bool bTimeMatches = table._listTime.empty();
-            for ( const hashed_string& time : table._listTime )
-                bTimeMatches = bTimeMatches || time == timeOfDay;
-            if ( bTimeMatches == false )
-                continue;
-            for ( const MonsterEncounterSlot& slot : table._listSlot )
+            for ( const MonsterEncounterDef& table : _encounterCatalog.getAll() )
             {
-                if ( slot._weight <= 0 )
+                if ( table._area != area )
                     continue;
-                listCandidate.push_back( &slot );
-                totalWeight += slot._weight;
+                bool bTimeMatches = table._listTime.empty();
+                for ( const hashed_string& time : table._listTime )
+                    bTimeMatches = bTimeMatches || time == timeOfDay;
+                if ( bTimeMatches == false )
+                    continue;
+                for ( const MonsterEncounterSlot& slot : table._listSlot )
+                {
+                    if ( slot._weight > 0 && visit( slot ) )
+                        return;
+                }
             }
-        }
+        };
+        int32 totalWeight = 0;
+        forEachCandidate( [&totalWeight]( const MonsterEncounterSlot& slot )
+        {
+            totalWeight += slot._weight;
+            return false;
+        } );
         if ( totalWeight <= 0 )
             return false;
 
-        int32 pick = random.nextInt( 0, totalWeight - 1 );
-        for ( const MonsterEncounterSlot* pSlot : listCandidate )
+        int32                       pick    = random.nextInt( 0, totalWeight - 1 );
+        const MonsterEncounterSlot* pPicked = nullptr;
+        forEachCandidate( [&pick, &pPicked]( const MonsterEncounterSlot& slot )
         {
-            if ( pick < pSlot->_weight )
+            if ( pick < slot._weight )
             {
-                outSpeciesId = pSlot->_speciesId;
-                outLevel     = random.nextInt( pSlot->_minLevel, pSlot->_maxLevel );
+                pPicked = &slot;
                 return true;
             }
-            pick -= pSlot->_weight;
-        }
-        return false;
+            pick -= slot._weight;
+            return false;
+        } );
+        if ( pPicked == nullptr )
+            return false;
+        outSpeciesId = pPicked->_speciesId;
+        outLevel     = random.nextInt( pPicked->_minLevel, pPicked->_maxLevel );
+        return true;
     }
 
     bool MonsterCollectorCatalog::isStatusImmune( MonsterStatus status, const vector<hashed_string>& listType ) const
