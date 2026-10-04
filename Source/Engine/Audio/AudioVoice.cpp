@@ -8,12 +8,14 @@ namespace sw
 {
     AudioVoice::AudioVoice()
         : _pClip{ nullptr }
+        , _lowPass{}
         , _position{ 0.0 }
         , _rate{ 1.0 }
         , _gainLeft{ 0.0f }
         , _gainRight{ 0.0f }
         , _targetGainLeft{ 0.0f }
         , _targetGainRight{ 0.0f }
+        , _lowPassHz{ audio::kFilterOpenHz }
         , _fadeGain{ 1.0f }
         , _fadeTarget{ 1.0f }
         , _fadeStep{ 0.0f }
@@ -98,10 +100,38 @@ namespace sw
         return bFadedOut == false;
     }
 
-    void AudioVoice::mix( float32* pBusInput, uint32 frameCount )
+    void AudioVoice::setLowPass( float32 cutoffHz )
+    {
+        const float32 cutoff = MathUtil::clamp( cutoffHz, 20.0f, audio::kFilterOpenHz );
+        if ( MathUtil::abs( cutoff - _lowPassHz ) <= _lowPassHz * 0.005f )
+            return;
+        // 열려 있다가 처음 걸리면 상태를 비운다(오래된 상태가 튀지 않게).
+        if ( _lowPassHz >= audio::kFilterOpenHz )
+            _lowPass.reset();
+        _lowPassHz = cutoff;
+        if ( cutoff < audio::kFilterOpenHz )
+            _lowPass._coefficients = AudioBiquadCoefficients::make( AudioBiquadType::LowPass, cutoff, 0.7071f, 0.0f, static_cast<float32>( audio::kSampleRate ) );
+    }
+
+    void AudioVoice::mix( float32* pBusInput, uint32 frameCount, float32* pScratch )
     {
         if ( isActive() == false || _bPaused == SW_TRUE )
             return;
+        if ( _lowPassHz >= audio::kFilterOpenHz || pScratch == nullptr )
+        {
+            mixInto( pBusInput, frameCount );
+            return;
+        }
+        const size_t sampleCount = static_cast<size_t>( frameCount ) * 2;
+        Memory::set( pScratch, 0, sampleCount * sizeof( float32 ) );
+        mixInto( pScratch, frameCount );
+        _lowPass.process( pScratch, frameCount );
+        for ( size_t sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
+            pBusInput[sampleIndex] += pScratch[sampleIndex];
+    }
+
+    void AudioVoice::mixInto( float32* pBusInput, uint32 frameCount )
+    {
 
         const AudioClipData& clip         = *_pClip;
         const float32*       pSample      = clip._listSample.data();

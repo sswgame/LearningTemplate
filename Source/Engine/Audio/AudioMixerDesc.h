@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -125,6 +126,10 @@ namespace sw
 
         PROPERTY( Tooltip = "Buses (submixes); the master bus is the only root" )
         vector<AudioBusDesc> _listBus{};
+        PROPERTY( Tooltip = "Distance attenuation presets every sound can pick by name" )
+        vector<AudioAttenuationDesc> _listAttenuation{};
+        PROPERTY( Tooltip = "How occlusion (0..1) turns into volume and low-pass" )
+        AudioOcclusionDesc _occlusion{};
         PROPERTY( Min = 1, Tooltip = "Most voices alive at once (real and virtual)" )
         uint32 _maxVoiceCount{ 256 };
         PROPERTY( Min = 1, Tooltip = "Most voices mixed at once; the quietest lowest-priority rest go virtual" )
@@ -141,11 +146,18 @@ namespace sw
 
         /** @brief 버스 번호입니다. 없으면 -1 입니다. */
         int32 findBusIndex( const hashed_string& name ) const;
+        /** @brief 감쇠 프리셋입니다. 없으면 nullptr 입니다. */
+        const AudioAttenuationDesc* findAttenuation( const hashed_string& name ) const;
         /**
          * @brief 처리 순서(보내는 버스가 받는 버스보다 앞)를 만듭니다 — 부모와 센드를 간선으로 본 위상 정렬입니다.
          * @return 고리가 있으면 false 입니다.
          */
         [[nodiscard]] bool makeProcessingOrder( vector<uint32>& outListBusIndex ) const;
+
+        /** @brief 감쇠 프리셋 목록을 검사합니다(이름 · 거리 · 곡선 점 순서). 이벤트 라이브러리도 같은 검사를 씁니다. */
+        [[nodiscard]] static bool validateAttenuations( const vector<AudioAttenuationDesc>& listAttenuation, string_view sourceName );
+        /** @brief 곡선 점이 입력 오름차순인지입니다. */
+        static bool isCurveSorted( const vector<AudioCurvePoint>& listPoint );
 
         /** @brief 파일 없이 쓰는 기본 그래프입니다 — master 아래 music · sfx · voice · ambient · ui, 센드 없음. */
         static AudioMixerDesc makeDefault();

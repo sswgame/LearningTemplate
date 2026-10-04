@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/AudioClip.h"
+#include "Engine/Audio/Dsp/AudioBiquad.h"
 
 namespace sw
 {
@@ -35,13 +36,18 @@ namespace sw
         /**
          * @brief 블록 하나만큼 @p pBusInput(스테레오 교차)에 더하고 위치를 진행합니다. 끝나면(루프가 아니고 끝에 닿았거나 페이드아웃이 0 에 닿음) 끝남으로 표시합니다.
          * @param frameCount 블록 길이(프레임)입니다.
+         * @param pScratch 로우패스가 걸렸을 때 쓰는 블록 길이 스테레오 작업 버퍼입니다(없으면 필터를 건너뜁니다).
          */
-        void mix( float32* pBusInput, uint32 frameCount );
+        void mix( float32* pBusInput, uint32 frameCount, float32* pScratch );
         /** @brief 섞지 않고 위치만 진행합니다(가상 보이스). 게인 램프 상태는 0 으로 둡니다 — 다시 섞일 때 0 에서 오릅니다. */
         void advanceVirtual( uint32 frameCount );
 
         /** @brief 블록의 목표 볼륨(선형)과 팬([-1, 1], -1 = 왼쪽)을 정합니다. */
         void setTarget( float32 volume, float32 pan );
+        /** @brief 보이스 로우패스 컷오프(Hz)입니다 — 가림 · 공기 흡수 · 파라미터. `audio::kFilterOpenHz` 이상이면 거르지 않습니다. */
+        void setLowPass( float32 cutoffHz );
+        /** @brief 지금 로우패스 컷오프입니다. */
+        float32 getLowPassHz() const { return _lowPassHz; }
         /** @brief 재생 속도 비입니다(클립 샘플레이트 / 출력 샘플레이트 × 피치). */
         void setPlaybackRate( float64 framesPerOutputFrame ) { _rate = framesPerOutputFrame; }
         /**
@@ -68,17 +74,21 @@ namespace sw
     private:
         /** @brief 지연 · 페이드를 한 프레임 진행합니다. 페이드가 끝나 보이스를 멈춰야 하면 false 입니다. */
         bool stepFade();
+        /** @brief 거르지 않고 @p pTarget 에 더합니다. */
+        void mixInto( float32* pTarget, uint32 frameCount );
         /** @brief 위치를 @p frameCount 출력 프레임만큼 진행합니다(루프 · 끝 처리). */
         void advancePosition( uint32 frameCount );
 
     private:
         shared_ptr<const AudioClipData> _pClip;             /**< 재생하는 클립입니다. */
+        AudioBiquadStereo               _lowPass;           /**< 보이스 로우패스입니다. */
         float64                         _position;          /**< 클립 안의 위치(프레임, 소수)입니다. */
         float64                         _rate;              /**< 출력 프레임당 진행하는 클립 프레임입니다. */
         float32                         _gainLeft;          /**< 지금 왼쪽 게인입니다(램프 중). */
         float32                         _gainRight;         /**< 지금 오른쪽 게인입니다(램프 중). */
         float32                         _targetGainLeft;    /**< 이 블록의 왼쪽 목표 게인입니다. */
         float32                         _targetGainRight;   /**< 이 블록의 오른쪽 목표 게인입니다. */
+        float32                         _lowPassHz;         /**< 로우패스 컷오프(Hz)입니다. */
         float32                         _fadeGain;          /**< 페이드 게인입니다. */
         float32                         _fadeTarget;        /**< 페이드 목표입니다. */
         float32                         _fadeStep;          /**< 프레임마다 페이드 게인이 움직이는 양입니다(절댓값). */

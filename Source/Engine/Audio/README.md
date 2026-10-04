@@ -14,6 +14,7 @@
 | WAV · OGG 디코드(stb_vorbis) | `AudioClipDecoder` · `AudioVorbisDecode.cpp` |
 | 버스 이펙트(바이쿼드 · 컴프레서 · 리미터 · 리버브 · 딜레이)와 이름 → 종류 등록부 | `Dsp/AudioEffect` |
 | 바이쿼드 계수(RBJ cookbook) · 스테레오 상태 · 크기 응답 | `Dsp/AudioBiquad` |
+| 공간화 — 리스너 · 에미터 · 감쇠 프리셋 · 팬 · 도플러 · 가림 · 가림 질의 창구 | `AudioSpatial` |
 | 형식 상수 · dB 변환 · 결정적 난수 · 버스 이름 | `AudioTypes.h` |
 | Windows 출력(XAudio2 스트리밍 보이스) · MP3 대체 디코더(Media Foundation) | `Windows/XAudio2System` |
 | 장치 없는 출력 | `NullAudioSystem` |
@@ -67,6 +68,22 @@
 
 기본 그래프는 master 에 리미터(-1 dBFS), `reverb` 리턴 버스에 리버브(dry 0)를 두고 sfx · voice · ambient 가 센드로 보냅니다.
 이펙트 이름(`AudioEffectDesc::_name`, 비우면 종류 이름)은 스냅샷이 파라미터를 바꿀 때 씁니다.
+
+## 공간화
+
+보이스가 에미터(`_emitterId`)와 감쇠 프리셋(`_attenuation`, 믹서 데이터의 `_listAttenuation` — Wwise Attenuation ShareSet · 언리얼 Sound Attenuation)을
+가지면 블록마다 리스너에 대해 공간화합니다. 둘 중 하나라도 없으면 2D(공간화 없음)입니다.
+
+- **리스너** `setListener( index, AudioListenerState )` — 최대 4 개(분할 화면). 여럿이면 보이스마다 가장 크게 들리는 리스너로 잽니다(언리얼 · Wwise 의
+  "가장 가까운 리스너"). 리스너를 섞어 내는 다중 리스너 믹스는 없습니다.
+- **팬** — 3D(`World3D`): 수평면 위 방향의 오른쪽 성분(오른쪽 = 위 × 앞, 왼손 좌표). 고도는 팬에 쓰지 않습니다. 리스너에 아주 가까우면(최소 거리의 절반 안)
+  가운데로 모읍니다. 모노는 등전력(가운데 -3 dB, L² + R² 일정), 스테레오는 밸런스. **HRTF(바이노럴) · 서라운드 출력은 없습니다** — 출력은 스테레오입니다.
+- **2D**(`Screen2D`): 팬 = 가로 거리 / 화면 반폭(`_screenHalfWidth`), 세로는 팬에 쓰지 않음(고도 없음), 거리는 XY 거리(Z 는 레이어라 무시).
+- **거리 감쇠** — `Linear` · `Inverse`(OpenAL inverse clamped) · `InverseSquare` · `Custom`(거리, dB 점). 공기 흡수는 (거리, Hz) 점의 보이스 로우패스.
+- **도플러** — 비 = (c − v_리스너·u) / (c − v_소스·u), u 는 소스 → 리스너, 속도는 c/2 안으로, 비는 [0.5, 2] 로 묶고 프리셋의 세기(`_dopplerFactor`, 0 = 끔)로 줄입니다.
+- **가림(occlusion)** — 게임 스레드가 0..1 을 재서(`IAudioOcclusionQuery`, 엔진 기본은 물리 씬 레이캐스트) `setEmitterOcclusion` 으로 넣고, 엔진은
+  `_occlusion._smoothingSeconds` 로 따라가며 볼륨(`_volumeDb` × 값)과 로우패스(20 kHz → `_lowPassHz`, 로그 축)로 바꿉니다. 프리셋의 `_bOcclusion` 이 끄면 무시.
+  가림 · 막힘(obstruction)을 따로 두지 않습니다 — 한 값입니다.
 
 ## 재생
 

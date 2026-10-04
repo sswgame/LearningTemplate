@@ -13,11 +13,13 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioClip.h"
+#include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/AudioVoice.h"
 
@@ -30,11 +32,13 @@ namespace sw
     /** @brief 클립 하나를 바로 재생할 때의 설정입니다(이벤트 없이 — `IAudioSystem::play` · `playMusic`). */
     struct AudioClipPlayParams
     {
-        float32 _volumeDb{ 0.0f };       ///< 볼륨(dB)
-        float32 _pitchSemitones{ 0.0f }; ///< 피치(반음)
-        float32 _pan{ 0.0f };            ///< 팬 [-1, 1]
-        float32 _fadeInSeconds{ 0.0f };  ///< 0 에서 오르는 시간(초)
-        bool    _bLoop{ false };         ///< 끝에서 처음으로 돌아간다
+        float32        _volumeDb{ 0.0f };       ///< 볼륨(dB)
+        float32        _pitchSemitones{ 0.0f }; ///< 피치(반음)
+        float32        _pan{ 0.0f };            ///< 팬 [-1, 1]
+        float32        _fadeInSeconds{ 0.0f };  ///< 0 에서 오르는 시간(초)
+        hashed_string  _attenuation{};          ///< 감쇠 프리셋 이름 — 비었거나 에미터가 0 이면 공간화하지 않는다(2D)
+        AudioEmitterId _emitterId{ 0 };         ///< 소리 내는 자리
+        bool           _bLoop{ false };         ///< 끝에서 처음으로 돌아간다
     };
 } // namespace sw
 
@@ -59,6 +63,9 @@ namespace sw
     class SW_API AudioEngine
     {
     public:
+        /** @brief 리스너 칸 수입니다(분할 화면 넷). */
+        static constexpr uint32 kMaxListenerCount = 4;
+
         AudioEngine();
         ~AudioEngine();
 
@@ -101,6 +108,18 @@ namespace sw
         /** @brief 버스를 솔로로 둡니다. */
         void setBusSolo( const hashed_string& bus, bool bSolo );
 
+        /**
+         * @brief 리스너를 정합니다(보통 게임 카메라). 여럿이면(분할 화면) 보이스마다 가장 크게 들리는 리스너로 공간화합니다.
+         * @param listenerIndex `kMaxListenerCount` 보다 작아야 합니다. `_bActive` 가 false 면 그 리스너를 끕니다.
+         */
+        void setListener( uint32 listenerIndex, const AudioListenerState& state );
+        /** @brief 에미터의 자리 · 속도를 정합니다(처음이면 만듭니다). */
+        void setEmitter( AudioEmitterId emitterId, const float3& position, const float3& velocity );
+        /** @brief 에미터의 가림 값(0..1)을 정합니다 — 엔진이 `AudioOcclusionDesc::_smoothingSeconds` 로 따라갑니다. */
+        void setEmitterOcclusion( AudioEmitterId emitterId, float32 occlusion );
+        /** @brief 에미터를 지웁니다. 그 자리의 소리는 마지막 자리에 남아 끝까지 재생합니다. */
+        void removeEmitter( AudioEmitterId emitterId );
+
         /** @brief 재생이 아직 살아 있는지입니다(디코드 대기 · 가상 포함). 명령이 아직 처리되지 않았으면 true 입니다. */
         bool isPlaying( AudioPlayingId playingId ) const;
         /** @brief 마지막 블록의 상태입니다. */
@@ -130,6 +149,10 @@ namespace sw
             SetBusSolo,
             SwapMixer,
             SetRandomSeed,
+            SetListener,
+            SetEmitter,
+            SetEmitterOcclusion,
+            RemoveEmitter,
         };
 
         /** @brief 게임 스레드가 쌓는 명령 하나입니다. 종류마다 쓰는 칸만 채웁니다. */
@@ -139,7 +162,12 @@ namespace sw
             hashed_string          _name{};       ///< 버스
             hashed_string          _path{};       ///< 클립 경로
             AudioClipPlayParams    _clipParams{}; ///< PlayClip
+            AudioListenerState     _listener{};   ///< SetListener
+            float3                 _position{};   ///< SetEmitter
+            float3                 _velocity{};   ///< SetEmitter
             AudioPlayingId         _playingId{ 0 };
+            AudioEmitterId         _emitterId{ 0 };
+            uint32                 _index{ 0 };    ///< 리스너 번호
             uint64                 _seed{ 0 };     ///< SetRandomSeed
             float32                _value{ 0.0f }; ///< 볼륨 · 페이드 시간
             CommandType            _type{ CommandType::PlayClip };
@@ -161,8 +189,11 @@ namespace sw
             AudioVoice     _voice{};
             hashed_string  _clipPath{};
             hashed_string  _busName{};
+            hashed_string  _attenuationName{};
             AudioPlayingId _playingId{ 0 };
-            float32        _volume{ 1.0f }; ///< 기본 볼륨(선형)
+            AudioEmitterId _emitterId{ 0 };
+            int32          _attenuationIndex{ -1 }; ///< 지금 그래프의 감쇠 프리셋(-1 = 2D)
+            float32        _volume{ 1.0f };         ///< 기본 볼륨(선형)
             float32        _pan{ 0.0f };
             float32        _pitchRatio{ 1.0f };
             float32        _fadeInSeconds{ 0.0f };
@@ -191,6 +222,12 @@ namespace sw
         void applyBusUserState( const BusUserState& state );
         /** @brief 이름의 사용자 상태 칸입니다(없으면 만듭니다). */
         BusUserState& findOrAddBusUserState( const hashed_string& bus );
+        /** @brief 에미터의 가림 값을 이 블록만큼 목표로 따라가게 합니다. */
+        void updateEmitters();
+        /** @brief 보이스 하나의 이번 블록 목표(볼륨 · 팬 · 피치 · 로우패스)를 정합니다. */
+        void updateVoiceTargets( VoiceSlot& slot );
+        /** @brief 감쇠 프리셋 이름을 지금 그래프의 번호로 풉니다(-1 = 없음). */
+        int32 resolveAttenuationIndex( const hashed_string& name ) const;
         /** @brief 게임 스레드가 읽을 상태를 게시합니다. */
         void publishState();
         /** @brief 명령을 쌓습니다. */
@@ -204,14 +241,17 @@ namespace sw
         mutex           _commandMutex;        /**< `_listPendingCommand` 를 지킵니다. */
         atomic<uint64>  _nextPlayingId;       /**< 다음 재생 id 입니다. */
         // 오디오 스레드
-        shared_ptr<AudioMixer> _pMixer;             /**< 지금 그래프입니다. */
-        vector<VoiceSlot>      _listVoice;          /**< 보이스 칸입니다. */
-        vector<BusUserState>   _listBusUserState;   /**< 버스 이름의 사용자 상태입니다. */
-        vector<float32>        _listBlockOutput;    /**< 마지막 블록의 출력입니다(스테레오 교차). */
-        AudioRandom            _random;             /**< 컨테이너 · 범위 난수입니다. */
-        uint64                 _renderedFrameCount; /**< 지금까지 렌더한 프레임입니다. */
-        uint64                 _appliedPlayingId;   /**< 적용한 재생 명령의 가장 큰 id 입니다. */
-        uint32                 _blockCursor;        /**< `_listBlockOutput` 에서 다음에 내보낼 프레임입니다. */
+        shared_ptr<AudioMixer>                           _pMixer;                         /**< 지금 그래프입니다. */
+        vector<VoiceSlot>                                _listVoice;                      /**< 보이스 칸입니다. */
+        vector<BusUserState>                             _listBusUserState;               /**< 버스 이름의 사용자 상태입니다. */
+        vector<float32>                                  _listBlockOutput;                /**< 마지막 블록의 출력입니다(스테레오 교차). */
+        vector<float32>                                  _listVoiceScratch;               /**< 보이스 로우패스 작업 버퍼입니다(블록 길이). */
+        unordered_map<AudioEmitterId, AudioEmitterState> _mapEmitter;                     /**< 에미터 id → 상태입니다. */
+        AudioListenerState                               _arrListener[kMaxListenerCount]; /**< 리스너입니다. */
+        AudioRandom                                      _random;                         /**< 컨테이너 · 범위 난수입니다. */
+        uint64                                           _renderedFrameCount;             /**< 지금까지 렌더한 프레임입니다. */
+        uint64                                           _appliedPlayingId;               /**< 적용한 재생 명령의 가장 큰 id 입니다. */
+        uint32                                           _blockCursor;                    /**< `_listBlockOutput` 에서 다음에 내보낼 프레임입니다. */
         // 게시(오디오 스레드 → 게임 스레드)
         vector<AudioPlayingId> _listPublishedPlaying; /**< 살아 있는 재생 id(정렬)입니다. */
         AudioEngineStats       _publishedStats;       /**< 마지막 블록의 상태입니다. */

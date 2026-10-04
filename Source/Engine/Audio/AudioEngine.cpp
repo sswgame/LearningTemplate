@@ -21,6 +21,9 @@ namespace sw
         , _listVoice{}
         , _listBusUserState{}
         , _listBlockOutput{}
+        , _listVoiceScratch{}
+        , _mapEmitter{}
+        , _arrListener{}
         , _random{}
         , _renderedFrameCount{ 0 }
         , _appliedPlayingId{ 0 }
@@ -47,6 +50,7 @@ namespace sw
         _listVoice.clear();
         _listVoice.resize( mixerDesc._maxVoiceCount );
         _listBlockOutput.assign( static_cast<size_t>( audio::kBlockFrameCount ) * audio::kChannelCount, 0.0f );
+        _listVoiceScratch.assign( static_cast<size_t>( audio::kBlockFrameCount ) * audio::kChannelCount, 0.0f );
         _blockCursor        = audio::kBlockFrameCount;
         _renderedFrameCount = 0;
         _bInitialized.store( true, std::memory_order_release );
@@ -154,6 +158,48 @@ namespace sw
         pushCommand( std::move( command ) );
     }
 
+    void AudioEngine::setListener( uint32 listenerIndex, const AudioListenerState& state )
+    {
+        if ( listenerIndex >= kMaxListenerCount )
+            return;
+        Command command;
+        command._type     = CommandType::SetListener;
+        command._index    = listenerIndex;
+        command._listener = state;
+        pushCommand( std::move( command ) );
+    }
+
+    void AudioEngine::setEmitter( AudioEmitterId emitterId, const float3& position, const float3& velocity )
+    {
+        if ( emitterId == 0 )
+            return;
+        Command command;
+        command._type      = CommandType::SetEmitter;
+        command._emitterId = emitterId;
+        command._position  = position;
+        command._velocity  = velocity;
+        pushCommand( std::move( command ) );
+    }
+
+    void AudioEngine::setEmitterOcclusion( AudioEmitterId emitterId, float32 occlusion )
+    {
+        if ( emitterId == 0 )
+            return;
+        Command command;
+        command._type      = CommandType::SetEmitterOcclusion;
+        command._emitterId = emitterId;
+        command._value     = MathUtil::saturate( occlusion );
+        pushCommand( std::move( command ) );
+    }
+
+    void AudioEngine::removeEmitter( AudioEmitterId emitterId )
+    {
+        Command command;
+        command._type      = CommandType::RemoveEmitter;
+        command._emitterId = emitterId;
+        pushCommand( std::move( command ) );
+    }
+
     bool AudioEngine::isPlaying( AudioPlayingId playingId ) const
     {
         if ( playingId == 0 )
@@ -235,16 +281,19 @@ namespace sw
                     SW_LOG_WARNING( "Voice pool exhausted - dropped %#", command._path.c_str() );
                     break;
                 }
-                pSlot->_playingId       = command._playingId;
-                pSlot->_clipPath        = command._path;
-                pSlot->_busName         = command._name;
-                pSlot->_busIndex        = resolveBusIndex( command._name );
-                pSlot->_volume          = AudioMath::dbToLinear( command._clipParams._volumeDb );
-                pSlot->_pan             = command._clipParams._pan;
-                pSlot->_pitchRatio      = AudioMath::semitonesToRatio( command._clipParams._pitchSemitones );
-                pSlot->_fadeInSeconds   = command._clipParams._fadeInSeconds;
-                pSlot->_bLoop           = command._clipParams._bLoop;
-                pSlot->_bWaitingForClip = true;
+                pSlot->_playingId        = command._playingId;
+                pSlot->_clipPath         = command._path;
+                pSlot->_busName          = command._name;
+                pSlot->_busIndex         = resolveBusIndex( command._name );
+                pSlot->_volume           = AudioMath::dbToLinear( command._clipParams._volumeDb );
+                pSlot->_pan              = command._clipParams._pan;
+                pSlot->_pitchRatio       = AudioMath::semitonesToRatio( command._clipParams._pitchSemitones );
+                pSlot->_fadeInSeconds    = command._clipParams._fadeInSeconds;
+                pSlot->_bLoop            = command._clipParams._bLoop;
+                pSlot->_emitterId        = command._clipParams._emitterId;
+                pSlot->_attenuationName  = command._clipParams._attenuation;
+                pSlot->_attenuationIndex = resolveAttenuationIndex( command._clipParams._attenuation );
+                pSlot->_bWaitingForClip  = true;
                 startWaitingVoice( *pSlot );
                 break;
             }
@@ -303,7 +352,10 @@ namespace sw
                 for ( VoiceSlot& slot : _listVoice )
                 {
                     if ( slot._bInUse )
-                        slot._busIndex = resolveBusIndex( slot._busName );
+                    {
+                        slot._busIndex         = resolveBusIndex( slot._busName );
+                        slot._attenuationIndex = resolveAttenuationIndex( slot._attenuationName );
+                    }
                 }
                 if ( _listVoice.size() < _pMixer->getDesc()._maxVoiceCount )
                     _listVoice.resize( _pMixer->getDesc()._maxVoiceCount );
@@ -312,6 +364,28 @@ namespace sw
             case CommandType::SetRandomSeed:
             {
                 _random._state = command._seed;
+                break;
+            }
+            case CommandType::SetListener:
+            {
+                _arrListener[command._index] = command._listener;
+                break;
+            }
+            case CommandType::SetEmitter:
+            {
+                AudioEmitterState& emitter = _mapEmitter[command._emitterId];
+                emitter._position          = command._position;
+                emitter._velocity          = command._velocity;
+                break;
+            }
+            case CommandType::SetEmitterOcclusion:
+            {
+                _mapEmitter[command._emitterId]._occlusionTarget = command._value;
+                break;
+            }
+            case CommandType::RemoveEmitter:
+            {
+                _mapEmitter.erase( command._emitterId );
                 break;
             }
         }
@@ -373,6 +447,75 @@ namespace sw
         return busIndex < 0 ? 0u : static_cast<uint32>( busIndex );
     }
 
+    int32 AudioEngine::resolveAttenuationIndex( const hashed_string& name ) const
+    {
+        if ( name.empty() )
+            return -1;
+        const vector<AudioAttenuationDesc>& listAttenuation = _pMixer->getDesc()._listAttenuation;
+        for ( size_t attenuationIndex = 0; attenuationIndex < listAttenuation.size(); ++attenuationIndex )
+        {
+            if ( listAttenuation[attenuationIndex]._name == name )
+                return static_cast<int32>( attenuationIndex );
+        }
+        return -1;
+    }
+
+    void AudioEngine::updateEmitters()
+    {
+        // 한 극 추종: 블록마다 남은 차이의 (1 − e^(−블록/τ)) 만큼 다가간다.
+        const float32 smoothing    = _pMixer->getDesc()._occlusion._smoothingSeconds;
+        const float32 blockSeconds = static_cast<float32>( audio::kBlockFrameCount ) / static_cast<float32>( audio::kSampleRate );
+        const float32 step         = smoothing <= 0.0f ? 1.0f : 1.0f - MathUtil::pow( 2.718281828f, -blockSeconds / smoothing );
+        for ( auto& entry : _mapEmitter )
+        {
+            AudioEmitterState& emitter = entry.second;
+            emitter._occlusion += ( emitter._occlusionTarget - emitter._occlusion ) * step;
+        }
+    }
+
+    void AudioEngine::updateVoiceTargets( VoiceSlot& slot )
+    {
+        float32 volume    = slot._volume;
+        float32 pan       = slot._pan;
+        float32 pitch     = slot._pitchRatio;
+        float32 lowPassHz = audio::kFilterOpenHz;
+
+        const bool bSpatial = slot._attenuationIndex >= 0 && slot._emitterId != 0;
+        if ( bSpatial )
+        {
+            const auto it = _mapEmitter.find( slot._emitterId );
+            if ( it != _mapEmitter.end() )
+            {
+                const AudioAttenuationDesc& attenuation = _pMixer->getDesc()._listAttenuation[static_cast<size_t>( slot._attenuationIndex )];
+                // 리스너가 여럿이면 가장 크게 들리는 리스너로 잰다(언리얼 · Wwise 의 "가장 가까운 리스너").
+                bool               bHaveListener = false;
+                AudioSpatialResult best;
+                for ( const AudioListenerState& listener : _arrListener )
+                {
+                    if ( listener._bActive == false )
+                        continue;
+                    const AudioSpatialResult result = AudioSpatializer::compute( listener, it->second, attenuation, _pMixer->getDesc()._occlusion );
+                    if ( bHaveListener == false || result._gain > best._gain )
+                        best = result;
+                    bHaveListener = true;
+                }
+                if ( bHaveListener )
+                {
+                    volume *= best._gain;
+                    pan = MathUtil::clamp( pan + best._pan, -1.0f, 1.0f );
+                    pitch *= best._pitchRatio;
+                    lowPassHz = best._lowPassHz;
+                }
+            }
+        }
+
+        const AudioClipData* pClip = slot._voice.getClip();
+        if ( pClip != nullptr )
+            slot._voice.setPlaybackRate( static_cast<float64>( pClip->_sampleRate ) / static_cast<float64>( audio::kSampleRate ) * static_cast<float64>( pitch ) );
+        slot._voice.setTarget( volume, pan );
+        slot._voice.setLowPass( lowPassHz );
+    }
+
     AudioEngine::BusUserState& AudioEngine::findOrAddBusUserState( const hashed_string& bus )
     {
         for ( BusUserState& state : _listBusUserState )
@@ -403,6 +546,7 @@ namespace sw
 
         AudioMixer& mixer = *_pMixer;
         mixer.beginBlock( audio::kBlockFrameCount );
+        updateEmitters();
 
         uint32 realCount = 0;
         for ( VoiceSlot& slot : _listVoice )
@@ -415,8 +559,8 @@ namespace sw
                 if ( slot._bInUse == false || slot._bWaitingForClip )
                     continue;
             }
-            slot._voice.setTarget( slot._volume, slot._pan );
-            slot._voice.mix( mixer.getBusInput( slot._busIndex ), audio::kBlockFrameCount );
+            updateVoiceTargets( slot );
+            slot._voice.mix( mixer.getBusInput( slot._busIndex ), audio::kBlockFrameCount, _listVoiceScratch.data() );
             ++realCount;
             if ( slot._voice.isFinished() )
                 freeVoice( slot );

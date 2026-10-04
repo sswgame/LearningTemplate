@@ -116,6 +116,8 @@ namespace sw
             SW_LOG_ERROR( "%#: the mixer needs exactly one root bus named '%#'", sourceName, AudioBusNames::kMaster );
             bValid = false;
         }
+        if ( validateAttenuations( _listAttenuation, sourceName ) == false )
+            bValid = false;
         if ( _maxVoiceCount == 0 || _maxRealVoiceCount == 0 )
         {
             SW_LOG_ERROR( "%#: voice limits must be at least 1", sourceName );
@@ -131,6 +133,66 @@ namespace sw
             }
         }
         return bValid;
+    }
+
+    const AudioAttenuationDesc* AudioMixerDesc::findAttenuation( const hashed_string& name ) const
+    {
+        for ( const AudioAttenuationDesc& attenuation : _listAttenuation )
+        {
+            if ( attenuation._name == name )
+                return &attenuation;
+        }
+        return nullptr;
+    }
+
+    bool AudioMixerDesc::validateAttenuations( const vector<AudioAttenuationDesc>& listAttenuation, string_view sourceName )
+    {
+        bool bValid = true;
+        for ( size_t attenuationIndex = 0; attenuationIndex < listAttenuation.size(); ++attenuationIndex )
+        {
+            const AudioAttenuationDesc& attenuation = listAttenuation[attenuationIndex];
+            if ( attenuation._name.empty() )
+            {
+                SW_LOG_ERROR( "%#: attenuation %# has no name", sourceName, attenuationIndex );
+                bValid = false;
+            }
+            for ( size_t otherIndex = attenuationIndex + 1; otherIndex < listAttenuation.size(); ++otherIndex )
+            {
+                if ( listAttenuation[otherIndex]._name == attenuation._name )
+                {
+                    SW_LOG_ERROR( "%#: attenuation '%#' is declared twice", sourceName, attenuation._name.c_str() );
+                    bValid = false;
+                }
+            }
+            if ( attenuation._maxDistance < attenuation._minDistance )
+            {
+                SW_LOG_ERROR( "%#: attenuation '%#' has a max distance below its min distance", sourceName, attenuation._name.c_str() );
+                bValid = false;
+            }
+            const bool bCustomSorted  = AudioMixerDesc::isCurveSorted( attenuation._listCustomPoint );
+            const bool bLowPassSorted = AudioMixerDesc::isCurveSorted( attenuation._listLowPassPoint );
+            if ( bCustomSorted == false || bLowPassSorted == false )
+            {
+                SW_LOG_ERROR( "%#: attenuation '%#' has curve points out of order", sourceName, attenuation._name.c_str() );
+                bValid = false;
+            }
+            if ( attenuation._curve == AudioAttenuationCurve::Custom && attenuation._listCustomPoint.empty() )
+            {
+                SW_LOG_ERROR( "%#: attenuation '%#' uses the Custom curve with no points", sourceName, attenuation._name.c_str() );
+                bValid = false;
+            }
+        }
+        return bValid;
+    }
+
+    bool AudioMixerDesc::isCurveSorted( const vector<AudioCurvePoint>& listPoint )
+    {
+        for ( size_t pointIndex = 1; pointIndex < listPoint.size(); ++pointIndex )
+        {
+            if ( listPoint[pointIndex]._x < listPoint[pointIndex - 1]._x )
+                return false;
+        }
+        return true;
     }
 
     int32 AudioMixerDesc::findBusIndex( const hashed_string& name ) const
