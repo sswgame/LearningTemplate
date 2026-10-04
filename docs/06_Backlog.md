@@ -121,6 +121,22 @@ cd build/Ninja-Debug/Bin
 
 ### 1-4. 에디터
 
+- **에디터 · 개발 편의 기능(2026-10-04 사용자 승인, 순서대로).** 이미 있는 것(gv 표 · 커맨드 팔레트 · 핫 리로드 · Undo · PIE 재생/한 프레임 ·
+  InputReplay · 기즈모 · 미니덤프 · RenderTargetPanel)은 다시 만들지 않는다.
+  - **B 빠른 이득** — GameView 가 `DebugOverlayState` 를 그린다(지금 아무도 안 읽음) · 진짜 Simulate(지금은 Play 와 같다) · 시간 배율 ·
+    N 프레임 진행 · "카메라 위치에서 시작" · `DebugDrawQueue` 에 상자 · 화살표 · 글자 · 지속시간 · 카테고리 · 로그 줄 클릭 → IDE ·
+    설정 파일 핫 리로드 · 타입/태그로 선택 · 이름 붙인 레이아웃.
+  - **C 확장 지점** — 등록부(`EditorRegistry<T>` · `IEditorPanel` · `IInspectorComponent` · 시각화 · `EditorCommandRegistry`)를
+    EditorFramework SHARED 로 떼어 내보내고, 키트 · 게임이 Dev 전용 `<Module>Editor` 모듈로 패널 · 인스펙터 · 시각화를 등록한다.
+    지금은 EditorModule DLL 안의 함수 정적이라 다른 모듈이 못 쓴다. 첫 사용자는 ThemePark 배치 시각화.
+  - **D 콘솔 · 치트** — 명령 입력 콘솔(gv 설정 · 자동완성 · 기록) + 개발 명령 등록부(`SW_DEV_COMMAND`, Shipping 제외).
+  - **E 자동 플레이 버튼** — 일곱 게임의 `-gv_*AutoPlay` 를 한 계약(`GameAutoplay` 등록)으로 묶어 툴바 버튼.
+  - **F 카탈로그 편집기** — 카탈로그 계약 하나(ResourceDataSchemaTest 의 종류 표를 대체) · enum 이름 표(`CityCatalog.cpp` 의 하드코딩 개수 포함
+    25 곳) · DataTablePanel 확장 편집기 · 저장 시 검증 · "어디서 쓰이나" 역색인 → 이름 바꾸기 시 참조 고침.
+  - **G 프로파일링 · 캡처** — 에디터 안 `FrameProfiler` 스코프 표(p50 · p99) · 네 백엔드 GPU 타임스탬프(지금 GL 만) · RenderDoc 캡처 버튼 ·
+    스크린샷 버튼 · 오버드로 · 노멀 · 깊이 보기.
+  - **H 품질 · 작업 흐름** — assert 무시 대화상자(이번만 / 계속) · 버그 리포트 한 방(스크린샷 + 로그 + InputReplay + 씬) · 시험 패널.
+
 - **에디터 자체 시험(`SW_EDITOR_SELF_TEST`)이 입력을 흉내 내지 못한다** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 툴팁 호버 · 드래그 드롭은
   ImGui 입력 이벤트를 넣는 창구(`ImGuiIO::AddMousePosEvent` 류를 프레임 단계에서 주입)가 있어야 덮인다.
 
@@ -138,6 +154,14 @@ cd build/Ninja-Debug/Bin
   내보내는 일이다. 쓰는 모듈이 생기면 그때.
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
+
+- **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 끝난 것: 매 틱 `hashed_string` 리터럴(`88b63828`). 남은 것 —
+  - 작은 것(기계적): 매 프레임 버리는 이벤트 vector 재사용(KartRace · TrampolineArena · GhostMansion · BrMatch) · 롤백 `saveState` 의 매 프레임
+    `BitWriter`(바깥 버퍼에 쓰기) · 정수 가중치 뽑기(`pickWeightedIndexInt`) · 카탈로그 로더 `GameDataXml::loadFile/loadText` 템플릿 ·
+    넷 메시지 id 를 `NetMessageRange::kX + n` 으로 · `ReplicationServer::handleInput` 은 틱 검사 먼저.
+  - 중간: `EventBuffer<T>`(drainEvents 27 곳) · `SpatialHashGrid2D` · `GridTopology` + 재사용 스크래치 BFS · NetConnection 메시지 버퍼 재사용 ·
+    `GameFlags` 와 `IFlagStore` 하나로 · TurnBattle 키트 정리.
+  - 동작이 바뀌는 것(시험 먼저): `NetPrioritizer` 공유 · 아이템/효과 처리기 등록부 · `TimedModifierSet`.
 
 - **나머지 시험 게임을 씬 · 프리팹 · 디렉터/뷰 컴포넌트로** — `ThemeParkTycoon` 이 본보기다(`Source/Games/README.md` 레시피). `PrimitiveStage` 를 쓰는 다섯
   (HarvestValley · NileCity · Shooter3D · StarSkirmish · VoxelCraft)과 AbilityArena. 그대로 쓰는 것: `OrthoCameraRigComponent`(HarvestValley · NileCity · StarSkirmish 의
@@ -223,6 +247,10 @@ cd build/Ninja-Debug/Bin
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
+
+- **`NetworkThreadTest.ConnectionsSurviveStalledGameThread` 의 50 ms 왕복 단언이 `-j 4` 부하에서 한 번 졌다**(2026-10-04 Shipping, 다시 돌리면 통과).
+  시간 상한 단언은 부하에 진다 — 다시 지면 상한을 늘리지 말고 "멈춘 게임 스레드에도 연결이 산다" 를 시간 대신 순서로 볼 수 있는지 본다.
+- **`-gv_profileFrames=90000` 실행이 약 60 초에 종료 0 · 스크린샷 없이 끝났다**(2026-10-04). 프로파일 세션에 시간 상한이 있는지부터 본다.
 
 - **`ReflectionTest_Shard2` 가 부하 아래에서 30 초 시한에 닿는다**(혼자 18~21 초, CI-Debug `-j 4` 중 다른 빌드와 겹친 1 회 초과). 또 보이면 샤드를 늘린다.
 
