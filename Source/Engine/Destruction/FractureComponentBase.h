@@ -78,10 +78,12 @@ namespace sw
     /** @brief 런타임 그룹 하나의 바디 · 자세 · 수명입니다. */
     struct FractureGroupRuntime
     {
-        float3             _position{}; ///< 그룹 자세(오브젝트 원점이 있는 월드 자리)
-        quaternion         _rotation{}; ///< 그룹 자세의 회전
-        PhysicsBodyHandle  _body{};     ///< 떨어진 그룹: 동적 바디 하나(앵커 그룹은 잎마다 정적 바디 — 컴포넌트가 잎 표로 든다)
-        PhysicsShapeHandle _shape{};    ///< 떨어진 그룹의 컴파운드 셰이프(바디와 함께 놓는다)
+        float3             _position{};      ///< 그룹 자세(오브젝트 원점이 있는 월드 자리)
+        quaternion         _rotation{};      ///< 그룹 자세의 회전
+        float3             _drivePosition{}; ///< 네트워크가 정한 목표 자세(`_bDriven`)
+        quaternion         _driveRotation{};
+        PhysicsBodyHandle  _body{};  ///< 떨어진 그룹: 동적 바디 하나(앵커 그룹은 잎마다 정적 바디 — 컴포넌트가 잎 표로 든다)
+        PhysicsShapeHandle _shape{}; ///< 떨어진 그룹의 컴파운드 셰이프(바디와 함께 놓는다)
         uint32             _groupId{ 0 };
         uint32             _spawnOrder{ 0 }; ///< 만든 순서(예산이 오래된 것부터 고른다)
         float32            _volume{ 0.0f };  ///< 배율을 건 부피(세제곱미터)
@@ -91,7 +93,27 @@ namespace sw
         uint8              _bAnchored{ SW_FALSE };
         uint8              _bFrozen{ SW_FALSE }; ///< 바디를 뺐다(자세 고정)
         uint8              _bFading{ SW_FALSE };
-        uint8              _bGone{ SW_FALSE }; ///< 사라졌다(그리지 않는다)
+        uint8              _bGone{ SW_FALSE };   ///< 사라졌다(그리지 않는다)
+        uint8              _bDriven{ SW_FALSE }; ///< 네트워크가 자세를 정한다 — 바디는 키네마틱, 스텝마다 목표로 옮긴다
+        uint8              _layer{ 0 };          ///< 떨어진 그룹 바디의 물리 레이어(덩어리 · 파편)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 떨어진 그룹 하나의 지금 자세입니다(네트워크 복제가 읽는다). */
+    struct FractureGroupPose
+    {
+        float3     _position{}; ///< 그룹 자세의 자리(오브젝트 원점이 있는 월드 자리)
+        float3     _center{};   ///< 질량 중심(월드) — 보간 · 오차는 이것으로 본다(원점은 덩어리에서 멀 수 있어 돌면 크게 움직인다)
+        quaternion _rotation{};
+        uint32     _groupId{ 0 };
+        float32    _volume{ 0.0f };       ///< 배율을 건 부피 — 덩어리(`isChunkVolume`)면 서버가 자세를 보낸다
+        uint8      _bResting{ SW_FALSE }; ///< 잠들었거나 바디를 뺐다(멈췄다)
+        uint8      _bGone{ SW_FALSE };    ///< 사라졌다
+        uint8      _bDriven{ SW_FALSE };  ///< 네트워크가 자세를 정한다(클라이언트의 덩어리 — 키네마틱)
+        uint8      _bHasBody{ SW_FALSE }; ///< 바디가 있다(충돌한다)
+        uint8      _layer{ 0 };           ///< 바디의 물리 레이어
     };
 } // namespace sw
 
@@ -105,13 +127,17 @@ namespace sw
             Mesh = 0,    ///< 메시 공간 사건 그대로(네트워크로 받은 것)
             WorldPoint,  ///< 월드 맞은 자리
             WorldRadial, ///< 월드 폭발
+            Snapshot,    ///< 상태 스냅숏(`applyNetworkSnapshot`) — 앞뒤 사건과 받은 순서대로 적용한다
         };
 
-        DestructionDamageEvent _event{};      ///< Mesh 면 그대로, 아니면 변형 · 반경 · 충격량만
-        float3                 _worldPoint{}; ///< 월드 중심
+        vector<uint8>          _snapshotBytes{}; ///< Snapshot 의 바이트
+        FractureGroupPose      _groupPose{};     ///< Mesh — 사건이 맞힌 떨어진 그룹의 보낸 쪽 자세(`_bHasGroupPose`). 적용 전에 그 자리로 옮긴다
+        DestructionDamageEvent _event{};         ///< Mesh 면 그대로, 아니면 변형 · 반경 · 충격량만
+        float3                 _worldPoint{};    ///< 월드 중심
         float3                 _worldDirection{};
         PhysicsBodyHandle      _hitBody{};
         Kind                   _kind{ Kind::Mesh };
+        uint8                  _bHasGroupPose{ SW_FALSE };
     };
 } // namespace sw
 
@@ -123,6 +149,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr uint32 kRecentHashCount = 64; ///< 받는 쪽이 사건마다 적어 두는 최근 상태 해시 수
+
         FractureComponentBase();
         ~FractureComponentBase() override;
 
@@ -131,6 +159,11 @@ namespace sw
 
         /** @brief 메시 공간 피해 사건 하나를 쌓습니다(다음 물리 프레임에 적용). 어느 틱에서든 부를 수 있습니다. */
         void applyDamage( const DestructionDamageEvent& event );
+        /**
+         * @brief 받은 사건 + 그 사건이 맞힌 떨어진 그룹의 보낸 쪽 자세입니다(네트워크). 적용하기 전에 그 그룹을 그 자리로 옮긴다 — 갈라진 조각이 받는 쪽의
+         *        늦은 자세가 아니라 보낸 쪽이 갈랐던 자리에서 태어난다.
+         */
+        void applyDamage( const DestructionDamageEvent& event, const FractureGroupPose& groupPose );
         /** @brief 월드의 맞은 자리 피해입니다(무기). @p hitBody 가 이 오브젝트의 떨어진 덩어리면 그 덩어리의 잎만 맞습니다. */
         void applyPointDamageAtWorld( const float3& worldPoint, const float3& worldDirection, float32 strain, float32 impulse, PhysicsBodyHandle hitBody );
         /** @brief 월드의 폭발 피해입니다. 붙은 구조와, 반경 안의 떨어진 덩어리마다 사건을 하나씩 만듭니다. */
@@ -155,7 +188,9 @@ namespace sw
         bool                       hasFractureData() const { return _asset != nullptr; }
         const DestructionState&    getState() const { return _state; }
         const DestructionEventLog& getEventLog() const { return _eventLog; }
-        const FractureAsset*       findAsset() const { return _asset.get(); }
+        /** @brief 사건 기록과 같은 자리 — 그 사건이 맞힌 떨어진 그룹의 적용 직전 자세입니다(앵커 그룹 · 그룹 없음은 `_groupId` 0). */
+        const vector<FractureGroupPose>& getEventGroupPoses() const { return _listEventGroupPose; }
+        const FractureAsset*             findAsset() const { return _asset.get(); }
         /** @brief 지금 있는 동적 바디 수(떨어진 그룹)입니다. */
         uint32 getDynamicBodyCount() const;
         /** @brief 지금 있는 정적 조각 바디 수(붙은 조각)입니다. */
@@ -175,6 +210,36 @@ namespace sw
         void setProfilePath( string_view path ) { _profilePath = string{ path }; }
         void setInteriorMaterialPath( const hashed_string& path ) { _interiorMaterialPath = path; }
 
+        // --- 네트워크(GF_NetClientServer 의 DestructionReplication 이 쓴다) ----------------------------------------------------------
+
+        /** @brief 상태를 시작했는지입니다(첫 물리 프레임 뒤). 그 전의 사건 · 스냅숏은 쌓였다가 시작하면 적용된다. */
+        bool isStateReady() const { return _bStateReady == SW_TRUE; }
+        /** @brief 아직 적용하지 않은 피해 · 스냅숏이 있는지입니다(해시를 비교하기 전에 본다). */
+        bool hasPendingDamage() const;
+        /** @brief 이 부피(배율을 건 세제곱미터)의 떨어진 그룹이 덩어리인지입니다 — 표의 `keepCollisionVolume` 이상. 덩어리는 서버가 자세를 보내고, 아래는 파편(꾸밈)이다. */
+        bool isChunkVolume( float32 volume ) const { return volume >= _profile._keepCollisionVolume; }
+        /**
+         * @brief 받는 쪽(권한 없음)이 사건 수 @p eventCount 에 이르렀을 때의 상태 해시입니다(최근 `kRecentHashCount` 개). 없으면 false.
+         * @details 사건은 물리 프레임마다 묶여 적용되므로 서버가 보낸 (사건 수, 해시)와 같은 순간이 지금 상태로 오지 않을 수 있다 — 사건마다 적어 둔다.
+         */
+        [[nodiscard]] bool findRecentStateHash( uint32 eventCount, uint64& outHash ) const;
+        /** @brief 파괴 재질 표입니다(상태를 시작한 뒤의 값). */
+        const DestructionProfile& getProfile() const { return _profile; }
+        /** @brief 떨어진(앵커가 아닌) 그룹들의 지금 자세입니다(그룹 번호 순). */
+        void collectGroupPoses( vector<FractureGroupPose>& outListPose ) const;
+        /**
+         * @brief 늦은 참가 · 어긋남 바로잡기용 스냅숏 — 구조 상태(`DestructionState::writeSnapshot`)와 떨어진 그룹의 자세 · 사라짐입니다.
+         * @details 사건열을 처음부터 다시 돌리지 않는다. 받는 쪽은 `applyNetworkSnapshot` 한 번으로 같은 해시 · 같은 그룹 · 그 자리의 덩어리가 된다.
+         */
+        void makeNetworkSnapshot( vector<uint8>& outBytes ) const;
+        /** @brief 스냅숏을 쌓습니다(다음 물리 프레임에 앞서 쌓인 사건 뒤에 적용). 바디 · 그림을 그룹마다 다시 짓는다. */
+        void applyNetworkSnapshot( const uint8* pData, size_t size );
+        /**
+         * @brief 떨어진 그룹 하나의 자세를 네트워크가 정합니다(클라이언트의 덩어리) — @p worldCenter 는 질량 중심(월드). 그 바디는 키네마틱이 되고 스텝마다 이 자세로 옮겨진다.
+         * @details 그룹이 아직 없거나(사건이 오기 전) 사라졌으면 아무것도 하지 않는다. 다음 물리 프레임에 든다.
+         */
+        void driveGroup( uint32 groupId, const float3& worldCenter, const quaternion& rotation );
+
     protected:
         /** @brief 2D 물리(Box2D)를 쓰는지입니다. */
         virtual bool uses2DPhysics() const = 0;
@@ -184,6 +249,7 @@ namespace sw
         virtual bool isFractureStale() const { return false; }
 
         void beginPhysicsFrame( ScenePhysics& physics ) override;
+        void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
         void postPhysicsStep( ScenePhysics& physics ) override;
         void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
         void releasePhysics( ScenePhysics& physics ) override;
@@ -212,7 +278,7 @@ namespace sw
         /** @brief 앵커 그룹의 잎에만 정적 바디가 있게 맞춥니다(남는 것은 그대로 — 붙은 벽이 갈라져도 다시 만들지 않는다). */
         void syncStaticBodies( vector<PhysicsBodyHandle>& inoutListDestroy );
         /** @brief 메시 공간 사건 하나를 상태에 적용하고 기록 · 그룹 바디를 고칩니다. */
-        void applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event );
+        void applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event, const FractureGroupPose* pGroupPose = nullptr );
         /** @brief 월드 요청 하나를 지금 자세로 메시 공간 사건들로 바꿉니다. */
         void convertWorldDamage( const FracturePendingDamage& pending, vector<DestructionDamageEvent>& outListEvent ) const;
         /** @brief 잎 → 런타임 자리 표를 다시 짓습니다. */
@@ -236,6 +302,14 @@ namespace sw
         Component* resolveOwnedComponent( const ComponentHandle& handle ) const;
         /** @brief 바디가 하나도 남지 않게 놓고 셰이프를 지웁니다. */
         void releaseAllBodies();
+        /** @brief 쌓인 스냅숏 하나를 지금 적용합니다 — 상태를 바꾸고 그룹 바디 · 그림을 다시 짓는다. */
+        void applySnapshotNow( ScenePhysics& physics, const vector<uint8>& bytes );
+        /** @brief 쌓인 자세 목표를 그룹에 옮깁니다(처음 받은 그룹은 바디를 키네마틱으로). */
+        void applyDriveTargets();
+        /** @brief 씬의 파편 바디 수(예산)를 바꿉니다. */
+        void changeDebrisBodyCount( int32 delta );
+        /** @brief 받는 쪽이면 지금 상태의 (사건 수, 해시)를 최근 표에 적습니다. */
+        void recordRecentStateHash();
 
     private:
         PROPERTY( Category = "Fracture", DisplayName = "Profile", AssetPath, Tooltip = "Destruction profile (*.destruction.xml); empty uses the engine default" )
@@ -264,7 +338,11 @@ namespace sw
         DestructionProfile              _profile;
         DestructionState                _state;
         DestructionEventLog             _eventLog;
-        mutex                           _pendingMutex;
+        vector<FractureGroupPose>       _listEventGroupPose; ///< `_eventLog` 와 같은 자리 — 맞은 떨어진 그룹의 적용 직전 자세
+        mutable mutex                   _pendingMutex;
+        vector<FractureGroupPose>       _listPendingDrive; ///< `driveGroup` 이 쌓은 목표(잠금 아래)
+        vector<uint64>                  _listRecentHash;   ///< 받는 쪽 — 사건 수 % `kRecentHashCount` 자리의 해시
+        vector<uint32>                  _listRecentCount;  ///< 위 자리의 사건 수
         vector<FracturePendingDamage>   _listPendingDamage;
         vector<PhysicsBodyHandle>       _listLeafStaticBody; ///< 잎마다 정적 바디(앵커 그룹의 잎만)
         vector<FractureGroupRuntime>    _listRuntime;        ///< 그룹 번호 오름차순

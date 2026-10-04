@@ -4,6 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Skeleton.h"
@@ -24,7 +25,7 @@
 
 namespace sw
 {
-    SW_GLOBAL_VARIABLE_INT( gv_destructionMaxDebrisBodies, 512, "모든 파괴 오브젝트가 함께 드는 떨어진 덩어리 바디의 상한(넘으면 오래된 작은 것부터 사라진다)" );
+    SW_GLOBAL_VARIABLE_INT( gv_destructionMaxDebrisBodies, 512, "한 씬(월드)의 모든 파괴 오브젝트가 함께 드는 떨어진 덩어리 바디의 상한(넘으면 오래된 작은 것부터 사라진다)" );
 } // namespace sw
 
 namespace sw
@@ -56,6 +57,10 @@ namespace sw
         virtual bool               isSleeping( PhysicsBodyHandle body ) const                                                                    = 0;
         virtual void               addImpulseAtPoint( PhysicsBodyHandle body, const float3& impulse, const float3& point )                       = 0;
         virtual void               setBodyEnabled( PhysicsBodyHandle body, bool bEnabled )                                                       = 0;
+        /** @brief 바디를 키네마틱으로 바꿉니다(네트워크가 자세를 정하는 덩어리). */
+        virtual void setBodyKinematic( PhysicsBodyHandle body ) = 0;
+        /** @brief 키네마틱 바디를 한 스텝 동안 목표 자세로 옮깁니다(닿는 것을 민다). */
+        virtual void moveKinematic( PhysicsBodyHandle body, const float3& position, const quaternion& rotation, float32 deltaTime ) = 0;
         /** @brief 잎 껍질을 그 자세에 놓았을 때 다른 오브젝트(@p ignoreUserData 가 아닌)의 정적 바디에 닿는지입니다(앵커 World). */
         virtual bool overlapsStaticWorld( const FractureAsset& asset, uint32 leaf, float32 scale, const float3& position, const quaternion& rotation,
                                           uint64 ignoreUserData ) const = 0;
@@ -73,13 +78,8 @@ namespace sw
             static constexpr uint32  kBakeAfterStillFrames = 30;
             static constexpr float32 kMoveEpsilon          = 1.0e-4f;
             static constexpr uint32  kMaxPolygonPoint2D    = 8;
-            static constexpr float32 kSpawnGraceTime       = 0.3f; ///< 갓 태어난 조각끼리의 부딪힘을 피해로 보지 않는 시간(초)
-
-            static uint32& getLiveDebrisBodyCount()
-            {
-                static uint32 s_count = 0;
-                return s_count;
-            }
+            static constexpr float32 kSpawnGraceTime       = 0.3f;        ///< 갓 태어난 조각끼리의 부딪힘을 피해로 보지 않는 시간(초)
+            static constexpr uint32  kSnapshotMagic        = 0x53574653u; ///< 'SWFS' — 네트워크 스냅숏(상태 + 그룹 자세)
 
             /** @brief 잎 껍질 점을 오브젝트 원점 기준으로(무게 중심 + 줄인 껍질) × 배율. */
             static void makeLeafHull( const FractureAsset& asset, uint32 leaf, float32 scale, float32 shrink, vector<float3>& outListPoint )
@@ -256,6 +256,12 @@ namespace sw
             bool isSleeping( PhysicsBodyHandle body ) const override { return _scene.isBodySleeping( body ); }
             void addImpulseAtPoint( PhysicsBodyHandle body, const float3& impulse, const float3& point ) override { _scene.addImpulseAtPoint( body, impulse, point ); }
             void setBodyEnabled( PhysicsBodyHandle body, bool bEnabled ) override { _scene.setBodyEnabled( body, bEnabled ); }
+            void setBodyKinematic( PhysicsBodyHandle body ) override { _scene.setBodyType( body, PhysicsBodyType::Kinematic ); }
+
+            void moveKinematic( PhysicsBodyHandle body, const float3& position, const quaternion& rotation, float32 deltaTime ) override
+            {
+                _scene.moveKinematic( body, position, rotation, deltaTime );
+            }
 
             bool overlapsStaticWorld( const FractureAsset& asset, uint32 leaf, float32 scale, const float3& position, const quaternion& rotation,
                                       uint64 ignoreUserData ) const override
@@ -413,6 +419,12 @@ namespace sw
             }
 
             void setBodyEnabled( PhysicsBodyHandle body, bool bEnabled ) override { _scene.setBodyEnabled( body, bEnabled ); }
+            void setBodyKinematic( PhysicsBodyHandle body ) override { _scene.setBodyType( body, PhysicsBodyType::Kinematic ); }
+
+            void moveKinematic( PhysicsBodyHandle body, const float3& position, const quaternion& rotation, float32 deltaTime ) override
+            {
+                _scene.moveKinematic( body, float2{ position._x, position._y }, FractureComponentBaseInternal::getAngleZ( rotation ), deltaTime );
+            }
 
             bool overlapsStaticWorld( const FractureAsset& asset, uint32 leaf, float32 scale, const float3& position, const quaternion& rotation,
                                       uint64 ignoreUserData ) const override
@@ -473,7 +485,11 @@ namespace sw
         , _profile{}
         , _state{}
         , _eventLog{}
+        , _listEventGroupPose{}
         , _pendingMutex{}
+        , _listPendingDrive{}
+        , _listRecentHash{}
+        , _listRecentCount{}
         , _listPendingDamage{}
         , _listLeafStaticBody{}
         , _listRuntime{}
@@ -548,6 +564,17 @@ namespace sw
         pending._event._strain  = strain;
         pending._event._impulse = impulse;
         pending._event._kind    = DestructionDamageKind::Point;
+        std::scoped_lock<mutex> lock{ _pendingMutex };
+        _listPendingDamage.push_back( pending );
+    }
+
+    void FractureComponentBase::applyDamage( const DestructionDamageEvent& event, const FractureGroupPose& groupPose )
+    {
+        FracturePendingDamage pending;
+        pending._kind          = FracturePendingDamage::Kind::Mesh;
+        pending._event         = event;
+        pending._groupPose     = groupPose;
+        pending._bHasGroupPose = SW_TRUE;
         std::scoped_lock<mutex> lock{ _pendingMutex };
         _listPendingDamage.push_back( pending );
     }
@@ -646,6 +673,21 @@ namespace sw
         if ( _bStateReady == SW_FALSE && initializeState( physics ) == false )
             return;
         processPendingEvents( physics );
+        applyDriveTargets();
+    }
+
+    void FractureComponentBase::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
+    {
+        (void)physics;
+        (void)stepIndex;
+        (void)stepCount;
+        if ( _physics == nullptr )
+            return;
+        for ( const FractureGroupRuntime& runtime : _listRuntime )
+        {
+            if ( runtime._bDriven == SW_TRUE && runtime._body.isValid() )
+                _physics->moveKinematic( runtime._body, runtime._drivePosition, runtime._driveRotation, fixedDeltaTime );
+        }
     }
 
     void FractureComponentBase::postPhysicsStep( ScenePhysics& physics )
@@ -695,7 +737,7 @@ namespace sw
             if ( runtime._body.isValid() )
             {
                 listDestroy.push_back( runtime._body );
-                --FractureComponentBaseInternal::getLiveDebrisBodyCount();
+                changeDebrisBodyCount( -1 );
                 runtime._body = PhysicsBodyHandle{};
             }
             if ( runtime._shape.isValid() )
@@ -790,10 +832,17 @@ namespace sw
         for ( const FracturePendingDamage& pending : listPending )
         {
             listEvent.clear();
+            if ( pending._kind == FracturePendingDamage::Kind::Snapshot )
+            {
+                applySnapshotNow( physics, pending._snapshotBytes );
+                continue;
+            }
             if ( pending._kind == FracturePendingDamage::Kind::Mesh )
-                listEvent.push_back( pending._event );
-            else
-                convertWorldDamage( pending, listEvent );
+            {
+                applyMeshEvent( physics, pending._event, pending._bHasGroupPose == SW_TRUE ? &pending._groupPose : nullptr );
+                continue;
+            }
+            convertWorldDamage( pending, listEvent );
             for ( const DestructionDamageEvent& event : listEvent )
                 applyMeshEvent( physics, event );
         }
@@ -876,12 +925,36 @@ namespace sw
         }
     }
 
-    void FractureComponentBase::applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event )
+    void FractureComponentBase::applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event, const FractureGroupPose* pGroupPose )
     {
+        // 맞은 떨어진 그룹 — 보낸 쪽 자세가 왔으면 그 자리로 옮기고, 적용 직전 자세를 사건 기록 옆에 적는다(보낼 때 함께 간다).
+        FractureGroupPose     hitPose;
+        FractureGroupRuntime* pHit = event._groupId != 0 ? findRuntime( event._groupId ) : nullptr;
+        if ( pHit != nullptr && pHit->_bAnchored == SW_FALSE )
+        {
+            if ( pGroupPose != nullptr && pGroupPose->_groupId == event._groupId )
+            {
+                pHit->_position = pGroupPose->_position;
+                pHit->_rotation = pGroupPose->_rotation;
+                if ( pHit->_bDriven == SW_TRUE )
+                {
+                    pHit->_drivePosition = pGroupPose->_position;
+                    pHit->_driveRotation = pGroupPose->_rotation;
+                }
+                _bPoseDirty = SW_TRUE;
+            }
+            hitPose._groupId  = pHit->_groupId;
+            hitPose._position = pHit->_position;
+            hitPose._rotation = pHit->_rotation;
+            hitPose._volume   = pHit->_volume;
+        }
+        _listEventGroupPose.push_back( hitPose );
         DestructionChange change;
-        const uint32      eventIndex = static_cast<uint32>( _eventLog._listEvent.size() );
-        const bool        bChanged   = _state.applyDamage( event, change );
+        // 흩기 씨앗의 번호는 상태의 사건 수다 — 스냅숏을 받은 쪽은 기록이 짧아도 서버와 같은 번호가 된다.
+        const uint32 eventIndex = _state.getEventCount();
+        const bool   bChanged   = _state.applyDamage( event, change );
         _eventLog._listEvent.push_back( event );
+        recordRecentStateHash();
         if ( bChanged == false )
             return;
         if ( _bFractured == SW_FALSE )
@@ -1001,7 +1074,7 @@ namespace sw
             if ( pRuntime->_body.isValid() )
             {
                 listDestroy.push_back( pRuntime->_body );
-                --FractureComponentBaseInternal::getLiveDebrisBodyCount();
+                changeDebrisBodyCount( -1 );
             }
             if ( pRuntime->_shape.isValid() )
                 _physics->destroyShape( pRuntime->_shape );
@@ -1100,11 +1173,12 @@ namespace sw
         const bool          bChunk = inoutRuntime._volume >= _profile._keepCollisionVolume;
         const ScenePhysics* pScene = getScenePhysics();
         const uint8         layer  = pScene != nullptr ? pScene->resolveLayer( bChunk ? _chunkLayer : _debrisLayer ) : 0;
-        const uint64        selfId = getOwner() != nullptr ? getOwner()->getObjectId() : 0;
+        inoutRuntime._layer        = layer;
+        const uint64 selfId        = getOwner() != nullptr ? getOwner()->getObjectId() : 0;
         inoutRuntime._body         = _physics->createGroupBody( listLeaf, inoutRuntime._position, inoutRuntime._rotation, inoutRuntime._volume * _profile._density, linearVelocity,
                                                                 angularVelocity, layer, selfId, inoutRuntime._shape );
         if ( inoutRuntime._body.isValid() )
-            ++FractureComponentBaseInternal::getLiveDebrisBodyCount();
+            changeDebrisBodyCount( 1 );
     }
 
     void FractureComponentBase::syncStaticBodies( vector<PhysicsBodyHandle>& inoutListDestroy )
@@ -1179,7 +1253,7 @@ namespace sw
                 if ( bRemoveOnSleep )
                 {
                     listDestroy.push_back( runtime._body );
-                    --Internal::getLiveDebrisBodyCount();
+                    changeDebrisBodyCount( -1 );
                     runtime._body    = PhysicsBodyHandle{};
                     runtime._bFrozen = SW_TRUE;
                 }
@@ -1198,7 +1272,7 @@ namespace sw
                     if ( runtime._body.isValid() )
                     {
                         listDestroy.push_back( runtime._body );
-                        --Internal::getLiveDebrisBodyCount();
+                        changeDebrisBodyCount( -1 );
                         runtime._body = PhysicsBodyHandle{};
                     }
                 }
@@ -1209,7 +1283,7 @@ namespace sw
 
         // 예산 — 이 오브젝트(표의 maxBodies)와 전역(gv_destructionMaxDebrisBodies)을 넘으면 오래된 것부터, 작은 것을 먼저 사라지게 한다.
         const uint32 globalLimit = static_cast<uint32>( MathUtil::max( 0, static_cast<int32>( gv_destructionMaxDebrisBodies ) ) );
-        uint32       globalCount = Internal::getLiveDebrisBodyCount();
+        uint32       globalCount = getScenePhysics() != nullptr ? getScenePhysics()->getDebrisBodyCount() : 0u;
         while ( liveBodyCount > _profile._maxDebrisBody || globalCount > globalLimit )
         {
             FractureGroupRuntime* pOldest = nullptr;
@@ -1227,10 +1301,10 @@ namespace sw
                 break;
             pOldest->_bFading = SW_TRUE;
             listDestroy.push_back( pOldest->_body );
-            --Internal::getLiveDebrisBodyCount();
+            changeDebrisBodyCount( -1 );
             pOldest->_body = PhysicsBodyHandle{};
             --liveBodyCount;
-            globalCount = Internal::getLiveDebrisBodyCount();
+            globalCount = getScenePhysics() != nullptr ? getScenePhysics()->getDebrisBodyCount() : 0u;
             bMoved      = true;
         }
         if ( listDestroy.empty() == false )
@@ -1397,5 +1471,291 @@ namespace sw
         const float32 boundRadius = float3::getDistance( _asset->_boundsMax, center ) * scale;
         const float3  worldBounds = position + float3::transform( center * scale, rotation );
         return float3::getDistance( worldBounds, worldCenter ) <= radius + boundRadius;
+    }
+} // namespace sw
+
+namespace sw
+{
+    // --- 네트워크 ---------------------------------------------------------------------------------------------------------------
+
+    void FractureComponentBase::changeDebrisBodyCount( int32 delta )
+    {
+        ScenePhysics* pScene = getScenePhysics();
+        if ( pScene != nullptr )
+            pScene->changeDebrisBodyCount( delta );
+    }
+
+    void FractureComponentBase::recordRecentStateHash()
+    {
+        if ( _bAuthority )
+            return;
+        if ( _listRecentHash.size() != kRecentHashCount )
+        {
+            _listRecentHash.assign( kRecentHashCount, 0 );
+            _listRecentCount.assign( kRecentHashCount, 0xFFFFFFFFu );
+        }
+        const uint32 eventCount = _state.getEventCount();
+        const uint32 slot       = eventCount % kRecentHashCount;
+        _listRecentHash[slot]   = _state.computeStateHash();
+        _listRecentCount[slot]  = eventCount;
+    }
+
+    bool FractureComponentBase::findRecentStateHash( uint32 eventCount, uint64& outHash ) const
+    {
+        if ( _listRecentCount.size() != kRecentHashCount )
+            return false;
+        const uint32 slot = eventCount % kRecentHashCount;
+        if ( _listRecentCount[slot] != eventCount )
+            return false;
+        outHash = _listRecentHash[slot];
+        return true;
+    }
+
+    bool FractureComponentBase::hasPendingDamage() const
+    {
+        std::scoped_lock<mutex> lock{ _pendingMutex };
+        return _listPendingDamage.empty() == false;
+    }
+
+    void FractureComponentBase::collectGroupPoses( vector<FractureGroupPose>& outListPose ) const
+    {
+        outListPose.clear();
+        for ( const FractureGroupRuntime& runtime : _listRuntime )
+        {
+            if ( runtime._bAnchored == SW_TRUE )
+                continue;
+            FractureGroupPose pose;
+            pose._position                 = runtime._position;
+            pose._rotation                 = runtime._rotation;
+            pose._center                   = runtime._position;
+            pose._groupId                  = runtime._groupId;
+            const DestructionGroup* pGroup = _state.findGroup( runtime._groupId );
+            if ( pGroup != nullptr )
+            {
+                float3 localCenter{};
+                (void)_state.computeGroupMass( *pGroup, localCenter );
+                pose._center = runtime._position + float3::transform( localCenter * _objectScale, runtime._rotation );
+            }
+            pose._volume   = runtime._volume;
+            pose._bResting = ( runtime._body.isValid() == false || runtime._sleepTime > 0.0f ) ? SW_TRUE : SW_FALSE;
+            pose._bGone    = runtime._bGone;
+            pose._bDriven  = runtime._bDriven;
+            pose._bHasBody = runtime._body.isValid() ? SW_TRUE : SW_FALSE;
+            pose._layer    = runtime._layer;
+            outListPose.push_back( pose );
+        }
+    }
+
+    void FractureComponentBase::makeNetworkSnapshot( vector<uint8>& outBytes ) const
+    {
+        using Internal = FractureComponentBaseInternal;
+        vector<uint8> stateBytes;
+        _state.writeSnapshot( stateBytes );
+        vector<FractureGroupPose> listPose;
+        collectGroupPoses( listPose );
+        BitWriter writer;
+        writer.writeUint32( Internal::kSnapshotMagic );
+        writer.writeVarUint( stateBytes.size() );
+        writer.writeBytes( stateBytes.data(), static_cast<int32>( stateBytes.size() ) );
+        writer.writeVarUint( listPose.size() );
+        for ( const FractureGroupPose& pose : listPose )
+        {
+            writer.writeVarUint( pose._groupId );
+            writer.writeBits( pose._bGone == SW_TRUE ? 1u : 0u, 1 );
+            if ( pose._bGone == SW_TRUE )
+                continue;
+            writer.writeFloat( pose._position._x );
+            writer.writeFloat( pose._position._y );
+            writer.writeFloat( pose._position._z );
+            writer.writeFloat( pose._rotation._x );
+            writer.writeFloat( pose._rotation._y );
+            writer.writeFloat( pose._rotation._z );
+            writer.writeFloat( pose._rotation._w );
+        }
+        outBytes = writer.releaseBytes();
+    }
+
+    void FractureComponentBase::applyNetworkSnapshot( const uint8* pData, size_t size )
+    {
+        if ( pData == nullptr || size == 0 )
+            return;
+        FracturePendingDamage pending;
+        pending._kind = FracturePendingDamage::Kind::Snapshot;
+        pending._snapshotBytes.assign( pData, pData + size );
+        std::scoped_lock<mutex> lock{ _pendingMutex };
+        _listPendingDamage.push_back( std::move( pending ) );
+    }
+
+    void FractureComponentBase::driveGroup( uint32 groupId, const float3& worldCenter, const quaternion& rotation )
+    {
+        FractureGroupPose target;
+        target._groupId  = groupId;
+        target._center   = worldCenter;
+        target._rotation = rotation;
+        std::scoped_lock<mutex> lock{ _pendingMutex };
+        for ( FractureGroupPose& existing : _listPendingDrive )
+        {
+            if ( existing._groupId == groupId )
+            {
+                existing = target;
+                return;
+            }
+        }
+        _listPendingDrive.push_back( target );
+    }
+
+    void FractureComponentBase::applyDriveTargets()
+    {
+        vector<FractureGroupPose> listDrive;
+        {
+            std::scoped_lock<mutex> lock{ _pendingMutex };
+            listDrive.swap( _listPendingDrive );
+        }
+        if ( _physics == nullptr )
+            return;
+        for ( const FractureGroupPose& target : listDrive )
+        {
+            FractureGroupRuntime* pRuntime = findRuntime( target._groupId );
+            if ( pRuntime == nullptr || pRuntime->_bAnchored == SW_TRUE || pRuntime->_bGone == SW_TRUE )
+                continue;
+            const DestructionGroup* pGroup = _state.findGroup( target._groupId );
+            if ( pGroup == nullptr )
+                continue;
+            // 질량 중심 → 그룹 원점(오브젝트 원점이 있는 자리).
+            float3 localCenter{};
+            (void)_state.computeGroupMass( *pGroup, localCenter );
+            if ( pRuntime->_bDriven == SW_FALSE && pRuntime->_body.isValid() )
+                _physics->setBodyKinematic( pRuntime->_body );
+            pRuntime->_bDriven       = SW_TRUE;
+            pRuntime->_drivePosition = target._center - float3::transform( localCenter * _objectScale, target._rotation );
+            pRuntime->_driveRotation = target._rotation;
+            if ( pRuntime->_body.isValid() == false )
+            {
+                // 바디를 뺀(쉬는) 그룹은 자세만 옮긴다 — 그림이 따라온다.
+                pRuntime->_position = pRuntime->_drivePosition;
+                pRuntime->_rotation = target._rotation;
+                _bPoseDirty         = SW_TRUE;
+            }
+        }
+    }
+
+    void FractureComponentBase::applySnapshotNow( ScenePhysics& physics, const vector<uint8>& bytes )
+    {
+        using Internal         = FractureComponentBaseInternal;
+        const utf8* pOwnerName = getOwner() != nullptr ? getOwner()->getName().c_str() : "?";
+        BitReader   reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+        if ( reader.readUint32() != Internal::kSnapshotMagic )
+        {
+            SW_LOG_ERROR( "'%#': destruction snapshot has a wrong magic", pOwnerName );
+            return;
+        }
+        const uint64 stateSize = reader.readVarUint();
+        if ( reader.hasOverflowed() || stateSize == 0 || stateSize > static_cast<uint64>( reader.getBitsRemaining() / 8 ) )
+        {
+            SW_LOG_ERROR( "'%#': destruction snapshot is truncated", pOwnerName );
+            return;
+        }
+        vector<uint8> stateBytes( static_cast<size_t>( stateSize ) );
+        if ( reader.readBytes( stateBytes.data(), static_cast<int32>( stateSize ) ) == false )
+            return;
+        DestructionState trial = _state;
+        if ( trial.readSnapshot( stateBytes.data(), stateBytes.size() ) == false )
+        {
+            SW_LOG_ERROR( "'%#': destruction snapshot does not fit this fracture", pOwnerName );
+            return;
+        }
+        vector<FractureGroupPose> listPose;
+        const uint64              poseCount = reader.readVarUint();
+        for ( uint64 index = 0; index < poseCount && reader.hasOverflowed() == false; ++index )
+        {
+            FractureGroupPose pose;
+            pose._groupId = static_cast<uint32>( reader.readVarUint() );
+            pose._bGone   = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
+            if ( pose._bGone == SW_FALSE )
+            {
+                pose._position._x = reader.readFloat();
+                pose._position._y = reader.readFloat();
+                pose._position._z = reader.readFloat();
+                pose._rotation._x = reader.readFloat();
+                pose._rotation._y = reader.readFloat();
+                pose._rotation._z = reader.readFloat();
+                pose._rotation._w = reader.readFloat();
+            }
+            listPose.push_back( pose );
+        }
+        if ( reader.hasOverflowed() )
+        {
+            SW_LOG_ERROR( "'%#': destruction snapshot poses are truncated", pOwnerName );
+            return;
+        }
+        _state = std::move( trial );
+        recordRecentStateHash();
+
+        // 아직 온전하고 스냅숏도 한 덩어리 그대로면 바디 · 그림을 바꿀 것이 없다(변형만 쌓였다).
+        const vector<DestructionGroup>& listGroup = _state.getGroups();
+        const bool                      bIntact   = listGroup.size() == 1 && listGroup[0]._id == 1;
+        if ( bIntact && _bFractured == SW_FALSE )
+            return;
+        if ( _bFractured == SW_FALSE )
+            activate( physics );
+
+        // 그룹 런타임을 모두 내리고 스냅숏의 그룹마다 다시 세운다(정적 잎 바디는 `syncStaticBodies` 가 맞춘다).
+        vector<PhysicsBodyHandle> listDestroy;
+        for ( FractureGroupRuntime& runtime : _listRuntime )
+        {
+            if ( runtime._body.isValid() )
+            {
+                listDestroy.push_back( runtime._body );
+                changeDebrisBodyCount( -1 );
+            }
+            if ( runtime._shape.isValid() )
+                _physics->destroyShape( runtime._shape );
+        }
+        _listRuntime.clear();
+        for ( const DestructionGroup& group : listGroup )
+        {
+            FractureGroupRuntime runtime;
+            runtime._groupId   = group._id;
+            runtime._position  = _objectPosition;
+            runtime._rotation  = _objectRotation;
+            runtime._bAnchored = group._bAnchored;
+            if ( runtime._bAnchored == SW_FALSE )
+            {
+                const FractureGroupPose* pPose = nullptr;
+                for ( const FractureGroupPose& pose : listPose )
+                {
+                    if ( pose._groupId == group._id )
+                        pPose = &pose;
+                }
+                if ( pPose != nullptr && pPose->_bGone == SW_TRUE )
+                {
+                    runtime._bGone = SW_TRUE;
+                    runtime._fade  = 0.0f;
+                }
+                else
+                {
+                    if ( pPose != nullptr )
+                    {
+                        runtime._position = pPose->_position;
+                        runtime._rotation = pPose->_rotation;
+                    }
+                    spawnGroup( runtime, group, float3{}, float3{} );
+                    // 받는 쪽의 덩어리는 서버 자세를 따른다 — 멈춘 덩어리의 자세는 다시 오지 않으므로 스냅숏 자세에 키네마틱으로 둔다.
+                    if ( _bAuthority == false && pPose != nullptr && isChunkVolume( runtime._volume ) && runtime._body.isValid() )
+                    {
+                        _physics->setBodyKinematic( runtime._body );
+                        runtime._bDriven       = SW_TRUE;
+                        runtime._drivePosition = runtime._position;
+                        runtime._driveRotation = runtime._rotation;
+                    }
+                }
+            }
+            _listRuntime.push_back( runtime );
+        }
+        syncStaticBodies( listDestroy );
+        if ( listDestroy.empty() == false )
+            _physics->destroyBodies( listDestroy );
+        rebuildLeafRuntimeMap();
+        _bPoseDirty = SW_TRUE;
     }
 } // namespace sw
