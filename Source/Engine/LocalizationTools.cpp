@@ -504,24 +504,29 @@ namespace sw
         SW_LOG_INFO( "[GatherText] project '%#': %# files, +%# added, ~%# changed, -%# removed, %# unchanged%#", result._projectName.c_str(), result._fileCount,
                      report._listAdded.size(), report._listChanged.size(), report._listRemoved.size(), report._unchangedCount,
                      result._bOutOfDate ? " (OUT OF DATE)" : ( result._bWritten ? " (written)" : "" ) );
+        // 줄을 모아 한 번에 쓴다 — 정보 로그가 빠지는 배포 구성에서도 같은 코드다.
+        string details;
         for ( const string& key : report._listAdded )
-            SW_LOG_INFO( "[GatherText]   + %#", key.c_str() );
+            details.append( "\n  + " ).append( key );
         for ( const string& key : report._listChanged )
-            SW_LOG_INFO( "[GatherText]   ~ %#", key.c_str() );
+            details.append( "\n  ~ " ).append( key );
         for ( const string& key : report._listRemoved )
-            SW_LOG_INFO( "[GatherText]   - %#", key.c_str() );
+            details.append( "\n  - " ).append( key );
+        for ( const LocalizationCultureReport& culture : result._listCulture )
+        {
+            details.append( "\n  " ).append( culture._culture ).append( ": " ).append( to_string( culture._currentCount ) ).append( " current, " );
+            details.append( to_string( culture._staleCount ) ).append( " stale, " ).append( to_string( culture._reviewCount ) ).append( " review, " );
+            details.append( to_string( culture._missingCount ) ).append( " missing, " ).append( to_string( culture._orphanCount ) ).append( " orphan removed, " );
+            details.append( to_string( culture._prefilledExact ) ).append( " exact + " ).append( to_string( culture._prefilledFuzzy ) ).append( " fuzzy from translation memory" );
+        }
+        if ( details.empty() == false )
+            SW_LOG_INFO( "[GatherText] %#%#", result._projectName.c_str(), details.c_str() );
         for ( const TextGatherIssue& issue : report._listIssue )
         {
             if ( issue._bError )
                 SW_LOG_ERROR( "[GatherText] %#: %#", issue._location.c_str(), issue._message.c_str() );
             else
                 SW_LOG_WARNING( "[GatherText] %#: %#", issue._location.c_str(), issue._message.c_str() );
-        }
-        for ( const LocalizationCultureReport& culture : result._listCulture )
-        {
-            SW_LOG_INFO( "[GatherText]   %#: %# current, %# stale, %# review, %# missing, %# orphan removed, %# exact + %# fuzzy from translation memory", culture._culture.c_str(),
-                         culture._currentCount, culture._staleCount, culture._reviewCount, culture._missingCount, culture._orphanCount, culture._prefilledExact,
-                         culture._prefilledFuzzy );
         }
     }
 
@@ -689,11 +694,14 @@ namespace sw
         {
             vector<LocalizationExchangeResult> listResult;
             bSucceeded = exportProjectPo( projectPath, listResult ) && bSucceeded;
+            string summary;
             for ( const LocalizationExchangeResult& result : listResult )
             {
-                SW_LOG_INFO( "[ExportPo] %# -> %#: %# entries, %# translated, %# fuzzy (%# stale)", result._culture.c_str(), result._path.c_str(), result._entryCount,
-                             result._translatedCount, result._fuzzyCount, result._staleCount );
+                summary.append( "\n  " ).append( result._culture ).append( " -> " ).append( result._path ).append( ": " ).append( to_string( result._entryCount ) );
+                summary.append( " entries, " ).append( to_string( result._translatedCount ) ).append( " translated, " ).append( to_string( result._fuzzyCount ) );
+                summary.append( " fuzzy (" ).append( to_string( result._staleCount ) ).append( " stale)" );
             }
+            SW_LOG_INFO( "[ExportPo] %#%#", projectPath.c_str(), summary.c_str() );
         }
         return bSucceeded;
     }
