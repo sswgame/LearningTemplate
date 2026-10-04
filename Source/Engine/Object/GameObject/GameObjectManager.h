@@ -421,13 +421,18 @@ namespace sw
          * @details 보통은 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눕니다(한 오브젝트의 항목은 한 워커가 순서대로).
          *          서브틱 선행 조건이 하나라도 있으면 등록부가 지은 DAG 스테이지를 차례로 돕니다. 그 캐시는 등록부 세대로 무효화됩니다.
          */
-        void tickComponents( float32 deltaTime );
+        void tickComponents( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
         /** @brief 플레이 중에 붙어 줄을 선 컴포넌트의 onBeginPlay 를 부릅니다(게임 스레드, 틱 밖). 도는 중에 선 것은 다음 번에 돕니다. */
         void dispatchPendingBeginPlay();
         /** @brief 플레이 중에 붙은 컴포넌트를 시작 줄에 세웁니다(`GameObject::attachCreatedComponent`). 핸들로 들어 그새 해체돼도 안전합니다. */
         void queueBeginPlay( ComponentHandle handle );
-        /** @brief `tick` 의 컴포넌트 단계입니다 — 플러시 → 쓰기 큐 준비 → 틱 중 표시 → `tickComponents` → 표시 해제. 오브젝트가 있을 때만 돕니다. */
-        void tickComponentsPhase( float32 deltaTime );
+        /**
+         * @brief `tick` 의 컴포넌트 단계 하나입니다 — 플러시 → 쓰기 큐 준비 → 틱 중 표시 → `tickComponents`(그룹 [@p firstGroup, @p endGroup)) → 표시 해제.
+         *        오브젝트가 있을 때만 돕니다. 물리 앞(PrePhysics · DuringPhysics)과 뒤(PostPhysics · PostUpdate)에 한 번씩 불립니다.
+         */
+        void tickComponentsPhase( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
+        /** @brief 틱이 남긴 것을 적용합니다 — 지연 구조 변경 → 틱 쓰기 → 틱 뒤 큐 · 병합 · 시작(게임 스레드, 틱 밖). 물리 앞 · 프레임 끝에 한 번씩. */
+        void applyTickResults();
         /** @brief 새 ObjectId 를 발급합니다. */
         uint64 generateNewId();
         /** @brief `_mutex` 를 쥔 채 @p objectId 로 오브젝트를 만들어 이름 맵 · id 표 · 병합 대기 목록에 올립니다. */

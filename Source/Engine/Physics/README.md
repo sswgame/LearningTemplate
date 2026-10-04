@@ -64,12 +64,12 @@ Jolt 의 대상 기능 옵션(AVX2)과 정의는 Jolt 백엔드 소스에만 붙
 
 ### 0.3 씬의 물리와 컴포넌트
 
-`GameObjectManager` 가 `ScenePhysics` 를 소유하고 `stepPhysics` 에서 겹침 월드 다음에 한 번 진행합니다(`Engine/Object/GameObject/ScenePhysics.h`).
+`GameObjectManager` 가 `ScenePhysics` 를 소유하고 `stepPhysics` 에서 겹침 월드 다음에 한 번 진행합니다 — DuringPhysics 틱 · 애니메이션 뒤, PostPhysics 틱 앞(`Engine/Object/GameObject/ScenePhysics.h`).
 3D · 2D 씬은 처음 쓸 때 만듭니다. 컴포넌트(`Engine/Object/Component/Physics/`)는 틱하지 않고 단계(바디 → 관절 → 캐릭터)마다 불립니다:
 
 | 컴포넌트 | 하는 일 |
 |---|---|
-| `RigidBodyComponent` · `RigidBody2DComponent` | 바디 하나. 종류 · 셰이프(둘 이상이면 컴파운드) · 레이어 · 재질 · 질량 · 트리거 · 연속을 속성으로 든다. Dynamic 은 보간한 자세를 트랜스폼에 쓰고, Kinematic 은 트랜스폼을 따라 스텝마다 나눠 움직이고, 코드가 옮기면(`teleportTo` 포함) 순간이동 |
+| `RigidBodyComponent` · `RigidBody2DComponent` | 바디 하나(무기 판정의 히트 존 `_hitZone`, 3D 는 소켓 부착의 물리 창구 `getSocketPhysicsBody` 도 든다). 종류 · 셰이프(둘 이상이면 컴파운드) · 레이어 · 재질 · 질량 · 트리거 · 연속을 속성으로 든다. Dynamic 은 보간한 자세를 트랜스폼에 쓰고, Kinematic 은 트랜스폼을 따라 스텝마다 나눠 움직이고, 코드가 옮기면(`teleportTo` 포함) 순간이동 |
 | `JointComponent` · `Joint2DComponent` | 이 오브젝트의 강체를 부모 사슬에서 가장 가까운 강체(또는 월드)에 잇는다. 자리 · 축은 컴포넌트의 월드 자세 |
 | `CharacterControllerComponent` · `CharacterController2DComponent` | 캡슐 무버. `setMoveVelocity` · `jump`, 중력은 컴포넌트가 쌓는다. 자리는 발. 3D 는 애니메이션 루트 모션(`addRootMotionDisplacement` — 프레임의 스텝들이 나눠 간다)도 받는다 |
 

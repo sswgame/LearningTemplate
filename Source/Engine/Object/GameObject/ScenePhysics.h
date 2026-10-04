@@ -1,7 +1,7 @@
 /**
  * @file ScenePhysics.h
  * @brief 씬 하나의 강체 물리 — 3D · 2D 물리 씬(처음 쓸 때 만든다), 고정 스텝 누적기, 물리 컴포넌트 등록부, 접촉 이벤트를 컴포넌트에 나눠 주기입니다.
- * @details `GameObjectManager` 가 소유만 하고(`PrimitiveRegistry` · `TickRegistry` 와 같은 자리), 틱 · 트랜스폼 적용 뒤에 게임 스레드에서 `step` 을
+ * @details `GameObjectManager` 가 소유만 하고(`PrimitiveRegistry` · `TickRegistry` 와 같은 자리), DuringPhysics 틱 · 트랜스폼 적용 · 애니메이션 뒤(PostPhysics 틱 앞)에 게임 스레드에서 `step` 을
  *          한 번 부릅니다. 겹침만 재는 `PhysicsWorld`(AABB · 연속 쓸기 · `BoxCollider2DComponent` · 키트의 투사체 · 근접 판정)는 그대로 따로
  *          돕니다 — 강체 씬과 같은 레이어 표를 받습니다.
  *

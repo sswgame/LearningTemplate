@@ -240,8 +240,7 @@ cd build/Ninja-Debug/Bin
 - **캐릭터 외형 편집(로드맵).** 지금: 형상 쪽(아래 ①~④ · ⑤ 의 소켓 이름 공간)은 `Source/Engine/Character` 에 있다(README "통합이 할 일"), GPU 모프 풀(`Mesh::setGpuMorphEnabled`)은
   있다, 스켈레톤 에셋(`.skeleton.json`)은 본 · 레퍼런스 포즈 · 역 바인드와 임포트가 적은 본 부착 메시 표(소켓 파일을 처음 만들 근거)뿐이고 편집 창구가 없다.
   ①~④ 남은 것 — **통합**: `Mesh` · 포즈 ↔ `AppearanceGeometry` · `CharacterBoneArray` 변환, 체형 모프 · 피팅 델타(`FitPartResult::_listVertexDelta`)를 GPU 모프 풀에
-  싣기(스키닝 앞), 병합 결과(`MeshMerger`)를 인덱스 · 정점 버퍼와 구간 그리기로, 애니메이션 시스템이 본이 움직인 프레임에만 `SocketBindingComponent::updateSocketTransform`,
-  강체 컴포넌트가 `ISocketPhysicsBody` 를 구현해 `setPhysicsBody`, 표면 상태(`CharacterSurfaceState`)를 머티리얼 파라미터 · 마스크 텍스처로. **쿠킹**: 장비 정점 → 몸 전이
+  싣기(스키닝 앞), 병합 결과(`MeshMerger`)를 인덱스 · 정점 버퍼와 구간 그리기로, 애니메이션 시스템이 본이 움직인 프레임에만 `SocketBindingComponent::updateSocketTransform`, 표면 상태(`CharacterSurfaceState`)를 머티리얼 파라미터 · 마스크 텍스처로. **쿠킹**: 장비 정점 → 몸 전이
   (`SurfaceTransferUtil` — 모프 · 스킨 가중치)를 임포트 · 쿠킹 단계에, 아틀라스 굽기(`IMeshMergeHooks` 구현). **핫 리로드**: 소켓 · 레퍼런스 포즈 · 체형 · 피팅 표 · 부품
   피팅 · 표면 채널 파일을 고치면 외형을 다시 조립 — 소비자(외형 컴포넌트)가 `IAssetCache` 로 올린다(로더는 다 있다). **나중**: 천 시뮬레이션(Jolt 소프트 바디)이 같은 겹
   정보를 충돌체로(Mutable 의 Clip with Mesh · Clip Deform 이 같은 문제를 푼다), 파괴 가능 메시(미리 쪼갠 조각)가 `GeometryCutUtil` 을 그대로 쓴다. 참고: 언리얼 Mutable(Customizable Object) ·
@@ -324,11 +323,8 @@ cd build/Ninja-Debug/Bin
   GLOB · 리플렉션 헤더 목록을 다시 모아야 한다 — 낡은 빌드 폴더의 `generated/**/Base/*.gen.cpp` 가 남아 같은 타입이 두 번 등록되면 그 폴더를 지운다.
 
 - **상호작용 · 기믹(2026-10-04 들어감 — `GameFramework/Interaction` · `Gimmick` · `Spline`) 병합 뒤 남은 것.**
-  - 물리(Jolt · Box2D 병합 뒤): `IWorldQuery`(광선 — 상호작용 시야 · 레이저 · 포탑 · 밀기 블록) · `IGrabPhysics`(집기 · 던지기 — 강체를 키네마틱/관절로 손에 묶고
-    놓을 때 속도)를 백엔드가 게임 서비스로 건다(지금은 `PhysicsWorld` AABB · 트랜스폼 폴백). 3D 트리거 이벤트가 `Component::onOverlapBegin/End` 로 오면
-    `GimmickSensorComponent` 가 그대로 받는다 — 안 오면 센서에 붙인다. 눌림판 무게는 `RigidBodyComponent` 질량(지금 `GimmickWeightComponent`), 발사대 ·
-    컨베이어는 `CharacterControllerComponent` 가 `GimmickLaunchEvent` · `getSurfaceVelocity` 를 읽게, 기믹 프리팹의 `BoxCollider2DComponent` 는 3D 게임용
-    3D 트리거 · 강체 콜라이더 변형을 더한다(`Resource/common/prefabs/gimmicks`).
+  - 물리: 기믹 프리팹의 `BoxCollider2DComponent` 에 3D 게임용 3D 트리거 · 강체 콜라이더 변형을 더한다(`Resource/common/prefabs/gimmicks`). 월드 질의 · 카메라 암 ·
+    집기 · 눌림판 무게 · 발사대 · 컨베이어는 강체 물리에 이어졌다(`GameFramework/Interaction` · `Gimmick` README).
   - 애니메이션: 상호작용 단계에 몽타주(클립)를 이름으로 잇기 — 맞춤 마커 → 워프 목표는 들어갔다(`InteractorComponent` 가 시작할 때 넣는다).
   - 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
   - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
@@ -801,6 +797,8 @@ cd build/Ninja-Debug/Bin
 
 ### 3-6. 오브젝트 · 씬 · 틱
 
+- **물리는 DuringPhysics 와 PostPhysics 틱 사이에 돈다**(그 앞에 틱 결과 적용 → 애니메이션). PostPhysics 이후 틱은 이번 프레임의 바디 자세 · 겹침을 보고,
+  그 그룹에서 쓴 애니메이터 파라미터 · 트랜스폼은 다음 프레임의 포즈 · 물리에 든다(`PhysicsComponentTest.PostPhysicsTickSeesThisFramesBodyPose`).
 - **한 오브젝트의 두 번째 씬 컴포넌트는 첫 씬 컴포넌트(루트)에 붙는다** — 저장하면 `_attachComponent="CameraComponent#0"` 처럼 남는다. 카메라와 같은 오브젝트의 뷰 모델 ·
   조준선은 로컬 자리(카메라 기준)로 다룬다 — 월드 자리를 `setLocalPosition` 에 넣으면 카메라 자리만큼 두 번 밀린다(`FirstPersonCameraComponent`).
 - **씬 작성 코드의 `createEmptyActiveScene` 은 `GameCamera` 엔티티를 둔다.** 자기 카메라를 들고 오는 씬(1인칭 플레이어)은 저장 전에 지운다 — 같은 역할 · 우선순위의

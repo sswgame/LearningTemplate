@@ -21,7 +21,7 @@ namespace sw
 {
     /**
      * @class GimmickWeightComponent
-     * @brief 눌림판이 재는 무게입니다(없는 오브젝트는 센서의 기본 무게). 강체가 생기면 강체 질량을 대신 읽습니다.
+     * @brief 눌림판이 재는 무게입니다(데이터로 덮을 때). 없으면 강체(`RigidBodyComponent` · `RigidBody2DComponent`)의 질량, 그것도 없으면 센서의 기본 무게입니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Gimmick Weight", Tooltip = "Weight a pressure plate measures for this object" )
     class SW_GF_API GimmickWeightComponent : public Component
@@ -68,7 +68,7 @@ namespace sw
         void removeOccupant( GameObjectHandle handle );
 
         int32 getOccupantCount() const { return static_cast<int32>( _listOccupant.size() ); }
-        /** @brief 겹친 것들의 무게 합입니다(`GimmickWeightComponent`, 없으면 기본 무게). 사라진 것은 세지 않습니다. */
+        /** @brief 겹친 것들의 무게 합입니다(`GimmickWeightComponent` → 강체 질량 → 기본 무게). 사라진 것은 세지 않습니다. */
         float32                         computeOccupantWeight() const;
         const vector<GameObjectHandle>& getOccupants() const { return _listOccupant; }
 

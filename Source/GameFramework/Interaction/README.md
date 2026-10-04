@@ -12,7 +12,7 @@
 | `InteractableComponent` | 쓸 수 있는 오브젝트 — 종류 id, 맞춤 지점(`computeAlignmentPoint` — 소켓 표의 마커), 쿨다운, 강조 요청 깃발(`getHighlightRequest` — 렌더러 · UI 가 읽는다), 완료 처리 |
 | `InteractorComponent` | 쓰는 쪽 — 후보 모으기 · 고르기 · 진행, UI 안내(`InteractionPrompt`), 2D/3D(`InteractionSpace`) |
 | `SmartObjectComponent` · `SmartObjectSlots` | 오브젝트 위 자리(벤치 · 엄폐 · 작업대 · 숨는 곳)를 플레이어와 AI 가 같은 함수로 차지 · 비움(태그로 빈자리 찾기) |
-| `GrabberComponent` · `IGrabPhysics` | 집기 · 던지기 · 붙이기. 물리 백엔드 서비스가 없으면 트랜스폼 폴백(`TransformGrabPhysics`) |
+| `GrabberComponent` · `IGrabPhysics` | 집기 · 던지기 · 붙이기. 서비스가 없으면 강체 백엔드(`RigidBodyGrabPhysics` — 3D · 2D 강체를 키네마틱으로 손에 묶고 놓을 때 동적 + 속도), 강체 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`) |
 | `IInteractionAuthority` · `InteractionCompletedEvent` | 네트워크 권한 훅(권한 `Server` 는 시작 전 허락), 완료 이벤트("game" 채널) |
 
 ## 흐름
@@ -30,5 +30,6 @@
   없으면 오브젝트 원점 · 앞입니다. 상호작용을 시작하면 하는 쪽의 `MotionWarpingComponent` 에 그 자리 · 요를 마커 이름(없으면 `Interaction`)의 워프 목표로 넣어,
   상호작용 클립의 `MotionWarp` 창이 손을 문고리에 맞춥니다.
 - 후보는 하는 쪽마다 틱에 씬의 `InteractableComponent` 를 훑습니다(`forEachComponentOfType` — 오브젝트 수에 비례). 하는 쪽이 많아지면 공간 격자 등록부로 바꿉니다.
-- 시야는 `WorldQuery`(물리 백엔드 서비스, 없으면 `PhysicsWorld` AABB 폴백 — 트리거는 막지 않는다)입니다.
+- 시야는 `WorldQuery`(서비스가 없으면 씬의 강체 물리 `ScenePhysicsWorldQuery` — Jolt 3D · Box2D 2D, 쏘는 쪽 바디는 모두 건너뜀 — 와 `PhysicsWorld` AABB 폴백
+  중 가까운 것, 트리거는 막지 않는다)입니다. 틱 워커에서 묻는다 — 물리 step 은 틱 그룹 사이(틱 밖)라 질의와 겹치지 않는다.
 - 강조 요청은 깃발뿐입니다 — 외곽선 · 감각 모드 패스는 렌더러가 `getHighlightRequest` 를 읽어 그릴 때 붙습니다.

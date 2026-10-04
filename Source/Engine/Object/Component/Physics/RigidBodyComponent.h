@@ -11,12 +11,36 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
+#include "Engine/Object/Component/Physics/SocketPhysicsBody.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsAsset.h"
 #include "Engine/Physics/PhysicsDesc.h"
 #include "Engine/Physics/PhysicsShape.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    class RigidBodyComponent;
+
+    /**
+     * @class RigidBodySocketPhysics
+     * @brief 강체 컴포넌트가 소켓 부착에 보이는 얼굴입니다(리플렉션 컴포넌트는 기반 하나). 붙은 동안은 키네마틱(손을 따르는 히트박스), 떼면 동적 +
+     *        시작 속도, 되돌아가면 다시 키네마틱입니다.
+     */
+    class SW_API RigidBodySocketPhysics final : public ISocketPhysicsBody
+    {
+    public:
+        explicit RigidBodySocketPhysics( RigidBodyComponent& owner );
+
+        void beginPhysics( const float4x4& worldTransform, const float3& linearVelocity ) override;
+        void endPhysics() override;
+        bool findBodyWorldTransform( float4x4& outWorldTransform ) const override;
+
+    private:
+        RigidBodyComponent& _owner;
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -93,6 +117,8 @@ namespace sw
         float32 getBodyMass() const;
         /** @brief 바디가 잠들었는지입니다. */
         bool isSleeping() const;
+        /** @brief 소켓 부착이 물리로 뗄 때 쓰는 얼굴입니다(`SocketBindingComponent` 가 같은 오브젝트의 강체를 찾아 건다). */
+        ISocketPhysicsBody& getSocketPhysicsBody() { return _socketPhysics; }
 
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;
@@ -132,6 +158,7 @@ namespace sw
         PROPERTY( Category = "Body", Tooltip = "Draw the pose interpolated between the last two physics steps" )
         bool _bInterpolate;
 
+        RigidBodySocketPhysics                 _socketPhysics;
         PhysicsBodyHandle                      _body;
         PhysicsBodyCommand<PhysicsDimension3D> _command;
         mutable SpinLock                       _commandLock;

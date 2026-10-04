@@ -145,9 +145,47 @@ namespace sw
 
         // 오브젝트가 없으면 컴포넌트 틱까지만 건너뛴다. 아래 단계(지연 큐 · 병합 · 파괴)는 늘 돈다 — 여기서 통째로 돌아가면
         // 빈 씬에 넣은 `deferPostTick` 이 오브젝트가 생길 때까지 돌지 않는다.
+        // 한 프레임: 물리 앞 그룹(PrePhysics · DuringPhysics) → 결과 적용 → 애니메이션 → 물리 → 물리 뒤 그룹(PostPhysics · PostUpdate) → 결과 적용.
+        // 그래서 PostPhysics 컴포넌트(카메라 디렉터 · 상호작용 · 스프라이트 애니메이터)는 **이번 프레임의** 바디 자세와 겹침을 본다(언리얼 TG_PostPhysics).
+        constexpr uint32 kPostPhysicsGroup = static_cast<uint32>( TickGroup::PostPhysics );
         if ( _listGameObject.empty() == false )
-            tickComponentsPhase( deltaTime );
+            tickComponentsPhase( deltaTime, 0, kPostPhysicsGroup );
+        applyTickResults();
 
+        // 애니메이션 — 틱이 정한 파라미터로 포즈 · 스킨 팔레트를 만들고, 루트 모션을 트랜스폼(또는 캐릭터 컨트롤러)에 쓴다. 물리 **앞**이다 —
+        // 키네마틱 히트박스(래그돌)가 이번 프레임 포즈를 쫓고, 래그돌의 바디 자세는 물리 뒤에 읽혀 다음 포즈에 섞인다.
+        _animationSystem.evaluate( deltaTime );
+
+        if ( hasDirtySceneTransforms() )
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.flushTransformsPost" );
+            flushSceneTransforms();
+        }
+
+        // 이 프레임에 적용된 월드 자리로 겹침을 잰다. 이벤트 처리가 지운 것도 아래에서 함께 놓는다.
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
+            stepPhysics( deltaTime );
+        }
+
+        if ( _listGameObject.empty() == false )
+            tickComponentsPhase( deltaTime, kPostPhysicsGroup, TickRegistry::kGroupCount );
+        applyTickResults();
+        if ( hasDirtySceneTransforms() )
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.flushTransformsEnd" );
+            flushSceneTransforms();
+        }
+
+        // 틱이 지운 것(맞은 투사체 등)을 여기서 놓는다.
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.destroyPost" );
+            processDeferredDestruction();
+        }
+    }
+
+    void GameObjectManager::applyTickResults()
+    {
         // 지연된 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성)을 **부른 순서대로** 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.deferredTransforms" );
@@ -168,30 +206,9 @@ namespace sw
             // 틱이 만든 것(스폰)은 같은 프레임 안에 시작한다.
             dispatchPendingBeginPlay();
         }
-
-        // 애니메이션 — 틱이 정한 파라미터로 포즈 · 스킨 팔레트를 만들고, 루트 모션을 트랜스폼에 쓴다(아래 플러시가 반영한다).
-        _animationSystem.evaluate( deltaTime );
-
-        if ( hasDirtySceneTransforms() )
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.flushTransformsPost" );
-            flushSceneTransforms();
-        }
-
-        // 이 프레임에 적용된 월드 자리로 겹침을 잰다. 이벤트 처리가 지운 것도 아래에서 함께 놓는다.
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
-            stepPhysics( deltaTime );
-        }
-
-        // 틱이 지운 것(맞은 투사체 등)을 여기서 놓는다.
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.destroyPost" );
-            processDeferredDestruction();
-        }
     }
 
-    void GameObjectManager::tickComponentsPhase( float32 deltaTime )
+    void GameObjectManager::tickComponentsPhase( float32 deltaTime, uint32 firstGroup, uint32 endGroup )
     {
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.flushTransforms" );
@@ -207,13 +224,13 @@ namespace sw
             // 엔진 **전체의** 태스크 — 렌더 스레드의 패스 기록, 에셋 스트리밍, 비동기 씬 로드, 오디오 재생 — 가 빌 때까지 게임 스레드를
             // 세운다. onTick 이 낸 태스크가 틱 뒤 단계 전에 끝나야 하면 매니저가 자기 스테이지를 만들어 `waitStage` 로 기다린다.
             SW_PROFILE_SCOPE( "GT.Scene.tick.components" );
-            tickComponents( deltaTime );
+            tickComponents( deltaTime, firstGroup, endGroup );
         }
 
         _bTicking.store( false, std::memory_order_release );
     }
 
-    void GameObjectManager::tickComponents( float32 deltaTime )
+    void GameObjectManager::tickComponents( float32 deltaTime, uint32 firstGroup, uint32 endGroup )
     {
         {
             // 멤버십이 바뀐 오브젝트만 항목을 다시 짓는다. 씬 전체를 훑지 않는다.
@@ -226,7 +243,7 @@ namespace sw
         {
             // 보통 경로다. 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눈다. 한 오브젝트의 항목은 한 워커가 (순서 키 순으로)
             // 돌므로 같은 오브젝트의 컴포넌트 둘이 동시에 돌지 않는다.
-            for ( uint32 group = 0; group < TickRegistry::kGroupCount; ++group )
+            for ( uint32 group = firstGroup; group < endGroup && group < TickRegistry::kGroupCount; ++group )
             {
                 const vector<TickObjectEntry>& listEntry = _tickRegistry.getEntries( group );
                 if ( listEntry.empty() )
@@ -249,9 +266,10 @@ namespace sw
             _tickRegistry.computePrerequisiteStages( _listCachedTickStage );
         }
 
+        // 스테이지는 그룹 순서로 지어진다(한 스테이지 = 한 그룹) — 이번 단계의 그룹만 돈다.
         for ( const TickStage& stage : _listCachedTickStage )
         {
-            if ( stage.empty() )
+            if ( stage.empty() || stage.front()._group < firstGroup || stage.front()._group >= endGroup )
                 continue;
             GameObjectManagerTickInternal::StageTick job{};
             job._pItem     = stage.data();

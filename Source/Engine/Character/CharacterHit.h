@@ -42,16 +42,16 @@ namespace sw
          * @brief 3D 강체 씬에 광선을 쏩니다. @p ignoreObjectId 의 바디는 모두 건너뜁니다(0 이면 건너뛰지 않음). 3D 씬이 없으면 false 입니다.
          * @param layerMask 볼 레이어 비트(기본 모두). 트리거는 보지 않습니다.
          */
-        static bool raycast3D( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask, uint64 ignoreObjectId,
+        static bool raycast3D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask, uint64 ignoreObjectId,
                                CharacterRayHit& outHit );
         /** @brief 2D 강체 씬(XY 평면)에 광선을 쏩니다. 출발 · 방향의 Z 는 보지 않습니다. */
-        static bool raycast2D( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask, uint64 ignoreObjectId,
+        static bool raycast2D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask, uint64 ignoreObjectId,
                                CharacterRayHit& outHit );
         /** @brief 3D 강체 씬에 구를 쓸어 처음 맞은 것입니다(칼날 두께). */
-        static bool sphereCast3D( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 radius, uint32 layerMask,
+        static bool sphereCast3D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 radius, uint32 layerMask,
                                   uint64 ignoreObjectId, CharacterRayHit& outHit );
         /** @brief 2D 강체 씬에 원을 쓸어 처음 맞은 것입니다. */
-        static bool circleCast2D( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 radius, uint32 layerMask,
+        static bool circleCast2D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 radius, uint32 layerMask,
                                   uint64 ignoreObjectId, CharacterRayHit& outHit );
         /**
          * @brief 맞은 바디의 히트 존을 @p inoutHit 에 채웁니다(`_zone` · `_damageMultiplier` · `_bodyIndex`). 존이 없으면 이름은 비고 배율 1 입니다.
@@ -66,7 +66,7 @@ namespace sw
          * @param outHit 알린 맞음입니다(맞지 않았으면 그대로).
          * @return 오브젝트를 맞혔으면 true 입니다.
          */
-        static bool traceWeaponHit( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
+        static bool traceWeaponHit( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
                                     GameObject* pInstigator, float32 damage, float32 impulse, bool bIs2D, HitInfo& outHit );
     };
 } // namespace sw

@@ -8,6 +8,35 @@
 
 namespace sw
 {
+    RigidBodySocketPhysics::RigidBodySocketPhysics( RigidBodyComponent& owner )
+        : _owner{ owner }
+    {
+    }
+
+    void RigidBodySocketPhysics::beginPhysics( const float4x4& worldTransform, const float3& linearVelocity )
+    {
+        // 부착이 이미 그 자리에 놓았다(월드 자리를 지켜 뗐다) — 바디는 순간이동 없이 동적으로 바뀌고 시작 속도를 받는다.
+        (void)worldTransform;
+        _owner.setBodyType( PhysicsBodyType::Dynamic );
+        _owner.setLinearVelocity( linearVelocity );
+        _owner.wake();
+    }
+
+    void RigidBodySocketPhysics::endPhysics()
+    {
+        _owner.setLinearVelocity( float3{} );
+        _owner.setAngularVelocity( float3{} );
+        _owner.setBodyType( PhysicsBodyType::Kinematic );
+    }
+
+    bool RigidBodySocketPhysics::findBodyWorldTransform( float4x4& outWorldTransform ) const
+    {
+        if ( _owner.getBodyHandle().isValid() == false )
+            return false;
+        outWorldTransform = _owner.getWorldMatrix();
+        return true;
+    }
+
     RigidBodyComponent::RigidBodyComponent()
         : PhysicsComponent{ PhysicsComponentPhase::Body }
         , _bodyType{ PhysicsBodyType::Dynamic }
@@ -23,6 +52,7 @@ namespace sw
         , _bContinuous{ false }
         , _bLockRotation{ false }
         , _bInterpolate{ true }
+        , _socketPhysics{ *this }
         , _body{}
         , _command{}
         , _commandLock{}

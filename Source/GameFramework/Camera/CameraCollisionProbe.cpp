@@ -4,7 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Character/CharacterHit.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/ContinuousCollision.h"
+#include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
 namespace sw
@@ -80,6 +84,49 @@ namespace sw
             if ( _ignoredObjectId != 0 && body._objectId == _ignoredObjectId )
                 continue;
             CameraCollisionProbeInternal::sweepAgainst( from, displacement, length, radius, body._aabb, nearest, bHit );
+        }
+        outDistance = nearest;
+        return bHit;
+    }
+
+    SceneCameraProbe::SceneCameraProbe( const GameObjectManager& manager, uint64 ignoredObjectId )
+        : _manager{ manager }
+        , _ignoredObjectId{ ignoredObjectId }
+    {
+    }
+
+    bool SceneCameraProbe::sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const
+    {
+        const float3  displacement = to - from;
+        const float32 length       = displacement.getLength();
+        if ( length <= MathUtil::Epsilon )
+            return false;
+        // 강체 — 세상의 막는 것(Default · Static)만. 래그돌 뼈 · 파편 · 캐릭터 캡슐에 암이 걸리지 않게 한다.
+        uint32                 layerMask = MathUtil::MaxUInt32;
+        const PhysicsSettings* pSettings = _manager.getScenePhysics().findSettings();
+        uint8                  layer     = 0;
+        if ( pSettings != nullptr )
+        {
+            layerMask = 0;
+            if ( pSettings->findLayerIndex( hashed_string( "Default" ), layer ) )
+                layerMask |= 1u << layer;
+            if ( pSettings->findLayerIndex( hashed_string( "Static" ), layer ) )
+                layerMask |= 1u << layer;
+        }
+        float32         nearest = length;
+        bool            bHit    = false;
+        CharacterRayHit hit;
+        if ( CharacterHitUtil::sphereCast3D( _manager, from, displacement, length, radius, layerMask, _ignoredObjectId, hit ) )
+        {
+            nearest = hit._distance;
+            bHit    = true;
+        }
+        const PhysicsWorldCameraProbe overlapProbe( _manager.getPhysicsWorld(), 0, _ignoredObjectId );
+        float32                       overlapDistance = 0.0f;
+        if ( overlapProbe.sweepSphere( from, to, radius, overlapDistance ) && overlapDistance < nearest )
+        {
+            nearest = overlapDistance;
+            bHit    = true;
         }
         outDistance = nearest;
         return bHit;

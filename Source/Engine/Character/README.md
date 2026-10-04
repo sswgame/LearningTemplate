@@ -48,7 +48,8 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
 
 상태: `Bound` · `ReleasedAnimated` · `ReleasedPhysics` · `Returning`. **붙어 있으면 비용이 없습니다** — 주인 루트를 holder 루트에 붙이고 소켓 변환을 로컬로
 적을 뿐이라 트랜스폼 계층이 나머지를 하고 틱이 꺼져 있습니다. holder 의 본이 움직이면 애니메이션 시스템이 그 단위를 평가한 뒤 `updateSocketTransform` 을 부릅니다(같은
-값이면 아무것도 안 함). 떼기는 월드 자리를 지키고(첫 프레임 = 붙어 있던 자리), 물리는 `ISocketPhysicsBody`(강체 컴포넌트가 구현, `setPhysicsBody` 로 넘김)에 맡기며,
+값이면 아무것도 안 함). 떼기는 월드 자리를 지키고(첫 프레임 = 붙어 있던 자리), 물리는 `ISocketPhysicsBody`(`Object/Component/Physics/SocketPhysicsBody.h` — 강체 컴포넌트가 구현하고
+시작할 때 같은 오브젝트의 `RigidBodyComponent` 를 저절로 건다: 붙은 동안 키네마틱으로 손을 따르고, 떼면 동적 + 시작 속도, 되돌아가면 다시 키네마틱. 강체는 단위의 루트에 둔다)에 맡기며,
 되돌아가기는 지금 월드에서 소켓까지 `BlendCurveSpec`(카메라 블렌드와 같은 구현, `Engine/Animation/BlendCurve.h`)으로 섞습니다. `transferTo` 는 다시 스폰하지 않고
 주인을 바꿉니다(땅의 줍기 오브젝트 · 다른 캐릭터). 2D 도 같습니다 — 2D 오브젝트도 씬 컴포넌트(X · Y, Z 축 회전)입니다.
 
