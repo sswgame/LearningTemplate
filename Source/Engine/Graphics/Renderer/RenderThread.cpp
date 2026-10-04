@@ -44,8 +44,8 @@ namespace sw
      * @brief `-gv_screenshotCount=<N>` · `-gv_screenshotInterval=<K>` — 첫 장(`-gv_screenshotFrame`)부터 K 프레임마다 N 장을 찍습니다(움직임 · 튐 확인).
      * @details 두 장 이상이면 파일 이름의 확장자 앞에 `_000` · `_001` … 이 붙습니다. 장마다 GPU 되읽기라 그 프레임은 느려집니다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_screenshotCount, 1, "연속으로 찍을 스크린샷 수 (기본 1)", SW_KEEP_IN_SHIPPING );
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_screenshotInterval, 1, "연속 스크린샷 사이 프레임 수 (기본 1)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_screenshotCount, 1, "연속으로 찍을 스크린샷 수 (기본 1)" );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_screenshotInterval, 1, "연속 스크린샷 사이 프레임 수 (기본 1)" );
 
     // 커맨드 리스트를 프레임 끝에 모아 한 번에 제출할지(기본), 잘릴 때마다 바로 제출할지. 이 파일이 프레임마다 디바이스로 밀어 넣는다.
     // 두 모드 모두 기록 순서 = 실행 순서다. 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고

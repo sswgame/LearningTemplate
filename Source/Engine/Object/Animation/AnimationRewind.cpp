@@ -17,9 +17,9 @@ namespace sw
     /**
      * @brief `-gv_animationRewind=1` — 애니메이션 되감기 기록을 켭니다(기본 꺼짐). 콘솔 `anim.rewind on|off` · 에디터 Animation Rewind 패널도 이것을 바꿉니다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_animationRewind, 0, "Record animation rewind history (poses, graph state, notifies, curves, root motion)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_animationRewind, 0, "Record animation rewind history (poses, graph state, notifies, curves, root motion)" );
     /** @brief `-gv_animationRewindSeconds=<초>` — 되감기 기록이 남기는 시간입니다. */
-    SW_TEST_GLOBAL_VARIABLE_FLOAT( gv_animationRewindSeconds, 10.0f, "Seconds of animation rewind history kept per unit" );
+    SW_TEST_GLOBAL_VARIABLE( float32, gv_animationRewindSeconds, 10.0f, "Seconds of animation rewind history kept per unit" );
 
     namespace
     {

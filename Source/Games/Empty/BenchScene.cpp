@@ -92,24 +92,24 @@ namespace sw
      * @brief `-gv_benchCharacterColumns=N` — 벤치 캐릭터를 한 줄이 아니라 N 열 격자로 세웁니다(0 = 한 줄). 천 명은 한 줄이면 1.6 km 다.
      * @details 카메라는 격자 앞 위에서 내려다본다 — 앞줄은 크고 뒷줄은 작아 애니메이션 LOD 의 단계가 고루 나온다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchCharacterColumns, 0, "벤치 캐릭터를 N 열 격자로 세운다 (0=한 줄)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCharacterColumns, 0, "벤치 캐릭터를 N 열 격자로 세운다 (0=한 줄)" );
 
     /**
      * @brief `-gv_benchCrowdShare=1` — 벤치 캐릭터의 군중 포즈 공유를 켭니다(`SkeletalMeshComponent::setShareCrowdPose`).
      * @details 끄면(기본) 캐릭터마다 스킨 사본 · 포즈 · 팔레트다. 켜면 같은 상태 · 위상끼리 포즈 하나 · 결과 구간 하나를 나누고, 아주 먼 캐릭터는 VAT 다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchCrowdShare, 0, "벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=묶음 공유 + 먼 캐릭터 VAT)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCrowdShare, 0, "벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=묶음 공유 + 먼 캐릭터 VAT)" );
 
     /**
      * @brief `-gv_benchCharacterStagger=1` — 벤치 캐릭터의 시작 시각을 인덱스 해시로 흩습니다(군중이 한 프레임으로 맞춰 움직이지 않게).
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchCharacterStagger, 0, "벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCharacterStagger, 0, "벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초)" );
 
     /**
      * @brief `-gv_benchFaces=N` — 시험 머리 N 개를 한 줄로 세웁니다(얼굴 애니메이션 확인). 모두 카메라를 보고(시선) 깜빡이며, 짝수는 Talk 클립
      *        (모프 가중치 커브)을 재생하고 Happy 표정 0.6, 홀수는 시험 음성을 말합니다(비즘 트랙).
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchFaces, 0, "벤치 시험 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchFaces, 0, "벤치 시험 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선)" );
 
     /**
      * @brief `-gv_benchCombat=1` — KayKit 스켈레톤 적이 걸으며(발소리 알림 · 바닥 재질) 무기 레이캐스트를 맞고(히트 존 · 움찔), 180 프레임에 치명적 맞음으로 래그돌이 되고
