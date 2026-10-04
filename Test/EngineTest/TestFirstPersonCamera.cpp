@@ -2,6 +2,9 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Input/Events/RawInputEvent.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -9,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Components/FirstPersonCameraComponent.h"
+#include "GameFramework/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -169,4 +173,45 @@ SW_TEST_CASE( FirstPersonCameraTest, CameraFollowsItsParentWhenTheEyeIsLocal )
     pRig->setEyePosition( eye );
     SW_EXPECT_NEAR_EQUAL( -2.0f + 0.2f, pCamera->getWorldPosition()._x, 1.0e-4f );
     manager.endPlay();
+}
+
+/**
+ * @brief [FirstPersonCameraTest] 시점 액션이 정해지면 원시 마우스가 아니라 입력 맵 액션의 값(바인딩 배율까지)으로 돈다
+ */
+SW_TEST_CASE( FirstPersonCameraTest, LookActionTurnsTheViewThroughTheInputMap )
+{
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    game::bindLocalService<InputManager>( &input );
+    // 배율 3 — 원시 마우스로 읽으면 같은 이동이 세 배 덜 돈다.
+    input.getInputMap().bindMouseDelta( "Look", 3.0f );
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Player" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SW_ASSERT_NOT_NULL( pObject->addComponent<CameraComponent>() );
+    FirstPersonCameraComponent* pRig = pObject->addComponent<FirstPersonCameraComponent>();
+    SW_ASSERT_NOT_NULL( pRig );
+    pRig->setLookAction( hashed_string( "Look" ) );
+    manager.beginPlay();
+    pRig->onTick( 0.016f ); // 첫 틱은 잠금을 정한다
+
+    const float32 yawBefore = pRig->getLook().getYaw();
+    input.postRawEvent( RawInputEvent::makeMouseMove( 10, 0 ) );
+    input.beginFrame( 0.016f );
+    pRig->onTick( 0.016f );
+    const float32 turned = pRig->getLook().getYaw() - yawBefore;
+    // 입력 맵의 Look 값(이동량 × 배율 3)만큼 돌았다 — 원시 마우스 이동량으로 돌았다면 세 배 덜 돈다.
+    const float2          lookValue = input.getInputMap().getVector2D( "Look" );
+    const int2            rawDelta  = input.getMouseDelta();
+    const FirstPersonLook viaAction = FirstPersonCameraMath::computeLookAfterMouse( FirstPersonLook{}, lookValue._x, 0.0f, 0.0022f );
+    const FirstPersonLook viaRaw    = FirstPersonCameraMath::computeLookAfterMouse( FirstPersonLook{}, static_cast<float32>( rawDelta._x ), 0.0f, 0.0022f );
+    SW_ASSERT_TRUE( rawDelta._x != 0 );
+    SW_EXPECT_NEAR_EQUAL( 3.0f * static_cast<float32>( rawDelta._x ), lookValue._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( viaAction.getYaw(), turned, 1.0e-5f );
+    SW_EXPECT_TRUE( MathUtil::abs( viaRaw.getYaw() - turned ) > 1.0e-4f );
+
+    manager.endPlay();
+    game::unbindLocalService<InputManager>();
+    input.shutdown();
 }

@@ -340,6 +340,19 @@ namespace sw
                 if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
                     bindChord( hashed_string( pActionName ), modifierKey, triggerKey, trigger, hashed_string( chordLayer.view() ) );
             }
+
+            // 6) <mouseDelta> 태그 파싱 — 마우스 이동량(시점). scale 은 감도 배율이다(1 = 픽셀 그대로).
+            for ( XmlNode deltaNode = actionNode.findChild( "mouseDelta" ); deltaNode.isValid(); deltaNode = deltaNode.findNextSibling( "mouseDelta" ) )
+            {
+                hashed_string deltaLayer      = layer;
+                const utf8*   pDeltaLayerAttr = deltaNode.findAttribute( "layer" );
+                if ( StringUtil::isNullOrEmpty( pDeltaLayerAttr ) == false )
+                {
+                    deltaLayer = hashed_string( pDeltaLayerAttr );
+                    ensureLayer( deltaLayer );
+                }
+                bindMouseDelta( hashed_string( pActionName ), deltaNode.getAttributeFloat( "scale", 1.0f ), hashed_string( deltaLayer.view() ) );
+            }
         };
 
         for ( XmlNode layerNode = root.findChild( InputMapSerializationInternal::InputMapXml::kLayer ); layerNode.isValid(); layerNode = layerNode.findNextSibling( InputMapSerializationInternal::InputMapXml::kLayer ) )

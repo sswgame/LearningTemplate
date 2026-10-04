@@ -5,10 +5,12 @@
 #include "GameFramework/Combat/Weapon.h"
 #include "GameFramework/Combat/WeaponMath.h"
 #include "GameFramework/Input/FirstPersonLook.h"
+#include "GameFramework/Movement/LocomotionMath.h"
+#include "GameFramework/Utility/RayMath.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 슈터 키트 — 히트스캔(구 · 상자), 1인칭 시점, 무기의 연사 간격 · 탄창 · 재장전 · 반자동 · 산탄 · 탄 퍼짐(씨앗이 같으면 같은 탄).
+// 슈터 키트 — 히트스캔(구 · 상자 · 캡슐), 1인칭 시점, 이동 방향 가르기, 무기의 연사 간격 · 탄창 · 재장전 · 반자동 · 산탄 · 탄 퍼짐(씨앗이 같으면 같은 탄).
 
 using namespace sw;
 
@@ -195,4 +197,67 @@ SW_TEST_CASE( ShooterTest, WeaponCatalogReadsXml )
     SW_EXPECT_TRUE( pShotgun->_bAutomatic == SW_FALSE );
     SW_EXPECT_NEAR_EQUAL( 0.8f, pShotgun->_fireInterval, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 80.0f, pShotgun->_range, 1.0e-5f );
+}
+
+/**
+ * @brief [ShooterTest] 캡슐 히트박스 — 옆면은 반지름만큼 앞에서, 끝 반구는 구처럼 맞고, 머리 위 · 뒤 · 사거리 밖은 놓친다 · 안에서 쏘면 거리 0
+ */
+SW_TEST_CASE( ShooterTest, RaysHitCapsulesOnTheSideAndTheCaps )
+{
+    const float3  bottom{ 0.0f, 0.45f, 5.0f };
+    const float3  top{ 0.0f, 1.55f, 5.0f };
+    const float32 radius   = 0.45f;
+    float32       distance = 0.0f;
+    GameRay       ray      = makeForwardRay();
+
+    ray._origin = float3{ 0.0f, 1.0f, 0.0f }; // 몸통 높이 — 옆면
+    SW_ASSERT_TRUE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+    SW_EXPECT_NEAR_EQUAL( 5.0f - radius, distance, 1.0e-4f );
+
+    ray._origin = float3{ 0.0f, 1.9f, 0.0f }; // 머리 — 위 반구(가운데에서 0.35 위)
+    SW_ASSERT_TRUE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+    SW_EXPECT_NEAR_EQUAL( 5.0f - MathUtil::sqrt( radius * radius - 0.35f * 0.35f ), distance, 1.0e-4f );
+
+    ray._origin = float3{ 0.0f, 2.2f, 0.0f }; // 머리 위 — 캡슐 꼭대기(2.0)보다 높다
+    SW_EXPECT_FALSE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+
+    ray._origin    = float3{ 0.0f, 5.0f, 5.0f }; // 위에서 축을 따라 — 옆면 판정이 없고 위 반구에서 맞는다
+    ray._direction = float3{ 0.0f, -1.0f, 0.0f };
+    SW_ASSERT_TRUE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+    SW_EXPECT_NEAR_EQUAL( 5.0f - ( 1.55f + radius ), distance, 1.0e-4f );
+
+    ray         = makeForwardRay();
+    ray._origin = float3{ 0.0f, 1.0f, 5.1f }; // 안
+    SW_ASSERT_TRUE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, distance, 1.0e-6f );
+
+    ray._origin = float3{ 0.0f, 1.0f, 10.0f }; // 뒤에 있다
+    SW_EXPECT_FALSE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+    ray._origin = float3{ 0.0f, 1.0f, 0.0f }; // 사거리 4 — 닿지 않는다
+    SW_EXPECT_FALSE( RayMath::intersectCapsule( ray, bottom, top, radius, 4.0f, distance ) );
+    ray._origin = float3{ 0.6f, 1.0f, 0.0f }; // 옆으로 비켜 간다
+    SW_EXPECT_FALSE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+}
+
+/**
+ * @brief [ShooterTest] 이동 방향은 보는 쪽 기준이다 — 요 0 이면 +Z 앞 · +X 오른쪽, 요 90° 면 +X 앞 · +Z 왼쪽, 대각선은 앞뒤, 느리면 서기, 공중은 공중
+ */
+SW_TEST_CASE( ShooterTest, LocomotionDirectionFollowsTheFacing )
+{
+    const float32 idle = 0.4f;
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.0f, 0.0f, 3.0f }, 0.0f, true, idle ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.0f, 0.0f, -2.0f }, 0.0f, true, idle ) == LocomotionDirection::Backward );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 2.0f, 0.0f, 0.0f }, 0.0f, true, idle ) == LocomotionDirection::Right );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ -2.0f, 0.0f, 0.0f }, 0.0f, true, idle ) == LocomotionDirection::Left );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 2.0f, 0.0f, 2.0f }, 0.0f, true, idle ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.1f, 0.0f, 0.2f }, 0.0f, true, idle ) == LocomotionDirection::Idle );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.0f, 0.0f, 3.0f }, 0.0f, false, idle ) == LocomotionDirection::Airborne );
+
+    const float32 facingRight = MathUtil::HalfPi;
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 3.0f, 0.0f, 0.0f }, facingRight, true, idle ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.0f, 0.0f, 3.0f }, facingRight, true, idle ) == LocomotionDirection::Left );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.0f, 0.0f, -3.0f }, facingRight, true, idle ) == LocomotionDirection::Right );
+    const float2 local = LocomotionMath::computeLocalVelocity( float3{ 3.0f, 0.0f, 1.0f }, facingRight );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, local._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, local._y, 1.0e-5f );
 }

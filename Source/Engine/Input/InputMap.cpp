@@ -299,23 +299,19 @@ namespace sw
         if ( pEntry == nullptr )
             return float2{ 0.0f, 0.0f };
 
-        float2 val{ 0.0f, 0.0f };
+        float2 bounded{ 0.0f, 0.0f };
+        float2 relative{ 0.0f, 0.0f };
         for ( const ActionBinding& binding : pEntry->_listBinding )
         {
-            float2 bVal{ 0.0f, 0.0f };
-            if ( isBindingLayerActive( binding ) && evaluateBindingDown( binding, bVal ) )
+            float2 bindingValue{ 0.0f, 0.0f };
+            if ( isBindingLayerActive( binding ) && evaluateBindingDown( binding, bindingValue ) )
             {
-                val._x += bVal._x;
-                val._y += bVal._y;
+                float2& accumulator = binding._kind == BindingKind::MouseDelta2D ? relative : bounded;
+                accumulator._x += bindingValue._x;
+                accumulator._y += bindingValue._y;
             }
         }
-        if ( _bInvertX == SW_TRUE )
-            val._x = -val._x;
-        if ( _bInvertY == SW_TRUE )
-            val._y = -val._y;
-        val._x = val._x < -1.0f ? -1.0f : ( val._x > 1.0f ? 1.0f : val._x );
-        val._y = val._y < -1.0f ? -1.0f : ( val._y > 1.0f ? 1.0f : val._y );
-        return val;
+        return composeActionValue( bounded, relative );
     }
 
     void InputMap::bindMouseDelta( const hashed_string& action, float32 sensitivity, const hashed_string& layer )

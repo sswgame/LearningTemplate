@@ -38,7 +38,8 @@ namespace sw
     /**
      * @class FirstPersonCameraComponent
      * @brief 같은 오브젝트의 `CameraComponent` 를 1인칭 원근 시점으로 둡니다. 슈터 · 복셀 샌드박스 · 걷는 시뮬레이터가 함께 씁니다.
-     * @details `TickGroup::PrePhysics` 에서 마우스로 시점을 돌리고(잠겨 있을 때만) 카메라를 둡니다. 몸을 움직이는 게임 컴포넌트는 **같은 오브젝트**에서
+     * @details `TickGroup::PrePhysics` 에서 마우스로 시점을 돌리고(잠겨 있을 때만) 카메라를 둡니다. `_lookAction` 이 있으면 원시 마우스 대신 입력 맵 액션의
+     *          2D 값(마우스 이동량 · 스틱 바인딩)을 읽습니다. 몸을 움직이는 게임 컴포넌트는 **같은 오브젝트**에서
      *          뒤 그룹에 돌며 이 시점(`getLook`)으로 걷고 쏜 뒤 `setEyePosition` 으로 눈 자리를 넣습니다 — 카메라 · 뷰 모델은 그 자리에서 바로 다시 놓인다.
      *          시점을 코드로 정하면(자동 조준 · 반동) `setAngles` · `addRecoil` 입니다.
      *
@@ -74,6 +75,8 @@ namespace sw
         const FirstPersonLook& getLook() const { return _look; }
         /** @brief 마우스로 시점을 돌릴지입니다(자동 플레이는 끈다 — 잠금도 풀린다). */
         void setMouseLookEnabled( bool bEnabled );
+        /** @brief 시점을 돌릴 입력 맵 액션(2D — 마우스 이동량 · 스틱)입니다. 비우면 원시 마우스입니다. */
+        void setLookAction( const hashed_string& action ) { _lookAction = action; }
         bool isMouseLookEnabled() const { return _bMouseLook; }
         /** @brief 뷰 모델(같은 오브젝트의 메시 컴포넌트 이름)과 눈 기준 오프셋(오른쪽 · 위 · 앞) · 앞을 맞추는 요를 정합니다. */
         void setViewModel( const hashed_string& componentName, const float3& offset, float32 yawOffset );
@@ -96,6 +99,8 @@ namespace sw
         float32 _maxPitch;
         PROPERTY( Category = "Look", DisplayName = "Mouse Sensitivity", Tooltip = "Radians per pixel of mouse movement", Min = 0.0 )
         float32 _mouseSensitivity;
+        PROPERTY( Category = "Look", DisplayName = "Look Action", Tooltip = "InputMap action whose 2D value turns the view (mouse delta binding); empty reads the raw mouse" )
+        hashed_string _lookAction;
         PROPERTY( Category = "Look", DisplayName = "Mouse Look", Tooltip = "Turn the view with the mouse (auto play turns it off)" )
         bool _bMouseLook;
         PROPERTY( Category = "Look", DisplayName = "Lock Mouse", Tooltip = "Lock and hide the cursor while mouse look is on; Esc toggles" )
