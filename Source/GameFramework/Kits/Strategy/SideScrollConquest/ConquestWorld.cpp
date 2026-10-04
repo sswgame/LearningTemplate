@@ -67,7 +67,7 @@ namespace sw
         : _listSite{}
         , _listBuilding{}
         , _listUnit{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _resource{}
         , _commander{}
         , _timer{}
@@ -87,7 +87,7 @@ namespace sw
         _listSite.clear();
         _listBuilding.clear();
         _listUnit.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _resource.clear();
         _elapsed     = 0.0f;
         _incomeTimer = 0.0f;
@@ -242,8 +242,7 @@ namespace sw
 
     void ConquestWorld::drainEvents( vector<ConquestEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     int32 ConquestWorld::getResource( const hashed_string& resource ) const
@@ -851,6 +850,6 @@ namespace sw
         event._id    = id;
         event._value = value;
         event._team  = team;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

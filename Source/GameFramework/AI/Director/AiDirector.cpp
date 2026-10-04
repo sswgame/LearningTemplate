@@ -87,7 +87,7 @@ namespace sw
         , _builtinModel{}
         , _spawnDirector{}
         , _listPoolState{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listTrace{}
         , _listScratchWeight{}
         , _listScratchSpawnEvent{}
@@ -120,7 +120,7 @@ namespace sw
         _random.setSeed( _seed );
         _builtinModel.reset();
         _spawnDirector.initialize( _pSpawnTable, _seed ^ AiDirectorInternal::kSpawnSeedSalt );
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listTrace.clear();
         _traceHead  = 0;
         _time       = 0.0f;
@@ -460,7 +460,7 @@ namespace sw
 
     void AiDirector::pushEvent( const AiDirectorEvent& event )
     {
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
         if ( static_cast<int32>( _listTrace.size() ) < kMaxTraceEvent )
         {
             _listTrace.push_back( event );
@@ -479,8 +479,7 @@ namespace sw
 
     void AiDirector::drainEvents( vector<AiDirectorEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void AiDirector::explain( string& outText ) const

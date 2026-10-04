@@ -20,7 +20,7 @@ namespace sw
 {
     Vitality::Vitality()
         : _settings{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _health{ 0.0f }
         , _shield{ 0.0f }
         , _downedHealth{ 0.0f }
@@ -57,7 +57,7 @@ namespace sw
         _settings._poiseMax           = MathUtil::max( 0.0f, _settings._poiseMax );
         _settings._poiseBreakDuration = MathUtil::max( 0.0f, _settings._poiseBreakDuration );
         _settings._maxDownCount       = MathUtil::max( 0, _settings._maxDownCount );
-        _listEvent.clear();
+        _eventBuffer.clear();
         _downCount = 0;
         respawn();
     }
@@ -278,8 +278,7 @@ namespace sw
 
     void Vitality::drainEvents( vector<VitalityEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     float32 Vitality::getHealthRatio() const { return _health / _settings._maxHealth; }
@@ -341,6 +340,6 @@ namespace sw
         event._type         = type;
         event._amount       = amount;
         event._instigatorId = instigatorId;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

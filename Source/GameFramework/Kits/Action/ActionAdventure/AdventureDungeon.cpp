@@ -207,7 +207,7 @@ namespace sw
     AdventureDungeonState::AdventureDungeonState()
         : _pCatalog{ nullptr }
         , _listRuntime{}
-        , _listEvent{}
+        , _eventBuffer{}
     {
     }
 
@@ -215,7 +215,7 @@ namespace sw
     {
         _pCatalog = pCatalog;
         _listRuntime.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         if ( pCatalog == nullptr )
             return;
         _listRuntime.resize( pCatalog->getDungeons().size() );
@@ -428,8 +428,7 @@ namespace sw
 
     void AdventureDungeonState::drainEvents( vector<AdventureDungeonEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     const AdventureDungeonProgress* AdventureDungeonState::findProgress( const hashed_string& dungeonId ) const
@@ -471,6 +470,6 @@ namespace sw
         event._id      = id;
         event._item    = item;
         event._count   = count;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

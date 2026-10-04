@@ -236,7 +236,7 @@ namespace sw
         , _defaultPathing{}
         , _settings{}
         , _listNpc{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listAppointmentCheck{}
         , _listBrokenAppointment{}
         , _listMetAppointment{}
@@ -305,7 +305,7 @@ namespace sw
             }
         }
         _listNpc.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listAppointmentCheck.clear();
         _listBrokenAppointment.clear();
         _listMetAppointment.clear();
@@ -622,8 +622,7 @@ namespace sw
 
     void ScheduleSystem::drainEvents( vector<ScheduleEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void ScheduleSystem::fillSaveState( ScheduleSaveState& outState ) const
@@ -675,7 +674,7 @@ namespace sw
         _minuteFraction = 0.0f;
         _settings._seed = state._seed;
         _weather        = state._weather;
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listMetAppointment.clear();
         _listBrokenAppointment.clear();
         for ( const string& appointmentId : state._listBrokenAppointment )
@@ -1410,7 +1409,7 @@ namespace sw
             event._activity  = pSegment->_activity;
             event._animation = pSegment->_animation;
         }
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
 
         const NpcRuntime& npc         = _listNpc[static_cast<size_t>( npcIndex )];
         const bool        bAnimation  = kind == ScheduleEvent::Kind::ActivityStarted || kind == ScheduleEvent::Kind::ActivityEnded;

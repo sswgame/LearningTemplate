@@ -16,7 +16,7 @@ namespace sw
     MetroSoulsState::MetroSoulsState()
         : _pCatalog{ nullptr }
         , _listKill{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _corpse{}
         , _respawnSite{}
         , _currency{ 0 }
@@ -31,7 +31,7 @@ namespace sw
     {
         _pCatalog = pCatalog;
         _listKill.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _corpse            = MetroCorpse{};
         _respawnSite       = hashed_string{};
         _currency          = 0;
@@ -163,8 +163,7 @@ namespace sw
 
     void MetroSoulsState::drainEvents( vector<MetroSoulsEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void MetroSoulsState::refreshWorld( Vitality& vitality )
@@ -190,6 +189,6 @@ namespace sw
         event._type   = type;
         event._id     = id;
         event._amount = amount;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

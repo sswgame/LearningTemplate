@@ -44,7 +44,7 @@ namespace sw
         : _settings{}
         , _listLane{}
         , _listGradeCount{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listInputRecord{}
         , _pChart{ nullptr }
         , _pJudge{ nullptr }
@@ -76,7 +76,7 @@ namespace sw
         _missCount         = 0;
         _judgedCount       = 0;
         _state             = RhythmPlayState::Playing;
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listInputRecord.clear();
         _listGradeCount.clear();
         _listGradeCount.resize( _pJudge->getWindows().size(), 0 );
@@ -214,8 +214,7 @@ namespace sw
 
     void RhythmPlaySession::drainEvents( vector<RhythmEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     float32 RhythmPlaySession::computeAccuracy() const
@@ -290,7 +289,7 @@ namespace sw
         emptyPress._combo = _combo;
         if ( queue._holdingNote >= 0 || queue._cursor >= queue._listNoteIndex.size() )
         {
-            _listEvent.push_back( emptyPress );
+            _eventBuffer.push( emptyPress );
             return;
         }
         const int32        noteIndex = queue._listNoteIndex[queue._cursor];
@@ -300,7 +299,7 @@ namespace sw
         {
             // 가장 넓은 창의 이른 폭(`getEarliestWidth`)보다 이르다 — 이 노트에 쓰지 않는다. 늦은 쪽은 update 가 이미 Miss 로 넘겼다.
             emptyPress._offset = result._offset;
-            _listEvent.push_back( emptyPress );
+            _eventBuffer.push( emptyPress );
             return;
         }
         ++queue._cursor;
@@ -358,7 +357,7 @@ namespace sw
         }
         event._combo = _combo;
         _life        = MathUtil::clamp( _life, 0.0f, _settings._maxLife );
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
 
         if ( _life <= 0.0f )
         {
@@ -366,7 +365,7 @@ namespace sw
             RhythmEvent failed;
             failed._kind  = RhythmEvent::Kind::Failed;
             failed._combo = _combo;
-            _listEvent.push_back( failed );
+            _eventBuffer.push( failed );
         }
     }
 
@@ -388,6 +387,6 @@ namespace sw
         RhythmEvent cleared;
         cleared._kind  = RhythmEvent::Kind::Cleared;
         cleared._combo = _combo;
-        _listEvent.push_back( cleared );
+        _eventBuffer.push( cleared );
     }
 } // namespace sw

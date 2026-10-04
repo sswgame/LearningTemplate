@@ -18,6 +18,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetKitMessageRange.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -225,6 +226,6 @@ namespace sw
 
     private:
         unordered_map<uint32, MmoEntity> _mapEntity{};
-        vector<MmoClientEvent>           _listEvent{};
+        EventBuffer<MmoClientEvent>      _eventBuffer{};
     };
 } // namespace sw

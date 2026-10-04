@@ -18,6 +18,7 @@
 #include "GameFramework/Navigation/NavAgent.h"
 #include "GameFramework/Navigation/NavGrid.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -365,7 +366,7 @@ namespace sw
         vector<uint32>        _listGeneration; ///< 자리마다 세대
         vector<uint32>        _listFreeSlot;
         vector<RtsPlayer>     _listPlayer;
-        vector<RtsEvent>      _listEvent;
+        EventBuffer<RtsEvent> _eventBuffer;
         vector<uint8>         _listTerrainBlocked;
         vector<vector<uint8>> _listTeamVisibility; ///< 팀마다 칸의 RtsVisibility
         vector<int32>         _listBucketHead;     ///< 버킷마다 첫 유닛 자리(−1 끝)

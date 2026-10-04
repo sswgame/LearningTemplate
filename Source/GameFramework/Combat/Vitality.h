@@ -12,6 +12,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -141,7 +142,7 @@ namespace sw
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<VitalityEvent>& outListEvent );
         /** @brief 쌓인 알림을 꺼내지 않고 버립니다(쓰지 않는 쪽 — 받을 목록을 만들어 복사하지 않는다). */
-        void discardEvents() { _listEvent.clear(); }
+        void discardEvents() { _eventBuffer.clear(); }
 
         const VitalitySettings& getSettings() const { return _settings; }
         VitalityState           getState() const { return _state; }
@@ -167,22 +168,22 @@ namespace sw
         void finishRevive();
         void pushEvent( VitalityEventType type, float32 amount, int32 instigatorId );
 
-        VitalitySettings      _settings;
-        vector<VitalityEvent> _listEvent;
-        float32               _health;
-        float32               _shield;
-        float32               _downedHealth;
-        float32               _poise;
-        float32               _sinceDamage;      ///< 마지막 피해 뒤 지난 시간(재생 지연)
-        float32               _sincePoiseDamage; ///< 마지막 경직 피해 뒤 지난 시간
-        Countdown             _poiseBreak;
-        Countdown             _invulnerable;
-        float32               _reviveElapsed; ///< 배율을 곱해 쌓인 부활 시간
-        float32               _reviveSpeedScale;
-        int32                 _reviverId;
-        int32                 _lastInstigatorId;
-        int32                 _downCount;
-        VitalityState         _state;
-        uint8                 _bReviving;
+        VitalitySettings           _settings;
+        EventBuffer<VitalityEvent> _eventBuffer;
+        float32                    _health;
+        float32                    _shield;
+        float32                    _downedHealth;
+        float32                    _poise;
+        float32                    _sinceDamage;      ///< 마지막 피해 뒤 지난 시간(재생 지연)
+        float32                    _sincePoiseDamage; ///< 마지막 경직 피해 뒤 지난 시간
+        Countdown                  _poiseBreak;
+        Countdown                  _invulnerable;
+        float32                    _reviveElapsed; ///< 배율을 곱해 쌓인 부활 시간
+        float32                    _reviveSpeedScale;
+        int32                      _reviverId;
+        int32                      _lastInstigatorId;
+        int32                      _downCount;
+        VitalityState              _state;
+        uint8                      _bReviving;
     };
 } // namespace sw

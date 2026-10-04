@@ -13,6 +13,7 @@
 
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -70,9 +71,9 @@ namespace sw
     private:
         WalletBalance& findOrAddBalance( const hashed_string& currency );
 
-        vector<WalletBalance> _listBalance{};
-        vector<WalletEvent>   _listEvent{};
-        uint32                _revision{ 0 };
+        vector<WalletBalance>    _listBalance{};
+        EventBuffer<WalletEvent> _eventBuffer{};
+        uint32                   _revision{ 0 };
     };
 } // namespace sw
 
@@ -258,7 +259,7 @@ namespace sw
         bool         isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemId ) const;
 
         vector<ShopRuntime>            _listRuntime;
-        vector<ShopEvent>              _listEvent;
+        EventBuffer<ShopEvent>         _eventBuffer;
         const ShopCatalog*             _pShopCatalog;
         const ItemCatalog*             _pItemCatalog;
         const IShopConditionEvaluator* _pConditionEvaluator;

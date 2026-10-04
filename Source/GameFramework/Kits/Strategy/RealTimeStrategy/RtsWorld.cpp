@@ -71,7 +71,7 @@ namespace sw
         , _listGeneration{}
         , _listFreeSlot{}
         , _listPlayer{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listTerrainBlocked{}
         , _listTeamVisibility{}
         , _listBucketHead{}
@@ -102,7 +102,7 @@ namespace sw
         _listGeneration.clear();
         _listFreeSlot.clear();
         _listPlayer.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listTerrainBlocked.assign( static_cast<size_t>( _grid.getWidth() * _grid.getHeight() ), SW_FALSE );
         _listTeamVisibility.clear();
         _listFlowField.clear();
@@ -587,8 +587,7 @@ namespace sw
 
     void RtsWorld::drainEvents( vector<RtsEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void RtsWorld::stepFixed( float32 deltaTime )
@@ -1607,7 +1606,7 @@ namespace sw
             event._position = pUnit->_position;
         else if ( unitId.isValid() && unitId.index() < _listUnit.size() )
             event._position = _listUnit[unitId.index()]._position;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw
 
@@ -1860,7 +1859,7 @@ namespace sw
         _listFreeSlot       = std::move( listFreeSlot );
         _listPlayer         = std::move( listPlayer );
         _listTeamVisibility = std::move( listTeamVisibility );
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listFlowField.clear();
         _stepTimer              = stepTimer;
         _time                   = time;

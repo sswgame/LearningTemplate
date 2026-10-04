@@ -24,6 +24,7 @@
 #include "GameFramework/Kits/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Match/MatchState.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -344,7 +345,7 @@ namespace sw
         vector<PalletState>                 _listPalletState;
         vector<float3>                      _listLocker;
         vector<int32>                       _listLockerOccupant;
-        vector<AsymmetricHorrorEvent>       _listEvent;
+        EventBuffer<AsymmetricHorrorEvent>  _eventBuffer;
         vector<InteractionEvent>            _listInteractionScratch;
         vector<VitalityEvent>               _listVitalityScratch;
         MatchState                          _match;

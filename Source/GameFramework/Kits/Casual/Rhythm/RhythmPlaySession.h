@@ -10,6 +10,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/Rhythm/RhythmChart.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -167,7 +168,7 @@ namespace sw
         RhythmPlaySettings        _settings;
         vector<LaneQueue>         _listLane;
         vector<int32>             _listGradeCount; ///< 판정기의 창 순서(좁은 것부터)
-        vector<RhythmEvent>       _listEvent;
+        EventBuffer<RhythmEvent>  _eventBuffer;
         vector<RhythmInputRecord> _listInputRecord;
         const RhythmChart*        _pChart;
         const TimingJudge*        _pJudge;

@@ -25,6 +25,7 @@
 #include "GameFramework/Kits/Action/MechArena/MechCatalog.h"
 #include "GameFramework/Match/MatchState.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -277,21 +278,21 @@ namespace sw
         bool   isTargetable( int32 pilot ) const;
         void   pushEvent( MechArenaEvent::Kind kind, int32 pilot, int32 other, float32 value, const hashed_string& id );
 
-        MechArenaSettings       _settings;
-        vector<MechPilot>       _listPilot;
-        vector<MechProjectile>  _listProjectile;
-        vector<hashed_string>   _listTeamName;
-        vector<MechArenaEvent>  _listEvent;
-        vector<VitalityEvent>   _listVitalityScratch;
-        vector<MatchEvent>      _listMatchScratch;
-        vector<LockOnCandidate> _listCandidateScratch;
-        MatchState              _match;
-        FixedStepTimer          _timer;
-        const MechCatalog*      _pMechCatalog;
-        const WeaponCatalog*    _pWeaponCatalog;
-        const MoveCatalog*      _pMoveCatalog;
-        uint32                  _tick;
-        uint8                   _bStarted;
-        uint8                   _bEndReported;
+        MechArenaSettings           _settings;
+        vector<MechPilot>           _listPilot;
+        vector<MechProjectile>      _listProjectile;
+        vector<hashed_string>       _listTeamName;
+        EventBuffer<MechArenaEvent> _eventBuffer;
+        vector<VitalityEvent>       _listVitalityScratch;
+        vector<MatchEvent>          _listMatchScratch;
+        vector<LockOnCandidate>     _listCandidateScratch;
+        MatchState                  _match;
+        FixedStepTimer              _timer;
+        const MechCatalog*          _pMechCatalog;
+        const WeaponCatalog*        _pWeaponCatalog;
+        const MoveCatalog*          _pMoveCatalog;
+        uint32                      _tick;
+        uint8                       _bStarted;
+        uint8                       _bEndReported;
     };
 } // namespace sw

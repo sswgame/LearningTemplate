@@ -11,6 +11,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Interaction/InteractionCatalog.h"
 #include "GameFramework/Interaction/InteractionProgress.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -73,13 +74,13 @@ namespace sw
         void beginStep();
         void completeStep();
 
-        const InteractionDef*           _pDef;
-        InteractionProgress             _holdProgress;
-        vector<InteractionSessionEvent> _listEvent;
-        vector<InteractionEvent>        _listHoldEvent;
-        uint32                          _actorId;
-        int32                           _stepIndex;
-        float32                         _mashProgress;
-        InteractionSessionState         _state;
+        const InteractionDef*                _pDef;
+        InteractionProgress                  _holdProgress;
+        EventBuffer<InteractionSessionEvent> _eventBuffer;
+        vector<InteractionEvent>             _listHoldEvent;
+        uint32                               _actorId;
+        int32                                _stepIndex;
+        float32                              _mashProgress;
+        InteractionSessionState              _state;
     };
 } // namespace sw

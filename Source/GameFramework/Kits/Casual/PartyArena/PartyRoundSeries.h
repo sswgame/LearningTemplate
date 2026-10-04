@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -87,12 +88,12 @@ namespace sw
         uint32 loadRoot( const XmlNode& root, string_view sourceName );
         void   pushEvent( PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points );
 
-        vector<PartyRoundDef>    _listRound;
-        vector<int32>            _listPlacementPoint;
-        vector<int32>            _listTotal;
-        vector<PartySeriesEvent> _listEvent;
-        int32                    _winScore;
-        int32                    _roundNumber;
-        int32                    _winner;
+        vector<PartyRoundDef>         _listRound;
+        vector<int32>                 _listPlacementPoint;
+        vector<int32>                 _listTotal;
+        EventBuffer<PartySeriesEvent> _eventBuffer;
+        int32                         _winScore;
+        int32                         _roundNumber;
+        int32                         _winner;
     };
 } // namespace sw

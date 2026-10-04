@@ -75,7 +75,7 @@ namespace sw
 {
     TrampolineArena::TrampolineArena()
         : _listPlayer{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listMatchEvent{}
         , _settings{}
         , _judge{}
@@ -127,7 +127,7 @@ namespace sw
         item._center                = float3{};
         item._spawnRadius           = _settings._arenaRadius * 0.75f;
         _itemSpawner.initialize( item, seed );
-        _listEvent.clear();
+        _eventBuffer.clear();
         _timer = FixedStepTimer( _settings._step, 0.25f );
         _time  = 0.0f;
         return true;
@@ -138,7 +138,7 @@ namespace sw
         _match.start();
         for ( int32 player = 0; player < getPlayerCount(); ++player )
             respawn( player );
-        _listEvent.clear(); // 첫 출발은 부활로 알리지 않는다
+        _eventBuffer.clear(); // 첫 출발은 부활로 알리지 않는다
     }
 
     void TrampolineArena::setInput( int32 player, const TrampolineInput& input )
@@ -236,8 +236,7 @@ namespace sw
 
     void TrampolineArena::drainEvents( vector<TrampolineEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     // --- 걸음 -------------------------------------------------------------------------------------
@@ -447,7 +446,7 @@ namespace sw
         event._player = player;
         event._value  = body._combo;
         event._grade  = grade;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     void TrampolineArena::updateAttacks()
@@ -543,7 +542,7 @@ namespace sw
             event._kind   = TrampolineEvent::Kind::ItemPicked;
             event._player = player;
             event._itemId = item._itemId;
-            _listEvent.push_back( event );
+            _eventBuffer.push( event );
         }
     }
 
@@ -573,6 +572,6 @@ namespace sw
         event._player = player;
         event._other  = other;
         event._value  = value;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

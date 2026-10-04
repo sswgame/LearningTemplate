@@ -45,7 +45,7 @@ namespace sw
     KartRace::KartRace()
         : _listRacer{}
         , _listProjectile{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listItemBoxTimer{}
         , _listPlaceOrder{}
         , _settings{}
@@ -73,7 +73,7 @@ namespace sw
         _timer = FixedStepTimer{ settings._step, 0.25f };
         _listRacer.clear();
         _listProjectile.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listPlaceOrder.clear();
         _listItemBoxTimer.clear();
         if ( pTrack != nullptr )
@@ -405,7 +405,7 @@ namespace sw
                     }
                 }
                 pushEvent( KartRaceEvent::Kind::ItemBoxTaken, static_cast<int32>( racerIndex ), -1, static_cast<int32>( boxIndex ), _raceTime );
-                _listEvent.back()._itemId = itemId;
+                _eventBuffer.getLast()._itemId = itemId;
                 break;
             }
         }
@@ -431,7 +431,7 @@ namespace sw
         kart._itemId       = hashed_string{};
         kart._itemHeldTime = 0.0f;
         pushEvent( KartRaceEvent::Kind::ItemUsed, racer, -1, static_cast<int32>( pItem->_kind ), _raceTime );
-        _listEvent.back()._itemId = pItem->_id;
+        _eventBuffer.getLast()._itemId = pItem->_id;
 
         const float3   forward  = kart._motor.computeForward();
         const float3&  position = kart._motor.getPosition();
@@ -599,7 +599,7 @@ namespace sw
         {
             kart._shieldTime.clear();
             pushEvent( KartRaceEvent::Kind::ShieldBlocked, victim, attacker, 0, _raceTime );
-            _listEvent.back()._itemId = def._id;
+            _eventBuffer.getLast()._itemId = def._id;
             return false;
         }
         // 감속은 충격으로 — 차의 드리프트가 보상 없이 끊긴다.
@@ -608,7 +608,7 @@ namespace sw
         kart._motor.addImpulse( float3{ -velocity._x * cut, 0.0f, -velocity._z * cut } );
         kart._spinTime.extendTo( def._spinTime );
         pushEvent( KartRaceEvent::Kind::Hit, victim, attacker, static_cast<int32>( def._kind ), _raceTime );
-        _listEvent.back()._itemId = def._id;
+        _eventBuffer.getLast()._itemId = def._id;
         return true;
     }
 
@@ -749,8 +749,7 @@ namespace sw
 
     void KartRace::drainEvents( vector<KartRaceEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void KartRace::pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time )
@@ -761,6 +760,6 @@ namespace sw
         event._other = other;
         event._value = value;
         event._time  = time;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

@@ -16,6 +16,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/SideScrollConquest/ConquestCatalog.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -221,19 +222,19 @@ namespace sw
         int32   findHomeSiteIndex() const;
         void    pushEvent( ConquestEvent::Kind kind, const hashed_string& id, int32 value = 0, ConquestTeam team = ConquestTeam::Neutral );
 
-        vector<ConquestSite>     _listSite;
-        vector<ConquestBuilding> _listBuilding;
-        vector<ConquestUnit>     _listUnit;
-        vector<ConquestEvent>    _listEvent;
-        StatBlock                _resource;
-        ConquestCommander        _commander;
-        FixedStepTimer           _timer;
-        const ConquestCatalog*   _pCatalog;
-        float32                  _elapsed;
-        float32                  _incomeTimer;
-        float32                  _waveTimer;
-        int32                    _nextUnitId;
-        uint8                    _bVictory;
-        uint8                    _bDefeat;
+        vector<ConquestSite>       _listSite;
+        vector<ConquestBuilding>   _listBuilding;
+        vector<ConquestUnit>       _listUnit;
+        EventBuffer<ConquestEvent> _eventBuffer;
+        StatBlock                  _resource;
+        ConquestCommander          _commander;
+        FixedStepTimer             _timer;
+        const ConquestCatalog*     _pCatalog;
+        float32                    _elapsed;
+        float32                    _incomeTimer;
+        float32                    _waveTimer;
+        int32                      _nextUnitId;
+        uint8                      _bVictory;
+        uint8                      _bDefeat;
     };
 } // namespace sw

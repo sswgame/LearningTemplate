@@ -11,6 +11,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -154,7 +155,7 @@ namespace sw
 
         vector<MatchTeam>        _listTeam;
         vector<MatchParticipant> _listParticipant;
-        vector<MatchEvent>       _listEvent;
+        EventBuffer<MatchEvent>  _eventBuffer;
         MatchSettings            _settings;
         float32                  _elapsed;
         float32                  _phaseTime;

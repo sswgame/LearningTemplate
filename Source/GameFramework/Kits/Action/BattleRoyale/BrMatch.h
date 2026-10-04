@@ -17,6 +17,7 @@
 #include "GameFramework/Kits/Action/BattleRoyale/BrLoot.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrZone.h"
 #include "GameFramework/Match/MatchState.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
@@ -150,7 +151,7 @@ namespace sw
 
         vector<BrPlayer>     _listPlayer;
         vector<BrSupplyDrop> _listSupplyDrop;
-        vector<BrEvent>      _listEvent;
+        EventBuffer<BrEvent> _eventBuffer;
         vector<MatchEvent>   _listMatchScratch;
         MatchState           _matchState;
         BrZone               _zone;

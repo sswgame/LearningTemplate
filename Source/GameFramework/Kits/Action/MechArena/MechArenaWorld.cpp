@@ -116,7 +116,7 @@ namespace sw
         , _listPilot{}
         , _listProjectile{}
         , _listTeamName{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listVitalityScratch{}
         , _listMatchScratch{}
         , _listCandidateScratch{}
@@ -144,7 +144,7 @@ namespace sw
         _listPilot.clear();
         _listProjectile.clear();
         _listTeamName.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _match.initialize( MatchSettings{} );
         _timer        = FixedStepTimer( _settings._fixedStep, 0.25f );
         _tick         = 0;
@@ -298,8 +298,7 @@ namespace sw
 
     void MechArenaWorld::drainEvents( vector<MechArenaEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     // --- 걸음 -------------------------------------------------------------------------------------
@@ -1032,7 +1031,7 @@ namespace sw
         event._other = other;
         event._value = value;
         event._id    = id;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     // --- 직렬화 -----------------------------------------------------------------------------------

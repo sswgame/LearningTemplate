@@ -35,7 +35,7 @@ namespace sw
         , _keyBag{}
         , _listBoo{}
         , _listSearched{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listGhostEvent{}
         , _currentRoom{}
         , _pCatalog{ nullptr }
@@ -57,7 +57,7 @@ namespace sw
         _random.setSeed( GameHash::mix32( seed ^ 0xB00B00u ) );
         _encounter.initialize( pCatalog, seed );
         _keyBag.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listGhostEvent.clear();
         _currentRoom = hashed_string{};
         _coinCount   = 0;
@@ -205,8 +205,7 @@ namespace sw
 
     void GhostMansion::drainEvents( vector<GhostMansionEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void GhostMansion::drainGhostEvents( vector<GhostEvent>& outListEvent )
@@ -331,6 +330,6 @@ namespace sw
         event._id    = id;
         event._room  = room;
         event._count = count;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

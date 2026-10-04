@@ -23,7 +23,7 @@ namespace sw
 {
     ElementGrid::ElementGrid()
         : _listCell{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listPending{}
         , _listFloodQueue{}
         , _listVisited{}
@@ -44,7 +44,7 @@ namespace sw
         _timer  = FixedStepTimer( MathUtil::max( 0.001f, pTable != nullptr ? pTable->getStepTime() : 0.25f ), 1.0f );
         _listCell.clear();
         _listCell.resize( static_cast<size_t>( _width ) * static_cast<size_t>( _height ) );
-        _listEvent.clear();
+        _eventBuffer.clear();
         _wind      = int2{};
         _stepCount = 0;
     }
@@ -122,7 +122,7 @@ namespace sw
         ElementEvent event;
         event._name = name;
         event._cell = cell;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     int32 ElementGrid::applyStimulus( const int2& cell, int32 stimulus )
@@ -320,8 +320,7 @@ namespace sw
 
     void ElementGrid::drainEvents( vector<ElementEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     uint32 ElementGrid::computeStateHash() const

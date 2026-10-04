@@ -63,7 +63,7 @@ namespace sw
         , _listPalletState{}
         , _listLocker{}
         , _listLockerOccupant{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listInteractionScratch{}
         , _listVitalityScratch{}
         , _match{}
@@ -100,7 +100,7 @@ namespace sw
         _listPalletState.clear();
         _listLocker.clear();
         _listLockerOccupant.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _match.initialize( MatchSettings{} );
         _timer = FixedStepTimer( _settings._fixedStep, 0.25f );
         _collapseRemaining.clear();
@@ -837,8 +837,7 @@ namespace sw
 
     void HorrorMatch::drainEvents( vector<AsymmetricHorrorEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     // --- 걸음 -------------------------------------------------------------------------------------
@@ -1407,6 +1406,6 @@ namespace sw
         event._target   = target;
         event._value    = value;
         event._position = position;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

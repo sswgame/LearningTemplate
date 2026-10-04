@@ -74,7 +74,7 @@ namespace sw
         : _listAlive{}
         , _listAliveCount{}
         , _listAllowedTag{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pTable{ nullptr }
         , _random{}
         , _budget{ 0.0f }
@@ -91,7 +91,7 @@ namespace sw
         _pTable = pTable;
         _random.setSeed( seed );
         _listAlive.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listAliveCount.assign( pTable != nullptr ? pTable->getEntries().size() : 0, 0 );
         _budget           = pTable != nullptr ? pTable->getStartBudget() : 0.0f;
         _budgetScale      = 1.0f;
@@ -175,7 +175,7 @@ namespace sw
             event._time    = _time;
             event._cost    = entry._cost;
             event._spawnId = alive._spawnId;
-            _listEvent.push_back( event );
+            _eventBuffer.push( event );
             _pendingIndex = -1;
             ++spawnCount;
         }
@@ -201,7 +201,7 @@ namespace sw
             event._time    = _time;
             event._cost    = refund;
             event._spawnId = spawnId;
-            _listEvent.push_back( event );
+            _eventBuffer.push( event );
             return true;
         }
         return false;
@@ -209,8 +209,7 @@ namespace sw
 
     void SpawnDirector::drainEvents( vector<SpawnEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     int32 SpawnDirector::getAliveCount( const hashed_string& entryId ) const

@@ -50,7 +50,7 @@ namespace sw
 {
     MonsterBattle::MonsterBattle()
         : _arrSide{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _turnOrder{}
         , _random{}
         , _captured{}
@@ -84,7 +84,7 @@ namespace sw
         _captured                          = MonsterInstance{};
         _weatherId                         = hashed_string{};
         _weatherTurns                      = 0;
-        _listEvent.clear();
+        _eventBuffer.clear();
         _turnOrder.removeActor( kPlayerSide );
         _turnOrder.removeActor( kFoeSide );
         _turnOrder.addActor( kPlayerSide, 1.0f );
@@ -332,7 +332,7 @@ namespace sw
             if ( input._bCritical )
                 pushEvent( MonsterBattleEvent::Kind::Critical, side, 0, pMove->_id );
             applyDamage( foeSide, computeDamage( input ), MonsterBattleEvent::Kind::Damage, pMove->_id );
-            _listEvent.back()._multiplier = typeMultiplier;
+            _eventBuffer.getLast()._multiplier = typeMultiplier;
             if ( getActive( foeSide ).isFainted() )
             {
                 handleFaint( foeSide );
@@ -700,12 +700,11 @@ namespace sw
         event._value      = value;
         event._id         = id;
         event._multiplier = multiplier;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     void MonsterBattle::drainEvents( vector<MonsterBattleEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

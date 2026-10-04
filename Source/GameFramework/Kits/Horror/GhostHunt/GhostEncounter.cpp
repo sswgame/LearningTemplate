@@ -53,7 +53,7 @@ namespace sw
         : _pCatalog{ nullptr }
         , _random{}
         , _listGhost{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _strobeCharge{ 0.0f }
         , _surgeGauge{ 0.0f }
         , _suctionTarget{ 0 }
@@ -73,7 +73,7 @@ namespace sw
     void GhostEncounter::clear()
     {
         _listGhost.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _strobeCharge  = 0.0f;
         _surgeGauge    = 0.0f;
         _suctionTarget = 0;
@@ -283,8 +283,7 @@ namespace sw
 
     void GhostEncounter::drainEvents( vector<GhostEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     const GhostInstance* GhostEncounter::findGhost( uint32 ghostId ) const
@@ -388,6 +387,6 @@ namespace sw
         event._ghostId = ghostId;
         event._amount  = amount;
         event._coins   = coins;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

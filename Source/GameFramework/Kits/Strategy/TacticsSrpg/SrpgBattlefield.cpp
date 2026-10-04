@@ -46,7 +46,7 @@ namespace sw
     SrpgBattlefield::SrpgBattlefield()
         : _listTerrain{}
         , _listUnit{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _settings{}
         , _turnOrder{}
         , _random{}
@@ -72,7 +72,7 @@ namespace sw
             SW_LOG_WARNING( "unknown default terrain '%#' - cells are impassable until painted", defaultTerrain.c_str() );
         _listTerrain.assign( static_cast<size_t>( _width * _height ), pTerrain );
         _listUnit.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _turn       = 0;
         _activeUnit = -1;
         _phaseTeam  = SrpgTeam::Player;
@@ -519,8 +519,7 @@ namespace sw
 
     void SrpgBattlefield::drainEvents( vector<SrpgEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void SrpgBattlefield::collectDevelopOptions( int32 unitIndex, vector<hashed_string>& outListUnitId ) const

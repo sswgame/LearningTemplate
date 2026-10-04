@@ -11,7 +11,7 @@ namespace sw
     BrMatch::BrMatch()
         : _listPlayer{}
         , _listSupplyDrop{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listMatchScratch{}
         , _matchState{}
         , _zone{}
@@ -33,7 +33,7 @@ namespace sw
         _pLootCatalog = pLootCatalog;
         _listPlayer.clear();
         _listSupplyDrop.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _random.setSeed( seed );
         _stepTimer.reset();
         _time           = 0.0f;
@@ -168,8 +168,7 @@ namespace sw
 
     void BrMatch::drainEvents( vector<BrEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     const BrPlayer* BrMatch::findPlayer( int32 player ) const { return isValidPlayer( player ) ? &_listPlayer[static_cast<size_t>( player )] : nullptr; }
@@ -344,7 +343,7 @@ namespace sw
         event._kind     = BrEvent::Kind::SupplyDropLanded;
         event._value    = static_cast<int32>( _listSupplyDrop.size() ) - 1;
         event._position = drop._position;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     void BrMatch::collectMatchEvents()
@@ -370,6 +369,6 @@ namespace sw
         event._value  = value;
         if ( isValidPlayer( player ) )
             event._position = _listPlayer[static_cast<size_t>( player )]._position;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

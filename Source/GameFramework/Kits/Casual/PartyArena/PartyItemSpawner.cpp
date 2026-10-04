@@ -18,7 +18,7 @@ namespace sw
     PartyItemSpawner::PartyItemSpawner()
         : _catalog{}
         , _listInstance{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _settings{}
         , _random{}
         , _spawnTimer{}
@@ -31,7 +31,7 @@ namespace sw
         _settings = settings;
         _random.setSeed( seed );
         _listInstance.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _nextSerial = 1;
         _spawnTimer.start( MathUtil::max( 0.0f, settings._minInterval ) );
     }
@@ -60,7 +60,7 @@ namespace sw
                 event._kind   = PartyItemEvent::Kind::Expired;
                 event._itemId = instance._itemId;
                 event._serial = instance._serial;
-                _listEvent.push_back( event );
+                _eventBuffer.push( event );
                 continue;
             }
             _listInstance[writeIndex++] = instance;
@@ -104,7 +104,7 @@ namespace sw
         event._kind   = PartyItemEvent::Kind::Spawned;
         event._itemId = instance._itemId;
         event._serial = instance._serial;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     bool PartyItemSpawner::tryPickUp( const float3& position, float32 radius, int32 player, PartyItemInstance& outItem )
@@ -130,14 +130,13 @@ namespace sw
         event._itemId = outItem._itemId;
         event._serial = outItem._serial;
         event._player = player;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
         return true;
     }
 
     void PartyItemSpawner::drainEvents( vector<PartyItemEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     bool PartyItemSpawner::loadFromResource( string_view path )

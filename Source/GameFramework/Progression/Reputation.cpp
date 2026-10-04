@@ -73,7 +73,7 @@ namespace sw
 
     ReputationState::ReputationState()
         : _listEntry{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pCatalog{ nullptr }
     {
     }
@@ -82,7 +82,7 @@ namespace sw
     {
         _pCatalog = pCatalog;
         _listEntry.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
     }
 
     ReputationState::Entry& ReputationState::acquireEntry( const hashed_string& factionId )
@@ -127,7 +127,7 @@ namespace sw
             event._oldTier   = oldTier >= 0 ? pFaction->_listTier[static_cast<size_t>( oldTier )]._name : hashed_string{};
             event._newTier   = newTier >= 0 ? pFaction->_listTier[static_cast<size_t>( newTier )]._name : hashed_string{};
             event._value     = entry._value;
-            _listEvent.push_back( event );
+            _eventBuffer.push( event );
         }
         return entry._value - oldValue;
     }
@@ -189,7 +189,6 @@ namespace sw
 
     void ReputationState::drainEvents( vector<ReputationEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

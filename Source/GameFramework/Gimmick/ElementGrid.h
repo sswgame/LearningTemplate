@@ -14,6 +14,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Gimmick/ElementRuleTable.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -97,16 +98,16 @@ namespace sw
         void  pushEvent( const hashed_string& name, const int2& cell );
         void  collectSpread( const ElementStepRule& rule, int32 ruleIndex, const int2& position );
 
-        vector<Cell>            _listCell;
-        vector<ElementEvent>    _listEvent;
-        vector<PendingChange>   _listPending; ///< 걸음 안에서 다시 쓰는 자리
-        vector<int2>            _listFloodQueue;
-        vector<uint8>           _listVisited;
-        const ElementRuleTable* _pTable;
-        FixedStepTimer          _timer;
-        int2                    _wind;
-        int32                   _width;
-        int32                   _height;
-        uint32                  _stepCount;
+        vector<Cell>              _listCell;
+        EventBuffer<ElementEvent> _eventBuffer;
+        vector<PendingChange>     _listPending; ///< 걸음 안에서 다시 쓰는 자리
+        vector<int2>              _listFloodQueue;
+        vector<uint8>             _listVisited;
+        const ElementRuleTable*   _pTable;
+        FixedStepTimer            _timer;
+        int2                      _wind;
+        int32                     _width;
+        int32                     _height;
+        uint32                    _stepCount;
     };
 } // namespace sw

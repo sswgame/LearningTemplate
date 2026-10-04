@@ -11,6 +11,7 @@
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/GameCurve.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -142,17 +143,17 @@ namespace sw
         bool isEligible( int32 entryIndex ) const;
         void pickPending();
 
-        vector<SpawnAlive>    _listAlive;
-        vector<int32>         _listAliveCount; ///< 항목마다
-        vector<hashed_string> _listAllowedTag;
-        vector<SpawnEvent>    _listEvent;
-        const SpawnTable*     _pTable;
-        GameRandom            _random;
-        float32               _budget;
-        float32               _budgetScale;
-        float32               _time;
-        int32                 _pendingIndex; ///< −1 = 골라 둔 것 없음
-        uint32                _nextSpawnId;
-        uint8                 _bRefundOnDespawn;
+        vector<SpawnAlive>      _listAlive;
+        vector<int32>           _listAliveCount; ///< 항목마다
+        vector<hashed_string>   _listAllowedTag;
+        EventBuffer<SpawnEvent> _eventBuffer;
+        const SpawnTable*       _pTable;
+        GameRandom              _random;
+        float32                 _budget;
+        float32                 _budgetScale;
+        float32                 _time;
+        int32                   _pendingIndex; ///< −1 = 골라 둔 것 없음
+        uint32                  _nextSpawnId;
+        uint8                   _bRefundOnDespawn;
     };
 } // namespace sw

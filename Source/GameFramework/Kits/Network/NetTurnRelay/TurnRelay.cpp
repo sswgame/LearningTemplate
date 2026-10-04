@@ -39,7 +39,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     TurnRelayServer::TurnRelayServer()
         : _listRoom{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _defaultPolicy{}
         , _pHost{ nullptr }
         , _pPolicy{ nullptr }
@@ -56,7 +56,7 @@ namespace sw
         _pPolicy    = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
         _tokenState = tokenSeed != 0 ? tokenSeed : 1u;
         _listRoom.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
     }
 
     uint32 TurnRelayServer::nextToken()
@@ -162,7 +162,7 @@ namespace sw
         event._kind   = bReturning ? TurnRelayEvent::Kind::SeatReturned : TurnRelayEvent::Kind::Joined;
         event._roomId = roomId;
         event._seat   = seatIndex;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
 
         // 시작했으면 시작 알림과 놓친 행동을, 다 찼으면 시작을 모두에게.
         bool bFull = true;
@@ -186,7 +186,7 @@ namespace sw
             startEvent._kind   = TurnRelayEvent::Kind::Started;
             startEvent._roomId = roomId;
             startEvent._seat   = pRoom->_currentSeat;
-            _listEvent.push_back( startEvent );
+            _eventBuffer.push( startEvent );
         }
     }
 
@@ -226,7 +226,7 @@ namespace sw
                 event._seat   = seat;
                 event._index  = index;
                 event._buffer = actionBuffer;
-                _listEvent.push_back( event );
+                _eventBuffer.push( event );
                 return;
             }
         }
@@ -264,15 +264,14 @@ namespace sw
                 event._kind   = TurnRelayEvent::Kind::SeatLeft;
                 event._roomId = room._roomId;
                 event._seat   = static_cast<int32>( index );
-                _listEvent.push_back( event );
+                _eventBuffer.push( event );
             }
         }
     }
 
     void TurnRelayServer::drainEvents( vector<TurnRelayEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     // ------------------------------------------------------------------------------
@@ -280,7 +279,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     TurnRelayClient::TurnRelayClient()
         : _listAction{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pHost{ nullptr }
         , _roomId{ 0 }
         , _token{ 0 }
@@ -378,13 +377,12 @@ namespace sw
             }
         }
         if ( reader.hasOverflowed() == false )
-            _listEvent.push_back( event );
+            _eventBuffer.push( event );
         return true;
     }
 
     void TurnRelayClient::drainEvents( vector<TurnRelayEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

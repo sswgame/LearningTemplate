@@ -21,7 +21,7 @@ namespace sw
 namespace sw
 {
     WesternHorse::WesternHorse()
-        : _listEvent{}
+        : _eventBuffer{}
         , _listAbility{}
         , _health{}
         , _stamina{}
@@ -58,7 +58,7 @@ namespace sw
         stamina._exhaustThreshold = _pDef->_stamina * 0.25f; // 바닥나면 4 분의 1 까지 쉬어야 다시 달린다
         _stamina.initialize( stamina );
         _random.setSeed( seed );
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listAbility.clear();
         _healthCore                                 = kCoreMax;
         _staminaCore                                = kCoreMax;
@@ -70,7 +70,7 @@ namespace sw
         _bGalloping                                 = SW_FALSE;
         const vector<WesternBondLevelDef>& listBond = pCatalog->getBondLevels();
         applyBondLevel( listBond.empty() ? 1 : listBond.front()._level );
-        _listEvent.clear(); // 첫 단계는 알리지 않는다
+        _eventBuffer.clear(); // 첫 단계는 알리지 않는다
         return true;
     }
 
@@ -109,7 +109,7 @@ namespace sw
         {
             WesternHorseEvent event;
             event._kind = WesternHorseEvent::Kind::Exhausted;
-            _listEvent.push_back( event );
+            _eventBuffer.push( event );
         }
         return bGalloping;
     }
@@ -152,7 +152,7 @@ namespace sw
         // 탄 사람이 있을 때만 떨어뜨릴 수 있다. 난수는 늘 하나 쓴다(탔는지와 상관없이 같은 수열).
         const bool bBuck = _random.nextChance( ( 1.0f - resist ) * WesternHorseInternal::kBuckChanceScale ) && _bRidden != SW_FALSE;
         event._kind      = bBuck ? WesternHorseEvent::Kind::ThrewRider : WesternHorseEvent::Kind::Spooked;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
         if ( bBuck )
             _bRidden = SW_FALSE;
         return bBuck ? WesternHorseReaction::Bucked : WesternHorseReaction::Rearing;
@@ -198,8 +198,7 @@ namespace sw
 
     void WesternHorse::drainEvents( vector<WesternHorseEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void WesternHorse::applyBondLevel( int32 level )
@@ -222,7 +221,7 @@ namespace sw
                 event._kind    = WesternHorseEvent::Kind::AbilityUnlocked;
                 event._ability = unlock;
                 event._value   = bond._level;
-                _listEvent.push_back( event );
+                _eventBuffer.push( event );
             }
         }
         _stamina.setMaxBonus( staminaBonus );
@@ -230,7 +229,7 @@ namespace sw
         WesternHorseEvent event;
         event._kind  = WesternHorseEvent::Kind::BondLevelUp;
         event._value = level;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     float32 WesternHorse::computeFearResist() const

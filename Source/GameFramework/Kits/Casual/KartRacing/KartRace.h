@@ -24,6 +24,7 @@
 #include "GameFramework/Kits/Casual/KartRacing/KartItems.h"
 #include "GameFramework/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
@@ -237,23 +238,23 @@ namespace sw
         void               resolveRaceEnd();
         void               pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time );
 
-        vector<KartRacer>      _listRacer;
-        vector<KartProjectile> _listProjectile;
-        vector<KartRaceEvent>  _listEvent;
-        vector<Countdown>      _listItemBoxTimer; ///< 끝나 있으면 놓여 있다
-        vector<int32>          _listPlaceOrder;   ///< 순위 순서의 차 번호
-        KartRaceSettings       _settings;
-        GameRandom             _random;
-        FixedStepTimer         _timer;
-        const KartTrack*       _pTrack;
-        const KartItemCatalog* _pItemCatalog;
-        KartGhost*             _pGhost;
-        float32                _raceTime;
-        Countdown              _countdown;
-        float32                _bestLapTime;
-        float32                _firstFinishTime; ///< < 0 = 아직 아무도
-        int32                  _ghostRacer;
-        int32                  _finishedCount;
-        KartRacePhase          _phase;
+        vector<KartRacer>          _listRacer;
+        vector<KartProjectile>     _listProjectile;
+        EventBuffer<KartRaceEvent> _eventBuffer;
+        vector<Countdown>          _listItemBoxTimer; ///< 끝나 있으면 놓여 있다
+        vector<int32>              _listPlaceOrder;   ///< 순위 순서의 차 번호
+        KartRaceSettings           _settings;
+        GameRandom                 _random;
+        FixedStepTimer             _timer;
+        const KartTrack*           _pTrack;
+        const KartItemCatalog*     _pItemCatalog;
+        KartGhost*                 _pGhost;
+        float32                    _raceTime;
+        Countdown                  _countdown;
+        float32                    _bestLapTime;
+        float32                    _firstFinishTime; ///< < 0 = 아직 아무도
+        int32                      _ghostRacer;
+        int32                      _finishedCount;
+        KartRacePhase              _phase;
     };
 } // namespace sw

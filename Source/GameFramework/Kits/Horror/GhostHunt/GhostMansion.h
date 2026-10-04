@@ -16,6 +16,7 @@
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostEncounter.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -133,19 +134,19 @@ namespace sw
         void  revealBoo( size_t booIndex );
         void  pushEvent( GhostMansionEventType type, const hashed_string& id, const hashed_string& room = hashed_string{}, int32 count = 0 );
 
-        GhostEncounter            _encounter;
-        GameRandom                _random;
-        ItemBag                   _keyBag;
-        vector<GhostBooRuntime>   _listBoo;      ///< 카탈로그 부 순서
-        vector<uint8>             _listSearched; ///< 카탈로그 가구 순서
-        vector<GhostMansionEvent> _listEvent;
-        vector<GhostEvent>        _listGhostEvent; ///< 게임에 넘길 싸움 알림
-        hashed_string             _currentRoom;
-        const GhostCatalog*       _pCatalog;
-        const LootCatalog*        _pLoot;
-        AreaGraph*                _pAreaGraph;
-        GameFlags*                _pFlags;
-        uint32                    _seed;
-        int32                     _coinCount;
+        GhostEncounter                 _encounter;
+        GameRandom                     _random;
+        ItemBag                        _keyBag;
+        vector<GhostBooRuntime>        _listBoo;      ///< 카탈로그 부 순서
+        vector<uint8>                  _listSearched; ///< 카탈로그 가구 순서
+        EventBuffer<GhostMansionEvent> _eventBuffer;
+        vector<GhostEvent>             _listGhostEvent; ///< 게임에 넘길 싸움 알림
+        hashed_string                  _currentRoom;
+        const GhostCatalog*            _pCatalog;
+        const LootCatalog*             _pLoot;
+        AreaGraph*                     _pAreaGraph;
+        GameFlags*                     _pFlags;
+        uint32                         _seed;
+        int32                          _coinCount;
     };
 } // namespace sw

@@ -22,6 +22,7 @@
 #include "GameFramework/Kits/Casual/PartyArena/PartyItemSpawner.h"
 #include "GameFramework/Match/MatchState.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -199,14 +200,14 @@ namespace sw
         void   applyItem( int32 player, const PartyItemDef& def );
         void   pushEvent( TrampolineEvent::Kind kind, int32 player, int32 other, int32 value );
 
-        vector<TrampolinePlayer> _listPlayer;
-        vector<TrampolineEvent>  _listEvent;
-        vector<MatchEvent>       _listMatchEvent; ///< 걸음마다 다시 쓰는 경기 알림 자리
-        TrampolineSettings       _settings;
-        TimingJudge              _judge;
-        PartyItemSpawner         _itemSpawner;
-        MatchState               _match;
-        FixedStepTimer           _timer;
-        float32                  _time;
+        vector<TrampolinePlayer>     _listPlayer;
+        EventBuffer<TrampolineEvent> _eventBuffer;
+        vector<MatchEvent>           _listMatchEvent; ///< 걸음마다 다시 쓰는 경기 알림 자리
+        TrampolineSettings           _settings;
+        TimingJudge                  _judge;
+        PartyItemSpawner             _itemSpawner;
+        MatchState                   _match;
+        FixedStepTimer               _timer;
+        float32                      _time;
     };
 } // namespace sw

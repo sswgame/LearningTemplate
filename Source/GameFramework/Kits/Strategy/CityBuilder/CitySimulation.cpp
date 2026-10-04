@@ -72,7 +72,7 @@ namespace sw
         : _listTile{}
         , _listBuilding{}
         , _listWalker{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pCatalog{ nullptr }
         , _settings{}
         , _stepTimer{}
@@ -103,7 +103,7 @@ namespace sw
         _listTile.assign( static_cast<size_t>( _width * _height ), CityTile{} );
         _listBuilding.clear();
         _listWalker.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _stepTimer = FixedStepTimer( settings._fixedStep, 5.0f );
         _random.setSeed( settings._randomSeed );
         _time               = 0.0f;
@@ -401,8 +401,7 @@ namespace sw
 
     void CitySimulation::drainEvents( vector<CityEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void CitySimulation::stepFixed( float32 deltaTime )
@@ -690,7 +689,7 @@ namespace sw
                     if ( storage._bAlive != SW_FALSE )
                     {
                         storage._stock.addItem( walker._cargoGood, walker._cargoAmount );
-                        _listEvent.push_back( CityEvent{ walker._cargoAmount, walker._targetBuilding, CityEvent::Kind::GoodsDelivered } );
+                        _eventBuffer.push( CityEvent{ walker._cargoAmount, walker._targetBuilding, CityEvent::Kind::GoodsDelivered } );
                     }
                 }
                 removeWalker( walker );
@@ -867,7 +866,7 @@ namespace sw
             {
                 ++house._level;
                 house._evolveTimer = 0.0f;
-                _listEvent.push_back( CityEvent{ house._level, buildingIndex, CityEvent::Kind::HouseEvolved } );
+                _eventBuffer.push( CityEvent{ house._level, buildingIndex, CityEvent::Kind::HouseEvolved } );
                 continue;
             }
             const bool bLosing  = house._level > 0 && meetsHouseLevel( house, house._level ) == false;
@@ -876,7 +875,7 @@ namespace sw
             {
                 --house._level;
                 house._devolveTimer = 0.0f;
-                _listEvent.push_back( CityEvent{ house._level, buildingIndex, CityEvent::Kind::HouseDevolved } );
+                _eventBuffer.push( CityEvent{ house._level, buildingIndex, CityEvent::Kind::HouseDevolved } );
             }
         }
     }
@@ -904,7 +903,7 @@ namespace sw
         _wageDebt -= static_cast<float32>( wages );
         _money += income - wages;
         _monthIncome = income - wages;
-        _listEvent.push_back( CityEvent{ _monthIncome, -1, CityEvent::Kind::MonthEnded } );
+        _eventBuffer.push( CityEvent{ _monthIncome, -1, CityEvent::Kind::MonthEnded } );
 
         if ( ++_month >= kMonthsPerYear )
         {
@@ -912,7 +911,7 @@ namespace sw
             ++_year;
             // 범람 — 해마다 다르다(40 % … 100 %). 범람원 농장의 다음 한 해를 정한다.
             _floodFertility = _random.nextRange( 0.4f, 1.0f );
-            _listEvent.push_back( CityEvent{ static_cast<int32>( _floodFertility * 100.0f ), -1, CityEvent::Kind::Flood } );
+            _eventBuffer.push( CityEvent{ static_cast<int32>( _floodFertility * 100.0f ), -1, CityEvent::Kind::Flood } );
         }
     }
 
@@ -1181,7 +1180,7 @@ namespace sw
         _year               = year;
         _bRoadsDirty        = bRoadsDirty;
         _bDesirabilityDirty = bDesirabilityDirty;
-        _listEvent.clear();
+        _eventBuffer.clear();
         return true;
     }
 } // namespace sw

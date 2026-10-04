@@ -12,6 +12,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
@@ -237,27 +238,27 @@ namespace sw
         bool  isRoad( int32 x, int32 y ) const;
         int32 getRoadComponent( const int2& tile ) const;
 
-        vector<CityTile>     _listTile;
-        vector<CityBuilding> _listBuilding;
-        vector<CityWalker>   _listWalker;
-        vector<CityEvent>    _listEvent;
-        const CityCatalog*   _pCatalog;
-        CitySettings         _settings;
-        FixedStepTimer       _stepTimer;
-        GameRandom           _random;
-        float32              _time;
-        float32              _monthTimer;
-        float32              _floodFertility;
-        float32              _wageDebt;
-        int32                _width;
-        int32                _height;
-        int32                _money;
-        int32                _monthIncome;
-        int32                _workforce;
-        int32                _employed;
-        int32                _month;
-        int32                _year;
-        uint8                _bRoadsDirty;
-        uint8                _bDesirabilityDirty;
+        vector<CityTile>       _listTile;
+        vector<CityBuilding>   _listBuilding;
+        vector<CityWalker>     _listWalker;
+        EventBuffer<CityEvent> _eventBuffer;
+        const CityCatalog*     _pCatalog;
+        CitySettings           _settings;
+        FixedStepTimer         _stepTimer;
+        GameRandom             _random;
+        float32                _time;
+        float32                _monthTimer;
+        float32                _floodFertility;
+        float32                _wageDebt;
+        int32                  _width;
+        int32                  _height;
+        int32                  _money;
+        int32                  _monthIncome;
+        int32                  _workforce;
+        int32                  _employed;
+        int32                  _month;
+        int32                  _year;
+        uint8                  _bRoadsDirty;
+        uint8                  _bDesirabilityDirty;
     };
 } // namespace sw

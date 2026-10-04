@@ -42,7 +42,7 @@ namespace sw
     WesternLawState::WesternLawState()
         : _listRecord{}
         , _listPending{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pCatalog{ nullptr }
         , _nextIncidentId{ 1 }
         , _bDisguised{ SW_FALSE }
@@ -54,7 +54,7 @@ namespace sw
         _pCatalog = pCatalog;
         _listRecord.clear();
         _listPending.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _nextIncidentId = 1;
         _bDisguised     = SW_FALSE;
     }
@@ -219,8 +219,7 @@ namespace sw
 
     void WesternLawState::drainEvents( vector<WesternLawEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     WesternLawState::RegionRecord* WesternLawState::findRecordMutable( const hashed_string& regionId )
@@ -291,6 +290,6 @@ namespace sw
         event._incidentId = incidentId;
         event._crimeId    = crimeId;
         event._witnessId  = witnessId;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

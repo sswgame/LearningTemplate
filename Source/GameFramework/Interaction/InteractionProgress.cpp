@@ -21,7 +21,7 @@ namespace sw
     InteractionProgress::InteractionProgress()
         : _config{}
         , _listParticipant{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pJudge{ nullptr }
         , _random{}
         , _seed{ GameRandom::kDefaultSeed }
@@ -49,7 +49,7 @@ namespace sw
     void InteractionProgress::reset()
     {
         _listParticipant.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _random.setSeed( _seed );
         _skillCheckActor    = 0;
         _progress           = 0.0f;
@@ -73,7 +73,7 @@ namespace sw
         event._kind    = kind;
         event._actorId = actorId;
         event._value   = value;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     bool InteractionProgress::hasParticipant( uint32 actorId ) const
@@ -201,7 +201,7 @@ namespace sw
             event._actorId = actorId;
             event._grade   = grade;
             event._value   = bonus;
-            _listEvent.push_back( event );
+            _eventBuffer.push( event );
             addProgress( bonus );
             return;
         }
@@ -210,13 +210,12 @@ namespace sw
         event._actorId = actorId;
         event._value   = -_config._skillCheckPenalty;
         event._bNoise  = _config._bSkillCheckFailNoise;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
         addProgress( -_config._skillCheckPenalty );
     }
 
     void InteractionProgress::drainEvents( vector<InteractionEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

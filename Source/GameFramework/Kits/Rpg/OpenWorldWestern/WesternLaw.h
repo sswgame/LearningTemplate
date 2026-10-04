@@ -12,6 +12,7 @@
 #include "GameFramework/AI/AiPerception.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -177,11 +178,11 @@ namespace sw
         void                pushEvent( WesternLawEvent::Kind kind, const hashed_string& regionId, int32 value, uint32 incidentId = 0,
                                        const hashed_string& crimeId = hashed_string{}, uint64 witnessId = 0 );
 
-        vector<RegionRecord>    _listRecord;
-        vector<PendingReport>   _listPending;
-        vector<WesternLawEvent> _listEvent;
-        const WesternCatalog*   _pCatalog;
-        uint32                  _nextIncidentId;
-        uint8                   _bDisguised;
+        vector<RegionRecord>         _listRecord;
+        vector<PendingReport>        _listPending;
+        EventBuffer<WesternLawEvent> _eventBuffer;
+        const WesternCatalog*        _pCatalog;
+        uint32                       _nextIncidentId;
+        uint8                        _bDisguised;
     };
 } // namespace sw

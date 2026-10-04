@@ -9,7 +9,7 @@ namespace sw
     MatchState::MatchState()
         : _listTeam{}
         , _listParticipant{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _settings{}
         , _elapsed{ 0.0f }
         , _phaseTime{ 0.0f }
@@ -23,7 +23,7 @@ namespace sw
         _settings = settings;
         _listTeam.clear();
         _listParticipant.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _elapsed     = 0.0f;
         _phaseTime   = 0.0f;
         _winningTeam = -1;
@@ -302,12 +302,11 @@ namespace sw
         event._other       = other;
         event._team        = team;
         event._value       = value;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     void MatchState::drainEvents( vector<MatchEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

@@ -26,7 +26,7 @@ namespace sw
 {
     ArcadeVehicleMotor::ArcadeVehicleMotor()
         : _settings{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _timer{ 1.0f / 60.0f, 0.25f }
         , _pGround{ nullptr }
         , _position{}
@@ -53,7 +53,7 @@ namespace sw
         _driftDirection = 0;
         _bAirborne      = SW_FALSE;
         _timer.reset();
-        _listEvent.clear();
+        _eventBuffer.clear();
     }
 
     void ArcadeVehicleMotor::addImpulse( const float3& impulse )
@@ -173,8 +173,7 @@ namespace sw
 
     void ArcadeVehicleMotor::drainEvents( vector<ArcadeVehicleEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     float32 ArcadeVehicleMotor::computeSteerRate( float32 speed ) const
@@ -376,6 +375,6 @@ namespace sw
         ArcadeVehicleEvent event;
         event._kind  = kind;
         event._value = value;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

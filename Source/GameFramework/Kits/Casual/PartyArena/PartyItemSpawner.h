@@ -15,6 +15,7 @@
 #include "GameFramework/Data/StatBlock.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -99,7 +100,7 @@ namespace sw
         [[nodiscard]] bool tryPickUp( const float3& position, float32 radius, int32 player, PartyItemInstance& outItem );
         void               drainEvents( vector<PartyItemEvent>& outListEvent );
         /** @brief 쌓인 알림을 꺼내지 않고 버립니다(쓰지 않는 쪽 — 받을 목록을 만들어 복사하지 않는다). */
-        void discardEvents() { _listEvent.clear(); }
+        void discardEvents() { _eventBuffer.clear(); }
 
         const PartyItemDef*              findItem( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<PartyItemInstance>& getInstances() const { return _listInstance; }
@@ -112,12 +113,12 @@ namespace sw
         void                spawnOne();
         float32             rollInterval();
 
-        GameCatalog<PartyItemDef> _catalog;
-        vector<PartyItemInstance> _listInstance;
-        vector<PartyItemEvent>    _listEvent;
-        PartyItemSpawnSettings    _settings;
-        GameRandom                _random;
-        Countdown                 _spawnTimer;
-        int32                     _nextSerial;
+        GameCatalog<PartyItemDef>   _catalog;
+        vector<PartyItemInstance>   _listInstance;
+        EventBuffer<PartyItemEvent> _eventBuffer;
+        PartyItemSpawnSettings      _settings;
+        GameRandom                  _random;
+        Countdown                   _spawnTimer;
+        int32                       _nextSerial;
     };
 } // namespace sw
