@@ -48,6 +48,7 @@ namespace sw
         void                                 drawDebug( IPhysicsDebugRenderer& renderer ) const override;
 
         PhysicsShapeHandle createShape( span<const PhysicsShapeDesc2D> listShape, const hashed_string& material ) override;
+        PhysicsShapeHandle createCompoundShape( span<const PhysicsShapeHandle> listChild ) override;
         void               destroyShape( PhysicsShapeHandle shape ) override;
 
         PhysicsBodyHandle createBody( const PhysicsBodyDesc2D& desc ) override;

@@ -101,5 +101,6 @@ namespace sw
         hashed_string _startStimulus;
 
         ElementGrid _grid;
+        uint32      _seenTableReloadCount; ///< 표를 찾을 때의 `ElementRuleTable::getSharedReloadCount` — 달라지면 다시 짓는다
     };
 } // namespace sw

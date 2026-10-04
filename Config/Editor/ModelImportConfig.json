@@ -12,6 +12,21 @@
       "animation_sample_rate": 30,
       "animation_precision": 0.0001,
       "animation_shell_distance": 0.1
+    },
+    {
+      "name": "Destruction_BrickWall",
+      "include_patterns": ["*/empty/models_raw/brick_wall*"],
+      "fracture": { "pattern": "uniform", "pieces": 200, "seed": 7, "levels": [6, 30], "interior_color": [0.55, 0.5, 0.45, 1.0] }
+    },
+    {
+      "name": "Destruction_Crate",
+      "include_patterns": ["*/empty/models_raw/crate_medium*"],
+      "fracture": { "volume": "bounds", "pattern": "uniform", "pieces": 24, "seed": 3, "levels": [4], "interior_color": [0.62, 0.45, 0.28, 1.0] }
+    },
+    {
+      "name": "Destruction_Barrel",
+      "include_patterns": ["*/empty/models_raw/barrel*"],
+      "fracture": { "pattern": "uniform", "pieces": 20, "seed": 11, "levels": [3], "interior_color": [0.35, 0.33, 0.3, 1.0] }
     }
   ]
 }

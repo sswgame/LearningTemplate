@@ -9,11 +9,19 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Animation/Pose.h"
+#include "Engine/Object/Animation/AnimationCrowd.h"
+#include "Engine/Object/Animation/AnimationDebugState.h"
+#include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Object/Animation/AnimationRewind.h"
+
 namespace sw
 {
     class AnimPlayer;
+    class Component;
     class GameObjectManager;
     class SkeletalMeshComponent;
+    class SkeletonBoneLod;
 
     /**
      * @enum AnimationPhase
@@ -82,8 +90,59 @@ namespace sw
         }
         /** @brief 모든 단계 뒤 게임 스레드에서 불립니다(루트 모션 적용 등). */
         virtual void finishAnimationFrame( SkeletalMeshComponent& unit ) { (void)unit; }
+        /**
+         * @brief 이번 프레임 포즈를 군중 묶음과 나눌 수 있으면 요청을 채우고 true 입니다(시간 단계 뒤, 게임 스레드).
+         * @details 나눌 수 있는 것: 반복 클립 하나를 섞기 · 레이어 · 시퀀서 덮어쓰기 없이 재생 중. 기본은 나눌 수 없음입니다(IK 같은 후처리 일은 유닛마다다).
+         */
+        virtual bool describeSharedPose( AnimSharedPoseRequest& outRequest ) const
+        {
+            (void)outRequest;
+            return false;
+        }
+        /** @brief 요청의 클립 소유입니다(묶음이 들고 있게). 모르는 클립이면 nullptr 입니다. */
+        virtual shared_ptr<const AnimClip> findSharedPoseClip( const AnimClip* pClip ) const
+        {
+            (void)pClip;
+            return nullptr;
+        }
         /** @brief 유닛이 사라지거나 일을 뗐습니다. 들고 있던 유닛 포인터를 놓습니다. */
         virtual void onAnimationUnitDetached( SkeletalMeshComponent& unit ) { (void)unit; }
+        /** @brief 진단 상태(그래프 상태 · 알림 · 커브 · 루트 모션)를 채웁니다 — 되감기 기록 · 패널이 읽습니다(게임 스레드, 평가 뒤). */
+        virtual void collectDebugState( AnimationDebugState& inoutState ) const { (void)inoutState; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class IAnimationLodClient
+     * @brief LOD 판정을 받는 것(스켈레탈 유닛 · 스프라이트 애니메이터)입니다. `AnimationSystem::registerLodClient` 로 올립니다.
+     * @details 리플렉션 컴포넌트는 기반 클래스 하나만 두므로 컴포넌트가 이것을 구현한 작은 객체를 하나 듭니다(`SkeletalAnimatorBinding` 과 같은 자리).
+     *          판정은 게임 스레드에서 평가 앞에 한 번이고, 결과는 `applyAnimationLod` 로 받습니다.
+     */
+    class SW_API IAnimationLodClient
+    {
+    public:
+        IAnimationLodClient()                                        = default;
+        virtual ~IAnimationLodClient()                               = default;
+        IAnimationLodClient( const IAnimationLodClient& )            = delete;
+        IAnimationLodClient& operator=( const IAnimationLodClient& ) = delete;
+
+        /** @brief 월드 경계 구입니다. 없으면 false — 늘 보이고 가장 중요한 것으로 봅니다. */
+        virtual bool findAnimationLodBounds( float3& outCenter, float32& outRadius ) const = 0;
+        /** @brief 본 LOD 표입니다(없으면 nullptr). */
+        virtual const SkeletonBoneLod* findBoneLod() const { return nullptr; }
+        /** @brief 이번 프레임의 판정을 받습니다(게임 스레드). */
+        virtual void applyAnimationLod( const AnimationLodState& state ) = 0;
+        /**
+         * @brief 포즈 없이 상태만 되감기에 남기는 클라이언트(스프라이트 애니메이터)면 그 컴포넌트입니다. 기본은 nullptr — 스켈레탈 유닛은 포즈와 함께
+         *        따로 기록합니다.
+         */
+        virtual const Component* findRewindTarget() const { return nullptr; }
+        /** @brief 되감기에 남길 상태를 채웁니다(게임 스레드, 평가 뒤). */
+        virtual void collectDebugState( AnimationDebugState& inoutState ) const { (void)inoutState; }
+        /** @brief 되감는 동안 기록된 상태를 겁니다(게임 스레드). */
+        virtual void applyRewindState( const AnimationDebugState& state ) { (void)state; }
     };
 } // namespace sw
 
@@ -118,11 +177,44 @@ namespace sw
         /** @brief 의존 · 리더가 바뀌었습니다. 다음 평가가 레벨을 다시 짓습니다. */
         void markOrderDirty() { _bOrderDirty = SW_TRUE; }
 
-        /** @brief 한 프레임을 평가합니다(게임 스레드, 틱 뒤). */
+        /** @brief 한 프레임을 평가합니다(게임 스레드, 틱 뒤). LOD 판정 → 단계들 순서입니다. */
         void evaluate( float32 deltaSeconds );
+
+        // --- LOD (AnimationLod.h) ---
+        /** @brief LOD 판정을 받을 것을 올립니다(유닛 · 스프라이트 애니메이터). */
+        void registerLodClient( IAnimationLodClient* pClient );
+        /** @brief 내립니다. 멱등입니다. */
+        void unregisterLodClient( IAnimationLodClient* pClient );
+        /**
+         * @brief 다음 평가가 쓸 뷰들입니다(주 시점 + 추가 뷰). 엔진 루프가 프레임마다 넣습니다. 한 번도 넣지 않았으면 LOD 는 꺼져 있습니다
+         *        (모든 클라이언트가 보이고 매 프레임 — 시험 · 서버 · 뷰가 없는 실행).
+         */
+        void setLodViews( const vector<AnimationLodView>& listView );
+        /** @brief 뷰를 지워 LOD 를 끕니다. */
+        void clearLodViews();
+        /** @brief LOD 표를 정합니다(시험 · 게임). 정하지 않으면 처음 판정 때 `AnimationLodSettings::kResourcePath` 를 읽습니다. */
+        void                        setLodSettings( const AnimationLodSettings& settings );
+        const AnimationLodSettings& getLodSettings() const { return _lodSettings; }
+        /** @brief 지난 판정에서 포즈 하나를 만드는 데 든 평균 시간(마이크로초, 지수 이동 평균)입니다 — 예산 배분이 씁니다. */
+        float32 getAverageEvaluationMicroseconds() const { return _averageEvaluationMicroseconds; }
+        /** @brief 비용 평균을 정합니다(시험 — 측정 대신 정한 값으로 예산을 돌린다). 0 이면 다시 잽니다. */
+        void setAverageEvaluationMicroseconds( float32 microseconds ) { _averageEvaluationMicroseconds = microseconds; }
+        /** @brief 지난 판정에서 예산 배분 뒤의 예상 비용(마이크로초)입니다. */
+        float32 getExpectedEvaluationMicroseconds() const { return _expectedEvaluationMicroseconds; }
+        /** @brief 지난 평가에서 실제로 포즈를 만든 유닛 수입니다. */
+        uint32 getPoseEvaluatedUnitCount() const { return _poseEvaluatedUnitCount; }
+
+        // --- 군중 공유 (AnimationCrowd.h) ---
+        /** @brief 군중(묶음 · 사본 풀 · VAT 캐시 · 시계)입니다. */
+        AnimationCrowd&       getCrowd() { return _crowd; }
+        const AnimationCrowd& getCrowd() const { return _crowd; }
+        /** @brief 군중 표를 정합니다(시험 · 게임). 정하지 않으면 처음 쓸 때 `AnimationCrowdSettings::kResourcePath` 를 읽습니다. */
+        void setCrowdSettings( const AnimationCrowdSettings& settings );
 
         /** @brief 등록된 유닛 수입니다. */
         uint32 getUnitCount() const { return static_cast<uint32>( _listUnit.size() ); }
+        /** @brief 등록된 유닛 전부입니다(평가 순서 아님). 레벨은 유닛이 빠지는 순간 비워지므로 "지금 있는 유닛" 은 이것으로 봅니다. */
+        const vector<SkeletalMeshComponent*>& getUnits() const { return _listUnit; }
         /** @brief 의존 레벨입니다(0 이 먼저). 시험 · 진단용입니다. */
         const vector<vector<SkeletalMeshComponent*>>& getLevels() const { return _listLevel; }
         /** @brief 마지막으로 지은 레벨에 의존 고리가 있었는지입니다. */
@@ -131,6 +223,12 @@ namespace sw
         uint64 getFrameIndex() const { return _frameIndex; }
         /** @brief 지난 프레임에 일한(쉬지 않은) 유닛 수입니다. */
         uint32 getActiveUnitCount() const { return _activeUnitCount; }
+#if SW_ANIMATION_REWIND_ENABLED
+        // --- 되감기 (AnimationRewind.h, Shipping 에는 없다) ---
+        /** @brief 되감기 기록기입니다. 켜져 있으면 평가 뒤 일한 유닛을 기록하고, 되감는 동안에는 평가 대신 기록된 포즈를 겁니다. */
+        AnimationRewindRecorder&       getRewind() { return _rewind; }
+        const AnimationRewindRecorder& getRewind() const { return _rewind; }
+#endif
         /** @brief 거리 LOD 의 기준점(보통 카메라 월드 위치)을 정합니다. 카메라 · 뷰를 가진 쪽이 프레임마다 넣습니다. */
         void setLodViewPosition( const float3& position );
         /** @brief 거리 LOD 기준점을 지웁니다(거리 LOD 가 꺼진다). */
@@ -139,24 +237,52 @@ namespace sw
         bool findLodViewPosition( float3& outPosition ) const;
 
     private:
+        /** @brief LOD 판정(가시성 · 화면 크기 · 주기 · 본 LOD · 예산)을 하고 클라이언트에 알립니다. */
+        void updateLod();
         /** @brief 의존을 풀어 레벨을 다시 짓습니다. */
         void rebuildLevels();
         /** @brief 단계 하나를 레벨 순서로 돕니다. */
         void runPhase( AnimationPhase phase );
         /** @brief 같은 이름의 동기 그룹끼리 위상을 맞춥니다. */
         void synchronizeGroups();
+        /** @brief 군중 공유를 켠 유닛의 묶음 · 사본 · VAT 를 정하고 묶음을 평가합니다(시간 단계 뒤). */
+        void updateCrowd();
+#if SW_ANIMATION_REWIND_ENABLED
+        /** @brief 되감는 동안 — 기록된 포즈를 유닛마다, 기록된 상태를 스프라이트 애니메이터마다 겁니다(평가하지 않는다). */
+        void applyRewindScrub();
+        /** @brief 이번 프레임을 기록합니다 — 일한 유닛(포즈 + 상태)과 상태만 남기는 LOD 클라이언트. */
+        void recordRewindFrame();
+#endif
 
         vector<SkeletalMeshComponent*>         _listUnit;
         vector<vector<SkeletalMeshComponent*>> _listLevel;
         vector<SkeletalMeshComponent*>         _listActive;     ///< 이번 프레임 단계를 도는 유닛(레벨 순서). 재사용합니다
         vector<uint32>                         _listLevelStart; ///< `_listActive` 안의 레벨 시작 위치(끝 하나 더)
-        GameObjectManager*                     _pManager;
-        float3                                 _lodViewPosition;
-        uint64                                 _frameIndex;
-        float32                                _deltaSeconds;
-        uint32                                 _activeUnitCount;
-        uint8                                  _bOrderDirty;
-        uint8                                  _bCycle;
-        uint8                                  _bHasLodViewPosition;
+        vector<IAnimationLodClient*>           _listLodClient;
+        vector<AnimationLodView>               _listLodView;
+        vector<AnimationLodState>              _listScratchLodState;   ///< 판정 중 클라이언트마다의 상태(재사용)
+        vector<AnimationBudgetItem>            _listScratchBudgetItem; ///< 예산 배분 입력(재사용)
+        AnimationLodSettings                   _lodSettings;
+        AnimationCrowd                         _crowd;
+#if SW_ANIMATION_REWIND_ENABLED
+        AnimationRewindRecorder _rewind;
+        Pose                    _rewindScratchPose; ///< 되감기 포즈를 풀 자리(재사용)
+        uint8                   _bRewindApplied;    ///< 지난 프레임에 되감기 포즈를 걸었다(끝나면 다시 평가하게 한다)
+#endif
+        GameObjectManager* _pManager;
+        float3             _lodViewPosition;
+        uint64             _frameIndex;
+        float32            _deltaSeconds;
+        float32            _averageEvaluationMicroseconds;
+        float32            _expectedEvaluationMicroseconds;
+        uint32             _activeUnitCount;
+        uint32             _poseEvaluatedUnitCount;
+        uint8              _bOrderDirty;
+        uint8              _bCycle;
+        uint8              _bLodViewsSet;        ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
+        uint8              _bLodSettingsReady;   ///< 표를 정했거나 읽었다
+        uint8              _bLodApplied;         ///< 지난 프레임에 판정을 넣었다(꺼질 때 한 번 되돌린다)
+        uint8              _bCrowdSettingsReady; ///< 군중 표를 정했거나 읽었다
+        uint8              _bHasLodViewPosition; ///< 거리 LOD 기준점을 정했다
     };
 } // namespace sw

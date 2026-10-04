@@ -14,8 +14,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   틱을 끄고 턴마다 `advanceTime( 1 )`). 같은 오브젝트의 `HealthBarComponent` · `DamageNumberComponent` 와 이어집니다. 자세한 것은 `Ability/README.md`,
   쓰는 예는 `Source/Games/AbilityArena`
 - **Framework**: 게임 모듈의 수명과 배선 — `IGame`, `GameInstanceBase`, 서비스 로케이터(`GameService`), 세이브 베이스(`SaveGame`),
-  "game" 채널 이벤트(`GameEvents.h` · 내는 길 `GameEventUtil`), 모드 전이(`GameModeStateMachine` — 일시정지 진입 · 해제에 `GamePausedEvent` · `GameResumedEvent`),
-  화면 전환(`ScreenTransitionManager`), 소리(`GameSound` — 이벤트 라이브러리 올리기 · 내리기, 2D 이벤트 `postEvent`, 월드 자리 원샷 `postEventAt`(한 번 쓰는 에미터), 클립 `play( path, bus )`;
+  "game" 채널 이벤트(`GameEvents.h` · 내는 길 `GameEventUtil`), 화면 전환(`ScreenTransitionManager`), 소리(`GameSound` — 이벤트 라이브러리 올리기 · 내리기, 2D 이벤트 `postEvent`, 월드 자리 원샷 `postEventAt`(한 번 쓰는 에미터), 클립 `play( path, bus )`;
   따라 움직이는 · 루프 소리는 엔진의 `AudioEmitterComponent`, 자세한 것은 `Source/Engine/Audio/README.md`). `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료를 그 자리에서 낸다. `onInitialize` 뒤에 사용자 설정을 다시 넣는다(`UserSettingsManager::reapplyAll` — 언어 · 입력 맵이 그때 선다). 공유 타입은 루트의 `GameFrameworkMinimal.h`.
   PROPERTY 가 아닌 컴포넌트 상태(디렉터가 든 키트 시뮬레이션)는 `ComponentStateStore` 가 상태 봉투의 세 번째 섹션으로 실어 핫 리로드 · 세이브를 넘긴다 —
   게임이 `onBeforeStateSerialize` 에서 `getComponentStateStore().capture<T>( manager )`, `onAfterStateDeserialize` 에서 `restore<T>( manager )` 를 부르고,
@@ -31,21 +30,21 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (`OrthoCameraRigComponent` — WASD · 방향키 이동(WASD 끄기 · 초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), Q/E 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)), 장식 흩뿌리기
   (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(`Rules` 모드 — Engine `Environment/Placement` 의 `PlacementRule`: 밀도 · 최소 거리 ·
   경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`). 계산은 `OrthoCameraRigMath` · `PropScatterMath` 로
-  떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리 · 손에 든 뷰 모델 자리, 계산은
+  떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스(또는 입력 맵 액션 `_lookAction`) 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리(카메라의 부모 공간) · 손에 든 뷰 모델 자리, 계산은
   `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다
 - **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 모드 계산(`CameraMode` — 입력 · 제약 · 프레이밍 · 스프링 암 · 훑기),
   흔들림(`CameraShake` — 펄린 손떨림 · 충격), 암 충돌 질의(`ICameraCollisionProbe`), 포즈 섞기(`blendPoses`, 곡선은 엔진 `BlendCurveSpec` · `evaluateBlendWeight`) · 블렌드 진행(`CameraPoseBlender`), 상태 기계
   (`CameraDirector`), 그것을 카메라에 쓰는 `CameraDirectorComponent`, 플레이어마다 뷰 타깃을 바꾸는 `CameraManagerComponent`. 아래 "카메라" 절
-- **Stage**: 절차로 무대를 세우는 도우미(`PrimitiveStage` — 활성 씬 잡기 · 세운 오브젝트 추적 · 색 · 텍스처 머티리얼 인스턴스 캐시 · 해 · 카메라). 시험 게임이 쓴다
 - **Utility**: 장르 무관 계산 도구 — 씨앗 고정 난수 · 좌표 해시(`GameRandom` · `GameHash` — 가중치 고르기 `pickWeightedIndex` · 섞기 `shuffle`), 값 노이즈(`ValueNoise`),
-  광선 판정(`RayMath` — 구 · 상자 · 바닥 평면 · 원뿔), 앞 · 위 → 오일러(`OrientationUtil` — 롤이 있는 차량 · 카메라), 2D 네 방향(`FacingDir`),
+  광선 판정(`RayMath` — 구 · 상자 · 캡슐 · 바닥 평면 · 원뿔), 앞 · 위 → 오일러(`OrientationUtil` — 롤이 있는 차량 · 카메라), 2D 네 방향(`FacingDir`),
   고정 스텝 누적기(`FixedStepTimer`), 게임 시간 타이머(`TimerQueue`), 시뮬레이션 상태 바이트의 공통 모양(`StateArchiveUtil` — 머리(표 · 버전) · 이름 ·
   남은 바이트로 상한을 둔 개수 · 난수 · 걸음 타이머). 셋 이상의 키트에 같은 것이 따로 있던 것을 모았다(아래 "새 장르 키트").
   키트 시뮬레이션의 `writeState` · `readState`(`FarmField` · `CitySimulation` · `RtsWorld` · `ThemeParkSimulation` · `VoxelWorld` …)는 임시에 읽어 끝까지 맞을 때만
   바꾸고, 정의는 카탈로그 id 로, 유닛 참조는 세대 든 id 로 적으며, 다시 만들 수 있는 것(길 · 격자 발자국 · 흐름장)은 적지 않는다
 - **Input**: 커맨드 입력(`InputCommandParser` — 철권 표기 · `InputCommandBuffer` — 새로 넣기 · 누른 채 · 동시 버튼 · 틱 한도 · 좌우 뒤집기 · 상태 바이트, 결정적),
   타이밍 판정(`TimingJudge` — 리듬 · 타이밍 공격 · 스킬 체크 · 저스트 프레임), 1인칭 시점(`FirstPersonLook`)
-- **Data**: 데이터를 읽고 담는 틀 — `GameSettings`, `GameStrings`, 데이터 XML 읽기(`GameDataXml` — 문서 · 루트 · id 확인 · 숫자 목록 · 토큰 목록,
+- **Data**: 데이터를 읽고 담는 틀 — `GameSettings`, `GameStrings`, 경로마다 한 번 읽어 나눠 쓰는 표의 캐시(`GameDataCache<T>` — 게임 서비스가 묶이면
+  에셋 캐시 등록부에 올라 에디터 핫 리로드가 새 표로 바꾸고 `getReloadCount` 를 올린다, 옛 표는 모듈이 내릴 때까지 산다), 데이터 XML 읽기(`GameDataXml` — 문서 · 루트 · id 확인 · 숫자 목록 · 토큰 목록,
   카탈로그 로더 템플릿 `loadFile` · `loadText` — 카탈로그의 `loadFromResource` · `loadFromXmlText` 는 `GameDataXml::loadFile( *this, &X::loadRoot, path, "Root" )`
   한 줄이고 루트 읽기는 비공개로 둔다, 읽은 수 0 · false 는 실패), id 카탈로그(`GameCatalog<T>` —
   읽은 순서 + 해시 조회), 이름 → 수치(`StatBlock` — 여러 자원 비용 `canAfford` · `trySpend`), 시간 → 값 꺾은선(`GameCurve` — 스폰 · 페이싱 곡선)
@@ -64,10 +63,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   지갑 · 가게(`Wallet` · `ShopCatalog` · `ShopState` — 여러 통화 · 재고 · 재입고 · 매입 시세 하락과 회복 · 조건은 `IShopConditionEvaluator`)
 - **Appearance**: 캐릭터 외형 데이터와 해석 — 슬롯 표 · 장비 세트 · 아이템 외형(부품 · 상태 · 피해 단계) · 꾸미기 스키마(캐릭터 · 아이템 공용) ·
   외형 규칙 · 프리셋(`CharacterAppearance`), 순수 해석기(`AppearanceResolver` — 결과 해시가 캐시 키), 외형 상태(`CharacterAppearanceState`),
-  공유 코드 · 플레이어 프리셋 세이브 · 네트워크 동기화(`AppearanceSelection`). 2D 스프라이트와 3D 메시가 같은 길이다. 자세한 것은 `Appearance/README.md`
+  공유 코드 · 플레이어 프리셋 세이브 · 네트워크 동기화(`AppearanceSelection`), 그리고 그것을 오브젝트로 조립하는 외형 컴포넌트(`CharacterAppearanceComponent` —
+  몸 메시 · 소켓 부착 부품 · 염색, 소켓 이름 공간 `AppearanceSocketRig`). 2D 스프라이트와 3D 메시가 같은 길이다. 자세한 것은 `Appearance/README.md`
 - **Match**: 판 규칙(`MatchState` — 팀 · 역할 · 점수 · 도움 · 부활 대기 · 코스트 게이지 · 탈락 순위 · 시간 제한 · 목표로 끝내기)
 - **Movement**: 2D 플랫포머 몸(`PlatformerMotor2D` · `PlatformTileMap` — 점프 높이 · 짧은 점프 · 코요테 · 미리 누르기 · 벽 점프 · 대시 · 다단 점프 · 한쪽 발판 · 사다리),
-  아케이드 차량(`ArcadeVehicleMotor` — 속도에 따른 조향 · 드리프트 미니터보 단계 · 니트로 · 오프로드 · 점프, 지면은 `IVehicleGround`)
+  아케이드 차량(`ArcadeVehicleMotor` — 속도에 따른 조향 · 드리프트 미니터보 단계 · 니트로 · 오프로드 · 점프, 지면은 `IVehicleGround`),
+  보는 쪽 기준 이동 방향(`LocomotionMath` — 서기 · 앞 · 뒤 · 옆걸음 · 공중, 애니메이터 이동 상태의 입력)
 - **Navigation**: 격자(`NavGrid`), A*(`GridPathfinder`), 흐름장(`FlowField`), 걷는 행위자(`NavAgent` · `Steering`), SRPG 이동 범위(`GridReachability`)
 - **Progression**: 경험치 곡선 · 레벨(`ExperienceCurve` · `LevelProgress`), 스킬 트리(`SkillTreeCatalog` · `SkillTreeState`), 평판 · 호감도(`ReputationCatalog` ·
   `ReputationState`), 로그라이트 지도(`RunMap`), 로컬 통계(`StatCatalog` · `PlayerStats` — `<Stats><Stat id kind="Counter|Max|Min|Time" max/>` 정의, `increment` ·
@@ -84,7 +85,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `GimmickSensorComponent`), 원소 상호작용 규칙표(`ElementRuleTable` · `ElementGrid` — 기본표 `common/data/elements/default.elements.xml`), 장르 기믹 세트(`Genre/` — 플랫포머 · 어드벤처 · 슈터 · 레이싱 · 공포 · 잠입 · 메트로배니아 · RPG, 프리팹 `common/prefabs/gimmicks`). 2D · 3D 공용. `Gimmick/README.md`
 - **Spline**: 곡선(`SplinePath` — Catmull-Rom · 3차 베지어 · 꺾은선, 호 길이 매개변수, 가장 가까운 점, 고른 간격 샘플)과 씬 컴포넌트(`SplineComponent`),
   누적 거리 표 계산(`ArcLengthUtil` — 코스터 트랙도 쓴다). 기믹 무버 · 카메라 레일 · 길이 함께 쓴다. `Spline/README.md`
-- **UI**: 장르 무관 UI 컴포넌트 — `RuntimeHud`, `DialogueRunnerComponent`,
+- **UI**: 장르 무관 UI 컴포넌트 — `DialogueRunnerComponent`,
   `HealthBarComponent`, `DamageNumberComponent`. HP 바 · 데미지 숫자는 월드 공간 스프라이트(`SpriteInstanceBatch`)로 그린다 — 저장되는
   컴포넌트를 만들지 않는다. 입력은 `HealthBarComponent::setTargetRatio` · `DamageNumberComponent::setDamageValue` 하나씩이다.
   `FadeOutComponent` 의 흐림은 같은 오브젝트 스프라이트들의 색 알파에 곱해진다.
@@ -152,6 +153,20 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       - `NetLockstep`: 결정적 — 락스텝(`LockstepSession` — 입력 지연 · 체크섬 비동기 감지, RTS), 롤백(`RollbackSession` · `IRollbackGame` — 예측 · 되감기 · 재시뮬레이션, 격투).
       - `NetTurnRelay`: 턴제 중계(카드 · 보드 · SRPG) — 방 · 자리 · 표, `ITurnPolicy`(차례 · 허락 · 방향), 행동 기록 방송, 재접속 시 놓친 행동.
       - `NetMmo`: MMO — 관심 영역 격자(`InterestGrid`, 들어옴 · 나감 히스테리시스), 우선도 누적 대역폭 예산, `IInterestPolicy`(늘 보이기 · 우선도).
+      - `NetDestruction`: 파괴 네트워킹(`DestructionReplicationServer` · `Client`, 영역 `kDestruction` 0x50). 권한 쪽 피해 사건을 번호(= 서버 상태의
+        사건 수)를 붙여 신뢰 순서로 보내고 받는 쪽은 번호 순으로만 적용한다(앞 번호는 버리고 뒤 번호는 기다린다). 덩어리(표의 `keepCollisionVolume` 이상)는
+        서버가 질량 중심 · 회전을 `<Network poseRate>` 로 비신뢰로 보내고(멈추면 비트 그대로 신뢰로 확정 + 비신뢰로 몇 번 더), 받는 쪽은 서버 틱 추정 −
+        보간 지연을 그려 키네마틱으로 몬다. 파편은 각자 시뮬레이션하는 꾸밈(Debris 레이어 — 캐릭터와 안 부딪힌다). 늦은 참가 · 해시 어긋남은 상태
+        스냅숏(조각으로 나눠 신뢰)으로 맞춘다. 파괴를 쓰지 않는 게임이 링크하지 않게, 권위 방식(복제 서버 · 리슨 · MMO)과 상관없이 `NetHost` 위에 얹게 키트를 따로 둔다.
+        롤백(상태 저장 · 되돌리기)은 없다. 시험: `NetSimDestructionTest` · `NetSimDestructionMatrixTest`(호스트 스위트 — Debug 40 초).
+      - `NetSimulation`: 한 프로세스 가상 서버(`NetSimHarness` — 언리얼 PIE "Play As Client, Number of Players N" + Network Emulation, 유니티 Multiplayer
+        Play Mode + Network Simulator 의 자리). 서버 월드 1 + 클라이언트 월드 N 이 **각자 씬 · 오브젝트 매니저 · 물리**를 갖고, 루프백 망 위에 끝점마다
+        흉내(`NetEmulationTransport`)를 씌워 클라이언트마다 올림 · 내림 조건(지연 · 흔들림 · 손실 · 중복 · 순서 · 대역폭)을 따로 준다. 시각은 틱 × 간격,
+        모든 난수는 씨앗에서 — 같은 씨앗이면 같은 패킷이 같은 틱에 도착한다. 게임은 `INetSimGame::createSession( world )` 에서 월드 내용을 짓고 세션
+        (`INetSimSession` — `onTickBegin` · `onTickEnd` · `onHostEvent`)을 돌려준다. 늦은 참가 · 떠남(`addClient` · `removeClient`, 떠나면 끊김 알림이 간다).
+        엔진 루프는 활성 씬 하나만 틱하므로 하니스는 월드마다 `GameObjectManager::tick` 을 직접 부른다(씬의 `tick` 이 아니다 — 오디오 리스너는 프로세스에
+        하나). 렌더러 · 오디오는 쓰지 않는다(nogpu 시험 · 게임 자동화). 틱 순서는 받은 것 나눠 주기 → 오브젝트 틱 → 보내기 — 깨끗한 회선이면 틱 N 에
+        보낸 것을 틱 N + 1 이 받는다. 시험: `NetSimHarnessTest`.
 
 ## 카메라: 프리셋 데이터 + 모드 + 블렌드 + 뷰 타깃
 
@@ -175,7 +190,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   모르는 함수라 시퀀서 · 소켓 부착의 되돌아가기(`SocketBindingComponent`)도 같은 곡선을 쓴다. 직교 ↔ 원근은 섞지 않고 가중치 0.5 에서 바꾼다.
 - **블렌드는 지금 화면에서 출발한다**(`CameraPoseBlender` — 디렉터 · 매니저가 같이 쓴다): 나가는 쪽은 블렌드 동안 계속 살아 있고, 블렌드 도중 다시 바꾸면 그 순간의 섞인
   포즈를 고정해 출발점으로 둔다. 포즈를 내던 중의 **컷**(곡선 `Cut` · 길이 0)은 카메라에 컷 표시(`CameraComponent::markCut`)를 남겨 렌더러가 TAA 기록을 버린다.
-- **`CameraDirectorComponent`**: `CameraComponent` 와 같은 오브젝트에 붙이고 프리셋 경로 · 시작 프리셋 · 대상(또는 묶음 `_listGroupTarget`) · 돌리기 키(`_cyclePresetKey`)를
+- **`CameraDirectorComponent`**: `CameraComponent` 와 같은 오브젝트에 붙이고 프리셋 경로 · 시작 프리셋 · 대상(또는 묶음 `_listGroupTarget`) · 돌리기 키(`_cyclePresetKey`) · 돌리기 입력 맵 액션(`_cycleAction`)을
   준다. `PostPhysics` 에서 입력만 읽고 **포즈는 틱 뒤에 쓴다**(`executeOrDeferPostTick`) — 틱 중의 트랜스폼 쓰기는 틱 뒤에 적용되므로 틱 안에서 대상을 읽으면 한 프레임
   늦다. `-gv_cameraPreset=<id>` 가 시작 프리셋을 고른다(캡처 카메라 제외 — 스크린샷용).
 - **`CameraManagerComponent`**(언리얼 `SetViewTargetWithBlend` · Cinemachine Brain): 로컬 플레이어마다 하나, 플레이어가 실제로 그리는 카메라에 붙는다. 뷰 타깃 = 다른
@@ -201,7 +216,6 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 | 가중치 고르기 · 섞기 | `GameRandom::pickWeightedIndex` · `shuffle` | 파티 아이템 · 식당 손님 · 카드 |
 | 여러 자원 비용 | `StatBlock::canAfford` · `trySpend` | 횡스크롤 정복 |
 | 아이템 개수 | `ItemBag` | 농장 인벤토리 · 출하함 |
-| 절차로 세우는 시험 무대 | `PrimitiveStage` | 시험 게임 다섯(씬 · 프리팹으로 옮기기 전 — `Source/Games/README.md`) |
 | 비스듬히 내려다보는 직교 카메라 · 장식 흩뿌리기 | `OrthoCameraRigComponent` · `PropScatterComponent` | ThemeParkTycoon · HarvestValley · NileCity · StarSkirmish |
 | 1인칭 카메라 · 손에 든 모델 · 마우스 잠금 | `FirstPersonCameraComponent` | Shooter3D · VoxelCraft |
 | 피해 숫자 | `DamageNumberComponent::spawnNumber` | 액션 · 어빌리티 |
@@ -253,7 +267,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 끊길 때까지 읽는다(슬롯 수는 데이터가 정한다). 세이브에는 개수(`ppCount`)를 함께 적는다.
 
 **종류를 코드가 정하지 않는다.** `MonsterDef` 의 보상은 `_mapDrop` 이고 `<Drop exp="10" souls="3"/>` 처럼
-**속성 이름이 곧 보상 이름**이다. `RuntimeHud` 가 게이지를 이름 맵으로 다루는 것과 같은 방식이다.
+**속성 이름이 곧 보상 이름**이다.
 
 **같은 문제는 같은 방식으로 푼다.** id → 행 조회는 `MonsterCatalog` · `SpeciesCatalog` 모두 맵이다. 한 프레임워크 안에서 같은
 일을 두 방식으로 하면 읽는 사람이 어느 쪽이 정석인지 알 수 없다. 다만 인덱스가 직렬화되는 곳(`SpeciesDef::_listMoveIndex`)은

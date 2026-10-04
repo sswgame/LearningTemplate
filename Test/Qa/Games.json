@@ -22,7 +22,7 @@
       "screenshot_frame": 180
     },
     "Shooter3D": {
-      "arguments": ["-gv_shooterAutoPlay=1"],
+      "arguments": ["-gv_shooterAutoPlay=1", "-gv_cameraPreset=cctv"],
       "screenshot_frame": 180
     },
     "StarSkirmish": {

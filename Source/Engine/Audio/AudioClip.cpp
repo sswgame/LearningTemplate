@@ -99,6 +99,21 @@ namespace sw
         return true;
     }
 
+    void AudioClipData::copyMonoSamples( vector<float32>& outListSample ) const
+    {
+        outListSample.assign( _frameCount, 0.0f );
+        if ( _channelCount == 0 )
+            return;
+        const float32 scale = 1.0f / static_cast<float32>( _channelCount );
+        for ( uint32 frameIndex = 0; frameIndex < _frameCount; ++frameIndex )
+        {
+            float32 sum = 0.0f;
+            for ( uint32 channelIndex = 0; channelIndex < _channelCount; ++channelIndex )
+                sum += _listSample[static_cast<size_t>( frameIndex ) * _channelCount + channelIndex];
+            outListSample[frameIndex] = sum * scale;
+        }
+    }
+
     AudioClipStore::AudioClipStore()
         : _mapPathToEntry{}
         , _pFallbackDecoder{ nullptr }

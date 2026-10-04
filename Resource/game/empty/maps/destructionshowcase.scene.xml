@@ -1,0 +1,578 @@
+<Scene formatVersion="1" name="DestructionShowcase">
+	<entities>
+		<entity id="1" name="ShowcaseCamera">
+			<GameObject _schemaVersion="0" _name="ShowcaseCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,2.8,-9.5"
+					                 _localRotation="0.16,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerId="0"
+					                 _attachComponent="None"
+					                 _fovY="0.9"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false">
+						<_renderOutput _screenRect="0,0,1,1"
+						               _renderTexture=""
+						               _renderTextureWidth="256"
+						               _renderTextureHeight="256"
+						               _resolutionScale="1"
+						               _updateRate="0"
+						               _visibilityObject="0"
+						               _target="MainView"
+						               _bShadows="true"
+						               _bPostProcess="true" />
+					</CameraComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="ShowcaseSun">
+			<GameObject _schemaVersion="0" _name="ShowcaseSun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,10,0"
+					                           _localRotation="0.9,0.5,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerId="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.35"
+					                           _ambient="0.3"
+					                           _shadowExtent="2.2222223"
+					                           _shadowDistance="2"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,-0.5,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="30,1,30"
+					                    _attachOwner="None"
+					                    _attachOwnerId="0"
+					                    _attachComponent="None"
+					                    _bodyType="Static"
+					                    _layer="Default"
+					                    _material="None"
+					                    _mass="0"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="0.5,0.5,0.5"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="BrickWall">
+			<GameObject _schemaVersion="0" _name="BrickWall" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerId="0"
+					                    _attachComponent="None"
+					                    _bodyType="Static"
+					                    _layer="Default"
+					                    _material="Stone"
+					                    _mass="0"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="2,1.5,0.15"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,1.5,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshId="game/empty/models/brick_wall.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<FractureComponent _componentName="FractureComponent"
+					                   _bActive="true"
+					                   _localPosition="0,0,0"
+					                   _localRotation="0,0,0"
+					                   _localScale="1,1,1"
+					                   _attachOwner="None"
+					                   _attachOwnerId="0"
+					                   _attachComponent="RigidBodyComponent#0"
+					                   _profilePath=""
+					                   _interiorMaterialPath="None"
+					                   _staticLayer="Static"
+					                   _chunkLayer="Default"
+					                   _debrisLayer="Debris"
+					                   _seed="1"
+					                   _anchorTolerance="0.05"
+					                   _anchorMode="Bottom"
+					                   _bAuthority="true"
+					                   _fracturePath="">
+						<_listAnchorVolume />
+					</FractureComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="CrateLeft">
+			<GameObject _schemaVersion="0" _name="CrateLeft" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="-2.9,0,-1.2"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerId="0"
+					                    _attachComponent="None"
+					                    _bodyType="Dynamic"
+					                    _layer="Default"
+					                    _material="Wood"
+					                    _mass="0"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="0.27,0.185,0.5"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0.165,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshId="game/empty/models/crate_medium.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<FractureComponent _componentName="FractureComponent"
+					                   _bActive="true"
+					                   _localPosition="0,0,0"
+					                   _localRotation="0,0,0"
+					                   _localScale="1,1,1"
+					                   _attachOwner="None"
+					                   _attachOwnerId="0"
+					                   _attachComponent="RigidBodyComponent#0"
+					                   _profilePath="engine/destruction/wood.destruction.xml"
+					                   _interiorMaterialPath="None"
+					                   _staticLayer="Static"
+					                   _chunkLayer="Default"
+					                   _debrisLayer="Debris"
+					                   _seed="1"
+					                   _anchorTolerance="0.05"
+					                   _anchorMode="None"
+					                   _bAuthority="true"
+					                   _fracturePath="">
+						<_listAnchorVolume />
+					</FractureComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="CrateRight">
+			<GameObject _schemaVersion="0" _name="CrateRight" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="2.8,0,-1.2"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerId="0"
+					                    _attachComponent="None"
+					                    _bodyType="Dynamic"
+					                    _layer="Default"
+					                    _material="Wood"
+					                    _mass="0"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="0.27,0.185,0.5"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0.165,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshId="game/empty/models/crate_medium.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<FractureComponent _componentName="FractureComponent"
+					                   _bActive="true"
+					                   _localPosition="0,0,0"
+					                   _localRotation="0,0,0"
+					                   _localScale="1,1,1"
+					                   _attachOwner="None"
+					                   _attachOwnerId="0"
+					                   _attachComponent="RigidBodyComponent#0"
+					                   _profilePath="engine/destruction/wood.destruction.xml"
+					                   _interiorMaterialPath="None"
+					                   _staticLayer="Static"
+					                   _chunkLayer="Default"
+					                   _debrisLayer="Debris"
+					                   _seed="1"
+					                   _anchorTolerance="0.05"
+					                   _anchorMode="None"
+					                   _bAuthority="true"
+					                   _fracturePath="">
+						<_listAnchorVolume />
+					</FractureComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="CrateStacked">
+			<GameObject _schemaVersion="0" _name="CrateStacked" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="2.8,0.36,-1.2"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerId="0"
+					                    _attachComponent="None"
+					                    _bodyType="Dynamic"
+					                    _layer="Default"
+					                    _material="Wood"
+					                    _mass="0"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="0.27,0.185,0.5"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0.165,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshId="game/empty/models/crate_medium.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<FractureComponent _componentName="FractureComponent"
+					                   _bActive="true"
+					                   _localPosition="0,0,0"
+					                   _localRotation="0,0,0"
+					                   _localScale="1,1,1"
+					                   _attachOwner="None"
+					                   _attachOwnerId="0"
+					                   _attachComponent="RigidBodyComponent#0"
+					                   _profilePath="engine/destruction/wood.destruction.xml"
+					                   _interiorMaterialPath="None"
+					                   _staticLayer="Static"
+					                   _chunkLayer="Default"
+					                   _debrisLayer="Debris"
+					                   _seed="1"
+					                   _anchorTolerance="0.05"
+					                   _anchorMode="None"
+					                   _bAuthority="true"
+					                   _fracturePath="">
+						<_listAnchorVolume />
+					</FractureComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="BarrelFuse">
+			<GameObject _schemaVersion="0" _name="BarrelFuse" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="-0.7,0,-0.9"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerId="0"
+					                    _attachComponent="None"
+					                    _bodyType="Dynamic"
+					                    _layer="Default"
+					                    _material="Metal"
+					                    _mass="0"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="0.33,0.5,0.33"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0.5,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshId="game/empty/models/barrel.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<FractureComponent _componentName="FractureComponent"
+					                   _bActive="true"
+					                   _localPosition="0,0,0"
+					                   _localRotation="0,0,0"
+					                   _localScale="1,1,1"
+					                   _attachOwner="None"
+					                   _attachOwnerId="0"
+					                   _attachComponent="RigidBodyComponent#0"
+					                   _profilePath=""
+					                   _interiorMaterialPath="None"
+					                   _staticLayer="Static"
+					                   _chunkLayer="Default"
+					                   _debrisLayer="Debris"
+					                   _seed="1"
+					                   _anchorTolerance="0.05"
+					                   _anchorMode="None"
+					                   _bAuthority="true"
+					                   _fracturePath="">
+						<_listAnchorVolume />
+					</FractureComponent>
+					<GimmickSensorComponent _componentName="GimmickSensorComponent"
+					                        _bActive="true"
+					                        _defaultWeight="1"
+					                        _bCountTriggers="false">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+						<_listOccupant />
+					</GimmickSensorComponent>
+					<ExplosiveBarrelComponent _componentName="ExplosiveBarrelComponent"
+					                          _bActive="true"
+					                          _health="30"
+					                          _radius="3"
+					                          _damage="80"
+					                          _fuseTime="1.5"
+					                          _fractureStrain="200"
+					                          _blastImpulse="400"
+					                          _damageTaken="0"
+					                          _bExploded="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="BarrelChain">
+			<GameObject _schemaVersion="0" _name="BarrelChain" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0.7,0,-1.3"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerId="0"
+					                    _attachComponent="None"
+					                    _bodyType="Dynamic"
+					                    _layer="Default"
+					                    _material="Metal"
+					                    _mass="0"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="0.33,0.5,0.33"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0.5,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshId="game/empty/models/barrel.mesh"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<FractureComponent _componentName="FractureComponent"
+					                   _bActive="true"
+					                   _localPosition="0,0,0"
+					                   _localRotation="0,0,0"
+					                   _localScale="1,1,1"
+					                   _attachOwner="None"
+					                   _attachOwnerId="0"
+					                   _attachComponent="RigidBodyComponent#0"
+					                   _profilePath=""
+					                   _interiorMaterialPath="None"
+					                   _staticLayer="Static"
+					                   _chunkLayer="Default"
+					                   _debrisLayer="Debris"
+					                   _seed="1"
+					                   _anchorTolerance="0.05"
+					                   _anchorMode="None"
+					                   _bAuthority="true"
+					                   _fracturePath="">
+						<_listAnchorVolume />
+					</FractureComponent>
+					<GimmickSensorComponent _componentName="GimmickSensorComponent"
+					                        _bActive="true"
+					                        _defaultWeight="1"
+					                        _bCountTriggers="false">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+						<_listOccupant />
+					</GimmickSensorComponent>
+					<ExplosiveBarrelComponent _componentName="ExplosiveBarrelComponent"
+					                          _bActive="true"
+					                          _health="30"
+					                          _radius="3"
+					                          _damage="80"
+					                          _fuseTime="0"
+					                          _fractureStrain="200"
+					                          _blastImpulse="400"
+					                          _damageTaken="0"
+					                          _bExploded="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

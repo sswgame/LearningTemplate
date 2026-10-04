@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimPlayer.h"
@@ -550,4 +551,89 @@ SW_TEST_CASE( SkeletalAnimationTest, AnimatorPlaysClipFromFolder )
     raw.sample( 0.25f, expected );
     SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameRotation( expected.getBoneTransform( 1 )._rotation, pUnit->getLocalPose().getBoneTransform( 1 )._rotation, 1e-3f ) );
     SW_EXPECT_FALSE( TestSkeletalAnimationInternal::isSameRotation( quaternion::Identity, pUnit->getLocalPose().getBoneTransform( 1 )._rotation, 1e-3f ) );
+}
+
+/**
+ * @brief [SkeletalAnimationTest] 런타임에 정한 스켈레톤(`setSkeleton`)은 렌더 에셋을 다시 풀어도(`resolveRenderAssets`) 암묵 스켈레톤으로 덮이지 않는다 — 경로를 정하면 경로가 이긴다
+ */
+SW_TEST_CASE( SkeletalAnimationTest, RuntimeSkeletonSurvivesRenderAssetResolve )
+{
+    GameObjectManager      manager;
+    SkeletalMeshComponent* pUnit = TestSkeletalAnimationInternal::createUnit( manager, "Runtime", 3 );
+    SW_ASSERT_NOT_NULL( pUnit );
+    SW_EXPECT_EQUAL( 3u, pUnit->getSkeleton().getBoneCount() );
+    pUnit->resolveRenderAssets();
+    SW_EXPECT_EQUAL( 3u, pUnit->getSkeleton().getBoneCount() );
+    pUnit->setSkeletonPath( "" ); // 경로를 (빈 값으로) 정하면 런타임 스켈레톤을 놓는다
+    SW_EXPECT_EQUAL( 1u, pUnit->getSkeleton().getBoneCount() );
+}
+
+/**
+ * @brief [SkeletalAnimationTest] 페이드가 다른 페이드로 끊겨도 포즈가 튀지 않는다 — 끊긴 순간의 포즈에서 이어 섞인다
+ * @details 루트 이동이 X 0 · 1 · 2 로 고정된 세 클립. A → B 페이드(0.2 초)의 반쯤(X ≈ 0.5)에서 C 로 넘어가면, 플레이어는 섞이던 한 칸을 버린다 —
+ *          그대로 그리면 한 프레임에 X 가 0.5 에서 1 로 뛴다(애니메이션이 튄다). 끊긴 순간의 포즈를 새 페이드 동안 섞어 사라지게 하면 X 는 이어진다.
+ */
+SW_TEST_CASE( SkeletalAnimationTest, InterruptedCrossfadeContinuesFromThePreviousPose )
+{
+    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    const Skeleton skeleton = test::makeChainSkeleton( 2 );
+    const string   folder   = test::makeTempPath( "animclips_interrupt" );
+    const utf8*    arrName[3]{ "A", "B", "C" };
+    for ( uint32 clipIndex = 0; clipIndex < 3; ++clipIndex )
+    {
+        AnimRawClip raw;
+        raw._sampleRate  = 30.0f;
+        raw._sampleCount = 31;
+        for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
+        {
+            raw._listTrackName.push_back( skeleton.getBone( boneIndex )._name );
+            raw._listTrackParent.push_back( skeleton.getBone( boneIndex )._parentIndex );
+        }
+        for ( uint32 sampleIndex = 0; sampleIndex < raw._sampleCount; ++sampleIndex )
+        {
+            for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
+            {
+                BoneTransform transform = skeleton.getBone( boneIndex )._referencePose;
+                if ( boneIndex == 0 )
+                    transform._translation = float3{ static_cast<float32>( clipIndex ), 0.0f, 0.0f };
+                raw._listSample.push_back( transform );
+            }
+        }
+        AnimClip clip;
+        clip.setName( hashed_string( arrName[clipIndex] ) );
+        SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
+        SW_ASSERT_TRUE( clip.saveToFile( FileUtil::joinPath( folder, StringUtil::toLower( arrName[clipIndex] ) + ".animclip" ) ) );
+    }
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Dancer" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SkeletalMeshComponent*     pUnit     = pObject->addComponent<SkeletalMeshComponent>();
+    SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
+    SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
+    pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
+    pAnimator->setClipFolder( folder );
+    pAnimator->setInitialState( "A" );
+    pAnimator->dispatchBeginPlay();
+    manager.getAnimationSystem().evaluate( 0.05f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pUnit->getLocalPose().getBoneTransform( 0 )._translation._x, 1e-4f );
+
+    // A → B 페이드의 가운데.
+    SW_ASSERT_TRUE( pAnimator->play( hashed_string( "B" ), true, 0.2f ) );
+    manager.getAnimationSystem().evaluate( 0.1f );
+    const float32 beforeInterrupt = pUnit->getLocalPose().getBoneTransform( 0 )._translation._x;
+    SW_EXPECT_NEAR_EQUAL( 0.5f, beforeInterrupt, 0.05f );
+
+    // 끊고 C 로 — 다음 프레임(아주 짧게)의 포즈는 끊긴 순간과 거의 같아야 한다.
+    SW_ASSERT_TRUE( pAnimator->play( hashed_string( "C" ), true, 0.2f ) );
+    manager.getAnimationSystem().evaluate( 0.001f );
+    const float32 afterInterrupt = pUnit->getLocalPose().getBoneTransform( 0 )._translation._x;
+    SW_EXPECT_NEAR_EQUAL( beforeInterrupt, afterInterrupt, 0.05f );
+
+    // 새 페이드가 끝나면 C 그대로다.
+    for ( uint32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+    {
+        manager.getAnimationSystem().evaluate( 0.05f );
+    }
+    SW_EXPECT_NEAR_EQUAL( 2.0f, pUnit->getLocalPose().getBoneTransform( 0 )._translation._x, 1e-3f );
 }

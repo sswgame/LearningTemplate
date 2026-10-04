@@ -13,12 +13,16 @@
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/ModelImportConfig.h"
+#include "Editor/Common/Asset/TextureImporter.h"
+#include "Editor/Common/Asset/VrmMaterialImporter.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Animation/AnimJsonUtil.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
+#include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -47,12 +51,17 @@ namespace sw::editor
             /** @brief 스탬프 머리 줄입니다. */
             static constexpr string_view kImportStampHeader = "SWMODELIMPORT 1";
             /** @brief 같은 원본에서 다른 결과를 내게 임포트를 바꾸면 올립니다. 원본 해시에 섞입니다. */
-            static constexpr uint32 kImporterVersion = 2;
+            static constexpr uint32 kImporterVersion = 3;
             /** @brief 원본 옆 곁 데이터(클립 반복 · 알림 · 커브)의 접미사입니다. */
             static constexpr string_view kClipDataSuffix = ".clips.json";
             /** @brief 스킨드 모델 옆 폴더 안의 부착 메시 · 클립 폴더 이름입니다. */
             static constexpr string_view kPartFolder = "parts";
             static constexpr string_view kClipFolder = "clips";
+            /** @brief VRM 모델 옆 폴더 안의 머티리얼 구간 메시 · 툰 머티리얼 폴더 이름입니다. */
+            static constexpr string_view kSectionFolder  = "sections";
+            static constexpr string_view kMaterialFolder = "materials";
+            /** @brief 머티리얼이 쓰는 내장 이미지를 꺼내 두는 원본 텍스처 폴더 이름입니다(텍스처 임포트가 옆 `textures/` 의 DDS 로 만든다). */
+            static constexpr string_view kRawTextureFolder = "textures_raw";
             /** @brief GLB 머리 · 청크 머리 크기와 표식("glTF" · "JSON")입니다. */
             static constexpr uint32 kGlbMagic           = 0x46546C67u;
             static constexpr uint32 kGlbJsonChunkType   = 0x4E4F534Au;
@@ -75,13 +84,20 @@ namespace sw::editor
                 bool    _bHasNormal{ false };
             };
 
-            /** @brief 여러 프리미티브를 합친 인덱스 메시입니다. */
+            /** @brief 여러 프리미티브를 합친 인덱스 메시입니다. 모프 타깃은 이름으로 합치고, 타깃마다 정점마다의 차이(없으면 0)를 듭니다. */
             struct MergedMesh
             {
-                vector<ImportVertex> _listVertex;
-                vector<uint32>       _listIndex;
-                uint32               _skippedPrimitiveCount{ 0 };
-                string               _baseColorTextureUri;
+                vector<ImportVertex>   _listVertex;
+                vector<uint32>         _listIndex;
+                vector<hashed_string>  _listMorphName;
+                vector<vector<float3>> _listMorphPosition; ///< [타깃][정점] 위치 차이(엔진 공간)
+                vector<vector<float3>> _listMorphNormal;   ///< [타깃][정점] 노멀 차이(엔진 공간)
+                /** @brief 삼각형마다 그 프리미티브의 머티리얼입니다(머티리얼 구간을 나눌 때 쓴다). */
+                vector<const cgltf_material*> _listTriangleMaterial;
+                uint32                        _skippedPrimitiveCount{ 0 };
+                string                        _baseColorTextureUri;
+                /** @brief 머티리얼 baseColorFactor 를 정점 색에 곱하는지입니다. 머티리얼이 색을 드는 VRM 은 끈다(두 번 곱하지 않게). */
+                bool _bBakeMaterialColor{ true };
             };
 
             /**
@@ -121,7 +137,7 @@ namespace sw::editor
                 int8                    _loopOverride{ -1 };
             };
 
-            static bool isSourceModel( string_view path ) { return FileUtil::hasAnyExtension( path, { ".glb", ".gltf" } ); }
+            static bool isSourceModel( string_view path ) { return FileUtil::hasAnyExtension( path, { ".glb", ".gltf", ".vrm" } ); }
 
             static void* allocate( void* pUser, cgltf_size size )
             {
@@ -179,6 +195,72 @@ namespace sw::editor
                 return normalizeOrZero( transformed );
             }
 
+            /** @brief 방향(차이)을 옮깁니다 — 3x3 만 곱하고 정규화하지 않습니다(모프 위치 차이). */
+            static float3 transformDirection( const float32 ( &arrMatrix )[16], const float3& direction )
+            {
+                return float3{ arrMatrix[0] * direction._x + arrMatrix[4] * direction._y + arrMatrix[8] * direction._z,
+                               arrMatrix[1] * direction._x + arrMatrix[5] * direction._y + arrMatrix[9] * direction._z,
+                               arrMatrix[2] * direction._x + arrMatrix[6] * direction._y + arrMatrix[10] * direction._z };
+            }
+
+            /** @brief 메시의 @p targetIndex 번째 모프 타깃 이름입니다(`extras.targetNames` — cgltf 가 `target_names` 로 읽는다). 없으면 "target<번호>" 입니다. */
+            static hashed_string makeMorphTargetName( const cgltf_mesh* pMesh, cgltf_size targetIndex )
+            {
+                if ( pMesh != nullptr && targetIndex < pMesh->target_names_count && pMesh->target_names[targetIndex] != nullptr )
+                    return hashed_string( pMesh->target_names[targetIndex] );
+                return hashed_string( "target" + to_string( static_cast<uint64>( targetIndex ) ) );
+            }
+
+            /**
+             * @brief 프리미티브의 모프 타깃(POSITION · NORMAL 차이)을 @p inoutMesh 의 이름 붙은 타깃에 더합니다. 모든 타깃 배열은 지금 정점 수로 맞춥니다(없는 정점은 0).
+             * @details 차이는 방향이라 노드 변환의 3x3 만 곱하고 엔진 공간(X 뒤집기)으로 옮깁니다.
+             */
+            static void appendMorphTargets( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
+                                            cgltf_size vertexCount, MergedMesh& inoutMesh )
+            {
+                const size_t totalCount = inoutMesh._listVertex.size();
+                for ( cgltf_size targetIndex = 0; targetIndex < primitive.targets_count; ++targetIndex )
+                {
+                    const hashed_string name    = makeMorphTargetName( pSourceMesh, targetIndex );
+                    const auto          found   = std::find( inoutMesh._listMorphName.begin(), inoutMesh._listMorphName.end(), name );
+                    const size_t        indexOf = static_cast<size_t>( found - inoutMesh._listMorphName.begin() );
+                    if ( found == inoutMesh._listMorphName.end() )
+                    {
+                        inoutMesh._listMorphName.push_back( name );
+                        inoutMesh._listMorphPosition.emplace_back( totalCount, float3{} );
+                        inoutMesh._listMorphNormal.emplace_back( totalCount, float3{} );
+                    }
+                    const cgltf_morph_target& target    = primitive.targets[targetIndex];
+                    const cgltf_accessor*     pPosition = nullptr;
+                    const cgltf_accessor*     pNormal   = nullptr;
+                    for ( cgltf_size attributeIndex = 0; attributeIndex < target.attributes_count; ++attributeIndex )
+                    {
+                        if ( target.attributes[attributeIndex].type == cgltf_attribute_type_position )
+                            pPosition = target.attributes[attributeIndex].data;
+                        else if ( target.attributes[attributeIndex].type == cgltf_attribute_type_normal )
+                            pNormal = target.attributes[attributeIndex].data;
+                    }
+                    vector<float3>& listPosition = inoutMesh._listMorphPosition[indexOf];
+                    vector<float3>& listNormal   = inoutMesh._listMorphNormal[indexOf];
+                    listPosition.resize( totalCount );
+                    listNormal.resize( totalCount );
+                    for ( cgltf_size vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
+                    {
+                        float32 arrValue[3]{};
+                        if ( readFloats( pPosition, vertexIndex, arrValue, 3 ) )
+                            listPosition[baseVertex + vertexIndex] = convertToEngineSpace( transformDirection( arrWorld, float3{ arrValue } ) );
+                        if ( readFloats( pNormal, vertexIndex, arrValue, 3 ) )
+                            listNormal[baseVertex + vertexIndex] = convertToEngineSpace( transformDirection( arrWorld, float3{ arrValue } ) );
+                    }
+                }
+                // 이 프리미티브에 없는 타깃도 정점 수를 맞춘다(차이 0).
+                for ( size_t targetIndex = 0; targetIndex < inoutMesh._listMorphName.size(); ++targetIndex )
+                {
+                    inoutMesh._listMorphPosition[targetIndex].resize( totalCount );
+                    inoutMesh._listMorphNormal[targetIndex].resize( totalCount );
+                }
+            }
+
             static float3 normalizeOrZero( const float3& value )
             {
                 const float32 length = value.getLength();
@@ -232,7 +314,8 @@ namespace sw::editor
              * @brief 프리미티브 하나를 월드 변환 · 좌표계 변환과 함께 @p inoutMesh 에 더합니다.
              * @param pSkin 스킨드 메시를 만드는 중이면 본 풀이(스킨드 프리미티브는 JOINTS_0 · WEIGHTS_0, 아니면 고정 본에 가중치 1). nullptr 이면 스킨을 보지 않습니다.
              */
-            static void appendPrimitive( const cgltf_primitive& primitive, const float32 ( &arrWorld )[16], const SkinBinding* pSkin, MergedMesh& inoutMesh )
+            static void appendPrimitive( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
+                                         MergedMesh& inoutMesh )
             {
                 if ( primitive.type != cgltf_primitive_type_triangles )
                 {
@@ -274,9 +357,10 @@ namespace sw::editor
                 if ( primitive.material != nullptr && primitive.material->has_pbr_metallic_roughness != 0 )
                 {
                     const cgltf_pbr_metallic_roughness& pbr = primitive.material->pbr_metallic_roughness;
-                    baseColor                               = float4{ pbr.base_color_factor[0], pbr.base_color_factor[1], pbr.base_color_factor[2], pbr.base_color_factor[3] };
-                    const cgltf_texture* pTexture           = pbr.base_color_texture.texture;
-                    const bool           bHasImage          = pTexture != nullptr && pTexture->image != nullptr;
+                    if ( inoutMesh._bBakeMaterialColor )
+                        baseColor = float4{ pbr.base_color_factor[0], pbr.base_color_factor[1], pbr.base_color_factor[2], pbr.base_color_factor[3] };
+                    const cgltf_texture* pTexture  = pbr.base_color_texture.texture;
+                    const bool           bHasImage = pTexture != nullptr && pTexture->image != nullptr;
                     if ( bHasImage && inoutMesh._baseColorTextureUri.empty() )
                     {
                         const utf8* pUri               = pTexture->image->uri != nullptr ? pTexture->image->uri : pTexture->image->name;
@@ -316,6 +400,7 @@ namespace sw::editor
                         vertex._arrJoint[0] = pSkin->_rigidBone;
                     inoutMesh._listVertex.push_back( vertex );
                 }
+                appendMorphTargets( primitive, pSourceMesh, arrWorld, baseVertex, pPosition->count, inoutMesh );
 
                 const cgltf_size indexCount = primitive.indices != nullptr ? primitive.indices->count : pPosition->count;
                 // X 를 뒤집은 거울상이 감김을 한 번 뒤집고, 노드 변환이 거울상(행렬식 < 0)이면 한 번 더 뒤집는다(glTF 규약).
@@ -335,6 +420,7 @@ namespace sw::editor
                     inoutMesh._listIndex.push_back( arrCorner[0] );
                     inoutMesh._listIndex.push_back( bSwapWinding ? arrCorner[2] : arrCorner[1] );
                     inoutMesh._listIndex.push_back( bSwapWinding ? arrCorner[1] : arrCorner[2] );
+                    inoutMesh._listTriangleMaterial.push_back( primitive.material );
                 }
             }
 
@@ -529,7 +615,7 @@ namespace sw::editor
                     float32 arrWorld[16]{};
                     cgltf_node_transform_world( &node, arrWorld );
                     for ( cgltf_size primitiveIndex = 0; primitiveIndex < node.mesh->primitives_count; ++primitiveIndex )
-                        appendPrimitive( node.mesh->primitives[primitiveIndex], arrWorld, nullptr, inoutMesh );
+                        appendPrimitive( node.mesh->primitives[primitiveIndex], node.mesh, arrWorld, nullptr, inoutMesh );
                 }
                 for ( cgltf_size childIndex = 0; childIndex < node.children_count; ++childIndex )
                 {
@@ -622,6 +708,23 @@ namespace sw::editor
                     }
                 }
                 outData._skinBoneCount = skinBoneCount;
+
+                // 모프 타깃 — 풀어 쓴 정점마다(삼각형 꼭짓점 순서) 차이가 있는 것만 싣는다. 얼굴 타깃은 메시의 작은 일부만 옮긴다.
+                constexpr float32 kMinimumDelta = 1e-7f;
+                for ( size_t targetIndex = 0; targetIndex < inoutMesh._listMorphName.size(); ++targetIndex )
+                {
+                    MeshMorphTarget target{};
+                    target._name = inoutMesh._listMorphName[targetIndex];
+                    for ( size_t corner = 0; corner < listIndex.size(); ++corner )
+                    {
+                        const float3& position = inoutMesh._listMorphPosition[targetIndex][listIndex[corner]];
+                        const float3& normal   = inoutMesh._listMorphNormal[targetIndex][listIndex[corner]];
+                        if ( position.getLengthSquared() <= kMinimumDelta && normal.getLengthSquared() <= kMinimumDelta )
+                            continue;
+                        target._listDelta.push_back( MeshMorphDelta{ static_cast<uint32>( corner ), position, normal } );
+                    }
+                    outData._listMorphTarget.push_back( std::move( target ) );
+                }
             }
 
             /** @brief 노드 이름(없으면 "node<번호>")입니다. */
@@ -893,17 +996,18 @@ namespace sw::editor
              * @brief glTF 애니메이션 하나를 관절마다 균일 표본으로 다시 뽑습니다. 표본율은 길이를 정확히 나누도록 조금 맞춥니다(마지막 표본 = 끝 시각).
              */
             static void resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
-                                           const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, AnimRawClip& outRawClip )
+                                           const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
+                                           AnimRawClip& outRawClip )
             {
                 const uint32          boneCount = skeleton.getBoneCount();
                 vector<JointChannels> listChannel( boneCount );
-                float32               duration = 0.0f;
+                float32               duration = minimumDuration;
                 for ( cgltf_size channelIndex = 0; channelIndex < animation.channels_count; ++channelIndex )
                 {
                     const cgltf_animation_channel& channel = animation.channels[channelIndex];
                     const auto                     it      = channel.target_node != nullptr ? mapJointBone.find( channel.target_node ) : mapJointBone.end();
                     if ( it == mapJointBone.end() || channel.sampler == nullptr )
-                        continue; // 관절이 아닌 노드 · 모프 가중치는 클립에 싣지 않는다
+                        continue; // 관절이 아닌 노드 · 모프 가중치(커브로 따로 싣는다 — readMorphWeightCurves)
                     JointChannels& joint = listChannel[static_cast<uint32>( it->second )];
                     if ( channel.target_path == cgltf_animation_path_type_translation )
                         readChannel( *channel.sampler, 3, joint._translation );
@@ -936,6 +1040,66 @@ namespace sw::editor
                         outRawClip._listSample[static_cast<size_t>( sampleIndex ) * boneCount + boneIndex] = sample;
                     }
                 }
+            }
+
+            /**
+             * @brief 애니메이션의 모프 가중치 채널(`weights`)을 타깃 이름의 커브로 읽습니다. 커브 이름 = 모프 타깃 이름이고, 런타임이 이름으로 유닛의 모프 가중치에 겁니다.
+             * @details 출력은 키마다 타깃 수만큼의 스칼라입니다(CUBICSPLINE 은 접선 · 값 · 접선 셋). 키 시각에서 그대로 읽고(선형 · 계단), 큐빅은 표본율로 다시 뽑습니다.
+             * @return 가중치 채널의 마지막 키 시각(클립 길이의 하한)입니다.
+             */
+            static float32 readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimCurve>& outListCurve )
+            {
+                outListCurve.clear();
+                float32 duration = 0.0f;
+                for ( cgltf_size channelIndex = 0; channelIndex < animation.channels_count; ++channelIndex )
+                {
+                    const cgltf_animation_channel& channel = animation.channels[channelIndex];
+                    if ( channel.target_path != cgltf_animation_path_type_weights || channel.sampler == nullptr || channel.target_node == nullptr ||
+                         channel.target_node->mesh == nullptr || channel.sampler->input == nullptr || channel.sampler->output == nullptr )
+                        continue;
+                    const cgltf_mesh& mesh        = *channel.target_node->mesh;
+                    const cgltf_size  targetCount = mesh.primitives_count > 0 ? mesh.primitives[0].targets_count : 0;
+                    if ( targetCount == 0 )
+                        continue;
+                    ChannelData data{};
+                    data._componentCount = static_cast<uint32>( targetCount );
+                    data._interpolation  = channel.sampler->interpolation;
+                    data._listTime.resize( channel.sampler->input->count );
+                    for ( cgltf_size keyIndex = 0; keyIndex < channel.sampler->input->count; ++keyIndex )
+                        (void)readFloats( channel.sampler->input, keyIndex, &data._listTime[keyIndex], 1 );
+                    data._listValue.resize( channel.sampler->output->count );
+                    for ( cgltf_size valueIndex = 0; valueIndex < channel.sampler->output->count; ++valueIndex )
+                        (void)readFloats( channel.sampler->output, valueIndex, &data._listValue[valueIndex], 1 );
+                    const float32 lastTime = findLastTime( data );
+                    duration               = MathUtil::max( duration, lastTime );
+                    // 키 시각(선형 · 계단) 또는 표본율 격자(큐빅)에서 값을 뽑는다.
+                    vector<float32> listTime = data._listTime;
+                    if ( data._interpolation == cgltf_interpolation_type_cubic_spline && sampleRate > 0.0f )
+                    {
+                        listTime.clear();
+                        const uint32 intervalCount = MathUtil::max( 1u, static_cast<uint32>( MathUtil::ceil( lastTime * sampleRate ) ) );
+                        for ( uint32 sampleIndex = 0; sampleIndex <= intervalCount; ++sampleIndex )
+                            listTime.push_back( lastTime * static_cast<float32>( sampleIndex ) / static_cast<float32>( intervalCount ) );
+                    }
+                    vector<float32> listValue( targetCount );
+                    for ( cgltf_size targetIndex = 0; targetIndex < targetCount; ++targetIndex )
+                    {
+                        const hashed_string name       = makeMorphTargetName( &mesh, targetIndex );
+                        const bool          bDuplicate = std::any_of( outListCurve.begin(), outListCurve.end(), [&name]( const AnimCurve& curve )
+                                 { return curve._name == name; } );
+                        if ( bDuplicate )
+                            continue;
+                        AnimCurve curve{};
+                        curve._name = name;
+                        for ( const float32 time : listTime )
+                        {
+                            if ( evaluateChannel( data, time, false, listValue.data() ) )
+                                curve._listKey.push_back( AnimCurveKey{ time, listValue[targetIndex] } );
+                        }
+                        outListCurve.push_back( std::move( curve ) );
+                    }
+                }
+                return duration;
             }
 
             /** @brief 곁 데이터(`<y>.clips.json`)를 읽습니다. 파일이 없으면 빈 표로 true, 모르는 키 · 틀린 값이면 false 입니다. */
@@ -1002,9 +1166,293 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 스킨드 모델을 읽습니다(모든 스킨이 한 스켈레톤 — 관절 노드가 같으면 한 본). */
+            /**
+             * @brief VRM 이면 glTF 머티리얼마다 툰 머티리얼 값을 읽습니다(0.x `extensions.VRM.materialProperties` · 1.0 `VRMC_materials_mtoon`).
+             * @param outListToon glTF 머티리얼 순서의 툰 머티리얼. VRM 이 아니면 비어 있습니다.
+             * @return 모르는 키 · 값이 있으면 false 입니다(오류를 남깁니다).
+             */
+            [[nodiscard]] static bool readToonMaterials( const cgltf_data& data, string_view sourcePath, vector<ToonMaterialDesc>& outListToon,
+                                                         vector<string>& outListIgnored )
+            {
+                outListToon.clear();
+                if ( data.json == nullptr || data.json_size == 0 )
+                    return true;
+                JsonDocument document;
+                if ( document.parse( string_view( data.json, data.json_size ) ) == false )
+                    return true; // cgltf 가 이미 읽은 JSON 이다 — 여기서 못 읽을 일은 없지만, 못 읽으면 VRM 이 아닌 것으로 본다
+                const JsonValue root       = document.getRoot();
+                const JsonValue extensions = root.get( "extensions", false );
+                const JsonValue vrm0       = extensions.isObject() ? extensions.get( "VRM", false ) : JsonValue{};
+                const JsonValue materials  = root.get( "materials", false );
+                const size_t    count      = materials.isArray() ? materials.size() : 0;
+
+                bool bVrm1 = extensions.isObject() && extensions.has( "VRMC_vrm", false );
+                for ( size_t index = 0; index < count && bVrm1 == false; ++index )
+                {
+                    const JsonValue materialExtensions = materials.at( index ).get( "extensions", false );
+                    bVrm1                              = materialExtensions.isObject() && materialExtensions.has( "VRMC_materials_mtoon", false );
+                }
+                if ( vrm0.isObject() == false && bVrm1 == false )
+                    return true;
+
+                outListToon.resize( count );
+                const JsonValue materialProperties = vrm0.isObject() ? vrm0.get( "materialProperties", false ) : JsonValue{};
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    string error;
+                    bool   bRead = false;
+                    if ( bVrm1 )
+                    {
+                        bRead = VrmMaterialImporter::readMtoon1Material( materials.at( index ), outListToon[index], &outListIgnored, error );
+                    }
+                    else
+                    {
+                        // 0.x 는 materialProperties[i] 가 materials[i] 의 것이다(UniVRM 이 같은 순서로 쓴다).
+                        if ( materialProperties.isArray() == false || index >= materialProperties.size() )
+                        {
+                            SW_LOG_ERROR( "VRM '%#': material %# has no materialProperties entry", sourcePath, index );
+                            return false;
+                        }
+                        bRead = VrmMaterialImporter::readVrm0Material( materialProperties.at( index ), materials.at( index ), outListToon[index], &outListIgnored, error );
+                    }
+                    if ( bRead == false )
+                    {
+                        SW_LOG_ERROR( "VRM '%#': %#", sourcePath, error.c_str() );
+                        return false;
+                    }
+                    if ( outListToon[index]._name.empty() )
+                        outListToon[index]._name = "material" + to_string( static_cast<uint64>( index ) );
+                }
+                return true;
+            }
+
+            /**
+             * @brief 합친 메시를 머티리얼마다 나눠 구간 메시로 풉니다(삼각형이 없는 머티리얼은 빠집니다). 정점은 그 구간이 쓰는 것만 옮깁니다.
+             * @param skinBoneCount 스킨드면 본 수(구간도 같은 스켈레톤을 쓴다), 아니면 0
+             */
+            static void splitMaterialSections( const MergedMesh& merged, const cgltf_data& data, const vector<ToonMaterialDesc>& listToon, uint32 skinBoneCount,
+                                               ModelImportResult& inoutResult )
+            {
+                unordered_map<string, uint32> mapStemUse;
+                for ( size_t materialIndex = 0; materialIndex < listToon.size(); ++materialIndex )
+                {
+                    const cgltf_material* pMaterial = &data.materials[materialIndex];
+                    MergedMesh            section;
+                    vector<uint32>        listRemap( merged._listVertex.size(), 0xFFFFFFFFu );
+                    for ( size_t triangle = 0; triangle < merged._listTriangleMaterial.size(); ++triangle )
+                    {
+                        if ( merged._listTriangleMaterial[triangle] != pMaterial )
+                            continue;
+                        for ( uint32 corner = 0; corner < 3; ++corner )
+                        {
+                            const uint32 source = merged._listIndex[triangle * 3 + corner];
+                            if ( listRemap[source] == 0xFFFFFFFFu )
+                            {
+                                listRemap[source] = static_cast<uint32>( section._listVertex.size() );
+                                section._listVertex.push_back( merged._listVertex[source] );
+                            }
+                            section._listIndex.push_back( listRemap[source] );
+                        }
+                    }
+                    if ( section._listIndex.empty() )
+                        continue;
+                    // 모프 타깃(표정)은 이 구간의 정점에 차이가 있는 것만 옮긴다 — 얼굴 타깃이 몸 · 옷 구간에 빈 채로 남으면 그 구간도 모프 풀을 탄다.
+                    for ( size_t targetIndex = 0; targetIndex < merged._listMorphName.size(); ++targetIndex )
+                    {
+                        vector<float3> listPosition( section._listVertex.size() );
+                        vector<float3> listNormal( section._listVertex.size() );
+                        bool           bMoves = false;
+                        for ( size_t source = 0; source < listRemap.size(); ++source )
+                        {
+                            if ( listRemap[source] == 0xFFFFFFFFu )
+                                continue;
+                            listPosition[listRemap[source]] = merged._listMorphPosition[targetIndex][source];
+                            listNormal[listRemap[source]]   = merged._listMorphNormal[targetIndex][source];
+                            bMoves                          = bMoves || listPosition[listRemap[source]].getLengthSquared() > 1e-7f || listNormal[listRemap[source]].getLengthSquared() > 1e-7f;
+                        }
+                        if ( bMoves == false )
+                            continue;
+                        section._listMorphName.push_back( merged._listMorphName[targetIndex] );
+                        section._listMorphPosition.push_back( std::move( listPosition ) );
+                        section._listMorphNormal.push_back( std::move( listNormal ) );
+                    }
+                    ModelImportSection output{};
+                    output._material      = listToon[materialIndex];
+                    const string baseStem = makeFileStem( output._material._name );
+                    const uint32 useCount = mapStemUse[baseStem]++;
+                    output._fileStem      = makeNumberedStem( baseStem, useCount );
+                    expandTriangles( section, skinBoneCount, output._mesh );
+                    inoutResult._listSection.push_back( std::move( output ) );
+                }
+            }
+
+            /**
+             * @brief 구간 머티리얼이 쓰는 텍스처의 원본 이미지 바이트를 모읍니다(glTF 텍스처 번호 자리). 파일 이름은 이미지 이름(겹치면 번호)입니다.
+             * @details 내장 이미지(bufferView)는 바이트 그대로, 바깥 파일(uri)은 원본 옆에서 읽습니다. data URI 이미지는 지원하지 않습니다(경고).
+             */
+            static void collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+            {
+                vector<uint8> listUsed( data.textures_count, SW_FALSE );
+                for ( const ModelImportSection& section : inoutResult._listSection )
+                {
+                    for ( const int32 textureIndex : { section._material._baseColorTexture, section._material._shadeTexture, section._material._emissiveTexture,
+                                                       section._material._matcapTexture } )
+                    {
+                        if ( 0 <= textureIndex && static_cast<cgltf_size>( textureIndex ) < data.textures_count )
+                            listUsed[static_cast<size_t>( textureIndex )] = SW_TRUE;
+                    }
+                }
+
+                // 이미지 이름 → 파일 이름(이미지 순서로 번호를 매겨 결정적이다).
+                vector<string>                listImageStem( data.images_count );
+                unordered_map<string, uint32> mapStemUse;
+                for ( cgltf_size imageIndex = 0; imageIndex < data.images_count; ++imageIndex )
+                {
+                    const cgltf_image& image    = data.images[imageIndex];
+                    const string       baseName = ( image.name != nullptr && image.name[0] != '\0' ) ? makeFileStem( image.name ) : "image" + to_string( static_cast<uint64>( imageIndex ) );
+                    listImageStem[imageIndex]   = makeNumberedStem( baseName, mapStemUse[baseName]++ );
+                }
+
+                inoutResult._listTexture.assign( data.textures_count, ModelImportTexture{} );
+                for ( cgltf_size textureIndex = 0; textureIndex < data.textures_count; ++textureIndex )
+                {
+                    const cgltf_image* pImage = data.textures[textureIndex].image;
+                    if ( listUsed[textureIndex] == SW_FALSE || pImage == nullptr )
+                        continue;
+                    ModelImportTexture& texture = inoutResult._listTexture[textureIndex];
+                    texture._fileStem           = listImageStem[static_cast<size_t>( pImage - data.images )];
+                    const string mimeType       = pImage->mime_type != nullptr ? string( pImage->mime_type ) : string();
+                    texture._extension          = ( mimeType == "image/jpeg" ) ? ".jpg" : ".png";
+                    if ( pImage->buffer_view != nullptr )
+                    {
+                        const uint8* pBytes = cgltf_buffer_view_data( pImage->buffer_view );
+                        if ( pBytes != nullptr )
+                            texture._bytes.assign( pBytes, pBytes + pImage->buffer_view->size );
+                    }
+                    else if ( pImage->uri != nullptr && StringUtil::startsWith( pImage->uri, "data:" ) == false )
+                    {
+                        texture._extension = FileUtil::getExtension( pImage->uri );
+                        (void)FileUtil::readFile( FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), pImage->uri ), texture._bytes );
+                    }
+                    if ( texture._bytes.empty() )
+                        SW_LOG_WARNING( "glTF '%#': texture %# has no readable image bytes - the material samples white", sourcePath, textureIndex );
+                }
+            }
+
+            /**
+             * @brief VRM 의 머티리얼 구간(메시 · 툰 머티리얼)과 그 텍스처 원본을 씁니다.
+             * @details 메시는 `<옆 폴더>/sections/<머티리얼>.mesh`, 머티리얼은 `<옆 폴더>/materials/<머티리얼>.material`(엔진 툰 머티리얼이 틀)이다.
+             *          텍스처 원본(내장 이미지 바이트 그대로)은 `<x>/textures_raw/<y>/<이미지>.png` 에 꺼내 두고 — 바이트가 같으면 건드리지 않는다 —
+             *          머티리얼은 텍스처 임포트(`App --import-textures`)가 만들 `<x>/textures/<y>/<이미지>.dds` 를 가리킨다(원본은 텍스처 임포트의 스탬프가 지킨다).
+             */
+            [[nodiscard]] static bool writeMaterialSections( const ModelImportResult& result, string_view sourcePath, string_view sideFolder )
+            {
+                if ( result._listSection.empty() )
+                    return true;
+                const string   rawTextureFolder = makeRawTextureFolder( sourcePath );
+                vector<string> listTexturePath( result._listTexture.size() );
+                for ( size_t textureIndex = 0; textureIndex < result._listTexture.size(); ++textureIndex )
+                {
+                    const ModelImportTexture& texture = result._listTexture[textureIndex];
+                    if ( texture._bytes.empty() || rawTextureFolder.empty() )
+                        continue;
+                    const string  rawPath = FileUtil::joinPath( rawTextureFolder, texture._fileStem + texture._extension );
+                    vector<uint8> existing;
+                    const bool    bSame = FileUtil::fileExists( rawPath ) && FileUtil::readFile( rawPath, existing ) && existing == texture._bytes;
+                    if ( bSame == false )
+                    {
+                        FileUtil::ensureDirectoryExists( rawTextureFolder );
+                        if ( FileUtil::writeFile( rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
+                        {
+                            SW_LOG_ERROR( "Failed to write texture source %#", rawPath.c_str() );
+                            return false;
+                        }
+                    }
+                    listTexturePath[textureIndex] = ResourceUtil::toResourceId( TextureImporter::makeImportedTexturePath( rawPath ) );
+                }
+
+                for ( const ModelImportSection& section : result._listSection )
+                {
+                    const string meshPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kSectionFolder ), section._fileStem + string( MeshAssetFormat::kExtension ) );
+                    if ( MeshAssetFormat::saveToFile( meshPath, section._mesh ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to write section mesh %#", meshPath.c_str() );
+                        return false;
+                    }
+                    const string materialText = VrmMaterialImporter::makeMaterialXml( section._material, listTexturePath );
+                    const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" );
+                    FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( materialPath ) );
+                    if ( materialText.empty() || FileUtil::writeTextFile( materialPath, materialText ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to write toon material %#", materialPath.c_str() );
+                        return false;
+                    }
+                    // 머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다 — 옆 폴더에 실행마다 다른 GUID 가 생기면 임포트 결과 해시가 어긋난다.
+                    // 그래서 임포터가 경로에서 정해지는 GUID 로 미리 쓴다(언리얼 · 유니티의 임포트 부산물도 임포터가 식별자를 정한다).
+                    const string resourceId = ResourceUtil::toResourceId( materialPath );
+                    if ( FileUtil::writeTextFile( materialPath + ".meta", "guid=" + makeImportedGuid( resourceId ) + "\nsourcePath=" + resourceId + "\nimported=1\n" ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to write %#.meta", materialPath.c_str() );
+                        return false;
+                    }
+                }
+                if ( result._listIgnoredMaterialKey.empty() == false )
+                {
+                    string joined;
+                    for ( const string& key : result._listIgnoredMaterialKey )
+                        joined += ( joined.empty() ? "" : ", " ) + key;
+                    SW_LOG_WARNING( "VRM '%#': material keys the toon material does not support (ignored): %#", sourcePath, joined.c_str() );
+                }
+                SW_LOG_INFO( "VRM '%#': %# material sections, %# texture sources", sourcePath, result._listSection.size(), result._listTexture.size() );
+                return true;
+            }
+
+            /** @brief 리소스 경로에서 정해지는 UUID 글입니다(버전 4 · 변형 비트 자리를 맞춘 FNV-1a 두 개). 같은 경로는 어디서 임포트해도 같은 GUID 입니다. */
+            static string makeImportedGuid( string_view resourceId )
+            {
+                const uint64 high = StringUtil::computeHash64( resourceId.data(), resourceId.size(), false );
+                const uint64 low  = StringUtil::computeHash64( resourceId.data(), resourceId.size(), false, high ^ 0x9E3779B97F4A7C15ull );
+                // 8-4-4-4-12 자리 16 진. 셋째 묶음 첫 자리는 버전 4, 넷째 묶음 첫 자리는 변형(8..b)이다.
+                auto appendHex = []( string& inoutText, uint64 value, uint32 digitCount )
+                {
+                    static constexpr utf8 kArrDigit[] = "0123456789abcdef";
+                    for ( uint32 digit = digitCount; digit > 0; --digit )
+                        inoutText += kArrDigit[( value >> ( ( digit - 1 ) * 4 ) ) & 0xFu];
+                };
+                string text;
+                appendHex( text, high >> 32, 8 );
+                text += '-';
+                appendHex( text, ( high >> 16 ) & 0xFFFFu, 4 );
+                text += "-4";
+                appendHex( text, high & 0x0FFFu, 3 );
+                text += '-';
+                appendHex( text, 0x8000u | ( ( low >> 48 ) & 0x3FFFu ), 4 );
+                text += '-';
+                appendHex( text, low & 0xFFFFFFFFFFFFull, 12 );
+                return text;
+            }
+
+            /**
+             * @brief 원본 경로의 원본 텍스처 폴더입니다(`<x>/models_raw/<y>.vrm` → `<x>/textures_raw/<y>`). `models_raw/` 구간이 없으면 빈 글입니다.
+             */
+            static string makeRawTextureFolder( string_view sourcePath )
+            {
+                const string normalized = FileUtil::normalizeSeparators( sourcePath );
+                const string marker     = "/" + string( kRawModelFolder ) + "/";
+                const size_t at         = normalized.find( marker );
+                if ( at == string::npos )
+                    return {};
+                const string domain   = normalized.substr( 0, at );
+                const string relative = FileUtil::removeExtension( normalized.substr( at + marker.size() ) );
+                return domain + "/" + string( kRawTextureFolder ) + "/" + relative;
+            }
+
+            /**
+             * @brief 스킨드 모델을 읽습니다(모든 스킨이 한 스켈레톤 — 관절 노드가 같으면 한 본).
+             * @param listToon VRM 이면 glTF 머티리얼마다의 툰 머티리얼 — 본 메시를 머티리얼 구간으로도 나눕니다.
+             */
             [[nodiscard]] static bool readSkinnedModel( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const ModelImportRule& rule, string_view sourcePath,
-                                                        ModelImportResult& outResult )
+                                                        const vector<ToonMaterialDesc>& listToon, ModelImportResult& outResult )
             {
                 unordered_map<const cgltf_node*, int32> mapJointBone;
                 vector<float4x4>                        listRootParent;
@@ -1026,7 +1474,8 @@ namespace sw::editor
                 SkinBinding rigidBinding{};
 
                 // 노드를 훑어 메시를 나눈다: 이 스킨을 쓰는 메시 → 몸, 관절 아래 스킨 없는 메시 → 부착, 그 밖의 스킨 없는 메시 → 몸(뿌리 본에 가중치 1).
-                MergedMesh                    body;
+                MergedMesh body;
+                body._bBakeMaterialColor = listToon.empty();
                 vector<const cgltf_node*>     listStack( listRoot.rbegin(), listRoot.rend() );
                 unordered_map<string, uint32> mapStemUse;
                 float32                       arrIdentity[16]{ 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
@@ -1046,7 +1495,7 @@ namespace sw::editor
                         // glTF 규약: 스킨드 메시는 노드 변환을 쓰지 않는다 — 정점은 바인드 공간이다.
                         const SkinBinding& binding = listBinding[static_cast<size_t>( pNode->skin - data.skins )];
                         for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
-                            appendPrimitive( pNode->mesh->primitives[primitiveIndex], arrIdentity, &binding, body );
+                            appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrIdentity, &binding, body );
                         continue;
                     }
                     const cgltf_node* pJoint = findJointAncestor( *pNode, mapJointBone );
@@ -1055,7 +1504,7 @@ namespace sw::editor
                         float32 arrWorld[16]{};
                         cgltf_node_transform_world( pNode, arrWorld );
                         for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
-                            appendPrimitive( pNode->mesh->primitives[primitiveIndex], arrWorld, &rigidBinding, body );
+                            appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrWorld, &rigidBinding, body );
                         continue;
                     }
 
@@ -1076,7 +1525,7 @@ namespace sw::editor
                     attachment._fileStem       = makeNumberedStem( baseStem, useCount );
                     MergedMesh part;
                     for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
-                        appendPrimitive( pNode->mesh->primitives[primitiveIndex], arrIdentity, nullptr, part );
+                        appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrIdentity, nullptr, part );
                     expandTriangles( part, 0, attachment._mesh );
                     if ( attachment._mesh._listVertex.empty() == false )
                         outResult._listAttachment.push_back( std::move( attachment ) );
@@ -1085,6 +1534,11 @@ namespace sw::editor
                 {
                     SW_LOG_ERROR( "glTF '%#' has a skin but no triangles bound to it", sourcePath );
                     return false;
+                }
+                if ( listToon.empty() == false )
+                {
+                    splitMaterialSections( body, data, listToon, boneCount, outResult );
+                    collectSectionTextures( data, sourcePath, outResult );
                 }
                 expandTriangles( body, boneCount, outResult._mesh );
                 outResult._bSkinned = SW_TRUE;
@@ -1140,11 +1594,16 @@ namespace sw::editor
                         listRequestedFound[static_cast<size_t>( itRequested - rule._listClipName.begin() )] = SW_TRUE;
                     }
 
-                    AnimRawClip rawClip;
-                    resampleAnimation( animation, skeleton, mapJointBone, listRest, listRootParent, rule._animationSampleRate, rawClip );
+                    // 모프 가중치 채널은 타깃 이름의 커브가 된다 — 가중치만 움직이는 클립(말하기)도 그 길이를 갖는다.
+                    vector<AnimCurve> listMorphCurve;
+                    const float32     morphDuration = readMorphWeightCurves( animation, rule._animationSampleRate, listMorphCurve );
+                    AnimRawClip       rawClip;
+                    resampleAnimation( animation, skeleton, mapJointBone, listRest, listRootParent, rule._animationSampleRate, morphDuration, rawClip );
                     ModelImportClip imported{};
                     imported._clip.setName( hashed_string( clipName ) );
                     imported._clip.setRootMotionTrack( rootMotionBone );
+                    for ( const AnimCurve& curve : listMorphCurve )
+                        imported._clip.addCurve( curve );
                     const auto itExtra = mapExtra.find( clipName );
                     if ( itExtra != mapExtra.end() )
                     {
@@ -1265,6 +1724,12 @@ namespace sw::editor
 
         vector<const cgltf_node*> listRoot;
         ModelImporterInternal::collectSceneRoots( *pData, listRoot );
+        vector<ToonMaterialDesc> listToon;
+        if ( ModelImporterInternal::readToonMaterials( *pData, sourcePath, listToon, outResult._listIgnoredMaterialKey ) == false )
+        {
+            cgltf_free( pData );
+            return false;
+        }
         bool bRead = true;
         if ( pData->skins_count > 0 )
         {
@@ -1276,28 +1741,35 @@ namespace sw::editor
             }
             else
             {
-                bRead = ModelImporterInternal::readSkinnedModel( *pData, listRoot, rule, sourcePath, outResult );
+                bRead = ModelImporterInternal::readSkinnedModel( *pData, listRoot, rule, sourcePath, listToon, outResult );
             }
             cgltf_free( pData );
             return bRead;
         }
 
         ModelImporterInternal::MergedMesh merged;
+        merged._bBakeMaterialColor = listToon.empty();
         for ( const cgltf_node* pRoot : listRoot )
             ModelImporterInternal::appendNode( *pRoot, merged );
         if ( pData->animations_count > 0 )
             SW_LOG_WARNING( "glTF '%#' has %# animations but no skin - node animations are not imported", sourcePath, pData->animations_count );
-        cgltf_free( pData );
 
         if ( merged._listIndex.empty() )
         {
             SW_LOG_ERROR( "glTF '%#' has no triangles in its default scene (%# primitives skipped)", sourcePath, merged._skippedPrimitiveCount );
+            cgltf_free( pData );
             return false;
         }
-        if ( merged._baseColorTextureUri.empty() == false )
+        if ( merged._baseColorTextureUri.empty() == false && listToon.empty() )
             SW_LOG_INFO( "glTF '%#' uses base color texture '%#' - assign it through the material (PrimitiveLook)", sourcePath, merged._baseColorTextureUri.c_str() );
 
         ModelImporterInternal::applyRule( rule, merged );
+        if ( listToon.empty() == false )
+        {
+            ModelImporterInternal::splitMaterialSections( merged, *pData, listToon, 0, outResult );
+            ModelImporterInternal::collectSectionTextures( *pData, sourcePath, outResult );
+        }
+        cgltf_free( pData );
         ModelImporterInternal::expandTriangles( merged, 0, outResult._mesh );
         return true;
     }
@@ -1318,6 +1790,37 @@ namespace sw::editor
         if ( MeshAssetFormat::saveToFile( outputPath, result._mesh ) == false )
         {
             SW_LOG_ERROR( "Failed to write mesh asset %#", outputPath );
+            return false;
+        }
+        if ( ModelImporterInternal::writeMaterialSections( result, sourcePath, sideFolder ) == false )
+            return false;
+        // 파쇄 — 규칙에 `fracture` 가 있으면 `.mesh` 옆에 `.fracture` 를 쓰고, 없으면 옛 것을 지운다(규칙에서 빠진 파쇄가 남지 않게).
+        const string fracturePath = FractureAsset::makePathForMesh( outputPath );
+        if ( rule._bFracture == SW_TRUE )
+        {
+            if ( result._bSkinned == SW_TRUE )
+            {
+                SW_LOG_ERROR( "Fracture rule '%#' matched skinned model %# - only static meshes fracture", rule._name.c_str(), sourcePath );
+                return false;
+            }
+            FractureAsset fracture;
+            string        error;
+            if ( MeshFractureUtil::fracture( result._mesh._listVertex, rule._fracture, fracture, error ) == false )
+            {
+                SW_LOG_ERROR( "Fracture of %# failed: %#", sourcePath, error.c_str() );
+                return false;
+            }
+            if ( fracture.saveToFile( fracturePath ) == false )
+            {
+                SW_LOG_ERROR( "Failed to write fracture asset %#", fracturePath.c_str() );
+                return false;
+            }
+            SW_LOG_INFO( "Fractured %# -> %# (%# pieces, %# links, %# levels, %# interior triangles)", sourcePath, fracturePath.c_str(), fracture.getPieceCount(),
+                         fracture._graph._listLink.size(), fracture._graph.getDepthCount(), fracture.countTriangles( FractureSurfaceSlot::Interior ) );
+        }
+        else if ( FileUtil::fileExists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
+        {
+            SW_LOG_ERROR( "Failed to remove stale fracture asset %#", fracturePath.c_str() );
             return false;
         }
         if ( result._bSkinned == SW_FALSE )
@@ -1432,6 +1935,12 @@ namespace sw::editor
         hash                       = StringUtil::computeHash64( reinterpret_cast<const utf8*>( rule._arrTranslation ), sizeof( rule._arrTranslation ), false, hash );
         const string animationText = rule.makeAnimationHashText();
         hash                       = StringUtil::computeHash64( animationText.c_str(), animationText.size(), false, hash );
+        const string fractureText  = rule.makeFractureHashText();
+        if ( fractureText.empty() == false )
+        {
+            const string fractureVersion = fractureText + ";format=" + to_string( FractureAsset::kVersion ) + ";algorithm=" + to_string( MeshFractureUtil::kAlgorithmVersion );
+            hash                         = StringUtil::computeHash64( fractureVersion.c_str(), fractureVersion.size(), false, hash );
+        }
         // 곁 데이터(클립 반복 · 알림 · 커브)를 고쳐도 다시 임포트해야 한다.
         vector<uint8> clipDataBytes;
         const string  clipDataPath = makeClipDataPath( sourcePath );
@@ -1468,6 +1977,13 @@ namespace sw::editor
         uint64 hash = AssetImportStampUtil::computeFileHash( importedMeshPath );
         if ( hash == 0 )
             return 0;
+        // 옆의 `.fracture` 도 결과다 — 지워지거나 바뀌면 어긋남이다.
+        const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
+        if ( FileUtil::fileExists( fracturePath ) )
+        {
+            const uint64 fractureHash = AssetImportStampUtil::computeFileHash( fracturePath );
+            hash                      = StringUtil::computeHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
+        }
         // 옆 폴더의 파일을 이름순으로 섞는다 — 이름도 섞어 파일이 사라지거나 바뀌면 다른 값이 된다.
         const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
         if ( FileUtil::directoryExists( sideFolder ) == false )

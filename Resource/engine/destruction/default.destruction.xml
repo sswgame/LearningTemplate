@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 기본 파괴 재질(콘크리트 · 벽돌 벽). 형식은 Source/Engine/Destruction/DestructionProfile.h -->
+<DestructionProfile density="2000" physicsMaterial="Stone">
+  <Strain thresholds="60 90 40"/>
+  <Links strength="400" supportStrength="30000"/>
+  <Impact impulseToStrain="0.4" minImpulse="40" radius="0.35"/>
+  <Debris lifetime="10" maxBodies="96" smallVolume="0.002" fadeTime="0.5" sleepRemoveTime="1.5" keepCollisionVolume="0.05" hullShrink="0.01"/>
+  <Network poseRate="10"/>
+</DestructionProfile>

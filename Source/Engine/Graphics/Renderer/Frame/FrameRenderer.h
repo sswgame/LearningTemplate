@@ -27,6 +27,7 @@
 #include "Engine/Graphics/Renderer/Scene/GpuMeshMorphPool.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Graphics/Renderer/Scene/GpuVertexAnimationPool.h"
 
 namespace sw
 {
@@ -210,6 +211,11 @@ namespace sw
          */
         RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPso, const GpuMeshBatch& batch ) const;
         /**
+         * @brief 이 패스가 이 배치를 그리는지 반환합니다 — 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
+         * @details 판정은 `FrameRendererUtil::drawsMaterialInPass` 하나입니다(머티리얼 PSO 변형 · 셰이더 쿠커와 같은 판정).
+         */
+        bool drawsBatchInPass( RenderPassType passType, const GpuMeshBatch& batch ) const;
+        /**
          * @brief PSO 를 만들 때 쓴 디스크립터를 돌려줍니다(셰이더 경로 · define · 렌더 상태). 모르는 PSO 면 false 입니다.
          * @details 어떤 퍼뮤테이션이 실제로 걸렸는지 밖에서 볼 수 있는 유일한 창입니다. 픽셀로는 안 보이는
          *          차이(알파 경로가 컴파일됐는가 같은)를 테스트가 여기서 확인합니다.
@@ -271,6 +277,8 @@ namespace sw
              *          뷰를 잘못 고르면 그림자 드리우개가 사라지거나 화면 밖 물체를 그립니다.
              */
             uint32 _cullViewIndex{ 0 };
+            /// @brief 지금 기록하는 패스의 종류입니다(`executePass` 가 정합니다). 드로우 루프가 이 패스가 그리지 않는 머티리얼의 배치를 거를 때 봅니다.
+            RenderPassType _passType{ RenderPassType::Invalid };
             /// @brief 이 드로우 그룹의 루트 상수 값(머티리얼 원소 수)입니다. 배치마다 다른 값(인스턴스 시작 · 모프 풀 · 정점 풀)은
             ///        배치 표(g_SwBatches)와 인스턴스 슬롯 스트림이 주므로 그룹 안에서 루트 상수를 다시 걸지 않습니다.
             ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어씁니다(binding.hlsli 1-0 참고).
@@ -666,6 +674,8 @@ namespace sw
         RHIConstantBufferSlot _meshSkinCb;
         /// @brief GPU 가 변형한 정점 풀입니다. RT 소유입니다(GpuMeshMorphPool 참고).
         GpuMeshMorphPool _meshMorphPool;
+        /// @brief 정점 애니메이션(VAT) 표 풀입니다. RT 소유입니다(GpuVertexAnimationPool 참고).
+        GpuVertexAnimationPool _vertexAnimationPool;
         /// @brief `setMeshMorphDiag` 가 준 값입니다. 음수면 전역 변수 `gv_morphDiag` 를 따릅니다.
         int32 _meshMorphDiagOverride;
         /// @brief `setDrawMergeEnabled` 가 준 값입니다. 음수면 전역 변수 `gv_drawMerge` 를 따릅니다.
@@ -703,6 +713,8 @@ namespace sw
         vector<Mesh*> _listScratchMorphMesh;
         /// @brief 이번 프레임 스킨드 메시 목록입니다(모프 풀의 스킨 구간 순서, 프레임마다 재사용).
         vector<Mesh*> _listScratchSkinMesh;
+        /// @brief 이번 프레임 VAT 메시 목록입니다(프레임마다 재사용).
+        vector<Mesh*> _listScratchVertexAnimationMesh;
         /// @brief 씬 라이트 구조버퍼입니다. RT 소유이고 포워드 · 디퍼드가 같은 버퍼를 읽습니다.
         GpuLightBuffer _lightBuffer;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 들고 있습니다.

@@ -39,7 +39,8 @@
 ### 기능
 
 - **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler,
-  Sequencer, Animation Graph, Dialogue Graph, Prefab Editor, Tile Map, Sprite Clip, User Settings(플레이어 옵션을 메뉴 바인딩 API 로 바꿔 보는 창 —
+  Sequencer, Animation Graph, Animation Rewind(기록된 포즈 · 상태를 시간 막대로 훑기 — 훑으면 PIE 를 멈춘다), Dialogue Graph, Prefab Editor, Tile Map,
+  Sprite Clip, User Settings(플레이어 옵션을 메뉴 바인딩 API 로 바꿔 보는 창 —
   셀프 시험 `userSettings.panelDrawsEveryTab`)
   - `Panels/Inspector/`: 프로퍼티·컴포넌트 인스펙터 확장 — 컴포넌트 확장은 `<Component>Inspector.cpp` 하나씩
 - **Viewport/**: 뷰포트 클라이언트, 툴바, 에디터 카메라(`EditorCamera`),
@@ -197,9 +198,9 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 
 ## 모델도 들일 때 임포트한다
 
-glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로의 `models/<이름>.mesh`(스킨드 모델이면 옆 폴더의 스켈레톤 · 부착 메시 · 클립까지)로
+glTF 원본(`.glb` · `.gltf` · `.vrm`)은 `models_raw/` 에 두고 같은 상대 경로의 `models/<이름>.mesh`(스킨드 모델이면 옆 폴더의 스켈레톤 · 부착 메시 · 클립까지)로
 임포트합니다(`ModelImporter`, cgltf + meshoptimizer).
-런타임은 `.mesh` 만 읽고(`MeshCache`), `MeshComponent::_meshId` 에 그 경로를 적거나 `PrimitiveStage::createModelObject` 로 세웁니다.
+런타임은 `.mesh` 만 읽고(`MeshCache`), `MeshComponent::_meshId` 에 그 경로를 적습니다.
 
 - **변환**: (스킨 없는 모델) 기본 씬의 노드 계층을 월드 변환째 한 메시로 합칩니다. glTF(오른손 · +Y 위 · 앞 +Z)를 엔진(왼손 · +Y 위 · 앞 +Z, 앞면 = 시계 방향)으로
   옮기려고 **X 를 뒤집고 삼각형마다 감김을 뒤집습니다**(노드가 거울상이면 한 번 더). 노멀이 없으면 면 노멀, 색은 baseColorFactor × COLOR_0.
@@ -219,6 +220,10 @@ glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로�
   남아 나중에 소켓 파일을 만들 근거가 된다 — 소켓 자체는 따로 둔 원본 에셋이다) · `clips/<클립>.animclip`(애니메이션마다 하나 — 관절마다 균일 표본으로
   다시 뽑아 규칙의 코덱으로 압축, 클립마다 압축률 · 최대 오차(mm)를 로그로 보고). 옆 폴더는 임포트마다 지우고 다시 쓰며, 스탬프의 결과 해시는
   `.mesh` 와 옆 폴더 파일 전부를 섞습니다(`IRawAssetImporter::computeImportedHash`). 스킨드 모델에 `translation` · `recenter` 는 오류입니다(바인드 행렬이 어긋난다).
+- **모프 타깃**: 프리미티브의 `targets`(POSITION · NORMAL 차이)를 합친 메시의 정점 번호로 옮겨 `.mesh` 의 모프 덩어리(`MRPH`)에 싣습니다 — 움직이는 정점만,
+  이름은 메시의 `extras.targetNames`(없으면 `target<n>`), 같은 이름의 타깃은 프리미티브를 건너 하나로 묶입니다. 노드 변환 · X 거울상은 위치 · 노멀과 같이
+  겁니다. 애니메이션의 `weights` 채널은 타깃 이름의 커브로 클립에 실리고(표본은 클립과 같은 율), 런타임 애니메이터가 이름이 같은 타깃의 가중치로 겁니다.
+  저장소의 시험 머리는 `game/empty/models_raw/testhead.gltf`(합성 — 타깃 일곱 · Talk 가중치 클립).
 - **애니메이션 규칙 키**: `animations`(기본 참) · `clips`(가져올 클립 이름, 비면 모두 — 원본에 없는 이름은 임포트 오류) · `animation_codec`(`raw` · `acl`,
   모르는 이름은 설정 오류) · `animation_sample_rate` · `animation_precision` · `animation_shell_distance`(미터) · `root_motion_bone`(루트 모션 트랙) ·
   `attachments`(기본 참). 모르는 키는 설정 전체를 거부합니다.
@@ -227,6 +232,50 @@ glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로�
 - **핫 리로드**: `models_raw/` 원본이 바뀌면 일괄 임포트하고, 쓰인 `.mesh` 를 메시 캐시가 같은 `Mesh` 에 제자리로 다시 읽습니다.
 - 시험: `ModelImporterTest`(좌표계 · 감김 · 노드 변환 · 색 · 스탬프 · 비표준 씬 뿌리 · 규칙 · 스킨드 모델(KayKit 기사 41 본 · 클립 76 · 부착 · 곁 데이터),
   저장소 원본 ↔ 결과 대조), 엔진 쪽은 `MeshAssetTest` · `SkeletalAnimationTest`.
+
+### VRM — MToon 머티리얼을 툰 머티리얼로
+
+VRM(`.vrm` — glTF 바이너리 + `extensions.VRM`(0.x) 또는 `VRMC_*`(1.0))도 같은 길로 임포트합니다. 머티리얼에 MToon 값이 있으면(`VrmMaterialImporter`):
+
+- **머티리얼마다 구간**: 본 메시와 별도로 머티리얼 하나가 쓰는 삼각형만 모은 `models/<이름>/sections/<머티리얼>.mesh`(스킨드면 같은 스켈레톤 · 본 영향)와
+  `models/<이름>/materials/<머티리얼>.material`(엔진 `engine/materials/toon.material` 이 틀 — 프로퍼티 · 퍼뮤테이션은 그 파일 하나가 정본)을 씁니다.
+  엔진 메시는 머티리얼 하나라(구간 · 머티리얼 칸이 없다) 오브젝트마다 구간 하나를 `SkeletalMeshComponent` 로 겁니다(`game/empty/maps/toonshowcase.scene.xml`).
+  VRM 은 정점 색에 baseColorFactor 를 굽지 않습니다 — 머티리얼이 듭니다.
+- **텍스처**: 구간 머티리얼이 쓰는 내장 이미지를 바이트 그대로 `<x>/textures_raw/<이름>/<이미지>.png` 로 꺼내고(바이트가 같으면 건드리지 않는다), 머티리얼은
+  텍스처 임포트가 만들 `<x>/textures/<이름>/<이미지>.dds` 를 가리킵니다. 그래서 VRM 은 `App --import-models` 뒤에 `App --import-textures` 를 돌립니다
+  (에디터는 핫 리로드가 둘을 잇는다). 원본 PNG 는 텍스처 임포트의 스탬프가 지킵니다.
+- **모르는 키는 임포트 오류**입니다(이 저장소의 규칙 — 철자가 틀린 키가 조용히 기본값이 되지 않게). 아는데 옮기지 않는 키는 값이 효과를 낼 때만 경고 한 줄로
+  모아 알립니다(`ModelImportResult::_listIgnoredMaterialKey`).
+
+| VRM 0.x (`materialProperties[]`) | 엔진 툰 머티리얼 | 옮기는 법 |
+|---|---|---|
+| `shader` | — | `VRM/MToon` 만 MToon. `VRM_USE_GLTFSHADER` · `VRM/UnlitTexture` · `VRM/UnlitCutout` · `VRM/UnlitTransparent` · `VRM/UnlitTransparentZWrite` 는 glTF 머티리얼을 평면 툰(그림자색 = 기본색)으로. 그 밖은 오류 |
+| `_Color` · `_ShadeColor` · `_EmissionColor` · `_RimColor` · `_OutlineColor` | `baseColor` · `shadeColor` · `emissiveColor` · `rimColor` · `outlineColor` | 감마 → 선형 |
+| `_MainTex` · `_ShadeTexture` · `_EmissionMap` · `_SphereAdd` | `baseColorMap` · `shadeMap` · `emissiveMap` · `matcapMap` | glTF 텍스처 번호 → DDS 경로 |
+| `_ShadeShift` · `_ShadeToony` | `shadingShift` · `shadingToony` | 0.x 구간 [shift, lerp(1, shift, toony)] 와 같은 경계: shift₁ = −(아래 + 위)/2, toony₁ = 1 − (위 − 아래)/2 |
+| `_ReceiveShadowRate` | `shadowReceive` | 그대로 |
+| `_RimFresnelPower` · `_RimLift` · `_RimLightingMix` | `rimFresnelPower` · `rimLift` · `rimLightingMix` | 그대로 |
+| `_OutlineWidthMode`(0 · 1 · 2) · `_OutlineWidth` | `Outline` 스위치 · `outlineWidthMode` · `outlineWidth` | 월드: cm → m(× 0.01), 화면: NDC 1 % → 화면 높이 비율(× 0.005) |
+| `_OutlineScaledMaxDistance` | `outlineMaxDistance` | 화면 모드만 |
+| `_OutlineColorMode` · `_OutlineLightingMix` | `outlineLightingMix` | 고정 색(0)은 0 |
+| `_BlendMode`(0 불투명 · 1 컷아웃 · 2 · 3 반투명) · `_Cutoff` | `AlphaCutoff` 스위치 · `alphaCutoff` · blendMode Transparent + `MATERIAL_BLEND_TRANSLUCENT` | 3(깊이 쓰는 반투명)은 반투명 |
+| `_CullMode`(0 끔 · 2 후면) | `TwoSided` 스위치 | 1(앞면)은 오류 |
+| 알지만 옮기지 않음 | — | `_BumpMap` · `_BumpScale`(노멀 맵 없음) · `_ShadingGradeTexture` · `_ShadingGradeRate` · `_ReceiveShadowTexture` · `_RimTexture` · `_OutlineWidthTexture` · `_UvAnimMaskTexture` · `_UvAnimScrollX/Y` · `_UvAnimRotation` · `_LightColorAttenuation` · `_IndirectLightIntensity` · `_OutlineCullMode`(늘 앞면) · 텍스처 타일링 벡터(늘 [0,0,1,1] 이어야 한다) · 블렌드 상태(`_SrcBlend` · `_DstBlend` · `_ZWrite` · `_AlphaToMask`) · `_DebugMode` · `_MToonVersion` · `keywordMap` · `tagMap` · `renderQueue` |
+
+| VRM 1.0 (`VRMC_materials_mtoon` + glTF 머티리얼) | 엔진 툰 머티리얼 |
+|---|---|
+| `pbrMetallicRoughness.baseColorFactor` · `baseColorTexture` | `baseColor` · `baseColorMap` |
+| `shadeColorFactor` · `shadeMultiplyTexture` | `shadeColor` · `shadeMap` |
+| `shadingShiftFactor` · `shadingToonyFactor` | `shadingShift` · `shadingToony` |
+| `emissiveFactor` · `emissiveTexture` · `KHR_materials_emissive_strength` | `emissiveColor` · `emissiveMap` · `emissiveStrength` |
+| `matcapFactor` · `matcapTexture` | `matcapColor` · `matcapMap` |
+| `parametricRimColorFactor` · `parametricRimFresnelPowerFactor` · `parametricRimLiftFactor` · `rimLightingMixFactor` | `rimColor` · `rimFresnelPower` · `rimLift` · `rimLightingMix` |
+| `outlineWidthMode`(`none` · `worldCoordinates` · `screenCoordinates`) · `outlineWidthFactor` · `outlineColorFactor` · `outlineLightingMixFactor` | `Outline` 스위치 · `outlineWidthMode` · `outlineWidth` · `outlineColor` · `outlineLightingMix` |
+| `alphaMode` · `alphaCutoff` · `doubleSided` | `AlphaCutoff` 스위치 · blendMode · `alphaCutoff` · `TwoSided` 스위치 |
+| 알지만 옮기지 않음 | `shadingShiftTexture` · `rimMultiplyTexture` · `outlineWidthMultiplyTexture` · `uvAnimation*` · `giEqualizationFactor`(환경광이 균일) · `transparentWithZWrite` · `renderQueueOffsetNumber` · `normalTexture` · `KHR_texture_transform` · `texCoord` ≠ 0 |
+| MToon 확장이 없는 머티리얼 | 평면 툰(그림자색 = 기본색) |
+
+시험: `VrmMaterialImporterTest`(0.x · 1.0 값 대응, 모르는 키 오류, 만든 `.material` 이 툰 머티리얼로 읽힘) · `ModelImporterTest.VrmSplitsMeshByToonMaterial`.
 
 ## 높이장도 들일 때 임포트한다
 
@@ -284,7 +333,7 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
   오버레이(시각화 · 피킹 · 기즈모)는 호스트가 그리는 것과 같은 카메라로 투영한다 — Play 중에는 게임 카메라다.
 - **Auto**(자동 플레이): 게임이 `SW_GAME_AUTOPLAY` 로 등록했으면 툴바에 서고, 누르면 그 게임의 자동 플레이 전역 변수를 켜고 끈다
   (`GameAutoplay::setOn` — 전역 변수 표를 거쳐 써서 패널 · 콘솔과 같은 값이다). 자체 시험 `gameView.autoplayButton`.
-- **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값(`RuntimeHud::publishSnapshot` 등)을 캔버스 왼쪽 아래에 키 순서로 그린다.
+- **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값을 캔버스 왼쪽 아래에 키 순서로 그린다.
 - 시험: `EditorPlaySessionTest`(Simulate · Step N · 카메라에서 시작), `DebugDrawQueueTest`, `DebugOverlayStateTest`, `FixedTimestepTest.TimeScale…`,
   에디터 자체 시험 `gameView.debugDraw` · `gameView.debugOverlay`.
 
@@ -314,7 +363,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 `Common/Commands/EditorDevCommands.cpp` — `editor <커맨드 id>`(커맨드 팔레트의 id) · `play` · `simulate` · `pause` · `stop` · `step [N]` ·
 `select.type <컴포넌트 타입>` · `select.tag <태그>` · `layout.save <이름>` · `layout.load <이름>` · `debugdraw.demo [초]`(뷰포트 카메라 앞에 상자 · 구 · 화살표 · 글자와 HUD 값 하나 — 시각화가 도는지 보는 용도). 엔진 명령(`timescale` · `teleport` ·
 `debugdraw.category`)은 `Engine/EngineDevCommands.cpp`. 에디터 없이 띄운 게임 창에서는 `~` 오버레이가 같은 콘솔입니다(`Source/App/README.md`).
-시험: `DevConsoleTest` · `DevCommandRegistryTest` · `DevConsoleOverlayTest`(EngineTest), `DevCommandShippingTest`(AppTest), 자체 시험 `console.devCommands`.
+시험: `DevConsoleTest` · `DevCommandRegistryTest` · `DevConsoleControllerTest`(EngineTest), `DevCommandShippingTest`(AppTest), 자체 시험 `console.devCommands`.
 
 ## ⚠️ 핵심 특징 및 규칙
 - **Dev 모드 전용**: 이 폴더의 코드는 개발(Dev) 모드에서만 `MODULE DLL`로 빌드되고 동작합니다. 배포(Shipping) 빌드를 할 때는 **코드가 통째로 날아갑니다.**

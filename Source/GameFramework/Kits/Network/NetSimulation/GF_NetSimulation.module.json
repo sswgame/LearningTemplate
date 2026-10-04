@@ -1,0 +1,20 @@
+{
+    "_name": "GF_NetSimulation",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "가상 서버 하니스 — 한 프로세스에서 서버 월드 1 + 클라이언트 월드 N(각자 씬 · 오브젝트 매니저 · 물리)을 루프백 망과 연결별 흉내(지연 · 흔들림 · 손실 · 중복 · 순서) 위에서 고정 스텝 · 씨앗 고정으로 돌린다 (시험 · 게임 자동화)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

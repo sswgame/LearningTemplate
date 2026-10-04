@@ -10,6 +10,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Utility/Xml/XmlNameCheck.h"
 
 namespace sw
 {
@@ -33,30 +34,6 @@ namespace sw
                 {  "ViewAxis",   TransparencySortMode::ViewAxis},
                 {"CustomAxis", TransparencySortMode::CustomAxis},
             };
-
-            /** @brief 노드의 속성이 모두 @p arrKnown 안에 있는지 봅니다. 모르는 것이 있으면 이름을 알리고 false 입니다. */
-            template <size_t kCount>
-            static bool hasOnlyKnownAttributes( const XmlNode& node, const utf8* const ( &arrKnown )[kCount], string_view sourceName )
-            {
-                for ( XmlAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
-                {
-                    bool bKnown = false;
-                    for ( const utf8* pKnown : arrKnown )
-                    {
-                        if ( StringUtil::equals( attribute.getName(), pKnown, true ) )
-                        {
-                            bKnown = true;
-                            break;
-                        }
-                    }
-                    if ( bKnown == false )
-                    {
-                        SW_LOG_ERROR( "%#: unknown attribute '%#' on <%#>", sourceName, attribute.getName(), node.getName() );
-                        return false;
-                    }
-                }
-                return true;
-            }
 
             /** @brief "x y z" 를 읽습니다. 숫자 셋이 아니면 false 입니다. */
             [[nodiscard]] static bool parseFloat3( string_view text, float3& outValue )
@@ -164,7 +141,7 @@ namespace sw
             if ( StringUtil::equals( child.getName(), "TransparencySort", true ) )
             {
                 static constexpr const utf8* kArrKnown[] = { "mode", "axis" };
-                if ( Internal::hasOnlyKnownAttributes( child, kArrKnown, sourceName ) == false )
+                if ( XmlNameCheck::reportUnknownAttributes( child, kArrKnown, sourceName ) == false )
                     return false;
                 const string_view modeName = child.getAttributeText( "mode" );
                 bool              bFound   = modeName.empty();
@@ -205,7 +182,7 @@ namespace sw
                         SW_LOG_ERROR( "%#: unknown element <%#> in <SortingLayers> (only <Layer name=\"...\"/>)", sourceName, layerNode.getName() );
                         return false;
                     }
-                    if ( Internal::hasOnlyKnownAttributes( layerNode, kArrKnown, sourceName ) == false )
+                    if ( XmlNameCheck::reportUnknownAttributes( layerNode, kArrKnown, sourceName ) == false )
                         return false;
                     const string_view name = layerNode.getAttributeText( "name" );
                     if ( name.empty() )

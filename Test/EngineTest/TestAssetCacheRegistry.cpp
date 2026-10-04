@@ -4,8 +4,12 @@
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
+#include "Engine/Graphics/2D/SpriteMeshBuilder.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/IAssetCache.h"
@@ -56,7 +60,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
 {
     sw::AssetManager resources;
 
-    SW_ASSERT_EQUAL( size_t( 12 ), resources.getAllAssetCache().size() );
+    SW_ASSERT_EQUAL( size_t( 17 ), resources.getAllAssetCache().size() );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Material" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Texture" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Prefab" ) );
@@ -69,6 +73,11 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "SocketSet" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "AnimNotifyTable" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "PhysicsAsset" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "SkeletonBoneLod" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "Fracture" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "PrimitiveMesh" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "SlicedSpriteMesh" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "SpriteTextureInstance" ) );
     SW_EXPECT_NULL( resources.findAssetCache( "NoSuchKind" ) );
     SW_EXPECT_NULL( resources.findAssetCache( "" ) );
 
@@ -76,6 +85,33 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
     SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getMaterialManager() ) );
     SW_EXPECT_TRUE( resources.findAssetCache( "Texture" ) == static_cast<sw::IAssetCache*>( &resources.getTextureManager() ) );
     SW_EXPECT_TRUE( resources.findAssetCache( "Prefab" ) == static_cast<sw::IAssetCache*>( &resources.getPrefabCache() ) );
+    SW_EXPECT_TRUE( resources.findAssetCache( "PrimitiveMesh" ) == &sw::MeshUtil::getPrimitiveCache() );
+    SW_EXPECT_TRUE( resources.findAssetCache( "SlicedSpriteMesh" ) == &sw::SpriteMeshBuilder::getSlicedMeshCache() );
+    SW_EXPECT_TRUE( resources.findAssetCache( "SpriteTextureInstance" ) == &sw::SpriteRenderUtil::getTextureInstanceCache() );
+}
+
+/**
+ * @brief [AssetCacheRegistryTest] 코드로 짓는 값 표(내장 도형)도 등록부로 세고 비운다 — 쥔 쪽의 값은 살고, 비운 뒤의 요청은 새로 짓는다
+ * @details 함수 정적 표가 등록부 밖에 있으면 진단(`getCachedCount`)에 보이지 않고 종료 · 재초기화의 비우기가 지나가지 않는다.
+ */
+SW_TEST_CASE( AssetCacheRegistryTest, InternedValueTablesAreCountedAndClearedThroughTheRegistry )
+{
+    sw::AssetManager resources;
+    sw::IAssetCache* pPrimitive = resources.findAssetCache( "PrimitiveMesh" );
+    SW_ASSERT_NOT_NULL( pPrimitive );
+
+    const sw::shared_ptr<sw::Mesh> first = sw::MeshUtil::acquirePrimitive( "Cone" );
+    SW_ASSERT_NOT_NULL( first.get() );
+    SW_EXPECT_TRUE( first == sw::MeshUtil::acquirePrimitive( "cone" ) ); // 같은 기준 이름은 같은 메시
+    SW_EXPECT_TRUE( pPrimitive->getCachedCount() >= 1u );
+    SW_EXPECT_FALSE( pPrimitive->isCached( "Cone" ) ); // 키가 리소스 경로가 아니다 — 핫 리로드 대상이 아니다
+
+    resources.clearAssetCaches();
+    SW_EXPECT_EQUAL( size_t( 0 ), pPrimitive->getCachedCount() );
+    const sw::shared_ptr<sw::Mesh> second = sw::MeshUtil::acquirePrimitive( "Cone" );
+    SW_ASSERT_NOT_NULL( second.get() );
+    SW_EXPECT_TRUE( first != second ); // 비운 뒤에는 새로 짓는다 — 쥔 쪽(first)은 그대로 산다
+    SW_EXPECT_TRUE( first->getVertices().size() == second->getVertices().size() );
 }
 
 /**

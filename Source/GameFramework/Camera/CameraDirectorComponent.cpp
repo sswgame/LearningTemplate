@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -57,6 +58,7 @@ namespace sw
         , _target{}
         , _listGroupTarget{}
         , _cyclePresetKey{ Key::Unknown }
+        , _cycleAction{}
         , _bReadInput{ true }
         , _catalog{}
         , _director{}
@@ -156,7 +158,9 @@ namespace sw
         const InputManager* pInput = _bReadInput ? game::getService<InputManager>() : nullptr;
         if ( pInput == nullptr )
             return;
-        if ( _cyclePresetKey != Key::Unknown && pInput->wasKeyPressed( _cyclePresetKey ) )
+        const bool bCycleKey    = _cyclePresetKey != Key::Unknown && pInput->wasKeyPressed( _cyclePresetKey );
+        const bool bCycleAction = _cycleAction.empty() == false && pInput->getInputMap().wasActionTriggered( _cycleAction );
+        if ( bCycleKey || bCycleAction )
         {
             [[maybe_unused]] const hashed_string nextId = activateNextPreset(); // 로그는 Shipping 에서 빠진다
             SW_LOG_INFO( "Camera preset -> '%#'", nextId.c_str() );

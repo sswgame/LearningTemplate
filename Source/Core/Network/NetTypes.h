@@ -32,7 +32,7 @@ namespace sw
     enum class NetChannelType : uint8
     {
         ReliableOrdered = 0, ///< 반드시 · 보낸 순서대로(채팅 · 거래 · 턴 행동 · 생성 · 파괴)
-        UnreliableSequenced, ///< 잃어도 되지만 옛것은 버린다(위치 스냅샷 · 입력)
+        UnreliableSequenced, ///< 잃어도 되지만 옛것은 버린다(위치 스냅샷 · 입력) — 메시지 첫 바이트(종류)마다 따로: 다른 종류끼리는 서로 지우지 않는다
         Unreliable,          ///< 잃어도 되고 순서도 상관없다(소리 · 이펙트)
         Count
     };

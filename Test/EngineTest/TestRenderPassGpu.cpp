@@ -8,6 +8,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -47,6 +49,7 @@
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -60,6 +63,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
 
+#include "EngineTest/AnimationTestUtil.h"
 #include "EngineTest/RHITestDevice.h"
 #include "EngineTest/RHITestImage.h"
 
@@ -415,6 +419,225 @@ namespace
             if ( outDrawnCount > 0 )
                 outMeanRedMinusBlue = sum / static_cast<int64>( outDrawnCount );
             return true;
+        }
+    };
+
+    /**
+     * @brief 툰 · 외곽선 시험 무대 — 기본 카메라(원점을 본다), 옆에서 비스듬히 드는 주광, 원점의 구 하나.
+     * @details 머티리얼은 실제 에셋(defaultmaterial · toon)을 읽어 값만 바꾼다(손으로 지은 XML 은 퍼뮤테이션이 빠져 쿠킹된 변형과 맞지 않는다).
+     */
+    struct ToonSphereScene
+    {
+        static constexpr float32 kSphereScale = 1.6f;
+
+        sw::Scene                    _scene{ "ToonSphereScene" };
+        sw::shared_ptr<sw::Material> _material;
+        sw::shared_ptr<sw::Mesh>     _mesh;
+        sw::MeshComponent*           _pSphere{ nullptr };
+
+        /** @brief 기본 머티리얼(forwardlit — 램버트)을 주황색으로 둔 것입니다. */
+        static sw::shared_ptr<sw::Material> makeLitMaterial()
+        {
+            sw::shared_ptr<sw::Material> material = sw::Material::create();
+            if ( material->loadFromFile( "engine/materials/defaultmaterial.material" ) == false ||
+                 material->setParameter( nullptr, sw::hashed_string( "color" ), "0.9 0.5 0.25 1.0" ) == false )
+                material.reset();
+            return material;
+        }
+
+        /**
+         * @brief toon.material 을 같은 주황색 · 어두운 그림자색으로, 계단을 칼같이(toony 1) 둔 것입니다. 림 · 맷캡 · 발광은 없습니다.
+         * @param bOutline 켜면 검은 외곽선(화면 높이의 1 %, 빛 섞기 0)을 그립니다.
+         */
+        static sw::shared_ptr<sw::Material> makeToonMaterial( bool bOutline )
+        {
+            sw::shared_ptr<sw::Material> material = sw::Material::create();
+            const bool                   bLoaded  = material->loadFromFile( "engine/materials/toon.material" );
+            const bool                   bSet     = bLoaded && material->setParameter( nullptr, sw::hashed_string( "baseColor" ), "0.9 0.5 0.25 1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "shadeColor" ), "0.35 0.2 0.3 1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "shadingToony" ), "1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "outlineColor" ), "0.0 0.0 0.0 1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "outlineWidth" ), "0.01" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "outlineWidthMode" ), "1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "outlineLightingMix" ), "0.0" );
+            if ( bSet == false )
+                return nullptr;
+            material->setStaticSwitch( sw::hashed_string( "Outline" ), bOutline );
+            return material;
+        }
+
+        /** @brief 카메라 · 주광 · 구를 채웁니다. 하나라도 못 만들면 false 입니다. */
+        bool populate( const sw::shared_ptr<sw::Material>& material )
+        {
+            _material = material;
+            if ( _material == nullptr || _scene.ensureDefaultCameras() == false )
+                return false;
+            sw::GameObject*                pLightObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
+            sw::DirectionalLightComponent* pLight       = pLightObject != nullptr ? pLightObject->addComponent<sw::DirectionalLightComponent>() : nullptr;
+            if ( pLight == nullptr )
+                return false;
+            // 옆에서 들어 화면의 구 절반쯤이 그늘이다 — 계단 경계가 구 한가운데를 지난다.
+            pLight->setLocalRotation( sw::float3{ 0.0f, 1.3f, 0.0f } );
+            pLight->setIntensity( 1.5f );
+            pLight->setCastShadow( false );
+
+            // 정점 색은 흰색이다 — 생성기의 검증 색(무지개)이 그대로 남으면 계단 위에 색 그라데이션이 얹혀 단계 수를 셀 수 없다.
+            _mesh = sw::MeshUtil::createPrimitive( "sphere", sw::PrimitiveVertexColor::White );
+            if ( _mesh == nullptr )
+                return false;
+            sw::GameObject* pObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "Sphere" ) );
+            _pSphere                = pObject != nullptr ? pObject->addComponent<sw::MeshComponent>() : nullptr;
+            if ( _pSphere == nullptr )
+                return false;
+            _pSphere->setMesh( _mesh );
+            _pSphere->setMaterial( _material.get() );
+            _pSphere->setLocalScale( sw::float3{ kSphereScale, kSphereScale, kSphereScale } );
+            return true;
+        }
+    };
+
+    /**
+     * @brief 그려진 픽셀 마스크 — 모서리 픽셀(배경)과 색 거리가 문턱을 넘는 픽셀입니다. 클리어 색 · 톤매핑과 무관하게 배경을 걷어 냅니다.
+     */
+    struct DrawnMask
+    {
+        static constexpr uint32 kBackgroundDistance = 24;
+
+        sw::vector<uint8> _listDrawn;
+        uint32            _width{ 0 };
+        uint32            _height{ 0 };
+        uint32            _drawnCount{ 0 };
+        sw::float2        _centroid{};
+
+        explicit DrawnMask( const test::RHITestImage& image )
+            : _listDrawn{}
+            , _width{ image.getWidth() }
+            , _height{ image.getHeight() }
+        {
+            // 크기 · 값 생성자는 중괄호로 부르면 원소 둘짜리 목록이 된다 — 본문에서 늘린다.
+            _listDrawn.resize( image.getPixelCount(), SW_FALSE );
+            const test::Rgba8 corner = image.getPixel( 0, 0 );
+            float64           sumX{ 0.0 };
+            float64           sumY{ 0.0 };
+            for ( uint32 y = 0; y < _height; ++y )
+            {
+                for ( uint32 x = 0; x < _width; ++x )
+                {
+                    if ( test::RHITestImage::getColorDistance( image.getPixel( x, y ), corner ) <= kBackgroundDistance )
+                        continue;
+                    _listDrawn[static_cast<size_t>( y ) * _width + x] = SW_TRUE;
+                    ++_drawnCount;
+                    sumX += x;
+                    sumY += y;
+                }
+            }
+            if ( _drawnCount > 0 )
+                _centroid = sw::float2{ static_cast<float32>( sumX / _drawnCount ), static_cast<float32>( sumY / _drawnCount ) };
+        }
+
+        bool isDrawn( uint32 x, uint32 y ) const { return _listDrawn[static_cast<size_t>( y ) * _width + x] == SW_TRUE; }
+    };
+
+    /** @brief 픽셀의 밝기(R · G · B 평균, 0~255)입니다. */
+    uint32 computeLuma( const test::Rgba8& pixel )
+    {
+        return ( static_cast<uint32>( pixel._r ) + pixel._g + pixel._b ) / 3u;
+    }
+
+    /**
+     * @brief 그려진 픽셀의 밝기 단계 수 — 밝기 64 칸 히스토그램에서 그려진 픽셀의 1 % 이상이 든 칸의 수입니다.
+     * @details 셀 셰이딩은 빛 · 그늘 두 단계(+ 경계의 몇 픽셀)라 몇 칸에 몰리고, 램버트는 구 표면을 따라 고르게 퍼져 여러 칸을 채운다.
+     *          특정 색의 픽셀 수가 아니라 분포의 모양을 보므로 클리어 색 · 톤매핑 · 백엔드 반올림에 흔들리지 않는다.
+     */
+    uint32 countBrightnessLevels( const test::RHITestImage& image, const DrawnMask& mask )
+    {
+        constexpr uint32 kBinCount = 64;
+        uint32           arrBin[kBinCount]{};
+        for ( uint32 y = 0; y < mask._height; ++y )
+        {
+            for ( uint32 x = 0; x < mask._width; ++x )
+            {
+                if ( mask.isDrawn( x, y ) )
+                    ++arrBin[computeLuma( image.getPixel( x, y ) ) * kBinCount / 256u];
+            }
+        }
+        uint32 levelCount{ 0 };
+        for ( const uint32 binCount : arrBin )
+        {
+            if ( binCount * 100u >= mask._drawnCount && binCount > 0 )
+                ++levelCount;
+        }
+        return levelCount;
+    }
+
+    /** @brief 씬을 몇 프레임 그리고(첫 프레임은 업로드 전이다) 첨부 하나를 읽습니다. 실패면 false 입니다. */
+    bool renderAndReadAttachment( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene, const utf8* pAttachment, test::RHITestImage& outImage )
+    {
+        constexpr uint32 kFrameCount = 4;
+        for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+        {
+            scene.getObjectManager()->getAnimationSystem().evaluate( 0.0f );
+            if ( renderSceneFrame( renderer, pDevice, scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } ) == false )
+                return false;
+        }
+        return outImage.readTransient( renderer, pAttachment );
+    }
+
+    /**
+     * @brief 외곽선을 켠 그림과 끈 그림의 차이 — 실루엣 둘레의 고리입니다.
+     * @details 고리 = 끈 그림에서 배경이고 켠 그림에서 그려진 픽셀. 구의 화면 반지름은 끈 그림의 면적에서 구한다(√(면적/π)).
+     */
+    struct OutlineRing
+    {
+        uint32  _sphereCount{ 0 };    ///< 끈 그림의 구 픽셀 수
+        uint32  _ringCount{ 0 };      ///< 고리 픽셀 수
+        uint32  _inBandCount{ 0 };    ///< 고리 중 실루엣 띠(반지름 R - 2 ~ R + 두께 + 3) 안의 수
+        uint32  _interiorDiffer{ 0 }; ///< 두 그림 모두 구인데 색이 30 넘게 다른 픽셀 수 — 외곽선이 구 안쪽을 덮으면 크다
+        float64 _ringMeanLuma{ 0.0 }; ///< 고리의 평균 밝기
+        float32 _radius{ 0.0f };      ///< 구의 화면 반지름(픽셀)
+
+        static OutlineRing measure( const test::RHITestImage& imageOff, const test::RHITestImage& imageOn, float32 ringWidthPixel )
+        {
+            OutlineRing     ring{};
+            const DrawnMask maskOff( imageOff );
+            const DrawnMask maskOn( imageOn );
+            ring._sphereCount = maskOff._drawnCount;
+            ring._radius      = sw::MathUtil::sqrt( static_cast<float32>( maskOff._drawnCount ) / sw::MathUtil::Pi );
+            if ( maskOff._width != maskOn._width || maskOff._height != maskOn._height )
+                return ring;
+            uint64 lumaSum{ 0 };
+            for ( uint32 y = 0; y < maskOff._height; ++y )
+            {
+                for ( uint32 x = 0; x < maskOff._width; ++x )
+                {
+                    const bool bOff = maskOff.isDrawn( x, y );
+                    const bool bOn  = maskOn.isDrawn( x, y );
+                    if ( bOff && bOn )
+                    {
+                        if ( test::RHITestImage::getColorDistance( imageOff.getPixel( x, y ), imageOn.getPixel( x, y ) ) > 30 )
+                            ++ring._interiorDiffer;
+                        continue;
+                    }
+                    if ( bOff || bOn == false )
+                        continue;
+                    ++ring._ringCount;
+                    lumaSum += computeLuma( imageOn.getPixel( x, y ) );
+                    const float32 dx     = static_cast<float32>( x ) - maskOff._centroid._x;
+                    const float32 dy     = static_cast<float32>( y ) - maskOff._centroid._y;
+                    const float32 radius = sw::MathUtil::sqrt( dx * dx + dy * dy );
+                    if ( ring._radius - 2.0f <= radius && radius <= ring._radius + ringWidthPixel + 3.0f )
+                        ++ring._inBandCount;
+                }
+            }
+            if ( ring._ringCount > 0 )
+                ring._ringMeanLuma = static_cast<float64>( lumaSum ) / static_cast<float64>( ring._ringCount );
+            return ring;
+        }
+
+        sw::string describe() const
+        {
+            return sw::string( "구 " ) + sw::to_string( _sphereCount ) + " px · 반지름 " + sw::to_string( _radius ) + " · 고리 " + sw::to_string( _ringCount ) +
+                   " px(띠 안 " + sw::to_string( _inBandCount ) + ", 평균 밝기 " + sw::to_string( _ringMeanLuma ) + ") · 안쪽 차이 " + sw::to_string( _interiorDiffer );
         }
     };
 } // namespace
@@ -2936,6 +3159,217 @@ SW_TEST_CASE( RenderPassGpuTest, SkinnedMeshFollowsPaletteLikeCpuSkinning )
 }
 
 /**
+ * @brief [RenderPassGpuTest] GPU 모프 타깃 — 유닛의 모프 가중치가 스키닝 앞에 레스트를 밀고, 그 그림이 CPU 에서 (레스트 + 가중치 × 차이) 를 스키닝한 정적 큐브와 같다(네 백엔드)
+ * @details 큐브의 위쪽 정점(본 1)을 +X 로 0.8 미는 타깃 `push` 와 아무것도 안 하는 타깃 `idle` 을 둔다. 가중치 0.6 · 본 1 을 Z 축 50° — 순서가
+ *          "모프 → 스킨" 이 아니면(스킨 뒤에 더하면) 민 방향이 회전하지 않아 CPU 그림과 갈린다. 가중치 0 이면 모프 없는 굽힘과 같아야 한다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MorphWeightsDeformBeforeSkinningLikeCpu )
+{
+    struct Snapshot
+    {
+        uint32             _drawnCount{ 0 };
+        bool               _bOk{ false };
+        test::RHITestImage _image;
+    };
+    auto countDifferentPixels = []( const Snapshot& a, const Snapshot& b ) -> uint32
+    {
+        if ( a._image.getWidth() != b._image.getWidth() || a._image.getHeight() != b._image.getHeight() )
+            return 0xFFFFFFFFu;
+        uint32 count{ 0 };
+        for ( uint32 y = 0; y < a._image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < a._image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixelA = a._image.getPixel( x, y );
+                const test::Rgba8 pixelB = b._image.getPixel( x, y );
+                const auto        isFar  = []( uint8 lhs, uint8 rhs )
+                { return lhs > rhs + 12 || rhs > lhs + 12; };
+                if ( isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b ) )
+                    ++count;
+            }
+        }
+        return count;
+    };
+    auto snapshot = []( sw::FrameRenderer& renderer, sw::IRHIDevice& device, sw::Scene& scene ) -> Snapshot
+    {
+        Snapshot         result{};
+        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+        for ( uint32 frame = 0; frame < 4; ++frame )
+        {
+            scene.getObjectManager()->getAnimationSystem().evaluate( 0.0f );
+            device.beginFrame( clear );
+            if ( renderer.execute( &device, &scene ) == false )
+                return result;
+            device.endFrame( false, false );
+            device.waitIdle();
+        }
+        if ( result._image.readTransient( renderer, "SceneColor" ) == false )
+            return result;
+        for ( uint32 y = 0; y < result._image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < result._image.getWidth(); ++x )
+            {
+                if ( test::RHITestImage::isDefaultClearBackground( result._image.getPixel( x, y ) ) == false )
+                    ++result._drawnCount;
+            }
+        }
+        result._bOk = result._drawnCount > 0;
+        return result;
+    };
+
+    /**
+     * @class MorphBendTask
+     * @brief 기본 포즈 단계에서 본 1 을 돌리고 타깃 0(`push`)의 가중치를 정하는 일입니다.
+     */
+    class MorphBendTask final : public sw::IAnimationPhaseTask
+    {
+    public:
+        MorphBendTask( float32 angle, float32 weight )
+            : _angle{ angle }
+            , _weight{ weight }
+        {
+        }
+        bool isAnimationActive() const override { return true; }
+        void runAnimationPhase( sw::AnimationPhase phase, sw::SkeletalMeshComponent& unit, const sw::AnimationFrameContext& context ) override
+        {
+            (void)context;
+            if ( phase != sw::AnimationPhase::BasePose )
+                return;
+            sw::BoneTransform bone = unit.getLocalPose().getBoneTransform( 1 );
+            bone._rotation         = sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, _angle );
+            unit.getLocalPose().setBoneTransform( 1, bone );
+            unit.setMorphWeight( 0, _weight );
+        }
+        float32 _angle;
+        float32 _weight;
+    };
+
+    constexpr float32            kBendAngle   = 0.87f;
+    constexpr float32            kMorphWeight = 0.6f;
+    const sw::float3             pushDelta{ 0.8f, 0.0f, 0.0f };
+    sw::shared_ptr<sw::Skeleton> skeleton = sw::make_shared<sw::Skeleton>();
+    (void)skeleton->addBone( sw::hashed_string( "base" ), -1, sw::BoneTransform{}, sw::float4x4::Identity );
+    (void)skeleton->addBone( sw::hashed_string( "top" ), 0, sw::BoneTransform{}, sw::float4x4::Identity );
+    skeleton->computeInverseBindFromReference();
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
+        sw::FrameRenderer renderer;
+        sw::FrameRenderer staticRenderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && staticRenderer.initialize( device.get() ) && staticRenderer.isReady();
+        if ( bOk && device->getCapabilities()._bGpuMeshMorph == SW_FALSE )
+            continue;
+
+        // 스킨 + 모프 큐브와, (레스트 + 가중치 × 차이) 를 CPU 에서 굽혀 둔 정적 큐브 · 모프 없이 굽힌 정적 큐브.
+        sw::shared_ptr<sw::Mesh> bindCube = sw::MeshUtil::createUnitCube();
+        SW_ASSERT_NOT_NULL( bindCube.get() );
+        const sw::float4x4             bend = sw::float4x4::createFromQuaternion( sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, kBendAngle ) );
+        sw::vector<sw::MeshSkinVertex> listSkin;
+        sw::MeshMorphTarget            push{};
+        push._name = sw::hashed_string( "push" );
+        sw::MeshMorphTarget idle{};
+        idle._name                                = sw::hashed_string( "idle" );
+        sw::vector<sw::RHIVertex> listMorphedBent = bindCube->getVertices();
+        sw::vector<sw::RHIVertex> listPlainBent   = bindCube->getVertices();
+        for ( uint32 vertexIndex = 0; vertexIndex < listMorphedBent.size(); ++vertexIndex )
+        {
+            sw::MeshSkinVertex skin{};
+            const bool         bTop = listMorphedBent[vertexIndex]._arrPosition[1] > 0.0f;
+            skin._arrJoint[0]       = bTop ? 1u : 0u;
+            listSkin.push_back( skin );
+            if ( bTop == false )
+                continue;
+            push._listDelta.push_back( sw::MeshMorphDelta{ vertexIndex, pushDelta, sw::float3{} } );
+            sw::RHIVertex* arrVertex[2] = { &listMorphedBent[vertexIndex], &listPlainBent[vertexIndex] };
+            for ( uint32 variant = 0; variant < 2; ++variant )
+            {
+                sw::RHIVertex&   vertex   = *arrVertex[variant];
+                const sw::float3 rest     = sw::float3{ vertex._arrPosition } + ( variant == 0 ? pushDelta * kMorphWeight : sw::float3{} );
+                const sw::float3 position = sw::float3::transform( rest, bend );
+                const sw::float3 normal   = sw::float3::transformVector( sw::float3{ vertex._arrNormal }, bend );
+                vertex._arrPosition[0]    = position._x;
+                vertex._arrPosition[1]    = position._y;
+                vertex._arrPosition[2]    = position._z;
+                vertex._arrNormal[0]      = normal._x;
+                vertex._arrNormal[1]      = normal._y;
+                vertex._arrNormal[2]      = normal._z;
+            }
+        }
+        sw::shared_ptr<sw::Mesh> morphCube = sw::Mesh::create();
+        morphCube->setVertices( bindCube->getVertices() );
+        morphCube->setSkin( listSkin, 2 );
+        morphCube->setMorphTargets( { push, idle } );
+        sw::shared_ptr<sw::Mesh> cpuMorphed = sw::Mesh::create();
+        cpuMorphed->setVertices( listMorphedBent );
+        sw::shared_ptr<sw::Mesh> cpuPlain = sw::Mesh::create();
+        cpuPlain->setVertices( listPlainBent );
+
+        sw::Scene morphScene( "MorphCubeScene" );
+        sw::Scene staticScene( "CpuMorphCubeScene" );
+        bOk                                 = bOk && morphScene.ensureDefaultCameras() && staticScene.ensureDefaultCameras();
+        sw::SkeletalMeshComponent* pSkinned = nullptr;
+        sw::MeshComponent*         pStatic  = nullptr;
+        if ( bOk )
+        {
+            sw::GameObject* pSkinnedObject = morphScene.getObjectManager()->createGameObject( sw::hashed_string( "Morph" ) );
+            sw::GameObject* pStaticObject  = staticScene.getObjectManager()->createGameObject( sw::hashed_string( "Static" ) );
+            bOk                            = pSkinnedObject != nullptr && pStaticObject != nullptr;
+            if ( bOk )
+            {
+                pSkinned = pSkinnedObject->addComponent<sw::SkeletalMeshComponent>();
+                pStatic  = pStaticObject->addComponent<sw::MeshComponent>();
+                bOk      = pSkinned != nullptr && pStatic != nullptr;
+            }
+        }
+        if ( bOk )
+        {
+            pSkinned->setSkeleton( skeleton );
+            pSkinned->setMesh( morphCube );
+            pSkinned->setBoundsRadius( 2.5f );
+            pSkinned->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+            pStatic->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + ": 씬·렌더러 준비 실패" ).c_str() );
+        if ( bOk == false )
+            continue;
+        SW_EXPECT_EQUAL( 2u, pSkinned->getMorphTargetCount() );
+
+        // (A) 가중치 0 — 모프 없이 굽힌 큐브와 같다.
+        MorphBendTask task( kBendAngle, 0.0f );
+        pSkinned->addAnimationPhaseTask( &task );
+        pStatic->setMesh( cpuPlain );
+        const Snapshot plainSkinned = snapshot( renderer, *device, morphScene );
+        const Snapshot plainStatic  = snapshot( staticRenderer, *device, staticScene );
+        SW_EXPECT_TRUE_MSG( plainSkinned._bOk && plainStatic._bOk, ( label + ": 가중치 0 그림을 못 읽었다" ).c_str() );
+        const uint32 plainDiff = countDifferentPixels( plainSkinned, plainStatic );
+        SW_EXPECT_TRUE_MSG( plainDiff <= plainStatic._drawnCount / 50 + 8,
+                            ( label + ": 가중치 0 인데 모프 큐브가 굽힌 큐브와 다르다 (달라진 픽셀 " + sw::to_string( plainDiff ) + ")" ).c_str() );
+
+        // (B) 가중치 0.6 — CPU 에서 민 뒤 굽힌 큐브와 같고, 가중치 0 과는 다르다.
+        task._weight = kMorphWeight;
+        pSkinned->markPoseDirty();
+        pStatic->setMesh( cpuMorphed );
+        const Snapshot morphSkinned = snapshot( renderer, *device, morphScene );
+        const Snapshot morphStatic  = snapshot( staticRenderer, *device, staticScene );
+        SW_EXPECT_TRUE_MSG( morphSkinned._bOk && morphStatic._bOk, ( label + ": 모프 그림을 못 읽었다" ).c_str() );
+        const uint32 weightDiff = countDifferentPixels( plainSkinned, morphSkinned );
+        SW_EXPECT_TRUE_MSG( weightDiff > plainStatic._drawnCount / 10,
+                            ( label + ": 가중치를 올렸는데 그림이 그대로다 (달라진 픽셀 " + sw::to_string( weightDiff ) + ") — 가중치가 GPU 에 닿지 않는다" ).c_str() );
+        const uint32 cpuDiff = countDifferentPixels( morphSkinned, morphStatic );
+        SW_EXPECT_TRUE_MSG( cpuDiff <= morphStatic._drawnCount / 50 + 8,
+                            ( label + ": GPU 모프가 CPU 모프 · 스키닝과 다르다 (달라진 픽셀 " + sw::to_string( cpuDiff ) + " / 그려진 " +
+                              sw::to_string( morphStatic._drawnCount ) + ")" )
+                                .c_str() );
+        pSkinned->removeAnimationPhaseTask( &task );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the GPU morph target test" );
+}
+
+/**
  * @brief [RenderPassGpuTest] 정점 · 모프 풀은 메시 **내용**이 바뀌면 다시 만든다 — 포인터가 같아도
  * @details 메시 집합이 그대로인지를 포인터로만 보면, 메시가 지워진 자리에 새 메시가 생기거나(할당기는 같은 크기의 자리를 곧바로
  *          다시 준다) 같은 메시의 정점을 바꿀 때(`setVertices`) "같은 집합" 으로 보여 옛 정점을 그리고, 정점 수가 줄었으면 배치의 정점 구간이
@@ -5086,6 +5520,216 @@ SW_TEST_CASE( RenderPassGpuTest, PortraitRendererDrawsAPrefabInIsolation )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 군중 공유 · VAT 의 그림이 캐릭터마다 스키닝한 그림과 같다(네 백엔드)
+ * @details 스킨드 큐브(위쪽 정점 = bone1) 셋이 반복 클립(bone1 사인 회전)을 0 · 0.25 · 0.5 초부터 재생한다. 변형 칸 넷(폭 0.25 초)의 가운데라
+ *          (A) 캐릭터마다 사본 · 포즈 · 팔레트(공유 끔)와 (B) 묶음 공유(묶음 셋, 결과 구간 셋)가 같은 그림이어야 하고, (C) 모두 VAT(15 fps 표의
+ *          정확한 프레임 시각)로 그려도 같아야 한다. (D) 클립 없는 바인드 포즈와는 달라야 한다 — 같으면 팔레트 · 표가 GPU 에 닿지 않는다.
+ *          (B) 가 지면 묶음 팔레트를 싣는 쪽(`GpuSceneBuilder::collectSkinPalettes`) · 인스턴스 표(meshskin.hlsl), (C) 가 지면 VAT 정점 셰이더 경로다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinning )
+{
+    struct Snapshot
+    {
+        uint32             _drawnCount{ 0 };
+        bool               _bOk{ false };
+        test::RHITestImage _image;
+    };
+    auto countDifferentPixels = []( const Snapshot& a, const Snapshot& b ) -> uint32
+    {
+        if ( a._image.getWidth() != b._image.getWidth() || a._image.getHeight() != b._image.getHeight() )
+            return 0xFFFFFFFFu;
+        uint32 count{ 0 };
+        for ( uint32 y = 0; y < a._image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < a._image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixelA = a._image.getPixel( x, y );
+                const test::Rgba8 pixelB = b._image.getPixel( x, y );
+                const auto        isFar  = []( uint8 lhs, uint8 rhs )
+                { return lhs > rhs + 12 || rhs > lhs + 12; };
+                if ( isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b ) )
+                    ++count;
+            }
+        }
+        return count;
+    };
+
+    enum class CrowdCase : uint8
+    {
+        PerUnit,
+        Shared,
+        VertexAnimation,
+        BindPose,
+    };
+
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::shared_ptr<sw::Skeleton> skeleton = sw::make_shared<sw::Skeleton>( test::makeChainSkeleton( 2 ) );
+    // 클립 — 반복, 길이 1 초, bone1 이 Z 축으로 크게 돈다.
+    const sw::string folder = test::makeTempPath( "crowdgpuclips" );
+    {
+        sw::AnimClip clip;
+        clip.setName( sw::hashed_string( "Wave" ) );
+        clip.setLooping( true );
+        SW_ASSERT_TRUE( clip.compressFrom( test::makeChainRawClip( *skeleton, 31, 30.0f, 0.9f ), sw::RawAnimCodec::getInstance(), sw::AnimCodecSettings{}, nullptr ) );
+        SW_ASSERT_TRUE( clip.saveToFile( sw::FileUtil::joinPath( folder, "wave.animclip" ) ) );
+    }
+    sw::shared_ptr<sw::Mesh> bindCube = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( bindCube.get() );
+    sw::vector<sw::MeshSkinVertex> listSkin;
+    for ( const sw::RHIVertex& vertex : bindCube->getVertices() )
+    {
+        sw::MeshSkinVertex skin{};
+        skin._arrJoint[0] = vertex._arrPosition[1] > 0.0f ? 1u : 0u;
+        listSkin.push_back( skin );
+    }
+    sw::shared_ptr<sw::Mesh> skinnedCube = sw::Mesh::create();
+    skinnedCube->setVertices( bindCube->getVertices() );
+    skinnedCube->setSkin( listSkin, 2 );
+
+    const float32 arrStart[3] = { 0.0f, 0.25f, 0.5f };
+    auto          renderCase  = [&]( test::RHITestDevice& device, CrowdCase crowdCase ) -> Snapshot
+    {
+        Snapshot          result{};
+        sw::FrameRenderer renderer;
+        if ( renderer.initialize( device.get() ) == false || renderer.isReady() == false )
+            return result;
+        sw::Scene scene( "CrowdScene" );
+        if ( scene.ensureDefaultCameras() == false )
+            return result;
+        sw::GameObjectManager& manager = *scene.getObjectManager();
+        for ( uint32 index = 0; index < 3; ++index )
+        {
+            const sw::string name    = sw::string( "Crowd" ) + sw::to_string( index ).c_str();
+            sw::GameObject*  pObject = manager.createGameObject( sw::hashed_string( name ) );
+            if ( pObject == nullptr )
+                return result;
+            sw::SkeletalMeshComponent* pUnit = pObject->addComponent<sw::SkeletalMeshComponent>();
+            if ( pUnit == nullptr )
+                return result;
+            pUnit->setShareCrowdPose( crowdCase == CrowdCase::Shared || crowdCase == CrowdCase::VertexAnimation );
+            pUnit->setMesh( skinnedCube );
+            pUnit->resolveRenderAssets();
+            pUnit->setSkeleton( skeleton );
+            pUnit->setBoundsRadius( 2.0f );
+            pUnit->setLocalPosition( sw::float3{ -1.6f + 1.6f * static_cast<float32>( index ), 1.0f, 0.0f } );
+            if ( crowdCase == CrowdCase::VertexAnimation )
+            {
+                sw::AnimationLodState farState{};
+                farState._bVertexAnimation = SW_TRUE;
+                pUnit->applyAnimationLod( farState );
+            }
+            if ( crowdCase == CrowdCase::BindPose )
+                continue;
+            sw::SkeletalAnimatorComponent* pAnimator = pObject->addComponent<sw::SkeletalAnimatorComponent>();
+            if ( pAnimator == nullptr )
+                return result;
+            pAnimator->setClipFolder( folder );
+            pAnimator->setInitialState( "Wave" );
+            pAnimator->setInitialTime( arrStart[index] );
+            pAnimator->dispatchBeginPlay();
+        }
+        manager.flushSceneTransforms();
+        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+        for ( uint32 frame = 0; frame < 4; ++frame )
+        {
+            // 팔레트 · 묶음은 애니메이션 시스템이 틱 뒤에 만든다 — 시험은 틱 대신 평가만 부른다(시간은 흐르지 않는다).
+            manager.getAnimationSystem().evaluate( 0.0f );
+            device->beginFrame( clear );
+            if ( renderer.execute( device.get(), &scene ) == false )
+                return result;
+            device->endFrame( false, false );
+            device->waitIdle();
+        }
+        if ( result._image.readTransient( renderer, "SceneColor" ) == false )
+            return result;
+        for ( uint32 y = 0; y < result._image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < result._image.getWidth(); ++x )
+            {
+                if ( test::RHITestImage::isDefaultClearBackground( result._image.getPixel( x, y ) ) == false )
+                    ++result._drawnCount;
+            }
+        }
+        result._bOk = result._drawnCount > 0;
+        return result;
+    };
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        if ( device->getCapabilities()._bGpuMeshMorph == SW_FALSE )
+            continue;
+        const sw::string label     = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
+        const Snapshot   perUnit   = renderCase( device, CrowdCase::PerUnit );
+        const Snapshot   shared    = renderCase( device, CrowdCase::Shared );
+        const Snapshot   vertexAni = renderCase( device, CrowdCase::VertexAnimation );
+        const Snapshot   bindPose  = renderCase( device, CrowdCase::BindPose );
+        const bool       bAllRead  = perUnit._bOk && shared._bOk && vertexAni._bOk && bindPose._bOk;
+        SW_EXPECT_TRUE_MSG( bAllRead, ( label + ": 그림을 못 읽었다" ).c_str() );
+        if ( bAllRead == false )
+            continue;
+        const uint32 tolerance  = perUnit._drawnCount / 50 + 8;
+        const uint32 sharedDiff = countDifferentPixels( perUnit, shared );
+        const uint32 vatDiff    = countDifferentPixels( perUnit, vertexAni );
+        const uint32 poseDiff   = countDifferentPixels( perUnit, bindPose );
+        SW_EXPECT_TRUE_MSG( poseDiff > perUnit._drawnCount / 10,
+                            ( label + ": 클립을 재생했는데 바인드 포즈와 같다 (달라진 픽셀 " + sw::to_string( poseDiff ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( sharedDiff <= tolerance, ( label + ": 묶음 공유 그림이 캐릭터마다 스키닝한 그림과 다르다 (달라진 픽셀 " + sw::to_string( sharedDiff ) +
+                                                       " / 그려진 " + sw::to_string( perUnit._drawnCount ) + ")" )
+                                                         .c_str() );
+        SW_EXPECT_TRUE_MSG( vatDiff <= tolerance, ( label + ": VAT 그림이 캐릭터마다 스키닝한 그림과 다르다 (달라진 픽셀 " + sw::to_string( vatDiff ) + " / 그려진 " +
+                                                    sw::to_string( perUnit._drawnCount ) + ")" )
+                                                      .c_str() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the crowd sharing test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 구조 버퍼를 앞에서부터 일부만 갱신하면 원본은 그 크기만 읽힌다 — 버퍼보다 짧은 원본의 뒤를 넘어 읽지 않는다
+ * @details 용량을 남겨 두는 풀(모프 · 스킨 풀)은 내용이 줄어도 버퍼를 다시 만들지 않고 앞에서부터 짧게 올린다. DX11 은 이 "오프셋 0 · 조각 하나" 를
+ *          상자 없는 `UpdateSubresource` 로 보냈는데, 상자가 없으면 드라이버가 버퍼 **전체** 길이를 원본에서 읽는다 — 원본 뒤를 넘어 읽다
+ *          드라이버 안에서 죽었다(Shooter3D 에서 스켈레톤 시체를 걷을 때). 원본을 페이지 끝에 붙이고 다음 페이지를 접근 불가로 두면, 한 바이트라도
+ *          넘어 읽는 순간 죽는다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, PartialStructuredBufferUploadReadsOnlyTheSourceRange )
+{
+#if SW_PLATFORM_WINDOWS
+    SYSTEM_INFO sysInfo{};
+    GetSystemInfo( &sysInfo );
+    const size_t pageSize = static_cast<size_t>( sysInfo.dwPageSize );
+    uint8*       pBase    = static_cast<uint8*>( VirtualAlloc( nullptr, pageSize * 2, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE ) );
+    SW_ASSERT_TRUE( pBase != nullptr );
+    DWORD oldProtect{ 0 };
+    SW_ASSERT_TRUE( VirtualProtect( pBase + pageSize, pageSize, PAGE_NOACCESS, &oldProtect ) != 0 );
+    const uint32 sourceSize = 256;
+    uint8*       pSource    = pBase + pageSize - sourceSize; // 원본의 끝 = 접근 불가 페이지의 시작
+    for ( uint32 byteIndex = 0; byteIndex < sourceSize; ++byteIndex )
+    {
+        pSource[byteIndex] = static_cast<uint8>( byteIndex );
+    }
+
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pFactory = device.get()->getResourceFactory();
+        // 원본보다 훨씬 큰 버퍼(64 KB) — 풀이 용량을 남겨 둔 모양.
+        const sw::RHIBufferHandle buffer = pFactory->createStructuredBuffer( 16, 4096 );
+        SW_ASSERT_TRUE( buffer != 0 );
+        pFactory->updateStructuredBufferRange( buffer, pSource, sourceSize, 0 );
+        pFactory->updateStructuredBuffer( buffer, pSource, sourceSize );
+        device.get()->waitIdle();
+        pFactory->destroyBuffer( buffer );
+    }
+    VirtualFree( pBase, 0, MEM_RELEASE );
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the partial structured buffer upload test" );
+#else
+    SW_TEST_SKIP( "Guard pages are set up with the Windows memory API" );
+#endif
+}
+
+/**
  * @brief [RenderPassGpuTest] 물 정점 셰이더의 파도 함수(gerstner.hlsli)가 CPU 질의(WaterWaveMath)와 같은 변위를 낸다 — 네 백엔드
  * @details 컴퓨트 프로브(common/shaders/waterwaveprobe.hlsl)가 water.hlsl 과 같은 `swComputeGerstnerDisplacement` 를 표본 32 자리에서 불러 float 비트를
  *          RGBA8 텍스처에 싣고, 읽어 CPU 값과 견준다. GPU 의 sin · cos 는 정확도가 낮아 비트가 같지는 않다 — 1 mm 안이면 같은 식이다.
@@ -5479,4 +6123,336 @@ SW_TEST_CASE( RenderPassGpuTest, Light2DFalloffAndShadowOnEveryBackend )
 
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for the 2D light test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 셀 셰이딩(toon.material)의 밝기 단계 수가 램버트(기본 머티리얼)보다 확실히 적다 — 네 백엔드
+ * @details 같은 구 · 같은 색 · 같은 빛을 두 머티리얼로 그리고, 그려진 픽셀(모서리 기준 배경 제거)의 밝기 히스토그램에서 1 % 이상이 든 칸을 센다.
+ *          램버트는 표면을 따라 고르게 퍼지고, 계단을 칼같이(toony 1) 둔 툰은 빛 · 그늘 두 무리에 몰린다. 툰이 단계 넷을 넘거나 램버트의 절반을
+ *          넘으면 계단(linearstep)이 GPU 에 닿지 않은 것이다(머티리얼 버퍼 레이아웃이 어긋나 shadingToony 가 0 으로 읽혀도 그렇다).
+ */
+SW_TEST_CASE( RenderPassGpuTest, ToonShadingHasFewerBrightnessLevelsThanLit )
+{
+    constexpr uint32 kMaxToonLevelCount = 4;
+
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+        ToonSphereScene  litScene;
+        ToonSphereScene  toonScene;
+        SW_ASSERT_TRUE_MSG( litScene.populate( ToonSphereScene::makeLitMaterial() ), ( label + "램버트 무대를 못 만들었다" ).c_str() );
+        SW_ASSERT_TRUE_MSG( toonScene.populate( ToonSphereScene::makeToonMaterial( false ) ), ( label + "툰 무대를 못 만들었다" ).c_str() );
+
+        // 씬마다 렌더러를 따로 둔다(한 렌더러의 씬 빌더는 그리던 씬의 수집 캐시를 든다).
+        sw::FrameRenderer  litRenderer;
+        sw::FrameRenderer  toonRenderer;
+        test::RHITestImage litImage;
+        test::RHITestImage toonImage;
+        const bool         bOk = litRenderer.initialize( device.get() ) && toonRenderer.initialize( device.get() ) &&
+                         renderAndReadAttachment( litRenderer, device.get(), litScene._scene, "SceneColor", litImage ) &&
+                         renderAndReadAttachment( toonRenderer, device.get(), toonScene._scene, "SceneColor", toonImage );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+        if ( bOk == false )
+            continue;
+
+        const DrawnMask litMask( litImage );
+        const DrawnMask toonMask( toonImage );
+        SW_EXPECT_TRUE_MSG( litMask._drawnCount > 2000 && toonMask._drawnCount > 2000,
+                            ( label + "구가 그려지지 않았다 (램버트 " + sw::to_string( litMask._drawnCount ) + " · 툰 " + sw::to_string( toonMask._drawnCount ) + " px)" ).c_str() );
+        if ( litMask._drawnCount <= 2000 || toonMask._drawnCount <= 2000 )
+            continue;
+
+        ++comparedCount;
+        const uint32 litLevelCount  = countBrightnessLevels( litImage, litMask );
+        const uint32 toonLevelCount = countBrightnessLevels( toonImage, toonMask );
+        SW_LOG_INFO( "%#brightness levels lit %# · toon %#", label, litLevelCount, toonLevelCount );
+        SW_EXPECT_TRUE_MSG( toonLevelCount <= kMaxToonLevelCount,
+                            ( label + "툰 구의 밝기 단계가 " + sw::to_string( toonLevelCount ) + " 개다 — 계단이 아니다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( toonLevelCount * 2u < litLevelCount,
+                            ( label + "툰 " + sw::to_string( toonLevelCount ) + " 단계 · 램버트 " + sw::to_string( litLevelCount ) + " 단계 — 툰이 확실히 적지 않다" ).c_str() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the toon shading test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 메시 외곽선 패스(뒤집은 껍질)가 실루엣 둘레에 어두운 고리를 그리고 안쪽은 건드리지 않는다 — 네 백엔드 × 포워드 · 디퍼드
+ * @details 같은 툰 구를 외곽선 스위치만 바꿔 그린다. 고리 = 끈 그림의 배경이 켠 그림에서 그려진 픽셀이다.
+ *          (1) 고리가 있다 — 둘레 × 두께의 절반 이상. 외곽선을 끈 머티리얼까지 패스가 그리면(머티리얼 거르기가 빠지면) 끈 그림에도 고리가 생겨 0 이 된다.
+ *          (2) 고리는 실루엣 띠(구의 화면 반지름 R ~ R + 두께) 안에 있다. (3) 어둡다(외곽선 색 검정, 빛 섞기 0).
+ *          (4) 구 안쪽은 같다 — 앞면 컬링이 빠지면 부풀린 껍질의 앞면이 구를 덮는다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MeshOutlineDrawsDarkRingAroundSilhouette )
+{
+    struct PipelineCase
+    {
+        const utf8* _pPath;
+        const utf8* _pColor;
+    };
+    const PipelineCase kArrCase[] = {
+        { "engine/pipeline/forwardpipeline.xml", "SceneColor"},
+        {"engine/pipeline/deferredpipeline.xml",   "LitColor"},
+    };
+    constexpr float32 kOutlineWidth  = 0.01f; // makeToonMaterial 의 화면 높이 비율
+    constexpr float64 kMaxRingLuma   = 40.0;
+    constexpr uint32  kBandPercent   = 95;
+    constexpr uint32  kInteriorRatio = 100; // 안쪽 차이는 구 픽셀의 1 % 이하
+
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        for ( const PipelineCase& pipelineCase : kArrCase )
+        {
+            const sw::string label = sw::string( device->getBackendName() ) + " " + pipelineCase._pPath + ": ";
+            ToonSphereScene  offScene;
+            ToonSphereScene  onScene;
+            SW_ASSERT_TRUE_MSG( offScene.populate( ToonSphereScene::makeToonMaterial( false ) ) && onScene.populate( ToonSphereScene::makeToonMaterial( true ) ),
+                                ( label + "무대를 못 만들었다" ).c_str() );
+
+            sw::FrameRenderer  offRenderer;
+            sw::FrameRenderer  onRenderer;
+            test::RHITestImage offImage;
+            test::RHITestImage onImage;
+            const bool         bOk = offRenderer.initialize( device.get(), pipelineCase._pPath ) && onRenderer.initialize( device.get(), pipelineCase._pPath ) &&
+                             renderAndReadAttachment( offRenderer, device.get(), offScene._scene, pipelineCase._pColor, offImage ) &&
+                             renderAndReadAttachment( onRenderer, device.get(), onScene._scene, pipelineCase._pColor, onImage );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+            if ( bOk == false )
+                continue;
+
+            const float32     widthPixel = kOutlineWidth * static_cast<float32>( onImage.getHeight() );
+            const OutlineRing ring       = OutlineRing::measure( offImage, onImage, widthPixel );
+            SW_LOG_INFO( "%#%#", label, ring.describe() );
+            SW_EXPECT_TRUE_MSG( ring._sphereCount > 2000, ( label + "구가 그려지지 않았다 — " + ring.describe() ).c_str() );
+            if ( ring._sphereCount <= 2000 )
+                continue;
+
+            ++comparedCount;
+            const float32 expectedRing = 2.0f * sw::MathUtil::Pi * ring._radius * widthPixel;
+            SW_EXPECT_TRUE_MSG( static_cast<float32>( ring._ringCount ) >= expectedRing * 0.5f,
+                                ( label + "외곽선 고리가 없다(기대 약 " + sw::to_string( expectedRing ) + " px) — " + ring.describe() ).c_str() );
+            SW_EXPECT_TRUE_MSG( ring._inBandCount * 100u >= ring._ringCount * kBandPercent, ( label + "고리가 실루엣 띠 밖에 있다 — " + ring.describe() ).c_str() );
+            SW_EXPECT_TRUE_MSG( ring._ringMeanLuma <= kMaxRingLuma, ( label + "고리가 어둡지 않다 — " + ring.describe() ).c_str() );
+            SW_EXPECT_TRUE_MSG( ring._interiorDiffer * kInteriorRatio <= ring._sphereCount, ( label + "외곽선이 구 안쪽을 덮었다 — " + ring.describe() ).c_str() );
+        }
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the mesh outline test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 스킨드 메시의 외곽선이 스키닝된 자리를 따른다 — GPU 스키닝으로 옮긴 구의 고리가 CPU 로 옮긴 정적 구의 고리와 같다(네 백엔드)
+ * @details 구의 모든 정점을 본 1 에 묶고 본 1 을 옆으로 옮긴다. 외곽선 껍질이 레스트 정점(입력 스트림)으로 밀면 고리가 옛 자리에 남아
+ *          옮긴 구의 고리와 어긋난다. 두 그림의 어두운 고리 마스크(그려졌고 밝기 40 이하)의 차이를 고리 크기와 견준다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MeshOutlineFollowsSkinnedPose )
+{
+    /**
+     * @class ShiftTask
+     * @brief 기본 포즈 단계에서 본 1 을 옆으로 옮기는 일입니다.
+     */
+    class ShiftTask final : public sw::IAnimationPhaseTask
+    {
+    public:
+        explicit ShiftTask( const sw::float3& offset )
+            : _offset{ offset }
+        {
+        }
+        bool isAnimationActive() const override { return true; }
+        void runAnimationPhase( sw::AnimationPhase phase, sw::SkeletalMeshComponent& unit, const sw::AnimationFrameContext& context ) override
+        {
+            (void)context;
+            if ( phase != sw::AnimationPhase::BasePose )
+                return;
+            sw::BoneTransform bone = unit.getLocalPose().getBoneTransform( 1 );
+            bone._translation      = _offset;
+            unit.getLocalPose().setBoneTransform( 1, bone );
+        }
+        sw::float3 _offset;
+    };
+
+    /// @brief 어두운 고리 마스크(그려졌고 밝기 40 이하)를 셉니다. @p pOther 가 있으면 둘 중 한쪽만 고리인 픽셀 수입니다.
+    auto countDarkRing = []( const test::RHITestImage& image, const test::RHITestImage* pOther ) -> uint32
+    {
+        const test::Rgba8 corner      = image.getPixel( 0, 0 );
+        const test::Rgba8 otherCorner = pOther != nullptr ? pOther->getPixel( 0, 0 ) : corner;
+        uint32            count{ 0 };
+        for ( uint32 y = 0; y < image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixel = image.getPixel( x, y );
+                const bool        bRing = test::RHITestImage::getColorDistance( pixel, corner ) > DrawnMask::kBackgroundDistance && computeLuma( pixel ) <= 40u;
+                if ( pOther == nullptr )
+                {
+                    count += bRing ? 1u : 0u;
+                    continue;
+                }
+                const test::Rgba8 otherPixel = pOther->getPixel( x, y );
+                const bool        bOtherRing = test::RHITestImage::getColorDistance( otherPixel, otherCorner ) > DrawnMask::kBackgroundDistance && computeLuma( otherPixel ) <= 40u;
+                count += ( bRing != bOtherRing ) ? 1u : 0u;
+            }
+        }
+        return count;
+    };
+
+    sw::shared_ptr<sw::Skeleton> skeleton = sw::make_shared<sw::Skeleton>();
+    (void)skeleton->addBone( sw::hashed_string( "base" ), -1, sw::BoneTransform{}, sw::float4x4::Identity );
+    (void)skeleton->addBone( sw::hashed_string( "body" ), 0, sw::BoneTransform{}, sw::float4x4::Identity );
+    skeleton->computeInverseBindFromReference();
+    // 메시 공간 이동이다(컴포넌트 스케일 전) — 화면에서 0.45 m 옆이다.
+    constexpr float32 kLocalShift = 0.45f / ToonSphereScene::kSphereScale;
+
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer skinnedRenderer;
+        sw::FrameRenderer staticRenderer;
+        const bool        bReady = skinnedRenderer.initialize( device.get() ) && staticRenderer.initialize( device.get() );
+        SW_EXPECT_TRUE_MSG( bReady, ( label + "렌더러를 못 만들었다" ).c_str() );
+        if ( bReady == false || device->getCapabilities()._bGpuMeshMorph == SW_FALSE )
+            continue;
+
+        // 스킨드 구(모든 정점이 본 1)와, 같은 이동을 CPU 로 정점에 걸어 둔 정적 구.
+        ToonSphereScene skinnedScene;
+        ToonSphereScene staticScene;
+        SW_ASSERT_TRUE_MSG( skinnedScene.populate( ToonSphereScene::makeToonMaterial( true ) ) && staticScene.populate( ToonSphereScene::makeToonMaterial( true ) ),
+                            ( label + "무대를 못 만들었다" ).c_str() );
+        const sw::vector<sw::RHIVertex>& listBind = skinnedScene._mesh->getVertices();
+        sw::vector<sw::MeshSkinVertex>   listSkin( listBind.size() );
+        sw::vector<sw::RHIVertex>        listShifted = listBind;
+        for ( size_t index = 0; index < listBind.size(); ++index )
+        {
+            listSkin[index]._arrJoint[0] = 1u;
+            listShifted[index]._arrPosition[0] += kLocalShift;
+        }
+        sw::shared_ptr<sw::Mesh> skinnedMesh = sw::Mesh::create();
+        skinnedMesh->setVertices( listBind );
+        skinnedMesh->setSkin( listSkin, 2 );
+        sw::shared_ptr<sw::Mesh> shiftedMesh = sw::Mesh::create();
+        shiftedMesh->setVertices( listShifted );
+
+        // 스킨드 구는 스켈레탈 메시 컴포넌트로 그린다(무대의 정적 구는 숨긴다).
+        skinnedScene._pSphere->setVisible( false );
+        sw::GameObject*            pSkinnedObject = skinnedScene._scene.getObjectManager()->createGameObject( sw::hashed_string( "SkinnedSphere" ) );
+        sw::SkeletalMeshComponent* pSkinned       = pSkinnedObject != nullptr ? pSkinnedObject->addComponent<sw::SkeletalMeshComponent>() : nullptr;
+        SW_ASSERT_NOT_NULL( pSkinned );
+        pSkinned->setSkeleton( skeleton );
+        pSkinned->setMesh( skinnedMesh );
+        pSkinned->setMaterial( skinnedScene._material.get() );
+        pSkinned->setBoundsRadius( 2.0f );
+        pSkinned->setLocalScale( sw::float3{ ToonSphereScene::kSphereScale, ToonSphereScene::kSphereScale, ToonSphereScene::kSphereScale } );
+        ShiftTask task( sw::float3{ kLocalShift, 0.0f, 0.0f } );
+        pSkinned->addAnimationPhaseTask( &task );
+        staticScene._pSphere->setMesh( shiftedMesh );
+
+        test::RHITestImage skinnedImage;
+        test::RHITestImage staticImage;
+        const bool         bOk = renderAndReadAttachment( skinnedRenderer, device.get(), skinnedScene._scene, "SceneColor", skinnedImage ) &&
+                         renderAndReadAttachment( staticRenderer, device.get(), staticScene._scene, "SceneColor", staticImage );
+        pSkinned->removeAnimationPhaseTask( &task );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+        if ( bOk == false )
+            continue;
+
+        const uint32 staticRingCount = countDarkRing( staticImage, nullptr );
+        const uint32 ringMismatch    = countDarkRing( skinnedImage, &staticImage );
+        SW_LOG_INFO( "%#outline ring %# px, skinned vs static mismatch %# px", label, staticRingCount, ringMismatch );
+        SW_EXPECT_TRUE_MSG( staticRingCount > 300, ( label + "정적 구에 외곽선 고리가 없다 (" + sw::to_string( staticRingCount ) + " px)" ).c_str() );
+        if ( staticRingCount <= 300 )
+            continue;
+        ++comparedCount;
+        SW_EXPECT_TRUE_MSG( ringMismatch * 5u <= staticRingCount,
+                            ( label + "스킨드 구의 외곽선이 옮긴 자리와 어긋난다 (어긋난 " + sw::to_string( ringMismatch ) + " / 고리 " + sw::to_string( staticRingCount ) +
+                              " px)" )
+                                .c_str() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the skinned outline test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 양면 머티리얼(`MATERIAL_TWO_SIDED`)은 뒷면도 그린다 — 머티리얼 변형 PSO 가 후면 컬링을 끈다(네 백엔드)
+ * @details 카메라를 등진 사각형을 툰 머티리얼로 그린다. 스위치를 끄면 후면 컬링으로 아무것도 안 그려지고, 켜면 사각형이 보인다
+ *          (머리카락 카드 · 치마 같은 VRM 양면 머티리얼이 뒤에서 사라지지 않게).
+ */
+SW_TEST_CASE( RenderPassGpuTest, TwoSidedMaterialDrawsBackFaces )
+{
+    struct QuadCase
+    {
+        bool    _bTwoSided;
+        float32 _yaw;
+    };
+    // [0] 등진 단면 · [1] 등진 양면 · [2] 마주 본 단면(기준 셰이딩)
+    const QuadCase kArrCase[] = {
+        {false, sw::MathUtil::Pi},
+        { true, sw::MathUtil::Pi},
+        {false,             0.0f},
+    };
+    constexpr uint32 kMaxMeanDelta = 6;
+
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+        uint32           arrDrawn[3]{};
+        uint32           arrMeanLuma[3]{};
+        bool             bOk = true;
+        for ( uint32 caseIndex = 0; caseIndex < 3 && bOk; ++caseIndex )
+        {
+            ToonSphereScene              scene;
+            sw::shared_ptr<sw::Material> material = ToonSphereScene::makeToonMaterial( false );
+            bOk                                   = material != nullptr && scene.populate( material );
+            if ( bOk == false )
+                break;
+            material->setStaticSwitch( sw::hashed_string( "TwoSided" ), kArrCase[caseIndex]._bTwoSided );
+            // 사각형(앞면 +Z)을 반 바퀴 돌리면 카메라(+Z 쪽)를 등진다.
+            scene._mesh = sw::MeshUtil::createRectMesh();
+            scene._pSphere->setMesh( scene._mesh );
+            scene._pSphere->setLocalRotation( sw::float3{ 0.0f, kArrCase[caseIndex]._yaw, 0.0f } );
+
+            sw::FrameRenderer  renderer;
+            test::RHITestImage image;
+            bOk = renderer.initialize( device.get() ) && renderAndReadAttachment( renderer, device.get(), scene._scene, "SceneColor", image );
+            if ( bOk == false )
+                break;
+            const DrawnMask mask( image );
+            uint64          lumaSum{ 0 };
+            for ( uint32 y = 0; y < mask._height; ++y )
+            {
+                for ( uint32 x = 0; x < mask._width; ++x )
+                {
+                    if ( mask.isDrawn( x, y ) )
+                        lumaSum += computeLuma( image.getPixel( x, y ) );
+                }
+            }
+            arrDrawn[caseIndex]    = mask._drawnCount;
+            arrMeanLuma[caseIndex] = mask._drawnCount > 0 ? static_cast<uint32>( lumaSum / mask._drawnCount ) : 0u;
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+        if ( bOk == false )
+            continue;
+        ++comparedCount;
+        SW_LOG_INFO( "%#quad one-sided back %# px · two-sided back %# px (luma %#) · front %# px (luma %#)", label, arrDrawn[0], arrDrawn[1], arrMeanLuma[1],
+                     arrDrawn[2], arrMeanLuma[2] );
+        SW_EXPECT_TRUE_MSG( arrDrawn[0] < 50, ( label + "단면 머티리얼인데 뒷면이 그려졌다 (" + sw::to_string( arrDrawn[0] ) + " px)" ).c_str() );
+        SW_EXPECT_TRUE_MSG( arrDrawn[1] > 2000, ( label + "양면 머티리얼의 뒷면이 그려지지 않았다 (" + sw::to_string( arrDrawn[1] ) + " px)" ).c_str() );
+        // 뒷면은 노멀을 뒤집어 칠한다 — 뒤집은 노멀은 마주 본 사각형의 노멀과 같으므로 밝기도 같아야 한다.
+        const uint32 meanDelta = arrMeanLuma[1] > arrMeanLuma[2] ? arrMeanLuma[1] - arrMeanLuma[2] : arrMeanLuma[2] - arrMeanLuma[1];
+        SW_EXPECT_TRUE_MSG( meanDelta <= kMaxMeanDelta, ( label + "뒷면 셰이딩이 앞면과 다르다 — 노멀을 뒤집지 않았다 (" + sw::to_string( arrMeanLuma[1] ) + " vs " +
+                                                          sw::to_string( arrMeanLuma[2] ) + ")" )
+                                                            .c_str() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the two-sided material test" );
 }

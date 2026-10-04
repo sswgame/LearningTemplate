@@ -1,0 +1,73 @@
+{
+ "asset": {
+  "version": "2.0",
+  "generator": "LearningTemplate destruction showcase"
+ },
+ "scene": 0,
+ "scenes": [
+  {
+   "nodes": [
+    0
+   ]
+  }
+ ],
+ "nodes": [
+  {
+   "mesh": 0
+  }
+ ],
+ "meshes": [
+  {
+   "primitives": [
+    {
+     "attributes": {
+      "POSITION": 0
+     },
+     "material": 0
+    }
+   ]
+  }
+ ],
+ "materials": [
+  {
+   "pbrMetallicRoughness": {
+    "baseColorFactor": [
+     0.78,
+     0.74,
+     0.68,
+     1.0
+    ]
+   }
+  }
+ ],
+ "accessors": [
+  {
+   "bufferView": 0,
+   "componentType": 5126,
+   "count": 36,
+   "type": "VEC3",
+   "min": [
+    -2.0,
+    0.0,
+    -0.15
+   ],
+   "max": [
+    2.0,
+    3.0,
+    0.15
+   ]
+  }
+ ],
+ "bufferViews": [
+  {
+   "buffer": 0,
+   "byteLength": 432
+  }
+ ],
+ "buffers": [
+  {
+   "byteLength": 432,
+   "uri": "data:application/octet-stream;base64,AAAAQAAAAACamRm+AAAAQAAAQECamRm+AAAAQAAAQECamRk+AAAAQAAAAACamRm+AAAAQAAAQECamRk+AAAAQAAAAACamRk+AAAAwAAAAACamRk+AAAAwAAAQECamRk+AAAAwAAAQECamRm+AAAAwAAAAACamRk+AAAAwAAAQECamRm+AAAAwAAAAACamRm+AAAAwAAAQECamRm+AAAAwAAAQECamRk+AAAAQAAAQECamRk+AAAAwAAAQECamRm+AAAAQAAAQECamRk+AAAAQAAAQECamRm+AAAAwAAAAACamRk+AAAAwAAAAACamRm+AAAAQAAAAACamRm+AAAAwAAAAACamRk+AAAAQAAAAACamRm+AAAAQAAAAACamRk+AAAAwAAAAACamRk+AAAAQAAAAACamRk+AAAAQAAAQECamRk+AAAAwAAAAACamRk+AAAAQAAAQECamRk+AAAAwAAAQECamRk+AAAAQAAAAACamRm+AAAAwAAAAACamRm+AAAAwAAAQECamRm+AAAAQAAAAACamRm+AAAAwAAAQECamRm+AAAAQAAAQECamRm+"
+  }
+ ]
+}

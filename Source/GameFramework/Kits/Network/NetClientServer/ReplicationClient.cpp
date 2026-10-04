@@ -47,10 +47,9 @@ namespace sw
     bool ReplicationClient::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
         (void)connectionId; // 클라이언트 — 받는 쪽은 서버 하나
-        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetKitMessageRange::kClientServer ) == false )
+        // 영역 안이어도 자기 종류가 아니면 넘긴다 — 라우터가 같은 영역의 다음 처리기에 묻는다(`INetMessageHandler` 계약).
+        if ( size <= 0 || pData[0] != NetClientServerMessage::kSnapshot )
             return false;
-        if ( pData[0] != NetClientServerMessage::kSnapshot )
-            return true;
         // 기준 틱을 먼저 엿보고 그 스냅샷을 찾는다.
         BitReader    peek( pData + 1, size - 1 );
         const uint32 tick         = static_cast<uint32>( peek.readVarUint() );

@@ -6,6 +6,7 @@
 #include "Core/File/AsyncFileIo.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -377,6 +378,8 @@ namespace sw
 
         if ( found.empty() == false )
         {
+            // 캐시는 에셋 색인의 몫이다 — 부르는 쪽(스플래시 · 모듈 · 워커)의 태그가 아니라 Asset 으로 센다(재해시가 어디서 일어나든).
+            SW_MEMORY_SCOPE( Asset );
             std::scoped_lock<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
             ResourceUtilInternal::_s_mapResolvedPath.insert_or_assign( cacheKeyHash, found );
         }

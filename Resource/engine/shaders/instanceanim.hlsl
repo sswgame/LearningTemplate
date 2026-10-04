@@ -13,7 +13,7 @@
  * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeUav( instanceUav, 0 ).
  */
 
-// 인스턴스 원소(SwInstanceData)는 그래픽스와 같은 정의 하나를 쓴다 — 고쳐 쓴 원소가 그대로 다시 그려지므로 112 바이트를 통째로 옮긴다.
+// 인스턴스 원소(SwInstanceData)는 그래픽스와 같은 정의 하나를 쓴다 — 고쳐 쓴 원소가 그대로 다시 그려지므로 128 바이트를 통째로 옮긴다.
 // spinSeed 가 0 인 인스턴스는 건드리지 않는다.
 #include "instancedata.hlsli"
 

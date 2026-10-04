@@ -28,6 +28,62 @@ namespace sw
         return true;
     }
 
+    bool RayMath::intersectCapsule( const GameRay& ray, const float3& segmentStart, const float3& segmentEnd, float32 radius, float32 maxDistance,
+                                    float32& outDistance )
+    {
+        const float3  axis         = segmentEnd - segmentStart;
+        const float32 axisLength   = axis.getLength();
+        const float32 radiusSquare = radius * radius;
+        if ( axisLength < 1.0e-6f )
+            return intersectSphere( ray, segmentStart, radius, maxDistance, outDistance );
+        const float3  unitAxis   = axis * ( 1.0f / axisLength );
+        const float3  fromStart  = ray._origin - segmentStart;
+        const float32 originAxis = MathUtil::clamp( fromStart.dot( unitAxis ), 0.0f, axisLength );
+        if ( ( fromStart - unitAxis * originAxis ).getLengthSquared() <= radiusSquare )
+        {
+            outDistance = 0.0f;
+            return true;
+        }
+        // 옆면 — 축에 수직인 성분만 남겨 원 판정을 푼다. 만난 높이가 선분 안일 때만 옆면이다.
+        float32       best          = maxDistance;
+        bool          bHit          = false;
+        const float3  directionPerp = ray._direction - unitAxis * ray._direction.dot( unitAxis );
+        const float3  originPerp    = fromStart - unitAxis * fromStart.dot( unitAxis );
+        const float32 quadA         = directionPerp.dot( directionPerp );
+        if ( quadA > 1.0e-8f )
+        {
+            const float32 quadB        = 2.0f * originPerp.dot( directionPerp );
+            const float32 quadC        = originPerp.dot( originPerp ) - radiusSquare;
+            const float32 discriminant = quadB * quadB - 4.0f * quadA * quadC;
+            if ( discriminant >= 0.0f )
+            {
+                const float32 distance   = ( -quadB - MathUtil::sqrt( discriminant ) ) / ( 2.0f * quadA );
+                const float32 hitOnAxis  = ( fromStart + ray._direction * distance ).dot( unitAxis );
+                const bool    bOnSegment = 0.0f <= hitOnAxis && hitOnAxis <= axisLength;
+                if ( distance >= 0.0f && bOnSegment && distance <= best )
+                {
+                    best = distance;
+                    bHit = true;
+                }
+            }
+        }
+        // 양 끝 반구 — 옆면보다 가까우면 그것이다.
+        float32 capDistance = 0.0f;
+        if ( intersectSphere( ray, segmentStart, radius, best, capDistance ) && capDistance <= best )
+        {
+            best = capDistance;
+            bHit = true;
+        }
+        if ( intersectSphere( ray, segmentEnd, radius, best, capDistance ) && capDistance <= best )
+        {
+            best = capDistance;
+            bHit = true;
+        }
+        if ( bHit )
+            outDistance = best;
+        return bHit;
+    }
+
     bool RayMath::intersectAabb( const GameRay& ray, const float3& boxMin, const float3& boxMax, float32 maxDistance, float32& outDistance )
     {
         const float32 arrOrigin[3]    = { ray._origin._x, ray._origin._y, ray._origin._z };

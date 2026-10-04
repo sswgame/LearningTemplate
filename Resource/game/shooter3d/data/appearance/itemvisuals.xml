@@ -2,99 +2,71 @@
 <!-- 아이템 외형. ItemDef 는 visual id 만 가리키고 한 외형을 여러 아이템이 나눈다(형상 변경은 이 id 를 바꾼다).
      Part kind: Skinned(캐릭터 스켈레톤을 따르는 mesh) · SocketPrefab(prefab 을 socket 에 — 후보는 쉼표, 앞의 것이 있으면 그것) ·
      BodyModification(Morph · Material · HideRegion) · Sprite(2D). sockets 는 부품의 소켓 에셋 — 해석된 외형에서는 "<칸>.<소켓>" 이름이 된다(MainHand.Muzzle).
-     State 는 외형 상태(뽑음 · 멤)마다 부품을 다른 소켓으로 옮기고, DamageStage 는 피해(맞음 · 닳은 내구도) 문턱마다 변형 · 머티리얼 값을 고른다.
-     breakable 부품은 맞으면 떨어져 나가고, breakStage 를 적으면 그 피해 단계에서 저절로 떨어진다(impulse 는 물리에 넘길 힌트).
-     몸 · 장비 메시는 KayKit 캐릭터(41 관절 리그 — handslot.r · handslot.l · head · chest)를 임포트한 models/*.mesh 를 가리킨다. -->
+     몸은 KayKit 캐릭터(41 관절 리그 — 몸 소켓은 data/sockets/kaykit_humanoid.sockets.xml)를 임포트한 models/kaykit/*.mesh, 장비는 원본에서 본에 붙어 있던
+     강체 메시를 프리팹(prefabs/kaykit/)으로 감싼 것이다. 블래스터는 Kenney Blaster Kit — offset 은 손잡이를 손에 맞추는 Gun 소켓 기준 자리다. -->
 <ItemVisualCatalog>
-  <ItemVisual id="body_soldier">
-    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/rogue.mesh" sockets="game/shooter3d/data/appearance/rogue.sockets.xml"/>
+  <ItemVisual id="body_knight">
+    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/knight.mesh" skeleton="game/shooter3d/models/kaykit/knight/knight.skeleton.json"
+          material="game/shooter3d/materials/kaykit_knight.material" sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
-  <ItemVisual id="hair_short">
-    <Part name="Hair" kind="Skinned" mesh="game/shooter3d/models/hair_short.mesh">
-      <Variant name="UnderHelmet" mesh="game/shooter3d/models/hair_short_flat.mesh"/>
-    </Part>
+  <ItemVisual id="body_rogue">
+    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/rogue.mesh" skeleton="game/shooter3d/models/kaykit/rogue/rogue.skeleton.json"
+          material="game/shooter3d/materials/kaykit_rogue.material" sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
-  <ItemVisual id="hair_buzz">
-    <Part name="Hair" kind="Skinned" mesh="game/shooter3d/models/hair_buzz.mesh"/>
+  <ItemVisual id="body_skeleton_minion">
+    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/skeleton_minion.mesh" skeleton="game/shooter3d/models/kaykit/skeleton_minion/skeleton_minion.skeleton.json"
+          material="game/shooter3d/materials/kaykit_skeleton.material" sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
-  <ItemVisual id="beard_stubble">
-    <Part name="Beard" kind="Skinned" mesh="game/shooter3d/models/beard_stubble.mesh"/>
+  <ItemVisual id="body_skeleton_warrior">
+    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/skeleton_warrior.mesh" skeleton="game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.json"
+          material="game/shooter3d/materials/kaykit_skeleton.material" sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
-
-  <ItemVisual id="helmet_combat" tags="Helmet.Open">
-    <Part name="Shell" kind="SocketPrefab" prefab="game/shooter3d/prefabs/helmet_combat.prefab.xml" socket="head" offset="0 0.12 0" breakable="true" impulse="0 2.5 -1.5">
-      <Variant name="Cracked" prefab="game/shooter3d/prefabs/helmet_combat_cracked.prefab.xml"/>
-    </Part>
-    <Part name="Press" kind="BodyModification">
-      <Morph name="HeadSquash" weight="0.3"/>
-    </Part>
-    <DamageStage name="Scuffed" threshold="0.4">
-      <Material part="Shell" name="Dirt" value="0.6"/>
-    </DamageStage>
-    <DamageStage name="Cracked" threshold="0.8">
-      <Variant part="Shell" name="Cracked"/>
-      <Material part="Shell" name="Dirt" value="1"/>
-    </DamageStage>
-  </ItemVisual>
-  <ItemVisual id="helmet_recon" tags="Helmet.FullFace">
-    <Part name="Shell" kind="SocketPrefab" prefab="game/shooter3d/prefabs/helmet_recon.prefab.xml" socket="head" offset="0 0.12 0"/>
-    <Part name="Visor" kind="SocketPrefab" prefab="game/shooter3d/prefabs/helmet_recon_visor.prefab.xml" socket="head" offset="0 0.1 0.12" breakable="true" breakStage="Shattered" impulse="0 1 2"/>
-    <DamageStage name="Shattered" threshold="0.9"/>
-  </ItemVisual>
-  <ItemVisual id="fatigues" tags="Sleeve.Long">
-    <Part name="Uniform" kind="Skinned" mesh="game/shooter3d/models/fatigues.mesh">
-      <Variant name="RolledSleeves" mesh="game/shooter3d/models/fatigues_rolled.mesh"/>
-    </Part>
-    <Part name="Cover" kind="BodyModification">
-      <HideRegion name="Torso"/>
-      <HideRegion name="UpperArms"/>
-    </Part>
-    <DamageStage name="Torn" threshold="0.5">
-      <Material part="Uniform" name="Tear" value="0.7"/>
-    </DamageStage>
-  </ItemVisual>
-  <ItemVisual id="vest_recon" tags="Torso.Vest">
-    <Part name="Vest" kind="Skinned" mesh="game/shooter3d/models/vest_recon.mesh"/>
-    <Part name="Cover" kind="BodyModification"><HideRegion name="Torso"/></Part>
-  </ItemVisual>
-  <ItemVisual id="vest_recon_f" tags="Torso.Vest">
-    <Part name="Vest" kind="Skinned" mesh="game/shooter3d/models/vest_recon_f.mesh"/>
-    <Part name="Cover" kind="BodyModification"><HideRegion name="Torso"/></Part>
-  </ItemVisual>
-  <ItemVisual id="boots_recon">
-    <Part name="Boots" kind="Skinned" mesh="game/shooter3d/models/boots_recon.mesh"/>
-    <Part name="Cover" kind="BodyModification"><HideRegion name="Feet"/></Part>
-  </ItemVisual>
-  <ItemVisual id="recon_ghillie" tags="Torso.Ghillie">
-    <Part name="Ghillie" kind="Skinned" mesh="game/shooter3d/models/recon_ghillie.mesh"/>
-    <Part name="Cover" kind="BodyModification"><HideRegion name="Torso"/><HideRegion name="Feet"/></Part>
-  </ItemVisual>
-  <ItemVisual id="recon_patch">
-    <Part name="Patch" kind="SocketPrefab" prefab="game/shooter3d/prefabs/recon_patch.prefab.xml" socket="upperarm.l"/>
-  </ItemVisual>
-  <ItemVisual id="backpack" tags="Back.Pack">
-    <Part name="Pack" kind="SocketPrefab" prefab="game/shooter3d/prefabs/backpack.prefab.xml" sockets="game/shooter3d/data/appearance/backpack.sockets.xml" socket="chest" offset="0 0 -0.2"/>
+  <ItemVisual id="body_skeleton_rogue">
+    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/skeleton_rogue.mesh" skeleton="game/shooter3d/models/kaykit/skeleton_rogue/skeleton_rogue.skeleton.json"
+          material="game/shooter3d/materials/kaykit_skeleton.material" sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
 
-  <ItemVisual id="rifle_m4" occupancy="TwoHanded" customization="Rifle" tags="Weapon.Rifle" defaultState="Drawn">
-    <Part name="Body" kind="SocketPrefab" prefab="game/shooter3d/prefabs/rifle_m4.prefab.xml" sockets="game/shooter3d/data/appearance/rifle_m4.sockets.xml" socket="handslot.r">
-      <MaterialVariant name="Desert" material="game/shooter3d/materials/rifle_desert.material"/>
-      <MaterialVariant name="Woodland" material="game/shooter3d/materials/rifle_woodland.material"/>
-    </Part>
-    <State name="Drawn">
-      <Place part="Body" socket="handslot.r"/>
-    </State>
-    <State name="Slung">
-      <Place part="Body" socket="RifleSling,chest" offset="0 0 -0.25" rotation="0 0 35"/>
-    </State>
-    <DamageStage name="Worn" threshold="0.5">
-      <Material part="Body" name="Wear" value="0.5"/>
-    </DamageStage>
-    <DamageStage name="Battered" threshold="0.9">
-      <Material part="Body" name="Wear" value="1"/>
-    </DamageStage>
+  <ItemVisual id="helmet_knight" tags="Helmet.Full">
+    <Part name="Shell" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/knight_helmet.prefab.xml" socket="Helmet"/>
   </ItemVisual>
-  <ItemVisual id="pistol_m9" tags="Weapon.Pistol">
-    <Part name="Body" kind="SocketPrefab" prefab="game/shooter3d/prefabs/pistol_m9.prefab.xml" sockets="game/shooter3d/data/appearance/pistol_m9.sockets.xml" socket="hips" offset="0.15 0 0"/>
+  <ItemVisual id="helmet_skeleton" tags="Helmet.Full">
+    <Part name="Shell" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/skeleton_warrior_helmet.prefab.xml" socket="Helmet"/>
+  </ItemVisual>
+  <ItemVisual id="hood_skeleton" tags="Hood">
+    <Part name="Hood" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/skeleton_rogue_hood.prefab.xml" socket="Helmet"/>
+  </ItemVisual>
+  <ItemVisual id="cape_rogue" tags="Cape">
+    <Part name="Cape" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/rogue_cape.prefab.xml" socket="Back"/>
+  </ItemVisual>
+  <ItemVisual id="cape_knight" tags="Cape.Heraldic">
+    <Part name="Cape" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/knight_cape.prefab.xml" socket="Back"/>
+  </ItemVisual>
+  <ItemVisual id="cape_skeleton" tags="Cape">
+    <Part name="Cape" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/skeleton_rogue_cape.prefab.xml" socket="Back"/>
+  </ItemVisual>
+  <ItemVisual id="shield_round" tags="Shield">
+    <Part name="Shield" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/round_shield.prefab.xml" socket="Shield"/>
+  </ItemVisual>
+  <ItemVisual id="shield_skeleton" tags="Shield">
+    <Part name="Shield" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/skeleton_shield.prefab.xml" socket="Shield"/>
+  </ItemVisual>
+  <ItemVisual id="blade_skeleton" tags="Weapon.Melee">
+    <Part name="Blade" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/skeleton_blade.prefab.xml" socket="Blade"/>
+  </ItemVisual>
+  <ItemVisual id="axe_skeleton" tags="Weapon.Melee">
+    <Part name="Axe" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/skeleton_axe.prefab.xml" socket="Blade"/>
+  </ItemVisual>
+
+  <ItemVisual id="blaster_rifle" customization="Blaster" tags="Weapon.Blaster">
+    <Part name="Body" kind="SocketPrefab" prefab="game/shooter3d/prefabs/blaster_d.prefab.xml" sockets="game/shooter3d/data/sockets/blaster_d.sockets.xml" socket="Gun"
+          offset="0 0.12 0.2"/>
+  </ItemVisual>
+  <ItemVisual id="blaster_shotgun" customization="Blaster" tags="Weapon.Blaster">
+    <Part name="Body" kind="SocketPrefab" prefab="game/shooter3d/prefabs/blaster_h.prefab.xml" sockets="game/shooter3d/data/sockets/blaster_h.sockets.xml" socket="Gun"
+          offset="0 0.1 0.15"/>
+  </ItemVisual>
+  <ItemVisual id="blaster_pistol" customization="Blaster" tags="Weapon.Blaster">
+    <Part name="Body" kind="SocketPrefab" prefab="game/shooter3d/prefabs/blaster_a.prefab.xml" sockets="game/shooter3d/data/sockets/blaster_a.sockets.xml" socket="Gun"
+          offset="0 0.18 0.18"/>
   </ItemVisual>
 </ItemVisualCatalog>

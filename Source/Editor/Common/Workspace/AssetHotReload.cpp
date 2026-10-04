@@ -177,23 +177,48 @@ namespace sw::editor
 
         // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 넘겨준 서비스를 쓴다.
         AssetManager* pResources = getService<AssetManager>();
-        IAssetCache*  pCache     = ( pResources != nullptr ) ? pResources->findAssetCache( route._pCacheKindName ) : nullptr;
-        if ( pCache == nullptr )
-        {
-            SW_LOG_WARNING( "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );
+        if ( pResources == nullptr )
             return false;
-        }
-
-        SW_LOG_INFO( "Hot-Reloading asset: %#", relativePath );
         // 디바이스는 **지금 것을** 넘긴다 — 캐시가 마지막으로 본 디바이스는 백엔드 교체 뒤 사라졌을 수 있다.
         EditorContext* pContext = EditorContext::get();
-        pCache->reload( relativePath, ( pContext != nullptr ) ? pContext->getRhiDevice() : nullptr );
+        IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getRhiDevice() : nullptr;
+        if ( route._pCacheKindName[0] == '\0' )
+        {
+            // 모듈이 올린 캐시 — 이름 대신 그 경로를 든 캐시가 다시 읽는다. 아무도 읽지 않은 파일이면 할 일이 없다(다음에 읽는 쪽이 새 내용을 읽는다).
+            if ( reloadInCachesHolding( *pResources, relativePath, pDevice ) == 0 )
+                return false;
+        }
+        else
+        {
+            IAssetCache* pCache = pResources->findAssetCache( route._pCacheKindName );
+            if ( pCache == nullptr )
+            {
+                SW_LOG_WARNING( "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );
+                return false;
+            }
+            SW_LOG_INFO( "Hot-Reloading asset: %#", relativePath );
+            pCache->reload( relativePath, pDevice );
+        }
 
         Scene*             pScene   = getActiveScene();
         GameObjectManager* pObjects = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
         if ( pObjects != nullptr )
             (void)notifyAssetUsers( *pObjects, relativePath );
         return true;
+    }
+
+    uint32 AssetHotReload::reloadInCachesHolding( AssetManager& resources, string_view relativePath, IRHIDevice* pDevice )
+    {
+        uint32 reloadedCount{ 0 };
+        for ( IAssetCache* pCache : resources.getAllAssetCache() )
+        {
+            if ( pCache->isCached( relativePath ) == false )
+                continue;
+            SW_LOG_INFO( "Hot-Reloading asset: %# (%#)", relativePath, pCache->getAssetKindName() );
+            pCache->reload( relativePath, pDevice );
+            ++reloadedCount;
+        }
+        return reloadedCount;
     }
 
     uint32 AssetHotReload::notifyAssetUsers( GameObjectManager& objects, string_view relativePath )

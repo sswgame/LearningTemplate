@@ -147,7 +147,9 @@ namespace sw
             uint32 _skinVertexBase{ 0 };
             uint32 _skinVertexCount{ 0 };
             uint32 _skinBoneCount{ 0 };
-            uint32 _pad{ 0 };
+            uint32 _skinInstanceCount{ 0 };
+            uint32 _skinDeltaBase{ 0 }; ///< 원본 레스트 버퍼 안에서 모프 차이가 시작하는 원소(meshskin.hlsl g_SkinDeltaBase)
+            uint32 _arrPad[3]{ 0, 0, 0 };
         };
         /** @brief 인스턴스 정렬 디스패치 상수(instancesort.hlsl `SortParams`, b0)입니다. */
         struct GpuSortParams
@@ -297,6 +299,27 @@ namespace sw
         }
 
         /**
+         * @brief 이 패스가 이 머티리얼 define 목록의 배치를 그리는지 반환합니다. 표의 `_pRequiredMaterialDefine` 이 없으면 늘 true 입니다.
+         * @details 드로우 루프 · 머티리얼 PSO 변형 · 셰이더 쿠커가 같은 판정을 씁니다 — 셋이 갈리면 쿠킹하지 않은 변형을 런타임이 찾거나,
+         *          외곽선을 모르는 셰이더가 외곽선 패스의 앞면 컬링으로 그려져 뒷면이 화면을 덮습니다.
+         * @param pListMaterialDefine 배치 머티리얼의 define 목록입니다. nullptr 이면 머티리얼이 없는 배치입니다.
+         */
+        static bool drawsMaterialInPass( RenderPassType passType, const vector<string>* pListMaterialDefine )
+        {
+            const utf8* pRequired = getRenderPassTypeInfo( passType )._pRequiredMaterialDefine;
+            if ( pRequired == nullptr )
+                return true;
+            if ( pListMaterialDefine == nullptr )
+                return false;
+            for ( const string& define : *pListMaterialDefine )
+            {
+                if ( define == pRequired )
+                    return true;
+            }
+            return false;
+        }
+
+        /**
          * @brief 이 패스 타입이 셰이더에 **얹는 define** 입니다. 파이프라인 XML 의 `_listPermutation` 위에 더해집니다.
          * @details G버퍼 패스는 픽셀 출력 서명을 MRT 로 바꾸려고 `SW_PASS_GBUFFER=1` 을 C++ 에서 얹습니다. 그래서 "이 패스의
          *          define 집합" 은 XML 만 보고 답하면 런타임과 어긋납니다. 런타임과 쿠커가 같은 표(`RenderPassTypeInfo`)를 봅니다.
@@ -316,7 +339,7 @@ namespace sw
          *          와이어프레임으로 그림자를 구우면 그림자가 선 몇 개로 남고, 뎁스 프리패스를
          *          와이어프레임으로 채우면 이후 패스의 뎁스 테스트가 삼각형 내부를 모두 버려 화면이 빕니다.
          *          둘 다 "보기 방식" 이 아니라 다음 패스의 입력이므로 늘 Solid · Lit 로 둡니다.
-         * @note 지금은 `usesMaterialShader` 와 같은 집합이지만 근거가 다르므로 표의 칸도 따로 둡니다.
+         * @note 메시 외곽선 패스는 머티리얼 셰이더를 쓰지만 뷰 모드를 받지 않습니다(외곽선은 보기 방식이 아니라 그림의 일부다).
          */
         static bool appliesViewMode( RenderPassType passType )
         {
@@ -446,6 +469,12 @@ namespace sw
         hashed_string _swBatchCount{ "g_SwBatchCount" };
         /// @brief 씬 라이트 버퍼의 원소 수 ↔ PassCB g_SwLightCount 입니다. 0 이면 셰이더가 키라이트로 폴백합니다.
         hashed_string _swLightCount{ "g_SwLightCount" };
+        /// @brief 정점 애니메이션(VAT) 표입니다(binding.hlsli g_SwVertexAnimation ↔ "SwVertexAnimation"). 패스당 한 번 겁니다.
+        hashed_string _swVertexAnimation{ "SwVertexAnimation" };
+        /// @brief 그 표의 원소 수 ↔ PassCB g_SwVertexAnimationCount 입니다.
+        hashed_string _swVertexAnimationCount{ "g_SwVertexAnimationCount" };
+        /// @brief VAT 시계(초) ↔ PassCB g_SwVertexAnimationTime 입니다.
+        hashed_string _swVertexAnimationTime{ "g_SwVertexAnimationTime" };
     };
 
     /**

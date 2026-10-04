@@ -59,6 +59,33 @@ namespace sw
             _owner._pUnit = nullptr;
     }
 
+    bool SkeletalAnimatorBinding::describeSharedPose( AnimSharedPoseRequest& outRequest ) const
+    {
+        return _owner.describeSharedPose( outRequest );
+    }
+
+    shared_ptr<const AnimClip> SkeletalAnimatorBinding::findSharedPoseClip( const AnimClip* pClip ) const
+    {
+        for ( const auto& [name, clip] : _owner._mapClip )
+        {
+            if ( clip.get() == pClip )
+                return clip;
+        }
+        return nullptr;
+    }
+
+    void SkeletalAnimatorBinding::collectDebugState( AnimationDebugState& inoutState ) const
+    {
+        inoutState._stateName = _owner._graphPlayer.getCurrentStateName();
+        inoutState._stateTime = _owner._stateTime;
+        for ( const AnimFiredNotify& notify : _owner._listFiredNotify )
+            inoutState._listNotify.push_back( notify._name );
+        inoutState._listCurveName.insert( inoutState._listCurveName.end(), _owner._listCurveName.begin(), _owner._listCurveName.end() );
+        inoutState._listCurveValue.insert( inoutState._listCurveValue.end(), _owner._listCurveValue.begin(), _owner._listCurveValue.end() );
+        inoutState._rootMotionTranslation = _owner._rootMotionDelta._translation;
+        inoutState._rootMotionRotation    = _owner._rootMotionDelta._rotation;
+    }
+
     const IAnimPlayable* SkeletalAnimatorBinding::findPlayable( const hashed_string& name ) const
     {
         return _owner.findClip( name );
@@ -90,6 +117,9 @@ namespace sw
         , _scratchPose{}
         , _scratchTrackPose{}
         , _scratchLayerPose{}
+        , _listScratchTrackMask{}
+        , _lastBasePose{}
+        , _carryOverPose{}
         , _sequencerClip{}
         , _rootMotionDelta{}
         , _pUnit{ nullptr }
@@ -97,9 +127,15 @@ namespace sw
         , _lastDeltaSeconds{ 0.0f }
         , _sequencerTime{ 0.0f }
         , _sequencerWeight{ 0.0f }
+        , _initialTime{ 0.0f }
+        , _carryOverElapsed{ 0.0f }
+        , _carryOverDuration{ 0.0f }
+        , _seenInterruptCount{ 0 }
         , _bExtractRootMotion{ SW_FALSE }
         , _bPlayOnBegin{ SW_TRUE }
         , _bRootMotionThroughController{ SW_TRUE }
+        , _bLastBasePoseValid{ SW_FALSE }
+        , _bCarryingOver{ SW_FALSE }
         , _reserved{ 0 }
     {
         _graphPlayer.setPlayableSource( &_binding );
@@ -123,8 +159,8 @@ namespace sw
         const float32 resumeTime = _stateTime;
         if ( _currentState.empty() == false && play( hashed_string( _currentState ), true, 0.0f ) )
             _graphPlayer.getPlayer().setCurrentTime( resumeTime );
-        else
-            (void)play( hashed_string( _initialState ), true, 0.0f );
+        else if ( play( hashed_string( _initialState ), true, 0.0f ) && _initialTime > 0.0f )
+            _graphPlayer.getPlayer().setCurrentTime( _initialTime );
     }
 
     void SkeletalAnimatorComponent::onEndPlay()
@@ -304,6 +340,20 @@ namespace sw
         return 0.0f;
     }
 
+    bool SkeletalAnimatorComponent::describeSharedPose( AnimSharedPoseRequest& outRequest ) const
+    {
+        const AnimPlayer& player   = _graphPlayer.getPlayer();
+        const AnimClip*   pCurrent = static_cast<const AnimClip*>( player.getCurrentPlayable() );
+        // 섞는 중(끊긴 페이드를 이어 섞는 중 포함) · 레이어 · 시퀀서 덮어쓰기는 캐릭터마다 다르다. 반복하지 않는 클립은 시작 시각이 캐릭터마다 달라 칸으로 묶지 않는다.
+        if ( pCurrent == nullptr || player.isCrossfading() || _bCarryingOver == SW_TRUE || player.isCurrentLooping() == false || _listLayer.empty() == false || _sequencerWeight > 0.0f )
+            return false;
+        outRequest._pClip             = pCurrent;
+        outRequest._time              = player.getCurrentTime();
+        outRequest._playRate          = _playRate * player.getSpeed();
+        outRequest._bAnchorRootMotion = _bExtractRootMotion;
+        return true;
+    }
+
     bool SkeletalAnimatorComponent::isAnimationActive() const
     {
         const bool bPlaying = _graphPlayer.getPlayer().getCurrentPlayable() != nullptr;
@@ -399,10 +449,30 @@ namespace sw
         for ( LayerState& layer : _listLayer )
             layer._player.update( deltaSeconds, &_listFiredNotify );
 
-        const AnimPlayer& player   = _graphPlayer.getPlayer();
-        const AnimClip*   pCurrent = static_cast<const AnimClip*>( player.getCurrentPlayable() );
-        const AnimClip*   pNext    = static_cast<const AnimClip*>( player.getNextPlayable() );
-        const float32     alpha    = player.getBlendAlpha();
+        // 페이드가 다른 페이드로 끊기면 플레이어는 섞이던 한 칸을 버린다(최대 절반이 한 프레임에 사라져 튄다). 끊긴 순간의 포즈(지난 기본 포즈)를
+        // 새 페이드 길이 동안 지금 포즈 위에서 사라지게 해 이어 붙인다 — 상태가 짧게 오가도 포즈는 이어진다.
+        const AnimPlayer& player = _graphPlayer.getPlayer();
+        if ( player.getInterruptCount() != _seenInterruptCount )
+        {
+            _seenInterruptCount = player.getInterruptCount();
+            if ( _bLastBasePoseValid == SW_TRUE )
+            {
+                _carryOverPose     = _lastBasePose;
+                _carryOverElapsed  = 0.0f;
+                _carryOverDuration = MathUtil::max( player.getFadeDuration(), 1.0e-3f );
+                _bCarryingOver     = SW_TRUE;
+            }
+        }
+        else if ( _bCarryingOver == SW_TRUE )
+        {
+            _carryOverElapsed += deltaSeconds;
+            if ( _carryOverElapsed >= _carryOverDuration )
+                _bCarryingOver = SW_FALSE;
+        }
+
+        const AnimClip* pCurrent = static_cast<const AnimClip*>( player.getCurrentPlayable() );
+        const AnimClip* pNext    = static_cast<const AnimClip*>( player.getNextPlayable() );
+        const float32   alpha    = player.getBlendAlpha();
 
         // 루트 모션 — 두 칸의 움직임을 섞임 가중치로 섞는다.
         _rootMotionDelta = BoneTransform{};
@@ -458,23 +528,22 @@ namespace sw
         return listBone;
     }
 
-    void SkeletalAnimatorComponent::sampleClipIntoPose( const AnimClip& clip, float32 time, const Skeleton& skeleton, Pose& inoutPose )
+    void SkeletalAnimatorComponent::sampleClipIntoPose( const AnimClip& clip, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask )
     {
-        if ( clip.sampleTracks( time, _scratchTrackPose ) == false )
-            return;
         const vector<int32>& listTrackToBone = getTrackMap( clip, skeleton );
-        AnimClip::copyTracksToPose( _scratchTrackPose, listTrackToBone, inoutPose );
-        // 루트 모션을 뽑으면 그 본은 클립 시작 자리에 묶는다 — 움직임은 오브젝트가 맡는다.
-        const int32 rootTrack = clip.getRootMotionTrack();
-        if ( _bExtractRootMotion == SW_TRUE && rootTrack >= 0 && listTrackToBone[static_cast<size_t>( rootTrack )] >= 0 )
+        // 본 LOD — 빠진 본의 트랙은 코덱이 풀지 않고(ACL 트랙 건너뛰기) 포즈에도 옮기지 않는다(레퍼런스로 부모를 따른다).
+        const uint8* pTrackMask = nullptr;
+        if ( pBoneMask != nullptr )
         {
-            const uint32        rootBone = static_cast<uint32>( listTrackToBone[static_cast<size_t>( rootTrack )] );
-            BoneTransform       anchored = inoutPose.getBoneTransform( rootBone );
-            const BoneTransform anchor   = clip.getRootMotionAnchor();
-            anchored._translation        = anchor._translation;
-            anchored._rotation           = anchor._rotation;
-            inoutPose.setBoneTransform( rootBone, anchored );
+            _listScratchTrackMask.resize( listTrackToBone.size() );
+            for ( size_t trackIndex = 0; trackIndex < listTrackToBone.size(); ++trackIndex )
+            {
+                const int32 boneIndex             = listTrackToBone[trackIndex];
+                _listScratchTrackMask[trackIndex] = ( boneIndex >= 0 && pBoneMask[static_cast<uint32>( boneIndex )] != 0 ) ? SW_TRUE : SW_FALSE;
+            }
+            pTrackMask = _listScratchTrackMask.data();
         }
+        (void)clip.samplePose( time, listTrackToBone, inoutPose, _scratchTrackPose, _bExtractRootMotion == SW_TRUE, pTrackMask );
     }
 
     void SkeletalAnimatorComponent::refreshLayerMask( LayerState& layer, const Skeleton& skeleton )
@@ -507,16 +576,21 @@ namespace sw
         const AnimPlayer& player   = _graphPlayer.getPlayer();
         const AnimClip*   pCurrent = static_cast<const AnimClip*>( player.getCurrentPlayable() );
         const AnimClip*   pNext    = static_cast<const AnimClip*>( player.getNextPlayable() );
+        const uint8*      pMask    = unit.findBoneLodMask();
 
         // pose 는 유닛이 레퍼런스(또는 리더 포즈)로 채워 둔 상태다. 지금 칸을 그 위에 샘플하고, 페이드 중이면 다음 칸과 섞는다.
         if ( pCurrent != nullptr )
-            sampleClipIntoPose( *pCurrent, player.getCurrentTime(), skeleton, pose );
+            sampleClipIntoPose( *pCurrent, player.getCurrentTime(), skeleton, pose, pMask );
         if ( pNext != nullptr )
         {
             _scratchPose.setToReference( skeleton );
-            sampleClipIntoPose( *pNext, player.getNextTime(), skeleton, _scratchPose );
+            sampleClipIntoPose( *pNext, player.getNextTime(), skeleton, _scratchPose, pMask );
             Pose::blend( pose, _scratchPose, player.getBlendAlpha(), pose );
         }
+        if ( _bCarryingOver == SW_TRUE && _carryOverPose.getBoneCount() == pose.getBoneCount() )
+            Pose::blend( _carryOverPose, pose, MathUtil::saturate( _carryOverElapsed / _carryOverDuration ), pose );
+        _lastBasePose       = pose;
+        _bLastBasePoseValid = SW_TRUE;
 
         for ( LayerState& layer : _listLayer )
         {
@@ -524,7 +598,7 @@ namespace sw
                 continue;
             refreshLayerMask( layer, skeleton );
             _scratchLayerPose.setToReference( skeleton );
-            sampleClipIntoPose( *layer._clip, layer._player.getCurrentTime(), skeleton, _scratchLayerPose );
+            sampleClipIntoPose( *layer._clip, layer._player.getCurrentTime(), skeleton, _scratchLayerPose, pMask );
             if ( layer._desc._blend == AnimLayerBlend::Override )
             {
                 Pose::blendMasked( pose, _scratchLayerPose, layer._desc._weight, layer._listBoneWeight.data(), pose );
@@ -539,8 +613,18 @@ namespace sw
         if ( _sequencerClip != nullptr && _sequencerWeight > 0.0f )
         {
             _scratchPose.setToReference( skeleton );
-            sampleClipIntoPose( *_sequencerClip, _sequencerTime, skeleton, _scratchPose );
+            sampleClipIntoPose( *_sequencerClip, _sequencerTime, skeleton, _scratchPose, pMask );
             Pose::blend( pose, _scratchPose, _sequencerWeight, pose );
+        }
+
+        // 모프 타깃 커브 — 이름이 그리는 메시의 모프 타깃과 같은 커브는 그 가중치가 된다(임포트가 glTF weights 채널을 타깃 이름의 커브로 싣는다).
+        if ( unit.getMorphTargetCount() == 0 )
+            return;
+        for ( size_t curveIndex = 0; curveIndex < _listCurveName.size(); ++curveIndex )
+        {
+            const int32 targetIndex = unit.findMorphTargetIndex( _listCurveName[curveIndex] );
+            if ( targetIndex >= 0 )
+                unit.addMorphWeight( static_cast<uint32>( targetIndex ), _listCurveValue[curveIndex] );
         }
     }
 } // namespace sw
