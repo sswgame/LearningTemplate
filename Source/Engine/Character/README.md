@@ -19,7 +19,7 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
 
 ## 데이터 — 모두 사람이 고치는 표, 모르는 이름은 로드 오류
 
-읽기는 `CharacterDataReader` 하나로 합니다 — 모르는 속성 · 원소 · 숫자가 아닌 숫자 칸 · 겹친 이름이 **오류**이고, 읽기 끝에 한꺼번에 로그로 내고 실패합니다.
+읽기는 `CharacterDataReader` 하나로 합니다(모르는 속성 판정은 `XmlNameCheck`) — 모르는 속성 · 원소 · 숫자가 아닌 숫자 칸 · 겹친 이름이 **오류**이고, 읽기 끝에 한꺼번에 로그로 내고 실패합니다.
 벡터는 `"x y z"`, 회전은 도 단위 `"피치 요 롤"`(`quaternion::createFromYawPitchRoll` 배치)입니다. 엔진 기본 표는 `Resource/engine/character/` 에 있습니다.
 
 | 파일 | 타입 | 내용 |

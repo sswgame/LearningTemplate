@@ -99,16 +99,6 @@ namespace sw
         /** @brief UTF-16 문자열을 UTF-8(sw::string)로 바꿉니다. */
         static string utf16ToUtf8( const utf16* pInput );
 
-        /** @brief UTF-16 문자열을 시스템 로캘 문자열로 바꿉니다. */
-        static string utf16ToLocale( const utf16* pInput );
-        /** @brief 시스템 로캘 문자열을 UTF-16 으로 바꿉니다. */
-        static wstring localeToUtf16( const utf8* pInput );
-
-        /** @brief 시스템 로캘 문자열을 UTF-8 로 바꿉니다. */
-        static string localeToUtf8( const utf8* pInput );
-        /** @brief UTF-8 문자열을 시스템 로캘 문자열로 바꿉니다. */
-        static string utf8ToLocale( const utf8* pInput );
-
         /** @brief UTF-8 문자 하나를 소문자로 바꿉니다(ASCII 만). */
         static constexpr utf8 toLowerChar( const utf8 ch ) { return ( 'A' <= ch && ch <= 'Z' ) ? static_cast<utf8>( ch + ( 'a' - 'A' ) ) : ch; }
 

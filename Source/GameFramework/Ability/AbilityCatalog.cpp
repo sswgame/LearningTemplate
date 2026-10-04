@@ -4,6 +4,7 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Ability/CombatAttributeSet.h"
@@ -49,14 +50,14 @@ namespace sw
                 }
 
                 const utf8* pOp = node.findAttribute( "op" );
-                if ( pOp != nullptr && AbilitySystemEnumUtil::parseModOp( string_view( pOp ), outModifier._op ) == false )
+                if ( pOp != nullptr && engine::getTypeRegistry().enumFromString( string_view( pOp ), outModifier._op ) == false )
                 {
                     SW_LOG_WARNING( "%#: effect '%#' has unknown modifier op '%#' - skipped", sourceName, pEffectId, pOp );
                     return false;
                 }
 
                 const utf8* pSource = node.findAttribute( "source" );
-                if ( pSource != nullptr && AbilitySystemEnumUtil::parseMagnitudeSource( string_view( pSource ), outModifier._magnitudeSource ) == false )
+                if ( pSource != nullptr && engine::getTypeRegistry().enumFromString( string_view( pSource ), outModifier._magnitudeSource ) == false )
                 {
                     SW_LOG_WARNING( "%#: effect '%#' has unknown magnitude source '%#' - skipped", sourceName, pEffectId, pSource );
                     return false;
@@ -297,7 +298,7 @@ namespace sw
         outDef._id = hashed_string( pId );
 
         const utf8* pDuration = node.findAttribute( "duration" );
-        if ( pDuration != nullptr && AbilitySystemEnumUtil::parseDurationPolicy( string_view( pDuration ), outDef._durationPolicy ) == false )
+        if ( pDuration != nullptr && engine::getTypeRegistry().enumFromString( string_view( pDuration ), outDef._durationPolicy ) == false )
         {
             SW_LOG_WARNING( "%#: effect '%#' has unknown duration policy '%#' - skipped", sourceName, pId, pDuration );
             return false;
@@ -312,13 +313,13 @@ namespace sw
             outDef._stackLimit = 1;
 
         const utf8* pStacking = node.findAttribute( "stacking" );
-        if ( pStacking != nullptr && AbilitySystemEnumUtil::parseStackingPolicy( string_view( pStacking ), outDef._stackingPolicy ) == false )
+        if ( pStacking != nullptr && engine::getTypeRegistry().enumFromString( string_view( pStacking ), outDef._stackingPolicy ) == false )
         {
             SW_LOG_WARNING( "%#: effect '%#' has unknown stacking policy '%#' - skipped", sourceName, pId, pStacking );
             return false;
         }
         const utf8* pExpiration = node.findAttribute( "stackExpiration" );
-        if ( pExpiration != nullptr && AbilitySystemEnumUtil::parseStackExpirationPolicy( string_view( pExpiration ), outDef._stackExpirationPolicy ) == false )
+        if ( pExpiration != nullptr && engine::getTypeRegistry().enumFromString( string_view( pExpiration ), outDef._stackExpirationPolicy ) == false )
         {
             SW_LOG_WARNING( "%#: effect '%#' has unknown stack expiration '%#' - skipped", sourceName, pId, pExpiration );
             return false;

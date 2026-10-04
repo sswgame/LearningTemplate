@@ -153,8 +153,14 @@ namespace sw
         [[nodiscard]] bool loadFromResource( string_view path );
         [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
         void               clear();
-        /** @brief 경로의 표를 한 번 읽어 프로세스 동안 나눠 씁니다(오브젝트 원소 상태가 같은 표를 본다). 읽지 못했으면 nullptr 입니다. 여러 스레드에서 불려도 됩니다. */
+        /**
+         * @brief 경로의 표를 한 번 읽어 나눠 씁니다(오브젝트 원소 상태가 같은 표를 본다). 읽지 못했으면 nullptr 입니다. 여러 스레드에서 불려도 됩니다.
+         * @details 돌려준 표는 GameFramework 모듈이 내릴 때까지 삽니다. 파일을 고치면 에디터 핫 리로드가 캐시("ElementRuleTable")로 새 표를 읽고
+         *          `getSharedReloadCount` 를 올립니다.
+         */
         static const ElementRuleTable* findShared( string_view path );
+        /** @brief `findShared` 의 표를 다시 읽은 횟수입니다. */
+        static uint32 getSharedReloadCount();
 
         /** @brief 깃발을 더합니다(이미 있으면 그 번호). 넘치면 −1 입니다. */
         int32 addFlag( const hashed_string& id );

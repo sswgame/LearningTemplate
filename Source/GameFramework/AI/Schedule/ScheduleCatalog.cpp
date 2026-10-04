@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Utility/Xml/XmlNameCheck.h"
 
 #include "GameFramework/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Data/GameDataXml.h"
@@ -57,28 +58,12 @@ namespace sw
                 return -1;
             }
 
-            template <size_t Count>
-            static bool isKnownName( const utf8* pName, const utf8* const ( &arrKnown )[Count] )
-            {
-                for ( const utf8* pKnown : arrKnown )
-                {
-                    if ( StringUtil::equals( pName, pKnown, true ) )
-                        return true;
-                }
-                return false;
-            }
-
             /** @brief 표에 없는 속성마다 경고합니다. @p bCondition 이면 조건 속성도 받습니다. */
             template <size_t Count>
             static void warnUnknownAttributes( const XmlNode& node, const utf8* const ( &arrKnown )[Count], bool bCondition, string_view sourceName )
             {
-                for ( XmlAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-                {
-                    const utf8* pName  = attribute.getName();
-                    const bool  bKnown = isKnownName( pName, arrKnown ) || ( bCondition && ScheduleCondition::isConditionAttribute( pName ) );
-                    if ( bKnown == false )
-                        SW_LOG_WARNING( "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), pName );
-                }
+                (void)XmlNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning, // 경고만 하고 읽기를 잇는다
+                                                             bCondition ? &ScheduleCondition::isConditionAttribute : nullptr );
             }
 
             static int32 readClock( const XmlNode& node, const utf8* pName, int32 fallback, string_view sourceName, string_view ownerName, bool& inoutbValid )

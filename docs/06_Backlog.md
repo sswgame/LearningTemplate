@@ -362,8 +362,8 @@ cd build/Ninja-Debug/Bin
   - 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
   - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
   - 네트워크: 회로 상태 바이트(`GimmickCircuit::saveState`)를 `NetClientServer` 스냅샷 · `RollbackSession` 상태에 싣기(모양은 준비됨, 배선 없음).
-  - `InteractorComponent` 는 틱마다 씬의 `InteractableComponent` 를 모두 훑는다 — 하는 쪽이 많아지면 공간 등록부로. `InteractionCatalog` · `ElementRuleTable` 의
-    `findShared` 는 처음 읽은 표를 계속 쓴다(데이터 핫 리로드 없음).
+  - `InteractorComponent` 는 틱마다 씬의 `InteractableComponent` 를 모두 훑는다 — 하는 쪽이 많아지면 공간 등록부로. `SmartObjectComponent` 는 틱도
+    `onPropertyChanged` 도 없어 상호작용 표를 고쳐도(핫 리로드) 자리 정의를 다시 찾지 않는다 — `InteractionCatalog::getSharedReloadCount` 를 볼 자리를 정한다.
   - 카트 트랙(`KartTrack`)은 거리를 수평(XZ) 길이로 재서 공용 `SplinePath` 로 옮기지 않았다(옮기면 랩 · 고스트 값이 바뀐다 — 옮길지 정한다).
 
 ### 1-7. Core · 태스크
@@ -382,6 +382,8 @@ cd build/Ninja-Debug/Bin
 - **종료 끝까지 남는 sw 블록이 있다**(Debug App `-dx12 -gv_profileFrames=5`, 2026-10-04): 모든 서비스를 내린 뒤에도 Scene ~57 KB(3 블록) · Unknown ~18 KB(15) ·
   Mesh 0.7 KB(6) · Material 0.2 KB(4) 가 살아 있다(`[MemoryLeak] shutdown - tag …`). CRT 검사는 합계만 봐 "no CRT leaks" 라고 한다. 정적 캐시인지 진짜 누수인지
   가린다 — 세부 추적(`setDetailedTrackingEnabled`)을 켜고 `destroyAll` 뒤 `getTopCallStacks( LiveBytes )`.
+  그중 Mesh 2 블록은 등록부 밖 함수 정적 표(내장 도형 · 9-슬라이스 메시)의 버킷이었다 — 표를 등록부에 올리고 비우기가 버킷까지 돌려줘 사라졌다(2026-10-05,
+  `41154e107` 기준 Mesh 448 B · 4 → 192 B · 2). 남은 Mesh 2 · Material 8 · Scene · Unknown 은 그대로다. 파괴 병합(`a8b1ed7ae`) 뒤에는 Mesh 가 6.3 KB · 4 블록이다 — 그 몫을 가린다.
 
 ### 1-8. 성능 (재고 나서 정할 것)
 
@@ -1335,7 +1337,7 @@ cd build/Ninja-Debug/Bin
   시퀀서 이벤트는 `SequencePlayerComponent::registerSequenceEvent` 로 받는다.
 
 - **`GameEvents.h` 의 이벤트는 프레임워크가 그 자리에서 낸다**(세이브 · 로드 완료 = `GameInstanceBase::save/loadStateToFile`, 레벨 로드 요청 · 완료 =
-  `requestFirstScene` · `requestEntranceScene`, 일시정지 = `GameModeStateMachine`). `SceneManager` 를 직접 부른 로드는 LevelLoad 이벤트를 내지 않는다.
+  `requestFirstScene` · `requestEntranceScene`). `SceneManager` 를 직접 부른 로드는 LevelLoad 이벤트를 내지 않는다.
   낼 자리가 없는 이벤트는 두지 않는다.
 - **스프라이트 클립 키(`transformKeys`)는 클립 타임라인의 초이고 루트(primary) 스프라이트에는 적용하지 않는다**(경고) — 움직일 스프라이트는 루트 아래에.
 

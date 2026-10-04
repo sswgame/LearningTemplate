@@ -96,7 +96,11 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
     등록부는 **포인터만** 든다. 모듈 DLL 이 내려가면 그 포인터도 가상 함수 표도 같이 사라지므로,
     내리지 않고 사라지면 다음 비우기가 죽은 코드로 뛴다(엔진 쪽 "Statics die on hot reload" 와 같은 함정).
     두고 가면 종료가 **이름으로** 경고한다 — 등록 시점에 이름을 복사해 두므로 그 진단은 죽은
-    포인터를 건드리지 않는다.
+    포인터를 건드리지 않는다. GameFramework 의 데이터 표 캐시(`GameDataCache` — 상호작용 · 원소 규칙 표)는 게임 서비스가 묶이고 풀릴 때 이 짝을 부른다.
+  - **"같은 키면 같은 객체, 마지막 사용자가 놓으면 사라짐" 표는 `WeakInternTable` 하나다.** 경로로 읽는 에셋(`SharedAssetTable` — 스켈레톤 · 클립 · 리그 ·
+    스프라이트 클립 · 캐릭터 데이터)도, 코드로 짓는 값(`WeakInternCache` — 내장 도형 `MeshUtil::acquirePrimitive` · 9-슬라이스 메시 · 스프라이트 텍스처 인스턴스)도
+    이것 위에 선다. 함수 정적 표를 등록부 밖에 따로 두지 않는다 — `WeakInternCache` 는 `IAssetCache` 라 `AssetManager` 가 생성자에서 내장 캐시로 올리고(목록
+    `_listBuiltInAssetCache` 하나), 종료의 비우기가 그 표의 약한 칸까지 지운다.
   - **티어 때문에 Resource 에 사는 것 셋**: `SpriteClipCache` · `AnimationAssetCache`(스켈레톤 · 애니메이션 클립)는 `IAssetCache` 를 구현하므로 Animation(티어 2)이 아니라 Resource(티어 4)에,
     `LocalizationReloadCache`(로컬라이제이션 파일의 핫 리로드 창구 — 글은 `LocalizationManager` 가 갖고 `clear()` 는 아무것도 지우지 않는다)도 같은 이유로 여기에,
     `PackCompressionUtil` 은 팩 타입(`ResourcePackTypes.h`)을 쓰므로 Compression(티어 0)이 아니라 Resource 에 둔다.
@@ -106,7 +110,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   감시 · 섀도 복사 · 다시 로드(`LiveReloadManager`)는 App 의 `App/Module`, 에셋 파일 감시(`FileWatchDispatcher`)는 에디터의
   `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleUnloadListener`)은 `Core/Module` 이다.
 - **Module/** 의 `ModuleCatalog` 는 모듈 매니페스트(`<모듈>.module.json`)를 읽고 켜짐 · 플랫폼 · 구성 · 의존 · 버전 · 순환을 보고 적재 순서를 정한다(App 이 쓴다 — CMake 와 같은 규칙).
-- **Utility/**: Format (KeyValueFile), Json, Xml, CommandStack, Debug, `GameTimeScale`(게임 시간 배율 `gv_timeScale` — 호스트의 프레임 시간이
+- **Utility/**: Format (KeyValueFile), Json, Xml(데이터 XML 의 "모르는 이름" 검사는 `XmlNameCheck` 하나 — 판정 · 문구 `<원소> has unknown attribute 'x'` 가 같고, 데이터 오류면 Error · 읽기를 잇는 로더면 Warning 을 고른다), CommandStack, Debug, `GameTimeScale`(게임 시간 배율 `gv_timeScale` — 호스트의 프레임 시간이
   곱한다), `GameAutoplay`(게임의 자동 플레이 스위치 계약 — `SW_GAME_AUTOPLAY`, `Source/Games/README.md`), Console(개발 콘솔 — 아래), TileMap(타일셋 · 규칙 타일 해석 · 충돌 사각형 병합 · 외곽선 · 이동 비용) — 진짜 최하위
   헬퍼만 둡니다.
   `Debug/MemoryBudgetMonitor` 는 메모리 태그 예산(`Config/Engine/MemoryBudget.json`, 모르는 태그 · 키는 오류) · 프레임 끝 예산 검사 · `-gv_memoryReport` 표 ·

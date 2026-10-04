@@ -199,7 +199,7 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 
 glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로의 `models/<이름>.mesh`(스킨드 모델이면 옆 폴더의 스켈레톤 · 부착 메시 · 클립까지)로
 임포트합니다(`ModelImporter`, cgltf + meshoptimizer).
-런타임은 `.mesh` 만 읽고(`MeshCache`), `MeshComponent::_meshId` 에 그 경로를 적거나 `PrimitiveStage::createModelObject` 로 세웁니다.
+런타임은 `.mesh` 만 읽고(`MeshCache`), `MeshComponent::_meshId` 에 그 경로를 적습니다.
 
 - **변환**: (스킨 없는 모델) 기본 씬의 노드 계층을 월드 변환째 한 메시로 합칩니다. glTF(오른손 · +Y 위 · 앞 +Z)를 엔진(왼손 · +Y 위 · 앞 +Z, 앞면 = 시계 방향)으로
   옮기려고 **X 를 뒤집고 삼각형마다 감김을 뒤집습니다**(노드가 거울상이면 한 번 더). 노멀이 없으면 면 노멀, 색은 baseColorFactor × COLOR_0.
@@ -284,7 +284,7 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
   오버레이(시각화 · 피킹 · 기즈모)는 호스트가 그리는 것과 같은 카메라로 투영한다 — Play 중에는 게임 카메라다.
 - **Auto**(자동 플레이): 게임이 `SW_GAME_AUTOPLAY` 로 등록했으면 툴바에 서고, 누르면 그 게임의 자동 플레이 전역 변수를 켜고 끈다
   (`GameAutoplay::setOn` — 전역 변수 표를 거쳐 써서 패널 · 콘솔과 같은 값이다). 자체 시험 `gameView.autoplayButton`.
-- **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값(`RuntimeHud::publishSnapshot` 등)을 캔버스 왼쪽 아래에 키 순서로 그린다.
+- **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값을 캔버스 왼쪽 아래에 키 순서로 그린다.
 - 시험: `EditorPlaySessionTest`(Simulate · Step N · 카메라에서 시작), `DebugDrawQueueTest`, `DebugOverlayStateTest`, `FixedTimestepTest.TimeScale…`,
   에디터 자체 시험 `gameView.debugDraw` · `gameView.debugOverlay`.
 

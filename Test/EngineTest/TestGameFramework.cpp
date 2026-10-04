@@ -14,7 +14,6 @@
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
-#include "Engine/Object/Component/2D/TileColliderComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -55,7 +54,6 @@
 #include "GameFramework/UI/DamageNumberComponent.h"
 #include "GameFramework/UI/DialogueRunnerComponent.h"
 #include "GameFramework/UI/HealthBarComponent.h"
-#include "GameFramework/UI/RuntimeHud.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -1702,34 +1700,6 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknown
 }
 
 /**
- * @brief [GameFrameworkTest] RuntimeHud 범용 게이지 맵 등록/조회/클리어 검증
- */
-SW_TEST_CASE( GameFrameworkTest, RuntimeHud_GenericGaugeMapSystem )
-{
-    RuntimeHud hud;
-    SW_EXPECT_TRUE( hud.isVisible() );
-    SW_EXPECT_EQUAL( size_t( 0 ), hud.getAllGauges().size() );
-
-    // 1) 게이지 등록 및 조회
-    hud.setGauge( "player_shield", 0.75f, 0.1f, 0.1f, 0.2f, 0.05f );
-    hud.setGauge( "turbo_boost", 0.5f );
-
-    SW_EXPECT_EQUAL( size_t( 2 ), hud.getAllGauges().size() );
-    SW_EXPECT_NEAR_EQUAL( 0.75f, hud.getGaugeFill( "player_shield" ), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, hud.getGaugeFill( "turbo_boost" ), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, hud.getGaugeFill( "unknown_gauge" ), 1e-4f );
-
-    const HudGauge* pShield = hud.getGauge( "player_shield" );
-    SW_ASSERT_NOT_NULL( pShield );
-    SW_EXPECT_NEAR_EQUAL( 0.1f, pShield->_x, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.2f, pShield->_w, 1e-4f );
-
-    // 2) 게이지 비우기
-    hud.clearGauges();
-    SW_EXPECT_EQUAL( size_t( 0 ), hud.getAllGauges().size() );
-}
-
-/**
  * @brief [GameFrameworkTest] LIFO 컨텍스트 스택 및 모달/비모달 동시 입력 검증
  */
 SW_TEST_CASE( GameFrameworkTest, EnhancedInput_LIFOStack_ModalAndNonModal )
@@ -3199,7 +3169,6 @@ SW_TEST_CASE( GameFrameworkTest, BeginPlayAddsNoOwnershipTags )
     manager.beginPlay();
 
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<BoxCollider2DComponent>( manager, "Collider" ) );
-    SW_EXPECT_TRUE( spawnsWithoutTagComponent<TileColliderComponent>( manager, "TileCollider" ) );
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<SpriteComponent>( manager, "Sprite" ) );
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<SpriteAnimatorComponent>( manager, "Animator" ) );
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<DontDestroyOnLoadComponent>( manager, "Persistent" ) );

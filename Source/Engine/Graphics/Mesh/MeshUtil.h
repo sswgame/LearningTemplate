@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    class IAssetCache;
     class Mesh;
 
     /**
@@ -101,5 +102,8 @@ namespace sw
          *          않으므로 디바이스가 내려갈 때 붙들고 있는 것이 없습니다. 정점 색은 흰색입니다(`PrimitiveVertexColor::White`).
          */
         static shared_ptr<Mesh> acquirePrimitive( string_view meshId );
+
+        /** @brief `acquirePrimitive` 의 표를 에셋 캐시 등록부에 보이는 창구입니다("PrimitiveMesh" — 진단 · 비우기). `AssetManager` 가 올립니다. */
+        static IAssetCache& getPrimitiveCache();
     };
 } // namespace sw

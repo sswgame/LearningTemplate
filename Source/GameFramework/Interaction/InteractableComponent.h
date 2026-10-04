@@ -54,7 +54,9 @@ namespace sw
          */
         bool computeAlignmentPoint( float3& outPosition, float32& outYaw ) const;
 
-        void    setInteractionId( const hashed_string& id );
+        void setInteractionId( const hashed_string& id );
+        /** @brief 상호작용 표 경로를 바꾸고 정의를 다시 찾습니다. 빈 글이면 공용 기본표(`InteractionCatalog::kDefaultPath`)입니다. */
+        void    setCatalogPath( string_view path );
         void    setEnabled( bool bEnabled ) { _bEnabled = bEnabled; }
         bool    isEnabled() const { return _bEnabled; }
         int32   getPriority() const { return _priority; }
@@ -89,6 +91,7 @@ namespace sw
 
         InteractionDef        _overrideDef;
         const InteractionDef* _pDef;
+        uint32                _seenCatalogReloadCount; ///< 정의를 찾을 때의 `InteractionCatalog::getSharedReloadCount` — 달라지면 다시 찾는다
         atomic<uint8>         _bHighlightRequested;
         uint8                 _bHasOverride;
     };

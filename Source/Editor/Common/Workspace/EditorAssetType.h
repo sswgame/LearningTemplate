@@ -58,7 +58,13 @@ namespace sw::editor
      */
     struct AssetReloadRoute
     {
-        const utf8*             _pCacheKindName{ nullptr };  ///< 다시 읽을 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아닙니다
+        /**
+         * @brief 모듈이 올린 캐시라 에디터가 이름을 모르는 줄의 캐시 이름입니다(빈 글) — 그 경로를 든 캐시(`IAssetCache::isCached`)가 모두 다시 읽습니다.
+         * @details GameFramework 의 데이터 표 캐시(`GameDataCache` — 상호작용 · 원소 규칙 표)는 게임 서비스가 묶일 때 등록부에 오른다. 에디터는 GameFramework 를 모른다.
+         */
+        static constexpr const utf8* kAnyCacheHoldingPath = "";
+
+        const utf8*             _pCacheKindName{ nullptr };  ///< 다시 읽을 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아닙니다, 빈 글이면 `kAnyCacheHoldingPath`
         AssetSourceImporterFunc _pfnImportSource{ nullptr }; ///< 캐시가 읽기 전에 돌리는 임포터. nullptr 이면 바로 캐시가 다시 읽습니다
     };
 } // namespace sw::editor
