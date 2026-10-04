@@ -40,7 +40,7 @@ namespace sw
     {
         static constexpr uint32 kClientServer = 1;
         static constexpr uint32 kLockstep     = 3;
-        static constexpr uint32 kTurnRelay    = 1;
+        static constexpr uint32 kTurnRelay    = 2;
         static constexpr uint32 kMmo          = 1;
         static constexpr uint32 kDestruction  = 1;
     };
