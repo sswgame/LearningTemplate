@@ -128,6 +128,9 @@ cd build/Ninja-Debug/Bin
   주 카메라로 한 번 정하고, GPU `instancesort` 는 뷰마다 인스턴스 번호로 되돌리기만 한다. 추가 뷰가 주 카메라와 크게 다른 쪽을 보면 겹친 투명 물체의 앞뒤가 틀린다 —
   뷰마다 CPU 정렬 키를 따로 두거나 뷰별 키를 GPU 정렬에 다시 넣는다.
 
+- **모든 머티리얼(20 개)의 `UseNormalMap` 정적 스위치 키워드 `MATERIAL_NORMALMAP` 을 읽는 셰이더가 없다**(에셋 검증 `material-dead-switches` 경고).
+  노멀 맵을 셰이더에 넣거나 스위치를 지운다 — 지금은 퍼뮤테이션 표에만 있는 죽은 칸이다.
+
 - **`.hdr` 원본 임포트가 없다** — 지금 임포트는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
 - **창(백버퍼)을 읽는 창구가 없어 창 쪽 반전을 시험이 못 본다.** `-gv_screenshot` 은 오프스크린 텍스처를 읽으므로 창으로 옮기는 단계(GL 캡처 블릿)의
@@ -184,6 +187,9 @@ cd build/Ninja-Debug/Bin
   내보내는 일이다. 쓰는 모듈이 생기면 그때.
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
+
+- **아무도 이름을 부르지 않는 메시가 45 개다**(에셋 검증 `orphans` 경고 — NileCity 건물 · StarSkirmish 탈것 · ThemePark 코스터 조각 등 Kenney 키트에서 들여온 것).
+  쓸 계획이 없으면 `models_raw/` 원본과 함께 지우고, 코드가 이름을 조립해 부르는 것이면 규칙의 `exclude_patterns` 에 적는다.
 
 - **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`. (1) 메뉴 UI(런타임 UI 프레임워크 뒤) ·
   `UserSettingsPanel` 대신 키를 눌러 받는 리바인딩 창. (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 그림자 · 시야 거리 · 후처리 ·
@@ -311,6 +317,9 @@ cd build/Ninja-Debug/Bin
   드론을 걷고 감독을 처음부터 돈다(quick-gf 의 상태 v1 은 웨이브 번호를 실었다 — v2 는 처치 수뿐). 감독 상태(주기 · 시간 · 단계 · 풀 쿨다운 · 예산 · 난수)를
   `writeState` · `readState` 로 싣고 Shooter3D 가 같이 쓰면 웨이브까지 이어진다.
 
+- **Shooter3D 외형 데이터(`game/shooter3d/data/appearance/`)가 없는 메시 · 프리팹 · 소켓 · 머티리얼 27 곳을 가리킨다**(char-appear 의 자리 채움 데이터).
+  에셋 검증 `references-exist` 가 이 폴더를 빼 두었다(`Config/Editor/AssetValidationRules.json`) — Shooter3D 통합이 실제 에셋을 넣으면 그 제외를 지운다.
+
 - **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
   스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
 - **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** (1) `CameraControllerComponent`(Overworld) · `UnitStatsComponent`(ActionCombat)는 장르 무관이라
@@ -397,6 +406,13 @@ cd build/Ninja-Debug/Bin
   수 없다. 상용 엔진처럼 Shipping 도 `/Z7`(또는 `/Zi`) + `/DEBUG:FULL` 로 PDB 를 만들고 패키지에서는 빼서 심볼 저장소에 넣는 단계가 필요하다
   (`Source/Engine/Telemetry/README.md` "심볼 · 빌드 id 짝짓기"). 빌드 시간 · 캐시에 닿는 결정이라 미뤘다 — 정하면 `ModuleBuildIdTest` · `CrashBundleTest` 의
   `SW_SHIPPING` 예외를 지운다.
+- **커버리지 안내 퍼징(libFuzzer)은 Windows 에서 엔진과 링크되지 않는다** — `clang_rt.fuzzer-x86_64.lib` 가 정적 CRT(/MT)뿐이라 동적 CRT(/MD) 엔진과 LNK2038.
+  `LoaderFuzzTest`(시드 고정 변이)가 같은 대상 표(`Test/EngineTest/LoaderFuzzTargets.cpp`)를 돈다. 리눅스 clang 에서 `LLVMFuzzerTestOneInput` 하나로 그 표를 붙이고
+  ASan 과 같이 돌린다(서드파티 디코더만 떼어 /MT 로 돌리면 Windows 에서도 된다 — stb_vorbis 를 그렇게 확인했다).
+- **stb_vorbis 1.22 는 조작한 설정 헤더(코드북 항목 수)로 수백 MB ~ GB 를 할당한다**(libFuzzer OOM, 주석 헤더 길이 검사 뒤에도 남는다). 죽지는 않지만
+  4 KB 파일 하나로 메모리를 다 쓸 수 있다 — `stb_vorbis_alloc` 고정 버퍼로 상한을 두거나 vcpkg 판을 올린다(CVE-2023-4567x 묶음이 고쳐진 판).
+- **골든 이미지 기준은 한 PC(RTX 3070 Ti Laptop · 그 드라이버)에서 뜬 것이다** — 다른 GPU · 드라이버는 허용 오차를 넘을 수 있다. 다른 기계에서 지면 그 기계에서 `--record` 로 뜬
+  기준과 견줘 차이가 드라이버인지 회귀인지 가른 뒤, 기계별 기준(`<백엔드>.<기계>.json`)이 필요한지 정한다.
 
 
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
@@ -407,9 +423,12 @@ cd build/Ninja-Debug/Bin
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
+- **GL 백엔드 `[Error] bindGraphicsContext failed - the context is held by another thread`**(2026-10-04, NileCity 자동 플레이 320×180 Debug, 골든 기록 중
+  한 번 — 같은 인자 5 회 재실행은 깨끗). GL 컨텍스트를 렌더 스레드와 다른 스레드가 같이 잡는 순간이 있다. 골든 러너가 진 판의 App 출력을
+  `%TEMP%/sw_golden_<백엔드>_<회차>_app.log` 로 남기니, 다시 보이면 그 로그로 어느 스레드 · 단계인지 본다.
+
 - **`NetworkThreadTest.ConnectionsSurviveStalledGameThread` 의 50 ms 왕복 단언이 `-j 4` 부하에서 한 번 졌다**(2026-10-04 Shipping, 다시 돌리면 통과).
   시간 상한 단언은 부하에 진다 — 다시 지면 상한을 늘리지 말고 "멈춘 게임 스레드에도 연결이 산다" 를 시간 대신 순서로 볼 수 있는지 본다.
-- **`-gv_profileFrames=90000` 실행이 약 60 초에 종료 0 · 스크린샷 없이 끝났다**(2026-10-04). 프로파일 세션에 시간 상한이 있는지부터 본다.
 
 - **`Meta = "Units=m"` 철자를 `Units = m` 으로 다시 쓴다**(엔진 · GameFramework · 게임 헤더 130 줄 남짓 — 병렬 워크트리가 같은 헤더를 고치는 동안이라
   리플렉션 확장에서는 하지 않았다). `Units =` 는 단위 표(`ReflectUnits.h`)로 철자를 검사하고 `Meta` 는 검사하지 않는다. 다 옮긴 뒤 파서가 `Meta` 안의
@@ -523,6 +542,8 @@ cd build/Ninja-Debug/Bin
 - **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` ·
   `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
   `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.
+- **`-gv_profileFrames=N` 은 프레임 수다** — VSync 가 꺼진 가벼운 장면은 1500 fps 라 90000 프레임이 1 분에 끝난다(시간 상한은 없다). 시간으로 재려면
+  `-gv_profileSeconds=S`(먼저 닿는 쪽이 끝낸다 — soak 이 쓴다).
 - **프레임당 힙 할당**은 `-gv_profileFrames` 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 재지 말 것).
 - **씬 로드 측정**: `Scripts/dev/GenerateStressScene.py` 로 큰 씬(도형 섞기) → 게임 프리셋(`Config/Game/Empty.json`) `_startupScene` → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지
   않으므로 쿠킹 효과는 `--cooked-dir=<repo>/Resource` 로 쿠킹하고 재고 지운다. `[SceneLoad]` 가 `.xml` 을 가리키면 쿠킹본을 안 읽은 것이다.
@@ -655,6 +676,9 @@ cd build/Ninja-Debug/Bin
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
+
+- **파이썬 도구의 단위 시험은 `Test/PythonTest/Test*.py`** — 파일을 놓으면 CTest 항목(`PythonTest_<이름>`, `nogpu`)이다. Blender 애드온처럼 바깥 모듈(bpy)을
+  쓰는 것은 그 import 를 한 파일에 가두고 나머지를 시험한다(`TestBlenderExporter` 가 빈 패키지 모듈을 세워 읽는다).
 
 - **주석 정리에서 마커(예전 · 날짜 · 백로그)로만 뽑으면 과거형 경위("~를 각자 들고 있었습니다")가 영역마다 ~10 % 남는다** — `(었|았|였)(는데|다|습니다)` 로 한 번 더 훑는다.
   빌드가 도는 동안 헤더를 고치면 PCH 크기 불일치("modified since the precompiled header")로 빌드가 진다 — 편집과 빌드를 겹치지 말 것.

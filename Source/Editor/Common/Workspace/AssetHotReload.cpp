@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -157,6 +158,10 @@ namespace sw::editor
 
         if ( relPath.empty() )
             return;
+
+        // 바뀐 파일(에디터 저장 · 임포트 산출물 · 바깥 도구의 쓰기)마다 검증 규칙을 돌린다 — 결과는 로그로 남는다.
+        if ( EditorContext* pContext = EditorContext::get(); pContext != nullptr )
+            pContext->getAssetValidation().requestValidation( relPath );
 
         (void)reloadChangedAsset( relPath );
     }

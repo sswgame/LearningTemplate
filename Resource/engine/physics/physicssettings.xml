@@ -3,7 +3,11 @@
 	코드는 이름으로만 고른다(PhysicsSettings::findLayerIndex · findMaterial). 모르는 이름 · 겹친 이름은 읽을 때 오류다.
 	충돌 목록은 대칭으로 읽는다 — 한쪽에만 적어도 둘이 부딪힌다.
 -->
-<PhysicsSettings _gravity="0,-9.81,0" _gravity2D="0,-9.81" _fixedTimeStep="0.016666668" _maxStepsPerFrame="4" _subStepCount2D="4">
+<PhysicsSettings _gravity="0,-9.81,0"
+                 _gravity2D="0,-9.81"
+                 _fixedTimeStep="0.016666668"
+                 _maxStepsPerFrame="4"
+                 _subStepCount2D="4">
 	<_listLayer>
 		<PhysicsLayerDef _name="Default">
 			<_listCollidesWith>

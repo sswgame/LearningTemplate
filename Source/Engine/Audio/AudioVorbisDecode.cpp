@@ -50,13 +50,104 @@
 #undef temp_block_array
 #undef temp_free
 
+#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief stb_vorbis 에 넘기기 전에 Vorbis 주석 헤더(두 번째 패킷)의 길이 칸들이 패킷 안에 들어오는지 봅니다.
+         * @details stb_vorbis 1.22 는 주석 헤더의 공급자 길이 · 주석 수 · 주석 길이를 패킷 크기와 대조하지 않는다. 큰 값이면 할당이 실패하고,
+         *          실패한 뒤 정리(`vorbis_deinit`)가 아직 채우지 않은 주석 칸까지 `free` 해 프로세스가 죽는다(CVE-2023-45675 · 45676 · 45677 계열,
+         *          `LoaderFuzzTest` 가 찾았다). 서드파티를 고치지 않고 입구에서 막는다 — 길이가 패킷 밖을 가리키는 파일은 어차피 망가진 파일이다.
+         */
+        struct OggCommentHeaderGuard
+        {
+            static uint32 readUint32( const uint8* pData )
+            {
+                return static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
+                       ( static_cast<uint32>( pData[3] ) << 24 );
+            }
+
+            /** @brief 첫 논리 스트림의 @p packetIndex 번째 패킷을 페이지를 건너 모읍니다. 페이지가 잘렸거나 패킷이 끝나지 않으면 false 입니다. */
+            static bool collectPacket( const uint8* pBytes, size_t byteCount, uint32 packetIndex, vector<uint8>& outPacketBytes )
+            {
+                outPacketBytes.clear();
+                constexpr size_t kPageHeaderSize = 27;
+                size_t           pageOffset      = 0;
+                uint32           currentPacket   = 0;
+                while ( pageOffset + kPageHeaderSize <= byteCount )
+                {
+                    if ( Memory::compare( pBytes + pageOffset, "OggS", 4 ) != 0 )
+                        return false;
+                    const size_t segmentCount = pBytes[pageOffset + 26];
+                    if ( pageOffset + kPageHeaderSize + segmentCount > byteCount )
+                        return false;
+                    const uint8* pSegmentTable = pBytes + pageOffset + kPageHeaderSize;
+                    size_t       dataOffset    = pageOffset + kPageHeaderSize + segmentCount;
+                    for ( size_t segmentIndex = 0; segmentIndex < segmentCount; ++segmentIndex )
+                    {
+                        const size_t lacing = pSegmentTable[segmentIndex];
+                        if ( dataOffset + lacing > byteCount )
+                            return false;
+                        if ( currentPacket == packetIndex )
+                            outPacketBytes.insert( outPacketBytes.end(), pBytes + dataOffset, pBytes + dataOffset + lacing );
+                        dataOffset += lacing;
+                        if ( lacing < 255 )
+                        {
+                            if ( currentPacket == packetIndex )
+                                return true;
+                            ++currentPacket;
+                        }
+                    }
+                    pageOffset = dataOffset;
+                }
+                return false;
+            }
+
+            /** @brief 주석 헤더의 길이 칸이 모두 패킷 안이면 true 입니다. */
+            static bool isCommentHeaderSane( const uint8* pBytes, size_t byteCount )
+            {
+                vector<uint8> packetBytes;
+                if ( collectPacket( pBytes, byteCount, 1, packetBytes ) == false )
+                    return false;
+                const size_t size = packetBytes.size();
+                if ( size < 7 + 4 + 4 || packetBytes[0] != 3 || Memory::compare( packetBytes.data() + 1, "vorbis", 6 ) != 0 )
+                    return false;
+                size_t       offset       = 7;
+                const uint32 vendorLength = readUint32( packetBytes.data() + offset );
+                offset += 4;
+                if ( vendorLength > size - offset )
+                    return false;
+                offset += vendorLength;
+                if ( offset + 4 > size )
+                    return false;
+                const uint32 commentCount = readUint32( packetBytes.data() + offset );
+                offset += 4;
+                if ( commentCount > ( size - offset ) / 4 )
+                    return false;
+                for ( uint32 commentIndex = 0; commentIndex < commentCount; ++commentIndex )
+                {
+                    if ( offset + 4 > size )
+                        return false;
+                    const uint32 commentLength = readUint32( packetBytes.data() + offset );
+                    offset += 4;
+                    if ( commentLength > size - offset )
+                        return false;
+                    offset += commentLength;
+                }
+                return true;
+            }
+        };
+    } // namespace
+
     bool AudioClipDecoder::decodeOgg( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
     {
         if ( pBytes == nullptr || byteCount < 4 || byteCount > static_cast<size_t>( INT32_MAX ) || Memory::compare( pBytes, "OggS", 4 ) != 0 )
+            return false;
+        if ( OggCommentHeaderGuard::isCommentHeaderSane( pBytes, byteCount ) == false )
             return false;
 
         int32  channelCount = 0;

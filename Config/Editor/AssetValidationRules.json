@@ -1,0 +1,182 @@
+{
+  "rules": [
+    {
+      "name": "file-names",
+      "check": "naming",
+      "description": "Lowercase letters, digits, underscore, dot and dash only; no spaces.",
+      "severity": "error",
+      "include_patterns": ["*"],
+      "exclude_patterns": ["README.md", "*/README.md"],
+      "name_pattern": "[a-z0-9_.\\-]+"
+    },
+    {
+      "name": "prefab-folder",
+      "check": "naming",
+      "severity": "error",
+      "include_patterns": ["game/*/prefabs/*"],
+      "allowed_suffixes": [".prefab.xml", ".prefab.xml.meta"]
+    },
+    {
+      "name": "map-folder",
+      "check": "naming",
+      "severity": "error",
+      "include_patterns": ["game/*/maps/*"],
+      "allowed_suffixes": [".scene.xml", ".tilemap.xml"]
+    },
+    {
+      "name": "material-folder",
+      "check": "naming",
+      "severity": "error",
+      "include_patterns": ["*/materials/*"],
+      "allowed_suffixes": [".material", ".material.meta"]
+    },
+    {
+      "name": "model-folder",
+      "check": "naming",
+      "severity": "error",
+      "include_patterns": ["*/models/*"],
+      "allowed_suffixes": [".mesh", ".sockets.xml", ".refpose.xml", ".skeleton.json", ".animclip"]
+    },
+    {
+      "name": "model-source-folder",
+      "check": "naming",
+      "severity": "error",
+      "include_patterns": ["*/models_raw/*"],
+      "allowed_suffixes": [".glb", ".gltf", ".bin", "import.stamp"]
+    },
+    {
+      "name": "texture-limits",
+      "check": "texture",
+      "description": "Every runtime texture: at most 4096, power of two, a known GPU format.",
+      "severity": "error",
+      "include_patterns": ["*/textures/*.dds"],
+      "exclude_patterns": ["editor/textures/splash.dds", "*_splat.dds"],
+      "max_size": 4096,
+      "power_of_two": true,
+      "allowed_formats": ["BC1_UNORM", "BC1_UNORM_SRGB", "BC3_UNORM", "BC3_UNORM_SRGB", "BC4_UNORM", "BC5_UNORM", "BC6H_UF16",
+                          "BC7_UNORM", "BC7_UNORM_SRGB", "R8G8B8A8_UNORM", "R8G8B8A8_UNORM_SRGB", "B8G8R8A8_UNORM",
+                          "B8G8R8A8_UNORM_SRGB", "R16G16B16A16_FLOAT", "UNCOMPRESSED_32BPP"]
+    },
+    {
+      "name": "texture-palette-no-mips",
+      "check": "texture",
+      "description": "Palette (colormap) and voxel atlas textures are sampled by exact texel; mips blur neighbouring swatches.",
+      "severity": "error",
+      "include_patterns": ["*colormap*.dds", "game/voxelcraft/textures/blocks.dds"],
+      "require_mips": false
+    },
+    {
+      "name": "texture-ui-no-mips",
+      "check": "texture",
+      "severity": "warning",
+      "include_patterns": ["*/textures/ui/*.dds"],
+      "require_mips": false
+    },
+    {
+      "name": "texture-world-mips",
+      "check": "texture",
+      "description": "Tiled world textures need the full mip chain (shimmering at distance otherwise).",
+      "severity": "warning",
+      "include_patterns": ["engine/textures/random/*.dds", "engine/textures/perlin.dds"],
+      "require_mips": true
+    },
+    {
+      "name": "mesh-budget",
+      "check": "mesh_budget",
+      "severity": "error",
+      "include_patterns": ["*.mesh"],
+      "max_triangles": 100000,
+      "max_bounding_radius": 500
+    },
+    {
+      "name": "mesh-budget-prop",
+      "check": "mesh_budget",
+      "description": "Packs that place many copies of one prop (city, park, skirmish units) keep props light.",
+      "severity": "warning",
+      "include_patterns": ["game/nilecity/models/*.mesh", "game/themepark/models/*.mesh", "game/starskirmish/models/*.mesh",
+                           "game/harvestvalley/models/*.mesh"],
+      "max_triangles": 20000
+    },
+    {
+      "name": "xml-parses",
+      "check": "xml_wellformed",
+      "severity": "error",
+      "include_patterns": ["*.xml", "*.material"]
+    },
+    {
+      "name": "references-exist",
+      "check": "missing_reference",
+      "severity": "error",
+      "include_patterns": ["*.xml", "*.material"],
+      "exclude_patterns": ["game/shooter3d/data/appearance/*"]
+    },
+    {
+      "name": "orphans",
+      "check": "orphan",
+      "description": "Assets nobody names. A warning: some are reached by code that builds the path at runtime.",
+      "severity": "warning",
+      "include_patterns": ["*.prefab.xml", "*.material", "*.mesh", "*/textures/*.dds", "*.ogg", "*.scene.xml"]
+    },
+    {
+      "name": "materials",
+      "check": "material",
+      "severity": "error",
+      "include_patterns": ["*.material"],
+      "allowed_blend_modes": ["Opaque", "Transparent", "AlphaBlend"],
+      "require_permutations": true
+    },
+    {
+      "name": "material-dead-switches",
+      "check": "material_keywords",
+      "description": "A static switch whose keyword no shader reads compiles the same bytecode twice.",
+      "severity": "warning",
+      "include_patterns": ["*.material"]
+    },
+    {
+      "name": "component-types",
+      "check": "component_type",
+      "severity": "error",
+      "include_patterns": ["*.scene.xml", "*.prefab.xml"]
+    },
+    {
+      "name": "scene-entity-ids",
+      "check": "entity_id",
+      "severity": "error",
+      "include_patterns": ["*.scene.xml"]
+    },
+    {
+      "name": "prefab-guids",
+      "check": "prefab_guid",
+      "severity": "error",
+      "include_patterns": ["*.scene.xml", "*.meta"]
+    },
+    {
+      "name": "prefab-stale-paths",
+      "check": "prefab_guid",
+      "description": "The guid wins at load time; a stale path still opens but misleads readers.",
+      "severity": "info",
+      "include_patterns": ["*.scene.xml"],
+      "stale_path_only": true
+    },
+    {
+      "name": "starskirmish-unit-tree",
+      "check": "catalog_reference",
+      "description": "Per-pack rule: producedBy / requires name another unit.",
+      "severity": "error",
+      "include_patterns": ["game/starskirmish/data/units.xml"],
+      "elements": ["Unit"],
+      "target_elements": ["Unit"],
+      "reference_attributes": ["producedBy", "requires"]
+    },
+    {
+      "name": "nilecity-goods",
+      "check": "catalog_reference",
+      "description": "Per-pack rule: a building's goods are declared Good ids.",
+      "severity": "error",
+      "include_patterns": ["game/nilecity/data/city.xml"],
+      "elements": ["Building", "HouseLevel"],
+      "target_elements": ["Good"],
+      "reference_attributes": ["goods"]
+    }
+  ]
+}

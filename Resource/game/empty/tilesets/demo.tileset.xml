@@ -2,11 +2,15 @@
 	2D 데모 타일셋 — TileSetAsset 이 읽는다. 아틀라스 4 x 4 칸(16 px), 타일 한 변 = 월드 1.
 	땅은 규칙 타일이다: 위가 비면 풀 덮인 윗면(1), 위와 양옆이 비면 외톨이 블록(0), 나머지는 흙(5). 맵 밖은 같은 땅으로 본다.
 -->
-<TileSet atlas="game/empty/textures/twod/tiles.dds" normalAtlas="game/empty/textures/twod/tiles_n.dds" columns="4" rows="4" tileSize="1">
+<TileSet atlas="game/empty/textures/twod/tiles.dds"
+         normalAtlas="game/empty/textures/twod/tiles_n.dds"
+         columns="4"
+         rows="4"
+         tileSize="1">
 	<RuleTile name="ground" cell="5" solid="true" outside="same">
-		<Rule pattern=".x. x.x ..." cell="0"/>
-		<Rule pattern=".x. ... ..." cell="1"/>
+		<Rule pattern=".x. x.x ..." cell="0" />
+		<Rule pattern=".x. ... ..." cell="1" />
 	</RuleTile>
-	<Tile name="stone" cell="3" solid="true"/>
-	<Tile name="water" frames="12 13 14 15" fps="4" navCost="40"/>
+	<Tile name="stone" cell="3" solid="true" />
+	<Tile name="water" frames="12 13 14 15" fps="4" navCost="40" />
 </TileSet>

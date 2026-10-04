@@ -5,12 +5,12 @@
 	TransparencySort: 같은 레이어 · 순서 안에서 앞뒤를 가르는 깊이 — Auto(원근은 거리, 직교는 시선 축) · Distance · ViewAxis · CustomAxis(axis).
 -->
 <Render2DSettings>
-	<TransparencySort mode="Auto" axis="0 0 1"/>
+	<TransparencySort mode="Auto" axis="0 0 1" />
 	<SortingLayers>
-		<Layer name="Background"/>
-		<Layer name="Default"/>
-		<Layer name="Foreground"/>
-		<Layer name="WorldUI"/>
-		<Layer name="Overlay"/>
+		<Layer name="Background" />
+		<Layer name="Default" />
+		<Layer name="Foreground" />
+		<Layer name="WorldUI" />
+		<Layer name="Overlay" />
 	</SortingLayers>
 </Render2DSettings>

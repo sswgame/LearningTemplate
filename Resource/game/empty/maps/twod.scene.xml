@@ -3,15 +3,39 @@
 		<entity id="1" name="Camera2D">
 			<GameObject _schemaVersion="0" _name="Camera2D" _bActive="true">
 				<_listComponent>
-					<CameraComponent _localPosition="13,-6,-10" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="11.25" _priority="0" _role="Game" _bOrthographic="true" />
-					<PixelPerfectCameraComponent _pixelsPerUnit="16" _referenceResolution="320,180" _barSortingLayer="Overlay" _bCropX="true" _bCropY="true" _bPixelSnapping="true" />
+					<CameraComponent _localPosition="13,-6,-10"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="11.25"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+					<PixelPerfectCameraComponent _pixelsPerUnit="16"
+					                             _referenceResolution="320,180"
+					                             _barSortingLayer="Overlay"
+					                             _bCropX="true"
+					                             _bCropY="true"
+					                             _bPixelSnapping="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="2" name="Sky">
 			<GameObject _schemaVersion="0" _name="Sky" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="13,-6,8" _localRotation="0,0,0" _localScale="22,12.5,1" _attachOwner="None" _attachComponent="None" _textureName="game/empty/textures/twod/sky.dds" _materialPath="engine/materials/sprite2dpixel.material" _sortingLayer="Background" _orderInLayer="-10" />
+					<SpriteComponent _localPosition="13,-6,8"
+					                 _localRotation="0,0,0"
+					                 _localScale="22,12.5,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _textureName="game/empty/textures/twod/sky.dds"
+					                 _materialPath="engine/materials/sprite2dpixel.material"
+					                 _sortingLayer="Background"
+					                 _orderInLayer="-10" />
 					<ParallaxLayerComponent _scrollFactor="0,0" _repeatSize="0,0" _referencePoint="13,-6" />
 				</_listComponent>
 			</GameObject>
@@ -19,7 +43,17 @@
 		<entity id="3" name="Hills">
 			<GameObject _schemaVersion="0" _name="Hills" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="13,-6.5,6" _localRotation="0,0,0" _localScale="8,4,1" _attachOwner="None" _attachComponent="None" _textureName="game/empty/textures/twod/hills.dds" _materialPath="engine/materials/sprite2dpixel.material" _drawMode="Tiled" _size="7,1" _sortingLayer="Background" _orderInLayer="0" />
+					<SpriteComponent _localPosition="13,-6.5,6"
+					                 _localRotation="0,0,0"
+					                 _localScale="8,4,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _textureName="game/empty/textures/twod/hills.dds"
+					                 _materialPath="engine/materials/sprite2dpixel.material"
+					                 _drawMode="Tiled"
+					                 _size="7,1"
+					                 _sortingLayer="Background"
+					                 _orderInLayer="0" />
 					<ParallaxLayerComponent _scrollFactor="0.4,1" _repeatSize="8,0" _referencePoint="13,-6" />
 				</_listComponent>
 			</GameObject>
@@ -27,8 +61,17 @@
 		<entity id="4" name="Level">
 			<GameObject _schemaVersion="0" _name="Level" _bActive="true">
 				<_listComponent>
-					<SceneComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
-					<TileMapRendererComponent _tileMapPath="game/empty/maps/twod.tilemap.xml" _materialPath="engine/materials/sprite2dlit.material" _sortingLayer="Default" _orderInLayer="0" _colliderLayer="0" _bGenerateColliders="true" />
+					<SceneComponent _localPosition="0,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<TileMapRendererComponent _tileMapPath="game/empty/maps/twod.tilemap.xml"
+					                          _materialPath="engine/materials/sprite2dlit.material"
+					                          _sortingLayer="Default"
+					                          _orderInLayer="0"
+					                          _colliderLayer="0"
+					                          _bGenerateColliders="true" />
 					<ShadowCaster2DComponent _size="1,1" _bUseTileMap="true" />
 				</_listComponent>
 			</GameObject>
@@ -36,7 +79,15 @@
 		<entity id="5" name="Crate">
 			<GameObject _schemaVersion="0" _name="Crate" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="9.5,-7.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _textureName="game/empty/textures/twod/crate.dds" _materialPath="engine/materials/sprite2dlit.material" _sortingLayer="Default" _orderInLayer="1" />
+					<SpriteComponent _localPosition="9.5,-7.5,0"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _textureName="game/empty/textures/twod/crate.dds"
+					                 _materialPath="engine/materials/sprite2dlit.material"
+					                 _sortingLayer="Default"
+					                 _orderInLayer="1" />
 					<ShadowCaster2DComponent _size="1,1" _bUseTileMap="false" />
 				</_listComponent>
 			</GameObject>
@@ -44,7 +95,15 @@
 		<entity id="6" name="Hero">
 			<GameObject _schemaVersion="0" _name="Hero" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="8.0,-7.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _textureName="game/empty/textures/twod/hero.dds" _materialPath="engine/materials/sprite2dlit.material" _sortingLayer="Foreground" _orderInLayer="0" />
+					<SpriteComponent _localPosition="8.0,-7.5,0"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _textureName="game/empty/textures/twod/hero.dds"
+					                 _materialPath="engine/materials/sprite2dlit.material"
+					                 _sortingLayer="Foreground"
+					                 _orderInLayer="0" />
 					<HealthBarComponent _hpRatio="0.7" _offsetPos="0,0.75" _barSize="1,0.125" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
@@ -52,28 +111,71 @@
 		<entity id="7" name="Torch">
 			<GameObject _schemaVersion="0" _name="Torch" _bActive="true">
 				<_listComponent>
-					<PointLight2DComponent _localPosition="11.5,-6.0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.78,0.5" _intensity="2.4" _innerRadius="0.5" _outerRadius="9" _falloffExponent="1.2" _innerAngle="6.2831853" _outerAngle="6.2831853" _normalMapHeight="1.5" _bCastShadows="true" />
+					<PointLight2DComponent _localPosition="11.5,-6.0,0"
+					                       _localRotation="0,0,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachComponent="None"
+					                       _color="1,0.78,0.5"
+					                       _intensity="2.4"
+					                       _innerRadius="0.5"
+					                       _outerRadius="9"
+					                       _falloffExponent="1.2"
+					                       _innerAngle="6.2831853"
+					                       _outerAngle="6.2831853"
+					                       _normalMapHeight="1.5"
+					                       _bCastShadows="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="8" name="SpotLight">
 			<GameObject _schemaVersion="0" _name="SpotLight" _bActive="true">
 				<_listComponent>
-					<PointLight2DComponent _localPosition="20,-0.5,0" _localRotation="0,0,-1.5707964" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="0.45,0.7,1" _intensity="3" _innerRadius="0" _outerRadius="9" _falloffExponent="1" _innerAngle="0.5235988" _outerAngle="0.9599311" _normalMapHeight="2" _bCastShadows="true" />
+					<PointLight2DComponent _localPosition="20,-0.5,0"
+					                       _localRotation="0,0,-1.5707964"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachComponent="None"
+					                       _color="0.45,0.7,1"
+					                       _intensity="3"
+					                       _innerRadius="0"
+					                       _outerRadius="9"
+					                       _falloffExponent="1"
+					                       _innerAngle="0.5235988"
+					                       _outerAngle="0.9599311"
+					                       _normalMapHeight="2"
+					                       _bCastShadows="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="9" name="Ambient">
 			<GameObject _schemaVersion="0" _name="Ambient" _bActive="true">
 				<_listComponent>
-					<GlobalLight2DComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="0.55,0.6,0.8" _intensity="0.5" />
+					<GlobalLight2DComponent _localPosition="0,0,0"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachComponent="None"
+					                        _color="0.55,0.6,0.8"
+					                        _intensity="0.5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
 		<entity id="10" name="Panel">
 			<GameObject _schemaVersion="0" _name="Panel" _bActive="true">
 				<_listComponent>
-					<SpriteComponent _localPosition="7,-1.75,-1" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _textureName="game/empty/textures/twod/panel.dds" _materialPath="engine/materials/sprite2dpixel.material" _drawMode="Sliced" _size="7,2" _sliceBorder="0.25,0.25,0.25,0.25" _sortingLayer="WorldUI" _orderInLayer="0" />
+					<SpriteComponent _localPosition="7,-1.75,-1"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _textureName="game/empty/textures/twod/panel.dds"
+					                 _materialPath="engine/materials/sprite2dpixel.material"
+					                 _drawMode="Sliced"
+					                 _size="7,2"
+					                 _sliceBorder="0.25,0.25,0.25,0.25"
+					                 _sortingLayer="WorldUI"
+					                 _orderInLayer="0" />
 				</_listComponent>
 			</GameObject>
 		</entity>

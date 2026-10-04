@@ -4,26 +4,63 @@
 -->
 <AudioEventLibrary>
 	<_listEvent>
-		<AudioEventDesc _name="Land" _bus="sfx" _container="Random" _priority="40" _cooldownSeconds="0.15" _maxInstances="2" _steal="Oldest"
-		                _volumeDbMin="-4" _volumeDbMax="0" _pitchMin="-1.5" _pitchMax="1">
+		<AudioEventDesc _name="Land"
+		                _bus="sfx"
+		                _container="Random"
+		                _priority="40"
+		                _cooldownSeconds="0.15"
+		                _maxInstances="2"
+		                _steal="Oldest"
+		                _volumeDbMin="-4"
+		                _volumeDbMax="0"
+		                _pitchMin="-1.5"
+		                _pitchMax="1">
 			<_listClip>
 				<AudioClipEntry _path="game/shooter3d/sounds/footstep_concrete_000.ogg" />
 			</_listClip>
 		</AudioEventDesc>
-		<AudioEventDesc _name="HitDrone" _bus="sfx" _container="Random" _priority="55" _cooldownSeconds="0.03" _maxInstances="4" _steal="Oldest"
-		                _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-2" _pitchMax="2">
+		<AudioEventDesc _name="HitDrone"
+		                _bus="sfx"
+		                _container="Random"
+		                _priority="55"
+		                _cooldownSeconds="0.03"
+		                _maxInstances="4"
+		                _steal="Oldest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-2"
+		                _pitchMax="2">
 			<_listClip>
 				<AudioClipEntry _path="game/shooter3d/sounds/impact_metal_light_001.ogg" />
 			</_listClip>
 		</AudioEventDesc>
-		<AudioEventDesc _name="HitCover" _bus="sfx" _container="Random" _priority="45" _cooldownSeconds="0.03" _maxInstances="4" _steal="Oldest"
-		                _volumeDbMin="-5" _volumeDbMax="-1" _pitchMin="-2" _pitchMax="2">
+		<AudioEventDesc _name="HitCover"
+		                _bus="sfx"
+		                _container="Random"
+		                _priority="45"
+		                _cooldownSeconds="0.03"
+		                _maxInstances="4"
+		                _steal="Oldest"
+		                _volumeDbMin="-5"
+		                _volumeDbMax="-1"
+		                _pitchMin="-2"
+		                _pitchMax="2">
 			<_listClip>
 				<AudioClipEntry _path="game/shooter3d/sounds/impact_plank_medium_000.ogg" />
 			</_listClip>
 		</AudioEventDesc>
-		<AudioEventDesc _name="DroneDown" _bus="sfx" _attenuation="Default" _container="Layer" _priority="60" _maxInstances="6" _steal="Farthest"
-		                _volumeDbMin="-2" _volumeDbMax="0" _pitchMin="-3" _pitchMax="0" _virtual="Stop">
+		<AudioEventDesc _name="DroneDown"
+		                _bus="sfx"
+		                _attenuation="Default"
+		                _container="Layer"
+		                _priority="60"
+		                _maxInstances="6"
+		                _steal="Farthest"
+		                _volumeDbMin="-2"
+		                _volumeDbMax="0"
+		                _pitchMin="-3"
+		                _pitchMax="0"
+		                _virtual="Stop">
 			<_listClip>
 				<AudioClipEntry _path="game/shooter3d/sounds/impact_metal_medium_000.ogg" />
 				<AudioClipEntry _path="game/shooter3d/sounds/impact_metal_light_001.ogg" _volumeDb="-8" />

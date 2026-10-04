@@ -693,6 +693,15 @@ namespace sw
         return std::filesystem::exists( fileName );
     }
 
+    bool FileUtil::isReadOnlyFile( string_view fileName )
+    {
+        std::error_code                    ec;
+        const std::filesystem::file_status status = std::filesystem::status( std::filesystem::path( fileName ), ec );
+        if ( ec || std::filesystem::is_regular_file( status ) == false )
+            return false;
+        return ( status.permissions() & std::filesystem::perms::owner_write ) == std::filesystem::perms::none;
+    }
+
     bool FileUtil::directoryExists( string_view path )
     {
         return std::filesystem::exists( path ) && std::filesystem::is_directory( path );

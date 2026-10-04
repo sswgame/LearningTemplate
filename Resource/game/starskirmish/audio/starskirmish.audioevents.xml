@@ -8,17 +8,34 @@
 	</_listAttenuation>
 	<_listEvent>
 		<AudioEventDesc _name="Select" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
-			<_listClip><AudioClipEntry _path="game/starskirmish/sounds/select_004.ogg" /></_listClip>
+			<_listClip>
+				<AudioClipEntry _path="game/starskirmish/sounds/select_004.ogg" />
+			</_listClip>
 		</AudioEventDesc>
 		<AudioEventDesc _name="Built" _bus="ui" _priority="70" _maxInstances="2">
-			<_listClip><AudioClipEntry _path="game/starskirmish/sounds/confirmation_003.ogg" /></_listClip>
+			<_listClip>
+				<AudioClipEntry _path="game/starskirmish/sounds/confirmation_003.ogg" />
+			</_listClip>
 		</AudioEventDesc>
 		<AudioEventDesc _name="Blocked" _bus="ui" _priority="70" _cooldownSeconds="1" _maxInstances="1" _steal="Reject">
-			<_listClip><AudioClipEntry _path="game/starskirmish/sounds/error_003.ogg" /></_listClip>
+			<_listClip>
+				<AudioClipEntry _path="game/starskirmish/sounds/error_003.ogg" />
+			</_listClip>
 		</AudioEventDesc>
-		<AudioEventDesc _name="UnitDied" _bus="sfx" _attenuation="Battlefield" _priority="50" _maxInstances="4" _steal="Quietest"
-		                _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-2" _pitchMax="1" _virtual="Stop">
-			<_listClip><AudioClipEntry _path="game/starskirmish/sounds/impact_metal_heavy_000.ogg" /></_listClip>
+		<AudioEventDesc _name="UnitDied"
+		                _bus="sfx"
+		                _attenuation="Battlefield"
+		                _priority="50"
+		                _maxInstances="4"
+		                _steal="Quietest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-2"
+		                _pitchMax="1"
+		                _virtual="Stop">
+			<_listClip>
+				<AudioClipEntry _path="game/starskirmish/sounds/impact_metal_heavy_000.ogg" />
+			</_listClip>
 		</AudioEventDesc>
 	</_listEvent>
 </AudioEventLibrary>
