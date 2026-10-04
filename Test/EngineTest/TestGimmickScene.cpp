@@ -8,7 +8,11 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDocument.h"
 
+#include "GameFramework/Gimmick/Genre/AdventureGimmicks.h"
 #include "GameFramework/Gimmick/GimmickCircuitComponent.h"
 #include "GameFramework/Gimmick/GimmickSensorComponent.h"
 #include "GameFramework/Spline/SplineComponent.h"
@@ -176,4 +180,37 @@ SW_TEST_CASE( GimmickSceneTest, InvalidWiringIsRejectedAtLoad )
     SW_EXPECT_TRUE( bUnknownTarget );
     SW_EXPECT_TRUE( bUnknownOutput );
     SW_EXPECT_TRUE( bBrokenParam );
+}
+
+/**
+ * @brief [GimmickSceneTest] 쇼케이스 씬(game/empty/maps/gimmickshowcase.scene.xml) — 레벨 회로의 노드 대상(파일 엔티티 id)이 이 실행의 오브젝트로 옮겨지고,
+ *        시계 → 토글이 문과 엘리베이터를 움직이며, 처음부터 불붙은 횃불이 Signal 센서로 들어간다
+ */
+SW_TEST_CASE( GimmickSceneTest, ShowcaseSceneWiresAcrossObjects )
+{
+    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SceneDocument doc;
+    SW_ASSERT_TRUE( doc.loadXml( "game/empty/maps/gimmickshowcase.scene.xml" ) );
+    Scene scene{ "GimmickShowcase" };
+    SW_ASSERT_TRUE( scene.instantiate( doc ) );
+    GameObjectManager& manager = *scene.getObjectManager();
+    GameObject*        pLogic  = manager.findGameObjectByName( "ShowcaseLogic" );
+    GameObject*        pGate   = manager.findGameObjectByName( "TorchGate" );
+    GameObject*        pLift   = manager.findGameObjectByName( "LiftPlatform" );
+    GameObject*        pTorch  = manager.findGameObjectByName( "TorchA" );
+    SW_ASSERT_TRUE( pLogic != nullptr && pGate != nullptr && pLift != nullptr && pTorch != nullptr );
+    GimmickCircuitComponent* pCircuit = pLogic->getComponent<GimmickCircuitComponent>();
+    SW_ASSERT_NOT_NULL( pCircuit );
+    SW_EXPECT_TRUE( pCircuit->getCircuit().isBuilt() );
+
+    manager.beginPlay();
+    const float32 gateY = GimmickSceneTestInternal::getY( pGate );
+    const float32 liftY = GimmickSceneTestInternal::getY( pLift );
+    GimmickSceneTestInternal::tickFrames( manager, 60 * 3 + 30 ); // 2 초에 토글 — 문 0.8 초 · 엘리베이터 2 초
+    SW_EXPECT_NEAR_EQUAL( gateY + 3.0f, GimmickSceneTestInternal::getY( pGate ), 1.0e-3f );
+    SW_EXPECT_TRUE( GimmickSceneTestInternal::getY( pLift ) > liftY + 1.5f );
+    SW_EXPECT_TRUE( pTorch->getComponent<ElementStatusComponent>()->hasStatus( "Burning" ) );
+    SW_EXPECT_TRUE( pCircuit->getCircuit().getOutput( pCircuit->findNode( "torchA" ), hashed_string( "Active" ) ) );
+    SW_EXPECT_FALSE( pCircuit->getCircuit().getOutput( pCircuit->findNode( "bothLit" ), hashed_string( "Out" ) ) );
+    manager.endPlay();
 }

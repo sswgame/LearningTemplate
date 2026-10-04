@@ -1,0 +1,527 @@
+<Scene formatVersion="1" name="GimmickShowcase">
+	<entities>
+		<entity id="1" name="ShowcaseCamera">
+			<GameObject _schemaVersion="0" _name="ShowcaseCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,9,-16"
+					                 _localRotation="0.45,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerId="0"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="ShowcaseSun">
+			<GameObject _schemaVersion="0" _name="ShowcaseSun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,10,0"
+					                           _localRotation="0.9,0.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerId="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.35"
+					                           _ambient="0.28"
+					                           _shadowExtent="2.2222223"
+					                           _shadowDistance="2"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,-0.6,0"
+					               _localRotation="0,0,0"
+					               _localScale="30,1,20"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="MovingPlatform">
+			<GameObject _schemaVersion="0" _name="MovingPlatform" _bActive="true">
+				<_listComponent>
+					<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+					                        _bActive="true"
+					                        _localPosition="-9,1,0"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachOwnerId="0"
+					                        _attachComponent="None"
+					                        _offsetPos="0,0"
+					                        _offsetScale="3,0.5"
+					                        _colliderType="0"
+					                        _bContinuous="false"
+					                        _bTrigger="false" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="3,0.5,3"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="BoxCollider2DComponent#0"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<SplineComponent _componentName="SplineComponent"
+					                 _bActive="true"
+					                 _samplesPerSegment="16"
+					                 _type="Linear"
+					                 _bClosed="false">
+						<_listControlPoint>
+							<item>0,0,0</item>
+							<item>6,0,0</item>
+						</_listControlPoint>
+					</SplineComponent>
+					<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+						<_listNode>
+							<GimmickNodeDesc _id="move" _kind="Mover" _params="speed=2; mode=PingPong; pause=0.5" />
+						</_listNode>
+						<_listNodeTarget>
+							<item>0</item>
+						</_listNodeTarget>
+						<_listWire />
+						<_listRestPose />
+						<_stateBytes />
+					</GimmickCircuitComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="RotatingPlatform">
+			<GameObject _schemaVersion="0" _name="RotatingPlatform" _bActive="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="0,0.5,5"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerId="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="4,0.3,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+						<_listNode>
+							<GimmickNodeDesc _id="spin" _kind="Rotator" _params="speed=45; axis=0 1 0" />
+						</_listNode>
+						<_listNodeTarget>
+							<item>0</item>
+						</_listNodeTarget>
+						<_listWire />
+						<_listRestPose />
+						<_stateBytes />
+					</GimmickCircuitComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="LiftPlatform">
+			<GameObject _schemaVersion="0" _name="LiftPlatform" _bActive="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="8,0,3"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerId="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="3,0.3,3"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="TorchA">
+			<GameObject _schemaVersion="0" _name="TorchA" _bActive="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="-2,0,-3"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerId="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.2,1.2,0.2"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<GimmickSensorComponent _componentName="GimmickSensorComponent"
+					                        _bActive="true"
+					                        _defaultWeight="1"
+					                        _bCountTriggers="false">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+						<_listOccupant />
+					</GimmickSensorComponent>
+					<ElementStatusComponent _componentName="ElementStatusComponent"
+					                        _bActive="true"
+					                        _tablePath=""
+					                        _material="Torch"
+					                        _signalStatus="Burning"
+					                        _startStimulus="Fire" />
+					<PointLightComponent _componentName="PointLightComponent"
+					                     _bActive="true"
+					                     _localPosition="0,1.4,0"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachOwnerId="0"
+					                     _attachComponent="SceneComponent#0"
+					                     _color="0.55,0.75,1"
+					                     _intensity="2"
+					                     _radius="6" />
+					<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+						<_listNode>
+							<GimmickNodeDesc _id="flame" _kind="Signal" _params="" />
+							<GimmickNodeDesc _id="light" _kind="Light" _params="intensity=1" />
+						</_listNode>
+						<_listNodeTarget>
+							<item>0</item>
+							<item>0</item>
+						</_listNodeTarget>
+						<_listWire>
+							<GimmickWireDesc _from="flame.Active" _to="light.On" _bInvert="false" />
+						</_listWire>
+						<_listRestPose />
+						<_stateBytes />
+					</GimmickCircuitComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="TorchB">
+			<GameObject _schemaVersion="0" _name="TorchB" _bActive="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="2,0,-3"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerId="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.2,1.2,0.2"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<GimmickSensorComponent _componentName="GimmickSensorComponent"
+					                        _bActive="true"
+					                        _defaultWeight="1"
+					                        _bCountTriggers="false">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+						<_listOccupant />
+					</GimmickSensorComponent>
+					<ElementStatusComponent _componentName="ElementStatusComponent"
+					                        _bActive="true"
+					                        _tablePath=""
+					                        _material="Torch"
+					                        _signalStatus="Burning"
+					                        _startStimulus="None" />
+					<PointLightComponent _componentName="PointLightComponent"
+					                     _bActive="true"
+					                     _localPosition="0,1.4,0"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachOwnerId="0"
+					                     _attachComponent="SceneComponent#0"
+					                     _color="0.55,0.75,1"
+					                     _intensity="2"
+					                     _radius="6" />
+					<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+						<_listNode>
+							<GimmickNodeDesc _id="flame" _kind="Signal" _params="" />
+							<GimmickNodeDesc _id="light" _kind="Light" _params="intensity=1" />
+						</_listNode>
+						<_listNodeTarget>
+							<item>0</item>
+							<item>0</item>
+						</_listNodeTarget>
+						<_listWire>
+							<GimmickWireDesc _from="flame.Active" _to="light.On" _bInvert="false" />
+						</_listWire>
+						<_listRestPose />
+						<_stateBytes />
+					</GimmickCircuitComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="TorchGate">
+			<GameObject _schemaVersion="0" _name="TorchGate" _bActive="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="0,1.5,-6"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerId="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="3,3,0.3"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="Barrel">
+			<GameObject _schemaVersion="0" _name="Barrel" _bActive="true">
+				<_listComponent>
+					<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+					                        _bActive="true"
+					                        _localPosition="5,0,-4"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachOwnerId="0"
+					                        _attachComponent="None"
+					                        _offsetPos="0,0"
+					                        _offsetScale="0.8,1.2"
+					                        _colliderType="0"
+					                        _bContinuous="false"
+					                        _bTrigger="false" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,1.2,0.8"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="BoxCollider2DComponent#0"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<GimmickSensorComponent _componentName="GimmickSensorComponent"
+					                        _bActive="true"
+					                        _defaultWeight="1"
+					                        _bCountTriggers="false">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+						<_listOccupant />
+					</GimmickSensorComponent>
+					<ExplosiveBarrelComponent _componentName="ExplosiveBarrelComponent"
+					                          _bActive="true"
+					                          _health="30"
+					                          _radius="4"
+					                          _damage="80"
+					                          _damageTaken="0"
+					                          _bExploded="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="ItemBox">
+			<GameObject _schemaVersion="0" _name="ItemBox" _bActive="true">
+				<_listComponent>
+					<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+					                        _bActive="true"
+					                        _localPosition="-6,0.5,-4"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachOwnerId="0"
+					                        _attachComponent="None"
+					                        _offsetPos="0,0"
+					                        _offsetScale="1,1"
+					                        _colliderType="0"
+					                        _bContinuous="false"
+					                        _bTrigger="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="BoxCollider2DComponent#0"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ItemBoxComponent _componentName="ItemBoxComponent"
+					                  _bActive="true"
+					                  _respawnDelay="3"
+					                  _seed="1"
+					                  _openCount="0"
+					                  _respawnStepsLeft="0">
+						<_listChoice>
+							<GimmickItemChoice _item="Banana" _weight="3" _count="1" />
+							<GimmickItemChoice _item="Shell" _weight="2" _count="1" />
+							<GimmickItemChoice _item="Mushroom" _weight="1" _count="1" />
+						</_listChoice>
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+					</ItemBoxComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Spring">
+			<GameObject _schemaVersion="0" _name="Spring" _bActive="true">
+				<_listComponent>
+					<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+					                        _bActive="true"
+					                        _localPosition="-4,0,3"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachOwnerId="0"
+					                        _attachComponent="None"
+					                        _offsetPos="0,0"
+					                        _offsetScale="1,0.5"
+					                        _colliderType="0"
+					                        _bContinuous="false"
+					                        _bTrigger="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,0.3,1"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="BoxCollider2DComponent#0"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<LaunchPadComponent _componentName="LaunchPadComponent" _bActive="true" _launchVelocity="0,14,0" _launchCount="0">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+					</LaunchPadComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="ShowcaseLogic">
+			<GameObject _schemaVersion="0" _name="ShowcaseLogic" _bActive="true">
+				<_listComponent>
+					<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+						<_listNode>
+							<GimmickNodeDesc _id="clock" _kind="Timer" _params="interval=2" />
+							<GimmickNodeDesc _id="flip" _kind="Toggle" _params="" />
+							<GimmickNodeDesc _id="torchA" _kind="Signal" _params="" />
+							<GimmickNodeDesc _id="torchB" _kind="Signal" _params="" />
+							<GimmickNodeDesc _id="bothLit" _kind="And" _params="" />
+							<GimmickNodeDesc _id="openGate" _kind="Or" _params="" />
+							<GimmickNodeDesc _id="gate" _kind="Door" _params="openTime=0.8; closeTime=0.8; openOffset=0 3 0" />
+							<GimmickNodeDesc _id="lift" _kind="Elevator" _params="floors=0 4; speed=2" />
+						</_listNode>
+						<_listNodeTarget>
+							<item>0</item>
+							<item>0</item>
+							<item>7</item>
+							<item>8</item>
+							<item>0</item>
+							<item>0</item>
+							<item>9</item>
+							<item>6</item>
+						</_listNodeTarget>
+						<_listWire>
+							<GimmickWireDesc _from="clock.OnTick" _to="flip.In" _bInvert="false" />
+							<GimmickWireDesc _from="torchA.Active" _to="bothLit.A" _bInvert="false" />
+							<GimmickWireDesc _from="torchB.Active" _to="bothLit.B" _bInvert="false" />
+							<GimmickWireDesc _from="bothLit.Out" _to="openGate.A" _bInvert="false" />
+							<GimmickWireDesc _from="flip.Out" _to="openGate.B" _bInvert="false" />
+							<GimmickWireDesc _from="openGate.Out" _to="gate.Open" _bInvert="false" />
+							<GimmickWireDesc _from="flip.Out" _to="lift.Call1" _bInvert="false" />
+							<GimmickWireDesc _from="flip.Out" _to="lift.Call0" _bInvert="true" />
+						</_listWire>
+						<_listRestPose />
+						<_stateBytes />
+					</GimmickCircuitComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

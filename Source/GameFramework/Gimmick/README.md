@@ -3,6 +3,8 @@
 센서 → 신호 → 연산자 → 액추에이터를 데이터로 잇습니다(소스 엔진 엔티티 입출력 · 포탈 2 퍼즐 메이커 · 마리오 메이커의 배선). 장르를 가리지 않아
 키트가 아니라 기반(`GameFramework`)에 있습니다. 2D(XY 평면 · 2D 콜라이더)와 3D 가 같은 코드입니다.
 시험: `EngineTest` 의 `GimmickTest`(회로 — `Test/EngineTest/TestGimmick.cpp`) · `GimmickSceneTest`(씬 — `TestGimmickScene.cpp`).
+쇼케이스 씬: `Resource/game/empty/maps/gimmickshowcase.scene.xml`(움직이는 발판 · 회전 발판 · 횃불 · 드럼통 · 아이템 상자 · 스프링, 레벨 회로가 시계 → 토글로
+문과 엘리베이터를 움직인다). 보려면 `Config/Game/Empty.json` 의 `_startupScene` 을 그 경로로 바꾸거나 에디터에서 `-gv_editorStartupScene=` 로 연다.
 
 ## 구성
 
