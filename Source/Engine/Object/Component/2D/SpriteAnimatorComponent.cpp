@@ -6,6 +6,7 @@
 
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw
 {
@@ -14,8 +15,9 @@ namespace sw
     // 컴포넌트는 오브젝트마다 만들어진다. 필드 크기 합(베이스 + 필드 + 비트필드 한 바이트)을 정렬로 올린 값을 넘으면 필드 사이에 구멍이 생긴 것이다.
     static_assert( sizeof( SpriteAnimatorComponent ) <=
                        ( sizeof( SceneComponent ) + sizeof( string ) * 2 + sizeof( AnimGraphAsset ) + sizeof( vector<string> ) + sizeof( float32 ) +
-                         sizeof( SpriteAnimatorClipSource ) + sizeof( SpriteClipPlayable ) + sizeof( AnimGraphPlayer ) + sizeof( int32 ) * 3 +
-                         sizeof( const SpriteClipAsset* ) + sizeof( uint8 ) + alignof( SpriteAnimatorComponent ) - 1 ) /
+                         sizeof( SpriteAnimatorClipSource ) + sizeof( SpriteClipPlayable ) + sizeof( AnimGraphPlayer ) + sizeof( SpriteAnimatorLodClient ) +
+                         sizeof( int32 ) * 3 + sizeof( uint32 ) + sizeof( AnimationLodState ) + sizeof( const SpriteClipAsset* ) + sizeof( AnimationSystem* ) +
+                         sizeof( uint8 ) + alignof( SpriteAnimatorComponent ) - 1 ) /
                            alignof( SpriteAnimatorComponent ) * alignof( SpriteAnimatorComponent ),
                    "SpriteAnimatorComponent has padding between fields (or a field was added without adding its size here)" );
 
@@ -31,6 +33,43 @@ namespace sw
         return &_owner._playable;
     }
 
+    SpriteAnimatorLodClient::SpriteAnimatorLodClient( SpriteAnimatorComponent& owner )
+        : _owner{ owner }
+    {
+    }
+
+    bool SpriteAnimatorLodClient::findAnimationLodBounds( float3& outCenter, float32& outRadius ) const
+    {
+        const SpriteComponent* pSprite = _owner.findSprite();
+        return pSprite != nullptr && pSprite->getWorldBounds( outCenter, outRadius );
+    }
+
+    void SpriteAnimatorLodClient::applyAnimationLod( const AnimationLodState& state )
+    {
+        _owner._lodState = state;
+    }
+
+    const Component* SpriteAnimatorLodClient::findRewindTarget() const
+    {
+        return _owner._bPlaying == SW_TRUE ? &_owner : nullptr;
+    }
+
+    void SpriteAnimatorLodClient::collectDebugState( AnimationDebugState& inoutState ) const
+    {
+        inoutState._stateName   = _owner._graphPlayer.getCurrentStateName().empty() ? hashed_string( _owner._currentAnimation ) : _owner._graphPlayer.getCurrentStateName();
+        inoutState._stateTime   = _owner._graphPlayer.getPlayer().getCurrentTime();
+        inoutState._spriteFrame = _owner._currentFrame;
+    }
+
+    void SpriteAnimatorLodClient::applyRewindState( const AnimationDebugState& state )
+    {
+        if ( state._spriteFrame < 0 )
+            return;
+        _owner._currentFrame = MathUtil::clamp( state._spriteFrame, 0, MathUtil::max( _owner._totalFrames - 1, 0 ) );
+        _owner.updateSpriteFrame();
+        _owner._bFrameStale = SW_TRUE; // 되감기가 끝나면 지금 프레임으로 다시 맞춘다
+    }
+
     SpriteAnimatorComponent::SpriteAnimatorComponent()
         : _animGraphPath{}
         , _graph{}
@@ -40,15 +79,20 @@ namespace sw
         , _clipSource{ *this }
         , _playable{}
         , _graphPlayer{}
+        , _lodClient{ *this }
         , _currentFrame{ 0 }
         , _totalFrames{ 1 }
         , _pRangeClip{ nullptr }
+        , _pAnimationSystem{ nullptr }
         , _firstClipFrame{ 0 }
+        , _updatePhase{ 0 }
+        , _lodState{}
         , _bRepeat{ SW_FALSE }
         , _bPlaying{ SW_FALSE }
         , _bPaused{ SW_FALSE }
         , _bGraphLoaded{ SW_FALSE }
         , _bRootWarned{ SW_FALSE }
+        , _bFrameStale{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -83,10 +127,31 @@ namespace sw
         Component::onEndPlay();
     }
 
+    void SpriteAnimatorComponent::onRegister( GameObjectManager& manager )
+    {
+        SceneComponent::onRegister( manager );
+        _pAnimationSystem = &manager.getAnimationSystem();
+        _pAnimationSystem->registerLodClient( &_lodClient );
+        const uint64 mixed = getHandle().componentId() * 0x9E3779B97F4A7C15ull;
+        _updatePhase       = static_cast<uint32>( ( mixed ^ ( mixed >> 29 ) ) & 0xFFFFu );
+    }
+
+    void SpriteAnimatorComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getAnimationSystem().unregisterLodClient( &_lodClient );
+        _pAnimationSystem = nullptr;
+        SceneComponent::onUnregister( manager );
+    }
+
     void SpriteAnimatorComponent::onTick( float32 deltaTime )
     {
         if ( _bPlaying == SW_FALSE || _bPaused == SW_TRUE )
             return;
+#if SW_ANIMATION_REWIND_ENABLED
+        // 되감는 동안에는 흐르지 않는다 — 애니메이션 시스템이 기록된 프레임을 건다.
+        if ( _pAnimationSystem != nullptr && _pAnimationSystem->getRewind().isScrubbing() )
+            return;
+#endif
 
         // 스프라이트의 클립이 바뀌었으면(늦게 붙었다 · 경로를 고쳤다) 구간을 다시 잡는다. 반복 여부는 재생을 시작할 때 정한 그대로다.
         if ( findClip() != _pRangeClip )
@@ -106,8 +171,18 @@ namespace sw
             _bPlaying     = SW_FALSE;
         }
 
-        if ( _currentFrame != prevFrame )
+        // LOD: 안 보이거나 주기 밖이면 스프라이트에 넘기지 않는다(시간 · 상태는 위에서 흘렀다). 보이게 되면 그 틱에 맞춘다.
+        const uint64 frameIndex = ( _pAnimationSystem != nullptr ) ? _pAnimationSystem->getFrameIndex() : 0u;
+        const bool   bOnRate    = AnimationLodUtil::isOnUpdateFrame( frameIndex, _updatePhase, MathUtil::max( _lodState._updateRateDivisor, 1u ) );
+        if ( _lodState._bVisible == SW_FALSE || bOnRate == false )
+        {
+            if ( _currentFrame != prevFrame )
+                _bFrameStale = SW_TRUE;
+            return;
+        }
+        if ( _currentFrame != prevFrame || _bFrameStale == SW_TRUE )
             updateSpriteFrame();
+        _bFrameStale = SW_FALSE;
         // 키는 프레임 사이에서도 보간된다 — 프레임이 그대로여도 매 틱 다시 읽는다.
         applyTransformKeys();
     }

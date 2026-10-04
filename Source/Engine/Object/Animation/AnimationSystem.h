@@ -124,6 +124,15 @@ namespace sw
         virtual const SkeletonBoneLod* findBoneLod() const { return nullptr; }
         /** @brief 이번 프레임의 판정을 받습니다(게임 스레드). */
         virtual void applyAnimationLod( const AnimationLodState& state ) = 0;
+        /**
+         * @brief 포즈 없이 상태만 되감기에 남기는 클라이언트(스프라이트 애니메이터)면 그 컴포넌트입니다. 기본은 nullptr — 스켈레탈 유닛은 포즈와 함께
+         *        따로 기록합니다.
+         */
+        virtual const Component* findRewindTarget() const { return nullptr; }
+        /** @brief 되감기에 남길 상태를 채웁니다(게임 스레드, 평가 뒤). */
+        virtual void collectDebugState( AnimationDebugState& inoutState ) const { (void)inoutState; }
+        /** @brief 되감는 동안 기록된 상태를 겁니다(게임 스레드). */
+        virtual void applyRewindState( const AnimationDebugState& state ) { (void)state; }
     };
 } // namespace sw
 
@@ -207,8 +216,6 @@ namespace sw
         /** @brief 되감기 기록기입니다. 켜져 있으면 평가 뒤 일한 유닛을 기록하고, 되감는 동안에는 평가 대신 기록된 포즈를 겁니다. */
         AnimationRewindRecorder&       getRewind() { return _rewind; }
         const AnimationRewindRecorder& getRewind() const { return _rewind; }
-        /** @brief 포즈 없이 상태만 기록하는 대상(스프라이트 애니메이터)이 평가 뒤에 부릅니다. */
-        void recordRewindState( const Component& target, AnimationRewindKind kind, const AnimationDebugState& state );
 #endif
 
     private:
@@ -223,8 +230,10 @@ namespace sw
         /** @brief 군중 공유를 켠 유닛의 묶음 · 사본 · VAT 를 정하고 묶음을 평가합니다(시간 단계 뒤). */
         void updateCrowd();
 #if SW_ANIMATION_REWIND_ENABLED
-        /** @brief 되감는 동안 — 기록된 포즈를 유닛마다 겁니다(평가하지 않는다). */
+        /** @brief 되감는 동안 — 기록된 포즈를 유닛마다, 기록된 상태를 스프라이트 애니메이터마다 겁니다(평가하지 않는다). */
         void applyRewindScrub();
+        /** @brief 이번 프레임을 기록합니다 — 일한 유닛(포즈 + 상태)과 상태만 남기는 LOD 클라이언트. */
+        void recordRewindFrame();
 #endif
 
         vector<SkeletalMeshComponent*>         _listUnit;

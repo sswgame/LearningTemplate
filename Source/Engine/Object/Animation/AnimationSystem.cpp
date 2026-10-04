@@ -363,6 +363,7 @@ namespace sw
         {
             _crowd.endFrame();
 #if SW_ANIMATION_REWIND_ENABLED
+            recordRewindFrame();
             _rewind.endFrame( deltaSeconds );
 #endif
             return;
@@ -394,20 +395,29 @@ namespace sw
             pUnit->finishAnimationFrame();
         _crowd.endFrame();
 #if SW_ANIMATION_REWIND_ENABLED
-        if ( _rewind.isEnabled() )
-        {
-            SW_PROFILE_SCOPE( "GT.Animation.rewindRecord" );
-            for ( const SkeletalMeshComponent* pUnit : _listActive )
-                _rewind.recordUnit( *pUnit, _frameIndex );
-        }
+        recordRewindFrame();
         _rewind.endFrame( deltaSeconds );
 #endif
     }
 
 #if SW_ANIMATION_REWIND_ENABLED
-    void AnimationSystem::recordRewindState( const Component& target, AnimationRewindKind kind, const AnimationDebugState& state )
+    void AnimationSystem::recordRewindFrame()
     {
-        _rewind.recordState( target, kind, state, _frameIndex );
+        if ( _rewind.isEnabled() == false )
+            return;
+        SW_PROFILE_SCOPE( "GT.Animation.rewindRecord" );
+        for ( const SkeletalMeshComponent* pUnit : _listActive )
+            _rewind.recordUnit( *pUnit, _frameIndex );
+        AnimationDebugState state;
+        for ( const IAnimationLodClient* pClient : _listLodClient )
+        {
+            const Component* pTarget = pClient->findRewindTarget();
+            if ( pTarget == nullptr )
+                continue;
+            state.reset();
+            pClient->collectDebugState( state );
+            _rewind.recordState( *pTarget, AnimationRewindKind::Sprite, state, _frameIndex );
+        }
     }
 
     void AnimationSystem::applyRewindScrub()
@@ -422,6 +432,14 @@ namespace sw
             AnimationRewindRecorder::decodePose( *pFrame, _rewindScratchPose );
             if ( pUnit->applyRewindPose( _rewindScratchPose ) )
                 _bRewindApplied = SW_TRUE;
+        }
+        for ( IAnimationLodClient* pClient : _listLodClient )
+        {
+            const Component*            pTarget = pClient->findRewindTarget();
+            const AnimationRewindTrack* pTrack  = ( pTarget != nullptr ) ? _rewind.findTrack( pTarget->getHandle() ) : nullptr;
+            const AnimationRewindFrame* pFrame  = ( pTrack != nullptr ) ? pTrack->findFrame( scrubTime ) : nullptr;
+            if ( pFrame != nullptr )
+                pClient->applyRewindState( pFrame->_state );
         }
     }
 #endif

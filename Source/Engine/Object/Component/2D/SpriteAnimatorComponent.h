@@ -11,6 +11,7 @@
 #include "Engine/Animation/AnimGraphAsset.h"
 #include "Engine/Animation/AnimGraphPlayer.h"
 #include "Engine/Animation/SpriteClipPlayable.h"
+#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -39,6 +40,28 @@ namespace sw
 namespace sw
 {
     /**
+     * @class SpriteAnimatorLodClient
+     * @brief 스프라이트 애니메이터가 애니메이션 LOD 판정 · 되감기 기록에 보이는 얼굴입니다(`SkeletalMeshLodClient` 와 같은 자리).
+     */
+    class SW_API SpriteAnimatorLodClient final : public IAnimationLodClient
+    {
+    public:
+        explicit SpriteAnimatorLodClient( SpriteAnimatorComponent& owner );
+
+        bool             findAnimationLodBounds( float3& outCenter, float32& outRadius ) const override;
+        void             applyAnimationLod( const AnimationLodState& state ) override;
+        const Component* findRewindTarget() const override;
+        void             collectDebugState( AnimationDebugState& inoutState ) const override;
+        void             applyRewindState( const AnimationDebugState& state ) override;
+
+    private:
+        SpriteAnimatorComponent& _owner;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class SpriteAnimatorComponent
      * @brief 같은 오브젝트의 `SpriteComponent` 가 든 클립(`.sprite.json`)의 프레임을 시간에 맞춰 넘깁니다.
      * @details 애니메이션 이름은 클립의 이름 붙은 구간(`SpriteClipAsset::findFrameRange`)을 고르고, 프레임 수 · 프레임마다의 시간도 클립에서 옵니다.
@@ -56,6 +79,7 @@ namespace sw
     class SW_API SpriteAnimatorComponent : public SceneComponent
     {
         friend class SpriteAnimatorClipSource;
+        friend class SpriteAnimatorLodClient;
 
     public:
         REFLECT_BODY();
@@ -64,6 +88,14 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
+        /** @brief 애니메이션 시스템에 LOD 클라이언트로 오릅니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
+        /**
+         * @brief 시간 · 상태 기계 · "끝나면 다음" 은 매 틱 흐릅니다. 스프라이트 프레임 · 트랜스폼 키는 애니메이션 LOD 를 따릅니다 — 어느 뷰에도
+         *        안 보이면 넘기지 않고, 주기가 1 보다 크면 그 주기의 프레임에만 넘깁니다(보이게 되면 그 프레임에 곧바로 맞춘다).
+         *        되감는 동안에는 흐르지 않습니다(기록된 프레임이 걸린다).
+         */
         void onTick( float32 deltaTime ) override;
         /**
          * @brief 그래프 경로(`_animGraphPath`)가 바뀌면(인스펙터 · 에셋 핫 리로드 알림 — 값이 같아도) 그래프를 다시 읽습니다.
@@ -140,19 +172,24 @@ namespace sw
         SpriteAnimatorClipSource _clipSource;  ///< 상태 이름 → `_playable` 풀이
         SpriteClipPlayable       _playable;    ///< 지금 구간(재생할 것). 스프라이트는 섞지 않으므로 하나면 된다
         AnimGraphPlayer          _graphPlayer; ///< 시간 · 반복 · 끝 · 다음 상태 — 스켈레탈 애니메이터와 같은 코드다
+        SpriteAnimatorLodClient  _lodClient;
         PROPERTY( Category = "Playback", DisplayName = "Current Frame", Tooltip = "Current playback frame index within the animation", Min = 0.0 )
         int32 _currentFrame;
         PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Frame count of the active animation, taken from the sprite clip", ReadOnly )
         int32 _totalFrames;
         /// @brief 구간을 잡을 때 본 클립입니다. **정체성 비교만** 하고 역참조하지 않습니다 — 스프라이트의 클립이 바뀌면 구간을 다시 잡습니다.
         const SpriteClipAsset* _pRangeClip;
-        int32                  _firstClipFrame; ///< 지금 구간이 시작하는 클립 프레임입니다(저장하지 않습니다 — 클립에서 다시 잡습니다)
+        AnimationSystem*       _pAnimationSystem; ///< 오른 애니메이션 시스템(등록 동안)
+        int32                  _firstClipFrame;   ///< 지금 구간이 시작하는 클립 프레임입니다(저장하지 않습니다 — 클립에서 다시 잡습니다)
+        uint32                 _updatePhase;      ///< LOD 주기 위상(핸들에서 — 같은 주기의 애니메이터가 한 프레임에 몰리지 않게)
+        AnimationLodState      _lodState;         ///< 마지막 LOD 판정
         PROPERTY( Category = "Playback", DisplayName = "Loop", Tooltip = "Loop playback when reaching the end" )
         uint8                  _bRepeat      : 1;
         uint8                  _bPlaying     : 1;
         uint8                  _bPaused      : 1;
         uint8                  _bGraphLoaded : 1;
         uint8                  _bRootWarned  : 1; ///< 이번 재생에서 "루트 스프라이트에는 키를 적용하지 않는다" 를 알렸다
-        [[maybe_unused]] uint8 _reserved     : 3;
+        uint8                  _bFrameStale  : 1; ///< LOD 로 건너뛰어 스프라이트의 프레임이 `_currentFrame` 과 다를 수 있다
+        [[maybe_unused]] uint8 _reserved     : 2;
     };
 } // namespace sw

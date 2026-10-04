@@ -120,6 +120,8 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
 | 상태 기계 · "끝나면 다음" · 조건 전이 | `AnimGraphPlayer` + `AnimGraphAsset` | 같음 |
 | 알림 · 동기 그룹 | `AnimNotifyTrack` · `AnimSyncGroup`(스프라이트 클립에 알림 형식은 아직 없음) | 같음 |
 | 샘플 | 재생 시각 → 구간 안 프레임 · 트랜스폼 키 시각 | 재생 시각 → 코덱 → 본 포즈 |
+| LOD | `SpriteAnimatorLodClient` — 안 보이면 · 주기 밖이면 스프라이트 프레임 · 키를 넘기지 않음(시간 · 상태는 매 틱), 보이면 그 틱에 맞춤 | `SkeletalMeshLodClient` — 포즈 건너뛰기 · 보간 · 본 LOD · 예산 |
+| 되감기 | 상태만(구간 이름 · 시각 · 프레임) — 되감는 동안 기록된 프레임을 걸고 흐르지 않음 | 압축 포즈 + 상태(그래프 · 알림 · 커브 · 루트 모션) |
 
 ## 0.4 함정
 
