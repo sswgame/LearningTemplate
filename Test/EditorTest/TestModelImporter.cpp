@@ -485,3 +485,50 @@ SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments 
     SW_EXPECT_TRUE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "raw", "clips": [ "Idle" ] } ] })" ) );
     SW_EXPECT_EQUAL( sw::string( "raw" ), config.getRules()[0]._animationCodec );
 }
+
+/**
+ * @brief [ModelImporterTest] VRM 은 머티리얼마다 구간 메시 · 툰 머티리얼을 낸다 — 삼각형이 머티리얼대로 나뉘고, 정점 색에 머티리얼 색을 굽지 않는다(머티리얼이 든다)
+ * @details 삼각형 두 개를 같은 위치 접근자로 두 프리미티브(머티리얼 0 · 1)가 쓰는 VRM 0.x glTF. 머티리얼 1 은 반투명 MToon 이다.
+ */
+SW_TEST_CASE( ModelImporterTest, VrmSplitsMeshByToonMaterial )
+{
+    const float32    arrPosition[9] = { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f };
+    const sw::string base64         = TestModelImporterInternal::encodeBase64( reinterpret_cast<const uint8*>( arrPosition ), sizeof( arrPosition ) );
+    sw::string       json           = R"({ "asset": { "version": "2.0" }, "scene": 0, "scenes": [ { "nodes": [ 0 ] } ], "nodes": [ { "mesh": 0 } ],
+  "meshes": [ { "primitives": [ { "attributes": { "POSITION": 0 }, "material": 0 }, { "attributes": { "POSITION": 0 }, "material": 1 }, { "attributes": { "POSITION": 0 }, "material": 1 } ] } ],
+  "materials": [ { "name": "Skin", "pbrMetallicRoughness": { "baseColorFactor": [ 0.5, 0.25, 1.0, 1.0 ] } }, { "name": "Glass" } ],
+  "extensionsUsed": [ "VRM" ],
+  "extensions": { "VRM": { "materialProperties": [
+    { "name": "Skin", "shader": "VRM/MToon", "floatProperties": { "_ShadeShift": 0.0, "_ShadeToony": 0.9 }, "vectorProperties": { "_Color": [ 0.5, 0.25, 1.0, 1.0 ] } },
+    { "name": "Glass", "shader": "VRM/MToon", "floatProperties": { "_BlendMode": 2 } } ] } },
+  "accessors": [ { "bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3", "min": [ 0, 0, 0 ], "max": [ 1, 1, 0 ] } ],
+  "bufferViews": [ { "buffer": 0, "byteLength": 36 } ],
+  "buffers": [ { "byteLength": 36, "uri": "data:application/octet-stream;base64,)";
+    json += base64;
+    json += R"(" } ] })";
+    const sw::string sourcePath = test::makeTempPath( "toon.vrm.gltf" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, json ) );
+
+    sw::editor::ModelImportResult result;
+    SW_ASSERT_TRUE( sw::editor::ModelImporter::readModelAsset( sourcePath, sw::editor::ModelImportRule{}, result ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), result._listSection.size() );
+    SW_EXPECT_STREQ( "skin", result._listSection[0]._fileStem.c_str() );
+    SW_EXPECT_STREQ( "glass", result._listSection[1]._fileStem.c_str() );
+    SW_EXPECT_EQUAL( size_t( 3 ), result._listSection[0]._mesh._listVertex.size() );
+    SW_EXPECT_EQUAL( size_t( 6 ), result._listSection[1]._mesh._listVertex.size() );
+    SW_EXPECT_TRUE( result._listSection[1]._material._alphaMode == sw::editor::ToonAlphaMode::Transparent );
+    // 본 메시는 전부(9 정점)이고, 색은 흰색이다 — baseColorFactor 는 툰 머티리얼의 baseColor 다(감마 → 선형).
+    SW_EXPECT_EQUAL( size_t( 9 ), result._mesh._listVertex.size() );
+    for ( const sw::RHIVertex& vertex : result._listSection[0]._mesh._listVertex )
+        SW_EXPECT_NEAR_EQUAL( 1.0f, vertex._arrColor[0], 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.21404f, result._listSection[0]._material._baseColor._x, 1e-4f );
+
+    // 모르는 MToon 키가 있으면 임포트가 실패한다.
+    sw::string   badJson = json;
+    const size_t at      = badJson.find( "\"_BlendMode\"" );
+    SW_ASSERT_TRUE( at != sw::string::npos );
+    badJson.replace( at, 12, "\"_BlendModes\"" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, badJson ) );
+    test::ScopedDefensiveTestLog expected( "an unknown VRM material key fails the import" );
+    SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( sourcePath, sw::editor::ModelImportRule{}, result ) );
+}

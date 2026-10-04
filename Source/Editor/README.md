@@ -197,7 +197,7 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 
 ## 모델도 들일 때 임포트한다
 
-glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로의 `models/<이름>.mesh`(스킨드 모델이면 옆 폴더의 스켈레톤 · 부착 메시 · 클립까지)로
+glTF 원본(`.glb` · `.gltf` · `.vrm`)은 `models_raw/` 에 두고 같은 상대 경로의 `models/<이름>.mesh`(스킨드 모델이면 옆 폴더의 스켈레톤 · 부착 메시 · 클립까지)로
 임포트합니다(`ModelImporter`, cgltf + meshoptimizer).
 런타임은 `.mesh` 만 읽고(`MeshCache`), `MeshComponent::_meshId` 에 그 경로를 적거나 `PrimitiveStage::createModelObject` 로 세웁니다.
 
@@ -227,6 +227,50 @@ glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로�
 - **핫 리로드**: `models_raw/` 원본이 바뀌면 일괄 임포트하고, 쓰인 `.mesh` 를 메시 캐시가 같은 `Mesh` 에 제자리로 다시 읽습니다.
 - 시험: `ModelImporterTest`(좌표계 · 감김 · 노드 변환 · 색 · 스탬프 · 비표준 씬 뿌리 · 규칙 · 스킨드 모델(KayKit 기사 41 본 · 클립 76 · 부착 · 곁 데이터),
   저장소 원본 ↔ 결과 대조), 엔진 쪽은 `MeshAssetTest` · `SkeletalAnimationTest`.
+
+### VRM — MToon 머티리얼을 툰 머티리얼로
+
+VRM(`.vrm` — glTF 바이너리 + `extensions.VRM`(0.x) 또는 `VRMC_*`(1.0))도 같은 길로 임포트합니다. 머티리얼에 MToon 값이 있으면(`VrmMaterialImporter`):
+
+- **머티리얼마다 구간**: 본 메시와 별도로 머티리얼 하나가 쓰는 삼각형만 모은 `models/<이름>/sections/<머티리얼>.mesh`(스킨드면 같은 스켈레톤 · 본 영향)와
+  `models/<이름>/materials/<머티리얼>.material`(엔진 `engine/materials/toon.material` 이 틀 — 프로퍼티 · 퍼뮤테이션은 그 파일 하나가 정본)을 씁니다.
+  엔진 메시는 머티리얼 하나라(구간 · 머티리얼 칸이 없다) 오브젝트마다 구간 하나를 `SkeletalMeshComponent` 로 겁니다(`game/empty/maps/toonshowcase.scene.xml`).
+  VRM 은 정점 색에 baseColorFactor 를 굽지 않습니다 — 머티리얼이 듭니다.
+- **텍스처**: 구간 머티리얼이 쓰는 내장 이미지를 바이트 그대로 `<x>/textures_raw/<이름>/<이미지>.png` 로 꺼내고(바이트가 같으면 건드리지 않는다), 머티리얼은
+  텍스처 임포트가 만들 `<x>/textures/<이름>/<이미지>.dds` 를 가리킵니다. 그래서 VRM 은 `App --import-models` 뒤에 `App --import-textures` 를 돌립니다
+  (에디터는 핫 리로드가 둘을 잇는다). 원본 PNG 는 텍스처 임포트의 스탬프가 지킵니다.
+- **모르는 키는 임포트 오류**입니다(이 저장소의 규칙 — 철자가 틀린 키가 조용히 기본값이 되지 않게). 아는데 옮기지 않는 키는 값이 효과를 낼 때만 경고 한 줄로
+  모아 알립니다(`ModelImportResult::_listIgnoredMaterialKey`).
+
+| VRM 0.x (`materialProperties[]`) | 엔진 툰 머티리얼 | 옮기는 법 |
+|---|---|---|
+| `shader` | — | `VRM/MToon` 만 MToon. `VRM_USE_GLTFSHADER` · `VRM/UnlitTexture` · `VRM/UnlitCutout` · `VRM/UnlitTransparent` · `VRM/UnlitTransparentZWrite` 는 glTF 머티리얼을 평면 툰(그림자색 = 기본색)으로. 그 밖은 오류 |
+| `_Color` · `_ShadeColor` · `_EmissionColor` · `_RimColor` · `_OutlineColor` | `baseColor` · `shadeColor` · `emissiveColor` · `rimColor` · `outlineColor` | 감마 → 선형 |
+| `_MainTex` · `_ShadeTexture` · `_EmissionMap` · `_SphereAdd` | `baseColorMap` · `shadeMap` · `emissiveMap` · `matcapMap` | glTF 텍스처 번호 → DDS 경로 |
+| `_ShadeShift` · `_ShadeToony` | `shadingShift` · `shadingToony` | 0.x 구간 [shift, lerp(1, shift, toony)] 와 같은 경계: shift₁ = −(아래 + 위)/2, toony₁ = 1 − (위 − 아래)/2 |
+| `_ReceiveShadowRate` | `shadowReceive` | 그대로 |
+| `_RimFresnelPower` · `_RimLift` · `_RimLightingMix` | `rimFresnelPower` · `rimLift` · `rimLightingMix` | 그대로 |
+| `_OutlineWidthMode`(0 · 1 · 2) · `_OutlineWidth` | `Outline` 스위치 · `outlineWidthMode` · `outlineWidth` | 월드: cm → m(× 0.01), 화면: NDC 1 % → 화면 높이 비율(× 0.005) |
+| `_OutlineScaledMaxDistance` | `outlineMaxDistance` | 화면 모드만 |
+| `_OutlineColorMode` · `_OutlineLightingMix` | `outlineLightingMix` | 고정 색(0)은 0 |
+| `_BlendMode`(0 불투명 · 1 컷아웃 · 2 · 3 반투명) · `_Cutoff` | `AlphaCutoff` 스위치 · `alphaCutoff` · blendMode Transparent + `MATERIAL_BLEND_TRANSLUCENT` | 3(깊이 쓰는 반투명)은 반투명 |
+| `_CullMode`(0 끔 · 2 후면) | `TwoSided` 스위치 | 1(앞면)은 오류 |
+| 알지만 옮기지 않음 | — | `_BumpMap` · `_BumpScale`(노멀 맵 없음) · `_ShadingGradeTexture` · `_ShadingGradeRate` · `_ReceiveShadowTexture` · `_RimTexture` · `_OutlineWidthTexture` · `_UvAnimMaskTexture` · `_UvAnimScrollX/Y` · `_UvAnimRotation` · `_LightColorAttenuation` · `_IndirectLightIntensity` · `_OutlineCullMode`(늘 앞면) · 텍스처 타일링 벡터(늘 [0,0,1,1] 이어야 한다) · 블렌드 상태(`_SrcBlend` · `_DstBlend` · `_ZWrite` · `_AlphaToMask`) · `_DebugMode` · `_MToonVersion` · `keywordMap` · `tagMap` · `renderQueue` |
+
+| VRM 1.0 (`VRMC_materials_mtoon` + glTF 머티리얼) | 엔진 툰 머티리얼 |
+|---|---|
+| `pbrMetallicRoughness.baseColorFactor` · `baseColorTexture` | `baseColor` · `baseColorMap` |
+| `shadeColorFactor` · `shadeMultiplyTexture` | `shadeColor` · `shadeMap` |
+| `shadingShiftFactor` · `shadingToonyFactor` | `shadingShift` · `shadingToony` |
+| `emissiveFactor` · `emissiveTexture` · `KHR_materials_emissive_strength` | `emissiveColor` · `emissiveMap` · `emissiveStrength` |
+| `matcapFactor` · `matcapTexture` | `matcapColor` · `matcapMap` |
+| `parametricRimColorFactor` · `parametricRimFresnelPowerFactor` · `parametricRimLiftFactor` · `rimLightingMixFactor` | `rimColor` · `rimFresnelPower` · `rimLift` · `rimLightingMix` |
+| `outlineWidthMode`(`none` · `worldCoordinates` · `screenCoordinates`) · `outlineWidthFactor` · `outlineColorFactor` · `outlineLightingMixFactor` | `Outline` 스위치 · `outlineWidthMode` · `outlineWidth` · `outlineColor` · `outlineLightingMix` |
+| `alphaMode` · `alphaCutoff` · `doubleSided` | `AlphaCutoff` 스위치 · blendMode · `alphaCutoff` · `TwoSided` 스위치 |
+| 알지만 옮기지 않음 | `shadingShiftTexture` · `rimMultiplyTexture` · `outlineWidthMultiplyTexture` · `uvAnimation*` · `giEqualizationFactor`(환경광이 균일) · `transparentWithZWrite` · `renderQueueOffsetNumber` · `normalTexture` · `KHR_texture_transform` · `texCoord` ≠ 0 |
+| MToon 확장이 없는 머티리얼 | 평면 툰(그림자색 = 기본색) |
+
+시험: `VrmMaterialImporterTest`(0.x · 1.0 값 대응, 모르는 키 오류, 만든 `.material` 이 툰 머티리얼로 읽힘) · `ModelImporterTest.VrmSplitsMeshByToonMaterial`.
 
 ## 높이장도 들일 때 임포트한다
 
