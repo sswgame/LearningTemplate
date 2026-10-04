@@ -88,8 +88,8 @@ namespace sw
         const string_view starterSpecies = pData->getCustomProperty( "starterSpecies", "critter_a" );
         const int32       starterLevel   = pData->getCustomPropertyInt( "starterLevel", 5 );
 
-        // 카탈로그에 그 종족이 있으면 카탈로그가 만든다(기본 HP · 기술 슬롯의 PP). 없을 때만 손으로 채운 최소 멤버다 — 예전에는 늘 손으로 채워
-        // 종족의 `baseHp` · 기술 수와 상관없이 HP 20 + 레벨 × 2, PP {35, 30} 이었다.
+        // 카탈로그에 그 종족이 있으면 카탈로그가 만든다(기본 HP · 기술 슬롯의 PP). 없을 때만 손으로 채운 최소 멤버다 — 손으로 채운 값은
+        // 종족의 `baseHp` · 기술 수를 모르므로 카탈로그가 있을 때 쓰면 안 된다.
         const SpeciesCatalog* pCatalog  = game::getService<SpeciesCatalog>();
         const SpeciesDef*     pDef      = pCatalog != nullptr ? pCatalog->findSpecies( string( starterSpecies ).c_str() ) : nullptr;
         const int32           safeLevel = MathUtil::clamp( starterLevel, 1, SpeciesCatalog::kMaxLevel );

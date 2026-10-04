@@ -243,7 +243,7 @@ namespace sw
         _costAccumulator -= static_cast<float32>( wholeCost );
 
         // 떠난 손님을 지운다(놀이기구의 줄 · 탑승자에는 남아 있지 않다 — 떠나기 전에 뺐다). 한 번에 당겨 담아 순서(id 오름차순)를 지킨다 —
-        // 예전에는 떠난 손님마다 `erase` 해 뒤를 매번 옮겼다.
+        // 손님마다 `erase` 하면 뒤를 매번 옮긴다.
         _listGuest.erase( std::remove_if( _listGuest.begin(), _listGuest.end(), []( const ParkGuest& guest )
         { return guest._state == ParkGuestState::Left; } ),
                           _listGuest.end() );

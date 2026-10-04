@@ -13,7 +13,7 @@ namespace sw
     /**
      * @struct ValueNoise
      * @brief 격자 꼭짓점에 정수 해시(`GameHash`)로 값을 두고 smoothstep 으로 잇습니다. 같은 씨앗이면 어느 기계에서나 같은 값입니다.
-     * @details 복셀 키트에 있었는데 장르를 가리지 않는다(농장의 들판 높낮이 · 공원 지형 · 2D 동굴) — 기반으로 옮겼다.
+     * @details 장르를 가리지 않는 기반이다(복셀 지형 · 농장의 들판 높낮이 · 공원 지형 · 2D 동굴).
      */
     struct SW_GF_API ValueNoise
     {

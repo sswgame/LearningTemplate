@@ -2,8 +2,8 @@
  * @file NetMessage.h
  * @brief 메시지 첫 바이트(종류)로 나뉘는 키트 · 게임 메시지를 쓰고 나눠 주는 도구 — `NetMessageWriter`(버퍼를 다시 쓰는 쓰기) · `INetMessageHandler` ·
  *        `NetMessageRouter`(호스트의 받은 메시지를 영역에 맞는 처리기로)입니다.
- * @details 네트워크 키트(`GF_Net*`)와 게임은 모두 "종류 바이트 + 비트 몸" 메시지를 주고받습니다. 예전에는 키트마다 메시지마다 `BitWriter` 를 새로 만들고,
- *          게임은 `if ( a.handleMessage( … ) ) continue; if ( b.handleMessage( … ) ) …` 사슬로 나눠 줬습니다. 영역은 `NetMessageRange`(16 개씩)입니다.
+ * @details 네트워크 키트(`GF_Net*`)와 게임은 모두 "종류 바이트 + 비트 몸" 메시지를 주고받습니다. 메시지마다 `BitWriter` 를 새로 만들지 말고
+ *          `NetMessageWriter` 를 다시 쓰며, 받은 메시지는 처리기 사슬 대신 `NetMessageRouter` 가 영역(`NetMessageRange`, 16 개씩)으로 나눠 줍니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

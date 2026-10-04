@@ -16,7 +16,7 @@ namespace sw
      * @class FirstPersonLook
      * @brief 요 · 피치 시점입니다. 피치는 ±최대각에서 자르고(뒤로 넘어가지 않는다) 요는 [-π, π) 로 감습니다.
      * @details 엔진 오일러(`SceneComponent::setLocalRotation`)는 피치가 아래로 + 입니다. 카메라에 넣을 값은 `computeCameraEuler` 가 돌려줍니다.
-     *          슈터 키트에 있었는데 복셀 게임이 시점 하나를 쓰려고 슈터 키트를 링크해야 했다 — 장르의 규칙이 아니라 기반으로 옮겼다.
+     *          장르의 규칙이 아니라 기반이다 — 1 인칭 시점이 필요한 키트 · 게임은 슈터 키트를 링크하지 않고 이것을 쓴다.
      */
     class SW_GF_API FirstPersonLook
     {

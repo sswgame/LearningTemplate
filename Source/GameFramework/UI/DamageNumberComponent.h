@@ -77,8 +77,7 @@ namespace sw
         /**
          * @brief 피해 숫자 하나를 @p position 에 띄웁니다 — 떠오르며 흐려지다 `kSpawnedLifeTime` 초 뒤 지워집니다.
          * @details 피해를 내는 모든 곳(`UnitStatsComponent` · `AbilitySystemComponent`)이 이것 하나를 씁니다. 틱 중이면 만들기를 틱 직후로 미룹니다
-         *          (틱 안에서는 컴포넌트를 붙일 수 없다). 예전에는 두 곳이 저마다 만들었고, 둘 다 수명 · 떠오름을 정하지 않아(기본 0 = 지우지 않음)
-         *          맞을 때마다 숫자 오브젝트가 영영 남았습니다.
+         *          (틱 안에서는 컴포넌트를 붙일 수 없다). 직접 만들지 말 것 — 수명 기본값 0 은 "지우지 않음" 이라 맞을 때마다 숫자 오브젝트가 남습니다.
          */
         static void spawnNumber( GameObjectManager& manager, const float3& position, int32 value );
 
