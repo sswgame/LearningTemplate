@@ -9,6 +9,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
+#include "Core/Process/ModuleBuildId.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -67,6 +68,12 @@ namespace sw
         // 크래시 리포트에 함께 나갈 값들이다. 덤프만으로는 알 수 없는 것들이다. 백엔드는 RHI 단계가 덮어쓴다.
         CrashHandler::setContextValue( "Build", build::kConfigName );
         CrashHandler::setContextValue( "Platform", build::kPlatformName );
+        // 심볼과 짝짓는 열쇠 — 실행 파일과(다르면) 엔진 모듈의 빌드 id. 덤프의 모듈 목록에도 같은 값이 있다.
+        const ModuleBuildId executableId = ModuleBuildId::find( nullptr );
+        const ModuleBuildId engineId     = ModuleBuildId::find( reinterpret_cast<const void*>( &CrashHandler::setContextValue ) );
+        CrashHandler::setContextValue( "BuildId", executableId._id );
+        if ( engineId._id != executableId._id )
+            CrashHandler::setContextValue( "EngineBuildId", engineId._id );
 
         if ( bDiagnostics )
         {

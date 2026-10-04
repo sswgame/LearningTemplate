@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Process/CrashHandler.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -474,6 +475,8 @@ namespace sw
             text.appendFormat( " %#=", value._name.c_str() );
             TelemetryServiceInternal::appendValueText( text, value );
         }
+        // 크래시 때 덤프 옆에 쓰이는 고정 고리에도 — 크래시 보고가 묶는다.
+        CrashHandler::addBreadcrumb( text.view() );
         if ( _listBreadcrumb.size() < capacity )
         {
             _listBreadcrumb.push_back( text.c_str() );

@@ -185,4 +185,11 @@
 	<!-- 개인 정보 — 아무것도 기본으로 켜지 않는다. 꺼져 있으면 텔레메트리는 모으지도 쓰지도 보내지도 않고, 끄는 순간 보내지 않은 스풀을 지운다(Engine/Telemetry).
 	     대상이 없다 — TelemetryService 가 적용 · 되돌리기 · 로드 통보로 확정 값을 읽는다. -->
 	<Setting id="telemetry.enabled" category="privacy" type="bool" default="false" text="settings.privacy.telemetry" description="settings.privacy.telemetry.description"/>
+	<!-- 크래시 보고 — local: 다음 실행이 덤프 · 로그를 묶음으로 모으기만 한다(기본), ask: 묶음마다 게임이 "보낼까요?" 를 묻는다, send: 보고 프로세스가 올린다.
+	     local 로 바꾸면 아직 보내지 않은 묶음도 보내지 않는다(Engine/Telemetry/CrashReportService). -->
+	<Setting id="telemetry.crashReports" category="privacy" type="enum" default="local" text="settings.privacy.crashReports" description="settings.privacy.crashReports.description">
+		<Option value="local" text="settings.privacy.crashReports.local"/>
+		<Option value="ask" text="settings.privacy.crashReports.ask"/>
+		<Option value="send" text="settings.privacy.crashReports.send"/>
+	</Setting>
 </UserSettingsSchema>

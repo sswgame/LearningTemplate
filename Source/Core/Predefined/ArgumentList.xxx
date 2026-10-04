@@ -45,3 +45,4 @@ SW_REGISTER_ARGUMENT( CHECK_TEXTURES, false, false, "check-textures" )
 // 모델 원본(`models_raw/` 의 glTF)을 `.mesh` 로 임포트한다 · 원본과 `.mesh` 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
 SW_REGISTER_ARGUMENT( IMPORT_MODELS, false, false, "import-models" )
 SW_REGISTER_ARGUMENT( CHECK_MODELS, false, false, "check-models" )
+// 크래시 보고 프로세스 `--crash-reporter=<묶음 폴더>` 는 이 목록에 없다 — App 의 main 이 엔진을 세우기 전에 읽고 끝낸다(`CrashReportService::runReporterFromCommandLine`).

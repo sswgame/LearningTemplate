@@ -10,6 +10,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/Process/CrashContext.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/Process/ModuleBuildId.h"
 #include "Core/String/StringUtil.h"
@@ -59,6 +60,7 @@
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneCooker.h"
+#include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -605,9 +607,27 @@ namespace sw
             telemetry.initialize( folder, context );
             // 동의는 플레이어 옵션(기본 꺼짐)이다. 꺼져 있으면 지난 실행이 남긴 스풀까지 지운다.
             telemetry.bindConsentSetting( *loop._owned._pUserSettingsManager );
+
+            // 지난 실행의 크래시를 묶는다(덤프 · 로그 폴더 옆의 Saved/CrashReports). 기본 동의(local)는 묶기만 하고, 보낼 것이 있을 때만 보고 프로세스를 띄운다.
+            const string crashFolder = getCrashReportFolder();
+            if ( crashFolder.empty() == false )
+            {
+                CrashReportService& crashReports = *loop._owned._pCrashReportService;
+                const string        reportsFolder =
+                    FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
+                crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionId() );
+                crashReports.bindConsentSetting( *loop._owned._pUserSettingsManager );
+                crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 kReporterArgument 를 알아듣는다(main.cpp)
+                (void)crashReports.collectNewCrashes();
+                (void)crashReports.launchReporterProcess();
+            }
             return EngineInitResult::Succeeded;
         }
-        static void shutdown( EngineLoop& loop ) { loop._owned._pTelemetryService->shutdown(); }
+        static void shutdown( EngineLoop& loop )
+        {
+            loop._owned._pCrashReportService->shutdown();
+            loop._owned._pTelemetryService->shutdown();
+        }
     };
 
     EngineLoop::EngineLoop()

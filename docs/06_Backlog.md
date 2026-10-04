@@ -274,7 +274,7 @@ cd build/Ninja-Debug/Bin
     HZB 가림 컬링 · 메시 LOD(meshopt) · PSO 미리 만들기 · 에디터 G(프로파일러 표 · GPU 타임스탬프 · RenderDoc · 보기 모드) · 에디터 C(확장 지점) · 에디터 F
     (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · UI 시험 입력 흉내 · 패키징 UI · 에디터 자동화 ·
     타일맵 확장 · 2D 조명/그림자 · 로딩 흐름 · 입력 확장 · 에셋 공정(검증 · XML 비교/병합 · 잠금 · DCC 내보내기) · QA 자동화(봇 · 내구 · 골든 이미지 · 성능 CI ·
-    퍼징) · 크래시 보고 업로드 · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 [대기: cam-views] · 하늘/시간대/높이
+    퍼징) · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 [대기: cam-views] · 하늘/시간대/높이
     안개 [대기: cam-views] · 2D 스켈레탈 · 리타게팅 · 모션 워핑/이동 보정 · 래그돌 + 히트박스 · 절단 런타임 · 군중 포즈 공유 · 되감기 디버거 [넷 다: char-anim,
     래그돌은 char-phys 도] · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서 — reflect-ext 의 문서 생성 뒤) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
     [넷 다: 런타임 UI].
@@ -1142,6 +1142,8 @@ cd build/Ninja-Debug/Bin
 - **크래시** — 엔진이 만드는 스레드는 시작할 때 `CrashHandler::initializeCurrentThread()`(빠뜨리면 스택 오버플로 덤프가 0 바이트). Windows 덤프는 보고 스레드가 `PssCaptureSnapshot` 으로
   쓴다(살아 있는 자기 프로세스를 `MiniDumpWriteDump` 하면 로더 락에 멈춘다 — 재현은 자식 12 개 × 400 회). 크래시 경로 로그는 `Logger::flushGlobalForCrash`(락을 못 잡으면 포기).
   시한은 `setReportDeadline`(20 초), POSIX 는 `alarm` + SIGALRM, `backtrace()` 예열. 실물 확인 `-gv_crashTest=1..5`. 크래시 보고 본문은 `CrashContext.cpp` 의 `writeCrashReport`.
+  묶음 · 올리기는 다음 실행의 `CrashReportService`(Engine/Telemetry). 보고 프로세스는 `setReporterExecutable` 을 정한 호스트(App)만 띄운다 — 경로를
+  `getExecutablePath` 로 잡았더니 시험 실행 파일이 `--crash-reporter=` 를 모른 채 자기를 끝없이 다시 띄웠다(실측).
 - **프로세스** — 자식 상속은 Windows `PROC_THREAD_ATTRIBUTE_HANDLE_LIST`, POSIX CLOEXEC + `close_range`(아니면 동시에 띄운 자식이 서로의 파이프를 문다). 띄우기만 할 때는 `Process::launchDetached`
   (`execute` 는 UI 스레드를 세운다, `explorer.exe /select,` 는 성공해도 1). POSIX: `isRunning` 은 `waitid(..., WNOWAIT)`, `terminate` 는 그룹째, pid 는 한 번만 읽는다(0 이면 `kill(-0)`).
 - **파일** — 쓰기는 원자적이다(`writeAtomically` → 같은 폴더 임시 파일 → `replaceFile`, Windows 는 `FileRenameInfoEx` POSIX 의미). Windows 읽기는 Win32(`readRange`) — `fopen_s` 는 ANSI 라

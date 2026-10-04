@@ -168,6 +168,40 @@ SW_TEST_CASE( CrashReportTest, SessionIdIsStableAndAppearsInReportPaths )
     SW_EXPECT_TRUE( path.find( ".dmp" ) != sw::string::npos );
 }
 
+/**
+ * @brief [CrashReportTest] 빵부스러기 — 최근 32 줄만 오래된 것부터 남고(긴 줄은 잘린다), 크래시 컨텍스트와 함께 `breadcrumbs.txt` 로 쓰인다
+ * @details 크래시 경로에서 할당 없이 쓰므로 고정 고리다. 넘치면 가장 오래된 줄을 덮는다.
+ */
+SW_TEST_CASE( CrashReportTest, BreadcrumbsKeepTheLatestLinesInOrder )
+{
+    prepareReportFolderInternal();
+    const sw::CrashBreadcrumbStore& store = sw::CrashBreadcrumbStore::get();
+    for ( uint32 index = 0; index < 40; ++index )
+    {
+        sw::StringBuilder<sw::constant::kMaxBuffer64> line;
+        line.appendFormat( "event %#", index );
+        sw::CrashHandler::addBreadcrumb( line.view() );
+    }
+    sw::CrashHandler::addBreadcrumb( sw::string( 400, 'z' ) );
+
+    utf8             arrText[sw::CrashBreadcrumbStore::kMaxBreadcrumb * sw::CrashBreadcrumbStore::kMaxLength]{};
+    const uint32     length = store.writeText( arrText, static_cast<uint32>( sizeof( arrText ) ) );
+    const sw::string text( arrText, length );
+    SW_EXPECT_TRUE( text.find( "event 8\n" ) == sw::string::npos );
+    SW_EXPECT_TRUE( text.find( "event 9\n" ) != sw::string::npos );
+    SW_EXPECT_TRUE( text.find( "event 9\n" ) < text.find( "event 39\n" ) );
+    SW_EXPECT_TRUE( text.find( sw::string( sw::CrashBreadcrumbStore::kMaxLength - 1, 'z' ) + "\n" ) != sw::string::npos );
+    uint32 lineCount = 0;
+    for ( const utf8 character : text )
+        lineCount += character == '\n' ? 1u : 0u;
+    SW_EXPECT_EQUAL( sw::CrashBreadcrumbStore::kMaxBreadcrumb, lineCount );
+
+    sw::writeCrashContextFile( "breadcrumb test", nullptr, 1, 2 );
+    sw::string fileText;
+    SW_ASSERT_TRUE( readReportFileInternal( "breadcrumbs.txt", fileText ) );
+    SW_EXPECT_TRUE( fileText == text );
+}
+
 // ------------------------------------------------------------------------------
 // 2) 진짜 크래시 — 이 실행 파일을 자식으로 띄워 죽게 하고, 리포트가 남았는지 본다
 //    크래시 핸들러는 크래시가 나야만 돈다. 조각을 직접 부르는 위 테스트로는 "그 방식으로 죽으면 핸들러에 들어오기는 하는가 · 들어와서

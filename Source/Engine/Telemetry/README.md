@@ -9,6 +9,8 @@
 | `TelemetryEvent` | 사건 하나(id + 타입 붙은 필드 값) |
 | `TelemetryService` | 엔진 서비스 — 동의 · 스키마 대조 · 표본 · 묶음 · 스풀(JSON lines) · 회전 · 상한 · 올리기 · 장면별 프레임 시간 요약 · 빵부스러기 |
 | `TelemetryUploader` | `ITelemetryUploader` · `NullTelemetryUploader`(기본 — 보내지 않음) · `HttpTelemetryUploader`(`IHttpClient` 로 POST) |
+| `CrashReportService` | 크래시 보고 — 다음 실행이 지난 크래시를 묶음 폴더로, 동의(local · ask · send)에 따라 두거나 묻거나 보고 프로세스로 올린다 |
+| `CrashReportUploader` | `ICrashReportUploader` · `NullCrashReportUploader`(기본) · `HttpCrashReportUploader`(multipart, `upload_file_minidump`) |
 | `HttpClient` | `IHttpClient` · `HttpRequest` · `HttpResponse` · `NullHttpClient`(기본 — 보내지 않고 거절). 이 저장소는 실제 네트워크 클라이언트를 싣지 않는다 |
 
 ## 동의 — 기본은 아무것도 하지 않는다
@@ -68,9 +70,48 @@ event.setInt( "wave", wave ).setInt( "kills", kills ).setFloat( "seconds", secon
 
 Shooter3D 는 새 웨이브(`progression.waveReached`)와 쓰러짐(`progression.roundEnded` — 웨이브 · 처치 · 시간 · 명중률)을 남긴다.
 
+## 크래시 보고
+
+크래시 순간에는 아무것도 보내지 않는다 — 죽어 가는 프로세스는 할당 없이 파일만 쓴다(`Core/Process/CrashHandler`: `crash_<세션>.dmp` · `.txt`(컨텍스트) ·
+`.stack.txt` · `.breadcrumbs.txt`, 로그 폴더 `Saved/Logs`). **다음 실행**의 기동 단계 `Telemetry` 가 `CrashReportService::collectNewCrashes` 로 지금 세션이 아닌
+크래시를 `Saved/CrashReports/crash_<세션>/` 로 묶는다.
+
+| 묶음 안 | 무엇 |
+|---------|------|
+| `crash.dmp` | 미니덤프(Windows) — 원래 파일을 옮긴다 |
+| `crash.txt` | 컨텍스트 — 사유 · 주소 · 프로세스/스레드 · Build · Platform · RHI · GPU · `BuildId`(실행 파일) · `EngineBuildId`(Dev 의 Engine.dll) |
+| `crash.stack.txt` | 심볼 변환한 콜 스택 |
+| `crash.breadcrumbs.txt` | 최근 사건 32 줄(텔레메트리 사건마다 `CrashHandler::addBreadcrumb` — 동의와 상관없이 기계 안에만) |
+| `last.log` | 그 세션의 로그 파일들을 이어 끝 512 KB(복사 — 로그 폴더의 것은 그대로) |
+| `manifest.json` | 세션 · 상태 · 시도 수 · 사유 · 빌드 id · 백엔드 · GPU · 시스템(논리 코어 · 메모리 — 묶는 실행이 읽는다) · 컨텍스트 전부 · 파일 목록 |
+
+- **동의** — 사용자 설정 `telemetry.crashReports`(기본 `local`): `local` 은 묶기만, `ask` 는 `AwaitingDecision` 으로 두고 게임 UI 가 `collectReports` 로 묻고
+  `decide( 세션, 보냄? )`, `send` 는 `Queued`. `local` 로 바꾸면 아직 보내지 않은 묶음(기다림 · 보낼 줄)이 `local` 로 돌아온다(철회). `send` 로 바꿔도 이미
+  `local` 로 모인 묶음은 소급해 보내지 않는다. 묶음은 10 개까지(오래된 것부터 지운다).
+- **보고 프로세스** — 보낼 줄이 있으면 `App.exe --crash-reporter="<묶음 폴더>"` 를 기다리지 않고 띄운다(`Process::launchDetached`). `main` 이 엔진 · 게임 모듈을
+  세우기 **전에** 이 인자를 보고 `runReporter` 만 돌고 끝낸다 — 크래시 난 게임 코드를 다시 올리지 않는다(언리얼 CrashReportClient · Crashpad 핸들러와 같은 자리,
+  여기서는 별도 exe 대신 같은 exe 의 다른 모드). 올리기 결과가 `Sent` 면 상태 `sent` 와 덤프 삭제, 아니면 시도 수 + 1, 3 번이면 더 띄우지 않는다.
+  띄울 실행 파일은 `setReporterExecutable` 로 정한 것뿐이다(EngineLoop 이 App 경로를 넣는다 — 시험 실행 파일은 자기를 다시 띄우지 않는다).
+- **업로더** — `HttpCrashReportUploader` 는 `multipart/form-data`: `manifest`(JSON) + 파일마다 한 부분, 덤프는 `upload_file_minidump`(Breakpad · Crashpad ·
+  Sentry 미니덤프 끝점이 받는 이름). 이 저장소의 보고 프로세스는 `NullCrashReportUploader`(보내지 않음)를 쓴다 — 실제로 올리려면 게임이 `IHttpClient` 와
+  끝점을 넣어 `runReporterFromCommandLine` 자리의 업로더를 바꾼다.
+
+### 심볼 · 빌드 id 짝짓기
+
+- 덤프만으로는 함수 이름이 없다. 덤프의 모듈 목록은 모듈마다 빌드 id(Windows: PE CodeView `RSDS` 의 GUID + age, PDB 이름)를 담고, 심볼 서버는 그 열쇠로
+  PDB 를 찾는다 — `symstore` 배치 `<pdb 이름>/<GUID 32 자리><age 16진>/<pdb 이름>`. `ModuleBuildId::find` 가 같은 열쇠를 만들어 컨텍스트 `BuildId` 에 적으므로,
+  묶음의 `buildId` 로 "어느 빌드의 PDB 가 필요한가" 를 덤프를 열지 않고 안다.
+- 배포할 때 할 일: 빌드마다 `Bin/*.pdb` 를 심볼 저장소에 넣는다(`symstore add /r /f build\Ninja-Shipping\Bin\*.pdb /s <저장소> /t SWEngine /v <버전>` 또는
+  Sentry `sentry-cli debug-files upload`). 배포물에는 PDB 를 싣지 않는다. Dev 는 모듈(DLL)마다 PDB 가 따로라 `EngineBuildId` 도 적는다.
+- 리눅스: ELF `NT_GNU_BUILD_ID` 노트(16진). 링커가 노트를 적어야 한다(`-Wl,--build-id` — 배포판 clang 은 기본으로 켠다, 없으면 `buildId` 가 빈다).
+  디버그 정보는 `objcopy --only-keep-debug` 로 떼어 `.build-id/<앞 2 자리>/<나머지>.debug` 배치로 저장한다(gdb · Sentry 가 이 배치를 읽는다).
+
 ## 상용 엔진과 견주면
 
 - 언리얼 Analytics: 공급자 인터페이스 · 세션 · 사건 속성 — 같은 자리(`ITelemetryUploader`). 언리얼은 속성이 자유 형식이고 여기는 스키마 대조가 있다(받는 쪽 테이블과
   어긋난 줄을 쓰지 않는다 — Unity 쪽). 언리얼의 내장 공급자(ET · 파일 · Flurry 등)에 해당하는 실제 HTTP 백엔드는 없다(`IHttpClient` 를 게임이 구현).
 - Unity Analytics: 오프라인 큐 · 동의 게이트 · 세션 표본 · 사건 스키마 — 있다. 대시보드 · 퍼널 · 서버 쪽 처리는 범위 밖.
 - 없는 것: 압축(gzip) 업로드, 재시도 백오프, 사건 단위 사용자 id(세션 id 뿐 — 개인 식별자를 일부러 싣지 않는다), 데이터 삭제 요청 API(GDPR — 서버 몫).
+- 언리얼 CrashReportClient: 별도 프로세스 · 덤프 + 로그 + 컨텍스트 묶음 · "보낼까요?" — 같은 틀(여기는 같은 exe 의 보고 모드, 창은 게임 UI 몫). CRC 는 크래시 직후
+  띄우고 여기는 다음 실행이 띄운다(죽어 가는 프로세스에서 아무것도 띄우지 않는다). Sentry · Backtrace: 미니덤프 multipart 업로드 · 빵부스러기 · 빌드 id
+  심볼 매칭 — 업로드 모양과 열쇠는 같다. 서버 쪽 심볼 변환 · 묶어 보기(같은 크래시 묶기) · 덤프 압축 · 크래시 중 스크린샷은 없다.

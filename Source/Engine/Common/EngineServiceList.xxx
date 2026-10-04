@@ -57,6 +57,8 @@ SW_ENGINE_SERVICE( _pFrameProfiler, class, FrameProfiler, getFrameProfiler, Requ
 SW_ENGINE_SERVICE( _pUserSettingsManager, class, UserSettingsManager, getUserSettingsManager, Required, GameVisible, EngineCreated )
 // 텔레메트리 — 동의(사용자 설정 telemetry.enabled, 기본 꺼짐)가 없으면 아무것도 모으지 않는다. 게임은 진행 사건을 `record` 한다.
 SW_ENGINE_SERVICE( _pTelemetryService, class, TelemetryService, getTelemetryService, Required, GameVisible, EngineCreated )
+// 크래시 보고 — 다음 실행이 지난 크래시를 묶는다. 게임 UI 는 "보낼까요?" 를 `collectReports` · `decide` 로 묻는다(동의가 ask 일 때).
+SW_ENGINE_SERVICE( _pCrashReportService, class, CrashReportService, getCrashReportService, Required, GameVisible, EngineCreated )
 
 
 SW_ENGINE_SERVICE_CONST( _pEngineDefaultAssets, struct, EngineDefaultAssets, getEngineDefaultAssets, Required, HostOnly, EngineCreated )
