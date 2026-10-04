@@ -81,7 +81,7 @@ namespace sw
         return GameDataXml::loadFile( *this, &GameSettings::loadRoot, path, "GameSettings" );
     }
 
-    bool GameSettings::loadRoot( const XmlNode& root, string_view sourceName )
+    bool GameSettings::loadRoot( const XmlNode& root, [[maybe_unused]] string_view sourceName )
     {
         root.takeChildText( "startMap", _startMap );
         root.takeChildText( "titleScene", _titleScene );

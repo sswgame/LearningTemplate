@@ -22,7 +22,7 @@ namespace sw
             static constexpr const utf8* kArrPhaseName[]      = { "Io", "Decode", "Upload" };
             static constexpr float64     kNanosPerMillisecond = 1.0e6;
 
-            static float64 toMilliseconds( uint64 nanos ) { return static_cast<float64>( nanos ) / kNanosPerMillisecond; }
+            [[maybe_unused]] static float64 toMilliseconds( uint64 nanos ) { return static_cast<float64>( nanos ) / kNanosPerMillisecond; }
 
             static uint64 computeSummaryTotal( const AssetLoadKindSummary& summary )
             {
@@ -175,6 +175,7 @@ namespace sw
 
     void AssetLoadProfiler::report( [[maybe_unused]] const utf8* pTitle ) const
     {
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
         using Internal = AssetLoadProfilerInternal;
         vector<AssetLoadKindSummary> listSummary;
         vector<AssetLoadRecord>      listSlowest;
@@ -201,6 +202,7 @@ namespace sw
                          Internal::toMilliseconds( record._arrPhaseNanos[2] ), record._bytes, record._bAsync != SW_FALSE ? "async" : "sync",
                          record._kind.c_str(), record._path.c_str() );
         }
+#endif // 표는 Info 로그로만 나간다 — 그것이 사라지는 빌드(Shipping)에서는 모을 것만 모은다
     }
 
     void AssetLoadProfiler::reportIfRequested( const utf8* pTitle ) const
