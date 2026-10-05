@@ -1,3 +1,7 @@
+/**
+ * @file Follow2DCameraComponent.h
+ * @brief 2D(XY 평면) 따라가기 · 흔들림 카메라 — 주인 오브젝트를 목표 자리 쪽으로 옮기고 흔들림 오프셋을 얹습니다.
+ */
 #pragma once
 #include "Core/Math/MathUtil.h"
 
@@ -8,8 +12,14 @@
 
 namespace sw
 {
-    REFLECT()
-    class SW_GF_API CameraControllerComponent : public Component
+    /**
+     * @class Follow2DCameraComponent
+     * @brief 주인 오브젝트(카메라)의 월드 XY 를 목표 자리로 끌고(속도가 0 이면 놓인 자리를 지킨다) 감쇠하는 흔들림을 얹습니다. Z 와 회전은 건드리지 않습니다.
+     * @details Godot `Camera2D` 의 위치 스무딩, Cinemachine 2D 의 따라가기 + Impulse 자리입니다. 데이터 카메라(`CameraDirectorComponent`)의 모드는 Y 가 위인 땅(XZ)
+     *          기준이라 XY 평면 2D 씬을 맡지 못해 따로 둡니다. 흔들림 식은 `CameraImpulse` 와 같습니다.
+     */
+    REFLECT( Category = "Camera", DisplayName = "Follow 2D Camera", Tooltip = "Moves this object towards a 2D target on the XY plane and adds a decaying shake" )
+    class SW_GF_API Follow2DCameraComponent : public Component
     {
     public:
         REFLECT_BODY();
@@ -17,8 +27,8 @@ namespace sw
         /** @brief `shake()` 에 진동 수를 주지 않았을 때 쓰는 값(초당 진동 수)입니다. */
         static constexpr float32 kDefaultShakeFrequency = 30.0f;
 
-        CameraControllerComponent();
-        virtual ~CameraControllerComponent() override = default;
+        Follow2DCameraComponent();
+        virtual ~Follow2DCameraComponent() override = default;
 
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;

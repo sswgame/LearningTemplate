@@ -38,7 +38,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 - **Camera**(카메라 컴포넌트): 비스듬히 내려다보는 직교 카메라
   (`OrthoCameraRigComponent` — WASD · 방향키 이동(WASD 끄기 · 초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), Q/E 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)). 계산은 `OrthoCameraRigMath` 로
   떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스(또는 입력 맵 액션 `_lookAction`) 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리(카메라의 부모 공간) · 손에 든 뷰 모델 자리, 계산은
-  `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다
+  `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다.
+  XY 평면 2D 씬의 따라가기 · 흔들림은 `Follow2DCameraComponent`(목표 자리 · 따라가는 비율 · 감쇠 흔들림)
 - **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 모드 계산(`CameraMode` — 입력 · 제약 · 프레이밍 · 스프링 암 · 훑기),
   흔들림(`CameraShake` — 펄린 손떨림 · 충격), 암 충돌 질의(`ICameraCollisionProbe`), 포즈 섞기(`blendPoses`, 곡선은 엔진 `BlendCurveSpec` · `evaluateBlendWeight`) · 블렌드 진행(`CameraPoseBlender`), 상태 기계
   (`CameraDirector`), 그것을 카메라에 쓰는 `CameraDirectorComponent`, 플레이어마다 뷰 타깃을 바꾸는 `CameraManagerComponent`. 아래 "카메라" 절
@@ -216,7 +217,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   물리 백엔드가 바뀌어도 카메라는 그대로다 — 지금 구현은 상자 목록(`CameraBoxCollisionProbe`)과 매니저의 `PhysicsWorld` 바디(`PhysicsWorldCameraProbe`, 대상 자신은 뺀다).
 - **흔들림**(`CameraShake.h`): 손떨림은 프리셋의 `<Noise>`(채널마다 다른 시드 줄기의 1D 펄린, 같은 시드 · 시간 = 같은 값), 충격은 `CameraImpulseListener::addImpulse`
   (크기 × 남은 비율 × e^(−t/감쇠), 길이 끝에 정확히 0, 반지름 안에서 거리에 따라 선형 감쇠). 흔들림은 포즈 위에 얹는 오프셋이라 블렌드 · 감쇠가 섞지 않는다.
-  오버월드 키트의 `CameraControllerComponent::shake` 도 같은 충격 식을 쓴다.
+  2D 따라가기 카메라(`Follow2DCameraComponent::shake`)도 같은 충격 식을 쓴다.
 - **블렌드 고르기**: `<Blend from to>` 표(정확히 → `from="*"` → `to="*"`) → 들어가는 프리셋의 `<BlendIn>` → `<DefaultBlend>`. 곡선은 엔진의 `BlendCurve`
   (Cut · Linear · EaseIn/Out/InOut · SmoothStep · Cubic · Exponential · Spring · Custom 키, `Engine/Animation/BlendCurve.h`). `evaluateBlendWeight` · `blendPoses` 는 컴포넌트를
   모르는 함수라 시퀀서 · 소켓 부착의 되돌아가기(`SocketBindingComponent`)도 같은 곡선을 쓴다. 직교 ↔ 원근은 섞지 않고 가중치 0.5 에서 바꾼다.

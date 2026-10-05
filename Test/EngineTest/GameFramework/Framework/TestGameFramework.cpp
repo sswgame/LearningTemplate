@@ -28,6 +28,7 @@
 #include "EngineTest/StateReloadTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
 
+#include "GameFramework/Camera/Follow2DCameraComponent.h"
 #include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/Framework/ComponentStateStore.h"
 #include "GameFramework/Framework/GameEvents.h"
@@ -41,7 +42,6 @@
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
-#include "GameFramework/Kits/Rpg/Overworld/CameraControllerComponent.h"
 #include "GameFramework/Kits/Rpg/Overworld/OverworldSaveGame.h"
 #include "GameFramework/Kits/Rpg/Overworld/PlayerController.h"
 #include "GameFramework/Kits/Rpg/Overworld/PlayerLocomotion.h"
@@ -2486,7 +2486,7 @@ SW_TEST_CASE( GameFrameworkTest, GameSettings_UnreadableValueFallsBackInsteadOfB
  */
 SW_TEST_CASE( GameFrameworkTest, CameraShakeOscillatesAndDecaysToZero )
 {
-    CameraControllerComponent camera;
+    Follow2DCameraComponent camera;
     SW_EXPECT_TRUE( camera.isShaking() == false );
     SW_EXPECT_NEAR_EQUAL( 0.0f, camera.getShakeOffset()._x, 1e-5f );
 
@@ -2522,17 +2522,17 @@ SW_TEST_CASE( GameFrameworkTest, CameraShakeOscillatesAndDecaysToZero )
 }
 
 /**
- * @brief [GameFrameworkTest] 카메라 컨트롤러는 놓인 자리를 지키고, 흔들림은 끝나면 그 자리로 돌아오며, 따라가기는 시킬 때만 한다
+ * @brief [GameFrameworkTest] 2D 따라가기 카메라는 놓인 자리를 지키고, 흔들림은 끝나면 그 자리로 돌아오며, 따라가기는 시킬 때만 한다
  * @details 기준은 주인이 놓인 자리(지난 틱의 흔들림을 걷어 낸 자리)이고, 목표 쪽으로는 속도를 줄 때만 간다(`setTargetPosition` ·
  *          `setFollowSpeed`). 컨트롤러가 자기 위치 사본(기본 원점)을 매 틱 주인에 덮어쓰면 이 컴포넌트를 단 카메라는 놓은 자리와 상관없이
  *          **원점에 박힌다.**
  */
-SW_TEST_CASE( GameFrameworkTest, CameraControllerKeepsItsPlaceAndFollowsOnlyWhenAsked )
+SW_TEST_CASE( GameFrameworkTest, Follow2DCameraKeepsItsPlaceAndFollowsOnlyWhenAsked )
 {
-    GameObjectManager          manager;
-    GameObject*                pCamera     = manager.createGameObject( hashed_string( "OverworldCamera" ) );
-    SceneComponent*            pScene      = pCamera->addComponent<SceneComponent>();
-    CameraControllerComponent* pController = pCamera->addComponent<CameraControllerComponent>();
+    GameObjectManager        manager;
+    GameObject*              pCamera     = manager.createGameObject( hashed_string( "Camera2D" ) );
+    SceneComponent*          pScene      = pCamera->addComponent<SceneComponent>();
+    Follow2DCameraComponent* pController = pCamera->addComponent<Follow2DCameraComponent>();
     SW_ASSERT_TRUE( pScene != nullptr && pController != nullptr );
     pScene->setLocalPosition( float3( 5.0f, 3.0f, -10.0f ) );
 
@@ -2567,10 +2567,10 @@ SW_TEST_CASE( GameFrameworkTest, CameraControllerKeepsItsPlaceAndFollowsOnlyWhen
  */
 SW_TEST_CASE( GameFrameworkTest, CameraShakeOffsetDoesNotSurviveAStateReload )
 {
-    GameObjectManager          manager;
-    GameObject*                pCamera     = manager.createGameObject( hashed_string( "OverworldCamera" ) );
-    SceneComponent*            pScene      = pCamera->addComponent<SceneComponent>();
-    CameraControllerComponent* pController = pCamera->addComponent<CameraControllerComponent>();
+    GameObjectManager        manager;
+    GameObject*              pCamera     = manager.createGameObject( hashed_string( "Camera2D" ) );
+    SceneComponent*          pScene      = pCamera->addComponent<SceneComponent>();
+    Follow2DCameraComponent* pController = pCamera->addComponent<Follow2DCameraComponent>();
     SW_ASSERT_TRUE( pScene != nullptr && pController != nullptr );
     pScene->setLocalPosition( float3( 5.0f, 3.0f, -10.0f ) );
     manager.beginPlay();
@@ -2584,7 +2584,7 @@ SW_TEST_CASE( GameFrameworkTest, CameraShakeOffsetDoesNotSurviveAStateReload )
 
     SW_ASSERT_TRUE( StateReloadTestUtil::reloadInPlace( pCamera ) );
     pScene      = pCamera->getComponent<SceneComponent>();
-    pController = pCamera->getComponent<CameraControllerComponent>();
+    pController = pCamera->getComponent<Follow2DCameraComponent>();
     SW_ASSERT_TRUE( pScene != nullptr && pController != nullptr );
     SW_EXPECT_TRUE( pController->isShaking() );
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Rpg/Overworld/CameraControllerComponent.h"
+#include "GameFramework/Camera/Follow2DCameraComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    CameraControllerComponent::CameraControllerComponent()
+    Follow2DCameraComponent::Follow2DCameraComponent()
         : _targetPos{ 0.0f, 0.0f }
         , _appliedShake{ 0.0f, 0.0f }
         , _followSpeed{ 0.0f }
@@ -20,13 +20,13 @@ namespace sw
     {
     }
 
-    void CameraControllerComponent::onBeginPlay()
+    void Follow2DCameraComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PrePhysics );
     }
 
-    void CameraControllerComponent::onTick( float32 deltaTime )
+    void Follow2DCameraComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
 
@@ -56,7 +56,7 @@ namespace sw
         pSceneComp->setWorldPosition( float3{ basePos + shakeOffset, pos._z } );
     }
 
-    float2 CameraControllerComponent::getShakeOffset() const
+    float2 Follow2DCameraComponent::getShakeOffset() const
     {
         if ( _shakeDuration <= 0.0f || _shakeTotalDuration <= 0.0f )
             return float2{ 0.0f, 0.0f };
@@ -71,7 +71,7 @@ namespace sw
         return float2{ offset._position._x, offset._position._y };
     }
 
-    void CameraControllerComponent::shake( float32 intensity, float32 duration, float32 frequency )
+    void Follow2DCameraComponent::shake( float32 intensity, float32 duration, float32 frequency )
     {
         _shakeIntensity     = intensity;
         _shakeDuration      = MathUtil::max( duration, 0.0f );
