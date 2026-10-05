@@ -360,14 +360,9 @@ cd build/Ninja-Debug/Bin
 
 - **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b) — 250 ms · 손실 15 % 의 사건 지연
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도
-  받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ④ **파괴 상태 해시가 구성마다 다르다**(2026-10-06,
-  사용자 판단 대기) — 같은 벽 · 사건열(net-ci-rest R3 의 시험 모양: `makeWall` · 사건 넷)의 해시가 Windows Debug `0xE17E4E8537A70F9B` · Windows Shipping(=Release
-  플래그) `0xDACCAB2F48260445` 로 **사건 전 파쇄 결과부터** 갈린다(두 구성 각 2 회 같은 값). 씨앗 · 사건만 보내고 받는 쪽이 같은 계산을 하는 파괴 네트워킹은
-  Debug 서버 ↔ Shipping 클라이언트(또는 Windows ↔ 리눅스)에서 다른 그림이 된다. 가장 그럴듯한 원인은 Release 의 `/arch:AVX2` + 기본 `-ffp-contract` 가
-  `a*b+c` 를 FMA 로 합쳐 반올림이 달라지는 것 — `-ffp-contract=off`(clang-cl `-clang:-ffp-contract=off`)를 파괴 · 파쇄 파일에만 걸지 전체에 걸지
-  사용자에게 묻는다(언리얼은 결정성이 필요한 물리 경로를 `/fp:precise` 로 짓는다). 정해지면 기준값 시험(`DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`
-  — 해시 다섯, `SW_DESTRUCTION_PRINT_GOLDEN=1`)을 다시 넣고 Debug · Shipping · 리눅스 CI 가 같은 값인지 본다. 전용 서버 프로세스 ↔ 클라이언트 비교는
-  server-target 뒤.
+  받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ④ 전용 서버 프로세스 ↔ 클라이언트 해시 비교는 server-target(Server
+  실행 파일) 뒤의 시험이다 — 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가
+  지킨다(Windows Debug · Release · Shipping 같은 값 확인, 리눅스는 CI 잡 — 리눅스 clang 에서 다르면 그 잡이 진다).
 
 - **네트워크 — 포화된 연결의 비신뢰 줄**(N21a 뒤). 대역폭 몫을 다 쓰면 메시지가 기다리는데, 비신뢰 줄(`NetConnection::_listOutgoingUnreliable`)에는 상한이 없어 오래 포화되면
   옛 비신뢰가 쌓였다 몰려 간다. 언리얼은 포화면(`IsNetReady` 거짓) 액터 복제를 건너뛴다 — 키트가 `NetHost` 에 "이 연결이 포화인가" 를 묻거나 줄에 나이 상한을 둔다. 재고 나서.
@@ -429,11 +424,8 @@ cd build/Ninja-Debug/Bin
 - **커버리지 안내 퍼저(`LoaderFuzzer`)는 아직 한 번도 지어지지 않았다**(2026-10-06 들임, 리눅스 전용 — 이 PC 는 WSL 을 쓰지 않았다). 첫 `fuzz.yml` 실행
   (밤 또는 `workflow_dispatch`)이 구성 · 링크(`-fsanitize=fuzzer-no-link` 엔진 + ASan, `-fsanitize=fuzzer` 실행 파일)와 대상마다 60 초가 끝나는지 본다.
   지면 그 실행의 주석 · 아티팩트(`fuzz-findings`)로 고친다.
-- **Windows CI Debug · STL 잡의 키트 시험 22 건(ActionAdventure · Metroidvania · Rhythm …)이 값이 어긋나 진다**(run 37251047781, `a380e2ee3`) — 유니티 켬 +
-  PCH 끔 Debug 에서만(같은 구성의 Shipping · 로컬 Ninja-Debug 통과). 2026-10-06 이 PC 에서 같은 구성(`cmake --preset CI-Debug -DSW_ENABLE_PCH=OFF`, CC/CXX=clang-cl,
-  Tools/LLVM)으로 지은 EngineTest 는 그 키트 시험 74/74 · `--host_suites=exclude` 1974/1976(2 skip) 통과 — 재현하지 못했다. 남은 차이는 러너의 컴파일러
-  (`C:\Program Files\LLVM` · MSVC STL 판)다. `AppCookTest` 실패는 출력 장치 없음(Info 로 바꿈)이었다. 다음 CI 실행의 주석(`CiFailureReport.py`)에 다시 나오면
-  그 잡의 clang 판을 로컬과 맞춰 본다.
+- **Windows CI Debug · STL 잡의 키트 시험 22 건 실패**(run 37251047781, `a380e2ee3` — 유니티 켬 + PCH 끔 Debug 에서만): 재현 안 됨 — 이 PC 의 같은 구성
+  (`CI-Debug -DSW_ENABLE_PCH=OFF`)에서 통과했다. B4 로 실패 보고(`CiFailureReport.py`)가 나아진 뒤 다음 CI 주석으로 본다.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다(2026-10-06 확인: 업스트림 vcpkg port-version 4 · 원본 master · develop 모두 아직 없음. vcpkg PR 은 내지 않는다 — 사용자 결정, 외부 공개).
 - **include · 전방 선언 남은 후보.** ① OS 헤더(`Core/Common/PlatformOsHeaders.h` — `Windows.h` · `DbgHelp.h` · `Xinput.h` …)가 `EngineMinimal.h` 를 거쳐
   PCH 에 남아 있다(TU 2746 · `windows.h` 1671). 빼려면 먼저 `NOMINMAX` · `WIN32_LEAN_AND_MEAN` 을 CMake 정의로 옮기고(서드파티가 `windows.h` 를 먼저 include 해도
@@ -884,6 +876,10 @@ cd build/Ninja-Debug/Bin
   링크 App 26.7 → 30.5 s · EngineTest 68.6 → 79.9 s, 전체 빌드 벽시계는 기계 부하에 묻혀 차이 없음(7.6 · 6.8 분).
 - **유니티 묶음에서 서드파티 매크로 정리는 "내가 정의한 것만" 지운다** — `AudioVorbisDecode.cpp` 가 stb_vorbis 뒤에 `#undef TRUE` · `FALSE` 를 하자 Windows
   `windows.h` 의 것이 지워져, 같은 묶음 뒤의 `XAudio2System.cpp`(d3d11.h)가 PCH 끈 빌드(CI Windows)에서 깨졌다. PCH 가 있으면 d3d 헤더가 먼저 들어와 가려진다.
+- **구성을 넘어 같은 비트가 필요한 TU 는 `sw_markDeterministicSources`** — 부동소수점 축약(FMA 합치기)을 끄고 유니티 묶음에서 뺀다. Release 의
+  `/arch:AVX2` 가 `a * b + c` 를 FMA 로 합쳐 파괴 해시가 Debug 와 갈렸다(파쇄 결과부터). 대상은 Engine `Destruction/` 의 시뮬레이션 TU 여덟 ·
+  `GF_NetDestruction` · Core `Math/VectorMath.cpp`(거리 · 길이가 줄 밖 함수라 그쪽도 — 빼면 사건 넷째의 반경 피해에서 다시 갈린다). 새 결정성 경로는
+  이 함수에 파일을 더하고 기준값 시험을 붙인다.
 
 ### 3-5. 직렬화 · 리플렉션 · 파서
 

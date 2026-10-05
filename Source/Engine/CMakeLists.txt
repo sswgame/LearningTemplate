@@ -287,6 +287,19 @@ if(COMMAND sw_setUnityBuild)
     sw_setUnityBuild(Engine BATCH_SIZE 12)
 endif()
 
+# 파괴 · 파쇄는 씨앗과 사건만 보내고 받는 쪽이 같은 계산을 한다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`,
+# `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`). 화면용(컴포넌트 · 렌더 도우미)은 넣지 않는다.
+sw_markDeterministicSources(Engine
+    Destruction/DestructionDamage.cpp
+    Destruction/DestructionProfile.cpp
+    Destruction/DestructionState.cpp
+    Destruction/FractureAsset.cpp
+    Destruction/FractureGraph.cpp
+    Destruction/MeshFracture.cpp
+    Destruction/PolygonFracture.cpp
+    Destruction/PolygonTriangulation.cpp
+)
+
 # ------------------------------------------------------------------------------
 # 6) ENUM() 코드젠 — ReflectionParser 필요 (루트가 Tools 이후 이 파일을 호출)
 # RHI_* MODULE은 런타임 로드이므로 빌드 순서만 묶음 (링크하지 않음)
