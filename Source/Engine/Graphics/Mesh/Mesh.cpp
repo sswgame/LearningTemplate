@@ -127,7 +127,7 @@ namespace sw
 
         // 워커에서 만들어도 되는지는 **백엔드가 말한다**. DX12 · DX11 · Vulkan 은 버퍼 생성이 디바이스 레벨이고
         // 핸들 테이블도 잠겨 있어 안전하다. OpenGL 은 glGen* 이 현재 컨텍스트를 필요로 해서 안 된다. 그 백엔드에서
-        // 워커가 여기 들어왔다면 부른 쪽이 틀린 것이다(GpuUploadQueue 는 그 경우 인라인으로 돈다).
+        // 워커가 여기 들어왔다면 부른 쪽이 틀린 것이다(GpuUploadQueue 는 그 백엔드에서 요청을 받지 않는다 — 렌더 스레드가 만든다).
         if ( engine::areEngineServicesBound() && pDevice->getCapabilities()._bThreadSafeResourceCreation == SW_FALSE )
             SW_ASSERT( engine::getTaskManager().isWorkerThread() == false );
         // 이미 올라가 있으면 그대로 둔다. 옛 디바이스가 죽었다면 통보(`releaseRhi` · `forgetRhi`)가 먼저 와서

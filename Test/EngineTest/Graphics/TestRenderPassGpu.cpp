@@ -2268,7 +2268,7 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
  */
 SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
 {
-    test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
+    test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan } );
     if ( device.isReady() == false )
         SW_TEST_SKIP( "No RHI backend for upload queue test" );
 
@@ -2306,6 +2306,33 @@ SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
 
     for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
         arrMesh[meshIndex]->releaseRhi( device.get() );
+}
+
+/**
+ * @brief 워커 생성을 못 하는 백엔드(OpenGL)에서는 업로드 큐가 메시를 받지 않는다 — 렌더 스레드가 그 프레임의 업로드에서 만든다.
+ * @details 게임 스레드가 대신 만들면 렌더 스레드가 컨텍스트를 오래 쥔 동안(쿠킹 안 된 셰이더의 실시간 컴파일) 컨텍스트 대기가 시간을 넘겨
+ *          `acquireGraphicsContextBlocking timed out` · `createVertexBuffer failed` 가 [Error] 로 남는다(쿠킹 전 Debug -gl 환경 쇼케이스).
+ */
+SW_TEST_CASE( RenderPassGpuTest, UploadQueueLeavesMeshesToTheRenderThreadWithoutThreadSafeCreation )
+{
+    test::RHITestDevice device( { sw::RHIBackend::OpenGL } );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "No OpenGL backend for upload queue test" );
+    SW_ASSERT_TRUE( device->getCapabilities()._bThreadSafeResourceCreation == SW_FALSE );
+
+    sw::GpuUploadQueue queue;
+    queue.bindDevice( device.get(), &sw::engine::getTaskManager() );
+
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( mesh.get() );
+    queue.requestMesh( mesh );
+    SW_EXPECT_EQUAL( 0u, queue.getPendingCount() );
+    SW_EXPECT_EQUAL( 0u, queue.flush() );
+    SW_EXPECT_FALSE( mesh->isRhiValid() );
+
+    // 렌더 스레드 자리(여기서는 컨텍스트를 쥔 시험 스레드)에서 만든다 — GpuScene 업로드가 하는 일이다.
+    SW_EXPECT_TRUE( mesh->initRhi( device.get() ) );
+    mesh->releaseRhi( device.get() );
 }
 
 /**
