@@ -206,7 +206,7 @@ cd build/Ninja-Debug/Bin
   카메라 `gv_cameraFieldOfView` · `gv_cameraShakeScale` · `gv_cameraHeadBob`(cam-views 가 읽을 자리). (4) 해상도 선택지를 모니터 모드에서(선택지 공급자) · GPU 사양 조회(RHI 어댑터 · 전용 메모리)로 품질 자동 선택.
   (5) 게임 스키마에 키 바인딩 설정 — Shooter3D 는 입력 맵(`data/shooter.input.xml`)을 쓰니 그 액션부터. 다른 시험 게임은 아직 키를 직접 묻는다(입력 맵으로 옮길 것). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 - **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
-  - 중간: `SpatialHashGrid2D`(RTS 버킷 · NetMmo 관심 격자 — 둘의 질의 모양이 달라 함께 뽑을 이득을 아직 못 봤다) · 키트의 칸 저장소를
+  - 중간: 키트의 칸 저장소를
     `GridTopology` 위로(CreatureTown · FarmField · TileMap · ActionPlatformerBody 의 `y × 너비 + x` 손셈 — 이웃 표 · 탐색은 이미 옮겼다) ·
     NetConnection 메시지 버퍼 재사용.
 
@@ -378,8 +378,7 @@ cd build/Ninja-Debug/Bin
   `LagCompensationHistory::raycastAt(float)` 는 있다) · B6(선택) Win32 입력 스레드 — 먼저 `GetMessageTime` 해상도를 재고, 에디터 · 콘솔이 먼저 소비하는 판정을 우회하지 않게.
   롤백 · 락스텝 키트에는 넣지 않는다(프레임 단위 결정성이 계약).
 
-- **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).** ② `SpatialHashGrid2D`(RTS · MMO ·
-  BR · Mech — 질의 모양이 달라 이득부터 볼 것).
+- **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).**
   ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
 
 - **(보류 — 사용자 결정 "안정화된 뒤 개발") 게임별 CC0 리소스 배치 + SD 메카 시험 게임 MechArena.** 라이선스는 **CC0 급만**(출처 표기 의무 · 재배포 금지가 붙은 것은
@@ -1538,6 +1537,9 @@ cd build/Ninja-Debug/Bin
   `saveGameToSlot( *this )` 를 부르면 `SaveGame` 의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓰고 성공을 돌려준다. 파생 세이브가 자기 타입으로 부른다(`OverworldSaveGame`).
 - **존 역할은 열거가 아니라 맵 `<role>` 의 태그 목록이다**(`ZoneTracker::setFromMap` 이 쉼표 · 공백으로 나눈다, `hashed_string` 이라 대소문자를 가리지 않는다). 클리어 게이트는 `clear_gate` 태그 —
   경로 이름에서 역할을 짐작하지 않는다.
+- **2D 근접 질의는 엔진 `SpatialHashGrid2D` 하나** — NetMmo 관심 영역이 쓴다(키는 엔티티 id 를 index 에 담은 `SlotHandle`, 세대 1). `update` 는 덮는 셀이 그대로면
+  경계만 바꾸고(PhysicsWorld 와 같은 지름길), 질의 결과는 핸들 순이라 순서가 결과에 실리는 쪽은 스스로 정렬한다. RTS 버킷(걸음마다 다시 짓는 밀집 머리 · 다음 배열,
+  결과 순서가 자동 목표 · 채취 · 밀어내기에 실린다)은 옮기지 않는다.
 - **키트 소속은 의존 관계로 판별되지 않는다**(전부 Engine 만 include). 다른 장르도 쓰는 것(HP 바 · 데미지 숫자 · 중력)은 `UI/` · `World/`.
   기반 폴더는 층(DAG)이고 `CheckGameFrameworkLayers` 가 지킨다 — 형식으로 묶은 폴더(옛 `Components/`)는 의존 방향을 숨겨서 두지 않는다. 리플렉션 대상 헤더는 소스와 같은 재귀 규칙으로
   모은다(다르면 새 폴더의 `REFLECT` 타입이 컴파일되고 등록만 안 된다).
@@ -1580,7 +1582,9 @@ cd build/Ninja-Debug/Bin
 - **구조**: 백엔드 `*RHIResource.h` · `*RHICommandContext.h` 공통 기반(겹침이 전부 override 선언), `ResourceCache<T>`(나머지 39 % 가 소유 방식), 모듈 팩토리 골격 공통화(공통 4 줄),
   RHI · GF leaf CMakeLists 를 부모 루프로(디렉터리 스코프), `FindWindowsTools` 파이썬 이전, `EngineTest` 에 `GF_*` 자동 링크, `SW_ASSERT_NULL`, `formatstring` 인자 수 컴파일 검사의 매크로 판
   (C++20 으로 올리면 `consteval` 포맷 타입으로 옮긴다), "자유 `static` 함수 금지" 린트(오탐), "CommandList 가 RecordingState 를 소유" 린트, `CheckCodeConventions` 매개변수 · 지역변수 사슬,
-  `Cb` · `Fbo` 풀어 쓰기, 되돌리기 스냅샷 바이너리 통일, `StringBuilder::appendFormat` 잘림(버퍼를 늘려 다시 포맷한다), `EditorViewportClient` 쪼개기(공통 빼기로 간다).
+  `Cb` · `Fbo` 풀어 쓰기, 되돌리기 스냅샷 바이너리 통일, `StringBuilder::appendFormat` 잘림(버퍼를 늘려 다시 포맷한다), `EditorViewportClient` 쪼개기(공통 빼기로 간다),
+  RTS 버킷 · MechArena · BattleRoyale 근접 질의를 엔진 `SpatialHashGrid2D` 로(RTS 는 ~40 줄이 순서 계약을 들어 핸들 정렬 격자로 바꾸면 자동 목표 동점 · 첫 빈 광물 ·
+  밀어내기 합이 바뀐다, BR 은 근접 질의가 없다, Mech 는 조종사 몇 명 전수 검사가 격자보다 싸다).
 - **늘 상위에 오는 정당한 중복**(`RunDuplicateCode`): 백엔드 인터페이스 선언 · 레이스 래퍼 전달 · 플랫폼 구현 · enum 레이블 나열 · 서비스 로케이터 둘(`sw::editor` 는 nullptr, `sw::game` 은
   assert) · `MaterialPacking` 숫자 case(`-Wswitch-enum`) · DX12 상태 조회 · `TypeInfo` 생성자 · RLE · 콜스택 관문 · 셰이더 반사 D3D11/12(확인 중 — 1-3) · Win32 마우스 case · include 묶음.
 

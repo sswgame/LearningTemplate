@@ -23,6 +23,11 @@ namespace sw
                 return MathUtil::sqrt( dx * dx + dz * dz );
             }
 
+            /**
+             * @brief 엔티티 id 를 공간 해시의 키로 바꿉니다. 격자는 키를 비교 · 해시만 하므로 세대는 늘 1 입니다(세대 0 은 무효 핸들이라 격자가 받지 않는다).
+             */
+            static SlotHandle makeGridKey( uint32 entityId ) { return SlotHandle::make( entityId, 1u ); }
+
             static void writeEntity( BitWriter& writer, const MmoEntity& entity, bool bWithType )
             {
                 writer.writeVarUint( entity._entityId );
@@ -57,81 +62,6 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // InterestGrid
-    // ------------------------------------------------------------------------------
-    void InterestGrid::initialize( float32 cellSize )
-    {
-        _cellSize = MathUtil::max( 1.0f, cellSize );
-        _mapCell.clear();
-        _mapPosition.clear();
-    }
-
-    int32 InterestGrid::computeCellCoord( float32 value ) const { return static_cast<int32>( MathUtil::floor( value / _cellSize ) ); }
-
-    void InterestGrid::setPosition( uint32 entityId, const float3& position )
-    {
-        const auto  positionIter = _mapPosition.find( entityId );
-        const int64 newKey       = makeCellKey( computeCellCoord( position._x ), computeCellCoord( position._z ) );
-        if ( positionIter != _mapPosition.end() )
-        {
-            const int64 oldKey   = makeCellKey( computeCellCoord( positionIter->second._x ), computeCellCoord( positionIter->second._z ) );
-            positionIter->second = position;
-            if ( oldKey == newKey )
-                return;
-            vector<uint32>& listOld = _mapCell[oldKey];
-            listOld.erase( std::remove( listOld.begin(), listOld.end(), entityId ), listOld.end() );
-        }
-        else
-        {
-            _mapPosition[entityId] = position;
-        }
-        _mapCell[newKey].push_back( entityId );
-    }
-
-    void InterestGrid::remove( uint32 entityId )
-    {
-        const auto positionIter = _mapPosition.find( entityId );
-        if ( positionIter == _mapPosition.end() )
-            return;
-        vector<uint32>& listCell = _mapCell[makeCellKey( computeCellCoord( positionIter->second._x ), computeCellCoord( positionIter->second._z ) )];
-        listCell.erase( std::remove( listCell.begin(), listCell.end(), entityId ), listCell.end() );
-        _mapPosition.erase( positionIter );
-    }
-
-    bool InterestGrid::findPosition( uint32 entityId, float3& outPosition ) const
-    {
-        const auto positionIter = _mapPosition.find( entityId );
-        if ( positionIter == _mapPosition.end() )
-            return false;
-        outPosition = positionIter->second;
-        return true;
-    }
-
-    void InterestGrid::queryRadius( const float3& center, float32 radius, vector<uint32>& outListEntity ) const
-    {
-        outListEntity.clear();
-        const int32 minX = computeCellCoord( center._x - radius );
-        const int32 maxX = computeCellCoord( center._x + radius );
-        const int32 minZ = computeCellCoord( center._z - radius );
-        const int32 maxZ = computeCellCoord( center._z + radius );
-        for ( int32 z = minZ; z <= maxZ; ++z )
-        {
-            for ( int32 x = minX; x <= maxX; ++x )
-            {
-                const auto cellIter = _mapCell.find( makeCellKey( x, z ) );
-                if ( cellIter == _mapCell.end() )
-                    continue;
-                for ( const uint32 entityId : cellIter->second )
-                {
-                    const float3& position = _mapPosition.find( entityId )->second;
-                    if ( MmoReplicatorInternal::computeFlatDistance( center, position ) <= radius )
-                        outListEntity.push_back( entityId );
-                }
-            }
-        }
-    }
-
-    // ------------------------------------------------------------------------------
     // MmoReplicator
     // ------------------------------------------------------------------------------
     MmoReplicator::MmoReplicator()
@@ -158,7 +88,7 @@ namespace sw
         _settings              = settings;
         _settings._leaveRadius = MathUtil::max( _settings._leaveRadius, _settings._enterRadius );
         _pPolicy               = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
-        _grid.initialize( settings._cellSize );
+        _grid                  = SpatialHashGrid2D{ settings._cellSize };
         _mapEntity.clear();
         _listObserver.clear();
         _sentUpdateCount = 0;
@@ -176,13 +106,14 @@ namespace sw
             return;
         }
         _mapEntity[entity._entityId] = entity;
-        _grid.setPosition( entity._entityId, entity._position );
+        _grid.update( MmoReplicatorInternal::makeGridKey( entity._entityId ), entity._position._x, entity._position._z, entity._position._x,
+                      entity._position._z );
     }
 
     void MmoReplicator::removeEntity( uint32 entityId )
     {
         _mapEntity.erase( entityId );
-        _grid.remove( entityId );
+        _grid.remove( MmoReplicatorInternal::makeGridKey( entityId ) );
     }
 
     void MmoReplicator::setObserver( int32 connectionId, uint32 entityId )
@@ -263,9 +194,11 @@ namespace sw
 
     void MmoReplicator::updateObserver( int32 connectionId, Observer& observer, float32 deltaTime, ObserverScratch& scratch )
     {
-        float3 center{};
-        if ( _grid.findPosition( observer._entityId, center ) == false )
+        // 관찰자의 자리는 엔티티 표에서 — 격자와 표는 setEntity · removeEntity 가 함께 바꾼다.
+        const auto observerIter = _mapEntity.find( observer._entityId );
+        if ( observerIter == _mapEntity.end() )
             return;
+        const float3 center = observerIter->second._position;
 
         const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
 
@@ -288,22 +221,22 @@ namespace sw
         const size_t pendingLeaveIndex = sendLeaves( connectionId, observer, scratch );
 
         // 2) 들어옴 — 들어오는 반경 안(가까운 것부터, 틱마다 상한).
-        vector<uint32>& listNear = scratch._listNear;
-        listNear.clear();
-        _grid.queryRadius( center, _settings._enterRadius, listNear );
+        vector<SlotHandle>& listNear = scratch._listNear;
+        _grid.queryCircle( center._x, center._z, _settings._enterRadius, listNear );
         if ( bAlwaysPolicy )
         {
             for ( const auto& entity : _mapEntity )
             {
                 if ( _pPolicy->isAlwaysRelevant( connectionId, entity.second ) )
-                    listNear.push_back( entity.first );
+                    listNear.push_back( MmoReplicatorInternal::makeGridKey( entity.first ) );
             }
         }
         // 거리는 한 번씩만 재고 (거리, id) 로 정렬한다(비교마다 해시를 찾지 않게). 이미 보이는 것은 뺀다.
         vector<std::pair<float32, uint32>>& listRank = scratch._listRank;
         listRank.clear();
-        for ( const uint32 entityId : listNear )
+        for ( const SlotHandle nearKey : listNear )
         {
+            const uint32 entityId = nearKey.index();
             if ( observer._mapVisible.find( entityId ) != observer._mapVisible.end() )
                 continue;
             const auto entityIter = _mapEntity.find( entityId );

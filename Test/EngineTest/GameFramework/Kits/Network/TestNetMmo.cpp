@@ -11,7 +11,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// MMO 네트워크 키트 — 격자 반경 질의, 관심 영역의 들어옴 · 나감(히스테리시스), 대역폭 예산 안에서 가까운 것을 더 자주 갱신,
+// MMO 네트워크 키트 — 관심 영역의 들어옴 · 나감(히스테리시스), 대역폭 예산 안에서 가까운 것을 더 자주 갱신,
 // 멀어도 굶지 않음, 늘 보이기 정책. 가상 서버 하니스 위에서 — 대량 나감 · 순서가 뒤바뀐 갱신 · 상한을 넘는 상태.
 
 using namespace sw;
@@ -165,26 +165,6 @@ namespace
         return getMmoClient( harness, goal._worldIndex ).getView().getEntityCount() == goal._entityCount;
     }
 } // namespace
-
-SW_TEST_CASE( NetMmoTest, InterestGridQueriesOnlyNearbyCells )
-{
-    InterestGrid grid;
-    grid.initialize( 10.0f );
-    grid.setPosition( 1, float3{ 5.0f, 0.0f, 5.0f } );
-    grid.setPosition( 2, float3{ 14.0f, 0.0f, 5.0f } );
-    grid.setPosition( 3, float3{ 100.0f, 0.0f, 100.0f } );
-    grid.setPosition( 4, float3{ -3.0f, 0.0f, -3.0f } );
-    vector<uint32> listFound;
-    grid.queryRadius( float3{ 5.0f, 0.0f, 5.0f }, 12.0f, listFound );
-    std::sort( listFound.begin(), listFound.end() );
-    SW_EXPECT_EQUAL( 3, static_cast<int32>( listFound.size() ) ); // 1 · 2 · 4(음수 칸)
-    grid.setPosition( 2, float3{ 90.0f, 0.0f, 95.0f } );          // 칸을 옮긴다
-    grid.queryRadius( float3{ 95.0f, 0.0f, 95.0f }, 10.0f, listFound );
-    SW_EXPECT_EQUAL( 2, static_cast<int32>( listFound.size() ) );
-    grid.remove( 3 );
-    grid.queryRadius( float3{ 95.0f, 0.0f, 95.0f }, 10.0f, listFound );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( listFound.size() ) );
-}
 
 SW_TEST_CASE( NetMmoTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
 {

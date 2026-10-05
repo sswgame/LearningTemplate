@@ -1,7 +1,7 @@
 /**
  * @file MmoReplicator.h
  * @brief MMO 복제 — 엔티티가 수천이어도 관찰자(플레이어)마다 "근처만, 중요한 것 먼저, 정한 바이트 안에서" 보냅니다.
- * @details 1. 관심 영역 — 격자 버킷으로 근처를 찾고, 들어오는 반경보다 나가는 반경을 크게 해 경계에서 들락날락하지 않게 합니다(히스테리시스).
+ * @details 1. 관심 영역 — 엔진 공간 해시(`SpatialHashGrid2D`, XZ 평면의 점)로 근처를 찾고, 들어오는 반경보다 나가는 반경을 크게 해 경계에서 들락날락하지 않게 합니다(히스테리시스).
  *          2. 들어옴 · 나감은 신뢰 메시지(전체 상태), 갱신은 비신뢰 묶음입니다(잃으면 다음 갱신이 메운다). 나감은 메시지 상한 안에서 여러 메시지로 쪼개고,
  *             보낸 것만 보이는 목록에서 뺀다(신뢰 창이 차면 다음 틱에). 들어옴 · 갱신에는 서버 틱을 싣고, 클라이언트는 엔티티마다 마지막으로 적용한 틱보다
  *             옛것을 버린다(순서가 뒤바뀐 비신뢰 갱신이 새 상태를 덮지 않게).
@@ -12,6 +12,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/SlotHandle.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
@@ -19,6 +20,8 @@
 #include "Core/Network/NetMessage.h"
 #include "Core/Network/NetParallel.h"
 #include "Core/Network/NetPrioritizer.h"
+
+#include "Engine/Spatial/SpatialHashGrid2D.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetKitMessageRange.h"
@@ -50,31 +53,6 @@ namespace sw
         uint32        _entityId{ 0 };
         uint32        _typeId{ 0 };
         float32       _importance{ 1.0f }; ///< 보스 · 다른 플레이어는 크게
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @class InterestGrid
-     * @brief XZ 평면의 격자 버킷입니다. 반경 질의는 걸친 칸만 봅니다.
-     */
-    class SW_GF_API InterestGrid
-    {
-    public:
-        void initialize( float32 cellSize );
-        void setPosition( uint32 entityId, const float3& position );
-        void remove( uint32 entityId );
-        void queryRadius( const float3& center, float32 radius, vector<uint32>& outListEntity ) const;
-        bool findPosition( uint32 entityId, float3& outPosition ) const;
-
-    private:
-        static int64 makeCellKey( int32 x, int32 z ) { return ( static_cast<int64>( x ) << 32 ) ^ static_cast<int64>( static_cast<uint32>( z ) ); }
-        int32        computeCellCoord( float32 value ) const;
-
-        unordered_map<int64, vector<uint32>> _mapCell{};
-        unordered_map<uint32, float3>        _mapPosition{};
-        float32                              _cellSize{ 32.0f };
     };
 } // namespace sw
 
@@ -164,8 +142,7 @@ namespace sw
         int32  getVisibleCount( int32 connectionId ) const;
         uint64 getSentUpdateCount() const { return _sentUpdateCount; }
         /** @brief 상한을 넘어 받지 않은 `setEntity` 수입니다. */
-        uint64              getOversizedEntityCount() const { return _oversizedEntityCount; }
-        const InterestGrid& getGrid() const { return _grid; }
+        uint64 getOversizedEntityCount() const { return _oversizedEntityCount; }
 
     private:
         struct VisibleEntry
@@ -185,7 +162,7 @@ namespace sw
         struct ObserverScratch
         {
             vector<uint32>                     _listLeave{};
-            vector<uint32>                     _listNear{};
+            vector<SlotHandle>                 _listNear{};  ///< 들어오는 반경 안 + 늘 보이기 — 격자 키(엔티티 id 를 담은 SlotHandle)
             vector<std::pair<float32, uint32>> _listRank{};  ///< (거리, id)
             vector<uint32>                     _listOrder{}; ///< 쌓인 우선도 순서
             vector<uint32>                     _listSent{};
@@ -201,7 +178,7 @@ namespace sw
 
         unordered_map<uint32, MmoEntity>    _mapEntity;
         vector<Observer>                    _listObserver;
-        InterestGrid                        _grid;
+        SpatialHashGrid2D                   _grid; ///< 엔티티 자리(XZ 점) — 키는 `MmoReplicatorInternal::makeGridKey`
         MmoReplicatorSettings               _settings;
         IInterestPolicy                     _defaultPolicy;
         NetHost*                            _pHost;
