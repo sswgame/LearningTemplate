@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -14,6 +15,10 @@
 
 #if defined( SW_HAS_DXC_API )
     #include <dxcapi.h>
+#endif
+#if defined( SW_PLATFORM_WINDOWS ) && !defined( SW_HAS_DXC_API )
+    // SW_HAS_DXC_API 는 EnginePlatformHeaders.h 가 정한다 — 빠지면 DXC 경로가 조용히 꺼지고 시험은 "컴파일러 없음" 으로 건너뛴다.
+    #error "SW_HAS_DXC_API is not defined on Windows - include Engine/Common/EnginePlatformHeaders.h"
 #endif
 
 namespace sw

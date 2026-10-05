@@ -506,9 +506,15 @@ cd build/Ninja-Debug/Bin
   Jolt 잡 안에서 불리는 엔진 콜백의 진짜 경쟁까지 가린다. TSan 전용 오버레이 트리플릿 `x64-linux-tsan`(`-fsanitize=thread`) · CI TSan 잡 · 억제 목록을 고친 **작업 중 커밋**이
   워크트리 `LT-wt/tsan-jolt`(브랜치 `wt/tsan-jolt`, `d0d9ddb07`)에 있다 — WSL configure 도중 멈춤, 빌드 · 시험 미확인. 이어서: 계측 빌드 → Jolt 억제 지우고 TSan ctest →
   진짜 경쟁이면 결함으로 재현 · 수정, 거짓만 남으면 함수 단위로 좁혀 남기기. 다른 구성의 트리플릿 · 설치 폴더 · CI 캐시 키는 바뀌면 안 된다(저장소 캐시 10 GB 한도 주의).
-- **include · 전방 선언 남은 후보.** `EnginePlatformHeaders.h` 의 OS 헤더
-  (TU 1442, 위험이 가장 큼 — 마지막) · `GameObjectManager.h` 가 끌고 다니는 헤더 약 14 개(233 TU — 이득을 보려면 서브시스템 전부를 포인터로 묶는 큰 단계, gom-split 이 숫자로
-  보류). 이득은 `ninja -t deps` 전후 TU 수로 판정한다.
+- **include · 전방 선언 남은 후보.** ① OS 헤더(`Core/Common/PlatformOsHeaders.h` — `Windows.h` · `DbgHelp.h` · `Xinput.h` …)가 `EngineMinimal.h` 를 거쳐
+  PCH 에 남아 있다(TU 2746 · `windows.h` 1671). 빼려면 먼저 `NOMINMAX` · `WIN32_LEAN_AND_MEAN` 을 CMake 정의로 옮기고(서드파티가 `windows.h` 를 먼저 include 해도
+  min/max 매크로가 안 생기게), Win32 · POSIX API 를 쓰는 파일이 직접 include 한다 — 글자 그래프로 찾은 후보 26 개(`Core/Common/Macros.h` · `ModuleCompiler.cpp` ·
+  `WindowsFileWatcher.h` · `InputManagerWin32.cpp` · `XInputGamepadDevice.h` · `TestFramework.cpp` …, 오탐 섞임)를 빌드로 하나씩 확인하는 단계다.
+  ② `GameObjectManager.h` 의 값 멤버 서브시스템 8 개(`ScenePhysics` · `SceneNavigation` · `SceneAudio` · `SceneOverlapWorld2D` · `PrimitiveRegistry` ·
+  `LightRegistry` · `CameraRegistry` · `AnimationSystem`)를 `unique_ptr` 로 바꾸면 GOM 을 include 하는 234 TU 에서 헤더 32 개(약 4,700 줄, 서드파티 없음 —
+  Physics/* · Navigation/* · Animation 보조)가 빠지지만, getter 를 쓰는 85 파일이 직접 include 해야 해 실제로 덜어지는 것은 약 150 TU × 4.7k 줄이다 — 보류
+  (2026-10-05 재측정, `_store` · `_transformHierarchy` · `_structuralChangeBuffer` · `_tickScheduler` 는 헤더의 인라인 · 템플릿이 써서 포인터로 못 뺀다).
+  이득은 `ninja -t deps` 전후 TU 수로 판정한다.
 - **헤더 자립 검사를 정기 실행으로.** `RunHeaderSelfContained.py` 는 전체 3~10 분이라 lint 게이트로는 무겁다 — CI 하루 한 번(또는 수동 잡) + 빌드 폴더가 있을 때만 커밋 훅이
   staged 헤더를 본다.
 
@@ -872,6 +878,9 @@ cd build/Ninja-Debug/Bin
 - **PCH 안 헤더의 include 하나가 TU 수를 정한다** — `RHITypes.h`(PCH)가 쓰지도 않는 `RHIBackendType.h` 를 들어 1987 TU 가 그 헤더에 의존했다(끊은 뒤 약 474).
   끊을 때 직접 include 를 받는 것은 그 이름의 **값**(`RHIBackend::DirectX12`)을 쓰는 파일뿐이다 — 타입 이름만 쓰는 헤더는 불투명 선언(`enum class RHIBackend : uint32;`)으로
   선다. 거쳐 받던 파일은 글자 include 그래프에서 그 간선을 끊어 후보를 좁힌 뒤 `-fsyntax-only`(PCH 없이)로 확인한다.
+- **D3D · DXGI · D3DCompiler · MF · XAudio2 헤더는 PCH 에 넣지 않는다**(`EngineMinimal.h` 는 OS 헤더만, 쓰는 파일이 `EnginePlatformHeaders.h` 를 직접) — 넣으면
+  1,654 TU 가 `d3d12.h` 를 파싱했다(뺀 뒤 약 43). `#if defined( SW_HAS_DXC_API )` 처럼 정의 여부로 읽는 매크로는 정의 헤더가 빠지면 **조용히** 꺼진다(시험은 "컴파일러
+  없음" 으로 건너뛴다) — `ShaderCompiler.cpp` 의 Windows `#error` 가 막는다.
 - **X-매크로 목록 `.xxx` 의 정본은 `Core/Predefined/`** 이고 죽은 사본은 `CheckDataFileReferences` 가 막는다. `PredefinedNameType.xxx` 의 줄 순서가 곧 intern 인덱스다(중간 삽입
   금지, 대소문자만 다른 이름 금지).
 - **`CheckCodeConventions` 알아 둘 것** — 명명 판정은 `kMapContainerVocabulary` × `kMapNamingSubject` 표 하나. `Style/BitfieldBoolean` · `Naming/DuplicateInternalHelper` ·

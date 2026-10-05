@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionUtil.h"
 
