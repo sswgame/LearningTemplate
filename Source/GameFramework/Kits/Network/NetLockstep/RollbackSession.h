@@ -13,6 +13,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetKitMessageRange.h"
@@ -97,7 +98,6 @@ namespace sw
         {
             vector<uint8> _listState{}; ///< 이 프레임을 시작하기 전 상태
             vector<uint8> _listInput{}; ///< 이 프레임에 쓴 입력(플레이어 순)
-            int32         _frame{ -1 };
         };
 
         /** @brief 상대 하나에게서 들은 것입니다. */
@@ -114,22 +114,22 @@ namespace sw
         void  sendLocalInputs();
         void  rollbackTo( int32 frame );
 
-        vector<FrameRecord>   _listRecord;    ///< 프레임 % 크기
-        vector<vector<int16>> _arrInput;      ///< 플레이어 → 프레임 % 크기 → 입력(−1 = 아직)
-        vector<vector<int32>> _arrInputFrame; ///< 그 자리의 프레임 번호
-        vector<int32>         _listConfirmed; ///< 플레이어마다 빈틈없이 받은 마지막 프레임
-        vector<PeerState>     _listPeer;      ///< 플레이어 순(내 자리는 쓰지 않는다)
-        RollbackSettings      _settings;
-        NetHost*              _pHost;
-        IRollbackGame*        _pGame;
-        int32                 _playerCount;
-        int32                 _localPlayer;
-        int32                 _frame;
-        int32                 _pendingRollbackFrame; ///< 예측이 틀린 가장 이른 프레임(없으면 −1)
-        int32                 _rollbackCount;
-        int32                 _resimulatedFrameCount;
-        int32                 _stallCount;
-        int32                 _timeSyncWaitCount;
-        NetMessageWriter      _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
+        TickRingBuffer<FrameRecord> _listRecord;    ///< 프레임마다 시작 전 상태 · 쓴 입력(최근 `kHistorySize` 프레임 — 되감기 한도)
+        vector<vector<int16>>       _arrInput;      ///< 플레이어 → 프레임 % 크기 → 입력(−1 = 아직)
+        vector<vector<int32>>       _arrInputFrame; ///< 그 자리의 프레임 번호
+        vector<int32>               _listConfirmed; ///< 플레이어마다 빈틈없이 받은 마지막 프레임
+        vector<PeerState>           _listPeer;      ///< 플레이어 순(내 자리는 쓰지 않는다)
+        RollbackSettings            _settings;
+        NetHost*                    _pHost;
+        IRollbackGame*              _pGame;
+        int32                       _playerCount;
+        int32                       _localPlayer;
+        int32                       _frame;
+        int32                       _pendingRollbackFrame; ///< 예측이 틀린 가장 이른 프레임(없으면 −1)
+        int32                       _rollbackCount;
+        int32                       _resimulatedFrameCount;
+        int32                       _stallCount;
+        int32                       _timeSyncWaitCount;
+        NetMessageWriter            _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
 } // namespace sw

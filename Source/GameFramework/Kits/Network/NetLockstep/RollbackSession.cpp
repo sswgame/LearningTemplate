@@ -41,7 +41,7 @@ namespace sw
         _settings                = settings;
         _settings._inputDelay    = MathUtil::clamp( _settings._inputDelay, 0, kMaxInputDelay );
         _settings._maxPrediction = MathUtil::clamp( _settings._maxPrediction, 1, kMaxPrediction );
-        _listRecord.assign( static_cast<size_t>( kHistorySize ), FrameRecord{} );
+        _listRecord.initialize( kHistorySize );
         _arrInput.assign( static_cast<size_t>( _playerCount ), vector<int16>( static_cast<size_t>( kHistorySize ), static_cast<int16>( -1 ) ) );
         _arrInputFrame.assign( static_cast<size_t>( _playerCount ), vector<int32>( static_cast<size_t>( kHistorySize ), -1 ) );
         _listConfirmed.assign( static_cast<size_t>( _playerCount ), -1 );
@@ -97,9 +97,10 @@ namespace sw
         // 이미 예측으로 흘린 프레임인데 다르면 되감아야 한다.
         if ( frame < _frame )
         {
-            const FrameRecord& record = _listRecord[slot];
-            if ( record._frame == frame && record._listInput.size() == static_cast<size_t>( _playerCount ) &&
-                 record._listInput[static_cast<size_t>( player )] != input )
+            const FrameRecord* pRecord       = _listRecord.find( static_cast<uint32>( frame ) );
+            const bool         bMispredicted = pRecord != nullptr && pRecord->_listInput.size() == static_cast<size_t>( _playerCount ) &&
+                                       pRecord->_listInput[static_cast<size_t>( player )] != input;
+            if ( bMispredicted )
                 _pendingRollbackFrame = _pendingRollbackFrame < 0 ? frame : MathUtil::min( _pendingRollbackFrame, frame );
         }
         int32& confirmed = _listConfirmed[static_cast<size_t>( player )];
@@ -121,17 +122,16 @@ namespace sw
 
     void RollbackSession::rollbackTo( int32 frame )
     {
-        FrameRecord& start = _listRecord[static_cast<size_t>( frame % kHistorySize )];
-        if ( start._frame != frame )
+        const FrameRecord* pStart = _listRecord.find( static_cast<uint32>( frame ) );
+        if ( pStart == nullptr )
             return; // 기록 밖 — 고칠 수 없다(최대 예측 안이면 생기지 않는다)
-        _pGame->loadState( start._listState );
+        _pGame->loadState( pStart->_listState );
         ++_rollbackCount;
         for ( int32 replay = frame; replay < _frame; ++replay )
         {
-            FrameRecord& record = _listRecord[static_cast<size_t>( replay % kHistorySize )];
+            FrameRecord& record = _listRecord.acquire( static_cast<uint32>( replay ) );
             if ( replay != frame )
                 _pGame->saveState( record._listState );
-            record._frame = replay;
             record._listInput.resize( static_cast<size_t>( _playerCount ) );
             for ( int32 player = 0; player < _playerCount; ++player )
                 record._listInput[static_cast<size_t>( player )] = predictInput( player, replay );
@@ -193,9 +193,8 @@ namespace sw
             ++_timeSyncWaitCount;
             return false;
         }
-        FrameRecord& record = _listRecord[static_cast<size_t>( _frame % kHistorySize )];
+        FrameRecord& record = _listRecord.acquire( static_cast<uint32>( _frame ) );
         _pGame->saveState( record._listState );
-        record._frame = _frame;
         record._listInput.resize( static_cast<size_t>( _playerCount ) );
         for ( int32 player = 0; player < _playerCount; ++player )
             record._listInput[static_cast<size_t>( player )] = predictInput( player, _frame );

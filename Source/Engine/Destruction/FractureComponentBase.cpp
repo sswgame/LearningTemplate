@@ -489,7 +489,6 @@ namespace sw
         , _pendingMutex{}
         , _listPendingDrive{}
         , _listRecentHash{}
-        , _listRecentCount{}
         , _listPendingDamage{}
         , _listLeafStaticBody{}
         , _listRuntime{}
@@ -1513,25 +1512,18 @@ namespace sw
     {
         if ( _bAuthority )
             return;
-        if ( _listRecentHash.size() != kRecentHashCount )
-        {
-            _listRecentHash.assign( kRecentHashCount, 0 );
-            _listRecentCount.assign( kRecentHashCount, 0xFFFFFFFFu );
-        }
-        const uint32 eventCount = _state.getEventCount();
-        const uint32 slot       = eventCount % kRecentHashCount;
-        _listRecentHash[slot]   = _state.computeStateHash();
-        _listRecentCount[slot]  = eventCount;
+        // 받는 쪽 컴포넌트만 처음 적을 때 자리를 잡는다(권한 쪽 · 파괴를 받지 않는 컴포넌트는 칸을 들지 않는다).
+        if ( _listRecentHash.getCapacity() != static_cast<int32>( kRecentHashCount ) )
+            _listRecentHash.initialize( static_cast<int32>( kRecentHashCount ) );
+        _listRecentHash.acquire( _state.getEventCount() ) = _state.computeStateHash();
     }
 
     bool FractureComponentBase::findRecentStateHash( uint32 eventCount, uint64& outHash ) const
     {
-        if ( _listRecentCount.size() != kRecentHashCount )
+        const uint64* pHash = _listRecentHash.find( eventCount );
+        if ( pHash == nullptr )
             return false;
-        const uint32 slot = eventCount % kRecentHashCount;
-        if ( _listRecentCount[slot] != eventCount )
-            return false;
-        outHash = _listRecentHash[slot];
+        outHash = *pHash;
         return true;
     }
 

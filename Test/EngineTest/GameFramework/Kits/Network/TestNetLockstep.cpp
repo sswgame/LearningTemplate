@@ -796,3 +796,32 @@ SW_TEST_CASE( NetLockstepTest, OversizeInputIsRefusedOnBothEnds )
         body.writeBits( 0x5A, 8 );
     SW_EXPECT_TRUE( NetHandleResult::Malformed == session.handleMessage( 0, writer.getBytes() ) );
 }
+
+/**
+ * @brief [NetLockstepTest] 기다리는 체크섬은 창(`kChecksumWindow`) 아래로 빠지는 틱마다 하나씩 지우고, 창 안의 것은 남긴다
+ */
+SW_TEST_CASE( NetLockstepTest, PendingChecksumsExpireOneTickAtATime )
+{
+    LockstepSession session;
+    session.initialize( nullptr, 2, 0, 0 );
+    for ( uint32 tick = 0; tick < 10; ++tick )
+        session.reportChecksum( tick, 7u ); // 상대(플레이어 1)는 알리지 않는다 — 열 틱이 기다린다
+    SW_EXPECT_EQUAL( 10, session.getPendingChecksumCount() );
+    NetMessageWriter      writer;
+    vector<vector<uint8>> listInput;
+    const vector<uint8>   listEmpty;
+    for ( uint32 tick = 0; tick < LockstepSession::kChecksumWindow + 10u; ++tick )
+    {
+        SW_ASSERT_TRUE( session.submitLocalInput( listEmpty ) );
+        BitWriter& body = writer.begin( NetLockstepMessage::kInput );
+        body.writeVarUint( 1 );
+        body.writeVarUint( tick );
+        body.writeVarUint( 0 ); // 빈 입력
+        SW_ASSERT_TRUE( NetHandleResult::Handled == session.handleMessage( 0, writer.getBytes() ) );
+        SW_ASSERT_TRUE( session.tryAdvance( listInput ) );
+        const uint32 currentTick = session.getCurrentTick();
+        const int32  expired     = currentTick > LockstepSession::kChecksumWindow ? static_cast<int32>( currentTick - LockstepSession::kChecksumWindow ) : 0;
+        SW_EXPECT_EQUAL( 10 - expired, session.getPendingChecksumCount() );
+    }
+    SW_EXPECT_EQUAL( 0, session.getQueuedTickCount() );
+}

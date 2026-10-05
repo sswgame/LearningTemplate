@@ -12,8 +12,8 @@ namespace sw
     SW_LOG_CALLER( "LockstepSession" );
 
     LockstepSession::LockstepSession()
-        : _mapInput{}
-        , _mapChecksum{}
+        : _listTickInput{}
+        , _listTickChecksum{}
         , _listNextInputTick{}
         , _listLeaveTick{}
         , _pHost{ nullptr }
@@ -34,8 +34,8 @@ namespace sw
         _playerCount = MathUtil::max( 1, playerCount );
         _localPlayer = localPlayer;
         _inputDelay  = MathUtil::clamp( inputDelay, 0, kMaxInputDelay );
-        _mapInput.clear();
-        _mapChecksum.clear();
+        _listTickInput.initialize( static_cast<int32>( kInputWindow ) );
+        _listTickChecksum.initialize( static_cast<int32>( 2 * kChecksumWindow ) );
         _listNextInputTick.assign( static_cast<size_t>( _playerCount ), 0u );
         _listLeaveTick.assign( static_cast<size_t>( _playerCount ), kNoLeaveTick );
         _stallCount  = 0;
@@ -66,14 +66,16 @@ namespace sw
         const bool bInWindow = _currentTick <= tick && tick - _currentTick < kInputWindow;
         if ( tick != _listNextInputTick[static_cast<size_t>( player )] || isPresentAt( player, tick ) == false || bInWindow == false )
             return false;
-        TickInput& tickInput = _mapInput[tick];
-        if ( tickInput._listInput.empty() )
+        TickInput* pTickInput = _listTickInput.find( tick );
+        if ( pTickInput == nullptr )
         {
-            tickInput._listInput.resize( static_cast<size_t>( _playerCount ) );
-            tickInput._listHas.assign( static_cast<size_t>( _playerCount ), SW_FALSE );
+            // 그 틱에 처음 온 입력 — 자리의 옛 값(지난 바퀴에 꺼낸 틱)을 비운다.
+            pTickInput = &_listTickInput.acquire( tick );
+            pTickInput->_listInput.assign( static_cast<size_t>( _playerCount ), vector<uint8>{} );
+            pTickInput->_listHas.assign( static_cast<size_t>( _playerCount ), SW_FALSE );
         }
-        tickInput._listInput[static_cast<size_t>( player )] = listInput;
-        tickInput._listHas[static_cast<size_t>( player )]   = SW_TRUE;
+        pTickInput->_listInput[static_cast<size_t>( player )] = listInput;
+        pTickInput->_listHas[static_cast<size_t>( player )]   = SW_TRUE;
         ++_listNextInputTick[static_cast<size_t>( player )];
         return true;
     }
@@ -99,11 +101,11 @@ namespace sw
 
     bool LockstepSession::tryAdvance( vector<vector<uint8>>& outListInput )
     {
-        const auto iter   = _mapInput.find( _currentTick );
-        bool       bReady = true;
+        TickInput* pTickInput = _listTickInput.find( _currentTick );
+        bool       bReady     = true;
         for ( int32 player = 0; player < _playerCount && bReady; ++player )
         {
-            const bool bHas = iter != _mapInput.end() && iter->second._listHas[static_cast<size_t>( player )] != SW_FALSE;
+            const bool bHas = pTickInput != nullptr && pTickInput->_listHas[static_cast<size_t>( player )] != SW_FALSE;
             bReady          = bHas || isPresentAt( player, _currentTick ) == false;
         }
         if ( bReady == false )
@@ -111,19 +113,20 @@ namespace sw
             ++_stallCount;
             return false;
         }
-        if ( iter != _mapInput.end() )
+        if ( pTickInput != nullptr )
         {
-            outListInput = std::move( iter->second._listInput );
-            _mapInput.erase( iter );
+            outListInput = std::move( pTickInput->_listInput );
+            _listTickInput.remove( _currentTick );
         }
         else
         {
             outListInput.assign( static_cast<size_t>( _playerCount ), vector<uint8>{} );
         }
         ++_currentTick;
-        // 이만큼 지난 체크섬은 더 기다리지 않는다(보고하지 않는 플레이어가 있어도 맵이 자라지 않게).
-        while ( _mapChecksum.empty() == false && _mapChecksum.begin()->first + kChecksumWindow < _currentTick )
-            _mapChecksum.erase( _mapChecksum.begin() );
+        // 창 아래로 빠진 틱의 체크섬은 더 기다리지 않는다(보고하지 않는 플레이어가 있어도 쌓이지 않게). 틱은 하나씩 넘어가므로 빠지는 틱도
+        // (지금 − kChecksumWindow − 1) 하나다 — 그보다 앞은 지난 진행들이 이미 지웠다.
+        if ( _currentTick > kChecksumWindow )
+            _listTickChecksum.remove( _currentTick - kChecksumWindow - 1u );
         return true;
     }
 
@@ -153,12 +156,15 @@ namespace sw
         const bool bInWindow = tick + kChecksumWindow >= _currentTick && tick < _currentTick + kChecksumWindow;
         if ( player < 0 || player >= _playerCount || _bDesynced == SW_TRUE || bInWindow == false )
             return;
-        vector<int64>& listChecksum = _mapChecksum[tick];
-        if ( listChecksum.empty() )
-            listChecksum.assign( static_cast<size_t>( _playerCount ), -1 );
-        listChecksum[static_cast<size_t>( player )] = static_cast<int64>( checksum );
-        if ( evaluateChecksum( tick, listChecksum ) )
-            _mapChecksum.erase( tick );
+        vector<int64>* pListChecksum = _listTickChecksum.find( tick );
+        if ( pListChecksum == nullptr )
+        {
+            pListChecksum = &_listTickChecksum.acquire( tick );
+            pListChecksum->assign( static_cast<size_t>( _playerCount ), -1 );
+        }
+        ( *pListChecksum )[static_cast<size_t>( player )] = static_cast<int64>( checksum );
+        if ( evaluateChecksum( tick, *pListChecksum ) )
+            _listTickChecksum.remove( tick );
     }
 
     void LockstepSession::reportChecksum( uint32 tick, uint32 checksum )
@@ -175,13 +181,14 @@ namespace sw
     void LockstepSession::applyLeave( int32 player, uint32 tick )
     {
         _listLeaveTick[static_cast<size_t>( player )] = tick;
-        // 그 플레이어만 기다리던 체크섬은 이제 비교할 수 있다.
-        for ( auto iter = _mapChecksum.begin(); iter != _mapChecksum.end(); )
+        // 그 플레이어만 기다리던 체크섬은 이제 비교할 수 있다 — 창 안을 틱 순으로 훑는다(어긋난 첫 틱이 desync 틱이 된다).
+        const uint32 windowFirst = _currentTick > kChecksumWindow ? _currentTick - kChecksumWindow : 0u;
+        const uint32 windowEnd   = _currentTick + kChecksumWindow;
+        for ( uint32 checkTick = MathUtil::max( tick, windowFirst ); checkTick < windowEnd; ++checkTick )
         {
-            if ( iter->first >= tick && evaluateChecksum( iter->first, iter->second ) )
-                iter = _mapChecksum.erase( iter );
-            else
-                ++iter;
+            const vector<int64>* pListChecksum = _listTickChecksum.find( checkTick );
+            if ( pListChecksum != nullptr && evaluateChecksum( checkTick, *pListChecksum ) )
+                _listTickChecksum.remove( checkTick );
         }
     }
 
