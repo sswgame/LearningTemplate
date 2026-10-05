@@ -97,6 +97,9 @@ cd build/Ninja-Debug/Bin
 
 - **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
 
+- **컨테이너 순회 통합(`ContainerVisitor`, L — 2026-10-05 구조 제안).** 시퀀스 · 맵 · 소유 포인터 · 불투명 · 중첩 · 스칼라 분기가 XML · JSON · 바이너리 세 형식에
+  따로 있어, 새 컨테이너 종류 하나에 세 곳을 고친다. 순회는 하나, 형식은 방문자로.
+
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
 
 - **프리팹 오버라이드의 남은 모서리 셋** — (1) 인스턴스에 더한 컴포넌트는 로드 때 목록 끝에 붙어, 가운데 있던 것은 저장 · 로드 뒤 순서가 바뀐다 (2) 물려받은
@@ -240,7 +243,7 @@ cd build/Ninja-Debug/Bin
     Cinemachine 처럼 나가는 블렌드를 살려 둔 채 겹쳐 섞으려면 블렌드 스택이 필요하다.
 
 
-- **서드파티 셋 — Jolt(3D 물리) · Box2D(2D 물리) · ACL(애니메이션 압축)(2026-10-04 사용자 결정, 이 셋만).** 모두 MIT · vcpkg 에 있다.
+- **서드파티 — Jolt(3D 물리) · Box2D(2D 물리) · ACL(애니메이션 압축)(2026-10-04 사용자 결정), Recast · Tracy(2026-10-05 추가).** 모두 MIT · vcpkg 에 있다.
   물리 둘은 감쌌다(`IPhysicsScene3D` · `IPhysicsScene2D`, `Source/Engine/Physics/README.md`) — 경계는 `CheckThirdPartyIsolation.py` 가 지킨다(ACL 도 같은 표에 있다).
   ACL 코덱은 `Engine/Animation/Codec/Acl`(쿠킹 때 압축 → 코덱 id + 불투명 블롭). vcpkg 를 바꿀 때는 **다른 워크트리가 빌드 중이
   아닐 때** — 설치 폴더를 나눠 써서, 옛 매니페스트의 워크트리가 configure 하면 새 패키지를 지운다. Jolt 소프트 바디(천 · 헤어 카드)는 아직 감싸지 않았다.
@@ -293,26 +296,19 @@ cd build/Ninja-Debug/Bin
   게임이 정한다 ⑥ 캐릭터 편집 창(다중 월드 툴 창 위) — 본 트리 + 기즈모 포즈 편집 · 소켓 추가/이동 ·
   체형 · 얼굴 슬라이더 · 장비 입히기와 체형을 바꿔 가며 피팅 확인(관통 표시 · 잘린 면 · 조임 강도 · 보정 조각 · 숨김 영역) · 장비 조합 미리보기(어느 규칙이 무엇을 숨기고 바꿨는지 설명 · 세트 입히기 · 규칙 충돌 표시) · 제약 리그 미리보기 · 애니메이션
   재생 · 좌우 대칭 편집.
-- **캐릭터 · 환경 병렬 진행(2026-10-04 사용자 지시 — 할 수 있는 것은 에이전트로 병렬, 메인은 지시 응답 · 병합).**
-  진행 중(워크트리 `LT-wt/<이름>`): char-anim(임포트 · 런타임 · GPU 스키닝 · ACL · 2D/3D 공통 재생 코어 · KayKit 리소스) · char-phys(Jolt/Box2D 인터페이스 ·
-  컴포넌트 · 물리 에셋 · 격리 게이트) · char-appear(슬롯 · 세트 · 아이템 외형 · 규칙 · 프리셋 · 장착 조건 · 커스터마이징 · 플레이어 프리셋 · 넷 동기화 · 장비
-  손상 단계) · char-geom(소켓 · SocketBindingComponent · 체형 · FitSolver · MeshMerger · 절단 · 표면 상태 · 찢김 마스크) · cam-views(카메라 2~4 단계 · 컷 신호 ·
-  초상화 렌더) · editor-dev(1-4 의 B · D · E) · gimmick(상호작용 · 스마트 오브젝트 · 배선 · 스플라인 · 원소 규칙 · 장르 기믹) · env-world(지형 · 식생 · 물) ·
-  game-settings(옵션 백엔드) · reflect-ext(함수/이벤트 · Replicated · SaveGame · Interp · Config · 표시 메타 · 검증 · 컨테이너 ·
-  문서 생성). **2D · 3D 에 다 쓰이는 기능은 공통 코어로**(사용자 지시).
-  **남은 대기열 — 빠른 순(2026-10-04 사용자 지시).** 자리가 나면 위에서부터 띄운다. `[대기: X]` 는 X 병합 전에는 못 시작하므로 그때까지 건너뛴다.
+- **남은 대기열 — 빠른 순(2026-10-04 사용자 지시, 다른 세션에서 워크트리 에이전트로).** 2026-10-04~05 의 병렬 웨이브(캐릭터 · 물리 · 외형 · 카메라 · 에디터 ·
+  기믹 · 환경 · 옵션 · 리플렉션 · 오디오 · 2D · 현지화 · 코어 인프라 · QA 도구 · 애니메이션 셋 · 파괴 · 툰 · 내비 · Tracy · 네트워크 결함)는 모두 main 에 들어갔다.
+  진행 방식은 메모리 "워크트리 에이전트 절차" — 결함 먼저 · 겹치는 파일 없게 나누고, 병합은 준비되는 대로, 전체 검증은 큰 묶음 뒤 한 번. **2D · 3D 에 다 쓰이는 기능은 공통 코어로**(사용자 지시).
   - **작음(S)**: 에디터 H(assert 대화상자 ·
     버그 리포트 · 시험 패널) · 단축키 편집기 · 환경설정 창 · 모듈 켜고 끄기 · DPI 실물 확인.
-  - **중간(M)**: 메모리 태깅 · 예산 · 대역폭 프로파일러 · 비동기 파일 IO · 게임플레이 디버거 · 비주얼 로거 · 모듈 패키지 관리 · 점광/스폿 그림자 · SSAO ·
+  - **중간(M)**: 대역폭 프로파일러 · 게임플레이 디버거 · 비주얼 로거 · 모듈 패키지 관리 · 점광/스폿 그림자 · SSAO ·
     HZB 가림 컬링 · 메시 LOD(meshopt) · PSO 미리 만들기 · 에디터 G(RenderDoc · 보기 모드 — 프로파일러 표 · GPU 타임스탬프 · Tracy 는 들어갔다) · 에디터 C(확장 지점) · 에디터 F
     (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · UI 시험 입력 흉내 · 패키징 UI · 에디터 자동화 ·
-    로딩 흐름 · 입력 확장 · 에셋 공정(검증 · XML 비교/병합 · 잠금 · DCC 내보내기) · QA 자동화(봇 · 내구 · 골든 이미지 · 성능 CI ·
-    퍼징) · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 [대기: cam-views] · 하늘/시간대/높이
-    안개 [대기: cam-views] · 2D 스켈레탈 [char-anim,
-    래그돌은 char-phys 도] · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서 — reflect-ext 의 문서 생성 뒤) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
+    로딩 흐름 · 입력 확장 · 에셋 DCC 내보내기 · QA 봇 · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 · 하늘/시간대/높이
+    안개 · 2D 스켈레탈 · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
     [넷 다: 런타임 UI].
-  - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 현지화 공정 · 제약 ·
-    파티클/VFX [대기: cam-views] · 텍스처
+  - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 제약 ·
+    파티클/VFX · 텍스처
     밉 스트리밍 · 카메라 5 · 6 단계 · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 · 탈것/말 ·
     천/머리카락 · 전술 AI · 볼류메트릭 안개/빛/구름 · 캐릭터 셰이딩 · 모션 캡처 공정 · 대규모 좌표 · PCG 저작 그래프 · GI/반사 프로브 · 플랫폼 서비스 ·
     패치/DLC · 모드/UGC.
@@ -389,6 +385,26 @@ cd build/Ninja-Debug/Bin
     `onPropertyChanged` 도 없어 상호작용 표를 고쳐도(핫 리로드) 자리 정의를 다시 찾지 않는다 — `InteractionCatalog::getSharedReloadCount` 를 볼 자리를 정한다.
   - 카트 트랙(`KartTrack`)은 거리를 수평(XZ) 길이로 재서 공용 `SplinePath` 로 옮기지 않았다(옮기면 랩 · 고스트 값이 바뀐다 — 옮길지 정한다).
 
+- **CS2 식 서브틱 입력(2026-10-05 제안 — 넷 게임이 생기면; 지금 넷 키트를 쓰는 시험 게임은 0).** `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
+  B1 사건 시각 + 입력 리플레이 판 4 · B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입) · B3 `InputMap` 이 행동별 "누른 순간" 을 준다 · B4 클릭 순간의 시선으로 발사
+  (쿨다운 남은 몫은 이미 고침) · B5 넷 입력 항목마다 스탬프 · `viewTick`(지금은 패킷마다 하나라 다시 보낸 옛 입력도 최신으로 판정) · 서버 클램프(랙 보정
+  `LagCompensationHistory::raycastAt(float)` 는 있다) · B6(선택) Win32 입력 스레드 — 먼저 `GetMessageTime` 해상도를 재고, 에디터 · 콘솔이 먼저 소비하는 판정을 우회하지 않게.
+  롤백 · 락스텝 키트에는 넣지 않는다(프레임 단위 결정성이 계약).
+
+- **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).** ① 팀 · 적대 판정(21 곳, 팀 enum 셋의 값이 달라 상태 바이트에
+  실림) · `RoundSeries`(3 곳, Fighting 롤백 상태 바이트가 바뀜) · `IHealthSource`(체력 모델 3 · 피해 입구 14) — 상태 형식이 바뀌니 시험부터 고정. ② `SpatialHashGrid2D`(RTS · MMO ·
+  BR · Mech — 질의 모양이 달라 이득부터 볼 것). ③ 모듈 이미지 · 동적 라이브러리 코드가 세 곳(`FileUtil` · `LiveReloadManager` · `Core/Module`)에 흩어져 있다 — 모으기.
+  ④ 키트 안 평행 구현: Overworld `TileMap` 이 Engine 타일맵과 따로 산다 · TurnBattle 과 MonsterCollector 가 같은 장르. ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
+
+- **(보류 — 사용자 결정 "안정화된 뒤 개발") 게임별 CC0 리소스 배치 + SD 메카 시험 게임 MechArena.** 라이선스는 **CC0 급만**(출처 표기 의무 · 재배포 금지가 붙은 것은
+  넣지 않는다 — 내려받기 스크립트 우회도 안 함). 확인한 원본: VRoid 알파판 샘플 D · E · F · G · 남녀 기본(OpenGameArt `vroid-studio-cc0-models`, VRM 0.x — 툰 셰이더 ·
+  VRM 임포트는 있음) · KayKit(GitHub 사용자 `KayKit-Game-Assets` 의 `*-1.0` 저장소, LICENSE.txt CC0 — Space Base · Restaurant · City Builder · Dungeon Remastered ·
+  Furniture · Halloween) · Quaternius(Poly Pizza 낱개 glb — 도리이 · 일본식 문 · 대나무 · 단풍 · 가을 소나무) · 음악 OpenGameArt CC0 `jaoan`(고토) · `menu-music-2`(도장풍 루프).
+  배치안: NileCity ← City Builder · StarSkirmish ← Space Base · Shooter3D ← Dungeon · ThemePark ← Restaurant · Halloween · HarvestValley ← 일본 시골(Quaternius) + jaoan ·
+  AbilityArena ← VRoid + menu-music-2. 프리팹 · 데이터 연결까지(안 쓰면 에셋 검증 `orphans`). 건담풍 사람형 메카는 CC0 로 쓸 만한 것이 없다(Quaternius 메카는 동물이 탄
+  보행기, OGA Shock Bot 은 리얼풍) → 파이썬으로 SD 메카 부품 메시를 만들어 부품마다 뼈 하나에 붙이고 KayKit 사람형 뼈대 이름에 맞춰 KayKit 애니메이션(CC0)을 쓰는 생성기 +
+  MechArena 시험 게임(`GF_MechArena` 키트는 있고 시험만 씀). 건담 고유 요소(V 안테나 · 얼굴 마스크 · 흰 · 파랑 · 빨강 · 노랑 배색)는 피한다.
+
 ### 1-7. Core · 태스크
 
 - **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 신뢰 순서 채널의 머리 막힘 — 재전송을 RTT + 50 ms · 빠른 재전송으로
@@ -403,6 +419,23 @@ cd build/Ninja-Debug/Bin
 - **네트워크 — 복제 키트에서 남은 것**(2026-10-05, N5~N7 뒤). ① MMO 비신뢰 갱신을 잃어도 서버는 모른다 — 보낸 순간 `_listSentState` 를 바꿔 "안 바뀜" 으로 보고
   가속하지 않으니 다음 차례(누적 우선도)까지 옛 상태가 보인다. 메시지 전달 통지(`NetConnection` 패킷 확인 → 메시지)가 생기면 확인 기준으로 바꾼다. ② 클라이언트-서버도
   우선도를 보낼 때 0 으로 돌려, 실린 스냅숏이 순서만 채널에서 다음 것에 밀리거나 잃으면 낮은 우선도는 한 차례(우선도 비 만큼) 더 기다린다(하니스: 11 → 최대 20 틱).
+
+- **리눅스 Shipping 에서만 파괴 네트워킹 해시가 갈린다**(2026-10-05, 결함 — 가장 먼저). `NetSimDestructionTest.CleanLinkConvergesLateJoinsAndRepairs` 가
+  WSL-Shipping 에서 3/3 으로 진다(`result._convergedTick >= 0` — 클라이언트의 끝 구조 해시가 서버와 다름). Windows Debug · Shipping 과 리눅스 Debug 는 통과.
+  한 프로세스 안의 서버 · 클라이언트가 갈리므로 기계 간 부동소수점이 아니라 **같은 바이너리 안의 다른 경로**(사건 적용 대 스냅숏 · 늦은 참가 · 복구, 최적화의 FMA
+  축약 `-ffp-contract`, 순서 없는 순회, 초기화 안 된 값, 해시에 섞인 패딩)를 의심한다. 처음 갈리는 사건을 찾던 진단 출력(`DBGNET`, `applyDamage` 전후 해시)이
+  워크트리 `LT-wt/net-linux`(브랜치 `wt/net-linux`)에 **커밋하지 않은 채** 남아 있다 — 이어서 쓰고, 고친 뒤 진단 줄은 모두 지운다. CI 리눅스 Shipping 잡이 이것으로 진다.
+
+- **네트워크 리팩토링 남은 단계(2026-10-05 사용자 요청 — 결함 단계 N0~N12 · 키트 결함 D1~D19 는 끝남).** 공통 부품을 Core `Network/Replication/` 에 두고 키트는
+  조립만 하게. 단계마다 커밋 하나, 스레드를 건드린 단계는 `--test_repeat=50`, 파괴 네트워킹 시험(`NetSimDestruction*` · `DestructionSnapshot`)을 매 단계 지킨다.
+  N13 폴더 나누기(Transport · Connection · Message · Replication) · `sendToPeers` 남은 곳 · 남은 손 블롭(`TurnRelay.cpp` 의 자체 `writeBlob/readBlob` 포함)을 Core 블롭으로 ·
+  N14 `TickRingBuffer<T>`(`ClientPrediction` · `ReplicationClient` 스냅숏 · `ReplicationServer::_listSent` · `LagCompensationHistory` · 롤백 기록/입력 · 락스텝 map) ·
+  N15 `NetInputSendWindow` · `NetInputReceiveBuffer`(CS 입력 · 롤백 입력 — 1-6 CS2 식 입력 B5 와 형식 공유) · N16 `NetClock` · `InterpolationBuffer<T>`
+  (`ReplicationClient::update/findBracket` 와 파괴 클라이언트의 서버 틱 추정 · 자세 표본) · N17 회선 흉내 하나로(`LoopbackConditions` 삭제) · N18 **측정 먼저**(하니스
+  클라이언트 16 × 엔티티 1000, 60 Hz 의 할당 · 시간 → 숫자가 움직일 때만 메시지 풀 · O(n) 델타 · 월드 아레나) · N19 시험 도우미 다섯(`NetTestPair` · `ThreadedCluster` ·
+  `NetTestCluster` · `HostCluster` · `TurnRelayScene`)을 하나로 · N20 신뢰 메시지 조각내기(64 KB — 언리얼 partial bunch · GNS, 파괴 스냅숏 조각 · 턴 대기 줄 · MMO 들어옴
+  쪼개기를 단순화) · N21 연결 대역폭 상한(토큰 버킷 — 언리얼 `NetSpeed`, 키트 예산의 기본값)과 "신뢰 · 순서 없음" 채널. 하지 않기로 한 것: 암호화 · NAT · 리플렉션
+  속성 복제(Iris) · RPC · 외부 네트워크 라이브러리.
 
 - **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는
   표준 API 라 줄이려면 Win32 · POSIX 순회로 바꾼다. 상주량은 1 KB 미만이라 전역 operator new 교체는 하지 않는다(사용자 결정).
@@ -432,7 +465,7 @@ cd build/Ninja-Debug/Bin
   (언리얼 Mass · 유니티 DOTS 자리)나 트랜스폼 SoA 2 단계가 필요하다 — 큰 구조 변경이라 할지부터 정한다(1-11 의 구조 후보).
 - **직렬화기(이름 대조 · 텍스트 파싱)와 리소스 로드의 리플렉션 비용, 비동기 씬 로드 중 최악 프레임을 재지 않았다.** 큰 씬 · 쿠킹본으로 잰다(Dev 는 `Cooked/`
   를 마운트하지 않는다).
-- **`GpuInstance` 96 → 112 B 의 비용을 재지 않았다.**
+- **`GpuInstance` 96 → 128 B(VAT 위상 · `pixelSnap` 칸)의 비용을 재지 않았다.**
 - **조건부 후보 묶음.** 병렬 틱 문턱의 교차점 · GameObject 레이아웃 · 적응형 틱 문턱 · 스폰 비용(~1.1 us, 잠금 여섯) · 시퀀서 성능 수치. TickItem 인라인
   재시도는 오브젝트의 틱 부기 49 B 를 먼저 줄여야 한다. 측정해서 이기면 한다.
 - **Core 에서 미룬 결정.** 전역 소형 블록 할당자(프레임당 할당이 0 근처가 된 뒤 로드 시간으로 판단 — 지금 ~10 회/프레임).
@@ -469,7 +502,8 @@ cd build/Ninja-Debug/Bin
 - **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
   결과(열거값)로 바꾸는 그래픽스 쪽 수정.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
-- **폴더 구조 정리(2026-10-05 점검, 사용자 승인) — 진행 중인 브랜치가 모두 병합되고 gv 매크로까지 들어간 뒤 한 번에.** 파일 이동은 진행 중인
+- **폴더 구조 정리(2026-10-05 점검, 사용자 승인) — 조건(큰 병합 · gv 매크로)은 이미 찼다, 다음 세션 첫 일로 좋다(착수 직후 세션 종료로 미착수).** 기계적 이동이라
+  커밋은 단계별로 나누되 빌드 · 시험은 다 옮긴 뒤 한 번(사용자 지시). 파일 이동은 진행 중인
   브랜치와 거의 모두 충돌하므로 조용한 창에 에이전트 하나로 한다.
   ① `Engine/Character` 60 개 평면 → 하위 폴더(`Socket/` — `Socket*` 일곱 · `Fit/` — `Fit*` · `BodyShape` · `Surface*` · `GeometryCut` ·
   `MeshMerger` · `CharacterGeometry` · `Hit/` — 피격 · 절단 · 래그돌), 애니메이션 기능(`AnimNotify*` · `MotionWarping` · `LocomotionWarping` ·
@@ -480,6 +514,16 @@ cd build/Ninja-Debug/Bin
   의도 — 코덱 틀은 Core, 서드파티 코덱은 Engine) ⑤ `Test/EngineTest` 229 개 · `CoreTest` 40 · `EditorTest` 37 평면 → 소스 폴더를 따르는 하위 폴더
   (`CheckTestSuites` · CMake 글롭 확인) ⑥ 다시 생기지 않게: 폴더당 파일 수 상한 보고서 + 엔진 루트 허용 목록 게이트.
   함정: `git mv` 는 mtime 을 안 바꿔 ReflectionParser 가 옛 경로 `.gen.cpp` 를 최신으로 본다 — 이동 뒤 re-configure 하고 생성 폴더를 지워 확인.
+
+- **TSan 에서 Jolt 를 계측해 짓기(2026-10-05 사용자 "일단 해보고 추가해", 미완).** 지금은 계측 안 된 Jolt 의 거짓 경쟁을 `TsanSuppressions.txt` 로 가리는데, 그 억제가
+  Jolt 잡 안에서 불리는 엔진 콜백의 진짜 경쟁까지 가린다. TSan 전용 오버레이 트리플릿 `x64-linux-tsan`(`-fsanitize=thread`) · CI TSan 잡 · 억제 목록을 고친 **작업 중 커밋**이
+  워크트리 `LT-wt/tsan-jolt`(브랜치 `wt/tsan-jolt`, `d0d9ddb07`)에 있다 — WSL configure 도중 멈춤, 빌드 · 시험 미확인. 이어서: 계측 빌드 → Jolt 억제 지우고 TSan ctest →
+  진짜 경쟁이면 결함으로 재현 · 수정, 거짓만 남으면 함수 단위로 좁혀 남기기. 다른 구성의 트리플릿 · 설치 폴더 · CI 캐시 키는 바뀌면 안 된다(저장소 캐시 10 GB 한도 주의).
+- **include · 전방 선언 남은 후보.** `RHITypes.h` → `RHIBackendType.h`(PCH 안, TU 1441) · `EditorThemeUtil.h` → `EditorWidgets.h`(33) · `EnginePlatformHeaders.h` 의 OS 헤더
+  (TU 1442, 위험이 가장 큼 — 마지막) · `GameObjectManager.h` 가 끌고 다니는 헤더 약 14 개(233 TU — 이득을 보려면 서브시스템 전부를 포인터로 묶는 큰 단계, gom-split 이 숫자로
+  보류). 이득은 `ninja -t deps` 전후 TU 수로 판정한다. `RunForwardDeclarationCandidates.py --apply` 는 끝에 cp949 콘솔에서 `UnicodeEncodeError` 로 죽는다(`useUtf8Stdout` 누락).
+- **헤더 자립 검사를 정기 실행으로.** `RunHeaderSelfContained.py` 는 전체 3~10 분이라 lint 게이트로는 무겁다 — CI 하루 한 번(또는 수동 잡) + 빌드 폴더가 있을 때만 커밋 훅이
+  staged 헤더를 본다.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
@@ -518,6 +562,10 @@ cd build/Ninja-Debug/Bin
   뽑는다(단순 정규식은 틀린다).
 
 ---
+
+- **서드파티 빈자리(2026-10-05 후보 중 사용자가 고르지 않은 것).** 리눅스 오디오 출력 없음(`XAudio2System` 만, 리눅스는 `NullAudioSystem`) → miniaudio(퍼블릭 도메인/MIT-0) ·
+  `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT) · 아랍어 셰이핑 · 양방향 없음 → HarfBuzz(MIT) + SheenBidi(Apache 2.0). 들이면 Jolt · Recast · Tracy 처럼
+  엔진 인터페이스 뒤 + 격리 게이트, vcpkg 변경은 main 에서 먼저.
 
 ## 2. 작업 방식 — 정해진 방향
 
