@@ -7,7 +7,9 @@
     py -3 -m Scripts golden --app <App> --backends dx12 vk                             # 백엔드를 골라
     py -3 -m Scripts golden --app <App> --record [--runs 3]                            # 기준을 새로 뜬다(같은 조건 여러 판 → 허용 오차)
 
-기준: `Test/Qa/Golden/<게임>/<백엔드>.png`(160x90 축소본, 사람이 열어 보는 그림)와 `<백엔드>.json`(지표 · 지표별 허용 오차 · 캡처 조건).
+기준: `Test/Qa/Golden/<게임>/<백엔드>.png`(160x90 축소본, 사람이 열어 보는 그림)와 `<백엔드>.json`(지표 · 지표별 허용 오차 · 캡처 조건 ·
+뜬 장치 `device` — GPU 이름 · 드라이버 판). 다른 기계에서 지면 비교 메시지가 두 장치를 함께 찍는다 — 그 기계에서 `--record` 로 떠 드라이버 차이인지
+회귀인지 가른다(기계별 기준 파일은 아직 두지 않는다).
 판정은 픽셀이 아니라 지표다(`Scripts/common/ImageMetrics.py`) — 자동 플레이는 프레임 시간이 벽시계를 따라가 같은 프레임 번호에서도 장면이
 조금씩 다르다. 허용 오차는 기록할 때 같은 조건 여러 판의 퍼짐에서 정한다. 언리얼 Automation Screenshot Comparison 의 "Tolerance"
 (Low/Medium/High) 를 손으로 고르는 대신 잡음 바닥을 재서 정하는 것이 다르다.
@@ -20,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -58,6 +61,33 @@ def captureInternal(appPath: Path, game: dict, table: dict, backend: str, workDi
     return "ok", downscale(image, table["reference_width"], table["reference_height"])
 
 
+def describeGpuInternal() -> dict:
+    """이 기계의 GPU 이름 · 드라이버 판입니다(Windows: 어댑터 메모리가 가장 큰 Win32_VideoController, 그 밖은 빈 값)."""
+    if sys.platform != "win32":
+        return {"gpu": "", "driver": ""}
+    command = ("Get-CimInstance Win32_VideoController | Sort-Object AdapterRAM -Descending | Select-Object -First 1 Name,DriverVersion"
+               " | ConvertTo-Json")
+    try:
+        output = subprocess.run(["powershell", "-NoProfile", "-Command", command], capture_output=True, text=True, timeout=30,
+                                check=False).stdout
+        record = json.loads(output) if output.strip() else {}
+        return {"gpu": record.get("Name", "") or "", "driver": record.get("DriverVersion", "") or ""}
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return {"gpu": "", "driver": ""}
+
+
+def describeDeviceMismatchInternal(record: dict) -> str:
+    """기준을 뜬 장치가 이 기계와 다르면 둘을 함께 적은 꼬리말입니다. 기준에 장치가 없거나 같으면 빈 글입니다."""
+    reference = record.get("device")
+    if not reference:
+        return ""
+    now = describeGpuInternal()
+    if reference.get("gpu") == now["gpu"] and reference.get("driver") == now["driver"]:
+        return ""
+    return (f" (reference captured on {reference.get('gpu', '')} {reference.get('driver', '')}, this machine {now['gpu']} {now['driver']}"
+            " - re-record here to tell a driver difference from a regression)")
+
+
 def recordInternal(appPath: Path, gameName: str, game: dict, table: dict, backend: str, goldenDir: Path, runCount: int,
                    workDir: Path) -> tuple[str, str]:
     listImage = []
@@ -78,6 +108,7 @@ def recordInternal(appPath: Path, gameName: str, game: dict, table: dict, backen
                     "arguments": game["arguments"]},
         "metrics": averageMetrics(listMetrics).toJson(),
         "tolerance": tolerance,
+        "device": describeGpuInternal(),
     }
     (goldenDir / f"{backend}.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     return "recorded", f"{runCount} run(s), tolerance {json.dumps(tolerance)}"
@@ -103,7 +134,7 @@ def compareInternal(appPath: Path, game: dict, table: dict, backend: str, golden
         referencePng = goldenDir / f"{backend}.png"
         if referencePng.is_file():
             writePng(diffDir / f"{backend}_expected.png", readPng(referencePng))
-    return "fail", "; ".join(violation.describe() for violation in listViolation)
+    return "fail", "; ".join(violation.describe() for violation in listViolation) + describeDeviceMismatchInternal(record)
 
 
 def main(listArgument: list[str] | None = None) -> int:
