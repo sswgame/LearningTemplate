@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Event/EventDispatcher.h"
+#include "Core/File/FileUtil.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -19,6 +20,7 @@
 #include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/Action/ActionCombat/MeleeHitboxComponent.h"
+#include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
 #include "GameFramework/UI/DamageNumberComponent.h"
@@ -76,6 +78,16 @@ namespace
 
         ScopedEventDispatcherService( const ScopedEventDispatcherService& )            = delete;
         ScopedEventDispatcherService& operator=( const ScopedEventDispatcherService& ) = delete;
+    };
+
+    /** @brief 이 시험 동안만 몬스터 카탈로그를 게임 서비스로 겁니다 — 액션 룸이 여기서 적을 읽는다. 어서션이 빠져나가도 풀린다. */
+    struct ScopedMonsterCatalogService
+    {
+        explicit ScopedMonsterCatalogService( MonsterCatalog& catalog ) { game::bindLocalService<MonsterCatalog>( &catalog ); }
+        ~ScopedMonsterCatalogService() { game::unbindLocalService<MonsterCatalog>(); }
+
+        ScopedMonsterCatalogService( const ScopedMonsterCatalogService& )            = delete;
+        ScopedMonsterCatalogService& operator=( const ScopedMonsterCatalogService& ) = delete;
     };
 
     /** @brief @p size 크기 콜라이더를 primary 씬 컴포넌트로 단 오브젝트를 (x, y) 에 만듭니다. */
@@ -1044,7 +1056,7 @@ SW_TEST_CASE( ActionCombatTest, ZeroDamageIsNoHitAndArmorLeavesAtLeastOne )
 /**
  * @brief [ActionCombatTest] 보스 발사 빈도는 프레임률과 상관없다 — 20 · 30 · 60 fps 로 120 초면 1 + (120 − 1.2) / 1.6 = 75.25 발(±1)
  * @details 끝난 프레임에 간격으로 덮으면 지나친 몫을 버린다 — float 로 dt 를 빼다 0 에 조금 못 미치는 프레임이 생겨 20 fps 72 발, 30 fps 73 발이 된다.
- *          쏜 횟수는 프레임 결과(`ActionRoomFrameResult::_bossShotCount`)로 센다.
+ *          쏜 횟수는 프레임 결과(`ActionRoomFrameResult::_enemyVolleyCount`)로 센다.
  */
 SW_TEST_CASE( ActionCombatTest, BossFireRateDoesNotDependOnFrameRate )
 {
@@ -1060,7 +1072,7 @@ SW_TEST_CASE( ActionCombatTest, BossFireRateDoesNotDependOnFrameRate )
         const int32 frameCount = static_cast<int32>( 120.0f * framesPerSecond + 0.5f );
         int32       shotCount  = 0;
         for ( int32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-            shotCount += room.update( 1.0f / framesPerSecond, input )._bossShotCount;
+            shotCount += room.update( 1.0f / framesPerSecond, input )._enemyVolleyCount;
         SW_EXPECT_NEAR_EQUAL( design, static_cast<float32>( shotCount ), 1.0f );
     }
 }
@@ -1119,4 +1131,86 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomEnemyNumbersStayTheSame )
     }
     SW_EXPECT_TRUE( room.isCleared() );
     SW_EXPECT_EQUAL( 13, hitCount );
+}
+
+/**
+ * @brief [ActionCombatTest] 액션 룸은 게임이 건 몬스터 카탈로그에서 적을 읽는다 — HP · 방어 · 닿은 피해 · 첫 사격 · 탄 피해
+ * @details 카탈로그(`MonsterCatalog`)를 게임 서비스로 걸면 룸의 종 id(`grunt` · `boss`)를 거기서 찾는다. 방어 식은 유닛 스탯과 같다(34 − 방어, 최소 1).
+ */
+SW_TEST_CASE( ActionCombatTest, ActionRoomReadsItsMonstersFromTheCatalogService )
+{
+    EventDispatcher                    dispatcher;
+    const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
+    const string                       path = test::makeTempPath( "room_monsters.xml" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "<MonsterCatalog>\n"
+                                                   "  <Monster id=\"grunt\"><Stats hp=\"60\" maxHp=\"60\" atk=\"5\" def=\"4\" speed=\"1.8\" radius=\"0.32\"/></Monster>\n"
+                                                   "  <Monster id=\"boss\"><Stats hp=\"100\" maxHp=\"100\" atk=\"12\" def=\"0\" speed=\"0.9\" radius=\"0.7\"/>\n"
+                                                   "    <AI coolTime=\"1.6\" firstDelay=\"0.5\"/>\n"
+                                                   "    <Shot angle=\"0\" speed=\"4.5\" life=\"2.5\" radius=\"0.22\" damage=\"7\"/>\n"
+                                                   "  </Monster>\n"
+                                                   "</MonsterCatalog>\n" ) );
+    MonsterCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromResource( path ) );
+    const ScopedMonsterCatalogService scopedCatalog{ catalog };
+    ActionRoom                        room;
+    ActionRoomFrameInput              input;
+
+    // 그런트 — 닿은 피해 5.
+    room.beginHall();
+    input._playerPos = float2{ 5.0f, 2.5f };
+    SW_EXPECT_EQUAL( 5, room.update( 0.016f, input )._damageToPlayer );
+
+    // 그런트 — 한 번에 30(34 − 4)이라 HP 60 은 첫 타에 서 있고 둘째 타에 쓰러진다.
+    room.beginHall();
+    input._playerPos      = float2{ 4.0f, 2.5f };
+    input._facing         = FacingDir::Right;
+    input._bAttackPressed = SW_TRUE;
+    (void)room.update( 0.016f, input ); // 살아 있는 적 수를 본다
+    SW_EXPECT_EQUAL( 3, room.getAliveEnemyCount() );
+    for ( int32 frameIndex = 0; frameIndex < 50 && room.getAliveEnemyCount() == 3; ++frameIndex )
+    {
+        (void)room.update( 0.02f, input ); // 살아 있는 적 수를 본다
+    }
+    SW_EXPECT_EQUAL( 2, room.getAliveEnemyCount() );
+
+    // 보스 — 방어 0 이라 한 번에 34(66 / 100).
+    room.beginBoss();
+    input._playerPos = float2{ 5.6f, 4.0f };
+    (void)room.update( 0.016f, input ); // 게이지를 본다
+    SW_EXPECT_NEAR_EQUAL( 0.66f, room.getBossHpFill(), 1e-5f );
+
+    // 보스 — 첫 사격은 0.5 초 뒤(0.02 초 걸음으로 25 번째 안팎), 탄 피해 7.
+    room.beginBoss();
+    input._playerPos       = float2{ 7.0f, 12.0f };
+    input._bAttackPressed  = SW_FALSE;
+    int32 firstVolleyFrame = -1;
+    for ( int32 frameIndex = 0; frameIndex < 100 && firstVolleyFrame < 0; ++frameIndex )
+    {
+        if ( room.update( 0.02f, input )._enemyVolleyCount > 0 )
+            firstVolleyFrame = frameIndex;
+    }
+    SW_EXPECT_TRUE( 23 <= firstVolleyFrame && firstVolleyFrame <= 25 );
+    SW_EXPECT_EQUAL( 7, updateRoomUntilPlayerIsHit( room, input, 300 ) );
+}
+
+/**
+ * @brief [ActionCombatTest] 걸린 카탈로그에 룸의 종이 없으면 알리고 내장 정의로 세운다 — 한 싸움에 한 번 알린다
+ * @details 데이터 오타가 조용히 내장 수치로 바뀌면 "카탈로그를 고쳤는데 그대로다" 를 찾을 길이 없다. 같은 종의 둘째 · 셋째는 그 싸움의 정의 목록에서 찾는다.
+ */
+SW_TEST_CASE( ActionCombatTest, ActionRoomWarnsWhenTheCatalogLacksItsMonster )
+{
+    EventDispatcher                    dispatcher;
+    const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
+    const string                       path = test::makeTempPath( "bat_monsters.xml" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "<MonsterCatalog>\n  <Monster id=\"bat\"/>\n</MonsterCatalog>\n" ) );
+    MonsterCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromResource( path ) );
+    const ScopedMonsterCatalogService scopedCatalog{ catalog };
+
+    SW_TEST_DEFENSIVE_SCOPE( "a monster missing from the catalog is reported" );
+    test::ScopedLogCollector logCollector;
+    ActionRoom               room;
+    room.beginHall();
+    SW_EXPECT_EQUAL( 3, room.getAliveEnemyCount() );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Monster 'grunt' is not in the monster catalog" ) == 1u, logCollector.joined().c_str() );
 }

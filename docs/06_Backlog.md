@@ -336,8 +336,7 @@ cd build/Ninja-Debug/Bin
 - **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
   스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
 - **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** (1) `CameraControllerComponent`(Overworld)는 장르 무관이라 기반으로 옮길 감 — 리플렉션 컴포넌트가 DLL 을 옮기면 등록 모듈이 바뀌므로 씬 로드 · 핫 리로드를 돌려 보며 옮긴다. (2) `ZoneTracker` 의 `ZoneRole` 열거(센터 · 마트 ·
-  체육관…)와 클리어 게이트 역할을 데이터(태그 + 맵 칸)로 — 태그 미러는 이미 있다, 열거를 쓰는 곳 · 시험을 함께 바꾼다. (3) `ActionRoom` 의 방 배치 · 적 스탯 ·
-  투사체 값을 `MonsterCatalog` 로, 피해를 `UnitStatsComponent` 한 길로. (4) `BattleState` 의 단계 시간 · 피해식 · 경험치를 설정 구조체로, `_expNext` 로
+  체육관…)와 클리어 게이트 역할을 데이터(태그 + 맵 칸)로 — 태그 미러는 이미 있다, 열거를 쓰는 곳 · 시험을 함께 바꾼다. (4) `BattleState` 의 단계 시간 · 피해식 · 경험치를 설정 구조체로, `_expNext` 로
   레벨 업, 두 기술 가정(`FightMove0/1`) 걷기. (5) 세이브 키 조립(`"party" + i + ".pp0"`) 도우미, 수명 → 지우기 타이머 셋(`EffectBase` · `DamageUI` ·
   `Projectile`) 하나로. **하지 않기로 한 것:** HP 바 · 피해 숫자의 매 틱 배치 예약을 "바뀔 때만" 으로 줄이는 것 — 월드 변환이 틱 **뒤에** 적용되므로 틱 안에서
   자리 변화를 보면 움직이는 막대가 한 프레임씩 건너 늦는다. 줄이려면 변환 적용 뒤의 훅이 필요하다.
@@ -1496,6 +1495,7 @@ cd build/Ninja-Debug/Bin
 - **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. 방어 식은 `DamageMath::applyArmor`(고정 방어, 최소 1 — 액션 룸의 적도 같은 식)이고, 0 이하 피해는 맞지 않은 것이다(HP · 무적 · 이벤트 없음 — 언리얼 `ApplyDamage`). `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. 월드 UI(HP 바 ·
   데미지 숫자)는 저장되지 않는 `SpriteInstanceBatch` 로 그린다 — 자식 컴포넌트로 만들면 씬 · 프리팹 · 스냅샷에 저장돼 다음 시작에 겹친다. 스프라이트 UV · 색은 인스턴스에 싣는다(같은 텍스처는
   한 배치). 체력을 가진 컴포넌트는 `Combat/HealthSourceComponent` 를 상속해 읽기(`getHealthReading` — 지금 · 최대 · 쓰러짐) 하나만 내고, 알림은 `notifyHealthChanged` 한 곳이 비율 · 종류(쓰러짐 포함)를 정해 같은 오브젝트의 `HealthListenerComponent` 에 보낸다 — HP 바는 시작할 때 원천을 읽는다(맞은 뒤 붙여도 맞는 비율). RTTI 가 없어 인터페이스가 아니라 리플렉션 베이스다(`getComponent<HealthSourceComponent>()`). 시뮬레이션 키트(`Vitality` · 정수 HP 배열)는 상속하지 않는다 — 그 유닛에 HP 바를 띄울 게임은 뷰 컴포넌트가 상속해 스냅샷을 읽는다. 보이기 정책은 바의 PROPERTY 다. 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`, 글리프 · 클립은 `Scripts/generate/GenerateSpriteTextures.py`.
+- **액션 룸의 적은 몬스터 정의다** — 종 id(`grunt` · `boss`)를 게임이 건 `MonsterCatalog` 서비스(`game::bindLocalService`)에서 찾고, 없으면 내장 정의(옛 상수와 같은 값)다. 카탈로그가 걸렸는데 그 id 가 없으면 싸움마다 한 번 경고한다. 사격은 `<Shot angle speed life radius damage/>` 줄마다 한 발(겨냥에서 돌린 각). 방어 식은 유닛 스탯과 같다(`DamageMath::applyArmor`). 룸이 돌려주는 플레이어 피해(`_damageToPlayer`)는 방어 전 값이다 — 게임이 플레이어 `UnitStatsComponent::takeDamage` 로 넣으면 방어가 한 번 빠진다. 룸의 적은 오브젝트가 아니라 `UnitStatsComponent` 를 거치지 않는다. 방 배치는 코드 표(`kArr*Spawn`) — 쓰는 게임이 생기면 맵의 스폰 지점으로.
 - **사용자 설정 파일(`usersettings.json`)은 배포된 플레이어 데이터다** — 설정 id · 선택지 이름을 바꾸면 스키마 `version` 을 올리고 `<Upgrade>` 를 더한다(별칭 금지
   규칙의 예외). 화면 변경은 적용기가 요청만 쌓고 App 이 프레임 맨 앞에서 렌더 스레드를 기다린 뒤 한다 — 창 크기는 `App::onResize` 한 길로 스왑체인에 닿는다.
 - **GameSettings** 는 `GameInstanceBase::initialize` 가 서비스로 묶는다. 언어 코드는 `LocalizationManager::normalizeLanguageCode` 의 철자 하나. 로컬라이제이션 조회의 `const utf8*` 는 추가 전용

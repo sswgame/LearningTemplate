@@ -84,6 +84,7 @@ namespace sw
                 monsterDef._def           = statsNode.getAttributeInt( "def", monsterDef._def );
                 monsterDef._speed         = statsNode.getAttributeFloat( "speed", monsterDef._speed );
                 monsterDef._invincibility = statsNode.getAttributeFloat( "invincibility", monsterDef._invincibility );
+                monsterDef._radius        = statsNode.getAttributeFloat( "radius", monsterDef._radius );
                 if ( monsterDef._speed > MonsterDef::kMaxSpeed )
                     SW_LOG_WARNING( "Monster '%#': speed %# is above %# m/s - the catalog is in meters, was it written in pixels?", pIdStr, monsterDef._speed,
                                     MonsterDef::kMaxSpeed );
@@ -92,13 +93,26 @@ namespace sw
             XmlNode aiNode = node.findChild( "AI" );
             if ( aiNode.isValid() )
             {
-                monsterDef._patrolRange    = aiNode.getAttributeFloat( "patrolRange", monsterDef._patrolRange );
-                monsterDef._detectRange    = aiNode.getAttributeFloat( "detectRange", monsterDef._detectRange );
-                monsterDef._attackRange    = aiNode.getAttributeFloat( "attackRange", monsterDef._attackRange );
-                monsterDef._attackCoolTime = aiNode.getAttributeFloat( "coolTime", monsterDef._attackCoolTime );
-                const utf8* pProj          = aiNode.findAttribute( "projectilePrefab" );
+                monsterDef._patrolRange      = aiNode.getAttributeFloat( "patrolRange", monsterDef._patrolRange );
+                monsterDef._detectRange      = aiNode.getAttributeFloat( "detectRange", monsterDef._detectRange );
+                monsterDef._attackRange      = aiNode.getAttributeFloat( "attackRange", monsterDef._attackRange );
+                monsterDef._attackCoolTime   = aiNode.getAttributeFloat( "coolTime", monsterDef._attackCoolTime );
+                monsterDef._firstAttackDelay = aiNode.getAttributeFloat( "firstDelay", monsterDef._firstAttackDelay );
+                const utf8* pProj            = aiNode.findAttribute( "projectilePrefab" );
                 if ( pProj != nullptr )
                     monsterDef._projectilePrefab = pProj;
+            }
+
+            // 사격은 줄마다 한 발이다 — 한 번에 쏘는 패턴(겨냥 · 옆 · 부채)을 코드 없이 적는다.
+            for ( XmlNode shotNode = node.findChild( "Shot" ); shotNode; shotNode = shotNode.findNextSibling( "Shot" ) )
+            {
+                MonsterShotDef shot;
+                shot._angleDegrees = shotNode.getAttributeFloat( "angle", shot._angleDegrees );
+                shot._speed        = shotNode.getAttributeFloat( "speed", shot._speed );
+                shot._lifeTime     = shotNode.getAttributeFloat( "life", shot._lifeTime );
+                shot._radius       = shotNode.getAttributeFloat( "radius", shot._radius );
+                shot._damage       = shotNode.getAttributeInt( "damage", shot._damage );
+                monsterDef._listShot.push_back( shot );
             }
 
             XmlNode prefabNode = node.findChild( "Prefab" );
