@@ -408,8 +408,8 @@ cd build/Ninja-Debug/Bin
 
 - **네트워크 리팩토링 남은 단계(2026-10-05 사용자 요청 — 결함 단계 N0~N12 · 키트 결함 D1~D19 는 끝남).** 공통 부품을 Core `Network/Replication/` 에 두고 키트는
   조립만 하게. 단계마다 커밋 하나, 스레드를 건드린 단계는 `--test_repeat=50`, 파괴 네트워킹 시험(`NetSimDestruction*` · `DestructionSnapshot`)을 매 단계 지킨다.
-  N18 **측정 먼저**(하니스
-  클라이언트 16 × 엔티티 1000, 60 Hz 의 할당 · 시간 → 숫자가 움직일 때만 메시지 풀 · O(n) 델타 · 월드 아레나) · N19 시험 도우미 다섯(`NetTestPair` · `ThreadedCluster` ·
+  N18b · N18c **측정 뒤 결정**(벤치 `NetReplicationBenchTest` 는 들어감 — Release 3 회로 서버 복제 할당 > 5 000 / 틱 또는 p50 > 1 ms 면 재구성 · 해독 버퍼
+  재사용 · 델타 이분 탐색, 그 뒤 연결 · 메시지 할당 > 1 000 / 틱이면 메시지 풀. 미달이면 3-12 에 숫자) · N19 시험 도우미 다섯(`NetTestPair` · `ThreadedCluster` ·
   `NetTestCluster` · `HostCluster` · `TurnRelayScene`)을 하나로 · N20 신뢰 메시지 조각내기(64 KB — 언리얼 partial bunch · GNS, 파괴 스냅숏 조각 · 턴 대기 줄 · MMO 들어옴
   쪼개기를 단순화) · N21 연결 대역폭 상한(토큰 버킷 — 언리얼 `NetSpeed`, 키트 예산의 기본값)과 "신뢰 · 순서 없음" 채널. 하지 않기로 한 것: 암호화 · NAT · 리플렉션
   속성 복제(Iris) · RPC · 외부 네트워크 라이브러리.
@@ -624,7 +624,7 @@ cd build/Ninja-Debug/Bin
 - **워커가 쓴 데이터를 다른 코어가 읽으면** 캐시 이동이 항목당 일(~40 ns)보다 비싸다. 쓰는 스레드와 읽는 스레드를 같게 둔다.
 - **워커는 공유 카운터 · 비트필드에 쓰지 않는다.** `fetch_add` 한 줄이 병렬 플러시를 직렬보다 느리게 했다. "하나라도" 플래그는 프레임에 한 번 쓰고 읽기만 한다.
 - **도구**: `RunDuplicateCode.py --filter <dir> --no-headers`(머리말에 "합칠 대상 아님" 목록), `RunEngineLayerGraph.py`, `Scripts/dev/BackendSmoke.py`(4 백엔드 평균 RGB),
-  Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest`, `Test/TestFramework/TestBench.h`.
+  Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest` · `NetReplicationBenchTest`(클라이언트 16 × 엔티티 1000), `Test/TestFramework/TestBench.h`.
 
 ### 3-2. 검증 · 시험 쓰기
 
