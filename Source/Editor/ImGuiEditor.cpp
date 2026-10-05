@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/EditorAssetValidation.h"
@@ -103,7 +104,7 @@ namespace sw::editor
                 const void*   pBegin{ nullptr };
                 const void*   pEnd{ nullptr };
                 if ( pCommandStack == nullptr ||
-                     FileUtil::findLoadedImageRange( reinterpret_cast<const void*>( &ImGuiEditorInternal::releaseModuleUndoCommands ), pBegin, pEnd ) == false )
+                     ModuleImageUtil::findLoadedImageRange( reinterpret_cast<const void*>( &ImGuiEditorInternal::releaseModuleUndoCommands ), pBegin, pEnd ) == false )
                     return;
                 pCommandStack->setObjectEditListener( {} );
                 const uint32 droppedCount = pCommandStack->releaseCodeWithin( pBegin, pEnd );

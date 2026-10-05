@@ -50,7 +50,7 @@ namespace sw
                 if ( modulePath.empty() )
                     return;
                 tryDeleteFile( modulePath );
-                tryDeleteFile( FileUtil::getDebugSymbolPath( modulePath ) );
+                tryDeleteFile( ModuleImageUtil::getDebugSymbolPath( modulePath ) );
             }
 
             /** @brief 원본을 읽습니다. 링커가 아직 쓰는 중이면 잠겨 있으므로 잠깐씩 기다려 다시 읽습니다. */
@@ -67,8 +67,8 @@ namespace sw
 
             static void copyDebugSymbolsIfPresent( string_view originalModulePath, string_view shadowModulePath )
             {
-                const string originalDebugPath = FileUtil::getDebugSymbolPath( originalModulePath );
-                const string shadowDebugPath   = FileUtil::getDebugSymbolPath( shadowModulePath );
+                const string originalDebugPath = ModuleImageUtil::getDebugSymbolPath( originalModulePath );
+                const string shadowDebugPath   = ModuleImageUtil::getDebugSymbolPath( shadowModulePath );
                 if ( FileUtil::fileExists( originalDebugPath ) == false )
                     return;
 
@@ -141,16 +141,16 @@ namespace sw
             {
 #if defined( SW_PLATFORM_WINDOWS )
                 pOutExpected = pExpected;
-                pOutActual   = findBoundImportModule( pModule, FileUtil::formatSharedLibraryName( dependencyName ) );
+                pOutActual   = findBoundImportModule( pModule, ModuleImageUtil::formatSharedLibraryName( dependencyName ) );
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #elif defined( SW_PLATFORM_LINUX )
                 const string stampSymbolName = string{ "sw_moduleEngineAbiStamp_" } + string{ dependencyName };
-                pOutExpected                 = FileUtil::getDynamicSymbol( pExpected, stampSymbolName );
+                pOutExpected                 = ModuleImageUtil::getDynamicSymbol( pExpected, stampSymbolName );
                 pOutActual                   = nullptr;
                 // 도장이 없는 모듈(정적 링크 · 도장을 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
                 if ( pOutExpected == nullptr )
                     return true;
-                pOutActual = FileUtil::getDynamicSymbol( pModule, stampSymbolName );
+                pOutActual = ModuleImageUtil::getDynamicSymbol( pModule, stampSymbolName );
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #else
                 (void)pModule;
@@ -170,7 +170,7 @@ namespace sw
             {
                 const void* pBegin{ nullptr };
                 const void* pEnd{ nullptr };
-                if ( pHandle == nullptr || FileUtil::findDynamicLibraryRange( pHandle, pBegin, pEnd ) == false )
+                if ( pHandle == nullptr || ModuleImageUtil::findDynamicLibraryRange( pHandle, pBegin, pEnd ) == false )
                     return false;
                 bool bKeepMapped{ false };
                 (void)ModuleImageUtil::releaseModuleCode( moduleName, pBegin, pEnd, &bKeepMapped );
@@ -539,7 +539,7 @@ namespace sw
         }
 
         const string execDir    = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-        const string modulePath = FileUtil::joinPath( execDir, FileUtil::formatSharedLibraryName( moduleName ) );
+        const string modulePath = FileUtil::joinPath( execDir, ModuleImageUtil::formatSharedLibraryName( moduleName ) );
         if ( FileUtil::fileExists( modulePath ) == false )
         {
             SW_LOG_INFO( "Shared module %# is not built next to the executable — nothing links it", moduleName );
@@ -562,7 +562,7 @@ namespace sw
         }
 
         // 불변 조건: 여기서 전역 머리는 비어 있다(등록할 때마다 비운다). 올리면 이 모듈의 정적 등록기만 매달린다.
-        if ( FileUtil::loadDynamicLibrary( modulePath ) == nullptr )
+        if ( ModuleImageUtil::loadDynamicLibrary( modulePath ) == nullptr )
         {
             SW_LOG_ERROR( "Failed to load the shared module %#", modulePath );
             return false;
@@ -586,7 +586,7 @@ namespace sw
         moduleContext._moduleName         = moduleName;
         moduleContext._listDependsOn      = listDependsOn;
         moduleContext._tempModulePath     = "";
-        moduleContext._originalModulePath = FileUtil::joinPath( execDir, FileUtil::formatSharedLibraryName( moduleName ) );
+        moduleContext._originalModulePath = FileUtil::joinPath( execDir, ModuleImageUtil::formatSharedLibraryName( moduleName ) );
         if ( loadShadowCopyModule( moduleContext ) )
         {
             if ( verifyModuleBindings() == false )
@@ -926,7 +926,7 @@ namespace sw
             rewriteShadowSonames( ctx, bytes );
 #endif
 
-            out._tempPath = FileUtil::joinPath( execDir, FileUtil::formatSharedLibraryName( tempName ) );
+            out._tempPath = FileUtil::joinPath( execDir, ModuleImageUtil::formatSharedLibraryName( tempName ) );
             if ( FileUtil::writeFile( out._tempPath, bytes.data(), bytes.size() ) == false )
             {
                 ctx._soname._current = ctx._soname._loaded;
@@ -948,7 +948,7 @@ namespace sw
             out._pPreviousEnumHead     = EnumRegistrar::getHead();
             out._pPreviousVariableHead = GlobalVariableRegistrar::getHead();
 
-            out._pHandle = FileUtil::loadDynamicLibrary( out._tempPath );
+            out._pHandle = ModuleImageUtil::loadDynamicLibrary( out._tempPath );
             if ( out._pHandle == nullptr )
             {
                 ctx._soname._current = ctx._soname._loaded;
@@ -1103,7 +1103,7 @@ namespace sw
             EnumRegistrar::getHead()           = prepared._pPreviousEnumHead;
             GlobalVariableRegistrar::getHead() = prepared._pPreviousVariableHead;
             if ( LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, prepared._pHandle ) == false )
-                FileUtil::unloadDynamicLibrary( prepared._pHandle );
+                ModuleImageUtil::unloadDynamicLibrary( prepared._pHandle );
             prepared._pHandle = nullptr;
         }
 
@@ -1130,7 +1130,7 @@ namespace sw
 
             engine::unregisterModuleTypes( ctx._moduleName );
             if ( LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, ctx._pLibraryModule ) == false )
-                FileUtil::unloadDynamicLibrary( ctx._pLibraryModule );
+                ModuleImageUtil::unloadDynamicLibrary( ctx._pLibraryModule );
             ctx._pLibraryModule = nullptr;
         }
 
@@ -1181,7 +1181,7 @@ namespace sw
                 continue;
             }
             SW_LOG_INFO( "Unloading deferred module image %# (batch %#, handle=%#)", deferredImage._moduleName, deferredImage._batchId, deferredImage._pHandle );
-            FileUtil::unloadDynamicLibrary( deferredImage._pHandle );
+            ModuleImageUtil::unloadDynamicLibrary( deferredImage._pHandle );
             LiveReloadManagerInternal::tryDeleteShadowArtifacts( deferredImage._tempPath );
         }
         _listDeferredUnloadImage.erase( _listDeferredUnloadImage.begin(), _listDeferredUnloadImage.begin() + static_cast<std::ptrdiff_t>( batchEnd ) );

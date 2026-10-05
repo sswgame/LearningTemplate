@@ -324,8 +324,8 @@ SW_TEST_CASE( ModuleHostTest, EditorAndGameTearDownInTheSameOrder )
  */
 SW_TEST_CASE( ModuleHostTest, ImageCheckAcceptsOnlyAModuleWithTheHostsApiTable )
 {
-    void* const pEditorModule = FileUtil::loadDynamicLibrary( FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ),
-                                                                                  FileUtil::formatSharedLibraryName( "EditorModule" ) ) );
+    void* const pEditorModule = ModuleImageUtil::loadDynamicLibrary( FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ),
+                                                                                         ModuleImageUtil::formatSharedLibraryName( "EditorModule" ) ) );
     if ( pEditorModule == nullptr )
         SW_TEST_SKIP( "EditorModule is not built next to this executable" );
     SW_TEST_DEFENSIVE_SCOPE( "a module with another API table is rejected and says why" );

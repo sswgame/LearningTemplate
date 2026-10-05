@@ -23,7 +23,7 @@
 - **String/**: `StringUtil` · `StringBuilder` · `fixed_string` · `hashed_string` · `formatString` · `string_splitter` · `TagID`
 - **Delegate/**: `Delegate`
 - **Event/**: `EventDispatcher` · `EventType`(엔진 예약 이벤트 ID — 이벤트 타입은 그 개념이 사는 층에 둔다)
-- **Module/**: `IModuleUnloadListener`(`ModuleUnloadListener.h`) — 모듈 이미지를 내리기 전에 그 코드(델리게이트 스텁 · vtable)를 떼야 하는 등록부의 공통 계약과 목록.
+- **Module/**: `ModuleImageUtil` — 동적 라이브러리(모듈 이미지)의 단일 자리: 이름(접두어 · 확장자 · 디버그 심볼) · 올리기 · 심볼 · 이미지 범위 · 의존 고정, 그리고 그 이미지의 코드를 쥔 등록을 떼고 내리기(`unloadModuleImage`). `IModuleUnloadListener`(`ModuleUnloadListener.h`) — 모듈 이미지를 내리기 전에 그 코드(델리게이트 스텁 · vtable)를 떼야 하는 등록부의 공통 계약과 목록.
   같은 수명 계약의 Engine 쪽은 `Engine/Module`, App 쪽(라이브 리로드)은 `App/Module` 이다.
 -  `Process::terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불러도 된다(pid 는 원자). 자식은 출력 파이프 하나만 물려받는다(남의 핸들 · 서술자 상속 없음). 기다리지 않는 실행은 `Process::launchDetached`.
 - **Compression/**: `ICompressionCodec` · `CompressionCodecRegistry` · `CompressionStream` · `NullCompressionCodec` · `RleCompressionCodec`

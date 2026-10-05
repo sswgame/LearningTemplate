@@ -2,6 +2,7 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestFramework.h"
@@ -300,14 +301,14 @@ SW_TEST_CASE( FileTest, LoadedImageRangeContainsTheAddress )
     const void* pProbe = reinterpret_cast<const void*>( &imageRangeProbe );
     const void* pBegin{ nullptr };
     const void* pEnd{ nullptr };
-    SW_ASSERT_TRUE( sw::FileUtil::findLoadedImageRange( pProbe, pBegin, pEnd ) );
+    SW_ASSERT_TRUE( sw::ModuleImageUtil::findLoadedImageRange( pProbe, pBegin, pEnd ) );
 
     const uintptr_t probe       = reinterpret_cast<uintptr_t>( pProbe );
     const bool      bContainsIt = reinterpret_cast<uintptr_t>( pBegin ) <= probe && probe < reinterpret_cast<uintptr_t>( pEnd );
     SW_EXPECT_TRUE( bContainsIt );
     SW_EXPECT_EQUAL( 7, imageRangeProbe() );
 
-    SW_EXPECT_FALSE( sw::FileUtil::findLoadedImageRange( nullptr, pBegin, pEnd ) );
+    SW_EXPECT_FALSE( sw::ModuleImageUtil::findLoadedImageRange( nullptr, pBegin, pEnd ) );
 }
 
 /**

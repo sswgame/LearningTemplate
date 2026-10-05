@@ -231,39 +231,5 @@ namespace sw
         static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive );
         /** @brief 디렉터리 아래의 폴더를 모읍니다(경로 규칙은 collectFiles 와 같습니다). */
         static bool collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive );
-
-        /** @brief 플랫폼의 공유 라이브러리 접두어(예: lib)를 반환합니다. */
-        static string_view getSharedLibraryPrefix();
-        /** @brief 플랫폼의 공유 라이브러리 확장자(예: .dll)를 반환합니다. */
-        static string_view getSharedLibraryExtension();
-        /** @brief baseName 에 접두어와 확장자를 붙여 공유 라이브러리 이름을 만듭니다. */
-        static string formatSharedLibraryName( string_view baseName );
-        /**
-         * @brief 라이브러리에 대응하는 별도 디버그 심볼 파일의 경로를 반환합니다.
-         * @note Windows: `.pdb` / Linux: `.debug`(없으면 DWARF 가 .so 안에 들어 있는 경우가 많습니다)
-         */
-        static string getDebugSymbolPath( string_view libraryPath );
-
-        /** @brief 동적 라이브러리를 로드합니다. */
-        static void* loadDynamicLibrary( string_view libraryName );
-        /** @brief 동적 라이브러리에서 심볼 주소를 찾습니다. */
-        static void* getDynamicSymbol( void* pHandle, string_view symbolName );
-        /** @brief 로드한 동적 라이브러리를 메모리에서 내립니다. */
-        static void unloadDynamicLibrary( void* pHandle );
-        /**
-         * @brief 라이브러리 @p pHandle 이 import 하는 라이브러리 가운데 지금 올라와 있는 것을 프로세스 끝까지 내려가지 않게 고정하고, 고정한 수를 반환합니다.
-         * @details 이 핸들을 내려도 그것이 끌어온 의존 이미지는 남깁니다. Windows 는 import · 지연 import 표의 DLL 을 `GET_MODULE_HANDLE_EX_FLAG_PIN`
-         *          으로, 리눅스는 `DT_NEEDED` 를 `RTLD_NODELETE | RTLD_NOLOAD` 로 고정합니다. 아직 올라오지 않은 의존은 올리지 않습니다.
-         */
-        static uint32 pinDynamicLibraryDependencies( void* pHandle );
-        /**
-         * @brief 주소 @p pAddressInside 를 담은 실행 이미지(exe · DLL · SO)가 메모리에서 차지하는 범위를 찾습니다.
-         * @details Windows 는 이미지 기준 주소 + `SizeOfImage`, 리눅스는 그 이미지의 적재 세그먼트(PT_LOAD) 전체입니다. 핫 리로드가
-         *          "이 델리게이트 · 함수 포인터가 내리려는 모듈의 코드인가" 를 가리는 데 씁니다.
-         * @return 찾지 못하면 false 입니다(그 외 플랫폼 포함).
-         */
-        static bool findLoadedImageRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd );
-        /** @brief `loadDynamicLibrary` 가 준 핸들의 이미지 범위를 찾습니다(`findLoadedImageRange` 와 같다). */
-        static bool findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd );
     };
 } // namespace sw

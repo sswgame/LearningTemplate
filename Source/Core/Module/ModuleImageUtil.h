@@ -1,22 +1,71 @@
 /**
  * @file ModuleImageUtil.h
- * @brief 동적으로 올린 모듈 이미지를 내리는 단일 창구입니다 — 그 이미지의 코드를 쥔 등록을 먼저 떼고 내립니다.
+ * @brief 동적 라이브러리(모듈 이미지)를 다루는 단일 자리입니다 — 이름 · 올리기 · 심볼 · 이미지 범위 · 의존 고정, 그리고 그 이미지의 코드를 쥔 등록을 떼고 내리기.
  *
- * 게임 · 에디터 모듈(`ModuleHost`), RHI 백엔드 모듈(`RHIBackendRegistry`), 핫 리로드(`LiveReloadManager`)가 모두 이 창구를 지난다.
+ * 게임 · 에디터 모듈(`ModuleHost`), RHI 백엔드 모듈(`RHIBackendRegistry`), 핫 리로드(`LiveReloadManager`), DXC 로더, 지연 로드 훅이 모두 이 자리를 지난다.
  * 등록부 목록은 `IModuleUnloadListener` 가 들고, 여기서는 그 목록을 훑고 결과를 로그로 남긴 뒤 이미지를 내린다.
+ * 섀도 복사본 **파일 바이트**를 고치는 것(`ModuleImagePatch`)은 핫 리로드만 쓰므로 `App/Module/LiveReloadManager` 에 있다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 
 namespace sw
 {
     /**
      * @struct ModuleImageUtil
-     * @brief 모듈 이미지의 코드 떼기와 이미지 내리기입니다.
+     * @brief 모듈 이미지의 이름 · 올리기 · 조회 · 코드 떼기 · 내리기입니다.
      */
     struct SW_API ModuleImageUtil
     {
+        // ------------------------------------------------------------------------------
+        // 1) 이름 — 플랫폼 접두어 · 확장자 · 디버그 심볼 파일
+        // ------------------------------------------------------------------------------
+        /** @brief 플랫폼의 공유 라이브러리 접두어(예: lib)를 반환합니다. */
+        static string_view getSharedLibraryPrefix();
+        /** @brief 플랫폼의 공유 라이브러리 확장자(예: .dll)를 반환합니다. */
+        static string_view getSharedLibraryExtension();
+        /** @brief baseName 에 접두어와 확장자를 붙여 공유 라이브러리 이름을 만듭니다. */
+        static string formatSharedLibraryName( string_view baseName );
+        /**
+         * @brief 라이브러리에 대응하는 별도 디버그 심볼 파일의 경로를 반환합니다.
+         * @note Windows: `.pdb` / Linux: `.debug`(없으면 DWARF 가 .so 안에 들어 있는 경우가 많습니다)
+         */
+        static string getDebugSymbolPath( string_view libraryPath );
+
+        // ------------------------------------------------------------------------------
+        // 2) 올리기 · 심볼 · 내리기(OS 로더) — 등록을 떼지 않는다. 엔진 코드를 쥘 수 있는 모듈은 4) 로 내린다
+        // ------------------------------------------------------------------------------
+        /** @brief 동적 라이브러리를 로드합니다. */
+        static void* loadDynamicLibrary( string_view libraryName );
+        /** @brief 동적 라이브러리에서 심볼 주소를 찾습니다. */
+        static void* getDynamicSymbol( void* pHandle, string_view symbolName );
+        /** @brief 로드한 동적 라이브러리를 메모리에서 내립니다. */
+        static void unloadDynamicLibrary( void* pHandle );
+        /**
+         * @brief 라이브러리 @p pHandle 이 import 하는 라이브러리 가운데 지금 올라와 있는 것을 프로세스 끝까지 내려가지 않게 고정하고, 고정한 수를 반환합니다.
+         * @details 이 핸들을 내려도 그것이 끌어온 의존 이미지는 남깁니다. Windows 는 import · 지연 import 표의 DLL 을 `GET_MODULE_HANDLE_EX_FLAG_PIN`
+         *          으로, 리눅스는 `DT_NEEDED` 를 `RTLD_NODELETE | RTLD_NOLOAD` 로 고정합니다. 아직 올라오지 않은 의존은 올리지 않습니다.
+         */
+        static uint32 pinDynamicLibraryDependencies( void* pHandle );
+
+        // ------------------------------------------------------------------------------
+        // 3) 올라온 이미지 조회
+        // ------------------------------------------------------------------------------
+        /**
+         * @brief 주소 @p pAddressInside 를 담은 실행 이미지(exe · DLL · SO)가 메모리에서 차지하는 범위를 찾습니다.
+         * @details Windows 는 이미지 기준 주소 + `SizeOfImage`, 리눅스는 그 이미지의 적재 세그먼트(PT_LOAD) 전체입니다. 핫 리로드가
+         *          "이 델리게이트 · 함수 포인터가 내리려는 모듈의 코드인가" 를 가리는 데 씁니다.
+         * @return 찾지 못하면 false 입니다(그 외 플랫폼 포함).
+         */
+        static bool findLoadedImageRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd );
+        /** @brief `loadDynamicLibrary` 가 준 핸들의 이미지 범위를 찾습니다(`findLoadedImageRange` 와 같다). */
+        static bool findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd );
+
+        // ------------------------------------------------------------------------------
+        // 4) 코드 떼기 · 내리기 — 이미지의 코드를 쥔 엔진 등록(`IModuleUnloadListener`)을 먼저 뗀다
+        // ------------------------------------------------------------------------------
         /**
          * @brief 모듈 이미지 [@p pBegin, @p pEnd) 의 코드를 가리키는 등록을 뗍니다. 이미지를 내리거나 언로드를 미루기 **전에** 부릅니다.
          * @details 모듈보다 오래 사는 등록부는 `IModuleUnloadListener` 를 상속해 만들어질 때 스스로 목록에 오르고, 여기서는 그 목록을 훑습니다
@@ -31,11 +80,11 @@ namespace sw
         static uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepImageMapped = nullptr );
 
         /**
-         * @brief `FileUtil::loadDynamicLibrary` 로 올린 모듈 이미지 @p pHandle 을 내립니다.
+         * @brief `loadDynamicLibrary` 로 올린 모듈 이미지 @p pHandle 을 내립니다.
          * @details 내리기 전에 그 이미지의 코드를 쥔 등록을 뗍니다(`releaseModuleCode`). 떼어 낼 수 없는 것이 남으면 내리지 않고 false 를
          *          돌려줍니다. 그 이미지가 끌어온 의존 이미지(GameFramework 같은 공유 모듈)는 **내리지 않습니다** — 의존 이미지가 언제 함께
          *          내려가는지는 로더만 알아 그 코드를 미리 뗄 수 없기 때문입니다. Windows 는 지연 로드가 의존 DLL 을 프로세스 끝까지 잡아 원래
-         *          그렇고, 리눅스는 `DT_NEEDED` 참조가 함께 풀려 내려가므로 여기서 고정합니다(`FileUtil::pinDynamicLibraryDependencies`).
+         *          그렇고, 리눅스는 `DT_NEEDED` 참조가 함께 풀려 내려가므로 여기서 고정합니다(`pinDynamicLibraryDependencies`).
          *          핫 리로드(`LiveReloadManager`)는 떼기와 내리기 사이에 언로드를 미루므로 `releaseModuleCode` 만 씁니다.
          * @return 이미지를 내렸으면 true 입니다.
          */

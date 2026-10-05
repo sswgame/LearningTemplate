@@ -3,6 +3,7 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Module/ModuleImageUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -393,7 +394,7 @@ SW_TEST_CASE( EventTest, ReleaseCodeWithinDropsTheSubscriptionsAndEntriesTheImag
 
     const void* pBegin{ nullptr };
     const void* pEnd{ nullptr };
-    SW_ASSERT_TRUE( sw::FileUtil::findLoadedImageRange( reinterpret_cast<const void*>( &onReleaseProbeResize ), pBegin, pEnd ) );
+    SW_ASSERT_TRUE( sw::ModuleImageUtil::findLoadedImageRange( reinterpret_cast<const void*>( &onReleaseProbeResize ), pBegin, pEnd ) );
 
     uint32 remainingEntryCount{ 99 };
     SW_EXPECT_EQUAL( 1u, dispatcher.releaseCodeWithin( pBegin, pEnd, remainingEntryCount ) );
@@ -485,7 +486,7 @@ SW_TEST_CASE( EventTest, ChannelCreatedByTheImageKeepsItMappedWhileOtherCodeSubs
 
     const void* pImageBegin{ nullptr };
     const void* pImageEnd{ nullptr };
-    SW_ASSERT_TRUE( sw::FileUtil::findLoadedImageRange( subscriber.getCodeAddress(), pImageBegin, pImageEnd ) );
+    SW_ASSERT_TRUE( sw::ModuleImageUtil::findLoadedImageRange( subscriber.getCodeAddress(), pImageBegin, pImageEnd ) );
     const uint8* pStub = static_cast<const uint8*>( subscriber.getCodeAddress() );
     const void*  arrRangeBegin[2]{ pImageBegin, pStub + 1 };
     const void*  arrRangeEnd[2]{ pStub, pImageEnd };

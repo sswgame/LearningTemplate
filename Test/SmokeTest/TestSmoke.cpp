@@ -52,7 +52,7 @@ namespace sw
     #else
             const sw::string dir = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
     #endif
-            return dir + "/" + sw::FileUtil::formatSharedLibraryName( pBaseName );
+            return dir + "/" + sw::ModuleImageUtil::formatSharedLibraryName( pBaseName );
         }
 
         /**
@@ -83,7 +83,7 @@ namespace sw
         void* loadModule( const utf8* pName )
         {
             const sw::string path = modulePath( pName );
-            return sw::FileUtil::loadDynamicLibrary( path );
+            return sw::ModuleImageUtil::loadDynamicLibrary( path );
         }
 
         /**
@@ -95,7 +95,7 @@ namespace sw
         {
             if ( pGameModule == nullptr )
                 return false;
-            const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( pGameModule, "exportGameApi" ) );
+            const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( pGameModule, "exportGameApi" ) );
             if ( pfnExport == nullptr )
                 return false;
             sw::GameAPI api{};
@@ -210,17 +210,17 @@ SW_TEST_CASE( ArchitectureTest, AllRHIModulesAbiStampExports )
         if ( sw::FileUtil::fileExists( path ) == false )
             continue;
 
-        void* handle = sw::FileUtil::loadDynamicLibrary( path );
+        void* handle = sw::ModuleImageUtil::loadDynamicLibrary( path );
         SW_EXPECT_TRUE( handle != nullptr );
         if ( handle == nullptr )
             continue;
 
         const sw::PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<sw::PFN_GetRHIModuleAbiVersion>(
-            sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
+            sw::ModuleImageUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
         const sw::PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<sw::PFN_GetRHIModuleAbiStamp>(
-            sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
+            sw::ModuleImageUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
         const void* pfnCreate = reinterpret_cast<void*>(
-            sw::FileUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
+            sw::ModuleImageUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
 
         SW_EXPECT_TRUE( pfnVersion != nullptr );
         SW_EXPECT_TRUE( pfnStamp != nullptr );
@@ -716,7 +716,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
 
     // 새로 로드된 모듈에서 C-ABI exportEditorApi 정상 동작 검증
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -1023,7 +1023,7 @@ SW_TEST_CASE( ArchitectureTest, DeferredUnloadImagesStayMappedUntilTheirBatchIsE
     SW_EXPECT_EQUAL( 0u, manager.getDeferredUnloadImageCount() );
 
     void* const                 pFirstGame     = manager.getModuleHandle( "SWGame" );
-    const sw::PFN_ExportGameAPI pfnFirstExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( pFirstGame, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnFirstExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( pFirstGame, "exportGameApi" ) );
     SW_ASSERT_TRUE( pfnFirstExport != nullptr );
 
     SW_ASSERT_TRUE( sw::reloadAndWait( manager, "SWGame" ) );
@@ -1285,7 +1285,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
 
     // 6) 새로 핫스왑된 모듈에서 C-ABI exportEditorApi 심볼 및 함수 테이블 유효성 검증
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -1354,21 +1354,21 @@ SW_TEST_CASE( ArchitectureTest, RHIBackendDynamicSwapAndReload )
             if ( sw::FileUtil::fileExists( modPath ) == false )
                 continue;
 
-            void* handle = sw::FileUtil::loadDynamicLibrary( modPath );
+            void* handle = sw::ModuleImageUtil::loadDynamicLibrary( modPath );
             SW_ASSERT_NOT_NULL( handle );
 
             auto* getStamp = reinterpret_cast<const utf8* (*)()>(
-                sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
+                sw::ModuleImageUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
             SW_ASSERT_NOT_NULL( getStamp );
             SW_EXPECT_EQUAL( sw::string( sw::kRHIModuleAbiStamp ), sw::string( getStamp() ) );
 
             auto* getAbiVer = reinterpret_cast<uint32 ( * )()>(
-                sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
+                sw::ModuleImageUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
             SW_ASSERT_NOT_NULL( getAbiVer );
             SW_EXPECT_EQUAL( sw::kRHIModuleAbiVersion, getAbiVer() );
 
             auto* factory = reinterpret_cast<void* (*)()>(
-                sw::FileUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
+                sw::ModuleImageUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
             SW_ASSERT_NOT_NULL( factory );
 
             // 동적 언로드 및 해제
@@ -1416,7 +1416,7 @@ SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
         return;
 
     const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
-        sw::FileUtil::getDynamicSymbol( handle, "exportGameApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameApi" ) );
     SW_EXPECT_TRUE( pfnExport != nullptr );
     if ( pfnExport == nullptr )
     {
@@ -1462,7 +1462,7 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
 
     sw::engine::registerModuleTypes( "SWGame" );
 
-    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( handle, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameApi" ) );
     SW_EXPECT_TRUE( pfnExport != nullptr );
     if ( pfnExport == nullptr )
     {
@@ -1545,7 +1545,7 @@ SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
     SW_ASSERT_NOT_NULL( handle );
 
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::FileUtil::getDynamicSymbol( handle, "exportEditorApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( handle, "exportEditorApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -1593,7 +1593,7 @@ SW_TEST_CASE( ModuleApiTest, SharedModuleChildKeepsItsRegistrations )
 
     void* const hGame = manager.getModuleHandle( "SWGame" );
     SW_ASSERT_NOT_NULL( hGame );
-    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
     sw::GameAPI api{};
     SW_ASSERT_TRUE( pfnExport( &api ) );
@@ -1711,7 +1711,7 @@ SW_TEST_CASE( ModuleApiTest, GameModuleRepeatedReloadCycle )
         sw::engine::registerModuleTypes( "SWGame" );
 
         const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
-            sw::FileUtil::getDynamicSymbol( handle, "exportGameApi" ) );
+            sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameApi" ) );
         SW_ASSERT_NOT_NULL( pfnExport );
 
         sw::GameAPI api{};
@@ -1778,9 +1778,9 @@ SW_TEST_CASE( ModuleApiTest, UnloadChildReleasesTheChannelsItsImageCreated )
 
     const void* pFrameworkBegin{ nullptr };
     const void* pFrameworkEnd{ nullptr };
-    SW_ASSERT_TRUE( sw::FileUtil::findDynamicLibraryRange( hFramework, pFrameworkBegin, pFrameworkEnd ) );
+    SW_ASSERT_TRUE( sw::ModuleImageUtil::findDynamicLibraryRange( hFramework, pFrameworkBegin, pFrameworkEnd ) );
 
-    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
     sw::GameAPI api{};
     SW_ASSERT_TRUE( pfnExport( &api ) );
@@ -1853,12 +1853,12 @@ SW_TEST_CASE( ModuleApiTest, UnloadKeepsTheImagesTheModulePulledIn )
     // GameFramework 의 코드를 한 번 돌려 Windows 지연 로드를 풀어 둔다 — 그래야 아래에서 여는 핸들이 새로 올리지 않고 있는 이미지를 가리킨다.
     SW_EXPECT_TRUE( sw::createAndDestroyGame( hGame ) );
 
-    void* const hFrameworkProbe = sw::FileUtil::loadDynamicLibrary( sw::modulePath( "GameFramework" ) );
+    void* const hFrameworkProbe = sw::ModuleImageUtil::loadDynamicLibrary( sw::modulePath( "GameFramework" ) );
     SW_ASSERT_NOT_NULL( hFrameworkProbe );
     const void* pFrameworkBegin{ nullptr };
     const void* pFrameworkEnd{ nullptr };
-    const bool  bFoundRange = sw::FileUtil::findDynamicLibraryRange( hFrameworkProbe, pFrameworkBegin, pFrameworkEnd );
-    sw::FileUtil::unloadDynamicLibrary( hFrameworkProbe ); // 범위를 재느라 올린 참조만 돌려준다 — GameFramework 는 SWGame 이 끌어온 것이다
+    const bool  bFoundRange = sw::ModuleImageUtil::findDynamicLibraryRange( hFrameworkProbe, pFrameworkBegin, pFrameworkEnd );
+    sw::ModuleImageUtil::unloadDynamicLibrary( hFrameworkProbe ); // 범위를 재느라 올린 참조만 돌려준다 — GameFramework 는 SWGame 이 끌어온 것이다
     SW_ASSERT_TRUE( bFoundRange );
 
     sw::engine::unregisterModuleTypes( "SWGame" );
@@ -1866,7 +1866,7 @@ SW_TEST_CASE( ModuleApiTest, UnloadKeepsTheImagesTheModulePulledIn )
 
     const void* pBegin{ nullptr };
     const void* pEnd{ nullptr };
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::findLoadedImageRange( pFrameworkBegin, pBegin, pEnd ),
+    SW_EXPECT_TRUE_MSG( sw::ModuleImageUtil::findLoadedImageRange( pFrameworkBegin, pBegin, pEnd ),
                         "GameFramework went down with SWGame - the event channels it created now point at unmapped code" );
 }
 

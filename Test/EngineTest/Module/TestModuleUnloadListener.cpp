@@ -108,13 +108,13 @@ SW_TEST_CASE( ModuleUnloadListenerTest, RhiModuleUnloadReleasesItsCode )
     const sw::string executableDir = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
     for ( const RhiModule& rhiModule : kArrRhiModule )
     {
-        const sw::string path = sw::FileUtil::joinPath( executableDir, sw::FileUtil::formatSharedLibraryName( rhiModule._pBaseName ) );
+        const sw::string path = sw::FileUtil::joinPath( executableDir, sw::ModuleImageUtil::formatSharedLibraryName( rhiModule._pBaseName ) );
         if ( sw::FileUtil::fileExists( path ) == false )
             continue;
-        void* pKeepMapped = sw::FileUtil::loadDynamicLibrary( path );
+        void* pKeepMapped = sw::ModuleImageUtil::loadDynamicLibrary( path );
         if ( pKeepMapped == nullptr )
             continue; // 드라이버 · 로더가 없는 기계(예: Vulkan 로더 없는 CI)
-        const void* pCreateDevice = sw::FileUtil::getDynamicSymbol( pKeepMapped, "createRHIDevice" );
+        const void* pCreateDevice = sw::ModuleImageUtil::getDynamicSymbol( pKeepMapped, "createRHIDevice" );
         SW_ASSERT_TRUE( pCreateDevice != nullptr );
 
         {

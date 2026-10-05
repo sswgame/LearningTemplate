@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
@@ -397,7 +398,7 @@ namespace sw
         {
             static auto s_getDxCompilerHandle = []() -> void*
             {
-                string         libName       = FileUtil::formatSharedLibraryName( "dxcompiler" );
+                string         libName       = ModuleImageUtil::formatSharedLibraryName( "dxcompiler" );
                 const string   execDir       = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
                 vector<string> listCandidate = {
                     execDir.empty() ? libName : FileUtil::joinPath( execDir, libName ),
@@ -406,17 +407,17 @@ namespace sw
                 {
                     if ( FileUtil::fileExists( candidatePath ) )
                     {
-                        void* pLibrary = FileUtil::loadDynamicLibrary( candidatePath );
+                        void* pLibrary = ModuleImageUtil::loadDynamicLibrary( candidatePath );
                         if ( pLibrary != nullptr )
                             return pLibrary;
                         SW_LOG_ERROR( "Failed to load %#", candidatePath.c_str() );
                     }
                 }
-                return FileUtil::loadDynamicLibrary( libName );
+                return ModuleImageUtil::loadDynamicLibrary( libName );
             };
             static void*                 s_pDxCompiler         = s_getDxCompilerHandle();
             static DxcCreateInstanceProc s_fnDxcCreateInstance = ( s_pDxCompiler != nullptr )
-                                                                   ? reinterpret_cast<DxcCreateInstanceProc>( FileUtil::getDynamicSymbol( s_pDxCompiler, "DxcCreateInstance" ) )
+                                                                   ? reinterpret_cast<DxcCreateInstanceProc>( ModuleImageUtil::getDynamicSymbol( s_pDxCompiler, "DxcCreateInstance" ) )
                                                                    : nullptr;
 
             DxcCreateInstanceProc fnDxcCreateInstance = s_fnDxcCreateInstance;

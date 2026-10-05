@@ -5,6 +5,7 @@
     // (게이트는 첫 `#if` 를 경계로 삼는다). 순서는 손으로 지킨다: Core → Engine.
     #include "Core/Common/PlatformOsHeaders.h"
     #include "Core/File/FileUtil.h"
+    #include "Core/Module/ModuleImageUtil.h"
 
     #include "Engine/Module/ModuleHandleProvider.h"
 
@@ -37,7 +38,7 @@ namespace sw
                 const string fullPath = FileUtil::joinPath( binDir, dllName );
                 if ( FileUtil::fileExists( fullPath ) )
                 {
-                    void* pHandle = FileUtil::loadDynamicLibrary( fullPath );
+                    void* pHandle = ModuleImageUtil::loadDynamicLibrary( fullPath );
                     if ( pHandle != nullptr )
                         return reinterpret_cast<FARPROC>( pHandle );
                 }
