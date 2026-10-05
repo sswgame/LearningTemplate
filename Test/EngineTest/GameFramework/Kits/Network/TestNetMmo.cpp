@@ -2,6 +2,7 @@
 
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
@@ -411,4 +412,49 @@ SW_TEST_CASE( NetMmoTest, OversizedStateIsRefusedByTheServer )
     SW_ASSERT_NOT_NULL( view.findEntity( 51 ) );
     SW_EXPECT_EQUAL( size_t{ NetMmoMessage::kMaxStateBytes }, view.findEntity( 51 )->_listState.size() );
     SW_EXPECT_TRUE( server.getOversizedEntityCount() > 0 );
+}
+
+/**
+ * @brief [NetMmoTest] 한 틱에 새로 보이는 엔티티는 신뢰 메시지 하나에 묶여 간다 — 상태 512 B 서른둘(17 KB)이 창 서른두 칸이 아니라 조각 수(17)만큼만 쓰고, 상태는 바이트 그대로 온다
+ */
+SW_TEST_CASE( NetMmoTest, EntersShareOneReliableMessagePerTick )
+{
+    constexpr uint32 kNeighborCount = 32;
+    constexpr uint32 kFirstId       = 100;
+    MmoNetSimGame    game;
+    game._table._listEntity.push_back( MmoEntity{
+        vector<uint8>{},
+        float3{ 0.0f, 0.0f, 0.0f },
+        kMmoObserverId, 0, 1.0f
+    } );
+    for ( uint32 index = 0; index < kNeighborCount; ++index )
+        game._table._listEntity.push_back(
+            MmoEntity{
+                vector<uint8>( static_cast<size_t>( NetMmoMessage::kMaxStateBytes ), static_cast<uint8>( index + 1 ) ),
+                float3{ static_cast<float32>( index % 8 ) * 2.0f, 0.0f, static_cast<float32>( index / 8 ) * 2.0f },
+                kFirstId + index, 1, 1.0f
+        } );
+    NetSimHarness harness;
+    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    const int32 client = harness.addClient( NetSimLinkConditions{} );
+
+    // 들어옴이 나가는 틱의 서버 쪽 미확인 신뢰 수 — 엔티티마다 메시지 하나면 32 를 넘고, 묶으면 조각 17 남짓이다.
+    MmoCountGoal all{ client, static_cast<int32>( kNeighborCount + 1 ) };
+    int32        maxPending = 0;
+    for ( int32 tick = 0; tick < 120 && hasMmoEntityCount( harness, &all ) == false; ++tick )
+    {
+        harness.stepTicks( 1 );
+        const NetConnection* pConnection = harness.getServer().getHost().findConnection( 0 );
+        if ( pConnection != nullptr )
+            maxPending = MathUtil::max( maxPending, pConnection->getPendingReliableCount() );
+    }
+    SW_ASSERT_TRUE_MSG( hasMmoEntityCount( harness, &all ), "every neighbor enters" );
+    SW_EXPECT_TRUE_MSG( maxPending <= 20, "the enters of one tick take the fragments of one message, not one window slot per entity" );
+    const MmoClientView& view = getMmoClient( harness, client ).getView();
+    for ( uint32 index = 0; index < kNeighborCount; ++index )
+    {
+        const MmoEntity* pEntity = view.findEntity( kFirstId + index );
+        SW_ASSERT_TRUE( pEntity != nullptr );
+        SW_EXPECT_TRUE( pEntity->_listState == game._table._listEntity[index + 1]._listState );
+    }
 }

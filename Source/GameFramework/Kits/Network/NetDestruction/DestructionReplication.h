@@ -12,7 +12,7 @@
  *            클라이언트는 보간 지연만큼 과거를 그려 그 바디를 키네마틱으로 옮긴다. 멈추면 마지막 자세를 신뢰 채널로 한 번 확정한다(비트 그대로). 파편(미만):
  *            클라이언트가 각자 시뮬레이션하는 꾸밈 — Debris 레이어라 캐릭터와 부딪히지 않는다(`physicssettings.xml`).
  *          - **늦은 참가.** 연결되면 사건이 하나라도 있는 오브젝트마다 스냅숏(끊긴 노드 · 연결 · 앵커 비트, 0 아닌 변형, 그룹, 떨어진 그룹 자세)을 보낸다
- *            (`FractureComponentBase::makeNetworkSnapshot`). 메시지 하나(1024 바이트)를 넘으면 조각으로 나눠 보낸다.
+ *            (`FractureComponentBase::makeNetworkSnapshot`) — 신뢰 순서 메시지 하나다(Core 가 64 KB 까지 조각으로 나른다. 넘으면 오류 로그). 신뢰 창이 차면 다음 `update` 에 다시.
  *          - **어긋남.** 서버가 주기적으로(사건 수, 해시)를 보내고, 클라이언트가 같은 사건 수에서 해시를 비교한다. 다르면 스냅숏을 청해 바로잡는다.
  *
  *          조각의 물리 자세(파편)는 기계마다 다르다 — 꾸밈이다. 롤백(상태 저장 · 되돌리기)은 하지 않는다.
@@ -44,7 +44,7 @@ namespace sw
     struct NetDestructionMessage
     {
         static constexpr uint8 kEvent           = NetKitMessageRange::kDestruction + 0; ///< 서버 → 사건 하나(신뢰 순서)
-        static constexpr uint8 kSnapshotPart    = NetKitMessageRange::kDestruction + 1; ///< 서버 → 스냅숏 조각(신뢰 순서)
+        static constexpr uint8 kSnapshot        = NetKitMessageRange::kDestruction + 1; ///< 서버 → 오브젝트 하나의 상태 스냅숏(신뢰 순서 — 64 KB 까지)
         static constexpr uint8 kPose            = NetKitMessageRange::kDestruction + 2; ///< 서버 → 덩어리 자세(움직이는 중은 비신뢰, 멈춤은 신뢰)
         static constexpr uint8 kHash            = NetKitMessageRange::kDestruction + 3; ///< 서버 → (사건 수, 상태 해시)(신뢰 순서)
         static constexpr uint8 kSnapshotRequest = NetKitMessageRange::kDestruction + 4; ///< 클라이언트 → 스냅숏을 청한다(신뢰)
@@ -60,7 +60,6 @@ namespace sw
         float32 _tickInterval{ 1.0f / 60.0f }; ///< 서버 틱 간격(자세 시각)
         float32 _hashInterval{ 1.0f };         ///< 서버가 상태 해시를 보내는 간격(초)
         float32 _interpolationDelay{ 0.1f };   ///< 클라이언트 — 덩어리 자세를 그리는 과거의 최소값. 실제는 이것과 (가장 긴 자세 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 것이다
-        int32   _snapshotPartBytes{ 900 };     ///< 스냅숏 조각 하나의 바이트(메시지 한도 1024 안)
         float32 _positionResolution{ 0.001f }; ///< 움직이는 덩어리 자리 양자화(미터)
         float32 _positionRange{ 1024.0f };     ///< 자리 범위(±미터)
     };
@@ -75,7 +74,6 @@ namespace sw
         uint64 _poseMessageCount{ 0 };
         uint64 _restPoseCount{ 0 }; ///< 멈춤 확정(신뢰)
         uint64 _snapshotCount{ 0 };
-        uint64 _snapshotPartCount{ 0 };
         uint64 _hashMessageCount{ 0 };
         uint64 _sentBytes{ 0 };         ///< 메시지 몸 바이트(호스트 헤더 · 확인 제외)
         uint32 _hashMatchCount{ 0 };    ///< 클라이언트 — 비교해 같았던 수
@@ -83,7 +81,7 @@ namespace sw
         uint32 _snapshotAppliedCount{ 0 };
         uint32 _skippedEventCount{ 0 }; ///< 클라이언트 — 일부러 뺀 사건(`skipNextEvent`)
         uint32 _staleEventCount{ 0 };   ///< 클라이언트 — 스냅숏이 이미 담은 앞 번호 사건
-        uint32 _sendRejectedCount{ 0 }; ///< 서버 — 신뢰 창이 차 연결이 거절한 메시지 수(그 클라이언트는 해시 비교 → 스냅숏으로 맞춘다)
+        uint32 _sendRejectedCount{ 0 }; ///< 서버 — 연결이 거절한 메시지 수: 신뢰 창이 찼다(사건은 해시 비교 → 스냅숏으로, 스냅숏은 다음 update 에 다시) · 64 KB 를 넘는 스냅숏
     };
 } // namespace sw
 
@@ -135,7 +133,6 @@ namespace sw
             ComponentHandle        _component{};
             uint32                 _netId{ 0 };
             uint32                 _sentEventCount{ 0 };
-            uint32                 _snapshotSerial{ 0 };
             float32                _poseTime{ 0.0f };
         };
 
@@ -148,10 +145,11 @@ namespace sw
         FractureComponentBase* resolve( const Entry& entry ) const;
         Entry*                 findEntry( uint32 netId );
         void                   sendEvents( Entry& entry, FractureComponentBase& component, uint32 serverTick );
-        void                   sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionId );
-        void                   sendPoses( Entry& entry, FractureComponentBase& component, uint32 serverTick );
-        void                   sendHash( const Entry& entry, const FractureComponentBase& component );
-        int32                  broadcast( NetChannelType channel );
+        /** @brief 스냅숏 메시지 하나를 보냅니다. 신뢰 창이 찼으면 false — 요청을 다음 `update` 로 미룬다. */
+        [[nodiscard]] bool sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionId );
+        void               sendPoses( Entry& entry, FractureComponentBase& component, uint32 serverTick );
+        void               sendHash( const Entry& entry, const FractureComponentBase& component );
+        int32              broadcast( NetChannelType channel );
 
         vector<Entry>                  _listEntry;
         vector<Request>                _listRequest;
@@ -168,7 +166,7 @@ namespace sw
 {
     /**
      * @class DestructionReplicationClient
-     * @brief 클라이언트 — 사건을 번호 순으로 컴포넌트에 넘기고, 스냅숏 조각을 모아 적용하고, 덩어리 자세를 보간해 몰고, 해시가 어긋나면 스냅숏을 청합니다.
+     * @brief 클라이언트 — 사건을 번호 순으로 컴포넌트에 넘기고, 스냅숏을 적용하고, 덩어리 자세를 보간해 몰고, 해시가 어긋나면 스냅숏을 청합니다.
      * @code
      *     client.initialize( &host, &manager, settings );
      *     client.registerObject( netId, *pFracture );          // 권한을 끈다
@@ -190,11 +188,11 @@ namespace sw
         void skipNextEvent( uint32 netId );
 
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kDestruction; }
-        /** @brief 사건 · 스냅숏 조각 · 자세 · 해시 — 같은 영역의 스냅숏 요청은 서버가 맡는다. */
+        /** @brief 사건 · 스냅숏 · 자세 · 해시 — 같은 영역의 스냅숏 요청은 서버가 맡는다. */
         uint16 getMessageKindMask() const override
         {
             constexpr uint8 kBase = NetKitMessageRange::kDestruction;
-            return static_cast<uint16>( ( 1u << ( NetDestructionMessage::kEvent - kBase ) ) | ( 1u << ( NetDestructionMessage::kSnapshotPart - kBase ) ) |
+            return static_cast<uint16>( ( 1u << ( NetDestructionMessage::kEvent - kBase ) ) | ( 1u << ( NetDestructionMessage::kSnapshot - kBase ) ) |
                                         ( 1u << ( NetDestructionMessage::kPose - kBase ) ) | ( 1u << ( NetDestructionMessage::kHash - kBase ) ) );
         }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
@@ -236,14 +234,9 @@ namespace sw
             vector<BufferedEvent> _listFutureEvent{}; ///< 번호가 앞서 온 사건(스냅숏을 기다린다)
             vector<HashCheck>     _listHashCheck{};
             vector<ChunkTrack>    _listChunk{};
-            vector<uint8>         _snapshotBytes{}; ///< 모으는 중인 스냅숏
             ComponentHandle       _component{};
             uint32                _netId{ 0 };
             uint32                _nextEventIndex{ 0 };
-            uint32                _snapshotSerial{ 0 };
-            uint32                _snapshotEventCount{ 0 };
-            uint32                _snapshotPartCount{ 0 };
-            uint32                _snapshotNextPart{ 0 };
             uint32                _skipCount{ 0 };
             uint8                 _bAwaitingSnapshot{ SW_FALSE };
         };
@@ -252,11 +245,12 @@ namespace sw
         Entry*                 findEntry( uint32 netId );
         void                   handleEvent( Entry& entry, const BufferedEvent& received );
         static void            applyToComponent( FractureComponentBase& component, const BufferedEvent& buffered );
-        void                   handleSnapshotPart( Entry& entry, BitReader& reader );
-        void                   handlePose( BitReader& reader, bool bRest );
-        void                   compareHashes( Entry& entry, FractureComponentBase& component );
-        void                   driveChunks( Entry& entry, FractureComponentBase& component );
-        void                   requestSnapshot( Entry& entry );
+        /** @brief 스냅숏 하나를 적용합니다. 깨졌으면 false 입니다. */
+        [[nodiscard]] bool handleSnapshot( Entry& entry, BitReader& reader );
+        void               handlePose( BitReader& reader, bool bRest );
+        void               compareHashes( Entry& entry, FractureComponentBase& component );
+        void               driveChunks( Entry& entry, FractureComponentBase& component );
+        void               requestSnapshot( Entry& entry );
 
         vector<Entry>                  _listEntry;
         DestructionReplicationSettings _settings;

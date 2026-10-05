@@ -181,18 +181,18 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
         시험: `NetLockstepTest`(하니스 위 30 틱 연속 손실 · 늦게 시작한 상대 · 넷 중 둘이 떠남 · 한쪽만 체크섬).
       - `NetTurnRelay`: 턴제 중계(카드 · 보드 · SRPG) — 방 · 자리 · 표, `ITurnPolicy`(차례 · 허락 · 방향), 행동 기록 방송, 재접속 시 놓친 행동.
         서버는 자리마다 보낸 행동 수(`TurnSeat::_sentActionCount`)만 들고 방 기록에서 이어 보낸다 — 신뢰 창이 차면 멈췄다가 `TurnRelayServer::update`(매 틱)가
-        이어 가므로 놓친 행동이 창(255)보다 많아도 빠지지 않고, 다른 알림도 창이 차면 연결마다 줄을 선다(64 를 넘게 쌓이면 그 연결을 끊는다). 자리 표는
+        이어 가므로 놓친 행동이 창(255)보다 많아도 빠지지 않고, 다른 알림도 창이 차면 연결마다 줄을 선다(64 를 넘게 쌓이면 그 연결을 끊는다). 행동은 8 KB 까지(1 KB 를 넘으면 Core 가 조각으로 나르고 조각마다 창 한 칸). 자리 표는
         운영체제 난수 비밀에서 섞는다. 표가 맞아도 그 자리 연결이 살아 있으면 `SeatInUse`, 한 연결은 자리 하나(다른 방은 `AlreadySeated`).
         시험: `NetTurnRelayTest`(하니스 위 300 행동 재동기 · 침입자 · 두 번 들어오기 · 서버마다 다른 표).
       - `NetMmo`: MMO — 관심 영역(엔진 `SpatialHashGrid2D` 의 XZ 점 · 반경 질의, 들어옴 · 나감 히스테리시스), 우선도 누적(`NetPrioritizer`) 대역폭 예산(`NetSendBudget`), `IInterestPolicy`(늘 보이기 · 우선도).
-        나감은 메시지 상한 안에서 여러 메시지로 쪼개고 보낸 것만 보이는 목록에서 뺀다(신뢰 창이 차면 다음 틱에). 들어옴 · 갱신에 서버 틱(`update` 마다 하나)을 싣고
+        들어옴은 틱마다 신뢰 메시지 하나에 묶고(조각으로 나른다), 나감은 1 KB 묶음으로 쪼개 보낸 것만 보이는 목록에서 뺀다(신뢰 창이 차면 다음 틱에). 들어옴 · 갱신에 서버 틱(`update` 마다 하나)을 싣고
         클라이언트는 엔티티마다 마지막으로 적용한 틱보다 옛 갱신을 버린다(`getStaleUpdateCount`). 상태는 `NetMmoMessage::kMaxStateBytes`(512 B)까지 — 넘는 `setEntity` 는
         서버가 받지 않는다. 시험: `NetMmoTest`(하니스 위 — 순간 이동 대량 나감 · 순서 뒤바뀐 갱신 · 상한 넘는 상태).
       - `NetDestruction`: 파괴 네트워킹(`DestructionReplicationServer` · `Client`, 영역 `kDestruction` 0x50). 권한 쪽 피해 사건을 번호(= 서버 상태의
         사건 수)를 붙여 신뢰 순서로 보내고 받는 쪽은 번호 순으로만 적용한다(앞 번호는 버리고 뒤 번호는 기다린다). 덩어리(표의 `keepCollisionVolume` 이상)는
         서버가 질량 중심 · 회전을 `<Network poseRate>` 로 비신뢰로 보내고(멈추면 비트 그대로 신뢰로 확정 + 비신뢰로 몇 번 더), 받는 쪽은 Core `NetClock` Monotonic(서버 틱
         추정 − 보간 지연, 지연은 설정값과 자세 간격 × 2 중 큰 것 — 자세 하나를 잃어도 사이를 잇는다)을 덩어리마다 `InterpolationBuffer` 의 자세 사이에서 그려 키네마틱으로 몬다. 파편은 각자 시뮬레이션하는 꾸밈(Debris 레이어 — 캐릭터와 안 부딪힌다). 늦은 참가 · 해시 어긋남은 상태
-        스냅숏(조각으로 나눠 신뢰)으로 맞춘다. 파괴를 쓰지 않는 게임이 링크하지 않게, 권위 방식(복제 서버 · 리슨 · MMO)과 상관없이 `NetHost` 위에 얹게 키트를 따로 둔다.
+        스냅숏(신뢰 메시지 하나 — 64 KB 까지, 창이 차면 다음 틱에 다시)으로 맞춘다. 파괴를 쓰지 않는 게임이 링크하지 않게, 권위 방식(복제 서버 · 리슨 · MMO)과 상관없이 `NetHost` 위에 얹게 키트를 따로 둔다.
         롤백(상태 저장 · 되돌리기)은 없다. 시험: `NetSimDestructionTest` · `NetSimDestructionMatrixTest`(나쁜 회선 둘 — 회선마다 한 케이스, nogpu 조각).
       - `NetSimulation`: 한 프로세스 가상 서버(`NetSimHarness` — 언리얼 PIE "Play As Client, Number of Players N" + Network Emulation, 유니티 Multiplayer
         Play Mode + Network Simulator 의 자리). 서버 월드 1 + 클라이언트 월드 N 이 **각자 씬 · 오브젝트 매니저 · 물리**를 갖고, 루프백 망 위에 끝점마다

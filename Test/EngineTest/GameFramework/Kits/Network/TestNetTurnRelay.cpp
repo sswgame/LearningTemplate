@@ -428,3 +428,52 @@ SW_TEST_CASE( NetTurnRelayTest, OversizeActionIsRefusedBeforeSending )
     SW_TEST_DEFENSIVE_SCOPE( "an action over the relay limit is refused with an error" );
     SW_EXPECT_EQUAL( -1, client.submitAction( vector<uint8>( static_cast<size_t>( NetTurnRelayMessage::kMaxActionBytes ) + 1, 0x11 ) ) );
 }
+
+/**
+ * @brief [NetTurnRelayTest] 1 KB 를 넘는 행동(6000 B — 조각 여섯)도 바이트 그대로 가고, 떠난 사이 쌓인 큰 행동 마흔 개(조각 240 — 창을 거의 채운다)를
+ *        돌아온 사람이 모두 받는다 — 창이 차면 `flushSeat` 가 기다렸다 이어 보낸다
+ */
+SW_TEST_CASE( NetTurnRelayTest, LargeActionsCatchUpThroughAFullWindow )
+{
+    AnyoneMayActPolicy  policy;
+    TurnRelayNetSimGame game( 2, &policy, 0 );
+    NetSimHarness       harness;
+    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    NetSimLinkConditions link;
+    link._upstream._latency  = 0.03;
+    link._upstream._lossRate = 0.05f;
+    link._downstream         = link._upstream;
+    TurnRelayClient clientA;
+    TurnRelayClient clientB;
+    (void)addTurnClient( harness, game, clientA, link );
+    const int32 worldB = addTurnClient( harness, game, clientB, link );
+    clientA.join( 7 );
+    clientB.join( 7 );
+    harness.stepTicks( 60 );
+    SW_ASSERT_TRUE( clientA.isStarted() && clientB.isStarted() );
+
+    harness.removeClient( worldB );
+    harness.stepTicks( 10 );
+    constexpr int32 kActionCount = 40;
+    constexpr int32 kActionBytes = 6000;
+    for ( int32 index = 0; index < kActionCount; ++index )
+    {
+        vector<uint8> action( static_cast<size_t>( kActionBytes ), static_cast<uint8>( index ) );
+        action[1] = static_cast<uint8>( index * 37 );
+        SW_ASSERT_TRUE( clientA.submitAction( action ) >= 0 );
+        if ( index % 5 == 4 )
+            harness.stepTicks( 4 ); // 보내는 쪽 창(조각 30 개씩)이 확인으로 비게
+    }
+    harness.stepTicks( 180 );
+    SW_ASSERT_EQUAL( size_t{ kActionCount }, clientA.getActions().size() );
+
+    (void)addTurnClient( harness, game, clientB, link );
+    clientB.join( 7 );
+    harness.stepTicks( 360 );
+    SW_ASSERT_EQUAL( size_t{ kActionCount }, clientB.getActions().size() );
+    int32 mismatchCount = 0;
+    for ( size_t index = 0; index < clientB.getActions().size(); ++index )
+        mismatchCount += clientB.getActions()[index]._buffer == clientA.getActions()[index]._buffer ? 0 : 1;
+    SW_EXPECT_EQUAL( 0, mismatchCount );
+    SW_EXPECT_EQUAL( kActionBytes, static_cast<int32>( clientB.getActions().back()._buffer.size() ) );
+}

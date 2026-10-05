@@ -5,6 +5,7 @@
  *          (숨겨진 패가 있는 게임은 서버 정책이 행동을 검증하고, 패를 나눠 주는 것은 서버가 자리별 메시지로).
  *          - **보낼 줄**: 서버는 자리마다 "보낸 행동 수" 만 들고 방의 행동 기록에서 이어 보낸다. 연결의 신뢰 창이 차면 멈췄다가 `update` 에서 이어 간다 —
  *            돌아온 사람이 놓친 행동이 창(255)보다 많아도 빠지지 않는다. 다른 알림도 창이 차면 연결마다 줄을 서 순서대로 나간다.
+ *            행동은 `NetTurnRelayMessage::kMaxActionBytes`(8 KB)까지 — 1 KB 를 넘는 행동은 조각마다 창 한 칸을 쓰므로 줄이 기다리는 것은 크기가 아니라 창이다.
  *          - **자리 표**: 운영체제 난수 비밀에서 섞어 만든다(실행마다 · 서버마다 다르고, 받은 표로 남의 표를 셈할 수 없다). 표가 맞아도 그 자리 연결이
  *            살아 있으면 거절한다(`SeatInUse`). 한 연결은 자리 하나만 갖는다 — 같은 방에 다시 들어오면 같은 자리를, 다른 방이면 `AlreadySeated` 로 거절한다.
  */
@@ -12,6 +13,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -25,14 +27,19 @@ namespace sw
     /** @brief 메시지 종류(첫 바이트)입니다. */
     struct NetTurnRelayMessage
     {
-        static constexpr uint8 kJoin           = NetKitMessageRange::kTurnRelay + 0;
-        static constexpr uint8 kJoined         = NetKitMessageRange::kTurnRelay + 1;
-        static constexpr uint8 kAction         = NetKitMessageRange::kTurnRelay + 2;
-        static constexpr uint8 kApplied        = NetKitMessageRange::kTurnRelay + 3;
-        static constexpr uint8 kRejected       = NetKitMessageRange::kTurnRelay + 4;
-        static constexpr uint8 kStarted        = NetKitMessageRange::kTurnRelay + 5;
-        static constexpr uint8 kDenied         = NetKitMessageRange::kTurnRelay + 6;
-        static constexpr int32 kMaxActionBytes = 900; ///< 행동 하나의 바이트 상한 — 클라이언트는 넘는 행동을 보내지 않고, 서버 · 클라이언트는 넘는 길이를 깨짐으로 본다
+        static constexpr uint8 kJoin     = NetKitMessageRange::kTurnRelay + 0;
+        static constexpr uint8 kJoined   = NetKitMessageRange::kTurnRelay + 1;
+        static constexpr uint8 kAction   = NetKitMessageRange::kTurnRelay + 2;
+        static constexpr uint8 kApplied  = NetKitMessageRange::kTurnRelay + 3;
+        static constexpr uint8 kRejected = NetKitMessageRange::kTurnRelay + 4;
+        static constexpr uint8 kStarted  = NetKitMessageRange::kTurnRelay + 5;
+        static constexpr uint8 kDenied   = NetKitMessageRange::kTurnRelay + 6;
+        /**
+         * @brief 행동 하나의 바이트 상한입니다 — 클라이언트는 넘는 행동을 보내지 않고, 서버 · 클라이언트는 넘는 길이를 깨짐으로 본다.
+         * @details 큰 행동은 신뢰 순서 채널이 조각(1 KB)으로 나른다 — 조각마다 신뢰 창 한 칸이라, 창이 차면 대기 줄 · `flushSeat` 가 기다린다.
+         */
+        static constexpr int32 kMaxActionBytes = 8 * 1024;
+        static_assert( kMaxActionBytes + 32 <= NetConnection::kMaxReliableMessageSize, "an action and its header must fit in one reliable message" );
         static_assert( NetMessageRange::isInRange( kDenied, NetKitMessageRange::kTurnRelay ), "message kinds must stay inside the kit's range" );
     };
 } // namespace sw

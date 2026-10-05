@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/NetTypes.h"
@@ -50,10 +51,11 @@ namespace sw
                 return reader.readBlob( outEntity._listState, NetMmoMessage::kMaxStateBytes ) && reader.hasOverflowed() == false;
             }
 
-            /** @brief 갱신 묶음에서 엔티티 하나(타입 없음)가 쓰는 비트입니다 — `writeEntity( …, false )` 와 같다. */
-            static int32 computeUpdateBits( const MmoEntity& entity )
+            /** @brief 묶음에서 엔티티 하나가 쓰는 비트입니다 — `writeEntity( …, bWithType )` 와 같다(들어옴은 타입까지, 갱신은 없이). */
+            static int32 computeEntityBits( const MmoEntity& entity, bool bWithType )
             {
-                return BitMath::computeVarUintBits( entity._entityId ) + 3 * 32 + BitMath::computeBlobBits( static_cast<int32>( entity._listState.size() ) );
+                const int32 typeBits = bWithType ? BitMath::computeVarUintBits( entity._typeId ) : 0;
+                return BitMath::computeVarUintBits( entity._entityId ) + typeBits + 3 * 32 + BitMath::computeBlobBits( static_cast<int32>( entity._listState.size() ) );
             }
         };
     } // namespace
@@ -245,23 +247,34 @@ namespace sw
         }
         std::sort( listRank.begin(), listRank.end() );
         listRank.erase( std::unique( listRank.begin(), listRank.end() ), listRank.end() ); // 반경 안 + 늘 보이기 겹침
-        int32 enteredCount = 0;
-        for ( const auto& ranked : listRank )
+        // 한 신뢰 메시지에 묶는다 — 엔티티마다 창 한 칸 · 머리를 쓰지 않는다(Core 가 64 KB 까지 조각으로 나른다). 보내기가 받아들여야 보이는 목록에 넣는다.
+        vector<uint32>& listEnter = scratch._listEnter;
+        listEnter.clear();
         {
-            const uint32 entityId = ranked.second;
-            if ( enteredCount >= _settings._maxEnterPerTick )
-                break; // 가까운 것부터 — 나머지는 다음 틱에
-            const auto entityIter = _mapEntity.find( entityId );
-            if ( entityIter == _mapEntity.end() )
-                continue;
             BitWriter& writer = scratch._messageWriter.begin( NetMmoMessage::kEnter );
             writer.writeVarUint( _tick );
-            MmoReplicatorInternal::writeEntity( writer, entityIter->second, true );
-            if ( _pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
-                break; // 신뢰 창이 찼다 — 다음 틱에
-            VisibleEntry& entry  = observer._mapVisible[entityId];
-            entry._listSentState = entityIter->second._listState;
-            ++enteredCount;
+            NetSendBudget budget( NetConnection::kMaxReliableMessageSize, NetConnection::kMaxReliableMessageSize );
+            budget.reserveBits( writer.getBitCount() + 1 ); // 머리 + 끝 표시
+            for ( const auto& ranked : listRank )
+            {
+                if ( static_cast<int32>( listEnter.size() ) >= _settings._maxEnterPerTick )
+                    break; // 가까운 것부터 — 나머지는 다음 틱에
+                const auto entityIter = _mapEntity.find( ranked.second );
+                if ( entityIter == _mapEntity.end() )
+                    continue;
+                if ( budget.tryReserveBits( 1 + MmoReplicatorInternal::computeEntityBits( entityIter->second, true ) ) == false )
+                    break; // 64 KB — 나머지는 다음 틱에
+                writer.writeBool( true );
+                MmoReplicatorInternal::writeEntity( writer, entityIter->second, true );
+                listEnter.push_back( ranked.second );
+            }
+            writer.writeBool( false );
+            if ( listEnter.empty() == false && _pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() ) )
+            {
+                for ( const uint32 entityId : listEnter )
+                    observer._mapVisible[entityId]._listSentState = getEntity( entityId )._listState;
+            }
+            // 보내기가 거절했으면(신뢰 창이 찼다) 아무것도 보이는 목록에 넣지 않는다 — 다음 틱에 다시 고른다.
         }
 
         // 3) 갱신 — 우선도를 쌓고 예산 안에서 큰 것부터. 나감을 아직 못 보낸 것(신뢰 창이 찼다)은 건너뛴다 — 사라진 엔티티일 수 있다.
@@ -288,7 +301,7 @@ namespace sw
             if ( std::binary_search( listLeave.begin() + static_cast<ptrdiff_t>( pendingLeaveIndex ), listLeave.end(), entityId ) )
                 continue;
             const MmoEntity& entity = getEntity( entityId );
-            if ( budget.tryReserveBits( 1 + MmoReplicatorInternal::computeUpdateBits( entity ) ) == false )
+            if ( budget.tryReserveBits( 1 + MmoReplicatorInternal::computeEntityBits( entity, false ) ) == false )
                 continue;
             writer.writeBool( true );
             MmoReplicatorInternal::writeEntity( writer, entity, false );
@@ -308,7 +321,7 @@ namespace sw
 
     size_t MmoReplicator::sendLeaves( int32 connectionId, Observer& observer, ObserverScratch& scratch )
     {
-        // 메시지 상한 안에서 쪼갠다 — 한 메시지에 다 넣으면 1024 B 를 넘어 버려지고, 보이는 목록에서는 이미 빠져 클라이언트에 유령이 남는다.
+        // 조각나지 않는 크기(1 KB)로 쪼갠다 — 묶어도 창 몫(조각 수)은 같고, 나눠 두면 창이 찼을 때 앞 묶음이라도 나간다. 보낸 것만 보이는 목록에서 뺀다(유령이 남지 않게).
         const vector<uint32>& listLeave = scratch._listLeave;
         size_t                sentCount = 0;
         while ( sentCount < listLeave.size() )
@@ -348,13 +361,19 @@ namespace sw
         BitReader& reader = body;
         if ( context._kind == NetMmoMessage::kEnter )
         {
-            ClientEntity entry;
-            entry._tick = static_cast<uint32>( reader.readVarUint() );
-            if ( MmoReplicatorInternal::readEntity( reader, entry._entity, true ) == false )
+            const uint32 tick = static_cast<uint32>( reader.readVarUint() );
+            while ( reader.readBool() )
+            {
+                ClientEntity entry;
+                entry._tick = tick;
+                if ( MmoReplicatorInternal::readEntity( reader, entry._entity, true ) == false )
+                    return NetHandleResult::Malformed;
+                const uint32 entityId = entry._entity._entityId;
+                _mapEntity[entityId]  = std::move( entry );
+                _eventBuffer.push( MmoClientEvent{ entityId, MmoClientEvent::Kind::Entered } );
+            }
+            if ( reader.hasOverflowed() )
                 return NetHandleResult::Malformed;
-            const uint32 entityId = entry._entity._entityId;
-            _mapEntity[entityId]  = std::move( entry );
-            _eventBuffer.push( MmoClientEvent{ entityId, MmoClientEvent::Kind::Entered } );
         }
         else if ( context._kind == NetMmoMessage::kLeave )
         {

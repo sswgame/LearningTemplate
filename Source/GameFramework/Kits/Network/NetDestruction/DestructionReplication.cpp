@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHost.h"
 
 #include "Engine/Destruction/FractureComponentBase.h"
@@ -228,8 +229,8 @@ namespace sw
         {
             Entry*                 pEntry     = findEntry( request._netId );
             FractureComponentBase* pComponent = pEntry != nullptr ? resolve( *pEntry ) : nullptr;
-            if ( pComponent != nullptr )
-                sendSnapshot( *pEntry, *pComponent, request._connectionId );
+            if ( pComponent != nullptr && sendSnapshot( *pEntry, *pComponent, request._connectionId ) == false )
+                _listRequest.push_back( request ); // 신뢰 창이 찼다 — 다음 틱에 다시(연결이 닫히면 onConnectionClosed 가 지운다)
         }
         for ( Entry& entry : _listEntry )
         {
@@ -273,33 +274,33 @@ namespace sw
         entry._sentEventCount = static_cast<uint32>( listEvent.size() );
     }
 
-    void DestructionReplicationServer::sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionId )
+    bool DestructionReplicationServer::sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionId )
     {
         const uint32 eventCount = component.getState().getEventCount();
         if ( component.isStateReady() == false || eventCount == 0 )
-            return; // 처음 상태 그대로 — 사건이 0 번부터 간다
+            return true; // 처음 상태 그대로 — 사건이 0 번부터 간다
         vector<uint8> bytes;
         component.makeNetworkSnapshot( bytes );
-        const uint32 partBytes = static_cast<uint32>( MathUtil::max( 64, _settings._snapshotPartBytes ) );
-        const uint32 partCount = static_cast<uint32>( ( bytes.size() + partBytes - 1 ) / partBytes );
-        const uint32 serial    = ++entry._snapshotSerial;
-        for ( uint32 part = 0; part < partCount; ++part )
+        BitWriter& writer = _writer.begin( NetDestructionMessage::kSnapshot );
+        writer.writeVarUint( entry._netId );
+        writer.writeVarUint( eventCount );
+        writer.writeBlob( bytes.data(), static_cast<int32>( bytes.size() ) );
+        if ( _writer.getByteCount() > NetConnection::kMaxReliableMessageSize )
         {
-            const uint32 offset = part * partBytes;
-            const uint32 length = MathUtil::min( partBytes, static_cast<uint32>( bytes.size() ) - offset );
-            BitWriter&   writer = _writer.begin( NetDestructionMessage::kSnapshotPart );
-            writer.writeVarUint( entry._netId );
-            writer.writeVarUint( serial );
-            writer.writeVarUint( eventCount );
-            writer.writeVarUint( part );
-            writer.writeVarUint( partCount );
-            writer.writeVarUint( length );
-            writer.writeBytes( bytes.data() + offset, static_cast<int32>( length ) );
-            if ( _writer.send( *_pHost, connectionId, NetChannelType::ReliableOrdered ) )
-                _stats._sentBytes += static_cast<uint64>( _writer.getByteCount() );
-            ++_stats._snapshotPartCount;
+            // 다시 해도 같다 — 줄에 돌려놓지 않는다. 이 오브젝트는 늦은 참가 · 복구를 받지 못한다(해시 비교가 계속 어긋남을 알린다).
+            SW_LOG_ERROR( "DestructionReplication: the snapshot of object %# is %# bytes, over the reliable message limit %# - it cannot be sent",
+                          entry._netId, _writer.getByteCount(), NetConnection::kMaxReliableMessageSize );
+            ++_stats._sendRejectedCount;
+            return true;
         }
+        if ( _writer.send( *_pHost, connectionId, NetChannelType::ReliableOrdered ) == false )
+        {
+            ++_stats._sendRejectedCount;
+            return false;
+        }
+        _stats._sentBytes += static_cast<uint64>( _writer.getByteCount() );
         ++_stats._snapshotCount;
+        return true;
     }
 
     void DestructionReplicationServer::sendPoses( Entry& entry, FractureComponentBase& component, uint32 serverTick )
@@ -511,9 +512,10 @@ namespace sw
                     handleEvent( *pEntry, buffered );
             }
         }
-        else if ( kind == NetDestructionMessage::kSnapshotPart )
+        else if ( kind == NetDestructionMessage::kSnapshot )
         {
-            handleSnapshotPart( *pEntry, reader );
+            if ( handleSnapshot( *pEntry, reader ) == false )
+                return NetHandleResult::Malformed;
         }
         else
         {
@@ -585,40 +587,19 @@ namespace sw
             component.applyDamage( buffered._event );
     }
 
-    void DestructionReplicationClient::handleSnapshotPart( Entry& entry, BitReader& reader )
+    bool DestructionReplicationClient::handleSnapshot( Entry& entry, BitReader& reader )
     {
-        const uint32 serial     = static_cast<uint32>( reader.readVarUint() );
-        const uint32 eventCount = static_cast<uint32>( reader.readVarUint() );
-        const uint32 part       = static_cast<uint32>( reader.readVarUint() );
-        const uint32 partCount  = static_cast<uint32>( reader.readVarUint() );
-        const uint32 length     = static_cast<uint32>( reader.readVarUint() );
-        if ( reader.hasOverflowed() || partCount == 0 || part >= partCount || length > static_cast<uint32>( reader.getBitsRemaining() / 8 ) )
-            return;
-        if ( part == 0 )
-        {
-            entry._snapshotBytes.clear();
-            entry._snapshotSerial     = serial;
-            entry._snapshotEventCount = eventCount;
-            entry._snapshotPartCount  = partCount;
-            entry._snapshotNextPart   = 0;
-        }
-        if ( serial != entry._snapshotSerial || part != entry._snapshotNextPart )
-            return; // 신뢰 순서 채널이라 빠지지 않는다 — 다른 스냅숏의 조각이면 버린다
-        const size_t offset = entry._snapshotBytes.size();
-        entry._snapshotBytes.resize( offset + length );
-        if ( reader.readBytes( entry._snapshotBytes.data() + offset, static_cast<int32>( length ) ) == false )
-            return;
-        ++entry._snapshotNextPart;
-        if ( entry._snapshotNextPart < entry._snapshotPartCount )
-            return;
+        const uint32  eventCount = static_cast<uint32>( reader.readVarUint() );
+        vector<uint8> bytes;
+        if ( reader.readBlob( bytes, NetConnection::kMaxReliableMessageSize ) == false || bytes.empty() )
+            return false;
 
         FractureComponentBase* pComponent = resolve( entry );
         if ( pComponent != nullptr )
-            pComponent->applyNetworkSnapshot( entry._snapshotBytes.data(), entry._snapshotBytes.size() );
+            pComponent->applyNetworkSnapshot( bytes.data(), bytes.size() );
         ++_stats._snapshotAppliedCount;
-        entry._snapshotBytes.clear();
         entry._bAwaitingSnapshot = SW_FALSE;
-        entry._nextEventIndex    = entry._snapshotEventCount;
+        entry._nextEventIndex    = eventCount;
         entry._skipCount         = 0;
         entry._listHashCheck.clear();
         // 스냅숏보다 앞 번호는 버리고, 이어지는 것은 적용한다.
@@ -631,6 +612,7 @@ namespace sw
             if ( buffered._index >= entry._nextEventIndex )
                 handleEvent( entry, buffered );
         }
+        return true;
     }
 
     void DestructionReplicationClient::handlePose( BitReader& reader, bool bRest )
