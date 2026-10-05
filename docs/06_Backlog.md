@@ -217,6 +217,7 @@ cd build/Ninja-Debug/Bin
   (`Source/GameFramework/README.md` "카메라" 절, `Source/Engine/Graphics/Renderer/README.md` "다중 뷰"). 남은 것 —
   - 2 단계에서 남은 것: 직교 리그 네 게임(ThemePark · Harvest · Nile · StarSkirmish)은 리그 값이 곧 데이터다(모드 · 블렌드는 공유) — 리그를 지우고 디렉터 + 프리셋
     XML 로 옮기려면 게임 디렉터의 `setViewOverride` · `findGroundPoint` 를 디렉터 창구로 바꿔야 한다. 프레이밍의 가로 존은 16:9 로 센다(모드가 화면 비율을 모른다).
+    2D(XY 평면) 카메라는 디렉터 밖의 `Follow2DCameraComponent` 다 — 2D 게임이 프리셋 · 블렌드를 원하면 디렉터 모드에 "XY 평면 따라가기" 를 더하고 그 컴포넌트를 지운다.
   - 4 단계에서 남은 것: 예산 · 보임 판정이 거칠다 — 보임은 "지정한 오브젝트가 주 카메라 절두체 안" 하나(가려짐 · 화면 크기 안 봄), 예산은 프레임당 뷰 수
     (`gv_renderViewBudget`)지 시간이 아니다. 화면 사각형 뷰는 에디터 GameView(ImGui 이미지)에서 검증하지 않았다. 해상도 배율 뷰의 TAA 기록 · 풀은 뷰마다 따로라
     뷰가 많으면 메모리가 뷰 수에 비례한다(공유 풀 없음). 초상화 굽기는 동기(렌더 스레드를 멈추고 그린다) — 에디터 썸네일처럼 많이 구우려면 큐로. GL 기본 프레임버퍼의 뷰포트
@@ -382,7 +383,7 @@ cd build/Ninja-Debug/Bin
 
 - **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).** ② `SpatialHashGrid2D`(RTS · MMO ·
   BR · Mech — 질의 모양이 달라 이득부터 볼 것).
-  ④ 키트 안 평행 구현: Overworld `TileMap` 이 Engine 타일맵과 따로 산다. ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
+  ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
 
 - **(보류 — 사용자 결정 "안정화된 뒤 개발") 게임별 CC0 리소스 배치 + SD 메카 시험 게임 MechArena.** 라이선스는 **CC0 급만**(출처 표기 의무 · 재배포 금지가 붙은 것은
   넣지 않는다 — 내려받기 스크립트 우회도 안 함). 확인한 원본: VRoid 알파판 샘플 D · E · F · G · 남녀 기본(OpenGameArt `vroid-studio-cc0-models`, VRM 0.x — 툰 셰이더 ·
@@ -528,6 +529,9 @@ cd build/Ninja-Debug/Bin
   뽑는다(단순 정규식은 틀린다).
 - **MonsterCollector 의 파티 · 박스 세이브**(쓰는 게임이 생기면) — `MonsterStorage` 를 세이브에 싣는 길이 없다. `MonsterInstance` 를 REFLECT 로 하거나 상태 바이트(`writeState`)로.
   맵 · 타일 자리 · 플래그는 `OverworldSaveGame` 이 든다.
+- **타일맵 칸 데이터를 일반 레이어로**(두 번째 장르가 칸마다 다른 값 — 지형 비용 · 발소리 — 을 원하면): 지금 레이어는 0/1(`kArrTileFlagLayerInfo`)이고 워프 · 역할 · 스폰은
+  전용 원소다. 값 종류를 정수로 넓히고 에디터 페인트 · 형식 시험을 같이 바꾼다(Godot TileSet custom data 모양).
+- **걸음 조우 판정 둘**(Overworld `shouldEncounterOnStep` 의 결정적 주기 · ClassicJrpg `JrpgEncounterWalker` 의 확률 + 유예) — 오버월드 위에 JRPG · 몬스터 수집 게임이 서면 기반 `World/` 로 하나를 올린다.
 
 ---
 
@@ -1472,7 +1476,9 @@ cd build/Ninja-Debug/Bin
 
 - **도구 에셋 종류는 표 하나** — 대화 노드는 `kArrDialogueNodeInfo` 한 줄 + 러너 switch 의 case 하나(`-Wswitch-enum` 이 짚음), 다음 노드는 러너 · 에디터 미리보기가
   같이 쓰는 `DialogueCursor::step`. 핀 번호 `nodeId*100+offset` 은 디스크 포맷. 타일맵 레이어 표(`kArrTileFlagLayerInfo`)의 XML 속성 이름과 줄 순서는 파일 형식이다
-  (바꾸면 옛 맵의 그 레이어가 기본값으로 읽힌다 — `TileMapXmlTest.SavedBytesMatchTheExistingFormat`). `SequenceItemKind` 값은 JSON 정수라 번호를 바꾸지 말 것;
+  (바꾸면 옛 맵의 그 레이어가 기본값으로 읽힌다 — `TileMapXmlTest.SavedBytesMatchTheExistingFormat`). 레이어를 더할 때 손댈 곳은 `TileFlagLayer` 값과
+  이 표 한 줄뿐이다(Overworld `TileMap` 은 `isFlagSet( layer )` 로 묻는다). 맵은 조우가 **일어나는 칸**만 말하고 무엇을 만나는지는 장르 키트의 지역 표
+  (`MonsterCollectorCatalog::rollEncounter` · `JrpgEncounterWalker`, 지역 = 존 id · 태그)가 정한다. `SequenceItemKind` 값은 JSON 정수라 번호를 바꾸지 말 것;
   시퀀서 이벤트는 `SequencePlayerComponent::registerSequenceEvent` 로 받는다.
 - **월드 플래그는 `GameFlags` 하나다** — 대화 러너(`DialogueRunnerComponent::setFlags`) · 지역 잠금(`AreaGraph`) · 일정이 같은 저장소 · 같은 조건식을 쓴다
   (`a && !b || count>=3` — 이름 하나는 0 이 아니면 참, 비교 오른쪽은 정수나 다른 플래그, 접두어 없음). 0 을 넣으면 지운다. 세이브는 `fillEntries` 의 이름 순 목록이다.

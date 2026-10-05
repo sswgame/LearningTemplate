@@ -1375,13 +1375,10 @@ SW_TEST_CASE( GameFrameworkTest, DontDestroyOnLoadComponentKeepsItsOwnerAcrossSc
 }
 
 /**
- * @brief [GameFrameworkTest] 런타임 TileMap 이 레이어 표의 모든 레이어를 칸 단위로 다루고 getFlags 비트로 내는지 검증
+ * @brief [GameFrameworkTest] 런타임 TileMap 이 레이어 표의 모든 레이어를 칸 단위로 다루는지 검증 — 표에 줄을 더하면 그대로 따라온다
  */
-SW_TEST_CASE( GameFrameworkTest, TileMap_EveryFlagLayerIsSetAndReported )
+SW_TEST_CASE( GameFrameworkTest, TileMap_EveryFlagLayerIsSetPerCell )
 {
-    const TileFlags arrExpectedFlag[] = { TileFlags::Walkable, TileFlags::Encounter, TileFlags::PassThrough };
-    static_assert( SW_COUNT_OF( arrExpectedFlag ) == kTileFlagLayerCount, "레이어마다 비트 하나" );
-
     for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
     {
         TileMap tileMap;
@@ -1392,16 +1389,13 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_EveryFlagLayerIsSetAndReported )
         tileMap.setFlag( info._layer, 0, 0, false );
         SW_EXPECT_TRUE( tileMap.isFlagSet( info._layer, 1, 1 ) );
         SW_EXPECT_FALSE( tileMap.isFlagSet( info._layer, 0, 0 ) );
-        const TileFlags expectedFlag = arrExpectedFlag[static_cast<size_t>( info._layer )];
-        SW_EXPECT_TRUE( ( tileMap.getFlags( 1, 1 ) & expectedFlag ) == expectedFlag );
-        SW_EXPECT_TRUE( ( tileMap.getFlags( 0, 0 ) & expectedFlag ) == TileFlags::None );
         SW_EXPECT_FALSE( tileMap.isFlagSet( info._layer, 5, 5 ) );
     }
 
     TileMap tileMap;
     tileMap.resize( 1, 1 );
     tileMap.setWalkable( 0, 0, false );
-    SW_EXPECT_TRUE( ( tileMap.getFlags( 0, 0 ) & TileFlags::Solid ) == TileFlags::Solid );
+    SW_EXPECT_TRUE( tileMap.isSolid( 0, 0 ) );
 }
 
 /**

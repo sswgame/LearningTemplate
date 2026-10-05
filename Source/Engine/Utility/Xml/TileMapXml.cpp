@@ -203,21 +203,6 @@ namespace sw
             }
         }
 
-        XmlNode encounters = root.findChild( "encounters" );
-        if ( encounters.isValid() )
-        {
-            for ( XmlNode encounterNode = encounters.findChild( "e" ); encounterNode; encounterNode = encounterNode.findNextSibling( "e" ) )
-            {
-                Encounter   entry{};
-                const utf8* pId = encounterNode.findAttribute( "id" );
-                if ( pId != nullptr )
-                    entry._speciesId = pId;
-                entry._weight = encounterNode.getAttributeFloat( "weight", 0.f );
-                if ( entry._speciesId.empty() == false )
-                    _listEncounterEntry.push_back( std::move( entry ) );
-            }
-        }
-
         // 타일 레이어 — 팔레트(브러시 이름)와 칸마다 팔레트 번호. 칸 수가 맞지 않거나 팔레트 밖 번호는 읽기 오류다.
         XmlNode tileLayer = root.findChild( "tileLayer" );
         if ( tileLayer.isValid() )
@@ -266,9 +251,7 @@ namespace sw
             }
         }
 
-        SW_LOG_INFO( "Loaded '%#' (%#×%#) scene=%# role=%# encounters=%#",
-                     _name, _width, _height, _scenePath, _role,
-                     static_cast<uint32>( _listEncounterEntry.size() ) );
+        SW_LOG_INFO( "Loaded '%#' (%#×%#) scene=%# role=%#", _name, _width, _height, _scenePath, _role );
         return true;
     }
 
@@ -431,17 +414,6 @@ namespace sw
             warpNode.appendAttribute( "ty", warp._targetTileY );
             if ( warp._pairId.empty() == false )
                 warpNode.appendAttribute( "pair", warp._pairId );
-        }
-
-        if ( _listEncounterEntry.empty() == false )
-        {
-            XmlNode encounters = root.appendChild( "encounters" );
-            for ( const Encounter& entry : _listEncounterEntry )
-            {
-                XmlNode encounterNode = encounters.appendChild( "e" );
-                encounterNode.appendAttribute( "id", entry._speciesId );
-                encounterNode.appendAttribute( "weight", entry._weight );
-            }
         }
 
         // 타일 레이어는 타일셋이 있을 때만 쓴다 — 없는 맵은 예전과 바이트까지 같다. 칸은 한 행씩 줄을 바꿔 적는다(사람이 읽고 비교할 수 있게).

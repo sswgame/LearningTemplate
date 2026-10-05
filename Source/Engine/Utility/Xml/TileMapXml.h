@@ -15,7 +15,7 @@ namespace sw
     /**
      * @brief 칸마다 켜고 끄는 타일 플래그 레이어입니다.
      * @details 레이어를 더하면 값 하나와 `kArrTileFlagLayerInfo` 의 줄 하나를 더합니다. XML 읽기 · 쓰기, 에디터 레이어 목록 · 색 ·
-     *          페인트, 런타임 `TileMap` 의 칸 조회가 모두 그 표를 훑습니다.
+     *          페인트가 그 표를 훑고, 런타임 `TileMap` 은 레이어 값으로 칸을 묻습니다(`isFlagSet`).
      */
     enum class TileFlagLayer : uint8
     {
@@ -97,25 +97,17 @@ namespace sw
             string _pairId{};
         };
 
-        /** @brief 맵 조우 테이블의 한 행 */
-        struct Encounter
-        {
-            string  _speciesId{};
-            float32 _weight{ 1.0f };
-        };
-
-        string            _name{};
-        string            _sourcePath{};
-        string            _scenePath{};
-        string            _role{};
-        int32             _width{ 0 };
-        int32             _height{ 0 };
-        int32             _spawnX{ 1 };
-        int32             _spawnY{ 1 };
-        vector<uint8>     _arrFlagLayer[kTileFlagLayerCount]{}; /**< 레이어마다 칸 수만큼의 0 · 1 입니다(`TileFlagLayer` 순서). */
-        vector<Visual>    _listVisual{};
-        vector<Warp>      _listWarp{};
-        vector<Encounter> _listEncounterEntry{};
+        string         _name{};
+        string         _sourcePath{};
+        string         _scenePath{};
+        string         _role{};
+        int32          _width{ 0 };
+        int32          _height{ 0 };
+        int32          _spawnX{ 1 };
+        int32          _spawnY{ 1 };
+        vector<uint8>  _arrFlagLayer[kTileFlagLayerCount]{}; /**< 레이어마다 칸 수만큼의 0 · 1 입니다(`TileFlagLayer` 순서). */
+        vector<Visual> _listVisual{};
+        vector<Warp>   _listWarp{};
         /**
          * @brief 타일 레이어의 타일셋(`.tileset.xml`) 경로입니다. 비어 있으면 타일 레이어가 없고 `<tileLayer>` 를 쓰지 않습니다(기존 맵과 바이트까지 같습니다).
          * @details 타일 레이어는 칸마다 **브러시**(그냥 타일 · 규칙 타일)를 칠합니다. 보일 모습(아틀라스 칸)은 저장하지 않고 읽는 쪽이 규칙으로 고릅니다

@@ -4,22 +4,11 @@
 
 namespace sw
 {
-    namespace
-    {
-        /**
-         * @brief 플래그 레이어마다 `getFlags` 가 켜는 런타임 비트입니다. `TileFlagLayer` 순서입니다.
-         * @details 레이어 표(`kArrTileFlagLayerInfo`)는 Engine 것이라 GameFramework 의 `TileFlags` 를 모릅니다. 그래서 비트만 여기 둡니다.
-         */
-        constexpr TileFlags kArrTileFlagOfLayer[] = { TileFlags::Walkable, TileFlags::Encounter, TileFlags::PassThrough };
-        static_assert( SW_COUNT_OF( kArrTileFlagOfLayer ) == kTileFlagLayerCount, "TileFlagLayer 를 늘렸으면 kArrTileFlagOfLayer 에도 비트를 더할 것" );
-    } // namespace
-
     SW_LOG_CALLER( "TileMap" );
 
     TileMap::TileMap()
         : _data{}
         , _mapWarpIndex{}
-        , _encounterRandom{}
     {
     }
 
@@ -57,46 +46,7 @@ namespace sw
                             width, height, TileMapXmlData::kMaxTileCount );
             return;
         }
-        _data._listEncounterEntry.clear();
         rebuildWarpIndex();
-    }
-
-    string TileMap::pickEncounterSpeciesId() const
-    {
-        if ( _data._listEncounterEntry.empty() )
-            return {};
-
-        float32 total{ 0.0f };
-        for ( const TileEncounterEntry& entry : _data._listEncounterEntry )
-        {
-            total += entry._weight > 0.0f ? entry._weight : 0.0f;
-        }
-        if ( total <= 0.0f )
-            return _data._listEncounterEntry[0]._speciesId;
-
-        // 누적 가중치 선택 — XML 의 확률 가중치를 따른다. 함수 지역 static 상태를 두지 말 것(모든 타일맵/스레드가 공유한다).
-        const float32 pick = _encounterRandom.nextRange( 0.0f, total );
-
-        float32 accumulated{ 0.0f };
-        for ( const TileEncounterEntry& entry : _data._listEncounterEntry )
-        {
-            const float32 weight = entry._weight > 0.0f ? entry._weight : 0.0f;
-            if ( weight <= 0.0f )
-                continue;
-
-            accumulated += weight;
-            if ( pick <= accumulated )
-                return entry._speciesId;
-        }
-
-        // 부동소수 오차로 끝까지 못 고른 경우: 가중치가 있는 마지막 항목으로 떨어뜨린다.
-        for ( size_t entryIndex = _data._listEncounterEntry.size(); entryIndex > 0; --entryIndex )
-        {
-            const TileEncounterEntry& entry = _data._listEncounterEntry[entryIndex - 1];
-            if ( entry._weight > 0.0f )
-                return entry._speciesId;
-        }
-        return _data._listEncounterEntry[0]._speciesId;
     }
 
     bool TileMap::isFlagSet( TileFlagLayer layer, int32 x, int32 y ) const
@@ -124,23 +74,6 @@ namespace sw
     bool TileMap::isSolid( int32 x, int32 y ) const
     {
         return isWalkable( x, y ) == false;
-    }
-
-    TileFlags TileMap::getFlags( int32 x, int32 y ) const
-    {
-        if ( isInBounds( x, y ) == false )
-            return TileFlags::Solid;
-        TileFlags flags = TileFlags::None;
-        for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
-        {
-            if ( _data.getFlagLayer( info._layer )[indexOf( x, y )] != 0 )
-                flags = flags | kArrTileFlagOfLayer[static_cast<size_t>( info._layer )];
-        }
-        if ( ( flags & TileFlags::Walkable ) == TileFlags::None )
-            flags = flags | TileFlags::Solid;
-        if ( findWarp( x, y ) != nullptr )
-            flags = flags | TileFlags::Warp;
-        return flags;
     }
 
     void TileMap::rebuildWarpIndex()

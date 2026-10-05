@@ -56,11 +56,6 @@ namespace
         warp._pairId      = "cave-entrance";
         data._listWarp.push_back( warp );
 
-        sw::TileMapXmlData::Encounter entry;
-        entry._speciesId = "slime";
-        entry._weight    = 2.25f;
-        data._listEncounterEntry.push_back( entry );
-
         return data;
     }
 
@@ -103,14 +98,6 @@ namespace
             SW_EXPECT_EQUAL( expected._listWarp[warpIndex]._targetTileX, actual._listWarp[warpIndex]._targetTileX );
             SW_EXPECT_EQUAL( expected._listWarp[warpIndex]._targetTileY, actual._listWarp[warpIndex]._targetTileY );
             SW_EXPECT_TRUE( expected._listWarp[warpIndex]._pairId == actual._listWarp[warpIndex]._pairId );
-        }
-
-        SW_ASSERT_EQUAL( expected._listEncounterEntry.size(), actual._listEncounterEntry.size() );
-        for ( size_t entryIndex = 0; entryIndex < expected._listEncounterEntry.size(); ++entryIndex )
-        {
-            SW_EXPECT_TRUE( expected._listEncounterEntry[entryIndex]._speciesId == actual._listEncounterEntry[entryIndex]._speciesId );
-            SW_EXPECT_NEAR_EQUAL( expected._listEncounterEntry[entryIndex]._weight,
-                                  actual._listEncounterEntry[entryIndex]._weight, 0.001f );
         }
     }
 } // namespace
@@ -369,9 +356,6 @@ SW_TEST_CASE( TileMapXmlTest, SavedBytesMatchTheExistingFormat )
 	<warps>
 		<warp x="2" y="0" map="game/empty/maps/cave.tilemap.xml" tx="5" ty="7" pair="cave-entrance" />
 	</warps>
-	<encounters>
-		<e id="slime" weight="2.25" />
-	</encounters>
 </TileMap>
 )";
     SW_EXPECT_TRUE_MSG( makeSampleMap().toXml() == kSampleXml, "레이어 표로 쓴 바이트가 기존 형식과 다르다" );
