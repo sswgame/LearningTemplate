@@ -20,5 +20,6 @@ add_subdirectory(EditorTest)
 add_subdirectory(EditorUiTest)
 add_subdirectory(AppTest)
 add_subdirectory(PythonTest)
+add_subdirectory(FuzzTest)
 
 target_compile_definitions(TestFramework PUBLIC SW_TEST_INTERNAL)

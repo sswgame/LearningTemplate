@@ -46,6 +46,9 @@ option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 �
 # TSan 은 GNU/Clang(리눅스)만 된다(clang-cl 은 지원하지 않는다).
 set(SW_SANITIZER_KIND "address" CACHE STRING "SW_ENABLE_SANITIZER 가 켤 새니타이저: address | thread")
 set_property(CACHE SW_SANITIZER_KIND PROPERTY STRINGS address thread)
+# 커버리지 안내 퍼징(libFuzzer) — 엔진에 커버리지 계측(`-fsanitize=fuzzer-no-link`)을 걸고 `Test/FuzzTest/LoaderFuzzer` 를 짓는다. 리눅스 clang + ASan 만
+# (Windows 의 clang_rt.fuzzer 는 정적 CRT 뿐이라 엔진과 링크되지 않는다). 프리셋 `CI-Fuzz`, 밤마다 `.github/workflows/fuzz.yml`.
+option(SW_ENABLE_FUZZING "리눅스 clang + ASan 에서 libFuzzer 대상(LoaderFuzzer)과 엔진 커버리지 계측" OFF)
 
 # 배포 빌드의 산출물 디렉터리에 테스트 실행 파일이 섞이면 안 된다. 그렇다고 Shipping 에서 테스트를
 # 끄면 배포 구성이 실제로 도는지 아무도 확인하지 않게 된다(CI 는 Shipping 에서도 같은 시험 집합을 돈다).

@@ -418,9 +418,9 @@ cd build/Ninja-Debug/Bin
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
 
-- **커버리지 안내 퍼징(libFuzzer)은 Windows 에서 엔진과 링크되지 않는다** — `clang_rt.fuzzer-x86_64.lib` 가 정적 CRT(/MT)뿐이라 동적 CRT(/MD) 엔진과 LNK2038.
-  `LoaderFuzzTest`(시드 고정 변이)가 같은 대상 표(`Test/EngineTest/LoaderFuzzTargets.cpp`)를 돈다. 리눅스 clang 에서 `LLVMFuzzerTestOneInput` 하나로 그 표를 붙이고
-  ASan 과 같이 돌린다(서드파티 디코더만 떼어 /MT 로 돌리면 Windows 에서도 된다 — stb_vorbis 를 그렇게 확인했다).
+- **커버리지 안내 퍼저(`LoaderFuzzer`)는 아직 한 번도 지어지지 않았다**(2026-10-06 들임, 리눅스 전용 — 이 PC 는 WSL 을 쓰지 않았다). 첫 `fuzz.yml` 실행
+  (밤 또는 `workflow_dispatch`)이 구성 · 링크(`-fsanitize=fuzzer-no-link` 엔진 + ASan, `-fsanitize=fuzzer` 실행 파일)와 대상마다 60 초가 끝나는지 본다.
+  지면 그 실행의 주석 · 아티팩트(`fuzz-findings`)로 고친다.
 - **Windows CI 시험 단계 실패(10-02 부터 Debug, 10-03 부터 Shipping)의 원인은 이 PC 에서 재현하지 못했다** — CI-Debug · CI-Shipping 을 같은 라벨로,
   TEMP 를 8.3 짧은 이름으로 바꿔서도 돌렸다(부하로 인한 시간 초과 말고는 통과). CI 의 시험 단계가 이제 진 시험을 주석으로 올리므로 병합 뒤 첫 실행의
   주석(`/check-runs/<job id>/annotations`, 로그인 없이 읽힌다)에서 시험 이름 · 실패 줄을 보고 고친다.
@@ -750,6 +750,9 @@ cd build/Ninja-Debug/Bin
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
 - **GitHub Windows 러너에는 오디오 출력 장치가 없다**(`CreateMasteringVoice` 0x80070490 = `ERROR_NOT_FOUND`) — 출력 줄의 `[Warning]` 을 세는 시험(`AppCookTest`)이 그것으로 졌다.
   장치 없음은 Info 로 알리고 오프라인 렌더로 돈다.
+- **커버리지 안내 퍼징은 리눅스 전용**(`SW_ENABLE_FUZZING` · 프리셋 `CI-Fuzz` · `.github/workflows/fuzz.yml`, 대상 표 하나를 시드 고정 변이 `LoaderFuzzTest` 와
+  나눠 쓴다). 퍼저와 시험 실행 파일은 같은 기동(`Test/TestFramework/TestHostRuntime`)을 쓴다. Windows 는 clang_rt.fuzzer 가 /MT 뿐이라 엔진(/MD)과 링크되지
+  않는다 — 디코더만 /MT 로 떼어 돌리는 것은 하지 않는다(사용자 결정 2026-10-06, 같은 코드를 리눅스가 돈다).
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
 

@@ -625,7 +625,7 @@ function(sw_addTestExecutable TARGET_NAME)
 	endif()
 
 	add_executable(${TARGET_NAME} ${ARG_SOURCES})
-	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Test/TestFramework/main.cpp")
+	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Test/TestFramework/main.cpp" "${CMAKE_SOURCE_DIR}/Test/TestFramework/TestHostRuntime.cpp")
 	sw_embedProcessManifest(${TARGET_NAME})
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Test")
 

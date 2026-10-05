@@ -1,0 +1,107 @@
+name: Fuzz (Linux | libFuzzer)
+
+# 커버리지 안내 퍼징 — 로더 대상 표(Test/EngineTest/LoaderFuzzTargets.cpp)를 대상마다 60 초씩. 밤마다(KST 03 시) + 손으로.
+# 크래시 · 시간 초과 입력은 아티팩트로, 진 대상 이름은 주석으로 올리고 잡을 붉게 한다. 말뭉치 캐시는 아직 두지 않는다(저장소 캐시 10 GB 한도 — 재고 나서).
+on:
+  schedule:
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SCCACHE_GHA_ENABLED: "true"
+
+jobs:
+  fuzz:
+    name: LoaderFuzzer (Linux Clang + ASan)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 1
+
+    - name: Setup sccache
+      uses: mozilla-actions/sccache-action@v0.0.11
+
+    # ci.yml 의 리눅스 준비와 같다(바꾸면 둘 다).
+    - name: Setup Linux toolchain & dependencies
+      timeout-minutes: 15
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          libclang-dev libtinfo5 zlib1g-dev \
+          libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+          libxext-dev libxfixes-dev libxcb1-dev libx11-xcb-dev \
+          libgl1-mesa-dev libglu1-mesa-dev libvulkan-dev vulkan-validationlayers
+        for candidate in $(ls -d /usr/lib/llvm-* 2>/dev/null | sort -V -r) /usr; do
+          if [ -f "$candidate/include/clang-c/Index.h" ]; then
+            echo "LLVM_DIR=$candidate" >> "$GITHUB_ENV"
+            echo "LLVM_ROOT=$candidate" >> "$GITHUB_ENV"
+            echo "LLVM_HOME=$candidate" >> "$GITHUB_ENV"
+            break
+          fi
+        done
+
+    # ci.yml 의 리눅스 잡과 같은 키 — 그 잡이 저장한 포트를 읽기만 한다(같은 트리플릿).
+    - name: Restore vcpkg binary cache
+      uses: actions/cache/restore@v5
+      with:
+        path: ${{ github.workspace }}/build/vcpkg_cache
+        key: vcpkg-bin-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**', 'ThirdParty/*/vcpkg-port/**') }}
+        restore-keys: |
+          vcpkg-bin-${{ runner.os }}-
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
+        vcpkgJsonGlob: 'vcpkg.json'
+
+    - name: Configure (CI-Fuzz)
+      env:
+        CC: clang
+        CXX: clang++
+        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
+      run: |
+        cmake --preset CI-Fuzz
+
+    - name: Build LoaderFuzzer
+      run: |
+        cmake --build --preset CI-Fuzz --target LoaderFuzzer
+
+    - name: Fuzz every target
+      id: fuzz
+      run: |
+        set -u
+        fuzzer=build/CI-Fuzz/Bin/LoaderFuzzer
+        mkdir -p fuzz
+        : > fuzz/failed.txt
+        for target in $(SW_FUZZ_LIST=1 "$fuzzer"); do
+          mkdir -p "fuzz/$target/corpus" "fuzz/$target/seeds"
+          (cd build/CI-Fuzz/Bin && SW_FUZZ_TARGET="$target" SW_FUZZ_DUMP_SEEDS="$GITHUB_WORKSPACE/fuzz/$target/seeds" ./LoaderFuzzer)
+          if ! (cd build/CI-Fuzz/Bin && SW_FUZZ_TARGET="$target" ./LoaderFuzzer "$GITHUB_WORKSPACE/fuzz/$target/corpus" "$GITHUB_WORKSPACE/fuzz/$target/seeds" \
+                -max_total_time=60 -timeout=10 -rss_limit_mb=4096 -artifact_prefix="$GITHUB_WORKSPACE/fuzz/$target/"); then
+            echo "$target" >> fuzz/failed.txt
+            echo "::error title=fuzz $target::libFuzzer found a crash or timeout - see the fuzz-findings artifact"
+          fi
+        done
+        test ! -s fuzz/failed.txt
+
+    - name: Upload findings
+      if: failure() && steps.fuzz.outcome == 'failure'
+      uses: actions/upload-artifact@v6
+      with:
+        name: fuzz-findings
+        path: |
+          fuzz/failed.txt
+          fuzz/**/crash-*
+          fuzz/**/timeout-*
+          fuzz/**/oom-*
+        if-no-files-found: ignore
+        retention-days: 14

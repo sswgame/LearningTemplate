@@ -245,6 +245,16 @@
         "SW_ENABLE_UNITY_BUILD": "ON",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
+    },
+    {
+      "name": "CI-Fuzz",
+      "displayName": "CI Fuzz (Ninja, Linux Clang + ASan + libFuzzer)",
+      "description": "Coverage-guided fuzzing of the loader target table (Test/FuzzTest/LoaderFuzzer). Linux clang only - the Windows clang_rt.fuzzer is /MT only. Built nightly by .github/workflows/fuzz.yml.",
+      "inherits": "CI-Debug-ASAN",
+      "cacheVariables": {
+        "SW_ENABLE_FUZZING": "ON",
+        "SW_ENABLE_UNITY_BUILD": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -323,6 +333,10 @@
     {
       "name": "CI-Shipping",
       "configurePreset": "CI-Shipping"
+    },
+    {
+      "name": "CI-Fuzz",
+      "configurePreset": "CI-Fuzz"
     }
   ],
   "testPresets": [

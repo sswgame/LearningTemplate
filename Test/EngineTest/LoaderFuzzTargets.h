@@ -3,7 +3,8 @@
  * @brief 로더 퍼징 대상 표 — 바이트 하나를 받아 엔진 로더 하나에 먹이는 함수와, 그 로더의 씨앗(저장소의 실제 파일 · 만든 바이트)입니다.
  * @details 시드 고정 변이 퍼저(`LoaderFuzzTest`, CI 의 nogpu)가 이 표를 돈다. 대상을 하나 더하는 것은 이 표에 한 줄을 더하는 것이다.
  *          함수 모양이 libFuzzer 의 `LLVMFuzzerTestOneInput` 과 같아 그대로 붙일 수 있다 — 다만 Windows 의 `clang_rt.fuzzer` 는 정적 CRT(/MT)
- *          빌드뿐이라 동적 CRT(/MD) 인 엔진과 링크되지 않는다(LNK2038). 커버리지 안내 퍼징은 리눅스 clang 에서 붙인다(백로그 1-9).
+ *          빌드뿐이라 동적 CRT(/MD) 인 엔진과 링크되지 않는다(LNK2038). 커버리지 안내 퍼징은 리눅스 `LoaderFuzzer`(`SW_ENABLE_FUZZING`, 프리셋 CI-Fuzz,
+ *          밤마다 `.github/workflows/fuzz.yml`)가 같은 표를 돈다.
  */
 #pragma once
 #include "Core/Common/Types.h"

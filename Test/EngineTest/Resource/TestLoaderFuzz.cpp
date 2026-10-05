@@ -23,7 +23,7 @@ using namespace sw;
 //   SW_FUZZ_SEED=<n>         변이 시드(기본 0x5eed) — 다른 입력을 보고 싶을 때
 //   SW_FUZZ_TARGET=<이름>    한 대상만(`LoaderFuzzTargets.cpp` 의 표 이름)
 //   SW_FUZZ_TRACE=1          입력마다 대상 · 씨앗 · 회차를 찍고 입력을 임시 폴더 `sw_fuzz_last_<대상>.bin` 에 남긴다 — 죽은 입력을 건질 때
-// 커버리지 안내 퍼징(libFuzzer)은 Windows 에서 엔진과 링크되지 않는다 — `LoaderFuzzTargets.h` 머리말.
+// 커버리지 안내 퍼징(libFuzzer)은 리눅스 `Test/FuzzTest/LoaderFuzzer` 가 같은 표를 돈다 — `LoaderFuzzTargets.h` 머리말.
 // ------------------------------------------------------------------------------
 
 namespace

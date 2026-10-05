@@ -31,6 +31,7 @@ include("${swModulesRoot}/BuildType/Release.cmake")
 
 include("${swModulesRoot}/Options/CppStandard.cmake")
 include("${swModulesRoot}/Options/Sanitizer.cmake")
+include("${swModulesRoot}/Options/Fuzzing.cmake")
 include("${swModulesRoot}/Options/UnityBuild.cmake")
 
 unset(swModulesRoot)
