@@ -3,6 +3,7 @@
 #include "Core/Container/map.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
 
@@ -411,6 +412,33 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameBinaryCrc32TamperingDetection )
     }
 
     SW_EXPECT_TRUE( FileUtil::removeFile( binPath ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] 세이브 슬롯 파일은 SAV1 봉투다 — 머리 16 바이트(마법 · 판 · 페이로드 CRC32 · 페이로드 길이) 뒤에 페이로드
+ * @details 받침 타입을 바꿔도(어떤 REFLECT 타입이든) 봉투는 `SaveGameSerializer` 하나가 쓰므로 그대로여야 한다.
+ */
+SW_TEST_CASE( GameFrameworkTest, SaveGameSlotFileIsTheSav1Envelope )
+{
+    TurnBattleSaveGame slot{};
+    slot._mapPath = "Levels/Envelope.scene";
+    slot._playerX = 3;
+    slot.setFlag( "gold", 7 );
+
+    const string path = test::makeTempPath( "envelope.sav" );
+    SW_ASSERT_TRUE( SaveGameSerializer::saveGameToSlot( slot, path ) );
+
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( FileUtil::readFile( path, bytes ) );
+    SW_ASSERT_TRUE( bytes.size() > 16u );
+
+    uint32 arrHeader[4]{ 0, 0, 0, 0 };
+    Memory::copy( arrHeader, bytes.data(), sizeof( arrHeader ) );
+    const uint32 payloadSize = static_cast<uint32>( bytes.size() - 16u );
+    SW_EXPECT_EQUAL( SaveGameSerializer::kSaveBinMagic, arrHeader[0] );
+    SW_EXPECT_EQUAL( SaveGameSerializer::kSaveBinVersion, arrHeader[1] );
+    SW_EXPECT_EQUAL( StringUtil::computeCrc32( bytes.data() + 16, payloadSize ), arrHeader[2] );
+    SW_EXPECT_EQUAL( payloadSize, arrHeader[3] );
 }
 
 /**
