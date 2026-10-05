@@ -96,7 +96,7 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 #if defined( SW_PASS_GBUFFER )
 	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), float4( albedo, 1.0f ), normal );
 #else
-	const float  shadow = swSampleShadowAtWorld( input.worldPosition );
+	const float  shadow = swSampleShadowAtWorld( input.worldPosition, normal );
 	const float3 lit    = swShadeLights( albedo, input.worldPosition, normal, shadow );
 	return swStoreSurface( float4( lit, 1.0f ), float4( albedo, 1.0f ), normal );
 #endif

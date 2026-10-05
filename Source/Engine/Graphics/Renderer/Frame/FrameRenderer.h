@@ -473,6 +473,7 @@ namespace sw
             float4   _dirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
             float4   _colorAmbient{ 1.0f, 0.82f, 0.62f, 0.28f };
             float4x4 _shadowViewProj{};
+            float4   _shadowParams{}; ///< g_ShadowParams — 그림자 행렬과 한 묶음
             uint8    _bHasShadowViewProj{ SW_FALSE };
         };
         /** @brief 카메라에서 뷰 · 투영을 적용합니다. */
@@ -847,7 +848,7 @@ namespace sw
         RenderGraphExecutionContext _graphContext;
 
         // 아래는 8 바이트보다 작은 필드입니다. 사이에 끼면 패딩이 생기므로 큰 것부터 끝에 모아 둡니다.
-        FrameLightState _frameLight; ///< 크기가 8 의 배수가 아니라(100) 4 바이트 필드와 짝을 짓습니다
+        FrameLightState _frameLight; ///< 크기가 8 의 배수가 아니라(116) 4 바이트 필드와 짝을 짓습니다
         /// @brief 주 출력(백버퍼 · 게임 뷰 RT)의 크기입니다. 주 시점의 풀은 이것 × 사각형 × 해상도 배율이고, 화면 사각형 뷰 · Present 캡처는 이 크기다.
         uint32 _outputWidth;
         uint32 _outputHeight;

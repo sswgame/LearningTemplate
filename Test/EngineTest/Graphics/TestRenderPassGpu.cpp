@@ -679,6 +679,66 @@ namespace
                    " px(띠 안 " + sw::to_string( _inBandCount ) + ", 평균 밝기 " + sw::to_string( _ringMeanLuma ) + ") · 안쪽 차이 " + sw::to_string( _interiorDiffer );
         }
     };
+
+    /**
+     * @brief 그림자 패스가 바닥에 그림자를 드리우는지 — 그림자 맵을 비운 판(그림자 패스 깊이 쓰기를 끈 판)과 그림이 **달라야** 한다.
+     * @param shadowExtent 0 이면 주광의 기본 볼륨, 아니면 그 반경(m)의 볼륨(빛 거리는 그 두 배)
+     */
+    void expectShadowCastsOnEveryBackend( const utf8* pTestName, float32 shadowExtent )
+    {
+        sw::string pipelineText;
+        SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
+        constexpr sw::string_view kDepthWriteOn  = "_bEnableDepthWrite=\"true\"";
+        constexpr sw::string_view kDepthWriteOff = "_bEnableDepthWrite=\"false\"";
+        const size_t              shadowPassAt   = pipelineText.find( "_type=\"Shadow\"" );
+        SW_ASSERT_TRUE( shadowPassAt != sw::string::npos );
+        const size_t depthWriteAt = pipelineText.find( kDepthWriteOn.data(), shadowPassAt );
+        SW_ASSERT_TRUE( depthWriteAt != sw::string::npos );
+        pipelineText.replace( depthWriteAt, kDepthWriteOn.size(), kDepthWriteOff.data() );
+        const sw::string emptyShadowPath = test::makeTempPath( "emptyshadowpipeline.xml" );
+        SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( emptyShadowPath, pipelineText ) );
+
+        uint32                comparedCount{ 0 };
+        test::RHIBackendSweep sweep;
+        for ( test::RHITestDevice& device : sweep )
+        {
+            LitCubeScene          cube;
+            sw::vector<uint8>     listShadow;
+            sw::vector<uint8>     listEmptyShadow;
+            sw::RHITextureMipSpan layoutShadow{};
+            sw::RHITextureMipSpan layoutEmptyShadow{};
+            const utf8*           pName = device->getBackendName();
+            bool                  bOk   = cube.populate();
+            if ( bOk && shadowExtent > 0.0f )
+            {
+                sw::DirectionalLightComponent* pLight = cube._scene.findActiveDirectionalLight();
+                bOk                                   = pLight != nullptr;
+                if ( bOk )
+                {
+                    pLight->setShadowExtent( shadowExtent );
+                    pLight->setShadowDistance( shadowExtent * 2.0f );
+                }
+            }
+            if ( bOk )
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", listShadow, layoutShadow );
+            if ( bOk )
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, emptyShadowPath.c_str(), listEmptyShadow, layoutEmptyShadow );
+
+            if ( bOk && layoutShadow._width == layoutEmptyShadow._width )
+            {
+                ++comparedCount;
+                const CaptureDifference difference = compareCaptures( listShadow, listEmptyShadow );
+                SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+                SW_EXPECT_FALSE_MSG( difference.isSameImage(),
+                                     ( sw::string( pName ) + ": 그림자 맵을 비워도 그림이 같다 — 그림자가 하나도 지지 않는다 (" + difference.describe() + ")" ).c_str() );
+            }
+            else if ( bOk == false )
+                SW_LOG_WARNING( "%#: %# 에서 파이프라인을 돌리지 못했습니다.", pTestName, pName );
+        }
+
+        if ( comparedCount == 0 )
+            SW_TEST_SKIP( "No RHI backend could run the shadow pipelines" );
+    }
 } // namespace
 
 /**
@@ -4416,48 +4476,17 @@ SW_TEST_CASE( RenderPassGpuTest, DepthPrepassRendersTheSameImage )
  */
 SW_TEST_CASE( RenderPassGpuTest, ShadowPassCastsOnEveryBackend )
 {
-    sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
-    constexpr sw::string_view kDepthWriteOn  = "_bEnableDepthWrite=\"true\"";
-    constexpr sw::string_view kDepthWriteOff = "_bEnableDepthWrite=\"false\"";
-    const size_t              shadowPassAt   = pipelineText.find( "_type=\"Shadow\"" );
-    SW_ASSERT_TRUE( shadowPassAt != sw::string::npos );
-    const size_t depthWriteAt = pipelineText.find( kDepthWriteOn.data(), shadowPassAt );
-    SW_ASSERT_TRUE( depthWriteAt != sw::string::npos );
-    pipelineText.replace( depthWriteAt, kDepthWriteOn.size(), kDepthWriteOff.data() );
-    const sw::string emptyShadowPath = test::makeTempPath( "emptyshadowpipeline.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( emptyShadowPath, pipelineText ) );
+    expectShadowCastsOnEveryBackend( "ShadowPassCastsOnEveryBackend", 0.0f );
+}
 
-    uint32                comparedCount{ 0 };
-    test::RHIBackendSweep sweep;
-    for ( test::RHITestDevice& device : sweep )
-    {
-        LitCubeScene          cube;
-        sw::vector<uint8>     listShadow;
-        sw::vector<uint8>     listEmptyShadow;
-        sw::RHITextureMipSpan layoutShadow{};
-        sw::RHITextureMipSpan layoutEmptyShadow{};
-        const utf8*           pName = device->getBackendName();
-        bool                  bOk   = cube.populate();
-        if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", listShadow, layoutShadow );
-        if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, emptyShadowPath.c_str(), listEmptyShadow, layoutEmptyShadow );
-
-        if ( bOk && layoutShadow._width == layoutEmptyShadow._width )
-        {
-            ++comparedCount;
-            const CaptureDifference difference = compareCaptures( listShadow, listEmptyShadow );
-            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
-            SW_EXPECT_FALSE_MSG( difference.isSameImage(),
-                                 ( sw::string( pName ) + ": 그림자 맵을 비워도 그림이 같다 — 그림자 패스가 아무것도 그리지 않는다 (" + difference.describe() + ")" ).c_str() );
-        }
-        else if ( bOk == false )
-            SW_LOG_WARNING( "ShadowPassCastsOnEveryBackend: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
-    }
-
-    if ( comparedCount == 0 )
-        SW_TEST_SKIP( "No RHI backend could run the shadow pipelines" );
+/**
+ * @brief [RenderPassGpuTest] 볼륨이 커도 작은 물체가 그림자를 드리운다 — 네 백엔드 모두
+ * @details 바이어스를 NDC 상수로 두면 볼륨 360 m 에서 월드 7.2 m 가 되어, 그보다 낮게 떠 있는 가리는 물체(이 1 m 큐브 · 벤치 · 레일)의
+ *          그림자가 통째로 사라진다(ThemePark). 바이어스는 텍셀 수로 정하고 볼륨 크기로 환산한다(`DirectionalShadowProjection::computeShaderParams`).
+ */
+SW_TEST_CASE( RenderPassGpuTest, ShadowSurvivesLargeShadowVolume )
+{
+    expectShadowCastsOnEveryBackend( "ShadowSurvivesLargeShadowVolume", 180.0f );
 }
 
 /**

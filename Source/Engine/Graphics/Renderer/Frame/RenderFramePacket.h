@@ -20,6 +20,8 @@ namespace sw
         float3           _cameraPos;
         float4x4         _viewProj;
         float4x4         _lightViewProj;
+        /** @brief 그림자 셰이더 값(`g_ShadowParams`)입니다 — 그림자 행렬과 같은 볼륨에서 나온다(`DirectionalShadowProjection::computeShaderParams`). */
+        float4 _shadowParams;
         /** @brief xyz = 빛이 나아가는 방향, w = 세기입니다. */
         float4 _lightDirIntensity;
         /** @brief rgb = 빛 색, a = 환경광입니다. */
@@ -51,6 +53,7 @@ namespace sw
             , _cameraPos{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] }
             , _viewProj{}
             , _lightViewProj{}
+            , _shadowParams{}
             , _lightDirIntensity{}
             , _lightColorAmbient{}
             , _listView{}
@@ -78,6 +81,7 @@ namespace sw
             _cameraPos         = float3{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
             _viewProj          = float4x4{};
             _lightViewProj     = float4x4{};
+            _shadowParams      = float4{};
             _lightDirIntensity = float4{};
             _lightColorAmbient = float4{};
             _listLight.clear();

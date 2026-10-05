@@ -1185,8 +1185,14 @@ namespace sw
                     const float3 color        = pLight->getColor();
                     packet._lightDirIntensity = float4{ dir._x, dir._y, dir._z, pLight->getIntensity() };
                     packet._lightColorAmbient = float4{ color._x, color._y, color._z, pLight->getAmbient() };
-                    packet._lightViewProj     = ( pShadowLight != nullptr ) ? pShadowLight->buildShadowViewProj() : float4x4{};
                     packet._bHasLight         = SW_TRUE;
+                }
+                // 그림자 행렬과 그 바이어스는 한 볼륨에서 같이 만든다. 텍셀 크기는 렌더 스레드가 만들 그림자 맵과 같은 해상도로 잰다.
+                if ( pLight != nullptr && pShadowLight != nullptr )
+                {
+                    const DirectionalShadowProjection shadow = pShadowLight->buildShadowProjection( FrameRenderer::getShadowMapResolution() );
+                    packet._lightViewProj                    = shadow._viewProj;
+                    packet._shadowParams                     = shadow.computeShaderParams();
                 }
 
                 // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 그림자

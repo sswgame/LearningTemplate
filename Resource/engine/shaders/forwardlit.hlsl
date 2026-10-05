@@ -65,7 +65,7 @@ SW_SURFACE_OUTPUT PSMain(PSInput input)
 	return swStoreSurface(float4(0, 0, 0, 0), albedo, normal);
 #else
 	// 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
-	float  shadow = swSampleShadowAtWorld(input.worldPosition);
+	float  shadow = swSampleShadowAtWorld(input.worldPosition, normal);
 	float3 lit = swShadeLights(albedo.rgb, input.worldPosition, normal, shadow);
 	float rim = pow(1.0f - saturate(dot(normal, float3(0, 0, 1))), 2.0f) * 0.15f;
 	lit += rim * g_KeyLightColor.rgb;

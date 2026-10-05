@@ -637,11 +637,21 @@ namespace sw
         DirectionalLightComponent* pShadowLight = ( pScene != nullptr ) ? pScene->findShadowCastingDirectionalLight() : nullptr;
         if ( pKeyLight != nullptr )
         {
-            const float3 lightDir           = pKeyLight->getLightDirection();
-            const float3 lightColor         = pKeyLight->getColor();
-            _frameLight._dirIntensity       = float4{ lightDir._x, lightDir._y, lightDir._z, pKeyLight->getIntensity() };
-            _frameLight._colorAmbient       = float4{ lightColor._x, lightColor._y, lightColor._z, pKeyLight->getAmbient() };
-            _frameLight._shadowViewProj     = ( pShadowLight != nullptr ) ? pShadowLight->buildShadowViewProj() : float4x4{};
+            const float3 lightDir     = pKeyLight->getLightDirection();
+            const float3 lightColor   = pKeyLight->getColor();
+            _frameLight._dirIntensity = float4{ lightDir._x, lightDir._y, lightDir._z, pKeyLight->getIntensity() };
+            _frameLight._colorAmbient = float4{ lightColor._x, lightColor._y, lightColor._z, pKeyLight->getAmbient() };
+            if ( pShadowLight != nullptr )
+            {
+                const DirectionalShadowProjection shadow = pShadowLight->buildShadowProjection( getShadowMapResolution() );
+                _frameLight._shadowViewProj              = shadow._viewProj;
+                _frameLight._shadowParams                = shadow.computeShaderParams();
+            }
+            else
+            {
+                _frameLight._shadowViewProj = float4x4{};
+                _frameLight._shadowParams   = float4{};
+            }
             _frameLight._bHasShadowViewProj = SW_TRUE;
         }
         else
@@ -706,6 +716,7 @@ namespace sw
             _frameLight._dirIntensity       = packet._lightDirIntensity;
             _frameLight._colorAmbient       = packet._lightColorAmbient;
             _frameLight._shadowViewProj     = packet._lightViewProj;
+            _frameLight._shadowParams       = packet._shadowParams;
             _frameLight._bHasShadowViewProj = SW_TRUE;
         }
         else

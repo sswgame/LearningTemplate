@@ -7,13 +7,13 @@
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 
 namespace sw
 {
     namespace
     {
-        constexpr float4 kDefaultShadowParams{ 0.02f, 0.45f, 0.0f, 0.0f };
         constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
         constexpr float4 kDefaultOutlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
 
@@ -36,10 +36,22 @@ namespace sw
         // 뷰 · 라이트 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다. 패킷이 자기
         // 뷰 행렬을 갖고 있으면 executePacket 이 그 위에 덮어쓴다.
         float4x4 lightViewProj{};
+        float4   shadowParams{};
         if ( _frameLight._bHasShadowViewProj != SW_FALSE )
+        {
             lightViewProj = _frameLight._shadowViewProj;
+            shadowParams  = _frameLight._shadowParams;
+        }
         else
+        {
             buildLightViewProj( ctx, lightViewProj );
+            // 폴백 볼륨(한 변 kLightOrthoExtent · 깊이 같은 길이)의 크기로 바이어스를 환산한다 — 빛이 있는 경로와 같은 식이다.
+            DirectionalShadowProjection fallback{};
+            fallback._resolution     = getShadowMapResolution();
+            fallback._texelWorldSize = kLightOrthoExtent / static_cast<float32>( fallback._resolution );
+            fallback._depthRange     = kLightOrthoExtent;
+            shadowParams             = fallback.computeShaderParams();
+        }
         ctx._passValues.setMatrix( passConstantNames()._lightViewProj, lightViewProj );
         view( RenderViewType::Shadow ).setViewProjection( lightViewProj );
 
@@ -58,7 +70,7 @@ namespace sw
 
         ctx._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
         ctx._passValues.setFloat4( passConstantNames()._keyLightColor, _frameLight._colorAmbient );
-        ctx._passValues.setFloat4( passConstantNames()._shadowParams, kDefaultShadowParams );
+        ctx._passValues.setFloat4( passConstantNames()._shadowParams, shadowParams );
         ctx._passValues.setFloat4( passConstantNames()._bloomParams, kDefaultBloomParams );
         ctx._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         applyViewPassConstants( ctx );

@@ -88,7 +88,7 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 	// 프레넬(슐릭, 물 F0 = 0.02) — 비스듬히 볼수록 하늘이 비친다.
 	const float  facing  = saturate( dot( normal, toView ) );
 	const float  fresnel = 0.02f + 0.98f * pow( 1.0f - facing, 5.0f );
-	const float  shadow  = swSampleShadowAtWorld( input.worldPosition );
+	const float  shadow  = swSampleShadowAtWorld( input.worldPosition, normal );
 	const float3 body    = swShadeLights( input.waterColor.rgb, input.worldPosition, normal, shadow );
 
 	// 주광의 반사(블린-퐁) — 물은 매끈하다.

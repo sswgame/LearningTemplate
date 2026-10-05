@@ -606,6 +606,36 @@ SW_TEST_CASE( SceneTest, ShadowMatrixDepthRangeContainsScene )
 }
 
 /**
+ * @brief [SceneTest] 그림자 바이어스는 볼륨 크기와 상관없이 텍셀 한두 개 길이다
+ * @details 바이어스를 NDC 상수(0.02)로 두면 깊이 360 m 볼륨(ThemePark)에서 월드 7.2 m 가 되어, 받는 면 위 2.5 m 미만의 물체는 그림자가
+ *          통째로 사라지고 나무 그림자는 밑동에서 떨어진다. 기본 볼륨(2.2 m)과 큰 볼륨(360 m) 둘 다 월드 바이어스가 텍셀 두 개 안이어야 한다.
+ */
+SW_TEST_CASE( SceneTest, ShadowBiasStaysInWorldUnits )
+{
+    sw::Scene scene{ "ShadowBias" };
+    SW_ASSERT_NOT_NULL( scene.getObjectManager() );
+    sw::GameObject* pSun = scene.getObjectManager()->createGameObject( sw::hashed_string( "Sun" ) );
+    SW_ASSERT_NOT_NULL( pSun );
+    sw::DirectionalLightComponent* pLight = pSun->addComponent<sw::DirectionalLightComponent>();
+    SW_ASSERT_NOT_NULL( pLight );
+
+    constexpr uint32 kResolution = 2048;
+    for ( const float32 extent : { 2.2222223f, 180.0f } )
+    {
+        pLight->setShadowExtent( extent );
+        pLight->setShadowDistance( extent * 2.0f );
+        const sw::DirectionalShadowProjection projection     = pLight->buildShadowProjection( kResolution );
+        const sw::float4                      params         = projection.computeShaderParams();
+        const float32                         depthBiasWorld = params._x * projection._depthRange;
+        const sw::string                      label          = "extent " + sw::to_string( extent ) + ": depth bias " + sw::to_string( depthBiasWorld ) + " m, normal offset " +
+                                 sw::to_string( params._z ) + " m, texel " + sw::to_string( projection._texelWorldSize ) + " m";
+        SW_EXPECT_TRUE_MSG( depthBiasWorld > 0.0f && depthBiasWorld <= projection._texelWorldSize * 2.0f, label.c_str() );
+        SW_EXPECT_TRUE_MSG( params._z > 0.0f && params._z <= projection._texelWorldSize * 3.0f, label.c_str() );
+        SW_EXPECT_NEAR_EQUAL( 1.0f / static_cast<float32>( kResolution ), params._w, 1e-9f );
+    }
+}
+
+/**
  * @brief [SceneTest] 씬 라이트 수집이 등록부를 보고, 타입·그림자 플래그를 제대로 싣는다
  * @details 렌더 스레드는 씬을 못 보므로 라이트는 **패킷으로만** 간다. 그 변환이 이 함수 하나라
  *          여기가 틀리면 "빛이 하나 조용히 엉뚱하게 계산된다" 로만 드러난다.

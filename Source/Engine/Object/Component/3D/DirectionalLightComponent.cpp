@@ -26,8 +26,24 @@ namespace sw
             static constexpr float32 kDefaultShadowDistance{ 2.0f };
             /// @brief 로컬 기본 빛 방향입니다(위에서 비스듬히). 월드 회전이 이것을 돌립니다.
             static constexpr float3 kDefaultDirection{ -0.35f, -0.85f, -0.25f };
+            /// @brief 깊이 바이어스(텍셀 수). 노멀 오프셋이 기울기를 맡으므로 깊이 쪽은 텍셀 하나면 된다.
+            static constexpr float32 kShadowDepthBiasTexels{ 1.0f };
+            /// @brief 노멀 오프셋(텍셀 수). 받는 점을 노멀 쪽으로 h 띄우면 빛 광선 위 깊이 여유가 h / sin(고도) 다 — 고도 20° 바닥에서 여드름 없이 지나는 값이다.
+            static constexpr float32 kShadowNormalOffsetTexels{ 2.0f };
+            /// @brief 그늘 세기 — 1 이면 그늘이 완전히 검다.
+            static constexpr float32 kShadowStrength{ 0.45f };
         };
     } // namespace
+
+    float4 DirectionalShadowProjection::computeShaderParams() const
+    {
+        using Internal                  = DirectionalLightComponentInternal;
+        const float32 depthRange        = MathUtil::max( _depthRange, MathUtil::Epsilon );
+        const float32 resolution        = static_cast<float32>( MathUtil::max( _resolution, 1u ) );
+        const float32 depthBiasWorld    = _texelWorldSize * Internal::kShadowDepthBiasTexels;
+        const float32 normalOffsetWorld = _texelWorldSize * Internal::kShadowNormalOffsetTexels;
+        return float4{ depthBiasWorld / depthRange, Internal::kShadowStrength, normalOffsetWorld, 1.0f / resolution };
+    }
 
     DirectionalLightComponent::DirectionalLightComponent()
         : LightComponent( shaderslot::kLightTypeDirectional, DirectionalLightComponentInternal::kDefaultColor,
@@ -88,6 +104,16 @@ namespace sw
         const float32 farPlane  = _shadowDistance + _shadowExtent;
         return float4x4::createLookAt( eye, float3::Zero, up ) *
                float4x4::createOrthographic( extent, extent, nearPlane, farPlane );
+    }
+
+    DirectionalShadowProjection DirectionalLightComponent::buildShadowProjection( uint32 shadowMapResolution ) const
+    {
+        DirectionalShadowProjection projection{};
+        projection._viewProj       = buildShadowViewProj();
+        projection._resolution     = MathUtil::max( shadowMapResolution, 1u );
+        projection._texelWorldSize = _shadowExtent * 2.0f / static_cast<float32>( projection._resolution );
+        projection._depthRange     = _shadowExtent * 2.0f; // buildShadowViewProj 의 [거리 - 반경, 거리 + 반경]
+        return projection;
     }
 
     void DirectionalLightComponent::writeGpuLightKindFields( GpuLight& outLight ) const
