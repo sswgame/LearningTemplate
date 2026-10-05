@@ -413,7 +413,7 @@ SW_TEST_CASE( ReflectionGenericQueryTest, MultiInheritanceSafeOrderParentAndProp
     SW_EXPECT_TRUE( pType->isDerivedFrom( sw::hashed_string( "sw::EmptyReflectedBaseTestActor" ) ) );
 
     // 다중 상속과 무관하게, 파생 클래스 자신에게 직접 선언된 프로퍼티는 정상적으로 round-trip 되어야
-    // 합니다 (TurnBattleSaveGame 의 5개 필드가 실제로 의존하는 보장입니다).
+    // 합니다 (SaveGame 파생 세이브의 필드가 실제로 의존하는 보장입니다).
     sw::MultiBaseOrderTestActor actor;
     const sw::PropertyInfo*     pOwnProp = pType->findProperty( sw::hashed_string( "_ownValue" ) );
     SW_ASSERT_NOT_NULL( pOwnProp );

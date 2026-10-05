@@ -178,7 +178,7 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             "name": "키트가 다른 키트를 include",
             "files": {
-                "Source/GameFramework/Kits/Rpg/TurnBattle/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Rpg/MonsterCollector/MonsterBattle.h"\n',
+                "Source/GameFramework/Kits/Rpg/ClassicJrpg/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Rpg/MonsterCollector/MonsterBattle.h"\n',
             },
         },
         {

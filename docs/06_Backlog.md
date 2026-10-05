@@ -209,8 +209,7 @@ cd build/Ninja-Debug/Bin
   - 작은 것: `RestaurantSimulation::placeOrder` 의 후보 목록 둘(가중치가 모두 0 일 때 결과가 달라져 손대지 않았다).
   - 중간: `SpatialHashGrid2D`(RTS 버킷 · NetMmo 관심 격자 — 둘의 질의 모양이 달라 함께 뽑을 이득을 아직 못 봤다) · 키트의 칸 저장소를
     `GridTopology` 위로(CreatureTown · FarmField · TileMap · ActionPlatformerBody 의 `y × 너비 + x` 손셈 — 이웃 표 · 탐색은 이미 옮겼다) ·
-    NetConnection 메시지 버퍼 재사용 ·
-    TurnBattle 키트 정리.
+    NetConnection 메시지 버퍼 재사용.
   - 동작이 바뀌는 것(시험 먼저): 아이템/효과 처리기 등록부 · `TimedModifierSet`.
 
 - **카메라 — 프리셋 데이터 · 블렌드 · 시퀀서(사용자 승인 로드맵).** 1~3 단계(프리셋 XML · 블렌드 · 디렉터, 모드(직교 · 궤도 · 따라가기 · 1인칭 · 3인칭 ·
@@ -336,8 +335,7 @@ cd build/Ninja-Debug/Bin
 - **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
   스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
 - **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** (1) `CameraControllerComponent`(Overworld)는 장르 무관이라 기반으로 옮길 감 — 리플렉션 컴포넌트가 DLL 을 옮기면 등록 모듈이 바뀌므로 씬 로드 · 핫 리로드를 돌려 보며 옮긴다. (2) `ZoneTracker` 의 `ZoneRole` 열거(센터 · 마트 ·
-  체육관…)와 클리어 게이트 역할을 데이터(태그 + 맵 칸)로 — 태그 미러는 이미 있다, 열거를 쓰는 곳 · 시험을 함께 바꾼다. (4) `BattleState` 의 단계 시간 · 피해식 · 경험치를 설정 구조체로, `_expNext` 로
-  레벨 업, 두 기술 가정(`FightMove0/1`) 걷기. (5) 세이브 키 조립(`"party" + i + ".pp0"`) 도우미, 수명 → 지우기 타이머 셋(`EffectBase` · `DamageUI` ·
+  체육관…)와 클리어 게이트 역할을 데이터(태그 + 맵 칸)로 — 태그 미러는 이미 있다, 열거를 쓰는 곳 · 시험을 함께 바꾼다. (5) 수명 → 지우기 타이머 셋(`EffectBase` · `DamageUI` ·
   `Projectile`) 하나로. **하지 않기로 한 것:** HP 바 · 피해 숫자의 매 틱 배치 예약을 "바뀔 때만" 으로 줄이는 것 — 월드 변환이 틱 **뒤에** 적용되므로 틱 안에서
   자리 변화를 보면 움직이는 막대가 한 프레임씩 건너 늦는다. 줄이려면 변환 적용 뒤의 훅이 필요하다.
 - **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
@@ -385,7 +383,7 @@ cd build/Ninja-Debug/Bin
 
 - **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).** ② `SpatialHashGrid2D`(RTS · MMO ·
   BR · Mech — 질의 모양이 달라 이득부터 볼 것).
-  ④ 키트 안 평행 구현: Overworld `TileMap` 이 Engine 타일맵과 따로 산다 · TurnBattle 과 MonsterCollector 가 같은 장르. ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
+  ④ 키트 안 평행 구현: Overworld `TileMap` 이 Engine 타일맵과 따로 산다. ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
 
 - **(보류 — 사용자 결정 "안정화된 뒤 개발") 게임별 CC0 리소스 배치 + SD 메카 시험 게임 MechArena.** 라이선스는 **CC0 급만**(출처 표기 의무 · 재배포 금지가 붙은 것은
   넣지 않는다 — 내려받기 스크립트 우회도 안 함). 확인한 원본: VRoid 알파판 샘플 D · E · F · G · 남녀 기본(OpenGameArt `vroid-studio-cc0-models`, VRM 0.x — 툰 셰이더 ·
@@ -529,6 +527,8 @@ cd build/Ninja-Debug/Bin
 
 - **100 줄 넘는 함수 정리.** 분해는 총량을 줄이지 않는다. 중복을 먼저 없애고, 그래도 문제면 본다. 목록이 필요하면 여러 줄 시그니처를 중괄호 깊이로 재는 스크립트로
   뽑는다(단순 정규식은 틀린다).
+- **MonsterCollector 의 파티 · 박스 세이브**(쓰는 게임이 생기면) — `MonsterStorage` 를 세이브에 싣는 길이 없다. `MonsterInstance` 를 REFLECT 로 하거나 상태 바이트(`writeState`)로.
+  맵 · 타일 자리 · 플래그는 `OverworldSaveGame` 이 든다.
 
 ---
 
@@ -1517,6 +1517,9 @@ cd build/Ninja-Debug/Bin
   (`ActionTeam` · `ConquestTeam` · `SrpgTeam`)은 상태 바이트에 실리지 않고 역할 이름 · XML 이름 · 페이즈 차례로 쓰여 그대로 둔다. 강타입 `TeamId`(uint8)는
   팀 번호를 배열 첨자로 쓰는 곳이 많고(약 220 줄 · 18 파일) RTS 상태 바이트(int32)를 바꿔서 하지 않았다. 동맹 표 · 팀킬 허용이 생기면 판정기를
   `TeamAttitudeUtil` 에 붙이고 `SrpgBattlefield::isHostile` · `ConquestWorldInternal::isHostile` 도 그쪽으로 옮긴다.
+- **턴제 몬스터 전투는 `MonsterCollector` 하나다**(같은 장르의 얇은 `TurnBattle` 키트는 2026-10 에 지웠다 — 레벨 업이 없었고 쓰는 게임이 0 이었다). 전투 연출(단계 타이머 · HUD 한 줄)은 게임 몫이다.
+- **`SaveGame::saveToFile` · `loadFromFile` 의 기본 구현은 `SaveGame` 자신의 타입(프로퍼티 0)으로 쓰고 읽는다** — `Archive::serializeObject<T>` 가 정적 타입 `T::StaticType()` 을 쓴다.
+  파생 세이브는 둘을 자기 타입으로 override 한다(`OverworldSaveGame`). 빠뜨리면 빈 페이로드가 성공으로 저장된다 — `BootstrapGameSettingsIsBoundAndApplied` 의 6) 이 잡는다.
 - **키트 소속은 의존 관계로 판별되지 않는다**(전부 Engine 만 include). 다른 장르도 쓰는 것(HP 바 · 데미지 숫자 · 중력)은 `UI/` · `World/`.
   기반 폴더는 층(DAG)이고 `CheckGameFrameworkLayers` 가 지킨다 — 형식으로 묶은 폴더(옛 `Components/`)는 의존 방향을 숨겨서 두지 않는다. 리플렉션 대상 헤더는 소스와 같은 재귀 규칙으로
   모은다(다르면 새 폴더의 `REFLECT` 타입이 컴파일되고 등록만 안 된다).

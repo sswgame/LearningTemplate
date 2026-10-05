@@ -42,13 +42,11 @@
 #include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
 #include "GameFramework/Kits/Rpg/Overworld/CameraControllerComponent.h"
+#include "GameFramework/Kits/Rpg/Overworld/OverworldSaveGame.h"
 #include "GameFramework/Kits/Rpg/Overworld/PlayerController.h"
 #include "GameFramework/Kits/Rpg/Overworld/PlayerLocomotion.h"
 #include "GameFramework/Kits/Rpg/Overworld/TileMap.h"
 #include "GameFramework/Kits/Rpg/Overworld/ZoneTracker.h"
-#include "GameFramework/Kits/Rpg/TurnBattle/BattleState.h"
-#include "GameFramework/Kits/Rpg/TurnBattle/SaveGame.h"
-#include "GameFramework/Kits/Rpg/TurnBattle/SpeciesData.h"
 #include "GameFramework/UI/DamageNumberComponent.h"
 #include "GameFramework/UI/DialogueRunnerComponent.h"
 #include "GameFramework/UI/HealthBarComponent.h"
@@ -298,43 +296,39 @@ SW_TEST_CASE( GameFrameworkTest, ScreenTransitionManagerReset )
 // ------------------------------------------------------------------------------
 
 /**
- * @brief [GameFrameworkTest] SaveGame 플래그 조회/설정 및 파일 저장/로드 라운드트립 검증
+ * @brief [GameFrameworkTest] 월드 플래그를 세이브에 받아 두고 파일로 왕복한다 — 목록은 이름 순이고 0 은 싣지 않는다
  */
 SW_TEST_CASE( GameFrameworkTest, SaveGameFlagsAndFileIO )
 {
-    TurnBattleSaveGame srcSlot{};
+    GameFlags flags;
+    SW_EXPECT_EQUAL( 0, flags.getFlag( "boss_defeated", 0 ) );
+    SW_EXPECT_EQUAL( -1, flags.getFlag( "non_existent_flag", -1 ) );
+    flags.setFlag( "player_level", 42 );
+    flags.setFlag( "chest_opened_1", 1 );
+    flags.setFlag( "boss_defeated", 1 );
+
+    OverworldSaveGame srcSlot{};
     srcSlot._mapPath = "Assets/Maps/Dungeon1.map";
     srcSlot._playerX = 15;
     srcSlot._playerY = 25;
+    srcSlot.captureFlags( flags );
+    SW_ASSERT_EQUAL( size_t( 3 ), srcSlot._listFlag.size() );
+    SW_EXPECT_TRUE_MSG( srcSlot._listFlag[0]._name == hashed_string( "boss_defeated" ), "세이브 플래그가 이름 순이 아닙니다" );
 
-    SW_EXPECT_EQUAL( 0, srcSlot.getFlag( "boss_defeated", 0 ) );
-    SW_EXPECT_EQUAL( -1, srcSlot.getFlag( "non_existent_flag", -1 ) );
-
-    srcSlot.setFlag( "boss_defeated", 1 );
-    srcSlot.setFlag( "chest_opened_1", 1 );
-    srcSlot.setFlag( "player_level", 42 );
-
-    SW_EXPECT_EQUAL( 1, srcSlot.getFlag( "boss_defeated" ) );
-    SW_EXPECT_EQUAL( 1, srcSlot.getFlag( "chest_opened_1" ) );
-    SW_EXPECT_EQUAL( 42, srcSlot.getFlag( "player_level" ) );
-
-    // 파일 저장 및 로드
     const string tempSavePath = test::makeTempPath( "test_saveslot_temp.sav" );
-    const bool   saveOk       = SaveGameSerializer::saveGameToSlot( srcSlot, tempSavePath );
-    SW_EXPECT_TRUE( saveOk );
+    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( srcSlot, tempSavePath ) );
 
-    TurnBattleSaveGame dstSlot{};
-    const bool         loadOk = SaveGameSerializer::loadGameFromSlot( dstSlot, tempSavePath );
-    SW_EXPECT_TRUE( loadOk );
-
+    OverworldSaveGame dstSlot{};
+    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( dstSlot, tempSavePath ) );
     SW_EXPECT_EQUAL( srcSlot._mapPath, dstSlot._mapPath );
     SW_EXPECT_EQUAL( srcSlot._playerX, dstSlot._playerX );
     SW_EXPECT_EQUAL( srcSlot._playerY, dstSlot._playerY );
-    SW_EXPECT_EQUAL( 1, dstSlot.getFlag( "boss_defeated" ) );
-    SW_EXPECT_EQUAL( 1, dstSlot.getFlag( "chest_opened_1" ) );
-    SW_EXPECT_EQUAL( 42, dstSlot.getFlag( "player_level" ) );
 
-    // 임시 파일 삭제
+    GameFlags loadedFlags;
+    dstSlot.restoreFlags( loadedFlags );
+    SW_EXPECT_EQUAL( 1, loadedFlags.getFlag( "boss_defeated" ) );
+    SW_EXPECT_EQUAL( 1, loadedFlags.getFlag( "chest_opened_1" ) );
+    SW_EXPECT_EQUAL( 42, loadedFlags.getFlag( "player_level" ) );
 }
 
 /**
@@ -352,30 +346,33 @@ SW_TEST_CASE( GameFrameworkTest, StringUtilCrc32StandardVector )
  */
 SW_TEST_CASE( GameFrameworkTest, SaveGameBinarySav1Format )
 {
-    TurnBattleSaveGame srcSlot{};
+    GameFlags flags;
+    flags.setFlag( "quest_active", 1 );
+    flags.setFlag( "key_silver", 3 );
+    flags.setFlag( "boss_defeated", 0 );
+    flags.setFlag( "difficulty", 2 );
+
+    OverworldSaveGame srcSlot{};
     srcSlot._mapPath = "Assets/Scenes/Dungeon_B2.scene";
     srcSlot._playerX = 15;
     srcSlot._playerY = 48;
-    srcSlot.setFlag( "quest_active", 1 );
-    srcSlot.setFlag( "key_silver", 3 );
-    srcSlot.setFlag( "boss_defeated", 0 );
-    srcSlot.setFlag( "difficulty", 2 );
+    srcSlot.captureFlags( flags );
 
     const string binSavePath = test::makeTempPath( "test_saveslot_sav1.sav" );
-    const bool   saveOk      = SaveGameSerializer::saveGameToSlot( srcSlot, binSavePath );
-    SW_EXPECT_TRUE( saveOk );
+    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( srcSlot, binSavePath ) );
 
-    TurnBattleSaveGame dstSlot{};
-    const bool         loadOk = SaveGameSerializer::loadGameFromSlot( dstSlot, binSavePath );
-    SW_EXPECT_TRUE( loadOk );
-
+    OverworldSaveGame dstSlot{};
+    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( dstSlot, binSavePath ) );
     SW_EXPECT_EQUAL( srcSlot._mapPath, dstSlot._mapPath );
     SW_EXPECT_EQUAL( srcSlot._playerX, dstSlot._playerX );
     SW_EXPECT_EQUAL( srcSlot._playerY, dstSlot._playerY );
-    SW_EXPECT_EQUAL( 1, dstSlot.getFlag( "quest_active" ) );
-    SW_EXPECT_EQUAL( 3, dstSlot.getFlag( "key_silver" ) );
-    SW_EXPECT_EQUAL( 0, dstSlot.getFlag( "boss_defeated" ) );
-    SW_EXPECT_EQUAL( 2, dstSlot.getFlag( "difficulty" ) );
+
+    GameFlags loadedFlags;
+    dstSlot.restoreFlags( loadedFlags );
+    SW_EXPECT_EQUAL( 1, loadedFlags.getFlag( "quest_active" ) );
+    SW_EXPECT_EQUAL( 3, loadedFlags.getFlag( "key_silver" ) );
+    SW_EXPECT_EQUAL( 0, loadedFlags.getFlag( "boss_defeated" ) );
+    SW_EXPECT_EQUAL( 2, loadedFlags.getFlag( "difficulty" ) );
 }
 
 /**
@@ -383,19 +380,23 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameBinarySav1Format )
  */
 SW_TEST_CASE( GameFrameworkTest, SaveGameBinaryCrc32TamperingDetection )
 {
-    TurnBattleSaveGame srcSlot{};
+    GameFlags flags;
+    flags.setFlag( "gold", 5000 );
+    OverworldSaveGame srcSlot{};
     srcSlot._mapPath = "Assets/Scenes/Castle.scene";
     srcSlot._playerX = 50;
     srcSlot._playerY = 70;
-    srcSlot.setFlag( "gold", 5000 );
+    srcSlot.captureFlags( flags );
 
     const string binPath = "test_sav1_corrupt.sav";
     SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( srcSlot, binPath ) );
 
     // 1) 정상 로드 확인
-    TurnBattleSaveGame okSlot{};
+    OverworldSaveGame okSlot{};
     SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( okSlot, binPath ) );
-    SW_EXPECT_EQUAL( 5000, okSlot.getFlag( "gold" ) );
+    GameFlags okFlags;
+    okSlot.restoreFlags( okFlags );
+    SW_EXPECT_EQUAL( 5000, okFlags.getFlag( "gold" ) );
 
     // 2) 바이너리 페이로드 바이트 1개 변조
     vector<uint8> rawBlob;
@@ -407,7 +408,7 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameBinaryCrc32TamperingDetection )
     // 3) CRC32 불일치로 로드 실패 검증
     {
         SW_TEST_DEFENSIVE_SCOPE( "Testing SaveGame binary CRC32 tampering detection" );
-        TurnBattleSaveGame corruptedSlot{};
+        OverworldSaveGame corruptedSlot{};
         SW_EXPECT_FALSE( SaveGameSerializer::loadGameFromSlot( corruptedSlot, binPath ) );
     }
 
@@ -420,10 +421,12 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameBinaryCrc32TamperingDetection )
  */
 SW_TEST_CASE( GameFrameworkTest, SaveGameSlotFileIsTheSav1Envelope )
 {
-    TurnBattleSaveGame slot{};
+    GameFlags flags;
+    flags.setFlag( "gold", 7 );
+    OverworldSaveGame slot{};
     slot._mapPath = "Levels/Envelope.scene";
     slot._playerX = 3;
-    slot.setFlag( "gold", 7 );
+    slot.captureFlags( flags );
 
     const string path = test::makeTempPath( "envelope.sav" );
     SW_ASSERT_TRUE( SaveGameSerializer::saveGameToSlot( slot, path ) );
@@ -1479,98 +1482,6 @@ SW_TEST_CASE( GameFrameworkTest, ScreenFade_ZeroAndExtremeDeltaTimeEdgeCases )
 }
 
 /**
- * @brief [GameFrameworkTest] SpeciesCatalog 미등록 ID 및 음수/범위 초과 기술 인덱스 검색 시 안전 폴백 보장 검증
- */
-SW_TEST_CASE( GameFrameworkTest, SpeciesCatalog_InvalidLookupAndNegativeIndexSafety )
-{
-    SpeciesCatalog catalog;
-
-    // 미등록 ID 및 nullptr 검색 시 크래시 없이 기본 유효 폴백 종족 반환
-    const SpeciesDef* pNonExistent = catalog.findSpecies( "completely_unknown_monster_id_999" );
-    SW_ASSERT_NOT_NULL( pNonExistent );
-    SW_EXPECT_FALSE( pNonExistent->_id.empty() );
-
-    // 음수 및 범위를 벗어난 기술 인덱스 검색 시 안전한 기본 폴백 기술 반환
-    const MoveDef* pNegativeMove = catalog.findMove( -1 );
-    SW_ASSERT_NOT_NULL( pNegativeMove );
-    SW_EXPECT_FALSE( pNegativeMove->_id.empty() );
-
-    const MoveDef* pOverflowMove = catalog.findMove( 99999 );
-    SW_ASSERT_NOT_NULL( pOverflowMove );
-    SW_EXPECT_FALSE( pOverflowMove->_id.empty() );
-
-    // 미등록 ID로 야생 개체 생성 시에도 크래시 없이 최소 기본 스탯 객체 반환
-    PartyMember wildCritter = catalog.makeWild( "unknown_species", 10 );
-    SW_EXPECT_TRUE( wildCritter._hpMax > 0 );
-    SW_EXPECT_TRUE( wildCritter._hp > 0 );
-}
-
-/**
- * @brief [GameFrameworkTest] 기술 슬롯 수를 데이터가 정하는지 — 2칸 고정이 아니어야 한다
- * @details 이 키트는 "턴제 전투" 라는 장르의 공통 뼈대다. `SpeciesDef` · `PartyMember` 가 기술 · PP 를 두 칸으로 고정하면
- *          **게임 하나의 스키마를 박는** 것이라 기술이 넷인 턴제 게임을 이 키트로 만들 수 없다. 슬롯 수가 데이터를 따라가는지 본다.
- */
-SW_TEST_CASE( GameFrameworkTest, SpeciesCatalog_MoveSlotCountFollowsData )
-{
-    SpeciesCatalog catalog;
-
-    // 폴백 종족도 슬롯 목록을 갖는다 — PP 배열과 길이가 같아야 한다.
-    const SpeciesDef* pFallback = catalog.findSpecies( nullptr );
-    SW_ASSERT_NOT_NULL( pFallback );
-    SW_EXPECT_TRUE( pFallback->_listMoveIndex.empty() == false );
-
-    PartyMember wild = catalog.makeWild( pFallback->_id.c_str(), 5 );
-    SW_EXPECT_EQUAL( pFallback->_listMoveIndex.size(), wild._listPp.size() );
-
-    // 슬롯 번호로 기술을 찾는다. 범위를 넘으면 nullptr — "PP 가 없는 것" 과 같이 다뤄야 한다.
-    const MoveDef* pSlot0 = catalog.findMoveAtSlot( *pFallback, 0 );
-    SW_ASSERT_NOT_NULL( pSlot0 );
-    SW_EXPECT_TRUE( catalog.findMoveAtSlot( *pFallback, 9999 ) == nullptr );
-
-    // 슬롯이 넷인 종족을 손으로 세워도 PP 배열이 그대로 따라간다 (데이터가 정한다는 뜻).
-    SpeciesDef fourSlot{};
-    fourSlot._id            = pFallback->_id;
-    fourSlot._listMoveIndex = { 0, 1, 0, 1 };
-    SW_EXPECT_EQUAL( size_t( 4 ), fourSlot._listMoveIndex.size() );
-    SW_EXPECT_TRUE( catalog.findMoveAtSlot( fourSlot, 3 ) != nullptr );
-}
-
-/**
- * @brief [GameFrameworkTest] 슬롯 수가 다른 파티도 세이브 왕복에서 보존되는지
- */
-SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_VariableMoveSlotRoundtrip )
-{
-    const string savePath = test::makeTempPath( "variable_slots.sav" );
-
-    TurnBattleSaveGame originalSlot;
-    originalSlot._mapPath = "Levels/SlotTest.scene";
-
-    PartyMember fourMoves{};
-    fourMoves._speciesId = "quad_caster";
-    fourMoves._nickname  = "Quad";
-    fourMoves._level     = 12;
-    fourMoves._hp        = 90;
-    fourMoves._hpMax     = 90;
-    fourMoves._listPp    = { 10, 20, 30, 40 };
-    originalSlot._listParty.push_back( fourMoves );
-
-    PartyMember oneMove{};
-    oneMove._speciesId = "single";
-    oneMove._listPp    = { 7 };
-    originalSlot._listParty.push_back( oneMove );
-
-    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( originalSlot, savePath ) );
-
-    TurnBattleSaveGame loaded;
-    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( loaded, savePath ) );
-    SW_ASSERT_EQUAL( size_t( 2 ), loaded._listParty.size() );
-    SW_EXPECT_EQUAL( size_t( 4 ), loaded._listParty[0]._listPp.size() );
-    SW_EXPECT_EQUAL( size_t( 1 ), loaded._listParty[1]._listPp.size() );
-    SW_EXPECT_EQUAL( int32( 40 ), loaded._listParty[0]._listPp[3] );
-    SW_EXPECT_EQUAL( int32( 7 ), loaded._listParty[1]._listPp[0] );
-}
-
-/**
  * @brief [GameFrameworkTest] TileMap 맵 경계 밖(-1, 99999) 쿼리 시 벽 판정(Solid) 및 크래시 방어 검증
  */
 SW_TEST_CASE( GameFrameworkTest, TileMap_OutOfBoundsQueriesSafety )
@@ -1963,56 +1874,6 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_SnapshotSerializationIsDeterminis
     SW_EXPECT_TRUE( loadedSnapshot.deserialize( arrBufferA, InputSnapshot::kSerializedSize ) );
     SW_EXPECT_EQUAL( uint64( 0xDEADBEEFull ), loadedSnapshot._buttonMask );
     SW_EXPECT_NEAR_EQUAL( -0.125f, loadedSnapshot._lookVector._x, 1e-6f );
-}
-
-/**
- * @brief [GameFrameworkTest] TurnBattleSaveGame 리플렉션 기반 SAV1 바이너리 라운드트립 검증
- */
-SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_ReflectionSaveRoundtrip )
-{
-    const string binaryPath = test::makeTempPath( "reflection_roundtrip.sav" );
-
-    TurnBattleSaveGame originalSlot;
-    originalSlot._mapPath = "Levels/Dungeon_Floor5.scene";
-    originalSlot._playerX = 42;
-    originalSlot._playerY = 88;
-
-    // 1) 플래그 설정
-    originalSlot.setFlag( "IsBossDead", 1 );
-    originalSlot.setFlag( "ChestOpened_01", 1 );
-    originalSlot.setFlag( "Gold", 99999 );
-
-    // 2) 파티 데이터 설정
-    PartyMember member1{};
-    member1._speciesId = "fire_dragon";
-    member1._nickname  = "Ignis";
-    member1._level     = 25;
-    member1._hp        = 250;
-    member1._hpMax     = 250;
-    originalSlot._listParty.push_back( member1 );
-
-    // --------------------------------------------------------------------------
-    // SAV1 바이너리 (리플렉션 + CRC32) 라운드트립 검증
-    // --------------------------------------------------------------------------
-    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( originalSlot, binaryPath ) );
-
-    TurnBattleSaveGame loadedBinarySlot;
-    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( loadedBinarySlot, binaryPath ) );
-
-    SW_EXPECT_EQUAL( string( "Levels/Dungeon_Floor5.scene" ), loadedBinarySlot._mapPath );
-    SW_EXPECT_EQUAL( 42, loadedBinarySlot._playerX );
-    SW_EXPECT_EQUAL( 88, loadedBinarySlot._playerY );
-
-    SW_EXPECT_EQUAL( 1, loadedBinarySlot.getFlag( "IsBossDead" ) );
-    SW_EXPECT_EQUAL( 1, loadedBinarySlot.getFlag( "ChestOpened_01" ) );
-    SW_EXPECT_EQUAL( 99999, loadedBinarySlot.getFlag( "Gold" ) );
-
-    SW_ASSERT_EQUAL( size_t( 1 ), loadedBinarySlot._listParty.size() );
-    SW_EXPECT_EQUAL( string( "fire_dragon" ), loadedBinarySlot._listParty[0]._speciesId );
-    SW_EXPECT_EQUAL( string( "Ignis" ), loadedBinarySlot._listParty[0]._nickname );
-    SW_EXPECT_EQUAL( 25, loadedBinarySlot._listParty[0]._level );
-    SW_EXPECT_EQUAL( 250, loadedBinarySlot._listParty[0]._hp );
-    SW_EXPECT_EQUAL( 250, loadedBinarySlot._listParty[0]._hpMax );
 }
 
 /**
@@ -2537,66 +2398,6 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhile
 }
 
 /**
- * @brief [GameFrameworkTest] 기술이 하나뿐인 적도 몰리면 **때린다**
- * @details 슬롯 수는 데이터가 정하므로 기술이 하나뿐인 종족이 있을 수 있다. 체력이 절반 아래일 때 무조건 1 번 슬롯을
- *          고르면 `applyMove` 가 없는 슬롯으로 보고 "no PP" 만 찍는다 — 적은 절반 이하로 떨어지는 순간부터 **한 대도
- *          못 때리고**, 몰려야 할 때 오히려 무해해진다.
- */
-SW_TEST_CASE( GameFrameworkTest, BattleFoeWithOneMoveStillAttacksWhenLow )
-{
-    // 기술이 둘이면 몰렸을 때 두 번째를 쓴다 — 원래 의도다.
-    SW_EXPECT_EQUAL( 0, pickFoeMoveSlot( 40, 40, 2 ) );
-    SW_EXPECT_EQUAL( 1, pickFoeMoveSlot( 10, 40, 2 ) );
-    SW_EXPECT_EQUAL( 1, pickFoeMoveSlot( 10, 40, 4 ) );
-
-    // 기술이 하나면 몰려도 0 번이다 — 없는 슬롯을 고르지 않는다.
-    SW_EXPECT_EQUAL( 0, pickFoeMoveSlot( 40, 40, 1 ) );
-    SW_EXPECT_TRUE_MSG( pickFoeMoveSlot( 10, 40, 1 ) == 0, "기술이 하나인데 없는 슬롯을 골랐습니다" );
-    SW_EXPECT_TRUE_MSG( pickFoeMoveSlot( 1, 40, 1 ) == 0, "기술이 하나인데 없는 슬롯을 골랐습니다" );
-
-    // 기술이 없으면 0 이다(부르는 쪽이 "슬롯 없음" 으로 처리한다).
-    SW_EXPECT_EQUAL( 0, pickFoeMoveSlot( 10, 40, 0 ) );
-}
-
-/**
- * @brief [GameFrameworkTest] 끝난 전투는 **스스로** 비활성으로 돌아온다
- * @details `update` 의 `Ended` 분기가 `Inactive` 로 돌리는 유일한 자리다. 첫 줄이 `Ended` 도 같이 걸러 내면 그 분기는
- *          한 번도 돌지 않고, `Ended` 에 들어가며 건 0.4 초 타이머도 영영 안 끝난다 — 전투가 스스로 끝나기를 기다리는 쪽은
- *          `endBattle()` 을 따로 부르지 않는 한 영원히 기다린다.
- */
-SW_TEST_CASE( GameFrameworkTest, EndedBattleReturnsToInactiveByItself )
-{
-    SpeciesCatalog catalog;
-    {
-        // 리소스가 없으면 최소 폴백 표를 심는다 — 이 테스트에는 그것으로 충분하다.
-        test::ScopedLogSuppressor suppressor;
-        (void)catalog.loadFromResource( "no_such_species_catalog.xml" ); // 없는 리소스 — 폴백 표를 쓴다
-    }
-    game::bindLocalService<SpeciesCatalog>( &catalog );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-    {
-        game::unbindLocalService<SpeciesCatalog>();
-    } ) );
-
-    BattleState battle;
-    battle.startWildEncounter();
-    SW_ASSERT_TRUE( battle.isActive() );
-
-    // 인트로를 넘기고 도망친다 — 가장 짧은 종료 경로다.
-    battle.update( 1.0f );
-    SW_ASSERT_EQUAL( static_cast<uint8>( BattlePhase::PlayerChoice ), static_cast<uint8>( battle.getPhase() ) );
-    battle.selectRun();
-    SW_ASSERT_EQUAL( static_cast<uint8>( BattlePhase::Ended ), static_cast<uint8>( battle.getPhase() ) );
-
-    // 여기서부터가 본론 — 아무도 `endBattle()` 을 부르지 않는다.
-    for ( int32 frameIndex = 0; frameIndex < 60; ++frameIndex )
-        battle.update( 0.016f );
-
-    SW_EXPECT_TRUE_MSG( battle.getPhase() == BattlePhase::Inactive,
-                        "끝난 전투가 스스로 비활성으로 돌아오지 않습니다" );
-}
-
-/**
  * @brief [GameFrameworkTest] 전환 액션이 **그 안에서 새 전환**을 걸어도 덮이지 않는다
  * @details 액션을 부른 뒤 `_phase = FadeIn` 과 `beginFadeIn()` 을 **조건 없이** 실행하면, 액션이 "다음 맵을 읽고,
  *          그 맵이 또 전환을 건다" 는 흔한 일을 할 때 방금 걸린 페이드 아웃이 곧바로 페이드 인으로 덮이고
@@ -2889,69 +2690,6 @@ SW_TEST_CASE( GameFrameworkTest, GroundedObjectFallsAgainAfterBeingLifted )
 }
 
 /**
- * @brief [GameFrameworkTest] 조회는 **읽기만 한다** — `clear()` 가 뜻을 갖는다
- * @details `findSpecies()` · `findMove()` 는 `const` 이고 이 카탈로그는 서비스라 여러 스레드가 동시에 읽는다. 비어 있을 때
- *          `const_cast` 로 자기 자신을 고쳐 폴백을 심으면 읽기인 줄 알고 부른 함수가 **벡터를 키우고**, `clear()` 가 아무
- *          뜻도 없어진다(다음 조회가 곧바로 다시 채운다).
- */
-SW_TEST_CASE( GameFrameworkTest, SpeciesCatalogLookupDoesNotReseedItself )
-{
-    SpeciesCatalog catalog;
-
-    // 갓 만든 카탈로그는 이미 쓸 수 있다 — 조회가 몰래 채워 주기를 기다리지 않는다.
-    SW_ASSERT_NOT_NULL( catalog.findSpecies( "critter_a" ) );
-    SW_ASSERT_NOT_NULL( catalog.findMove( 0 ) );
-
-    catalog.clear();
-    SW_EXPECT_TRUE_MSG( catalog.findSpecies( "critter_a" ) == nullptr, "clear() 뒤에 조회가 표를 다시 채웠습니다" );
-    SW_EXPECT_TRUE_MSG( catalog.findSpecies( nullptr ) == nullptr, "clear() 뒤에 조회가 표를 다시 채웠습니다" );
-    SW_EXPECT_TRUE_MSG( catalog.findMove( 0 ) == nullptr, "clear() 뒤에 조회가 표를 다시 채웠습니다" );
-
-    // 빈 카탈로그로 만들어도 죽지 않는다 — 아무것도 안 채운 기본 파티원이 나온다.
-    // (`PartyMember` 의 `_listPp` 기본값은 두 칸이라 그것으로는 구별되지 않는다.
-    //  `_nickname` 은 기본이 비어 있고 `makeWild` 가 성공했을 때만 채워진다.)
-    const PartyMember member = catalog.makeWild( "critter_a", 5 );
-    SW_EXPECT_TRUE_MSG( member._nickname.empty(), "빈 카탈로그인데 파티원이 채워졌습니다" );
-}
-
-/**
- * @brief [GameFrameworkTest] 세이브가 말한 레벨을 그대로 곱하지 않는다
- * @details `_expNext = 40 + level * 10` 과 `makeWild` 의 `baseHp + level * 2` 가 곱셈인데
- *          레벨은 세이브에서 온다. 손으로 고친 `level=2000000000` 한 줄이 **부호 있는 정수
- *          오버플로(= 미정의 동작)** 가 된다. 파티 수 · PP 수와 같은 규칙으로 자른다.
- */
-SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeLevelIsCapped )
-{
-    const string savePath = test::makeTempPath( "huge_level.sav" );
-    string       text;
-    text += "map=Levels/Huge.scene\n";
-    text += "partyCount=1\n";
-    text += "party0.speciesId=huge\n";
-    text += "party0.level=2000000000\n";
-    text += "party0.ppCount=2\n";
-    text += "party0.pp0=35\n";
-    text += "party0.pp1=30\n";
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( savePath, text ) );
-
-    TurnBattleSaveGame loaded;
-    SW_ASSERT_TRUE( loaded.loadFromFile( savePath ) );
-    SW_ASSERT_EQUAL( size_t( 1 ), loaded._listParty.size() );
-
-    const int32 level = loaded._listParty[0]._level;
-    SW_EXPECT_TRUE_MSG( level <= SpeciesCatalog::kMaxLevel, "세이브가 말한 레벨을 그대로 잡았습니다" );
-    SW_EXPECT_TRUE( level >= 1 );
-
-    // 그 레벨로 만든 파생 값도 넘치지 않는다.
-    SW_EXPECT_TRUE( loaded._listParty[0]._expNext > 0 );
-
-    SpeciesCatalog    catalog;
-    const PartyMember wild = catalog.makeWild( "critter_a", 2000000000 );
-    SW_EXPECT_TRUE_MSG( wild._level <= SpeciesCatalog::kMaxLevel, "makeWild 가 레벨을 안 잘랐습니다" );
-    SW_EXPECT_TRUE( wild._hpMax > 0 );
-    SW_EXPECT_TRUE( wild._expNext > 0 );
-}
-
-/**
  * @brief [GameFrameworkTest] 붙지 않은 게임 서비스는 nullptr 로 돌아온다 — 죽지 않는다
  * @details `game::getService<T>()` 의 실패 자리에 `SW_ASSERT( false )` 를 두면, `SW_ASSERT` 는 Debug 에서 디버거 브레이크이고
  *          Debug 밖에서는 사라지므로 "없으면 nullptr" 이라는 계약이 **Debug 에서만 프로세스를 죽이는** 계약이 된다 — 호출하는 자리의
@@ -2962,7 +2700,6 @@ SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking 
 {
     // EngineTest 프로세스에는 게임이 붙어 있지 않다.
     SW_EXPECT_TRUE_MSG( game::getService<GameSettings>() == nullptr, "테스트 프로세스에 GameSettings 가 붙어 있습니다" );
-    SW_EXPECT_TRUE_MSG( game::getService<SpeciesCatalog>() == nullptr, "테스트 프로세스에 SpeciesCatalog 가 붙어 있습니다" );
 
     // 붙이면 그것이 돌아오고, 떼면 다시 nullptr 이다.
     GameSettings gameSettings;
@@ -2970,77 +2707,6 @@ SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking 
     SW_EXPECT_EQUAL( &gameSettings, game::getService<GameSettings>() );
     game::unbindLocalService<GameSettings>();
     SW_EXPECT_TRUE( game::getService<GameSettings>() == nullptr );
-}
-
-/**
- * @brief [GameFrameworkTest] 세이브가 말한 기술 슬롯 수를 그대로 잡지 않는다
- * @details 세이브 파일은 손으로 고칠 수 있고 망가질 수도 있다. 파티 수처럼 `ppCount` 도 잘라 써야 한다 —
- *          `party0.ppCount=2000000000` 한 줄이 8 GB 짜리 `assign` 이 되어 게임이 그 자리에서 죽는다.
- */
-SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeMoveSlotCountIsCapped )
-{
-    const string savePath = test::makeTempPath( "sw_turnbattle_huge_pp.sav" );
-    // 손으로 고친 세이브를 흉내낸다 — 텍스트 경로(SAV1 매직이 없다)로 읽힌다.
-    string text;
-    text += "map=Levels/Huge.scene\n";
-    text += "x=3\n";
-    text += "y=4\n";
-    text += "partyCount=1\n";
-    text += "party0.speciesId=huge\n";
-    text += "party0.level=5\n";
-    text += "party0.ppCount=2000000000\n";
-    text += "party0.pp0=11\n";
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( savePath, text ) );
-
-    TurnBattleSaveGame loaded;
-    SW_ASSERT_TRUE( loaded.loadFromFile( savePath ) );
-    SW_ASSERT_EQUAL( size_t( 1 ), loaded._listParty.size() );
-
-    const size_t slotCount = loaded._listParty[0]._listPp.size();
-    SW_EXPECT_TRUE_MSG( slotCount <= 16, "세이브가 말한 슬롯 수를 그대로 잡았습니다" );
-    SW_EXPECT_TRUE( slotCount > 0 );
-    SW_EXPECT_EQUAL( int32( 11 ), loaded._listParty[0]._listPp[0] );
-}
-
-/**
- * @brief [GameFrameworkTest] 텍스트 세이브의 PP 칸은 ppCount 가 정한다 — 개수 없이 pp0 · pp1 만 있으면 슬롯 없이 읽고 경고한다
- * @details 세이브 형식은 하나(`ppCount` + `pp0..pp{n-1}`)다. 개수 없는 두 칸을 따로 읽는 갈래를 두지 않는다.
- */
-SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_MoveSlotsNeedPpCount )
-{
-    const string savePath = test::makeTempPath( "sw_turnbattle_no_ppcount.sav.txt" );
-    string       text;
-    text += "map=Levels/Field.scene\n";
-    text += "partyCount=1\n";
-    text += "party0.speciesId=critter_a\n";
-    text += "party0.level=5\n";
-    text += "party0.pp0=11\n";
-    text += "party0.pp1=12\n";
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( savePath, text ) );
-
-    test::ScopedLogCollector logs;
-    TurnBattleSaveGame       loaded;
-    {
-        SW_TEST_DEFENSIVE_SCOPE( "save without ppCount" );
-        SW_ASSERT_TRUE( loaded.loadFromFile( savePath ) );
-    }
-    SW_ASSERT_EQUAL( size_t( 1 ), loaded._listParty.size() );
-    SW_EXPECT_TRUE_MSG( loaded._listParty[0]._listPp.empty(), "ppCount 없는 세이브의 pp0 · pp1 을 읽었습니다" );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "has no ppCount" ) == 1, logs.joined().c_str() );
-
-    // 지금 형식으로 쓴 세이브는 그 칸을 그대로 돌려준다.
-    PartyMember member{};
-    member._speciesId = "critter_a";
-    member._nickname  = "Critter";
-    member._listPp    = { 7, 8, 9 };
-    TurnBattleSaveGame saved;
-    saved.setPartyFrom( { member } );
-    const string roundTripPath = test::makeTempPath( "sw_turnbattle_ppcount_roundtrip.sav.txt" );
-    SW_ASSERT_TRUE( saved.saveToFile( roundTripPath ) );
-    TurnBattleSaveGame reloaded;
-    SW_ASSERT_TRUE( reloaded.loadFromFile( roundTripPath ) );
-    SW_ASSERT_EQUAL( size_t( 1 ), reloaded._listParty.size() );
-    SW_EXPECT_TRUE( reloaded._listParty[0]._listPp == member._listPp );
 }
 
 /**
@@ -3114,9 +2780,9 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreThatStopsHalfwayFails )
 }
 
 /**
- * @brief [GameFrameworkTest] GameSettings 의 칸은 읽힌다 — 서비스로 묶이고, 다국어 · 입력 맵이 적용되고, 씬 흐름 · 세이브 경로 · 턴제 시작 맵이 그것을 쓴다
- * @details `GameInstanceBase` 가 gamesettings 를 읽기만 하고 서비스로 묶지 않으면 커스텀 칸을 읽는 킷 코드(`TurnBattleSaveGame` 의 파티 상한)조차
- *          제품에서 늘 기본값이고, 표준 칸은 읽는 곳이 없다. 게임플레이 입력 맵도 읽고 갱신해야 한다.
+ * @brief [GameFrameworkTest] GameSettings 의 칸은 읽힌다 — 서비스로 묶이고, 다국어 · 입력 맵이 적용되고, 씬 흐름 · 세이브 경로 · 오버월드 시작 맵이 그것을 쓴다
+ * @details `GameInstanceBase` 가 gamesettings 를 읽기만 하고 서비스로 묶지 않으면 커스텀 칸을 읽는 킷 코드조차 제품에서 늘 기본값이고,
+ *          표준 칸은 읽는 곳이 없다. 게임플레이 입력 맵도 읽고 갱신해야 한다.
  */
 SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
 {
@@ -3187,11 +2853,10 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     instance._savePath  = test::makeTempPath( "bootstrap_default.sav" );
     SW_ASSERT_TRUE( instance.initialize( nullptr, nullptr ) );
 
-    // 1) 서비스 — 커스텀 칸을 읽는 킷 코드가 데이터의 값을 쓴다
-    SW_ASSERT_NOT_NULL( game::getService<GameSettings>() );
-    TurnBattleSaveGame party{};
-    party.setPartyFrom( vector<PartyMember>( 5 ) );
-    SW_EXPECT_EQUAL( size_t( 3 ), party._listParty.size() );
+    // 1) 서비스 — 커스텀 칸이 데이터의 값으로 읽힌다
+    const GameSettings* pBoundSettings = game::getService<GameSettings>();
+    SW_ASSERT_NOT_NULL( pBoundSettings );
+    SW_EXPECT_EQUAL( 3, pBoundSettings->getCustomPropertyInt( "maxPartySize", 6 ) );
 
     // 2) 입력 맵 — 통합 맵에 읽혔다
     SW_EXPECT_TRUE( runState._input.getInputMap().hasAction( "Confirm" ) );
@@ -3212,12 +2877,17 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     SW_EXPECT_TRUE( FileUtil::fileExists( instance._savePath ) );
     SW_EXPECT_TRUE( instance.loadStateFromFile() );
 
-    // 6) 턴제 세이브 — 맵 없는 세이브는 시작 맵에서 시작한다
-    const string mapLessSave = test::makeTempPath( "bootstrap_mapless.txt" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( mapLessSave, "x=3\ny=4\npartyCount=0\n" ) );
-    TurnBattleSaveGame loaded{};
+    // 6) 오버월드 세이브 — 맵 없는 세이브는 시작 맵에서 시작한다(파생 세이브가 자기 타입으로 쓰는지도 본다 — 기본 SaveGame::saveToFile 은 빈 페이로드다)
+    const string      mapLessSave = test::makeTempPath( "bootstrap_mapless.sav" );
+    OverworldSaveGame mapLess{};
+    mapLess._playerX = 3;
+    mapLess._playerY = 4;
+    SW_ASSERT_TRUE( mapLess.saveToFile( mapLessSave ) );
+    OverworldSaveGame loaded{};
     SW_ASSERT_TRUE( loaded.loadFromFile( mapLessSave ) );
     SW_EXPECT_STREQ( "game/test/maps/start.scene.xml", loaded._mapPath.c_str() );
+    SW_EXPECT_EQUAL( 3, loaded._playerX );
+    SW_EXPECT_EQUAL( 4, loaded._playerY );
 
     instance.shutdown();
     SW_EXPECT_NULL( game::getService<GameSettings>() );
@@ -3254,40 +2924,4 @@ SW_TEST_CASE( GameFrameworkTest, BeginPlayAddsNoOwnershipTags )
     } );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), projectileCount );
     manager.endPlay();
-}
-
-/**
- * @brief [GameFrameworkTest] 전투의 HUD 한 줄(`BattleState::getStatusText`)이 조우 · 도망 · 종료를 따라간다
- * @details 킷이 HUD 에 내놓는 유일한 출력이다(적 이름은 `foe()._nickname`). 문자열 표가 없으면 각 줄의 기본 영어 문장이다.
- */
-SW_TEST_CASE( GameFrameworkTest, BattleStatusTextFollowsTheBattle )
-{
-    SpeciesCatalog catalog;
-    {
-        test::ScopedLogSuppressor suppressor;
-        (void)catalog.loadFromResource( "no_such_species_catalog.xml" ); // 없는 리소스 — 폴백 표를 쓴다
-    }
-    game::bindLocalService<SpeciesCatalog>( &catalog );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-    {
-        game::unbindLocalService<SpeciesCatalog>();
-    } ) );
-
-    BattleState battle;
-    SW_EXPECT_STREQ( "", battle.getStatusText() );
-
-    battle.startWildEncounter();
-    SW_ASSERT_TRUE( battle.isActive() );
-    const string foeName( battle.foe()._nickname.c_str() );
-    SW_ASSERT_FALSE( foeName.empty() );
-    const string_view appeared( battle.getStatusText() );
-    SW_EXPECT_TRUE_MSG( appeared.find( foeName.c_str() ) != string_view::npos, "조우 줄에 적 이름이 없습니다" );
-
-    battle.update( 1.0f );
-    SW_ASSERT_EQUAL( static_cast<uint8>( BattlePhase::PlayerChoice ), static_cast<uint8>( battle.getPhase() ) );
-    battle.selectRun();
-    SW_EXPECT_STREQ( "Got away safely!", battle.getStatusText() );
-
-    battle.endBattle();
-    SW_EXPECT_STREQ( "", battle.getStatusText() );
 }

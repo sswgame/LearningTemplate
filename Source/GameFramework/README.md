@@ -125,8 +125,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `CoopScavenger`: 협동 수집 공포(리썰 컴퍼니 장르) — 할당량 주기(`ScavengerQuota`), 위성 · 하루 시각 · 날씨 · 위협 예산 · 죽음과 시신 회수 · 전멸 손실(`ScavengerExpedition`), 절차 시설 방 그래프 · 고철(`ScavengerFacility`), 운반 칸 · 양손 · 무게(`ScavengerCarry`).
     - `GhostHunt`: 유령 사냥(루이지 맨션 장르) — 손전등 원뿔 · 스트로브 기절 · 흡입 줄다리기 · 강화 단계(`GhostEncounter`), 방 불 켜기 · 열쇠 문 · 가구 보물 · 부 탈출(`GhostMansion`), XML(`GhostCatalog`).
   - **RPG** (`Kits/Rpg/`)
-    - `Overworld`: 오픈월드형 필드 탐색 시스템
-    - `TurnBattle`: 턴제 전투 시스템
+    - `Overworld`: 타일 걸음 필드 — 칸 조회(`TileMap` — Engine `TileMapXmlData` 그대로 · 걷기 · 조우 칸 · 통과 · 워프), 걸음 이동(`PlayerController` · `PlayerLocomotion`), 존 태그 · 클리어 게이트(`ZoneTracker`), 세이브(`OverworldSaveGame` — 맵 · 타일 자리 · 플래그). 무엇을 만나는지는 장르 키트의 지역 표(`MonsterCollector` · `ClassicJrpg`)가 정한다.
     - `ClassicJrpg`: 클래식 JRPG(드래곤 퀘스트 3 HD-2D · 씨 오브 스타즈 · 완다링 소드 장르) — 직업 · 주문 · 장비 카탈로그(`JrpgCatalog`), 파티 · 전직 · 여관 · 교회(`JrpgParty`), 라운드제 전투 · 타이밍 공격/방어(`JrpgBattle`), 걸음 수 인카운터(`JrpgEncounter`).
     - `MonsterCollector`: 몬스터 수집(포켓몬 장르) — 종 · 기술 · 성격 · 날씨 카탈로그(`MonsterCollectorCatalog`), 개체값 · 노력치 · 능력치 공식 · 경험치 · 진화(`MonsterInstance`), 우선도 · 스피드 순 1:1 전투 · 피해 공식 · 상성 · 포획(`MonsterBattle`), 트레이너 AI(`MonsterTrainerAi`).
     - `OpenWorldWestern`: 오픈월드 서부극(레드 데드 리뎀션 장르) — 목격자 시야 · 신고 시간 · 처치/위협으로 막기 · 지역별 현상금 · 수배 감쇠 · 보안관 추적(`WesternLaw`), 명예 단계 · 할인 · 대사 플래그(`WesternHonor`), 말 유대 · 능력 해금 · 코어 · 질주 · 겁(`WesternHorse`), 추위/더위 · 옷 · 음식 · 데드아이(`WesternSurvival`), 가죽 등급 · 사체 부패 · 매입 값(`WesternHunting`).
@@ -315,15 +314,14 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 키트는 **장르 전체**가 쓰는 것이라, 게임 하나의 규칙이 타입에 박히면 그 장르의 다른 게임은
 이 키트를 못 쓴다. 규칙은 셋이다.
 
-**개수를 코드가 정하지 않는다.** `SpeciesDef` 의 기술 · `PartyMember` 의 PP 는 `vector` 이고, XML 은 `move0`, `move1`, ... 을
-끊길 때까지 읽는다(슬롯 수는 데이터가 정한다). 세이브에는 개수(`ppCount`)를 함께 적는다.
+**개수를 코드가 정하지 않는다.** `MonsterDef` 의 사격 패턴(`_listShot`)은 `vector` 이고, XML 은 `<Shot>` 원소를 있는 만큼 읽는다
+(한 번에 몇 발인지는 데이터가 정한다).
 
 **종류를 코드가 정하지 않는다.** `MonsterDef` 의 보상은 `_mapDrop` 이고 `<Drop exp="10" souls="3"/>` 처럼
 **속성 이름이 곧 보상 이름**이다.
 
-**같은 문제는 같은 방식으로 푼다.** id → 행 조회는 `MonsterCatalog` · `SpeciesCatalog` 모두 맵이다. 한 프레임워크 안에서 같은
-일을 두 방식으로 하면 읽는 사람이 어느 쪽이 정석인지 알 수 없다. 다만 인덱스가 직렬화되는 곳(`SpeciesDef::_listMoveIndex`)은
-**벡터의 자리를 그대로 두고** 맵을 곁에 둔다.
+**같은 문제는 같은 방식으로 푼다.** id → 행 조회는 `MonsterCatalog` · `MonsterCollectorCatalog`(`XmlCatalog`) 모두 맵이다. 한 프레임워크 안에서 같은
+일을 두 방식으로 하면 읽는 사람이 어느 쪽이 정석인지 알 수 없다.
 
 키트에 새 타입을 넣기 전에 물어볼 것: *이 장르의 다른 게임이 이 필드를 그대로 쓸 수 있나?*
 "슬롯 2개", "통화 2종", "스탯 이름 고정" 이 나오면 거의 항상 아니다.

@@ -592,8 +592,8 @@ SW_TEST_CASE( LogTest, InvalidUtf8ByteIsEscapedNotTheWholeLine )
 
 /**
  * @brief [LogTest] 이름이 같은 두 파일(다른 폴더)의 로그 호출자 이름이 섞이지 않는다 — 구분자가 섞여도 같은 파일은 같다
- * @details 호출자 표가 파일 이름만 키로 쓰면 `GameFramework/Framework/SaveGame.cpp` 와 `Kits/Rpg/TurnBattle/SaveGame.cpp` 가 같은 키라, 나중에 등록된
- *          "TurnBattleSaveGame" 이 두 파일의 로그에 모두 붙는다.
+ * @details 호출자 표가 파일 이름만 키로 쓰면 `CallerBase/SameNamedFile.cpp` 와 `CallerKit/SameNamedFile.cpp` 가 같은 키라, 나중에 등록된
+ *          이름이 두 파일의 로그에 모두 붙는다.
  */
 SW_TEST_CASE( LogTest, CallerNamesOfSameNamedFilesStayApart )
 {

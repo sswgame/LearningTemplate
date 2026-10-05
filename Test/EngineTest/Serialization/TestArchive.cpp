@@ -18,7 +18,8 @@
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
 #include "GameFramework/Framework/SaveGame.h"
-#include "GameFramework/Kits/Rpg/TurnBattle/SaveGame.h"
+#include "GameFramework/Kits/Rpg/Overworld/OverworldSaveGame.h"
+#include "GameFramework/World/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -399,27 +400,32 @@ SW_TEST_CASE( ArchiveTest, SaveGameBinaryArchiveRoundTrip )
 {
     const sw::string savePath = test::makeTempPath( "test_save_slot.sav" );
 
-    sw::TurnBattleSaveGame writeSlot;
+    sw::GameFlags flags;
+    flags.setFlag( "quest_dragon_defeated", 1 );
+    flags.setFlag( "gold_coins", 9999 );
+    flags.setFlag( "current_chapter", 3 );
+
+    sw::OverworldSaveGame writeSlot;
     writeSlot._mapPath = "Resource/game/empty/scenes/overworld.scene.xml";
     writeSlot._playerX = 150;
     writeSlot._playerY = -300;
-    writeSlot.setFlag( "quest_dragon_defeated", 1 );
-    writeSlot.setFlag( "gold_coins", 9999 );
-    writeSlot.setFlag( "current_chapter", 3 );
+    writeSlot.captureFlags( flags );
 
     SW_EXPECT_TRUE( writeSlot.saveToFile( savePath ) );
     SW_EXPECT_TRUE( sw::FileUtil::fileExists( savePath ) );
 
-    sw::TurnBattleSaveGame readSlot;
+    sw::OverworldSaveGame readSlot;
     SW_EXPECT_TRUE( readSlot.loadFromFile( savePath ) );
-
     SW_EXPECT_EQUAL( writeSlot._mapPath, readSlot._mapPath );
     SW_EXPECT_EQUAL( 150, readSlot._playerX );
     SW_EXPECT_EQUAL( -300, readSlot._playerY );
-    SW_EXPECT_EQUAL( 1, readSlot.getFlag( "quest_dragon_defeated" ) );
-    SW_EXPECT_EQUAL( 9999, readSlot.getFlag( "gold_coins" ) );
-    SW_EXPECT_EQUAL( 3, readSlot.getFlag( "current_chapter" ) );
-    SW_EXPECT_EQUAL( 0, readSlot.getFlag( "non_existent_flag", 0 ) );
+
+    sw::GameFlags readFlags;
+    readSlot.restoreFlags( readFlags );
+    SW_EXPECT_EQUAL( 1, readFlags.getFlag( "quest_dragon_defeated" ) );
+    SW_EXPECT_EQUAL( 9999, readFlags.getFlag( "gold_coins" ) );
+    SW_EXPECT_EQUAL( 3, readFlags.getFlag( "current_chapter" ) );
+    SW_EXPECT_EQUAL( 0, readFlags.getFlag( "non_existent_flag", 0 ) );
 }
 
 /**
@@ -429,11 +435,10 @@ SW_TEST_CASE( ArchiveTest, SaveGameBinaryTamperRejection )
 {
     const sw::string savePath = test::makeTempPath( "tampered_save_slot.sav" );
 
-    sw::TurnBattleSaveGame writeSlot;
+    sw::OverworldSaveGame writeSlot;
     writeSlot._mapPath = "world_level_1";
     writeSlot._playerX = 10;
     writeSlot._playerY = 20;
-    writeSlot.setFlag( "admin_level", 0 );
     SW_EXPECT_TRUE( sw::SaveGameSerializer::saveGameToSlot( writeSlot, savePath ) );
 
     // 파일 읽어서 페이로드 바이트 임의 변조
@@ -441,11 +446,11 @@ SW_TEST_CASE( ArchiveTest, SaveGameBinaryTamperRejection )
     SW_ASSERT_TRUE( sw::FileUtil::readFile( savePath, saveBytes ) );
     SW_ASSERT_TRUE( saveBytes.size() > 20 );
 
-    saveBytes[saveBytes.size() - 2] ^= 0x7F; // 플래그 값 변조
+    saveBytes[saveBytes.size() - 2] ^= 0x7F; // 페이로드 끝 변조
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( savePath, saveBytes.data(), saveBytes.size() ) );
 
     // 변조된 파일 로드시 CRC 불일치로 실패해야 함
-    sw::TurnBattleSaveGame tamperedSlot;
+    sw::OverworldSaveGame tamperedSlot;
     SW_EXPECT_FALSE( sw::SaveGameSerializer::loadGameFromSlot( tamperedSlot, savePath ) );
 }
 
@@ -1579,11 +1584,13 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
 {
     // 1. SaveGame SAV1 CRC32 mismatch detection
     {
-        sw::TurnBattleSaveGame validSlot;
+        sw::OverworldSaveGame validSlot;
         validSlot._mapPath = "dungeon_boss";
         validSlot._playerX = 100;
         validSlot._playerY = 200;
-        validSlot.setFlag( "boss_defeated", 1 );
+        sw::GameFlags flags;
+        flags.setFlag( "boss_defeated", 1 );
+        validSlot.captureFlags( flags );
 
         const sw::string savePath = test::makeTempPath( "test_corrupt_slot.sav" );
         SW_EXPECT_TRUE( sw::SaveGameSerializer::saveGameToSlot( validSlot, savePath ) );
@@ -1598,7 +1605,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
         SW_EXPECT_TRUE( sw::FileUtil::writeFile( savePath, fileBytes.data(), fileBytes.size() ) );
 
         // Load must detect CRC32 mismatch and reject
-        sw::TurnBattleSaveGame corruptSlot;
+        sw::OverworldSaveGame corruptSlot;
         SW_EXPECT_FALSE( sw::SaveGameSerializer::loadGameFromSlot( corruptSlot, savePath ) );
 
         // Cleanup
@@ -1635,37 +1642,53 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
 }
 
 /**
- * @brief [ArchiveTest] SaveGame 플래그 키 및 필드 리플렉션 라운드트립 검증
+ * @brief [ArchiveTest] SaveGame 플래그 키 및 필드 리플렉션 라운드트립 검증 — 넣은 순서가 달라도 같은 상태면 같은 파일 바이트
  */
 SW_TEST_CASE( ArchiveTest, SaveGameReflectionChecksumAndLoad )
 {
-    const sw::string testSavePath = test::makeTempPath( "test_deterministic_slot.sav" );
+    const sw::string testSavePath  = test::makeTempPath( "test_deterministic_slot.sav" );
+    const sw::string otherSavePath = test::makeTempPath( "test_deterministic_slot_other.sav" );
 
-    sw::TurnBattleSaveGame slot1;
+    // 같은 플래그를 다른 순서로 넣는다.
+    sw::GameFlags flags;
+    flags.setFlag( "quest.boss_defeated", 1 );
+    flags.setFlag( "inventory.key_count", 3 );
+    flags.setFlag( "dialogue.npc_met", 1 );
+    flags.setFlag( "area.unlocked_gate", 1 );
+    sw::GameFlags otherFlags;
+    otherFlags.setFlag( "area.unlocked_gate", 1 );
+    otherFlags.setFlag( "dialogue.npc_met", 1 );
+    otherFlags.setFlag( "inventory.key_count", 3 );
+    otherFlags.setFlag( "quest.boss_defeated", 1 );
+
+    sw::OverworldSaveGame slot1;
     slot1._mapPath = "Overworld_Main";
     slot1._playerX = 10;
     slot1._playerY = 20;
-
-    // 무작위 순서로 플래그 삽입
-    slot1.setFlag( "quest.boss_defeated", 1 );
-    slot1.setFlag( "inventory.key_count", 3 );
-    slot1.setFlag( "dialogue.npc_met", 1 );
-    slot1.setFlag( "area.unlocked_gate", 1 );
+    slot1.captureFlags( flags );
+    sw::OverworldSaveGame otherSlot = slot1;
+    otherSlot.captureFlags( otherFlags );
 
     SW_ASSERT_TRUE( sw::SaveGameSerializer::saveGameToSlot( slot1, testSavePath ) );
+    SW_ASSERT_TRUE( sw::SaveGameSerializer::saveGameToSlot( otherSlot, otherSavePath ) );
+    sw::vector<uint8> bytes;
+    sw::vector<uint8> otherBytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( testSavePath, bytes ) );
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( otherSavePath, otherBytes ) );
+    SW_EXPECT_TRUE_MSG( bytes == otherBytes, "같은 플래그인데 넣은 순서에 따라 세이브 바이트가 다릅니다" );
 
-    sw::TurnBattleSaveGame slot2;
+    sw::OverworldSaveGame slot2;
     SW_ASSERT_TRUE( sw::SaveGameSerializer::loadGameFromSlot( slot2, testSavePath ) );
-
     SW_EXPECT_EQUAL( sw::string( "Overworld_Main" ), slot2._mapPath );
     SW_EXPECT_EQUAL( 10, slot2._playerX );
     SW_EXPECT_EQUAL( 20, slot2._playerY );
-    SW_EXPECT_EQUAL( 1, slot2.getFlag( "quest.boss_defeated" ) );
-    SW_EXPECT_EQUAL( 3, slot2.getFlag( "inventory.key_count" ) );
-    SW_EXPECT_EQUAL( 1, slot2.getFlag( "dialogue.npc_met" ) );
-    SW_EXPECT_EQUAL( 1, slot2.getFlag( "area.unlocked_gate" ) );
 
-    // Cleanup
+    sw::GameFlags loadedFlags;
+    slot2.restoreFlags( loadedFlags );
+    SW_EXPECT_EQUAL( 1, loadedFlags.getFlag( "quest.boss_defeated" ) );
+    SW_EXPECT_EQUAL( 3, loadedFlags.getFlag( "inventory.key_count" ) );
+    SW_EXPECT_EQUAL( 1, loadedFlags.getFlag( "dialogue.npc_met" ) );
+    SW_EXPECT_EQUAL( 1, loadedFlags.getFlag( "area.unlocked_gate" ) );
 }
 
 /**

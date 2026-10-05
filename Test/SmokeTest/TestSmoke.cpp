@@ -771,11 +771,11 @@ SW_TEST_CASE( ArchitectureTest, ObjectUndoSurvivesAnEditorModuleReload )
 }
 
 /**
- * @brief [ArchitectureTest] 장르 키트 모듈 (GF_Overworld, GF_TurnBattle, GF_ActionCombat) 개별 LiveReload 검증
+ * @brief [ArchitectureTest] 장르 키트 모듈 (GF_Overworld, GF_MonsterCollector, GF_ActionCombat) 개별 LiveReload 검증
  */
 SW_TEST_CASE( ArchitectureTest, LiveReloadGenreKitsIndividuallyAndCascaded )
 {
-    const utf8* kKits[] = { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" };
+    const utf8* kKits[] = { "GF_Overworld", "GF_MonsterCollector", "GF_ActionCombat" };
 
     for ( const utf8* kitName : kKits )
     {
@@ -1559,11 +1559,11 @@ SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
 }
 
 /**
- * @brief [ModuleApiTest] 장르별 독립 Kit 모듈 (GF_Overworld, GF_TurnBattle, GF_ActionCombat) 타입 등록 검증
+ * @brief [ModuleApiTest] 장르별 독립 Kit 모듈 (GF_Overworld, GF_MonsterCollector, GF_ActionCombat) 타입 등록 검증
  */
 SW_TEST_CASE( ModuleApiTest, GameFrameworkKitsModuleTypeRegistration )
 {
-    for ( const utf8* kitName : { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" } )
+    for ( const utf8* kitName : { "GF_Overworld", "GF_MonsterCollector", "GF_ActionCombat" } )
     {
         void* handle = sw::loadModule( kitName );
         if ( handle )
@@ -1646,7 +1646,7 @@ SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
     if ( std::getenv( "SW_MODULE_PROPERTY_CHILD" ) == nullptr )
         SW_TEST_SKIP( "child only — EveryModulePropertyHasATypeTheSerializersCanCarry launches it" );
 
-    const utf8* const     arrKit[] = { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" };
+    const utf8* const     arrKit[] = { "GF_Overworld", "GF_ActionCombat" };
     sw::LiveReloadManager manager;
     SW_ASSERT_TRUE( manager.loadSharedModule( "GameFramework" ) );
     sw::vector<sw::string> listGameDepend{ "GameFramework" };
@@ -1661,7 +1661,7 @@ SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
     sw::unordered_map<sw::hashed_string, uint32> mapModuleTypeCount;
     sw::engine::getTypeRegistry().forEachType( [&mapModuleTypeCount]( const sw::TypeInfo& info )
     { ++mapModuleTypeCount[info._moduleName]; } );
-    for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat", "SWGame", "EditorModule" } )
+    for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_ActionCombat", "SWGame", "EditorModule" } )
         SW_EXPECT_TRUE_MSG( mapModuleTypeCount[sw::hashed_string( pModule )] > 0, pModule );
 
     const test::PropertyCarryReport report = test::makePropertyCarryReport();
@@ -1679,7 +1679,7 @@ SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
  */
 SW_TEST_CASE( ModuleApiTest, EveryModulePropertyHasATypeTheSerializersCanCarry )
 {
-    for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat", "SWGame", "EditorModule" } )
+    for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_ActionCombat", "SWGame", "EditorModule" } )
     {
         if ( sw::FileUtil::fileExists( sw::modulePath( pModule ) ) == false )
             SW_TEST_SKIP( "a module is not built next to the test in this config" );

@@ -16,7 +16,7 @@ namespace sw
     MonsterCatalog::MonsterCatalog()
         : _mapMonster{}
     {
-        // 읽기 전에도 비어 있지 않다(`SpeciesCatalog` 와 같은 규칙) — 데이터가 늦게 오거나 못 와도 `findMonster` 가 널만 돌려주지 않는다.
+        // 읽기 전에도 비어 있지 않다 — 데이터가 늦게 오거나 못 와도 `findMonster` 가 널만 돌려주지 않는다.
         seedFallback();
     }
 
