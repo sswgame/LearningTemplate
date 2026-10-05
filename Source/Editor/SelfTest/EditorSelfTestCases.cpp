@@ -437,6 +437,111 @@ namespace sw::editor
              * @brief 사용자 설정 창이 카테고리 탭마다 설정 표를 그린다 — 탭을 하나씩 골라 다음 프레임에 표가 그려졌는지 본다.
              * @details 창은 게임 메뉴 UI 가 부를 바인딩 API 만 쓰므로, 모든 종류의 위젯(체크 · 슬라이더 · 콤보 · 키)이 엔진 스키마로 한 번씩 그려진다.
              */
+            // ------------------------------------------------------------------------------
+            // dpi.monitorScaleFollows — 창 DPI 가 0.5 커지면(100 % → 150 %) 글자 · 여백 · 테마 배율이 함께 따르고, Windows 는 WM_DPICHANGED 로 창 · 백버퍼가 권장 사각형을 따른다.
+            // 실물 150 % 모니터 대신이다(이 PC 는 96 DPI). 글자 래스터의 선명도는 이것으로 못 본다. 끝에 원래 DPI · 창 크기로 되돌린다.
+            // ------------------------------------------------------------------------------
+            struct DpiProbe
+            {
+                float32 ( *_pfnSavedDpiScale )( ImGuiViewport* ){ nullptr };
+                float32 _baseScale{ 1.0f };
+                float32 _fakeScale{ 1.5f }; ///< 바꿔 끼운 창 DPI — 지금 배율 + 0.5(이 PC 가 이미 150 % 여도 바뀐다)
+                float32 _basePaddingX{ 0.0f };
+#if defined( SW_PLATFORM_WINDOWS )
+                RECT _originalRect{};
+                RECT _suggestedRect{};
+#endif
+            };
+
+            static DpiProbe& getDpiProbe()
+            {
+                static DpiProbe s_probe;
+                return s_probe;
+            }
+
+            static float32 fakeWindowDpiScale( ImGuiViewport* pViewport )
+            {
+                (void)pViewport;
+                return getDpiProbe()._fakeScale;
+            }
+
+            static EditorSelfTestStep runDpiMonitorScaleFollows( EditorSelfTestContext& context )
+            {
+                // 단계 표 — 바꿔 끼운 DPI 를 NewFrame 이 읽고 테마가 따르는 데 몇 프레임, 창 메시지가 펌프 · 리사이즈를 거치는 데 몇 프레임.
+                constexpr uint32 kCheckScaleStep   = 4;
+                constexpr uint32 kCheckWindowStep  = 12;
+                constexpr uint32 kCheckRestoreStep = 20;
+
+                DpiProbe&        probe      = getDpiProbe();
+                ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
+                const uint32     stepIndex  = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    if ( ImGui::GetIO().ConfigDpiScaleFonts == false )
+                        return EditorSelfTestStep::Done; // 배율을 직접 정한 실행(gv_editorUiScale)은 모니터를 따르지 않는다 — 볼 것이 없다
+                    probe                                 = DpiProbe{};
+                    probe._pfnSavedDpiScale               = platformIo.Platform_GetWindowDpiScale;
+                    probe._baseScale                      = EditorThemeUtil::getDpiScale();
+                    probe._basePaddingX                   = ImGui::GetStyle().FramePadding.x;
+                    probe._fakeScale                      = probe._baseScale + 0.5f;
+                    platformIo.Platform_GetWindowDpiScale = &fakeWindowDpiScale;
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex < kCheckScaleStep )
+                    return EditorSelfTestStep::Continue; // NewFrame 이 뷰포트 DPI 를 다시 읽고, 다음 프레임에 테마가 따른다
+                if ( stepIndex == kCheckScaleStep )
+                {
+                    const float32 expectedPadding = probe._basePaddingX / probe._baseScale * probe._fakeScale;
+                    (void)context.expect( isNear( ImGui::GetMainViewport()->DpiScale, probe._fakeScale, 0.001f ), "the main viewport did not take the window DPI" );
+                    (void)context.expect( isNear( ImGui::GetStyle().FontScaleDpi, probe._fakeScale, 0.001f ), "fonts did not follow the window DPI" );
+                    (void)context.expect( isNear( EditorThemeUtil::getDpiScale(), probe._fakeScale, 0.001f ), "the theme scale did not follow the window DPI" );
+                    (void)context.expect( isNear( ImGui::GetStyle().FramePadding.x, expectedPadding, 0.01f ), "frame padding stayed at the old DPI while fonts grew" );
+                    platformIo.Platform_GetWindowDpiScale = probe._pfnSavedDpiScale;
+#if defined( SW_PLATFORM_WINDOWS )
+                    // 창 쪽 — OS 가 보내는 것과 같은 메시지(새 DPI · 그 비율만큼 큰 권장 사각형). 보내기(SendMessage)로 — 주의: 게시(PostMessage)한 WM_DPICHANGED 는 창 프로시저에 닿지 않는다.
+                    HWND hWnd = static_cast<HWND>( ImGui::GetMainViewport()->PlatformHandleRaw );
+                    if ( hWnd != nullptr && GetWindowRect( hWnd, &probe._originalRect ) )
+                    {
+                        probe._suggestedRect        = probe._originalRect;
+                        probe._suggestedRect.right  = probe._originalRect.left + static_cast<LONG>( static_cast<float32>( probe._originalRect.right - probe._originalRect.left ) * probe._fakeScale / probe._baseScale );
+                        probe._suggestedRect.bottom = probe._originalRect.top + static_cast<LONG>( static_cast<float32>( probe._originalRect.bottom - probe._originalRect.top ) * probe._fakeScale / probe._baseScale );
+                        SendMessageW( hWnd, WM_DPICHANGED, MAKEWPARAM( static_cast<WORD>( 96.0f * probe._fakeScale ), static_cast<WORD>( 96.0f * probe._fakeScale ) ), reinterpret_cast<LPARAM>( &probe._suggestedRect ) );
+                    }
+#endif
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex < kCheckWindowStep )
+                    return EditorSelfTestStep::Continue;
+                if ( stepIndex == kCheckWindowStep )
+                {
+#if defined( SW_PLATFORM_WINDOWS )
+                    HWND           hWnd = static_cast<HWND>( ImGui::GetMainViewport()->PlatformHandleRaw );
+                    RECT           client{};
+                    EditorContext* pContext = EditorContext::get();
+                    if ( hWnd != nullptr && GetClientRect( hWnd, &client ) && pContext != nullptr && pContext->getRhiDevice() != nullptr )
+                    {
+                        const IRHIDevice* pDevice    = pContext->getRhiDevice();
+                        const bool        bGrew      = ( probe._suggestedRect.right - probe._suggestedRect.left ) > ( probe._originalRect.right - probe._originalRect.left );
+                        const bool        bMatchesBb = pDevice->getBackBufferWidth() == static_cast<uint32>( client.right ) &&
+                                                pDevice->getBackBufferHeight() == static_cast<uint32>( client.bottom );
+                        RECT windowRect{};
+                        (void)GetWindowRect( hWnd, &windowRect );
+                        (void)context.expect( bGrew == false || ( windowRect.right - windowRect.left ) == ( probe._suggestedRect.right - probe._suggestedRect.left ),
+                                              "WM_DPICHANGED did not move the window to the suggested rectangle" );
+                        (void)context.expect( bMatchesBb, "after WM_DPICHANGED the back buffer does not match the window client area" );
+                        // 원래 창 크기 · DPI 로 되돌린다 — 다음 시험이 커진 창에서 돌지 않게.
+                        SendMessageW( hWnd, WM_DPICHANGED, MAKEWPARAM( static_cast<WORD>( 96.0f * probe._baseScale ), static_cast<WORD>( 96.0f * probe._baseScale ) ), reinterpret_cast<LPARAM>( &probe._originalRect ) );
+                    }
+#endif
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex < kCheckRestoreStep )
+                    return EditorSelfTestStep::Continue;
+                // 진짜 DPI 로 돌아왔다 — 테마도 따라 돌아와야 한다(옮겨 갔다 돌아오는 모니터 이동과 같다).
+                (void)context.expect( isNear( EditorThemeUtil::getDpiScale(), probe._baseScale, 0.001f ), "the theme scale did not follow the DPI back" );
+                return EditorSelfTestStep::Done;
+            }
+
             static EditorSelfTestStep runUserSettingsPanelDrawsEveryTab( EditorSelfTestContext& context )
             {
                 constexpr const utf8* kPanelId  = "user_settings";
@@ -485,4 +590,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( GameViewResize, "gameView.resizeEveryFrame", 700, &EditorSelfTestCasesInternal::runGameViewResizeEveryFrame );
     SW_EDITOR_SELF_TEST( ProfilerGpuMemory, "profiler.gpuMemoryTab", 800, &EditorSelfTestCasesInternal::runProfilerGpuMemoryTabDrawsTheLedger );
     SW_EDITOR_SELF_TEST( UserSettingsPanel, "userSettings.panelDrawsEveryTab", 900, &EditorSelfTestCasesInternal::runUserSettingsPanelDrawsEveryTab );
+    SW_EDITOR_SELF_TEST( DpiMonitorScale, "dpi.monitorScaleFollows", 950, &EditorSelfTestCasesInternal::runDpiMonitorScaleFollows );
 } // namespace sw::editor

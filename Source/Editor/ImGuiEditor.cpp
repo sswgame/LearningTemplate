@@ -61,6 +61,9 @@ namespace sw::editor
     {
         struct ImGuiEditorInternal
         {
+            /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이만큼 넘게 다르면 테마가 따라간다(beginFrame).
+            static constexpr float32 kDpiFollowTolerance = 0.001f;
+
             /** @brief ImGui 할당을 sw 할당자로 보낸다 — 할당 헤더에 태그가 적혀 메모리 프로파일러의 Editor 줄로 세인다. */
             static void* allocateForImGui( size_t size, void* /*pUserData*/ ) { return Memory::allocate( size ); }
             /** @brief `allocateForImGui` 의 짝입니다. */
@@ -651,6 +654,16 @@ namespace sw::editor
         // 이름 붙인 레이아웃은 프레임 밖에서 읽어야 이미 있는 창 · 도킹 노드에 적용된다.
         _dockLayout.applyPendingNamedLayout();
         ImGui::NewFrame();
+        // 모니터를 옮기면 ImGui 가 글자 배율(FontScaleDpi)만 새 DPI 로 덮는다(ConfigDpiScaleFonts). 테마의 여백 · 둥글기는 옛 배율이라 따라가게 한다 —
+        // 안 그러면 150 % 모니터에서 글자만 커지고 칸은 그대로다. 배율을 직접 정했으면(gv_editorUiScale) ImGui 가 덮지 않으므로 여기도 같다.
+        // 이 프레임의 위젯은 아직 안 그렸다 — 스타일 크기는 그릴 때 읽힌다.
+        {
+            const float32 fontScaleDpi = ImGui::GetStyle().FontScaleDpi;
+            const bool    bDpiMoved    = ImGui::GetIO().ConfigDpiScaleFonts && fontScaleDpi > 0.0f &&
+                                   MathUtil::abs( fontScaleDpi - EditorThemeUtil::getDpiScale() ) > ImGuiEditorInternal::kDpiFollowTolerance;
+            if ( bDpiMoved )
+                EditorThemeUtil::setDpiScale( fontScaleDpi );
+        }
         ImGuizmo::BeginFrame();
         // 기즈모를 띄우는 패널이, 캔버스가 입력을 받을 수 있을 때 다시 켠다.
         ImGuizmo::Enable( false );

@@ -703,6 +703,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|hierarchy.selectAllWith",
         "EditorSelfTest|PASS|layout.namedRoundTrip",
         "EditorSelfTest|PASS|profiler.gpuMemoryTab",
+        "EditorSelfTest|PASS|dpi.monitorScaleFollows",
         "EditorSelfTest|PASS|input.hierarchySearchTyping",
         "EditorSelfTest|PASS|input.tooltipOnHover",
         "EditorSelfTest|PASS|input.classicDarkSwatch",
