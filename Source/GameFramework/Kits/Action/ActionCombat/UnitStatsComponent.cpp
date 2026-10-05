@@ -5,6 +5,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Combat/DamageMath.h"
 #include "GameFramework/Framework/GameEventUtil.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
@@ -139,9 +140,10 @@ namespace sw
         if ( bCannotTakeDamage )
             return;
 
-        int32 actualDamage = amount - _defense;
-        if ( actualDamage < 1 )
-            actualDamage = 1;
+        // 방어 식은 `DamageMath::applyArmor` 하나다(액션 룸의 적도 같은 식) — 고정 방어를 빼고 최소 1. 0 이하 피해는 맞지 않은 것이다(언리얼 `ApplyDamage` 가 0 을 버린다).
+        const int32 actualDamage = static_cast<int32>( DamageMath::applyArmor( static_cast<float32>( amount ), static_cast<float32>( _defense ), 0.0f, 1.0f ) );
+        if ( actualDamage <= 0 )
+            return;
 
         _hp -= actualDamage;
         if ( _hp <= 0 )

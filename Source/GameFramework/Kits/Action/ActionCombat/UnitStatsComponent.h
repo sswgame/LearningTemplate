@@ -29,7 +29,7 @@ namespace sw
 
         /**
          * @brief 피해를 줍니다 — 투사체 · 공격 판정 · 게임 코드가 모두 이 하나를 지납니다(언리얼 `AActor::TakeDamage`).
-         * @details 방어력을 빼고 최소 1 을 깎은 뒤 무적 시간을 겁니다. 죽었거나 무적이면 아무것도 하지 않습니다. HP 가 깎였으면 그 자리에서
+         * @details 방어력을 빼고 최소 1 을 깎은 뒤 무적 시간을 겁니다(`DamageMath::applyArmor`). 죽었거나 무적이거나 @p amount 가 0 이하면 아무것도 하지 않습니다. HP 가 깎였으면 그 자리에서
          *          `registerDamageApplied` 의 델리게이트를 부르고 `DamageAppliedEvent` 를 "game" 채널에 냅니다(`GameEventUtil::send`). 틱 중(구조 동결)이면
          *          틱 직후로 미루고, 미룬 것도 @p instigator 를 들고 갑니다.
          * @param instigator 피해를 낸 쪽(쏜 · 휘두른 오브젝트). 이벤트에 그대로 실립니다. 모르면 무효 핸들

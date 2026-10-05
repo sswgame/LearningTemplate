@@ -1014,6 +1014,34 @@ SW_TEST_CASE( ActionCombatTest, UnitSpawnsDamageNumbersWhenAsked )
 }
 
 /**
+ * @brief [ActionCombatTest] 피해 0 은 맞지 않은 것이고, 방어가 피해보다 커도 맞으면 1 은 깎인다
+ * @details 방어 식은 `DamageMath::applyArmor` 하나다(액션 룸의 적도 같은 식). 0 이하 피해는 HP · 무적 · 이벤트를 건드리지 않는다 — 언리얼
+ *          `UGameplayStatics::ApplyDamage` 가 0 을 버리는 것과 같다. 설정하지 않은 투사체(피해 0)가 맞을 때마다 1 씩 깎으면 안 된다.
+ */
+SW_TEST_CASE( ActionCombatTest, ZeroDamageIsNoHitAndArmorLeavesAtLeastOne )
+{
+    GameObjectManager   manager;
+    UnitStatsComponent* pUnit = spawnUnit( manager, "Tank", 0.0f, 100, 10, 0.5f );
+    SW_ASSERT_NOT_NULL( pUnit );
+    int32                hitCount     = 0;
+    const DelegateHandle subscription = pUnit->registerDamageApplied( SW_DELEGATE_LAMBDA( UnitStatsComponent::DamageAppliedDelegate, [&hitCount]( const DamageAppliedEvent& event )
+    {
+        (void)event;
+        ++hitCount;
+    } ) );
+    manager.beginPlay();
+
+    pUnit->takeDamage( 0 );
+    SW_EXPECT_EQUAL( 100, pUnit->getHp() );
+    SW_EXPECT_EQUAL( 0, hitCount );
+    pUnit->takeDamage( 3 ); // 0 은 무적을 걸지 않았다 — 방어 10 이 3 보다 커도 1
+    SW_EXPECT_EQUAL( 99, pUnit->getHp() );
+    SW_EXPECT_EQUAL( 1, hitCount );
+    pUnit->unregisterDamageApplied( subscription );
+    manager.endPlay();
+}
+
+/**
  * @brief [ActionCombatTest] 보스 발사 빈도는 프레임률과 상관없다 — 20 · 30 · 60 fps 로 120 초면 1 + (120 − 1.2) / 1.6 = 75.25 발(±1)
  * @details 끝난 프레임에 간격으로 덮으면 지나친 몫을 버린다 — float 로 dt 를 빼다 0 에 조금 못 미치는 프레임이 생겨 20 fps 72 발, 30 fps 73 발이 된다.
  *          쏜 횟수는 프레임 결과(`ActionRoomFrameResult::_bossShotCount`)로 센다.
