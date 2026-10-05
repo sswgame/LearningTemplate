@@ -17,12 +17,16 @@ on:
     paths-ignore: *paths-ignore
   workflow_dispatch:
 
+# main 은 돌고 있는 실행을 **끝까지** 돌린다. 같은 그룹에 기다리는 실행은 하나만 남고(더 새 push 가 오면 기다리던 것이 취소된다), 앞 실행이
+# 끝나면 그것이 돈다. main 에서 진행 중인 실행까지 지우면 push 가 실행 시간(Windows 15 분~, vcpkg 를 새로 지으면 1 시간+)보다 잦을 때
+# 끝나는 실행이 하나도 없다(2026-10-04: 7 시간 동안 완료 0 건). PR · 다른 브랜치는 최신 커밋만 보면 되므로 진행 중인 것도 취소한다.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   SCCACHE_GHA_ENABLED: "true"
+  # 아직 Node 20 으로 선언된 액션(ilammy/msvc-dev-cmd@v1 — 더 새 판이 없다)을 Node 24 로 돌린다.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
@@ -88,7 +92,7 @@ jobs:
         fetch-depth: 1
 
     - name: Setup sccache
-      uses: mozilla/sccache-action@v0.0.9
+      uses: mozilla-actions/sccache-action@v0.0.11
 
     # Windows Environment Setup
     - name: MSVC developer environment (Windows)
@@ -122,19 +126,19 @@ jobs:
           fi
         done
 
-    # vcpkg Cache and Setup
-
-    - name: Cache vcpkg tools and binary artifacts
-      uses: actions/cache@v4
+    # vcpkg 바이너리 캐시 — 복원과 저장을 나눈다. `actions/cache` 하나로 두면 저장이 잡 끝(post)에 **잡이 성공했을 때만** 돌아, 시험 하나가
+    # 지거나 실행이 취소되면 방금 1 시간 걸려 지은 포트가 버려지고 다음 실행이 또 처음부터 짓는다(2026-10-04: Configure 50~90 분이 매번).
+    # 구성이 끝난 바로 뒤에 저장한다. 키에 프리셋을 넣지 않는다 — 트리플릿은 OS 하나에 하나(x64-windows · x64-linux)라 같은 OS 의 잡이 같은
+    # 패키지를 쓰고, 프리셋마다 따로 두면 저장소 캐시 한도(10 GB, sccache 항목과 나눠 쓴다)를 세 배로 먹어 서로를 밀어낸다.
+    # `Tools/vcpkg`(클론 · buildtrees · downloads)는 넣지 않는다 — 바이너리 캐시만 있으면 포트를 다시 짓지 않고, 클론은 아래 단계가 한다.
+    - name: Restore vcpkg binary cache
+      id: vcpkg-cache
+      uses: actions/cache/restore@v5
       with:
-        path: |
-          ${{ github.workspace }}/Tools/vcpkg
-          ${{ github.workspace }}/build/vcpkg_cache
-        key: vcpkg-${{ runner.os }}-${{ matrix.preset }}-${{ hashFiles('vcpkg.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**', 'ThirdParty/*/vcpkg-port/**') }}
+        path: ${{ github.workspace }}/build/vcpkg_cache
+        key: vcpkg-bin-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**', 'ThirdParty/*/vcpkg-port/**') }}
         restore-keys: |
-          vcpkg-${{ runner.os }}-${{ matrix.preset }}-${{ hashFiles('vcpkg.json') }}-
-          vcpkg-${{ runner.os }}-${{ matrix.preset }}-
-          vcpkg-${{ runner.os }}-
+          vcpkg-bin-${{ runner.os }}-
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
@@ -143,13 +147,25 @@ jobs:
         vcpkgJsonGlob: 'vcpkg.json'
 
     # Configure, Build, and Test
+    # Windows 는 PCH 를 끈다. clang-cl 의 PCH 는 MSVC 방식(`/Yc` · `/Yu` · `/Fp`)이고 sccache 는 그것을 캐시하지 못한다("Non-cacheable reasons:
+    # /Fp") — PCH 를 쓰는 TU(1118 개 중 1016 개)가 매번 처음부터 컴파일돼 적중률이 0 % 였다(0 hits, 45 misses — 셀 수 있는 것은 PCH 를 안 쓰는
+    # 생성 파일 · Jolt 소스뿐). 리눅스 clang 의 `-include-pch` 는 sccache 가 캐시하므로 그대로 둔다.
     - name: Configure (${{ matrix.preset }})
+      id: configure
       env:
         CC: ${{ runner.os == 'Windows' && 'clang-cl' || 'clang' }}
         CXX: ${{ runner.os == 'Windows' && 'clang-cl' || 'clang++' }}
         VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
       run: |
-        cmake --preset ${{ matrix.preset }}
+        cmake --preset ${{ matrix.preset }} ${{ runner.os == 'Windows' && '-DSW_ENABLE_PCH=OFF' || '' }}
+
+    # 같은 키를 다른 잡이 먼저 저장했으면 경고만 남기고 넘어간다.
+    - name: Save vcpkg binary cache
+      if: always() && steps.configure.outcome == 'success' && steps.vcpkg-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ${{ github.workspace }}/build/vcpkg_cache
+        key: ${{ steps.vcpkg-cache.outputs.cache-primary-key }}
 
     - name: Build
       run: |
@@ -165,27 +181,66 @@ jobs:
     # Shipping 도 Debug 와 **같은 집합**을 돈다 — Debug 가 숨기는 결함(최적화 · 정적 링크 · 로그 매크로
     # 제거로만 드러나는 것)이 드러나는 곳이 배포 구성이므로, Shipping 을 일부 실행 파일로 좁히지 말 것.
     # GPU·디스플레이가 필요한 스위트는 `-L nogpu` 가 걸러내므로 러너에서 돌릴 수 있는 것만 돈다.
+    # TSan 옵션(억제 목록 · 두 번째 스택)은 ctest 항목이 든다(`sw_applySanitizerTestProperties`) — 여기서 따로 주지 않는다.
     - name: Test
-      env:
-        # TSan: 경쟁이 하나라도 보고되면 종료 코드 66 으로 끝나 그 테스트가 진다. 두 번째 스택까지 적어 교착 · 경쟁 원인을 좁힌다.
-        TSAN_OPTIONS: "second_deadlock_stack=1 history_size=4"
+      id: test
       run: |
         ctest --test-dir build/${{ matrix.preset }} -L nogpu -j 4 --output-on-failure
 
+    # 진 시험을 주석(annotation)으로 올린다. 작업 로그 · 아티팩트는 저장소 관리자만 받을 수 있어(공개 저장소라도 API 는 403), 무엇이
+    # 졌는지 밖에서 보이는 곳은 주석뿐이다. 시험마다 시험 틀의 실패 줄(`[  FAILED  ]` · `[FAILED]` + 조건 · 메시지 · 빈 스위트)과 마지막
+    # `[ RUN ]`, 출력의 마지막 25 줄(크래시 · 시간 초과면 어디서 멈췄는지 보인다)을 싣는다.
+    - name: Report failed tests as annotations
+      if: failure() && steps.test.outcome == 'failure'
+      shell: bash
+      env:
+        SW_CTEST_DIR: build/${{ matrix.preset }}
+      run: |
+        PYTHON=${{ runner.os == 'Windows' && 'python' || 'python3' }}
+        "$PYTHON" - <<'EOF'
+        import os, re
+        kNewline = chr(10)
+        tempDir = os.path.join(os.environ["SW_CTEST_DIR"], "Testing", "Temporary")
+        def readText(name):
+            try:
+                with open(os.path.join(tempDir, name), encoding="utf-8", errors="replace") as file:
+                    return file.read()
+            except OSError:
+                return ""
+        listFailed = [line.split(":", 1)[1].strip() for line in readText("LastTestsFailed.log").splitlines() if ":" in line]
+        log = readText("LastTest.log")
+        if not listFailed:
+            print("::warning title=ctest::LastTestsFailed.log is empty or missing - no test result to report")
+        # 시험 틀이 stdout 에 찍는 실패 줄만 고른다. 로거가 같은 내용을 "[날짜] …" 로 한 번 더 찍으므로 그 줄은 뺀다.
+        kMarker = re.compile(r"^\[  FAILED  \]|^  \[FAILED\]|^    Condition:|^    Message  :|verified nothing|^ Tests failed|^   - |no cases in this executable|selected no test|^Invalid|^Unknown --")
+        kAnsi = re.compile(r"\x1b\[[0-9;]*m")
+        for name in listFailed[:20]:
+            match = re.search(r"Test: " + re.escape(name) + r"\s*$(.*?)^\"" + re.escape(name) + r"\" end time", log, re.S | re.M)
+            listLine = [kAnsi.sub("", line) for line in match.group(1).splitlines()] if match else []
+            listMarked = [line[:300] for line in listLine if kMarker.search(line)][:40]
+            listRun = [line for line in listLine if line.startswith("[ RUN")]
+            listTail = [line[:300] for line in listLine[-25:]]
+            summary = kNewline.join(listMarked + ["--- last RUN: " + (listRun[-1] if listRun else "(none)"), "--- tail:"] + listTail)
+            print("::error title=ctest " + name + "::" + summary.replace("%", "%25").replace(chr(13), "").replace(kNewline, "%0A"))
+            print("===== " + name + " =====" + kNewline + summary + kNewline)
+        EOF
+
     # Diagnostics & Artifact Upload
+    # 시험 단계가 돌았을 때만 올린다 — 빌드에서 진 잡에는 LastTest.log 가 없어 "No files were found" 경고만 남았다.
     - name: Upload test logs on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
+      if: failure() && steps.test.outcome == 'failure'
+      uses: actions/upload-artifact@v6
       with:
         name: test-logs-${{ runner.os }}-${{ matrix.preset }}
         path: |
-          build/**/Testing/Temporary/LastTest.log
-          build/**/Bin/*.log
+          build/${{ matrix.preset }}/Testing/Temporary/LastTest*.log
+          build/${{ matrix.preset }}/Bin/*.log
+        if-no-files-found: ignore
         retention-days: 7
 
     - name: Upload Shipping Artifacts
       if: success() && matrix.preset == 'CI-Shipping' && github.ref == 'refs/heads/main'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: game-${{ runner.os }}-shipping
         path: |

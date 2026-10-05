@@ -697,7 +697,15 @@ cd build/Ninja-Debug/Bin
   모든 TU 에 `Convex` · `None` 같은 매크로가 퍼져 Jolt(`EShapeType::Convex`)가 리눅스 다섯 잡을 세웠다 — Windows 빌드는 원리상 못 본다. 유니티 빌드는 X11 `.cpp` 를
   include 줄을 보고 묶음에서 뺀다(`sw_skipUnityForX11Sources`).
 - **플랫폼 스텁도 인터페이스를 따라간다** — `IWindow` 에 가상 함수를 더하면 `Win32Window` 의 비-Windows `#else` 스텁에도 정의를 둔다(빠지면 리눅스 링크만 진다).
-  실행 파일 · 공유 라이브러리 이름은 `FileUtil::formatSharedLibraryName` 으로 고른다 — `Engine.dll` 을 글자로 찾던 시험이 리눅스에서 늘 건너뛰어 "아무것도 검증하지 않은 스위트" 로 졌다.
+  올라온 이미지는 이름이 아니라 주소로 찾는다(`ModuleBuildId::find( &함수 )._modulePath`) — `Engine.dll` 을 글자로 찾던 시험이 리눅스(`Lib/libEngine.so`)에서
+  늘 건너뛰어 "아무것도 검증하지 않은 스위트" 로 졌다.
+- **CI 가 끝까지 돌게 하는 세 가지**(`.github/workflows/ci.yml`). ① main 은 `cancel-in-progress: false` — push 가 실행 시간보다 잦으면 끝나는 실행이 0 건이 된다(10-04 7 시간).
+  ② vcpkg 바이너리 캐시는 구성 직후 `actions/cache/save` 로 저장한다 — `actions/cache` 의 post 저장은 잡이 성공할 때만 돌아, 시험 하나가 지면 1 시간 지은 포트를 버렸다
+  (Configure 50~90 분이 매번). 키는 OS 별 하나(트리플릿이 OS 당 하나). ③ Windows 는 `SW_ENABLE_PCH=OFF` — sccache 는 clang-cl 의 `/Yu` · `/Fp` 를 캐시하지 못해 적중률 0 % 였다
+  (`sccache --show-stats` 의 "Non-cacheable reasons: /Fp"). PCH 를 끄면 PCH 가 가리던 오류가 드러난다(템플릿 본문의 `-Wcovered-switch-default`) — PCH 를 끈 구성도 짓는다.
+  작업 로그 · 아티팩트는 API 로 403 이라 진 시험은 주석(annotation)으로 올린다 — 실행 목록 · 잡 단계 · 주석은 로그인 없이 읽힌다(시간당 60 회 한도를 여럿이 나눠 쓴다).
+- **WSL 의 sccache 적중은 빈 의존 파일(.d)을 남길 수 있다** — 적중한 오브젝트의 `ninja -t deps` 가 `#deps 0` 이면 그 TU 의 소스 · 헤더를 고쳐도 `ninja: no work to do`
+  다(유니티 TU 에서 봤다). 낡은 빌드가 의심되면 그 오브젝트를 지우거나 `SCCACHE_RECACHE=1` 로 다시 짓는다.
 - **리눅스 CI 는 ubuntu-22.04 의 `libclang-dev`(16 미만)다.** 파서에 새 libclang API 를 쓰면 리눅스 잡만 선다 — `CINDEX_VERSION` 으로 가른다. CI 러너 파이썬은 3.10 이라
   f-string 식 안의 백슬래시 · 여러 줄 식이 configure 를 죽인다(`CheckPythonMinimumVersion.py`). GH Windows 러너는 cp1252 라 한글을 print 하는 스크립트가 빌드째 죽는다
   (증상: `sccache stats: 0 hits, 0 misses`) — 스크립트는 `Scripts/common` 을 import 한다(UTF-8 stdout). 재현은 `PYTHONIOENCODING=cp1252`.
