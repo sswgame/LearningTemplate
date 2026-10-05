@@ -9,6 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_LINUX )
     #include <link.h>
@@ -57,6 +58,17 @@ namespace sw
                 return 0;
             }
 #elif defined( SW_PLATFORM_WINDOWS )
+            /** @brief 이미지 기준 주소 @p pBase 의 PE NT 머리입니다. DOS · NT 서명이 맞지 않으면 nullptr 입니다. */
+            static const IMAGE_NT_HEADERS* findNtHeaders( const void* pBase )
+            {
+                const uint8*            pBytes = static_cast<const uint8*>( pBase );
+                const IMAGE_DOS_HEADER* pDos   = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBytes );
+                if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )
+                    return nullptr;
+                const IMAGE_NT_HEADERS* pNt = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBytes + pDos->e_lfanew );
+                return ( pNt->Signature == IMAGE_NT_SIGNATURE ) ? pNt : nullptr;
+            }
+
             /** @brief 이름이 @p pDllName 인 DLL 이 올라와 있으면 프로세스 끝까지 내려가지 않게 고정합니다. 고정했으면 true 입니다. */
             static bool pinLoadedModule( const utf8* pDllName )
             {
@@ -187,15 +199,11 @@ namespace sw
         if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                                  static_cast<LPCWSTR>( pAddressInside ), &hModule ) == FALSE )
             return false;
-        const uint8*            pBase = reinterpret_cast<const uint8*>( hModule );
-        const IMAGE_DOS_HEADER* pDos  = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBase );
-        if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )
+        const IMAGE_NT_HEADERS* pNt = ModuleImageUtilInternal::findNtHeaders( hModule );
+        if ( pNt == nullptr )
             return false;
-        const IMAGE_NT_HEADERS* pNt = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBase + pDos->e_lfanew );
-        if ( pNt->Signature != IMAGE_NT_SIGNATURE )
-            return false;
-        pOutBegin = pBase;
-        pOutEnd   = pBase + pNt->OptionalHeader.SizeOfImage;
+        pOutBegin = hModule;
+        pOutEnd   = reinterpret_cast<const uint8*>( hModule ) + pNt->OptionalHeader.SizeOfImage;
         return true;
 #elif defined( SW_PLATFORM_LINUX )
         ModuleImageUtilInternal::ImageRangeQuery query{};
@@ -252,11 +260,8 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
         // Windows 의 모듈 핸들은 이미지의 기준 주소다.
         const uint8*            pBase = static_cast<const uint8*>( pHandle );
-        const IMAGE_DOS_HEADER* pDos  = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBase );
-        if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )
-            return 0;
-        const IMAGE_NT_HEADERS* pNt = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBase + pDos->e_lfanew );
-        if ( pNt->Signature != IMAGE_NT_SIGNATURE )
+        const IMAGE_NT_HEADERS* pNt   = ModuleImageUtilInternal::findNtHeaders( pHandle );
+        if ( pNt == nullptr )
             return 0;
 
         const IMAGE_DATA_DIRECTORY& importDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
@@ -341,17 +346,72 @@ namespace sw
         return releasedCount;
     }
 
+    void* ModuleImageUtil::findBoundImportImage( void* pHandle, string_view dependencyFileName )
+    {
+#if defined( SW_PLATFORM_WINDOWS )
+        if ( pHandle == nullptr )
+            return nullptr;
+        const IMAGE_NT_HEADERS* pNt = ModuleImageUtilInternal::findNtHeaders( pHandle );
+        if ( pNt == nullptr )
+            return nullptr;
+        const uint8* pBase = static_cast<const uint8*>( pHandle );
+
+        const IMAGE_DATA_DIRECTORY& delayDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
+        if ( delayDir.VirtualAddress != 0 )
+        {
+            const IMAGE_DELAYLOAD_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_DELAYLOAD_DESCRIPTOR*>( pBase + delayDir.VirtualAddress );
+            for ( ; pDesc->DllNameRVA != 0; ++pDesc )
+            {
+                if ( pDesc->Attributes.RvaBased == 0 )
+                    continue;
+                const utf8* pName = reinterpret_cast<const utf8*>( pBase + pDesc->DllNameRVA );
+                if ( StringUtil::equals( string_view{ pName }, dependencyFileName, true ) )
+                    return *reinterpret_cast<void* const*>( pBase + pDesc->ModuleHandleRVA );
+            }
+        }
+
+        const IMAGE_DATA_DIRECTORY& importDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+        if ( importDir.VirtualAddress != 0 )
+        {
+            const IMAGE_IMPORT_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>( pBase + importDir.VirtualAddress );
+            for ( ; pDesc->Name != 0; ++pDesc )
+            {
+                const utf8* pName = reinterpret_cast<const utf8*>( pBase + pDesc->Name );
+                if ( StringUtil::equals( string_view{ pName }, dependencyFileName, true ) == false )
+                    continue;
+                const IMAGE_THUNK_DATA* pThunk = reinterpret_cast<const IMAGE_THUNK_DATA*>( pBase + pDesc->FirstThunk );
+                if ( pThunk->u1.Function == 0 )
+                    return nullptr;
+                HMODULE hBound = nullptr;
+                GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                    reinterpret_cast<LPCWSTR>( pThunk->u1.Function ), &hBound );
+                return hBound;
+            }
+        }
+        return nullptr;
+#else
+        (void)pHandle; // 리눅스는 import 표에서 결속을 읽을 수 없다 — 부르는 쪽이 심볼로 가린다
+        (void)dependencyFileName;
+        return nullptr;
+#endif
+    }
+
+    bool ModuleImageUtil::releaseImageCode( string_view moduleName, void* pHandle )
+    {
+        const void* pBegin{ nullptr };
+        const void* pEnd{ nullptr };
+        if ( pHandle == nullptr || findDynamicLibraryRange( pHandle, pBegin, pEnd ) == false )
+            return true;
+        bool bKeepImageMapped{ false };
+        (void)releaseModuleCode( moduleName, pBegin, pEnd, &bKeepImageMapped ); // 뗀 것은 releaseModuleCode 가 경고로 남긴다
+        return bKeepImageMapped == false;
+    }
+
     bool ModuleImageUtil::unloadModuleImage( string_view moduleName, void* pHandle )
     {
         if ( pHandle == nullptr )
             return false;
-
-        const void* pBegin{ nullptr };
-        const void* pEnd{ nullptr };
-        bool        bKeepImageMapped{ false };
-        if ( findDynamicLibraryRange( pHandle, pBegin, pEnd ) )
-            (void)releaseModuleCode( moduleName, pBegin, pEnd, &bKeepImageMapped ); // 뗀 것은 releaseModuleCode 가 경고로 남긴다
-        if ( bKeepImageMapped )
+        if ( releaseImageCode( moduleName, pHandle ) == false )
             return false;
 
         // 이 이미지가 끌어온 의존 이미지가 함께 내려가지 않게 한다. 그 이미지의 코드를 쥔 등록은 여기서 뗄 수 없다.

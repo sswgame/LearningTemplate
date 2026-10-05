@@ -397,7 +397,7 @@ cd build/Ninja-Debug/Bin
 
 - **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).** ① 팀 · 적대 판정(21 곳, 팀 enum 셋의 값이 달라 상태 바이트에
   실림) · `RoundSeries`(3 곳, Fighting 롤백 상태 바이트가 바뀜) · `IHealthSource`(체력 모델 3 · 피해 입구 14) — 상태 형식이 바뀌니 시험부터 고정. ② `SpatialHashGrid2D`(RTS · MMO ·
-  BR · Mech — 질의 모양이 달라 이득부터 볼 것). ③ 모듈 이미지 · 동적 라이브러리 코드가 세 곳(`FileUtil` · `LiveReloadManager` · `Core/Module`)에 흩어져 있다 — 모으기.
+  BR · Mech — 질의 모양이 달라 이득부터 볼 것).
   ④ 키트 안 평행 구현: Overworld `TileMap` 이 Engine 타일맵과 따로 산다 · TurnBattle 과 MonsterCollector 가 같은 장르. ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
 
 - **(보류 — 사용자 결정 "안정화된 뒤 개발") 게임별 CC0 리소스 배치 + SD 메카 시험 게임 MechArena.** 라이선스는 **CC0 급만**(출처 표기 의무 · 재배포 금지가 붙은 것은
@@ -1317,6 +1317,7 @@ cd build/Ninja-Debug/Bin
   `ModuleCatalogTest.BuildAndRuntimeAgree` 가 견준다). 새 동적 모듈은 매니페스트가 없으면 `sw_registerDynamicModule` 에서 구성이 선다. 게임 매니페스트는 활성 게임 것만
   빌드가 읽으므로 다른 게임 것은 `ModuleCatalogTest.EveryRepositoryManifestParses` 가 본다. 꺼진 모듈의 낡은 DLL 은 `Bin` 에 남아도 올리지 않는다.
 
+- **올라온 모듈 이미지를 다루는 코드는 `Core/Module/ModuleImageUtil` 한 곳이다**(이름 · 올리기 · 심볼 · 범위 · 의존 고정 · import 결속 · 코드 떼기 · 내리기). `FileUtil` 에 되돌리지 말 것. 섀도 복사본 **파일 바이트**(`ModuleImagePatch`)와 리로드 정책(`ShadowCopyName` · 리눅스 도장 결속 검사)은 쓰는 곳이 하나라 `LiveReloadManager` 에 있다.
 - **핫 리로드가 아닌 곳에서 모듈 이미지를 내릴 때는 `ModuleImageUtil::unloadModuleImage`(Core) 하나로** — 게임 · 에디터 모듈과 RHI 백엔드 모듈이 같은 창구다(RHI 층은 Module 층을 include 할 수 없어 Core 에 둔다. 로그 이름은 적재 때 받은 경로로 — 종료 중 서비스 소멸자에서 리플렉션 조회(`RHI::getBackendTypeName`)를 부르면 정리 중인 TypeRegistry 를 읽어 죽는다) — `releaseModuleCode` 로 그 이미지 코드를 쥔 등록(디스패처 채널 등)을 떼고,
   떼지 못하면 내리지 않으며, 끌어온 의존 이미지는 고정한다(리눅스는 DT_NEEDED 가 함께 내려가 종료 때 남은 채널 deleter 로 SEGFAULT, Windows 는 /DELAYLOAD 가
   GameFramework 를 프로세스 끝까지 잡아 가려졌다). 섀도 사본 이름은 `<모듈>_temp_p<pid>_…` — 정리는 다른 살아 있는 프로세스의 사본을 남긴다(`Bin` 은 CTest `-j` 로 같이

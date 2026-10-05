@@ -76,59 +76,6 @@ namespace sw
                     SW_LOG_WARNING( "Failed to copy debug symbols: %#", shadowDebugPath.c_str() );
             }
 
-#if defined( SW_PLATFORM_WINDOWS )
-            /**
-             * @brief 모듈 @p pModule 이 DLL @p dependencyFileName 을 **어느 이미지에 묶었는지** import 표에서 읽습니다.
-             * @return 묶인 이미지의 핸들입니다. 아직 풀리지 않은 지연 로드이거나 그 DLL 을 import 하지 않으면 nullptr 입니다.
-             * @details 지연 로드는 서술자의 모듈 핸들 칸에 훅이 돌려준 핸들이 적힙니다(풀리기 전에는 0). 일반 import 는 로드할 때 이미
-             *          풀리므로 IAT 첫 칸이 가리키는 주소의 모듈이 묶인 이미지입니다.
-             */
-            static void* findBoundImportModule( void* pModule, string_view dependencyFileName )
-            {
-                const uint8*            pBase = static_cast<const uint8*>( pModule );
-                const IMAGE_DOS_HEADER* pDos  = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBase );
-                if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )
-                    return nullptr;
-                const IMAGE_NT_HEADERS* pNt = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBase + pDos->e_lfanew );
-                if ( pNt->Signature != IMAGE_NT_SIGNATURE )
-                    return nullptr;
-
-                const IMAGE_DATA_DIRECTORY& delayDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
-                if ( delayDir.VirtualAddress != 0 )
-                {
-                    const IMAGE_DELAYLOAD_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_DELAYLOAD_DESCRIPTOR*>( pBase + delayDir.VirtualAddress );
-                    for ( ; pDesc->DllNameRVA != 0; ++pDesc )
-                    {
-                        if ( pDesc->Attributes.RvaBased == 0 )
-                            continue;
-                        const utf8* pName = reinterpret_cast<const utf8*>( pBase + pDesc->DllNameRVA );
-                        if ( StringUtil::equals( string_view{ pName }, dependencyFileName, true ) )
-                            return *reinterpret_cast<void* const*>( pBase + pDesc->ModuleHandleRVA );
-                    }
-                }
-
-                const IMAGE_DATA_DIRECTORY& importDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-                if ( importDir.VirtualAddress != 0 )
-                {
-                    const IMAGE_IMPORT_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>( pBase + importDir.VirtualAddress );
-                    for ( ; pDesc->Name != 0; ++pDesc )
-                    {
-                        const utf8* pName = reinterpret_cast<const utf8*>( pBase + pDesc->Name );
-                        if ( StringUtil::equals( string_view{ pName }, dependencyFileName, true ) == false )
-                            continue;
-                        const IMAGE_THUNK_DATA* pThunk = reinterpret_cast<const IMAGE_THUNK_DATA*>( pBase + pDesc->FirstThunk );
-                        if ( pThunk->u1.Function == 0 )
-                            return nullptr;
-                        HMODULE hBound = nullptr;
-                        GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                                            reinterpret_cast<LPCWSTR>( pThunk->u1.Function ), &hBound );
-                        return hBound;
-                    }
-                }
-                return nullptr;
-            }
-#endif
-
             /**
              * @brief 모듈 @p pModule 이 의존 @p dependencyName 을 @p pExpected 이미지에 묶었는지 봅니다.
              * @param pOutActual   모듈이 실제로 묶인 쪽입니다(로그용). 아직 묶이지 않았으면 nullptr 입니다.
@@ -141,7 +88,7 @@ namespace sw
             {
 #if defined( SW_PLATFORM_WINDOWS )
                 pOutExpected = pExpected;
-                pOutActual   = findBoundImportModule( pModule, ModuleImageUtil::formatSharedLibraryName( dependencyName ) );
+                pOutActual   = ModuleImageUtil::findBoundImportImage( pModule, ModuleImageUtil::formatSharedLibraryName( dependencyName ) );
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #elif defined( SW_PLATFORM_LINUX )
                 const string stampSymbolName = string{ "sw_moduleEngineAbiStamp_" } + string{ dependencyName };
@@ -160,21 +107,6 @@ namespace sw
                 pOutExpected = nullptr;
                 return true;
 #endif
-            }
-
-            /**
-             * @brief 모듈 이미지 @p pHandle 의 코드를 가리키는 엔진 쪽 등록을 뗍니다(`ModuleImageUtil::releaseModuleCode`). 이미지를 내리기 전에 부릅니다.
-             * @return 이미지를 내리면 안 되면 true 입니다 — 그 이미지가 만든 이벤트 채널을 다른 코드가 아직 구독한다.
-             */
-            static bool releaseImageCode( string_view moduleName, void* pHandle )
-            {
-                const void* pBegin{ nullptr };
-                const void* pEnd{ nullptr };
-                if ( pHandle == nullptr || ModuleImageUtil::findDynamicLibraryRange( pHandle, pBegin, pEnd ) == false )
-                    return false;
-                bool bKeepMapped{ false };
-                (void)ModuleImageUtil::releaseModuleCode( moduleName, pBegin, pEnd, &bKeepMapped );
-                return bKeepMapped;
             }
         };
 
@@ -1023,7 +955,7 @@ namespace sw
                 // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
                 drainTasksBeforeUnload();
                 engine::unregisterModuleTypes( ctx._moduleName );
-                bKeepPreviousImage = LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, pPreviousHandle );
+                bKeepPreviousImage = ModuleImageUtil::releaseImageCode( ctx._moduleName, pPreviousHandle ) == false;
             }
 
             ctx._pLibraryModule    = prepared._pHandle;
@@ -1102,7 +1034,7 @@ namespace sw
             TypeRegistrar::getHead()           = prepared._pPreviousTypeHead;
             EnumRegistrar::getHead()           = prepared._pPreviousEnumHead;
             GlobalVariableRegistrar::getHead() = prepared._pPreviousVariableHead;
-            if ( LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, prepared._pHandle ) == false )
+            if ( ModuleImageUtil::releaseImageCode( ctx._moduleName, prepared._pHandle ) )
                 ModuleImageUtil::unloadDynamicLibrary( prepared._pHandle );
             prepared._pHandle = nullptr;
         }
@@ -1129,7 +1061,7 @@ namespace sw
             drainTasksBeforeUnload();
 
             engine::unregisterModuleTypes( ctx._moduleName );
-            if ( LiveReloadManagerInternal::releaseImageCode( ctx._moduleName, ctx._pLibraryModule ) == false )
+            if ( ModuleImageUtil::releaseImageCode( ctx._moduleName, ctx._pLibraryModule ) )
                 ModuleImageUtil::unloadDynamicLibrary( ctx._pLibraryModule );
             ctx._pLibraryModule = nullptr;
         }

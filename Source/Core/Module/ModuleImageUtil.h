@@ -62,6 +62,14 @@ namespace sw
         static bool findLoadedImageRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd );
         /** @brief `loadDynamicLibrary` 가 준 핸들의 이미지 범위를 찾습니다(`findLoadedImageRange` 와 같다). */
         static bool findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd );
+        /**
+         * @brief 모듈 @p pHandle 이 DLL @p dependencyFileName(예: `GameFramework.dll`)을 **어느 이미지에 묶었는지** import 표에서 읽습니다.
+         * @details 지연 로드는 서술자의 모듈 핸들 칸에 훅이 돌려준 핸들이 적힙니다(풀리기 전에는 0). 일반 import 는 로드할 때 이미 풀리므로
+         *          IAT 첫 칸이 가리키는 주소의 모듈이 묶인 이미지입니다. Windows 전용입니다 — 리눅스는 import 표에서 결속을 읽을 수 없어
+         *          부르는 쪽이 심볼로 가립니다(`LiveReloadManager` 의 결속 검사).
+         * @return 묶인 이미지의 핸들입니다. 아직 풀리지 않은 지연 로드이거나 그 DLL 을 import 하지 않으면(그 외 플랫폼 포함) nullptr 입니다.
+         */
+        static void* findBoundImportImage( void* pHandle, string_view dependencyFileName );
 
         // ------------------------------------------------------------------------------
         // 4) 코드 떼기 · 내리기 — 이미지의 코드를 쥔 엔진 등록(`IModuleUnloadListener`)을 먼저 뗀다
@@ -78,6 +86,13 @@ namespace sw
          * @return 모든 리스너에서 뗀 것의 수입니다. 모듈이 제대로 정리했으면 0 입니다.
          */
         static uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepImageMapped = nullptr );
+        /**
+         * @brief `loadDynamicLibrary` 로 올린 이미지 @p pHandle 의 코드를 가리키는 등록을 뗍니다(`releaseModuleCode` 를 그 이미지 범위로).
+         * @details 언로드를 미루는 핫 리로드처럼 떼기와 내리기 사이가 벌어지는 곳이 씁니다. 바로 내리면 `unloadModuleImage` 가 이것까지 합니다.
+         * @return 이미지를 내려도 되면 true 입니다. 이미지가 만든 이벤트 채널을 다른 코드가 아직 구독하면 false — 프로세스 끝까지 올려 둡니다.
+         *         범위를 찾지 못하면(핸들이 null 등) 뗄 것이 없으므로 true 입니다.
+         */
+        [[nodiscard]] static bool releaseImageCode( string_view moduleName, void* pHandle );
 
         /**
          * @brief `loadDynamicLibrary` 로 올린 모듈 이미지 @p pHandle 을 내립니다.
@@ -85,7 +100,7 @@ namespace sw
          *          돌려줍니다. 그 이미지가 끌어온 의존 이미지(GameFramework 같은 공유 모듈)는 **내리지 않습니다** — 의존 이미지가 언제 함께
          *          내려가는지는 로더만 알아 그 코드를 미리 뗄 수 없기 때문입니다. Windows 는 지연 로드가 의존 DLL 을 프로세스 끝까지 잡아 원래
          *          그렇고, 리눅스는 `DT_NEEDED` 참조가 함께 풀려 내려가므로 여기서 고정합니다(`pinDynamicLibraryDependencies`).
-         *          핫 리로드(`LiveReloadManager`)는 떼기와 내리기 사이에 언로드를 미루므로 `releaseModuleCode` 만 씁니다.
+         *          핫 리로드(`LiveReloadManager`)는 떼기와 내리기 사이에 언로드를 미루므로 `releaseImageCode` 만 씁니다.
          * @return 이미지를 내렸으면 true 입니다.
          */
         [[nodiscard]] static bool unloadModuleImage( string_view moduleName, void* pHandle );
