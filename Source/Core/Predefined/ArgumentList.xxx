@@ -39,6 +39,10 @@ SW_REGISTER_ARGUMENT( LANGUAGE, "", false, "lang" )
 SW_REGISTER_ARGUMENT( COOK_SHADERS, false, false, "cook-shaders" )
 SW_REGISTER_ARGUMENT( COOK_SCENES, false, false, "cook-scenes" )
 SW_REGISTER_ARGUMENT( COOKED_DIR, "", false, "cooked-dir" )
+// 전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<SW_ACTIVE_GAME>.json`. Shipping 도 디스크에서 읽는다.
+SW_REGISTER_ARGUMENT( SERVER_CONFIG, "", false, "server-config" )
+// 전용 서버를 Windows 서비스(SCM)로 돈다(`Server --service`). SCM 이 띄운 프로세스만 된다.
+SW_REGISTER_ARGUMENT( SERVICE, false, false, "service" )
 // 등록된 리플렉션 타입(엔진 · GameFramework · 킷 · 게임)으로 Markdown API 문서를 그 폴더에 쓰고 끝난다(헤드리스). 빌드 산출물이라 커밋하지 않는다.
 SW_REGISTER_ARGUMENT( WRITE_REFLECTION_DOCS, "", false, "write-reflection-docs" )
 // 텍스처 원본(`textures_raw/`)을 DDS 로 임포트한다 · 원본과 DDS 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.

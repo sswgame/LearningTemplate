@@ -16,6 +16,8 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}")
 		"SW_ACTIVE_GAME='${SW_ACTIVE_GAME}' has no game preset ${SW_FILE_RUNTIME_GAME_CONFIG}\n"
 		"  Add it next to the other presets in ${SW_DIR_RUNTIME_GAME_PRESET}/ (_packRoot, _gameSettingsFile, _startupScene)")
 endif()
+# 3-2. 전용 서버 운영 설정(Config/Server/<SW_ACTIVE_GAME>.json, ServerConfig) — 굽지 않고 Server 가 디스크에서 읽는다. 서버가 없는 게임은 파일이 없어도 된다.
+set(SW_FILE_RUNTIME_SERVER_CONFIG "${SW_DIR_RUNTIME_SERVER_PRESET}/${SW_ACTIVE_GAME}.json")
 # 프리셋을 고치면 생성 헤더(Shipping 기본값)도 다시 만든다.
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}")
 

@@ -1,0 +1,16 @@
+{
+    "_listenAddress": "127.0.0.1",
+    "_gamePort": 7777,
+    "_gamePortShardCount": 1,
+    "_bGamePortReuse": false,
+    "_servicePort": 0,
+    "_tickRateHz": 30,
+    "_maxCatchUpTicks": 5,
+    "_bConsoleInput": true,
+    "_shutdownGraceSeconds": 10,
+    "_tlsCertificateFile": "",
+    "_tlsPrivateKeyFile": "",
+    "_tlsPrivateKeySecretEnvironment": "",
+    "_listStore": [],
+    "_listCache": []
+}

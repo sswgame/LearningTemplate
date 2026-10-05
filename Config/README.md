@@ -10,6 +10,7 @@
 | `Config/Engine/MemoryBudget.json` | 메모리 태그 예산(`_listBudget: [{ _tag, _megabytes }]`) — 넘으면 `[MemoryBudget]` 경고 한 번(`MemoryBudgetMonitor`) | 미포함(배포본에는 프로파일러가 없다) |
 | `Config/Engine/CookContract.json` | RHI 백엔드 표(이름 · 셰이더 폴더 · 명령줄 별칭 · 기본 백엔드)와 쿠킹 확장자 표 — C++(configure 때 `CookContract.gen.h`)와 Python 쿠커가 같이 읽는 단일 출처 | 빌드에 굳어 들어감 |
 | `Config/Engine/PackConfig.json` · `PackFormat.json` | 리소스 팩 쿠킹 설정(코덱 · 제외 폴더 — `textures_raw` 등)과 `.pack` 바이너리 포맷의 단일 출처(C++ 는 `PackFormat.gen.h`, Python 쿠커는 JSON 을 직접 읽는다) | 빌드 · 쿠킹 전용, 미포함 |
+| `Config/Server/<게임>.json` | 전용 서버(`Server`) 운영 설정 `ServerConfig` — 받는 주소 · 게임 · 서비스 포트 · 틱 · TLS 인증서 경로 · 저장소 · 캐시 항목(`-server-config=<경로>` 로 바꿈). 비밀은 파일에 쓰지 않고 항목의 `_secretEnvironment` 환경 변수로 | **Shipping 도 디스크에서 읽는다**(굽지 않는다 — 운영자가 고친다). 없으면 Shipping 서버는 기동하지 않는다 |
 || `Config/Environment/` | 머신 로컬 툴체인·파서 | **절대 미포함** |
 
 에디터가 떠 있으면 `Config/` 의 JSON 을 감시해 바뀐 설정을 다시 읽습니다(EngineConfig · GameConfig · editortooldefaults —
