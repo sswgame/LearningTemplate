@@ -10,6 +10,10 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <cinttypes>
+#include <cstdio>
+#include <cstdlib>
+
 // DestructionDamageTest — 변형 문턱(깊이별) · 넘친 몫이 아래 레벨로 · 연결 세기 · 부딪힘 충격량 · 폭발 감쇠, 같은 사건열 = 같은 상태(네트워크 동기화).
 
 namespace
@@ -195,6 +199,48 @@ SW_TEST_CASE( DestructionDamageTest, SameEventLogGivesTheSameStateOnAnotherMachi
     SW_EXPECT_FALSE( received.readFromBytes( bytes.data(), bytes.size() - 1 ) );
     bytes[20] = 9; // 모르는 종류
     SW_EXPECT_FALSE( received.readFromBytes( bytes.data(), bytes.size() ) );
+}
+
+/**
+ * @brief [DestructionDamageTest] 같은 벽 · 사건열의 상태 해시는 기록해 둔 값이다 — Windows(clang-cl) · 리눅스(clang) · Debug · Shipping 이 모두 같은 수를 내야 한다
+ * @details 파괴 네트워킹은 변환이 아니라 씨앗과 사건을 보내고 받는 쪽이 같은 계산을 한다. 한 프로세스 안의 두 상태가 같은 것(앞 케이스)으로는 컴파일러 ·
+ *          최적화(FMA 축약 · 벡터화)가 계산을 바꾸는 것을 못 본다. 기준값이 바뀌어야 하는 변경(파쇄 · 피해 계산을 일부러 바꿈)이면 새 값을 적고 커밋
+ *          메시지에 이유를 적는다. 새 값은 환경 변수 `SW_DESTRUCTION_PRINT_GOLDEN=1` 로 돌려 출력에서 읽는다.
+ */
+SW_TEST_CASE( DestructionDamageTest, EventLogHashMatchesTheRecordedValueOnEveryBuild )
+{
+    using Internal = TestDestructionDamageInternal;
+    sw::FractureAsset asset;
+    SW_ASSERT_TRUE( Internal::makeWall( asset ) );
+    const sw::vector<uint8> anchors = Internal::makeBottomAnchors( asset );
+    sw::DestructionState    state;
+    state.initialize( asset._graph, Internal::makeProfile(), anchors );
+    sw::DestructionChange change;
+    sw::vector<uint64>    listHash;
+    listHash.push_back( state.computeStateHash() ); // 파쇄 결과(사건 전)
+    sw::DestructionDamageEvent arrEvent[] = {
+        Internal::makeHit( sw::float3{ 1.0f, 1.0f, 0.0f }, 90.0f, 0.8f, sw::DestructionDamageKind::Radial ),
+        Internal::makeHit( sw::float3{ -1.0f, 2.0f, 0.0f }, 200.0f, 0.0f, sw::DestructionDamageKind::Point ),
+        Internal::makeHit( sw::float3{ 0.0f, 0.5f, 0.0f }, 300.0f, 1.2f, sw::DestructionDamageKind::Radial ),
+        Internal::makeHit( sw::float3{ 0.7f, 2.6f, 0.0f }, 150.0f, 0.6f, sw::DestructionDamageKind::Radial ),
+    };
+    arrEvent[1]._leafHint = 5;
+    for ( const sw::DestructionDamageEvent& event : arrEvent )
+    {
+        (void)state.applyDamage( event, change );
+        listHash.push_back( state.computeStateHash() );
+    }
+    const utf8* pPrint = std::getenv( "SW_DESTRUCTION_PRINT_GOLDEN" );
+    if ( pPrint != nullptr && pPrint[0] == '1' )
+    {
+        for ( size_t index = 0; index < listHash.size(); ++index )
+            std::fprintf( stdout, "golden[%zu] = 0x%016" PRIX64 "ull\n", index, listHash[index] );
+    }
+    // Windows Debug 에서 뜬 값 — Windows Shipping 에서도 같다(적용 때 확인). 리눅스는 CI 의 리눅스 잡이 지킨다.
+    constexpr uint64 kArrGolden[] = { 0xE17E4E8537A70F9Bull, 0x083557872ECF1472ull, 0x1FBEDF0551212285ull, 0x3AA022BD84135BFDull, 0xCAE6C8F262BEE25Dull };
+    SW_ASSERT_EQUAL( sizeof( kArrGolden ) / sizeof( kArrGolden[0] ), listHash.size() );
+    for ( size_t index = 0; index < listHash.size(); ++index )
+        SW_EXPECT_TRUE_MSG( kArrGolden[index] == listHash[index], "destruction hash differs from the recorded value - a compiler or build setting changed the arithmetic" );
 }
 
 /**

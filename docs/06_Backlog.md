@@ -362,8 +362,9 @@ cd build/Ninja-Debug/Bin
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도
   받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ② 롤백(파괴 상태 저장 · 되돌리기, `RollbackSession` 에
   `makeNetworkSnapshot` 바이트 싣기)은 하지 않았다. ③ 부서지기 전 움직이는 파괴 오브젝트(상자 · 드럼통)의 자세는 파괴 키트가 보내지 않는다 — 게임이
-  `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ 전용 서버 프로세스 모드(창 · 렌더러 없는 App 서버 +
-  UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다.
+  `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ 전용 서버 프로세스 ↔ 클라이언트 해시 비교는
+  server-target(Server 실행 파일) 뒤의 시험이다 — 같은 입력의 해시가 구성 · 플랫폼을 넘어 같은 것은
+  `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(기록한 해시 다섯)가 CI 두 플랫폼에서 지킨다.
 
 - **네트워크 — 복제 키트에서 남은 것**(2026-10-05, N5~N7 뒤). ① MMO 비신뢰 갱신을 잃어도 서버는 모른다 — 보낸 순간 `_listSentState` 를 바꿔 "안 바뀜" 으로 보고
   가속하지 않으니 다음 차례(누적 우선도)까지 옛 상태가 보인다. 메시지 전달 통지(`NetConnection` 패킷 확인 → 메시지)가 생기면 확인 기준으로 바꾼다. ② 클라이언트-서버도
