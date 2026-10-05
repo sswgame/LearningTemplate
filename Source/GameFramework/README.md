@@ -101,6 +101,10 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `Online/Guard`: 요청 보호 — `TokenBucket`(정수 · 밀리초, 버스트 · 조각 시간 이월) · `TokenBucketMap`(키마다, 상한에서 가득 찬 것을 지움) · `RequestLimits`.
   `Online/Cache`: 휘발성 저장 계약 `IEphemeralStore`(만료 키-값 · 원자 증감 · 비교 후 쓰기 · 정렬 집합 · 발행/구독, 요청을 맡기고 답을 거둔다 — 잃어도 되는 것만,
   정본은 `IServiceStore`) + 메모리 구현(`MemoryEphemeralDatabase` 시계 고정 · 게으른 만료 + `MemoryEphemeralStore` 앞). RESP 구현은 키트 `GF_Server_CacheStore`.
+  `Online/Audit`: 지울 수 없는 감사 줄(`ServiceAuditLog` — 효과와 같은 트랜잭션에 "없어야 함" 으로, 상한을 넘으면 효과까지 Invalid). `Online/Bus`: 서버 간 알림
+  (`IServerBus` — 주제 발행/구독 · 최대 한 번, `EphemeralServerBus` 캐시 위 · `LocalServerBus` 프로세스 안). `Online/Schedule`: 예약 작업(`ServiceScheduler` — 일일 · 주간 · 기간,
+  회차를 저장소 조건부 쓰기로 차지해 서버 여럿 중 하나만, 지나친 회차는 최근 하나, 임대가 지나면 이어받기). `Online/Config`: 원격 설정 · 기능 플래그(`RemoteConfig` —
+  저장소 정본 · 판 조건 바꾸기 + 감사 · 버스 알림, 계정 해시 출시 비율, 클라이언트 묶음 · 해시). 관측(지표 · 구조화 로그 · 요청 추적 id)은 서비스 틀의 요청 문맥이 자리다.
   `Online/Identity`: 신원 원형 — `AccountId` · `AccountIdentity` · `IAccountDirectory`(이 프로세스에 붙어 있는 계정, 발급은 계정 키트).
 - **Progression**: 경험치 곡선 · 레벨(`ExperienceCurve` · `LevelProgress`), 스킬 트리(`SkillTreeCatalog` · `SkillTreeState`), 평판 · 호감도(`ReputationCatalog` ·
   `ReputationState`), 로그라이트 지도(`RunMap`), 로컬 통계(`StatCatalog` · `PlayerStats` — `<Stats><Stat id kind="Counter|Max|Min|Time" max/>` 정의, `increment` ·
