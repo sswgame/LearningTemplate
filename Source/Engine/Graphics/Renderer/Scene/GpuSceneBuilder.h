@@ -17,6 +17,7 @@
 namespace sw
 {
     struct PrimitiveInstanceEntry;
+    struct RenderViewRequest;
 
     class GameObjectManager;
     class GpuUploadQueue;
@@ -75,6 +76,12 @@ namespace sw
          *          `Render2DSettings::computeTransparentSortAxis` 로 정해 넘깁니다(유니티 Transparency Sort Mode). 바뀌면 다음 빌드가 다시 정렬합니다.
          */
         void setTransparentSortAxis( const float3& axis );
+        /**
+         * @brief 추가 뷰마다 투명 꼬리를 그 뷰의 눈으로 다시 정렬해 스냅샷에 싣습니다. `buildFromScene` **뒤**, 내보내기 전에 부릅니다.
+         * @details 씬이 그대로인 프레임에도 부른다 — 뷰 카메라만 움직여도 순서가 바뀐다. 그리지 않는 뷰(`_bRender` 0)는 건너뛴다.
+         *          키는 주 뷰와 같은 규칙(`makeTransparentSortKey` · `isDrawnBefore`)이다.
+         */
+        void buildViewTransparentOrders( const vector<RenderViewRequest>& listView );
         /** @brief 투명 정렬의 깊이 축입니다(영벡터 = 거리). */
         const float3& getTransparentSortAxis() const { return _transparentSortAxis; }
         /**
@@ -536,12 +543,16 @@ namespace sw
          * @details 깊이가 같으면 후보 인덱스(등록 순서)로 가르므로 같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 뒤집히지 않습니다.
          */
         static bool isDrawnBefore( const TransparentSortKey& keyA, const TransparentSortKey& keyB );
+        /** @brief 투명 인스턴스 하나의 정렬 키를 채웁니다 — 주 뷰(`sortTransparent`)와 추가 뷰(`buildViewTransparentOrders`)가 같은 규칙을 쓴다. */
+        static TransparentSortKey makeTransparentSortKey( uint32 sortLayer, const float3& center, const float3& eye, const float3& axis, uint32 orderIndex );
         /**
          * @brief 투명 정렬의 작업 배열입니다.
          * @details 비교 함수가 원소마다 raw 에서 바운드를 읽어 거리를 **다시** 구하면 투명 2000 개에 비교 22000 번 ·
          *          무작위 읽기 44000 번이고, 그 raw 는 다른 코어가 방금 쓴 것이라 원격 캐시에서 옵니다. 키를 한 번 계산해 두면 읽기는 2000 번이고 정렬은 12 바이트 연속 배열 위에서 돕니다.
          */
         vector<TransparentSortKey> _listTransparentSortKey;
+        /// @brief 추가 뷰 정렬의 스크래치입니다(뷰마다 다시 쓴다).
+        vector<TransparentSortKey> _listViewSortKey;
 
         /**
          * @brief 배치마다 그 배치의 인스턴스가 쓰는 머티리얼 원소 인덱스(중복 없이)입니다. `_listBatchElementRange` 로 자릅니다.

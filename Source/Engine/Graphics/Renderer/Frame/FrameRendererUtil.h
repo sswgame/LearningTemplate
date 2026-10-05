@@ -157,7 +157,8 @@ namespace sw
             float32 _arrCameraPos[4]{};
             uint32  _instanceCount{ 0 };
             uint32  _batchCount{ 0 };
-            uint32  _arrPad[2]{};
+            uint32  _bUseViewRank{ 0 };        ///< 1 이면 t2 의 뷰 순번으로 정렬한다(추가 뷰), 0 이면 인스턴스 번호(주 · 그림자)
+            uint32  _transparentTailBase{ 0 }; ///< 순번 표의 0 번이 가리키는 인스턴스 번호
         };
 
         static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }

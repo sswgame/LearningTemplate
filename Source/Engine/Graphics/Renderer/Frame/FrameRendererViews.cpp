@@ -118,11 +118,71 @@ namespace sw
         releaseViewTransients( view );
         view._cullInput._cullCb.release( _pDevice );
         view._cullInput._sortCb.release( _pDevice );
+        releaseViewTransparentOrder( view );
         view._commandList.reset();
         if ( view._pOutputTexture != nullptr && engine::areEngineServicesBound() )
             engine::getAssetManager().getTextureManager().release( view._outputPath.view(), _pDevice );
         view._pOutputTexture = nullptr;
         view._outputPath     = hashed_string{};
+    }
+
+    void FrameRenderer::applyViewTransparentOrder( ViewTarget& view )
+    {
+        view._bHasTransparentRank = SW_FALSE;
+        view._bUsesViewSlotStream = SW_FALSE;
+        view._listTransparentBatchOrder.clear();
+        const GpuViewTransparentOrder* pOrder  = _gpuScene.findViewTransparentOrder( view._viewId );
+        const bool                     bUsable = pOrder != nullptr && pOrder->_pListRank != nullptr && pOrder->_pListTailSlot != nullptr &&
+                             pOrder->_listBatchOrder.size() == _gpuScene.getTransparentBatches().size() &&
+                             pOrder->_tailBase + pOrder->_pListRank->size() == _gpuScene.getInstances().size();
+        if ( bUsable == false )
+            return;
+        view._listTransparentBatchOrder = pOrder->_listBatchOrder;
+        view._transparentTailBase       = pOrder->_tailBase;
+        const uint32 tailCount          = static_cast<uint32>( pOrder->_pListRank->size() );
+        if ( _gpuScene.areIndirectCountsGpuFilled() )
+        {
+            // GPU 정렬이 순번으로 되돌린다(instancesort.hlsl). 표는 뷰마다 자기 것 — 나눠 쓰면 뒤 업로드가 앞 디스패치를 덮는다(정렬 CB 와 같은 함정).
+            if ( view._transparentRank.ensureCapacity( _pDevice, sizeof( uint32 ), tailCount, RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
+                return;
+            view._transparentRank.upload( _pDevice, pOrder->_pListRank->data(), tailCount * static_cast<uint32>( sizeof( uint32 ) ) );
+            view._bHasTransparentRank = SW_TRUE;
+            return;
+        }
+        // 컬링이 없는 백엔드는 인스턴스 슬롯 스트림이 곧 그리는 순서다. 앞(불투명)은 항등, 꼬리는 배치 안을 뷰 순서로 다시 놓는다.
+        // 내용이 지난 프레임과 같으면 버퍼를 그대로 쓴다(뷰 카메라 · 투명 물체가 서 있으면 순서가 같다).
+        const uint32 instanceCount = pOrder->_tailBase + tailCount;
+        const bool   bSameContent  = view._instanceSlotStream != 0 && view._listInstanceSlot.size() == instanceCount &&
+                                  Memory::compare( view._listInstanceSlot.data() + pOrder->_tailBase, pOrder->_pListTailSlot->data(), tailCount * sizeof( uint32 ) ) == 0;
+        if ( bSameContent == false )
+        {
+            view._listInstanceSlot.resize( instanceCount );
+            for ( uint32 slot = 0; slot < pOrder->_tailBase; ++slot )
+                view._listInstanceSlot[slot] = slot;
+            Memory::copy( view._listInstanceSlot.data() + pOrder->_tailBase, pOrder->_pListTailSlot->data(), tailCount * sizeof( uint32 ) );
+            // 지난 프레임 기록이 이 버퍼를 읽었을 수 있다 — 반환은 디바이스가 미룬다(releaseHandle).
+            if ( view._instanceSlotStream != 0 )
+                _pDevice->releaseHandle( RHIHandleKind::Buffer, view._instanceSlotStream );
+            view._instanceSlotStream = _pDevice->getResourceFactory()->createVertexBuffer( view._listInstanceSlot.data(), instanceCount * static_cast<uint32>( sizeof( uint32 ) ) );
+            if ( view._instanceSlotStream == 0 )
+            {
+                view._listInstanceSlot.clear();
+                return;
+            }
+        }
+        view._bUsesViewSlotStream = SW_TRUE;
+    }
+
+    void FrameRenderer::releaseViewTransparentOrder( ViewTarget& view )
+    {
+        view._transparentRank.release( _pDevice );
+        if ( view._instanceSlotStream != 0 && _pDevice != nullptr )
+            _pDevice->releaseHandle( RHIHandleKind::Buffer, view._instanceSlotStream );
+        view._instanceSlotStream = 0;
+        view._listInstanceSlot.clear();
+        view._listTransparentBatchOrder.clear();
+        view._bHasTransparentRank = SW_FALSE;
+        view._bUsesViewSlotStream = SW_FALSE;
     }
 
     void FrameRenderer::renderExtraView( IRHIDevice* pDevice, ViewTarget& view )

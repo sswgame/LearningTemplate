@@ -122,9 +122,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
-- **추가 뷰(CCTV · PiP · 렌더 텍스처)의 투명 순서는 주 카메라 기준이다.** 투명 순서의 정본이 CPU `sortTransparent` 하나가 되면서(twod-basics) 시선 축 · 깊이를
-  주 카메라로 한 번 정하고, GPU `instancesort` 는 뷰마다 인스턴스 번호로 되돌리기만 한다. 추가 뷰가 주 카메라와 크게 다른 쪽을 보면 겹친 투명 물체의 앞뒤가 틀린다 —
-  뷰마다 CPU 정렬 키를 따로 두거나 뷰별 키를 GPU 정렬에 다시 넣는다.
 
 - **`.hdr` 원본 임포트가 없다** — 지금 임포트는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
@@ -1136,6 +1133,9 @@ cd build/Ninja-Debug/Bin
   define 없는 변형의 리플렉션을 묻는다. Debug 는 런타임 리플렉션으로 넘어가 모르고, Shipping hostgpu 만 "매니페스트에 없다" 로 실패한다(sprite2dlit).
 - **투명 순서의 정본은 CPU 의 `sortTransparent` 하나다**(정렬 레이어 키 → 깊이 → 후보 번호). GPU `instancesort.hlsl` 은 압축된 목록을 인스턴스 번호
   오름차순으로 되돌릴 뿐이다 — 거기서 깊이를 다시 재면 정렬 레이어 · 직교 시선 축을 모르고 같은 깊이를 불안정하게 갈라 CPU 와 다른 순서를 낸다.
+  추가 뷰는 `buildViewTransparentOrders` 가 발행된 꼬리를 그 뷰의 눈으로 다시 정렬해 순번(정렬 디스패치 t2) · 배치 순서 · 뷰 슬롯 스트림(DX11)으로 싣는다 —
+  배치끼리 깊이가 엇갈리는 것과 512 넘는 투명 배치(Preserve)는 그 뷰에서도 주 순서다. 머티리얼을 넘어 묶는 백엔드(DX12 · Vulkan)는 색만 다른 투명 머티리얼이
+  한 배치라 순서가 GPU 정렬 하나로 정해지고, 나머지는 배치 순서가 정한다 — 둘 다 `RenderPassGpuTest.ExtraViewSortsTransparencyFromItsOwnEye` 가 본다.
 
 - **bindless 표를 바꾸는 일은 렌더 스레드의 병렬 기록과 겹치면 안 된다**(`IRHIDevice::setParallelRecording`). 게임 스레드의 `MaterialCache::initializePending`
   (씬 로드 · 처음 쓰는 머티리얼의 스폰)은 렌더 스레드가 지난 프레임을 기록하는 동안 돈다 — `EngineLoop` 는 올릴 것이 있는 프레임(`hasPendingInitialize`)만

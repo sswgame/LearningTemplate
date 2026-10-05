@@ -5604,6 +5604,148 @@ SW_TEST_CASE( RenderPassGpuTest, ScreenRectViewLandsInItsCornerOfTheBackBuffer )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 추가 뷰(렌더 텍스처)의 투명 순서는 그 뷰의 눈으로 정한다 — 같은 눈을 주 카메라로 둔 그림과 같다(4 백엔드)
+ * @details 투명 큐브 여섯(같은 메시 · 머티리얼 = 한 배치, 회전을 달리해 순서가 그림에 남게)과 다른 머티리얼의 투명 큐브 하나(배치 순서)를 겹쳐 두고,
+ *          주 카메라는 앞(+Z)에서, 캡처 카메라는 뒤(-Z)에서 본다. 캡처 텍스처를 "그 캡처 카메라를 주 카메라로 둔 렌더러" 의 Present 캡처(같은 크기)와 견준다.
+ *          주 순서로 그리면 뒤에서 본 그림의 겹침이 거꾸로 섞여 색이 갈린다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ExtraViewSortsTransparencyFromItsOwnEye )
+{
+    constexpr uint32      kWidth  = 64;
+    constexpr uint32      kHeight = 48;
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+        // 씬 하나 — 큐브 일곱과 기본 카메라. 캡처 카메라의 자리 · 방향은 기준 렌더에서 주 카메라로 다시 쓴다.
+        auto populate = []( sw::Scene& scene, sw::shared_ptr<sw::Mesh>& outMesh, sw::shared_ptr<sw::Material>& outGlass, sw::shared_ptr<sw::Material>& outTint ) -> bool
+        {
+            if ( scene.ensureDefaultCameras() == false )
+                return false;
+            outMesh  = sw::MeshUtil::createUnitCube();
+            outGlass = sw::Material::create();
+            outTint  = sw::Material::create();
+            if ( outMesh == nullptr || outGlass->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
+                 outGlass->setParameter( nullptr, sw::hashed_string( "color" ), "0.2 0.9 0.3 0.55" ) == false ||
+                 outTint->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
+                 outTint->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.1 0.1 0.6" ) == false )
+                return false;
+            for ( uint32 cubeIndex = 0; cubeIndex < 7; ++cubeIndex )
+            {
+                const sw::string   name    = sw::string( "Glass" ) + sw::to_string( cubeIndex );
+                sw::GameObject*    pObject = scene.getObjectManager()->createGameObject( sw::hashed_string( name ) );
+                sw::MeshComponent* pMesh   = pObject != nullptr ? pObject->addComponent<sw::MeshComponent>() : nullptr;
+                if ( pMesh == nullptr )
+                    return false;
+                pMesh->setMesh( outMesh );
+                pMesh->setMaterial( cubeIndex == 6 ? outTint.get() : outGlass.get() ); // 마지막 하나만 다른 배치
+                const float32 offset = static_cast<float32>( cubeIndex ) * 0.30f;
+                pMesh->setLocalPosition( sw::float3{ offset - 0.9f, 0.0f, offset - 0.9f } );
+                pMesh->setLocalRotation( sw::float3{ 0.3f * static_cast<float32>( cubeIndex % 3 ), 0.65f * static_cast<float32>( cubeIndex ), 0.0f } );
+            }
+            scene.getObjectManager()->flushSceneTransforms();
+            return true;
+        };
+        const sw::float3 captureEye{ 0.4f, 1.0f, -4.0f }; // 주 카메라(기본: +Z 쪽)의 반대편
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+
+        // 1) 추가 뷰로 그린 그림.
+        sw::Scene                    viewScene( "ExtraViewTransparency" );
+        sw::shared_ptr<sw::Mesh>     viewMesh;
+        sw::shared_ptr<sw::Material> viewGlass;
+        sw::shared_ptr<sw::Material> viewTint;
+        sw::FrameRenderer            viewRenderer;
+        bool                         bOk      = viewRenderer.initialize( device.get() ) && viewRenderer.isReady() && populate( viewScene, viewMesh, viewGlass, viewTint );
+        sw::CameraComponent*         pCapture = nullptr;
+        if ( bOk )
+        {
+            sw::GameObject* pObject = viewScene.getObjectManager()->createGameObject( sw::hashed_string( "Capture" ) );
+            pCapture                = pObject != nullptr ? pObject->addComponent<sw::CameraComponent>() : nullptr;
+            bOk                     = pCapture != nullptr;
+        }
+        if ( bOk )
+        {
+            sw::CameraRenderOutput output;
+            output._target              = sw::CameraOutputTarget::RenderTexture;
+            output._renderTexture       = "rendertarget/test_extraviewtransparency";
+            output._renderTextureWidth  = kWidth;
+            output._renderTextureHeight = kHeight;
+            pCapture->setRole( sw::CameraRole::Capture );
+            pCapture->setLocalPosition( captureEye );
+            pCapture->lookAt( sw::float3{} );
+            pCapture->setRenderOutput( output );
+            viewScene.getObjectManager()->flushSceneTransforms();
+        }
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( viewRenderer, device.get(), viewScene, clear );
+        test::RHITestImage viewImage;
+        if ( bOk )
+        {
+            const sw::Texture2D*  pTexture = sw::engine::getAssetManager().getTextureManager().find( "rendertarget/test_extraviewtransparency" );
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            bOk = pTexture != nullptr && device->getResourceFactory()->readbackTexture2D( pTexture->getHandle(), 0, 0, bytes, layout );
+            if ( bOk )
+                viewImage.assign( std::move( bytes ), layout, pTexture->getFormat() );
+        }
+
+        // 2) 같은 눈을 주 카메라로 둔 기준 그림(같은 크기의 Present 캡처).
+        sw::Scene                    mainScene( "MainViewTransparency" );
+        sw::shared_ptr<sw::Mesh>     mainMesh;
+        sw::shared_ptr<sw::Material> mainGlass;
+        sw::shared_ptr<sw::Material> mainTint;
+        sw::FrameRenderer            mainRenderer;
+        bOk = bOk && mainRenderer.initialize( device.get() ) && mainRenderer.isReady() && populate( mainScene, mainMesh, mainGlass, mainTint );
+        if ( bOk )
+        {
+            sw::CameraComponent* pMain = mainScene.getActiveGameCamera();
+            bOk                        = pMain != nullptr;
+            if ( bOk )
+            {
+                pMain->setLocalPosition( captureEye );
+                pMain->lookAt( sw::float3{} );
+                mainScene.getObjectManager()->flushSceneTransforms();
+            }
+        }
+        mainRenderer.setOutputSizeOverride( kWidth, kHeight );
+        mainRenderer.setPresentCaptureEnabled( true );
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( mainRenderer, device.get(), mainScene, clear );
+        sw::vector<uint8>     mainBytes;
+        sw::RHITextureMipSpan mainLayout{};
+        bOk = bOk && mainRenderer.readbackPresentCapture( mainBytes, mainLayout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 읽기" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage mainImage;
+            mainImage.assign( std::move( mainBytes ), mainLayout, sw::constant::kBackBufferFormat );
+            SW_EXPECT_EQUAL( mainImage.getWidth(), viewImage.getWidth() );
+            SW_EXPECT_EQUAL( mainImage.getHeight(), viewImage.getHeight() );
+            uint32 drawnCount  = 0;
+            uint32 differCount = 0;
+            for ( uint32 y = 0; y < mainImage.getHeight() && y < viewImage.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < mainImage.getWidth() && x < viewImage.getWidth(); ++x )
+                {
+                    const test::Rgba8 reference = mainImage.getPixel( x, y );
+                    if ( test::RHITestImage::getColorDistance( reference, mainImage.getPixel( 0, 0 ) ) >= 24 )
+                        ++drawnCount;
+                    if ( test::RHITestImage::getColorDistance( reference, viewImage.getPixel( x, y ) ) > 8 )
+                        ++differCount;
+                }
+            }
+            SW_LOG_INFO( "%#extra view vs main view of the same eye: %# px differ (drawn %#)", label, differCount, drawnCount );
+            SW_EXPECT_TRUE_MSG( drawnCount > kWidth * kHeight / 20, ( label + "기준 그림에 투명 큐브가 없다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( differCount * 50 < drawnCount, ( label + "추가 뷰의 투명 순서가 그 뷰의 눈과 다르다 (다른 픽셀 " + sw::to_string( differCount ) + ")" ).c_str() );
+        }
+        mainRenderer.shutdown();
+        viewRenderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the extra-view transparency test" );
+}
+
+/**
  * @brief [RenderPassGpuTest] 컷 표시는 TAA 기록을 버린다 — 큐브 색을 바꾼 컷 프레임의 TaaColor 에 지난 색이 섞이지 않는다(4 백엔드, 디퍼드)
  * @details TAA 는 이번 원본과 기록을 0.1 : 0.9 로 섞는다. 붉은 큐브를 몇 프레임 그린 뒤 푸르게 바꾸면 컷이 없을 때 TaaColor 는 여전히 붉은 쪽이고,
  *          주 카메라에 컷을 표시하면 그 프레임부터 푸르다.

@@ -284,26 +284,39 @@ namespace sw
         };
 
         const RHIBufferHandle argsBuffer = _gpuScene.getCullView( ctx._cullViewIndex )._indirectArgs._buffer;
+        // 추가 뷰의 투명 패스는 그 뷰의 순서로 배치를 돈다(GpuViewTransparentOrder). 묶기는 그 순서에서 이웃이고 번호도 이어진 것만 — 간접 인자는 번호 순으로 놓여 있다.
+        const bool            bExtraView = isRenderingExtraView();
+        const vector<uint32>* pOrder =
+            ( bTransparentPass && bExtraView && _pActiveView->_listTransparentBatchOrder.size() == batches.size() ) ? &_pActiveView->_listTransparentBatchOrder : nullptr;
         // 인스턴스 슬롯 스트림(슬롯 1). 패스당 한 번 건다. 씬 드로우는 모두 이 스트림에서 자기 자리를 읽는다.
-        if ( _gpuScene.getInstanceSlotStream() != 0 )
-            ctx._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, _gpuScene.getInstanceSlotStream(), constant::kInstanceSlotStreamStride, 0 );
+        // 컬링 없는 백엔드의 추가 뷰는 꼬리를 그 뷰 순서로 다시 놓은 자기 스트림을 쓴다(GPU 정렬 백엔드는 늘 공용 스트림).
+        const RHIBufferHandle slotStream =
+            ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream : _gpuScene.getInstanceSlotStream();
+        if ( slotStream != 0 )
+            ctx._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, slotStream, constant::kInstanceSlotStreamStride, 0 );
         RHIBufferHandle boundVertexBuffer{ 0 };
         uint32          drawCallCount{ 0 };
-        uint32          batchIndex{ 0 };
+        uint32          orderIndex{ 0 };
         const uint32    batchCount = static_cast<uint32>( batches.size() );
-        while ( batchIndex < batchCount )
+        while ( orderIndex < batchCount )
         {
-            const GpuMeshBatch& head = batches[batchIndex];
+            const uint32        batchIndex = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex] : orderIndex;
+            const GpuMeshBatch& head       = batches[batchIndex];
             if ( head._vertexBuffer == 0 || head._instanceCount == 0 || drawsBatchInPass( passType, head ) == false )
             {
-                ++batchIndex;
+                ++orderIndex;
                 continue;
             }
-            uint32 groupEnd = batchIndex + 1;
+            uint32 groupCount = 1;
             if ( bMerge )
             {
-                while ( groupEnd < batchCount && sameDrawGroup( head, batches[groupEnd] ) )
-                    ++groupEnd;
+                while ( orderIndex + groupCount < batchCount )
+                {
+                    const uint32 nextBatchIndex = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex + groupCount] : orderIndex + groupCount;
+                    if ( nextBatchIndex != batchIndex + groupCount || sameDrawGroup( head, batches[nextBatchIndex] ) == false )
+                        break;
+                    ++groupCount;
+                }
             }
 
             // 정점 풀 하나라 보통 패스당 한 번 걸린다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다.
@@ -328,10 +341,9 @@ namespace sw
             bindForDraw( ctx, batchPso, head._materialCb, head._arrMaterialTexSrv );
             // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
-            ctx._pCmd->drawIndirect( argsBuffer, ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ),
-                                     groupEnd - batchIndex );
+            ctx._pCmd->drawIndirect( argsBuffer, ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), groupCount );
             ++drawCallCount;
-            batchIndex = groupEnd;
+            orderIndex += groupCount;
         }
         SW_PROFILE_COUNT( "RT.Draw.indirectCalls", drawCallCount );
         _indirectDrawCallCount.fetch_add( drawCallCount, std::memory_order_relaxed );

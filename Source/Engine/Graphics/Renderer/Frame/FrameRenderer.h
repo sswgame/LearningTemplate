@@ -324,12 +324,19 @@ namespace sw
             uint64                      _viewId{ 0 };
             RHITextureHandle            _taaHistory{ 0 }; ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)
             RHIDescriptorIndex          _taaHistorySrv{ kInvalidDescriptorIndex };
+            RHIStructuredBufferSlot     _transparentRank;           ///< 이 뷰의 투명 순번 표(정렬 디스패치 t2) — GPU 정렬 백엔드
+            vector<uint32>              _listTransparentBatchOrder; ///< 이번 프레임 이 뷰의 투명 배치 순서(비면 주 순서)
+            vector<uint32>              _listInstanceSlot;          ///< 지금 `_instanceSlotStream` 에 든 내용(같으면 다시 만들지 않는다)
+            RHIBufferHandle             _instanceSlotStream{ 0 };   ///< 이 뷰의 인스턴스 슬롯 스트림(꼬리만 뷰 순서) — 컬링 없는 백엔드(DX11)
+            uint32                      _transparentTailBase{ 0 };  ///< 순번 표 0 번의 인스턴스 번호
             uint32                      _cullSlot{ 0 };
             uint32                      _outputWidth{ 0 }; ///< 출력 크기(렌더 텍스처 · 화면 사각형)
             uint32                      _outputHeight{ 0 };
             RenderViewOutputKind        _outputKind{ RenderViewOutputKind::ScreenRect };
             uint8                       _bRenderThisFrame{ SW_FALSE };
             uint8                       _bSeenThisFrame{ SW_FALSE };
+            uint8                       _bHasTransparentRank{ SW_FALSE }; ///< 이번 프레임 `_transparentRank` 로 정렬한다
+            uint8                       _bUsesViewSlotStream{ SW_FALSE }; ///< 이번 프레임 `_instanceSlotStream` 으로 그린다
         };
 
         // ------------------------------------------------------------------------------
@@ -392,6 +399,13 @@ namespace sw
          *        GpuScene 의 컬링 칸 수를 정합니다. **업로드 전에**(셋업 단계) 부릅니다 — 버퍼 · 텍스처 생성은 기록 중에 할 수 없다.
          */
         void prepareExtraViews( const vector<RenderViewRequest>& listRequest );
+        /**
+         * @brief 스냅샷의 이 뷰 투명 순서를 뷰 자원(순번 표 · 슬롯 스트림 · 배치 순서)에 옮깁니다. 없으면 주 순서로 그립니다.
+         * @details GPU 정렬 백엔드는 순번 표를 정렬 디스패치에, 컬링 없는 백엔드는 배치 안을 뷰 순서로 다시 놓은 슬롯 스트림을 드로우에 쓴다. 업로드 뒤 · 기록 전에 부릅니다.
+         */
+        void applyViewTransparentOrder( ViewTarget& view );
+        /** @brief 뷰 하나의 투명 순서 자원(순번 표 · 슬롯 스트림)을 놓습니다(디바이스가 없으면 핸들만 잊는다). */
+        void releaseViewTransparentOrder( ViewTarget& view );
         /** @brief 추가 뷰 하나를 그래프로 그립니다(직렬, 자기 리스트). 지금 뷰를 그 뷰로 바꿨다가 주 시점으로 돌려놓습니다. */
         void renderExtraView( IRHIDevice* pDevice, ViewTarget& view );
         /** @brief 지금 그리는 뷰의 트랜지언트 풀입니다. */
@@ -785,8 +799,11 @@ namespace sw
          * @details 컬링 결과는 절두체에 종속이라 뷰(메인 · 그림자)마다 자기 인자 · 목록을 따로 만듭니다.
          */
         void dispatchCullAndSort( uint32 instanceCount );
-        /** @brief 컬링 칸 하나를 컬링 · 정렬합니다(그 뷰의 절두체 · 자기 상수버퍼). 돌렸으면 true 입니다. */
-        bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount );
+        /**
+         * @brief 컬링 칸 하나를 컬링 · 정렬합니다(그 뷰의 절두체 · 자기 상수버퍼). 돌렸으면 true 입니다.
+         * @param pExtraView 추가 뷰면 그 뷰(투명 순번 표를 정렬에 건다), 고정 뷰(주 · 그림자)면 nullptr.
+         */
+        bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView );
         /**
          * @brief 인스턴스 애니메이션에 넣는 절대 시간(초)입니다.
          * @details 각도를 프레임마다 누적하지 않고 **이 절대 시간에서 매번 새로 만듭니다**. 누적하면 프레임
@@ -807,6 +824,8 @@ namespace sw
          *          키는 stride 입니다. 셋업(ensureMaterialFallbackBuffers)에서만 만들고 기록 중에는 조회만 합니다.
          */
         unordered_map<uint32, RHIStructuredBufferSlot> _mapMaterialFallback;
+        /// @brief 순번 표가 없는 뷰(주 · 그림자)의 정렬 디스패치가 t2 에 거는 원소 하나짜리 자리표입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않는다.
+        RHIStructuredBufferSlot _transparentRankPlaceholder;
         /// @brief 엔진 패스 PSO · Present PSO · 머티리얼 변형과 그 바인딩 레이아웃입니다. 소유와 해제 순서는 캐시가 압니다.
         RenderPsoCache                       _psoCache;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;

@@ -66,6 +66,7 @@ namespace sw
     {
         float4x4             _viewProj{};
         float3               _position{};
+        float3               _transparentSortAxis{}; ///< 이 뷰의 투명 정렬 축(직교 카메라의 시선). 0 이면 눈까지의 거리로 정렬한다(주 뷰와 같은 규칙)
         RenderViewSettings   _settings{};
         hashed_string        _renderTexture{};  ///< `RenderTexture` 의 경로(`rendertarget/<이름>`)
         uint64               _viewId{ 0 };      ///< 카메라 컴포넌트 id — 렌더러가 뷰마다의 상태를 이것으로 찾는다

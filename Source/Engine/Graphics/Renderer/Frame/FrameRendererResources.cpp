@@ -76,6 +76,10 @@ namespace sw
 
         // 폴백 원소는 PSO 를 모두 등록한 뒤에 만든다. 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();
+        // 정렬 디스패치의 t2 자리표 — 순번 표가 없는 뷰도 빈 슬롯으로 디스패치하지 않는다(DX12 는 빈 디스크립터를 읽으면 폴트).
+        constexpr uint32 kZeroRank = 0;
+        if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )
+            SW_LOG_ERROR( "Failed to create the transparent rank placeholder - extra views draw transparency in the main view order" );
 
         _bPassResourcesReady = SW_TRUE;
         SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
@@ -128,7 +132,9 @@ namespace sw
         {
             pView->_cullInput._cullCb.release( _pDevice );
             pView->_cullInput._sortCb.release( _pDevice );
+            releaseViewTransparentOrder( *pView );
         }
+        _transparentRankPlaceholder.release( _pDevice );
         _meshMorphPool.release( _pDevice );
         _vertexAnimationPool.release( _pDevice );
         _lightBuffer.release( _pDevice );

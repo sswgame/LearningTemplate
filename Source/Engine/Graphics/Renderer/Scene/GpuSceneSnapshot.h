@@ -273,6 +273,24 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct GpuViewTransparentOrder
+     * @brief 추가 뷰 하나의 투명 그리기 순서입니다. 주 뷰의 순서(꼬리 인스턴스 배치)는 그대로 두고 이 뷰가 다르게 그릴 것만 싣습니다.
+     * @details GT 가 그 뷰의 눈 · 시선 축으로 꼬리를 다시 정렬해 만든다(`GpuSceneBuilder::buildViewTransparentOrders`). RT 는 순번 표를 정렬 디스패치에,
+     *          꼬리 슬롯 표를 컬링이 없는 백엔드의 인스턴스 슬롯 스트림에, 배치 순서를 투명 패스 드로우 순서에 쓴다.
+     */
+    struct GpuViewTransparentOrder
+    {
+        shared_ptr<const vector<uint32>> _pListRank;      ///< 꼬리 인스턴스(꼬리 시작 기준)마다 이 뷰에서 그리는 순번(0 = 가장 먼저 = 가장 멀다)
+        shared_ptr<const vector<uint32>> _pListTailSlot;  ///< 배치마다 안쪽을 이 뷰 순서로 다시 놓은 꼬리 인스턴스 번호(전역) — 꼬리 길이와 같다
+        vector<uint32>                   _listBatchOrder; ///< 이 뷰에서 투명 배치를 그리는 순서(`_listTransparentBatch` 의 번호)
+        uint64                           _viewId{ 0 };    ///< `RenderViewRequest::_viewId`
+        uint32                           _tailBase{ 0 };  ///< 꼬리의 첫 인스턴스 번호(불투명 인스턴스 수)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct GpuSceneSnapshot
      * @brief 게임 스레드가 만들고 렌더 패킷에 실어 렌더 스레드로 **옮기는 전부**입니다.
      *
@@ -344,6 +362,8 @@ namespace sw
          *          작은 업로드가 도리어 비싸므로, 빌더가 개수 상한을 넘기면 전체로 돌립니다.
          */
         vector<GpuInstanceRun> _listDirtyInstanceRun;
+        /// @brief 이번 프레임에 그리는 추가 뷰마다의 투명 순서입니다. 뷰가 투명을 안 보거나 꼬리가 없으면 비어 있습니다(그 뷰는 주 순서로 그린다).
+        vector<GpuViewTransparentOrder> _listViewTransparentOrder;
 
         /** @brief 인스턴스 배열을 반환합니다. 아직 발행 전이면 빈 배열입니다. */
         const vector<GpuInstance>& getInstances() const

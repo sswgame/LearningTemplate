@@ -6,6 +6,7 @@
 #include "Core/Math/Frustum.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Renderer/Frame/RenderViewScheduler.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -118,9 +119,10 @@ namespace sw
                 request._outputWidth  = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputWidth ) * output._screenRect._z + 0.5f ) );
                 request._outputHeight = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputHeight ) * output._screenRect._w + 0.5f ) );
             }
-            const float32 aspect = static_cast<float32>( request._outputWidth ) / static_cast<float32>( request._outputHeight );
-            request._viewProj    = pCamera->getViewProjectionMatrix( aspect );
-            request._position    = pCamera->getCameraPosition();
+            const float32 aspect         = static_cast<float32>( request._outputWidth ) / static_cast<float32>( request._outputHeight );
+            request._viewProj            = pCamera->getViewProjectionMatrix( aspect );
+            request._position            = pCamera->getCameraPosition();
+            request._transparentSortAxis = Render2DSettings::getActive().computeTransparentSortAxis( pCamera->isOrthographic(), pCamera->getCameraForward() );
 
             RenderViewScheduler::Candidate& candidate = arrCandidate[candidateCount];
             candidate._viewId                         = request._viewId;
