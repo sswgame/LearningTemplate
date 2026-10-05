@@ -50,6 +50,7 @@ sw_copyDxcDlls(EngineTest)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	sw_copyVulkanValidationRuntime(EngineTest)
 endif()
+sw_copyTracyRuntime(EngineTest)
 sw_emitRuntimeCopies(EngineTest)
 
 # RHI MODULE은 런타임 로드 — Engine과 순환 없이 테스트 빌드 시 플러그인 재빌드

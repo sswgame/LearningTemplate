@@ -123,6 +123,9 @@ _kEngineTier: dict[str, int] = {
     # 4: 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. 공간 분할은 물리의 AABB 위에 선다.
     "Resource": 4,
     "Spatial": 4,
+    # 내비메시(인터페이스 · 베이크 입력 · 설정 표 · Recast 백엔드). 물리의 셰이프 서술자 · AABB(3)를 읽어 베이크하고, 씬의 내비게이션(Object, 6)과
+    # 컴포넌트가 쓴다 — 공간 분할과 같은 자리.
+    "Navigation": 4,
     # 5: 디바이스와 GPU 에셋(RHI·Shader·Material·Mesh·Texture·Upload) · 창. 창은 IRenderSurface 로만 RHI 에 보인다.
     "Graphics": 5,
     "Window": 5,

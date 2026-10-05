@@ -8,6 +8,17 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct BitReaderInternal
+        {
+            static constexpr int32 kMaxByteCount = 0x7FFFFFFF / 8; ///< 비트 위치가 int32 라 읽을 수 있는 바이트 상한
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // BitWriter
     // ------------------------------------------------------------------------------
@@ -106,6 +117,13 @@ namespace sw
             writeBits( pData[index], 8 );
     }
 
+    void BitWriter::writeBlob( const uint8* pData, int32 byteCount )
+    {
+        const int32 size = MathUtil::max( 0, byteCount );
+        writeVarUint( static_cast<uint64>( size ) );
+        writeBytes( pData, size );
+    }
+
     void BitWriter::reserve( int32 byteCount )
     {
         if ( byteCount > 0 )
@@ -130,7 +148,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     BitReader::BitReader( const uint8* pData, int32 byteCount )
         : _pData{ pData }
-        , _bitCapacity{ MathUtil::max( 0, byteCount ) * 8 }
+        , _bitCapacity{ MathUtil::clamp( byteCount, 0, BitReaderInternal::kMaxByteCount ) * 8 }
         , _bitPosition{ 0 }
         , _bOverflow{ SW_FALSE }
     {
@@ -203,9 +221,15 @@ namespace sw
         return static_cast<int64>( zigZag >> 1 ) ^ -static_cast<int64>( zigZag & 1u );
     }
 
+    bool BitReader::hasBytes( int32 byteCount ) const
+    {
+        // 비트로 바꾸기 전에 남은 바이트와 비교한다 — `byteCount * 8` 은 2^28 부터 int32 를 넘쳐 음수 · 작은 수가 된다.
+        return 0 <= byteCount && byteCount <= ( _bitCapacity - _bitPosition ) / 8;
+    }
+
     bool BitReader::skipBytes( int32 byteCount )
     {
-        if ( byteCount < 0 || _bitPosition + byteCount * 8 > _bitCapacity )
+        if ( hasBytes( byteCount ) == false )
         {
             _bOverflow = SW_TRUE;
             return false;
@@ -216,7 +240,7 @@ namespace sw
 
     bool BitReader::readBytes( uint8* pOutData, int32 byteCount )
     {
-        if ( byteCount < 0 || _bitPosition + byteCount * 8 > _bitCapacity )
+        if ( hasBytes( byteCount ) == false )
         {
             _bOverflow = SW_TRUE;
             return false;
@@ -231,6 +255,37 @@ namespace sw
         for ( int32 index = 0; index < byteCount; ++index )
             pOutData[index] = static_cast<uint8>( readBits( 8 ) );
         return true;
+    }
+
+    bool BitReader::readBlobSize( int32 maxSize, int32& outSize )
+    {
+        outSize           = 0;
+        const uint64 size = readVarUint();
+        if ( hasOverflowed() || size > static_cast<uint64>( MathUtil::max( 0, maxSize ) ) || hasBytes( static_cast<int32>( size ) ) == false )
+        {
+            _bOverflow = SW_TRUE;
+            return false;
+        }
+        outSize = static_cast<int32>( size );
+        return true;
+    }
+
+    bool BitReader::readBlob( vector<uint8>& outBuffer, int32 maxSize )
+    {
+        int32 size = 0;
+        if ( readBlobSize( maxSize, size ) == false )
+        {
+            outBuffer.clear();
+            return false;
+        }
+        outBuffer.resize( static_cast<size_t>( size ) );
+        return size == 0 || readBytes( outBuffer.data(), size );
+    }
+
+    bool BitReader::skipBlob( int32 maxSize )
+    {
+        int32 size = 0;
+        return readBlobSize( maxSize, size ) && skipBytes( size );
     }
 
     void BitReader::alignToByte()

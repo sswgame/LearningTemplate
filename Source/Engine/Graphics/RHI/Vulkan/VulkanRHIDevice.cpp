@@ -47,7 +47,8 @@ namespace sw
         , _timestampPeriod{ 0.0f }
         , _activeFrameBuffer{ nullptr }
         , _timestampPool{ nullptr }
-        , _listTimestampMicro{}
+        , _clockQueryPool{ nullptr }
+        , _timestampFrame{}
         , _listCommandBuffer{}
         , _listInFlightFence{}
         , _listImagesInFlight{}
@@ -399,6 +400,11 @@ namespace sw
             {
                 vkDestroyQueryPool( _device, _timestampPool, nullptr );
                 _timestampPool = VK_NULL_HANDLE;
+            }
+            if ( _clockQueryPool != VK_NULL_HANDLE )
+            {
+                vkDestroyQueryPool( _device, _clockQueryPool, nullptr );
+                _clockQueryPool = VK_NULL_HANDLE;
             }
 
             if ( _defaultSampler )

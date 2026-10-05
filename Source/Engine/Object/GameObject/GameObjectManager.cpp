@@ -136,6 +136,7 @@ namespace sw
         , _tickRegistry{}
     {
         _animationSystem.setObjectManager( this );
+        _sceneNavigation.setObjectManager( this );
     }
 
     GameObjectManager::~GameObjectManager()
@@ -671,6 +672,7 @@ namespace sw
         markTickStagesDirty();
         // 컴포넌트가 바디를 놓았다 — 빈 물리 씬과 쌓인 시간을 버린다(다음 씬은 처음 쓸 때 새로 만든다).
         _scenePhysics.shutdown();
+        _sceneNavigation.shutdown();
     }
 
     void GameObjectManager::mergePendingAdds()

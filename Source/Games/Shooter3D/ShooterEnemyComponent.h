@@ -1,6 +1,6 @@
 /**
  * @file ShooterEnemyComponent.h
- * @brief 스켈레톤 적 하나 — 땅에서 일어나 플레이어 쪽으로 걸어오며 이웃과 떨어지고 상자를 돌아가고, 닿으면 휘두르고, 맞으면 움찔하고, 쓰러집니다.
+ * @brief 스켈레톤 적 하나 — 땅에서 일어나 플레이어 쪽으로 걸어오며 이웃과 떨어지고 상자를 돌아가고(내비메시 에이전트), 닿으면 휘두르고, 맞으면 움찔하고, 쓰러집니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -10,6 +10,8 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -98,19 +100,19 @@ namespace sw
         PROPERTY( Category = "Enemy", DisplayName = "Turn Rate", Tooltip = "How fast the body turns to its heading", Min = 0.0, Meta = "Units=rad/s" )
         float32 _turnRate;
 
-        float3            _position; ///< 발
+        float3            _position;   ///< 발
+        float3            _lastTarget; ///< 내비메시 에이전트에 마지막으로 건 목적지
         float32           _yaw;
         float32           _health;
         float32           _maxHealth;
         float32           _speed;
         float32           _phaseTime;
-        float32           _attackCooldown;
+        Countdown         _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)
         ShooterEnemyPhase _phase;
         uint8             _bLaunched       : 1;
         uint8             _bHitPending     : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
         uint8             _bAttackLanded   : 1; ///< 이번 휘두름이 이미 맞았다
-        uint8             _bBarShown       : 1;
         uint8             _bAttackStarting : 1; ///< 다음 틱에 애니메이터에 Attack 트리거를 건다
-        uint8             _reserved        : 3;
+        uint8             _reserved        : 4;
     };
 } // namespace sw

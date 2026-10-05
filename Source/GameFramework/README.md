@@ -11,25 +11,32 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 - **Ability**: 언리얼 Gameplay Ability System 과 같은 어빌리티 시스템 — `AbilitySystemComponent`(어트리뷰트 · 이펙트 · 어빌리티 · 태그 개수),
   `AttributeSet` · `CombatAttributeSet`, `GameplayEffectDef` · `GameplayEffectSpec`(즉시 · 지속 · 무한 · 주기 · 스택 · 실행 계산), `GameplayAbility`
   (태그 조건 · 비용 · 쿨다운 · 트리거 · 입력) · `AbilityTask`, XML 카탈로그(`AbilityCatalog`). 장르를 가리지 않아 키트가 아니라 기반에 있습니다(턴제는
-  틱을 끄고 턴마다 `advanceTime( 1 )`). 같은 오브젝트의 `HealthBarComponent` · `DamageNumberComponent` 와 이어집니다. 자세한 것은 `Ability/README.md`,
+  틱을 끄고 턴마다 `advanceTime( 1 )`). 체력 변화는 같은 오브젝트의 `HealthListenerComponent`(HP 바)에 알리고 피해는 `DamageNumberComponent` 로 띄웁니다. 자세한 것은 `Ability/README.md`,
   쓰는 예는 `Source/Games/AbilityArena`
-- **Framework**: 게임 모듈의 수명과 배선 — `IGame`, `GameInstanceBase`, 서비스 로케이터(`GameService`), 세이브 베이스(`SaveGame`),
+- **Framework**: 게임 모듈의 수명과 배선 — `IGame`, `GameInstanceBase`, 서비스 로케이터(`GameService`), 다국어 창구(`GameStrings` — 엔진 `LocalizationManager` 를 게임 서비스로 부른다), 세이브 베이스(`SaveGame`),
   "game" 채널 이벤트(`GameEvents.h` · 내는 길 `GameEventUtil`), 화면 전환(`ScreenTransitionManager`), 소리(`GameSound` — 이벤트 라이브러리 올리기 · 내리기, 2D 이벤트 `postEvent`, 월드 자리 원샷 `postEventAt`(한 번 쓰는 에미터), 클립 `play( path, bus )`;
   따라 움직이는 · 루프 소리는 엔진의 `AudioEmitterComponent`, 자세한 것은 `Source/Engine/Audio/README.md`). `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료를 그 자리에서 낸다. `onInitialize` 뒤에 사용자 설정을 다시 넣는다(`UserSettingsManager::reapplyAll` — 언어 · 입력 맵이 그때 선다). 공유 타입은 루트의 `GameFrameworkMinimal.h`.
   PROPERTY 가 아닌 컴포넌트 상태(디렉터가 든 키트 시뮬레이션)는 `ComponentStateStore` 가 상태 봉투의 세 번째 섹션으로 실어 핫 리로드 · 세이브를 넘긴다 —
-  게임이 `onBeforeStateSerialize` 에서 `getComponentStateStore().capture<T>( manager )`, `onAfterStateDeserialize` 에서 `restore<T>( manager )` 를 부르고,
+  게임 인스턴스가 생성자에서 `registerDirector<T>()`(상태 + 걷기) · `registerStatefulComponent<T>()`(상태만) · `registerViewOwner<T>()`(걷기만) 한 줄로 올리면
+  저장 전에 모두 싣고 세운 것을 걷으며 복원 뒤 돌려준다(그 뒤에 `onBeforeStateSerialize` · `onAfterStateDeserialize` 훅이 돈다).
   컴포넌트는 `writeState( Archive& )` · `restoreState( vector<uint8>&& )`(시작 전이면 들고 있다가 `onBeginPlay` 에서 적용)를 둔다. 같은 실행은 컴포넌트 id,
   다른 실행의 세이브는 타입 안 순서로 짝짓는다(언리얼 `UObject::Serialize` · 유니티 `ISerializationCallbackReceiver` 의 자리). 살아 있는 씬 위에 다시 선
   인스턴스(핫 리로드 · 백엔드 교체)는 `requestFirstScene` 이 아무것도 하지 않는다 — 되살린 씬을 첫 씬이 덮지 않게.
+  디렉터 베이스(`GameDirectorComponent` — 언리얼 `AGameModeBase` · `AGameStateBase` 자리): 틱 그룹(PrePhysics) · 상태 바이트 보류와 적용 · 틱 뒤 플러시
+  (`executeOrDeferPostTick` 한 번 → `onFlush`) · 세운 것 걷기(`spawnPrefab` · `trackSpawned` · `despawnViews`) · 자동 플레이(`_bAutoPlay` · `GameAutoplay`) ·
+  디렉터 찾기(`resolve<T>`)를 들고, 게임은 `startGame` · `readState` · `tickGame` · `onFlush` 만 적는다(쓰는 법은 `Source/Games/README.md`). 틱 안에서 쌓아
+  틱 뒤에 내는 소리는 `GameSoundQueue`, 색만 다른 모습은 `MaterialTintCache`(색 하나에 머티리얼 인스턴스 하나).
   자동 저장 정책(`AutosaveManager` · `AutosaveSettings` — `<Autosave>` XML): 간격 · 지역 이동 · 체크포인트 · 보스 앞 · 종료 까닭, 요청을 한 update 에 하나로 합치고
   더 중요한 까닭을 남김, 최소 간격 · 막기(전투 · 연출 — 기다렸다 저장, 종료만 무시), 돌림 칸(가장 새 칸을 건드리지 않고 다음 칸에 쓴 뒤 `.info` 기록 —
   파일 쓰기는 `FileUtil::writeFile` 이 원자적), 다른 실행의 칸 기록을 읽어 순번을 잇기, `restoreLatest` · `restoreCheckpoint`. 저장 · 불러오기는 게임이
-  넘긴 델리게이트(보통 `saveStateToFile` · `loadStateFromFile`)이고 UI 는 없다. 씬에는 `AutosaveTriggerComponent`(Components)를 놓는다
-- **Components**: 장르 무관 씬 컴포넌트 — `FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`, 체크포인트 · 보스 앞 · 지역 경계 볼륨
-  (`AutosaveTriggerComponent` — 태그가 맞는 활성자가 트리거에 들면 게임 서비스 `AutosaveManager` 에 까닭과 이름을 넘긴다, 한 번), 비스듬히 내려다보는 직교 카메라
-  (`OrthoCameraRigComponent` — WASD · 방향키 이동(WASD 끄기 · 초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), Q/E 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)), 장식 흩뿌리기
+  넘긴 델리게이트(보통 `saveStateToFile` · `loadStateFromFile`)이고 UI 는 없다. 씬에는 체크포인트 · 보스 앞 · 지역 경계 볼륨
+  `AutosaveTriggerComponent`(태그가 맞는 활성자가 트리거에 들면 게임 서비스 `AutosaveManager` 에 까닭과 이름을 넘긴다, 한 번)를 놓는다
+- **World**(씬 컴포넌트): 장르 무관 씬 컴포넌트 — `FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`, 장식 흩뿌리기
   (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(`Rules` 모드 — Engine `Environment/Placement` 의 `PlacementRule`: 밀도 · 최소 거리 ·
-  경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`). 계산은 `OrthoCameraRigMath` · `PropScatterMath` 로
+  경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`, 계산은 `PropScatterMath`).
+  아래 **World** 절의 시계 · 날씨 · 지역 그래프 · 플래그 · 질의와 같은 폴더다
+- **Camera**(카메라 컴포넌트): 비스듬히 내려다보는 직교 카메라
+  (`OrthoCameraRigComponent` — WASD · 방향키 이동(WASD 끄기 · 초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), Q/E 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)). 계산은 `OrthoCameraRigMath` 로
   떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스(또는 입력 맵 액션 `_lookAction`) 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리(카메라의 부모 공간) · 손에 든 뷰 모델 자리, 계산은
   `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다
 - **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 모드 계산(`CameraMode` — 입력 · 제약 · 프레이밍 · 스프링 암 · 훑기),
@@ -48,7 +55,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   바꾸고, 정의는 카탈로그 id 로, 유닛 참조는 세대 든 id 로 적으며, 다시 만들 수 있는 것(길 · 격자 발자국 · 흐름장)은 적지 않는다
 - **Input**: 커맨드 입력(`InputCommandParser` — 철권 표기 · `InputCommandBuffer` — 새로 넣기 · 누른 채 · 동시 버튼 · 틱 한도 · 좌우 뒤집기 · 상태 바이트, 결정적),
   타이밍 판정(`TimingJudge` — 리듬 · 타이밍 공격 · 스킬 체크 · 저스트 프레임), 1인칭 시점(`FirstPersonLook`)
-- **Data**: 데이터를 읽고 담는 틀 — `GameSettings`, `GameStrings`, 경로마다 한 번 읽어 나눠 쓰는 표의 캐시(`GameDataCache<T>` — 게임 서비스가 묶이면
+- **Data**: 데이터를 읽고 담는 틀 — `GameSettings`, 경로마다 한 번 읽어 나눠 쓰는 표의 캐시(`GameDataCache<T>` — 게임 서비스가 묶이면
   에셋 캐시 등록부에 올라 에디터 핫 리로드가 새 표로 바꾸고 `getReloadCount` 를 올린다, 옛 표는 모듈이 내릴 때까지 산다), 데이터 XML 읽기(`GameDataXml` — 문서 · 루트 · id 확인 · 숫자 목록 · 토큰 목록,
   다른 카탈로그를 함께 받는 루트 읽기용 로더 템플릿 `loadFile` · `loadText`), 카탈로그 베이스(`XmlCatalog<T>` — 물려받으면 `loadFromResource` ·
   `loadFromXmlText` 가 생기고 카탈로그는 `kXmlRootName` 과 비공개 `loadRoot` 만 둔다, 읽은 수 0 · false 는 실패), id 카탈로그(`GameCatalog<T>` —
@@ -59,7 +66,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   페이싱 감독(`AI/Director` — `*.director.xml` 긴장도 모델 · 쌓기/절정/쉼 단계와 곡선 · 단계별 스폰 예산 · 조우/보상 가중 풀(단계 진입 · 주기 · 예산) · 쿨다운 ·
   문맥 조건 · 보상 밀도 · 결정성 · 추적 — `AI/Director/README.md`)
 - **Combat**: 무기 정의 · 상태(`WeaponCatalog` · `WeaponState` — 연사 · 탄창 · 재장전 · 퍼짐 · 산탄 · 거리 감쇠 · 머리 배율 · 탄속 · 탄 아이템), 탄 퍼짐(`WeaponMath`),
-  피해 공식(`DamageMath`), 탄도(`Ballistics` — 낙차 · 발사각 · 앞 겨누기), 턴 순서(`TurnOrder` — 라운드제 · 타임라인제), 록온(`LockOnSelector`),
+  체력 신호(`HealthListenerComponent` · `HealthChangedEvent` — 체력 시스템이 같은 오브젝트의 받는 쪽(HP 바)에 알린다), 피해 공식(`DamageMath`), 탄도(`Ballistics` — 낙차 · 발사각 · 앞 겨누기), 턴 순서(`TurnOrder` — 라운드제 · 타임라인제), 록온(`LockOnSelector`),
   체력 상태(`Vitality` — 실드 · 기절 → 출혈 → 부활 · 최대 기절 횟수 · 무적 · 경직 게이지 · 최대 체력 바꾸기), 자원 게이지(`ResourceGauge` — 스태미나 탈진 · 과열 · 회복 배율 · 즉시 깎기),
   프레임 데이터(`MoveCatalog` · `MoveTimeline` — 발생 · 지속 · 경직 · 캔슬 · 히트스톱 · 가드 높이 · 상태 복원), 속성 상성(`ElementChart` — 복합 속성 곱 · 면역 · 상태이상 확률)
   슈터 · 배틀로얄 · 서부극 · 기체 대전 · JRPG · 포켓몬 · 젤다가 함께 쓴다(예전 `GF_Shooter` 키트의 무기는 여기로 옮겼다)
@@ -92,12 +99,14 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   누적 거리 표 계산(`ArcLengthUtil` — 코스터 트랙도 쓴다). 기믹 무버 · 카메라 레일 · 길이 함께 쓴다. `Spline/README.md`
 - **UI**: 장르 무관 UI 컴포넌트 — `DialogueRunnerComponent`,
   `HealthBarComponent`, `DamageNumberComponent`. HP 바 · 데미지 숫자는 월드 공간 스프라이트(`SpriteInstanceBatch`)로 그린다 — 저장되는
-  컴포넌트를 만들지 않는다. 입력은 `HealthBarComponent::setTargetRatio` · `DamageNumberComponent::setDamageValue` 하나씩이다.
+  컴포넌트를 만들지 않는다. HP 바는 `HealthListenerComponent`(Combat)를 상속해 체력 시스템의 알림(`HealthChangedEvent` — 다시 두기 · 바뀜 · 쓰러짐)을 받는다 —
+  체력 시스템(어빌리티 · 키트 · 게임)은 바를 모른다(Lyra `ULyraHealthComponent::OnHealthChanged` 를 위젯이 받는 자리). 보이기 정책도 바의 것이다
+  (`_bShowWhenHurt` · `_bHideWhenDead`). 데미지 숫자의 입력은 `DamageNumberComponent::setDamageValue` · `spawnNumber`.
   `FadeOutComponent` 의 흐림은 같은 오브젝트 스프라이트들의 색 알파에 곱해진다.
 
 별도 타겟:
 
-- **Kits**: 키트끼리 링크하지 않음. 공유 타입은 기반(`Framework` · `Components` · `Utility` · `UI` …)으로. 장르 묶음 폴더 아래 키트 하나씩입니다(`Kits/<묶음>/<키트>`, 타겟은 `GF_<키트>`).
+- **Kits**: 키트끼리 링크하지 않음. 공유 타입은 기반(`Framework` · `World` · `Utility` · `UI` …)으로. 장르 묶음 폴더 아래 키트 하나씩입니다(`Kits/<묶음>/<키트>`, 타겟은 `GF_<키트>`).
   - **액션 · 대전** (`Kits/Action/`)
     - `ActionCombat`: 공격 히트박스(`MeleeHitboxComponent`), 투사체, 유닛 스탯, 액션 룸.
       피해는 한 길이다 — 투사체(`ProjectileComponent`)와 공격 판정은 같은 오브젝트의 `BoxCollider2DComponent` 겹침으로 맞음을 알고
@@ -155,13 +164,31 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       그때 정책(`IReplicationPolicy` · `IInterestPolicy`)은 여러 스레드에서 동시에 불리므로 읽기만 한다.
       - `NetClientServer`: 권위 서버(슈터 · 배틀로얄 · 액션 · 기체 대전 · 비대칭) — 스냅샷 델타(확인된 기준 대비 · 예산 · 우선도, `IReplicationPolicy` 관련성),
         보간(`ReplicationClient` — 지연만큼 과거 · 시계 맞추기), 입력 겹쳐 보내기, 클라이언트 예측 되맞추기(`ClientPrediction`), 랙 보정 되감기(`LagCompensationHistory`).
+        우선도는 클라이언트마다 `NetPrioritizer` 로 스냅샷마다 쌓고, 실었거나 클라이언트가 이미 최신인 엔티티만 0 으로 돌린다 — 예산이 늘 차도 낮은 우선도가 굶지 않는다
+        (우선도 10 넷이 예산을 채우면 우선도 1 은 11 틱쯤에 한 번). 스냅샷 예산은 메시지 전체(종류 바이트 · 머리 · 사라진 목록 · 끝 표시)를 `NetSendBudget` 으로 정확히 세고 1024 B 로 잘린다 — 못 실은 사라짐 · 바뀜은 재구성에
+        기준 값으로 남아 다음 델타가 다시 고른다. 엔티티 상태는 `NetSnapshot::kMaxEntityBytes`(255 B)까지 — 넘으면 싣지 않는다(`setEntity` 가 처음 한 번 경고).
+        입력은 틱마다 `NetClientServerMessage::kMaxInputBytes`(255 B)까지(넘으면 `sendInput` 이 false), 겹침은 `kMaxRedundantInputCount`(32)와 메시지 상한 안에서 —
+        두 상수를 클라이언트 · 서버가 같이 쓰고, 서버는 넘는 길이를 깨짐으로 본다. 시험: `NetClientServerTest` · `NetSimReplicationTest`(하니스 위 — 대량 사라짐 · 예산 포화에서 굶지 않음).
       - `NetLockstep`: 결정적 — 락스텝(`LockstepSession` — 입력 지연 · 체크섬 비동기 감지, RTS), 롤백(`RollbackSession` · `IRollbackGame` — 예측 · 되감기 · 재시뮬레이션, 격투).
+        롤백 입력은 GGPO 식이다 — 메시지마다 "플레이어마다 빈틈없이 받은 마지막 프레임"(확인)을 싣고, 보내는 쪽은 모두가 확인한 다음 프레임부터 싣는다
+        (연속 손실이 길어도 빈틈이 남지 않는다). 받는 창은 [지금 − 64, 지금 + 64). 앞선 쪽은 (내 이점 − 상대 이점) / 2 가 `_maxFrameAdvantage` 를 넘으면
+        한 프레임 쉰다(시간 동기). 락스텝은 서버가 클라이언트 연결이 닫히면(`onConnectionClosed`) "플레이어 p 는 틱 T 부터 빈 입력"(`kLeave`)을 신뢰 순서로
+        알린다 — T 는 서버가 받은 p 의 마지막 입력 다음 틱이라 모두가 같은 틱에 p 를 뺀다(`getLeaveTick`). 입력은 플레이어마다 다음 틱만 받고(먼 틱 · 겹친 틱은
+        버린다) 내 입력은 지금 + `kMaxInputLead`(127)까지만 예약한다(`submitLocalInput` 이 false). 체크섬은 `kChecksumWindow`(256 틱) 넘게 지나면 지운다.
+        시험: `NetLockstepTest`(하니스 위 30 틱 연속 손실 · 늦게 시작한 상대 · 넷 중 둘이 떠남 · 한쪽만 체크섬).
       - `NetTurnRelay`: 턴제 중계(카드 · 보드 · SRPG) — 방 · 자리 · 표, `ITurnPolicy`(차례 · 허락 · 방향), 행동 기록 방송, 재접속 시 놓친 행동.
-      - `NetMmo`: MMO — 관심 영역 격자(`InterestGrid`, 들어옴 · 나감 히스테리시스), 우선도 누적 대역폭 예산, `IInterestPolicy`(늘 보이기 · 우선도).
+        서버는 자리마다 보낸 행동 수(`TurnSeat::_sentActionCount`)만 들고 방 기록에서 이어 보낸다 — 신뢰 창이 차면 멈췄다가 `TurnRelayServer::update`(매 틱)가
+        이어 가므로 놓친 행동이 창(255)보다 많아도 빠지지 않고, 다른 알림도 창이 차면 연결마다 줄을 선다(64 를 넘게 쌓이면 그 연결을 끊는다). 자리 표는
+        운영체제 난수 비밀에서 섞는다. 표가 맞아도 그 자리 연결이 살아 있으면 `SeatInUse`, 한 연결은 자리 하나(다른 방은 `AlreadySeated`).
+        시험: `NetTurnRelayTest`(하니스 위 300 행동 재동기 · 침입자 · 두 번 들어오기 · 서버마다 다른 표).
+      - `NetMmo`: MMO — 관심 영역 격자(`InterestGrid`, 들어옴 · 나감 히스테리시스), 우선도 누적(`NetPrioritizer`) 대역폭 예산(`NetSendBudget`), `IInterestPolicy`(늘 보이기 · 우선도).
+        나감은 메시지 상한 안에서 여러 메시지로 쪼개고 보낸 것만 보이는 목록에서 뺀다(신뢰 창이 차면 다음 틱에). 들어옴 · 갱신에 서버 틱(`update` 마다 하나)을 싣고
+        클라이언트는 엔티티마다 마지막으로 적용한 틱보다 옛 갱신을 버린다(`getStaleUpdateCount`). 상태는 `NetMmoMessage::kMaxStateBytes`(512 B)까지 — 넘는 `setEntity` 는
+        서버가 받지 않는다. 시험: `NetMmoTest`(하니스 위 — 순간 이동 대량 나감 · 순서 뒤바뀐 갱신 · 상한 넘는 상태).
       - `NetDestruction`: 파괴 네트워킹(`DestructionReplicationServer` · `Client`, 영역 `kDestruction` 0x50). 권한 쪽 피해 사건을 번호(= 서버 상태의
         사건 수)를 붙여 신뢰 순서로 보내고 받는 쪽은 번호 순으로만 적용한다(앞 번호는 버리고 뒤 번호는 기다린다). 덩어리(표의 `keepCollisionVolume` 이상)는
         서버가 질량 중심 · 회전을 `<Network poseRate>` 로 비신뢰로 보내고(멈추면 비트 그대로 신뢰로 확정 + 비신뢰로 몇 번 더), 받는 쪽은 서버 틱 추정 −
-        보간 지연을 그려 키네마틱으로 몬다. 파편은 각자 시뮬레이션하는 꾸밈(Debris 레이어 — 캐릭터와 안 부딪힌다). 늦은 참가 · 해시 어긋남은 상태
+        보간 지연(설정값과 자세 간격 × 2 중 큰 것 — 자세 하나를 잃어도 사이를 잇는다)을 그려 키네마틱으로 몬다. 파편은 각자 시뮬레이션하는 꾸밈(Debris 레이어 — 캐릭터와 안 부딪힌다). 늦은 참가 · 해시 어긋남은 상태
         스냅숏(조각으로 나눠 신뢰)으로 맞춘다. 파괴를 쓰지 않는 게임이 링크하지 않게, 권위 방식(복제 서버 · 리슨 · MMO)과 상관없이 `NetHost` 위에 얹게 키트를 따로 둔다.
         롤백(상태 저장 · 되돌리기)은 없다. 시험: `NetSimDestructionTest` · `NetSimDestructionMatrixTest`(호스트 스위트 — Debug 40 초).
       - `NetSimulation`: 한 프로세스 가상 서버(`NetSimHarness` — 언리얼 PIE "Play As Client, Number of Players N" + Network Emulation, 유니티 Multiplayer
@@ -250,9 +277,28 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 
 기준: **다른 장르의 게임이 이 타입을 그대로 쓰겠는가?**
 
-- 쓴다 → 기반의 알맞은 폴더 — 수명 · 배선은 `Framework`, 씬 컴포넌트는 `Components`, 계산 도구는 `Utility`, 화면에 뜨는 것은 `UI`.
+- 쓴다 → 기반의 알맞은 폴더 — 수명 · 배선은 `Framework`, 씬 컴포넌트는 그 기능의 폴더(월드 · 장식은 `World`, 카메라는 `Camera`), 계산 도구는 `Utility`, 화면에 뜨는 것은 `UI`.
+  형식(컴포넌트냐)으로 묶은 폴더는 두지 않는다 — 의존 방향을 숨긴다(옛 `Components/` 가 카메라 시스템 위에 서 있었다).
   HP 바와 데미지 숫자는 턴제도 쓴다. 중력은 플랫포머도, 탄막도 쓴다.
 - 안 쓴다 → 그 키트. 공격 히트박스·투사체·액션 룸처럼 **장르의 규칙을 담은 것**이 여기 해당한다.
+
+## 기반 폴더의 층 — `CheckGameFrameworkLayers`
+
+기반 폴더는 층(DAG)이다. 폴더는 **자기보다 낮은 층**만 include 하고, 같은 층끼리도 서로 모른다. 기반은 키트를, 키트는 다른 키트를 include 하지 않는다
+(묶음 공용 헤더 `Kits/<묶음>/x.h` 는 그 묶음 키트만). GameFramework 는 `Games/` · `Editor/` 를 모른다. 표는 `Scripts/lint/gate/CheckGameFrameworkLayers.py` 의
+`_kBaseTier` 이고 새 폴더는 층을 정해 넣는다(없으면 실패).
+
+| 층 | 폴더 |
+|----|------|
+| 0 | `Utility` |
+| 1 | `Data` · `Match` · `Navigation` · `Spline` |
+| 2 | `Framework` |
+| 3 | `Combat` · `Input` · `Inventory` · `Movement` · `Progression` · `World` |
+| 4 | `AI` · `Appearance` · `Camera` · `Interaction` · `Quest` · `UI` |
+| 5 | `Ability` · `Gimmick` |
+
+위층이 알리는 길은 신호다 — 체력 시스템 → HP 바는 `Combat/HealthListenerComponent`, 상호작용 → 기믹 센서는 센서가 완료 수를 끌어 읽는다. 기반을 DLL 여럿으로
+나누지는 않는다(층은 폴더로만 지킨다).
 
 ## 리플렉션 — 폴더를 늘릴 때
 

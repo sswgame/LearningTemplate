@@ -19,6 +19,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -427,4 +428,76 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
     }
     SW_EXPECT_TRUE_MSG( checkedCount > 0, "쿠킹된 바이너리를 하나도 찾지 못했다 — 이 시험이 아무것도 보지 않는다" );
     SW_EXPECT_EQUAL( 0u, orphanCount );
+}
+
+/**
+ * @brief [ShaderCookRequestTest] 머티리얼이 런타임에 바꿀 수 있는 정적 스위치(`bShaderFeature="0"`)의 모든 조합을, 씬 메시 패스마다 요청한다
+ * @details 런타임은 `Material::setStaticSwitch` 로 바뀐 define 목록으로 변형 PSO 를 만든다(`createMaterialPsoVariant` — 패스 define ∪ 머티리얼 define).
+ *          쿠커가 에셋 상태만 쿠킹하면 Dev 는 실시간 컴파일로 그려지고 Shipping 에서만 바이너리가 없다(툰 TwoSided 를 켠 시험이 Shipping hostgpu 에서만 졌다).
+ *          조합은 쿠커와 따로 런타임 API(`setStaticSwitch` → `getCachedShaderDefines`)로 만들고, 패스마다 런타임과 같은 합집합을 기대한다.
+ *          `bShaderFeature="1"` 스위치는 에셋 상태만 쿠킹하는 계약이라 보지 않는다.
+ */
+SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsRequested )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::EngineDefaultAssets engineDefaultAssets;
+    SW_ASSERT_TRUE( engineDefaultAssets.loadFromResource() );
+    const sw::string&                 rootDir = sw::ResourceUtil::getRootFolderPath();
+    sw::vector<sw::ShaderCookRequest> listRequest;
+    sw::ShaderCookDriver::collectAllRequests( rootDir, listRequest );
+    SW_ASSERT_TRUE( listRequest.empty() == false );
+
+    sw::vector<sw::string> listMaterialFile;
+    sw::FileUtil::collectFiles( rootDir, ".material", listMaterialFile, true );
+    uint32 runtimeComboCount{ 0 };
+    for ( const sw::string& materialPath : listMaterialFile )
+    {
+        const sw::shared_ptr<sw::Material> material = sw::Material::create();
+        if ( material->loadFromFile( materialPath ) == false || material->getShaderPath().empty() )
+            continue;
+        sw::vector<sw::string> listRuntimeSwitch;
+        for ( const sw::MaterialStaticSwitch& entry : material->getPermutations()._listStaticSwitch )
+        {
+            if ( entry._bShaderFeature == SW_FALSE )
+                listRuntimeSwitch.push_back( entry._name );
+        }
+        if ( listRuntimeSwitch.empty() )
+            continue;
+
+        const uint32 comboCount = 1u << static_cast<uint32>( listRuntimeSwitch.size() );
+        for ( uint32 combo = 0; combo < comboCount; ++combo )
+        {
+            for ( size_t switchIndex = 0; switchIndex < listRuntimeSwitch.size(); ++switchIndex )
+                material->setStaticSwitch( sw::hashed_string( listRuntimeSwitch[switchIndex] ), ( combo & ( 1u << switchIndex ) ) != 0 );
+            const sw::vector<sw::string> listMaterialDefine = material->getCachedShaderDefines();
+            const sw::string             label              = materialPath + " switches " + sw::to_string( combo ) + ": ";
+            ++runtimeComboCount;
+
+            for ( uint32 typeIndex = 0; typeIndex < sw::kRenderPassTypeCount; ++typeIndex )
+            {
+                const sw::RenderPassType passType = static_cast<sw::RenderPassType>( typeIndex );
+                if ( sw::FrameRendererUtil::drawsSceneMeshes( passType ) == false ||
+                     sw::FrameRendererUtil::drawsMaterialInPass( passType, &listMaterialDefine ) == false )
+                    continue;
+                const sw::RenderPassShaderSelection passShader = sw::selectRenderPassShader( passType, nullptr, engineDefaultAssets );
+                const sw::string&                   shaderPath = sw::FrameRendererUtil::usesMaterialShader( passType ) ? material->getShaderPath()
+                                                                                                                       : passShader._shaderPath;
+                sw::vector<sw::string>              listDefine = passShader._listDefine;
+                for ( const sw::string& define : listMaterialDefine )
+                {
+                    if ( std::find( listDefine.begin(), listDefine.end(), define ) == listDefine.end() )
+                        listDefine.push_back( define );
+                }
+                const uint64     permutationHash = sw::ShaderCooker::computePermutationHash( listDefine );
+                const sw::string passLabel       = label + "pass type " + sw::to_string( typeIndex );
+                SW_EXPECT_TRUE_MSG( hasExactRequestInternal( listRequest, shaderPath, "VSMain", sw::ShaderStage::Vertex, permutationHash ),
+                                    ( passLabel + " — 런타임이 만드는 VS 변형을 쿠킹하지 않는다" ).c_str() );
+                if ( sw::FrameRendererUtil::hasPixelStage( passType ) )
+                    SW_EXPECT_TRUE_MSG( hasExactRequestInternal( listRequest, shaderPath, "PSMain", sw::ShaderStage::Pixel, permutationHash ),
+                                        ( passLabel + " — 런타임이 만드는 PS 변형을 쿠킹하지 않는다" ).c_str() );
+            }
+        }
+    }
+    // 툰 머티리얼(engine/materials/toon.material)의 Outline · TwoSided 가 런타임 스위치다 — 하나도 없으면 이 시험은 눈이 멀었다.
+    SW_EXPECT_TRUE_MSG( runtimeComboCount >= 4, "런타임 정적 스위치를 가진 머티리얼이 없다 — 이 시험이 아무것도 보지 않는다" );
 }

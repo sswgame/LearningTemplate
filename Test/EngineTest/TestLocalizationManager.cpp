@@ -13,8 +13,8 @@
 #include "EngineTest/GameTestUtil.h"
 #include "EngineTest/LocalizationTestUtil.h"
 
-#include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameStrings.h"
 
 #include "TestFramework/TestFramework.h"
 

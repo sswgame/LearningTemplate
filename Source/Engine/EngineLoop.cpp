@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/BuildInfo.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/Concurrency/ThreadName.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/AsyncFileIo.h"
 #include "Core/File/FileUtil.h"
@@ -79,6 +80,7 @@
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneCooker.h"
+#include "Engine/Scene/SceneNavigationCooker.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/UserSettings/HardwareProbe.h"
@@ -87,6 +89,7 @@
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/ProfilerBackend.h"
 #include "Engine/Window/IWindow.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -116,6 +119,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
     /** @brief 활성 씬의 강체 물리(바디 셰이프 · 캐릭터 캡슐)를 디버그 선으로 그립니다(`ScenePhysics::drawDebug` → `DebugDrawQueue`). */
     SW_GLOBAL_VARIABLE( bool, gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
+    SW_GLOBAL_VARIABLE( int32, gv_navDebugDraw, 0, "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔)" );
     /** @brief `-gv_telemetryFolder=<경로>`: 텔레메트리 스풀 폴더입니다(자동화 — 사용자 폴더를 건드리지 않는다). 비면 사용자 설정 파일 옆의 `telemetry/`. */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_telemetryFolder, "", "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)" );
 
@@ -427,11 +431,15 @@ namespace sw
                 uint32                        vertexAnimationFailedCount = 0;
                 [[maybe_unused]] const uint32 vertexAnimationCount =
                     VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, vertexAnimationFailedCount );
-                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures).",
+                // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
+                uint32                        navMeshFailedCount = 0;
+                [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( resourceRoot, cookedDir, navMeshFailedCount );
+                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures), "
+                             "%# navmeshes (%# failures).",
                              sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,
-                             vertexAnimationFailedCount );
-                loop._bHeadlessTaskFailed =
-                    sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 || vertexAnimationFailedCount > 0;
+                             vertexAnimationFailedCount, navMeshCount, navMeshFailedCount );
+                loop._bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 ||
+                                            vertexAnimationFailedCount > 0 || navMeshFailedCount > 0;
                 return EngineInitResult::SkipDependents;
             }
 
@@ -853,6 +861,10 @@ namespace sw
             engine::bindEngineServices( services );
         }
 
+        // 외부 프로파일러(`-gv_tracy`)는 서비스 표가 선 직후에 켠다 — 기동 단계부터 타임라인에 남고, 켤 때 엔진 프로파일러도 같이 켠다.
+        ThreadName::setCurrentThreadName( "GameThread" );
+        ProfilerBackend::initialize();
+
         // 초기화(`initialize()`)의 순서는 손으로 적지 않는다. 단계마다 먼저 서야 하는 단계를 `EngineInitStepList.xxx` 에 적고,
         // 여기서는 위상 순서로 단계 구조체(`<단계>StartupStep`)의 본문을 부른다. 종료와 해제는 그 역순이다(`shutdown`).
         const bool bStarted = _startup.initializeAll( *this );
@@ -877,6 +889,8 @@ namespace sw
         // 단계가 소유한 객체를 표의 역순으로 해제한다(`<단계>StartupStep::destroy`): 렌더러 쪽 → RHI → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 →
         // 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _startup.destroyAll();
+        // 할당 관찰을 떼고 출력을 비운다. 출력 객체(Tracy)는 프로세스 수명이라 남아 있는 구간을 닫을 수 있다.
+        ProfilerBackend::shutdown();
         // 표 밖 부트스트랩을 세운 역순으로 내린다(시험 하네스와 같은 끝 정리).
         _bootstrap.shutdown();
 
@@ -1047,6 +1061,22 @@ namespace sw
             }
         }
 
+        // 내비메시 · 에이전트 경로 · 속도 · 장애물 — 선은 물리 디버그와 같은 출구로(편집기 뷰포트가 그린다), 비트 16 은 게임 화면에 보이는 메시로.
+        if ( _owned._pSceneManager != nullptr )
+        {
+            Scene* pDebugScene = _owned._pSceneManager->getActiveScene();
+            if ( pDebugScene != nullptr && pDebugScene->getObjectManager() != nullptr )
+            {
+                SceneNavigation& navigation = pDebugScene->getObjectManager()->getSceneNavigation();
+                navigation.updateDebugView( static_cast<uint32>( gv_navDebugDraw ) );
+                if ( gv_navDebugDraw != 0 )
+                {
+                    PhysicsDebugDrawAdapter adapter{ engine::getDebugDrawQueue() };
+                    navigation.drawDebug( adapter, static_cast<uint32>( gv_navDebugDraw ) );
+                }
+            }
+        }
+
         // 텔레메트리 — 장면별 프레임 시간을 모으고 flush 시간이 되면 쓴다. 동의가 없으면 둘 다 아무 일도 하지 않는다.
         if ( _owned._pTelemetryService != nullptr )
         {
@@ -1175,6 +1205,10 @@ namespace sw
     void EngineLoop::endFrame()
     {
         engine::getFrameProfiler().endFrame();
+        // 외부 프로파일러(Tracy)의 주 프레임 경계 — 게임 스레드 프레임이다.
+        IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();
+        if ( pProfilerBackend != nullptr )
+            pProfilerBackend->markFrame( nullptr );
         const bool bReportedBefore = _profileSession.hasReported();
         _profileSession.onFrameEnd();
         // CPU 메모리 태그 표 옆에 GPU 메모리 표를 둔다. 보고 세션은 Utility 층이라 Graphics 의 장부를 볼 수 없어 여기서 잇는다.

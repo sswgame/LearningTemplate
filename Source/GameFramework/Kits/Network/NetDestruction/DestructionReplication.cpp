@@ -20,6 +20,10 @@ namespace sw
             static constexpr int32   kPoseMessageBudget    = 900; ///< 자세 메시지 하나를 이만큼에서 끊는다(한도 1024)
             static constexpr uint8   kRestRepeatCount      = 5;   ///< 멈춘 자세를 비신뢰로 되풀이하는 횟수(자세 주기마다)
             static constexpr uint32  kMaxPoseSample        = 32;
+            static constexpr float32 kPoseIntervalsBehind  = 2.0f; ///< 렌더 지연은 자세 간격의 이 배 이상 — 자세 하나를 잃거나 흔들림으로 늦어도 다음 것과 사이를 잇는다
+
+            /** @brief 프로필의 자세 간격(초)입니다. */
+            static float32 computePosePeriod( const FractureComponentBase& component ) { return 1.0f / MathUtil::max( 0.1f, component.getProfile()._networkPoseRate ); }
 
             static void writeEvent( BitWriter& writer, const DestructionDamageEvent& event )
             {
@@ -304,7 +308,7 @@ namespace sw
         using Internal = DestructionReplicationInternal;
         if ( component.isStateReady() == false || component.isFractured() == false )
             return;
-        const float32 period = 1.0f / MathUtil::max( 0.1f, component.getProfile()._networkPoseRate );
+        const float32 period = Internal::computePosePeriod( component );
         entry._poseTime += _settings._tickInterval;
         const bool bDue = entry._poseTime + 1.0e-4f >= period;
         if ( bDue )
@@ -417,6 +421,7 @@ namespace sw
         , _pHost{ nullptr }
         , _pManager{ nullptr }
         , _renderTick{ -1.0f }
+        , _posePeriodMax{ 0.0f }
         , _serverTickEstimate{ 0.0f }
         , _bHasServerTick{ SW_FALSE }
     {
@@ -430,6 +435,7 @@ namespace sw
         _listEntry.clear();
         _stats              = DestructionReplicationStats{};
         _renderTick         = -1.0f;
+        _posePeriodMax      = 0.0f;
         _serverTickEstimate = 0.0f;
         _bHasServerTick     = SW_FALSE;
     }
@@ -446,6 +452,7 @@ namespace sw
         *pEntry            = Entry{};
         pEntry->_netId     = netId;
         pEntry->_component = component.getHandle();
+        _posePeriodMax     = MathUtil::max( _posePeriodMax, DestructionReplicationInternal::computePosePeriod( component ) );
     }
 
     void DestructionReplicationClient::skipNextEvent( uint32 netId )
@@ -694,7 +701,9 @@ namespace sw
             // 서버 틱 추정은 틱마다 흐르고 받은 틱보다 뒤처지지 않는다 — 자세가 오지 않는 동안(모두 멈춤)에도 렌더 틱이 서버 시각을 따른다.
             const float32 tickInterval = MathUtil::max( 1.0e-4f, _settings._tickInterval );
             _serverTickEstimate += deltaTime / tickInterval;
-            _renderTick = MathUtil::max( _renderTick, _serverTickEstimate - _settings._interpolationDelay / tickInterval );
+            // 지연이 자세 간격 하나뿐이면 자세 하나를 잃거나 흔들림으로 늦을 때마다 뒤 자세가 없어 덩어리가 멈춰 선다(빨리 떨어지는 덩어리는 미터 단위로 어긋난다).
+            const float32 delay = MathUtil::max( _settings._interpolationDelay, _posePeriodMax * DestructionReplicationInternal::kPoseIntervalsBehind );
+            _renderTick         = MathUtil::max( _renderTick, _serverTickEstimate - delay / tickInterval );
         }
         for ( Entry& entry : _listEntry )
         {

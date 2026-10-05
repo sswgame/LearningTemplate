@@ -3,6 +3,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 
@@ -32,10 +33,52 @@ namespace sw
                  : 0u;
     }
 
-    bool VulkanRHIDevice::readTimestampsMicros( vector<float32>& outListMicro )
+    bool VulkanRHIDevice::readTimestamps( RHIGpuTimestampFrame& outFrame )
     {
-        outListMicro = _listTimestampMicro;
-        return outListMicro.empty() == false;
+        outFrame = _timestampFrame;
+        return outFrame._listMicro.empty() == false;
+    }
+
+    bool VulkanRHIDevice::readGpuClockNanos( int64& outGpuNanos )
+    {
+        outGpuNanos = 0;
+        if ( _device == VK_NULL_HANDLE || _physicalDevice == VK_NULL_HANDLE || _graphicsQueue == VK_NULL_HANDLE ||
+             _oneShotCommandPool == VK_NULL_HANDLE )
+            return false;
+
+        VkPhysicalDeviceProperties properties{};
+        vkGetPhysicalDeviceProperties( _physicalDevice, &properties );
+        if ( properties.limits.timestampPeriod <= 0.0f || properties.limits.timestampComputeAndGraphics == VK_FALSE )
+            return false;
+        if ( _clockQueryPool == VK_NULL_HANDLE )
+        {
+            VkQueryPoolCreateInfo poolInfo{};
+            poolInfo.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+            poolInfo.queryType  = VK_QUERY_TYPE_TIMESTAMP;
+            poolInfo.queryCount = 1;
+            if ( vkCreateQueryPool( _device, &poolInfo, nullptr, &_clockQueryPool ) != VK_SUCCESS )
+            {
+                _clockQueryPool = VK_NULL_HANDLE;
+                return false;
+            }
+        }
+
+        // 보정 확장(VK_EXT_calibrated_timestamps) 없이 "지금 GPU 시계" 를 얻는 길: 타임스탬프 하나를 일회성 버퍼로 내고 큐가 빌 때까지
+        // 기다린다. 돌아오는 순간의 값이 곧 지금이다(관찰 지연만큼 이르다). 큐를 비우므로 컨텍스트를 열 때 한 번만 부른다.
+        {
+            VulkanOneShotCommands oneShot{ _device, _oneShotCommandPool, _oneShotMutex, _graphicsQueue, _queueMutex };
+            if ( oneShot.isValid() == false )
+                return false;
+            vkCmdResetQueryPool( oneShot.get(), _clockQueryPool, 0, 1 );
+            vkCmdWriteTimestamp( oneShot.get(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, _clockQueryPool, 0 );
+            if ( oneShot.endSubmitAndWait() == false )
+                return false;
+        }
+        uint64 tick{ 0 };
+        if ( vkGetQueryPoolResults( _device, _clockQueryPool, 0, 1, sizeof( tick ), &tick, sizeof( tick ), VK_QUERY_RESULT_64_BIT ) != VK_SUCCESS )
+            return false;
+        outGpuNanos = RHIGpuTimestamp::convertTickToNanos( tick, static_cast<float64>( properties.limits.timestampPeriod ) );
+        return true;
     }
 
     void VulkanRHIDevice::ensureTimestampPool()
@@ -64,7 +107,7 @@ namespace sw
 
     void VulkanRHIDevice::collectTimestampsForSlot()
     {
-        _listTimestampMicro.clear();
+        _timestampFrame._listMicro.clear();
         if ( _bTimestampEnabled == SW_FALSE || _timestampPool == VK_NULL_HANDLE || _timestampPeriod <= 0.0f ||
              _arrTimestampSubmitted[_currentFrame] == SW_FALSE )
             return;
@@ -91,7 +134,7 @@ namespace sw
             arrTick[index] = arrResult[index * 2];
             readyMask |= ( 1u << index );
         }
-        RHIGpuTimestamp::resolveMicro( arrTick, readyMask, static_cast<float64>( _timestampPeriod ) / 1000.0, _listTimestampMicro );
+        RHIGpuTimestamp::resolve( arrTick, readyMask, static_cast<float64>( _timestampPeriod ), _timestampFrame );
     }
 
     void VulkanRHIDevice::beginFrame( const float4& clearColor )

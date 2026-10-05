@@ -27,15 +27,12 @@
 #include "EngineTest/StateReloadTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
 
-#include "GameFramework/Components/DontDestroyOnLoadComponent.h"
-#include "GameFramework/Components/FadeOutComponent.h"
-#include "GameFramework/Components/GravityComponent.h"
 #include "GameFramework/Data/GameSettings.h"
-#include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Framework/ComponentStateStore.h"
 #include "GameFramework/Framework/GameEvents.h"
 #include "GameFramework/Framework/GameInstanceBase.h"
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameStrings.h"
 #include "GameFramework/Framework/SaveGame.h"
 #include "GameFramework/Framework/ScreenTransitionManager.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionRoom.h"
@@ -54,6 +51,9 @@
 #include "GameFramework/UI/DamageNumberComponent.h"
 #include "GameFramework/UI/DialogueRunnerComponent.h"
 #include "GameFramework/UI/HealthBarComponent.h"
+#include "GameFramework/World/DontDestroyOnLoadComponent.h"
+#include "GameFramework/World/FadeOutComponent.h"
+#include "GameFramework/World/GravityComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -24,7 +24,7 @@ namespace sw
         float32 _interpolationDelay{ 0.1f };   ///< 이만큼 과거를 그린다(스냅샷 두 개 사이 — 하나를 잃어도 끊기지 않게)
         float32 _clockCorrection{ 0.1f };      ///< 렌더 시각이 목표에서 벗어나면 초당 이 몫만큼 빠르게 · 느리게
         int32   _historySize{ 64 };
-        int32   _inputRedundancy{ 4 }; ///< 입력 메시지마다 지난 입력을 몇 개까지 겹쳐 싣나(손실 대비)
+        int32   _inputRedundancy{ 4 }; ///< 입력 메시지마다 지난 입력을 몇 개까지 겹쳐 싣나(손실 대비, 1..`NetClientServerMessage::kMaxRedundantInputCount`, 메시지 상한 안에서)
     };
 } // namespace sw
 
@@ -47,8 +47,8 @@ namespace sw
         void onConnectionOpened( int32 connectionId ) override;
         /** @brief 렌더 시각을 흘립니다. */
         void update( float32 deltaTime );
-        /** @brief 이 틱의 입력을 보냅니다(지난 입력 몇 개와 함께). */
-        void sendInput( uint32 tick, const vector<uint8>& listInput );
+        /** @brief 이 틱의 입력을 보냅니다(지난 입력 몇 개와 함께). 입력이 `NetClientServerMessage::kMaxInputBytes` 를 넘으면 보내지 않고 false 입니다. */
+        bool sendInput( uint32 tick, const vector<uint8>& listInput );
 
         /**
          * @brief 렌더 시각의 엔티티 — 앞뒤 스냅샷의 상태와 그 사이 비율(0..1)입니다. 앞 스냅샷에만 있으면 그것 하나(@p pOutTo 도 같은 것).

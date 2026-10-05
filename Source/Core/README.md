@@ -11,9 +11,11 @@
   `X11MacroUndef.h`(Xlib · GLX · XKB 를 더 포함한 바로 뒤에 다시 include)
 - **Predefined/**: 엔진과 ReflectionParser 가 함께 include 하는 X-매크로 표(`*.xxx` — 명령줄 인자 · 고정 이름 · 컨테이너 종류 · 애노테이션 종류)와 `AnnotationMeta.txt`
 - **Memory/**: `Memory`(`allocateAligned` · 바이트 유틸) · `sw_new` / `sw_delete` · `sw_new_array` / `sw_delete_array` · `make_unique<T>` / `make_unique<T[]>`(`Memory.h`) ·
-  `MemoryTag`(아래 "메모리 태그") · `LinearAllocator` · `FrameArenaAllocator`(+ `FrameDoubleBuffer`) · `PoolAllocator` · `MemoryProfiler`(태그별 통계 · 콜스택 · 누수 검사)
+  `MemoryTag`(아래 "메모리 태그") · `LinearAllocator` · `FrameArenaAllocator`(+ `FrameDoubleBuffer`) · `PoolAllocator` · `MemoryProfiler`(태그별 통계 · 콜스택 · 누수 검사) ·
+  할당 관찰자(`Memory::setAllocationObserver` — 외부 프로파일러가 할당 · 해제를 받는다. 관찰 중에 잡힌 블록의 해제만 알린다, 배포본에는 없다)
 - **Concurrency/**: `LockFreeObjectPool`, `LockFreeQueue`, `ConcurrentQueue`, `WorkStealingDeque`, `SpinLock`, `Futex`, `DeadlockDetector`, `DataRaceDetector`,
-  `mutex`(데드락 탐지 내장 래퍼) · `atomic`(PROPERTY 로 노출 · 직렬화할 수 있는 래퍼)
+  `mutex`(데드락 탐지 내장 래퍼) · `atomic`(PROPERTY 로 노출 · 직렬화할 수 있는 래퍼) · `ThreadName`(스레드 진입 함수가 OS 에 이름을 적는다 —
+  디버거와 Tracy 가 같은 이름을 읽는다: `GameThread` · `RenderThread` · `Worker N` · `IO` · `Logger` · `Net`)
 - **Task/**: `TaskManager` · `TaskHandle` · `TaskFuture` (워커 풀 + DAG 스케줄러, `Task/README.md`)
 - **Container/**: 표준 컨테이너 별칭(`vector.h` · `unordered_map.h` …) · `span` · `VectorUtil`(`removeAtSwap` 등) · `sparse_set` · `DynamicBitset` · `PagedArray`(주소가 옮겨지지 않는 청크 배열) ·
   `InlineAllocator`(SBO) · 핸들(`SlotHandle` · `SlotHandleTable` · `GameObjectHandle` · `ComponentHandle`) · `RegistrationList`(등록부의 공통 모양 —
@@ -29,7 +31,11 @@
 - **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
   얹어, 싱글 게임은 그 키트를 링크하지 않는다.
   - `BitStream`(`BitWriter` · `BitReader` — 범위 정수 · 양자화 실수 · 가변 정수, 넘침 감지. 비트를 바이트 덩어리로 쓰고 읽고, 경계에 맞은 바이트는 `memcpy` —
-    선 위 배치는 비트 단위 시절과 같다), `SequenceBuffer`(16 비트 감김 시퀀스 고리), `NetTypes`(`NetAddress` ·
+    선 위 배치는 비트 단위 시절과 같다. 길이 붙인 덩어리 `writeBlob` / `readBlob( out, maxSize )` · `skipBlob` — 상한을 넘는 길이는 자르지 않고 넘침으로 거부한다.
+    `BitMath::computeVarUintBits` · `computeBlobBits` 는 쓸 비트를 정확히 센다), `NetSendBudget`(메시지 하나의 비트 예산 — `NetConnection::kMaxMessageSize` 로 잘리고,
+    종류 바이트 · 머리 · 목록 길이 · 끝 표시까지 센다. 넘는 메시지는 보내기가 통째로 버리고, 확인이 안 와 같은 크기를 또 보내는 라이브락이 된다), `NetPrioritizer`(관찰자
+    하나의 엔티티마다 누적 우선도 — 언리얼 `NetPriority` × 지난 시간 · 유니티 고스트 중요도 × 나이. 틱마다 `우선도 × 시간` 을 쌓고 보낸 것만 0 으로, 순서는 큰 것부터 ·
+    같으면 id 순이라 결정적이다. 예산이 늘 차도 낮은 우선도가 쌓여 차례를 얻는다 — 복제 키트 둘(`ReplicationServer` · `MmoReplicator`)이 같이 쓴다), `SequenceBuffer`(16 비트 감김 시퀀스 고리), `NetTypes`(`NetAddress` ·
     채널 · 연결 상태 · 메시지 첫 바이트 영역 `NetMessageRange` · 와이어 판 `NetWireVersion` · 프로토콜 id `NetProtocol`)
   - `NetConnection` — 연결 하나의 신뢰성: 패킷 시퀀스 · ack + 32 비트 묶음, 채널(신뢰 순서 · 순서만 — 메시지 첫 바이트(종류)마다 가장 새 것 하나, 다른 종류끼리는 서로 지우지 않는다 · 비신뢰), 재전송(RTT + 50 ms, 그리고 뒤 패킷 셋이 확인됐는데 확인이 없는 패킷은 바로 — 빠른 재전송), RTT · 손실률 · 대역폭(최근 1 초).
     받은 패킷은 몸을 다 읽은 뒤에야 시퀀스를 적는다 — 깨진 패킷을 확인하면 보낸 쪽이 그 안의 신뢰 메시지를 전달된 것으로 지운다.

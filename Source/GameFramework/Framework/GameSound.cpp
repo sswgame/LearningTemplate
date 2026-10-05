@@ -82,3 +82,62 @@ namespace sw
         return playingId;
     }
 } // namespace sw
+
+namespace sw
+{
+    GameSoundQueue::GameSoundQueue()
+        : _listEntry{}
+    {
+    }
+
+    void GameSoundQueue::queueClip( const utf8* pPath )
+    {
+        Entry entry;
+        entry._pName = pPath;
+        entry._kind  = Kind::Clip;
+        _listEntry.push_back( entry );
+    }
+
+    void GameSoundQueue::queueEvent( const utf8* pEventName )
+    {
+        Entry entry;
+        entry._pName = pEventName;
+        entry._kind  = Kind::Event;
+        _listEntry.push_back( entry );
+    }
+
+    void GameSoundQueue::queueEventAt( const utf8* pEventName, const float3& position )
+    {
+        Entry entry;
+        entry._position = position;
+        entry._pName    = pEventName;
+        entry._kind     = Kind::EventAt;
+        _listEntry.push_back( entry );
+    }
+
+    void GameSoundQueue::playAll()
+    {
+        for ( const Entry& entry : _listEntry )
+        {
+            switch ( entry._kind )
+            {
+                case Kind::Clip:
+                {
+                    (void)GameSound::play( entry._pName );
+                    break;
+                }
+                case Kind::Event:
+                {
+                    (void)GameSound::postEvent( hashed_string( entry._pName ) );
+                    break;
+                }
+                case Kind::EventAt:
+                {
+                    (void)GameSound::postEventAt( hashed_string( entry._pName ), entry._position );
+                    break;
+                }
+            }
+        }
+        _listEntry.clear();
+    }
+} // namespace sw

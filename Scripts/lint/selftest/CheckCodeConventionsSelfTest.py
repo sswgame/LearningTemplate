@@ -250,6 +250,15 @@ _kWholeScanCleanCase: dict[str, str] = {
         '#include "pch.h"\n\nvoid probeCounter( ByteCounter& target )\n{\n'
         "    target._bytesWritten = 0;\n}\n"
     ),
+    # 포인터 사이에 const 가 낀 멤버(`Widget* const* _ppWidget`)도 멤버 선언이다 — 못 읽으면 그 앞뒤 멤버를 순서대로 초기화해도
+    # `Style/ConstructorOrder` 가 순서 위반으로 잘못 건다.
+    "Source/Probe/RangeTable.h": (
+        "#pragma once\n\nstruct Widget;\n\nclass RangeTable\n{\npublic:\n    RangeTable();\n\nprivate:\n"
+        "    int32          _first;\n    Widget* const* _ppWidget;\n    int32          _last;\n};\n"
+    ),
+    "Source/Probe/RangeTable.cpp": (
+        '#include "pch.h"\n\nRangeTable::RangeTable()\n    : _first{ 1 }\n    , _ppWidget{ nullptr }\n    , _last{ 2 }\n{\n}\n'
+    ),
     # 같은 이름이 두 폭으로 선언돼 있으면 **어느 쪽을 쓴 것인지 단정할 수 없다** — 건너뛴다.
     "Source/Probe/WidthClash.h": (
         "#pragma once\n\nstruct NarrowFlags\n{\n    uint8 _bReady : 1;\n};\n\n"

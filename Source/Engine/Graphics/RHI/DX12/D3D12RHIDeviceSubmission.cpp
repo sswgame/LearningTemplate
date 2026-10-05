@@ -379,10 +379,29 @@ namespace sw
                  : 0u;
     }
 
-    bool D3D12RHIDevice::readTimestampsMicros( vector<float32>& outListMicro )
+    bool D3D12RHIDevice::readTimestamps( RHIGpuTimestampFrame& outFrame )
     {
-        outListMicro = _listTimestampMicro;
-        return outListMicro.empty() == false;
+        outFrame = _timestampFrame;
+        return outFrame._listMicro.empty() == false;
+    }
+
+    bool D3D12RHIDevice::readGpuClockNanos( int64& outGpuNanos )
+    {
+        outGpuNanos = 0;
+        if ( _commandQueue == nullptr )
+            return false;
+        uint64 frequency = _timestampFrequency;
+        if ( frequency == 0 && FAILED( _commandQueue->GetTimestampFrequency( &frequency ) ) )
+            return false;
+        if ( frequency == 0 )
+            return false;
+        // 큐의 GPU 시계와 CPU 시계를 한 순간에 읽는다(기다리지 않는다). GPU 값만 쓴다 — CPU 쪽은 Tracy 가 자기 시계로 찍는다.
+        uint64 gpuTick{ 0 };
+        uint64 cpuTick{ 0 };
+        if ( FAILED( _commandQueue->GetClockCalibration( &gpuTick, &cpuTick ) ) )
+            return false;
+        outGpuNanos = RHIGpuTimestamp::convertTickToNanos( gpuTick, 1.0e9 / static_cast<float64>( frequency ) );
+        return true;
     }
 
     void D3D12RHIDevice::ensureTimestampResources()
@@ -424,7 +443,7 @@ namespace sw
     void D3D12RHIDevice::collectTimestampsForSlot()
     {
         // 이 슬롯은 방금 펜스를 통과했다. 지난번 이 슬롯에 적은 값이 GPU 에서 이미 끝나 있다.
-        _listTimestampMicro.clear();
+        _timestampFrame._listMicro.clear();
         const uint32 writtenMask = _arrTimestampMask[_frameRing.currentIndex()];
         if ( _timestampReadback == nullptr || _timestampFrequency == 0 || writtenMask == 0 )
             return;
@@ -441,7 +460,7 @@ namespace sw
         // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
         const uint64* pTicks = reinterpret_cast<const uint64*>( static_cast<const uint8*>( pMapped ) + byteOffset );
         // 그래서 writtenMask 가 곧 준비 비트다. 이 슬롯은 방금 펜스를 통과했다.
-        RHIGpuTimestamp::resolveMicro( pTicks, writtenMask, 1000000.0 / static_cast<float64>( _timestampFrequency ), _listTimestampMicro );
+        RHIGpuTimestamp::resolve( pTicks, writtenMask, 1.0e9 / static_cast<float64>( _timestampFrequency ), _timestampFrame );
 
         const D3D12_RANGE emptyRange{ 0, 0 };
         _timestampReadback->Unmap( 0, &emptyRange );

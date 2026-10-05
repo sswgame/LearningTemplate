@@ -91,8 +91,8 @@ namespace sw
             return;
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const VoxelDirectorComponent* pDirector = pManager != nullptr ? VoxelDirectorComponent::resolveDirector( *pManager, _director ) : nullptr;
-        if ( pDirector == nullptr || pDirector->isWorldReady() == false )
+        const VoxelDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
+        if ( pDirector == nullptr || pDirector->isStarted() == false )
             return;
         // 메싱은 월드를 읽기만 한다 — 같은 그룹의 다른 청크와 나란히 돈다. 블록은 틱 뒤에만 바뀐다.
         _bRebuildRequested = SW_FALSE;
