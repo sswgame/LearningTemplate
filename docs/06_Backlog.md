@@ -159,6 +159,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-4. 에디터
 
+- **AbilityArena 자동 전투 실행은 종료 보고에 `Scene` 태그 232 B(1 블록)가 남는다**(2026-10-06, `Ninja-Debug-AbilityArena` 네 백엔드 모두 `-gv_arenaAutoPlay=1
+  -gv_profileFrames=300`). 다른 게임 여섯 · Empty 는 0. 같은 진단(기준선 뒤 상세 추적 · 종료 직전 `getTopCallStacks`)으로 자리를 찾는다.
+- **Shooter3D 의 Q/E 한 번 = 무기 한 칸은 손으로 확인할 것**(2026-10-06 입력 trigger 결함 수정 뒤). 단위 시험(`InputMapTest.Axis1DBindingFollowsTheActionTrigger`)은
+  통과했고, 실기동 키 입력은 백그라운드 세션에서 창 포커스를 얻지 못해 자동으로 넣지 못했다 — 로그 `[Shooter] <무기> - ` 줄이 누를 때마다 한 줄이어야 한다.
 - **에디터를 켠 실행은 종료 보고에 `Editor` 태그 256 B(1 블록)가 남는다**(2026-10-06, `App.exe -dx12 -EnableEditor -gv_profileFrames=5`). 에디터 없는 실행은 0 이고
   `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 지킨다. 프로세스 정적 저장소가 기동 뒤 자란 몫일 것 — 기준선 직후 `setDetailedTrackingEnabled( true )` ·
   종료 보고 직전 `getTopCallStacks( LiveBytes )` 임시 진단으로 자리를 찾아 종료 끝에서 놓는다.
