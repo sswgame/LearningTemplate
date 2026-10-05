@@ -488,3 +488,13 @@ SW_TEST_CASE( NetTurnRelayTest, SeatTokensDifferBetweenServers )
     }
     SW_EXPECT_TRUE( arrToken[0] != arrToken[1] );
 }
+
+/**
+ * @brief [NetTurnRelayTest] 상한을 넘는 행동은 보내지 않고 −1 — 서버가 깨짐으로 버려 조용히 사라지지 않게
+ */
+SW_TEST_CASE( NetTurnRelayTest, OversizeActionIsRefusedBeforeSending )
+{
+    TurnRelayClient client;
+    SW_TEST_DEFENSIVE_SCOPE( "an action over the relay limit is refused with an error" );
+    SW_EXPECT_EQUAL( -1, client.submitAction( vector<uint8>( static_cast<size_t>( NetTurnRelayMessage::kMaxActionBytes ) + 1, 0x11 ) ) );
+}

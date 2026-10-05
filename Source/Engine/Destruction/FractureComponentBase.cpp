@@ -1579,8 +1579,7 @@ namespace sw
         collectGroupPoses( listPose );
         BitWriter writer;
         writer.writeUint32( Internal::kSnapshotMagic );
-        writer.writeVarUint( stateBytes.size() );
-        writer.writeBytes( stateBytes.data(), static_cast<int32>( stateBytes.size() ) );
+        writer.writeBlob( stateBytes.data(), static_cast<int32>( stateBytes.size() ) );
         writer.writeVarUint( listPose.size() );
         for ( const FractureGroupPose& pose : listPose )
         {
@@ -1673,15 +1672,13 @@ namespace sw
             SW_LOG_ERROR( "'%#': destruction snapshot has a wrong magic", pOwnerName );
             return;
         }
-        const uint64 stateSize = reader.readVarUint();
-        if ( reader.hasOverflowed() || stateSize == 0 || stateSize > static_cast<uint64>( reader.getBitsRemaining() / 8 ) )
+        // 상태 바이트의 상한은 남은 바이트다 — 받은 스냅숏 자체가 길이를 정한다(조각은 이미 모아 왔다).
+        vector<uint8> stateBytes;
+        if ( reader.readBlob( stateBytes, reader.getBitsRemaining() / 8 ) == false || stateBytes.empty() )
         {
             SW_LOG_ERROR( "'%#': destruction snapshot is truncated", pOwnerName );
             return;
         }
-        vector<uint8> stateBytes( static_cast<size_t>( stateSize ) );
-        if ( reader.readBytes( stateBytes.data(), static_cast<int32>( stateSize ) ) == false )
-            return;
         DestructionState trial = _state;
         if ( trial.readSnapshot( stateBytes.data(), stateBytes.size() ) == false )
         {

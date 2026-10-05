@@ -25,13 +25,14 @@ namespace sw
     /** @brief 메시지 종류(첫 바이트)입니다. */
     struct NetTurnRelayMessage
     {
-        static constexpr uint8 kJoin     = NetKitMessageRange::kTurnRelay + 0;
-        static constexpr uint8 kJoined   = NetKitMessageRange::kTurnRelay + 1;
-        static constexpr uint8 kAction   = NetKitMessageRange::kTurnRelay + 2;
-        static constexpr uint8 kApplied  = NetKitMessageRange::kTurnRelay + 3;
-        static constexpr uint8 kRejected = NetKitMessageRange::kTurnRelay + 4;
-        static constexpr uint8 kStarted  = NetKitMessageRange::kTurnRelay + 5;
-        static constexpr uint8 kDenied   = NetKitMessageRange::kTurnRelay + 6;
+        static constexpr uint8 kJoin           = NetKitMessageRange::kTurnRelay + 0;
+        static constexpr uint8 kJoined         = NetKitMessageRange::kTurnRelay + 1;
+        static constexpr uint8 kAction         = NetKitMessageRange::kTurnRelay + 2;
+        static constexpr uint8 kApplied        = NetKitMessageRange::kTurnRelay + 3;
+        static constexpr uint8 kRejected       = NetKitMessageRange::kTurnRelay + 4;
+        static constexpr uint8 kStarted        = NetKitMessageRange::kTurnRelay + 5;
+        static constexpr uint8 kDenied         = NetKitMessageRange::kTurnRelay + 6;
+        static constexpr int32 kMaxActionBytes = 900; ///< 행동 하나의 바이트 상한 — 클라이언트는 넘는 행동을 보내지 않고, 서버 · 클라이언트는 넘는 길이를 깨짐으로 본다
         static_assert( NetMessageRange::isInRange( kDenied, NetKitMessageRange::kTurnRelay ), "message kinds must stay inside the kit's range" );
     };
 } // namespace sw
@@ -215,7 +216,7 @@ namespace sw
         void initialize( NetHost* pHost );
         /** @brief 방에 들어갑니다(자리 −1 = 아무 데나). 전에 받은 표가 있으면 그 자리로 돌아갑니다. */
         void join( uint32 roomId, int32 seat = -1 );
-        /** @brief 행동을 보냅니다. 행동 번호(거절 알림에 붙는다)입니다. */
+        /** @brief 행동을 보냅니다. 행동 번호(거절 알림에 붙는다)입니다. 행동이 `NetTurnRelayMessage::kMaxActionBytes` 를 넘으면 보내지 않고 오류를 남긴 뒤 −1 입니다. */
         int32 submitAction( const vector<uint8>& buffer );
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kTurnRelay; }
         /** @brief 클라이언트가 받는 종류 — 들어옴 · 적용 · 거절 · 시작 · 거부. */

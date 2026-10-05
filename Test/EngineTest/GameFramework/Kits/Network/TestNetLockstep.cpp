@@ -773,3 +773,26 @@ SW_TEST_CASE( NetLockstepTest, FarFutureInputIsIgnored )
     SW_EXPECT_TRUE( listInput[0] == vector<uint8>{ 0x22 } && listInput[1] == vector<uint8>{ 0x11 } );
     SW_EXPECT_FALSE( session.tryAdvance( listInput ) );
 }
+
+/**
+ * @brief [NetLockstepTest] 상한을 넘는 입력 — 내 쪽은 예약하지 않고(나만 진행하는 비동기를 막는다), 받은 쪽은 길이를 자르지 않고 깨진 메시지로 버린다
+ */
+SW_TEST_CASE( NetLockstepTest, OversizeInputIsRefusedOnBothEnds )
+{
+    LockstepSession session;
+    session.initialize( nullptr, 2, 0, 2 );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an input over the lockstep limit is refused with an error" );
+        SW_EXPECT_FALSE( session.submitLocalInput( vector<uint8>( static_cast<size_t>( NetLockstepMessage::kMaxInputBytes ) + 1, 0x5A ) ) );
+    }
+    SW_EXPECT_TRUE( session.submitLocalInput( vector<uint8>( static_cast<size_t>( NetLockstepMessage::kMaxInputBytes ), 0x5A ) ) );
+
+    NetMessageWriter writer;
+    BitWriter&       body = writer.begin( NetLockstepMessage::kInput );
+    body.writeVarUint( 1 );
+    body.writeVarUint( 0 );
+    body.writeVarUint( static_cast<uint64>( NetLockstepMessage::kMaxInputBytes ) + 1 );
+    for ( int32 index = 0; index <= NetLockstepMessage::kMaxInputBytes; ++index )
+        body.writeBits( 0x5A, 8 );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == session.handleMessage( 0, writer.getBytes() ) );
+}

@@ -407,7 +407,6 @@ cd build/Ninja-Debug/Bin
 
 - **네트워크 리팩토링 남은 단계(2026-10-05 사용자 요청 — 결함 단계 N0~N12 · 키트 결함 D1~D19 는 끝남).** 공통 부품을 Core `Network/Replication/` 에 두고 키트는
   조립만 하게. 단계마다 커밋 하나, 스레드를 건드린 단계는 `--test_repeat=50`, 파괴 네트워킹 시험(`NetSimDestruction*` · `DestructionSnapshot`)을 매 단계 지킨다.
-  N13 폴더 나누기(Transport · Connection · Message · Replication) · `sendToPeers` 남은 곳 · 남은 손 블롭(`TurnRelay.cpp` 의 자체 `writeBlob/readBlob` 포함)을 Core 블롭으로 ·
   N14 `TickRingBuffer<T>`(`ClientPrediction` · `ReplicationClient` 스냅숏 · `ReplicationServer::_listSent` · `LagCompensationHistory` · 롤백 기록/입력 · 락스텝 map) ·
   N15 `NetInputSendWindow` · `NetInputReceiveBuffer`(CS 입력 · 롤백 입력 — 1-6 CS2 식 입력 B5 와 형식 공유) · N16 `NetClock` · `InterpolationBuffer<T>`
   (`ReplicationClient::update/findBracket` 와 파괴 클라이언트의 서버 틱 추정 · 자세 표본) · N17 회선 흉내 하나로(`LoopbackConditions` 삭제) · N18 **측정 먼저**(하니스
@@ -1397,6 +1396,8 @@ cd build/Ninja-Debug/Bin
 - **확인만 담은 패킷이 확인을 부르면 한가한 연결이 30 Hz 로 핑퐁한다**(`NetConnection` 확인 요청 비트의 이유). 요청을 끄면 거꾸로 두 쪽 유지 시각이 맞물려 한쪽은
   늘 답만 보내 RTT 표본이 0 이 된다 — 그래서 답이라도 마지막 요청에서 유지 간격이 지나면 요청한다. RTT 는 "요청 패킷이 가장 새 확인으로" 돌아올 때만 잰다(묶음으로 늦게
   확인된 것은 상대가 기다렸다 보낸 시간이 섞인다).
+- **상한은 쓰는 쪽도 본다** — 받는 쪽만 상한을 보면 넘는 메시지가 보낸 쪽에선 "보냈다", 받는 쪽에선 깨짐으로 조용히 사라진다(턴 행동 900 B) · 락스텝은 보내기가 실패해도
+  내 입력을 이미 예약해 나만 진행했다. 상한 상수는 메시지 구조체에 하나(`NetTurnRelayMessage::kMaxActionBytes` · `NetLockstepMessage::kMaxInputBytes`)를 두 쪽이 같이 쓴다.
 
 - **보고의 "(sw 할당자 밖)" 은 CRT 합 − 태그 합**이라 프로파일러보다 먼저 잡힌 sw 블록도 들어간다 — MemoryProfiler 는 부트스트랩 맨 앞에서 선다. 새 스레드는 Unknown
   에서 시작하므로 띄운 쪽의 태그를 인자로 넘겨 첫 줄에서 건다. 배열은 `sw_new_array` · `make_unique<T[]>`(맨 `new` 는 `Style/RawNew` 가 막는다). 외부 라이브러리는

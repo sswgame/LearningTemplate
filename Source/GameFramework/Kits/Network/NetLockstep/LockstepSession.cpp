@@ -9,6 +9,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "LockstepSession" );
+
     LockstepSession::LockstepSession()
         : _mapInput{}
         , _mapChecksum{}
@@ -78,15 +80,18 @@ namespace sw
 
     bool LockstepSession::submitLocalInput( const vector<uint8>& listInput )
     {
+        if ( static_cast<int32>( listInput.size() ) > NetLockstepMessage::kMaxInputBytes )
+        {
+            SW_LOG_ERROR( "Lockstep input of %# bytes exceeds the limit of %# bytes - not scheduled", listInput.size(), NetLockstepMessage::kMaxInputBytes );
+            return false;
+        }
         const uint32 tick = _listNextInputTick[static_cast<size_t>( _localPlayer )];
         if ( tick > _currentTick + kMaxInputLead || storeInput( _localPlayer, tick, listInput ) == false )
             return false;
         BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kInput );
         writer.writeVarUint( static_cast<uint64>( _localPlayer ) );
         writer.writeVarUint( tick );
-        writer.writeVarUint( listInput.size() );
-        if ( listInput.empty() == false )
-            writer.writeBytes( listInput.data(), static_cast<int32>( listInput.size() ) );
+        writer.writeBlob( listInput.data(), static_cast<int32>( listInput.size() ) );
         if ( _pHost != nullptr )
             (void)_messageWriter.sendToPeers( *_pHost, NetChannelType::ReliableOrdered );
         return true;
@@ -214,8 +219,8 @@ namespace sw
             return NetHandleResult::Handled;
         if ( context._kind == NetLockstepMessage::kInput )
         {
-            vector<uint8> listInput( static_cast<size_t>( MathUtil::min<uint64>( 1024, body.readVarUint() ) ) );
-            if ( listInput.empty() == false && body.readBytes( listInput.data(), static_cast<int32>( listInput.size() ) ) == false )
+            vector<uint8> listInput;
+            if ( body.readBlob( listInput, NetLockstepMessage::kMaxInputBytes ) == false )
                 return NetHandleResult::Malformed;
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
