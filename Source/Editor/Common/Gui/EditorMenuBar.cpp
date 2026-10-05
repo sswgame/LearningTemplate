@@ -259,6 +259,11 @@ namespace sw::editor
         EditorMenuBarInternal::_s_bShowThemeSettings = true;
     }
 
+    void EditorMenuBar::closeThemeDialog()
+    {
+        EditorMenuBarInternal::_s_bShowThemeSettings = false;
+    }
+
     void EditorMenuBar::processOpenPanelRequests()
     {
         EditorContext* pContext = EditorContext::get();

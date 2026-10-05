@@ -34,6 +34,7 @@
 #include "Editor/Popups/EditorPopupManager.h"
 #include "Editor/SelfTest/EditorRegistryDump.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -644,6 +645,8 @@ namespace sw::editor
 
         if ( _platformBackend != nullptr )
             _platformBackend->newFrame();
+        // 자체 시험이 흉내 낸 입력 — 플랫폼 백엔드가 넣은 실제 커서보다 뒤에 넣어야 이긴다(ImGui 는 큐를 순서대로 처리한다).
+        EditorSelfTestInput::flushIntoImGui();
 
         // 이름 붙인 레이아웃은 프레임 밖에서 읽어야 이미 있는 창 · 도킹 노드에 적용된다.
         _dockLayout.applyPendingNamedLayout();

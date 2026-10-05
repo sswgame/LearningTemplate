@@ -39,6 +39,8 @@ namespace sw::editor
         void setFilterText( string_view filterText ) { _filterBuffer = filterText; }
         /** @brief 마지막으로 그린 프레임에 필터를 지난 루트 오브젝트 수입니다(서브트리 중 하나라도 맞으면 그 루트가 보인다). */
         uint32 getVisibleRootCount() const { return _visibleRootCount; }
+        /** @brief 검색 칸의 지금 글입니다(에디터 자체 시험이 타이핑이 닿았는지 본다). */
+        string_view getFilterText() const { return _filterBuffer.view(); }
 
     private:
         /**

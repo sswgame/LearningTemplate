@@ -20,6 +20,13 @@ namespace sw::editor
     {
         struct EditorWidgetsInternal
         {
+            /** @brief 0 건 안내를 그린 횟수입니다(`getNoSearchResultHintCount`). */
+            static uint32& noSearchResultHintCount()
+            {
+                static uint32 s_count = 0;
+                return s_count;
+            }
+
             static ImVec4 toIm( const Color4& c )
             {
                 return ImVec4( c._r, c._g, c._b, c._a );
@@ -213,6 +220,7 @@ namespace sw::editor
 
     void EditorWidgets::drawNoSearchResultHint( string_view filter )
     {
+        ++EditorWidgetsInternal::noSearchResultHintCount();
         if ( filter.empty() )
         {
             drawEmptyHint( "No matches." );
@@ -221,6 +229,11 @@ namespace sw::editor
 
         // 필터를 서식 **인자**로 넘긴다. 그래서 검색어에 '%' 가 들어와도 서식으로 해석되지 않는다.
         ImGui::TextDisabled( "No matches for \"%.*s\".", static_cast<int32>( filter.size() ), filter.data() );
+    }
+
+    uint32 EditorWidgets::getNoSearchResultHintCount()
+    {
+        return EditorWidgetsInternal::noSearchResultHintCount();
     }
 
     void EditorWidgets::drawCountLabel( uint32 visible, uint32 total, const utf8* pUnit )

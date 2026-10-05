@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -593,6 +594,7 @@ namespace sw::editor
             ImGui::SameLine();
             EditorWidgets::drawSearchField( "##HierarchyFilter", _filterBuffer,
                                             "Search (t:Mesh, tag:Player)...", 0.0f, false );
+            EditorSelfTestMarks::note( "hierarchy.filter" );
             EditorWidgets::drawTooltip( "오브젝트 이름 검색, 컴포넌트 타입(t:Mesh), 태그(tag:Player) 필터를 지원합니다" );
         }
         EditorChrome::endToolbar();

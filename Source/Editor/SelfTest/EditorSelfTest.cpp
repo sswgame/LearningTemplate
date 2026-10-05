@@ -6,6 +6,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/SelfTest/EditorSelfTestInput.h"
+
 #include "Engine/Window/IWindow.h"
 
 namespace sw::editor
@@ -154,6 +156,8 @@ namespace sw::editor
         if ( state._bStarted == false )
         {
             state._bStarted = true;
+            // 시험이 도는 동안만 패널이 누를 위젯의 이름표를 적는다(EditorSelfTestMarks::note).
+            EditorSelfTestMarks::setEnabled( true );
             for ( uint32 index = 0; index < Registry::getCount(); ++index )
             {
                 if ( matchesPattern( Registry::getAt( index )._pId, gv_editorSelfTest ) )
@@ -182,6 +186,7 @@ namespace sw::editor
 
         // 모두 끝났다. 하나도 맞지 않은 패턴은 실패다 — 이름을 잘못 적은 실행이 초록으로 보이면 안 된다.
         state._bFinished = true;
+        EditorSelfTestMarks::setEnabled( false );
         if ( state._listSelectedIndex.empty() )
             ++state._failedCount;
         string doneLine{ "EditorSelfTest|DONE|" };

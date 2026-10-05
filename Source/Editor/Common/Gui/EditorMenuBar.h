@@ -16,6 +16,8 @@ namespace sw::editor
         static void drawThemeDialog();
         /** @brief 다음 프레임부터 테마 설정 대화상자를 엽니다 (editor.themeSettings 커맨드가 부릅니다). */
         static void openThemeDialog();
+        /** @brief 테마 설정 대화상자를 닫습니다(에디터 자체 시험이 열었던 것을 되돌린다). */
+        static void closeThemeDialog();
 
         /** @brief 커맨드 표의 메뉴(File / Edit / Build) · Assets / Panel 메뉴와 RHI 상태줄을 그립니다. */
         static void draw( EditorDockLayout& dockLayout );
