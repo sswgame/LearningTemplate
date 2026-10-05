@@ -612,12 +612,24 @@ float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 	return swSampleIndex( index, uv ); // samplerId 는 쓰지 않는다
 }
 #endif
-/** @brief 에뮬 백엔드: 비교 샘플러가 없어 저장된 깊이를 읽어 직접 비교한다 (필터링 없는 하드 섀도). */
+/**
+ * @brief 에뮬 백엔드: 비교 샘플러가 없어 2x2 이웃을 게더로 읽어 각각 비교하고 쌍선형으로 섞는다 — DX12 · Vulkan 의 비교 샘플러(LINEAR)와 같은 값이다.
+ * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 슬롯 0 이다(swSampleIndex 의 표).
+ */
 float swSampleShadowComparison( uint index, float2 uv, float depth )
 {
 	if ( index == kInvalidIndex )
 		return 1.0f;
-	return ( depth <= swSampleIndex( index, uv ).r ) ? 1.0f : 0.0f;
+	if ( index != g_ShadowMapIndex )
+		return ( depth <= swSampleIndex( index, uv ).r ) ? 1.0f : 0.0f;
+	float2 size;
+	g_SwSlot0.GetDimensions( size.x, size.y );
+	const float2 texelPosition = uv * size - 0.5f;
+	const float2 weight        = frac( texelPosition );
+	// 게더는 네 텍셀이 만나는 모서리를 가리킨다. 순서는 w (0,0) · z (1,0) · x (0,1) · y (1,1).
+	const float4 stored = g_SwSlot0.GatherRed( g_SwSlot0Sampler, ( floor( texelPosition ) + 1.0f ) / size );
+	const float4 lit    = step( depth.xxxx, stored ); // depth <= 저장값이면 1 (LESS_EQUAL)
+	return lerp( lerp( lit.w, lit.z, weight.x ), lerp( lit.x, lit.y, weight.x ), weight.y );
 }
 
 #endif // !SW_STAGE_COMPUTE

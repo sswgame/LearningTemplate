@@ -39,6 +39,7 @@ SW_DECLARE_STRUCTURED_BUFFER( SwLightData, g_SwLights, SW_SLOT_LIGHT_SRV );
  *          "깊이 텍스처를 화면에 붙인 무늬" 라, 카메라가 움직이면 그늘이 물체를 따라오지 않고 화면에 붙는다.
  *          바이어스는 둘이다 — 노멀 쪽으로 `g_ShadowParams.z`(m) 띄운 점을 읽고(노멀 오프셋), 깊이에서 `g_ShadowParams.x`(NDC)를 뺀다.
  *          둘 다 CPU 가 텍셀 크기로 정한다(`DirectionalShadowProjection::computeShaderParams`). 깊이 바이어스만 키우면 그림자가 물체 발치에서 떨어진다.
+ *          필터는 3x3 PCF 다 — 탭 하나가 2x2 쌍선형 비교라 가장자리가 텍셀 세 개 폭으로 번진다.
  * @note 맵 밖은 1(가려지지 않음)이다. 0 으로 두면 그림자 볼륨 밖이 통째로 검게 죽는다.
  */
 float swSampleShadowAtWorld( float3 worldPosition, float3 worldNormal )
@@ -57,7 +58,15 @@ float swSampleShadowAtWorld( float3 worldPosition, float3 worldNormal )
 		return 1.0f;
 
 	// 바이어스(g_ShadowParams.x · z)가 없으면 자기 자신에 그림자가 져 표면이 줄무늬가 된다(shadow acne).
-	const float lit = swSampleShadowComparison( g_ShadowMapIndex, uv, ndc.z - g_ShadowParams.x );
+	// 3x3 PCF — 탭 하나가 2x2 쌍선형 비교라 가장자리의 텍셀 계단이 보이지 않는다. 간격 g_ShadowParams.w = 텍셀 하나의 UV 폭.
+	const float depth = ndc.z - g_ShadowParams.x;
+	float       lit   = 0.0f;
+	[unroll] for ( int offsetY = -1; offsetY <= 1; ++offsetY )
+	{
+		[unroll] for ( int offsetX = -1; offsetX <= 1; ++offsetX )
+			lit += swSampleShadowComparison( g_ShadowMapIndex, uv + float2( offsetX, offsetY ) * g_ShadowParams.w, depth );
+	}
+	lit *= 1.0f / 9.0f;
 
 	// 세기는 g_ShadowParams.y — 완전한 검정이 아니라 "얼마나 어두워지는가" 다.
 	return lerp( 1.0f - g_ShadowParams.y, 1.0f, saturate( lit ) );
