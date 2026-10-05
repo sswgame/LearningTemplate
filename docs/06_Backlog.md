@@ -522,9 +522,6 @@ cd build/Ninja-Debug/Bin
   한 번 — 같은 인자 5 회 재실행은 깨끗). GL 컨텍스트를 렌더 스레드와 다른 스레드가 같이 잡는 순간이 있다. 골든 러너가 진 판의 App 출력을
   `%TEMP%/sw_golden_<백엔드>_<회차>_app.log` 로 남기니, 다시 보이면 그 로그로 어느 스레드 · 단계인지 본다.
 
-- **`Meta = "Units=m"` 철자를 `Units = m` 으로 다시 쓴다**(엔진 · GameFramework · 게임 헤더 130 줄 남짓 — 병렬 워크트리가 같은 헤더를 고치는 동안이라
-  리플렉션 확장에서는 하지 않았다). `Units =` 는 단위 표(`ReflectUnits.h`)로 철자를 검사하고 `Meta` 는 검사하지 않는다. 다 옮긴 뒤 파서가 `Meta` 안의
-  `Units` 를 표에 있는 단위면 거절하게 하고(표에 없는 `HP` 같은 글자만 `Meta` 에 남는다), 같은 커밋에 데이터 · 시험을 맞춘다.
 - **ReflectionParserTest 는 파서 프로세스를 케이스마다 1~4 번 띄운다**(2026-10-04 여섯 조각으로 나눔 — 파서 케이스가 25 개로 늘었다). 더 줄이려면 파서 실행
   비용을 깎는다: CoreMinimal.h 를 PCH 로 미리 컴파일해 `-include-pch` 로 쓰는 것. 함정: PCH 에서 온 헤더를 `clang_getInclusions` 가 의존으로 내는지 먼저
   확인할 것(안 내면 depfile 이 비어 반사되지 않은 헤더가 바뀌어도 단계가 다시 돌지 않는다). 실행 하나의 0.5~1 초는 프로세스 생성 · 종료라 파서 탓이 아니다.
@@ -971,6 +968,9 @@ cd build/Ninja-Debug/Bin
 - **파서 변경의 검증은 생성물 바이트 비교다** — 새 · 옛 파서로 133 파일(열 타깃 + `ReflectBuiltins.gen.cpp`)을 만들어 `diff -r` 0. 로컬 `parser_config.json` 은 기계 키
   (`paths.*` · `parser_args.extra` · `parser_args.force_include`)만 받는다. `findReflectionParserExecutable` 은 `BuildTools` 를 먼저 본다 — `Bin` 의 옛 사본을 돌린 결과는 지금 답이 아니다.
   Shipping 은 Info 로그가 없으므로 도구의 사용법 · 덤프는 stdout 으로.
+- **단위는 `PROPERTY( Units = m )`** — 단위 표(`ReflectUnits.h`)로 철자를 검사한다. `Meta = "Units=…"` 는 표에 없는 글자(`HP` · `dB` · `px` · `BPM`)만 받고, 표에 있는
+  단위를 `Meta` 로 적으면 파서가 거절한다(`ReflectionParserTest.DisplayMetadataIsValidated`). 가속도는 `m/s2`(`m/s^2` 아님). `/` 가 든 단위는 따옴표로
+  (`Units = "m/s"`) — clang-format 이 `m/s` 를 `m / s` 로 띄우고, 따옴표 없는 값은 첫 공백에서 끝나 `m` 이 된다. 파서는 공백이 든 따옴표 없는 값을 거절한다.
 - **`AnnotationMeta.txt` 의 `flag.X` 한 줄이 단독 토큰과 `X = true` 를 함께 등록한다.** `ArgumentList.xxx` 의 `bUseDefaultValue` 를 켜면 주지 않은 인자에도 `getArgument` 가 true 다.
 - **XML** — 쓰기는 `XmlNode::toString` 하나, float 는 `std::to_chars` 최단 왕복(그래서 되돌리기 스냅샷을 바이너리로 바꾸지 않는다), 긴 줄 접기는 시작 태그 속성에만(pugixml 은 텍스트
   안 `"` 를 이스케이프하지 않는다), 태그는 `sanitizeTag` 가 `::` → `__`. 정수 속성은 `tryGetAttributeIntInRange`, 불리언 글은 `StringUtil::tryParseBool`(관대한 `parseBool` 은 실패를

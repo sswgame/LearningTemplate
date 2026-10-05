@@ -168,17 +168,17 @@ namespace sw
         hashed_string _getUpExitState;
         PROPERTY( Category = "Hit Reaction", DisplayName = "Flinch Clip", Tooltip = "Additive clip played once on a non-fatal hit (empty: none)" )
         hashed_string _flinchClip;
-        PROPERTY( Category = "Ragdoll", DisplayName = "Blend Back Seconds", Min = 0.0, Max = 3.0, Meta = "Units=s" )
+        PROPERTY( Category = "Ragdoll", DisplayName = "Blend Back Seconds", Min = 0.0, Max = 3.0, Units = s )
         float32 _blendBackSeconds;
-        PROPERTY( Category = "Ragdoll", DisplayName = "Settle Speed", Min = 0.0, Tooltip = "Bodies slower than this count as resting", Meta = "Units=m/s" )
+        PROPERTY( Category = "Ragdoll", DisplayName = "Settle Speed", Min = 0.0, Tooltip = "Bodies slower than this count as resting", Units = "m/s" )
         float32 _settleSpeed;
-        PROPERTY( Category = "Ragdoll", DisplayName = "Settle Seconds", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Ragdoll", DisplayName = "Settle Seconds", Min = 0.0, Units = s )
         float32 _settleSeconds;
-        PROPERTY( Category = "Hit Reaction", DisplayName = "Reaction Seconds", Min = 0.0, Max = 3.0, Meta = "Units=s" )
+        PROPERTY( Category = "Hit Reaction", DisplayName = "Reaction Seconds", Min = 0.0, Max = 3.0, Units = s )
         float32 _hitReactionSeconds;
         PROPERTY( Category = "Hit Reaction", DisplayName = "Reaction Weight", Min = 0.0, Max = 1.0, Tooltip = "Physics blend weight right after a hit" )
         float32 _hitReactionWeight;
-        PROPERTY( Category = "Hit Reaction", DisplayName = "Flinch Seconds", Min = 0.0, Max = 3.0, Meta = "Units=s" )
+        PROPERTY( Category = "Hit Reaction", DisplayName = "Flinch Seconds", Min = 0.0, Max = 3.0, Units = s )
         float32 _flinchSeconds;
         PROPERTY( Category = "Ragdoll", DisplayName = "State", ReadOnly, Transient )
         RagdollState _state;

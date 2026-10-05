@@ -48,15 +48,15 @@ namespace sw
         static bool findWind( const GameObjectManager& manager, WindSettings& outSettings );
 
     private:
-        PROPERTY( Category = "Wind", DisplayName = "Direction", Meta = "Units=rad", Tooltip = "Blowing towards, from +x towards +z" )
+        PROPERTY( Category = "Wind", DisplayName = "Direction", Units = rad, Tooltip = "Blowing towards, from +x towards +z" )
         float32 _direction;
-        PROPERTY( Category = "Wind", DisplayName = "Strength", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Wind", DisplayName = "Strength", Min = 0.0, Units = m )
         float32 _strength;
-        PROPERTY( Category = "Wind", DisplayName = "Gust Strength", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Wind", DisplayName = "Gust Strength", Min = 0.0, Units = m )
         float32 _gustStrength;
-        PROPERTY( Category = "Wind", DisplayName = "Gust Frequency", Min = 0.0, Meta = "Units=Hz" )
+        PROPERTY( Category = "Wind", DisplayName = "Gust Frequency", Min = 0.0, Units = Hz )
         float32 _gustFrequency;
-        PROPERTY( Category = "Wind", DisplayName = "Sway Frequency", Min = 0.0, Meta = "Units=Hz" )
+        PROPERTY( Category = "Wind", DisplayName = "Sway Frequency", Min = 0.0, Units = Hz )
         float32 _swayFrequency;
     };
 } // namespace sw

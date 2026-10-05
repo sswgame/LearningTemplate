@@ -75,29 +75,29 @@ namespace sw
     private:
         PROPERTY( Category = "Enemy", DisplayName = "Director", Tooltip = "Object with the ShooterDirectorComponent" )
         GameObjectHandle _director;
-        PROPERTY( Category = "Enemy", DisplayName = "Radius", Tooltip = "Capsule radius of the hit box and the body", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Enemy", DisplayName = "Radius", Tooltip = "Capsule radius of the hit box and the body", Min = 0.0, Units = m )
         float32 _radius;
-        PROPERTY( Category = "Enemy", DisplayName = "Height", Tooltip = "Top of the hit capsule above the feet", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Enemy", DisplayName = "Height", Tooltip = "Top of the hit capsule above the feet", Min = 0.0, Units = m )
         float32 _height;
-        PROPERTY( Category = "Enemy", DisplayName = "Reach", Tooltip = "Starts a swing inside this distance", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Enemy", DisplayName = "Reach", Tooltip = "Starts a swing inside this distance", Min = 0.0, Units = m )
         float32 _reach;
         PROPERTY( Category = "Enemy", DisplayName = "Damage", Tooltip = "Damage per swing that lands", Min = 0.0 )
         float32 _damage;
-        PROPERTY( Category = "Enemy", DisplayName = "Attack Interval", Tooltip = "Seconds between swings", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Enemy", DisplayName = "Attack Interval", Tooltip = "Seconds between swings", Min = 0.0, Units = s )
         float32 _attackInterval;
-        PROPERTY( Category = "Enemy", DisplayName = "Attack Hit Time", Tooltip = "Seconds into the swing when the blade lands", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Enemy", DisplayName = "Attack Hit Time", Tooltip = "Seconds into the swing when the blade lands", Min = 0.0, Units = s )
         float32 _attackHitTime;
-        PROPERTY( Category = "Enemy", DisplayName = "Attack Length", Tooltip = "Seconds the swing locks movement", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Enemy", DisplayName = "Attack Length", Tooltip = "Seconds the swing locks movement", Min = 0.0, Units = s )
         float32 _attackLength;
-        PROPERTY( Category = "Enemy", DisplayName = "Rise Time", Tooltip = "Seconds spent rising from the ground before chasing", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Enemy", DisplayName = "Rise Time", Tooltip = "Seconds spent rising from the ground before chasing", Min = 0.0, Units = s )
         float32 _riseTime;
-        PROPERTY( Category = "Enemy", DisplayName = "Stagger Time", Tooltip = "Seconds a hit stops the enemy", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Enemy", DisplayName = "Stagger Time", Tooltip = "Seconds a hit stops the enemy", Min = 0.0, Units = s )
         float32 _staggerTime;
-        PROPERTY( Category = "Enemy", DisplayName = "Corpse Time", Tooltip = "Seconds the body stays after collapsing", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Enemy", DisplayName = "Corpse Time", Tooltip = "Seconds the body stays after collapsing", Min = 0.0, Units = s )
         float32 _corpseTime;
-        PROPERTY( Category = "Enemy", DisplayName = "Run Speed", Tooltip = "At or above this chase speed the run clip plays instead of the walk", Min = 0.0, Meta = "Units=m/s" )
+        PROPERTY( Category = "Enemy", DisplayName = "Run Speed", Tooltip = "At or above this chase speed the run clip plays instead of the walk", Min = 0.0, Units = "m/s" )
         float32 _runSpeed;
-        PROPERTY( Category = "Enemy", DisplayName = "Turn Rate", Tooltip = "How fast the body turns to its heading", Min = 0.0, Meta = "Units=rad/s" )
+        PROPERTY( Category = "Enemy", DisplayName = "Turn Rate", Tooltip = "How fast the body turns to its heading", Min = 0.0, Units = "rad/s" )
         float32 _turnRate;
 
         float3            _position;   ///< 발

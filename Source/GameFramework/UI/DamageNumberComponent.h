@@ -104,15 +104,15 @@ namespace sw
         PROPERTY( Category = "Damage", DisplayName = "Damage Value", Tooltip = "Number to show" )
         int32 _damageValue;
         PROPERTY( Category = "Animation", DisplayName = "Life Time", Tooltip = "Seconds until the number fades out and the object is destroyed; 0 keeps it", Min = 0.0,
-                  Meta = "Units=s" )
+                  Units = s )
         float32 _lifeTime;
-        PROPERTY( Category = "Animation", DisplayName = "Current Life", Tooltip = "Seconds since the number appeared", ReadOnly, Meta = "Units=s" )
+        PROPERTY( Category = "Animation", DisplayName = "Current Life", Tooltip = "Seconds since the number appeared", ReadOnly, Units = s )
         float32 _currentLife;
-        PROPERTY( Category = "Animation", DisplayName = "Float Speed", Tooltip = "Upward speed in world units per second", Meta = "Units=m/s" )
+        PROPERTY( Category = "Animation", DisplayName = "Float Speed", Tooltip = "Upward speed in world units per second", Units = "m/s" )
         float32 _floatSpeed;
         PROPERTY( Category = "Animation", DisplayName = "Alpha", Tooltip = "Current fade (1 to 0)", Min = 0.0, Max = 1.0, ReadOnly )
         float32 _alpha;
-        PROPERTY( Category = "Style", DisplayName = "Glyph Size", Tooltip = "Width (advance) and height of one glyph in world units", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Style", DisplayName = "Glyph Size", Tooltip = "Width (advance) and height of one glyph in world units", Min = 0.0, Units = m )
         float2 _glyphSize;
         PROPERTY( Category = "Style", DisplayName = "Color", Meta = "Color", Tooltip = "Glyph color; alpha is multiplied by the fade" )
         float4 _color;

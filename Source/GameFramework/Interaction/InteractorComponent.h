@@ -79,7 +79,7 @@ namespace sw
     private:
         PROPERTY( Category = "Interaction", DisplayName = "Space", Tooltip = "3D distance and view, or the 2D XY plane" )
         InteractionSpace _space;
-        PROPERTY( Category = "Interaction", DisplayName = "Eye Offset", Tooltip = "Eye point above the owner origin", Meta = "Units=m" )
+        PROPERTY( Category = "Interaction", DisplayName = "Eye Offset", Tooltip = "Eye point above the owner origin", Units = m )
         float3 _eyeOffset;
         PROPERTY( Category = "Interaction", DisplayName = "Facing 2D", Tooltip = "View direction in 2D (left or right)" )
         float3 _facing2D;

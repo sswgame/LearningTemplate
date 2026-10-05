@@ -233,7 +233,7 @@ namespace sw
         float32 _stateTime;
         PROPERTY( Category = "Playback", DisplayName = "Play Rate", Tooltip = "Playback speed multiplier", Min = 0.0, Max = 10.0 )
         float32 _playRate;
-        PROPERTY( Category = "Playback", DisplayName = "Blend Seconds", Tooltip = "Default crossfade length for transitions", Min = 0.0, Max = 5.0, Meta = "Units=s" )
+        PROPERTY( Category = "Playback", DisplayName = "Blend Seconds", Tooltip = "Default crossfade length for transitions", Min = 0.0, Max = 5.0, Units = s )
         float32 _blendSeconds;
         PROPERTY( Category = "Sync", DisplayName = "Sync Group", Tooltip = "Units in the same sync group follow the heaviest one's phase" )
         string _syncGroup;

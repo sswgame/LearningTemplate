@@ -30,17 +30,17 @@ namespace sw
 
         PROPERTY( Tooltip = "Name agents and surfaces pick it by" )
         hashed_string _name{};
-        PROPERTY( Min = 0.0, Tooltip = "Body radius; walls are eroded by this much", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Body radius; walls are eroded by this much", Units = m )
         float32 _radius{ 0.4f };
-        PROPERTY( Min = 0.0, Tooltip = "Body height; lower ceilings are not walkable", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Body height; lower ceilings are not walkable", Units = m )
         float32 _height{ 2.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Highest step the body walks up", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Highest step the body walks up", Units = m )
         float32 _maxClimb{ 0.4f };
-        PROPERTY( Min = 0.0, Max = 1.553343, Tooltip = "Steepest walkable slope", Meta = "Units=rad" )
+        PROPERTY( Min = 0.0, Max = 1.553343, Tooltip = "Steepest walkable slope", Units = rad )
         float32 _maxSlope{ 0.785398f };
-        PROPERTY( Min = 0.01, Tooltip = "Voxel size on XZ (smaller is more exact and slower to bake)", Meta = "Units=m" )
+        PROPERTY( Min = 0.01, Tooltip = "Voxel size on XZ (smaller is more exact and slower to bake)", Units = m )
         float32 _cellSize{ 0.2f };
-        PROPERTY( Min = 0.01, Tooltip = "Voxel size on Y", Meta = "Units=m" )
+        PROPERTY( Min = 0.01, Tooltip = "Voxel size on Y", Units = m )
         float32 _cellHeight{ 0.1f };
         PROPERTY( Min = 8, Max = 256, Tooltip = "Tile edge in cells; a change rebakes one tile" )
         uint32 _tileSize{ 48 };
@@ -48,7 +48,7 @@ namespace sw
         uint32 _minRegionSize{ 4 };
         PROPERTY( Min = 0, Tooltip = "Regions smaller than this many cells (as a square side) merge into neighbours" )
         uint32 _mergeRegionSize{ 16 };
-        PROPERTY( Min = 0.0, Tooltip = "Longest polygon edge along walls (0 = no limit)", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Longest polygon edge along walls (0 = no limit)", Units = m )
         float32 _maxEdgeLength{ 12.0f };
         PROPERTY( Min = 0.1, Tooltip = "How far the simplified outline may stray from the voxels, in cells" )
         float32 _maxEdgeError{ 1.3f };
@@ -103,7 +103,7 @@ namespace sw
         hashed_string _defaultAgentType{};
         PROPERTY( Min = 1, Tooltip = "Tile rebakes running on workers at once; more wait for the next frame" )
         uint32 _maxConcurrentTileBakeCount{ 4 };
-        PROPERTY( Min = 0.0, Tooltip = "An obstacle has to move this far before the mesh around it rebakes", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "An obstacle has to move this far before the mesh around it rebakes", Units = m )
         float32 _obstacleMoveThreshold{ 0.25f };
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음 · 모르는 이름 · 겹친 이름 · 범위 밖) 오류를 남기고 false 입니다. */

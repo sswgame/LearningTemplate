@@ -152,7 +152,7 @@ namespace sw
         GameObjectHandle _shippingBin;
         PROPERTY( Category = "Scene", DisplayName = "Shop", Tooltip = "Object whose position is the seed shop" )
         GameObjectHandle _shop;
-        PROPERTY( Category = "Farmer", DisplayName = "Player Start", Tooltip = "Where the farmer wakes up", Meta = "Units=m" )
+        PROPERTY( Category = "Farmer", DisplayName = "Player Start", Tooltip = "Where the farmer wakes up", Units = m )
         float3 _playerStart;
 
         CropCatalog                  _cropCatalog;

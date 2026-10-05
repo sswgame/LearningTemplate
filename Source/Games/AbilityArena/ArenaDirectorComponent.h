@@ -172,11 +172,11 @@ namespace sw
         string _casterPrefab;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
         string _projectilePrefab;
-        PROPERTY( Category = "Arena", DisplayName = "Arena Half Size", Tooltip = "Units are kept inside this square", Min = 1.0, Meta = "Units=m" )
+        PROPERTY( Category = "Arena", DisplayName = "Arena Half Size", Tooltip = "Units are kept inside this square", Min = 1.0, Units = m )
         float32 _arenaHalfSize;
-        PROPERTY( Category = "Arena", DisplayName = "Wave Radius", Tooltip = "Radius of the circle the enemies spawn on", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Arena", DisplayName = "Wave Radius", Tooltip = "Radius of the circle the enemies spawn on", Min = 0.0, Units = m )
         float32 _waveRadius;
-        PROPERTY( Category = "Arena", DisplayName = "Player Respawn Delay", Tooltip = "Seconds before a fallen player stands up again", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Arena", DisplayName = "Player Respawn Delay", Tooltip = "Seconds before a fallen player stands up again", Min = 0.0, Units = s )
         float32 _playerRespawnDelay;
         PROPERTY( Category = "Look", DisplayName = "Player Tint", Meta = "Color", Tooltip = "Multiplies the palette texture of the player model" )
         float4 _playerTint;

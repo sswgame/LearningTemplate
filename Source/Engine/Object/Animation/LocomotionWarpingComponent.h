@@ -98,7 +98,7 @@ namespace sw
         float32 _maxPlayRate;
         PROPERTY( Category = "Orientation", DisplayName = "Orientation Warping", Tooltip = "Turn the lower body toward the movement direction" )
         bool _bOrientationWarping;
-        PROPERTY( Category = "Orientation", DisplayName = "Max Angle", Min = 0.0, Max = 3.14, Meta = "Units=rad" )
+        PROPERTY( Category = "Orientation", DisplayName = "Max Angle", Min = 0.0, Max = 3.14, Units = rad )
         float32 _maxOrientationAngle;
         PROPERTY( Category = "Orientation", DisplayName = "Bones", Tooltip = "Bones turned around the character up axis and their share" )
         vector<LocomotionOrientationBone> _listOrientationBone;

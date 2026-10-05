@@ -53,15 +53,15 @@ namespace sw
 
         PROPERTY( Tooltip = "Shape kind" )
         PhysicsShapeType3D _type{ PhysicsShapeType3D::Box };
-        PROPERTY( Tooltip = "Box half size", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Box half size", Units = m )
         float3 _halfExtents{ 0.5f, 0.5f, 0.5f };
-        PROPERTY( Min = 0.0, Tooltip = "Sphere / capsule radius", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Sphere / capsule radius", Units = m )
         float32 _radius{ 0.5f };
-        PROPERTY( Min = 0.0, Tooltip = "Capsule: half the length of the cylinder part along local Y", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Capsule: half the length of the cylinder part along local Y", Units = m )
         float32 _halfHeight{ 0.5f };
-        PROPERTY( Tooltip = "Offset from the body origin", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Offset from the body origin", Units = m )
         float3 _localPosition{};
-        PROPERTY( Tooltip = "Rotation relative to the body (pitch, yaw, roll)", Meta = "Units=rad" )
+        PROPERTY( Tooltip = "Rotation relative to the body (pitch, yaw, roll)", Units = rad )
         float3 _localRotation{};
         PROPERTY( Tooltip = "Convex hull points / triangle mesh vertices (body local)" )
         vector<float3> _listPoint;
@@ -82,15 +82,15 @@ namespace sw
 
         PROPERTY( Tooltip = "Shape kind" )
         PhysicsShapeType2D _type{ PhysicsShapeType2D::Box };
-        PROPERTY( Tooltip = "Box half size", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Box half size", Units = m )
         float2 _halfExtents{ 0.5f, 0.5f };
-        PROPERTY( Min = 0.0, Tooltip = "Circle / capsule radius", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Circle / capsule radius", Units = m )
         float32 _radius{ 0.5f };
-        PROPERTY( Min = 0.0, Tooltip = "Capsule: half the length of the straight part along local Y", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Capsule: half the length of the straight part along local Y", Units = m )
         float32 _halfHeight{ 0.5f };
-        PROPERTY( Tooltip = "Offset from the body origin", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Offset from the body origin", Units = m )
         float2 _localPosition{};
-        PROPERTY( Tooltip = "Rotation relative to the body", Meta = "Units=rad" )
+        PROPERTY( Tooltip = "Rotation relative to the body", Units = rad )
         float32 _localAngle{ 0.0f };
         PROPERTY( Tooltip = "Polygon / chain points (body local)" )
         vector<float2> _listPoint;

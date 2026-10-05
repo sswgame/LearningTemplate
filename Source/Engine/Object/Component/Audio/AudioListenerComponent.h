@@ -51,7 +51,7 @@ namespace sw
         void setMode( AudioSpatialMode mode, float32 screenHalfWidth );
 
     private:
-        PROPERTY( Category = "Listener", DisplayName = "Screen Half Width", Min = 0.01, Tooltip = "Screen2D: horizontal distance where panning reaches full left/right", Meta = "Units=m" )
+        PROPERTY( Category = "Listener", DisplayName = "Screen Half Width", Min = 0.01, Tooltip = "Screen2D: horizontal distance where panning reaches full left/right", Units = m )
         float32 _screenHalfWidth;
         PROPERTY( Category = "Listener", DisplayName = "Listener Index", Min = 0, Max = 3, Tooltip = "Listener slot (split screen)" )
         uint32 _listenerIndex;

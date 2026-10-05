@@ -40,7 +40,7 @@ namespace sw
         void            setHalfSize( const float3& halfSize ) { _halfSize = halfSize; }
 
     private:
-        PROPERTY( Category = "Blocker", DisplayName = "Half Size", Tooltip = "Half extents of the box around the object position", Meta = "Units=m" )
+        PROPERTY( Category = "Blocker", DisplayName = "Half Size", Tooltip = "Half extents of the box around the object position", Units = m )
         float3 _halfSize;
     };
 } // namespace sw

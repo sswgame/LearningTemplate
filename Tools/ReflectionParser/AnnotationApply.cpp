@@ -63,6 +63,18 @@ namespace sw
                 value.assign( token.data() + valueStart, valueEnd - valueStart );
                 return value;
             }
+
+            /**
+             * @brief 따옴표 없는 값이 공백으로 갈라졌는지 봅니다(`Units = m / s`).
+             * @details 따옴표 없는 값은 첫 공백에서 끝나므로 뒷조각이 조용히 버려진다 — clang-format 은 `m/s` 를 `m / s` 로 띄우고, 그러면 `m` 이 단위 표를 통과한다.
+             */
+            static bool isUnquotedValueSplit( const string_view token, const size_t eqPos ) noexcept
+            {
+                const string_view value = StringUtil::trim( token.substr( eqPos + 1 ) );
+                if ( value.empty() || value.front() == '"' )
+                    return false;
+                return value.find_first_of( " \t" ) != string_view::npos;
+            }
         };
     } // namespace
 } // namespace sw
@@ -157,6 +169,11 @@ namespace sw
             if ( pBinding == nullptr )
             {
                 outListUnknownToken.push_back( token );
+                continue;
+            }
+            if ( bBare == false && AnnotationApplyInternal::isUnquotedValueSplit( token, eqPos ) )
+            {
+                outListUnknownToken.push_back( token + "  (value has spaces - quote it)" );
                 continue;
             }
 

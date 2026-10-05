@@ -1212,13 +1212,23 @@ namespace sw
             }
 
             /**
-             * @brief 표시 메타를 검사하고 정리합니다 — `Units` 는 단위 표에 있어야 하고(커스텀 메타 `Units` 로 싣는다), `EditCondition` 은 네 꼴 중 하나여야 하며,
-             *        C 고정 배열의 원소는 컨테이너일 수 없습니다.
+             * @brief 표시 메타를 검사하고 정리합니다 — `Units` 는 단위 표에 있어야 하고(커스텀 메타 `Units` 로 싣는다), 표에 있는 단위를 `Meta = "Units=…"` 로
+             *        적으면 거절하고, `EditCondition` 은 네 꼴 중 하나여야 하며, C 고정 배열의 원소는 컨테이너일 수 없습니다.
              * @details 조건식이 가리키는 이름은 기반 클래스의 것일 수 있어 여기서는 꼴만 본다 — 이름은 등록된 뒤 `PropertyEditCondition::parse` 가 보고,
              *          `ReflectionDisplayMetaTest.EveryEditConditionResolves` 가 모든 타입을 대조한다.
              */
             static bool applyDisplayMeta( ParsedPropertyInfo& prop, const CXType fieldType, const string_view owner )
             {
+                // `Meta` 의 `Units` 는 철자 검사를 받지 않으므로 표에 없는 글자(`HP`)만 받는다 — 표에 있는 단위는 `Units = …` 로 적는다.
+                for ( const auto& [key, value] : prop._listCustomMeta )
+                {
+                    if ( key == "Units" && ReflectUnitUtil::findUnit( value ) != nullptr )
+                    {
+                        SW_LOG_ERROR( "ERROR: '%#' writes Meta = \"Units=%#\" - a known unit is written PROPERTY( Units = %# ).", owner, value, value );
+                        return false;
+                    }
+                }
+
                 if ( prop._units.empty() == false )
                 {
                     if ( ReflectUnitUtil::findUnit( prop._units ) == nullptr )

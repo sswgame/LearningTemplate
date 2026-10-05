@@ -44,19 +44,19 @@ namespace sw
         void writeGpuLightKindFields( GpuLight& outLight ) const override;
 
     private:
-        PROPERTY( Category = "Light", DisplayName = "Inner Radius", Min = 0.0, Tooltip = "Full intensity inside this distance", Meta = "Units=m" )
+        PROPERTY( Category = "Light", DisplayName = "Inner Radius", Min = 0.0, Tooltip = "Full intensity inside this distance", Units = m )
         float32 _innerRadius;
-        PROPERTY( Category = "Light", DisplayName = "Outer Radius", Min = 0.01, Tooltip = "Distance at which the light reaches zero", Meta = "Units=m" )
+        PROPERTY( Category = "Light", DisplayName = "Outer Radius", Min = 0.01, Tooltip = "Distance at which the light reaches zero", Units = m )
         float32 _outerRadius;
         PROPERTY( Category = "Light", DisplayName = "Falloff Exponent", Min = 0.01, Tooltip = "1 fades linearly, larger values fade faster near the edge" )
         float32 _falloffExponent;
-        PROPERTY( Category = "Light", DisplayName = "Inner Angle", Min = 0.0, Max = 6.2831853, Tooltip = "Full intensity inside this cone angle", Meta = "Units=rad" )
+        PROPERTY( Category = "Light", DisplayName = "Inner Angle", Min = 0.0, Max = 6.2831853, Tooltip = "Full intensity inside this cone angle", Units = rad )
         float32 _innerAngle;
         PROPERTY( Category = "Light", DisplayName = "Outer Angle", Min = 0.0, Max = 6.2831853, Tooltip = "Cone angle where the light reaches zero; a full turn is a point light",
-                  Meta = "Units=rad" )
+                  Units = rad )
         float32 _outerAngle;
         PROPERTY( Category = "Light", DisplayName = "Normal Map Height", Min = 0.0, Tooltip = "How far in front of the sprite plane the light sits for normal maps",
-                  Meta = "Units=m" )
+                  Units = m )
         float32 _normalMapHeight;
         PROPERTY( Category = "Light", DisplayName = "Cast Shadows", Tooltip = "Shadow Caster 2D shapes block this light" )
         bool _bCastShadows;

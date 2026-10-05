@@ -36,7 +36,7 @@ namespace sw
         GameObjectHandle _director;
         PROPERTY( Category = "Walker", DisplayName = "Walker Index", Tooltip = "Slot in the simulation walker list" )
         int32 _walkerIndex;
-        PROPERTY( Category = "Walker", DisplayName = "Height", Tooltip = "Capsule centre above the ground", Meta = "Units=m" )
+        PROPERTY( Category = "Walker", DisplayName = "Height", Tooltip = "Capsule centre above the ground", Units = m )
         float32 _height;
 
         const void* _pShownLook; ///< 지금 입은 모습(인스턴스 주소 — 비교만 한다)

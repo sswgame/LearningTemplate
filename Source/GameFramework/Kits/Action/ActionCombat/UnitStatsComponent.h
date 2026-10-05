@@ -92,17 +92,17 @@ namespace sw
         int32 _attack;
         PROPERTY( Category = "Stats", DisplayName = "Defense", Tooltip = "Defense rating", Min = 0.0 )
         int32 _defense;
-        PROPERTY( Category = "Movement", DisplayName = "Move Speed", Tooltip = "Base movement speed in world units per second", Min = 0.0, Max = 50.0, Meta = "Units=m/s" )
+        PROPERTY( Category = "Movement", DisplayName = "Move Speed", Tooltip = "Base movement speed in world units per second", Min = 0.0, Max = 50.0, Units = "m/s" )
         float32 _moveSpeed;
-        PROPERTY( Category = "Combat", DisplayName = "Invincibility Timer", Tooltip = "Remaining invincibility time", Transient, ReadOnly, Meta = "Units=s" )
+        PROPERTY( Category = "Combat", DisplayName = "Invincibility Timer", Tooltip = "Remaining invincibility time", Transient, ReadOnly, Units = s )
         float32 _invincibilityTime;
-        PROPERTY( Category = "Combat", DisplayName = "Max Invincibility Time", Tooltip = "Duration of invincibility after taking damage", Min = 0.0, Max = 10.0, Meta = "Units=s" )
+        PROPERTY( Category = "Combat", DisplayName = "Max Invincibility Time", Tooltip = "Duration of invincibility after taking damage", Min = 0.0, Max = 10.0, Units = s )
         float32 _maxInvincibilityTime;
         PROPERTY( Category = "State", DisplayName = "Is Dead", Tooltip = "Whether the unit is currently dead", ReadOnly )
         bool _bIsDead;
         PROPERTY( Category = "Feedback", DisplayName = "Show Damage Numbers", Tooltip = "Spawn a floating damage number for each hit" )
         bool _bShowDamageNumbers;
-        PROPERTY( Category = "Feedback", DisplayName = "Damage Number Offset", Tooltip = "Where damage numbers appear, relative to the unit", Meta = "Units=m" )
+        PROPERTY( Category = "Feedback", DisplayName = "Damage Number Offset", Tooltip = "Where damage numbers appear, relative to the unit", Units = m )
         float3 _damageNumberOffset;
     };
 } // namespace sw

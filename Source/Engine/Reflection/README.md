@@ -232,7 +232,8 @@ int32 _arrSlot[3] = { 1, 2, 3 };                        // C 고정 배열 = std
 
 - `Units` 는 **저장된 값의 단위**이고 `ReflectUnits.h` 의 표에 있어야 합니다(없으면 파서 오류). 커스텀 메타 `Units` 로 실리므로 인스펙터의 표시
   규칙(`rad` → 도, `ratio` → 백분율)은 그대로이고, 다른 단위로 적힌 글은 `ReflectUnitUtil::parseValueInUnit( "150 cm", "m", out )` 으로 바꿉니다.
-  게임 고유의 글자(`HP`)처럼 표에 없는 표시는 `Meta = "Units=HP"` 로 적습니다.
+  게임 고유의 글자(`HP` · `dB`)처럼 표에 없는 표시만 `Meta = "Units=HP"` 로 적습니다 — 표에 있는 단위를 `Meta` 로 적으면 철자 검사를 건너뛰므로
+  파서가 거절합니다.
 - `EditCondition` 이 가리키는 이름은 기반 클래스의 것일 수 있어 파서는 꼴만 봅니다. 이름 · 열거자는 `PropertyEditCondition::parse` 가 풀고,
   `ReflectionDisplayMetaTest.EveryEditConditionResolves` 가 등록된 모든 타입을 대조합니다.
 - 위젯은 `UiMin` · `UiMax`(없으면 `Min` · `Max`) 안에서 움직이고, 값은 늘 `Min` · `Max` 로 막습니다(`InspectorPropertyLayout::getNumericRange`).

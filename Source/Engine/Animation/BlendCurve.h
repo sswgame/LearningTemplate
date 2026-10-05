@@ -58,11 +58,11 @@ namespace sw
 
         PROPERTY( Tooltip = "Keys of the Custom curve, time ascending in [0, 1]" )
         vector<BlendCurveKey> _listCustomKey{};
-        PROPERTY( Min = 0.0, Tooltip = "Blend length; 0 cuts", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Blend length; 0 cuts", Units = s )
         float32 _duration{ 0.5f };
         PROPERTY( Min = 0.01, Tooltip = "Strength of EaseIn / EaseOut / EaseInOut / Exponential" )
         float32 _exponent{ 2.0f };
-        PROPERTY( Min = 0.01, Tooltip = "Spring frequency", Meta = "Units=Hz" )
+        PROPERTY( Min = 0.01, Tooltip = "Spring frequency", Units = Hz )
         float32 _springFrequency{ 1.0f };
         PROPERTY( Min = 1.0, Tooltip = "Spring damping ratio; 1 is critical, more is slower (below 1 is raised to 1)" )
         float32 _springDamping{ 1.0f };

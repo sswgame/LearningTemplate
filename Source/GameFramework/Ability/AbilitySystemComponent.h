@@ -430,7 +430,7 @@ namespace sw
         hashed_string _healthAttribute;
         PROPERTY( Category = "Ability System", DisplayName = "Max Health Attribute", Tooltip = "Attribute used as the health bar maximum" )
         hashed_string _maxHealthAttribute;
-        PROPERTY( Category = "Feedback", DisplayName = "Damage Number Offset", Tooltip = "Where damage numbers appear, relative to the owner", Meta = "Units=m" )
+        PROPERTY( Category = "Feedback", DisplayName = "Damage Number Offset", Tooltip = "Where damage numbers appear, relative to the owner", Units = m )
         float3 _damageNumberOffset;
         PROPERTY( Category = "Feedback", DisplayName = "Show Damage Numbers", Tooltip = "Spawn a floating number whenever health goes down" )
         bool _bShowDamageNumbers;

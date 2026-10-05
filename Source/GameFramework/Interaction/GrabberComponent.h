@@ -94,7 +94,7 @@ namespace sw
         IGrabPhysics& getBackend();
 
     private:
-        PROPERTY( Category = "Grab", DisplayName = "Hold Offset", Tooltip = "Where the held object sits, in this object's space", Meta = "Units=m" )
+        PROPERTY( Category = "Grab", DisplayName = "Hold Offset", Tooltip = "Where the held object sits, in this object's space", Units = m )
         float3 _holdOffset;
         PROPERTY( Category = "Grab", DisplayName = "Held", Tooltip = "Object held now (runtime)" )
         GameObjectHandle _held;

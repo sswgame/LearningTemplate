@@ -48,7 +48,7 @@ namespace sw
         vector<float2> _listBorder;
         PROPERTY( Category = "Fracture 2D", DisplayName = "Cluster Levels", Tooltip = "Clusters per level, top to bottom (big chunks break first)" )
         vector<uint32> _listLevelCount;
-        PROPERTY( Category = "Fracture 2D", DisplayName = "Size", Tooltip = "Box size when there is no outline (bottom centre at the origin)", Meta = "Units=m" )
+        PROPERTY( Category = "Fracture 2D", DisplayName = "Size", Tooltip = "Box size when there is no outline (bottom centre at the origin)", Units = m )
         float2 _size;
         PROPERTY( Category = "Fracture 2D", DisplayName = "Pieces", Min = 1.0, Tooltip = "Voronoi sites (uniform / clustered)" )
         uint32 _pieceCount;

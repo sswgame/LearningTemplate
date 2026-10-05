@@ -122,7 +122,7 @@ namespace sw
         GameObjectHandle _cameraRig;
         PROPERTY( Category = "City", DisplayName = "Starting Money", Min = 0 )
         int32 _startingMoney;
-        PROPERTY( Category = "City", DisplayName = "Service Duration", Tooltip = "Seconds a walker's service lasts at a house", Min = 1.0, Meta = "Units=s" )
+        PROPERTY( Category = "City", DisplayName = "Service Duration", Tooltip = "Seconds a walker's service lasts at a house", Min = 1.0, Units = s )
         float32 _serviceDuration;
 
         CityCatalog                          _catalog;

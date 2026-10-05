@@ -48,11 +48,11 @@ namespace sw
     private:
         PROPERTY( Category = "Barrel", DisplayName = "Health", Min = 0.0 )
         float32 _health;
-        PROPERTY( Category = "Barrel", DisplayName = "Radius", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Barrel", DisplayName = "Radius", Min = 0.0, Units = m )
         float32 _radius;
         PROPERTY( Category = "Barrel", DisplayName = "Damage", Min = 0.0, Tooltip = "Damage at the centre; falls off linearly to the radius" )
         float32 _damage;
-        PROPERTY( Category = "Barrel", DisplayName = "Fuse Time", Min = 0.0, Tooltip = "Explodes on its own this long after play starts (0 = only from damage)", Meta = "Units=s" )
+        PROPERTY( Category = "Barrel", DisplayName = "Fuse Time", Min = 0.0, Tooltip = "Explodes on its own this long after play starts (0 = only from damage)", Units = s )
         float32 _fuseTime;
         PROPERTY( Category = "Barrel", DisplayName = "Fracture Strain", Min = 0.0, Tooltip = "Strain at the centre for destructible (fractured) objects in the radius" )
         float32 _fractureStrain;
@@ -94,15 +94,15 @@ namespace sw
     private:
         PROPERTY( Category = "Turret", DisplayName = "Target Tags" )
         TagContainer _targetTags;
-        PROPERTY( Category = "Turret", DisplayName = "Range", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Turret", DisplayName = "Range", Min = 0.0, Units = m )
         float32 _range;
-        PROPERTY( Category = "Turret", DisplayName = "View Angle", Min = 0.0, Tooltip = "Half angle it can see, 0 sees all around", Meta = "Units=rad" )
+        PROPERTY( Category = "Turret", DisplayName = "View Angle", Min = 0.0, Tooltip = "Half angle it can see, 0 sees all around", Units = rad )
         float32 _viewAngle;
-        PROPERTY( Category = "Turret", DisplayName = "Turn Speed", Min = 0.0, Meta = "Units=rad/s" )
+        PROPERTY( Category = "Turret", DisplayName = "Turn Speed", Min = 0.0, Units = "rad/s" )
         float32 _turnSpeed;
-        PROPERTY( Category = "Turret", DisplayName = "Aim Tolerance", Min = 0.0, Meta = "Units=rad" )
+        PROPERTY( Category = "Turret", DisplayName = "Aim Tolerance", Min = 0.0, Units = rad )
         float32 _aimTolerance;
-        PROPERTY( Category = "Turret", DisplayName = "Fire Interval", Min = 0.01, Meta = "Units=s" )
+        PROPERTY( Category = "Turret", DisplayName = "Fire Interval", Min = 0.01, Units = s )
         float32 _fireInterval;
         PROPERTY( Category = "Turret", DisplayName = "Damage", Min = 0.0 )
         float32 _damage;

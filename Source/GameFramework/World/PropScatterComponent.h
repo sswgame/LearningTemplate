@@ -51,9 +51,9 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Meta = "Units=m" )
+        PROPERTY( Units = m )
         float3 _center{};
-        PROPERTY( Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Units = m )
         float32 _radius{ 1.0f };
     };
 } // namespace sw
@@ -158,15 +158,15 @@ namespace sw
         string _materialPath;
         PROPERTY( Category = "Scatter", DisplayName = "Prop Name", Tooltip = "Name of the spawned objects" )
         string _propName;
-        PROPERTY( Category = "Scatter", DisplayName = "Region Min", Meta = "Units=m" )
+        PROPERTY( Category = "Scatter", DisplayName = "Region Min", Units = m )
         float3 _regionMin;
-        PROPERTY( Category = "Scatter", DisplayName = "Region Max", Meta = "Units=m" )
+        PROPERTY( Category = "Scatter", DisplayName = "Region Max", Units = m )
         float3 _regionMax;
-        PROPERTY( Category = "Scatter", DisplayName = "Spacing", Tooltip = "Distance between rows or grid cells", Min = 0.5, Meta = "Units=m" )
+        PROPERTY( Category = "Scatter", DisplayName = "Spacing", Tooltip = "Distance between rows or grid cells", Min = 0.5, Units = m )
         float32 _spacing;
-        PROPERTY( Category = "Scatter", DisplayName = "Along Jitter", Tooltip = "Random offset along an edge row", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Scatter", DisplayName = "Along Jitter", Tooltip = "Random offset along an edge row", Min = 0.0, Units = m )
         float32 _alongJitter;
-        PROPERTY( Category = "Scatter", DisplayName = "Inward Jitter", Tooltip = "Random offset inwards from an edge (both axes in Fill mode)", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Scatter", DisplayName = "Inward Jitter", Tooltip = "Random offset inwards from an edge (both axes in Fill mode)", Min = 0.0, Units = m )
         float32 _inwardJitter;
         PROPERTY( Category = "Scatter", DisplayName = "Scale Min", Min = 0.01 )
         float32 _scaleMin;

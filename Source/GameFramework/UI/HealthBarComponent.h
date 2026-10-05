@@ -85,18 +85,18 @@ namespace sw
         void layoutSprites();
 
         PROPERTY( Category = "Health", DisplayName = "HP Ratio", Tooltip = "Displayed fill ratio (0..1); drops at once, refills at the lerp speed", Min = 0.0, Max = 1.0,
-                  Meta = "Slider, Units=ratio" )
+                  Units = ratio, Meta = "Slider" )
         float32 _hpRatio;
-        PROPERTY( Category = "Health", DisplayName = "Remain Ratio", Tooltip = "Delayed damage trail ratio (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=ratio" )
+        PROPERTY( Category = "Health", DisplayName = "Remain Ratio", Tooltip = "Delayed damage trail ratio (0..1)", Min = 0.0, Max = 1.0, Units = ratio, Meta = "Slider" )
         float32 _remainRatio;
         PROPERTY( Category = "Health", DisplayName = "Target Ratio", Tooltip = "True HP ratio (0..1) set by the health system", Min = 0.0, Max = 1.0,
-                  Meta = "Slider, Units=ratio" )
+                  Units = ratio, Meta = "Slider" )
         float32 _targetRatio;
         PROPERTY( Category = "Animation", DisplayName = "Lerp Speed", Tooltip = "How fast the trail shrinks and the fill refills (per second)", Min = 0.1, Max = 20.0 )
         float32 _lerpSpeed;
-        PROPERTY( Category = "Layout", DisplayName = "Offset Position", Tooltip = "Offset of the bar center from the owner position", Meta = "Units=m" )
+        PROPERTY( Category = "Layout", DisplayName = "Offset Position", Tooltip = "Offset of the bar center from the owner position", Units = m )
         float2 _offsetPos;
-        PROPERTY( Category = "Layout", DisplayName = "Bar Size", Tooltip = "Bar width and height in world units", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Layout", DisplayName = "Bar Size", Tooltip = "Bar width and height in world units", Min = 0.0, Units = m )
         float2 _barSize;
         PROPERTY( Category = "Style", DisplayName = "Fill Color", Meta = "Color", Tooltip = "Color of the current HP" )
         float4 _fillColor;

@@ -147,11 +147,11 @@ namespace sw
         float32 _pitchMin{ 0.0f };
         PROPERTY( Tooltip = "Random pitch range high end", Meta = "Units=semitones" )
         float32 _pitchMax{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Posts closer together than this are dropped", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Posts closer together than this are dropped", Units = s )
         float32 _cooldownSeconds{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Fade in on start", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Fade in on start", Units = s )
         float32 _fadeInSeconds{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Fade out on stop and steal", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Fade out on stop and steal", Units = s )
         float32 _fadeOutSeconds{ 0.05f };
         PROPERTY( Tooltip = "Most instances alive at once; 0 is unlimited" )
         uint32 _maxInstances{ 0 };

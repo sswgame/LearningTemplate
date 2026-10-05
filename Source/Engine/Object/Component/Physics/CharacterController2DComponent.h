@@ -62,11 +62,11 @@ namespace sw
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
-        PROPERTY( Category = "Character", Min = 0.01, Tooltip = "Capsule radius", Meta = "Units=m" )
+        PROPERTY( Category = "Character", Min = 0.01, Tooltip = "Capsule radius", Units = m )
         float32 _radius;
-        PROPERTY( Category = "Character", Min = 0.0, Tooltip = "Half the cylinder part; height = 2 * (half height + radius)", Meta = "Units=m" )
+        PROPERTY( Category = "Character", Min = 0.0, Tooltip = "Half the cylinder part; height = 2 * (half height + radius)", Units = m )
         float32 _halfHeight;
-        PROPERTY( Category = "Character", Min = 0.0, Max = 1.57, Tooltip = "Steepest walkable floor", Meta = "Units=rad" )
+        PROPERTY( Category = "Character", Min = 0.0, Max = 1.57, Tooltip = "Steepest walkable floor", Units = rad )
         float32 _maxSlopeAngle;
         PROPERTY( Category = "Character", Tooltip = "Multiplier on scene gravity (0 floats)" )
         float32 _gravityScale;

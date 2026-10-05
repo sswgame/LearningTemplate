@@ -53,13 +53,13 @@ namespace sw
         string _shootLayerClip;
         PROPERTY( Category = "Avatar", DisplayName = "Upper Body Bone", Tooltip = "Root bone of the upper-body layer mask" )
         string _upperBodyBone;
-        PROPERTY( Category = "Avatar", DisplayName = "Walk Threshold", Tooltip = "Below this speed the body stands", Min = 0.0, Meta = "Units=m/s" )
+        PROPERTY( Category = "Avatar", DisplayName = "Walk Threshold", Tooltip = "Below this speed the body stands", Min = 0.0, Units = "m/s" )
         float32 _walkThreshold;
-        PROPERTY( Category = "Avatar", DisplayName = "Run Threshold", Tooltip = "At or above this forward speed the run clip plays", Min = 0.0, Meta = "Units=m/s" )
+        PROPERTY( Category = "Avatar", DisplayName = "Run Threshold", Tooltip = "At or above this forward speed the run clip plays", Min = 0.0, Units = "m/s" )
         float32 _runThreshold;
-        PROPERTY( Category = "Avatar", DisplayName = "Hit Pause", Tooltip = "Seconds the upper-body layers step aside for the hit reaction", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Avatar", DisplayName = "Hit Pause", Tooltip = "Seconds the upper-body layers step aside for the hit reaction", Min = 0.0, Units = s )
         float32 _hitPause;
-        PROPERTY( Category = "Avatar", DisplayName = "Turn Rate", Tooltip = "Fastest the body turns to the view direction", Min = 0.0, Meta = "Units=rad/s" )
+        PROPERTY( Category = "Avatar", DisplayName = "Turn Rate", Tooltip = "Fastest the body turns to the view direction", Min = 0.0, Units = "rad/s" )
         float32 _turnRate;
 
         LocomotionDirectionFilter _locomotion;

@@ -66,9 +66,9 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Box centre in object space", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Box centre in object space", Units = m )
         float3 _center{};
-        PROPERTY( Tooltip = "Box half size", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Box half size", Units = m )
         float3 _halfExtents{ 0.5f, 0.5f, 0.5f };
     };
 } // namespace sw
@@ -332,7 +332,7 @@ namespace sw
         vector<FractureAnchorVolume> _listAnchorVolume;
         PROPERTY( Category = "Fracture", DisplayName = "Seed", Tooltip = "Scatter seed (send it with the damage events to sync)" )
         uint32 _seed;
-        PROPERTY( Category = "Fracture", DisplayName = "Anchor Tolerance", Min = 0.0, Tooltip = "Bottom mode: distance above the lowest face that still counts", Meta = "Units=m" )
+        PROPERTY( Category = "Fracture", DisplayName = "Anchor Tolerance", Min = 0.0, Tooltip = "Bottom mode: distance above the lowest face that still counts", Units = m )
         float32 _anchorTolerance;
         PROPERTY( Category = "Fracture", DisplayName = "Anchor Mode", Tooltip = "Which pieces hold the rest up" )
         FractureAnchorMode _anchorMode;

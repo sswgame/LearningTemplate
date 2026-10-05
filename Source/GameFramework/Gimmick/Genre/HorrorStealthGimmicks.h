@@ -45,9 +45,9 @@ namespace sw
         TagContainer _requiredTags;
         PROPERTY( Category = "Scare", DisplayName = "Once" )
         bool _bOnce;
-        PROPERTY( Category = "Scare", DisplayName = "Cooldown", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Scare", DisplayName = "Cooldown", Min = 0.0, Units = s )
         float32 _cooldown;
-        PROPERTY( Category = "Scare", DisplayName = "Cooldown Left", Tooltip = "Runtime", Meta = "Units=s" )
+        PROPERTY( Category = "Scare", DisplayName = "Cooldown Left", Tooltip = "Runtime", Units = s )
         float32 _cooldownLeft;
         PROPERTY( Category = "Scare", DisplayName = "Fire Count", Tooltip = "Runtime" )
         int32 _fireCount;
@@ -139,9 +139,9 @@ namespace sw
         int32   getEmitCount() const { return _emitCount; }
 
     private:
-        PROPERTY( Category = "Noise", DisplayName = "Radius", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Noise", DisplayName = "Radius", Min = 0.0, Units = m )
         float32 _radius;
-        PROPERTY( Category = "Noise", DisplayName = "Interval", Min = 0.0, Tooltip = "0 disables periodic noise", Meta = "Units=s" )
+        PROPERTY( Category = "Noise", DisplayName = "Interval", Min = 0.0, Tooltip = "0 disables periodic noise", Units = s )
         float32 _interval;
         PROPERTY( Category = "Noise", DisplayName = "On Step", Tooltip = "Emit when something steps onto the sensor" )
         bool _bOnStep;
