@@ -1032,7 +1032,7 @@ SW_TEST_CASE( GpuSceneTest, PermutationSplitsBatchesAcrossMaterials )
     SW_ASSERT_TRUE( materialPlain != nullptr && materialSwitched != nullptr );
 
     // 같은 셰이더, 같은 블렌드 모드. 다른 것은 정적 스위치 하나뿐이다.
-    materialSwitched->setStaticSwitch( sw::hashed_string( "UseNormalMap" ), true );
+    materialSwitched->setStaticSwitch( sw::hashed_string( "MATERIAL_TEST_SWITCH" ), true );
     SW_EXPECT_TRUE_MSG( materialPlain->getShaderPath() == materialSwitched->getShaderPath(),
                         "이 테스트는 같은 셰이더를 쓰는 두 머티리얼을 전제로 한다" );
     SW_ASSERT_TRUE( materialPlain->getPermutationHash() != materialSwitched->getPermutationHash() );
@@ -1078,20 +1078,20 @@ SW_TEST_CASE( GpuSceneTest, PermutationSplitsBatchesAcrossMaterials )
         SW_ASSERT_TRUE( pPermutation != nullptr );
         SW_EXPECT_TRUE_MSG( pPermutation->_shaderPath.empty() == false, "퍼뮤테이션에 셰이더 경로가 없다" );
 
-        bool bHasNormalMap{ false };
+        bool bHasTestSwitch{ false };
         for ( const sw::string& defineStr : pPermutation->_listDefine )
         {
-            if ( defineStr == "MATERIAL_NORMALMAP" )
-                bHasNormalMap = true;
+            if ( defineStr == "MATERIAL_TEST_SWITCH" )
+                bHasTestSwitch = true;
         }
         if ( batch._material == materialSwitched )
         {
             bFoundSwitched = true;
-            SW_EXPECT_TRUE_MSG( bHasNormalMap, "스위치를 켠 머티리얼의 배치인데 그 키워드가 퍼뮤테이션에 없다" );
+            SW_EXPECT_TRUE_MSG( bHasTestSwitch, "스위치를 켠 머티리얼의 배치인데 그 키워드가 퍼뮤테이션에 없다" );
         }
         else
         {
-            SW_EXPECT_TRUE_MSG( bHasNormalMap == false, "스위치를 안 켠 머티리얼의 배치에 남의 키워드가 들어 있다" );
+            SW_EXPECT_TRUE_MSG( bHasTestSwitch == false, "스위치를 안 켠 머티리얼의 배치에 남의 키워드가 들어 있다" );
         }
     }
     SW_EXPECT_TRUE_MSG( bFoundSwitched, "스위치를 켠 머티리얼의 배치를 찾지 못했다" );
@@ -1566,7 +1566,7 @@ SW_TEST_CASE( GpuSceneTest, InstancePermutationChangeRebuildsBatches )
     SW_ASSERT_TRUE( gpuScene.getOpaqueBatches().size() == 1 );
 
     // **첫 빌드 뒤에** 인스턴스의 정적 스위치를 켠다. 씬에서는 아무것도 움직이지 않는다.
-    instance->enableKeyword( sw::hashed_string( "MATERIAL_NORMALMAP" ) );
+    instance->enableKeyword( sw::hashed_string( "MATERIAL_TEST_SWITCH" ) );
     gpuScene.buildFromScene( &scene, cameraPos );
 
     const sw::vector<sw::GpuMeshBatch>& batches = gpuScene.getOpaqueBatches();
@@ -1579,7 +1579,7 @@ SW_TEST_CASE( GpuSceneTest, InstancePermutationChangeRebuildsBatches )
 
     // 합치기가 켜지면 배치의 `_materialInstance` 는 nullptr 이다(값은 원소 표가 든다) — 배치를
     // 인스턴스로 식별할 수 없다. 그래서 **퍼뮤테이션 쪽에서** 센다: 켠 것 하나, 안 켠 것 하나여야 한다.
-    uint32 withNormalMap{ 0 };
+    uint32 withTestSwitch{ 0 };
     for ( const sw::GpuMeshBatch& batch : batches )
     {
         const sw::GpuShaderPermutation* pPermutation = gpuScene.findShaderPermutation( batch._shaderPermutation );
@@ -1587,11 +1587,11 @@ SW_TEST_CASE( GpuSceneTest, InstancePermutationChangeRebuildsBatches )
         SW_EXPECT_TRUE_MSG( pPermutation->_shaderPath.empty() == false, "퍼뮤테이션에 셰이더 경로가 없다" );
         for ( const sw::string& defineStr : pPermutation->_listDefine )
         {
-            if ( defineStr == "MATERIAL_NORMALMAP" )
-                ++withNormalMap;
+            if ( defineStr == "MATERIAL_TEST_SWITCH" )
+                ++withTestSwitch;
         }
     }
-    SW_EXPECT_TRUE_MSG( withNormalMap == 1,
+    SW_EXPECT_TRUE_MSG( withTestSwitch == 1,
                         "인스턴스가 켠 키워드를 든 배치가 정확히 하나여야 한다 — 0 이면 인스턴스 define 이 통째로 빠진 것이고, 2 면 남의 배치에까지 번진 것이다" );
 }
 

@@ -41,8 +41,8 @@ namespace sw
         constexpr float32 kBenchCameraMargin = 0.28f;
         /** @brief 스트레스가 들고 있을 머티리얼 인스턴스 상한. 넘으면 붙이는 대신 뗀다. */
         constexpr size_t kChurnInstanceCap = 512;
-        /** @brief 스트레스가 흔드는 정적 스위치 키워드 (defaultmaterial.material 의 useNormalMap). */
-        constexpr const utf8* kChurnNormalMapKeyword = "MATERIAL_NORMALMAP";
+        /** @brief 스트레스가 인스턴스에서 켜고 끄는 키워드입니다. 읽는 셰이더는 없고 퍼뮤테이션만 갈립니다. */
+        constexpr const utf8* kChurnKeyword = "MATERIAL_BENCH_CHURN";
         /** @brief 스트레스가 흔드는 멀티컴파일 이름. */
         constexpr const utf8* kChurnFogMultiCompile = "FogMode";
         /** @brief 그 멀티컴파일의 선택지 — 머티리얼 에셋의 _multiCompiles 와 같아야 한다. */
@@ -1201,9 +1201,9 @@ namespace sw
                 if ( ( nextChurnRandom() & 1u ) != 0u )
                 {
                     if ( ( nextChurnRandom() & 1u ) != 0u )
-                        pInstance->enableKeyword( hashed_string( kChurnNormalMapKeyword ) );
+                        pInstance->enableKeyword( hashed_string( kChurnKeyword ) );
                     else
-                        pInstance->disableKeyword( hashed_string( kChurnNormalMapKeyword ) );
+                        pInstance->disableKeyword( hashed_string( kChurnKeyword ) );
                 }
                 else
                 {

@@ -73,12 +73,10 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
     SW_EXPECT_TRUE( has( "MATERIAL_QUALITY_HIGH" ) );
     SW_EXPECT_TRUE( has( "MATERIAL_USAGE_STATIC_MESH" ) );
     SW_EXPECT_TRUE( has( "FOG_OFF" ) );
-    SW_EXPECT_TRUE( has( "MATERIAL_NORMALMAP_OFF" ) ); // static switch 꺼짐 시 Off 디파인
-    SW_EXPECT_TRUE( has( "MATERIAL_NORMALMAP" ) == false );
 
-    material->setStaticSwitch( sw::hashed_string( "UseNormalMap" ), true );
+    material->setStaticSwitch( sw::hashed_string( "MATERIAL_TEST_SWITCH" ), true );
     listDef = material->getCachedShaderDefines();
-    SW_EXPECT_TRUE( std::find( listDef.begin(), listDef.end(), "MATERIAL_NORMALMAP" ) != listDef.end() );
+    SW_EXPECT_TRUE( std::find( listDef.begin(), listDef.end(), "MATERIAL_TEST_SWITCH" ) != listDef.end() );
 
     material->setMultiCompile( sw::hashed_string( "FogMode" ), "FOG_LINEAR" );
     listDef = material->getCachedShaderDefines();
@@ -95,6 +93,40 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
     sw::vector<sw::string> listInstDef = instance->getCachedShaderDefines();
     SW_EXPECT_TRUE( std::find( listInstDef.begin(), listInstDef.end(), "CUSTOM_KEYWORD" ) != listInstDef.end() );
     SW_EXPECT_TRUE( instance->getPermutationHash() != material->getPermutationHash() );
+}
+
+/**
+ * @brief [MaterialTest] 꺼진 정적 스위치는 `keywordOff` 를, 켜면 `keyword` 를 define 으로 낸다
+ * @details 지금 이 경로를 쓰는 에셋이 없다 — 안 쓰이는 경로가 조용히 썩지 않게 시험이 든다.
+ */
+SW_TEST_CASE( MaterialTest, StaticSwitchOffKeywordWhenDisabled )
+{
+    const utf8*      xml      = R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialDesc formatVersion="0" name="SwitchMat" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_staticSwitches>
+			<item name="UseDetail" keyword="MATERIAL_DETAIL" keywordOff="MATERIAL_DETAIL_OFF" bEnabled="0" bShaderFeature="1"/>
+		</_staticSwitches>
+	</_permutations>
+</MaterialDesc>
+)";
+    const sw::string tempPath = test::makeTempPath( "test_switch_material.material" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( xml ), static_cast<uint64>( sw::StringUtil::strlen( xml ) ) ) );
+
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_ASSERT_TRUE( material->loadFromFile( tempPath ) );
+
+    auto has = [&material]( const utf8* pDefine )
+    {
+        const sw::vector<sw::string>& listDefine = material->getCachedShaderDefines();
+        return std::find( listDefine.begin(), listDefine.end(), pDefine ) != listDefine.end();
+    };
+    SW_EXPECT_TRUE( has( "MATERIAL_DETAIL_OFF" ) );
+    SW_EXPECT_FALSE( has( "MATERIAL_DETAIL" ) );
+
+    material->setStaticSwitch( sw::hashed_string( "UseDetail" ), true );
+    SW_EXPECT_TRUE( has( "MATERIAL_DETAIL" ) );
+    SW_EXPECT_FALSE( has( "MATERIAL_DETAIL_OFF" ) );
 }
 
 /**

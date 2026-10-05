@@ -133,9 +133,6 @@ cd build/Ninja-Debug/Bin
   주 카메라로 한 번 정하고, GPU `instancesort` 는 뷰마다 인스턴스 번호로 되돌리기만 한다. 추가 뷰가 주 카메라와 크게 다른 쪽을 보면 겹친 투명 물체의 앞뒤가 틀린다 —
   뷰마다 CPU 정렬 키를 따로 두거나 뷰별 키를 GPU 정렬에 다시 넣는다.
 
-- **모든 머티리얼(20 개)의 `UseNormalMap` 정적 스위치 키워드 `MATERIAL_NORMALMAP` 을 읽는 셰이더가 없다**(에셋 검증 `material-dead-switches` 경고).
-  노멀 맵을 셰이더에 넣거나 스위치를 지운다 — 지금은 퍼뮤테이션 표에만 있는 죽은 칸이다.
-
 - **`.hdr` 원본 임포트가 없다** — 지금 임포트는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
 - **창(백버퍼)을 읽는 창구가 없어 창 쪽 반전을 시험이 못 본다.** `-gv_screenshot` 은 오프스크린 텍스처를 읽으므로 창으로 옮기는 단계(GL 캡처 블릿)의
@@ -1125,6 +1122,8 @@ cd build/Ninja-Debug/Bin
   기존 DX12 해제 경로 전부에 해당한다(열린 일).
 
 - **런타임에 바꾸는 정적 스위치는 `bShaderFeature="0"` 이어야 Shipping 에 바이너리가 있다** — 쿠커는 에셋 상태 + `bShaderFeature="0"` 스위치의 켬/끔 조합만 쿠킹한다(유니티 shader_feature / multi_compile, 런타임 스위치 넷까지). 코드가 `setStaticSwitch` 로 바꾸는 변형은 Dev 의 실시간 컴파일이 가려 Shipping hostgpu 에서만 진다 — `ShaderCookRequestTest.EveryRuntimeStaticSwitchCombinationIsRequested` 가 조합을 패스마다 대조한다. 멀티 컴파일(`_multiCompiles`)은 아직 고른 값만 쿠킹한다.
+- **정적 스위치의 `keywordOff`(꺼지면 내는 define)를 쓰는 에셋은 지금 없다** — `MaterialTest.StaticSwitchOffKeywordWhenDisabled` 만 지킨다. 스위치를 지우거나 켜고 끄면
+  퍼뮤테이션 해시가 바뀌므로 `--cook-shaders` 를 다시 한다.
 - **셰이더 쿠킹은 패스 종류 표 전체 × (머티리얼 없음 + 머티리얼) × `RenderViewMode` 를 쿠킹한다** — 파이프라인 XML 에 나오는 패스만 곱하면 런타임
   (`ensurePassResources`)이 만드는 변형이 빠진다. 뷰 모드 define 의 정본은 `FrameRendererUtil::findViewModeDefine`, `ShaderCookRequestTest.CookedManifestHoldsEveryRequest` 가
   커밋된 매니페스트를 대조한다. Vulkan 최소 판과 쿠킹 타깃(`-fspv-target-env`)은 `VulkanRHIApiVersion.h` 하나 — 1.3 미만 디바이스는 고르지 않는다(SPIR-V 1.6).
