@@ -21,6 +21,7 @@
 
 namespace sw
 {
+    class Archive;
     class AreaGraph;
     class GameFlags;
     class ItemBag;
@@ -182,6 +183,9 @@ namespace sw
     class SW_GF_API AdventureDungeonState
     {
     public:
+        static constexpr uint32 kStateTag     = 0x4E474441u; ///< 'ADGN'
+        static constexpr uint32 kStateVersion = 1;
+
         AdventureDungeonState();
 
         void initialize( const AdventureDungeonCatalog* pCatalog );
@@ -214,6 +218,14 @@ namespace sw
         const AdventureDungeonProgress* findProgress( const hashed_string& dungeonId ) const;
         bool                            isDeviceActive( const hashed_string& dungeonId, const hashed_string& deviceId ) const;
         int32                           getLitTorchCount( const hashed_string& dungeonId, const hashed_string& deviceId ) const;
+
+        /**
+         * @brief 던전마다 id · 진행(열쇠 · 지도 · 나침반) · 장치(남은 시간 · 켜진 횃불 수 · 활성)를 씁니다. 열린 문 · 상자 · 장치 플래그는 빌린
+         *        `GameFlags` 의 것이라 싣지 않고, 카탈로그는 `initialize` 의 것, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 카탈로그에 없는 던전 · 장치 수가 다르거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 장치 하나의 지금 상태입니다. */

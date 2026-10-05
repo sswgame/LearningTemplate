@@ -13,6 +13,7 @@ namespace sw
 {
     struct BrArmorDef;
 
+    class Archive;
     class BrCatalog;
     class Inventory;
     class WeaponState;
@@ -78,6 +79,11 @@ namespace sw
         /** @brief 지금 무게 한도입니다(기본 + 가방). */
         float32 computeCarryLimit() const;
         float32 computeCarryLimit( const hashed_string& backpackId ) const;
+
+        /** @brief 헬멧 · 조끼(방어구 id · 내구도) · 가방 id 를 씁니다. 방어구 정의는 카탈로그의 것이라 id 만 싣습니다(무게 한도는 인벤토리가 든다). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다 — 방어구 · 가방은 `initialize` 의 카탈로그에서 id 로 찾습니다. 없는 id · 칸이 다른 방어구거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         const BrCatalog* _pCatalog;

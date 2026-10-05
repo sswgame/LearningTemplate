@@ -22,6 +22,7 @@ namespace sw
     struct ActionComboDef;
 
     class ActionPlatformerCatalog;
+    class Archive;
     class MoveCatalog;
     class PlatformTileMap;
 
@@ -76,7 +77,9 @@ namespace sw
     class SW_GF_API ActionCombatRig
     {
     public:
-        static constexpr float32 kFrameTime = 1.0f / 60.0f; ///< 한 프레임(탄 · 총 시간)
+        static constexpr uint32  kStateTag     = 0x52435041u; ///< 'APCR'
+        static constexpr uint32  kStateVersion = 1;
+        static constexpr float32 kFrameTime    = 1.0f / 60.0f; ///< 한 프레임(탄 · 총 시간)
 
         ActionCombatRig();
 
@@ -114,6 +117,17 @@ namespace sw
         const MoveTimeline&             getTimeline() const { return _timeline; }
         const WeaponState&              getGun() const { return _gun; }
         const vector<ActionProjectile>& getProjectiles() const { return _listProjectile; }
+
+        /**
+         * @brief 콤보 id · 기술 시간표(기술 id) · 콤보 자리 · 공격 기억 · 패리 창 · 히트스톱 · 다음 탄 id · 총(든 여부 · `WeaponState`) · 투사체를 씁니다.
+         *        카탈로그 · 기술 표는 `initialize` 의 것, 무기 정의는 `equipGun` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 바꿉니다. 콤보 · 기술은 `initialize` 의 카탈로그에서 id 로 찾습니다. `initialize` 하지 않았거나, 없는 콤보 · 기술,
+         *        총을 든 여부 · 무기가 지금과 다르거나 깨졌으면 false 이고 그대로입니다.
+         */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void startMove( int32 comboIndex );

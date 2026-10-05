@@ -45,6 +45,8 @@ namespace sw
 
 namespace sw
 {
+    class Archive;
+
     /**
      * @class AdventureTargeting
      * @brief 플레이어 한 명의 주목입니다. 매 틱 `update` 에 대상 후보 · 이동 입력(x 오른쪽 · y 앞, −1..1) · 점프를 넘깁니다.
@@ -52,6 +54,9 @@ namespace sw
     class SW_GF_API AdventureTargeting
     {
     public:
+        static constexpr uint32 kStateTag     = 0x54475441u; ///< 'ATGT'
+        static constexpr uint32 kStateVersion = 1;
+
         AdventureTargeting();
 
         void initialize( const AdventureTargetingSettings& settings );
@@ -77,6 +82,11 @@ namespace sw
         bool                    isHeld() const { return _bHeld == SW_TRUE; }
         bool                    isEvading() const { return _evade.isActive(); }
         bool                    isInvulnerable() const { return _invulnerable.isActive(); }
+
+        /** @brief 표적 고르기(표적 · 숨은 시간) · 표적 위치 · 회피 · 무적 남은 시간 · 몸놀림 상태 · 버튼 쥠을 씁니다. 설정은 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void refreshTargetPosition( const vector<LockOnCandidate>& listCandidate );

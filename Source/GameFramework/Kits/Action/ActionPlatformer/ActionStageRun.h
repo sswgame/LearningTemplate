@@ -17,6 +17,7 @@ namespace sw
     struct ActionStageDef;
 
     class ActionPlatformerCatalog;
+    class Archive;
 
     /** @brief 판 상태입니다. */
     enum class ActionStageState : uint8
@@ -52,6 +53,9 @@ namespace sw
     class SW_GF_API ActionStageRun
     {
     public:
+        static constexpr uint32 kStateTag     = 0x54535041u; ///< 'APST'
+        static constexpr uint32 kStateVersion = 1;
+
         ActionStageRun();
 
         /** @brief 스테이지를 시작합니다. 모르는 스테이지면 false 입니다. */
@@ -87,6 +91,13 @@ namespace sw
         int32                 getSecretCommittedCount() const { return static_cast<int32>( _listSecretCommitted.size() ); }
         int32                 getSecretPendingCount() const { return static_cast<int32>( _listSecretPending.size() ); }
         const ActionStageDef* getStage() const { return _pStage; }
+
+        /** @brief 스테이지 id · 판 상태 · 경과 · 목숨 · 체크포인트 자리 · 피격 · 죽은 수 · 확정 · 지닌 비밀을 씁니다. 스테이지 정의는 카탈로그의 것이라 id 만 싣습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief 스테이지를 찾을 카탈로그를 빌립니다 — 새 객체에 `readState` 하기 전에 묶는다(`start` 도 묶는다). */
+        void bindCatalog( const ActionPlatformerCatalog* pCatalog ) { _pCatalog = pCatalog; }
+        /** @brief `writeState` 의 바이트로 바꿉니다 — 스테이지는 묶은 카탈로그에서 id 로 찾습니다. 카탈로그가 없거나, 없는 스테이지 · 비밀 · 체크포인트거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void        commitSecrets();

@@ -3,6 +3,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Combat/Weapon.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
@@ -129,6 +131,16 @@ namespace
             _match.drainEvents( _listEvent );
         }
     };
+
+    /** @brief 판의 상태 바이트를 꺼냅니다. */
+    vector<uint8> captureMatchBytes( const BrMatch& match )
+    {
+        Archive archive;
+        match.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
+    }
 } // namespace
 
 SW_TEST_CASE( BattleRoyaleTest, ZoneShrinksIntoNextCircleAndHurtsOutside )
@@ -192,6 +204,58 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneShrinksIntoNextCircleAndHurtsOutside )
     SW_EXPECT_NEAR_EQUAL( firstCenter._x, again.getCenter()._x, 0.0001f );
     zone.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 7u, nullptr );
     SW_EXPECT_NEAR_EQUAL( zone.getNextCenter()._x, again.getNextCenter()._x, 0.0001f );
+}
+
+/**
+ * @brief [BattleRoyaleTest] 자기장 세이브(Archive) 왕복 — 넷 코덱의 바이트를 길이 붙은 본문으로 실어(난수 상태를 붙여) 다른 씨앗의 자기장이 같은 넷 바이트로 돌아오고,
+ *        다음 단계의 원(난수)까지 같다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( BattleRoyaleTest, ZoneStateRoundTripContinuesTheSameZone )
+{
+    BrCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kBrCatalogXml, "BattleRoyaleTest" ) );
+    auto captureNetBytes = []( const BrZone& target )
+    {
+        BitWriter writer;
+        target.writeState( writer );
+        return writer.getBytes();
+    };
+    auto captureSaveBytes = []( const BrZone& target )
+    {
+        Archive archive;
+        target.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
+    };
+
+    BrZone zone;
+    zone.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 7u, nullptr );
+    zone.update( 70.0f ); // 첫 단계가 줄어드는 중
+    const vector<uint8> written = captureSaveBytes( zone );
+    BrZone              restored;
+    restored.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 99u, nullptr );
+    const float32 untouchedRadius = restored.getRadius();
+    Archive       reader( written.data(), written.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    SW_EXPECT_TRUE( restored.getStage() == BrZoneStage::Shrinking );
+    SW_EXPECT_TRUE( captureNetBytes( zone ) == captureNetBytes( restored ) );
+    SW_EXPECT_TRUE( written == captureSaveBytes( restored ) );
+
+    // 다 줄고 다음 단계로 — 새 다음 원은 이어받은 난수가 고른다.
+    zone.update( 40.0f );
+    restored.update( 40.0f );
+    SW_EXPECT_EQUAL( 1, restored.getPhaseIndex() );
+    SW_EXPECT_TRUE( zone.getNextCenter()._x == restored.getNextCenter()._x && zone.getNextCenter()._y == restored.getNextCenter()._y );
+    SW_EXPECT_TRUE( captureSaveBytes( zone ) == captureSaveBytes( restored ) );
+
+    BrZone truncated;
+    truncated.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 99u, nullptr );
+    Archive cut( written.data(), written.size() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_TRUE( truncated.getRadius() == untouchedRadius );
+    SW_EXPECT_TRUE( truncated.getStage() == BrZoneStage::Waiting );
 }
 
 SW_TEST_CASE( BattleRoyaleTest, NextZoneCenterAvoidsForbiddenTerrain )
@@ -509,4 +573,63 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneDamageBleedoutCreditAndSupplyDrop )
     SW_ASSERT_TRUE( replay._match.getSupplyDrops().size() == 1 );
     SW_EXPECT_NEAR_EQUAL( drop._position._x, replay._match.getSupplyDrops()[0]._position._x, 0.0001f );
     SW_EXPECT_TRUE( drop._position._x >= 0.0f && drop._position._x <= 1000.0f && drop._position._y >= 0.0f && drop._position._y <= 1000.0f );
+}
+
+/**
+ * @brief [BattleRoyaleTest] 판 상태 바이트 — 사람(체력 · 기절 · 부활 진행 · 가방 · 장비) · 보급 상자 · 판 · 자기장 · 시간이 그대로 오고, 같은 시간을 더 돌려도
+ *        바이트가 같다(부활이 같은 걸음에 끝난다). 사람은 카탈로그 설정으로 다시 세운다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( BattleRoyaleTest, StateRoundTripContinuesTheSameMatch )
+{
+    BrTestWorld world;
+    SW_ASSERT_TRUE( world.initialize( 11u ) );
+    world.startTwoSquads();
+    BrPlayer* pLooter = world._match.findPlayerMutable( 0 );
+    SW_ASSERT_NOT_NULL( pLooter );
+    SW_EXPECT_TRUE( pLooter->_loadout.tryEquipArmor( "helmet1" ) );
+    SW_EXPECT_TRUE( pLooter->_loadout.tryEquipBackpack( "bag1", pLooter->_inventory ) );
+    SW_EXPECT_EQUAL( 30, pLooter->_inventory.addItem( "ammo556", 30 ) );
+    world.run( 41.0f ); // 보급 상자 하나가 떨어졌다(40 초)
+    SW_ASSERT_TRUE( world._match.getSupplyDrops().size() == 1 );
+
+    // 0 이 기절하고 팀원 1 이 살리는 중(3 초 — 30 %).
+    (void)world._match.applyDamage( 0, 2, 150.0f, BrHitZone::Body );
+    SW_ASSERT_TRUE( world._match.findPlayer( 0 )->isDowned() );
+    world.run( 1.0f );
+    SW_ASSERT_TRUE( world._match.beginRevive( 1, 0 ) );
+    world.run( 3.0f );
+
+    const vector<uint8> bytes = captureMatchBytes( world._match );
+    BrTestWorld         restored;
+    SW_ASSERT_TRUE( restored.initialize( 99u ) ); // 다른 씨앗 · 사람 없이 — 판 · 사람 · 자기장 · 난수가 바이트에서 온다
+    Archive reader( bytes.data(), bytes.size() );
+    SW_ASSERT_TRUE( restored._match.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    SW_ASSERT_EQUAL( 4, restored._match.getPlayerCount() );
+    const BrPlayer* pRestoredLooter = restored._match.findPlayer( 0 );
+    SW_ASSERT_NOT_NULL( pRestoredLooter );
+    SW_EXPECT_TRUE( pRestoredLooter->isDowned() );
+    SW_EXPECT_EQUAL( 1, pRestoredLooter->_revive.getParticipantCount() );
+    SW_EXPECT_NEAR_EQUAL( world._match.findPlayer( 0 )->_revive.getProgress(), pRestoredLooter->_revive.getProgress(), 1.0e-6f );
+    SW_EXPECT_EQUAL( 0, restored._match.findPlayer( 1 )->_revivingTarget );
+    SW_EXPECT_TRUE( pRestoredLooter->_loadout.getHelmet()._pDef != nullptr );
+    SW_EXPECT_TRUE( pRestoredLooter->_loadout.getBackpackId() == hashed_string( "bag1" ) );
+    SW_EXPECT_EQUAL( 30, pRestoredLooter->_inventory.getItemCount( "ammo556" ) );
+    SW_EXPECT_NEAR_EQUAL( pLooter->_inventory.getMaxWeight(), pRestoredLooter->_inventory.getMaxWeight(), 1.0e-6f );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( restored._match.getSupplyDrops().size() ) );
+    SW_EXPECT_NEAR_EQUAL( world._match.getTime(), restored._match.getTime(), 1.0e-6f );
+    SW_EXPECT_TRUE( world._match.getZone().getRadius() == restored._match.getZone().getRadius() );
+    SW_EXPECT_TRUE( bytes == captureMatchBytes( restored._match ) );
+
+    world.run( 8.0f );
+    restored.run( 8.0f );
+    SW_EXPECT_TRUE( restored._match.findPlayer( 0 )->isAlive() ); // 남은 7 초를 이어 살아났다
+    SW_EXPECT_TRUE( containsBrEvent( restored._listEvent, BrEvent::Kind::PlayerRevived, 0 ) );
+    SW_EXPECT_TRUE( captureMatchBytes( world._match ) == captureMatchBytes( restored._match ) );
+
+    BrTestWorld truncated;
+    SW_ASSERT_TRUE( truncated.initialize( 99u ) );
+    Archive cut( bytes.data(), bytes.size() - 1 );
+    SW_EXPECT_FALSE( truncated._match.readState( cut ) );
+    SW_EXPECT_EQUAL( 0, truncated._match.getPlayerCount() );
 }

@@ -4,12 +4,15 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Combat/Vitality.h"
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/ItemBag.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
 
@@ -189,4 +192,71 @@ namespace sw
     }
 
     hashed_string MetroSoulsState::getCurrencyName() const { return _pCatalog != nullptr ? _pCatalog->getRules()._currency : MetroRules{}._currency; }
+
+    void MetroSoulsState::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listKill.size() );
+        for ( const MetroKillRecord& kill : _listKill )
+        {
+            StateArchiveUtil::writeName( outArchive, kill._spawnId );
+            outArchive << kill._bBoss;
+        }
+        StateArchiveUtil::writeName( outArchive, _corpse._area );
+        outArchive << _corpse._position;
+        outArchive << _corpse._currency;
+        outArchive << _corpse._bActive;
+        StateArchiveUtil::writeName( outArchive, _respawnSite );
+        outArchive << _lostCurrency;
+        outArchive << _flaskCharges;
+        outArchive << _flaskMaxCharges;
+        outArchive << _flaskPotencyLevel;
+    }
+
+    bool MetroSoulsState::readState( Archive& archive )
+    {
+        uint32 killCount = 0;
+        // 처치마다 자리 id(4) + 보스(1) 이상
+        if ( StateArchiveUtil::readCount( archive, 5, killCount ) == false )
+            return false;
+        vector<MetroKillRecord> listKill( killCount );
+        for ( MetroKillRecord& kill : listKill )
+        {
+            if ( StateArchiveUtil::readName( archive, kill._spawnId ) == false )
+                return false;
+            archive >> kill._bBoss;
+            if ( archive.isError() || kill._bBoss > SW_TRUE )
+                return false;
+        }
+        MetroCorpse   corpse;
+        hashed_string respawnSite;
+        int32         lostCurrency      = 0;
+        int32         flaskCharges      = 0;
+        int32         flaskMaxCharges   = 0;
+        int32         flaskPotencyLevel = 0;
+        if ( StateArchiveUtil::readName( archive, corpse._area ) == false )
+            return false;
+        archive >> corpse._position;
+        archive >> corpse._currency;
+        archive >> corpse._bActive;
+        if ( StateArchiveUtil::readName( archive, respawnSite ) == false )
+            return false;
+        archive >> lostCurrency;
+        archive >> flaskCharges;
+        archive >> flaskMaxCharges;
+        archive >> flaskPotencyLevel;
+        const bool bSiteKnown = respawnSite.empty() || ( _pCatalog != nullptr && _pCatalog->findSite( respawnSite ) != nullptr );
+        const bool bValid     = archive.isOk() && bSiteKnown && 0 <= corpse._currency && corpse._bActive <= SW_TRUE && 0 <= lostCurrency && 0 <= flaskCharges &&
+                            flaskCharges <= flaskMaxCharges && 0 <= flaskPotencyLevel;
+        if ( bValid == false )
+            return false;
+        _listKill          = std::move( listKill );
+        _corpse            = corpse;
+        _respawnSite       = respawnSite;
+        _lostCurrency      = lostCurrency;
+        _flaskCharges      = flaskCharges;
+        _flaskMaxCharges   = flaskMaxCharges;
+        _flaskPotencyLevel = flaskPotencyLevel;
+        _eventBuffer.clear();
+        return true;
+    }
 } // namespace sw

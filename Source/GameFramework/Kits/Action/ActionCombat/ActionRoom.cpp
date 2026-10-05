@@ -6,10 +6,12 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Combat/DamageMath.h"
 #include "GameFramework/Base/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
 
 namespace sw
@@ -542,5 +544,111 @@ namespace sw
             float3{centerX - radius, 0.0f, centerY - radius},
             float3{centerX + radius, 1.0f, centerY + radius}
         };
+    }
+
+    void ActionRoom::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint8>( _kind );
+        outArchive << static_cast<uint8>( _bCleared );
+        StateArchiveUtil::writeCountdown( outArchive, _attackCooldown );
+        StateArchiveUtil::writeCountdown( outArchive, _dashCooldown );
+        StateArchiveUtil::writeCountdown( outArchive, _invulnerable );
+        outArchive << static_cast<uint32>( _listMonsterDef.size() );
+        for ( const MonsterDef& def : _listMonsterDef )
+        {
+            outArchive << string_view( def._id );
+        }
+        outArchive << static_cast<uint32>( _listActor.size() );
+        for ( const Actor& actor : _listActor )
+        {
+            outArchive << actor._position;
+            outArchive << actor._hp;
+            StateArchiveUtil::writeCountdown( outArchive, actor._attackTimer );
+            outArchive << actor._defIndex;
+            outArchive << static_cast<uint8>( actor._bAlive );
+        }
+        outArchive << static_cast<uint32>( _listProjectile.size() );
+        for ( const Projectile& projectile : _listProjectile )
+        {
+            outArchive << projectile._position;
+            outArchive << projectile._velocity;
+            StateArchiveUtil::writeCountdown( outArchive, projectile._life );
+            outArchive << projectile._radius;
+            outArchive << projectile._damage;
+            outArchive << static_cast<uint8>( projectile._bAlive );
+        }
+    }
+
+    bool ActionRoom::readState( Archive& archive )
+    {
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 자리 · 충돌 층은 사본이 그대로 든다.
+        ActionRoom restored = *this;
+        uint8      kind     = 0;
+        uint8      bCleared = SW_FALSE;
+        archive >> kind;
+        archive >> bCleared;
+        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._attackCooldown ) &&
+                                StateArchiveUtil::readCountdown( archive, restored._dashCooldown ) && StateArchiveUtil::readCountdown( archive, restored._invulnerable );
+        const bool bHeadValid = bTimerRead && archive.isOk() && kind <= static_cast<uint8>( ActionRoomKind::Boss ) && bCleared <= SW_TRUE;
+        if ( bHeadValid == false )
+            return false;
+        restored._kind     = static_cast<ActionRoomKind>( kind );
+        restored._bCleared = bCleared;
+
+        // 종 정의는 id 로 다시 찾는다 — 같은 순서로 더해 적의 종 칸이 그대로 맞는다.
+        uint32 defCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 4, defCount ) == false )
+            return false;
+        restored._listMonsterDef.clear();
+        for ( uint32 defIndex = 0; defIndex < defCount; ++defIndex )
+        {
+            hashed_string monsterId;
+            if ( StateArchiveUtil::readName( archive, monsterId ) == false )
+                return false;
+            if ( restored.findOrAddMonsterDef( monsterId ) != static_cast<int32>( defIndex ) )
+                return false;
+        }
+
+        uint32 actorCount = 0;
+        // 적마다 자리(8) + 체력(4) + 사격 시간(4) + 종 칸(2) + 생존(1)
+        if ( StateArchiveUtil::readCount( archive, 19, actorCount ) == false )
+            return false;
+        restored._listActor.assign( actorCount, Actor{} );
+        for ( Actor& actor : restored._listActor )
+        {
+            uint8 bAlive = SW_FALSE;
+            archive >> actor._position;
+            archive >> actor._hp;
+            if ( StateArchiveUtil::readCountdown( archive, actor._attackTimer ) == false )
+                return false;
+            archive >> actor._defIndex;
+            archive >> bAlive;
+            const bool bActorValid = archive.isOk() && actor._defIndex < defCount && bAlive <= SW_TRUE;
+            if ( bActorValid == false )
+                return false;
+            actor._bAlive = bAlive;
+        }
+
+        uint32 projectileCount = 0;
+        // 투사체마다 자리(8) + 속도(8) + 수명(4) + 반지름(4) + 피해(4) + 생존(1)
+        if ( StateArchiveUtil::readCount( archive, 29, projectileCount ) == false )
+            return false;
+        restored._listProjectile.assign( projectileCount, Projectile{} );
+        for ( Projectile& projectile : restored._listProjectile )
+        {
+            uint8 bAlive = SW_FALSE;
+            archive >> projectile._position;
+            archive >> projectile._velocity;
+            if ( StateArchiveUtil::readCountdown( archive, projectile._life ) == false )
+                return false;
+            archive >> projectile._radius;
+            archive >> projectile._damage;
+            archive >> bAlive;
+            if ( archive.isError() || bAlive > SW_TRUE )
+                return false;
+            projectile._bAlive = bAlive;
+        }
+        *this = std::move( restored );
+        return true;
     }
 } // namespace sw

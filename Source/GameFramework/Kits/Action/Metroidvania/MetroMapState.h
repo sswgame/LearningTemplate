@@ -17,6 +17,7 @@ namespace sw
 {
     struct MetroPickupDef;
 
+    class Archive;
     class AreaGraph;
     class MetroidvaniaCatalog;
     class Wallet;
@@ -37,6 +38,9 @@ namespace sw
     class SW_GF_API MetroMapState
     {
     public:
+        static constexpr uint32 kStateTag     = 0x50414D4Du; ///< 'MMAP'
+        static constexpr uint32 kStateVersion = 1;
+
         MetroMapState();
 
         /** @brief 카탈로그와 방 그래프를 둡니다(상태는 비운다). */
@@ -76,6 +80,11 @@ namespace sw
         void fillSaveState( vector<hashed_string>& outListRegionMap, vector<hashed_string>& outListSite, vector<hashed_string>& outListPickup ) const;
         /** @brief 세이브에서 되살립니다(그래프의 방문 · 발견은 `AreaGraph::restoreState` 로 따로). 지도를 산 지역은 다시 드러냅니다. */
         void restoreSaveState( const vector<hashed_string>& listRegionMap, const vector<hashed_string>& listSite, const vector<hashed_string>& listPickup );
+
+        /** @brief 산 지도 · 연 지점 · 주운 것을 씁니다. 방문 · 발견은 빌린 `AreaGraph` 의 것, 카탈로그는 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다(지도를 산 지역은 그래프에 다시 드러낸다). 카탈로그에 없는 id 거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         static bool contains( const vector<hashed_string>& listId, const hashed_string& id );

@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     const utf8* toString( AdventureTargetingState state )
@@ -138,5 +142,34 @@ namespace sw
             if ( candidate._id == _selector.getTarget() )
                 _targetPosition = candidate._position;
         }
+    }
+
+    void AdventureTargeting::writeState( Archive& outArchive ) const
+    {
+        _selector.writeState( outArchive );
+        outArchive << _targetPosition;
+        StateArchiveUtil::writeCountdown( outArchive, _evade );
+        StateArchiveUtil::writeCountdown( outArchive, _invulnerable );
+        outArchive << static_cast<uint8>( _state );
+        outArchive << _bHeld;
+    }
+
+    bool AdventureTargeting::readState( Archive& archive )
+    {
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정은 사본이 그대로 든다.
+        AdventureTargeting restored = *this;
+        uint8              state    = 0;
+        if ( restored._selector.readState( archive ) == false )
+            return false;
+        archive >> restored._targetPosition;
+        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._evade ) && StateArchiveUtil::readCountdown( archive, restored._invulnerable );
+        archive >> state;
+        archive >> restored._bHeld;
+        const bool bValid = bTimerRead && archive.isOk() && state <= static_cast<uint8>( AdventureTargetingState::SideHopRight ) && restored._bHeld <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        restored._state = static_cast<AdventureTargetingState>( state );
+        *this           = std::move( restored );
+        return true;
     }
 } // namespace sw

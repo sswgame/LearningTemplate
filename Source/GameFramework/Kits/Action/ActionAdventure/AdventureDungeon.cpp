@@ -5,10 +5,12 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
 #include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Base/World/GameFlags.h"
 
@@ -464,5 +466,83 @@ namespace sw
         event._item    = item;
         event._count   = count;
         _eventBuffer.push( event );
+    }
+
+    void AdventureDungeonState::writeState( Archive& outArchive ) const
+    {
+        const vector<AdventureDungeonDef>* pListDungeon = _pCatalog != nullptr ? &_pCatalog->getDungeons() : nullptr;
+        outArchive << static_cast<uint32>( _listRuntime.size() );
+        for ( size_t dungeonIndex = 0; dungeonIndex < _listRuntime.size(); ++dungeonIndex )
+        {
+            const DungeonRuntime& runtime = _listRuntime[dungeonIndex];
+            StateArchiveUtil::writeName( outArchive, pListDungeon != nullptr ? ( *pListDungeon )[dungeonIndex]._id : hashed_string{} );
+            outArchive << runtime._progress._smallKeyCount;
+            outArchive << runtime._progress._smallKeyUsedCount;
+            outArchive << runtime._progress._bBossKey;
+            outArchive << runtime._progress._bMap;
+            outArchive << runtime._progress._bCompass;
+            outArchive << static_cast<uint32>( runtime._listDevice.size() );
+            for ( const DeviceRuntime& device : runtime._listDevice )
+            {
+                StateArchiveUtil::writeCountdown( outArchive, device._timer );
+                outArchive << device._litCount;
+                outArchive << device._bActive;
+            }
+        }
+    }
+
+    bool AdventureDungeonState::readState( Archive& archive )
+    {
+        if ( _pCatalog == nullptr )
+            return false;
+        uint32 dungeonCount = 0;
+        // 던전마다 id(4) + 진행(11) + 장치 수(4) 이상
+        if ( StateArchiveUtil::readCount( archive, 19, dungeonCount ) == false )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 실리지 않은 던전은 새 판(`initialize` 의 모양)으로 남는다.
+        vector<DungeonRuntime> listRuntime = _listRuntime;
+        for ( uint32 entry = 0; entry < dungeonCount; ++entry )
+        {
+            hashed_string dungeonId;
+            if ( StateArchiveUtil::readName( archive, dungeonId ) == false )
+                return false;
+            const int32 dungeonIndex = _pCatalog->findDungeonIndex( dungeonId );
+            if ( dungeonIndex < 0 || static_cast<size_t>( dungeonIndex ) >= listRuntime.size() )
+                return false;
+            const AdventureDungeonDef& dungeon = _pCatalog->getDungeons()[static_cast<size_t>( dungeonIndex )];
+            DungeonRuntime&            runtime = listRuntime[static_cast<size_t>( dungeonIndex )];
+            AdventureDungeonProgress   progress;
+            uint32                     deviceCount = 0;
+            archive >> progress._smallKeyCount;
+            archive >> progress._smallKeyUsedCount;
+            archive >> progress._bBossKey;
+            archive >> progress._bMap;
+            archive >> progress._bCompass;
+            // 장치마다 남은 시간(4) + 켜진 수(4) + 활성(1)
+            if ( StateArchiveUtil::readCount( archive, 9, deviceCount ) == false || deviceCount != runtime._listDevice.size() )
+                return false;
+            const bool bProgressValid = 0 <= progress._smallKeyCount && 0 <= progress._smallKeyUsedCount && progress._bBossKey <= SW_TRUE &&
+                                        progress._bMap <= SW_TRUE && progress._bCompass <= SW_TRUE;
+            if ( bProgressValid == false )
+                return false;
+            runtime._progress = progress;
+            for ( size_t deviceIndex = 0; deviceIndex < runtime._listDevice.size(); ++deviceIndex )
+            {
+                DeviceRuntime& device = runtime._listDevice[deviceIndex];
+                if ( StateArchiveUtil::readCountdown( archive, device._timer ) == false )
+                    return false;
+                archive >> device._litCount;
+                archive >> device._bActive;
+                const bool bDeviceValid = archive.isOk() && 0 <= device._litCount && device._litCount <= dungeon._listDevice[deviceIndex]._torchCount &&
+                                          device._bActive <= SW_TRUE;
+                if ( bDeviceValid == false )
+                    return false;
+            }
+        }
+        if ( archive.isError() )
+            return false;
+        _listRuntime = std::move( listRuntime );
+        _eventBuffer.clear();
+        return true;
     }
 } // namespace sw

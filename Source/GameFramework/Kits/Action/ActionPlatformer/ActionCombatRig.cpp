@@ -4,8 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Base/Utility/RayMath.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 
 namespace sw
@@ -249,5 +252,81 @@ namespace sw
         event._id    = id;
         event._value = value;
         _eventBuffer.push( event );
+    }
+
+    void ActionCombatRig::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeName( outArchive, _pCombo != nullptr ? _pCombo->_id : hashed_string{} );
+        _timeline.writeState( outArchive );
+        outArchive << _comboIndex;
+        outArchive << _attackBufferFrames;
+        outArchive << _parryFrames;
+        outArchive << _hitstopFrames;
+        outArchive << _nextProjectileId;
+        outArchive << _bGunEquipped;
+        _gun.writeState( outArchive );
+        outArchive << static_cast<uint32>( _listProjectile.size() );
+        for ( const ActionProjectile& projectile : _listProjectile )
+        {
+            outArchive << projectile._position;
+            outArchive << projectile._velocity;
+            outArchive << projectile._damage;
+            outArchive << projectile._lifetime;
+            outArchive << projectile._id;
+            outArchive << static_cast<uint8>( projectile._team );
+            outArchive << projectile._bReflected;
+        }
+    }
+
+    bool ActionCombatRig::readState( Archive& archive )
+    {
+        if ( _pCatalog == nullptr || _pMoves == nullptr )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 기술 표 · 무기 정의는 사본이 그대로 든다.
+        ActionCombatRig restored = *this;
+        hashed_string   comboId;
+        uint8           bGunEquipped = SW_FALSE;
+        if ( StateArchiveUtil::readName( archive, comboId ) == false )
+            return false;
+        restored._pCombo = comboId.empty() ? nullptr : _pCatalog->findCombo( comboId );
+        if ( comboId.empty() == false && restored._pCombo == nullptr )
+            return false;
+        if ( restored._timeline.readState( archive, *_pMoves ) == false )
+            return false;
+        archive >> restored._comboIndex;
+        archive >> restored._attackBufferFrames;
+        archive >> restored._parryFrames;
+        archive >> restored._hitstopFrames;
+        archive >> restored._nextProjectileId;
+        archive >> bGunEquipped;
+        const int32 comboMoveCount = restored._pCombo != nullptr ? static_cast<int32>( restored._pCombo->_listMove.size() ) : 0;
+        const bool  bHeadValid     = archive.isOk() && -1 <= restored._comboIndex && restored._comboIndex < comboMoveCount && 0 <= restored._attackBufferFrames &&
+                                0 <= restored._parryFrames && 0 <= restored._hitstopFrames && bGunEquipped == _bGunEquipped;
+        if ( bHeadValid == false || restored._gun.readState( archive ) == false )
+            return false;
+
+        uint32 projectileCount = 0;
+        // 투사체마다 자리(8) + 속도(8) + 피해(4) + 남은 시간(4) + id(4) + 편(1) + 되받아침(1)
+        if ( StateArchiveUtil::readCount( archive, 30, projectileCount ) == false )
+            return false;
+        restored._listProjectile.assign( projectileCount, ActionProjectile{} );
+        for ( ActionProjectile& projectile : restored._listProjectile )
+        {
+            uint8 team = 0;
+            archive >> projectile._position;
+            archive >> projectile._velocity;
+            archive >> projectile._damage;
+            archive >> projectile._lifetime;
+            archive >> projectile._id;
+            archive >> team;
+            archive >> projectile._bReflected;
+            const bool bValid = archive.isOk() && team <= static_cast<uint8>( ActionTeam::Enemy ) && projectile._bReflected <= SW_TRUE;
+            if ( bValid == false )
+                return false;
+            projectile._team = static_cast<ActionTeam>( team );
+        }
+        restored._eventBuffer.clear();
+        *this = std::move( restored );
+        return true;
     }
 } // namespace sw

@@ -241,4 +241,16 @@ namespace sw
     int32 AdventureElementGrid::countBurning() const { return _grid.countStatus( _burningStatus ); }
 
     uint32 AdventureElementGrid::computeStateHash() const { return _grid.computeStateHash(); }
+
+    void AdventureElementGrid::writeState( Archive& outArchive ) const { _grid.writeState( outArchive ); }
+
+    bool AdventureElementGrid::readState( Archive& archive )
+    {
+        // 격자가 크기 · 깨짐을 스스로 거절한다(그대로 둔다).
+        if ( _grid.readState( archive ) == false )
+            return false;
+        _listGridEvent.clear();
+        _listEvent.clear();
+        return true;
+    }
 } // namespace sw

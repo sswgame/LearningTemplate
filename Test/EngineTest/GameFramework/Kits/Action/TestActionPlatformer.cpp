@@ -3,6 +3,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Combat/FrameData.h"
 #include "GameFramework/Base/Combat/Weapon.h"
 #include "GameFramework/Base/Movement/PlatformerMotor2D.h"
@@ -172,6 +174,17 @@ namespace
                 duel._enemyDamage += listHit[0]._damage;
         }
         return duel;
+    }
+
+    /** @brief 상태 바이트를 꺼냅니다. */
+    template <typename StateType>
+    vector<uint8> capturePlatformerBytes( const StateType& state )
+    {
+        Archive archive;
+        state.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
     }
 } // namespace
 
@@ -591,4 +604,151 @@ SW_TEST_CASE( ActionPlatformerTest, GunEnemyPatternAndParryReflectAreDeterminist
     const ParryDuel again = runParryDuel( scene, true );
     SW_EXPECT_EQUAL( parried._reflectFrame, again._reflectFrame );
     SW_EXPECT_NEAR_EQUAL( parried._enemyDamage, again._enemyDamage, 0.0f );
+}
+
+/**
+ * @brief [ActionPlatformerTest] 상태 바이트 — 스테이지(확정 · 지닌 비밀 · 체크포인트 · 목숨) · 활공 중인 몸 · 콤보 · 총 · 투사체 · 적 패턴이 그대로 오고,
+ *        같은 걸음을 더 돌려도 바이트가 같다. 정의는 id 로 카탈로그에서 찾고, 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( ActionPlatformerTest, StateRoundTripContinuesTheSameRun )
+{
+    ActionScene scene;
+    SW_ASSERT_TRUE( scene._bLoaded );
+
+    // 스테이지 — gem1 은 확정, gem2 는 지닌 채, 한 번 맞고 5 초.
+    ActionStageRun run;
+    SW_ASSERT_TRUE( run.start( &scene._catalog, "1-1" ) );
+    SW_EXPECT_TRUE( run.collectSecret( "gem1" ) );
+    SW_EXPECT_TRUE( run.reachCheckpoint( "cp1" ) );
+    SW_EXPECT_TRUE( run.collectSecret( "gem2" ) );
+    run.registerHit();
+    for ( int32 tick = 0; tick < 10; ++tick )
+        run.update( 0.5f );
+    const vector<uint8> runBytes = capturePlatformerBytes( run );
+    ActionStageRun      restoredRun;
+    restoredRun.bindCatalog( &scene._catalog );
+    Archive runReader( runBytes.data(), runBytes.size() );
+    SW_ASSERT_TRUE( restoredRun.readState( runReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, runReader.getRemainingBytes() );
+    SW_ASSERT_NOT_NULL( restoredRun.getStage() );
+    SW_EXPECT_TRUE( restoredRun.getStage()->_id == hashed_string( "1-1" ) );
+    SW_EXPECT_EQUAL( 0, restoredRun.getCheckpointIndex() );
+    SW_EXPECT_EQUAL( 1, restoredRun.getSecretCommittedCount() );
+    SW_EXPECT_EQUAL( 1, restoredRun.getSecretPendingCount() );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, restoredRun.getElapsed(), 1.0e-4f );
+    SW_EXPECT_TRUE( runBytes == capturePlatformerBytes( restoredRun ) );
+    run.update( 1.0f );
+    restoredRun.update( 1.0f );
+    SW_EXPECT_TRUE( run.die() == restoredRun.die() ); // 둘 다 cp1 에서 되살아나고 gem2 를 놓는다
+    SW_EXPECT_TRUE( capturePlatformerBytes( run ) == capturePlatformerBytes( restoredRun ) );
+    ActionStageRun truncatedRun;
+    truncatedRun.bindCatalog( &scene._catalog );
+    Archive runCut( runBytes.data(), runBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedRun.readState( runCut ) );
+    SW_EXPECT_TRUE( truncatedRun.getState() == ActionStageState::NotStarted );
+
+    // 몸 — 우산을 편 채 떨어지는 중(기반 몸의 설정은 활공 것이어야 같은 속도로 이어진다).
+    ActionBodyInput glide;
+    glide._bGlideHeld = SW_TRUE;
+    scene._body.setPosition( float2{ 3.5f, 9.5f } );
+    (void)scene.run( glide, 10 );
+    SW_EXPECT_TRUE( scene._body.getMode() == ActionMoveMode::Glide );
+    const vector<uint8>  bodyBytes = capturePlatformerBytes( scene._body );
+    ActionPlatformerBody restoredBody;
+    restoredBody.initialize( PlatformerSettings{}, scene._catalog.getBodySettings() );
+    Archive bodyReader( bodyBytes.data(), bodyBytes.size() );
+    SW_ASSERT_TRUE( restoredBody.readState( bodyReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, bodyReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( restoredBody.getMode() == ActionMoveMode::Glide );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, restoredBody.getMotor().getSettings()._maxFallSpeed, 1.0e-4f );
+    SW_EXPECT_TRUE( bodyBytes == capturePlatformerBytes( restoredBody ) );
+    for ( int32 frame = 0; frame < 10; ++frame )
+    {
+        scene._body.update( scene._map, scene._terrain, glide, kActionPlatformerStep );
+        restoredBody.update( scene._map, scene._terrain, glide, kActionPlatformerStep );
+    }
+    SW_EXPECT_TRUE( capturePlatformerBytes( scene._body ) == capturePlatformerBytes( restoredBody ) );
+    ActionPlatformerBody truncatedBody;
+    truncatedBody.initialize( PlatformerSettings{}, scene._catalog.getBodySettings() );
+    Archive bodyCut( bodyBytes.data(), bodyBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedBody.readState( bodyCut ) );
+    SW_EXPECT_TRUE( truncatedBody.getMode() == ActionMoveMode::Normal );
+
+    // 싸움 — slash1 중, 총 한 발이 날고, 적 탄 하나가 다가온다.
+    const float2    player{ 5.0f, 2.0f };
+    ActionCombatRig rig;
+    SW_ASSERT_TRUE( rig.initialize( &scene._catalog, &scene._moves, "umbrella" ) );
+    rig.equipGun( makePistol(), 4, 3u );
+    rig.pressAttack();
+    for ( int32 frame = 0; frame < 2; ++frame )
+        rig.advanceFrame( nullptr, player );
+    SW_EXPECT_TRUE( rig.fireGun( float2{ 2.0f, 2.0f }, float2{ 1.0f, 0.0f }, true ) == WeaponFireResult::Fired );
+    ActionProjectile incoming;
+    incoming._position = float2{ 15.0f, 2.0f };
+    incoming._velocity = float2{ -3.0f, 0.0f };
+    (void)rig.spawnProjectile( incoming );
+    rig.advanceFrame( nullptr, player );
+    const vector<uint8> rigBytes = capturePlatformerBytes( rig );
+    ActionCombatRig     restoredRig;
+    SW_ASSERT_TRUE( restoredRig.initialize( &scene._catalog, &scene._moves, "umbrella" ) );
+    restoredRig.equipGun( makePistol(), 4, 3u );
+    Archive rigReader( rigBytes.data(), rigBytes.size() );
+    SW_ASSERT_TRUE( restoredRig.readState( rigReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, rigReader.getRemainingBytes() );
+    SW_EXPECT_EQUAL( 0, restoredRig.getComboIndex() );
+    SW_EXPECT_TRUE( restoredRig.getTimeline().getMove()._id == hashed_string( "slash1" ) );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( restoredRig.getProjectiles().size() ) );
+    SW_EXPECT_EQUAL( 1, restoredRig.getGun().getMagazineAmmo() );
+    SW_EXPECT_TRUE( rigBytes == capturePlatformerBytes( restoredRig ) );
+    rig.registerMeleeContact( false );
+    restoredRig.registerMeleeContact( false );
+    rig.pressAttack();
+    restoredRig.pressAttack();
+    for ( int32 frame = 0; frame < 20; ++frame )
+    {
+        rig.advanceFrame( nullptr, player );
+        restoredRig.advanceFrame( nullptr, player );
+    }
+    SW_EXPECT_EQUAL( rig.getComboIndex(), restoredRig.getComboIndex() );
+    SW_EXPECT_TRUE( capturePlatformerBytes( rig ) == capturePlatformerBytes( restoredRig ) );
+    ActionCombatRig truncatedRig;
+    SW_ASSERT_TRUE( truncatedRig.initialize( &scene._catalog, &scene._moves, "umbrella" ) );
+    truncatedRig.equipGun( makePistol(), 4, 3u );
+    Archive rigCut( rigBytes.data(), rigBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedRig.readState( rigCut ) );
+    SW_EXPECT_TRUE( truncatedRig.getProjectiles().empty() );
+
+    // 적 — 조준 중. 패턴은 id 로 찾으니 아무것도 들지 않은 뇌에 읽어도 이어진다.
+    ActionEnemyBrain brain;
+    SW_ASSERT_TRUE( brain.initialize( scene._catalog.findPattern( "gunner" ), -1 ) );
+    (void)brain.advanceFrame( 10.0f );
+    (void)brain.advanceFrame( 5.0f );
+    for ( int32 frame = 0; frame < 3; ++frame )
+        (void)brain.advanceFrame( 5.0f );
+    SW_EXPECT_TRUE( brain.getStateId() == hashed_string( "aim" ) );
+    const vector<uint8> brainBytes = capturePlatformerBytes( brain );
+    ActionEnemyBrain    restoredBrain;
+    restoredBrain.bindCatalog( &scene._catalog );
+    Archive brainReader( brainBytes.data(), brainBytes.size() );
+    SW_ASSERT_TRUE( restoredBrain.readState( brainReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, brainReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( restoredBrain.getStateId() == hashed_string( "aim" ) );
+    SW_EXPECT_EQUAL( brain.getStateFrame(), restoredBrain.getStateFrame() );
+    SW_EXPECT_EQUAL( -1, restoredBrain.getFacing() );
+    SW_EXPECT_TRUE( brainBytes == capturePlatformerBytes( restoredBrain ) );
+    int32 fireCount         = 0;
+    int32 restoredFireCount = 0;
+    for ( int32 frame = 0; frame < 12; ++frame )
+    {
+        fireCount += brain.advanceFrame( 5.0f )._bFire == SW_TRUE ? 1 : 0;
+        restoredFireCount += restoredBrain.advanceFrame( 5.0f )._bFire == SW_TRUE ? 1 : 0;
+    }
+    SW_EXPECT_EQUAL( 1, fireCount );
+    SW_EXPECT_EQUAL( fireCount, restoredFireCount );
+    SW_EXPECT_TRUE( capturePlatformerBytes( brain ) == capturePlatformerBytes( restoredBrain ) );
+    ActionEnemyBrain truncatedBrain;
+    truncatedBrain.bindCatalog( &scene._catalog );
+    Archive brainCut( brainBytes.data(), brainBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedBrain.readState( brainCut ) );
+    SW_EXPECT_TRUE( truncatedBrain.getStateId().empty() );
 }

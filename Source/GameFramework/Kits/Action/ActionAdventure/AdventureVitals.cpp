@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 namespace sw
 {
     const utf8* toString( AdventureStaminaOutcome outcome )
@@ -171,4 +173,33 @@ namespace sw
     }
 
     int32 AdventureVitals::computeHealthQuarters() const { return static_cast<int32>( _health.getHealth() + 0.5f ); }
+
+    void AdventureVitals::writeState( Archive& outArchive ) const
+    {
+        outArchive << _heartCount;
+        outArchive << _heartPieceCount;
+        outArchive << _bMagicUpgraded;
+        _health.writeState( outArchive );
+        _magic.writeState( outArchive );
+        _stamina.writeState( outArchive );
+    }
+
+    bool AdventureVitals::readState( Archive& archive )
+    {
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정은 사본이 그대로 든다.
+        AdventureVitals restored = *this;
+        archive >> restored._heartCount;
+        archive >> restored._heartPieceCount;
+        archive >> restored._bMagicUpgraded;
+        const bool bHeadValid = archive.isOk() && 1 <= restored._heartCount && restored._heartCount <= _settings._maxHeartCount && 0 <= restored._heartPieceCount &&
+                                restored._heartPieceCount < _settings._piecesPerHeart && restored._bMagicUpgraded <= SW_TRUE;
+        if ( bHeadValid == false )
+            return false;
+        restored.resetHealth(); // 체력 최대는 하트 수가 정한다 — 값은 아래에서 읽는다
+        const bool bBodyRead = restored._health.readState( archive ) && restored._magic.readState( archive ) && restored._stamina.readState( archive );
+        if ( bBodyRead == false )
+            return false;
+        *this = std::move( restored );
+        return true;
+    }
 } // namespace sw

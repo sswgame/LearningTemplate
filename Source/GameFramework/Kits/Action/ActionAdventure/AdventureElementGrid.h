@@ -69,6 +69,8 @@ namespace sw
 
 namespace sw
 {
+    class Archive;
+
     /**
      * @class AdventureElementGrid
      * @brief 가로 × 세로 셀입니다. 칸 좌표는 (x, y) 이고 바람도 같은 축의 (−1..1, −1..1) 입니다.
@@ -76,6 +78,9 @@ namespace sw
     class SW_GF_API AdventureElementGrid
     {
     public:
+        static constexpr uint32 kStateTag     = 0x4D4C4541u; ///< 'AELM'
+        static constexpr uint32 kStateVersion = 1;
+
         AdventureElementGrid();
         /** @brief 격자는 규칙표를 가리키므로 복사하면 새 규칙표를 가리키게 다시 잇습니다. */
         AdventureElementGrid( const AdventureElementGrid& other );
@@ -116,6 +121,11 @@ namespace sw
         int32  getWidth() const { return _grid.getWidth(); }
         int32  getHeight() const { return _grid.getHeight(); }
         uint32 getStepCount() const { return _grid.getStepCount(); }
+
+        /** @brief 기반 격자의 칸 · 바람 · 고정 걸음 · 걸음 수를 씁니다. 설정 · 규칙표는 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 격자 크기가 다르거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 설정 값으로 규칙표를 짓습니다(`default.elements.xml` 과 같은 모양 — 재질 번호 = `AdventureMaterial`). */

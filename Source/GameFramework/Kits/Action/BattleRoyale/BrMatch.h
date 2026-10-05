@@ -23,6 +23,7 @@
 
 namespace sw
 {
+    class Archive;
     class BrCatalog;
     class ItemCatalog;
     class LootCatalog;
@@ -101,7 +102,9 @@ namespace sw
     class SW_GF_API BrMatch
     {
     public:
-        static constexpr float32 kFixedStep = 0.1f;
+        static constexpr uint32  kStateTag     = 0x544D5242u; ///< 'BRMT'
+        static constexpr uint32  kStateVersion = 1;
+        static constexpr float32 kFixedStep    = 0.1f;
 
         BrMatch();
 
@@ -136,8 +139,22 @@ namespace sw
         const vector<BrSupplyDrop>& getSupplyDrops() const { return _listSupplyDrop; }
         float32                     getTime() const { return _time; }
 
+        /**
+         * @brief 판(`MatchState`) · 자기장(`BrZone`) · 난수 · 고정 걸음 · 시간 · 다음 보급 자리, 사람마다 체력 · 부활 진행(붙은 팀원 · 진행량) · 가방(`Inventory`) ·
+         *        장비 · 자리 · 팀 · 처치 · 기절시킨 수 · 기절시킨 사람 · 살리는 대상, 보급 상자를 씁니다. 카탈로그 셋 · 지형은 `initialize` 의 것이라 싣지 않고,
+         *        알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 바꿉니다 — 사람은 카탈로그 설정으로 다시 세운 뒤 값을 읽습니다(`initialize` 한 판에 읽는다). 사람 수가 판의 참가자 수와
+         *        다르거나, 없는 팀 · 아이템 칸 수가 다르거나 깨졌으면 false 이고 그대로입니다.
+         */
+        [[nodiscard]] bool readState( Archive& archive );
+
     private:
         bool isValidPlayer( int32 player ) const { return player >= 0 && player < static_cast<int32>( _listPlayer.size() ); }
+        /** @brief 카탈로그 설정으로 사람 하나를 세웁니다(체력 · 부활 · 장비 · 가방). */
+        void initializePlayer( BrPlayer& outPlayer, int32 team, int32 participant ) const;
         void stepFixed( float32 deltaTime );
         void processVitality( int32 player );
         void handleDowned( int32 player, int32 instigator );

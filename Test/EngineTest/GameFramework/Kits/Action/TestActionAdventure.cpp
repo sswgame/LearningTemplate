@@ -1,6 +1,8 @@
 // 액션 어드벤처 키트(젤다 장르) — 던전 열쇠 · 문 · 지도 · 나침반 · 장치, 하트 · 마법 · 스태미나, 주목 몸놀림, 원소 화학, 요리, 무기 내구도, 탑 · 사당.
 #include "pch.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Inventory/Crafting.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/ItemBag.h"
@@ -138,6 +140,33 @@ namespace
   <Recipe id="sorbet" station="CookingPot"><In item="hydromelon" count="2"/><Out item="chillySorbet" count="1"/></Recipe>
 </RecipeCatalog>
 )";
+
+    /** @brief 상태 바이트를 꺼냅니다. */
+    template <typename StateType>
+    vector<uint8> captureAdventureBytes( const StateType& state )
+    {
+        Archive archive;
+        state.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
+    }
+
+    /** @brief @p bytes 를 @p outState 에 읽고 끝까지 다 읽었으면 true 입니다. */
+    template <typename StateType>
+    bool restoreAdventureBytes( const vector<uint8>& bytes, StateType& outState )
+    {
+        Archive reader( bytes.data(), bytes.size() );
+        return outState.readState( reader ) && reader.getRemainingBytes() == 0;
+    }
+
+    /** @brief 마지막 한 바이트를 자른 바이트를 @p outState 에 읽습니다(거절되어야 한다). */
+    template <typename StateType>
+    bool restoreTruncatedAdventureBytes( const vector<uint8>& bytes, StateType& outState )
+    {
+        Archive reader( bytes.data(), bytes.size() - 1 );
+        return outState.readState( reader );
+    }
 } // namespace
 
 /**
@@ -598,4 +627,130 @@ SW_TEST_CASE( ActionAdventureTest, WeaponWearTowersAndShrines )
     SW_EXPECT_EQUAL( 0, worldMap.getOrbCount() );
     SW_EXPECT_EQUAL( 4, vitals.getHeartCount() );
     SW_EXPECT_EQUAL( 4, worldMap.getCompletedShrineCount() );
+}
+
+/**
+ * @brief [ActionAdventureTest] 상태 바이트 — 던전(열쇠 · 시간제 스위치 · 횃불) · 원소 격자 · 주목 · 몸이 그대로 오고, 같은 걸음을 더 돌려도 바이트가 같다.
+ *        잘린 바이트 · 크기가 다른 격자는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( ActionAdventureTest, StateRoundTripContinuesTheSameAdventure )
+{
+    // 던전 — 열쇠 셋, 시간제 스위치가 2 초 남고 횃불 둘이 켜져 있다.
+    AdventureDungeonScene dungeon;
+    SW_ASSERT_TRUE( dungeon.initialize() );
+    ItemBag reward;
+    SW_EXPECT_TRUE( dungeon._state.openTreasure( "forest", "keyChest", dungeon._flags, reward ) );
+    SW_EXPECT_TRUE( dungeon._state.addSmallKey( "forest", 2 ) );
+    SW_EXPECT_TRUE( dungeon._state.hitSwitch( "forest", "timer", dungeon._flags ) );
+    SW_EXPECT_TRUE( dungeon._state.lightTorch( "forest", "torches", dungeon._flags ) );
+    SW_EXPECT_TRUE( dungeon._state.lightTorch( "forest", "torches", dungeon._flags ) );
+    dungeon.run( 1.0f );
+    const vector<uint8>   dungeonBytes = captureAdventureBytes( dungeon._state );
+    AdventureDungeonScene restoredDungeon;
+    SW_ASSERT_TRUE( restoredDungeon.initialize() );
+    SW_ASSERT_TRUE( restoreAdventureBytes( dungeonBytes, restoredDungeon._state ) );
+    SW_EXPECT_EQUAL( 3, restoredDungeon._state.findProgress( "forest" )->_smallKeyCount );
+    SW_EXPECT_EQUAL( 2, restoredDungeon._state.getLitTorchCount( "forest", "torches" ) );
+    SW_EXPECT_TRUE( restoredDungeon._state.isDeviceActive( "forest", "timer" ) );
+    SW_EXPECT_TRUE( dungeonBytes == captureAdventureBytes( restoredDungeon._state ) );
+    dungeon.run( 2.5f );
+    restoredDungeon.run( 2.5f );
+    SW_EXPECT_FALSE( restoredDungeon._state.isDeviceActive( "forest", "timer" ) ); // 남은 2 초가 이어져 닫혔다
+    SW_EXPECT_TRUE( captureAdventureBytes( dungeon._state ) == captureAdventureBytes( restoredDungeon._state ) );
+    AdventureDungeonScene truncatedDungeon;
+    SW_ASSERT_TRUE( truncatedDungeon.initialize() );
+    SW_EXPECT_FALSE( restoreTruncatedAdventureBytes( dungeonBytes, truncatedDungeon._state ) );
+    SW_EXPECT_EQUAL( 0, truncatedDungeon._state.findProgress( "forest" )->_smallKeyCount );
+
+    // 원소 격자 — 불이 번지는 중간. 읽는 쪽은 바람 없는 초원에서 시작해도 바람까지 이어받는다.
+    AdventureElementGrid grid;
+    fillMeadow( grid, int2{ 1, 0 } );
+    SW_ASSERT_TRUE( grid.applyFire( int2{ 0, 1 } ) );
+    for ( int32 stepIndex = 0; stepIndex < 3; ++stepIndex )
+        grid.step();
+    const vector<uint8>  gridBytes = captureAdventureBytes( grid );
+    AdventureElementGrid restoredGrid;
+    fillMeadow( restoredGrid, int2{ 0, 0 } );
+    SW_ASSERT_TRUE( restoreAdventureBytes( gridBytes, restoredGrid ) );
+    SW_EXPECT_EQUAL( grid.computeStateHash(), restoredGrid.computeStateHash() );
+    SW_EXPECT_EQUAL( 1, restoredGrid.getWind()._x );
+    SW_EXPECT_TRUE( gridBytes == captureAdventureBytes( restoredGrid ) );
+    for ( int32 stepIndex = 0; stepIndex < 3; ++stepIndex )
+    {
+        grid.step();
+        restoredGrid.step();
+    }
+    SW_EXPECT_TRUE( captureAdventureBytes( grid ) == captureAdventureBytes( restoredGrid ) );
+    AdventureElementGrid smallerGrid;
+    smallerGrid.initialize( 4, 3, AdventureElementSettings{} );
+    Archive smallerReader( gridBytes.data(), gridBytes.size() );
+    SW_EXPECT_FALSE( smallerGrid.readState( smallerReader ) );
+    AdventureElementGrid truncatedGrid;
+    fillMeadow( truncatedGrid, int2{ 0, 0 } );
+    SW_EXPECT_FALSE( restoreTruncatedAdventureBytes( gridBytes, truncatedGrid ) );
+    SW_EXPECT_EQUAL( 0, truncatedGrid.countBurning() );
+
+    // 주목 — 공중제비 한가운데(회피 · 무적이 남았다).
+    AdventureTargeting      targeting;
+    vector<LockOnCandidate> listCandidate;
+    LockOnCandidate         moblin;
+    moblin._id       = 7;
+    moblin._position = float3{ 5.0f, 0.0f, 0.0f };
+    listCandidate.push_back( moblin );
+    const float3 eye{};
+    targeting.initialize( AdventureTargetingSettings{} );
+    SW_ASSERT_TRUE( targeting.press( eye, float3{ 1.0f, 0.0f, 0.0f }, listCandidate ) );
+    SW_EXPECT_TRUE( targeting.update( eye, listCandidate, float2{ 1.0f, 0.0f }, false, 0.1f ) == AdventureTargetingState::StrafeRight );
+    SW_EXPECT_TRUE( targeting.update( eye, listCandidate, float2{ 0.0f, -1.0f }, true, 0.1f ) == AdventureTargetingState::Backflip );
+    const vector<uint8> targetingBytes = captureAdventureBytes( targeting );
+    AdventureTargeting  restoredTargeting;
+    restoredTargeting.initialize( AdventureTargetingSettings{} );
+    SW_ASSERT_TRUE( restoreAdventureBytes( targetingBytes, restoredTargeting ) );
+    SW_EXPECT_TRUE( restoredTargeting.getState() == AdventureTargetingState::Backflip );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 7 ), restoredTargeting.getTarget() );
+    SW_EXPECT_TRUE( restoredTargeting.isInvulnerable() );
+    SW_EXPECT_TRUE( restoredTargeting.isHeld() );
+    SW_EXPECT_TRUE( targetingBytes == captureAdventureBytes( restoredTargeting ) );
+    for ( int32 tick = 0; tick < 2; ++tick )
+    {
+        (void)targeting.update( eye, listCandidate, float2{ 1.0f, 0.0f }, false, 0.3f );
+        (void)restoredTargeting.update( eye, listCandidate, float2{ 1.0f, 0.0f }, false, 0.3f );
+    }
+    SW_EXPECT_TRUE( targeting.getState() == restoredTargeting.getState() );
+    SW_EXPECT_TRUE( captureAdventureBytes( targeting ) == captureAdventureBytes( restoredTargeting ) );
+    AdventureTargeting truncatedTargeting;
+    truncatedTargeting.initialize( AdventureTargetingSettings{} );
+    SW_EXPECT_FALSE( restoreTruncatedAdventureBytes( targetingBytes, truncatedTargeting ) );
+    SW_EXPECT_TRUE( truncatedTargeting.getState() == AdventureTargetingState::Free );
+
+    // 몸 — 하트 넷 + 조각 하나, 두 배 마법을 조금 썼고, 오르다 지구력이 줄었다.
+    AdventureVitals vitals;
+    vitals.initialize( AdventureVitalsSettings{} );
+    for ( int32 piece = 0; piece < 5; ++piece )
+        (void)vitals.addHeartPiece();
+    SW_EXPECT_FALSE( vitals.applyDamage( 3 ) );
+    SW_EXPECT_TRUE( vitals.upgradeMagic() );
+    SW_EXPECT_TRUE( vitals.trySpendMagic( 30.0f ) );
+    for ( int32 second = 0; second < 3; ++second )
+        (void)vitals.updateStamina( AdventureStaminaAction::Climb, 1.0f );
+    const vector<uint8> vitalsBytes = captureAdventureBytes( vitals );
+    AdventureVitals     restoredVitals;
+    restoredVitals.initialize( AdventureVitalsSettings{} );
+    SW_ASSERT_TRUE( restoreAdventureBytes( vitalsBytes, restoredVitals ) );
+    SW_EXPECT_EQUAL( 4, restoredVitals.getHeartCount() );
+    SW_EXPECT_EQUAL( 1, restoredVitals.getHeartPieceCount() );
+    SW_EXPECT_EQUAL( 13, restoredVitals.computeHealthQuarters() );
+    SW_EXPECT_EQUAL( 16, restoredVitals.getMaxHealthQuarters() );
+    SW_EXPECT_NEAR_EQUAL( 96.0f, restoredVitals.getMagic().getMax(), 0.001f );
+    SW_EXPECT_TRUE( vitalsBytes == captureAdventureBytes( restoredVitals ) );
+    for ( int32 tick = 0; tick < 4; ++tick )
+    {
+        (void)vitals.updateStamina( AdventureStaminaAction::Idle, 0.5f );
+        (void)restoredVitals.updateStamina( AdventureStaminaAction::Idle, 0.5f );
+    }
+    SW_EXPECT_TRUE( captureAdventureBytes( vitals ) == captureAdventureBytes( restoredVitals ) );
+    AdventureVitals truncatedVitals;
+    truncatedVitals.initialize( AdventureVitalsSettings{} );
+    SW_EXPECT_FALSE( restoreTruncatedAdventureBytes( vitalsBytes, truncatedVitals ) );
+    SW_EXPECT_EQUAL( 3, truncatedVitals.getHeartCount() );
 }

@@ -19,6 +19,7 @@ namespace sw
 {
     struct GameStateRefs;
 
+    class Archive;
     class GameFlags;
     class GameRandom;
     class ItemBag;
@@ -81,6 +82,9 @@ namespace sw
     class SW_GF_API MetroSoulsState
     {
     public:
+        static constexpr uint32 kStateTag     = 0x4C4F534Du; ///< 'MSOL'
+        static constexpr uint32 kStateVersion = 1;
+
         MetroSoulsState();
 
         /**
@@ -128,6 +132,14 @@ namespace sw
         const hashed_string&           getRespawnSite() const { return _respawnSite; }
         int32                          getLostCurrency() const { return _lostCurrency; }
         const vector<MetroKillRecord>& getKills() const { return _listKill; }
+
+        /**
+         * @brief 처치 기록 · 시체 · 되살아날 지점 · 잃은 통화 · 물약(충전 · 최대 · 회복 단계)을 씁니다. 통화 잔액은 빌린 지갑의 것, 카탈로그는 `initialize` 의 것이라
+         *        싣지 않고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 카탈로그에 없는 되살아날 지점이거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void          refreshWorld( Vitality& vitality );
