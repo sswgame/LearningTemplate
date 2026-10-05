@@ -148,6 +148,18 @@ namespace
         pProperty->setValue<bool>( &bar, bValue );
         return true;
     }
+
+    /** @brief 룸을 0.02 초씩 갱신하다 플레이어가 처음 피해를 받은 프레임의 피해입니다(최대 @p maxFrame 번, 없으면 0). */
+    int32 updateRoomUntilPlayerIsHit( ActionRoom& room, const ActionRoomFrameInput& input, int32 maxFrame )
+    {
+        for ( int32 frameIndex = 0; frameIndex < maxFrame; ++frameIndex )
+        {
+            const int32 damage = room.update( 0.02f, input )._damageToPlayer;
+            if ( damage > 0 )
+                return damage;
+        }
+        return 0;
+    }
 } // namespace
 
 /**
@@ -1023,4 +1035,60 @@ SW_TEST_CASE( ActionCombatTest, BossFireRateDoesNotDependOnFrameRate )
             shotCount += room.update( 1.0f / framesPerSecond, input )._bossShotCount;
         SW_EXPECT_NEAR_EQUAL( design, static_cast<float32>( shotCount ), 1.0f );
     }
+}
+
+/**
+ * @brief [ActionCombatTest] 액션 룸 적의 수치 — 그런트는 닿으면 8 · 한 번에 쓰러지고, 보스는 닿으면 12 · 탄 10 · 한 번에 18 씩 최대 220 이라 13 번째에 쓰러진다
+ * @details 적의 수치를 코드 상수에서 몬스터 정의로 옮겨도 동작이 같은지 본다(내장 정의가 옛 상수와 같아야 한다). 피해는 프레임 결과로, HP 는 보스 게이지
+ *          (`getBossHpFill`)와 살아 있는 적 수로 읽는다.
+ */
+SW_TEST_CASE( ActionCombatTest, ActionRoomEnemyNumbersStayTheSame )
+{
+    EventDispatcher                    dispatcher;
+    const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
+    ActionRoom                         room;
+    ActionRoomFrameInput               input;
+
+    // 1) 그런트 — 첫 그런트(5, 2.5) 위에 서면 닿은 피해 8.
+    room.beginHall();
+    input._playerPos = float2{ 5.0f, 2.5f };
+    SW_EXPECT_EQUAL( 8, room.update( 0.016f, input )._damageToPlayer );
+
+    // 2) 그런트 — 한 번 치면 쓰러진다(34 ≥ HP 30). 왼쪽에서 오른쪽을 보고 친다(닿지는 않는 자리).
+    room.beginHall();
+    input._playerPos      = float2{ 4.0f, 2.5f };
+    input._facing         = FacingDir::Right;
+    input._bAttackPressed = SW_TRUE;
+    (void)room.update( 0.016f, input ); // 살아 있는 적 수를 본다
+    SW_EXPECT_EQUAL( 2, room.getAliveEnemyCount() );
+
+    // 3) 보스 — 보스(7, 4) 위에 서면 닿은 피해 12.
+    room.beginBoss();
+    input._playerPos      = float2{ 7.0f, 4.0f };
+    input._bAttackPressed = SW_FALSE;
+    SW_EXPECT_EQUAL( 12, room.update( 0.016f, input )._damageToPlayer );
+
+    // 4) 보스 탄 — 8 m 떨어져 서면 처음 맞는 것은 겨냥한 탄이고 피해 10(옆으로 나간 탄은 비켜 간다).
+    room.beginBoss();
+    input._playerPos = float2{ 7.0f, 12.0f };
+    SW_EXPECT_EQUAL( 10, updateRoomUntilPlayerIsHit( room, input, 300 ) );
+
+    // 5) 보스 HP — 한 번에 18, 최대 220 → 13 번째에 쓰러진다.
+    room.beginBoss();
+    input._playerPos      = float2{ 5.6f, 4.0f };
+    input._bAttackPressed = SW_TRUE;
+    (void)room.update( 0.016f, input ); // 게이지를 본다
+    SW_EXPECT_NEAR_EQUAL( 202.0f / 220.0f, room.getBossHpFill(), 1e-5f );
+    int32   hitCount = 1;
+    float32 lastFill = room.getBossHpFill();
+    for ( int32 frameIndex = 0; frameIndex < 2000 && room.isCleared() == false; ++frameIndex )
+    {
+        (void)room.update( 0.02f, input ); // 게이지를 본다
+        const float32 fill = room.getBossHpFill();
+        if ( fill < lastFill )
+            ++hitCount;
+        lastFill = fill;
+    }
+    SW_EXPECT_TRUE( room.isCleared() );
+    SW_EXPECT_EQUAL( 13, hitCount );
 }
