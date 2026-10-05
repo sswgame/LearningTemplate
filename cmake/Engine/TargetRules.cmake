@@ -587,13 +587,19 @@ endfunction()
 #   HOST_TIMEOUT  `_HostOnly` 의 제한 시간(기본: TIMEOUT).
 #   SHARDS        ctest 항목을 이 수만큼 `<타깃>_Shard<k>` 로 갈라 병렬로 돌린다(`--test_shard=<k-1>/<n>`). 케이스는 **스위트 안에서 번갈아**
 #                 나뉘므로 느린 스위트 하나가 끝을 정하는 실행 파일에 쓴다(ReflectionTest — 파서를 차례로 띄우는 스위트가 시간의 거의 전부).
-#                 스위트 이름을 적지 않는다. HOST_SPLIT 과 함께 쓰면 **`_NoGPU` 만** `<타깃>_NoGPU_Shard<k>` 로 가른다
-#                 (`--host_suites=exclude --test_shard=…`, CI 가 병렬로 도는 쪽). `_HostOnly` 는 직렬 하나 그대로다.
+#                 스위트 이름을 적지 않는다. HOST_SPLIT 과 함께 쓰면 `_NoGPU` 를 `<타깃>_NoGPU_Shard<k>` 로 가른다
+#                 (`--host_suites=exclude --test_shard=…`, CI 가 병렬로 도는 쪽).
+#   HOST_SHARDS   HOST_SPLIT 의 `_HostOnly` 를 이 수만큼 `<타깃>_HostOnly_Shard<k>` 로 가른다(기본 1 — 하나). 조각도 **직렬**이다
+#                 (GPU 를 잡는다) — 합계 시간은 같고, 조각마다 제한 시간(HOST_TIMEOUT)을 따로 받는다. 조각마다 호스트 케이스가 하나는
+#                 있어야 한다(`--host_suites=only` 가 아무것도 고르지 않으면 진다).
 #   RUN_SERIAL    다른 테스트와 겹치면 안 되는 실행 파일(같은 파일 · 같은 장치를 쓰는 경우). **지금 쓰는 타겟은 없다.**
 #                 쓸 때는 그 이유를 옆에 적는다.
 # ------------------------------------------------------------------------------
 function(sw_addTestExecutable TARGET_NAME)
-	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT;SHARDS" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
+	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT;SHARDS;HOST_SHARDS" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
+	if(ARG_HOST_SHARDS AND NOT ARG_HOST_SPLIT)
+		message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): HOST_SHARDS 는 HOST_SPLIT 의 `_HostOnly` 를 가른다 — HOST_SPLIT 없이 쓰지 않는다")
+	endif()
 	if(NOT ARG_SOURCES)
 		file(GLOB_RECURSE ARG_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 	endif()
@@ -676,7 +682,11 @@ function(sw_addTestExecutable TARGET_NAME)
 		ARGS --host_suites=exclude LABELS "${labels};nogpu" TIMEOUT ${timeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
 	# 직렬인 이유: 창을 띄우고 GPU 를 잡는다. 다른 GPU 테스트와 겹치면 서로를 느리게 만들고, 드라이버에 따라
 	# 서로의 디바이스 생성을 막는다.
-	sw_registerTestRun(${TARGET_NAME}_HostOnly ${TARGET_NAME} RUN_SERIAL
+	set(hostShardCount 1)
+	if(ARG_HOST_SHARDS AND ARG_HOST_SHARDS GREATER 1)
+		set(hostShardCount ${ARG_HOST_SHARDS})
+	endif()
+	sw_registerTestShards(${TARGET_NAME}_HostOnly ${TARGET_NAME} ${hostShardCount} RUN_SERIAL
 		ARGS --host_suites=only LABELS "${labels};hostgpu" TIMEOUT ${hostTimeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
 endfunction()
 

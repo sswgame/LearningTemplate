@@ -22,7 +22,7 @@ namespace sw
     };
 
     /** @brief 로드 한 번의 기록입니다. */
-    struct AssetLoadRecord
+    struct SW_API AssetLoadRecord
     {
         string        _path{};
         hashed_string _kind{}; ///< "Texture" · "Mesh" · "Material" · "Prefab" · "Scene" …

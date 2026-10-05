@@ -84,8 +84,8 @@ build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (
   `SW_TEST_REQUIRES_HOST` sits in a folder whose CMakeLists says `HOST_SPLIT` (otherwise nothing reads it and
   CI runs the suite). The same gate keeps `CoreTest` free of Engine headers and `engine::` calls (Engine tests go
   in `EngineTest`) and checks that the Editor sources `EditorTest` lists by hand exist and do not include ImGui.
-- **A slow executable is split with `SHARDS <n>`** in `sw_addTestExecutable`: it registers `<Target>_Shard1..n` (with `HOST_SPLIT`, only
-  the CI half is split: `<Target>_NoGPU_Shard1..n`, `_HostOnly` stays one serial entry — `EngineTest` uses 3), each with
+- **A slow executable is split with `SHARDS <n>`** in `sw_addTestExecutable`: it registers `<Target>_Shard1..n` (with `HOST_SPLIT`,
+  `<Target>_NoGPU_Shard1..n`; `HOST_SHARDS <m>` splits `_HostOnly` into `<Target>_HostOnly_Shard1..m`, still serial — `EngineTest` uses 3 and 2), each with
   `--test_shard=<k>/<n>`, and cases are dealt out **within each suite** so one slow suite is halved (`ReflectionTest` — its
   parser suite was ~21 s of a 30 s limit). A suite split across shards is not judged by the "every case skipped" check, so a
   suite whose cases skip when a prerequisite is missing keeps one case that asserts the prerequisite
