@@ -1,16 +1,15 @@
 #include "pch.h"
 
-#include "Core/Container/deque.h"
 #include "Core/Container/map.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Transport/NetEmulation.h"
-#include "Core/Network/Transport/NetTransport.h"
 
 #include "GameFramework/Kits/Network/NetLockstep/LockstepSession.h"
 #include "GameFramework/Kits/Network/NetLockstep/RollbackSession.h"
 #include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestLoopbackCluster.h"
 
 // 결정적 네트워크 키트 — 락스텝(셋이 같은 입력으로 같은 상태, 입력 위조 거절, 체크섬 비동기 감지, 떠난 플레이어를 모두 같은 틱에 빼기, 입력 · 체크섬 창)과
 // 롤백(지연 · 손실 망에서 예측 → 되감기 → 양쪽 확정 상태 일치, 너무 앞서면 멈춤, 확인 기반 다시 보내기, 시간 동기, 받는 창).
@@ -19,65 +18,18 @@ using namespace sw;
 
 namespace
 {
-    struct NetTestCluster
+    /** @brief 서버(포트 4000) + 클라이언트 @p clientCount(4001 부터)를 30 프레임 동안 연결하고, 그 뒤 모든 끝점에 @p conditions 를 겁니다. */
+    void connectLockstepCluster( test::LoopbackCluster& cluster, int32 clientCount, const NetEmulationConditions& conditions )
     {
-        LoopbackNetwork              _network;
-        deque<NetEmulationTransport> _listLink; ///< 호스트마다 보내는 쪽 흉내 — deque 라 주소가 움직이지 않는다
-        deque<NetHost>               _listHost; ///< deque — NetHost 는 옮길 수 없다(잠금을 품는다)
-        float64                      _time{ 0.0 };
-
-        NetTestCluster( int32 clientCount, const NetEmulationConditions& conditions )
+        NetHostSettings settings;
+        settings._sendInterval = 1.0 / 60.0;
+        for ( int32 index = 0; index <= clientCount; ++index )
         {
-            for ( int32 index = 0; index <= clientCount; ++index )
-            {
-                _listLink.emplace_back( _network.createEndpoint( static_cast<uint16>( 4000 + index ) ), 31u + static_cast<uint32>( index ) );
-                _listHost.emplace_back();
-            }
-            NetHostSettings settings;
-            settings._sendInterval = 1.0 / 60.0;
-            for ( size_t index = 0; index < _listHost.size(); ++index )
-            {
-                _listHost[index].initialize( &_listLink[index], settings );
-            }
-            (void)_listHost[0].listen();
-            for ( size_t index = 1; index < _listHost.size(); ++index )
-            {
-                (void)_listHost[index].connect( NetAddress::makeLoopback( 4000 ) );
-            }
-            for ( int32 frame = 0; frame < 30; ++frame )
-            {
-                step();
-            }
-            for ( NetEmulationTransport& link : _listLink )
-            {
-                link.setDefaultConditions( conditions );
-            }
+            (void)cluster.addHost( static_cast<uint16>( 4000 + index ), settings );
         }
-
-        void step()
-        {
-            _time += 1.0 / 60.0;
-            // 흉내 줄을 먼저 모두 비운다 — 지연이 방향 · 호스트 순서와 상관없이 같다.
-            for ( NetEmulationTransport& link : _listLink )
-            {
-                link.update( _time );
-            }
-            for ( NetHost& host : _listHost )
-            {
-                host.update( _time );
-            }
-        }
-
-        bool isAllConnected() const
-        {
-            for ( size_t index = 1; index < _listHost.size(); ++index )
-            {
-                if ( _listHost[index].getConnectionState( 0 ) != NetConnectionState::Connected )
-                    return false;
-            }
-            return true;
-        }
-    };
+        (void)cluster.connectClients( 30 ); // 연결됐는지는 케이스가 단언한다
+        cluster.setConditions( conditions );
+    }
 
     uint32 mixHash( uint32 hash, const vector<vector<uint8>>& listInput )
     {
@@ -509,16 +461,17 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
     conditions._latency  = 0.03;
     conditions._jitter   = 0.01;
     conditions._lossRate = 0.05f;
-    NetTestCluster cluster( 2, conditions );
-    SW_ASSERT_TRUE( cluster.isAllConnected() );
+    test::LoopbackCluster cluster( 31u );
+    connectLockstepCluster( cluster, 2, conditions );
+    SW_ASSERT_TRUE( cluster.areClientsConnected() );
 
     vector<LockstepSession>     listSession( 3 );
     vector<uint32>              listHash( 3, 2166136261u );
     vector<map<uint32, uint32>> listHashByTick( 3 );
     for ( int32 index = 0; index < 3; ++index )
     {
-        const int32 player = index == 0 ? 0 : cluster._listHost[static_cast<size_t>( index )].getClientIndex() + 1;
-        listSession[static_cast<size_t>( index )].initialize( &cluster._listHost[static_cast<size_t>( index )], 3, player, 4 );
+        const int32 player = index == 0 ? 0 : cluster.getHost( index ).getClientIndex() + 1;
+        listSession[static_cast<size_t>( index )].initialize( &cluster.getHost( index ), 3, player, 4 );
     }
     vector<uint8> buffer;
     for ( int32 frame = 0; frame < 60 * 6; ++frame )
@@ -526,7 +479,7 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
         cluster.step();
         for ( int32 index = 0; index < 3; ++index )
         {
-            NetHost&       host         = cluster._listHost[static_cast<size_t>( index )];
+            NetHost&       host         = cluster.getHost( index );
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
             while ( host.receiveMessage( connectionId, channel, buffer ) )
@@ -574,7 +527,7 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
         {
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
-            while ( cluster._listHost[static_cast<size_t>( index )].receiveMessage( connectionId, channel, buffer ) )
+            while ( cluster.getHost( index ).receiveMessage( connectionId, channel, buffer ) )
                 (void)listSession[static_cast<size_t>( index )].handleMessage( connectionId, buffer );
         }
     }
@@ -591,15 +544,16 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
     conditions._latency  = 0.05;
     conditions._jitter   = 0.015;
     conditions._lossRate = 0.05f;
-    NetTestCluster cluster( 1, conditions );
-    SW_ASSERT_TRUE( cluster.isAllConnected() );
+    test::LoopbackCluster cluster( 31u );
+    connectLockstepCluster( cluster, 1, conditions );
+    SW_ASSERT_TRUE( cluster.areClientsConnected() );
 
     TrackedDuel      arrGame[2];
     RollbackSession  arrSession[2];
     RollbackSettings settings;
     settings._inputDelay = 2;
     for ( int32 index = 0; index < 2; ++index )
-        arrSession[index].initialize( &cluster._listHost[static_cast<size_t>( index )], &arrGame[index], 2, index, settings );
+        arrSession[index].initialize( &cluster.getHost( index ), &arrGame[index], 2, index, settings );
 
     vector<uint8> buffer;
     int32         arrLocalFrame[2] = { 0, 0 };
@@ -610,7 +564,7 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
         {
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
-            while ( cluster._listHost[static_cast<size_t>( index )].receiveMessage( connectionId, channel, buffer ) )
+            while ( cluster.getHost( index ).receiveMessage( connectionId, channel, buffer ) )
                 SW_EXPECT_TRUE( NetHandleResult::Handled == arrSession[index].handleMessage( connectionId, buffer ) );
             if ( arrSession[index].advanceFrame( scriptInput( index, arrLocalFrame[index] ) ) )
                 ++arrLocalFrame[index];

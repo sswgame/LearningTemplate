@@ -12,6 +12,7 @@
 #include "Core/Network/Transport/UdpNetTransport.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestLoopbackCluster.h"
 
 // 네트워크 공통 계층 — 비트 스트림, 시퀀스 감김, 신뢰성(재전송 · 순서 · 중복 · 옛것 버리기 · RTT), 핸드셰이크(도전 · 가득 참 · 다른 프로토콜),
 // 나쁜 망(지연 · 흔들림 · 손실 · 중복 · 깨짐)에서의 신뢰 순서, 끊기 · 타임아웃, 실제 UDP 소켓, 한가할 때의 유지 패킷, 메시지 라우터, 많은 연결.
@@ -20,41 +21,12 @@ using namespace sw;
 
 namespace
 {
-    struct NetTestPair
+    /** @brief 서버(포트 4000 — 호스트 0) · 클라이언트(포트 5000 — 호스트 1)를 더합니다. listen · connect 는 케이스가 한다. */
+    void addServerAndClient( test::LoopbackCluster& cluster, const NetHostSettings& settings )
     {
-        LoopbackNetwork       _network;
-        NetEmulationTransport _serverLink{ _network.createEndpoint( 4000 ), 77u };
-        NetEmulationTransport _clientLink{ _network.createEndpoint( 5000 ), 78u };
-        NetHost               _server;
-        NetHost               _client;
-        float64               _time{ 0.0 };
-
-        explicit NetTestPair( const NetHostSettings& settings = NetHostSettings{} )
-        {
-            _server.initialize( &_serverLink, settings );
-            _client.initialize( &_clientLink, settings );
-        }
-
-        /** @brief 두 끝점의 보내는 쪽에 같은 조건을 겁니다(왕복). */
-        void setConditions( const NetEmulationConditions& conditions )
-        {
-            _serverLink.setDefaultConditions( conditions );
-            _clientLink.setDefaultConditions( conditions );
-        }
-
-        void run( float64 seconds, float64 step = 1.0 / 60.0 )
-        {
-            for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += step )
-            {
-                _time += step;
-                // 흉내 줄을 먼저 모두 비운다 — 지연이 방향 · 호스트 순서와 상관없이 같다.
-                _serverLink.update( _time );
-                _clientLink.update( _time );
-                _server.update( _time );
-                _client.update( _time );
-            }
-        }
-    };
+        (void)cluster.addHost( 4000, settings );
+        (void)cluster.addHost( 5000, settings );
+    }
 
     vector<uint8> makeMessage( int32 value, int32 size = 4 )
     {
@@ -489,16 +461,17 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
 {
     NetHostSettings settings;
     settings._maxConnections = 2;
-    NetTestPair pair( settings );
-    SW_ASSERT_TRUE( pair._server.listen() );
-    SW_ASSERT_TRUE( pair._client.connect( NetAddress::makeLoopback( 4000 ) ) );
-    SW_EXPECT_TRUE( pair._client.getConnectionState( 0 ) == NetConnectionState::Connecting );
+    test::LoopbackCluster pair( 77u );
+    addServerAndClient( pair, settings );
+    SW_ASSERT_TRUE( pair.getServer().listen() );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+    SW_EXPECT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connecting );
     pair.run( 0.3 );
-    SW_ASSERT_TRUE( pair._client.getConnectionState( 0 ) == NetConnectionState::Connected );
-    SW_EXPECT_EQUAL( 1, pair._server.getConnectedCount() );
-    SW_EXPECT_EQUAL( 0, pair._client.getClientIndex() );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_EXPECT_EQUAL( 1, pair.getServer().getConnectedCount() );
+    SW_EXPECT_EQUAL( 0, pair.getClient( 0 ).getClientIndex() );
     vector<NetHostEvent> listEvent;
-    pair._server.drainEvents( listEvent );
+    pair.getServer().drainEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.size() == 1 && listEvent[0]._kind == NetHostEvent::Kind::Connected );
 
     // 나쁜 망 — 두 끝점의 보내는 쪽 흉내에 지연 80 ms ± 30, 손실 20 %, 중복 10 %, 깨짐 5 %. 신뢰 메시지 200 개가 순서대로 한 번씩.
@@ -512,7 +485,7 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     for ( int32 index = 0; index < 200; ++index )
     {
         const vector<uint8> buffer = makeMessage( index, 24 );
-        SW_ASSERT_TRUE( pair._client.sendMessage( 0, NetChannelType::ReliableOrdered, buffer ) );
+        SW_ASSERT_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, buffer ) );
     }
     vector<int32> listReceived;
     for ( int32 frame = 0; frame < 60 * 20 && listReceived.size() < 200; ++frame )
@@ -521,7 +494,7 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
         int32          connectionId = -1;
         NetChannelType channel      = NetChannelType::Unreliable;
         vector<uint8>  buffer;
-        while ( pair._server.receiveMessage( connectionId, channel, buffer ) )
+        while ( pair.getServer().receiveMessage( connectionId, channel, buffer ) )
         {
             SW_EXPECT_EQUAL( 0, connectionId );
             listReceived.push_back( readMessageValue( buffer ) );
@@ -531,27 +504,27 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     for ( int32 index = 0; index < 200; ++index )
         SW_EXPECT_EQUAL( index, listReceived[static_cast<size_t>( index )] );
     // RTT · 손실률 · 깨짐은 패킷이 쌓여야 보인다(메시지 200 개는 패킷 스무 개 남짓에 다 실렸다) — 6 초 동안 매 프레임 입력 같은 비신뢰 메시지를 보낸다.
-    const NetConnectionStats& stats = pair._client.findConnection( 0 )->getStats();
+    const NetConnectionStats& stats = pair.getClient( 0 ).findConnection( 0 )->getStats();
     for ( int32 frame = 0; frame < 60 * 6; ++frame )
     {
         const vector<uint8> input = makeMessage( frame, 8 );
-        SW_ASSERT_TRUE( pair._client.sendMessage( 0, NetChannelType::Unreliable, input ) );
+        SW_ASSERT_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::Unreliable, input ) );
         pair.run( 1.0 / 60.0 );
     }
-    SW_EXPECT_TRUE( pair._server.getRejectedPacketCount() > 0 );              // 깨진 패킷을 체크섬이 걸렀다
+    SW_EXPECT_TRUE( pair.getServer().getRejectedPacketCount() > 0 );          // 깨진 패킷을 체크섬이 걸렀다
     SW_EXPECT_TRUE( stats._rtt > 0.12f && stats._rtt < 0.3f );                // 지연 80 ms 왕복 + 흔들림
     SW_EXPECT_TRUE( stats._packetLoss > 0.12f && stats._packetLoss < 0.45f ); // 보낸 쪽 손실 20 % + 깨짐 5 %
-    SW_EXPECT_EQUAL( 1, pair._server.getConnectedCount() );                   // 나쁜 망에서도 끊기지 않았다
+    SW_EXPECT_EQUAL( 1, pair.getServer().getConnectedCount() );               // 나쁜 망에서도 끊기지 않았다
 
     // 서버 → 클라이언트 방송.
     pair.setConditions( NetEmulationConditions{} );
     const vector<uint8> hello = makeMessage( 4242 );
-    SW_EXPECT_EQUAL( 1, pair._server.broadcast( NetChannelType::ReliableOrdered, hello.data(), 4 ) );
+    SW_EXPECT_EQUAL( 1, pair.getServer().broadcast( NetChannelType::ReliableOrdered, hello.data(), 4 ) );
     pair.run( 0.2 );
     int32          connectionId = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    SW_ASSERT_TRUE( pair._client.receiveMessage( connectionId, channel, buffer ) );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).receiveMessage( connectionId, channel, buffer ) );
     SW_EXPECT_EQUAL( 4242, readMessageValue( buffer ) );
     SW_EXPECT_TRUE( channel == NetChannelType::ReliableOrdered );
 }
@@ -1004,15 +977,16 @@ SW_TEST_CASE( NetworkTest, BitStreamKeepsWireLayoutAndRoundTripsRandomFields )
 
 SW_TEST_CASE( NetworkTest, IdleConnectionsSendKeepAlivesInsteadOfEveryInterval )
 {
-    NetTestPair pair;
-    SW_ASSERT_TRUE( pair._server.listen() );
-    SW_ASSERT_TRUE( pair._client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    test::LoopbackCluster pair( 77u );
+    addServerAndClient( pair, NetHostSettings{} );
+    SW_ASSERT_TRUE( pair.getServer().listen() );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     pair.run( 0.5 );
-    SW_ASSERT_TRUE( pair._client.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
 
     // 4 초 동안 아무것도 보내지 않는다 — 보낼 간격(1/30 초)마다가 아니라 유지 간격(0.25 초)마다 유지 패킷과 그 확인만 오간다.
-    const NetConnectionStats& clientStats = pair._client.findConnection( 0 )->getStats();
-    const NetConnectionStats& serverStats = pair._server.findConnection( 0 )->getStats();
+    const NetConnectionStats& clientStats = pair.getClient( 0 ).findConnection( 0 )->getStats();
+    const NetConnectionStats& serverStats = pair.getServer().findConnection( 0 )->getStats();
     const uint64              clientSent  = clientStats._sentPacketCount;
     const uint64              serverSent  = serverStats._sentPacketCount;
     pair.run( 4.0 );
@@ -1022,28 +996,29 @@ SW_TEST_CASE( NetworkTest, IdleConnectionsSendKeepAlivesInsteadOfEveryInterval )
     SW_EXPECT_TRUE( serverIdleSent >= 8 && serverIdleSent <= 40 );
     SW_EXPECT_TRUE( clientStats._rtt > 0.0f && clientStats._rtt < 0.1f ); // 유지 패킷도 RTT 를 잰다(지연 없는 망)
     SW_EXPECT_TRUE( clientStats._packetLoss < 0.01f );                    // 확인만 담은 답은 확인을 바라지 않으니 잃은 것으로 세지 않는다
-    SW_EXPECT_EQUAL( 1, pair._server.getConnectedCount() );
+    SW_EXPECT_EQUAL( 1, pair.getServer().getConnectedCount() );
 
     // 보낼 것이 생기면 바로 — 다음 유지 시각을 기다리지 않는다. 메시지 길이 칸(11 비트)의 끝 1024 바이트까지 실린다.
     const vector<uint8> largest = makeMessage( 777, NetConnection::kMaxMessageSize );
-    SW_ASSERT_TRUE( pair._client.sendMessage( 0, NetChannelType::ReliableOrdered, largest ) );
-    SW_EXPECT_FALSE( pair._client.sendMessage( 0, NetChannelType::ReliableOrdered, makeMessage( 0, NetConnection::kMaxMessageSize + 1 ) ) );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, largest ) );
+    SW_EXPECT_FALSE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, makeMessage( 0, NetConnection::kMaxMessageSize + 1 ) ) );
     pair.run( 2.0 / 30.0 );
     int32          connectionId = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    SW_ASSERT_TRUE( pair._server.receiveMessage( connectionId, channel, buffer ) );
+    SW_ASSERT_TRUE( pair.getServer().receiveMessage( connectionId, channel, buffer ) );
     SW_EXPECT_EQUAL( NetConnection::kMaxMessageSize, static_cast<int32>( buffer.size() ) );
     SW_EXPECT_EQUAL( 777, readMessageValue( buffer ) );
 }
 
 SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
 {
-    NetTestPair pair;
-    SW_ASSERT_TRUE( pair._server.listen() );
-    SW_ASSERT_TRUE( pair._client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    test::LoopbackCluster pair( 77u );
+    addServerAndClient( pair, NetHostSettings{} );
+    SW_ASSERT_TRUE( pair.getServer().listen() );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     pair.run( 0.3 );
-    SW_ASSERT_TRUE( pair._client.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
 
     // 한 영역에 처리기 둘 — 등록 순서대로 묻고 처음 받아들인 쪽에서 멈춘다.
     CountingHandler  lockstep( NetMessageRange::kFramework + NetMessageRange::kSize, 0x21 );
@@ -1059,11 +1034,11 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     for ( const uint8 kind : arrKind )
     {
         messageWriter.begin( kind ).writeVarUint( kind );
-        SW_ASSERT_TRUE( messageWriter.send( pair._client, 0, NetChannelType::ReliableOrdered ) );
+        SW_ASSERT_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
     }
     pair.run( 0.2 );
     vector<NetReceivedMessage> listUnhandled;
-    SW_EXPECT_EQUAL( 7, router.pump( pair._server, &listUnhandled ) );
+    SW_EXPECT_EQUAL( 7, router.pump( pair.getServer(), &listUnhandled ) );
     SW_EXPECT_EQUAL( 1, lockstep.getHandledCount() );
     SW_EXPECT_EQUAL( 1, gameFirst.getHandledCount() );
     SW_EXPECT_EQUAL( 2, gameSecond.getHandledCount() );
@@ -1089,21 +1064,22 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
  */
 SW_TEST_CASE( NetworkTest, MalformedMessageIsCountedNotForwarded )
 {
-    NetTestPair pair;
-    SW_ASSERT_TRUE( pair._server.listen() );
-    SW_ASSERT_TRUE( pair._client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    test::LoopbackCluster pair( 77u );
+    addServerAndClient( pair, NetHostSettings{} );
+    SW_ASSERT_TRUE( pair.getServer().listen() );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     pair.run( 0.3 );
     CountingHandler  handler( NetMessageRange::kGame, 0x81 );
     NetMessageRouter router;
     router.addHandler( &handler );
     NetMessageWriter messageWriter;
     (void)messageWriter.begin( 0x81 ); // 몸(가변 정수)이 없다
-    SW_ASSERT_TRUE( messageWriter.send( pair._client, 0, NetChannelType::ReliableOrdered ) );
+    SW_ASSERT_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
     messageWriter.begin( 0x81 ).writeVarUint( 5 );
-    SW_ASSERT_TRUE( messageWriter.send( pair._client, 0, NetChannelType::ReliableOrdered ) );
+    SW_ASSERT_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
     pair.run( 0.2 );
     vector<NetReceivedMessage> listUnhandled;
-    SW_EXPECT_EQUAL( 2, router.pump( pair._server, &listUnhandled ) );
+    SW_EXPECT_EQUAL( 2, router.pump( pair.getServer(), &listUnhandled ) );
     SW_EXPECT_EQUAL( 1, handler.getHandledCount() );
     SW_EXPECT_EQUAL( uint64{ 1 }, router.getMalformedCount() );
     SW_EXPECT_TRUE( listUnhandled.empty() );
@@ -1143,21 +1119,22 @@ SW_TEST_CASE( NetworkTest, RouterTellsHandlersAboutConnectionsBeforeTheirMessage
         bool   _bOpen{ false };
     };
 
-    NetTestPair pair;
-    SW_ASSERT_TRUE( pair._server.listen() );
-    SW_ASSERT_TRUE( pair._client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    test::LoopbackCluster pair( 77u );
+    addServerAndClient( pair, NetHostSettings{} );
+    SW_ASSERT_TRUE( pair.getServer().listen() );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     ConnectionTracker tracker;
     NetMessageRouter  router;
     router.addHandler( &tracker );
     pair.run( 0.3 );
     NetMessageWriter messageWriter;
     messageWriter.begin( 0x80 ).writeVarUint( 1 );
-    SW_ASSERT_TRUE( messageWriter.send( pair._client, 0, NetChannelType::ReliableOrdered ) );
+    SW_ASSERT_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
     pair.run( 0.2 );
-    (void)router.pump( pair._server );
-    pair._client.disconnect( 0 );
+    (void)router.pump( pair.getServer() );
+    pair.getClient( 0 ).disconnect( 0 );
     pair.run( 0.2 );
-    (void)router.pump( pair._server );
+    (void)router.pump( pair.getServer() );
     SW_EXPECT_TRUE( tracker._log == "OMC" );
 }
 

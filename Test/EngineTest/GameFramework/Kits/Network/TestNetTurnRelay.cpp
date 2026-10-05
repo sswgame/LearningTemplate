@@ -1,17 +1,15 @@
 #include "pch.h"
 
-#include "Core/Container/deque.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Transport/NetEmulation.h"
-#include "Core/Network/Transport/NetTransport.h"
 
 #include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
 #include "GameFramework/Kits/Network/NetTurnRelay/TurnRelay.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 턴제 중계 키트 — 셋이 방에 들어와 시작, 차례가 아닌 행동 거절, 정책(리버스 · 규칙 위반), 끊긴 자리 유지와 표로 돌아와 놓친 행동 받기, 모두 같은 기록.
-// 하니스 위 — 신뢰 창보다 많은 놓친 행동, 살아 있는 자리 빼앗기 · 한 연결 여러 자리 거절, 서버마다 다른 표.
+// 턴제 중계 키트(모두 하니스 위) — 셋이 방에 들어와 시작, 차례가 아닌 행동 거절, 정책(리버스 · 규칙 위반), 끊긴 자리 유지와 표로 돌아와 놓친 행동 받기,
+// 모두 같은 기록, 신뢰 창보다 많은 놓친 행동, 살아 있는 자리 빼앗기 · 한 연결 여러 자리 거절, 서버마다 다른 표.
 
 using namespace sw;
 
@@ -34,101 +32,6 @@ namespace
         }
     };
 
-    struct TurnRelayScene
-    {
-        LoopbackNetwork              _network;
-        NetEmulationTransport        _serverLink{ _network.createEndpoint( 4000 ), 3u };
-        NetHost                      _serverHost;
-        deque<NetEmulationTransport> _listClientLink; ///< 클라이언트마다 보내는 쪽 흉내 — deque 라 주소가 움직이지 않는다
-        deque<NetHost>               _listClientHost; ///< deque — NetHost 는 옮길 수 없다
-        TurnRelayServer              _server;
-        vector<TurnRelayClient>      _listClient;
-        vector<uint8>                _listOnline;
-        UnoLikePolicy                _policy;
-        float64                      _time{ 0.0 };
-
-        TurnRelayScene()
-        {
-            NetEmulationConditions conditions;
-            conditions._latency  = 0.04;
-            conditions._lossRate = 0.1f;
-            _serverLink.setDefaultConditions( conditions );
-            _serverHost.initialize( &_serverLink, NetHostSettings{} );
-            (void)_serverHost.listen();
-            _server.initialize( &_serverHost, 3, &_policy );
-            for ( int32 index = 0; index < 3; ++index )
-            {
-                _listClientLink.emplace_back( _network.createEndpoint( static_cast<uint16>( 5000 + index ) ), 4u + static_cast<uint32>( index ) );
-                _listClientLink.back().setDefaultConditions( conditions );
-                _listClientHost.emplace_back();
-            }
-            _listClient.resize( 3 );
-            _listOnline.assign( 3, SW_TRUE );
-            for ( size_t index = 0; index < 3; ++index )
-            {
-                _listClientHost[index].initialize( &_listClientLink[index], NetHostSettings{} );
-                (void)_listClientHost[index].connect( NetAddress::makeLoopback( 4000 ) );
-                _listClient[index].initialize( &_listClientHost[index] );
-            }
-        }
-
-        void run( float64 seconds )
-        {
-            vector<uint8> buffer;
-            for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
-            {
-                _time += 1.0 / 60.0;
-                // 흉내 줄을 먼저 모두 비운다 — 꺼 둔 클라이언트의 줄(끊김 알림)도 나가야 서버가 끊김을 안다.
-                _serverLink.update( _time );
-                for ( NetEmulationTransport& link : _listClientLink )
-                {
-                    link.update( _time );
-                }
-                _serverHost.update( _time );
-                vector<NetHostEvent> listHostEvent;
-                _serverHost.drainEvents( listHostEvent );
-                for ( const NetHostEvent& event : listHostEvent )
-                {
-                    if ( event._kind == NetHostEvent::Kind::Disconnected )
-                        _server.onConnectionClosed( event._connectionId, event._reason );
-                }
-                int32          connectionId = -1;
-                NetChannelType channel      = NetChannelType::Unreliable;
-                while ( _serverHost.receiveMessage( connectionId, channel, buffer ) )
-                    (void)_server.handleMessage( connectionId, buffer );
-                for ( size_t index = 0; index < 3; ++index )
-                {
-                    if ( _listOnline[index] == SW_FALSE )
-                        continue;
-                    _listClientHost[index].update( _time );
-                    while ( _listClientHost[index].receiveMessage( connectionId, channel, buffer ) )
-                        (void)_listClient[index].handleMessage( 0, buffer );
-                }
-            }
-        }
-
-        int32 findClientAtSeat( int32 seat ) const
-        {
-            for ( size_t index = 0; index < _listClient.size(); ++index )
-            {
-                if ( _listClient[index].getSeat() == seat )
-                    return static_cast<int32>( index );
-            }
-            return -1;
-        }
-
-        bool isAllConnected() const
-        {
-            for ( const NetHost& host : _listClientHost )
-            {
-                if ( host.getConnectionState( 0 ) != NetConnectionState::Connected )
-                    return false;
-            }
-            return true;
-        }
-
-        void play( int32 seat, uint8 card ) { (void)_listClient[static_cast<size_t>( findClientAtSeat( seat ) )].submitAction( vector<uint8>{ card } ); }
-    };
     /** @brief 누구나 언제든 — 차례를 바꾸지 않습니다(보낼 줄 시험에서 한 사람이 행동을 몰아 낸다). */
     class AnyoneMayActPolicy final : public ITurnPolicy
     {
@@ -241,83 +144,114 @@ namespace
             count += seat._bTaken != SW_FALSE ? 1 : 0;
         return count;
     }
+
+    /** @brief @p seat 에 앉은 클라이언트의 번호입니다. 없으면 -1 입니다. */
+    int32 findClientAtSeat( const vector<TurnRelayClient>& listClient, int32 seat )
+    {
+        for ( size_t index = 0; index < listClient.size(); ++index )
+        {
+            if ( listClient[index].getSeat() == seat )
+                return static_cast<int32>( index );
+        }
+        return -1;
+    }
+
+    /** @brief @p seat 의 클라이언트가 카드 한 장을 냅니다. */
+    void playAtSeat( vector<TurnRelayClient>& listClient, int32 seat, uint8 card )
+    {
+        (void)listClient[static_cast<size_t>( findClientAtSeat( listClient, seat ) )].submitAction( vector<uint8>{ card } );
+    }
 } // namespace
 
 SW_TEST_CASE( NetTurnRelayTest, RoomsEnforceTurnsAndResyncReturningPlayers )
 {
-    TurnRelayScene scene;
+    UnoLikePolicy       policy;
+    TurnRelayNetSimGame game( 3, &policy, 0 );
+    NetSimHarness       harness;
+    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
     // 손실 10 % — 핸드셰이크는 몇 번 되풀이될 수 있다.
-    for ( int32 step = 0; step < 300 && scene.isAllConnected() == false; ++step )
-        scene.run( 1.0 / 60.0 );
-    SW_ASSERT_TRUE( scene.isAllConnected() );
-    for ( TurnRelayClient& client : scene._listClient )
+    NetSimLinkConditions link;
+    link._upstream._latency  = 0.04;
+    link._upstream._lossRate = 0.1f;
+    link._downstream         = link._upstream;
+    vector<TurnRelayClient> listClient( 3 ); // 크기를 바꾸지 않는다 — 하니스 게임이 주소를 든다
+    int32                   arrWorld[3] = {};
+    for ( int32 index = 0; index < 3; ++index )
+    {
+        arrWorld[index] = addTurnClient( harness, game, listClient[static_cast<size_t>( index )], link );
+    }
+    SW_ASSERT_TRUE( harness.areAllClientsConnected() );
+    for ( TurnRelayClient& client : listClient )
+    {
         client.join( 7 );
-    scene.run( 1.0 );
-    for ( const TurnRelayClient& client : scene._listClient )
+    }
+    harness.stepTicks( 60 );
+    for ( const TurnRelayClient& client : listClient )
     {
         SW_EXPECT_TRUE( client.isStarted() );
         SW_EXPECT_TRUE( client.getSeat() >= 0 );
     }
-    SW_ASSERT_TRUE( scene.findClientAtSeat( 0 ) >= 0 && scene.findClientAtSeat( 1 ) >= 0 && scene.findClientAtSeat( 2 ) >= 0 );
+    SW_ASSERT_TRUE( findClientAtSeat( listClient, 0 ) >= 0 && findClientAtSeat( listClient, 1 ) >= 0 && findClientAtSeat( listClient, 2 ) >= 0 );
 
     // 차례가 아니면 거절.
-    const int32 seatOneClient = scene.findClientAtSeat( 1 );
-    const int32 rejectedId    = scene._listClient[static_cast<size_t>( seatOneClient )].submitAction( vector<uint8>{ 'z' } );
-    scene.run( 0.5 );
+    const int32 seatOneClient = findClientAtSeat( listClient, 1 );
+    const int32 rejectedId    = listClient[static_cast<size_t>( seatOneClient )].submitAction( vector<uint8>{ 'z' } );
+    harness.stepTicks( 30 );
     vector<TurnRelayEvent> listEvent;
-    scene._listClient[static_cast<size_t>( seatOneClient )].drainEvents( listEvent );
+    listClient[static_cast<size_t>( seatOneClient )].drainEvents( listEvent );
     bool bRejected = false;
     for ( const TurnRelayEvent& event : listEvent )
+    {
         bRejected = bRejected || ( event._kind == TurnRelayEvent::Kind::ActionRejected && event._index == rejectedId && event._reason == TurnRejectReason::NotYourTurn );
+    }
     SW_EXPECT_TRUE( bRejected );
 
     // 0:a → 1:R(뒤집기) → 0:X(위반) → 0:b → 2:c
-    scene.play( 0, 'a' );
-    scene.run( 0.4 );
-    scene.play( 1, 'R' );
-    scene.run( 0.4 );
-    scene.play( 0, 'X' );
-    scene.run( 0.4 );
-    scene.play( 0, 'b' );
-    scene.run( 0.4 );
-    SW_EXPECT_EQUAL( 2, scene._server.findRoom( 7 )->_currentSeat );
-    scene.play( 2, 'c' );
-    scene.run( 0.4 );
+    playAtSeat( listClient, 0, 'a' );
+    harness.stepTicks( 24 );
+    playAtSeat( listClient, 1, 'R' );
+    harness.stepTicks( 24 );
+    playAtSeat( listClient, 0, 'X' );
+    harness.stepTicks( 24 );
+    playAtSeat( listClient, 0, 'b' );
+    harness.stepTicks( 24 );
+    SW_EXPECT_EQUAL( 2, game._server.findRoom( 7 )->_currentSeat );
+    playAtSeat( listClient, 2, 'c' );
+    harness.stepTicks( 24 );
 
-    // 자리 2 가 끊긴다 — 그동안 1:d → 0:e. 자리는 남는다.
-    const int32 seatTwoClient = scene.findClientAtSeat( 2 );
-    scene._listClientHost[static_cast<size_t>( seatTwoClient )].disconnect( 0 );
-    scene._listOnline[static_cast<size_t>( seatTwoClient )] = SW_FALSE;
-    scene.run( 0.5 );
-    scene.play( 1, 'd' );
-    scene.run( 0.4 );
-    scene.play( 0, 'e' );
-    scene.run( 0.4 );
-    SW_EXPECT_TRUE( scene._server.findRoom( 7 )->_listSeat[2]._connectionId < 0 );
-    SW_EXPECT_EQUAL( 4, static_cast<int32>( scene._listClient[static_cast<size_t>( seatTwoClient )].getActions().size() ) ); // a R b c 까지만
+    // 자리 2 가 떠난다(끊김 알림) — 그동안 1:d → 0:e. 자리는 남는다.
+    const int32 seatTwoClient = findClientAtSeat( listClient, 2 );
+    harness.removeClient( arrWorld[seatTwoClient] );
+    harness.stepTicks( 30 );
+    playAtSeat( listClient, 1, 'd' );
+    harness.stepTicks( 24 );
+    playAtSeat( listClient, 0, 'e' );
+    harness.stepTicks( 24 );
+    SW_EXPECT_TRUE( game._server.findRoom( 7 )->_listSeat[2]._connectionId < 0 );
+    SW_EXPECT_EQUAL( 4, static_cast<int32>( listClient[static_cast<size_t>( seatTwoClient )].getActions().size() ) ); // a R b c 까지만
 
-    // 돌아온다 — 표로 같은 자리, 놓친 d · e 를 받는다.
-    const uint32 token = scene._listClient[static_cast<size_t>( seatTwoClient )].getToken();
+    // 같은 객체(표 · 받은 행동)로 돌아온다 — 표로 같은 자리, 놓친 d · e 를 받는다.
+    const uint32 token = listClient[static_cast<size_t>( seatTwoClient )].getToken();
     SW_EXPECT_TRUE( token != 0 );
-    scene._listOnline[static_cast<size_t>( seatTwoClient )] = SW_TRUE;
-    SW_ASSERT_TRUE( scene._listClientHost[static_cast<size_t>( seatTwoClient )].connect( NetAddress::makeLoopback( 4000 ) ) );
-    for ( int32 step = 0; step < 300 && scene.isAllConnected() == false; ++step )
-        scene.run( 1.0 / 60.0 );
-    scene._listClient[static_cast<size_t>( seatTwoClient )].join( 7 );
-    scene.run( 1.0 );
-    SW_EXPECT_EQUAL( 2, scene._listClient[static_cast<size_t>( seatTwoClient )].getSeat() );
-    scene.play( 2, 'f' );
-    scene.run( 1.0 );
+    arrWorld[seatTwoClient] = addTurnClient( harness, game, listClient[static_cast<size_t>( seatTwoClient )], link );
+    SW_ASSERT_TRUE( arrWorld[seatTwoClient] > 0 && harness.areAllClientsConnected() );
+    listClient[static_cast<size_t>( seatTwoClient )].join( 7 );
+    harness.stepTicks( 60 );
+    SW_EXPECT_EQUAL( 2, listClient[static_cast<size_t>( seatTwoClient )].getSeat() );
+    playAtSeat( listClient, 2, 'f' );
+    harness.stepTicks( 60 );
 
     const utf8* pExpected = "aRbcdef";
-    for ( const TurnRelayClient& client : scene._listClient )
+    for ( const TurnRelayClient& client : listClient )
     {
         SW_ASSERT_TRUE( client.getActions().size() == 7 );
         for ( size_t index = 0; index < 7; ++index )
+        {
             SW_EXPECT_EQUAL( static_cast<int32>( pExpected[index] ), static_cast<int32>( client.getActions()[index]._buffer[0] ) );
+        }
     }
     vector<TurnRelayEvent> listServerEvent;
-    scene._server.drainEvents( listServerEvent );
+    game._server.drainEvents( listServerEvent );
     int32 leftCount     = 0;
     int32 returnedCount = 0;
     for ( const TurnRelayEvent& event : listServerEvent )
@@ -329,27 +263,10 @@ SW_TEST_CASE( NetTurnRelayTest, RoomsEnforceTurnsAndResyncReturningPlayers )
     SW_EXPECT_EQUAL( 1, returnedCount );
 
     // 가득 찬 방 — 넷째는 거절.
-    NetHost         fourthHost;
     TurnRelayClient fourth;
-    fourthHost.initialize( scene._network.createEndpoint( 6000 ), NetHostSettings{} );
-    (void)fourthHost.connect( NetAddress::makeLoopback( 4000 ) );
-    fourth.initialize( &fourthHost );
-    bool bJoinSent = false;
-    for ( int32 frame = 0; frame < 300; ++frame )
-    {
-        scene.run( 1.0 / 60.0 );
-        fourthHost.update( scene._time );
-        if ( bJoinSent == false && fourthHost.getConnectionState( 0 ) == NetConnectionState::Connected )
-        {
-            fourth.join( 7 );
-            bJoinSent = true;
-        }
-        int32          connectionId = -1;
-        NetChannelType channel      = NetChannelType::Unreliable;
-        vector<uint8>  buffer;
-        while ( fourthHost.receiveMessage( connectionId, channel, buffer ) )
-            (void)fourth.handleMessage( 0, buffer );
-    }
+    (void)addTurnClient( harness, game, fourth, link );
+    fourth.join( 7 );
+    harness.stepTicks( 300 );
     listEvent.clear();
     fourth.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.empty() == false );

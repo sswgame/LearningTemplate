@@ -3,7 +3,6 @@
 #include "Core/Container/deque.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
-#include "Core/Network/Transport/NetTransport.h"
 #include "Core/Task/TaskManager.h"
 
 #include "GameFramework/Kits/Network/NetClientServer/ReplicationClient.h"
@@ -11,6 +10,7 @@
 #include "GameFramework/Kits/Network/NetMmo/MmoReplicator.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestLoopbackCluster.h"
 
 // 서버 키트의 연결별 일을 작업 스레드에 나눠도 결과가 같은가 — 권위 서버 스냅샷 · MMO 관심 영역. 결정적인 루프백 망에서 한 스레드 · 여러 스레드로
 // 같은 판을 돌려 클라이언트가 받은 바이트를 비교한다(연결마다 독립이라 보낸 내용이 바이트까지 같아야 한다).
@@ -42,59 +42,40 @@ namespace
         }
     };
 
-    /** @brief 서버 하나 + 클라이언트 여럿을 한 스레드에서 같은 순서로 돌린다(망은 결정적). */
-    struct HostCluster
+    /** @brief 서버(포트 4000) + 클라이언트 kClientCount(5000 부터)를 세우고 30 프레임 돌려 연결합니다. 소금을 고정해 핸드셰이크 값까지 같게 한다(한 스레드라 망은 결정적). */
+    void connectHostCluster( test::LoopbackCluster& cluster, const NetHostSettings& settings )
     {
-        LoopbackNetwork _network;
-        NetHost         _server;
-        deque<NetHost>  _listClient;
-        float64         _time{ 0.0 };
-
-        explicit HostCluster( const NetHostSettings& settings )
+        NetHostSettings fixed = settings;
+        fixed._saltSeed       = 99;
+        fixed._maxConnections = kClientCount + 8;
+        (void)cluster.addHost( 4000, fixed );
+        for ( int32 index = 0; index < kClientCount; ++index )
         {
-            NetHostSettings fixed = settings;
-            fixed._saltSeed       = 99; // 핸드셰이크 값까지 같게
-            fixed._maxConnections = kClientCount + 8;
-            _server.initialize( _network.createEndpoint( 4000 ), fixed );
-            (void)_server.listen();
-            for ( int32 index = 0; index < kClientCount; ++index )
-            {
-                fixed._saltSeed = 1000u + static_cast<uint64>( index );
-                _listClient.emplace_back();
-                _listClient.back().initialize( _network.createEndpoint( static_cast<uint16>( 5000 + index ) ), fixed );
-                (void)_listClient.back().connect( NetAddress::makeLoopback( 4000 ) );
-            }
-            for ( int32 frame = 0; frame < 30; ++frame )
-                step( 1.0 / 60.0 );
+            fixed._saltSeed = 1000u + static_cast<uint64>( index );
+            (void)cluster.addHost( static_cast<uint16>( 5000 + index ), fixed );
         }
-
-        void step( float64 deltaTime )
-        {
-            _time += deltaTime;
-            _server.update( _time );
-            for ( NetHost& client : _listClient )
-                client.update( _time );
-        }
-    };
+        (void)cluster.connectClients( 30 ); // 같은 판을 두 번 돌려 바이트를 견주는 시험 — 연결 실패는 해시가 달라 드러난다
+    }
 
     /** @brief 권위 서버 판 — 클라이언트마다 받은 메시지 바이트의 해시입니다. */
     vector<uint64> runReplication( TaskManager* pTaskManager )
     {
         NetHostSettings settings;
         settings._sendInterval = 1.0 / 60.0;
-        HostCluster cluster( settings );
+        test::LoopbackCluster cluster( 21u );
+        connectHostCluster( cluster, settings );
 
         StripedPolicy             policy;
         ReplicationServer         server;
         ReplicationServerSettings serverSettings;
         serverSettings._snapshotBudgetBytes = 400; // 예산이 모자라 우선도 순서가 결과를 바꾼다
-        server.initialize( &cluster._server, serverSettings, &policy );
+        server.initialize( &cluster.getServer(), serverSettings, &policy );
         server.setTaskManager( pTaskManager, 1 );
         deque<ReplicationClient> listReplication;
-        for ( NetHost& client : cluster._listClient )
+        for ( int32 index = 0; index < cluster.getClientCount(); ++index )
         {
             listReplication.emplace_back();
-            listReplication.back().initialize( &client, ReplicationClientSettings{} );
+            listReplication.back().initialize( &cluster.getClient( index ), ReplicationClientSettings{} );
         }
 
         vector<uint64> listHash( kClientCount, 1469598103934665603ull );
@@ -113,11 +94,11 @@ namespace
             cluster.step( 1.0 / 60.0 );
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
-            while ( cluster._server.receiveMessage( connectionId, channel, buffer ) )
+            while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
                 (void)server.handleMessage( connectionId, buffer );
             for ( int32 index = 0; index < kClientCount; ++index )
             {
-                while ( cluster._listClient[static_cast<size_t>( index )].receiveMessage( connectionId, channel, buffer ) )
+                while ( cluster.getClient( index ).receiveMessage( connectionId, channel, buffer ) )
                 {
                     listHash[static_cast<size_t>( index )] = mixBytes( listHash[static_cast<size_t>( index )], buffer );
                     (void)listReplication[static_cast<size_t>( index )].handleMessage( 0, buffer );
@@ -138,7 +119,8 @@ namespace
     {
         NetHostSettings settings;
         settings._sendInterval = 1.0 / 20.0;
-        HostCluster cluster( settings );
+        test::LoopbackCluster cluster( 21u );
+        connectHostCluster( cluster, settings );
 
         MmoReplicator         server;
         MmoReplicatorSettings mmoSettings;
@@ -146,7 +128,7 @@ namespace
         mmoSettings._leaveRadius       = 60.0f;
         mmoSettings._updateBudgetBytes = 120;
         mmoSettings._maxEnterPerTick   = 6;
-        server.initialize( &cluster._server, mmoSettings );
+        server.initialize( &cluster.getServer(), mmoSettings );
         server.setTaskManager( pTaskManager, 1 );
         const auto placeEntities = [&server]( uint32 tick )
         {
@@ -180,7 +162,7 @@ namespace
             NetChannelType channel      = NetChannelType::Unreliable;
             for ( int32 index = 0; index < kClientCount; ++index )
             {
-                while ( cluster._listClient[static_cast<size_t>( index )].receiveMessage( connectionId, channel, buffer ) )
+                while ( cluster.getClient( index ).receiveMessage( connectionId, channel, buffer ) )
                     listHash[static_cast<size_t>( index )] = mixBytes( listHash[static_cast<size_t>( index )], buffer );
             }
         }

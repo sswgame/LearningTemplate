@@ -409,8 +409,7 @@ cd build/Ninja-Debug/Bin
 - **네트워크 리팩토링 남은 단계(2026-10-05 사용자 요청 — 결함 단계 N0~N12 · 키트 결함 D1~D19 는 끝남).** 공통 부품을 Core `Network/Replication/` 에 두고 키트는
   조립만 하게. 단계마다 커밋 하나, 스레드를 건드린 단계는 `--test_repeat=50`, 파괴 네트워킹 시험(`NetSimDestruction*` · `DestructionSnapshot`)을 매 단계 지킨다.
   N18b · N18c **측정 뒤 결정**(벤치 `NetReplicationBenchTest` 는 들어감 — Release 3 회로 서버 복제 할당 > 5 000 / 틱 또는 p50 > 1 ms 면 재구성 · 해독 버퍼
-  재사용 · 델타 이분 탐색, 그 뒤 연결 · 메시지 할당 > 1 000 / 틱이면 메시지 풀. 미달이면 3-12 에 숫자) · N19 시험 도우미 다섯(`NetTestPair` · `ThreadedCluster` ·
-  `NetTestCluster` · `HostCluster` · `TurnRelayScene`)을 하나로 · N20 신뢰 메시지 조각내기(64 KB — 언리얼 partial bunch · GNS, 파괴 스냅숏 조각 · 턴 대기 줄 · MMO 들어옴
+  재사용 · 델타 이분 탐색, 그 뒤 연결 · 메시지 할당 > 1 000 / 틱이면 메시지 풀. 미달이면 3-12 에 숫자) · N20 신뢰 메시지 조각내기(64 KB — 언리얼 partial bunch · GNS, 파괴 스냅숏 조각 · 턴 대기 줄 · MMO 들어옴
   쪼개기를 단순화) · N21 연결 대역폭 상한(토큰 버킷 — 언리얼 `NetSpeed`, 키트 예산의 기본값)과 "신뢰 · 순서 없음" 채널. 하지 않기로 한 것: 암호화 · NAT · 리플렉션
   속성 복제(Iris) · RPC · 외부 네트워크 라이브러리.
 
@@ -698,7 +697,8 @@ cd build/Ninja-Debug/Bin
   LIFO 인 것을 써서 "다음 할당이 같은 주소" 로 검사하면 Debug 에서도 잡힌다.
 - **시험 도우미**: `test::makeTempPath` · `makeTempDirectory`(케이스 폴더, 끝나면 지우고 못 지우면 진다), `test::ScopedLogCollector`, `test::ScopedFailureCapture`,
   `test::ScopedDefensiveTestLog`, `SW_ASSERT_TRUE_MSG`, `test::runThisExecutableAsChild`, `test::RHITestDevice`(`kArrAllRhiBackend`), `test::RHITestImage`,
-  `test::FakeRHIDevice`(병렬 기록 nogpu), `LitCubeScene` · `renderPresentCaptureOf` · `compareCaptures`(TestRenderPassGpu.cpp), 에디터 지역 서비스 `Test/EditorTest/EditorTestServices.h`.
+  `test::FakeRHIDevice`(병렬 기록 nogpu), `LitCubeScene` · `renderPresentCaptureOf` · `compareCaptures`(TestRenderPassGpu.cpp), 에디터 지역 서비스 `Test/EditorTest/EditorTestServices.h`, 네트워크 호스트 묶음 `test::LoopbackCluster`(`TestFramework/TestLoopbackCluster.h` — 루프백 +
+  끝점마다 흉내, 손 시각 `step` · 호스트 스레드, CoreTest 도 쓴다. 씬 · 라우터까지 필요하면 `NetSimHarness`).
 - **시험 실행기 규칙** — 필터로 고른 스위트의 케이스가 전부 스킵되면 실패다(`--allow_empty_suite`). 테스트는 `Bin` 에 쓰지 않는다. `RUN_SERIAL` 은 이유와 함께만.
   PowerShell 에서 쉼표가 든 `--test_filter` 는 따옴표로 감싼다(안 감싸면 앞 토큰만 먹고 오류도 없다).
 - **단언 규칙** — 공개 API 는 단언 뒤에 진짜 if 가드를 둔다(Release 에서 단언이 사라진다). 그런 경로의 시험은 Debug 에서 skip 하고 Release · Shipping 에서 잰다.
