@@ -27,7 +27,7 @@ namespace sw
                 while ( true )
                 {
                     const string candidate = FileUtil::joinPath( cur, relPath );
-                    if ( FileUtil::fileExists( candidate ) )
+                    if ( FileUtil::isRegularFile( candidate ) )
                         return candidate;
 
                     const string parent = FileUtil::getDirectoryPart( cur );

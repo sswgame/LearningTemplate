@@ -62,7 +62,7 @@ namespace sw::editor
                 if ( editorRoot.empty() == false )
                 {
                     const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, data._fontsFolder ), pFileName );
-                    if ( FileUtil::fileExists( candidate ) )
+                    if ( FileUtil::isRegularFile( candidate ) )
                         return candidate;
                 }
 
@@ -72,7 +72,7 @@ namespace sw::editor
                     const string candidate = FileUtil::joinPath(
                         FileUtil::joinPath( FileUtil::joinPath( resourceRoot, data._editorFolder ), data._fontsFolder ),
                         pFileName );
-                    if ( FileUtil::fileExists( candidate ) )
+                    if ( FileUtil::isRegularFile( candidate ) )
                         return candidate;
                 }
 
@@ -80,7 +80,7 @@ namespace sw::editor
                 for ( const string& fontsDir : getSystemFontsDirectories() )
                 {
                     string direct = FileUtil::joinPath( fontsDir, pFileName );
-                    if ( FileUtil::fileExists( direct ) )
+                    if ( FileUtil::isRegularFile( direct ) )
                         return string( std::move( direct ) );
                 }
 

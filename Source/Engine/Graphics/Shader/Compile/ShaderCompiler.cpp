@@ -67,7 +67,7 @@ namespace sw
                     for ( const string& root : _listRoot )
                     {
                         const string candidate = FileUtil::normalizeSeparators( FileUtil::joinPath( root, pFileName ) );
-                        if ( FileUtil::fileExists( candidate ) == false )
+                        if ( FileUtil::isRegularFile( candidate ) == false )
                             continue;
 
                         vector<uint8> bytes;
@@ -405,7 +405,7 @@ namespace sw
                     libName };
                 for ( const string& candidatePath : listCandidate )
                 {
-                    if ( FileUtil::fileExists( candidatePath ) )
+                    if ( FileUtil::isRegularFile( candidatePath ) )
                     {
                         void* pLibrary = ModuleImageUtil::loadDynamicLibrary( candidatePath );
                         if ( pLibrary != nullptr )

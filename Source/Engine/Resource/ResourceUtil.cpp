@@ -201,7 +201,7 @@ namespace sw
                     SW_LOG_WARNING( "Refusing a loose read of '%#' — this build reads resources from packs only", relativePath );
                     return false;
                 }
-                if ( FileUtil::fileExists( relativePath ) == false )
+                if ( FileUtil::isRegularFile( relativePath ) == false )
                     return false;
                 if ( pOutAbsPath != nullptr )
                     *pOutAbsPath = string( relativePath );
@@ -222,7 +222,7 @@ namespace sw
             if ( bLooseFirst )
             {
                 loosePath = ResourceUtil::getResourcePath( relativePath );
-                if ( loosePath.empty() == false && FileUtil::fileExists( loosePath ) )
+                if ( loosePath.empty() == false && FileUtil::isRegularFile( loosePath ) )
                 {
                     if ( pOutAbsPath != nullptr )
                         *pOutAbsPath = loosePath;
@@ -242,7 +242,7 @@ namespace sw
 
             // 3. 낱개 경로를 **못 푼 경우에만** 상대 경로 그대로 마지막으로 본다.
             //    풀렸는데 없었다면 위에서 이미 확인했으므로 다시 묻지 않는다.
-            if ( bLooseFirst && loosePath.empty() && FileUtil::fileExists( relativePath ) )
+            if ( bLooseFirst && loosePath.empty() && FileUtil::isRegularFile( relativePath ) )
             {
                 if ( pOutAbsPath != nullptr )
                     *pOutAbsPath = string( relativePath );

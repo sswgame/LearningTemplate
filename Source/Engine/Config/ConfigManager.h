@@ -237,10 +237,10 @@ namespace sw
             if ( FileUtil::isAbsolutePath( filePath ) )
             {
                 outResolvedPath = filePath;
-                return FileUtil::fileExists( outResolvedPath );
+                return FileUtil::isRegularFile( outResolvedPath );
             }
 
-            if ( FileUtil::fileExists( filePath ) )
+            if ( FileUtil::isRegularFile( filePath ) )
             {
                 outResolvedPath = filePath;
                 return true;
@@ -249,7 +249,7 @@ namespace sw
             if ( _rootDirectory.empty() == false )
             {
                 string candidate = FileUtil::joinPath( _rootDirectory, filePath );
-                if ( FileUtil::fileExists( candidate ) )
+                if ( FileUtil::isRegularFile( candidate ) )
                 {
                     outResolvedPath = std::move( candidate );
                     return true;
@@ -260,7 +260,7 @@ namespace sw
             if ( exeDir.empty() == false )
             {
                 string candidate = FileUtil::joinPath( exeDir, filePath );
-                if ( FileUtil::fileExists( candidate ) )
+                if ( FileUtil::isRegularFile( candidate ) )
                 {
                     outResolvedPath = std::move( candidate );
                     return true;

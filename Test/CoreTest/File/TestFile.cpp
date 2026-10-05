@@ -596,3 +596,24 @@ SW_TEST_CASE( FileTest, DirectoryVisitorReportsEntriesAndStops )
     SW_EXPECT_FALSE( sw::FileUtil::forEachDirectoryEntry( root + "/missing", true, []( const sw::DirectoryEntry& )
     { return true; } ) );
 }
+
+/**
+ * @brief [FileTest] isRegularFile 은 파일에만 true 이고, fileExists 는 파일과 폴더 모두에 true 다
+ * @details 후보 경로를 차례로 보는 곳(설정 · 리소스 낱개 · 폰트)은 같은 이름의 폴더를 건너뛰어야 다음 후보로 간다.
+ */
+SW_TEST_CASE( FileTest, RegularFileExcludesDirectories )
+{
+    const sw::string root     = test::makeTempDirectory( "SwRegularFileTest" );
+    const sw::string filePath = root + "/plain.txt";
+    const sw::string dirPath  = root + "/folder.txt";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "plain" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( dirPath ) );
+
+    SW_EXPECT_TRUE( sw::FileUtil::isRegularFile( filePath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( dirPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( root + "/missing.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( "" ) );
+
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( filePath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( dirPath ) );
+}

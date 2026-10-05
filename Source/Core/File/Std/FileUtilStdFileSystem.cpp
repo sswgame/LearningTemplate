@@ -153,6 +153,14 @@ namespace sw
         return std::filesystem::is_directory( FileUtilStdInternal::toPath( path ), errorCode );
     }
 
+    bool FileUtil::isRegularFile( string_view path )
+    {
+        if ( path.empty() )
+            return false;
+        std::error_code errorCode;
+        return std::filesystem::is_regular_file( FileUtilStdInternal::toPath( path ), errorCode );
+    }
+
     bool FileUtil::isReadOnlyFile( string_view fileName )
     {
         if ( fileName.empty() )

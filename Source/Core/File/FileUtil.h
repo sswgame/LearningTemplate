@@ -163,6 +163,12 @@ namespace sw
         /** @brief 경로에 디렉터리가 있는지 반환합니다. */
         static bool directoryExists( string_view path );
         /**
+         * @brief 경로에 **일반 파일**이 있는지 반환합니다(디렉터리 · 없는 경로는 false, 링크는 가리키는 쪽 기준).
+         * @details 후보 경로 여럿 중 처음 있는 것을 골라 파일로 읽는 곳(설정 · 리소스 낱개 · 셰이더 include · 폰트 찾기)이 씁니다 — 같은 이름의 폴더가
+         *          있으면 `fileExists` 는 그것을 골라 다음 후보로 넘어가지 못합니다.
+         */
+        static bool isRegularFile( string_view path );
+        /**
          * @brief 파일이 있고 쓰기가 막혀 있으면(읽기 전용 속성 · 소유자 쓰기 권한 없음) true 입니다. 없는 파일은 false 입니다.
          * @details 버전 관리의 잠금(git LFS lockable 파일은 잠그기 전까지 읽기 전용이다)을 에디터가 보여 주는 데 씁니다.
          */

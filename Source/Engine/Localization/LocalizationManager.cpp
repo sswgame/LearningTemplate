@@ -27,7 +27,7 @@ namespace sw
             [[nodiscard]] static bool readLocalizationFile( string_view path, string& outText )
             {
                 // 디스크에 있는 경로(시험 · 도구의 절대 경로)는 그대로 읽는다 — 리소스 조회는 못 찾으면 오류를 남긴다.
-                if ( FileUtil::fileExists( path ) )
+                if ( FileUtil::isRegularFile( path ) )
                     return FileUtil::readTextFile( path, outText );
                 return ResourceUtil::readTextResource( path, outText );
             }
