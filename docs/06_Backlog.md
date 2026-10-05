@@ -506,7 +506,7 @@ cd build/Ninja-Debug/Bin
   Jolt 잡 안에서 불리는 엔진 콜백의 진짜 경쟁까지 가린다. TSan 전용 오버레이 트리플릿 `x64-linux-tsan`(`-fsanitize=thread`) · CI TSan 잡 · 억제 목록을 고친 **작업 중 커밋**이
   워크트리 `LT-wt/tsan-jolt`(브랜치 `wt/tsan-jolt`, `d0d9ddb07`)에 있다 — WSL configure 도중 멈춤, 빌드 · 시험 미확인. 이어서: 계측 빌드 → Jolt 억제 지우고 TSan ctest →
   진짜 경쟁이면 결함으로 재현 · 수정, 거짓만 남으면 함수 단위로 좁혀 남기기. 다른 구성의 트리플릿 · 설치 폴더 · CI 캐시 키는 바뀌면 안 된다(저장소 캐시 10 GB 한도 주의).
-- **include · 전방 선언 남은 후보.** `EditorThemeUtil.h` → `EditorWidgets.h`(33) · `EnginePlatformHeaders.h` 의 OS 헤더
+- **include · 전방 선언 남은 후보.** `EnginePlatformHeaders.h` 의 OS 헤더
   (TU 1442, 위험이 가장 큼 — 마지막) · `GameObjectManager.h` 가 끌고 다니는 헤더 약 14 개(233 TU — 이득을 보려면 서브시스템 전부를 포인터로 묶는 큰 단계, gom-split 이 숫자로
   보류). 이득은 `ninja -t deps` 전후 TU 수로 판정한다.
 - **헤더 자립 검사를 정기 실행으로.** `RunHeaderSelfContained.py` 는 전체 3~10 분이라 lint 게이트로는 무겁다 — CI 하루 한 번(또는 수동 잡) + 빌드 폴더가 있을 때만 커밋 훅이
