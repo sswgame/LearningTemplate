@@ -238,12 +238,12 @@ namespace sw
         bind( action, InputSlot::fromMouseButton( mouse ), trigger, layer );
     }
 
-    void InputMap::bindAxis1DComposite( const hashed_string& action, Key negativeKey, Key positiveKey, const hashed_string& layer )
+    void InputMap::bindAxis1DComposite( const hashed_string& action, Key negativeKey, Key positiveKey, const hashed_string& layer, ActionTrigger trigger )
     {
         if ( action.empty() )
             return;
 
-        ActionBinding binding = beginBinding( action, BindingKind::Axis1DComposite, ActionTrigger::Down, layer );
+        ActionBinding binding = beginBinding( action, BindingKind::Axis1DComposite, trigger, layer );
         binding._arrSlot[0]   = InputSlot::fromKey( negativeKey );
         binding._arrSlot[1]   = InputSlot::fromKey( positiveKey );
         commitBinding( action, InputActionValueType::Axis1D, binding );

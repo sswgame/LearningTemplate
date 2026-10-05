@@ -514,6 +514,28 @@ namespace
             }
         }
     }
+
+    struct InputTriggerTestInternal
+    {
+        /** @brief 키 하나를 누른 채 `frameCount` 프레임을 돌려 `action` 이 발화한 프레임 수를 셉니다(끝에 키를 뗀다). */
+        static uint32 countTriggeredFrames( sw::InputManager& input, const sw::hashed_string& action, sw::Key key, uint32 frameCount )
+        {
+            sw::InputMap& inputMap = input.getInputMap();
+            input.postRawEvent( sw::RawInputEvent::makeKeyDown( key ) );
+            uint32 triggeredCount = 0;
+            for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+            {
+                input.beginFrame( 0.016f );
+                if ( inputMap.wasActionTriggered( action ) )
+                    ++triggeredCount;
+                input.endFrame();
+            }
+            input.postRawEvent( sw::RawInputEvent::makeKeyUp( key ) );
+            input.beginFrame( 0.016f );
+            input.endFrame();
+            return triggeredCount;
+        }
+    };
 } // namespace
 
 /**
@@ -924,6 +946,95 @@ SW_TEST_CASE( InputMapTest, ComboParserRingBufferOverflowStress )
 
     // 콤보 패턴 매칭 검증 (236P)
     SW_EXPECT_TRUE( inputMap.wasCommandPatternTriggered( "236P", 0.5f ) );
+
+    input.shutdown();
+}
+
+/**
+ * @brief [InputMapTest] `<axis1d>` 바인딩은 액션의 `trigger` 를 따른다 — `Pressed` 면 누른 순간 한 번만 발화하고, 축 값은 누르는 동안 그대로다
+ * @details `<axis1d>` 파싱이 액션의 `trigger` 를 넘기지 않으면 `Down` 으로 고정돼, Shooter3D 의 SwitchWeapon(Q/E)이 누르는 동안 매 프레임 무기를
+ *          바꿨다. trigger 를 적지 않은 축(Steer)은 축 값을 매 프레임 읽는 쓰임이라 `Down` 그대로다. 유저 바인딩 저장 · 읽기도 trigger 를 싣는다 —
+ *          안 실으면 다시 읽을 때 같은 결함이 돌아온다. 연속 값 종류(`vector2d`)에 적힌 `Down` 이 아닌 trigger 는 경고하고 무시한다.
+ */
+SW_TEST_CASE( InputMapTest, Axis1DBindingFollowsTheActionTrigger )
+{
+    const sw::string definitionPath = test::makeTempPath( "axis_trigger.input.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( definitionPath, "<InputMap defaultLayer=\"Gameplay\">\n"
+                                                                 "\t<layers><layer name=\"Gameplay\" enabled=\"1\"/></layers>\n"
+                                                                 "\t<action name=\"SwitchWeapon\" layer=\"Gameplay\" trigger=\"Pressed\">\n"
+                                                                 "\t\t<axis1d negative=\"Q\" positive=\"E\"/>\n"
+                                                                 "\t</action>\n"
+                                                                 "\t<action name=\"Steer\" layer=\"Gameplay\">\n"
+                                                                 "\t\t<axis1d negative=\"A\" positive=\"D\"/>\n"
+                                                                 "\t</action>\n"
+                                                                 "\t<action name=\"Move\" layer=\"Gameplay\" trigger=\"Pressed\">\n"
+                                                                 "\t\t<vector2d up=\"W\" down=\"S\" left=\"J\" right=\"L\"/>\n"
+                                                                 "\t</action>\n"
+                                                                 "</InputMap>\n" ) );
+
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    {
+        test::ScopedLogCollector logs;
+        SW_TEST_DEFENSIVE_SCOPE( "a continuous binding with a Pressed trigger is warned about and read as Down" );
+        SW_ASSERT_TRUE( inputMap.loadFromResource( definitionPath ) );
+        SW_EXPECT_TRUE_MSG( logs.countContaining( "'Move'" ) == 1u, logs.joined().c_str() );
+    }
+
+    const sw::ActionBinding* pSwitchBinding = inputMap.getBinding( "SwitchWeapon", 0 );
+    SW_ASSERT_NOT_NULL( pSwitchBinding );
+    SW_EXPECT_TRUE( pSwitchBinding->_trigger == sw::ActionTrigger::Pressed );
+    const sw::ActionBinding* pSteerBinding = inputMap.getBinding( "Steer", 0 );
+    SW_ASSERT_NOT_NULL( pSteerBinding );
+    SW_EXPECT_TRUE( pSteerBinding->_trigger == sw::ActionTrigger::Down );
+    const sw::ActionBinding* pMoveBinding = inputMap.getBinding( "Move", 0 );
+    SW_ASSERT_NOT_NULL( pMoveBinding );
+    SW_EXPECT_TRUE( pMoveBinding->_trigger == sw::ActionTrigger::Down );
+
+    // 누른 채 세 프레임 — 첫 프레임만 발화한다. 떼었다 다시 누르면 다시 한 번.
+    SW_EXPECT_EQUAL( 1u, InputTriggerTestInternal::countTriggeredFrames( input, "SwitchWeapon", sw::Key::E, 3 ) );
+    SW_EXPECT_EQUAL( 1u, InputTriggerTestInternal::countTriggeredFrames( input, "SwitchWeapon", sw::Key::Q, 3 ) );
+    SW_EXPECT_EQUAL( 3u, InputTriggerTestInternal::countTriggeredFrames( input, "Steer", sw::Key::D, 3 ) );
+
+    // 축 값은 누르는 동안 +1 이다.
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::E ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, inputMap.getAxis1D( "SwitchWeapon" ), 1.0e-5f );
+    input.endFrame();
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, inputMap.getAxis1D( "SwitchWeapon" ), 1.0e-5f );
+    input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::E ) );
+    input.beginFrame( 0.016f );
+    input.endFrame();
+
+    // 정의 저장(편집기) · 유저 바인딩 저장을 거쳐도 trigger 가 남는다.
+    const sw::string savedDefinitionPath = test::makeTempPath( "axis_trigger_saved.input.xml" );
+    SW_ASSERT_TRUE( inputMap.saveToResource( savedDefinitionPath ) );
+    sw::InputMap reloadedDefinition;
+    SW_ASSERT_TRUE( reloadedDefinition.loadFromResource( savedDefinitionPath ) );
+    const sw::ActionBinding* pReloadedSwitch = reloadedDefinition.getBinding( "SwitchWeapon", 0 );
+    SW_ASSERT_NOT_NULL( pReloadedSwitch );
+    SW_EXPECT_TRUE( pReloadedSwitch->_trigger == sw::ActionTrigger::Pressed );
+    const sw::ActionBinding* pReloadedSteer = reloadedDefinition.getBinding( "Steer", 0 );
+    SW_ASSERT_NOT_NULL( pReloadedSteer );
+    SW_EXPECT_TRUE( pReloadedSteer->_trigger == sw::ActionTrigger::Down );
+
+    const sw::string userPath = test::makeTempPath( "axis_trigger_user.xml" );
+    inputMap.bind( "Sprint", sw::Key::LeftShift, sw::ActionTrigger::Down, "Gameplay" );
+    SW_ASSERT_TRUE( inputMap.saveUserBindings( userPath ) );
+    sw::InputMap reloadedUser;
+    SW_ASSERT_TRUE( reloadedUser.loadUserBindings( userPath ) );
+    const sw::ActionBinding* pUserSwitch = reloadedUser.getBinding( "SwitchWeapon", 0 );
+    SW_ASSERT_NOT_NULL( pUserSwitch );
+    SW_EXPECT_TRUE( pUserSwitch->_trigger == sw::ActionTrigger::Pressed );
+    const sw::ActionBinding* pUserSteer = reloadedUser.getBinding( "Steer", 0 );
+    SW_ASSERT_NOT_NULL( pUserSteer );
+    SW_EXPECT_TRUE( pUserSteer->_trigger == sw::ActionTrigger::Down );
+    const sw::ActionBinding* pUserSprint = reloadedUser.getBinding( "Sprint", 0 );
+    SW_ASSERT_NOT_NULL( pUserSprint );
+    SW_EXPECT_TRUE( pUserSprint->_trigger == sw::ActionTrigger::Down );
 
     input.shutdown();
 }
