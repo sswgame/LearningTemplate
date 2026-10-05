@@ -4,10 +4,14 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
+#include <algorithm>
 
 namespace sw
 {
@@ -265,5 +269,60 @@ namespace sw
             else
                 _listJob.pop_front();
         }
+    }
+
+    void Crafter::writeState( Archive& outArchive ) const
+    {
+        vector<hashed_string> listLearned( _uniqueLearnedRecipe.begin(), _uniqueLearnedRecipe.end() );
+        std::sort( listLearned.begin(), listLearned.end(), []( const hashed_string& left, const hashed_string& right )
+        {
+            return string_view( left.c_str() ) < string_view( right.c_str() );
+        } );
+        outArchive << static_cast<uint32>( listLearned.size() );
+        for ( const hashed_string& recipeId : listLearned )
+        {
+            StateArchiveUtil::writeName( outArchive, recipeId );
+        }
+        outArchive << static_cast<uint32>( _listJob.size() );
+        for ( const CraftJob& job : _listJob )
+        {
+            StateArchiveUtil::writeName( outArchive, job._recipeId );
+            outArchive << job._remaining;
+            outArchive << job._count;
+        }
+    }
+
+    bool Crafter::readState( Archive& archive )
+    {
+        uint32 count = 0;
+        if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+            return false;
+        unordered_set<hashed_string> uniqueLearned;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            hashed_string recipeId;
+            if ( StateArchiveUtil::readName( archive, recipeId ) == false )
+                return false;
+            uniqueLearned.insert( recipeId );
+        }
+        // 작업마다 이름(4) + 남은 시간(4) + 개수(4)
+        if ( StateArchiveUtil::readCount( archive, 12, count ) == false )
+            return false;
+        deque<CraftJob> listJob;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            CraftJob job;
+            if ( StateArchiveUtil::readName( archive, job._recipeId ) == false )
+                return false;
+            archive >> job._remaining;
+            archive >> job._count;
+            const bool bValid = archive.isOk() && job._recipeId.empty() == false && 0.0f <= job._remaining && 0 < job._count;
+            if ( bValid == false )
+                return false;
+            listJob.push_back( job );
+        }
+        _uniqueLearnedRecipe = std::move( uniqueLearned );
+        _listJob             = std::move( listJob );
+        return true;
     }
 } // namespace sw

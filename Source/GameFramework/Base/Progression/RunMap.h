@@ -13,6 +13,7 @@
 
 namespace sw
 {
+    class Archive;
     class GameRandom;
 
     /** @brief 칸 종류의 규칙입니다. */
@@ -77,6 +78,11 @@ namespace sw
         int32                  getFloorCount() const { return _floorCount; }
         /** @brief 끝 칸(보스)에 닿았는가입니다. */
         bool isFinished() const;
+
+        /** @brief 노드(층 · 열 · 종류 · 이어진 칸) · 칸 표 · 층 · 열 수 · 지금 자리을 씁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         int32         findOrAddNode( int32 floor, int32 column );

@@ -5,16 +5,29 @@
  */
 #include "pch.h"
 
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/AI/SpawnDirector.h"
 #include "GameFramework/Base/Combat/FrameData.h"
 #include "GameFramework/Base/Combat/LockOnSelector.h"
 #include "GameFramework/Base/Combat/ResourceGauge.h"
 #include "GameFramework/Base/Combat/TurnOrder.h"
 #include "GameFramework/Base/Combat/Vitality.h"
 #include "GameFramework/Base/Combat/Weapon.h"
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Gimmick/ElementGrid.h"
+#include "GameFramework/Base/Gimmick/ElementRuleTable.h"
+#include "GameFramework/Base/Inventory/Crafting.h"
+#include "GameFramework/Base/Inventory/GridInventory.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Match/MatchState.h"
 #include "GameFramework/Base/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/Base/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Base/Progression/LevelProgress.h"
+#include "GameFramework/Base/Progression/RunMap.h"
 #include "GameFramework/Base/Utility/Countdown.h"
 #include "GameFramework/Base/Utility/RayMath.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
@@ -26,6 +39,36 @@ using namespace sw;
 namespace
 {
     constexpr float32 kValueStateStep = 1.0f / 60.0f;
+
+    constexpr const utf8* kValueStateItemXml = R"(
+<ItemCatalog>
+  <Item id="potion" category="Consumable" maxStack="10" value="12"/>
+  <Item id="herb" category="Material" maxStack="99" value="2"/>
+</ItemCatalog>
+)";
+
+    constexpr const utf8* kValueStateShopXml = R"(
+<ShopCatalog>
+  <Shop id="general" restockDays="2">
+    <Stock item="potion" price="20" count="5" restock="3"/>
+  </Shop>
+</ShopCatalog>
+)";
+
+    constexpr const utf8* kValueStateRecipeXml = R"(
+<RecipeCatalog>
+  <Recipe id="brew" time="2"><In item="herb" count="1"/><Out item="potion" count="1"/></Recipe>
+</RecipeCatalog>
+)";
+
+    constexpr const utf8* kValueStateSpawnXml = R"(
+<SpawnTable budgetPerMinute="120" maxBudget="6" startBudget="2">
+  <Entry id="grunt" cost="1" weight="1" max="50" tags="Common"/>
+  <Entry id="boss" cost="4" weight="1" max="1" tags="Special"/>
+</SpawnTable>
+)";
+
+    constexpr const utf8* kValueStateElementTablePath = "common/data/elements/default.elements.xml";
 
     constexpr const utf8* kValueStateLevelText = R"(
 #            #
@@ -94,8 +137,8 @@ SW_TEST_CASE( BaseValueStateArchiveTest, CountdownKeepsLatenessAndAccumulatorKee
     RateAccumulator restoredAccumulator;
     SW_ASSERT_TRUE( StateArchiveUtil::readCountdown( reader, restoredCountdown ) );
     SW_ASSERT_TRUE( StateArchiveUtil::readRateAccumulator( reader, restoredAccumulator ) );
-    SW_EXPECT_NEAR( -0.5f, restoredCountdown._remaining, 1e-6f );
-    SW_EXPECT_NEAR( 1.75f, restoredAccumulator.getFraction(), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( -0.5f, restoredCountdown._remaining, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.75f, restoredAccumulator.getFraction(), 1e-6f );
 }
 
 /**
@@ -138,7 +181,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, VitalityReplaysAfterRestore )
             state.update( kValueStateStep );
         (void)state.applyDamage( 20.0f, 3.0f, 9 );
     } ) );
-    SW_EXPECT_NEAR( vitality.getHealth(), restored.getHealth(), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( vitality.getHealth(), restored.getHealth(), 1e-6f );
 }
 
 /**
@@ -292,7 +335,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, PlatformerMotorReplaysAfterRestore )
         for ( int32 frame = 0; frame < 40; ++frame )
             state.update( map, input, kValueStateStep );
     } ) );
-    SW_EXPECT_NEAR( motor.getPosition()._y, restored.getPosition()._y, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( motor.getPosition()._y, restored.getPosition()._y, 1e-6f );
 }
 
 /**
@@ -318,5 +361,227 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ArcadeVehicleReplaysAfterRestore )
     {
         (void)state.advance( input, 0.51f );
     } ) );
-    SW_EXPECT_NEAR( motor.getYaw(), restored.getYaw(), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( motor.getYaw(), restored.getYaw(), 1e-6f );
+}
+
+/**
+ * @brief [BaseValueStateArchiveTest] 가게 — 재고 · 가격 배율 · 재입고 날이 가게 id 로 온다
+ */
+SW_TEST_CASE( BaseValueStateArchiveTest, ShopStateReplaysAfterRestore )
+{
+    ItemCatalog items;
+    ShopCatalog shops;
+    SW_ASSERT_TRUE( items.loadFromXmlText( kValueStateItemXml, "BaseValueStateArchiveTest" ) );
+    SW_ASSERT_TRUE( shops.loadFromXmlText( kValueStateShopXml, "BaseValueStateArchiveTest" ) );
+    Inventory inventory;
+    inventory.initialize( &items, 4 );
+    Wallet wallet;
+    wallet.add( "Gold", 200 );
+
+    ShopState shop;
+    shop.initialize( &shops, &items );
+    SW_ASSERT_TRUE( shop.buy( "general", "potion", 3, wallet, inventory ) == ShopResult::Ok );
+    shop.setPriceModifier( "general", 1.5f, 0.5f );
+    shop.advanceDay();
+
+    ShopState restored;
+    restored.initialize( &shops, &items );
+    SW_EXPECT_TRUE( replaysAfterRestore( shop, restored, []( ShopState& state )
+    { state.advanceDay(); } ) );
+    SW_EXPECT_EQUAL( shop.getStockCount( "general", "potion" ), restored.getStockCount( "general", "potion" ) );
+    SW_EXPECT_EQUAL( shop.computeBuyPrice( "general", "potion" ), restored.computeBuyPrice( "general", "potion" ) );
+}
+
+/**
+ * @brief [BaseValueStateArchiveTest] 제작 — 배운 레시피 · 대기열 남은 시간이 이어져 같은 때 끝난다
+ */
+SW_TEST_CASE( BaseValueStateArchiveTest, CrafterReplaysAfterRestore )
+{
+    ItemCatalog   items;
+    RecipeCatalog recipes;
+    SW_ASSERT_TRUE( items.loadFromXmlText( kValueStateItemXml, "BaseValueStateArchiveTest" ) );
+    SW_ASSERT_TRUE( recipes.loadFromXmlText( kValueStateRecipeXml, "BaseValueStateArchiveTest" ) );
+    Inventory inventory;
+    inventory.initialize( &items, 4 );
+    (void)inventory.addItem( "herb", 5 );
+
+    Crafter crafter;
+    crafter.initialize( &recipes );
+    crafter.learnRecipe( "brew" );
+    crafter.learnRecipe( "a.secret" );
+    SW_ASSERT_TRUE( crafter.enqueue( "brew", inventory, {}, 1, 3 ) == CraftResult::Ok );
+    vector<hashed_string> listFinished;
+    crafter.update( 2.5f, inventory, listFinished );
+
+    Crafter restored;
+    restored.initialize( &recipes );
+    SW_EXPECT_TRUE( replaysAfterRestore( crafter, restored, [&items]( Crafter& state )
+    {
+        Inventory stepInventory;
+        stepInventory.initialize( &items, 4 );
+        vector<hashed_string> listStepFinished;
+        state.update( 1.0f, stepInventory, listStepFinished );
+    } ) );
+    SW_EXPECT_TRUE( restored.isLearned( "brew" ) );
+    SW_EXPECT_EQUAL( crafter.getQueue().size(), restored.getQueue().size() );
+}
+
+/**
+ * @brief [BaseValueStateArchiveTest] 능력치 묶음 · 레벨 진행 — 값이 그대로 오고 이어서 더한다
+ */
+SW_TEST_CASE( BaseValueStateArchiveTest, StatBlockAndLevelProgressReplayAfterRestore )
+{
+    StatBlock stats;
+    stats.setValue( "Strength", 7.0f );
+    stats.addValue( "Speed", 1.5f );
+    StatBlock restoredStats;
+    restoredStats.setValue( "Other", 1.0f );
+    SW_EXPECT_TRUE( replaysAfterRestore( stats, restoredStats, []( StatBlock& state )
+    { state.addValue( "Strength", 2.0f ); } ) );
+    SW_EXPECT_FALSE( restoredStats.hasValue( "Other" ) );
+
+    ExperienceCurve curve;
+    curve.setFormula( 100.0f, 1.5f, 0.0f, 50 );
+    LevelProgress progress;
+    (void)progress.addXp( curve, 350 );
+    LevelProgress restoredProgress;
+    SW_EXPECT_TRUE( replaysAfterRestore( progress, restoredProgress, [&curve]( LevelProgress& state )
+    { (void)state.addXp( curve, 420 ); } ) );
+    SW_EXPECT_EQUAL( progress.getLevel(), restoredProgress.getLevel() );
+}
+
+/**
+ * @brief [BaseValueStateArchiveTest] 런 지도 — 만든 지도 · 지금 자리가 와서 같은 갈림길을 낸다
+ */
+SW_TEST_CASE( BaseValueStateArchiveTest, RunMapReplaysAfterRestore )
+{
+    RunMapSettings settings;
+    RunNodeRule    fight;
+    fight._kind = "Fight";
+    RunNodeRule rest;
+    rest._kind            = "Rest";
+    rest._weight          = 0.3f;
+    settings._listRule    = { fight, rest };
+    settings._floorCount  = 6;
+    settings._columnCount = 4;
+    settings._pathCount   = 3;
+    RunMap map;
+    map.generate( settings, 17 );
+    vector<int32> listChoice;
+    map.collectChoices( listChoice );
+    SW_ASSERT_FALSE( listChoice.empty() );
+    SW_ASSERT_TRUE( map.moveTo( listChoice[0] ) );
+
+    RunMap restored;
+    SW_EXPECT_TRUE( replaysAfterRestore( map, restored, []( RunMap& state )
+    {
+        vector<int32> listStepChoice;
+        state.collectChoices( listStepChoice );
+        if ( listStepChoice.empty() == false )
+            (void)state.moveTo( listStepChoice.back() );
+    } ) );
+    SW_EXPECT_EQUAL( map.getCurrent(), restored.getCurrent() );
+}
+
+/**
+ * @brief [BaseValueStateArchiveTest] 원소 격자 — 번지는 불 한가운데서 되살려 같은 칸을 태운다
+ */
+SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
+{
+    ElementRuleTable table;
+    SW_ASSERT_TRUE( ResourceUtil::initialize() && table.loadFromResource( kValueStateElementTablePath ) );
+    ElementGrid grid;
+    grid.initialize( 8, 3, &table );
+    for ( int32 y = 0; y < 3; ++y )
+    {
+        for ( int32 x = 0; x < 8; ++x )
+            grid.setMaterial( int2{ x, y }, table.findMaterial( "Grass" ) );
+    }
+    grid.setWind( int2{ 1, 0 } );
+    (void)grid.applyStimulus( int2{ 0, 1 }, table.findStimulus( "Fire" ) );
+    (void)grid.update( 0.37f );
+
+    ElementGrid restored;
+    restored.initialize( 2, 2, &table );
+    SW_EXPECT_TRUE( replaysAfterRestore( grid, restored, []( ElementGrid& state )
+    { (void)state.update( 0.9f ); } ) );
+    SW_EXPECT_EQUAL( grid.computeStateHash(), restored.computeStateHash() );
+}
+
+/**
+ * @brief [BaseValueStateArchiveTest] 스폰 디렉터 — 예산 · 난수 · 살아 있는 것이 이어져 같은 다음 스폰을 낸다
+ */
+SW_TEST_CASE( BaseValueStateArchiveTest, SpawnDirectorReplaysAfterRestore )
+{
+    SpawnTable table;
+    SW_ASSERT_TRUE( table.loadFromXmlText( kValueStateSpawnXml, "BaseValueStateArchiveTest" ) );
+    SpawnDirector director;
+    director.initialize( &table, 3 );
+    (void)director.update( 2.0f );
+    (void)director.notifyDespawned( 1 );
+
+    SpawnDirector restored;
+    restored.initialize( &table, 99 );
+    SW_EXPECT_TRUE( replaysAfterRestore( director, restored, []( SpawnDirector& state )
+    {
+        for ( int32 stepIndex = 0; stepIndex < 10; ++stepIndex )
+            (void)state.update( 0.5f );
+    } ) );
+    SW_EXPECT_EQUAL( director.getTotalAliveCount(), restored.getTotalAliveCount() );
+}
+
+/**
+ * @brief [BaseValueStateArchiveTest] 격자 가방 — 칸 · 아이템 번호가 와서 다음 번호가 겹치지 않는다
+ */
+SW_TEST_CASE( BaseValueStateArchiveTest, GridInventoryReplaysAfterRestore )
+{
+    const GridInventory::ShapeDelegate shapeLookup = GridInventory::ShapeDelegate::create( []( const hashed_string& itemId, GridItemShape& outShape )
+    {
+        if ( itemId == hashed_string( "rifle" ) )
+        {
+            outShape._width  = 3;
+            outShape._height = 1;
+            return true;
+        }
+        outShape._maxStack = 30;
+        return true;
+    } );
+    GridInventory                      grid;
+    grid.initialize( shapeLookup, 4, 3 );
+    SW_ASSERT_TRUE( grid.placeItem( "rifle", 1, 0, 0, false ) > 0 );
+    SW_ASSERT_EQUAL( 45, grid.addItem( "ammo", 45 ) );
+
+    GridInventory restored;
+    restored.initialize( shapeLookup, 4, 3 );
+    SW_EXPECT_TRUE( replaysAfterRestore( grid, restored, []( GridInventory& state )
+    { (void)state.addItem( "ammo", 20 ); } ) );
+    SW_EXPECT_EQUAL( grid.getItemCount( "ammo" ), restored.getItemCount( "ammo" ) );
+}
+
+/**
+ * @brief [BaseValueStateArchiveTest] 경기 — 팀 · 참가자 · 단계가 와서 같은 끝을 낸다
+ */
+SW_TEST_CASE( BaseValueStateArchiveTest, MatchStateReplaysAfterRestore )
+{
+    MatchSettings settings;
+    MatchState    match;
+    match.initialize( settings );
+    const int32 red   = match.addTeam( "Red" );
+    const int32 blue  = match.addTeam( "Blue" );
+    const int32 redA  = match.addParticipant( red, "Striker" );
+    const int32 blueA = match.addParticipant( blue, "Striker" );
+    match.start();
+    match.update( 1.0f );
+    match.reportDamage( redA, blueA, 30.0f );
+    match.reportKill( blueA, redA );
+    match.addScore( red, 2 );
+
+    MatchState restored;
+    restored.initialize( settings );
+    SW_EXPECT_TRUE( replaysAfterRestore( match, restored, [redA, blueA]( MatchState& state )
+    {
+        state.update( 0.5f );
+        state.reportKill( redA, blueA );
+    } ) );
+    SW_EXPECT_TRUE( match.getPhase() == restored.getPhase() );
 }

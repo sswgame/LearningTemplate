@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 격자 아이템의 모양입니다(돌리지 않았을 때 가로 × 세로 칸, 한 자리에 겹치는 수). */
     struct GridItemShape
     {
@@ -85,6 +87,11 @@ namespace sw
         int32                   getWidth() const { return _width; }
         int32                   getHeight() const { return _height; }
         uint32                  getRevision() const { return _revision; }
+
+        /** @brief 크기 · 칸 · 아이템(id · 번호 · 개수 · 자리 · 돌림) · 다음 번호을 씁니다. 모양 조회는 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         bool  findShape( const hashed_string& itemId, GridItemShape& outShape ) const;

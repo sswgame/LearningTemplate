@@ -4,9 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -108,5 +110,29 @@ namespace sw
     {
         const int64 toNext = curve.getXpToNext( _level );
         return toNext <= 0 ? 1.0f : static_cast<float32>( _xp ) / static_cast<float32>( toNext );
+    }
+
+    void LevelProgress::writeState( Archive& outArchive ) const
+    {
+        outArchive << _xp;
+        outArchive << _totalXp;
+        outArchive << _level;
+    }
+
+    bool LevelProgress::readState( Archive& archive )
+    {
+        int64 xp      = 0;
+        int64 totalXp = 0;
+        int32 level   = 1;
+        archive >> xp;
+        archive >> totalXp;
+        archive >> level;
+        const bool bValid = archive.isOk() && 0 <= xp && xp <= totalXp && 1 <= level;
+        if ( bValid == false )
+            return false;
+        _xp      = xp;
+        _totalXp = totalXp;
+        _level   = level;
+        return true;
     }
 } // namespace sw

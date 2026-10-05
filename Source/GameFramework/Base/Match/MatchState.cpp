@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Match/TeamAttitude.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -310,5 +313,114 @@ namespace sw
     void MatchState::drainEvents( vector<MatchEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void MatchState::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listTeam.size() );
+        for ( const MatchTeam& team : _listTeam )
+        {
+            StateArchiveUtil::writeName( outArchive, team._name );
+            outArchive << team._score;
+            outArchive << team._costPool;
+            outArchive << team._placement;
+            outArchive << team._bUnlimitedCost;
+            outArchive << team._bEliminated;
+        }
+        outArchive << static_cast<uint32>( _listParticipant.size() );
+        for ( const MatchParticipant& participant : _listParticipant )
+        {
+            StateArchiveUtil::writeName( outArchive, participant._role );
+            outArchive << static_cast<uint32>( participant._listDamage.size() );
+            for ( const MatchParticipant::DamageRecord& record : participant._listDamage )
+            {
+                outArchive << record._attacker;
+                outArchive << record._time;
+            }
+            StateArchiveUtil::writeCountdown( outArchive, participant._respawnTimer );
+            outArchive << participant._damageDealt;
+            outArchive << participant._team;
+            outArchive << participant._kills;
+            outArchive << participant._deaths;
+            outArchive << participant._assists;
+            outArchive << participant._respawnCost;
+            outArchive << participant._bAlive;
+            outArchive << participant._bEliminated;
+        }
+        outArchive << _elapsed;
+        outArchive << _phaseTime;
+        outArchive << _winningTeam;
+        outArchive << static_cast<uint8>( _phase );
+    }
+
+    bool MatchState::readState( Archive& archive )
+    {
+        uint32 teamCount = 0;
+        // 팀마다 이름(4) + 정수 셋(12) + 표시 둘(2)
+        if ( StateArchiveUtil::readCount( archive, 18, teamCount ) == false )
+            return false;
+        vector<MatchTeam> listTeam( teamCount );
+        for ( MatchTeam& team : listTeam )
+        {
+            if ( StateArchiveUtil::readName( archive, team._name ) == false )
+                return false;
+            archive >> team._score;
+            archive >> team._costPool;
+            archive >> team._placement;
+            archive >> team._bUnlimitedCost;
+            archive >> team._bEliminated;
+            if ( archive.isError() || team._bUnlimitedCost > SW_TRUE || team._bEliminated > SW_TRUE )
+                return false;
+        }
+        uint32 participantCount = 0;
+        // 참가자마다 이름(4) + 피해 수(4) + 타이머(4) + 피해량(4) + 정수 여섯(24) + 표시 둘(2)
+        if ( StateArchiveUtil::readCount( archive, 42, participantCount ) == false )
+            return false;
+        vector<MatchParticipant> listParticipant( participantCount );
+        for ( MatchParticipant& participant : listParticipant )
+        {
+            uint32 damageCount = 0;
+            if ( StateArchiveUtil::readName( archive, participant._role ) == false || StateArchiveUtil::readCount( archive, 8, damageCount ) == false )
+                return false;
+            participant._listDamage.resize( damageCount );
+            for ( MatchParticipant::DamageRecord& record : participant._listDamage )
+            {
+                archive >> record._attacker;
+                archive >> record._time;
+            }
+            if ( StateArchiveUtil::readCountdown( archive, participant._respawnTimer ) == false )
+                return false;
+            archive >> participant._damageDealt;
+            archive >> participant._team;
+            archive >> participant._kills;
+            archive >> participant._deaths;
+            archive >> participant._assists;
+            archive >> participant._respawnCost;
+            archive >> participant._bAlive;
+            archive >> participant._bEliminated;
+            const bool bValid = archive.isOk() && -1 <= participant._team && participant._team < static_cast<int32>( teamCount ) && participant._bAlive <= SW_TRUE &&
+                                participant._bEliminated <= SW_TRUE;
+            if ( bValid == false )
+                return false;
+        }
+        float32 elapsed     = 0.0f;
+        float32 phaseTime   = 0.0f;
+        int32   winningTeam = -1;
+        uint8   phase       = 0;
+        archive >> elapsed;
+        archive >> phaseTime;
+        archive >> winningTeam;
+        archive >> phase;
+        const bool bValid = archive.isOk() && phase <= static_cast<uint8>( MatchPhase::Ended ) && -1 <= winningTeam && winningTeam < static_cast<int32>( teamCount );
+        if ( bValid == false )
+            return false;
+        _listTeam        = std::move( listTeam );
+        _listParticipant = std::move( listParticipant );
+        _elapsed         = elapsed;
+        _phaseTime       = phaseTime;
+        _winningTeam     = winningTeam;
+        _phase           = static_cast<MatchPhase>( phase );
+        _eventBuffer.clear();
+        return true;
     }
 } // namespace sw

@@ -225,57 +225,88 @@ namespace sw
 
     void SpawnDirector::writeState( Archive& outArchive ) const
     {
-        outArchive << _time;
-        outArchive << _budget;
-        outArchive << _budgetScale;
-        outArchive << _pendingIndex;
-        outArchive << _nextSpawnId;
-        StateArchiveUtil::writeRandom( outArchive, _random );
         outArchive << static_cast<uint32>( _listAlive.size() );
         for ( const SpawnAlive& alive : _listAlive )
         {
             outArchive << alive._spawnId;
             outArchive << alive._entryIndex;
         }
+        outArchive << static_cast<uint32>( _listAliveCount.size() );
+        for ( const int32 count : _listAliveCount )
+        {
+            outArchive << count;
+        }
+        outArchive << static_cast<uint32>( _listAllowedTag.size() );
+        for ( const hashed_string& tag : _listAllowedTag )
+        {
+            StateArchiveUtil::writeName( outArchive, tag );
+        }
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _budget;
+        outArchive << _budgetScale;
+        outArchive << _time;
+        outArchive << _pendingIndex;
+        outArchive << _nextSpawnId;
+        outArchive << _bRefundOnDespawn;
     }
 
     bool SpawnDirector::readState( Archive& archive )
     {
-        float32    time         = 0.0f;
-        float32    budget       = 0.0f;
-        float32    budgetScale  = 1.0f;
-        int32      pendingIndex = -1;
-        uint32     nextSpawnId  = 1;
-        GameRandom random;
-        archive >> time;
-        archive >> budget;
-        archive >> budgetScale;
-        archive >> pendingIndex;
-        archive >> nextSpawnId;
-        uint32 aliveCount = 0;
-        if ( StateArchiveUtil::readRandom( archive, random ) == false || StateArchiveUtil::readCount( archive, 8, aliveCount ) == false )
+        uint32 count = 0;
+        // 살아 있는 것마다 id(4) + 항목(4)
+        if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
             return false;
-        const int32        entryCount = _pTable != nullptr ? static_cast<int32>( _pTable->getEntries().size() ) : 0;
-        vector<SpawnAlive> listAlive( aliveCount );
-        vector<int32>      listAliveCount( static_cast<size_t>( entryCount ), 0 );
+        const int32        entryCount = static_cast<int32>( _listAliveCount.size() );
+        vector<SpawnAlive> listAlive( count );
         for ( SpawnAlive& alive : listAlive )
         {
             archive >> alive._spawnId;
             archive >> alive._entryIndex;
             if ( alive._entryIndex < 0 || alive._entryIndex >= entryCount )
-                return false;
-            ++listAliveCount[static_cast<size_t>( alive._entryIndex )];
+                archive.setError();
         }
-        if ( archive.isError() || pendingIndex < -1 || pendingIndex >= entryCount || nextSpawnId == 0 )
+        if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false || count != _listAliveCount.size() )
             return false;
-        _time           = time;
-        _budget         = budget;
-        _budgetScale    = budgetScale;
-        _pendingIndex   = pendingIndex;
-        _nextSpawnId    = nextSpawnId;
-        _random         = random;
-        _listAlive      = std::move( listAlive );
-        _listAliveCount = std::move( listAliveCount );
+        vector<int32> listAliveCount( count, 0 );
+        for ( int32& aliveCount : listAliveCount )
+        {
+            archive >> aliveCount;
+        }
+        if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+            return false;
+        vector<hashed_string> listAllowedTag( count );
+        for ( hashed_string& tag : listAllowedTag )
+        {
+            if ( StateArchiveUtil::readName( archive, tag ) == false )
+                return false;
+        }
+        GameRandom random       = _random;
+        float32    budget       = 0.0f;
+        float32    budgetScale  = 1.0f;
+        float32    time         = 0.0f;
+        int32      pendingIndex = -1;
+        uint32     nextSpawnId  = 1;
+        uint8      bRefund      = SW_FALSE;
+        const bool bRandomRead  = StateArchiveUtil::readRandom( archive, random );
+        archive >> budget;
+        archive >> budgetScale;
+        archive >> time;
+        archive >> pendingIndex;
+        archive >> nextSpawnId;
+        archive >> bRefund;
+        const bool bValid = bRandomRead && archive.isOk() && -1 <= pendingIndex && pendingIndex < entryCount && bRefund <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        _listAlive        = std::move( listAlive );
+        _listAliveCount   = std::move( listAliveCount );
+        _listAllowedTag   = std::move( listAllowedTag );
+        _random           = random;
+        _budget           = budget;
+        _budgetScale      = budgetScale;
+        _time             = time;
+        _pendingIndex     = pendingIndex;
+        _nextSpawnId      = nextSpawnId;
+        _bRefundOnDespawn = bRefund;
         _eventBuffer.clear();
         return true;
     }

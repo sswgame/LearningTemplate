@@ -529,4 +529,89 @@ namespace sw
             return false;
         return shop.refusesCategory( pItem->_category ) || ShopInternal::containsId( runtime._listExtraRefused, pItem->_category );
     }
+
+    void ShopState::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listRuntime.size() );
+        for ( const ShopRuntime& runtime : _listRuntime )
+        {
+            StateArchiveUtil::writeName( outArchive, runtime._shopId );
+            outArchive << static_cast<uint32>( runtime._listStockCount.size() );
+            for ( const int32 count : runtime._listStockCount )
+            {
+                outArchive << count;
+            }
+            outArchive << static_cast<uint32>( runtime._listSaturatedItem.size() );
+            for ( size_t index = 0; index < runtime._listSaturatedItem.size(); ++index )
+            {
+                StateArchiveUtil::writeName( outArchive, runtime._listSaturatedItem[index] );
+                outArchive << ( index < runtime._listSellFactor.size() ? runtime._listSellFactor[index] : 1.0f );
+            }
+            outArchive << static_cast<uint32>( runtime._listExtraRefused.size() );
+            for ( const hashed_string& category : runtime._listExtraRefused )
+            {
+                StateArchiveUtil::writeName( outArchive, category );
+            }
+            outArchive << runtime._buyModifier;
+            outArchive << runtime._sellModifier;
+            outArchive << runtime._daysSinceRestock;
+        }
+    }
+
+    bool ShopState::readState( Archive& archive )
+    {
+        vector<ShopRuntime> listRuntime = _listRuntime;
+        uint32              shopCount   = 0;
+        // 가게마다 이름(4) + 개수 셋(12) + 배율 둘(8) + 날(4) 이상
+        if ( StateArchiveUtil::readCount( archive, 28, shopCount ) == false )
+            return false;
+        for ( uint32 shopIndex = 0; shopIndex < shopCount; ++shopIndex )
+        {
+            ShopRuntime saved;
+            uint32      count = 0;
+            if ( StateArchiveUtil::readName( archive, saved._shopId ) == false || StateArchiveUtil::readCount( archive, 4, count ) == false )
+                return false;
+            saved._listStockCount.resize( count, 0 );
+            for ( int32& stockCount : saved._listStockCount )
+            {
+                archive >> stockCount;
+            }
+            if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+                return false;
+            saved._listSaturatedItem.resize( count );
+            saved._listSellFactor.resize( count, 1.0f );
+            for ( uint32 index = 0; index < count; ++index )
+            {
+                if ( StateArchiveUtil::readName( archive, saved._listSaturatedItem[index] ) == false )
+                    return false;
+                archive >> saved._listSellFactor[index];
+            }
+            if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+                return false;
+            saved._listExtraRefused.resize( count );
+            for ( hashed_string& category : saved._listExtraRefused )
+            {
+                if ( StateArchiveUtil::readName( archive, category ) == false )
+                    return false;
+            }
+            archive >> saved._buyModifier;
+            archive >> saved._sellModifier;
+            archive >> saved._daysSinceRestock;
+            if ( archive.isError() )
+                return false;
+            // 카탈로그에서 지운 가게는 버리고, 재고 줄 수가 바뀐 가게는 깨진 것으로 본다(재고는 정의 순서로 짝짓는다)
+            for ( ShopRuntime& runtime : listRuntime )
+            {
+                if ( runtime._shopId != saved._shopId )
+                    continue;
+                if ( runtime._listStockCount.size() != saved._listStockCount.size() )
+                    return false;
+                runtime = std::move( saved );
+                break;
+            }
+        }
+        _listRuntime = std::move( listRuntime );
+        _eventBuffer.clear();
+        return true;
+    }
 } // namespace sw

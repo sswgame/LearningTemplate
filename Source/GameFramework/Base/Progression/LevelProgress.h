@@ -11,6 +11,7 @@
 
 namespace sw
 {
+    class Archive;
     class XmlNode;
 
     /**
@@ -60,6 +61,11 @@ namespace sw
         int32 getLevel() const { return _level; }
         int64 getXp() const { return _xp; }
         int64 getTotalXp() const { return _totalXp; }
+
+        /** @brief xp · 총 xp · 레벨을 씁니다. 곡선은 호출자가 줍니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         int64 _xp{ 0 };      ///< 이 레벨 안에서 모은 것

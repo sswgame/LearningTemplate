@@ -20,6 +20,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 원소 알림 하나 — 칸과 표가 적은 알림 이름입니다. */
     struct ElementEvent
     {
@@ -74,6 +76,11 @@ namespace sw
         int32                   getHeight() const { return _height; }
         uint32                  getStepCount() const { return _stepCount; }
         const ElementRuleTable* getTable() const { return _pTable; }
+
+        /** @brief 크기 · 칸(재질 · 상태 비트) · 바람 · 고정 걸음 남은 시간 · 걸음 수을 씁니다. 규칙 표는 `initialize` 의 것, 걸음 안의 대기 변화 · 번짐 스크래치는 걸음 사이에 비어 싣지 않고, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 칸 하나 — 재질과 상태(비트 + 값)입니다. */

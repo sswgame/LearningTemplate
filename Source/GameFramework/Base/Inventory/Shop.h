@@ -262,6 +262,11 @@ namespace sw
         hashed_string      getCurrency( const hashed_string& shopId ) const;
         const ShopRuntime* findRuntime( const hashed_string& shopId ) const;
 
+        /** @brief 가게마다 런타임(가게 id · 재고 · 시세 · 사들이지 않는 분류 · 가격 배율 · 재입고 뒤 날)을 씁니다. 카탈로그는 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
     private:
         ShopRuntime* findRuntime( const hashed_string& shopId );
         int32        findStockIndex( const ShopDef& shop, const hashed_string& itemId ) const;

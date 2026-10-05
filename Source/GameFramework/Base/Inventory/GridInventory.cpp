@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     GridInventory::GridInventory()
@@ -281,5 +285,69 @@ namespace sw
     {
         stampItem( _listItem[itemIndex], -1 );
         _listItem.erase( _listItem.begin() + static_cast<ptrdiff_t>( itemIndex ) );
+    }
+
+    void GridInventory::writeState( Archive& outArchive ) const
+    {
+        outArchive << _width;
+        outArchive << _height;
+        outArchive << _nextInstanceId;
+        for ( const int32 cell : _listCell )
+        {
+            outArchive << cell;
+        }
+        outArchive << static_cast<uint32>( _listItem.size() );
+        for ( const GridItem& item : _listItem )
+        {
+            StateArchiveUtil::writeName( outArchive, item._itemId );
+            outArchive << item._instanceId;
+            outArchive << item._count;
+            outArchive << item._x;
+            outArchive << item._y;
+            outArchive << item._bRotated;
+        }
+    }
+
+    bool GridInventory::readState( Archive& archive )
+    {
+        int32 width          = 0;
+        int32 height         = 0;
+        int32 nextInstanceId = 0;
+        archive >> width;
+        archive >> height;
+        archive >> nextInstanceId;
+        const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
+        if ( archive.isError() || width < 0 || height < 0 || archive.hasBytesAvailable( cellCount * 4 ) == false )
+            return false;
+        vector<int32> listCell( static_cast<size_t>( cellCount ), -1 );
+        for ( int32& cell : listCell )
+        {
+            archive >> cell;
+        }
+        uint32 itemCount = 0;
+        // 아이템마다 이름(4) + 번호 · 개수 · 자리(16) + 돌림(1)
+        if ( StateArchiveUtil::readCount( archive, 21, itemCount ) == false )
+            return false;
+        vector<GridItem> listItem( itemCount );
+        for ( GridItem& item : listItem )
+        {
+            if ( StateArchiveUtil::readName( archive, item._itemId ) == false )
+                return false;
+            archive >> item._instanceId;
+            archive >> item._count;
+            archive >> item._x;
+            archive >> item._y;
+            archive >> item._bRotated;
+            const bool bValid = archive.isOk() && 0 <= item._instanceId && item._instanceId < nextInstanceId && 0 < item._count && item._bRotated <= SW_TRUE;
+            if ( bValid == false )
+                return false;
+        }
+        _width          = width;
+        _height         = height;
+        _nextInstanceId = nextInstanceId;
+        _listCell       = std::move( listCell );
+        _listItem       = std::move( listItem );
+        ++_revision;
+        return true;
     }
 } // namespace sw

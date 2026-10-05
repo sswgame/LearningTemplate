@@ -18,6 +18,7 @@
 
 namespace sw
 {
+    class Archive;
     class Inventory;
     class XmlNode;
 
@@ -129,6 +130,11 @@ namespace sw
         void update( float32 deltaTime, Inventory& inventory, vector<hashed_string>& outListFinished );
 
         const deque<CraftJob>& getQueue() const { return _listJob; }
+
+        /** @brief 배운 레시피(이름 순) · 작업 대기열(레시피 id · 남은 시간 · 개수)을 씁니다. 카탈로그 · 재료 처리기는 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         const RecipeCatalog*         _pCatalog;

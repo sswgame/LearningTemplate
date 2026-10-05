@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
@@ -329,5 +333,54 @@ namespace sw
                 hash = ( hash ^ value ) * 16777619u;
         }
         return hash;
+    }
+
+    void ElementGrid::writeState( Archive& outArchive ) const
+    {
+        outArchive << _width;
+        outArchive << _height;
+        for ( const Cell& cell : _listCell )
+        {
+            outArchive << cell._material;
+            outArchive << cell._statusBits;
+        }
+        StateArchiveUtil::writeInt2( outArchive, _wind );
+        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        outArchive << _stepCount;
+    }
+
+    bool ElementGrid::readState( Archive& archive )
+    {
+        int32 width  = 0;
+        int32 height = 0;
+        archive >> width;
+        archive >> height;
+        const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
+        // 칸마다 재질 · 상태(2)
+        if ( archive.isError() || width < 0 || height < 0 || archive.hasBytesAvailable( cellCount * 2 ) == false )
+            return false;
+        vector<Cell> listCell( static_cast<size_t>( cellCount ) );
+        for ( Cell& cell : listCell )
+        {
+            archive >> cell._material;
+            archive >> cell._statusBits;
+        }
+        int2           wind      = {};
+        FixedStepTimer timer     = _timer;
+        uint32         stepCount = 0;
+        StateArchiveUtil::readInt2( archive, wind );
+        const bool bTimerRead = StateArchiveUtil::readStepTimer( archive, timer );
+        archive >> stepCount;
+        if ( bTimerRead == false || archive.isError() )
+            return false;
+        _width     = width;
+        _height    = height;
+        _listCell  = std::move( listCell );
+        _wind      = wind;
+        _timer     = timer;
+        _stepCount = stepCount;
+        _listPending.clear();
+        _eventBuffer.clear();
+        return true;
     }
 } // namespace sw

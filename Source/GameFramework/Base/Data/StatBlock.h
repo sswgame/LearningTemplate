@@ -12,6 +12,7 @@
 
 namespace sw
 {
+    class Archive;
     class XmlNode;
 
     /** @brief 이름 붙은 수치 하나입니다. */
@@ -50,6 +51,11 @@ namespace sw
         const vector<StatValue>& getValues() const { return _listValue; }
         bool                     isEmpty() const { return _listValue.empty(); }
         size_t                   getCount() const { return _listValue.size(); }
+
+        /** @brief 이름 → 값 목록(넣은 순서)을 씁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         StatValue* findValue( const hashed_string& name );

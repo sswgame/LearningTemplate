@@ -4,10 +4,12 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
 
@@ -200,4 +202,78 @@ namespace sw
     }
 
     bool RunMap::isFinished() const { return _current >= 0 && _listNode[static_cast<size_t>( _current )]._floor == _floorCount - 1; }
+
+    void RunMap::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listNode.size() );
+        for ( const RunNode& node : _listNode )
+        {
+            StateArchiveUtil::writeName( outArchive, node._kind );
+            outArchive << node._floor;
+            outArchive << node._column;
+            outArchive << static_cast<uint32>( node._listNext.size() );
+            for ( const int32 next : node._listNext )
+            {
+                outArchive << next;
+            }
+        }
+        outArchive << static_cast<uint32>( _listCell.size() );
+        for ( const int32 cell : _listCell )
+        {
+            outArchive << cell;
+        }
+        outArchive << _floorCount;
+        outArchive << _columnCount;
+        outArchive << _current;
+    }
+
+    bool RunMap::readState( Archive& archive )
+    {
+        uint32 nodeCount = 0;
+        // 노드마다 이름(4) + 층 · 열(8) + 이어진 수(4)
+        if ( StateArchiveUtil::readCount( archive, 16, nodeCount ) == false )
+            return false;
+        vector<RunNode> listNode( nodeCount );
+        for ( RunNode& node : listNode )
+        {
+            uint32 nextCount = 0;
+            if ( StateArchiveUtil::readName( archive, node._kind ) == false )
+                return false;
+            archive >> node._floor;
+            archive >> node._column;
+            if ( StateArchiveUtil::readCount( archive, 4, nextCount ) == false )
+                return false;
+            node._listNext.resize( nextCount, 0 );
+            for ( int32& next : node._listNext )
+            {
+                archive >> next;
+                if ( next < 0 || static_cast<uint32>( next ) >= nodeCount )
+                    archive.setError();
+            }
+        }
+        uint32 cellCount = 0;
+        if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, cellCount ) == false )
+            return false;
+        vector<int32> listCell( cellCount, -1 );
+        for ( int32& cell : listCell )
+        {
+            archive >> cell;
+        }
+        int32 floorCount  = 0;
+        int32 columnCount = 0;
+        int32 current     = kStart;
+        archive >> floorCount;
+        archive >> columnCount;
+        archive >> current;
+        const bool bValid = archive.isOk() && 0 <= floorCount && 0 <= columnCount && static_cast<int64>( floorCount ) * columnCount == static_cast<int64>( cellCount ) &&
+                            kStart <= current && current < static_cast<int32>( nodeCount );
+        if ( bValid == false )
+            return false;
+        _listNode    = std::move( listNode );
+        _listCell    = std::move( listCell );
+        _floorCount  = floorCount;
+        _columnCount = columnCount;
+        _current     = current;
+        return true;
+    }
 } // namespace sw

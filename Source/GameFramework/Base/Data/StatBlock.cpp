@@ -4,9 +4,11 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -103,5 +105,34 @@ namespace sw
             ++loadedCount;
         }
         return loadedCount;
+    }
+
+    void StatBlock::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listValue.size() );
+        for ( const StatValue& value : _listValue )
+        {
+            StateArchiveUtil::writeName( outArchive, value._name );
+            outArchive << value._value;
+        }
+    }
+
+    bool StatBlock::readState( Archive& archive )
+    {
+        uint32 count = 0;
+        // 칸마다 이름 길이(4) + 값(4) 이상
+        if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+            return false;
+        vector<StatValue> listValue( count );
+        for ( StatValue& value : listValue )
+        {
+            if ( StateArchiveUtil::readName( archive, value._name ) == false )
+                return false;
+            archive >> value._value;
+            if ( archive.isError() || value._name.empty() )
+                return false;
+        }
+        _listValue = std::move( listValue );
+        return true;
     }
 } // namespace sw

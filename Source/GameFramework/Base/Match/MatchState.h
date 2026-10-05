@@ -15,6 +15,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 판 설정입니다. 0 은 "없음" 입니다. */
     struct MatchSettings
     {
@@ -143,6 +145,11 @@ namespace sw
         /** @brief 살아 있거나 부활할 수 있는 팀원 수입니다. */
         int32 countStanding( int32 team ) const;
         void  drainEvents( vector<MatchEvent>& outListEvent );
+
+        /** @brief 팀 · 참가자 · 경과 · 단계 시간 · 승리 팀 · 단계을 씁니다. 설정은 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         bool isValidParticipant( int32 participant ) const { return participant >= 0 && participant < static_cast<int32>( _listParticipant.size() ); }
