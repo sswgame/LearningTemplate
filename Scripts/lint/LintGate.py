@@ -99,6 +99,8 @@ class LintGate:
                            전부 영어이고, Windows 콘솔 코드페이지에서 한글이 깨진 전례가 있다.
     - `timeoutSeconds`   : CTest TIMEOUT.
     - `listCtestArgument`: `--root` 말고 더 줄 인자. CMake 변수 참조를 그대로 적는다.
+    - `ctestSkipReason`  : CTest 린트로 등록하지 않는 이유(트리 전체가 몇 분 걸리는 검사). 커밋 훅 · 직접 실행은 그대로다.
+                           이유 없는 예외는 없다 — 그 검사를 트리 전체로 돌리는 다른 자리(CI 잡)를 적는다.
     """
 
     name: str = ""
@@ -106,6 +108,7 @@ class LintGate:
     buildComment: str = ""
     timeoutSeconds: int = 30
     listCtestArgument: tuple[str, ...] = ()
+    ctestSkipReason: str = ""
     violationHeader: str = "위반"
     noteHeader: str = "참고"
     hint: str = ""

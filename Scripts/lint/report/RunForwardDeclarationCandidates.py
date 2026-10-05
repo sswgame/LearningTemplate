@@ -28,7 +28,6 @@ import argparse
 import concurrent.futures as futures
 import os
 import re
-import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass, field
@@ -37,6 +36,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
 from common import useUtf8Stdout  # noqa: E402
+from common.HeaderSelfContained import (findHeaderProbeProblem, findSeedEntry, loadCompileDatabase, makeSeedIndex,  # noqa: E402
+                                        runSyntaxOnly)
 
 kRepositoryRoot = Path(__file__).resolve().parents[3]
 kSourceRoot = kRepositoryRoot / "Source"
@@ -344,17 +345,15 @@ def verifyUnusedIncludes(listUnused: list[tuple[Path, str]], buildDir: Path) -> 
     글자로만 보면 그 헤더를 **거쳐** 들어오는 이름(헤더가 다시 include 하는 것)에 기대는 include 와 정말 안 쓰는 include 를 가를 수 없다.
     결과: "removable"(빼도 선다) · "needed"(빼면 선다지 못한다 — 거쳐 오는 이름이 있다, 첫 오류를 함께) · "unknown"(원래 헤더부터 혼자 서지 못한다).
     """
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import RunHeaderSelfContained as selfContained  # noqa: E402 — 같은 폴더의 보고서가 컴파일 명령을 만든다
-
-    seeds = selfContained.makeSeedIndex(selfContained.loadCompileDatabase(buildDir))
     result: dict[str, list[tuple[Path, str, str]]] = {"removable": [], "needed": [], "unknown": []}
-    if not seeds:
-        print("[ForwardDeclaration] 컴파일 DB 가 없습니다: %s — 먼저 그 프리셋을 configure 하세요" % buildDir)
+    problem = findHeaderProbeProblem(buildDir)
+    if problem:
+        print("[ForwardDeclaration] %s" % problem)
         return result
+    seeds = makeSeedIndex(loadCompileDatabase(buildDir), buildDir, kRepositoryRoot)
 
     def compileText(header: Path, text: str, probeDir: Path, tag: str) -> str | None:
-        entry = selfContained.findSeedEntry(selfContained.normalizePath(str(header.resolve())), seeds)
+        entry = findSeedEntry(header.resolve().as_posix(), seeds)
         if entry is None:
             return "컴파일 DB 에 가까운 TU 가 없다"
         stem = header.relative_to(kSourceRoot).as_posix().replace("/", "_")[:-2]
@@ -362,12 +361,7 @@ def verifyUnusedIncludes(listUnused: list[tuple[Path, str]], buildDir: Path) -> 
         copy.write_text(text, encoding="utf-8")
         probe = probeDir / ("%s_%s_probe.cpp" % (stem, tag))
         probe.write_text('#include "%s"\n' % copy.as_posix(), encoding="utf-8")
-        completed = subprocess.run(" ".join(selfContained.makeSyntaxOnlyCommand(entry, probe)), shell=True,
-                                   capture_output=True, text=True, errors="replace", cwd=str(buildDir))
-        if completed.returncode == 0:
-            return None
-        reasons = re.findall(r"error: (.+)", (completed.stdout or "") + (completed.stderr or ""))
-        return reasons[0].strip() if reasons else "컴파일 실패"
+        return runSyntaxOnly(entry, probe, buildDir)
 
     def classify(item: tuple[int, Path, str], probeDir: Path) -> tuple[str, Path, str, str]:
         index, header, includePath = item

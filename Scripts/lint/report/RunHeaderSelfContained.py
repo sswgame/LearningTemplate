@@ -15,16 +15,10 @@ include 하면 그 이름은 어디서나 "이미 있는" 것이 되어 누락�
 include 하는 `*.gen.h` 는 불투명 열거형 전방 선언과 `IsBitFlagEnum` 특수화만 든다(`Core/Common/BitFlagTrait.h` —
 `<type_traits>` 만 — 밖에는 include 하지 않는다).
 
-[게이트가 아니다]
-`Run*` 은 보고하고 `Check*` 이 막는다(`RunBuildWarnings.py` 와 같은 규칙). 막지 않는 이유는 비용이다 —
-헤더 하나에 컴파일러를 한 번씩 부르므로 6코어에서 전 트리 약 3 분이 걸린다. 린트 스위트 전체가
-30 초인데 여기에 3 분을 얹으면 아무도 린트를 돌리지 않게 된다.
-
-[플래그는 진짜 빌드에서 그대로 빌려 온다]
-`compile_commands.json` 에서 그 헤더와 경로가 가장 많이 겹치는 TU 를 골라 그 명령줄을 쓴다 —
-Editor 헤더는 Editor TU 의 플래그로, Engine 헤더는 Engine TU 의 플래그로 본다. 검사기가 자기만의
-플래그 목록을 들면 그 목록이 또 썩는다. PCH(`/Yu` · `/Fp` · `/FI cmake_pch`)만 떼어 낸다 —
-그대로 두면 pch 가 미리 넣어 준 것이 또 누락을 가린다.
+[게이트가 아니다 — 정기 실행과 커밋 훅이 나눠 막는다]
+헤더 하나에 컴파일러를 한 번씩 부르므로 전 트리가 3~10 분이다. 린트 스위트(30 초)에 얹지 않는다. 대신
+CI 의 `header-self-contained` 워크플로가 하루 한 번 `--fail-on-violation` 으로 트리 전체를 보고, 커밋 훅은 빌드 폴더가 있을 때
+staged 헤더만 본다(`gate/CheckHeaderSelfContained.py`). 판정 · 플래그 고르기는 `common/HeaderSelfContained.py` 한 자리다.
 
 [언제 쓰나 — 매번은 아니다]
 한 폴더를 훑어 끝냈을 때, 헤더를 여럿 옮기거나 include 를 정리한 뒤, 남의 커밋을 받은 뒤에 돌린다.
@@ -34,196 +28,71 @@ Editor 헤더는 Editor TU 의 플래그로, Engine 헤더는 Engine TU 의 플�
   py -3 Scripts/lint/report/RunHeaderSelfContained.py --filter Engine/Graphics
   py -3 Scripts/lint/report/RunHeaderSelfContained.py --files Source/Engine/Scene/Scene.h
   py -3 Scripts/lint/report/RunHeaderSelfContained.py --build build/Ninja-Shipping --jobs 8
+  py -3 Scripts/lint/report/RunHeaderSelfContained.py --build build/CI-Debug --fail-on-violation   # CI 정기 잡
 """
 
 from __future__ import annotations
 
 import argparse
-import concurrent.futures as futures
-import json
-import os
-import re
-import shlex
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
 from common import useUtf8Stdout  # noqa: E402
-
-kDefaultBuildDir = Path("build") / "Ninja-Debug"
-kScanRoot = "Source"
-# 생성 헤더와 PCH 는 애초에 혼자 서는 것이 목적이 아니다.
-kSkipSuffixes = (".gen.h",)
-kSkipNames = ("pch.h",)
-
-
-def loadCompileDatabase(buildDir: Path) -> list[dict]:
-    """compile_commands.json 을 읽는다."""
-    dbPath = buildDir / "compile_commands.json"
-    if not dbPath.is_file():
-        print(f"[HeaderSelfContained] 컴파일 DB 가 없습니다: {dbPath.as_posix()}", file=sys.stderr)
-        print("[HeaderSelfContained] `cmake --preset Ninja-Debug` 를 먼저 돌리세요.", file=sys.stderr)
-        return []
-    try:
-        return json.loads(dbPath.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as error:
-        print(f"[HeaderSelfContained] 컴파일 DB 를 읽지 못했습니다: {error}", file=sys.stderr)
-        return []
-
-
-def normalizePath(rawPath: str) -> str:
-    """경로 구분자를 `/` 로 통일한다."""
-    return rawPath.replace("\\", "/")
-
-
-def makeSeedIndex(database: Sequence[dict]) -> list[tuple[str, dict]]:
-    """TU 를 자기 디렉터리와 함께 늘어놓는다 — 헤더와 가장 많이 겹치는 것을 고르기 위한 표다."""
-    seeds: list[tuple[str, dict]] = []
-    for entry in database:
-        filePath = normalizePath(entry.get("file", ""))
-        if filePath:
-            seeds.append((filePath.rsplit("/", 1)[0] + "/", entry))
-    return seeds
-
-
-def findSeedEntry(headerPath: str, seeds: Sequence[tuple[str, dict]]) -> dict | None:
-    """헤더와 디렉터리 경로가 가장 길게 겹치는 TU 를 고른다."""
-    bestEntry: dict | None = None
-    bestLength = -1
-    for seedDir, entry in seeds:
-        length = len(os.path.commonprefix([seedDir, headerPath]))
-        if length > bestLength:
-            bestLength = length
-            bestEntry = entry
-    return bestEntry
-
-
-def makeSyntaxOnlyCommand(entry: dict, probeSource: Path) -> list[str]:
-    """TU 의 명령줄에서 PCH·출력 경로·소스 파일을 떼고 `-fsyntax-only` 로 바꾼다."""
-    rawCommand = entry.get("command") or " ".join(entry.get("arguments", []))
-    command: list[str] = []
-    for token in shlex.split(rawCommand, posix=False):
-        if token.startswith(("/Yu", "/Fp", "/Fo", "/Fd")):
-            continue
-        if token.startswith("/FI") and "cmake_pch" in token:
-            continue
-        if token in ("-c", "--"):
-            continue
-        if token.endswith((".cpp", ".cc", ".cxx")):
-            continue
-        command.append(token)
-
-    command.extend(["-fsyntax-only", "-Wno-unused-command-line-argument", str(probeSource)])
-    return command
-
-
-def isCheckedHeader(headerPath: Path) -> bool:
-    """검사 대상 헤더인지 본다."""
-    return headerPath.name not in kSkipNames and not headerPath.name.endswith(kSkipSuffixes)
-
-
-def collectHeaders(repositoryRoot: Path, pathFilter: str) -> list[Path]:
-    """검사 대상 헤더를 모은다."""
-    scanRoot = repositoryRoot / kScanRoot
-    if not scanRoot.is_dir():
-        return []
-    headers = [p for p in sorted(scanRoot.rglob("*.h")) if isCheckedHeader(p)]
-    if pathFilter:
-        needle = normalizePath(pathFilter)
-        headers = [p for p in headers if needle in normalizePath(str(p))]
-    return headers
-
-
-def makeIncludeSpelling(repositoryRoot: Path, headerPath: Path) -> str | None:
-    """`Source/` 기준 상대 경로 — 저장소가 실제로 쓰는 include 철자다."""
-    try:
-        return headerPath.resolve().relative_to((repositoryRoot / kScanRoot).resolve()).as_posix()
-    except ValueError:
-        return None
-
-
-def checkOneHeader(repositoryRoot: Path, buildDir: Path, headerPath: Path,
-                   seeds: Sequence[tuple[str, dict]], probeDir: Path) -> tuple[str, str] | None:
-    """헤더 하나를 단독 컴파일한다. 서지 못하면 (철자, 첫 오류) 를 반환한다."""
-    includeSpelling = makeIncludeSpelling(repositoryRoot, headerPath)
-    if includeSpelling is None:
-        return None
-
-    entry = findSeedEntry(normalizePath(str(headerPath.resolve())), seeds)
-    if entry is None:
-        return None
-
-    probeSource = probeDir / (includeSpelling.replace("/", "_")[:-2] + "_probe.cpp")
-    probeSource.write_text('#include "%s"\n' % includeSpelling, encoding="utf-8")
-
-    completed = subprocess.run(
-        " ".join(makeSyntaxOnlyCommand(entry, probeSource)),
-        shell=True, capture_output=True, text=True, errors="replace", cwd=str(buildDir),
-    )
-    if completed.returncode == 0:
-        return None
-
-    output = (completed.stdout or "") + (completed.stderr or "")
-    reasons = re.findall(r"error: (.+)", output)
-    return includeSpelling, (reasons[0].strip() if reasons else "컴파일 실패 (오류 메시지 없음)")
+from common.HeaderSelfContained import (collectCheckedHeaders, findHeaderProbeProblem, findHeadersNotSelfContained,  # noqa: E402
+                                        isCheckedHeader, kDefaultHeaderProbeBuildDir)
 
 
 def main() -> int:
+    useUtf8Stdout()
     parser = argparse.ArgumentParser(description="혼자 서지 못하는 헤더를 보고한다 (게이트 아님).")
     parser.add_argument("--root", default=".", help="저장소 루트")
-    parser.add_argument("--build", default=str(kDefaultBuildDir), help="컴파일 DB 가 있는 빌드 디렉터리")
+    parser.add_argument("--build", default=str(kDefaultHeaderProbeBuildDir), help="컴파일 DB 가 있는 빌드 디렉터리")
     parser.add_argument("--filter", default="", help="경로에 이 문자열이 든 헤더만")
     parser.add_argument("--files", nargs="*", default=None, help="검사할 헤더 경로 목록")
-    parser.add_argument("--jobs", type=int, default=0, help="동시 실행 수 (0 이면 CPU 수 × 4)")
+    parser.add_argument("--jobs", type=int, default=0, help="동시 실행 수 (0 이면 CPU 수)")
+    parser.add_argument("--fail-on-violation", action="store_true",
+                        help="서지 못하는 헤더가 있으면 1, 검사할 수 없으면 2 로 끝낸다 (CI 정기 잡)")
     args = parser.parse_args()
-
-    useUtf8Stdout()
 
     repositoryRoot = Path(args.root).resolve()
     buildDir = Path(args.build)
     if not buildDir.is_absolute():
         buildDir = repositoryRoot / buildDir
 
-    seeds = makeSeedIndex(loadCompileDatabase(buildDir))
-    if not seeds:
-        return 0   # 보고 스크립트는 막지 않는다 — 돌 수 없으면 그렇다고 말하고 끝낸다.
+    problem = findHeaderProbeProblem(buildDir)
+    if problem:
+        print(f"[HeaderSelfContained] {problem}", file=sys.stderr)
+        # 보고로 돌 때는 막지 않는다 — 돌 수 없으면 그렇다고 말하고 끝낸다. CI 는 "아무것도 안 봤다" 를 통과로 읽으면 안 된다.
+        return 2 if args.fail_on_violation else 0
 
     if args.files:
-        headers = [Path(p) if Path(p).is_absolute() else repositoryRoot / p for p in args.files]
-        headers = [p for p in headers if p.suffix == ".h" and p.is_file() and isCheckedHeader(p)]
+        listHeader = [Path(p) if Path(p).is_absolute() else repositoryRoot / p for p in args.files]
+        listHeader = [p for p in listHeader if p.is_file() and isCheckedHeader(p)]
     else:
-        headers = collectHeaders(repositoryRoot, args.filter)
+        listHeader = collectCheckedHeaders(repositoryRoot, args.filter)
 
-    if not headers:
+    if not listHeader:
         print("[HeaderSelfContained] 검사할 헤더가 없습니다.")
-        return 0
+        return 2 if args.fail_on_violation else 0
 
-    jobCount = args.jobs if args.jobs > 0 else min(32, (os.cpu_count() or 4) * 4)
-    print(f"[HeaderSelfContained] 헤더 {len(headers)}개를 단독 컴파일합니다 (동시 {jobCount}) …")
-
+    print(f"[HeaderSelfContained] 헤더 {len(listHeader)}개를 단독 컴파일합니다 …")
     with tempfile.TemporaryDirectory(prefix="swHeaderProbe") as probeDirName:
-        probeDir = Path(probeDirName)
-        with futures.ThreadPoolExecutor(max_workers=jobCount) as pool:
-            results = list(pool.map(
-                lambda header: checkOneHeader(repositoryRoot, buildDir, header, seeds, probeDir),
-                headers,
-            ))
+        listFailure = findHeadersNotSelfContained(repositoryRoot, buildDir, listHeader, Path(probeDirName),
+                                                  workerCount=args.jobs or None)
 
-    failures = [r for r in results if r is not None]
-    if not failures:
-        print(f"[HeaderSelfContained] OK — 헤더 {len(headers)}개가 전부 혼자 섭니다.")
+    if not listFailure:
+        print(f"[HeaderSelfContained] OK — 헤더 {len(listHeader)}개가 전부 혼자 섭니다.")
         return 0
 
-    print(f"\n[HeaderSelfContained] 혼자 서지 못하는 헤더 {len(failures)}개:\n")
-    for spelling, reason in failures:
+    print(f"\n[HeaderSelfContained] 혼자 서지 못하는 헤더 {len(listFailure)}개:\n")
+    for spelling, reason in listFailure:
         print(f"  {spelling}\n      {reason}")
     print("\n  그 헤더가 직접 쓰는 이름의 선언을 그 헤더가 직접 include 하세요.")
     print("  지금 컴파일되는 것은 남이 먼저 include 해 준 덕이고, 그 남이 바뀌면 깨집니다.")
-    return 0   # 보고만 한다.
+    return 1 if args.fail_on_violation else 0
 
 
 if __name__ == "__main__":
