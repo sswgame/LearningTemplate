@@ -1121,9 +1121,9 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     CountingHandler  gameFirst( NetMessageRange::kGame, 0x81 );
     CountingHandler  gameSecond( NetMessageRange::kGame, 0x82 );
     NetMessageRouter router;
-    router.addHandler( &lockstep );
-    router.addHandler( &gameFirst );
-    router.addHandler( &gameSecond );
+    SW_ASSERT_TRUE( router.addHandler( &lockstep ) );
+    SW_ASSERT_TRUE( router.addHandler( &gameFirst ) );
+    SW_ASSERT_TRUE( router.addHandler( &gameSecond ) );
 
     NetMessageWriter messageWriter;
     const uint8      arrKind[] = { 0x21, 0x81, 0x82, 0x82, 0x83, 0x51, 0x22 };
@@ -1152,6 +1152,31 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, messageWriter.getBytes().data(), messageWriter.getByteCount() ) );
     SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, nullptr, 0 ) );
     SW_EXPECT_EQUAL( 1, gameFirst.getHandledCount() );
+}
+
+/**
+ * @brief [NetworkTest] 이미 맡은 종류를 맡으려는 처리기는 통째로 받지 않는다 — 메시지는 먼저 단 처리기가 받고, 겹치지 않는 처리기는 그대로 단다
+ */
+SW_TEST_CASE( NetworkTest, MessageRouterRefusesAHandlerThatOverlapsAClaimedKind )
+{
+    CountingHandler  first( NetMessageRange::kGame, 0x81 );
+    CountingHandler  overlapping( NetMessageRange::kGame, 0x81 );
+    CountingHandler  disjoint( NetMessageRange::kGame, 0x82 );
+    NetMessageRouter router;
+    SW_EXPECT_TRUE( router.addHandler( &first ) );
+    SW_EXPECT_FALSE( router.addHandler( &overlapping ) );
+    SW_EXPECT_TRUE( router.addHandler( &disjoint ) );
+    SW_EXPECT_TRUE( router.addHandler( &first ) ); // 이미 단 처리기
+    SW_EXPECT_FALSE( router.addHandler( nullptr ) );
+
+    const uint8 arrMessage[] = { 0x81, 0x01 };
+    SW_EXPECT_TRUE( NetHandleResult::Handled == router.dispatch( NetMessageContext{}, arrMessage, static_cast<int32>( sizeof( arrMessage ) ) ) );
+    SW_EXPECT_EQUAL( 1, first.getHandledCount() );
+    SW_EXPECT_EQUAL( 0, overlapping.getHandledCount() );
+
+    // 거절된 처리기는 목록에 없다 — 먼저 단 처리기를 빼면 비로소 단다
+    router.removeHandler( &first );
+    SW_EXPECT_TRUE( router.addHandler( &overlapping ) );
 }
 
 /**

@@ -62,12 +62,27 @@ namespace sw
     {
     }
 
-    void NetMessageRouter::addHandler( INetMessageHandler* pHandler )
+    bool NetMessageRouter::addHandler( INetMessageHandler* pHandler )
     {
-        if ( pHandler == nullptr || std::find( _listHandler.begin(), _listHandler.end(), pHandler ) != _listHandler.end() )
-            return;
+        if ( pHandler == nullptr )
+            return false;
+        if ( std::find( _listHandler.begin(), _listHandler.end(), pHandler ) != _listHandler.end() )
+            return true;
+        const uint8  rangeBase = pHandler->getMessageRangeBase();
+        const uint16 kindMask  = pHandler->getMessageKindMask();
+        for ( int32 offset = 0; offset < NetMessageRange::kSize; ++offset )
+        {
+            const int32 kind     = static_cast<int32>( rangeBase ) + offset;
+            const bool  bClaimed = ( ( kindMask >> offset ) & 1u ) != 0 && kind < kKindCount && _arrKindHandler[kind] != nullptr;
+            if ( bClaimed )
+            {
+                SW_LOG_ERROR( "NetMessageRouter: message kind 0x%02x is already claimed - the new handler is refused (give it its own range or a disjoint kind mask)", kind );
+                return false;
+            }
+        }
         _listHandler.push_back( pHandler );
         rebuildKindTable();
+        return true;
     }
 
     void NetMessageRouter::removeHandler( INetMessageHandler* pHandler )
