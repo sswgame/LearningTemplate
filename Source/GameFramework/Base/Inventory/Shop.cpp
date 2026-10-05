@@ -4,11 +4,13 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -96,6 +98,41 @@ namespace sw
     void Wallet::drainEvents( vector<WalletEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void Wallet::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listBalance.size() );
+        for ( const WalletBalance& balance : _listBalance )
+        {
+            StateArchiveUtil::writeName( outArchive, balance._currency );
+            outArchive << balance._amount;
+        }
+    }
+
+    bool Wallet::readState( Archive& archive )
+    {
+        uint32 count = 0;
+        // 칸마다 이름 길이(4) + 잔액(8) 이상
+        if ( StateArchiveUtil::readCount( archive, 12, count ) == false )
+            return false;
+        vector<WalletBalance> listBalance;
+        listBalance.reserve( count );
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            WalletBalance balance;
+            if ( StateArchiveUtil::readName( archive, balance._currency ) == false )
+                return false;
+            archive >> balance._amount;
+            const bool bValid = archive.isOk() && balance._currency.empty() == false && 0 <= balance._amount;
+            if ( bValid == false )
+                return false;
+            listBalance.push_back( balance );
+        }
+        _listBalance = std::move( listBalance );
+        _eventBuffer.clear();
+        ++_revision;
+        return true;
     }
 
     int64 Wallet::getBalance( const hashed_string& currency ) const

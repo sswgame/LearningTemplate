@@ -18,6 +18,7 @@
 
 namespace sw
 {
+    class Archive;
     class Inventory;
     class ItemCatalog;
     class XmlNode;
@@ -51,6 +52,9 @@ namespace sw
     class SW_GF_API Wallet
     {
     public:
+        static constexpr uint32 kStateTag     = 0x544C4157u; ///< 'WALT'
+        static constexpr uint32 kStateVersion = 1;
+
         /** @brief 통화를 적지 않으면 쓰는 "Gold" 입니다. */
         static hashed_string getDefaultCurrency();
 
@@ -63,6 +67,10 @@ namespace sw
         void clear();
         /** @brief 쌓인 변화를 넘기고 비웁니다. */
         void drainEvents( vector<WalletEvent>& outListEvent );
+        /** @brief 통화마다 이름 · 잔액을 처음 만난 순서로 씁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 모두 바꿉니다(알림 없음). 빈 통화 이름 · 음수 잔액이면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         int64                        getBalance( const hashed_string& currency ) const;
         bool                         canAfford( const hashed_string& currency, int64 amount ) const { return amount <= getBalance( currency ); }

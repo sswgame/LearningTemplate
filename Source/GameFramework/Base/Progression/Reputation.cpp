@@ -4,9 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
 
@@ -180,5 +182,38 @@ namespace sw
     void ReputationState::drainEvents( vector<ReputationEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void ReputationState::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listEntry.size() );
+        for ( const Entry& entry : _listEntry )
+        {
+            StateArchiveUtil::writeName( outArchive, entry._factionId );
+            outArchive << entry._value;
+        }
+    }
+
+    bool ReputationState::readState( Archive& archive )
+    {
+        uint32 count = 0;
+        // 칸마다 이름 길이(4) + 값(4) 이상
+        if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+            return false;
+        vector<Entry> listEntry;
+        listEntry.reserve( count );
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            Entry entry;
+            if ( StateArchiveUtil::readName( archive, entry._factionId ) == false )
+                return false;
+            archive >> entry._value;
+            if ( archive.isError() || entry._factionId.empty() )
+                return false;
+            listEntry.push_back( entry );
+        }
+        _listEntry = std::move( listEntry );
+        _eventBuffer.clear();
+        return true;
     }
 } // namespace sw

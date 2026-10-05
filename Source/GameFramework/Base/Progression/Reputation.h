@@ -16,6 +16,7 @@
 
 namespace sw
 {
+    class Archive;
     class XmlNode;
 
     /** @brief 단계 하나 — 값이 `_minValue` 이상이면 이 단계입니다. */
@@ -98,6 +99,9 @@ namespace sw
     class SW_GF_API ReputationState
     {
     public:
+        static constexpr uint32 kStateTag     = 0x55504552u; ///< 'REPU'
+        static constexpr uint32 kStateVersion = 1;
+
         ReputationState();
 
         void initialize( const ReputationCatalog* pCatalog );
@@ -115,6 +119,10 @@ namespace sw
          */
         int32 getTierIndex( const hashed_string& factionId ) const;
         void  drainEvents( vector<ReputationEvent>& outListEvent );
+        /** @brief 세력마다 id · 값을 처음 만난 순서로 씁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 모두 바꿉니다(알림 없음). 빈 세력 id 면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         struct Entry

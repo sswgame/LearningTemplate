@@ -17,6 +17,7 @@ namespace sw
     struct QuestReward;
     struct QuestStage;
 
+    class Archive;
     class QuestCatalog;
 
     /** @brief 퀘스트 상태입니다. */
@@ -90,7 +91,9 @@ namespace sw
     class SW_GF_API QuestLog
     {
     public:
-        static constexpr int32 kMaxChainedStages = 32; ///< 한 번에 넘어가는 단계 수 상한(서로 가리키는 단계가 멈추게)
+        static constexpr int32  kMaxChainedStages = 32;          ///< 한 번에 넘어가는 단계 수 상한(서로 가리키는 단계가 멈추게)
+        static constexpr uint32 kStateTag         = 0x474F4C51u; ///< 'QLOG'
+        static constexpr uint32 kStateVersion     = 1;
 
         QuestLog();
 
@@ -116,6 +119,13 @@ namespace sw
         /** @brief 진행 중인 퀘스트 id 입니다(받은 순서). */
         void collectActive( vector<hashed_string>& outListQuest ) const;
         void drainEvents( vector<QuestEvent>& outListEvent );
+        /** @brief 퀘스트마다 진행(단계 · 목표 개수 · 단계 시간 · 완료 횟수 · 상태 · 선택 대기)을 씁니다. */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 모두 바꿉니다(알림 없음). 깨졌으면 false 이고 그대로입니다.
+         * @details 카탈로그(`initialize`)에 없는 퀘스트는 알리고 버립니다 — 데이터에서 지운 퀘스트 하나가 일지 전체를 막지 않게.
+         */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         QuestProgress* findProgressMutable( const hashed_string& questId );

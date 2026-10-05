@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
@@ -167,5 +171,35 @@ namespace sw
     void WorldClock::drainEvents( vector<WorldClockEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void WorldClock::writeState( Archive& outArchive ) const
+    {
+        outArchive << _day;
+        outArchive << _secondOfDay;
+        outArchive << _timeScale;
+        outArchive << _bPaused;
+    }
+
+    bool WorldClock::readState( Archive& archive )
+    {
+        int32   day         = 0;
+        float32 secondOfDay = 0.0f;
+        float32 timeScale   = 1.0f;
+        uint8   bPaused     = SW_FALSE;
+        archive >> day;
+        archive >> secondOfDay;
+        archive >> timeScale;
+        archive >> bPaused;
+        // NaN 은 비교가 모두 거짓이라 여기서 걸린다.
+        const bool bValid = archive.isOk() && 0 <= day && 0.0f <= secondOfDay && secondOfDay < _settings._secondsPerDay && 0.0f <= timeScale && bPaused <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        _day         = day;
+        _secondOfDay = secondOfDay;
+        _timeScale   = timeScale;
+        _bPaused     = bPaused;
+        _eventBuffer.clear();
+        return true;
     }
 } // namespace sw

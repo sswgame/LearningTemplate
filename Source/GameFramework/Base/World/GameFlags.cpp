@@ -2,6 +2,10 @@
 
 #include "GameFramework/Base/World/GameFlags.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 #include <algorithm>
 
 namespace sw
@@ -321,5 +325,39 @@ namespace sw
                 _mapFlag[entry._name] = entry._value;
         }
         ++_revision;
+    }
+
+    void GameFlags::writeState( Archive& outArchive ) const
+    {
+        vector<GameFlagEntry> listEntry;
+        fillEntries( listEntry );
+        outArchive << static_cast<uint32>( listEntry.size() );
+        for ( const GameFlagEntry& entry : listEntry )
+        {
+            StateArchiveUtil::writeName( outArchive, entry._name );
+            outArchive << entry._value;
+        }
+    }
+
+    bool GameFlags::readState( Archive& archive )
+    {
+        uint32 count = 0;
+        // 칸마다 이름 길이(4) + 값(4) 이상
+        if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+            return false;
+        vector<GameFlagEntry> listEntry;
+        listEntry.reserve( count );
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            GameFlagEntry entry;
+            if ( StateArchiveUtil::readName( archive, entry._name ) == false )
+                return false;
+            archive >> entry._value;
+            if ( archive.isError() )
+                return false;
+            listEntry.push_back( entry );
+        }
+        restoreEntries( listEntry );
+        return true;
     }
 } // namespace sw

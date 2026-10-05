@@ -16,6 +16,11 @@
 
 namespace sw
 {
+    class Archive;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 세이브용 플래그 하나입니다. 세이브 타입이 `vector<GameFlagEntry>` PROPERTY 로 싣습니다(`GameFlags::fillEntries` 가 이름 순으로 채운다). */
     REFLECT()
     struct SW_GF_API GameFlagEntry
@@ -41,7 +46,9 @@ namespace sw
     class SW_GF_API GameFlags
     {
     public:
-        static constexpr int32 kMaxConditionDepth = 32; ///< 괄호 · `!` 중첩 상한(잘못된 식이 스택을 다 쓰지 않게)
+        static constexpr int32  kMaxConditionDepth = 32;          ///< 괄호 · `!` 중첩 상한(잘못된 식이 스택을 다 쓰지 않게)
+        static constexpr uint32 kStateTag          = 0x47414C46u; ///< 'FLAG'
+        static constexpr uint32 kStateVersion      = 1;
 
         GameFlags();
 
@@ -68,6 +75,10 @@ namespace sw
         void fillEntries( vector<GameFlagEntry>& outListEntry ) const;
         /** @brief 세이브에서 되살립니다(지금 값은 모두 지운다). */
         void restoreEntries( const vector<GameFlagEntry>& listEntry );
+        /** @brief 플래그를 이름 순으로 씁니다 — 같은 플래그면 넣은 순서와 상관없이 같은 바이트입니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 모두 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         uint32 getRevision() const { return _revision; }
         size_t getCount() const { return _mapFlag.size(); }

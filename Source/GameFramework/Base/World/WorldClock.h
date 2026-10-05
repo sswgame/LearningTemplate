@@ -13,6 +13,11 @@
 
 namespace sw
 {
+    class Archive;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 시계 설정입니다. 시각은 0..24 시입니다. */
     struct WorldClockSettings
     {
@@ -65,6 +70,9 @@ namespace sw
     class SW_GF_API WorldClock
     {
     public:
+        static constexpr uint32 kStateTag     = 0x4B4F4C43u; ///< 'CLOK'
+        static constexpr uint32 kStateVersion = 1;
+
         WorldClock();
 
         void initialize( const WorldClockSettings& settings );
@@ -93,6 +101,10 @@ namespace sw
         const WorldClockSettings& getSettings() const { return _settings; }
         bool                      isPaused() const { return _bPaused != SW_FALSE; }
         void                      drainEvents( vector<WorldClockEvent>& outListEvent );
+        /** @brief 날 · 하루 안의 초 · 배율 · 멈춤을 씁니다. 설정(하루 길이 · 계절)은 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다(알림 없음). 날이 음수이거나 시각이 지금 설정의 하루 밖이면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief @p settings 의 시계에서 @p hour 시의 때입니다 — 시계가 그 시각에 있을 때의 `getDayPhase` 와 같습니다(일정이 미래 시각을 판정할 때). */
         static DayPhase computePhaseAt( const WorldClockSettings& settings, float32 hour );

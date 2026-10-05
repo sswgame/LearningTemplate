@@ -4,10 +4,15 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Quest/QuestCatalog.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "QuestLog" );
+
     const utf8* toString( QuestStartResult result )
     {
         switch ( result )
@@ -295,5 +300,67 @@ namespace sw
     void QuestLog::drainEvents( vector<QuestEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void QuestLog::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listProgress.size() );
+        for ( const QuestProgress& progress : _listProgress )
+        {
+            StateArchiveUtil::writeName( outArchive, progress._questId );
+            StateArchiveUtil::writeName( outArchive, progress._stageId );
+            outArchive << static_cast<uint32>( progress._listCount.size() );
+            for ( const int32 count : progress._listCount )
+            {
+                outArchive << count;
+            }
+            outArchive << progress._stageTime;
+            outArchive << progress._completedCount;
+            outArchive << static_cast<uint8>( progress._status );
+            outArchive << progress._bAwaitingChoice;
+        }
+    }
+
+    bool QuestLog::readState( Archive& archive )
+    {
+        uint32 progressCount = 0;
+        // 퀘스트마다 이름 둘(8) + 목표 수(4) + 단계 시간(4) + 완료 횟수(4) + 상태(1) + 선택 대기(1) 이상
+        if ( StateArchiveUtil::readCount( archive, 22, progressCount ) == false )
+            return false;
+        vector<QuestProgress> listProgress;
+        listProgress.reserve( progressCount );
+        for ( uint32 progressIndex = 0; progressIndex < progressCount; ++progressIndex )
+        {
+            QuestProgress progress;
+            uint32        objectiveCount = 0;
+            const bool    bHeadRead      = StateArchiveUtil::readName( archive, progress._questId ) && StateArchiveUtil::readName( archive, progress._stageId ) &&
+                                   StateArchiveUtil::readCount( archive, 4, objectiveCount );
+            if ( bHeadRead == false )
+                return false;
+            progress._listCount.resize( objectiveCount, 0 );
+            for ( int32& count : progress._listCount )
+            {
+                archive >> count;
+            }
+            uint8 status = 0;
+            archive >> progress._stageTime;
+            archive >> progress._completedCount;
+            archive >> status;
+            archive >> progress._bAwaitingChoice;
+            const bool bValid = archive.isOk() && status <= static_cast<uint8>( QuestStatus::Failed ) && progress._bAwaitingChoice <= SW_TRUE;
+            if ( bValid == false )
+                return false;
+            progress._status  = static_cast<QuestStatus>( status );
+            const bool bKnown = _pCatalog == nullptr || _pCatalog->findQuest( progress._questId ) != nullptr;
+            if ( bKnown == false )
+            {
+                SW_LOG_WARNING( "QuestLog: saved quest '%#' is not in the catalog - dropped", progress._questId.c_str() );
+                continue;
+            }
+            listProgress.push_back( std::move( progress ) );
+        }
+        _listProgress = std::move( listProgress );
+        _eventBuffer.clear();
+        return true;
     }
 } // namespace sw
