@@ -452,10 +452,9 @@ cd build/Ninja-Debug/Bin
 - **TSan 잡의 Jolt 는 계측되지 않은 vcpkg 라이브러리다** — 잡 의존 · 장벽 동기화가 라이브러리 .cpp 안이라 TSan 이 못 보고, 헤더 인라인 접근만 보여
   수백 건의 거짓 경쟁이 난다. `cmake/Modules/Options/TsanSuppressions.txt` 가 Jolt 내부 함수를 억제하고, 그 탓에 Jolt 잡 안에서 불리는 엔진 콜백(접촉
   리스너 등)의 경쟁도 가려진다. TSan 구성에서 Jolt 를 `-fsanitize=thread` 로 짓는 트리플릿(트리플릿 변경 — 메인 · 사용자 결정)으로 바꾸면 억제를 지운다.
-- **리눅스 Shipping 에서만 지는 시험 둘**(WSL CI-Shipping, 리눅스 Debug · ASan · TSan · Windows Shipping 은 통과) — CI 리눅스 Shipping 잡을 세운다.
-  ① `NetSimDestructionTest.CleanLinkConvergesLateJoinsAndRepairs`: `_convergedTick >= 0`(클라이언트 구조 해시가 서버와 끝내 같아지지 않는다, 3/3) — 최적화
-  구성에서만 갈리는 결정성 문제로 보인다. ② `NavMeshCookTest.CookedTilesMatchTheRuntimeBakeAndStaleOnesAreRejected`: `TestNavMeshCook.cpp:50` 의
-  `!isLoadedFromCooked(...)` (10-05 recast 병합). 재현: `cd build/CI-Shipping/Bin && ../TestBin/EngineTest --test_filter=NetSimDestructionTest.*:NavMeshCookTest.*`.
+- **리눅스 Shipping 에서 `NetSimDestructionTest.CleanLinkConvergesLateJoinsAndRepairs` 가 늘 진다**(`_convergedTick >= 0` — 클라이언트 구조 해시가
+  서버와 끝내 같아지지 않는다, WSL CI-Shipping 3/3) — CI 리눅스 Shipping 잡을 세운다. 리눅스 Debug · ASan · TSan · Windows Shipping 은 통과한다 — 최적화
+  구성에서만 갈리는 결정성 문제로 보인다. 재현: `cd build/CI-Shipping/Bin && ../TestBin/EngineTest --test_filter=NetSimDestructionTest.*`.
 - **Windows CI 시험 단계 실패(10-02 부터 Debug, 10-03 부터 Shipping)의 원인은 이 PC 에서 재현하지 못했다** — CI-Debug · CI-Shipping 을 같은 라벨로,
   TEMP 를 8.3 짧은 이름으로 바꿔서도 돌렸다(부하로 인한 시간 초과 말고는 통과). CI 의 시험 단계가 이제 진 시험을 주석으로 올리므로 병합 뒤 첫 실행의
   주석(`/check-runs/<job id>/annotations`, 로그인 없이 읽힌다)에서 시험 이름 · 실패 줄을 보고 고친다.
