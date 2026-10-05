@@ -28,6 +28,8 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from common import useUtf8Stdout  # noqa: E402
+
 _kMarker = "Template engine linux-dev"
 
 _kShellBlock = f"""\
@@ -266,6 +268,7 @@ def parseArgs(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    useUtf8Stdout()
     args = parseArgs(argv)
     return setupLinuxDevEnvironment(home=args.home)
 

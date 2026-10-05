@@ -508,7 +508,7 @@ cd build/Ninja-Debug/Bin
   진짜 경쟁이면 결함으로 재현 · 수정, 거짓만 남으면 함수 단위로 좁혀 남기기. 다른 구성의 트리플릿 · 설치 폴더 · CI 캐시 키는 바뀌면 안 된다(저장소 캐시 10 GB 한도 주의).
 - **include · 전방 선언 남은 후보.** `RHITypes.h` → `RHIBackendType.h`(PCH 안, TU 1441) · `EditorThemeUtil.h` → `EditorWidgets.h`(33) · `EnginePlatformHeaders.h` 의 OS 헤더
   (TU 1442, 위험이 가장 큼 — 마지막) · `GameObjectManager.h` 가 끌고 다니는 헤더 약 14 개(233 TU — 이득을 보려면 서브시스템 전부를 포인터로 묶는 큰 단계, gom-split 이 숫자로
-  보류). 이득은 `ninja -t deps` 전후 TU 수로 판정한다. `RunForwardDeclarationCandidates.py --apply` 는 끝에 cp949 콘솔에서 `UnicodeEncodeError` 로 죽는다(`useUtf8Stdout` 누락).
+  보류). 이득은 `ninja -t deps` 전후 TU 수로 판정한다.
 - **헤더 자립 검사를 정기 실행으로.** `RunHeaderSelfContained.py` 는 전체 3~10 분이라 lint 게이트로는 무겁다 — CI 하루 한 번(또는 수동 잡) + 빌드 폴더가 있을 때만 커밋 훅이
   staged 헤더를 본다.
 
@@ -762,7 +762,8 @@ cd build/Ninja-Debug/Bin
   다(유니티 TU 에서 봤다). 낡은 빌드가 의심되면 그 오브젝트를 지우거나 `SCCACHE_RECACHE=1` 로 다시 짓는다.
 - **리눅스 CI 는 ubuntu-22.04 의 `libclang-dev`(16 미만)다.** 파서에 새 libclang API 를 쓰면 리눅스 잡만 선다 — `CINDEX_VERSION` 으로 가른다. CI 러너 파이썬은 3.10 이라
   f-string 식 안의 백슬래시 · 여러 줄 식이 configure 를 죽인다(`CheckPythonMinimumVersion.py`). GH Windows 러너는 cp1252 라 한글을 print 하는 스크립트가 빌드째 죽는다
-  (증상: `sccache stats: 0 hits, 0 misses`) — 스크립트는 `Scripts/common` 을 import 한다(UTF-8 stdout). 재현은 `PYTHONIOENCODING=cp1252`.
+  (증상: `sccache stats: 0 hits, 0 misses`) — 진입점은 `Scripts/common` 을 **모듈 수준에서** import 한다(UTF-8 stdout, 게이트 `CheckScriptEntryPoints` —
+  함수 안의 import 는 치지 않는다: 한 갈래에서만 끌어오면 다른 갈래의 print 가 죽는다). 재현은 `PYTHONIOENCODING=cp1252`(cp949 는 `—` 에서 죽는다).
 - **CI 실패는 실패한 잡과 같은 프리셋으로 재현한다.** Debug(Engine SHARED)는 Shipping 정적 링크 결함을 원리상 못 낸다. Windows CI 러너의 TEMP 는 8.3 짧은 이름
   (`RUNNER~1`)이라 경로를 글자로 비교하면 틀린다. 빨간 CI 는 다음 결함을 숨긴다(55 런 연속 실패를 아무도 몰랐다) — 런 상태:
   `curl -s "https://api.github.com/repos/sswgame/LearningTemplate/actions/runs?per_page=30&branch=main"`. 스킵은 실패보다 조용하다.

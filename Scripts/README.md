@@ -91,6 +91,7 @@ Scripts/
   │     │     ├── CheckCmakeConventions.py    # CMake 명명 규칙
   │     │     ├── CheckCmakeReadme.py         # cmake/README.md 가 가리키는 파일 · 함수가 실재하는지
   │     │     ├── CheckPythonConventions.py   # 파이썬 명명 규칙
+  │     │     ├── CheckScriptEntryPoints.py   # 진입점이 모듈 수준에서 common 을 import 하는지(콘솔 UTF-8)
   │     │     ├── CheckPythonMinimumVersion.py # CI 의 파이썬에서도 파싱되는지
   │     │     └── CheckTextFilesAreText.py    # 텍스트 파일의 널 바이트
   │     ├── fixer/                    # 파일을 실제로 고쳐 쓴다 (게이트가 아니다)
