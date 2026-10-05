@@ -222,7 +222,7 @@ namespace sw
             if ( pComponent != nullptr )
                 sendEvents( entry, *pComponent, serverTick );
         }
-        // 스냅숏은 사건 뒤에 — 스냅숏의 사건 수 앞의 사건은 이미 같은 채널에서 앞서 갔다.
+        // 스냅숏은 사건 뒤에 — 이번 틱 사건까지 사건 수에 든다. 사건(순서 없음)과 스냅숏(순서)은 받는 쪽에서 앞뒤가 바뀔 수 있다 — 클라이언트가 번호로 맞춘다.
         vector<Request> listRequest;
         listRequest.swap( _listRequest );
         for ( const Request& request : listRequest )
@@ -268,7 +268,7 @@ namespace sw
             writer.writeBool( bHasPose );
             if ( bHasPose )
                 DestructionReplicationInternal::writeExactPose( writer, listGroupPose[index]._position, listGroupPose[index]._rotation );
-            (void)broadcast( NetChannelType::ReliableOrdered );
+            (void)broadcast( NetChannelType::ReliableUnordered ); // 받는 쪽이 번호로 줄 세운다 — 앞 사건을 잃어도 뒤 사건이 기다리지 않는다
             ++_stats._eventMessageCount;
         }
         entry._sentEventCount = static_cast<uint32>( listEvent.size() );
@@ -538,15 +538,11 @@ namespace sw
             ++_stats._staleEventCount; // 스냅숏이 이미 담았다
             return;
         }
-        if ( index > entry._nextEventIndex )
+        if ( entry._bAwaitingSnapshot == SW_TRUE || index > entry._nextEventIndex )
         {
-            // 앞 번호를 기다린다(늦게 들어와 스냅숏이 아직 안 왔다).
-            for ( const BufferedEvent& buffered : entry._listFutureEvent )
-            {
-                if ( buffered._index == index )
-                    return;
-            }
-            entry._listFutureEvent.push_back( received );
+            // 앞 번호를 기다리거나(늦게 들어와 스냅숏이 아직 안 왔다 · 앞 사건을 잃었다), 청한 스냅숏을 기다린다 — 지금 적용하면 뒤에 온 스냅숏이 그 상태를 덮고
+            // 번호를 되돌려 이 사건이 영영 빠진다(사건은 순서 없음 채널이라 스냅숏보다 먼저 올 수 있다). 스냅숏이 번호로 잇는다.
+            bufferEvent( entry, received );
             return;
         }
         FractureComponentBase* pComponent = resolve( entry );
@@ -577,6 +573,16 @@ namespace sw
                 break;
             }
         }
+    }
+
+    void DestructionReplicationClient::bufferEvent( Entry& entry, const BufferedEvent& received )
+    {
+        for ( const BufferedEvent& buffered : entry._listFutureEvent )
+        {
+            if ( buffered._index == received._index )
+                return;
+        }
+        entry._listFutureEvent.push_back( received );
     }
 
     void DestructionReplicationClient::applyToComponent( FractureComponentBase& component, const BufferedEvent& buffered )

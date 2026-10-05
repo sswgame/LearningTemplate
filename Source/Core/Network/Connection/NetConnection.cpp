@@ -11,7 +11,8 @@ namespace sw
     {
         struct NetConnectionInternal
         {
-            static constexpr int32   kChannelBits   = 2;
+            static constexpr int32 kChannelBits = 2;
+            static_assert( static_cast<int32>( NetChannelType::Count ) <= ( 1 << kChannelBits ), "every channel must fit in the channel field" );
             static constexpr float64 kRttSmoothing  = 0.1;
             static constexpr float64 kLossSmoothing = 0.1;
             static constexpr float64 kStatsInterval = 0.25;
@@ -127,8 +128,9 @@ namespace sw
         switch ( channel )
         {
             case NetChannelType::ReliableOrdered:
+            case NetChannelType::ReliableUnordered:
             {
-                return queueReliable( pData, size );
+                return queueReliable( channel, pData, size );
             }
             case NetChannelType::UnreliableSequenced:
             {
@@ -164,9 +166,10 @@ namespace sw
         return channel == NetChannelType::ReliableOrdered ? kMaxReliableMessageSize : kMaxSingleMessageSize;
     }
 
-    bool NetConnection::queueReliable( const uint8* pData, int32 size )
+    bool NetConnection::queueReliable( NetChannelType channel, const uint8* pData, int32 size )
     {
         // 조각 하나가 신뢰 id 하나다 — 재전송 · 확인도 조각마다. 창이 메시지 전체를 받을 수 없으면 조각 하나도 넣지 않는다.
+        // 신뢰 순서 없음은 조각나지 않는다(`getMaxMessageSize` 가 이미 1 KB 로 막았다). 조각은 잇달아 id 를 받는다 — 사이에 다른 메시지가 끼지 않는다.
         const int32 fragmentCount = MathUtil::max( 1, ( size + kMaxSingleMessageSize - 1 ) / kMaxSingleMessageSize );
         if ( getPendingReliableCount() + fragmentCount > kReliableWindow - 1 )
             return false; // 상대가 확인하지 않는다 — 막힘(게임이 보내는 속도를 줄인다)
@@ -178,6 +181,7 @@ namespace sw
             pMessage->_buffer.assign( pData + offset, pData + offset + length );
             pMessage->_lastSentTime = -1.0;
             pMessage->_bMore        = fragment + 1 < fragmentCount ? SW_TRUE : SW_FALSE;
+            pMessage->_channel      = channel;
             ++_nextReliableSendId;
         }
         return true;
@@ -272,7 +276,7 @@ namespace sw
                     continue;
                 if ( pSent->_reliableCount >= kMaxReliablePerPacket )
                     break;
-                if ( writeMessage( NetChannelType::ReliableOrdered, messageId, pMessage->_buffer, pMessage->_bMore != SW_FALSE ) == false )
+                if ( writeMessage( pMessage->_channel, messageId, pMessage->_buffer, pMessage->_bMore != SW_FALSE ) == false )
                     break;
                 if ( pMessage->_lastSentTime >= 0.0 )
                     ++_stats._resentMessageCount;
@@ -350,8 +354,8 @@ namespace sw
         {
             ParsedMessage message;
             message._channel = static_cast<NetChannelType>( reader.readBits( NetConnectionInternal::kChannelBits ) );
-            if ( message._channel == NetChannelType::Count )
-                return false;
+            if ( message._channel >= NetChannelType::Count )
+                return false; // 채널 칸이 넷을 모두 쓰면 닿지 않지만, 채널이 늘어도 깨진 값을 거르게 둔다
             message._id      = message._channel != NetChannelType::Unreliable ? static_cast<uint16>( reader.readBits( 16 ) ) : static_cast<uint16>( 0 );
             message._bMore   = message._channel == NetChannelType::ReliableOrdered && reader.readBool() ? SW_TRUE : SW_FALSE;
             const int32 size = static_cast<int32>( reader.readBits( kMessageSizeBits ) );
@@ -392,6 +396,19 @@ namespace sw
                         pIncoming->_buffer = std::move( message._buffer );
                         pIncoming->_bMore  = message._bMore;
                     }
+                    break;
+                }
+                case NetChannelType::ReliableUnordered:
+                {
+                    // 받는 대로 건넨다 — 앞 신뢰 메시지를 기다리지 않는다. 자리에는 "건넸다" 표만 남겨 순서 커서가 지나가고 늦게 온 중복을 거른다.
+                    const int32 ahead = NetSequence::computeDifference( message._id, _nextReliableReceiveId );
+                    if ( ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id ) )
+                        break;
+                    IncomingReliable* pIncoming = _incomingReliable.insert( message._id );
+                    if ( pIncoming == nullptr )
+                        break;
+                    pIncoming->_bDelivered = SW_TRUE;
+                    _arrIncoming[static_cast<int32>( NetChannelType::ReliableUnordered )].push_back( std::move( message._buffer ) );
                     break;
                 }
                 case NetChannelType::UnreliableSequenced:
@@ -439,6 +456,17 @@ namespace sw
 
     void NetConnection::deliverReliable( IncomingReliable& incoming )
     {
+        if ( incoming._bDelivered != SW_FALSE )
+        {
+            // 순서 없음 — 받을 때 이미 건넸다, 커서만 지나간다. 순서 메시지의 조각 사이에 끼었으면 상대가 규약을 어겼다(보내는 쪽은 조각을 잇달아 둔다).
+            if ( _listReliableAssembly.empty() == false && _bDiscardingAssembly == SW_FALSE )
+            {
+                SW_LOG_ERROR( "NetConnection: an unordered reliable message sits between the fragments of an ordered one - the peer breaks the protocol, dropping the ordered message" );
+                _listReliableAssembly.clear();
+                _bDiscardingAssembly = SW_TRUE;
+            }
+            return;
+        }
         deque<vector<uint8>>& listIncoming = _arrIncoming[static_cast<int32>( NetChannelType::ReliableOrdered )];
         const bool            bLast        = incoming._bMore == SW_FALSE;
         // 조각 하나짜리(대부분) — 모으지 않고 그대로 건넨다.

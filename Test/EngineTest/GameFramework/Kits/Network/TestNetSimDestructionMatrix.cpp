@@ -39,3 +39,21 @@ SW_TEST_CASE( NetSimDestructionMatrixTest, HeavyLossDuplicateReorderLinkConverge
     expectConverged( result, 0.4f );
     SW_EXPECT_EQUAL( 0u, result._hashMismatchCount );
 }
+
+/**
+ * @brief [NetSimDestructionMatrixTest] 250 ms · 손실 15 % · 중복 · 순서 바뀜에서 사건 하나를 빼먹은 클라이언트도 스냅숏으로 바로잡힌다 — 사건은 순서 없음 채널이라
+ *        청한 스냅숏보다 뒤 사건이 먼저 올 수 있고, 클라이언트는 스냅숏을 기다리는 동안 사건을 쌓아 두었다 스냅숏 뒤에 번호로 잇는다
+ */
+SW_TEST_CASE( NetSimDestructionMatrixTest, HeavyLossRepairsASkippedEvent )
+{
+    SceneDocument document;
+    SW_ASSERT_TRUE( loadShowcase( document ) );
+    ScenarioOptions options;
+    options._conditions         = makeConditions( 0.25, 0.0, 0.15f, 0.05f, 0.05f );
+    options._skipEventClient    = 0;
+    const ScenarioResult result = runShowcase( document, options );
+    logResult( "250ms/15%/dup/reorder + dropped event", result );
+    expectConverged( result, 0.4f );
+    SW_EXPECT_TRUE( result._hashMismatchCount >= 1 );
+    SW_EXPECT_TRUE_MSG( 0 < result._desyncRecoverTicks, "the dropped event is repaired by a snapshot" );
+}

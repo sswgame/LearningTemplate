@@ -252,6 +252,7 @@ namespace test
         int32           _lastServerChangeTick{ -1 };
         int32           _convergedTick{ -1 }; ///< 그 뒤 모든 클라이언트 해시가 서버와 같아진 틱(끝까지 유지)
         int32           _maxEventLagTicks{ 0 };
+        float32         _meanEventLagTicks{ 0.0f };   ///< 사건마다 모든 클라이언트가 적용하기까지(틱)의 평균 — 늦게 들어온 클라이언트는 빼고
         float32         _minRenderLagTicks{ 1.0e9f }; ///< 클라이언트가 덩어리를 그리는 틱이 서버 틱보다 가장 덜 뒤처졌을 때(틱)
         int32           _lateJoinMatchTicks{ -1 };
         int32           _desyncRecoverTicks{ -1 };
@@ -315,6 +316,8 @@ namespace test
             }
         }
 
+        uint64                    eventLagSum   = 0;
+        uint32                    eventLagCount = 0;
         vector<FractureGroupPose> listPose;
         uint64                    windowStartBytes = 0;
         // 서버 물리가 언제 가라앉는지는 구성마다 다르다(리눅스 Shipping 은 벽 사건이 480 틱 뒤까지 온다) — 창이 끝나도 모두 같아질 때까지 상한 안에서 더 돈다.
@@ -408,6 +411,8 @@ namespace test
                 }
                 if ( bEveryone )
                 {
+                    eventLagSum += static_cast<uint64>( tick - listCountTick[entry - 1] );
+                    ++eventLagCount;
                     listCountTick.erase( listCountTick.begin() + static_cast<std::ptrdiff_t>( entry - 1 ) );
                     listCountObject.erase( listCountObject.begin() + static_cast<std::ptrdiff_t>( entry - 1 ) );
                     listCountIndex.erase( listCountIndex.begin() + static_cast<std::ptrdiff_t>( entry - 1 ) );
@@ -481,16 +486,17 @@ namespace test
         result._poseMessageCount             = getServerSession( harness )._replication.getStats()._poseMessageCount;
         for ( const FractureComponent* pFracture : server._listFracture )
             result._serverEventCount += pFracture->getState().getEventCount();
-        result._bValid = true;
+        result._meanEventLagTicks = eventLagCount > 0 ? static_cast<float32>( eventLagSum ) / static_cast<float32>( eventLagCount ) : 0.0f;
+        result._bValid            = true;
         return result;
     }
 
     inline void logResult( [[maybe_unused]] const utf8* pName, [[maybe_unused]] const ScenarioResult& result ) // 로그만 — Shipping 에서는 빈 함수
     {
-        SW_LOG_INFO( "[NetSimDestruction] %#: events %#, last server change tick %#, converge %# ticks after it, max event lag %# ticks, chunk error max %# m p99 %# m (%# samples), render lag min %# ticks, "
+        SW_LOG_INFO( "[NetSimDestruction] %#: events %#, last server change tick %#, converge %# ticks after it, max event lag %# ticks mean %# ticks, chunk error max %# m p99 %# m (%# samples), render lag min %# ticks, "
                      "rest error %# m, chunks %# debris %# violations %#, server up %# B/s (peak %# B/s), client down %# B/s, destruction payload %# B/s, pose messages %#, "
                      "mismatch %# snapshots %# late-join %# ticks desync-recover %# ticks settle %# ticks",
-                     pName, result._serverEventCount, result._lastServerChangeTick, result._convergedTick >= 0 ? result._convergedTick - result._lastServerChangeTick : -1, result._maxEventLagTicks,
+                     pName, result._serverEventCount, result._lastServerChangeTick, result._convergedTick >= 0 ? result._convergedTick - result._lastServerChangeTick : -1, result._maxEventLagTicks, result._meanEventLagTicks,
                      computePercentile( result._listChunkError, 1.0f ), computePercentile( result._listChunkError, 0.99f ), result._listChunkError.size(), result._minRenderLagTicks,
                      result._maxRestError,
                      result._chunkCount, result._debrisCount, result._debrisViolationCount, result._serverUploadBytesPerSecond, result._peakServerUploadBytesPerSecond, result._clientDownloadBytesPerSecond,

@@ -158,7 +158,7 @@ namespace sw
         }
         /** @brief 연결된 모두에게 보냅니다(@p exceptId 는 빼고). 보낸 수입니다. */
         int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptId = -1 );
-        /** @brief 받은 메시지 하나를 꺼냅니다 — 연결 순, 채널은 신뢰 → 순서 → 비신뢰 순. */
+        /** @brief 받은 메시지 하나를 꺼냅니다 — 연결 순, 채널은 신뢰 순서 → 신뢰 순서 없음 → 순서만 → 비신뢰 순(채널 값 순). */
         [[nodiscard]] bool receiveMessage( int32& outConnectionId, NetChannelType& outChannel, vector<uint8>& outBuffer );
         void               disconnect( int32 connectionId );
         void               disconnectAll();

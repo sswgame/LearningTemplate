@@ -1546,3 +1546,58 @@ SW_TEST_CASE( NetworkTest, KitTickBudgetFollowsTheConnectionCap )
     SW_EXPECT_EQUAL( 1000, NetSendBudget::computeTickBudget( 1000, 20000, 0.0 ) );
     SW_EXPECT_EQUAL( 600, NetSendBudget::computeTickBudget( 600, 100000, 1.0 / 60.0 ) ); // MMO 기본 · 60 Hz — 몫 833
 }
+
+/**
+ * @brief [NetworkTest] 신뢰 · 순서 없음 메시지는 앞 신뢰 메시지를 잃어도 기다리지 않고 받는 대로 건네지고, 다시 와도 두 번 건네지지 않는다. 신뢰 순서는 여전히 순서대로다
+ * @details 두 채널은 신뢰 id · 창을 같이 쓴다 — 순서 없음 자리에는 "건넸다" 표만 남아 순서 커서가 지나간다. 순서 없음은 조각나지 않는다(1 KB 까지).
+ */
+SW_TEST_CASE( NetworkTest, ReliableUnorderedSkipsTheHeadOfLineButStaysReliable )
+{
+    NetConnection sender;
+    NetConnection receiver;
+    const auto    writeOne = [&sender]( NetChannelType channel, int32 value, float64 time ) -> vector<uint8>
+    {
+        const vector<uint8> message = makeMessage( value );
+        SW_EXPECT_TRUE( sender.sendMessage( channel, message.data(), static_cast<int32>( message.size() ) ) );
+        BitWriter packet;
+        sender.writePacket( time, packet, 300 );
+        return vector<uint8>( packet.getBytes().data(), packet.getBytes().data() + packet.getByteCount() );
+    };
+    const auto deliver = [&receiver]( const vector<uint8>& listPacket, float64 time ) -> bool
+    {
+        BitReader reader( listPacket.data(), static_cast<int32>( listPacket.size() ) );
+        return receiver.readPacket( time, reader );
+    };
+    const auto drain = [&receiver]( NetChannelType channel ) -> vector<int32>
+    {
+        vector<int32> listValue;
+        vector<uint8> buffer;
+        while ( receiver.receiveMessage( channel, buffer ) )
+            listValue.push_back( readMessageValue( buffer ) );
+        return listValue;
+    };
+
+    // 패킷마다 메시지 하나 — 순서 1 · 없음 2 · 순서 3 · 없음 4. 첫 패킷(순서 1)을 잃고, 나머지는 뒤바뀌어 온다.
+    (void)writeOne( NetChannelType::ReliableOrdered, 1, 0.00 );
+    const vector<uint8> packetA = writeOne( NetChannelType::ReliableUnordered, 2, 0.01 );
+    const vector<uint8> packetB = writeOne( NetChannelType::ReliableOrdered, 3, 0.02 );
+    const vector<uint8> packetC = writeOne( NetChannelType::ReliableUnordered, 4, 0.03 );
+    SW_ASSERT_TRUE( deliver( packetC, 0.05 ) );
+    SW_ASSERT_TRUE( deliver( packetA, 0.06 ) );
+    SW_ASSERT_TRUE( deliver( packetB, 0.07 ) );
+    SW_EXPECT_TRUE( drain( NetChannelType::ReliableUnordered ) == ( vector<int32>{ 4, 2 } ) ); // 받는 대로 — 순서 1 을 기다리지 않는다
+    SW_EXPECT_TRUE( drain( NetChannelType::ReliableOrdered ).empty() );                        // 순서 3 은 잃은 1 을 기다린다
+
+    // 확인이 보내는 쪽에 가지 않았다 — 재전송 간격(0.1 초)이 지나 넷이 모두 다시 간다. 순서는 1, 3 으로 이어지고 없음 2 · 4 는 다시 건네지지 않는다.
+    BitWriter resend;
+    sender.writePacket( 0.5, resend, 300 );
+    BitReader resendReader( resend.getBytes().data(), resend.getByteCount() );
+    SW_ASSERT_TRUE( receiver.readPacket( 0.55, resendReader ) );
+    SW_EXPECT_TRUE( drain( NetChannelType::ReliableOrdered ) == ( vector<int32>{ 1, 3 } ) );
+    SW_EXPECT_TRUE( drain( NetChannelType::ReliableUnordered ).empty() );
+
+    // 순서 없음은 조각나지 않는다.
+    SW_TEST_DEFENSIVE_SCOPE( "an unordered reliable message over one fragment is refused with an error" );
+    const vector<uint8> tooLarge( static_cast<size_t>( NetConnection::kMaxSingleMessageSize + 1 ), 0 );
+    SW_EXPECT_FALSE( sender.sendMessage( NetChannelType::ReliableUnordered, tooLarge.data(), static_cast<int32>( tooLarge.size() ) ) );
+}

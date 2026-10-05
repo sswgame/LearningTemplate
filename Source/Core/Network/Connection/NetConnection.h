@@ -1,6 +1,6 @@
 /**
  * @file NetConnection.h
- * @brief 한 상대와의 신뢰성 계층 — 패킷 시퀀스 · 확인(ack + 32 비트 묶음), 채널별 메시지(신뢰 순서 · 순서만 · 비신뢰), 재전송, RTT · 손실률 · 대역폭 통계입니다.
+ * @brief 한 상대와의 신뢰성 계층 — 패킷 시퀀스 · 확인(ack + 32 비트 묶음), 채널별 메시지(신뢰 순서 · 신뢰 순서 없음 · 순서만 · 비신뢰), 재전송, RTT · 손실률 · 대역폭 통계입니다.
  * @details 주소 · 핸드셰이크 · 타임아웃은 `NetHost` 가 맡고 여기는 "연결된 뒤 한 패킷의 몸" 만 씁니다(Gaffer "Reliability and Congestion Avoidance over UDP").
  *          패킷마다 그 패킷에 실은 신뢰 메시지 id 를 기억해 두었다가, 패킷이 확인되면 메시지도 확인된 것으로 봅니다. 확인되지 않은 신뢰 메시지는 RTT + 50 ms
  *          (최소 0.1 초)가 지나면 다음 패킷에 다시 싣습니다. 그보다 먼저, 뒤에 보낸 패킷이 `kFastResendGap` 개 넘게 확인됐는데 확인이 없는 패킷은 잃은 것으로
@@ -9,6 +9,7 @@
  *          조각 단위), 조각 머리 1 비트가 "다음 id 가 같은 메시지" 다. 받는 쪽은 순서대로 모아 마지막 조각에서 한 메시지로 건넨다(언리얼 partial bunch).
  *          다른 채널은 조각나지 않아 `kMaxSingleMessageSize` 까지다. 상한을 넘는 보내기는 오류 로그와 함께 false 다(창이 찬 것은 오류가 아니다 — 로그 없이 false).
  *          조각은 패킷을 거의 채우므로, 앞 패킷이 순서만 · 비신뢰를 남겼으면 다음 패킷은 그쪽부터 싣는다(번갈아 — 큰 전송이 스냅샷을 굶기지 않는다).
+ *          신뢰 순서 없음은 신뢰 순서와 id · 창 · 재전송을 같이 쓴다 — 받는 쪽은 받는 대로 건네고 그 자리에 "건넸다" 표만 남겨, 순서 커서는 표를 지나가고 늦게 온 중복은 표가 거른다.
  *          패킷 끝의 1 비트가 "확인을 바로 돌려 달라" 입니다. 메시지를 실었거나 확인할 것이 없던(유지) 패킷만 켜고, 확인만 담은 답은 끈다 — 그래야 한가할 때
  *          두 쪽이 확인에 확인으로 끝없이 주고받지 않고 `NetHostSettings::_keepAliveInterval` 마다만 오간다. RTT · 손실률도 이 비트를 켠 패킷으로만 잰다.
  */
@@ -114,10 +115,11 @@ namespace sw
         /** @brief 보낸 신뢰 메시지 하나 — 큰 메시지면 그 조각 하나입니다. */
         struct OutgoingReliable
         {
-            vector<uint8> _buffer{};
-            float64       _lastSentTime{ -1.0 };
-            uint8         _bResendNow{ SW_FALSE }; ///< 실린 패킷을 잃었다 — 재전송 간격을 기다리지 않는다
-            uint8         _bMore{ SW_FALSE };      ///< 다음 id 가 같은 메시지의 이어지는 조각이다
+            vector<uint8>  _buffer{};
+            float64        _lastSentTime{ -1.0 };
+            uint8          _bResendNow{ SW_FALSE };                     ///< 실린 패킷을 잃었다 — 재전송 간격을 기다리지 않는다
+            uint8          _bMore{ SW_FALSE };                          ///< 다음 id 가 같은 메시지의 이어지는 조각이다(신뢰 순서만)
+            NetChannelType _channel{ NetChannelType::ReliableOrdered }; ///< 신뢰 순서 · 신뢰 순서 없음 — id · 창은 하나다
         };
 
         /** @brief 받은 신뢰 메시지 하나(조각 하나) — 순서가 오면 `deliverReliable` 이 건네거나 모은다. */
@@ -125,6 +127,7 @@ namespace sw
         {
             vector<uint8> _buffer{};
             uint8         _bMore{ SW_FALSE };
+            uint8         _bDelivered{ SW_FALSE }; ///< 신뢰 순서 없음 — 받을 때 이미 건넸다(순서 커서가 지나가기만 한다)
         };
 
         /** @brief 순서만 채널의 흐름 하나(메시지 첫 바이트 = 종류)에서 마지막으로 건넨 메시지 번호입니다. */
@@ -148,8 +151,8 @@ namespace sw
         void    updateStats( float64 time );
         uint32  computeAckBits( uint16 ack ) const;
         float64 computeResendDelay() const;
-        /** @brief 신뢰 순서 메시지를 조각으로 나눠 보낼 줄에 넣습니다. 창이 조각 모두를 받을 수 없으면 아무것도 넣지 않고 false 입니다. */
-        bool queueReliable( const uint8* pData, int32 size );
+        /** @brief 신뢰 메시지를 보낼 줄에 넣습니다(신뢰 순서는 조각으로 나눠). 창이 조각 모두를 받을 수 없으면 아무것도 넣지 않고 false 입니다. */
+        bool queueReliable( NetChannelType channel, const uint8* pData, int32 size );
         /** @brief 순서가 온 신뢰 조각 하나를 건네거나(조각 하나짜리) 모읍니다(마지막 조각에서 한 메시지로). */
         void deliverReliable( IncomingReliable& incoming );
 

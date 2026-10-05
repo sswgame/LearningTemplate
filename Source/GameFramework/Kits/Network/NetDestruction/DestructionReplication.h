@@ -1,12 +1,13 @@
 /**
  * @file DestructionReplication.h
- * @brief 파괴 네트워킹 — 권위 서버가 만든 피해 사건을 신뢰 · 순서 채널로 보내고(서버 틱 · 사건 번호를 붙여), 덩어리 자세를 낮은 빈도로 보내 클라이언트가
+ * @brief 파괴 네트워킹 — 권위 서버가 만든 피해 사건을 신뢰 · 순서 없음 채널로 보내고(서버 틱 · 사건 번호를 붙여 — 받는 쪽이 번호로 줄 세운다), 덩어리 자세를 낮은 빈도로 보내 클라이언트가
  *        보간하고, 늦은 참가 · 어긋남은 상태 스냅숏 하나로 맞춥니다. 키트 `GF_NetDestruction` — 자기 메시지 영역(`NetKitMessageRange::kDestruction`)을 쓴다.
  *        파괴를 쓰지 않는 게임은 링크하지 않고, 권위 방식(복제 서버 · 리슨 서버 · MMO)과 상관없이 `NetHost` 위에 얹는다.
  * @details 파괴의 설계(`Source/Engine/Destruction/README.md` 3 · 4 절)를 그대로 따릅니다.
  *          - **구조는 사건으로.** 같은 그래프 · 표 · 앵커에 같은 순서의 사건이면 같은 상태다(`DestructionState::computeStateHash`). 그래서 보내는 것은
  *            변환이 아니라 메시 공간 사건(`DestructionDamageEvent`, 실수는 비트 그대로)이고, 사건마다 번호(= 서버 상태의 사건 수)를 붙인다. 클라이언트는
- *            번호 순으로만 적용한다 — 앞 번호는 버리고(스냅숏이 이미 담았다), 뒤 번호는 기다린다.
+ *            번호 순으로만 적용한다 — 앞 번호는 버리고(스냅숏이 이미 담았다), 뒤 번호는 기다린다. 사건은 순서 없음 채널이라 앞 사건을 잃어도 뒤 사건이 기다리지 않고,
+ *            스냅숏(순서 채널)과도 앞뒤가 바뀐다 — 청한 스냅숏을 기다리는 동안에는 사건을 모두 쌓아 두었다 스냅숏 뒤에 번호로 잇는다.
  *          - **권한.** 부딪힘 사건은 서버 물리에서만 나온다 — 클라이언트 컴포넌트는 `setAuthority( false )`.
  *          - **크기로 나눈다(`DestructionProfile` 표의 `keepCollisionVolume`).** 덩어리(이상): 서버가 자세를 `<Network poseRate>` 빈도로 보내고(비신뢰 — 받는 쪽이 틱으로 줄 세운다),
  *            클라이언트는 보간 지연만큼 과거를 그려 그 바디를 키네마틱으로 옮긴다. 멈추면 마지막 자세를 신뢰 채널로 한 번 확정한다(비트 그대로). 파편(미만):
@@ -43,7 +44,7 @@ namespace sw
     /** @brief 파괴 메시지 종류입니다. */
     struct NetDestructionMessage
     {
-        static constexpr uint8 kEvent           = NetKitMessageRange::kDestruction + 0; ///< 서버 → 사건 하나(신뢰 순서)
+        static constexpr uint8 kEvent           = NetKitMessageRange::kDestruction + 0; ///< 서버 → 사건 하나(신뢰 순서 없음 — 받는 쪽이 번호로 줄 세운다)
         static constexpr uint8 kSnapshot        = NetKitMessageRange::kDestruction + 1; ///< 서버 → 오브젝트 하나의 상태 스냅숏(신뢰 순서 — 64 KB 까지)
         static constexpr uint8 kPose            = NetKitMessageRange::kDestruction + 2; ///< 서버 → 덩어리 자세(움직이는 중은 비신뢰, 멈춤은 신뢰)
         static constexpr uint8 kHash            = NetKitMessageRange::kDestruction + 3; ///< 서버 → (사건 수, 상태 해시)(신뢰 순서)
@@ -231,7 +232,7 @@ namespace sw
 
         struct Entry
         {
-            vector<BufferedEvent> _listFutureEvent{}; ///< 번호가 앞서 온 사건(스냅숏을 기다린다)
+            vector<BufferedEvent> _listFutureEvent{}; ///< 번호가 앞서 온 사건 · 스냅숏을 기다리는 동안 온 사건 — 번호로 잇는다
             vector<HashCheck>     _listHashCheck{};
             vector<ChunkTrack>    _listChunk{};
             ComponentHandle       _component{};
@@ -244,7 +245,9 @@ namespace sw
         FractureComponentBase* resolve( const Entry& entry ) const;
         Entry*                 findEntry( uint32 netId );
         void                   handleEvent( Entry& entry, const BufferedEvent& received );
-        static void            applyToComponent( FractureComponentBase& component, const BufferedEvent& buffered );
+        /** @brief 앞선 사건을 쌓아 둡니다(같은 번호는 한 번만). */
+        static void bufferEvent( Entry& entry, const BufferedEvent& received );
+        static void applyToComponent( FractureComponentBase& component, const BufferedEvent& buffered );
         /** @brief 스냅숏 하나를 적용합니다. 깨졌으면 false 입니다. */
         [[nodiscard]] bool handleSnapshot( Entry& entry, BitReader& reader );
         void               handlePose( BitReader& reader, bool bRest );
