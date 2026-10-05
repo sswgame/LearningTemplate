@@ -346,7 +346,6 @@ namespace sw
                 }
                 case Mode::FinishedOnce:
                 case Mode::End:
-                default:
                 {
                     _mode = Mode::End;
                     return;

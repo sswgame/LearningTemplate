@@ -437,7 +437,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, NameOnlyParentReferenceIsNeverTheObjectI
 
     // 2) 씬 파일(파일 id)로 쓴다 — 남겨 둔 런타임 id 는 파일 id 공간이 아니라 비우고 이름만 남는다.
     const ObjectSavedIdMap mapSavedId{
-        { pKept->getObjectId(), 2 }
+        { pKept->getObjectId(), uint64{ 2 } }
     };
     ObjectSaveOptions options{};
     options._pSavedIdMap  = &mapSavedId;
