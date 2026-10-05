@@ -440,10 +440,6 @@ cd build/Ninja-Debug/Bin
   ② 시스템 호출이 지배적이면 일괄 I/O(리눅스 `recvmmsg`/`sendmmsg` → UDP GSO/GRO, Windows RIO — 완료 통지는 IOCP) ③ 한 스레드가 차면 `SO_REUSEPORT` 수신 분산 + 연결 샤딩(`NetHost` 잠금 분할).
 - **순서**: 보안의 UDP 부분은 N13~N21 뒤(연결 수립 · 패킷 머리가 정리된 위에), 스트림 전송 → 프레이밍/요청-응답 → TLS → 로그인 → 채팅 · 거래. 압축은 측정 벤치가 서면 어느 때나.
 
-- **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는
-  표준 API 라 줄이려면 Win32 · POSIX 순회로 바꾼다. 상주량은 1 KB 미만이라 전역 operator new 교체는 하지 않는다(사용자 결정).
-  누적은 `-gv_memoryReport=1` 의 "(outside the sw allocator, cumulative since start)" 줄(Debug)과 `FileUtilBenchTest` 로 잰다.
-
 - **`runParallel` 합류 대기가 남의 태스크(IO 등)를 도와 실행할 수 있다.** 프로파일에 보이면 IO 레인을 따로 둔다(조건부).
 - **TaskManager 스테이지 디버그 이름** — 프로파일러에 연결할 때 넣는다(지금은 연결돼 있지 않다).
 - **`fixed_string` 의 해시가 FNV(`computeHash64`)다.** 느리지만 프로파일에 안 보여 두었다(낮음).
@@ -1495,6 +1491,7 @@ cd build/Ninja-Debug/Bin
   한글 경로가 깨진다. 실행 파일마다 `WindowsProcess.manifest`(UTF-8 코드페이지 · longPath · PerMonitorV2)를 `sw_embedProcessManifest` 로 박는다(새 exe 에 빠뜨리면 한글 경로를 못 읽는다).
   `getFileTimestamp` 는 초 단위, 셰이더 소스 캐시는 (크기, 시각) `getFileStamp`. 워처가 알림을 잃으면 빈 `_filename` 의 `Modified`(리스캔 신호) — `expandRescanEvents`.
   `std::filesystem` 은 `Core/File/Std/FileUtilStdFileSystem.cpp` 한 TU 에만 있다 — `path` 는 넓은 문자로 만들고(좁은 문자 생성자는 잘못된 UTF-8 에서 던진다), 오류는 `error_code` 판으로만.
+  `std::filesystem` 을 직접 쓰지 않는다 — 게이트 `CheckStdFilesystemIsolation` · 순회는 `forEachDirectoryEntry`, 시험의 파일 시각 조작은 `setFileWriteTime`.
 - **문자열** — `formatstring` 은 `string_view` 를 길이로 쓴다(`.data()` 로 풀어 넘기면 뷰 끝을 지나 읽는다 — `CheckLogViewArgument`). `%#` 은 순수 자리표, 모르는 `%…` 는 리터럴, 인자 수 불일치는
   Debug 실행 단언(정본은 `FormatString` 클래스 주석). `setlocale` 이 없다(C 로캘) — 잘못된 UTF-8 은 `escapeInvalidUtf8`. `fixed_string` 은 넘치면 글자 경계에서 자르고 경고한다.
   `StringUtil` 은 비-ASCII 바이트를 `uint8` 로 넓힌다(utf16 에 같은 치환 금지), `stristr` 은 바이트 묶음 "최적화" 금지. Win32 변환은 `utf8ToUtf16`(`ImmGetCompositionStringW` 반환은 바이트 수).
@@ -1629,6 +1626,11 @@ cd build/Ninja-Debug/Bin
 - **히치**: 펜스 시그널을 Present 앞으로 · 백버퍼 수 · 인라인/즉시 제출 — 분포가 그대로였다. 어댑터 강제 선택은 A/B 로 악화.
 - **틱 · 오브젝트**: 인라인 `TickItem`(GameObject 192 → 232 B), 적용 단계를 틱에 합치기(칸당 +124 B), 회전 사원수 캐시(+28 B), 축별 sin/cos 건너뛰기(18.0 → 18.7 ns), 쓰기 정렬의
   `id % 버킷`(150 → 450 us) · 키를 건에 넣기(64 → 80 B), 오브젝트 id 표 2 단 디렉터리(1 억 스폰이면 800 MB) · 늘 견주기(5.6 → 6.4 ns), 엔티티당 XML 재파싱 구조 변경(2 ms 뿐).
+- **파일 시스템을 플랫폼 API 로 다시 짜기**(2026-10-06, Release 스크래치 · 2920 파일): 존재 확인 p50 10.9 vs 10.3 us · 순회 6.5~9.4 vs 7.6~10.0 ms — 시간은 같고
+  할당만 준다(존재 확인 1 → 0, 순회 항목당 3.1 → 1.0). 그 할당은 기동 때만이고 상주가 아니다. `Core/File/Std` 로 감싼 뒤(Debug `FileUtilBenchTest`): 존재 확인 호출당 sw 할당자 밖 2 · sw 4
+  (구분자 정규화 · UTF-16 변환 문자열), 순회 파일당 밖 2.3 · sw 6.5 — 감싸기 전 밖 1 · 순회 3.1(스크래치). 줄이려면 `toPath` 를 스택 버퍼 변환으로(sw 0).
+  다시 재는 법: App Debug `-gv_memoryReport=1` 의 "cumulative since start" 줄 · `FileUtilBenchTest`. `std::filesystem` 은 `Core/File/Std` 뒤에 감췄으니 한 경로가 프로파일에 보이면 그 함수만
+  `File/Windows` · `File/Linux` 로 옮긴다(기준: Release 기동이나 프레임에서 1 ms 이상 · 프레임마다 부르는 경로).
 - **태스크**: 워커 스핀 늘리기(2 → 50 us 면 SMT 형제를 빼앗아 GT 889 → 1305 us), hot pool(이득 없음), 스레드별 목록 머리 패딩(잡음), 공유 풀 위 GT 병렬화를 레인 없이(RT 170 → 261 us),
   워커 깨우기 사슬, `TaskArgs` 인라인 4 칸(기록 122 → 196 us), `PagedArray` 통합의 첫 측정(번갈아 재니 차이 없음 — 측정 착시).
 - **도구 · 빌드**: 린트를 파일마다 프로세스로(5.3 → 9.4 s — 덩어리 프로세스는 7.5 → 2.25 s), 커밋 훅 게이트 병렬화(이득 ~1 s), 짝 헤더 메모이즈(차이 없음), `formatstring` 비템플릿 부분

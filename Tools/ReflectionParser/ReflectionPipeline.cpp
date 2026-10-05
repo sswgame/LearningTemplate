@@ -205,10 +205,9 @@ namespace sw
                 vector<StampDependency> listDependency;
                 // 출력 폴더는 받은 꼴과 실제 경로 둘로 거른다 — clang 은 include 한 파일을 실제 경로로 주는데, 받은 경로는 8.3 짧은 이름
                 // (`RUNNER~1`)이거나 링크일 수 있다(Windows CI 의 TEMP 가 그렇다).
-                std::error_code    errorCode;
-                const auto         realOutputDir = std::filesystem::canonical( std::filesystem::path( outputDir.c_str() ), errorCode );
-                InclusionCollector collector{ translationUnit, FileUtil::normalizeSeparators( outputDir ),
-                                              errorCode ? string() : FileUtil::normalizeSeparators( string( realOutputDir.generic_string().c_str() ) ),
+                string             realOutputDir;
+                const bool         bHasRealOutputDir = FileUtil::makeCanonicalPath( outputDir, realOutputDir );
+                InclusionCollector collector{ translationUnit, FileUtil::normalizeSeparators( outputDir ), bHasRealOutputDir ? realOutputDir : string(),
                                               runStartTime, &listDependency };
                 for ( string* pPrefix : { &collector._outputDirPrefix, &collector._outputDirRealPrefix } )
                 {

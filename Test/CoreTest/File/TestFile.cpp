@@ -8,7 +8,6 @@
 #include "TestFramework/TestFramework.h"
 
 #include <atomic>
-#include <filesystem>
 #include <thread>
 
 namespace
@@ -504,11 +503,10 @@ SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "locked" ) );
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( filePath ) );
 
-    std::filesystem::permissions( std::filesystem::path( filePath.c_str() ), std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write,
-                                  std::filesystem::perm_options::remove );
+    SW_ASSERT_TRUE( sw::FileUtil::setWritable( filePath, false ) );
     SW_EXPECT_TRUE( sw::FileUtil::isReadOnlyFile( filePath ) );
 
-    std::filesystem::permissions( std::filesystem::path( filePath.c_str() ), std::filesystem::perms::owner_write, std::filesystem::perm_options::add );
+    SW_ASSERT_TRUE( sw::FileUtil::setWritable( filePath, true ) );
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( filePath ) );
 
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( root + "/missing.txt" ) );

@@ -253,17 +253,13 @@ namespace sw
         if ( addWatchDirectory( directoryPath ) == false )
             return false;
 
-        namespace fs = std::filesystem;
-        std::error_code ec;
-        uint32          failedCount{ 0 };
-        for ( fs::recursive_directory_iterator it( directoryPath, fs::directory_options::skip_permission_denied, ec ), end;
-              it != end && ec == std::error_code{}; it.increment( ec ) )
+        uint32 failedCount{ 0 };
+        (void)FileUtil::forEachDirectoryEntry( directoryPath, true, [this, &failedCount]( const DirectoryEntry& entry )
         {
-            if ( it->is_directory( ec ) == false )
-                continue;
-            if ( addWatchDirectory( it->path().string() ) == false )
+            if ( entry._bDirectory && addWatchDirectory( entry._path ) == false )
                 ++failedCount;
-        }
+            return true;
+        } );
 
         // 실패는 보통 디렉터리마다 따로 나는 것이 아니라 한도(max_user_watches)를 넘긴 순간부터 전부 난다.
         // 디렉터리마다 로그를 찍으면 묻히므로 한 줄로 모으고, 흔한 원인을 함께 적는다.

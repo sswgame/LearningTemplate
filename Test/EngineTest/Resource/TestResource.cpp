@@ -664,12 +664,12 @@ SW_TEST_CASE( ResourceTest, DeletingAnAssetKeepsItsMetaUntilTheAssetIsGone )
         std::ifstream lockedAsset( assetPath.c_str() );
         SW_ASSERT_TRUE( lockedAsset.is_open() );
 #else
-        std::filesystem::permissions( dir.c_str(), std::filesystem::perms::owner_write, std::filesystem::perm_options::remove );
+        SW_ASSERT_TRUE( sw::FileUtil::setWritable( dir, false ) );
 #endif
         test::ScopedDefensiveTestLog expected( "the asset itself cannot be removed" );
         SW_EXPECT_FALSE( sw::AssetDatabase::deleteAssetFile( assetPath ) );
 #if defined( SW_PLATFORM_WINDOWS ) == false
-        std::filesystem::permissions( dir.c_str(), std::filesystem::perms::owner_write, std::filesystem::perm_options::add );
+        SW_ASSERT_TRUE( sw::FileUtil::setWritable( dir, true ) );
 #endif
     }
     SW_EXPECT_TRUE( sw::FileUtil::fileExists( assetPath ) );

@@ -17,13 +17,13 @@
 
 #include "TestFramework/TestFramework.h"
 
-#include <chrono>
-#include <filesystem>
-
 // ReflectionParser — 런타임이 아니라 **도구** 를 본다. 애노테이션·주석 파싱과 경로 판별.
 
 namespace
 {
+    /** @brief 파일 시각 한 시간(`FileUtil` 의 100 ns 눈금)입니다. */
+    constexpr int64 kHourTicks = 3600 * sw::FileUtil::kFileTimeTicksPerSecond;
+
     /**
      * @brief 이 빌드의 `ReflectionParser` 실행 파일 경로. 못 찾으면 빈 문자열.
      * @details **`Bin` 옆이 아니라 `BuildTools` 에 있다.** `Bin` 만 보면 검사가 늘 스스로 건너뛰어
@@ -930,16 +930,17 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
     // 시간을 셋으로 벌린다: 입력(2시간 전) < 산출물(1시간 전) < 파서(지금).
     // **입력을 같이 과거로 보내는 것이 핵심이다** — 안 그러면 "입력이 더 새롭다" 는 이유로 다시
     // 만들어져, 이 검사가 파서 시간을 보는지 아닌지를 구분하지 못한다.
-    const std::filesystem::file_time_type parserTime = std::filesystem::last_write_time( parserExe.c_str() );
-    std::filesystem::last_write_time( headerPath.c_str(), parserTime - std::chrono::hours( 2 ) );
-    std::filesystem::last_write_time( genPath.c_str(), parserTime - std::chrono::hours( 1 ) );
+    int64 parserTime{ 0 };
+    SW_ASSERT_TRUE( sw::FileUtil::getFileWriteTime( parserExe, parserTime ) );
+    SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( headerPath, parserTime - 2 * kHourTicks ) );
+    SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( genPath, parserTime - kHourTicks ) );
     const sw::string genHeaderPath = sw::FileUtil::joinPath( outGenDir, "StalenessProbeSample.gen.h" );
     if ( sw::FileUtil::fileExists( genHeaderPath ) )
-        std::filesystem::last_write_time( genHeaderPath.c_str(), parserTime - std::chrono::hours( 1 ) );
+        SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( genHeaderPath, parserTime - kHourTicks ) );
     // 최신 판정의 기준은 산출물이 아니라 스탬프(마지막으로 성공한 생성)다 — 같이 과거로 보낸다.
     const sw::string stampPath = genPath + ".stamp";
     SW_ASSERT_TRUE( sw::FileUtil::fileExists( stampPath ) );
-    std::filesystem::last_write_time( stampPath.c_str(), parserTime - std::chrono::hours( 1 ) );
+    SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( stampPath, parserTime - kHourTicks ) );
 
     SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
 
@@ -1292,8 +1293,7 @@ SW_TEST_CASE( ReflectionParserTest, EditSavedWhileParsingIsNotHiddenByTheStamp )
     };
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, makeHeader( "" ) ) );
     // 처음 읽을 때의 헤더 시각을 두 시간 전으로 — 아래의 "편집" 시각을 그 뒤 · 스탬프 앞에 둘 자리를 만든다.
-    const std::filesystem::file_time_type now = std::filesystem::file_time_type::clock::now();
-    std::filesystem::last_write_time( headerPath.c_str(), now - std::chrono::hours( 2 ) );
+    SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( headerPath, sw::FileUtil::getCurrentFileWriteTime() - 2 * kHourTicks ) );
 
     const sw::string   command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
     sw::ProcessOptions options;
@@ -1306,7 +1306,9 @@ SW_TEST_CASE( ReflectionParserTest, EditSavedWhileParsingIsNotHiddenByTheStamp )
 
     // 파싱 도중에 저장한 편집: 내용이 바뀌고 시각은 처음 읽은 때보다 뒤, 스탬프보다는 앞.
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, makeHeader( "        PROPERTY()\n        int32 _addedWhileParsing;\n" ) ) );
-    std::filesystem::last_write_time( headerPath.c_str(), std::filesystem::last_write_time( stampPath.c_str() ) - std::chrono::seconds( 1 ) );
+    int64 stampTime{ 0 };
+    SW_ASSERT_TRUE( sw::FileUtil::getFileWriteTime( stampPath, stampTime ) );
+    SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( headerPath, stampTime - sw::FileUtil::kFileTimeTicksPerSecond ) );
 
     SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
     sw::string generated;
@@ -1315,9 +1317,12 @@ SW_TEST_CASE( ReflectionParserTest, EditSavedWhileParsingIsNotHiddenByTheStamp )
                         "파싱하는 동안 저장한 편집을 스탬프가 가렸습니다 — 그 헤더를 다시 저장할 때까지 생성 코드에 들어가지 않습니다" );
 
     // 그대로 다시 돌리면 최신이다(다시 파싱하지 않는다 — 산출물을 건드리지 않는다).
-    const std::filesystem::file_time_type stampBefore = std::filesystem::last_write_time( stampPath.c_str() );
+    int64 stampBefore{ 0 };
+    SW_ASSERT_TRUE( sw::FileUtil::getFileWriteTime( stampPath, stampBefore ) );
     SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
-    SW_EXPECT_TRUE( std::filesystem::last_write_time( stampPath.c_str() ) == stampBefore );
+    int64 stampAfter{ 0 };
+    SW_ASSERT_TRUE( sw::FileUtil::getFileWriteTime( stampPath, stampAfter ) );
+    SW_EXPECT_EQUAL( stampBefore, stampAfter );
 }
 
 /**
@@ -1384,7 +1389,9 @@ SW_TEST_CASE( ReflectionParserTest, IncludedHeaderChangeRegeneratesAndIsInTheDep
 
     // 반사되지 않은 기반에만 순수 가상 함수를 더한다(반사된 헤더는 그대로). 시각은 한 시간 뒤로 — 같은 초 안의 변화도 확실히.
     SW_ASSERT_TRUE( writeBase( "        virtual void mustImplement() = 0;\n" ) );
-    std::filesystem::last_write_time( basePath.c_str(), std::filesystem::last_write_time( basePath.c_str() ) + std::chrono::hours( 1 ) );
+    int64 baseTime{ 0 };
+    SW_ASSERT_TRUE( sw::FileUtil::getFileWriteTime( basePath, baseTime ) );
+    SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( basePath, baseTime + kHourTicks ) );
     SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( genPath, generated ) );
     SW_EXPECT_TRUE_MSG( generated.find( "_bAbstract = 1" ) != sw::string::npos,

@@ -5,6 +5,8 @@
 
 #if !defined( SW_SHIPPING )
 
+    #include "Core/File/FileUtil.h"
+
     #include "Engine/Common/EngineServices.h"
     #include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -12,9 +14,6 @@
     #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
     #include "TestFramework/TestFramework.h"
-
-    #include <chrono>
-    #include <filesystem>
 
 // 셰이더 핫 리로드 — 디스크의 .hlsli 를 고치고 바이트코드가 실제로 다시 쿠킹되는지 본다.
 //
@@ -147,8 +146,9 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     // 실행 속도에 따라 흔들리지 않도록 수정 시각을 명시적으로 밀어 둔다.
     // (실사용에서는 저장하고 단축키를 누르기까지 1초 이상 걸리므로 문제가 되지 않는다.)
     {
-        const std::filesystem::file_time_type written = std::filesystem::last_write_time( includeAbs.c_str() );
-        std::filesystem::last_write_time( includeAbs.c_str(), written + std::chrono::seconds( 5 ) );
+        int64 written{ 0 };
+        SW_ASSERT_TRUE( sw::FileUtil::getFileWriteTime( includeAbs, written ) );
+        SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( includeAbs, written + 5 * sw::FileUtil::kFileTimeTicksPerSecond ) );
     }
 
     // 공유 헤더 해시가 캐시돼 있으면 캐시 키가 그대로라 **옛 바이트코드가 돌아온다**.
