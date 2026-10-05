@@ -93,6 +93,7 @@ set(listLinuxSource
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxAsyncFileIoBackend.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileDialog.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileWatcher.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/Transport/Linux/EpollStreamTransport.cpp"
 )
 
 # 고르지 않은 OS 의 것은 소스 검사 게이트에 "이 구성이 짓지 않는다" 로 적는다(`sw_declareUnbuiltSources`).
