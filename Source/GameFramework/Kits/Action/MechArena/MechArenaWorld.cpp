@@ -6,6 +6,7 @@
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Kits/Action/MechArena/MechArenaSnapshot.h"
+#include "GameFramework/Match/TeamAttitude.h"
 #include "GameFramework/Utility/GameRandom.h"
 #include "GameFramework/Utility/RayMath.h"
 
@@ -546,7 +547,7 @@ namespace sw
         for ( int32 other = 0; other < getPilotCount(); ++other )
         {
             const MechPilot& candidate = _listPilot[static_cast<size_t>( other )];
-            if ( candidate._team == pilot._team || isTargetable( other ) == false )
+            if ( isEnemyTarget( pilot._team, other ) == false )
                 continue;
             const float32 reach    = slot._range + pMech->_radius + candidate.getMech()->_radius;
             const float32 distance = float3::getDistance( computeCenter( pilot ), computeCenter( candidate ) );
@@ -599,7 +600,7 @@ namespace sw
                 projectile._direction     = Internal::rotateToward( projectile._direction, desired, MathUtil::toRadian( projectile._homing ) * deltaTime );
             }
             const float32 stepLength = MathUtil::min( projectile._speed * deltaTime, projectile._rangeLeft );
-            const int32   ownerTeam  = isValidPilot( projectile._owner ) ? _listPilot[static_cast<size_t>( projectile._owner )]._team : -1;
+            const int32   ownerTeam  = isValidPilot( projectile._owner ) ? _listPilot[static_cast<size_t>( projectile._owner )]._team : TeamAttitudeUtil::kNoTeam;
             const GameRay ray{ projectile._position, projectile._direction };
             int32         hitPilot    = -1;
             float32       hitDistance = stepLength;
@@ -607,7 +608,7 @@ namespace sw
             {
                 const MechPilot& candidate = _listPilot[static_cast<size_t>( other )];
                 float32          distance  = 0.0f;
-                if ( candidate._team == ownerTeam || isTargetable( other ) == false )
+                if ( isEnemyTarget( ownerTeam, other ) == false )
                     continue;
                 if ( RayMath::intersectSphere( ray, computeCenter( candidate ), candidate.getMech()->_radius, hitDistance, distance ) && distance <= hitDistance )
                 {
@@ -717,7 +718,7 @@ namespace sw
             {
                 const MechPilot& candidate = _listPilot[static_cast<size_t>( other )];
                 float32          distance  = 0.0f;
-                if ( candidate._team == pilot._team || isTargetable( other ) == false )
+                if ( isEnemyTarget( pilot._team, other ) == false )
                     continue;
                 if ( RayMath::intersectSphere( ray, computeCenter( candidate ), candidate.getMech()->_radius, hitDistance, distance ) && distance <= hitDistance )
                 {
@@ -795,7 +796,7 @@ namespace sw
             for ( Countdown& remaining : target._listSkillRemaining )
                 remaining.clear();
             ++target._deaths;
-            if ( bAttacker && _listPilot[static_cast<size_t>( attacker )]._team != target._team )
+            if ( bAttacker && TeamAttitudeUtil::isHostile( _listPilot[static_cast<size_t>( attacker )]._team, target._team ) )
                 ++_listPilot[static_cast<size_t>( attacker )]._kills;
             pushEvent( MechArenaEvent::Kind::Destroyed, victim, attacker, 0.0f, pVictimMech->_id );
             _match.reportKill( victimParticipant, attackerParticipant );
@@ -960,7 +961,7 @@ namespace sw
         for ( int32 other = 0; other < getPilotCount(); ++other )
         {
             const MechPilot& candidate = _listPilot[static_cast<size_t>( other )];
-            if ( candidate._team == team || isTargetable( other ) == false )
+            if ( isEnemyTarget( team, other ) == false )
                 continue;
             LockOnCandidate entry;
             entry._position = computeCenter( candidate );
@@ -1015,6 +1016,11 @@ namespace sw
             return false;
         const MechPilotState state = _listPilot[static_cast<size_t>( pilot )]._state;
         return state == MechPilotState::Active || state == MechPilotState::Down;
+    }
+
+    bool MechArenaWorld::isEnemyTarget( int32 team, int32 other ) const
+    {
+        return isTargetable( other ) && TeamAttitudeUtil::isHostile( team, _listPilot[static_cast<size_t>( other )]._team );
     }
 
     float3 MechArenaWorld::computeCenter( const MechPilot& pilot ) const

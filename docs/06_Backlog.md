@@ -383,8 +383,7 @@ cd build/Ninja-Debug/Bin
   `LagCompensationHistory::raycastAt(float)` 는 있다) · B6(선택) Win32 입력 스레드 — 먼저 `GetMessageTime` 해상도를 재고, 에디터 · 콘솔이 먼저 소비하는 판정을 우회하지 않게.
   롤백 · 락스텝 키트에는 넣지 않는다(프레임 단위 결정성이 계약).
 
-- **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).** ① 팀 · 적대 판정(21 곳, 팀 enum 셋의 값이 달라 상태 바이트에
-  실림) — 상태 형식이 바뀌니 시험부터 고정. ② `SpatialHashGrid2D`(RTS · MMO ·
+- **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).** ② `SpatialHashGrid2D`(RTS · MMO ·
   BR · Mech — 질의 모양이 달라 이득부터 볼 것).
   ④ 키트 안 평행 구현: Overworld `TileMap` 이 Engine 타일맵과 따로 산다 · TurnBattle 과 MonsterCollector 가 같은 장르. ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
 
@@ -1511,6 +1510,11 @@ cd build/Ninja-Debug/Bin
   상태 바이트. 알림은 내지 않고 결과(`RoundSeriesOutcome` · `RoundSeriesTick`)를 돌려준다 — 키트가 제 이벤트로 낸다. 롤백 상태에 실을 때는 **맨 뒤**에 둔다:
   `readState` 가 맞을 때만 바꾸므로 마지막에 읽으면 키트의 `loadState` 가 통째로 원자적이다. 카트 카운트다운은 라운드가 아니라 한 경기의 출발 대기라 옮기지 않았다
   (그랑프리처럼 여러 경기를 순위 점수로 묶을 때 이것을 쓴다).
+- **팀 적대 판정은 `Match/TeamAttitude.h` 하나** — 팀은 판이 매긴 번호(int32, `TeamAttitudeUtil::kNoTeam` = −1 = 누구와도 중립), 적 · 아군은
+  `TeamAttitudeUtil::isHostile` · `isFriendly`(언리얼 `ETeamAttitude` 자리, `Combat` 이 아니라 `Match` 인 것은 `MatchState`(층 1)가 쓰기 때문). 키트 팀 enum
+  (`ActionTeam` · `ConquestTeam` · `SrpgTeam`)은 상태 바이트에 실리지 않고 역할 이름 · XML 이름 · 페이즈 차례로 쓰여 그대로 둔다. 강타입 `TeamId`(uint8)는
+  팀 번호를 배열 첨자로 쓰는 곳이 많고(약 220 줄 · 18 파일) RTS 상태 바이트(int32)를 바꿔서 하지 않았다. 동맹 표 · 팀킬 허용이 생기면 판정기를
+  `TeamAttitudeUtil` 에 붙이고 `SrpgBattlefield::isHostile` · `ConquestWorldInternal::isHostile` 도 그쪽으로 옮긴다.
 - **키트 소속은 의존 관계로 판별되지 않는다**(전부 Engine 만 include). 다른 장르도 쓰는 것(HP 바 · 데미지 숫자 · 중력)은 `UI/` · `World/`.
   기반 폴더는 층(DAG)이고 `CheckGameFrameworkLayers` 가 지킨다 — 형식으로 묶은 폴더(옛 `Components/`)는 의존 방향을 숨겨서 두지 않는다. 리플렉션 대상 헤더는 소스와 같은 재귀 규칙으로
   모은다(다르면 새 폴더의 `REFLECT` 타입이 컴파일되고 등록만 안 된다).

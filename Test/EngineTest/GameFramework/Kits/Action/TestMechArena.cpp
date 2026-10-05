@@ -455,3 +455,42 @@ SW_TEST_CASE( MechArenaTest, StateBytesRoundTripAndReplayDeterministically )
     BitReader         shortReader( firstRun.getBytes().data(), firstRun.getByteCount() / 2 );
     SW_EXPECT_FALSE( MechArenaSnapshotCodec::read( shortReader, broken ) );
 }
+
+SW_TEST_CASE( MechArenaTest, ShotsLockOnAndProjectilesSkipTeammates )
+{
+    MechFixture fixture;
+    SW_ASSERT_TRUE( fixture.load() );
+
+    // 광선 — 록온은 같은 편을 고르지 않고, 쏜 광선은 사이에 선 같은 편을 지나 적에게 맞는다.
+    MechArenaWorld world;
+    fixture.initialize( world );
+    const int32 shooter  = world.addPilot( makePilot( { "striker" }, 0, float3{} ) );
+    const int32 teammate = world.addPilot( makePilot( { "heavy" }, 0, float3{ 0.0f, 0.0f, 10.0f } ) );
+    const int32 enemy    = world.addPilot( makePilot( { "heavy" }, 1, float3{ 0.0f, 0.0f, 20.0f } ) );
+    world.start();
+    tapButton( world, shooter, []( MechInput& input )
+    { input._bLockOn = SW_TRUE; } );
+    SW_EXPECT_TRUE( world.findPilot( shooter )->_lockOn.getTarget() == static_cast<uint64>( enemy + 1 ) );
+    tapButton( world, shooter, []( MechInput& input )
+    { input._bFire = SW_TRUE; } );
+    SW_EXPECT_NEAR_EQUAL( world.findPilot( teammate )->_vitality.getHealth(), 1000.0f, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( world.findPilot( enemy )->_vitality.getHealth(), 950.0f, 0.01f );
+
+    // 탄 — 곧은 바주카도 같은 편을 지나간다.
+    MechArenaWorld projectileWorld;
+    fixture.initialize( projectileWorld );
+    const int32 sniper = projectileWorld.addPilot( makePilot( { "sniper" }, 0, float3{} ) );
+    const int32 escort = projectileWorld.addPilot( makePilot( { "heavy" }, 0, float3{ 0.0f, 0.0f, 10.0f } ) );
+    const int32 victim = projectileWorld.addPilot( makePilot( { "heavy" }, 1, float3{ 0.0f, 0.0f, 20.0f } ) );
+    projectileWorld.start();
+    tapButton( projectileWorld, sniper, []( MechInput& input )
+    { input._bLockOn = SW_TRUE; } );
+    tapButton( projectileWorld, sniper, []( MechInput& input )
+    { input._bSpecial = SW_TRUE; } );
+    runSteps( projectileWorld, 60 );
+    vector<MechArenaEvent> listEvent;
+    projectileWorld.drainEvents( listEvent );
+    SW_EXPECT_EQUAL( countEvents( listEvent, MechArenaEvent::Kind::Hit, escort ), 0 );
+    SW_EXPECT_EQUAL( countEvents( listEvent, MechArenaEvent::Kind::Hit, victim ), 1 );
+    SW_EXPECT_NEAR_EQUAL( projectileWorld.findPilot( escort )->_vitality.getHealth(), 1000.0f, 0.01f );
+}

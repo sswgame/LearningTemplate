@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Match/TeamAttitude.h"
 #include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
@@ -1156,7 +1157,7 @@ namespace sw
     {
         const RtsPlayer* pA = findPlayer( playerA );
         const RtsPlayer* pB = findPlayer( playerB );
-        return pA != nullptr && pB != nullptr && pA->_team != pB->_team;
+        return pA != nullptr && pB != nullptr && TeamAttitudeUtil::isHostile( pA->_team, pB->_team );
     }
 
     bool RtsWorld::canAttack( const RtsUnit& attacker, const RtsUnit& target ) const
@@ -1335,7 +1336,7 @@ namespace sw
         const RtsPlayer* pPlayer = findPlayer( player );
         if ( pUnit == nullptr || pPlayer == nullptr )
             return false;
-        if ( pUnit->_owner != kNoOwner && _listPlayer[static_cast<size_t>( pUnit->_owner )]._team == pPlayer->_team )
+        if ( pUnit->_owner != kNoOwner && TeamAttitudeUtil::isFriendly( _listPlayer[static_cast<size_t>( pUnit->_owner )]._team, pPlayer->_team ) )
             return true;
         if ( pUnit->isMobile() )
             return getVisibility( player, _grid.computeCell( pUnit->_position ) ) == RtsVisibility::Visible;

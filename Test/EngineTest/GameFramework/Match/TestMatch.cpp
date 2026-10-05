@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "GameFramework/Match/MatchState.h"
+#include "GameFramework/Match/TeamAttitude.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -136,4 +137,50 @@ SW_TEST_CASE( MatchTest, CostGaugesEliminationPlacementsAndObjectiveEnds )
     vector<MatchEvent> listEvent;
     asymmetric.drainEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.back()._kind == MatchEvent::Kind::MatchEnded );
+}
+
+SW_TEST_CASE( MatchTest, TeamKillScoresNothingAndTeammateDamageIsNoAssist )
+{
+    MatchSettings settings; // 몸풀기 0 — start 하면 바로 진행
+    MatchState    match;
+    match.initialize( settings );
+    const int32 red   = match.addTeam( hashed_string( "Red" ) );
+    const int32 blue  = match.addTeam( hashed_string( "Blue" ) );
+    const int32 redA  = match.addParticipant( red, hashed_string( "Striker" ) );
+    const int32 redB  = match.addParticipant( red, hashed_string( "Striker" ) );
+    const int32 blueA = match.addParticipant( blue, hashed_string( "Striker" ) );
+    const int32 blueB = match.addParticipant( blue, hashed_string( "Striker" ) );
+    match.start();
+    SW_ASSERT_TRUE( match.getPhase() == MatchPhase::InProgress );
+
+    // 죽은 쪽과 같은 팀이 준 피해는 도움이 아니다 — 적이 준 피해만 도움이다.
+    match.reportDamage( blueB, blueA, 10.0f );
+    match.reportDamage( redB, blueA, 10.0f );
+    match.reportKill( blueA, redA );
+    SW_EXPECT_EQUAL( 1, match.findParticipant( redA )->_kills );
+    SW_EXPECT_EQUAL( 1, match.findTeam( red )->_score );
+    SW_EXPECT_EQUAL( 1, match.findParticipant( redB )->_assists );
+    SW_EXPECT_EQUAL( 0, match.findParticipant( blueB )->_assists );
+
+    // 같은 팀을 죽이면 처치 · 점수가 없다(죽음은 센다).
+    match.reportKill( redB, redA );
+    SW_EXPECT_EQUAL( 1, match.findParticipant( redA )->_kills );
+    SW_EXPECT_EQUAL( 1, match.findTeam( red )->_score );
+    SW_EXPECT_EQUAL( 1, match.findParticipant( redB )->_deaths );
+}
+
+SW_TEST_CASE( MatchTest, TeamAttitudeIsFriendlyHostileOrNeutralWithoutTeam )
+{
+    static_assert( TeamAttitudeUtil::isHostile( 0, 1 ), "TeamAttitudeUtil must stay usable in constant expressions" );
+    SW_EXPECT_TRUE( TeamAttitudeUtil::computeAttitude( 0, 0 ) == TeamAttitude::Friendly );
+    SW_EXPECT_TRUE( TeamAttitudeUtil::computeAttitude( 0, 1 ) == TeamAttitude::Hostile );
+    SW_EXPECT_TRUE( TeamAttitudeUtil::computeAttitude( TeamAttitudeUtil::kNoTeam, 0 ) == TeamAttitude::Neutral );
+    SW_EXPECT_TRUE( TeamAttitudeUtil::computeAttitude( 1, TeamAttitudeUtil::kNoTeam ) == TeamAttitude::Neutral );
+    SW_EXPECT_TRUE( TeamAttitudeUtil::computeAttitude( TeamAttitudeUtil::kNoTeam, TeamAttitudeUtil::kNoTeam ) == TeamAttitude::Neutral );
+    SW_EXPECT_TRUE( TeamAttitudeUtil::isHostile( 2, 3 ) );
+    SW_EXPECT_FALSE( TeamAttitudeUtil::isHostile( 2, 2 ) );
+    SW_EXPECT_FALSE( TeamAttitudeUtil::isHostile( TeamAttitudeUtil::kNoTeam, 2 ) );
+    SW_EXPECT_TRUE( TeamAttitudeUtil::isFriendly( 2, 2 ) );
+    SW_EXPECT_FALSE( TeamAttitudeUtil::isFriendly( 2, 3 ) );
+    SW_EXPECT_FALSE( TeamAttitudeUtil::isFriendly( TeamAttitudeUtil::kNoTeam, TeamAttitudeUtil::kNoTeam ) );
 }

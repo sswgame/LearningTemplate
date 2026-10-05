@@ -276,7 +276,9 @@ namespace sw
         int32  countActiveSkills( const MechPilot& pilot ) const;
         int32  findSlot( const MechPilot& pilot, MechWeaponKind kind ) const;
         bool   isTargetable( int32 pilot ) const;
-        void   pushEvent( MechArenaEvent::Kind kind, int32 pilot, int32 other, float32 value, const hashed_string& id );
+        /** @brief @p other 가 @p team 의 적이고 지금 맞힐 수 있는가입니다(근접 · 광선 · 탄 · 록온 후보가 같은 판정을 씁니다). */
+        bool isEnemyTarget( int32 team, int32 other ) const;
+        void pushEvent( MechArenaEvent::Kind kind, int32 pilot, int32 other, float32 value, const hashed_string& id );
 
         MechArenaSettings           _settings;
         vector<MechPilot>           _listPilot;

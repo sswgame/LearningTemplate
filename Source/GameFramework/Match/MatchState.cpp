@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Match/TeamAttitude.h"
+
 namespace sw
 {
     MatchState::MatchState()
@@ -134,7 +136,7 @@ namespace sw
         ++dead._deaths;
         pushEvent( MatchEvent::Kind::Killed, victim, killer, dead._team, 0 );
 
-        const bool bEnemyKill = isValidParticipant( killer ) && _listParticipant[static_cast<size_t>( killer )]._team != dead._team;
+        const bool bEnemyKill = isValidParticipant( killer ) && TeamAttitudeUtil::isHostile( _listParticipant[static_cast<size_t>( killer )]._team, dead._team );
         if ( bEnemyKill )
         {
             MatchParticipant& slayer = _listParticipant[static_cast<size_t>( killer )];
@@ -147,7 +149,7 @@ namespace sw
             if ( record._attacker == killer || _elapsed - record._time > _settings._assistWindow )
                 continue;
             MatchParticipant& helper = _listParticipant[static_cast<size_t>( record._attacker )];
-            if ( helper._team == dead._team )
+            if ( TeamAttitudeUtil::isHostile( helper._team, dead._team ) == false )
                 continue;
             ++helper._assists;
             pushEvent( MatchEvent::Kind::Assisted, record._attacker, victim, helper._team, 0 );

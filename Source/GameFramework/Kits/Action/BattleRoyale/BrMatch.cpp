@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"
+#include "GameFramework/Match/TeamAttitude.h"
 
 namespace sw
 {
@@ -109,7 +110,8 @@ namespace sw
         BrPlayer& target = _listPlayer[static_cast<size_t>( victim )];
         if ( target.isDead() )
             return 0.0f;
-        if ( isValidPlayer( attacker ) && attacker != victim && _listPlayer[static_cast<size_t>( attacker )]._team == target._team )
+        const bool bFriendlyFire = isValidPlayer( attacker ) && attacker != victim && TeamAttitudeUtil::isFriendly( _listPlayer[static_cast<size_t>( attacker )]._team, target._team );
+        if ( bFriendlyFire )
             return 0.0f;
 
         float32 bodyDamage = damage;
@@ -138,7 +140,7 @@ namespace sw
             return false;
         BrPlayer&  helper = _listPlayer[static_cast<size_t>( reviver )];
         BrPlayer&  downed = _listPlayer[static_cast<size_t>( target )];
-        const bool bValid = helper._team == downed._team && helper.isAlive() && downed.isDowned() && helper._revivingTarget < 0;
+        const bool bValid = TeamAttitudeUtil::isFriendly( helper._team, downed._team ) && helper.isAlive() && downed.isDowned() && helper._revivingTarget < 0;
         if ( bValid == false || downed._revive.join( static_cast<uint32>( reviver ) ) == false )
             return false;
         helper._revivingTarget = target;
@@ -268,7 +270,7 @@ namespace sw
                 other._revivingTarget = -1;
         }
         target._revive.reset();
-        if ( isValidPlayer( killer ) && _listPlayer[static_cast<size_t>( killer )]._team != target._team )
+        if ( isValidPlayer( killer ) && TeamAttitudeUtil::isHostile( _listPlayer[static_cast<size_t>( killer )]._team, target._team ) )
             ++_listPlayer[static_cast<size_t>( killer )]._kills;
         _matchState.reportKill( player, killer );
         const int32 remaining = countRemainingPlayers();

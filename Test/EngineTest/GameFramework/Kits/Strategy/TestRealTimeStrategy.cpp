@@ -354,6 +354,10 @@ SW_TEST_CASE( RealTimeStrategyTest, FogOfWarTracksVisibleAndExploredCellsPerTeam
     SW_EXPECT_TRUE( scene._world.getVisibility( red, int2{ 5, 5 } ) == RtsVisibility::Unexplored );
     SW_EXPECT_TRUE( scene._world.isVisibleTo( blue, marineId ) );
     SW_EXPECT_TRUE( scene._world.isVisibleTo( blue, enemyId ) == false );
+    SW_EXPECT_TRUE( scene._world.isVisibleTo( ally, marineId ) ); // 같은 팀 유닛은 늘 보인다
+    SW_EXPECT_FALSE( scene._world.areEnemies( blue, ally ) );
+    SW_EXPECT_TRUE( scene._world.areEnemies( blue, red ) );
+    SW_EXPECT_FALSE( scene._world.areEnemies( blue, RtsWorld::kNoOwner ) ); // 주인 없음(자원)은 적이 아니다
 
     SW_EXPECT_TRUE( scene._world.issueMove( marineId, float3{ 34.5f, 0.0f, 34.5f } ) == RtsCommandResult::Ok );
     scene.run( 20.0f );

@@ -77,7 +77,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   외형 규칙 · 프리셋(`CharacterAppearance`), 순수 해석기(`AppearanceResolver` — 결과 해시가 캐시 키), 외형 상태(`CharacterAppearanceState`),
   공유 코드 · 플레이어 프리셋 세이브 · 네트워크 동기화(`AppearanceSelection`), 그리고 그것을 오브젝트로 조립하는 외형 컴포넌트(`CharacterAppearanceComponent` —
   몸 메시 · 소켓 부착 부품 · 염색, 소켓 이름 공간 `AppearanceSocketRig`). 2D 스프라이트와 3D 메시가 같은 길이다. 자세한 것은 `Appearance/README.md`
-- **Match**: 판 규칙(`MatchState` — 팀 · 역할 · 점수 · 도움 · 부활 대기 · 코스트 게이지 · 탈락 순위 · 시간 제한 · 목표로 끝내기), 라운드 묶음(`RoundSeries` — 순위 점수(비면 1 위 1 점 = 선승) · 목표 점수 · 동점 규칙(무승부 · 서든 데스) · 정수 걸음 라운드 시간 · 라운드 사이 대기 · 상태 바이트, 알림 대신 결과를 돌려준다)
+- **Match**: 판 규칙(`MatchState` — 팀 · 역할 · 점수 · 도움 · 부활 대기 · 코스트 게이지 · 탈락 순위 · 시간 제한 · 목표로 끝내기), 라운드 묶음(`RoundSeries` — 순위 점수(비면 1 위 1 점 = 선승) · 목표 점수 · 동점 규칙(무승부 · 서든 데스) · 정수 걸음 라운드 시간 · 라운드 사이 대기 · 상태 바이트, 알림 대신 결과를 돌려준다), 팀 태도(`TeamAttitudeUtil` — 같은 팀 아군 · 다른 팀 적 · 팀 없음 중립, 언리얼 `ETeamAttitude`)
 - **Movement**: 2D 플랫포머 몸(`PlatformerMotor2D` · `PlatformTileMap` — 점프 높이 · 짧은 점프 · 코요테 · 미리 누르기 · 벽 점프 · 대시 · 다단 점프 · 한쪽 발판 · 사다리),
   아케이드 차량(`ArcadeVehicleMotor` — 속도에 따른 조향 · 드리프트 미니터보 단계 · 니트로 · 오프로드 · 점프, 지면은 `IVehicleGround`),
   보는 쪽 기준 이동 방향(`LocomotionMath` — 서기 · 앞 · 뒤 · 옆걸음 · 공중, 애니메이터 이동 상태의 입력)
