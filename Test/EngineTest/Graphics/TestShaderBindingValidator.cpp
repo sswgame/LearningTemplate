@@ -633,6 +633,10 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCpuStruct 
  */
 SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
 {
+#if defined( SW_SHIPPING )
+    // 배포본은 팩에서 읽고, 팩에는 정적으로 링크한 백엔드(`SW_SHIPPING_RHI_BACKEND`) 하나의 셰이더만 든다 — 네 백엔드 대조는 개발 빌드가 한다.
+    SW_TEST_SKIP( "Shipping packs hold the cooked shaders of one backend only" );
+#endif
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     constexpr uint32             kFormatCount            = 4;
