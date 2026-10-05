@@ -110,8 +110,9 @@
 - `PlatformFileUtil` 은 이름이 다른 원시 연산만 담는다 — `openFile`(Windows 는 UTF-16 경로 · 공유 열기 `_wfsopen`) ·
   `seekTo`(`_fseeki64`↔`fseeko`) · `tellPosition`(`_ftelli64`↔`ftello`) · `replaceFile`(원자적 바꿔치기) · `getOpenFileSizeAndRewind`.
   같은 `#if` 를 `FileUtil` · `Logger` · `ResourcePackReader` 에 다시 쓰지 않는다.
-- 표준 라이브러리가 이미 플랫폼을 덮어 주면 **분기를 만들지 않는다.** 파일 크기·시각·복사·삭제는
-  `std::filesystem` 이 한다(`FileUtil::getFileSize`).
+- 표준 라이브러리가 이미 플랫폼을 덮어 주면 **분기를 만들지 않는다.** 파일 존재 · 크기 · 시각 · 순회 · 복사 · 삭제는 `std::filesystem` 이 하되
+  `File/Std/FileUtilStdFileSystem.cpp` 한 TU 안에서만 쓴다. 엔진은 `FileUtil` 로만 본다 — 한 함수를 플랫폼 API 로
+  바꿀 때는 그 정의만 `File/Windows` · `File/Linux` 로 옮긴다(측정에서 이길 때만).
 - 플랫폼 · 아키텍처 · 컴파일러는 아래 "타깃 매크로" 의 `SW_*` 매크로로만 묻는다.
 
 ## 타깃 매크로

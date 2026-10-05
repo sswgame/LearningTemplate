@@ -515,3 +515,86 @@ SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( root ) );
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
 }
+
+/**
+ * @brief [FileTest] 잘못된 UTF-8 경로는 "없다" 로 답하고 예외를 던지지 않는다
+ * @details 경로는 씬 · 에셋 데이터에서 온다. Windows 에서 좁은 문자 경로를 `std::filesystem::path` 에 넘기면 ANSI 코드 페이지(UTF-8) 변환이 잘못된 바이트에서
+ *          `system_error` 를 던져, 깨진 데이터 한 줄이 존재 확인에서 프로세스를 내린다. 리눅스는 변환이 없어 원래 통과한다.
+ *          넓은 문자로 바꿀 때 잘못된 바이트는 U+FFFD 로 바뀌고 경고가 남는다(기대한 경고).
+ */
+SW_TEST_CASE( FileTest, InvalidUtf8PathIsAnsweredNotThrown )
+{
+    const sw::string root        = test::makeTempPath( "SwInvalidUtf8PathTest" );
+    const sw::string invalidPath = root + "/\xFF\xFE.txt";
+
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( invalidPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::directoryExists( invalidPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( invalidPath ) );
+    SW_EXPECT_EQUAL( 0ull, sw::FileUtil::getFileSize( invalidPath ) );
+    SW_EXPECT_EQUAL( 0ull, sw::FileUtil::getFileTimestamp( invalidPath ) );
+    int64 writeTicks{ 0 };
+    SW_EXPECT_FALSE( sw::FileUtil::getFileWriteTime( invalidPath, writeTicks ) );
+
+    sw::vector<sw::string> listFilePath;
+    SW_EXPECT_FALSE( sw::FileUtil::collectFiles( invalidPath, "", listFilePath, true ) );
+    SW_EXPECT_TRUE( listFilePath.empty() );
+}
+
+/**
+ * @brief [FileTest] 파일 시각은 100 ns 눈금으로 읽고 쓰며, 다시 읽으면 쓴 값이다
+ */
+SW_TEST_CASE( FileTest, FileWriteTimeRoundTrips )
+{
+    const sw::string filePath = test::makeTempPath( "SwWriteTimeTest" ) + "/stamp.txt";
+    SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "time" ) );
+
+    int64 written{ 0 };
+    SW_ASSERT_TRUE( sw::FileUtil::getFileWriteTime( filePath, written ) );
+    const int64 now = sw::FileUtil::getCurrentFileWriteTime();
+    SW_EXPECT_TRUE( written <= now + sw::FileUtil::kFileTimeTicksPerSecond ); // 같은 시계다
+
+    const int64 pastTicks = written - 3600 * sw::FileUtil::kFileTimeTicksPerSecond;
+    SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( filePath, pastTicks ) );
+    int64 readBack{ 0 };
+    SW_ASSERT_TRUE( sw::FileUtil::getFileWriteTime( filePath, readBack ) );
+    SW_EXPECT_EQUAL( pastTicks, readBack );
+    SW_EXPECT_EQUAL( static_cast<uint64>( pastTicks / sw::FileUtil::kFileTimeTicksPerSecond ), sw::FileUtil::getFileTimestamp( filePath ) );
+}
+
+/**
+ * @brief [FileTest] 순회 콜백은 루트로 시작하는 `/` 경로와 디렉터리 여부를 주고, false 를 돌려주면 멈춘다
+ */
+SW_TEST_CASE( FileTest, DirectoryVisitorReportsEntriesAndStops )
+{
+    const sw::string root = test::makeTempDirectory( "SwVisitorTest" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( root + "/a.txt", "a" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( root + "/sub" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( root + "/sub/b.txt", "b" ) );
+
+    uint32 fileCount{ 0 };
+    uint32 directoryCount{ 0 };
+    bool   bAllUnderRoot = true;
+    SW_EXPECT_TRUE( sw::FileUtil::forEachDirectoryEntry( root, true, [&]( const sw::DirectoryEntry& entry )
+    {
+        bAllUnderRoot = bAllUnderRoot && sw::FileUtil::startsWithPathComponent( entry._path, root ) && entry._path.find( '\\' ) == sw::string_view::npos;
+        if ( entry._bDirectory )
+            ++directoryCount;
+        else
+            ++fileCount;
+        return true;
+    } ) );
+    SW_EXPECT_EQUAL( 2u, fileCount );
+    SW_EXPECT_EQUAL( 1u, directoryCount );
+    SW_EXPECT_TRUE( bAllUnderRoot );
+
+    uint32 visitedBeforeStop{ 0 };
+    SW_EXPECT_TRUE( sw::FileUtil::forEachDirectoryEntry( root, true, [&visitedBeforeStop]( const sw::DirectoryEntry& )
+    {
+        ++visitedBeforeStop;
+        return false;
+    } ) );
+    SW_EXPECT_EQUAL( 1u, visitedBeforeStop );
+    SW_EXPECT_FALSE( sw::FileUtil::forEachDirectoryEntry( root + "/missing", true, []( const sw::DirectoryEntry& )
+    { return true; } ) );
+}

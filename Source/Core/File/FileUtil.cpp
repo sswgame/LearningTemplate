@@ -243,59 +243,6 @@ namespace sw
         constexpr size_t kMaxWindowsPathSize = 32768;
 #endif
 
-        /**
-         * @brief 디렉터리를 훑으며 항목마다 함수를 실행합니다. **예외를 던지지 않습니다.**
-         * @details `std::filesystem` 의 순회자는 `error_code` 를 받지 않으면 **예외를 던집니다.** 권한이 없는 폴더, 순회 도중
-         *          지워진 폴더, 윈도우의 보호된 정션이 그런 경우입니다. `collectFiles` · `collectFolders` 는 `bool` 로 실패를
-         *          알리기로 약속했으므로 예외가 호출부까지 뚫고 나가면 안 됩니다(`makeRelativePath` · `makeAbsolutePath` 도
-         *          `error_code` 를 받습니다).
-         *
-         *          파일/폴더 × 재귀/비재귀 네 경우가 모두 이것 하나를 씁니다.
-         */
-        template <typename Func>
-        void forEachDirectoryEntry( const std::filesystem::path& directoryPath, const bool bRecursive, Func&& func )
-        {
-            std::error_code ec;
-
-            if ( bRecursive )
-            {
-                // `skip_permission_denied` 는 하위 폴더에 들어갈 수 없을 때 멈추지 않고 건너뛰게 한다.
-                std::filesystem::recursive_directory_iterator iter{ directoryPath, std::filesystem::directory_options::skip_permission_denied, ec };
-                if ( ec )
-                    return;
-
-                const std::filesystem::recursive_directory_iterator last{};
-                while ( iter != last )
-                {
-                    func( *iter );
-                    iter.increment( ec );
-                    if ( ec )
-                        return;
-                }
-                return;
-            }
-
-            std::filesystem::directory_iterator iter{ directoryPath, std::filesystem::directory_options::skip_permission_denied, ec };
-            if ( ec )
-                return;
-
-            const std::filesystem::directory_iterator last{};
-            while ( iter != last )
-            {
-                func( *iter );
-                iter.increment( ec );
-                if ( ec )
-                    return;
-            }
-        }
-
-        /** @brief 항목이 디렉터리인지 확인합니다. 확인하다 예외를 던지지 않습니다. */
-        bool isDirectoryEntry( const std::filesystem::directory_entry& entry )
-        {
-            std::error_code ec;
-            const bool      bIsDirectory = entry.is_directory( ec );
-            return ec ? false : bIsDirectory;
-        }
     } // namespace
 
     void FileUtil::splitPath( string_view fullPath, string_view& outDirectoryPath, string_view& outFileName )
@@ -475,39 +422,6 @@ namespace sw
         return string{ stemView };
     }
 
-    bool FileUtil::makeRelativePath( string_view rootDir, string_view path, string& outResult )
-    {
-        if ( rootDir.empty() || path.empty() )
-            return false;
-
-        const std::filesystem::path filepath{ path };
-        if ( filepath.is_absolute() )
-        {
-            const std::filesystem::path rootpath{ rootDir };
-            std::error_code             ec;
-            const std::filesystem::path relative = std::filesystem::relative( filepath, rootpath, ec );
-            if ( ec.value() == 0 && relative.empty() == false )
-            {
-                outResult = string( relative.generic_string().c_str() );
-                return true;
-            }
-            return false;
-        }
-        return false;
-    }
-
-    bool FileUtil::makeAbsolutePath( string_view path, string& outResult )
-    {
-        std::error_code             ec;
-        const std::filesystem::path absolute = std::filesystem::absolute( path, ec );
-        if ( ec.value() == 0 && absolute.empty() == false )
-        {
-            outResult = string( absolute.generic_string().c_str() );
-            return true;
-        }
-        return false;
-    }
-
     bool FileUtil::isAbsolutePath( string_view path )
     {
         if ( path.empty() )
@@ -626,47 +540,6 @@ namespace sw
         return ensureDirectoryExists( getDirectoryPart( filePath ) );
     }
 
-    bool FileUtil::ensureDirectoryExists( string_view directoryPath )
-    {
-        if ( directoryPath.empty() || directoryExists( directoryPath ) )
-            return true;
-
-        const string    normalized = normalizeSeparators( directoryPath );
-        std::error_code ec;
-        std::filesystem::create_directories( normalized.c_str(), ec );
-        if ( ec || directoryExists( normalized ) == false )
-        {
-            SW_LOG_ERROR( "Could not create directory '%#': %#", normalized.c_str(), ec ? ec.message().c_str() : "a file is in the way" );
-            return false;
-        }
-        return true;
-    }
-
-    bool FileUtil::fileExists( string_view fileName )
-    {
-        return std::filesystem::exists( fileName );
-    }
-
-    bool FileUtil::isReadOnlyFile( string_view fileName )
-    {
-        std::error_code                    ec;
-        const std::filesystem::file_status status = std::filesystem::status( std::filesystem::path( fileName ), ec );
-        if ( ec || std::filesystem::is_regular_file( status ) == false )
-            return false;
-        return ( status.permissions() & std::filesystem::perms::owner_write ) == std::filesystem::perms::none;
-    }
-
-    bool FileUtil::directoryExists( string_view path )
-    {
-        return std::filesystem::exists( path ) && std::filesystem::is_directory( path );
-    }
-
-    string FileUtil::getCurrentPath()
-    {
-        const std::filesystem::path path = std::filesystem::current_path();
-        return string( path.generic_string().c_str() );
-    }
-
     string FileUtil::getExecutablePath()
     {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -692,43 +565,12 @@ namespace sw
             listPathBuffer.resize( listPathBuffer.size() * 2 );
         }
 #else
-        std::error_code ec;
-        auto            pathObj = std::filesystem::canonical( "/proc/self/exe", ec );
-        if ( ec.value() == 0 )
-            return string{ pathObj.generic_string().c_str() };
+        // `/proc/self/exe` 는 실행 파일을 가리키는 링크다 — 풀어 둔 실제 경로가 답이다.
+        string executablePath;
+        if ( makeCanonicalPath( "/proc/self/exe", executablePath ) )
+            return executablePath;
         return string{};
 #endif
-    }
-
-    uint64 FileUtil::getFileTimestamp( string_view fileName )
-    {
-        if ( fileExists( fileName ) == false )
-            return 0;
-
-        const string                          filePath = normalizeSeparators( fileName );
-        const std::filesystem::file_time_type tim      = std::filesystem::last_write_time( filePath.c_str() );
-        return std::chrono::duration_cast<std::chrono::duration<uint64>>( tim.time_since_epoch() ).count();
-    }
-
-    uint64 FileUtil::getCurrentFileTimestamp()
-    {
-        const std::filesystem::file_time_type now = std::filesystem::file_time_type::clock::now();
-        return std::chrono::duration_cast<std::chrono::duration<uint64>>( now.time_since_epoch() ).count();
-    }
-
-    uint64 FileUtil::getFileSize( string_view fileName )
-    {
-        if ( fileName.empty() )
-            return 0;
-
-        // 크기만 알면 되므로 파일을 열지 않고 바로 위 getFileTimestamp 와 같은 방식으로 묻는다. 핸들도 플랫폼 분기도 필요 없다.
-        const string    filePath = normalizeSeparators( fileName );
-        std::error_code errorCode;
-        const uintmax_t size = std::filesystem::file_size( filePath.c_str(), errorCode );
-        if ( errorCode.value() != 0 )
-            return 0;
-
-        return static_cast<uint64>( size );
     }
 
     bool FileUtil::getFileStamp( string_view fileName, FileStamp& outStamp )
@@ -737,7 +579,7 @@ namespace sw
             return false;
         const string filePath = normalizeSeparators( fileName );
 #if defined( SW_PLATFORM_WINDOWS )
-        // 크기와 시각을 한 번에 얻는다. `std::filesystem` 으로는 두 번 물어야 한다(`file_size` · `last_write_time`).
+        // 크기와 시각을 한 번에 얻는다(`getFileSize` · `getFileWriteTime` 두 번이 아니라).
         const wstring             widePath = StringUtil::utf8ToUtf16( filePath.c_str() );
         WIN32_FILE_ATTRIBUTE_DATA attribute{};
         if ( GetFileAttributesExW( widePath.c_str(), GetFileExInfoStandard, &attribute ) == FALSE )
@@ -748,58 +590,14 @@ namespace sw
         outStamp._writeTime = ( static_cast<uint64>( attribute.ftLastWriteTime.dwHighDateTime ) << 32 ) | attribute.ftLastWriteTime.dwLowDateTime;
         return true;
 #else
-        std::error_code errorCode;
-        const uintmax_t size = std::filesystem::file_size( filePath.c_str(), errorCode );
-        if ( errorCode.value() != 0 )
+        // 시스템 호출 하나 — Windows 갈래와 같은 "한 번의 조회". 디렉터리는 false(Windows 갈래와 같다).
+        struct stat fileStat{};
+        if ( ::stat( filePath.c_str(), &fileStat ) != 0 || S_ISREG( fileStat.st_mode ) == 0 )
             return false;
-        const std::filesystem::file_time_type writeTime = std::filesystem::last_write_time( filePath.c_str(), errorCode );
-        if ( errorCode.value() != 0 )
-            return false;
-        outStamp._size      = static_cast<uint64>( size );
-        outStamp._writeTime = static_cast<uint64>( writeTime.time_since_epoch().count() );
+        outStamp._size      = static_cast<uint64>( fileStat.st_size );
+        outStamp._writeTime = static_cast<uint64>( fileStat.st_mtim.tv_sec ) * 1'000'000'000ull + static_cast<uint64>( fileStat.st_mtim.tv_nsec );
         return true;
 #endif
-    }
-
-    bool FileUtil::copyFile( string_view source, string_view destination )
-    {
-        std::error_code ec;
-        bool            result = std::filesystem::copy_file( source, destination, std::filesystem::copy_options::overwrite_existing, ec );
-        if ( ec.value() != 0 )
-        {
-            SW_LOG_ERROR( "copyFile failed: %#", ec.message().c_str() );
-            return false;
-        }
-        return result;
-    }
-
-    bool FileUtil::removeFile( string_view path )
-    {
-        if ( path.empty() )
-            return true;
-        const string    normalized = normalizeSeparators( path );
-        std::error_code ec;
-        std::filesystem::remove( normalized.c_str(), ec );
-        return fileExists( normalized ) == false;
-    }
-
-    bool FileUtil::removeDirectory( string_view path )
-    {
-        if ( path.empty() )
-            return true;
-        const string    normalized = normalizeSeparators( path );
-        std::error_code ec;
-        std::filesystem::remove_all( normalized.c_str(), ec );
-        return directoryExists( normalized ) == false;
-    }
-
-    string FileUtil::getTempDirectory()
-    {
-        std::error_code             ec;
-        const std::filesystem::path p = std::filesystem::temp_directory_path( ec );
-        if ( ec.value() != 0 )
-            return {};
-        return string( normalizeSeparators( p.generic_string().c_str() ).c_str() );
     }
 
     bool FileUtil::writeFile( string_view fileName, const uint8* pData, const uint64 size )
@@ -935,22 +733,15 @@ namespace sw
         if ( directoryExists( directory ) == false )
             return false;
 
-        const std::filesystem::path directoryPath{ directory };
-        const bool                  bHasFilter = filterExtension.empty() == false;
-
-        forEachDirectoryEntry( directoryPath, bRecursive, [&]( const std::filesystem::directory_entry& entry )
+        const bool bHasFilter = filterExtension.empty() == false;
+        // 열지 못하는 디렉터리는 위에서 걸렀다. 순회 도중 멈춘 것은 거기까지 모은 것으로 끝난다(순회가 경고한다).
+        (void)forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter]( const DirectoryEntry& entry )
         {
-            if ( isDirectoryEntry( entry ) )
-                return;
-
-            const string genericStd = entry.path().generic_string().c_str();
-            string_view  genericView{ genericStd };
-            if ( bHasFilter && hasExtension( genericView, filterExtension ) == false )
-                return;
-
-            outListFilePath.push_back( string( genericView ) );
+            if ( entry._bDirectory || ( bHasFilter && hasExtension( entry._path, filterExtension ) == false ) )
+                return true;
+            outListFilePath.push_back( string( entry._path ) );
+            return true;
         } );
-
         return true;
     }
 
@@ -959,18 +750,12 @@ namespace sw
         if ( directoryExists( directory ) == false )
             return false;
 
-        const std::filesystem::path directoryPath{ directory };
-
-        forEachDirectoryEntry( directoryPath, bRecursive, [&]( const std::filesystem::directory_entry& entry )
+        (void)forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )
         {
-            if ( isDirectoryEntry( entry ) == false )
-                return;
-
-            const string genericStd = entry.path().generic_string().c_str();
-            string_view  genericView{ genericStd };
-            outListFolder.push_back( string( genericView ) );
+            if ( entry._bDirectory )
+                outListFolder.push_back( string( entry._path ) );
+            return true;
         } );
-
         return true;
     }
 } // namespace sw

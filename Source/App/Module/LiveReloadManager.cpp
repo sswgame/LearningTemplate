@@ -42,7 +42,7 @@ namespace sw
             static void tryDeleteFile( string_view path )
             {
                 // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 다음 시작 · 종료의 ShadowCopyName::removeStaleCopies 가 지운다.
-                (void)FileUtil::removeFile( path );
+                (void)FileUtil::tryRemoveFile( path );
             }
 
             static void tryDeleteShadowArtifacts( string_view modulePath )
@@ -1614,7 +1614,8 @@ namespace sw
             const bool bOwnedByOtherLiveProcess = ownerProcessId != 0 && ownerProcessId != currentProcessId && Process::isProcessAlive( ownerProcessId );
             if ( bOwnedByOtherLiveProcess )
                 continue;
-            if ( FileUtil::removeFile( filePath ) )
+            // 이 프로세스가 아직 올려 둔 사본은 지워지지 않는다(예상된 실패 — 알리지 않는다).
+            if ( FileUtil::tryRemoveFile( filePath ) )
                 ++removedCount;
         }
         return removedCount;
