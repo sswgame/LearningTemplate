@@ -408,7 +408,6 @@ cd build/Ninja-Debug/Bin
 
 - **네트워크 리팩토링 남은 단계(2026-10-05 사용자 요청 — 결함 단계 N0~N12 · 키트 결함 D1~D19 는 끝남).** 공통 부품을 Core `Network/Replication/` 에 두고 키트는
   조립만 하게. 단계마다 커밋 하나, 스레드를 건드린 단계는 `--test_repeat=50`, 파괴 네트워킹 시험(`NetSimDestruction*` · `DestructionSnapshot`)을 매 단계 지킨다.
-  N15b 권위 서버 입력을 `NetInputSendWindow` · `NetInputReceiveBuffer` 로(확인 기반 — 스냅숏이 확인을 나른다, `NetKitWireVersion::kClientServer` 3) ·
   N16 `NetClock` · `InterpolationBuffer<T>`
   (`ReplicationClient::update/findBracket` 와 파괴 클라이언트의 서버 틱 추정 · 자세 표본) · N17 회선 흉내 하나로(`LoopbackConditions` 삭제) · N18 **측정 먼저**(하니스
   클라이언트 16 × 엔티티 1000, 60 Hz 의 할당 · 시간 → 숫자가 움직일 때만 메시지 풀 · O(n) 델타 · 월드 아레나) · N19 시험 도우미 다섯(`NetTestPair` · `ThreadedCluster` ·
@@ -1395,6 +1394,7 @@ cd build/Ninja-Debug/Bin
 - **비신뢰 입력을 "최근 N 개" 만 겹쳐 보내면 N 을 넘는 연속 손실이 영구 빈틈이 된다** — 롤백은 30 틱 끊김 뒤 두 쪽이 120 프레임에서 영원히 멈췄다. 상대가 확인한
   다음 틱부터 보낸다(GGPO) — Core `NetInputSendWindow` 가 구조로 그렇게 하고, 예산이 모자라면 **오래된 것부터** 싣는다(새 것부터 실으면 못 실은 옛 것이 같은
   빈틈이 된다). 받는 고리(`NetInputReceiveBuffer`)는 아래 · 위 창을 둘 다 둔다 — 위 창이 없으면 고리 한 바퀴 뒤의 먼 틱이 받아 둔 입력을 덮는다.
+  권위 서버 입력도 같은 부품이다 — 확인은 스냅숏의 `_firstMissingInputTick`, 서버가 꺼낸 틱은 받는 창 아래로 놓아 확인이 넘어간다(`InputBurstLossLeavesNoGap`).
 - **틱 · 프레임으로 찾는 고리는 `TickRingBuffer` 하나다**(예측 · 스냅숏 · 보낸 재구성 · 랙 보정 · 롤백 기록 · 락스텝 입력 · 체크섬 · 파괴 최근 해시). 키 전체를 적어
   감김 · 건너뛴 칸 비우기가 없고, 무엇이 낡았나는 쓰는 쪽이 넣기 전에 본다 — 창 너비를 고리 크기로 두면 창 안끼리 덮지 않는다(락스텝 입력 256 · 체크섬 512).
   `acquire` 는 옛 값을 비우지 않는다(버퍼를 다시 쓴다 — 처음 넣는 틱이면 쓰는 쪽이 비운다). 16 비트로 감기는 패킷 시퀀스는 `SequenceBuffer`.

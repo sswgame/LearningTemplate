@@ -164,12 +164,14 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       작업 스레드에 나눈다 — 결과는 한 스레드와 바이트까지 같고(`NetParallelTest`), 관찰자 128 · 엔티티 8000 에서 틱당 4.4 → 1.5 ms(워커 3).
       그때 정책(`IReplicationPolicy` · `IInterestPolicy`)은 여러 스레드에서 동시에 불리므로 읽기만 한다.
       - `NetClientServer`: 권위 서버(슈터 · 배틀로얄 · 액션 · 기체 대전 · 비대칭) — 스냅샷 델타(확인된 기준 대비 · 예산 · 우선도, `IReplicationPolicy` 관련성),
-        보간(`ReplicationClient` — 지연만큼 과거 · 시계 맞추기), 입력 겹쳐 보내기, 클라이언트 예측 되맞추기(`ClientPrediction`), 랙 보정 되감기(`LagCompensationHistory`).
+        보간(`ReplicationClient` — 지연만큼 과거 · 시계 맞추기), 확인 기반 입력 보내기(Core `NetInputSendWindow` — 서버가 스냅숏에 실어 돌려준 "빈틈없이 받은 다음 틱" 부터),
+        클라이언트 예측 되맞추기(`ClientPrediction`), 랙 보정 되감기(`LagCompensationHistory`).
         우선도는 클라이언트마다 `NetPrioritizer` 로 스냅샷마다 쌓고, 실었거나 클라이언트가 이미 최신인 엔티티만 0 으로 돌린다 — 예산이 늘 차도 낮은 우선도가 굶지 않는다
         (우선도 10 넷이 예산을 채우면 우선도 1 은 11 틱쯤에 한 번). 스냅샷 예산은 메시지 전체(종류 바이트 · 머리 · 사라진 목록 · 끝 표시)를 `NetSendBudget` 으로 정확히 세고 1024 B 로 잘린다 — 못 실은 사라짐 · 바뀜은 재구성에
         기준 값으로 남아 다음 델타가 다시 고른다. 엔티티 상태는 `NetSnapshot::kMaxEntityBytes`(255 B)까지 — 넘으면 싣지 않는다(`setEntity` 가 처음 한 번 경고).
-        입력은 틱마다 `NetClientServerMessage::kMaxInputBytes`(255 B)까지(넘으면 `sendInput` 이 false), 겹침은 `kMaxRedundantInputCount`(32)와 메시지 상한 안에서 —
-        두 상수를 클라이언트 · 서버가 같이 쓰고, 서버는 넘는 길이를 깨짐으로 본다. 시험: `NetClientServerTest` · `NetSimReplicationTest`(하니스 위 — 대량 사라짐 · 예산 포화에서 굶지 않음).
+        입력은 틱마다 `NetClientServerMessage::kMaxInputBytes`(255 B)까지(넘으면 `sendInput` 이 false), 메시지 하나에 `kMaxInputCount`(32)와 메시지 상한 안에서
+        확인 안 된 것을 **오래된 것부터** 싣는다(연속 손실이 길어도 서버가 꺼내기 전이면 빈틈이 남지 않는다) — 두 상수를 클라이언트 · 서버가 같이 쓰고, 서버는
+        넘는 길이 · 개수를 깨짐으로 보며 깨진 메시지의 입력은 하나도 넣지 않는다. 시험: `NetClientServerTest` · `NetSimReplicationTest`(하니스 위 — 대량 사라짐 · 예산 포화에서 굶지 않음).
       - `NetLockstep`: 결정적 — 락스텝(`LockstepSession` — 입력 지연 · 체크섬 비동기 감지, RTS), 롤백(`RollbackSession` · `IRollbackGame` — 예측 · 되감기 · 재시뮬레이션, 격투).
         롤백 입력은 GGPO 식이다 — 메시지마다 "플레이어마다 빈틈없이 받은 다음 프레임"(확인)을 싣고, 보내는 쪽은 모두가 확인한 다음 프레임부터 싣는다
         (연속 손실이 길어도 빈틈이 남지 않는다 — Core `NetInputSendWindow` · `NetInputReceiveBuffer`). 받는 창은 [지금 − 64, 지금 + 64). 앞선 쪽은 (내 이점 − 상대 이점) / 2 가 `_maxFrameAdvantage` 를 넘으면

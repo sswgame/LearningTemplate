@@ -6,8 +6,6 @@
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
 
-#include <algorithm>
-
 namespace sw
 {
     ReplicationServer::ReplicationServer()
@@ -46,6 +44,7 @@ namespace sw
             client          = ClientState{};
             client._bActive = SW_TRUE;
             client._listSent.initialize( MathUtil::max( 2, _settings._historySize ) );
+            client._input.initialize( MathUtil::max( 1, _settings._inputBufferSize ), NetClientServerMessage::kInputFormat, NetInputWindowMode::FollowNewest );
         }
         return client;
     }
@@ -128,6 +127,7 @@ namespace sw
         NetSnapshot& filtered            = scratch._filtered;
         filtered._tick                   = _world._tick;
         filtered._lastProcessedInputTick = client._lastProcessedInputTick;
+        filtered._firstMissingInputTick  = client._input.getFirstMissingTick(); // 여러 워커가 읽기만 한다 — 입력은 보내기 전 게임 스레드가 넣었다
         NetPrioritizer& prioritizer      = client._prioritizer;
         prioritizer.beginAccumulate();
         size_t relevantCount = 0;
@@ -205,36 +205,13 @@ namespace sw
 
     bool ReplicationServer::handleInput( ClientState& client, BitReader& reader )
     {
-        const uint32 latestTick = static_cast<uint32>( reader.readVarUint() );
-        const uint32 viewTick   = static_cast<uint32>( reader.readVarUint() );
-        const uint32 count      = static_cast<uint32>( reader.readVarUint() );
-        if ( reader.hasOverflowed() || count > static_cast<uint32>( NetClientServerMessage::kMaxRedundantInputCount ) )
+        const uint32 viewTick = static_cast<uint32>( reader.readVarUint() );
+        if ( reader.hasOverflowed() )
+            return false;
+        // 이미 꺼낸 틱 · 이미 가진 틱은 버퍼 없이 넘기고, 길이 · 개수 상한을 넘거나 모자라면 하나도 넣지 않고 깨짐으로 본다.
+        if ( client._input.read( reader ) == false )
             return false;
         client._viewTick = static_cast<float32>( viewTick ) / 256.0f;
-        // 새 것부터 실려 있다 — 이미 쓴 틱 · 이미 가진 틱은 건너뛴다.
-        for ( uint32 index = 0; index < count && index <= latestTick; ++index )
-        {
-            const uint32 tick = latestTick - index;
-            // 쓸 틱인지 먼저 본다 — 같은 입력이 여러 패킷에 겹쳐 실려 오므로 대부분은 버릴 것이고, 버릴 것에는 버퍼를 잡지 않는다.
-            // 길이가 상한을 넘으면 자르지 않고 깨짐으로 본다 — 자르면 남은 바이트를 다음 입력의 길이로 읽는다.
-            const auto inputIter    = std::lower_bound( client._listInput.begin(), client._listInput.end(), tick,
-                                                        []( const InputEntry& entry, uint32 value )
-               { return entry._tick < value; } );
-            const bool bAlreadyUsed = client._bHasInput && tick <= client._lastProcessedInputTick;
-            const bool bAlreadyHave = inputIter != client._listInput.end() && inputIter->_tick == tick;
-            if ( bAlreadyUsed || bAlreadyHave )
-            {
-                if ( reader.skipBlob( NetClientServerMessage::kMaxInputBytes ) == false )
-                    return false;
-                continue;
-            }
-            vector<uint8> inputBuffer;
-            if ( reader.readBlob( inputBuffer, NetClientServerMessage::kMaxInputBytes ) == false )
-                return false;
-            client._listInput.insert( inputIter, InputEntry{ std::move( inputBuffer ), tick } );
-        }
-        while ( static_cast<int32>( client._listInput.size() ) > _settings._inputBufferSize )
-            client._listInput.pop_front();
         return true;
     }
 
@@ -244,22 +221,16 @@ namespace sw
         if ( connectionId < 0 || connectionId >= static_cast<int32>( _listClient.size() ) )
             return false;
         ClientState& client = _listClient[static_cast<size_t>( connectionId )];
-        // 지난 틱의 입력은 버린다(늦게 왔다 — 이미 되풀이로 처리했다).
-        while ( client._listInput.empty() == false && client._listInput.front()._tick < tick )
+        // 그 틱 것이 있으면 그것, 없으면 지난번에 꺼낸 틱 뒤로 늦게 온 것 중 가장 새것(되풀이할 값을 새것으로 바꾼다).
+        const NetInputEntry* pEntry = client._input.findLatestAtOrBefore( tick, client._input.getWindowFirst() );
+        if ( pEntry != nullptr )
         {
-            client._lastInput = std::move( client._listInput.front()._buffer );
+            client._lastInput = pEntry->_bytes;
             client._bHasInput = SW_TRUE;
-            client._listInput.pop_front();
+            outbExact         = pEntry->_tick == tick;
         }
-        if ( client._listInput.empty() == false && client._listInput.front()._tick == tick )
-        {
-            client._lastInput = std::move( client._listInput.front()._buffer );
-            client._bHasInput = SW_TRUE;
-            client._listInput.pop_front();
-            outInputBuffer = client._lastInput;
-            outbExact      = true;
-            return true;
-        }
+        // 이 틱까지는 다 썼다 — 더 받지 않고, 확인이 넘어가 클라이언트가 다시 싣지 않는다.
+        client._input.setWindow( tick + 1u, NetInputReceiveBuffer::kNoWindowEnd );
         if ( client._bHasInput == SW_FALSE )
             return false;
         outInputBuffer = client._lastInput;

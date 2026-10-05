@@ -19,7 +19,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 권위 서버 네트워크 키트 — 스냅샷 델타(바뀐 것 · 사라진 것 · 예산 넘침), 지연 · 손실 망 위의 복제와 보간, 입력 중복 전송,
+// 권위 서버 네트워크 키트 — 스냅샷 델타(바뀐 것 · 사라진 것 · 예산 넘침), 지연 · 손실 망 위의 복제와 보간, 확인 기반 입력 전송(연속 손실 뒤 빈틈 없음),
 // 관련 정책, 클라이언트 예측 되맞추기, 랙 보정 되감기.
 
 using namespace sw;
@@ -73,6 +73,38 @@ namespace
             return entity._entityId != 3;
         }
     };
+
+    /** @brief 손으로 지은 입력 메시지 — [@p firstTick, @p firstTick + 개수) 틱의 입력을 오래된 것부터 싣는다(보는 틱 0). */
+    vector<uint8> makeInputMessage( uint32 firstTick, const vector<vector<uint8>>& listPayload )
+    {
+        BitWriter writer;
+        writer.writeBits( NetClientServerMessage::kInput, 8 );
+        writer.writeVarUint( 0 ); // 보는 틱 × 256
+        writer.writeVarUint( firstTick );
+        writer.writeVarUint( listPayload.size() );
+        for ( const vector<uint8>& payload : listPayload )
+            writer.writeBlob( payload.data(), static_cast<int32>( payload.size() ) );
+        return writer.getBytes();
+    }
+
+    /** @brief 흉내 거르개 — `_bDropping` 인 동안 보내는 패킷을 모두 버립니다(한 방향 연속 손실). */
+    struct InputBurstDropper
+    {
+        int32 _droppedCount{ 0 };
+        bool  _bDropping{ false };
+    };
+
+    bool dropInputBurst( const NetAddress& to, const uint8* pData, int32 size, void* pContext )
+    {
+        (void)to;
+        (void)pData;
+        (void)size;
+        InputBurstDropper& dropper = *static_cast<InputBurstDropper*>( pContext );
+        if ( dropper._bDropping == false )
+            return false;
+        ++dropper._droppedCount;
+        return true;
+    }
 } // namespace
 
 SW_TEST_CASE( NetClientServerTest, SnapshotDeltasCarryChangesRemovalsAndRespectBudgets )
@@ -129,36 +161,22 @@ SW_TEST_CASE( NetClientServerTest, SnapshotDeltasCarryChangesRemovalsAndRespectB
 
 /**
  * @brief [NetClientServerTest] 겹쳐 실려 온 입력 가운데 이미 가진 틱은 넘기고, 그 뒤의 새 틱은 제 페이로드로 받는다
- * @details 클라이언트는 최근 입력을 새 것부터 여러 개 겹쳐 보낸다. 서버는 이미 가진 틱의 페이로드를 버퍼 없이 넘기는데, 넘기는 길이가 틀리면
- *          뒤따르는 새 틱이 남의 바이트를 입력으로 받는다.
+ * @details 클라이언트는 서버가 확인하지 않은 입력을 오래된 것부터 메시지마다 다시 싣는다. 서버는 이미 가진 틱의 페이로드를 버퍼 없이 넘기는데,
+ *          넘기는 길이가 틀리면 뒤따르는 새 틱이 남의 바이트를 입력으로 받는다.
  */
 SW_TEST_CASE( NetClientServerTest, RedundantInputsSkipKnownTicksAndKeepLaterPayloads )
 {
     ReplicationServer server;
     server.initialize( nullptr, ReplicationServerSettings{}, nullptr );
-    const auto makeInputMessage = []( uint32 latestTick, const vector<vector<uint8>>& listPayload )
-    {
-        BitWriter writer;
-        writer.writeBits( NetClientServerMessage::kInput, 8 );
-        writer.writeVarUint( latestTick );
-        writer.writeVarUint( 0 );
-        writer.writeVarUint( listPayload.size() );
-        for ( const vector<uint8>& payload : listPayload )
-        {
-            writer.writeVarUint( payload.size() );
-            writer.writeBytes( payload.data(), static_cast<int32>( payload.size() ) );
-        }
-        return writer.getBytes();
-    };
 
-    // 틱 5 를 먼저 받는다. 다음 패킷은 6(새) · 5(이미 가짐) · 4(새) — 새 것부터.
+    // 틱 5 를 먼저 받는다. 다음 메시지는 4(새) · 5(이미 가짐) · 6(새) — 오래된 것부터.
     SW_ASSERT_TRUE( NetHandleResult::Handled == server.handleMessage( 0, makeInputMessage( 5, {
                                                                                                   { 5, 5, 5 }
     } ) ) );
-    SW_ASSERT_TRUE( NetHandleResult::Handled == server.handleMessage( 0, makeInputMessage( 6, {
-                                                                                                  { 6, 6 },
+    SW_ASSERT_TRUE( NetHandleResult::Handled == server.handleMessage( 0, makeInputMessage( 4, {
+                                                                                                  { 4 },
                                                                                                   { 5, 5, 5 },
-                                                                                                  { 4 }
+                                                                                                  { 6, 6 }
     } ) ) );
 
     vector<uint8> input;
@@ -470,15 +488,8 @@ SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
     };
     const auto sendInput = []( NetHost& host, uint32 tick )
     {
-        BitWriter writer;
-        writer.writeBits( NetClientServerMessage::kInput, 8 );
-        writer.writeVarUint( tick );
-        writer.writeVarUint( 0 );
-        writer.writeVarUint( 1 );
-        writer.writeVarUint( 1 );
-        const uint8 payload = static_cast<uint8>( tick + 1 );
-        writer.writeBytes( &payload, 1 );
-        return host.sendMessage( 0, NetChannelType::ReliableOrdered, writer.getBytes() );
+        const vector<uint8> message = makeInputMessage( tick, { vector<uint8>{ static_cast<uint8>( tick + 1 ) } } );
+        return host.sendMessage( 0, NetChannelType::ReliableOrdered, message );
     };
 
     // 첫 클라이언트가 자리 0 에서 틱 100 까지 썼다.
@@ -593,10 +604,10 @@ SW_TEST_CASE( NetClientServerTest, SnapshotStaysUnderMessageLimitWithManyRemoval
 }
 
 /**
- * @brief [NetClientServerTest] 상한을 넘는 입력은 보내는 쪽이 거절하고, 서버는 상한을 넘는 길이를 잘라 읽지 않고 깨짐으로 본다.
- *        겹쳐 싣기는 메시지 상한 · 서버의 개수 상한 안에서만 한다
+ * @brief [NetClientServerTest] 상한을 넘는 입력은 보내는 쪽이 거절하고, 서버는 상한을 넘는 길이를 잘라 읽지 않고 깨짐으로 보며 그 메시지의 입력은 하나도 넣지 않는다.
+ *        큰 입력은 메시지 상한 안에서 오래된 것부터 실리고 서버 확인이 오르면 다음 메시지가 잇는다
  * @details 클라이언트는 전체 길이를 쓰는데 서버가 길이를 255 로 잘라 읽어, 남은 바이트가 다음 항목의 길이로 읽혀 옛 틱에 쓰레기 입력이 들어갔다.
- *          겹침 수가 서버 상한(32)을 넘거나 입력 × 겹침이 1024 B 를 넘으면 메시지가 통째로 거절 · 버려져 입력이 하나도 가지 않았다.
+ *          항목마다 읽으며 넣던 때는 깨진 항목 앞의 입력이 이미 들어가 있었다.
  */
 SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
 {
@@ -605,26 +616,15 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
     SW_EXPECT_FALSE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes + 1, 1 ) ) );
     SW_EXPECT_TRUE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes, 1 ) ) );
 
-    // 손으로 지은 메시지 — 틱 5 는 300 B(상한 넘음), 틱 4 는 1 B.
+    // 손으로 지은 메시지 — 틱 4 는 1 B, 틱 5 는 300 B(상한 넘음).
     ReplicationServer server;
     server.initialize( nullptr, ReplicationServerSettings{}, nullptr );
-    BitWriter writer;
-    writer.writeBits( NetClientServerMessage::kInput, 8 );
-    writer.writeVarUint( 5 );
-    writer.writeVarUint( 0 );
-    writer.writeVarUint( 2 );
-    const vector<uint8> oversize( 300, 7 );
-    writer.writeVarUint( oversize.size() );
-    writer.writeBytes( oversize.data(), static_cast<int32>( oversize.size() ) );
-    const uint8 tinyInput = 9;
-    writer.writeVarUint( 1 );
-    writer.writeBytes( &tinyInput, 1 );
-    SW_EXPECT_TRUE( NetHandleResult::Malformed == server.handleMessage( 0, writer.getBytes() ) );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == server.handleMessage( 0, makeInputMessage( 4, { vector<uint8>{ 9 }, vector<uint8>( 300, 7 ) } ) ) );
     vector<uint8> input;
     bool          bExact = false;
-    SW_EXPECT_FALSE( server.popInput( 0, 4, input, bExact ) ); // 쓰레기가 들어가지 않았다
+    SW_EXPECT_FALSE( server.popInput( 0, 4, input, bExact ) ); // 깨진 항목 앞의 성한 입력도 들어가지 않았다
 
-    // 겹침 64 · 입력 200 B — 보내는 쪽이 메시지 상한 안에서 개수를 줄여 실어 매 틱 입력이 간다.
+    // 입력 200 B — 메시지 하나에 다섯 개쯤. 서버가 스냅숏에 실어 준 확인을 따라 오래된 것부터 이어 실어 40 틱이 모두 간다.
     NetHostSettings hostSettings;
     hostSettings._sendInterval = 1.0 / 60.0;
     LoopbackNetwork network( 43u );
@@ -634,14 +634,14 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
     clientHost.initialize( network.createEndpoint( 5000 ), hostSettings );
     SW_ASSERT_TRUE( serverHost.listen() );
     SW_ASSERT_TRUE( clientHost.connect( NetAddress::makeLoopback( 4000 ) ) );
-    ReplicationServer         liveServer;
-    ReplicationClient         liveClient;
-    ReplicationClientSettings clientSettings;
-    clientSettings._inputRedundancy = 64;
+    ReplicationServer liveServer;
+    ReplicationClient liveClient;
     liveServer.initialize( &serverHost, ReplicationServerSettings{}, nullptr );
-    liveClient.initialize( &clientHost, clientSettings );
-    NetMessageRouter router;
-    router.addHandler( &liveServer );
+    liveClient.initialize( &clientHost, ReplicationClientSettings{} );
+    NetMessageRouter serverRouter;
+    NetMessageRouter clientRouter;
+    serverRouter.addHandler( &liveServer );
+    clientRouter.addHandler( &liveClient );
     float64 time = 0.0;
     for ( int32 frame = 0; frame < 30; ++frame )
     {
@@ -653,19 +653,24 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
     for ( uint32 tick = 0; tick < 40; ++tick )
     {
         SW_EXPECT_TRUE( liveClient.sendInput( tick, vector<uint8>( 200, static_cast<uint8>( tick ) ) ) );
+        liveServer.beginTick( tick );
+        liveServer.endTick();
+        liveServer.sendSnapshots(); // 스냅숏이 입력 확인을 나른다
         time += 1.0 / 60.0;
         clientHost.update( time );
         serverHost.update( time );
-        (void)router.pump( serverHost );
+        (void)serverRouter.pump( serverHost );
+        (void)clientRouter.pump( clientHost );
     }
     for ( int32 frame = 0; frame < 30; ++frame ) // 보내기 간격이 틱과 어긋나 밀린 패킷까지
     {
         time += 1.0 / 60.0;
         clientHost.update( time );
         serverHost.update( time );
-        (void)router.pump( serverHost );
+        (void)serverRouter.pump( serverHost );
+        (void)clientRouter.pump( clientHost );
     }
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( router.getMalformedCount() ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( serverRouter.getMalformedCount() ) );
     int32 exactCount = 0;
     for ( uint32 tick = 0; tick < 39; ++tick )
     {
@@ -673,4 +678,83 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
             ++exactCount;
     }
     SW_EXPECT_EQUAL( 39, exactCount );
+}
+
+/**
+ * @brief [NetClientServerTest] 클라이언트 → 서버가 12 틱 동안 모두 사라져도 서버가 꺼내는 입력에 빈틈이 없다 — 보내는 쪽은 서버가 확인한 다음 틱부터 싣는다
+ * @details "최근 N 개(4)" 만 겹쳐 보내던 때는 끊김이 끝난 첫 메시지가 마지막 네 틱만 실어, 그 앞 여덟 틱을 서버가 지난 입력 되풀이로 처리했다(꺼내기는
+ *          24 틱 뒤라 다시 왔으면 늦지 않았다). 확인이 따라오면 다시 싣는 입력은 몇 개뿐이다(확인이 없으면 32 개까지 자란다).
+ */
+SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
+{
+    LoopbackNetwork        network( 47u );
+    NetEmulationTransport  clientTransport( network.createEndpoint( 5200 ), 3u );
+    InputBurstDropper      dropper;
+    NetEmulationConditions conditions;
+    conditions._pDropFilter        = &dropInputBurst;
+    conditions._pDropFilterContext = &dropper;
+    clientTransport.setDefaultConditions( conditions );
+    NetHostSettings hostSettings;
+    hostSettings._sendInterval = 1.0 / 60.0;
+    NetHost serverHost;
+    NetHost clientHost;
+    serverHost.initialize( network.createEndpoint( 4200 ), hostSettings );
+    clientHost.initialize( &clientTransport, hostSettings );
+    SW_ASSERT_TRUE( serverHost.listen() );
+    SW_ASSERT_TRUE( clientHost.connect( NetAddress::makeLoopback( 4200 ) ) );
+
+    ReplicationServer server;
+    ReplicationClient client;
+    server.initialize( &serverHost, ReplicationServerSettings{} );
+    client.initialize( &clientHost, ReplicationClientSettings{} );
+    NetMessageRouter serverRouter;
+    NetMessageRouter clientRouter;
+    serverRouter.addHandler( &server );
+    clientRouter.addHandler( &client );
+
+    // 30 Hz 틱 · 60 Hz 프레임. 서버는 입력을 24 틱 늦게 꺼낸다 — 끊김이 끝난 뒤 다시 온 입력이 꺼내기 전에 닿는다.
+    const uint32  popDelay     = 24;
+    const uint32  burstBegin   = 40;
+    const uint32  burstEnd     = 52;
+    float64       time         = 0.0;
+    uint32        tick         = 0;
+    int32         checkedCount = 0;
+    int32         exactCount   = 0;
+    vector<uint8> input;
+    for ( int32 frame = 0; frame < 60 * 4; ++frame )
+    {
+        time += 1.0 / 60.0;
+        // 틱 t 의 입력은 다음 프레임 update 에서 나간다(그때 tick = t + 1) — 틱 [40, 52) 의 입력을 실은 패킷이 모두 사라진다.
+        dropper._bDropping = burstBegin < tick && tick <= burstEnd;
+        serverHost.update( time );
+        clientHost.update( time );
+        network.advance( time );
+        (void)serverRouter.pump( serverHost );
+        (void)clientRouter.pump( clientHost );
+        const bool bTickFrame = frame % 2 == 0 && clientHost.getConnectionState( 0 ) == NetConnectionState::Connected;
+        if ( bTickFrame == false )
+            continue;
+        SW_EXPECT_TRUE( client.sendInput( tick, vector<uint8>{ static_cast<uint8>( tick & 0xFF ), 7 } ) );
+        if ( tick >= popDelay )
+        {
+            const uint32 popTick = tick - popDelay;
+            bool         bExact  = false;
+            if ( server.popInput( 0, popTick, input, bExact ) )
+            {
+                ++checkedCount;
+                exactCount += bExact && input.size() == 2 && input[0] == static_cast<uint8>( popTick & 0xFF ) ? 1 : 0;
+            }
+            server.setLastProcessedInputTick( 0, popTick );
+        }
+        server.beginTick( tick );
+        server.setEntity( 1, 1, makeFloatBytes( static_cast<float32>( tick ) ) );
+        server.endTick();
+        server.sendSnapshots(); // 스냅숏이 입력 확인을 나른다
+        ++tick;
+    }
+    SW_EXPECT_TRUE( clientHost.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_EXPECT_TRUE( dropper._droppedCount >= 10 );
+    SW_EXPECT_TRUE( checkedCount > 60 );
+    SW_EXPECT_EQUAL( checkedCount, exactCount );          // 끊김 앞뒤 모두 그 틱의 입력이다
+    SW_EXPECT_TRUE( client.getPendingInputCount() <= 6 ); // 확인이 따라와 다시 싣는 것은 몇 개뿐
 }

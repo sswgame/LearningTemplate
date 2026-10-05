@@ -1,14 +1,15 @@
 /**
  * @file ReplicationServer.h
- * @brief 권위 서버 쪽 — 매 틱 월드 상태를 모아 클라이언트마다 (관련 · 우선도 정책을 거쳐) 확인받은 기준 대비 델타로 보내고, 중복으로 온 입력을 틱 순으로 꺼내 줍니다.
+ * @brief 권위 서버 쪽 — 매 틱 월드 상태를 모아 클라이언트마다 (관련 · 우선도 정책을 거쳐) 확인받은 기준 대비 델타로 보내고, 받은 입력을 틱 순으로 꺼내 주며
+ *        "빈틈없이 받은 다음 틱" 을 스냅숏에 실어 돌려줍니다(클라이언트는 그 틱부터 다시 보낸다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Replication/NetInputWindow.h"
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
@@ -63,7 +64,7 @@ namespace sw
     {
         int32 _snapshotBudgetBytes{ 1000 }; ///< 클라이언트 · 틱마다 스냅샷 메시지 상한(종류 바이트 · 머리 · 사라진 목록 포함, `NetConnection::kMaxMessageSize` 로 잘린다)
         int32 _historySize{ 64 };           ///< 클라이언트마다 기억하는 보낸 스냅샷(기준 후보) 수
-        int32 _inputBufferSize{ 64 };
+        int32 _inputBufferSize{ 64 };       ///< 클라이언트마다 받아 두는 입력 틱 수(받은 가장 새 틱에서 이만큼 뒤까지 — 그보다 오래된 것은 놓는다)
     };
 } // namespace sw
 
@@ -107,6 +108,7 @@ namespace sw
 
         /**
          * @brief 그 틱의 입력을 꺼냅니다. 아직 안 왔으면 가장 최근 입력을 되풀이합니다(@p outbExact false). 받은 입력이 하나도 없으면 false 입니다.
+         *        그 틱까지는 다 쓴 것으로 놓는다 — 더 받지 않고, 스냅숏의 확인도 그 다음 틱으로 넘어간다.
          */
         [[nodiscard]] bool popInput( int32 connectionId, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact );
         void               setLastProcessedInputTick( int32 connectionId, uint32 tick );
@@ -118,17 +120,11 @@ namespace sw
         uint64 getOversizedEntityCount() const;
 
     private:
-        struct InputEntry
-        {
-            vector<uint8> _buffer{};
-            uint32        _tick{ 0 };
-        };
-
         struct ClientState
         {
             NetPrioritizer              _prioritizer{}; ///< 관련 엔티티마다 쌓인 우선도
             TickRingBuffer<NetSnapshot> _listSent{};    ///< 보낸(재구성된) 스냅샷 — 클라이언트가 확인한 틱을 델타의 기준으로 찾는다
-            deque<InputEntry>           _listInput{};   ///< 틱 오름차순
+            NetInputReceiveBuffer       _input{};       ///< 받은 입력 — 받은 가장 새 틱을 따르는 창, 꺼낸 틱은 놓는다
             vector<uint8>               _lastInput{};
             float32                     _viewTick{ 0.0f };
             uint32                      _ackedTick{ 0 };

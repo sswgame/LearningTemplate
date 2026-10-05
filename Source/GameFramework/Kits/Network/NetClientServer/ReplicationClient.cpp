@@ -11,12 +11,11 @@ namespace sw
 {
     ReplicationClient::ReplicationClient()
         : _listSnapshot{}
-        , _listRecentInput{}
+        , _inputWindow{}
         , _settings{}
         , _pHost{ nullptr }
         , _renderTime{ 0.0f }
         , _decodeFailureCount{ 0 }
-        , _latestInputTick{ 0 }
         , _messageWriter{}
     {
     }
@@ -26,6 +25,7 @@ namespace sw
         _pHost    = pHost;
         _settings = settings;
         _listSnapshot.initialize( MathUtil::max( 4, settings._historySize ) );
+        _inputWindow.initialize( NetClientServerMessage::kMaxInputCount, NetClientServerMessage::kInputFormat );
         _decodeFailureCount = 0;
         resetHistory();
     }
@@ -33,7 +33,7 @@ namespace sw
     void ReplicationClient::resetHistory()
     {
         _listSnapshot.reset(); // 스냅숏 버퍼는 자리에 남아 다음 연결이 다시 쓴다
-        _listRecentInput.clear();
+        _inputWindow.reset();  // 새 서버 — 옛 확인은 이 연결의 것이 아니다
         _renderTime = 0.0f;
     }
 
@@ -63,6 +63,7 @@ namespace sw
             ++_decodeFailureCount; // 기준을 이미 잃은 델타도 여기로 온다 — 형식은 맞으니 깨짐으로 세지 않는다
             return NetHandleResult::Handled;
         }
+        _inputWindow.acknowledge( snapshot._firstMissingInputTick ); // 서버가 빈틈없이 받은 다음 틱 — 그 앞은 다시 싣지 않는다
         const bool bFirst             = _listSnapshot.hasNewest() == false;
         _listSnapshot.acquire( tick ) = std::move( snapshot ); // 가장 새 틱도 이것이 된다
         if ( bFirst )
@@ -171,27 +172,16 @@ namespace sw
                             NetClientServerMessage::kMaxInputBytes );
             return false;
         }
-        if ( _listRecentInput.empty() == false && tick != _latestInputTick + 1u )
-            _listRecentInput.clear(); // 틱이 끊겼다 — 겹쳐 실을 수 없다
-        _listRecentInput.push_front( listInput );
-        const int32 redundancy = MathUtil::clamp( _settings._inputRedundancy, 1, NetClientServerMessage::kMaxRedundantInputCount );
-        while ( static_cast<int32>( _listRecentInput.size() ) > redundancy )
-            _listRecentInput.pop_back();
-        _latestInputTick = tick;
+        // 틱이 건너뛰면 그 틱부터, 줄면(새 판) 확인까지 비우고 다시 쌓는다. 같은 틱이면 처음 값이 남고 지금 창만 다시 보낸다.
+        (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ) );
         if ( _pHost == nullptr )
             return true;
         BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kInput );
-        writer.writeVarUint( tick );
         writer.writeVarUint( static_cast<uint64>( MathUtil::max( 0.0f, getRenderTick() ) * 256.0f ) );
-        // 새 것부터, 메시지 상한 안에 들어가는 만큼만 겹쳐 싣는다(이번 틱의 입력은 늘 들어간다 — 상한 255 바이트).
+        // 서버가 확인한 다음 틱부터, 메시지 상한 안에서 오래된 것부터 — 못 실은 새 것은 확인이 오른 뒤 다음 메시지가 싣는다.
         NetSendBudget budget( NetConnection::kMaxMessageSize );
-        budget.reserveBits( writer.getBitCount() + BitMath::computeVarUintBits( _listRecentInput.size() ) );
-        size_t count = 0;
-        while ( count < _listRecentInput.size() && budget.tryReserveBits( BitMath::computeBlobBits( static_cast<int32>( _listRecentInput[count].size() ) ) ) )
-            ++count;
-        writer.writeVarUint( count );
-        for ( size_t index = 0; index < count; ++index )
-            writer.writeBlob( _listRecentInput[index].data(), static_cast<int32>( _listRecentInput[index].size() ) );
+        budget.reserveBits( writer.getBitCount() );
+        (void)_inputWindow.write( writer, budget );
         (void)_pHost->sendMessage( 0, NetChannelType::Unreliable, writer.getBytes() );
         return true;
     }

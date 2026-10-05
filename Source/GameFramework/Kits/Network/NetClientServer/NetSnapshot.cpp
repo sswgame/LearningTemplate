@@ -31,9 +31,11 @@ namespace sw
         outWritten                         = NetSnapshot{};
         outWritten._tick                   = _tick;
         outWritten._lastProcessedInputTick = _lastProcessedInputTick;
+        outWritten._firstMissingInputTick  = _firstMissingInputTick;
         writer.writeVarUint( _tick );
         writer.writeVarUint( pBaseline != nullptr ? pBaseline->_tick + 1u : 0u ); // 0 = 기준 없음
         writer.writeVarUint( _lastProcessedInputTick );
+        writer.writeVarUint( _firstMissingInputTick );
         // 예산은 메시지 전체 — 앞서 쓴 종류 바이트 · 머리, 끝 표시 1 비트를 먼저 센다.
         NetSendBudget budget( maxBytes );
         budget.reserveBits( writer.getBitCount() + 1 );
@@ -114,6 +116,7 @@ namespace sw
         outSnapshot._tick                   = static_cast<uint32>( reader.readVarUint() );
         const uint32 baselineCode           = static_cast<uint32>( reader.readVarUint() );
         outSnapshot._lastProcessedInputTick = static_cast<uint32>( reader.readVarUint() );
+        outSnapshot._firstMissingInputTick  = static_cast<uint32>( reader.readVarUint() );
         if ( baselineCode != 0 && ( pBaseline == nullptr || pBaseline->_tick != baselineCode - 1u ) )
             return false; // 기준이 없다 — 서버가 곧 다른 기준으로 보낸다
         if ( baselineCode != 0 )
