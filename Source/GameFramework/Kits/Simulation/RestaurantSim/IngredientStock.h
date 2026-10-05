@@ -12,6 +12,7 @@
 
 namespace sw
 {
+    class Archive;
     class Inventory;
     class ItemBag;
 
@@ -65,6 +66,11 @@ namespace sw
         int32                          findEarliestExpiry( const hashed_string& itemId ) const;
         int32                          getBatchCount( const hashed_string& itemId ) const;
         const vector<IngredientBatch>& getBatches() const { return _listBatch; }
+
+        /** @brief 묶음(재료 · 원가 · 개수 · 남은 날)을 씁니다. 빌린 창고는 싣지 않습니다(주인이 싣는다). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 묶음 합이 인벤토리 개수를 넘으면 오래된 묶음부터 줄입니다(밖에서 뺀 만큼). */

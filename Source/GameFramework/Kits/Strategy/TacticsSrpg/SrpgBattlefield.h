@@ -20,6 +20,7 @@
 
 namespace sw
 {
+    class Archive;
     class GridReachability;
 
     /** @brief 팀입니다. 다른 팀끼리는 모두 적입니다(제3세력은 양쪽 모두와 싸운다). */
@@ -152,6 +153,9 @@ namespace sw
     class SW_GF_API SrpgBattlefield
     {
     public:
+        static constexpr uint32 kStateTag     = 0x46425253u; ///< 'SRBF'
+        static constexpr uint32 kStateVersion = 1;
+
         SrpgBattlefield();
 
         void               initialize( const SrpgCatalog* pCatalog, int32 width, int32 height, const hashed_string& defaultTerrain, const SrpgSettings& settings, uint32 seed );
@@ -208,6 +212,14 @@ namespace sw
         void grantXp( int32 unitIndex, int64 amount );
         void pushEvent( const SrpgEvent& event ) { _eventBuffer.push( event ); }
         void drainEvents( vector<SrpgEvent>& outListEvent );
+
+        /**
+         * @brief 크기 · 칸마다 지형 정의 id · 유닛(기체 · 파일럿 id, 탄, 레벨 둘, 칸 · HP · EN · 기력 · 회피 · 명단 자리 · 팀 · 차례 비트) · 차례(`TurnOrder`) · 난수 ·
+         *        턴 · 활성 유닛 · 페이즈 팀을 씁니다. 정의는 id 로 싣고 카탈로그에서 찾습니다(무기 목록은 기체 정의에서 다시 만든다). 설정은 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 같은 카탈로그 · 같은 크기로 `initialize` 한 뒤에 부릅니다. 깨졌거나 없는 정의면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         // --- 개발 ---
         /** @brief 기체 레벨 조건을 채운 개발 갈래입니다. */

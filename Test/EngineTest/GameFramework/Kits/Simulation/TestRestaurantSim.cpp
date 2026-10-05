@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Crafting.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
@@ -156,6 +158,19 @@ namespace
                 ++count;
         }
         return count;
+    }
+
+    /** @brief 빌린 것(창고 · 지갑 · 시계 · 평판)을 상태 바이트로 옮깁니다 — 되살린 식당이 따로 든 같은 공유 상태로 같은 걸음을 걷게 합니다. */
+    bool copyRestaurantBorrowed( const RestaurantTestBorrowed& source, RestaurantTestBorrowed& outTarget )
+    {
+        Archive written;
+        source._pantry.writeState( written );
+        source._wallet.writeState( written );
+        source._clock.writeState( written );
+        source._reputation.writeState( written );
+        Archive reader( written.getData(), written.getSize() );
+        return outTarget._pantry.readState( reader ) && outTarget._wallet.readState( reader ) && outTarget._clock.readState( reader ) &&
+               outTarget._reputation.readState( reader );
     }
 
     /** @brief 시험의 뽑기 흉내가 쓰는 가중치 읽기입니다 — 실수 하나가 곧 가중치입니다. */
@@ -569,4 +584,85 @@ SW_TEST_CASE( RestaurantSimTest, CustomerWithOnlyZeroWeightDishesLeavesWithoutOr
     SW_EXPECT_EQUAL( 1, sim.getToday()._noChoice );
     SW_EXPECT_TRUE( sim.getCustomers().back()._state == CustomerState::Left );
     SW_EXPECT_EQUAL( 5, simBorrowed._pantry.getItemCount( "noodle" ) ); // 주문이 없으니 재료도 그대로
+}
+
+/**
+ * @brief [RestaurantSimTest] 상태 바이트로 되살린 식당이 같은 영업을 잇는다 — 직원 · 손님 · 주문 · 재료 묶음 · 시세 · 오늘 결산 · 도착 누적이 같은 바이트이고,
+ *        같은 걸음을 둘 다 더 돌려도(빌린 것은 따로 옮겨 든다) 같은 바이트 · 같은 결산이다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( RestaurantSimTest, StateRoundTripContinuesTheSameRestaurant )
+{
+    RestaurantTestWorld world;
+    SW_ASSERT_TRUE( world.load() );
+    RestaurantSettings settings;
+    settings._seatCount = 6;
+    RestaurantSimulation   sim;
+    RestaurantTestBorrowed simBorrowed;
+    world.initialize( sim, settings, simBorrowed );
+    sim.setStationCount( "Stove", 2 );
+    sim.setStationCount( "Oven", 1 );
+    (void)sim.hireStaff( "ann", StaffRole::Cook, 30, 3 );
+    (void)sim.hireStaff( "bob", StaffRole::Cook, 20 );
+    (void)sim.hireStaff( "cid", StaffRole::Server, 15 );
+    (void)sim.hireStaff( "dee", StaffRole::Cashier, 15 );
+    stockPantry( sim, 60 );
+    simBorrowed._wallet.add( sim.getCurrency(), 500 );
+    SW_EXPECT_TRUE( sim.setMenuPrice( "ramen", 45 ) );
+    sim.openDay( "sunny" );
+    for ( int32 minute = 0; minute < 60; ++minute )
+        sim.update( 1.0f );
+    SW_EXPECT_TRUE( sim.getToday()._arrivals > 0 );
+
+    Archive written;
+    sim.writeState( written );
+    RestaurantSimulation   restored;
+    RestaurantTestBorrowed restoredBorrowed;
+    world.initialize( restored, settings, restoredBorrowed );
+    SW_ASSERT_TRUE( copyRestaurantBorrowed( simBorrowed, restoredBorrowed ) );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    Archive rewritten;
+    restored.writeState( rewritten );
+    vector<uint8> originalBytes;
+    vector<uint8> restoredBytes;
+    written.writeData( originalBytes );
+    rewritten.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+    SW_EXPECT_TRUE( restored.isOpen() );
+    SW_EXPECT_EQUAL( 45, static_cast<int32>( restored.getMenuPrice( "ramen" ) ) );
+    SW_EXPECT_EQUAL( 4, static_cast<int32>( restored.getStaff().size() ) );
+    SW_EXPECT_EQUAL( sim.getStaff()[0]._level.getLevel(), restored.getStaff()[0]._level.getLevel() );
+    SW_EXPECT_EQUAL( sim.getToday()._arrivals, restored.getToday()._arrivals );
+    SW_EXPECT_EQUAL( static_cast<int32>( sim.getOrders().size() ), static_cast<int32>( restored.getOrders().size() ) );
+    SW_EXPECT_NEAR_EQUAL( sim.getMinutes(), restored.getMinutes(), 1.0e-4f );
+
+    // 같은 걸음을 둘 다 — 한 시간 더 영업하고 닫는다. 도착 · 고르기 · 조리 · 계산이 같은 때에 같은 것으로 일어난다.
+    for ( int32 minute = 0; minute < 60; ++minute )
+    {
+        sim.update( 1.0f );
+        restored.update( 1.0f );
+    }
+    Archive afterOriginal;
+    Archive afterRestored;
+    sim.writeState( afterOriginal );
+    restored.writeState( afterRestored );
+    afterOriginal.writeData( originalBytes );
+    afterRestored.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+    RestaurantDaySummary originalSummary;
+    RestaurantDaySummary restoredSummary;
+    sim.closeDay( originalSummary );
+    restored.closeDay( restoredSummary );
+    SW_EXPECT_EQUAL( originalSummary._served, restoredSummary._served );
+    SW_EXPECT_EQUAL( static_cast<int32>( originalSummary._revenue ), static_cast<int32>( restoredSummary._revenue ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( originalSummary._profit ), static_cast<int32>( restoredSummary._profit ) );
+
+    RestaurantSimulation   truncated;
+    RestaurantTestBorrowed truncatedBorrowed;
+    world.initialize( truncated, settings, truncatedBorrowed );
+    Archive cut( written.getData(), written.getSize() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_TRUE( truncated.getStaff().empty() );
+    SW_EXPECT_FALSE( truncated.isOpen() );
 }

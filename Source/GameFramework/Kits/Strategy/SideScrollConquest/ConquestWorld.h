@@ -21,6 +21,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 부대 명령입니다. */
     enum class ConquestOrder : uint8
     {
@@ -146,6 +148,9 @@ namespace sw
     class SW_GF_API ConquestWorld
     {
     public:
+        static constexpr uint32 kStateTag     = 0x57514E43u; ///< 'CNQW'
+        static constexpr uint32 kStateVersion = 1;
+
         ConquestWorld();
 
         /** @brief 새 판 — 거점 · 주둔군 · 시작 자원을 두고 지휘관을 첫 플레이어 거점(가장 왼쪽)에 세웁니다. */
@@ -171,6 +176,14 @@ namespace sw
         void  addResource( const hashed_string& resource, float32 amount ) { _resource.addValue( resource, amount ); }
 
         void drainEvents( vector<ConquestEvent>& outListEvent );
+
+        /**
+         * @brief 거점(정의 id · 성문 · 성벽 · 점령) · 건물(정의 id · 대기열 · 진행 · 자리 · 일꾼) · 병사 · 자원 · 지휘관 · 고정 걸음 · 지난 시간 · 수입 · 웨이브 타이머 ·
+         *        다음 병사 번호 · 승패를 씁니다. 정의는 id 로 싣고 카탈로그에서 찾습니다. 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 같은 카탈로그로 `initialize` 한 뒤에 부릅니다. 깨졌거나 없는 정의면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         int32 getResource( const hashed_string& resource ) const;
         int32 computePopulation() const;

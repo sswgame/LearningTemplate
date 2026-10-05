@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Navigation/GridReachability.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -516,6 +519,131 @@ namespace sw
     void SrpgBattlefield::drainEvents( vector<SrpgEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void SrpgBattlefield::writeState( Archive& outArchive ) const
+    {
+        outArchive << _topology._width;
+        outArchive << _topology._height;
+        for ( const SrpgTerrainDef* pTerrain : _listTerrain )
+        {
+            StateArchiveUtil::writeName( outArchive, pTerrain != nullptr ? pTerrain->_id : hashed_string{} );
+        }
+        outArchive << static_cast<uint32>( _listUnit.size() );
+        for ( const SrpgUnit& unit : _listUnit )
+        {
+            StateArchiveUtil::writeName( outArchive, unit._pDef->_id );
+            StateArchiveUtil::writeName( outArchive, unit._pPilot->_id );
+            outArchive << static_cast<uint32>( unit._listAmmo.size() );
+            for ( const int32 ammo : unit._listAmmo )
+            {
+                outArchive << ammo;
+            }
+            unit._pilotLevel.writeState( outArchive );
+            unit._unitLevel.writeState( outArchive );
+            StateArchiveUtil::writeInt2( outArchive, unit._cell );
+            outArchive << unit._hp;
+            outArchive << unit._en;
+            outArchive << unit._morale;
+            outArchive << unit._dodge;
+            outArchive << unit._rosterIndex;
+            outArchive << static_cast<uint8>( unit._team );
+            outArchive << unit._bAlive;
+            outArchive << unit._bMoved;
+            outArchive << unit._bAttacked;
+            outArchive << unit._bActed;
+            outArchive << unit._bCommander;
+            outArchive << unit._bSupportUsed;
+        }
+        _turnOrder.writeState( outArchive );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _turn;
+        outArchive << _activeUnit;
+        outArchive << static_cast<uint8>( _phaseTeam );
+    }
+
+    bool SrpgBattlefield::readState( Archive& archive )
+    {
+        int32 width  = 0;
+        int32 height = 0;
+        archive >> width;
+        archive >> height;
+        if ( archive.isError() || _pCatalog == nullptr || width != _topology._width || height != _topology._height )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 설정은 사본이 그대로 든다.
+        SrpgBattlefield restored = *this;
+        for ( const SrpgTerrainDef*& pTerrain : restored._listTerrain )
+        {
+            hashed_string terrainId;
+            if ( StateArchiveUtil::readName( archive, terrainId ) == false )
+                return false;
+            pTerrain = terrainId.empty() ? nullptr : _pCatalog->findTerrain( terrainId );
+            if ( terrainId.empty() == false && pTerrain == nullptr )
+                return false;
+        }
+
+        uint32 unitCount = 0;
+        // 유닛마다 이름 둘(8) + 탄 수(4) + 레벨 둘(40) + 칸(8) + HP · EN · 기력 · 회피 · 명단(20) + 팀 · 비트 여섯(7)
+        if ( StateArchiveUtil::readCount( archive, 87, unitCount ) == false )
+            return false;
+        restored._listUnit.assign( unitCount, SrpgUnit{} );
+        for ( SrpgUnit& unit : restored._listUnit )
+        {
+            hashed_string unitId;
+            hashed_string pilotId;
+            uint32        ammoCount = 0;
+            const bool    bHeadRead =
+                StateArchiveUtil::readName( archive, unitId ) && StateArchiveUtil::readName( archive, pilotId ) && StateArchiveUtil::readCount( archive, 4, ammoCount );
+            if ( bHeadRead == false )
+                return false;
+            unit._pDef   = _pCatalog->findUnit( unitId );
+            unit._pPilot = _pCatalog->findPilot( pilotId );
+            if ( unit._pDef == nullptr || unit._pPilot == nullptr )
+                return false;
+            // 무기는 기체 정의의 순서로 다시 짓는다 — 탄 수가 그 무기 수와 같아야 한다.
+            restored.refillUnit( unit );
+            if ( ammoCount != unit._listAmmo.size() )
+                return false;
+            for ( int32& ammo : unit._listAmmo )
+            {
+                archive >> ammo;
+            }
+            uint8      team       = 0;
+            const bool bLevelRead = unit._pilotLevel.readState( archive ) && unit._unitLevel.readState( archive );
+            StateArchiveUtil::readInt2( archive, unit._cell );
+            archive >> unit._hp;
+            archive >> unit._en;
+            archive >> unit._morale;
+            archive >> unit._dodge;
+            archive >> unit._rosterIndex;
+            archive >> team;
+            archive >> unit._bAlive;
+            archive >> unit._bMoved;
+            archive >> unit._bAttacked;
+            archive >> unit._bActed;
+            archive >> unit._bCommander;
+            archive >> unit._bSupportUsed;
+            const bool bFlagValid = unit._bAlive <= SW_TRUE && unit._bMoved <= SW_TRUE && unit._bAttacked <= SW_TRUE && unit._bActed <= SW_TRUE &&
+                                    unit._bCommander <= SW_TRUE && unit._bSupportUsed <= SW_TRUE;
+            const bool bValid = bLevelRead && archive.isOk() && isInside( unit._cell ) && team < static_cast<uint8>( kSrpgTeamCount ) && bFlagValid;
+            if ( bValid == false )
+                return false;
+            unit._team = static_cast<SrpgTeam>( team );
+        }
+
+        uint8      phaseTeam = 0;
+        const bool bPartRead = restored._turnOrder.readState( archive ) && StateArchiveUtil::readRandom( archive, restored._random );
+        archive >> restored._turn;
+        archive >> restored._activeUnit;
+        archive >> phaseTeam;
+        const bool bValid = bPartRead && archive.isOk() && 0 <= restored._turn && -1 <= restored._activeUnit &&
+                            restored._activeUnit < static_cast<int32>( restored._listUnit.size() ) && phaseTeam < static_cast<uint8>( kSrpgTeamCount );
+        if ( bValid == false )
+            return false;
+        restored._phaseTeam = static_cast<SrpgTeam>( phaseTeam );
+        restored._eventBuffer.clear();
+        *this = std::move( restored );
+        return true;
     }
 
     void SrpgBattlefield::collectDevelopOptions( int32 unitIndex, vector<hashed_string>& outListUnitId ) const

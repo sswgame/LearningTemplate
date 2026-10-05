@@ -27,6 +27,7 @@ namespace sw
     struct DishDef;
     struct GameStateRefs;
 
+    class Archive;
     class ItemCatalog;
     class RestaurantCatalog;
     class WorldClock;
@@ -195,7 +196,9 @@ namespace sw
     class SW_GF_API RestaurantSimulation
     {
     public:
-        static constexpr float32 kStepMinutes = 1.0f;
+        static constexpr float32 kStepMinutes  = 1.0f;
+        static constexpr uint32  kStateTag     = 0x4D495352u; ///< 'RSIM'
+        static constexpr uint32  kStateVersion = 1;
 
         RestaurantSimulation();
 
@@ -231,6 +234,14 @@ namespace sw
         /** @brief 밤을 넘깁니다 — 재료가 하루 늙어 상한 것은 버리고(다음 결산에 들어간다), 시세 · 평판이 바뀝니다. */
         void advanceDay();
         void drainEvents( vector<RestaurantEvent>& outListEvent );
+
+        /**
+         * @brief 직원(레벨 포함) · 손님 · 주문 · 메뉴 · 스테이션 · 만족도 · 재료 묶음 · 조리(`Crafter`) · 시세(`ShopState`) · 오늘 결산 · 걸음 · 난수 · 날씨 id · 분 ·
+         *        도착 누적 · 미룬 폐기비 · 다음 손님 번호 · 영업 중을 씁니다. 카탈로그 · 설정 · 빌린 지갑 · 시계 · 평판 · 주방 창고는 싣지 않고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 같은 카탈로그 · 설정으로 `initialize` 한 뒤에 부릅니다. 깨졌거나 메뉴 수가 다르면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 지금 주문할 수 있는 요리인가입니다(메뉴 · 레시피 · 스테이션 · 레벨 · 재료). */
         bool  canServe( const hashed_string& dishId ) const;

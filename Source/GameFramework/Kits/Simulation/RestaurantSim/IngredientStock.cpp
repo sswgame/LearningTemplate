@@ -2,8 +2,11 @@
 
 #include "GameFramework/Kits/Simulation/RestaurantSim/IngredientStock.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -160,5 +163,38 @@ namespace sw
     {
         std::stable_sort( _listBatch.begin(), _listBatch.end(), []( const IngredientBatch& lhs, const IngredientBatch& rhs )
         { return IngredientStockInternal::makeExpiryKey( lhs ) < IngredientStockInternal::makeExpiryKey( rhs ); } );
+    }
+
+    void IngredientStock::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listBatch.size() );
+        for ( const IngredientBatch& batch : _listBatch )
+        {
+            StateArchiveUtil::writeName( outArchive, batch._itemId );
+            outArchive << batch._unitCost;
+            outArchive << batch._count;
+            outArchive << batch._daysLeft;
+        }
+    }
+
+    bool IngredientStock::readState( Archive& archive )
+    {
+        uint32 count = 0;
+        // 묶음마다 이름(4) + 원가(8) + 개수 · 남은 날(8)
+        if ( StateArchiveUtil::readCount( archive, 20, count ) == false )
+            return false;
+        vector<IngredientBatch> listBatch( count );
+        for ( IngredientBatch& batch : listBatch )
+        {
+            if ( StateArchiveUtil::readName( archive, batch._itemId ) == false )
+                return false;
+            archive >> batch._unitCost;
+            archive >> batch._count;
+            archive >> batch._daysLeft;
+            if ( archive.isError() || batch._count < 0 )
+                return false;
+        }
+        _listBatch = std::move( listBatch );
+        return true;
     }
 } // namespace sw

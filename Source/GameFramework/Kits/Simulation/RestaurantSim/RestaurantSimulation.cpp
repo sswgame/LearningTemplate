@@ -4,8 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantCatalog.h"
 
@@ -329,6 +332,232 @@ namespace sw
     void RestaurantSimulation::drainEvents( vector<RestaurantEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void RestaurantSimulation::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listStaff.size() );
+        for ( const StaffMember& staff : _listStaff )
+        {
+            StateArchiveUtil::writeName( outArchive, staff._name );
+            staff._level.writeState( outArchive );
+            outArchive << staff._busyMinutes;
+            outArchive << staff._dailyWage;
+            outArchive << staff._taskCustomer;
+            outArchive << static_cast<uint8>( staff._role );
+            outArchive << staff._bHired;
+        }
+        outArchive << static_cast<uint32>( _listCustomer.size() );
+        for ( const RestaurantCustomer& customer : _listCustomer )
+        {
+            StateArchiveUtil::writeName( outArchive, customer._typeId );
+            StateArchiveUtil::writeName( outArchive, customer._dishId );
+            outArchive << customer._waited;
+            outArchive << customer._patience;
+            outArchive << customer._eatRemaining;
+            outArchive << customer._price;
+            outArchive << customer._id;
+            outArchive << customer._seat;
+            outArchive << customer._quality;
+            outArchive << static_cast<uint8>( customer._state );
+            outArchive << customer._bServing;
+            outArchive << customer._bCheckingOut;
+        }
+        outArchive << static_cast<uint32>( _listOrder.size() );
+        for ( const KitchenOrder& order : _listOrder )
+        {
+            StateArchiveUtil::writeName( outArchive, order._dishId );
+            StateArchiveUtil::writeName( outArchive, order._station );
+            outArchive << order._remaining;
+            outArchive << order._customerId;
+            outArchive << order._cook;
+            outArchive << order._quality;
+            outArchive << order._bReady;
+        }
+        outArchive << static_cast<uint32>( _listMenu.size() );
+        for ( const MenuEntry& entry : _listMenu )
+        {
+            StateArchiveUtil::writeName( outArchive, entry._dishId );
+            outArchive << entry._price;
+            outArchive << entry._bOnMenu;
+        }
+        outArchive << static_cast<uint32>( _listStation.size() );
+        for ( const StationSlot& slot : _listStation )
+        {
+            StateArchiveUtil::writeName( outArchive, slot._station );
+            outArchive << slot._count;
+        }
+        outArchive << static_cast<uint32>( _listSatisfaction.size() );
+        for ( const float32 satisfaction : _listSatisfaction )
+        {
+            outArchive << satisfaction;
+        }
+        _stock.writeState( outArchive );
+        _crafter.writeState( outArchive );
+        _market.writeState( outArchive );
+        outArchive << _today._revenue;
+        outArchive << _today._tips;
+        outArchive << _today._ingredientCost;
+        outArchive << _today._wages;
+        outArchive << _today._spoilageCost;
+        outArchive << _today._profit;
+        outArchive << _today._rating;
+        outArchive << _today._arrivals;
+        outArchive << _today._served;
+        outArchive << _today._walkouts;
+        outArchive << _today._noChoice;
+        outArchive << _today._unservedAtClose;
+        StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateArchiveUtil::writeName( outArchive, _weatherId );
+        outArchive << _minutes;
+        StateArchiveUtil::writeRateAccumulator( outArchive, _arrival );
+        outArchive << _pendingSpoilageCost;
+        outArchive << _nextCustomerId;
+        outArchive << _bOpen;
+    }
+
+    bool RestaurantSimulation::readState( Archive& archive )
+    {
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 설정 · 빌린 포인터는 사본이 그대로 든다.
+        RestaurantSimulation restored = *this;
+        uint32               count    = 0;
+        // 직원마다 이름(4) + 레벨(경험치 · 누적 16 + 레벨 4) + 바쁨(4) + 일당(8) + 맡은 손님(4) + 역할 · 고용(2)
+        if ( StateArchiveUtil::readCount( archive, 42, count ) == false )
+            return false;
+        restored._listStaff.assign( count, StaffMember{} );
+        for ( StaffMember& staff : restored._listStaff )
+        {
+            uint8 role = 0;
+            if ( StateArchiveUtil::readName( archive, staff._name ) == false || staff._level.readState( archive ) == false )
+                return false;
+            archive >> staff._busyMinutes;
+            archive >> staff._dailyWage;
+            archive >> staff._taskCustomer;
+            archive >> role;
+            archive >> staff._bHired;
+            if ( archive.isError() || role > static_cast<uint8>( StaffRole::Cashier ) || staff._bHired > SW_TRUE )
+                return false;
+            staff._role = static_cast<StaffRole>( role );
+        }
+
+        // 손님마다 이름 둘(8) + 기다림 · 인내 · 먹기(12) + 값(8) + 번호 · 자리 · 품질(12) + 상태 · 나름 · 계산(3)
+        if ( StateArchiveUtil::readCount( archive, 43, count ) == false )
+            return false;
+        restored._listCustomer.assign( count, RestaurantCustomer{} );
+        for ( RestaurantCustomer& customer : restored._listCustomer )
+        {
+            uint8 state = 0;
+            if ( StateArchiveUtil::readName( archive, customer._typeId ) == false || StateArchiveUtil::readName( archive, customer._dishId ) == false )
+                return false;
+            archive >> customer._waited;
+            archive >> customer._patience;
+            archive >> customer._eatRemaining;
+            archive >> customer._price;
+            archive >> customer._id;
+            archive >> customer._seat;
+            archive >> customer._quality;
+            archive >> state;
+            archive >> customer._bServing;
+            archive >> customer._bCheckingOut;
+            const bool bValid = archive.isOk() && state <= static_cast<uint8>( CustomerState::Left ) && -1 <= customer._seat &&
+                                customer._seat < _settings._seatCount && customer._bServing <= SW_TRUE && customer._bCheckingOut <= SW_TRUE;
+            if ( bValid == false )
+                return false;
+            customer._state = static_cast<CustomerState>( state );
+        }
+
+        // 주문마다 이름 둘(8) + 남은 시간 · 손님 · 요리사 · 품질(16) + 준비(1)
+        if ( StateArchiveUtil::readCount( archive, 25, count ) == false )
+            return false;
+        restored._listOrder.clear();
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            KitchenOrder order;
+            if ( StateArchiveUtil::readName( archive, order._dishId ) == false || StateArchiveUtil::readName( archive, order._station ) == false )
+                return false;
+            archive >> order._remaining;
+            archive >> order._customerId;
+            archive >> order._cook;
+            archive >> order._quality;
+            archive >> order._bReady;
+            const bool bValid = archive.isOk() && -1 <= order._cook && order._cook < static_cast<int32>( restored._listStaff.size() ) && order._bReady <= SW_TRUE;
+            if ( bValid == false )
+                return false;
+            restored._listOrder.push_back( order );
+        }
+
+        // 메뉴는 카탈로그 요리마다 하나다 — 이름(4) + 값(8) + 올림(1)
+        if ( StateArchiveUtil::readCount( archive, 13, count ) == false || count != _listMenu.size() )
+            return false;
+        for ( MenuEntry& entry : restored._listMenu )
+        {
+            if ( StateArchiveUtil::readName( archive, entry._dishId ) == false )
+                return false;
+            archive >> entry._price;
+            archive >> entry._bOnMenu;
+            if ( archive.isError() || entry._bOnMenu > SW_TRUE )
+                return false;
+        }
+
+        // 스테이션마다 이름(4) + 수(4)
+        if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+            return false;
+        restored._listStation.assign( count, StationSlot{} );
+        for ( StationSlot& slot : restored._listStation )
+        {
+            if ( StateArchiveUtil::readName( archive, slot._station ) == false )
+                return false;
+            archive >> slot._count;
+        }
+        if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false )
+            return false;
+        restored._listSatisfaction.assign( count, 0.0f );
+        for ( float32& satisfaction : restored._listSatisfaction )
+        {
+            archive >> satisfaction;
+        }
+
+        const bool bPartRead = archive.isOk() && restored._stock.readState( archive ) && restored._crafter.readState( archive ) && restored._market.readState( archive );
+        if ( bPartRead == false )
+            return false;
+        archive >> restored._today._revenue;
+        archive >> restored._today._tips;
+        archive >> restored._today._ingredientCost;
+        archive >> restored._today._wages;
+        archive >> restored._today._spoilageCost;
+        archive >> restored._today._profit;
+        archive >> restored._today._rating;
+        archive >> restored._today._arrivals;
+        archive >> restored._today._served;
+        archive >> restored._today._walkouts;
+        archive >> restored._today._noChoice;
+        archive >> restored._today._unservedAtClose;
+        const bool bTailRead = StateArchiveUtil::readStepTimer( archive, restored._stepTimer ) && StateArchiveUtil::readRandom( archive, restored._random ) &&
+                               StateArchiveUtil::readName( archive, restored._weatherId );
+        archive >> restored._minutes;
+        const bool bArrivalRead = StateArchiveUtil::readRateAccumulator( archive, restored._arrival );
+        archive >> restored._pendingSpoilageCost;
+        archive >> restored._nextCustomerId;
+        archive >> restored._bOpen;
+        if ( bTailRead == false || bArrivalRead == false || archive.isError() || restored._bOpen > SW_TRUE )
+            return false;
+
+        // 직원이 맡은 손님 · 주문의 손님은 있는 손님이어야 한다.
+        for ( const StaffMember& staff : restored._listStaff )
+        {
+            if ( staff._taskCustomer >= 0 && restored.findCustomerIndex( staff._taskCustomer ) < 0 )
+                return false;
+        }
+        for ( const KitchenOrder& order : restored._listOrder )
+        {
+            if ( restored.findCustomerIndex( order._customerId ) < 0 )
+                return false;
+        }
+        restored._eventBuffer.clear();
+        restored._listSpoilageScratch.clear();
+        *this = std::move( restored );
+        return true;
     }
 
     bool RestaurantSimulation::canServe( const hashed_string& dishId ) const

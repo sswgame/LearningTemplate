@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    class Archive;
     class SrpgBattlefield;
     class SrpgCatalog;
 
@@ -80,6 +81,9 @@ namespace sw
     class SW_GF_API SrpgCampaign
     {
     public:
+        static constexpr uint32 kStateTag     = 0x50435253u; ///< 'SRCP'
+        static constexpr uint32 kStateVersion = 1;
+
         SrpgCampaign();
 
         void initialize( const RunMapSettings& settings, uint32 seed );
@@ -102,6 +106,11 @@ namespace sw
         bool                           isFailed() const { return _bFailed == SW_TRUE; }
         /** @brief 끝 칸(보스)의 작전을 이겼는가입니다. */
         bool isCleared() const { return _bFailed == SW_FALSE && _bInMission == SW_FALSE && _runMap.isFinished(); }
+
+        /** @brief 지도(`RunMap`) · 명단(레벨 둘 · 기체 · 파일럿 id · 잃음) · 씨앗 · 임무 중 · 실패를 씁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         RunMap                  _runMap;

@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Kits/Strategy/SideScrollConquest/ConquestCatalog.h"
 #include "GameFramework/Kits/Strategy/SideScrollConquest/ConquestWorld.h"
 
@@ -429,4 +431,73 @@ SW_TEST_CASE( SideScrollConquestTest, AttackRateFollowsTheIntervalNotTheStep )
             guardLoss = 100000.0f - unit._health;
     }
     SW_EXPECT_NEAR_EQUAL( design, guardLoss / 10.0f, 1.0f );
+}
+
+/**
+ * @brief [SideScrollConquestTest] 상태 바이트로 되살린 전장이 같은 전쟁을 잇는다 — 거점 · 건물(대기열 · 일꾼) · 병사 · 자원 · 지휘관 · 타이머가 같은 바이트이고,
+ *        같은 걸음을 둘 다 더 돌려도(훈련 · 생산 · 돌격 · 웨이브) 같은 바이트다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( SideScrollConquestTest, StateRoundTripContinuesTheSameWar )
+{
+    ConquestCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kConquestTestXml, "SideScrollConquestTest" ) );
+    ConquestWorld world;
+    world.initialize( &catalog );
+    SW_EXPECT_TRUE( world.placeBuilding( "barracks", "home" ) == ConquestResult::Ok );
+    SW_EXPECT_TRUE( world.placeBuilding( "lumberMill", "home" ) == ConquestResult::Ok );
+    SW_EXPECT_TRUE( world.assignWorkers( 1, 2 ) == ConquestResult::Ok );
+    SW_EXPECT_TRUE( world.trainUnit( 0, "spearman" ) == ConquestResult::Ok );
+    SW_EXPECT_TRUE( world.trainUnit( 0, "archer" ) == ConquestResult::Ok );
+    (void)world.spawnUnit( "ram", ConquestTeam::Player, 10.0f, ConquestOrder::Charge );
+    world.setCommanderMove( 1.0f );
+    for ( int32 frame = 0; frame < 100; ++frame )
+        world.update( frame % 3 == 0 ? 0.13f : 0.07f );
+
+    Archive written;
+    world.writeState( written );
+    ConquestWorld restored;
+    restored.initialize( &catalog );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    Archive rewritten;
+    restored.writeState( rewritten );
+    vector<uint8> originalBytes;
+    vector<uint8> restoredBytes;
+    written.writeData( originalBytes );
+    rewritten.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( restored.getBuildings().size() ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( world.getUnits().size() ), static_cast<int32>( restored.getUnits().size() ) );
+    SW_EXPECT_EQUAL( world.getResource( "wood" ), restored.getResource( "wood" ) );
+    SW_EXPECT_NEAR_EQUAL( world.getCommander()._x, restored.getCommander()._x, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( world.getElapsed(), restored.getElapsed(), 1.0e-6f );
+
+    // 같은 걸음을 둘 다 — 남은 훈련 · 생산이 끝나고, 돌격 명령 뒤 웨이브(30 초)가 나온다.
+    for ( int32 frame = 0; frame < 250; ++frame )
+    {
+        const float32 deltaTime = frame % 3 == 0 ? 0.13f : 0.07f;
+        world.update( deltaTime );
+        restored.update( deltaTime );
+        if ( frame == 50 )
+        {
+            world.issueOrder( ConquestOrder::Charge );
+            restored.issueOrder( ConquestOrder::Charge );
+        }
+    }
+    SW_EXPECT_TRUE( restored.getElapsed() > 30.0f );
+    Archive afterOriginal;
+    Archive afterRestored;
+    world.writeState( afterOriginal );
+    restored.writeState( afterRestored );
+    afterOriginal.writeData( originalBytes );
+    afterRestored.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+
+    ConquestWorld truncated;
+    truncated.initialize( &catalog );
+    Archive cut( written.getData(), written.getSize() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_TRUE( truncated.getBuildings().empty() );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, truncated.getElapsed(), 1.0e-6f );
 }
