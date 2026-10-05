@@ -377,15 +377,10 @@ namespace sw
 
     ID3D11ShaderResourceView* D3D11RHICommandContext::findBindlessBufferSrv( RHIDescriptorIndex index ) const
     {
-        if ( index == kInvalidDescriptorIndex || index >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
+        if ( index == kInvalidDescriptorIndex )
             return nullptr;
-        const RHIBufferHandle buffer = _pDevice->bindlessBufferAt( index );
-        if ( buffer == 0 )
-            return nullptr;
-        const auto it = _pDevice->_mapBufferSrv.find( buffer );
-        if ( it == _pDevice->_mapBufferSrv.end() || it->second == nullptr )
-            return nullptr;
-        return it->second.Get();
+        // 레지스트리는 공유 락으로 읽고(범위 밖이면 핸들 0), SRV 는 버퍼 레코드에서 락 없이 읽는다(핸들 0 은 nullptr).
+        return _pDevice->resolveBufferSrv( _pDevice->bindlessBufferAt( index ) );
     }
 
     void D3D11RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )

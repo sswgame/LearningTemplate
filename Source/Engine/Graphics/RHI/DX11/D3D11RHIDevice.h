@@ -8,7 +8,6 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
@@ -211,6 +210,13 @@ namespace sw
         /** @brief 다시 쓰기 직전의 묶음에서 결과를 마이크로초로 풉니다 (기다리지 않습니다). */
         void collectTimestampsForSlot();
 
+        /// @brief 버퍼와 그 SRV 입니다. SRV 는 셰이더가 버퍼로 읽는 것(구조버퍼 · 인다이렉트 인자 버퍼)에만 있습니다.
+        struct BufferRecord
+        {
+            Microsoft::WRL::ComPtr<ID3D11Buffer>             _buffer;
+            Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> _srv;
+        };
+
         /// @brief 텍스처와 그 뷰(SRV · RTV · UAV)입니다.
         struct TextureRecord
         {
@@ -282,10 +288,18 @@ namespace sw
         void forgetPipelineStateInRecordingStates( RHIPipelineStateHandle pso );
         /** @brief 불투명 버퍼 핸들을 ID3D11Buffer 로 풉니다. */
         ID3D11Buffer* resolveBuffer( RHIBufferHandle handle ) const;
-        /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. GPU 메모리 장부의 Buffer 줄에 크기(`ByteWidth`)를 올리는 유일한 자리입니다. */
-        RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer );
         /**
-         * @brief 버퍼에 `srvDesc` 로 SRV 를 만들고, 버퍼를 핸들 표에 넣은 뒤 SRV 를 그 핸들에 붙입니다. SRV 를 못 만들면 버퍼만 넣습니다.
+         * @brief 불투명 버퍼 핸들의 SRV 입니다(없으면 nullptr). 락 없이 읽습니다 — 레코드는 핸들 표의 슬롯에 있어 자리가 바뀌지 않습니다.
+         * @note 버퍼를 지우는 일(`destroyBuffer`)이 기록과 겹치면 안 됩니다. 다른 스레드는 `IRHIDevice::releaseHandle` 로 내립니다.
+         */
+        ID3D11ShaderResourceView* resolveBufferSrv( RHIBufferHandle handle ) const;
+        /**
+         * @brief 버퍼(와 있으면 SRV)를 핸들 표에 넣고 핸들을 반환합니다. GPU 메모리 장부의 Buffer 줄에 크기(`ByteWidth`)를 올리는 유일한 자리입니다.
+         * @details SRV 는 넣기 **전에** 레코드에 싣습니다 — 넣은 뒤에 붙이면 다른 스레드가 SRV 없는 레코드를 볼 수 있습니다.
+         */
+        RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv = nullptr );
+        /**
+         * @brief 버퍼에 `srvDesc` 로 SRV 를 만들어 버퍼와 함께 핸들 표에 넣습니다. SRV 를 못 만들면 버퍼만 넣습니다.
          * @details 구조버퍼와 인다이렉트 인자 버퍼 생성이 함께 씁니다(뷰 설명만 다릅니다).
          */
         RHIBufferHandle storeBufferWithSrv( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc );
@@ -331,10 +345,9 @@ namespace sw
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> _vertexBuffer; ///< 풀스크린 삼각형(정점 3개). 메시 정점 버퍼가 없는 드로우가 씀
 
-        RHIHandleTable<Microsoft::WRL::ComPtr<ID3D11Buffer>> _gpuBuffers;
-        /// @brief 구조버퍼 핸들 → SRV 입니다(그래픽스 VS 가 StructuredBuffer 로 읽습니다. GPUScene 인스턴스 버퍼 등).
-        unordered_map<RHIBufferHandle, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _mapBufferSrv;
-        RHIHandleTable<TextureRecord>                                                    _gpuTextures;
+        /// @brief 버퍼 핸들 → 버퍼 · SRV 입니다(텍스처 `_gpuTextures` 와 같은 모양). 기록 스레드가 SRV 를 락 없이 읽습니다(`resolveBufferSrv`).
+        RHIHandleTable<BufferRecord>  _gpuBuffers;
+        RHIHandleTable<TextureRecord> _gpuTextures;
 
         /// @brief 즉시 컨텍스트가 쓰는 기록 상태입니다. 리스트는 각자 자기 것을 갖습니다.
         D3D11RecordingState _recordingState;

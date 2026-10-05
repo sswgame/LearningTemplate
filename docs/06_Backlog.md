@@ -1220,7 +1220,8 @@ cd build/Ninja-Debug/Bin
 - **DX11** — `ID3D11DeviceContext` 는 스레드 안전하지 않다. 드로우 경로의 CB 갱신은 워커가 건 자기 Deferred Context 에 `Map(WRITE_DISCARD)`, 즉시 컨텍스트 자리는
   `_immediateContextMutex` 뒤. 기록 컨텍스트의 스레드 로컬은 (디바이스 일련번호 · 슬롯 · 세대) **토큰**만 든다 — 포인터로 되돌리면 해제된 컨텍스트에 Map 한다. 모든 드로우 진입점은
   `bindGraphicsPipelineForDraw()` 를 거친다. 인스턴스 버퍼를 CS UAV 에서 떼지 않으면 D3D11 이 SRV 를 NULL 로 강제한다(해저드는 WARNING 이라 로그에 안 나온다 — 해저드 ID 만 ERROR 로).
-  기록 끝난 `ID3D11CommandList` 가 백버퍼를 붙든다(리사이즈).
+  기록 끝난 `ID3D11CommandList` 가 백버퍼를 붙든다(리사이즈). 버퍼의 SRV 는 버퍼 레코드(`BufferRecord`)에 든다 — 기록 경로가 읽는 자료를 따로 된 해시 맵에
+  두지 않는다(생성 · 삭제의 재해시를 기록이 읽는다).
 - **DX12** — 펜스 대기의 시간 초과는 성공이 아니다. 커맨드 얼로케이터는 리스트마다(공유가 DEVICE_HUNG 의 진짜 원인이었다), 업로드 얼로케이터 Reset 은 그 슬롯의 펜스를 직접 기다린다.
   업로드 복사 리스트는 열어 두고 기록만 하며 `flushPendingUploads` 가 프레임에 한 번 내보낸다(`_uploadSlotMutex`). bindless 인덱스는 `acquireBindlessIndex(lock)` 로 집는 일과 뷰 생성을
   한 임계 구역에. CBV 는 256 B 정렬. drawIndirect 가 메시 VB 를 덮어쓴 적이 있다 — 렌더 변경은 스크린샷까지 본다.

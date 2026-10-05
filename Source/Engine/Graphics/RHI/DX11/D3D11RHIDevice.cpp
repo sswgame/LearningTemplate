@@ -178,8 +178,14 @@ namespace sw
 
     ID3D11Buffer* D3D11RHIDevice::resolveBuffer( RHIBufferHandle handle ) const
     {
-        const Microsoft::WRL::ComPtr<ID3D11Buffer>* pSlot = _gpuBuffers.get( handle );
-        return pSlot != nullptr ? pSlot->Get() : nullptr;
+        const BufferRecord* pRecord = _gpuBuffers.get( handle );
+        return pRecord != nullptr ? pRecord->_buffer.Get() : nullptr;
+    }
+
+    ID3D11ShaderResourceView* D3D11RHIDevice::resolveBufferSrv( RHIBufferHandle handle ) const
+    {
+        const BufferRecord* pRecord = _gpuBuffers.get( handle );
+        return pRecord != nullptr ? pRecord->_srv.Get() : nullptr;
     }
 
     size_t D3D11RHIDevice::bindlessBufferCount() const
@@ -220,13 +226,16 @@ namespace sw
         return _listUavSourceBuffer[index];
     }
 
-    RHIBufferHandle D3D11RHIDevice::storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer )
+    RHIBufferHandle D3D11RHIDevice::storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv )
     {
         if ( buffer == nullptr )
             return 0;
         D3D11_BUFFER_DESC bufferDesc{};
         buffer->GetDesc( &bufferDesc );
-        const RHIBufferHandle handle = _gpuBuffers.insert( std::move( buffer ) );
+        BufferRecord record{};
+        record._buffer               = std::move( buffer );
+        record._srv                  = std::move( srv );
+        const RHIBufferHandle handle = _gpuBuffers.insert( std::move( record ) );
         getMemoryLedger().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bufferDesc.ByteWidth );
         return handle;
     }
@@ -236,11 +245,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
         if ( buffer != nullptr )
             _device->CreateShaderResourceView( buffer.Get(), &srvDesc, srv.GetAddressOf() );
-
-        const RHIBufferHandle handle = storeBuffer( std::move( buffer ) );
-        if ( handle != 0 && srv )
-            _mapBufferSrv[handle] = std::move( srv );
-        return handle;
+        return storeBuffer( std::move( buffer ), std::move( srv ) );
     }
 
     D3D11RHIDevice::TextureRecord* D3D11RHIDevice::resolveTexture( RHITextureHandle handle )
