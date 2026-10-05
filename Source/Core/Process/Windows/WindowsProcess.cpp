@@ -35,6 +35,7 @@ namespace sw
 
     void Process::shutdown()
     {
+        closeInput();
         if ( _pStdOutRead != nullptr )
         {
             CloseHandle( static_cast<HANDLE>( _pStdOutRead ) );
@@ -76,6 +77,27 @@ namespace sw
 
         SetHandleInformation( hStdOutRead, HANDLE_FLAG_INHERIT, 0 );
 
+        // 표준 입력: 파이프(쓰는 끝은 이 프로세스만) 또는 NUL. 비워 두면 자식은 표준 입력 핸들이 없다.
+        HANDLE hStdInRead  = nullptr;
+        HANDLE hStdInWrite = nullptr;
+        if ( options._bPipeStandardInput )
+        {
+            if ( CreatePipe( &hStdInRead, &hStdInWrite, &saAttr, 0 ) == FALSE )
+            {
+                CloseHandle( hStdOutRead );
+                CloseHandle( hStdOutWrite );
+                SW_LOG_ERROR( "CreatePipe (stdin) failed!" );
+                return false;
+            }
+            SetHandleInformation( hStdInWrite, HANDLE_FLAG_INHERIT, 0 );
+        }
+        else
+        {
+            hStdInRead = CreateFileW( L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &saAttr, OPEN_EXISTING, 0, nullptr );
+            if ( hStdInRead == INVALID_HANDLE_VALUE )
+                hStdInRead = nullptr;
+        }
+
         string  cmdStr     = string( command );
         wstring wsCmdLine  = StringUtil::utf8ToUtf16( cmdStr.c_str() );
         wstring wsBuildDir = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
@@ -87,15 +109,20 @@ namespace sw
         InitializeProcThreadAttributeList( nullptr, 1, 0, &attributeListSize );
         vector<uint8>                attributeListBytes( attributeListSize );
         LPPROC_THREAD_ATTRIBUTE_LIST pAttributeList        = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>( attributeListBytes.data() );
-        HANDLE                       arrInheritedHandle[1] = { hStdOutWrite };
+        HANDLE                       arrInheritedHandle[2] = { hStdOutWrite, hStdInRead };
+        const DWORD                  inheritedHandleSize   = static_cast<DWORD>( sizeof( HANDLE ) * ( hStdInRead != nullptr ? 2 : 1 ) );
         const bool                   bAttributeReady       = InitializeProcThreadAttributeList( pAttributeList, 1, 0, &attributeListSize ) != FALSE;
         if ( bAttributeReady == false ||
-             UpdateProcThreadAttribute( pAttributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, arrInheritedHandle, sizeof( arrInheritedHandle ), nullptr, nullptr ) == FALSE )
+             UpdateProcThreadAttribute( pAttributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, arrInheritedHandle, inheritedHandleSize, nullptr, nullptr ) == FALSE )
         {
             if ( bAttributeReady )
                 DeleteProcThreadAttributeList( pAttributeList );
             CloseHandle( hStdOutRead );
             CloseHandle( hStdOutWrite );
+            if ( hStdInRead != nullptr )
+                CloseHandle( hStdInRead );
+            if ( hStdInWrite != nullptr )
+                CloseHandle( hStdInWrite );
             SW_LOG_ERROR( "Failed to restrict inherited handles for: %#", cmdStr.c_str() );
             return false;
         }
@@ -104,10 +131,16 @@ namespace sw
         startupInfo.StartupInfo.cb         = sizeof( STARTUPINFOEXW );
         startupInfo.StartupInfo.hStdError  = hStdOutWrite;
         startupInfo.StartupInfo.hStdOutput = hStdOutWrite;
+        startupInfo.StartupInfo.hStdInput  = hStdInRead;
         startupInfo.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
         startupInfo.lpAttributeList = pAttributeList;
 
-        const DWORD creationFlags = ( options._bCreateWindow ? 0 : CREATE_NO_WINDOW ) | EXTENDED_STARTUPINFO_PRESENT;
+        // 정상 종료 요청(`requestStop` — 콘솔 그룹에 Ctrl+Break)을 받을 자식은 이 프로세스의 콘솔을 나눠 써야 한다. CREATE_NO_WINDOW 는 숨은 새 콘솔을
+        // 만들어 이벤트가 닿지 않는다. 이 프로세스에 콘솔이 없으면(서비스 · 창 앱) 나눠 쓸 것이 없으니 그대로 숨긴다 — 새 콘솔 창이 뜨지 않게.
+        DWORD       consoleProcessId = 0;
+        const bool  bShareConsole    = options._bNewProcessGroup && GetConsoleProcessList( &consoleProcessId, 1 ) != 0;
+        const DWORD creationFlags    = ( options._bCreateWindow || bShareConsole ? 0 : CREATE_NO_WINDOW ) | EXTENDED_STARTUPINFO_PRESENT |
+                                    ( options._bNewProcessGroup ? CREATE_NEW_PROCESS_GROUP : 0 );
 
         PROCESS_INFORMATION pi{};
         const BOOL          bCreated = CreateProcessW(
@@ -124,17 +157,23 @@ namespace sw
 
         DeleteProcThreadAttributeList( pAttributeList );
         CloseHandle( hStdOutWrite );
+        if ( hStdInRead != nullptr )
+            CloseHandle( hStdInRead );
 
         if ( bCreated == FALSE )
         {
             CloseHandle( hStdOutRead );
+            if ( hStdInWrite != nullptr )
+                CloseHandle( hStdInWrite );
             SW_LOG_ERROR( "Failed to launch command: %#", cmdStr.c_str() );
             return false;
         }
 
-        _pNativeHandle = pi.hProcess;
-        _pNativeThread = pi.hThread;
-        _pStdOutRead   = hStdOutRead;
+        _pNativeHandle    = pi.hProcess;
+        _pNativeThread    = pi.hThread;
+        _pStdOutRead      = hStdOutRead;
+        _pStdInWrite      = hStdInWrite;
+        _bNewProcessGroup = options._bNewProcessGroup;
         _processId.store( static_cast<int32>( pi.dwProcessId ) );
 
         return true;
@@ -216,6 +255,37 @@ namespace sw
             return false;
 
         return TerminateProcess( static_cast<HANDLE>( _pNativeHandle ), static_cast<UINT>( exitCode ) ) != FALSE;
+    }
+
+    bool Process::writeInput( string_view text )
+    {
+        if ( _pStdInWrite == nullptr )
+            return false;
+        size_t written = 0;
+        while ( written < text.size() )
+        {
+            DWORD chunk = 0;
+            if ( WriteFile( static_cast<HANDLE>( _pStdInWrite ), text.data() + written, static_cast<DWORD>( text.size() - written ), &chunk, nullptr ) == FALSE )
+                return false;
+            written += chunk;
+        }
+        return true;
+    }
+
+    void Process::closeInput()
+    {
+        if ( _pStdInWrite != nullptr )
+        {
+            CloseHandle( static_cast<HANDLE>( _pStdInWrite ) );
+            _pStdInWrite = nullptr;
+        }
+    }
+
+    bool Process::requestStop()
+    {
+        const int32 processId = _processId.load();
+        // Ctrl+Break 는 콘솔 그룹에 간다 — 새 그룹으로 띄운 자식이 아니면 이 프로세스(와 같은 콘솔의 모두)가 받는다.
+        return _bNewProcessGroup && processId > 0 && GenerateConsoleCtrlEvent( CTRL_BREAK_EVENT, static_cast<DWORD>( processId ) ) != FALSE;
     }
 
     bool Process::isRunning() const

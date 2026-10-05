@@ -13,8 +13,10 @@ namespace sw
         : _pNativeHandle{ nullptr }
         , _pStdOutRead{ nullptr }
         , _pNativeThread{ nullptr }
+        , _pStdInWrite{ nullptr }
         , _bufferedOutput{}
         , _processId{ 0 }
+        , _bNewProcessGroup{ false }
     {
     }
 
@@ -27,12 +29,15 @@ namespace sw
         : _pNativeHandle{ other._pNativeHandle }
         , _pStdOutRead{ other._pStdOutRead }
         , _pNativeThread{ other._pNativeThread }
+        , _pStdInWrite{ other._pStdInWrite }
         , _bufferedOutput{ std::move( other._bufferedOutput ) }
         , _processId{ other._processId.load() }
+        , _bNewProcessGroup{ other._bNewProcessGroup }
     {
         other._pNativeHandle = nullptr;
         other._pStdOutRead   = nullptr;
         other._pNativeThread = nullptr;
+        other._pStdInWrite   = nullptr;
         other._processId.store( 0 );
     }
 
@@ -42,15 +47,18 @@ namespace sw
         {
             shutdown();
 
-            _pNativeHandle  = other._pNativeHandle;
-            _pStdOutRead    = other._pStdOutRead;
-            _pNativeThread  = other._pNativeThread;
-            _bufferedOutput = std::move( other._bufferedOutput );
+            _pNativeHandle    = other._pNativeHandle;
+            _pStdOutRead      = other._pStdOutRead;
+            _pNativeThread    = other._pNativeThread;
+            _pStdInWrite      = other._pStdInWrite;
+            _bufferedOutput   = std::move( other._bufferedOutput );
+            _bNewProcessGroup = other._bNewProcessGroup;
             _processId.store( other._processId.load() );
 
             other._pNativeHandle = nullptr;
             other._pStdOutRead   = nullptr;
             other._pNativeThread = nullptr;
+            other._pStdInWrite   = nullptr;
             other._processId.store( 0 );
         }
         return *this;

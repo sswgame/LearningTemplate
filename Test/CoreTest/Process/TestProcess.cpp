@@ -246,3 +246,26 @@ SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
     SW_EXPECT_TRUE_MSG( bFinished, "분리 실행한 명령이 10 초 안에 표식을 남기지 않았다 — 띄우지 못했거나 돌지 않았다" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
 }
+
+/**
+ * @brief [ProcessTest] 표준 입력 파이프로 쓴 줄을 자식이 읽고, 입력을 닫으면 자식이 EOF 로 끝난다
+ */
+SW_TEST_CASE( ProcessTest, StandardInputPipeReachesTheChild )
+{
+    sw::ProcessOptions options;
+    options._bPipeStandardInput = true;
+    sw::Process process;
+#if defined( SW_PLATFORM_WINDOWS )
+    SW_ASSERT_TRUE( process.launch( "cmd.exe /c findstr x", options ) );
+#else
+    SW_ASSERT_TRUE( process.launch( "grep x", options ) );
+#endif
+    SW_ASSERT_TRUE( process.writeInput( "axb\nccc\n" ) );
+    process.closeInput();
+    sw::string line;
+    sw::string output;
+    while ( process.readOutputLine( line ) )
+        output += line + "\n";
+    SW_EXPECT_EQUAL( 0, process.waitForExit() );
+    SW_EXPECT_STREQ( "axb\n", output.c_str() );
+}

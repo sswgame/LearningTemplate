@@ -36,6 +36,12 @@ namespace sw
         }
         /** @brief 지금 시각(마이크로초)입니다. */
         static int64 nowMicroseconds() noexcept { return nowNanoseconds() / 1000; }
+        /**
+         * @brief `nowNanoseconds()` 기준 @p deadlineNanoseconds 까지 이 스레드를 재웁니다(이미 지났으면 바로 돌아온다). 고정 틱 루프의 잠자기입니다.
+         * @details Windows 는 고해상도 대기 타이머(`CREATE_WAITABLE_TIMER_HIGH_RESOLUTION` — 없으면 `Sleep` 밀리초)로 1 ms 해상도 한계를 피하고,
+         *          리눅스는 `clock_nanosleep` 상대 대기입니다. 일찍 깨거나 신호에 깨면 남은 시간을 다시 재서 마감까지 다시 잡니다.
+         */
+        static void sleepUntilNanoseconds( int64 deadlineNanoseconds ) noexcept;
     };
 } // namespace sw
 

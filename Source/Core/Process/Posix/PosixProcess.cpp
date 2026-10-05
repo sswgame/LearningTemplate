@@ -65,6 +65,7 @@ namespace sw
 
     void Process::shutdown()
     {
+        closeInput();
         if ( _pStdOutRead != nullptr )
         {
             fclose( asOutputStream( _pStdOutRead ) );
@@ -115,6 +116,16 @@ namespace sw
             return false;
         }
 
+        // 표준 입력 파이프(켰을 때만). 끄면 자식의 표준 입력은 /dev/null — 서버 같은 자식이 이 프로세스의 표준 입력을 가로채지 않게.
+        int32 arrInputFd[2] = { -1, -1 };
+        if ( options._bPipeStandardInput && pipe2( arrInputFd, O_CLOEXEC ) != 0 )
+        {
+            close( arrPipeFd[0] );
+            close( arrPipeFd[1] );
+            SW_LOG_ERROR( "pipe() (stdin) failed for command: %#", pCommand );
+            return false;
+        }
+
         const int32 descriptorMax = getDescriptorLimit();
 
         const pid_t childPid = fork();
@@ -122,6 +133,11 @@ namespace sw
         {
             close( arrPipeFd[0] );
             close( arrPipeFd[1] );
+            if ( arrInputFd[0] >= 0 )
+            {
+                close( arrInputFd[0] );
+                close( arrInputFd[1] );
+            }
             SW_LOG_ERROR( "fork() failed for command: %#", pCommand );
             return false;
         }
@@ -138,6 +154,18 @@ namespace sw
             dup2( arrPipeFd[1], STDOUT_FILENO );
             dup2( arrPipeFd[1], STDERR_FILENO );
             close( arrPipeFd[1] );
+            if ( arrInputFd[0] >= 0 )
+            {
+                dup2( arrInputFd[0], STDIN_FILENO );
+                close( arrInputFd[0] );
+                close( arrInputFd[1] );
+            }
+            else
+            {
+                const int32 nullFd = open( "/dev/null", O_RDONLY );
+                if ( nullFd >= 0 )
+                    dup2( nullFd, STDIN_FILENO );
+            }
 
             closeDescriptorsAboveStandardInChild( descriptorMax );
 
@@ -154,6 +182,11 @@ namespace sw
 
         // ---- 부모 ----
         close( arrPipeFd[1] );
+        if ( arrInputFd[0] >= 0 )
+        {
+            close( arrInputFd[0] );
+            _pStdInWrite = reinterpret_cast<void*>( static_cast<intptr_t>( arrInputFd[1] ) + 1 );
+        }
 
         // 자식과 부모 중 누가 먼저 도는지는 정해져 있지 않다. 그래서 그룹 설정은 **양쪽에서** 부른다(먼저 도는 쪽이
         // 이기고, 나중 것은 조용히 실패한다). POSIX 가 권하는 관용구다.
@@ -163,6 +196,7 @@ namespace sw
         if ( pStream == nullptr )
         {
             close( arrPipeFd[0] );
+            closeInput();
             kill( -childPid, SIGKILL );
             int32 status = 0;
             waitpid( childPid, &status, 0 );
@@ -294,6 +328,41 @@ namespace sw
         // 아직 죽지 않았을 수 있다. Windows 의 `TerminateProcess` 와 같은 **요청**이다. 확실히 하려면 호출하는 쪽이
         // `waitForExit` 으로 기다린다.
         return true;
+    }
+
+    bool Process::writeInput( string_view text )
+    {
+        if ( _pStdInWrite == nullptr )
+            return false;
+        // 자식이 먼저 끝났으면 SIGPIPE 가 이 프로세스를 죽인다 — 시험 실행 파일은 신호 처리기를 두지 않으므로 여기서 한 번 무시로 건다(프로세스 전역).
+        (void)signal( SIGPIPE, SIG_IGN );
+        const int32 descriptor = static_cast<int32>( reinterpret_cast<intptr_t>( _pStdInWrite ) - 1 );
+        size_t      written    = 0;
+        while ( written < text.size() )
+        {
+            const ssize_t chunk = write( descriptor, text.data() + written, text.size() - written );
+            if ( chunk < 0 && errno == EINTR )
+                continue;
+            if ( chunk <= 0 )
+                return false;
+            written += static_cast<size_t>( chunk );
+        }
+        return true;
+    }
+
+    void Process::closeInput()
+    {
+        if ( _pStdInWrite != nullptr )
+        {
+            close( static_cast<int32>( reinterpret_cast<intptr_t>( _pStdInWrite ) - 1 ) );
+            _pStdInWrite = nullptr;
+        }
+    }
+
+    bool Process::requestStop()
+    {
+        const pid_t childPid = static_cast<pid_t>( _processId.load() );
+        return childPid > 0 && ( kill( -childPid, SIGTERM ) == 0 || kill( childPid, SIGTERM ) == 0 );
     }
 
     bool Process::isRunning() const

@@ -56,6 +56,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/CrashContext.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/ModuleBuildId.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Process.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Process/ShutdownSignal.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/StringUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/TagID.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/hashed_string.cpp"
@@ -75,11 +76,13 @@ set(listWindowsSource
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsCallStackCapture.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsCrashHandler.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsProcess.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsShutdownSignal.cpp"
 )
 set(listPosixSource
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixCallStackCapture.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixCrashHandler.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixProcess.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixShutdownSignal.cpp"
 )
 set(listLinuxSource
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxAsyncFileIoBackend.cpp"
