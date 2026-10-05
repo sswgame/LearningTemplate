@@ -70,8 +70,15 @@ if(Python3_Interpreter_FOUND)
 	# 와야 하고, App 경로는 빌드 폴더를 뒤지지 않고 CMake 가 그대로 넘긴다. 주의: 방향을 거꾸로(App 이 CookAssets 에
 	# 의존) 걸면 깨끗한 트리(CI)에서 아직 없는 App 을 찾다가 죽는다 — 로컬에서는 다른 프리셋의 낡은 App.exe 가
 	# 우연히 있어 지나간다. 의존 방향은 sw_configureAppDependencies 가 건다.
-	set(swCookArgs --all --output "${swPackOutputDir}" --cooked-dir "${CMAKE_BINARY_DIR}/Cooked" --app "$<TARGET_FILE:App>")
-	if(SW_SHIPPING_BUILD)
+	# 씬 쿠킹을 돌리는 엔진 실행 파일 — 전용 서버 타깃에는 App 이 없어 Server 가 쿠킹한다(같은 Headless 단계가 씬을 쿠킹한다).
+	# 서버는 셰이더를 쿠킹 · 검증하지 않는다(DXC 가 없고, 그릴 것이 없다).
+	if(SW_TARGET_TYPE STREQUAL "Server")
+		set(SW_COOK_HOST_TARGET Server)
+	else()
+		set(SW_COOK_HOST_TARGET App)
+	endif()
+	set(swCookArgs --all --output "${swPackOutputDir}" --cooked-dir "${CMAKE_BINARY_DIR}/Cooked" --app "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>")
+	if(SW_SHIPPING_BUILD AND NOT SW_TARGET_TYPE STREQUAL "Server")
 		list(APPEND swCookArgs --verify-shaders)
 	endif()
 

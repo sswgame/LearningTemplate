@@ -297,7 +297,8 @@ function(sw_configureAppDependencies TARGET_NAME)
 		list(REMOVE_DUPLICATES listReflectionStaticLib)
 		sw_linkWholeArchive(${TARGET_NAME} ${listReflectionStaticLib})
 
-		if(TARGET CookAssets)
+		# 쿠킹은 쿠커 실행 파일(App, 서버 타깃은 Server — SW_COOK_HOST_TARGET) 뒤에만 건다.
+		if(TARGET CookAssets AND TARGET_NAME STREQUAL SW_COOK_HOST_TARGET)
 			add_dependencies(CookAssets ${TARGET_NAME})
 			set_target_properties(CookAssets PROPERTIES EXCLUDE_FROM_ALL FALSE)
 		endif()

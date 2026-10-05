@@ -3,6 +3,7 @@
 #include "App/App.h"
 
 #include "App/Module/LiveReloadManager.h"
+#include "App/Module/ModuleCatalogLoader.h"
 #include "App/Module/ModuleHost.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
@@ -256,25 +257,10 @@ namespace sw
         // 모듈 호스트 · 감시자 · 앱 설정은 엔진 기반 몫이다. 모듈 본체의 로드는 ModuleHost 가 에디터 · 게임 태그를 건다.
         SW_MEMORY_SCOPE( EngineMisc );
 #if !defined( SW_SHIPPING )
-        // 무엇을 올릴지는 모듈 매니페스트가 정한다 — 빌드가 실행 파일 옆 `Modules/` 에 복사해 둔 것을 CMake 와 같은 규칙으로 해석한다.
-        const string catalogDirectory = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), ModuleCatalog::kCatalogFolder );
-        string       moduleError;
-        if ( _moduleCatalog.loadDirectory( catalogDirectory, moduleError ) == false )
-        {
-            SW_LOG_ERROR( "Module catalog: %#", moduleError.c_str() );
+        // 무엇을 올릴지는 모듈 매니페스트가 정한다. App 은 빌드가 담은 모든 대상을 올린다(Game = 클라이언트 + 리슨 서버용 서버 모듈,
+        // Client = 클라이언트). 전용 서버는 Server 실행 파일이 Server 대상으로 같은 해석을 한다.
+        if ( ModuleCatalogLoader::loadAndResolve( ModuleCatalog::getBuildTargetMask(), _moduleCatalog, _moduleResolution ) == false )
             return false;
-        }
-        ModuleResolveContext resolveContext{};
-        resolveContext._platform      = ModuleCatalog::getCurrentPlatform();
-        resolveContext._configuration = ModuleCatalog::getCurrentConfiguration();
-        if ( _moduleCatalog.resolve( resolveContext, _moduleResolution, moduleError ) == false )
-        {
-            SW_LOG_ERROR( "Module manifests: %#", moduleError.c_str() );
-            return false;
-        }
-        SW_LOG_INFO( "Modules: %# active, %# off", _moduleResolution._listLoadOrder.size(), _moduleResolution._listInactive.size() );
-        for ( const ModuleInactiveEntry& inactive : _moduleResolution._listInactive )
-            SW_LOG_INFO( "Module %# is off — %#", inactive._name.c_str(), inactive._reason.c_str() );
 
         // 모듈 감시자는 모듈을 올리는 ModuleHost 보다 먼저 있어야 한다. ModuleHost 가 이 포인터로 모듈을 올리고 리로드 콜백을 건다.
         _liveReloadManager = make_unique<LiveReloadManager>();

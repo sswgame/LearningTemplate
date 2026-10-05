@@ -71,6 +71,7 @@ add_subdirectory(Source/Engine)
 add_subdirectory(Source/RuntimeAPI)
 add_subdirectory(Source/Editor)
 add_subdirectory(Source/App)
+add_subdirectory(Source/Server)
 
 # 끈 것은 소스 검사 게이트에 "이 구성이 짓지 않는다" 로 적는다.
 if(SW_BUILD_GAMEFRAMEWORK OR SW_BUILD_GAME)
@@ -89,8 +90,9 @@ endif()
 # (빠지면 App 이 그 DLL 보다 먼저 빌드될 수 있고, 증상은 "가끔 실패" 로만 나타난다.)
 sw_verifyDynamicModuleRegistry()
 
-# App 타겟의 RHI 플러그인, 게임 모듈(SWGame), 에셋 쿠킹 빌드 순서 및 링크 의존성 자동 구성
+# App · Server 타겟의 RHI 플러그인, 게임 모듈(SWGame), 에셋 쿠킹 빌드 순서 및 링크 의존성 자동 구성(없는 타깃은 건너뛴다)
 sw_configureAppDependencies(App)
+sw_configureAppDependencies(Server)
 
 # 이 구성이 일부러 짓지 않는 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드 …)를 빌드 트리에 적는다 — `CheckSourceGlob` 이 읽는다.
 sw_writeUnbuiltSourceList()

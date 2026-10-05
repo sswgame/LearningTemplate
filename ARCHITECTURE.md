@@ -13,7 +13,9 @@
 
 엔진은 여러 모듈(DLL)과 정적 라이브러리로 분리되어 있습니다.
 ```text
-App (exe)  — Engine + RuntimeAPI만 링크. GameFramework는 링크하지 않음.
+App (exe)  — Engine + RuntimeAPI + AppHost 만 링크. GameFramework는 링크하지 않음. (빌드 타깃 Game · Client)
+Server (exe) — 전용 서버. App 과 같은 AppHost(ModuleHost · 매니페스트 해석 · 프레임 시간)를 링크하고, 창 · RHI · 플레이어 설정 단계 없이
+               게임 모듈을 고정 틱으로 돌린다. (빌드 타깃 Game · Server — `Source/Server/README.md`)
  ├─ Engine        (Object, RHI, Scene 등 — Core_objects 심볼을 DLL에 포함)
  │   └─ RuntimeAPI / Delegate / Event로 게임·에디터와 통신
  ├─ EditorModule  (Dev 전용, delay-load)
@@ -26,6 +28,8 @@ Core (STATIC)     — 로그·파일·문자열·메모리. OBJECT를 Engine과 
 ```
 - **Dev 모드**: `Engine` SHARED, `Editor`/`SWGame`/키트/`RHI_*`는 MODULE. App을 끄지 않고 핫리로드할 수 있습니다.
 - **Shipping 모드**: `Editor` 제외. `Engine`/`SWGame` STATIC. RHI 백엔드는 `SW_SHIPPING_RHI_BACKEND` 로 고른 하나를 Engine 에 정적 링크.
+- **빌드 타깃(`SW_TARGET_TYPE`)**: Game(Dev 기본 — App + Server), Client(배포 `*-Shipping` — App 만, 서버 전용 모듈 없음), Server(`*-Server` 프리셋 —
+  Server 만, 에디터 · RHI 백엔드 · X11 없음). 모듈은 매니페스트 `_listTarget`(Client · Server)로 타깃에 들어간다.
 
 ### 엔진 기동 · 종료
 - 기동 순서는 **단계 표 하나**(`Source/Engine/EngineInitStepList.xxx`)입니다. 줄마다 단계 하나와 그 단계가 기다리는 단계 목록(`{ A, B }`, 컴파일 때 검사)을 적고,

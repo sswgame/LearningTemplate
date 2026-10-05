@@ -13,6 +13,9 @@
    에디터의 시작 씬(`-gv_editorStartupScene`)이 게임의 첫 씬 요청보다 이깁니다. 에디터는 `-EnableEditor` 일 때만 올라옵니다.
 4. 게임 루프(`App::run`)를 돌립니다.
 
+모듈 호스트(`Module/` — `ModuleHost` · `LiveReloadManager` · `ModuleCompiler` · `ModuleCatalogLoader`)와 `FixedTimestep` 은 정적 라이브러리 `AppHost` 로 묶여
+전용 서버 실행 파일(`Source/Server`)이 같이 씁니다. App 은 빌드가 담은 모든 대상(`ModuleCatalog::getBuildTargetMask`)의 모듈을, Server 는 `Server` 대상만 올립니다.
+
 윈도우 메시지는 `NativeWindowEvent`로만 받고, 키/마우스 해석은 `InputManager`가 합니다.
 셸 단축키는 `EngineLoop` 가 든 셸 전용 `InputMap` 의 `Debug` 레이어(`alwaysOn`, `Resource/engine/input/default.input.xml`)로 묻습니다 —
 ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F7(`App::pollReloadHotkeys` 가 `EngineLoop::wasDebugActionTriggered` 로 묻는다).
