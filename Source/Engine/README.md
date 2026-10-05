@@ -19,7 +19,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 | 4 | `Resource` · `Spatial` · `Navigation` | 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. 공간 분할은 물리의 `AABB` 위에 선다. 내비메시(Recast 백엔드 · 베이크 입력 · 설정 표)는 물리의 셰이프 서술자를 읽어 베이크하고, 씬의 내비게이션 · 컴포넌트(6)가 쓴다. |
 | 5 | `Graphics`(Renderer 제외) · `Window` | RHI · 셰이더 · 머티리얼 · 메시 · 텍스처 — **디바이스와 GPU 에셋**. 창은 표면(`Common/IRenderSurface`)으로만 RHI 에 보인다. |
 | 6 | `Input` · `Object` | 컴포넌트 모델. 컴포넌트가 머티리얼·메시(5)를 든다 — 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 드는 것과 같은 자리. |
-| 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` · `Environment` · `DevTools` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트 · 지형 · 식생 · 물). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. 개발 도구(`DevTools` — 게임 창 개발 콘솔의 판단)는 입력(6) · 창(5) 위에 선다. |
+| 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` · `Environment` · `DevTools` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트 · 지형 · 식생 · 물). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. 개발 도구(`DevTools` — 게임 창 개발 콘솔의 판단 · 엔진 개발 명령 · 로컬라이제이션 수집 명령)는 씬(7) · 입력(6) · 창 · 디버그 그리기(5) 위에 선다. |
 | 8 | `Graphics/Renderer` · `Module` · `Telemetry` · `Destruction` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Cook)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. 텔레메트리 · 크래시 보고는 동의를 사용자 설정(7)에서 읽는다. 파괴(`Destruction`)는 캐릭터 형상의 자르기 도구(7) 위에 서는 기능 모듈이라 여기다(렌더러는 모른다). |
 | 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
 
@@ -70,6 +70,8 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Graphics/**: RHI · Material · Shader · FrameRenderer. [Graphics/README.md](Graphics/README.md)
 - **Input/**: InputManager · InputMap · 장치(Keyboard/Mouse/Gamepad) 추상화. [Input/README.md](Input/README.md)
 - **Localization/**: 문자열 표(원문 · 문화권 번역 · 낡은 번역 판정) · 문화권 데이터 · ICU 메시지 포맷(복수형 · 고르기 · 숫자 · 날짜) · 의사 로컬라이제이션 · `SW_LOCTEXT`. [Localization/README.md](Localization/README.md)
+- **DevTools/**: 개발 도구 — 게임 창 콘솔의 판단(`DevConsoleController`) · 엔진 개발 명령(`EngineDevCommands.cpp`) · 로컬라이제이션 수집 · 가져오기 ·
+  내보내기 명령의 본문(`LocalizationTools`, `EngineLoop` 이 명령줄로 부른다). 씬 · 오브젝트 · 대화 에셋을 함께 보므로 티어 7 이다.
 - **UserSettings/**: 플레이어 옵션 메뉴의 백엔드 — 데이터 스키마 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기/확인 카운트다운 · 메뉴 바인딩 API. [UserSettings/README.md](UserSettings/README.md)
 - **Telemetry/**: 텔레메트리(동의 · 스키마 · 표본 · 묶음 · JSON lines 스풀 · 회전 · 올리기 · 장면별 프레임 시간 요약)와 크래시 보고(다음 실행의 묶음 ·
   동의 local/ask/send · 보고 프로세스 · multipart 업로드). 바깥으로는 `IHttpClient` 창구로만 나가고 기본 창구는 보내지 않는다. [Telemetry/README.md](Telemetry/README.md)
@@ -131,7 +133,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   글자 입력(`InputManager::setTextInputCallback( …, InputKeyboardFocus::DevConsole )`)이고, 여닫는 액션이 발화한 프레임의 글자는 버립니다.
   열려 있는 동안 콘솔이 `InputManager` 키보드 포커스를 쥐어 게임 쪽 키 조회와 통합 InputMap 의 키보드 바인딩이 "안 눌림" 입니다(셸 맵만 포커스를 무시합니다).
   패드는 포커스 밖이라 콘솔이 열린 동안에도 게임이 받습니다. 엔진 명령은
-  루트의 `EngineDevCommands.cpp`(`timescale` · `teleport` · `debugdraw.category`). Shipping 실행 파일에 등록부가 없는지는
+  `DevTools/EngineDevCommands.cpp`(`timescale` · `teleport` · `debugdraw.category`). Shipping 실행 파일에 등록부가 없는지는
   `DevCommandShippingTest`(AppTest)가 바이너리를 훑어 봅니다.
 - **루트 파일 — 기동 · 종료**:
   - `EngineInitStepList.xxx`: 기동 단계의 등록표(X-macro). 줄 순서가 초기화 순서이고, 줄마다 단계 이름 · 그 초기화에 거는 메모리 태그 ·

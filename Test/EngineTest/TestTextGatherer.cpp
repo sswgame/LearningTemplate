@@ -3,10 +3,10 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/DevTools/LocalizationTools.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextGatherer.h"
-#include "Engine/LocalizationTools.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 

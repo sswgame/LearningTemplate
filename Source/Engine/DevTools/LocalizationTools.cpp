@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/LocalizationTools.h"
+#include "Engine/DevTools/LocalizationTools.h"
 
 #include "Core/Container/set.h"
 #include "Core/File/FileUtil.h"

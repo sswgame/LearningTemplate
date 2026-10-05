@@ -2,10 +2,10 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/DevTools/LocalizationTools.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/PortableObjectFile.h"
 #include "Engine/Localization/TranslationMemory.h"
-#include "Engine/LocalizationTools.h"
 
 #include "EngineTest/LocalizationTestUtil.h"
 
