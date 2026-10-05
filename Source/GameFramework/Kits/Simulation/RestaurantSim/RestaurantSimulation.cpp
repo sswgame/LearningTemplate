@@ -33,6 +33,18 @@ namespace sw
                 }
                 return false;
             }
+
+            /** @brief 주문 후보 하나 — 요리와 그 손님의 고르기 가중치(양수만 담는다)입니다. */
+            struct DishChoice
+            {
+                const DishDef* _pDish{ nullptr };
+                float32        _weight{ 0.0f };
+            };
+
+            static float32 getChoiceWeight( const DishChoice& choice )
+            {
+                return choice._weight;
+            }
         };
     } // namespace
 } // namespace sw
@@ -608,8 +620,7 @@ namespace sw
         const CustomerTypeDef* pType = _pCatalog->findCustomerType( customer._typeId );
         if ( pType == nullptr )
             return false;
-        vector<const DishDef*> listCandidate;
-        vector<float32>        listWeight;
+        vector<RestaurantSimulationInternal::DishChoice> listChoice;
         for ( const MenuEntry& entry : _listMenu )
         {
             const DishDef* pDish = _pCatalog->findDish( entry._dishId );
@@ -621,16 +632,16 @@ namespace sw
             float32 weight = computeDishDemand( *pDish, entry._price );
             if ( RestaurantSimulationInternal::contains( pType->_listCategory, pDish->_category ) )
                 weight *= _settings._preferredWeight;
-            listCandidate.push_back( pDish );
-            listWeight.push_back( weight );
+            if ( weight <= 0.0f )
+                continue; // 고를 몫이 없는 요리는 후보가 아니다 — 모두 0 이면 시킬 것이 없어 나간다
+            listChoice.push_back( RestaurantSimulationInternal::DishChoice{ pDish, weight } );
         }
-        if ( listCandidate.empty() )
+        const int32 pickIndex = _random.pickWeightedIndex( listChoice, &RestaurantSimulationInternal::getChoiceWeight );
+        if ( pickIndex < 0 )
             return false;
-        const int32      pickIndex = _random.pickWeightedIndex( listWeight, []( float32 weight )
-             { return weight; } );
-        const DishDef*   pDish     = pickIndex >= 0 ? listCandidate[static_cast<size_t>( pickIndex )] : listCandidate.back();
-        const RecipeDef* pRecipe   = findRecipe( *pDish );
-        int64            cost      = 0;
+        const DishDef*   pDish   = listChoice[static_cast<size_t>( pickIndex )]._pDish;
+        const RecipeDef* pRecipe = findRecipe( *pDish );
+        int64            cost    = 0;
         if ( pRecipe == nullptr || _stock.consumeBag( pRecipe->_inputs, 1, cost ) == false )
             return false;
         _today._ingredientCost += cost;

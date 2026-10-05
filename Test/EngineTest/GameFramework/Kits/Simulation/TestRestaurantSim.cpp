@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantSimulation.h"
 #include "GameFramework/Progression/LevelProgress.h"
 #include "GameFramework/Progression/Reputation.h"
+#include "GameFramework/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -123,6 +124,12 @@ namespace
                 ++count;
         }
         return count;
+    }
+
+    /** @brief 시험의 뽑기 흉내가 쓰는 가중치 읽기입니다 — 실수 하나가 곧 가중치입니다. */
+    float32 getRestaurantTestWeight( float32 weight )
+    {
+        return weight;
     }
 } // namespace
 
@@ -432,4 +439,92 @@ SW_TEST_CASE( RestaurantSimTest, FullDayClosesTheBooksDeterministically )
 
     const RestaurantDaySummary rainy = runRestaurantDay( world, "rain", 1.0f );
     SW_EXPECT_TRUE( rainy._arrivals < sunny._arrivals );
+}
+
+/**
+ * @brief [RestaurantSimTest] 손님은 (좋아하는 분류 배율 × 가격 수요) 가중치로 요리를 고른다 — 같은 씨앗 · 같은 가중치의 뽑기와 한 그릇씩 같다
+ * @details 학생(Noodle 선호)에게 라멘은 1 × `_preferredWeight` 3, 오믈렛은 1 이다. 케이크는 오븐이 없어 후보가 아니다. 시뮬레이션의 난수는 손님 도착과
+ *          요리 고르기에만 쓰이고 이 시험은 영업을 열지 않으므로(도착 없음), 같은 씨앗의 `GameRandom` 으로 같은 순서를 다시 뽑아 견준다.
+ */
+SW_TEST_CASE( RestaurantSimTest, CustomersPickDishesLikeTheSeededWeightedDraw )
+{
+    RestaurantTestWorld world;
+    SW_ASSERT_TRUE( world.load() );
+    RestaurantSettings settings;
+    settings._seatCount = 6;
+    RestaurantSimulation sim;
+    world.initialize( sim, settings );
+    sim.setStationCount( "Stove", 1 );
+    (void)sim.hireStaff( "ann", StaffRole::Cook, 30 );
+    stockPantry( sim, 20 );
+    SW_ASSERT_TRUE( sim.canServe( "ramen" ) );
+    SW_ASSERT_TRUE( sim.canServe( "omelette" ) );
+    SW_ASSERT_FALSE( sim.canServe( "cake" ) );
+    for ( int32 customerIndex = 0; customerIndex < 6; ++customerIndex )
+        (void)sim.admitCustomer( "student" );
+    sim.update( 1.0f );
+    SW_ASSERT_TRUE( sim.getOrders().size() == 6 );
+
+    GameRandom          oracle( settings._randomSeed );
+    const float32       arrWeight[] = { 3.0f, 1.0f }; // 메뉴 순서 — 라멘 · 오믈렛
+    const hashed_string arrDishId[] = { hashed_string( "ramen" ), hashed_string( "omelette" ) };
+    for ( const KitchenOrder& order : sim.getOrders() )
+    {
+        const int32 expectedIndex = oracle.pickWeightedIndex( arrWeight, getRestaurantTestWeight );
+        SW_ASSERT_TRUE( 0 <= expectedIndex && expectedIndex <= 1 );
+        SW_EXPECT_TRUE( order._dishId == arrDishId[expectedIndex] );
+    }
+    SW_EXPECT_EQUAL( 0, sim.getToday()._noChoice );
+}
+
+/**
+ * @brief [RestaurantSimTest] 가중치가 0 인 요리는 양수 가중치 요리 옆에서 뽑히지 않는다 — 좋아하는 분류 배율이 0 이면 학생은 라멘 대신 오믈렛만 시킨다
+ */
+SW_TEST_CASE( RestaurantSimTest, ZeroWeightDishIsNotOrderedBesidePositiveOnes )
+{
+    RestaurantTestWorld world;
+    SW_ASSERT_TRUE( world.load() );
+    RestaurantSettings settings;
+    settings._seatCount       = 6;
+    settings._preferredWeight = 0.0f; // 학생이 좋아하는 Noodle(라멘)의 가중치가 0
+    RestaurantSimulation sim;
+    world.initialize( sim, settings );
+    sim.setStationCount( "Stove", 1 );
+    (void)sim.hireStaff( "ann", StaffRole::Cook, 30 );
+    stockPantry( sim, 20 );
+    SW_ASSERT_TRUE( sim.canServe( "ramen" ) );
+    SW_ASSERT_TRUE( sim.canServe( "omelette" ) );
+    for ( int32 customerIndex = 0; customerIndex < 6; ++customerIndex )
+        (void)sim.admitCustomer( "student" );
+    sim.update( 1.0f );
+    SW_ASSERT_TRUE( sim.getOrders().size() == 6 );
+    for ( const KitchenOrder& order : sim.getOrders() )
+        SW_EXPECT_TRUE( order._dishId == hashed_string( "omelette" ) );
+    SW_EXPECT_EQUAL( 0, sim.getToday()._noChoice );
+}
+
+/**
+ * @brief [RestaurantSimTest] 후보가 모두 가중치 0 이면 시키지 않고 나간다 — 0 은 "후보 아님" 이라 다른 후보가 없어도 되살아나지 않는다
+ * @details 좋아하는 분류 배율 0 · 라멘 재료만 — 학생의 후보는 가중치 0 인 라멘 하나다. 주문이 없으니 재료도 그대로다.
+ */
+SW_TEST_CASE( RestaurantSimTest, CustomerWithOnlyZeroWeightDishesLeavesWithoutOrdering )
+{
+    RestaurantTestWorld world;
+    SW_ASSERT_TRUE( world.load() );
+    RestaurantSettings settings;
+    settings._preferredWeight = 0.0f;
+    RestaurantSimulation sim;
+    world.initialize( sim, settings );
+    sim.setStationCount( "Stove", 1 );
+    (void)sim.hireStaff( "ann", StaffRole::Cook, 30 );
+    (void)sim.addIngredient( "noodle", 5, 5 );
+    (void)sim.addIngredient( "broth", 5, 4 );
+    SW_ASSERT_TRUE( sim.canServe( "ramen" ) );
+    SW_ASSERT_FALSE( sim.canServe( "omelette" ) );
+    (void)sim.admitCustomer( "student" );
+    sim.update( 1.0f );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( sim.getOrders().size() ) );
+    SW_EXPECT_EQUAL( 1, sim.getToday()._noChoice );
+    SW_EXPECT_TRUE( sim.getCustomers().back()._state == CustomerState::Left );
+    SW_EXPECT_EQUAL( 5, sim.getInventory().getItemCount( "noodle" ) ); // 주문이 없으니 재료도 그대로
 }

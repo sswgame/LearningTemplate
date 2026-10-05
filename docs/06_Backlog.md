@@ -206,7 +206,6 @@ cd build/Ninja-Debug/Bin
   카메라 `gv_cameraFieldOfView` · `gv_cameraShakeScale` · `gv_cameraHeadBob`(cam-views 가 읽을 자리). (4) 해상도 선택지를 모니터 모드에서(선택지 공급자) · GPU 사양 조회(RHI 어댑터 · 전용 메모리)로 품질 자동 선택.
   (5) 게임 스키마에 키 바인딩 설정 — Shooter3D 는 입력 맵(`data/shooter.input.xml`)을 쓰니 그 액션부터. 다른 시험 게임은 아직 키를 직접 묻는다(입력 맵으로 옮길 것). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 - **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
-  - 작은 것: `RestaurantSimulation::placeOrder` 의 후보 목록 둘(가중치가 모두 0 일 때 결과가 달라져 손대지 않았다).
   - 중간: `SpatialHashGrid2D`(RTS 버킷 · NetMmo 관심 격자 — 둘의 질의 모양이 달라 함께 뽑을 이득을 아직 못 봤다) · 키트의 칸 저장소를
     `GridTopology` 위로(CreatureTown · FarmField · TileMap · ActionPlatformerBody 의 `y × 너비 + x` 손셈 — 이웃 표 · 탐색은 이미 옮겼다) ·
     NetConnection 메시지 버퍼 재사용.
@@ -1553,6 +1552,8 @@ cd build/Ninja-Debug/Bin
   `PhysicsWorldQuery` 는 깊이 없는 바디를 Z 와 상관없이 맞힌다.
 - **병렬 틱에서 다른 오브젝트의 상태(센서 피해)를 바로 바꾸면 결정적이지 않다** — 받는 쪽이 이번 틱에 볼지가 스케줄에 달린다(사슬 폭발이 한 프레임에 번지거나 말거나).
   `GimmickDamageUtil` 처럼 틱 뒤(`executeOrDeferPostTick`)로 미루면 늘 다음 틱이다. Windows 헤더는 `near` · `far` 를 빈 매크로로 둔다 — 지역 변수 이름으로 쓰지 말 것.
+- **가중치 뽑기에서 0 은 "후보 아님" 이다** — `pickWeightedIndex` 가 −1 이면 아무것도 고르지 않는다(식당 주문 · 손님 도착 · 드롭 · 조우 모두 같다). 실수 가중치(수요 · 배율)는
+  `pickWeightedIndex`, 정수 표(조우 · 드롭)는 `pickWeightedIndexInt` — 서로 바꾸면 난수 흐름(`nextFloat` ↔ `nextInt`)이 달라져 같은 씨앗의 결과가 바뀐다.
 
 ### 3-12. 기각한 것 — 숫자와 함께 (다시 제안하지 말 것)
 
