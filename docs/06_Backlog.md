@@ -366,9 +366,6 @@ cd build/Ninja-Debug/Bin
   server-target(Server 실행 파일) 뒤의 시험이다 — 같은 입력의 해시가 구성 · 플랫폼을 넘어 같은 것은
   `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(기록한 해시 다섯)가 CI 두 플랫폼에서 지킨다.
 
-- **네트워크 — 복제 키트에서 남은 것**(2026-10-05, N5~N7 뒤). ① MMO 비신뢰 갱신을 잃어도 서버는 모른다 — 보낸 순간 `_listSentState` 를 바꿔 "안 바뀜" 으로 보고
-  가속하지 않으니 다음 차례(누적 우선도)까지 옛 상태가 보인다. 메시지 전달 통지(`NetConnection` 패킷 확인 → 메시지)가 생기면 확인 기준으로 바꾼다.
-
 - **네트워크 — 포화된 연결의 비신뢰 줄**(N21a 뒤). 대역폭 몫을 다 쓰면 메시지가 기다리는데, 비신뢰 줄(`NetConnection::_listOutgoingUnreliable`)에는 상한이 없어 오래 포화되면
   옛 비신뢰가 쌓였다 몰려 간다. 언리얼은 포화면(`IsNetReady` 거짓) 액터 복제를 건너뛴다 — 키트가 `NetHost` 에 "이 연결이 포화인가" 를 묻거나 줄에 나이 상한을 둔다. 재고 나서.
 
@@ -481,6 +478,7 @@ cd build/Ninja-Debug/Bin
 - **타일맵 칸 데이터를 일반 레이어로**(두 번째 장르가 칸마다 다른 값 — 지형 비용 · 발소리 — 을 원하면): 지금 레이어는 0/1(`kArrTileFlagLayerInfo`)이고 워프 · 역할 · 스폰은
   전용 원소다. 값 종류를 정수로 넓히고 에디터 페인트 · 형식 시험을 같이 바꾼다(Godot TileSet custom data 모양).
 - **걸음 조우 판정 둘**(Overworld `shouldEncounterOnStep` 의 결정적 주기 · ClassicJrpg `JrpgEncounterWalker` 의 확률 + 유예) — 오버월드 위에 JRPG · 몬스터 수집 게임이 서면 기반 `World/` 로 하나를 올린다.
+- **MMO 갱신 확인을 `NetConnection` 전달 통지로**: 패킷 확인 → 메시지 전달 통지가 Core 에 생기면 키트 확인 메시지(`kUpdateAck`)를 지우고 그 통지로 판정한다(언리얼 NAK 자리).
 
 ---
 
@@ -1489,6 +1487,8 @@ cd build/Ninja-Debug/Bin
 - **비신뢰로 실은 몫은 확인을 기다린다**(`NetPrioritizer::markSentUnconfirmed` · `resolveSend`) — 실은 순간 0 으로만 돌리면 잃은 상태가 한 차례를 통째로
   다시 기다린다. CS 는 확인한 재구성과 보낸 재구성의 그 엔티티를 견줘 받음 · 잃음을 가린다(하니스 손실 20 % 낮은 우선도 최대 96 → 89 틱; 손실 없는 포화
   회선의 최대 20 틱은 그대로 — 그 20 은 순서만 채널에 밀린 몫이 아니었다).
+- **비신뢰 갱신의 "보낸 상태" 와 "확인된 상태" 를 나눈다**(MMO `_listInFlightState` · `_listSentState`) — 보낸 순간 기준을 바꾸면 잃은 갱신이 "안 바뀜" 이 되어
+  가속도 없다. 클라이언트는 받은 갱신 틱을 확인(가장 새 틱 + 앞 32 틱 비트)으로 틱마다 보낸다(30 틱 끊김 뒤 먼 엔티티 13 → 4 틱).
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
 

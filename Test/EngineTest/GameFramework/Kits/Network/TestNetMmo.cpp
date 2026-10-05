@@ -85,7 +85,7 @@ namespace
         MmoTable*     _pTable;
     };
 
-    /** @brief 클라이언트 — 보이는 엔티티와, 틱 도장이 있는 상태가 뒤로 간 횟수(옛 갱신이 새 것을 덮음)를 센다. */
+    /** @brief 클라이언트 — 보이는 엔티티와, 틱 도장이 있는 상태가 뒤로 간 횟수(옛 갱신이 새 것을 덮음)를 센다. 받은 갱신 틱은 틱마다 확인한다. */
     class MmoClientSession final : public INetSimSession
     {
     public:
@@ -94,8 +94,23 @@ namespace
             , _listEvent{}
             , _mapLastStamp{}
             , _regressionCount{ 0 }
+            , _serverConnectionId{ -1 }
         {
             world.getRouter().addHandler( &_view );
+        }
+
+        void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
+        {
+            (void)world;
+            if ( event._kind == NetHostEvent::Kind::Connected )
+                _serverConnectionId = event._connectionId;
+        }
+
+        void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
+        {
+            (void)deltaTime;
+            if ( _serverConnectionId >= 0 )
+                _view.sendAck( world.getHost(), _serverConnectionId );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -132,6 +147,7 @@ namespace
         vector<MmoClientEvent>        _listEvent;
         unordered_map<uint32, uint32> _mapLastStamp;
         int32                         _regressionCount;
+        int32                         _serverConnectionId;
     };
 
     class MmoNetSimGame final : public INetSimGame
@@ -249,6 +265,10 @@ SW_TEST_CASE( NetMmoTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
             NetChannelType channel      = NetChannelType::Unreliable;
             while ( clientHost.receiveMessage( connectionId, channel, buffer ) )
                 SW_EXPECT_TRUE( NetHandleResult::Handled == view.handleMessage( 0, buffer ) );
+            // 클라이언트는 받은 갱신 틱을 틱마다 확인한다 — 서버는 그것으로 잃은 갱신을 가린다.
+            view.sendAck( clientHost, 0 );
+            while ( serverHost.receiveMessage( connectionId, channel, buffer ) )
+                SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionId, buffer ) );
             vector<MmoClientEvent> listEvent;
             view.drainEvents( listEvent );
             for ( const MmoClientEvent& event : listEvent )
@@ -493,4 +513,68 @@ SW_TEST_CASE( NetMmoTest, UpdateBudgetFollowsTheConnectionCap )
     SW_LOG_INFO( "[NetMmo] updates in 120 ticks: default cap %#, 6 KB/s cap %#", defaultCount, cappedCount );
     SW_EXPECT_TRUE( defaultCount > 1000 );            // 600 B 예산 — 스물이 거의 매 틱
     SW_EXPECT_TRUE( cappedCount * 3 < defaultCount ); // 50 B 예산 — 틱마다 두셋
+}
+
+/**
+ * @brief [NetMmoTest] 잃은 갱신의 엔티티는 확인을 보고 곧 다시 간다 — 서버가 보낸 순간 "안 바뀜" 으로 보고 한 차례를 통째로 기다리지 않는다
+ * @details 먼 엔티티(낮은 우선도) 하나가 바뀐 직후 내리막을 30 틱 모두 잃는다. 그 사이 서버는 그 갱신을 보낸다(바뀜 가속). 회선이 돌아온 뒤
+ *          클라이언트가 새 상태를 볼 때까지의 틱을 잰다. 가까운 여덟이 틱마다 바뀌어 예산(200 B)을 채운다.
+ */
+SW_TEST_CASE( NetMmoTest, LostUpdateIsResentSoonAfterTheAck )
+{
+    constexpr uint32 kFarId = 200;
+    MmoNetSimGame    game;
+    game._table._settings._updateBudgetBytes = 200;
+    game._table._listEntity.push_back( MmoEntity{
+        vector<uint8>( 4, 0 ), float3{ 0.0f, 0.0f, 0.0f },
+        kMmoObserverId, 0, 1.0f
+    } );
+    for ( uint32 index = 0; index < 8; ++index )
+        game._table._listEntity.push_back( MmoEntity{
+            vector<uint8>( 16, 0 ), float3{ static_cast<float32>( index + 1 ), 0.0f, 1.0f },
+            100 + index, 1, 1.0f
+        } );
+    game._table._listEntity.push_back( MmoEntity{
+        vector<uint8>( 16, 0 ), float3{ 50.0f, 0.0f, 0.0f },
+        kFarId, 1, 1.0f
+    } );
+    NetSimSettings settings;
+    settings._hostSettings._sendInterval = 1.0 / 60.0;
+    NetSimHarness harness;
+    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    const int32 client = harness.addClient( NetSimLinkConditions{} );
+    for ( uint32 tick = 0; tick < 120; ++tick )
+    {
+        for ( size_t index = 1; index <= 8; ++index )
+            ++game._table._listEntity[index]._listState[0];
+        harness.step();
+    }
+    const MmoClientSession& session = getMmoClient( harness, client );
+    SW_ASSERT_NOT_NULL( session.getView().findEntity( kFarId ) );
+
+    NetEmulationConditions dropAll;
+    dropAll._lossRate = 1.0f;
+    NetSimLinkConditions blackout;
+    blackout._downstream = dropAll;
+    harness.setLinkConditions( client, blackout );
+    game._table._listEntity.back()._listState[0] = 7; // 먼 엔티티가 한 번 바뀐다 — 이 갱신은 잃는다
+    for ( uint32 tick = 0; tick < 30; ++tick )
+    {
+        for ( size_t index = 1; index <= 8; ++index )
+            ++game._table._listEntity[index]._listState[0];
+        harness.step();
+    }
+    harness.setLinkConditions( client, NetSimLinkConditions{} );
+
+    uint32 ticksToSee = 0;
+    while ( ticksToSee < 300 && session.getView().findEntity( kFarId )->_listState[0] != 7 )
+    {
+        for ( size_t index = 1; index <= 8; ++index )
+            ++game._table._listEntity[index]._listState[0];
+        harness.step();
+        ++ticksToSee;
+    }
+    SW_LOG_INFO( "[NetMmo] far entity changed during a 30-tick downstream blackout: seen %# ticks after the link came back", ticksToSee );
+    // 판정 없이(보낸 순간 "안 바뀜") 13 틱, 확인으로 판정하면 4 틱. 고친 값 + 3.
+    SW_EXPECT_TRUE( ticksToSee <= 7u );
 }

@@ -2,11 +2,13 @@
  * @file MmoReplicator.h
  * @brief MMO 복제 — 엔티티가 수천이어도 관찰자(플레이어)마다 "근처만, 중요한 것 먼저, 정한 바이트 안에서" 보냅니다.
  * @details 1. 관심 영역 — 엔진 공간 해시(`SpatialHashGrid2D`, XZ 평면의 점)로 근처를 찾고, 들어오는 반경보다 나가는 반경을 크게 해 경계에서 들락날락하지 않게 합니다(히스테리시스).
- *          2. 들어옴은 틱마다 신뢰 메시지 하나에 묶고(전체 상태 — Core 가 64 KB 까지 조각으로 나른다), 갱신은 비신뢰 묶음입니다(잃으면 다음 갱신이 메운다).
+ *          2. 들어옴은 틱마다 신뢰 메시지 하나에 묶고(전체 상태 — Core 가 64 KB 까지 조각으로 나른다), 갱신은 비신뢰 묶음입니다. 클라이언트가 받은 갱신 틱을
+ *             확인(`kUpdateAck` — 가장 새 틱 + 앞 32 틱 비트)으로 돌려보내, 잃은 갱신의 엔티티는 우선도와 "바뀜" 가속을 되돌려 곧 다시 보냅니다.
  *             나감은 조각나지 않는 크기(1 KB)로 여러 메시지로 쪼개고 보낸 것만 보이는 목록에서 뺀다 — 창이 차도 앞 묶음은 나간다(남은 것은 다음 틱에).
  *             들어옴 · 갱신에는 서버 틱을 싣고, 클라이언트는 엔티티마다 마지막으로 적용한 틱보다
  *             옛것을 버린다(순서가 뒤바뀐 비신뢰 갱신이 새 상태를 덮지 않게).
- *          3. 우선도 누적(`NetPrioritizer`) — 보이는 엔티티마다 매 틱 우선도(정책: 거리 · 중요도)를 쌓고, 예산 안에서 쌓인 것이 큰 순서로 보낸 뒤 0 으로 돌립니다.
+ *          3. 우선도 누적(`NetPrioritizer`) — 보이는 엔티티마다 매 틱 우선도(정책: 거리 · 중요도)를 쌓고, 예산 안에서 쌓인 것이 큰 순서로 보낸 뒤 0 으로 돌리고
+ *             (확인 기다림), 잃었으면 되돌립니다.
  *             멀거나 변하지 않는 것도 언젠가는 차례가 옵니다(굶지 않는다). 상태가 바뀐 것은 더 빨리 쌓입니다.
  *          엔티티 상태는 `NetMmoMessage::kMaxStateBytes` 까지입니다 — 서버 · 클라이언트가 같은 상한을 쓰고, 넘는 `setEntity` 는 받지 않는다.
  */
@@ -21,6 +23,7 @@
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
+#include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "Engine/Spatial/SpatialHashGrid2D.h"
 
@@ -35,12 +38,15 @@ namespace sw
     /** @brief 메시지 종류(첫 바이트)입니다. */
     struct NetMmoMessage
     {
-        static constexpr uint8 kEnter  = NetKitMessageRange::kMmo + 0;
-        static constexpr uint8 kLeave  = NetKitMessageRange::kMmo + 1;
-        static constexpr uint8 kUpdate = NetKitMessageRange::kMmo + 2;
-        static_assert( NetMessageRange::isInRange( kUpdate, NetKitMessageRange::kMmo ), "message kinds must stay inside the kit's range" );
+        static constexpr uint8 kEnter     = NetKitMessageRange::kMmo + 0;
+        static constexpr uint8 kLeave     = NetKitMessageRange::kMmo + 1;
+        static constexpr uint8 kUpdate    = NetKitMessageRange::kMmo + 2;
+        static constexpr uint8 kUpdateAck = NetKitMessageRange::kMmo + 3; ///< 클라이언트 → 서버(비신뢰): 받은 갱신 틱 — 가장 새 틱 + 그 앞 32 틱 비트
+        static_assert( NetMessageRange::isInRange( kUpdateAck, NetKitMessageRange::kMmo ), "message kinds must stay inside the kit's range" );
 
-        static constexpr int32 kMaxStateBytes = 512; ///< 엔티티 상태 상한 — 서버는 넘는 엔티티를 받지 않고 클라이언트는 넘는 길이를 깨짐으로 본다
+        static constexpr int32  kMaxStateBytes       = 512; ///< 엔티티 상태 상한 — 서버는 넘는 엔티티를 받지 않고 클라이언트는 넘는 길이를 깨짐으로 본다
+        static constexpr uint32 kAckWindowTicks      = 32;  ///< 확인 비트가 덮는 앞 틱 수
+        static constexpr uint32 kMaxUnconfirmedTicks = 64;  ///< 이만큼 지나도 확인이 없으면 잃은 것으로 본다(서버 확인 표 크기)
     };
 } // namespace sw
 
@@ -112,7 +118,7 @@ namespace sw
 {
     /**
      * @brief 서버 쪽입니다. 관찰자 = 연결 + 그 연결이 조종하는 엔티티(그 자리가 관심의 중심).
-     * @details 받는 메시지는 없다(종류 마스크 0) — 라우터에 달면 연결이 닫힐 때 그 관찰자를 스스로 지운다(`onConnectionClosed`).
+     * @details 받는 메시지는 갱신 확인(`kUpdateAck`) 하나다. 라우터에 달면 연결이 닫힐 때 그 관찰자를 스스로 지운다(`onConnectionClosed`).
      */
     class SW_GF_API MmoReplicator : public INetMessageHandler
     {
@@ -120,7 +126,7 @@ namespace sw
         MmoReplicator();
 
         uint8           getMessageRangeBase() const override { return NetKitMessageRange::kMmo; }
-        uint16          getMessageKindMask() const override { return 0u; }
+        uint16          getMessageKindMask() const override { return static_cast<uint16>( 1u << ( NetMmoMessage::kUpdateAck - NetKitMessageRange::kMmo ) ); }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         void            onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override;
 
@@ -148,14 +154,20 @@ namespace sw
     private:
         struct VisibleEntry
         {
-            vector<uint8> _listSentState{};
+            vector<uint8> _listSentState{};     ///< 클라이언트가 가진 것으로 확인된 상태(들어옴 · 확인된 갱신)
+            vector<uint8> _listInFlightState{}; ///< 보냈지만 확인 안 된 갱신의 상태
+            uint32        _inFlightTick{ 0 };
+            uint8         _bInFlight{ SW_FALSE };
         };
 
         struct Observer
         {
             unordered_map<uint32, VisibleEntry> _mapVisible{};
             NetPrioritizer                      _prioritizer{}; ///< 보이는 엔티티마다 쌓인 우선도
+            TickRingBuffer<uint8>               _ackedUpdate{}; ///< 클라이언트가 받았다고 확인한 갱신 틱(값은 쓰지 않는다 — 있으면 받음)
             uint32                              _entityId{ 0 };
+            uint32                              _newestAckTick{ 0 };
+            uint8                               _bHasAck{ SW_FALSE };
             uint8                               _bActive{ SW_FALSE };
         };
 
@@ -175,7 +187,9 @@ namespace sw
         void updateObserverRange( uint32 start, uint32 end );
         void updateObserver( int32 connectionId, Observer& observer, float32 deltaTime, ObserverScratch& scratch );
         /** @brief 나감을 조각나지 않는 크기(`NetConnection::kMaxSingleMessageSize`)로 쪼개 보내고, 보낸 것만 보이는 목록에서 뺍니다. 못 보낸 것의 시작 자리(`_listLeave`)입니다. */
-        size_t           sendLeaves( int32 connectionId, Observer& observer, ObserverScratch& scratch );
+        size_t sendLeaves( int32 connectionId, Observer& observer, ObserverScratch& scratch );
+        /** @brief 확인 기다리는 갱신을 판정합니다 — 받았으면 확인된 상태로 옮기고, 잃었으면 우선도를 되돌린다(`NetPrioritizer::resolveSend`). */
+        void             resolveInFlightUpdates( Observer& observer ) const;
         const MmoEntity& getEntity( uint32 entityId ) const;
 
         unordered_map<uint32, MmoEntity>    _mapEntity;
@@ -228,6 +242,8 @@ namespace sw
         /** @brief 서버에 (다시) 연결됐다 — 보이던 엔티티를 비운다(새 연결은 들어옴부터 다시 받는다). */
         void onConnectionOpened( int32 connectionId ) override;
         void drainEvents( vector<MmoClientEvent>& outListEvent );
+        /** @brief 받은 갱신 틱을 서버에 확인합니다(틱마다 한 번 — 받은 것이 없으면 보내지 않는다). @p connectionId 는 서버 연결입니다. */
+        void sendAck( NetHost& host, int32 connectionId );
 
         const MmoEntity* findEntity( uint32 entityId ) const;
         int32            getEntityCount() const { return static_cast<int32>( _mapEntity.size() ); }
@@ -241,8 +257,15 @@ namespace sw
             uint32    _tick{ 0 }; ///< 마지막으로 적용한 서버 틱
         };
 
+        /** @brief 받은 갱신 틱을 확인 창에 적습니다. */
+        void markUpdateReceived( uint32 tick );
+
         unordered_map<uint32, ClientEntity> _mapEntity{};
         EventBuffer<MmoClientEvent>         _eventBuffer{};
+        NetMessageWriter                    _ackWriter{};
         uint64                              _staleUpdateCount{ 0 };
+        uint32                              _newestUpdateTick{ 0 }; ///< 받은 가장 새 갱신 틱
+        uint32                              _receivedBits{ 0 };     ///< bit i = `_newestUpdateTick - 1 - i` 틱의 갱신을 받았다
+        uint8                               _bHasUpdate{ SW_FALSE };
     };
 } // namespace sw
