@@ -101,8 +101,8 @@ cd build/Ninja-Debug/Bin
   가 줄바꿈으로 끝나 다시 쓰면 `&#10;` 이 빠진다 — 지금은 오브젝트 상태 직렬화기가 원문을 그대로 다시 써서 데이터는 잃지 않고, 시험은 이 타입을 뺀다.
   끝 공백이 뜻을 갖는 문자열 칸이 생기면 XML 읽기의 자르기를 속성 값에서 걷어낸다.
 
-- **컨테이너 순회 통합(`ContainerVisitor`, L — 2026-10-05 구조 제안).** 시퀀스 · 맵 · 소유 포인터 · 불투명 · 중첩 · 스칼라 분기가 XML · JSON · 바이너리 세 형식에
-  따로 있어, 새 컨테이너 종류 하나에 세 곳을 고친다. 순회는 하나, 형식은 방문자로.
+- **JSON 소유 포인터 원소가 `{ "타입이름": {...} }` 꼴이 아니면 말없이 건너뛴다**(`JsonSerializerInternal::ContainerReader::readOwnedPointer`). 실패로 알리면 `_listComponent`
+  칸 전체가 실패하므로 그 원소만 orphan 으로 남기는 길이 필요하다(XML 은 태그가 곧 타입이라 이 모양이 없다).
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
 
@@ -982,6 +982,11 @@ cd build/Ninja-Debug/Bin
 - **JSON** — `JsonValue` 는 빌린 포인터다: 같은 부모에 `set( 새 키 )` · `pushBack()` 을 하면 앞서 꺼낸 형제 핸들이 죽는다("하나 받아 다 채우고 다음"). nlohmann
   `is_number_integer()` 는 부호 없는 수에도 참 — unsigned 를 먼저 본다. `JsonSerializer::loadFile` 은 실패해도 그 앞까지 읽힌 값이 남는다. `SerializeContext` 는 `deriveFromDefault()`.
 - **컨테이너를 어떻게 채울지는 컨테이너가 정한다** — 역직렬화는 `appendElement`, 인스펙터는 `allowsInPlaceElementWrite()`. 왕복 시험은 세 형식 모두, 값은 정렬되지 않은 순서로.
+- **컨테이너 순회는 `ContainerVisitor` 하나다**(`Serialization/Core/ContainerVisitor.h`). 원소 모양(중첩 · 소유 포인터 · 값 구조체 · 스칼라)은 컨테이너마다 한 번
+  `ContainerElementPlan` 이 정하고, 형식은 `IContainerWriter` · `IContainerReader` 만 구현한다(형식 TU 의 `…Internal::ContainerWriter` · `ContainerReader`). 실패는 세 형식이
+  `ContainerReadResult` 로 같다 — 자리를 알면 그 원소 · 항목만 빼고 칸 실패(`FieldFailed`), 모르면 멈춘다(`StreamBroken`: 바이너리의 enum 아닌 값 실패 · 넣을 칸 없는 원소).
+- **직렬화 출력이 그대로인지는 덤프로 본다** — `SW_SERIALIZATION_DUMP_DIR=<폴더>` 로 `SerializationRoundTripTest.DumpEveryResourceObjectState` **하나만** 돌리면 씬 · 프리팹의
+  오브젝트 상태를 세 형식으로 덤프한다. 고치기 전 · 후 덤프의 `diff -r` 이 비어야 한다. 실제 데이터의 쓰기 → 되읽기 → 쓰기 고정점은 `…EveryResourceComponentRewritesToTheSameBytes`.
 - **경로** — 리소스 id 하나로 든다(`ResourceUtil::toResourceId` — 루트 밖 · `..` 는 빈 글). 쓰기 경로는 `ResourceUtil::getWritePath` 하나 + `ensureParentDirectoryExists`(bool, 실패하면
   그 자리에서 경로 · OS 이유를 알린다). 맵 키는 `normalizePath`(소문자), 여는 경로는 `normalizeSeparators`(`collectFiles` 는 대소문자를 보존한다). 배포 빌드는 `.meta` 를 쓰지도
   GUID 를 지어내지도 않는다 — 배포본 GUID 표는 쿠커가 도메인마다 넣는 `assetregistry.txt` 다. `ensureMeta` 는 루트 밖 절대 경로면 null GUID.

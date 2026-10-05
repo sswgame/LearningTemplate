@@ -852,6 +852,36 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorInAContainerFailsOnl
 }
 
 /**
+ * @brief [ReflectionSerializationTest] 컨테이너 읽기 규칙은 세 형식이 같다 — 모르는 맵 키는 그 항목만 빠지고 칸은 실패, 빈 컨테이너는 실패가 아니다
+ * @details 텍스트 형식이 못 읽은 맵 키 · 값을 말없이 버리면, 이름을 바꾸고 데이터를 빠뜨려도 로드가 조용하다(바이너리는 이미 칸 실패로 알린다).
+ *          XML 엄격 백엔드 입구는 빈 컨테이너 요소를 "원소가 없다" 로 실패시켜, 비어 있는 목록 하나가 객체 전체를 실패로 만들었다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, ContainerReadRulesAreTheSameInEveryFormat )
+{
+    registerWireShiftEnumsAsDeclared();
+    const RestoreWireShiftEnumsOnExit restoreEnums{};
+    const sw::TypeInfo                info = makeWireShiftHostType();
+    test::ScopedLogSuppressor         suppressor; // 모르는 열거자 경고
+
+    WireShiftHost fromXml;
+    SW_EXPECT_FALSE( sw::XmlSerializer::deserialize(
+        &fromXml, info, R"(<WireShiftHost><_mapColorToCount><entry key="Purple">3</entry><entry key="Blue">4</entry></_mapColorToCount></WireShiftHost>)" ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), fromXml._mapColorToCount.size() );
+    SW_EXPECT_EQUAL( 4, fromXml._mapColorToCount[WireShiftColor::Blue] );
+
+    WireShiftHost fromJson;
+    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &fromJson, info, R"({"_mapColorToCount":{"Purple":3,"Blue":4}})" ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), fromJson._mapColorToCount.size() );
+    SW_EXPECT_EQUAL( 4, fromJson._mapColorToCount[WireShiftColor::Blue] );
+
+    sw::XmlDocumentBackend backend;
+    WireShiftHost          fromEmpty;
+    fromEmpty._listColor = { WireShiftColor::Red };
+    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &fromEmpty, info, backend, "<WireShiftHost><_listColor /></WireShiftHost>" ) );
+    SW_EXPECT_TRUE( fromEmpty._listColor.empty() );
+}
+
+/**
  * @brief [ReflectionSerializationTest] 지금 enum 에 없는 열거자 이름은 **그 칸만** 실패한다 — 값은 그대로, 0 이 되지 않는다(XML 과 같다)
  * @details 열거자를 지웠거나 ValueAlias 없이 이름을 바꾼 다음 빌드의 자리다. 엄격한 읽기는 실패를 알리고 그 칸은 지금 값을 지킨다. 모르는 칸을 받는 문맥
  *          (오브젝트 상태)은 그 칸만 건너뛰고 나머지를 읽는다 — 그 컴포넌트를 통째로 버리면 안 된다. 옛 이름을 ValueAlias 로 남기면 새 이름으로 읽힌다.
