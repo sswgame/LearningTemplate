@@ -330,6 +330,12 @@ namespace sw
          *          경로(COMMON 암묵 승격)가 그대로 맞습니다.
          */
         D3D12_RESOURCE_STATES getTrackedTextureState( RHITextureHandle texture );
+        struct OffscreenTargetView;
+        /**
+         * @brief 오프스크린 레코드를 `_resourceStateMutex` 안에서 찾아 @p slice 면의 뷰와 함께 복사합니다. 오프스크린 레코드가 없으면 false 입니다.
+         * @details 텍스처 생성(`createTexture2D`)이 다른 스레드에서 이 표를 재해시하는 동안 기록 워커가 읽으면 안 됩니다 — 표의 이터레이터를 기록 경로에 들고 다니지 않습니다.
+         */
+        [[nodiscard]] bool findOffscreenTargetView( RHITextureHandle texture, uint32 slice, OffscreenTargetView& outView );
         /** @brief RTV 힙의 `rtvIndex` 번 디스크립터입니다(스왑체인 버퍼 수를 포함한 절대 번호). */
         D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenRtvHandle( uint32 rtvIndex ) const;
         /** @brief DSV 힙의 `dsvIndex` 번 디스크립터입니다. */
@@ -416,6 +422,18 @@ namespace sw
             uint8               _bHasRtv  : 1;
             uint8               _bHasDsv  : 1;
             uint8               _reserved : 6;
+        };
+
+        /// @brief 기록 경로가 오프스크린 레코드에서 읽는 칸입니다. `findOffscreenTargetView` 가 잠근 채 복사해 줍니다.
+        struct OffscreenTargetView
+        {
+            D3D12_CPU_DESCRIPTOR_HANDLE _rtvHandle{};                          ///< 고른 면의 RTV(없으면 0)
+            D3D12_CPU_DESCRIPTOR_HANDLE _dsvHandle{};                          ///< 고른 면의 DSV(없으면 0)
+            D3D12_RESOURCE_STATES       _state  = D3D12_RESOURCE_STATE_COMMON; ///< 복사한 순간의 상태(전이는 `transitionTexture` 가 다시 잠그고 한다)
+            DXGI_FORMAT                 _format = DXGI_FORMAT_UNKNOWN;
+            uint8                       _bHasRtv{ SW_FALSE };
+            uint8                       _bHasDsv{ SW_FALSE };
+            uint8                       _bSliceInRange{ SW_FALSE }; ///< 고른 면이 면 수 안이고 그 면의 뷰가 있다
         };
 
         /// @brief 네이티브 PSO 와 루트 시그니처입니다.
@@ -558,7 +576,7 @@ namespace sw
         /// @brief 리소스 상태 전이 맵을 보호합니다. 여러 커맨드 리스트가 동시에 같은 자원을 전이할 수 있기 때문입니다.
         mutex                                                 _resourceStateMutex;
         unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES> _mapStructuredBufferState;
-        /// @brief 구조버퍼 핸들 → 원소 stride 입니다(bindless StructuredBuffer SRV 생성용).
+        /// @brief 구조버퍼 핸들 → 원소 stride 입니다(bindless StructuredBuffer SRV · UAV 생성용). `_bindlessMutex` 가 지킵니다(등록이 그 배타 락 안에서 읽습니다).
         unordered_map<RHIBufferHandle, uint32> _mapStructuredStride;
 
         unordered_map<RHITextureHandle, OffscreenTextureRecord> _mapOffscreenTexture;

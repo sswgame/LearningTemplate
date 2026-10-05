@@ -1225,6 +1225,7 @@ cd build/Ninja-Debug/Bin
 - **DX12** — 펜스 대기의 시간 초과는 성공이 아니다. 커맨드 얼로케이터는 리스트마다(공유가 DEVICE_HUNG 의 진짜 원인이었다), 업로드 얼로케이터 Reset 은 그 슬롯의 펜스를 직접 기다린다.
   업로드 복사 리스트는 열어 두고 기록만 하며 `flushPendingUploads` 가 프레임에 한 번 내보낸다(`_uploadSlotMutex`). bindless 인덱스는 `acquireBindlessIndex(lock)` 로 집는 일과 뷰 생성을
   한 임계 구역에. CBV 는 256 B 정렬. drawIndirect 가 메시 VB 를 덮어쓴 적이 있다 — 렌더 변경은 스크린샷까지 본다.
+  오프스크린 레코드(`_mapOffscreenTexture`)는 기록 경로에서도 `findOffscreenTargetView`(잠근 채 복사)로만 읽는다 — 이터레이터를 들고 `transitionTexture` 를 부르면 같은 뮤텍스로 교착이다.
 - **Vulkan** — acquire 한 이미지는 present 로만 돌려준다(present 없는 프레임마다 acquire 하면 `UINT64_MAX` acquire 로 교착). 리소스 해제는 실제 GPU 펜스(단조 세대)와 이어야 한다.
   일회성 업로드는 `VulkanOneShotCommands` · 전용 풀 · `_queueMutex`. `vulkan1.3` DXC 는 `discard` 를 demote 로 내므로 기능을 켠다 — 쿠킹된 셰이더가 바뀌면 검증 레이어 로그를 다시 읽는다.
   와이어프레임은 `fillModeNonSolid`. 백버퍼 블릿의 이전 레이아웃은 `UNDEFINED`.

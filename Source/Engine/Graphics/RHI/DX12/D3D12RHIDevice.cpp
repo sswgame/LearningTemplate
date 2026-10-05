@@ -118,6 +118,42 @@ namespace sw
         return offscreenIt->second._state;
     }
 
+    bool D3D12RHIDevice::findOffscreenTargetView( RHITextureHandle texture, uint32 slice, OffscreenTargetView& outView )
+    {
+        std::scoped_lock<mutex> lock{ _resourceStateMutex };
+        const auto              it = _mapOffscreenTexture.find( texture );
+        if ( it == _mapOffscreenTexture.end() )
+            return false;
+
+        const OffscreenTextureRecord& record = it->second;
+        outView                              = OffscreenTargetView{};
+        outView._state                       = record._state;
+        outView._format                      = record._format;
+        outView._bHasRtv                     = record._bHasRtv;
+        outView._bHasDsv                     = record._bHasDsv;
+        if ( slice >= record._arraySize )
+            return true;
+
+        // 면 0 은 레코드의 첫 뷰, 면 1.. 은 추가 인덱스다. 디스크립터가 바닥나 만들다 멈춘 면은 목록에 없다.
+        const size_t extraIndex = static_cast<size_t>( slice ) - 1u;
+        if ( record._bHasRtv != SW_FALSE )
+        {
+            if ( slice == 0 )
+                outView._rtvHandle = record._rtvHandle;
+            else if ( extraIndex < record._listExtraRtvIndex.size() )
+                outView._rtvHandle = getOffscreenRtvHandle( record._listExtraRtvIndex[extraIndex] );
+        }
+        if ( record._bHasDsv != SW_FALSE )
+        {
+            if ( slice == 0 )
+                outView._dsvHandle = record._dsvHandle;
+            else if ( extraIndex < record._listExtraDsvIndex.size() )
+                outView._dsvHandle = getOffscreenDsvHandle( record._listExtraDsvIndex[extraIndex] );
+        }
+        outView._bSliceInRange = ( outView._rtvHandle.ptr != 0 || outView._dsvHandle.ptr != 0 ) ? SW_TRUE : SW_FALSE;
+        return true;
+    }
+
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenRtvHandle( uint32 rtvIndex ) const
     {
         D3D12_CPU_DESCRIPTOR_HANDLE handle = _rtvHeap->GetCPUDescriptorHandleForHeapStart();

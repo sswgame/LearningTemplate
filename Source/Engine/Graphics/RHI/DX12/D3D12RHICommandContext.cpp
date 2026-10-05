@@ -283,8 +283,8 @@ namespace sw
         if ( pSrcResource == nullptr )
             return;
 
-        auto srcIt = _pDevice->_mapOffscreenTexture.find( src );
-        if ( srcIt == _pDevice->_mapOffscreenTexture.end() || srcIt->second._bHasDsv != SW_FALSE )
+        D3D12RHIDevice::OffscreenTargetView srcView{};
+        if ( _pDevice->findOffscreenTargetView( src, 0, srcView ) == false || srcView._bHasDsv != SW_FALSE )
             return;
 
         _pDevice->reportBarrierDuringRecording( "blitTexture(src)" );
@@ -310,10 +310,10 @@ namespace sw
             pDstResource = _pDevice->resolveTexture( dst );
             if ( pDstResource == nullptr )
                 return;
-            auto dstIt = _pDevice->_mapOffscreenTexture.find( dst );
-            if ( dstIt == _pDevice->_mapOffscreenTexture.end() || dstIt->second._bHasDsv != SW_FALSE )
+            D3D12RHIDevice::OffscreenTargetView dstView{};
+            if ( _pDevice->findOffscreenTargetView( dst, 0, dstView ) == false || dstView._bHasDsv != SW_FALSE )
                 return;
-            dstStateBefore = dstIt->second._state;
+            dstStateBefore = dstView._state;
         }
 
         // CopyResource 는 포맷과 크기가 완전히 같아야 한다. 검증 없이 발행하면 포맷이나 해상도가 다른 조합
@@ -395,10 +395,10 @@ namespace sw
         if ( _pCmdList == nullptr || texture == 0 )
             return;
 
-        auto it = _pDevice->_mapOffscreenTexture.find( texture );
-        if ( it == _pDevice->_mapOffscreenTexture.end() )
+        D3D12RHIDevice::OffscreenTargetView view{};
+        if ( _pDevice->findOffscreenTargetView( texture, 0, view ) == false )
             return;
-        if ( it->second._bHasRtv == SW_FALSE && it->second._bHasDsv == SW_FALSE )
+        if ( view._bHasRtv == SW_FALSE && view._bHasDsv == SW_FALSE )
             return;
 
         _pDevice->reportBarrierDuringRecording( "prepareTextureForShaderRead" );
@@ -765,8 +765,9 @@ namespace sw
             }
             else
             {
-                auto it = _pDevice->_mapOffscreenTexture.find( colorHandle );
-                if ( it == _pDevice->_mapOffscreenTexture.end() || it->second._bHasRtv == SW_FALSE )
+                const uint32                        slice = beginInfo._arrColorTargetSlice[attachmentIndex];
+                D3D12RHIDevice::OffscreenTargetView view{};
+                if ( _pDevice->findOffscreenTargetView( colorHandle, slice, view ) == false || view._bHasRtv == SW_FALSE )
                 {
                     if ( attachmentIndex > 0 )
                         break;
@@ -774,14 +775,13 @@ namespace sw
                 }
                 _pDevice->reportBarrierDuringRecording( "beginRenderPass(color)" );
                 transitionTexture( colorHandle, D3D12_RESOURCE_STATE_RENDER_TARGET );
-                const uint32 slice = beginInfo._arrColorTargetSlice[attachmentIndex];
-                if ( slice >= it->second._arraySize )
+                if ( view._bSliceInRange == SW_FALSE )
                 {
                     if ( attachmentIndex > 0 )
                         break;
                     return;
                 }
-                rtv                                     = ( slice == 0 ) ? it->second._rtvHandle : _pDevice->getOffscreenRtvHandle( it->second._listExtraRtvIndex[slice - 1] );
+                rtv                                     = view._rtvHandle;
                 bValid                                  = true;
                 _pState->_arrActiveColorTarget[rtCount] = colorHandle;
             }
@@ -802,14 +802,13 @@ namespace sw
         _pState->_activeDepthTarget = 0;
         if ( bHasDepth )
         {
-            auto         depthIt    = _pDevice->_mapOffscreenTexture.find( beginInfo._depthTarget );
-            const uint32 depthSlice = beginInfo._depthTargetSlice;
-            if ( depthIt != _pDevice->_mapOffscreenTexture.end() && depthIt->second._bHasDsv != SW_FALSE && depthSlice < depthIt->second._arraySize )
+            D3D12RHIDevice::OffscreenTargetView depthView{};
+            const bool                          bDepthFound = _pDevice->findOffscreenTargetView( beginInfo._depthTarget, beginInfo._depthTargetSlice, depthView );
+            if ( bDepthFound && depthView._bHasDsv != SW_FALSE && depthView._bSliceInRange != SW_FALSE )
             {
                 _pDevice->reportBarrierDuringRecording( "beginRenderPass(depth)" );
                 transitionTexture( beginInfo._depthTarget, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-                dsvHandle                   = ( depthSlice == 0 ) ? depthIt->second._dsvHandle
-                                                                  : _pDevice->getOffscreenDsvHandle( depthIt->second._listExtraDsvIndex[depthSlice - 1] );
+                dsvHandle                   = depthView._dsvHandle;
                 pDsv                        = &dsvHandle;
                 _pState->_activeDepthTarget = beginInfo._depthTarget;
                 if ( beginInfo._depthLoadOp == RHIRenderPassLoadOp::Clear )
