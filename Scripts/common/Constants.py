@@ -35,6 +35,7 @@ kDirSourceGameFramework = "Source/GameFramework"
 kDirSourceApp = "Source/App"
 kDirSourceEditor = "Source/Editor"
 kDirSourceCore = "Source/Core"
+kDirSourceRuntimeAPI = "Source/RuntimeAPI"
 
 kFileReflectBuiltins = "Source/Engine/Reflection/ReflectBuiltins.xxx"
 kFileEngineServices = "Engine/Common/EngineServices.h"

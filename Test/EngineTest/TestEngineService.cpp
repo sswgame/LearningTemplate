@@ -42,7 +42,7 @@ SW_TEST_CASE( EngineServiceTest, GameModuleTableHidesHostOnlyServices )
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
-#include "Engine/Common/EngineServiceList.xxx"
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -162,7 +162,7 @@ SW_TEST_CASE( EngineServiceTest, OwnedStorageFillsExactlyTheOwnedRows )
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_CHECK_OWNED_ROW( member, Type, creator )
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_CHECK_OWNED_ROW( member, Type, creator )
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_CHECK_OWNED_ROW( member, Type, creator )
-#include "Engine/Common/EngineServiceList.xxx"
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -210,7 +210,7 @@ SW_TEST_CASE( EngineServiceTest, DestroyAllReleasesInReverseListOrder )
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_COLLECT_ENGINE_CREATED( member, creator )
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_COLLECT_ENGINE_CREATED( member, creator )
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_COLLECT_ENGINE_CREATED( member, creator )
-#include "Engine/Common/EngineServiceList.xxx"
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT

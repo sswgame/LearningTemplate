@@ -68,7 +68,7 @@ namespace sw
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_CONCAT( SW_ENGINE_OWNED_STORAGE_, creator )( member, Type )
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_CONCAT( SW_ENGINE_OWNED_STORAGE_, creator )( member, Type )
 // NOLINTEND(bugprone-macro-parentheses)
-#include "Engine/Common/EngineServiceList.xxx"
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -92,7 +92,7 @@ namespace sw
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_CONCAT( SW_ENGINE_OWNED_BIND_, creator )( member )
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_CONCAT( SW_ENGINE_OWNED_BIND_, creator )( member )
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_CONCAT( SW_ENGINE_OWNED_BIND_, creator )( member )
-#include "Engine/Common/EngineServiceList.xxx"
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT

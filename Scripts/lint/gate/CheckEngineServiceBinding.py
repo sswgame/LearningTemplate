@@ -3,7 +3,7 @@
 """
 엔진 서비스 표와 그것을 **채우는 호스트**가 어긋나지 않는지 검사.
 
-`Source/Engine/Common/EngineServiceList.xxx` 한 줄이 구조체 멤버 · getter · `areEngineServicesBound()` ·
+`Source/RuntimeAPI/Service/EngineServiceList.xxx` 한 줄이 구조체 멤버 · getter · `areEngineServicesBound()` ·
 `ModuleServiceId` 를 전부 만든다. 그런데 **그 표를 실제로 채우는 것은 손으로 적은 대입 22줄**이고,
 그것이 호스트마다 한 벌씩 있다(`EngineLoop::initialize`, `Test/TestFramework/main.cpp`). 목록이 하나여도
 채우는 곳이 둘이면 한쪽만 늘어난다.
@@ -44,7 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from common import collectRepositoryFiles, readTextFiles  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
-_kServiceListPath = "Source/Engine/Common/EngineServiceList.xxx"
+_kServiceListPath = "Source/RuntimeAPI/Service/EngineServiceList.xxx"
 # 호스트를 찾을 곳. `bindEngineServices(` 를 부르는 파일이 호스트다 — 이름을 적지 않는다.
 _kHostSearchRoot = ("Source", "Test", "Tools")
 

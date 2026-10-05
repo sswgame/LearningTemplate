@@ -155,7 +155,7 @@ than for a gate — a gate that over-fires prints a red line, a fixer that over-
 py -3 Scripts/lint/gate/CheckCodeConventions.py                # naming/style rules (CI gate)
 py -3 Scripts/lint/gate/CheckCodeConventions.py --files <path> # single file
 py -3 Scripts/lint/gate/CheckIncludeOrder.py                   # check only; `--fix` to rewrite
-py -3 Scripts/lint/gate/CheckEngineLayers.py                   # Engine must not include Editor/GameFramework/Games
+py -3 Scripts/lint/gate/CheckEngineLayers.py                   # Engine must not include Editor/GameFramework/Games; RuntimeAPI must not include Engine/App
 py -3 Scripts/lint/gate/CheckEngineRootFiles.py                # Source/Engine root holds only the startup/shutdown wiring files
 py -3 Scripts/lint/gate/CheckResourceCasing.py                 # everything under Resource/ must be lowercase
 py -3 Scripts/lint/gate/CheckFunctionVocabulary.py            # one verb per concept; acronyms are camelCase words
@@ -209,7 +209,9 @@ are dynamically loaded MODULEs supporting hot reload; in **Shipping** the editor
 links statically into one exe.
 
 **The C-ABI boundary.** `Source/RuntimeAPI` is header-only `INTERFACE` — a pure `extern "C"` contract, never
-implementations. Everything crossing App ↔ module goes through it. Export macros are distinct and not
+implementations. It includes no Engine or App header (`CheckEngineLayers.py`); the engine service table that defines
+the service ids (`Source/RuntimeAPI/Service/EngineServiceList.xxx`) lives here and Engine includes it.
+Everything crossing App ↔ module goes through it. Export macros are distinct and not
 interchangeable: `SW_API` (Engine.dll symbols), `SW_MODULE_API` (C-ABI entry points of any loadable plugin),
 `SW_GF_API` (GameFramework.dll classes), `SW_GAMESERVICE_API` (the RuntimeAPI GameService locator only).
 
@@ -225,7 +227,7 @@ table is in `Source/Engine/README.md` (recompute it with `Scripts/lint/report/Ru
 steps it waits for; `EngineInitSequence` sorts it, brings steps up in that order and down in reverse, and each
 step is one struct (`initialize` / `shutdown` / `destroy`). `EngineLoop` and the test harness share
 `EngineBootstrap`. Scenes load only after `ModuleTypes` (every type provider registered), and `ModuleHost` brings
-the game up before the editor. Engine services are the rows of `Source/Engine/Common/EngineServiceList.xxx`.
+the game up before the editor. Engine services are the rows of `Source/RuntimeAPI/Service/EngineServiceList.xxx`.
 
 **Reflection codegen.** `REFLECT` / `PROPERTY` / `FUNCTION` / `ENUM` macros in headers are parsed by
 `Tools/ReflectionParser` (libclang) into `build/<preset>/generated/**/*.gen.cpp`, driven by

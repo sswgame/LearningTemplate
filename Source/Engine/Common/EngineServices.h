@@ -21,7 +21,7 @@ namespace sw
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       Tag Type;
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) Tag Type;
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                Tag Type;
-#include "Engine/Common/EngineServiceList.xxx"
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -38,7 +38,7 @@ namespace sw
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) Type* member{ nullptr };
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                Type* member{ nullptr };
 // NOLINTEND(bugprone-macro-parentheses)
-#include "Engine/Common/EngineServiceList.xxx"
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -92,7 +92,7 @@ namespace sw
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_API Type& getter();
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_API const Type& getter();
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_API Type* getter();
-#include "Engine/Common/EngineServiceList.xxx"
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT

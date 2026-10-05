@@ -31,7 +31,7 @@ Core (STATIC)     — 로그·파일·문자열·메모리. OBJECT를 Engine과 
 - 기동 순서는 **단계 표 하나**(`Source/Engine/EngineInitStepList.xxx`)입니다. 줄마다 단계 하나와 그 단계가 기다리는 단계 목록(`{ A, B }`, 컴파일 때 검사)을 적고,
   `EngineInitSequence` 가 위상 정렬해 그 순서로 세우고 **역순으로** 내립니다. 단계마다 구조체 하나가 `initialize` · `shutdown` · `destroy` 를 갖습니다.
 - `EngineLoop` 와 시험 하네스(`Test/TestFramework/main.cpp`)는 같은 부트스트랩 · 끝 정리(`EngineBootstrap`)를 씁니다. 서비스 표
-  (`Source/Engine/Common/EngineServiceList.xxx`)의 칸은 숫자가 아니라 낱말(`Required` · `GameVisible` · `EngineCreated` …)입니다.
+  (`Source/RuntimeAPI/Service/EngineServiceList.xxx`)의 칸은 숫자가 아니라 낱말(`Required` · `GameVisible` · `EngineCreated` …)입니다.
 - 씬은 모든 타입 공급자(엔진 · 게임 · 에디터 모듈)가 등록을 끝낸 단계(`ModuleTypes`) 뒤에만 읽습니다. `ModuleHost` 는 게임 인스턴스를 에디터보다 먼저 세우므로
   `-gv_editorStartupScene` 이 실제로 열리는 씬입니다.
 - 디바이스에 매인 단계는 기동 표의 본문이라, 백엔드 교체는 그 단계들을 내리고 다시 세웁니다.

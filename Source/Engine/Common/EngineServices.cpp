@@ -63,7 +63,7 @@ namespace sw
     }
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )
-#include "Engine/Common/EngineServiceList.xxx"
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -99,7 +99,7 @@ namespace sw
     SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator ) \
     SW_ENGINE_SERVICE( member, Tag, Type, getter, Optional, visibility, creator )
-#include "Engine/Common/EngineServiceList.xxx"
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -122,7 +122,7 @@ namespace sw
     {                                                                           \
         return s_services.member;                                               \
     }
-#include "Engine/Common/EngineServiceList.xxx"
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
