@@ -13,6 +13,7 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "EngineTest/StateReloadTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
 
 #include "GameFramework/Framework/GameEvents.h"
@@ -626,6 +627,33 @@ SW_TEST_CASE( ActionCombatTest, ProjectileWithoutAColliderWarnsAtBeginPlay )
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "can never hit anything" ) == 1u, logs.joined().c_str() );
     SW_EXPECT_EQUAL( 1u, logs.countContaining( "BareShot" ) );
+    manager.endPlay();
+}
+
+/**
+ * @brief [ActionCombatTest] 날던 중에 상태를 다시 읽은 투사체는 흐른 수명을 이어 간다
+ * @details 플레이 중 되돌리기 · 핫 리로드는 컴포넌트를 다시 만들고 `onBeginPlay` 를 다시 부른다. 거기서 흐른 수명을 0 으로 돌리면 되돌릴 때마다
+ *          총알이 수명을 처음부터 다시 산다(이펙트 페이드 · 데미지 숫자와 같은 규칙).
+ */
+SW_TEST_CASE( ActionCombatTest, ProjectileKeepsItsLifeAfterTheStateIsReadAgain )
+{
+    GameObjectManager    manager;
+    ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 1.0f, 5 );
+    SW_ASSERT_NOT_NULL( pProjectile );
+    pProjectile->setLifeTime( 1.0f );
+    GameObject* pBullet = pProjectile->getOwner();
+    manager.beginPlay();
+    pProjectile->onTick( 0.6f );
+    SW_EXPECT_FALSE( pBullet->isPendingDestroy() );
+
+    SW_ASSERT_TRUE( StateReloadTestUtil::reloadInPlace( pBullet ) );
+    pProjectile = pBullet->getComponent<ProjectileComponent>();
+    SW_ASSERT_NOT_NULL( pProjectile );
+    SW_ASSERT_TRUE( pProjectile->hasBegunPlay() );
+
+    // 남은 0.4 초가 지나면 지운다 — 수명을 0 에서 다시 셌다면 아직 남아 있다.
+    pProjectile->onTick( 0.5f );
+    SW_EXPECT_TRUE( pBullet->isPendingDestroy() );
     manager.endPlay();
 }
 
