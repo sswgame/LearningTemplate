@@ -5,12 +5,12 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputKeyMap.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
-#include "Engine/Input/Utils/VirtualJoystick.h"
+#include "Engine/Input/RawInputEvent.h"
+#include "Engine/Input/VirtualJoystick.h"
 #include "Engine/Input/Windows/XInputGamepadDevice.h"
 #include "Engine/Window/NativeWindowEvent.h"
 

@@ -14,11 +14,11 @@
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
-#include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputSnapshot.h"
 #include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/RawInputEvent.h"
 
 namespace sw
 {

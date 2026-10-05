@@ -5,7 +5,7 @@
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
-#include "Engine/Input/Utils/VirtualJoystick.h"
+#include "Engine/Input/VirtualJoystick.h"
 
 /**
  * @file InputMapEvaluate.cpp

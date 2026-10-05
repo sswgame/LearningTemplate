@@ -55,7 +55,7 @@ flowchart LR
 | `ReflectionDocWriter.*` | 등록된 타입 · 열거형 → Markdown API 문서(`App --write-reflection-docs=<폴더>`, 빌드 산출물 — 커밋하지 않는다) |
 | `ReflectionValidation.*` | 검증 함수(`Validate = fn`)를 돌리고(`ReflectionValidation`) 결과를 모은다(`ValidationContext` · `ValidationIssueLog`) |
 | `PropertyRoleUtil.*` | 역할 플래그(`Replicated` · `RepNotify` · `SaveGame` · `Interp` · `Config`)를 읽는 쪽의 도우미 — 모으기 · RepNotify 부르기 · 값 섞기 · 설정 묶음 |
-| `Rpc/` | RPC용 리플렉션 보조(`ReflectionRpc.h`) |
+| `ReflectionRpc.h` | RPC용 리플렉션 보조 |
 
 보통은 `#include "Engine/Reflection/ReflectionCore.h"` 또는 컴포넌트 헤더가 끌어오는 매크로만 쓰면 됩니다.
 

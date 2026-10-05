@@ -48,8 +48,8 @@ Input/
 ├─ InputSnapshot.*         # 롤백 넷코드/리플레이용 프레임 스냅샷 링버퍼
 ├─ InputReplay.*           # 입력 녹화/재생 (에디터 QA 툴이 사용)
 ├─ Devices/                # KeyboardDevice, MouseDevice, GamepadDevice 구현체
-├─ Events/RawInputEvent.h  # OS 이벤트를 표현하는 값 타입 (postRawEvent로 큐에 들어감)
-├─ Utils/VirtualJoystick.h # 마우스 드래그/터치 좌표 -> 2D 축 벡터 계산기 (InputMap의 VirtualJoystick2D 바인딩이 사용)
+├─ RawInputEvent.h         # OS 이벤트를 표현하는 값 타입 (postRawEvent로 큐에 들어감)
+├─ VirtualJoystick.h       # 마우스 드래그/터치 좌표 -> 2D 축 벡터 계산기 (InputMap의 VirtualJoystick2D 바인딩이 사용)
 ├─ Windows/                # Win32/XInput 구현 (InputManagerWin32.cpp, XInputGamepadDevice.*, InputKeyMapWin32.cpp)
 ├─ Linux/                  # X11/커널 조이스틱 구현 (InputManagerX11.cpp, LinuxJoystickGamepadDevice.*, InputKeyMapX11.cpp)
 └─ (Editor 연동은 Source/Editor/Panels/InputMapPanel.cpp)
@@ -184,6 +184,6 @@ inputMap.bindVirtualJoystick2D( "Move", sw::MouseButton::Left, /*radius*/ 100.0f
 
 - `InputManager.h` — 편의 API(`isKeyDown`, `getMouseDelta` 등) 전체 목록
 - `InputMap.h` — `BindingKind`/`ActionTrigger`/`ActionPhase` 등 스키마 enum 주석
-- `Events/RawInputEvent.h` — `RawInputEvent::makeXxx()` 팩토리 함수 목록
+- `RawInputEvent.h` — `RawInputEvent::makeXxx()` 팩토리 함수 목록
 - `Test/EngineTest/TestInput.cpp` — 각 기능의 실제 사용 예시(테스트 코드가 곧 예제입니다)
 - `Source/Editor/Panels/InputMapPanel.cpp` — 액션 바인딩을 시각적으로 편집/테스트하는 에디터 패널

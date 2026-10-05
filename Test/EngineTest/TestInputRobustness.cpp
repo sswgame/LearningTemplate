@@ -4,10 +4,10 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
-#include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputReplay.h"
+#include "Engine/Input/RawInputEvent.h"
 
 #include "TestFramework/TestFramework.h"
 

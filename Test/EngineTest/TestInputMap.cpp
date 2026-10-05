@@ -4,9 +4,9 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/EngineLoop.h"
-#include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
+#include "Engine/Input/RawInputEvent.h"
 
 #include "TestFramework/TestFramework.h"
 
