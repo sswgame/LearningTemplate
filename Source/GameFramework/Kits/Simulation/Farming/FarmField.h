@@ -10,6 +10,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmCalendar.h"
+#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {
@@ -82,8 +83,8 @@ namespace sw
 
         /** @brief 칸입니다. 밖이면 nullptr 입니다. */
         const FarmTile* findTile( int32 x, int32 y ) const;
-        int32           getWidth() const { return _width; }
-        int32           getHeight() const { return _height; }
+        int32           getWidth() const { return _topology._width; }
+        int32           getHeight() const { return _topology._height; }
         /** @brief 작물이 있는 칸 수입니다(시든 것 포함). */
         uint32 getCropCount() const;
         /** @brief 거둘 수 있는 칸 수입니다. */
@@ -100,9 +101,8 @@ namespace sw
         FarmTile*      findTileMutable( int32 x, int32 y );
         const CropDef* findCropDef( const FarmTile& tile ) const;
 
-        vector<FarmTile>   _listTile; ///< 행 우선(y × width + x)
+        vector<FarmTile>   _listTile; ///< 칸마다(`_topology` 의 칸 번호)
         const CropCatalog* _pCatalog;
-        int32              _width;
-        int32              _height;
+        GridTopology       _topology;
     };
 } // namespace sw

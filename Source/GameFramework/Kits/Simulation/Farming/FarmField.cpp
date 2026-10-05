@@ -42,24 +42,22 @@ namespace sw
     FarmField::FarmField()
         : _listTile{}
         , _pCatalog{ nullptr }
-        , _width{ 0 }
-        , _height{ 0 }
+        , _topology{}
     {
     }
 
     void FarmField::initialize( int32 width, int32 height, const CropCatalog* pCatalog )
     {
-        _width    = MathUtil::max( 0, width );
-        _height   = MathUtil::max( 0, height );
+        _topology = GridTopology{ width, height }; // 음수는 0 칸(GridTopology 생성자)
         _pCatalog = pCatalog;
         _listTile.clear();
-        _listTile.resize( static_cast<size_t>( _width ) * static_cast<size_t>( _height ) );
+        _listTile.resize( static_cast<size_t>( _topology.getCellCount() ) );
     }
 
     void FarmField::writeState( Archive& outArchive ) const
     {
-        outArchive << _width;
-        outArchive << _height;
+        outArchive << _topology._width;
+        outArchive << _topology._height;
         for ( const FarmTile& tile : _listTile )
         {
             StateArchiveUtil::writeName( outArchive, tile._cropId );
@@ -76,7 +74,7 @@ namespace sw
         int32 height = 0;
         archive >> width;
         archive >> height;
-        if ( archive.isError() || width != _width || height != _height )
+        if ( archive.isError() || width != _topology._width || height != _topology._height )
             return false;
         vector<FarmTile> listTile( _listTile.size() );
         for ( FarmTile& tile : listTile )
@@ -216,10 +214,9 @@ namespace sw
 
     const FarmTile* FarmField::findTile( int32 x, int32 y ) const
     {
-        const bool bInside = 0 <= x && x < _width && 0 <= y && y < _height;
-        if ( bInside == false )
+        if ( _topology.isInside( x, y ) == false )
             return nullptr;
-        return &_listTile[static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x )];
+        return &_listTile[static_cast<size_t>( _topology.toIndex( x, y ) )];
     }
 
     uint32 FarmField::getCropCount() const

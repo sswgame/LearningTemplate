@@ -133,8 +133,7 @@ namespace sw
         , _questLog{}
         , _settings{}
         , _pCatalog{ nullptr }
-        , _width{ 0 }
-        , _height{ 0 }
+        , _topology{}
         , _day{ 0 }
         , _nextHabitatId{ 1 }
         , _lastAttractKey{ -1 }
@@ -147,9 +146,8 @@ namespace sw
     {
         _pCatalog = pCatalog;
         _settings = settings;
-        _width    = MathUtil::max( 1, width );
-        _height   = MathUtil::max( 1, height );
-        _listObject.assign( static_cast<size_t>( _width * _height ), hashed_string{} );
+        _topology = GridTopology{ MathUtil::max( 1, width ), MathUtil::max( 1, height ) };
+        _listObject.assign( static_cast<size_t>( _topology.getCellCount() ), hashed_string{} );
         _listHabitat.clear();
         _listCreature.clear();
         _listHouse.clear();
@@ -166,9 +164,9 @@ namespace sw
 
     bool CreatureTown::setObject( int32 x, int32 y, const hashed_string& object )
     {
-        if ( x < 0 || y < 0 || x >= _width || y >= _height )
+        if ( _topology.isInside( x, y ) == false )
             return false;
-        hashed_string& tileObject = _listObject[static_cast<size_t>( y * _width + x )];
+        hashed_string& tileObject = _listObject[static_cast<size_t>( _topology.toIndex( x, y ) )];
         if ( tileObject == object )
             return true;
         tileObject = object;
@@ -200,7 +198,7 @@ namespace sw
                 if ( findCreatureIndex( species._id ) >= 0 || species.likesHabitat( instance._habitatId ) == false || species.comesIn( phase, weatherId ) == false )
                     continue;
                 // 서식지 번호가 아니라 자리로 섞는다 — 같은 배치면 지어 온 순서와 상관없이 같은 답이다.
-                const uint32  placeKey = static_cast<uint32>( instance._origin._y * _width + instance._origin._x ) * 4u + static_cast<uint32>( instance._rotation );
+                const uint32  placeKey = static_cast<uint32>( _topology.toIndex( instance._origin ) ) * 4u + static_cast<uint32>( instance._rotation );
                 const uint32  salt     = static_cast<uint32>( speciesIndex ) * 977u + placeKey * 31u;
                 const float32 roll     = GameHash::toUnitFloat( GameHash::hashCoord( attractKey, static_cast<int32>( salt ), _settings._randomSeed ) );
                 if ( roll >= species._chance && species._chance < 1.0f )
@@ -314,9 +312,9 @@ namespace sw
         int32& usedCount = creature._listAbilityUse[static_cast<size_t>( abilitySlot )];
         if ( usedCount >= pAbility->_usesPerDay )
             return CreatureAbilityResult::NoUsesLeft;
-        if ( x < 0 || y < 0 || x >= _width || y >= _height )
+        if ( _topology.isInside( x, y ) == false )
             return CreatureAbilityResult::OutOfBounds;
-        const int32             tileIndex = y * _width + x;
+        const int32             tileIndex = _topology.toIndex( x, y );
         const CreatureTileRule* pRule     = pAbility->findRule( _listObject[static_cast<size_t>( tileIndex )] );
         if ( pRule == nullptr )
             return CreatureAbilityResult::NoRule;
@@ -330,7 +328,7 @@ namespace sw
 
     int32 CreatureTown::placeHouse( int32 x, int32 y, int32 capacity )
     {
-        if ( x < 0 || y < 0 || x >= _width || y >= _height || _listObject[static_cast<size_t>( y * _width + x )].empty() == false )
+        if ( _topology.isInside( x, y ) == false || _listObject[static_cast<size_t>( _topology.toIndex( x, y ) )].empty() == false )
             return -1;
         CreatureHouse house;
         house._tile     = int2{ x, y };
@@ -407,9 +405,9 @@ namespace sw
 
     const hashed_string* CreatureTown::findObject( int32 x, int32 y ) const
     {
-        if ( x < 0 || y < 0 || x >= _width || y >= _height )
+        if ( _topology.isInside( x, y ) == false )
             return nullptr;
-        return &_listObject[static_cast<size_t>( y * _width + x )];
+        return &_listObject[static_cast<size_t>( _topology.toIndex( x, y ) )];
     }
 
     const TownCreature* CreatureTown::findCreature( const hashed_string& speciesId ) const
@@ -510,9 +508,9 @@ namespace sw
         for ( const int32 habitatIndex : _pCatalog->getHabitatMatchOrder() )
         {
             const HabitatDef& habitat = _pCatalog->getHabitats()[static_cast<size_t>( habitatIndex )];
-            for ( int32 originY = 0; originY < _height; ++originY )
+            for ( int32 originY = 0; originY < _topology._height; ++originY )
             {
-                for ( int32 originX = 0; originX < _width; ++originX )
+                for ( int32 originX = 0; originX < _topology._width; ++originX )
                 {
                     for ( int32 rotation = 0; rotation < CreatureTownInternal::kRotationCount; ++rotation )
                     {
@@ -595,7 +593,7 @@ namespace sw
     {
         outListTile.clear();
         const int2 size = CreatureTownInternal::computeRotatedSize( habitat, rotation );
-        if ( originX + size._x > _width || originY + size._y > _height )
+        if ( _topology.isRectInside( int2{ originX, originY }, size ) == false )
             return false;
         for ( int32 rotatedY = 0; rotatedY < size._y; ++rotatedY )
         {
@@ -604,7 +602,7 @@ namespace sw
                 const HabitatCell& cell = CreatureTownInternal::sampleRotated( habitat, rotation, rotatedX, rotatedY );
                 if ( cell._bAny != SW_FALSE )
                     continue;
-                const int32 tileIndex = ( originY + rotatedY ) * _width + originX + rotatedX;
+                const int32 tileIndex = _topology.toIndex( originX + rotatedX, originY + rotatedY );
                 if ( listClaimed[static_cast<size_t>( tileIndex )] != SW_FALSE || ( _listObject[static_cast<size_t>( tileIndex )] == cell._object ) == false )
                     return false;
                 outListTile.push_back( tileIndex );
@@ -696,7 +694,6 @@ namespace sw
         const HabitatInstance* pHabitat = findHabitat( creature._habitat );
         if ( pHabitat == nullptr || pHabitat->_listTile.empty() )
             return int2{ 0, 0 };
-        const int32 tileIndex = pHabitat->_listTile.front();
-        return int2{ tileIndex % _width, tileIndex / _width };
+        return _topology.toCell( pHabitat->_listTile.front() );
     }
 } // namespace sw
