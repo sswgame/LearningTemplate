@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
@@ -403,5 +407,48 @@ namespace sw
             _events |= PlatformerEvent::kLanded;
         if ( isTouching( map, PlatformTile::Hazard ) )
             _events |= PlatformerEvent::kTouchedHazard;
+    }
+
+    void PlatformerMotor2D::writeState( Archive& outArchive ) const
+    {
+        outArchive << _position;
+        outArchive << _velocity;
+        StateArchiveUtil::writeCountdown( outArchive, _coyote );
+        StateArchiveUtil::writeCountdown( outArchive, _jumpBuffer );
+        StateArchiveUtil::writeCountdown( outArchive, _wallLock );
+        StateArchiveUtil::writeCountdown( outArchive, _dash );
+        StateArchiveUtil::writeCountdown( outArchive, _dashCooldown );
+        StateArchiveUtil::writeCountdown( outArchive, _dropThrough );
+        outArchive << _extraJumpsLeft;
+        outArchive << _airDashesLeft;
+        outArchive << _wallSide;
+        outArchive << _facing;
+        outArchive << _bGrounded;
+        outArchive << _bClimbing;
+        outArchive << _bRising;
+    }
+
+    bool PlatformerMotor2D::readState( Archive& archive )
+    {
+        PlatformerMotor2D restored = *this;
+        archive >> restored._position;
+        archive >> restored._velocity;
+        const bool bTimerRead =
+            StateArchiveUtil::readCountdown( archive, restored._coyote ) && StateArchiveUtil::readCountdown( archive, restored._jumpBuffer ) &&
+            StateArchiveUtil::readCountdown( archive, restored._wallLock ) && StateArchiveUtil::readCountdown( archive, restored._dash ) &&
+            StateArchiveUtil::readCountdown( archive, restored._dashCooldown ) && StateArchiveUtil::readCountdown( archive, restored._dropThrough );
+        archive >> restored._extraJumpsLeft;
+        archive >> restored._airDashesLeft;
+        archive >> restored._wallSide;
+        archive >> restored._facing;
+        archive >> restored._bGrounded;
+        archive >> restored._bClimbing;
+        archive >> restored._bRising;
+        const bool bValid = bTimerRead && archive.isOk() && restored._bGrounded <= SW_TRUE && restored._bClimbing <= SW_TRUE && restored._bRising <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        restored._events = 0;
+        *this            = restored;
+        return true;
     }
 } // namespace sw

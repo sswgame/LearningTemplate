@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 체력 설정입니다. 시간은 초, 비율은 0..1 입니다. 0 인 재생 속도는 "재생 없음" 입니다. */
     struct VitalitySettings
     {
@@ -161,6 +163,11 @@ namespace sw
         bool    isInvulnerable() const { return _invulnerable.isActive(); }
         float32 getPoise() const { return _poise; }
         bool    isPoiseBroken() const { return _poiseBreak.isActive(); }
+
+        /** @brief 체력 · 보호막 · 다운 · 강인도 · 무적 · 부활 진행 · 상태을 씁니다. 설정은 `initialize` 의 것, 알림은 "일어난 일" 이라 싣지 않고 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void enterDowned( int32 instigatorId );

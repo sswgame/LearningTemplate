@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 후보 하나입니다. id 는 게임의 것(오브젝트 핸들의 묶은 값 등)입니다. */
     struct LockOnCandidate
     {
@@ -57,6 +59,11 @@ namespace sw
 
         uint64 getTarget() const { return _target; }
         bool   hasTarget() const { return _target != 0; }
+
+        /** @brief 표적 · 숨은 시간을 씁니다. 설정은 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 앞 방향 기준 가로 각(도, 오른쪽 +)입니다. */

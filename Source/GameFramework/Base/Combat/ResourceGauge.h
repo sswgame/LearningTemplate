@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 게이지 설정입니다. 시간은 초입니다. */
     struct ResourceGaugeSettings
     {
@@ -87,6 +89,11 @@ namespace sw
         bool isOverheated() const { return _bLocked == SW_TRUE && _settings._bOverheatMode == SW_TRUE; }
         /** @brief 지금 쓸 수 있는가(잠기지 않았고 보통형이면 남은 양이 있다)입니다. */
         bool canUse() const;
+
+        /** @brief 값 · 최대 보너스 · 재생 배율 · 마지막 사용 뒤 · 과열 벌칙 · 잠김을 씁니다. 설정은 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void markUsed();

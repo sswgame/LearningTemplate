@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 순서 방식입니다. */
     enum class TurnOrderMode : uint8
     {
@@ -48,6 +50,11 @@ namespace sw
         void  previewOrder( int32 count, vector<int32>& outListActor ) const;
         int32 getRound() const { return _round; }
         int32 getActorCount() const { return static_cast<int32>( _listActor.size() ); }
+
+        /** @brief 배우(속도 · 게이지 · id · 우선 · 동률깨기) · 라운드 대기열 · 난수 · 라운드 · 모드을 씁니다.  */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         struct Actor

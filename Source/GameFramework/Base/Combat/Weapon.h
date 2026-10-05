@@ -18,6 +18,7 @@
 
 namespace sw
 {
+    class Archive;
     class XmlNode;
 
     /**
@@ -131,6 +132,11 @@ namespace sw
         float32          getCurrentSpread() const { return _currentSpread; }
         bool             isReloading() const { return _reload.isActive(); }
         float32          getReloadRemaining() const { return _reload.getRemaining(); }
+
+        /** @brief 무기 정의 id · 난수 · 쿨다운 · 장전 · 퍼짐 · 탄창 · 예비탄을 씁니다. 정의는 `equip` 의 것이라 id 만 싣고, 읽을 때 지금 정의와 id 가 다르면 거절합니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         WeaponDef  _def;

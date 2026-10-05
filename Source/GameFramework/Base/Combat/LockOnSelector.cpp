@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
@@ -126,5 +130,24 @@ namespace sw
     {
         _target     = 0;
         _hiddenTime = 0.0f;
+    }
+
+    void LockOnSelector::writeState( Archive& outArchive ) const
+    {
+        outArchive << _target;
+        outArchive << _hiddenTime;
+    }
+
+    bool LockOnSelector::readState( Archive& archive )
+    {
+        uint64  target     = 0;
+        float32 hiddenTime = 0.0f;
+        archive >> target;
+        archive >> hiddenTime;
+        if ( archive.isError() || ( 0.0f <= hiddenTime ) == false )
+            return false;
+        _target     = target;
+        _hiddenTime = hiddenTime;
+        return true;
     }
 } // namespace sw

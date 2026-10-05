@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
@@ -376,5 +380,58 @@ namespace sw
         event._kind  = kind;
         event._value = value;
         _eventBuffer.push( event );
+    }
+
+    void ArcadeVehicleMotor::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        outArchive << _position;
+        outArchive << _velocity;
+        outArchive << _yaw;
+        outArchive << _driftCharge;
+        StateArchiveUtil::writeCountdown( outArchive, _boost );
+        outArchive << _nitroGauge;
+        outArchive << _nitroCount;
+        outArchive << _driftDirection;
+        outArchive << _bAirborne;
+    }
+
+    bool ArcadeVehicleMotor::readState( Archive& archive )
+    {
+        FixedStepTimer timer          = _timer;
+        float3         position       = {};
+        float3         velocity       = {};
+        float32        yaw            = 0.0f;
+        float32        driftCharge    = 0.0f;
+        Countdown      boost          = {};
+        float32        nitroGauge     = 0.0f;
+        int32          nitroCount     = 0;
+        int32          driftDirection = 0;
+        uint8          bAirborne      = SW_FALSE;
+        const bool     bTimerRead     = StateArchiveUtil::readStepTimer( archive, timer );
+        archive >> position;
+        archive >> velocity;
+        archive >> yaw;
+        archive >> driftCharge;
+        const bool bBoostRead = StateArchiveUtil::readCountdown( archive, boost );
+        archive >> nitroGauge;
+        archive >> nitroCount;
+        archive >> driftDirection;
+        archive >> bAirborne;
+        const bool bValid = bTimerRead && bBoostRead && archive.isOk() && 0 <= nitroCount && -1 <= driftDirection && driftDirection <= 1 && bAirborne <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        _timer          = timer;
+        _position       = position;
+        _velocity       = velocity;
+        _yaw            = yaw;
+        _driftCharge    = driftCharge;
+        _boost          = boost;
+        _nitroGauge     = nitroGauge;
+        _nitroCount     = nitroCount;
+        _driftDirection = driftDirection;
+        _bAirborne      = bAirborne;
+        _eventBuffer.clear();
+        return true;
     }
 } // namespace sw

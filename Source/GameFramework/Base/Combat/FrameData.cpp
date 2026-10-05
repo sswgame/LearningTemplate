@@ -5,9 +5,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -281,5 +283,45 @@ namespace sw
             }
         }
         return GuardOutcome::Hit;
+    }
+
+    void MoveTimeline::writeState( Archive& outArchive ) const
+    {
+        outArchive << _bPlaying;
+        if ( _bPlaying == SW_FALSE )
+            return;
+        StateArchiveUtil::writeName( outArchive, _move._id );
+        outArchive << _frame;
+        outArchive << _hitstopRemaining;
+        outArchive << _bContact;
+        outArchive << _bBlocked;
+    }
+
+    bool MoveTimeline::readState( Archive& archive, const MoveCatalog& catalog )
+    {
+        uint8 bPlaying = SW_FALSE;
+        archive >> bPlaying;
+        if ( archive.isError() || bPlaying > SW_TRUE )
+            return false;
+        if ( bPlaying == SW_FALSE )
+        {
+            cancel();
+            return true;
+        }
+        hashed_string moveId;
+        int32         frame            = 0;
+        int32         hitstopRemaining = 0;
+        uint8         bContact         = SW_FALSE;
+        uint8         bBlocked         = SW_FALSE;
+        if ( StateArchiveUtil::readName( archive, moveId ) == false )
+            return false;
+        archive >> frame;
+        archive >> hitstopRemaining;
+        archive >> bContact;
+        archive >> bBlocked;
+        const MoveFrameData* pMove = catalog.findMove( moveId );
+        if ( archive.isError() || pMove == nullptr )
+            return false;
+        return restoreState( *pMove, frame, hitstopRemaining, bContact == SW_TRUE, bBlocked == SW_TRUE );
     }
 } // namespace sw

@@ -21,6 +21,7 @@
 
 namespace sw
 {
+    class Archive;
     class XmlNode;
 
     /** @brief 공격 높이입니다(철권 상단 · 중단 · 하단 · 잡기). */
@@ -218,6 +219,11 @@ namespace sw
         static GuardOutcome computeGuardOutcome( AttackHeight height, GuardStance stance, bool bUnblockable = false );
         /** @brief `computeGuardOutcome( height, stance ) == Blocked` 입니다. */
         static bool isBlocked( AttackHeight height, GuardStance stance ) { return computeGuardOutcome( height, stance ) == GuardOutcome::Blocked; }
+
+        /** @brief 재생 중이면 기술 id · 프레임 · 히트스톱 · 접촉 · 막힘을 씁니다. 기술 정의는 카탈로그의 것이라 id 만 싣습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다 — 기술은 @p catalog 에서 id 로 찾습니다. 깨졌거나 없는 기술이면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive, const MoveCatalog& catalog );
 
     private:
         MoveFrameData _move;

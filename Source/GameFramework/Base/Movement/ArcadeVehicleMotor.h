@@ -18,6 +18,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /**
      * @class IVehicleGround
      * @brief 차 밑의 땅입니다 — 높이와 그 자리의 속도 배율(길 1, 풀밭 · 모래 < 1). 게임이 지형 · 높이맵 · 트랙 메시로 답합니다.
@@ -174,6 +176,11 @@ namespace sw
         int32                        getNitroCount() const { return _nitroCount; }
         const ArcadeVehicleSettings& getSettings() const { return _settings; }
         FixedStepTimer&              getTimer() { return _timer; }
+
+        /** @brief 고정 걸음 남은 시간 · 자리 · 속도 · 요 · 드리프트 · 부스트 · 니트로 · 공중을 씁니다. 설정 · 지면 포인터는 싣지 않고, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         float32 sampleHeight( float32 x, float32 z ) const;

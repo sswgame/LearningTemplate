@@ -15,6 +15,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 칸 종류입니다. */
     enum class PlatformTile : uint8
     {
@@ -143,6 +145,11 @@ namespace sw
         float32                   getGravity() const;
         float32                   getJumpSpeed() const;
         const PlatformerSettings& getSettings() const { return _settings; }
+
+        /** @brief 자리 · 속도 · 타이머들 · 남은 점프 · 대시 · 벽 · 방향 · 바닥 · 오르기 · 상승을 씁니다. 설정과 이번 걸음의 사건 비트는 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         bool isBlocked( const PlatformTileMap& map, const float2& center, bool bFromAbove, float32 previousBottom ) const;

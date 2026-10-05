@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
@@ -341,5 +345,52 @@ namespace sw
         event._amount       = amount;
         event._instigatorId = instigatorId;
         _eventBuffer.push( event );
+    }
+
+    void Vitality::writeState( Archive& outArchive ) const
+    {
+        outArchive << _health;
+        outArchive << _shield;
+        outArchive << _downedHealth;
+        outArchive << _poise;
+        outArchive << _sinceDamage;
+        outArchive << _sincePoiseDamage;
+        StateArchiveUtil::writeCountdown( outArchive, _poiseBreak );
+        StateArchiveUtil::writeCountdown( outArchive, _invulnerable );
+        outArchive << _reviveElapsed;
+        outArchive << _reviveSpeedScale;
+        outArchive << _reviverId;
+        outArchive << _lastInstigatorId;
+        outArchive << _downCount;
+        outArchive << static_cast<uint8>( _state );
+        outArchive << _bReviving;
+    }
+
+    bool Vitality::readState( Archive& archive )
+    {
+        Vitality restored;
+        restored._settings = _settings;
+        uint8 state        = 0;
+        archive >> restored._health;
+        archive >> restored._shield;
+        archive >> restored._downedHealth;
+        archive >> restored._poise;
+        archive >> restored._sinceDamage;
+        archive >> restored._sincePoiseDamage;
+        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._poiseBreak ) && StateArchiveUtil::readCountdown( archive, restored._invulnerable );
+        archive >> restored._reviveElapsed;
+        archive >> restored._reviveSpeedScale;
+        archive >> restored._reviverId;
+        archive >> restored._lastInstigatorId;
+        archive >> restored._downCount;
+        archive >> state;
+        archive >> restored._bReviving;
+        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._health && 0.0f <= restored._shield && 0 <= restored._downCount &&
+                            state <= static_cast<uint8>( VitalityState::Dead ) && restored._bReviving <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        restored._state = static_cast<VitalityState>( state );
+        *this           = std::move( restored );
+        return true;
     }
 } // namespace sw

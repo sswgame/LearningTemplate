@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Utility/Countdown.h"
 #include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
 
@@ -122,6 +123,37 @@ namespace sw
         if ( archive.isError() || accumulator < 0.0f )
             return false;
         inoutTimer._accumulator = accumulator;
+        return true;
+    }
+
+    void StateArchiveUtil::writeCountdown( Archive& outArchive, const Countdown& countdown )
+    {
+        outArchive << countdown._remaining;
+    }
+
+    bool StateArchiveUtil::readCountdown( Archive& archive, Countdown& outCountdown )
+    {
+        float32 remaining = 0.0f;
+        archive >> remaining;
+        // NaN 은 자기 자신과 같지 않다
+        if ( archive.isError() || ( remaining == remaining ) == false )
+            return false;
+        outCountdown._remaining = remaining;
+        return true;
+    }
+
+    void StateArchiveUtil::writeRateAccumulator( Archive& outArchive, const RateAccumulator& accumulator )
+    {
+        outArchive << accumulator._fraction;
+    }
+
+    bool StateArchiveUtil::readRateAccumulator( Archive& archive, RateAccumulator& outAccumulator )
+    {
+        float32 fraction = 0.0f;
+        archive >> fraction;
+        if ( archive.isError() || ( 0.0f <= fraction ) == false )
+            return false;
+        outAccumulator._fraction = fraction;
         return true;
     }
 } // namespace sw

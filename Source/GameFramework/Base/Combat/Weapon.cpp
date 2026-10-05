@@ -4,9 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -166,5 +168,34 @@ namespace sw
     {
         if ( amount > 0 )
             _reserveAmmo = MathUtil::min( _def._maxReserveAmmo, _reserveAmmo + amount );
+    }
+
+    void WeaponState::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeName( outArchive, _def._id );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateArchiveUtil::writeCountdown( outArchive, _cooldown );
+        StateArchiveUtil::writeCountdown( outArchive, _reload );
+        outArchive << _currentSpread;
+        outArchive << _magazineAmmo;
+        outArchive << _reserveAmmo;
+    }
+
+    bool WeaponState::readState( Archive& archive )
+    {
+        hashed_string defId;
+        if ( StateArchiveUtil::readName( archive, defId ) == false || defId != _def._id )
+            return false;
+        WeaponState restored = *this;
+        const bool  bRead    = StateArchiveUtil::readRandom( archive, restored._random ) && StateArchiveUtil::readCountdown( archive, restored._cooldown ) &&
+                           StateArchiveUtil::readCountdown( archive, restored._reload );
+        archive >> restored._currentSpread;
+        archive >> restored._magazineAmmo;
+        archive >> restored._reserveAmmo;
+        const bool bValid = bRead && archive.isOk() && 0 <= restored._magazineAmmo && 0 <= restored._reserveAmmo;
+        if ( bValid == false )
+            return false;
+        *this = std::move( restored );
+        return true;
     }
 } // namespace sw

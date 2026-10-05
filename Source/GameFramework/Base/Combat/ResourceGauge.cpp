@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     ResourceGauge::ResourceGauge()
@@ -197,5 +201,31 @@ namespace sw
         const bool bRecovered = _settings._bOverheatMode == SW_TRUE ? _value <= _settings._overheatRecoverLevel : _value >= _settings._exhaustThreshold;
         if ( bRecovered )
             _bLocked = SW_FALSE;
+    }
+
+    void ResourceGauge::writeState( Archive& outArchive ) const
+    {
+        outArchive << _value;
+        outArchive << _maxBonus;
+        outArchive << _regenScale;
+        outArchive << _sinceUse;
+        StateArchiveUtil::writeCountdown( outArchive, _overheatPenalty );
+        outArchive << _bLocked;
+    }
+
+    bool ResourceGauge::readState( Archive& archive )
+    {
+        ResourceGauge restored = *this;
+        archive >> restored._value;
+        archive >> restored._maxBonus;
+        archive >> restored._regenScale;
+        archive >> restored._sinceUse;
+        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._overheatPenalty );
+        archive >> restored._bLocked;
+        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._value && restored._bLocked <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        *this = restored;
+        return true;
     }
 } // namespace sw

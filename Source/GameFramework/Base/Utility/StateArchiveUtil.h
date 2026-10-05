@@ -10,8 +10,10 @@
 
 namespace sw
 {
+    struct Countdown;
     struct FixedStepTimer;
     struct int2;
+    struct RateAccumulator;
 
     class Archive;
     class GameRandom;
@@ -58,5 +60,12 @@ namespace sw
         /** @brief 고정 걸음 타이머의 남은 시간만 씁니다(걸음 · 상한은 설정이 정한다). */
         static void               writeStepTimer( Archive& outArchive, const FixedStepTimer& timer );
         [[nodiscard]] static bool readStepTimer( Archive& archive, FixedStepTimer& inoutTimer );
+
+        /** @brief 남은 시간을 그대로 씁니다(음수 늦음까지 — 되살린 뒤 같은 발생 시각을 낸다). */
+        static void               writeCountdown( Archive& outArchive, const Countdown& countdown );
+        [[nodiscard]] static bool readCountdown( Archive& archive, Countdown& outCountdown );
+        /** @brief 아직 정수가 되지 않은 몫을 씁니다. */
+        static void               writeRateAccumulator( Archive& outArchive, const RateAccumulator& accumulator );
+        [[nodiscard]] static bool readRateAccumulator( Archive& archive, RateAccumulator& outAccumulator );
     };
 } // namespace sw

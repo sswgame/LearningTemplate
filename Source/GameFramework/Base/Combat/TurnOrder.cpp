@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 #include <algorithm>
 
 namespace sw
@@ -153,5 +157,61 @@ namespace sw
             outListActor.push_back( listQueue.front() );
             listQueue.erase( listQueue.begin() );
         }
+    }
+
+    void TurnOrder::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listActor.size() );
+        for ( const Actor& actor : _listActor )
+        {
+            outArchive << actor._speed;
+            outArchive << actor._gauge;
+            outArchive << actor._actorId;
+            outArchive << actor._priority;
+            outArchive << actor._tieBreak;
+        }
+        outArchive << static_cast<uint32>( _listRoundQueue.size() );
+        for ( const int32 actorId : _listRoundQueue )
+        {
+            outArchive << actorId;
+        }
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _round;
+        outArchive << static_cast<uint8>( _mode );
+    }
+
+    bool TurnOrder::readState( Archive& archive )
+    {
+        TurnOrder restored = *this;
+        uint32    count    = 0;
+        // 배우마다 속도 · 게이지 · id · 우선 · 동률깨기(20)
+        if ( StateArchiveUtil::readCount( archive, 20, count ) == false )
+            return false;
+        restored._listActor.resize( count );
+        for ( Actor& actor : restored._listActor )
+        {
+            archive >> actor._speed;
+            archive >> actor._gauge;
+            archive >> actor._actorId;
+            archive >> actor._priority;
+            archive >> actor._tieBreak;
+        }
+        if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false )
+            return false;
+        restored._listRoundQueue.resize( count );
+        for ( int32& actorId : restored._listRoundQueue )
+        {
+            archive >> actorId;
+        }
+        uint8      mode        = 0;
+        const bool bRandomRead = StateArchiveUtil::readRandom( archive, restored._random );
+        archive >> restored._round;
+        archive >> mode;
+        const bool bValid = bRandomRead && archive.isOk() && mode <= static_cast<uint8>( TurnOrderMode::Timeline );
+        if ( bValid == false )
+            return false;
+        restored._mode = static_cast<TurnOrderMode>( mode );
+        *this          = std::move( restored );
+        return true;
     }
 } // namespace sw
