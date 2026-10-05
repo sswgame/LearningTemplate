@@ -731,6 +731,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-3. 환경 · 툴체인
 
+- **리눅스 Vulkan 검증 레이어는 시스템 패키지(`vulkan-validationlayers`)다 — vcpkg 포트는 Windows 만**(`"platform": "!linux"`). Windows 만 레이어를 Bin 옆에
+  복사하고 `VK_LAYER_PATH` 를 건다(`RuntimeDependencies.cmake` · `VulkanRHIDevice.cpp`). 리눅스 CI(ubuntu-22.04 · clang 14)에서 그 포트가 configure 에서 져 잡 넷이 섰다.
+  레이어가 없으면 경고 한 줄 뒤 검증 없이 돈다.
 - **리눅스 빌드는 WSL 안의 클론(`~/LearningTemplate`)에서 한다.** 그 클론의 변경은 사용자 것이라 현재 상태를 덮어 빌드해도 된다. 가져올 때는 그 클론에서
   `git fetch /mnt/d/Projects/Personal/LearningTemplate main`. **`WSL-*` 프리셋을 Windows 체크아웃(`/mnt/d`)에서 돌리지 말 것** — 같은 `build/vcpkg_installed` 를
   리눅스 트리플릿이 덮어 Windows 트리가 통째로 선다(복구 27 분). DrvFs 에서는 configure 자체가 `Operation not permitted` 로 죽는다.
