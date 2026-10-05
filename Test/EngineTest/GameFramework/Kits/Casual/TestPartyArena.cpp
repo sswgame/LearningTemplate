@@ -87,6 +87,12 @@ namespace
         }
         return apex;
     }
+
+    /** @brief 묶음 알림 하나가 기대와 같은가입니다. */
+    bool isPartySeriesEvent( const PartySeriesEvent& event, PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points, const hashed_string& roundId )
+    {
+        return event._kind == kind && event._player == player && event._value == value && event._points == points && event._roundId == roundId;
+    }
 } // namespace
 
 SW_TEST_CASE( PartyArenaTest, TimedBouncesBuildComboUpToTheCap )
@@ -427,6 +433,40 @@ SW_TEST_CASE( PartyArenaTest, RoundSeriesRanksRoundsAndCrownsFirstToTarget )
     for ( const PartySeriesEvent& event : listEvent )
         won += event._kind == PartySeriesEvent::Kind::SeriesWon ? 1 : 0;
     SW_EXPECT_EQUAL( won, 1 );
+}
+
+/**
+ * @brief [PartyArenaTest] 라운드 묶음 알림 — 순서(순위 → 다음 라운드 · 우승), 라운드 id(끝난 라운드 · 새 라운드), 순위 · 순위 점수, 목록보다 낮은 순위는 0 점
+ */
+SW_TEST_CASE( PartyArenaTest, RoundSeriesEventsCarryRoundIdRankAndPoints )
+{
+    PartyRoundSeries series;
+    SW_ASSERT_TRUE( series.loadFromXmlText( R"(<PartySeries winScore="4" placementPoints="3,1"><Round id="trampoline"/><Round id="sumo"/></PartySeries>)",
+                                            "PartyArenaTest" ) );
+    SW_ASSERT_TRUE( series.start( 3 ) );
+    const hashed_string trampoline( "trampoline" );
+    const hashed_string sumo( "sumo" );
+    using Kind = PartySeriesEvent::Kind;
+
+    // 1 라운드 1 · 4 · 0 → 순위 2 · 1 · 3, 점수 1 · 3 · 0(3 위는 목록 밖). 아무도 4 점이 아니라 2 라운드(sumo).
+    SW_ASSERT_TRUE( series.reportRound( vector<int32>{ 1, 4, 0 } ) );
+    // 2 라운드 0 · 5 · 5 → 순위 3 · 1 · 1(같은 점수 같은 순위), 총점 1 · 6 · 3 → 1 번 우승(끝난 라운드 id).
+    SW_ASSERT_TRUE( series.reportRound( vector<int32>{ 0, 5, 5 } ) );
+
+    vector<PartySeriesEvent> listEvent;
+    series.drainEvents( listEvent );
+    SW_ASSERT_EQUAL( 9, static_cast<int32>( listEvent.size() ) );
+    SW_EXPECT_TRUE( isPartySeriesEvent( listEvent[0], Kind::RoundStarted, -1, 0, 0, trampoline ) );
+    SW_EXPECT_TRUE( isPartySeriesEvent( listEvent[1], Kind::RoundRanked, 0, 2, 1, trampoline ) );
+    SW_EXPECT_TRUE( isPartySeriesEvent( listEvent[2], Kind::RoundRanked, 1, 1, 3, trampoline ) );
+    SW_EXPECT_TRUE( isPartySeriesEvent( listEvent[3], Kind::RoundRanked, 2, 3, 0, trampoline ) );
+    SW_EXPECT_TRUE( isPartySeriesEvent( listEvent[4], Kind::RoundStarted, -1, 1, 0, sumo ) );
+    SW_EXPECT_TRUE( isPartySeriesEvent( listEvent[5], Kind::RoundRanked, 0, 3, 0, sumo ) );
+    SW_EXPECT_TRUE( isPartySeriesEvent( listEvent[6], Kind::RoundRanked, 1, 1, 3, sumo ) );
+    SW_EXPECT_TRUE( isPartySeriesEvent( listEvent[7], Kind::RoundRanked, 2, 1, 3, sumo ) );
+    SW_EXPECT_TRUE( isPartySeriesEvent( listEvent[8], Kind::SeriesWon, 1, 6, 0, sumo ) );
+    SW_EXPECT_EQUAL( 1, series.getWinner() );
+    SW_EXPECT_EQUAL( 1, series.getRoundNumber() ); // 우승한 라운드에서 멈춘다
 }
 
 /**

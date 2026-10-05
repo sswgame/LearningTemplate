@@ -1,6 +1,8 @@
 // 철권 류 격투 키트 — 커맨드 우선도 · 스트링 창 · 자세 · 조건, 가드 높이(하단 · 상단 회피), 프레임 이득 확정 반격, 띄우기 저글 감쇠 · 스크류 1회 · 다운 추가타 · 벽꽝,
-// 잡기 풀기 창, 횡이동 대 직선 · 추적, 라운드(시간 초과 · K.O. · 레이지 · 무승부), 롤백 저장 → 복원 → 재진행 결정성.
+// 잡기 풀기 창, 횡이동 대 직선 · 추적, 라운드(시간 초과 · K.O. · 레이지 · 무승부), 롤백 저장 → 복원 → 재진행 결정성, 롤백 상태 바이트 형식 · 라운드 시간 · 대기 프레임 수.
 #include "pch.h"
+
+#include "Core/Network/BitStream.h"
 
 #include "GameFramework/Combat/FrameData.h"
 #include "GameFramework/Kits/Action/Fighting/FighterCatalog.h"
@@ -153,6 +155,64 @@ namespace
     {
         runFrames( match, 1, press0, input1, inoutListEvent );
         runFrames( match, waitFrames, makeInput( 0, 5 ), input1, inoutListEvent );
+    }
+
+    /**
+     * @brief 롤백 상태 바이트를 시험 쪽에서 따로 적습니다(버전 1) — `saveState` 와 바이트가 같아야 합니다.
+     * @details 라운드 사이 대기의 남은 프레임은 게터가 없어 시나리오가 아는 값(@p roundOverFramesRemaining)으로 넣습니다.
+     */
+    vector<uint8> writeExpectedFightingState( const FightingMatch& match, int32 roundOverFramesRemaining )
+    {
+        BitWriter writer;
+        writer.writeUint32( 0x54484746u ); // "FGHT"
+        writer.writeVarInt( 1 );
+        writer.writeVarInt( match.getFrame() );
+        writer.writeVarInt( match.getRound() );
+        writer.writeVarInt( match.getRoundFramesRemaining() );
+        writer.writeVarInt( roundOverFramesRemaining );
+        writer.writeVarInt( match.getLastRoundWinner() );
+        writer.writeVarInt( match.getMatchWinner() );
+        writer.writeVarUint( static_cast<uint64>( match.getPhase() ) );
+        for ( int32 player = 0; player < FightingMatch::kPlayerCount; ++player )
+        {
+            const FighterRuntime& fighter = match.getFighter( player );
+            writer.writeVarUint( fighter._pDef->_listMove.size() );
+            const float32 arrFloat[] = { fighter._x, fighter._z, fighter._y, fighter._dirX, fighter._dirZ,
+                                         fighter._velocityY, fighter._gravity, fighter._carryX, fighter._carryZ };
+            for ( const float32 value : arrFloat )
+                writer.writeFloat( value );
+            const int32 arrCounter[] = { fighter._health, fighter._stateFrames, fighter._hitstop, fighter._moveIndex, fighter._bufferedMove,
+                                         fighter._bufferedAge, fighter._stanceIndex, fighter._stanceFrames, fighter._comboHits, fighter._airHits,
+                                         fighter._heatFrames, fighter._sidestepSign, fighter._side, fighter._roundWins, fighter._breakButtons };
+            for ( const int32 counter : arrCounter )
+                writer.writeVarInt( counter );
+            writer.writeVarUint( static_cast<uint64>( fighter._state ) );
+            writer.writeVarUint( static_cast<uint64>( fighter._posture ) );
+            writer.writeVarUint( static_cast<uint64>( fighter._guard ) );
+            const uint8 arrFlag[] = { fighter._bAirborne, fighter._bScrewUsed, fighter._bBoundUsed, fighter._bWallSplatUsed,
+                                      fighter._bRage, fighter._bRageUsed, fighter._bHeatUsed, fighter._bThrowAttempted };
+            for ( const uint8 flag : arrFlag )
+                writer.writeBool( flag == SW_TRUE );
+            writer.writeBool( fighter._timeline.isPlaying() );
+            writer.writeBool( fighter._timeline.hasContact() );
+            writer.writeBool( fighter._timeline.wasBlocked() );
+            writer.writeVarInt( fighter._timeline.getFrame() );
+            writer.writeVarInt( fighter._timeline.getHitstopRemaining() );
+            writer.writeVarInt( fighter._inputBuffer.getFrameCount() );
+            for ( int32 framesAgo = fighter._inputBuffer.getFrameCount() - 1; framesAgo >= 0; --framesAgo )
+                writer.writeBits( FightingMatch::encodeInput( fighter._inputBuffer.getFrame( framesAgo ) ), 8 );
+        }
+        return writer.releaseBytes();
+    }
+
+    /** @brief 240 프레임 라운드 · 2 선승 · 대기 10 프레임 — 아래 두 시험이 같은 수치를 씁니다. */
+    FightingSettings makeRoundPinSettings()
+    {
+        FightingSettings settings;
+        settings._roundFrames     = 240;
+        settings._roundsToWin     = 2;
+        settings._roundOverFrames = 10;
+        return settings;
     }
 } // namespace
 
@@ -610,4 +670,126 @@ SW_TEST_CASE( FightingTest, RollbackSaveLoadResimulatesIdentically )
     vector<uint8> afterBroken;
     match.saveState( afterBroken );
     SW_EXPECT_TRUE( afterBroken == firstFinal );
+}
+
+/**
+ * @brief [FightingTest] 롤백 상태 바이트의 형식 — 머리는 바이트 그대로, 전체는 시험이 따로 적은 형식과 같다(라운드 중 · 대기 중 · 다음 라운드 · 대전 끝)
+ * @details 형식을 바꾸면 `writeExpectedFightingState` 와 머리 바이트를 같은 커밋에서 고치고 `kStateVersion` 을 올린다.
+ */
+SW_TEST_CASE( FightingTest, RollbackStateBytesKeepTheirLayout )
+{
+    FightingFixture fixture;
+    SW_ASSERT_TRUE( fixture._bLoaded );
+    const FighterDef&     tester   = *fixture.findTester();
+    const InputFrame      neutral0 = makeInput( 0, 5 );
+    const InputFrame      neutral1 = makeInput( 1, 5 );
+    FightingMatch         match;
+    vector<FightingEvent> listEvent;
+    vector<uint8>         bytes;
+    match.initialize( tester, tester, makeRoundPinSettings() );
+
+    // 머리 — "FGHT" · 버전 1 · 프레임 0 · 1 라운드 · 남은 240(지그재그 480 = E0 03) · 대기 0 · 지난 라운드 −1 · 대전 −1 · 라운드 중.
+    match.saveState( bytes );
+    const uint8 arrHeader[] = { 0x46, 0x47, 0x48, 0x54, 0x02, 0x00, 0x02, 0xE0, 0x03, 0x00, 0x01, 0x01, 0x00 };
+    SW_ASSERT_TRUE( bytes.size() > sizeof( arrHeader ) );
+    for ( size_t index = 0; index < sizeof( arrHeader ); ++index )
+        SW_EXPECT_EQUAL( static_cast<int32>( arrHeader[index] ), static_cast<int32>( bytes[index] ) );
+    SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 0 ) );
+
+    // 1 라운드 시간 초과(체력이 많은 0 승) 바로 뒤 — 대기 10.
+    match.setFighterHealth( 1, 90 );
+    runFrames( match, 240, neutral0, neutral1, listEvent );
+    SW_ASSERT_TRUE( match.getPhase() == FightingPhase::RoundOver );
+    match.saveState( bytes );
+    SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 10 ) );
+
+    // 대기 6 프레임 뒤 — 4 남음.
+    runFrames( match, 6, neutral0, neutral1, listEvent );
+    match.saveState( bytes );
+    SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 4 ) );
+
+    // 2 라운드 시작.
+    runFrames( match, 4, neutral0, neutral1, listEvent );
+    SW_ASSERT_TRUE( match.getPhase() == FightingPhase::RoundActive );
+    match.saveState( bytes );
+    SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 0 ) );
+
+    // 2 라운드도 0 승 → 대전 끝(끝날 때는 대기를 걸지 않는다).
+    match.setFighterHealth( 1, 90 );
+    runFrames( match, 240, neutral0, neutral1, listEvent );
+    SW_ASSERT_TRUE( match.getPhase() == FightingPhase::MatchOver );
+    match.saveState( bytes );
+    SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 0 ) );
+}
+
+/**
+ * @brief [FightingTest] 라운드 시간 · 라운드 사이 대기 · 대전 끝을 프레임 단위로 센다 — 240 번째 프레임에 시간 초과, 대기 10 프레임 뒤 2 라운드, 2 선승에 끝, 끝난 뒤의 프레임은 세지 않는다
+ * @details 대기 0 은 1 프레임으로 센다(끝난 다음 프레임에 새 라운드).
+ */
+SW_TEST_CASE( FightingTest, RoundClockIntermissionAndMatchEndCountExactFrames )
+{
+    FightingFixture fixture;
+    SW_ASSERT_TRUE( fixture._bLoaded );
+    const FighterDef&     tester   = *fixture.findTester();
+    const InputFrame      neutral0 = makeInput( 0, 5 );
+    const InputFrame      neutral1 = makeInput( 1, 5 );
+    FightingSettings      settings = makeRoundPinSettings();
+    FightingMatch         match;
+    vector<FightingEvent> listEvent;
+    match.initialize( tester, tester, settings );
+    SW_EXPECT_EQUAL( 1, match.getRound() );
+    SW_EXPECT_EQUAL( 240, match.getRoundFramesRemaining() );
+
+    // 239 프레임 — 아직 라운드 중, 1 프레임 남음.
+    match.setFighterHealth( 1, 90 );
+    runFrames( match, 239, neutral0, neutral1, listEvent );
+    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::RoundActive );
+    SW_EXPECT_EQUAL( 1, match.getRoundFramesRemaining() );
+    SW_EXPECT_EQUAL( -1, match.getLastRoundWinner() );
+
+    // 240 번째 — 시간 초과, 체력이 많은 0 승. 알림은 TimeOut → RoundEnd 둘.
+    listEvent.clear();
+    runFrames( match, 1, neutral0, neutral1, listEvent );
+    SW_ASSERT_EQUAL( 2, static_cast<int32>( listEvent.size() ) );
+    SW_EXPECT_TRUE( listEvent[0]._kind == FightingEvent::Kind::TimeOut && listEvent[0]._player == 0 );
+    SW_EXPECT_TRUE( listEvent[1]._kind == FightingEvent::Kind::RoundEnd && listEvent[1]._value == 0 );
+    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::RoundOver );
+    SW_EXPECT_EQUAL( 0, match.getRoundFramesRemaining() );
+    SW_EXPECT_EQUAL( 0, match.getLastRoundWinner() );
+    SW_EXPECT_EQUAL( 1, match.getFighter( 0 )._roundWins );
+    SW_EXPECT_EQUAL( 0, match.getFighter( 1 )._roundWins );
+
+    // 대기 10 프레임 — 9 프레임째까지 1 라운드, 10 프레임째 2 라운드(체력 · 시간을 채운다).
+    runFrames( match, 9, neutral0, neutral1, listEvent );
+    SW_EXPECT_EQUAL( 1, match.getRound() );
+    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::RoundOver );
+    runFrames( match, 1, neutral0, neutral1, listEvent );
+    SW_EXPECT_EQUAL( 2, match.getRound() );
+    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::RoundActive );
+    SW_EXPECT_EQUAL( 240, match.getRoundFramesRemaining() );
+    SW_EXPECT_EQUAL( 100, match.getFighter( 1 )._health );
+    SW_EXPECT_EQUAL( 250, match.getFrame() );
+
+    // 2 라운드도 0 승 → 2 선승으로 대전 끝. 끝난 뒤의 프레임은 세지 않는다.
+    listEvent.clear();
+    match.setFighterHealth( 1, 90 );
+    runFrames( match, 240, neutral0, neutral1, listEvent );
+    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::MatchOver );
+    SW_EXPECT_EQUAL( 0, match.getMatchWinner() );
+    SW_EXPECT_EQUAL( 2, match.getFighter( 0 )._roundWins );
+    SW_EXPECT_EQUAL( 1, countEvents( listEvent, FightingEvent::Kind::MatchEnd, 0 ) );
+    SW_EXPECT_EQUAL( 490, match.getFrame() );
+    runFrames( match, 5, neutral0, neutral1, listEvent );
+    SW_EXPECT_EQUAL( 490, match.getFrame() );
+
+    // 대기 0 은 1 프레임 — 무승부 라운드(같은 체력) 뒤 다음 프레임에 2 라운드.
+    settings._roundOverFrames = 0;
+    match.initialize( tester, tester, settings );
+    runFrames( match, 240, neutral0, neutral1, listEvent );
+    SW_EXPECT_EQUAL( FightingMatch::kDraw, match.getLastRoundWinner() );
+    SW_EXPECT_EQUAL( 1, match.getFighter( 0 )._roundWins );
+    SW_EXPECT_EQUAL( 1, match.getFighter( 1 )._roundWins );
+    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::RoundOver );
+    runFrames( match, 1, neutral0, neutral1, listEvent );
+    SW_EXPECT_EQUAL( 2, match.getRound() );
 }
