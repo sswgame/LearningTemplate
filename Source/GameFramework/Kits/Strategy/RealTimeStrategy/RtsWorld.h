@@ -20,6 +20,7 @@
 #include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
+#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {
@@ -380,8 +381,7 @@ namespace sw
         FixedStepTimer        _stepTimer;
         float32               _time;
         Countdown             _visionTimer;
-        int32                 _bucketWidth;
-        int32                 _bucketHeight;
+        GridTopology          _bucketTopology; ///< 이웃 찾기 버킷 격자(버킷 = `_settings._bucketSize` 칸)
         int32                 _teamCount;
         int32                 _winningTeam;
     };

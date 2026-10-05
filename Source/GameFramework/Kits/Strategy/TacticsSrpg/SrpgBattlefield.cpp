@@ -52,8 +52,7 @@ namespace sw
         , _turnOrder{}
         , _random{}
         , _pCatalog{ nullptr }
-        , _width{ 0 }
-        , _height{ 0 }
+        , _topology{}
         , _turn{ 0 }
         , _activeUnit{ -1 }
         , _phaseTeam{ SrpgTeam::Player }
@@ -64,14 +63,13 @@ namespace sw
                                       uint32 seed )
     {
         _pCatalog = pCatalog;
-        _width    = MathUtil::max( 0, width );
-        _height   = MathUtil::max( 0, height );
+        _topology = GridTopology{ width, height }; // 음수는 0 칸
         _settings = settings;
         _random.setSeed( seed );
         const SrpgTerrainDef* pTerrain = pCatalog != nullptr ? pCatalog->findTerrain( defaultTerrain ) : nullptr;
         if ( pTerrain == nullptr )
             SW_LOG_WARNING( "unknown default terrain '%#' - cells are impassable until painted", defaultTerrain.c_str() );
-        _listTerrain.assign( static_cast<size_t>( _width * _height ), pTerrain );
+        _listTerrain.assign( static_cast<size_t>( _topology.getCellCount() ), pTerrain );
         _listUnit.clear();
         _eventBuffer.clear();
         _turn       = 0;
@@ -84,7 +82,7 @@ namespace sw
         const SrpgTerrainDef* pTerrain = _pCatalog != nullptr ? _pCatalog->findTerrain( terrainId ) : nullptr;
         if ( pTerrain == nullptr || isInside( cell ) == false )
             return false;
-        _listTerrain[static_cast<size_t>( cell._y * _width + cell._x )] = pTerrain;
+        _listTerrain[static_cast<size_t>( _topology.toIndex( cell ) )] = pTerrain;
         return true;
     }
 
@@ -320,7 +318,7 @@ namespace sw
         const SrpgUnit* pUnit = findUnit( unitIndex );
         if ( pUnit == nullptr || pUnit->_bAlive == SW_FALSE )
         {
-            outReach.compute( _width, _height, int2{ -1, -1 }, 0, []( const int2&, const int2& )
+            outReach.compute( _topology._width, _topology._height, int2{ -1, -1 }, 0, []( const int2&, const int2& )
             { return -1; }, []( const int2& )
             { return false; } );
             return;
@@ -329,7 +327,7 @@ namespace sw
         const int2      start = unit._cell;
         const bool      bZoc  = _settings._bZoneOfControl == SW_TRUE;
         outReach.compute(
-            _width, _height, start, unit._pDef->_move,
+            _topology._width, _topology._height, start, unit._pDef->_move,
             [&]( const int2& fromCell, const int2& toCell )
         {
             const int32 occupant = findUnitAt( toCell );
@@ -383,7 +381,7 @@ namespace sw
             reach.collectReachable( listStand );
         }
         // 한 칸을 한 번만 — 표시는 재사용 스크래치에(호출마다 W × H 를 잡지 않는다).
-        _cellMarks.begin( _width * _height );
+        _cellMarks.begin( _topology.getCellCount() );
         vector<int2> listRange;
         for ( int32 weaponIndex = 0; weaponIndex < static_cast<int32>( pUnit->_listWeapon.size() ); ++weaponIndex )
         {
@@ -396,10 +394,10 @@ namespace sw
             for ( size_t standIndex = 0; standIndex < standCount; ++standIndex )
             {
                 const int2& stand = bPostMove ? listStand[standIndex] : pUnit->_cell;
-                GridReachability::collectRangeCells( stand, weapon._minRange, weapon._maxRange, _width, _height, listRange );
+                GridReachability::collectRangeCells( stand, weapon._minRange, weapon._maxRange, _topology._width, _topology._height, listRange );
                 for ( const int2& cell : listRange )
                 {
-                    if ( _cellMarks.visit( cell._y * _width + cell._x, -1 ) )
+                    if ( _cellMarks.visit( _topology.toIndex( cell ), -1 ) )
                         outListCell.push_back( cell );
                 }
             }
@@ -554,7 +552,7 @@ namespace sw
 
     const SrpgTerrainDef* SrpgBattlefield::findTerrainAt( const int2& cell ) const
     {
-        return isInside( cell ) ? _listTerrain[static_cast<size_t>( cell._y * _width + cell._x )] : nullptr;
+        return isInside( cell ) ? _listTerrain[static_cast<size_t>( _topology.toIndex( cell ) )] : nullptr;
     }
 
     int32 SrpgBattlefield::findUnitAt( const int2& cell ) const

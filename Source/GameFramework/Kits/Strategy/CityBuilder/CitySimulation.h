@@ -186,8 +186,8 @@ namespace sw
         /** @brief 일꾼의 그릴 자리(칸 단위 실수 — 칸 가운데가 .5)입니다. */
         static float2 computeWalkerPosition( const CityWalker& walker );
 
-        int32   getWidth() const { return _width; }
-        int32   getHeight() const { return _height; }
+        int32   getWidth() const { return _topology._width; }
+        int32   getHeight() const { return _topology._height; }
         int32   getMoney() const { return _money; }
         int32   getPopulation() const;
         int32   getWorkforce() const { return _workforce; }
@@ -252,8 +252,7 @@ namespace sw
         float32                   _monthTimer;
         float32                   _floodFertility;
         float32                   _wageDebt;
-        int32                     _width;
-        int32                     _height;
+        GridTopology              _topology;
         int32                     _money;
         int32                     _monthIncome;
         int32                     _workforce;

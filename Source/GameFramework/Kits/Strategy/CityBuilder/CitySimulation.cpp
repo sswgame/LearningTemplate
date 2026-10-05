@@ -79,8 +79,7 @@ namespace sw
         , _monthTimer{ 0.0f }
         , _floodFertility{ 0.8f }
         , _wageDebt{ 0.0f }
-        , _width{ 0 }
-        , _height{ 0 }
+        , _topology{}
         , _money{ 0 }
         , _monthIncome{ 0 }
         , _workforce{ 0 }
@@ -96,9 +95,8 @@ namespace sw
     {
         _pCatalog = pCatalog;
         _settings = settings;
-        _width    = MathUtil::max( 1, width );
-        _height   = MathUtil::max( 1, height );
-        _listTile.assign( static_cast<size_t>( _width * _height ), CityTile{} );
+        _topology = GridTopology{ MathUtil::max( 1, width ), MathUtil::max( 1, height ) };
+        _listTile.assign( static_cast<size_t>( _topology.getCellCount() ), CityTile{} );
         _listBuilding.clear();
         _listWalker.clear();
         _eventBuffer.clear();
@@ -120,9 +118,9 @@ namespace sw
 
     void CitySimulation::setTerrain( int32 x, int32 y, CityTerrain terrain )
     {
-        if ( x < 0 || y < 0 || x >= _width || y >= _height )
+        if ( _topology.isInside( x, y ) == false )
             return;
-        _listTile[static_cast<size_t>( y * _width + x )]._terrain = terrain;
+        _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )]._terrain = terrain;
     }
 
     void CitySimulation::fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain )
@@ -136,9 +134,9 @@ namespace sw
 
     const CityTile* CitySimulation::findTile( int32 x, int32 y ) const
     {
-        if ( x < 0 || y < 0 || x >= _width || y >= _height )
+        if ( _topology.isInside( x, y ) == false )
             return nullptr;
-        return &_listTile[static_cast<size_t>( y * _width + x )];
+        return &_listTile[static_cast<size_t>( _topology.toIndex( x, y ) )];
     }
 
     const CityBuilding* CitySimulation::findBuildingAt( int32 x, int32 y ) const
@@ -175,8 +173,8 @@ namespace sw
         if ( _money < cost )
             return CityPlaceResult::NotEnoughMoney;
         _money -= cost;
-        _listTile[static_cast<size_t>( y * _width + x )]._bRoad = SW_TRUE;
-        _bRoadsDirty                                            = SW_TRUE;
+        _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )]._bRoad = SW_TRUE;
+        _bRoadsDirty                                                       = SW_TRUE;
         return CityPlaceResult::Ok;
     }
 
@@ -204,7 +202,7 @@ namespace sw
         if ( pDef == nullptr )
             return CityPlaceResult::UnknownBuilding;
         // 범위를 먼저 — 발밑 일부만 맵 밖이어도 "땅이 나쁘다" 가 아니라 "밖" 이다.
-        if ( x < 0 || y < 0 || x + pDef->_size > _width || y + pDef->_size > _height )
+        if ( _topology.isRectInside( int2{ x, y }, int2{ pDef->_size, pDef->_size } ) == false )
             return CityPlaceResult::OutOfBounds;
         for ( int32 dy = 0; dy < pDef->_size; ++dy )
         {
@@ -247,7 +245,7 @@ namespace sw
         for ( int32 dy = 0; dy < pDef->_size; ++dy )
         {
             for ( int32 dx = 0; dx < pDef->_size; ++dx )
-                _listTile[static_cast<size_t>( ( y + dy ) * _width + x + dx )]._buildingIndex = index;
+                _listTile[static_cast<size_t>( _topology.toIndex( x + dx, y + dy ) )]._buildingIndex = index;
         }
         refreshAccess( building );
         _bDesirabilityDirty = SW_TRUE;
@@ -259,7 +257,7 @@ namespace sw
         const CityTile* pTile = findTile( x, y );
         if ( pTile == nullptr )
             return false;
-        CityTile& tile = _listTile[static_cast<size_t>( y * _width + x )];
+        CityTile& tile = _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )];
         if ( tile._bRoad != SW_FALSE )
         {
             tile._bRoad  = SW_FALSE;
@@ -273,7 +271,7 @@ namespace sw
         for ( int32 dy = 0; dy < building._pDef->_size; ++dy )
         {
             for ( int32 dx = 0; dx < building._pDef->_size; ++dx )
-                _listTile[static_cast<size_t>( ( building._origin._y + dy ) * _width + building._origin._x + dx )]._buildingIndex = -1;
+                _listTile[static_cast<size_t>( _topology.toIndex( building._origin._x + dx, building._origin._y + dy ) )]._buildingIndex = -1;
         }
         building._bAlive     = SW_FALSE;
         building._population = 0;
@@ -318,32 +316,31 @@ namespace sw
         for ( CityTile& tile : _listTile )
             tile._roadComponent = -1;
         // 도로 조각마다 너비 우선 — 큐는 길 찾기와 같은 재사용 스크래치(조각 번호가 칸의 "봤다" 표시다).
-        const GridTopology topology{ _width, _height };
-        int32              component = 0;
-        for ( int32 y = 0; y < _height; ++y )
+        int32 component = 0;
+        for ( int32 y = 0; y < _topology._height; ++y )
         {
-            for ( int32 x = 0; x < _width; ++x )
+            for ( int32 x = 0; x < _topology._width; ++x )
             {
-                CityTile& seed = _listTile[static_cast<size_t>( y * _width + x )];
+                CityTile& seed = _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )];
                 if ( seed._bRoad == SW_FALSE || seed._roadComponent >= 0 )
                     continue;
                 seed._roadComponent = component;
-                _roadSearch.begin( topology.getCellCount() );
-                _roadSearch.visit( topology.toIndex( int2{ x, y } ), -1 );
+                _roadSearch.begin( _topology.getCellCount() );
+                _roadSearch.visit( _topology.toIndex( x, y ), -1 );
                 while ( _roadSearch.hasNext() )
                 {
                     const int32 index = _roadSearch.popNext();
-                    const int2  tile  = topology.toCell( index );
+                    const int2  tile  = _topology.toCell( index );
                     for ( int32 direction = 0; direction < GridTopology::kOrthogonalCount; ++direction )
                     {
                         const int2 next = GridTopology::getNeighbor( tile, direction );
                         if ( isRoad( next._x, next._y ) == false )
                             continue;
-                        CityTile& nextTile = _listTile[static_cast<size_t>( topology.toIndex( next ) )];
+                        CityTile& nextTile = _listTile[static_cast<size_t>( _topology.toIndex( next ) )];
                         if ( nextTile._roadComponent >= 0 )
                             continue;
                         nextTile._roadComponent = component;
-                        _roadSearch.visit( topology.toIndex( next ), index );
+                        _roadSearch.visit( _topology.toIndex( next ), index );
                     }
                 }
                 ++component;
@@ -377,12 +374,13 @@ namespace sw
             {
                 for ( int32 x = building._origin._x - radius; x < building._origin._x + size + radius; ++x )
                 {
-                    if ( x < 0 || y < 0 || x >= _width || y >= _height )
+                    if ( _topology.isInside( x, y ) == false )
                         continue;
                     // 발밑과 바로 둘레는 다 받고 반경 끝으로 갈수록 줄어든다.
-                    const int32 distance                                           = CitySimulationInternal::computeChebyshev( int2{ x, y }, building._origin, size );
-                    const int32 value                                              = building._pDef->_desirability * ( radius + 1 - MathUtil::max( 0, distance - 1 ) ) / ( radius + 1 );
-                    _listTile[static_cast<size_t>( y * _width + x )]._desirability = static_cast<int16>( _listTile[static_cast<size_t>( y * _width + x )]._desirability + value );
+                    const int32 distance = CitySimulationInternal::computeChebyshev( int2{ x, y }, building._origin, size );
+                    const int32 value    = building._pDef->_desirability * ( radius + 1 - MathUtil::max( 0, distance - 1 ) ) / ( radius + 1 );
+                    CityTile&   tile     = _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )];
+                    tile._desirability   = static_cast<int16>( tile._desirability + value );
                 }
             }
         }
@@ -623,27 +621,26 @@ namespace sw
         if ( isRoad( from._x, from._y ) == false || isRoad( to._x, to._y ) == false || getRoadComponent( from ) != getRoadComponent( to ) )
             return false;
         // 칸 표시 · 부모 · 큐는 재사용 스크래치에 — 일꾼을 내보낼 때마다 W × H 를 새로 잡지 않는다.
-        const GridTopology topology{ _width, _height };
-        const int32        goal = topology.toIndex( to );
-        _roadSearch.begin( topology.getCellCount() );
-        _roadSearch.visit( topology.toIndex( from ), -1 );
+        const int32 goal = _topology.toIndex( to );
+        _roadSearch.begin( _topology.getCellCount() );
+        _roadSearch.visit( _topology.toIndex( from ), -1 );
         while ( _roadSearch.hasNext() )
         {
             const int32 index = _roadSearch.popNext();
             if ( index == goal )
                 break;
-            const int2 tile = topology.toCell( index );
+            const int2 tile = _topology.toCell( index );
             for ( int32 direction = 0; direction < GridTopology::kOrthogonalCount; ++direction )
             {
                 const int2 next = GridTopology::getNeighbor( tile, direction );
                 if ( isRoad( next._x, next._y ) )
-                    _roadSearch.visit( topology.toIndex( next ), index );
+                    _roadSearch.visit( _topology.toIndex( next ), index );
             }
         }
         if ( _roadSearch.isVisited( goal ) == false )
             return false;
         for ( int32 index = goal; index >= 0; index = _roadSearch.getParent( index ) )
-            outListPath.push_back( topology.toCell( index ) );
+            outListPath.push_back( _topology.toCell( index ) );
         std::reverse( outListPath.begin(), outListPath.end() );
         outListPath.erase( outListPath.begin() ); // 지금 칸은 빼고 다음 칸부터
         return true;
@@ -962,8 +959,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     void CitySimulation::writeState( Archive& outArchive ) const
     {
-        outArchive << _width;
-        outArchive << _height;
+        outArchive << _topology._width;
+        outArchive << _topology._height;
         for ( const CityTile& tile : _listTile )
         {
             outArchive << tile._buildingIndex;
@@ -1038,7 +1035,7 @@ namespace sw
         int32 height = 0;
         archive >> width;
         archive >> height;
-        if ( archive.isError() || width != _width || height != _height || _pCatalog == nullptr )
+        if ( archive.isError() || width != _topology._width || height != _topology._height || _pCatalog == nullptr )
             return false;
 
         const int32      buildingLimit = static_cast<int32>( _listTile.size() ); // 건물은 적어도 한 칸이다
