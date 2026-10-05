@@ -344,7 +344,7 @@ namespace
             }
         }
         result._serverTraffic = harness.getServer().getTraffic();
-        result._droppedCount  = harness.getNetwork()->getDroppedCount();
+        result._droppedCount  = harness.getDroppedPacketCount();
         return result;
     }
 } // namespace

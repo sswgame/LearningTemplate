@@ -3,6 +3,7 @@
 #include "Core/Container/deque.h"
 #include "Core/Container/map.h"
 #include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
 
 #include "GameFramework/Kits/Network/NetLockstep/LockstepSession.h"
@@ -20,31 +21,51 @@ namespace
 {
     struct NetTestCluster
     {
-        LoopbackNetwork _network{ 31u };
-        deque<NetHost>  _listHost; ///< deque — NetHost 는 옮길 수 없다(잠금을 품는다)
-        float64         _time{ 0.0 };
+        LoopbackNetwork              _network;
+        deque<NetEmulationTransport> _listLink; ///< 호스트마다 보내는 쪽 흉내 — deque 라 주소가 움직이지 않는다
+        deque<NetHost>               _listHost; ///< deque — NetHost 는 옮길 수 없다(잠금을 품는다)
+        float64                      _time{ 0.0 };
 
-        NetTestCluster( int32 clientCount, const LoopbackConditions& conditions )
+        NetTestCluster( int32 clientCount, const NetEmulationConditions& conditions )
         {
             for ( int32 index = 0; index <= clientCount; ++index )
+            {
+                _listLink.emplace_back( _network.createEndpoint( static_cast<uint16>( 4000 + index ) ), 31u + static_cast<uint32>( index ) );
                 _listHost.emplace_back();
+            }
             NetHostSettings settings;
             settings._sendInterval = 1.0 / 60.0;
             for ( size_t index = 0; index < _listHost.size(); ++index )
-                _listHost[index].initialize( _network.createEndpoint( static_cast<uint16>( 4000 + index ) ), settings );
+            {
+                _listHost[index].initialize( &_listLink[index], settings );
+            }
             (void)_listHost[0].listen();
             for ( size_t index = 1; index < _listHost.size(); ++index )
+            {
                 (void)_listHost[index].connect( NetAddress::makeLoopback( 4000 ) );
+            }
             for ( int32 frame = 0; frame < 30; ++frame )
+            {
                 step();
-            _network.setConditions( conditions );
+            }
+            for ( NetEmulationTransport& link : _listLink )
+            {
+                link.setDefaultConditions( conditions );
+            }
         }
 
         void step()
         {
             _time += 1.0 / 60.0;
+            // 흉내 줄을 먼저 모두 비운다 — 지연이 방향 · 호스트 순서와 상관없이 같다.
+            for ( NetEmulationTransport& link : _listLink )
+            {
+                link.update( _time );
+            }
             for ( NetHost& host : _listHost )
+            {
                 host.update( _time );
+            }
         }
 
         bool isAllConnected() const
@@ -484,7 +505,7 @@ namespace
 
 SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs )
 {
-    LoopbackConditions conditions;
+    NetEmulationConditions conditions;
     conditions._latency  = 0.03;
     conditions._jitter   = 0.01;
     conditions._lossRate = 0.05f;
@@ -566,7 +587,7 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
 
 SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
 {
-    LoopbackConditions conditions;
+    NetEmulationConditions conditions;
     conditions._latency  = 0.05;
     conditions._jitter   = 0.015;
     conditions._lossRate = 0.05f;

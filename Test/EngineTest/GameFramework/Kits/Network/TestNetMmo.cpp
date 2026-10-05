@@ -168,16 +168,18 @@ namespace
 
 SW_TEST_CASE( NetMmoTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
 {
-    LoopbackNetwork    network( 9u );
-    LoopbackConditions conditions;
+    LoopbackNetwork        network;
+    NetEmulationTransport  serverTransport( network.createEndpoint( 4000 ), 9u );
+    NetEmulationTransport  clientTransport( network.createEndpoint( 5000 ), 10u );
+    NetEmulationConditions conditions;
     conditions._latency  = 0.03;
     conditions._lossRate = 0.05f;
     NetHostSettings hostSettings;
     hostSettings._sendInterval = 1.0 / 20.0;
     NetHost serverHost;
     NetHost clientHost;
-    serverHost.initialize( network.createEndpoint( 4000 ), hostSettings );
-    clientHost.initialize( network.createEndpoint( 5000 ), hostSettings );
+    serverHost.initialize( &serverTransport, hostSettings );
+    clientHost.initialize( &clientTransport, hostSettings );
     (void)serverHost.listen();
     (void)clientHost.connect( NetAddress::makeLoopback( 4000 ) );
     float64 time = 0.0;
@@ -188,7 +190,8 @@ SW_TEST_CASE( NetMmoTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
         clientHost.update( time );
     }
     SW_ASSERT_TRUE( clientHost.getConnectionState( 0 ) == NetConnectionState::Connected );
-    network.setConditions( conditions );
+    serverTransport.setDefaultConditions( conditions );
+    clientTransport.setDefaultConditions( conditions );
 
     PartyPolicy           policy;
     MmoReplicator         server;
@@ -236,6 +239,9 @@ SW_TEST_CASE( NetMmoTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
                     } );
             }
             server.update( 1.0f / 20.0f );
+            // 흉내 줄을 먼저 모두 비운다 — 지연이 방향과 상관없이 같다.
+            serverTransport.update( time );
+            clientTransport.update( time );
             serverHost.update( time );
             clientHost.update( time );
             int32          connectionId = -1;

@@ -408,7 +408,7 @@ cd build/Ninja-Debug/Bin
 
 - **네트워크 리팩토링 남은 단계(2026-10-05 사용자 요청 — 결함 단계 N0~N12 · 키트 결함 D1~D19 는 끝남).** 공통 부품을 Core `Network/Replication/` 에 두고 키트는
   조립만 하게. 단계마다 커밋 하나, 스레드를 건드린 단계는 `--test_repeat=50`, 파괴 네트워킹 시험(`NetSimDestruction*` · `DestructionSnapshot`)을 매 단계 지킨다.
-  N17 회선 흉내 하나로(`LoopbackConditions` 삭제) · N18 **측정 먼저**(하니스
+  N18 **측정 먼저**(하니스
   클라이언트 16 × 엔티티 1000, 60 Hz 의 할당 · 시간 → 숫자가 움직일 때만 메시지 풀 · O(n) 델타 · 월드 아레나) · N19 시험 도우미 다섯(`NetTestPair` · `ThreadedCluster` ·
   `NetTestCluster` · `HostCluster` · `TurnRelayScene`)을 하나로 · N20 신뢰 메시지 조각내기(64 KB — 언리얼 partial bunch · GNS, 파괴 스냅숏 조각 · 턴 대기 줄 · MMO 들어옴
   쪼개기를 단순화) · N21 연결 대역폭 상한(토큰 버킷 — 언리얼 `NetSpeed`, 키트 예산의 기본값)과 "신뢰 · 순서 없음" 채널. 하지 않기로 한 것: 암호화 · NAT · 리플렉션
@@ -1386,6 +1386,9 @@ cd build/Ninja-Debug/Bin
   나온다, `MemoryTagTest.DiagnosticBootstrapEnablesPlatformLeakChecks`).
 - **Windows UDP 는 돈다**(2026-10-05, `NetworkTest.UdpTransportSendsDatagramsOverLocalhost` · `NetworkThreadTest.UdpHostsRunOnThreadsOverLocalhost`, 닫힌 포트로 보낸 뒤
   받기 포함). `SIO_UDP_CONNRESET` 끄기와 받기 고리의 "오류는 건너뛰고 다음 것" 을 둘 다 빼도 시험은 통과한다 — 루프백 ICMP 리셋을 이 시험이 재현하지 못하니 두 방어를 지우지 말 것.
+- **회선 나쁨은 `NetEmulationTransport` 하나다**(N17) — 루프백 망은 보낸 순서대로 다음 `update` 에 배달만 한다. 흉내는 보내는 쪽 줄이라 호스트를 한 스레드에서
+  차례로 돌리는 시험은 프레임마다 흉내를 **모두 먼저** `update` 한다(아니면 뒤에 도는 호스트가 보낸 것이 한 프레임 늦다 — `NetSimHarness` 와 시험 도우미가 그렇게 한다).
+  깨짐 난수는 깨짐을 켰을 때만 뽑아 다른 조건의 수열을 바꾸지 않는다(하니스 · 파괴 시험이 바이트까지 그대로인 이유).
 - **신뢰 재전송 간격을 짧게 고정하면 꼬리는 줄지만 회선을 먹는다**(2026-10-05 측정). 0.1 초 고정은 250 ms · 15 % 에서 사건 최대 지연 1.0 초였지만 메시지당
   재전송 3.5 번 · 서버 올림 3 배로 파괴 시험(덩어리 오차)이 졌다. RTT + 50 ms 와 빠른 재전송(뒤 패킷 셋 확인)이 재전송 1.9 배 · 올림 +9 % 로 4.1 → 1.3 초다.
 - **복제 예산은 메시지 전체를 정확히 센다**(`NetSendBudget`) — 1024 B 를 넘는 메시지는 `sendMessage` 가 버리고 확인이 안 와 기준이 그대로라, 다음 틱도 같은

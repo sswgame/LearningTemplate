@@ -75,9 +75,10 @@
     **사건을 먼저** 모든 처리기에 알리고 메시지를 나눈다 — 같은 자리에 새로 온 연결이 옛 상태로 읽히지 않는다. 깨진 메시지는 세고(`getMalformedCount`) 버리고,
     처리기 없는 것만 돌려준다). 키트는 수신 가드 · `onDisconnected` 같은 손 배선 없이 자기 종류만 읽는다. 손 배달은 `INetMessageHandler::handleMessage`
   - 전송: `INetTransport`(`send` 는 아무 스레드, `receive` · `waitForReceive` 는 `update` 스레드 하나), 실제 UDP(`UdpNetTransport` — 플랫폼 차이는 `PlatformSocketUtil` 한 곳, 송수신 버퍼 1 MB, Windows 는 ICMP 포트 닿지 않음으로
-    `recvfrom` 이 실패하지 않게 `SIO_UDP_CONNRESET` 을 끈다), 한 프로세스 루프백 망(`LoopbackNetwork` — 잠금 하나로 끝점마다 다른 스레드가 돌아도 된다. 지연 · 흔들림 · 손실 ·
-    중복 · 깨짐을 씨앗으로 흉내, 시험 · 리슨 서버), 네트워크 흉내(`NetEmulationTransport` — 어느 전송(UDP · 루프백)에나 씌워 보내는 쪽에서 지연 · 흔들림 ·
-    손실 · 중복 · 순서 뒤바뀜 · 대역폭 상한(목적지마다 회선 줄 · 큐 넘침 버림)을 건다. 조건은 기본값 + 연결별 덮어쓰기, `-gv_netEmuLatencyMs` · `JitterMs` ·
+    `recvfrom` 이 실패하지 않게 `SIO_UDP_CONNRESET` 을 끈다), 한 프로세스 루프백 망(`LoopbackNetwork` — 잠금 하나로 끝점마다 다른 스레드가 돌아도 된다. 보낸 순서대로
+    다음 `update` 에 배달만 하고 회선을 나쁘게 하지 않는다, 시험 · 리슨 서버), 네트워크 흉내(`NetEmulationTransport` — 회선 나쁨은 이것 하나다. 어느 전송(UDP · 루프백)에나
+    씌워 보내는 쪽에서 지연 · 흔들림 · 손실 · 중복 · 깨짐(한 바이트 뒤집기 — 체크섬 시험) · 순서 뒤바뀜 · 대역폭 상한(목적지마다 회선 줄 · 큐 넘침 버림)을 건다.
+    조건은 기본값 + 연결별 덮어쓰기, `-gv_netEmuLatencyMs` · `JitterMs` ·
     `LossPercent` · `DuplicatePercent` · `ReorderPercent` · `BandwidthKilobytesPerSecond` 로 `NetEmulationConditions::makeFromGlobalVariables` —
     언리얼 PktLag · PktLoss · PktDup · PktOrder · 유니티 Network Simulator 의 자리. `NetHost` 는 그냥 전송으로 받는다. 조건의 거르개
     `_pDropFilter` 는 고른 패킷만 버린다 — `NetHost::peekPacketType` 과 함께 "`Accepted` 하나만 잃기" · "위조 주소로 간 답 전부 잃기" 같은 시험을 짓는다)

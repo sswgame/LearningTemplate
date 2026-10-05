@@ -2,6 +2,7 @@
 
 #include "Core/Container/deque.h"
 #include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
 
 #include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
@@ -35,31 +36,37 @@ namespace
 
     struct TurnRelayScene
     {
-        LoopbackNetwork         _network{ 3u };
-        NetHost                 _serverHost;
-        deque<NetHost>          _listClientHost; ///< deque — NetHost 는 옮길 수 없다
-        TurnRelayServer         _server;
-        vector<TurnRelayClient> _listClient;
-        vector<uint8>           _listOnline;
-        UnoLikePolicy           _policy;
-        float64                 _time{ 0.0 };
+        LoopbackNetwork              _network;
+        NetEmulationTransport        _serverLink{ _network.createEndpoint( 4000 ), 3u };
+        NetHost                      _serverHost;
+        deque<NetEmulationTransport> _listClientLink; ///< 클라이언트마다 보내는 쪽 흉내 — deque 라 주소가 움직이지 않는다
+        deque<NetHost>               _listClientHost; ///< deque — NetHost 는 옮길 수 없다
+        TurnRelayServer              _server;
+        vector<TurnRelayClient>      _listClient;
+        vector<uint8>                _listOnline;
+        UnoLikePolicy                _policy;
+        float64                      _time{ 0.0 };
 
         TurnRelayScene()
         {
-            LoopbackConditions conditions;
+            NetEmulationConditions conditions;
             conditions._latency  = 0.04;
             conditions._lossRate = 0.1f;
-            _network.setConditions( conditions );
-            _serverHost.initialize( _network.createEndpoint( 4000 ), NetHostSettings{} );
+            _serverLink.setDefaultConditions( conditions );
+            _serverHost.initialize( &_serverLink, NetHostSettings{} );
             (void)_serverHost.listen();
             _server.initialize( &_serverHost, 3, &_policy );
             for ( int32 index = 0; index < 3; ++index )
+            {
+                _listClientLink.emplace_back( _network.createEndpoint( static_cast<uint16>( 5000 + index ) ), 4u + static_cast<uint32>( index ) );
+                _listClientLink.back().setDefaultConditions( conditions );
                 _listClientHost.emplace_back();
+            }
             _listClient.resize( 3 );
             _listOnline.assign( 3, SW_TRUE );
             for ( size_t index = 0; index < 3; ++index )
             {
-                _listClientHost[index].initialize( _network.createEndpoint( static_cast<uint16>( 5000 + index ) ), NetHostSettings{} );
+                _listClientHost[index].initialize( &_listClientLink[index], NetHostSettings{} );
                 (void)_listClientHost[index].connect( NetAddress::makeLoopback( 4000 ) );
                 _listClient[index].initialize( &_listClientHost[index] );
             }
@@ -71,6 +78,12 @@ namespace
             for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
             {
                 _time += 1.0 / 60.0;
+                // 흉내 줄을 먼저 모두 비운다 — 꺼 둔 클라이언트의 줄(끊김 알림)도 나가야 서버가 끊김을 안다.
+                _serverLink.update( _time );
+                for ( NetEmulationTransport& link : _listClientLink )
+                {
+                    link.update( _time );
+                }
                 _serverHost.update( _time );
                 vector<NetHostEvent> listHostEvent;
                 _serverHost.drainEvents( listHostEvent );

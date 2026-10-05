@@ -196,7 +196,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
         롤백(상태 저장 · 되돌리기)은 없다. 시험: `NetSimDestructionTest` · `NetSimDestructionMatrixTest`(나쁜 회선 둘 — 회선마다 한 케이스, nogpu 조각).
       - `NetSimulation`: 한 프로세스 가상 서버(`NetSimHarness` — 언리얼 PIE "Play As Client, Number of Players N" + Network Emulation, 유니티 Multiplayer
         Play Mode + Network Simulator 의 자리). 서버 월드 1 + 클라이언트 월드 N 이 **각자 씬 · 오브젝트 매니저 · 물리**를 갖고, 루프백 망 위에 끝점마다
-        흉내(`NetEmulationTransport`)를 씌워 클라이언트마다 올림 · 내림 조건(지연 · 흔들림 · 손실 · 중복 · 순서 · 대역폭)을 따로 준다. 시각은 틱 × 간격,
+        흉내(`NetEmulationTransport`)를 씌워 클라이언트마다 올림 · 내림 조건(지연 · 흔들림 · 손실 · 중복 · 깨짐 · 순서 · 대역폭)을 따로 준다. 시각은 틱 × 간격,
         모든 난수는 씨앗에서 — 같은 씨앗이면 같은 패킷이 같은 틱에 도착한다. 게임은 `INetSimGame::createSession( world )` 에서 월드 내용을 짓고 세션
         (`INetSimSession` — `onTickBegin` · `onTickEnd` · `onHostEvent`)을 돌려준다. 키트의 연결 수명은 라우터가 처리기에 넘기므로(`onConnectionOpened` ·
         `onConnectionClosed`) `onHostEvent` 는 게임 몫만 한다(틱 앞, 라우터가 사건을 알린 바로 뒤에 불린다). 늦은 참가 · 떠남(`addClient` · `removeClient`, 떠나면 끊김 알림이 간다).

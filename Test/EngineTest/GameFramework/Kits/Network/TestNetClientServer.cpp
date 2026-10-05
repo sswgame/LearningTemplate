@@ -194,18 +194,21 @@ SW_TEST_CASE( NetClientServerTest, RedundantInputsSkipKnownTicksAndKeepLaterPayl
 
 SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCarriesRedundantInputs )
 {
-    LoopbackNetwork    network( 11u );
-    LoopbackConditions conditions;
+    LoopbackNetwork        network;
+    NetEmulationTransport  serverTransport( network.createEndpoint( 4000 ), 11u );
+    NetEmulationTransport  clientTransport( network.createEndpoint( 5000 ), 12u );
+    NetEmulationConditions conditions;
     conditions._latency  = 0.05;
     conditions._jitter   = 0.01;
     conditions._lossRate = 0.1f;
-    network.setConditions( conditions );
+    serverTransport.setDefaultConditions( conditions );
+    clientTransport.setDefaultConditions( conditions );
     NetHostSettings hostSettings;
     hostSettings._sendInterval = 1.0 / 60.0;
     NetHost serverHost;
     NetHost clientHost;
-    serverHost.initialize( network.createEndpoint( 4000 ), hostSettings );
-    clientHost.initialize( network.createEndpoint( 5000 ), hostSettings );
+    serverHost.initialize( &serverTransport, hostSettings );
+    clientHost.initialize( &clientTransport, hostSettings );
     SW_ASSERT_TRUE( serverHost.listen() );
     SW_ASSERT_TRUE( clientHost.connect( NetAddress::makeLoopback( 4000 ) ) );
 
@@ -230,6 +233,9 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
     for ( int32 frame = 0; frame < 60 * 6; ++frame )
     {
         time += 1.0 / 60.0;
+        // 흉내 줄을 먼저 모두 비운다 — 지연이 방향과 상관없이 같다.
+        serverTransport.update( time );
+        clientTransport.update( time );
         serverHost.update( time );
         clientHost.update( time );
         int32          connectionId = -1;
@@ -342,7 +348,7 @@ SW_TEST_CASE( NetClientServerTest, PredictionReconcilesAndLagCompensationRewinds
  */
 SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
 {
-    LoopbackNetwork        network( 21u );
+    LoopbackNetwork        network;
     NetEmulationTransport  serverTransport( network.createEndpoint( 4100 ), 5u );
     NetEmulationTransport  clientTransport( network.createEndpoint( 5100 ), 9u );
     NetEmulationConditions conditions;
@@ -380,7 +386,7 @@ SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
         time += 1.0 / 60.0;
         serverHost.update( time );
         clientHost.update( time );
-        network.advance( time );
+        network.deliverInFlight();
         int32          connectionId = -1;
         NetChannelType channel      = NetChannelType::Unreliable;
         while ( serverHost.receiveMessage( connectionId, channel, buffer ) )
@@ -463,7 +469,7 @@ SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
 {
     NetHostSettings settings;
     settings._maxConnections = 1;
-    LoopbackNetwork network( 41u );
+    LoopbackNetwork network;
     NetHost         serverHost;
     NetHost         first;
     NetHost         second;
@@ -627,7 +633,7 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
     // 입력 200 B — 메시지 하나에 다섯 개쯤. 서버가 스냅숏에 실어 준 확인을 따라 오래된 것부터 이어 실어 40 틱이 모두 간다.
     NetHostSettings hostSettings;
     hostSettings._sendInterval = 1.0 / 60.0;
-    LoopbackNetwork network( 43u );
+    LoopbackNetwork network;
     NetHost         serverHost;
     NetHost         clientHost;
     serverHost.initialize( network.createEndpoint( 4000 ), hostSettings );
@@ -687,7 +693,7 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
  */
 SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
 {
-    LoopbackNetwork        network( 47u );
+    LoopbackNetwork        network;
     NetEmulationTransport  clientTransport( network.createEndpoint( 5200 ), 3u );
     InputBurstDropper      dropper;
     NetEmulationConditions conditions;
@@ -728,7 +734,7 @@ SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
         dropper._bDropping = burstBegin < tick && tick <= burstEnd;
         serverHost.update( time );
         clientHost.update( time );
-        network.advance( time );
+        network.deliverInFlight();
         (void)serverRouter.pump( serverHost );
         (void)clientRouter.pump( clientHost );
         const bool bTickFrame = frame % 2 == 0 && clientHost.getConnectionState( 0 ) == NetConnectionState::Connected;

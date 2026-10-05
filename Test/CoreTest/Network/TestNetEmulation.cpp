@@ -5,7 +5,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 네트워크 흉내 — 지연 · 흔들림, 손실 · 중복 비율, 일부러 늦춘 패킷이 앞지르기를 당함, 대역폭 줄과 큐 넘침, 연결별 덮어쓰기, 꺼지면 그대로.
+// 네트워크 흉내 — 지연 · 흔들림, 손실 · 중복 비율, 일부러 늦춘 패킷이 앞지르기를 당함, 대역폭 줄과 큐 넘침, 연결별 덮어쓰기, 깨짐(한 바이트), 꺼지면 그대로.
 // 전역 변수(-gv_netEmu*)로 조건을 만드는 것은 EngineTest 의 NetClientServerTest 가 본다(전역 변수 표가 엔진에 있다).
 
 using namespace sw;
@@ -15,7 +15,7 @@ namespace
     /** @brief 완벽한 루프백 위에 흉내를 씌운 보내는 쪽 · 받는 쪽입니다. */
     struct NetEmulationTestLink
     {
-        LoopbackNetwork       _network{ 3u };
+        LoopbackNetwork       _network;
         LoopbackTransport*    _pSenderEndpoint{ _network.createEndpoint( 7000 ) };
         LoopbackTransport*    _pReceiver{ _network.createEndpoint( 7001 ) };
         NetEmulationTransport _sender{ _pSenderEndpoint, 17u };
@@ -24,7 +24,7 @@ namespace
         void advance( float64 time, vector<int32>& outListReceived )
         {
             _sender.update( time );
-            _network.advance( time );
+            _network.deliverInFlight();
             NetAddress    from{};
             vector<uint8> buffer;
             while ( _pReceiver->receive( from, buffer ) )
@@ -40,6 +40,17 @@ namespace
             return _sender.send( NetAddress::makeLoopback( 7001 ), buffer.data(), size );
         }
     };
+
+    /** @brief @p buffer 에서 @p fill 과 다른 바이트 수입니다. */
+    int32 countChangedBytes( const vector<uint8>& buffer, uint8 fill )
+    {
+        int32 count = 0;
+        for ( const uint8 byte : buffer )
+        {
+            count += byte != fill ? 1 : 0;
+        }
+        return count;
+    }
 } // namespace
 
 /**
@@ -128,4 +139,48 @@ SW_TEST_CASE( NetEmulationTest, BandwidthQueuesPerLinkAndOverridesOneConnection 
     // 덮어쓰기를 풀면 기본(꺼짐)이다.
     link._sender.clearConditions( NetAddress::makeLoopback( 7001 ) );
     SW_EXPECT_FALSE( link._sender.findConditions( NetAddress::makeLoopback( 7001 ) ).isActive() );
+}
+
+/**
+ * @brief [NetEmulationTest] 깨짐은 정한 비율 근처로 패킷마다 한 바이트를 뒤집어 넘기고(버리지 않는다) 그 수를 센다 — 받는 쪽 체크섬 시험이 이것을 쓴다
+ */
+SW_TEST_CASE( NetEmulationTest, CorruptionFlipsOneBytePerPacket )
+{
+    constexpr int32        kPacketCount = 2000;
+    constexpr int32        kPacketSize  = 16;
+    constexpr uint8        kFill        = 0x11;
+    NetEmulationTestLink   link;
+    NetEmulationConditions conditions;
+    conditions._latency     = 0.01;
+    conditions._corruptRate = 0.1f;
+    SW_EXPECT_TRUE( conditions.isActive() );
+    link._sender.setDefaultConditions( conditions );
+
+    const vector<uint8> packet( static_cast<size_t>( kPacketSize ), kFill );
+    vector<uint8>       received;
+    NetAddress          from{};
+    int32               receivedCount  = 0;
+    int32               corruptedCount = 0;
+    int32               manyByteCount  = 0;
+    float64             time           = 0.0;
+    for ( int32 frame = 0; frame < kPacketCount + 20; ++frame )
+    {
+        if ( frame < kPacketCount )
+            SW_ASSERT_TRUE( link._sender.send( NetAddress::makeLoopback( 7001 ), packet.data(), kPacketSize ) );
+        time += 0.001;
+        link._sender.update( time );
+        while ( link._pReceiver->receive( from, received ) )
+        {
+            const int32 changedCount = countChangedBytes( received, kFill );
+            ++receivedCount;
+            corruptedCount += changedCount == 1 ? 1 : 0;
+            manyByteCount += changedCount > 1 ? 1 : 0;
+        }
+    }
+    const NetEmulationStats stats = link._sender.getStats();
+    SW_EXPECT_EQUAL( kPacketCount, receivedCount ); // 깨진 패킷도 버리지 않는다
+    SW_EXPECT_EQUAL( uint64( 0 ), stats._droppedCount );
+    SW_EXPECT_TRUE( 150u <= stats._corruptedCount && stats._corruptedCount <= 250u ); // 10 % ± 2.5 %
+    SW_EXPECT_EQUAL( static_cast<int32>( stats._corruptedCount ), corruptedCount );
+    SW_EXPECT_EQUAL( 0, manyByteCount ); // 한 패킷에 한 바이트만
 }

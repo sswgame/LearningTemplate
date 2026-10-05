@@ -12,7 +12,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 서버 키트의 연결별 일을 작업 스레드에 나눠도 결과가 같은가 — 권위 서버 스냅샷 · MMO 관심 영역. 같은 씨앗의 루프백 망에서 한 스레드 · 여러 스레드로
+// 서버 키트의 연결별 일을 작업 스레드에 나눠도 결과가 같은가 — 권위 서버 스냅샷 · MMO 관심 영역. 결정적인 루프백 망에서 한 스레드 · 여러 스레드로
 // 같은 판을 돌려 클라이언트가 받은 바이트를 비교한다(연결마다 독립이라 보낸 내용이 바이트까지 같아야 한다).
 
 using namespace sw;
@@ -45,7 +45,7 @@ namespace
     /** @brief 서버 하나 + 클라이언트 여럿을 한 스레드에서 같은 순서로 돌린다(망은 결정적). */
     struct HostCluster
     {
-        LoopbackNetwork _network{ 21u };
+        LoopbackNetwork _network;
         NetHost         _server;
         deque<NetHost>  _listClient;
         float64         _time{ 0.0 };

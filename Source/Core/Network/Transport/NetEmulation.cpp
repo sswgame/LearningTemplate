@@ -17,6 +17,7 @@ namespace sw
             static constexpr float32 kPercent       = 0.01f;
             static constexpr int32   kKilobyte      = 1024;
             static constexpr uint32  kDefaultRandom = 0x9E3779B9u;
+            static constexpr uint8   kCorruptMask   = 0x5A; ///< 깨짐 — 고른 바이트에 XOR 한다
         };
     } // namespace
 
@@ -32,7 +33,8 @@ namespace sw
 {
     bool NetEmulationConditions::isActive() const
     {
-        return _latency > 0.0 || _jitter > 0.0 || _lossRate > 0.0f || _duplicateRate > 0.0f || _reorderRate > 0.0f || _bandwidthBytesPerSecond > 0;
+        return _latency > 0.0 || _jitter > 0.0 || _lossRate > 0.0f || _duplicateRate > 0.0f || _reorderRate > 0.0f || _corruptRate > 0.0f ||
+               _bandwidthBytesPerSecond > 0;
     }
 
     NetEmulationConditions NetEmulationConditions::makeFromGlobalVariables()
@@ -150,6 +152,13 @@ namespace sw
             }
             Pending pending;
             pending._buffer.assign( pData, pData + size );
+            if ( conditions._corruptRate > 0.0f && nextRandom() < conditions._corruptRate )
+            {
+                // 한 바이트를 뒤집는다 — 받는 쪽 체크섬이 걸러야 한다. 깨짐 난수는 켰을 때만 뽑아 다른 조건의 수열을 바꾸지 않는다.
+                const int32 index = MathUtil::min( size - 1, static_cast<int32>( nextRandom() * static_cast<float32>( size ) ) );
+                pending._buffer[static_cast<size_t>( index )] ^= NetEmulationInternal::kCorruptMask;
+                ++_stats._corruptedCount;
+            }
             pending._to          = to;
             pending._deliverTime = departTime + MathUtil::max( 0.0, delay );
             pending._order       = _order++;

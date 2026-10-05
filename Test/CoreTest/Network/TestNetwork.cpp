@@ -22,15 +22,24 @@ namespace
 {
     struct NetTestPair
     {
-        LoopbackNetwork _network{ 77u };
-        NetHost         _server;
-        NetHost         _client;
-        float64         _time{ 0.0 };
+        LoopbackNetwork       _network;
+        NetEmulationTransport _serverLink{ _network.createEndpoint( 4000 ), 77u };
+        NetEmulationTransport _clientLink{ _network.createEndpoint( 5000 ), 78u };
+        NetHost               _server;
+        NetHost               _client;
+        float64               _time{ 0.0 };
 
         explicit NetTestPair( const NetHostSettings& settings = NetHostSettings{} )
         {
-            _server.initialize( _network.createEndpoint( 4000 ), settings );
-            _client.initialize( _network.createEndpoint( 5000 ), settings );
+            _server.initialize( &_serverLink, settings );
+            _client.initialize( &_clientLink, settings );
+        }
+
+        /** @brief 두 끝점의 보내는 쪽에 같은 조건을 겁니다(왕복). */
+        void setConditions( const NetEmulationConditions& conditions )
+        {
+            _serverLink.setDefaultConditions( conditions );
+            _clientLink.setDefaultConditions( conditions );
         }
 
         void run( float64 seconds, float64 step = 1.0 / 60.0 )
@@ -38,6 +47,9 @@ namespace
             for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += step )
             {
                 _time += step;
+                // 흉내 줄을 먼저 모두 비운다 — 지연이 방향 · 호스트 순서와 상관없이 같다.
+                _serverLink.update( _time );
+                _clientLink.update( _time );
                 _server.update( _time );
                 _client.update( _time );
             }
@@ -489,14 +501,14 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     pair._server.drainEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.size() == 1 && listEvent[0]._kind == NetHostEvent::Kind::Connected );
 
-    // 나쁜 망 — 지연 80 ms ± 30, 손실 20 %, 중복 10 %, 깨짐 5 %. 신뢰 메시지 200 개가 순서대로 한 번씩.
-    LoopbackConditions conditions;
+    // 나쁜 망 — 두 끝점의 보내는 쪽 흉내에 지연 80 ms ± 30, 손실 20 %, 중복 10 %, 깨짐 5 %. 신뢰 메시지 200 개가 순서대로 한 번씩.
+    NetEmulationConditions conditions;
     conditions._latency       = 0.08;
     conditions._jitter        = 0.03;
     conditions._lossRate      = 0.2f;
     conditions._duplicateRate = 0.1f;
     conditions._corruptRate   = 0.05f;
-    pair._network.setConditions( conditions );
+    pair.setConditions( conditions );
     for ( int32 index = 0; index < 200; ++index )
     {
         const vector<uint8> buffer = makeMessage( index, 24 );
@@ -532,7 +544,7 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     SW_EXPECT_EQUAL( 1, pair._server.getConnectedCount() );                   // 나쁜 망에서도 끊기지 않았다
 
     // 서버 → 클라이언트 방송.
-    pair._network.setConditions( LoopbackConditions{} );
+    pair.setConditions( NetEmulationConditions{} );
     const vector<uint8> hello = makeMessage( 4242 );
     SW_EXPECT_EQUAL( 1, pair._server.broadcast( NetChannelType::ReliableOrdered, hello.data(), 4 ) );
     pair.run( 0.2 );
@@ -549,7 +561,7 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     NetHostSettings settings;
     settings._maxConnections = 1;
     settings._timeout        = 1.0;
-    LoopbackNetwork network( 5u );
+    LoopbackNetwork network;
     NetHost         server;
     NetHost         first;
     NetHost         second;
@@ -631,7 +643,7 @@ SW_TEST_CASE( NetworkTest, WireVersionMismatchIsRefusedWithReason )
     serverSettings._wireVersion = NetWireVersion::combine( { 1u, 4u } );
     NetHostSettings oldSettings = serverSettings;
     oldSettings._wireVersion    = NetWireVersion::combine( { 1u, 3u } );
-    LoopbackNetwork network( 9u );
+    LoopbackNetwork network;
     NetHost         server;
     NetHost         current;
     NetHost         outdated;
@@ -666,7 +678,7 @@ SW_TEST_CASE( NetworkTest, WireVersionMismatchIsRefusedWithReason )
  */
 SW_TEST_CASE( NetworkTest, LostAcceptedStillReportsClientIndex )
 {
-    LoopbackNetwork        network( 21u );
+    LoopbackNetwork        network;
     NetEmulationTransport  serverLink( network.createEndpoint( 4000 ) );
     AcceptedDropper        dropper;
     NetEmulationConditions conditions;
@@ -792,7 +804,7 @@ SW_TEST_CASE( NetworkTest, ExpiredChallengeIsRejected )
 {
     NetHostSettings settings;
     settings._connectTimeout = 60.0;
-    LoopbackNetwork        network( 31u );
+    LoopbackNetwork        network;
     NetEmulationTransport  slowLink( network.createEndpoint( 5000 ) );
     NetEmulationTransport  fineLink( network.createEndpoint( 5001 ) );
     NetEmulationConditions slow;
@@ -1154,7 +1166,7 @@ SW_TEST_CASE( NetworkTest, ServerTellsManyClientsApartByAddress )
     constexpr int32 kClientCount = 40;
     NetHostSettings settings;
     settings._maxConnections = 48;
-    LoopbackNetwork network( 11u );
+    LoopbackNetwork network;
     NetHost         server;
     server.initialize( network.createEndpoint( 4000 ), settings );
     SW_ASSERT_TRUE( server.listen() );
@@ -1212,7 +1224,7 @@ SW_TEST_CASE( NetworkTest, ServerTellsManyClientsApartByAddress )
  */
 SW_TEST_CASE( NetworkTest, SendToPeersAndRelayReachEveryOtherPeer )
 {
-    LoopbackNetwork network( 23u );
+    LoopbackNetwork network;
     NetHost         server;
     NetHost         arrClient[2];
     server.initialize( network.createEndpoint( 4000 ), NetHostSettings{} );
@@ -1267,4 +1279,37 @@ SW_TEST_CASE( NetworkTest, SendToPeersAndRelayReachEveryOtherPeer )
     runAll( 0.2 );
     for ( NetHost& client : arrClient )
         SW_EXPECT_TRUE( client.receiveMessage( connectionId, channel, buffer ) );
+}
+
+/**
+ * @brief [NetworkTest] 루프백 망은 회선을 나쁘게 하지 않는다 — 보낸 순서대로 다음 `update` 에 배달하고, 받을 끝점이 없는 패킷은 버린 수로 센다
+ */
+SW_TEST_CASE( NetworkTest, LoopbackDeliversInSendOrderOnNextUpdate )
+{
+    LoopbackNetwork    network;
+    LoopbackTransport* pSender   = network.createEndpoint( 7000 );
+    LoopbackTransport* pReceiver = network.createEndpoint( 7001 );
+    SW_ASSERT_NOT_NULL( pSender );
+    SW_ASSERT_NOT_NULL( pReceiver );
+    SW_EXPECT_NULL( network.createEndpoint( 7001 ) ); // 한 포트에 끝점 하나
+    for ( uint8 number = 0; number < 5; ++number )
+    {
+        SW_ASSERT_TRUE( pSender->send( NetAddress::makeLoopback( 7001 ), &number, 1 ) );
+    }
+    const uint8 orphan = 9;
+    SW_ASSERT_TRUE( pSender->send( NetAddress::makeLoopback( 7999 ), &orphan, 1 ) ); // 받을 끝점이 없다
+
+    NetAddress    from{};
+    vector<uint8> buffer;
+    SW_EXPECT_FALSE( pReceiver->receive( from, buffer ) ); // 다음 update 까지는 날아가는 중
+    pReceiver->update( 0.0 );                              // 어느 끝점의 update 든 망 전체를 배달한다
+    for ( uint8 number = 0; number < 5; ++number )
+    {
+        SW_ASSERT_TRUE( pReceiver->receive( from, buffer ) );
+        SW_EXPECT_TRUE( from == NetAddress::makeLoopback( 7000 ) );
+        SW_EXPECT_EQUAL( static_cast<int32>( number ), static_cast<int32>( buffer[0] ) );
+    }
+    SW_EXPECT_FALSE( pReceiver->receive( from, buffer ) );
+    SW_EXPECT_EQUAL( uint64{ 5 }, network.getDeliveredCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, network.getDroppedCount() );
 }

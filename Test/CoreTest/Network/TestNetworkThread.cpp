@@ -58,7 +58,7 @@ namespace
     /** @brief 루프백 망 위의 서버 하나 + 클라이언트 여럿, 모두 자기 네트워크 스레드에서 돈다. */
     struct ThreadedCluster
     {
-        LoopbackNetwork       _network{ 3u };
+        LoopbackNetwork       _network;
         NetHost               _server;
         deque<NetHost>        _listClient;
         deque<NetHostThread>  _listThread;
