@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/NetTypes.h"
 
 #include "GameFramework/Kits/Network/NetLockstep/LockstepSession.h"
@@ -13,10 +14,10 @@ namespace sw
 {
     RollbackSession::RollbackSession()
         : _listRecord{}
-        , _arrInput{}
-        , _arrInputFrame{}
-        , _listConfirmed{}
+        , _listReceive{}
         , _listPeer{}
+        , _listNewFrameScratch{}
+        , _sendWindow{}
         , _settings{}
         , _pHost{ nullptr }
         , _pGame{ nullptr }
@@ -42,31 +43,36 @@ namespace sw
         _settings._inputDelay    = MathUtil::clamp( _settings._inputDelay, 0, kMaxInputDelay );
         _settings._maxPrediction = MathUtil::clamp( _settings._maxPrediction, 1, kMaxPrediction );
         _listRecord.initialize( kHistorySize );
-        _arrInput.assign( static_cast<size_t>( _playerCount ), vector<int16>( static_cast<size_t>( kHistorySize ), static_cast<int16>( -1 ) ) );
-        _arrInputFrame.assign( static_cast<size_t>( _playerCount ), vector<int32>( static_cast<size_t>( kHistorySize ), -1 ) );
-        _listConfirmed.assign( static_cast<size_t>( _playerCount ), -1 );
+        _listReceive.assign( static_cast<size_t>( _playerCount ), NetInputReceiveBuffer{} );
+        for ( NetInputReceiveBuffer& buffer : _listReceive )
+            buffer.initialize( kHistorySize, kInputFormat, NetInputWindowMode::Manual );
+        _sendWindow.initialize( kFrameWindow, kInputFormat );
         // 지연 프레임들은 모두 중립 입력 — 모두가 아는 값이라 상대도 이미 확인한 것으로 둔다.
         PeerState peer;
         peer._ackedLocalFrame = _settings._inputDelay - 1;
         _listPeer.assign( static_cast<size_t>( _playerCount ), peer );
+        _listNewFrameScratch.clear();
         _frame                 = 0;
         _pendingRollbackFrame  = -1;
         _rollbackCount         = 0;
         _resimulatedFrameCount = 0;
         _stallCount            = 0;
         _timeSyncWaitCount     = 0;
-        for ( int32 player = 0; player < _playerCount; ++player )
+        moveReceiveWindows();
+        const uint8 neutralInput = 0;
+        for ( int32 frame = 0; frame < _settings._inputDelay; ++frame )
         {
-            for ( int32 frame = 0; frame < _settings._inputDelay; ++frame )
-                receiveInput( player, frame, 0 );
+            for ( int32 player = 0; player < _playerCount; ++player )
+                receiveInput( player, frame, neutralInput );
+            (void)_sendWindow.push( static_cast<uint32>( frame ), &neutralInput, 1 );
         }
     }
 
     int32 RollbackSession::getConfirmedFrame() const
     {
         int32 confirmed = _frame;
-        for ( const int32 frame : _listConfirmed )
-            confirmed = MathUtil::min( confirmed, frame );
+        for ( int32 player = 0; player < _playerCount; ++player )
+            confirmed = MathUtil::min( confirmed, getConfirmedInputFrame( player ) );
         return confirmed;
     }
 
@@ -86,38 +92,45 @@ namespace sw
 
     void RollbackSession::receiveInput( int32 player, int32 frame, uint8 input )
     {
-        const bool bInWindow = _frame - kFrameWindow <= frame && frame < _frame + kFrameWindow;
-        if ( player < 0 || player >= _playerCount || frame < 0 || bInWindow == false )
+        if ( player < 0 || player >= _playerCount || frame < 0 )
             return;
-        const size_t slot = static_cast<size_t>( frame % kHistorySize );
-        if ( _arrInputFrame[static_cast<size_t>( player )][slot] == frame )
-            return; // 이미 있다(다시 보낸 것)
-        _arrInputFrame[static_cast<size_t>( player )][slot] = frame;
-        _arrInput[static_cast<size_t>( player )][slot]      = static_cast<int16>( input );
+        // 창 [지금 − 창, 지금 + 창) 밖 · 이미 있는 것(다시 보낸 것)은 버퍼가 버린다.
+        if ( _listReceive[static_cast<size_t>( player )].store( static_cast<uint32>( frame ), &input, 1 ) )
+            markMisprediction( player, frame, input );
+    }
+
+    void RollbackSession::markMisprediction( int32 player, int32 frame, uint8 input )
+    {
         // 이미 예측으로 흘린 프레임인데 다르면 되감아야 한다.
-        if ( frame < _frame )
-        {
-            const FrameRecord* pRecord       = _listRecord.find( static_cast<uint32>( frame ) );
-            const bool         bMispredicted = pRecord != nullptr && pRecord->_listInput.size() == static_cast<size_t>( _playerCount ) &&
-                                       pRecord->_listInput[static_cast<size_t>( player )] != input;
-            if ( bMispredicted )
-                _pendingRollbackFrame = _pendingRollbackFrame < 0 ? frame : MathUtil::min( _pendingRollbackFrame, frame );
-        }
-        int32& confirmed = _listConfirmed[static_cast<size_t>( player )];
-        while ( _arrInputFrame[static_cast<size_t>( player )][static_cast<size_t>( ( confirmed + 1 ) % kHistorySize )] == confirmed + 1 )
-            ++confirmed;
+        if ( frame >= _frame )
+            return;
+        const FrameRecord* pRecord       = _listRecord.find( static_cast<uint32>( frame ) );
+        const bool         bMispredicted = pRecord != nullptr && pRecord->_listInput.size() == static_cast<size_t>( _playerCount ) &&
+                                   pRecord->_listInput[static_cast<size_t>( player )] != input;
+        if ( bMispredicted )
+            _pendingRollbackFrame = _pendingRollbackFrame < 0 ? frame : MathUtil::min( _pendingRollbackFrame, frame );
+    }
+
+    void RollbackSession::moveReceiveWindows()
+    {
+        // 고리(128 칸)의 두 반쪽 — 창 안의 프레임끼리는 칸을 덮지 않고, 예측 · 되감기가 읽는 지난 64 프레임도 남는다.
+        const uint32 first = static_cast<uint32>( MathUtil::max( 0, _frame - kFrameWindow ) );
+        const uint32 end   = static_cast<uint32>( _frame + kFrameWindow );
+        for ( NetInputReceiveBuffer& buffer : _listReceive )
+            buffer.setWindow( first, end );
+    }
+
+    int32 RollbackSession::getConfirmedInputFrame( int32 player ) const
+    {
+        return static_cast<int32>( _listReceive[static_cast<size_t>( player )].getFirstMissingTick() ) - 1;
     }
 
     uint8 RollbackSession::predictInput( int32 player, int32 frame ) const
     {
         // 그 프레임 것이 있으면 그것, 없으면 가장 최근에 받은 것(같은 버튼을 계속 누르고 있다고 본다).
-        for ( int32 candidate = frame; candidate >= MathUtil::max( 0, frame - kFrameWindow ); --candidate )
-        {
-            const size_t slot = static_cast<size_t>( candidate % kHistorySize );
-            if ( _arrInputFrame[static_cast<size_t>( player )][slot] == candidate )
-                return static_cast<uint8>( _arrInput[static_cast<size_t>( player )][slot] );
-        }
-        return 0;
+        const uint32         lowestFrame = static_cast<uint32>( MathUtil::max( 0, frame - kFrameWindow ) );
+        const NetInputEntry* pEntry      = _listReceive[static_cast<size_t>( player )].findLatestAtOrBefore( static_cast<uint32>( frame ), lowestFrame );
+        return pEntry != nullptr ? pEntry->_bytes[0] : static_cast<uint8>( 0 );
     }
 
     void RollbackSession::rollbackTo( int32 frame )
@@ -144,27 +157,26 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return;
-        // 모두가 확인한 다음 프레임부터 — 상대가 아직 못 받은 것은 확인이 오를 때까지 메시지마다 다시 싣는다.
-        const int32 latest = _listConfirmed[static_cast<size_t>( _localPlayer )];
-        int32       acked  = latest;
+        // 모두가 확인한 다음 프레임부터 — 상대가 아직 못 받은 것은 확인이 오를 때까지 메시지마다 다시 싣는다(`NetInputSendWindow`).
+        int32 acked = getConfirmedInputFrame( _localPlayer );
         for ( int32 player = 0; player < _playerCount; ++player )
         {
             if ( player != _localPlayer )
                 acked = MathUtil::min( acked, _listPeer[static_cast<size_t>( player )]._ackedLocalFrame );
         }
-        const int32 first  = MathUtil::max( acked + 1, latest - kFrameWindow + 1 );
-        BitWriter&  writer = _messageWriter.begin( NetLockstepMessage::kRollbackInput );
+        _sendWindow.acknowledge( static_cast<uint32>( acked + 1 ) );
+        BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kRollbackInput );
         writer.writeVarUint( static_cast<uint64>( _localPlayer ) );
         writer.writeVarUint( static_cast<uint64>( _frame ) );
         for ( int32 player = 0; player < _playerCount; ++player )
         {
-            writer.writeVarUint( static_cast<uint64>( _listConfirmed[static_cast<size_t>( player )] + 1 ) );
+            writer.writeVarUint( _listReceive[static_cast<size_t>( player )].getFirstMissingTick() );
             writer.writeVarInt( _listPeer[static_cast<size_t>( player )]._localAdvantage );
         }
-        writer.writeVarUint( static_cast<uint64>( first ) );
-        writer.writeVarUint( static_cast<uint64>( latest - first + 1 ) );
-        for ( int32 frame = first; frame <= latest; ++frame )
-            writer.writeBits( predictInput( _localPlayer, frame ), 8 );
+        // 확인 안 된 내 입력은 (예측 + 지연) × 2 + 1 프레임을 넘지 않는다(static_assert) — 예산(1024 B)은 닿지 않는다.
+        NetSendBudget budget( NetConnection::kMaxMessageSize );
+        budget.reserveBits( writer.getBitCount() );
+        (void)_sendWindow.write( writer, budget );
         (void)_messageWriter.sendToPeers( *_pHost, NetChannelType::Unreliable );
     }
 
@@ -173,6 +185,7 @@ namespace sw
         if ( _pGame == nullptr )
             return false;
         receiveInput( _localPlayer, _frame + _settings._inputDelay, localInput );
+        (void)_sendWindow.push( static_cast<uint32>( _frame + _settings._inputDelay ), &localInput, 1 ); // 멈춘 프레임에 다시 내면 처음 값이 남는다
         sendLocalInputs();
         if ( _pendingRollbackFrame >= 0 )
         {
@@ -182,7 +195,7 @@ namespace sw
         // 너무 앞서면 기다린다(예측이 길수록 되감기가 길고 화면이 튄다).
         for ( int32 player = 0; player < _playerCount; ++player )
         {
-            if ( _frame - _listConfirmed[static_cast<size_t>( player )] > _settings._maxPrediction )
+            if ( _frame - getConfirmedInputFrame( player ) > _settings._maxPrediction )
             {
                 ++_stallCount;
                 return false;
@@ -200,6 +213,7 @@ namespace sw
             record._listInput[static_cast<size_t>( player )] = predictInput( player, _frame );
         _pGame->advanceFrame( record._listInput, false );
         ++_frame;
+        moveReceiveWindows();
         return true;
     }
 
@@ -228,26 +242,21 @@ namespace sw
                 advantage       = peerAdvantage;
             }
         }
-        const int32 first = static_cast<int32>( body.readVarUint() );
-        const int32 count = static_cast<int32>( body.readVarUint() );
-        if ( body.hasOverflowed() || count < 0 || count > kFrameWindow )
-            return NetHandleResult::Malformed;
-        uint8 arrInput[kFrameWindow];
-        for ( int32 index = 0; index < count; ++index )
-            arrInput[index] = static_cast<uint8>( body.readBits( 8 ) );
-        if ( body.hasOverflowed() )
+        // 입력 묶음 — 깨졌으면 하나도 넣지 않는다. 창 밖 · 이미 받은 프레임은 버퍼가 버린다.
+        NetInputReceiveBuffer& buffer = _listReceive[static_cast<size_t>( player )];
+        if ( body.hasOverflowed() || buffer.read( body, &_listNewFrameScratch ) == false )
             return NetHandleResult::Malformed;
         PeerState& peer = _listPeer[static_cast<size_t>( player )];
         // 확인은 늘기만 한다(비신뢰라 늦게 온 옛 메시지가 있다). 내가 아직 안 만든 프레임은 확인할 수 없다.
-        peer._ackedLocalFrame = MathUtil::max( peer._ackedLocalFrame, MathUtil::min( ackedLocalFrame, _listConfirmed[static_cast<size_t>( _localPlayer )] ) );
+        peer._ackedLocalFrame = MathUtil::max( peer._ackedLocalFrame, MathUtil::min( ackedLocalFrame, getConfirmedInputFrame( _localPlayer ) ) );
         if ( remoteFrame >= peer._reportedFrame )
         {
             peer._reportedFrame   = remoteFrame;
             peer._localAdvantage  = _frame - remoteFrame;
             peer._remoteAdvantage = advantage;
         }
-        for ( int32 index = 0; index < count; ++index )
-            receiveInput( player, first + index, arrInput[index] );
+        for ( const uint32 newFrame : _listNewFrameScratch )
+            markMisprediction( player, static_cast<int32>( newFrame ), buffer.find( newFrame )->_bytes[0] );
         if ( _pHost != nullptr )
             (void)NetMessageRouter::relayToOtherPeers( *_pHost, context );
         return NetHandleResult::Handled;

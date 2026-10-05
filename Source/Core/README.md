@@ -31,7 +31,7 @@
 - **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
   얹어, 싱글 게임은 그 키트를 링크하지 않는다.
   폴더가 층이다 — 뿌리(`NetTypes` · `BitStream`) ← `Transport/`(전송 · 루프백 · UDP · 회선 흉내) ← `Connection/`(`NetConnection` · `NetHost` ·
-  `NetHostThread` · `SequenceBuffer`) ← `Message/`(`NetMessage` · `NetSendBudget`) ← `Replication/`(키트가 나눠 쓰는 복제 부품 — `NetPrioritizer` · `NetParallel` · `TickRingBuffer`).
+  `NetHostThread` · `SequenceBuffer`) ← `Message/`(`NetMessage` · `NetSendBudget`) ← `Replication/`(키트가 나눠 쓰는 복제 부품 — `NetPrioritizer` · `NetParallel` · `TickRingBuffer` · `NetInputWindow`).
   아래 층은 위 층을 include 하지 않는다(`CheckCoreNetworkLayers`).
   - `BitStream`(`BitWriter` · `BitReader` — 범위 정수 · 양자화 실수 · 가변 정수, 넘침 감지. 비트를 바이트 덩어리로 쓰고 읽고, 경계에 맞은 바이트는 `memcpy` —
     선 위 배치는 비트 단위 시절과 같다. 길이 붙인 덩어리 `writeBlob` / `readBlob( out, maxSize )` · `skipBlob` — 상한을 넘는 길이는 자르지 않고 넘침으로 거부한다.
@@ -40,7 +40,11 @@
     하나의 엔티티마다 누적 우선도 — 언리얼 `NetPriority` × 지난 시간 · 유니티 고스트 중요도 × 나이. 틱마다 `우선도 × 시간` 을 쌓고 보낸 것만 0 으로, 순서는 큰 것부터 ·
     같으면 id 순이라 결정적이다. 예산이 늘 차도 낮은 우선도가 쌓여 차례를 얻는다 — 복제 키트 둘(`ReplicationServer` · `MmoReplicator`)이 같이 쓴다), `SequenceBuffer`(16 비트 감김 시퀀스 고리),
     `TickRingBuffer`(32 비트 틱 · 프레임으로 찾는 고리 — 키 전체를 적어 감김 · 건너뛴 칸 비우기가 없고, 무엇이 낡았나는 쓰는 쪽이 넣기 전에 본다. `acquire` 는 옛 값을
-    비우지 않아 버퍼를 다시 쓴다. 예측 · 스냅숏 · 보낸 재구성 · 랙 보정 · 롤백 기록 · 락스텝 입력 · 체크섬이 같이 쓴다), `NetTypes`(`NetAddress` ·
+    비우지 않아 버퍼를 다시 쓴다. 예측 · 스냅숏 · 보낸 재구성 · 랙 보정 · 롤백 기록 · 락스텝 입력 · 체크섬이 같이 쓴다),
+    `NetInputWindow`(비신뢰 입력 묶음 — `NetInputSendWindow` 는 상대가 확인한 다음 틱부터 가장 새 틱까지를 싣고 예산이 모자라면 오래된 것부터(확인 전에는
+    빠지지 않아 연속 손실에 빈틈이 남지 않는다 — GGPO 입력 큐 · 언리얼 `FSavedMove` 목록), `NetInputReceiveBuffer` 는 틱 고리 + 받는 창(위아래 — 고리를 덮지 않게,
+    `Manual` · `FollowNewest`) + "빈틈없이 받은 다음 틱" 확인, 깨진 묶음은 하나도 넣지 않는다. 형식 `NetInputFormat` 은 고정 길이(롤백 버튼 1 바이트) · 덩어리 ·
+    항목 스탬프(서브틱 입력의 자리) — 롤백 · 권위 서버 입력이 같이 쓴다), `NetTypes`(`NetAddress` ·
     채널
  · 연결 상태 · 메시지 첫 바이트 영역 `NetMessageRange` · 와이어 판 `NetWireVersion` · 프로토콜 id `NetProtocol`)
   - `NetConnection` — 연결 하나의 신뢰성: 패킷 시퀀스 · ack + 32 비트 묶음, 채널(신뢰 순서 · 순서만 — 메시지 첫 바이트(종류)마다 가장 새 것 하나, 다른 종류끼리는 서로 지우지 않는다 · 비신뢰), 재전송(RTT + 50 ms, 그리고 뒤 패킷 셋이 확인됐는데 확인이 없는 패킷은 바로 — 빠른 재전송), RTT · 손실률 · 대역폭(최근 1 초).

@@ -28,6 +28,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/Connection/NetHost.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/Connection/NetHostThread.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/Message/NetMessage.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/Replication/NetInputWindow.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/Replication/NetPrioritizer.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/Transport/NetEmulation.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/Transport/NetTransport.cpp"
