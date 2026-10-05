@@ -255,13 +255,7 @@ namespace sw
         // 백엔드(DX11)는 하나씩 부른다. 드로우 루프의 비용은 호출 수라, 배치가 많은 씬에서는 RT 프레임의 큰 몫이 된다.
         const bool bMerge = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
 
-        // **머티리얼 CB 를 실제로 거는 셰이더에서만** 그 값을 병합 키에 넣는다.
-        //
-        // GPUScene 경로의 머티리얼은 구조버퍼(`g_SwMaterials`, t9)에서 인스턴스의 `_materialIndex` 로
-        // 읽는다. 그런 셰이더에는 머티리얼 CB 슬롯이 아예 없어서 `bindForDraw` 가 그 값을 걸지도
-        // 않는다. 주의: 그런 셰이더에서도 `_materialCb` 를 병합 키에 넣으면 깊이순으로 섞인 투명 배치들이
-        // **그리기에 아무 영향 없는 값 때문에** 하나씩 따로 그려진다
-        // (큐브 8000 · 도형 8 종: 배치 1795 개가 드로우 1206 회. 이 값을 빼면 3 회이고 화면은 같다).
+        // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GpuMeshBatch::canShareMaterialBinding`).
         auto layoutBindsMaterialCb = [this]( RHIPipelineStateHandle batchPso ) -> bool
         {
             const ShaderBindingLayout* pLayout = layoutForPso( batchPso );
@@ -284,17 +278,9 @@ namespace sw
                 return false;
             if ( other._vertexBuffer != head._vertexBuffer || psoForBatch( pso, other ) != psoForBatch( pso, head ) )
                 return false;
-            if ( other._materialBuffer != head._materialBuffer || other._materialSrv != head._materialSrv ||
-                 other._materialCount != head._materialCount )
-                return false;
-            if ( other._materialCb != head._materialCb && layoutBindsMaterialCb( psoForBatch( pso, head ) ) )
-                return false;
-            for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
-            {
-                if ( other._arrMaterialTexSrv[texIndex] != head._arrMaterialTexSrv[texIndex] )
-                    return false;
-            }
-            return true;
+            // 레이아웃을 보는 것은 CB 가 다를 때만(대부분 같다).
+            const bool bCbDiffers = other._materialCb != head._materialCb;
+            return GpuMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( psoForBatch( pso, head ) ) );
         };
 
         const RHIBufferHandle argsBuffer = _gpuScene.getCullView( ctx._cullViewIndex )._indirectArgs._buffer;

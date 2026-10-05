@@ -2476,3 +2476,24 @@ SW_TEST_CASE( GpuSceneTest, EqualDepthTransparentOrderIsStableUnderViewAxis )
     SW_ASSERT_EQUAL( 4u, static_cast<uint32>( withBehind.size() ) );
     SW_EXPECT_NEAR_EQUAL( 3.0f, withBehind[0], 1e-4f );
 }
+
+/**
+ * @brief [GpuSceneTest] 머티리얼 CB 만 다른 두 배치는 셰이더가 CB 슬롯을 걸지 않으면 묶이고, 걸면 갈린다. 텍스처 · 버퍼가 다르면 늘 갈린다
+ */
+SW_TEST_CASE( GpuSceneTest, MaterialCbIsAMergeKeyOnlyWhenTheShaderBindsIt )
+{
+    sw::GpuMeshBatch head{};
+    head._materialBuffer   = 7;
+    head._materialCb       = 1;
+    sw::GpuMeshBatch other = head;
+    other._materialCb      = 2;
+    SW_EXPECT_TRUE( sw::GpuMeshBatch::canShareMaterialBinding( head, other, false ) );
+    SW_EXPECT_FALSE( sw::GpuMeshBatch::canShareMaterialBinding( head, other, true ) );
+    other._materialCb = head._materialCb;
+    SW_EXPECT_TRUE( sw::GpuMeshBatch::canShareMaterialBinding( head, other, true ) );
+    other._arrMaterialTexSrv[1] = 99;
+    SW_EXPECT_FALSE( sw::GpuMeshBatch::canShareMaterialBinding( head, other, false ) );
+    other                 = head;
+    other._materialBuffer = 8;
+    SW_EXPECT_FALSE( sw::GpuMeshBatch::canShareMaterialBinding( head, other, false ) );
+}

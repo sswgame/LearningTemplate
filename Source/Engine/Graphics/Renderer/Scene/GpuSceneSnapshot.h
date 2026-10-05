@@ -129,6 +129,27 @@ namespace sw
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
         /** @brief 배치의 머티리얼 인스턴스입니다. RT 가 upload() 에서 updateRhi 합니다. 수명은 이 shared_ptr 이 쥐어, 패킷이 살아 있는 동안 삽니다. */
         shared_ptr<MaterialInstance> _materialInstance;
+
+        /**
+         * @brief 두 배치가 머티리얼 쪽에서 한 멀티 드로우로 묶일 수 있는가입니다 — 버퍼 · SRV · 원소 수 · 텍스처가 같아야 하고, 머티리얼 CB 는
+         *        셰이더가 그 슬롯을 걸 때만(@p bShaderBindsMaterialCb) 본다.
+         * @details GPUScene 경로의 셰이더는 머티리얼을 구조버퍼(`g_SwMaterials`, t9)에서 인스턴스의 `_materialIndex` 로 읽어 CB 슬롯이 없다 —
+         *          그런 셰이더에서 `_materialCb` 를 키에 넣으면 깊이순으로 섞인 투명 배치들이 그림에 영향 없는 값 때문에 하나씩 따로 그려진다
+         *          (큐브 8000 · 도형 8 종: 배치 1795 개가 드로우 1206 회, 이 값을 빼면 3 회이고 화면은 같다).
+         */
+        static bool canShareMaterialBinding( const GpuMeshBatch& head, const GpuMeshBatch& other, bool bShaderBindsMaterialCb )
+        {
+            if ( other._materialBuffer != head._materialBuffer || other._materialSrv != head._materialSrv || other._materialCount != head._materialCount )
+                return false;
+            if ( bShaderBindsMaterialCb && other._materialCb != head._materialCb )
+                return false;
+            for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
+            {
+                if ( other._arrMaterialTexSrv[texIndex] != head._arrMaterialTexSrv[texIndex] )
+                    return false;
+            }
+            return true;
+        }
     };
 } // namespace sw
 
