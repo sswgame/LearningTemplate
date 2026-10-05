@@ -362,9 +362,14 @@ cd build/Ninja-Debug/Bin
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도
   받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ② 롤백(파괴 상태 저장 · 되돌리기, `RollbackSession` 에
   `makeNetworkSnapshot` 바이트 싣기)은 하지 않았다. ③ 부서지기 전 움직이는 파괴 오브젝트(상자 · 드럼통)의 자세는 파괴 키트가 보내지 않는다 — 게임이
-  `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ 전용 서버 프로세스 ↔ 클라이언트 해시 비교는
-  server-target(Server 실행 파일) 뒤의 시험이다 — 같은 입력의 해시가 구성 · 플랫폼을 넘어 같은 것은
-  `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(기록한 해시 다섯)가 CI 두 플랫폼에서 지킨다.
+  `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ **파괴 상태 해시가 구성마다 다르다**(2026-10-06,
+  사용자 판단 대기) — 같은 벽 · 사건열(net-ci-rest R3 의 시험 모양: `makeWall` · 사건 넷)의 해시가 Windows Debug `0xE17E4E8537A70F9B` · Windows Shipping(=Release
+  플래그) `0xDACCAB2F48260445` 로 **사건 전 파쇄 결과부터** 갈린다(두 구성 각 2 회 같은 값). 씨앗 · 사건만 보내고 받는 쪽이 같은 계산을 하는 파괴 네트워킹은
+  Debug 서버 ↔ Shipping 클라이언트(또는 Windows ↔ 리눅스)에서 다른 그림이 된다. 가장 그럴듯한 원인은 Release 의 `/arch:AVX2` + 기본 `-ffp-contract` 가
+  `a*b+c` 를 FMA 로 합쳐 반올림이 달라지는 것 — `-ffp-contract=off`(clang-cl `-clang:-ffp-contract=off`)를 파괴 · 파쇄 파일에만 걸지 전체에 걸지
+  사용자에게 묻는다(언리얼은 결정성이 필요한 물리 경로를 `/fp:precise` 로 짓는다). 정해지면 기준값 시험(`DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`
+  — 해시 다섯, `SW_DESTRUCTION_PRINT_GOLDEN=1`)을 다시 넣고 Debug · Shipping · 리눅스 CI 가 같은 값인지 본다. 전용 서버 프로세스 ↔ 클라이언트 비교는
+  server-target 뒤.
 
 - **네트워크 — 포화된 연결의 비신뢰 줄**(N21a 뒤). 대역폭 몫을 다 쓰면 메시지가 기다리는데, 비신뢰 줄(`NetConnection::_listOutgoingUnreliable`)에는 상한이 없어 오래 포화되면
   옛 비신뢰가 쌓였다 몰려 간다. 언리얼은 포화면(`IsNetReady` 거짓) 액터 복제를 건너뛴다 — 키트가 `NetHost` 에 "이 연결이 포화인가" 를 묻거나 줄에 나이 상한을 둔다. 재고 나서.
