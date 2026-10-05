@@ -54,6 +54,18 @@ build/Ninja-Debug/Bin/Server.exe -gv_serverExitAfterTicks=300          # Dev(Gam
 build/Ninja-Shipping-Server/Bin/Server.exe -server-config=Config/Server/Empty.json
 ```
 
+## Windows 서비스
+
+`Server --service` 는 SCM 이 띄운 프로세스에서만 됩니다(`Server/Windows/WindowsServiceHost`). 작업 폴더를 실행 파일 폴더로 옮기고, SCM 정지 · 사전 종료를
+`ServiceStop` 으로 잇고, 대기 힌트와 함께 `STOP_PENDING` → `STOPPED` 를 보고합니다. 서비스에는 콘솔이 없어 로그는 파일로 봅니다. 수동 확인(관리자 PowerShell):
+
+```
+sc create SwServer binPath= "C:\sw\Bin\Server.exe --service -server-config=C:\sw\server.json" start= demand
+sc start SwServer      # 로그에 Dedicated server ready
+sc stop SwServer       # 로그에 shutdown requested (ServiceStop) · shutdown complete, sc query 가 STOPPED
+sc delete SwServer
+```
+
 ## systemd 예시
 
 ```ini
