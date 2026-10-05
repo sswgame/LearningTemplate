@@ -4,9 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -211,5 +213,70 @@ namespace sw
     hashed_string SpawnDirector::getPendingEntry() const
     {
         return _pendingIndex >= 0 ? _pTable->getEntries()[static_cast<size_t>( _pendingIndex )]._id : hashed_string{};
+    }
+
+    void SpawnDirector::collectAliveSpawnIds( vector<uint32>& outListSpawnId ) const
+    {
+        outListSpawnId.clear();
+        outListSpawnId.reserve( _listAlive.size() );
+        for ( const SpawnAlive& alive : _listAlive )
+            outListSpawnId.push_back( alive._spawnId );
+    }
+
+    void SpawnDirector::writeState( Archive& outArchive ) const
+    {
+        outArchive << _time;
+        outArchive << _budget;
+        outArchive << _budgetScale;
+        outArchive << _pendingIndex;
+        outArchive << _nextSpawnId;
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << static_cast<uint32>( _listAlive.size() );
+        for ( const SpawnAlive& alive : _listAlive )
+        {
+            outArchive << alive._spawnId;
+            outArchive << alive._entryIndex;
+        }
+    }
+
+    bool SpawnDirector::readState( Archive& archive )
+    {
+        float32    time         = 0.0f;
+        float32    budget       = 0.0f;
+        float32    budgetScale  = 1.0f;
+        int32      pendingIndex = -1;
+        uint32     nextSpawnId  = 1;
+        GameRandom random;
+        archive >> time;
+        archive >> budget;
+        archive >> budgetScale;
+        archive >> pendingIndex;
+        archive >> nextSpawnId;
+        uint32 aliveCount = 0;
+        if ( StateArchiveUtil::readRandom( archive, random ) == false || StateArchiveUtil::readCount( archive, 8, aliveCount ) == false )
+            return false;
+        const int32        entryCount = _pTable != nullptr ? static_cast<int32>( _pTable->getEntries().size() ) : 0;
+        vector<SpawnAlive> listAlive( aliveCount );
+        vector<int32>      listAliveCount( static_cast<size_t>( entryCount ), 0 );
+        for ( SpawnAlive& alive : listAlive )
+        {
+            archive >> alive._spawnId;
+            archive >> alive._entryIndex;
+            if ( alive._entryIndex < 0 || alive._entryIndex >= entryCount )
+                return false;
+            ++listAliveCount[static_cast<size_t>( alive._entryIndex )];
+        }
+        if ( archive.isError() || pendingIndex < -1 || pendingIndex >= entryCount || nextSpawnId == 0 )
+            return false;
+        _time           = time;
+        _budget         = budget;
+        _budgetScale    = budgetScale;
+        _pendingIndex   = pendingIndex;
+        _nextSpawnId    = nextSpawnId;
+        _random         = random;
+        _listAlive      = std::move( listAlive );
+        _listAliveCount = std::move( listAliveCount );
+        _eventBuffer.clear();
+        return true;
     }
 } // namespace sw

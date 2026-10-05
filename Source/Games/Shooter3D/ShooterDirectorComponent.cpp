@@ -39,7 +39,7 @@ namespace sw
         {
             static constexpr float32 kStatusInterval = 5.0f;
             static constexpr uint32  kStateTag       = 0x544F4853u; ///< 'SHOT'
-            static constexpr uint32  kStateVersion   = 2;
+            static constexpr uint32  kStateVersion   = 3;
             /** @brief 이 거리(m) 안의 적이 "가까운 적" 신호입니다. */
             static constexpr float32 kNearDistance = 7.0f;
             /** @brief 수리 보상의 scale 1 이 채우는 체력입니다. */
@@ -152,7 +152,6 @@ namespace sw
         , _traceFrame{ 0 }
         , _bAmmoPending{ SW_FALSE }
         , _bPacingReady{ SW_FALSE }
-        , _bPacingRestart{ SW_FALSE }
         , _bPlayerAlive{ SW_TRUE }
         , _reserved{ 0 }
     {
@@ -177,17 +176,26 @@ namespace sw
     {
         StateArchiveUtil::writeHeader( outArchive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion );
         outArchive << _killCount;
+        outArchive << static_cast<uint8>( _bPacingReady );
+        if ( _bPacingReady == SW_TRUE )
+            _director.writeState( outArchive );
     }
 
     bool ShooterDirectorComponent::readState( Archive& archive )
     {
         uint32 killCount = 0;
+        uint8  bPacing   = SW_FALSE;
         if ( StateArchiveUtil::readHeader( archive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion ) == false )
             return false;
         archive >> killCount;
-        if ( archive.isError() || archive.getRemainingBytes() != 0 )
+        archive >> bPacing;
+        if ( archive.isError() || ( bPacing == SW_TRUE && _bPacingReady == SW_FALSE ) )
             return false;
-        // 적은 걷히고(`onViewsDespawned` 가 다음 틱에 감독도 처음부터 돌리게 한다) 처치 수만 잇는다 — 감독의 주기 · 시간 · 풀은 싣지 않는다.
+        // 감독은 단계 · 웨이브 · 예산 · 산 스폰까지 잇는다. 적 모습은 복원 뒤 걷히고(`onViewsDespawned`) 감독 예산으로 섰던 것만 같은 스폰 id 로 다시 선다.
+        if ( bPacing == SW_TRUE && _director.readState( archive ) == false )
+            return false;
+        if ( archive.getRemainingBytes() != 0 )
+            return false;
         _killCount = killCount;
         return true;
     }
@@ -195,9 +203,17 @@ namespace sw
     void ShooterDirectorComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO( "[Shooter] arena state restored - %# kills", _killCount );
+        {
+            SW_LOG_INFO( "[Shooter] arena state restored - %# kills, wave %#", _killCount, getWave() );
+        }
         else
+        {
+            // 감독은 읽었는데 끝 바이트가 남은 경우도 여기로 온다 — 새 판으로 되돌린다.
             SW_LOG_WARNING( "[Shooter] the saved arena state does not match this build - starting a new round" );
+            _killCount = 0;
+            if ( _bPacingReady == SW_TRUE )
+                _director.restart();
+        }
     }
 
     void ShooterDirectorComponent::onEndPlay()
@@ -216,11 +232,6 @@ namespace sw
         if ( step > 0.0f )
         {
             updateEnemies();
-            if ( _bPacingReady == SW_TRUE && _bPacingRestart == SW_TRUE )
-            {
-                _bPacingRestart = SW_FALSE;
-                _director.restart();
-            }
             if ( _bPacingReady == SW_TRUE )
             {
                 _director.update( step );
@@ -243,7 +254,14 @@ namespace sw
         _listEnemyView.clear();
         _listPendingEnemy.clear();
         _listPendingEffect.clear();
-        _bPacingRestart = SW_TRUE; // 걷은 적의 스폰 id 를 돌려줄 수 없다 — 다음 틱에 감독도 처음부터
+        // 감독 예산으로 선 적은 감독이 아직 산 것으로 센다 — 같은 스폰 id 로 다시 세운다(체력은 새로). 무리 · 정예는 예산 밖이라 걷힌 채 끝난다.
+        if ( _bPacingReady == SW_TRUE )
+        {
+            vector<uint32> listSpawnId;
+            _director.getSpawnDirector().collectAliveSpawnIds( listSpawnId );
+            for ( const uint32 spawnId : listSpawnId )
+                requestEnemies( 1, 1.0f, spawnId, false );
+        }
     }
 
     void ShooterDirectorComponent::restartRound()
@@ -326,9 +344,8 @@ namespace sw
 
     void ShooterDirectorComponent::startPacing()
     {
-        using Internal  = ShooterDirectorComponentInternal;
-        _bPacingReady   = SW_FALSE;
-        _bPacingRestart = SW_FALSE;
+        using Internal = ShooterDirectorComponentInternal;
+        _bPacingReady  = SW_FALSE;
         if ( _profile.loadFromResource( _pacingProfile ) == false || _table.loadFromResource( _spawnTable ) == false )
         {
             SW_LOG_ERROR( "[Shooter] pacing data '%#' / '%#' could not be loaded - no enemies will come", _pacingProfile.c_str(), _spawnTable.c_str() );

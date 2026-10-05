@@ -17,6 +17,7 @@
 
 namespace sw
 {
+    class Archive;
     class XmlNode;
 
     /** @brief 낼 수 있는 것 하나입니다. */
@@ -132,6 +133,12 @@ namespace sw
         int32   getTotalAliveCount() const { return static_cast<int32>( _listAlive.size() ); }
         /** @brief 다음에 낼 것으로 골라 둔 항목입니다. 없으면 빈 이름입니다. */
         hashed_string getPendingEntry() const;
+        /** @brief 살아 있는 개체의 스폰 id 를 낸 순서로 @p outListSpawnId 에 채웁니다. */
+        void collectAliveSpawnIds( vector<uint32>& outListSpawnId ) const;
+        /** @brief 시계 · 예산 · 배율 · 골라 둔 것 · 난수 · 살아 있는 개체를 씁니다(테이블 · 태그 거르기는 싣지 않는다 — 부른 쪽이 다시 건다). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 테이블의 항목 수와 맞지 않거나 끝까지 읽지 못하면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 살아 있는 개체 하나입니다. */

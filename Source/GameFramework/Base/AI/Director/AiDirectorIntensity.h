@@ -16,6 +16,8 @@ namespace sw
 {
     struct AiDirectorIntensityDef;
 
+    class Archive;
+
     /**
      * @class IAiDirectorIntensityModel
      * @brief 감독이 읽는 긴장도 모델입니다. 감독은 `update` 를 프레임마다 한 번 부르고 값을 읽기만 합니다(신호는 게임이 모델에 직접 넣는다).
@@ -66,6 +68,10 @@ namespace sw
         float32 getCalmSeconds() const override { return _calmSeconds; }
         float32 getSignal( const hashed_string& signalId ) const override;
         float32 getStress() const { return _stress; }
+        /** @brief 스트레스 · 싸움 뒤 시간 · 신호 값을 씁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 신호 수가 정의와 다르면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         int32   findSignalIndex( const hashed_string& signalId ) const;

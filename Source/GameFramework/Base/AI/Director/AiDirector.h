@@ -25,6 +25,7 @@ namespace sw
     struct AiDirectorPoolDef;
 
     class AiDirectorProfile;
+    class Archive;
     class WorldClock;
 
     /** @brief 조우 조건을 판정할 때의 세계 · 플레이어 상태입니다. 게임이 바뀔 때 `AiDirector::setContext` 로 넘깁니다. */
@@ -148,6 +149,16 @@ namespace sw
         void dumpTrace( string& outText ) const;
         /** @brief 결정성 확인용 상태 해시입니다(시간 · 단계 · 긴장도 · 난수 · 풀 · 항목 · 스폰 상태). */
         uint64 computeStateHash() const;
+        /**
+         * @brief 감독 상태를 씁니다(표 'AIDR' · 판 1) — 시간 · 단계 · 순환 · 긴장도 · 고른 횟수 · 난수 · 프로필 모양 · 풀 · 항목 · 기본 긴장도 모델 · 스폰 감독.
+         * @details 핫 리로드 · 세이브가 웨이브를 잇는 자리입니다. 게임 긴장도 모델(`setIntensityModel`) · 추적 · 쌓인 사건은 싣지 않습니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 이어 갑니다. 먼저 같은 프로필 · 테이블로 `initialize` 한 감독에 부릅니다.
+         * @details 프로필 모양(단계 · 풀 · 항목 · 신호 수)이 다르거나 끝까지 읽지 못하면 false 이고 감독은 그대로입니다(부른 쪽은 처음부터 돈다). 쌓인 사건 · 추적은 비웁니다.
+         */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 항목 하나의 런타임 상태입니다. */

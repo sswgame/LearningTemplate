@@ -324,10 +324,6 @@ cd build/Ninja-Debug/Bin
   물리 질의 히트스캔 · 시야(지금 상자 목록 · 캡슐), 쓰러질 때 무기 떨어뜨리기(`SocketBindingComponent::release( Physics )` — 무기 프리팹에 강체를 더하면 된다),
   알림으로 휘두름 피해 · 발소리(지금 휘두름 피해는 `_attackHitTime` 초). 그 밖: 외형 부품 풀(스켈레톤마다 프리팹을 세우고 지운다), 1인칭에서 숨긴 몸의 애니메이션
   LOD(숨겨도 평가한다), 걷기 · 달리기 발 미끄러짐(위 애니메이션 ⑦).
-- **Shooter3D 핫 리로드 · 세이브는 처치 수만 잇는다.** 웨이브를 페이싱 감독(`AiDirector`)이 내게 되면서(ai-telemetry) 웨이브는 감독의 주기라, 되살린 판은
-  적을 걷고 감독을 처음부터 돈다(quick-gf 의 상태 v1 은 웨이브 번호를 실었다 — v2 는 처치 수뿐). 감독 상태(주기 · 시간 · 단계 · 풀 쿨다운 · 예산 · 난수)를
-  `writeState` · `readState` 로 싣고 Shooter3D 가 같이 쓰면 웨이브까지 이어진다.
-
 - **Shooter3D 외형 데이터(`game/shooter3d/data/appearance/`)가 없는 메시 · 프리팹 · 소켓 · 머티리얼 27 곳을 가리킨다**(char-appear 의 자리 채움 데이터).
   에셋 검증 `references-exist` 가 이 폴더를 빼 두었다(`Config/Editor/AssetValidationRules.json`) — Shooter3D 통합이 실제 에셋을 넣으면 그 제외를 지운다.
 
@@ -1605,6 +1601,9 @@ cd build/Ninja-Debug/Bin
   키보드 포커스 `Game`. 활성화(`WM_ACTIVATE` · `FocusIn`)로 다시 잠그면 제목 표시줄 · X 를 눌러 활성화한 사용자의 커서가 클라이언트 안으로 끌려가 창을 못 끈다.
   잠금을 다시 건 클릭(과 그 뗌)은 게임에 넘기지 않는다(언리얼 뷰포트 캡처 클릭과 같다). `ShowCursor` 는 카운터라 `syncMouseLock` 이 전이에서만 부른다.
   "잠긴 동안만" 할 일(마우스 시점)은 `isMouseLockActive` 로 가린다.
+- **페이싱 감독(`AiDirector`)의 상태는 `writeState` · `readState`(표 'AIDR')로 넘긴다** — 프로필 모양(단계 · 풀 · 항목 · 신호 수)이 다르면 거절해 처음부터 돈다. 게임 긴장도 모델
+  (`setIntensityModel`)은 싣지 않는다(게임이 자기 상태로). 스폰 감독의 산 개체는 실리므로, 모습을 걷은 게임은 `collectAliveSpawnIds` 로 다시 세워야 예산 · 상한이 맞다.
+  태그 거르기는 싣지 않고 단계에서 다시 거는데, **읽기 전에** 건다(뒤에 걸면 상한에 걸려 있던 골라 둔 것을 비워 원본과 갈린다).
 
 ### 3-12. 기각한 것 — 숫자와 함께 (다시 제안하지 말 것)
 

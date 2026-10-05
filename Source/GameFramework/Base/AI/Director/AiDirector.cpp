@@ -7,7 +7,10 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/AI/Director/AiDirectorProfile.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/WorldClock.h"
 
 namespace sw
@@ -21,7 +24,11 @@ namespace sw
             static constexpr const utf8* kArrEventKindName[] = { "PhaseChanged", "Spawned", "Despawned", "Encounter", "Reward" };
             static constexpr const utf8* kArrBlockName[]     = { "weight", "pacing", "cooldown", "maxCount", "cycle", "minTime", "intensity", "area", "condition", "cost" };
             /** @brief 스폰 감독의 씨앗을 감독 씨앗에서 떼어 낼 때 섞는 값입니다(같은 씨앗이 두 수열에서 같은 수를 내지 않게). */
-            static constexpr uint32 kSpawnSeedSalt = 0x5bd1e995u;
+            static constexpr uint32 kSpawnSeedSalt  = 0x5bd1e995u;
+            static constexpr uint32 kStateTag       = 0x52444941u; ///< 'AIDR'
+            static constexpr uint32 kStateVersion   = 1;
+            static constexpr uint32 kPoolMinBytes   = 20; ///< 풀 하나의 최소 바이트(타이머 · 예산 · 마지막 고른 시각 · 골라 둔 것 · 항목 수)
+            static constexpr uint32 kEncounterBytes = 8;  ///< 항목 하나(마지막 시각 · 횟수)
 
             static bool contains( const vector<hashed_string>& listName, const hashed_string& name )
             {
@@ -600,5 +607,106 @@ namespace sw
             }
         }
         return hash;
+    }
+
+    void AiDirector::writeState( Archive& outArchive ) const
+    {
+        using Internal = AiDirectorInternal;
+        StateArchiveUtil::writeHeader( outArchive, Internal::kStateTag, Internal::kStateVersion );
+        const int32 phaseCount = _pProfile != nullptr ? static_cast<int32>( _pProfile->getPhases().size() ) : 0;
+        outArchive << phaseCount;
+        outArchive << _time;
+        outArchive << _phaseTime;
+        outArchive << _intensity;
+        outArchive << _phaseIndex;
+        outArchive << _cycle;
+        outArchive << _pickSerial;
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << static_cast<uint32>( _listPoolState.size() );
+        for ( const PoolState& state : _listPoolState )
+        {
+            outArchive << state._timer;
+            outArchive << state._budget;
+            outArchive << state._lastPickTime;
+            outArchive << state._pendingIndex;
+            outArchive << static_cast<uint32>( state._listEncounter.size() );
+            for ( const EncounterState& encounter : state._listEncounter )
+            {
+                outArchive << encounter._lastTime;
+                outArchive << encounter._count;
+            }
+        }
+        _builtinModel.writeState( outArchive );
+        _spawnDirector.writeState( outArchive );
+    }
+
+    bool AiDirector::readState( Archive& archive )
+    {
+        using Internal = AiDirectorInternal;
+        if ( _pProfile == nullptr || StateArchiveUtil::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
+            return false;
+        int32   phaseCount = 0;
+        float32 time       = 0.0f;
+        float32 phaseTime  = 0.0f;
+        float32 intensity  = 0.0f;
+        int32   phaseIndex = -1;
+        int32   cycle      = 0;
+        uint32  pickSerial = 0;
+        archive >> phaseCount;
+        archive >> time;
+        archive >> phaseTime;
+        archive >> intensity;
+        archive >> phaseIndex;
+        archive >> cycle;
+        archive >> pickSerial;
+        GameRandom random;
+        uint32     poolCount = 0;
+        if ( StateArchiveUtil::readRandom( archive, random ) == false || StateArchiveUtil::readCount( archive, Internal::kPoolMinBytes, poolCount ) == false )
+            return false;
+        const vector<AiDirectorPoolDef>& listPool = _pProfile->getPools();
+        const bool                       bShape   = phaseCount == static_cast<int32>( _pProfile->getPhases().size() ) && 0 <= phaseIndex && phaseIndex < phaseCount && poolCount == listPool.size();
+        if ( bShape == false )
+            return false;
+        vector<PoolState> listPoolState( poolCount );
+        for ( size_t poolIndex = 0; poolIndex < listPoolState.size(); ++poolIndex )
+        {
+            PoolState& state = listPoolState[poolIndex];
+            archive >> state._timer;
+            archive >> state._budget;
+            archive >> state._lastPickTime;
+            archive >> state._pendingIndex;
+            uint32 encounterCount = 0;
+            if ( StateArchiveUtil::readCount( archive, Internal::kEncounterBytes, encounterCount ) == false || encounterCount != listPool[poolIndex]._listEncounter.size() )
+                return false;
+            state._listEncounter.resize( encounterCount );
+            for ( EncounterState& encounter : state._listEncounter )
+            {
+                archive >> encounter._lastTime;
+                archive >> encounter._count;
+            }
+        }
+        // 긴장도 모델 · 스폰 감독은 사본에 읽어 둘 다 맞을 때 바꾼다 — 반쯤 읽은 상태를 남기지 않는다.
+        // 태그 거르기는 단계가 정한다(싣지 않았다) — 읽기 전에 걸어야 실린 골라 둔 것을 그대로 받는다(뒤에 걸면 상한에 걸린 것을 비워 원본과 갈린다).
+        AiDirectorIntensityModel model   = _builtinModel;
+        SpawnDirector            spawner = _spawnDirector;
+        spawner.setAllowedTags( _pProfile->getPhases()[static_cast<size_t>( phaseIndex )]._listSpawnTag );
+        const bool bModel   = model.readState( archive );
+        const bool bSpawner = bModel && spawner.readState( archive );
+        if ( bSpawner == false || archive.isError() )
+            return false;
+        _time          = time;
+        _phaseTime     = phaseTime;
+        _intensity     = intensity;
+        _phaseIndex    = phaseIndex;
+        _cycle         = cycle;
+        _pickSerial    = pickSerial;
+        _random        = random;
+        _listPoolState = std::move( listPoolState );
+        _builtinModel  = std::move( model );
+        _spawnDirector = std::move( spawner );
+        _eventBuffer.clear();
+        _listTrace.clear();
+        _traceHead = 0;
+        return true;
     }
 } // namespace sw

@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/AI/Director/AiDirectorProfile.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -135,5 +138,34 @@ namespace sw
     {
         const int32 signalIndex = findSignalIndex( signalId );
         return signalIndex >= 0 ? _listSignalValue[static_cast<size_t>( signalIndex )] : 0.0f;
+    }
+
+    void AiDirectorIntensityModel::writeState( Archive& outArchive ) const
+    {
+        outArchive << _stress;
+        outArchive << _calmSeconds;
+        outArchive << static_cast<uint32>( _listSignalValue.size() );
+        for ( const float32 value : _listSignalValue )
+            outArchive << value;
+    }
+
+    bool AiDirectorIntensityModel::readState( Archive& archive )
+    {
+        float32 stress      = 0.0f;
+        float32 calmSeconds = 0.0f;
+        uint32  signalCount = 0;
+        archive >> stress;
+        archive >> calmSeconds;
+        if ( StateArchiveUtil::readCount( archive, 4, signalCount ) == false || signalCount != _listSignalValue.size() )
+            return false;
+        vector<float32> listSignalValue( signalCount, 0.0f );
+        for ( float32& value : listSignalValue )
+            archive >> value;
+        if ( archive.isError() )
+            return false;
+        _stress          = stress;
+        _calmSeconds     = calmSeconds;
+        _listSignalValue = std::move( listSignalValue );
+        return true;
     }
 } // namespace sw

@@ -4,6 +4,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/AI/Director/AiDirector.h"
 #include "GameFramework/Base/AI/Director/AiDirectorProfile.h"
@@ -603,4 +604,104 @@ SW_TEST_CASE( AiDirectorTest, TraceKeepsRecentEventsInOrder )
     SW_EXPECT_EQUAL( AiDirector::kMaxTraceEvent, lineCount );
     SW_EXPECT_NEAR_EQUAL( listEvent.back()._time, lastTime, 0.01f );
     SW_EXPECT_TRUE_MSG( trace.find( "PhaseChanged 'Relax' from 'Peak' exit 0" ) != string::npos, trace.c_str() );
+}
+
+/**
+ * @brief [AiDirectorTest] 상태를 쓰고 같은 프로필의 새 감독에 읽으면 같은 자리에서 이어 간다 — 이후 사건 · 상태 해시가 원본과 같다. 모양이 다른 프로필은 거절한다
+ * @details 핫 리로드 · 세이브가 감독을 처음부터 돌리면 웨이브가 1 로 돌아간다.
+ */
+SW_TEST_CASE( AiDirectorTest, StateRoundTripContinuesFromTheSamePlace )
+{
+    using Internal = AiDirectorTestInternal;
+    AiDirectorProfile profile;
+    SpawnTable        table;
+    SW_ASSERT_TRUE( profile.loadFromXmlText( Internal::kPacingXml, "Pacing" ) );
+    SW_ASSERT_TRUE( table.loadFromXmlText( Internal::kSpawnXml, "Spawn" ) );
+
+    /** @brief 대본 한 걸음 — 30 초마다 맞고, 처음 6 초는 둘러싸이고, 스폰은 3 초 뒤 돌려준다(산 목록은 게임의 몫이라 감독 밖에 든다). */
+    struct Script
+    {
+        vector<uint32>  _listAliveId;
+        vector<float32> _listAliveTime;
+
+        void step( AiDirector& director, int32 stepIndex, vector<AiDirectorEvent>& outListEvent )
+        {
+            if ( stepIndex % 300 == 0 )
+                (void)director.getBuiltinIntensityModel().addSignal( hashed_string( "damage" ), 9.0f );
+            (void)director.getBuiltinIntensityModel().setSignal( hashed_string( "nearby" ), stepIndex % 300 < 60 ? 3.0f : 0.0f );
+            director.update( 0.1f );
+            const size_t first = outListEvent.size();
+            director.drainEvents( outListEvent );
+            for ( size_t index = first; index < outListEvent.size(); ++index )
+            {
+                if ( outListEvent[index]._kind == AiDirectorEventKind::Spawned && outListEvent[index]._spawnId != 0 )
+                {
+                    _listAliveId.push_back( outListEvent[index]._spawnId );
+                    _listAliveTime.push_back( director.getTime() );
+                }
+            }
+            for ( size_t index = 0; index < _listAliveId.size(); )
+            {
+                if ( director.getTime() - _listAliveTime[index] < 3.0f )
+                {
+                    ++index;
+                    continue;
+                }
+                (void)director.notifyDespawned( _listAliveId[index] );
+                _listAliveId.erase( _listAliveId.begin() + static_cast<ptrdiff_t>( index ) );
+                _listAliveTime.erase( _listAliveTime.begin() + static_cast<ptrdiff_t>( index ) );
+            }
+        }
+    };
+
+    AiDirector              original;
+    Script                  originalScript;
+    vector<AiDirectorEvent> listOriginal;
+    original.initialize( &profile, &table, 77u );
+    // 한 번은 돌았고(순환 ≥ 1) 산 스폰이 있는 자리에서 저장해야 "이어 간다" 가 뜻이 있다 — 산 개체 목록이 실리지 않으면 예산 · 상한이 갈린다.
+    int32 saveStep = 0;
+    for ( ; saveStep < 2000; ++saveStep )
+    {
+        originalScript.step( original, saveStep, listOriginal );
+        if ( saveStep >= 700 && original.getSpawnDirector().getTotalAliveCount() > 0 )
+            break;
+    }
+    ++saveStep;
+    SW_ASSERT_TRUE( original.getCycle() >= 1 );
+    SW_ASSERT_TRUE( original.getSpawnDirector().getTotalAliveCount() > 0 );
+
+    Archive written;
+    original.writeState( written );
+    AiDirector restored;
+    restored.initialize( &profile, &table, 77u );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64( 0 ), reader.getRemainingBytes() );
+    SW_EXPECT_EQUAL( original.computeStateHash(), restored.computeStateHash() );
+    SW_EXPECT_EQUAL( original.getCycle(), restored.getCycle() );
+    SW_EXPECT_TRUE( original.getPhase() == restored.getPhase() );
+
+    Script                  restoredScript = originalScript; // 산 적 목록은 게임이 다시 세운 그대로
+    vector<AiDirectorEvent> listAfterOriginal;
+    vector<AiDirectorEvent> listAfterRestored;
+    for ( int32 stepIndex = saveStep; stepIndex < saveStep + 700; ++stepIndex )
+    {
+        originalScript.step( original, stepIndex, listAfterOriginal );
+        restoredScript.step( restored, stepIndex, listAfterRestored );
+    }
+    SW_EXPECT_EQUAL( original.computeStateHash(), restored.computeStateHash() );
+    SW_ASSERT_EQUAL( listAfterOriginal.size(), listAfterRestored.size() );
+    for ( size_t index = 0; index < listAfterOriginal.size(); ++index )
+        SW_EXPECT_TRUE( listAfterOriginal[index]._kind == listAfterRestored[index]._kind && listAfterOriginal[index]._id == listAfterRestored[index]._id );
+    SW_EXPECT_TRUE( Internal::countKind( listAfterOriginal, AiDirectorEventKind::Spawned ) > 0 );
+
+    // 모양이 다른 프로필(단계 하나 · 풀 하나)은 거절하고 그대로다.
+    AiDirectorProfile other;
+    SW_ASSERT_TRUE( other.loadFromXmlText( Internal::kCooldownXml, "Cooldown" ) );
+    AiDirector mismatched;
+    mismatched.initialize( &other, nullptr, 77u );
+    const uint64 hashBefore = mismatched.computeStateHash();
+    Archive      mismatchReader( written.getData(), written.getSize() );
+    SW_EXPECT_FALSE( mismatched.readState( mismatchReader ) );
+    SW_EXPECT_EQUAL( hashBefore, mismatched.computeStateHash() );
 }
