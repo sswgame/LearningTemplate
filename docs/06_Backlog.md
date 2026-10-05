@@ -334,8 +334,6 @@ cd build/Ninja-Debug/Bin
 - **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.
-- **리눅스에서 yad 만 깔린 기계에는 "All files" 필터가 없다**(`LinuxFileDialog.cpp`). `yad --file --file-filter='A | *.txt' --file-filter='All files | *'`
-  가 뜨는지 확인한 뒤에만 `buildGtkStyleCommand( ..., true )` 로 바꾼다 — yad 가 인자를 거부하면 다이얼로그가 아예 안 뜬다.
 
 - **장르 공통 기반 · 새 키트의 첫 엔진 빌드(2026-10-03).** 위 두 항목과 같은 이유로 하네스로만 돌렸다. 기반의 새 폴더 —
   `AI/` · `Navigation/` · `Combat/`(Shooter 키트에서 옮긴 무기 포함) · `Input/`(예전 `Control/`) · `Inventory/` · `Match/` · `Movement/` · `Progression/` · `Quest/` · `World/`,
@@ -496,7 +494,8 @@ cd build/Ninja-Debug/Bin
 - **CI Windows 러너(WARP)에서 픽셀 시험이 지던 원인은 판정하지 않았다**(`RenderPassGpuTest` 를 host 스위트로 빼서 우회). 실패 값이 `좌 0, 우 0` 이면 WARP 가
   컴퓨트 컬링 · 인디렉트를 못 하는 것이니 초기화에서 끊고, 어중간하면 허용 오차를 본다.
 - **리눅스 전용 경로는 이 PC 에서 돌려 보지 않았다** — `parseWriteTime`, POSIX `pipe2` · `close_range` · `launchDetached`, `alarm` 시한, X11 입력(좌표 · `XkbSetDetectableAutoRepeat`),
-  리눅스 LTO 를 진짜 `llvm-ar` 로 끝까지 링크하기, `verifyModuleBindings` 의 dlsym 도장 갈래(`727b872c` 뒤). 리눅스 CI 가 초록인지 · IPO 가 실제로 켜졌는지를 본다.
+  리눅스 LTO 를 진짜 `llvm-ar` 로 끝까지 링크하기, `verifyModuleBindings` 의 dlsym 도장 갈래(`727b872c` 뒤) · yad 파일 대화상자의 두 번째 `--file-filter`(man 으로만 확인).
+  리눅스 CI 가 초록인지 · IPO 가 실제로 켜졌는지를 본다.
 - **수동 확인이 안 된 에디터 동작** — Hierarchy `tag:` 필터, 검색 0 건 힌트, Classic Dark 테마의 대화상자 편집 경로.
 - **DbgHelp 외부 샘플러 소스가 저장소 밖에 있다**(세션 스크래치였다). 다른 PC 에 남아 있는지 확인하고, 필요하면 `Scripts/dev/` 로 들인다.
 

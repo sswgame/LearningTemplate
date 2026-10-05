@@ -196,22 +196,13 @@ namespace sw
             }
 
             /**
-             * @brief zenity · yad 계열 도구의 명령줄을 만듭니다. **두 도구의 차이는 인자 두 개뿐입니다.**
+             * @brief zenity · yad 계열 도구의 명령줄을 만듭니다. **두 도구의 차이는 파일 선택 플래그 하나뿐입니다.**
              * @param pFileSelectionFlag 파일 선택 모드를 켜는 플래그(zenity `--file-selection`, yad `--file`)
-             * @param bAppendAllFilesFilter "All files | *" 필터를 하나 더 붙일지 여부
-             *
-             * @details 두 도구의 명령 조립을 함께 씁니다. 두 도구의 차이는 이 인자들뿐입니다.
-             *          **zenity 만 "All files" 필터를 붙입니다.** 그래서 yad 만 설치된 기계에서는 선언한 확장자 밖의 파일을
-             *          **고를 방법이 없습니다.** 같은 제품이 설치된 도구에 따라 다르게 동작하는데, 어느 쪽도 로그를 남기지 않습니다.
-             *
-             * @note **그 차이는 아직 맞추지 않습니다.** yad 가 `--file-filter` 를 여러 번 받는지 확인되지 않았기 때문입니다.
-             *       잘못 넣으면 "필터가 제한된다" 로 끝나지 않고 도구가 인자를 거부해 **다이얼로그가 아예 뜨지 않습니다.**
-             *       차이는 **인자 하나로 드러나** 있으므로 확인되면 한 줄만 바꾸면 됩니다.
-             *       확인 방법: yad 가 설치된 리눅스에서 `yad --file --file-filter='A | *.txt'
-             *       --file-filter='All files | *'` 가 뜨는지 봅니다. 뜨면 아래 호출을 `true` 로 바꿉니다.
+             * @details 선언한 확장자 필터 뒤에 "All files | *" 필터를 하나 더 붙여 그 밖의 파일도 고를 수 있게 합니다 —
+             *          zenity · yad 모두 `--file-filter` 를 여러 번 받습니다(yad man File filters 절: "This option may be used multiple times").
              */
             static string buildGtkStyleCommand( string_view toolPath, const utf8* pFileSelectionFlag,
-                                                const FileDialogParams& params, bool bMulti, bool bAppendAllFilesFilter )
+                                                const FileDialogParams& params, bool bMulti )
             {
                 string cmd = shellQuote( toolPath );
                 cmd += " ";
@@ -242,12 +233,9 @@ namespace sw
                     const string globs = makeCombinedGlobList( params._listFilterExtension );
                     cmd += " --file-filter=";
                     cmd += shellQuote( label + " | " + globs );
-
-                    if ( bAppendAllFilesFilter )
-                    {
-                        cmd += " --file-filter=";
-                        cmd += shellQuote( string{ "All files | *" } );
-                    }
+                    // 선언한 확장자 밖도 고를 수 있게 둘째 필터(zenity · yad 모두 --file-filter 를 여러 번 받는다).
+                    cmd += " --file-filter=";
+                    cmd += shellQuote( string{ "All files | *" } );
                 }
                 return cmd;
             }
@@ -272,7 +260,7 @@ namespace sw
             [[nodiscard]] static bool openWithZenity( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
             {
                 const bool   bMulti = isMultiselectEnabled( params );
-                const string cmd    = buildGtkStyleCommand( toolPath, "--file-selection", params, bMulti, true );
+                const string cmd    = buildGtkStyleCommand( toolPath, "--file-selection", params, bMulti );
 
                 int32        exitCode = -1;
                 const string output   = runCommandCapture( cmd, exitCode );
@@ -282,15 +270,11 @@ namespace sw
                 return collectGtkStyleOutput( output, bMulti, outListPath );
             }
 
-            /**
-             * @brief yad 로 다이얼로그를 엽니다.
-             * @note "All files" 필터를 붙이지 않는 것이 zenity 와의 유일한 차이입니다. 그대로 둔 이유는 `buildGtkStyleCommand` 의
-             *       설명을 보십시오.
-             */
+            /** @brief yad 로 다이얼로그를 엽니다. */
             [[nodiscard]] static bool openWithYad( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
             {
                 const bool   bMulti = isMultiselectEnabled( params );
-                const string cmd    = buildGtkStyleCommand( toolPath, "--file", params, bMulti, false );
+                const string cmd    = buildGtkStyleCommand( toolPath, "--file", params, bMulti );
 
                 int32        exitCode = -1;
                 const string output   = runCommandCapture( cmd, exitCode );
