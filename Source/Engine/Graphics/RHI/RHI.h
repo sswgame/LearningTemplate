@@ -8,6 +8,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw

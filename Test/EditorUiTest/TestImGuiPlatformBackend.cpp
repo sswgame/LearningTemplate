@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 #include "TestFramework/TestFramework.h"

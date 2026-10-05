@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Delegate/Delegate.h"
 
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 

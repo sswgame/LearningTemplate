@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"

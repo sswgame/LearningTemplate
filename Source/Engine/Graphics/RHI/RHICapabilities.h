@@ -3,6 +3,7 @@
  * @brief RHI 백엔드 능력과 OS · 빌드 가용성 조회입니다.
  */
 #pragma once
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw

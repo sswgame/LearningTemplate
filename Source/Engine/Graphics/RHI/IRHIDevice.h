@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 
 namespace sw
