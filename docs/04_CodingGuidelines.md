@@ -154,6 +154,11 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - 내장 매크로를 읽는 곳은 `Source/Core/Common/TargetMacroCheck.h` 하나뿐입니다. CMake 판정이 실제 컴파일러와 어긋나거나 매크로가
   빠지면 그 헤더의 `#error` 로 빌드가 섭니다. `CheckTargetMacros.py` 가 Source · Test · Tools/ReflectionParser 에서 검사합니다.
 
+### 빌드 타깃 매크로(Game · Client · Server)
+- 빌드 타깃 종류(`SW_TARGET_TYPE`)는 `SW_WITH_CLIENT_CODE`(Game · Client) · `SW_WITH_SERVER_CODE`(Game · Server) · `sw::build::kTargetName` 으로만 묻습니다.
+- `#if defined( SW_WITH_*_CODE )` 는 `.cpp` 본문에서만 씁니다. 리플렉션 선언(`REFLECT` · `PROPERTY`)과 헤더의 클래스 모양을 이 매크로로 가르지 않습니다.
+- 클라이언트 · 서버로 나뉘는 기능은 모듈로 나눕니다 — 공유 `GF_<X>`, 서버 전용 `GF_Server_<X>`, 클라이언트 전용 `GF_Client_<X>`(매니페스트 `_listTarget`).
+
 ### 시계는 MonotonicClock 하나
 - 시각은 `Core/Time/MonotonicClock.h` 로만 읽습니다(`MonotonicClock::nowNanoseconds()` · 걸린 시간 `Stopwatch` · 기다림 기한 `Deadline::afterMilliseconds( ms )` + `isExpired()`). `std::chrono` 의 `steady_clock` · `high_resolution_clock` · `system_clock` 은 시험 코드에서도 쓰지 않습니다(별칭 · `using namespace` 포함, `sleep_for` 같은 기간 값은 괜찮다). 예외는 이유와 함께 게이트의 표 한 곳에 두고, `CheckClockReads.py` 가 Source · Test · Tools/ReflectionParser 에서 검사합니다.
 

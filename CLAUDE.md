@@ -37,8 +37,12 @@ cmake --build --preset Ninja-Debug
   `WSL-*` (Linux clang), `CI-*` (used by `.github/workflows/ci.yml`).
   Each test game has its own Debug preset `Ninja-Debug-<Game>` (own build folder, `SW_ACTIVE_GAME=<Game>`) — switch games by preset,
   not by re-configuring one folder (two jobs sharing a build folder break each other's builds). `Ninja-Debug` is the Empty game.
+  Dedicated-server presets `*-Server` (`Ninja-Debug-Server`, `Ninja-Shipping-Server`, `WSL-*-Server`, `CI-Shipping-Server`) build the
+  Server target; the `*-Shipping` presets are the Client target.
 - Outputs: `build/<preset>/Bin`. Compile DB: `build/<preset>/compile_commands.json` (`.clangd` points at `Ninja-Debug`).
 - Key cache options (all `SW_*`, declared in `cmake/Config/BuildOptions.cmake`): `SW_SHIPPING_BUILD`,
+  `SW_TARGET_TYPE` (`Game` · `Client` · `Server` — the Unreal TargetType slot; empty = Shipping→Client, else Game; code reads only
+  `SW_WITH_CLIENT_CODE` / `SW_WITH_SERVER_CODE` / `sw::build::kTargetName`, and only inside `.cpp` bodies — split code goes into modules by `_listTarget`),
   `SW_ACTIVE_GAME` (which `Source/Games/<name>` builds as `SWGame`, and which game preset `Config/Game/<name>.json` — pack root,
   gamesettings, startup scene — the runtime reads; Shipping bakes that file in), `SW_SHIPPING_RHI_BACKEND` (the one RHI backend
   Shipping links statically — declared in `Source/Engine/CMakeLists.txt`; Dev always loads every `RHI_*` module),

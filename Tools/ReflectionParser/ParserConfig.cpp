@@ -450,6 +450,13 @@ namespace sw
             _listBaseArg.emplace_back( "-DSW_ARM64" );
 #endif
             _listBaseArg.emplace_back( "-DSW_COMPILER_CLANG" );
+            // 빌드 타깃 종류 — 파서는 같은 빌드 폴더의 sw_global_options 로 지어지므로 자기 매크로가 곧 그 빌드의 것이다.
+#if defined( SW_WITH_CLIENT_CODE )
+            _listBaseArg.emplace_back( "-DSW_WITH_CLIENT_CODE" );
+#endif
+#if defined( SW_WITH_SERVER_CODE )
+            _listBaseArg.emplace_back( "-DSW_WITH_SERVER_CODE" );
+#endif
         }
 
         BLOCK( "Locate LLVM and Clang Resource Directory" )

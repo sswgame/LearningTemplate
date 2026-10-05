@@ -45,6 +45,19 @@ endif()
 # 생성기 식이라 다중 구성 생성기에서도 그 구성의 이름이 된다.
 target_compile_definitions(sw_global_options INTERFACE "SW_BUILD_CONFIG_NAME=\"$<IF:$<BOOL:${SW_SHIPPING_BUILD}>,Shipping,$<CONFIG>>\"")
 
+# 빌드 타깃 종류(SW_TARGET_TYPE) — 코드는 이 둘과 `sw::build::kTargetName` 만 읽는다(`Core/Common/BuildInfo.h` · `TargetMacroCheck.h`).
+#   SW_WITH_CLIENT_CODE : Game · Client — 창 · 렌더 · 입력 장치 · 오디오 장치 코드
+#   SW_WITH_SERVER_CODE : Game · Server — 서버 코드
+# `#if defined( SW_WITH_*_CODE )` 는 .cpp 본문에서만 쓴다. 리플렉션 선언 · 헤더의 클래스 모양을 가르지 않는다 — 나뉘는 코드는 모듈(`_listTarget`)로 나눈다.
+target_compile_definitions(sw_global_options INTERFACE "SW_TARGET_NAME=\"${SW_TARGET_TYPE}\"")
+if(NOT SW_TARGET_TYPE STREQUAL "Server")
+	target_compile_definitions(sw_global_options INTERFACE SW_WITH_CLIENT_CODE)
+endif()
+if(NOT SW_TARGET_TYPE STREQUAL "Client")
+	target_compile_definitions(sw_global_options INTERFACE SW_WITH_SERVER_CODE)
+endif()
+message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
+
 if(SW_SHIPPING_BUILD)
 	target_compile_definitions(sw_global_options INTERFACE SW_SHIPPING)
 	message(STATUS "[BuildConfig] Shipping: Engine/SWGame STATIC, RHI backend linked into Engine, Editor off (SW_SHIPPING_BUILD=ON)")

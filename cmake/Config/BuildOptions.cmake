@@ -32,6 +32,28 @@ option(SW_BUILD_GAME "GameFramework 및 게임 모듈(SWGame DLL/정적 링크) 
 # 아래 옵션들의 기본값이 이 값에 따라 갈리므로 가장 먼저 선언한다.
 option(SW_SHIPPING_BUILD "배포용 단일 실행 파일 정적 링크 빌드 (Editor 모듈 제외 및 최고 성능 최적화)" OFF)
 
+# 빌드 타깃 종류 — 언리얼 TargetType(Game · Client · Server)과 같은 자리. 모듈 매니페스트의 `_listTarget` 과 코드 매크로
+# (`SW_WITH_CLIENT_CODE` · `SW_WITH_SERVER_CODE`, `cmake/Engine/BuildLayout.cmake`)가 이 값을 따른다.
+#   Game   — 클라이언트 + 서버 코드 전부(개발 · 에디터 · 한 프로세스 서버/클라 시험 · 리슨 서버). App 과 Server 를 짓는다.
+#   Client — 서버 전용 모듈이 없는 플레이어 배포본. App 만 짓는다.
+#   Server — 클라이언트 전용 모듈(에디터 · RHI 백엔드)과 창 · GPU · 오디오 장치 코드가 없는 전용 서버. Server 만 짓는다.
+# 비우면 Shipping 은 Client, 그 밖은 Game 이다. 캐시 값은 그대로 두고 같은 이름의 보통 변수로 가린다 — 아래 모든 곳이 해석된 값을 본다.
+set(SW_TARGET_TYPE "" CACHE STRING "빌드 타깃 종류: Game | Client | Server (비우면 Shipping=Client, 그 밖=Game)")
+set_property(CACHE SW_TARGET_TYPE PROPERTY STRINGS "" Game Client Server)
+if(SW_TARGET_TYPE STREQUAL "")
+	if(SW_SHIPPING_BUILD)
+		set(SW_TARGET_TYPE Client)
+	else()
+		set(SW_TARGET_TYPE Game)
+	endif()
+endif()
+if(NOT SW_TARGET_TYPE MATCHES "^(Game|Client|Server)$")
+	message(FATAL_ERROR "SW_TARGET_TYPE='${SW_TARGET_TYPE}' — one of Game, Client, Server")
+endif()
+if(SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_BUILD_GAME)
+	message(FATAL_ERROR "SW_TARGET_TYPE=Server needs SW_BUILD_GAME=ON — the dedicated server runs the game module")
+endif()
+
 option(SW_BUILD_GAMEFRAMEWORK "Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드" ON)
 option(SW_ENABLE_PCH "빌드 속도 단축을 위한 프리컴파일드 헤더(PCH) 사용" ON)
 
