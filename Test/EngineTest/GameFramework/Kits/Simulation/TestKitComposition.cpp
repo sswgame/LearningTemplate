@@ -1,6 +1,7 @@
 /**
  * @file TestKitComposition.cpp
- * @brief 장르 키트 둘(Farming · CreatureLife)을 한 씬 · 한 공유 상태에 섞는 조립 시험입니다 — 틱 순서 · 키트 사이 흐름 · 다른 실행의 세이브 · 핫 리로드 왕복.
+ * @brief 장르 키트 둘을 한 씬 · 한 공유 상태에 섞는 조립 시험입니다 — Farming + CreatureLife(틱 순서 · 키트 사이 흐름), RTS + CityBuilder(한 땅 · 한 지갑 · 한 시계),
+ *        둘 다 다른 실행의 세이브 · 핫 리로드 왕복.
  * @details 밭이 순무를 키워 팔면 번 돈이 공유 지갑에 들고, 마을이 같은 틱에 그 돈으로 과수원을 심어 생물의 부탁(공유 일지)이 끝난다.
  *          공유 상태(`GameStateComponent`)와 두 디렉터가 한 오브젝트에 그 순서로 붙어 시계 → 밭 → 마을 순서로 매 틱 돈다.
  */
@@ -21,10 +22,15 @@
 #include "GameFramework/Base/Progression/Reputation.h"
 #include "GameFramework/Base/Quest/QuestCatalog.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureTown.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmField.h"
+#include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
+#include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -345,6 +351,298 @@ namespace sw
     };
 } // namespace sw
 
+// ── 둘째 조립 — RTS + CityBuilder 가 한 땅 · 한 지갑 · 한 시계를 나눈다 ─────────────────────────────
+
+namespace sw
+{
+    /** @brief 둘째 조립 시험의 카탈로그입니다(디렉터는 되살릴 때 새로 서므로 포인터를 들지 않고 여기서 얻는다). */
+    struct LandCompositionCatalogs
+    {
+        static constexpr const utf8* kCityXml          = R"(
+<CityCatalog roadCost="1">
+  <Building id="house" kind="House" size="1" cost="5"/>
+  <Building id="temple" kind="Decoration" size="4" cost="40"/>
+  <HouseLevel name="Hut" population="4" tax="1"/>
+</CityCatalog>
+)";
+        static constexpr const utf8* kRtsXml           = R"(
+<RtsCatalog supplyMax="200">
+  <Unit id="base" kind="Building" hp="1500" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="60"/>
+  <Unit id="worker" hp="40" speed="3" radius="0.35" worker="true" producedBy="base" minerals="50" supply="1" buildTime="12"/>
+  <Unit id="barracks" kind="Building" hp="1000" footprint="3" producedBy="worker" minerals="150" buildTime="20"/>
+  <Unit id="marine" hp="40" speed="2.25" radius="0.35" producedBy="barracks" minerals="50" supply="1" buildTime="18"/>
+</RtsCatalog>
+)";
+        static constexpr int32       kLandSize         = 32;
+        static constexpr int64       kStartingDeben    = 500;
+        static constexpr int64       kStartingMinerals = 500;
+
+        CityCatalog _city;
+        RtsCatalog  _rts;
+        uint8       _bLoaded{ SW_FALSE };
+
+        static LandCompositionCatalogs& get()
+        {
+            static LandCompositionCatalogs s_catalogs;
+            if ( s_catalogs._bLoaded == SW_FALSE )
+            {
+                const bool bLoaded  = s_catalogs._city.loadFromXmlText( kCityXml, "KitCompositionTest" ) && s_catalogs._rts.loadFromXmlText( kRtsXml, "KitCompositionTest" );
+                s_catalogs._bLoaded = bLoaded ? SW_TRUE : SW_FALSE;
+            }
+            return s_catalogs;
+        }
+
+        /** @brief 공유 상태 설정 — 땅 32 × 32(칸 1 m), 하루(= 도시의 한 달)는 실제 24 초. */
+        static GameStateSettings makeStateSettings()
+        {
+            GameStateSettings settings;
+            settings._clock._secondsPerDay = 24.0f;
+            settings._landWidth            = kLandSize;
+            settings._landHeight           = kLandSize;
+            return settings;
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 도시 키트 디렉터 — 판을 열고(새 판이면 시작 돈 둘), 첫 틱에 (4..7, 4..7) 에 신전(막힌 땅), (0..15, 10) 에 도로(막히지 않은 땅)를 놓는다.
+     *        공유 시계의 날 넘김이 도시의 달 결산이다.
+     */
+    class KitCompositionCityDirector : public GameDirectorComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr uint32 kStateTag     = 0x5443434Bu; ///< 'KCCT'
+        static constexpr uint32 kStateVersion = 1;
+
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
+        CitySimulation& getCity() { return _city; }
+
+        void writeState( Archive& outArchive ) const override
+        {
+            StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
+            outArchive << _bLaidOut;
+            Archive body;
+            _city.writeState( body );
+            StateArchiveUtil::writeSection( outArchive, CitySimulation::kStateTag, CitySimulation::kStateVersion, body );
+        }
+
+    protected:
+        bool startGame() override
+        {
+            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            if ( pState == nullptr || LandCompositionCatalogs::get()._bLoaded == SW_FALSE )
+                return false;
+            if ( pState->initialize( LandCompositionCatalogs::makeStateSettings() ) == GameStateInitResult::Fresh )
+            {
+                pState->getWallet().add( "Deben", LandCompositionCatalogs::kStartingDeben );
+                pState->getWallet().add( "Minerals", LandCompositionCatalogs::kStartingMinerals );
+            }
+            initializeCity( _city, *pState );
+            return true;
+        }
+
+        bool readState( Archive& archive ) override
+        {
+            GameStateComponent* pState   = GameStateComponent::findOnOwner( *this );
+            uint32              tag      = 0;
+            uint32              version  = 0;
+            uint8               bLaidOut = SW_FALSE;
+            Archive             body;
+            const bool          bHeadRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion );
+            if ( bHeadRead == false )
+                return false;
+            archive >> bLaidOut;
+            if ( archive.isError() || StateArchiveUtil::readSection( archive, tag, version, body ) == false || tag != CitySimulation::kStateTag )
+                return false;
+            CitySimulation city;
+            initializeCity( city, *pState );
+            if ( city.readState( body ) == false || body.getRemainingBytes() != 0 || archive.getRemainingBytes() != 0 )
+                return false;
+            _city     = std::move( city );
+            _bLaidOut = bLaidOut;
+            return true;
+        }
+
+        void tickGame( float32 deltaTime ) override
+        {
+            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            if ( pState == nullptr )
+                return;
+            if ( _bLaidOut == SW_FALSE )
+            {
+                // 첫 틱에 놓는다 — RTS 는 시작할 때 땅을 칠했으니, 이것은 RTS 가 땅 리비전으로 다시 칠해야 보인다.
+                _bLaidOut = SW_TRUE;
+                (void)_city.placeBuilding( "temple", 4, 4 );
+                (void)_city.placeRoadLine( int2{ 0, 10 }, int2{ 15, 10 } );
+            }
+            _city.update( deltaTime );
+            for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
+            {
+                if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )
+                    _city.settleMonth( false );
+            }
+        }
+
+        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override
+        {
+            (void)manager;
+            (void)bRespawnViews;
+        }
+
+    private:
+        static void initializeCity( CitySimulation& outCity, GameStateComponent& state )
+        {
+            outCity.initialize( &LandCompositionCatalogs::get()._city, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, CitySettings{}, state.makeRefs() );
+            outCity.bindLand( &state.getLand(), int2{ 0, 0 } );
+        }
+
+        CitySimulation _city;
+        uint8          _bLaidOut{ SW_FALSE };
+    };
+
+    inline const TypeInfo* KitCompositionCityDirector::StaticType()
+    {
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<KitCompositionCityDirector>, hashed_string( "KitCompositionCityDirector" ),
+                                          hashed_string( "sw::KitCompositionCityDirector" ), sizeof( KitCompositionCityDirector ),
+                                          hashed_string( "sw::GameDirectorComponent" ) );
+    }
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief RTS 키트 디렉터 — 공유 지갑을 플레이어 0 에 빌려 주고, 새 판이면 일꾼 · 해병을 놓는다. 둘째 틱에 일꾼에게 (5, 5)(도시 땅 — 거절)와
+     *        (20, 20)(빈 땅) 짓기를, 해병에게 (2, 6) → (10, 6) 이동을 준다. 해병이 도시 신전 칸을 밟았는지 매 틱 센다.
+     */
+    class KitCompositionSkirmishDirector : public GameDirectorComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr uint32 kStateTag     = 0x4B53434Bu; ///< 'KCSK'
+        static constexpr uint32 kStateVersion = 1;
+
+        const TypeInfo*  getTypeInfo() const override { return StaticType(); }
+        const RtsWorld&  getWorld() const { return _world; }
+        RtsCommandResult getBlockedBuildResult() const { return _blockedBuildResult; }
+        RtsCommandResult getOpenBuildResult() const { return _openBuildResult; }
+        RtsCommandResult getRoadBuildResult() const { return _roadBuildResult; }
+        int32            getTempleStepCount() const { return _templeStepCount; }
+        RtsUnitId        getMarine() const { return _marine; }
+
+        void writeState( Archive& outArchive ) const override
+        {
+            StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
+            outArchive << _tickCount;
+            outArchive << _marine.packed();
+            _world.writeState( outArchive );
+        }
+
+    protected:
+        bool startGame() override
+        {
+            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            if ( pState == nullptr || LandCompositionCatalogs::get()._bLoaded == SW_FALSE )
+                return false;
+            (void)pState->initialize( LandCompositionCatalogs::makeStateSettings() ); // 이미 열렸으면 아무것도 하지 않는다
+            initializeWorld( _world, *pState );
+            if ( pState->isFreshGame() )
+            {
+                _worker = _world.spawnUnit( "worker", 0, float3{ 2.5f, 0.0f, 2.5f } );
+                _marine = _world.spawnUnit( "marine", 0, float3{ 2.5f, 0.0f, 6.5f } );
+            }
+            return true;
+        }
+
+        bool readState( Archive& archive ) override
+        {
+            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            if ( pState == nullptr || StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) == false )
+                return false;
+            int32  tickCount   = 0;
+            uint64 marineValue = 0;
+            archive >> tickCount;
+            archive >> marineValue;
+            RtsWorld world;
+            initializeWorld( world, *pState );
+            if ( archive.isError() || world.readState( archive ) == false || archive.getRemainingBytes() != 0 )
+                return false;
+            _world     = std::move( world );
+            _tickCount = tickCount;
+            _marine    = RtsUnitId::fromPacked( marineValue );
+            return true;
+        }
+
+        void tickGame( float32 deltaTime ) override
+        {
+            if ( ++_tickCount == 2 )
+            {
+                _blockedBuildResult = _world.issueBuild( _worker, "barracks", int2{ 5, 5 } );
+                _roadBuildResult    = _world.issueBuild( _worker, "barracks", int2{ 12, 9 } ); // 도시 도로 — 막히지 않았지만 남의 땅
+                _openBuildResult    = _world.issueBuild( _worker, "barracks", int2{ 20, 20 } );
+                (void)_world.issueMove( _marine, float3{ 10.5f, 0.0f, 6.5f } );
+            }
+            _world.update( deltaTime );
+            const RtsUnit* pMarine = _world.findUnit( _marine );
+            if ( pMarine != nullptr )
+            {
+                const int2 cell      = _world.getGrid().computeCell( pMarine->_position );
+                const bool bOnTemple = 4 <= cell._x && cell._x <= 7 && 4 <= cell._y && cell._y <= 7;
+                _templeStepCount += bOnTemple ? 1 : 0;
+            }
+        }
+
+        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override
+        {
+            (void)manager;
+            (void)bRespawnViews;
+        }
+
+    private:
+        static void initializeWorld( RtsWorld& outWorld, GameStateComponent& state )
+        {
+            outWorld.initialize( &LandCompositionCatalogs::get()._rts, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, RtsSettings{} );
+            outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
+            (void)outWorld.addPlayer( 0, &state.getWallet(), float3{ 2.0f, 0.0f, 2.0f } );
+        }
+
+        RtsWorld         _world;
+        RtsUnitId        _worker{};
+        RtsUnitId        _marine{};
+        RtsCommandResult _blockedBuildResult{ RtsCommandResult::Ok };
+        RtsCommandResult _openBuildResult{ RtsCommandResult::CannotDo };
+        RtsCommandResult _roadBuildResult{ RtsCommandResult::Ok };
+        int32            _tickCount{ 0 };
+        int32            _templeStepCount{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    inline const TypeInfo* KitCompositionSkirmishDirector::StaticType()
+    {
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<KitCompositionSkirmishDirector>, hashed_string( "KitCompositionSkirmishDirector" ),
+                                          hashed_string( "sw::KitCompositionSkirmishDirector" ), sizeof( KitCompositionSkirmishDirector ),
+                                          hashed_string( "sw::GameDirectorComponent" ) );
+    }
+
+    /** @brief 공유 상태 · 도시 · RTS 디렉터를 상태 스냅숏에 올린 게임 인스턴스입니다. */
+    class LandCompositionGameInstance : public GameInstanceBase
+    {
+    public:
+        LandCompositionGameInstance()
+        {
+            registerStatefulComponent<GameStateComponent>();
+            registerDirector<KitCompositionCityDirector>();
+            registerDirector<KitCompositionSkirmishDirector>();
+        }
+    };
+} // namespace sw
+
 using namespace sw;
 
 namespace
@@ -453,6 +751,101 @@ namespace
         outDigest._readyCount    = pFarm->getField().getReadyCount();
         outDigest._requestStatus = pState->getQuestLog().getStatus( "meadow_request" );
         return true;
+    }
+
+    struct LandCompositionTestInternal
+    {
+        static constexpr int32 kHalfRunTicks = 60; ///< 30 초 — 막사가 다 서고 해병이 닿은 뒤
+    };
+
+    /** @brief 활성 씬 하나 + 공유 상태 · 도시 · RTS 를 (그 순서로) 붙인 오브젝트 하나입니다. */
+    struct LandCompositionTestScene
+    {
+        SceneManager                              _sceneManager;
+        Scene*                                    _pScene;
+        unique_ptr<ScopedCompositionSceneService> _pBinding;
+
+        LandCompositionTestScene()
+            : _sceneManager{}
+            , _pScene{ nullptr }
+            , _pBinding{}
+        {
+            _pScene                  = _sceneManager.createEmptyActiveScene( "LandComposition" );
+            _pBinding                = make_unique<ScopedCompositionSceneService>( _sceneManager );
+            GameObject* pStateObject = getManager()->createGameObject( hashed_string( "LandState" ) );
+            (void)pStateObject->addComponent<GameStateComponent>();
+            (void)pStateObject->addComponent<KitCompositionCityDirector>();
+            (void)pStateObject->addComponent<KitCompositionSkirmishDirector>();
+        }
+
+        GameObjectManager* getManager() const { return _pScene != nullptr ? _pScene->getObjectManager() : nullptr; }
+    };
+
+    /** @brief 둘째 조립의 판을 견줄 숫자들입니다. */
+    struct LandCompositionDigest
+    {
+        int64         _deben{ 0 };
+        int64         _minerals{ 0 };
+        int32         _day{ 0 };
+        int32         _stateCount{ 0 };
+        int32         _barracksCount{ 0 };
+        int32         _finishedBarracksCount{ 0 };
+        float3        _marinePosition{};
+        hashed_string _templeOwner{};
+        hashed_string _barracksOwner{};
+    };
+
+    void registerLandCompositionTypes()
+    {
+        RegisterMockComponents();
+        (void)KitCompositionCityDirector::StaticType();
+        (void)KitCompositionSkirmishDirector::StaticType();
+    }
+
+    GameStateComponent* findLandState( GameObjectManager& manager, int32& outStateCount )
+    {
+        GameStateComponent* pState = nullptr;
+        outStateCount              = 0;
+        manager.forEachComponentOfType<GameStateComponent>( [&pState, &outStateCount]( GameStateComponent* pComponent )
+        {
+            pState = pState == nullptr ? pComponent : pState;
+            ++outStateCount;
+        } );
+        return pState;
+    }
+
+    bool makeLandCompositionDigest( GameObjectManager& manager, LandCompositionDigest& outDigest )
+    {
+        GameStateComponent* pState = findLandState( manager, outDigest._stateCount );
+        if ( pState == nullptr || pState->getOwner() == nullptr )
+            return false;
+        const KitCompositionSkirmishDirector* pSkirmish = pState->getOwner()->getComponent<KitCompositionSkirmishDirector>();
+        if ( pSkirmish == nullptr )
+            return false;
+        outDigest._deben                 = pState->getWallet().getBalance( "Deben" );
+        outDigest._minerals              = pState->getWallet().getBalance( "Minerals" );
+        outDigest._day                   = pState->getClock().getDay();
+        outDigest._templeOwner           = pState->getLand().getOwnerName( 5, 5 );
+        outDigest._barracksOwner         = pState->getLand().getOwnerName( 21, 21 );
+        outDigest._barracksCount         = pSkirmish->getWorld().countUnits( 0, "barracks", true );
+        outDigest._finishedBarracksCount = pSkirmish->getWorld().countUnits( 0, "barracks", false );
+        const RtsUnit* pMarine           = pSkirmish->getWorld().findUnit( pSkirmish->getMarine() );
+        outDigest._marinePosition        = pMarine != nullptr ? pMarine->_position : float3{};
+        return true;
+    }
+
+    void expectSameLandDigest( const LandCompositionDigest& expected, const LandCompositionDigest& actual )
+    {
+        SW_EXPECT_EQUAL( 1, actual._stateCount );
+        SW_EXPECT_EQUAL( expected._deben, actual._deben );
+        SW_EXPECT_EQUAL( expected._minerals, actual._minerals );
+        SW_EXPECT_EQUAL( expected._day, actual._day );
+        SW_EXPECT_EQUAL( expected._barracksCount, actual._barracksCount );
+        SW_EXPECT_EQUAL( expected._finishedBarracksCount, actual._finishedBarracksCount );
+        SW_EXPECT_TRUE( expected._templeOwner == actual._templeOwner );
+        SW_EXPECT_TRUE( expected._barracksOwner == actual._barracksOwner );
+        SW_EXPECT_NEAR_EQUAL( expected._marinePosition._x, actual._marinePosition._x, 1.0e-4f );
+        SW_EXPECT_NEAR_EQUAL( expected._marinePosition._z, actual._marinePosition._z, 1.0e-4f );
     }
 } // namespace
 
@@ -605,4 +998,117 @@ SW_TEST_CASE( KitCompositionTest, HotReloadSnapshotContinuesLikeAnUninterruptedR
     SW_EXPECT_EQUAL( straight._cropCount, reloaded._cropCount );
     SW_EXPECT_EQUAL( straight._readyCount, reloaded._readyCount );
     SW_EXPECT_TRUE( straight._requestStatus == reloaded._requestStatus );
+}
+
+/**
+ * @brief [KitCompositionTest] 도시와 RTS 가 한 땅을 나눈다 — RTS 는 도시 땅에 짓지 못하고 빈 땅에는 짓는다, 해병은 도시 신전(막힌 땅)을 돌아간다,
+ *        도시는 RTS 막사 자리에 짓지 못한다, 한 지갑에서 도시는 Deben · RTS 는 Minerals 만 쓴다
+ */
+SW_TEST_CASE( KitCompositionTest, CityAndSkirmishShareTheLandAndRouteAroundBuildings )
+{
+    registerLandCompositionTypes();
+    SW_ASSERT_TRUE( LandCompositionCatalogs::get()._bLoaded == SW_TRUE );
+    LandCompositionTestScene scene;
+    GameObjectManager*       pManager = scene.getManager();
+    SW_ASSERT_NOT_NULL( pManager );
+    pManager->beginPlay();
+    runCompositionTicks( *pManager, 2 * LandCompositionTestInternal::kHalfRunTicks );
+
+    int32               stateCount = 0;
+    GameStateComponent* pState     = findLandState( *pManager, stateCount );
+    SW_ASSERT_NOT_NULL( pState );
+    KitCompositionCityDirector*           pCity     = pState->getOwner()->getComponent<KitCompositionCityDirector>();
+    const KitCompositionSkirmishDirector* pSkirmish = pState->getOwner()->getComponent<KitCompositionSkirmishDirector>();
+    SW_ASSERT_NOT_NULL( pCity );
+    SW_ASSERT_NOT_NULL( pSkirmish );
+
+    SW_EXPECT_TRUE( pSkirmish->getBlockedBuildResult() == RtsCommandResult::InvalidPlacement ); // (5, 5) 는 도시 신전 땅
+    SW_EXPECT_TRUE( pSkirmish->getRoadBuildResult() == RtsCommandResult::InvalidPlacement );    // 도로는 지나갈 수 있어도 도시 땅
+    SW_EXPECT_TRUE( pSkirmish->getOpenBuildResult() == RtsCommandResult::Ok );
+    SW_EXPECT_EQUAL( 0, pSkirmish->getTempleStepCount() ); // 해병은 신전 칸을 밟지 않았다
+
+    LandCompositionDigest digest;
+    SW_ASSERT_TRUE( makeLandCompositionDigest( *pManager, digest ) );
+    SW_EXPECT_TRUE( digest._templeOwner == hashed_string( "CityBuilder" ) );
+    SW_EXPECT_TRUE( digest._barracksOwner == hashed_string( "RealTimeStrategy" ) );
+    SW_EXPECT_EQUAL( 1, digest._finishedBarracksCount );
+    SW_EXPECT_NEAR_EQUAL( 10.5f, digest._marinePosition._x, 0.75f ); // 닿았다
+    SW_EXPECT_NEAR_EQUAL( 6.5f, digest._marinePosition._z, 0.75f );
+    SW_EXPECT_EQUAL( int64{ LandCompositionCatalogs::kStartingMinerals - 150 }, digest._minerals );   // 막사만
+    SW_EXPECT_EQUAL( int64{ LandCompositionCatalogs::kStartingDeben - 40 - 16 }, digest._deben );     // 신전 + 도로 16 칸(집이 없어 달 결산은 0)
+    SW_EXPECT_TRUE( 1 <= digest._day );                                                               // 한 달 이상 지났다
+    SW_EXPECT_TRUE( pCity->getCity().placeBuilding( "house", 21, 21 ) == CityPlaceResult::Occupied ); // 막사 자리
+    pManager->endPlay();
+}
+
+/**
+ * @brief [KitCompositionTest] 다른 실행의 세이브 — 땅 주인 · 두 키트 · 한 지갑이 함께 되살고 판이 그대로 이어진다
+ */
+SW_TEST_CASE( KitCompositionTest, CityAndSkirmishSurviveSaveFromAnotherRun )
+{
+    registerLandCompositionTypes();
+    SW_ASSERT_TRUE( LandCompositionCatalogs::get()._bLoaded == SW_TRUE );
+    LandCompositionTestScene scene;
+    GameObjectManager*       pManager = scene.getManager();
+    SW_ASSERT_NOT_NULL( pManager );
+    pManager->beginPlay();
+    runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks );
+    LandCompositionDigest before;
+    SW_ASSERT_TRUE( makeLandCompositionDigest( *pManager, before ) );
+
+    LandCompositionGameInstance instance;
+    vector<uint8>               snapshot;
+    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( 16 <= snapshot.size() );
+    for ( size_t byteIndex = 8; byteIndex < 16; ++byteIndex )
+        snapshot[byteIndex] = static_cast<uint8>( snapshot[byteIndex] ^ 0xFFu ); // 다른 실행 — 프로세스 표를 바꾼다
+    SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+    pManager->mergePendingAdds();
+    pManager->tick( 0.0f );
+
+    LandCompositionDigest after;
+    SW_ASSERT_TRUE( makeLandCompositionDigest( *pManager, after ) );
+    expectSameLandDigest( before, after );
+    pManager->endPlay();
+}
+
+/**
+ * @brief [KitCompositionTest] 핫 리로드 스냅숏으로 판을 걷었다 세워도 끊기지 않은 판과 끝까지 같다(땅 · 도시 · RTS · 지갑)
+ */
+SW_TEST_CASE( KitCompositionTest, CityAndSkirmishHotReloadContinuesLikeAnUninterruptedRun )
+{
+    registerLandCompositionTypes();
+    SW_ASSERT_TRUE( LandCompositionCatalogs::get()._bLoaded == SW_TRUE );
+
+    LandCompositionDigest reloaded;
+    {
+        LandCompositionTestScene scene;
+        GameObjectManager*       pManager = scene.getManager();
+        SW_ASSERT_NOT_NULL( pManager );
+        pManager->beginPlay();
+        runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks / 2 ); // 막사를 짓는 중
+        LandCompositionGameInstance instance;
+        vector<uint8>               snapshot;
+        SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+        SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+        pManager->mergePendingAdds();
+        pManager->tick( 0.0f );
+        runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks );
+        SW_ASSERT_TRUE( makeLandCompositionDigest( *pManager, reloaded ) );
+        pManager->endPlay();
+    }
+
+    LandCompositionDigest straight;
+    {
+        LandCompositionTestScene scene;
+        GameObjectManager*       pManager = scene.getManager();
+        SW_ASSERT_NOT_NULL( pManager );
+        pManager->beginPlay();
+        runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks / 2 );
+        pManager->tick( 0.0f );
+        runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks );
+        SW_ASSERT_TRUE( makeLandCompositionDigest( *pManager, straight ) );
+        pManager->endPlay();
+    }
+    expectSameLandDigest( straight, reloaded );
 }
