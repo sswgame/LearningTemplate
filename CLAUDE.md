@@ -54,6 +54,7 @@ ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure  # what CI 
 ctest --preset Ninja-Debug-lint                                   # lint tests only
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=SceneTest.*      # one suite
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=-RHIDeviceTest.* # leading '-' excludes
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=InputManagerTest.*:WindowTest.*-WindowTest.Recreate*  # gtest form: ':' (or ',') joins, everything after the first '-' excludes
 build/Ninja-Debug/Bin/EngineTest.exe --test_list                   # enumerate cases
 py -3 -m Scripts test SceneTest.* [--preset Ninja-Shipping]         # by name: finds the exe (Bin/TestBin) and runs it from Bin
 build/Ninja-Debug/Bin/CoreTest.exe --test_filter=ProcessTest.* --test_repeat=50  # flaky hunt; a failure names its iteration

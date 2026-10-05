@@ -4,6 +4,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestChildProcess.h"
+#include "TestFramework/TestFilter.h"
 #include "TestFramework/TestFramework.h"
 
 #include <algorithm>
@@ -294,9 +295,8 @@ SW_TEST_CASE( TestFrameworkTest, IneffectiveHostSuitesRunFails )
 }
 
 /**
- * @brief [TestFrameworkTest] 케이스를 하나도 고르지 않는 `--test_filter` 는 진다 — 구분자를 틀린 필터(`A.*:B.*`)가 0/0 으로 통과하지 않게
- * @details 구분자는 쉼표다. `:` 로 이으면 패턴 하나("A.*:B.*")가 되어 아무것도 맞지 않는데, 그 실행이 0 으로 끝나면 확인한 줄 안다.
- *          빼기만 적은 필터(`-A.*`)는 일부러 고르지 않는 것이라 그대로 통과한다.
+ * @brief [TestFrameworkTest] 케이스를 하나도 고르지 않는 `--test_filter` 는 진다 — 이름을 틀린 필터가 0/0 으로 통과하지 않게
+ * @details 아무것도 맞지 않는 실행이 0 으로 끝나면 확인한 줄 안다. 빼기만 적은 필터(`-A.*`)는 일부러 고르지 않는 것이라 그대로 통과한다.
  */
 SW_TEST_CASE( TestFrameworkTest, FilterThatSelectsNothingFails )
 {
@@ -304,13 +304,52 @@ SW_TEST_CASE( TestFrameworkTest, FilterThatSelectsNothingFails )
 
     test::TestRegistry typoRegistry;
     typoRegistry.registerTest( "PlainProbeTest", "One", {} );
-    typoRegistry.setFilter( "PlainProbeTest.*:OtherProbeTest.*" );
+    typoRegistry.setFilter( "PlainProbTest.*:OtherProbeTest.*" );
     SW_EXPECT_EQUAL( 1, typoRegistry.runAllTests() );
 
     test::TestRegistry excludeRegistry;
     excludeRegistry.registerTest( "PlainProbeTest", "One", {} );
     excludeRegistry.setFilter( "-PlainProbeTest.*" );
     SW_EXPECT_EQUAL( 0, excludeRegistry.runAllTests() );
+}
+
+/**
+ * @brief [TestFrameworkTest] `--test_filter` 는 gtest 와 같은 모양을 읽는다 — 패턴 사이는 `:` 도 쉼표도 되고, 첫 `-` 뒤는 빼는 패턴이다
+ * @details gtest 습관대로 `A.*:B.*` 를 적으면 둘 다 골라야 한다. `:` 를 몰라 패턴 하나로 읽으면 아무것도 고르지 않는다.
+ */
+SW_TEST_CASE( TestFrameworkTest, FilterReadsColonCommaAndDash )
+{
+    test::TestFilter colonFilter;
+    colonFilter.setPattern( "AlphaTest.*:BetaTest.*" );
+    SW_EXPECT_TRUE( colonFilter.matches( "AlphaTest.One" ) );
+    SW_EXPECT_TRUE( colonFilter.matches( "BetaTest.Two" ) );
+    SW_EXPECT_FALSE( colonFilter.matches( "GammaTest.Three" ) );
+
+    test::TestFilter commaFilter;
+    commaFilter.setPattern( "AlphaTest.*,BetaTest.*" );
+    SW_EXPECT_TRUE( commaFilter.matches( "AlphaTest.One" ) );
+    SW_EXPECT_TRUE( commaFilter.matches( "BetaTest.Two" ) );
+    SW_EXPECT_FALSE( commaFilter.matches( "GammaTest.Three" ) );
+
+    test::TestFilter excludeFilter;
+    excludeFilter.setPattern( "-AlphaTest.*" );
+    SW_EXPECT_FALSE( excludeFilter.hasIncludePattern() );
+    SW_EXPECT_FALSE( excludeFilter.matches( "AlphaTest.One" ) );
+    SW_EXPECT_TRUE( excludeFilter.matches( "BetaTest.Two" ) );
+
+    test::TestFilter mixedFilter;
+    mixedFilter.setPattern( "AlphaTest.*:-AlphaTest.Two" );
+    SW_EXPECT_TRUE( mixedFilter.matches( "AlphaTest.One" ) );
+    SW_EXPECT_FALSE( mixedFilter.matches( "AlphaTest.Two" ) );
+    SW_EXPECT_FALSE( mixedFilter.matches( "BetaTest.One" ) );
+
+    // gtest 의 `양-음` 모양: 첫 `-` 뒤는 모두 빼는 패턴이다(구분자가 없어도).
+    test::TestFilter gtestFilter;
+    gtestFilter.setPattern( "AlphaTest.*:BetaTest.*-AlphaTest.Two:BetaTest.One" );
+    SW_EXPECT_TRUE( gtestFilter.matches( "AlphaTest.One" ) );
+    SW_EXPECT_FALSE( gtestFilter.matches( "AlphaTest.Two" ) );
+    SW_EXPECT_FALSE( gtestFilter.matches( "BetaTest.One" ) );
+    SW_EXPECT_TRUE( gtestFilter.matches( "BetaTest.Two" ) );
 }
 
 /**
