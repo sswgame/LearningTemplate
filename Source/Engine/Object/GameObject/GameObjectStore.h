@@ -266,9 +266,9 @@ namespace sw
          */
         bool isNameTakenUnlocked( hashed_string name ) const;
 
-        GameObjectManager*            _pManager;                ///< 만든 오브젝트의 소유 매니저(`GameObject::_pOwnerManager`)
-        TickRegistry*                 _pTickRegistry;           ///< 지운 컴포넌트 · 오브젝트를 틱 등록부에 알린다
-        const StructuralChangeBuffer* _pStructuralChangeBuffer; ///< 틱 중인지만 읽는다(해체 단언)
+        GameObjectManager*                             _pManager;                ///< 만든 오브젝트의 소유 매니저(`GameObject::_pOwnerManager`)
+        TickRegistry*                                  _pTickRegistry;           ///< 지운 컴포넌트 · 오브젝트를 틱 등록부에 알린다
+        [[maybe_unused]] const StructuralChangeBuffer* _pStructuralChangeBuffer; ///< 틱 중인지만 읽는다(해체 단언 — 단언이 빠지는 Release · Shipping 에서는 읽는 곳이 없다)
 
         TypedPoolAllocator<GameObject>                          _poolGameObject;
         unordered_map<hashed_string, unique_ptr<PoolAllocator>> _mapComponentPool; ///< 키는 타입 FQN(`getOrCreateComponentPool` 설명 참고)
