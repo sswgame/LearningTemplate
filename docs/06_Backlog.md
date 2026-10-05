@@ -399,8 +399,7 @@ cd build/Ninja-Debug/Bin
   최대는 한 메시지가 거듭 잃는 몫). 종류마다 흐름을 나누는 것은 파괴 사건처럼 한 종류가 대부분이면 효과가 없다. ② 롤백(파괴 상태 저장 · 되돌리기, `RollbackSession` 에
   `makeNetworkSnapshot` 바이트 싣기)은 하지 않았다. ③ 부서지기 전 움직이는 파괴 오브젝트(상자 · 드럼통)의 자세는 파괴 키트가 보내지 않는다 — 게임이
   `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ 전용 서버 프로세스 모드(창 · 렌더러 없는 App 서버 +
-  UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다. ⑤ `NetSimDestructionMatrixTest`(나쁜 회선 둘)는 Debug 40 초라
-  호스트 스위트로 두었다 — 이제 `EngineTest_NoGPU` 가 세 조각이라(`SHARDS` + `HOST_SPLIT`) 조각 시간을 보고 nogpu 로 옮긴다.
+  UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다.
 
 - **네트워크 — 복제 키트에서 남은 것**(2026-10-05, N5~N7 뒤). ① MMO 비신뢰 갱신을 잃어도 서버는 모른다 — 보낸 순간 `_listSentState` 를 바꿔 "안 바뀜" 으로 보고
   가속하지 않으니 다음 차례(누적 우선도)까지 옛 상태가 보인다. 메시지 전달 통지(`NetConnection` 패킷 확인 → 메시지)가 생기면 확인 기준으로 바꾼다. ② 클라이언트-서버도
@@ -646,6 +645,8 @@ cd build/Ninja-Debug/Bin
 - **고정 틱 창 끝에서 "모두 같다" 를 보는 네트워크 시험은 서버 물리가 그 창 안에 가라앉는다고 가정한다** — 물리 궤적은 구성마다 달라 리눅스 Shipping 에서는
   파괴 벽의 사건이 480 틱 창 너머까지 와 수렴 단언이 졌다(Debug 는 269 틱에 멈춤). 수렴은 창 뒤 상한 안에서 같아질 때까지 돌려 본다(`ScenarioOptions::_settleTickLimit`).
   해시가 갈리면 먼저 사건마다 적용 전 · 후 해시를 서버 · 클라이언트에 찍어 같은 (오브젝트, 번호) 끼리 맞춰 본다 — 결정성 결함인지 시험 가정인지 한 번에 갈린다.
+- **느린 시나리오는 조건마다 한 케이스로 쪼갠다** — 조각(`SHARDS`)은 스위트 안의 케이스를 번갈아 나누므로, 한 케이스에 조건 둘을 넣으면 한 조각이 둘 다 진다
+  (`NetSimDestructionMatrixTest` 는 회선 둘을 두 케이스로 나눠 호스트 스위트에서 nogpu 로 왔다 — WSL Debug 케이스마다 17 초).
 
 - **CoreTest 는 엔진을 쓰지 않는다** — include 경로로는 막을 수 없다(`TestFramework` 가 Engine 을 PUBLIC 링크, `TestFramework.h` → `EngineMinimal.h`).
   `CheckTestSuites` 규칙 6 이 CoreTest 파일의 직접 Engine · GameFramework · Editor include 와 `engine::` 호출을 막는다. 엔진 타입이 필요하면 지역 대역을 쓰거나 EngineTest 에.
