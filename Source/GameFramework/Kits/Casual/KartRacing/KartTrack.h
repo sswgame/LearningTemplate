@@ -13,10 +13,10 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Data/GameCatalog.h"
-#include "GameFramework/Data/XmlCatalog.h"
+#include "GameFramework/Base/Data/GameCatalog.h"
+#include "GameFramework/Base/Data/XmlCatalog.h"
+#include "GameFramework/Base/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Movement/ArcadeVehicleMotor.h"
 
 namespace sw
 {

@@ -7,9 +7,9 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
 {

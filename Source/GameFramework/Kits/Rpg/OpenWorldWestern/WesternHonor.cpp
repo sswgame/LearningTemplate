@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternCatalog.h"
-#include "GameFramework/World/GameFlags.h"
 
 namespace sw
 {

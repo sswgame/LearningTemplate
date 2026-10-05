@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/AI/AiPerception.h"
+#include "GameFramework/Base/AI/AiPerception.h"
 #include "GameFramework/Kits/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Horror/AsymmetricHorror/HorrorSnapshot.h"
 

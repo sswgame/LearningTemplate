@@ -9,13 +9,13 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Progression/Reputation.h"
+#include "GameFramework/Base/Quest/QuestLog.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/GridTopology.h"
+#include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
-#include "GameFramework/Progression/Reputation.h"
-#include "GameFramework/Quest/QuestLog.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/GridTopology.h"
-#include "GameFramework/World/WorldClock.h"
 
 namespace sw
 {

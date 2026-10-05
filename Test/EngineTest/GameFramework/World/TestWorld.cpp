@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "GameFramework/World/WeatherSystem.h"
-#include "GameFramework/World/WorldClock.h"
+#include "GameFramework/Base/World/WeatherSystem.h"
+#include "GameFramework/Base/World/WorldClock.h"
 
 #include "TestFramework/TestFramework.h"
 

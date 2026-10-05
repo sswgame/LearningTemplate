@@ -17,9 +17,9 @@
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
-#include "GameFramework/Framework/SaveGame.h"
+#include "GameFramework/Base/Framework/SaveGame.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Rpg/Overworld/OverworldSaveGame.h"
-#include "GameFramework/World/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -10,17 +10,17 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Inventory/Crafting.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Progression/LevelProgress.h"
+#include "GameFramework/Base/Progression/Reputation.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/Crafting.h"
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/Shop.h"
 #include "GameFramework/Kits/Simulation/RestaurantSim/IngredientStock.h"
-#include "GameFramework/Progression/LevelProgress.h"
-#include "GameFramework/Progression/Reputation.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {

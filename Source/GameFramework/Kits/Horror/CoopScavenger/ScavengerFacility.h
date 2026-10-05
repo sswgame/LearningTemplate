@@ -8,9 +8,9 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/World/AreaGraph.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/World/AreaGraph.h"
-#include "GameFramework/World/GameFlags.h"
 
 namespace sw
 {

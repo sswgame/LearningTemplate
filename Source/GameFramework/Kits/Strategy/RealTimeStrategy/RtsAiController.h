@@ -7,11 +7,11 @@
 #include "Core/Common/Types.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/AI/BehaviorTree.h"
-#include "GameFramework/AI/Blackboard.h"
+#include "GameFramework/Base/AI/BehaviorTree.h"
+#include "GameFramework/Base/AI/Blackboard.h"
+#include "GameFramework/Base/Utility/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
-#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {

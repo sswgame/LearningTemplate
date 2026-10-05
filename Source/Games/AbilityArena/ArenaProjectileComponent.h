@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Ability/GameplayEffect.h"
+#include "GameFramework/Base/Ability/GameplayEffect.h"
 
 namespace sw
 {

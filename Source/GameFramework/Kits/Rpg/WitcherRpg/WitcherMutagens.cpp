@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherMutagens.h"
 
-#include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Base/Data/StatBlock.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCatalog.h"
 
 namespace sw

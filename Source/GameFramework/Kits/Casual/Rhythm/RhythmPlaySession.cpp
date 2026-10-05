@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Input/TimingJudge.h"
+#include "GameFramework/Base/Input/TimingJudge.h"
 
 namespace sw
 {

@@ -10,9 +10,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Framework/SaveGame.h"
+#include "GameFramework/Base/Framework/SaveGame.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/World/GameFlags.h"
 
 namespace sw
 {

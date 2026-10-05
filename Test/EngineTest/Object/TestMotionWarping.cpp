@@ -21,7 +21,7 @@
 
 #include "EngineTest/AnimationTestUtil.h"
 
-#include "GameFramework/Interaction/InteractableComponent.h"
+#include "GameFramework/Base/Interaction/InteractableComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

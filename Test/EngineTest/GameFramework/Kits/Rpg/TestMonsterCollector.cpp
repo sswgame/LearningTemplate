@@ -2,12 +2,12 @@
 // 상태이상 · 능력 변화 · 날씨, 포획 흔들림 · 파티 6 · 박스, 레벨업 기술 · 진화(레벨 · 아이템 · 친밀도), 야생 조우 테이블, 트레이너 AI 와 결정성.
 #include "pch.h"
 
-#include "GameFramework/Combat/ElementChart.h"
+#include "GameFramework/Base/Combat/ElementChart.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterBattle.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterCollectorCatalog.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterInstance.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterTrainerAi.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
 

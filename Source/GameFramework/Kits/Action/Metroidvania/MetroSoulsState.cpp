@@ -4,12 +4,12 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Combat/Vitality.h"
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/Inventory/LootTable.h"
+#include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/World/GameFlags.h"
 
 namespace sw
 {

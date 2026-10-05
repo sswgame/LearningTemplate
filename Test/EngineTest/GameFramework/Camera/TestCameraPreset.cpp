@@ -11,12 +11,12 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-#include "GameFramework/Camera/CameraBlend.h"
-#include "GameFramework/Camera/CameraDirector.h"
-#include "GameFramework/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Camera/CameraPreset.h"
-#include "GameFramework/Camera/OrthoCameraRigComponent.h"
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Camera/CameraBlend.h"
+#include "GameFramework/Base/Camera/CameraDirector.h"
+#include "GameFramework/Base/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Base/Camera/CameraPreset.h"
+#include "GameFramework/Base/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 

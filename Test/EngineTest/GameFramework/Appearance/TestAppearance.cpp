@@ -4,12 +4,12 @@
 
 #include "EngineTest/AppearanceTestFixture.h"
 
-#include "GameFramework/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Appearance/AppearanceResolver.h"
-#include "GameFramework/Appearance/AppearanceXmlUtil.h"
-#include "GameFramework/Appearance/CharacterAppearanceState.h"
-#include "GameFramework/Inventory/Equipment.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Base/Appearance/AppearanceResolver.h"
+#include "GameFramework/Base/Appearance/AppearanceXmlUtil.h"
+#include "GameFramework/Base/Appearance/CharacterAppearanceState.h"
+#include "GameFramework/Base/Inventory/Equipment.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
 
 #include "TestFramework/TestFramework.h"
 

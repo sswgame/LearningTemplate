@@ -19,8 +19,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Framework/GameDirectorComponent.h"
-#include "GameFramework/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Framework/MaterialTintCache.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsSelection.h"
 

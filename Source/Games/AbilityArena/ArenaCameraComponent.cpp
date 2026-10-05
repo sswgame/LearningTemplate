@@ -9,8 +9,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Camera/CameraMode.h"
-#include "GameFramework/Camera/CameraPoseUtil.h"
+#include "GameFramework/Base/Camera/CameraMode.h"
+#include "GameFramework/Base/Camera/CameraPoseUtil.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 

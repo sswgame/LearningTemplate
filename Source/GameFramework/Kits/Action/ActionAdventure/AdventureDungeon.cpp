@@ -7,10 +7,10 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Data/GameDataXml.h"
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/World/AreaGraph.h"
-#include "GameFramework/World/GameFlags.h"
+#include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/World/AreaGraph.h"
+#include "GameFramework/Base/World/GameFlags.h"
 
 namespace sw
 {

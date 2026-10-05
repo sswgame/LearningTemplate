@@ -12,13 +12,13 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Inventory/GridInventory.h"
+#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/GridInventory.h"
-#include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/World/GameFlags.h"
 
 namespace sw
 {

@@ -8,8 +8,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Inventory/ItemBag.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/ItemBag.h"
 
 namespace sw
 {

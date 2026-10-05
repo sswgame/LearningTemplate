@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Progression/Reputation.h"
+#include "GameFramework/Base/Quest/QuestCatalog.h"
+#include "GameFramework/Base/World/WeatherSystem.h"
+#include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureTown.h"
-#include "GameFramework/Progression/Reputation.h"
-#include "GameFramework/Quest/QuestCatalog.h"
-#include "GameFramework/World/WeatherSystem.h"
-#include "GameFramework/World/WorldClock.h"
 
 #include "TestFramework/TestFramework.h"
 

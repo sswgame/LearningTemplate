@@ -5,10 +5,10 @@
 
 #include "EngineTest/AppearanceTestFixture.h"
 
-#include "GameFramework/Appearance/AppearanceResolver.h"
-#include "GameFramework/Appearance/AppearanceSelection.h"
-#include "GameFramework/Appearance/UserAppearancePresetStore.h"
-#include "GameFramework/Inventory/Equipment.h"
+#include "GameFramework/Base/Appearance/AppearanceResolver.h"
+#include "GameFramework/Base/Appearance/AppearanceSelection.h"
+#include "GameFramework/Base/Appearance/UserAppearancePresetStore.h"
+#include "GameFramework/Base/Inventory/Equipment.h"
 
 #include "TestFramework/TestFramework.h"
 

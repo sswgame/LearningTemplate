@@ -10,8 +10,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {

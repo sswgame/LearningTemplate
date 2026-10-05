@@ -11,10 +11,10 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelTerrain.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/VoxelCraft/VoxelChunkComponent.h"
 #include "Games/VoxelCraft/VoxelPlayerComponent.h"

@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Utility/RayMath.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
-#include "GameFramework/Utility/RayMath.h"
 
 namespace sw
 {

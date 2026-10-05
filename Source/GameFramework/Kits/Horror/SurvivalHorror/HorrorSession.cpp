@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/World/AreaGraph.h"
+#include "GameFramework/Base/World/AreaGraph.h"
 
 namespace sw
 {

@@ -4,10 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Inventory/LootTable.h"
+#include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/World/AreaGraph.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
-#include "GameFramework/World/AreaGraph.h"
-#include "GameFramework/World/GameFlags.h"
 
 namespace sw
 {

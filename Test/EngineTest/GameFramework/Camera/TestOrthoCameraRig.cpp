@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Camera/OrthoCameraRigComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

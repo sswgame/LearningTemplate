@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
 #include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantCatalog.h"
 
 namespace sw

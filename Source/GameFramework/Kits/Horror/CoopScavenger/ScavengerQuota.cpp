@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 
 namespace sw
 {

@@ -10,13 +10,13 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Combat/TurnOrder.h"
+#include "GameFramework/Base/Combat/TurnOrder.h"
+#include "GameFramework/Base/Progression/LevelProgress.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"
-#include "GameFramework/Progression/LevelProgress.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {

@@ -4,7 +4,8 @@
 GameFramework 층 검사 — 기반 폴더의 층(DAG)과 키트의 의존 방향.
 
 강제 규칙:
-  1) 기반 폴더(`Source/GameFramework/<폴더>/`, `Kits` 제외)는 **자기보다 낮은 층**의 기반 폴더만 include 한다(_kBaseTier).
+  0) `Source/GameFramework/` 최상위 폴더는 `Base`(기반) · `Kits`(키트) 둘뿐이다 — 그 밖의 폴더는 실패다.
+  1) 기반 폴더(`Source/GameFramework/Base/<폴더>/`)는 **자기보다 낮은 층**의 기반 폴더만 include 한다(_kBaseTier).
      같은 층끼리도 서로 모른다 — 그래서 표가 곧 순환이 없다는 증거다. 표에 없는 폴더는 실패다(새 폴더는 층을 정하고 넣는다).
   2) 기반은 키트(`GameFramework/Kits/`)를 include 하지 않는다 — 키트끼리 나눠 쓰는 것은 기반으로 내린다.
   3) 키트(`Kits/<묶음>/<키트>/`)는 다른 키트를 include 하지 않는다. 묶음이 함께 쓰는 헤더(`Kits/<묶음>/x.h` — 키트 폴더 밖)만 된다.
@@ -32,6 +33,7 @@ from LintGate import GateError, GateResult, LintGate  # noqa: E402
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
 
 _kKitsFolderName = "Kits"
+_kBaseFolderName = "Base"
 
 # ------------------------------------------------------------------------------
 # 기반 폴더의 층 — 숫자가 큰 쪽이 위다. 폴더는 **자기보다 작은 층**만 include 한다(같은 층끼리도 금지).
@@ -76,14 +78,18 @@ _kForbiddenPrefixes: tuple[str, ...] = ("Games/", "Editor/")
 
 def classifyInternal(relativePath: str) -> tuple[str, str]:
     """
-    GameFramework 아래 상대 경로 → (종류, 이름). 종류는 "base"(기반 폴더) · "kit"(키트 하나) · "kitGroup"(묶음 공용 헤더) · "root"(루트 파일).
-    키트 이름은 `<묶음>/<키트>` 다.
+    GameFramework 아래 상대 경로 → (종류, 이름). 종류는 "base"(기반 폴더) · "kit"(키트 하나) · "kitGroup"(묶음 공용 헤더) · "root"(루트 파일) ·
+    "stray"(최상위의 `Base` · `Kits` 아닌 폴더). 키트 이름은 `<묶음>/<키트>` 다.
     """
     parts = relativePath.split("/")
     if len(parts) == 1:
         return "root", ""
+    if parts[0] == _kBaseFolderName:
+        if len(parts) == 2:
+            return "root", ""
+        return "base", parts[1]
     if parts[0] != _kKitsFolderName:
-        return "base", parts[0]
+        return "stray", parts[0]
     if len(parts) >= 4:
         return "kit", f"{parts[1]}/{parts[2]}"
     if len(parts) == 3:
@@ -97,6 +103,9 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
     gameFrameworkRelative = relativeFilePath[len(prefix):]
     sourceKind, sourceName = classifyInternal(gameFrameworkRelative)
     listViolation: list[str] = []
+    if sourceKind == "stray":
+        listViolation.append(f"{relativeFilePath}: GameFramework 최상위 폴더 '{sourceName}' — 기반은 Base/ 아래, 키트는 Kits/ 아래에 둔다")
+        return listViolation
     if sourceKind == "base" and sourceName not in _kBaseTier:
         listViolation.append(f"{relativeFilePath}: 기반 폴더 '{sourceName}' 가 층 표(_kBaseTier)에 없습니다")
         return listViolation
@@ -108,7 +117,7 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
         if include.startswith("GameFramework/") is False:
             continue
         destKind, destName = classifyInternal(include[len("GameFramework/"):])
-        if destKind == "root":
+        if destKind in ("root", "stray"):
             continue
         if sourceKind == "base":
             if destKind in ("kit", "kitGroup"):
@@ -147,32 +156,39 @@ class CheckGameFrameworkLayersGate(LintGate):
             # 순환을 다시 만드는 가장 쉬운 엣지 — 상호작용이 기믹을 직접 부른다.
             "name": "Interaction 이 Gimmick 을 include (아래층이 위층을)",
             "files": {
-                "Source/GameFramework/Interaction/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Gimmick/GimmickSensorComponent.h"\n',
+                "Source/GameFramework/Base/Interaction/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Gimmick/GimmickSensorComponent.h"\n',
             },
         },
         {
             # 모델이 뷰를 아는 방향 — 체력 시스템이 HP 바를 민다.
             "name": "Combat 이 UI 를 include",
             "files": {
-                "Source/GameFramework/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/UI/HealthBarComponent.h"\n',
+                "Source/GameFramework/Base/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/UI/HealthBarComponent.h"\n',
             },
         },
         {
             "name": "같은 층끼리 include",
             "files": {
-                "Source/GameFramework/World/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Combat/Vitality.h"\n',
+                "Source/GameFramework/Base/World/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Combat/Vitality.h"\n',
             },
         },
         {
             "name": "층 표에 없는 기반 폴더",
             "files": {
-                "Source/GameFramework/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Utility/GameRandom.h"\n',
+                "Source/GameFramework/Base/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Utility/GameRandom.h"\n',
+            },
+        },
+        {
+            # 기반 폴더를 Base/ 밖(최상위)에 다시 만든다.
+            "name": "최상위에 Base · Kits 아닌 폴더",
+            "files": {
+                "Source/GameFramework/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Utility/GameRandom.h"\n',
             },
         },
         {
             "name": "기반이 키트를 include",
             "files": {
-                "Source/GameFramework/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"\n',
+                "Source/GameFramework/Base/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"\n',
             },
         },
         {

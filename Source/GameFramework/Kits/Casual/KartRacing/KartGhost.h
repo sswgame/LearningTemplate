@@ -12,8 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Movement/ArcadeVehicleMotor.h"
 
 namespace sw
 {

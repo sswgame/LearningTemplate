@@ -17,9 +17,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/Gimmick/ElementGrid.h"
+#include "GameFramework/Base/Gimmick/ElementRuleTable.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Gimmick/ElementGrid.h"
-#include "GameFramework/Gimmick/ElementRuleTable.h"
 
 namespace sw
 {

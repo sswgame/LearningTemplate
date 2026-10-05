@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "GameFramework/Match/MatchState.h"
-#include "GameFramework/Match/TeamAttitude.h"
+#include "GameFramework/Base/Match/MatchState.h"
+#include "GameFramework/Base/Match/TeamAttitude.h"
 
 #include "TestFramework/TestFramework.h"
 

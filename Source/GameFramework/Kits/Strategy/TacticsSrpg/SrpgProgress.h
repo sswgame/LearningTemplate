@@ -9,9 +9,9 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Progression/LevelProgress.h"
+#include "GameFramework/Base/Progression/RunMap.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Progression/LevelProgress.h"
-#include "GameFramework/Progression/RunMap.h"
 
 namespace sw
 {

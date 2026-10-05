@@ -1,13 +1,13 @@
 // 유령 사냥 키트(루이지 맨션 장르) — 손전등 원뿔 · 스트로브, 유령 상태 순환 · 기절 시간, 흡입 줄다리기 · 서지 · 강화 단계, 가구 보물의 결정성, 방 불 · 열쇠 문, 부의 탈출.
 #include "pch.h"
 
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/Inventory/LootTable.h"
+#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/World/AreaGraph.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostEncounter.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostMansion.h"
-#include "GameFramework/World/AreaGraph.h"
-#include "GameFramework/World/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 

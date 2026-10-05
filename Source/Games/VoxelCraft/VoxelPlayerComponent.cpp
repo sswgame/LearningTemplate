@@ -9,11 +9,11 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Camera/FirstPersonCameraComponent.h"
-#include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Framework/GameSound.h"
+#include "GameFramework/Base/Camera/FirstPersonCameraComponent.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameSound.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/VoxelCraft/VoxelDirectorComponent.h"
 

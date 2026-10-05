@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgProgress.h"
 
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgBattlefield.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {

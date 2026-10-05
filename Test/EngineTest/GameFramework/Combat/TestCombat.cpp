@@ -2,11 +2,11 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Combat/Ballistics.h"
-#include "GameFramework/Combat/DamageMath.h"
-#include "GameFramework/Combat/LockOnSelector.h"
-#include "GameFramework/Combat/TurnOrder.h"
-#include "GameFramework/Combat/Weapon.h"
+#include "GameFramework/Base/Combat/Ballistics.h"
+#include "GameFramework/Base/Combat/DamageMath.h"
+#include "GameFramework/Base/Combat/LockOnSelector.h"
+#include "GameFramework/Base/Combat/TurnOrder.h"
+#include "GameFramework/Base/Combat/Weapon.h"
 
 #include "TestFramework/TestFramework.h"
 

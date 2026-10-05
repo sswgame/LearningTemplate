@@ -12,11 +12,11 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Ability/AbilityCatalog.h"
-#include "GameFramework/Ability/AbilitySystemComponent.h"
-#include "GameFramework/Ability/CombatAttributeSet.h"
-#include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Ability/AbilityCatalog.h"
+#include "GameFramework/Base/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Ability/CombatAttributeSet.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include "Games/AbilityArena/ArenaProjectileComponent.h"
 

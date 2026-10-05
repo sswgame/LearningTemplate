@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Action/Metroidvania/MetroMapState.h"
 
+#include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
-#include "GameFramework/World/AreaGraph.h"
 
 namespace sw
 {

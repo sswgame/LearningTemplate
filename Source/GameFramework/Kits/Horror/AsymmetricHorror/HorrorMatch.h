@@ -17,14 +17,14 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Combat/Vitality.h"
-#include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Interaction/InteractionProgress.h"
+#include "GameFramework/Base/Match/MatchState.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Interaction/InteractionProgress.h"
-#include "GameFramework/Match/MatchState.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
 {

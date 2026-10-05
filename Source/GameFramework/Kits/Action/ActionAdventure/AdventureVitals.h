@@ -9,8 +9,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "GameFramework/Combat/ResourceGauge.h"
-#include "GameFramework/Combat/Vitality.h"
+#include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Combat/Vitality.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

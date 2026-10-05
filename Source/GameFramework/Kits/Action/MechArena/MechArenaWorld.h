@@ -16,17 +16,17 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Combat/FrameData.h"
-#include "GameFramework/Combat/LockOnSelector.h"
-#include "GameFramework/Combat/ResourceGauge.h"
-#include "GameFramework/Combat/Vitality.h"
-#include "GameFramework/Combat/Weapon.h"
+#include "GameFramework/Base/Combat/FrameData.h"
+#include "GameFramework/Base/Combat/LockOnSelector.h"
+#include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Combat/Weapon.h"
+#include "GameFramework/Base/Match/MatchState.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Action/MechArena/MechCatalog.h"
-#include "GameFramework/Match/MatchState.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
 {

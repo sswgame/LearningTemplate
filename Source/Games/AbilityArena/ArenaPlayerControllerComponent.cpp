@@ -6,9 +6,9 @@
 
 #include "Engine/Input/InputManager.h"
 
-#include "GameFramework/Ability/AbilitySystemComponent.h"
-#include "GameFramework/Ability/CombatAttributeSet.h"
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Ability/CombatAttributeSet.h"
+#include "GameFramework/Base/Framework/GameService.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 

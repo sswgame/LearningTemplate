@@ -20,10 +20,10 @@
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Appearance/CharacterAppearanceComponent.h"
-#include "GameFramework/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Base/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include "Games/Shooter3D/ShooterEffectComponent.h"
 #include "Games/Shooter3D/ShooterEnemyComponent.h"

@@ -16,16 +16,16 @@
 #include "EngineTest/StateReloadTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
 
-#include "GameFramework/Framework/GameEvents.h"
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameEvents.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/UI/DamageNumberComponent.h"
+#include "GameFramework/Base/UI/HealthBarComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/Action/ActionCombat/MeleeHitboxComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
-#include "GameFramework/UI/DamageNumberComponent.h"
-#include "GameFramework/UI/HealthBarComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -20,13 +20,13 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Framework/GameDirectorComponent.h"
-#include "GameFramework/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmCalendar.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmInventory.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {

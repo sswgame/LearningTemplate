@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Base/Utility/RayMath.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionPlatformerCatalog.h"
-#include "GameFramework/Movement/PlatformerMotor2D.h"
-#include "GameFramework/Utility/RayMath.h"
 
 namespace sw
 {

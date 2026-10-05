@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Match/TeamAttitude.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Match/TeamAttitude.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
 

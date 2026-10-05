@@ -2,11 +2,11 @@
 // 정신력(어둠 · 괴물 목격 · 환각 · 조준 흔들림)과 손전등 배터리, 열쇠 문 · 다이얼 · 순서 퍼즐, 단서 보드 추리, 턴제 초자연 전투의 결정성.
 #include "pch.h"
 
-#include "GameFramework/Inventory/GridInventory.h"
+#include "GameFramework/Base/Inventory/GridInventory.h"
+#include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorEncounter.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorSession.h"
-#include "GameFramework/World/AreaGraph.h"
 
 #include "TestFramework/TestFramework.h"
 

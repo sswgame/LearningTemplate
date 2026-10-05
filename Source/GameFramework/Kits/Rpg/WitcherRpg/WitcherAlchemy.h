@@ -9,9 +9,9 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Inventory/Crafting.h"
+#include "GameFramework/Base/Utility/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/Crafting.h"
-#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {

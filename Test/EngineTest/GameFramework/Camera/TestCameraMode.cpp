@@ -6,14 +6,14 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Camera/CameraBlend.h"
-#include "GameFramework/Camera/CameraCollisionProbe.h"
-#include "GameFramework/Camera/CameraDirector.h"
-#include "GameFramework/Camera/CameraManagerComponent.h"
-#include "GameFramework/Camera/CameraMode.h"
-#include "GameFramework/Camera/CameraPreset.h"
-#include "GameFramework/Camera/CameraShake.h"
-#include "GameFramework/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Camera/CameraBlend.h"
+#include "GameFramework/Base/Camera/CameraCollisionProbe.h"
+#include "GameFramework/Base/Camera/CameraDirector.h"
+#include "GameFramework/Base/Camera/CameraManagerComponent.h"
+#include "GameFramework/Base/Camera/CameraMode.h"
+#include "GameFramework/Base/Camera/CameraPreset.h"
+#include "GameFramework/Base/Camera/CameraShake.h"
+#include "GameFramework/Base/Camera/OrthoCameraRigComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

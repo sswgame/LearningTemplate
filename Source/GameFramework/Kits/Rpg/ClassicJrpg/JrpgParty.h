@@ -10,13 +10,13 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Inventory/Equipment.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Progression/LevelProgress.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/Equipment.h"
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/Shop.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgCatalog.h"
-#include "GameFramework/Progression/LevelProgress.h"
-#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {

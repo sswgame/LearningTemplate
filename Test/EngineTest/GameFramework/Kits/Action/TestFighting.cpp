@@ -4,11 +4,11 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Combat/FrameData.h"
+#include "GameFramework/Base/Combat/FrameData.h"
+#include "GameFramework/Base/Match/RoundSeries.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Kits/Action/Fighting/FighterCatalog.h"
 #include "GameFramework/Kits/Action/Fighting/FightingMatch.h"
-#include "GameFramework/Match/RoundSeries.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
 

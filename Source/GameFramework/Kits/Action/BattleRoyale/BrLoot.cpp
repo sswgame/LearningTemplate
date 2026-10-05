@@ -2,10 +2,10 @@
 
 #include "GameFramework/Kits/Action/BattleRoyale/BrLoot.h"
 
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/Inventory/LootTable.h"
+#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 #include <algorithm>
 

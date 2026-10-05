@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
-#include "GameFramework/World/PropScatterComponent.h"
+#include "GameFramework/Base/World/PropScatterComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

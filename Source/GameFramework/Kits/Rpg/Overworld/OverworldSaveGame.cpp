@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Rpg/Overworld/OverworldSaveGame.h"
 
-#include "GameFramework/Data/GameSettings.h"
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Data/GameSettings.h"
+#include "GameFramework/Base/Framework/GameService.h"
 
 namespace sw
 {

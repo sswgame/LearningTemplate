@@ -28,7 +28,7 @@
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/WindowEvents.h"
 
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"

@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Simulation/RestaurantSim/IngredientStock.h"
 
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemBag.h"
 
 namespace sw
 {

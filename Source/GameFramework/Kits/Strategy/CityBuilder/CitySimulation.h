@@ -9,13 +9,13 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {

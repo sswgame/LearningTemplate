@@ -1,19 +1,19 @@
 // 메트로배니아 · 2D 소울라이크 키트 — 능력 → 몸 설정 · 길 잠금, 지도 구매 · 아이템 표시 · 빠른 이동, 시체 · 영구 손실, 휴식 · 물약 · 적 부활 · 보스, 패리 · 막기 · 강인도, 부적 슬롯.
 #include "pch.h"
 
-#include "GameFramework/Data/StatBlock.h"
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/Inventory/LootTable.h"
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/World/AreaGraph.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroAbilitySet.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroCharmLoadout.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroDuelist.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroMapState.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroSoulsState.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
-#include "GameFramework/Movement/PlatformerMotor2D.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/World/AreaGraph.h"
-#include "GameFramework/World/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 

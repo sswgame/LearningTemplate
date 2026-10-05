@@ -5,10 +5,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Match/TeamAttitude.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/RayMath.h"
 #include "GameFramework/Kits/Action/MechArena/MechArenaSnapshot.h"
-#include "GameFramework/Match/TeamAttitude.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/Utility/RayMath.h"
 
 namespace sw
 {

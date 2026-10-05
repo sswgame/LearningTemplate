@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Quest/QuestLog.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCatalog.h"
-#include "GameFramework/Quest/QuestLog.h"
 
 namespace sw
 {

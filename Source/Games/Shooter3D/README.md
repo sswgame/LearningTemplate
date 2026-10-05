@@ -1,8 +1,8 @@
 # Shooter3D — 슈터 시험 게임(1인칭 · 3인칭)
 
-기반의 무기 규칙(`GameFramework/Combat` — 무기 카탈로그 · 무기 상태, 히트스캔은 `RayMath` · 1인칭 시점은 `FirstPersonLook`)과 캐릭터 시스템(애니메이션 ·
+기반의 무기 규칙(`GameFramework/Base/Combat` — 무기 카탈로그 · 무기 상태, 히트스캔은 `RayMath` · 1인칭 시점은 `FirstPersonLook`)과 캐릭터 시스템(애니메이션 ·
 외형 · 소켓)을 실제로 쓰는 아레나 슈터입니다. 나무 상자 더미가 놓인 아레나에 땅에서 스켈레톤(KayKit)이 일어나 다가옵니다. 언제 · 얼마나 오는지는 페이싱
-감독(`GameFramework/AI/Director`)이 정합니다. 플레이어는 KayKit 기사(투구 · 망토 · 방패, 오른손에 블래스터)이고, 3인칭 · 궤도 · CCTV 시점에서 보입니다.
+감독(`GameFramework/Base/AI/Director`)이 정합니다. 플레이어는 KayKit 기사(투구 · 망토 · 방패, 오른손에 블래스터)이고, 3인칭 · 궤도 · CCTV 시점에서 보입니다.
 총 · 상자 · 과녁은 Kenney Blaster Kit, 캐릭터는 KayKit(CC0, `Resource/game/shooter3d/credits.md`), 벽 · 바닥은 내장 도형입니다.
 
 ## 빌드 · 실행
@@ -51,7 +51,7 @@ cd build/Ninja-Debug-Shooter3D/Bin
 
 | 무엇 | 어디 |
 |------|------|
-| 외형 데이터 | `data/appearance/`(칸 · 세트 · 아이템 외형 · 꾸미기 · 규칙 · 프리셋 — 형식은 `GameFramework/Appearance/README.md`)와 `data/items.xml`. 게임이 `AppearanceDatabase` 를 게임 서비스로 건다 |
+| 외형 데이터 | `data/appearance/`(칸 · 세트 · 아이템 외형 · 꾸미기 · 규칙 · 프리셋 — 형식은 `GameFramework/Base/Appearance/README.md`)와 `data/items.xml`. 게임이 `AppearanceDatabase` 를 게임 서비스로 건다 |
 | 플레이어 모습 | 프리셋 `ShooterPlayer` — 기사 몸 + 기사 세트(투구 · 망토 · 방패를 다 갖추면 망토가 기사 망토로) + MainHand 블래스터 + 푸른 염색(`OutfitDye` → 머티리얼 `color`) |
 | 적 모습 | `SkeletonMinion` · `SkeletonRaider`(씨앗마다 몸 · 두건 · 무기) · `SkeletonRogue` · 정예 `SkeletonWarrior`(고른 두건을 투구가 감춘다 — 규칙 `HelmetHidesHood`). 뼈 색은 씨앗으로 뽑는다 |
 | 몸 소켓 | `data/sockets/kaykit_humanoid.sockets.xml` — 임포트의 본 부착 표에서 옮긴 Helmet · Back · Gun · Blade · Shield 와 Eyes(1인칭 눈높이) · Chest(히트박스 중심) |

@@ -2,7 +2,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Progression/PlayerStats.h"
+#include "GameFramework/Base/Progression/PlayerStats.h"
 
 #include "TestFramework/TestFramework.h"
 

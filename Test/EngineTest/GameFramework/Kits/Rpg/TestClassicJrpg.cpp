@@ -2,9 +2,9 @@
 // 시전 잠금 깨기 · 취소 · 약화, 콤보 포인트 합동기 · 도망 확률, 무협 내공 · 비급 숙련 해금, 걸음 수 인카운터 · 보상 분배 · 결정성.
 #include "pch.h"
 
-#include "GameFramework/Input/TimingJudge.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
-#include "GameFramework/Inventory/Shop.h"
+#include "GameFramework/Base/Input/TimingJudge.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgBattle.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgCatalog.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgEncounter.h"

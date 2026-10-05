@@ -4,7 +4,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameService.h"
 
 #include "Games/AbilityArena/ArenaAbilities.h"
 #include "Games/AbilityArena/ArenaDirectorComponent.h"

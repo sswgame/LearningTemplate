@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Combat/Weapon.h"
-#include "GameFramework/Inventory/Inventory.h"
+#include "GameFramework/Base/Combat/Weapon.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"
 
 namespace sw

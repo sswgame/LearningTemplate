@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Combat/LockOnSelector.h"
+#include "GameFramework/Base/Combat/LockOnSelector.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartGhost.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartTrack.h"
 

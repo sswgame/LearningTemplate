@@ -6,12 +6,12 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 
-#include "GameFramework/Combat/Weapon.h"
-#include "GameFramework/Combat/WeaponMath.h"
-#include "GameFramework/Input/FirstPersonLook.h"
-#include "GameFramework/Movement/LocomotionMath.h"
-#include "GameFramework/Utility/OrientationUtil.h"
-#include "GameFramework/Utility/RayMath.h"
+#include "GameFramework/Base/Combat/Weapon.h"
+#include "GameFramework/Base/Combat/WeaponMath.h"
+#include "GameFramework/Base/Input/FirstPersonLook.h"
+#include "GameFramework/Base/Movement/LocomotionMath.h"
+#include "GameFramework/Base/Utility/OrientationUtil.h"
+#include "GameFramework/Base/Utility/RayMath.h"
 
 #include "TestFramework/TestFramework.h"
 

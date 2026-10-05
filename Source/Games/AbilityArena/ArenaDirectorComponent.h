@@ -21,9 +21,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Ability/GameplayEffect.h"
-#include "GameFramework/Framework/GameDirectorComponent.h"
-#include "GameFramework/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Ability/GameplayEffect.h"
+#include "GameFramework/Base/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Framework/MaterialTintCache.h"
 
 #include "Games/AbilityArena/ArenaControllerComponent.h"
 

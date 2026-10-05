@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Action/Metroidvania/MetroCharmLoadout.h"
 
-#include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Base/Data/StatBlock.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
 
 namespace sw

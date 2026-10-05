@@ -6,7 +6,10 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 
 ## 하위 폴더 구성
 
-`GameFramework` 타겟(= 모든 키트가 깔고 앉는 기반):
+최상위에는 `Base/`(기반) · `Kits/`(키트)와 루트 파일(`GameFrameworkExports.h` · `GameFrameworkMinimal.h` · 매니페스트 · `CMakeLists.txt`)만 둡니다 —
+다른 폴더가 생기면 `CheckGameFrameworkLayers` 가 실패합니다.
+
+`GameFramework` 타겟(= 모든 키트가 깔고 앉는 기반, `Base/<폴더>`):
 
 - **Ability**: 언리얼 Gameplay Ability System 과 같은 어빌리티 시스템 — `AbilitySystemComponent`(어트리뷰트 · 이펙트 · 어빌리티 · 태그 개수),
   `AttributeSet` · `CombatAttributeSet`, `GameplayEffectDef` · `GameplayEffectSpec`(즉시 · 지속 · 무한 · 주기 · 스택 · 실행 계산), `GameplayAbility`
@@ -281,14 +284,14 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 
 기준: **다른 장르의 게임이 이 타입을 그대로 쓰겠는가?**
 
-- 쓴다 → 기반의 알맞은 폴더 — 수명 · 배선은 `Framework`, 씬 컴포넌트는 그 기능의 폴더(월드 · 장식은 `World`, 카메라는 `Camera`), 계산 도구는 `Utility`, 화면에 뜨는 것은 `UI`.
+- 쓴다 → 기반(`Base/`)의 알맞은 폴더 — 수명 · 배선은 `Framework`, 씬 컴포넌트는 그 기능의 폴더(월드 · 장식은 `World`, 카메라는 `Camera`), 계산 도구는 `Utility`, 화면에 뜨는 것은 `UI`.
   형식(컴포넌트냐)으로 묶은 폴더는 두지 않는다 — 의존 방향을 숨긴다(옛 `Components/` 가 카메라 시스템 위에 서 있었다).
   HP 바와 데미지 숫자는 턴제도 쓴다. 중력은 플랫포머도, 탄막도 쓴다.
 - 안 쓴다 → 그 키트. 공격 히트박스·투사체·액션 룸처럼 **장르의 규칙을 담은 것**이 여기 해당한다.
 
 ## 기반 폴더의 층 — `CheckGameFrameworkLayers`
 
-기반 폴더는 층(DAG)이다. 폴더는 **자기보다 낮은 층**만 include 하고, 같은 층끼리도 서로 모른다. 기반은 키트를, 키트는 다른 키트를 include 하지 않는다
+기반 폴더(`Base/<폴더>`)는 층(DAG)이다. 폴더는 **자기보다 낮은 층**만 include 하고, 같은 층끼리도 서로 모른다. 기반은 키트를, 키트는 다른 키트를 include 하지 않는다
 (묶음 공용 헤더 `Kits/<묶음>/x.h` 는 그 묶음 키트만). GameFramework 는 `Games/` · `Editor/` 를 모른다. 표는 `Scripts/lint/gate/CheckGameFrameworkLayers.py` 의
 `_kBaseTier` 이고 새 폴더는 층을 정해 넣는다(없으면 실패).
 
@@ -307,7 +310,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 ## 리플렉션 — 폴더를 늘릴 때
 
 리플렉션 대상 헤더는 소스와 **같은 규칙**으로 모은다(재귀 GLOB). `GameFramework` 는 `Kits/` 를 뺀 모든 헤더를
-`GLOB_RECURSE` 로 넘기고, 키트(`sw_addGameFrameworkKit`)는 `sw_addReflectionStep` 에 헤더 목록을 넘기지 않고 자동 탐색에 맡긴다.
+`GLOB_RECURSE` 로 넘기고(그래서 `Base/` 아래 새 폴더도 저절로 들어간다), 키트(`sw_addGameFrameworkKit`)는 `sw_addReflectionStep` 에 헤더 목록을 넘기지 않고 자동 탐색에 맡긴다.
 주의: 폴더를 이름으로 적어 모으면 새 폴더의 `REFLECT()` 타입이 **조용히 등록되지 않는다** — 컴파일은 통과하고 역직렬화만 실패한다.
 헤더에 처음 `REFLECT` 를 넣었으면 다시 configure 해야 한다(목록은 configure 때 훑는다).
 

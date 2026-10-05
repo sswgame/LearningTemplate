@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Navigation/GridReachability.h"
+#include "GameFramework/Base/Navigation/GridReachability.h"
 
 namespace sw
 {

@@ -2,16 +2,16 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/AI/SpawnDirector.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
-#include "GameFramework/Inventory/Shop.h"
+#include "GameFramework/Base/AI/SpawnDirector.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/World/WeatherSystem.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCarry.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCatalog.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerExpedition.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerFacility.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerQuota.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/World/WeatherSystem.h"
 
 #include "TestFramework/TestFramework.h"
 

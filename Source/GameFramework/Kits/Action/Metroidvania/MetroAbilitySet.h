@@ -10,8 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Movement/PlatformerMotor2D.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Movement/PlatformerMotor2D.h"
 
 namespace sw
 {

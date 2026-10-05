@@ -18,7 +18,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Framework/GameDirectorComponent.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelWorld.h"
 
 namespace sw

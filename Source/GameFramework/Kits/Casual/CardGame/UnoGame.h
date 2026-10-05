@@ -11,9 +11,9 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
-#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {

@@ -9,19 +9,19 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/AI/SpawnDirector.h"
-#include "GameFramework/Combat/Vitality.h"
+#include "GameFramework/Base/AI/SpawnDirector.h"
+#include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/World/WeatherSystem.h"
+#include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/Shop.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCarry.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCatalog.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerFacility.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerQuota.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/World/WeatherSystem.h"
-#include "GameFramework/World/WorldClock.h"
 
 namespace sw
 {

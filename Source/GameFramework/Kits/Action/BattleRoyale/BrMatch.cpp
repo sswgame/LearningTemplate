@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Match/TeamAttitude.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"
-#include "GameFramework/Match/TeamAttitude.h"
 
 namespace sw
 {

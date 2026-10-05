@@ -9,7 +9,7 @@
 #pragma once
 #include "Core/Memory/Memory.h"
 
-#include "GameFramework/Framework/GameInstanceBase.h"
+#include "GameFramework/Base/Framework/GameInstanceBase.h"
 
 namespace sw
 {

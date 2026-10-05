@@ -2,14 +2,14 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Inventory/Crafting.h"
-#include "GameFramework/Inventory/Equipment.h"
-#include "GameFramework/Inventory/GridInventory.h"
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
-#include "GameFramework/Inventory/LootTable.h"
-#include "GameFramework/Utility/GameRandom.h"
+#include "GameFramework/Base/Inventory/Crafting.h"
+#include "GameFramework/Base/Inventory/Equipment.h"
+#include "GameFramework/Base/Inventory/GridInventory.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
 

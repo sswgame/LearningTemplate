@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCatalog.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 #include <algorithm>
 

@@ -2,7 +2,7 @@
 // 콤보 끊김 · 최대 콤보 · 콤보 보너스 점수 · 정확도 · 등급 · 리플레이, 라이프 0 실패, 오토플레이, 시간 기반 · BPM 따라 스크롤.
 #include "pch.h"
 
-#include "GameFramework/Input/TimingJudge.h"
+#include "GameFramework/Base/Input/TimingJudge.h"
 #include "GameFramework/Kits/Casual/Rhythm/RhythmChart.h"
 #include "GameFramework/Kits/Casual/Rhythm/RhythmPlaySession.h"
 

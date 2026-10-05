@@ -1,11 +1,11 @@
 #include "pch.h"
 
+#include "GameFramework/Base/Navigation/GridReachability.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgAiController.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgBattlefield.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCombat.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgProgress.h"
-#include "GameFramework/Navigation/GridReachability.h"
 
 #include "TestFramework/TestFramework.h"
 

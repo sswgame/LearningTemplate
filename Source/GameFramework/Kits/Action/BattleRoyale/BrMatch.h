@@ -9,17 +9,17 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Combat/Vitality.h"
+#include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Interaction/InteractionProgress.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Match/MatchState.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Interaction/InteractionProgress.h"
-#include "GameFramework/Inventory/Inventory.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrGear.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrLoot.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrZone.h"
-#include "GameFramework/Match/MatchState.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {

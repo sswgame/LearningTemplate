@@ -4,10 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Combat/ElementChart.h"
-#include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Base/Combat/ElementChart.h"
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Progression/SkillTree.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCatalog.h"
-#include "GameFramework/Progression/SkillTree.h"
 
 namespace sw
 {

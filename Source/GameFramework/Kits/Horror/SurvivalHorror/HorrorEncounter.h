@@ -10,10 +10,10 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Combat/TurnOrder.h"
+#include "GameFramework/Base/Combat/TurnOrder.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {

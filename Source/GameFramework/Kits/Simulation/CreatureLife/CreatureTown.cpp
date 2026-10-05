@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/World/WeatherSystem.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/World/WeatherSystem.h"
 
 namespace sw
 {
