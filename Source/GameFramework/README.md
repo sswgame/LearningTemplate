@@ -98,6 +98,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `pollCompletions` 로 거둔다 — 게임 · 네트워크 스레드는 DB 를 기다리지 않는다), 멱등 기록(`ServiceIdempotency`), 키 도우미(`ServiceKeyUtil` — 키는 ASCII,
   숫자는 고정 16 자리 16 진수), 메모리 구현(`MemoryServiceDatabase` 데이터 · 실패 주입 + `MemoryServiceStore` 앞 — 시험 · 개발 서버). 판은 저장소 전체에서 오르는 수라 ABA 가 없다.
   SQL 구현은 키트 `GF_SqlStore` · `GF_Server_SqlStore`.
+  `Online/Guard`: 요청 보호 — `TokenBucket`(정수 · 밀리초, 버스트 · 조각 시간 이월) · `TokenBucketMap`(키마다, 상한에서 가득 찬 것을 지움) · `RequestLimits`.
+  `Online/Identity`: 신원 원형 — `AccountId` · `AccountIdentity` · `IAccountDirectory`(이 프로세스에 붙어 있는 계정, 발급은 계정 키트).
 - **Progression**: 경험치 곡선 · 레벨(`ExperienceCurve` · `LevelProgress`), 스킬 트리(`SkillTreeCatalog` · `SkillTreeState`), 평판 · 호감도(`ReputationCatalog` ·
   `ReputationState`), 로그라이트 지도(`RunMap`), 로컬 통계(`StatCatalog` · `PlayerStats` — `<Stats><Stat id kind="Counter|Max|Min|Time" max/>` 정의, `increment` ·
   `submit`(기록이 좋아질 때만) · `addTime`, 바뀔 때만 듣는 쪽에 `StatChange`, 프로필 파일 `saveToFile` · `loadFromFile` — 업적의 바탕, Steam Stats 의 로컬 판)
