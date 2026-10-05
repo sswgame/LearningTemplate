@@ -90,6 +90,36 @@ endfunction()
 #
 #   KIND: rhi | kit | game | gameframework | editor
 # ------------------------------------------------------------------------------
+# 서버 전용 모듈(매니페스트 `_listTarget` 이 Server 뿐)에 표식 글 `sw-server-only-module:<이름>` 을 박는다 — 클라이언트 산출물에 그 글이 없음을
+# `BuildTargetImageTest` 가 바이트로 확인한다. 정적 초기화 객체가 글을 읽어(volatile) 링커가 Shipping 정적 링크 · 섹션 GC 에서 버리지 못한다
+# (Shipping 은 모듈을 통째로 링크한다 — `sw_linkWholeArchive`). 서버 실행 파일 자신의 표식은 `Source/Server/ServerApp.cpp` 에 있다.
+function(sw_addServerOnlyMarker TARGET_NAME)
+	get_property(swTargets GLOBAL PROPERTY SW_MODULE_${TARGET_NAME}_TARGETS)
+	if(NOT swTargets STREQUAL "Server")
+		return()
+	endif()
+	set(swMarkerSource "${CMAKE_BINARY_DIR}/generated/moduletarget/${TARGET_NAME}ServerOnlyMarker.cpp")
+	file(CONFIGURE OUTPUT "${swMarkerSource}" CONTENT
+"// 생성 파일 - sw_addServerOnlyMarker (cmake/Engine/TargetRules.cmake). 고치지 마십시오.
+// 서버 전용 모듈의 표식입니다. 클라이언트 산출물에 이 글이 있으면 서버 코드가 새어 든 것입니다(BuildTargetImageTest).
+namespace
+{
+    struct ServerOnlyMarker_@TARGET_NAME@
+    {
+        ServerOnlyMarker_@TARGET_NAME@()
+        {
+            static const char kMarker[] = \"sw-server-only-module:@TARGET_NAME@\";
+            const volatile char* pMarker = kMarker;
+            (void)pMarker[0];
+        }
+    };
+    const ServerOnlyMarker_@TARGET_NAME@ s_serverOnlyMarker_@TARGET_NAME@{};
+}
+" @ONLY)
+	target_sources(${TARGET_NAME} PRIVATE "${swMarkerSource}")
+	set_source_files_properties("${swMarkerSource}" PROPERTIES SKIP_PRECOMPILE_HEADERS ON SKIP_UNITY_BUILD_INCLUSION ON)
+endfunction()
+
 function(sw_registerDynamicModule TARGET_NAME KIND)
 	# 모든 동적 모듈은 매니페스트를 갖는다(없으면 여기서 구성이 선다) — App 이 그것으로 적재 순서를 정한다.
 	sw_isModuleActive(${TARGET_NAME} swModuleActive)
@@ -99,6 +129,7 @@ function(sw_registerDynamicModule TARGET_NAME KIND)
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${TARGET_NAME})
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES_${KIND} ${TARGET_NAME})
 	sw_addModuleEngineStamp(${TARGET_NAME})
+	sw_addServerOnlyMarker(${TARGET_NAME})
 endfunction()
 
 # ------------------------------------------------------------------------------

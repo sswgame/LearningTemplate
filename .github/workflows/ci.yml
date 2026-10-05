@@ -88,6 +88,16 @@ jobs:
             os: ubuntu-22.04
             preset: CI-Shipping
 
+          # 전용 서버 배포본(SW_TARGET_TYPE=Server) — 에디터 · App · RHI 백엔드 없이 서는지, ServerTest(nogpu)가 실제 Server 를 띄운다.
+          # 리눅스 러너에는 화면이 없어 서버가 X11 을 찾으면 여기서 진다.
+          - name: Build Windows Dedicated Server Shipping (clang-cl)
+            os: windows-2022
+            preset: CI-Shipping-Server
+
+          - name: Build Linux Dedicated Server Shipping (Clang)
+            os: ubuntu-22.04
+            preset: CI-Shipping-Server
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v5

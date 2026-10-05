@@ -1550,6 +1550,9 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
  */
 SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
 {
+    // 전용 서버 타깃(Server)은 에디터 모듈을 짓지 않는다(매니페스트 `_listTarget: ["Client"]`).
+    if ( sw::FileUtil::fileExists( sw::modulePath( "EditorModule" ) ) == false )
+        SW_TEST_SKIP( "EditorModule not built in this config" );
     void* handle = sw::loadModule( "EditorModule" );
     SW_ASSERT_NOT_NULL( handle );
 

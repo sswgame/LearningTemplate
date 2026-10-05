@@ -66,7 +66,9 @@ build/Ninja-Debug/Bin/EngineTest.exe --test_shuffle                # order depen
 build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (also GTEST_SHARD_INDEX / GTEST_TOTAL_SHARDS)
 ```
 
-- Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUiTest`, `AppTest`.
+- Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUiTest`, `AppTest`, `ServerTest`.
+  `ServerTest` launches the built `Server` (Game · Server targets) without a window or GPU and runs under `nogpu` on both platforms;
+  the Server target builds no editor or App tests, and its presets run `-L nogpu` only (a server build has no GPU suite).
   **Always run them with `build/<preset>/Bin` as the working directory** — they walk up from the current
   directory to find `Resource/`, and `Bin` is where that walk succeeds. This is what CTest does, in every
   configuration (`sw_registerTestRun`). In Shipping the binaries themselves live in
@@ -95,7 +97,7 @@ build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (
   parser suite was ~21 s of a 30 s limit). A suite split across shards is not judged by the "every case skipped" check, so a
   suite whose cases skip when a prerequisite is missing keeps one case that asserts the prerequisite
   (`ReflectionParserTest.ParserExecutableIsBuilt`).
-- Labels: `nogpu` (CI-safe), `hostgpu` (GPU/display/DXC — CI cannot), `lint`, `unit`, `core`, `engine`, `editor`, `app`, `module`, `reflection`.
+- Labels: `nogpu` (CI-safe), `hostgpu` (GPU/display/DXC — CI cannot), `lint`, `unit`, `core`, `engine`, `editor`, `app`, `server`, `module`, `reflection`.
 - Cases are declared with `SW_TEST_CASE(Suite, Name)` and assert via `SW_EXPECT_*` / `SW_ASSERT_*`. To test a path
   that trips an engine assert (`SW_ASSERT` / `SW_LOG_ASSERT` break in Debug), hold a `test::ScopedAssertCapture`.
 
