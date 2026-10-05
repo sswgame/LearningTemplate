@@ -28,7 +28,7 @@ namespace sw
 
     bool OverworldSaveGame::saveToFile( string_view path ) const
     {
-        // 이 타입으로 쓴다 — `SaveGame::saveToFile` 은 `SaveGame` 의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓴다.
+        // 이 타입으로 쓴다 — `SaveGame&` 로 부르면 `SaveGame` 의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓴다.
         return SaveGameSerializer::saveGameToSlot( *this, path );
     }
 

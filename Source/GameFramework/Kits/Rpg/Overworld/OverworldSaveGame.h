@@ -19,8 +19,8 @@ namespace sw
     /**
      * @class OverworldSaveGame
      * @brief 오버월드의 영속 상태입니다. 게임 도중의 정본은 `GameFlags` · `PlayerController` 이고, 이 세이브는 저장할 때 그 값을 받아 둡니다(언리얼 `USaveGame` 처럼 사본).
-     * @details 플래그는 `GameFlags::fillEntries` 의 이름 순 목록이라 같은 상태면 같은 바이트입니다. `SaveGame` 의 기본 `saveToFile` · `loadFromFile` 은
-     *          `SaveGame` 자신의 타입(프로퍼티 없음)으로 쓰므로 여기서 이 타입으로 다시 둡니다.
+     * @details 플래그는 `GameFlags::fillEntries` 의 이름 순 목록이라 같은 상태면 같은 바이트입니다. `saveToFile` · `loadFromFile` 은
+     *          이 타입으로 `SaveGameSerializer` 를 부릅니다.
      */
     REFLECT()
     class SW_GF_API OverworldSaveGame : public SaveGame

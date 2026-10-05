@@ -99,8 +99,13 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) SaveGame —모든 세이브 데이터의 순수 리플렉션 베이스 클래스
     // ------------------------------------------------------------------------------
-    /** @brief 장르별 · 게임별 커스텀 세이브 클래스 · 구조체의 베이스입니다. */
-    REFLECT()
+    /**
+     * @brief 장르별 · 게임별 커스텀 세이브 클래스 · 구조체의 베이스입니다. 만들 수 없는 기반이라 `REFLECT( Abstract )` 로 등록합니다.
+     * @details 파일 입출력은 파생 타입이 정합니다 — 리플렉션 세이브는 `SaveGameSerializer::saveGameToSlot( *this, path )` 처럼 **자기 타입**으로 부릅니다.
+     *          여기서 `*this` 로 부르면 템플릿 인자가 `SaveGame` 이 되어 이 타입의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓰고도 성공을 돌려줍니다.
+     *          그래서 기본 구현을 두지 않습니다(순수 가상).
+     */
+    REFLECT( Abstract )
     class SW_GF_API SaveGame
     {
     public:
@@ -113,9 +118,9 @@ namespace sw
         SaveGame( SaveGame&& ) noexcept            = default;
         SaveGame& operator=( SaveGame&& ) noexcept = default;
 
-        /** @brief 리플렉션 바이너리 포맷으로 파일에 저장합니다. */
-        [[nodiscard]] virtual bool saveToFile( string_view path ) const;
-        /** @brief 바이너리 파일에서 리플렉션 역직렬화로 불러옵니다. */
-        [[nodiscard]] virtual bool loadFromFile( string_view path );
+        /** @brief 파일에 저장합니다. 파생 타입이 자기 형식(리플렉션 세이브는 자기 타입의 SAV1)으로 씁니다. */
+        [[nodiscard]] virtual bool saveToFile( string_view path ) const = 0;
+        /** @brief 파일에서 불러옵니다. 파생 타입이 `saveToFile` 과 같은 형식으로 읽습니다. */
+        [[nodiscard]] virtual bool loadFromFile( string_view path ) = 0;
     };
 } // namespace sw

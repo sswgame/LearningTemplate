@@ -57,6 +57,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <type_traits>
+
 using namespace sw;
 
 namespace
@@ -442,6 +444,21 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameSlotFileIsTheSav1Envelope )
     SW_EXPECT_EQUAL( SaveGameSerializer::kSaveBinVersion, arrHeader[1] );
     SW_EXPECT_EQUAL( StringUtil::computeCrc32( bytes.data() + 16, payloadSize ), arrHeader[2] );
     SW_EXPECT_EQUAL( payloadSize, arrHeader[3] );
+}
+
+/**
+ * @brief [GameFrameworkTest] 세이브 기반(`SaveGame`)은 파일 입출력의 기본 구현을 갖지 않는다 — 파생 타입이 자기 타입으로 쓴다
+ * @details 기반이 `saveGameToSlot( *this, path )` 를 부르면 템플릿 인자가 `SaveGame` 이라 프로퍼티 0 인 빈 페이로드를 쓰고도 성공을 돌려준다.
+ *          그런 기본 구현이 있으면 override 를 빠뜨린 파생 세이브는 말없이 데이터를 잃는다 — 순수 가상이라 컴파일러가 막는다.
+ */
+SW_TEST_CASE( GameFrameworkTest, SaveGameBaseHasNoDefaultFileIo )
+{
+    SW_EXPECT_TRUE_MSG( std::is_abstract_v<SaveGame>, "SaveGame 에 파일 입출력 기본 구현이 다시 생겼습니다" );
+    SW_EXPECT_TRUE_MSG( std::is_abstract_v<OverworldSaveGame> == false, "OverworldSaveGame 이 saveToFile · loadFromFile 을 정의하지 않습니다" );
+
+    const TypeInfo* pSaveGameType = SaveGame::StaticType();
+    SW_ASSERT_NOT_NULL( pSaveGameType );
+    SW_EXPECT_TRUE( OverworldSaveGame::StaticType() != nullptr && OverworldSaveGame::StaticType()->isDerivedFrom( pSaveGameType ) );
 }
 
 /**
@@ -2877,7 +2894,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     SW_EXPECT_TRUE( FileUtil::fileExists( instance._savePath ) );
     SW_EXPECT_TRUE( instance.loadStateFromFile() );
 
-    // 6) 오버월드 세이브 — 맵 없는 세이브는 시작 맵에서 시작한다(파생 세이브가 자기 타입으로 쓰는지도 본다 — 기본 SaveGame::saveToFile 은 빈 페이로드다)
+    // 6) 오버월드 세이브 — 맵 없는 세이브는 시작 맵에서 시작한다(자리 값까지 돌아오는지 — 세이브가 자기 타입으로 쓰는지도 본다)
     const string      mapLessSave = test::makeTempPath( "bootstrap_mapless.sav" );
     OverworldSaveGame mapLess{};
     mapLess._playerX = 3;

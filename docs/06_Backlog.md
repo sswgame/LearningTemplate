@@ -1518,8 +1518,8 @@ cd build/Ninja-Debug/Bin
   팀 번호를 배열 첨자로 쓰는 곳이 많고(약 220 줄 · 18 파일) RTS 상태 바이트(int32)를 바꿔서 하지 않았다. 동맹 표 · 팀킬 허용이 생기면 판정기를
   `TeamAttitudeUtil` 에 붙이고 `SrpgBattlefield::isHostile` · `ConquestWorldInternal::isHostile` 도 그쪽으로 옮긴다.
 - **턴제 몬스터 전투는 `MonsterCollector` 하나다**(같은 장르의 얇은 `TurnBattle` 키트는 2026-10 에 지웠다 — 레벨 업이 없었고 쓰는 게임이 0 이었다). 전투 연출(단계 타이머 · HUD 한 줄)은 게임 몫이다.
-- **`SaveGame::saveToFile` · `loadFromFile` 의 기본 구현은 `SaveGame` 자신의 타입(프로퍼티 0)으로 쓰고 읽는다** — `Archive::serializeObject<T>` 가 정적 타입 `T::StaticType()` 을 쓴다.
-  파생 세이브는 둘을 자기 타입으로 override 한다(`OverworldSaveGame`). 빠뜨리면 빈 페이로드가 성공으로 저장된다 — `BootstrapGameSettingsIsBoundAndApplied` 의 6) 이 잡는다.
+- **`SaveGame::saveToFile` · `loadFromFile` 은 순수 가상이다**(`REFLECT( Abstract )`) — `Archive::serializeObject<T>` 가 정적 타입 `T::StaticType()` 을 쓰므로 기반에서
+  `saveGameToSlot( *this )` 를 부르면 `SaveGame` 의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓰고 성공을 돌려준다. 파생 세이브가 자기 타입으로 부른다(`OverworldSaveGame`).
 - **키트 소속은 의존 관계로 판별되지 않는다**(전부 Engine 만 include). 다른 장르도 쓰는 것(HP 바 · 데미지 숫자 · 중력)은 `UI/` · `World/`.
   기반 폴더는 층(DAG)이고 `CheckGameFrameworkLayers` 가 지킨다 — 형식으로 묶은 폴더(옛 `Components/`)는 의존 방향을 숨겨서 두지 않는다. 리플렉션 대상 헤더는 소스와 같은 재귀 규칙으로
   모은다(다르면 새 폴더의 `REFLECT` 타입이 컴파일되고 등록만 안 된다).
