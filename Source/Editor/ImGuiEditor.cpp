@@ -16,6 +16,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorCommandGui.h"
 #include "Editor/Common/Gui/EditorFontSetup.h"
@@ -400,7 +401,12 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE )
             return;
 
-        waitForDrawSnapshotIdle();
+        // 하위 구간 — `GT.Editor.updateUi`(App) 가 무엇에 쓰이는지 가른다. 패널마다의 시간은 `-gv_editorPanelTimes=N`.
+        {
+            // 지난 UI 프레임을 렌더 스레드가 다 그릴(postPresent) 때까지 기다린다 — 큰 값은 UI 일이 아니라 RT · GPU · Present 대기다.
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.waitDrawSnapshot" );
+            waitForDrawSnapshotIdle();
+        }
 
         if ( _editorContext != nullptr )
         {
@@ -408,30 +414,33 @@ namespace sw::editor
             _editorContext->setGameViewHovered( false );
         }
 
-        BLOCK( "ImGui NewFrame / Dockspace" )
         {
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.newFrame" );
             beginFrame();
             EditorMenuBar::drawThemeDialog();
             EditorMenuBar::draw( _dockLayout );
             _dockLayout.beginDockspace();
         }
 
-        EditorCommandGui::processHotkeys();
-        EditorMenuBar::processOpenPanelRequests();
-        EditorMenuBar::processSceneSession();
-
-        // 에셋 파일 감시는 **에디터 프레임에서만** 돈다. 리로드가 패널 그리기보다
-        // 앞에 있어야 이번 프레임에 바뀐 머티리얼이 그대로 보인다.
-        if ( _editorContext != nullptr )
         {
-            _editorContext->getAssetHotReload().update();
-            _editorContext->getConfigHotReload().update();
-            _editorContext->getAssetValidation().update();
-            _editorContext->getSourceControl().update();
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.commandsAndWatchers" );
+            EditorCommandGui::processHotkeys();
+            EditorMenuBar::processOpenPanelRequests();
+            EditorMenuBar::processSceneSession();
+
+            // 에셋 파일 감시는 **에디터 프레임에서만** 돈다. 리로드가 패널 그리기보다
+            // 앞에 있어야 이번 프레임에 바뀐 머티리얼이 그대로 보인다.
+            if ( _editorContext != nullptr )
+            {
+                _editorContext->getAssetHotReload().update();
+                _editorContext->getConfigHotReload().update();
+                _editorContext->getAssetValidation().update();
+                _editorContext->getSourceControl().update();
+            }
         }
 
-        BLOCK( "Editor Panels Draw" )
         {
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.panels" );
             if ( _editorContext != nullptr )
             {
                 _editorContext->getPanelManager().drawOpenPanels();
@@ -442,9 +451,12 @@ namespace sw::editor
             EditorSelfTestRunner::runFrame();
         }
 
-        BLOCK( "ImGui EndFrame / Platform Windows Update" )
         {
-            endFrame();
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.endFrame" );
+            {
+                SW_EDITOR_PROFILE_SCOPE( "GT.Editor.render" );
+                endFrame();
+            }
 
             // EndFrame 이후여야 창의 DrawList 가 이번 프레임의 최종 내용을 담는다.
             // -gv_editorPanelDump=N 이 없으면 아무것도 하지 않는다.
@@ -466,6 +478,7 @@ namespace sw::editor
                 // 플랫폼(OS 창) 갱신은 항상 UI 스레드에서 한다. imgui 1.92 뷰포트 관리는 단일 스레드 호출을 전제하므로 보조(플로팅)
                 // 뷰포트의 GPU 렌더 · present 는 한 스레드에서만 돌려야 하고, GL 이면 그 스레드는 렌더 스레드다(아래 render() 에서 처리).
                 // 창 생성 · 크기 변경 · 파괴와 렌더가 GPU 큐에 제출 · 대기하므로 렌더러 백엔드의 큐 잠금 안에서 한다.
+                SW_EDITOR_PROFILE_SCOPE( "GT.Editor.platformWindows" );
                 const std::unique_lock<mutex> queueLock =
                     ( _rendererBackend != nullptr ) ? _rendererBackend->lockSubmissionQueue() : std::unique_lock<mutex>{};
                 ImGui::UpdatePlatformWindows();
@@ -480,7 +493,10 @@ namespace sw::editor
 
             // 번호는 내기 전에 알린다. 이 뒤에 놓는 자원은 이 스냅샷이 그릴 수 있으므로 다음 번호를 받아야 한다.
             ++_lastDrawSnapshotSequence;
-            _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence );
+            {
+                SW_EDITOR_PROFILE_SCOPE( "GT.Editor.captureDrawSnapshot" );
+                _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence );
+            }
             if ( _rendererBackend != nullptr )
                 _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
             _publishedDrawSlot.store( writeSlot, std::memory_order_release );

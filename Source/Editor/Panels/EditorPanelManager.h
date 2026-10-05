@@ -34,6 +34,8 @@ namespace sw::editor
         string                   _title;
         EditorPanelCategory      _category{ EditorPanelCategory::Core };
         unique_ptr<IEditorPanel> _pInstance;
+        uint64                   _drawNanosSum{ 0 }; ///< `-gv_editorPanelTimes` 가 모으는 그리기 시간 합(ns)
+        uint64                   _drawNanosMax{ 0 }; ///< 그 가운데 가장 긴 한 프레임(ns)
     };
 } // namespace sw::editor
 
@@ -97,7 +99,12 @@ namespace sw::editor
         void discardAllDirtyDocuments();
 
     private:
+        /** @brief `-gv_editorPanelTimes=N` 이 모은 패널별 시간을 큰 순서로 한 번 로그로 찍습니다(`EditorPanelTime|<id>|avg … us|max … us`). */
+        void reportPanelTimes();
+
         vector<EditorPanelEntry> _listPanel;
+        uint32                   _panelTimeFrameCount{ 0 };     ///< 패널 시간을 모은 프레임 수
+        bool                     _bPanelTimesReported{ false }; ///< 한 번 찍었으면 더 모으지 않는다
     };
 } // namespace sw::editor
 
