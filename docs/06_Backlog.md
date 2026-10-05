@@ -386,7 +386,7 @@ cd build/Ninja-Debug/Bin
   롤백 · 락스텝 키트에는 넣지 않는다(프레임 단위 결정성이 계약).
 
 - **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).** ① 팀 · 적대 판정(21 곳, 팀 enum 셋의 값이 달라 상태 바이트에
-  실림) · `RoundSeries` 의 Fighting 이전(기반 · 파티는 옮김, 롤백 상태 버전 2 — 바이트는 `FightingTest.RollbackStateBytesKeepTheirLayout` 이 고정) · `IHealthSource`(체력 모델 3 · 피해 입구 14) — 상태 형식이 바뀌니 시험부터 고정. ② `SpatialHashGrid2D`(RTS · MMO ·
+  실림) · `IHealthSource`(체력 모델 3 · 피해 입구 14) — 상태 형식이 바뀌니 시험부터 고정. ② `SpatialHashGrid2D`(RTS · MMO ·
   BR · Mech — 질의 모양이 달라 이득부터 볼 것).
   ④ 키트 안 평행 구현: Overworld `TileMap` 이 Engine 타일맵과 따로 산다 · TurnBattle 과 MonsterCollector 가 같은 장르. ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
 
@@ -1508,6 +1508,10 @@ cd build/Ninja-Debug/Bin
 - **게임 디렉터는 `GameDirectorComponent` 를 상속한다** — 상태 바이트 보류 · 틱 뒤 플러시 · 대기 소리 · 세운 것 걷기 · 자동 플레이는 베이스에 있고, 게임 인스턴스는
   생성자에서 `registerDirector<T>()` 한 줄로 스냅샷에 올린다(`Source/Games/README.md`). 디렉터의 시뮬레이션은 PROPERTY 가 아니라 `writeState` · `readState` 로만 넘는다.
   뷰 · 컨트롤러를 템플릿 베이스(`DirectorViewComponent<T>`)로 묶지 않는다 — 리플렉션 부모는 등록된 타입이어야 해서 템플릿 중간 층을 둘 수 없다.
+- **라운드 묶음은 기반 `Match/RoundSeries` 하나다** — 순위 점수(비면 1 위 1 점 = 선승) · 목표 점수 · 동점 규칙(격투 무승부 · 파티 서든 데스) · 정수 걸음 라운드 시간 · 대기 ·
+  상태 바이트. 알림은 내지 않고 결과(`RoundSeriesOutcome` · `RoundSeriesTick`)를 돌려준다 — 키트가 제 이벤트로 낸다. 롤백 상태에 실을 때는 **맨 뒤**에 둔다:
+  `readState` 가 맞을 때만 바꾸므로 마지막에 읽으면 키트의 `loadState` 가 통째로 원자적이다. 카트 카운트다운은 라운드가 아니라 한 경기의 출발 대기라 옮기지 않았다
+  (그랑프리처럼 여러 경기를 순위 점수로 묶을 때 이것을 쓴다).
 - **키트 소속은 의존 관계로 판별되지 않는다**(전부 Engine 만 include). 다른 장르도 쓰는 것(HP 바 · 데미지 숫자 · 중력)은 `UI/` · `World/`.
   기반 폴더는 층(DAG)이고 `CheckGameFrameworkLayers` 가 지킨다 — 형식으로 묶은 폴더(옛 `Components/`)는 의존 방향을 숨겨서 두지 않는다. 리플렉션 대상 헤더는 소스와 같은 재귀 규칙으로
   모은다(다르면 새 폴더의 `REFLECT` 타입이 컴파일되고 등록만 안 된다).

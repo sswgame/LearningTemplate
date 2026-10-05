@@ -7,6 +7,7 @@
 #include "GameFramework/Combat/FrameData.h"
 #include "GameFramework/Kits/Action/Fighting/FighterCatalog.h"
 #include "GameFramework/Kits/Action/Fighting/FightingMatch.h"
+#include "GameFramework/Match/RoundSeries.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
@@ -158,21 +159,16 @@ namespace
     }
 
     /**
-     * @brief 롤백 상태 바이트를 시험 쪽에서 따로 적습니다(버전 1) — `saveState` 와 바이트가 같아야 합니다.
-     * @details 라운드 사이 대기의 남은 프레임은 게터가 없어 시나리오가 아는 값(@p roundOverFramesRemaining)으로 넣습니다.
+     * @brief 롤백 상태 바이트를 시험 쪽에서 따로 적습니다(버전 2) — `saveState` 와 바이트가 같아야 합니다.
+     * @details 라운드 사이 대기의 남은 프레임은 시나리오가 아는 값(@p roundOverFramesRemaining)으로 넣습니다. 라운드 묶음(`RoundSeries`)은 맨 뒤입니다.
      */
     vector<uint8> writeExpectedFightingState( const FightingMatch& match, int32 roundOverFramesRemaining )
     {
         BitWriter writer;
         writer.writeUint32( 0x54484746u ); // "FGHT"
-        writer.writeVarInt( 1 );
+        writer.writeVarInt( 2 );
         writer.writeVarInt( match.getFrame() );
-        writer.writeVarInt( match.getRound() );
-        writer.writeVarInt( match.getRoundFramesRemaining() );
-        writer.writeVarInt( roundOverFramesRemaining );
         writer.writeVarInt( match.getLastRoundWinner() );
-        writer.writeVarInt( match.getMatchWinner() );
-        writer.writeVarUint( static_cast<uint64>( match.getPhase() ) );
         for ( int32 player = 0; player < FightingMatch::kPlayerCount; ++player )
         {
             const FighterRuntime& fighter = match.getFighter( player );
@@ -183,7 +179,7 @@ namespace
                 writer.writeFloat( value );
             const int32 arrCounter[] = { fighter._health, fighter._stateFrames, fighter._hitstop, fighter._moveIndex, fighter._bufferedMove,
                                          fighter._bufferedAge, fighter._stanceIndex, fighter._stanceFrames, fighter._comboHits, fighter._airHits,
-                                         fighter._heatFrames, fighter._sidestepSign, fighter._side, fighter._roundWins, fighter._breakButtons };
+                                         fighter._heatFrames, fighter._sidestepSign, fighter._side, fighter._breakButtons };
             for ( const int32 counter : arrCounter )
                 writer.writeVarInt( counter );
             writer.writeVarUint( static_cast<uint64>( fighter._state ) );
@@ -202,6 +198,15 @@ namespace
             for ( int32 framesAgo = fighter._inputBuffer.getFrameCount() - 1; framesAgo >= 0; --framesAgo )
                 writer.writeBits( FightingMatch::encodeInput( fighter._inputBuffer.getFrame( framesAgo ) ), 8 );
         }
+        const RoundSeries& series = match.getSeries();
+        writer.writeVarUint( static_cast<uint64>( series.getPhase() ) );
+        writer.writeVarInt( series.getRoundIndex() );
+        writer.writeVarInt( series.getRoundTicksRemaining() );
+        writer.writeVarInt( roundOverFramesRemaining );
+        writer.writeVarInt( series.getWinner() );
+        writer.writeVarUint( static_cast<uint64>( series.getParticipantCount() ) );
+        for ( int32 player = 0; player < series.getParticipantCount(); ++player )
+            writer.writeVarInt( series.getTotal( player ) );
         return writer.releaseBytes();
     }
 
@@ -548,7 +553,7 @@ SW_TEST_CASE( FightingTest, RoundsTimeOutKnockoutRageAndDraw )
     pressAndWait( match, makeInput( 0, 5, kFightingButton1 ), makeInput( 1, 6 ), 250, listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, FightingEvent::Kind::TimeOut, 0 ) );
     SW_EXPECT_EQUAL( 0, match.getLastRoundWinner() );
-    SW_EXPECT_EQUAL( 1, match.getFighter( 0 )._roundWins );
+    SW_EXPECT_EQUAL( 1, match.getRoundWins( 0 ) );
     SW_EXPECT_EQUAL( 2, match.getRound() );
     SW_EXPECT_EQUAL( 100, match.getFighter( 1 )._health ); // 새 라운드는 체력을 채운다
 
@@ -573,15 +578,15 @@ SW_TEST_CASE( FightingTest, RoundsTimeOutKnockoutRageAndDraw )
     runFrames( match, 20, makeInput( 0, 6 ), makeInput( 1, 5 ), listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, FightingEvent::Kind::Knockout, 1 ) );
     SW_EXPECT_EQUAL( 0, countEvents( listEvent, FightingEvent::Kind::TimeOut, 1 ) );
-    SW_EXPECT_EQUAL( 1, match.getFighter( 1 )._roundWins );
-    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::RoundOver || match.getRound() == 3 );
+    SW_EXPECT_EQUAL( 1, match.getRoundWins( 1 ) );
+    SW_EXPECT_TRUE( match.getPhase() == RoundSeriesPhase::Intermission || match.getRound() == 3 );
 
     // 3 라운드 — 아무도 안 때리고 시간 초과: 같은 체력이면 무승부, 둘 다 2 승 → 대전 무승부.
     listEvent.clear();
     runFrames( match, 300, makeInput( 0, 5 ), makeInput( 1, 5 ), listEvent );
     SW_EXPECT_EQUAL( 3, match.getRound() );
     SW_EXPECT_EQUAL( FightingMatch::kDraw, match.getLastRoundWinner() );
-    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::MatchOver );
+    SW_EXPECT_TRUE( match.getPhase() == RoundSeriesPhase::Finished );
     SW_EXPECT_EQUAL( FightingMatch::kDraw, match.getMatchWinner() );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, FightingEvent::Kind::MatchEnd, FightingMatch::kDraw ) );
 }
@@ -688,9 +693,9 @@ SW_TEST_CASE( FightingTest, RollbackStateBytesKeepTheirLayout )
     vector<uint8>         bytes;
     match.initialize( tester, tester, makeRoundPinSettings() );
 
-    // 머리 — "FGHT" · 버전 1 · 프레임 0 · 1 라운드 · 남은 240(지그재그 480 = E0 03) · 대기 0 · 지난 라운드 −1 · 대전 −1 · 라운드 중.
+    // 머리 — "FGHT" · 버전 2 · 프레임 0 · 지난 라운드 −1. 라운드 묶음은 맨 뒤(형식은 RoundSeriesTest.PlacementPointsAndStateBytes).
     match.saveState( bytes );
-    const uint8 arrHeader[] = { 0x46, 0x47, 0x48, 0x54, 0x02, 0x00, 0x02, 0xE0, 0x03, 0x00, 0x01, 0x01, 0x00 };
+    const uint8 arrHeader[] = { 0x46, 0x47, 0x48, 0x54, 0x04, 0x00, 0x01 };
     SW_ASSERT_TRUE( bytes.size() > sizeof( arrHeader ) );
     for ( size_t index = 0; index < sizeof( arrHeader ); ++index )
         SW_EXPECT_EQUAL( static_cast<int32>( arrHeader[index] ), static_cast<int32>( bytes[index] ) );
@@ -699,7 +704,8 @@ SW_TEST_CASE( FightingTest, RollbackStateBytesKeepTheirLayout )
     // 1 라운드 시간 초과(체력이 많은 0 승) 바로 뒤 — 대기 10.
     match.setFighterHealth( 1, 90 );
     runFrames( match, 240, neutral0, neutral1, listEvent );
-    SW_ASSERT_TRUE( match.getPhase() == FightingPhase::RoundOver );
+    SW_ASSERT_TRUE( match.getPhase() == RoundSeriesPhase::Intermission );
+    SW_EXPECT_EQUAL( 10, match.getSeries().getIntermissionTicksRemaining() );
     match.saveState( bytes );
     SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 10 ) );
 
@@ -710,14 +716,14 @@ SW_TEST_CASE( FightingTest, RollbackStateBytesKeepTheirLayout )
 
     // 2 라운드 시작.
     runFrames( match, 4, neutral0, neutral1, listEvent );
-    SW_ASSERT_TRUE( match.getPhase() == FightingPhase::RoundActive );
+    SW_ASSERT_TRUE( match.getPhase() == RoundSeriesPhase::RoundActive );
     match.saveState( bytes );
     SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 0 ) );
 
     // 2 라운드도 0 승 → 대전 끝(끝날 때는 대기를 걸지 않는다).
     match.setFighterHealth( 1, 90 );
     runFrames( match, 240, neutral0, neutral1, listEvent );
-    SW_ASSERT_TRUE( match.getPhase() == FightingPhase::MatchOver );
+    SW_ASSERT_TRUE( match.getPhase() == RoundSeriesPhase::Finished );
     match.saveState( bytes );
     SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 0 ) );
 }
@@ -743,7 +749,7 @@ SW_TEST_CASE( FightingTest, RoundClockIntermissionAndMatchEndCountExactFrames )
     // 239 프레임 — 아직 라운드 중, 1 프레임 남음.
     match.setFighterHealth( 1, 90 );
     runFrames( match, 239, neutral0, neutral1, listEvent );
-    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::RoundActive );
+    SW_EXPECT_TRUE( match.getPhase() == RoundSeriesPhase::RoundActive );
     SW_EXPECT_EQUAL( 1, match.getRoundFramesRemaining() );
     SW_EXPECT_EQUAL( -1, match.getLastRoundWinner() );
 
@@ -753,19 +759,19 @@ SW_TEST_CASE( FightingTest, RoundClockIntermissionAndMatchEndCountExactFrames )
     SW_ASSERT_EQUAL( 2, static_cast<int32>( listEvent.size() ) );
     SW_EXPECT_TRUE( listEvent[0]._kind == FightingEvent::Kind::TimeOut && listEvent[0]._player == 0 );
     SW_EXPECT_TRUE( listEvent[1]._kind == FightingEvent::Kind::RoundEnd && listEvent[1]._value == 0 );
-    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::RoundOver );
+    SW_EXPECT_TRUE( match.getPhase() == RoundSeriesPhase::Intermission );
     SW_EXPECT_EQUAL( 0, match.getRoundFramesRemaining() );
     SW_EXPECT_EQUAL( 0, match.getLastRoundWinner() );
-    SW_EXPECT_EQUAL( 1, match.getFighter( 0 )._roundWins );
-    SW_EXPECT_EQUAL( 0, match.getFighter( 1 )._roundWins );
+    SW_EXPECT_EQUAL( 1, match.getRoundWins( 0 ) );
+    SW_EXPECT_EQUAL( 0, match.getRoundWins( 1 ) );
 
     // 대기 10 프레임 — 9 프레임째까지 1 라운드, 10 프레임째 2 라운드(체력 · 시간을 채운다).
     runFrames( match, 9, neutral0, neutral1, listEvent );
     SW_EXPECT_EQUAL( 1, match.getRound() );
-    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::RoundOver );
+    SW_EXPECT_TRUE( match.getPhase() == RoundSeriesPhase::Intermission );
     runFrames( match, 1, neutral0, neutral1, listEvent );
     SW_EXPECT_EQUAL( 2, match.getRound() );
-    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::RoundActive );
+    SW_EXPECT_TRUE( match.getPhase() == RoundSeriesPhase::RoundActive );
     SW_EXPECT_EQUAL( 240, match.getRoundFramesRemaining() );
     SW_EXPECT_EQUAL( 100, match.getFighter( 1 )._health );
     SW_EXPECT_EQUAL( 250, match.getFrame() );
@@ -774,9 +780,9 @@ SW_TEST_CASE( FightingTest, RoundClockIntermissionAndMatchEndCountExactFrames )
     listEvent.clear();
     match.setFighterHealth( 1, 90 );
     runFrames( match, 240, neutral0, neutral1, listEvent );
-    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::MatchOver );
+    SW_EXPECT_TRUE( match.getPhase() == RoundSeriesPhase::Finished );
     SW_EXPECT_EQUAL( 0, match.getMatchWinner() );
-    SW_EXPECT_EQUAL( 2, match.getFighter( 0 )._roundWins );
+    SW_EXPECT_EQUAL( 2, match.getRoundWins( 0 ) );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, FightingEvent::Kind::MatchEnd, 0 ) );
     SW_EXPECT_EQUAL( 490, match.getFrame() );
     runFrames( match, 5, neutral0, neutral1, listEvent );
@@ -787,9 +793,9 @@ SW_TEST_CASE( FightingTest, RoundClockIntermissionAndMatchEndCountExactFrames )
     match.initialize( tester, tester, settings );
     runFrames( match, 240, neutral0, neutral1, listEvent );
     SW_EXPECT_EQUAL( FightingMatch::kDraw, match.getLastRoundWinner() );
-    SW_EXPECT_EQUAL( 1, match.getFighter( 0 )._roundWins );
-    SW_EXPECT_EQUAL( 1, match.getFighter( 1 )._roundWins );
-    SW_EXPECT_TRUE( match.getPhase() == FightingPhase::RoundOver );
+    SW_EXPECT_EQUAL( 1, match.getRoundWins( 0 ) );
+    SW_EXPECT_EQUAL( 1, match.getRoundWins( 1 ) );
+    SW_EXPECT_TRUE( match.getPhase() == RoundSeriesPhase::Intermission );
     runFrames( match, 1, neutral0, neutral1, listEvent );
     SW_EXPECT_EQUAL( 2, match.getRound() );
 }

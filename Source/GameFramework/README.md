@@ -116,7 +116,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `ActionAdventure`: 액션 어드벤처(젤다 장르) — 던전 열쇠 · 조건 문 · 지도/나침반 · 장치(`AdventureDungeon`), 하트 조각 · 마법 · 스태미나 탈진(`AdventureVitals`), 주목 옆걸음 · 회피(`AdventureTargeting`), 불 번짐 · 전기 · 얼음 셀 자동자(`AdventureElementGrid` — 기반 원소 규칙표 `ElementGrid` 위), 효과 합산 요리(`AdventureCooking`), 무기 내구도(`AdventureWeaponWear`), 탑 · 사당 · 증표(`AdventureWorldMap`).
     - `ActionPlatformer`: 스테이지형 액션 플랫포머(검브렐라 · 페퍼 그라인더 · 어스블레이드 장르) — 체크포인트 · 목숨 · 비밀 수집 · 등급(`ActionStageRun`), 활공 · 갈고리 진자 · 드릴 이동(`ActionPlatformerBody`), 근접 콤보 · 총 · 패리 반사(`ActionCombatRig`), 데이터 적 패턴(`ActionEnemyBrain`).
     - `Metroidvania`: 메트로배니아 · 2D 소울라이크(블라스퍼머스 2 · 더 라스트 페이스 · 엠버베인 장르) — 능력 잠금(`MetroAbilitySet`), 탐색률 · 지도 구매(`MetroMapState`), 휴식 · 시체 · 물약(`MetroSoulsState`), 스태미나 · 패리 · 강인도(`MetroDuelist`), 부적 슬롯(`MetroCharmLoadout`).
-    - `Fighting`: 3D 격투(철권 장르) — 캐릭터 데이터(커맨드 · 자세 · 조건 · 스트링, `FighterCatalog`), 60프레임 결정적 시뮬레이션(가드 높이 · 프레임 이득 · 저글 감쇠 · 스크류 · 벽꽝 · 잡기 풀기 · 횡이동 · 레이지 · 히트) · 라운드 · 롤백 상태 저장/복원(`FightingMatch`).
+    - `Fighting`: 3D 격투(철권 장르) — 캐릭터 데이터(커맨드 · 자세 · 조건 · 스트링, `FighterCatalog`), 60프레임 결정적 시뮬레이션(가드 높이 · 프레임 이득 · 저글 감쇠 · 스크류 · 벽꽝 · 잡기 풀기 · 횡이동 · 레이지 · 히트) · 라운드(기반 `RoundSeries` — 선승 · 무승부 라운드는 둘 다 1 승 · 라운드 시간 · 대기) · 롤백 상태 저장/복원(`FightingMatch` — 라운드 묶음은 상태 바이트 맨 뒤).
     - `MechArena`: 3인칭 팀 기체 대전(SD건담 캡슐파이터 장르) — 기체 · 형태 · 무기 칸 · 분류 보정 · 스킬(`MechCatalog`), 부스트 오버히트 · 다운치 · 기상 무적 · 록온 유도 · 근접 콤보 · 변형 · 팀 전력 게이지 · 기체 교체(`MechArenaWorld`), 상태 바이트(`MechArenaSnapshot`).
     - `BattleRoyale`: 배틀로얄(배틀그라운드 장르) — 자기장 단계 · 다음 원 고르기(`BrZone`), 비행기 경로 · 낙하 · 착지 예측(`BrDrop`), 지점별 전리품 · 보급 상자(`BrLoot`), 방어구 · 가방 등급 · 탄약(`BrGear`), 기절 · 팀원 부활 · 순위 · 킬 피드(`BrMatch`).
   - **공포 · 조사** (`Kits/Horror/`)

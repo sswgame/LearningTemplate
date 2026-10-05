@@ -12,7 +12,7 @@ namespace sw
         struct FightingMatchInternal
         {
             static constexpr uint32  kStateMagic    = 0x54484746u; ///< "FGHT"
-            static constexpr int32   kStateVersion  = 1;
+            static constexpr int32   kStateVersion  = 2;
             static constexpr uint16  kButtonMask    = 0x0F; ///< 1 바이트 입력에 싣는 버튼 4 개
             static constexpr int32   kMaxCounter    = 1 << 20;
             static constexpr float32 kRoundingSlack = 1.0e-3f; ///< 0.55 × 10 같은 반올림 경계가 부동소수 오차로 내려가지 않게
@@ -53,6 +53,17 @@ namespace sw
                     return true;
                 return pMove != nullptr && outTimeline.restoreState( pMove->_frame, frame, hitstop, bContact, bBlocked );
             }
+
+            /** @brief 격투의 라운드 규칙 — 라운드 승 = 1 위 1 점(순위 점수 목록 없음), 둘이 함께 선승에 닿으면 무승부, 시간 · 대기는 최소 1 프레임입니다. */
+            static RoundSeriesSettings makeSeriesSettings( const FightingSettings& settings )
+            {
+                RoundSeriesSettings series;
+                series._winScore          = settings._roundsToWin;
+                series._roundTicks        = MathUtil::max( 1, settings._roundFrames );
+                series._intermissionTicks = MathUtil::max( 1, settings._roundOverFrames );
+                series._tieRule           = RoundSeriesTieRule::Draw;
+                return series;
+            }
         };
     } // namespace
 } // namespace sw
@@ -75,15 +86,11 @@ namespace sw
     FightingMatch::FightingMatch()
         : _arrFighter{}
         , _settings{}
+        , _series{}
         , _eventBuffer{}
         , _listHitboxScratch{}
         , _frame{ 0 }
-        , _round{ 0 }
-        , _roundFramesRemaining{ 0 }
-        , _phaseFrames{ 0 }
         , _lastRoundWinner{ -1 }
-        , _matchWinner{ -1 }
-        , _phase{ FightingPhase::MatchOver }
     {
     }
 
@@ -92,9 +99,7 @@ namespace sw
         _settings = settings;
         _eventBuffer.clear();
         _frame                                 = 0;
-        _round                                 = 0;
         _lastRoundWinner                       = -1;
-        _matchWinner                           = -1;
         const FighterDef* arrDef[kPlayerCount] = { &fighter0, &fighter1 };
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
@@ -103,15 +108,13 @@ namespace sw
             _arrFighter[player]._side = player == 0 ? 1 : -1;
             _arrFighter[player]._inputBuffer.clear();
         }
+        _series.initialize( FightingMatchInternal::makeSeriesSettings( settings ) );
+        (void)_series.start( kPlayerCount ); // 참가자 둘 — 실패하지 않는다
         startRound();
     }
 
     void FightingMatch::startRound()
     {
-        ++_round;
-        _phase                = FightingPhase::RoundActive;
-        _phaseFrames          = 0;
-        _roundFramesRemaining = _settings._roundFrames;
         for ( int32 player = 0; player < kPlayerCount; ++player )
             resetFighter( player );
     }
@@ -161,7 +164,7 @@ namespace sw
 
     void FightingMatch::advanceFrame( const InputFrame& input0, const InputFrame& input1 )
     {
-        if ( _phase == FightingPhase::MatchOver )
+        if ( _series.isRunning() == false )
             return;
         ++_frame;
 
@@ -175,10 +178,9 @@ namespace sw
             fighter._inputBuffer.push( arrInput[player] );
         }
 
-        if ( _phase == FightingPhase::RoundOver )
+        if ( _series.getPhase() == RoundSeriesPhase::Intermission )
         {
-            --_phaseFrames;
-            if ( _phaseFrames <= 0 )
+            if ( _series.advanceTick() == RoundSeriesTick::RoundStarted )
                 startRound();
             return;
         }
@@ -1001,9 +1003,7 @@ namespace sw
             }
         }
 
-        if ( _roundFramesRemaining > 0 )
-            --_roundFramesRemaining;
-        if ( _roundFramesRemaining > 0 )
+        if ( _series.advanceTick() != RoundSeriesTick::TimeUp )
             return;
         // 시간 초과 — 체력 비율(정수 교차 곱으로 정확히)이 높은 쪽.
         const int64 left  = static_cast<int64>( _arrFighter[0]._health ) * MathUtil::max( 1, _arrFighter[1]._pDef->_health );
@@ -1015,28 +1015,25 @@ namespace sw
     {
         pushEvent( reason, winner, 0 );
         _lastRoundWinner = winner;
-        if ( winner == kDraw )
-        {
-            ++_arrFighter[0]._roundWins;
-            ++_arrFighter[1]._roundWins;
-        }
-        else
-        {
-            ++_arrFighter[winner]._roundWins;
-        }
+        // 무승부 라운드는 둘 다 1 위 — 둘 다 1 승이다. 라운드 중에만 불리므로 거절되지 않는다.
+        const RoundSeriesOutcome outcome = _series.reportRoundWinner( winner == kDraw ? RoundSeries::kNoWinner : winner );
         pushEvent( FightingEvent::Kind::RoundEnd, winner, winner );
-
-        const bool bDone0 = _arrFighter[0]._roundWins >= _settings._roundsToWin;
-        const bool bDone1 = _arrFighter[1]._roundWins >= _settings._roundsToWin;
-        if ( bDone0 || bDone1 )
-        {
-            _phase       = FightingPhase::MatchOver;
-            _matchWinner = bDone0 && bDone1 ? kDraw : ( bDone0 ? 0 : 1 );
-            pushEvent( FightingEvent::Kind::MatchEnd, _matchWinner, _matchWinner );
+        if ( outcome != RoundSeriesOutcome::Finished )
             return;
-        }
-        _phase       = FightingPhase::RoundOver;
-        _phaseFrames = MathUtil::max( 1, _settings._roundOverFrames );
+        const int32 matchWinner = getMatchWinner();
+        pushEvent( FightingEvent::Kind::MatchEnd, matchWinner, matchWinner );
+    }
+
+    int32 FightingMatch::getRound() const
+    {
+        return _series.getPhase() == RoundSeriesPhase::Waiting ? 0 : _series.getRoundIndex() + 1;
+    }
+
+    int32 FightingMatch::getMatchWinner() const
+    {
+        if ( _series.isFinished() == false )
+            return -1;
+        return _series.getWinner() == RoundSeries::kNoWinner ? kDraw : _series.getWinner();
     }
 
     void FightingMatch::pushEvent( FightingEvent::Kind kind, int32 player, int32 value, const hashed_string& moveId )
@@ -1079,12 +1076,7 @@ namespace sw
         writer.writeUint32( FightingMatchInternal::kStateMagic );
         writer.writeVarInt( FightingMatchInternal::kStateVersion );
         FightingMatchInternal::writeCounter( writer, _frame );
-        FightingMatchInternal::writeCounter( writer, _round );
-        FightingMatchInternal::writeCounter( writer, _roundFramesRemaining );
-        FightingMatchInternal::writeCounter( writer, _phaseFrames );
         FightingMatchInternal::writeCounter( writer, _lastRoundWinner );
-        FightingMatchInternal::writeCounter( writer, _matchWinner );
-        writer.writeVarUint( static_cast<uint64>( _phase ) );
         for ( const FighterRuntime& fighter : _arrFighter )
         {
             writer.writeVarUint( fighter._pDef != nullptr ? fighter._pDef->_listMove.size() : 0 ); // 같은 캐릭터인지 대 보는 값
@@ -1097,10 +1089,9 @@ namespace sw
             writer.writeFloat( fighter._gravity );
             writer.writeFloat( fighter._carryX );
             writer.writeFloat( fighter._carryZ );
-            const int32 arrCounter[] = { fighter._health, fighter._stateFrames, fighter._hitstop, fighter._moveIndex,
-                                         fighter._bufferedMove, fighter._bufferedAge, fighter._stanceIndex, fighter._stanceFrames,
-                                         fighter._comboHits, fighter._airHits, fighter._heatFrames, fighter._sidestepSign,
-                                         fighter._side, fighter._roundWins, fighter._breakButtons };
+            const int32 arrCounter[] = { fighter._health, fighter._stateFrames, fighter._hitstop, fighter._moveIndex, fighter._bufferedMove,
+                                         fighter._bufferedAge, fighter._stanceIndex, fighter._stanceFrames, fighter._comboHits, fighter._airHits,
+                                         fighter._heatFrames, fighter._sidestepSign, fighter._side, fighter._breakButtons };
             for ( const int32 counter : arrCounter )
                 FightingMatchInternal::writeCounter( writer, counter );
             writer.writeVarUint( static_cast<uint64>( fighter._state ) );
@@ -1116,6 +1107,8 @@ namespace sw
             for ( int32 framesAgo = fighter._inputBuffer.getFrameCount() - 1; framesAgo >= 0; --framesAgo )
                 writer.writeBits( encodeInput( fighter._inputBuffer.getFrame( framesAgo ) ), 8 );
         }
+        // 라운드 묶음은 맨 뒤 — 되살릴 때 마지막에 읽어, 맞을 때만 바뀌는 묶음 덕에 loadState 가 통째로 원자적이다.
+        _series.writeState( writer );
         outBuffer = writer.releaseBytes();
     }
 
@@ -1124,15 +1117,8 @@ namespace sw
         BitReader reader( buffer.data(), static_cast<int32>( buffer.size() ) );
         if ( reader.readUint32() != FightingMatchInternal::kStateMagic || reader.readVarInt() != FightingMatchInternal::kStateVersion )
             return false;
-        const int32  frame                = FightingMatchInternal::readCounter( reader );
-        const int32  round                = FightingMatchInternal::readCounter( reader );
-        const int32  roundFramesRemaining = FightingMatchInternal::readCounter( reader );
-        const int32  phaseFrames          = FightingMatchInternal::readCounter( reader );
-        const int32  lastRoundWinner      = FightingMatchInternal::readCounter( reader );
-        const int32  matchWinner          = FightingMatchInternal::readCounter( reader );
-        const uint64 phase                = reader.readVarUint();
-        if ( phase > static_cast<uint64>( FightingPhase::MatchOver ) )
-            return false;
+        const int32 frame           = FightingMatchInternal::readCounter( reader );
+        const int32 lastRoundWinner = FightingMatchInternal::readCounter( reader );
 
         FighterRuntime arrLoaded[kPlayerCount] = { _arrFighter[0], _arrFighter[1] };
         for ( FighterRuntime& fighter : arrLoaded )
@@ -1148,10 +1134,9 @@ namespace sw
             fighter._gravity    = reader.readFloat();
             fighter._carryX     = reader.readFloat();
             fighter._carryZ     = reader.readFloat();
-            int32* arrCounter[] = { &fighter._health, &fighter._stateFrames, &fighter._hitstop, &fighter._moveIndex,
-                                    &fighter._bufferedMove, &fighter._bufferedAge, &fighter._stanceIndex, &fighter._stanceFrames,
-                                    &fighter._comboHits, &fighter._airHits, &fighter._heatFrames, &fighter._sidestepSign,
-                                    &fighter._side, &fighter._roundWins };
+            int32* arrCounter[] = { &fighter._health, &fighter._stateFrames, &fighter._hitstop, &fighter._moveIndex, &fighter._bufferedMove,
+                                    &fighter._bufferedAge, &fighter._stanceIndex, &fighter._stanceFrames, &fighter._comboHits, &fighter._airHits,
+                                    &fighter._heatFrames, &fighter._sidestepSign, &fighter._side };
             for ( int32* pCounter : arrCounter )
                 *pCounter = FightingMatchInternal::readCounter( reader );
             fighter._breakButtons    = static_cast<uint16>( FightingMatchInternal::readCounter( reader ) & 0xFFFF );
@@ -1184,16 +1169,14 @@ namespace sw
         }
         if ( reader.hasOverflowed() )
             return false;
+        // 라운드 묶음은 맨 뒤 — 맞을 때만 바뀌므로 이 뒤에는 실패할 일이 없다.
+        if ( _series.readState( reader ) == false )
+            return false;
 
-        _arrFighter[0]        = arrLoaded[0];
-        _arrFighter[1]        = arrLoaded[1];
-        _frame                = frame;
-        _round                = round;
-        _roundFramesRemaining = roundFramesRemaining;
-        _phaseFrames          = phaseFrames;
-        _lastRoundWinner      = lastRoundWinner;
-        _matchWinner          = matchWinner;
-        _phase                = static_cast<FightingPhase>( phase );
+        _arrFighter[0]   = arrLoaded[0];
+        _arrFighter[1]   = arrLoaded[1];
+        _frame           = frame;
+        _lastRoundWinner = lastRoundWinner;
         _eventBuffer.clear();
         return true;
     }
