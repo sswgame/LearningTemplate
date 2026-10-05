@@ -99,6 +99,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   숫자는 고정 16 자리 16 진수), 메모리 구현(`MemoryServiceDatabase` 데이터 · 실패 주입 + `MemoryServiceStore` 앞 — 시험 · 개발 서버). 판은 저장소 전체에서 오르는 수라 ABA 가 없다.
   SQL 구현은 키트 `GF_SqlStore` · `GF_Server_SqlStore`.
   `Online/Guard`: 요청 보호 — `TokenBucket`(정수 · 밀리초, 버스트 · 조각 시간 이월) · `TokenBucketMap`(키마다, 상한에서 가득 찬 것을 지움) · `RequestLimits`.
+  `Online/Cache`: 휘발성 저장 계약 `IEphemeralStore`(만료 키-값 · 원자 증감 · 비교 후 쓰기 · 정렬 집합 · 발행/구독, 요청을 맡기고 답을 거둔다 — 잃어도 되는 것만,
+  정본은 `IServiceStore`) + 메모리 구현(`MemoryEphemeralDatabase` 시계 고정 · 게으른 만료 + `MemoryEphemeralStore` 앞). RESP 구현은 키트 `GF_Server_CacheStore`.
   `Online/Identity`: 신원 원형 — `AccountId` · `AccountIdentity` · `IAccountDirectory`(이 프로세스에 붙어 있는 계정, 발급은 계정 키트).
 - **Progression**: 경험치 곡선 · 레벨(`ExperienceCurve` · `LevelProgress`), 스킬 트리(`SkillTreeCatalog` · `SkillTreeState`), 평판 · 호감도(`ReputationCatalog` ·
   `ReputationState`), 로그라이트 지도(`RunMap`), 로컬 통계(`StatCatalog` · `PlayerStats` — `<Stats><Stat id kind="Counter|Max|Min|Time" max/>` 정의, `increment` ·

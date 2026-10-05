@@ -397,8 +397,8 @@ cd build/Ninja-Debug/Bin
   **서버는 윈도우 · 리눅스 둘 다 1 급**, 서버 전용 모듈은 클라이언트 Shipping 에 넣지 않는다(전용 서버 타깃 — Game · Client · Server).
   **순서**: 기반 + 드라이버 → Account · ServerDirectory → Economy → Trade · Mailbox · Admin · 관측 → Chat · Social → Leaderboard · Matchmaking · LiveOps.
   **들어간 기반**(`GameFramework/Base/Online/`): `Store`(영속 계약 `IServiceStore` — 비동기 일 · 트랜잭션 · 조건부 쓰기 · 멱등 기록, 메모리 구현 · 계약 시험) ·
-  `Guard`(토큰 버킷 · 크기 상한) · `Identity`(`AccountId` · `IAccountDirectory`).
-  남은 기반: 캐시 계약 `IEphemeralStore` · 감사 로그 · 서버 간 버스 · 예약 작업 · 원격 설정 · `ILocalStore` · 서비스 틀 · 관측, 드라이버 키트 `GF_SqlStore`(SQLite · 마이그레이션 적용기) · `GF_Server_SqlStore`(PostgreSQL · SqlServiceStore) · `GF_Server_CacheStore`(RESP) —
+  `Guard`(토큰 버킷 · 크기 상한) · `Identity`(`AccountId` · `IAccountDirectory`) · `Cache`(휘발성 계약 `IEphemeralStore` — 만료 · 원자 증감 · 임대 · 정렬 집합 · 발행/구독, 메모리 구현 · 계약 시험).
+  남은 기반: 감사 로그 · 서버 간 버스 · 예약 작업 · 원격 설정 · `ILocalStore` · 서비스 틀 · 관측, 드라이버 키트 `GF_SqlStore`(SQLite · 마이그레이션 적용기) · `GF_Server_SqlStore`(PostgreSQL · SqlServiceStore) · `GF_Server_CacheStore`(RESP) —
   계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
 - **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는
