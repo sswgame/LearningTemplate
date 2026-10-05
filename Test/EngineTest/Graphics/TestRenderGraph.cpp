@@ -315,3 +315,41 @@ SW_TEST_CASE( RenderGraphTest, ParallelExecutionSubmitsNothingWhenACommandListCa
     SW_EXPECT_EQUAL( 0, countB.load() );
     SW_EXPECT_EQUAL( 0, countC.load() );
 }
+
+/**
+ * @brief [RenderGraphTest] 태스크를 넣지 못하면(풀이 내리는 중) 병렬 기록은 그 패스를 렌더 스레드에서 기록한다 — 기록 없이 제출하지 않는다
+ * @details 그냥 넘어가면 레벨의 첫 리스트는 배리어만 든 채 **열린 채로**, 나머지는 지난 프레임의 명령 그대로 제출된다.
+ */
+SW_TEST_CASE( RenderGraphTest, ParallelExecutionRecordsInlineWhenTasksCannotBeQueued )
+{
+    sw::atomic<int32> countA{ 0 };
+    sw::atomic<int32> countB{ 0 };
+    sw::atomic<int32> countC{ 0 };
+    sw::RenderGraph   graph;
+    graph.addPass( sw::hashed_string( "A" ), {}, { sw::hashed_string( "OutA" ) }, makeCountingPass( countA ) );
+    graph.addPass( sw::hashed_string( "B" ), { sw::hashed_string( "OutA" ) }, { sw::hashed_string( "OutB" ) }, makeCountingPass( countB ) );
+    graph.addPass( sw::hashed_string( "C" ), {}, { sw::hashed_string( "OutC" ) }, makeCountingPass( countC ) );
+    SW_ASSERT_TRUE( graph.compile() );
+
+    // 내린 풀 — emplaceTask 가 무효 핸들을 돌려준다(노드 풀은 생성자가 만들어 내린 뒤에도 스테이지를 낼 수 있다).
+    sw::TaskManager stoppedTaskManager;
+    SW_ASSERT_TRUE( stoppedTaskManager.initialize( 1 ) );
+    stoppedTaskManager.shutdown();
+
+    test::FakeRHIDevice             device;
+    sw::RenderGraphExecutionContext context;
+    {
+        test::ScopedDefensiveTestLog expected( "a task manager that is shutting down refuses new tasks" );
+        SW_ASSERT_TRUE( graph.executeParallel( context, &stoppedTaskManager, &device ) );
+    }
+    SW_EXPECT_EQUAL( 1, countA.load() );
+    SW_EXPECT_EQUAL( 1, countB.load() );
+    SW_EXPECT_EQUAL( 1, countC.load() );
+    SW_ASSERT_EQUAL( size_t( 3 ), device._listExecuted.size() );
+    for ( const test::FakeRHICommandList* pList : device._listExecuted )
+    {
+        SW_EXPECT_EQUAL( 1u, pList->_beginCount );
+        SW_EXPECT_EQUAL( 1u, pList->_endCount );
+        SW_EXPECT_FALSE( pList->_bOpen );
+    }
+}

@@ -429,8 +429,7 @@ cd build/Ninja-Debug/Bin
   주석(`/check-runs/<job id>/annotations`, 로그인 없이 읽힌다)에서 시험 이름 · 실패 줄을 보고 고친다.
 
 
-- **시험 공백 목록** — `syncAfterSceneGenerationChange`,
-  `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
+- **시험 공백 목록** — `syncAfterSceneGenerationChange`, `_materialCb` 병합 키(그래픽스).
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
 - **include · 전방 선언 남은 후보.** ① OS 헤더(`Core/Common/PlatformOsHeaders.h` — `Windows.h` · `DbgHelp.h` · `Xinput.h` …)가 `EngineMinimal.h` 를 거쳐
   PCH 에 남아 있다(TU 2746 · `windows.h` 1671). 빼려면 먼저 `NOMINMAX` · `WIN32_LEAN_AND_MEAN` 을 CMake 정의로 옮기고(서드파티가 `windows.h` 를 먼저 include 해도
