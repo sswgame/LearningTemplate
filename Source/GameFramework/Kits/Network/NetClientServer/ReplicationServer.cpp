@@ -155,6 +155,7 @@ namespace sw
         }
         filtered._listEntity.resize( relevantCount );
         prioritizer.removeUntouched(); // 더는 관련 없는 엔티티는 잊는다(다시 관련되면 0 에서)
+        resolveUnconfirmedSends( client, filtered );
         // 쌓인 것이 큰 것부터 — 관련 엔티티는 id 순이라 자리를 이분 탐색으로 찾는다.
         vector<uint32>& listOrderEntity = scratch._listOrderEntity;
         prioritizer.collectOrder( listOrderEntity );
@@ -185,13 +186,39 @@ namespace sw
         {
             filtered.writeDelta( writer, pBaseline, _snapshotBudgetBytes, slot, &listOrder, &scratch._listCurrent );
         }
-        // 실었거나 받는 쪽이 이미 지금 상태인 것만 0 으로 — 못 실은 것은 쌓인 채로 다음 스냅샷에서 앞선다.
+        // 받는 쪽이 이미 지금 상태인 것은 확정으로 0, 이번에 실은 것은 확인 기다리는 보냄으로 0 — 못 실은 것은 쌓인 채로 다음 스냅샷에서 앞선다.
         for ( size_t index = 0; index < filtered._listEntity.size(); ++index )
         {
-            if ( scratch._listCurrent[index] != 0 )
-                prioritizer.markSent( filtered._listEntity[index]._entityId );
+            const uint32 entityId = filtered._listEntity[index]._entityId;
+            if ( scratch._listCurrent[index] == NetSnapshot::kEntityAlreadyCurrent )
+                prioritizer.markSent( entityId );
+            else if ( scratch._listCurrent[index] == NetSnapshot::kEntityWritten )
+                prioritizer.markSentUnconfirmed( entityId, _world._tick );
         }
         (void)scratch._messageWriter.send( *_pHost, connectionId, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 — NetHost 가 지킨다
+    }
+
+    void ReplicationServer::resolveUnconfirmedSends( ClientState& client, const NetSnapshot& filtered ) const
+    {
+        // 여러 워커가 클라이언트마다 따로 부른다 — 이 클라이언트의 상태만 쓰고 월드는 읽기만 한다.
+        NetPrioritizer&    prioritizer = client._prioritizer;
+        const NetSnapshot* pAcked      = client._bHasAck == SW_TRUE ? client._listSent.find( client._ackedTick ) : nullptr;
+        const uint32       capacity    = static_cast<uint32>( client._listSent.getCapacity() );
+        for ( const NetEntityState& entity : filtered._listEntity )
+        {
+            uint32 sentTick = 0;
+            if ( prioritizer.findUnconfirmedSendTick( entity._entityId, sentTick ) == false )
+                continue;
+            const bool bAckedPast = client._bHasAck == SW_TRUE && client._ackedTick >= sentTick;
+            const bool bExpired   = _world._tick - sentTick >= capacity; // 보낸 재구성이 고리에서 밀렸다 — 더 기다리지 않는다
+            if ( bAckedPast == false && bExpired == false )
+                continue; // 아직 오가는 중
+            const NetSnapshot*    pSent      = bExpired ? nullptr : client._listSent.find( sentTick );
+            const NetEntityState* pSentState = pSent != nullptr ? pSent->findEntity( entity._entityId ) : nullptr;
+            const NetEntityState* pHave      = pAcked != nullptr ? pAcked->findEntity( entity._entityId ) : nullptr;
+            const bool            bDelivered = pSentState != nullptr && pHave != nullptr && pHave->_typeId == pSentState->_typeId && pHave->_buffer == pSentState->_buffer;
+            prioritizer.resolveSend( entity._entityId, bDelivered );
+        }
     }
 
     NetHandleResult ReplicationServer::handleNetMessage( const NetMessageContext& context, BitReader& body )

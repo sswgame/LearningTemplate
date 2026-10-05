@@ -350,6 +350,46 @@ SW_TEST_CASE( NetworkTest, PrioritizerOrderIsDeterministic )
 }
 
 /**
+ * @brief [NetworkTest] 비신뢰로 실은 몫은 확인을 기다린다 — 잃었다고 판정하면 0 으로 돌렸던 몫이 돌아와 다음 차례에 바로 앞서고, 받았으면 그대로 0 이다
+ */
+SW_TEST_CASE( NetworkTest, PrioritizerRestoresAnUnconfirmedSendThatWasLost )
+{
+    NetPrioritizer prioritizer;
+    prioritizer.beginAccumulate();
+    prioritizer.accumulate( 1, 3.0f, 1.0f );
+    prioritizer.accumulate( 2, 5.0f, 1.0f );
+    prioritizer.removeUntouched();
+    prioritizer.markSentUnconfirmed( 1, 10 );
+    prioritizer.markSentUnconfirmed( 2, 10 );
+    uint32 sentTick = 0;
+    SW_ASSERT_TRUE( prioritizer.findUnconfirmedSendTick( 1, sentTick ) );
+    SW_EXPECT_EQUAL( 10u, sentTick );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, prioritizer.getAccumulated( 1 ), 1.0e-6f );
+
+    // 확인 전에 또 실었다 — 몫은 더해지고 틱은 새 것.
+    prioritizer.beginAccumulate();
+    prioritizer.accumulate( 1, 3.0f, 1.0f );
+    prioritizer.accumulate( 2, 5.0f, 1.0f );
+    prioritizer.removeUntouched();
+    prioritizer.markSentUnconfirmed( 1, 11 );
+    SW_ASSERT_TRUE( prioritizer.findUnconfirmedSendTick( 1, sentTick ) );
+    SW_EXPECT_EQUAL( 11u, sentTick );
+
+    prioritizer.resolveSend( 1, false ); // 잃었다 — 3 + 3 이 돌아온다
+    prioritizer.resolveSend( 2, true );  // 받았다 — 이번 틱에 쌓인 5 만
+    SW_EXPECT_NEAR_EQUAL( 6.0f, prioritizer.getAccumulated( 1 ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, prioritizer.getAccumulated( 2 ), 1.0e-6f );
+    SW_EXPECT_FALSE( prioritizer.findUnconfirmedSendTick( 1, sentTick ) );
+    prioritizer.resolveSend( 1, false ); // 기다리는 것이 없으면 아무것도 하지 않는다
+    SW_EXPECT_NEAR_EQUAL( 6.0f, prioritizer.getAccumulated( 1 ), 1.0e-6f );
+
+    // 받는 쪽이 이미 지금 상태 — 기억도 지운다.
+    prioritizer.markSentUnconfirmed( 2, 12 );
+    prioritizer.markSent( 2 );
+    SW_EXPECT_FALSE( prioritizer.findUnconfirmedSendTick( 2, sentTick ) );
+}
+
+/**
  * @brief [NetworkTest] 받은 버퍼를 이어받아 쓴 BitWriter 는 그 버퍼를 새로 잡지 않고 돌려준다 — 같은 자리에 매 프레임 써도 할당이 없다
  * @details 롤백 넷코드는 프레임마다 · 되감아 다시 돌 때마다 상태를 링 슬롯에 저장한다. 지역 BitWriter 로 써서 복사해 넘기면 저장마다
  *          버퍼 하나가 새로 잡히고 하나가 복사된다(`FightingMatch::saveState`).

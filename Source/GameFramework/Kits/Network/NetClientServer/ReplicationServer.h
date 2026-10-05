@@ -143,13 +143,15 @@ namespace sw
             NetSnapshot      _filtered{}; ///< 클라이언트 하나의 관련 엔티티
             vector<uint32>   _listOrderEntity{};
             vector<int32>    _listOrder{};   ///< 위 순서를 `_filtered` 자리로
-            vector<uint8>    _listCurrent{}; ///< `_filtered` 자리마다 받는 쪽이 지금 상태를 갖게 됐나
+            vector<uint8>    _listCurrent{}; ///< `_filtered` 자리마다 `writeDelta` 의 결과(`NetSnapshot::kEntity*`)
             NetMessageWriter _messageWriter{};
         };
 
-        ClientState&       acquireClient( int32 connectionId );
-        void               sendSnapshotRange( uint32 start, uint32 end );
-        void               sendSnapshot( int32 connectionId, ClientState& client, SnapshotScratch& scratch );
+        ClientState& acquireClient( int32 connectionId );
+        void         sendSnapshotRange( uint32 start, uint32 end );
+        void         sendSnapshot( int32 connectionId, ClientState& client, SnapshotScratch& scratch );
+        /** @brief 이 클라이언트의 확인 기다리는 보냄을 판정합니다 — 확인한 틱이 보낸 틱을 지났는데 확인된 재구성에 그때 보낸 상태가 없으면 잃은 것(우선도를 되돌린다). */
+        void               resolveUnconfirmedSends( ClientState& client, const NetSnapshot& filtered ) const;
         [[nodiscard]] bool handleInput( ClientState& client, BitReader& reader );
         void               resetClient( int32 connectionId );
 

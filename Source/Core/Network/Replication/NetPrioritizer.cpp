@@ -73,8 +73,42 @@ namespace sw
     void NetPrioritizer::markSent( uint32 entityId )
     {
         Entry* pEntry = findEntry( entityId );
-        if ( pEntry != nullptr )
-            pEntry->_accumulated = 0.0f;
+        if ( pEntry == nullptr )
+            return;
+        pEntry->_accumulated            = 0.0f;
+        pEntry->_unconfirmedAccumulated = 0.0f;
+        pEntry->_bUnconfirmed           = SW_FALSE;
+    }
+
+    void NetPrioritizer::markSentUnconfirmed( uint32 entityId, uint32 sentTick )
+    {
+        Entry* pEntry = findEntry( entityId );
+        if ( pEntry == nullptr )
+            return;
+        pEntry->_unconfirmedAccumulated += pEntry->_accumulated;
+        pEntry->_accumulated     = 0.0f;
+        pEntry->_unconfirmedTick = sentTick;
+        pEntry->_bUnconfirmed    = SW_TRUE;
+    }
+
+    bool NetPrioritizer::findUnconfirmedSendTick( uint32 entityId, uint32& outSentTick ) const
+    {
+        const size_t index = findLowerIndex( entityId );
+        if ( index == _listEntry.size() || _listEntry[index]._entityId != entityId || _listEntry[index]._bUnconfirmed == SW_FALSE )
+            return false;
+        outSentTick = _listEntry[index]._unconfirmedTick;
+        return true;
+    }
+
+    void NetPrioritizer::resolveSend( uint32 entityId, bool bDelivered )
+    {
+        Entry* pEntry = findEntry( entityId );
+        if ( pEntry == nullptr || pEntry->_bUnconfirmed == SW_FALSE )
+            return;
+        if ( bDelivered == false )
+            pEntry->_accumulated += pEntry->_unconfirmedAccumulated;
+        pEntry->_unconfirmedAccumulated = 0.0f;
+        pEntry->_bUnconfirmed           = SW_FALSE;
     }
 
     void NetPrioritizer::remove( uint32 entityId )
