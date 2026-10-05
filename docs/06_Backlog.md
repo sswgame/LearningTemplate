@@ -105,6 +105,9 @@ cd build/Ninja-Debug/Bin
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
 
+- **`forEachComponentOfType` 이 모든 오브젝트를 훑는다**(사용자 결정 대기). `InteractorComponent` 하나가 고르기마다 이것으로 씬 전체를 공유 잠금 아래 훑어,
+  Release 오브젝트 10,000 · 대상 16 에서 씬 틱 p50 이 29 → 218~238 us(차 ~190~207 us, 3 회 — 기준 50 us 의 4 배), 1,000 에서 차 ~25 us(`InteractionBenchTest`).
+  고칠 자리는 Interaction 이 아니라 엔진 — 타입별 등록 목록(`LightRegistry` 모양을 일반화)으로. 구조 변경이라 사용자 결정. 지금 이 컴포넌트를 쓰는 시험 게임은 0 이다.
 - **중첩 프리팹이 정식으로 없다.** 프리팹은 GameObject 하나(컴포넌트 트리)라 메시 · 이펙트 여럿을 담을 수는 있지만, 프리팹 안에 다른 프리팹의
   인스턴스를 오버라이드와 함께 두는 형식은 없다 — 지금은 컴포넌트가 로드 뒤 스폰하는 우회뿐이다(순환 스폰 방어는 있다, `PrefabTest.CircularReferenceSpawnProtection`).
   아이템 부품 · 탈것 · 건물처럼 조립하는 것이 늘면 필요하다: 상태 안의 프리팹 인스턴스 노드(경로 + 오버라이드), 원본 프리팹을 고치면 모든 상위가
@@ -335,7 +338,7 @@ cd build/Ninja-Debug/Bin
   - 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
   - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
   - 네트워크: 회로 상태 바이트(`GimmickCircuit::saveState`)를 `NetClientServer` 스냅샷 · `RollbackSession` 상태에 싣기(모양은 준비됨, 배선 없음).
-  - `InteractorComponent` 는 틱마다 씬의 `InteractableComponent` 를 모두 훑는다 — 하는 쪽이 많아지면 공간 등록부로.
+
 
 - **CS2 식 서브틱 입력(2026-10-05 제안 — 넷 게임이 생기면; 지금 넷 키트를 쓰는 시험 게임은 0).** `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
   B1 사건 시각 + 입력 리플레이 판 4 · B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입) · B3 `InputMap` 이 행동별 "누른 순간" 을 준다 · B4 클릭 순간의 시선으로 발사
