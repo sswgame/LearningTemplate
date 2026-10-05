@@ -758,3 +758,42 @@ SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
     SW_EXPECT_EQUAL( checkedCount, exactCount );          // 끊김 앞뒤 모두 그 틱의 입력이다
     SW_EXPECT_TRUE( client.getPendingInputCount() <= 6 ); // 확인이 따라와 다시 싣는 것은 몇 개뿐
 }
+
+/**
+ * @brief [NetClientServerTest] 스냅숏이 1 초 끊겼다가 다시 와도 클라이언트 렌더 틱은 되돌아가지 않고 받은 가장 새 틱을 넘지 않는다
+ * @details 손으로 만든 스냅숏을 손 배달한다(호스트 없음). 끊긴 동안 렌더 틱은 마지막으로 받은 틱에서 멈추고, 다시 오면 앞으로만 간다.
+ */
+SW_TEST_CASE( NetClientServerTest, RenderTickNeverGoesBackAcrossASnapshotGap )
+{
+    ReplicationClient         client;
+    ReplicationClientSettings clientSettings;
+    clientSettings._tickInterval = 1.0f / 30.0f;
+    client.initialize( nullptr, clientSettings );
+    float32    lastRenderTick = -1.0e9f; // 첫 스냅숏의 렌더 틱(0 − 지연 = −3)은 받기 전 값보다 작다 — 받은 뒤부터 본다
+    bool       bMonotonic     = true;
+    bool       bBehindNewest  = true;
+    const auto deliver        = [&client]( uint32 tick )
+    {
+        BitWriter writer;
+        writer.writeBits( NetClientServerMessage::kSnapshot, 8 );
+        NetSnapshot snapshot;
+        snapshot._tick = tick;
+        NetSnapshot written;
+        snapshot.writeDelta( writer, nullptr, NetConnection::kMaxMessageSize, written );
+        return client.handleMessage( 0, writer.getBytes() );
+    };
+    for ( uint32 frame = 0; frame < 240; ++frame )
+    {
+        const bool bGap = frame >= 60 && frame < 120; // 1 초 동안 아무것도 오지 않는다
+        if ( frame % 2 == 0 && bGap == false )
+            SW_EXPECT_TRUE( NetHandleResult::Handled == deliver( frame / 2 ) );
+        client.update( 1.0f / 60.0f );
+        const float32 renderTick = client.getRenderTick();
+        bMonotonic               = bMonotonic && renderTick >= lastRenderTick - 1.0e-4f;
+        bBehindNewest            = bBehindNewest && ( client.hasSnapshot() == false || renderTick <= static_cast<float32>( client.getLatest()->_tick ) + 1.0e-4f );
+        lastRenderTick           = renderTick;
+    }
+    SW_EXPECT_TRUE( bMonotonic );
+    SW_EXPECT_TRUE( bBehindNewest );
+    SW_EXPECT_TRUE( lastRenderTick > 110.0f ); // 끝(받은 틱 119) 근처까지 따라왔다 — 지연 3 틱
+}
