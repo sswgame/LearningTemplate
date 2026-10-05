@@ -282,6 +282,28 @@ SW_TEST_CASE( WorldUiTest, EffectResumesItsFadeAfterTheStateIsReadAgain )
 }
 
 /**
+ * @brief [WorldUiTest] 이펙트는 흐른 시간이 수명에 닿는 걸음에 지워진다 — 데미지 숫자 · 투사체 · `Countdown` 과 같은 "수명 이상" 경계
+ */
+SW_TEST_CASE( WorldUiTest, EffectIsDestroyedTheTickItsTimeRunsOut )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::GameObjectManager manager;
+    sw::GameObject*       pSpark = manager.createGameObject( sw::hashed_string( "Spark" ) );
+    SW_ASSERT_NOT_NULL( pSpark );
+    SW_ASSERT_NOT_NULL( pSpark->addComponent<sw::SpriteComponent>() );
+    sw::FadeOutComponent* pEffect = pSpark->addComponent<sw::FadeOutComponent>();
+    SW_ASSERT_NOT_NULL( pEffect );
+    SW_ASSERT_TRUE( setReflectedValue( pEffect, "_duration", 1.0f ) );
+    pEffect->dispatchBeginPlay();
+
+    pEffect->onTick( 0.5f );
+    SW_EXPECT_FALSE( pSpark->isPendingDestroy() );
+    pEffect->onTick( 0.5f ); // 흐른 시간 1.0 == 수명
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pEffect->getCurrentAlpha(), 1e-6f );
+    SW_EXPECT_TRUE( pSpark->isPendingDestroy() );
+}
+
+/**
  * @brief [WorldUiTest] 떠 있는 동안 상태를 다시 읽은 데미지 숫자는 남은 수명을 이어 간다
  * @details `onBeginPlay` 가 수명을 0 · 알파를 1 로 돌리면, 플레이 중 되돌리기 · 핫 리로드 때마다 떠 있던 숫자가 처음부터 다시 떠오른다.
  */

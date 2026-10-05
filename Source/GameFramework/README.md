@@ -47,6 +47,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   광선 판정(`RayMath` — 구 · 상자 · 캡슐 · 바닥 평면 · 원뿔), 앞 · 위 → 오일러(`OrientationUtil` — 롤이 있는 차량 · 카메라), 2D 네 방향(`FacingDir`),
   고정 스텝 누적기(`FixedStepTimer`), 게임 시간 타이머(`TimerQueue`), 쿨다운 · 지속 시간 · 반복 간격 값(`Countdown` — `tick` 이 끝난 걸음에 한 번 true,
   반복은 그 걸음에 `restart` 로 다시 걸어 지나친 몫을 한 간격까지 잇는다), 초당 비율 → 정수 발생(`RateAccumulator` — 손님 도착 · 운영비),
+  수명 계산(`LifeSpanUtil` — 흐른 시간 · 수명으로 "다했나" · 흐림, 페이드 · 데미지 숫자 · 투사체),
   시뮬레이션 알림 버퍼(`EventBuffer<T>` — `drainEvents` 의 몸통 `drainTo`, 빈 목록이면 저장소를 맞바꿔 프레임마다 할당 · 복사하지 않는다),
   칸 격자의 모양(`GridTopology` — 칸 번호 · 경계 · 이웃 순서 하나: 직교 넷 → 대각선 넷, 내비 · 원소 격자 · 키트가 같은 표)과 너비 우선 탐색 ·
   "한 칸 한 번" 표시 스크래치(`GridSearchScratch` — 세대 번호로 비워 호출마다 W × H 를 잡거나 지우지 않는다),

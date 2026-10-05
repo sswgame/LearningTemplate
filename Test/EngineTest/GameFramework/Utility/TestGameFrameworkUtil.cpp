@@ -16,6 +16,7 @@
 #include "GameFramework/Utility/FixedStepTimer.h"
 #include "GameFramework/Utility/GameRandom.h"
 #include "GameFramework/Utility/GridTopology.h"
+#include "GameFramework/Utility/LifeSpanUtil.h"
 #include "GameFramework/Utility/RayMath.h"
 
 #include "TestFramework/TestFramework.h"
@@ -244,6 +245,24 @@ SW_TEST_CASE( GameFrameworkUtilTest, CountdownTickRepeatKeepsTheHeldRate )
         SW_EXPECT_FALSE( swingCooldown.tickRepeat( 0.1f, 1.5f, true ) );
         SW_EXPECT_NEAR_EQUAL( 1.4f, swingCooldown.getRemaining(), 1.0e-4f );
     }
+}
+
+/**
+ * @brief [GameFrameworkUtilTest] 수명은 흐른 시간이 수명 이상인 걸음부터 다했고, 흐림은 1 에서 0 으로 내려가 0 아래로 가지 않는다 — 수명 0 은 끝없음
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, LifeSpanEndsAtItsLifeTimeAndFadesFromOneToZero )
+{
+    float32 elapsed = 0.0f;
+    SW_EXPECT_FALSE( LifeSpanUtil::advance( elapsed, 1.0f, 0.5f ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, LifeSpanUtil::computeFade( elapsed, 1.0f ), 1.0e-6f );
+    SW_EXPECT_TRUE( LifeSpanUtil::advance( elapsed, 1.0f, 0.5f ) ); // 정확히 수명 — 이 걸음에 다했다
+    SW_EXPECT_NEAR_EQUAL( 0.0f, LifeSpanUtil::computeFade( elapsed, 1.0f ), 1.0e-6f );
+    SW_EXPECT_TRUE( LifeSpanUtil::advance( elapsed, 1.0f, 0.5f ) ); // 다한 뒤로도 다했다
+    SW_EXPECT_NEAR_EQUAL( 0.0f, LifeSpanUtil::computeFade( elapsed, 1.0f ), 1.0e-6f );
+
+    float32 kept = 0.0f;
+    SW_EXPECT_FALSE( LifeSpanUtil::advance( kept, 0.0f, 100.0f ) ); // 수명 0 — 지우지 않는 견본
+    SW_EXPECT_NEAR_EQUAL( 1.0f, LifeSpanUtil::computeFade( kept, 0.0f ), 1.0e-6f );
 }
 
 /**

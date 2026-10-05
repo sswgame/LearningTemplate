@@ -334,8 +334,7 @@ cd build/Ninja-Debug/Bin
 
 - **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
   스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
-- **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** (5) 수명 → 지우기 타이머 셋(`EffectBase` · `DamageUI` ·
-  `Projectile`) 하나로. **하지 않기로 한 것:** HP 바 · 피해 숫자의 매 틱 배치 예약을 "바뀔 때만" 으로 줄이는 것 — 월드 변환이 틱 **뒤에** 적용되므로 틱 안에서
+- **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** **하지 않기로 한 것:** HP 바 · 피해 숫자의 매 틱 배치 예약을 "바뀔 때만" 으로 줄이는 것 — 월드 변환이 틱 **뒤에** 적용되므로 틱 안에서
   자리 변화를 보면 움직이는 막대가 한 프레임씩 건너 늦는다. 줄이려면 변환 적용 뒤의 훅이 필요하다.
 - **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
@@ -1508,6 +1507,8 @@ cd build/Ninja-Debug/Bin
 - **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. 방어 식은 `DamageMath::applyArmor`(고정 방어, 최소 1 — 액션 룸의 적도 같은 식)이고, 0 이하 피해는 맞지 않은 것이다(HP · 무적 · 이벤트 없음 — 언리얼 `ApplyDamage`). `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. 월드 UI(HP 바 ·
   데미지 숫자)는 저장되지 않는 `SpriteInstanceBatch` 로 그린다 — 자식 컴포넌트로 만들면 씬 · 프리팹 · 스냅샷에 저장돼 다음 시작에 겹친다. 스프라이트 UV · 색은 인스턴스에 싣는다(같은 텍스처는
   한 배치). 체력을 가진 컴포넌트는 `Combat/HealthSourceComponent` 를 상속해 읽기(`getHealthReading` — 지금 · 최대 · 쓰러짐) 하나만 내고, 알림은 `notifyHealthChanged` 한 곳이 비율 · 종류(쓰러짐 포함)를 정해 같은 오브젝트의 `HealthListenerComponent` 에 보낸다 — HP 바는 시작할 때 원천을 읽는다(맞은 뒤 붙여도 맞는 비율). RTTI 가 없어 인터페이스가 아니라 리플렉션 베이스다(`getComponent<HealthSourceComponent>()`). 시뮬레이션 키트(`Vitality` · 정수 HP 배열)는 상속하지 않는다 — 그 유닛에 HP 바를 띄울 게임은 뷰 컴포넌트가 상속해 스냅샷을 읽는다. 보이기 정책은 바의 PROPERTY 다. 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`, 글리프 · 클립은 `Scripts/generate/GenerateSpriteTextures.py`.
+- **수명이 다하면 지우는 컴포넌트(이펙트 페이드 · 데미지 숫자 · 투사체)는 `LifeSpanUtil` 로 센다** — 흐른 시간은 저장되는 PROPERTY 이고 `onBeginPlay` 에서 0 으로 돌리지
+  않는다(되돌리기 · 핫 리로드 때마다 수명을 다시 산다 — 투사체가 그랬다). 끝나는 경계는 `Countdown::tick` 과 같은 "수명 이상", 수명 0 은 지우지 않음.
 - **액션 룸의 적은 몬스터 정의다** — 종 id(`grunt` · `boss`)를 게임이 건 `MonsterCatalog` 서비스(`game::bindLocalService`)에서 찾고, 없으면 내장 정의(옛 상수와 같은 값)다. 카탈로그가 걸렸는데 그 id 가 없으면 싸움마다 한 번 경고한다. 사격은 `<Shot angle speed life radius damage/>` 줄마다 한 발(겨냥에서 돌린 각). 방어 식은 유닛 스탯과 같다(`DamageMath::applyArmor`). 룸이 돌려주는 플레이어 피해(`_damageToPlayer`)는 방어 전 값이다 — 게임이 플레이어 `UnitStatsComponent::takeDamage` 로 넣으면 방어가 한 번 빠진다. 룸의 적은 오브젝트가 아니라 `UnitStatsComponent` 를 거치지 않는다. 방 배치는 코드 표(`kArr*Spawn`) — 쓰는 게임이 생기면 맵의 스폰 지점으로.
 - **사용자 설정 파일(`usersettings.json`)은 배포된 플레이어 데이터다** — 설정 id · 선택지 이름을 바꾸면 스키마 `version` 을 올리고 `<Upgrade>` 를 더한다(별칭 금지
   규칙의 예외). 화면 변경은 적용기가 요청만 쌓고 App 이 프레임 맨 앞에서 렌더 스레드를 기다린 뒤 한다 — 창 크기는 `App::onResize` 한 길로 스왑체인에 닿는다.

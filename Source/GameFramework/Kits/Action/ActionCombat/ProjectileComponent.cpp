@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
+#include "GameFramework/Utility/LifeSpanUtil.h"
 
 namespace sw
 {
@@ -50,12 +51,12 @@ namespace sw
     {
         Component::onTick( deltaTime );
 
-        _currentLife += deltaTime;
-        GameObject* pOwner = getOwner();
+        const bool  bExpired = LifeSpanUtil::advance( _currentLife, _lifeTime, deltaTime );
+        GameObject* pOwner   = getOwner();
         if ( pOwner == nullptr )
             return;
 
-        if ( _lifeTime > 0.0f && _currentLife >= _lifeTime )
+        if ( bExpired )
         {
             // 표시만 하면 파괴 목록에 들어가지 않아 오브젝트가 풀로 돌아오지 않는다.
             pOwner->destroy();

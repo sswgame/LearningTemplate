@@ -10,6 +10,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/SpriteClipCache.h"
 
+#include "GameFramework/Utility/LifeSpanUtil.h"
+
 namespace sw
 {
     DamageNumberComponent::DamageNumberComponent()
@@ -51,7 +53,7 @@ namespace sw
     {
         Component::onTick( deltaTime );
 
-        _currentLife += deltaTime;
+        const bool bExpired = LifeSpanUtil::advance( _currentLife, _lifeTime, deltaTime );
         if ( _lifeTime > 0.0f )
         {
             _alpha             = computeAlpha();
@@ -59,7 +61,7 @@ namespace sw
             if ( pOwner == nullptr )
                 return;
 
-            if ( _currentLife >= _lifeTime )
+            if ( bExpired )
             {
                 // 표시만 하면 파괴 목록에 들어가지 않아 오브젝트가 풀로 돌아오지 않는다.
                 pOwner->destroy();
@@ -171,7 +173,7 @@ namespace sw
 
     float32 DamageNumberComponent::computeAlpha() const
     {
-        return ( _lifeTime > 0.0f ) ? MathUtil::saturate( 1.0f - ( _currentLife / _lifeTime ) ) : 1.0f;
+        return LifeSpanUtil::computeFade( _currentLife, _lifeTime );
     }
 
     void DamageNumberComponent::acquireGlyphSprites()
