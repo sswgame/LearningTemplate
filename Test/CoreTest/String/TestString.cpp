@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
@@ -57,6 +58,76 @@ SW_TEST_CASE( StringTest, ClearedInternTableIsRebuiltNotLeftEmpty )
     SW_EXPECT_TRUE( info._arrChunk[0].load() != nullptr );
 
     info.clear();
+}
+
+/**
+ * @brief [StringTest] 비운 intern 테이블은 저장소(샤드 맵의 버킷 · 밀집 배열, 아레나 목록)까지 돌려준다
+ * @details `HashedStringPool::shutdown` 은 이 `clear()` 하나다. 맵 · 목록의 `clear()` 는 원소만 지우고 저장소를 남기므로, 비운 뒤에도 블록이
+ *          살아 있으면 엔진 종료 누수 보고(기준선 대비 태그 증가)에 남는다. 테이블을 세웠다 비운 전후로 살아 있는 블록 수가 같아야 한다.
+ */
+SW_TEST_CASE( StringTest, ClearedInternTableReturnsItsStorage )
+{
+    if constexpr ( sw::kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "allocation headers are compiled out in this configuration" );
+    const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
+    if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
+        SW_TEST_SKIP( "no tracking memory profiler in this host" );
+
+    const uint64 liveCountBefore = pProfiler->getLiveAllocationCount();
+    uint64       liveCountHeld{ 0 };
+    uint64       liveCountCleared{ 0 };
+    {
+        sw::hashed_string::AllocationInfo info;
+        liveCountHeld = pProfiler->getLiveAllocationCount();
+        info.clear();
+        liveCountCleared = pProfiler->getLiveAllocationCount();
+    }
+    // 세운 테이블이 실제로 블록을 잡았어야 아래 비교가 뜻이 있다.
+    SW_ASSERT_TRUE( liveCountHeld > liveCountBefore );
+    // 살아 있는 블록 수는 프로세스 전체 값이라 다른 스레드(비동기 로거 등)의 할당 · 해제가 한두 개 섞인다 — 고치기 전 차이는 수십 블록이다.
+    SW_EXPECT_TRUE_MSG( liveCountCleared <= liveCountBefore + 2u, "the cleared intern table still holds storage blocks" );
+}
+
+/**
+ * @brief [StringTest] 이름 풀의 블록은 부른 쪽의 태그가 아니라 `EngineMisc` 로 센다
+ * @details 새 이름을 넣으면 청크 · 아레나 블록 · 샤드 맵이 자란다. 둘러싼 스코프 태그로 세면 같은 몫이 "누가 먼저 넣었나" 에 따라 태그를
+ *          옮겨 다닌다(종료 보고에서 Scene · Mesh 로 보였다). 새 이름 2048 개면 청크 경계(1024)를 반드시 한 번 넘는다.
+ */
+SW_TEST_CASE( StringTest, InternPoolMemoryIsTaggedEngineMisc )
+{
+    if constexpr ( sw::kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
+    if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
+        SW_TEST_SKIP( "no tracking memory profiler in this host" );
+
+    constexpr uint32 kNameCount = 2048;
+    // `--test_repeat` 의 다음 판도 새 이름을 넣어야 시험이 헛돌지 않는다.
+    static uint32 s_round{ 0 };
+    ++s_round;
+    sw::vector<sw::string> listName;
+    listName.reserve( kNameCount );
+    for ( uint32 index = 0; index < kNameCount; ++index )
+    {
+        listName.push_back( sw::string( "InternPoolTagProbe_" ) + sw::to_string( s_round ) + "_" + sw::to_string( index ) );
+    }
+
+    const uint32 internedBefore = sw::hashed_string::getInternedCount();
+    const uint64 scriptBefore   = pProfiler->getStats( sw::MemoryTag::Script )._currentAllocatedBytes.load();
+    uint32       nonEmptyCount{ 0 };
+    {
+        SW_MEMORY_SCOPE( Script );
+        for ( const sw::string& name : listName )
+        {
+            const sw::hashed_string interned{ sw::string_view{ name } };
+            nonEmptyCount += ( interned.size() > 0 ) ? 1u : 0u;
+        }
+    }
+    const uint64 scriptAfter = pProfiler->getStats( sw::MemoryTag::Script )._currentAllocatedBytes.load();
+
+    SW_ASSERT_EQUAL( kNameCount, nonEmptyCount );
+    SW_ASSERT_TRUE( sw::hashed_string::getInternedCount() >= internedBefore + kNameCount );
+    SW_EXPECT_EQUAL( scriptBefore, scriptAfter );
 }
 
 // ------------------------------------------------------------------------------
