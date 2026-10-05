@@ -586,7 +586,10 @@ namespace sw
             loop._rhi = make_unique<RHI>();
             loop._rhi->setPreferredVSync( display._bHasVSync ? display._bVSync : loop._pEngineConfig->_window._bVSync );
             // RHI 는 창 시스템을 모른다. 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 들고 있다.
-            if ( loop._rhi->initialize( IWindow::getActiveWindow() ) == false )
+            const bool bRhiReady = loop._rhi->initialize( IWindow::getActiveWindow() );
+            // 단계가 내려가면(destroy 는 모든 단계를 돈다) _rhi 가 사라진다 — 실패의 이유를 그 전에 남긴다. App 이 이것으로 종료 코드를 고른다.
+            loop._rhiInitResult = loop._rhi->getInitResult();
+            if ( bRhiReady == false )
                 return EngineInitResult::Failed;
             // 백엔드가 정해졌으니 크래시 리포트에 남긴다. 이 저장소는 백엔드가 넷이라 "어느
             // 백엔드에서 났는가" 가 범위를 좁히는 첫 질문이다.
@@ -805,6 +808,7 @@ namespace sw
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
+        , _rhiInitResult{ RHIInitResult::NotStarted }
         , _sceneDeltaSeconds{ 0.0f }
         , _profileSession{}
         , _startup{}

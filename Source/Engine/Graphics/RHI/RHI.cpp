@@ -180,6 +180,7 @@ namespace sw
         , _pSurface{ nullptr }
         , _pendingRHIBackend{ RHIBackend::DirectX12 }
         , _committedRHIBackend{ RHIBackend::DirectX12 }
+        , _initResult{ RHIInitResult::NotStarted }
         , _bPreferredVSync{ SW_FALSE }
         , _bPendingBackendChange{ SW_FALSE }
         , _reserved{ 0 }
@@ -190,7 +191,8 @@ namespace sw
 
     bool RHI::initialize( IRenderSurface* pSurface )
     {
-        _pSurface = pSurface;
+        _pSurface   = pSurface;
+        _initResult = RHIInitResult::Failed;
         // 우선순위: 명시한 CLI > 지금 전역 변수 값 > OS 기본값 > 처음으로 쓸 수 있는 것
         RHIBackend currentBackend = gv_rhiBackend;
 
@@ -206,6 +208,7 @@ namespace sw
         if ( RHIAvailability::isAvailable( currentBackend ) == false )
         {
             SW_LOG_ERROR( "Requested RHI backend is unavailable on this platform." );
+            _initResult = RHIInitResult::BackendNotBuilt;
             return false;
         }
 
@@ -225,11 +228,13 @@ namespace sw
         if ( _device->initialize() == false )
         {
             SW_LOG_ERROR( "Failed to initialize RHI Device!" );
+            _initResult = _device->getInitResult();
             _device.reset();
             return false;
         }
 
         SW_LOG_INFO( "RHI initialized successfully." );
+        _initResult          = RHIInitResult::Succeeded;
         _committedRHIBackend = currentBackend;
         _pendingRHIBackend   = currentBackend;
         return true;

@@ -481,8 +481,6 @@ cd build/Ninja-Debug/Bin
 
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
-- **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
-  결과(열거값)로 바꾸는 그래픽스 쪽 수정.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
 - **TSan 에서 Jolt 를 계측해 짓기(2026-10-05 사용자 "일단 해보고 추가해", 미완).** 지금은 계측 안 된 Jolt 의 거짓 경쟁을 `TsanSuppressions.txt` 로 가리는데, 그 억제가
   Jolt 잡 안에서 불리는 엔진 콜백의 진짜 경쟁까지 가린다. TSan 전용 오버레이 트리플릿 `x64-linux-tsan`(`-fsanitize=thread`) · CI TSan 잡 · 억제 목록을 고친 **작업 중 커밋**이
@@ -640,6 +638,8 @@ cd build/Ninja-Debug/Bin
 - **광선이 두 삼각형이 나누는 모서리를 정확히 지나면 Möller–Trumbore 가 양쪽을 다 놓칠 수 있다** — 같은 각도로 나뉜 합성 원기둥 두 겹에서 실제로 났다
   (`CharacterGeometryUtil::intersectRayTriangle` 은 무게중심 여유 1e-5 로 막는다). 합성 형상 시험은 분할 수를 서로 다르게 하고, 면 모양(다각형)이라 반지름이 면 가운데서
   `r · cos(π/n)` 로 준다는 것도 기댓값에 넣는다.
+- **App 의 종료 코드 77 = 이 기계 · 빌드가 그 RHI 백엔드를 못 돌린다**(`RHIInitResult` 의 `BackendNotBuilt` · `DriverUnsupported`). 시험 · `AppRun.py` 는 로그 문구가 아니라 이것으로 건너뛴다 —
+  환경 탓으로 물러나는 새 경로는 백엔드가 `_initResult` 를 적어야 건너뜀이 된다(안 적으면 결함으로 진다).
 - **백엔드마다 디바이스를 세우는 시험은 `test::RHIBackendSweep`** — `for ( test::RHITestDevice& device : sweep )`, 건너뛰기는 케이스가 `sweep.getReadyCount() == 0` 으로.
   오프스크린 · 한 프레임 도우미(`makeSingleTargetPsoDesc` · `beginOffscreenRenderPass` · `countPrimaryColorPixels` · `renderSceneFrame`)를 먼저 볼 것.
 - **macOS 는 지원 대상이 아니다** — 코드는 10-04 에 지웠고 `CheckTargetMacros` 가 `SW_PLATFORM_MACOS` 를 막는다. 되살리려면 그 전 git 기록에서. `Vcpkg.cmake` 의 APPLE 갈래 ·

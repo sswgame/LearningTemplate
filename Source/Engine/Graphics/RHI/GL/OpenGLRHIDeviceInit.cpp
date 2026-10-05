@@ -166,6 +166,7 @@ namespace sw
         if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
         {
             SW_LOG_WARNING( "OpenGL 백엔드를 쓸 수 없습니다 — GL_ARB_gl_spirv 없음(glShaderBinary/glSpecializeShader null)." );
+            _initResult = RHIInitResult::DriverUnsupported;
             return false;
         }
 

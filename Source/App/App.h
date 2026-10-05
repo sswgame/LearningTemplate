@@ -94,6 +94,8 @@ namespace sw
         void shutdown();
         /** @brief 메인 루프입니다(할 일은 최소한만 합니다). */
         void run();
+        /** @brief `initialize` 가 false 를 돌려준 뒤의 프로세스 종료 코드입니다. 이 기계 · 빌드가 그 RHI 백엔드를 못 돌리면 `kRhiUnusableHereExitCode`, 그 밖은 -1 입니다. */
+        int32 getInitFailureExitCode() const;
 
     private:
         // 부팅 단계. initialize() 가 차례로 부른다.

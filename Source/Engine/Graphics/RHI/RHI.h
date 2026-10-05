@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -127,6 +128,8 @@ namespace sw
 
         /** @brief 활성 IRHIDevice 를 반환합니다. */
         IRHIDevice& getDevice() const { return *_device; }
+        /** @brief 마지막 `initialize` 의 결과입니다. App 이 "이 기계에서 그 백엔드를 못 돌린다" 를 종료 코드로 알릴 때 읽습니다(`EngineLoop::getRhiInitResult`). */
+        RHIInitResult getInitResult() const { return _initResult; }
 
     private:
         unique_ptr<IRHIDevice> _device;
@@ -134,6 +137,7 @@ namespace sw
 
         RHIBackend             _pendingRHIBackend;
         RHIBackend             _committedRHIBackend;
+        RHIInitResult          _initResult;
         uint8                  _bPreferredVSync       : 1;
         uint8                  _bPendingBackendChange : 1;
         [[maybe_unused]] uint8 _reserved              : 6;

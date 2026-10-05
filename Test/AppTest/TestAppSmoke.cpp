@@ -11,6 +11,7 @@
 #include "Core/Process/Process.h"
 
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
+#include "Engine/Graphics/RHI/RHIInitResult.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -56,28 +57,9 @@ namespace
         vector<string> _listMarkedLine{};
         uint32         _missingComponentLineCount{ 0 }; /**< `MissingComponent` 가 든 줄 수 — 씬이 모르는 타입을 만났다. */
         bool           _bLaunched{ false };
-        bool           _bBackendUnusableHere{ false };     /**< 이 기계가 그 백엔드를 못 돌린다고 App 이 말했다. */
+        bool           _bBackendUnusableHere{ false };     /**< App 이 종료 코드 kRhiUnusableHereExitCode 로 "이 기계에서 그 백엔드를 못 돌린다" 고 알렸다(RHIInitResult). */
         bool           _bVulkanValidationEnabled{ false }; /**< Vulkan 디바이스가 검증 레이어를 켜고 섰다(그래야 잘못된 사용이 [Error] 로 나온다). */
     };
-
-    /**
-     * @brief App 이 "이 기계에서는 이 백엔드를 못 돌린다" 고 **스스로 말한** 줄인가.
-     * @details 두 가지가 있고 **둘 다 결함이 아니라 환경**이다:
-     *          1. **백엔드가 이 빌드·플랫폼에 아예 없다.** 리눅스의 DX12·DX11 이 그렇다.
-     *          2. **있지만 이 기계의 드라이버가 필요한 기능을 안 준다.** WSLg 의 Mesa 에는
-     *             `GL_ARB_gl_spirv` 가 없는데 이 엔진의 GL 백엔드는 **SPIR-V 를 먹이므로** 못 돈다 —
-     *             백엔드가 그 확장 이름을 로그에 남기고 스스로 물러난다.
-     *
-     *          그 밖의 초기화 실패는 **그대로 진다.** "Failed to initialize RHI Device!" 만 보고
-     *          건너뛰면 진짜 회귀까지 같이 숨는다 — 그 한 줄은 이유를 말해 주지 않기 때문이다.
-     *
-     * @note 산문이 아니라 **고정된 표식**(영문 한 문장 · 확장 이름)만 본다.
-     */
-    bool isBackendUnusableLine( string_view line )
-    {
-        return line.find( "Requested RHI backend is unavailable" ) != string_view::npos ||
-               line.find( "GL_ARB_gl_spirv" ) != string_view::npos;
-    }
 
     /**
      * @brief App 을 한 판 돌리고 종료 코드와 `[Error]` 줄 수를 돌려줍니다.
@@ -99,8 +81,6 @@ namespace
         while ( process.readOutputLine( line ) )
         {
             ++result._lineCount;
-            if ( isBackendUnusableLine( line ) )
-                result._bBackendUnusableHere = true;
             if ( line.find( "MissingComponent" ) != string::npos )
                 ++result._missingComponentLineCount;
             if ( line.find( "(Validation Layers: ENABLED)" ) != string::npos )
@@ -126,6 +106,8 @@ namespace
         }
 
         result._exitCode = process.waitForExit();
+        // App 이 RHI 를 세우다 환경 탓(이 빌드에 없다 · 드라이버가 기능을 안 준다)으로 물러나면 이 코드로 끝난다. 로그 문구는 보지 않는다.
+        result._bBackendUnusableHere = ( result._exitCode == kRhiUnusableHereExitCode );
         return result;
     }
 
