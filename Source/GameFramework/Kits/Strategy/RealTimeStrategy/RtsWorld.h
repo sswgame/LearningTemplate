@@ -25,6 +25,7 @@
 namespace sw
 {
     class Archive;
+    class Wallet;
 
     /** @brief 유닛 id 입니다. 죽은 유닛의 자리가 다시 쓰여도 옛 id 는 세대가 달라 찾지 못합니다. */
     using RtsUnitId = SlotHandle;
@@ -32,17 +33,19 @@ namespace sw
     /** @brief 규칙의 수치입니다. 시간은 게임 초입니다. */
     struct RtsSettings
     {
-        float32 _fixedStep{ 0.05f };             ///< 시뮬레이션 걸음(20 Hz — 스타크래프트의 게임 틱 근처)
-        float32 _minimumDamage{ 0.5f };          ///< 방어가 높아도 이만큼은 들어간다
-        float32 _repathInterval{ 0.5f };         ///< 움직이는 목표를 쫓을 때 경로를 다시 구하는 간격
-        float32 _visionInterval{ 0.25f };        ///< 안개를 다시 칠하는 간격
-        float32 _interactSlack{ 0.35f };         ///< 채취 · 짓기 · 반납이 닿았다고 보는 가장자리 거리
-        float32 _resourceSearchRadius{ 8.0f };   ///< 다 캔 광물 대신 찾을 반경
-        float32 _constructionStartRatio{ 0.1f }; ///< 짓기 시작한 건물의 체력 몫
-        float32 _underAttackCooldown{ 10.0f };   ///< "공격받고 있다" 알림 간격(플레이어마다)
-        int32   _productionQueueMax{ 5 };
-        int32   _flowFieldGroupSize{ 6 }; ///< 이만큼 이상을 한 곳으로 보내면 A* 대신 흐름장 하나
-        int32   _bucketSize{ 4 };         ///< 이웃 찾기 버킷(칸)
+        float32       _fixedStep{ 0.05f };             ///< 시뮬레이션 걸음(20 Hz — 스타크래프트의 게임 틱 근처)
+        float32       _minimumDamage{ 0.5f };          ///< 방어가 높아도 이만큼은 들어간다
+        float32       _repathInterval{ 0.5f };         ///< 움직이는 목표를 쫓을 때 경로를 다시 구하는 간격
+        float32       _visionInterval{ 0.25f };        ///< 안개를 다시 칠하는 간격
+        float32       _interactSlack{ 0.35f };         ///< 채취 · 짓기 · 반납이 닿았다고 보는 가장자리 거리
+        float32       _resourceSearchRadius{ 8.0f };   ///< 다 캔 광물 대신 찾을 반경
+        float32       _constructionStartRatio{ 0.1f }; ///< 짓기 시작한 건물의 체력 몫
+        float32       _underAttackCooldown{ 10.0f };   ///< "공격받고 있다" 알림 간격(플레이어마다)
+        int32         _productionQueueMax{ 5 };
+        int32         _flowFieldGroupSize{ 6 };       ///< 이만큼 이상을 한 곳으로 보내면 A* 대신 흐름장 하나
+        int32         _bucketSize{ 4 };               ///< 이웃 찾기 버킷(칸)
+        hashed_string _mineralCurrency{ "Minerals" }; ///< 플레이어 지갑에서 광물로 쓰는 통화
+        hashed_string _gasCurrency{ "Gas" };          ///< 플레이어 지갑에서 가스로 쓰는 통화
     };
 } // namespace sw
 
@@ -149,8 +152,7 @@ namespace sw
     struct RtsPlayer
     {
         float3  _startPosition{};
-        int32   _minerals{ 0 };
-        int32   _gas{ 0 };
+        Wallet* _pWallet{ nullptr }; ///< 빌린 지갑(광물 · 가스 — `RtsSettings` 의 통화) — 지역 플레이어는 공유 지갑, AI 는 게임이 든다
         int32   _supplyUsed{ 0 };
         int32   _supplyCap{ 0 };
         int32   _team{ 0 };
@@ -220,8 +222,9 @@ namespace sw
 
         void initialize( const RtsCatalog* pCatalog, int32 width, int32 height, const RtsSettings& settings );
         /** @brief 지형 막힘(절벽 · 물)입니다. 유닛을 놓기 전에 칠합니다. */
-        void  setTerrainBlocked( int32 x, int32 y, bool bBlocked );
-        int32 addPlayer( int32 team, int32 minerals, int32 gas, const float3& startPosition );
+        void setTerrainBlocked( int32 x, int32 y, bool bBlocked );
+        /** @brief 플레이어를 더합니다. 자원은 빌린 지갑(@p pWallet — 월드보다 오래 살아야 한다, nullptr 이면 아무것도 사지 못한다)입니다. 플레이어 번호입니다. */
+        int32 addPlayer( int32 team, Wallet* pWallet, const float3& startPosition );
         /** @brief 유닛 · 건물(다 지은 채) · 자원을 놓습니다. 건물 · 자원은 @p position 이 든 칸이 왼쪽 아래입니다. 놓을 수 없으면 무효 id 입니다. */
         RtsUnitId spawnUnit( const hashed_string& defId, int32 owner, const float3& position );
 
@@ -256,6 +259,9 @@ namespace sw
         const RtsUnit*   findUnit( RtsUnitId unitId ) const;
         const RtsPlayer* findPlayer( int32 player ) const;
         int32            getPlayerCount() const { return static_cast<int32>( _listPlayer.size() ); }
+        /** @brief 그 플레이어 지갑의 광물 · 가스입니다(지갑이 없으면 0). */
+        int64 getMinerals( int32 player ) const;
+        int64 getGas( int32 player ) const;
         /** @brief 산 유닛마다 부릅니다. */
         template <typename TFunction>
         void forEachUnit( TFunction&& function ) const
@@ -356,6 +362,8 @@ namespace sw
         void             completeProduction( RtsUnit& building );
         bool             findSpawnPosition( const RtsUnit& building, float3& outPosition ) const;
         RtsCommandResult evaluateCost( int32 player, const RtsUnitDef& def ) const;
+        void             payCost( RtsPlayer& player, const RtsUnitDef& def );
+        void             refundCost( RtsPlayer& player, const RtsUnitDef& def );
         void             pushEvent( RtsEvent::Kind kind, int32 player, RtsUnitId unitId, const hashed_string& defId, int32 value = 0, RtsUnitId otherId = RtsUnitId{} );
         FlowField*       acquireFlowField( const int2& goal );
         void             releaseFlowField( const FlowField* pField );

@@ -67,6 +67,7 @@ namespace sw
     SkirmishMatch::SkirmishMatch()
         : _world{}
         , _arrAi{}
+        , _arrWallet{}
         , _listEvent{}
         , _listFrameEvent{}
         , _listCliff{}
@@ -90,9 +91,15 @@ namespace sw
         paintMap();
 
         // 0 번은 남서(본진 가운데 10, 10), 1 번은 점 대칭인 북동. 팀이 달라 서로 적이다.
-        const float32 farCenter = static_cast<float32>( kMapSize ) - 10.0f;
-        (void)_world.addPlayer( 0, SkirmishMatchInternal::kStartMinerals, 0, float3{ 10.0f, 0.0f, 10.0f } );
-        (void)_world.addPlayer( 1, SkirmishMatchInternal::kStartMinerals, 0, float3{ farCenter, 0.0f, farCenter } );
+        const float32      farCenter = static_cast<float32>( kMapSize ) - 10.0f;
+        const RtsSettings& settings  = _world.getSettings();
+        for ( Wallet& wallet : _arrWallet )
+        {
+            wallet.clear();
+            wallet.add( settings._mineralCurrency, SkirmishMatchInternal::kStartMinerals );
+        }
+        (void)_world.addPlayer( 0, &_arrWallet[0], float3{ 10.0f, 0.0f, 10.0f } );
+        (void)_world.addPlayer( 1, &_arrWallet[1], float3{ farCenter, 0.0f, farCenter } );
         spawnBase( 0, false );
         spawnBase( 1, true );
         // 가운데 길목의 확장 광물(누구 것도 아니다).
@@ -119,6 +126,8 @@ namespace sw
     {
         outArchive << _bHumanPlayer;
         _world.writeState( outArchive );
+        for ( const Wallet& wallet : _arrWallet )
+            wallet.writeState( outArchive );
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
             if ( _arrAiActive[player] == SW_TRUE )
@@ -135,6 +144,11 @@ namespace sw
         archive >> bHumanPlayer;
         if ( archive.isError() || bHumanPlayer != _bHumanPlayer || _world.readState( archive ) == false )
             return false;
+        for ( Wallet& wallet : _arrWallet )
+        {
+            if ( wallet.readState( archive ) == false )
+                return false;
+        }
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
             if ( _arrAiActive[player] == SW_TRUE && _arrAi[player].readState( archive ) == false )
@@ -337,8 +351,8 @@ namespace sw
         const RtsPlayer* pPlayer = _world.findPlayer( player );
         if ( pPlayer != nullptr )
         {
-            summary._minerals   = pPlayer->_minerals;
-            summary._gas        = pPlayer->_gas;
+            summary._minerals   = static_cast<int32>( _world.getMinerals( player ) );
+            summary._gas        = static_cast<int32>( _world.getGas( player ) );
             summary._supplyUsed = pPlayer->_supplyUsed;
             summary._supplyCap  = pPlayer->_supplyCap;
         }

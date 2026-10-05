@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Match/TeamAttitude.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
@@ -13,6 +14,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "RtsWorld" );
+
     namespace
     {
         struct RtsWorldInternal
@@ -20,7 +23,7 @@ namespace sw
             static constexpr float32 kMaxUnitExtent       = 4.5f; ///< 버킷 조회에 더하는 몸 크기 상한(건물 반 변)
             static constexpr uint32  kMinUnitStateBytes   = 128;  ///< 유닛 하나의 상태가 적어도 쓰는 바이트(개수 상한)
             static constexpr uint32  kMinOrderStateBytes  = 34;   ///< 명령 하나의 상태가 적어도 쓰는 바이트
-            static constexpr uint32  kMinPlayerStateBytes = 38;   ///< 플레이어 하나의 상태가 적어도 쓰는 바이트
+            static constexpr uint32  kMinPlayerStateBytes = 30;   ///< 플레이어 하나의 상태가 적어도 쓰는 바이트
 
             static float32 computeFlatDistance( const float3& lhs, const float3& rhs )
             {
@@ -125,12 +128,11 @@ namespace sw
         _grid.setBlocked( x, y, bBlocked );
     }
 
-    int32 RtsWorld::addPlayer( int32 team, int32 minerals, int32 gas, const float3& startPosition )
+    int32 RtsWorld::addPlayer( int32 team, Wallet* pWallet, const float3& startPosition )
     {
         RtsPlayer player;
         player._team          = MathUtil::max( 0, team );
-        player._minerals      = minerals;
-        player._gas           = gas;
+        player._pWallet       = pWallet;
         player._startPosition = startPosition;
         _listPlayer.push_back( player );
         _teamCount = MathUtil::max( _teamCount, player._team + 1 );
@@ -407,9 +409,9 @@ namespace sw
             return RtsCommandResult::NotOwner;
         if ( def._requires.empty() == false && hasConstructed( player, def._requires ) == false )
             return RtsCommandResult::TechRequired;
-        if ( pPlayer->_minerals < def._minerals )
+        if ( def._minerals > 0 && ( pPlayer->_pWallet == nullptr || pPlayer->_pWallet->canAfford( _settings._mineralCurrency, def._minerals ) == false ) )
             return RtsCommandResult::NotEnoughMinerals;
-        if ( pPlayer->_gas < def._gas )
+        if ( def._gas > 0 && ( pPlayer->_pWallet == nullptr || pPlayer->_pWallet->canAfford( _settings._gasCurrency, def._gas ) == false ) )
             return RtsCommandResult::NotEnoughGas;
         return RtsCommandResult::Ok;
     }
@@ -535,9 +537,7 @@ namespace sw
         const RtsCommandResult costResult = evaluateCost( pBuilding->_owner, *pDef );
         if ( costResult != RtsCommandResult::Ok )
             return costResult;
-        RtsPlayer& player = _listPlayer[static_cast<size_t>( pBuilding->_owner )];
-        player._minerals -= pDef->_minerals;
-        player._gas -= pDef->_gas;
+        payCost( _listPlayer[static_cast<size_t>( pBuilding->_owner )], *pDef );
         pBuilding->_listProduction.push_back( unitId );
         return RtsCommandResult::Ok;
     }
@@ -556,11 +556,7 @@ namespace sw
         }
         pBuilding->_listProduction.pop_back();
         if ( pDef != nullptr )
-        {
-            RtsPlayer& player = _listPlayer[static_cast<size_t>( pBuilding->_owner )];
-            player._minerals += pDef->_minerals;
-            player._gas += pDef->_gas;
-        }
+            refundCost( _listPlayer[static_cast<size_t>( pBuilding->_owner )], *pDef );
         return true;
     }
 
@@ -899,10 +895,8 @@ namespace sw
             }
             unit._agent.stop();
             RtsPlayer& player = _listPlayer[static_cast<size_t>( unit._owner )];
-            if ( unit._cargoType == RtsResourceType::Gas )
-                player._gas += unit._cargoAmount;
-            else
-                player._minerals += unit._cargoAmount;
+            if ( player._pWallet != nullptr )
+                player._pWallet->add( unit._cargoType == RtsResourceType::Gas ? _settings._gasCurrency : _settings._mineralCurrency, unit._cargoAmount );
             pushEvent( RtsEvent::Kind::ResourcesDeposited, unit._owner, unit._id, unit._pDef->_id, unit._cargoAmount );
             unit._cargoAmount = 0;
             unit._cargoType   = RtsResourceType::None;
@@ -1007,9 +1001,7 @@ namespace sw
             finishOrder( worker );
             return;
         }
-        RtsPlayer& player = _listPlayer[static_cast<size_t>( worker._owner )];
-        player._minerals -= pDef->_minerals;
-        player._gas -= pDef->_gas;
+        payCost( _listPlayer[static_cast<size_t>( worker._owner )], *pDef );
         pBuilding->_buildProgress = 0.0f;
         pBuilding->_hp            = pDef->_hp * _settings._constructionStartRatio;
         pBuilding->_builder       = worker._id;
@@ -1674,8 +1666,6 @@ namespace sw
         for ( const RtsPlayer& player : _listPlayer )
         {
             outArchive << player._startPosition;
-            outArchive << player._minerals;
-            outArchive << player._gas;
             outArchive << player._supplyUsed;
             outArchive << player._supplyCap;
             outArchive << player._team;
@@ -1816,14 +1806,15 @@ namespace sw
                 archive.setError();
         }
         uint32 playerCount = 0;
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, Internal::kMinPlayerStateBytes, playerCount ) == false )
+        // 지갑은 플레이어를 더한 쪽이 빌려 준 것이라 싣지 않는다 — 같은 수의 플레이어를 먼저 더한 월드에만 읽는다.
+        if ( archive.isError() || StateArchiveUtil::readCount( archive, Internal::kMinPlayerStateBytes, playerCount ) == false || playerCount != _listPlayer.size() )
             return false;
         vector<RtsPlayer> listPlayer( playerCount );
+        for ( uint32 playerIndex = 0; playerIndex < playerCount; ++playerIndex )
+            listPlayer[playerIndex]._pWallet = _listPlayer[playerIndex]._pWallet;
         for ( RtsPlayer& player : listPlayer )
         {
             archive >> player._startPosition;
-            archive >> player._minerals;
-            archive >> player._gas;
             archive >> player._supplyUsed;
             archive >> player._supplyCap;
             archive >> player._team;
@@ -1903,5 +1894,34 @@ namespace sw
         }
         rebuildBuckets();
         return true;
+    }
+
+    int64 RtsWorld::getMinerals( int32 player ) const
+    {
+        const RtsPlayer* pPlayer = findPlayer( player );
+        return pPlayer != nullptr && pPlayer->_pWallet != nullptr ? pPlayer->_pWallet->getBalance( _settings._mineralCurrency ) : 0;
+    }
+
+    int64 RtsWorld::getGas( int32 player ) const
+    {
+        const RtsPlayer* pPlayer = findPlayer( player );
+        return pPlayer != nullptr && pPlayer->_pWallet != nullptr ? pPlayer->_pWallet->getBalance( _settings._gasCurrency ) : 0;
+    }
+
+    void RtsWorld::payCost( RtsPlayer& player, const RtsUnitDef& def )
+    {
+        // evaluateCost 가 둘 다 된다고 본 뒤에만 부른다 — 한쪽만 빠지지 않는다.
+        if ( player._pWallet == nullptr )
+            return;
+        if ( player._pWallet->trySpend( _settings._mineralCurrency, def._minerals ) == false || player._pWallet->trySpend( _settings._gasCurrency, def._gas ) == false )
+            SW_LOG_WARNING( "RtsWorld: '%#' cost was checked but could not be paid", def._id.c_str() );
+    }
+
+    void RtsWorld::refundCost( RtsPlayer& player, const RtsUnitDef& def )
+    {
+        if ( player._pWallet == nullptr )
+            return;
+        player._pWallet->add( _settings._mineralCurrency, def._minerals );
+        player._pWallet->add( _settings._gasCurrency, def._gas );
     }
 } // namespace sw
