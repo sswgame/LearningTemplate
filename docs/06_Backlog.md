@@ -403,9 +403,10 @@ cd build/Ninja-Debug/Bin
 
 - **DX12 · Vulkan Present 히치.** 큐브 100 · 600 프레임 중 40 프레임이 1~18 ms 다(DX11 은 없다). 다음 후보는 DXGI 대기 가능 스왑체인
   (`FRAME_LATENCY_WAITABLE_OBJECT` + `SetMaximumFrameLatency` + 대기). 함정: 플래그는 `ResizeBuffers` 에도 같게. 재기 전에 VSync 가 정말 꺼졌는지 보고 p99 로 본다.
-- **파괴 잎 셰이프를 플레이 시작에 짓는 비용.** 잎마다 Jolt 볼록 껍질 약 80 us(Release) — 쇼케이스(파괴물 여섯 · 잎 312)가 첫 프레임에 ≈ 25 ms 를 쓴다.
-  파괴물이 많은 맵이면 선형으로 는다. 후보: 쿠킹 때 Jolt 셰이프를 직렬화해 `.fracture` 에 싣기(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리) 또는
-  워커에서 `ShapeSettings::Create`(순수 계산) 후 게임 스레드에서 핸들만 등록. 지금 깨지는 프레임은 200 조각 벽 4 ~ 7 ms(그중 사건 처리 2 ~ 4 ms).
+- **파괴 잎 셰이프를 플레이 첫 프레임에 짓는 비용.** `FractureBenchTest.ShowcaseBeginPlay`(Release, beginPlay + 첫 틱 — 첫 물리 스텝 앞에서 상태 · 잎 셰이프를 세운다)
+  p50 20.2 · 27.2 · 20.7 ms(쇼케이스 파괴물 여섯 · 잎 312, 200 조각 벽 하나가 볼록 껍질 ~11 ms = 잎당 ~55 us). 파괴물이 많은 맵이면 선형으로 는다.
+  워커로 나누기는 졌다(3-12) — 남은 후보는 쿠킹 때 Jolt 셰이프를 직렬화해 `.fracture` 에 싣기(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리) 또는
+  잎 셰이프를 처음 깨질 때까지 미루기. 지금 깨지는 프레임은 200 조각 벽 4 ~ 7 ms(그중 사건 처리 2 ~ 4 ms).
 - **DX12 `releaseOnlineBlocksDeferred` 의 `_onlineBlockMutex` 경합.** 병렬 기록 중 RT `mutex::lock` 의 79 % 였다. 후보는 워커별 대기 목록. 고치기 전에 다시 잴 것.
 
 - **8000 무버의 `components`(onTick) ~325 us.** 남은 비용은 오브젝트 → 틱 항목 → 컴포넌트 포인터 추적이다. 더 줄이려면 오브젝트 모델 밖 배치 경로
@@ -1686,6 +1687,10 @@ cd build/Ninja-Debug/Bin
   (구분자 정규화 · UTF-16 변환 문자열), 순회 파일당 밖 2.3 · sw 6.5 — 감싸기 전 밖 1 · 순회 3.1(스크래치). 줄이려면 `toPath` 를 스택 버퍼 변환으로(sw 0).
   다시 재는 법: App Debug `-gv_memoryReport=1` 의 "cumulative since start" 줄 · `FileUtilBenchTest`. `std::filesystem` 은 `Core/File/Std` 뒤에 감췄으니 한 경로가 프로파일에 보이면 그 함수만
   `File/Windows` · `File/Linux` 로 옮긴다(기준: Release 기동이나 프레임에서 1 ms 이상 · 프레임마다 부르는 경로).
+- **물리**: 파괴 잎 볼록 껍질을 워커로 나눠 짓기(Jolt 잡 시스템, 2026-10-06) — `FractureBenchTest` p50 20.7 → 24.4 ms 로 느려졌다. 워커 15 개가 청크(잎 13 개)마다
+  ~10 ms(잎당 ~750 us — 직렬 55 us 의 14 배)를 썼다: 껍질 짓기는 할당이 많고 Jolt 할당이 엔진 `Memory::allocate` 로 가서 경합한다. 할당을 풀어 주지 않는 한 다시 하지 말 것.
+  주의: Jolt 백엔드 TU(`Physics/Jolt/*.cpp`, PCH 없이 Jolt 정의 · 대상 기능으로 컴파일)에 `Engine/Common/EngineParallel.h` 를 넣자 물리 전체가 깨졌다(질량 · 자세가 쓰레기) —
+  그 TU 에서는 엔진 태스크 대신 이미 쓰는 Jolt 잡 시스템(`JoltJobSystem`)을 쓴다.
 - **태스크**: 워커 스핀 늘리기(2 → 50 us 면 SMT 형제를 빼앗아 GT 889 → 1305 us), hot pool(이득 없음), 스레드별 목록 머리 패딩(잡음), 공유 풀 위 GT 병렬화를 레인 없이(RT 170 → 261 us),
   워커 깨우기 사슬, `TaskArgs` 인라인 4 칸(기록 122 → 196 us), `PagedArray` 통합의 첫 측정(번갈아 재니 차이 없음 — 측정 착시).
 - **도구 · 빌드**: 린트를 파일마다 프로세스로(5.3 → 9.4 s — 덩어리 프로세스는 7.5 → 2.25 s), 커밋 훅 게이트 병렬화(이득 ~1 s), 짝 헤더 메모이즈(차이 없음), `formatstring` 비템플릿 부분
