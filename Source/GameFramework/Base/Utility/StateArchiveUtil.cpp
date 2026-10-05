@@ -27,6 +27,31 @@ namespace sw
         return archive.isOk() && readTag == tag && readVersion == version;
     }
 
+    void StateArchiveUtil::writeSection( Archive& outArchive, uint32 tag, uint32 version, const Archive& body )
+    {
+        writeHeader( outArchive, tag, version );
+        outArchive.writeSection( body.getData(), static_cast<uint32>( body.getSize() ) );
+    }
+
+    bool StateArchiveUtil::readSection( Archive& archive, uint32& outTag, uint32& outVersion, Archive& outBody )
+    {
+        uint32 tag      = 0;
+        uint32 version  = 0;
+        uint32 bodySize = 0;
+        archive >> tag;
+        archive >> version;
+        archive >> bodySize;
+        if ( archive.isError() || archive.hasBytesAvailable( bodySize ) == false )
+        {
+            archive.setError();
+            return false;
+        }
+        outBody    = archive.readSubArchive( bodySize );
+        outTag     = tag;
+        outVersion = version;
+        return outBody.isOk();
+    }
+
     void StateArchiveUtil::writeName( Archive& outArchive, const hashed_string& name )
     {
         outArchive << string_view( name.c_str() );

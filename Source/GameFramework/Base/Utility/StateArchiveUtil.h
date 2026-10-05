@@ -28,6 +28,17 @@ namespace sw
         static void writeHeader( Archive& outArchive, uint32 tag, uint32 version );
         /** @brief 머리를 읽고 @p tag · @p version 과 같으면 true 입니다. */
         [[nodiscard]] static bool readHeader( Archive& archive, uint32 tag, uint32 version );
+        /**
+         * @brief 구간 하나를 씁니다 — 표 · 판 · 본문 길이(uint32) · 본문. 읽는 쪽은 모르는 표를 길이로 건너뜁니다.
+         * @details 상태 하나에 키트 · 기반 상태 여럿을 실을 때 씁니다(`GameStateComponent`, 키트 여럿을 든 디렉터). 한 구간의 형식이 바뀌어도 다른
+         *          구간은 그대로 읽히고, 빠진 구간은 읽는 쪽이 새 판으로 둡니다. @p body 는 쓰기 모드로 다 쓴 아카이브입니다.
+         */
+        static void writeSection( Archive& outArchive, uint32 tag, uint32 version, const Archive& body );
+        /**
+         * @brief `writeSection` 이 쓴 구간 하나의 머리를 읽고 본문을 @p outBody 로 자릅니다(읽기 전용 보기 — @p archive 의 바이트를 가리킨다).
+         * @return 머리가 잘렸거나 길이가 남은 바이트를 넘으면 false 이고 @p archive 에 오류를 남깁니다.
+         */
+        [[nodiscard]] static bool readSection( Archive& archive, uint32& outTag, uint32& outVersion, Archive& outBody );
 
         static void               writeName( Archive& outArchive, const hashed_string& name );
         [[nodiscard]] static bool readName( Archive& archive, hashed_string& outName );

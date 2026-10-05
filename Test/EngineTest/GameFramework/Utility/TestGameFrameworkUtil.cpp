@@ -2,6 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameCatalog.h"
@@ -18,6 +19,7 @@
 #include "GameFramework/Base/Utility/GridTopology.h"
 #include "GameFramework/Base/Utility/LifeSpanUtil.h"
 #include "GameFramework/Base/Utility/RayMath.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -679,4 +681,53 @@ SW_TEST_CASE( GameFrameworkUtilTest, WeightedPickShuffleConeAndCosts )
     SW_EXPECT_TRUE( wallet.trySpend( cost ) );
     SW_EXPECT_NEAR_EQUAL( wallet.getValue( hashed_string( "Wood" ) ), 20.0f, 0.001f );
     SW_EXPECT_NEAR_EQUAL( wallet.getValue( hashed_string( "Gold" ) ), 0.0f, 0.001f );
+}
+
+/**
+ * @brief [GameFrameworkUtilTest] 상태 구간 — 표 · 판 · 길이가 붙어 모르는 구간을 길이로 건너뛰고, 길이가 남은 바이트를 넘으면 오류다
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, StateSectionsCarryTagVersionAndSkipByLength )
+{
+    Archive first;
+    first << int32{ 7 };
+    Archive unknown;
+    unknown << uint64{ 0x1122334455667788ull };
+    unknown << int32{ 9 };
+    Archive empty;
+
+    Archive archive;
+    StateArchiveUtil::writeSection( archive, 0x41414141u, 3, first );
+    StateArchiveUtil::writeSection( archive, 0x42424242u, 1, unknown );
+    StateArchiveUtil::writeSection( archive, 0x43434343u, 2, empty );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+
+    Archive reader( bytes.data(), bytes.size() );
+    uint32  tag     = 0;
+    uint32  version = 0;
+    Archive body;
+    SW_ASSERT_TRUE( StateArchiveUtil::readSection( reader, tag, version, body ) );
+    SW_EXPECT_EQUAL( 0x41414141u, tag );
+    SW_EXPECT_EQUAL( 3u, version );
+    int32 value = 0;
+    body >> value;
+    SW_EXPECT_EQUAL( 7, value );
+    SW_EXPECT_EQUAL( uint64{ 0 }, body.getRemainingBytes() );
+
+    // 모르는 구간 — 본문을 읽지 않고 넘어가도 다음 구간이 맞는다
+    SW_ASSERT_TRUE( StateArchiveUtil::readSection( reader, tag, version, body ) );
+    SW_EXPECT_EQUAL( 0x42424242u, tag );
+    SW_ASSERT_TRUE( StateArchiveUtil::readSection( reader, tag, version, body ) );
+    SW_EXPECT_EQUAL( 0x43434343u, tag );
+    SW_EXPECT_EQUAL( 2u, version );
+    SW_EXPECT_EQUAL( uint64{ 0 }, body.getRemainingBytes() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+
+    // 마지막 구간의 머리가 잘린 세이브 — 앞 둘은 읽히고 셋째에서 오류다
+    bytes.resize( bytes.size() - 1 );
+    Archive truncated( bytes.data(), bytes.size() );
+    SW_EXPECT_TRUE( StateArchiveUtil::readSection( truncated, tag, version, body ) );
+    SW_EXPECT_TRUE( StateArchiveUtil::readSection( truncated, tag, version, body ) );
+    SW_EXPECT_FALSE( StateArchiveUtil::readSection( truncated, tag, version, body ) );
+    SW_EXPECT_TRUE( truncated.isError() );
 }
