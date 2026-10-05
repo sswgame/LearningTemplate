@@ -174,7 +174,7 @@ namespace sw
             writer.writeVarInt( _listPeer[static_cast<size_t>( player )]._localAdvantage );
         }
         // 확인 안 된 내 입력은 (예측 + 지연) × 2 + 1 프레임을 넘지 않는다(static_assert) — 예산(1024 B)은 닿지 않는다.
-        NetSendBudget budget( NetConnection::kMaxMessageSize );
+        NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         budget.reserveBits( writer.getBitCount() );
         (void)_sendWindow.write( writer, budget );
         (void)_messageWriter.sendToPeers( *_pHost, NetChannelType::Unreliable );

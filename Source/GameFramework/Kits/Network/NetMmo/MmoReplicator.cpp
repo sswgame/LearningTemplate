@@ -314,7 +314,7 @@ namespace sw
         while ( sentCount < listLeave.size() )
         {
             BitWriter&    writer = scratch._messageWriter.begin( NetMmoMessage::kLeave );
-            NetSendBudget budget( NetConnection::kMaxMessageSize );
+            NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
             budget.reserveBits( writer.getBitCount() + BitMath::computeVarUintBits( listLeave.size() - sentCount ) );
             size_t count = 0;
             while ( sentCount + count < listLeave.size() && budget.tryReserveBits( BitMath::computeVarUintBits( listLeave[sentCount + count] ) ) )

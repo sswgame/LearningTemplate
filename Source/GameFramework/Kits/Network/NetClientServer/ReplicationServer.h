@@ -62,7 +62,7 @@ namespace sw
     /** @brief 서버 설정입니다. */
     struct ReplicationServerSettings
     {
-        int32 _snapshotBudgetBytes{ 1000 }; ///< 클라이언트 · 틱마다 스냅샷 메시지 상한(종류 바이트 · 머리 · 사라진 목록 포함, `NetConnection::kMaxMessageSize` 로 잘린다)
+        int32 _snapshotBudgetBytes{ 1000 }; ///< 클라이언트 · 틱마다 스냅샷 메시지 상한(종류 바이트 · 머리 · 사라진 목록 포함, `NetConnection::kMaxSingleMessageSize` 로 잘린다)
         int32 _historySize{ 64 };           ///< 클라이언트마다 기억하는 보낸 스냅샷(기준 후보) 수
         int32 _inputBufferSize{ 64 };       ///< 클라이언트마다 받아 두는 입력 틱 수(받은 가장 새 틱에서 이만큼 뒤까지 — 그보다 오래된 것은 놓는다)
     };

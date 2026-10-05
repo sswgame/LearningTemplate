@@ -60,7 +60,7 @@ namespace sw
         /**
          * @brief @p baseline 대비 바뀐 엔티티 · 사라진 엔티티를 씁니다. @p pBaseline 이 없으면 모두 씁니다.
          * @param writer 메시지 쓰기 — 이미 쓴 비트(종류 바이트)도 예산에 든다.
-         * @param maxBytes 메시지 전체(이미 쓴 것 · 머리 · 사라진 목록 · 끝 표시 포함) 상한. `NetConnection::kMaxMessageSize` 로 잘린다. 넘치는 엔티티 ·
+         * @param maxBytes 메시지 전체(이미 쓴 것 · 머리 · 사라진 목록 · 끝 표시 포함) 상한. `NetConnection::kMaxSingleMessageSize` 로 잘린다. 넘치는 엔티티 ·
          *        사라진 엔티티는 싣지 않고 @p outWritten 에 실은 것만 반영한다(받는 쪽 재구성 = 기준 + 실은 것 — 못 실은 것은 다음 델타가 다시 고른다).
          *        `kMaxEntityBytes` 를 넘는 엔티티도 싣지 않는다.
          * @param pListOrder 싣는 순서(`_listEntity` 의 자리 — 우선도 높은 것 먼저). 없으면 id 순.

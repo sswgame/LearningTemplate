@@ -587,7 +587,7 @@ SW_TEST_CASE( NetClientServerTest, SnapshotStaysUnderMessageLimitWithManyRemoval
         BitWriter&       writer = messageWriter.begin( NetClientServerMessage::kSnapshot );
         NetSnapshot      written;
         current.writeDelta( writer, &serverState, 5000, written );
-        SW_ASSERT_TRUE( messageWriter.getByteCount() <= NetConnection::kMaxMessageSize );
+        SW_ASSERT_TRUE( messageWriter.getByteCount() <= NetConnection::kMaxSingleMessageSize );
         BitReader reader( messageWriter.getBytes().data(), messageWriter.getByteCount() );
         (void)reader.readBits( 8 );
         NetSnapshot decoded;
@@ -785,7 +785,7 @@ SW_TEST_CASE( NetClientServerTest, RenderTickNeverGoesBackAcrossASnapshotGap )
         NetSnapshot snapshot;
         snapshot._tick = tick;
         NetSnapshot written;
-        snapshot.writeDelta( writer, nullptr, NetConnection::kMaxMessageSize, written );
+        snapshot.writeDelta( writer, nullptr, NetConnection::kMaxSingleMessageSize, written );
         return client.handleMessage( 0, writer.getBytes() );
     };
     for ( uint32 frame = 0; frame < 240; ++frame )

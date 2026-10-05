@@ -1,7 +1,8 @@
 /**
  * @file NetSendBudget.h
  * @brief 메시지 하나 안의 비트 예산입니다 — 종류 바이트 · 머리 · 목록 길이 · 항목 · 끝 표시까지 실제로 쓸 비트를 쓰기 전에 셉니다.
- * @details 메시지가 `NetConnection::kMaxMessageSize` 를 넘으면 보내기가 통째로 버린다. 그래서 예산은 그 상한으로 자르고, 항목 크기는 어림이 아니라
+ * @details 메시지가 채널 상한(`NetConnection::getMaxMessageSize` — 순서만 · 비신뢰는 `kMaxSingleMessageSize`, 신뢰 순서는 `kMaxReliableMessageSize`)을 넘으면
+ *          보내기가 오류와 함께 통째로 버린다. 그래서 예산은 그 상한(생성자의 `limitBytes`, 기본은 조각나지 않는 상한)으로 자르고, 항목 크기는 어림이 아니라
  *          `BitMath::computeVarUintBits` · `computeBlobBits` 로 정확히 센다. 목록 길이처럼 항목보다 먼저 쓰는 칸은 가장 큰 값으로 미리 잡는다.
  * @code
  *     BitWriter&    writer = _messageWriter.begin( kKind );
@@ -22,9 +23,12 @@ namespace sw
     class NetSendBudget
     {
     public:
-        /** @brief @p maxBytes 바이트 예산입니다. 메시지 상한을 넘으면 상한으로, 음수면 0 으로 자른다. */
-        explicit NetSendBudget( int32 maxBytes )
-            : _maxBits{ ( maxBytes < 0 ? 0 : ( maxBytes < NetConnection::kMaxMessageSize ? maxBytes : NetConnection::kMaxMessageSize ) ) * 8 }
+        /**
+         * @brief @p maxBytes 바이트 예산입니다. @p limitBytes(보낼 채널의 상한 — 기본은 조각나지 않는 `kMaxSingleMessageSize`)를 넘으면 그것으로, 음수면 0 으로 자른다.
+         *        신뢰 순서 메시지 하나에 묶는 쪽만 `NetConnection::kMaxReliableMessageSize` 를 준다.
+         */
+        explicit NetSendBudget( int32 maxBytes, int32 limitBytes = NetConnection::kMaxSingleMessageSize )
+            : _maxBits{ clampBytes( maxBytes, limitBytes ) * 8 }
             , _usedBits{ 0 }
         {
         }
@@ -46,6 +50,13 @@ namespace sw
         bool  hasExceeded() const { return _usedBits > _maxBits; }
 
     private:
+        /** @brief @p maxBytes 를 [0, min( @p limitBytes, 신뢰 상한 )] 로 자릅니다. */
+        static constexpr int32 clampBytes( int32 maxBytes, int32 limitBytes )
+        {
+            const int32 limit = limitBytes < NetConnection::kMaxReliableMessageSize ? limitBytes : NetConnection::kMaxReliableMessageSize;
+            return maxBytes < 0 ? 0 : ( maxBytes < limit ? maxBytes : limit );
+        }
+
         int32 _maxBits;
         int32 _usedBits;
     };

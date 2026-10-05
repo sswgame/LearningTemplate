@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Connection/NetHostThread.h"
 #include "Core/Network/Transport/UdpNetTransport.h"
@@ -335,4 +336,44 @@ SW_TEST_CASE( NetworkThreadTest, UdpHostsRunOnThreadsOverLocalhost )
     { return server.getConnectedCount() == 0; }, 1.0 ) );
     clientThread.stop();
     serverThread.stop();
+}
+
+/**
+ * @brief [NetworkThreadTest] 게임 스레드가 보낸 큰 신뢰 메시지(64 KB · 30000 B · 1000 B)가 네트워크 스레드 위에서 조각으로 가 바이트 그대로 · 순서대로 온다
+ * @details 보내기(게임 스레드 — 조각을 창에 넣는다)와 패킷 쓰기 · 모으기(네트워크 스레드)가 같은 연결을 잠금 하나로 나눈다.
+ */
+SW_TEST_CASE( NetworkThreadTest, LargeReliableMessagesCrossHostThreads )
+{
+    NetHostSettings settings;
+    settings._sendInterval = 1.0 / 240.0; // 스레드가 2 ms 마다 돈다 — 조각 107 개가 0.5 초 안팎
+    test::LoopbackCluster cluster( 3u );
+    SW_ASSERT_TRUE( startThreadedCluster( cluster, 1, settings ) );
+    NetHost& client = cluster.getClient( 0 );
+    SW_ASSERT_TRUE( client.connectAsync( NetAddress::makeLoopback( 4000 ) ).waitFor( kFutureWaitMilli ) );
+    SW_ASSERT_TRUE( waitUntil( [&cluster]()
+    { return cluster.getServer().getConnectedCount() == 1; } ) );
+
+    vector<vector<uint8>> listSent;
+    for ( const int32 size : { NetConnection::kMaxReliableMessageSize, 30000, 1000 } )
+    {
+        vector<uint8> message( static_cast<size_t>( size ), 0 );
+        for ( size_t index = 0; index < message.size(); ++index )
+            message[index] = static_cast<uint8>( index * 7u + static_cast<size_t>( size ) );
+        SW_ASSERT_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, message ) );
+        listSent.push_back( std::move( message ) );
+    }
+    vector<vector<uint8>> listReceived;
+    int32                 connectionId = -1;
+    NetChannelType        channel      = NetChannelType::Unreliable;
+    vector<uint8>         buffer;
+    const bool            bAllReceived = waitUntil( [&]()
+    {
+        while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
+            listReceived.push_back( buffer );
+        return listReceived.size() >= listSent.size();
+    }, 10.0 );
+    SW_EXPECT_TRUE( bAllReceived );
+    SW_ASSERT_EQUAL( listSent.size(), listReceived.size() );
+    for ( size_t index = 0; index < listSent.size(); ++index )
+        SW_EXPECT_TRUE( listReceived[index] == listSent[index] );
 }

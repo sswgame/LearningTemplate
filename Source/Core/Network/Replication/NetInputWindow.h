@@ -11,7 +11,7 @@
  *     // 보내는 쪽 — 틱마다
  *     (void)window.push( tick, input.data(), static_cast<int32>( input.size() ) );
  *     window.acknowledge( ackFromPeer );                   // 상대 메시지에서 꺼낸 "빈틈없이 받은 다음 틱"
- *     NetSendBudget budget( NetConnection::kMaxMessageSize );
+ *     NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
  *     budget.reserveBits( writer.getBitCount() );          // 이미 쓴 종류 바이트 · 머리
  *     (void)window.write( writer, budget );
  *     // 받는 쪽

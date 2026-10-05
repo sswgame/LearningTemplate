@@ -21,7 +21,7 @@ namespace
         static constexpr NetInputFormat kStampedFormat{ 0, 255, 32, SW_TRUE };
 
         /** @brief 보내는 창이 쓴 묶음을 받는 버퍼가 읽습니다(종류 바이트 하나를 앞에 둔 셈으로 예산을 센다). 깨졌으면 false 입니다. */
-        static bool deliver( const NetInputSendWindow& window, NetInputReceiveBuffer& buffer, int32 budgetBytes = NetConnection::kMaxMessageSize )
+        static bool deliver( const NetInputSendWindow& window, NetInputReceiveBuffer& buffer, int32 budgetBytes = NetConnection::kMaxSingleMessageSize )
         {
             BitWriter     writer;
             NetSendBudget budget( budgetBytes );
@@ -136,11 +136,11 @@ SW_TEST_CASE( NetInputWindowTest, ByteBudgetSendsTheOldestFirst )
         SW_ASSERT_TRUE( window.push( tick, big.data(), static_cast<int32>( big.size() ) ) );
 
     BitWriter     writer;
-    NetSendBudget budget( NetConnection::kMaxMessageSize );
+    NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
     budget.reserveBits( 8 );
     const int32 written = window.write( writer, budget );
     SW_EXPECT_TRUE( 3 <= written && written < 10 );
-    SW_EXPECT_TRUE( writer.getByteCount() + 1 <= NetConnection::kMaxMessageSize );
+    SW_EXPECT_TRUE( writer.getByteCount() + 1 <= NetConnection::kMaxSingleMessageSize );
 
     NetInputReceiveBuffer buffer;
     buffer.initialize( 64, NetInputWindowTestInternal::kBlobFormat, NetInputWindowMode::Manual );
@@ -255,7 +255,7 @@ SW_TEST_CASE( NetInputWindowTest, FixedEntriesMatchTheHandWrittenRollbackLayout 
     {
         BitWriter written;
         written.writeBits( 0, leadingBits );
-        NetSendBudget budget( NetConnection::kMaxMessageSize );
+        NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         SW_EXPECT_EQUAL( 5, window.write( written, budget ) );
 
         BitWriter manual;

@@ -175,7 +175,7 @@ namespace sw
         BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kInput );
         writer.writeVarUint( static_cast<uint64>( MathUtil::max( 0.0f, getRenderTick() ) * 256.0f ) );
         // 서버가 확인한 다음 틱부터, 메시지 상한 안에서 오래된 것부터 — 못 실은 새 것은 확인이 오른 뒤 다음 메시지가 싣는다.
-        NetSendBudget budget( NetConnection::kMaxMessageSize );
+        NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         budget.reserveBits( writer.getBitCount() );
         (void)_inputWindow.write( writer, budget );
         (void)_pHost->sendMessage( 0, NetChannelType::Unreliable, writer.getBytes() );

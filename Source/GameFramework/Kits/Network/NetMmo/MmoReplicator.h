@@ -102,7 +102,7 @@ namespace sw
         float32 _enterRadius{ 60.0f };
         float32 _leaveRadius{ 70.0f };
         float32 _changedBoost{ 4.0f };     ///< 상태가 바뀐 엔티티의 우선도 배율
-        int32   _updateBudgetBytes{ 600 }; ///< 관찰자 · 틱마다 갱신 메시지 바이트(종류 바이트 · 틱 포함, `NetConnection::kMaxMessageSize` 로 잘린다)
+        int32   _updateBudgetBytes{ 600 }; ///< 관찰자 · 틱마다 갱신 메시지 바이트(종류 바이트 · 틱 포함, `NetConnection::kMaxSingleMessageSize` 로 잘린다)
         int32   _maxEnterPerTick{ 32 };    ///< 한 틱에 새로 보이는 것 상한(텔레포트 직후 몰리지 않게)
     };
 } // namespace sw

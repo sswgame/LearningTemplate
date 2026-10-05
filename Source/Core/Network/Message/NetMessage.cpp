@@ -11,7 +11,7 @@ namespace sw
     NetMessageWriter::NetMessageWriter()
         : _writer{}
     {
-        _writer.reserve( NetConnection::kMaxMessageSize );
+        _writer.reserve( NetConnection::kMaxSingleMessageSize );
     }
 
     BitWriter& NetMessageWriter::begin( uint8 kind )

@@ -36,6 +36,29 @@ namespace
         return buffer;
     }
 
+    /** @brief @p seed 로 정해지는 바이트 @p size 개입니다(조각 경계를 넘어 섞여도 알아보게 자리마다 다르다). */
+    vector<uint8> makePatternMessage( uint32 seed, int32 size )
+    {
+        vector<uint8> buffer( static_cast<size_t>( size ), 0 );
+        uint32        state = seed * 2654435761u + 1u;
+        for ( uint8& byte : buffer )
+        {
+            state = state * 1664525u + 1013904223u;
+            byte  = static_cast<uint8>( state >> 24 );
+        }
+        return buffer;
+    }
+
+    /** @brief 서버(호스트 0)가 받은 메시지를 모두 꺼내 뒤에 붙입니다. */
+    void drainServerMessages( test::LoopbackCluster& cluster, vector<vector<uint8>>& outListMessage )
+    {
+        int32          connectionId = -1;
+        NetChannelType channel      = NetChannelType::Unreliable;
+        vector<uint8>  buffer;
+        while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
+            outListMessage.push_back( buffer );
+    }
+
     /** @brief 시험용 처리기 — 맡은 영역에서 @p acceptedKind 만 맡고(가변 정수 하나가 몸) 받은 수를 셉니다. */
     class CountingHandler : public INetMessageHandler
     {
@@ -234,16 +257,22 @@ SW_TEST_CASE( NetworkTest, BlobRoundTripsAndRejectsOversize )
 SW_TEST_CASE( NetworkTest, SendBudgetClampsToMessageLimit )
 {
     NetSendBudget budget( 4000 );
-    SW_EXPECT_EQUAL( NetConnection::kMaxMessageSize * 8, budget.getMaxBits() );
+    SW_EXPECT_EQUAL( NetConnection::kMaxSingleMessageSize * 8, budget.getMaxBits() );
     budget.reserveBits( 8 );
-    SW_EXPECT_FALSE( budget.tryReserveBits( NetConnection::kMaxMessageSize * 8 ) );
+    SW_EXPECT_FALSE( budget.tryReserveBits( NetConnection::kMaxSingleMessageSize * 8 ) );
     SW_EXPECT_EQUAL( 8, budget.getUsedBits() );
-    SW_EXPECT_TRUE( budget.tryReserveBits( NetConnection::kMaxMessageSize * 8 - 8 ) );
+    SW_EXPECT_TRUE( budget.tryReserveBits( NetConnection::kMaxSingleMessageSize * 8 - 8 ) );
     SW_EXPECT_EQUAL( 0, budget.getRemainingBits() );
     SW_EXPECT_FALSE( budget.tryReserveBits( 1 ) );
     SW_EXPECT_FALSE( budget.hasExceeded() );
     budget.reserveBits( 1 );
     SW_EXPECT_TRUE( budget.hasExceeded() );
+
+    // 신뢰 순서 메시지 하나에 묶는 예산 — 상한 인자를 준 만큼, 그래도 신뢰 상한(64 KB)을 넘지 않는다.
+    const NetSendBudget reliable( 100000, NetConnection::kMaxReliableMessageSize );
+    SW_EXPECT_EQUAL( NetConnection::kMaxReliableMessageSize * 8, reliable.getMaxBits() );
+    const NetSendBudget beyond( 100000, 1 << 20 );
+    SW_EXPECT_EQUAL( NetConnection::kMaxReliableMessageSize * 8, beyond.getMaxBits() );
     SW_EXPECT_EQUAL( 0, NetSendBudget( -5 ).getMaxBits() );
 }
 
@@ -353,8 +382,11 @@ SW_TEST_CASE( NetworkTest, ConnectionsResendReliableMessagesInOrderAndDropStaleS
         const vector<uint8> buffer = makeMessage( index, 40 );
         SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, buffer.data(), static_cast<int32>( buffer.size() ) ) );
     }
-    const vector<uint8> tooBig( static_cast<size_t>( NetConnection::kMaxMessageSize + 1 ), 0 );
-    SW_EXPECT_FALSE( sender.sendMessage( NetChannelType::ReliableOrdered, tooBig.data(), static_cast<int32>( tooBig.size() ) ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a message over the reliable limit is refused with an error" );
+        const vector<uint8> tooBig( static_cast<size_t>( NetConnection::kMaxReliableMessageSize + 1 ), 0 );
+        SW_EXPECT_FALSE( sender.sendMessage( NetChannelType::ReliableOrdered, tooBig.data(), static_cast<int32>( tooBig.size() ) ) );
+    }
 
     // 세 패킷 중 하나를 잃고, 받는 쪽은 매번 확인을 돌려준다.
     vector<int32> listReceived;
@@ -998,16 +1030,19 @@ SW_TEST_CASE( NetworkTest, IdleConnectionsSendKeepAlivesInsteadOfEveryInterval )
     SW_EXPECT_TRUE( clientStats._packetLoss < 0.01f );                    // 확인만 담은 답은 확인을 바라지 않으니 잃은 것으로 세지 않는다
     SW_EXPECT_EQUAL( 1, pair.getServer().getConnectedCount() );
 
-    // 보낼 것이 생기면 바로 — 다음 유지 시각을 기다리지 않는다. 메시지 길이 칸(11 비트)의 끝 1024 바이트까지 실린다.
-    const vector<uint8> largest = makeMessage( 777, NetConnection::kMaxMessageSize );
+    // 보낼 것이 생기면 바로 — 다음 유지 시각을 기다리지 않는다. 메시지 길이 칸(11 비트)의 끝 1024 바이트(조각 하나)까지 한 패킷에 실린다.
+    const vector<uint8> largest = makeMessage( 777, NetConnection::kMaxSingleMessageSize );
     SW_ASSERT_TRUE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, largest ) );
-    SW_EXPECT_FALSE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, makeMessage( 0, NetConnection::kMaxMessageSize + 1 ) ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an unfragmented channel refuses a message over one fragment" );
+        SW_EXPECT_FALSE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::Unreliable, makeMessage( 0, NetConnection::kMaxSingleMessageSize + 1 ) ) );
+    }
     pair.run( 2.0 / 30.0 );
     int32          connectionId = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
     SW_ASSERT_TRUE( pair.getServer().receiveMessage( connectionId, channel, buffer ) );
-    SW_EXPECT_EQUAL( NetConnection::kMaxMessageSize, static_cast<int32>( buffer.size() ) );
+    SW_EXPECT_EQUAL( NetConnection::kMaxSingleMessageSize, static_cast<int32>( buffer.size() ) );
     SW_EXPECT_EQUAL( 777, readMessageValue( buffer ) );
 }
 
@@ -1289,4 +1324,162 @@ SW_TEST_CASE( NetworkTest, LoopbackDeliversInSendOrderOnNextUpdate )
     SW_EXPECT_FALSE( pReceiver->receive( from, buffer ) );
     SW_EXPECT_EQUAL( uint64{ 5 }, network.getDeliveredCount() );
     SW_EXPECT_EQUAL( uint64{ 1 }, network.getDroppedCount() );
+}
+
+/**
+ * @brief [NetworkTest] 신뢰 순서 메시지는 64 KB 까지 조각으로 가고, 손실 · 중복 · 순서 바뀜 회선에서도 받는 쪽이 한 번 · 바이트 그대로 · 보낸 순서로 받는다
+ * @details 조각 하나가 신뢰 id 하나다 — 잃은 조각만 다시 가고, 받는 쪽은 마지막 조각까지 모아 메시지 하나로 건넨다. 늦게 온 중복 조각은 메시지를 다시 만들지 않는다.
+ */
+SW_TEST_CASE( NetworkTest, ReliableMessagesUpTo64KbArriveWholeOverABadLine )
+{
+    NetHostSettings settings;
+    settings._sendInterval = 1.0 / 60.0;
+    test::LoopbackCluster cluster( 41u );
+    addServerAndClient( cluster, settings );
+    SW_ASSERT_TRUE( cluster.connectClients( 30 ) );
+    NetEmulationConditions conditions;
+    conditions._latency       = 0.03;
+    conditions._jitter        = 0.01;
+    conditions._lossRate      = 0.15f;
+    conditions._duplicateRate = 0.05f;
+    conditions._reorderRate   = 0.1f;
+    cluster.setConditions( conditions );
+
+    // 64 KB(조각 64) · 7 B · 40000 B(40) · 1025 B(2) — 조각 107 개, 창(255) 안.
+    const vector<vector<uint8>> listSent = { makePatternMessage( 1u, NetConnection::kMaxReliableMessageSize ), makePatternMessage( 2u, 7 ),
+                                             makePatternMessage( 3u, 40000 ), makePatternMessage( 4u, NetConnection::kMaxSingleMessageSize + 1 ) };
+    for ( const vector<uint8>& message : listSent )
+        SW_ASSERT_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, message ) );
+
+    vector<vector<uint8>> listReceived;
+    for ( int32 step = 0; step < 60 * 20 && listReceived.size() < listSent.size(); ++step )
+    {
+        cluster.step();
+        drainServerMessages( cluster, listReceived );
+    }
+    cluster.run( 1.0 ); // 늦게 온 중복 조각 · 재전송이 메시지를 하나 더 만들지 않는다
+    drainServerMessages( cluster, listReceived );
+
+    SW_ASSERT_EQUAL( listSent.size(), listReceived.size() );
+    for ( size_t index = 0; index < listSent.size(); ++index )
+        SW_EXPECT_TRUE_MSG( listReceived[index] == listSent[index], "every message arrives whole, byte for byte, in the order sent" );
+    const NetConnection* pClientSide = cluster.getClient( 0 ).findConnection( 0 );
+    SW_ASSERT_TRUE( pClientSide != nullptr );
+    SW_EXPECT_TRUE( pClientSide->getStats()._resentMessageCount > 0 ); // 잃은 조각을 다시 보냈다(회선이 실제로 나빴다)
+    SW_EXPECT_EQUAL( 0, pClientSide->getPendingReliableCount() );
+}
+
+/**
+ * @brief [NetworkTest] 채널 상한을 넘는 메시지는 오류 로그와 함께 거절되고 아무것도 남기지 않는다. 신뢰 창이 메시지 전체를 받을 수 없으면 통째로 거절된다 — 막힘은 오류가 아니다(로그 없음)
+ */
+SW_TEST_CASE( NetworkTest, OversizedMessagesAreRefusedLoudlyAndAFullWindowQuietly )
+{
+    NetConnection       connection;
+    const vector<uint8> tooLarge     = makePatternMessage( 6u, NetConnection::kMaxReliableMessageSize + 1 );
+    const vector<uint8> unfragmented = makePatternMessage( 7u, NetConnection::kMaxSingleMessageSize + 1 );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "oversized messages are refused with an error" );
+        test::ScopedLogCollector log;
+        SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::ReliableOrdered, tooLarge.data(), static_cast<int32>( tooLarge.size() ) ) );
+        SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::UnreliableSequenced, unfragmented.data(), static_cast<int32>( unfragmented.size() ) ) );
+        SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::Unreliable, unfragmented.data(), static_cast<int32>( unfragmented.size() ) ) );
+        SW_EXPECT_EQUAL( 3u, log.countContaining( "exceeds the" ) );
+    }
+    SW_EXPECT_EQUAL( 0, connection.getPendingReliableCount() ); // 거절한 것은 조각 하나도 남기지 않는다
+    SW_EXPECT_FALSE( connection.hasDataToSend( 0.0 ) );
+
+    // 창 — 64 KB 는 조각 64 개. 셋(192)은 들어가고, 넷째(256)는 창(미확인 255)을 넘어 통째로 거절된다. 63 개짜리는 꼭 맞고, 그 뒤 1 바이트는 거절된다.
+    test::ScopedLogCollector log;
+    const vector<uint8>      largest    = makePatternMessage( 5u, NetConnection::kMaxReliableMessageSize );
+    const int32              perMessage = NetConnection::kMaxReliableMessageSize / NetConnection::kMaxSingleMessageSize;
+    for ( int32 index = 0; index < 3; ++index )
+        SW_EXPECT_TRUE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), static_cast<int32>( largest.size() ) ) );
+    SW_EXPECT_EQUAL( 3 * perMessage, connection.getPendingReliableCount() );
+    SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), static_cast<int32>( largest.size() ) ) );
+    SW_EXPECT_EQUAL( 3 * perMessage, connection.getPendingReliableCount() );
+    SW_EXPECT_TRUE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), 63 * NetConnection::kMaxSingleMessageSize ) );
+    SW_EXPECT_EQUAL( NetConnection::kReliableWindow - 1, connection.getPendingReliableCount() );
+    SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), 1 ) );
+    SW_EXPECT_EQUAL( 0u, log.countContaining( "NetConnection" ) );
+}
+
+/**
+ * @brief [NetworkTest] 큰 신뢰 메시지를 받는 도중 연결이 끊기면 모으던 조각은 버려진다 — 같은 자리에 다시 들어온 연결의 첫 메시지 앞에 옛 조각이 붙지 않는다
+ */
+SW_TEST_CASE( NetworkTest, DisconnectMidMessageLeavesNoFragmentsBehind )
+{
+    test::LoopbackCluster cluster( 43u );
+    addServerAndClient( cluster, NetHostSettings{} );
+    SW_ASSERT_TRUE( cluster.connectClients( 30 ) );
+    const vector<uint8> large = makePatternMessage( 8u, NetConnection::kMaxReliableMessageSize );
+    SW_ASSERT_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, large ) );
+    cluster.run( 0.2 ); // 조각 몇 개만 — 64 개가 다 가기 전
+    vector<vector<uint8>> listReceived;
+    drainServerMessages( cluster, listReceived );
+    SW_ASSERT_TRUE( listReceived.empty() );
+    const NetConnection* pServerSide = cluster.getServer().findConnection( 0 );
+    SW_ASSERT_TRUE( pServerSide != nullptr );
+    SW_ASSERT_TRUE( pServerSide->getStats()._receivedPacketCount > 3 ); // 서버는 앞 조각을 모으는 중이다
+
+    cluster.getClient( 0 ).disconnect( 0 );
+    cluster.run( 0.5 );
+    SW_ASSERT_EQUAL( 0, cluster.getServer().getConnectedCount() );
+    SW_ASSERT_TRUE( cluster.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+    cluster.run( 0.5 );
+    SW_ASSERT_TRUE( cluster.areClientsConnected() );
+
+    const vector<uint8> smallMessage = makePatternMessage( 9u, 16 );
+    SW_ASSERT_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, smallMessage ) );
+    cluster.run( 0.5 );
+    drainServerMessages( cluster, listReceived );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listReceived.size() );
+    SW_EXPECT_TRUE_MSG( listReceived[0] == smallMessage, "no fragment of the old connection is glued to the new connection's first message" );
+}
+
+/**
+ * @brief [NetworkTest] 큰 신뢰 메시지의 조각이 패킷을 채워도 순서만 메시지(스냅샷)가 굶지 않는다 — 앞 패킷이 남겼으면 다음 패킷은 그쪽부터 싣는다(번갈아)
+ * @details 조각(1 KB) 뒤에는 150 B 남짓만 남아 600 B 스냅샷이 못 들어간다. 늘 신뢰부터 실으면 32 KB 를 보내는 동안 스냅샷이 하나도 가지 않는다.
+ */
+SW_TEST_CASE( NetworkTest, LargeReliableMessageDoesNotStarveSequencedMessages )
+{
+    NetConnection       sender;
+    NetConnection       receiver;
+    const int32         fragmentCount = 32;
+    const vector<uint8> large         = makePatternMessage( 10u, fragmentCount * NetConnection::kMaxSingleMessageSize );
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, large.data(), static_cast<int32>( large.size() ) ) );
+    const auto exchange = [&]( float64 time )
+    {
+        BitWriter packet;
+        sender.writePacket( time, packet, kNetMaxPacketSize - 8 );
+        BitReader reader( packet.getBytes().data(), packet.getByteCount() );
+        SW_EXPECT_TRUE( receiver.readPacket( time + 0.01, reader ) );
+        BitWriter reply;
+        receiver.writePacket( time + 0.01, reply, kNetMaxPacketSize - 8 );
+        BitReader replyReader( reply.getBytes().data(), reply.getByteCount() );
+        (void)sender.readPacket( time + 0.02, replyReader );
+    };
+    int32         snapshotCount = 0;
+    vector<uint8> buffer;
+    for ( int32 frame = 0; frame < 20; ++frame )
+    {
+        vector<uint8> snapshot( 600, static_cast<uint8>( frame ) );
+        snapshot[0] = 0x10; // 종류 하나 — 흐름 하나
+        SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, snapshot.data(), static_cast<int32>( snapshot.size() ) ) );
+        exchange( 0.05 * frame );
+        while ( receiver.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) )
+            ++snapshotCount;
+    }
+    SW_EXPECT_TRUE_MSG( snapshotCount >= 9, "about every other packet carries the snapshot" );
+    SW_EXPECT_TRUE_MSG( fragmentCount - sender.getPendingReliableCount() >= 9, "the reliable transfer keeps going too" );
+
+    // 스냅샷이 그치면 조각만 — 메시지는 바이트 그대로 끝난다.
+    vector<vector<uint8>> listReceived;
+    for ( int32 frame = 20; frame < 80 && listReceived.empty(); ++frame )
+    {
+        exchange( 0.05 * frame );
+        while ( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) )
+            listReceived.push_back( buffer );
+    }
+    SW_ASSERT_EQUAL( size_t{ 1 }, listReceived.size() );
+    SW_EXPECT_TRUE( listReceived[0] == large );
 }
