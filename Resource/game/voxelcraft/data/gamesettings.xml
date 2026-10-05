@@ -2,4 +2,5 @@
 <!-- VoxelCraft 팩의 설정 — 시작 맵은 섬 씬이다(게임 프리셋 Config/Game/VoxelCraft.json 이 이 파일을 가리킨다). -->
 <GameSettings>
   <startMap>game/voxelcraft/maps/island.scene.xml</startMap>
+  <inputMap>game/voxelcraft/data/voxel.input.xml</inputMap>
 </GameSettings>

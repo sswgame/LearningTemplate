@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VoxelCraft 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstanceBase 가 통합 맵(InputManager::getInputMap)에 읽는다.
+  게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다(키 바꾸기는 이 파일 · 사용자 설정의 키 바인딩). 이름은 게임 접두(Voxel.) — 섞인 게임에서 디렉터 둘이 같은 이름을 나눠 쓰지 않게.
+-->
+<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
+	<layers>
+		<layer name="Gameplay" enabled="1" blockLower="0"/>
+	</layers>
+
+	<action name="Voxel.Move" layer="Gameplay">
+		<vector2d up="W" down="S" left="A" right="D"/>
+	</action>
+
+	<action name="Voxel.Jump" layer="Gameplay" trigger="Down">
+		<bind source="key" code="Space"/>
+	</action>
+
+	<action name="Voxel.Sprint" layer="Gameplay" trigger="Down">
+		<bind source="key" code="LeftShift"/>
+	</action>
+
+	<action name="Voxel.Slot1" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit1"/>
+	</action>
+
+	<action name="Voxel.Slot2" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit2"/>
+	</action>
+
+	<action name="Voxel.Slot3" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit3"/>
+	</action>
+
+	<action name="Voxel.Slot4" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit4"/>
+	</action>
+
+	<action name="Voxel.Slot5" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit5"/>
+	</action>
+
+	<action name="Voxel.Slot6" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit6"/>
+	</action>
+
+	<action name="Voxel.Slot7" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit7"/>
+	</action>
+
+	<action name="Voxel.Slot8" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit8"/>
+	</action>
+
+	<action name="Voxel.Slot9" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit9"/>
+	</action>
+</InputMap>

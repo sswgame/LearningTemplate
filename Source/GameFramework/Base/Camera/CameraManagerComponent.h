@@ -8,7 +8,6 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -83,8 +82,8 @@ namespace sw
         BlendCurveSpec _defaultBlend;
         PROPERTY( Category = "Camera", DisplayName = "Local Player", Tooltip = "Local player index this manager serves" )
         uint32 _localPlayerIndex;
-        PROPERTY( Category = "Camera", DisplayName = "Cycle Key", Tooltip = "Key that cycles the view target through cameras of Cycle Role (Unknown: none)" )
-        Key _cycleKey;
+        PROPERTY( Category = "Camera", DisplayName = "Cycle Action", Tooltip = "InputMap action that cycles the view target through cameras of Cycle Role (empty: none)" )
+        hashed_string _cycleAction;
         PROPERTY( Category = "Camera", DisplayName = "Cycle Role", Tooltip = "Role of the cameras the cycle key steps through" )
         CameraRole _cycleRole;
 

@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -462,42 +463,37 @@ namespace sw
     // ------------------------------------------------------------------------------
     void FarmDirectorComponent::updatePlayerInput( float32 deltaTime, const InputManager& input )
     {
-        float3 direction{ 0.0f, 0.0f, 0.0f };
-        if ( input.isKeyDown( Key::W ) || input.isKeyDown( Key::Up ) )
-            direction._z += 1.0f;
-        if ( input.isKeyDown( Key::S ) || input.isKeyDown( Key::Down ) )
-            direction._z -= 1.0f;
-        if ( input.isKeyDown( Key::D ) || input.isKeyDown( Key::Right ) )
-            direction._x += 1.0f;
-        if ( input.isKeyDown( Key::A ) || input.isKeyDown( Key::Left ) )
-            direction._x -= 1.0f;
+        // 키는 입력 맵(`data/farm.input.xml`)이 정한다.
+        const InputMap& inputMap = input.getInputMap();
+        const float2    move     = inputMap.getVector2D( hashed_string( "Farm.Move" ) );
+        const float3    direction{ move._x, 0.0f, move._y };
         if ( direction.getLengthSquared() > 0.0f )
             movePlayer( direction, deltaTime );
 
-        constexpr Key      kArrToolKey[] = { Key::Digit1, Key::Digit2, Key::Digit3, Key::Digit4 };
-        constexpr FarmTool kArrTool[]    = { FarmTool::Hoe, FarmTool::WateringCan, FarmTool::Seeds, FarmTool::Hand };
+        constexpr const utf8* kArrToolAction[] = { "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4" };
+        constexpr FarmTool    kArrTool[]       = { FarmTool::Hoe, FarmTool::WateringCan, FarmTool::Seeds, FarmTool::Hand };
         for ( int32 toolIndex = 0; toolIndex < 4; ++toolIndex )
         {
-            if ( input.wasKeyPressed( kArrToolKey[toolIndex] ) )
+            if ( inputMap.wasActionTriggered( hashed_string( kArrToolAction[toolIndex] ) ) )
             {
                 _tool = kArrTool[toolIndex];
                 SW_LOG_INFO( "[Farm] tool: %#", FarmDirectorComponentInternal::toToolName( _tool ) );
                 getSoundQueue().queueClip( FarmDirectorComponentInternal::kSoundSelect );
             }
         }
-        if ( input.wasKeyPressed( Key::Q ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Farm.SeedPrev" ) ) )
             selectSeed( -1 );
-        if ( input.wasKeyPressed( Key::E ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Farm.SeedNext" ) ) )
             selectSeed( 1 );
-        if ( input.wasKeyPressed( Key::Space ) || input.wasKeyPressed( Key::J ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Farm.Use" ) ) )
             useTool();
-        if ( input.wasKeyPressed( Key::F ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Farm.Ship" ) ) )
             (void)shipAllProduce();
-        if ( input.wasKeyPressed( Key::B ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Farm.Buy" ) ) )
             (void)buySelectedSeed();
-        if ( input.wasKeyPressed( Key::Z ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Farm.Sleep" ) ) )
             endDay( false );
-        if ( input.wasKeyPressed( Key::Tab ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Farm.Status" ) ) )
             logStatus( true );
     }
 

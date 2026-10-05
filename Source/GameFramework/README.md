@@ -39,7 +39,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`, 계산은 `PropScatterMath`).
   아래 **World** 절의 시계 · 날씨 · 지역 그래프 · 플래그 · 질의와 같은 폴더다
 - **Camera**(카메라 컴포넌트): 비스듬히 내려다보는 직교 카메라
-  (`OrthoCameraRigComponent` — WASD · 방향키 이동(WASD 끄기 · 초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), Q/E 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)). 계산은 `OrthoCameraRigMath` 로
+  (`OrthoCameraRigComponent` — 입력 맵 액션 `_panAction`(기본 `Camera.Pan`, 2D 벡터) 이동(초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), `_rotateAction`(기본 `Camera.Rotate`, 1D 축) 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)). 계산은 `OrthoCameraRigMath` 로
   떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스(또는 입력 맵 액션 `_lookAction`) 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리(카메라의 부모 공간) · 손에 든 뷰 모델 자리, 계산은
   `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다.
   XY 평면 2D 씬의 따라가기 · 흔들림은 `Follow2DCameraComponent`(목표 자리 · 따라가는 비율 · 감쇠 흔들림)
@@ -236,7 +236,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   모르는 함수라 시퀀서 · 소켓 부착의 되돌아가기(`SocketBindingComponent`)도 같은 곡선을 쓴다. 직교 ↔ 원근은 섞지 않고 가중치 0.5 에서 바꾼다.
 - **블렌드는 지금 화면에서 출발한다**(`CameraPoseBlender` — 디렉터 · 매니저가 같이 쓴다): 나가는 쪽은 블렌드 동안 계속 살아 있고, 블렌드 도중 다시 바꾸면 그 순간의 섞인
   포즈를 고정해 출발점으로 둔다. 포즈를 내던 중의 **컷**(곡선 `Cut` · 길이 0)은 카메라에 컷 표시(`CameraComponent::markCut`)를 남겨 렌더러가 TAA 기록을 버린다.
-- **`CameraDirectorComponent`**: `CameraComponent` 와 같은 오브젝트에 붙이고 프리셋 경로 · 시작 프리셋 · 대상(또는 묶음 `_listGroupTarget`) · 돌리기 키(`_cyclePresetKey`) · 돌리기 입력 맵 액션(`_cycleAction`)을
+- **`CameraDirectorComponent`**: `CameraComponent` 와 같은 오브젝트에 붙이고 프리셋 경로 · 시작 프리셋 · 대상(또는 묶음 `_listGroupTarget`) · 돌리기 입력 맵 액션(`_cycleAction`) · 팬 · 회전 액션(`_panAction` · `_rotateAction` — 기본 `Camera.Pan` · `Camera.Rotate`)을
   준다. `PostPhysics` 에서 입력만 읽고 **포즈는 틱 뒤에 쓴다**(`executeOrDeferPostTick`) — 틱 중의 트랜스폼 쓰기는 틱 뒤에 적용되므로 틱 안에서 대상을 읽으면 한 프레임
   늦다. `-gv_cameraPreset=<id>` 가 시작 프리셋을 고른다(캡처 카메라 제외 — 스크린샷용).
 - **`CameraManagerComponent`**(언리얼 `SetViewTargetWithBlend` · Cinemachine Brain): 로컬 플레이어마다 하나, 플레이어가 실제로 그리는 카메라에 붙는다. 뷰 타깃 = 다른
@@ -305,6 +305,8 @@ CMake 는 빌드 타깃(`SW_TARGET_TYPE` — Game 은 둘 다)과 겹치지 않�
 - **땅에 무언가 놓는 키트는 땅을 빌린다**(`bindLand( LandRegistry*, 원점 )` — 밭 · 마을 · 도시 · RTS · SRPG 전장 · 공원 · 복셀). 놓기 전에 얻고 치우면 놓는다 —
   남의 칸에는 놓지 못하고, 남이 막아 둔 칸(건물 · 나무)은 다른 키트의 길찾기가 피한다(RTS 는 땅 리비전이 바뀌면 땅 격자를 다시 칠한다). 키트 자기 격자(밭 칸 · 도시 칸)는 그대로 키트의 것이다.
   액션 플랫포머의 굴착 격자는 옆에서 본 2D 레벨의 충돌 칸이라 월드 XZ 땅이 아니다.
+- **입력은 입력 맵 액션으로만**(게임 · 키트 모두 원시 키를 묻지 않는다 — 게임 팩의 `data/<게임>.input.xml`, 이름은 게임 접두). **카메라를 미는 것은 한 디렉터**(또는 기반 카메라 리그 하나) —
+  다른 디렉터는 카메라를 만지지 않는다. 같은 키를 두 디렉터가 읽는 일은 액션 이름이 갈라 드러난다.
 - **빌린 객체의 알림은 꺼내지 않는다**(`drainEvents` 는 게임 화면의 것). 키트는 상태를 본다(`QuestLog::getStatus`). 시계 알림은 `getClockEvents` 를 여럿이 읽는다.
 - **판을 여는 것은 그 오브젝트의 첫 디렉터**(`GameStateComponent::initialize`), 시작값 · 공유 상태를 건드리는 시작 배치는 `isFreshGame()` 일 때만.
 - **상태 바이트는 구간**(`StateArchiveUtil::writeSection` — 표 · 판 · 길이). 키트 상태마다 `kStateTag`(4 글자, 저장소에서 하나 — `CheckKitNamespaces`) · `kStateVersion` 을 키트 클래스가 든다.

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  NileCity 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstanceBase 가 통합 맵(InputManager::getInputMap)에 읽는다.
+  게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다(키 바꾸기는 이 파일 · 사용자 설정의 키 바인딩). 이름은 게임 접두(Nile.) — 섞인 게임에서 디렉터 둘이 같은 이름을 나눠 쓰지 않게.
+  Camera.Pan · Camera.Rotate 는 기반 카메라 리그(OrthoCameraRigComponent 의 _panAction · _rotateAction)가 읽는다.
+-->
+<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
+	<layers>
+		<layer name="Gameplay" enabled="1" blockLower="0"/>
+	</layers>
+
+	<action name="Camera.Pan" layer="Gameplay">
+		<vector2d up="W" down="S" left="A" right="D"/>
+		<vector2d up="Up" down="Down" left="Left" right="Right"/>
+	</action>
+
+	<action name="Nile.NextTool" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="E"/>
+		<bind source="key" code="Tab"/>
+	</action>
+
+	<action name="Nile.PrevTool" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Q"/>
+	</action>
+
+	<action name="Nile.RoadTool" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="R"/>
+	</action>
+
+	<action name="Nile.Pause" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Space"/>
+	</action>
+
+	<action name="Nile.Slower" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Minus"/>
+	</action>
+
+	<action name="Nile.Faster" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Equal"/>
+	</action>
+
+	<action name="Nile.ToggleAutoPlan" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="P"/>
+	</action>
+
+	<action name="Nile.Status" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="F1"/>
+	</action>
+</InputMap>

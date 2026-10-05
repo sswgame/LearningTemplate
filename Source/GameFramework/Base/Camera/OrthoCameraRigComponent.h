@@ -92,8 +92,8 @@ namespace sw
         float32 getOrthoHeight() const { return _orthoHeight; }
         /** @brief 직교 화면 높이를 바꿉니다(확대 범위 안으로 묶는다 — 휠과 같은 규칙). */
         void setOrthoHeight( float32 orthoHeight );
-        /** @brief WASD 로도 움직일지 정합니다(끄면 방향키만 — 게임이 WASD 를 단축키로 쓸 때). */
-        void setWasdPanEnabled( bool bEnabled ) { _bWasdPan = bEnabled; }
+        /** @brief 초점을 미는 입력 맵 액션(2D 벡터)을 바꿉니다 — 같은 게임에서 모드마다 다른 키로 밀 때(관전은 WASD 도). */
+        void setPanAction( const hashed_string& action ) { _panAction = action; }
         /**
          * @brief 화면 점 아래의 땅(y = @p groundHeight) 점입니다. 지금 직교 시점(초점 · 요 · 피치 · 거리 · 화면 높이)으로 광선을 쏩니다. 안 만나면 false 입니다.
          * @details 다른 오브젝트가 읽어도 됩니다 — 리그는 PostUpdate 에서 쓰므로 앞 그룹(PrePhysics)에서 부르면 지난 프레임의 시점입니다.
@@ -142,10 +142,12 @@ namespace sw
         float3 _focusMin;
         PROPERTY( Category = "Rig", DisplayName = "Focus Max", Tooltip = "Highest focus X and Z when Clamp Focus is on", Units = m )
         float3 _focusMax;
-        PROPERTY( Category = "Rig", DisplayName = "Input Enabled", Tooltip = "Read WASD / arrows, wheel and Q/E" )
+        PROPERTY( Category = "Rig", DisplayName = "Pan Action", Tooltip = "InputMap action (2D vector) that pans the focus; missing from the map: no pan" )
+        hashed_string _panAction;
+        PROPERTY( Category = "Rig", DisplayName = "Rotate Action", Tooltip = "InputMap action (1D axis, Pressed) whose sign steps the yaw; missing from the map: no rotation" )
+        hashed_string _rotateAction;
+        PROPERTY( Category = "Rig", DisplayName = "Input Enabled", Tooltip = "Read the pan / rotate actions and the wheel" )
         bool _bInputEnabled;
-        PROPERTY( Category = "Rig", DisplayName = "WASD Pan", Tooltip = "Pan with WASD as well as the arrow keys" )
-        bool _bWasdPan;
         PROPERTY( Category = "Rig", DisplayName = "Clamp Focus", Tooltip = "Keep the panned focus inside Focus Min / Max (X and Z)" )
         bool _bClampFocus;
         PROPERTY( Category = "Rig", DisplayName = "Rotate Time", Tooltip = "Time constant the shown yaw follows a Q/E step with", Min = 0.0, Units = s )

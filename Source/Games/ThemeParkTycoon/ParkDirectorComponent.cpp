@@ -7,6 +7,7 @@
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -562,7 +563,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ParkDirectorComponent::updateInput( const InputManager& input )
     {
-        if ( input.wasKeyPressed( Key::Tab ) && _listPlacement.empty() == false )
+        // 키는 입력 맵(`data/park.input.xml`)이 정한다.
+        const InputMap& inputMap = input.getInputMap();
+        if ( inputMap.wasActionTriggered( hashed_string( "Park.NextRide" ) ) && _listPlacement.empty() == false )
         {
             _selectedPlacement = ( _selectedPlacement + 1 ) % static_cast<int32>( _listPlacement.size() );
             getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundSelect );
@@ -573,30 +576,32 @@ namespace sw
         if ( rideIndex >= 0 )
         {
             const ParkRide& ride = _simulation.getRides()[static_cast<size_t>( rideIndex )];
-            if ( input.wasKeyPressed( Key::O ) )
+            if ( inputMap.wasActionTriggered( hashed_string( "Park.ToggleOpen" ) ) )
             {
                 _simulation.setRideOpen( rideIndex, ride._bOpen == SW_FALSE );
                 SW_LOG_INFO( "[Park] %# is now %#", ride._name.c_str(), ride._bOpen != SW_FALSE ? "open" : "closed" );
             }
-            if ( input.wasKeyPressed( Key::LeftBracket ) || input.wasKeyPressed( Key::RightBracket ) )
+            const bool bPriceUp = inputMap.wasActionTriggered( hashed_string( "Park.PriceUp" ) );
+            if ( bPriceUp || inputMap.wasActionTriggered( hashed_string( "Park.PriceDown" ) ) )
             {
-                _simulation.setRidePrice( rideIndex, ride._price + ( input.wasKeyPressed( Key::RightBracket ) ? 1 : -1 ) );
+                _simulation.setRidePrice( rideIndex, ride._price + ( bPriceUp ? 1 : -1 ) );
                 SW_LOG_INFO( "[Park] %# ticket $%# (worth about $%#)", ride._name.c_str(), ride._price, static_cast<int32>( ThemeParkSimulation::computeRideValue( ride ) ) );
             }
         }
-        if ( input.wasKeyPressed( Key::Minus ) || input.wasKeyPressed( Key::Equal ) )
+        const bool bFeeUp = inputMap.wasActionTriggered( hashed_string( "Park.FeeUp" ) );
+        if ( bFeeUp || inputMap.wasActionTriggered( hashed_string( "Park.FeeDown" ) ) )
         {
-            _simulation.setEntryFee( _simulation.getSettings()._entryFee + ( input.wasKeyPressed( Key::Equal ) ? 5 : -5 ) );
+            _simulation.setEntryFee( _simulation.getSettings()._entryFee + ( bFeeUp ? 5 : -5 ) );
             SW_LOG_INFO( "[Park] entry fee $%#", _simulation.getSettings()._entryFee );
         }
-        if ( input.wasKeyPressed( Key::B ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Park.Build" ) ) )
         {
             if ( _listPlacement[static_cast<size_t>( _selectedPlacement )]._rideIndex < 0 )
                 (void)buildPlacement( _selectedPlacement );
             else
                 (void)buildCheapestRemaining();
         }
-        if ( input.wasKeyPressed( Key::V ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Park.Ride" ) ) )
         {
             // 타고 있으면 내린다. 아니면 고른 코스터(고른 것이 코스터가 아니면 첫 코스터)에 탄다.
             if ( _ridingCoaster >= 0 )
@@ -612,9 +617,9 @@ namespace sw
             }
             SW_LOG_INFO( "[Park] %#", _ridingCoaster >= 0 ? "riding the coaster - V again to get off" : "back to the park view" );
         }
-        if ( input.wasKeyPressed( Key::G ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Park.Thoughts" ) ) )
             logThoughts();
-        if ( input.wasKeyPressed( Key::F1 ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Park.Status" ) ) )
             logStatus( 0.0f, true );
     }
 

@@ -2,4 +2,5 @@
 <!-- NileCity 팩의 설정 — 시작 맵은 나일 도시 씬이다(게임 프리셋 Config/Game/NileCity.json 이 이 파일을 가리킨다). -->
 <GameSettings>
   <startMap>game/nilecity/maps/nile.scene.xml</startMap>
+  <inputMap>game/nilecity/data/nile.input.xml</inputMap>
 </GameSettings>

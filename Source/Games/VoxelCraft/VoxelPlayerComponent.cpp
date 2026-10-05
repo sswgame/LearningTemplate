@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -226,25 +227,21 @@ namespace sw
         const FirstPersonLook& look    = camera.getLook();
         const float3           forward = look.getFlatForward();
         const float3           right   = look.getFlatRight();
-        if ( input.isKeyDown( Key::W ) )
-            outWish = outWish + forward;
-        if ( input.isKeyDown( Key::S ) )
-            outWish = outWish - forward;
-        if ( input.isKeyDown( Key::D ) )
-            outWish = outWish + right;
-        if ( input.isKeyDown( Key::A ) )
-            outWish = outWish - right;
-        outJump   = input.isKeyDown( Key::Space );
-        outSprint = input.isKeyDown( Key::LeftShift );
-        outBreak  = input.isMouseButtonDown( MouseButton::Left );
-        outPlace  = input.isMouseButtonDown( MouseButton::Right ); // 처음 누름도 누름이다 — 간격은 `_placeCooldown` 이 거른다
+        // 키는 입력 맵(`data/voxel.input.xml`)이 정한다.
+        const InputMap& inputMap = input.getInputMap();
+        const float2    move     = inputMap.getVector2D( hashed_string( "Voxel.Move" ) );
+        outWish                  = outWish + forward * move._y + right * move._x;
+        outJump                  = inputMap.isActionDown( hashed_string( "Voxel.Jump" ) );
+        outSprint                = inputMap.isActionDown( hashed_string( "Voxel.Sprint" ) );
+        outBreak                 = input.isMouseButtonDown( MouseButton::Left );
+        outPlace                 = input.isMouseButtonDown( MouseButton::Right ); // 처음 누름도 누름이다 — 간격은 `_placeCooldown` 이 거른다
 
-        constexpr Key kArrSlotKey[VoxelHotbar::kSlotCount] = { Key::Digit1, Key::Digit2, Key::Digit3, Key::Digit4, Key::Digit5,
-                                                               Key::Digit6, Key::Digit7, Key::Digit8, Key::Digit9 };
-        const int32   previousSlot                         = _hotbar.getSelectedIndex();
+        constexpr const utf8* kArrSlotAction[VoxelHotbar::kSlotCount] = { "Voxel.Slot1", "Voxel.Slot2", "Voxel.Slot3", "Voxel.Slot4", "Voxel.Slot5",
+                                                                          "Voxel.Slot6", "Voxel.Slot7", "Voxel.Slot8", "Voxel.Slot9" };
+        const int32           previousSlot                            = _hotbar.getSelectedIndex();
         for ( int32 slotIndex = 0; slotIndex < VoxelHotbar::kSlotCount; ++slotIndex )
         {
-            if ( input.wasKeyPressed( kArrSlotKey[slotIndex] ) )
+            if ( inputMap.wasActionTriggered( hashed_string( kArrSlotAction[slotIndex] ) ) )
                 _hotbar.select( slotIndex );
         }
         const float32 wheel = input.getMouseWheel();

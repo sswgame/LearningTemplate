@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
@@ -92,8 +93,9 @@ namespace sw
         , _farPlaneScale{ 2.5f }
         , _focusMin{ 0.0f, 0.0f, 0.0f }
         , _focusMax{ 0.0f, 0.0f, 0.0f }
+        , _panAction{ "Camera.Pan" }
+        , _rotateAction{ "Camera.Rotate" }
         , _bInputEnabled{ true }
-        , _bWasdPan{ true }
         , _bClampFocus{ false }
         , _rotateTime{ 0.15f }
         , _overrideBlend{}
@@ -141,27 +143,22 @@ namespace sw
         const InputManager* pInput = game::getService<InputManager>();
         if ( pInput == nullptr )
             return;
-        float32    forwardInput = 0.0f;
-        float32    rightInput   = 0.0f;
-        const bool bWasd        = _bWasdPan;
-        if ( pInput->isKeyDown( Key::Up ) || ( bWasd && pInput->isKeyDown( Key::W ) ) )
-            forwardInput += 1.0f;
-        if ( pInput->isKeyDown( Key::Down ) || ( bWasd && pInput->isKeyDown( Key::S ) ) )
-            forwardInput -= 1.0f;
-        if ( pInput->isKeyDown( Key::Right ) || ( bWasd && pInput->isKeyDown( Key::D ) ) )
-            rightInput += 1.0f;
-        if ( pInput->isKeyDown( Key::Left ) || ( bWasd && pInput->isKeyDown( Key::A ) ) )
-            rightInput -= 1.0f;
+        // 키는 입력 맵이 정한다(게임의 `Camera.Pan` · `Camera.Rotate` — 맵에 없으면 움직이지 않는다).
+        const InputMap& inputMap     = pInput->getInputMap();
+        const float2    panInput     = inputMap.getVector2D( _panAction );
+        const float32   forwardInput = panInput._y;
+        const float32   rightInput   = panInput._x;
         // 확대할수록 느리게 — 화면에서 보이는 빠르기가 같다.
         const float32 panScale = _panReferenceHeight > 0.0f ? _orthoHeight / _panReferenceHeight : 1.0f;
         const float3  pan      = OrthoCameraRigMath::computePanDirection( _yaw, forwardInput, rightInput );
         _focus                 = _focus + pan * ( _panSpeed * panScale * deltaTime );
         if ( _bClampFocus )
             _focus = OrthoCameraRigMath::clampFocus( _focus, _focusMin, _focusMax );
-        if ( pInput->wasKeyPressed( Key::Q ) )
-            _yaw -= _rotateStep;
-        if ( pInput->wasKeyPressed( Key::E ) )
-            _yaw += _rotateStep;
+        if ( inputMap.wasActionTriggered( _rotateAction ) )
+        {
+            const float32 rotateInput = inputMap.getAxis1D( _rotateAction );
+            _yaw += rotateInput > 0.0f ? _rotateStep : ( rotateInput < 0.0f ? -_rotateStep : 0.0f );
+        }
         _orthoHeight = OrthoCameraRigMath::computeZoomedHeight( _orthoHeight, pInput->getMouseWheel(), _zoomStep, _minOrthoHeight, _maxOrthoHeight );
     }
 

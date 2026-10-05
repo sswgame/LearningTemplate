@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -616,35 +617,41 @@ namespace sw
     {
         // 카메라 이동 · 확대는 리그(PostUpdate)가 읽는다. 여기는 도구 · 속도 · 짓기.
         (void)deltaTime;
-        const int32 toolCount = static_cast<int32>( _listTool.size() );
-        if ( input.wasKeyPressed( Key::E ) || input.wasKeyPressed( Key::Tab ) )
+        // 키는 입력 맵(`data/nile.input.xml`)이 정한다.
+        const InputMap& inputMap  = input.getInputMap();
+        const int32     toolCount = static_cast<int32>( _listTool.size() );
+        const bool      bNextTool = inputMap.wasActionTriggered( hashed_string( "Nile.NextTool" ) );
+        const bool      bPrevTool = inputMap.wasActionTriggered( hashed_string( "Nile.PrevTool" ) );
+        const bool      bRoadTool = inputMap.wasActionTriggered( hashed_string( "Nile.RoadTool" ) );
+        if ( bNextTool )
             _selectedTool = ( _selectedTool + 1 ) % toolCount;
-        if ( input.wasKeyPressed( Key::Q ) )
+        if ( bPrevTool )
             _selectedTool = ( _selectedTool + toolCount - 1 ) % toolCount;
-        if ( input.wasKeyPressed( Key::R ) )
+        if ( bRoadTool )
             _selectedTool = 0;
-        if ( input.wasKeyPressed( Key::E ) || input.wasKeyPressed( Key::Tab ) || input.wasKeyPressed( Key::Q ) || input.wasKeyPressed( Key::R ) )
+        if ( bNextTool || bPrevTool || bRoadTool )
         {
             [[maybe_unused]] const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
             SW_LOG_INFO( "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _catalog.getRoadCost() );
             getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundSelect );
         }
-        if ( input.wasKeyPressed( Key::Space ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Nile.Pause" ) ) )
         {
             _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
             SW_LOG_INFO( "[Nile] %#", _bPaused == SW_TRUE ? "paused" : "running" );
         }
-        if ( input.wasKeyPressed( Key::Minus ) || input.wasKeyPressed( Key::Equal ) )
+        const bool bFaster = inputMap.wasActionTriggered( hashed_string( "Nile.Faster" ) );
+        if ( bFaster || inputMap.wasActionTriggered( hashed_string( "Nile.Slower" ) ) )
         {
-            _timeScale = MathUtil::clamp( _timeScale * ( input.wasKeyPressed( Key::Equal ) ? 2.0f : 0.5f ), 0.25f, 8.0f );
+            _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
             SW_LOG_INFO( "[Nile] speed x%#", _timeScale );
         }
-        if ( input.wasKeyPressed( Key::P ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Nile.ToggleAutoPlan" ) ) )
         {
             _bAutoPlanToggle = _bAutoPlanToggle == SW_TRUE ? SW_FALSE : SW_TRUE;
             SW_LOG_INFO( "[Nile] auto plan %# (step %# of %#)", _bAutoPlanToggle == SW_TRUE ? "on" : "off", _planner.getNextStep(), _planner.getStepCount() );
         }
-        if ( input.wasKeyPressed( Key::F1 ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Nile.Status" ) ) )
             logStatus();
 
         updateCursor( input );

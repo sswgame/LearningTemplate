@@ -58,8 +58,9 @@ namespace sw
         , _initialPreset{}
         , _target{}
         , _listGroupTarget{}
-        , _cyclePresetKey{ Key::Unknown }
         , _cycleAction{}
+        , _panAction{ "Camera.Pan" }
+        , _rotateAction{ "Camera.Rotate" }
         , _bReadInput{ true }
         , _catalog{}
         , _director{}
@@ -171,9 +172,8 @@ namespace sw
         const InputManager* pInput = _bReadInput ? game::getService<InputManager>() : nullptr;
         if ( pInput == nullptr )
             return;
-        const bool bCycleKey    = _cyclePresetKey != Key::Unknown && pInput->wasKeyPressed( _cyclePresetKey );
-        const bool bCycleAction = _cycleAction.empty() == false && pInput->getInputMap().wasActionTriggered( _cycleAction );
-        if ( bCycleKey || bCycleAction )
+        const InputMap& inputMap = pInput->getInputMap();
+        if ( _cycleAction.empty() == false && inputMap.wasActionTriggered( _cycleAction ) )
         {
             [[maybe_unused]] const hashed_string nextId = activateNextPreset(); // 로그는 Shipping 에서 빠진다
             SW_LOG_INFO( "Camera preset -> '%#'", nextId.c_str() );
@@ -190,21 +190,14 @@ namespace sw
             input._zoomNotches = pInput->getMouseWheel();
         if ( inputDef._panSpeed > 0.0f )
         {
-            if ( pInput->isKeyDown( Key::Up ) || pInput->isKeyDown( Key::W ) )
-                input._pan._x += 1.0f;
-            if ( pInput->isKeyDown( Key::Down ) || pInput->isKeyDown( Key::S ) )
-                input._pan._x -= 1.0f;
-            if ( pInput->isKeyDown( Key::Right ) || pInput->isKeyDown( Key::D ) )
-                input._pan._y += 1.0f;
-            if ( pInput->isKeyDown( Key::Left ) || pInput->isKeyDown( Key::A ) )
-                input._pan._y -= 1.0f;
+            // 모드 입력의 팬은 (앞, 오른쪽) — 액션의 (x 오른쪽, y 앞)을 바꿔 넣는다.
+            const float2 panInput = inputMap.getVector2D( _panAction );
+            input._pan            = float2{ panInput._y, panInput._x };
         }
-        if ( inputDef._rotateStep != 0.0f )
+        if ( inputDef._rotateStep != 0.0f && inputMap.wasActionTriggered( _rotateAction ) )
         {
-            if ( pInput->wasKeyPressed( Key::E ) )
-                ++input._rotateSteps;
-            if ( pInput->wasKeyPressed( Key::Q ) )
-                --input._rotateSteps;
+            const float32 rotateInput = inputMap.getAxis1D( _rotateAction );
+            input._rotateSteps += rotateInput > 0.0f ? 1 : ( rotateInput < 0.0f ? -1 : 0 );
         }
         _director.applyInput( input, deltaTime );
     }

@@ -6,6 +6,7 @@
 
 #include "Engine/Character/AnimNotify/AnimNotifyHandlers.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -24,7 +25,7 @@ namespace sw
         : _viewTarget{}
         , _defaultBlend{}
         , _localPlayerIndex{ 0 }
-        , _cycleKey{ Key::Unknown }
+        , _cycleAction{}
         , _cycleRole{ CameraRole::Custom }
         , _previousTarget{}
         , _blender{}
@@ -65,8 +66,8 @@ namespace sw
     void CameraManagerComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        const InputManager* pInput = _cycleKey != Key::Unknown ? game::getService<InputManager>() : nullptr;
-        if ( pInput != nullptr && pInput->wasKeyPressed( _cycleKey ) )
+        const InputManager* pInput = _cycleAction.empty() == false ? game::getService<InputManager>() : nullptr;
+        if ( pInput != nullptr && pInput->getInputMap().wasActionTriggered( _cycleAction ) )
             (void)cycleViewTarget( _cycleRole );
         updateCamera( deltaTime );
     }

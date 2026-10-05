@@ -2,4 +2,5 @@
 <!-- AbilityArena 팩의 설정 — 시작 맵은 아레나 씬이다(게임 프리셋 Config/Game/AbilityArena.json 이 이 파일을 가리킨다). -->
 <GameSettings>
   <startMap>game/abilityarena/maps/arena.scene.xml</startMap>
+  <inputMap>game/abilityarena/data/arena.input.xml</inputMap>
 </GameSettings>
