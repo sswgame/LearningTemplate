@@ -442,6 +442,7 @@ cd build/Ninja-Debug/Bin
 
 - **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는
   표준 API 라 줄이려면 Win32 · POSIX 순회로 바꾼다. 상주량은 1 KB 미만이라 전역 operator new 교체는 하지 않는다(사용자 결정).
+  누적은 `-gv_memoryReport=1` 의 "(outside the sw allocator, cumulative since start)" 줄(Debug)과 `FileUtilBenchTest` 로 잰다.
 
 - **`runParallel` 합류 대기가 남의 태스크(IO 등)를 도와 실행할 수 있다.** 프로파일에 보이면 IO 레인을 따로 둔다(조건부).
 - **TaskManager 스테이지 디버그 이름** — 프로파일러에 연결할 때 넣는다(지금은 연결돼 있지 않다).

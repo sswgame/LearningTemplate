@@ -260,6 +260,18 @@ namespace sw
             const uint64 outsideX10 = MemoryBudgetMonitorInternal::toKilobytesX10( platformBytes - swBlockBytes );
             SW_LOG_INFO( "[Memory]   (outside the sw allocator — std::allocator · third-party · static init)  %#.%# KB", outsideX10 / 10, outsideX10 % 10 );
         }
+
+        uint64 platformTotalBytes{ 0 };
+        uint64 platformRequestCount{ 0 };
+        if ( MemoryProfiler::getPlatformHeapTotals( platformTotalBytes, platformRequestCount ) )
+        {
+            // sw 블록도 CRT 에서 온다(헤더 포함). 추적을 켜기 전(부트스트랩 맨 앞)의 sw 할당은 밖 몫으로 세인다 — 근사다.
+            const uint64 swCount      = profiler.getTotalAllocationCount();
+            const uint64 swBytes      = profiler.getTotalAllocatedBytes() + swCount * Memory::getAllocationHeaderSize();
+            const uint64 outsideCount = platformRequestCount > swCount ? platformRequestCount - swCount : 0;
+            const uint64 outsideX10   = MemoryBudgetMonitorInternal::toKilobytesX10( platformTotalBytes > swBytes ? platformTotalBytes - swBytes : 0 );
+            SW_LOG_INFO( "[Memory]   (outside the sw allocator, cumulative since start)  %#.%# KB in %# allocations", outsideX10 / 10, outsideX10 % 10, outsideCount );
+        }
 #endif
     }
 } // namespace sw
