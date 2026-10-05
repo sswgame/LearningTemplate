@@ -15,6 +15,8 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
 
+#include "sw/config/CookContract.gen.h"
+
 namespace sw
 {
     namespace
@@ -190,6 +192,9 @@ namespace sw
                                                const DiskReadFn& readFromDisk, const PackReadFn& readFromPack )
         {
             if ( relativePath.empty() )
+                return false;
+            // 이 호스트가 읽지 않는 에셋 종류(전용 서버의 텍스처 · 셰이더 바이너리 · 오디오)는 없는 것으로 친다 — 서버 팩에는 들어 있지도 않다.
+            if ( ResourceUtil::isExcludedForHost( relativePath ) )
                 return false;
 
             // 0. OS 절대 경로(임시 파일, 외부 세이브 등)면 디스크에서 바로 읽는다. 단, 팩 전용 모드(낱개 파일 금지 — 배포 구성)에서 리소스 루트
@@ -502,7 +507,7 @@ namespace sw
 
     bool ResourceUtil::hasResource( string_view relativePath )
     {
-        if ( relativePath.empty() )
+        if ( relativePath.empty() || isExcludedForHost( relativePath ) )
             return false;
 
         // 0. OS 절대 경로면 디스크에서 바로 확인한다
@@ -730,5 +735,49 @@ namespace sw
     vector<string> ResourceUtil::_s_listSearchPriority;
 
     vector<string> ResourceUtil::_s_listResourceFolder;
+
+    vector<string> ResourceUtil::_s_listHostExcludedExtension;
+
+    vector<string> ResourceUtil::_s_listHostExcludedFolder;
+
+    void ResourceUtil::setHostTarget( string_view buildTargetName )
+    {
+        _s_listHostExcludedExtension.clear();
+        _s_listHostExcludedFolder.clear();
+#define SW_ADD_HOST_EXCLUSION( Target, Kind, Extension, Folder )    \
+    if ( buildTargetName == #Target )                               \
+    {                                                               \
+        if ( string_view{ Extension }.empty() == false )            \
+            _s_listHostExcludedExtension.emplace_back( Extension ); \
+        else                                                        \
+            _s_listHostExcludedFolder.emplace_back( Folder );       \
+    }
+        SW_TARGET_ASSET_EXCLUSION_TABLE( SW_ADD_HOST_EXCLUSION )
+#undef SW_ADD_HOST_EXCLUSION
+        if ( _s_listHostExcludedExtension.empty() == false || _s_listHostExcludedFolder.empty() == false )
+            SW_LOG_INFO( "Host target %# does not read %# asset extensions and %# asset folders", string( buildTargetName ).c_str(),
+                         _s_listHostExcludedExtension.size(), _s_listHostExcludedFolder.size() );
+    }
+
+    bool ResourceUtil::isExcludedForHost( string_view resourcePath )
+    {
+        if ( _s_listHostExcludedExtension.empty() && _s_listHostExcludedFolder.empty() )
+            return false;
+        const string normalized = FileUtil::normalizePath( resourcePath );
+        for ( const string& extension : _s_listHostExcludedExtension )
+        {
+            if ( StringUtil::endsWith( normalized, extension ) )
+                return true;
+        }
+        for ( const string& folder : _s_listHostExcludedFolder )
+        {
+            // 폴더 조각은 경로 처음이거나 '/' 뒤에서 시작해 '/' 로 끝나야 한다(`shaders/bin` 이 `myshaders/binary` 에 맞지 않게).
+            const size_t position = normalized.find( folder );
+            if ( position != string::npos && ( position == 0 || normalized[position - 1] == '/' ) && position + folder.size() < normalized.size() &&
+                 normalized[position + folder.size()] == '/' )
+                return true;
+        }
+        return false;
+    }
 
 } // namespace sw

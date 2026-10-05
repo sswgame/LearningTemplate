@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-쿠킹 표(`Config/Engine/CookContract.json`)를 **읽은 결과** — RHI 백엔드 표와 쿡 접미사 표.
+쿠킹 표(`Config/Engine/CookContract.json`)를 **읽은 결과** — RHI 백엔드 표 · 쿡 접미사 표 · 빌드 타깃별 제외 에셋 종류 표.
 
 C++ 은 같은 파일에서 생성한 X-macro(`sw/config/CookContract.gen.h`, `GenerateCookContract.py`)로 읽고, 쿠커
 (`CookAssets.py`)는 이 객체에 묻는다. 표를 읽고 검증하는 일은 여기 한 곳이다 — 헤더 생성기와 쿠커가 같은 객체를 쓴다.
@@ -46,6 +46,26 @@ class CookSuffixSpec:
     bAuthoringSource: bool
 
 
+@dataclass(frozen=True)
+class AssetKindSpec:
+    """빌드 타깃이 뺄 수 있는 에셋 종류 하나 — 소문자 확장자 또는 폴더(경로 조각)로 고른다."""
+
+    name: str
+    listExtension: tuple[str, ...]
+    listFolder: tuple[str, ...]
+
+    def matches(self, relPath: str) -> bool:
+        """`relPath`(도메인 기준 · 리소스 id 어느 쪽이든)가 이 종류인가."""
+        normalized = relPath.replace("\\", "/").lower()
+        if any(normalized.endswith(extension) for extension in self.listExtension):
+            return True
+        return any(normalized.startswith(folder + "/") or f"/{folder}/" in normalized for folder in self.listFolder)
+
+
+#: 빌드 타깃 이름(CMake `SW_TARGET_TYPE`).
+kListBuildTarget = ("Game", "Client", "Server")
+
+
 class CookContractSpec:
     """
     계약 파일 전체. `load()` 는 같은 프로젝트 루트에 대해 한 번만 읽는다.
@@ -59,6 +79,11 @@ class CookContractSpec:
     def __init__(self, spec: dict) -> None:
         self.listBackend: list[RhiBackendSpec] = [makeBackendInternal(row) for row in spec["rhi_backends"]]
         self.listCookSuffix: list[CookSuffixSpec] = [makeCookSuffixInternal(row) for row in spec["cook_suffixes"]]
+        self.listAssetKind: list[AssetKindSpec] = [makeAssetKindInternal(row) for row in spec.get("asset_kinds", [])]
+        #: 빌드 타깃 → 그 타깃이 빼는 종류 이름(표 순서).
+        self.mapExcludedKindByTarget: dict[str, tuple[str, ...]] = {
+            str(row["target"]): tuple(str(kind) for kind in row["kinds"]) for row in spec.get("target_excluded_asset_kinds", [])
+        }
         defaultName = str(spec["default_rhi_backend"])
         self.defaultBackend: RhiBackendSpec = next(
             (backend for backend in self.listBackend if backend.name == defaultName), None
@@ -92,6 +117,14 @@ class CookContractSpec:
             if suffix.cooked not in listSuffix:
                 listSuffix.append(suffix.cooked)
         return listSuffix
+
+    def findExcludedKind(self, relPath: str, buildTarget: str) -> AssetKindSpec | None:
+        """`buildTarget`(Game · Client · Server)이 패키지에서 빼는 종류라면 그 종류, 아니면 None."""
+        for kindName in self.mapExcludedKindByTarget.get(buildTarget, ()):
+            kind = next(assetKind for assetKind in self.listAssetKind if assetKind.name == kindName)
+            if kind.matches(relPath):
+                return kind
+        return None
 
     def findBackend(self, text: str) -> RhiBackendSpec | None:
         """별칭 · 백엔드 이름(대소문자 무시)으로 줄을 찾습니다. 모르면 None."""
@@ -136,6 +169,25 @@ def makeCookSuffixInternal(row: dict) -> CookSuffixSpec:
     return suffix
 
 
+def makeAssetKindInternal(row: dict) -> AssetKindSpec:
+    kind = AssetKindSpec(
+        name=str(row["name"]),
+        listExtension=tuple(str(extension) for extension in row.get("extensions", [])),
+        listFolder=tuple(str(folder) for folder in row.get("folders", [])),
+    )
+    if not _kIdentifierPattern.match(kind.name):
+        raise ValueError(f"asset_kinds: '{kind.name}' 는 C++ 식별자가 아닙니다")
+    if not kind.listExtension and not kind.listFolder:
+        raise ValueError(f"asset_kinds '{kind.name}': extensions · folders 가 둘 다 비었습니다")
+    for extension in kind.listExtension:
+        if not extension.startswith(".") or extension != extension.lower() or '"' in extension:
+            raise ValueError(f"asset_kinds '{kind.name}': '{extension}' 는 '.' 으로 시작하는 소문자 확장자가 아닙니다")
+    for folder in kind.listFolder:
+        if folder != folder.lower() or folder.startswith("/") or folder.endswith("/") or "\\" in folder or '"' in folder:
+            raise ValueError(f"asset_kinds '{kind.name}': '{folder}' 는 소문자 'a/b' 모양 폴더가 아닙니다")
+    return kind
+
+
 def validateInternal(spec: CookContractSpec) -> None:
     """표 전체 규칙 — 이름 · 폴더 · 별칭이 백엔드끼리 겹치지 않고, 긴 접미사가 짧은 것보다 먼저 온다."""
     mapOwnerByName: dict[str, str] = {}
@@ -151,3 +203,13 @@ def validateInternal(spec: CookContractSpec) -> None:
                 raise ValueError(f"cook_suffixes: '{later.source}' 가 두 번 있습니다")
             if later.source.endswith(earlier.source):
                 raise ValueError(f"cook_suffixes: '{later.source}' 가 그것의 끝인 '{earlier.source}' 보다 뒤에 있어 맞지 않습니다")
+
+    setKindName = {kind.name for kind in spec.listAssetKind}
+    for target, listKind in spec.mapExcludedKindByTarget.items():
+        if target not in kListBuildTarget:
+            raise ValueError(f"target_excluded_asset_kinds: 모르는 빌드 타깃 '{target}' ({' · '.join(kListBuildTarget)})")
+        if target == "Game":
+            raise ValueError("target_excluded_asset_kinds: Game 타깃은 클라이언트 · 서버를 다 담으므로 아무것도 빼지 않습니다")
+        for kindName in listKind:
+            if kindName not in setKindName:
+                raise ValueError(f"target_excluded_asset_kinds '{target}': asset_kinds 에 없는 종류 '{kindName}'")

@@ -20,6 +20,11 @@ Client(배포 `*-Shipping`)에는 없습니다.
 
 헤드리스 작업은 씬 쿠킹(`--cook-scenes`)만 됩니다 — 서버 타깃의 `CookAssets` 가 `Server --cook-scenes` 로 쿠킹합니다. 셰이더 쿠킹 · 원본 임포트는 App 의 일이라 오류입니다.
 
+**서버 패키지에는 텍스처 · 셰이더 바이너리 · 오디오가 없습니다.** 표 하나(`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds`)를
+쿠커(`CookAssets.py --build-target Server` — 서버 타깃 빌드가 넘긴다)는 팩에서 빼는 데, 서버 런타임(`ResourceUtil::setHostTarget( "Server" )`)은 그 종류를
+요청 단계에서 없는 것으로 치는 데("파일 없음" 경고 · 오류 없음) 같이 씁니다. 메시 · 애니메이션은 충돌 · 소켓 · 히트박스 · 루트 모션 때문에 남깁니다.
+Dev 의 Server 는 낱개 파일을 읽지만 같은 규칙으로 그 종류를 읽지 않습니다 — 배포 서버와 같은 길을 개발 중에도 지납니다.
+
 ## 설정 — `Config/Server/<게임>.json`
 
 `ServerConfig`(`Engine/Config/ServerConfig.h`) — 받는 주소 · 게임 UDP 포트(+ 샤드 수) · 서비스 TCP 포트 · 틱 수 · 따라잡기 상한 · 콘솔 입력 · 종료 유예 ·

@@ -55,6 +55,34 @@ def isCookedArtifact(relPath):
     return relPath.lower().endswith(".scene.bin")
 '''
 
+#: 쿠커 조각 — 빌드 타깃 인자를 받기만 하고 빼지 않는 필터(서버 팩에 텍스처가 그대로 들어간다). 셀프 테스트가 이것을 잡아야 한다.
+_kTargetBlindCookerFixture = '''
+def shouldIncludeFile(relPath, config, targetRhi="dx12", buildTarget=""):
+    return True
+
+
+def resolveTargetRhi(config, cliRhi="", projectRoot=None):
+    return "dx12"
+
+
+def isCookedArtifact(relPath):
+    return relPath.lower().endswith(".scene.bin")
+'''
+
+#: 위 조각과 짝인 표 — 백엔드 하나 · 접미사 한 줄 · 서버가 텍스처를 뺀다.
+_kTargetContractFixture = '''{
+    "default_rhi_backend": "DirectX12",
+    "rhi_backends": [
+        { "name": "DirectX12", "shader_folder": "dx12", "shader_target": "DXIL_D3D12", "command_line_argument": "DIRECTX_12", "aliases": [ "dx12" ] }
+    ],
+    "cook_suffixes": [
+        { "source": ".scene.xml", "cooked": ".scene.bin", "kind": "Scene", "is_authoring_source": true }
+    ],
+    "asset_kinds": [ { "name": "Texture", "extensions": [ ".dds" ], "folders": [] } ],
+    "target_excluded_asset_kinds": [ { "target": "Server", "kinds": [ "Texture" ] } ]
+}
+'''
+
 #: 셀프 테스트의 표 — 백엔드 둘 · 접미사 한 줄이면 위 필터의 결함이 드러난다.
 _kContractFixture = '''{
     "default_rhi_backend": "DirectX12",
@@ -114,6 +142,28 @@ def checkTargetResolutionInternal(cooker: ModuleType, spec: CookContractSpec) ->
     return listViolation
 
 
+def checkTargetExclusionInternal(cooker: ModuleType, spec: CookContractSpec) -> list[str]:
+    """빌드 타깃이 빼는 종류(확장자 · 폴더마다 탐침 하나)는 그 타깃의 팩에서 빠지고, 빼지 않는 타깃(Game)에는 들어가는지."""
+    listViolation: list[str] = []
+    for target, listKind in spec.mapExcludedKindByTarget.items():
+        for kind in spec.listAssetKind:
+            if kind.name not in listKind:
+                continue
+            listProbe = [f"probe/asset{extension}" for extension in kind.listExtension] + [f"{folder}/probe.bin" for folder in kind.listFolder]
+            for relPath in listProbe:
+                try:
+                    bExcluded = not cooker.shouldIncludeFile(relPath, {}, "", buildTarget=target)
+                    bGameKept = bool(cooker.shouldIncludeFile(relPath, {}, "", buildTarget="Game"))
+                except TypeError:
+                    listViolation.append("shouldIncludeFile 가 buildTarget 인자를 받지 않는다 - 빌드 타깃별 제외 표를 볼 수 없다")
+                    return listViolation
+                if not bExcluded:
+                    listViolation.append(f"shouldIncludeFile('{relPath}', buildTarget='{target}') 가 넣는다 - 표는 {target} 에서 {kind.name} 를 뺀다")
+                if not bGameKept:
+                    listViolation.append(f"shouldIncludeFile('{relPath}', buildTarget='Game') 가 뺀다 - Game 타깃은 아무것도 빼지 않는다")
+    return listViolation
+
+
 def checkCookedArtifactInternal(cooker: ModuleType, spec: CookContractSpec) -> list[str]:
     """쿠킹본 접미사는 산출물, 저작 소스 접미사는 산출물이 아닌지."""
     listViolation: list[str] = []
@@ -145,6 +195,13 @@ class CheckCookContractGate(LintGate):
                 kCookerRelative: _kBrokenCookerFixture,
             },
         },
+        {
+            "name": "빌드 타깃 인자를 받기만 하고 서버 팩에서 텍스처를 빼지 않는 쿠커",
+            "files": {
+                kCookContractConfigRelative: _kTargetContractFixture,
+                kCookerRelative: _kTargetBlindCookerFixture,
+            },
+        },
     ]
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
@@ -157,9 +214,10 @@ class CheckCookContractGate(LintGate):
         listViolation = checkShaderFolderFilterInternal(cooker, spec)
         listViolation += checkTargetResolutionInternal(cooker, spec)
         listViolation += checkCookedArtifactInternal(cooker, spec)
+        listViolation += checkTargetExclusionInternal(cooker, spec)
         return GateResult(
             listViolation=listViolation,
-            summary=f"{len(spec.listBackend)} backends, {len(spec.listCookSuffix)} cook suffixes",
+            summary=f"{len(spec.listBackend)} backends, {len(spec.listCookSuffix)} cook suffixes, {len(spec.mapExcludedKindByTarget)} target exclusions",
         )
 
 

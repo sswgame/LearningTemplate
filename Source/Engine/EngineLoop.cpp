@@ -855,7 +855,7 @@ namespace sw
         if ( _bootstrap.initialize( _owned, kDiagnostics ) == false )
             return false;
         _bootstrap.parseCommandLine( argc, pArgv );
-        // 역할은 서비스를 만들기 전에 정한다 — 오디오 장치 · 기동 표 대상이 이것을 본다. 빌드에 없는 역할로는 서지 않는다.
+        // 역할은 서비스를 만들기 전에 정한다 — 오디오 장치 · 기동 표 대상 · 읽지 않는 에셋 종류가 이것을 본다. 빌드에 없는 역할로는 서지 않는다.
         _hostRole                   = role;
         const bool bDedicatedServer = role == EngineHostRole::DedicatedServer;
         if ( ( bDedicatedServer && build::kWithServerCode == false ) || ( bDedicatedServer == false && build::kWithClientCode == false ) )
@@ -863,6 +863,8 @@ namespace sw
             SW_LOG_ERROR( "The %# build cannot host the %# role", build::kTargetName, bDedicatedServer ? "dedicated server" : "client" );
             return false;
         }
+        // 서버 패키지에 없는 에셋 종류(텍스처 · 셰이더 바이너리 · 오디오 — 쿠킹 표의 target_excluded_asset_kinds)는 서버가 읽지 않는다.
+        ResourceUtil::setHostTarget( bDedicatedServer ? "Server" : "Client" );
         // `-gv_memoryTracking=1` 은 기동의 할당부터 센다(Release 는 추적이 꺼진 채 선다).
         _memoryBudgetMonitor.applyTrackingSetting();
 

@@ -347,8 +347,15 @@ def isCookedArtifact(relPath: str) -> bool:
     return any(normRel.endswith(cooked) for cooked in _gCookContract.listCookedSuffix)
 
 
-def shouldIncludeFile(relPath: str, config: dict, targetRhi: str = "dx12") -> bool:
-    """PackConfig에 정의된 전역 및 개별 규칙에 따라 파일 패킹 포함 여부를 판단합니다."""
+def shouldIncludeFile(relPath: str, config: dict, targetRhi: str = "dx12", buildTarget: str = "") -> bool:
+    """
+    PackConfig에 정의된 전역 및 개별 규칙에 따라 파일 패킹 포함 여부를 판단합니다.
+
+    `buildTarget`(Game · Client · Server)이 표(`target_excluded_asset_kinds`)에서 빼는 종류(전용 서버: 텍스처 · 셰이더 바이너리 · 오디오)는
+    넣지 않는다 — 그 호스트의 런타임은 같은 표로 그 종류를 읽지 않는다(`ResourceUtil::setHostTarget`).
+    """
+    if buildTarget and _gCookContract.findExcludedKind(relPath, buildTarget) is not None:
+        return False
     normRel = normalizePath(relPath).lower()
     parts = normRel.split("/")
     fileName = parts[-1]
@@ -530,6 +537,28 @@ class PackWriter:
         return outPackPath.stat().st_size
 
 
+def collectPackFiles(sourceDir: Path, packConfig: dict | None, targetRhi: str = "dx12",
+                     buildTarget: str = "") -> tuple[list[tuple[str, Path]], list[str]]:
+    """
+    도메인 폴더에서 팩에 넣을 낱개 파일(상대 경로, 경로)과, 소스 트리에 남은 낡은 쿠킹 산출물 목록을 고릅니다 — `cookPack` 과 시험이 같은 판단을 쓴다.
+    """
+    listPackFile: list[tuple[str, Path]] = []
+    staleCooked: list[str] = []
+    for filePath in sorted(sourceDir.rglob("*")):
+        if not filePath.is_file():
+            continue
+        rel = filePath.relative_to(sourceDir).as_posix()
+        if packConfig and not shouldIncludeFile(rel, packConfig, targetRhi=targetRhi, buildTarget=buildTarget):
+            continue
+        if isCookedArtifact(rel):
+            # 산출물은 스테이징에만 있다. 소스 트리에 남은 것은 낡은 쿠킹 잔재이고, Dev 런타임이 소스가
+            # 없을 때 그것으로 물러나 실패를 가리므로 팩에 넣지 않고 이름을 찍어 지우게 한다.
+            staleCooked.append(rel)
+            continue
+        listPackFile.append((rel, filePath))
+    return listPackFile, staleCooked
+
+
 def cookPack(
     sourceDir: Path,
     outPackPath: Path,
@@ -541,6 +570,7 @@ def cookPack(
     targetRhi: str = "dx12",
     extraEntries: list[tuple[str, bytes]] | None = None,
     stagedDir: Path | None = None,
+    buildTarget: str = "",
 ) -> bool:
     """
     단일 디렉터리 내 에셋들을 .pack 파일로 패킹합니다 — **무엇을 담을지** 고르는 것이 이 함수의 일이고,
@@ -561,18 +591,8 @@ def cookPack(
         bStripDebugStrings=stripDebugStrings,
     )
 
-    staleCooked: list[str] = []
-    for filePath in sorted(sourceDir.rglob("*")):
-        if not filePath.is_file():
-            continue
-        rel = filePath.relative_to(sourceDir).as_posix()
-        if packConfig and not shouldIncludeFile(rel, packConfig, targetRhi=targetRhi):
-            continue
-        if isCookedArtifact(rel):
-            # 산출물은 스테이징에만 있다. 소스 트리에 남은 것은 낡은 쿠킹 잔재이고, Dev 런타임이 소스가
-            # 없을 때 그것으로 물러나 실패를 가리므로 팩에 넣지 않고 이름을 찍어 지우게 한다.
-            staleCooked.append(rel)
-            continue
+    listPackFile, staleCooked = collectPackFiles(sourceDir, packConfig, targetRhi=targetRhi, buildTarget=buildTarget)
+    for rel, filePath in listPackFile:
         writer.addFile(rel, filePath)
 
     if staleCooked:
@@ -600,8 +620,12 @@ def cookAllPacks(
     packConfig: dict | None = None,
     targetRhi: str = "dx12",
     cookedDir: Path | None = None,
+    buildTarget: str = "",
 ) -> bool:
-    """engine, common, 그리고 game 에셋 디렉터리들을 일괄 패킹합니다. cookedDir 은 프리팹·씬 산출물의 스테이징 루트다."""
+    """
+    engine, common, 그리고 game 에셋 디렉터리들을 일괄 패킹합니다. cookedDir 은 프리팹·씬 산출물의 스테이징 루트다.
+    buildTarget 이 빼는 에셋 종류(전용 서버: 텍스처 · 셰이더 바이너리 · 오디오)는 넣지 않는다.
+    """
     resourceDir = projectRoot / "Resource"
     cookedDir = cookedDir or resolveDefaultOutputDir(projectRoot, "Cooked")
     outputDir.mkdir(parents=True, exist_ok=True)
@@ -635,7 +659,7 @@ def cookAllPacks(
                   file=sys.stderr)
         success = cookPack(src, out, dlcAppId=dlcId, compression=packCompression, compressionLevel=packCompressionLevel,
                            stripDebugStrings=isShipping, packConfig=packConfig, targetRhi=targetRhi,
-                           stagedDir=staged)
+                           stagedDir=staged, buildTarget=buildTarget)
         if not success:
             allSuccess = False
 
@@ -659,6 +683,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--target-rhi", type=str, default="", help=f"타깃 RHI 백엔드 ({', '.join(backend.name for backend in _gCookContract.listBackend)} 또는 그 별칭)")
     parser.add_argument("--cook-shaders", action="store_true", help="패킹 전 App.exe --cook-shaders 를 실행하여 셰이더 일괄 사전 빌드")
     parser.add_argument("--verify-shaders", action="store_true", help="쿠킹된 셰이더가 현재 소스에서 나온 것인지 확인하고, 아니면 쿠킹을 중단")
+    parser.add_argument("--build-target", type=str, default="",
+                        help="빌드 타깃(Game · Client · Server — CMake SW_TARGET_TYPE). 그 타깃이 빼는 에셋 종류를 팩에 넣지 않는다")
     parser.add_argument("--app", type=str, default="", help="씬 쿠킹·셰이더 쿠킹에 쓸 App 실행 파일 (CMake 가 $<TARGET_FILE:App> 을 넘긴다; 없으면 빌드 폴더를 뒤진다)")
 
     args = parser.parse_args(argv)
@@ -704,7 +730,11 @@ def main(argv: list[str] | None = None) -> int:
                 print("                   해결: build/Ninja-Debug/Bin/App.exe --cook-shaders", file=sys.stderr)
                 return 1
         outDir = Path(args.output) if args.output else resolveDefaultOutputDir(projectRoot, "Packs")
-        success = cookAllPacks(projectRoot, outDir, isShipping=stripNames, packConfig=packConfig, targetRhi=targetRhi, cookedDir=cookedDir)
+        if args.build_target:
+            listExcluded = _gCookContract.mapExcludedKindByTarget.get(args.build_target, ())
+            print(f"[CookAssets] Build target: {args.build_target} (excluded asset kinds: {', '.join(listExcluded) or 'none'})")
+        success = cookAllPacks(projectRoot, outDir, isShipping=stripNames, packConfig=packConfig, targetRhi=targetRhi, cookedDir=cookedDir,
+                               buildTarget=args.build_target)
         if not success:
             exitCode = 1
 

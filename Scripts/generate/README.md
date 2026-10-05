@@ -8,7 +8,7 @@
 
 | 스크립트 | 역할 | 출력/대상 |
 |---|---|---|
-| `CookAssets.py` | 씬 · 프리팹을 `App --cook-scenes` 로 쿠킹하게 하고(SCN1 · PFB2 — 리플렉션이 엔진 안에 있어서 엔진이 쿠킹한다), Resource 도메인을 `.pack` 으로 패킹(SWPK, 4KB 섹터 정렬). 쿠킹된 씬 · 프리팹은 소스 옆이 아니라 스테이징 폴더에 쓰고 팩에 같은 상대 경로로 넣는다 | `--cooked-dir`(기본 `build/*/Bin/Cooked`), `build/*/Bin/Packs/*.pack` |
+| `CookAssets.py` | 씬 · 프리팹을 `App --cook-scenes` 로 쿠킹하게 하고(SCN1 · PFB2 — 리플렉션이 엔진 안에 있어서 엔진이 쿠킹한다), Resource 도메인을 `.pack` 으로 패킹(SWPK, 4KB 섹터 정렬). 쿠킹된 씬 · 프리팹은 소스 옆이 아니라 스테이징 폴더에 쓰고 팩에 같은 상대 경로로 넣는다. `--build-target`(Game · Client · Server)이 빼는 에셋 종류(쿠킹 표 `target_excluded_asset_kinds` — 서버: 텍스처 · 셰이더 바이너리 · 오디오)는 넣지 않는다 | `--cooked-dir`(기본 `build/*/Bin/Cooked`), `build/*/Bin/Packs/*.pack` |
 | `GenerateShippingHostDefaults.py` | 커밋된 런타임 JSON 설정을 읽어 Shipping 및 Fallback용 C++ 헤더로 생성 | `build/.../ShippingHostDefaults.h` |
 | `GenerateDocs.py` | Doxygen을 구동하여 C++ API 레퍼런스 문서 생성 | `Docs/Doxygen/html/index.html` |
 | `GeneratePackFormat.py` | 팩 바이너리 계약(`Config/Engine/PackFormat.json`)을 C++ 헤더로 | `build/.../PackFormat.gen.h` |
