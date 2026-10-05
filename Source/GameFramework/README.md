@@ -228,6 +228,16 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
         엔진 루프는 활성 씬 하나만 틱하므로 하니스는 월드마다 `GameObjectManager::tick` 을 직접 부른다(씬의 `tick` 이 아니다 — 오디오 리스너는 프로세스에
         하나). 렌더러 · 오디오는 쓰지 않는다(nogpu 시험 · 게임 자동화). 틱 순서는 받은 것 나눠 주기 → 오브젝트 틱 → 보내기 — 깨끗한 회선이면 틱 N 에
         보낸 것을 틱 N + 1 이 받는다. 시험: `NetSimHarnessTest`.
+  - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
+    - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
+      연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,
+      없는 이름은 분명한 오류), 마이그레이션 적용기(`SqlMigrationRunner` — `NNNN_이름.sql` · `NNNN_이름.<드라이버>.sql`, 체크섬 · 한 트랜잭션 · 토큰 `{{blob}}` `{{keytext}}`),
+      SQLite 드라이버(`Driver/Sqlite/` — sqlite3 를 아는 유일한 폴더, WAL · 준비문 캐시).
+      **SQL 이식성**: 공통 SQL 은 SQLite 3.35+ · PostgreSQL 이 같은 문법만(`ON CONFLICT … DO NOTHING/UPDATE` · `RETURNING` · `LIMIT ?`), 자리표시자는 늘 `?`(드라이버가 바꾼다),
+      갈라지는 곳은 방언 훅뿐이다. 시험: `SqlDriverSqliteTest`(드라이버 계약 `SqlDriverContract.h` · 풀 · 등록부).
+    - `Server/SqlStore`(`GF_Server_SqlStore`, Server): `SqlServiceStore`(기반 `IServiceStore` 의 SQL 구현 — `sw_record` 표, 조건부 쓰기는 영향 받은 행 수로,
+      마이그레이션은 `Resource/common/sql/servicestore/`), `ServiceStoreFactory`(서버 설정의 저장소 항목 → 저장소, `memory` 는 기반 메모리 구현).
+      시험: `ServiceStoreSqliteTest`(메모리와 같은 계약 여섯 `ServiceStoreContract.h` · 다시 띄우기 · 공장).
 
 ## 카메라: 프리셋 데이터 + 모드 + 블렌드 + 뷰 타깃
 

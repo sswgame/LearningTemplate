@@ -67,3 +67,9 @@ add_subdirectory(Network/NetLockstep)
 add_subdirectory(Network/NetMmo)
 add_subdirectory(Network/NetSimulation)
 add_subdirectory(Network/NetTurnRelay)
+
+# ------------------------------------------------------------------------------
+# 9) 저장 — 서비스 저장 계약(기반 Online/Store)의 드라이버. 서버 전용은 `<묶음>/Server/<키트>`(GF_Server_<키트>)
+# ------------------------------------------------------------------------------
+add_subdirectory(Storage/SqlStore)
+add_subdirectory(Storage/Server/SqlStore)

@@ -399,7 +399,7 @@ cd build/Ninja-Debug/Bin
   **들어간 기반**(`GameFramework/Base/Online/`): `Store`(영속 계약 `IServiceStore` — 비동기 일 · 트랜잭션 · 조건부 쓰기 · 멱등 기록, 메모리 구현 · 계약 시험) ·
   `Guard`(토큰 버킷 · 크기 상한) · `Identity`(`AccountId` · `IAccountDirectory`) · `Cache`(휘발성 계약 `IEphemeralStore` — 만료 · 원자 증감 · 임대 · 정렬 집합 · 발행/구독, 메모리 구현 · 계약 시험) ·
   `Audit`(감사 줄) · `Bus`(서버 간 버스 — 캐시 위 · 프로세스 안) · `Schedule`(예약 작업 — 회차 차지 · 임대 이어받기) · `Config`(원격 설정 · 기능 플래그 출시 비율).
-  남은 기반: `ILocalStore` · 서비스 틀(캐시 답 · 버스 메시지를 요청 id · 주제별로 나눠 주기 — 그때까지 `EphemeralServerBus` 는 자기 캐시 앞을 혼자 쓴다) · 관측, 드라이버 키트 `GF_SqlStore`(SQLite · 마이그레이션 적용기) · `GF_Server_SqlStore`(PostgreSQL · SqlServiceStore) · `GF_Server_CacheStore`(RESP) —
+  남은 기반: `ILocalStore` · 서비스 틀(캐시 답 · 버스 메시지를 요청 id · 주제별로 나눠 주기 — 그때까지 `EphemeralServerBus` 는 자기 캐시 앞을 혼자 쓴다) · 관측, 드라이버 `GF_Server_SqlStore` 의 PostgreSQL(libpq) · `GF_Server_CacheStore`(RESP), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
   계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
 - **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는
@@ -811,6 +811,7 @@ cd build/Ninja-Debug/Bin
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
 
+- **서드파티 격리의 링크 주인은 규칙마다다**(`CheckThirdPartyIsolation` 의 `cmakeLinkOwner`) — 엔진 백엔드는 `Source/Engine/CMakeLists.txt`, 키트 안 드라이버(SQLite)는 그 키트의 CMakeLists 가 링크한다. 어느 드라이버가 실행 파일에 드는지는 빌드 타깃(`_listTarget`)이 정한다 — 드라이버 목록 옵션을 따로 두지 않는다.
 - **빌드 타깃별 제외 에셋은 쿠킹 표 한 줄이다**(`Config/Engine/CookContract.json` 의 `asset_kinds` · `target_excluded_asset_kinds`). 쿠커(`--build-target`)가 팩에서 빼고,
   같은 호스트의 런타임(`ResourceUtil::setHostTarget`)은 그 종류를 읽지 않는다 — 한쪽만 고치면 서버가 "파일 없음" 을 쏟거나 팩에 쓸모없는 바이트가 남는다.
   종류를 더하면 `CheckCookContract` · `TestServerPackExclusion` · `ResourceHostTargetTest` 가 같이 본다.
