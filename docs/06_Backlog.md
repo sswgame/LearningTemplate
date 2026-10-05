@@ -387,7 +387,6 @@ cd build/Ninja-Debug/Bin
 - **네트워크 서비스 계층(2026-10-06 사용자 결정 — 로그인 · 채팅 · 거래, MMO 가 아니어도 쓰는 키트).** 상태 복제(UDP)와 달리 순서 있는 신뢰 스트림 · 긴 연결 · 요청-응답이다.
   ① 스트림 전송(Core `Network/Transport/` — IOCP · epoll · 루프백)은 있다. 리눅스 epoll(`EpollStreamTransport`)은 WSL 빌드 · `StreamTransportTest` 미확인 —
   `WSL-Debug` · `WSL-Shipping` 에서 `--test_repeat=20` 과 변이(`setReceivePaused( false )` 의 할 일 빼기 → 백프레셔 시험이 진다)를 본다. io_uring 은 측정 뒤.
-  ② Core `Network/Message/` 의 길이 접두 프레임 · 끝점은 있다 — 요청-응답(요청 id · 시한 · 취소 · 멱등 키) — 복제용 RPC 와 다르다(서비스 호출)
   ③ 구성은 `docs/` 가 아니라 이 항목이 정본 — **공통 기반**(GameFramework 기반 `Online/`): 서비스 틀(등록 · 라우팅 · 인증 문맥 · 오류 코드 · 판 협상) · 요청 보호(도배 제한 · 멱등 키 · 크기 상한) ·
   신원 원형(`AccountId` · 세션 토큰 검증) · 저장 계약(`IServiceStore` 영속 · `IEphemeralStore` 캐시 · `ILocalStore` 로컬 — 파일 백엔드는 바이너리/JSON/XML · 원자적 쓰기 · 체크섬 · 선택 압축/암호화) ·
   마이그레이션 적용기 · 감사 로그 · 서버 간 버스 · 예약 작업 · 원격 설정/기능 플래그 · 관측(지표 · 구조화 로그 · 추적 id). **드라이버 키트**: `GF_SqlStore`(SQLite · PostgreSQL) ·
@@ -1581,6 +1580,8 @@ cd build/Ninja-Debug/Bin
 - **스트림 전송의 연결 수명은 "걸린 일 수" 로 센다**(IOCP 는 걸린 overlapped + 콜백 중 표시, epoll 은 루프 스레드 하나가 소유) — 닫힘은 그 수가 0 이 되는 첫 순간 한 번,
   그 뒤에 자리를 세대 +1 로 돌려준다. 걸린 일이 없는 연결을 닫으면 아무 완료도 오지 않으니 정리 표를 루프에 넣는다. 열림 콜백은 받기를 걸기 **전에** — 열림이 늘 첫 콜백.
   I/O 스레드를 끝낼 때 완료 포트의 멈춤 표는 깨우기만 쓴다 — `GetQueuedCompletionStatusEx` 는 한 묶음에 표 여럿을 한 스레드에 줘서, 표 수로 끝내면 다른 스레드가 영영 기다린다.
+- **멱등 기억은 연결이 아니라 주체에 묶는다** — 거래 요청이 처리된 뒤 응답 전에 끊기면 클라이언트는 새 연결에서 같은 키로 다시 보낸다. 범위가 연결이면 두 번 처리된다
+  (`NetRequestServer::setPrincipal` — 로그인 키트가 붙인다). 처리 중인 키가 다시 오면 처리하지 않고 첫 응답을 같이 받게 한다. 연결이 닫혀도 처리 중 기록은 남겨 늦은 응답을 기억한다.
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
 
