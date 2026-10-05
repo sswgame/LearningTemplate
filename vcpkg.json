@@ -72,6 +72,15 @@
     },
     "zlib",
     "lz4",
-    "zstd"
+    "zstd",
+    "openssl",
+    "sqlite3",
+    {
+      "name": "libpq",
+      "default-features": false,
+      "features": [
+        "openssl"
+      ]
+    }
   ]
 }

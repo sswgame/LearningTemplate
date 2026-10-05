@@ -81,6 +81,24 @@ if(Python3_Interpreter_FOUND)
 	)
 	set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
 
+	# 서드파티 고지 — 배포물(Bin · Shipping 패키지)에 함께 놓는다. vcpkg 설치 트리의 `share/<포트>/copyright` 를 이 매니페스트가
+	# 끌어오는 포트만 모아 쓴다(설치 트리는 워크트리끼리 나눠 쓰므로 트리 전체가 아니다). 포트가 바뀌면 status 가 바뀌어 다시 만든다.
+	if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET AND EXISTS "${VCPKG_INSTALLED_DIR}/vcpkg/status")
+		set(swThirdPartyNotices "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/THIRD_PARTY_NOTICES.txt")
+		add_custom_command(
+			OUTPUT "${swThirdPartyNotices}"
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateThirdPartyNotices.py"
+				--manifest "${CMAKE_SOURCE_DIR}/vcpkg.json" --installed "${VCPKG_INSTALLED_DIR}"
+				--triplet "${VCPKG_TARGET_TRIPLET}" --out "${swThirdPartyNotices}"
+			DEPENDS "${CMAKE_SOURCE_DIR}/vcpkg.json" "${VCPKG_INSTALLED_DIR}/vcpkg/status"
+				"${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateThirdPartyNotices.py"
+			COMMENT "Collecting third-party license notices..."
+			VERBATIM
+		)
+		add_custom_target(ThirdPartyNotices ALL DEPENDS "${swThirdPartyNotices}")
+		set_target_properties(ThirdPartyNotices PROPERTIES FOLDER "Engine/Scripts")
+	endif()
+
 	# 린트 타깃·CTest 등록은 파이썬이 만든다 — 목록의 출처는 `Scripts/lint/gate/` 와
 	# `Scripts/lint/selftest/` 폴더 그 자체이고, 린트마다 다른 값(설명·타임아웃·추가 인자)은
 	# 각 린트가 직접 든다. 이 파일에 린트를 손으로 나열하지 않는다.

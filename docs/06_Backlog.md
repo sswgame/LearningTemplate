@@ -237,10 +237,9 @@ cd build/Ninja-Debug/Bin
   2026-10-05 사용자 결정으로 **Recast & Detour**(zlib, 정적 — `RecastNavigation::Recast` · `Detour` · `DetourCrowd` · `DetourTileCache`)와
   **Tracy**(BSD-3, 클라이언트만 · 기능 끔 — `Tracy::TracyClient`, Windows 는 공유 TracyClient.dll)를 vcpkg 로 들였다(`ThirdParty/{recastnavigation,tracy}`).
   Tracy 는 clang-cl 트리플릿의 C++14 기본값에 서지 못해 C++17 오버레이 포트(`ThirdParty/tracy/vcpkg-port/tracy`)를 둔다. Tracy 는 엔진 프로파일러의 두 번째
-  출력으로 감쌌다(`Source/Engine/Utility/Profiling/README.md` — 헤더 경계는 같은 게이트, Shipping 은 링크하지 않는다). 남은 것: 배포물에 넣을
-  서드파티 고지 목록이 저장소에 없다 — Shipping 패키지에 `THIRD_PARTY_NOTICES` 를 만들어 vcpkg `share/*/copyright` 를 모은다. Tracy(BSD-3)는 Shipping 에
-  들어가지 않지만 **개발 빌드(TracyClient.dll)를 남에게 줄 때** 고지가 필요하다: "Tracy Profiler (https://github.com/wolfpld/tracy) is licensed under the
-  3-clause BSD license. Copyright (c) 2017-2025, Bartosz Taudul <wolf@nereid.pl>" + BSD-3 본문(`share/tracy/copyright`) — 뷰어(tracy-profiler.exe)는 저장소에 넣지 않는다.
+  출력으로 감쌌다(`Source/Engine/Utility/Profiling/README.md` — 헤더 경계는 같은 게이트, Shipping 은 링크하지 않는다). 뷰어(tracy-profiler.exe)는 저장소에 넣지 않는다.
+  2026-10-06 **OpenSSL**(Apache-2.0 — 감쌀 폴더 `Engine/Network/OpenSsl`, 같은 게이트) · **SQLite**(퍼블릭 도메인) · **libpq**(PostgreSQL License, `openssl` 기능만)를
+  들였다 — Windows 는 지금 트리플릿대로 DLL. 아직 쓰는 코드는 없다(네트워크 보안 · 저장 드라이버 단위가 쓴다).
 - **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/README.md`(임포트 · 코덱 · 재생 · 상태 기계 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생).
   알림 디스패치(구간 알림 · 처리기 등록부 · `*.notifies.xml`)는 `Source/Engine/Character/README.md`.
   남은 것 — ① 그래프의 블렌드 스페이스 노드(지금 `BlendSpace` 는 행렬 하나라
@@ -385,8 +384,8 @@ cd build/Ninja-Debug/Bin
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
 - **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는
   ChaCha20-Poly1305 · 패킷 번호를 nonce 로 · 재전송 방지 창) — Valve GNS · 언리얼 AESGCM PacketHandler 와 같은 모양. 세션 키는 로그인 키트가 발급한 토큰에 묶는다(UDP 접속 = 토큰 제시).
-  암호 구현은 직접 짜지 않는다 — 라이브러리 하나(후보 OpenSSL: TLS · AEAD · X25519 를 한 의존으로, Apache-2.0)를 엔진 인터페이스 뒤에 두고 격리 게이트(`CheckThirdPartyIsolation`)에
-  올린다. vcpkg 변경은 main 에서 먼저(라이브러리 선택은 제안서에서 근거와 함께 사용자 확인). 인증서 · 키 관리(개발용 자체 서명, 배포 설정)와 시험(변조 · 재전송 · 잘못된 키 거절)을 같이.
+  암호 구현은 직접 짜지 않는다 — 라이브러리 하나(OpenSSL 3.6 — vcpkg 에 넣었다, 감싼 폴더는 Engine/Network/OpenSsl)를 엔진 인터페이스 뒤에 두고 격리 게이트(`CheckThirdPartyIsolation`)에
+  올렸다. 인증서 · 키 관리(개발용 자체 서명, 배포 설정)와 시험(변조 · 재전송 · 잘못된 키 거절)을 같이.
 - **패킷 압축(2026-10-06 사용자 결정).** 코덱 틀은 Core `Compression`(코덱 id 등록부), LZ4 · zstd · zlib 은 Engine 이 등록한다 — Core 네트워크는 id 로만 쓴다. 작은 UDP 패킷은 일반 압축의 이득이
   작으니 **측정 먼저**: 실제 스냅숏 · 파괴 사건 · 채팅을 모아 (양자화 · 비트 패킹 · 델타 뒤) LZ4 · zstd(학습 사전 포함)의 크기 · 시간을 잰다 → 이기는 종류만 켠다(패킷 머리에 코덱 표식,
   압축 뒤 암호화 순서, 압축 폭탄 상한). 스트림(채팅 기록 · 거래 내역 · 큰 메시지)은 zstd 가 기본 후보.
@@ -755,6 +754,10 @@ cd build/Ninja-Debug/Bin
   않는다 — 디코더만 /MT 로 떼어 돌리는 것은 하지 않는다(사용자 결정 2026-10-06, 같은 코드를 리눅스가 돈다).
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
+
+- **서드파티 고지는 빌드가 만든다** — `ThirdPartyNotices` 타깃(`Scripts/generate/GenerateThirdPartyNotices.py`)이 `Bin/THIRD_PARTY_NOTICES.txt` 에
+  매니페스트가 끌어오는 vcpkg 포트의 `share/<포트>/copyright` 를 모은다(설치 트리를 워크트리끼리 나눠 써 트리 전체가 아니라 `vcpkg/status` 의 의존 닫힘).
+  vcpkg 밖에서 들인 코드(저장소에 복사한 헤더 등)는 여기 저절로 들어가지 않는다 — 그런 것을 들이면 그 고지를 같이 넣는다.
 
 - **파이썬 도구의 단위 시험은 `Test/PythonTest/Test*.py`** — 파일을 놓으면 CTest 항목(`PythonTest_<이름>`, `nogpu`)이다. Blender 애드온처럼 바깥 모듈(bpy)을
   쓰는 것은 그 import 를 한 파일에 가두고 나머지를 시험한다(`TestBlenderExporter` 가 빈 패키지 모듈을 세워 읽는다).
