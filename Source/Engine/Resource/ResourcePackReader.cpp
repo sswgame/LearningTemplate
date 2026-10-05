@@ -143,7 +143,7 @@ namespace sw
 
             SW_LOG_INFO( "Opened pack %# (Files: %# | Compression: %# | Encryption: %#)",
                          packFilePath,
-                         _header._fileCount,
+                         static_cast<uint32>( _header._fileCount ),
                          pCompressionName != nullptr ? pCompressionName : "Raw",
                          pEncryptionName != nullptr ? pEncryptionName : "None" );
         }
@@ -423,7 +423,7 @@ namespace sw
         if ( _header._indexSize != derivedIndexSize )
         {
             SW_LOG_ERROR( "Pack index size disagrees with file count in %# (header says %#, %# entries need %#)",
-                          _packFilePath, _header._indexSize, _header._fileCount, derivedIndexSize );
+                          _packFilePath, static_cast<uint64>( _header._indexSize ), static_cast<uint32>( _header._fileCount ), derivedIndexSize );
             return false;
         }
 
@@ -432,7 +432,7 @@ namespace sw
         if ( _header._indexOffset > sizeBytes || derivedIndexSize > sizeBytes - _header._indexOffset )
         {
             SW_LOG_ERROR( "Pack index table lies outside the file %# (offset %#, size %#, file %#)",
-                          _packFilePath, _header._indexOffset, derivedIndexSize, sizeBytes );
+                          _packFilePath, static_cast<uint64>( _header._indexOffset ), derivedIndexSize, sizeBytes );
             return false;
         }
 
@@ -440,7 +440,7 @@ namespace sw
              ( _header._stringPoolOffset > sizeBytes || _header._stringPoolSize > sizeBytes - _header._stringPoolOffset ) )
         {
             SW_LOG_ERROR( "Pack string pool lies outside the file %# (offset %#, size %#, file %#)",
-                          _packFilePath, _header._stringPoolOffset, _header._stringPoolSize, sizeBytes );
+                          _packFilePath, static_cast<uint64>( _header._stringPoolOffset ), static_cast<uint64>( _header._stringPoolSize ), sizeBytes );
             return false;
         }
 

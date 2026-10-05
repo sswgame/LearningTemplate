@@ -11,7 +11,7 @@
 | 버스 그래프 실행(페이더 · 음소거/솔로 · 센드) | `AudioMixer` |
 | 보이스(재생 위치 · 피치 리샘플 · 팬 · 페이드 · 가상 진행) | `AudioVoice` |
 | 클립(float 샘플)과 경로 → 클립 캐시 · 비동기 디코드 | `AudioClip` |
-| WAV · OGG 디코드(stb_vorbis) | `AudioClipDecoder` · `AudioVorbisDecode.cpp` |
+| WAV · OGG 디코드(stb_vorbis — 디코더 메모리는 우리 아레나 256 KB → 64 MB 상한, 깨진 파일의 오류 길 누수 · 과대 할당이 거기서 끝난다) | `AudioClipDecoder` · `AudioVorbisDecode.cpp` |
 | 립싱크 일괄 임포트(`voice/` 음성 → `.visemes.json`, `App --import-lipsync`) — 분석기 · 트랙 형식은 `Animation/Facial/LipSync` | `LipSyncImport` · `AudioClipData::copyMonoSamples` |
 | 버스 이펙트(바이쿼드 · 컴프레서 · 리미터 · 리버브 · 딜레이)와 이름 → 종류 등록부 | `Dsp/AudioEffect` |
 | 바이쿼드 계수(RBJ cookbook) · 스테레오 상태 · 크기 응답 | `Dsp/AudioBiquad` |

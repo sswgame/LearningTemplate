@@ -435,8 +435,15 @@ cd build/Ninja-Debug/Bin
 - **커버리지 안내 퍼징(libFuzzer)은 Windows 에서 엔진과 링크되지 않는다** — `clang_rt.fuzzer-x86_64.lib` 가 정적 CRT(/MT)뿐이라 동적 CRT(/MD) 엔진과 LNK2038.
   `LoaderFuzzTest`(시드 고정 변이)가 같은 대상 표(`Test/EngineTest/LoaderFuzzTargets.cpp`)를 돈다. 리눅스 clang 에서 `LLVMFuzzerTestOneInput` 하나로 그 표를 붙이고
   ASan 과 같이 돌린다(서드파티 디코더만 떼어 /MT 로 돌리면 Windows 에서도 된다 — stb_vorbis 를 그렇게 확인했다).
-- **stb_vorbis 1.22 는 조작한 설정 헤더(코드북 항목 수)로 수백 MB ~ GB 를 할당한다**(libFuzzer OOM, 주석 헤더 길이 검사 뒤에도 남는다). 죽지는 않지만
-  4 KB 파일 하나로 메모리를 다 쓸 수 있다 — `stb_vorbis_alloc` 고정 버퍼로 상한을 두거나 vcpkg 판을 올린다(CVE-2023-4567x 묶음이 고쳐진 판).
+- **TSan 잡의 Jolt 는 계측되지 않은 vcpkg 라이브러리다** — 잡 의존 · 장벽 동기화가 라이브러리 .cpp 안이라 TSan 이 못 보고, 헤더 인라인 접근만 보여
+  수백 건의 거짓 경쟁이 난다. `cmake/Modules/Options/TsanSuppressions.txt` 가 Jolt 내부 함수를 억제하고, 그 탓에 Jolt 잡 안에서 불리는 엔진 콜백(접촉
+  리스너 등)의 경쟁도 가려진다. TSan 구성에서 Jolt 를 `-fsanitize=thread` 로 짓는 트리플릿(트리플릿 변경 — 메인 · 사용자 결정)으로 바꾸면 억제를 지운다.
+- **리눅스 Shipping 에서 `NetSimDestructionTest.CleanLinkConvergesLateJoinsAndRepairs` 가 늘 진다**(`_convergedTick >= 0` — 클라이언트 구조 해시가
+  서버와 끝내 같아지지 않는다, WSL CI-Shipping 3/3). 리눅스 Debug · ASan · TSan · Windows Shipping 은 통과한다 — 최적화 구성에서만 갈리는 결정성 문제로 보인다.
+  재현: `cd build/CI-Shipping/Bin && ../TestBin/EngineTest --test_filter=NetSimDestructionTest.*`.
+- **Windows CI 시험 단계 실패(10-02 부터 Debug, 10-03 부터 Shipping)의 원인은 이 PC 에서 재현하지 못했다** — CI-Debug · CI-Shipping 을 같은 라벨로,
+  TEMP 를 8.3 짧은 이름으로 바꿔서도 돌렸다(부하로 인한 시간 초과 말고는 통과). CI 의 시험 단계가 이제 진 시험을 주석으로 올리므로 병합 뒤 첫 실행의
+  주석(`/check-runs/<job id>/annotations`, 로그인 없이 읽힌다)에서 시험 이름 · 실패 줄을 보고 고친다.
 - **골든 이미지 기준은 한 PC(RTX 3070 Ti Laptop · 그 드라이버)에서 뜬 것이다** — 다른 GPU · 드라이버는 허용 오차를 넘을 수 있다. 다른 기계에서 지면 그 기계에서 `--record` 로 뜬
   기준과 견줘 차이가 드라이버인지 회귀인지 가른 뒤, 기계별 기준(`<백엔드>.<기계>.json`)이 필요한지 정한다.
 
