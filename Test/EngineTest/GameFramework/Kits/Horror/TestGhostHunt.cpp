@@ -1,6 +1,8 @@
 // 유령 사냥 키트(루이지 맨션 장르) — 손전등 원뿔 · 스트로브, 유령 상태 순환 · 기절 시간, 흡입 줄다리기 · 서지 · 강화 단계, 가구 보물의 결정성, 방 불 · 열쇠 문, 부의 탈출.
 #include "pch.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/ItemBag.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
 #include "GameFramework/Base/World/AreaGraph.h"
@@ -97,6 +99,7 @@ namespace
         LootCatalog  _loot;
         AreaGraph    _areaGraph;
         GameFlags    _flags;
+        Inventory    _bag; ///< 플레이어 가방(열쇠)
         GhostMansion _mansion;
 
         bool initialize( uint32 seed )
@@ -104,7 +107,11 @@ namespace
             if ( _catalog.loadFromXmlText( kGhostHuntXml, "GhostHuntTest" ) == false || _loot.loadFromXmlText( kGhostLootXml, "GhostHuntTest" ) == false ||
                  _areaGraph.loadFromXmlText( kGhostAreaXml, "GhostHuntTest" ) == false )
                 return false;
-            _mansion.initialize( &_catalog, &_loot, &_areaGraph, &_flags, seed );
+            _bag.initialize( nullptr, 8 );
+            GameStateRefs refs;
+            refs._pFlags     = &_flags;
+            refs._pInventory = &_bag;
+            _mansion.initialize( &_catalog, &_loot, &_areaGraph, refs, seed );
             return true;
         }
 
@@ -390,7 +397,7 @@ SW_TEST_CASE( GhostHuntTest, RoomLightsAndKeyDoor )
     SW_ASSERT_TRUE( scene.catchGhost( secondGhost ) );
     SW_EXPECT_TRUE( mansion.isRoomLit( "foyer" ) );
     SW_EXPECT_TRUE( scene._flags.hasFlag( "lit.foyer" ) );
-    SW_EXPECT_EQUAL( 1, mansion.getKeys().getItemCount( "parlorKey" ) );
+    SW_EXPECT_EQUAL( 1, scene._bag.getItemCount( "parlorKey" ) );
     SW_EXPECT_EQUAL( 20, mansion.getCoinCount() );
     vector<GhostMansionEvent> listEvent;
     mansion.drainEvents( listEvent );
@@ -403,11 +410,35 @@ SW_TEST_CASE( GhostHuntTest, RoomLightsAndKeyDoor )
     SW_EXPECT_TRUE( mansion.unlockDoor( "parlorDoor" ) == GhostDoorResult::Opened );
     SW_EXPECT_TRUE( scene._areaGraph.canTraverse( "foyer", "parlor", scene._flags ) );
     SW_EXPECT_TRUE( mansion.unlockDoor( "parlorDoor" ) == GhostDoorResult::AlreadyOpen );
-    SW_EXPECT_EQUAL( 0, mansion.getKeys().getItemCount( "parlorKey" ) );
+    SW_EXPECT_EQUAL( 0, scene._bag.getItemCount( "parlorKey" ) );
     SW_EXPECT_EQUAL( 0, mansion.enterRoom( "foyer" ) ); // 밝은 방
     SW_EXPECT_EQUAL( 0, mansion.enterRoom( "hall" ) );  // 유령이 없는 방은 들어서면 밝다
     SW_EXPECT_TRUE( mansion.isRoomLit( "hall" ) );
     SW_EXPECT_EQUAL( 1, mansion.enterRoom( "parlor" ) );
+}
+
+/**
+ * @brief [GhostHuntTest] 열쇠는 플레이어 가방에 산다 — 다른 길(다른 키트 · 상점)로 가방에 들어온 열쇠로도 문이 열리고, 열면 가방에서 빠진다
+ */
+SW_TEST_CASE( GhostHuntTest, KeysLiveInThePlayerBag )
+{
+    GhostMansionScene scene;
+    SW_ASSERT_TRUE( scene.initialize( 11 ) );
+    GhostMansion& mansion = scene._mansion;
+    SW_EXPECT_EQUAL( 2, mansion.enterRoom( "foyer" ) );
+    SW_EXPECT_TRUE( mansion.unlockDoor( "parlorDoor" ) == GhostDoorResult::NeedKey );
+    SW_ASSERT_EQUAL( 1, scene._bag.addItem( "parlorKey", 1 ) ); // 방을 밝히지 않고 가방에 넣었다
+    SW_EXPECT_TRUE( mansion.unlockDoor( "parlorDoor" ) == GhostDoorResult::Opened );
+    SW_EXPECT_EQUAL( 0, scene._bag.getItemCount( "parlorKey" ) );
+    SW_EXPECT_TRUE( scene._areaGraph.canTraverse( "foyer", "parlor", scene._flags ) );
+
+    // 가방을 빌려 주지 않은 저택 — 열쇠가 드는 문은 열리지 않는다
+    GhostMansionScene bagless;
+    SW_ASSERT_TRUE( bagless.initialize( 11 ) );
+    GameStateRefs refs;
+    refs._pFlags = &bagless._flags;
+    bagless._mansion.initialize( &bagless._catalog, &bagless._loot, &bagless._areaGraph, refs, 11 );
+    SW_EXPECT_TRUE( bagless._mansion.unlockDoor( "parlorDoor" ) == GhostDoorResult::NeedKey );
 }
 
 /**

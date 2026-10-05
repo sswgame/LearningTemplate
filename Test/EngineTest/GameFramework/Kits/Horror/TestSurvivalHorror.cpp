@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "GameFramework/Base/Inventory/GridInventory.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorEncounter.h"
@@ -14,6 +15,15 @@ using namespace sw;
 
 namespace
 {
+    /** @brief 세션이 빌리는 그릇 — 격자 가방(게임이 든다)과 아이템 상자(세계 보관함)입니다. */
+    struct HorrorTestContainers
+    {
+        GridInventory _grid;
+        Inventory     _box;
+
+        HorrorTestContainers() { _box.initialize( nullptr, 32 ); }
+    };
+
     constexpr const utf8* kHorrorTestXml = R"(
 <HorrorCatalog>
   <Rules saveMode="InkRibbon" gridWidth="4" gridHeight="2" maxSanity="100" darknessDrain="10" sanityRegen="5" sanityRegenDelay="2"
@@ -157,8 +167,9 @@ SW_TEST_CASE( SurvivalHorrorTest, ItemBoxAndCombineRollBackWhenTheResultHasNoRoo
 {
     HorrorCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
-    HorrorSession session;
-    session.initialize( &catalog, nullptr, hashed_string() );
+    HorrorSession        session;
+    HorrorTestContainers sessionContainers;
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers._grid, sessionContainers._box );
     GridInventory& grid = session.getInventory();
     SW_EXPECT_EQUAL( 2, grid.addItem( "herbGreen", 2 ) ); // (0,0) (1,0)
     SW_EXPECT_EQUAL( 1, grid.addItem( "herbRed", 1 ) );   // (2,0)
@@ -187,20 +198,21 @@ SW_TEST_CASE( SurvivalHorrorTest, ItemBoxAndCombineRollBackWhenTheResultHasNoRoo
         if ( junkInstance > 0 && grid.findInstance( junkInstance )->_itemId == hashed_string( "junk" ) )
             SW_EXPECT_TRUE( session.storeInBox( junkInstance, 1 ) );
     }
-    SW_EXPECT_EQUAL( 4, session.getItemBox().getItemCount( "junk" ) );
+    SW_EXPECT_EQUAL( 4, sessionContainers._box.getItemCount( "junk" ) );
     SW_EXPECT_FALSE( session.storeInBox( grid.findInstanceAt( 3, 0 ), 2 ) ); // 한 개뿐인 자리에서 둘은 못 맡긴다
     SW_EXPECT_TRUE( session.combineItems( grid.findInstanceAt( 0, 0 ), grid.findInstanceAt( 1, 0 ) ) );
     SW_EXPECT_EQUAL( 1, grid.getItemCount( "herbSuper" ) );
     SW_EXPECT_EQUAL( 3, session.takeFromBox( "junk", 4 ) ); // 2x2 가 왼쪽 네 칸을 차지해 세 칸만 남았다 — 하나는 상자에 남는다
-    SW_EXPECT_EQUAL( 1, session.getItemBox().getItemCount( "junk" ) );
+    SW_EXPECT_EQUAL( 1, sessionContainers._box.getItemCount( "junk" ) );
 }
 
 SW_TEST_CASE( SurvivalHorrorTest, SavesNeedInkRibbonsOrRespectTheLimitAndAmmoIsScarce )
 {
     HorrorCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
-    HorrorSession session;
-    session.initialize( &catalog, nullptr, hashed_string() );
+    HorrorSession        session;
+    HorrorTestContainers sessionContainers;
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers._grid, sessionContainers._box );
     SW_EXPECT_TRUE( session.trySave() == HorrorSaveResult::NoSaveItem );
     SW_EXPECT_EQUAL( 2, session.getInventory().addItem( "ribbon", 2 ) );
     SW_EXPECT_TRUE( session.trySave() == HorrorSaveResult::Ok );
@@ -213,8 +225,9 @@ SW_TEST_CASE( SurvivalHorrorTest, SavesNeedInkRibbonsOrRespectTheLimitAndAmmoIsS
     rules._saveMode                    = HorrorSaveMode::Limited;
     rules._maxSaves                    = 1;
     limitedCatalog.setRules( rules );
-    HorrorSession limited;
-    limited.initialize( &limitedCatalog, nullptr, hashed_string() );
+    HorrorSession        limited;
+    HorrorTestContainers limitedContainers;
+    limited.initialize( &limitedCatalog, nullptr, hashed_string(), limitedContainers._grid, limitedContainers._box );
     SW_EXPECT_TRUE( limited.trySave() == HorrorSaveResult::Ok );
     SW_EXPECT_TRUE( limited.trySave() == HorrorSaveResult::NoSavesLeft );
 
@@ -236,8 +249,9 @@ SW_TEST_CASE( SurvivalHorrorTest, SanityFallsInDarknessAndSightingsWhileTheFlash
 {
     HorrorCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
-    HorrorSession session;
-    session.initialize( &catalog, nullptr, hashed_string() );
+    HorrorSession        session;
+    HorrorTestContainers sessionContainers;
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers._grid, sessionContainers._box );
     vector<SurvivalHorrorEvent> listEvent;
 
     // 괴물 목격: 처음은 전부, 다시 보면 배율(0.25)만큼.
@@ -289,8 +303,9 @@ SW_TEST_CASE( SurvivalHorrorTest, KeysDialsAndSequencesOpenTheMansionThroughArea
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
     AreaGraph areaGraph;
     SW_ASSERT_TRUE( areaGraph.loadFromXmlText( kHorrorAreaXml, "SurvivalHorrorTest" ) );
-    HorrorSession session;
-    session.initialize( &catalog, &areaGraph, "hall" );
+    HorrorSession        session;
+    HorrorTestContainers sessionContainers;
+    session.initialize( &catalog, &areaGraph, "hall", sessionContainers._grid, sessionContainers._box );
     SW_EXPECT_TRUE( areaGraph.isVisited( "hall" ) );
 
     SW_EXPECT_TRUE( session.tryMoveTo( "dining" ) );
@@ -330,8 +345,9 @@ SW_TEST_CASE( SurvivalHorrorTest, ClueBoardDeductionNeedsTheRightLinksAndPunishe
 {
     HorrorCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
-    HorrorSession session;
-    session.initialize( &catalog, nullptr, hashed_string() );
+    HorrorSession        session;
+    HorrorTestContainers sessionContainers;
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers._grid, sessionContainers._box );
 
     SW_EXPECT_TRUE( session.readDocument( "diary" ) );
     SW_EXPECT_FALSE( session.readDocument( "diary" ) ); // 두 번째는 새 단서가 없다

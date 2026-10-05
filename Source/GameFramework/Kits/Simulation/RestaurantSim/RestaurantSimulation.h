@@ -44,7 +44,6 @@ namespace sw
         int32         _reputationPerServe{ 10 };          ///< 만족도 1 이면 +이것, 0 이면 −이것
         int32         _walkoutPenalty{ 15 };              ///< 기다리다 떠나면 평판에서 뺀다
         int32         _seatCount{ 4 };
-        int32         _inventorySlots{ 40 };
         int64         _cookXp{ 10 };
         int64         _serveXp{ 5 };
         int64         _checkoutXp{ 5 };
@@ -198,8 +197,11 @@ namespace sw
 
         RestaurantSimulation();
 
+        /**
+         * @brief 새 식당을 엽니다. 재료는 빌린 창고(@p pantry — 식당보다 오래 살아야 한다)에 듭니다 — 섞인 게임은 플레이어 가방을 넘겨 "밭 → 식탁" 이 그대로 된다.
+         */
         void initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog, const ShopCatalog* pShopCatalog,
-                         const ReputationCatalog* pReputationCatalog, const ExperienceCurve* pStaffCurve, const RestaurantSettings& settings );
+                         const ReputationCatalog* pReputationCatalog, const ExperienceCurve* pStaffCurve, Inventory& pantry, const RestaurantSettings& settings );
         /** @brief 조리 스테이션 수를 정합니다("Stove" 2 개 · "Oven" 1 개). */
         void setStationCount( const hashed_string& station, int32 count );
         /** @brief 직원을 고용합니다. 직원 자리 번호입니다. */
@@ -244,7 +246,6 @@ namespace sw
         const vector<RestaurantCustomer>& getCustomers() const { return _listCustomer; }
         const deque<KitchenOrder>&        getOrders() const { return _listOrder; }
         const RestaurantDaySummary&       getToday() const { return _today; }
-        const Inventory&                  getInventory() const { return _inventory; }
         const IngredientStock&            getStock() const { return _stock; }
         const ShopState&                  getMarket() const { return _market; }
         Wallet&                           getWallet() { return _wallet; }
@@ -296,7 +297,6 @@ namespace sw
         EventBuffer<RestaurantEvent> _eventBuffer;
         vector<ReputationEvent>      _listReputationScratch;
         vector<IngredientSpoilage>   _listSpoilageScratch;
-        Inventory                    _inventory;
         IngredientStock              _stock;
         Crafter                      _crafter;
         ShopState                    _market;
@@ -308,6 +308,7 @@ namespace sw
         GameRandom                   _random;
         hashed_string                _weatherId;
         const RestaurantCatalog*     _pCatalog;
+        Inventory*                   _pPantry; ///< 주방 창고(빌림)
         const RecipeCatalog*         _pRecipeCatalog;
         const ShopCatalog*           _pShopCatalog;
         const ExperienceCurve*       _pStaffCurve;

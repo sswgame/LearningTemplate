@@ -4,8 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Inventory/ItemBag.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
 
@@ -360,5 +363,78 @@ namespace sw
             if ( slot.isEmpty() == false )
                 outBag.addItem( slot._itemId, slot._count );
         }
+    }
+
+    void Inventory::writeState( Archive& outArchive ) const
+    {
+        outArchive << _maxWeight;
+        outArchive << static_cast<uint32>( _listSlot.size() );
+        for ( const ItemStack& slot : _listSlot )
+        {
+            StateArchiveUtil::writeName( outArchive, slot._itemId );
+            outArchive << slot._count;
+            outArchive << slot._durability;
+            outArchive << slot._damage;
+            const vector<CustomizationValue>& listValue = slot._customization.getValues();
+            outArchive << static_cast<uint32>( listValue.size() );
+            for ( const CustomizationValue& value : listValue )
+            {
+                StateArchiveUtil::writeName( outArchive, value._parameter );
+                StateArchiveUtil::writeName( outArchive, value._option );
+                outArchive << value._number;
+            }
+            outArchive << static_cast<uint32>( slot._listDetachedPart.size() );
+            for ( const hashed_string& part : slot._listDetachedPart )
+            {
+                StateArchiveUtil::writeName( outArchive, part );
+            }
+        }
+    }
+
+    bool Inventory::readState( Archive& archive )
+    {
+        float32 maxWeight = 0.0f;
+        uint32  slotCount = 0;
+        archive >> maxWeight;
+        // 칸마다 이름(4) + 개수 · 내구도 · 피해(12) + 꾸미기 수 · 부품 수(8)
+        if ( archive.isError() || ( 0.0f <= maxWeight ) == false || StateArchiveUtil::readCount( archive, 24, slotCount ) == false || slotCount != _listSlot.size() )
+            return false;
+        vector<ItemStack> listSlot( slotCount );
+        for ( ItemStack& slot : listSlot )
+        {
+            uint32 valueCount = 0;
+            if ( StateArchiveUtil::readName( archive, slot._itemId ) == false )
+                return false;
+            archive >> slot._count;
+            archive >> slot._durability;
+            archive >> slot._damage;
+            // 값마다 이름 둘(8) + 숫자 넷(16)
+            if ( StateArchiveUtil::readCount( archive, 24, valueCount ) == false )
+                return false;
+            for ( uint32 valueIndex = 0; valueIndex < valueCount; ++valueIndex )
+            {
+                CustomizationValue value;
+                if ( StateArchiveUtil::readName( archive, value._parameter ) == false || StateArchiveUtil::readName( archive, value._option ) == false )
+                    return false;
+                archive >> value._number;
+                slot._customization.setValue( value );
+            }
+            uint32 partCount = 0;
+            if ( StateArchiveUtil::readCount( archive, 4, partCount ) == false )
+                return false;
+            slot._listDetachedPart.resize( partCount );
+            for ( hashed_string& part : slot._listDetachedPart )
+            {
+                if ( StateArchiveUtil::readName( archive, part ) == false )
+                    return false;
+            }
+            const bool bValid = archive.isOk() && 0 <= slot._count && ( slot._count == 0 || slot._itemId.empty() == false );
+            if ( bValid == false )
+                return false;
+        }
+        _maxWeight = maxWeight;
+        _listSlot  = std::move( listSlot );
+        ++_revision;
+        return true;
     }
 } // namespace sw

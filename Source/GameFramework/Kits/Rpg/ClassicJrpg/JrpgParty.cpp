@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 
 namespace sw
 {
@@ -53,14 +54,14 @@ namespace sw
         : _listMember{}
         , _eventBuffer{}
         , _wallet{}
-        , _inventory{}
         , _equipLayout{}
         , _pCatalog{ nullptr }
         , _pItemCatalog{ nullptr }
+        , _pInventory{ nullptr }
     {
     }
 
-    void JrpgParty::initialize( const JrpgCatalog* pCatalog, const ItemCatalog* pItemCatalog, int32 inventorySlotCount, string_view equipLayout )
+    void JrpgParty::initialize( const JrpgCatalog* pCatalog, const ItemCatalog* pItemCatalog, const GameStateRefs& refs, string_view equipLayout )
     {
         _pCatalog     = pCatalog;
         _pItemCatalog = pItemCatalog;
@@ -68,7 +69,7 @@ namespace sw
         _listMember.clear();
         _eventBuffer.clear();
         _wallet.clear();
-        _inventory.initialize( pItemCatalog, inventorySlotCount );
+        _pInventory = refs._pInventory;
     }
 
     int32 JrpgParty::addMember( const hashed_string& memberId, string_view name, const hashed_string& classId, int32 level )
@@ -116,7 +117,7 @@ namespace sw
             return JrpgClassChangeResult::Dead;
         if ( member._level.getLevel() < minLevel )
             return JrpgClassChangeResult::LevelTooLow;
-        if ( pClass->_requiredItem.empty() == false && _inventory.hasItem( pClass->_requiredItem ) == false )
+        if ( pClass->_requiredItem.empty() == false && ( _pInventory == nullptr || _pInventory->hasItem( pClass->_requiredItem ) == false ) )
             return JrpgClassChangeResult::MissingItem;
 
         member._classId = classId;

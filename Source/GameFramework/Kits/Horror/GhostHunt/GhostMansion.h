@@ -21,8 +21,11 @@
 
 namespace sw
 {
+    struct GameStateRefs;
+
     class AreaGraph;
     class GameFlags;
+    class Inventory;
     class LootCatalog;
 
     /** @brief 열쇠 문 결과입니다. */
@@ -100,7 +103,8 @@ namespace sw
     public:
         GhostMansion();
 
-        void initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, GameFlags* pFlags, uint32 seed );
+        /** @brief 새 판을 엽니다. 플래그 · 플레이어 가방(열쇠)은 @p refs 에서 빌립니다 — 가방이 없으면 열쇠가 드는 문은 열리지 않습니다. */
+        void initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, const GameStateRefs& refs, uint32 seed );
 
         /** @brief 방에 들어갑니다. 불이 꺼진 방이면 그 방 유령이 (숨은 채로) 나옵니다. 나온 유령 수이고 없는 방이면 −1 입니다. */
         int32 enterRoom( const hashed_string& roomId );
@@ -121,7 +125,6 @@ namespace sw
         const GhostEncounter&  getEncounter() const { return _encounter; }
         const hashed_string&   getCurrentRoom() const { return _currentRoom; }
         bool                   isRoomLit( const hashed_string& roomId ) const;
-        const ItemBag&         getKeys() const { return _keyBag; }
         int32                  getCoinCount() const { return _coinCount; }
         const GhostBooRuntime* findBoo( const hashed_string& booId ) const;
         int32                  countCaughtBoos() const;
@@ -136,7 +139,6 @@ namespace sw
 
         GhostEncounter                 _encounter;
         GameRandom                     _random;
-        ItemBag                        _keyBag;
         vector<GhostBooRuntime>        _listBoo;      ///< 카탈로그 부 순서
         vector<uint8>                  _listSearched; ///< 카탈로그 가구 순서
         EventBuffer<GhostMansionEvent> _eventBuffer;
@@ -146,6 +148,7 @@ namespace sw
         const LootCatalog*             _pLoot;
         AreaGraph*                     _pAreaGraph;
         GameFlags*                     _pFlags;
+        Inventory*                     _pInventory; ///< 플레이어 가방(열쇠)
         uint32                         _seed;
         int32                          _coinCount;
     };

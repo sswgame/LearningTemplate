@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
 #include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Base/World/GameFlags.h"
@@ -32,7 +34,6 @@ namespace sw
     GhostMansion::GhostMansion()
         : _encounter{}
         , _random{}
-        , _keyBag{}
         , _listBoo{}
         , _listSearched{}
         , _eventBuffer{}
@@ -42,21 +43,22 @@ namespace sw
         , _pLoot{ nullptr }
         , _pAreaGraph{ nullptr }
         , _pFlags{ nullptr }
+        , _pInventory{ nullptr }
         , _seed{ 0 }
         , _coinCount{ 0 }
     {
     }
 
-    void GhostMansion::initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, GameFlags* pFlags, uint32 seed )
+    void GhostMansion::initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, const GameStateRefs& refs, uint32 seed )
     {
         _pCatalog   = pCatalog;
         _pLoot      = pLoot;
         _pAreaGraph = pAreaGraph;
-        _pFlags     = pFlags;
+        _pFlags     = refs._pFlags;
+        _pInventory = refs._pInventory;
         _seed       = seed;
         _random.setSeed( GameHash::mix32( seed ^ 0xB00B00u ) );
         _encounter.initialize( pCatalog, seed );
-        _keyBag.clear();
         _eventBuffer.clear();
         _listGhostEvent.clear();
         _currentRoom = hashed_string{};
@@ -149,7 +151,7 @@ namespace sw
             return GhostDoorResult::UnknownDoor;
         if ( _pFlags->hasFlag( pDoor->_flag ) )
             return GhostDoorResult::AlreadyOpen;
-        if ( pDoor->_key.empty() == false && _keyBag.removeItem( pDoor->_key, 1 ) == false )
+        if ( pDoor->_key.empty() == false && ( _pInventory == nullptr || _pInventory->removeItem( pDoor->_key, 1 ) == false ) )
             return GhostDoorResult::NeedKey;
         _pFlags->setFlag( pDoor->_flag, 1 );
         pushEvent( GhostMansionEventType::DoorOpened, doorId );
@@ -267,7 +269,9 @@ namespace sw
         pushEvent( GhostMansionEventType::RoomLit, roomId, roomId );
         if ( pRoom->_keyReward.empty() )
             return;
-        _keyBag.addItem( pRoom->_keyReward, 1 );
+        // 가방이 없거나 차면 열쇠를 받지 못한다(알림도 없다) — 칸 수는 게임이 정한다.
+        if ( _pInventory == nullptr || _pInventory->addItem( pRoom->_keyReward, 1 ) == 0 )
+            return;
         pushEvent( GhostMansionEventType::KeyAwarded, pRoom->_keyReward, roomId );
     }
 

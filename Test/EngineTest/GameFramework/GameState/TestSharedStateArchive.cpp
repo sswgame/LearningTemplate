@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Progression/Reputation.h"
 #include "GameFramework/Base/Quest/QuestCatalog.h"
@@ -193,4 +194,38 @@ SW_TEST_CASE( SharedStateArchiveTest, QuestLogRoundTripDropsUnknownQuests )
     other.initialize( &otherCatalog );
     SW_ASSERT_TRUE( restoreStateBytes( other, bytes ) );
     SW_EXPECT_TRUE( other.getStatus( "hunt" ) == QuestStatus::NotStarted );
+}
+
+/**
+ * @brief [SharedStateArchiveTest] 플레이어 가방 — 칸마다 아이템 · 개수 · 내구도 · 꾸미기가 그대로 오고, 칸 수가 다른 가방은 거절한다
+ */
+SW_TEST_CASE( SharedStateArchiveTest, InventoryRoundTripKeepsSlotsAndRejectsOtherSlotCount )
+{
+    Inventory bag;
+    bag.initialize( nullptr, 4, 30.0f );
+    SW_ASSERT_EQUAL( 2, bag.addItem( "turnip", 2 ) );
+    ItemStack dyed;
+    dyed._itemId     = "hat";
+    dyed._count      = 1;
+    dyed._durability = 0.5f;
+    dyed._customization.setColor( "Dye", float4{ 1.0f, 0.0f, 0.0f, 1.0f } );
+    dyed._listDetachedPart.push_back( "Feather" );
+    SW_ASSERT_TRUE( bag.addStack( dyed ) );
+    const vector<uint8> bytes = captureStateBytes( bag );
+
+    Inventory restored;
+    restored.initialize( nullptr, 4 );
+    SW_ASSERT_TRUE( restoreStateBytes( restored, bytes ) );
+    SW_EXPECT_EQUAL( 2, restored.getItemCount( "turnip" ) );
+    SW_EXPECT_NEAR_EQUAL( 30.0f, restored.getMaxWeight(), 1e-6f );
+    const int32 hatSlot = restored.findFirstSlot( "hat" );
+    SW_ASSERT_TRUE( hatSlot >= 0 );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, restored.getSlot( hatSlot )._durability, 1e-6f );
+    SW_EXPECT_TRUE( restored.getSlot( hatSlot )._customization.isEquivalent( dyed._customization ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), restored.getSlot( hatSlot )._listDetachedPart.size() );
+    SW_EXPECT_TRUE( captureStateBytes( restored ) == bytes );
+
+    Inventory smaller;
+    smaller.initialize( nullptr, 3 );
+    SW_EXPECT_FALSE( restoreStateBytes( smaller, bytes ) );
 }

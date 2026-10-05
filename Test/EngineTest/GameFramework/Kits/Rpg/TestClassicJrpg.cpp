@@ -2,7 +2,9 @@
 // 시전 잠금 깨기 · 취소 · 약화, 콤보 포인트 합동기 · 도망 확률, 무협 내공 · 비급 숙련 해금, 걸음 수 인카운터 · 보상 분배 · 결정성.
 #include "pch.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Input/TimingJudge.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgBattle.h"
@@ -87,6 +89,7 @@ namespace
         ItemCatalog _itemCatalog;
         ShopCatalog _shopCatalog;
         TimingJudge _judge;
+        Inventory   _inventory; ///< 플레이어 가방(파티가 빌린다)
 
         bool initialize()
         {
@@ -99,6 +102,15 @@ namespace
             _judge.setWindows( listWindow );
             return _catalog.loadFromXmlText( kJrpgCatalogXml, "ClassicJrpgTest" ) && _itemCatalog.loadFromXmlText( kJrpgItemXml, "ClassicJrpgTest" ) &&
                    _shopCatalog.loadFromXmlText( kJrpgShopXml, "ClassicJrpgTest" );
+        }
+
+        /** @brief 파티가 빌릴 공유 상태 — 부를 때마다 가방을 새로 엽니다. */
+        GameStateRefs makeRefs()
+        {
+            _inventory.initialize( &_itemCatalog, 20 );
+            GameStateRefs refs;
+            refs._pInventory = &_inventory;
+            return refs;
         }
     };
 
@@ -134,7 +146,7 @@ SW_TEST_CASE( ClassicJrpgTest, ClassChangeHalvesStatsKeepsSpellsAndResetsLevel )
     JrpgTestWorld world;
     SW_ASSERT_TRUE( world.initialize() );
     JrpgParty party;
-    party.initialize( &world._catalog, &world._itemCatalog, 20 );
+    party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     const int32 mage   = party.addMember( hashed_string( "maya" ), "Maya", hashed_string( "mage" ), 20 );
     const int32 novice = party.addMember( hashed_string( "nina" ), "Nina", hashed_string( "mage" ), 19 );
     SW_ASSERT_TRUE( mage == 0 && novice == 1 );
@@ -174,7 +186,7 @@ SW_TEST_CASE( ClassicJrpgTest, ClassChangeHalvesStatsKeepsSpellsAndResetsLevel )
     SW_EXPECT_EQUAL( strengthBefore + 2 * 4, party.getMember( mage ).getStat( JrpgStat::Strength ) );
 
     // 깨달음의 책을 가지면 현자로.
-    SW_EXPECT_EQUAL( 1, party.getInventory().addItem( hashed_string( "book_of_satori" ), 1 ) );
+    SW_EXPECT_EQUAL( 1, world._inventory.addItem( hashed_string( "book_of_satori" ), 1 ) );
     party.getMember( novice )._level.setLevel( world._catalog.getCurve(), 20 );
     SW_EXPECT_TRUE( party.changeClass( novice, hashed_string( "sage" ) ) == JrpgClassChangeResult::Ok );
     vector<JrpgPartyEvent> listEvent;
@@ -190,7 +202,7 @@ SW_TEST_CASE( ClassicJrpgTest, InnChurchShopAndEquipment )
     JrpgTestWorld world;
     SW_ASSERT_TRUE( world.initialize() );
     JrpgParty party;
-    party.initialize( &world._catalog, &world._itemCatalog, 20 );
+    party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     (void)party.addMember( hashed_string( "hero" ), "Hero", hashed_string( "hero" ), 5 );
     (void)party.addMember( hashed_string( "sol" ), "Sol", hashed_string( "warrior" ), 4 );
     (void)party.addMember( hashed_string( "mia" ), "Mia", hashed_string( "mage" ), 3 );
@@ -200,13 +212,13 @@ SW_TEST_CASE( ClassicJrpgTest, InnChurchShopAndEquipment )
     ShopState shop;
     shop.initialize( &world._shopCatalog, &world._itemCatalog );
     const int32 attackBefore = party.computeAttack( 0 );
-    SW_EXPECT_TRUE( shop.buy( hashed_string( "aliahan" ), hashed_string( "copper_sword" ), 1, party.getWallet(), party.getInventory() ) == ShopResult::Ok );
+    SW_EXPECT_TRUE( shop.buy( hashed_string( "aliahan" ), hashed_string( "copper_sword" ), 1, party.getWallet(), world._inventory ) == ShopResult::Ok );
     SW_EXPECT_EQUAL( 100, static_cast<int32>( party.getWallet().getBalance( Wallet::getDefaultCurrency() ) ) );
-    const int32 inventorySlot = party.getInventory().findFirstSlot( hashed_string( "copper_sword" ) );
+    const int32 inventorySlot = world._inventory.findFirstSlot( hashed_string( "copper_sword" ) );
     SW_ASSERT_TRUE( inventorySlot >= 0 );
-    SW_EXPECT_TRUE( party.getMember( 0 )._equipment.equipFromInventory( party.getInventory(), inventorySlot ) == EquipResult::Ok );
+    SW_EXPECT_TRUE( party.getMember( 0 )._equipment.equipFromInventory( world._inventory, inventorySlot ) == EquipResult::Ok );
     SW_EXPECT_EQUAL( attackBefore + 12, party.computeAttack( 0 ) );
-    SW_EXPECT_EQUAL( 0, party.getInventory().getItemCount( hashed_string( "copper_sword" ) ) );
+    SW_EXPECT_EQUAL( 0, world._inventory.getItemCount( hashed_string( "copper_sword" ) ) );
 
     // 여관: 살아 있는 멤버 수 × 값 — 쓰러진 멤버는 그대로.
     party.getMember( 0 )._hp = 1;
@@ -241,7 +253,7 @@ SW_TEST_CASE( ClassicJrpgTest, AgilityOrderDefendPriorityAndTimedAttackAndBlock 
                                int32& outHeroHp )
     {
         JrpgParty party;
-        party.initialize( &world._catalog, &world._itemCatalog, 4 );
+        party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
         (void)party.addMember( hashed_string( "hero" ), "Hero", hashed_string( "hero" ), 1 );
         timing._bAttackPressed = bAttackPressed;
         timing._attackOffset   = attackOffset;
@@ -321,7 +333,7 @@ SW_TEST_CASE( ClassicJrpgTest, CastingEnemyLocksBreakCancelAndWeaken )
     const auto runCast = [&]( const utf8* pRound2, const utf8* pRound3, vector<JrpgBattleEvent>& outListEvent ) -> int32
     {
         JrpgParty party;
-        party.initialize( &world._catalog, &world._itemCatalog, 4 );
+        party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
         (void)party.addMember( hashed_string( "zale" ), "Zale", hashed_string( "sunblade" ), 10 );
         (void)party.addMember( hashed_string( "valere" ), "Valere", hashed_string( "moonstaff" ), 10 );
         JrpgBattle battle;
@@ -375,7 +387,7 @@ SW_TEST_CASE( ClassicJrpgTest, ComboPointsJointTechniqueAndFleeChance )
     JrpgTestWorld world;
     SW_ASSERT_TRUE( world.initialize() );
     JrpgParty party;
-    party.initialize( &world._catalog, &world._itemCatalog, 4 );
+    party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     (void)party.addMember( hashed_string( "zale" ), "Zale", hashed_string( "sunblade" ), 10 );
     (void)party.addMember( hashed_string( "valere" ), "Valere", hashed_string( "moonstaff" ), 10 );
     ScriptedTiming timing;
@@ -421,7 +433,7 @@ SW_TEST_CASE( ClassicJrpgTest, ComboPointsJointTechniqueAndFleeChance )
 
     // 도망: 0.5 + (평균 민첩 차) × 0.02 + 실패 × 0.1. 보스 앞에서는 0 이고 실패하면 적만 행동한다.
     JrpgParty runners;
-    runners.initialize( &world._catalog, &world._itemCatalog, 4 );
+    runners.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     (void)runners.addMember( hashed_string( "zale" ), "Zale", hashed_string( "sunblade" ), 1 );
     JrpgBattle bossBattle;
     bossBattle.initialize( &world._catalog, &world._judge, JrpgBattleSettings{}, 5 );
@@ -436,7 +448,7 @@ SW_TEST_CASE( ClassicJrpgTest, ComboPointsJointTechniqueAndFleeChance )
     const auto runFlee = [&]( uint32 seed, float32& outFirstChance ) -> int32
     {
         JrpgParty fleeParty;
-        fleeParty.initialize( &world._catalog, &world._itemCatalog, 4 );
+        fleeParty.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
         (void)fleeParty.addMember( hashed_string( "zale" ), "Zale", hashed_string( "sunblade" ), 1 );
         JrpgBattle fleeBattle;
         fleeBattle.initialize( &world._catalog, &world._judge, JrpgBattleSettings{}, seed );
@@ -462,7 +474,7 @@ SW_TEST_CASE( ClassicJrpgTest, WuxiaInnerEnergyAndManualProficiencyUnlockTechniq
     JrpgBattleSettings settings;
     settings._bWuxia = true;
     JrpgParty party;
-    party.initialize( &world._catalog, &world._itemCatalog, 4 );
+    party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     (void)party.addMember( hashed_string( "li" ), "Li", hashed_string( "swordsman" ), 5 );
     SW_EXPECT_FALSE( party.canUseSpell( 0, hashed_string( "pine_cut" ) ) );
     party.learnManual( 0, hashed_string( "pine_sword" ) );
@@ -508,7 +520,7 @@ SW_TEST_CASE( ClassicJrpgTest, WuxiaInnerEnergyAndManualProficiencyUnlockTechniq
 
     // 무협 옵션을 끄면 내공은 차지 않고 초식의 내공 비용도 보지 않는다.
     JrpgParty plain;
-    plain.initialize( &world._catalog, &world._itemCatalog, 4 );
+    plain.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     (void)plain.addMember( hashed_string( "li" ), "Li", hashed_string( "swordsman" ), 5 );
     plain.learnManual( 0, hashed_string( "pine_sword" ) );
     JrpgBattle plainBattle;
@@ -556,7 +568,7 @@ SW_TEST_CASE( ClassicJrpgTest, StepEncounterRewardSplitAndDeterminism )
     // 승리 보상: 경험치 6 × 2 = 12 를 살아 있는 셋이 4 씩, 골드 8 은 지갑으로. 쓰러진 멤버는 받지 않는다.
     const auto runBattle = [&]( uint32 seed, vector<JrpgBattleEvent>& outListEvent, JrpgParty& outParty ) -> JrpgBattleOutcome
     {
-        outParty.initialize( &world._catalog, &world._itemCatalog, 4 );
+        outParty.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
         (void)outParty.addMember( hashed_string( "hero" ), "Hero", hashed_string( "hero" ), 1 );
         (void)outParty.addMember( hashed_string( "sol" ), "Sol", hashed_string( "warrior" ), 1 );
         (void)outParty.addMember( hashed_string( "mia" ), "Mia", hashed_string( "mage" ), 1 );

@@ -13,6 +13,7 @@
 
 namespace sw
 {
+    class Archive;
     class ItemBag;
     class ItemCatalog;
 
@@ -47,6 +48,9 @@ namespace sw
     class SW_GF_API Inventory
     {
     public:
+        static constexpr uint32 kStateTag     = 0x54564E49u; ///< 'INVT'
+        static constexpr uint32 kStateVersion = 1;
+
         Inventory();
 
         void initialize( const ItemCatalog* pCatalog, int32 slotCount, float32 maxWeight = 0.0f );
@@ -87,6 +91,11 @@ namespace sw
         void               fillItemBag( ItemBag& outBag ) const;
         uint32             getRevision() const { return _revision; }
         const ItemCatalog* getCatalog() const { return _pCatalog; }
+
+        /** @brief 최대 무게와 칸마다 아이템 · 개수 · 내구도 · 외형 피해 · 꾸미기 값 · 떨어진 부품을 씁니다. 카탈로그는 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 칸 수가 지금과 다르거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         bool    isValidSlot( int32 slot ) const { return slot >= 0 && slot < static_cast<int32>( _listSlot.size() ); }

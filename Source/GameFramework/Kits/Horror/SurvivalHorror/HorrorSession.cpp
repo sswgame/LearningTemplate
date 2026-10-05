@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/World/AreaGraph.h"
 
 namespace sw
@@ -60,9 +61,7 @@ namespace sw
     }
 
     HorrorSession::HorrorSession()
-        : _inventory{}
-        , _itemBox{}
-        , _flags{}
+        : _flags{}
         , _sanity{}
         , _battery{}
         , _uniqueSeenMonster{}
@@ -75,6 +74,8 @@ namespace sw
         , _eventBuffer{}
         , _currentArea{}
         , _pCatalog{ nullptr }
+        , _pInventory{ nullptr }
+        , _pItemBox{ nullptr }
         , _pAreaGraph{ nullptr }
         , _health{ 0.0f }
         , _saveCount{ 0 }
@@ -84,13 +85,14 @@ namespace sw
     {
     }
 
-    void HorrorSession::initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea )
+    void HorrorSession::initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, GridInventory& inventory, Inventory& itemBox )
     {
         _pCatalog                       = pCatalog;
         _pAreaGraph                     = pAreaGraph;
         const SurvivalHorrorRules rules = pCatalog != nullptr ? pCatalog->getRules() : SurvivalHorrorRules{};
-        _inventory.initialize( pCatalog != nullptr ? pCatalog->makeShapeLookup() : GridInventory::ShapeDelegate{}, rules._gridWidth, rules._gridHeight );
-        _itemBox.clear();
+        _pInventory                     = &inventory;
+        _pItemBox                       = &itemBox;
+        _pInventory->initialize( pCatalog != nullptr ? pCatalog->makeShapeLookup() : GridInventory::ShapeDelegate{}, rules._gridWidth, rules._gridHeight );
         _flags.clear();
         _sanity.initialize( HorrorSessionInternal::makeSanitySettings( rules ) );
         _battery.initialize( HorrorSessionInternal::makeBatterySettings( rules ) );
@@ -131,23 +133,25 @@ namespace sw
 
     bool HorrorSession::storeInBox( int32 instanceId, int32 count )
     {
-        const GridItem* pItem = _inventory.findInstance( instanceId );
+        const GridItem* pItem = _pInventory->findInstance( instanceId );
         if ( pItem == nullptr || count <= 0 || pItem->_count < count )
             return false;
         const hashed_string itemId = pItem->_itemId;
-        const int32         taken  = _inventory.takeFromInstance( instanceId, count );
-        _itemBox.addItem( itemId, taken );
-        return taken == count;
+        if ( _pItemBox->hasRoomFor( itemId, count ) == false )
+            return false;
+        const int32 taken = _pInventory->takeFromInstance( instanceId, count );
+        const int32 added = _pItemBox->addItem( itemId, taken );
+        return taken == count && added == taken;
     }
 
     int32 HorrorSession::takeFromBox( const hashed_string& itemId, int32 count )
     {
-        const int32 wanted = MathUtil::min( count, _itemBox.getItemCount( itemId ) );
+        const int32 wanted = MathUtil::min( count, _pItemBox->getItemCount( itemId ) );
         if ( wanted <= 0 )
             return 0;
-        const int32 added = _inventory.addItem( itemId, wanted );
+        const int32 added = _pInventory->addItem( itemId, wanted );
         if ( added > 0 )
-            (void)_itemBox.removeItem( itemId, added );
+            (void)_pItemBox->removeItem( itemId, added );
         return added;
     }
 
@@ -155,8 +159,8 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        const GridItem* pFirst  = _inventory.findInstance( firstInstanceId );
-        const GridItem* pSecond = _inventory.findInstance( secondInstanceId );
+        const GridItem* pFirst  = _pInventory->findInstance( firstInstanceId );
+        const GridItem* pSecond = _pInventory->findInstance( secondInstanceId );
         if ( pFirst == nullptr || pSecond == nullptr )
             return false;
         if ( firstInstanceId == secondInstanceId && pFirst->_count < 2 )
@@ -167,8 +171,8 @@ namespace sw
         if ( pRecipe == nullptr || pRecipe->_outputs.isEmpty() )
             return false;
 
-        (void)_inventory.takeFromInstance( firstInstanceId, 1 );
-        (void)_inventory.takeFromInstance( secondInstanceId, 1 );
+        (void)_pInventory->takeFromInstance( firstInstanceId, 1 );
+        (void)_pInventory->takeFromInstance( secondInstanceId, 1 );
         vector<hashed_string> listOutput;
         pRecipe->_outputs.getItemIds( listOutput );
         vector<int32> listAdded;
@@ -176,7 +180,7 @@ namespace sw
         for ( const hashed_string& outputId : listOutput )
         {
             const int32 wanted = pRecipe->_outputs.getItemCount( outputId );
-            const int32 added  = _inventory.addItem( outputId, wanted );
+            const int32 added  = _pInventory->addItem( outputId, wanted );
             listAdded.push_back( added );
             if ( added < wanted )
                 bAllFit = false;
@@ -187,10 +191,10 @@ namespace sw
             for ( size_t outputIndex = 0; outputIndex < listOutput.size(); ++outputIndex )
             {
                 if ( listAdded[outputIndex] > 0 )
-                    (void)_inventory.removeItem( listOutput[outputIndex], listAdded[outputIndex] );
+                    (void)_pInventory->removeItem( listOutput[outputIndex], listAdded[outputIndex] );
             }
-            (void)_inventory.addItem( firstItem, 1 );
-            (void)_inventory.addItem( secondItem, 1 );
+            (void)_pInventory->addItem( firstItem, 1 );
+            (void)_pInventory->addItem( secondItem, 1 );
             return false;
         }
         for ( const hashed_string& outputId : listOutput )
@@ -200,12 +204,12 @@ namespace sw
 
     bool HorrorSession::tryConsumeAmmo( const hashed_string& ammoItemId, int32 count )
     {
-        return _inventory.removeItem( ammoItemId, count );
+        return _pInventory->removeItem( ammoItemId, count );
     }
 
     bool HorrorSession::tryUseItem( int32 instanceId )
     {
-        const GridItem* pItem = _inventory.findInstance( instanceId );
+        const GridItem* pItem = _pInventory->findInstance( instanceId );
         if ( pItem == nullptr || _pCatalog == nullptr )
             return false;
         const HorrorItemDef* pDef = _pCatalog->findItem( pItem->_itemId );
@@ -217,7 +221,7 @@ namespace sw
             _sanity.restore( pDef->_sanityAmount );
         if ( pDef->_batteryAmount > 0.0f )
             _battery.restore( pDef->_batteryAmount );
-        (void)_inventory.takeFromInstance( instanceId, 1 );
+        (void)_pInventory->takeFromInstance( instanceId, 1 );
         refreshHallucination();
         return true;
     }
@@ -236,7 +240,7 @@ namespace sw
         {
             // 가방에서 처음 찾은 SaveItem 하나를 쓴다(놓은 순서 — 결정적).
             int32 ribbonInstance = -1;
-            for ( const GridItem& item : _inventory.getItems() )
+            for ( const GridItem& item : _pInventory->getItems() )
             {
                 const HorrorItemDef* pDef = _pCatalog->findItem( item._itemId );
                 if ( pDef != nullptr && pDef->_kind == HorrorItemKind::SaveItem )
@@ -247,7 +251,7 @@ namespace sw
             }
             if ( ribbonInstance < 0 )
                 return HorrorSaveResult::NoSaveItem;
-            (void)_inventory.takeFromInstance( ribbonInstance, 1 );
+            (void)_pInventory->takeFromInstance( ribbonInstance, 1 );
         }
         ++_saveCount;
         pushEvent( SurvivalHorrorEvent::Kind::Saved, hashed_string(), static_cast<float32>( _saveCount ) );
@@ -296,10 +300,10 @@ namespace sw
             return HorrorPuzzleResult::Unknown;
         if ( _uniqueSolvedPuzzle.count( lockId ) > 0 )
             return HorrorPuzzleResult::AlreadySolved;
-        if ( _inventory.hasItem( pLock->_keyItem ) == false )
+        if ( _pInventory->hasItem( pLock->_keyItem ) == false )
             return HorrorPuzzleResult::MissingItem;
         if ( pLock->_bConsumeKey == SW_TRUE )
-            (void)_inventory.removeItem( pLock->_keyItem, 1 );
+            (void)_pInventory->removeItem( pLock->_keyItem, 1 );
         (void)markSolved( lockId, pLock->_flag );
         pushEvent( SurvivalHorrorEvent::Kind::DoorUnlocked, lockId );
         return HorrorPuzzleResult::Solved;

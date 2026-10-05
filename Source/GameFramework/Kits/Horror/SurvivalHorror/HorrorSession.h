@@ -23,6 +23,7 @@
 namespace sw
 {
     class AreaGraph;
+    class Inventory;
 
     /** @brief 퍼즐 · 자물쇠 · 추리의 결과입니다. */
     enum class HorrorPuzzleResult : uint8
@@ -86,17 +87,19 @@ namespace sw
     public:
         HorrorSession();
 
-        /** @brief 새 판을 시작합니다. @p pAreaGraph 가 있으면 @p startArea 에 들어갑니다. */
-        void initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea );
+        /**
+         * @brief 새 판을 시작합니다. @p pAreaGraph 가 있으면 @p startArea 에 들어갑니다.
+         * @details 격자 가방(@p inventory — 장르 고유 그릇이라 게임이 든다)과 아이템 상자(@p itemBox — 세계 보관함)는 빌립니다(세션보다 오래 살아야 한다).
+         *          격자 가방은 여기서 카탈로그 모양 · 규칙의 크기로 다시 엽니다. 부르기 전에는 다른 함수를 부르지 않습니다.
+         */
+        void initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, GridInventory& inventory, Inventory& itemBox );
 
         /** @brief 시간을 흘립니다 — 손전등 배터리, 어둠의 정신력 감소, 밝은 곳의 회복. */
         void update( float32 deltaTime, bool bInDarkness );
 
         // ── 가방 · 상자 · 조합 ─────────────────────────────────────────────
-        GridInventory&       getInventory() { return _inventory; }
-        const GridInventory& getInventory() const { return _inventory; }
-        /** @brief 공유 아이템 상자(어느 상자에서 열어도 같은 내용)입니다. */
-        const ItemBag& getItemBox() const { return _itemBox; }
+        GridInventory&       getInventory() { return *_pInventory; }
+        const GridInventory& getInventory() const { return *_pInventory; }
         /** @brief 가방 자리 하나에서 @p count 개를 상자로 넣습니다. 모자라면 false 입니다. */
         [[nodiscard]] bool storeInBox( int32 instanceId, int32 count );
         /** @brief 상자에서 꺼내 가방에 넣고 넣은 개수를 돌려줍니다(자리가 모자란 만큼은 상자에 남는다). */
@@ -168,8 +171,6 @@ namespace sw
         void refreshHallucination();
         bool markSolved( const hashed_string& puzzleId, const hashed_string& flag );
 
-        GridInventory                       _inventory;
-        ItemBag                             _itemBox;
         GameFlags                           _flags;
         ResourceGauge                       _sanity;
         ResourceGauge                       _battery;
@@ -183,6 +184,8 @@ namespace sw
         EventBuffer<SurvivalHorrorEvent>    _eventBuffer;
         hashed_string                       _currentArea;
         const HorrorCatalog*                _pCatalog;
+        GridInventory*                      _pInventory; ///< 격자 가방(빌림)
+        Inventory*                          _pItemBox;   ///< 아이템 상자(빌림 — 세계 보관함)
         AreaGraph*                          _pAreaGraph;
         float32                             _health;
         int32                               _saveCount;

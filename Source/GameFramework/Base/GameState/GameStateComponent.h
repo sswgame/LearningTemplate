@@ -10,6 +10,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Progression/Reputation.h"
 #include "GameFramework/Base/Quest/QuestLog.h"
@@ -20,6 +21,7 @@
 namespace sw
 {
     class Archive;
+    class ItemCatalog;
     class QuestCatalog;
     class ReputationCatalog;
 
@@ -29,6 +31,8 @@ namespace sw
         WorldClockSettings       _clock{};
         const QuestCatalog*      _pQuestCatalog{ nullptr };
         const ReputationCatalog* _pReputationCatalog{ nullptr };
+        const ItemCatalog*       _pItemCatalog{ nullptr };
+        int32                    _inventorySlotCount{ 0 }; ///< 플레이어 가방 칸 수(0 이면 가방 없음 — `makeRefs` 의 가방 칸이 nullptr)
     };
 } // namespace sw
 
@@ -98,6 +102,8 @@ namespace sw
         QuestLog&              getQuestLog() { return _questLog; }
         const QuestLog&        getQuestLog() const { return _questLog; }
         ReputationState&       getReputation() { return _reputation; }
+        Inventory&             getInventory() { return _inventory; }
+        const Inventory&       getInventory() const { return _inventory; }
         const ReputationState& getReputation() const { return _reputation; }
         /** @brief 이번 틱에 시계가 넘은 경계입니다(읽기만 — 다음 틱 처음에 비운다). */
         const vector<WorldClockEvent>& getClockEvents() const { return _listClockEvent; }
@@ -120,6 +126,7 @@ namespace sw
         WorldClock              _clock;
         QuestLog                _questLog;
         ReputationState         _reputation;
+        Inventory               _inventory; ///< 플레이어 가방
         vector<WorldClockEvent> _listClockEvent;
         vector<uint8>           _pendingStateBytes; ///< 열리기 전에 받은 복원 바이트
         uint8                   _bInitialized : 1;

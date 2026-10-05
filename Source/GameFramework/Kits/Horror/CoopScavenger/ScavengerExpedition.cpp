@@ -14,7 +14,6 @@ namespace sw
     {
         struct ScavengerExpeditionInternal
         {
-            static constexpr int32 kShipInventorySlots = 64;
 
             static uint32 makeDaySeed( uint32 seed, int32 dayIndex, uint32 salt ) { return GameHash::hashCoord( dayIndex, static_cast<int32>( salt ), seed ); }
         };
@@ -61,8 +60,8 @@ namespace sw
         , _outdoorDirector{}
         , _wallet{}
         , _shop{}
-        , _shipInventory{}
         , _random{}
+        , _pShipStorage{ nullptr }
         , _pMoon{ nullptr }
         , _seed{ 1u }
         , _hoursOnMoon{ 0.0f }
@@ -72,7 +71,7 @@ namespace sw
     {
     }
 
-    void ScavengerExpedition::initialize( const ScavengerExpeditionData& data, uint32 seed, int32 crewCount )
+    void ScavengerExpedition::initialize( const ScavengerExpeditionData& data, Inventory& shipStorage, uint32 seed, int32 crewCount )
     {
         _data = data;
         _seed = seed;
@@ -87,7 +86,7 @@ namespace sw
         _bDuskAnnounced = SW_FALSE;
         _wallet.clear();
         _shop.initialize( data._pShopCatalog, data._pItemCatalog );
-        _shipInventory.initialize( data._pItemCatalog, ScavengerExpeditionInternal::kShipInventorySlots, 0.0f );
+        _pShipStorage = &shipStorage;
         _listCrew.clear();
         _listCrew.resize( static_cast<size_t>( MathUtil::max( 1, crewCount ) ) );
         if ( data._pCatalog == nullptr )
@@ -325,7 +324,7 @@ namespace sw
     {
         if ( _data._pCatalog == nullptr || _phase == ScavengerPhase::GameOver )
             return ShopResult::UnknownShop;
-        return _shop.buy( _data._pCatalog->getTerminalShopId(), itemId, count, _wallet, _shipInventory );
+        return _shop.buy( _data._pCatalog->getTerminalShopId(), itemId, count, _wallet, *_pShipStorage );
     }
 
     void ScavengerExpedition::drainEvents( vector<ScavengerEvent>& outListEvent )

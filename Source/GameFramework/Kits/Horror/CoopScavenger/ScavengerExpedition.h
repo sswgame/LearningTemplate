@@ -127,7 +127,8 @@ namespace sw
 
         ScavengerExpedition();
 
-        void initialize( const ScavengerExpeditionData& data, uint32 seed, int32 crewCount );
+        /** @brief 새 원정을 엽니다. 터미널에서 산 것은 빌린 우주선 창고(@p shipStorage — 원정보다 오래 살아야 한다)에 듭니다. */
+        void initialize( const ScavengerExpeditionData& data, Inventory& shipStorage, uint32 seed, int32 crewCount );
 
         /** @brief 궤도에서 위성으로 갑니다(비용을 낸다). 이미 그 위성이면 공짜입니다. */
         ScavengerActionResult routeTo( const hashed_string& moonId );
@@ -169,7 +170,7 @@ namespace sw
         const ScavengerFacility&      getFacility() const { return _facility; }
         const WorldClock&             getClock() const { return _clock; }
         const WeatherSystem&          getWeather() const { return _weather; }
-        const Inventory&              getShipInventory() const { return _shipInventory; }
+        const Inventory&              getShipInventory() const { return *_pShipStorage; }
         const vector<ScavengerScrap>& getShipScrap() const { return _listShipScrap; }
         int32                         computeShipValue() const;
         const ScavengerCrewMember*    findCrewMember( int32 player ) const;
@@ -204,8 +205,8 @@ namespace sw
         SpawnDirector               _outdoorDirector;
         Wallet                      _wallet;
         ShopState                   _shop;
-        Inventory                   _shipInventory;
         GameRandom                  _random;
+        Inventory*                  _pShipStorage; ///< 우주선 창고(빌림)
         const ScavengerMoonDef*     _pMoon;
         uint32                      _seed;
         float32                     _hoursOnMoon;

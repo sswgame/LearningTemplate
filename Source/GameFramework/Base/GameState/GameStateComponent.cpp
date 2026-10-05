@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/GameState/GameStateComponent.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -15,7 +17,7 @@ namespace sw
     {
         struct GameStateComponentInternal
         {
-            static constexpr uint32 kSectionCount = 5;
+            static constexpr uint32 kSectionCount = 6;
 
             /** @brief 읽은 구간 하나 — 본문은 읽은 바이트의 보기입니다. */
             struct Section
@@ -66,6 +68,7 @@ namespace sw
         , _clock{}
         , _questLog{}
         , _reputation{}
+        , _inventory{}
         , _listClockEvent{}
         , _pendingStateBytes{}
         , _bInitialized{ SW_FALSE }
@@ -85,6 +88,7 @@ namespace sw
         _clock.initialize( settings._clock );
         _questLog.initialize( settings._pQuestCatalog );
         _reputation.initialize( settings._pReputationCatalog );
+        _inventory.initialize( settings._pItemCatalog, MathUtil::max( 0, settings._inventorySlotCount ) );
         _listClockEvent.clear();
         _bInitialized = SW_TRUE;
         _bFreshGame   = SW_TRUE;
@@ -128,6 +132,7 @@ namespace sw
         GameStateComponentInternal::writeStateSection( outArchive, _clock );
         GameStateComponentInternal::writeStateSection( outArchive, _questLog );
         GameStateComponentInternal::writeStateSection( outArchive, _reputation );
+        GameStateComponentInternal::writeStateSection( outArchive, _inventory );
     }
 
     void GameStateComponent::restoreState( vector<uint8>&& bytes )
@@ -145,6 +150,7 @@ namespace sw
         refs._pClock      = &_clock;
         refs._pQuestLog   = &_questLog;
         refs._pReputation = &_reputation;
+        refs._pInventory  = _inventory.getSlotCount() > 0 ? &_inventory : nullptr;
         return refs;
     }
 
@@ -211,6 +217,11 @@ namespace sw
                 case ReputationState::kStateTag:
                 {
                     (void)GameStateComponentInternal::applyStateSection( section, _reputation, "reputation" );
+                    break;
+                }
+                case Inventory::kStateTag:
+                {
+                    (void)GameStateComponentInternal::applyStateSection( section, _inventory, "inventory" );
                     break;
                 }
                 default:

@@ -75,7 +75,6 @@ namespace sw
         , _eventBuffer{}
         , _listReputationScratch{}
         , _listSpoilageScratch{}
-        , _inventory{}
         , _stock{}
         , _crafter{}
         , _market{}
@@ -87,6 +86,7 @@ namespace sw
         , _random{}
         , _weatherId{}
         , _pCatalog{ nullptr }
+        , _pPantry{ nullptr }
         , _pRecipeCatalog{ nullptr }
         , _pShopCatalog{ nullptr }
         , _pStaffCurve{ nullptr }
@@ -101,15 +101,15 @@ namespace sw
 
     void RestaurantSimulation::initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog,
                                            const ShopCatalog* pShopCatalog, const ReputationCatalog* pReputationCatalog, const ExperienceCurve* pStaffCurve,
-                                           const RestaurantSettings& settings )
+                                           Inventory& pantry, const RestaurantSettings& settings )
     {
         _pCatalog       = pCatalog;
         _pRecipeCatalog = pRecipeCatalog;
         _pShopCatalog   = pShopCatalog;
         _pStaffCurve    = pStaffCurve;
         _settings       = settings;
-        _inventory.initialize( pItemCatalog, MathUtil::max( 1, settings._inventorySlots ) );
-        _stock.initialize( &_inventory );
+        _pPantry        = &pantry;
+        _stock.initialize( _pPantry );
         _crafter.initialize( pRecipeCatalog );
         _market.initialize( pShopCatalog, pItemCatalog );
         _reputation.initialize( pReputationCatalog );
@@ -215,7 +215,7 @@ namespace sw
     ShopResult RestaurantSimulation::buyIngredient( const hashed_string& shopId, const hashed_string& itemId, int32 count )
     {
         int64            spent  = 0;
-        const ShopResult result = _market.buy( shopId, itemId, count, _wallet, _inventory, &spent );
+        const ShopResult result = _market.buy( shopId, itemId, count, _wallet, *_pPantry, &spent );
         if ( result != ShopResult::Ok )
             return result;
         const int32 shelfLife = _pCatalog != nullptr ? _pCatalog->findShelfLife( itemId ) : 0;
@@ -343,7 +343,7 @@ namespace sw
             return false;
         if ( pRecipe->_station.empty() == false && countStations( pRecipe->_station ) <= 0 )
             return false;
-        return _crafter.evaluate( pRecipe->_id, _inventory, pRecipe->_station, findBestCookLevel() ) == CraftResult::Ok;
+        return _crafter.evaluate( pRecipe->_id, *_pPantry, pRecipe->_station, findBestCookLevel() ) == CraftResult::Ok;
     }
 
     int64 RestaurantSimulation::getMenuPrice( const hashed_string& dishId ) const
