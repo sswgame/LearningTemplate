@@ -510,11 +510,11 @@ SW_TEST_CASE( AppearanceTest, DamageStagesFollowDataThresholds )
     // 내구도 15/100 → 피해 0.85 → 부서짐: 녹 1, 손잡이 머리가 단계로 떨어진다.
     Equipment equipment;
     fixture.makeEquipment( equipment );
-    ItemStack sword;
+    InventorySlot sword;
     sword._itemId     = hashed_string( "sword" );
     sword._count      = 1;
     sword._durability = 15.0f;
-    vector<ItemStack> listRemoved;
+    vector<InventorySlot> listRemoved;
     SW_ASSERT_TRUE( equipment.equip( hashed_string( "MainHand" ), sword, listRemoved ) == EquipResult::Ok );
     AppearanceInputUtil::applyEquipment( equipment, spec );
     SW_EXPECT_NEAR_EQUAL( AppearanceResolver::snapDamage( 0.85f ), spec.findSlot( hashed_string( "MainHand" ) )->_damage, 1.0e-6f );
@@ -538,11 +538,11 @@ SW_TEST_CASE( AppearanceTest, BreakOffEmitsOneDetachEvent )
     SW_ASSERT_TRUE( fixture.expand( hashed_string( "Knight" ), 0u, spec ) );
     Equipment equipment;
     fixture.makeEquipment( equipment );
-    ItemStack sword;
+    InventorySlot sword;
     sword._itemId     = hashed_string( "sword" );
     sword._count      = 1;
     sword._durability = 100.0f;
-    vector<ItemStack> listRemoved;
+    vector<InventorySlot> listRemoved;
     SW_ASSERT_TRUE( equipment.equip( hashed_string( "MainHand" ), sword, listRemoved ) == EquipResult::Ok );
 
     CharacterAppearanceState state;
@@ -675,10 +675,10 @@ SW_TEST_CASE( AppearanceTest, StateReresolvesOnlyWhenARevisionChanges )
     SW_EXPECT_FALSE( state.update( &equipment ) );
     SW_EXPECT_EQUAL( 1u, state.getResolveCount() );
 
-    ItemStack cap;
+    InventorySlot cap;
     cap._itemId = hashed_string( "cap" );
     cap._count  = 1;
-    vector<ItemStack> listRemoved;
+    vector<InventorySlot> listRemoved;
     SW_ASSERT_TRUE( equipment.equip( hashed_string( "Head" ), cap, listRemoved ) == EquipResult::Ok );
     SW_EXPECT_TRUE( state.update( &equipment ) );
     SW_EXPECT_TRUE( state.getResolved().hasOwner( hashed_string( "Head" ) ) );

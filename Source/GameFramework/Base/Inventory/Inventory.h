@@ -22,7 +22,7 @@ namespace sw
      * @details 인스턴스 상태(꾸미기 값 · 피해 · 떨어져 나간 부품)는 그 아이템 하나를 따라다닙니다 — 세이브 · 네트워크도 이 칸을 그대로 싣습니다.
      *          인스턴스 상태가 있는 것은 같은 id 와 겹치지 않습니다(`hasInstanceState`).
      */
-    struct ItemStack
+    struct InventorySlot
     {
         CustomizationValueSet _customization{};    ///< 아이템 인스턴스의 꾸미기 값(염색 · 부착물 · 변형 — 외형 스키마가 뜻을 정한다)
         vector<hashed_string> _listDetachedPart{}; ///< 맞아서 떨어져 나간 외형 부품 이름(모자가 날아감 · 갑옷 판이 깨짐)
@@ -55,17 +55,17 @@ namespace sw
 
         void initialize( const ItemCatalog* pCatalog, int32 slotCount, float32 maxWeight = 0.0f );
         /** @brief 칸 수를 바꿉니다(가방 바꾸기). 줄어서 넘치는 것은 @p outListOverflow 로 나옵니다(바닥에 떨어뜨리기). */
-        void resize( int32 slotCount, vector<ItemStack>& outListOverflow );
+        void resize( int32 slotCount, vector<InventorySlot>& outListOverflow );
         void setMaxWeight( float32 maxWeight );
 
         /** @brief 넣고, 넣은 개수를 돌려줍니다(칸 · 무게가 모자라면 일부만). */
         int32 addItem( const hashed_string& itemId, int32 count );
         /** @brief 칸 하나(내구도 포함)를 통째로 넣습니다. 다 들어갔으면 true 입니다. */
-        [[nodiscard]] bool addStack( const ItemStack& stack );
+        [[nodiscard]] bool addStack( const InventorySlot& stack );
         /** @brief @p count 개가 모두 있으면 뺍니다(뒤 칸부터). */
         [[nodiscard]] bool removeItem( const hashed_string& itemId, int32 count );
         /** @brief 칸에서 @p count 개까지 빼고 뺀 것을 돌려줍니다. */
-        ItemStack takeFromSlot( int32 slot, int32 count );
+        InventorySlot takeFromSlot( int32 slot, int32 count );
         /** @brief 칸을 옮깁니다 — 같은 아이템이면 합치고(넘치면 남김), 아니면 바꿉니다. */
         [[nodiscard]] bool moveSlot( int32 fromSlot, int32 toSlot );
         /** @brief 칸에서 @p count 개를 떼어 빈 칸에 둡니다. 둔 칸 번호입니다(못 하면 −1). */
@@ -80,13 +80,13 @@ namespace sw
         bool  hasItem( const hashed_string& itemId, int32 count = 1 ) const { return getItemCount( itemId ) >= count; }
         bool  hasItems( const ItemBag& bag ) const;
         /** @brief @p count 개가 다 들어갈 자리(칸 · 무게)가 있는가입니다. */
-        bool             hasRoomFor( const hashed_string& itemId, int32 count ) const;
-        int32            findFirstSlot( const hashed_string& itemId ) const;
-        int32            countEmptySlots() const;
-        float32          computeWeight() const;
-        float32          getMaxWeight() const { return _maxWeight; }
-        int32            getSlotCount() const { return static_cast<int32>( _listSlot.size() ); }
-        const ItemStack& getSlot( int32 slot ) const { return _listSlot[static_cast<size_t>( slot )]; }
+        bool                 hasRoomFor( const hashed_string& itemId, int32 count ) const;
+        int32                findFirstSlot( const hashed_string& itemId ) const;
+        int32                countEmptySlots() const;
+        float32              computeWeight() const;
+        float32              getMaxWeight() const { return _maxWeight; }
+        int32                getSlotCount() const { return static_cast<int32>( _listSlot.size() ); }
+        const InventorySlot& getSlot( int32 slot ) const { return _listSlot[static_cast<size_t>( slot )]; }
         /** @brief 아이템마다 개수를 봉투에 더합니다(세이브 · 거래 화면). */
         void               fillItemBag( ItemBag& outBag ) const;
         uint32             getRevision() const { return _revision; }
@@ -102,9 +102,9 @@ namespace sw
         int32   computeWeightRoom( const hashed_string& itemId, int32 count ) const;
         float32 getItemWeight( const hashed_string& itemId ) const;
 
-        vector<ItemStack>  _listSlot;
-        const ItemCatalog* _pCatalog;
-        float32            _maxWeight;
-        uint32             _revision;
+        vector<InventorySlot> _listSlot;
+        const ItemCatalog*    _pCatalog;
+        float32               _maxWeight;
+        uint32                _revision;
     };
 } // namespace sw

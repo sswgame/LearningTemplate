@@ -15,8 +15,8 @@ namespace sw
             /** @brief 칸 상태가 같은가입니다(판을 올릴지 고른다). */
             static bool isSameSlot( const EquipSlot& lhs, const EquipSlot& rhs )
             {
-                const ItemStack& left  = lhs._item;
-                const ItemStack& right = rhs._item;
+                const InventorySlot& left  = lhs._item;
+                const InventorySlot& right = rhs._item;
                 return lhs._bSuppressed == rhs._bSuppressed && left._itemId == right._itemId && left._count == right._count && left._durability == right._durability && left._damage == right._damage && left._listDetachedPart == right._listDetachedPart && left._customization.isEquivalent( right._customization );
             }
 
@@ -97,7 +97,7 @@ namespace sw
         return true;
     }
 
-    EquipResult Equipment::settleConditions( vector<EquipSlot>& inoutListSlot, bool bAllowRefuse, vector<ItemStack>& outListRemoved ) const
+    EquipResult Equipment::settleConditions( vector<EquipSlot>& inoutListSlot, bool bAllowRefuse, vector<InventorySlot>& outListRemoved ) const
     {
         if ( _pCatalog == nullptr )
             return EquipResult::Ok;
@@ -133,7 +133,7 @@ namespace sw
                 if ( pDef->_breakPolicy == EquipBreakPolicy::UnequipTogether )
                 {
                     outListRemoved.push_back( slot._item );
-                    slot._item = ItemStack{};
+                    slot._item = InventorySlot{};
                 }
                 else
                 {
@@ -147,7 +147,7 @@ namespace sw
         return EquipResult::Ok;
     }
 
-    EquipResult Equipment::makeTrialEquip( int32 slotIndex, const ItemStack& item, vector<EquipSlot>& outListSlot, vector<ItemStack>& outListRemoved ) const
+    EquipResult Equipment::makeTrialEquip( int32 slotIndex, const InventorySlot& item, vector<EquipSlot>& outListSlot, vector<InventorySlot>& outListRemoved ) const
     {
         outListRemoved.clear();
         if ( slotIndex < 0 )
@@ -181,7 +181,7 @@ namespace sw
             ++_revision;
     }
 
-    void Equipment::setCharacterContext( const EquipCharacterContext& context, vector<ItemStack>& outListRemoved )
+    void Equipment::setCharacterContext( const EquipCharacterContext& context, vector<InventorySlot>& outListRemoved )
     {
         outListRemoved.clear();
         _context                    = context;
@@ -193,11 +193,11 @@ namespace sw
 
     EquipResult Equipment::evaluateEquip( const hashed_string& slot, const hashed_string& itemId ) const
     {
-        ItemStack item;
+        InventorySlot item;
         item._itemId = itemId;
         item._count  = 1;
-        vector<EquipSlot> listTrial;
-        vector<ItemStack> listRemoved;
+        vector<EquipSlot>     listTrial;
+        vector<InventorySlot> listRemoved;
         return makeTrialEquip( findSlotIndex( slot ), item, listTrial, listRemoved );
     }
 
@@ -219,7 +219,7 @@ namespace sw
         return firstMatch;
     }
 
-    EquipResult Equipment::equip( const hashed_string& slot, const ItemStack& item, vector<ItemStack>& outListRemoved )
+    EquipResult Equipment::equip( const hashed_string& slot, const InventorySlot& item, vector<InventorySlot>& outListRemoved )
     {
         vector<EquipSlot> listTrial;
         const EquipResult result = makeTrialEquip( findSlotIndex( slot ), item, listTrial, outListRemoved );
@@ -232,7 +232,7 @@ namespace sw
         return EquipResult::Ok;
     }
 
-    EquipResult Equipment::unequip( const hashed_string& slot, vector<ItemStack>& outListRemoved )
+    EquipResult Equipment::unequip( const hashed_string& slot, vector<InventorySlot>& outListRemoved )
     {
         outListRemoved.clear();
         const int32 slotIndex = findSlotIndex( slot );
@@ -243,7 +243,7 @@ namespace sw
         vector<EquipSlot> listTrial = _listSlot;
         EquipSlot&        target    = listTrial[static_cast<size_t>( slotIndex )];
         outListRemoved.push_back( target._item );
-        target._item             = ItemStack{};
+        target._item             = InventorySlot{};
         target._bSuppressed      = SW_FALSE;
         const EquipResult result = settleConditions( listTrial, true, outListRemoved );
         if ( result != EquipResult::Ok )
@@ -259,7 +259,7 @@ namespace sw
     {
         if ( inventorySlot < 0 || inventorySlot >= inventory.getSlotCount() || inventory.getSlot( inventorySlot ).isEmpty() )
             return EquipResult::UnknownItem;
-        const ItemStack     source     = inventory.getSlot( inventorySlot );
+        const InventorySlot source     = inventory.getSlot( inventorySlot );
         const hashed_string targetSlot = slot.empty() ? findSlotFor( source._itemId ) : slot;
         if ( targetSlot.empty() )
             return EquipResult::WrongSlot; // 그 아이템을 받는 칸이 없다
@@ -270,10 +270,10 @@ namespace sw
         const Inventory         inventoryBefore = inventory;
         const vector<EquipSlot> slotsBefore     = _listSlot;
         const uint32            revisionBefore  = _revision;
-        const ItemStack         taken           = inventory.takeFromSlot( inventorySlot, 1 );
-        vector<ItemStack>       listRemoved;
+        const InventorySlot     taken           = inventory.takeFromSlot( inventorySlot, 1 );
+        vector<InventorySlot>   listRemoved;
         (void)equip( targetSlot, taken, listRemoved );
-        for ( const ItemStack& removed : listRemoved )
+        for ( const InventorySlot& removed : listRemoved )
         {
             if ( inventory.addStack( removed ) == false )
             {
@@ -291,10 +291,10 @@ namespace sw
         const Inventory         inventoryBefore = inventory;
         const vector<EquipSlot> slotsBefore     = _listSlot;
         const uint32            revisionBefore  = _revision;
-        vector<ItemStack>       listRemoved;
+        vector<InventorySlot>   listRemoved;
         if ( unequip( slot, listRemoved ) != EquipResult::Ok )
             return false;
-        for ( const ItemStack& removed : listRemoved )
+        for ( const InventorySlot& removed : listRemoved )
         {
             if ( inventory.addStack( removed ) == false )
             {
@@ -307,13 +307,13 @@ namespace sw
         return true;
     }
 
-    bool Equipment::setEquippedInstance( const hashed_string& slot, const ItemStack& item )
+    bool Equipment::setEquippedInstance( const hashed_string& slot, const InventorySlot& item )
     {
         const int32 slotIndex = findSlotIndex( slot );
         if ( slotIndex < 0 || _listSlot[static_cast<size_t>( slotIndex )]._item.isEmpty() )
             return false;
         vector<EquipSlot> listTrial = _listSlot;
-        ItemStack&        target    = listTrial[static_cast<size_t>( slotIndex )]._item;
+        InventorySlot&    target    = listTrial[static_cast<size_t>( slotIndex )]._item;
         target._customization       = item._customization;
         target._listDetachedPart    = item._listDetachedPart;
         target._durability          = item._durability;
@@ -322,7 +322,7 @@ namespace sw
         return true;
     }
 
-    const ItemStack* Equipment::findEquipped( const hashed_string& slot ) const
+    const InventorySlot* Equipment::findEquipped( const hashed_string& slot ) const
     {
         const int32 slotIndex = findSlotIndex( slot );
         if ( slotIndex < 0 )

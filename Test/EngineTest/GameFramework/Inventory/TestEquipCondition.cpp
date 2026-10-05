@@ -19,9 +19,9 @@ namespace
 {
     struct EquipConditionTestInternal
     {
-        static ItemStack makeItem( const utf8* pItemId )
+        static InventorySlot makeItem( const utf8* pItemId )
         {
-            ItemStack item;
+            InventorySlot item;
             item._itemId = hashed_string( pItemId );
             item._count  = 1;
             return item;
@@ -29,7 +29,7 @@ namespace
 
         static EquipResult equip( Equipment& equipment, const utf8* pSlot, const utf8* pItemId )
         {
-            vector<ItemStack> listRemoved;
+            vector<InventorySlot> listRemoved;
             return equipment.equip( hashed_string( pSlot ), makeItem( pItemId ), listRemoved );
         }
 
@@ -63,8 +63,8 @@ SW_TEST_CASE( EquipConditionTest, SetOnlyItemIsRefusedUntilTheSetIsComplete )
     SW_EXPECT_TRUE( equipment.getRevision() != revision );
 
     // 몸 종류 변형 — 여성 몸은 plate_f 가 몸통 조각이다.
-    Equipment         female;
-    vector<ItemStack> listRemoved;
+    Equipment             female;
+    vector<InventorySlot> listRemoved;
     fixture.makeEquipment( female );
     EquipCharacterContext context;
     context._bodyType = hashed_string( "Female" );
@@ -94,7 +94,7 @@ SW_TEST_CASE( EquipConditionTest, BrokenConditionFollowsThePerItemPolicy )
         equipment.computeStats( stats );
         SW_EXPECT_NEAR_EQUAL( 3.0f, stats.getValue( hashed_string( "charisma" ) ), 1.0e-4f );
 
-        vector<ItemStack> listRemoved;
+        vector<InventorySlot> listRemoved;
         SW_EXPECT_TRUE( equipment.unequip( hashed_string( "Head" ), listRemoved ) == EquipResult::Ok );
         SW_EXPECT_EQUAL( size_t( 1 ), listRemoved.size() ); // 투구만 — 망토는 남는다
         SW_EXPECT_TRUE( equipment.findEquipped( hashed_string( "Back" ) ) != nullptr );
@@ -112,7 +112,7 @@ SW_TEST_CASE( EquipConditionTest, BrokenConditionFollowsThePerItemPolicy )
         fixture.makeEquipment( equipment );
         SW_ASSERT_TRUE( Internal::equipKnightSet( equipment ) );
         SW_ASSERT_TRUE( Internal::equip( equipment, "Back", "cape_together" ) == EquipResult::Ok );
-        vector<ItemStack> listRemoved;
+        vector<InventorySlot> listRemoved;
         // 바꿔 끼기도 세트를 깬다 — 판갑을 셔츠로.
         SW_EXPECT_TRUE( equipment.equip( hashed_string( "Body" ), Internal::makeItem( "shirt" ), listRemoved ) == EquipResult::Ok );
         SW_ASSERT_EQUAL( size_t( 2 ), listRemoved.size() );
@@ -126,8 +126,8 @@ SW_TEST_CASE( EquipConditionTest, BrokenConditionFollowsThePerItemPolicy )
         fixture.makeEquipment( equipment );
         SW_ASSERT_TRUE( Internal::equipKnightSet( equipment ) );
         SW_ASSERT_TRUE( Internal::equip( equipment, "Back", "cape_refuse" ) == EquipResult::Ok );
-        const uint32      revision = equipment.getRevision();
-        vector<ItemStack> listRemoved;
+        const uint32          revision = equipment.getRevision();
+        vector<InventorySlot> listRemoved;
         SW_EXPECT_TRUE( equipment.unequip( hashed_string( "Legs" ), listRemoved ) == EquipResult::RefusedByDependent );
         SW_EXPECT_TRUE( listRemoved.empty() );
         SW_EXPECT_TRUE( Internal::equip( equipment, "Body", "shirt" ) == EquipResult::RefusedByDependent );
@@ -162,7 +162,7 @@ SW_TEST_CASE( EquipConditionTest, TagCharacterTagAndBodyShapeConditions )
     EquipCharacterContext context;
     context._tags.addTag( TagID::request( "Class.Knight.Paladin" ) );
     context._bodyShape = hashed_string( "Huge" );
-    vector<ItemStack> listRemoved;
+    vector<InventorySlot> listRemoved;
     equipment.setCharacterContext( context, listRemoved );
     SW_EXPECT_TRUE( Internal::equip( equipment, "Head", "crown" ) == EquipResult::Ok );
     SW_EXPECT_TRUE( Internal::equip( equipment, "Belt", "belt_big" ) == EquipResult::Ok );
@@ -215,7 +215,7 @@ SW_TEST_CASE( EquipConditionTest, InstanceStateKeepsItemsFromStacking )
     Inventory inventory;
     inventory.initialize( &catalog, 4 );
     SW_EXPECT_EQUAL( 1, inventory.addItem( hashed_string( "gem" ), 1 ) );
-    ItemStack dyed;
+    InventorySlot dyed;
     dyed._itemId = hashed_string( "gem" );
     dyed._count  = 1;
     dyed._customization.setColor( hashed_string( "Tint" ), float4( 1.0f, 0.0f, 0.0f, 1.0f ) );

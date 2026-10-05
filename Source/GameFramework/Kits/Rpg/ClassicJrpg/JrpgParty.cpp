@@ -323,11 +323,11 @@ namespace sw
                     return false;
                 if ( itemId.empty() )
                     continue;
-                ItemStack item;
+                InventorySlot item;
                 item._itemId = itemId;
                 item._count  = 1;
-                vector<ItemStack>    listRemoved;
-                const hashed_string& slotName = member._equipment.getSlots()[slotIndex]._name;
+                vector<InventorySlot> listRemoved;
+                const hashed_string&  slotName = member._equipment.getSlots()[slotIndex]._name;
                 if ( member._equipment.equip( slotName, item, listRemoved ) != EquipResult::Ok )
                     return false;
             }

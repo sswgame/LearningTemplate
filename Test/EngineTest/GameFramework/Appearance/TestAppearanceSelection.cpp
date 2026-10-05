@@ -269,8 +269,8 @@ SW_TEST_CASE( AppearanceSelectionTest, NetworkSyncResolvesToTheSameHash )
     // 장비가 프리셋을 덮는다 — 내구도가 닳은 칼 · 조건이 깨져 숨긴 망토.
     Equipment equipment;
     fixture.makeEquipment( equipment );
-    vector<ItemStack> listRemoved;
-    ItemStack         item;
+    vector<InventorySlot> listRemoved;
+    InventorySlot         item;
     item._count                     = 1;
     const utf8* const arrPiece[][2] = {
         {"Head",    "helm"},
@@ -285,7 +285,7 @@ SW_TEST_CASE( AppearanceSelectionTest, NetworkSyncResolvesToTheSameHash )
     item._itemId = hashed_string( "cape_hidden" );
     SW_ASSERT_TRUE( equipment.equip( hashed_string( "Back" ), item, listRemoved ) == EquipResult::Ok );
     SW_ASSERT_TRUE( equipment.unequip( hashed_string( "Legs" ), listRemoved ) == EquipResult::Ok );
-    ItemStack sword;
+    InventorySlot sword;
     sword._itemId           = hashed_string( "sword" );
     sword._count            = 1;
     sword._durability       = 37.0f;

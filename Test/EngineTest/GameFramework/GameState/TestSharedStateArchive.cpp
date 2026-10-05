@@ -222,7 +222,7 @@ SW_TEST_CASE( SharedStateArchiveTest, InventoryRoundTripKeepsSlotsAndRejectsOthe
     Inventory bag;
     bag.initialize( nullptr, 4, 30.0f );
     SW_ASSERT_EQUAL( 2, bag.addItem( "turnip", 2 ) );
-    ItemStack dyed;
+    InventorySlot dyed;
     dyed._itemId     = "hat";
     dyed._count      = 1;
     dyed._durability = 0.5f;

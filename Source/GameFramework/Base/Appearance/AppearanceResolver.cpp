@@ -905,9 +905,9 @@ namespace sw
                 request._bSuppressed = SW_FALSE;
                 continue;
             }
-            const ItemStack& item     = pEquipSlot->_item;
-            const ItemDef*   pDef     = pCatalog != nullptr ? pCatalog->findItem( item._itemId ) : nullptr;
-            const float32    worn     = pDef != nullptr && pDef->_maxDurability > 0.0f ? 1.0f - MathUtil::saturate( item._durability / pDef->_maxDurability ) : 0.0f;
+            const InventorySlot& item = pEquipSlot->_item;
+            const ItemDef*       pDef = pCatalog != nullptr ? pCatalog->findItem( item._itemId ) : nullptr;
+            const float32        worn = pDef != nullptr && pDef->_maxDurability > 0.0f ? 1.0f - MathUtil::saturate( item._durability / pDef->_maxDurability ) : 0.0f;
             request._customization    = item._customization;
             request._listDetachedPart = item._listDetachedPart;
             request._damage           = AppearanceResolver::snapDamage( MathUtil::max( item._damage, worn ) );

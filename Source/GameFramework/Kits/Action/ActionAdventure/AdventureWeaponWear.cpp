@@ -17,7 +17,7 @@ namespace sw
         AdventureStrikeResult result;
         if ( slot < 0 || slot >= inventory.getSlotCount() )
             return result;
-        const ItemStack stack = inventory.getSlot( slot );
+        const InventorySlot stack = inventory.getSlot( slot );
         if ( stack.isEmpty() )
             return result;
         result._itemId                   = stack._itemId;

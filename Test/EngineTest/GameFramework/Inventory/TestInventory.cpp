@@ -102,7 +102,7 @@ SW_TEST_CASE( InventoryTest, SlotsStackRespectWeightAndMoveSplitSortAndWear )
     SW_EXPECT_EQUAL( 0, inventory.getItemCount( hashed_string( "sword" ) ) );
 
     // 가방이 작아지면 넘치는 것이 나온다.
-    vector<ItemStack> listOverflow;
+    vector<InventorySlot> listOverflow;
     inventory.resize( 1, listOverflow );
     SW_EXPECT_EQUAL( 1, inventory.getSlotCount() );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( listOverflow.size() ) );
