@@ -145,6 +145,14 @@ namespace sw
 
         // 재생성이 성공할 때만 표시를 내린다. 실패해도 내리면 복원 도중 한 번 실패한 뒤 스왑체인 없이 프레임을 **영영** 건너뛴다
         // (창이 검은 채로 멈춤).
+        // 서피스를 잃은 채면(지난 present · 재생성 실패) 서피스부터 다시 만든다. 실패하면 이 프레임은 건너뛰고 다음 프레임에 다시 시도한다.
+        if ( _bSurfaceLost == SW_TRUE )
+        {
+            if ( recreateSurfaceAndSwapChain() == false )
+                return;
+            _bSurfaceLost    = SW_FALSE;
+            _bSwapChainDirty = 0;
+        }
         if ( _bSwapChainDirty && recreateSwapChain() )
             _bSwapChainDirty = 0;
 
@@ -175,6 +183,17 @@ namespace sw
         if ( _bSwapChainImageHeld == SW_FALSE )
         {
             VulkanSwapChainStatus status = _swapChain.acquireNextImage( _device, _currentFrame );
+            if ( status == VulkanSwapChainStatus::SurfaceLost )
+            {
+                // 사양: 서피스를 잃으면 스왑체인만이 아니라 서피스부터 다시 만든다. 잃은 서피스로 다시 acquire 하면 계속 진다.
+                noteSurfaceLost( "acquire" );
+                if ( recreateSurfaceAndSwapChain() == false || _swapChain.isValid() == false )
+                {
+                    _bSurfaceLost = SW_TRUE;
+                    return;
+                }
+                status = _swapChain.acquireNextImage( _device, _currentFrame );
+            }
             if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::Suboptimal )
             {
                 if ( recreateSwapChain() == false || _swapChain.isValid() == false )
@@ -311,6 +330,12 @@ namespace sw
             {
                 // 다음 beginFrame 에서 스왑체인을 다시 만든다.
                 _bSwapChainDirty = 1;
+            }
+            else if ( presentStatus == VulkanSwapChainStatus::SurfaceLost )
+            {
+                // 다음 beginFrame 에서 서피스부터 다시 만든다(큐 락 안이라 여기서 만들지 않는다).
+                noteSurfaceLost( "present" );
+                _bSurfaceLost = SW_TRUE;
             }
             // 성공이든 OutOfDate 든 이미지는 프레젠테이션 엔진으로 넘어갔다. 재생성 경로에서도
             // 이미지 자체가 사라지므로, 어느 쪽이든 더 이상 쥐고 있지 않다.

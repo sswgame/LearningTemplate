@@ -30,6 +30,8 @@ namespace sw
                 return VulkanSwapChainStatus::Suboptimal;
             if ( result == VK_ERROR_OUT_OF_DATE_KHR )
                 return VulkanSwapChainStatus::OutOfDate;
+            if ( result == VK_ERROR_SURFACE_LOST_KHR )
+                return VulkanSwapChainStatus::SurfaceLost;
             return VulkanSwapChainStatus::Failed;
         }
     } // namespace

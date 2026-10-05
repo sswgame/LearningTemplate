@@ -59,6 +59,7 @@ namespace sw
         , _width{ 0 }
         , _height{ 0 }
         , _depthFormat{ 0 }
+        , _surfaceLostCount{ 0 }
         , _bFrameStarted{ SW_FALSE }
 #if defined( SW_DEBUG )
         , _bEnableValidationLayers{ SW_TRUE }
@@ -74,6 +75,7 @@ namespace sw
         , _bSwapChainImageHeld{ SW_FALSE }
         , _bMemoryBudget{ SW_FALSE }
         , _linuxWsi{ 0 }
+        , _bSurfaceLost{ SW_FALSE }
         , _reservedVulkan{ 0 }
         , _bSwapChainRecreateFailing{ SW_FALSE }
         , _bFrameAcquireWaitPending{ SW_FALSE }

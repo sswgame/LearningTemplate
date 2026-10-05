@@ -556,6 +556,40 @@ namespace sw
         return true;
     }
 
+    void VulkanRHIDevice::noteSurfaceLost( const utf8* pWhere )
+    {
+        ++_surfaceLostCount;
+        SW_LOG_WARNING( "Vulkan surface lost at %# (%# time(s) on this device, frame %#) - recreating the surface and swapchain", pWhere, _surfaceLostCount,
+                        _frameFenceCounter );
+    }
+
+    bool VulkanRHIDevice::recreateSurfaceAndSwapChain()
+    {
+        if ( _device == nullptr || _instance == nullptr )
+            return false;
+        {
+            std::scoped_lock<mutex> queueLock{ _queueMutex };
+            vkDeviceWaitIdle( _device );
+        }
+        // 스왑체인이 서피스 위에 있으므로 스왑체인 → 서피스 순으로 버리고 서피스 → 스왑체인 순으로 만든다.
+        _bSwapChainImageHeld = SW_FALSE;
+        destroyFrameFences();
+        _swapChain.destroySemaphores( _device );
+        _swapChain.destroy( _device );
+        _swapChain.destroySurface( _instance );
+        if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _linuxWsi ) == false )
+            return false;
+        // 새 서피스를 이 큐가 프레젠트할 수 있는지 — 고를 때(pickPhysicalDevice) 본 것은 옛 서피스다.
+        VkBool32 bPresentSupported = VK_FALSE;
+        vkGetPhysicalDeviceSurfaceSupportKHR( _physicalDevice, _graphicsQueueFamilyIndex, _swapChain.getSurface(), &bPresentSupported );
+        if ( bPresentSupported == VK_FALSE )
+        {
+            SW_LOG_ERROR( "The recreated Vulkan surface cannot be presented by queue family %#", _graphicsQueueFamilyIndex );
+            return false;
+        }
+        return recreateSwapChain();
+    }
+
     bool VulkanRHIDevice::initializePipelineCache()
     {
         if ( _device == VK_NULL_HANDLE )
