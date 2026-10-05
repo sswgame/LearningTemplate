@@ -32,8 +32,30 @@ namespace sw
 
     void D3D11RHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
-        if ( _pContext == nullptr || src == 0 )
+        if ( _pContext == nullptr || ( src == 0 && dst == 0 ) )
             return;
+
+        if ( src == 0 )
+        {
+            // 백버퍼 → 텍스처. CopyResource 는 포맷 · 크기가 같아야 한다(받는 쪽은 getBackBufferFormat 으로 만든다).
+            const Microsoft::WRL::ComPtr<ID3D11Texture2D> backTex    = _pDevice->_swapChain.getBackBufferTexture();
+            const D3D11RHIDevice::TextureRecord*          pDstRecord = _pDevice->resolveTexture( dst );
+            if ( backTex == nullptr || pDstRecord == nullptr || pDstRecord->_texture == nullptr || pDstRecord->_bDepth != SW_FALSE )
+                return;
+            D3D11_TEXTURE2D_DESC backDesc{};
+            D3D11_TEXTURE2D_DESC dstDesc{};
+            backTex->GetDesc( &backDesc );
+            pDstRecord->_texture->GetDesc( &dstDesc );
+            const bool bSameShape = backDesc.Format == dstDesc.Format && backDesc.Width == dstDesc.Width && backDesc.Height == dstDesc.Height;
+            if ( bSameShape == false )
+            {
+                SW_LOG_ERROR( "blitTexture(backbuffer): the target must match the back buffer (fmt %# %#x%# vs %# %#x%#)", static_cast<uint32>( backDesc.Format ),
+                              backDesc.Width, backDesc.Height, static_cast<uint32>( dstDesc.Format ), dstDesc.Width, dstDesc.Height );
+                return;
+            }
+            _pContext->CopyResource( pDstRecord->_texture.Get(), backTex.Get() );
+            return;
+        }
 
         const D3D11RHIDevice::TextureRecord* pSrcRecord = _pDevice->resolveTexture( src );
         if ( pSrcRecord == nullptr || pSrcRecord->_texture == nullptr || pSrcRecord->_bDepth != SW_FALSE )

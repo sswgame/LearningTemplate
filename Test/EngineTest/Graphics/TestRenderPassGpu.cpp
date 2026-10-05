@@ -20,6 +20,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -112,6 +113,42 @@ namespace
         pDevice->endFrame( false, false );
         pDevice->waitIdle();
         return bExecuted;
+    }
+
+    /**
+     * @brief 한 프레임을 그리고 Present 전에 백버퍼를 텍스처로 읽어 옵니다(창에 나갈 그림 — 0 행이 화면 위). 실패면 false.
+     * @details 백버퍼는 Present 뒤 내용이 버려지므로 프레임 스트림에 복사를 기록한 뒤 endFrame 한다.
+     */
+    bool renderSceneFrameReadingBackBuffer( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene, const sw::float4& clear,
+                                            test::RHITestImage& outImage )
+    {
+        sw::IRHIResourceFactory* pFactory = pDevice->getResourceFactory();
+        sw::RHITextureDesc       desc{};
+        desc._width                         = pDevice->getBackBufferWidth();
+        desc._height                        = pDevice->getBackBufferHeight();
+        desc._format                        = pDevice->getBackBufferFormat();
+        desc._bIsRenderTarget               = SW_TRUE; // GL 블릿 대상은 FBO 가 있어야 한다
+        desc._bIsShaderResource             = SW_TRUE;
+        const sw::RHITextureHandle backCopy = pFactory->createTexture2D( desc );
+        if ( backCopy == 0 )
+            return false;
+
+        pDevice->beginFrame( clear );
+        bool                    bOk     = renderer.execute( pDevice, &scene );
+        sw::IRHICommandContext* pStream = pDevice->getFrameStreamContext();
+        bOk                             = bOk && pStream != nullptr;
+        if ( bOk )
+            pStream->blitTexture( 0, backCopy );
+        pDevice->endFrame( false, false );
+        pDevice->waitIdle();
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        bOk = bOk && pFactory->readbackTexture2D( backCopy, 0, 0, bytes, layout );
+        if ( bOk )
+            outImage.assign( std::move( bytes ), layout, desc._format );
+        pFactory->destroyTexture( backCopy );
+        return bOk;
     }
 
     /**
@@ -5451,6 +5488,119 @@ SW_TEST_CASE( RenderPassGpuTest, ScreenRectViewDrawsOnlyInsideItsRectangle )
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the screen-rect view test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 창으로 나간 그림(백버퍼)이 Present 캡처와 같다 — 4 백엔드
+ * @details 스크린샷(`-gv_screenshot`)은 오프스크린 캡처를 읽으므로 캡처 → 창 블릿의 반전 · 잘림은 거기서 보이지 않는다(GL 창은 0 행이 아래).
+ *          캡처를 켜고 그린 프레임의 백버퍼를 읽어 캡처와 픽셀로 견준다 — 위아래가 뒤집히면 큐브 · 바닥 자리가 갈린다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, PresentedBackBufferMatchesTheCapture )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        // 화면 위쪽에 치우친 큐브 — 상하 반전이 그림을 크게 옮긴다.
+        if ( bOk )
+        {
+            stage._pCube->setLocalPosition( sw::float3{ 0.6f, 0.9f, 0.0f } );
+            stage._scene.getObjectManager()->flushSceneTransforms();
+        }
+        renderer.setPresentCaptureEnabled( true );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        test::RHITestImage window;
+        bOk = bOk && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
+        sw::vector<uint8>     captureBytes;
+        sw::RHITextureMipSpan captureLayout{};
+        bOk = bOk && renderer.readbackPresentCapture( captureBytes, captureLayout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 백버퍼 · 캡처 읽기" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage capture;
+            capture.assign( std::move( captureBytes ), captureLayout, sw::constant::kBackBufferFormat );
+            SW_EXPECT_EQUAL( capture.getWidth(), window.getWidth() );
+            SW_EXPECT_EQUAL( capture.getHeight(), window.getHeight() );
+            uint32 differCount = 0;
+            uint32 drawnCount  = 0;
+            for ( uint32 y = 0; y < capture.getHeight() && y < window.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < capture.getWidth() && x < window.getWidth(); ++x )
+                {
+                    const test::Rgba8 capturePixel = capture.getPixel( x, y );
+                    if ( test::RHITestImage::getColorDistance( capturePixel, capture.getPixel( 0, 0 ) ) >= 24 )
+                        ++drawnCount;
+                    if ( test::RHITestImage::getColorDistance( capturePixel, window.getPixel( x, y ) ) > 6 )
+                        ++differCount;
+                }
+            }
+            SW_LOG_INFO( "%#window vs capture: %# of %# px differ (drawn %#)", label, differCount, capture.getPixelCount(), drawnCount );
+            SW_EXPECT_TRUE_MSG( drawnCount > capture.getPixelCount() / 200, ( label + "캡처에 큐브가 없다 — 비교가 뜻이 없다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( differCount * 100 < drawnCount, ( label + "창에 나간 그림이 캡처와 다르다 (다른 픽셀 " + sw::to_string( differCount ) + ")" ).c_str() );
+        }
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the back buffer readback test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] Present 가 백버퍼에 직접 그릴 때(캡처 끔) 화면 사각형 뷰가 백버퍼의 오른쪽 아래에 앉는다 — 4 백엔드
+ * @details GL 기본 프레임버퍼는 아래 원점이라 `setViewport` 가 y 를 뒤집는다. 캡처를 켜면 Present 가 오프스크린 FBO 에 그려 이 갈래를 안 지난다
+ *          (`ScreenRectViewDrawsOnlyInsideItsRectangle` 은 캡처를 본다). 뒤집기가 빠지면 PiP 가 오른쪽 **위**에 그려진다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ScreenRectViewLandsInItsCornerOfTheBackBuffer )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string       label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer      renderer;
+        MultiViewScene         stage;
+        bool                   bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        sw::CameraRenderOutput output;
+        output._target     = sw::CameraOutputTarget::ScreenRect;
+        output._screenRect = sw::float4{ 0.55f, 0.55f, 0.4f, 0.4f };
+        bOk                = bOk && stage.addViewCamera( "PictureInPicture", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f }, output, sw::CameraRole::Game ) != nullptr;
+        renderer.setPresentCaptureEnabled( false );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        test::RHITestImage window;
+        bOk = bOk && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 백버퍼 읽기" ).c_str() );
+        if ( bOk )
+        {
+            uint32 insideRed  = 0;
+            uint32 outsideRed = 0;
+            for ( uint32 y = 0; y < window.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < window.getWidth(); ++x )
+                {
+                    const test::Rgba8 pixel   = window.getPixel( x, y );
+                    const bool        bRed    = pixel._r > pixel._b + 60 && pixel._r > pixel._g + 40;
+                    const float32     u       = ( static_cast<float32>( x ) + 0.5f ) / static_cast<float32>( window.getWidth() );
+                    const float32     v       = ( static_cast<float32>( y ) + 0.5f ) / static_cast<float32>( window.getHeight() );
+                    const bool        bInside = 0.55f <= u && u <= 0.95f && 0.55f <= v && v <= 0.95f;
+                    if ( bRed && bInside )
+                        ++insideRed;
+                    else if ( bRed )
+                        ++outsideRed;
+                }
+            }
+            SW_LOG_INFO( "%#back buffer PiP red inside %#, outside %#", label, insideRed, outsideRed );
+            SW_EXPECT_TRUE_MSG( insideRed > window.getPixelCount() / 200, ( label + "백버퍼의 사각형 안에 PiP 가 없다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( outsideRed * 50 < insideRed, ( label + "PiP 가 백버퍼의 사각형 밖(위아래 뒤집힘?)에 그려졌다" ).c_str() );
+        }
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the back buffer screen-rect test" );
 }
 
 /**

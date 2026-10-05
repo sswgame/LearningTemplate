@@ -114,13 +114,36 @@ namespace sw
     void VulkanRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
         VkCommandBuffer cmd = commandBuffer();
-        if ( cmd == VK_NULL_HANDLE || src == 0 )
+        if ( cmd == VK_NULL_HANDLE || ( src == 0 && dst == 0 ) )
             return;
 
         if ( _pState->_bRenderPassActive == SW_TRUE )
         {
             vkCmdEndRenderPass( cmd );
             _pState->_bRenderPassActive = SW_FALSE;
+        }
+
+        if ( src == 0 )
+        {
+            // 백버퍼 → 텍스처. 스왑체인 이미지는 PRESENT_SRC 로 끝나 있다(Present 패스 · 캡처 블릿). 블릿이라 포맷(BGRA ↔ RGBA)을 바꿔 준다.
+            const VkImage                         backImage    = _pDevice->_swapChain.getCurrentImage();
+            VulkanRHIDevice::VulkanTextureRecord* pDstResolved = _pDevice->resolveTexture( dst );
+            if ( backImage == VK_NULL_HANDLE || pDstResolved == nullptr || pDstResolved->_image == VK_NULL_HANDLE )
+                return;
+            _pDevice->transitionImageLayout( cmd, backImage, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT );
+            _pDevice->transitionTextureLayout( cmd, *pDstResolved, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT );
+            VkImageBlit backBlit{};
+            backBlit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            backBlit.srcSubresource.layerCount = 1;
+            backBlit.srcOffsets[1]             = { static_cast<int32>( _pDevice->_swapChain.getExtentWidth() ), static_cast<int32>( _pDevice->_swapChain.getExtentHeight() ), 1 };
+            backBlit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            backBlit.dstSubresource.layerCount = 1;
+            backBlit.dstOffsets[1]             = { static_cast<int32>( pDstResolved->_width ), static_cast<int32>( pDstResolved->_height ), 1 };
+            vkCmdBlitImage( cmd, backImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, pDstResolved->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &backBlit,
+                            VK_FILTER_NEAREST );
+            _pDevice->transitionImageLayout( cmd, backImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_ASPECT_COLOR_BIT );
+            _pDevice->transitionTextureLayout( cmd, *pDstResolved, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT );
+            return;
         }
 
         VulkanRHIDevice::VulkanTextureRecord* pSrcResolved = _pDevice->resolveTexture( src );

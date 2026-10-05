@@ -128,8 +128,6 @@ cd build/Ninja-Debug/Bin
 
 - **`.hdr` 원본 임포트가 없다** — 지금 임포트는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
-- **창(백버퍼)을 읽는 창구가 없어 창 쪽 반전을 시험이 못 본다.** `-gv_screenshot` 은 오프스크린 텍스처를 읽으므로 창으로 옮기는 단계(GL 캡처 블릿)의
-  상하 반전은 캡처로 보이지 않는다(`3b9a6bdc`). 지금은 `Scripts/dev/CompareWindowToCapture.py` 로 손으로 잰다. 스왑체인에 백버퍼 읽기를 두면 hostgpu 시험으로 바꿀 수 있다.
 - **2D 의 남은 것(2026-10-04 twod-basics)** — (1) 파이프라인을 게임이 데이터로 고르는 자리(지금은 `-gv_renderPipeline` 뿐 — 게임 프리셋 · gamesettings 에)
   (2) 픽셀 퍼펙트의 Upscale Render Texture(기준 해상도 타깃 + 정수 업스케일 패스) (3) 2D 빛 텍스처 · 자유 모양 빛 · 부드러운 그림자 · 빛 블렌드 스타일
   (4) 타일맵 청크(한 레이어 65536 칸)와 편집 중 미리보기(지금은 플레이 때 배치를 만든다), 에디터 칸에 아틀라스 그림 (5) 테두리를 픽셀로 적는 9-슬라이스.
@@ -213,8 +211,7 @@ cd build/Ninja-Debug/Bin
     2D(XY 평면) 카메라는 디렉터 밖의 `Follow2DCameraComponent` 다 — 2D 게임이 프리셋 · 블렌드를 원하면 디렉터 모드에 "XY 평면 따라가기" 를 더하고 그 컴포넌트를 지운다.
   - 4 단계에서 남은 것: 예산 · 보임 판정이 거칠다 — 보임은 "지정한 오브젝트가 주 카메라 절두체 안" 하나(가려짐 · 화면 크기 안 봄), 예산은 프레임당 뷰 수
     (`gv_renderViewBudget`)지 시간이 아니다. 화면 사각형 뷰는 에디터 GameView(ImGui 이미지)에서 검증하지 않았다. 해상도 배율 뷰의 TAA 기록 · 풀은 뷰마다 따로라
-    뷰가 많으면 메모리가 뷰 수에 비례한다(공유 풀 없음). 초상화 굽기는 동기(렌더 스레드를 멈추고 그린다) — 에디터 썸네일처럼 많이 구우려면 큐로. GL 기본 프레임버퍼의 뷰포트
-    y 뒤집기(`OpenGLRHICommandContext::setViewport`)는 자동 시험이 없다 — 시험의 화면 사각형은 캡처(오프스크린 FBO)에 그려지고 RHI 에 백버퍼 되읽기가 없다.
+    뷰가 많으면 메모리가 뷰 수에 비례한다(공유 풀 없음). 초상화 굽기는 동기(렌더 스레드를 멈추고 그린다) — 에디터 썸네일처럼 많이 구우려면 큐로.
   - 5 단계(시퀀서): 값 커브 트랙(시야각 · 초점 · 노출 — 블렌드 곡선과 같은 보간 함수), 카메라 컷 트랙(구간마다 프리셋 · 카메라, 프리셋의 블렌드로 전환 — 언리얼
     Camera Cut Track), 흔들림 트랙, 게임 ↔ 시네마틱 블렌드(시퀀스 시작 · 끝). 지금 시퀀서는 Clip(트랜스폼 보간) · Event 두 종류뿐이다.
     - 컷 준비(프리웜) — 컷 순간 LOD · 텍스처 · 셰이더가 바뀌는 게 보이지 않게. 컷 트랙은 다음 컷을 미리 안다 → 컷 N 초(또는 프레임) 전에 카메라 매니저에
@@ -1127,6 +1124,7 @@ cd build/Ninja-Debug/Bin
   기록만 남는다(`RenderView::_sortCb`). ② 직렬 경로의 패스는 `_frameCtx._pCmd` 리스트에 기록한다 — 프리패스 리스트가 이미 닫힌 뒤라 그 자리를 뷰의 리스트로 바꿔
   두지 않으면 Vulkan 이 죽고 나머지는 0 을 그린다. ③ D3D 의 `CopyResource` 는 같은 포맷 · 크기만 받는다 — 컷 프레임은 원본을 기록에 복사하지 않고 기록 자리에
   원본을 건다, 캡처를 백버퍼로 옮기는 것은 출력이 백버퍼 크기일 때만. GL 기본 프레임버퍼는 아래 원점이라 `setViewport` 가 y 를 뒤집는다(오프스크린 FBO 는 그대로).
+  창에 나간 그림은 `blitTexture( 0, 텍스처 )`(src 0 = 백버퍼, Present 전 프레임 스트림)로 읽는다 — `RenderPassGpuTest.PresentedBackBufferMatchesTheCapture` · `ScreenRectViewLandsInItsCornerOfTheBackBuffer`.
 - **GPU 자원을 든 객체의 마지막 소유는 게임 스레드가 아무 때나 놓는다 — 핸들 반환은 `IRHIDevice::releaseHandle` 로.** GpuScene 후보 · 걷은 뷰가 마지막 소유가 되면
   소멸이 수집 잡 안에서 일어나고, 그때 렌더 스레드가 병렬 기록 중이면 bindless 표가 바뀐다(핫 리로드한 StarSkirmish · VoxelCraft · Shooter3D 가 Debug 단언으로 죽었다).
   `releaseHandle` 은 렌더 스레드가 프레임을 들고 있으면 그 프레임 뒤(RT 의 `flushDeferredHandleReleases`)로 미룬다(언리얼 `FDeferredCleanupInterface`).

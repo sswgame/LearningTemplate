@@ -155,6 +155,12 @@ namespace sw
          */
         virtual void prepareTextureForUnorderedAccess( RHITextureHandle texture ) = 0;
 
+        /**
+         * @brief 텍스처 전체를 다른 텍스처로 옮깁니다. **0 은 백버퍼다** — dst 0 은 화면으로 내보내기, src 0 은 화면에 나갈 그림을 읽기(시험 · 진단)입니다.
+         * @details 둘 다 0 이면 아무것도 하지 않습니다. 백버퍼 → 텍스처는 크기가 백버퍼와 같아야 하고, D3D 는 포맷도 같아야 합니다(`getBackBufferFormat` 으로 만든다 —
+         *          Vulkan 은 블릿이라 변환한다). GL 은 창의 0 행이 아래라 읽을 때 뒤집어, 결과 텍스처의 0 행은 언제나 화면 위입니다.
+         *          주의: 백버퍼는 Present 뒤에 내용이 버려진다(플립 모델) — Present 전에, 프레임 스트림에 기록합니다.
+         */
         virtual void blitTexture( RHITextureHandle src, RHITextureHandle dst ) = 0;
 
         // ------------------------------------------------------------------------------
