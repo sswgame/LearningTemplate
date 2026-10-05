@@ -632,8 +632,10 @@ function(sw_addTestExecutable TARGET_NAME)
 	# App 과 같은 이유로 테스트 실행 파일도 리플렉션 정적 라이브러리를 통째로 링크한다 —
 	# 왜 그래야 하는지, 플랫폼마다 무슨 플래그인지는 `sw_linkWholeArchive` 머리말에 있다.
 	# 플랫폼 가드는 여기 두지 않는다: `WIN32` 로 가드하면 리눅스 Shipping 만 조용히 깨진다.
+	# Engine 은 모든 시험 실행 파일에 들어간다(TestFramework 가 끈다) — `LIBS` 에 적지 않은 실행 파일(CoreTest)도 Engine 의 등록기를
+	# 통째로 받아야 기동 단계의 설정 역직렬화가 열거형을 찾는다. 같은 아카이브가 `LIBS` 에 또 나와도 된다.
 	if(SW_SHIPPING_BUILD)
-		sw_linkWholeArchive(${TARGET_NAME} ${ARG_LIBS})
+		sw_linkWholeArchive(${TARGET_NAME} Engine ${ARG_LIBS})
 	endif()
 
 	target_compile_definitions(${TARGET_NAME}

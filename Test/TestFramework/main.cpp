@@ -31,6 +31,7 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/DebugOverlayState.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
@@ -110,6 +111,18 @@ namespace
                 // 레지스트리 경로를 만든다 — 활성 설정이 없으면 시작 시점 GUID 표가 반쪽이 된다.
                 host._configManager = sw::make_unique<sw::ConfigManager>();
                 host._configManager->setRootDirectory( sw::ResourceUtil::getProjectFolderPath() );
+#if defined( SW_SHIPPING )
+                // 배포 구성은 생성된 JSON 만 읽는다. 그것이 역직렬화되지 않으면(정적 링크에서 리플렉션 등록기가 빠졌다) 모든 시험이 C++ 기본값
+                // 설정으로 돈다 — 기동 실패로 드러낸다(`sw_addTestExecutable` 의 통째 링크).
+                {
+                    sw::EngineConfig probe;
+                    if ( sw::JsonSerializer::deserialize( &probe, *sw::EngineConfig::StaticType(), sw::shipping_host::kEngineConfigJson ) == false )
+                    {
+                        SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize in this test executable - a reflection registrar was dropped at link time" );
+                        return sw::EngineInitResult::Failed;
+                    }
+                }
+#endif
                 host._pEngineConfig               = host._configManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJson );
                 const sw::GameConfig* pGameConfig = host._configManager->ensureConfig<sw::GameConfig>( sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJson );
                 if ( pGameConfig != nullptr )

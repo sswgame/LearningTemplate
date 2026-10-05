@@ -460,7 +460,6 @@ cd build/Ninja-Debug/Bin
 
 - **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩). 09-23 에 고친 DX11 기록 컨텍스트 결함과 모양은 같지만 단정하지 않았다.
   이제 시험 실행 파일에 크래시 핸들러가 있어 다음에는 스택이 남는다 — 직접 실행해 전체 출력을 파일로 받는다.
-- **Shipping `CoreTest` 의 `Failed to deserialize config from: shipping_host_generated`**(한 번, 3 회 재실행 통과). `ConfigManager::loadConfigFromJson`.
 - **WSL lavapipe 의 첫 `vkAcquireNextImageKHR` 가 가끔 `VK_ERROR_SURFACE_LOST_KHR`** 로 진다(`AppTest_HostOnly`, 43 회 중 3 회, 환경 탓으로 판단 — 미확정).
   다시 보이면 기준선과 번갈아 돌려 가른다. App 로그는 `build/WSL-Debug/Bin/Saved/Logs`.
 - **CI Windows 러너(WARP)에서 픽셀 시험이 지던 원인은 판정하지 않았다**(`RenderPassGpuTest` 를 host 스위트로 빼서 우회). 실패 값이 `좌 0, 우 0` 이면 WARP 가
@@ -867,6 +866,9 @@ cd build/Ninja-Debug/Bin
 - **헤더 멤버 초기값은 금지, 정본은 생성자**(면제는 `AGENTS.md`). 네임스페이스 스코프 상수는 `inline constexpr`(`inline static constexpr` 은 TU 마다 사본).
 - **고아 검사(`orphans`)는 전체 경로 · 파일 이름만 찾는다** — 코드가 `"game/<게임>/models/" + 이름 + ".mesh"` 로 조립하는 메시는 규칙의 `exclude_patterns` 에 적는다
   (NileCity · StarSkirmish · HarvestValley 작물). 아무도 안 쓰는 원본은 `models_raw/` 와 `import.stamp` 줄까지 함께 지운다. 기믹 프리팹(`common/prefabs/gimmicks`)은 가져다 쓰는 라이브러리라 뺀다.
+- **Shipping 통째 링크는 "링크한 라이브러리" 기준이어야 한다, "적은 `LIBS`" 기준이 아니다** — `CoreTest` 는 Engine 을 `TestFramework` 로만 받아 Shipping 에서 등록기가
+  빠졌고, 하네스 기동의 `[Error] Failed to deserialize config` 한 줄만 남긴 채 모든 시험이 기본값 설정으로 돌았다(종료 코드 0). 배포 구성의 하네스는 생성 JSON 이
+  역직렬화되지 않으면 기동을 실패시킨다.
 
 ### 3-5. 직렬화 · 리플렉션 · 파서
 
