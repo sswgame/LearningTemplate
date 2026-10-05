@@ -871,6 +871,8 @@ cd build/Ninja-Debug/Bin
 - **Shipping 통째 링크는 "링크한 라이브러리" 기준이어야 한다, "적은 `LIBS`" 기준이 아니다** — `CoreTest` 는 Engine 을 `TestFramework` 로만 받아 Shipping 에서 등록기가
   빠졌고, 하네스 기동의 `[Error] Failed to deserialize config` 한 줄만 남긴 채 모든 시험이 기본값 설정으로 돌았다(종료 코드 0). 배포 구성의 하네스는 생성 JSON 이
   역직렬화되지 않으면 기동을 실패시킨다.
+- **CI 실패는 `Scripts/dev/CiFailureReport.py` 가 주석으로 올린다**(시험 · 구성 실패의 vcpkg 포트 로그 · 크래시 스택 `Bin/Saved/Logs/crash_*.stack.txt`).
+  작업 로그 · 아티팩트는 관리자 전용(API 403)이라 밖에서는 주석만 보인다.
 
 ### 3-5. 직렬화 · 리플렉션 · 파서
 

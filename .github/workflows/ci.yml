@@ -162,8 +162,20 @@ jobs:
         CC: ${{ runner.os == 'Windows' && 'clang-cl' || 'clang' }}
         CXX: ${{ runner.os == 'Windows' && 'clang-cl' || 'clang++' }}
         VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
+      # 출력을 파일로도 받는다(아래 실패 보고가 읽는다). Windows 에서 Git Bash 를 쓰면 /usr/bin/link 가 MSVC link.exe 를 가리므로 두 OS 모두 pwsh 로 —
+      # pwsh 는 파이프 뒤에도 cmake 의 종료 코드를 $LASTEXITCODE 에 둔다.
+      shell: pwsh
       run: |
-        cmake --preset ${{ matrix.preset }} ${{ runner.os == 'Windows' && '-DSW_ENABLE_PCH=OFF' || '' }}
+        New-Item -ItemType Directory -Force build | Out-Null
+        cmake --preset ${{ matrix.preset }} ${{ runner.os == 'Windows' && '-DSW_ENABLE_PCH=OFF' || '' }} 2>&1 | Tee-Object -FilePath build/configure.log
+        exit $LASTEXITCODE
+
+    # 구성(vcpkg 설치)에서 진 잡은 "vcpkg install failed" 한 줄만 남는다 — vcpkg 가 가리킨 포트 로그의 끝을 주석으로 올린다.
+    - name: Report configure failure as annotations
+      if: failure() && steps.configure.outcome == 'failure'
+      shell: bash
+      run: |
+        ${{ runner.os == 'Windows' && 'python' || 'python3' }} Scripts/dev/CiFailureReport.py configure --log build/configure.log
 
     # 같은 키를 다른 잡이 먼저 저장했으면 경고만 남기고 넘어간다.
     - name: Save vcpkg binary cache
@@ -194,42 +206,12 @@ jobs:
         ctest --test-dir build/${{ matrix.preset }} -L nogpu -j 4 --output-on-failure
 
     # 진 시험을 주석(annotation)으로 올린다. 작업 로그 · 아티팩트는 저장소 관리자만 받을 수 있어(공개 저장소라도 API 는 403), 무엇이
-    # 졌는지 밖에서 보이는 곳은 주석뿐이다. 시험마다 시험 틀의 실패 줄(`[  FAILED  ]` · `[FAILED]` + 조건 · 메시지 · 빈 스위트)과 마지막
-    # `[ RUN ]`, 출력의 마지막 25 줄(크래시 · 시간 초과면 어디서 멈췄는지 보인다)을 싣는다.
+    # 졌는지 밖에서 보이는 곳은 주석뿐이다. 시험마다 실패 줄 · 마지막 `[ RUN ]` · 출력의 마지막 25 줄, 그리고 크래시 스택(Scripts/dev/CiFailureReport.py).
     - name: Report failed tests as annotations
       if: failure() && steps.test.outcome == 'failure'
       shell: bash
-      env:
-        SW_CTEST_DIR: build/${{ matrix.preset }}
       run: |
-        PYTHON=${{ runner.os == 'Windows' && 'python' || 'python3' }}
-        "$PYTHON" - <<'EOF'
-        import os, re
-        kNewline = chr(10)
-        tempDir = os.path.join(os.environ["SW_CTEST_DIR"], "Testing", "Temporary")
-        def readText(name):
-            try:
-                with open(os.path.join(tempDir, name), encoding="utf-8", errors="replace") as file:
-                    return file.read()
-            except OSError:
-                return ""
-        listFailed = [line.split(":", 1)[1].strip() for line in readText("LastTestsFailed.log").splitlines() if ":" in line]
-        log = readText("LastTest.log")
-        if not listFailed:
-            print("::warning title=ctest::LastTestsFailed.log is empty or missing - no test result to report")
-        # 시험 틀이 stdout 에 찍는 실패 줄만 고른다. 로거가 같은 내용을 "[날짜] …" 로 한 번 더 찍으므로 그 줄은 뺀다.
-        kMarker = re.compile(r"^\[  FAILED  \]|^  \[FAILED\]|^    Condition:|^    Message  :|verified nothing|^ Tests failed|^   - |no cases in this executable|selected no test|^Invalid|^Unknown --")
-        kAnsi = re.compile(r"\x1b\[[0-9;]*m")
-        for name in listFailed[:20]:
-            match = re.search(r"Test: " + re.escape(name) + r"\s*$(.*?)^\"" + re.escape(name) + r"\" end time", log, re.S | re.M)
-            listLine = [kAnsi.sub("", line) for line in match.group(1).splitlines()] if match else []
-            listMarked = [line[:300] for line in listLine if kMarker.search(line)][:40]
-            listRun = [line for line in listLine if line.startswith("[ RUN")]
-            listTail = [line[:300] for line in listLine[-25:]]
-            summary = kNewline.join(listMarked + ["--- last RUN: " + (listRun[-1] if listRun else "(none)"), "--- tail:"] + listTail)
-            print("::error title=ctest " + name + "::" + summary.replace("%", "%25").replace(chr(13), "").replace(kNewline, "%0A"))
-            print("===== " + name + " =====" + kNewline + summary + kNewline)
-        EOF
+        ${{ runner.os == 'Windows' && 'python' || 'python3' }} Scripts/dev/CiFailureReport.py tests --ctest-dir build/${{ matrix.preset }}
 
     # Diagnostics & Artifact Upload
     # 시험 단계가 돌았을 때만 올린다 — 빌드에서 진 잡에는 LastTest.log 가 없어 "No files were found" 경고만 남았다.
@@ -241,6 +223,7 @@ jobs:
         path: |
           build/${{ matrix.preset }}/Testing/Temporary/LastTest*.log
           build/${{ matrix.preset }}/Bin/*.log
+          build/${{ matrix.preset }}/Bin/Saved/Logs/crash_*
         if-no-files-found: ignore
         retention-days: 7
 
