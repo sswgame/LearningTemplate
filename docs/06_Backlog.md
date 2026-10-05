@@ -411,11 +411,13 @@ cd build/Ninja-Debug/Bin
 - **TaskManager 스테이지 디버그 이름** — 프로파일러에 연결할 때 넣는다(지금은 연결돼 있지 않다).
 - **`fixed_string` 의 해시가 FNV(`computeHash64`)다.** 느리지만 프로파일에 안 보여 두었다(낮음).
 
-- **종료 끝까지 남는 sw 블록이 있다**(Debug App `-dx12 -gv_profileFrames=5`, 2026-10-04): 모든 서비스를 내린 뒤에도 Scene ~57 KB(3 블록) · Unknown ~18 KB(15) ·
-  Mesh 0.7 KB(6) · Material 0.2 KB(4) 가 살아 있다(`[MemoryLeak] shutdown - tag …`). CRT 검사는 합계만 봐 "no CRT leaks" 라고 한다. 정적 캐시인지 진짜 누수인지
-  가린다 — 세부 추적(`setDetailedTrackingEnabled`)을 켜고 `destroyAll` 뒤 `getTopCallStacks( LiveBytes )`.
-  그중 Mesh 2 블록은 등록부 밖 함수 정적 표(내장 도형 · 9-슬라이스 메시)의 버킷이었다 — 표를 등록부에 올리고 비우기가 버킷까지 돌려줘 사라졌다(2026-10-05,
-  `41154e107` 기준 Mesh 448 B · 4 → 192 B · 2). 남은 Mesh 2 · Material 8 · Scene · Unknown 은 그대로다. 파괴 병합(`a8b1ed7ae`) 뒤에는 Mesh 가 6.3 KB · 4 블록이다 — 그 몫을 가린다.
+- **종료 끝까지 남는 sw 블록이 있다**(Debug App `-dx12 -gv_profileFrames=5`): 모든 서비스를 내린 뒤에도 기동 뒤 기준선보다 Scene 82 KB(12 블록) · Mesh 192 B(2) ·
+  Material 128 B(4) 가 많다(`a380e2ee3`, 세 번 같음). CRT 검사는 합계만 봐 "no CRT leaks" 라고 한다. 기준선 뒤 세부 추적을 켜고 종료 직전 `getTopCallStacks( LiveBytes )` 로
+  뜬 내역(2026-10-05): **HashedStringPool 버킷 ≈ 98 KB**(기동 뒤 처음 쓰인 이름 — FrameProfiler 구간 49 KB · GPU 구간 18 KB · InputMap 12 KB ·
+  ShaderBindingLayoutCache 키 12 KB · AssetLoadScope 6 KB)와 **SceneTransformStorage 슬랩 51.7 KB**(첫 SceneComponent 가 잡는다) · ResourceUtil 경로 2 KB.
+  `HashedStringPool::shutdown` 뒤에도 버킷 메모리가 남고, 그 블록은 **처음 이름을 넣을 때 둘러싼 메모리 범위의 태그**로 세인다 — 그래서 같은 몫이 병합마다
+  태그를 옮겨 다녔다(파괴 병합 뒤 "Mesh 6.3 KB · 4" 와 "Unknown 12 KB" 는 tracy · recast 뒤 Scene 으로 옮겨 갔다). 메시 누수가 아니다. 남은 일: 풀 버킷을
+  자기 태그(`EngineMisc` 등)로 잡고 종료에서 돌려주기, SceneTransformStorage 슬랩을 종료에서 놓기 — 그 뒤 이 줄이 0 이 되는지 본다.
 
 ### 1-8. 성능 (재고 나서 정할 것)
 
