@@ -95,7 +95,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-1. 직렬화 · 리플렉션
 
-- **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
 
 - **XML 문자열 속성은 읽을 때 끝 공백(줄바꿈)을 잘라 왕복이 고정점이 아니다**(2026-10-06, `SerializationRoundTripTest` 가 찾음). `MissingComponent::_originalText`
   가 줄바꿈으로 끝나 다시 쓰면 `&#10;` 이 빠진다 — 지금은 오브젝트 상태 직렬화기가 원문을 그대로 다시 써서 데이터는 잃지 않고, 시험은 이 타입을 뺀다.
@@ -111,7 +110,6 @@ cd build/Ninja-Debug/Bin
   아이템 부품 · 탈것 · 건물처럼 조립하는 것이 늘면 필요하다: 상태 안의 프리팹 인스턴스 노드(경로 + 오버라이드), 원본 프리팹을 고치면 모든 상위가
   따라감, 순환은 로드 오류, 쿠킹은 펼치거나 참조 유지(로드 시간으로 고름), `collectReferencedPrefabPaths` 가 프리로드 수집에 그대로 쓰임.
 
-- **`getAllGameObjects()` 값 반환이 6 곳에 있다(모두 일회성).** 프레임 경로에 들어오면 `getAllGameObjects( out )` 또는 `forEachGameObject` 로 바꾼다(조건부).
 - **강체 물리의 다음 조각.** (1) 볼록 껍질 · 삼각 메시 셰이프를 `.mesh` 에서 채우는 길이 없다 — 지금은 셰이프 서술자에 점 · 인덱스를 직접 적는다
   (`MeshCache` 의 CPU 정점이 필요하다) (3) 에디터에 물리 컴포넌트의 셰이프 시각화 · 기즈모가 없다(`gv_physicsDebugDraw` 가 게임 뷰의 디버그 선으로만 그린다)
   (4) Box2D 는 한 스레드로 돈다 — 2D 바디가 수천이 되면 전용 워커를 붙인다 (5) 3D 질의는 가장 가까운 것 하나 · 겹침 목록뿐이다(레이의 모든 닿음 ·
@@ -321,29 +319,10 @@ cd build/Ninja-Debug/Bin
   물리 질의 히트스캔 · 시야(지금 상자 목록 · 캡슐), 쓰러질 때 무기 떨어뜨리기(`SocketBindingComponent::release( Physics )` — 무기 프리팹에 강체를 더하면 된다),
   알림으로 휘두름 피해 · 발소리(지금 휘두름 피해는 `_attackHitTime` 초). 그 밖: 외형 부품 풀(스켈레톤마다 프리팹을 세우고 지운다), 1인칭에서 숨긴 몸의 애니메이션
   LOD(숨겨도 평가한다), 걷기 · 달리기 발 미끄러짐(위 애니메이션 ⑦).
-- **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
-  스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
-- **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** **하지 않기로 한 것:** HP 바 · 피해 숫자의 매 틱 배치 예약을 "바뀔 때만" 으로 줄이는 것 — 월드 변환이 틱 **뒤에** 적용되므로 틱 안에서
-  자리 변화를 보면 움직이는 막대가 한 프레임씩 건너 늦는다. 줄이려면 변환 적용 뒤의 훅이 필요하다.
 - **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.
 
-- **장르 공통 기반 · 새 키트의 첫 엔진 빌드(2026-10-03).** 위 두 항목과 같은 이유로 하네스로만 돌렸다. 기반의 새 폴더 —
-  `AI/` · `Navigation/` · `Combat/`(Shooter 키트에서 옮긴 무기 포함) · `Input/`(예전 `Control/`) · `Inventory/` · `Match/` · `Movement/` · `Progression/` · `Quest/` · `World/`,
-  `Input/TimingJudge` · `Utility/TimerQueue` · `Data/StatBlock` — 와 키트 `GF_CityBuilder` · `GF_RealTimeStrategy`. 하네스 통과: `NavigationTest` · `AiTest` ·
-  `CityBuilderTest` · `RealTimeStrategyTest` · `CombatTest` · `InventoryTest` · `ProgressionTest` · `QuestTest` · `WorldTest` · `MatchTest` · `ControlTest` · `PlatformerTest` ·
-  `GameFrameworkUtilTest`, 네트워크 — `Core/Network`(`NetworkTest` 6, 실제 UDP 로컬 송수신 포함) · 키트 `GF_NetClientServer` · `GF_NetLockstep` · `GF_NetTurnRelay` · `GF_NetMmo`
-  (`NetClientServerTest` · `NetLockstepTest` · `NetTurnRelayTest` · `NetMmoTest`). Windows 소켓 경로(`PlatformSocketUtil` 의 winsock 분기)는 **구문 검사도 못 했다**(리눅스뿐). 할 일: 재구성(새 폴더는 GLOB 이라 CMake 수정 없음 — `GF_Shooter` 가 빠졌으니 낡은 빌드의 `GF_Shooter.dll` 을 지운다) → Debug · Shipping →
-  `EngineTest --test_filter=` 위 스위트들. `GameFramework.dll` 이 커졌으니 `SW_GF_API` 내보내기 누락(링크 오류)부터 본다.
-- **새 장르 키트 22 개 · 시험 게임 둘의 첫 엔진 빌드(2026-10-03, 대기열은 모두 만들었다).** 하네스로만 돌렸다 — `GF_TacticsSrpg` · `GF_CardGame` · `GF_OpenWorldWestern` ·
-  `GF_WitcherRpg` · `GF_CreatureLife` · `GF_RestaurantSim` · `GF_SurvivalHorror` · `GF_SideScrollConquest` · `GF_Fighting` · `GF_ActionAdventure` · `GF_GhostHunt` ·
-  `GF_BattleRoyale` · `GF_CoopScavenger` · `GF_MonsterCollector` · `GF_ClassicJrpg` · `GF_Metroidvania` · `GF_ActionPlatformer` · `GF_KartRacing` · `GF_MechArena` ·
-  `GF_AsymmetricHorror` · `GF_PartyArena` · `GF_Rhythm`, 시험 게임 `NileCity` · `StarSkirmish`(화면 · 마우스 집기 · 카메라는 본 적이 없다 — 에디터 게임 뷰에서는
-  창 크기를 써서 커서가 어긋날 수 있다). 할 일: 재구성 → Debug · Shipping → 각 `<Kit>Test`, `SW_ACTIVE_GAME=NileCity` · `StarSkirmish` 로 한 번씩 띄워 보기.
-  **같은 빌드에서 GameFramework 폴더 재배치(2026-10-03)도 처음 확인한다** — `Base/` 를 `Framework` · `Components` · `Stage` · `Utility` · `Input` 으로 쪼개고
-  (`Transition` · `Control` 은 합침, `ItemBag` → `Inventory`, `GameFlags` → `World`), 키트를 `Kits/<장르 묶음>/<키트>` 로 옮겼다. 재구성(`cmake --preset`)으로
-  GLOB · 리플렉션 헤더 목록을 다시 모아야 한다 — 낡은 빌드 폴더의 `generated/**/Base/*.gen.cpp` 가 남아 같은 타입이 두 번 등록되면 그 폴더를 지운다.
 - **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글꼴 렌더러가 생기면: `getFontFallback( culture )` 의 가족 목록으로 CJK ·
   아랍 글리프 대체를 고르고, `isRightToLeft()` 로 배치를 뒤집고, `getTextRevision()` 이 바뀌면 글을 다시 묻는다(언리얼 FText 처럼 키를 든 UI 글 컴포넌트 —
   `Meta = "Localizable"` 프로퍼티 + `getStringByText`). 아직 없는 것: `selectordinal`(서수) · 화폐 · 시간대 · XLIFF · 쿠킹된 이진 표(언리얼 `.locres` — 지금은 JSON 을
@@ -357,7 +336,6 @@ cd build/Ninja-Debug/Bin
   - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
   - 네트워크: 회로 상태 바이트(`GimmickCircuit::saveState`)를 `NetClientServer` 스냅샷 · `RollbackSession` 상태에 싣기(모양은 준비됨, 배선 없음).
   - `InteractorComponent` 는 틱마다 씬의 `InteractableComponent` 를 모두 훑는다 — 하는 쪽이 많아지면 공간 등록부로.
-  - 카트 트랙(`KartTrack`)은 거리를 수평(XZ) 길이로 재서 공용 `SplinePath` 로 옮기지 않았다(옮기면 랩 · 고스트 값이 바뀐다 — 옮길지 정한다).
 
 - **CS2 식 서브틱 입력(2026-10-05 제안 — 넷 게임이 생기면; 지금 넷 키트를 쓰는 시험 게임은 0).** `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
   B1 사건 시각 + 입력 리플레이 판 4 · B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입) · B3 `InputMap` 이 행동별 "누른 순간" 을 준다 · B4 클릭 순간의 시선으로 발사
@@ -501,6 +479,8 @@ cd build/Ninja-Debug/Bin
 
 ### 1-12. 낮은 우선순위 · 조건이 오면
 
+- **씬 · 프리팹 파일을 넘는 오브젝트 참조**(조건: 레벨 스트리밍 · 하위 레벨 · 다른 씬의 오브젝트를 가리키는 데이터가 생기면). 그때 오브젝트마다
+  영속 GUID 를 싣는다(언리얼 `FSoftObjectPath` 의 하위 오브젝트 경로 자리). 지금은 파일 안에서 엔티티 `id` 로 가리키고, 파일을 넘는 데이터 · 코드가 0 이다.
 - **100 줄 넘는 함수 정리.** 분해는 총량을 줄이지 않는다. 중복을 먼저 없애고, 그래도 문제면 본다. 목록이 필요하면 여러 줄 시그니처를 중괄호 깊이로 재는 스크립트로
   뽑는다(단순 정규식은 틀린다).
 - **MonsterCollector 의 파티 · 박스 세이브**(쓰는 게임이 생기면) — `MonsterStorage` 를 세이브에 싣는 길이 없다. `MonsterInstance` 를 REFLECT 로 하거나 상태 바이트(`writeState`)로.
@@ -1078,6 +1058,7 @@ cd build/Ninja-Debug/Bin
 - **프리팹 오버라이드는 키(`이름표#n`)로 프리팹 컴포넌트를 가리킨다.** 더한 컴포넌트는 `<Add after>` 로 자리를 지킨다. 프리팹에서 사라진 컴포넌트의 오버라이드는
   엔티티 이름과 함께 경고하고 버린다(언리얼과 같다 — 유니티는 남겨 둔다). 물려받은 컴포넌트의 이름표를 바꾸면 제거 + 추가로 기록돼 프리팹 수정이 더는 닿지 않는다 —
   에디터에는 이름표 편집 창구가 없다(`_componentName` 은 `HideInInspector`). 만들게 되면 프리팹 인스턴스의 물려받은 컴포넌트는 막는다(언리얼과 같다).
+- **`getAllGameObjects()` 값 반환은 사건 구동 5 곳만**(에디터 프리팹 명령 둘 · 미리보기 둘 · `Scene::shutdown`) — 프레임 경로에 쓰면 `getAllGameObjects( out )` · `forEachGameObject`.
 - **`MeshInstanceBatch` 는 항목 수 고정 · 메시 · 머티리얼 하나**(언리얼 ISM 과 같다) — 늘리려면 다시 만들고, 항목별 머티리얼 · 투명 정렬이 필요하면 `MeshComponent` 로.
 
 ### 3-7. 그래픽스 · RHI · 셰이더
@@ -1639,6 +1620,9 @@ cd build/Ninja-Debug/Bin
   RTS 버킷 · MechArena · BattleRoyale 근접 질의를 엔진 `SpatialHashGrid2D` 로(RTS 는 ~40 줄이 순서 계약을 들어 핸들 정렬 격자로 바꾸면 자동 목표 동점 · 첫 빈 광물 ·
   밀어내기 합이 바뀐다, BR 은 근접 질의가 없다, Mech 는 조종사 몇 명 전수 검사가 격자보다 싸다), 키트 칸 저장소 템플릿 `Grid2D<T>`(덮는 자리 4 곳에서 4 줄,
   저장소 모양이 키트마다 다르다).
+- **게임 · 키트**: 복셀 청크 메시 제자리 갱신 — 다시 짓기는 블록이 바뀐 청크만(Debug VoxelCraft 자동 플레이 5,000 프레임에 2 회, 프레임당 최대 4 개), 새 `Mesh` 가
+  렌더 스레드가 든 옛 메시와 겹치지 않는 길. HP 바 · 피해 숫자의 배치 예약을 바뀔 때만 — 월드 변환이 틱 뒤에 적용돼 한 프레임 늦는다(변환 적용 뒤 훅이 필요).
+  카트 트랙을 공용 `SplinePath` 로 — 카트는 XZ 로 달려 랩 · 고스트 거리가 수평 길이다(3D 호 길이로 바꾸면 같은 트랙의 값이 바뀐다), 공유되는 것은 누적 거리 표 하나, 쓰는 게임 0.
 - **늘 상위에 오는 정당한 중복**(`RunDuplicateCode`): 백엔드 인터페이스 선언 · 레이스 래퍼 전달 · 플랫폼 구현 · enum 레이블 나열 · 서비스 로케이터 둘(`sw::editor` 는 nullptr, `sw::game` 은
   assert) · `MaterialPacking` 숫자 case(`-Wswitch-enum`) · DX12 상태 조회 · `TypeInfo` 생성자 · RLE · 콜스택 관문 · 셰이더 반사 D3D11/12(확인 중 — 1-3) · Win32 마우스 case · include 묶음.
 
