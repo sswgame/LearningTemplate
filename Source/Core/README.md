@@ -23,30 +23,48 @@
 - **String/**: `StringUtil` · `StringBuilder` · `fixed_string` · `hashed_string` · `formatString` · `string_splitter` · `TagID`
 - **Delegate/**: `Delegate`
 - **Event/**: `EventDispatcher` · `EventType`(엔진 예약 이벤트 ID — 이벤트 타입은 그 개념이 사는 층에 둔다)
-- **Module/**: `IModuleUnloadListener`(`ModuleUnloadListener.h`) — 모듈 이미지를 내리기 전에 그 코드(델리게이트 스텁 · vtable)를 떼야 하는 등록부의 공통 계약과 목록.
+- **Module/**: `ModuleImageUtil` — 동적 라이브러리(모듈 이미지)의 단일 자리: 이름(접두어 · 확장자 · 디버그 심볼) · 올리기 · 심볼 · 이미지 범위 · 의존 고정, 그리고 그 이미지의 코드를 쥔 등록을 떼고 내리기(`unloadModuleImage`). `IModuleUnloadListener`(`ModuleUnloadListener.h`) — 모듈 이미지를 내리기 전에 그 코드(델리게이트 스텁 · vtable)를 떼야 하는 등록부의 공통 계약과 목록.
   같은 수명 계약의 Engine 쪽은 `Engine/Module`, App 쪽(라이브 리로드)은 `App/Module` 이다.
 -  `Process::terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불러도 된다(pid 는 원자). 자식은 출력 파이프 하나만 물려받는다(남의 핸들 · 서술자 상속 없음). 기다리지 않는 실행은 `Process::launchDetached`.
 - **Compression/**: `ICompressionCodec` · `CompressionCodecRegistry` · `CompressionStream` · `NullCompressionCodec` · `RleCompressionCodec`
   (zlib · zstd · LZ4 코덱은 외부 라이브러리를 쓰므로 `Engine/Compression` 에 있다)
 - **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
   얹어, 싱글 게임은 그 키트를 링크하지 않는다.
+  폴더가 층이다 — 뿌리(`NetTypes` · `BitStream`) ← `Transport/`(전송 · 루프백 · UDP · 회선 흉내) ← `Connection/`(`NetConnection` · `NetHost` ·
+  `NetHostThread` · `SequenceBuffer`) ← `Message/`(`NetMessage` · `NetSendBudget`) ← `Replication/`(키트가 나눠 쓰는 복제 부품 — `NetPrioritizer` · `NetParallel` · `TickRingBuffer` · `NetInputWindow` ·
+  `NetClock` · `InterpolationBuffer`).
+  아래 층은 위 층을 include 하지 않는다(`CheckCoreNetworkLayers`).
   - `BitStream`(`BitWriter` · `BitReader` — 범위 정수 · 양자화 실수 · 가변 정수, 넘침 감지. 비트를 바이트 덩어리로 쓰고 읽고, 경계에 맞은 바이트는 `memcpy` —
     선 위 배치는 비트 단위 시절과 같다. 길이 붙인 덩어리 `writeBlob` / `readBlob( out, maxSize )` · `skipBlob` — 상한을 넘는 길이는 자르지 않고 넘침으로 거부한다.
-    `BitMath::computeVarUintBits` · `computeBlobBits` 는 쓸 비트를 정확히 센다), `NetSendBudget`(메시지 하나의 비트 예산 — `NetConnection::kMaxMessageSize` 로 잘리고,
-    종류 바이트 · 머리 · 목록 길이 · 끝 표시까지 센다. 넘는 메시지는 보내기가 통째로 버리고, 확인이 안 와 같은 크기를 또 보내는 라이브락이 된다), `NetPrioritizer`(관찰자
+    `BitMath::computeVarUintBits` · `computeBlobBits` 는 쓸 비트를 정확히 센다), `NetSendBudget`(메시지 하나의 비트 예산 — 보낼 채널의 상한(기본 `NetConnection::kMaxSingleMessageSize`, 신뢰 순서 하나에 묶으면 `kMaxReliableMessageSize`)으로 잘리고,
+    종류 바이트 · 머리 · 목록 길이 · 끝 표시까지 센다. 넘는 메시지는 보내기가 오류와 함께 통째로 버리고, 확인이 안 와 같은 크기를 또 보내는 라이브락이 된다. 키트 틱 예산은 `computeTickBudget`(설정과 연결 상한 × 틱 간격 × 0.5 중 작은 것)), `NetPrioritizer`(관찰자
     하나의 엔티티마다 누적 우선도 — 언리얼 `NetPriority` × 지난 시간 · 유니티 고스트 중요도 × 나이. 틱마다 `우선도 × 시간` 을 쌓고 보낸 것만 0 으로, 순서는 큰 것부터 ·
-    같으면 id 순이라 결정적이다. 예산이 늘 차도 낮은 우선도가 쌓여 차례를 얻는다 — 복제 키트 둘(`ReplicationServer` · `MmoReplicator`)이 같이 쓴다), `SequenceBuffer`(16 비트 감김 시퀀스 고리), `NetTypes`(`NetAddress` ·
-    채널 · 연결 상태 · 메시지 첫 바이트 영역 `NetMessageRange` · 와이어 판 `NetWireVersion` · 프로토콜 id `NetProtocol`)
-  - `NetConnection` — 연결 하나의 신뢰성: 패킷 시퀀스 · ack + 32 비트 묶음, 채널(신뢰 순서 · 순서만 — 메시지 첫 바이트(종류)마다 가장 새 것 하나, 다른 종류끼리는 서로 지우지 않는다 · 비신뢰), 재전송(RTT + 50 ms, 그리고 뒤 패킷 셋이 확인됐는데 확인이 없는 패킷은 바로 — 빠른 재전송), RTT · 손실률 · 대역폭(최근 1 초).
+    같으면 id 순이라 결정적이다. 예산이 늘 차도 낮은 우선도가 쌓여 차례를 얻는다 — 복제 키트 둘(`ReplicationServer` · `MmoReplicator`)이 같이 쓴다), `SequenceBuffer`(16 비트 감김 시퀀스 고리),
+    `TickRingBuffer`(32 비트 틱 · 프레임으로 찾는 고리 — 키 전체를 적어 감김 · 건너뛴 칸 비우기가 없고, 무엇이 낡았나는 쓰는 쪽이 넣기 전에 본다. `acquire` 는 옛 값을
+    비우지 않아 버퍼를 다시 쓴다. 예측 · 스냅숏 · 보낸 재구성 · 랙 보정 · 롤백 기록 · 락스텝 입력 · 체크섬이 같이 쓴다),
+    `NetClock`(받은 서버 틱으로 서버 틱을 추정하고 지연만큼 과거의 렌더 틱을 흘린다 — 지연 = max( 최소값, 표본 간격 × 2 ). 추정은 받은 틱이 하한, 받은 가장 새 틱 +
+    지연이 상한이고 렌더 틱은 되돌아가지 않는다. 복제 · 파괴 클라이언트가 같이 쓴다 — 유니티 N4E `NetworkTime` 의 자리),
+    `InterpolationBuffer`(틱 순 표본 줄 — 렌더 틱 이하 가장 새 것 · 그보다 큰 첫 것 · 끝이면 멈춤, 첫 것 앞이면 그것을 알린다. 유니티 `BufferedLinearInterpolator` 의 자리),
+    `NetInputWindow`(비신뢰 입력 묶음 — `NetInputSendWindow` 는 상대가 확인한 다음 틱부터 가장 새 틱까지를 싣고 예산이 모자라면 오래된 것부터(확인 전에는
+    빠지지 않아 연속 손실에 빈틈이 남지 않는다 — GGPO 입력 큐 · 언리얼 `FSavedMove` 목록), `NetInputReceiveBuffer` 는 틱 고리 + 받는 창(위아래 — 고리를 덮지 않게,
+    `Manual` · `FollowNewest`) + "빈틈없이 받은 다음 틱" 확인, 깨진 묶음은 하나도 넣지 않는다. 형식 `NetInputFormat` 은 고정 길이(롤백 버튼 1 바이트) · 덩어리 ·
+    항목 스탬프(서브틱 입력의 자리) — 롤백 · 권위 서버 입력이 같이 쓴다), `NetTypes`(`NetAddress` ·
+    채널
+ · 연결 상태 · 메시지 첫 바이트 영역 `NetMessageRange` · 와이어 판 `NetWireVersion` · 프로토콜 id `NetProtocol`)
+  - `NetConnection` — 연결 하나의 신뢰성: 패킷 시퀀스 · ack + 32 비트 묶음, 채널(신뢰 순서 · 신뢰 순서 없음 — 받는 대로 건네고 그 자리에 "건넸다" 표, id · 창 · 재전송은 신뢰 순서와 하나 · 순서만 — 메시지 첫 바이트(종류)마다 가장 새 것 하나, 다른 종류끼리는 서로 지우지 않는다 · 비신뢰), 재전송(RTT + 50 ms, 그리고 뒤 패킷 셋이 확인됐는데 확인이 없는 패킷은 바로 — 빠른 재전송), RTT · 손실률 · 대역폭(최근 1 초).
     받은 패킷은 몸을 다 읽은 뒤에야 시퀀스를 적는다 — 깨진 패킷을 확인하면 보낸 쪽이 그 안의 신뢰 메시지를 전달된 것으로 지운다.
-    메시지 길이 칸 11 비트(0..1024). 패킷 끝 1 비트 "확인 요청" — 확인만 담은 답은 끄므로 한가할 때 답에 답이 꼬리를 물지 않는다(RTT · 손실률은 요청 패킷으로 잰다)
+    메시지 길이 칸 11 비트(0..1024). **신뢰 순서 메시지는 64 KB 까지 조각으로**(언리얼 partial bunch) — 1 KB 조각마다 신뢰 id 하나(재전송 · 확인 · 창이 조각 단위,
+    64 KB = 창 64 칸), 조각 머리 1 비트 "다음 id 가 같은 메시지", 받는 쪽은 순서대로 모아 마지막 조각에서 건넨다(끊기면 `reset` 이 모으던 것을 버린다).
+    다른 채널은 조각나지 않아 1 KB 까지. 상한을 넘는 보내기는 오류 로그 + false, 창이 메시지 전체를 못 받으면 로그 없이 false(반쪽 메시지가 없다).
+    조각이 패킷을 채워 순서만 · 비신뢰가 남으면 다음 패킷은 그쪽부터(번갈아 — 큰 전송이 스냅샷을 굶기지 않는다). 패킷 끝 1 비트 "확인 요청" — 확인만 담은 답은 끄므로 한가할 때 답에 답이 꼬리를 물지 않는다(RTT · 손실률은 요청 패킷으로 잰다)
   - `NetHost` — 서버 · 클라이언트 끝점: 요청 → 도전 → 응답 → 수락 핸드셰이크(위조 주소 방지 — **상태 없는 도전**: 서버는 요청에 자리를 잡지 않고
     비밀 키 · 주소 · 소금 · 5 초 칸으로 만든 도전 값만 돌려준다. 그 값을 되돌려 준 응답이 만든 칸 · 다음 칸 안에 와야 자리를 잡는다), 프로토콜 id + 체크섬으로 남의 · 깨진 패킷 거르기, 유지 · 타임아웃 · 끊기.
     클라이언트는 `Accepted` 로만 연결된다 — 그것을 잃고 데이터 패킷이 먼저 와도 연결로 치지 않고 응답을 다시 보낸다(수락에만 서버가 준 번호가 있다).
     **와이어 판**: 프로토콜 id = 게임 id(`_gameId`) + Core 판(`NetWireVersion::kCore`) + 게임 · 키트 판(`_wireVersion`, 키트 판은 `NetKitWireVersion`).
     형식을 바꾸는 커밋은 그 층의 판을 올리고 옛 형식은 읽지 않는다. 판이 다르면 서버가 요청을 `VersionMismatch`(다른 게임이면 `Rejected`)로 거절하고 두 쪽 로그에
     두 프로토콜 id 를 남긴다 — 요청 · 거절 패킷만 판과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로 싸서 판을 넘어 읽힌다(두 패킷 배치는 바꾸지 않는다).
-    보낼 것이 없으면 `_sendInterval` 이 아니라 `_keepAliveInterval`(0.25 초)마다만 보낸다. 도전 소금 씨앗은 0 이면 OS 난수(`_saltSeed` 는 시험 재현용).
+    보낼 것이 없으면 `_sendInterval` 이 아니라 `_keepAliveInterval`(0.25 초)마다만 보낸다. **연결 대역폭 상한**(`_maxBytesPerSecond`, 기본 100000 B/s — 언리얼 `NetSpeed`): 빚 모양 토큰 버킷, 몫이 남으면 차례에 패킷 여럿(`kMaxPacketsPerSend` 8),
+    다 쓰면 메시지 없이 확인 · 유지만. 도전 소금 씨앗은 0 이면 OS 난수(`_saltSeed` 는 시험 재현용).
     주소 → 자리 해시(연결 수에 상관없이 받은 패킷 하나에 O(1)), 패킷 · 쓰기 버퍼는 다시 쓴다.
     **스레드 안전** — 공개 함수는 잠금 하나로 지켜져 아무 스레드에서나 보내고 꺼낸다. `update` 는 소켓 받기 · 보내기를 잠금 밖에서 묶어 하고(한 번에
     최대 512 개) 잠금 안에서는 패킷 처리만 한다. **비동기 연결** `connectAsync` → `TaskFuture<NetConnectResult>`(연결 · 가득 참 · 거절 · 타임아웃 · 끊음,
@@ -61,9 +79,10 @@
     **사건을 먼저** 모든 처리기에 알리고 메시지를 나눈다 — 같은 자리에 새로 온 연결이 옛 상태로 읽히지 않는다. 깨진 메시지는 세고(`getMalformedCount`) 버리고,
     처리기 없는 것만 돌려준다). 키트는 수신 가드 · `onDisconnected` 같은 손 배선 없이 자기 종류만 읽는다. 손 배달은 `INetMessageHandler::handleMessage`
   - 전송: `INetTransport`(`send` 는 아무 스레드, `receive` · `waitForReceive` 는 `update` 스레드 하나), 실제 UDP(`UdpNetTransport` — 플랫폼 차이는 `PlatformSocketUtil` 한 곳, 송수신 버퍼 1 MB, Windows 는 ICMP 포트 닿지 않음으로
-    `recvfrom` 이 실패하지 않게 `SIO_UDP_CONNRESET` 을 끈다), 한 프로세스 루프백 망(`LoopbackNetwork` — 잠금 하나로 끝점마다 다른 스레드가 돌아도 된다. 지연 · 흔들림 · 손실 ·
-    중복 · 깨짐을 씨앗으로 흉내, 시험 · 리슨 서버), 네트워크 흉내(`NetEmulationTransport` — 어느 전송(UDP · 루프백)에나 씌워 보내는 쪽에서 지연 · 흔들림 ·
-    손실 · 중복 · 순서 뒤바뀜 · 대역폭 상한(목적지마다 회선 줄 · 큐 넘침 버림)을 건다. 조건은 기본값 + 연결별 덮어쓰기, `-gv_netEmuLatencyMs` · `JitterMs` ·
+    `recvfrom` 이 실패하지 않게 `SIO_UDP_CONNRESET` 을 끈다), 한 프로세스 루프백 망(`LoopbackNetwork` — 잠금 하나로 끝점마다 다른 스레드가 돌아도 된다. 보낸 순서대로
+    다음 `update` 에 배달만 하고 회선을 나쁘게 하지 않는다, 시험 · 리슨 서버), 네트워크 흉내(`NetEmulationTransport` — 회선 나쁨은 이것 하나다. 어느 전송(UDP · 루프백)에나
+    씌워 보내는 쪽에서 지연 · 흔들림 · 손실 · 중복 · 깨짐(한 바이트 뒤집기 — 체크섬 시험) · 순서 뒤바뀜 · 대역폭 상한(목적지마다 회선 줄 · 큐 넘침 버림)을 건다.
+    조건은 기본값 + 연결별 덮어쓰기, `-gv_netEmuLatencyMs` · `JitterMs` ·
     `LossPercent` · `DuplicatePercent` · `ReorderPercent` · `BandwidthKilobytesPerSecond` 로 `NetEmulationConditions::makeFromGlobalVariables` —
     언리얼 PktLag · PktLoss · PktDup · PktOrder · 유니티 Network Simulator 의 자리. `NetHost` 는 그냥 전송으로 받는다. 조건의 거르개
     `_pDropFilter` 는 고른 패킷만 버린다 — `NetHost::peekPacketType` 과 함께 "`Accepted` 하나만 잃기" · "위조 주소로 간 답 전부 잃기" 같은 시험을 짓는다)

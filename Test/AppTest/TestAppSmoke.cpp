@@ -11,6 +11,7 @@
 #include "Core/Process/Process.h"
 
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
+#include "Engine/Graphics/RHI/RHIInitResult.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -56,28 +57,9 @@ namespace
         vector<string> _listMarkedLine{};
         uint32         _missingComponentLineCount{ 0 }; /**< `MissingComponent` 가 든 줄 수 — 씬이 모르는 타입을 만났다. */
         bool           _bLaunched{ false };
-        bool           _bBackendUnusableHere{ false };     /**< 이 기계가 그 백엔드를 못 돌린다고 App 이 말했다. */
+        bool           _bBackendUnusableHere{ false };     /**< App 이 종료 코드 kRhiUnusableHereExitCode 로 "이 기계에서 그 백엔드를 못 돌린다" 고 알렸다(RHIInitResult). */
         bool           _bVulkanValidationEnabled{ false }; /**< Vulkan 디바이스가 검증 레이어를 켜고 섰다(그래야 잘못된 사용이 [Error] 로 나온다). */
     };
-
-    /**
-     * @brief App 이 "이 기계에서는 이 백엔드를 못 돌린다" 고 **스스로 말한** 줄인가.
-     * @details 두 가지가 있고 **둘 다 결함이 아니라 환경**이다:
-     *          1. **백엔드가 이 빌드·플랫폼에 아예 없다.** 리눅스의 DX12·DX11 이 그렇다.
-     *          2. **있지만 이 기계의 드라이버가 필요한 기능을 안 준다.** WSLg 의 Mesa 에는
-     *             `GL_ARB_gl_spirv` 가 없는데 이 엔진의 GL 백엔드는 **SPIR-V 를 먹이므로** 못 돈다 —
-     *             백엔드가 그 확장 이름을 로그에 남기고 스스로 물러난다.
-     *
-     *          그 밖의 초기화 실패는 **그대로 진다.** "Failed to initialize RHI Device!" 만 보고
-     *          건너뛰면 진짜 회귀까지 같이 숨는다 — 그 한 줄은 이유를 말해 주지 않기 때문이다.
-     *
-     * @note 산문이 아니라 **고정된 표식**(영문 한 문장 · 확장 이름)만 본다.
-     */
-    bool isBackendUnusableLine( string_view line )
-    {
-        return line.find( "Requested RHI backend is unavailable" ) != string_view::npos ||
-               line.find( "GL_ARB_gl_spirv" ) != string_view::npos;
-    }
 
     /**
      * @brief App 을 한 판 돌리고 종료 코드와 `[Error]` 줄 수를 돌려줍니다.
@@ -99,8 +81,6 @@ namespace
         while ( process.readOutputLine( line ) )
         {
             ++result._lineCount;
-            if ( isBackendUnusableLine( line ) )
-                result._bBackendUnusableHere = true;
             if ( line.find( "MissingComponent" ) != string::npos )
                 ++result._missingComponentLineCount;
             if ( line.find( "(Validation Layers: ENABLED)" ) != string::npos )
@@ -126,6 +106,8 @@ namespace
         }
 
         result._exitCode = process.waitForExit();
+        // App 이 RHI 를 세우다 환경 탓(이 빌드에 없다 · 드라이버가 기능을 안 준다)으로 물러나면 이 코드로 끝난다. 로그 문구는 보지 않는다.
+        result._bBackendUnusableHere = ( result._exitCode == kRhiUnusableHereExitCode );
         return result;
     }
 
@@ -765,6 +747,28 @@ SW_TEST_CASE( AppSmokeTest, HeadlessRunReportsLeaksAgainstABaseline )
     }
     SW_EXPECT_TRUE_MSG( bBaselineCaptured, "헤드리스 실행이 누수 기준선을 잡지 않았다" );
     SW_EXPECT_TRUE_MSG( bComparedClean, "헤드리스 실행의 종료 누수 보고가 기준선 대비 깨끗하지 않다" );
+}
+
+/**
+ * @brief [AppSmokeTest] 보통 실행을 끝내면 어느 메모리 태그도 기동 뒤 기준선보다 크지 않다
+ * @details 종료 끝(`EngineBootstrap::shutdown`)이 태그별로 기준선과 견줘 `[MemoryLeak]` 줄을 남긴다. 프로세스 정적 저장소(이름 풀 · 트랜스폼 페이지 ·
+ *          경로 캐시)가 기동 뒤 자란 몫을 돌려주지 않으면 "tag … grew by" 줄이 나온다. CRT 검사는 합계만 봐 이것을 "no CRT leaks" 라고 한다.
+ */
+SW_TEST_CASE( AppSmokeTest, ShutdownReturnsEveryTagToTheBaseline )
+{
+    const AppRunResult result = runApp( "-gv_profileFrames=5 -dx12", "[MemoryLeak]" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
+    if ( result._bBackendUnusableHere )
+        SW_TEST_SKIP( "DX12 is not usable on this machine" );
+    SW_EXPECT_EQUAL( 0, result._exitCode );
+
+    bool bComparedTags = false;
+    for ( const string& line : result._listMarkedLine )
+    {
+        SW_EXPECT_TRUE_MSG( line.find( "grew by" ) == string::npos, line.c_str() );
+        bComparedTags = bComparedTags || line.find( "no memory tag grew" ) != string::npos;
+    }
+    SW_EXPECT_TRUE_MSG( bComparedTags, "종료 보고가 태그를 기준선과 견주지 않았다" );
 }
 #endif
 

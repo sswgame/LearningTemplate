@@ -83,9 +83,9 @@ namespace sw
         vector<AudioCurvePoint> _listCustomPoint{};
         PROPERTY( Tooltip = "Air absorption: (distance m, low-pass cutoff Hz) points; empty means none" )
         vector<AudioCurvePoint> _listLowPassPoint{};
-        PROPERTY( Min = 0.01, Tooltip = "Full volume inside this distance", Meta = "Units=m" )
+        PROPERTY( Min = 0.01, Tooltip = "Full volume inside this distance", Units = m )
         float32 _minDistance{ 1.0f };
-        PROPERTY( Min = 0.01, Tooltip = "Curve end (Linear reaches silence here)", Meta = "Units=m" )
+        PROPERTY( Min = 0.01, Tooltip = "Curve end (Linear reaches silence here)", Units = m )
         float32 _maxDistance{ 30.0f };
         PROPERTY( Min = 0.0, Max = 4.0, Tooltip = "Doppler strength; 0 turns it off" )
         float32 _dopplerFactor{ 0.0f };
@@ -111,9 +111,9 @@ namespace sw
 
         PROPERTY( Max = 0.0, Tooltip = "Volume change at full occlusion", Meta = "Units=dB" )
         float32 _volumeDb{ -12.0f };
-        PROPERTY( Min = 20.0, Max = 20000.0, Tooltip = "Low-pass cutoff at full occlusion (open is 20 kHz; blended on a log scale)", Meta = "Units=Hz" )
+        PROPERTY( Min = 20.0, Max = 20000.0, Tooltip = "Low-pass cutoff at full occlusion (open is 20 kHz; blended on a log scale)", Units = Hz )
         float32 _lowPassHz{ 900.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Time the engine takes to follow a new occlusion value", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Time the engine takes to follow a new occlusion value", Units = s )
         float32 _smoothingSeconds{ 0.15f };
     };
 } // namespace sw

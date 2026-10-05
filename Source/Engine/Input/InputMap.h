@@ -304,8 +304,13 @@ namespace sw
         void bind( const hashed_string& action, GamepadButton button, ActionTrigger trigger = ActionTrigger::Pressed, const hashed_string& layer = {} );
         void bind( const hashed_string& action, MouseButton mouse, ActionTrigger trigger = ActionTrigger::Pressed, const hashed_string& layer = {} );
 
-        /** @brief 1D 축 합성 바인딩입니다(negativeKey: -1.0, positiveKey: +1.0). */
-        void    bindAxis1DComposite( const hashed_string& action, Key negativeKey, Key positiveKey, const hashed_string& layer = {} );
+        /**
+         * @brief 1D 축 합성 바인딩입니다(negativeKey: -1.0, positiveKey: +1.0).
+         * @param trigger 액션 발화(`wasActionTriggered`) 규칙입니다. 축 값(`getAxis1D`)은 trigger 와 관계없이 누르는 동안 읽힙니다 —
+         *                축을 매 프레임 읽는 쓰임은 `Down`, 누를 때마다 한 칸씩 넘기는 쓰임(무기 교체)은 `Pressed` 입니다.
+         */
+        void    bindAxis1DComposite( const hashed_string& action, Key negativeKey, Key positiveKey, const hashed_string& layer = {},
+                                     ActionTrigger trigger = ActionTrigger::Down );
         float32 getAxis1D( const hashed_string& action ) const;
 
         /** @brief 2D 이동 축 바인딩을 등록합니다(키보드 4방향 합성). */

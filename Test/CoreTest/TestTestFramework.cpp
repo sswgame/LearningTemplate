@@ -294,6 +294,26 @@ SW_TEST_CASE( TestFrameworkTest, IneffectiveHostSuitesRunFails )
 }
 
 /**
+ * @brief [TestFrameworkTest] 케이스를 하나도 고르지 않는 `--test_filter` 는 진다 — 구분자를 틀린 필터(`A.*:B.*`)가 0/0 으로 통과하지 않게
+ * @details 구분자는 쉼표다. `:` 로 이으면 패턴 하나("A.*:B.*")가 되어 아무것도 맞지 않는데, 그 실행이 0 으로 끝나면 확인한 줄 안다.
+ *          빼기만 적은 필터(`-A.*`)는 일부러 고르지 않는 것이라 그대로 통과한다.
+ */
+SW_TEST_CASE( TestFrameworkTest, FilterThatSelectsNothingFails )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    test::TestRegistry typoRegistry;
+    typoRegistry.registerTest( "PlainProbeTest", "One", {} );
+    typoRegistry.setFilter( "PlainProbeTest.*:OtherProbeTest.*" );
+    SW_EXPECT_EQUAL( 1, typoRegistry.runAllTests() );
+
+    test::TestRegistry excludeRegistry;
+    excludeRegistry.registerTest( "PlainProbeTest", "One", {} );
+    excludeRegistry.setFilter( "-PlainProbeTest.*" );
+    SW_EXPECT_EQUAL( 0, excludeRegistry.runAllTests() );
+}
+
+/**
  * @brief [TestFrameworkTest] 호스트 스위트 케이스는 예상 밖 Error 로그 하나로 진다 — 방어 구간의 Error 와 일반 스위트는 그대로 통과
  * @details GPU 시험은 검증 레이어 · 드라이버 오류를 Error 로그로만 남기고 단언은 통과할 수 있다(Vulkan 구간이 `[Error]` 17 줄을 찍으며
  *          통과한 적이 있다). 이 케이스는 일부러 Error 한 줄을 남기므로 그 줄이 이 실행의 출력에 보인다.

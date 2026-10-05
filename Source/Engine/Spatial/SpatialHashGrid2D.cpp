@@ -29,6 +29,15 @@ namespace sw
                     return MathUtil::MaxInt32;
                 return static_cast<int32>( scaled );
             }
+
+            /** @brief 뒤집힌 상자도 받아 min ≤ max 로 맞춘 경계입니다. 넣기 · 옮기기 · 상자 질의가 같은 정규화를 쓴다. */
+            static AABB2D makeBounds( float32 minX, float32 minY, float32 maxX, float32 maxY )
+            {
+                return AABB2D{
+                    float2{MathUtil::min( minX, maxX ), MathUtil::min( minY, maxY )},
+                    float2{MathUtil::max( minX, maxX ), MathUtil::max( minY, maxY )}
+                };
+            }
         };
 
         /**
@@ -129,11 +138,7 @@ namespace sw
         if ( _mapHandleBound.find( handle ) != _mapHandleBound.end() )
             remove( handle );
 
-        const AABB2D bounds{
-            float2{MathUtil::min( minX, maxX ), MathUtil::min( minY, maxY )},
-            float2{MathUtil::max( minX, maxX ), MathUtil::max( minY, maxY )}
-        };
-        _mapHandleBound[handle] = bounds;
+        _mapHandleBound[handle] = SpatialHashGrid2DInternal::makeBounds( minX, minY, maxX, maxY );
 
         const CellRange range = CellRange::fromBounds( minX, minY, maxX, maxY, _cellSize );
         if ( range.getCellCount() > kMaxHandleCellCount )
@@ -151,6 +156,20 @@ namespace sw
 
     void SpatialHashGrid2D::update( SlotHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY )
     {
+        auto boundIt = _mapHandleBound.find( handle );
+        if ( boundIt != _mapHandleBound.end() )
+        {
+            // 덮는 셀이 그대로면 셀 목록(넘친 목록 포함)이 이미 맞다 — 경계만 바꾼다. 판단은 넣기 · 빼기와 **같은 계산**
+            // (`CellRange::fromBounds`)이어야 한다. 아니면 핸들이 틀린 셀에 앉은 채 남는다.
+            const AABB2D&   oldBounds = boundIt->second;
+            const CellRange oldRange  = CellRange::fromBounds( oldBounds._min._x, oldBounds._min._y, oldBounds._max._x, oldBounds._max._y, _cellSize );
+            const CellRange newRange  = CellRange::fromBounds( minX, minY, maxX, maxY, _cellSize );
+            if ( oldRange == newRange )
+            {
+                boundIt->second = SpatialHashGrid2DInternal::makeBounds( minX, minY, maxX, maxY );
+                return;
+            }
+        }
         insert( handle, minX, minY, maxX, maxY );
     }
 
@@ -195,10 +214,7 @@ namespace sw
     {
         outListHandle.clear();
 
-        const AABB2D queryBounds{
-            float2{MathUtil::min( minX, maxX ), MathUtil::min( minY, maxY )},
-            float2{MathUtil::max( minX, maxX ), MathUtil::max( minY, maxY )}
-        };
+        const AABB2D queryBounds = SpatialHashGrid2DInternal::makeBounds( minX, minY, maxX, maxY );
 
         forEachCandidateHandle( CellRange::fromBounds( minX, minY, maxX, maxY, _cellSize ), [&]( SlotHandle handle )
         {

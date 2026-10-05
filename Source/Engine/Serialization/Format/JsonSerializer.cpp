@@ -2,10 +2,12 @@
 
 #include "Engine/Serialization/Format/JsonSerializer.h"
 
+#include "Core/Container/InlineAllocator.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Serialization/Core/ContainerVisitor.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
 #include "Engine/Utility/Json/JsonDocument.h"
@@ -74,31 +76,56 @@ namespace sw
                 dst.setString( text.view() );
             }
 
-            /**
-             * @brief 컨테이너 원소 하나를 dst 에 씁니다(중첩 컨테이너 / 구조체 / 소유 포인터 / 값).
-             * @details 소유 포인터만 런타임 타입을 알아야 하므로 { "TypeName": {...} } 래핑을 유지합니다.
-             */
-            static void writeContainerElementJson( JsonValue dst, const void* pElemPtr, const NestedContainerInfo& nested,
-                                                   bool bOwnedPtr, const SerializeContext& ctx )
+            /** @brief 컨테이너를 자연스러운 JSON 으로 적습니다 — 시퀀스는 배열, 맵은 오브젝트, 소유 포인터 원소만 `{ "TypeName": {...} }` 로 감쌉니다. */
+            class ContainerWriter final : public IContainerWriter
             {
-                if ( nested._elementNested != nullptr )
+            public:
+                ContainerWriter( const JsonValue& root, const SerializeContext& ctx )
+                    : _listSlot{}
+                    , _ctx{ ctx }
                 {
-                    writeContainerValueJson( dst, pElemPtr, *nested._elementNested, ctx );
-                    return;
+                    _listSlot.push_back( root );
                 }
 
-                if ( bOwnedPtr )
+                void beginSequence( size_t ) override { _listSlot.back().setArray(); }
+                void endSequence() override {}
+                void beginMap( size_t ) override { _listSlot.back().setObject(); }
+                void endMap() override {}
+
+                // `JsonValue` 는 빌린 포인터다 — 같은 부모에 새 키 · 원소를 더하면 앞서 꺼낸 형제 핸들이 죽으므로, 꺼낸 자리는 다 채운 뒤 버린다(스택).
+                void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override
                 {
-                    void* const* ppObj = static_cast<void* const*>( pElemPtr );
-                    void*        pObj  = ppObj != nullptr ? *ppObj : nullptr;
-                    if ( pObj == nullptr )
+                    StringBuilder<constant::kMaxBuffer8192> keyText;
+                    SerializerUtil::valueToText( keyText, pKey, keyTypeName, _ctx );
+                    const JsonValue entry = _listSlot.back().set( keyText.view(), false );
+                    _listSlot.push_back( entry );
+                }
+
+                void endMapEntry() override { _listSlot.pop_back(); }
+
+                void beginNestedContainer( const ContainerSlot slot ) override
+                {
+                    if ( slot == ContainerSlot::SequenceElement )
                     {
-                        dst.setObject();
-                        return;
+                        const JsonValue element = _listSlot.back().pushBack();
+                        _listSlot.push_back( element );
                     }
+                }
+
+                void endNestedContainer( const ContainerSlot slot ) override
+                {
+                    if ( slot == ContainerSlot::SequenceElement )
+                        _listSlot.pop_back();
+                }
+
+                void writeOwnedPointer( const void* pObject ) override
+                {
+                    if ( pObject == nullptr )
+                        return; // 널 원소는 배열에 넣지 않는다
+                    const JsonValue dst = _listSlot.back().pushBack();
                     // 맡아 둔 원소(모르는 타입)는 읽은 원문 그대로 다시 쓴다.
                     SerializeContext::OpaqueElementView opaque{};
-                    if ( ctx.queryOpaqueElement( pObj, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Json )
+                    if ( _ctx.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Json )
                     {
                         JsonDocument rawDoc;
                         if ( rawDoc.tryParse( opaque._text ) )
@@ -107,215 +134,149 @@ namespace sw
                             return;
                         }
                     }
-                    const TypeInfo* pRuntimeType = ctx.getRuntimeTypeInfo( pObj );
+                    dst.setObject();
+                    const TypeInfo* pRuntimeType = _ctx.getRuntimeTypeInfo( pObject );
                     if ( pRuntimeType == nullptr )
-                    {
-                        dst.setObject();
                         return;
-                    }
-                    dst.setObject();
-                    JsonValue body = dst.set( pRuntimeType->_name.c_str(), false );
-                    JsonSerializer::writeObject( body, pObj, *pRuntimeType, ctx );
+                    const JsonValue body = dst.set( pRuntimeType->_name.c_str(), false );
+                    JsonSerializer::writeObject( body, pObject, *pRuntimeType, _ctx );
                     body.set( kSchemaVersionKey, false ).setUint( 0 );
-                    return;
                 }
 
-                const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
-                if ( pElemType != nullptr )
+                // 값 구조체는 타입 래핑 없이 본문을 그대로 쓴다(리더도 본문만 받는다).
+                void writeValueObject( const void* pValue, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
                 {
-                    // 값 구조체는 타입 래핑 없이 본문을 그대로 쓴다(리더도 본문만 받는다).
-                    JsonSerializer::writeObject( dst, pElemPtr, *pElemType, ctx );
-                    return;
+                    JsonSerializer::writeObject( openElementSlot( slot ), pValue, typeInfo, _ctx );
                 }
 
-                writeJsonValue( dst, pElemPtr, nested._elementTypeName, ctx );
-            }
+                void writeScalar( const void* pValue, const hashed_string& typeName, const ContainerSlot slot ) override
+                {
+                    writeJsonValue( openElementSlot( slot ), pValue, typeName, _ctx );
+                }
 
-            /**
-             * @brief 컨테이너를 자연스러운 JSON 표현으로 씁니다. 시퀀스는 배열, 맵은 오브젝트입니다.
-             */
-            static void writeContainerValueJson( JsonValue dst, const void* pContainerPtr, const NestedContainerInfo& nested,
-                                                 const SerializeContext& ctx )
+            private:
+                /** @brief 원소 하나를 적을 자리입니다 — 시퀀스면 새 배열 원소, 맵 값이면 항목이 연 자리입니다. */
+                JsonValue openElementSlot( const ContainerSlot slot ) const
+                {
+                    if ( slot == ContainerSlot::SequenceElement )
+                        return _listSlot.back().pushBack();
+                    return _listSlot.back();
+                }
+
+                vector<JsonValue, InlineAllocator<JsonValue, 4>> _listSlot;
+                const SerializeContext&                          _ctx;
+            };
+
+            /** @brief 컨테이너를 자연스러운 JSON 에서 읽습니다. 모양이 다른 값(배열 자리에 글)은 그 칸만 실패입니다 — 다음 자리는 압니다. */
+            class ContainerReader final : public IContainerReader
             {
-                if ( dst.isValid() == false || pContainerPtr == nullptr || nested._wrapper == nullptr )
-                    return;
-
-                const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
-
-                ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
-                if ( pSeq != nullptr )
+            public:
+                ContainerReader( const JsonValue& root, const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
+                    : _listCursor{}
+                    , _pCurrentKey{ nullptr }
+                    , _ctx{ ctx }
+                    , _pOutListOrphan{ pOutListOrphan }
                 {
-                    dst.setArray();
-                    const size_t elementCount = pSeq->getSize( pContainerPtr );
-                    for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                    _listCursor.push_back( root );
+                }
+
+                ContainerReadResult beginSequence( size_t& outCountHint ) override
+                {
+                    const JsonValue& current = _listCursor.back();
+                    if ( current.isArray() == false )
+                        return ContainerReadResult::FieldFailed;
+                    outCountHint = current.size();
+                    return ContainerReadResult::Read;
+                }
+
+                ContainerReadResult beginMap( size_t& outCountHint ) override
+                {
+                    outCountHint = 0;
+                    return _listCursor.back().isObject() ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
+                }
+
+                ContainerReadResult forEachElement( const ContainerElementVisitDelegate& visit ) override
+                {
+                    const JsonValue     container = _listCursor.back();
+                    ContainerReadResult total{ ContainerReadResult::Read };
+                    if ( container.isArray() )
                     {
-                        const void* pElemPtr = pSeq->getElementConst( pContainerPtr, elementIndex );
-                        if ( bOwnedPtr )
+                        for ( size_t elementIndex = 0; elementIndex < container.size() && total != ContainerReadResult::StreamBroken; ++elementIndex )
                         {
-                            void* const* ppObj = static_cast<void* const*>( pElemPtr );
-                            if ( ppObj == nullptr || *ppObj == nullptr )
-                                continue; // 널 원소는 건너뛴다(레거시 동작 유지).
+                            _listCursor.push_back( container.at( elementIndex ) );
+                            total = ContainerVisitor::mergeResult( total, visit( elementIndex ) );
+                            _listCursor.pop_back();
                         }
-                        writeContainerElementJson( dst.pushBack(), pElemPtr, nested, bOwnedPtr, ctx );
+                        return total;
                     }
-                    return;
-                }
-
-                IMapContainerWrapper* pMapWrap = nested._wrapper->asMap();
-                if ( pMapWrap != nullptr )
-                {
-                    dst.setObject();
-                    pMapWrap->forEach( pContainerPtr, [&]( const void* pKPtr, const void* pVPtr )
+                    const vector<string> listKey = container.getMemberNames();
+                    for ( size_t entryIndex = 0; entryIndex < listKey.size() && total != ContainerReadResult::StreamBroken; ++entryIndex )
                     {
-                        StringBuilder<constant::kMaxBuffer8192> keySs;
-                        SerializerUtil::valueToText( keySs, pKPtr, nested._keyTypeName, ctx );
-                        writeContainerElementJson( dst.set( keySs.view(), false ), pVPtr, nested, false, ctx );
-                    } );
-                }
-            }
-
-            /**
-             * @brief items(JSON 배열)의 각 원소를 시퀀스 컨테이너에 채운다. 부르는 쪽이 미리 wrapper->clear() 를 한다.
-             * @param pOutListOrphan 소유 포인터 원소(컴포넌트)의 못 읽은 칸을 받을 바깥 orphan 목록(XML 과 같다). 없으면 그 원소를 엄격하게 읽는다.
-             */
-            [[nodiscard]] static bool readSequenceItemsJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& items,
-                                                             bool bOwnedPtr, const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
-            {
-                ISequenceContainerWrapper* pSeq = nested._wrapper != nullptr ? nested._wrapper->asSequence() : nullptr;
-                if ( pSeq == nullptr || items.isArray() == false )
-                    return false;
-
-                if ( bOwnedPtr )
-                {
-                    bool bOk{ true };
-                    for ( size_t elementIndex = 0; elementIndex < items.size(); ++elementIndex )
-                    {
-                        const JsonValue elem = items.at( elementIndex );
-                        if ( elem.isObject() == false )
-                            continue;
-                        const vector<string> listKey = elem.getMemberNames();
-                        if ( listKey.size() != 1 )
-                            continue;
-                        const hashed_string typeName = hashed_string::findInterned( listKey[0] );
-                        const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
-                        void*               pObj     = ( pType != nullptr ) ? ctx.createOwnedPointer( typeName ) : nullptr;
-                        if ( pObj == nullptr )
-                        {
-                            // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다.
-                            const string                        rawJson = elem.dump();
-                            SerializeContext::OpaqueElementView opaque{};
-                            opaque._typeName = listKey[0];
-                            opaque._format   = SerializeContext::OpaqueFormat::Json;
-                            opaque._text     = rawJson;
-                            (void)ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
-                            continue;
-                        }
-                        // 원소 안의 못 읽은 칸은 바깥 orphan 목록으로(XML 과 같다) — 엄격하게 읽으면 칸 하나가 `_listComponent` 칸 **전체**를 실패로 만든다.
-                        if ( JsonSerializer::readObject( elem.get( listKey[0], false ), pObj, *pType, pOutListOrphan, nullptr, ctx ) == false )
-                            bOk = false;
+                        _pCurrentKey = &listKey[entryIndex];
+                        _listCursor.push_back( container.get( listKey[entryIndex], false ) );
+                        total = ContainerVisitor::mergeResult( total, visit( entryIndex ) );
+                        _listCursor.pop_back();
                     }
-                    return bOk;
+                    _pCurrentKey = nullptr;
+                    return total;
                 }
 
-                pSeq->reserve( pContainerPtr, items.size() );
-                bool bOk{ true };
-
-                // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다. `set` 은 다 읽은 뒤 insert 해야 한다.
-                for ( size_t elementIndex = 0; elementIndex < items.size(); ++elementIndex )
+                // 키는 멤버 이름(글)이다 — XML 의 `key` 속성과 같은 길로 읽는다.
+                ContainerReadResult readMapKey( void* pKey, const hashed_string& keyTypeName ) override
                 {
-                    const JsonValue elem = items.at( elementIndex );
-
-                    const bool bAppended = pSeq->appendElement( pContainerPtr, elementIndex, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElemPtr ) -> bool
-                    {
-                        if ( nested._elementNested != nullptr )
-                            return readTypedContainerJson( pElemPtr, *nested._elementNested, elem, ctx );
-
-                        const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
-                        if ( pElemType == nullptr )
-                            return readJsonValue( pElemPtr, nested._elementTypeName, elem, ctx );
-
-                        if ( elem.isObject() == false )
-                            return false;
-
-                        // 값 구조체 원소는 본문 그대로다(쓰는 쪽이 타입 이름으로 감싸지 않는다). 감싼 원소는 모르는 키 하나로 읽힌다.
-                        return JsonSerializer::readObject( elem, pElemPtr, *pElemType, nullptr, nullptr, ctx );
-                    } ) );
-
-                    if ( bAppended == false )
-                        bOk = false;
+                    const bool bRead = _pCurrentKey != nullptr && parseTextValueCoerced( pKey, keyTypeName, *_pCurrentKey, _ctx );
+                    return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
-                return bOk;
-            }
 
-            // entries(JSON 오브젝트)의 각 멤버를 맵 컨테이너에 채운다. 부르는 쪽이 미리 wrapper->clear() 를 한다.
-            [[nodiscard]] static bool readMapEntriesJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& entries,
-                                                          const SerializeContext& ctx )
-            {
-                IMapContainerWrapper* pMapWrap = nested._wrapper != nullptr ? nested._wrapper->asMap() : nullptr;
-                if ( pMapWrap == nullptr || entries.isObject() == false )
-                    return false;
-
-                vector<uint8> listKBuf( pMapWrap->getKeySize() );
-                vector<uint8> listVBuf( pMapWrap->getValueSize() );
-                for ( const string& key : entries.getMemberNames() )
+                ContainerReadResult readOwnedPointer() override
                 {
-                    pMapWrap->defaultConstructKey( listKBuf.data() );
-                    pMapWrap->defaultConstructValue( listVBuf.data() );
-                    JsonDocument keyDoc;
-                    keyDoc.getRoot().setString( key );
-                    bool                                kOk{ false };
-                    const SerializeContext::TextReadFn* pKeyReader = ctx.findTextReader( nested._keyTypeName );
-                    if ( pKeyReader != nullptr )
-                        kOk = ( *pKeyReader )( listKBuf.data(), key );
-                    else
-                        kOk = readJsonValue( listKBuf.data(), nested._keyTypeName, keyDoc.getRoot(), ctx );
-
-                    bool            vOk{ false };
-                    const JsonValue valJson = entries.get( key, false );
-                    if ( nested._elementNested != nullptr )
-                        vOk = readTypedContainerJson( listVBuf.data(), *nested._elementNested, valJson, ctx );
-                    else
+                    // 타입 이름 키 하나짜리 오브젝트가 아니면 원소로 보지 않고 건너뛴다.
+                    const JsonValue& element = _listCursor.back();
+                    if ( element.isObject() == false )
+                        return ContainerReadResult::Read;
+                    const vector<string> listKey = element.getMemberNames();
+                    if ( listKey.size() != 1 )
+                        return ContainerReadResult::Read;
+                    const hashed_string typeName = hashed_string::findInterned( listKey[0] );
+                    const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
+                    void*               pObject  = ( pType != nullptr ) ? _ctx.createOwnedPointer( typeName ) : nullptr;
+                    if ( pObject == nullptr )
                     {
-                        const SerializeContext::TextReadFn* pElemReader = ctx.findTextReader( nested._elementTypeName );
-                        if ( pElemReader != nullptr )
-                            vOk = ( *pElemReader )( listVBuf.data(), valJson.isString() ? valJson.asString() : valJson.dump() );
-                        else
-                            vOk = readJsonValue( listVBuf.data(), nested._elementTypeName, valJson, ctx );
+                        // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다.
+                        const string                        rawJson = element.dump();
+                        SerializeContext::OpaqueElementView opaque{};
+                        opaque._typeName = listKey[0];
+                        opaque._format   = SerializeContext::OpaqueFormat::Json;
+                        opaque._text     = rawJson;
+                        (void)_ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
+                        return ContainerReadResult::Read;
                     }
-
-                    if ( kOk && vOk )
-                        pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
-                    pMapWrap->destroyKey( listKBuf.data() );
-                    pMapWrap->destroyValue( listVBuf.data() );
+                    // 원소 안의 못 읽은 칸은 바깥 orphan 목록으로(XML 과 같다) — 엄격하게 읽으면 칸 하나가 `_listComponent` 칸 전체를 실패로 만든다.
+                    const bool bRead = JsonSerializer::readObject( element.get( listKey[0], false ), pObject, *pType, _pOutListOrphan, nullptr, _ctx );
+                    return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
-                return true;
-            }
 
-            /**
-             * @brief 컨테이너를 자연스러운 JSON 표현으로 읽습니다. 시퀀스는 배열, 맵은 오브젝트입니다.
-             * @details 원소가 또 컨테이너면 그 값에서 재귀하므로 얼마든지 중첩할 수 있습니다.
-             */
-            [[nodiscard]] static bool readTypedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
-                                                              const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan = nullptr )
-            {
-                if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
-                    return false;
-
-                if ( src.isArray() && nested._wrapper->asSequence() != nullptr )
+                // 값 구조체 원소는 본문 그대로다(쓰는 쪽이 타입 이름으로 감싸지 않는다). 감싼 원소는 모르는 키 하나로 읽힌다.
+                ContainerReadResult readValueObject( void* pValue, const hashed_string&, const TypeInfo& typeInfo, ContainerSlot ) override
                 {
-                    const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
-                    if ( bOwnedPtr == false )
-                        nested._wrapper->clear( pContainerPtr );
-                    return readSequenceItemsJson( pContainerPtr, nested, src, bOwnedPtr, ctx, pOutListOrphan );
+                    const JsonValue& element = _listCursor.back();
+                    const bool       bRead   = element.isObject() && JsonSerializer::readObject( element, pValue, typeInfo, nullptr, nullptr, _ctx );
+                    return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
 
-                if ( src.isObject() && nested._wrapper->asMap() != nullptr )
+                ContainerReadResult readScalar( void* pValue, const hashed_string& typeName, ContainerSlot ) override
                 {
-                    nested._wrapper->clear( pContainerPtr );
-                    return readMapEntriesJson( pContainerPtr, nested, src, ctx );
+                    return readJsonValue( pValue, typeName, _listCursor.back(), _ctx ) ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
-                return false;
-            }
+
+                ContainerReadResult skipElement( size_t ) override { return ContainerReadResult::FieldFailed; }
+
+            private:
+                vector<JsonValue, InlineAllocator<JsonValue, 4>> _listCursor;
+                const string*                                    _pCurrentKey;
+                const SerializeContext&                          _ctx;
+                vector<SchemaOrphanValue>*                       _pOutListOrphan;
+            };
 
             [[nodiscard]] static bool readJsonValue( void* pValPtr, const hashed_string& typeName, const JsonValue& src, const SerializeContext& ctx )
             {
@@ -372,11 +333,9 @@ namespace sw
                 const void* pPropPtr = prop.getRawPtr( pInstance );
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
                 {
-                    NestedContainerInfo shape = prop.getContainerShape();
-                    if ( shape._typeName.empty() )
-                        shape._typeName = prop._typeName;
                     // 프로퍼티 이름 아래에 바로 배열/오브젝트로 쓴다.
-                    writeContainerValueJson( parent.set( prop._name.c_str(), false ), pPropPtr, shape, ctx );
+                    ContainerWriter writer( parent.set( prop._name.c_str(), false ), ctx );
+                    ContainerVisitor::write( pPropPtr, prop.getContainerShape(), writer, ctx );
                     return;
                 }
                 writeJsonValue( parent.set( prop._name.c_str(), false ), pPropPtr, prop._typeName, ctx );
@@ -400,7 +359,10 @@ namespace sw
                 }
                 void* pPropPtr = prop.getRawPtr( pInstance );
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
-                    return readTypedContainerJson( pPropPtr, prop.getContainerShape(), field, ctx, pOutListOrphan );
+                {
+                    ContainerReader reader( field, ctx, pOutListOrphan );
+                    return ContainerVisitor::read( pPropPtr, prop.getContainerShape(), reader, ctx ) == ContainerReadResult::Read;
+                }
                 return readJsonValue( pPropPtr, prop._typeName, field, ctx );
             }
         };

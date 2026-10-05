@@ -49,9 +49,9 @@ namespace sw
         void         setDelays( float32 crumbleDelay, float32 respawnDelay );
 
     private:
-        PROPERTY( Category = "Crumble", DisplayName = "Crumble Delay", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Crumble", DisplayName = "Crumble Delay", Min = 0.0, Units = s )
         float32 _crumbleDelay;
-        PROPERTY( Category = "Crumble", DisplayName = "Respawn Delay", Min = 0.0, Tooltip = "0 never respawns", Meta = "Units=s" )
+        PROPERTY( Category = "Crumble", DisplayName = "Respawn Delay", Min = 0.0, Tooltip = "0 never respawns", Units = s )
         float32 _respawnDelay;
         PROPERTY( Category = "Crumble", DisplayName = "Steps In State", Tooltip = "Runtime" )
         int32 _stepsInState;
@@ -110,7 +110,7 @@ namespace sw
         int32 getLaunchCount() const { return _launchCount; }
 
     private:
-        PROPERTY( Category = "Launch", DisplayName = "Launch Velocity", Meta = "Units=m/s" )
+        PROPERTY( Category = "Launch", DisplayName = "Launch Velocity", Units = "m/s" )
         float3 _launchVelocity;
         PROPERTY( Category = "Launch", DisplayName = "Required Tags" )
         TagContainer _requiredTags;
@@ -140,7 +140,7 @@ namespace sw
         const float3& getSurfaceVelocity() const { return _velocity; }
 
     private:
-        PROPERTY( Category = "Conveyor", DisplayName = "Velocity", Meta = "Units=m/s" )
+        PROPERTY( Category = "Conveyor", DisplayName = "Velocity", Units = "m/s" )
         float3 _velocity;
         PROPERTY( Category = "Conveyor", DisplayName = "Move Occupants", Tooltip = "Move overlapping objects directly" )
         bool _bMoveOccupants;
@@ -174,7 +174,7 @@ namespace sw
     private:
         PROPERTY( Category = "Climb", DisplayName = "Axis", Tooltip = "Climb direction (world)" )
         float3 _axis;
-        PROPERTY( Category = "Climb", DisplayName = "Climb Speed", Min = 0.0, Meta = "Units=m/s" )
+        PROPERTY( Category = "Climb", DisplayName = "Climb Speed", Min = 0.0, Units = "m/s" )
         float32 _climbSpeed;
         PROPERTY( Category = "Climb", DisplayName = "Swing", Tooltip = "Rope: can swing and jump off sideways" )
         bool _bSwing;

@@ -91,11 +91,11 @@ namespace sw
         MeshComponent* findViewModel() const;
 
     private:
-        PROPERTY( Category = "Look", DisplayName = "Yaw", Tooltip = "Starting yaw from +Z towards +X", Meta = "Units=rad" )
+        PROPERTY( Category = "Look", DisplayName = "Yaw", Tooltip = "Starting yaw from +Z towards +X", Units = rad )
         float32 _yaw;
-        PROPERTY( Category = "Look", DisplayName = "Pitch", Tooltip = "Starting pitch, up is positive", Meta = "Units=rad" )
+        PROPERTY( Category = "Look", DisplayName = "Pitch", Tooltip = "Starting pitch, up is positive", Units = rad )
         float32 _pitch;
-        PROPERTY( Category = "Look", DisplayName = "Max Pitch", Tooltip = "Pitch limit up and down", Min = 0.0, Max = 1.5707963, Meta = "Units=rad" )
+        PROPERTY( Category = "Look", DisplayName = "Max Pitch", Tooltip = "Pitch limit up and down", Min = 0.0, Max = 1.5707963, Units = rad )
         float32 _maxPitch;
         PROPERTY( Category = "Look", DisplayName = "Mouse Sensitivity", Tooltip = "Radians per pixel of mouse movement", Min = 0.0 )
         float32 _mouseSensitivity;
@@ -105,17 +105,17 @@ namespace sw
         bool _bMouseLook;
         PROPERTY( Category = "Look", DisplayName = "Lock Mouse", Tooltip = "Lock and hide the cursor while mouse look is on; Esc toggles" )
         bool _bLockMouse;
-        PROPERTY( Category = "Lens", DisplayName = "Field Of View", Tooltip = "Vertical field of view", Min = 0.1, Max = 3.0, Meta = "Units=rad" )
+        PROPERTY( Category = "Lens", DisplayName = "Field Of View", Tooltip = "Vertical field of view", Min = 0.1, Max = 3.0, Units = rad )
         float32 _fieldOfViewY;
-        PROPERTY( Category = "Lens", DisplayName = "Near Plane", Min = 0.001, Meta = "Units=m" )
+        PROPERTY( Category = "Lens", DisplayName = "Near Plane", Min = 0.001, Units = m )
         float32 _nearPlane;
-        PROPERTY( Category = "Lens", DisplayName = "Far Plane", Min = 0.01, Meta = "Units=m" )
+        PROPERTY( Category = "Lens", DisplayName = "Far Plane", Min = 0.01, Units = m )
         float32 _farPlane;
         PROPERTY( Category = "View Model", DisplayName = "View Model", Tooltip = "Component name of the mesh held in front of the eye (empty: none)" )
         hashed_string _viewModelName;
-        PROPERTY( Category = "View Model", DisplayName = "Offset", Tooltip = "Right, up and forward of the eye", Meta = "Units=m" )
+        PROPERTY( Category = "View Model", DisplayName = "Offset", Tooltip = "Right, up and forward of the eye", Units = m )
         float3 _viewModelOffset;
-        PROPERTY( Category = "View Model", DisplayName = "Yaw Offset", Tooltip = "Turns the model so its front faces the view (pi when the muzzle is -Z)", Meta = "Units=rad" )
+        PROPERTY( Category = "View Model", DisplayName = "Yaw Offset", Tooltip = "Turns the model so its front faces the view (pi when the muzzle is -Z)", Units = rad )
         float32 _viewModelYawOffset;
 
         FirstPersonLook _look;

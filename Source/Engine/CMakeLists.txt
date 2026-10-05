@@ -193,7 +193,7 @@ if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
         SKIP_PRECOMPILE_HEADERS ON
     )
     if(WIN32)
-        target_link_options(Engine PRIVATE /DELAYLOAD:TracyClient.dll)
+        sw_addDelayloadSystemDlls(Engine DLLS TracyClient.dll)
     endif()
     message(STATUS "[Engine] Tracy profiler client linked (delay-loaded on Windows)")
 endif()
@@ -258,7 +258,6 @@ if(WIN32)
         d3dcompiler.lib
         dbghelp.lib
         synchronization.lib
-        delayimp.lib
         mfplat.lib
         mfreadwrite.lib
         mfuuid.lib
@@ -266,12 +265,7 @@ if(WIN32)
         shell32.lib
         xaudio2.lib
     )
-    target_link_options(Engine PRIVATE
-        /DELAYLOAD:d3dcompiler_47.dll
-        /DELAYLOAD:mfplat.dll
-        /DELAYLOAD:mfreadwrite.dll
-        /DELAYLOAD:xaudio2_9.dll
-    )
+    sw_addDelayloadSystemDlls(Engine DLLS d3dcompiler_47.dll mfplat.dll mfreadwrite.dll xaudio2_9.dll)
 endif()
 
 # ------------------------------------------------------------------------------

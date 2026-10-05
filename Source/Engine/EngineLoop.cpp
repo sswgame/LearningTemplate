@@ -31,7 +31,11 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/DevTools/LocalizationTools.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/PhysicsDebugDrawAdapter.h"
+#include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -42,9 +46,6 @@
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/Renderer/Capture/PortraitRenderer.h"
 #include "Engine/Graphics/Renderer/Cook/ShaderCookDriver.h"
-#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
-#include "Engine/Graphics/Renderer/Debug/PhysicsDebugDrawAdapter.h"
-#include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/Frame/RenderViewCollector.h"
@@ -60,7 +61,6 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
-#include "Engine/LocalizationTools.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Animation/AnimationCrowd.h"
 #include "Engine/Object/Animation/VertexAnimationCooker.h"
@@ -87,8 +87,8 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/CommandStack.h"
-#include "Engine/Utility/Debug/DebugOverlayState.h"
-#include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/DebugOverlayState.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 #include "Engine/Utility/Profiling/ProfilerBackend.h"
 #include "Engine/Window/IWindow.h"
 
@@ -586,7 +586,10 @@ namespace sw
             loop._rhi = make_unique<RHI>();
             loop._rhi->setPreferredVSync( display._bHasVSync ? display._bVSync : loop._pEngineConfig->_window._bVSync );
             // RHI 는 창 시스템을 모른다. 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 들고 있다.
-            if ( loop._rhi->initialize( IWindow::getActiveWindow() ) == false )
+            const bool bRhiReady = loop._rhi->initialize( IWindow::getActiveWindow() );
+            // 단계가 내려가면(destroy 는 모든 단계를 돈다) _rhi 가 사라진다 — 실패의 이유를 그 전에 남긴다. App 이 이것으로 종료 코드를 고른다.
+            loop._rhiInitResult = loop._rhi->getInitResult();
+            if ( bRhiReady == false )
                 return EngineInitResult::Failed;
             // 백엔드가 정해졌으니 크래시 리포트에 남긴다. 이 저장소는 백엔드가 넷이라 "어느
             // 백엔드에서 났는가" 가 범위를 좁히는 첫 질문이다.
@@ -805,6 +808,7 @@ namespace sw
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
+        , _rhiInitResult{ RHIInitResult::NotStarted }
         , _sceneDeltaSeconds{ 0.0f }
         , _profileSession{}
         , _startup{}

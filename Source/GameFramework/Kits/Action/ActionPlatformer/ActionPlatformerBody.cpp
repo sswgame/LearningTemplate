@@ -72,8 +72,7 @@ namespace sw
         , _listGrapplePoint{}
         , _origin{}
         , _tileSize{ 1.0f }
-        , _width{ 0 }
-        , _height{ 0 }
+        , _topology{}
     {
     }
 
@@ -82,22 +81,21 @@ namespace sw
         outMap.loadFromText( text, tileSize, origin );
         _origin   = origin;
         _tileSize = outMap.getTileSize();
-        _width    = outMap.getWidth();
-        _height   = outMap.getHeight();
-        _listDirt.assign( static_cast<size_t>( _width * _height ), SW_FALSE );
+        _topology = GridTopology{ outMap.getWidth(), outMap.getHeight() };
+        _listDirt.assign( static_cast<size_t>( _topology.getCellCount() ), SW_FALSE );
         _listGrapplePoint.clear();
 
         vector<string_view> listLine;
         ActionPlatformerBodyInternal::splitLines( text, listLine );
         for ( size_t row = 0; row < listLine.size(); ++row )
         {
-            const int32 y = _height - 1 - static_cast<int32>( row );
+            const int32 y = _topology._height - 1 - static_cast<int32>( row );
             for ( size_t column = 0; column < listLine[row].size(); ++column )
             {
                 const int32 x = static_cast<int32>( column );
                 if ( listLine[row][column] == 'D' )
                 {
-                    _listDirt[static_cast<size_t>( y * _width + x )] = SW_TRUE;
+                    _listDirt[static_cast<size_t>( _topology.toIndex( x, y ) )] = SW_TRUE;
                     outMap.setTile( x, y, PlatformTile::Solid );
                 }
                 else if ( listLine[row][column] == 'O' )
@@ -111,9 +109,9 @@ namespace sw
 
     bool ActionTerrainGrid::isDirt( int32 x, int32 y ) const
     {
-        if ( x < 0 || y < 0 || x >= _width || y >= _height )
+        if ( _topology.isInside( x, y ) == false )
             return false;
-        return _listDirt[static_cast<size_t>( y * _width + x )] == SW_TRUE;
+        return _listDirt[static_cast<size_t>( _topology.toIndex( x, y ) )] == SW_TRUE;
     }
 
     bool ActionTerrainGrid::isDirtAt( const float2& worldPosition ) const { return isDirt( computeTileX( worldPosition._x ), computeTileY( worldPosition._y ) ); }

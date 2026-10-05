@@ -155,31 +155,31 @@ namespace sw
     private:
         PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the ShooterDirectorComponent" )
         GameObjectHandle _director;
-        PROPERTY( Category = "Player", DisplayName = "Spawn Position", Tooltip = "Feet position at the start and after being overrun", Meta = "Units=m" )
+        PROPERTY( Category = "Player", DisplayName = "Spawn Position", Tooltip = "Feet position at the start and after being overrun", Units = m )
         float3 _spawnPosition;
         PROPERTY( Category = "Player", AssetPath, AssetType = "Prefab", DisplayName = "Body Prefab", Tooltip = "Visible body (skeletal mesh, animator, appearance, ShooterAvatarComponent)" )
         string _bodyPrefab;
         PROPERTY( Category = "Player", DisplayName = "Weapon Items", Tooltip = "Appearance item of each weapon (rifle, shotgun, pistol) worn in the MainHand slot" )
         vector<string> _listWeaponItem;
-        PROPERTY( Category = "Movement", DisplayName = "Walk Speed", Min = 0.0, Meta = "Units=m/s" )
+        PROPERTY( Category = "Movement", DisplayName = "Walk Speed", Min = 0.0, Units = "m/s" )
         float32 _walkSpeed;
-        PROPERTY( Category = "Movement", DisplayName = "Sprint Speed", Min = 0.0, Meta = "Units=m/s" )
+        PROPERTY( Category = "Movement", DisplayName = "Sprint Speed", Min = 0.0, Units = "m/s" )
         float32 _sprintSpeed;
-        PROPERTY( Category = "Movement", DisplayName = "Jump Speed", Min = 0.0, Meta = "Units=m/s" )
+        PROPERTY( Category = "Movement", DisplayName = "Jump Speed", Min = 0.0, Units = "m/s" )
         float32 _jumpSpeed;
-        PROPERTY( Category = "Movement", DisplayName = "Gravity", Min = 0.0, Meta = "Units=m/s2" )
+        PROPERTY( Category = "Movement", DisplayName = "Gravity", Min = 0.0, Units = "m/s2" )
         float32 _gravity;
-        PROPERTY( Category = "Movement", DisplayName = "Radius", Tooltip = "Body radius against the blockers", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Movement", DisplayName = "Radius", Tooltip = "Body radius against the blockers", Min = 0.0, Units = m )
         float32 _radius;
-        PROPERTY( Category = "Movement", DisplayName = "Eye Height", Tooltip = "Used until the body's Eyes socket is known", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Movement", DisplayName = "Eye Height", Tooltip = "Used until the body's Eyes socket is known", Min = 0.0, Units = m )
         float32 _eyeHeight;
         PROPERTY( Category = "Health", DisplayName = "Max Health", Min = 1.0 )
         float32 _maxHealth;
-        PROPERTY( Category = "Health", DisplayName = "Regen Delay", Tooltip = "Seconds without a hit before health refills", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Health", DisplayName = "Regen Delay", Tooltip = "Seconds without a hit before health refills", Min = 0.0, Units = s )
         float32 _regenDelay;
         PROPERTY( Category = "Health", DisplayName = "Regen Per Second", Min = 0.0 )
         float32 _regenPerSecond;
-        PROPERTY( Category = "Health", DisplayName = "Down Time", Tooltip = "Seconds the death clip plays before the round starts over", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Health", DisplayName = "Down Time", Tooltip = "Seconds the death clip plays before the round starts over", Min = 0.0, Units = s )
         float32 _downTime;
 
         WeaponState              _arrWeapon[kWeaponCount];

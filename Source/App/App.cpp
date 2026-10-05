@@ -20,14 +20,15 @@
 #include "Engine/DevTools/DevConsoleController.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/RenderThread.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/Debug/FrameProfiler.h"
 #include "Engine/Utility/GameTimeScale.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/SplashWindow.h"
@@ -458,6 +459,12 @@ namespace sw
 
             _engineLoop.endFrame();
         }
+    }
+
+    int32 App::getInitFailureExitCode() const
+    {
+        // 환경 탓(백엔드가 이 빌드에 없다 · 드라이버가 기능을 안 준다)은 시험 · 스크립트가 건너뜀으로 읽는 코드로 끝낸다. 그 밖은 결함일 수 있다.
+        return RHIInitResultUtil::isUnusableHere( _engineLoop.getRhiInitResult() ) ? kRhiUnusableHereExitCode : -1;
     }
 
     void App::pollReloadHotkeys( [[maybe_unused]] float32 deltaTime )

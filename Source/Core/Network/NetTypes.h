@@ -38,7 +38,7 @@ namespace sw
      */
     struct NetWireVersion
     {
-        static constexpr uint32 kCore = 2;
+        static constexpr uint32 kCore = 4; ///< 4: 채널 "신뢰 · 순서 없음" — 채널 값이 바뀌었다(N21b)
 
         /** @brief 층들의 판을 값 하나로 섞습니다(FNV-1a — 순서도 섞인다). */
         static constexpr uint32 combine( std::initializer_list<uint32> listVersion )
@@ -76,10 +76,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 채널 종류입니다. 메시지마다 고른다. */
+    /** @brief 채널 종류입니다. 메시지마다 고른다. 값은 선(wire) 형식이다 — 바꾸면 `NetWireVersion::kCore` 를 올린다. */
     enum class NetChannelType : uint8
     {
-        ReliableOrdered = 0, ///< 반드시 · 보낸 순서대로(채팅 · 거래 · 턴 행동 · 생성 · 파괴)
+        ReliableOrdered = 0, ///< 반드시 · 보낸 순서대로(채팅 · 거래 · 턴 행동 · 생성 · 파괴 스냅숏) — 64 KB 까지(조각으로)
+        ReliableUnordered,   ///< 반드시 · 받는 대로 — 앞 신뢰 메시지를 잃어도 기다리지 않는다(번호로 스스로 줄 세우는 파괴 사건). 1 KB 까지(조각나지 않는다)
         UnreliableSequenced, ///< 잃어도 되지만 옛것은 버린다(위치 스냅샷 · 입력) — 메시지 첫 바이트(종류)마다 따로: 다른 종류끼리는 서로 지우지 않는다
         Unreliable,          ///< 잃어도 되고 순서도 상관없다(소리 · 이펙트)
         Count

@@ -10,15 +10,22 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    /** @brief 세이브용 플래그 하나입니다. */
-    struct GameFlagEntry
+    /** @brief 세이브용 플래그 하나입니다. 세이브 타입이 `vector<GameFlagEntry>` PROPERTY 로 싣습니다(`GameFlags::fillEntries` 가 이름 순으로 채운다). */
+    REFLECT()
+    struct SW_GF_API GameFlagEntry
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _name{};
-        int32         _value{ 0 };
+        PROPERTY()
+        int32 _value{ 0 };
     };
 } // namespace sw
 

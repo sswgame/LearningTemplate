@@ -229,11 +229,9 @@ namespace sw
             return;
         _pDevice->forgetBufferInRecordingStates( buffer );
 
-        Microsoft::WRL::ComPtr<ID3D11Buffer> owned;
+        D3D11RHIDevice::BufferRecord owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
             return;
-
-        _pDevice->_mapBufferSrv.erase( buffer );
 
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         for ( size_t bindlessIndex = 0; bindlessIndex < _pDevice->_listRegisteredBindless.size(); ++bindlessIndex )
@@ -252,11 +250,11 @@ namespace sw
                                   static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
         }
 
-        // 장부는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
+        // 장부는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라). SRV 도 버퍼와 함께 그때 놓인다.
         RHIMemoryLedger* pLedger   = &_pDevice->getMemoryLedger();
         auto             releaseCb = [owned, pLedger, buffer]()
         {
-            (void)owned.Get();
+            (void)owned._buffer.Get();
             pLedger->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         };
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );

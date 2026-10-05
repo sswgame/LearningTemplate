@@ -7,6 +7,20 @@
 **티어 7(Scene · Sequencer 와 같은 자리).** `SocketBindingComponent` 가 컴포넌트(Object, 6)이고 공간 질의(Spatial, 1) · 블렌드 곡선(Animation, 2) ·
 XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "오브젝트 위에서 도는 기능 모듈" 입니다.
 
+## 폴더
+
+| 폴더 | 무엇 |
+|---|---|
+| (루트) | 공용 데이터 읽기 — `CharacterDataReader`(모르는 이름은 오류) · `CharacterDataCache`(경로 → 공유 표) |
+| `Fit/` | 중립 형상(`CharacterGeometry` · `SurfaceBvh`) · 체형 · 장비 피팅 · 병합 · 자르기 · 표면 상태 |
+| `Socket/` | 소켓 에셋 · 해석된 소켓 표 · 소켓 표 컴포넌트 · 소켓 부착 · 가져오기 도우미 |
+| `Hit/` | 맞힘 · 래그돌 · 절단 런타임 |
+| `Pose/` | 레퍼런스 포즈 덮어쓰기 · 후처리 리그(`PoseModifierComponent`) · 포즈 도우미 |
+| `AnimNotify/` | 애니메이션 알림 표 · 처리기 · 디스패치 컴포넌트 |
+
+애니메이션 기능 중 캐릭터 형상 · 소켓 · 맞힘을 모르는 것(모션 워핑 · 이동 보정)은 `Object/Animation/` 에 있습니다. 알림 · 후처리 리그 ·
+레퍼런스 포즈는 소켓 · 맞힘 · `CharacterDataReader`(이 폴더, 티어 7)를 읽으므로 `Animation`(티어 2) · `Object/Animation`(티어 6)으로 내려가지 않습니다.
+
 ## 중립 형상 — 메시 · 포즈를 모른다
 
 모든 계산은 `CharacterGeometry.h` 의 값 타입 위에서 돕니다. 외형을 조립하는 쪽(통합)이 `Mesh` · 포즈를 이 꼴로 바꿔 넘기고 결과를 GPU 로 싣습니다.
@@ -102,6 +116,8 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
 - 처리기가 한 일은 `getActions()` 에 남습니다(진단 · 시험).
 
 ## 모션 워핑 · 이동 보정 — `MotionWarpingComponent` · `LocomotionWarpingComponent`
+
+두 컴포넌트는 `Object/Animation/` 에 있습니다(캐릭터 형상 · 소켓을 모른다). 구간 알림(`MotionWarp`)은 이 폴더의 `AnimNotify/` 가 엽니다.
 
 - **모션 워핑**(언리얼 Motion Warping 의 Skew Warp): 게임플레이가 이름 붙은 목표(월드 자리 · 요)를 넣고(`setWarpTarget` — 상호작용 시작이 맞춤 마커를 넣는다),
   클립의 `MotionWarp` 구간 알림이 창을 엽니다. 애니메이터가 루트 모션을 옮기기 전에(`IRootMotionModifier`) 남은 루트 모션(지금 → 창 끝, 루트 모션 트랙)과

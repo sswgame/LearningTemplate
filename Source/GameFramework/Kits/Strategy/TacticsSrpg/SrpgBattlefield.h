@@ -218,7 +218,7 @@ namespace sw
         // --- 조회 ---
         static bool           isHostile( SrpgTeam lhs, SrpgTeam rhs ) { return lhs != rhs; }
         static int32          computeDistance( const int2& lhs, const int2& rhs );
-        bool                  isInside( const int2& cell ) const { return 0 <= cell._x && cell._x < _width && 0 <= cell._y && cell._y < _height; }
+        bool                  isInside( const int2& cell ) const { return _topology.isInside( cell ); }
         const SrpgTerrainDef* findTerrainAt( const int2& cell ) const;
         /** @brief 그 칸에 선 살아 있는 유닛입니다. 없으면 −1 입니다. */
         int32 findUnitAt( const int2& cell ) const;
@@ -233,8 +233,8 @@ namespace sw
         const SrpgSettings&     getSettings() const { return _settings; }
         const SrpgCatalog*      getCatalog() const { return _pCatalog; }
         GameRandom&             getRandom() { return _random; }
-        int32                   getWidth() const { return _width; }
-        int32                   getHeight() const { return _height; }
+        int32                   getWidth() const { return _topology._width; }
+        int32                   getHeight() const { return _topology._height; }
 
     private:
         void startPhase( SrpgTeam team );
@@ -252,8 +252,7 @@ namespace sw
         TurnOrder                     _turnOrder;
         GameRandom                    _random;
         const SrpgCatalog*            _pCatalog;
-        int32                         _width;
-        int32                         _height;
+        GridTopology                  _topology;
         int32                         _turn;
         int32                         _activeUnit;
         SrpgTeam                      _phaseTeam;

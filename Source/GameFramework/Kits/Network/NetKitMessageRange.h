@@ -38,10 +38,10 @@ namespace sw
      */
     struct NetKitWireVersion
     {
-        static constexpr uint32 kClientServer = 2;
+        static constexpr uint32 kClientServer = 3;
         static constexpr uint32 kLockstep     = 3;
-        static constexpr uint32 kTurnRelay    = 2;
-        static constexpr uint32 kMmo          = 2;
-        static constexpr uint32 kDestruction  = 1;
+        static constexpr uint32 kTurnRelay    = 3; ///< 3: 행동 상한 8 KB(N20b)
+        static constexpr uint32 kMmo          = 3; ///< 3: 들어옴을 틱마다 메시지 하나로(N20b)
+        static constexpr uint32 kDestruction  = 2; ///< 2: 스냅숏 조각 → 메시지 하나(N20b)
     };
 } // namespace sw

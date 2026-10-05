@@ -149,7 +149,10 @@ namespace sw
         /** @brief 중첩 컨테이너를 바이너리로 직렬화합니다. */
         SW_API static void serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
                                                            vector<uint8>& listBuffer, const SerializeContext& ctx );
-        /** @brief 바이너리에서 중첩 컨테이너를 역직렬화합니다. 원소 · 키 · 값은 `wireVersion` 으로 읽습니다(`deserializeValueBinary`). */
+        /**
+         * @brief 바이너리에서 중첩 컨테이너를 역직렬화합니다. 원소 · 키 · 값은 `wireVersion` 으로 읽습니다(`deserializeValueBinary`).
+         * @details 원소 · 항목 실패 규칙은 `ContainerVisitor` 의 것이다(모르는 열거자는 그 원소만 빼고 칸 실패).
+         */
         [[nodiscard]] SW_API static bool deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
                                                                            const uint8* pData, size_t dataSize, size_t& offset,
                                                                            const SerializeContext& ctx,

@@ -67,9 +67,12 @@ jobs:
             os: ubuntu-22.04
             preset: CI-Debug-ASAN
 
+          # 프리셋이 트리플릿 `x64-linux-tsan`(cmake/Modules/Toolchain/VcpkgTsan — Jolt · Box2D 를 -fsanitize=thread 로 짓는다)을 쓴다. 트리플릿 파일이
+          # ABI 해시에 들어 포트가 다른 리눅스 잡과 하나도 겹치지 않으므로 vcpkg 캐시를 따로 둔다(`vcpkgCache`, 아래 Restore 단계 주석).
           - name: Build Linux TSan (Clang)
             os: ubuntu-22.04
             preset: CI-Debug-TSAN
+            vcpkgCache: vcpkg-bin-tsan
 
           # `SW_ENABLE_STL_CONTAINER` 구성(표준 컨테이너 · 할당자)이 컴파일되는지 지킨다. 기본 빌드가 쓰지 않는 옵션이라 돌리지 않으면 썩는다.
           # 다른 잡과 나란히 돌아 벽시계 시간은 늘지 않고, Windows Debug 잡 하나만큼 러너 시간이 는다.
@@ -116,7 +119,7 @@ jobs:
           libclang-dev libtinfo5 zlib1g-dev \
           libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
           libxext-dev libxfixes-dev libxcb1-dev libx11-xcb-dev \
-          libgl1-mesa-dev libglu1-mesa-dev libvulkan-dev
+          libgl1-mesa-dev libglu1-mesa-dev libvulkan-dev vulkan-validationlayers
         for candidate in $(ls -d /usr/lib/llvm-* 2>/dev/null | sort -V -r) /usr; do
           if [ -f "$candidate/include/clang-c/Index.h" ]; then
             echo "LLVM_DIR=$candidate" >> "$GITHUB_ENV"
@@ -128,17 +131,20 @@ jobs:
 
     # vcpkg 바이너리 캐시 — 복원과 저장을 나눈다. `actions/cache` 하나로 두면 저장이 잡 끝(post)에 **잡이 성공했을 때만** 돌아, 시험 하나가
     # 지거나 실행이 취소되면 방금 1 시간 걸려 지은 포트가 버려지고 다음 실행이 또 처음부터 짓는다(2026-10-04: Configure 50~90 분이 매번).
-    # 구성이 끝난 바로 뒤에 저장한다. 키에 프리셋을 넣지 않는다 — 트리플릿은 OS 하나에 하나(x64-windows · x64-linux)라 같은 OS 의 잡이 같은
+    # 구성이 끝난 바로 뒤에 저장한다. 키에 프리셋을 넣지 않는다 — 기본 트리플릿은 OS 하나에 하나(x64-windows · x64-linux)라 같은 OS 의 잡이 같은
     # 패키지를 쓰고, 프리셋마다 따로 두면 저장소 캐시 한도(10 GB, sccache 항목과 나눠 쓴다)를 세 배로 먹어 서로를 밀어낸다.
+    # 다른 트리플릿을 쓰는 잡(TSan 의 `x64-linux-tsan`)만 매트릭스의 `vcpkgCache` 로 이름을 가른다. 이름은 `vcpkg-bin-<OS>-` 로 시작하면 안 된다 —
+    # 다른 잡의 restore-keys 가 접두어로 그 캐시(그 잡의 트리플릿 패키지가 없다)를 집어 포트를 처음부터 짓게 된다.
+    # 그 트리플릿은 `Toolchain/Vcpkg/` 밖(`Toolchain/VcpkgTsan/`)에 있어 기본 키를 바꾸지 않는다 — `vcpkgCache` 가 있는 잡만 그 폴더 해시를 키 끝에 붙인다.
     # `Tools/vcpkg`(클론 · buildtrees · downloads)는 넣지 않는다 — 바이너리 캐시만 있으면 포트를 다시 짓지 않고, 클론은 아래 단계가 한다.
     - name: Restore vcpkg binary cache
       id: vcpkg-cache
       uses: actions/cache/restore@v5
       with:
         path: ${{ github.workspace }}/build/vcpkg_cache
-        key: vcpkg-bin-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**', 'ThirdParty/*/vcpkg-port/**') }}
+        key: ${{ matrix.vcpkgCache || 'vcpkg-bin' }}-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**', 'ThirdParty/*/vcpkg-port/**') }}${{ matrix.vcpkgCache && format('-{0}', hashFiles('cmake/Modules/Toolchain/VcpkgTsan/**')) || '' }}
         restore-keys: |
-          vcpkg-bin-${{ runner.os }}-
+          ${{ matrix.vcpkgCache || 'vcpkg-bin' }}-${{ runner.os }}-
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11

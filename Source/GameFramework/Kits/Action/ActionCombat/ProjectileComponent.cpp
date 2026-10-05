@@ -2,10 +2,13 @@
 
 #include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
+#include "GameFramework/Utility/LifeSpanUtil.h"
 
 namespace sw
 {
@@ -39,19 +42,21 @@ namespace sw
                 SW_LOG_WARNING( "Projectile '%#' has no BoxCollider2DComponent on its object - it moves but can never hit anything", pOwner->getName().c_str() );
         }
 
-        _currentLife = 0.0f;
+        // 흐른 수명은 처음으로 되돌리지 않는다 — 날던 중에 상태를 다시 읽은 투사체(플레이 중 되돌리기 · 핫 리로드)가 수명을 다시 시작하지 않게.
+        // 새로 만든 투사체는 생성자가 0 으로 둔다.
+        _currentLife = MathUtil::max( _currentLife, 0.0f );
     }
 
     void ProjectileComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
 
-        _currentLife += deltaTime;
-        GameObject* pOwner = getOwner();
+        const bool  bExpired = LifeSpanUtil::advance( _currentLife, _lifeTime, deltaTime );
+        GameObject* pOwner   = getOwner();
         if ( pOwner == nullptr )
             return;
 
-        if ( _lifeTime > 0.0f && _currentLife >= _lifeTime )
+        if ( bExpired )
         {
             // 표시만 하면 파괴 목록에 들어가지 않아 오브젝트가 풀로 돌아오지 않는다.
             pOwner->destroy();

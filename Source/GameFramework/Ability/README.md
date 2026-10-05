@@ -2,7 +2,7 @@
 
 `GameFramework` 타깃의 일부입니다(키트가 아님 — 장르를 가리지 않습니다). 액션 · 턴제 · 오버월드 어느 게임이든
 "숫자 상태 + 그것을 바꾸는 효과 + 조건을 지나 발동하는 행동 + 태그" 가 필요하면 이것을 씁니다.
-시험: `EngineTest` 의 `AbilitySystemTest`(`Test/EngineTest/TestAbilitySystem.cpp`). 실제로 쓰는 게임: `Source/Games/AbilityArena`.
+시험: `EngineTest` 의 `AbilitySystemTest`(`Test/EngineTest/GameFramework/Ability/TestAbilitySystem.cpp`). 실제로 쓰는 게임: `Source/Games/AbilityArena`.
 
 ## 구성 — 언리얼 이름과 1:1
 
@@ -104,7 +104,7 @@ public:
 
 ## 연결된 UI
 
-체력 · 최대 체력이 바뀔 때마다 같은 오브젝트의 `HealthListenerComponent`(HP 바 `HealthBarComponent` 가 상속한다)에 비율을 알립니다 — 어빌리티 시스템은 바를 모릅니다. `setShowDamageNumbers( true )` 면 체력이 깎일 때
+어빌리티 시스템은 체력 원천(`HealthSourceComponent`)입니다 — 체력 · 최대 체력이 바뀔 때마다 같은 오브젝트의 `HealthListenerComponent`(HP 바 `HealthBarComponent` 가 상속한다)에 비율을 알리고, 체력이 0 이면 쓰러짐으로 알립니다 — 어빌리티 시스템은 바를 모릅니다. `setShowDamageNumbers( true )` 면 체력이 깎일 때
 `DamageNumberComponent` 숫자를 띄웁니다. 어트리뷰트 이름은 `setHealthAttributes` 로 바꿉니다(기본 `Health` · `MaxHealth`).
 
 ## 카탈로그 XML

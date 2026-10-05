@@ -12,7 +12,6 @@
 #include "GameFramework/Ability/AbilityCatalog.h"
 #include "GameFramework/Ability/AbilitySystemEvents.h"
 #include "GameFramework/Ability/GameplayAbility.h"
-#include "GameFramework/Combat/HealthListenerComponent.h"
 #include "GameFramework/Framework/GameEventUtil.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/UI/DamageNumberComponent.h"
@@ -221,7 +220,7 @@ namespace sw
         Component::onBeginPlay();
         if ( _abilitySetId.empty() == false )
             (void)grantAbilitySet( _abilitySetId ); // 실패는 안에서 알린다
-        syncHealthBar( true );
+        notifyHealthChanged( true );
     }
 
     void AbilitySystemComponent::onEndPlay()
@@ -328,7 +327,7 @@ namespace sw
         {
             recomputeAttribute( name );
         }
-        syncHealthBar( true );
+        notifyHealthChanged( true );
         return pRaw;
     }
 
@@ -1052,7 +1051,21 @@ namespace sw
     {
         _healthAttribute    = health;
         _maxHealthAttribute = maxHealth;
-        syncHealthBar( true );
+        notifyHealthChanged( true );
+    }
+
+    HealthReading AbilitySystemComponent::getHealthReading() const
+    {
+        HealthReading reading;
+        if ( hasAttribute( _healthAttribute ) == false )
+        {
+            reading._bHasHealth = SW_FALSE;
+            return reading;
+        }
+        reading._health    = getAttributeValue( _healthAttribute );
+        reading._maxHealth = getAttributeValue( _maxHealthAttribute );
+        reading._bDead     = reading._health <= 0.0f ? SW_TRUE : SW_FALSE;
+        return reading;
     }
 
     // ------------------------------------------------------------------------------
@@ -1464,7 +1477,7 @@ namespace sw
 
         const bool bHealth = name == _healthAttribute;
         if ( bHealth || name == _maxHealthAttribute )
-            syncHealthBar( false );
+            notifyHealthChanged( false );
         if ( bHealth && newValue < oldValue && _bShowDamageNumbers )
             spawnDamageNumber( oldValue - newValue );
     }
@@ -1608,19 +1621,6 @@ namespace sw
         if ( pManager == nullptr || pManager->isStructuralMutationFrozen() == false )
             return true;
         return GameObjectManager::getTickingObject() == pOwner;
-    }
-
-    void AbilitySystemComponent::syncHealthBar( bool bReset )
-    {
-        const GameObject* pOwner = getOwner();
-        if ( pOwner == nullptr || hasAttribute( _healthAttribute ) == false )
-            return;
-
-        const float32      maxHealth = getAttributeValue( _maxHealthAttribute );
-        HealthChangedEvent event;
-        event._ratio = maxHealth > 0.0f ? MathUtil::clamp( getAttributeValue( _healthAttribute ) / maxHealth, 0.0f, 1.0f ) : 0.0f;
-        event._kind  = bReset ? HealthChangeKind::Reset : HealthChangeKind::Changed;
-        HealthListenerComponent::broadcast( *pOwner, event );
     }
 
     void AbilitySystemComponent::spawnDamageNumber( float32 amount )

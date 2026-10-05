@@ -9,6 +9,7 @@
 #include "App/Module/LiveReloadManager.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/Process.h"
 
 #include "TestFramework/TestFramework.h"
@@ -37,7 +38,7 @@ namespace
     /** @brief @p processId 가 만든 것으로 이름 지은 SWGame 복사본 경로입니다. */
     sw::string makeCopyPath( const sw::string& directory, int32 processId, uint32 serial )
     {
-        return sw::FileUtil::joinPath( directory, sw::FileUtil::formatSharedLibraryName( sw::ShadowCopyName::make( "SWGame", processId, serial, 1234 ) ) );
+        return sw::FileUtil::joinPath( directory, sw::ModuleImageUtil::formatSharedLibraryName( sw::ShadowCopyName::make( "SWGame", processId, serial, 1234 ) ) );
     }
 } // namespace
 
@@ -50,7 +51,7 @@ SW_TEST_CASE( ShadowCopyNameTest, NameCarriesTheProcessThatMadeIt )
     SW_EXPECT_STREQ( "GF_Overworld_temp_p4120_3_13435508261", name.c_str() );
 
     int32 processId{ -1 };
-    SW_EXPECT_TRUE( sw::ShadowCopyName::parse( "D:/Bin/" + sw::FileUtil::formatSharedLibraryName( name ), processId ) );
+    SW_EXPECT_TRUE( sw::ShadowCopyName::parse( "D:/Bin/" + sw::ModuleImageUtil::formatSharedLibraryName( name ), processId ) );
     SW_EXPECT_EQUAL( 4120, processId );
     // 디버그 심볼과 원자적 쓰기의 임시 파일도 같은 복사본의 것이다.
     SW_EXPECT_TRUE( sw::ShadowCopyName::parse( "GF_Overworld_temp_p4120_3_13435508261.pdb", processId ) );
@@ -102,7 +103,7 @@ SW_TEST_CASE( ShadowCopyNameTest, CleanupKeepsCopiesOfOtherLiveProcesses )
     const sw::string livePath      = makeCopyPath( directory, liveProcessId, 1 );
     const sw::string ownPath       = makeCopyPath( directory, sw::Process::getCurrentProcessId(), 2 );
     const sw::string donePath      = makeCopyPath( directory, doneProcessId, 3 );
-    const sw::string legacyPath    = sw::FileUtil::joinPath( directory, sw::FileUtil::formatSharedLibraryName( "SWGame_temp_4_1234" ) );
+    const sw::string legacyPath    = sw::FileUtil::joinPath( directory, sw::ModuleImageUtil::formatSharedLibraryName( "SWGame_temp_4_1234" ) );
     const sw::string unrelatedPath = sw::FileUtil::joinPath( directory, "SWGame.txt" );
     for ( const sw::string* pPath : { &livePath, &ownPath, &donePath, &legacyPath, &unrelatedPath } )
     {

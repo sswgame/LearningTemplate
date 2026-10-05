@@ -42,7 +42,7 @@ namespace sw
         void writeGpuLightKindFields( GpuLight& outLight ) const override;
 
     private:
-        PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Meta = "Units=m" )
+        PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m )
         float32 _radius;
     };
 } // namespace sw

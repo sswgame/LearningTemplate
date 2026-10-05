@@ -3,6 +3,7 @@
  * @brief RHI 백엔드 능력과 OS · 빌드 가용성 조회입니다.
  */
 #pragma once
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -37,7 +38,7 @@ namespace sw
          * @brief 워커 스레드에서 GPU 리소스를 **만들어도** 되는지입니다(그리기가 아니라 생성만).
          * @details DX12 · Vulkan 은 디바이스 레벨 생성이 스펙상 스레드 안전하고, DX11 도 ID3D11Device 는
          *          (컨텍스트와 달리) 안전합니다. OpenGL 은 `glGen*` 이 **현재 컨텍스트**를 필요로 해 안 됩니다.
-         *          `GpuUploadQueue` 가 이 값으로 워커 병렬과 인라인을 가릅니다.
+         *          `GpuUploadQueue` 가 이 값으로 워커 병렬과 "받지 않음(렌더 스레드가 만든다)" 을 가릅니다.
          */
         uint8 _bThreadSafeResourceCreation{ SW_FALSE };
 

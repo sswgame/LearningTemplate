@@ -108,19 +108,19 @@ namespace sw
 
         PROPERTY( Category = "Agent", DisplayName = "Agent Type", Tooltip = "Navmesh agent kind from the navigation settings (empty = default)" )
         hashed_string _agentType;
-        PROPERTY( Category = "Agent", Min = 0.0, Tooltip = "Top speed", Meta = "Units=m/s" )
+        PROPERTY( Category = "Agent", Min = 0.0, Tooltip = "Top speed", Units = "m/s" )
         float32 _maxSpeed;
-        PROPERTY( Category = "Agent", Min = 0.0, Tooltip = "How fast the speed changes", Meta = "Units=m/s^2" )
+        PROPERTY( Category = "Agent", Min = 0.0, Tooltip = "How fast the speed changes", Units = "m/s2" )
         float32 _maxAcceleration;
-        PROPERTY( Category = "Agent", Min = 0.0, Tooltip = "Arrives and stops inside this distance of the destination", Meta = "Units=m" )
+        PROPERTY( Category = "Agent", Min = 0.0, Tooltip = "Arrives and stops inside this distance of the destination", Units = m )
         float32 _stoppingDistance;
-        PROPERTY( Category = "Agent", Min = 0.0, Tooltip = "Body radius used for avoidance (0 = the agent type's)", Meta = "Units=m" )
+        PROPERTY( Category = "Agent", Min = 0.0, Tooltip = "Body radius used for avoidance (0 = the agent type's)", Units = m )
         float32 _radius;
         PROPERTY( Category = "Avoidance", Min = 0.0, Tooltip = "How hard agents push apart" )
         float32 _separationWeight;
         PROPERTY( Category = "Avoidance", Tooltip = "Sampling effort of the velocity obstacle avoidance" )
         NavAvoidanceQuality _avoidanceQuality;
-        PROPERTY( Category = "Movement", Min = 0.0, Tooltip = "How fast the body turns to face its velocity", Meta = "Units=rad/s" )
+        PROPERTY( Category = "Movement", Min = 0.0, Tooltip = "How fast the body turns to face its velocity", Units = "rad/s" )
         float32 _turnRate;
         PROPERTY( Category = "Movement", Tooltip = "Moves the object (off when a character controller or game code moves it)" )
         bool _bUpdatePosition;

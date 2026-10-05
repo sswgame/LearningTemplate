@@ -76,7 +76,7 @@ namespace sw
         bool consumeMovedFlag();
         /** @brief 대기 중인 워프 요청을 소비합니다. */
         bool consumeWarpRequest( string& outMapPath, int32& outSpawnX, int32& outSpawnY );
-        /** @brief 대기 중인 조우 요청을 소비합니다. */
+        /** @brief 대기 중인 조우 요청을 소비합니다. 무엇을 만나는지는 게임이 장르 키트의 지역 표로 정합니다(지역 = 존 id · 태그). */
         bool consumeEncounterRequest();
         /** @brief 대기 중인 상호작용 요청을 소비합니다. */
         bool consumeInteractRequest();

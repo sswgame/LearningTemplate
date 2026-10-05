@@ -7,7 +7,9 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Graphics/RHI/RHIInitResult.h"
 
 namespace sw
 {
@@ -87,6 +89,11 @@ namespace sw
 
         /** @brief 표면(`setRenderSurface`)에서 스왑체인 서술(크기 · 백버퍼 3 개 · 포맷 · VSync)을 채워 `initializeInternal` 을 부릅니다. */
         virtual bool initialize();
+        /**
+         * @brief 마지막 `initialize` 의 결과입니다. 실패면 이유가 환경(드라이버가 기능을 안 준다)인지 결함일 수 있는지를 가립니다.
+         * @details 백엔드는 환경 탓으로 물러날 때만 `initializeInternal` 안에서 `_initResult` 를 `DriverUnsupported` 로 적고 false 를 돌려줍니다.
+         */
+        RHIInitResult getInitResult() const { return _initResult; }
         /**
          * @brief 디바이스를 종료합니다. 단계 순서는 이 함수 하나가 정하고, 백엔드는 단계 훅만 채웁니다.
          * @details 1) 자원을 든 쪽에 알린다(`RHIRenderResource::releaseAllFor` — 디바이스가 살아 있어 돌려줄 수 있다)
@@ -477,6 +484,8 @@ namespace sw
         bool _bImmediateSubmit;
         /// @brief 지금이 병렬 패스 기록 구간인지입니다(setParallelRecording 참고).
         bool _bParallelRecording;
+        /// @brief 마지막 `initialize` 의 결과입니다(getInitResult 참고).
+        RHIInitResult _initResult;
         /// @brief GPU 자원 장부입니다(getMemoryLedger 참고). 해제 큐가 비워지는 백엔드 소멸자보다 오래 삽니다(기반 클래스 멤버).
         unique_ptr<RHIMemoryLedger> _memoryLedger;
         /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 렌더 스레드가 든 프레임 수입니다(releaseHandle 참고).

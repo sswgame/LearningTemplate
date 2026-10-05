@@ -17,9 +17,9 @@
 #include "Engine/EngineBootstrap.h"
 #include "Engine/EngineInitSequence.h"
 #include "Engine/EngineServiceCollection.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
-#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
-#include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -32,8 +32,8 @@
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/CommandStack.h"
-#include "Engine/Utility/Debug/DebugOverlayState.h"
-#include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/DebugOverlayState.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 #include "GameFramework/Framework/GameService.h"
 

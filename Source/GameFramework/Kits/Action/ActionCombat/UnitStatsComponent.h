@@ -3,9 +3,9 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Combat/HealthSourceComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -14,7 +14,7 @@ namespace sw
     struct MonsterDef;
 
     REFLECT( Category = "Gameplay", DisplayName = "Unit Stats Component", Tooltip = "Manages HP, Attack, Defense, Movement Speed, and Invincibility" )
-    class SW_GF_API UnitStatsComponent : public Component
+    class SW_GF_API UnitStatsComponent : public HealthSourceComponent
     {
     public:
         REFLECT_BODY();
@@ -29,7 +29,7 @@ namespace sw
 
         /**
          * @brief 피해를 줍니다 — 투사체 · 공격 판정 · 게임 코드가 모두 이 하나를 지납니다(언리얼 `AActor::TakeDamage`).
-         * @details 방어력을 빼고 최소 1 을 깎은 뒤 무적 시간을 겁니다. 죽었거나 무적이면 아무것도 하지 않습니다. HP 가 깎였으면 그 자리에서
+         * @details 방어력을 빼고 최소 1 을 깎은 뒤 무적 시간을 겁니다(`DamageMath::applyArmor`). 죽었거나 무적이거나 @p amount 가 0 이하면 아무것도 하지 않습니다. HP 가 깎였으면 그 자리에서
          *          `registerDamageApplied` 의 델리게이트를 부르고 `DamageAppliedEvent` 를 "game" 채널에 냅니다(`GameEventUtil::send`). 틱 중(구조 동결)이면
          *          틱 직후로 미루고, 미룬 것도 @p instigator 를 들고 갑니다.
          * @param instigator 피해를 낸 쪽(쏜 · 휘두른 오브젝트). 이벤트에 그대로 실립니다. 모르면 무효 핸들
@@ -57,6 +57,8 @@ namespace sw
         /** @brief 기본 이동 속도입니다 — 초당 월드 유닛(m/s)입니다. 이동 코드는 프레임 시간을 곱해 씁니다(`getMoveSpeed() * deltaTime`). */
         float32 getMoveSpeed() const { return _moveSpeed; }
         bool    isDead() const { return _bIsDead; }
+        /** @brief 체력 원천의 읽기입니다 — HP · 최대 HP · 죽음을 그대로 옮깁니다. */
+        HealthReading getHealthReading() const override;
 
         /** @brief 스탯을 한 번에 정합니다. 같은 오브젝트의 HP 바는 새 비율로 다시 맞춥니다(흔적 없이). */
         void setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime );
@@ -74,11 +76,6 @@ namespace sw
         /** @brief 피해를 지금 적용하고 깎였으면 `DamageAppliedEvent` 를 냅니다. 피해가 HP 에 닿는 유일한 자리입니다. */
         void applyTakeDamage( int32 amount, GameObjectHandle instigator );
         void applyHeal( int32 amount );
-        /**
-         * @brief 같은 오브젝트의 체력 받는 쪽(`HealthListenerComponent` — HP 바)에 지금 HP 비율을 알립니다. @p bReset 이면 흔적 없이(시작 · 스탯 재설정), 아니면 바뀜(피해 · 회복).
-         * @details HP 가 바뀌는 자리(피해 · 회복 · 스탯 설정 · 시작)가 이것을 부른다 — 알리는 곳은 여기 하나다. 바를 모른다.
-         */
-        void syncHealthBar( bool bReset );
         /** @brief 깎인 피해 @p amount 를 데미지 숫자 오브젝트로 띄웁니다(`_bShowDamageNumbers` 일 때). */
         void spawnDamageNumber( int32 amount );
 
@@ -92,17 +89,17 @@ namespace sw
         int32 _attack;
         PROPERTY( Category = "Stats", DisplayName = "Defense", Tooltip = "Defense rating", Min = 0.0 )
         int32 _defense;
-        PROPERTY( Category = "Movement", DisplayName = "Move Speed", Tooltip = "Base movement speed in world units per second", Min = 0.0, Max = 50.0, Meta = "Units=m/s" )
+        PROPERTY( Category = "Movement", DisplayName = "Move Speed", Tooltip = "Base movement speed in world units per second", Min = 0.0, Max = 50.0, Units = "m/s" )
         float32 _moveSpeed;
-        PROPERTY( Category = "Combat", DisplayName = "Invincibility Timer", Tooltip = "Remaining invincibility time", Transient, ReadOnly, Meta = "Units=s" )
+        PROPERTY( Category = "Combat", DisplayName = "Invincibility Timer", Tooltip = "Remaining invincibility time", Transient, ReadOnly, Units = s )
         float32 _invincibilityTime;
-        PROPERTY( Category = "Combat", DisplayName = "Max Invincibility Time", Tooltip = "Duration of invincibility after taking damage", Min = 0.0, Max = 10.0, Meta = "Units=s" )
+        PROPERTY( Category = "Combat", DisplayName = "Max Invincibility Time", Tooltip = "Duration of invincibility after taking damage", Min = 0.0, Max = 10.0, Units = s )
         float32 _maxInvincibilityTime;
         PROPERTY( Category = "State", DisplayName = "Is Dead", Tooltip = "Whether the unit is currently dead", ReadOnly )
         bool _bIsDead;
         PROPERTY( Category = "Feedback", DisplayName = "Show Damage Numbers", Tooltip = "Spawn a floating damage number for each hit" )
         bool _bShowDamageNumbers;
-        PROPERTY( Category = "Feedback", DisplayName = "Damage Number Offset", Tooltip = "Where damage numbers appear, relative to the unit", Meta = "Units=m" )
+        PROPERTY( Category = "Feedback", DisplayName = "Damage Number Offset", Tooltip = "Where damage numbers appear, relative to the unit", Units = m )
         float3 _damageNumberOffset;
     };
 } // namespace sw

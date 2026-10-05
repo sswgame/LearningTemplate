@@ -1,66 +1,6 @@
 {
     "culture": "en",
     "entries": {
-        "battle.foe_fainted": {
-            "source": "{name} fainted! You won!",
-            "origins": [
-                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
-            ]
-        },
-        "battle.got_away": {
-            "source": "Got away safely!",
-            "origins": [
-                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
-            ]
-        },
-        "battle.no_move": {
-            "source": "{name} has no usable move!",
-            "origins": [
-                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
-            ]
-        },
-        "battle.no_pp": {
-            "source": "{name} has no PP!",
-            "origins": [
-                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
-            ]
-        },
-        "battle.player_fainted": {
-            "source": "{name} fainted...",
-            "origins": [
-                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
-            ]
-        },
-        "battle.prompt_fight": {
-            "source": "Fight: 1/2 moves, Enter=Move0, Esc=Run",
-            "origins": [
-                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
-            ]
-        },
-        "battle.used_move": {
-            "source": "{name} used {move}!",
-            "origins": [
-                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
-            ]
-        },
-        "battle.used_move_dmg": {
-            "source": "{name} used {move}! ({damage} dmg)",
-            "origins": [
-                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
-            ]
-        },
-        "battle.what_will": {
-            "source": "What will {name} do?",
-            "origins": [
-                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
-            ]
-        },
-        "battle.wild_appeared": {
-            "source": "A wild {name} appeared!",
-            "origins": [
-                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
-            ]
-        },
         "settings.accessibility.colorVision": {
             "source": "Color Vision Mode",
             "context": "Options menu label",

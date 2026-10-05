@@ -16,7 +16,7 @@ culture fallback · ICU 포맷 · 의사 로컬라이즈)와 유니티 Localizat
 | `TranslationMemory.*` | 번역 메모리(`tm/<culture>.tm.json`) — 같은 원문 · 정규화 · 편집 거리 근사 일치 |
 | `PortableObjectFile.*` | gettext PO 읽기 · 쓰기(msgctxt 키 · `#.` · `#:` · `#` 번역가 메모 · `#, fuzzy` · `#|` 옛 원문) |
 
-수집 · 교환 명령의 본문은 엔진 루트의 `LocalizationTools.*` 다(대화 에셋 · 소스 트리를 함께 보므로 티어 맨 위).
+수집 · 교환 명령의 본문은 `DevTools/LocalizationTools.*` 다(대화 에셋 · 게임 설정을 함께 보므로 Localization(티어 2)이 아니라 개발 도구(티어 7)에 있다).
 
 ## 데이터
 

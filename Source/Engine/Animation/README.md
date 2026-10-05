@@ -135,7 +135,7 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
 - **가산 포즈의 회전은 `inverse(ref) * pose`**(로컬에서 먼저 적용), 얹을 때 `base * delta` 입니다. 순서를 바꾸면 부모 공간에서 돌아 팔이 엉뚱한 축으로 돈다.
 - **알림은 반 열린 구간 (이전, 지금]** 이고, 재생 직후 첫 걸음만 시작 시각을 포함합니다. 반복 경계는 (이전, 끝] + [0, 지금] — 한 시각의 알림이 한 바퀴에 한 번.
   길이가 있는 알림(구간 · NotifyState)은 시작에서 `Begin`, 끝(시작 + 길이, 한 바퀴 끝을 넘지 않음)에서 `End` 가 울리고 같은 시각이면 `End` 가 먼저입니다.
-  `AnimFiredNotify::_pSource` · `_eventIndex` 가 구간 하나를 가립니다. 처리(이름 → 처리기)는 `Engine/Character/AnimNotifyComponent` — 애니메이터는 받는 쪽
+  `AnimFiredNotify::_pSource` · `_eventIndex` 가 구간 하나를 가립니다. 처리(이름 → 처리기)는 `Engine/Character/AnimNotify/AnimNotifyComponent` — 애니메이터는 받는 쪽
   (`IAnimNotifyListener`, `Object/Animation/AnimNotifyListener.h`)에 프레임마다 한 번 넘깁니다.
 - **크로스페이드가 다른 크로스페이드로 끊기면 플레이어는 섞이던 한 칸을 버린다**(`AnimPlayer::getInterruptCount` 가 오른다). 스켈레탈 애니메이터는 끊긴 순간의
   기본 포즈를 새 페이드 길이 동안 섞어 사라지게 해 이어 붙인다 — 포즈를 직접 섞는 다른 소비자(스프라이트는 프레임이라 해당 없음)도 같은 일을 해야 튀지 않는다.

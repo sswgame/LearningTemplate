@@ -13,7 +13,7 @@ namespace sw
 {
     struct DialogueStepInput;
 
-    class IFlagStore;
+    class GameFlags;
 
     ENUM()
     enum class DialogueRunnerState : uint8
@@ -82,7 +82,8 @@ namespace sw
         FUNCTION( Category = "Preview", DisplayName = "Preview Line", EditorPreview = "DialogueLine" )
         void previewLine( string speaker, string text );
 
-        void setFlagStore( IFlagStore* pFlagStore );
+        /** @brief Branch 조건 · `set_flag:` 명령이 읽고 쓰는 월드 플래그입니다(빌려 씁니다 — 러너보다 오래 살아야 합니다). nullptr 이면 모든 플래그가 0 입니다. */
+        void setFlags( GameFlags* pFlags );
 
         DialogueRunnerState   getState() const;
         int32                 getCurrentNodeId() const;
@@ -97,9 +98,9 @@ namespace sw
 
     private:
         /**
-         * @brief Branch 노드의 조건식을 평가합니다. 빈 식은 참입니다.
-         * @details 모양은 `[flag.]키` (= `키 == 1`) 또는 `[flag.]키 <연산자> 정수` 이고 연산자는 `==` · `!=` · `>=` · `<=` · `>` · `<` 입니다.
-         *          읽지 못한 식(정수가 아닌 오른쪽, 표에 없는 연산자 글자)은 경고하고 거짓입니다.
+         * @brief Branch 노드의 조건식을 월드 플래그 조건식으로 평가합니다. 빈 식은 참입니다.
+         * @details 문법은 `GameFlags`(`a && !b || count>=3`) 하나입니다 — 이름 하나는 0 이 아니면 참, 비교 오른쪽은 정수나 다른 플래그입니다.
+         *          읽지 못한 식은 경고하고 거짓입니다. 플래그 저장소가 없으면 모든 이름이 0 입니다.
          */
         bool evaluateCondition( const string& condition ) const;
         /** @brief `_graphPath` 의 그래프를 엽니다. 경로가 비었으면 아무것도 하지 않고, 못 열면 경고합니다. */
@@ -125,7 +126,7 @@ namespace sw
         void notifyChoices();
 
         DialogueGraphAsset     _graph;
-        IFlagStore*            _pFlagStore;
+        GameFlags*             _pFlags;
         string                 _currentSpeaker;
         string                 _currentText;
         vector<string>         _listCurrentChoice;

@@ -16,6 +16,7 @@
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 #include "GameFramework/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {
@@ -41,19 +42,18 @@ namespace sw
         int32 findGrapplePoint( const float2& position, float32 minDistance, float32 maxDistance ) const;
 
         const vector<float2>& getGrapplePoints() const { return _listGrapplePoint; }
-        int32                 getWidth() const { return _width; }
-        int32                 getHeight() const { return _height; }
+        int32                 getWidth() const { return _topology._width; }
+        int32                 getHeight() const { return _topology._height; }
 
     private:
         int32 computeTileX( float32 worldX ) const;
         int32 computeTileY( float32 worldY ) const;
 
-        vector<uint8>  _listDirt; ///< 칸마다 SW_TRUE/SW_FALSE
+        vector<uint8>  _listDirt; ///< 칸마다 SW_TRUE/SW_FALSE(`_topology` 의 칸 번호)
         vector<float2> _listGrapplePoint;
         float2         _origin;
         float32        _tileSize;
-        int32          _width;
-        int32          _height;
+        GridTopology   _topology;
     };
 } // namespace sw
 

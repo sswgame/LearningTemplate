@@ -111,9 +111,9 @@ namespace sw
         string _unitPrefab;
         PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the OrthoCameraRigComponent the mouse is picked through" )
         GameObjectHandle _cameraRig;
-        PROPERTY( Category = "Scene", DisplayName = "Watch Focus", Tooltip = "Camera focus when both players are AI (the whole map)", Meta = "Units=m" )
+        PROPERTY( Category = "Scene", DisplayName = "Watch Focus", Tooltip = "Camera focus when both players are AI (the whole map)", Units = m )
         float3 _watchFocus;
-        PROPERTY( Category = "Scene", DisplayName = "Watch Ortho Height", Tooltip = "Camera height when both players are AI", Min = 0.1, Meta = "Units=m" )
+        PROPERTY( Category = "Scene", DisplayName = "Watch Ortho Height", Tooltip = "Camera height when both players are AI", Min = 0.1, Units = m )
         float32 _watchOrthoHeight;
 
         RtsCatalog                           _catalog;

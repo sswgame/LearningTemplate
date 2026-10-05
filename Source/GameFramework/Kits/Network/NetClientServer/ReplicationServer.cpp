@@ -4,9 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetHost.h"
-
-#include <algorithm>
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Message/NetSendBudget.h"
 
 namespace sw
 {
@@ -21,7 +20,9 @@ namespace sw
         , _snapshotScratch{}
         , _listConnectionScratch{}
         , _listClientScratch{}
+        , _worldEntityCount{ 0 }
         , _oversizedEntityCount{ 0 }
+        , _snapshotBudgetBytes{ 0 }
         , _pRangeConnection{ nullptr }
         , _ppRangeClient{ nullptr }
     {
@@ -33,7 +34,8 @@ namespace sw
         _settings = settings;
         _pPolicy  = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
         _listClient.clear();
-        _world = NetSnapshot{};
+        _world            = NetSnapshot{};
+        _worldEntityCount = 0;
     }
 
     ReplicationServer::ClientState& ReplicationServer::acquireClient( int32 connectionId )
@@ -45,7 +47,8 @@ namespace sw
         {
             client          = ClientState{};
             client._bActive = SW_TRUE;
-            client._listSent.resize( static_cast<size_t>( MathUtil::max( 2, _settings._historySize ) ) );
+            client._listSent.initialize( MathUtil::max( 2, _settings._historySize ) );
+            client._input.initialize( MathUtil::max( 1, _settings._inputBufferSize ), NetClientServerMessage::kInputFormat, NetInputWindowMode::FollowNewest );
         }
         return client;
     }
@@ -72,8 +75,8 @@ namespace sw
 
     void ReplicationServer::beginTick( uint32 tick )
     {
-        _world._tick = tick;
-        _world._listEntity.clear();
+        _world._tick      = tick;
+        _worldEntityCount = 0; // 자리는 지우지 않는다 — `setEntity` 가 덮어쓰고 `endTick` 이 남는 것을 자른다(버퍼 용량을 다시 쓴다)
     }
 
     void ReplicationServer::setEntity( uint32 entityId, uint32 typeId, const vector<uint8>& buffer )
@@ -86,14 +89,19 @@ namespace sw
                                 entityId, static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
             ++_oversizedEntityCount;
         }
-        NetEntityState entity;
-        entity._entityId = entityId;
-        entity._typeId   = typeId;
-        entity._buffer   = buffer;
-        _world._listEntity.push_back( std::move( entity ) );
+        if ( _worldEntityCount == _world._listEntity.size() )
+            _world._listEntity.emplace_back();
+        NetEntityState& entity = _world._listEntity[_worldEntityCount++];
+        entity._entityId       = entityId;
+        entity._typeId         = typeId;
+        entity._buffer         = buffer; // 복사 대입 — 자리의 용량을 다시 쓴다
     }
 
-    void ReplicationServer::endTick() { _world.sortEntities(); }
+    void ReplicationServer::endTick()
+    {
+        _world._listEntity.resize( _worldEntityCount );
+        _world.sortEntities();
+    }
 
     void ReplicationServer::setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold ) { _parallel.setTaskManager( pTaskManager, serialThreshold ); }
 
@@ -101,6 +109,8 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return;
+        // 이번 틱의 예산 — 설정과 연결 상한의 몫 중 작은 것(호스트 잠금은 여기서 한 번, 워커는 이 값만 읽는다).
+        _snapshotBudgetBytes = NetSendBudget::computeTickBudget( _settings._snapshotBudgetBytes, _pHost->getMaxBytesPerSecond(), static_cast<float64>( _settings._tickInterval ) );
         // 클라이언트 상태는 나누기 전에 모두 잡는다 — `acquireClient` 는 목록을 키울 수 있다(나누는 중에는 아무도 목록을 건드리지 않는다).
         _pHost->collectConnected( _listConnectionScratch );
         _listClientScratch.resize( _listConnectionScratch.size() );
@@ -128,6 +138,7 @@ namespace sw
         NetSnapshot& filtered            = scratch._filtered;
         filtered._tick                   = _world._tick;
         filtered._lastProcessedInputTick = client._lastProcessedInputTick;
+        filtered._firstMissingInputTick  = client._input.getFirstMissingTick(); // 여러 워커가 읽기만 한다 — 입력은 보내기 전 게임 스레드가 넣었다
         NetPrioritizer& prioritizer      = client._prioritizer;
         prioritizer.beginAccumulate();
         size_t relevantCount = 0;
@@ -156,22 +167,23 @@ namespace sw
         const NetSnapshot* pBaseline = nullptr;
         if ( client._bHasAck )
         {
-            const NetSnapshot& candidate = client._listSent[static_cast<size_t>( client._ackedTick % client._listSent.size() )];
-            if ( candidate._tick == client._ackedTick && _world._tick - client._ackedTick < client._listSent.size() )
-                pBaseline = &candidate;
+            const NetSnapshot* pCandidate = client._listSent.find( client._ackedTick );
+            const bool         bRecent    = _world._tick - client._ackedTick < static_cast<uint32>( client._listSent.getCapacity() );
+            if ( pCandidate != nullptr && bRecent )
+                pBaseline = pCandidate;
         }
         BitWriter& writer = scratch._messageWriter.begin( NetClientServerMessage::kSnapshot );
-        // 보낸 재구성은 그 틱의 자리에 바로 쓴다(기준 자리와 겹치면 — 확인이 한 바퀴 늦었다 — 사본을 거친다).
-        NetSnapshot& slot = client._listSent[static_cast<size_t>( _world._tick % client._listSent.size() )];
+        // 보낸 재구성은 그 틱의 자리에 바로 쓴다(기준 자리와 겹치면 — 같은 틱을 두 번 보낸다 — 사본을 거친다). 자리의 옛 버퍼는 남는다.
+        NetSnapshot& slot = client._listSent.acquire( _world._tick );
         if ( &slot == pBaseline )
         {
             NetSnapshot written;
-            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, written, &listOrder, &scratch._listCurrent );
+            filtered.writeDelta( writer, pBaseline, _snapshotBudgetBytes, written, &listOrder, &scratch._listCurrent );
             slot = std::move( written );
         }
         else
         {
-            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, slot, &listOrder, &scratch._listCurrent );
+            filtered.writeDelta( writer, pBaseline, _snapshotBudgetBytes, slot, &listOrder, &scratch._listCurrent );
         }
         // 실었거나 받는 쪽이 이미 지금 상태인 것만 0 으로 — 못 실은 것은 쌓인 채로 다음 스냅샷에서 앞선다.
         for ( size_t index = 0; index < filtered._listEntity.size(); ++index )
@@ -204,36 +216,13 @@ namespace sw
 
     bool ReplicationServer::handleInput( ClientState& client, BitReader& reader )
     {
-        const uint32 latestTick = static_cast<uint32>( reader.readVarUint() );
-        const uint32 viewTick   = static_cast<uint32>( reader.readVarUint() );
-        const uint32 count      = static_cast<uint32>( reader.readVarUint() );
-        if ( reader.hasOverflowed() || count > static_cast<uint32>( NetClientServerMessage::kMaxRedundantInputCount ) )
+        const uint32 viewTick = static_cast<uint32>( reader.readVarUint() );
+        if ( reader.hasOverflowed() )
+            return false;
+        // 이미 꺼낸 틱 · 이미 가진 틱은 버퍼 없이 넘기고, 길이 · 개수 상한을 넘거나 모자라면 하나도 넣지 않고 깨짐으로 본다.
+        if ( client._input.read( reader ) == false )
             return false;
         client._viewTick = static_cast<float32>( viewTick ) / 256.0f;
-        // 새 것부터 실려 있다 — 이미 쓴 틱 · 이미 가진 틱은 건너뛴다.
-        for ( uint32 index = 0; index < count && index <= latestTick; ++index )
-        {
-            const uint32 tick = latestTick - index;
-            // 쓸 틱인지 먼저 본다 — 같은 입력이 여러 패킷에 겹쳐 실려 오므로 대부분은 버릴 것이고, 버릴 것에는 버퍼를 잡지 않는다.
-            // 길이가 상한을 넘으면 자르지 않고 깨짐으로 본다 — 자르면 남은 바이트를 다음 입력의 길이로 읽는다.
-            const auto inputIter    = std::lower_bound( client._listInput.begin(), client._listInput.end(), tick,
-                                                        []( const InputEntry& entry, uint32 value )
-               { return entry._tick < value; } );
-            const bool bAlreadyUsed = client._bHasInput && tick <= client._lastProcessedInputTick;
-            const bool bAlreadyHave = inputIter != client._listInput.end() && inputIter->_tick == tick;
-            if ( bAlreadyUsed || bAlreadyHave )
-            {
-                if ( reader.skipBlob( NetClientServerMessage::kMaxInputBytes ) == false )
-                    return false;
-                continue;
-            }
-            vector<uint8> inputBuffer;
-            if ( reader.readBlob( inputBuffer, NetClientServerMessage::kMaxInputBytes ) == false )
-                return false;
-            client._listInput.insert( inputIter, InputEntry{ std::move( inputBuffer ), tick } );
-        }
-        while ( static_cast<int32>( client._listInput.size() ) > _settings._inputBufferSize )
-            client._listInput.pop_front();
         return true;
     }
 
@@ -243,22 +232,16 @@ namespace sw
         if ( connectionId < 0 || connectionId >= static_cast<int32>( _listClient.size() ) )
             return false;
         ClientState& client = _listClient[static_cast<size_t>( connectionId )];
-        // 지난 틱의 입력은 버린다(늦게 왔다 — 이미 되풀이로 처리했다).
-        while ( client._listInput.empty() == false && client._listInput.front()._tick < tick )
+        // 그 틱 것이 있으면 그것, 없으면 지난번에 꺼낸 틱 뒤로 늦게 온 것 중 가장 새것(되풀이할 값을 새것으로 바꾼다).
+        const NetInputEntry* pEntry = client._input.findLatestAtOrBefore( tick, client._input.getWindowFirst() );
+        if ( pEntry != nullptr )
         {
-            client._lastInput = std::move( client._listInput.front()._buffer );
+            client._lastInput = pEntry->_bytes;
             client._bHasInput = SW_TRUE;
-            client._listInput.pop_front();
+            outbExact         = pEntry->_tick == tick;
         }
-        if ( client._listInput.empty() == false && client._listInput.front()._tick == tick )
-        {
-            client._lastInput = std::move( client._listInput.front()._buffer );
-            client._bHasInput = SW_TRUE;
-            client._listInput.pop_front();
-            outInputBuffer = client._lastInput;
-            outbExact      = true;
-            return true;
-        }
+        // 이 틱까지는 다 썼다 — 더 받지 않고, 확인이 넘어가 클라이언트가 다시 싣지 않는다.
+        client._input.setWindow( tick + 1u, NetInputReceiveBuffer::kNoWindowEnd );
         if ( client._bHasInput == SW_FALSE )
             return false;
         outInputBuffer = client._lastInput;

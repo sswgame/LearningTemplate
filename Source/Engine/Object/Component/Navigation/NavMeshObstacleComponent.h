@@ -60,9 +60,9 @@ namespace sw
 
         PROPERTY( Category = "Obstacle", Tooltip = "Footprint shape" )
         NavObstacleShape _shape;
-        PROPERTY( Category = "Obstacle", DisplayName = "Half Extents", Tooltip = "Box half size; cylinder uses x as radius and y as half height", Meta = "Units=m" )
+        PROPERTY( Category = "Obstacle", DisplayName = "Half Extents", Tooltip = "Box half size; cylinder uses x as radius and y as half height", Units = m )
         float3 _halfExtents;
-        PROPERTY( Category = "Obstacle", Tooltip = "Offset from the object origin", Meta = "Units=m" )
+        PROPERTY( Category = "Obstacle", Tooltip = "Offset from the object origin", Units = m )
         float3 _center;
 
         AABB    _carvedBounds; ///< 지금 내비메시에 뚫린 자리(마지막으로 알린 것)

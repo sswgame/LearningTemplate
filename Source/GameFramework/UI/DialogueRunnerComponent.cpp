@@ -7,85 +7,7 @@
 
 #include "Engine/Dialogue/DialogueCursor.h"
 
-#include "GameFramework/Framework/SaveGame.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct DialogueRunnerComponentInternal
-        {
-            /** @brief 조건식의 비교 연산자입니다. */
-            enum class CompareOp : uint8
-            {
-                Equal,
-                NotEqual,
-                GreaterEqual,
-                LessEqual,
-                Greater,
-                Less
-            };
-
-            struct CompareOpToken
-            {
-                const utf8* _pToken;
-                CompareOp   _op;
-            };
-
-            /**
-             * @brief 조건식이 아는 비교 연산자 표입니다. 연산자는 **이 표 하나가** 정합니다.
-             * @details 표에 없는 연산자가 든 식(`flag.gold >= 10`)은 **식 전체가 플래그 키**로 읽혀 늘 거짓이 된다. 같은 자리에서는
-             *          앞에 적힌 것이 이기므로 두 글자 연산자를 먼저 둔다 — `>=` 의 `>` 를 먼저 맞추면 오른쪽이 `=10` 이 된다.
-             */
-            static constexpr CompareOpToken kArrCompareOp[] = {
-                {">=", CompareOp::GreaterEqual},
-                {"<=",    CompareOp::LessEqual},
-                {"==",        CompareOp::Equal},
-                {"!=",     CompareOp::NotEqual},
-                { ">",      CompareOp::Greater},
-                { "<",         CompareOp::Less},
-            };
-
-            /** @brief 조건식에서 가장 앞의 비교 연산자를 찾습니다. 없으면 false 입니다. */
-            [[nodiscard]] static bool findCompareOp( string_view condition, size_t& outPos, const CompareOpToken*& pOutOp )
-            {
-                for ( size_t pos = 0; pos < condition.size(); ++pos )
-                {
-                    for ( const CompareOpToken& entry : kArrCompareOp )
-                    {
-                        const string_view token{ entry._pToken };
-                        if ( condition.compare( pos, token.size(), token ) != 0 )
-                            continue;
-                        outPos = pos;
-                        pOutOp = &entry;
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            static bool compare( int32 lhs, CompareOp op, int32 rhs )
-            {
-                switch ( op )
-                {
-                    case CompareOp::Equal:
-                        return lhs == rhs;
-                    case CompareOp::NotEqual:
-                        return lhs != rhs;
-                    case CompareOp::GreaterEqual:
-                        return lhs >= rhs;
-                    case CompareOp::LessEqual:
-                        return lhs <= rhs;
-                    case CompareOp::Greater:
-                        return lhs > rhs;
-                    case CompareOp::Less:
-                        return lhs < rhs;
-                }
-                return false;
-            }
-        };
-    } // namespace
-} // namespace sw
+#include "GameFramework/World/GameFlags.h"
 
 namespace sw
 {
@@ -94,7 +16,7 @@ namespace sw
     DialogueRunnerComponent::DialogueRunnerComponent()
         : _graphPath{}
         , _graph{}
-        , _pFlagStore{ nullptr }
+        , _pFlags{ nullptr }
         , _currentSpeaker{}
         , _currentText{}
         , _listCurrentChoice{}
@@ -241,9 +163,9 @@ namespace sw
         notifyLine();
     }
 
-    void DialogueRunnerComponent::setFlagStore( IFlagStore* pFlagStore )
+    void DialogueRunnerComponent::setFlags( GameFlags* pFlags )
     {
-        _pFlagStore = pFlagStore;
+        _pFlags = pFlags;
     }
 
     DialogueRunnerState DialogueRunnerComponent::getState() const
@@ -319,44 +241,12 @@ namespace sw
 
     bool DialogueRunnerComponent::evaluateCondition( const string& condition ) const
     {
-        if ( condition.empty() )
-            return true;
-
-        // 연산자가 없으면 `키` 는 `키 == 1` 이다(켜진 플래그).
-        const string_view                          conditionView{ condition.c_str(), condition.size() };
-        string_view                                keyText = conditionView;
-        int32                                      expectedVal{ 1 };
-        DialogueRunnerComponentInternal::CompareOp op = DialogueRunnerComponentInternal::CompareOp::Equal;
-
-        size_t                                                 opPos{ 0 };
-        const DialogueRunnerComponentInternal::CompareOpToken* pOpToken = nullptr;
-        if ( DialogueRunnerComponentInternal::findCompareOp( conditionView, opPos, pOpToken ) )
-        {
-            keyText                 = conditionView.substr( 0, opPos );
-            const string_view right = StringUtil::trim( conditionView.substr( opPos + string_view{ pOpToken->_pToken }.size() ) );
-            // 읽지 못한 식은 거짓이다 — 알리기만 하고 기본값과 비교하면 `!=` 식이 오히려 참 쪽으로 간다.
-            if ( StringUtil::parseInt( right, expectedVal ) == false )
-            {
-                SW_LOG_WARNING( "Dialogue condition '%#' compares with '%#', which is not a number - the condition is false", condition, right );
-                return false;
-            }
-            op = pOpToken->_op;
-        }
-
-        string_view flagKey = StringUtil::trim( keyText );
-        // 표에 없는 연산자 글자(`=` 하나 · `!flag`)가 남았으면 키가 아니다 — 식 전체를 키로 읽으면 늘 0 이라 말없이 거짓이 된다.
-        if ( flagKey.empty() || flagKey.find_first_of( "=<>!" ) != string_view::npos )
-        {
-            SW_LOG_WARNING( "Dialogue condition '%#' is not understood (operators: == != >= <= > <) - the condition is false", condition );
-            return false;
-        }
-
-        constexpr string_view kPrefix = "flag.";
-        if ( StringUtil::startsWith( flagKey, kPrefix ) )
-            flagKey = flagKey.substr( kPrefix.size() );
-
-        const int32 currentVal = ( _pFlagStore != nullptr ) ? _pFlagStore->getFlag( flagKey ) : 0;
-        return DialogueRunnerComponentInternal::compare( currentVal, op, expectedVal );
+        // 문법은 월드 플래그의 조건식 하나다(`GameFlags::parseCondition`). 빈 식은 참이고, 읽지 못한 식은 `GameFlags` 가 경고하고 거짓이다.
+        // 저장소가 없으면 모든 이름이 0 인 빈 플래그로 평가한다.
+        if ( _pFlags != nullptr )
+            return _pFlags->evaluate( condition );
+        const GameFlags noFlags;
+        return noFlags.evaluate( condition );
     }
 
     void DialogueRunnerComponent::executeAction( string actionCmd )
@@ -371,7 +261,7 @@ namespace sw
         if ( _onEvent.isBound() )
             _onEvent( actionCmd );
 
-        if ( _pFlagStore != nullptr )
+        if ( _pFlags != nullptr )
         {
             constexpr string_view kSetFlag = "set_flag:";
             if ( StringUtil::startsWith( actionCmd, kSetFlag ) )
@@ -382,7 +272,8 @@ namespace sw
                 int32        val{ 1 };
                 if ( colon != string::npos && StringUtil::parseInt( rest.substr( colon + 1 ), val ) == false )
                     SW_LOG_WARNING( "Dialogue action '%#' sets a value that is not a number - using 1", rest );
-                _pFlagStore->setFlag( key, val );
+                // 0 은 지우기다(`GameFlags` 규칙) — 읽는 쪽에는 없는 플래그와 같은 0 이다.
+                _pFlags->setFlag( hashed_string( key ), val );
             }
         }
     }

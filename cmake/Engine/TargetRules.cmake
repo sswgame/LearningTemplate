@@ -499,8 +499,8 @@ function(sw_applySanitizerTestProperties TEST_NAME)
 		string(APPEND swAsanOptions ":${swAsanOption}")
 	endforeach()
 
-	# TSan: 경쟁이 하나라도 보고되면 종료 코드 66 으로 끝나 그 시험이 진다. 두 번째 스택까지 적어 교착 · 경쟁 원인을 좁히고,
-	# 계측되지 않은 Jolt 안의 동기화를 못 봐 나는 보고는 억제 목록으로 거른다(파일 머리말). CI 와 손으로 돌린 ctest 가 같은 옵션을 쓴다.
+	# TSan: 경쟁이 하나라도 보고되면 종료 코드 66 으로 끝나 그 시험이 진다. 두 번째 스택까지 적어 교착 · 경쟁 원인을 좁힌다. 억제 목록은 비어 있는
+	# 것이 정상이다(파일 머리말 — 스스로 동기화하는 서드파티는 계측해 짓는다). CI 와 손으로 돌린 ctest 가 같은 옵션을 쓴다.
 	set(swTsanOptions "suppressions=${CMAKE_SOURCE_DIR}/cmake/Modules/Options/TsanSuppressions.txt:second_deadlock_stack=1:history_size=4")
 
 	set_tests_properties(${TEST_NAME} PROPERTIES
@@ -764,6 +764,10 @@ endfunction()
 
 # ------------------------------------------------------------------------------
 # Windows delay-load + 훅 소스 바인딩
+# 지연 로드는 이 함수와 sw_addDelayloadSystemDlls 로만 정한다(CheckDelayLoadSites). lld 의 x64 지연 로드 썽크(__tailMerge_<dll>)는
+# xmm0~3 을 [rsp] · [rsp+10h] · … 에 두고 __delayLoadHelper2 를 부르는데 [rsp..rsp+1Fh] 가 그 호출의 홈 공간이라, 첫 호출이 묶으면
+# 그 호출의 첫 float 인자(xmm0)가 망가진다. 그래서 여기서 넣는 훅 TU 가 bindDelayLoadImports 를 내보내고, 모듈을 올리는 자리
+# (LiveReloadManager · ModuleHost)와 엔진 기동이 그 코드가 돌기 전에 부른다(ModuleImageUtil::bindDelayLoadImports).
 # ------------------------------------------------------------------------------
 function(sw_addDelayloadHook TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "DLLS" ${ARGN})
@@ -803,6 +807,24 @@ function(sw_addDelayloadHook TARGET_NAME)
 	target_sources(${TARGET_NAME} PRIVATE "${swHookSrc}")
 	target_link_libraries(${TARGET_NAME} PRIVATE delayimp)
 
+	foreach(dll IN LISTS ARG_DLLS)
+		target_link_options(${TARGET_NAME} PRIVATE "LINKER:/DELAYLOAD:${dll}")
+	endforeach()
+endfunction()
+
+# ------------------------------------------------------------------------------
+# Windows delay-load — 필요할 때만 올리는 시스템 DLL(훅 · 미리 묶기 없음)
+# 미리 묶지 않으므로 첫 호출이 썽크를 지난다 — 이 DLL 에서 부르는 함수 가운데 **첫 인자가 float · double 인 것이 없어야** 한다(xmm0 이 망가진다).
+# 지금 목록(D3DCompile · D3DReflect · MFStartup · MFCreate* · XAudio2Create · Tracy C API)은 첫 인자가 모두 포인터 · 정수다. 빠지면 기능이
+# 꺼지는 선택 DLL(Windows N 의 Media Foundation 등)이라 기동에서 미리 올리지 않는다.
+# ------------------------------------------------------------------------------
+function(sw_addDelayloadSystemDlls TARGET_NAME)
+	cmake_parse_arguments(ARG "" "" "DLLS" ${ARGN})
+	if(NOT WIN32)
+		return()
+	endif()
+
+	target_link_libraries(${TARGET_NAME} PRIVATE delayimp)
 	foreach(dll IN LISTS ARG_DLLS)
 		target_link_options(${TARGET_NAME} PRIVATE "LINKER:/DELAYLOAD:${dll}")
 	endforeach()

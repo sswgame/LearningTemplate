@@ -20,6 +20,7 @@
 #include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
+#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {
@@ -287,6 +288,7 @@ namespace sw
         RtsVisibility getVisibility( int32 player, const int2& cell ) const;
         /** @brief 그 플레이어(팀)가 지금 그 유닛을 보는가입니다. */
         bool isVisibleTo( int32 player, RtsUnitId unitId ) const;
+        /** @brief 두 플레이어가 서로 적인가입니다(팀이 다르면 적 — `TeamAttitudeUtil::isHostile`). 없는 플레이어(주인 없음)는 누구와도 적이 아닙니다. */
         bool areEnemies( int32 playerA, int32 playerB ) const;
         /** @brief 남은 팀이 하나면 그 팀, 아니면 −1 입니다. */
         int32 getWinningTeam() const { return _winningTeam; }
@@ -379,8 +381,7 @@ namespace sw
         FixedStepTimer        _stepTimer;
         float32               _time;
         Countdown             _visionTimer;
-        int32                 _bucketWidth;
-        int32                 _bucketHeight;
+        GridTopology          _bucketTopology; ///< 이웃 찾기 버킷 격자(버킷 = `_settings._bucketSize` 칸)
         int32                 _teamCount;
         int32                 _winningTeam;
     };

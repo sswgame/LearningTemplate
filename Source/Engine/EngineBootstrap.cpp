@@ -8,12 +8,16 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/Process/ModuleBuildId.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/EngineServiceCollection.h"
+#include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Object/Component/SceneTransformStorage.h"
+#include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
@@ -75,6 +79,10 @@ namespace sw
             return false;
         }
 
+        // OS 로더가 실행 파일과 함께 올린 모듈(시험 실행 파일이 링크한 키트 · 게임)의 지연 import 를 그 코드가 돌기 전에 묶는다 — 첫 호출이 묶으면
+        // 그 호출의 첫 float 인자가 망가진다(`ModuleImageUtil::bindDelayLoadImports`). 명시적으로 올리는 모듈은 올리는 자리가 묶는다.
+        (void)ModuleImageUtil::bindDelayLoadImportsOfLoadedModules(); // 못 묶으면 경고했다
+
         // 크래시 리포트에 함께 나갈 값들이다. 덤프만으로는 알 수 없는 것들이다. 백엔드는 RHI 단계가 덮어쓴다.
         CrashHandler::setContextValue( "Build", build::kConfigName );
         CrashHandler::setContextValue( "Platform", build::kPlatformName );
@@ -131,6 +139,16 @@ namespace sw
         }
         // 표가 가리키던 것이 모두 사라졌다. 이 뒤로 `engine::get*` 은 쓰지 않는다.
         engine::unbindEngineServices();
+
+        // 프로세스 정적 저장소가 기동 뒤 자란 몫을 돌려준다 — 남기면 아래 종료 보고(기준선 대비 태그 증가)에 남는다. 이름 풀은 아래에서 내린다.
+        // 컴포넌트는 모두 사라진 뒤다. 칸이 남았으면 그 컴포넌트가 새는 것이라 놓지 않고 알린다(페이지를 놓으면 그 컴포넌트가 내려간 메모리를 든다).
+        SceneTransformStorage& transformStorage = SceneTransformStorage::get();
+        if ( transformStorage.releaseStorage() == false )
+            SW_LOG_WARNING( "Scene transform storage still has %# live slots at shutdown - a scene component leaked", transformStorage.getLiveSlotCount() );
+        ResourceUtil::clearPathCache();
+        AssetLoadProfiler::get().releaseStorage();
+        if ( RHIRenderResource::releaseRegistryStorage() == false )
+            SW_LOG_WARNING( "RHI render resources are still registered at shutdown - a mesh, texture or material leaked" );
 
         // 로거 **스레드**는 메모리 프로파일러보다 먼저 세운다. 그 스레드도 메모리를 풀며 프로파일러를 부른다(`Memory::free` → `recordFree`).
         // 로거 객체는 맨 마지막에 놓는다 — 그 사이의 로그는 출력에 바로 쓰인다.

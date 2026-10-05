@@ -41,7 +41,7 @@ namespace sw
     private:
         PROPERTY( Category = "Farmer", DisplayName = "Director", Tooltip = "Object with the FarmDirectorComponent" )
         GameObjectHandle _director;
-        PROPERTY( Category = "Farmer", DisplayName = "Height Offset", Tooltip = "Lift above the ground point", Meta = "Units=m" )
+        PROPERTY( Category = "Farmer", DisplayName = "Height Offset", Tooltip = "Lift above the ground point", Units = m )
         float32 _heightOffset;
         PROPERTY( Category = "Farmer", DisplayName = "Kind", Tooltip = "Follow the farmer or the faced tile" )
         FarmerViewKind _kind;

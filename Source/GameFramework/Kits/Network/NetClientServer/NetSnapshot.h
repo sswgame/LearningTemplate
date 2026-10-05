@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/Replication/NetInputWindow.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetKitMessageRange.h"
@@ -23,8 +24,10 @@ namespace sw
         static constexpr uint8 kInput       = NetKitMessageRange::kClientServer + 2;
         static_assert( NetMessageRange::isInRange( kInput, NetKitMessageRange::kClientServer ), "message kinds must stay inside the kit's range" );
 
-        static constexpr int32 kMaxInputBytes          = 255; ///< 틱 하나의 입력 상한 — 클라이언트는 넘는 입력을 보내지 않고 서버는 넘는 길이를 깨짐으로 본다
-        static constexpr int32 kMaxRedundantInputCount = 32;  ///< 입력 메시지 하나에 겹쳐 싣는 입력 수 상한 — 두 쪽이 같은 값을 쓴다
+        static constexpr int32 kMaxInputBytes = 255; ///< 틱 하나의 입력 상한 — 클라이언트는 넘는 입력을 보내지 않고 서버는 넘는 길이를 깨짐으로 본다
+        static constexpr int32 kMaxInputCount = 32;  ///< 입력 메시지 하나에 싣는 입력 수 상한이자 클라이언트가 확인을 기다리며 드는 입력 수 — 두 쪽이 같은 값을 쓴다
+        /** @brief 입력 묶음의 선 형식(길이 붙인 덩어리 · 스탬프 없음 — 1-6 B5 가 스탬프를 켜면 와이어 판을 올린다)입니다. */
+        static constexpr NetInputFormat kInputFormat{ 0, kMaxInputBytes, kMaxInputCount, SW_FALSE };
     };
 } // namespace sw
 
@@ -50,13 +53,14 @@ namespace sw
         vector<NetEntityState> _listEntity{};
         uint32                 _tick{ 0 };
         uint32                 _lastProcessedInputTick{ 0 }; ///< 받는 클라이언트의 입력을 서버가 어디까지 썼나(예측 맞추기)
+        uint32                 _firstMissingInputTick{ 0 };  ///< 받는 클라이언트의 입력을 서버가 빈틈없이 받은(또는 이미 꺼낸) 다음 틱 — 클라이언트는 여기서부터 다시 보낸다
 
         const NetEntityState* findEntity( uint32 entityId ) const;
         void                  sortEntities();
         /**
          * @brief @p baseline 대비 바뀐 엔티티 · 사라진 엔티티를 씁니다. @p pBaseline 이 없으면 모두 씁니다.
          * @param writer 메시지 쓰기 — 이미 쓴 비트(종류 바이트)도 예산에 든다.
-         * @param maxBytes 메시지 전체(이미 쓴 것 · 머리 · 사라진 목록 · 끝 표시 포함) 상한. `NetConnection::kMaxMessageSize` 로 잘린다. 넘치는 엔티티 ·
+         * @param maxBytes 메시지 전체(이미 쓴 것 · 머리 · 사라진 목록 · 끝 표시 포함) 상한. `NetConnection::kMaxSingleMessageSize` 로 잘린다. 넘치는 엔티티 ·
          *        사라진 엔티티는 싣지 않고 @p outWritten 에 실은 것만 반영한다(받는 쪽 재구성 = 기준 + 실은 것 — 못 실은 것은 다음 델타가 다시 고른다).
          *        `kMaxEntityBytes` 를 넘는 엔티티도 싣지 않는다.
          * @param pListOrder 싣는 순서(`_listEntity` 의 자리 — 우선도 높은 것 먼저). 없으면 id 순.

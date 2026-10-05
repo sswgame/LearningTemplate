@@ -20,8 +20,8 @@ namespace sw
     /**
      * @struct SceneTransformPage
      * @brief 트랜스폼 칸 256 개입니다. 값마다 배열 하나라, 같은 값을 연달아 도는 패스(틱 뒤 적용 · 플러시 · 렌더 수집)가 줄 단위로 읽습니다.
-     * @details 한 칸의 값은 모든 배열의 같은 자리(`칸 번호 & kSlotMask`)에 있습니다. 페이지는 한 번 만들면 옮기지도 놓지도 않으므로(저장소가
-     *          사라질 때까지), 컴포넌트는 자기 페이지 포인터를 들고 표를 거치지 않고 찾습니다.
+     * @details 한 칸의 값은 모든 배열의 같은 자리(`칸 번호 & kSlotMask`)에 있습니다. 페이지는 한 번 만들면 옮기지도 놓지도 않으므로(칸이
+     *          하나도 없을 때의 `releaseStorage` 까지), 컴포넌트는 자기 페이지 포인터를 들고 표를 거치지 않고 찾습니다.
      *
      *          값을 `SceneComponent` 안에 두지 않는 이유: 틱 뒤 적용 · 렌더 수집이 8000 개를 돌 때 객체마다 캐시 줄 서넛을 건너다니고,
      *          행렬 하나를 읽으려고 컴포넌트 전체를 끌어오게 된다.
@@ -147,6 +147,13 @@ namespace sw
         }
         /** @brief 지금 쓰이는 칸 수입니다(테스트 · 진단용). */
         uint32 getLiveSlotCount() const;
+        /**
+         * @brief 쓰이는 칸이 하나도 없으면 페이지 · 빈 칸 목록을 모두 놓고 처음 상태로 되돌립니다. 엔진 종료 끝(`EngineBootstrap::shutdown`)이 부릅니다.
+         * @details 저장소는 함수 정적이라 그대로 두면 페이지가 프로세스 끝까지 남아 종료 누수 보고(기준선 대비 태그 증가)에 보입니다. 다시 칸을 받으면
+         *          페이지를 새로 만듭니다(칸 번호는 0 부터).
+         * @return 놓았으면 true 입니다. 살아 있는 칸이 있으면(그 컴포넌트가 페이지 포인터를 들고 있다) 아무것도 하지 않고 false 입니다.
+         */
+        [[nodiscard]] bool releaseStorage();
 
         /**
          * @brief 칸의 로컬 값으로 월드 행렬 · LWC 를 합성합니다. 부모가 없으면 두 부모 포인터를 nullptr 로 줍니다.
@@ -168,7 +175,7 @@ namespace sw
         /** @brief 칸 하나를 기본값으로 채웁니다. */
         static void initializeSlot( SceneTransformPage& page, uint32 pageIndex, SceneComponent* pOwner );
 
-        /** @brief 페이지 표입니다. 한 번 발행한 페이지는 저장소가 사라질 때까지 그 자리에 있습니다. */
+        /** @brief 페이지 표입니다. 한 번 발행한 페이지는 `releaseStorage`(살아 있는 칸이 없을 때만) 까지 그 자리에 있습니다. */
         atomic<SceneTransformPage*> _arrPage[kMaxPageCount];
         /** @brief 놓인 칸입니다. 나중에 놓인 것부터 다시 씁니다. */
         vector<uint32> _listFreeSlot;

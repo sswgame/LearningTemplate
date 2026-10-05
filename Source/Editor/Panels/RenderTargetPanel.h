@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-#include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
+#include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 
 // `vector<RenderTargetInfo>` 를 멤버로 들고 있으므로 **완전한 타입**이 필요하다(전방 선언으로는 안 된다).
 

@@ -1,16 +1,19 @@
-# Profiling — 엔진 프로파일러의 두 번째 출력(Tracy)
+# Profiling — 엔진 프로파일러(프로세스 안의 표 · Tracy)
 
 계측 지점은 하나입니다. `SW_PROFILE_SCOPE( "GT.Scene.tick" )` 한 줄이 두 곳에 남습니다.
 
 | 출력 | 무엇을 하는가 | 어디서 보는가 |
 |---|---|---|
-| `Debug/FrameProfiler` | 프로세스 **안**에서 구간을 프레임마다 접어 avg · p50 · p99 · 최대를 낸다 | `-gv_profileFrames` 표 · 성능 회귀(`Scripts/qa/PerfRegression.py`) · 에디터 프로파일러 패널 · Shipping 오버레이 |
-| `Profiling/` (이 폴더) | 같은 구간을 **시간축**으로 외부 뷰어에 보낸다 — 스레드별 타임라인 · GPU 큐 · 프레임 · 그래프 · 메모리 | Tracy 뷰어(언리얼 Insights · 유니티 Profiler 의 타임라인 자리) |
+| `FrameProfiler` | 프로세스 **안**에서 구간을 프레임마다 접어 avg · p50 · p99 · 최대를 낸다 | `-gv_profileFrames` 표 · 성능 회귀(`Scripts/qa/PerfRegression.py`) · 에디터 프로파일러 패널 · Shipping 오버레이 |
+| `Tracy/` | 같은 구간을 **시간축**으로 외부 뷰어에 보낸다 — 스레드별 타임라인 · GPU 큐 · 프레임 · 그래프 · 메모리 | Tracy 뷰어(언리얼 Insights · 유니티 Profiler 의 타임라인 자리) |
 
 ## 구조
 
 | 파일 | 역할 |
 |---|---|
+| `FrameProfiler.h/.cpp` | 프로세스 안의 구간 표 — 프레임마다 접어 avg · p50 · p99 · 최대, 카운터(`-gv_profileFrames` 표 · 에디터 프로파일러 패널) |
+| `FrameProfileSession.h/.cpp` | `-gv_profileFrames=N` 한 판 — N 프레임 뒤 표를 남기고 끝낸다 |
+| `MemoryBudgetMonitor.h/.cpp` | 메모리 태그 예산(`Config/Engine/MemoryBudget.json`) · 프레임 끝 예산 검사 · `-gv_memoryReport` 표 · 카운터 |
 | `IProfilerBackend.h` | 출력 하나의 계약 — CPU 구간 · 프레임 표시 · 그래프 · 할당 · GPU 컨텍스트/구간. 라이브러리 타입이 없다 |
 | `ProfilerBackend.h/.cpp` | 활성 출력 하나(정적), 계측 지점 저장소(프로세스 수명 사본), `-gv_tracy` · `-gv_tracyMemory` 해석, Core 할당 관찰자 연결 |
 | `Tracy/TracyProfilerBackend.h/.cpp` | Tracy C API 호출부 — **저장소에서 Tracy 헤더를 include 하는 유일한 곳** (`CheckThirdPartyIsolation.py`) |

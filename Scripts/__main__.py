@@ -24,6 +24,8 @@ _scriptRoot = Path(__file__).resolve().parent
 if str(_scriptRoot) not in sys.path:
     sys.path.insert(0, str(_scriptRoot))
 
+from common import useUtf8Stdout  # noqa: E402
+
 
 @dataclass(frozen=True)
 class Subcommand:
@@ -68,6 +70,7 @@ _kSubcommandByName: dict[str, Subcommand] = {command.name: command for command i
 
 
 def main() -> int:
+    useUtf8Stdout()
     parser = argparse.ArgumentParser(
         prog="py -3 -m Scripts",
         description="SW Engine 통합 개발 도구체인 CLI",

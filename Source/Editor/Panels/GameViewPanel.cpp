@@ -15,7 +15,7 @@
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Viewport/EditorCamera.h"
 
-#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"

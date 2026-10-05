@@ -114,33 +114,33 @@ namespace sw
         CameraPresetDef makeOverridePreset() const;
 
     private:
-        PROPERTY( Category = "Rig", DisplayName = "Focus", Tooltip = "Ground point the camera orbits and looks at", Meta = "Units=m" )
+        PROPERTY( Category = "Rig", DisplayName = "Focus", Tooltip = "Ground point the camera orbits and looks at", Units = m )
         float3 _focus;
-        PROPERTY( Category = "Rig", DisplayName = "Yaw", Tooltip = "Orbit angle from +Z towards +X", Meta = "Units=rad" )
+        PROPERTY( Category = "Rig", DisplayName = "Yaw", Tooltip = "Orbit angle from +Z towards +X", Units = rad )
         float32 _yaw;
-        PROPERTY( Category = "Rig", DisplayName = "Pitch", Tooltip = "Downward viewing angle", Min = 0.01, Max = 1.56, Meta = "Units=rad" )
+        PROPERTY( Category = "Rig", DisplayName = "Pitch", Tooltip = "Downward viewing angle", Min = 0.01, Max = 1.56, Units = rad )
         float32 _pitch;
-        PROPERTY( Category = "Rig", DisplayName = "Distance", Tooltip = "Distance from the focus to the camera", Min = 1.0, Meta = "Units=m" )
+        PROPERTY( Category = "Rig", DisplayName = "Distance", Tooltip = "Distance from the focus to the camera", Min = 1.0, Units = m )
         float32 _distance;
-        PROPERTY( Category = "Rig", DisplayName = "Ortho Height", Tooltip = "Visible height of the orthographic view", Min = 0.1, Meta = "Units=m" )
+        PROPERTY( Category = "Rig", DisplayName = "Ortho Height", Tooltip = "Visible height of the orthographic view", Min = 0.1, Units = m )
         float32 _orthoHeight;
-        PROPERTY( Category = "Rig", DisplayName = "Min Ortho Height", Tooltip = "Closest zoom", Min = 0.1, Meta = "Units=m" )
+        PROPERTY( Category = "Rig", DisplayName = "Min Ortho Height", Tooltip = "Closest zoom", Min = 0.1, Units = m )
         float32 _minOrthoHeight;
-        PROPERTY( Category = "Rig", DisplayName = "Max Ortho Height", Tooltip = "Farthest zoom", Min = 0.1, Meta = "Units=m" )
+        PROPERTY( Category = "Rig", DisplayName = "Max Ortho Height", Tooltip = "Farthest zoom", Min = 0.1, Units = m )
         float32 _maxOrthoHeight;
         PROPERTY( Category = "Rig", DisplayName = "Zoom Step", Tooltip = "Height factor per wheel notch (below 1)", Min = 0.1, Max = 0.99 )
         float32 _zoomStep;
-        PROPERTY( Category = "Rig", DisplayName = "Pan Speed", Tooltip = "Pan speed at the reference height; scales with the zoom", Meta = "Units=m/s" )
+        PROPERTY( Category = "Rig", DisplayName = "Pan Speed", Tooltip = "Pan speed at the reference height; scales with the zoom", Units = "m/s" )
         float32 _panSpeed;
-        PROPERTY( Category = "Rig", DisplayName = "Pan Reference Height", Tooltip = "Ortho height at which the pan speed holds", Min = 0.1, Meta = "Units=m" )
+        PROPERTY( Category = "Rig", DisplayName = "Pan Reference Height", Tooltip = "Ortho height at which the pan speed holds", Min = 0.1, Units = m )
         float32 _panReferenceHeight;
-        PROPERTY( Category = "Rig", DisplayName = "Rotate Step", Tooltip = "Yaw change per Q/E press", Meta = "Units=rad" )
+        PROPERTY( Category = "Rig", DisplayName = "Rotate Step", Tooltip = "Yaw change per Q/E press", Units = rad )
         float32 _rotateStep;
         PROPERTY( Category = "Rig", DisplayName = "Far Plane Scale", Tooltip = "Far plane as a multiple of the distance", Min = 1.0 )
         float32 _farPlaneScale;
-        PROPERTY( Category = "Rig", DisplayName = "Focus Min", Tooltip = "Lowest focus X and Z when Clamp Focus is on", Meta = "Units=m" )
+        PROPERTY( Category = "Rig", DisplayName = "Focus Min", Tooltip = "Lowest focus X and Z when Clamp Focus is on", Units = m )
         float3 _focusMin;
-        PROPERTY( Category = "Rig", DisplayName = "Focus Max", Tooltip = "Highest focus X and Z when Clamp Focus is on", Meta = "Units=m" )
+        PROPERTY( Category = "Rig", DisplayName = "Focus Max", Tooltip = "Highest focus X and Z when Clamp Focus is on", Units = m )
         float3 _focusMax;
         PROPERTY( Category = "Rig", DisplayName = "Input Enabled", Tooltip = "Read WASD / arrows, wheel and Q/E" )
         bool _bInputEnabled;
@@ -148,7 +148,7 @@ namespace sw
         bool _bWasdPan;
         PROPERTY( Category = "Rig", DisplayName = "Clamp Focus", Tooltip = "Keep the panned focus inside Focus Min / Max (X and Z)" )
         bool _bClampFocus;
-        PROPERTY( Category = "Rig", DisplayName = "Rotate Time", Tooltip = "Time constant the shown yaw follows a Q/E step with", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Rig", DisplayName = "Rotate Time", Tooltip = "Time constant the shown yaw follows a Q/E step with", Min = 0.0, Units = s )
         float32 _rotateTime;
         PROPERTY( Category = "Rig", DisplayName = "Override Blend", Tooltip = "Blend into and out of a view override (ride camera)" )
         BlendCurveSpec _overrideBlend;

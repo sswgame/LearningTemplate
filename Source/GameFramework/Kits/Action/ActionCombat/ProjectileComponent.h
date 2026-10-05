@@ -33,6 +33,7 @@ namespace sw
         ProjectileComponent();
         virtual ~ProjectileComponent() override = default;
 
+        /** @brief 콜라이더를 연속 충돌로 켭니다. 흐른 수명(`_currentLife`)은 되돌리지 않습니다 — 상태를 다시 읽은 투사체는 남은 수명을 이어 갑니다. */
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;
         /** @brief 맞음 처리입니다(클래스 설명의 규칙). 물리 step 뒤 게임 스레드에서 불리고, 사라짐은 같은 틱 끝에 놓입니다. */

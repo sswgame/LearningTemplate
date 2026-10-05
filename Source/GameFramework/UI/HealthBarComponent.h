@@ -39,7 +39,7 @@ namespace sw
         HealthBarComponent();
         virtual ~HealthBarComponent() override = default;
 
-        /** @brief 조각 셋을 만들고 비율을 지금 HP 비율로 맞춥니다(흔적 없음). */
+        /** @brief 조각 셋을 만들고 비율을 같은 오브젝트의 체력 원천(`HealthSourceComponent`)에 맞춥니다 — 원천이 없으면 저장된 `_hpRatio`(흔적 없음). */
         void onBeginPlay() override;
         /** @brief 조각을 놓습니다. */
         void onEndPlay() override;
@@ -51,7 +51,7 @@ namespace sw
         void onOwnerActiveInHierarchyChanged() override;
         /**
          * @brief 같은 오브젝트의 체력 시스템이 알린 변화입니다 — 다시 두기는 흔적 없이(`resetRatio`), 바뀜은 목표만(`setTargetRatio`).
-         * @details `_bShowWhenHurt` 면 처음 줄 때 보이고, `_bHideWhenDead` 면 쓰러질 때 숨습니다(보이기 정책은 바가 정한다 — 체력 시스템은 바를 모른다).
+         * @details `_bShowWhenHurt` 면 처음 줄 때 보이고, `_bHideWhenDead` 면 쓰러질 때 숨고, 아니면 쓰러짐도 `_bShowWhenHurt` 에 따라 보입니다(한 방에 쓰러진 적)(보이기 정책은 바가 정한다 — 체력 시스템은 바를 모른다).
          */
         void onHealthChanged( const HealthChangedEvent& event ) override;
 
@@ -85,18 +85,18 @@ namespace sw
         void layoutSprites();
 
         PROPERTY( Category = "Health", DisplayName = "HP Ratio", Tooltip = "Displayed fill ratio (0..1); drops at once, refills at the lerp speed", Min = 0.0, Max = 1.0,
-                  Meta = "Slider, Units=ratio" )
+                  Units = ratio, Meta = "Slider" )
         float32 _hpRatio;
-        PROPERTY( Category = "Health", DisplayName = "Remain Ratio", Tooltip = "Delayed damage trail ratio (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=ratio" )
+        PROPERTY( Category = "Health", DisplayName = "Remain Ratio", Tooltip = "Delayed damage trail ratio (0..1)", Min = 0.0, Max = 1.0, Units = ratio, Meta = "Slider" )
         float32 _remainRatio;
         PROPERTY( Category = "Health", DisplayName = "Target Ratio", Tooltip = "True HP ratio (0..1) set by the health system", Min = 0.0, Max = 1.0,
-                  Meta = "Slider, Units=ratio" )
+                  Units = ratio, Meta = "Slider" )
         float32 _targetRatio;
         PROPERTY( Category = "Animation", DisplayName = "Lerp Speed", Tooltip = "How fast the trail shrinks and the fill refills (per second)", Min = 0.1, Max = 20.0 )
         float32 _lerpSpeed;
-        PROPERTY( Category = "Layout", DisplayName = "Offset Position", Tooltip = "Offset of the bar center from the owner position", Meta = "Units=m" )
+        PROPERTY( Category = "Layout", DisplayName = "Offset Position", Tooltip = "Offset of the bar center from the owner position", Units = m )
         float2 _offsetPos;
-        PROPERTY( Category = "Layout", DisplayName = "Bar Size", Tooltip = "Bar width and height in world units", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Layout", DisplayName = "Bar Size", Tooltip = "Bar width and height in world units", Min = 0.0, Units = m )
         float2 _barSize;
         PROPERTY( Category = "Style", DisplayName = "Fill Color", Meta = "Color", Tooltip = "Color of the current HP" )
         float4 _fillColor;

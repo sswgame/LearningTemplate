@@ -18,6 +18,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Input/InputCommandBuffer.h"
 #include "GameFramework/Kits/Action/Fighting/FighterCatalog.h"
+#include "GameFramework/Match/RoundSeries.h"
 #include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
@@ -25,9 +26,9 @@ namespace sw
     /** @brief 대전 규칙 수치입니다. 시간은 모두 프레임(60 = 1 초)입니다. */
     struct FightingSettings
     {
-        int32   _roundFrames{ 60 * 60 };     ///< 라운드 시간
-        int32   _roundsToWin{ 2 };           ///< 이만큼 이기면 대전 끝
-        int32   _roundOverFrames{ 90 };      ///< 라운드가 끝나고 다음 라운드까지
+        int32   _roundFrames{ 60 * 60 };     ///< 라운드 시간(1 보다 작으면 1)
+        int32   _roundsToWin{ 2 };           ///< 이만큼 이기면 대전 끝(1 보다 작으면 1, 둘이 함께 닿으면 무승부)
+        int32   _roundOverFrames{ 90 };      ///< 라운드가 끝나고 다음 라운드까지(1 보다 작으면 1)
         int32   _downFrames{ 30 };           ///< 다운 — 바닥에 누운 시간
         int32   _wakeupFrames{ 20 };         ///< 기상 — 무적으로 일어나는 시간
         int32   _wallSplatFrames{ 40 };      ///< 벽꽝 — 벽에 붙어 있는 시간
@@ -75,14 +76,6 @@ namespace sw
         Throwing,    ///< 잡은 쪽
         ThrowBreak,  ///< 잡힌 쪽 — 풀기 창
         Knockout
-    };
-
-    /** @brief 대전 위상입니다. */
-    enum class FightingPhase : uint8
-    {
-        RoundActive = 0,
-        RoundOver, ///< K.O. · 시간 초과 뒤 다음 라운드를 기다린다
-        MatchOver
     };
 
     /** @brief 일어난 일입니다. `drainEvents` 로 가져갑니다(상태 저장에는 들지 않는다 — 다시 돌릴 때 게임이 알아서 거른다). */
@@ -146,7 +139,6 @@ namespace sw
         int32              _heatFrames{ 0 };
         int32              _sidestepSign{ 0 }; ///< +1 안쪽, −1 바깥쪽
         int32              _side{ 1 };         ///< 화면 쪽 — +1 이면 앞 = 6
-        int32              _roundWins{ 0 };
         uint16             _breakButtons{ 0 }; ///< 잡혔을 때 풀기 버튼
         FighterState       _state{ FighterState::Neutral };
         FighterPosture     _posture{ FighterPosture::Standing };
@@ -174,6 +166,8 @@ namespace sw
      *          움직일 수 있으면 커맨드(우선도가 높은 것, 같으면 단계가 많은 것 — 기반 규칙)로 기술 · 스트링 · 횡이동 · 점프, 아니면 선입력에 담는다 →
      *          몸 겹침 · 벽 → 두 쪽 판정을 함께 본 뒤 함께 적용(상쇄) → K.O. · 레이지 · 타이머.
      *          경직은 닿은 다음 프레임부터 세어 `MoveTimeline::computeFrameAdvantage` 의 이득이 그대로 성립합니다(−10 이면 10 프레임 기술이 확정).
+     *          라운드 번호 · 선승 · 라운드 시간 · 라운드 사이 대기는 기반 `RoundSeries` 가 듭니다 — 라운드 승은 1 위 1 점, 무승부 라운드는 둘 다 1 승,
+     *          둘이 함께 선승에 닿으면 대전 무승부입니다.
      */
     class SW_GF_API FightingMatch
     {
@@ -203,14 +197,19 @@ namespace sw
 
         const FighterRuntime&   getFighter( int32 player ) const { return _arrFighter[player]; }
         const FightingSettings& getSettings() const { return _settings; }
-        FightingPhase           getPhase() const { return _phase; }
-        int32                   getFrame() const { return _frame; }
-        int32                   getRound() const { return _round; }
-        int32                   getRoundFramesRemaining() const { return _roundFramesRemaining; }
+        /** @brief 라운드 묶음(단계 · 라운드 번호 · 남은 시간 · 대기 · 라운드 승)입니다. */
+        const RoundSeries& getSeries() const { return _series; }
+        RoundSeriesPhase   getPhase() const { return _series.getPhase(); }
+        int32              getFrame() const { return _frame; }
+        /** @brief 지금 라운드(1 부터, `initialize` 전 0)입니다. */
+        int32 getRound() const;
+        int32 getRoundFramesRemaining() const { return _series.getRoundTicksRemaining(); }
+        /** @brief 이긴 라운드 수입니다(무승부 라운드는 둘 다 1 승). */
+        int32 getRoundWins( int32 player ) const { return _series.getTotal( player ); }
         /** @brief 지난 라운드 결과(0 · 1 · `kDraw`, 아직 없으면 −1)입니다. */
         int32 getLastRoundWinner() const { return _lastRoundWinner; }
         /** @brief 대전 결과(0 · 1 · `kDraw`, 끝나지 않았으면 −1)입니다. */
-        int32 getMatchWinner() const { return _matchWinner; }
+        int32 getMatchWinner() const;
         /** @brief 두 캐릭터 바닥 거리입니다. */
         float32 computeDistance() const;
         /** @brief 몸이 벽에서 `_wallNearDistance` 안인가입니다. */
@@ -221,6 +220,7 @@ namespace sw
         static InputFrame decodeInput( uint8 byte );
 
     private:
+        /** @brief 두 몸을 출발 자리로 되돌립니다(라운드 번호 · 시간은 `_series` 가 연다). */
         void startRound();
         void resetFighter( int32 player );
         void updateFighter( int32 player, uint16 pressedButtons );
@@ -250,14 +250,10 @@ namespace sw
 
         FighterRuntime             _arrFighter[kPlayerCount];
         FightingSettings           _settings;
+        RoundSeries                _series; ///< 라운드 번호 · 시간 · 대기 · 라운드 승 · 대전 결과(롤백 상태의 맨 뒤)
         EventBuffer<FightingEvent> _eventBuffer;
         vector<MoveHitbox>         _listHitboxScratch; ///< 판정용 임시(상태 아님)
         int32                      _frame;
-        int32                      _round;
-        int32                      _roundFramesRemaining;
-        int32                      _phaseFrames;
         int32                      _lastRoundWinner;
-        int32                      _matchWinner;
-        FightingPhase              _phase;
     };
 } // namespace sw

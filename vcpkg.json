@@ -28,7 +28,10 @@
       "name": "vulkan-loader",
       "platform": "!linux"
     },
-    "vulkan-validationlayers",
+    {
+      "name": "vulkan-validationlayers",
+      "platform": "!linux"
+    },
     {
       "name": "imgui",
       "features": [

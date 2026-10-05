@@ -40,7 +40,7 @@ namespace sw
         static uint32 collectNearest( const GameObjectManager& manager, const float3& viewPosition, float4 ( &outArrSphere )[kMaxInfluencerCount] );
 
     private:
-        PROPERTY( Category = "Foliage", DisplayName = "Radius", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Foliage", DisplayName = "Radius", Min = 0.0, Units = m )
         float32 _radius;
     };
 } // namespace sw

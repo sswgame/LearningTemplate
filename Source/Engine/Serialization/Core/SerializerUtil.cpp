@@ -3,12 +3,13 @@
 #include "Engine/Serialization/Core/SerializerUtil.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/InlineAllocator.h"
 #include "Core/Log/Logger.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Serialization/Core/ContainerVisitor.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
@@ -241,14 +242,11 @@ namespace sw
              * 건너뛰기 위해서입니다.** 없으면 낯선 컴포넌트 하나가 그 뒤 스트림을 통째로 어긋나게 합니다.
              * 빈 이름은 빈 자리를 뜻합니다(원소 개수를 앞에서 이미 적었으므로 자리는 남겨야 합니다).
              */
-            static void writeOwnedPointerBinary( const void* pElemPtr, vector<uint8>& buffer, const SerializeContext& ctx )
+            static void writeOwnedPointerBinary( const void* pObject, vector<uint8>& buffer, const SerializeContext& ctx )
             {
-                const void* const* ppObj = static_cast<const void* const*>( pElemPtr );
-                const void*        pObj  = ( ppObj != nullptr ) ? *ppObj : nullptr;
-
                 // 맡아 둔 원소(모르는 타입)는 읽은 이름 · 본문 그대로 다시 쓴다.
                 SerializeContext::OpaqueElementView opaque{};
-                if ( ctx.queryOpaqueElement( pObj, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Binary )
+                if ( ctx.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Binary )
                 {
                     appendUint32( buffer, static_cast<uint32>( opaque._typeName.size() ) );
                     const auto* pNameBytes = reinterpret_cast<const uint8*>( opaque._typeName.data() );
@@ -258,7 +256,7 @@ namespace sw
                         buffer.insert( buffer.end(), opaque._pBytes, opaque._pBytes + opaque._byteCount );
                     return;
                 }
-                const TypeInfo* pRuntimeType = ( pObj != nullptr ) ? ctx.getRuntimeTypeInfo( pObj ) : nullptr;
+                const TypeInfo* pRuntimeType = ( pObject != nullptr ) ? ctx.getRuntimeTypeInfo( pObject ) : nullptr;
 
                 if ( pRuntimeType == nullptr )
                 {
@@ -280,7 +278,7 @@ namespace sw
                 appendUint32( buffer, 0 );
 
                 const size_t bodyStart = buffer.size();
-                BinarySerializer::serialize( pObj, *pRuntimeType, buffer, ctx );
+                BinarySerializer::serialize( pObject, *pRuntimeType, buffer, ctx );
                 const uint32 bodySize = static_cast<uint32>( buffer.size() - bodyStart );
                 Memory::copy( buffer.data() + sizePos, &bodySize, sizeof( uint32 ) );
             }
@@ -370,6 +368,121 @@ namespace sw
 
                 return serializeText( scratch.get() );
             }
+
+            /** @brief 컨테이너를 바이너리로 적습니다 — 원소 수(uint32) 뒤에 원소, 맵은 항목마다 키 · 값. 소유 포인터 원소는 `[이름][본문크기][본문]` 입니다. */
+            class ContainerWriter final : public IContainerWriter
+            {
+            public:
+                ContainerWriter( vector<uint8>& buffer, const SerializeContext& ctx )
+                    : _listBuffer{ buffer }
+                    , _ctx{ ctx }
+                {
+                }
+
+                void beginSequence( const size_t elementCount ) override { appendUint32( _listBuffer, static_cast<uint32>( elementCount ) ); }
+                void endSequence() override {}
+                void beginMap( const size_t entryCount ) override { appendUint32( _listBuffer, static_cast<uint32>( entryCount ) ); }
+                void endMap() override {}
+                void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override { SerializerUtil::serializeValueBinary( pKey, keyTypeName, _listBuffer, _ctx ); }
+                void endMapEntry() override {}
+                void beginNestedContainer( ContainerSlot ) override {}
+                void endNestedContainer( ContainerSlot ) override {}
+                void writeOwnedPointer( const void* pObject ) override { writeOwnedPointerBinary( pObject, _listBuffer, _ctx ); }
+
+                // 값 구조체도 값 하나의 길로 적는다 — 등록된 바이너리 핸들러가 구조체보다 먼저다(`serializeValueBinary` 의 순서).
+                void writeValueObject( const void* pValue, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override
+                {
+                    SerializerUtil::serializeValueBinary( pValue, typeName, _listBuffer, _ctx );
+                }
+
+                void writeScalar( const void* pValue, const hashed_string& typeName, ContainerSlot ) override
+                {
+                    SerializerUtil::serializeValueBinary( pValue, typeName, _listBuffer, _ctx );
+                }
+
+            private:
+                vector<uint8>&          _listBuffer;
+                const SerializeContext& _ctx;
+            };
+
+            /** @brief 바이너리 컨테이너를 읽습니다. 신뢰할 수 없는 바이트의 경계 검사가 이 안에 있습니다(원소 수 · 값 · 소유 포인터 본문). */
+            class ContainerReader final : public IContainerReader
+            {
+            public:
+                ContainerReader( const uint8* pData, const size_t dataSize, size_t* pInOutOffset, const SerializeContext& ctx, const BinaryWireVersion wireVersion )
+                    : _listOpenCount{}
+                    , _pData{ pData }
+                    , _dataSize{ dataSize }
+                    , _pInOutOffset{ pInOutOffset }
+                    , _ctx{ ctx }
+                    , _wireVersion{ wireVersion }
+                {
+                }
+
+                ContainerReadResult beginSequence( size_t& outCountHint ) override { return beginCounted( outCountHint ); }
+                ContainerReadResult beginMap( size_t& outCountHint ) override { return beginCounted( outCountHint ); }
+
+                ContainerReadResult forEachElement( const ContainerElementVisitDelegate& visit ) override
+                {
+                    // 원소가 또 컨테이너면 그 안에서 begin* 이 다시 쌓으므로, 이 컨테이너의 수는 돌기 전에 꺼낸다.
+                    const uint32 elementCount = _listOpenCount.back();
+                    _listOpenCount.pop_back();
+                    ContainerReadResult total{ ContainerReadResult::Read };
+                    for ( uint32 elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                    {
+                        total = ContainerVisitor::mergeResult( total, visit( elementIndex ) );
+                        if ( total == ContainerReadResult::StreamBroken )
+                            break;
+                    }
+                    return total;
+                }
+
+                ContainerReadResult readMapKey( void* pKey, const hashed_string& keyTypeName ) override { return readValue( pKey, keyTypeName ); }
+
+                // 본문 크기가 있어 모르는 타입은 건너뛰지만, 아는 타입의 본문을 못 읽으면 스트림이 망가진 것이다.
+                ContainerReadResult readOwnedPointer() override
+                {
+                    return readOwnedPointerBinary( _pData, _dataSize, *_pInOutOffset, _ctx ) ? ContainerReadResult::Read : ContainerReadResult::StreamBroken;
+                }
+
+                ContainerReadResult readValueObject( void* pValue, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override { return readValue( pValue, typeName ); }
+                ContainerReadResult readScalar( void* pValue, const hashed_string& typeName, ContainerSlot ) override { return readValue( pValue, typeName ); }
+
+                // 바이너리는 원소 크기를 적지 않는다 — 넣을 칸이 없는 원소는 지나갈 수 없다.
+                ContainerReadResult skipElement( size_t ) override { return ContainerReadResult::StreamBroken; }
+
+            private:
+                ContainerReadResult beginCounted( size_t& outCountHint )
+                {
+                    uint32 count{ 0 };
+                    if ( readUint32( _pData, _dataSize, *_pInOutOffset, count ) == false )
+                        return ContainerReadResult::StreamBroken;
+                    // 원소마다 적어도 한 바이트다 — 남은 바이트보다 많은 원소 수는 거짓이다(손상된 개수 칸 하나로 큰 할당을 하지 않는다).
+                    if ( _dataSize - *_pInOutOffset < count )
+                        return ContainerReadResult::StreamBroken;
+                    _listOpenCount.push_back( count );
+                    outCountHint = count;
+                    return ContainerReadResult::Read;
+                }
+
+                /** @brief 값 하나를 읽습니다. 모르는 열거자는 바이트를 끝까지 읽고 실패하므로 그 원소만 빼고(FieldFailed), 그 밖의 실패는 자리를 모릅니다. */
+                ContainerReadResult readValue( void* pValue, const hashed_string& typeName ) const
+                {
+                    const size_t valueStart = *_pInOutOffset;
+                    if ( SerializerUtil::deserializeValueBinary( pValue, typeName, _pData, _dataSize, *_pInOutOffset, _ctx, _wireVersion ) )
+                        return ContainerReadResult::Read;
+                    const bool bAdvanced  = valueStart < *_pInOutOffset && *_pInOutOffset <= _dataSize;
+                    const bool bSkippable = bAdvanced && engine::getTypeRegistry().findEnum( typeName ) != nullptr;
+                    return bSkippable ? ContainerReadResult::FieldFailed : ContainerReadResult::StreamBroken;
+                }
+
+                vector<uint32, InlineAllocator<uint32, 4>> _listOpenCount;
+                const uint8*                               _pData;
+                size_t                                     _dataSize;
+                size_t*                                    _pInOutOffset;
+                const SerializeContext&                    _ctx;
+                BinaryWireVersion                          _wireVersion;
+            };
         };
     } // namespace
 } // namespace sw
@@ -520,162 +633,16 @@ namespace sw
     void SerializerUtil::serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
                                                          vector<uint8>& listBuffer, const SerializeContext& ctx )
     {
-        if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
-            return;
-
-        // 다형 소유 포인터는 값이 아니라 **런타임 타입 + 본문**으로 실린다(XML · JSON 과 같다). 이 분기를 빠뜨리면
-        // `serializeValueBinary` 로 흘러 들어가 0 바이트 하나만 적고 컴포넌트를 통째로 버린다.
-        const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
-
-        ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
-        if ( pSeq != nullptr )
-        {
-            const size_t elementCount = pSeq->getSize( pContainerPtr );
-            const uint32 count        = static_cast<uint32>( elementCount );
-            const uint8* pByte        = reinterpret_cast<const uint8*>( &count );
-            listBuffer.insert( listBuffer.end(), pByte, pByte + sizeof( uint32 ) );
-
-            for ( size_t elemIndex = 0; elemIndex < elementCount; ++elemIndex )
-            {
-                const void* pElem = pSeq->getElementConst( pContainerPtr, elemIndex );
-                if ( bOwnedPtr )
-                    SerializerUtilInternal::writeOwnedPointerBinary( pElem, listBuffer, ctx );
-                else if ( nested._elementNested != nullptr )
-                    SerializerUtil::serializeNestedContainerBinary( pElem, *nested._elementNested, listBuffer, ctx );
-                else
-                    SerializerUtil::serializeValueBinary( pElem, nested._elementTypeName, listBuffer, ctx );
-            }
-            return;
-        }
-
-        IMapContainerWrapper* pMapWrap = nested._wrapper->asMap();
-        if ( pMapWrap != nullptr )
-        {
-            const size_t elementCount = pMapWrap->getSize( pContainerPtr );
-            const uint32 count        = static_cast<uint32>( elementCount );
-            const uint8* pByte        = reinterpret_cast<const uint8*>( &count );
-            listBuffer.insert( listBuffer.end(), pByte, pByte + sizeof( uint32 ) );
-
-            pMapWrap->forEach( pContainerPtr, [&]( const void* pKey, const void* pVal )
-            {
-                SerializerUtil::serializeValueBinary( pKey, nested._keyTypeName, listBuffer, ctx );
-                if ( nested._elementNested != nullptr )
-                    SerializerUtil::serializeNestedContainerBinary( pVal, *nested._elementNested, listBuffer, ctx );
-                else
-                    SerializerUtil::serializeValueBinary( pVal, nested._elementTypeName, listBuffer, ctx );
-            } );
-        }
+        SerializerUtilInternal::ContainerWriter writer( listBuffer, ctx );
+        ContainerVisitor::write( pContainerPtr, nested, writer, ctx );
     }
 
     bool SerializerUtil::deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
                                                            const uint8* pData, size_t dataSize, size_t& offset,
                                                            const SerializeContext& ctx, BinaryWireVersion wireVersion )
     {
-        if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
-            return false;
-
-        // 소유 포인터 컨테이너는 **비우지 않는다.** 원소를 넣는 것은 팩토리(소유자)의 일이고,
-        // 여기서 비우면 팩토리가 방금 붙인 것까지 날아간다. XML · JSON 도 같은 예외를 둔다.
-        const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
-        if ( bOwnedPtr == false )
-            nested._wrapper->clear( pContainerPtr );
-
-        if ( offset + sizeof( uint32 ) > dataSize )
-            return false;
-        uint32 count{ 0 };
-        Memory::copy( &count, pData + offset, sizeof( uint32 ) );
-        offset += sizeof( uint32 );
-
-        if ( ( dataSize - offset ) < count )
-            return false;
-
-        ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
-        if ( pSeq != nullptr )
-        {
-            if ( bOwnedPtr )
-            {
-                for ( uint32 elemIndex = 0; elemIndex < count; ++elemIndex )
-                {
-                    if ( SerializerUtilInternal::readOwnedPointerBinary( pData, dataSize, offset, ctx ) == false )
-                        return false;
-                }
-                return true;
-            }
-
-            pSeq->reserve( pContainerPtr, MathUtil::min( count, static_cast<uint32>( MathUtil::MaxUInt16 ) ) );
-
-            // 모르는 열거자는 그 원소의 바이트를 끝까지 읽고 실패한다 — 그 원소만 기본값으로 두고 나머지를 읽는다(XML 과 같다). 첫 실패에서
-            // 멈추면 **그 뒤 원소를 모두 잃는다.** 칸은 여전히 실패로 알린다(스칼라 enum 과 같다). 그 밖의 실패는 스트림이 망가진 것이라 멈춘다.
-            const bool bEnumElement = nested._elementNested == nullptr && engine::getTypeRegistry().findEnum( nested._elementTypeName ) != nullptr;
-            bool       bElementFailed{ false };
-
-            // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다. `set` 은 다 읽은 뒤 insert 해야 한다
-            // (트리에 들어간 원소를 제자리에서 고치면 정렬 불변식이 깨진다).
-            for ( uint32 elemIndex = 0; elemIndex < count; ++elemIndex )
-            {
-                const size_t elementStart = offset;
-                const bool   bAppended    = pSeq->appendElement( pContainerPtr, elemIndex, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
-                     {
-                    if ( nested._elementNested != nullptr )
-                        return SerializerUtil::deserializeNestedContainerBinary( pElement, *nested._elementNested, pData, dataSize, offset, ctx, wireVersion );
-                    return SerializerUtil::deserializeValueBinary( pElement, nested._elementTypeName, pData, dataSize, offset, ctx, wireVersion );
-                } ) );
-                if ( bAppended )
-                    continue;
-                if ( bEnumElement && offset > elementStart && offset <= dataSize )
-                {
-                    bElementFailed = true;
-                    continue;
-                }
-                return false;
-            }
-            return bElementFailed == false;
-        }
-
-        IMapContainerWrapper* pMapWrap = nested._wrapper->asMap();
-        if ( pMapWrap != nullptr )
-        {
-            vector<uint8> listKBuf( pMapWrap->getKeySize() );
-            vector<uint8> listVBuf( pMapWrap->getValueSize() );
-            // 시퀀스와 같은 규칙 — 모르는 열거자(키 · 값)인 항목만 빼고 나머지를 읽는다. 키가 모르는 열거자여도 값은 읽어야 다음 항목과 어긋나지 않는다.
-            const bool bEnumKey   = engine::getTypeRegistry().findEnum( nested._keyTypeName ) != nullptr;
-            const bool bEnumValue = nested._elementNested == nullptr && engine::getTypeRegistry().findEnum( nested._elementTypeName ) != nullptr;
-            bool       bEntryFailed{ false };
-            for ( uint32 entryIndex = 0; entryIndex < count; ++entryIndex )
-            {
-                pMapWrap->defaultConstructKey( listKBuf.data() );
-                pMapWrap->defaultConstructValue( listVBuf.data() );
-                const size_t keyStart        = offset;
-                const bool   bKeyOk          = SerializerUtil::deserializeValueBinary( listKBuf.data(), nested._keyTypeName, pData, dataSize, offset, ctx, wireVersion );
-                const bool   bKeySkippable   = bKeyOk == false && bEnumKey && offset > keyStart && offset <= dataSize;
-                bool         bValueOk        = false;
-                bool         bValueSkippable = false;
-                if ( bKeyOk || bKeySkippable )
-                {
-                    const size_t valueStart = offset;
-                    if ( nested._elementNested != nullptr )
-                        bValueOk = SerializerUtil::deserializeNestedContainerBinary( listVBuf.data(), *nested._elementNested, pData, dataSize, offset, ctx, wireVersion );
-                    else
-                        bValueOk = SerializerUtil::deserializeValueBinary( listVBuf.data(), nested._elementTypeName, pData, dataSize, offset, ctx, wireVersion );
-                    bValueSkippable = bValueOk == false && bEnumValue && offset > valueStart && offset <= dataSize;
-                }
-                const bool bInsert = bKeyOk && bValueOk;
-                if ( bInsert )
-                    pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
-                pMapWrap->destroyKey( listKBuf.data() );
-                pMapWrap->destroyValue( listVBuf.data() );
-                if ( bInsert )
-                    continue;
-                if ( ( bKeyOk || bKeySkippable ) && ( bValueOk || bValueSkippable ) )
-                {
-                    bEntryFailed = true;
-                    continue;
-                }
-                return false;
-            }
-            return bEntryFailed == false;
-        }
-        return false;
+        SerializerUtilInternal::ContainerReader reader( pData, dataSize, &offset, ctx, wireVersion );
+        return ContainerVisitor::read( pContainerPtr, nested, reader, ctx ) == ContainerReadResult::Read;
     }
 
     void SerializerUtil::valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,

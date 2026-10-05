@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Character/CharacterGeometry.h"
-#include "Engine/Character/GeometryCut.h"
+#include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Character/Fit/GeometryCut.h"
 #include "Engine/Destruction/DestructionRandom.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/FractureGraph.h"

@@ -8,8 +8,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/InputSnapshot.h"
+#include "Engine/Input/RawInputEvent.h"
 
 namespace sw
 {

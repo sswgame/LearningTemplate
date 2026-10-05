@@ -103,6 +103,21 @@ namespace sw
         return _liveSlotCount;
     }
 
+    bool SceneTransformStorage::releaseStorage()
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        if ( _liveSlotCount != 0 )
+            return false;
+
+        for ( atomic<SceneTransformPage*>& page : _arrPage )
+        {
+            sw_delete( page.exchange( nullptr, std::memory_order_acq_rel ) );
+        }
+        _listFreeSlot = vector<uint32>{};
+        _nextSlot     = 0;
+        return true;
+    }
+
     void SceneTransformStorage::initializeSlot( SceneTransformPage& page, uint32 pageIndex, SceneComponent* pOwner )
     {
         page._arrWorldMatrix[pageIndex]      = float4x4::Identity;

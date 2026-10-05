@@ -174,7 +174,7 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Animation List", Tooltip = "Available animation names" )
         vector<string> _listAnimation;
         PROPERTY( Category = "Playback", DisplayName = "Frame Rate", Tooltip = "Playback speed in FPS for frames without their own duration", Min = 1.0, Max = 120.0,
-                  Meta = "Units=fps" )
+                  Units = fps )
         float32                  _frameRate;
         SpriteAnimatorClipSource _clipSource;      ///< 상태 이름 → `_playable` 풀이
         SpriteClipPlayable       _playable;        ///< 지금 구간(재생할 것). 스프라이트는 섞지 않으므로 하나면 된다

@@ -39,15 +39,15 @@ namespace sw
         bool               isMoving() const { return _stepsLeft > 0; }
 
     private:
-        PROPERTY( Category = "Push", DisplayName = "Cell Size", Min = 0.01, Meta = "Units=m" )
+        PROPERTY( Category = "Push", DisplayName = "Cell Size", Min = 0.01, Units = m )
         float32 _cellSize;
-        PROPERTY( Category = "Push", DisplayName = "Move Time", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Push", DisplayName = "Move Time", Min = 0.0, Units = s )
         float32 _moveTime;
         PROPERTY( Category = "Push", DisplayName = "Planar 2D", Tooltip = "Push along X/Y instead of X/Z" )
         bool _bPlanar2D;
-        PROPERTY( Category = "Push", DisplayName = "From", Tooltip = "Runtime: cell the move started from", Meta = "Units=m" )
+        PROPERTY( Category = "Push", DisplayName = "From", Tooltip = "Runtime: cell the move started from", Units = m )
         float3 _from;
-        PROPERTY( Category = "Push", DisplayName = "To", Tooltip = "Runtime: cell the move ends at", Meta = "Units=m" )
+        PROPERTY( Category = "Push", DisplayName = "To", Tooltip = "Runtime: cell the move ends at", Units = m )
         float3 _to;
         PROPERTY( Category = "Push", DisplayName = "Steps Left", Tooltip = "Runtime" )
         int32 _stepsLeft;

@@ -47,7 +47,7 @@ namespace sw
         int32 getBoostCount() const { return _boostCount; }
 
     private:
-        PROPERTY( Category = "Boost", DisplayName = "Duration", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Boost", DisplayName = "Duration", Min = 0.0, Units = s )
         float32 _duration;
         PROPERTY( Category = "Boost", DisplayName = "Strength", Min = 0.0, Tooltip = "Speed multiplier or added speed, as the vehicle reads it" )
         float32 _strength;
@@ -90,7 +90,7 @@ namespace sw
         vector<GimmickItemChoice> _listChoice;
         PROPERTY( Category = "Item Box", DisplayName = "Required Tags" )
         TagContainer _requiredTags;
-        PROPERTY( Category = "Item Box", DisplayName = "Respawn Delay", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Item Box", DisplayName = "Respawn Delay", Min = 0.0, Units = s )
         float32 _respawnDelay;
         PROPERTY( Category = "Item Box", DisplayName = "Seed" )
         uint32 _seed;

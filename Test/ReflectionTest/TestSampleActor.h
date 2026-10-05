@@ -55,7 +55,7 @@ namespace sw
 {
     /**
      * @brief REFLECT() 가 없는 순수 인터페이스. 다중 상속 시 프로퍼티가 없으므로 리플렉션 부모
-     *        선택에서 조용히 무시되어야 합니다 (경고 없음). GameFramework::IFlagStore 축소판.
+     *        선택에서 조용히 무시되어야 합니다 (경고 없음). 콜백 · 믹스인 인터페이스의 축소판.
      */
     class IPlainMixinTestActor
     {
@@ -83,8 +83,8 @@ namespace sw
 {
     /**
      * @brief REFLECT() 베이스(EmptyReflectedBaseTestActor)가 선언 순서상 첫 번째이고, REFLECT() 가
-     *        없는 순수 인터페이스가 두 번째인 다중 상속 조합 검증용 액터. GameFramework::
-     *        TurnBattleSaveGame : public SaveGame, public IFlagStore 실제 사례의 축소판입니다.
+     *        없는 순수 인터페이스가 두 번째인 다중 상속 조합 검증용 액터. SaveGame 파생에 콜백
+     *        인터페이스를 덧붙이는 모양의 축소판입니다.
      *        부모는 EmptyReflectedBaseTestActor 로 채택되어야 하고, 자신의 프로퍼티는 다중 상속과
      *        무관하게 정상 동작해야 합니다.
      */

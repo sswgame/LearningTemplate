@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Utility/Format/KeyValueFile.h"
+#include "Engine/Utility/KeyValueFile.h"
 
 #include "GameFramework/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Data/GameDataXml.h"

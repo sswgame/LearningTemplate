@@ -48,15 +48,15 @@ namespace sw
     private:
         PROPERTY( Category = "AI", DisplayName = "Kind", Tooltip = "Grunt walks up and strikes; Caster keeps its distance and shoots" )
         ArenaUnitKind _kind;
-        PROPERTY( Category = "AI", DisplayName = "Melee Reach", Tooltip = "Grunt stops and strikes inside this distance", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "AI", DisplayName = "Melee Reach", Tooltip = "Grunt stops and strikes inside this distance", Min = 0.0, Units = m )
         float32 _meleeReach;
-        PROPERTY( Category = "AI", DisplayName = "Preferred Min", Tooltip = "Caster backs off inside this distance", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "AI", DisplayName = "Preferred Min", Tooltip = "Caster backs off inside this distance", Min = 0.0, Units = m )
         float32 _preferredMin;
-        PROPERTY( Category = "AI", DisplayName = "Preferred Max", Tooltip = "Caster closes in beyond this distance", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "AI", DisplayName = "Preferred Max", Tooltip = "Caster closes in beyond this distance", Min = 0.0, Units = m )
         float32 _preferredMax;
-        PROPERTY( Category = "AI", DisplayName = "Fire Range", Tooltip = "Caster shoots inside this distance", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "AI", DisplayName = "Fire Range", Tooltip = "Caster shoots inside this distance", Min = 0.0, Units = m )
         float32 _fireRange;
-        PROPERTY( Category = "AI", DisplayName = "Unit Radius", Tooltip = "Body radius used to push overlapping enemies apart", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "AI", DisplayName = "Unit Radius", Tooltip = "Body radius used to push overlapping enemies apart", Min = 0.0, Units = m )
         float32 _unitRadius;
 
         SubTickHandle _targetTick; ///< 지금 선행 조건으로 건 대상 컨트롤러의 주 틱

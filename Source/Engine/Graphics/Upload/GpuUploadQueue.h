@@ -22,8 +22,9 @@
  *
  * @note 스레드 안전성은 백엔드가 말합니다(`RHICapabilities::_bThreadSafeResourceCreation`). DX12 · DX11 ·
  *       Vulkan 은 버퍼 생성이 디바이스 레벨이고 핸들 테이블도 잠겨 있어 워커에서 안전합니다. OpenGL 은
- *       `glGenBuffers` 가 **현재 컨텍스트**를 필요로 해서 안 됩니다. 그 백엔드에서는 큐가 인라인으로
- *       동작해 RT 가 만드는 길과 같아집니다.
+ *       `glGenBuffers` 가 **현재 컨텍스트**를 필요로 해서 안 됩니다. 그 백엔드에서는 큐가 요청을 받지 않고
+ *       렌더 스레드가 그 프레임에 만듭니다. 주의: 게임 스레드가 대신 만들면 렌더 스레드가 컨텍스트를 쥔 동안
+ *       기다리다 시간을 넘깁니다(`acquireGraphicsContextBlocking timed out`).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -83,7 +84,7 @@ namespace sw
          *        메시가 사라지면 안 되기 때문입니다(Graphics README 의 소유 규칙 1번과 같은 이유입니다).
          */
         vector<shared_ptr<Mesh>> _listPendingMesh;
-        /** @brief 이 백엔드가 워커 생성을 허용하면 1 입니다. */
+        /** @brief 이 백엔드가 워커 생성을 허용하면 1 입니다. 0 이면 큐는 요청을 받지 않습니다. */
         uint8 _bParallel{ SW_FALSE };
     };
 } // namespace sw

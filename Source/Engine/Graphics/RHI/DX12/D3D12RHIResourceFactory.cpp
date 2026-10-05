@@ -72,7 +72,11 @@ namespace sw
             std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
             _pDevice->_mapStructuredBufferState[handle] = D3D12_RESOURCE_STATE_COMMON;
         }
-        _pDevice->_mapStructuredStride[handle] = elementSize > 0 ? elementSize : 4u;
+        {
+            // 등록(registerBindlessResource · registerBindlessUav)이 같은 배타 락 안에서 읽는다. 다른 스레드의 생성과 겹쳐 재해시되지 않게 한다.
+            std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            _pDevice->_mapStructuredStride[handle] = elementSize > 0 ? elementSize : 4u;
+        }
         return handle;
     }
 
@@ -420,12 +424,12 @@ namespace sw
     RHIFormat D3D12RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
     {
         // 오프스크린 레코드는 요청 포맷을 그대로 들고 있다(깊이는 리소스가 typeless 라 GetDesc 로는 못 되돌린다).
-        const auto offscreenIt = _pDevice->_mapOffscreenTexture.find( texture );
-        if ( offscreenIt != _pDevice->_mapOffscreenTexture.end() )
+        D3D12RHIDevice::OffscreenTargetView view{};
+        if ( _pDevice->findOffscreenTargetView( texture, 0, view ) )
         {
-            if ( offscreenIt->second._bHasDsv != SW_FALSE )
+            if ( view._bHasDsv != SW_FALSE )
                 return RHIFormat::D24_UNORM_S8_UINT;
-            return fromDxgiFormat( offscreenIt->second._format );
+            return fromDxgiFormat( view._format );
         }
         ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
         if ( pTexture == nullptr )
@@ -561,6 +565,7 @@ namespace sw
             _pDevice->_mapCbMapped.erase( mapIt );
         }
         _pDevice->_mapCbAlignedSize.erase( buffer );
+        _pDevice->_mapStructuredStride.erase( buffer );
         _pDevice->_constantBufferMirror.forget( buffer );
         Microsoft::WRL::ComPtr<ID3D12Resource> owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )

@@ -83,13 +83,13 @@ namespace sw
     private:
         PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the VoxelDirectorComponent" )
         GameObjectHandle _director;
-        PROPERTY( Category = "Player", DisplayName = "Reach", Tooltip = "Blocks within this distance can be broken or built on", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Player", DisplayName = "Reach", Tooltip = "Blocks within this distance can be broken or built on", Min = 0.0, Units = m )
         float32 _reachDistance;
-        PROPERTY( Category = "Player", DisplayName = "Place Interval", Tooltip = "Seconds between placements while the button is held", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Player", DisplayName = "Place Interval", Tooltip = "Seconds between placements while the button is held", Min = 0.0, Units = s )
         float32 _placeInterval;
-        PROPERTY( Category = "Player", DisplayName = "Start Yaw", Meta = "Units=rad" )
+        PROPERTY( Category = "Player", DisplayName = "Start Yaw", Units = rad )
         float32 _startYaw;
-        PROPERTY( Category = "Player", DisplayName = "Start Pitch", Meta = "Units=rad" )
+        PROPERTY( Category = "Player", DisplayName = "Start Pitch", Units = rad )
         float32 _startPitch;
 
         VoxelBody         _body;

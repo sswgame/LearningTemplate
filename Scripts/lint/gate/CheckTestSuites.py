@@ -128,7 +128,7 @@ def collectHostSplitFolders(rootDir: Path) -> set[str]:
 
 
 def testFolderOf(relPath: str) -> str:
-    """`Test/EngineTest/TestRHIDevice.cpp` -> `Test/EngineTest`. 그 폴더의 CMakeLists 가 실행 파일 하나를 만든다."""
+    """`Test/EngineTest/Graphics/TestRHIDevice.cpp` -> `Test/EngineTest`. 그 폴더의 CMakeLists 가 실행 파일 하나를 만든다."""
     return "/".join(relPath.split("/")[:2])
 
 

@@ -8,56 +8,6 @@ msgstr ""
 "X-Message-Format: ICU\n"
 "X-Generator: SWEngine LocalizationTools\n"
 
-#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
-msgctxt "battle.foe_fainted"
-msgid "{name} fainted! You won!"
-msgstr ""
-
-#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
-msgctxt "battle.got_away"
-msgid "Got away safely!"
-msgstr ""
-
-#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
-msgctxt "battle.no_move"
-msgid "{name} has no usable move!"
-msgstr ""
-
-#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
-msgctxt "battle.no_pp"
-msgid "{name} has no PP!"
-msgstr ""
-
-#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
-msgctxt "battle.player_fainted"
-msgid "{name} fainted..."
-msgstr ""
-
-#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
-msgctxt "battle.prompt_fight"
-msgid "Fight: 1/2 moves, Enter=Move0, Esc=Run"
-msgstr ""
-
-#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
-msgctxt "battle.used_move"
-msgid "{name} used {move}!"
-msgstr ""
-
-#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
-msgctxt "battle.used_move_dmg"
-msgid "{name} used {move}! ({damage} dmg)"
-msgstr ""
-
-#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
-msgctxt "battle.what_will"
-msgid "What will {name} do?"
-msgstr ""
-
-#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
-msgctxt "battle.wild_appeared"
-msgid "A wild {name} appeared!"
-msgstr ""
-
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml

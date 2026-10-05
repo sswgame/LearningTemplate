@@ -28,6 +28,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/Replication/TickRingBuffer.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Pose.h"
@@ -66,9 +67,9 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Box centre in object space", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Box centre in object space", Units = m )
         float3 _center{};
-        PROPERTY( Tooltip = "Box half size", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Box half size", Units = m )
         float3 _halfExtents{ 0.5f, 0.5f, 0.5f };
     };
 } // namespace sw
@@ -332,7 +333,7 @@ namespace sw
         vector<FractureAnchorVolume> _listAnchorVolume;
         PROPERTY( Category = "Fracture", DisplayName = "Seed", Tooltip = "Scatter seed (send it with the damage events to sync)" )
         uint32 _seed;
-        PROPERTY( Category = "Fracture", DisplayName = "Anchor Tolerance", Min = 0.0, Tooltip = "Bottom mode: distance above the lowest face that still counts", Meta = "Units=m" )
+        PROPERTY( Category = "Fracture", DisplayName = "Anchor Tolerance", Min = 0.0, Tooltip = "Bottom mode: distance above the lowest face that still counts", Units = m )
         float32 _anchorTolerance;
         PROPERTY( Category = "Fracture", DisplayName = "Anchor Mode", Tooltip = "Which pieces hold the rest up" )
         FractureAnchorMode _anchorMode;
@@ -347,8 +348,7 @@ namespace sw
         vector<FractureGroupPose>       _listEventGroupPose; ///< `_eventLog` 와 같은 자리 — 맞은 떨어진 그룹의 적용 직전 자세
         mutable mutex                   _pendingMutex;
         vector<FractureGroupPose>       _listPendingDrive; ///< `driveGroup` 이 쌓은 목표(잠금 아래)
-        vector<uint64>                  _listRecentHash;   ///< 받는 쪽 — 사건 수 % `kRecentHashCount` 자리의 해시
-        vector<uint32>                  _listRecentCount;  ///< 위 자리의 사건 수
+        TickRingBuffer<uint64>          _listRecentHash;   ///< 받는 쪽 — 사건 수로 찾는 최근 상태 해시(처음 적을 때 `kRecentHashCount` 칸을 잡는다)
         vector<FracturePendingDamage>   _listPendingDamage;
         vector<PhysicsBodyHandle>       _listLeafStaticBody; ///< 잎마다 정적 바디(앵커 그룹의 잎만)
         vector<FractureGroupRuntime>    _listRuntime;        ///< 그룹 번호 오름차순

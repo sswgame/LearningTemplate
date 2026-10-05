@@ -37,7 +37,7 @@ namespace sw
         int32 _coasterIndex;
         PROPERTY( Category = "Car", DisplayName = "Car Index", Tooltip = "0 is the front car" )
         int32 _carIndex;
-        PROPERTY( Category = "Car", DisplayName = "Car Spacing", Tooltip = "Track distance between cars", Min = 0.1, Meta = "Units=m" )
+        PROPERTY( Category = "Car", DisplayName = "Car Spacing", Tooltip = "Track distance between cars", Min = 0.1, Units = m )
         float32 _carSpacing;
     };
 } // namespace sw

@@ -141,7 +141,7 @@ namespace sw
         hashed_string _material;
         PROPERTY( Category = "Body", Tooltip = "Hit zone of this body for weapon traces (name and damage multiplier); empty name is no zone" )
         PhysicsHitZoneDef _hitZone;
-        PROPERTY( Category = "Body", Min = 0.0, Tooltip = "Mass in kg; 0 computes it from the shapes and material density", Meta = "Units=kg" )
+        PROPERTY( Category = "Body", Min = 0.0, Tooltip = "Mass in kg; 0 computes it from the shapes and material density", Units = kg )
         float32 _mass;
         PROPERTY( Category = "Body", Min = 0.0, Tooltip = "Linear velocity damping" )
         float32 _linearDamping;

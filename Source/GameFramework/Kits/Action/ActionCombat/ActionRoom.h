@@ -7,12 +7,14 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/CollisionLayers.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/GameFrameworkMinimal.h"
+#include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/FacingDir.h"
 
@@ -28,7 +30,10 @@ namespace sw
         Hall,
         Boss
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 한 프레임의 플레이어 입력입니다(위치 · 방향 · 공격/대시). */
     struct ActionRoomFrameInput
     {
@@ -51,8 +56,8 @@ namespace sw
     /** @brief 한 프레임의 전투 결과입니다(피격 · 클리어 · 대시 시작). */
     struct ActionRoomFrameResult
     {
-        int32                  _damageToPlayer{ 0 }; ///< 이번 프레임 플레이어 피해
-        int32                  _bossShotCount{ 0 };  ///< 이번 프레임에 보스가 쏜 횟수(소리 · 연출)
+        int32                  _damageToPlayer{ 0 };   ///< 이번 프레임 플레이어가 받은 피해 — 방어를 빼기 전이다(플레이어의 방어 · HP 는 게임이 든다)
+        int32                  _enemyVolleyCount{ 0 }; ///< 이번 프레임에 적이 쏜 횟수 — 한 번에 여러 발이어도 1(소리 · 연출)
         uint8                  _bClearedThisFrame : 1;
         uint8                  _bBossDefeated     : 1;
         uint8                  _bDashStarted      : 1;
@@ -93,6 +98,11 @@ namespace sw
      *          - 클리어 — `RoomClearedEvent`(보스였는지) 뒤 게이트가 열린다.
      *          - 플레이어 패배(`onPlayerDefeated`) — `PlayerDefeatedInRoomEvent` 뒤 게이트가 열리고 룸이 비워진다.
      *          HUD · 오버월드는 결과를 `update` 의 반환값에서 되묻지 않고 이 이벤트로 받는다.
+     *
+     *          적의 수치(HP · 반지름 · 속도 · 닿은 피해 · 방어 · 사격)는 몬스터 정의(`MonsterDef`)입니다 — 게임이 `MonsterCatalog` 를 게임 서비스로 걸면
+     *          그 표에서 종 id(`grunt` · `boss`)를 찾고, 없으면 내장 정의를 씁니다. 싸움을 시작할 때 그 싸움에 나온 종의 정의를 복사해 듭니다(싸움 도중
+     *          카탈로그가 다시 읽혀도 그대로). 방 배치(어느 종을 어디에)는 룸 종류마다 코드 표입니다. 적은 오브젝트가 아니라 `UnitStatsComponent` 를
+     *          거치지 않고, 방어 식만 같습니다(`DamageMath::applyArmor`).
      */
     class SW_GF_API ActionRoom
     {
@@ -124,7 +134,7 @@ namespace sw
         bool isPlayerInvulnerable() const { return _invulnerable.isActive(); }
         /** @brief 대시 쿨다운 게이지(0~1)를 반환합니다. */
         float32 getDashFill() const;
-        /** @brief 보스 HP 게이지(0~1)를 반환합니다. */
+        /** @brief 보스 룸의 HP 게이지(0~1)입니다 — 적 HP 합 / 최대 합(보스 하나면 그 보스의 비율). 보스 룸이 아니면 0 입니다. */
         float32 getBossHpFill() const;
         /** @brief 살아 있는 적 수를 반환합니다. */
         int32 getAliveEnemyCount() const;
@@ -141,42 +151,26 @@ namespace sw
         void drawDebug() const;
 
     private:
-        /** @brief 적 액터 종류입니다. */
-        enum class ActorKind : uint8
-        {
-            Grunt = 0,
-            Boss
-        };
-
-        /** @brief 적 위치 · HP · 공격 타이머입니다. */
+        /** @brief 룸에 선 적 하나입니다. 수치는 그 종의 정의(`_listMonsterDef[_defIndex]`)에서 읽습니다. */
         struct Actor
         {
-            ActorKind              _kind;
             float2                 _position;
             float32                _hp;
-            float32                _hpMax;
-            float32                _radius;
-            float32                _speed;
-            Countdown              _attackTimer; ///< 다음 투사체까지
+            Countdown              _attackTimer; ///< 다음 사격까지(쏘는 종만)
+            uint16                 _defIndex;    ///< `_listMonsterDef` 의 칸
             uint8                  _bAlive   : 1;
             [[maybe_unused]] uint8 _reserved : 7;
 
             /** @brief 살아 있는 상태로 둡니다. */
             Actor()
-                : _kind{ ActorKind::Grunt }
-                , _position{}
+                : _position{}
                 , _hp{ 1.0f }
-                , _hpMax{ 1.0f }
-                , _radius{ 0.35f }
-                , _speed{ 1.6f }
                 , _attackTimer{}
+                , _defIndex{ 0 }
                 , _bAlive{ SW_TRUE }
                 , _reserved{ 0 }
             {
             }
-
-            /** @brief 액터 AABB 를 반환합니다. */
-            AABB bounds() const;
         };
 
         /** @brief 적 투사체입니다. */
@@ -186,6 +180,7 @@ namespace sw
             float2                 _velocity;
             Countdown              _life; ///< 남은 수명(초)
             float32                _radius;
+            int32                  _damage; ///< 맞은 플레이어에게 주는 피해(`MonsterShotDef::_damage`)
             uint8                  _bAlive   : 1;
             [[maybe_unused]] uint8 _reserved : 7;
 
@@ -195,6 +190,7 @@ namespace sw
                 , _velocity{}
                 , _life{}
                 , _radius{ 0.2f }
+                , _damage{ 0 }
                 , _bAlive{ SW_TRUE }
                 , _reserved{ 0 }
             {
@@ -204,13 +200,16 @@ namespace sw
             AABB bounds() const;
         };
 
-        /** @brief 그런트를 스폰합니다. */
-        void spawnGrunt( float32 x, float32 y );
-        /** @brief 보스를 스폰합니다. */
-        void spawnBoss( float32 x, float32 y );
+        /** @brief 종 @p monsterId 의 적 하나를 @p position 에 세웁니다. 정의가 없으면 세우지 않습니다(`findOrAddMonsterDef` 가 알린다). */
+        void spawnMonster( const hashed_string& monsterId, const float2& position );
+        /**
+         * @brief 이번 싸움의 정의 목록에서 @p monsterId 의 칸을 찾고, 없으면 카탈로그 서비스 → 내장 정의 순서로 찾아 더합니다.
+         * @return 칸 번호. 어디에도 없으면 -1 입니다(경고한다). 카탈로그가 걸렸는데 그 id 가 없으면 내장 정의를 쓰며 경고한다.
+         */
+        int32 findOrAddMonsterDef( const hashed_string& monsterId );
         /** @brief 플레이어 공격을 시도합니다. */
         void tryPlayerAttack( const ActionRoomFrameInput& input );
-        /** @brief 액터를 갱신합니다. 보스가 쏜 횟수를 @p out 에 더합니다. */
+        /** @brief 액터를 갱신합니다. 적이 쏜 횟수를 @p out 에 더합니다. */
         void updateActors( float32 deltaTime, float32 playerX, float32 playerY, ActionRoomFrameResult& out );
         /** @brief 투사체를 갱신합니다. */
         void updateProjectiles( float32 deltaTime );
@@ -222,6 +221,8 @@ namespace sw
         void startFight( ActionRoomKind kind );
         /** @brief 클리어 게이트가 바뀌었음을 알립니다(`ClearGateStateChangedEvent`). */
         void sendGateState( bool bLocked, bool bTriggered ) const;
+        /** @brief 적의 맞음 상자입니다(그 종의 `_radius`). */
+        AABB computeActorBounds( const Actor& actor ) const;
         /** @brief 플레이어 피격 박스를 반환합니다. */
         AABB playerHurtBox( float32 x, float32 y ) const;
         /** @brief 플레이어 공격 박스를 반환합니다. */
@@ -237,10 +238,10 @@ namespace sw
         CollisionLayers        _layers;
         vector<Actor>          _listActor;
         vector<Projectile>     _listProjectile;
+        vector<MonsterDef>     _listMonsterDef; ///< 이번 싸움에 나온 종의 정의(복사) — `Actor::_defIndex` 가 가리킨다
         Countdown              _attackCooldown;
         Countdown              _dashCooldown;
         Countdown              _invulnerable; ///< 피격 후 무적
-        float32                _bossMaxHp;
         uint8                  _bCleared : 1;
         [[maybe_unused]] uint8 _reserved : 7;
     };

@@ -3,6 +3,7 @@
  * @brief Vulkan 1.3 RHI 백엔드 디바이스입니다.
  */
 #pragma once
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"

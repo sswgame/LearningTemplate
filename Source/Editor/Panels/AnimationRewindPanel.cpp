@@ -11,7 +11,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
-#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Animation/AnimationRewind.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"

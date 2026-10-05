@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/EditorColor.h"
 
 namespace sw::editor
 {

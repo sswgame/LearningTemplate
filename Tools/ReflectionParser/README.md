@@ -337,6 +337,8 @@ struct MyComponent : public Component
 | `REFLECT_BODY()` 안에 주석 | 전처리 깨짐 | BODY 본문에 주석 금지 |
 | AnnotationMeta.txt 에만 철자 추가 | 파서가 시작할 때 멈춤 | `PredefinedAnnotationField.xxx` 에 필드 줄 |
 | 표에 없는 토큰(`PROPERTY( Color )`) | 그 헤더의 코드젠이 멈춤 | 에디터 힌트는 `Meta = "Color"` · 단위는 `Units = m`(표에 없는 글자는 `Meta = "Units=HP"`) |
+| 표에 있는 단위를 `Meta = "Units=m"` 로 | 그 헤더의 코드젠이 멈춤 | `Units = m` — `Meta` 의 `Units` 는 철자 검사를 받지 않으므로 표에 없는 글자만 받는다 |
+| 따옴표 없는 값에 공백(`Units = m / s`) | 그 헤더의 코드젠이 멈춤 | `Units = "m/s"` — 따옴표 없는 값은 첫 공백에서 끝나고, clang-format 이 `m/s` 를 `m / s` 로 띄운다 |
 
 ---
 

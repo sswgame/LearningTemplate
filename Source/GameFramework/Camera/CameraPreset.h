@@ -60,15 +60,15 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Pivot offset from the focus (Fixed: world position, FirstPerson / ThirdPerson / Follow: offset in the target's yaw frame)", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Pivot offset from the focus (Fixed: world position, FirstPerson / ThirdPerson / Follow: offset in the target's yaw frame)", Units = m )
         float3 _offset{};
-        PROPERTY( Tooltip = "World point a Fixed camera looks at when Aim is Point", Meta = "Units=m" )
+        PROPERTY( Tooltip = "World point a Fixed camera looks at when Aim is Point", Units = m )
         float3 _lookAt{};
-        PROPERTY( Tooltip = "Downward viewing angle", Meta = "Units=rad" )
+        PROPERTY( Tooltip = "Downward viewing angle", Units = rad )
         float32 _pitch{ 0.0f };
-        PROPERTY( Tooltip = "Angle from +Z towards +X (Follow / FirstPerson / ThirdPerson: added to the target's yaw)", Meta = "Units=rad" )
+        PROPERTY( Tooltip = "Angle from +Z towards +X (Follow / FirstPerson / ThirdPerson: added to the target's yaw)", Units = rad )
         float32 _yaw{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Distance from the pivot to the camera", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Distance from the pivot to the camera", Units = m )
         float32 _distance{ 10.0f };
         PROPERTY()
         CameraPresetMode _mode{ CameraPresetMode::Orbit };
@@ -85,13 +85,13 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Min = 0.1, Max = 3.14, Tooltip = "Vertical field of view", Meta = "Units=rad" )
+        PROPERTY( Min = 0.1, Max = 3.14, Tooltip = "Vertical field of view", Units = rad )
         float32 _fieldOfViewY{ 0.70f };
-        PROPERTY( Min = 0.1, Tooltip = "Visible height of the orthographic view", Meta = "Units=m" )
+        PROPERTY( Min = 0.1, Tooltip = "Visible height of the orthographic view", Units = m )
         float32 _orthoHeight{ 10.0f };
-        PROPERTY( Min = 0.01, Meta = "Units=m" )
+        PROPERTY( Min = 0.01, Units = m )
         float32 _nearPlane{ 0.1f };
-        PROPERTY( Min = 1.0, Meta = "Units=m" )
+        PROPERTY( Min = 1.0, Units = m )
         float32 _farPlane{ 100.0f };
         PROPERTY()
         bool _bOrthographic{ false };
@@ -106,9 +106,9 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Min = 0.0, Tooltip = "Time constant of the position lag; 0 snaps", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Time constant of the position lag; 0 snaps", Units = s )
         float32 _positionTime{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Time constant of the orientation lag; 0 snaps", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Time constant of the orientation lag; 0 snaps", Units = s )
         float32 _orientationTime{ 0.0f };
     };
 } // namespace sw
@@ -129,11 +129,11 @@ namespace sw
         float32 _lookSensitivity{ 0.0f };
         PROPERTY( Min = 0.0, Max = 0.99, Tooltip = "Distance / ortho height factor per wheel notch (below 1); 0 ignores the wheel" )
         float32 _zoomStep{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Focus pan speed with WASD / arrows; 0 ignores them", Meta = "Units=m/s" )
+        PROPERTY( Min = 0.0, Tooltip = "Focus pan speed with WASD / arrows; 0 ignores them", Units = "m/s" )
         float32 _panSpeed{ 0.0f };
-        PROPERTY( Tooltip = "Yaw change per Q/E press; 0 ignores them", Meta = "Units=rad" )
+        PROPERTY( Tooltip = "Yaw change per Q/E press; 0 ignores them", Units = rad )
         float32 _rotateStep{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Time constant the shown yaw follows a Q/E step with", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Time constant the shown yaw follows a Q/E step with", Units = s )
         float32 _rotateTime{ 0.15f };
         PROPERTY( Tooltip = "Mouse turns the view only while the right button is held (orbit drag)" )
         bool _bLookWhileHeld{ false };
@@ -151,17 +151,17 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Lowest pitch (up is negative)", Meta = "Units=rad" )
+        PROPERTY( Tooltip = "Lowest pitch (up is negative)", Units = rad )
         float32 _pitchMin{ -MathUtil::HalfPi };
-        PROPERTY( Tooltip = "Highest pitch (down is positive)", Meta = "Units=rad" )
+        PROPERTY( Tooltip = "Highest pitch (down is positive)", Units = rad )
         float32 _pitchMax{ MathUtil::HalfPi };
-        PROPERTY( Min = 0.0, Tooltip = "Closest distance / smallest ortho height; 0 has no limit", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Closest distance / smallest ortho height; 0 has no limit", Units = m )
         float32 _zoomMin{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Farthest distance / largest ortho height; 0 has no limit", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Farthest distance / largest ortho height; 0 has no limit", Units = m )
         float32 _zoomMax{ 0.0f };
-        PROPERTY( Tooltip = "Lowest corner of the box the camera stays in", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Lowest corner of the box the camera stays in", Units = m )
         float3 _boundsMin{};
-        PROPERTY( Tooltip = "Highest corner of the box the camera stays in", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Highest corner of the box the camera stays in", Units = m )
         float3 _boundsMax{};
         PROPERTY( Tooltip = "Keep the camera (ortho: the focus X and Z) inside the box" )
         bool _bBounds{ false };
@@ -187,11 +187,11 @@ namespace sw
         float2 _deadZone{ 0.0f, 0.0f };
         PROPERTY( Tooltip = "Screen fraction the target never leaves; outside the dead zone the camera turns with the damping" )
         float2 _softZone{ 0.8f, 0.8f };
-        PROPERTY( Min = 0.0, Tooltip = "Time constant of turning towards the target outside the dead zone", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Time constant of turning towards the target outside the dead zone", Units = s )
         float32 _damping{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Aim at where the target will be after this time", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Aim at where the target will be after this time", Units = s )
         float32 _lookAheadTime{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Time constant smoothing the look-ahead", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Time constant smoothing the look-ahead", Units = s )
         float32 _lookAheadSmoothing{ 0.2f };
         PROPERTY( Min = 0.0, Tooltip = "Back off so the target group radius times this fits on screen; 0 keeps the distance" )
         float32 _groupPadding{ 0.0f };
@@ -211,11 +211,11 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Min = 0.0, Tooltip = "Radius of the probe sphere", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Radius of the probe sphere", Units = m )
         float32 _radius{ 0.2f };
-        PROPERTY( Min = 0.0, Tooltip = "Closest the arm pulls in", Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Tooltip = "Closest the arm pulls in", Units = m )
         float32 _minDistance{ 0.3f };
-        PROPERTY( Min = 0.0, Tooltip = "Time constant of easing back out once the way is clear", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Time constant of easing back out once the way is clear", Units = s )
         float32 _recoverTime{ 0.3f };
         PROPERTY( Tooltip = "Sweep the arm against the scene" )
         bool _bEnabled{ false };
@@ -233,11 +233,11 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Position amplitude along the camera's right, up and forward", Meta = "Units=m" )
+        PROPERTY( Tooltip = "Position amplitude along the camera's right, up and forward", Units = m )
         float3 _positionAmplitude{};
-        PROPERTY( Tooltip = "Rotation amplitude (pitch, yaw, roll)", Meta = "Units=rad" )
+        PROPERTY( Tooltip = "Rotation amplitude (pitch, yaw, roll)", Units = rad )
         float3 _rotationAmplitude{};
-        PROPERTY( Min = 0.0, Tooltip = "Noise frequency", Meta = "Units=Hz" )
+        PROPERTY( Min = 0.0, Tooltip = "Noise frequency", Units = Hz )
         float32 _frequency{ 0.5f };
         PROPERTY( Tooltip = "Noise seed; the same seed gives the same shake" )
         uint32 _seed{ 0 };
@@ -252,9 +252,9 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Min = 0.0, Tooltip = "Half the sweep angle", Meta = "Units=rad" )
+        PROPERTY( Min = 0.0, Tooltip = "Half the sweep angle", Units = rad )
         float32 _yawAmplitude{ 0.0f };
-        PROPERTY( Min = 0.01, Tooltip = "Time of one full sweep there and back", Meta = "Units=s" )
+        PROPERTY( Min = 0.01, Tooltip = "Time of one full sweep there and back", Units = s )
         float32 _period{ 8.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Start phase as a fraction of the period" )
         float32 _phase{ 0.0f };

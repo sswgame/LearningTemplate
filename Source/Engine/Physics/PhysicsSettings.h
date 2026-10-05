@@ -75,11 +75,11 @@ namespace sw
         /** @brief 레이어 수의 상한입니다(`CollisionLayers::kLayerCount`). */
         static constexpr uint32 kMaxLayerCount = CollisionLayers::kLayerCount;
 
-        PROPERTY( Tooltip = "3D gravity", Meta = "Units=m/s^2" )
+        PROPERTY( Tooltip = "3D gravity", Units = "m/s2" )
         float3 _gravity{ 0.0f, -9.81f, 0.0f };
-        PROPERTY( Tooltip = "2D gravity", Meta = "Units=m/s^2" )
+        PROPERTY( Tooltip = "2D gravity", Units = "m/s2" )
         float2 _gravity2D{ 0.0f, -9.81f };
-        PROPERTY( Min = 0.001, Tooltip = "Simulation step; frames accumulate time and run whole steps", Meta = "Units=s" )
+        PROPERTY( Min = 0.001, Tooltip = "Simulation step; frames accumulate time and run whole steps", Units = s )
         float32 _fixedTimeStep{ 1.0f / 60.0f };
         PROPERTY( Min = 1, Tooltip = "Most steps one frame runs; time beyond that is dropped (slow motion instead of a spiral)" )
         uint32 _maxStepsPerFrame{ 4 };

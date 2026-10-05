@@ -4,7 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetHost.h"
+#include "Core/Network/Connection/NetConnection.h"
+#include "Core/Network/Connection/NetHost.h"
 
 #include "Engine/Destruction/FractureComponentBase.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -19,8 +20,7 @@ namespace sw
             static constexpr float32 kQuaternionResolution = 1.0f / 32767.0f;
             static constexpr int32   kPoseMessageBudget    = 900; ///< 자세 메시지 하나를 이만큼에서 끊는다(한도 1024)
             static constexpr uint8   kRestRepeatCount      = 5;   ///< 멈춘 자세를 비신뢰로 되풀이하는 횟수(자세 주기마다)
-            static constexpr uint32  kMaxPoseSample        = 32;
-            static constexpr float32 kPoseIntervalsBehind  = 2.0f; ///< 렌더 지연은 자세 간격의 이 배 이상 — 자세 하나를 잃거나 흔들림으로 늦어도 다음 것과 사이를 잇는다
+            static constexpr int32   kMaxPoseSample        = 32;  ///< 덩어리마다 드는 자세 표본 수
 
             /** @brief 프로필의 자세 간격(초)입니다. */
             static float32 computePosePeriod( const FractureComponentBase& component ) { return 1.0f / MathUtil::max( 0.1f, component.getProfile()._networkPoseRate ); }
@@ -222,15 +222,15 @@ namespace sw
             if ( pComponent != nullptr )
                 sendEvents( entry, *pComponent, serverTick );
         }
-        // 스냅숏은 사건 뒤에 — 스냅숏의 사건 수 앞의 사건은 이미 같은 채널에서 앞서 갔다.
+        // 스냅숏은 사건 뒤에 — 이번 틱 사건까지 사건 수에 든다. 사건(순서 없음)과 스냅숏(순서)은 받는 쪽에서 앞뒤가 바뀔 수 있다 — 클라이언트가 번호로 맞춘다.
         vector<Request> listRequest;
         listRequest.swap( _listRequest );
         for ( const Request& request : listRequest )
         {
             Entry*                 pEntry     = findEntry( request._netId );
             FractureComponentBase* pComponent = pEntry != nullptr ? resolve( *pEntry ) : nullptr;
-            if ( pComponent != nullptr )
-                sendSnapshot( *pEntry, *pComponent, request._connectionId );
+            if ( pComponent != nullptr && sendSnapshot( *pEntry, *pComponent, request._connectionId ) == false )
+                _listRequest.push_back( request ); // 신뢰 창이 찼다 — 다음 틱에 다시(연결이 닫히면 onConnectionClosed 가 지운다)
         }
         for ( Entry& entry : _listEntry )
         {
@@ -268,39 +268,39 @@ namespace sw
             writer.writeBool( bHasPose );
             if ( bHasPose )
                 DestructionReplicationInternal::writeExactPose( writer, listGroupPose[index]._position, listGroupPose[index]._rotation );
-            (void)broadcast( NetChannelType::ReliableOrdered );
+            (void)broadcast( NetChannelType::ReliableUnordered ); // 받는 쪽이 번호로 줄 세운다 — 앞 사건을 잃어도 뒤 사건이 기다리지 않는다
             ++_stats._eventMessageCount;
         }
         entry._sentEventCount = static_cast<uint32>( listEvent.size() );
     }
 
-    void DestructionReplicationServer::sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionId )
+    bool DestructionReplicationServer::sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionId )
     {
         const uint32 eventCount = component.getState().getEventCount();
         if ( component.isStateReady() == false || eventCount == 0 )
-            return; // 처음 상태 그대로 — 사건이 0 번부터 간다
+            return true; // 처음 상태 그대로 — 사건이 0 번부터 간다
         vector<uint8> bytes;
         component.makeNetworkSnapshot( bytes );
-        const uint32 partBytes = static_cast<uint32>( MathUtil::max( 64, _settings._snapshotPartBytes ) );
-        const uint32 partCount = static_cast<uint32>( ( bytes.size() + partBytes - 1 ) / partBytes );
-        const uint32 serial    = ++entry._snapshotSerial;
-        for ( uint32 part = 0; part < partCount; ++part )
+        BitWriter& writer = _writer.begin( NetDestructionMessage::kSnapshot );
+        writer.writeVarUint( entry._netId );
+        writer.writeVarUint( eventCount );
+        writer.writeBlob( bytes.data(), static_cast<int32>( bytes.size() ) );
+        if ( _writer.getByteCount() > NetConnection::kMaxReliableMessageSize )
         {
-            const uint32 offset = part * partBytes;
-            const uint32 length = MathUtil::min( partBytes, static_cast<uint32>( bytes.size() ) - offset );
-            BitWriter&   writer = _writer.begin( NetDestructionMessage::kSnapshotPart );
-            writer.writeVarUint( entry._netId );
-            writer.writeVarUint( serial );
-            writer.writeVarUint( eventCount );
-            writer.writeVarUint( part );
-            writer.writeVarUint( partCount );
-            writer.writeVarUint( length );
-            writer.writeBytes( bytes.data() + offset, static_cast<int32>( length ) );
-            if ( _writer.send( *_pHost, connectionId, NetChannelType::ReliableOrdered ) )
-                _stats._sentBytes += static_cast<uint64>( _writer.getByteCount() );
-            ++_stats._snapshotPartCount;
+            // 다시 해도 같다 — 줄에 돌려놓지 않는다. 이 오브젝트는 늦은 참가 · 복구를 받지 못한다(해시 비교가 계속 어긋남을 알린다).
+            SW_LOG_ERROR( "DestructionReplication: the snapshot of object %# is %# bytes, over the reliable message limit %# - it cannot be sent",
+                          entry._netId, _writer.getByteCount(), NetConnection::kMaxReliableMessageSize );
+            ++_stats._sendRejectedCount;
+            return true;
         }
+        if ( _writer.send( *_pHost, connectionId, NetChannelType::ReliableOrdered ) == false )
+        {
+            ++_stats._sendRejectedCount;
+            return false;
+        }
+        _stats._sentBytes += static_cast<uint64>( _writer.getByteCount() );
         ++_stats._snapshotCount;
+        return true;
     }
 
     void DestructionReplicationServer::sendPoses( Entry& entry, FractureComponentBase& component, uint32 serverTick )
@@ -420,10 +420,7 @@ namespace sw
         , _writer{}
         , _pHost{ nullptr }
         , _pManager{ nullptr }
-        , _renderTick{ -1.0f }
-        , _posePeriodMax{ 0.0f }
-        , _serverTickEstimate{ 0.0f }
-        , _bHasServerTick{ SW_FALSE }
+        , _clock{}
     {
     }
 
@@ -433,11 +430,12 @@ namespace sw
         _pManager = pManager;
         _settings = settings;
         _listEntry.clear();
-        _stats              = DestructionReplicationStats{};
-        _renderTick         = -1.0f;
-        _posePeriodMax      = 0.0f;
-        _serverTickEstimate = 0.0f;
-        _bHasServerTick     = SW_FALSE;
+        _stats = DestructionReplicationStats{};
+        NetClockSettings clockSettings;
+        clockSettings._tickInterval       = settings._tickInterval;
+        clockSettings._interpolationDelay = settings._interpolationDelay;
+        clockSettings._sampleInterval     = 0.0f; // 등록하는 오브젝트의 자세 간격으로 올린다(registerObject)
+        _clock.initialize( clockSettings );
     }
 
     void DestructionReplicationClient::registerObject( uint32 netId, FractureComponentBase& component )
@@ -452,7 +450,7 @@ namespace sw
         *pEntry            = Entry{};
         pEntry->_netId     = netId;
         pEntry->_component = component.getHandle();
-        _posePeriodMax     = MathUtil::max( _posePeriodMax, DestructionReplicationInternal::computePosePeriod( component ) );
+        _clock.setSampleInterval( MathUtil::max( _clock.getSampleInterval(), DestructionReplicationInternal::computePosePeriod( component ) ) );
     }
 
     void DestructionReplicationClient::skipNextEvent( uint32 netId )
@@ -497,7 +495,7 @@ namespace sw
         {
             const uint32 serverTick = static_cast<uint32>( reader.readVarUint() );
             const uint32 index      = static_cast<uint32>( reader.readVarUint() );
-            observeServerTick( serverTick );
+            _clock.observeServerTick( serverTick );
             BufferedEvent buffered;
             buffered._index = index;
             if ( DestructionReplicationInternal::readEvent( reader, buffered._event ) )
@@ -512,9 +510,10 @@ namespace sw
                     handleEvent( *pEntry, buffered );
             }
         }
-        else if ( kind == NetDestructionMessage::kSnapshotPart )
+        else if ( kind == NetDestructionMessage::kSnapshot )
         {
-            handleSnapshotPart( *pEntry, reader );
+            if ( handleSnapshot( *pEntry, reader ) == false )
+                return NetHandleResult::Malformed;
         }
         else
         {
@@ -537,15 +536,11 @@ namespace sw
             ++_stats._staleEventCount; // 스냅숏이 이미 담았다
             return;
         }
-        if ( index > entry._nextEventIndex )
+        if ( entry._bAwaitingSnapshot == SW_TRUE || index > entry._nextEventIndex )
         {
-            // 앞 번호를 기다린다(늦게 들어와 스냅숏이 아직 안 왔다).
-            for ( const BufferedEvent& buffered : entry._listFutureEvent )
-            {
-                if ( buffered._index == index )
-                    return;
-            }
-            entry._listFutureEvent.push_back( received );
+            // 앞 번호를 기다리거나(늦게 들어와 스냅숏이 아직 안 왔다 · 앞 사건을 잃었다), 청한 스냅숏을 기다린다 — 지금 적용하면 뒤에 온 스냅숏이 그 상태를 덮고
+            // 번호를 되돌려 이 사건이 영영 빠진다(사건은 순서 없음 채널이라 스냅숏보다 먼저 올 수 있다). 스냅숏이 번호로 잇는다.
+            bufferEvent( entry, received );
             return;
         }
         FractureComponentBase* pComponent = resolve( entry );
@@ -578,6 +573,16 @@ namespace sw
         }
     }
 
+    void DestructionReplicationClient::bufferEvent( Entry& entry, const BufferedEvent& received )
+    {
+        for ( const BufferedEvent& buffered : entry._listFutureEvent )
+        {
+            if ( buffered._index == received._index )
+                return;
+        }
+        entry._listFutureEvent.push_back( received );
+    }
+
     void DestructionReplicationClient::applyToComponent( FractureComponentBase& component, const BufferedEvent& buffered )
     {
         if ( buffered._bHasPose == SW_TRUE )
@@ -586,40 +591,19 @@ namespace sw
             component.applyDamage( buffered._event );
     }
 
-    void DestructionReplicationClient::handleSnapshotPart( Entry& entry, BitReader& reader )
+    bool DestructionReplicationClient::handleSnapshot( Entry& entry, BitReader& reader )
     {
-        const uint32 serial     = static_cast<uint32>( reader.readVarUint() );
-        const uint32 eventCount = static_cast<uint32>( reader.readVarUint() );
-        const uint32 part       = static_cast<uint32>( reader.readVarUint() );
-        const uint32 partCount  = static_cast<uint32>( reader.readVarUint() );
-        const uint32 length     = static_cast<uint32>( reader.readVarUint() );
-        if ( reader.hasOverflowed() || partCount == 0 || part >= partCount || length > static_cast<uint32>( reader.getBitsRemaining() / 8 ) )
-            return;
-        if ( part == 0 )
-        {
-            entry._snapshotBytes.clear();
-            entry._snapshotSerial     = serial;
-            entry._snapshotEventCount = eventCount;
-            entry._snapshotPartCount  = partCount;
-            entry._snapshotNextPart   = 0;
-        }
-        if ( serial != entry._snapshotSerial || part != entry._snapshotNextPart )
-            return; // 신뢰 순서 채널이라 빠지지 않는다 — 다른 스냅숏의 조각이면 버린다
-        const size_t offset = entry._snapshotBytes.size();
-        entry._snapshotBytes.resize( offset + length );
-        if ( reader.readBytes( entry._snapshotBytes.data() + offset, static_cast<int32>( length ) ) == false )
-            return;
-        ++entry._snapshotNextPart;
-        if ( entry._snapshotNextPart < entry._snapshotPartCount )
-            return;
+        const uint32  eventCount = static_cast<uint32>( reader.readVarUint() );
+        vector<uint8> bytes;
+        if ( reader.readBlob( bytes, NetConnection::kMaxReliableMessageSize ) == false || bytes.empty() )
+            return false;
 
         FractureComponentBase* pComponent = resolve( entry );
         if ( pComponent != nullptr )
-            pComponent->applyNetworkSnapshot( entry._snapshotBytes.data(), entry._snapshotBytes.size() );
+            pComponent->applyNetworkSnapshot( bytes.data(), bytes.size() );
         ++_stats._snapshotAppliedCount;
-        entry._snapshotBytes.clear();
         entry._bAwaitingSnapshot = SW_FALSE;
-        entry._nextEventIndex    = entry._snapshotEventCount;
+        entry._nextEventIndex    = eventCount;
         entry._skipCount         = 0;
         entry._listHashCheck.clear();
         // 스냅숏보다 앞 번호는 버리고, 이어지는 것은 적용한다.
@@ -632,6 +616,7 @@ namespace sw
             if ( buffered._index >= entry._nextEventIndex )
                 handleEvent( entry, buffered );
         }
+        return true;
     }
 
     void DestructionReplicationClient::handlePose( BitReader& reader, bool bRest )
@@ -643,17 +628,15 @@ namespace sw
         if ( reader.hasOverflowed() )
             return;
         Entry* pEntry = findEntry( netId );
-        observeServerTick( tick );
+        _clock.observeServerTick( tick );
         for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
         {
-            PoseSample sample;
-            sample._tick         = tick;
-            sample._bRest        = bRest ? SW_TRUE : SW_FALSE;
+            ChunkPose    pose;
             const uint32 groupId = static_cast<uint32>( reader.readVarUint() );
             if ( bRest )
-                Internal::readExactPose( reader, sample._position, sample._rotation );
+                Internal::readExactPose( reader, pose._position, pose._rotation );
             else
-                Internal::readQuantizedPose( reader, sample._position, sample._rotation, _settings );
+                Internal::readQuantizedPose( reader, pose._position, pose._rotation, _settings );
             if ( pEntry == nullptr || reader.hasOverflowed() )
                 continue;
             ChunkTrack* pTrack = nullptr;
@@ -667,44 +650,19 @@ namespace sw
                 pEntry->_listChunk.emplace_back();
                 pTrack           = &pEntry->_listChunk.back();
                 pTrack->_groupId = groupId;
+                pTrack->_poseBuffer.initialize( Internal::kMaxPoseSample );
             }
-            // 틱 순으로 끼운다(멈춤 확정은 다른 채널이라 앞질러 올 수 있다). 같은 틱이면 멈춤 쪽이 이긴다.
-            auto iter = pTrack->_listSample.begin();
-            while ( iter != pTrack->_listSample.end() && iter->_tick < tick )
-                ++iter;
-            if ( iter != pTrack->_listSample.end() && iter->_tick == tick )
-            {
-                if ( bRest )
-                    *iter = sample;
-            }
-            else
-            {
-                pTrack->_listSample.insert( iter, sample );
-            }
-            while ( pTrack->_listSample.size() > Internal::kMaxPoseSample )
-                pTrack->_listSample.pop_front();
+            // 틱 순으로 끼운다(멈춤 확정은 다른 채널이라 앞질러 올 수 있다). 같은 틱이면 멈춤 쪽이 이긴다. 넘치면 가장 오래된 것을 버린다.
+            pTrack->_poseBuffer.insert( tick, pose, bRest );
         }
-    }
-
-    void DestructionReplicationClient::observeServerTick( uint32 serverTick )
-    {
-        const float32 tick = static_cast<float32>( serverTick );
-        if ( _bHasServerTick == SW_FALSE || tick > _serverTickEstimate )
-            _serverTickEstimate = tick;
-        _bHasServerTick = SW_TRUE;
     }
 
     void DestructionReplicationClient::update( float32 deltaTime )
     {
-        if ( _bHasServerTick == SW_TRUE )
-        {
-            // 서버 틱 추정은 틱마다 흐르고 받은 틱보다 뒤처지지 않는다 — 자세가 오지 않는 동안(모두 멈춤)에도 렌더 틱이 서버 시각을 따른다.
-            const float32 tickInterval = MathUtil::max( 1.0e-4f, _settings._tickInterval );
-            _serverTickEstimate += deltaTime / tickInterval;
-            // 지연이 자세 간격 하나뿐이면 자세 하나를 잃거나 흔들림으로 늦을 때마다 뒤 자세가 없어 덩어리가 멈춰 선다(빨리 떨어지는 덩어리는 미터 단위로 어긋난다).
-            const float32 delay = MathUtil::max( _settings._interpolationDelay, _posePeriodMax * DestructionReplicationInternal::kPoseIntervalsBehind );
-            _renderTick         = MathUtil::max( _renderTick, _serverTickEstimate - delay / tickInterval );
-        }
+        // 서버 틱 추정은 틱마다 흐르고 받은 틱보다 뒤처지지 않는다 — 자세가 오지 않는 동안(모두 멈춤)에도 렌더 틱이 서버 시각을 따른다(NetClock — 받은 가장 새 틱까지).
+        // 지연은 설정값과 가장 긴 자세 간격 × 2 중 큰 것 — 간격 하나뿐이면 자세 하나를 잃거나 흔들림으로 늦을 때마다 뒤 자세가 없어 덩어리가 멈춰 선다
+        // (빨리 떨어지는 덩어리는 미터 단위로 어긋난다).
+        _clock.advance( deltaTime );
         for ( Entry& entry : _listEntry )
         {
             FractureComponentBase* pComponent = resolve( entry );
@@ -770,7 +728,8 @@ namespace sw
 
     void DestructionReplicationClient::driveChunks( Entry& entry, FractureComponentBase& component )
     {
-        if ( _renderTick < 0.0f )
+        const float32 renderTick = _clock.getRenderTick();
+        if ( renderTick < 0.0f )
             return;
         // 그룹 번호는 늘기만 한다 — 지금 가장 큰 번호보다 작은데 없는 그룹은 갈라져 사라진 것, 큰 것은 그 사건이 아직 오지 않은 것(자세를 먼저 받았다).
         uint32 maxGroupId = 0;
@@ -787,34 +746,27 @@ namespace sw
                 continue;
             }
             ++trackIndex;
-            // 첫 자세보다 앞을 그리는 동안은 몰지 않는다 — 그 덩어리는 같은 사건 · 같은 씨앗으로 서버와 같은 속도로 태어나 혼자 날아간다.
-            if ( bHasGroup == false || track._listSample.empty() || static_cast<float32>( track._listSample.front()._tick ) > _renderTick )
+            if ( bHasGroup == false )
                 continue;
-            // 렌더 틱을 사이에 둔 두 자세 — 앞이 없으면 첫 것, 뒤가 없으면 마지막 것(앞으로 내다보지 않는다).
-            const PoseSample* pFrom = &track._listSample.front();
-            const PoseSample* pTo   = pFrom;
-            for ( const PoseSample& sample : track._listSample )
+            // 렌더 틱을 사이에 둔 두 자세 — 뒤가 없으면 마지막 것(앞으로 내다보지 않는다).
+            const InterpolationBuffer<ChunkPose>::Sample* pFrom = nullptr;
+            const InterpolationBuffer<ChunkPose>::Sample* pTo   = nullptr;
+            float32                                       alpha = 0.0f;
+            const InterpolationBracketKind                kind  = track._poseBuffer.findBracket( renderTick, pFrom, pTo, alpha );
+            // 첫 자세보다 앞을 그리는 동안은 몰지 않는다 — 그 덩어리는 같은 사건 · 같은 씨앗으로 서버와 같은 속도로 태어나 혼자 날아간다.
+            const bool bBeforeFirst = kind == InterpolationBracketKind::Empty || kind == InterpolationBracketKind::BeforeFirst;
+            if ( bBeforeFirst )
+                continue;
+            float3     position = pFrom->_value._position;
+            quaternion rotation = pFrom->_value._rotation;
+            if ( kind == InterpolationBracketKind::Between )
             {
-                if ( static_cast<float32>( sample._tick ) <= _renderTick )
-                    pFrom = &sample;
-                pTo = &sample;
-                if ( static_cast<float32>( sample._tick ) > _renderTick )
-                    break;
-            }
-            if ( static_cast<float32>( pFrom->_tick ) > _renderTick )
-                pTo = pFrom;
-            float3     position = pFrom->_position;
-            quaternion rotation = pFrom->_rotation;
-            if ( pTo != pFrom && pTo->_tick > pFrom->_tick )
-            {
-                const float32 alpha = MathUtil::clamp( ( _renderTick - static_cast<float32>( pFrom->_tick ) ) / static_cast<float32>( pTo->_tick - pFrom->_tick ), 0.0f, 1.0f );
-                position            = pFrom->_position + ( pTo->_position - pFrom->_position ) * alpha;
-                rotation            = quaternion::lerp( pFrom->_rotation, pTo->_rotation, alpha );
+                position = pFrom->_value._position + ( pTo->_value._position - pFrom->_value._position ) * alpha;
+                rotation = quaternion::lerp( pFrom->_value._rotation, pTo->_value._rotation, alpha );
             }
             component.driveGroup( track._groupId, position, rotation );
             // 지난 것은 하나만 남긴다(보간의 앞).
-            while ( track._listSample.size() > 2 && static_cast<float32>( track._listSample[1]._tick ) <= _renderTick )
-                track._listSample.pop_front();
+            track._poseBuffer.removeConsumed( renderTick );
         }
     }
 } // namespace sw

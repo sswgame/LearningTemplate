@@ -4,8 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetHost.h"
-#include "Core/Network/NetSendBudget.h"
+#include "Core/Network/Connection/NetConnection.h"
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/NetTypes.h"
 
 #include <algorithm>
@@ -22,6 +23,11 @@ namespace sw
                 const float32 dz = lhs._z - rhs._z;
                 return MathUtil::sqrt( dx * dx + dz * dz );
             }
+
+            /**
+             * @brief 엔티티 id 를 공간 해시의 키로 바꿉니다. 격자는 키를 비교 · 해시만 하므로 세대는 늘 1 입니다(세대 0 은 무효 핸들이라 격자가 받지 않는다).
+             */
+            static SlotHandle makeGridKey( uint32 entityId ) { return SlotHandle::make( entityId, 1u ); }
 
             static void writeEntity( BitWriter& writer, const MmoEntity& entity, bool bWithType )
             {
@@ -45,10 +51,11 @@ namespace sw
                 return reader.readBlob( outEntity._listState, NetMmoMessage::kMaxStateBytes ) && reader.hasOverflowed() == false;
             }
 
-            /** @brief 갱신 묶음에서 엔티티 하나(타입 없음)가 쓰는 비트입니다 — `writeEntity( …, false )` 와 같다. */
-            static int32 computeUpdateBits( const MmoEntity& entity )
+            /** @brief 묶음에서 엔티티 하나가 쓰는 비트입니다 — `writeEntity( …, bWithType )` 와 같다(들어옴은 타입까지, 갱신은 없이). */
+            static int32 computeEntityBits( const MmoEntity& entity, bool bWithType )
             {
-                return BitMath::computeVarUintBits( entity._entityId ) + 3 * 32 + BitMath::computeBlobBits( static_cast<int32>( entity._listState.size() ) );
+                const int32 typeBits = bWithType ? BitMath::computeVarUintBits( entity._typeId ) : 0;
+                return BitMath::computeVarUintBits( entity._entityId ) + typeBits + 3 * 32 + BitMath::computeBlobBits( static_cast<int32>( entity._listState.size() ) );
             }
         };
     } // namespace
@@ -56,81 +63,6 @@ namespace sw
 
 namespace sw
 {
-    // ------------------------------------------------------------------------------
-    // InterestGrid
-    // ------------------------------------------------------------------------------
-    void InterestGrid::initialize( float32 cellSize )
-    {
-        _cellSize = MathUtil::max( 1.0f, cellSize );
-        _mapCell.clear();
-        _mapPosition.clear();
-    }
-
-    int32 InterestGrid::computeCellCoord( float32 value ) const { return static_cast<int32>( MathUtil::floor( value / _cellSize ) ); }
-
-    void InterestGrid::setPosition( uint32 entityId, const float3& position )
-    {
-        const auto  positionIter = _mapPosition.find( entityId );
-        const int64 newKey       = makeCellKey( computeCellCoord( position._x ), computeCellCoord( position._z ) );
-        if ( positionIter != _mapPosition.end() )
-        {
-            const int64 oldKey   = makeCellKey( computeCellCoord( positionIter->second._x ), computeCellCoord( positionIter->second._z ) );
-            positionIter->second = position;
-            if ( oldKey == newKey )
-                return;
-            vector<uint32>& listOld = _mapCell[oldKey];
-            listOld.erase( std::remove( listOld.begin(), listOld.end(), entityId ), listOld.end() );
-        }
-        else
-        {
-            _mapPosition[entityId] = position;
-        }
-        _mapCell[newKey].push_back( entityId );
-    }
-
-    void InterestGrid::remove( uint32 entityId )
-    {
-        const auto positionIter = _mapPosition.find( entityId );
-        if ( positionIter == _mapPosition.end() )
-            return;
-        vector<uint32>& listCell = _mapCell[makeCellKey( computeCellCoord( positionIter->second._x ), computeCellCoord( positionIter->second._z ) )];
-        listCell.erase( std::remove( listCell.begin(), listCell.end(), entityId ), listCell.end() );
-        _mapPosition.erase( positionIter );
-    }
-
-    bool InterestGrid::findPosition( uint32 entityId, float3& outPosition ) const
-    {
-        const auto positionIter = _mapPosition.find( entityId );
-        if ( positionIter == _mapPosition.end() )
-            return false;
-        outPosition = positionIter->second;
-        return true;
-    }
-
-    void InterestGrid::queryRadius( const float3& center, float32 radius, vector<uint32>& outListEntity ) const
-    {
-        outListEntity.clear();
-        const int32 minX = computeCellCoord( center._x - radius );
-        const int32 maxX = computeCellCoord( center._x + radius );
-        const int32 minZ = computeCellCoord( center._z - radius );
-        const int32 maxZ = computeCellCoord( center._z + radius );
-        for ( int32 z = minZ; z <= maxZ; ++z )
-        {
-            for ( int32 x = minX; x <= maxX; ++x )
-            {
-                const auto cellIter = _mapCell.find( makeCellKey( x, z ) );
-                if ( cellIter == _mapCell.end() )
-                    continue;
-                for ( const uint32 entityId : cellIter->second )
-                {
-                    const float3& position = _mapPosition.find( entityId )->second;
-                    if ( MmoReplicatorInternal::computeFlatDistance( center, position ) <= radius )
-                        outListEntity.push_back( entityId );
-                }
-            }
-        }
-    }
-
     // ------------------------------------------------------------------------------
     // MmoReplicator
     // ------------------------------------------------------------------------------
@@ -147,6 +79,7 @@ namespace sw
         , _parallel{}
         , _observerScratch{}
         , _tickDeltaTime{ 0.0f }
+        , _tickUpdateBudgetBytes{ 0 }
         , _tick{ 0 }
         , _pRangeObserver{ nullptr }
     {
@@ -158,7 +91,7 @@ namespace sw
         _settings              = settings;
         _settings._leaveRadius = MathUtil::max( _settings._leaveRadius, _settings._enterRadius );
         _pPolicy               = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
-        _grid.initialize( settings._cellSize );
+        _grid                  = SpatialHashGrid2D{ settings._cellSize };
         _mapEntity.clear();
         _listObserver.clear();
         _sentUpdateCount = 0;
@@ -176,13 +109,14 @@ namespace sw
             return;
         }
         _mapEntity[entity._entityId] = entity;
-        _grid.setPosition( entity._entityId, entity._position );
+        _grid.update( MmoReplicatorInternal::makeGridKey( entity._entityId ), entity._position._x, entity._position._z, entity._position._x,
+                      entity._position._z );
     }
 
     void MmoReplicator::removeEntity( uint32 entityId )
     {
         _mapEntity.erase( entityId );
-        _grid.remove( entityId );
+        _grid.remove( MmoReplicatorInternal::makeGridKey( entityId ) );
     }
 
     void MmoReplicator::setObserver( int32 connectionId, uint32 entityId )
@@ -230,7 +164,8 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return;
-        _tickDeltaTime = deltaTime;
+        _tickDeltaTime         = deltaTime;
+        _tickUpdateBudgetBytes = NetSendBudget::computeTickBudget( _settings._updateBudgetBytes, _pHost->getMaxBytesPerSecond(), static_cast<float64>( deltaTime ) );
         ++_tick;
         _observerScratch.prepare( _parallel );
         _pRangeObserver = _listObserver.data();
@@ -263,9 +198,11 @@ namespace sw
 
     void MmoReplicator::updateObserver( int32 connectionId, Observer& observer, float32 deltaTime, ObserverScratch& scratch )
     {
-        float3 center{};
-        if ( _grid.findPosition( observer._entityId, center ) == false )
+        // 관찰자의 자리는 엔티티 표에서 — 격자와 표는 setEntity · removeEntity 가 함께 바꾼다.
+        const auto observerIter = _mapEntity.find( observer._entityId );
+        if ( observerIter == _mapEntity.end() )
             return;
+        const float3 center = observerIter->second._position;
 
         const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
 
@@ -288,22 +225,22 @@ namespace sw
         const size_t pendingLeaveIndex = sendLeaves( connectionId, observer, scratch );
 
         // 2) 들어옴 — 들어오는 반경 안(가까운 것부터, 틱마다 상한).
-        vector<uint32>& listNear = scratch._listNear;
-        listNear.clear();
-        _grid.queryRadius( center, _settings._enterRadius, listNear );
+        vector<SlotHandle>& listNear = scratch._listNear;
+        _grid.queryCircle( center._x, center._z, _settings._enterRadius, listNear );
         if ( bAlwaysPolicy )
         {
             for ( const auto& entity : _mapEntity )
             {
                 if ( _pPolicy->isAlwaysRelevant( connectionId, entity.second ) )
-                    listNear.push_back( entity.first );
+                    listNear.push_back( MmoReplicatorInternal::makeGridKey( entity.first ) );
             }
         }
         // 거리는 한 번씩만 재고 (거리, id) 로 정렬한다(비교마다 해시를 찾지 않게). 이미 보이는 것은 뺀다.
         vector<std::pair<float32, uint32>>& listRank = scratch._listRank;
         listRank.clear();
-        for ( const uint32 entityId : listNear )
+        for ( const SlotHandle nearKey : listNear )
         {
+            const uint32 entityId = nearKey.index();
             if ( observer._mapVisible.find( entityId ) != observer._mapVisible.end() )
                 continue;
             const auto entityIter = _mapEntity.find( entityId );
@@ -312,23 +249,34 @@ namespace sw
         }
         std::sort( listRank.begin(), listRank.end() );
         listRank.erase( std::unique( listRank.begin(), listRank.end() ), listRank.end() ); // 반경 안 + 늘 보이기 겹침
-        int32 enteredCount = 0;
-        for ( const auto& ranked : listRank )
+        // 한 신뢰 메시지에 묶는다 — 엔티티마다 창 한 칸 · 머리를 쓰지 않는다(Core 가 64 KB 까지 조각으로 나른다). 보내기가 받아들여야 보이는 목록에 넣는다.
+        vector<uint32>& listEnter = scratch._listEnter;
+        listEnter.clear();
         {
-            const uint32 entityId = ranked.second;
-            if ( enteredCount >= _settings._maxEnterPerTick )
-                break; // 가까운 것부터 — 나머지는 다음 틱에
-            const auto entityIter = _mapEntity.find( entityId );
-            if ( entityIter == _mapEntity.end() )
-                continue;
             BitWriter& writer = scratch._messageWriter.begin( NetMmoMessage::kEnter );
             writer.writeVarUint( _tick );
-            MmoReplicatorInternal::writeEntity( writer, entityIter->second, true );
-            if ( _pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
-                break; // 신뢰 창이 찼다 — 다음 틱에
-            VisibleEntry& entry  = observer._mapVisible[entityId];
-            entry._listSentState = entityIter->second._listState;
-            ++enteredCount;
+            NetSendBudget budget( NetConnection::kMaxReliableMessageSize, NetConnection::kMaxReliableMessageSize );
+            budget.reserveBits( writer.getBitCount() + 1 ); // 머리 + 끝 표시
+            for ( const auto& ranked : listRank )
+            {
+                if ( static_cast<int32>( listEnter.size() ) >= _settings._maxEnterPerTick )
+                    break; // 가까운 것부터 — 나머지는 다음 틱에
+                const auto entityIter = _mapEntity.find( ranked.second );
+                if ( entityIter == _mapEntity.end() )
+                    continue;
+                if ( budget.tryReserveBits( 1 + MmoReplicatorInternal::computeEntityBits( entityIter->second, true ) ) == false )
+                    break; // 64 KB — 나머지는 다음 틱에
+                writer.writeBool( true );
+                MmoReplicatorInternal::writeEntity( writer, entityIter->second, true );
+                listEnter.push_back( ranked.second );
+            }
+            writer.writeBool( false );
+            if ( listEnter.empty() == false && _pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() ) )
+            {
+                for ( const uint32 entityId : listEnter )
+                    observer._mapVisible[entityId]._listSentState = getEntity( entityId )._listState;
+            }
+            // 보내기가 거절했으면(신뢰 창이 찼다) 아무것도 보이는 목록에 넣지 않는다 — 다음 틱에 다시 고른다.
         }
 
         // 3) 갱신 — 우선도를 쌓고 예산 안에서 큰 것부터. 나감을 아직 못 보낸 것(신뢰 창이 찼다)은 건너뛴다 — 사라진 엔티티일 수 있다.
@@ -346,7 +294,7 @@ namespace sw
         prioritizer.collectOrder( listOrder );
         BitWriter& writer = scratch._messageWriter.begin( NetMmoMessage::kUpdate );
         writer.writeVarUint( _tick );
-        NetSendBudget budget( _settings._updateBudgetBytes );
+        NetSendBudget budget( _tickUpdateBudgetBytes );
         budget.reserveBits( writer.getBitCount() + 1 ); // 머리 + 끝 표시
         vector<uint32>& listSent = scratch._listSent;
         listSent.clear();
@@ -355,7 +303,7 @@ namespace sw
             if ( std::binary_search( listLeave.begin() + static_cast<ptrdiff_t>( pendingLeaveIndex ), listLeave.end(), entityId ) )
                 continue;
             const MmoEntity& entity = getEntity( entityId );
-            if ( budget.tryReserveBits( 1 + MmoReplicatorInternal::computeUpdateBits( entity ) ) == false )
+            if ( budget.tryReserveBits( 1 + MmoReplicatorInternal::computeEntityBits( entity, false ) ) == false )
                 continue;
             writer.writeBool( true );
             MmoReplicatorInternal::writeEntity( writer, entity, false );
@@ -375,13 +323,13 @@ namespace sw
 
     size_t MmoReplicator::sendLeaves( int32 connectionId, Observer& observer, ObserverScratch& scratch )
     {
-        // 메시지 상한 안에서 쪼갠다 — 한 메시지에 다 넣으면 1024 B 를 넘어 버려지고, 보이는 목록에서는 이미 빠져 클라이언트에 유령이 남는다.
+        // 조각나지 않는 크기(1 KB)로 쪼갠다 — 묶어도 창 몫(조각 수)은 같고, 나눠 두면 창이 찼을 때 앞 묶음이라도 나간다. 보낸 것만 보이는 목록에서 뺀다(유령이 남지 않게).
         const vector<uint32>& listLeave = scratch._listLeave;
         size_t                sentCount = 0;
         while ( sentCount < listLeave.size() )
         {
             BitWriter&    writer = scratch._messageWriter.begin( NetMmoMessage::kLeave );
-            NetSendBudget budget( NetConnection::kMaxMessageSize );
+            NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
             budget.reserveBits( writer.getBitCount() + BitMath::computeVarUintBits( listLeave.size() - sentCount ) );
             size_t count = 0;
             while ( sentCount + count < listLeave.size() && budget.tryReserveBits( BitMath::computeVarUintBits( listLeave[sentCount + count] ) ) )
@@ -415,13 +363,19 @@ namespace sw
         BitReader& reader = body;
         if ( context._kind == NetMmoMessage::kEnter )
         {
-            ClientEntity entry;
-            entry._tick = static_cast<uint32>( reader.readVarUint() );
-            if ( MmoReplicatorInternal::readEntity( reader, entry._entity, true ) == false )
+            const uint32 tick = static_cast<uint32>( reader.readVarUint() );
+            while ( reader.readBool() )
+            {
+                ClientEntity entry;
+                entry._tick = tick;
+                if ( MmoReplicatorInternal::readEntity( reader, entry._entity, true ) == false )
+                    return NetHandleResult::Malformed;
+                const uint32 entityId = entry._entity._entityId;
+                _mapEntity[entityId]  = std::move( entry );
+                _eventBuffer.push( MmoClientEvent{ entityId, MmoClientEvent::Kind::Entered } );
+            }
+            if ( reader.hasOverflowed() )
                 return NetHandleResult::Malformed;
-            const uint32 entityId = entry._entity._entityId;
-            _mapEntity[entityId]  = std::move( entry );
-            _eventBuffer.push( MmoClientEvent{ entityId, MmoClientEvent::Kind::Entered } );
         }
         else if ( context._kind == NetMmoMessage::kLeave )
         {

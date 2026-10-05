@@ -53,7 +53,7 @@ namespace sw
                                           const utf8* pModuleName )
             {
                 const PFN_GetModuleAbiVersion pfnVersion =
-                    reinterpret_cast<PFN_GetModuleAbiVersion>( FileUtil::getDynamicSymbol( pLibraryModule, pVersionSymbol ) );
+                    reinterpret_cast<PFN_GetModuleAbiVersion>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, pVersionSymbol ) );
                 if ( pfnVersion == nullptr || pfnVersion() != kModuleAbiVersion )
                 {
                     SW_LOG_ERROR( "%# 모듈 ABI 버전이 다릅니다 (기대 %#) — 엔진과 모듈을 함께 다시 빌드하세요.",
@@ -62,7 +62,7 @@ namespace sw
                 }
 
                 const PFN_GetModuleAbiStamp pfnStamp =
-                    reinterpret_cast<PFN_GetModuleAbiStamp>( FileUtil::getDynamicSymbol( pLibraryModule, pStampSymbol ) );
+                    reinterpret_cast<PFN_GetModuleAbiStamp>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, pStampSymbol ) );
                 if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kModuleAbiStamp ) == false )
                 {
                     SW_LOG_ERROR( "%# 모듈 ABI 스탬프가 다릅니다 (기대 '%#') — 엔진과 모듈을 함께 다시 빌드하세요.",
@@ -94,7 +94,7 @@ namespace sw
                 if ( pLibraryModule == nullptr ||
                      matchesModuleAbi( pLibraryModule, symbols._pVersionSymbol, symbols._pStampSymbol, symbols._pModuleLabel ) == false )
                     return false;
-                const TExportFn pfnExport = reinterpret_cast<TExportFn>( FileUtil::getDynamicSymbol( pLibraryModule, symbols._pExportSymbol ) );
+                const TExportFn pfnExport = reinterpret_cast<TExportFn>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, symbols._pExportSymbol ) );
                 if ( pfnExport == nullptr || pfnExport( &outApi ) == false )
                 {
                     outApi = {};
@@ -392,13 +392,14 @@ namespace sw
         return false;
 #else
         const string modulePath     = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ),
-                                                          FileUtil::formatSharedLibraryName( sw::config::kTargetEditorModule ) );
-        void* const  pLibraryModule = FileUtil::fileExists( modulePath ) ? FileUtil::loadDynamicLibrary( modulePath ) : nullptr;
+                                                          ModuleImageUtil::formatSharedLibraryName( sw::config::kTargetEditorModule ) );
+        void* const  pLibraryModule = FileUtil::fileExists( modulePath ) ? ModuleImageUtil::loadDynamicLibrary( modulePath ) : nullptr;
         if ( pLibraryModule == nullptr )
         {
             SW_LOG_ERROR( "Asset importing needs the editor module next to the executable: %#", modulePath.c_str() );
             return false;
         }
+        (void)ModuleImageUtil::bindDelayLoadImports( pLibraryModule ); // 못 묶으면 경고했다
 
         // 올리는 순간 모듈의 정적 등록기가 전역 머리에 매달린다. 모듈 이름으로 등록해 두어야 내리기 전에 걷을 수 있다.
         engine::registerModuleTypes( sw::config::kTargetEditorModule );
@@ -408,7 +409,7 @@ namespace sw
                                                    ModuleHostInternal::kEditorSymbols._pStampSymbol, ModuleHostInternal::kEditorSymbols._pModuleLabel ) )
         {
             const PFN_ImportEditorAssets pfnImport =
-                reinterpret_cast<PFN_ImportEditorAssets>( FileUtil::getDynamicSymbol( pLibraryModule, kImportEditorAssetsSymbol ) );
+                reinterpret_cast<PFN_ImportEditorAssets>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, kImportEditorAssetsSymbol ) );
             if ( pfnImport == nullptr )
                 SW_LOG_ERROR( "The editor module does not export %#", kImportEditorAssetsSymbol );
             else

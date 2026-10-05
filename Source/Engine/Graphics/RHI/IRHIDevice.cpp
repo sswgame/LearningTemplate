@@ -244,6 +244,7 @@ namespace sw
         , _bPreferredVSync{ false }
         , _bImmediateSubmit{ false }
         , _bParallelRecording{ false }
+        , _initResult{ RHIInitResult::NotStarted }
         , _memoryLedger{ make_unique<RHIMemoryLedger>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
     {
@@ -257,6 +258,8 @@ namespace sw
 
     bool IRHIDevice::initialize()
     {
+        // 백엔드가 이유를 좁히지 않고 물러나면 결함일 수 있는 실패다. 환경 탓이면 백엔드가 initializeInternal 안에서 고쳐 적는다.
+        _initResult = RHIInitResult::Failed;
         if ( _pSurface == nullptr )
             return false;
 
@@ -283,6 +286,7 @@ namespace sw
 
         if ( initializeInternal( swapChainDesc ) == false )
             return false;
+        _initResult = RHIInitResult::Succeeded;
         // 요청과 채택이 다를 수 있다(Vulkan 서피스 협상). 백버퍼 PSO 는 채택값으로 만들어진다. 어느 쪽인지 로그로 남긴다.
         SW_LOG_INFO( "백버퍼 포맷: 요청 %# → 채택 %# (getBackBufferFormat)",
                      static_cast<uint32>( swapChainDesc._format ), static_cast<uint32>( getBackBufferFormat() ) );

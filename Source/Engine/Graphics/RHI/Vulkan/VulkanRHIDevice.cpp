@@ -160,7 +160,9 @@ namespace sw
 
             if ( _bEnableValidationLayers == SW_TRUE && supportsValidationLayer() == false )
             {
-                SW_LOG_INFO( "Vulkan Validation Layers requested, but VK_LAYER_KHRONOS_validation was not found (Validation Layers: DISABLED)" );
+                // 리눅스는 시스템 패키지(vulkan-validationlayers)의 레이어를 찾는다 — vcpkg 포트는 Windows 만 짓는다(Bin 옆 VK_LAYER_PATH).
+                SW_LOG_WARNING( "Vulkan Validation Layers requested, but VK_LAYER_KHRONOS_validation was not found - running without validation "
+                                "(Linux: install the vulkan-validationlayers package)" );
                 _bEnableValidationLayers = SW_FALSE;
             }
         }

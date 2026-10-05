@@ -8,31 +8,15 @@ namespace sw
 {
     LagCompensationHistory::LagCompensationHistory( int32 capacity )
         : _listFrame{}
-        , _newestTick{ 0 }
-        , _bHasFrame{ false }
     {
-        _listFrame.resize( static_cast<size_t>( MathUtil::max( 2, capacity ) ) );
+        _listFrame.initialize( MathUtil::max( 2, capacity ) );
     }
 
-    void LagCompensationHistory::record( uint32 tick, const vector<LagRecord>& listRecord )
-    {
-        Frame& frame      = _listFrame[static_cast<size_t>( tick % _listFrame.size() )];
-        frame._tick       = tick;
-        frame._listRecord = listRecord;
-        if ( _bHasFrame == false || tick > _newestTick )
-            _newestTick = tick;
-        _bHasFrame = true;
-    }
+    void LagCompensationHistory::record( uint32 tick, const vector<LagRecord>& listRecord ) { _listFrame.acquire( tick ) = listRecord; }
 
-    const LagCompensationHistory::Frame* LagCompensationHistory::findFrame( uint32 tick ) const
+    const LagRecord* LagCompensationHistory::findRecord( const vector<LagRecord>& listRecord, uint32 entityId )
     {
-        const Frame& frame = _listFrame[static_cast<size_t>( tick % _listFrame.size() )];
-        return frame._tick == tick ? &frame : nullptr;
-    }
-
-    const LagRecord* LagCompensationHistory::findRecord( const Frame& frame, uint32 entityId )
-    {
-        for ( const LagRecord& record : frame._listRecord )
+        for ( const LagRecord& record : listRecord )
         {
             if ( record._entityId == entityId )
                 return &record;
@@ -42,16 +26,17 @@ namespace sw
 
     bool LagCompensationHistory::sampleAt( float32 tick, uint32 entityId, LagRecord& outRecord ) const
     {
-        if ( _bHasFrame == false )
+        if ( _listFrame.hasNewest() == false )
             return false;
-        const uint32     oldestTick  = _newestTick >= _listFrame.size() - 1 ? _newestTick - static_cast<uint32>( _listFrame.size() - 1 ) : 0u;
-        const float32    clamped     = MathUtil::clamp( tick, static_cast<float32>( oldestTick ), static_cast<float32>( _newestTick ) );
-        const uint32     lowTick     = static_cast<uint32>( clamped );
-        const uint32     highTick    = MathUtil::min( _newestTick, lowTick + 1u );
-        const Frame*     pLow        = findFrame( lowTick );
-        const Frame*     pHigh       = findFrame( highTick );
-        const LagRecord* pLowRecord  = pLow != nullptr ? findRecord( *pLow, entityId ) : nullptr;
-        const LagRecord* pHighRecord = pHigh != nullptr ? findRecord( *pHigh, entityId ) : nullptr;
+        const uint32                   newestTick  = _listFrame.getNewestTick();
+        const uint32                   oldestTick  = _listFrame.computeOldestTick();
+        const float32                  clamped     = MathUtil::clamp( tick, static_cast<float32>( oldestTick ), static_cast<float32>( newestTick ) );
+        const uint32                   lowTick     = static_cast<uint32>( clamped );
+        const uint32                   highTick    = MathUtil::min( newestTick, lowTick + 1u );
+        const vector<LagRecord>* const pLow        = _listFrame.find( lowTick );
+        const vector<LagRecord>* const pHigh       = _listFrame.find( highTick );
+        const LagRecord*               pLowRecord  = pLow != nullptr ? findRecord( *pLow, entityId ) : nullptr;
+        const LagRecord*               pHighRecord = pHigh != nullptr ? findRecord( *pHigh, entityId ) : nullptr;
         if ( pLowRecord == nullptr && pHighRecord == nullptr )
             return false;
         if ( pLowRecord == nullptr || pHighRecord == nullptr )
@@ -68,13 +53,13 @@ namespace sw
     uint32 LagCompensationHistory::raycastAt( float32 tick, const float3& origin, const float3& direction, float32 maxDistance, uint32 ignoreEntityId,
                                               float32& outDistance ) const
     {
-        const Frame* pNewest = _bHasFrame ? findFrame( _newestTick ) : nullptr;
+        const vector<LagRecord>* pNewest = _listFrame.hasNewest() ? _listFrame.find( _listFrame.getNewestTick() ) : nullptr;
         if ( pNewest == nullptr )
             return 0;
         uint32  bestId       = 0;
         float32 bestDistance = maxDistance;
         // 지금 있는 몸들을 그 시각으로 되감아 본다.
-        for ( const LagRecord& current : pNewest->_listRecord )
+        for ( const LagRecord& current : *pNewest )
         {
             if ( current._entityId == ignoreEntityId )
                 continue;

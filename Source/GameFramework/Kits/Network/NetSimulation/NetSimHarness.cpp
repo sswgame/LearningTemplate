@@ -182,7 +182,7 @@ namespace sw
         _time           = 0.0;
         _tick           = 0;
         _nextWorldIndex = 1;
-        _pNetwork       = make_unique<LoopbackNetwork>( static_cast<uint32>( NetSimHarnessInternal::mixSeed( settings._seed, 0xFFFFu ) ) );
+        _pNetwork       = make_unique<LoopbackNetwork>();
         Link* pLink     = createLink( 0 );
         if ( pLink == nullptr )
             return false;
@@ -321,6 +321,14 @@ namespace sw
         return true;
     }
 
+    uint64 NetSimHarness::getDroppedPacketCount() const
+    {
+        uint64 droppedCount = _pNetwork != nullptr ? _pNetwork->getDroppedCount() : 0u;
+        for ( const unique_ptr<Link>& pLink : _listLink )
+            droppedCount += pLink->_pEmulation->getStats()._droppedCount;
+        return droppedCount;
+    }
+
     void NetSimHarness::step()
     {
         if ( _pServer == nullptr )
@@ -342,10 +350,10 @@ namespace sw
         _pServer->getHost().update( _time );
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
             pWorld->getHost().update( _time );
-        // 2) 흉내 줄에서 때가 된 것을 망에 싣고 이 시각까지 배달한다(떠난 클라이언트의 끝점도 — 끊김 알림이 아직 줄에 있을 수 있다).
+        // 2) 흉내 줄에서 때가 된 것을 망에 싣고 망이 배달한다(떠난 클라이언트의 끝점도 — 끊김 알림이 아직 줄에 있을 수 있다).
         for ( unique_ptr<Link>& pLink : _listLink )
             pLink->_pEmulation->update( _time );
-        _pNetwork->advance( _time );
+        _pNetwork->deliverInFlight();
         // 3) 받기 — 같은 시각이라 보내기 간격이 막아 다시 보내지는 않는다.
         _pServer->getHost().update( _time );
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )

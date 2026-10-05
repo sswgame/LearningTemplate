@@ -35,9 +35,9 @@ namespace sw
     private:
         PROPERTY( Category = "Camera", DisplayName = "Director", Tooltip = "Object with the ArenaDirectorComponent" )
         GameObjectHandle _director;
-        PROPERTY( Category = "Camera", DisplayName = "Offset", Tooltip = "Camera position relative to the player", Meta = "Units=m" )
+        PROPERTY( Category = "Camera", DisplayName = "Offset", Tooltip = "Camera position relative to the player", Units = m )
         float3 _offset;
-        PROPERTY( Category = "Camera", DisplayName = "Min Far Plane", Tooltip = "Far plane is at least this far", Min = 1.0, Meta = "Units=m" )
+        PROPERTY( Category = "Camera", DisplayName = "Min Far Plane", Tooltip = "Far plane is at least this far", Min = 1.0, Units = m )
         float32 _minFarPlane;
     };
 } // namespace sw

@@ -186,7 +186,7 @@ namespace sw
         GameObjectHandle _player;
         PROPERTY( Category = "Scene", DisplayName = "Spawn Points", Tooltip = "Enemies rise at these objects, in order" )
         vector<GameObjectHandle> _listSpawnPoint;
-        PROPERTY( Category = "Arena", DisplayName = "Arena Half Size", Min = 1.0, Meta = "Units=m" )
+        PROPERTY( Category = "Arena", DisplayName = "Arena Half Size", Min = 1.0, Units = m )
         float32 _arenaHalfSize;
         PROPERTY( Category = "Pacing", AssetPath, DisplayName = "Pacing Profile", Tooltip = "AI director profile (*.director.xml): intensity, phases, encounter and reward pools" )
         string _pacingProfile;

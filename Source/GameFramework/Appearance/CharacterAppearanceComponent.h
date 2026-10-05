@@ -12,7 +12,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Character/CharacterGeometry.h"
+#include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

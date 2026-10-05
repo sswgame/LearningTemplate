@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Match/TeamAttitude.h"
 #include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
@@ -84,8 +85,7 @@ namespace sw
         , _stepTimer{}
         , _time{ 0.0f }
         , _visionTimer{}
-        , _bucketWidth{ 0 }
-        , _bucketHeight{ 0 }
+        , _bucketTopology{}
         , _teamCount{ 0 }
         , _winningTeam{ -1 }
     {
@@ -106,9 +106,9 @@ namespace sw
         _listTerrainBlocked.assign( static_cast<size_t>( _grid.getWidth() * _grid.getHeight() ), SW_FALSE );
         _listTeamVisibility.clear();
         _listFlowField.clear();
-        _bucketWidth  = ( _grid.getWidth() + _settings._bucketSize - 1 ) / _settings._bucketSize;
-        _bucketHeight = ( _grid.getHeight() + _settings._bucketSize - 1 ) / _settings._bucketSize;
-        _listBucketHead.assign( static_cast<size_t>( _bucketWidth * _bucketHeight ), -1 );
+        _bucketTopology = GridTopology{ ( _grid.getWidth() + _settings._bucketSize - 1 ) / _settings._bucketSize,
+                                        ( _grid.getHeight() + _settings._bucketSize - 1 ) / _settings._bucketSize };
+        _listBucketHead.assign( static_cast<size_t>( _bucketTopology.getCellCount() ), -1 );
         _listBucketNext.clear();
         _stepTimer = FixedStepTimer{ _settings._fixedStep, 0.25f };
         _time      = 0.0f;
@@ -640,9 +640,9 @@ namespace sw
     int32 RtsWorld::computeBucketIndex( const float3& position ) const
     {
         const int2  cell    = _grid.computeCell( position );
-        const int32 bucketX = MathUtil::clamp( cell._x / _settings._bucketSize, 0, _bucketWidth - 1 );
-        const int32 bucketY = MathUtil::clamp( cell._y / _settings._bucketSize, 0, _bucketHeight - 1 );
-        return bucketY * _bucketWidth + bucketX;
+        const int32 bucketX = MathUtil::clamp( cell._x / _settings._bucketSize, 0, _bucketTopology._width - 1 );
+        const int32 bucketY = MathUtil::clamp( cell._y / _settings._bucketSize, 0, _bucketTopology._height - 1 );
+        return _bucketTopology.toIndex( bucketX, bucketY );
     }
 
     void RtsWorld::rebuildBuckets()
@@ -665,17 +665,19 @@ namespace sw
         outListUnit.clear();
         if ( _listBucketHead.empty() )
             return;
-        const float32 reach      = radius + RtsWorldInternal::kMaxUnitExtent;
-        const float32 cellSize   = _grid.getCellSize() * static_cast<float32>( _settings._bucketSize );
-        const int32   minBucketX = MathUtil::clamp( static_cast<int32>( ( center._x - reach - _grid.getOrigin()._x ) / cellSize ), 0, _bucketWidth - 1 );
-        const int32   maxBucketX = MathUtil::clamp( static_cast<int32>( ( center._x + reach - _grid.getOrigin()._x ) / cellSize ), 0, _bucketWidth - 1 );
-        const int32   minBucketY = MathUtil::clamp( static_cast<int32>( ( center._z - reach - _grid.getOrigin()._z ) / cellSize ), 0, _bucketHeight - 1 );
-        const int32   maxBucketY = MathUtil::clamp( static_cast<int32>( ( center._z + reach - _grid.getOrigin()._z ) / cellSize ), 0, _bucketHeight - 1 );
+        const float32 reach       = radius + RtsWorldInternal::kMaxUnitExtent;
+        const float32 cellSize    = _grid.getCellSize() * static_cast<float32>( _settings._bucketSize );
+        const int32   lastBucketX = _bucketTopology._width - 1;
+        const int32   lastBucketY = _bucketTopology._height - 1;
+        const int32   minBucketX  = MathUtil::clamp( static_cast<int32>( ( center._x - reach - _grid.getOrigin()._x ) / cellSize ), 0, lastBucketX );
+        const int32   maxBucketX  = MathUtil::clamp( static_cast<int32>( ( center._x + reach - _grid.getOrigin()._x ) / cellSize ), 0, lastBucketX );
+        const int32   minBucketY  = MathUtil::clamp( static_cast<int32>( ( center._z - reach - _grid.getOrigin()._z ) / cellSize ), 0, lastBucketY );
+        const int32   maxBucketY  = MathUtil::clamp( static_cast<int32>( ( center._z + reach - _grid.getOrigin()._z ) / cellSize ), 0, lastBucketY );
         for ( int32 bucketY = minBucketY; bucketY <= maxBucketY; ++bucketY )
         {
             for ( int32 bucketX = minBucketX; bucketX <= maxBucketX; ++bucketX )
             {
-                for ( int32 index = _listBucketHead[static_cast<size_t>( bucketY * _bucketWidth + bucketX )]; index >= 0;
+                for ( int32 index = _listBucketHead[static_cast<size_t>( _bucketTopology.toIndex( bucketX, bucketY ) )]; index >= 0;
                       index       = _listBucketNext[static_cast<size_t>( index )] )
                 {
                     const RtsUnit& unit = _listUnit[static_cast<size_t>( index )];
@@ -1156,7 +1158,7 @@ namespace sw
     {
         const RtsPlayer* pA = findPlayer( playerA );
         const RtsPlayer* pB = findPlayer( playerB );
-        return pA != nullptr && pB != nullptr && pA->_team != pB->_team;
+        return pA != nullptr && pB != nullptr && TeamAttitudeUtil::isHostile( pA->_team, pB->_team );
     }
 
     bool RtsWorld::canAttack( const RtsUnit& attacker, const RtsUnit& target ) const
@@ -1315,7 +1317,7 @@ namespace sw
                     const float32 dx = static_cast<float32>( x - center._x );
                     const float32 dy = static_cast<float32>( y - center._y );
                     if ( dx * dx + dy * dy <= sightSquared )
-                        listVisibility[static_cast<size_t>( y * _grid.getWidth() + x )] = static_cast<uint8>( RtsVisibility::Visible );
+                        listVisibility[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] = static_cast<uint8>( RtsVisibility::Visible );
                 }
             }
         }
@@ -1335,7 +1337,7 @@ namespace sw
         const RtsPlayer* pPlayer = findPlayer( player );
         if ( pUnit == nullptr || pPlayer == nullptr )
             return false;
-        if ( pUnit->_owner != kNoOwner && _listPlayer[static_cast<size_t>( pUnit->_owner )]._team == pPlayer->_team )
+        if ( pUnit->_owner != kNoOwner && TeamAttitudeUtil::isFriendly( _listPlayer[static_cast<size_t>( pUnit->_owner )]._team, pPlayer->_team ) )
             return true;
         if ( pUnit->isMobile() )
             return getVisibility( player, _grid.computeCell( pUnit->_position ) ) == RtsVisibility::Visible;

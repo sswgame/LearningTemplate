@@ -43,7 +43,7 @@ namespace sw
         const float2& getSize() const { return _size; }
 
     private:
-        PROPERTY( Category = "Shadow", DisplayName = "Box Size", Min = 0.0, Tooltip = "Width and height of the box shape centered on the object", Meta = "Units=m" )
+        PROPERTY( Category = "Shadow", DisplayName = "Box Size", Min = 0.0, Tooltip = "Width and height of the box shape centered on the object", Units = m )
         float2 _size;
         PROPERTY( Category = "Shadow", DisplayName = "Use Tile Map", Tooltip = "Use the outline of the tile map on this object instead of the box" )
         bool _bUseTileMap;

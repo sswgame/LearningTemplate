@@ -8,7 +8,7 @@
  *          - **결정적**: 시각은 틱 × 간격(벽시계를 읽지 않는다), 망 · 연결마다의 흉내 · 도전 소금은 모두 씨앗에서 나온다. 한 스레드가 `step` 을 부르면
  *            같은 씨앗 · 같은 게임이면 같은 패킷이 같은 틱에 도착한다.
  *          - **연결마다 조건**: 클라이언트마다 올림(클라이언트 → 서버) · 내림(서버 → 클라이언트) 조건(`NetEmulationConditions` — 지연 · 흔들림 · 손실 ·
- *            중복 · 순서 바뀜 · 대역폭)을 따로 준다. 도중에 바꿀 수 있다(`setLinkConditions`).
+ *            중복 · 깨짐 · 순서 바뀜 · 대역폭)을 따로 준다. 도중에 바꿀 수 있다(`setLinkConditions`).
  *          - **늦은 참가 · 떠남**: `addClient` · `removeClient` 는 어느 틱 사이에서나 부른다. 떠난 클라이언트는 끊김 알림을 보내고(서버는 타임아웃이 아니라
  *            Remote 로 안다) 월드가 내려간다. 포트는 다시 쓰지 않는다.
  *
@@ -17,7 +17,7 @@
  *          2. 월드마다(서버 → 클라이언트 번호 순): 라우터가 호스트 사건(연결 · 끊김)과 받은 메시지를 꺼내 처리기에 나눠 준다(사건 먼저) →
  *             사건을 `INetSimSession::onHostEvent` 로 → `INetSimSession::onTickBegin` → 오브젝트 매니저 틱(물리 포함) →
  *             `INetSimSession::onTickEnd`(보낼 것을 쌓는다).
- *          3. 망: 호스트마다 `update`(쌓인 것을 보낸다) → 흉내 줄에서 때가 된 패킷을 망에 싣고 망을 그 시각까지 배달 → 호스트마다 다시 `update`(받는다).
+ *          3. 망: 호스트마다 `update`(쌓인 것을 보낸다) → 흉내 줄에서 때가 된 패킷을 망에 싣고 망이 배달 → 호스트마다 다시 `update`(받는다).
  *          그래서 조건이 깨끗하면 틱 N 끝에 보낸 메시지를 틱 N + 1 이 받는다. 지연 L 이면 보낸 시각 + L 이 지난 첫 틱이다.
  */
 #pragma once
@@ -25,11 +25,11 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/NetEmulation.h"
-#include "Core/Network/NetHost.h"
-#include "Core/Network/NetMessage.h"
-#include "Core/Network/NetTransport.h"
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Transport/NetEmulation.h"
+#include "Core/Network/Transport/NetTransport.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -297,8 +297,8 @@ namespace sw
         uint32  getTick() const { return _tick; }
         float64 getTime() const { return _time; }
         float64 getTickInterval() const { return _settings._tickInterval; }
-        /** @brief 망이 배달한 · 버린 패킷 수입니다. */
-        const LoopbackNetwork* getNetwork() const { return _pNetwork.get(); }
+        /** @brief 버린 패킷 수입니다 — 끝점 흉내가 버린 것(손실 · 큐 넘침 · 거르개)과 받을 끝점이 없어 망이 버린 것의 합. */
+        uint64 getDroppedPacketCount() const;
 
     private:
         /** @brief 끝점 하나의 흉내 전송입니다. 월드가 떠나도 남아 줄에 든 패킷(끊김 알림)을 마저 내보낸다. */

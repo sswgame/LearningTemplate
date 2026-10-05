@@ -85,6 +85,8 @@ namespace sw
         /** @brief `-gv_assetLoadReport=1` 이면 `report` 합니다(엔진 종료가 부른다). */
         void reportIfRequested( const utf8* pTitle ) const;
         void reset();
+        /** @brief 종류 표와 느린 로드 목록의 저장소까지 놓습니다(엔진 종료 끝). 남기면 종료 누수 보고에 로드한 쪽의 태그로 남는다. */
+        void releaseStorage();
 
     private:
         /** @brief 종류 하나의 누적과 프레임 프로파일러 구간 번호(단계마다)입니다. */

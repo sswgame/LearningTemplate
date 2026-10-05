@@ -14,6 +14,7 @@
 #include "GameFramework/Progression/Reputation.h"
 #include "GameFramework/Quest/QuestLog.h"
 #include "GameFramework/Utility/EventBuffer.h"
+#include "GameFramework/Utility/GridTopology.h"
 #include "GameFramework/World/WorldClock.h"
 
 namespace sw
@@ -216,8 +217,8 @@ namespace sw
         hashed_string   getAppealTierName() const;
         const QuestLog& getQuestLog() const { return _questLog; }
         int32           getDay() const { return _day; }
-        int32           getWidth() const { return _width; }
-        int32           getHeight() const { return _height; }
+        int32           getWidth() const { return _topology._width; }
+        int32           getHeight() const { return _topology._height; }
 
     private:
         /** @brief 처음부터 다시 맞추고 전 결과와 견줘 생긴 · 없어진 서식지를 알립니다. */
@@ -233,7 +234,7 @@ namespace sw
         void  updateAppealTier();
         int2  computeCreatureAnchor( const TownCreature& creature ) const;
 
-        vector<hashed_string>          _listObject; ///< 행 우선(y × width + x) — 빈 id 는 빈 칸
+        vector<hashed_string>          _listObject; ///< 칸마다 오브젝트 id(`_topology` 의 칸 번호) — 빈 id 는 빈 칸
         vector<HabitatInstance>        _listHabitat;
         vector<TownCreature>           _listCreature; ///< 온 순서
         vector<CreatureHouse>          _listHouse;
@@ -244,8 +245,7 @@ namespace sw
         QuestLog                       _questLog;
         CreatureTownSettings           _settings;
         const CreatureLifeCatalog*     _pCatalog;
-        int32                          _width;
-        int32                          _height;
+        GridTopology                   _topology;
         int32                          _day;
         int32                          _nextHabitatId;
         int32                          _lastAttractKey; ///< 마지막으로 방문을 굴린 날 × 24 + 시

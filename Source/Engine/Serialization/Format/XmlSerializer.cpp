@@ -8,6 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Serialization/Core/ContainerVisitor.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -35,268 +36,218 @@ namespace sw
                 return false;
             }
 
-            static void recordCoerceFailure( vector<SchemaOrphanValue>* pOutListOrphan, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
+            /** @brief 읽지 못한 글을 그 칸의 orphan 으로 남깁니다(로드가 끝난 뒤 버린 값으로 알린다). orphan 목록이 없으면 아무것도 하지 않습니다. */
+            static void recordDroppedText( vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& prop, string_view text )
             {
-                bFieldError = true;
-                if ( pOutListOrphan != nullptr )
-                {
-                    SchemaOrphanValue orphan;
-                    orphan._name         = prop._name;
-                    orphan._nameHash     = prop.getNameHash();
-                    orphan._wireTypeHash = 0;
-                    orphan._text         = string( strValue );
-                    pOutListOrphan->push_back( std::move( orphan ) );
-                }
+                if ( pOutListOrphan == nullptr )
+                    return;
+                SchemaOrphanValue orphan;
+                orphan._name         = prop._name;
+                orphan._nameHash     = prop.getNameHash();
+                orphan._wireTypeHash = 0;
+                orphan._text         = string( text );
+                pOutListOrphan->push_back( std::move( orphan ) );
             }
 
-            /**
-             * @brief 컨테이너를 현재 노드 "안에" 자연스러운 형태로 씁니다.
-             * @details 시퀀스 원소는 구조체면 타입 이름 태그, 그 외에는 <item> 입니다.
-             *          맵 항목은 <entry key="K"> 입니다. 값은 그 노드 안에 같은 규칙으로 재귀합니다.
-             *          리더는 태그 이름에 의존하지 않으므로(다형 포인터 제외) 얼마든지 중첩할 수 있습니다.
-             */
-            static void writeContainerXml( const void* pContainerPtr, const NestedContainerInfo& nested,
-                                           IXmlBackend& backend, const SerializeContext& ctx )
+            /** @brief 컨테이너를 지금 노드 "안에" 적습니다 — 시퀀스 원소는 구조체면 타입 이름 태그, 그 외에는 `<item>`, 맵 항목은 `<entry key="K">` 입니다. */
+            class ContainerWriter final : public IContainerWriter
             {
-                if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
-                    return;
-
-                const bool                 bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
-                ISequenceContainerWrapper* pSeq      = nested._wrapper->asSequence();
-                IMapContainerWrapper*      pMapWrap  = nested._wrapper->asMap();
-
-                if ( pSeq != nullptr )
+            public:
+                ContainerWriter( IXmlBackend& backend, const SerializeContext& ctx )
+                    : _backend{ backend }
+                    , _ctx{ ctx }
                 {
-                    const size_t elementCount = pSeq->getSize( pContainerPtr );
-                    for ( size_t elemIndex = 0; elemIndex < elementCount; ++elemIndex )
+                }
+
+                void beginSequence( size_t ) override {}
+                void endSequence() override {}
+                void beginMap( size_t ) override {}
+                void endMap() override {}
+
+                void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override
+                {
+                    StringBuilder<constant::kMaxBuffer8192> keyText;
+                    SerializerUtil::valueToText( keyText, pKey, keyTypeName, _ctx );
+                    _backend.beginMap( kXmlEntryTag );
+                    _backend.writeAttribute( kXmlKeyAttr, keyText.c_str() );
+                }
+
+                void endMapEntry() override { _backend.endMap(); }
+
+                // 시퀀스 원소인 컨테이너는 `<item>` 안에, 맵 값인 컨테이너는 `<entry>` 안에 바로 적는다.
+                void beginNestedContainer( const ContainerSlot slot ) override
+                {
+                    if ( slot == ContainerSlot::SequenceElement )
+                        _backend.beginMap( kXmlItemTag );
+                }
+
+                void endNestedContainer( const ContainerSlot slot ) override
+                {
+                    if ( slot == ContainerSlot::SequenceElement )
+                        _backend.endMap();
+                }
+
+                void writeOwnedPointer( const void* pObject ) override
+                {
+                    if ( pObject == nullptr )
+                        return;
+                    // 맡아 둔 원소(모르는 타입)는 읽은 원문 그대로 다시 쓴다.
+                    SerializeContext::OpaqueElementView opaque{};
+                    if ( _ctx.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Xml )
                     {
-                        const void* pElemPtr = pSeq->getElementConst( pContainerPtr, elemIndex );
-                        if ( nested._elementNested != nullptr )
-                        {
-                            backend.beginMap( kXmlItemTag );
-                            writeContainerXml( pElemPtr, *nested._elementNested, backend, ctx );
-                            backend.endMap();
-                        }
-                        else if ( bOwnedPtr )
-                        {
-                            void* const* ppObj = static_cast<void* const*>( pElemPtr );
-                            void*        pObj  = ppObj != nullptr ? *ppObj : nullptr;
-                            if ( pObj == nullptr )
-                                continue;
-                            // 맡아 둔 원소(모르는 타입)는 읽은 원문 그대로 다시 쓴다.
-                            SerializeContext::OpaqueElementView opaque{};
-                            if ( ctx.queryOpaqueElement( pObj, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Xml )
-                            {
-                                backend.writeRawElement( opaque._text );
-                                continue;
-                            }
-                            // 다형 원소만 태그 이름이 곧 런타임 타입 정보다.
-                            const TypeInfo* pRuntimeType = ctx.getRuntimeTypeInfo( pObj );
-                            if ( pRuntimeType == nullptr )
-                                continue;
-                            backend.beginMap( pRuntimeType->_name.c_str() );
-                            writeXmlProperties( pObj, *pRuntimeType, backend, ctx );
-                            backend.endMap();
-                        }
-                        else
-                        {
-                            const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
-                            if ( pElemType != nullptr )
-                            {
-                                backend.beginMap( pElemType->_name.c_str() );
-                                writeXmlProperties( pElemPtr, *pElemType, backend, ctx );
-                                backend.endMap();
-                            }
-                            else
-                            {
-                                StringBuilder<constant::kMaxBuffer8192> ss;
-                                SerializerUtil::valueToText( ss, pElemPtr, nested._elementTypeName, ctx );
-                                backend.writeValue( kXmlItemTag, ss.c_str() );
-                            }
-                        }
+                        _backend.writeRawElement( opaque._text );
+                        return;
                     }
-                    return;
+                    // 다형 원소만 태그 이름이 곧 런타임 타입 정보다.
+                    const TypeInfo* pRuntimeType = _ctx.getRuntimeTypeInfo( pObject );
+                    if ( pRuntimeType == nullptr )
+                        return;
+                    _backend.beginMap( pRuntimeType->_name.c_str() );
+                    writeXmlProperties( pObject, *pRuntimeType, _backend, _ctx );
+                    _backend.endMap();
                 }
 
-                if ( pMapWrap != nullptr )
+                void writeValueObject( const void* pValue, const hashed_string&, const TypeInfo& typeInfo, ContainerSlot ) override
                 {
-                    pMapWrap->forEach( pContainerPtr, [&]( const void* pKPtr, const void* pVPtr )
-                    {
-                        StringBuilder<constant::kMaxBuffer8192> kSs;
-                        SerializerUtil::valueToText( kSs, pKPtr, nested._keyTypeName, ctx );
-
-                        backend.beginMap( kXmlEntryTag );
-                        backend.writeAttribute( kXmlKeyAttr, kSs.c_str() );
-                        if ( nested._elementNested != nullptr )
-                        {
-                            writeContainerXml( pVPtr, *nested._elementNested, backend, ctx );
-                        }
-                        else
-                        {
-                            const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
-                            if ( pElemType != nullptr )
-                            {
-                                backend.beginMap( pElemType->_name.c_str() );
-                                writeXmlProperties( pVPtr, *pElemType, backend, ctx );
-                                backend.endMap();
-                            }
-                            else
-                            {
-                                StringBuilder<constant::kMaxBuffer8192> vSs;
-                                SerializerUtil::valueToText( vSs, pVPtr, nested._elementTypeName, ctx );
-                                backend.writeText( vSs.c_str() );
-                            }
-                        }
-                        backend.endMap();
-                    } );
+                    _backend.beginMap( typeInfo._name.c_str() );
+                    writeXmlProperties( pValue, typeInfo, _backend, _ctx );
+                    _backend.endMap();
                 }
-            }
 
-            /**
-             * @brief 현재 노드 "안에" 있는 컨테이너를 읽습니다. writeContainerXml 의 역연산입니다.
-             * @details 자식 태그 이름에 의존하지 않고 순서대로 훑습니다(다형 포인터만 이름=타입).
-             *          원소가 또 컨테이너면 그 자식 노드에서 재귀하므로 얼마든지 중첩할 수 있습니다.
-             */
-            [[nodiscard]] static bool readContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, IXmlBackend& backend,
-                                                        const SerializeContext& ctx, bool& bOutFieldError,
-                                                        vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& propForOrphan )
+                void writeScalar( const void* pValue, const hashed_string& typeName, const ContainerSlot slot ) override
+                {
+                    StringBuilder<constant::kMaxBuffer8192> text;
+                    SerializerUtil::valueToText( text, pValue, typeName, _ctx );
+                    if ( slot == ContainerSlot::SequenceElement )
+                        _backend.writeValue( kXmlItemTag, text.c_str() );
+                    else
+                        _backend.writeText( text.c_str() );
+                }
+
+            private:
+                IXmlBackend&            _backend;
+                const SerializeContext& _ctx;
+            };
+
+            /** @brief 지금 노드 "안의" 컨테이너를 읽습니다 — 자식 태그 이름에 기대지 않고 차례로 훑습니다(다형 원소만 이름 = 타입). */
+            class ContainerReader final : public IContainerReader
             {
-                if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
-                    return false;
-
-                const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
-                if ( bOwnedPtr == false )
-                    nested._wrapper->clear( pContainerPtr );
-
-                ISequenceContainerWrapper* pSeq     = nested._wrapper->asSequence();
-                IMapContainerWrapper*      pMapWrap = nested._wrapper->asMap();
-
-                if ( pSeq != nullptr )
+            public:
+                ContainerReader( IXmlBackend& backend, const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& propForOrphan )
+                    : _backend{ backend }
+                    , _ctx{ ctx }
+                    , _pOutListOrphan{ pOutListOrphan }
+                    , _propForOrphan{ propForOrphan }
+                    , _currentTagName{}
                 {
-                    size_t elemIndex{ 0 };
-                    bool   bAny{ false };
-                    backend.iterateChildren( SW_DELEGATE_LAMBDA( XmlChildVisitDelegate, [&]( string_view tagName )
+                }
+
+                // 원소 수는 미리 세지 않는다 — 자식을 차례로 훑는다. 빈 컨테이너도 Read 다.
+                ContainerReadResult beginSequence( size_t& outCountHint ) override
+                {
+                    outCountHint = 0;
+                    return ContainerReadResult::Read;
+                }
+
+                ContainerReadResult beginMap( size_t& outCountHint ) override
+                {
+                    outCountHint = 0;
+                    return ContainerReadResult::Read;
+                }
+
+                ContainerReadResult forEachElement( const ContainerElementVisitDelegate& visit ) override
+                {
+                    ContainerReadResult total{ ContainerReadResult::Read };
+                    size_t              elementIndex{ 0 };
+                    // 자식이 없으면 false 다 — 빈 컨테이너라 볼 것이 없다.
+                    (void)_backend.iterateChildren( SW_DELEGATE_LAMBDA( XmlChildVisitDelegate, [&]( string_view tagName )
                     {
-                        bAny = true;
-                        if ( bOwnedPtr )
-                        {
-                            // 다형 원소: 태그 이름이 런타임 타입이다.
-                            const hashed_string typeName = hashed_string::findInterned( tagName );
-                            const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
-                            void*               pObj     = ( pType != nullptr ) ? ctx.createOwnedPointer( typeName ) : nullptr;
-                            if ( pObj == nullptr || pType == nullptr )
-                            {
-                                // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다.
-                                string rawXml;
-                                if ( backend.readCurrentNodeXml( rawXml ) )
-                                {
-                                    SerializeContext::OpaqueElementView opaque{};
-                                    opaque._typeName = tagName;
-                                    opaque._format   = SerializeContext::OpaqueFormat::Xml;
-                                    opaque._text     = rawXml;
-                                    (void)ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
-                                }
-                                return;
-                            }
-                            // 원소 안의 못 읽은 칸 — orphan 목록이 있으면 거기 남고 true, 엄격 읽기면 false 다.
-                            if ( readNestedXmlIntoInstance( pObj, *pType, backend, ctx, pOutListOrphan ) == false )
-                                bOutFieldError = true;
+                        if ( total == ContainerReadResult::StreamBroken )
                             return;
-                        }
-
-                        // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다. `set` 은 다 읽은 뒤 insert 해야 한다.
-                        const size_t elementOrdinal = elemIndex++;
-                        const bool   bAppended      = pSeq->appendElement( pContainerPtr, elementOrdinal, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElemPtr ) -> bool
-                               {
-                            if ( nested._elementNested != nullptr )
-                            {
-                                // 반환값은 "원소가 하나라도 있었나" 다 — 빈 안쪽 컨테이너는 실패가 아니다. 칸 실패는 bOutFieldError 로 온다.
-                                (void)readContainerXml( pElemPtr, *nested._elementNested, backend, ctx, bOutFieldError, pOutListOrphan, propForOrphan );
-                                return true;
-                            }
-
-                            const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
-                            if ( pElemType != nullptr )
-                            {
-                                if ( readNestedXmlIntoInstance( pElemPtr, *pElemType, backend, ctx, pOutListOrphan ) == false )
-                                    bOutFieldError = true;
-                                return true;
-                            }
-
-                            string itemText;
-                            (void)backend.readText( itemText ); // 없으면 빈 글 — 아래 파싱이 실패로 알린다
-                            if ( parseTextValueCoerced( pElemPtr, nested._elementTypeName, itemText, ctx ) == false )
-                                recordCoerceFailure( pOutListOrphan, bOutFieldError, propForOrphan, itemText );
-                            return true;
-                        } ) );
-                        // 넣을 자리가 없다(고정 배열보다 원소가 많다) — 버리되 그 글을 orphan 으로 남겨 실패로 알린다.
-                        if ( bAppended == false )
-                        {
-                            SW_LOG_WARNING( "'%#' has more elements than it can hold - element %# dropped", propForOrphan._name.c_str(), elementOrdinal );
-                            string droppedText;
-                            (void)backend.readText( droppedText ); // 구조체 원소면 비어 있다 — 실패로 알리는 것이 목적이다
-                            recordCoerceFailure( pOutListOrphan, bOutFieldError, propForOrphan, droppedText );
-                        }
+                        _currentTagName = tagName;
+                        total           = ContainerVisitor::mergeResult( total, visit( elementIndex++ ) );
                     } ) );
-                    return bAny;
+                    return total;
                 }
 
-                if ( pMapWrap != nullptr )
+                ContainerReadResult readMapKey( void* pKey, const hashed_string& keyTypeName ) override
                 {
-                    vector<uint8> listKBuf( pMapWrap->getKeySize() );
-                    vector<uint8> listVBuf( pMapWrap->getValueSize() );
-                    bool          bAny{ false };
-                    backend.iterateChildren( SW_DELEGATE_LAMBDA( XmlChildVisitDelegate, [&]( string_view tagName )
-                    {
-                        (void)tagName;
-                        bAny = true;
-
-                        string keyText;
-                        (void)backend.readAttribute( kXmlKeyAttr, keyText ); // 없으면 빈 키 — 아래 키 파싱이 거른다
-
-                        pMapWrap->defaultConstructKey( listKBuf.data() );
-                        pMapWrap->defaultConstructValue( listVBuf.data() );
-
-                        const bool kOk = parseTextValueCoerced( listKBuf.data(), nested._keyTypeName, keyText, ctx );
-                        bool       vOk{ true };
-                        if ( nested._elementNested != nullptr )
-                        {
-                            // 반환값은 "원소가 하나라도 있었나" 다 — 빈 안쪽 컨테이너는 실패가 아니다. 칸 실패는 bOutFieldError 로 온다.
-                            (void)readContainerXml( listVBuf.data(), *nested._elementNested, backend, ctx, bOutFieldError, pOutListOrphan, propForOrphan );
-                        }
-                        else
-                        {
-                            const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
-                            if ( pElemType != nullptr )
-                            {
-                                // 구조체 값은 <entry> 안의 <TypeName> 자식에 들어 있다.
-                                if ( backend.pushFirstChild() )
-                                {
-                                    vOk = readNestedXmlIntoInstance( listVBuf.data(), *pElemType, backend, ctx, pOutListOrphan );
-                                    if ( vOk == false )
-                                        bOutFieldError = true;
-                                    backend.popChild();
-                                }
-                            }
-                            else
-                            {
-                                string valText;
-                                (void)backend.readText( valText ); // 없으면 빈 글 — 아래 파싱이 실패로 알린다
-                                vOk = parseTextValueCoerced( listVBuf.data(), nested._elementTypeName, valText, ctx );
-                                if ( vOk == false )
-                                    recordCoerceFailure( pOutListOrphan, bOutFieldError, propForOrphan, valText );
-                            }
-                        }
-
-                        if ( kOk && vOk )
-                            pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
-                        pMapWrap->destroyKey( listKBuf.data() );
-                        pMapWrap->destroyValue( listVBuf.data() );
-                    } ) );
-                    return bAny;
+                    string keyText;
+                    (void)_backend.readAttribute( kXmlKeyAttr, keyText ); // 없으면 빈 키 — 아래 파싱이 거른다
+                    return readText( pKey, keyTypeName, keyText );
                 }
-                return false;
-            }
+
+                ContainerReadResult readOwnedPointer() override
+                {
+                    // 태그 이름이 런타임 타입이다. 파일의 이름을 전역 이름 표에 넣지 않는다(`findInterned`).
+                    const hashed_string typeName = hashed_string::findInterned( _currentTagName );
+                    const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
+                    void*               pObject  = ( pType != nullptr ) ? _ctx.createOwnedPointer( typeName ) : nullptr;
+                    if ( pObject == nullptr )
+                    {
+                        // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다.
+                        string rawXml;
+                        if ( _backend.readCurrentNodeXml( rawXml ) )
+                        {
+                            SerializeContext::OpaqueElementView opaque{};
+                            opaque._typeName = _currentTagName;
+                            opaque._format   = SerializeContext::OpaqueFormat::Xml;
+                            opaque._text     = rawXml;
+                            (void)_ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
+                        }
+                        return ContainerReadResult::Read;
+                    }
+                    // 원소 안의 못 읽은 칸 — orphan 목록이 있으면 거기 남고 Read, 엄격 읽기면 FieldFailed 다.
+                    return toResult( readNestedXmlIntoInstance( pObject, *pType, _backend, _ctx, _pOutListOrphan ) );
+                }
+
+                ContainerReadResult readValueObject( void* pValue, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
+                {
+                    if ( slot == ContainerSlot::SequenceElement )
+                        return toResult( readNestedXmlIntoInstance( pValue, typeInfo, _backend, _ctx, _pOutListOrphan ) );
+                    // 맵 값의 구조체는 `<entry>` 안의 `<TypeName>` 자식이다. 자식이 없으면 기본값 그대로 넣는다.
+                    if ( _backend.pushFirstChild() == false )
+                        return ContainerReadResult::Read;
+                    const bool bRead = readNestedXmlIntoInstance( pValue, typeInfo, _backend, _ctx, _pOutListOrphan );
+                    _backend.popChild();
+                    return toResult( bRead );
+                }
+
+                // 시퀀스 원소는 `<item>` 의 글, 맵 값은 `<entry>` 의 글이다 — 둘 다 지금 노드의 글이다.
+                ContainerReadResult readScalar( void* pValue, const hashed_string& typeName, ContainerSlot ) override
+                {
+                    string text;
+                    (void)_backend.readText( text ); // 없으면 빈 글 — 아래 파싱이 실패로 알린다
+                    return readText( pValue, typeName, text );
+                }
+
+                ContainerReadResult skipElement( const size_t elementIndex ) override
+                {
+                    SW_LOG_WARNING( "'%#' has more elements than it can hold - element %# dropped", _propForOrphan._name.c_str(), elementIndex );
+                    string droppedText;
+                    (void)_backend.readText( droppedText ); // 구조체 원소면 비어 있다 — 실패로 알리는 것이 목적이다
+                    recordDroppedText( _pOutListOrphan, _propForOrphan, droppedText );
+                    return ContainerReadResult::FieldFailed;
+                }
+
+            private:
+                static ContainerReadResult toResult( const bool bRead ) { return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed; }
+
+                /** @brief 글 하나를 값으로 읽습니다. 못 읽으면 그 글을 orphan 으로 남기고 FieldFailed 입니다(조용히 버리지 않는다). */
+                ContainerReadResult readText( void* pValue, const hashed_string& typeName, const string& text ) const
+                {
+                    if ( parseTextValueCoerced( pValue, typeName, text, _ctx ) )
+                        return ContainerReadResult::Read;
+                    recordDroppedText( _pOutListOrphan, _propForOrphan, text );
+                    return ContainerReadResult::FieldFailed;
+                }
+
+                IXmlBackend&               _backend;
+                const SerializeContext&    _ctx;
+                vector<SchemaOrphanValue>* _pOutListOrphan;
+                const PropertyInfo&        _propForOrphan;
+                string_view                _currentTagName;
+            };
 
             static void writeXmlProperties( const void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend,
                                             const SerializeContext& ctx )
@@ -317,12 +268,10 @@ namespace sw
 
                     if ( prop._bIsContainer && prop.hasContainerWrapper() )
                     {
-                        NestedContainerInfo shape = prop.getContainerShape();
-                        if ( shape._typeName.empty() )
-                            shape._typeName = prop._typeName;
                         // 프로퍼티 이름이 곧 컨테이너 요소다. 그 안에 원소들이 들어간다.
                         backend.beginMap( prop._name.c_str() );
-                        writeContainerXml( pPropPtr, shape, backend, ctx );
+                        ContainerWriter writer( backend, ctx );
+                        ContainerVisitor::write( pPropPtr, prop.getContainerShape(), writer, ctx );
                         backend.endMap();
                     }
                     else
@@ -394,9 +343,6 @@ namespace sw
 
                     if ( prop._bIsContainer && prop.hasContainerWrapper() )
                     {
-                        NestedContainerInfo shape = prop.getContainerShape();
-                        if ( shape._typeName.empty() )
-                            shape._typeName = prop._typeName;
                         // 컨테이너는 프로퍼티 이름 요소 안에 들어 있다.
                         const bool entered = tryNameOrAlias( prop, [&]( const utf8* pName )
                         {
@@ -404,7 +350,8 @@ namespace sw
                         } );
                         if ( entered )
                         {
-                            if ( readContainerXml( pPropPtr, shape, backend, ctx, bFieldError, pOutListOrphan, prop ) == false )
+                            ContainerReader reader( backend, ctx, pOutListOrphan, prop );
+                            if ( ContainerVisitor::read( pPropPtr, prop.getContainerShape(), reader, ctx ) != ContainerReadResult::Read )
                                 bFieldError = true;
                             backend.popChild();
                         }
@@ -443,10 +390,16 @@ namespace sw
                             if ( prop._bIsBitField == SW_TRUE )
                             {
                                 if ( SerializerUtil::applyPropertyText( prop, pInstance, strValue, ctx ) == false )
-                                    recordCoerceFailure( pOutListOrphan, bFieldError, prop, strValue );
+                                {
+                                    bFieldError = true;
+                                    recordDroppedText( pOutListOrphan, prop, strValue );
+                                }
                             }
                             else if ( parseTextValueCoerced( pPropPtr, prop._typeName, strValue, ctx ) == false )
-                                recordCoerceFailure( pOutListOrphan, bFieldError, prop, strValue );
+                            {
+                                bFieldError = true;
+                                recordDroppedText( pOutListOrphan, prop, strValue );
+                            }
                         }
                         else
                             SerializerUtil::applyPropertyDefault( prop, pInstance, ctx );

@@ -24,8 +24,9 @@ from pathlib import Path
 #: 백엔드 짧은 이름 → App 스위치(쿠킹 표의 첫 별칭과 같다 — `Config/Engine/CookContract.json`).
 kBackendSwitch: dict[str, str] = {"dx12": "-dx12", "dx11": "-dx11", "vk": "-vk", "gl": "-gl"}
 
-#: App 이 "이 기계에서는 이 백엔드를 못 돌린다" 고 스스로 말하는 고정 표식(`AppSmokeTest::isBackendUnusableLine` 과 같다).
-kBackendUnusableMarker: tuple[str, ...] = ("Requested RHI backend is unavailable", "GL_ARB_gl_spirv")
+#: App 이 "이 기계에서는 이 백엔드를 못 돌린다"(빌드에 없다 · 드라이버가 기능을 안 준다)로 끝날 때의 종료 코드
+#: (`kRhiUnusableHereExitCode`, `Source/Engine/Graphics/RHI/RHIInitResult.h` 와 같다).
+kAppRhiUnusableExitCode = 77
 
 #: ctest 가 "건너뜀" 으로 읽는 종료 코드(`SKIP_RETURN_CODE`).
 kSkipExitCode = 77
@@ -234,9 +235,8 @@ def runApp(appPath: Path, listArgument: list[str], *, cwd: Path | None = None, t
     reader.join(timeout=10.0)
     result.exitCode = process.returncode
     result.seconds = time.monotonic() - startSeconds
+    result.bBackendUnusable = result.exitCode == kAppRhiUnusableExitCode
     for line in result.listLine:
-        if any(marker in line for marker in kBackendUnusableMarker):
-            result.bBackendUnusable = True
         if "[Error]" in line:
             result.listErrorLine.append(line)
     return result

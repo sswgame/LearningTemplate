@@ -70,9 +70,9 @@ namespace sw
 
         PROPERTY( Category = "Parallax", DisplayName = "Scroll Factor", Tooltip = "Fraction of the camera motion this layer follows on screen; 1 = world, 0 = fixed to the camera" )
         float2 _scrollFactor;
-        PROPERTY( Category = "Parallax", DisplayName = "Repeat Size", Tooltip = "Content repeats every this many units per axis (0 = no wrap)", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Parallax", DisplayName = "Repeat Size", Tooltip = "Content repeats every this many units per axis (0 = no wrap)", Min = 0.0, Units = m )
         float2 _repeatSize;
-        PROPERTY( Category = "Parallax", DisplayName = "Reference Point", Tooltip = "Camera position at which the layer sits where it was authored", Meta = "Units=m" )
+        PROPERTY( Category = "Parallax", DisplayName = "Reference Point", Tooltip = "Camera position at which the layer sits where it was authored", Units = m )
         float2 _referencePoint;
         float3 _origin;     ///< 저작한 로컬 위치(시작할 때 잡습니다). 저장하지 않습니다
         uint8  _bHasOrigin; ///< `_origin` 을 잡았는가

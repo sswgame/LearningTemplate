@@ -84,7 +84,7 @@ namespace sw
         string _catalogPath;
         PROPERTY( Category = "Interaction", DisplayName = "Last Interactor", Tooltip = "Who completed it last (runtime)" )
         GameObjectHandle _lastInteractor;
-        PROPERTY( Category = "Interaction", DisplayName = "Cooldown Remaining", Tooltip = "Seconds until usable again (runtime)", Meta = "Units=s" )
+        PROPERTY( Category = "Interaction", DisplayName = "Cooldown Remaining", Tooltip = "Seconds until usable again (runtime)", Units = s )
         float32 _cooldownRemaining;
         PROPERTY( Category = "Interaction", DisplayName = "Priority", Tooltip = "Higher wins over nearer candidates" )
         int32 _priority;

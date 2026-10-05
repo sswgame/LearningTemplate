@@ -52,7 +52,7 @@ namespace sw
     #else
             const sw::string dir = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
     #endif
-            return dir + "/" + sw::FileUtil::formatSharedLibraryName( pBaseName );
+            return dir + "/" + sw::ModuleImageUtil::formatSharedLibraryName( pBaseName );
         }
 
         /**
@@ -83,7 +83,7 @@ namespace sw
         void* loadModule( const utf8* pName )
         {
             const sw::string path = modulePath( pName );
-            return sw::FileUtil::loadDynamicLibrary( path );
+            return sw::ModuleImageUtil::loadDynamicLibrary( path );
         }
 
         /**
@@ -95,7 +95,7 @@ namespace sw
         {
             if ( pGameModule == nullptr )
                 return false;
-            const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( pGameModule, "exportGameApi" ) );
+            const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( pGameModule, "exportGameApi" ) );
             if ( pfnExport == nullptr )
                 return false;
             sw::GameAPI api{};
@@ -210,17 +210,17 @@ SW_TEST_CASE( ArchitectureTest, AllRHIModulesAbiStampExports )
         if ( sw::FileUtil::fileExists( path ) == false )
             continue;
 
-        void* handle = sw::FileUtil::loadDynamicLibrary( path );
+        void* handle = sw::ModuleImageUtil::loadDynamicLibrary( path );
         SW_EXPECT_TRUE( handle != nullptr );
         if ( handle == nullptr )
             continue;
 
         const sw::PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<sw::PFN_GetRHIModuleAbiVersion>(
-            sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
+            sw::ModuleImageUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
         const sw::PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<sw::PFN_GetRHIModuleAbiStamp>(
-            sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
+            sw::ModuleImageUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
         const void* pfnCreate = reinterpret_cast<void*>(
-            sw::FileUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
+            sw::ModuleImageUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
 
         SW_EXPECT_TRUE( pfnVersion != nullptr );
         SW_EXPECT_TRUE( pfnStamp != nullptr );
@@ -716,7 +716,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
 
     // 새로 로드된 모듈에서 C-ABI exportEditorApi 정상 동작 검증
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -771,11 +771,11 @@ SW_TEST_CASE( ArchitectureTest, ObjectUndoSurvivesAnEditorModuleReload )
 }
 
 /**
- * @brief [ArchitectureTest] 장르 키트 모듈 (GF_Overworld, GF_TurnBattle, GF_ActionCombat) 개별 LiveReload 검증
+ * @brief [ArchitectureTest] 장르 키트 모듈 (GF_Overworld, GF_MonsterCollector, GF_ActionCombat) 개별 LiveReload 검증
  */
 SW_TEST_CASE( ArchitectureTest, LiveReloadGenreKitsIndividuallyAndCascaded )
 {
-    const utf8* kKits[] = { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" };
+    const utf8* kKits[] = { "GF_Overworld", "GF_MonsterCollector", "GF_ActionCombat" };
 
     for ( const utf8* kitName : kKits )
     {
@@ -898,9 +898,8 @@ SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
  *          GameFramework 가 한 프로세스에 두 벌 돌고, 옛 복사본을 내리는 순간 그리로 뛰는 코드가 죽는다. 리로드가 "끝났다" 만 보면
  *          이것을 못 잡으므로 누가 누구에게 묶였는지를 본다.
  *
- *          Windows 에서는 SWGame 이 GameFramework 를 실제로 불러야 지연 로드가 풀리므로, 리로드 앞뒤로 게임 인스턴스를 한 번씩
- *          만들고 부순 뒤에 확인한다. (킷의 GameFramework 지연 로드는 킷 코드가 돌기 전까지 풀리지 않을 수 있다 — 그 경우 확인은
- *          "아직 안 묶임" 으로 지나간다. 리눅스는 `RTLD_NOW` 라 로드하는 순간 모두 묶인다.)
+ *          Windows 는 올리는 자리(`LiveReloadManager` 의 커밋)가 지연 import 를 미리 묶으므로(`ModuleImageUtil::bindDelayLoadImports`) 모듈 코드를
+ *          부르기 전에 이미 지금의 GameFramework 에 묶여 있어야 한다. 리눅스는 `RTLD_NOW` 라 로드하는 순간 모두 묶인다.
  */
 SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
 {
@@ -917,6 +916,11 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
         SW_TEST_SKIP( "SWGame registration failed" );
 
     SW_EXPECT_FALSE( manager.isGraphBroken() );
+    #if defined( SW_PLATFORM_WINDOWS )
+    // 올리는 자리가 지연 import 를 미리 묶는다(첫 호출이 묶으면 첫 float 인자가 망가진다) — 모듈 코드를 부르기 전에 이미 지금의 GameFramework 에 묶여 있다.
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "SWGame" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "GF_Overworld" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
+    #endif
     SW_EXPECT_TRUE( sw::createAndDestroyGame( manager.getModuleHandle( "SWGame" ) ) );
     SW_EXPECT_TRUE( manager.verifyModuleBindings() );
 
@@ -940,6 +944,11 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
 
     SW_EXPECT_TRUE( bGameReloaded );
     SW_EXPECT_FALSE( manager.isGraphBroken() );
+    #if defined( SW_PLATFORM_WINDOWS )
+    // 올리는 자리가 지연 import 를 미리 묶는다(첫 호출이 묶으면 첫 float 인자가 망가진다) — 모듈 코드를 부르기 전에 이미 지금의 GameFramework 에 묶여 있다.
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "SWGame" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "GF_Overworld" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
+    #endif
     SW_EXPECT_TRUE( sw::createAndDestroyGame( manager.getModuleHandle( "SWGame" ) ) );
     SW_EXPECT_TRUE( manager.verifyModuleBindings() );
 
@@ -1023,7 +1032,7 @@ SW_TEST_CASE( ArchitectureTest, DeferredUnloadImagesStayMappedUntilTheirBatchIsE
     SW_EXPECT_EQUAL( 0u, manager.getDeferredUnloadImageCount() );
 
     void* const                 pFirstGame     = manager.getModuleHandle( "SWGame" );
-    const sw::PFN_ExportGameAPI pfnFirstExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( pFirstGame, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnFirstExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( pFirstGame, "exportGameApi" ) );
     SW_ASSERT_TRUE( pfnFirstExport != nullptr );
 
     SW_ASSERT_TRUE( sw::reloadAndWait( manager, "SWGame" ) );
@@ -1285,7 +1294,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
 
     // 6) 새로 핫스왑된 모듈에서 C-ABI exportEditorApi 심볼 및 함수 테이블 유효성 검증
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -1354,21 +1363,21 @@ SW_TEST_CASE( ArchitectureTest, RHIBackendDynamicSwapAndReload )
             if ( sw::FileUtil::fileExists( modPath ) == false )
                 continue;
 
-            void* handle = sw::FileUtil::loadDynamicLibrary( modPath );
+            void* handle = sw::ModuleImageUtil::loadDynamicLibrary( modPath );
             SW_ASSERT_NOT_NULL( handle );
 
             auto* getStamp = reinterpret_cast<const utf8* (*)()>(
-                sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
+                sw::ModuleImageUtil::getDynamicSymbol( handle, "getRHIModuleAbiStamp" ) );
             SW_ASSERT_NOT_NULL( getStamp );
             SW_EXPECT_EQUAL( sw::string( sw::kRHIModuleAbiStamp ), sw::string( getStamp() ) );
 
             auto* getAbiVer = reinterpret_cast<uint32 ( * )()>(
-                sw::FileUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
+                sw::ModuleImageUtil::getDynamicSymbol( handle, "getRHIModuleAbiVersion" ) );
             SW_ASSERT_NOT_NULL( getAbiVer );
             SW_EXPECT_EQUAL( sw::kRHIModuleAbiVersion, getAbiVer() );
 
             auto* factory = reinterpret_cast<void* (*)()>(
-                sw::FileUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
+                sw::ModuleImageUtil::getDynamicSymbol( handle, "createRHIDevice" ) );
             SW_ASSERT_NOT_NULL( factory );
 
             // 동적 언로드 및 해제
@@ -1416,7 +1425,7 @@ SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
         return;
 
     const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
-        sw::FileUtil::getDynamicSymbol( handle, "exportGameApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameApi" ) );
     SW_EXPECT_TRUE( pfnExport != nullptr );
     if ( pfnExport == nullptr )
     {
@@ -1462,7 +1471,7 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
 
     sw::engine::registerModuleTypes( "SWGame" );
 
-    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( handle, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameApi" ) );
     SW_EXPECT_TRUE( pfnExport != nullptr );
     if ( pfnExport == nullptr )
     {
@@ -1545,7 +1554,7 @@ SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
     SW_ASSERT_NOT_NULL( handle );
 
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::FileUtil::getDynamicSymbol( handle, "exportEditorApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( handle, "exportEditorApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -1559,11 +1568,11 @@ SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
 }
 
 /**
- * @brief [ModuleApiTest] 장르별 독립 Kit 모듈 (GF_Overworld, GF_TurnBattle, GF_ActionCombat) 타입 등록 검증
+ * @brief [ModuleApiTest] 장르별 독립 Kit 모듈 (GF_Overworld, GF_MonsterCollector, GF_ActionCombat) 타입 등록 검증
  */
 SW_TEST_CASE( ModuleApiTest, GameFrameworkKitsModuleTypeRegistration )
 {
-    for ( const utf8* kitName : { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" } )
+    for ( const utf8* kitName : { "GF_Overworld", "GF_MonsterCollector", "GF_ActionCombat" } )
     {
         void* handle = sw::loadModule( kitName );
         if ( handle )
@@ -1593,7 +1602,7 @@ SW_TEST_CASE( ModuleApiTest, SharedModuleChildKeepsItsRegistrations )
 
     void* const hGame = manager.getModuleHandle( "SWGame" );
     SW_ASSERT_NOT_NULL( hGame );
-    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
     sw::GameAPI api{};
     SW_ASSERT_TRUE( pfnExport( &api ) );
@@ -1646,7 +1655,7 @@ SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
     if ( std::getenv( "SW_MODULE_PROPERTY_CHILD" ) == nullptr )
         SW_TEST_SKIP( "child only — EveryModulePropertyHasATypeTheSerializersCanCarry launches it" );
 
-    const utf8* const     arrKit[] = { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" };
+    const utf8* const     arrKit[] = { "GF_Overworld", "GF_ActionCombat" };
     sw::LiveReloadManager manager;
     SW_ASSERT_TRUE( manager.loadSharedModule( "GameFramework" ) );
     sw::vector<sw::string> listGameDepend{ "GameFramework" };
@@ -1661,7 +1670,7 @@ SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
     sw::unordered_map<sw::hashed_string, uint32> mapModuleTypeCount;
     sw::engine::getTypeRegistry().forEachType( [&mapModuleTypeCount]( const sw::TypeInfo& info )
     { ++mapModuleTypeCount[info._moduleName]; } );
-    for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat", "SWGame", "EditorModule" } )
+    for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_ActionCombat", "SWGame", "EditorModule" } )
         SW_EXPECT_TRUE_MSG( mapModuleTypeCount[sw::hashed_string( pModule )] > 0, pModule );
 
     const test::PropertyCarryReport report = test::makePropertyCarryReport();
@@ -1679,7 +1688,7 @@ SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
  */
 SW_TEST_CASE( ModuleApiTest, EveryModulePropertyHasATypeTheSerializersCanCarry )
 {
-    for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat", "SWGame", "EditorModule" } )
+    for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_ActionCombat", "SWGame", "EditorModule" } )
     {
         if ( sw::FileUtil::fileExists( sw::modulePath( pModule ) ) == false )
             SW_TEST_SKIP( "a module is not built next to the test in this config" );
@@ -1711,7 +1720,7 @@ SW_TEST_CASE( ModuleApiTest, GameModuleRepeatedReloadCycle )
         sw::engine::registerModuleTypes( "SWGame" );
 
         const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
-            sw::FileUtil::getDynamicSymbol( handle, "exportGameApi" ) );
+            sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameApi" ) );
         SW_ASSERT_NOT_NULL( pfnExport );
 
         sw::GameAPI api{};
@@ -1778,9 +1787,9 @@ SW_TEST_CASE( ModuleApiTest, UnloadChildReleasesTheChannelsItsImageCreated )
 
     const void* pFrameworkBegin{ nullptr };
     const void* pFrameworkEnd{ nullptr };
-    SW_ASSERT_TRUE( sw::FileUtil::findDynamicLibraryRange( hFramework, pFrameworkBegin, pFrameworkEnd ) );
+    SW_ASSERT_TRUE( sw::ModuleImageUtil::findDynamicLibraryRange( hFramework, pFrameworkBegin, pFrameworkEnd ) );
 
-    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
     sw::GameAPI api{};
     SW_ASSERT_TRUE( pfnExport( &api ) );
@@ -1853,12 +1862,12 @@ SW_TEST_CASE( ModuleApiTest, UnloadKeepsTheImagesTheModulePulledIn )
     // GameFramework 의 코드를 한 번 돌려 Windows 지연 로드를 풀어 둔다 — 그래야 아래에서 여는 핸들이 새로 올리지 않고 있는 이미지를 가리킨다.
     SW_EXPECT_TRUE( sw::createAndDestroyGame( hGame ) );
 
-    void* const hFrameworkProbe = sw::FileUtil::loadDynamicLibrary( sw::modulePath( "GameFramework" ) );
+    void* const hFrameworkProbe = sw::ModuleImageUtil::loadDynamicLibrary( sw::modulePath( "GameFramework" ) );
     SW_ASSERT_NOT_NULL( hFrameworkProbe );
     const void* pFrameworkBegin{ nullptr };
     const void* pFrameworkEnd{ nullptr };
-    const bool  bFoundRange = sw::FileUtil::findDynamicLibraryRange( hFrameworkProbe, pFrameworkBegin, pFrameworkEnd );
-    sw::FileUtil::unloadDynamicLibrary( hFrameworkProbe ); // 범위를 재느라 올린 참조만 돌려준다 — GameFramework 는 SWGame 이 끌어온 것이다
+    const bool  bFoundRange = sw::ModuleImageUtil::findDynamicLibraryRange( hFrameworkProbe, pFrameworkBegin, pFrameworkEnd );
+    sw::ModuleImageUtil::unloadDynamicLibrary( hFrameworkProbe ); // 범위를 재느라 올린 참조만 돌려준다 — GameFramework 는 SWGame 이 끌어온 것이다
     SW_ASSERT_TRUE( bFoundRange );
 
     sw::engine::unregisterModuleTypes( "SWGame" );
@@ -1866,7 +1875,7 @@ SW_TEST_CASE( ModuleApiTest, UnloadKeepsTheImagesTheModulePulledIn )
 
     const void* pBegin{ nullptr };
     const void* pEnd{ nullptr };
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::findLoadedImageRange( pFrameworkBegin, pBegin, pEnd ),
+    SW_EXPECT_TRUE_MSG( sw::ModuleImageUtil::findLoadedImageRange( pFrameworkBegin, pBegin, pEnd ),
                         "GameFramework went down with SWGame - the event channels it created now point at unmapped code" );
 }
 

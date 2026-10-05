@@ -31,7 +31,6 @@ add_subdirectory(Rpg/ClassicJrpg)
 add_subdirectory(Rpg/MonsterCollector)
 add_subdirectory(Rpg/OpenWorldWestern)
 add_subdirectory(Rpg/Overworld)
-add_subdirectory(Rpg/TurnBattle)
 add_subdirectory(Rpg/WitcherRpg)
 
 # ------------------------------------------------------------------------------

@@ -254,8 +254,8 @@ namespace sw
         if ( _constant._buffer != 0 && size > _constantByteSize )
         {
             if ( _descriptorIndex != kInvalidDescriptorIndex )
-                pRhi->getResourceFactory()->unregisterBindlessResource( _descriptorIndex );
-            pRhi->getResourceFactory()->destroyBuffer( _constant._buffer );
+                pRhi->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
+            pRhi->releaseHandle( RHIHandleKind::Buffer, _constant._buffer );
             _constant.forget();
             _descriptorIndex  = kInvalidDescriptorIndex;
             _constantByteSize = 0;

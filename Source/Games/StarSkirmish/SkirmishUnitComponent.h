@@ -54,7 +54,7 @@ namespace sw
     private:
         PROPERTY( Category = "Unit", DisplayName = "Director", Tooltip = "Object with the SkirmishDirectorComponent" )
         GameObjectHandle _director;
-        PROPERTY( Category = "Unit", DisplayName = "Air Height", Tooltip = "Flying units hover this high", Meta = "Units=m" )
+        PROPERTY( Category = "Unit", DisplayName = "Air Height", Tooltip = "Flying units hover this high", Units = m )
         float32 _airHeight;
 
         float3      _lastPosition; ///< 지난 프레임 자리(움직인 쪽으로 돌린다)

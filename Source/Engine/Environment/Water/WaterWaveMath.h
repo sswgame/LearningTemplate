@@ -20,11 +20,11 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Meta = "Units=rad", Tooltip = "Travel direction, from +x towards +z" )
+        PROPERTY( Units = rad, Tooltip = "Travel direction, from +x towards +z" )
         float32 _direction{ 0.0f };
-        PROPERTY( Min = 0.01, Meta = "Units=m" )
+        PROPERTY( Min = 0.01, Units = m )
         float32 _wavelength{ 8.0f };
-        PROPERTY( Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Units = m )
         float32 _amplitude{ 0.1f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "0 = sine wave, 1 = sharpest crest without loops" )
         float32 _steepness{ 0.5f };

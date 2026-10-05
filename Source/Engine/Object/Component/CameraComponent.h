@@ -59,7 +59,7 @@ namespace sw
         uint32 _renderTextureHeight{ 256 };
         PROPERTY( Min = 0.1, Max = 2.0, Tooltip = "Internal resolution as a multiple of the output size" )
         float32 _resolutionScale{ 1.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Renders per second; 0 renders every frame", Meta = "Units=Hz" )
+        PROPERTY( Min = 0.0, Tooltip = "Renders per second; 0 renders every frame", Units = Hz )
         float32 _updateRate{ 0.0f };
         PROPERTY( Tooltip = "Object whose bounds must be in the main view for this view to render (a CCTV monitor); empty always renders" )
         GameObjectHandle _visibilityObject{};
@@ -189,11 +189,11 @@ namespace sw
         void declareRenderTexture() const;
 
     private:
-        PROPERTY( Category = "Projection", DisplayName = "Field Of View", Tooltip = "Vertical FOV (radians)", Min = 0.1, Max = 3.14, Meta = "Units=rad" )
+        PROPERTY( Category = "Projection", DisplayName = "Field Of View", Tooltip = "Vertical FOV (radians)", Min = 0.1, Max = 3.14, Units = rad )
         float32 _fovY;
-        PROPERTY( Category = "Clipping", DisplayName = "Near Plane", Tooltip = "Near clipping distance", Min = 0.01, Max = 1000.0, Meta = "Units=m" )
+        PROPERTY( Category = "Clipping", DisplayName = "Near Plane", Tooltip = "Near clipping distance", Min = 0.01, Max = 1000.0, Units = m )
         float32 _nearZ;
-        PROPERTY( Category = "Clipping", DisplayName = "Far Plane", Tooltip = "Far clipping distance", Min = 1.0, Max = 100000.0, Meta = "Units=m" )
+        PROPERTY( Category = "Clipping", DisplayName = "Far Plane", Tooltip = "Far clipping distance", Min = 1.0, Max = 100000.0, Units = m )
         float32 _farZ;
         PROPERTY( Category = "Projection", DisplayName = "Ortho Height", Tooltip = "Orthographic view height", Min = 0.1, Max = 1000.0 )
         float32 _orthoHeight;

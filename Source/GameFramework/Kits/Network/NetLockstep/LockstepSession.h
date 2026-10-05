@@ -12,9 +12,9 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/map.h"
 #include "Core/Container/vector.h"
-#include "Core/Network/NetMessage.h"
+#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetKitMessageRange.h"
@@ -30,6 +30,7 @@ namespace sw
         static constexpr uint8 kChecksum      = NetKitMessageRange::kLockstep + 1;
         static constexpr uint8 kRollbackInput = NetKitMessageRange::kLockstep + 2;
         static constexpr uint8 kLeave         = NetKitMessageRange::kLockstep + 3; ///< 서버 → 모두: 플레이어 · 그 플레이어가 빈 입력이 되는 틱
+        static constexpr int32 kMaxInputBytes = 1000;                              ///< 틱 하나의 입력 상한 — 종류 · 플레이어 · 틱 · 길이와 함께 메시지 하나(1024 B)에 든다. 넘는 입력은 예약하지 않는다
         static_assert( NetMessageRange::isInRange( kLeave, NetKitMessageRange::kLockstep ), "message kinds must stay inside the kit's range" );
     };
 } // namespace sw
@@ -66,7 +67,10 @@ namespace sw
         LockstepSession();
 
         void initialize( NetHost* pHost, int32 playerCount, int32 localPlayer, int32 inputDelay );
-        /** @brief 내 다음 입력을 다음 빈 틱에 예약해 보냅니다. 이미 (지금 틱 + `kMaxInputLead`)까지 예약했으면 false — 틱이 넘어간 뒤 다시 낸다. */
+        /**
+         * @brief 내 다음 입력을 다음 빈 틱에 예약해 보냅니다. 이미 (지금 틱 + `kMaxInputLead`)까지 예약했으면 false — 틱이 넘어간 뒤 다시 낸다.
+         *        입력이 `NetLockstepMessage::kMaxInputBytes` 를 넘어도 false 입니다(오류를 남긴다).
+         */
         [[nodiscard]] bool submitLocalInput( const vector<uint8>& listInput );
         /** @brief 지금 틱의 입력이 모두 모였으면 꺼내고 틱을 넘깁니다. */
         [[nodiscard]] bool tryAdvance( vector<vector<uint8>>& outListInput );
@@ -93,9 +97,9 @@ namespace sw
         /** @brief @p player 가 빈 입력이 되는 틱입니다. 떠나지 않았으면 `kNoLeaveTick` 입니다. */
         uint32 getLeaveTick( int32 player ) const;
         /** @brief 받아 두고 아직 진행하지 않은 틱 수입니다. */
-        int32 getQueuedTickCount() const { return static_cast<int32>( _mapInput.size() ); }
+        int32 getQueuedTickCount() const { return _listTickInput.getCount(); }
         /** @brief 모두의 체크섬을 기다리는 틱 수입니다. */
-        int32 getPendingChecksumCount() const { return static_cast<int32>( _mapChecksum.size() ); }
+        int32 getPendingChecksumCount() const { return _listTickChecksum.getCount(); }
 
     private:
         /** @brief 틱 하나에 받은 입력입니다(플레이어 순). */
@@ -112,21 +116,19 @@ namespace sw
         void applyLeave( int32 player, uint32 tick );
         bool isPresentAt( int32 player, uint32 tick ) const { return tick < _listLeaveTick[static_cast<size_t>( player )]; }
         bool hasLeft( int32 player ) const { return _listLeaveTick[static_cast<size_t>( player )] != kNoLeaveTick; }
-        void sendToPeers( const NetMessageWriter& writer );
-        void relay( const NetMessageContext& context );
 
-        map<uint32, TickInput>     _mapInput;
-        map<uint32, vector<int64>> _mapChecksum;       ///< 틱 → 플레이어마다 체크섬(−1 = 아직)
-        vector<uint32>             _listNextInputTick; ///< 플레이어마다 다음에 올 입력 틱
-        vector<uint32>             _listLeaveTick;     ///< 플레이어마다 빈 입력이 되는 틱(`kNoLeaveTick` = 있다)
-        NetHost*                   _pHost;
-        int32                      _playerCount;
-        int32                      _localPlayer;
-        int32                      _inputDelay;
-        int32                      _stallCount;
-        uint32                     _currentTick;
-        uint32                     _desyncTick;
-        uint8                      _bDesynced;
-        NetMessageWriter           _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
+        TickRingBuffer<TickInput>     _listTickInput;     ///< 받아 두고 아직 진행하지 않은 틱 — 받는 창 [지금, 지금 + `kInputWindow`) 이 고리 한 바퀴다
+        TickRingBuffer<vector<int64>> _listTickChecksum;  ///< 틱 → 플레이어마다 체크섬(−1 = 아직) — 창 [지금 − `kChecksumWindow`, 지금 + `kChecksumWindow`) 이 고리 한 바퀴다
+        vector<uint32>                _listNextInputTick; ///< 플레이어마다 다음에 올 입력 틱
+        vector<uint32>                _listLeaveTick;     ///< 플레이어마다 빈 입력이 되는 틱(`kNoLeaveTick` = 있다)
+        NetHost*                      _pHost;
+        int32                         _playerCount;
+        int32                         _localPlayer;
+        int32                         _inputDelay;
+        int32                         _stallCount;
+        uint32                        _currentTick;
+        uint32                        _desyncTick;
+        uint8                         _bDesynced;
+        NetMessageWriter              _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
 } // namespace sw

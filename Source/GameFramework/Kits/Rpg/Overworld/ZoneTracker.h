@@ -1,6 +1,6 @@
 ﻿/**
  * @file ZoneTracker.h
- * @brief 역할 태그와 카메라 경계로 활성 존을 고릅니다(룸 개념).
+ * @brief 맵이 붙인 태그 · 카메라 경계 · 클리어 게이트로 활성 존을 고릅니다(룸 개념).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -8,29 +8,12 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    // ------------------------------------------------------------------------------
-    // 1) ZoneRole · 경계 · 정의
-    //    클리어 게이트가 잠기면 워프를 막음 (액션 룸)
-    // ------------------------------------------------------------------------------
-    /** @brief 맵 역할입니다(BGM · 조우 · 액션 룸 분기). */
-    enum class ZoneRole : uint8
-    {
-        Town = 0,
-        Route,
-        Center,
-        Mart,
-        Gym,
-        Wild,
-        Battle,
-        Dungeon,
-        Boss
-    };
-
     /** @brief 카메라가 머물 타일 경계입니다. */
     struct ZoneBounds
     {
@@ -41,13 +24,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 한 존의 ID · 역할 · 경계 · 태그입니다. */
+    /** @brief 한 존의 ID · 경계 · 태그 · 클리어 게이트입니다. */
     struct SW_GF_API ZoneDef
     {
         string                 _id; ///< 안정적인 존 ID (맵 이름 / 경로)
-        ZoneRole               _role;
         ZoneBounds             _bounds;
-        vector<string>         _listTag;              ///< 장르 비의존 태그 (예: "indoors", "no_encounter")
+        vector<hashed_string>  _listTag;              ///< 맵 데이터가 붙인 태그(예: "gym", "indoors", "no_encounter"). 대소문자를 가리지 않는다
         uint8                  _bClearGateLocked : 1; ///< 잠기면 워프 차단
         [[maybe_unused]] uint8 _reserved         : 7;
 
@@ -55,50 +37,50 @@ namespace sw
         ZoneDef();
 
         /** @brief 태그가 있는지 반환합니다. */
-        bool hasTag( string_view tag ) const;
-        /** @brief 태그를 추가합니다. */
-        void addTag( string_view tag );
+        bool hasTag( const hashed_string& tag ) const;
+        /** @brief 태그를 추가합니다. 빈 이름 · 이미 있는 태그는 무시합니다. */
+        void addTag( const hashed_string& tag );
     };
 } // namespace sw
 
 namespace sw
 {
-    // ------------------------------------------------------------------------------
-    // 2) ZoneTracker — 존 목록 + 활성 존 조회
-    //    1개 맵 = 1개 기본 존(setFromMap)뿐이다. 여러 존을 채우는 로더는 아직 없다
-    // ------------------------------------------------------------------------------
-    /** @brief 런타임 존 상태입니다(경계, 역할, 클리어 게이트, 태그). */
+    /**
+     * @class ZoneTracker
+     * @brief 런타임 존 상태입니다(경계, 태그, 클리어 게이트). 1 개 맵 = 1 개 기본 존(`setFromMap`)입니다.
+     * @details 존이 무엇인지(마을 · 체육관 · 던전 …)는 열거가 아니라 맵이 붙인 태그입니다(UE GameplayTag 컨테이너 모양). 장르 코드는 `hasActiveZoneTag( "dungeon" )` 로 묻습니다.
+     */
     class SW_GF_API ZoneTracker
     {
     public:
+        /** @brief 이 태그가 붙은 존은 들어갈 때 클리어 게이트가 잠깁니다(체육관 · 던전 · 보스 방 — 맵 데이터가 붙인다). */
+        static constexpr const utf8* kClearGateTag = "clear_gate";
+
         ZoneTracker();
 
         /** @brief 존 목록과 활성 인덱스를 비웁니다. */
         void clear();
 
-        /** @brief 맵 크기로 단일 기본 존을 만듭니다. roleText 가 비면 경로에서 추론합니다. */
-        void setFromMap( string_view mapPath, string_view mapName, int32 width, int32 height,
-                         string_view roleText = "" );
+        /**
+         * @brief 맵 크기로 단일 기본 존을 만들고 활성화합니다.
+         * @param tagText 맵의 역할 글(`TileMap::getRole` — `<role>`)입니다. 쉼표 · 공백으로 나눈 태그 목록이고(예: "gym, clear_gate"), 비면 태그가 없습니다.
+         */
+        void setFromMap( string_view mapPath, string_view mapName, int32 width, int32 height, string_view tagText = "" );
 
         /** @brief 지정 존을 활성화합니다. */
         void activate( string_view zoneId );
-
-        /** @brief 플레이어 타일 위치에 맞는 첫 번째 존을 활성화합니다. 변경되면 true 를 반환합니다. */
-        bool updateActiveZone( int32 playerX, int32 playerY );
 
         /** @brief 활성 존의 클리어 게이트를 잠그거나 풉니다. */
         void setClearGateLocked( bool bLocked );
         /** @brief 활성 존의 클리어 게이트가 잠겨 있는지 반환합니다. */
         bool isClearGateLocked() const;
         /** @brief 활성 존이 태그를 갖는지 반환합니다. */
-        bool hasActiveZoneTag( string_view tag ) const;
+        bool hasActiveZoneTag( const hashed_string& tag ) const;
 
-        /** @brief 활성 존 정의를 반환합니다. */
+        /** @brief 활성 존 정의를 반환합니다. 없으면 nullptr 입니다. */
         const ZoneDef* getActiveZone() const;
-        /** @brief getActiveZone()->_id 의 별칭입니다(없으면 빈 문자열). */
+        /** @brief 활성 존의 ID 입니다(없으면 빈 문자열). */
         string getActiveZoneId() const;
-        /** @brief 활성 존 역할을 반환합니다. */
-        ZoneRole getActiveRole() const;
         /** @brief 카메라 경계를 반환합니다. */
         const ZoneBounds& getCameraBounds() const;
 
@@ -106,17 +88,4 @@ namespace sw
         vector<ZoneDef> _listZone;
         int32           _activeIndex;
     };
-
-    // ------------------------------------------------------------------------------
-    // 3) 맵 경로 → ZoneRole (setFromMap 폴백)
-    // ------------------------------------------------------------------------------
-    /** @brief 맵 경로에서 존 역할을 추론합니다. */
-    SW_GF_API ZoneRole zoneRoleFromMapPath( string_view mapPath );
-    /**
-     * @brief 역할을 태그 이름으로 바꿉니다. `zoneRoleFromMapPath` 와 **같은 표**를 봅니다.
-     * @details 장르에 매이지 않은 코드가 `ZoneRole` 을 모른 채 `hasActiveZoneTag( "dungeon" )`
-     *          으로 물을 수 있도록 역할을 태그로 미러합니다. 그 이름과 경로 · 글자에서 역할을 읽을
-     *          때 쓰는 이름은 **같아야 하므로 한 표에서 나옵니다.**
-     */
-    SW_GF_API const utf8* zoneRoleToTag( ZoneRole role );
 } // namespace sw

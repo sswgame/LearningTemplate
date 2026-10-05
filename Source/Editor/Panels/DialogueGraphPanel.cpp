@@ -632,7 +632,7 @@ namespace sw::editor
                 EditorWidgets::drawTextField( "Condition", node._condition );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-                ImGui::TextDisabled( "Ex: flag.boss_defeated == 1" );
+                ImGui::TextDisabled( "Ex: boss_defeated && gold >= 10" );
                 break;
             }
             case DialogueNodeBody::Action:

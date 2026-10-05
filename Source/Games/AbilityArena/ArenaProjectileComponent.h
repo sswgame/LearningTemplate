@@ -45,11 +45,11 @@ namespace sw
     private:
         PROPERTY( Category = "Projectile", DisplayName = "Director", Tooltip = "Object with the ArenaDirectorComponent" )
         GameObjectHandle _director;
-        PROPERTY( Category = "Projectile", DisplayName = "Radius", Tooltip = "Hit radius", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Projectile", DisplayName = "Radius", Tooltip = "Hit radius", Min = 0.0, Units = m )
         float32 _radius;
-        PROPERTY( Category = "Projectile", DisplayName = "Unit Radius", Tooltip = "Body radius of the units it can hit", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Projectile", DisplayName = "Unit Radius", Tooltip = "Body radius of the units it can hit", Min = 0.0, Units = m )
         float32 _unitRadius;
-        PROPERTY( Category = "Projectile", DisplayName = "Visual Lift", Tooltip = "Drawn this high above the hit point (chest height)", Meta = "Units=m" )
+        PROPERTY( Category = "Projectile", DisplayName = "Visual Lift", Tooltip = "Drawn this high above the hit point (chest height)", Units = m )
         float32 _visualLift;
 
         GameplayEffectSpec _spec;

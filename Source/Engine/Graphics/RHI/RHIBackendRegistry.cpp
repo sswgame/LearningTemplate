@@ -54,7 +54,7 @@ namespace sw
             [[nodiscard]] static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
             {
                 RHIBackendRegistry& reg           = engine::getRHIBackendRegistry();
-                const string        dllName       = FileUtil::formatSharedLibraryName( pModuleBaseName );
+                const string        dllName       = ModuleImageUtil::formatSharedLibraryName( pModuleBaseName );
                 const string        execDir       = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
                 const string        exeDirDllPath = execDir.empty() ? dllName.c_str() : FileUtil::joinPath( execDir, dllName );
 
@@ -184,11 +184,11 @@ namespace sw
 
     bool RHIBackendRegistry::tryLoadModule( RHIBackend backend, string_view modulePath )
     {
-        void* pModuleHandle = FileUtil::loadDynamicLibrary( modulePath );
+        void* pModuleHandle = ModuleImageUtil::loadDynamicLibrary( modulePath );
         if ( pModuleHandle == nullptr )
             return false;
 
-        PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<PFN_GetRHIModuleAbiVersion>( FileUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleAbiVersion" ) );
+        PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<PFN_GetRHIModuleAbiVersion>( ModuleImageUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleAbiVersion" ) );
         if ( pfnVersion == nullptr || pfnVersion() != kRHIModuleAbiVersion )
         {
             SW_LOG_ERROR( "RHI MODULE ABI version mismatch or missing getRHIModuleAbiVersion (%#)", modulePath );
@@ -196,7 +196,7 @@ namespace sw
             return false;
         }
 
-        PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleAbiStamp>( FileUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleAbiStamp" ) );
+        PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleAbiStamp>( ModuleImageUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleAbiStamp" ) );
         if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kRHIModuleAbiStamp ) == false )
         {
             SW_LOG_ERROR( "RHI MODULE ABI stamp mismatch or missing getRHIModuleAbiStamp (%#; expected %#)", modulePath, kRHIModuleAbiStamp );
@@ -204,7 +204,7 @@ namespace sw
             return false;
         }
 
-        PFN_CreateRHIDevice pfnCreate = reinterpret_cast<PFN_CreateRHIDevice>( FileUtil::getDynamicSymbol( pModuleHandle, "createRHIDevice" ) );
+        PFN_CreateRHIDevice pfnCreate = reinterpret_cast<PFN_CreateRHIDevice>( ModuleImageUtil::getDynamicSymbol( pModuleHandle, "createRHIDevice" ) );
         if ( pfnCreate == nullptr )
         {
             (void)ModuleImageUtil::unloadModuleImage( modulePath, pModuleHandle );

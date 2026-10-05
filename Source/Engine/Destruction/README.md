@@ -51,7 +51,7 @@
 | `PolygonTriangulationUtil` | `PolygonTriangulation.h` |
 | `DestructionRandom` | `DestructionRandom.h` |
 
-시험: `FractureTest`(`Test/EngineTest/TestFracture.cpp`), 임포트는 `ModelImporterTest.FractureRuleWritesFractureAssetBesideTheMesh`.
+시험: `FractureTest`(`Test/EngineTest/Destruction/TestFracture.cpp`), 임포트는 `ModelImporterTest.FractureRuleWritesFractureAssetBesideTheMesh`.
 
 ## 2. 구조 — 계층 · 연결 · 앵커 · 지지(`DestructionState`)
 
@@ -75,7 +75,7 @@
 기본은 `Resource/engine/destruction/default.destruction.xml`(돌), `wood.destruction.xml`(나무). 모르는 원소 · 속성 · 틀린 수 · 같은 원소 두 번은 로드
 오류이고(`CharacterDataReader`), `ResourceDataSchemaTest` 가 저장소의 모든 표를 읽습니다. 같은 `.fracture` 를 표만 바꿔 다르게 부숩니다(다시 쿠킹하지 않는다).
 
-시험: `DestructionStateTest`(`Test/EngineTest/TestDestructionState.cpp`).
+시험: `DestructionStateTest`(`Test/EngineTest/Destruction/TestDestructionState.cpp`).
 
 ## 3. 피해 — 변형 문턱 · 사건 · 네트워크(`DestructionDamage.h`, `DestructionState::applyDamage`)
 
@@ -100,7 +100,7 @@
 부모 · 앵커 · 활성 노드), 다음 그룹 번호, 사건 수. 읽은 쪽의 `computeStateHash` 가 쓴 쪽과 같고 뒤따르는 사건도 같은 결과를 냅니다(쌓인 변형까지 넘어간다) —
 늦은 참가 · 어긋남 바로잡기가 사건열을 처음부터 다시 돌리지 않습니다. 다른 그래프 · 잘린 바이트는 거절하고 상태를 그대로 둡니다. 시험: `DestructionSnapshotTest`.
 
-시험: `DestructionDamageTest`(`Test/EngineTest/TestDestructionDamage.cpp`).
+시험: `DestructionDamageTest`(`Test/EngineTest/Destruction/TestDestructionDamage.cpp`).
 
 ## 4. 런타임 — `FractureComponent`(3D) · `FractureComponentBase`
 
@@ -140,7 +140,7 @@
 - `SkeletalMeshComponent` 에 둘을 더했다: `setSkeleton` 은 런타임 지정이라 경로가 바뀔 때까지 유지(시작의 렌더 에셋 해석이 덮지 않는다),
   `applyExternalPose`(평가 밖에서 고친 로컬 포즈로 팔레트를 그 자리에서).
 
-시험: `FractureComponentTest`(`Test/EngineTest/TestFractureComponent.cpp`).
+시험: `FractureComponentTest`(`Test/EngineTest/Destruction/TestFractureComponent.cpp`).
 
 ## 5. 기믹과 잇기(GameFramework)
 
@@ -160,7 +160,7 @@
 `_pieceCount` · `_pattern` · `_listLevelCount`). 그릴 메시가 없으면 쉬는 조각을 구운 평평한 메시를 `MeshComponent` 로 더합니다. 조각 바디는 Box2D
 (`IFracturePhysics` 의 2D 구현 — 껍질은 8 점 이하 볼록 다각형으로 줄이고, 자세는 XY · Z 축 회전, 깊이는 오브젝트 것).
 
-시험: `Fracture2DTest`(`Test/EngineTest/TestFracture2D.cpp`).
+시험: `Fracture2DTest`(`Test/EngineTest/Destruction/TestFracture2D.cpp`).
 
 **삼각형 수.** 자를 때마다 앞 막음의 대각선 교점이 다음 막음의 고리에 일직선으로 쌓입니다. 칸마다 자르기를 마치면 안쪽 면을 평면마다 다시 짓습니다
 (`simplifyCaps` — 그 점을 쓰는 **모든** 면이 안쪽 면이고 그 모든 고리에서 일직선인 점만 함께 뺀다, 겉면이 쓰는 점은 그대로). 쪼개기 결과를 바꾸는 고침은

@@ -610,7 +610,7 @@ namespace sw
              * @details PropertyInfo 의 오프셋 접근 · 캐스팅은 "리플렉션 부모는 항상 파생 객체의 byte offset 0 에 있다" 는
              *          전제로 동작합니다(비가상 첫 번째 베이스는 C++ ABI 가 offset 0 을 보장하지만, 두 번째 이후 베이스는 그렇지
              *          않습니다). 그래서 부모는 항상 선언 순서상 첫 번째 베이스로 고정합니다.
-             *          두 번째 이후 베이스가 REFLECT() 없는 순수 인터페이스 · 믹스인(예: IFlagStore)이면 잃을 프로퍼티가 없으므로
+             *          두 번째 이후 베이스가 REFLECT() 없는 순수 인터페이스 · 믹스인(콜백 인터페이스 등)이면 잃을 프로퍼티가 없으므로
              *          조용히 무시합니다. REFLECT() 가 붙은 베이스가 두 번째 이후에 있으면 프로퍼티가 유실되거나 조용히 오프셋이
              *          잘못될 수 있으므로, 경고가 아니라 빌드를 실패시키는 에러로 처리합니다. 그 베이스를 첫 번째로 옮기면
              *          해결됩니다.
@@ -1212,13 +1212,23 @@ namespace sw
             }
 
             /**
-             * @brief 표시 메타를 검사하고 정리합니다 — `Units` 는 단위 표에 있어야 하고(커스텀 메타 `Units` 로 싣는다), `EditCondition` 은 네 꼴 중 하나여야 하며,
-             *        C 고정 배열의 원소는 컨테이너일 수 없습니다.
+             * @brief 표시 메타를 검사하고 정리합니다 — `Units` 는 단위 표에 있어야 하고(커스텀 메타 `Units` 로 싣는다), 표에 있는 단위를 `Meta = "Units=…"` 로
+             *        적으면 거절하고, `EditCondition` 은 네 꼴 중 하나여야 하며, C 고정 배열의 원소는 컨테이너일 수 없습니다.
              * @details 조건식이 가리키는 이름은 기반 클래스의 것일 수 있어 여기서는 꼴만 본다 — 이름은 등록된 뒤 `PropertyEditCondition::parse` 가 보고,
              *          `ReflectionDisplayMetaTest.EveryEditConditionResolves` 가 모든 타입을 대조한다.
              */
             static bool applyDisplayMeta( ParsedPropertyInfo& prop, const CXType fieldType, const string_view owner )
             {
+                // `Meta` 의 `Units` 는 철자 검사를 받지 않으므로 표에 없는 글자(`HP`)만 받는다 — 표에 있는 단위는 `Units = …` 로 적는다.
+                for ( const auto& [key, value] : prop._listCustomMeta )
+                {
+                    if ( key == "Units" && ReflectUnitUtil::findUnit( value ) != nullptr )
+                    {
+                        SW_LOG_ERROR( "ERROR: '%#' writes Meta = \"Units=%#\" - a known unit is written PROPERTY( Units = %# ).", owner, value, value );
+                        return false;
+                    }
+                }
+
                 if ( prop._units.empty() == false )
                 {
                     if ( ReflectUnitUtil::findUnit( prop._units ) == nullptr )

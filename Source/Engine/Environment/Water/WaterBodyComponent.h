@@ -131,13 +131,13 @@ namespace sw
         WaterBodyShape _shape;
         PROPERTY( Category = "Water", DisplayName = "Material", AssetPath, AssetType = "Material" )
         string _materialPath;
-        PROPERTY( Category = "Water", DisplayName = "Size", Meta = "Units=m", Tooltip = "Lake extent along x and z, centered on the owner" )
+        PROPERTY( Category = "Water", DisplayName = "Size", Units = m, Tooltip = "Lake extent along x and z, centered on the owner" )
         float2 _size;
-        PROPERTY( Category = "Water", DisplayName = "Cell Size", Min = 0.1, Meta = "Units=m", Tooltip = "Surface grid spacing (waves need vertices)" )
+        PROPERTY( Category = "Water", DisplayName = "Cell Size", Min = 0.1, Units = m, Tooltip = "Surface grid spacing (waves need vertices)" )
         float32 _cellSize;
-        PROPERTY( Category = "Water", DisplayName = "River Points", Meta = "Units=m", Tooltip = "River centerline relative to the owner; y is the surface height" )
+        PROPERTY( Category = "Water", DisplayName = "River Points", Units = m, Tooltip = "River centerline relative to the owner; y is the surface height" )
         vector<float3> _listRiverPoint;
-        PROPERTY( Category = "Water", DisplayName = "River Width", Min = 0.1, Meta = "Units=m" )
+        PROPERTY( Category = "Water", DisplayName = "River Width", Min = 0.1, Units = m )
         float32 _riverWidth;
         PROPERTY( Category = "Waves", DisplayName = "Waves", Tooltip = "Up to four Gerstner waves" )
         vector<GerstnerWave> _listWave;
@@ -147,9 +147,9 @@ namespace sw
         float4 _deepColor;
         PROPERTY( Category = "Shading", DisplayName = "Sky Color", Tooltip = "Reflected at grazing angles (fresnel)" )
         float4 _skyColor;
-        PROPERTY( Category = "Shading", DisplayName = "Deep Depth", Min = 0.01, Meta = "Units=m", Tooltip = "Depth where the deep color is reached" )
+        PROPERTY( Category = "Shading", DisplayName = "Deep Depth", Min = 0.01, Units = m, Tooltip = "Depth where the deep color is reached" )
         float32 _deepDepth;
-        PROPERTY( Category = "Shading", DisplayName = "Foam Width", Min = 0.0, Meta = "Units=m", Tooltip = "Shore foam where the water is shallower than this" )
+        PROPERTY( Category = "Shading", DisplayName = "Foam Width", Min = 0.0, Units = m, Tooltip = "Shore foam where the water is shallower than this" )
         float32 _foamWidth;
         PROPERTY( Category = "Shading", DisplayName = "Ripple Strength", Min = 0.0, Max = 1.0, Tooltip = "Small normal ripples on top of the waves" )
         float32 _rippleStrength;

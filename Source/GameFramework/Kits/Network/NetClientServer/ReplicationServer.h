@@ -1,16 +1,18 @@
 /**
  * @file ReplicationServer.h
- * @brief 권위 서버 쪽 — 매 틱 월드 상태를 모아 클라이언트마다 (관련 · 우선도 정책을 거쳐) 확인받은 기준 대비 델타로 보내고, 중복으로 온 입력을 틱 순으로 꺼내 줍니다.
+ * @brief 권위 서버 쪽 — 매 틱 월드 상태를 모아 클라이언트마다 (관련 · 우선도 정책을 거쳐) 확인받은 기준 대비 델타로 보내고, 받은 입력을 틱 순으로 꺼내 주며
+ *        "빈틈없이 받은 다음 틱" 을 스냅숏에 실어 돌려줍니다(클라이언트는 그 틱부터 다시 보낸다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
-#include "Core/Network/NetMessage.h"
-#include "Core/Network/NetParallel.h"
-#include "Core/Network/NetPrioritizer.h"
+#include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Replication/NetInputWindow.h"
+#include "Core/Network/Replication/NetParallel.h"
+#include "Core/Network/Replication/NetPrioritizer.h"
+#include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetClientServer/NetSnapshot.h"
@@ -60,9 +62,11 @@ namespace sw
     /** @brief 서버 설정입니다. */
     struct ReplicationServerSettings
     {
-        int32 _snapshotBudgetBytes{ 1000 }; ///< 클라이언트 · 틱마다 스냅샷 메시지 상한(종류 바이트 · 머리 · 사라진 목록 포함, `NetConnection::kMaxMessageSize` 로 잘린다)
-        int32 _historySize{ 64 };           ///< 클라이언트마다 기억하는 보낸 스냅샷(기준 후보) 수
-        int32 _inputBufferSize{ 64 };
+        int32 _snapshotBudgetBytes{ 1000 };    ///< 클라이언트 · 틱마다 스냅샷 메시지 상한(종류 바이트 · 머리 · 사라진 목록 포함, `NetConnection::kMaxSingleMessageSize` 로 잘린다).
+                                               ///< 연결 상한의 몫(`NetSendBudget::computeTickBudget`)이 더 작으면 그것
+        float32 _tickInterval{ 1.0f / 30.0f }; ///< `sendSnapshots` 를 부르는 간격(초) — 연결 상한에서 스냅샷 하나의 몫을 셈한다(클라이언트 설정의 같은 이름과 맞춘다)
+        int32   _historySize{ 64 };            ///< 클라이언트마다 기억하는 보낸 스냅샷(기준 후보) 수
+        int32   _inputBufferSize{ 64 };        ///< 클라이언트마다 받아 두는 입력 틱 수(받은 가장 새 틱에서 이만큼 뒤까지 — 그보다 오래된 것은 놓는다)
     };
 } // namespace sw
 
@@ -89,6 +93,7 @@ namespace sw
         void beginTick( uint32 tick );
         /** @brief 이 틱의 엔티티입니다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 복제하지 않는다(처음 한 번 경고, 그 뒤로는 센다). */
         void setEntity( uint32 entityId, uint32 typeId, const vector<uint8>& buffer );
+        /** @brief 이 틱의 엔티티를 확정합니다(id 순 정렬). 그 전까지 월드에는 지난 틱의 자리가 남아 있다 — `sendSnapshots` · `getWorldSnapshot` 은 이 뒤에 쓴다. */
         void endTick();
         /**
          * @brief 연결된 클라이언트마다 스냅샷을 보냅니다. `setTaskManager` 를 줬으면 클라이언트들을 작업 스레드에 나눠 만든다(클라이언트마다 독립 —
@@ -106,6 +111,7 @@ namespace sw
 
         /**
          * @brief 그 틱의 입력을 꺼냅니다. 아직 안 왔으면 가장 최근 입력을 되풀이합니다(@p outbExact false). 받은 입력이 하나도 없으면 false 입니다.
+         *        그 틱까지는 다 쓴 것으로 놓는다 — 더 받지 않고, 스냅숏의 확인도 그 다음 틱으로 넘어간다.
          */
         [[nodiscard]] bool popInput( int32 connectionId, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact );
         void               setLastProcessedInputTick( int32 connectionId, uint32 tick );
@@ -117,24 +123,18 @@ namespace sw
         uint64 getOversizedEntityCount() const;
 
     private:
-        struct InputEntry
-        {
-            vector<uint8> _buffer{};
-            uint32        _tick{ 0 };
-        };
-
         struct ClientState
         {
-            NetPrioritizer      _prioritizer{}; ///< 관련 엔티티마다 쌓인 우선도
-            vector<NetSnapshot> _listSent{};    ///< 틱 % 크기 자리 — 보낸(재구성된) 스냅샷
-            deque<InputEntry>   _listInput{};   ///< 틱 오름차순
-            vector<uint8>       _lastInput{};
-            float32             _viewTick{ 0.0f };
-            uint32              _ackedTick{ 0 };
-            uint32              _lastProcessedInputTick{ 0 };
-            uint8               _bHasAck{ SW_FALSE };
-            uint8               _bHasInput{ SW_FALSE };
-            uint8               _bActive{ SW_FALSE };
+            NetPrioritizer              _prioritizer{}; ///< 관련 엔티티마다 쌓인 우선도
+            TickRingBuffer<NetSnapshot> _listSent{};    ///< 보낸(재구성된) 스냅샷 — 클라이언트가 확인한 틱을 델타의 기준으로 찾는다
+            NetInputReceiveBuffer       _input{};       ///< 받은 입력 — 받은 가장 새 틱을 따르는 창, 꺼낸 틱은 놓는다
+            vector<uint8>               _lastInput{};
+            float32                     _viewTick{ 0.0f };
+            uint32                      _ackedTick{ 0 };
+            uint32                      _lastProcessedInputTick{ 0 };
+            uint8                       _bHasAck{ SW_FALSE };
+            uint8                       _bHasInput{ SW_FALSE };
+            uint8                       _bActive{ SW_FALSE };
         };
 
         /** @brief 작업 스레드 하나가 스냅샷 하나를 만드는 데 쓰는 자리입니다(틱마다 다시 쓴다). */
@@ -163,8 +163,10 @@ namespace sw
         NetParallelScratch<SnapshotScratch> _snapshotScratch;       ///< 스레드마다 하나
         vector<int32>                       _listConnectionScratch; ///< 이번 틱에 보낼 연결
         vector<ClientState*>                _listClientScratch;     ///< 위 연결의 상태 — 나누기 전에 모두 잡아 둔다(나누는 중에 목록이 자라지 않게)
+        size_t                              _worldEntityCount;      ///< 이 틱에 `setEntity` 한 수 — 월드 엔티티 자리는 틱을 넘어 다시 쓴다(버퍼 용량을 남긴다)
         uint64                              _oversizedEntityCount;
-        const int32*                        _pRangeConnection; ///< 나눈 본문이 읽는 `_listConnectionScratch.data()` — 워커는 컨테이너를 만지지 않는다
-        ClientState* const*                 _ppRangeClient;    ///< 나눈 본문이 읽는 `_listClientScratch.data()`
+        int32                               _snapshotBudgetBytes; ///< 이번 `sendSnapshots` 의 예산 — 나누기 전에 정하고 워커는 읽기만 한다
+        const int32*                        _pRangeConnection;    ///< 나눈 본문이 읽는 `_listConnectionScratch.data()` — 워커는 컨테이너를 만지지 않는다
+        ClientState* const*                 _ppRangeClient;       ///< 나눈 본문이 읽는 `_listClientScratch.data()`
     };
 } // namespace sw

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/CoreMinimal.h"
+#include "Core/Memory/MemoryProfiler.h"
 
 namespace sw
 {
@@ -40,5 +41,21 @@ namespace sw
 
         s_pInstance->clear();
         s_pInstance = nullptr;
+    }
+
+    HashedStringPool::ScopedPoolMemoryTag::ScopedPoolMemoryTag() noexcept
+        : _previousTag{ MemoryTag::Unknown }
+    {
+        if constexpr ( kMemoryTagScopesEnabled )
+        {
+            _previousTag = MemoryProfiler::getCurrentMemoryTag();
+            MemoryProfiler::setCurrentMemoryTag( MemoryTag::EngineMisc );
+        }
+    }
+
+    HashedStringPool::ScopedPoolMemoryTag::~ScopedPoolMemoryTag() noexcept
+    {
+        if constexpr ( kMemoryTagScopesEnabled )
+            MemoryProfiler::setCurrentMemoryTag( _previousTag );
     }
 } // namespace sw

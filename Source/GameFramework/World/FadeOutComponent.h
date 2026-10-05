@@ -33,7 +33,7 @@ namespace sw
          * @details 흐른 시간이 있으면(읽어 들인 상태) 타이머 · 알파 · 기준 알파를 그대로 두고 스프라이트에 다시 넣기만 합니다.
          */
         void onBeginPlay() override;
-        /** @brief 흐림을 진행해 스프라이트에 넣고, 다 흐려지면 오브젝트를 지웁니다. */
+        /** @brief 흐림을 진행해 스프라이트에 넣고, 흐른 시간이 `_duration` 에 닿는 걸음에 오브젝트를 지웁니다. */
         void onTick( float32 deltaTime ) override;
 
         float32 getDuration() const;
@@ -46,9 +46,9 @@ namespace sw
         /** @brief 같은 오브젝트의 스프라이트마다 색 알파 = 기준 알파 × `_currentAlpha` 로 둡니다. */
         void applyAlphaToSprites();
 
-        PROPERTY( Category = "Effect", DisplayName = "Duration", Tooltip = "Seconds until the effect has faded out; 0 keeps it", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Effect", DisplayName = "Duration", Tooltip = "Seconds until the effect has faded out; 0 keeps it", Min = 0.0, Units = s )
         float32 _duration;
-        PROPERTY( Category = "Effect", DisplayName = "Current Timer", Tooltip = "Seconds since the effect started", ReadOnly, Meta = "Units=s" )
+        PROPERTY( Category = "Effect", DisplayName = "Current Timer", Tooltip = "Seconds since the effect started", ReadOnly, Units = s )
         float32 _currentTimer;
         PROPERTY( Category = "Effect", DisplayName = "Current Alpha", Tooltip = "Fade multiplied into the sprites' alpha (1 to 0)", Min = 0.0, Max = 1.0 )
         float32 _currentAlpha;

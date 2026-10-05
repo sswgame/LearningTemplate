@@ -2,7 +2,7 @@
  * @file PhysicsDebugDraw.h
  * @brief 물리 디버그 그리기의 출구(`IPhysicsDebugRenderer`)와 셰이프 와이어프레임 도우미입니다.
  * @details 물리는 그리는 쪽을 모릅니다(티어가 아래다). 씬이 `drawDebug( renderer )` 로 바디마다 셰이프를 선으로 내고, 렌더러 쪽 어댑터가 그것을
- *          `DebugDrawQueue` 로 옮깁니다(`Engine/Graphics/Renderer/Debug/PhysicsDebugDrawAdapter.h`, `gv_physicsDebugDraw`). 셰이프를 선으로 푸는
+ *          `DebugDrawQueue` 로 옮깁니다(`Engine/Graphics/Debug/PhysicsDebugDrawAdapter.h`, `gv_physicsDebugDraw`). 셰이프를 선으로 푸는
  *          일은 백엔드와 무관해 여기 한 곳에 둡니다 — 두 백엔드가 바디 자세만 넘깁니다.
  */
 #pragma once

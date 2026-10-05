@@ -66,7 +66,7 @@ namespace sw
         NavGeometrySource _geometrySource;
         PROPERTY( Category = "Surface", DisplayName = "Exclude Tags", Tooltip = "Objects with one of these tags (and their children) are left out" )
         vector<TagID> _listExcludeTag;
-        PROPERTY( Category = "Surface", DisplayName = "Bounds Half Extents", Tooltip = "Bake only inside this box around the object (0 = everything)", Meta = "Units=m" )
+        PROPERTY( Category = "Surface", DisplayName = "Bounds Half Extents", Tooltip = "Bake only inside this box around the object (0 = everything)", Units = m )
         float3 _boundsHalfExtents;
     };
 } // namespace sw

@@ -153,11 +153,11 @@ namespace sw
         string _detailTexturePath;
         PROPERTY( Category = "Terrain", DisplayName = "Layers", Tooltip = "Up to four layers, one per splat channel" )
         vector<TerrainLayer> _listLayer;
-        PROPERTY( Category = "Terrain", DisplayName = "Size", Meta = "Units=m", Tooltip = "World extent along x and z" )
+        PROPERTY( Category = "Terrain", DisplayName = "Size", Units = m, Tooltip = "World extent along x and z" )
         float2 _size;
-        PROPERTY( Category = "Terrain", DisplayName = "Height Min", Meta = "Units=m" )
+        PROPERTY( Category = "Terrain", DisplayName = "Height Min", Units = m )
         float32 _heightMin;
-        PROPERTY( Category = "Terrain", DisplayName = "Height Max", Meta = "Units=m" )
+        PROPERTY( Category = "Terrain", DisplayName = "Height Max", Units = m )
         float32 _heightMax;
         PROPERTY( Category = "Terrain", DisplayName = "Detail Tiling", Min = 0.0, Tooltip = "Detail texture repeats per meter" )
         float32 _detailTiling;
@@ -167,7 +167,7 @@ namespace sw
         int32 _cliffLayer;
         PROPERTY( Category = "LOD", DisplayName = "Chunk Cells", Min = 2, Tooltip = "Cells per chunk side (power of two dividing resolution - 1)" )
         uint32 _chunkCells;
-        PROPERTY( Category = "LOD", DisplayName = "LOD Distance", Min = 0.0, Meta = "Units=m", Tooltip = "Distance of the first LOD step; each next step doubles it" )
+        PROPERTY( Category = "LOD", DisplayName = "LOD Distance", Min = 0.0, Units = m, Tooltip = "Distance of the first LOD step; each next step doubles it" )
         float32 _lodDistance;
 
         TerrainHeightfield  _heightfield;

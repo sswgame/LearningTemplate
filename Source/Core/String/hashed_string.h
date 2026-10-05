@@ -304,6 +304,29 @@ namespace sw
         static void initialize() noexcept;
         /** @brief intern 테이블을 비웁니다. 그 뒤 hashed_string 을 쓰면 UB 입니다. */
         static void shutdown() noexcept;
+
+        /**
+         * @struct ScopedPoolMemoryTag
+         * @brief 스코프 동안 이 스레드의 할당을 이름 풀의 태그(`MemoryTag::EngineMisc`)로 셉니다.
+         * @details 풀의 블록(청크 · 문자열 아레나 · 샤드 맵)은 이름을 처음 넣은 하위 시스템의 것이 아닙니다. 둘러싼 스코프 태그로 세면 같은 몫이
+         *          "누가 먼저 넣었나" 에 따라 태그를 옮겨 다닙니다. 새 이름을 넣는 느린 길과 저장소를 세우는 자리에서만 겁니다.
+         *          배포본(`kMemoryTagScopesEnabled` 가 아닌 구성)에서는 아무것도 하지 않습니다.
+         */
+        struct SW_API ScopedPoolMemoryTag
+        {
+            /** @brief 지금 태그를 저장하고 `EngineMisc` 로 바꿉니다. */
+            ScopedPoolMemoryTag() noexcept;
+            /** @brief 들어오기 전의 태그로 되돌립니다. */
+            ~ScopedPoolMemoryTag() noexcept;
+
+            /** @brief 복사를 금지합니다. */
+            ScopedPoolMemoryTag( const ScopedPoolMemoryTag& ) = delete;
+            /** @brief 복사 대입을 금지합니다. */
+            ScopedPoolMemoryTag& operator=( const ScopedPoolMemoryTag& ) = delete;
+
+        private:
+            MemoryTag _previousTag; ///< 들어오기 전의 스레드 태그
+        };
     };
 
     template <>
@@ -393,11 +416,12 @@ namespace sw
         /** @brief 32개로 나눈 맵 샤드입니다(각자 shared_mutex 로 보호합니다). */
         struct Shard
         {
-            mutable std::shared_mutex _mutex; ///< 이 샤드 전용 읽기/쓰기 락
-            unordered_map<StringKey, uint32, typename StringKey::HashFunc, typename StringKey::EqualIgnoreCase>
-                _mapKeyToIndex; ///< 이름(대소문자 무시) → 비교 엔트리 인덱스
-            unordered_map<StringKey, uint32, typename StringKey::HashFunc, typename StringKey::EqualExact>
-                _mapExactKeyToIndex; ///< 철자 → 표시 엔트리 인덱스
+            using NameIndexMap     = unordered_map<StringKey, uint32, typename StringKey::HashFunc, typename StringKey::EqualIgnoreCase>;
+            using SpellingIndexMap = unordered_map<StringKey, uint32, typename StringKey::HashFunc, typename StringKey::EqualExact>;
+
+            mutable std::shared_mutex _mutex;              ///< 이 샤드 전용 읽기/쓰기 락
+            NameIndexMap              _mapKeyToIndex;      ///< 이름(대소문자 무시) → 비교 엔트리 인덱스
+            SpellingIndexMap          _mapExactKeyToIndex; ///< 철자 → 표시 엔트리 인덱스
         };
 
         atomic<Entry*> _arrChunk[kMaxChunks]{}; /**< 1024 단위 엔트리 청크의 원자 포인터 배열(락 없는 O(1) 조회) */
@@ -425,6 +449,8 @@ namespace sw
          */
         void initializeStorage()
         {
+            const HashedStringPool::ScopedPoolMemoryTag poolMemoryTag;
+
             // 0번 청크를 미리 할당해 미리 정의된 이름을 적재한다
             constexpr size_t chunkSize   = sizeof( Entry ) * kChunkSize;
             Entry*           pFirstChunk = static_cast<Entry*>( Memory::allocate( chunkSize ) );
@@ -438,15 +464,16 @@ namespace sw
             SW_ASSERT( _entryCount.load( std::memory_order_relaxed ) == static_cast<uint32>( PredefinedNameType::Count ) );
         }
 
-        /** @brief 모든 메모리 블록 · 청크 · 맵을 한꺼번에 해제합니다. */
+        /** @brief 모든 메모리 블록 · 청크 · 맵을 한꺼번에 해제합니다. 맵 · 목록은 저장소(버킷 · 밀집 배열 · 용량)까지 돌려줍니다. */
         void clear() noexcept
         {
             std::unique_lock<std::shared_mutex> arrShardLock[kNumShards];
             for ( uint32 shardIndex = 0; shardIndex < kNumShards; ++shardIndex )
             {
                 arrShardLock[shardIndex] = std::unique_lock<std::shared_mutex>( _arrShard[shardIndex]._mutex );
-                _arrShard[shardIndex]._mapKeyToIndex.clear();
-                _arrShard[shardIndex]._mapExactKeyToIndex.clear();
+                // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 빈 맵을 대입해야 종료 뒤 남는 블록이 없다. `= {}` 는 쓰지 않는다(STL 구성에서 initializer_list 대입이 골라져 버킷이 남는다).
+                _arrShard[shardIndex]._mapKeyToIndex      = typename Shard::NameIndexMap{};
+                _arrShard[shardIndex]._mapExactKeyToIndex = typename Shard::SpellingIndexMap{};
             }
 
             std::scoped_lock<mutex> globalLock{ _globalAppendMutex };
@@ -462,7 +489,7 @@ namespace sw
             {
                 Memory::free( pBlock );
             }
-            _listArenaBlock.clear();
+            _listArenaBlock     = vector<value_type*>{};
             _pCurrentArenaBlock = nullptr;
             _arenaOffset        = 0;
 
@@ -470,7 +497,7 @@ namespace sw
             {
                 Memory::free( largeBlock );
             }
-            _listLargeAllocation.clear();
+            _listLargeAllocation = vector<value_type*>{};
 
             _entryCount.store( 0, std::memory_order_release );
         }
@@ -632,7 +659,8 @@ namespace sw
         }
 
         // 2단계: 새 철자 등록. 샤드 배타 락 + 전역 할당 락
-        std::unique_lock<std::shared_mutex> writeLock{ shard._mutex };
+        std::unique_lock<std::shared_mutex>         writeLock{ shard._mutex };
+        const HashedStringPool::ScopedPoolMemoryTag poolMemoryTag;
 
         // 다시 확인한다(double-check)
         const auto exactIter = shard._mapExactKeyToIndex.find( lookupKey );

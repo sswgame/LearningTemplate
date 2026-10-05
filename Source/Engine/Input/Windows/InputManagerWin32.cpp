@@ -10,7 +10,7 @@
     #include "Engine/Input/Devices/GamepadDevice.h"
     #include "Engine/Input/Devices/KeyboardDevice.h"
     #include "Engine/Input/Devices/MouseDevice.h"
-    #include "Engine/Input/Events/RawInputEvent.h"
+    #include "Engine/Input/RawInputEvent.h"
     #include "Engine/Input/InputKeyMap.h"
     #include "Engine/Input/Windows/XInputGamepadDevice.h"
     #include "Engine/Window/IWindow.h"

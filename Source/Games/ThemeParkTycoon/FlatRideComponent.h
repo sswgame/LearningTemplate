@@ -35,7 +35,7 @@ namespace sw
         GameObjectHandle _director;
         PROPERTY( Category = "Ride", DisplayName = "Ride Index", Tooltip = "Ride slot in the simulation" )
         int32 _rideIndex;
-        PROPERTY( Category = "Ride", DisplayName = "Spin", Tooltip = "Turn rate while riders are on", Meta = "Units=rad/s" )
+        PROPERTY( Category = "Ride", DisplayName = "Spin", Tooltip = "Turn rate while riders are on", Units = "rad/s" )
         float32 _spin;
 
         float32 _angle;

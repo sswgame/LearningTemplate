@@ -126,5 +126,6 @@ def makeLintTarget(script: LintScript) -> LintTarget:
 
 
 def discoverLintTargets(folderName: str = "") -> list[LintTarget]:
-    """등록 대상 린트를 찾아 CMake 등록 정보까지 만들어 돌려줍니다."""
-    return [makeLintTarget(script) for script in discoverLintScripts(folderName)]
+    """등록 대상 린트를 찾아 CMake 등록 정보까지 만들어 돌려줍니다. `ctestSkipReason` 을 든 게이트는 뺀다."""
+    return [makeLintTarget(script) for script in discoverLintScripts(folderName)
+            if script.gateClass is None or not script.gateClass.ctestSkipReason]

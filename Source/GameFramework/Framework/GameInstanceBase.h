@@ -38,7 +38,7 @@ namespace sw
         /**
          * @brief configureBootstrap 으로 부트스트랩을 채우고(게임 프리셋 `Config/Game/<게임>.json` 의 팩 루트가 있으면 그것이 우선) gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
          * @details 읽은 `GameSettings` 를 게임 서비스로 묶고(`game::getService<GameSettings>()`), 다국어(`_localizationProject`)와
-         *          게임플레이 입력 맵(`_inputMap`)을 여기서 적용합니다. 커스텀 칸을 읽는 킷 코드(`TurnBattleSaveGame` 의 파티 상한 · 스타터)는
+         *          게임플레이 입력 맵(`_inputMap`)을 여기서 적용합니다. 커스텀 칸을 읽는 킷 코드는
          *          이 서비스로 읽습니다 — 서비스로 묶지 않으면 제품에서 늘 기본값을 씁니다.
          */
         bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) final;

@@ -37,7 +37,7 @@ namespace sw
     private:
         PROPERTY( Category = "Gate", DisplayName = "Required Tags", Tooltip = "Ability tags that open the gate" )
         TagContainer _requiredTags;
-        PROPERTY( Category = "Gate", DisplayName = "Open Radius", Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Category = "Gate", DisplayName = "Open Radius", Min = 0.0, Units = m )
         float32 _openRadius;
         PROPERTY( Category = "Gate", DisplayName = "Stays Open" )
         bool _bStaysOpen;
@@ -81,7 +81,7 @@ namespace sw
         int32 _count;
         PROPERTY( Category = "Gathering", DisplayName = "Uses", Min = 1 )
         int32 _uses;
-        PROPERTY( Category = "Gathering", DisplayName = "Respawn Delay", Min = 0.0, Meta = "Units=s" )
+        PROPERTY( Category = "Gathering", DisplayName = "Respawn Delay", Min = 0.0, Units = s )
         float32 _respawnDelay;
         PROPERTY( Category = "Gathering", DisplayName = "Uses Left", Tooltip = "Runtime" )
         int32 _usesLeft;

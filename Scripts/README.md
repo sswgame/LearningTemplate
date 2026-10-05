@@ -31,6 +31,7 @@ Scripts/
   │     ├── Host.py                   # Git 연동 및 clang-format 배치 실행
   │     ├── Parallel.py               # 동시 처리 한 자리 — 워커 수 정책과 map/flatMap (스레드인 이유가 적혀 있다)
   │     ├── TranslationUnits.py       # 컴파일 DB 를 읽어 TU 를 골라 하나씩 돌리는 자리 (clang-tidy · 경고 스윕)
+  │     ├── HeaderSelfContained.py    # 헤더 하나를 혼자 컴파일해 보는 자리 (자립 보고서 · 커밋 훅 게이트 · 전방 선언 후보 공용)
   │     ├── AppBinary.py              # 빌드된 App 을 찾고 헤드리스로 셰이더를 쿠킹하는 자리
   │     ├── AppRun.py                 # App 한 판 — 출력 모으기 · 못 도는 백엔드 판정 · 프로파일 표 읽기 · 밖에서 메모리 · 핸들 재기(qa/ 셋이 쓴다)
   │     ├── AssetValidation.py        # 에셋 검증 규칙 — 규칙 표(Config/Editor/AssetValidationRules.json)의 `check` 이름이 고르는 연산자들
@@ -72,6 +73,7 @@ Scripts/
   │     │     ├── CheckFunctionVocabulary.py  # 함수 이름 어휘 (한 개념 한 동사 · 약어는 단어)
   │     │     ├── CheckIncludeOrder.py        # 인클루드 순서·중복 (기본 검사, `--fix` 로 수정)
   │     │     ├── CheckEngineLayers.py        # 아키텍처 레이어 침범
+  │     │     ├── CheckCoreNetworkLayers.py   # Core/Network 폴더 층(뿌리 ← Transport ← Connection ← Message ← Replication)
   │     │     ├── CheckEngineServiceBinding.py # 엔진 서비스 표와 바인딩 호스트 대조
   │     │     ├── CheckNullableServiceUse.py  # nullptr 가능 서비스 조회를 확인 없이 역참조
   │     │     ├── CheckLogViewArgument.py     # 로그 인자의 string_view::data()
@@ -81,6 +83,7 @@ Scripts/
   │     │     ├── CheckFallibleNodiscard.py   # 실패를 bool 로 알리는 함수 선언의 `[[nodiscard]]`
   │     │     ├── CheckSourceGlob.py          # CMake GLOB 소스 누락 + RHI 백엔드 목록 (짓지 않는 소스는 CMake 가 적은 UnbuiltSources.txt 로만 안다)
   │     │     ├── CheckDataFileReferences.py  # 아무도 include 하지 않는 죽은 데이터 파일
+  │     │     ├── CheckDelayLoadSites.py      # /DELAYLOAD 는 TargetRules.cmake 의 두 함수로만(지연 로드 첫 호출이 첫 float 인자를 망가뜨린다)
   │     │     ├── CheckResourceCasing.py      # 리소스 소문자 명명
   │     │     ├── CheckTextureFolders.py      # 런타임 textures/ 에는 DDS 만, 원본 이미지는 textures_raw/ 에만
   │     │     ├── CheckAssetRules.py          # 에셋 검증 규칙의 오류 심각도(이름 · 텍스처 · 메시 예산 · 참조 · 머티리얼 · 컴포넌트 · id · guid · 팩 규칙)
@@ -91,6 +94,8 @@ Scripts/
   │     │     ├── CheckCmakeConventions.py    # CMake 명명 규칙
   │     │     ├── CheckCmakeReadme.py         # cmake/README.md 가 가리키는 파일 · 함수가 실재하는지
   │     │     ├── CheckPythonConventions.py   # 파이썬 명명 규칙
+  │     │     ├── CheckScriptEntryPoints.py   # 진입점이 모듈 수준에서 common 을 import 하는지(콘솔 UTF-8)
+  │     │     ├── CheckHeaderSelfContained.py # staged 헤더가 혼자 서는지 — 빌드 폴더가 있을 때만, CTest 린트에는 안 든다(ctestSkipReason)
   │     │     ├── CheckPythonMinimumVersion.py # CI 의 파이썬에서도 파싱되는지
   │     │     └── CheckTextFilesAreText.py    # 텍스트 파일의 널 바이트
   │     ├── fixer/                    # 파일을 실제로 고쳐 쓴다 (게이트가 아니다)
@@ -102,7 +107,7 @@ Scripts/
   │     │     ├── RunBuildWarnings.py         # 트리에 남아 있는 컴파일러 경고 (`--fail-on error` 를 명시하면 CI 가 막는 데 쓴다,
   │     │     │                               #   `--define SW_ENABLE_DEADLOCK_DETECTION` 처럼 어느 프리셋도 켜지 않는 옵션이 아직 컴파일되는지도 묻는다)
   │     │     ├── RunClangTidy.py
-  │     │     ├── RunHeaderSelfContained.py   # 혼자 서지 못하는 헤더
+  │     │     ├── RunHeaderSelfContained.py   # 혼자 서지 못하는 헤더 (CI header-self-contained 가 매일 --fail-on-violation 으로)
   │     │     ├── RunPaddingReport.py         # 레코드별 패딩 · 필드 재배치로 줄일 수 있는 크기 (libclang, `--preset` · `--define SW_SHIPPING`)
   │     │     ├── RunForwardDeclarationCandidates.py # 전방 선언으로 바꿀 수 있는 include (`--apply` 는 고쳐 쓴다)
   │     │     ├── RunDuplicateCode.py         # 복사돼 있는 코드 블록 (C++ · `--language py` · `--language cmake`)

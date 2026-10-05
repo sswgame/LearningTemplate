@@ -36,7 +36,7 @@ namespace sw
         void    setWeight( float32 weight ) { _weight = weight; }
 
     private:
-        PROPERTY( Category = "Gimmick", DisplayName = "Weight", Min = 0.0, Meta = "Units=kg" )
+        PROPERTY( Category = "Gimmick", DisplayName = "Weight", Min = 0.0, Units = kg )
         float32 _weight;
     };
 } // namespace sw
@@ -90,7 +90,7 @@ namespace sw
         TagContainer _requiredTags;
         PROPERTY( Category = "Sensor", DisplayName = "Occupants", Tooltip = "Objects overlapping now (runtime)" )
         vector<GameObjectHandle> _listOccupant;
-        PROPERTY( Category = "Sensor", DisplayName = "Default Weight", Min = 0.0, Tooltip = "Weight of an occupant without a GimmickWeightComponent", Meta = "Units=kg" )
+        PROPERTY( Category = "Sensor", DisplayName = "Default Weight", Min = 0.0, Tooltip = "Weight of an occupant without a GimmickWeightComponent", Units = kg )
         float32 _defaultWeight;
         PROPERTY( Category = "Sensor", DisplayName = "Count Triggers", Tooltip = "Also count the other object's trigger colliders" )
         bool _bCountTriggers;

@@ -4,11 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Character/AnimNotifyComponent.h"
-#include "Engine/Character/CharacterHit.h"
-#include "Engine/Character/RagdollComponent.h"
-#include "Engine/Character/SocketBindingComponent.h"
-#include "Engine/Character/SocketSetComponent.h"
+#include "Engine/Character/AnimNotify/AnimNotifyComponent.h"
+#include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Character/Hit/RagdollComponent.h"
+#include "Engine/Character/Socket/SocketBindingComponent.h"
+#include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"

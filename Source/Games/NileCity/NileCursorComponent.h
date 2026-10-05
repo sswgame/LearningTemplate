@@ -30,9 +30,9 @@ namespace sw
     private:
         PROPERTY( Category = "Cursor", DisplayName = "Director", Tooltip = "Object with the NileDirectorComponent" )
         GameObjectHandle _director;
-        PROPERTY( Category = "Cursor", DisplayName = "Height", Tooltip = "Box centre above the ground", Meta = "Units=m" )
+        PROPERTY( Category = "Cursor", DisplayName = "Height", Tooltip = "Box centre above the ground", Units = m )
         float32 _height;
-        PROPERTY( Category = "Cursor", DisplayName = "Thickness", Tooltip = "Box height", Meta = "Units=m" )
+        PROPERTY( Category = "Cursor", DisplayName = "Thickness", Tooltip = "Box height", Units = m )
         float32 _thickness;
     };
 } // namespace sw

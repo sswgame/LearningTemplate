@@ -8,6 +8,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Combat/HealthSourceComponent.h"
+
 namespace sw
 {
     namespace
@@ -53,11 +55,15 @@ namespace sw
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
 
+        // 같은 오브젝트의 체력 원천이 있으면 그 비율에서 시작한다 — 원천보다 먼저 시작하든, 맞은 뒤에 붙든 같다. 원천이 없으면 저장된 칸이다.
+        GameObject*                  pOwner  = getOwner();
+        const HealthSourceComponent* pSource = ( pOwner != nullptr ) ? pOwner->getComponent<HealthSourceComponent>() : nullptr;
+        if ( pSource != nullptr && pSource->getHealthReading()._bHasHealth == SW_TRUE )
+            _hpRatio = pSource->getHealthRatio();
         _hpRatio     = MathUtil::saturate( _hpRatio );
         _remainRatio = _hpRatio;
         _targetRatio = _hpRatio;
 
-        GameObject* pOwner = getOwner();
         if ( pOwner != nullptr )
         {
             GameObjectManager* pManager = pOwner->getManager();
@@ -123,9 +129,12 @@ namespace sw
             }
             case HealthChangeKind::Died:
             {
+                // 쓰러짐도 줄어든 것이다 — 숨기지 않는 바는 한 방에 쓰러진 적에서도 보인다.
                 setTargetRatio( event._ratio );
                 if ( _bHideWhenDead )
                     setVisible( false );
+                else if ( _bShowWhenHurt )
+                    setVisible( true );
                 break;
             }
         }

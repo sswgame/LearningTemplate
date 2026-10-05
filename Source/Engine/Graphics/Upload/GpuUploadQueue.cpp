@@ -8,7 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -35,12 +35,16 @@ namespace sw
         // 워커에서 만들어도 되는지는 백엔드가 말한다. OpenGL 은 컨텍스트가 스레드에 묶여 안 된다.
         _bParallel = ( pDevice->getCapabilities()._bThreadSafeResourceCreation != SW_FALSE ) ? SW_TRUE : SW_FALSE;
         SW_LOG_INFO( "GPU 업로드 큐: %# (백엔드 %#)",
-                     _bParallel == SW_TRUE ? "워커 병렬" : "인라인(이 백엔드는 워커 생성 불가)",
+                     _bParallel == SW_TRUE ? "워커 병렬" : "꺼짐 — 렌더 스레드가 그 프레임에 만든다(이 백엔드는 워커 생성 불가)",
                      pDevice->getBackendName() );
     }
 
     void GpuUploadQueue::requestMesh( const shared_ptr<Mesh>& mesh )
     {
+        // 워커 생성을 못 하는 백엔드(OpenGL)에서는 받지 않는다 — 렌더 스레드가 그 프레임의 업로드(`GpuScene` 의 `initRhi`)에서 만든다.
+        // 주의: 게임 스레드가 대신 만들면 렌더 스레드가 컨텍스트를 오래 쥔 동안(셰이더 실시간 컴파일) 컨텍스트 대기가 시간을 넘겨 메시를 못 만든다.
+        if ( _bParallel == SW_FALSE )
+            return;
         // 이미 이 디바이스에 올라가 있으면 할 일이 없다. 상주 판단은 Mesh 가 세대로 한다.
         if ( mesh == nullptr || _pDevice == nullptr || mesh->isRhiValid() )
             return;

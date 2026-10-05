@@ -9,7 +9,6 @@
 
 #include "Engine/Common/Common.h"
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Config/RHIBackendType.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -9,6 +9,8 @@ Engine 레이어 금지 include 검사.
      (게임 쪽은 GameFramework/Framework/GameService.h 의 game:: 만 사용).
   3) Engine 내부 티어: 아래 티어가 위 티어를 include 하지 못한다 (_kEngineTier).
      `Graphics/Renderer` 만 최상위 폴더보다 잘게 본다 — 그리는 쪽은 씬 위, 나머지 Graphics 는 컴포넌트 아래.
+  4) Source/RuntimeAPI/** 에서 Engine / App / Games 경로 include 금지 — 호스트 ↔ 모듈 계약이 구현을 알면 안 된다.
+     (Export/ 의 모듈 매크로가 Editor · GameFramework 로케이터를 끌어오는 것은 계약이라 막지 않는다.)
 
 티어는 **include 그래프에서 계산한 것**이다 — 손으로 고른 금지 쌍은 늘릴 기준이 없다. 전체 그래프를
 Tarjan SCC 로 줄이고 위상 순서를 티어로 쓰며, 위반은 경고가 아니라 실패다.
@@ -29,9 +31,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 
 from common import (  # noqa: E402
     collectSourceFiles,
+    kDirSourceApp,
     kDirSourceEngine,
     kDirSourceGameFramework,
     kDirSourceGames,
+    kDirSourceRuntimeAPI,
     kFileEngineServices,
     mapConcurrent,
     normalizePath,
@@ -76,6 +80,12 @@ _kForbiddenRules: list[tuple[str, tuple[str, ...]]] = [
     (
         kDirSourceGameFramework,
         (kFileEngineServices, "EngineServices.h"),
+    ),
+    (
+        # 계약이 구현을 알면 안 된다 — 서비스 표도 RuntimeAPI 에 있다. Export/ 의 모듈 매크로는 모듈 쪽 로케이터(Editor · GameFramework)를 끌어오는 것이
+        # 계약이라(그 본문은 모듈 .cpp 에서 펼쳐진다) 막지 않는다.
+        kDirSourceRuntimeAPI,
+        ("Engine/", kDirSourceEngine, "App/", kDirSourceApp, "Games/", kDirSourceGames),
     ),
 ]
 
@@ -141,7 +151,8 @@ _kEngineTier: dict[str, int] = {
     "Character": 7,
     # 지형 · 식생 · 물 — 컴포넌트(6)가 메시 · 머티리얼(5)로 그리는 월드 기능. 씬을 모르고 오브젝트 매니저만 본다.
     "Environment": 7,
-    # 개발 도구(게임 창 개발 콘솔의 판단). 입력(6) · 창(5) · 콘솔 해석기(Utility, 1)를 내려다본다 — 언리얼 `UConsole` 이 입력 · 뷰포트 위에 있는 자리.
+    # 개발 도구(게임 창 개발 콘솔의 판단 · 엔진 개발 명령 · 로컬라이제이션 수집 명령). 씬(7) · 입력(6) · 창 · 디버그 그리기(5) · 콘솔 해석기(Utility, 1)를
+    # 내려다본다 — 언리얼 `UConsole` 이 입력 · 뷰포트 위에 있는 자리.
     "DevTools": 7,
     # 8: 그리는 쪽 · 핫리로드. 씬과 컴포넌트를 읽는다.
     _kGraphicsRendererLayerName: 8,
@@ -278,6 +289,14 @@ class CheckEngineLayersGate(LintGate):
                 "Source/Engine/Graphics/RHI/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"\n',
             },
         },
+        {
+            # 계약이 구현을 아는 방향 — 서비스 표를 Engine 에 두면 이 모양이 된다.
+            "name": "RuntimeAPI 가 Engine 을 include",
+            "files": {
+                "Source/Engine/Common/Probe.h": "#pragma once\n",
+                "Source/RuntimeAPI/Service/Probe.h": '#pragma once\n\n#include "Engine/Common/EngineServices.h"\n',
+            },
+        },
     ]
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
@@ -285,7 +304,12 @@ class CheckEngineLayersGate(LintGate):
         if not engineDir.is_dir():
             raise GateError(f"Engine 경로 없음: {engineDir}")
 
-        scanRoots = [engineDir, repositoryRoot / kDirSourceGames, repositoryRoot / kDirSourceGameFramework]
+        scanRoots = [
+            engineDir,
+            repositoryRoot / kDirSourceGames,
+            repositoryRoot / kDirSourceGameFramework,
+            repositoryRoot / kDirSourceRuntimeAPI,
+        ]
         allFiles = collectSourceFiles(scanRoots)
 
         violations: list[str] = []

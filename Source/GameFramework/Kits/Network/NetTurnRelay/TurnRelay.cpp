@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetHost.h"
+#include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Uuid/Uuid.h"
 
@@ -32,22 +32,6 @@ namespace sw
                 for ( const uint8 byte : uuid._arrBytes )
                     value = mix64( value ^ byte );
                 return value != 0 ? value : 0x9E3779B97F4A7C15ull;
-            }
-
-            static void writeBlob( BitWriter& writer, const vector<uint8>& buffer )
-            {
-                writer.writeVarUint( buffer.size() );
-                if ( buffer.empty() == false )
-                    writer.writeBytes( buffer.data(), static_cast<int32>( buffer.size() ) );
-            }
-
-            [[nodiscard]] static bool readBlob( BitReader& reader, vector<uint8>& outByte )
-            {
-                const uint64 size = reader.readVarUint();
-                if ( reader.hasOverflowed() || size > 900 )
-                    return false;
-                outByte.resize( static_cast<size_t>( size ) );
-                return size == 0 || reader.readBytes( outByte.data(), static_cast<int32>( size ) );
             }
         };
     } // namespace
@@ -176,7 +160,7 @@ namespace sw
             writer.writeVarUint( room._roomId );
             writer.writeVarUint( static_cast<uint64>( index ) );
             writer.writeVarUint( static_cast<uint64>( action._seat ) );
-            TurnRelayInternal::writeBlob( writer, action._buffer );
+            writer.writeBlob( action._buffer.data(), static_cast<int32>( action._buffer.size() ) );
             if ( _messageWriter.send( *_pHost, seat._connectionId, NetChannelType::ReliableOrdered ) == false )
                 return; // 창이 찼다 — `update` 가 이어 보낸다
             ++seat._sentActionCount;
@@ -324,7 +308,7 @@ namespace sw
         const uint32  roomId   = static_cast<uint32>( reader.readVarUint() );
         const int32   submitId = static_cast<int32>( reader.readVarUint() );
         vector<uint8> actionBuffer;
-        if ( TurnRelayInternal::readBlob( reader, actionBuffer ) == false )
+        if ( reader.readBlob( actionBuffer, NetTurnRelayMessage::kMaxActionBytes ) == false )
             return false;
         TurnRoom*        pRoom  = findRoomMutable( roomId );
         int32            seat   = -1;
@@ -447,11 +431,16 @@ namespace sw
 
     int32 TurnRelayClient::submitAction( const vector<uint8>& buffer )
     {
+        if ( static_cast<int32>( buffer.size() ) > NetTurnRelayMessage::kMaxActionBytes )
+        {
+            SW_LOG_ERROR( "Turn action of %# bytes exceeds the relay limit of %# bytes - not sent", buffer.size(), NetTurnRelayMessage::kMaxActionBytes );
+            return -1;
+        }
         const int32 submitId = _nextSubmitId++;
         BitWriter&  writer   = _messageWriter.begin( NetTurnRelayMessage::kAction );
         writer.writeVarUint( _roomId );
         writer.writeVarUint( static_cast<uint64>( submitId ) );
-        TurnRelayInternal::writeBlob( writer, buffer );
+        writer.writeBlob( buffer.data(), static_cast<int32>( buffer.size() ) );
         (void)_pHost->sendMessage( 0, NetChannelType::ReliableOrdered, writer.getBytes() );
         return submitId;
     }
@@ -487,7 +476,7 @@ namespace sw
                 event._kind  = TurnRelayEvent::Kind::ActionApplied;
                 event._index = static_cast<int32>( reader.readVarUint() );
                 event._seat  = static_cast<int32>( reader.readVarUint() );
-                if ( TurnRelayInternal::readBlob( reader, event._buffer ) == false )
+                if ( reader.readBlob( event._buffer, NetTurnRelayMessage::kMaxActionBytes ) == false )
                     return NetHandleResult::Malformed;
                 if ( event._index != static_cast<int32>( _listAction.size() ) )
                     return NetHandleResult::Handled; // 이미 가진 것(다시 들어올 때 겹친 것)

@@ -87,9 +87,9 @@ namespace sw
         hashed_string _to{};
         PROPERTY( Tooltip = "Clip played on the switch point (one shot)" )
         hashed_string _stinger{};
-        PROPERTY( Min = 0.0, Tooltip = "Fade out of the old segment from the switch point", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Fade out of the old segment from the switch point", Units = s )
         float32 _fadeOutSeconds{ 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Fade in of the new segment from the switch point", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Fade in of the new segment from the switch point", Units = s )
         float32 _fadeInSeconds{ 0.0f };
         PROPERTY( Tooltip = "Switch point" )
         AudioMusicSync _sync{ AudioMusicSync::NextBar };
@@ -131,7 +131,7 @@ namespace sw
         vector<AudioMusicTransitionDesc> _listTransition{};
         PROPERTY( Min = 1.0, Tooltip = "Tempo", Meta = "Units=BPM" )
         float32 _tempo{ 120.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Time a parameter-driven layer takes to move between its old and new volume", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Time a parameter-driven layer takes to move between its old and new volume", Units = s )
         float32 _layerFadeSeconds{ 1.0f };
         PROPERTY( Min = 1, Tooltip = "Beats per bar" )
         uint32 _beatsPerBar{ 4 };

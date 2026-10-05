@@ -55,11 +55,11 @@ namespace sw
         void writeGpuLightKindFields( GpuLight& outLight ) const override;
 
     private:
-        PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Meta = "Units=m" )
+        PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m )
         float32 _radius;
-        PROPERTY( Category = "Cone", DisplayName = "Inner Cone Angle", Min = 0.0, Tooltip = "Half angle with no falloff", Meta = "Units=rad" )
+        PROPERTY( Category = "Cone", DisplayName = "Inner Cone Angle", Min = 0.0, Tooltip = "Half angle with no falloff", Units = rad )
         float32 _innerConeAngle;
-        PROPERTY( Category = "Cone", DisplayName = "Outer Cone Angle", Min = 0.0, Tooltip = "Half angle where the light reaches zero", Meta = "Units=rad" )
+        PROPERTY( Category = "Cone", DisplayName = "Outer Cone Angle", Min = 0.0, Tooltip = "Half angle where the light reaches zero", Units = rad )
         float32 _outerConeAngle;
     };
 } // namespace sw

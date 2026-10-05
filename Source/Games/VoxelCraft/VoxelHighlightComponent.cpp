@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

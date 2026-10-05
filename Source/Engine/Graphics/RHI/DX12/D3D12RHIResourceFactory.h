@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
 #include <shared_mutex>

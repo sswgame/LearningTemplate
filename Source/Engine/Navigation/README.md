@@ -87,7 +87,7 @@ Recast 순서(`RecastNavMesh::bakeTile`):
 경계 상자 · 타일 수 → 타일마다 (x, z, 바이트)]. 읽기는 지금 형식만 받고 잘린 바이트 · 다른 매직 · 다른 백엔드를 거절합니다. 이름은 씬 이름 + `.navmesh`
 (`NavMeshAsset::makeCookedPath` — `maps/arena.scene.xml` → `maps/arena.navmesh`).
 
-시험: `NavMeshBakeTest`(`Test/EngineTest/TestNavMeshBake.cpp` — 바닥 · 계단 · 경사 · 구멍 · 쿠킹본 왕복 · 표), `NavMeshQueryTest`(돌아가는 경로 · 닿을 수
+시험: `NavMeshBakeTest`(`Test/EngineTest/Navigation/TestNavMeshBake.cpp` — 바닥 · 계단 · 경사 · 구멍 · 쿠킹본 왕복 · 표), `NavMeshQueryTest`(돌아가는 경로 · 닿을 수
 없는 섬 · 레이캐스트 · 영역 비용), `NavMeshCrowdTest`(복도에서 마주 오는 둘이 비켜 감).
 
 ## 7. 씬의 내비게이션 — `SceneNavigation`(Object, 티어 6)

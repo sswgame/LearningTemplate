@@ -56,13 +56,13 @@ namespace sw
         float4 _tint{ 1.0f, 1.0f, 1.0f, 1.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Per-instance brightness variation" )
         float32 _tintVariation{ 0.15f };
-        PROPERTY( Min = 0.0, Meta = "Units=m", Tooltip = "Instances start shrinking into the ground here" )
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "Instances start shrinking into the ground here" )
         float32 _fadeStart{ 60.0f };
-        PROPERTY( Min = 0.0, Meta = "Units=m", Tooltip = "Instances are gone (and their cells culled) beyond this" )
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "Instances are gone (and their cells culled) beyond this" )
         float32 _fadeEnd{ 80.0f };
         PROPERTY( Min = 0.0, Tooltip = "Multiplies the wind sway" )
         float32 _windResponse{ 1.0f };
-        PROPERTY( Min = 0.01, Meta = "Units=m", Tooltip = "Height at which the sway reaches full strength" )
+        PROPERTY( Min = 0.01, Units = m, Tooltip = "Height at which the sway reaches full strength" )
         float32 _swayHeight{ 1.0f };
         PROPERTY( Min = 0.0, Tooltip = "How far influencer spheres push the foliage" )
         float32 _bendStrength{ 1.0f };
@@ -140,9 +140,9 @@ namespace sw
         vector<FoliageLayer> _listLayer;
         PROPERTY( Category = "Foliage", DisplayName = "Exclusions", Tooltip = "Areas left empty (paths, buildings, water)" )
         vector<PlacementExclusion> _listExclusion;
-        PROPERTY( Category = "Foliage", DisplayName = "Region Size", Meta = "Units=m", Tooltip = "Extent around the owner; zero covers the terrain below" )
+        PROPERTY( Category = "Foliage", DisplayName = "Region Size", Units = m, Tooltip = "Extent around the owner; zero covers the terrain below" )
         float2 _regionSize;
-        PROPERTY( Category = "Foliage", DisplayName = "Cell Size", Min = 4.0, Meta = "Units=m", Tooltip = "Culling cell (one instance batch per mesh and cell)" )
+        PROPERTY( Category = "Foliage", DisplayName = "Cell Size", Min = 4.0, Units = m, Tooltip = "Culling cell (one instance batch per mesh and cell)" )
         float32 _cellSize;
 
         vector<Cell>                            _listCell;

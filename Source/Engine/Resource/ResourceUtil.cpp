@@ -632,7 +632,8 @@ namespace sw
     void ResourceUtil::clearPathCache()
     {
         std::scoped_lock<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
-        ResourceUtilInternal::_s_mapResolvedPath.clear();
+        // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 종료 끝에서도 부르므로 저장소까지 놓는다.
+        ResourceUtilInternal::_s_mapResolvedPath = unordered_map<uint64, string>{};
     }
 
     string ResourceUtil::makeSaveFolderPath( string_view absoluteFolder )

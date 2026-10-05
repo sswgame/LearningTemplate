@@ -188,9 +188,9 @@ namespace sw
         vector<AudioSnapshotSendDesc> _listSend{};
         PROPERTY( Tooltip = "Effect parameters" )
         vector<AudioSnapshotEffectDesc> _listEffectParameter{};
-        PROPERTY( Min = 0.0, Tooltip = "Time to reach full intensity", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Time to reach full intensity", Units = s )
         float32 _fadeInSeconds{ 0.5f };
-        PROPERTY( Min = 0.0, Tooltip = "Time to fall back to zero", Meta = "Units=s" )
+        PROPERTY( Min = 0.0, Tooltip = "Time to fall back to zero", Units = s )
         float32 _fadeOutSeconds{ 0.5f };
     };
 } // namespace sw

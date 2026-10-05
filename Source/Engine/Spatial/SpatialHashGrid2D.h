@@ -45,6 +45,11 @@ namespace sw
         SpatialHashGrid2D& operator=( SpatialHashGrid2D&& ) noexcept = default;
 
         void insert( SlotHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY );
+        /**
+         * @brief 핸들의 경계를 바꿉니다. 없던 핸들이면 넣습니다.
+         * @details 새 경계가 덮는 셀 범위가 지금과 같으면 셀 목록은 건드리지 않고 경계만 바꿉니다(`PhysicsWorld::setAabbLocked` 와 같은
+         *          지름길) — 틱마다 조금씩 움직이는 점 엔티티는 거의 늘 이 길입니다. 좁힘 판정은 언제나 새 경계로 합니다.
+         */
         void update( SlotHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY );
         void remove( SlotHandle handle );
         void clear();
@@ -74,6 +79,11 @@ namespace sw
 
             /** @brief 경계 상자가 덮는 셀 범위입니다. 뒤집힌 상자도 정규화해서 받습니다. */
             static CellRange fromBounds( float32 minX, float32 minY, float32 maxX, float32 maxY, float32 cellSize );
+
+            bool operator==( const CellRange& other ) const noexcept
+            {
+                return _minX == other._minX && _maxX == other._maxX && _minY == other._minY && _maxY == other._maxY;
+            }
 
             /** @brief 이 범위가 덮는 셀 수입니다. 비어 있으면 0 입니다. */
             int64 getCellCount() const noexcept;

@@ -162,7 +162,10 @@ namespace sw
         if ( _bEnableValidationLayers == SW_TRUE && VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
             listExtension.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
         else if ( _bEnableValidationLayers == SW_TRUE )
+        {
+            SW_LOG_WARNING( "Vulkan validation layer found but VK_EXT_debug_utils is not available - running without validation" );
             _bEnableValidationLayers = SW_FALSE;
+        }
 
         createInfo.enabledExtensionCount   = static_cast<uint32>( listExtension.size() );
         createInfo.ppEnabledExtensionNames = listExtension.data();

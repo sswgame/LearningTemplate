@@ -4,21 +4,20 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetHost.h"
-#include "Core/Network/NetSendBudget.h"
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Message/NetSendBudget.h"
+#include "Core/Network/Replication/InterpolationBuffer.h"
 
 namespace sw
 {
     ReplicationClient::ReplicationClient()
         : _listSnapshot{}
-        , _listRecentInput{}
+        , _decodeScratch{}
+        , _inputWindow{}
         , _settings{}
         , _pHost{ nullptr }
-        , _renderTime{ 0.0f }
+        , _clock{}
         , _decodeFailureCount{ 0 }
-        , _latestTick{ 0 }
-        , _latestInputTick{ 0 }
-        , _bHasSnapshot{ SW_FALSE }
         , _messageWriter{}
     {
     }
@@ -27,19 +26,23 @@ namespace sw
     {
         _pHost    = pHost;
         _settings = settings;
-        _listSnapshot.assign( static_cast<size_t>( MathUtil::max( 4, settings._historySize ) ), NetSnapshot{} );
+        NetClockSettings clockSettings;
+        clockSettings._tickInterval       = settings._tickInterval;
+        clockSettings._interpolationDelay = settings._interpolationDelay;
+        clockSettings._sampleInterval     = settings._tickInterval; // 스냅숏은 서버 틱마다 온다
+        _clock.initialize( clockSettings );
+
+        _listSnapshot.initialize( MathUtil::max( 4, settings._historySize ) );
+        _inputWindow.initialize( NetClientServerMessage::kMaxInputCount, NetClientServerMessage::kInputFormat );
         _decodeFailureCount = 0;
         resetHistory();
     }
 
     void ReplicationClient::resetHistory()
     {
-        for ( NetSnapshot& snapshot : _listSnapshot )
-            snapshot._tick = 0xFFFFFFFFu;
-        _listRecentInput.clear();
-        _renderTime   = 0.0f;
-        _latestTick   = 0;
-        _bHasSnapshot = SW_FALSE;
+        _listSnapshot.reset(); // 스냅숏 버퍼는 자리에 남아 다음 연결이 다시 쓴다
+        _inputWindow.reset();  // 새 서버 — 옛 확인은 이 연결의 것이 아니다
+        _clock.reset();        // 새 서버의 틱은 옛 것보다 작을 수 있다 — 첫 스냅숏에서 다시 선다
     }
 
     void ReplicationClient::onConnectionOpened( int32 connectionId )
@@ -48,13 +51,7 @@ namespace sw
         resetHistory();
     }
 
-    const NetSnapshot* ReplicationClient::findSnapshot( uint32 tick ) const
-    {
-        const NetSnapshot& snapshot = _listSnapshot[static_cast<size_t>( tick % _listSnapshot.size() )];
-        return snapshot._tick == tick ? &snapshot : nullptr;
-    }
-
-    const NetSnapshot* ReplicationClient::getLatest() const { return _bHasSnapshot ? findSnapshot( _latestTick ) : nullptr; }
+    const NetSnapshot* ReplicationClient::getLatest() const { return _listSnapshot.hasNewest() ? _listSnapshot.find( _listSnapshot.getNewestTick() ) : nullptr; }
 
     NetHandleResult ReplicationClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
@@ -65,21 +62,17 @@ namespace sw
         const uint32 baselineCode = static_cast<uint32>( peek.readVarUint() );
         if ( peek.hasOverflowed() )
             return NetHandleResult::Malformed;
-        if ( _bHasSnapshot && tick <= _latestTick )
+        if ( _listSnapshot.hasNewest() && tick <= _listSnapshot.getNewestTick() )
             return NetHandleResult::Handled; // 늦게 온 옛것
-        const NetSnapshot* pBaseline = baselineCode != 0 ? findSnapshot( baselineCode - 1u ) : nullptr;
-        NetSnapshot        snapshot;
-        if ( NetSnapshot::readDelta( body, pBaseline, snapshot ) == false )
+        const NetSnapshot* pBaseline = baselineCode != 0 ? _listSnapshot.find( baselineCode - 1u ) : nullptr;
+        if ( NetSnapshot::readDelta( body, pBaseline, _decodeScratch ) == false )
         {
             ++_decodeFailureCount; // 기준을 이미 잃은 델타도 여기로 온다 — 형식은 맞으니 깨짐으로 세지 않는다
             return NetHandleResult::Handled;
         }
-        const bool bFirst                                                 = _bHasSnapshot == SW_FALSE;
-        _listSnapshot[static_cast<size_t>( tick % _listSnapshot.size() )] = std::move( snapshot );
-        _latestTick                                                       = tick;
-        _bHasSnapshot                                                     = SW_TRUE;
-        if ( bFirst )
-            _renderTime = static_cast<float32>( tick ) * _settings._tickInterval - _settings._interpolationDelay;
+        _inputWindow.acknowledge( _decodeScratch._firstMissingInputTick ); // 서버가 빈틈없이 받은 다음 틱 — 그 앞은 다시 싣지 않는다
+        std::swap( _listSnapshot.acquire( tick ), _decodeScratch );        // 가장 새 틱도 이것이 된다. 밀려난 옛 스냅숏은 다음 해독 자리가 된다
+        _clock.observeServerTick( tick );                                  // 첫 스냅숏이면 렌더 틱을 바로 (그 틱 − 지연)에 둔다
         if ( _pHost != nullptr )
         {
             BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kSnapshotAck );
@@ -91,18 +84,8 @@ namespace sw
 
     void ReplicationClient::update( float32 deltaTime )
     {
-        if ( _bHasSnapshot == SW_FALSE || deltaTime <= 0.0f )
-            return;
-        // 목표 = 가장 새 스냅샷 시각 − 지연. 벗어난 만큼 조금 빠르게 · 느리게 흘려 맞춘다(튀지 않게). 크게 벗어나면 바로 맞춘다.
-        const float32 target = static_cast<float32>( _latestTick ) * _settings._tickInterval - _settings._interpolationDelay;
-        const float32 error  = target - ( _renderTime + deltaTime );
-        if ( MathUtil::abs( error ) > _settings._interpolationDelay * 4.0f )
-        {
-            _renderTime = target;
-            return;
-        }
-        const float32 scale = 1.0f + MathUtil::clamp( error / MathUtil::max( 1.0e-3f, _settings._interpolationDelay ), -1.0f, 1.0f ) * _settings._clockCorrection;
-        _renderTime += deltaTime * scale;
+        // 렌더 틱 = 서버 틱 추정 − 지연. 추정은 받은 스냅숏 틱의 하한 + 흐른 시간(받은 가장 새 틱 + 지연까지)이라 끊겨도 되돌아가지 않고 받은 틱을 지나치지 않는다.
+        _clock.advance( deltaTime );
     }
 
     void ReplicationClient::findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, float32& outAlpha ) const
@@ -110,14 +93,14 @@ namespace sw
         pOutFrom = nullptr;
         pOutTo   = nullptr;
         outAlpha = 0.0f;
-        if ( _bHasSnapshot == SW_FALSE )
+        if ( _listSnapshot.hasNewest() == false )
             return;
         const float32 renderTick = getRenderTick();
-        // 렌더 틱 이하의 가장 새 것과 그보다 큰 가장 오래된 것.
-        const uint32 oldestTick = _latestTick >= _listSnapshot.size() ? _latestTick - static_cast<uint32>( _listSnapshot.size() ) + 1u : 0u;
-        for ( uint32 tick = _latestTick + 1u; tick-- > oldestTick; )
+        // 렌더 틱 이하의 가장 새 것과 그보다 큰 가장 오래된 것(고리가 들 수 있는 틱 안에서).
+        const uint32 oldestTick = _listSnapshot.computeOldestTick();
+        for ( uint32 tick = _listSnapshot.getNewestTick() + 1u; tick-- > oldestTick; )
         {
-            const NetSnapshot* pSnapshot = findSnapshot( tick );
+            const NetSnapshot* pSnapshot = _listSnapshot.find( tick );
             if ( pSnapshot == nullptr )
                 continue;
             if ( static_cast<float32>( tick ) <= renderTick )
@@ -137,8 +120,7 @@ namespace sw
             pOutTo = pOutFrom; // 새 스냅샷이 늦는다 — 마지막 것에 멈춘다(외삽하지 않는다)
             return;
         }
-        const float32 span = static_cast<float32>( pOutTo->_tick - pOutFrom->_tick );
-        outAlpha           = span > 0.0f ? MathUtil::saturate( ( renderTick - static_cast<float32>( pOutFrom->_tick ) ) / span ) : 0.0f;
+        outAlpha = NetInterpolationUtil::computeAlpha( pOutFrom->_tick, pOutTo->_tick, renderTick );
     }
 
     bool ReplicationClient::sampleEntity( uint32 entityId, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, float32& outAlpha ) const
@@ -184,27 +166,16 @@ namespace sw
                             NetClientServerMessage::kMaxInputBytes );
             return false;
         }
-        if ( _listRecentInput.empty() == false && tick != _latestInputTick + 1u )
-            _listRecentInput.clear(); // 틱이 끊겼다 — 겹쳐 실을 수 없다
-        _listRecentInput.push_front( listInput );
-        const int32 redundancy = MathUtil::clamp( _settings._inputRedundancy, 1, NetClientServerMessage::kMaxRedundantInputCount );
-        while ( static_cast<int32>( _listRecentInput.size() ) > redundancy )
-            _listRecentInput.pop_back();
-        _latestInputTick = tick;
+        // 틱이 건너뛰면 그 틱부터, 줄면(새 판) 확인까지 비우고 다시 쌓는다. 같은 틱이면 처음 값이 남고 지금 창만 다시 보낸다.
+        (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ) );
         if ( _pHost == nullptr )
             return true;
         BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kInput );
-        writer.writeVarUint( tick );
         writer.writeVarUint( static_cast<uint64>( MathUtil::max( 0.0f, getRenderTick() ) * 256.0f ) );
-        // 새 것부터, 메시지 상한 안에 들어가는 만큼만 겹쳐 싣는다(이번 틱의 입력은 늘 들어간다 — 상한 255 바이트).
-        NetSendBudget budget( NetConnection::kMaxMessageSize );
-        budget.reserveBits( writer.getBitCount() + BitMath::computeVarUintBits( _listRecentInput.size() ) );
-        size_t count = 0;
-        while ( count < _listRecentInput.size() && budget.tryReserveBits( BitMath::computeBlobBits( static_cast<int32>( _listRecentInput[count].size() ) ) ) )
-            ++count;
-        writer.writeVarUint( count );
-        for ( size_t index = 0; index < count; ++index )
-            writer.writeBlob( _listRecentInput[index].data(), static_cast<int32>( _listRecentInput[index].size() ) );
+        // 서버가 확인한 다음 틱부터, 메시지 상한 안에서 오래된 것부터 — 못 실은 새 것은 확인이 오른 뒤 다음 메시지가 싣는다.
+        NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
+        budget.reserveBits( writer.getBitCount() );
+        (void)_inputWindow.write( writer, budget );
         (void)_pHost->sendMessage( 0, NetChannelType::Unreliable, writer.getBytes() );
         return true;
     }

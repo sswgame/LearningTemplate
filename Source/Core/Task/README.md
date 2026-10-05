@@ -335,7 +335,7 @@ tm.shutdown();
 - **큐 비우기**: `TaskManager::clear()` 는 워커 데크를 `steal()` 로, 메인 · 전역(High · Normal · Low) 큐를 `dequeue` 로 하나씩 꺼내 노드를 놓고,
   활성 수를 0 으로 · 스테이지를 모두 돌려줍니다. **아무것도 돌고 있지 않을 때만** 부릅니다.
 
-- `TaskManager` 는 엔진 서비스 표(`Engine/Common/EngineServiceList.xxx`, `EngineCreated`)의 한 줄이라 `EngineLoop` 가 만들어
+- `TaskManager` 는 엔진 서비스 표(`RuntimeAPI/Service/EngineServiceList.xxx`, `EngineCreated`)의 한 줄이라 `EngineLoop` 가 만들어
   `engine::bindEngineServices` 로 붙이고, 기동 표(`Engine/EngineInitStepList.xxx`)의 `Task` 단계가 `initialize` · `shutdown` 합니다.
   태스크를 기다리는 단계(`ModuleImages` · `Audio` · `Scene` · `FrameRenderer`)는 `Task` 에 의존하므로 역순 종료에서 먼저 내려갑니다.
 - 게임 모듈은 보통 **직접 TaskManager를 만들지 않고**, 이미 돌아가는 엔진 서비스를 쓰거나 Object · 씬 · 리소스 API 뒤에 숨은 비동기를 사용합니다.

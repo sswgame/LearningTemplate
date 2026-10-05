@@ -63,9 +63,9 @@ namespace sw
     private:
         PROPERTY( Category = "Light", DisplayName = "Ambient", Min = 0.0, Tooltip = "Ambient term" )
         float32 _ambient;
-        PROPERTY( Category = "Shadow", DisplayName = "Shadow Extent", Min = 0.0, Tooltip = "Half size of the shadow ortho volume", Meta = "Units=m" )
+        PROPERTY( Category = "Shadow", DisplayName = "Shadow Extent", Min = 0.0, Tooltip = "Half size of the shadow ortho volume", Units = m )
         float32 _shadowExtent;
-        PROPERTY( Category = "Shadow", DisplayName = "Shadow Distance", Min = 0.0, Tooltip = "Shadow camera pullback along the light direction", Meta = "Units=m" )
+        PROPERTY( Category = "Shadow", DisplayName = "Shadow Distance", Min = 0.0, Tooltip = "Shadow camera pullback along the light direction", Units = m )
         float32 _shadowDistance;
         PROPERTY( Category = "Shadow", DisplayName = "Cast Shadow", Tooltip = "Render this light into the shadow map" )
         uint8                  _bCastShadow   : 1;

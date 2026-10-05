@@ -33,11 +33,11 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Meta = "Units=m" )
+        PROPERTY( Units = m )
         float2 _center{};
-        PROPERTY( Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Units = m )
         float2 _halfExtent{ 1.0f, 1.0f }; ///< 사각형의 반폭
-        PROPERTY( Min = 0.0, Meta = "Units=m" )
+        PROPERTY( Min = 0.0, Units = m )
         float32 _radius{ 1.0f }; ///< 원의 반지름
         PROPERTY()
         PlacementExclusionShape _shape{ PlacementExclusionShape::Circle };
@@ -57,27 +57,27 @@ namespace sw
 
         PROPERTY( Min = 0.0, Tooltip = "Candidates per square unit before filters" )
         float32 _density{ 0.1f };
-        PROPERTY( Min = 0.0, Meta = "Units=m", Tooltip = "No two placements closer than this (Poisson disk)" )
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "No two placements closer than this (Poisson disk)" )
         float32 _minDistance{ 0.0f };
         PROPERTY( Min = 0.01 )
         float32 _scaleMin{ 1.0f };
         PROPERTY( Min = 0.01 )
         float32 _scaleMax{ 1.0f };
-        PROPERTY( Meta = "Units=rad" )
+        PROPERTY( Units = rad )
         float32 _yawMin{ 0.0f };
-        PROPERTY( Meta = "Units=rad" )
+        PROPERTY( Units = rad )
         float32 _yawMax{ 6.2831853f };
-        PROPERTY( Min = 0.0, Max = 1.0, Meta = "Units=ratio", Tooltip = "0 stands upright, 1 follows the surface normal" )
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio, Tooltip = "0 stands upright, 1 follows the surface normal" )
         float32 _alignToNormal{ 0.0f };
-        PROPERTY( Min = 0.0, Meta = "Units=rad" )
+        PROPERTY( Min = 0.0, Units = rad )
         float32 _slopeMin{ 0.0f };
-        PROPERTY( Min = 0.0, Meta = "Units=rad" )
+        PROPERTY( Min = 0.0, Units = rad )
         float32 _slopeMax{ 1.5707964f };
-        PROPERTY( Meta = "Units=m" )
+        PROPERTY( Units = m )
         float32 _heightMin{ -100000.0f };
-        PROPERTY( Meta = "Units=m" )
+        PROPERTY( Units = m )
         float32 _heightMax{ 100000.0f };
-        PROPERTY( Meta = "Units=m", Tooltip = "Added to the surface height (negative sinks into the ground)" )
+        PROPERTY( Units = m, Tooltip = "Added to the surface height (negative sinks into the ground)" )
         float32 _heightOffset{ 0.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Minimum weight of the filter layer" )
         float32 _layerMinWeight{ 0.5f };

@@ -394,7 +394,7 @@ SW_TEST_CASE( ReflectionGenericQueryTest, FindTypeAndIsA )
  * @brief [ReflectionGenericQueryTest] REFLECT() 베이스가 첫 번째로 선언된 다중 상속 액터의 부모 채택을
  *        검증합니다. IPlainMixinTestActor(REFLECT() 없는 순수 인터페이스)는 두 번째 베이스로 조용히
  *        무시되고, EmptyReflectedBaseTestActor(REFLECT() 있음, 첫 번째 베이스)가 부모로 채택되어야
- *        합니다. GameFramework::TurnBattleSaveGame : public SaveGame, public IFlagStore 실사례의
+ *        합니다. SaveGame 파생에 콜백 인터페이스를 덧붙이는 모양의
  *        축소판이며, ReflectionParser/AstVisitor.cpp 의 `collectBase`(첫 번째 베이스를 부모로)를 지키는 테스트입니다.
  * @note 프로퍼티 오프셋은 파생 클래스 자신에게 직접 선언된 것만 안전합니다(offsetof가 그 파생
  *       클래스 자체의 실제 레이아웃으로 계산되므로). 그래서 리플렉션 부모(EmptyReflectedBaseTestActor)
@@ -413,7 +413,7 @@ SW_TEST_CASE( ReflectionGenericQueryTest, MultiInheritanceSafeOrderParentAndProp
     SW_EXPECT_TRUE( pType->isDerivedFrom( sw::hashed_string( "sw::EmptyReflectedBaseTestActor" ) ) );
 
     // 다중 상속과 무관하게, 파생 클래스 자신에게 직접 선언된 프로퍼티는 정상적으로 round-trip 되어야
-    // 합니다 (TurnBattleSaveGame 의 5개 필드가 실제로 의존하는 보장입니다).
+    // 합니다 (SaveGame 파생 세이브의 필드가 실제로 의존하는 보장입니다).
     sw::MultiBaseOrderTestActor actor;
     const sw::PropertyInfo*     pOwnProp = pType->findProperty( sw::hashed_string( "_ownValue" ) );
     SW_ASSERT_NOT_NULL( pOwnProp );

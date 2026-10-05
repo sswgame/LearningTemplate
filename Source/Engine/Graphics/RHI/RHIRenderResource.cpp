@@ -79,6 +79,15 @@ namespace sw
         return true;
     }
 
+    bool RHIRenderResource::releaseRegistryStorage()
+    {
+        std::scoped_lock<mutex> lock{ registryMutexInternal() };
+        if ( registryInternal().empty() == false )
+            return false;
+        registryInternal() = unordered_set<RHIRenderResource*>{};
+        return true;
+    }
+
     void RHIRenderResource::releaseAllFor( IRHIDevice* pDevice )
     {
         if ( pDevice == nullptr )

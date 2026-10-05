@@ -145,7 +145,7 @@ SW_TEST_CASE( ReflectionEnumFlagTest, EnumFlagOperators )
 /**
  * @brief [ReflectionEnumFlagTest] ENUM(Flags) 코드젠 연산자(|, &, ^, ~, |=, &=, ^=)가 sw::EnumUtil의
  *        제네릭 hasFlag/hasAnyFlag/setFlag/clearFlag(Core/Common/EnumUtil.h)와 함께 정상 동작하는지
- *        검증합니다. EnumUtil 자체의 단위 테스트는 Test/CoreTest/TestEnumUtil.cpp에 있습니다
+ *        검증합니다. EnumUtil 자체의 단위 테스트는 Test/CoreTest/Common/TestEnumUtil.cpp에 있습니다
  *        (리플렉션과 무관하게 동작함을 증명하기 위해 일부러 CoreTest에 둡니다).
  */
 SW_TEST_CASE( ReflectionEnumFlagTest, GeneratedOperatorsWithEnumUtil )

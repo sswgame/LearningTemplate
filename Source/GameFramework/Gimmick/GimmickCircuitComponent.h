@@ -72,9 +72,9 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Meta = "Units=m" )
+        PROPERTY( Units = m )
         float3 _position{};
-        PROPERTY( Meta = "Units=rad" )
+        PROPERTY( Units = rad )
         float3 _rotation{};
         PROPERTY()
         float32 _intensity{ 1.0f };
@@ -173,7 +173,7 @@ namespace sw
         vector<GimmickRestPose> _listRestPose;
         PROPERTY( HideInInspector )
         vector<uint8> _stateBytes;
-        PROPERTY( Category = "Circuit", DisplayName = "Step Time", Min = 0.001, Tooltip = "Fixed simulation step", Meta = "Units=s" )
+        PROPERTY( Category = "Circuit", DisplayName = "Step Time", Min = 0.001, Tooltip = "Fixed simulation step", Units = s )
         float32 _stepTime;
 
         GimmickCircuit  _circuit;

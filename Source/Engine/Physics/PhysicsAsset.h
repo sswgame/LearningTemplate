@@ -46,13 +46,13 @@ namespace sw
         float3 _twistAxis{ 0.0f, 1.0f, 0.0f };
         PROPERTY( Tooltip = "Reference axis perpendicular to the twist axis, in bone space" )
         float3 _normalAxis{ 1.0f, 0.0f, 0.0f };
-        PROPERTY( Min = 0.0, Tooltip = "Cone swing half angle around the normal axis", Meta = "Units=rad" )
+        PROPERTY( Min = 0.0, Tooltip = "Cone swing half angle around the normal axis", Units = rad )
         float32 _swingLimitNormal{ 0.5f };
-        PROPERTY( Min = 0.0, Tooltip = "Cone swing half angle around the third axis", Meta = "Units=rad" )
+        PROPERTY( Min = 0.0, Tooltip = "Cone swing half angle around the third axis", Units = rad )
         float32 _swingLimitPlane{ 0.5f };
-        PROPERTY( Tooltip = "Twist (Cone) / angle (Hinge) lower limit", Meta = "Units=rad" )
+        PROPERTY( Tooltip = "Twist (Cone) / angle (Hinge) lower limit", Units = rad )
         float32 _twistMin{ -0.3f };
-        PROPERTY( Tooltip = "Twist (Cone) / angle (Hinge) upper limit", Meta = "Units=rad" )
+        PROPERTY( Tooltip = "Twist (Cone) / angle (Hinge) upper limit", Units = rad )
         float32 _twistMax{ 0.3f };
     };
 } // namespace sw
@@ -84,7 +84,7 @@ namespace sw
         hashed_string _bone{};
         PROPERTY( Tooltip = "Collision shapes in bone space" )
         vector<PhysicsShapeDesc3D> _listShape;
-        PROPERTY( Min = 0.0, Tooltip = "Mass in kg; 0 computes it from the shapes and material density", Meta = "Units=kg" )
+        PROPERTY( Min = 0.0, Tooltip = "Mass in kg; 0 computes it from the shapes and material density", Units = kg )
         float32 _mass{ 0.0f };
         PROPERTY( Tooltip = "Physics material name (empty: the first material)" )
         hashed_string _material{};
