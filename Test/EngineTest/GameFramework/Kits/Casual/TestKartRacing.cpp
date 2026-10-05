@@ -2,6 +2,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartAi.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartGhost.h"
@@ -547,4 +549,86 @@ SW_TEST_CASE( KartRacingTest, GhostReplaysTheSamePath )
     const float32 deltaX = flatPlayer.getMotor().getPosition()._x - finishPosition._x;
     const float32 deltaZ = flatPlayer.getMotor().getPosition()._z - finishPosition._z;
     SW_EXPECT_TRUE( deltaX * deltaX + deltaZ * deltaZ > 1.0f );
+}
+
+/**
+ * @brief [KartRacingTest] 상태 바이트 — 차체 · 진행 · 순위 · 들고 있는 아이템 · 날아가는 껍질 · 상자 타이머 · 난수가 다른 씨앗으로 연 경기에 그대로 오고,
+ *        같은 입력으로 더 달려도 바이트가 같다. 잘린 바이트 · 차 수가 다른 경기는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( KartRacingTest, StateRoundTripContinuesTheSameRace )
+{
+    KartTrack track;
+    SW_ASSERT_TRUE( loadTestTrack( track, 3 ) );
+    KartItemCatalog items;
+    SW_ASSERT_TRUE( items.loadFromXmlText( kKartRacingItemXml, "test" ) );
+    auto beginRace = [&]( KartRace& outRace, uint32 seed, int32 racerCount )
+    {
+        KartRaceSettings settings;
+        settings._countdownTime = 1.0f;
+        settings._seed          = seed;
+        outRace.initialize( settings, &track, &items );
+        for ( int32 racer = 0; racer < racerCount; ++racer )
+            SW_EXPECT_TRUE( outRace.addRacer( ArcadeVehicleSettings{}, racer > 0 ) == racer ); // 0 번만 사람
+        outRace.start();
+    };
+    auto drive = []( KartRace& race, int32 stepCount )
+    {
+        for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
+            race.setInput( 0, makeThrottle( 1.0f ) );
+            race.step();
+        }
+    };
+    auto capture = []( const KartRace& race )
+    {
+        Archive archive;
+        race.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
+    };
+
+    // 카운트다운 뒤 몇 초 달리고, 사람이 녹색 껍질을 쏜 직후(날아가는 중)에 저장한다.
+    KartRace race;
+    beginRace( race, 77u, 4 );
+    drive( race, 60 * 6 );
+    race.giveItem( 0, "green" );
+    SW_EXPECT_TRUE( race.useItem( 0 ) );
+    race.giveItem( 0, "shield" );
+    drive( race, 3 );
+    SW_EXPECT_TRUE( race.getProjectiles().empty() == false );
+    vector<KartRaceEvent> listEvent;
+    race.drainEvents( listEvent );
+
+    const vector<uint8> written = capture( race );
+    KartRace            restored;
+    beginRace( restored, 12345u, 4 );
+    Archive reader( written.data(), written.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    SW_EXPECT_TRUE( restored.getPhase() == KartRacePhase::Racing );
+    SW_EXPECT_TRUE( race.getRaceTime() == restored.getRaceTime() );
+    SW_EXPECT_EQUAL( static_cast<int32>( race.getProjectiles().size() ), static_cast<int32>( restored.getProjectiles().size() ) );
+    SW_EXPECT_TRUE( restored.findRacer( 0 )->_itemId == hashed_string( "shield" ) );
+    for ( int32 racer = 0; racer < 4; ++racer )
+    {
+        SW_EXPECT_TRUE( race.findRacer( racer )->_motor.getPosition()._z == restored.findRacer( racer )->_motor.getPosition()._z );
+        SW_EXPECT_EQUAL( race.findRacer( racer )->_place, restored.findRacer( racer )->_place );
+    }
+    SW_EXPECT_TRUE( written == capture( restored ) );
+
+    // 같은 입력으로 더 달리면 같은 경기 — 껍질이 맞히고, 상자를 깨 굴리는 아이템(난수)까지 갈리지 않는다.
+    drive( race, 60 * 5 );
+    drive( restored, 60 * 5 );
+    SW_EXPECT_TRUE( capture( race ) == capture( restored ) );
+
+    KartRace fewer;
+    beginRace( fewer, 77u, 3 );
+    Archive fewerReader( written.data(), written.size() );
+    SW_EXPECT_FALSE( fewer.readState( fewerReader ) );
+    KartRace truncated;
+    beginRace( truncated, 77u, 4 );
+    Archive cut( written.data(), written.size() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_TRUE( truncated.getPhase() == KartRacePhase::Countdown );
 }

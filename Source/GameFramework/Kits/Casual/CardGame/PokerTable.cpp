@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 #include <algorithm>
 
 namespace sw
@@ -448,5 +452,111 @@ namespace sw
     void PokerTable::drainEvents( vector<PokerEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void PokerTable::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listSeat.size() );
+        for ( const PokerSeat& seat : _listSeat )
+        {
+            for ( const Card& card : seat._arrHole )
+            {
+                outArchive << card._id;
+                outArchive << card._suit;
+                outArchive << card._rank;
+            }
+            outArchive << seat._stack;
+            outArchive << seat._committed;
+            outArchive << seat._contributed;
+            outArchive << seat._won;
+            outArchive << seat._bInHand;
+            outArchive << seat._bFolded;
+            outArchive << seat._bAllIn;
+            outArchive << seat._bActed;
+        }
+        outArchive << static_cast<uint32>( _listLastPot.size() );
+        for ( const PokerPot& pot : _listLastPot )
+        {
+            outArchive << static_cast<uint32>( pot._listEligibleSeat.size() );
+            for ( const int32 seat : pot._listEligibleSeat )
+            {
+                outArchive << seat;
+            }
+            outArchive << pot._amount;
+        }
+        _deck.writeState( outArchive );
+        _board.writeState( outArchive );
+        outArchive << _button;
+        outArchive << _currentSeat;
+        outArchive << _currentBet;
+        outArchive << _lastRaiseSize;
+        outArchive << static_cast<uint8>( _street );
+    }
+
+    bool PokerTable::readState( Archive& archive )
+    {
+        uint32 seatCount = 0;
+        archive >> seatCount;
+        if ( archive.isError() || seatCount != _listSeat.size() )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정은 사본이 그대로 든다.
+        PokerTable  table = *this;
+        const int32 count = static_cast<int32>( seatCount );
+        for ( PokerSeat& seat : table._listSeat )
+        {
+            for ( Card& card : seat._arrHole )
+            {
+                archive >> card._id;
+                archive >> card._suit;
+                archive >> card._rank;
+            }
+            archive >> seat._stack;
+            archive >> seat._committed;
+            archive >> seat._contributed;
+            archive >> seat._won;
+            archive >> seat._bInHand;
+            archive >> seat._bFolded;
+            archive >> seat._bAllIn;
+            archive >> seat._bActed;
+            const bool bFlagsValid = seat._bInHand <= SW_TRUE && seat._bFolded <= SW_TRUE && seat._bAllIn <= SW_TRUE && seat._bActed <= SW_TRUE;
+            if ( archive.isError() || bFlagsValid == false )
+                return false;
+        }
+
+        uint32 potCount = 0;
+        // 팟마다 자리 수(4) + 금액(4)
+        if ( StateArchiveUtil::readCount( archive, 8, potCount ) == false )
+            return false;
+        table._listLastPot.assign( potCount, PokerPot{} );
+        for ( PokerPot& pot : table._listLastPot )
+        {
+            uint32 eligibleCount = 0;
+            if ( StateArchiveUtil::readCount( archive, 4, eligibleCount ) == false )
+                return false;
+            pot._listEligibleSeat.assign( eligibleCount, -1 );
+            for ( int32& seat : pot._listEligibleSeat )
+            {
+                archive >> seat;
+                if ( seat < 0 || count <= seat )
+                    return false;
+            }
+            archive >> pot._amount;
+        }
+        if ( table._deck.readState( archive ) == false || table._board.readState( archive ) == false )
+            return false;
+        uint8 street = 0;
+        archive >> table._button;
+        archive >> table._currentSeat;
+        archive >> table._currentBet;
+        archive >> table._lastRaiseSize;
+        archive >> street;
+        const bool bButtonValid = -1 <= table._button && table._button < count;
+        const bool bSeatValid   = -1 <= table._currentSeat && table._currentSeat < count;
+        if ( archive.isError() || bButtonValid == false || bSeatValid == false || street > static_cast<uint8>( PokerStreet::HandOver ) )
+            return false;
+        table._street = static_cast<PokerStreet>( street );
+        table._eventBuffer.clear();
+        *this = std::move( table );
+        return true;
     }
 } // namespace sw

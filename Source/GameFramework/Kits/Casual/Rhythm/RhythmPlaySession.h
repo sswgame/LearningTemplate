@@ -16,6 +16,7 @@ namespace sw
 {
     struct TimingWindow;
 
+    class Archive;
     class TimingJudge;
 
     /** @brief 판정 등급 하나의 라이프 증감 · 정확도 가중치입니다. 점수는 판정 창(`TimingWindow::_score`)의 것입니다. */
@@ -113,6 +114,9 @@ namespace sw
     class SW_GF_API RhythmPlaySession
     {
     public:
+        static constexpr uint32 kStateTag     = 0x50594852u; ///< 'RHYP'
+        static constexpr uint32 kStateVersion = 1;
+
         RhythmPlaySession();
 
         /** @brief 판을 처음부터 시작합니다. 채보의 레인 수만큼 대기열을 만듭니다. */
@@ -127,6 +131,14 @@ namespace sw
 
         /** @brief 쌓인 알림을 넘기고 비웁니다. */
         void drainEvents( vector<RhythmEvent>& outListEvent );
+
+        /**
+         * @brief 레인마다 판정 자리 · 누르고 있는 롱노트, 등급별 판정 수 · 입력 기록 · 점수 · 정확도 합 · 라이프 · 지금 시각 · 콤보 · 놓침 · 판정 수 · 상태를 씁니다.
+         * @details 채보 · 판정기는 빌린 것이라 싣지 않습니다(채보 정의가 카탈로그 id 를 갖지 않는다) — 같은 채보인지는 노트 수 · 레인 수로 대 봅니다. 설정은 `initialize` 의 것이고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 채보 · 판정 창 수가 다르거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 정확도(%)입니다 — 판정마다 가중치(Miss = 0)의 평균. 판정이 없으면 100 입니다. */
         float32 computeAccuracy() const;

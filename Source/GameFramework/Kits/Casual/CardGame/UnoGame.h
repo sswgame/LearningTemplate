@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 색입니다. */
     enum class UnoColor : uint8
     {
@@ -105,6 +107,9 @@ namespace sw
     class SW_GF_API UnoGame
     {
     public:
+        static constexpr uint32 kStateTag     = 0x4F4E5543u; ///< 'CUNO'
+        static constexpr uint32 kStateVersion = 1;
+
         UnoGame();
 
         /** @brief 108 장을 @p seed 로 섞어 한 장씩 돌려 나누고, 와일드가 아닌 첫 장을 뒤집습니다(첫 장의 효과는 없다). */
@@ -118,6 +123,11 @@ namespace sw
         /** @brief 우노 잡기(남) · 늦은 선언(본인)입니다. 잡을 사람이 없으면 false 입니다. */
         [[nodiscard]] bool callUno( int32 caller );
         [[nodiscard]] bool applyAction( int32 player, const CardAction& action );
+
+        /** @brief 손패 · 뽑을 더미 · 버린 더미 · 난수 · 차례 · 방향 · 쌓인 벌칙 · 우노 대상 · 이긴 사람 · 색을 씁니다. 설정은 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 인원이 다르거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 지금 낼 수 있는 카드인가입니다(색 · 값 · 와일드, 벌칙이 쌓였으면 쌓을 수 있는 카드만). */
         bool isPlayable( const Card& card ) const;

@@ -2,6 +2,10 @@
 
 #include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     CardPile::CardPile()
@@ -78,6 +82,36 @@ namespace sw
                 hand.push( card );
             }
         }
+        return true;
+    }
+
+    void CardPile::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listCard.size() );
+        for ( const Card& card : _listCard )
+        {
+            outArchive << card._id;
+            outArchive << card._suit;
+            outArchive << card._rank;
+        }
+    }
+
+    bool CardPile::readState( Archive& archive )
+    {
+        uint32 cardCount = 0;
+        // 카드마다 번호(2) + 무늬(1) + 숫자(1)
+        if ( StateArchiveUtil::readCount( archive, 4, cardCount ) == false )
+            return false;
+        vector<Card> listCard( cardCount, Card{} );
+        for ( Card& card : listCard )
+        {
+            archive >> card._id;
+            archive >> card._suit;
+            archive >> card._rank;
+        }
+        if ( archive.isError() )
+            return false;
+        _listCard = std::move( listCard );
         return true;
     }
 

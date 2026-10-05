@@ -5,6 +5,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
@@ -66,6 +70,74 @@ namespace sw
             {
                 static const hashed_string name( "Shield" );
                 return name;
+            }
+
+            static void writePlayer( Archive& outArchive, const TrampolinePlayer& body )
+            {
+                outArchive << body._position;
+                outArchive << body._velocity;
+                outArchive << body._facing;
+                outArchive << body._input._moveX;
+                outArchive << body._input._moveZ;
+                outArchive << body._input._bJumpPressed;
+                outArchive << body._input._bAttackPressed;
+                outArchive << body._input._bPoundPressed;
+                outArchive << body._landTime;
+                outArchive << body._jumpPressTime;
+                StateArchiveUtil::writeCountdown( outArchive, body._contactTimer );
+                StateArchiveUtil::writeCountdown( outArchive, body._attackTimer );
+                StateArchiveUtil::writeCountdown( outArchive, body._attackCooldown );
+                StateArchiveUtil::writeCountdown( outArchive, body._stunTimer );
+                StateArchiveUtil::writeCountdown( outArchive, body._invulnerableTimer );
+                outArchive << body._lastHitTime;
+                StateArchiveUtil::writeCountdown( outArchive, body._heavyTimer );
+                outArchive << body._knockbackTaken;
+                outArchive << body._knockbackDealt;
+                outArchive << body._combo;
+                outArchive << body._lastHitter;
+                outArchive << body._bPounding;
+                outArchive << body._bSuperBounce;
+                outArchive << body._bShield;
+                outArchive << body._bHitThisDash;
+                outArchive << static_cast<uint8>( body._state );
+            }
+
+            [[nodiscard]] static bool readPlayer( Archive& archive, int32 playerCount, TrampolinePlayer& outBody )
+            {
+                archive >> outBody._position;
+                archive >> outBody._velocity;
+                archive >> outBody._facing;
+                archive >> outBody._input._moveX;
+                archive >> outBody._input._moveZ;
+                archive >> outBody._input._bJumpPressed;
+                archive >> outBody._input._bAttackPressed;
+                archive >> outBody._input._bPoundPressed;
+                archive >> outBody._landTime;
+                archive >> outBody._jumpPressTime;
+                const bool bTimersRead = StateArchiveUtil::readCountdown( archive, outBody._contactTimer ) && StateArchiveUtil::readCountdown( archive, outBody._attackTimer ) &&
+                                         StateArchiveUtil::readCountdown( archive, outBody._attackCooldown ) && StateArchiveUtil::readCountdown( archive, outBody._stunTimer ) &&
+                                         StateArchiveUtil::readCountdown( archive, outBody._invulnerableTimer );
+                archive >> outBody._lastHitTime;
+                const bool bHeavyRead = StateArchiveUtil::readCountdown( archive, outBody._heavyTimer );
+                uint8      state      = 0;
+                archive >> outBody._knockbackTaken;
+                archive >> outBody._knockbackDealt;
+                archive >> outBody._combo;
+                archive >> outBody._lastHitter;
+                archive >> outBody._bPounding;
+                archive >> outBody._bSuperBounce;
+                archive >> outBody._bShield;
+                archive >> outBody._bHitThisDash;
+                archive >> state;
+                const bool bInputValid  = outBody._input._bJumpPressed <= SW_TRUE && outBody._input._bAttackPressed <= SW_TRUE && outBody._input._bPoundPressed <= SW_TRUE;
+                const bool bFlagsValid  = outBody._bPounding <= SW_TRUE && outBody._bSuperBounce <= SW_TRUE && outBody._bShield <= SW_TRUE && outBody._bHitThisDash <= SW_TRUE;
+                const bool bHitterValid = -1 <= outBody._lastHitter && outBody._lastHitter < playerCount;
+                const bool bStateValid  = state <= static_cast<uint8>( TrampolinePlayerState::Respawning );
+                if ( bTimersRead == false || bHeavyRead == false || archive.isError() || bInputValid == false || bFlagsValid == false || bHitterValid == false ||
+                     bStateValid == false || outBody._combo < 0 )
+                    return false;
+                outBody._state = static_cast<TrampolinePlayerState>( state );
+                return true;
             }
         };
     } // namespace
@@ -237,6 +309,42 @@ namespace sw
     void TrampolineArena::drainEvents( vector<TrampolineEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void TrampolineArena::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listPlayer.size() );
+        for ( const TrampolinePlayer& body : _listPlayer )
+        {
+            TrampolineArenaInternal::writePlayer( outArchive, body );
+        }
+        _itemSpawner.writeState( outArchive );
+        _match.writeState( outArchive );
+        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        outArchive << _time;
+    }
+
+    bool TrampolineArena::readState( Archive& archive )
+    {
+        uint32 playerCount = 0;
+        archive >> playerCount;
+        if ( archive.isError() || playerCount != _listPlayer.size() )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정 · 판정 창 · 아이템 정의는 사본이 그대로 든다.
+        TrampolineArena arena = *this;
+        for ( TrampolinePlayer& body : arena._listPlayer )
+        {
+            if ( TrampolineArenaInternal::readPlayer( archive, static_cast<int32>( playerCount ), body ) == false )
+                return false;
+        }
+        const bool bPartsRead = arena._itemSpawner.readState( archive ) && arena._match.readState( archive ) && StateArchiveUtil::readStepTimer( archive, arena._timer );
+        archive >> arena._time;
+        if ( bPartsRead == false || archive.isError() )
+            return false;
+        arena._eventBuffer.clear();
+        arena._listMatchEvent.clear();
+        *this = std::move( arena );
+        return true;
     }
 
     // --- 걸음 -------------------------------------------------------------------------------------
