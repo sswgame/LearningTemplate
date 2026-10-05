@@ -1475,6 +1475,8 @@ cd build/Ninja-Debug/Bin
   같이 쓰는 `DialogueCursor::step`. 핀 번호 `nodeId*100+offset` 은 디스크 포맷. 타일맵 레이어 표(`kArrTileFlagLayerInfo`)의 XML 속성 이름과 줄 순서는 파일 형식이다
   (바꾸면 옛 맵의 그 레이어가 기본값으로 읽힌다 — `TileMapXmlTest.SavedBytesMatchTheExistingFormat`). `SequenceItemKind` 값은 JSON 정수라 번호를 바꾸지 말 것;
   시퀀서 이벤트는 `SequencePlayerComponent::registerSequenceEvent` 로 받는다.
+- **월드 플래그는 `GameFlags` 하나다** — 대화 러너(`DialogueRunnerComponent::setFlags`) · 지역 잠금(`AreaGraph`) · 일정이 같은 저장소 · 같은 조건식을 쓴다
+  (`a && !b || count>=3` — 이름 하나는 0 이 아니면 참, 비교 오른쪽은 정수나 다른 플래그, 접두어 없음). 0 을 넣으면 지운다. 세이브는 `fillEntries` 의 이름 순 목록이다.
 
 - **`GameEvents.h` 의 이벤트는 프레임워크가 그 자리에서 낸다**(세이브 · 로드 완료 = `GameInstanceBase::save/loadStateToFile`, 레벨 로드 요청 · 완료 =
   `requestFirstScene` · `requestEntranceScene`). `SceneManager` 를 직접 부른 로드는 LevelLoad 이벤트를 내지 않는다.

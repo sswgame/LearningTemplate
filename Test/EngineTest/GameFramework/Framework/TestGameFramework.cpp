@@ -548,15 +548,15 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentEditorTool100ScaleFormat
 }
 
 /**
- * @brief [GameFrameworkTest] 대화 Branch 조건이 비교 연산자 여섯을 모두 안다 — `>=` 가 든 식을 통째로 플래그 키로 읽지 않는다
- * @details 평가가 `==` 와 `!=` 만 찾으면 `flag.gold >= 10` 은 **식 전체를 키**("gold >= 10")로 읽고, 그런 플래그는 없으니 늘 0 이라
- *          금화가 충분해도 거짓 쪽 분기로 간다(`<=` · `>` · `<` 도 같다). 연산자는 표 하나가 정하고(두 글자를 먼저), 읽지 못한 식
- *          (정수가 아닌 오른쪽, 표에 없는 `=` 하나)은 경고하고 거짓이다 — `!= lots` 를 1 과 비교해 참으로 읽으면 안 된다.
+ * @brief [GameFrameworkTest] 대화 Branch 조건은 월드 플래그 조건식이다 — 비교 여섯 · 이름 하나 · 논리 연산 · 플래그끼리 비교, 읽지 못한 식은 경고하고 거짓
+ * @details 비교 연산자가 두 글자를 먼저 맞추지 않으면 `gold >= 10` 의 `>` 가 먼저 잡혀 오른쪽이 `=10` 이 된다. 이름 하나는 0 이 아니면 참이고
+ *          `flag.` 접두어는 없다(이름의 일부로 읽힌다).
  */
 SW_TEST_CASE( GameFrameworkTest, DialogueConditionUnderstandsEveryComparison )
 {
     GameFlags flags;
     flags.setFlag( "gold", 10 );
+    flags.setFlag( "threshold", 5 );
 
     // Start → Branch(조건) → 참이면 "yes", 거짓이면 "no" 를 보여 준다.
     const auto takesTrueBranch = [&flags]( const utf8* pCondition ) -> bool
@@ -573,28 +573,65 @@ SW_TEST_CASE( GameFrameworkTest, DialogueConditionUnderstandsEveryComparison )
         return runner.getCurrentText() == "yes";
     };
 
-    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold >= 10" ) );
-    SW_EXPECT_FALSE( takesTrueBranch( "flag.gold >= 11" ) );
-    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold <= 10" ) );
-    SW_EXPECT_FALSE( takesTrueBranch( "flag.gold <= 9" ) );
-    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold > 9" ) );
-    SW_EXPECT_FALSE( takesTrueBranch( "flag.gold > 10" ) );
-    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold < 11" ) );
-    SW_EXPECT_FALSE( takesTrueBranch( "flag.gold < 10" ) );
-    SW_EXPECT_TRUE( takesTrueBranch( "gold>=-1" ) ); // 공백 없이 · 음수 · `flag.` 없이
+    SW_EXPECT_TRUE( takesTrueBranch( "gold >= 10" ) );
+    SW_EXPECT_FALSE( takesTrueBranch( "gold >= 11" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "gold <= 10" ) );
+    SW_EXPECT_FALSE( takesTrueBranch( "gold <= 9" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "gold > 9" ) );
+    SW_EXPECT_FALSE( takesTrueBranch( "gold > 10" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "gold < 11" ) );
+    SW_EXPECT_FALSE( takesTrueBranch( "gold < 10" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "gold>=-1" ) ); // 공백 없이 · 음수
+    SW_EXPECT_TRUE( takesTrueBranch( "gold == 10" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "gold != 3" ) );
 
-    // 이미 알던 둘과 연산자 없는 키는 그대로다(`키` 는 `키 == 1`).
-    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold == 10" ) );
-    SW_EXPECT_TRUE( takesTrueBranch( "flag.gold != 3" ) );
-    SW_EXPECT_FALSE( takesTrueBranch( "flag.gold" ) );
+    // 이름 하나는 0 이 아니면 참이다(옛 대화 규칙 "== 1" 이 아니다). 없는 이름은 0 이다.
+    SW_EXPECT_TRUE( takesTrueBranch( "gold" ) );
+    SW_EXPECT_FALSE( takesTrueBranch( "visited" ) );
+    // 논리 연산 · 괄호 · 플래그끼리 비교 — 대화도 지역 잠금과 같은 식을 쓴다.
+    SW_EXPECT_TRUE( takesTrueBranch( "gold >= 10 && !visited" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "visited || (gold == 10)" ) );
+    SW_EXPECT_TRUE( takesTrueBranch( "gold > threshold" ) );
+    // `flag.` 접두어는 없다 — `flag.gold` 는 다른 이름이라 0 이다.
+    SW_EXPECT_FALSE( takesTrueBranch( "flag.gold >= 10" ) );
 
     test::ScopedLogCollector logs;
     {
         SW_TEST_DEFENSIVE_SCOPE( "unreadable dialogue conditions" );
-        SW_EXPECT_FALSE( takesTrueBranch( "flag.gold != lots" ) );
-        SW_EXPECT_FALSE( takesTrueBranch( "flag.gold = 10" ) );
+        SW_EXPECT_FALSE( takesTrueBranch( "gold = 10" ) );
+        SW_EXPECT_FALSE( takesTrueBranch( "gold >=" ) );
+        SW_EXPECT_FALSE( takesTrueBranch( "(gold" ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "the condition is false" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Invalid flag condition" ) == 3, logs.joined().c_str() );
+}
+
+/**
+ * @brief [GameFrameworkTest] 대화 Branch 와 월드 플래그 조건식이 같은 답을 내는 식들 — 문법을 하나로 합칠 때 그대로여야 하는 몫
+ * @details 접두어 없는 비교 여섯 · 공백 없는 음수 비교는 대화 러너와 `GameFlags::evaluate` 가 같은 답이다. 문법을 합친 뒤에도 이 줄들은 바뀌지 않는다.
+ */
+SW_TEST_CASE( GameFrameworkTest, DialogueConditionAgreesWithWorldFlagConditions )
+{
+    GameFlags flags;
+    flags.setFlag( "gold", 10 );
+
+    const auto takesTrueBranch = [&flags]( const utf8* pCondition ) -> bool
+    {
+        DialogueRunnerComponent runner;
+        runner.setFlags( &flags );
+        string json = R"({ "nodes": [ { "id": 1, "type": "Start" }, { "id": 2, "type": "Branch", "condition": ")";
+        json += pCondition;
+        json += R"(" }, { "id": 3, "type": "Dialogue", "speaker": "S", "text": "yes" },
+		                 { "id": 4, "type": "Dialogue", "speaker": "S", "text": "no" } ],
+		    "links": [ { "from": 102, "to": 201 }, { "from": 203, "to": 301 }, { "from": 204, "to": 401 } ] })";
+        SW_EXPECT_TRUE( runner.loadGraphJson( json ) );
+        SW_EXPECT_TRUE( runner.startDialogue() );
+        return runner.getCurrentText() == "yes";
+    };
+
+    const utf8* const arrCondition[] = { "gold >= 10", "gold >= 11", "gold <= 10", "gold <= 9", "gold > 9", "gold > 10",
+                                         "gold < 11", "gold < 10", "gold == 10", "gold != 3", "gold>=-1", "" };
+    for ( const utf8* pCondition : arrCondition )
+        SW_EXPECT_TRUE_MSG( takesTrueBranch( pCondition ) == flags.evaluate( pCondition ), pCondition );
 }
 
 // ------------------------------------------------------------------------------
