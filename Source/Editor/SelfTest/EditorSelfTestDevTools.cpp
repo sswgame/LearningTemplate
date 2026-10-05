@@ -22,13 +22,13 @@
 #include "Editor/Viewport/EditorCamera.h"
 #include "Editor/Viewport/EditorVisualizerGeometry.h"
 
-#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Utility/Console/DevCommandRegistry.h"
 #include "Engine/Utility/Console/DevConsole.h"
-#include "Engine/Utility/Debug/DebugOverlayState.h"
+#include "Engine/Utility/DebugOverlayState.h"
 #include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Utility/GameTimeScale.h"
 

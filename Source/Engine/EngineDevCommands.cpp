@@ -12,7 +12,7 @@
     #include "Core/String/StringUtil.h"
 
     #include "Engine/Common/EngineServices.h"
-    #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
+    #include "Engine/Graphics/Debug/DebugDrawQueue.h"
     #include "Engine/Object/Animation/AnimationSystem.h"
     #include "Engine/Object/Component/SceneComponent.h"
     #include "Engine/Object/GameObject/GameObject.h"

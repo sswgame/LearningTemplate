@@ -23,7 +23,7 @@
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {

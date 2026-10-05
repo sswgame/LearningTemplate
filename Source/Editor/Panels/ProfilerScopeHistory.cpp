@@ -7,7 +7,7 @@
 
 #include "Editor/Common/Widgets/EditorListFilter.h"
 
-#include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw::editor
 {

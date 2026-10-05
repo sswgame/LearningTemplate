@@ -11,7 +11,7 @@
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
-#include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {

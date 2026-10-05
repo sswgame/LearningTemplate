@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Physics/AABB.h"
 

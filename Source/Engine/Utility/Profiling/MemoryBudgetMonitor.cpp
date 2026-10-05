@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Utility/Debug/MemoryBudgetMonitor.h"
+#include "Engine/Utility/Profiling/MemoryBudgetMonitor.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -14,8 +14,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Utility/Debug/FrameProfiler.h"
 #include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {

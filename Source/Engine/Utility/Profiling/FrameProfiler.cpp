@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 #include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"

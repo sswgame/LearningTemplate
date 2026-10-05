@@ -91,7 +91,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | `GpuMeshVertexPool` · `GpuMeshMorphPool` | Renderer/Scene/ | RT 소유 GPU 풀 — 씬 정점을 한 버퍼에(멀티 드로우) · 모프 · 스키닝 결과(언리얼 GPU Skin Cache 자리) |
 | `RenderPipelineAssetCache` · `RenderPassAsset` · `RenderPipelineAsset` | Renderer/Pipeline/ | XML/에셋 쪽 패스·파이프라인 |
 | `RenderFramePacket` | Renderer/Frame/ | 프레임 입력 패킷 |
-| `DebugDrawQueue` · `RenderTargetRegistry` | Renderer/Debug/ | 에디터가 읽는 디버그 통로 — 라인/스피어 큐 · 프레임 렌더타깃 목록 |
+| `DebugDrawQueue` · `RenderTargetRegistry` · `PhysicsDebugDrawAdapter` | Debug/ | 에디터가 읽는 디버그 통로 — 라인/스피어 큐 · 프레임 렌더타깃 목록 · 물리 디버그 선 옮기기. 렌더러가 아니라 디바이스 쪽(티어 5)이라 게임 · 개발 명령이 렌더러를 몰라도 넣는다 |
 
 ---
 

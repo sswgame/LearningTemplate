@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/Debug/DebugOverlayState.h"
+#include "Engine/Utility/DebugOverlayState.h"
 
 #include "TestFramework/TestFramework.h"
 

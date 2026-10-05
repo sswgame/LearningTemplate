@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Utility/Debug/FrameProfileSession.h"
+#include "Engine/Utility/Profiling/FrameProfileSession.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -14,8 +14,8 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Utility/Debug/FrameProfiler.h"
-#include "Engine/Utility/Debug/MemoryBudgetMonitor.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
+#include "Engine/Utility/Profiling/MemoryBudgetMonitor.h"
 
 namespace sw
 {

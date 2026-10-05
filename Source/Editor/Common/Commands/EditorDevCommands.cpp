@@ -15,12 +15,12 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Viewport/EditorCamera.h"
 
-#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Console/DevCommandRegistry.h"
-#include "Engine/Utility/Debug/DebugOverlayState.h"
+#include "Engine/Utility/DebugOverlayState.h"
 
 namespace sw::editor
 {

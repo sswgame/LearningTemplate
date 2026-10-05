@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 #include "Engine/Utility/Profiling/ProfilerBackend.h"
 #include "Engine/Utility/Profiling/Tracy/TracyProfilerBackend.h"
 

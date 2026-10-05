@@ -113,12 +113,12 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   감시 · 섀도 복사 · 다시 로드(`LiveReloadManager`)는 App 의 `App/Module`, 에셋 파일 감시(`FileWatchDispatcher`)는 에디터의
   `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleUnloadListener`)은 `Core/Module` 이다.
 - **Module/** 의 `ModuleCatalog` 는 모듈 매니페스트(`<모듈>.module.json`)를 읽고 켜짐 · 플랫폼 · 구성 · 의존 · 버전 · 순환을 보고 적재 순서를 정한다(App 이 쓴다 — CMake 와 같은 규칙).
-- **Utility/**: Format (KeyValueFile), Json, Xml(데이터 XML 의 "모르는 이름" 검사는 `XmlNameCheck` 하나 — 판정 · 문구 `<원소> has unknown attribute 'x'` 가 같고, 데이터 오류면 Error · 읽기를 잇는 로더면 Warning 을 고른다), CommandStack, Debug, `GameTimeScale`(게임 시간 배율 `gv_timeScale` — 호스트의 프레임 시간이
+- **Utility/**: `KeyValueFile`, Json, Xml(데이터 XML 의 "모르는 이름" 검사는 `XmlNameCheck` 하나 — 판정 · 문구 `<원소> has unknown attribute 'x'` 가 같고, 데이터 오류면 Error · 읽기를 잇는 로더면 Warning 을 고른다), CommandStack, `DebugOverlayState`(게임이 쓰고 에디터 HUD 가 읽는 디버그 값), `GameTimeScale`(게임 시간 배율 `gv_timeScale` — 호스트의 프레임 시간이
   곱한다), `GameAutoplay`(게임의 자동 플레이 스위치 계약 — `SW_GAME_AUTOPLAY`, `Source/Games/README.md`), Console(개발 콘솔 — 아래), TileMap(타일셋 · 규칙 타일 해석 · 충돌 사각형 병합 · 외곽선 · 이동 비용) — 진짜 최하위
   헬퍼만 둡니다.
-  `Profiling/` 은 엔진 프로파일러의 두 번째 출력(외부 타임라인 뷰어 — Tracy)이다: `SW_PROFILE_SCOPE` 한 줄이 `Debug/FrameProfiler` 표와 Tracy 구간에 함께
+  `Profiling/` 은 엔진 프로파일러다 — 프로세스 안의 표(`FrameProfiler` · `FrameProfileSession`)와 두 번째 출력(외부 타임라인 뷰어 — Tracy): `SW_PROFILE_SCOPE` 한 줄이 `FrameProfiler` 표와 Tracy 구간에 함께
   남는다(`Utility/Profiling/README.md`). Tracy 헤더는 `Profiling/Tracy/` 에서만 include 한다(`CheckThirdPartyIsolation.py`).
-  `Debug/MemoryBudgetMonitor` 는 메모리 태그 예산(`Config/Engine/MemoryBudget.json`, 모르는 태그 · 키는 오류) · 프레임 끝 예산 검사 · `-gv_memoryReport` 표 ·
+  `Profiling/MemoryBudgetMonitor` 는 메모리 태그 예산(`Config/Engine/MemoryBudget.json`, 모르는 태그 · 키는 오류) · 프레임 끝 예산 검사 · `-gv_memoryReport` 표 ·
   FrameProfiler 카운터를 맡습니다(`EngineLoop::endFrame`, 표는 `-gv_profileFrames` 보고와 같은 함수).
 - **개발 콘솔 · 개발 명령(Shipping 에는 없다 — `SW_DEV_COMMANDS_ENABLED`)**: `Utility/Console/DevCommandRegistry` 가 명령 등록부(Engine 하나, 모듈을 내리면
   그 모듈의 명령이 빠진다)이고, 명령은 자기 .cpp 에 `SW_DEV_COMMAND( 변수, "이름", "사용법", "설명", &본문 )` 한 줄로 등록합니다 — 본문은

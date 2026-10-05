@@ -8,7 +8,7 @@
 #include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Debug/MemoryBudgetMonitor.h"
+#include "Engine/Utility/Profiling/MemoryBudgetMonitor.h"
 
 #include "TestFramework/TestFramework.h"
 

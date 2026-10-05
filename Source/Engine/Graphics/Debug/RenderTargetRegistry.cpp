@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
+#include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 
 namespace sw
 {

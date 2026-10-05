@@ -3,7 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 
 #include "TestFramework/TestFramework.h"
 

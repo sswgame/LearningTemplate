@@ -5,7 +5,7 @@
 
 #include "Editor/Viewport/EditorVisualizerGeometry.h"
 
-#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

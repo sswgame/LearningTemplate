@@ -13,8 +13,8 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Debug/FrameProfiler.h"
 #include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {

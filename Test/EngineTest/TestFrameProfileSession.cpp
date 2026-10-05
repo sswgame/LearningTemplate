@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/Debug/FrameProfileSession.h"
+#include "Engine/Utility/Profiling/FrameProfileSession.h"
 
 #include "TestFramework/TestFramework.h"
 

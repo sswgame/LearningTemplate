@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/StructuralChangeBuffer.h"
-#include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {

@@ -10,7 +10,7 @@
 #include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 
-#include "Engine/Utility/Debug/DebugOverlayState.h"
+#include "Engine/Utility/DebugOverlayState.h"
 
 namespace sw::editor
 {

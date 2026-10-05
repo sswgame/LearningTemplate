@@ -7,7 +7,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 
 namespace sw

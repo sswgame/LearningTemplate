@@ -510,7 +510,7 @@ cd build/Ninja-Debug/Bin
   `PoseModifier` · `CharacterPoseUtil` · `ReferencePoseOverride`)은 데이터는 `Animation/`, 컴포넌트 · 시스템은 `Object/Animation/` 으로
   ② 엔진 루트의 `LocalizationTools.cpp/.h` → `Localization/`, `EngineDevCommands.cpp` → `Utility/Console/`(층은 `CheckEngineLayers` 로 확인 —
   루트는 `EngineLoop` 급만) ③ 파일 하나짜리 폴더 `Input/Events` · `Input/Utils` · `Reflection/Rpc` 를 위로 합치기 ④ 이름이 겹쳐 헷갈리는
-  `Utility/Format` ↔ `Serialization/Format`, `Graphics/Renderer/Debug` ↔ `Utility/Debug` 정리(`Core/Compression` ↔ `Engine/Compression` 은
+  `Utility/Format` ↔ `Serialization/Format`, `Graphics/Debug` ↔ `Utility/Profiling` 정리(`Core/Compression` ↔ `Engine/Compression` 은
   의도 — 코덱 틀은 Core, 서드파티 코덱은 Engine) ⑤ `Test/EngineTest` 229 개 · `CoreTest` 40 · `EditorTest` 37 평면 → 소스 폴더를 따르는 하위 폴더
   (`CheckTestSuites` · CMake 글롭 확인) ⑥ 다시 생기지 않게: 폴더당 파일 수 상한 보고서 + 엔진 루트 허용 목록 게이트.
   함정: `git mv` 는 mtime 을 안 바꿔 ReflectionParser 가 옛 경로 `.gen.cpp` 를 최신으로 본다 — 이동 뒤 re-configure 하고 생성 폴더를 지워 확인.

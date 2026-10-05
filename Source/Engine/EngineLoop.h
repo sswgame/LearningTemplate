@@ -15,8 +15,8 @@
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Object/Animation/AnimationLod.h"
-#include "Engine/Utility/Debug/FrameProfileSession.h"
-#include "Engine/Utility/Debug/MemoryBudgetMonitor.h"
+#include "Engine/Utility/Profiling/FrameProfileSession.h"
+#include "Engine/Utility/Profiling/MemoryBudgetMonitor.h"
 
 namespace sw
 {
