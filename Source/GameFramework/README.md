@@ -93,6 +93,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   아케이드 차량(`ArcadeVehicleMotor` — 속도에 따른 조향 · 드리프트 미니터보 단계 · 니트로 · 오프로드 · 점프, 지면은 `IVehicleGround`),
   보는 쪽 기준 이동 방향(`LocomotionMath` — 서기 · 앞 · 뒤 · 옆걸음 · 공중, 애니메이터 이동 상태의 입력)
 - **Navigation**: 격자(`NavGrid`), A*(`GridPathfinder`), 흐름장(`FlowField`), 걷는 행위자(`NavAgent` · `Steering`), SRPG 이동 범위(`GridReachability`)
+- **Online**: 온라인 서비스(계정 · 경제 · 거래 · 채팅 키트)가 같이 쓰는 기반 계약 — 키트끼리는 include 하지 못하므로 여기 둔다. 층 1(Core 만 본다).
+  `Online/Store`: 서비스 저장 계약 `IServiceStore`((표, 키) → 바이트 + 판, 조건부 쓰기를 묶은 트랜잭션 · 키 범위 읽기, 저장 왕복을 `IServiceStoreWork` 로 맡기고
+  `pollCompletions` 로 거둔다 — 게임 · 네트워크 스레드는 DB 를 기다리지 않는다), 멱등 기록(`ServiceIdempotency`), 키 도우미(`ServiceKeyUtil` — 키는 ASCII,
+  숫자는 고정 16 자리 16 진수), 메모리 구현(`MemoryServiceDatabase` 데이터 · 실패 주입 + `MemoryServiceStore` 앞 — 시험 · 개발 서버). 판은 저장소 전체에서 오르는 수라 ABA 가 없다.
+  SQL 구현은 키트 `GF_SqlStore` · `GF_Server_SqlStore`.
 - **Progression**: 경험치 곡선 · 레벨(`ExperienceCurve` · `LevelProgress`), 스킬 트리(`SkillTreeCatalog` · `SkillTreeState`), 평판 · 호감도(`ReputationCatalog` ·
   `ReputationState`), 로그라이트 지도(`RunMap`), 로컬 통계(`StatCatalog` · `PlayerStats` — `<Stats><Stat id kind="Counter|Max|Min|Time" max/>` 정의, `increment` ·
   `submit`(기록이 좋아질 때만) · `addTime`, 바뀔 때만 듣는 쪽에 `StatChange`, 프로필 파일 `saveToFile` · `loadFromFile` — 업적의 바탕, Steam Stats 의 로컬 판)
@@ -339,7 +344,7 @@ CMake 는 빌드 타깃(`SW_TARGET_TYPE` — Game 은 둘 다)과 겹치지 않�
 | 층 | 폴더 |
 |----|------|
 | 0 | `Utility` |
-| 1 | `Data` · `Match` · `Navigation` · `Spline` |
+| 1 | `Data` · `Match` · `Navigation` · `Online` · `Spline` |
 | 2 | `Framework` |
 | 3 | `Combat` · `Input` · `Inventory` · `Movement` · `Progression` · `World` |
 | 4 | `AI` · `Appearance` · `Camera` · `Interaction` · `Quest` · `UI` |

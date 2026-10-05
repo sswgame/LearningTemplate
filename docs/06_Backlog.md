@@ -396,6 +396,9 @@ cd build/Ninja-Debug/Bin
   RSAL/SSPL — "오픈소스 · 무료" 조건 밖). 캐시를 잃어도 영속 데이터는 맞아야 한다(거래 정본은 영속 트랜잭션). DB 호출은 전용 워커 + 연결 풀 + 비동기 완료.
   **서버는 윈도우 · 리눅스 둘 다 1 급**, 서버 전용 모듈은 클라이언트 Shipping 에 넣지 않는다(전용 서버 타깃 — Game · Client · Server).
   **순서**: 기반 + 드라이버 → Account · ServerDirectory → Economy → Trade · Mailbox · Admin · 관측 → Chat · Social → Leaderboard · Matchmaking · LiveOps.
+  **들어간 기반**(`GameFramework/Base/Online/`): `Store`(영속 계약 `IServiceStore` — 비동기 일 · 트랜잭션 · 조건부 쓰기 · 멱등 기록, 메모리 구현 · 계약 시험).
+  남은 기반: `ILocalStore` · 서비스 틀 · 관측, 드라이버 키트 `GF_SqlStore`(SQLite · 마이그레이션 적용기) · `GF_Server_SqlStore`(PostgreSQL · SqlServiceStore) · `GF_Server_CacheStore`(RESP) —
+  계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
 - **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는
   ChaCha20-Poly1305 · 패킷 번호를 nonce 로 · 재전송 방지 창) — Valve GNS · 언리얼 AESGCM PacketHandler 와 같은 모양. 세션 키는 로그인 키트가 발급한 토큰에 묶는다(UDP 접속 = 토큰 제시).
@@ -1698,6 +1701,9 @@ cd build/Ninja-Debug/Bin
 - **땅에 놓는 키트는 공유 땅을 빌린다**(`LandRegistry` · `LandBinding`) — 얻기는 사각 전부이거나 아무것도, 상태 바이트는 주인을 이름으로(등록 순서가 실행마다 달라도).
   RTS 는 막힌 남의 땅을 땅 격자에 칠하고 땅 리비전이 바뀌면 다시 칠한다 — 도로처럼 막히지 않은 남의 땅은 걸을 수 있지만 짓지는 못한다(`canPlaceBuilding`).
   막힌 땅으로는 짓기 거절이 이미 땅 격자에서 나서 땅 검사를 빼도 시험이 지지 않는다 — 땅 검사의 변이는 막히지 않은 땅(도로)으로 본다.
+- **서비스 저장소의 판은 저장소 전체에서 오르는 수다**(`Base/Online/Store`) — 키마다 1 부터 세면 지웠다 다시 만든 키가 옛 판을 다시 받아, 그 판을 들고 있던 늦은 쓰기가
+  새 레코드를 덮는다(ABA). `Unavailable` 은 "적용됐는지 모른다" 이므로 돈 · 아이템이 움직이는 커밋은 멱등 기록(`ServiceIdempotency`)을 **같은 트랜잭션**에 넣는다.
+  저장 왕복은 일(`IServiceStoreWork`) 하나 — `run` 은 저장소 스레드라 서비스 멤버를 만지지 않고 `SW_EXPECT_*` 도 부르지 않는다(계약 시험은 어긋난 단계 번호만 적는다), 결과는 `complete` 에서 적용한다.
 
 ### 3-12. 기각한 것 — 숫자와 함께 (다시 제안하지 말 것)
 

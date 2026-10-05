@@ -43,7 +43,7 @@ _kBaseFolderName = "Base"
 #
 # 층은 include 그래프에서 읽었다(언리얼 GameplayAbilities · AIModule 이 Engine GameFramework 위에 서는 모양):
 #   0  계산 도구 — 무엇도 모른다.
-#   1  데이터 틀 · 의존 없는 잎 시스템(판 규칙 · 격자 길 찾기 · 곡선).
+#   1  데이터 틀 · 의존 없는 잎 시스템(판 규칙 · 격자 길 찾기 · 곡선) · 온라인 기반 계약(`Online/` — 저장 · 캐시 · 보호 · 신원 · 감사 · 버스 · 예약 · 원격 설정, Core 만 본다).
 #   2  게임 모듈의 수명 · 배선 · 서비스 창구(Framework) — 데이터를 읽는다.
 #   3  장르 공통 시스템 — 전투 수치 · 입력 · 인벤토리 · 성장 · 이동 · 월드(씬 컴포넌트 포함).
 #   4  그 위의 시스템 — AI(길 찾기 · 월드 위) · 외형(인벤토리 위) · 카메라(1인칭 시점 입력 위) · 상호작용(입력 · 월드 위) · 퀘스트(인벤토리 위) ·
@@ -57,6 +57,7 @@ _kBaseTier: dict[str, int] = {
     "Data": 1,
     "Match": 1,
     "Navigation": 1,
+    "Online": 1,
     "Spline": 1,
     "Framework": 2,
     "Combat": 3,
