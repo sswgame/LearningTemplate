@@ -73,6 +73,7 @@ _kBaseTier: dict[str, int] = {
     "UI": 4,
     "Ability": 5,
     "Gimmick": 5,
+    "GameState": 5,
 }
 
 # 키트 묶음 안에서 서버 · 클라이언트 전용 키트를 담는 폴더 이름(모듈 `GF_Server_<키트>` · `GF_Client_<키트>`).

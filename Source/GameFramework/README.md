@@ -55,7 +55,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   칸 격자의 모양(`GridTopology` — 칸 번호 · 경계 · 이웃 순서 하나: 직교 넷 → 대각선 넷, 내비 · 원소 격자 · 키트가 같은 표)과 너비 우선 탐색 ·
   "한 칸 한 번" 표시 스크래치(`GridSearchScratch` — 세대 번호로 비워 호출마다 W × H 를 잡거나 지우지 않는다),
   시뮬레이션 상태 바이트의 공통 모양(`StateArchiveUtil` — 머리(표 · 버전) · 이름 ·
-  남은 바이트로 상한을 둔 개수 · 난수 · 걸음 타이머). 셋 이상의 키트에 같은 것이 따로 있던 것을 모았다(아래 "새 장르 키트").
+  남은 바이트로 상한을 둔 개수 · 난수 · 걸음 타이머 · 구간 — 표 · 판 · 길이). 셋 이상의 키트에 같은 것이 따로 있던 것을 모았다(아래 "새 장르 키트").
+- **GameState**: 키트 여럿을 한 게임에 섞을 때 나눠 쓰는 판 상태 — `GameStateComponent`(지갑 · 플래그 · 시계 · 퀘스트 일지 · 평판, 시계 알림을 틱마다 읽기 전용 목록으로).
+  키트 디렉터들과 **같은 오브젝트, 맨 앞**에 두고, 상태 바이트는 상태마다 구간(`StateArchiveUtil::writeSection`)이다. 키트는 `GameStateRefs`(`Framework/`)로 빌린다. 아래 "키트 여럿을 한 게임에" 절
   키트 시뮬레이션의 `writeState` · `readState`(`FarmField` · `CitySimulation` · `RtsWorld` · `ThemeParkSimulation` · `VoxelWorld` …)는 임시에 읽어 끝까지 맞을 때만
   바꾸고, 정의는 카탈로그 id 로, 유닛 참조는 세대 든 id 로 적으며, 다시 만들 수 있는 것(길 · 격자 발자국 · 흐름장)은 적지 않는다
 - **Input**: 커맨드 입력(`InputCommandParser` — 철권 표기 · `InputCommandBuffer` — 새로 넣기 · 누른 채 · 동시 버튼 · 틱 한도 · 좌우 뒤집기 · 상태 바이트, 결정적),
@@ -287,6 +289,19 @@ CMake 는 빌드 타깃(`SW_TARGET_TYPE` — Game 은 둘 다)과 겹치지 않�
 
 의존 · include 는 서버 전용 → 공유 ← 클라이언트 전용 방향만 된다 — `CheckModuleTargets` 가 이름 접두 · 의존 · include 를, `CheckGameFrameworkLayers` 가
 키트 사이 include 를 본다(서버 · 클라이언트 키트는 같은 기능의 공유 키트만 include 한다). DB · 캐시 드라이버와 그 서드파티는 `["Server"]` 모듈 안에만 둔다.
+## 키트 여럿을 한 게임에 — 소유권 · 순서 · 이름 공간
+
+키트는 게임 전체를 쥐지 않는다. 섞인 게임에서 키트 둘이 같은 돈 · 시간 · 퀘스트를 보려면 다음을 지킨다(조립 시험: `KitCompositionTest`, 시험 게임 `MeadowVillage`).
+
+- **공유 상태는 `GameStateComponent` 하나**(지갑 · 플래그 · 시계 · 일지 · 평판). 키트 디렉터들과 **같은 오브젝트에 맨 앞**으로 붙인다 — 한 오브젝트의 틱은 붙은 순서로
+  한 워커가 돈다(`TickRegistry`). 공유 상태를 만지는 디렉터를 다른 오브젝트에 두면 같은 그룹에서 동시에 돌아 데이터 경쟁이다.
+- **키트 시뮬레이션은 기반 상태를 빌린다**(`const GameStateRefs&` — 지갑 · 가방 · 플래그 · 시계 · 날씨 · 일지 · 평판 · 땅의 포인터 묶음). 제 것으로 들지 않는다 —
+  키트 하나만 쓰는 게임은 디렉터가 들고 빌려 준다.
+- **빌린 객체의 알림은 꺼내지 않는다**(`drainEvents` 는 게임 화면의 것). 키트는 상태를 본다(`QuestLog::getStatus`). 시계 알림은 `getClockEvents` 를 여럿이 읽는다.
+- **판을 여는 것은 그 오브젝트의 첫 디렉터**(`GameStateComponent::initialize`), 시작값 · 공유 상태를 건드리는 시작 배치는 `isFreshGame()` 일 때만.
+- **상태 바이트는 구간**(`StateArchiveUtil::writeSection` — 표 · 판 · 길이). 키트 상태마다 `kStateTag`(4 글자, 저장소에서 하나 — `CheckKitNamespaces`) · `kStateVersion` 을 키트 클래스가 든다.
+- **이름 공간** — 키트는 키 · 입력 액션 이름을 박지 않고 설정 칸으로 받는다, 키트가 읽는 게임 설정 칸은 `<키트>.` 접두(둘 다 `CheckKitNamespaces`),
+  넷 메시지는 키트 영역(`Kits/Network/NetKitMessageRange.h`) — 겹치는 처리기는 라우터가 받지 않는다(`NetMessageRouter::addHandler` 가 false).
 
 ## 무엇이 키트에 들어가고 무엇이 기반에 남는가
 
@@ -314,7 +329,7 @@ CMake 는 빌드 타깃(`SW_TARGET_TYPE` — Game 은 둘 다)과 겹치지 않�
 | 2 | `Framework` |
 | 3 | `Combat` · `Input` · `Inventory` · `Movement` · `Progression` · `World` |
 | 4 | `AI` · `Appearance` · `Camera` · `Interaction` · `Quest` · `UI` |
-| 5 | `Ability` · `Gimmick` |
+| 5 | `Ability` · `Gimmick` · `GameState` |
 
 위층이 알리는 길은 신호다 — 체력 시스템 → HP 바는 `Combat/HealthListenerComponent`, 상호작용 → 기믹 센서는 센서가 완료 수를 끌어 읽는다. 기반을 DLL 여럿으로
 나누지는 않는다(층은 폴더로만 지킨다).
