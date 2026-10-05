@@ -9,6 +9,9 @@ GameFramework 층 검사 — 기반 폴더의 층(DAG)과 키트의 의존 방�
      같은 층끼리도 서로 모른다 — 그래서 표가 곧 순환이 없다는 증거다. 표에 없는 폴더는 실패다(새 폴더는 층을 정하고 넣는다).
   2) 기반은 키트(`GameFramework/Kits/`)를 include 하지 않는다 — 키트끼리 나눠 쓰는 것은 기반으로 내린다.
   3) 키트(`Kits/<묶음>/<키트>/`)는 다른 키트를 include 하지 않는다. 묶음이 함께 쓰는 헤더(`Kits/<묶음>/x.h` — 키트 폴더 밖)만 된다.
+     서버 · 클라이언트 전용 키트(`Kits/<묶음>/Server/<키트>/` · `Kits/<묶음>/Client/<키트>/` — 모듈 `GF_Server_<키트>` · `GF_Client_<키트>`)도
+     키트 하나다. 예외는 하나 — 같은 기능의 공유 키트(`Kits/<묶음>/<키트>/`)는 include 해도 된다(서버 → 공유 ← 클라이언트).
+     서버 키트끼리 · 다른 기능의 키트는 여전히 안 된다.
   4) GameFramework 의 어느 파일도 `Games/` · `Editor/` 를 include 하지 않는다.
 
 키트 → 기반은 어느 층이든 된다(키트는 기반 위의 층이다). 기반을 DLL 여럿으로 나누지는 않는다 — 층은 폴더로만 지킨다
@@ -72,6 +75,8 @@ _kBaseTier: dict[str, int] = {
     "Gimmick": 5,
 }
 
+# 키트 묶음 안에서 서버 · 클라이언트 전용 키트를 담는 폴더 이름(모듈 `GF_Server_<키트>` · `GF_Client_<키트>`).
+_kSideFolderNames: tuple[str, ...] = ("Server", "Client")
 # GameFramework 아래 어디서 include 해도 금지인 경로 앞부분.
 _kForbiddenPrefixes: tuple[str, ...] = ("Games/", "Editor/")
 
@@ -90,11 +95,22 @@ def classifyInternal(relativePath: str) -> tuple[str, str]:
         return "base", parts[1]
     if parts[0] != _kKitsFolderName:
         return "stray", parts[0]
+    # 서버 · 클라이언트 전용 키트는 한 단 더 깊다 — `Kits/<묶음>/Server/<키트>/…` 가 키트 `<묶음>/Server/<키트>` 하나다.
+    if len(parts) >= 5 and parts[2] in _kSideFolderNames:
+        return "kit", f"{parts[1]}/{parts[2]}/{parts[3]}"
+    if len(parts) == 4 and parts[2] in _kSideFolderNames:
+        return "kitGroup", parts[1]
     if len(parts) >= 4:
         return "kit", f"{parts[1]}/{parts[2]}"
     if len(parts) == 3:
         return "kitGroup", parts[1]
     return "root", ""
+
+
+def isSameFeatureSharedKitInternal(sourceKit: str, destKit: str) -> bool:
+    """서버 · 클라이언트 전용 키트(`<묶음>/Server/<키트>`)가 같은 기능의 공유 키트(`<묶음>/<키트>`)를 보는가."""
+    sourceParts = sourceKit.split("/")
+    return len(sourceParts) == 3 and sourceParts[1] in _kSideFolderNames and destKit == f"{sourceParts[0]}/{sourceParts[2]}"
 
 
 def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
@@ -134,7 +150,7 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
                 listViolation.append(
                     f'{relativeFilePath}: #include "{includePath}"  (층 {sourceName}(L{sourceTier}) -> {destName}(L{destTier}) — 아래 층만 볼 수 있다)')
             continue
-        if sourceKind == "kit" and destKind == "kit" and destName != sourceName:
+        if sourceKind == "kit" and destKind == "kit" and destName != sourceName and isSameFeatureSharedKitInternal(sourceName, destName) is False:
             listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (키트 {sourceName} -> 다른 키트 {destName})')
             continue
         if sourceKind == "kit" and destKind == "kitGroup" and sourceName.split("/")[0] != destName:
@@ -195,6 +211,18 @@ class CheckGameFrameworkLayersGate(LintGate):
             "name": "키트가 다른 키트를 include",
             "files": {
                 "Source/GameFramework/Kits/Rpg/ClassicJrpg/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Rpg/MonsterCollector/MonsterBattle.h"\n',
+            },
+        },
+        {
+            "name": "서버 키트가 다른 서버 키트를 include",
+            "files": {
+                "Source/GameFramework/Kits/Online/Server/Trade/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Online/Server/Account/AccountService.h"\n',
+            },
+        },
+        {
+            "name": "서버 키트가 다른 기능의 공유 키트를 include",
+            "files": {
+                "Source/GameFramework/Kits/Online/Server/Trade/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Online/Account/AccountMessages.h"\n',
             },
         },
         {
