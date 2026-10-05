@@ -257,6 +257,9 @@ namespace sw
 
         PROPERTY()
         bool _bFullscreen{ false }; ///< 전체 화면
+
+        PROPERTY( Transient )
+        bool _bSoftwareAdapter{ false }; ///< 소프트웨어 래스터라이저로 띄운다(DX12 · DX11 WARP, Vulkan CPU 디바이스) — CI 러너와 같은 조건을 재현하는 진단 스위치
     };
 } // namespace sw
 

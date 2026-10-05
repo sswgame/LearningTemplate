@@ -451,8 +451,9 @@ cd build/Ninja-Debug/Bin
   스택 파일(`Bin/Saved/Logs/crash_<세션>.stack.txt` — Shipping 도 이제 PDB 가 있어 함수 이름), CI 는 그 파일을 아티팩트로 · 스택을 주석으로 올린다(`CiFailureReport.py`).
 - **WSL lavapipe 의 첫 `vkAcquireNextImageKHR` 가 가끔 `VK_ERROR_SURFACE_LOST_KHR`** 로 진다(`AppTest_HostOnly`, 43 회 중 3 회, 환경 탓으로 판단 — 미확정).
   다시 보이면 기준선과 번갈아 돌려 가른다. App 로그는 `build/WSL-Debug/Bin/Saved/Logs`.
-- **CI Windows 러너(WARP)에서 픽셀 시험이 지던 원인은 판정하지 않았다**(`RenderPassGpuTest` 를 host 스위트로 빼서 우회). 실패 값이 `좌 0, 우 0` 이면 WARP 가
-  컴퓨트 컬링 · 인디렉트를 못 하는 것이니 초기화에서 끊고, 어중간하면 허용 오차를 본다.
+- **CI Windows 러너(WARP)의 픽셀 시험 실패**(`RenderPassGpuTest` 를 host 스위트로 빼서 우회) — 이 PC 에서 `SW_RHI_SOFTWARE_ADAPTER=1`(`-gv_rhiSoftwareAdapter=1`)로
+  같은 래스터라이저를 고를 수 있다. 2026-10-06 이 PC 의 WARP(DX12 · DX11)로 `RenderPassGpuTest.*` 71 개 픽셀 시험이 모두 통과했다(Vulkan 은 CPU 디바이스가
+  없어 빠지고 GL 은 하드웨어) — WARP 자체는 컴퓨트 컬링 · 인디렉트를 한다. 러너 쪽(WARP 판 · 창 없는 세션)을 다음 CI 실패의 주석으로 가른다.
 - **리눅스 전용 경로는 이 PC 에서 돌려 보지 않았다** — `parseWriteTime`, POSIX `pipe2` · `close_range` · `launchDetached`, `alarm` 시한, X11 입력(좌표 · `XkbSetDetectableAutoRepeat`),
   리눅스 LTO 를 진짜 `llvm-ar` 로 끝까지 링크하기, `verifyModuleBindings` 의 dlsym 도장 갈래(`727b872c` 뒤) · yad 파일 대화상자의 두 번째 `--file-filter`(man 으로만 확인).
   리눅스 CI 가 초록인지 · IPO 가 실제로 켜졌는지를 본다.
@@ -699,6 +700,8 @@ cd build/Ninja-Debug/Bin
   → vcpkg.json 되돌림. 스탬프가 다를 때만 dry-run 이 돈다(약 20 초).
 - **sccache 서버 포트(4226)를 Windows 와 WSL 이 나눠 쓴다.** 동시에 빌드하면 모든 컴파일이 `failed to fill whole buffer` 로 깨진다(코드 오류처럼 보인다). WSL 은
   `export SCCACHE_SERVER_PORT=4227`, 아니면 상대 서버를 `sccache --stop-server`.
+- **소프트웨어 어댑터**: `-gv_rhiSoftwareAdapter=1` 또는 환경 변수 `SW_RHI_SOFTWARE_ADAPTER=1`(ctest 가 인자 없이) — DX12 · DX11 WARP, Vulkan 은 CPU 디바이스
+  (lavapipe · SwiftShader 가 설치돼 있어야 한다 — 없으면 경고와 함께 그 백엔드가 안 선다), GL 은 무시. 실제로 선 어댑터는 `IRHIDevice::isRunningOnSoftwareAdapter`.
 - **WSL 에는 GPU 가 없다**(Vulkan 은 `llvmpipe` 하나, GL 은 `ARB_gl_spirv` 가 없어 빠진다) — API 오용은 잡지만 드라이버 거동은 못 본다. `libwayland-dev` 가 필요하다.
   **gdb 가 없다** — `/proc/<pid>/task/*/stat` 의 utime · stime 을 두 번 떠 사용자/커널을 가르고, SIGUSR1 처리기(`backtrace_symbols_fd`)를 임시로 넣어 `tgkill` 로 스레드마다
   스택을 뜬다. 리눅스 파일 하나는 `clang++ -fsyntax-only -DSW_PLATFORM_LINUX … -include Source/Core/pch.h <file>` 로 검사할 수 있다.

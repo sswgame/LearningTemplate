@@ -2,6 +2,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/String/StringUtil.h"
@@ -5904,6 +5905,40 @@ SW_TEST_CASE( RenderPassGpuTest, GlContextBindWaitsForAShortHolder )
     SW_EXPECT_TRUE_MSG( bBound, "bindGraphicsContext gave up while another thread held the context for 30 ms" );
     if ( bBound == false )
         (void)pDevice->bindGraphicsContext(); // 디바이스를 내리는 쪽(이 스레드)이 컨텍스트를 쥐어야 한다
+}
+
+/**
+ * @brief [RenderPassGpuTest] 소프트웨어 어댑터 스위치(`gv_rhiSoftwareAdapter`)로 DX12 · DX11 이 WARP 로 선다(Windows) — CI 러너 조건을 이 PC 에서 만든다
+ * @details 디바이스가 적는 "실제로 선 어댑터가 소프트웨어인가" 를 본다(요청이 아니라 결과). 스위치를 끄면 하드웨어 어댑터로 돌아와야 한다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, SoftwareAdapterSwitchStartsWarp )
+{
+#if defined( SW_PLATFORM_WINDOWS )
+    sw::GlobalVariableInfo* pSwitch = sw::engine::getGlobalVariableManager().findVariable( "gv_rhiSoftwareAdapter" );
+    SW_ASSERT_TRUE( pSwitch != nullptr );
+    for ( const sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11 } )
+    {
+        SW_EXPECT_TRUE( pSwitch->setValueAsInt( 1 ) );
+        bool bSoftware = false;
+        bool bReady    = false;
+        {
+            test::RHITestDevice device( backend );
+            bReady    = device.isReady();
+            bSoftware = bReady && device->isRunningOnSoftwareAdapter();
+        }
+        SW_EXPECT_TRUE( pSwitch->setValueAsInt( 0 ) );
+        SW_EXPECT_TRUE_MSG( bReady, "the WARP device did not start" );
+        SW_EXPECT_TRUE_MSG( bSoftware, "gv_rhiSoftwareAdapter=1 did not put the device on the software adapter" );
+        // 환경 변수(SW_RHI_SOFTWARE_ADAPTER=1)로 시험 전체를 WARP 로 돌리는 실행이면 "끄면 하드웨어" 는 볼 수 없다.
+        const utf8*         pEnv     = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
+        const bool          bEnvWarp = pEnv != nullptr && sw::StringUtil::equals( pEnv, "1" );
+        test::RHITestDevice hardware( backend );
+        if ( hardware.isReady() && bEnvWarp == false )
+            SW_EXPECT_FALSE_MSG( hardware->isRunningOnSoftwareAdapter(), "the device stayed on the software adapter after the switch went off" );
+    }
+#else
+    SW_TEST_SKIP( "WARP is a Windows adapter" );
+#endif
 }
 
 /**

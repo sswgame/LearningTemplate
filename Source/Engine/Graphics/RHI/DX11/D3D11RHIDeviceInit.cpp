@@ -71,18 +71,20 @@ namespace sw
         };
 
         Microsoft::WRL::ComPtr<IDXGISwapChain> createdSwapChain;
-        HRESULT                                hr = D3D11CreateDeviceAndSwapChain( nullptr,
-                                                                                   D3D_DRIVER_TYPE_HARDWARE,
-                                                                                   nullptr,
-                                                                                   createDeviceFlags,
-                                                                                   arrFeatureLevel,
-                                                                                   SW_COUNT_OF( arrFeatureLevel ),
-                                                                                   D3D11_SDK_VERSION,
-                                                                                   &swapChainDesc,
-                                                                                   createdSwapChain.GetAddressOf(),
-                                                                                   _device.GetAddressOf(),
-                                                                                   &featureLevel,
-                                                                                   _deviceContext.GetAddressOf() );
+        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter).
+        const D3D_DRIVER_TYPE driverType = desc._bSoftwareAdapter ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_HARDWARE;
+        HRESULT               hr         = D3D11CreateDeviceAndSwapChain( nullptr,
+                                                                          driverType,
+                                                                          nullptr,
+                                                                          createDeviceFlags,
+                                                                          arrFeatureLevel,
+                                                                          SW_COUNT_OF( arrFeatureLevel ),
+                                                                          D3D11_SDK_VERSION,
+                                                                          &swapChainDesc,
+                                                                          createdSwapChain.GetAddressOf(),
+                                                                          _device.GetAddressOf(),
+                                                                          &featureLevel,
+                                                                          _deviceContext.GetAddressOf() );
 
         if ( FAILED( hr ) )
         {
@@ -95,7 +97,14 @@ namespace sw
             Microsoft::WRL::ComPtr<IDXGIDevice>  dxgiDevice;
             Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
             if ( SUCCEEDED( _device.As( &dxgiDevice ) ) && SUCCEEDED( dxgiDevice->GetAdapter( adapter.GetAddressOf() ) ) )
+            {
                 adapter.As( &_memoryAdapter );
+                // 실제로 선 어댑터가 소프트웨어(WARP)인지 — 요청이 아니라 결과를 적는다.
+                Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter1;
+                DXGI_ADAPTER_DESC1                    adapterDesc{};
+                _bSoftwareAdapter = SUCCEEDED( adapter.As( &adapter1 ) ) && SUCCEEDED( adapter1->GetDesc1( &adapterDesc ) ) &&
+                                    ( adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE ) != 0;
+            }
         }
 
         // D3D11 은 디바이스와 스왑체인이 한 호출에서 함께 나온다. 만들어진 것을 넘겨 소유시킨다.

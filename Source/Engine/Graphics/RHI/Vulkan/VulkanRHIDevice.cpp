@@ -177,7 +177,7 @@ namespace sw
             if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _linuxWsi ) == false )
                 return false;
 
-            if ( pickPhysicalDevice() == false )
+            if ( pickPhysicalDevice( desc._bSoftwareAdapter ) == false )
                 return false;
 
             if ( selectDepthFormat() == false )

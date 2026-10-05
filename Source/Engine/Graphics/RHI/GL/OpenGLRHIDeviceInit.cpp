@@ -52,6 +52,8 @@ namespace sw
         _width  = desc._width;
         _height = desc._height;
         _pHWnd  = desc._pWindowHandle;
+        if ( desc._bSoftwareAdapter )
+            SW_LOG_WARNING( "gv_rhiSoftwareAdapter is ignored on OpenGL (the driver decides)" );
         // GL 에는 자원의 할당 크기를 물을 API 가 없다. 장부는 서술(버퍼 크기 · 텍스처 서술)로 계산한 논리 크기다.
         getMemoryLedger().setSizeBasis( RHIMemorySizeBasis::Logical );
 

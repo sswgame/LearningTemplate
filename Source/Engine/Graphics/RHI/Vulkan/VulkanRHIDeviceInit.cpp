@@ -200,7 +200,7 @@ namespace sw
         CreateDebugUtilsMessengerEXT( _instance, &createInfo, nullptr, &_debugMessenger );
     }
 
-    bool VulkanRHIDevice::pickPhysicalDevice()
+    bool VulkanRHIDevice::pickPhysicalDevice( bool bSoftwareAdapter )
     {
         uint32 deviceCount{ 0 };
         vkEnumeratePhysicalDevices( _instance, &deviceCount, nullptr );
@@ -222,6 +222,9 @@ namespace sw
                                 VulkanRHIApiVersion::kRequiredMinor );
                 continue;
             }
+            // 소프트웨어 어댑터를 요청했으면(gv_rhiSoftwareAdapter) CPU 디바이스(lavapipe · SwiftShader)만 후보다.
+            if ( bSoftwareAdapter && candidateProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_CPU )
+                continue;
 
             uint32 queueFamilyCount{ 0 };
             vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, nullptr );
@@ -261,8 +264,15 @@ namespace sw
                           properties.driverVersion, VK_VERSION_MAJOR( properties.apiVersion ),
                           VK_VERSION_MINOR( properties.apiVersion ), VK_VERSION_PATCH( properties.apiVersion ) );
             CrashHandler::setContextValue( "GPU", arrGpu );
+            _bSoftwareAdapter = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
         }
-        if ( _physicalDevice == nullptr )
+        if ( _physicalDevice == nullptr && bSoftwareAdapter )
+        {
+            // 환경 탓이다(CPU 구현이 설치되지 않았다) — 결함으로 알리지 않는다.
+            SW_LOG_WARNING( "No CPU Vulkan device (lavapipe / SwiftShader) for gv_rhiSoftwareAdapter - Vulkan does not start" );
+            _initResult = RHIInitResult::DriverUnsupported;
+        }
+        else if ( _physicalDevice == nullptr )
             SW_LOG_ERROR( "No Vulkan %#.%# device with a graphics queue that can present to this surface", VulkanRHIApiVersion::kRequiredMajor,
                           VulkanRHIApiVersion::kRequiredMinor );
         return _physicalDevice != nullptr;

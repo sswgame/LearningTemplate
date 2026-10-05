@@ -302,9 +302,9 @@ namespace sw
          */
         void createDebugMessenger();
         /**
-         * @brief 물리 디바이스를 고릅니다.
+         * @brief 물리 디바이스를 고릅니다. @p bSoftwareAdapter 면 CPU 디바이스(lavapipe · SwiftShader)만 후보로 둡니다.
          */
-        bool pickPhysicalDevice();
+        bool pickPhysicalDevice( bool bSoftwareAdapter );
         /**
          * @brief 논리 디바이스와 큐를 만듭니다.
          */
