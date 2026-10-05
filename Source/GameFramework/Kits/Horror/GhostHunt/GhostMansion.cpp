@@ -4,10 +4,13 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
 #include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
@@ -337,5 +340,70 @@ namespace sw
         event._room  = room;
         event._count = count;
         _eventBuffer.push( event );
+    }
+
+    void GhostMansion::writeState( Archive& outArchive ) const
+    {
+        _encounter.writeState( outArchive );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << static_cast<uint32>( _listBoo.size() );
+        for ( const GhostBooRuntime& boo : _listBoo )
+        {
+            StateArchiveUtil::writeName( outArchive, boo._room );
+            StateArchiveUtil::writeName( outArchive, boo._furniture );
+            outArchive << boo._hp;
+            StateArchiveUtil::writeCountdown( outArchive, boo._timer );
+            outArchive << static_cast<uint8>( boo._state );
+        }
+        outArchive << static_cast<uint32>( _listSearched.size() );
+        for ( const uint8 bSearched : _listSearched )
+        {
+            outArchive << bSearched;
+        }
+        StateArchiveUtil::writeName( outArchive, _currentRoom );
+        outArchive << _seed;
+    }
+
+    bool GhostMansion::readState( Archive& archive )
+    {
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 빌린 포인터는 사본이 그대로 든다.
+        GhostMansion restored = *this;
+        uint32       booCount = 0;
+        // 부마다 이름 둘(8) + 체력 · 시간(8) + 상태(1) 이상
+        const bool bHeadRead =
+            restored._encounter.readState( archive ) && StateArchiveUtil::readRandom( archive, restored._random ) && StateArchiveUtil::readCount( archive, 17, booCount );
+        if ( bHeadRead == false || booCount != _listBoo.size() )
+            return false;
+        for ( GhostBooRuntime& boo : restored._listBoo )
+        {
+            uint8      state     = 0;
+            const bool bNameRead = StateArchiveUtil::readName( archive, boo._room ) && StateArchiveUtil::readName( archive, boo._furniture );
+            if ( bNameRead == false )
+                return false;
+            archive >> boo._hp;
+            const bool bTimerRead = StateArchiveUtil::readCountdown( archive, boo._timer );
+            archive >> state;
+            if ( bTimerRead == false || archive.isError() || state > static_cast<uint8>( GhostBooState::Caught ) )
+                return false;
+            boo._state = static_cast<GhostBooState>( state );
+        }
+        uint32 searchedCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 1, searchedCount ) == false || searchedCount != _listSearched.size() )
+            return false;
+        for ( uint8& bSearched : restored._listSearched )
+        {
+            archive >> bSearched;
+            if ( bSearched > SW_TRUE )
+                archive.setError();
+        }
+        if ( StateArchiveUtil::readName( archive, restored._currentRoom ) == false )
+            return false;
+        archive >> restored._seed;
+        if ( archive.isError() )
+            return false;
+        restored._eventBuffer.clear();
+        restored._listGhostEvent.clear();
+        *this = std::move( restored );
+        return true;
     }
 } // namespace sw

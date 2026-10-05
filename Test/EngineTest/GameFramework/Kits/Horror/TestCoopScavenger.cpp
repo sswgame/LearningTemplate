@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/BitStream.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/AI/SpawnDirector.h"
 #include "GameFramework/Base/Framework/GameStateRefs.h"
@@ -116,6 +116,17 @@ namespace
             return refs;
         }
 
+        /** @brief 이미 연 공유 상태를 다시 열지 않고 빌려 줍니다(되살린 원정이 같은 시계 · 날씨를 본다). */
+        GameStateRefs borrowRefs()
+        {
+            GameStateRefs refs;
+            refs._pWallet  = &_wallet;
+            refs._pClock   = &_clock;
+            refs._pWeather = &_weather;
+            refs._pFlags   = &_flags;
+            return refs;
+        }
+
         ScavengerExpeditionData makeData() const
         {
             ScavengerExpeditionData data;
@@ -214,10 +225,10 @@ SW_TEST_CASE( CoopScavengerTest, QuotaFormulaBuyRateAndDeadline )
     SW_EXPECT_TRUE( quota.getQuota() >= 130 + 79 && quota.getQuota() <= 130 + 133 );
 
     // 직렬화 — 받은 쪽이 같은 할당량을 본다.
-    BitWriter writer;
+    Archive writer;
     quota.writeState( writer );
     ScavengerQuota copy;
-    BitReader      reader( writer.getBytes().data(), writer.getByteCount() );
+    Archive        reader( writer.getData(), writer.getSize() );
     SW_ASSERT_TRUE( copy.readState( reader ) );
     SW_EXPECT_EQUAL( quota.getQuota(), copy.getQuota() );
     SW_EXPECT_EQUAL( 1, copy.getCycle() );
@@ -587,4 +598,75 @@ SW_TEST_CASE( CoopScavengerTest, CompanySellingTerminalAndGameOver )
     SW_EXPECT_TRUE( expedition.getPhase() == ScavengerPhase::GameOver );
     SW_EXPECT_TRUE( expedition.land() == ScavengerActionResult::WrongPhase );
     SW_EXPECT_TRUE( expedition.buyFromTerminal( "flashlight", 1 ) == ShopResult::UnknownShop );
+}
+
+/**
+ * @brief [CoopScavengerTest] 상태 바이트로 되살린 원정이 같은 원정을 잇는다 — 사람 · 우주선 고철 · 시설(바닥 · 잠금 해제 · 다시 지은 그래프) · 위협 감독 · 할당량이
+ *        같은 바이트이고, 같은 걸음을 둘 다 더 돌려도 같은 바이트다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( CoopScavengerTest, StateRoundTripContinuesTheSameExpedition )
+{
+    ScavengerTestData data;
+    SW_ASSERT_TRUE( data.initialize() );
+    ScavengerExpedition expedition;
+    expedition.initialize( data.makeData(), data.makeRefs(), data.openShipStorage(), 3u, 2 );
+    SW_ASSERT_TRUE( expedition.land() == ScavengerActionResult::Ok );
+    SW_ASSERT_TRUE( fetchOneScrap( expedition, 0 ) > 0 );
+    SW_EXPECT_TRUE( expedition.movePlayer( 1, "outside" ) == ScavengerActionResult::Ok );
+    SW_EXPECT_TRUE( expedition.movePlayer( 1, "entrance" ) == ScavengerActionResult::Ok );
+    // 잠긴 문이 있으면 하나를 연다 — 빌린 플래그에 둔 것을 시설이 기억한다.
+    for ( const AreaLink& link : expedition.getFacility().getGraph().getLinks() )
+    {
+        if ( link._requires.empty() == false )
+        {
+            SW_EXPECT_TRUE( expedition.unlockDoor( link._to ) );
+            break;
+        }
+    }
+    vector<ScavengerEvent> listEvent;
+    runScavenger( expedition, 20.0f, listEvent );
+
+    Archive written;
+    expedition.writeState( written );
+    ScavengerExpedition restored;
+    restored.initialize( data.makeData(), data.borrowRefs(), data._shipStorage, 77u, 2 );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    Archive rewritten;
+    restored.writeState( rewritten );
+    vector<uint8> originalBytes;
+    vector<uint8> restoredBytes;
+    written.writeData( originalBytes );
+    rewritten.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+    SW_EXPECT_TRUE( restored.getPhase() == ScavengerPhase::Landed );
+    SW_EXPECT_EQUAL( expedition.computeShipValue(), restored.computeShipValue() );
+    SW_EXPECT_EQUAL( expedition.getFacility().computeGroundValue(), restored.getFacility().computeGroundValue() );
+    SW_EXPECT_EQUAL( static_cast<int32>( expedition.getFacility().getGraph().getLinks().size() ),
+                     static_cast<int32>( restored.getFacility().getGraph().getLinks().size() ) );
+    SW_EXPECT_NEAR_EQUAL( expedition.getHoursOnMoon(), restored.getHoursOnMoon(), 0.0001f );
+
+    // 같은 걸음을 둘 다 — 1 이 바깥으로 나가고(다시 지은 그래프로 걷는다) 시간이 흐른다. 위협이 같은 때에 같은 것으로 나온다.
+    SW_EXPECT_TRUE( expedition.movePlayer( 1, "outside" ) == ScavengerActionResult::Ok );
+    SW_EXPECT_TRUE( restored.movePlayer( 1, "outside" ) == ScavengerActionResult::Ok );
+    vector<ScavengerEvent> listOriginal;
+    vector<ScavengerEvent> listRestored;
+    runScavenger( expedition, 30.0f, listOriginal );
+    runScavenger( restored, 30.0f, listRestored );
+    SW_EXPECT_EQUAL( static_cast<int32>( listOriginal.size() ), static_cast<int32>( listRestored.size() ) );
+    Archive afterOriginal;
+    Archive afterRestored;
+    expedition.writeState( afterOriginal );
+    restored.writeState( afterRestored );
+    afterOriginal.writeData( originalBytes );
+    afterRestored.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+
+    ScavengerExpedition truncated;
+    truncated.initialize( data.makeData(), data.borrowRefs(), data._shipStorage, 77u, 2 );
+    Archive cut( written.getData(), written.getSize() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_TRUE( truncated.getPhase() == ScavengerPhase::InOrbit );
+    SW_EXPECT_TRUE( truncated.getShipScrap().empty() );
 }

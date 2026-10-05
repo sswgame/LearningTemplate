@@ -1,6 +1,8 @@
 // 유령 사냥 키트(루이지 맨션 장르) — 손전등 원뿔 · 스트로브, 유령 상태 순환 · 기절 시간, 흡입 줄다리기 · 서지 · 강화 단계, 가구 보물의 결정성, 방 불 · 열쇠 문, 부의 탈출.
 #include "pch.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/ItemBag.h"
@@ -489,4 +491,67 @@ SW_TEST_CASE( GhostHuntTest, BooHidesAndEscapes )
     SW_EXPECT_FALSE( mansion.damageBoo( "booA", 5.0f ) );
     // 부가 떠난 서랍은 이제 보물을 준다.
     SW_EXPECT_TRUE( mansion.searchFurniture( "dresser", GhostSearchMode::Shake, loot ) == GhostSearchResult::Found );
+}
+
+/**
+ * @brief [GhostHuntTest] 상태 바이트로 되살린 저택이 같은 판을 잇는다 — 싸움 중인 유령 · 들킨 부 · 뒤진 가구 · 지금 방이 같은 바이트이고,
+ *        같은 걸음을 둘 다 더 돌려도(유령 순환 · 부의 탈출 난수) 같은 바이트다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( GhostHuntTest, StateRoundTripContinuesTheSameMansion )
+{
+    GhostMansionScene scene;
+    SW_ASSERT_TRUE( scene.initialize( 3 ) );
+    GhostMansion& mansion = scene._mansion;
+    ItemBag       loot;
+    (void)mansion.enterRoom( "hall" );
+    SW_EXPECT_TRUE( mansion.searchFurniture( "dresser", GhostSearchMode::Shake, loot ) == GhostSearchResult::BooFound );
+    SW_EXPECT_EQUAL( 2, mansion.enterRoom( "foyer" ) );
+    SW_EXPECT_TRUE( mansion.searchFurniture( "curtain", GhostSearchMode::Vacuum, loot ) == GhostSearchResult::Found ); // 부를 찾은 가구는 뒤진 것으로 치지 않는다
+    scene.run( 1.0f );
+
+    GameStateRefs refs;
+    refs._pFlags     = &scene._flags;
+    refs._pInventory = &scene._bag;
+    refs._pWallet    = &scene._wallet;
+    Archive written;
+    mansion.writeState( written );
+    GhostMansion restored;
+    restored.initialize( &scene._catalog, &scene._loot, &scene._areaGraph, refs, 99 );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    Archive rewritten;
+    restored.writeState( rewritten );
+    vector<uint8> originalBytes;
+    vector<uint8> restoredBytes;
+    written.writeData( originalBytes );
+    rewritten.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+    SW_EXPECT_TRUE( restored.getCurrentRoom() == hashed_string( "foyer" ) );
+    SW_EXPECT_TRUE( restored.isSearched( "curtain" ) );
+    SW_EXPECT_TRUE( restored.findBoo( "booA" )->_state == GhostBooState::Revealed );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( restored.getEncounter().getGhosts().size() ) );
+
+    // 같은 걸음을 둘 다 — 유령이 순환하고 부가 시간이 다 되어 같은 곳으로 달아난다.
+    for ( int32 tick = 0; tick < 45; ++tick )
+    {
+        mansion.update( 0.1f );
+        restored.update( 0.1f );
+    }
+    SW_EXPECT_TRUE( restored.findBoo( "booA" )->_state == GhostBooState::Hiding );
+    SW_EXPECT_TRUE( mansion.findBoo( "booA" )->_room == restored.findBoo( "booA" )->_room );
+    Archive afterOriginal;
+    Archive afterRestored;
+    mansion.writeState( afterOriginal );
+    restored.writeState( afterRestored );
+    afterOriginal.writeData( originalBytes );
+    afterRestored.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+
+    GhostMansion truncated;
+    truncated.initialize( &scene._catalog, &scene._loot, &scene._areaGraph, refs, 99 );
+    Archive cut( written.getData(), written.getSize() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_TRUE( truncated.getCurrentRoom().empty() );
+    SW_EXPECT_FALSE( truncated.isSearched( "curtain" ) );
 }

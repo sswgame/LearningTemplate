@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 전투에 나선 조사자 한 명입니다. */
     struct HorrorInvestigator
     {
@@ -61,7 +63,9 @@ namespace sw
     class SW_GF_API HorrorEncounter
     {
     public:
-        static constexpr int32 kMonsterActorId = 1000000; ///< 괴물의 차례 번호(조사자 번호와 겹치지 않게)
+        static constexpr int32  kMonsterActorId = 1000000;     ///< 괴물의 차례 번호(조사자 번호와 겹치지 않게)
+        static constexpr uint32 kStateTag       = 0x434E4548u; ///< 'HENC'
+        static constexpr uint32 kStateVersion   = 1;
 
         HorrorEncounter();
 
@@ -69,6 +73,14 @@ namespace sw
         void initialize( const HorrorMonsterDef& monster, const vector<HorrorInvestigator>& listInvestigator, uint32 seed, int32 successFace = 5 );
         /** @brief 다음 차례를 치릅니다. 이미 끝났으면 `_actorId` 가 −1 인 빈 결과입니다. */
         HorrorTurnResult playNextTurn();
+
+        /**
+         * @brief 괴물 id · 조사자(속도 · 번호 · 체력 · 정신력 · 의지 · 힘 · 빠짐) · 차례(`TurnOrder`) · 난수 · 남은 강인함 · 턴 수 · 결과를 씁니다.
+         *        괴물 정의와 성공 눈은 `initialize` 의 것이라 싣지 않습니다(괴물 id 는 맞는지 보려고 싣는다).
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 같은 괴물로 `initialize` 한 뒤에 부릅니다. 깨졌거나 괴물이 다르면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         HorrorEncounterState              getState() const { return _state; }
         int32                             getMonsterToughness() const { return _monsterToughness; }

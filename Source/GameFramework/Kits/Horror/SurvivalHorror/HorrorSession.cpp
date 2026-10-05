@@ -4,10 +4,15 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Base/World/GameFlags.h"
+
+#include <algorithm>
 
 namespace sw
 {
@@ -33,6 +38,71 @@ namespace sw
                 settings._regenDelay     = 0.0f;
                 settings._drainPerSecond = rules._batteryDrain;
                 return settings;
+            }
+
+            /** @brief 이름 집합을 이름 순으로 씁니다 — 같은 집합이면 같은 바이트입니다. */
+            static void writeSortedSet( Archive& outArchive, const unordered_set<hashed_string>& uniqueName )
+            {
+                vector<hashed_string> listName( uniqueName.begin(), uniqueName.end() );
+                std::sort( listName.begin(), listName.end(), HashedStringLexicalLess{} );
+                outArchive << static_cast<uint32>( listName.size() );
+                for ( const hashed_string& name : listName )
+                {
+                    StateArchiveUtil::writeName( outArchive, name );
+                }
+            }
+
+            [[nodiscard]] static bool readSet( Archive& archive, unordered_set<hashed_string>& outUniqueName )
+            {
+                uint32 count = 0;
+                if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+                    return false;
+                outUniqueName.clear();
+                for ( uint32 index = 0; index < count; ++index )
+                {
+                    hashed_string name;
+                    if ( StateArchiveUtil::readName( archive, name ) == false || outUniqueName.insert( name ).second == false )
+                        return false;
+                }
+                return true;
+            }
+
+            /** @brief 이름 → 수 맵을 이름 순으로 씁니다 — 같은 맵이면 같은 바이트입니다. */
+            static void writeSortedMap( Archive& outArchive, const unordered_map<hashed_string, int32>& mapNameToCount )
+            {
+                vector<hashed_string> listName;
+                listName.reserve( mapNameToCount.size() );
+                for ( const auto& [name, count] : mapNameToCount )
+                {
+                    listName.push_back( name );
+                }
+                std::sort( listName.begin(), listName.end(), HashedStringLexicalLess{} );
+                outArchive << static_cast<uint32>( listName.size() );
+                for ( const hashed_string& name : listName )
+                {
+                    StateArchiveUtil::writeName( outArchive, name );
+                    outArchive << mapNameToCount.find( name )->second;
+                }
+            }
+
+            [[nodiscard]] static bool readMap( Archive& archive, unordered_map<hashed_string, int32>& outMapNameToCount )
+            {
+                uint32 count = 0;
+                // 이름(4) + 수(4)
+                if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+                    return false;
+                outMapNameToCount.clear();
+                for ( uint32 index = 0; index < count; ++index )
+                {
+                    hashed_string name;
+                    int32         value = 0;
+                    if ( StateArchiveUtil::readName( archive, name ) == false )
+                        return false;
+                    archive >> value;
+                    if ( archive.isError() || outMapNameToCount.emplace( name, value ).second == false )
+                        return false;
+                }
+                return true;
             }
         };
     } // namespace
@@ -456,6 +526,72 @@ namespace sw
     void HorrorSession::drainEvents( vector<SurvivalHorrorEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void HorrorSession::writeState( Archive& outArchive ) const
+    {
+        _sanity.writeState( outArchive );
+        _battery.writeState( outArchive );
+        HorrorSessionInternal::writeSortedSet( outArchive, _uniqueSeenMonster );
+        HorrorSessionInternal::writeSortedSet( outArchive, _uniqueReadDocument );
+        HorrorSessionInternal::writeSortedSet( outArchive, _uniqueClue );
+        HorrorSessionInternal::writeSortedSet( outArchive, _uniqueSolvedPuzzle );
+        HorrorSessionInternal::writeSortedMap( outArchive, _mapDialAttempt );
+        HorrorSessionInternal::writeSortedMap( outArchive, _mapSequenceProgress );
+        outArchive << static_cast<uint32>( _listClueLink.size() );
+        for ( const HorrorClueLink& link : _listClueLink )
+        {
+            StateArchiveUtil::writeName( outArchive, link._first );
+            StateArchiveUtil::writeName( outArchive, link._second );
+        }
+        StateArchiveUtil::writeName( outArchive, _currentArea );
+        outArchive << _health;
+        outArchive << _saveCount;
+        outArchive << _wrongDeductionCount;
+        outArchive << _bFlashlightOn;
+        outArchive << _bHallucinating;
+    }
+
+    bool HorrorSession::readState( Archive& archive )
+    {
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 빌린 포인터 · 게이지 설정은 사본이 그대로 든다.
+        HorrorSession restored = *this;
+        const bool    bPartRead =
+            restored._sanity.readState( archive ) && restored._battery.readState( archive ) && HorrorSessionInternal::readSet( archive, restored._uniqueSeenMonster ) &&
+            HorrorSessionInternal::readSet( archive, restored._uniqueReadDocument ) && HorrorSessionInternal::readSet( archive, restored._uniqueClue ) &&
+            HorrorSessionInternal::readSet( archive, restored._uniqueSolvedPuzzle ) && HorrorSessionInternal::readMap( archive, restored._mapDialAttempt ) &&
+            HorrorSessionInternal::readMap( archive, restored._mapSequenceProgress );
+        uint32 linkCount = 0;
+        // 연결마다 이름 둘(8)
+        if ( bPartRead == false || StateArchiveUtil::readCount( archive, 8, linkCount ) == false )
+            return false;
+        restored._listClueLink.assign( linkCount, HorrorClueLink{} );
+        for ( HorrorClueLink& link : restored._listClueLink )
+        {
+            if ( StateArchiveUtil::readName( archive, link._first ) == false || StateArchiveUtil::readName( archive, link._second ) == false )
+                return false;
+        }
+        if ( StateArchiveUtil::readName( archive, restored._currentArea ) == false )
+            return false;
+        archive >> restored._health;
+        archive >> restored._saveCount;
+        archive >> restored._wrongDeductionCount;
+        archive >> restored._bFlashlightOn;
+        archive >> restored._bHallucinating;
+        const bool bValid = archive.isOk() && 0 <= restored._saveCount && 0 <= restored._wrongDeductionCount && restored._bFlashlightOn <= SW_TRUE &&
+                            restored._bHallucinating <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        // 순서 퍼즐 진행은 다음 걸음의 자리라 그 퍼즐의 걸음 수 안이어야 한다.
+        for ( const auto& [puzzleId, progress] : restored._mapSequenceProgress )
+        {
+            const HorrorSequenceDef* pSequence = _pCatalog != nullptr ? _pCatalog->findSequence( puzzleId ) : nullptr;
+            if ( pSequence == nullptr || progress < 0 || progress >= static_cast<int32>( pSequence->_listStep.size() ) )
+                return false;
+        }
+        restored._eventBuffer.clear();
+        *this = std::move( restored );
+        return true;
     }
 
     void HorrorSession::pushEvent( SurvivalHorrorEvent::Kind kind, const hashed_string& id, float32 value )

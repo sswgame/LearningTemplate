@@ -25,6 +25,7 @@ namespace sw
 {
     struct GameStateRefs;
 
+    class Archive;
     class ItemCatalog;
     class ShopCatalog;
     class SpawnTable;
@@ -126,6 +127,8 @@ namespace sw
     public:
         static constexpr const utf8* kShipAreaId    = "ship";
         static constexpr const utf8* kOutsideAreaId = "outside";
+        static constexpr uint32      kStateTag      = 0x58454353u; ///< 'SCEX'
+        static constexpr uint32      kStateVersion  = 1;
 
         ScavengerExpedition();
 
@@ -166,6 +169,14 @@ namespace sw
         /** @brief 터미널 상점에서 삽니다(우주선 창고로). */
         ShopResult buyFromTerminal( const hashed_string& itemId, int32 count );
         void       drainEvents( vector<ScavengerEvent>& outListEvent );
+
+        /**
+         * @brief 사람(체력 · 든 것 · 자리 · 시신) · 우주선 고철 · 할당량 · 시설 · 위협 감독 둘 · 상점 시세 · 난수 · 위성 id · 씨앗 · 내린 시간 · 단계 · 해 질 녘 알림을 씁니다.
+         *        카탈로그 · 빌린 지갑 · 시계 · 날씨 · 플래그 · 우주선 창고는 싣지 않습니다(주인이 싣는다). 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 같은 데이터 · 같은 사람 수로 `initialize` 한 뒤에 부릅니다. 깨졌거나 없는 위성이면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         ScavengerPhase                getPhase() const { return _phase; }
         const ScavengerMoonDef*       getMoon() const { return _pMoon; }

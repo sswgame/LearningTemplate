@@ -23,6 +23,7 @@ namespace sw
 {
     struct GameStateRefs;
 
+    class Archive;
     class AreaGraph;
     class GameFlags;
     class Inventory;
@@ -87,6 +88,9 @@ namespace sw
     class SW_GF_API HorrorSession
     {
     public:
+        static constexpr uint32 kStateTag     = 0x53455348u; ///< 'HSES'
+        static constexpr uint32 kStateVersion = 1;
+
         HorrorSession();
 
         /**
@@ -156,6 +160,14 @@ namespace sw
         HorrorPuzzleResult submitDeduction( const hashed_string& deductionId, const hashed_string& answer );
 
         void drainEvents( vector<SurvivalHorrorEvent>& outListEvent );
+
+        /**
+         * @brief 정신력 · 배터리 게이지, 본 괴물 · 읽은 문서 · 단서 · 푼 퍼즐(이름 순), 다이얼 시도 · 순서 진행(이름 순), 단서 연결, 지금 곳 · 체력 · 세이브 수 ·
+         *        틀린 추리 수 · 손전등 · 환각을 씁니다. 같은 상태면 같은 바이트입니다. 카탈로그 · 빌린 격자 가방 · 아이템 상자 · 플래그 · 방 그래프는 싣지 않고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         const ResourceGauge&          getSanity() const { return _sanity; }
         const ResourceGauge&          getBattery() const { return _battery; }

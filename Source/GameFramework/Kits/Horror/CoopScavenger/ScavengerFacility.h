@@ -16,6 +16,7 @@ namespace sw
 {
     struct ScavengerMoonDef;
 
+    class Archive;
     class GameRandom;
     class ScavengerCatalog;
 
@@ -48,6 +49,10 @@ namespace sw
     class SW_GF_API ScavengerFacility
     {
     public:
+        static constexpr uint32 kStateTag      = 0x43464353u; ///< 'SCFC'
+        static constexpr uint32 kStateVersion  = 1;
+        static constexpr uint32 kMinScrapBytes = 29; ///< 고철 하나가 쓰는 가장 적은 바이트(이름 둘 · 무게 · 번호 · 가치 · 시신 · 날 · 양손)
+
         ScavengerFacility();
 
         /** @brief 지도를 짓고 고철을 놓습니다. 회사 위성이면 바깥 · 우주선만 있습니다. 실패(지도 읽기)면 false 입니다. */
@@ -75,13 +80,31 @@ namespace sw
         /** @brief 잠긴 문 수(만들 때)입니다. */
         int32 getLockedDoorCount() const { return _lockedDoorCount; }
 
+        /**
+         * @brief 지도를 지은 위성 id · 씨앗, 바닥 고철, 빌린 플래그에 둔 잠금 해제 목록, 다음 고유 번호 · 방 수 · 잠긴 문 수를 씁니다.
+         *        그래프는 위성 · 씨앗으로 다시 지으므로 싣지 않고, 빌린 플래그 자체도 싣지 않습니다(주인이 싣는다).
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief 지도를 다시 지을 카탈로그를 빌립니다 — 새 객체에 `readState` 하기 전에 묶는다(`createLayout` 도 묶는다). */
+        void bindCatalog( const ScavengerCatalog* pCatalog ) { _pCatalog = pCatalog; }
+        /** @brief `writeState` 의 바이트로 바꿉니다 — 그래프는 묶은 카탈로그의 위성으로 다시 짓습니다. 깨졌거나, 지은 지도가 있는데 카탈로그가 없거나 없는 위성이면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
+        /** @brief 고철 하나를 씁니다(운반 칸 · 우주선 · 바닥이 함께 쓴다). */
+        static void writeScrap( Archive& outArchive, const ScavengerScrap& scrap );
+        /** @brief `writeScrap` 의 바이트를 읽습니다. 깨졌으면 false 입니다. */
+        [[nodiscard]] static bool readScrap( Archive& archive, ScavengerScrap& outScrap );
+
     private:
-        AreaGraph              _graph;
-        vector<ScavengerScrap> _listGroundScrap;
-        vector<hashed_string>  _listUnlockedFlag; ///< 이 시설이 빌린 플래그에 둔 것(하루가 끝나면 이것만 지운다)
-        GameFlags*             _pFlags;           ///< 빌린 플래그
-        int32                  _nextUid;
-        int32                  _roomCount;
-        int32                  _lockedDoorCount;
+        AreaGraph               _graph;
+        vector<ScavengerScrap>  _listGroundScrap;
+        vector<hashed_string>   _listUnlockedFlag; ///< 이 시설이 빌린 플래그에 둔 것(하루가 끝나면 이것만 지운다)
+        hashed_string           _layoutMoonId;     ///< 그래프를 지은 위성(비면 지은 적 없음 — `clear` 뒤에도 그래프와 함께 남는다)
+        GameFlags*              _pFlags;           ///< 빌린 플래그
+        const ScavengerCatalog* _pCatalog;         ///< 빌린 카탈로그(지도를 다시 짓는다)
+        uint32                  _layoutSeed;       ///< 그래프를 지은 씨앗
+        int32                   _nextUid;
+        int32                   _roomCount;
+        int32                   _lockedDoorCount;
     };
 } // namespace sw

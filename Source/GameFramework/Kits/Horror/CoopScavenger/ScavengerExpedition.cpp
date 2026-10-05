@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/WeatherSystem.h"
 #include "GameFramework/Base/World/WorldClock.h"
 
@@ -90,6 +93,7 @@ namespace sw
         _pClock         = refs._pClock;
         _pWeather       = refs._pWeather;
         _facility.setFlags( refs._pFlags );
+        _facility.bindCatalog( data._pCatalog );
         _shop.initialize( data._pShopCatalog, data._pItemCatalog );
         _pShipStorage = &shipStorage;
         _listCrew.clear();
@@ -560,4 +564,95 @@ namespace sw
     }
 
     int32 ScavengerExpedition::getDayIndex() const { return _pClock != nullptr ? _pClock->getDay() : 0; }
+
+    void ScavengerExpedition::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listCrew.size() );
+        for ( const ScavengerCrewMember& member : _listCrew )
+        {
+            member._vitality.writeState( outArchive );
+            member._carry.writeState( outArchive );
+            StateArchiveUtil::writeName( outArchive, member._areaId );
+            outArchive << member._bBodyRecovered;
+        }
+        outArchive << static_cast<uint32>( _listShipScrap.size() );
+        for ( const ScavengerScrap& scrap : _listShipScrap )
+        {
+            ScavengerFacility::writeScrap( outArchive, scrap );
+        }
+        StateArchiveUtil::writeName( outArchive, _pMoon != nullptr ? _pMoon->_id : hashed_string{} );
+        outArchive << static_cast<uint8>( _phase );
+        outArchive << _bDuskAnnounced;
+        outArchive << _seed;
+        outArchive << _hoursOnMoon;
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        _quota.writeState( outArchive );
+        _facility.writeState( outArchive );
+        _indoorDirector.writeState( outArchive );
+        _outdoorDirector.writeState( outArchive );
+        _shop.writeState( outArchive );
+    }
+
+    bool ScavengerExpedition::readState( Archive& archive )
+    {
+        if ( _data._pCatalog == nullptr )
+            return false;
+        uint32 crewCount = 0;
+        archive >> crewCount;
+        if ( archive.isError() || crewCount != _listCrew.size() )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 데이터 · 빌린 포인터 · 사람마다의 설정은 사본이 그대로 든다.
+        ScavengerExpedition restored = *this;
+        for ( ScavengerCrewMember& member : restored._listCrew )
+        {
+            const bool bMemberRead = member._vitality.readState( archive ) && member._carry.readState( archive ) && StateArchiveUtil::readName( archive, member._areaId );
+            if ( bMemberRead == false )
+                return false;
+            archive >> member._bBodyRecovered;
+            if ( archive.isError() || member._bBodyRecovered > SW_TRUE )
+                return false;
+        }
+
+        uint32 scrapCount = 0;
+        if ( StateArchiveUtil::readCount( archive, ScavengerFacility::kMinScrapBytes, scrapCount ) == false )
+            return false;
+        restored._listShipScrap.assign( scrapCount, ScavengerScrap{} );
+        for ( ScavengerScrap& scrap : restored._listShipScrap )
+        {
+            if ( ScavengerFacility::readScrap( archive, scrap ) == false )
+                return false;
+        }
+
+        hashed_string moonId;
+        uint8         phase = 0;
+        if ( StateArchiveUtil::readName( archive, moonId ) == false )
+            return false;
+        archive >> phase;
+        archive >> restored._bDuskAnnounced;
+        archive >> restored._seed;
+        archive >> restored._hoursOnMoon;
+        const bool bHeadValid = StateArchiveUtil::readRandom( archive, restored._random ) && phase <= static_cast<uint8>( ScavengerPhase::GameOver ) &&
+                                restored._bDuskAnnounced <= SW_TRUE;
+        if ( bHeadValid == false )
+            return false;
+        restored._phase = static_cast<ScavengerPhase>( phase );
+        restored._pMoon = moonId.empty() ? nullptr : _data._pCatalog->findMoon( moonId );
+        if ( moonId.empty() == false && restored._pMoon == nullptr )
+            return false;
+        if ( restored._phase == ScavengerPhase::Landed && restored._pMoon == nullptr )
+            return false;
+
+        // 위협 감독은 내려 있는 동안만 표를 든다(궤도 · 회사에서는 비어 있다) — 같은 표로 열고 나머지를 읽는다.
+        const bool bThreatActive = restored._phase == ScavengerPhase::Landed && restored._pMoon->_bCompany == SW_FALSE && _data._pThreatTable != nullptr;
+        restored._indoorDirector.initialize( bThreatActive ? _data._pThreatTable : nullptr, 1u );
+        restored._outdoorDirector.initialize( bThreatActive ? _data._pThreatTable : nullptr, 1u );
+        const bool bPartRead = restored._quota.readState( archive ) && restored._facility.readState( archive ) &&
+                               restored._indoorDirector.readState( archive ) && restored._outdoorDirector.readState( archive ) && restored._shop.readState( archive );
+        if ( bPartRead == false )
+            return false;
+        restored._eventBuffer.clear();
+        restored._listSpawnScratch.clear();
+        *this = std::move( restored );
+        return true;
+    }
 } // namespace sw

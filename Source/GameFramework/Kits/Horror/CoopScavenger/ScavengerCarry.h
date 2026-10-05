@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 줍기 결과입니다. */
     enum class ScavengerPickupResult : uint8
     {
@@ -30,6 +32,9 @@ namespace sw
     class SW_GF_API ScavengerCarry
     {
     public:
+        static constexpr uint32 kStateTag     = 0x41434353u; ///< 'SCCA'
+        static constexpr uint32 kStateVersion = 1;
+
         ScavengerCarry();
 
         void initialize( const ScavengerCarrySettings& settings );
@@ -48,6 +53,11 @@ namespace sw
         bool                          isHoldingTwoHanded() const;
         int32                         getCount() const { return static_cast<int32>( _listScrap.size() ); }
         const vector<ScavengerScrap>& getScraps() const { return _listScrap; }
+
+        /** @brief 든 것을 씁니다. 설정(칸 수 · 무게)은 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌거나 칸 수를 넘으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         vector<ScavengerScrap> _listScrap;

@@ -23,6 +23,7 @@ namespace sw
 {
     struct GameStateRefs;
 
+    class Archive;
     class AreaGraph;
     class GameFlags;
     class Inventory;
@@ -102,6 +103,9 @@ namespace sw
     class SW_GF_API GhostMansion
     {
     public:
+        static constexpr uint32 kStateTag     = 0x4E4D4847u; ///< 'GHMN'
+        static constexpr uint32 kStateVersion = 1;
+
         GhostMansion();
 
         /** @brief 새 판을 엽니다. 플래그 · 플레이어 가방(열쇠) · 지갑(동전)은 @p refs 에서 빌립니다 — 가방이 없으면 열쇠가 드는 문은 열리지 않습니다. */
@@ -121,6 +125,14 @@ namespace sw
         void drainEvents( vector<GhostMansionEvent>& outListEvent );
         /** @brief 지금 방 싸움의 알림(나타남 · 공격 · 잡힘 …)을 꺼내 갑니다 — 저택이 `update` 에서 싸움 알림을 받아 잡은 수를 세므로 게임은 여기서 받습니다. */
         void drainGhostEvents( vector<GhostEvent>& outListEvent );
+
+        /**
+         * @brief 싸움(`GhostEncounter`) · 난수 · 부(방 · 가구 · 체력 · 시간 · 상태) · 뒤진 가구 · 지금 방 · 씨앗을 씁니다.
+         *        카탈로그 · 빌린 방 그래프 · 열쇠 가방 · 지갑 · 플래그(밝힌 방 · 연 문)는 싣지 않고(주인이 싣는다), 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 같은 카탈로그로 `initialize` 한 뒤에 부릅니다. 깨졌거나 부 · 가구 수가 다르면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         GhostEncounter&        getEncounter() { return _encounter; }
         const GhostEncounter&  getEncounter() const { return _encounter; }

@@ -11,8 +11,7 @@
 
 namespace sw
 {
-    class BitReader;
-    class BitWriter;
+    class Archive;
     class GameRandom;
 
     /** @brief 마감 판정 결과입니다. */
@@ -31,6 +30,9 @@ namespace sw
     class SW_GF_API ScavengerQuota
     {
     public:
+        static constexpr uint32 kStateTag     = 0x54514353u; ///< 'SCQT'
+        static constexpr uint32 kStateVersion = 1;
+
         ScavengerQuota();
 
         void initialize( const ScavengerQuotaSettings& settings );
@@ -41,8 +43,10 @@ namespace sw
         /** @brief 주기 @p cycleIndex(0 부터) 를 채운 뒤의 늘어남입니다(무작위 r 을 넘긴다 — 시험 · 화면 예고). */
         int32 computeIncrease( int32 cycleIndex, float32 randomValue ) const;
 
-        void               writeState( BitWriter& writer ) const;
-        [[nodiscard]] bool readState( BitReader& reader );
+        /** @brief 할당량 · 채운 양 · 남은 날 · 주기 · 게임 오버를 씁니다. 설정은 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         int32 getQuota() const { return _quota; }
         int32 getFulfilled() const { return _fulfilled; }
