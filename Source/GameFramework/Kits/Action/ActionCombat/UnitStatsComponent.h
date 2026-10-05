@@ -3,9 +3,9 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Combat/HealthSourceComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -14,7 +14,7 @@ namespace sw
     struct MonsterDef;
 
     REFLECT( Category = "Gameplay", DisplayName = "Unit Stats Component", Tooltip = "Manages HP, Attack, Defense, Movement Speed, and Invincibility" )
-    class SW_GF_API UnitStatsComponent : public Component
+    class SW_GF_API UnitStatsComponent : public HealthSourceComponent
     {
     public:
         REFLECT_BODY();
@@ -57,6 +57,8 @@ namespace sw
         /** @brief 기본 이동 속도입니다 — 초당 월드 유닛(m/s)입니다. 이동 코드는 프레임 시간을 곱해 씁니다(`getMoveSpeed() * deltaTime`). */
         float32 getMoveSpeed() const { return _moveSpeed; }
         bool    isDead() const { return _bIsDead; }
+        /** @brief 체력 원천의 읽기입니다 — HP · 최대 HP · 죽음을 그대로 옮깁니다. */
+        HealthReading getHealthReading() const override;
 
         /** @brief 스탯을 한 번에 정합니다. 같은 오브젝트의 HP 바는 새 비율로 다시 맞춥니다(흔적 없이). */
         void setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime );
@@ -74,11 +76,6 @@ namespace sw
         /** @brief 피해를 지금 적용하고 깎였으면 `DamageAppliedEvent` 를 냅니다. 피해가 HP 에 닿는 유일한 자리입니다. */
         void applyTakeDamage( int32 amount, GameObjectHandle instigator );
         void applyHeal( int32 amount );
-        /**
-         * @brief 같은 오브젝트의 체력 받는 쪽(`HealthListenerComponent` — HP 바)에 지금 HP 비율을 알립니다. @p bReset 이면 흔적 없이(시작 · 스탯 재설정), 아니면 바뀜(피해 · 회복).
-         * @details HP 가 바뀌는 자리(피해 · 회복 · 스탯 설정 · 시작)가 이것을 부른다 — 알리는 곳은 여기 하나다. 바를 모른다.
-         */
-        void syncHealthBar( bool bReset );
         /** @brief 깎인 피해 @p amount 를 데미지 숫자 오브젝트로 띄웁니다(`_bShowDamageNumbers` 일 때). */
         void spawnDamageNumber( int32 amount );
 

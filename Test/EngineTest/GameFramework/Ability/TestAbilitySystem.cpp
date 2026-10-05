@@ -4,6 +4,7 @@
 #include "Core/Module/ModuleUnloadListener.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
@@ -189,6 +190,17 @@ namespace
         pSet->defineAttribute( CombatAttributes::attackPower(), attackPower );
         (void)pAbilitySystem->addAttributeSet( unique_ptr<AttributeSet>( std::move( pSet ) ) );
         return pAbilitySystem;
+    }
+
+    /** @brief HP 바의 보이기 정책 칸을 넣습니다 — 세터가 없는 PROPERTY 다. */
+    bool setAbilityBarFlag( HealthBarComponent& bar, const utf8* pName, bool bValue )
+    {
+        const TypeInfo*     pTypeInfo = bar.getTypeInfo();
+        const PropertyInfo* pProperty = ( pTypeInfo != nullptr ) ? pTypeInfo->findPropertyInHierarchy( hashed_string( pName ) ) : nullptr;
+        if ( pProperty == nullptr )
+            return false;
+        pProperty->setValue<bool>( &bar, bValue );
+        return true;
     }
 
     /** @brief 어트리뷰트 하나에 모디파이어 하나를 거는 이펙트 정의입니다. */
@@ -510,6 +522,29 @@ SW_TEST_CASE( AbilitySystemTest, DamageExecutionMitigatesByArmorAndKillsExactlyO
     SW_EXPECT_TRUE( listDied[0]._target == pTarget->getOwner()->getHandle() );
     SW_EXPECT_TRUE( listDied[0]._instigator == pAttacker->getOwner()->getHandle() );
     SW_EXPECT_EQUAL( 4, hitCount ); // 75 → 50 → 25 → 0, 그 뒤 둘은 무시
+}
+
+/**
+ * @brief [AbilitySystemTest] 체력이 0 에 닿으면 HP 바가 쓰러짐을 받는다 — `_bHideWhenDead` 인 바는 숨는다
+ * @details 어빌리티 시스템은 체력 원천(`HealthSourceComponent`)이고 알림 종류를 읽기(체력 0 = 쓰러짐)에서 정한다. 바뀜(`Changed`)으로만 알리면 쓰러져도 숨지 않는다.
+ */
+SW_TEST_CASE( AbilitySystemTest, HealthBarHearsTheOwnerDie )
+{
+    GameObjectManager       manager;
+    AbilitySystemComponent* pTarget = spawnCombatant( manager, "Target", 100.0f, 0.0f, 0.0f );
+    SW_ASSERT_NOT_NULL( pTarget );
+    HealthBarComponent* pBar = pTarget->getOwner()->addComponent<HealthBarComponent>();
+    SW_ASSERT_NOT_NULL( pBar );
+    SW_ASSERT_TRUE( setAbilityBarFlag( *pBar, "_bHideWhenDead", true ) );
+    pBar->setVisible( true );
+
+    SW_ASSERT_TRUE( pTarget->setAttributeBaseValue( CombatAttributes::health(), 60.0f ) );
+    SW_EXPECT_NEAR_EQUAL( 0.6f, pBar->getTargetRatio(), 0.001f );
+    SW_EXPECT_TRUE( pBar->isVisible() );
+
+    SW_ASSERT_TRUE( pTarget->setAttributeBaseValue( CombatAttributes::health(), 0.0f ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pBar->getTargetRatio(), 0.001f );
+    SW_EXPECT_FALSE( pBar->isVisible() );
 }
 
 /**

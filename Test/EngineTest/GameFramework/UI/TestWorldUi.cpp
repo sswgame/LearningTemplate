@@ -385,3 +385,28 @@ SW_TEST_CASE( WorldUiTest, HPBarFollowsHealthSignalAndOwnsItsVisibility )
     SW_EXPECT_NEAR_EQUAL( 0.0f, pBar->getTargetRatio(), 1e-6f );
     SW_EXPECT_FALSE( pBar->isVisible() ); // 쓰러지면 숨는다
 }
+
+/**
+ * @brief [WorldUiTest] 한 방에 쓰러져도 `_bShowWhenHurt` 인 바는 보인다 — `_bHideWhenDead` 가 아니면
+ * @details 쓰러짐(`Died`)도 줄어든 것이다. 바뀜에서만 보이게 하면 한 방에 죽은 적의 바가 끝내 나타나지 않는다.
+ */
+SW_TEST_CASE( WorldUiTest, HPBarShowsOnAOneHitKillUnlessItHidesOnDeath )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pEnemy = spawnAnchoredObject( manager, "Enemy", sw::float3{ 0.0f, 0.0f, 0.0f } );
+    SW_ASSERT_NOT_NULL( pEnemy );
+    sw::HealthBarComponent* pBar = pEnemy->addComponent<sw::HealthBarComponent>();
+    SW_ASSERT_NOT_NULL( pBar );
+    SW_ASSERT_TRUE( setReflectedValue( pBar, "_bShowWhenHurt", true ) );
+
+    sw::HealthChangedEvent event;
+    event._ratio = 1.0f;
+    event._kind  = sw::HealthChangeKind::Reset;
+    sw::HealthListenerComponent::broadcast( *pEnemy, event );
+    SW_EXPECT_FALSE( pBar->isVisible() );
+
+    event._ratio = 0.0f;
+    event._kind  = sw::HealthChangeKind::Died;
+    sw::HealthListenerComponent::broadcast( *pEnemy, event );
+    SW_EXPECT_TRUE( pBar->isVisible() );
+}

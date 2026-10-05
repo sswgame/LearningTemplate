@@ -34,7 +34,7 @@ namespace sw
 {
     /**
      * @class HealthListenerComponent
-     * @brief 체력 변화를 받는 쪽입니다. 체력 시스템(어빌리티 시스템 · 키트의 유닛 스탯 · 게임의 적)이 `broadcast` 로 같은 오브젝트의 이 파생 모두에 알립니다.
+     * @brief 체력 변화를 받는 쪽입니다. 체력 원천(`HealthSourceComponent::notifyHealthChanged` — 어빌리티 시스템 · 키트의 유닛 스탯 · 게임의 적)이 `broadcast` 로 같은 오브젝트의 이 파생 모두에 알립니다.
      * @details 모델은 뷰를 모른다 — 체력 시스템은 이 베이스(전투 층)만 알고, HP 바(`HealthBarComponent`, UI 층)가 이것을 상속해 받습니다. 언리얼 Lyra 의
      *          `ULyraHealthComponent::OnHealthChanged` 를 위젯이 받는 자리입니다. 알림은 그 자리에서(같은 스레드 · 같은 프레임) 갑니다 — 체력 시스템이
      *          자기 오브젝트를 틱하는 중이면 같은 워커이므로 받는 쪽은 자기 상태만 고칩니다.

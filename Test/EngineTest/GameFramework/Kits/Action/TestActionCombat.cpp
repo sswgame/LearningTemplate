@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
@@ -135,6 +136,17 @@ namespace
         for ( int32 frameIndex = 0; frameIndex < maxFrame && room.isCleared() == false; ++frameIndex )
             (void)room.update( 0.02f, input ); // 이 시험은 룸 이벤트를 본다 — 프레임 결과는 쓰지 않는다
         return room.isCleared();
+    }
+
+    /** @brief HP 바의 보이기 정책 칸(`_bShowWhenHurt` · `_bHideWhenDead`)을 넣습니다 — 세터가 없는 PROPERTY 다. */
+    bool setUnitBarFlag( HealthBarComponent& bar, const utf8* pName, bool bValue )
+    {
+        const TypeInfo*     pTypeInfo = bar.getTypeInfo();
+        const PropertyInfo* pProperty = ( pTypeInfo != nullptr ) ? pTypeInfo->findPropertyInHierarchy( hashed_string( pName ) ) : nullptr;
+        if ( pProperty == nullptr )
+            return false;
+        pProperty->setValue<bool>( &bar, bValue );
+        return true;
     }
 } // namespace
 
@@ -908,6 +920,51 @@ SW_TEST_CASE( ActionCombatTest, UnitDrivesItsHealthBar )
     SW_EXPECT_NEAR_EQUAL( 0.4f, pBar->getTargetRatio(), 1e-4f );
     pUnit->setStats( 80, 100, 0, 0, 0.0f, 0.0f ); // 스탯 재설정(부활)은 흔적 없이
     SW_EXPECT_NEAR_EQUAL( 0.8f, pBar->getRemainRatio(), 1e-4f );
+    manager.endPlay();
+}
+
+/**
+ * @brief [ActionCombatTest] 유닛이 쓰러지면 HP 바는 쓰러짐을 받는다 — `_bHideWhenDead` 인 바는 숨는다
+ * @details 유닛은 체력 원천(`HealthSourceComponent`)이고 알림 종류를 읽기(`_bIsDead`)에서 정한다. 바뀜으로만 알리면 쓰러져도 바가 남는다.
+ */
+SW_TEST_CASE( ActionCombatTest, UnitDeathHidesAHealthBarThatHidesOnDeath )
+{
+    GameObjectManager   manager;
+    UnitStatsComponent* pUnit = spawnUnit( manager, "Hero", 0.0f, 30, 0, 0.0f );
+    SW_ASSERT_NOT_NULL( pUnit );
+    HealthBarComponent* pBar = pUnit->getOwner()->addComponent<HealthBarComponent>();
+    SW_ASSERT_NOT_NULL( pBar );
+    SW_ASSERT_TRUE( setUnitBarFlag( *pBar, "_bHideWhenDead", true ) );
+    pBar->setVisible( true );
+    manager.beginPlay();
+
+    pUnit->takeDamage( 10 );
+    SW_EXPECT_TRUE( pBar->isVisible() ); // 살아 있다
+    pUnit->takeDamage( 100 );
+    SW_EXPECT_TRUE( pUnit->isDead() );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pBar->getTargetRatio(), 1e-4f );
+    SW_EXPECT_FALSE( pBar->isVisible() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [ActionCombatTest] 맞은 뒤에 붙인 HP 바는 유닛의 지금 HP 에서 시작한다
+ * @details 바는 시작할 때 같은 오브젝트의 체력 원천을 읽는다 — 알림만 기다리면 다음 피해 전까지 저장된 칸(`_hpRatio`, 기본 0)을 그린다.
+ */
+SW_TEST_CASE( ActionCombatTest, HealthBarAddedAfterAHitStartsAtTheUnitsHealth )
+{
+    GameObjectManager   manager;
+    UnitStatsComponent* pUnit = spawnUnit( manager, "Hero", 0.0f, 100, 0, 0.0f );
+    SW_ASSERT_NOT_NULL( pUnit );
+    manager.beginPlay();
+    pUnit->takeDamage( 60 );
+    SW_ASSERT_EQUAL( 40, pUnit->getHp() );
+
+    HealthBarComponent* pBar = pUnit->getOwner()->addComponent<HealthBarComponent>();
+    SW_ASSERT_NOT_NULL( pBar );
+    manager.tick( 0.016f ); // 플레이 중에 붙인 컴포넌트는 다음 틱의 시작 단계에서 시작한다
+    SW_EXPECT_NEAR_EQUAL( 0.4f, pBar->getTargetRatio(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, pBar->getRemainRatio(), 1e-4f ); // 흔적 없이
     manager.endPlay();
 }
 

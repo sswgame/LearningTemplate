@@ -14,13 +14,13 @@
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Ability/AbilitySystemTypes.h"
 #include "GameFramework/Ability/AttributeSet.h"
 #include "GameFramework/Ability/GameplayEffect.h"
+#include "GameFramework/Combat/HealthSourceComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -61,14 +61,14 @@ namespace sw
      *          **다른 오브젝트에** 이펙트를 걸거나 이벤트를 보내면(`applyGameplayEffectSpecToTarget` · `sendGameplayEventToTarget`) 틱 직후로
      *          미룹니다(`UnitStatsComponent::takeDamage` 와 같은 규칙). 체력이 깎일 때 띄우는 피해 숫자도 틱 직후에 만듭니다.
      *
-     *          **연결된 UI**: 체력 · 최대 체력이 바뀔 때마다 같은 오브젝트의 `HealthListenerComponent`(HP 바)에 비율을 알립니다(바를 모른다). `_bShowDamageNumbers` 면
+     *          **연결된 UI**: 체력 원천(`HealthSourceComponent`)입니다 — 체력 · 최대 체력이 바뀔 때마다 같은 오브젝트의 `HealthListenerComponent`(HP 바)에 비율을 알리고, 체력이 0 이면 쓰러짐(`Died`)으로 알립니다(바를 모른다). `_bShowDamageNumbers` 면
      *          체력이 깎일 때 `DamageNumberComponent` 숫자를 띄웁니다. 어트리뷰트 이름은 `_healthAttribute` · `_maxHealthAttribute` 로 바꿀 수 있습니다.
      *
      *          **저장**: PROPERTY 만 저장됩니다(어빌리티 세트 id · 표시 설정). 런타임 상태(어트리뷰트 값 · 이펙트 · 어빌리티)는 저장하지 않고
      *          플레이 시작에 세트에서 다시 만듭니다 — 세이브가 필요한 값은 게임의 `SaveGame` 이 어트리뷰트를 읽어 담습니다.
      */
     REFLECT( Category = "Gameplay", DisplayName = "Ability System Component", Tooltip = "Attributes, gameplay effects, abilities and gameplay tags (Unreal GAS style)" )
-    class SW_GF_API AbilitySystemComponent : public Component
+    class SW_GF_API AbilitySystemComponent : public HealthSourceComponent
     {
         friend class AbilitySystemModuleUnloadGuard;
         friend class GameplayAbility;
@@ -299,6 +299,8 @@ namespace sw
         void                 setHealthAttributes( const hashed_string& health, const hashed_string& maxHealth );
         const hashed_string& getHealthAttribute() const { return _healthAttribute; }
         const hashed_string& getMaxHealthAttribute() const { return _maxHealthAttribute; }
+        /** @brief 체력 원천의 읽기입니다 — `_healthAttribute` · `_maxHealthAttribute` 의 current, 체력 0 이하면 쓰러짐. 체력 어트리뷰트가 없으면 `_bHasHealth` 가 SW_FALSE 입니다. */
+        HealthReading getHealthReading() const override;
 
     private:
         /** @brief 부여된 어빌리티 하나입니다(언리얼 `FGameplayAbilitySpec`). 주소가 바뀌지 않게 `unique_ptr` 로 든다. */
@@ -393,8 +395,6 @@ namespace sw
          *        틱할 수 있다).
          */
         bool canMutateNow() const;
-        /** @brief 같은 오브젝트의 HP 바를 체력 비율로 맞춥니다. */
-        void syncHealthBar( bool bReset );
         /** @brief 깎인 체력 @p amount 를 피해 숫자로 띄웁니다(틱 중이면 틱 직후). */
         void spawnDamageNumber( float32 amount );
         /** @brief [@p pBegin, @p pEnd) 안의 코드(어빌리티 · 묶음 · 실행 계산의 vtable, 델리게이트 스텁)를 뗍니다 — 모듈을 내리기 전 */
