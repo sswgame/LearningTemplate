@@ -23,6 +23,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 대전 규칙 수치입니다. 시간은 모두 프레임(60 = 1 초)입니다. */
     struct FightingSettings
     {
@@ -172,8 +174,10 @@ namespace sw
     class SW_GF_API FightingMatch
     {
     public:
-        static constexpr int32 kPlayerCount = 2;
-        static constexpr int32 kDraw        = 2; ///< 라운드 · 대전 결과의 무승부
+        static constexpr uint32 kStateTag     = 0x4D544746u; ///< 'FGTM'
+        static constexpr uint32 kStateVersion = 1;
+        static constexpr int32  kPlayerCount  = 2;
+        static constexpr int32  kDraw         = 2; ///< 라운드 · 대전 결과의 무승부
 
         FightingMatch();
 
@@ -188,6 +192,10 @@ namespace sw
         void saveState( vector<uint8>& outBuffer ) const;
         /** @brief `saveState` 의 바이트로 되돌립니다. 같은 캐릭터로 `initialize` 한 대전이어야 하고, 깨졌거나 맞지 않으면 false 이고 바꾸지 않습니다. */
         [[nodiscard]] bool loadState( const vector<uint8>& buffer );
+        /** @brief 세이브(`Archive`) — `saveState` 의 바이트를 길이 붙은 본문으로 그대로 싣습니다(같은 상태를 두 형식으로 따로 쓰지 않는다). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 본문을 `loadState` 로 되돌립니다. 본문이 잘렸거나 `loadState` 가 거절하면 false 이고 바꾸지 않습니다. */
+        [[nodiscard]] bool readState( Archive& archive );
         void               drainEvents( vector<FightingEvent>& outListEvent );
 
         /** @brief 연습 모드 · 시험용 — 위치를 옮깁니다(벽 안으로 자른다). */

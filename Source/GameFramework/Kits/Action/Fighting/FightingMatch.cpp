@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 namespace sw
 {
     namespace
@@ -1179,5 +1181,21 @@ namespace sw
         _lastRoundWinner = lastRoundWinner;
         _eventBuffer.clear();
         return true;
+    }
+
+    // 세이브(Archive)는 롤백 코덱의 바이트를 그대로 싣는다(같은 상태를 두 형식으로 따로 쓰지 않는다).
+    void FightingMatch::writeState( Archive& outArchive ) const
+    {
+        vector<uint8> bytes;
+        saveState( bytes );
+        outArchive.writeSection( bytes.data(), static_cast<uint32>( bytes.size() ) );
+    }
+
+    bool FightingMatch::readState( Archive& archive )
+    {
+        vector<uint8> bytes;
+        if ( archive.readSection( bytes ) == false )
+            return false;
+        return loadState( bytes ); // 롤백 코덱의 읽기(임시에 읽어 끝까지 맞을 때만 바꿈)
     }
 } // namespace sw
