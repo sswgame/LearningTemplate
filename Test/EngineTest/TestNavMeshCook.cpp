@@ -45,7 +45,9 @@ SW_TEST_CASE( NavMeshCookTest, CookedTilesMatchTheRuntimeBakeAndStaleOnesAreReje
     sw::Scene runtimeScene{ "NavRuntime" };
     SW_ASSERT_TRUE( Internal::instantiate( runtimeScene ) );
     sw::SceneNavigation& runtimeNavigation = runtimeScene.getObjectManager()->getSceneNavigation();
-    const sw::INavMesh*  pRuntimeMesh      = runtimeNavigation.ensureNavMesh( entry._agentType );
+    // 쿠킹 팩(Shipping 의 Cooked)에는 이 씬의 `.navmesh` 가 있어 런타임이 그것을 끼운다 — 런타임 베이크를 보려면 찾을 경로를 비운다.
+    runtimeNavigation.setSourcePath( {} );
+    const sw::INavMesh* pRuntimeMesh = runtimeNavigation.ensureNavMesh( entry._agentType );
     SW_ASSERT_NOT_NULL( pRuntimeMesh );
     SW_EXPECT_FALSE( runtimeNavigation.isLoadedFromCooked( entry._agentType ) );
     sw::vector<sw::NavTileData> listRuntimeTile;
