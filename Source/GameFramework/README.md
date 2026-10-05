@@ -144,8 +144,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `TacticsSrpg`: SRPG(SD건담 G제네레이션 · 메탈슬러그 택틱스 장르) — 기체 · 파일럿 · 무기 · 지형 XML(`SrpgCatalog`), 전장(`SrpgBattlefield` — `GridReachability` 이동 범위 · ZOC · MAP 병기 · 페이즈/개별 순서), 전투 예측 · 반격 · 지원 · 동기(`SrpgCombat`), 점수 AI(`SrpgAiController`), 승패 · 개발 · `RunMap` 로그라이트 캠페인(`SrpgProgress`).
     - `SideScrollConquest`: 횡스크롤 정복(썬즈 오브 발할라 장르) — 1차원 전선 거점 · 건물/일꾼/생산 · 병력 훈련/인구 · 지휘관 부대 명령 · 진형 · 사기 · 성문/성벽 · 충차/사다리 · 점령 → 영토 · 반격 웨이브(`ConquestWorld`).
   - **시뮬레이션 · 생활** (`Kits/Simulation/`)
-    - `Farming`: 농장 생활(하베스트 문 장르) — 달력(`FarmCalendar`: 6:00–26:00 하루 · 28 일 계절 · 해), 작물 XML 카탈로그(`CropCatalog`),
-      밭(`FarmField`: 갈기 · 물 · 심기 · 거두기, 물 받은 날만 자람, 다시 열림, 철 지나면 시듦, 비), 인벤토리 · 출하 정산(`FarmInventory`).
+    - `Farming`: 농장 생활(하베스트 문 장르) — 작물 XML 카탈로그(`CropCatalog` — 계절은 공유 시계의 이름, 씨앗 · 수확물 아이템을 `ItemCatalog` 로),
+      밭(`FarmField`: 갈기 · 물 · 심기 · 거두기, 물 받은 날만 자람, 다시 열림, 철 지나면 시듦, 비), 출하함(`FarmShippingBin` — 빌린 가방에서 담고 빌린 지갑으로 정산).
+      달력 · 돈 · 가방은 공유 상태(`WorldClock` · `Wallet` · `Inventory`)를 빌린다.
     - `CreatureLife`: 생물 생활(포코피아 · 문스톤 아일랜드 장르) — 칸 패턴 서식지 레시피(회전 · 큰 것 먼저), 시간대 · 날씨 방문(결정적, 조건은 일정과 같은 `ScheduleCondition`), 생물별 호감도(`ReputationState`) · 부탁(`QuestLog`), 능력 칸 변환 · 하루 횟수, 집 배정, 마을 매력도 단계(`CreatureTown`).
     - `RestaurantSim`: 식당 경영(셰프 RPG 장르) — 메뉴(Crafting 레시피 · 숙련도 품질), 재료 신선도 묶음(`IngredientStock`), 시장 시세, 손님 도착 · 성향 · 인내, 요리사 · 스테이션 병렬 조리, 서빙 · 계산 · 팁, 별점 이동 평균, 일 결산(`RestaurantSimulation`).
     - `ThemePark`: 롤러코스터 타이쿤 — 조각으로 쌓는 코스터 트랙(`CoasterTrackBuilder`: 오르막 체인 · 낙하 · 언덕 · 뱅크 회전 · 클로소이드 루프 ·

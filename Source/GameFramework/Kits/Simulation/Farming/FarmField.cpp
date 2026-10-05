@@ -121,7 +121,7 @@ namespace sw
         return FarmActionResult::Done;
     }
 
-    FarmActionResult FarmField::plant( int32 x, int32 y, const hashed_string& seedItem, FarmSeason season )
+    FarmActionResult FarmField::plant( int32 x, int32 y, const hashed_string& seedItem, const hashed_string& season )
     {
         FarmTile* pTile = findTileMutable( x, y );
         if ( pTile == nullptr )
@@ -186,7 +186,7 @@ namespace sw
         return FarmActionResult::Done;
     }
 
-    void FarmField::advanceDay( FarmSeason newSeason, bool bRain )
+    void FarmField::advanceDay( const hashed_string& newSeason, bool bRain )
     {
         for ( FarmTile& tile : _listTile )
         {

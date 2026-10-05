@@ -714,6 +714,7 @@
 		<entity id="35" name="FarmDirector">
 			<GameObject _schemaVersion="0" _name="FarmDirector" _bActive="true">
 				<_listComponent>
+					<GameStateComponent _componentName="GameStateComponent" _bActive="true" />
 					<FarmDirectorComponent _componentName="FarmDirectorComponent"
 					                       _bActive="true"
 					                       _cropDataPath="game/harvestvalley/data/crops.xml"

@@ -2,14 +2,16 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
-#include "GameFramework/Kits/Simulation/Farming/FarmCalendar.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmField.h"
-#include "GameFramework/Kits/Simulation/Farming/FarmInventory.h"
+#include "GameFramework/Kits/Simulation/Farming/FarmShippingBin.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 농장 키트(하베스트 문 장르) — 달력의 하루 · 계절 · 해, 물 준 날만 자라는 작물, 다시 자라는 작물, 계절이 바뀌면 시듦, 비, 출하 정산.
+// 농장 키트(하베스트 문 장르) — 물 준 날만 자라는 작물, 다시 자라는 작물, 계절(공유 시계의 이름)이 바뀌면 시듦, 비, 빌린 가방 · 지갑으로 출하 정산.
 
 using namespace sw;
 
@@ -28,35 +30,9 @@ namespace
     {
         (void)field.till( x, y );
         (void)field.water( x, y );
-        (void)field.plant( x, y, seed, FarmSeason::Spring );
+        (void)field.plant( x, y, seed, "Spring" );
     }
 } // namespace
-
-/**
- * @brief [FarmingTest] 하루는 6:00 에 시작해 26:00 에 끝나고, 28 일이 지나면 계절이, 네 계절이 지나면 해가 넘어간다
- */
-SW_TEST_CASE( FarmingTest, CalendarRollsDaysSeasonsAndYears )
-{
-    FarmCalendar calendar;
-    SW_EXPECT_EQUAL( 6, calendar.getHour() );
-    SW_EXPECT_FALSE( calendar.advanceMinutes( 60.0f * 19.0f ) ); // 25:00
-    SW_EXPECT_TRUE( calendar.advanceMinutes( 120.0f ) );         // 26:00 에서 멈춘다
-    SW_EXPECT_EQUAL( 26, calendar.getHour() );
-
-    for ( int32 dayIndex = 1; dayIndex < FarmCalendar::kDaysPerSeason; ++dayIndex )
-        SW_EXPECT_FALSE( calendar.startNextDay() );
-    SW_EXPECT_EQUAL( 28, calendar.getDay() );
-    SW_EXPECT_TRUE( calendar.startNextDay() );
-    SW_EXPECT_TRUE( calendar.getSeason() == FarmSeason::Summer );
-    SW_EXPECT_EQUAL( 1, calendar.getDay() );
-    SW_EXPECT_EQUAL( 6, calendar.getHour() );
-    SW_EXPECT_EQUAL( 28, calendar.getElapsedDays() );
-
-    calendar.setDate( 1, FarmSeason::Winter, 28 );
-    SW_EXPECT_TRUE( calendar.startNextDay() );
-    SW_EXPECT_EQUAL( 2, calendar.getYear() );
-    SW_EXPECT_TRUE( calendar.getSeason() == FarmSeason::Spring );
-}
 
 /**
  * @brief [FarmingTest] 작물은 물 받은 날만 자라고 정한 날 수만큼 자라야 거둔다 — 갈지 않은 땅에는 심을 수 없다
@@ -64,27 +40,28 @@ SW_TEST_CASE( FarmingTest, CalendarRollsDaysSeasonsAndYears )
 SW_TEST_CASE( FarmingTest, CropsGrowOnlyOnWateredDays )
 {
     CropCatalog catalog;
+    catalog.setKnownSeasons( { "Spring", "Summer", "Fall", "Winter" } );
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmingTestCropXml, "FarmingTest" ) );
-    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), catalog.getCrops().size() ); // 계절이 없는 ghost 는 빠졌다
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), catalog.getCrops().size() ); // 모르는 계절(Monsoon)만 적힌 ghost 는 빠졌다
 
     FarmField field;
     field.initialize( 4, 4, &catalog );
-    SW_EXPECT_TRUE( field.plant( 0, 0, "turnip_seed", FarmSeason::Spring ) == FarmActionResult::NotTilled );
+    SW_EXPECT_TRUE( field.plant( 0, 0, "turnip_seed", "Spring" ) == FarmActionResult::NotTilled );
     SW_EXPECT_TRUE( field.till( 9, 9 ) == FarmActionResult::OutOfBounds );
     prepareFarmTile( field, 0, 0, "turnip_seed" );
-    SW_EXPECT_TRUE( field.plant( 0, 0, "turnip_seed", FarmSeason::Spring ) == FarmActionResult::Occupied );
+    SW_EXPECT_TRUE( field.plant( 0, 0, "turnip_seed", "Spring" ) == FarmActionResult::Occupied );
     SW_EXPECT_TRUE( field.water( 0, 0 ) == FarmActionResult::AlreadyWatered );
 
     hashed_string produce;
     int32         count = 0;
-    field.advanceDay( FarmSeason::Spring, false ); // 자람 1
-    field.advanceDay( FarmSeason::Spring, false ); // 물을 안 줬다 — 그대로
+    field.advanceDay( "Spring", false ); // 자람 1
+    field.advanceDay( "Spring", false ); // 물을 안 줬다 — 그대로
     SW_EXPECT_NEAR_EQUAL( 1.0f / 3.0f, field.computeGrowthRatio( 0, 0 ), 1.0e-4f );
     SW_EXPECT_TRUE( field.harvest( 0, 0, produce, count ) == FarmActionResult::NotReady );
     (void)field.water( 0, 0 );
-    field.advanceDay( FarmSeason::Spring, false );
+    field.advanceDay( "Spring", false );
     (void)field.water( 0, 0 );
-    field.advanceDay( FarmSeason::Spring, false );
+    field.advanceDay( "Spring", false );
     SW_EXPECT_EQUAL( 1u, field.getReadyCount() );
     SW_EXPECT_TRUE( field.harvest( 0, 0, produce, count ) == FarmActionResult::Done );
     SW_EXPECT_TRUE( produce == hashed_string( "turnip" ) );
@@ -106,19 +83,19 @@ SW_TEST_CASE( FarmingTest, RegrowingCropsStayAndRainWatersTilledSoil )
     (void)field.till( 1, 0 );
 
     // 비가 오면 다음 날 아침 물 준 상태로 시작한다 — 계속 비면 물을 안 줘도 자란다.
-    field.advanceDay( FarmSeason::Spring, true );
+    field.advanceDay( "Spring", true );
     SW_EXPECT_TRUE( field.findTile( 1, 0 )->_bWatered == SW_TRUE );
     for ( int32 dayIndex = 0; dayIndex < 3; ++dayIndex )
-        field.advanceDay( FarmSeason::Spring, true );
+        field.advanceDay( "Spring", true );
     hashed_string produce;
     int32         count = 0;
     SW_ASSERT_TRUE( field.harvest( 0, 0, produce, count ) == FarmActionResult::Done );
     SW_EXPECT_EQUAL( 2, count );
     SW_EXPECT_EQUAL( 1u, field.getCropCount() ); // 남았다
 
-    field.advanceDay( FarmSeason::Spring, true );
+    field.advanceDay( "Spring", true );
     SW_EXPECT_TRUE( field.harvest( 0, 0, produce, count ) == FarmActionResult::NotReady );
-    field.advanceDay( FarmSeason::Spring, true );
+    field.advanceDay( "Spring", true );
     SW_EXPECT_TRUE( field.harvest( 0, 0, produce, count ) == FarmActionResult::Done );
 }
 
@@ -134,7 +111,7 @@ SW_TEST_CASE( FarmingTest, SeasonChangeWithersOutOfSeasonCrops )
     prepareFarmTile( field, 0, 0, "turnip_seed" ); // 봄만
     prepareFarmTile( field, 1, 0, "tomato_seed" ); // 봄 · 여름
 
-    field.advanceDay( FarmSeason::Summer, false );
+    field.advanceDay( "Summer", false );
     SW_EXPECT_TRUE( field.findTile( 0, 0 )->_bWithered == SW_TRUE );
     SW_EXPECT_TRUE( field.findTile( 1, 0 )->_bWithered == SW_FALSE );
     hashed_string produce;
@@ -144,93 +121,86 @@ SW_TEST_CASE( FarmingTest, SeasonChangeWithersOutOfSeasonCrops )
     SW_EXPECT_TRUE( produce.empty() );
 
     (void)field.water( 0, 0 );
-    SW_EXPECT_TRUE( field.plant( 0, 0, "turnip_seed", FarmSeason::Summer ) == FarmActionResult::OutOfSeason );
-    SW_EXPECT_TRUE( field.plant( 0, 0, "rose_seed", FarmSeason::Summer ) == FarmActionResult::UnknownSeed );
+    SW_EXPECT_TRUE( field.plant( 0, 0, "turnip_seed", "Summer" ) == FarmActionResult::OutOfSeason );
+    SW_EXPECT_TRUE( field.plant( 0, 0, "rose_seed", "Summer" ) == FarmActionResult::UnknownSeed );
 }
 
 /**
- * @brief [FarmingTest] 가게에서 씨를 사면 돈이 줄고, 출하함에 넣은 것은 하루 끝 정산에서 카탈로그 값으로 팔린다
+ * @brief [FarmingTest] 출하함은 빌린 가방에서 꺼내 담고, 하루 끝 정산에서 카탈로그 값으로 팔아 빌린 지갑에 더한다
  */
-SW_TEST_CASE( FarmingTest, ShippingSellsAtTheEndOfTheDay )
+SW_TEST_CASE( FarmingTest, ShippingBinSellsFromTheBorrowedBagAtTheEndOfTheDay )
 {
     CropCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmingTestCropXml, "FarmingTest" ) );
-    FarmInventory inventory;
-    inventory.addGold( 100 );
-    SW_EXPECT_TRUE( inventory.buyItem( "turnip_seed", 3, 20 ) );
-    SW_EXPECT_FALSE( inventory.buyItem( "tomato_seed", 2, 40 ) ); // 40 남았는데 80
-    SW_EXPECT_EQUAL( 40, inventory.getGold() );
-    SW_EXPECT_EQUAL( 3, inventory.getItemCount( "turnip_seed" ) );
-
-    inventory.addItem( "turnip", 5 );
-    SW_EXPECT_TRUE( inventory.shipItem( "turnip", 4 ) );
-    SW_EXPECT_FALSE( inventory.shipItem( "turnip", 2 ) );
-    SW_EXPECT_TRUE( inventory.shipItem( "turnip_seed", 1 ) );
-    SW_EXPECT_EQUAL( 5, inventory.getShippedItemCount() );
-    SW_EXPECT_EQUAL( 4 * 60 + 10, inventory.settleShipping( catalog ) );
-    SW_EXPECT_EQUAL( 40 + 250, inventory.getGold() );
-    SW_EXPECT_EQUAL( 0, inventory.getShippedItemCount() );
-    SW_EXPECT_EQUAL( 1, inventory.getItemCount( "turnip" ) );
+    ItemCatalog items;
+    catalog.fillItemCatalog( items, 99 );
+    SW_ASSERT_NOT_NULL( items.findItem( "turnip_seed" ) );
+    Inventory bag;
+    bag.initialize( &items, 8 );
+    Wallet          wallet;
+    FarmShippingBin bin;
+    SW_EXPECT_EQUAL( 5, bag.addItem( "turnip", 5 ) );
+    (void)bag.addItem( "turnip_seed", 1 );
+    SW_EXPECT_TRUE( bin.shipItem( bag, "turnip", 4 ) );
+    SW_EXPECT_FALSE( bin.shipItem( bag, "turnip", 2 ) );
+    SW_EXPECT_TRUE( bin.shipItem( bag, "turnip_seed", 1 ) );
+    SW_EXPECT_EQUAL( 5, bin.getShippedItemCount() );
+    SW_EXPECT_EQUAL( 4 * 60 + 10, bin.settleShipping( catalog, wallet ) );
+    SW_EXPECT_EQUAL( int64{ 250 }, wallet.getBalance( bin.getCurrency() ) );
+    SW_EXPECT_EQUAL( 0, bin.getShippedItemCount() );
+    SW_EXPECT_EQUAL( 1, bag.getItemCount( "turnip" ) );
 }
 
 /**
- * @brief [FarmingTest] 달력 · 밭 · 인벤토리의 상태를 쓰고 새 객체에 읽으면 같은 농장이 이어진다 — 깨진 바이트는 거절하고 그대로 둔다
- * @details 핫 리로드 · 세이브가 디렉터의 시뮬레이션을 이 바이트로 옮긴다(`ComponentStateStore`). 읽은 쪽과 원본을 같은 하루만큼 더 돌려도 같아야 한다.
+ * @brief [FarmingTest] 밭 · 출하함의 상태를 쓰고 새 객체에 읽으면 같은 농장이 이어진다 — 깨진 바이트는 거절하고 그대로 둔다
+ * @details 핫 리로드 · 세이브가 디렉터의 시뮬레이션을 이 바이트로 옮긴다(`ComponentStateStore`). 달력 · 가방 · 돈은 공유 상태가 싣는다.
+ *          읽은 쪽과 원본을 같은 하루만큼 더 돌려도 같아야 한다.
  */
 SW_TEST_CASE( FarmingTest, StateRoundTripContinuesTheSameFarm )
 {
     CropCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmingTestCropXml, "FarmingTest" ) );
+    ItemCatalog items;
+    catalog.fillItemCatalog( items, 99 );
+    Inventory bag;
+    bag.initialize( &items, 8 );
 
-    FarmCalendar calendar;
-    calendar.setDate( 2, FarmSeason::Summer, 5 );
-    (void)calendar.advanceMinutes( 125.0f );
     FarmField field;
     field.initialize( 4, 3, &catalog );
     prepareFarmTile( field, 1, 1, "tomato_seed" );
     (void)field.till( 2, 2 );
-    field.advanceDay( FarmSeason::Spring, true );
-    FarmInventory inventory;
-    inventory.addGold( 321 );
-    inventory.addItem( "turnip_seed", 7 );
-    inventory.addItem( "tomato", 2 );
-    SW_EXPECT_TRUE( inventory.shipItem( "tomato", 1 ) );
+    field.advanceDay( "Spring", true );
+    FarmShippingBin bin;
+    (void)bag.addItem( "tomato", 2 );
+    SW_EXPECT_TRUE( bin.shipItem( bag, "tomato", 1 ) );
 
     Archive written;
-    calendar.writeState( written );
     field.writeState( written );
-    inventory.writeState( written );
+    bin.writeState( written );
 
-    FarmCalendar  readCalendar;
-    FarmField     readField;
-    FarmInventory readInventory;
+    FarmField       readField;
+    FarmShippingBin readBin;
     readField.initialize( 4, 3, &catalog );
     Archive reader( written.getData(), written.getSize() );
-    SW_ASSERT_TRUE( readCalendar.readState( reader ) );
     SW_ASSERT_TRUE( readField.readState( reader ) );
-    SW_ASSERT_TRUE( readInventory.readState( reader ) );
+    SW_ASSERT_TRUE( readBin.readState( reader ) );
     SW_EXPECT_EQUAL( uint64( 0 ), reader.getRemainingBytes() );
 
-    SW_EXPECT_EQUAL( 2, readCalendar.getYear() );
-    SW_EXPECT_TRUE( readCalendar.getSeason() == FarmSeason::Summer );
-    SW_EXPECT_EQUAL( 5, readCalendar.getDay() );
-    SW_EXPECT_EQUAL( calendar.getHour(), readCalendar.getHour() );
-    SW_EXPECT_EQUAL( calendar.getMinute(), readCalendar.getMinute() );
     SW_EXPECT_EQUAL( field.getCropCount(), readField.getCropCount() );
     SW_EXPECT_NEAR_EQUAL( field.computeGrowthRatio( 1, 1 ), readField.computeGrowthRatio( 1, 1 ), 1.0e-6f );
     SW_ASSERT_NOT_NULL( readField.findTile( 2, 2 ) );
     SW_EXPECT_TRUE( readField.findTile( 2, 2 )->_bTilled == SW_TRUE );
-    SW_EXPECT_EQUAL( 321, readInventory.getGold() );
-    SW_EXPECT_EQUAL( 7, readInventory.getItemCount( "turnip_seed" ) );
-    SW_EXPECT_EQUAL( 1, readInventory.getShippedItemCount() );
+    SW_EXPECT_EQUAL( 1, readBin.getShippedItemCount() );
 
     // 같은 하루를 더 돌리면 같은 결과다 — 상태가 다 옮겨졌다
     (void)field.water( 1, 1 );
     (void)readField.water( 1, 1 );
-    field.advanceDay( FarmSeason::Spring, false );
-    readField.advanceDay( FarmSeason::Spring, false );
+    field.advanceDay( "Spring", false );
+    readField.advanceDay( "Spring", false );
     SW_EXPECT_NEAR_EQUAL( field.computeGrowthRatio( 1, 1 ), readField.computeGrowthRatio( 1, 1 ), 1.0e-6f );
-    SW_EXPECT_EQUAL( inventory.settleShipping( catalog ), readInventory.settleShipping( catalog ) );
+    Wallet settleWallet;
+    Wallet readSettleWallet;
+    SW_EXPECT_EQUAL( bin.settleShipping( catalog, settleWallet ), readBin.settleShipping( catalog, readSettleWallet ) );
 
     BLOCK( "크기가 다른 밭 · 잘린 바이트는 거절하고 그대로 둔다" )
     {
@@ -242,15 +212,36 @@ SW_TEST_CASE( FarmingTest, StateRoundTripContinuesTheSameFarm )
         SW_EXPECT_FALSE( smallField.readState( smallReader ) );
         SW_EXPECT_EQUAL( uint32( 0 ), smallField.getCropCount() );
 
-        FarmInventory truncated;
-        truncated.addGold( 5 );
-        Archive      cut( written.getData(), written.getSize() - 2 );
-        FarmCalendar skipCalendar;
-        FarmField    skipField;
+        FarmShippingBin truncated;
+        (void)bag.addItem( "turnip", 1 );
+        SW_ASSERT_TRUE( truncated.shipItem( bag, "turnip", 1 ) );
+        Archive   cut( written.getData(), written.getSize() - 2 );
+        FarmField skipField;
         skipField.initialize( 4, 3, &catalog );
-        SW_EXPECT_TRUE( skipCalendar.readState( cut ) );
         SW_EXPECT_TRUE( skipField.readState( cut ) );
         SW_EXPECT_FALSE( truncated.readState( cut ) );
-        SW_EXPECT_EQUAL( 5, truncated.getGold() );
+        SW_EXPECT_EQUAL( 1, truncated.getShippedItemCount() );
     }
+}
+
+/**
+ * @brief [FarmingTest] 밭 둘이 지갑 하나를 빌려 쓴다 — 두 출하함의 정산이 한 지갑에 더해진다(키트를 섞은 게임의 공유 지갑)
+ */
+SW_TEST_CASE( FarmingTest, TwoFarmsShareOneBorrowedWallet )
+{
+    CropCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmingTestCropXml, "FarmingTest" ) );
+    Inventory bag;
+    bag.initialize( nullptr, 8 );
+    Wallet          shared;
+    FarmShippingBin north;
+    FarmShippingBin south;
+    (void)bag.addItem( "turnip", 1 );
+    (void)bag.addItem( "turnip", 1 );
+    (void)bag.addItem( "turnip", 1 );
+    SW_EXPECT_TRUE( north.shipItem( bag, "turnip", 2 ) );
+    SW_EXPECT_TRUE( south.shipItem( bag, "turnip", 1 ) );
+    SW_EXPECT_EQUAL( 2 * 60, north.settleShipping( catalog, shared ) );
+    SW_EXPECT_EQUAL( 60, south.settleShipping( catalog, shared ) );
+    SW_EXPECT_EQUAL( int64{ 3 * 60 }, shared.getBalance( "Gold" ) );
 }

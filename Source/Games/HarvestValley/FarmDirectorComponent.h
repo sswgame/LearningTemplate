@@ -22,11 +22,11 @@
 
 #include "GameFramework/Base/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
-#include "GameFramework/Kits/Simulation/Farming/FarmCalendar.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmField.h"
-#include "GameFramework/Kits/Simulation/Farming/FarmInventory.h"
+#include "GameFramework/Kits/Simulation/Farming/FarmShippingBin.h"
 
 namespace sw
 {
@@ -59,23 +59,25 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr int32   kFieldWidth       = 12;
-        static constexpr int32   kFieldHeight      = 8;
-        static constexpr int32   kMaxStamina       = 100;
-        static constexpr int32   kStartingGold     = 500;
-        static constexpr float32 kMinutesPerSecond = 10.0f; ///< 실제 1 초 = 게임 10 분(하루 20 시간 = 2 분)
+        static constexpr int32   kFieldWidth    = 12;
+        static constexpr int32   kFieldHeight   = 8;
+        static constexpr int32   kMaxStamina    = 100;
+        static constexpr int32   kStartingGold  = 500;
+        static constexpr float32 kSecondsPerDay = 144.0f; ///< 실제 초 — 1 초 = 게임 10 분(공유 시계 하루)
+        static constexpr int32   kBagSlotCount  = 24;     ///< 플레이어 가방 칸 수(공유 상태)
 
         FarmDirectorComponent();
         virtual ~FarmDirectorComponent() override;
 
-        /** @brief 농장 상태(달력 · 밭 · 인벤토리 · 농부 · 날씨)를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 농장 상태(밭 · 출하함 구간 · 농부 · 날씨)를 씁니다 — 달력 · 가방 · 돈은 공유 상태(`GameStateComponent`)가 싣는다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;
 
         // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
-        const FarmCalendar& getCalendar() const { return _calendar; }
-        const FarmField&    getField() const { return _field; }
-        const float3&       getPlayerPosition() const { return _playerPosition; }
-        bool                isRaining() const { return _bRaining == SW_TRUE; }
+        /** @brief 공유 시계의 시각(0..24)입니다 — 디렉터가 틱마다 옮겨 적는다(뷰는 PostUpdate 에서 이것만 읽는다). */
+        float32          getHourOfDay() const { return _hourOfDay; }
+        const FarmField& getField() const { return _field; }
+        const float3&    getPlayerPosition() const { return _playerPosition; }
+        bool             isRaining() const { return _bRaining == SW_TRUE; }
         /** @brief 농부가 바라보는 칸입니다. 밭 밖이면 false 입니다. */
         bool findTargetTile( int32& outX, int32& outY ) const;
         /** @brief 흙 상태(0 풀 · 1 갈았음 · 2 물 줌)의 모습입니다. 아직 없으면 비어 있다. */
@@ -86,7 +88,7 @@ namespace sw
         static float3 computeTileCenter( int32 x, int32 y );
 
     protected:
-        /** @brief 작물 카탈로그를 읽고 밭 · 달력 · 인벤토리를 새로 둡니다. */
+        /** @brief 작물 카탈로그를 읽고 밭 · 출하함을 새로 두며, 같은 오브젝트의 공유 상태를 엽니다(새 판일 때만 시작 돈 · 씨앗). */
         [[nodiscard]] bool startGame() override;
         /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 이고 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive ) override;
@@ -156,9 +158,9 @@ namespace sw
         float3 _playerStart;
 
         CropCatalog                  _cropCatalog;
-        FarmCalendar                 _calendar;
+        ItemCatalog                  _itemCatalog; ///< 작물 카탈로그가 채운 씨앗 · 수확물(공유 가방의 겹침 수)
         FarmField                    _field;
-        FarmInventory                _inventory;
+        FarmShippingBin              _shipment;  ///< 출하함에 든 것(하루 끝에 팔린다)
         vector<hashed_string>        _listSeed;  ///< 카탈로그 순서의 씨앗 아이템(가게 진열)
         MaterialTintCache            _tintCache; ///< 흙 · 작물 색(같은 색은 나눠 쓴다)
         vector<CropLook>             _listCropLook;
@@ -175,6 +177,8 @@ namespace sw
         int32                        _stamina;
         int32                        _selectedSeedIndex;
         int32                        _lastLoggedHour;
+        int32                        _dayStarted; ///< 농부의 하루가 시작된 공유 시계의 날(쓰러짐 판정)
+        float32                      _hourOfDay;  ///< 뷰가 읽는 시각
         FarmTool                     _tool;
         uint8                        _bRaining : 1;
         uint8                        _reserved : 7;

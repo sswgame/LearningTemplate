@@ -13,32 +13,34 @@
 #include "GameFramework/Base/Data/GameCatalog.h"
 #include "GameFramework/Base/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Simulation/Farming/FarmCalendar.h"
+
+#include <algorithm>
 
 namespace sw
 {
+    class ItemCatalog;
     class XmlNode;
 
     /**
      * @brief 작물 한 종입니다.
      * @details 물 준 날만 하루 자랍니다. `_growthDays` 번 자라면 거둘 수 있고, `_regrowDays` 가 0 이 아니면 거둔 뒤에도 남아 그만큼 다시 자랍니다
-     *          (토마토 · 옥수수). 자라는 계절(`_seasonMask`) 밖으로 계절이 바뀌면 시듭니다.
+     *          (토마토 · 옥수수). 자라는 계절(`_listSeason` — 시계의 계절 이름) 밖으로 계절이 바뀌면 시듭니다.
      */
     struct CropDef
     {
-        hashed_string _id{};
-        string        _name{};
-        hashed_string _seedItem{};    ///< 심을 때 쓰는 아이템
-        hashed_string _produceItem{}; ///< 거두면 받는 아이템
-        int32         _growthDays{ 4 };
-        int32         _regrowDays{ 0 }; ///< 0 이면 한 번 거두고 끝
-        int32         _seedPrice{ 20 };
-        int32         _sellPrice{ 60 };
-        int32         _harvestCount{ 1 }; ///< 한 번에 받는 수
-        uint8         _seasonMask{ 0 };   ///< `makeFarmSeasonBit` 의 합
+        hashed_string         _id{};
+        string                _name{};
+        hashed_string         _seedItem{};    ///< 심을 때 쓰는 아이템
+        hashed_string         _produceItem{}; ///< 거두면 받는 아이템
+        int32                 _growthDays{ 4 };
+        int32                 _regrowDays{ 0 }; ///< 0 이면 한 번 거두고 끝
+        int32                 _seedPrice{ 20 };
+        int32                 _sellPrice{ 60 };
+        int32                 _harvestCount{ 1 }; ///< 한 번에 받는 수
+        vector<hashed_string> _listSeason{};      ///< 자라는 계절(시계의 계절 이름 — `WorldClockSettings::_listSeason`)
 
         /** @brief @p season 에 자라면 true 입니다. */
-        bool growsIn( FarmSeason season ) const { return ( _seasonMask & makeFarmSeasonBit( season ) ) != 0; }
+        bool growsIn( const hashed_string& season ) const { return std::find( _listSeason.begin(), _listSeason.end(), season ) != _listSeason.end(); }
     };
 } // namespace sw
 
@@ -68,6 +70,11 @@ namespace sw
         int32                  findSellPrice( const hashed_string& itemId ) const;
         const vector<CropDef>& getCrops() const { return _catalog.getAll(); }
 
+        /** @brief 읽기 전에 알려 둔 계절 이름입니다 — 모르는 계절만 적힌 작물은 알리고 뺀다(비우면 검사하지 않는다). */
+        void setKnownSeasons( const vector<hashed_string>& listSeason ) { _listKnownSeason = listSeason; }
+        /** @brief 작물마다 씨앗 · 수확물 아이템을 @p inoutItems 에 더합니다(이미 있으면 둔다) — 플레이어 가방(`Inventory`)이 겹침 수를 묻는다. */
+        void fillItemCatalog( ItemCatalog& inoutItems, int32 maxStack ) const;
+
     private:
         static constexpr const utf8* kXmlRootName = "CropCatalog"; ///< 루트 원소(`XmlCatalog`)
         uint32                       loadRoot( const XmlNode& root, string_view sourceName );
@@ -77,5 +84,6 @@ namespace sw
         GameCatalog<CropDef>                 _catalog;         ///< 읽은 순서(가게 진열 순서)
         unordered_map<hashed_string, uint32> _mapSeedIndex;    ///< 씨앗 아이템 → 자리
         unordered_map<hashed_string, uint32> _mapProduceIndex; ///< 수확물 아이템 → 자리
+        vector<hashed_string>                _listKnownSeason; ///< 읽을 때 검사하는 계절 이름(비면 검사 없음)
     };
 } // namespace sw

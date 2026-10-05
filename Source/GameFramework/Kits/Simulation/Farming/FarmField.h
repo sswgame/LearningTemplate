@@ -10,7 +10,6 @@
 
 #include "GameFramework/Base/Utility/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Simulation/Farming/FarmCalendar.h"
 
 namespace sw
 {
@@ -65,6 +64,9 @@ namespace sw
     class SW_GF_API FarmField
     {
     public:
+        static constexpr uint32 kStateTag     = 0x444C4646u; ///< 'FFLD'
+        static constexpr uint32 kStateVersion = 1;
+
         FarmField();
 
         /** @brief 크기를 정하고 모든 칸을 갈지 않은 빈 땅으로 둡니다. */
@@ -72,14 +74,14 @@ namespace sw
 
         FarmActionResult till( int32 x, int32 y );
         FarmActionResult water( int32 x, int32 y );
-        FarmActionResult plant( int32 x, int32 y, const hashed_string& seedItem, FarmSeason season );
+        FarmActionResult plant( int32 x, int32 y, const hashed_string& seedItem, const hashed_string& season );
         /**
          * @brief 거둡니다. 다 자랐으면 @p outProduceItem · @p outCount 에 받은 것을 적습니다. 시든 작물은 치우고 `Done` 이지만 받는 것은 없습니다(개수 0).
          * @details 다시 자라는 작물은 남고 `_regrowDays` 만큼 다시 자라야 합니다.
          */
         FarmActionResult harvest( int32 x, int32 y, hashed_string& outProduceItem, int32& outCount );
-        /** @brief 하루를 넘깁니다 — 자람 → 시듦(새 계절 @p newSeason) → 물 마름 · 비(@p bRain). */
-        void advanceDay( FarmSeason newSeason, bool bRain );
+        /** @brief 하루를 넘깁니다 — 자람 → 시듦(새 계절 @p newSeason — 시계의 계절 이름) → 물 마름 · 비(@p bRain). */
+        void advanceDay( const hashed_string& newSeason, bool bRain );
 
         /** @brief 칸입니다. 밖이면 nullptr 입니다. */
         const FarmTile* findTile( int32 x, int32 y ) const;
