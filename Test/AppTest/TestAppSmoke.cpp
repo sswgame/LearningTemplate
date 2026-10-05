@@ -694,6 +694,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|inspector.drawLeavesTheObjectAlone",
         "EditorSelfTest|PASS|preview.materialHoldsOneReference",
         "EditorSelfTest|PASS|hierarchy.tagFilter",
+        "EditorSelfTest|PASS|hierarchy.offscreenRootsKeepTheirPlace",
         "EditorSelfTest|PASS|gameView.resizeEveryFrame",
         "EditorSelfTest|PASS|gameView.debugDraw",
         "EditorSelfTest|PASS|gameView.debugOverlay",

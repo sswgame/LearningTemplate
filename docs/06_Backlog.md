@@ -407,8 +407,7 @@ cd build/Ninja-Debug/Bin
   파괴물이 많은 맵이면 선형으로 는다. 후보: 쿠킹 때 Jolt 셰이프를 직렬화해 `.fracture` 에 싣기(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리) 또는
   워커에서 `ShapeSettings::Create`(순수 계산) 후 게임 스레드에서 핸들만 등록. 지금 깨지는 프레임은 200 조각 벽 4 ~ 7 ms(그중 사건 처리 2 ~ 4 ms).
 - **DX12 `releaseOnlineBlocksDeferred` 의 `_onlineBlockMutex` 경합.** 병렬 기록 중 RT `mutex::lock` 의 79 % 였다. 후보는 워커별 대기 목록. 고치기 전에 다시 잴 것.
-- **에디터 `GT.Editor.updateUi`(큐브 8000, Release) p50 4.2~4.7 ms** — 가장 큰 것은 `GT.Editor.panels`(3.1~3.4 ms) 안의 Hierarchy 패널(평균 3.4~4.1 ms,
-  `-gv_editorPanelTimes`), 다음이 지난 UI 프레임을 기다리는 `GT.Editor.waitDrawSnapshot`(0.5~0.7 ms). 창을 전면에 두고 잰다(가려지면 RT.BeginFrame 이 67 ms 를 기다린다).
+
 - **8000 무버의 `components`(onTick) ~325 us.** 남은 비용은 오브젝트 → 틱 항목 → 컴포넌트 포인터 추적이다. 더 줄이려면 오브젝트 모델 밖 배치 경로
   (언리얼 Mass · 유니티 DOTS 자리)나 트랜스폼 SoA 2 단계가 필요하다 — 큰 구조 변경이라 할지부터 정한다(1-11 의 구조 후보).
 - **직렬화기(이름 대조 · 텍스트 파싱)와 리소스 로드의 리플렉션 비용, 비동기 씬 로드 중 최악 프레임을 재지 않았다.** 큰 씬 · 쿠킹본으로 잰다(Dev 는 `Cooked/`
@@ -574,6 +573,9 @@ cd build/Ninja-Debug/Bin
 - **에디터 모듈의 계측은 `SW_EDITOR_PROFILE_SCOPE`**(`Editor/Common/EditorProfile.h`) — 엔진 `SW_PROFILE_SCOPE` 는 엔진 서비스 표(`engine::getFrameProfiler`)를
   불러 에디터 모듈에서 쓸 수 없다. 같은 표에 쌓이고 이름은 엔진이 복사해 든다(모듈을 다시 올려도 매달리지 않는다). `GT.Editor.updateUi` 의 하위 구간은
   `GT.Editor.waitDrawSnapshot · newFrame · commandsAndWatchers · panels · endFrame(render · platformWindows · captureDrawSnapshot)`, 패널별 시간은 `-gv_editorPanelTimes=N`.
+- **Hierarchy 는 화면 밖의 접힌 루트를 빈자리로 둔다**(이어진 것은 빈자리 하나) — 큐브 8000 Release `GT.Editor.updateUi` p50 4.2~4.7 → 1.3~1.4 ms, Hierarchy 패널
+  평균 3.4~4.1 → 0.63~0.65 ms(큐브 100 에서는 0.12 ms). 남은 몫은 루트 8000 개를 도는 것(열림 상태 조회) — 더 줄이려면 열린 루트 목록을 들고 보이는 범위만 계산한다.
+  빈자리 높이는 접힌 루트 줄(프레임 높이 + 줄 간격)과 같아야 스크롤이 튀지 않는다(`hierarchy.offscreenRootsKeepTheirPlace`).
 
 - **AppSmokeTest 의 Unknown 태그 상한(8 KB)은 파일 수에도 걸린다** — 태그 없는 호출자(App 스플래시)가 공유 캐시(`ResourceUtil` 경로 캐시)의
   재해시를 일으키면 그 버킷 배열이 Unknown 으로 센다. 데이터 파일 몇 개를 더하자 18 KB 가 넘었다. 공유 캐시는 넣는 자리에서 자기 태그를 건다.

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/EditorViewportPreview.h"
@@ -321,6 +322,121 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
+            // hierarchy.offscreenRootsKeepTheirPlace — 화면 밖의 접힌 루트를 빈자리로 둬도 스크롤 길이가 같고, 맨 아래로 내리면 마지막 루트가 그려진다
+            // ------------------------------------------------------------------------------
+            struct OffscreenRowProbe
+            {
+                vector<uint64> _listObjectId;
+                float32        _scrollMaxWithSkip{ 0.0f };
+            };
+
+            static OffscreenRowProbe& getOffscreenRowProbe()
+            {
+                static OffscreenRowProbe s_probe;
+                return s_probe;
+            }
+
+            /** @brief Hierarchy 트리 구역(자식 창 "##HierarchyTree")을 찾습니다. 없으면 nullptr. */
+            static ImGuiWindow* findHierarchyTreeWindow()
+            {
+                const ImGuiContext* pImGui = ImGui::GetCurrentContext();
+                if ( pImGui == nullptr )
+                    return nullptr;
+                for ( ImGuiWindow* pWindow : pImGui->Windows )
+                {
+                    if ( pWindow != nullptr && pWindow->Name != nullptr && StringUtil::contains( pWindow->Name, "HierarchyTree" ) )
+                        return pWindow;
+                }
+                return nullptr;
+            }
+
+            static EditorSelfTestStep runHierarchyOffscreenRootsKeepTheirPlace( EditorSelfTestContext& context )
+            {
+                constexpr uint32 kRootCount = 300;
+
+                OffscreenRowProbe& probe    = getOffscreenRowProbe();
+                EditorContext*     pContext = EditorContext::get();
+                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
+                    return EditorSelfTestStep::Done;
+                (void)pContext->getPanelManager().setPanelOpen( "hierarchy", true );
+                HierarchyPanel*    pHierarchy = static_cast<HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) );
+                GameObjectManager* pManager   = editor::getActiveObjectManager();
+                if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
+                    return EditorSelfTestStep::Done;
+
+                const uint32 stepIndex = context.getStepIndex();
+                ImGuiWindow* pTree     = findHierarchyTreeWindow();
+                bool         bDone     = false;
+                switch ( stepIndex )
+                {
+                    case 0:
+                    {
+                        pHierarchy->setFilterText( "" );
+                        probe = OffscreenRowProbe{};
+                        for ( uint32 rowIndex = 0; rowIndex < kRootCount; ++rowIndex )
+                        {
+                            GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestRow" ) );
+                            if ( pObj != nullptr )
+                                probe._listObjectId.push_back( pObj->getObjectId() );
+                        }
+                        (void)context.expect( probe._listObjectId.size() == kRootCount, "could not create the probe rows" );
+                        return EditorSelfTestStep::Continue;
+                    }
+                    case 1:
+                    {
+                        return EditorSelfTestStep::Continue; // 줄이 다 그려진(빈자리 포함) 크기로 스크롤 길이가 정해지게
+                    }
+                    case 2:
+                    {
+                        if ( context.expect( pTree != nullptr, "the hierarchy tree region was not found" ) == false )
+                        {
+                            bDone = true;
+                            break;
+                        }
+                        (void)context.expect( pHierarchy->getDrawnRootCount() < pHierarchy->getVisibleRootCount(), "offscreen roots were drawn anyway" );
+                        probe._scrollMaxWithSkip = pTree->ScrollMax.y;
+                        pHierarchy->setOffscreenRowSkipEnabled( false );
+                        return EditorSelfTestStep::Continue;
+                    }
+                    case 3:
+                    {
+                        return EditorSelfTestStep::Continue;
+                    }
+                    case 4:
+                    {
+                        // 빈자리 높이 = 그린 줄의 높이여야 스크롤 길이가 같다(틀리면 스크롤이 튄다).
+                        if ( pTree != nullptr )
+                            (void)context.expect( isNear( pTree->ScrollMax.y, probe._scrollMaxWithSkip, 0.5f ), "skipped rows changed the scroll length" );
+                        pHierarchy->setOffscreenRowSkipEnabled( true );
+                        if ( pTree != nullptr )
+                            ImGui::SetScrollY( pTree, pTree->ScrollMax.y ); // 맨 아래로 — 다음 프레임에 걸린다
+                        return EditorSelfTestStep::Continue;
+                    }
+                    case 5:
+                    {
+                        return EditorSelfTestStep::Continue;
+                    }
+                    default:
+                    {
+                        (void)context.expect( probe._listObjectId.empty() == false && pHierarchy->getLastDrawnRootId() == probe._listObjectId.back(),
+                                              "scrolled to the bottom, the last root was not drawn" );
+                        (void)context.expect( pHierarchy->getDrawnRootCount() < pHierarchy->getVisibleRootCount(), "offscreen roots were drawn at the bottom" );
+                        bDone = true;
+                        break;
+                    }
+                }
+                if ( bDone == false )
+                    return EditorSelfTestStep::Continue;
+                pHierarchy->setOffscreenRowSkipEnabled( true );
+                if ( pTree != nullptr )
+                    ImGui::SetScrollY( pTree, 0.0f );
+                for ( const uint64 objectId : probe._listObjectId )
+                    destroyProbeObject( objectId );
+                probe = OffscreenRowProbe{};
+                return EditorSelfTestStep::Done;
+            }
+
+            // ------------------------------------------------------------------------------
             // gameView.resizeEveryFrame — 게임 뷰를 프레임마다 다른 크기로 다시 만든다
             // 놓은 ImGui 텍스처 · 렌더 타깃은 그것을 그렸을 수 있는 마지막 프레임의 GPU 작업이 끝난 뒤에 놓여야 한다. 어기면 Vulkan 검증 레이어가
             // "사용 중인 디스크립터 세트 해제" 를 Error 로 남기고, AppSmokeTest 가 그 줄을 센다.
@@ -587,6 +703,7 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( InspectorEnum, "inspector.drawLeavesTheObjectAlone", 400, &EditorSelfTestCasesInternal::runInspectorDrawLeavesTheObjectAlone );
     SW_EDITOR_SELF_TEST( MaterialPreview, "preview.materialHoldsOneReference", 500, &EditorSelfTestCasesInternal::runMaterialPreviewHoldsOneReference );
     SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &EditorSelfTestCasesInternal::runHierarchyTagFilter );
+    SW_EDITOR_SELF_TEST( HierarchyOffscreenRows, "hierarchy.offscreenRootsKeepTheirPlace", 610, &EditorSelfTestCasesInternal::runHierarchyOffscreenRootsKeepTheirPlace );
     SW_EDITOR_SELF_TEST( GameViewResize, "gameView.resizeEveryFrame", 700, &EditorSelfTestCasesInternal::runGameViewResizeEveryFrame );
     SW_EDITOR_SELF_TEST( ProfilerGpuMemory, "profiler.gpuMemoryTab", 800, &EditorSelfTestCasesInternal::runProfilerGpuMemoryTabDrawsTheLedger );
     SW_EDITOR_SELF_TEST( UserSettingsPanel, "userSettings.panelDrawsEveryTab", 900, &EditorSelfTestCasesInternal::runUserSettingsPanelDrawsEveryTab );
