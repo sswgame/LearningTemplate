@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -1884,3 +1885,24 @@ SW_TEST_CASE( StringTest, BoolTextIsReadByOneTable )
         SW_EXPECT_FALSE_MSG( sw::StringUtil::parseBool( pText, false ), pText );
     }
 }
+
+#if !defined( SW_SHIPPING )
+/**
+ * @brief [StringTest] StringBuilder 가 늘리다 할당에 실패하면 쌓은 글을 그대로 두고, 다음 할당이 되면 다시 이어 붙는다
+ * @details `ensureCapacity` 가 실패를 확인하지 않고 늘린 용량만 적으면 버퍼가 nullptr 인 채로 다음 append 가 그 자리에 쓴다.
+ */
+SW_TEST_CASE( StringTest, StringBuilderKeepsItsTextWhenGrowingFails )
+{
+    sw::StringBuilder<sw::constant::kMaxBuffer16> builder;
+    builder.append( "0123456789" );
+    sw::Memory::injectAllocationFailures( 1 );
+    builder.append( "this text does not fit in sixteen bytes" );
+    sw::Memory::injectAllocationFailures( 0 );
+    SW_EXPECT_EQUAL( 10u, builder.size() );
+    SW_EXPECT_TRUE( builder.view() == "0123456789" );
+
+    builder.append( "abcdefghijklmnopqrstuvwxyz" );
+    SW_EXPECT_EQUAL( 36u, builder.size() );
+    SW_EXPECT_TRUE( builder.view() == "0123456789abcdefghijklmnopqrstuvwxyz" );
+}
+#endif
