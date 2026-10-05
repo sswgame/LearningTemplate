@@ -12,7 +12,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 
 | 티어 | 폴더 | 뜻 |
 |---|---|---|
-| 0 | `Common` · `Compression` | 토대. Engine 의 어느 것도 참조하지 않는다. |
+| 0 | `Common` · `Compression` · `Network` | 토대. Engine 의 어느 것도 참조하지 않는다. 외부 라이브러리로 Core 의 창구를 구현하는 자리(압축 코덱 · 네트워크 보안). |
 | 1 | `Reflection` · `Utility` | 리플렉션과, 토대 위의 잎 헬퍼. |
 | 2 | `Animation` · `Localization` · `Serialization` | 리플렉션 위에 올라가는 직렬화와 에셋형 잎. |
 | 3 | `Audio` · `Config` · `Dialogue` · `Physics` | 설정 — 리플렉션·직렬화로 읽힌다. 물리(설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터)와 오디오(믹서 그래프 · 이벤트 · 음악 데이터)도 여기다. |

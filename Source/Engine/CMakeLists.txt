@@ -203,6 +203,13 @@ endif()
 target_link_libraries(Engine PRIVATE recastnavigation)
 
 # ------------------------------------------------------------------------------
+# 2-4) 네트워크 보안 — OpenSSL 3(TLS 1.3 · X25519 · AEAD · HKDF · Argon2id). 헤더는 Network/OpenSsl 에서만 include 한다(CheckThirdPartyIsolation.py)
+# — Core · 키트 · 게임은 Core/Network/Security/INetSecurityProvider.h 와 Engine/Network/EngineNetSecurity.h 만 본다.
+# x64-windows 는 DLL 두 개(libssl-3-x64 · libcrypto-3-x64), 리눅스는 정적.
+# ------------------------------------------------------------------------------
+target_link_libraries(Engine PRIVATE openssl)
+
+# ------------------------------------------------------------------------------
 # 3) RHI 링크 — Shipping 은 백엔드 하나를 Engine 에 정적 링크, Dev 는 RHI_* MODULE 을 런타임에 로드
 # 전용 서버 배포본은 RHI 백엔드를 하나도 링크하지 않는다(기동 표의 RHI 단계가 서버에서 돌지 않는다) — 백엔드 소스는 모두 "이 구성이 짓지 않는다".
 # Dev 서버는 RHI_* 모듈을 매니페스트(`_listTarget: ["Client"]`)가 끈다.

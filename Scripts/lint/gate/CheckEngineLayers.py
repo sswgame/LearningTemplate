@@ -117,6 +117,9 @@ _kEngineTier: dict[str, int] = {
     # 외부 압축 라이브러리(lz4·zstd) 코덱. Core 의 ICompressionCodec 만 구현하고 Engine 것은 안 본다
     # — Core 를 압축 라이브러리에 종속시키지 않으려고 여기 둔다(Source/Engine/CMakeLists.txt 주석 참고).
     "Compression": 0,
+    # 네트워크 보안 구현(OpenSSL). Core 의 INetSecurityProvider 만 구현하고 Engine 의 다른 폴더는 안 본다(ResourceUtil 은 어디서나 되는 경로 도우미)
+    # — Core 를 암호 라이브러리에 종속시키지 않으려고 여기 둔다(압축 코덱과 같은 이유).
+    "Network": 0,
     # 1: 리플렉션과, 토대 위의 잎 서브시스템·헬퍼.
     "Reflection": 1,
     "Utility": 1,
