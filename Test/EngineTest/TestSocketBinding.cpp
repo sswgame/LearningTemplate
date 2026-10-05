@@ -2,10 +2,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Character/CharacterGeometry.h"
-#include "Engine/Character/ResolvedSocketTable.h"
-#include "Engine/Character/SocketBindingComponent.h"
-#include "Engine/Character/SocketSet.h"
+#include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Character/Socket/ResolvedSocketTable.h"
+#include "Engine/Character/Socket/SocketBindingComponent.h"
+#include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Object/Component/Physics/SocketPhysicsBody.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

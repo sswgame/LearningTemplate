@@ -10,7 +10,7 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Skeleton.h"
-#include "Engine/Character/BodyShape.h"
+#include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/3D/PoseRetargetComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"

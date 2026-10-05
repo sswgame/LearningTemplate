@@ -59,7 +59,9 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 ## 주요 시스템 디렉터리 구조
 - **Object/**: GameObject · Component · Prefab. 틱/구조 동결·사용법은 [Object/README.md](Object/README.md)
 - **Scene/**: Scene · SceneManager · SceneDocument · SceneCooker · ObjectUndoUtil ([Scene/README.md](Scene/README.md))
-- **Character/**: 캐릭터 외형의 형상 쪽 — 소켓 에셋 · 해석된 소켓 표 · 레퍼런스 포즈 덮어쓰기 · 체형 · 장비 피팅(`FitSolver`) · 병합 · 절단 · 표면 상태 · `SocketBindingComponent` ([Character/README.md](Character/README.md))
+- **Character/**: 캐릭터 외형의 형상 쪽 — `Fit/`(중립 형상 · 체형 · 장비 피팅 `FitSolver` · 병합 · 자르기 · 표면 상태) · `Socket/`(소켓 에셋 · 해석된 소켓 표 ·
+  `SocketBindingComponent`) · `Hit/`(맞힘 · 래그돌 · 절단 런타임) · `Pose/`(레퍼런스 포즈 덮어쓰기 · 후처리 리그) · `AnimNotify/`(알림 디스패치), 루트는 공용 데이터 읽기
+  ([Character/README.md](Character/README.md)). 모션 워핑 · 이동 보정 컴포넌트는 `Object/Animation/`
 - **Destruction/**: 파괴 가능 메시 — 보로노이 파쇄(`.fracture`) · 묶음 계층 · 연결 그래프 · 구조 지지 · 피해 · 조각 컴포넌트 ([Destruction/README.md](Destruction/README.md))
 - **Environment/**: 지형(높이장 · 청크 LOD · 스플랫 레이어) · 식생(규칙 배치 · GPU 인스턴스 · 바람) · 물(거스트너 · 수면 질의) · 2D/3D 공용 배치 규칙 ([Environment/README.md](Environment/README.md))
 - **Navigation/**: 3D 내비메시 — `INavMesh` · `INavCrowd` 인터페이스 뒤의 Recast & Detour(타일 베이크 · 경로 · 레이캐스트 · 군중), 설정 표, 쿠킹본(`.navmesh`). 씬 쪽(`SceneNavigation` · 에이전트 · 표면 · 장애물 컴포넌트)은 Object 에 있다 ([Navigation/README.md](Navigation/README.md))

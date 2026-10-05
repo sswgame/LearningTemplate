@@ -99,7 +99,7 @@ PhysicsRagdollBuilder::setBodyType( scene, ragdoll, PhysicsBodyType::Dynamic ); 
 PhysicsRagdollBuilder::readBoneTransforms( scene, ragdoll, skeleton, worldFromModel, outPose ); // 포즈를 받는다
 ```
 
-컴포넌트로 쓰는 길(에셋 캐시 · 포즈 따르기 · 래그돌 · 맞음 반응 · 부분 · 기상)은 `Engine/Character/RagdollComponent`(`Source/Engine/Character/README.md`)입니다.
+컴포넌트로 쓰는 길(에셋 캐시 · 포즈 따르기 · 래그돌 · 맞음 반응 · 부분 · 기상)은 `Engine/Character/Hit/RagdollComponent`(`Source/Engine/Character/README.md`)입니다.
 셰이프 · 관절 축은 뼈 로컬입니다. 관절은 그 뼈의 바디와 부모 사슬에서 가장 가까운 바디가 있는 뼈를 Cone(스윙 원뿔 + 비틀림) · Hinge 등으로 잇고,
 이은 바디끼리 · `_listDisabledPair` 의 쌍은 부딪히지 않습니다. 바디 없는 뼈(손가락 · 모자)는 되읽을 때 입력 포즈의 부모 상대 변환으로 따라갑니다.
 에셋의 뼈가 스켈레톤에 없으면 오류이고 아무것도 만들지 않습니다. 견본: `Resource/engine/physics/samples/chain.physics.xml`.

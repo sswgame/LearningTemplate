@@ -2,14 +2,14 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Character/CharacterGeometry.h"
-#include "Engine/Character/FitOperator.h"
-#include "Engine/Character/FitPartData.h"
-#include "Engine/Character/FitSolver.h"
-#include "Engine/Character/FitTables.h"
-#include "Engine/Character/GeometryCut.h"
-#include "Engine/Character/SurfaceBvh.h"
-#include "Engine/Character/SurfaceTransfer.h"
+#include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Character/Fit/FitOperator.h"
+#include "Engine/Character/Fit/FitPartData.h"
+#include "Engine/Character/Fit/FitSolver.h"
+#include "Engine/Character/Fit/FitTables.h"
+#include "Engine/Character/Fit/GeometryCut.h"
+#include "Engine/Character/Fit/SurfaceBvh.h"
+#include "Engine/Character/Fit/SurfaceTransfer.h"
 
 #include "EngineTest/CharacterTestUtil.h"
 

@@ -4,8 +4,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/CharacterDataCache.h"
-#include "Engine/Character/CharacterHit.h"
-#include "Engine/Character/RagdollComponent.h"
+#include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"

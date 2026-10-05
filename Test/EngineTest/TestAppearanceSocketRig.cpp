@@ -4,9 +4,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Skeleton.h"
-#include "Engine/Character/CharacterGeometry.h"
-#include "Engine/Character/CharacterPoseUtil.h"
-#include "Engine/Character/SocketSet.h"
+#include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Character/Pose/CharacterPoseUtil.h"
+#include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

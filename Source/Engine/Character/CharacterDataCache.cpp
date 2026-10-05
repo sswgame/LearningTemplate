@@ -4,8 +4,8 @@
 
 #include "Core/Memory/MemoryProfiler.h"
 
-#include "Engine/Character/AnimNotifyTable.h"
-#include "Engine/Character/SocketSet.h"
+#include "Engine/Character/AnimNotify/AnimNotifyTable.h"
+#include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Physics/PhysicsAsset.h"
 #include "Engine/Resource/SharedAssetTable.h"
 

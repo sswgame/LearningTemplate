@@ -4,12 +4,12 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Character/BodyShape.h"
-#include "Engine/Character/CharacterGeometry.h"
-#include "Engine/Character/ReferencePoseOverride.h"
-#include "Engine/Character/ResolvedSocketTable.h"
-#include "Engine/Character/SocketImportUtil.h"
-#include "Engine/Character/SocketSet.h"
+#include "Engine/Character/Fit/BodyShape.h"
+#include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Character/Pose/ReferencePoseOverride.h"
+#include "Engine/Character/Socket/ResolvedSocketTable.h"
+#include "Engine/Character/Socket/SocketImportUtil.h"
+#include "Engine/Character/Socket/SocketSet.h"
 
 #include "EngineTest/CharacterTestUtil.h"
 

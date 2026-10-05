@@ -4,9 +4,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Skeleton.h"
-#include "Engine/Character/CharacterHit.h"
-#include "Engine/Character/DismembermentComponent.h"
-#include "Engine/Character/RagdollComponent.h"
+#include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Character/Hit/DismembermentComponent.h"
+#include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"

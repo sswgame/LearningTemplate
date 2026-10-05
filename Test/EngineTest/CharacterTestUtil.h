@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Character/CharacterGeometry.h"
+#include "Engine/Character/Fit/CharacterGeometry.h"
 
 namespace test
 {

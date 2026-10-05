@@ -5,9 +5,9 @@
 
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Animation/SpriteClipPlayable.h"
-#include "Engine/Character/AnimNotifyComponent.h"
-#include "Engine/Character/AnimNotifyTable.h"
-#include "Engine/Character/SocketSetComponent.h"
+#include "Engine/Character/AnimNotify/AnimNotifyComponent.h"
+#include "Engine/Character/AnimNotify/AnimNotifyTable.h"
+#include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/Physics/RigidBody2DComponent.h"

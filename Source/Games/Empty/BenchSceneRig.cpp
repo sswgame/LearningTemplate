@@ -6,8 +6,8 @@
 
 #include "Engine/Animation/Pose.h"
 #include "Engine/Animation/Skeleton.h"
-#include "Engine/Character/PoseModifierComponent.h"
-#include "Engine/Character/SocketSet.h"
+#include "Engine/Character/Pose/PoseModifierComponent.h"
+#include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Animation/AnimationSystem.h"

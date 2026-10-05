@@ -3,13 +3,13 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Character/CharacterGeometry.h"
-#include "Engine/Character/Dismemberment.h"
-#include "Engine/Character/FitSolver.h"
-#include "Engine/Character/FitTables.h"
-#include "Engine/Character/GeometryCut.h"
-#include "Engine/Character/MeshMerger.h"
-#include "Engine/Character/SurfaceState.h"
+#include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Character/Fit/FitSolver.h"
+#include "Engine/Character/Fit/FitTables.h"
+#include "Engine/Character/Fit/GeometryCut.h"
+#include "Engine/Character/Fit/MeshMerger.h"
+#include "Engine/Character/Fit/SurfaceState.h"
+#include "Engine/Character/Hit/Dismemberment.h"
 
 #include "EngineTest/CharacterTestUtil.h"
 

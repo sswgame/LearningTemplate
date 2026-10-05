@@ -2,8 +2,8 @@
 
 #include "GameFramework/Appearance/CharacterAppearanceComponent.h"
 
-#include "Engine/Character/CharacterPoseUtil.h"
-#include "Engine/Character/SocketBindingComponent.h"
+#include "Engine/Character/Pose/CharacterPoseUtil.h"
+#include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
