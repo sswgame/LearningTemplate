@@ -502,19 +502,6 @@ cd build/Ninja-Debug/Bin
 - **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
   결과(열거값)로 바꾸는 그래픽스 쪽 수정.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
-- **폴더 구조 정리(2026-10-05 점검, 사용자 승인) — 조건(큰 병합 · gv 매크로)은 이미 찼다, 다음 세션 첫 일로 좋다(착수 직후 세션 종료로 미착수).** 기계적 이동이라
-  커밋은 단계별로 나누되 빌드 · 시험은 다 옮긴 뒤 한 번(사용자 지시). 파일 이동은 진행 중인
-  브랜치와 거의 모두 충돌하므로 조용한 창에 에이전트 하나로 한다.
-  ① `Engine/Character` 60 개 평면 → 하위 폴더(`Socket/` — `Socket*` 일곱 · `Fit/` — `Fit*` · `BodyShape` · `Surface*` · `GeometryCut` ·
-  `MeshMerger` · `CharacterGeometry` · `Hit/` — 피격 · 절단 · 래그돌), 애니메이션 기능(`AnimNotify*` · `MotionWarping` · `LocomotionWarping` ·
-  `PoseModifier` · `CharacterPoseUtil` · `ReferencePoseOverride`)은 데이터는 `Animation/`, 컴포넌트 · 시스템은 `Object/Animation/` 으로
-  ② 엔진 루트의 `LocalizationTools.cpp/.h` → `Localization/`, `EngineDevCommands.cpp` → `Utility/Console/`(층은 `CheckEngineLayers` 로 확인 —
-  루트는 `EngineLoop` 급만) ③ 파일 하나짜리 폴더 `Input/Events` · `Input/Utils` · `Reflection/Rpc` 를 위로 합치기 ④ 이름이 겹쳐 헷갈리는
-  `Utility/Format` ↔ `Serialization/Format`, `Graphics/Debug` ↔ `Utility/Profiling` 정리(`Core/Compression` ↔ `Engine/Compression` 은
-  의도 — 코덱 틀은 Core, 서드파티 코덱은 Engine) ⑤ `Test/EngineTest` 229 개 · `CoreTest` 40 · `EditorTest` 37 평면 → 소스 폴더를 따르는 하위 폴더
-  (`CheckTestSuites` · CMake 글롭 확인) ⑥ 다시 생기지 않게: 폴더당 파일 수 상한 보고서 + 엔진 루트 허용 목록 게이트.
-  함정: `git mv` 는 mtime 을 안 바꿔 ReflectionParser 가 옛 경로 `.gen.cpp` 를 최신으로 본다 — 이동 뒤 re-configure 하고 생성 폴더를 지워 확인.
-
 - **TSan 에서 Jolt 를 계측해 짓기(2026-10-05 사용자 "일단 해보고 추가해", 미완).** 지금은 계측 안 된 Jolt 의 거짓 경쟁을 `TsanSuppressions.txt` 로 가리는데, 그 억제가
   Jolt 잡 안에서 불리는 엔진 콜백의 진짜 경쟁까지 가린다. TSan 전용 오버레이 트리플릿 `x64-linux-tsan`(`-fsanitize=thread`) · CI TSan 잡 · 억제 목록을 고친 **작업 중 커밋**이
   워크트리 `LT-wt/tsan-jolt`(브랜치 `wt/tsan-jolt`, `d0d9ddb07`)에 있다 — WSL configure 도중 멈춤, 빌드 · 시험 미확인. 이어서: 계측 빌드 → Jolt 억제 지우고 TSan ctest →
@@ -816,6 +803,9 @@ cd build/Ninja-Debug/Bin
 - **명령줄 철자는 인자마다 하나다** — `ArgumentList.xxx` 의 줄에 적은 것만 키이고 열거자 이름(`WIDTH` · `COOK_SHADERS`)은 키가 아니다(`CommandLineTest.EnumeratorNameIsNotACommandLineKey`). RHI 백엔드 줄만 쿠킹 표(`CookContract.json`)의 별칭 여럿을 받는다.
 
 - **`git mv` 로 옮긴 시험 파일은 pre-commit 의 `CheckIncludeOrder` · `CheckTestSuites` 가 "변경 없음" 으로 건너뛴다** — 옮긴 뒤에는 `ctest -L lint` 로 확인할 것.
+- **폴더를 옮기기 전에 옮길 파일의 include 를 티어 표와 대조한다**(2026-10-05 폴더 정리). 계획한 자리(`Animation/` · `Utility/Console/` · `Localization/`)가
+  위층을 include 하는 파일을 받을 수 없어 `Character/Pose/` · `Character/AnimNotify/` · `DevTools/` 로 갔다. 엔진 루트는 `CheckEngineRootFiles` 허용 목록,
+  폴더 크기 · 파일 하나짜리 폴더는 `RunFolderFileCount.py`(보고서). 시험은 소스 폴더를 따른다(`Test/README.md`). 옮긴 헤더의 옛 `.gen.cpp` 는 생성 폴더에서 지운다.
 - **병합 커밋의 훅은 어느 부모와도 내용이 다른 파일만 파일 단위로 본다**(한쪽 부모와 같은 파일은 그 부모 커밋 때 검사됐다) — 부모 둘에서 따로 온 파일끼리의 관계는
   병합 뒤 `ctest -L lint` 로 확인할 것.
 
@@ -1564,5 +1554,11 @@ cd build/Ninja-Debug/Bin
 | `-gv_editorOpenAllPanels=1` | `-gv_editorOpenPanel=all` |
 | `RenderResourceXml` | `Serialization/Format/ReflectedXmlFile` |
 | `CameraBlendCurve` · `CameraBlendKey` · `CameraBlendSpec`(GameFramework/Camera) | `BlendCurve` · `BlendCurveKey` · `BlendCurveSpec`(`Engine/Animation/BlendCurve.h`) |
+| `Engine/Character/<평면 60 개>` | `Character/{Fit,Socket,Hit,Pose,AnimNotify}/`, 워핑 둘은 `Object/Animation/`(2026-10-05) |
+| `Utility/Debug/*` · `Utility/Format/KeyValueFile` | `Utility/Profiling/*`(`DebugOverlayState` · `KeyValueFile` 은 `Utility/`) |
+| `Graphics/Renderer/Debug/` | `Graphics/Debug/` |
+| 엔진 루트 `LocalizationTools` · `EngineDevCommands.cpp` | `DevTools/` |
+| `Input/Events/` · `Input/Utils/` · `Reflection/Rpc/` | 한 단계 위(`Input/` · `Reflection/`) |
+| `Test/<실행 파일>/Test*.cpp`(평면) | 소스 폴더를 따르는 하위 폴더(`Test/README.md`) |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
