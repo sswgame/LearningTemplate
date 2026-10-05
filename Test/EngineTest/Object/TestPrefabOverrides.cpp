@@ -8,6 +8,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -330,4 +331,42 @@ SW_TEST_CASE( PrefabOverridesTest, AddedComponentKeepsItsPlaceBetweenInheritedOn
     const sw::string lostAnchor = "<PrefabOverrides><Add after=\"Gone#0\"><SceneComponent _componentName=\"Late\" /></Add></PrefabOverrides>";
     SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, lostAnchor, "CrateTail", rebuiltState ) );
     SW_EXPECT_TRUE_MSG( rebuiltState.find( "\"Late\"" ) != sw::string::npos && rebuiltState.find( "\"Late\"" ) > rebuiltState.find( "MeshComponent" ), rebuiltState.c_str() );
+}
+
+/**
+ * @brief [PrefabOverridesTest] 프리팹에서 사라진 컴포넌트의 오버라이드는 엔티티 이름과 함께 경고하고 버린다 — 얹은 상태에 남지 않는다
+ */
+SW_TEST_CASE( PrefabOverridesTest, OverrideOfVanishedComponentIsDroppedWithTheEntityName )
+{
+    const sw::PrefabAsset prefab = sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
+    sw::string            baseState;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::makeBaseState( prefab, baseState ) );
+    const sw::string overrides = "<PrefabOverrides><Override key=\"Gone#0\"><SceneComponent _localPosition=\"9,9,9\" /></Override></PrefabOverrides>";
+
+    test::ScopedLogCollector logs;
+    sw::string               rebuiltState;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, overrides, "CrateGone", rebuiltState ) );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "'Gone#0' of 'CrateGone' is dropped" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( rebuiltState.find( "9,9,9" ) == sw::string::npos, rebuiltState.c_str() );
+}
+
+/**
+ * @brief [PrefabOverridesTest] 물려받은 컴포넌트의 이름표를 바꾸면 제거 + 추가로 기록된다 — 그 컴포넌트에 프리팹 수정이 더는 닿지 않는다(에디터가 막을 자리)
+ */
+SW_TEST_CASE( PrefabOverridesTest, RenamedInheritedComponentIsRecordedAsRemoveAndAdd )
+{
+    const sw::PrefabAsset prefab = sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
+    sw::string            baseState;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::makeBaseState( prefab, baseState ) );
+    sw::GameObjectManager world;
+    sw::GameObject*       pInstance = world.createGameObject( sw::hashed_string( "CrateRenamed" ) );
+    SW_ASSERT_TRUE( prefab.applyStateTo( pInstance ) );
+    sw::Component* pSocket = sw::ComponentStableKey::findComponent( pInstance, "Socket#0" );
+    SW_ASSERT_NOT_NULL( pSocket );
+    pSocket->setComponentName( sw::hashed_string( "Mount" ) );
+
+    sw::string overrides;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( sw::ObjectStateSerializer::saveToXmlString( pInstance ), baseState, overrides ) );
+    SW_EXPECT_TRUE_MSG( overrides.find( "<Remove key=\"Socket#0\"" ) != sw::string::npos, overrides.c_str() );
+    SW_EXPECT_TRUE_MSG( overrides.find( "_componentName=\"Mount\"" ) != sw::string::npos, overrides.c_str() );
 }

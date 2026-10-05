@@ -202,7 +202,8 @@ namespace sw
             /** @brief `makeInstanceState` 가 컴포넌트 목록을 쓰는 단계입니다 — 지운 것을 빼고, 덮어쓴 것을 얹고, 더한 것을 `after` 자리에 넣습니다. */
             struct ComponentListWriter
             {
-                XmlNode _overrideRoot;
+                XmlNode     _overrideRoot;
+                string_view _instanceName; ///< 경고에 적을 엔티티 이름(비면 "?")
 
                 void write( XmlNode outRoot, const XmlNode& baseList ) const
                 {
@@ -306,7 +307,8 @@ namespace sw
                         for ( const KeyedComponent& component : listBase )
                             bMatched = bMatched || ( pKey != nullptr && component._key == pKey && component._bUsed );
                         if ( bMatched == false )
-                            SW_LOG_WARNING( "Prefab override for component '%#' is dropped - the prefab no longer has that component", pKey != nullptr ? pKey : "" );
+                            SW_LOG_WARNING( "Prefab override for component '%#' of '%#' is dropped - the prefab no longer has that component", pKey != nullptr ? pKey : "",
+                                            _instanceName.empty() ? string_view( "?" ) : _instanceName );
                     }
                     for ( const string& removedKey : listRemovedKey )
                     {
@@ -455,7 +457,7 @@ namespace sw
         }
 
         const XmlNode                                       objectOverride = PrefabOverridesInternal::findChildElement( overrideRoot, PrefabOverridesInternal::kObject );
-        const PrefabOverridesInternal::ComponentListWriter  listWriter{ overrideRoot };
+        const PrefabOverridesInternal::ComponentListWriter  listWriter{ overrideRoot, instanceName };
         const PrefabOverridesInternal::ComponentListWriteFn writeList =
             SW_DELEGATE_METHOD( PrefabOverridesInternal::ComponentListWriteFn, &PrefabOverridesInternal::ComponentListWriter::write, &listWriter );
         const string name( instanceName );

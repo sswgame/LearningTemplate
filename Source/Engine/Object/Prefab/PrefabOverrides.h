@@ -51,7 +51,7 @@ namespace sw
         /**
          * @brief 기준 상태에 덮어쓴 것을 얹어 인스턴스의 오브젝트 상태 XML 을 만듭니다. @p overrideXml 이 비면 기준 상태 그대로입니다.
          * @param instanceName 비어 있지 않으면 루트의 `_name` 을 이것으로 씁니다(엔티티 이름).
-         * @details 프리팹에서 사라진 컴포넌트를 가리키는 덮어쓴 값은 버리고 경고합니다 — 다음 저장에서 빠집니다(언리얼 · 유니티도 원형에 없는
+         * @details 프리팹에서 사라진 컴포넌트를 가리키는 덮어쓴 값은 버리고 엔티티 이름과 함께 경고합니다 — 다음 저장에서 빠집니다(언리얼 · 유니티도 원형에 없는
          *          오버라이드는 버린다). 읽지 못하면 false 입니다.
          */
         [[nodiscard]] static bool makeInstanceState( string_view baseStateXml, string_view overrideXml, string_view instanceName, string& outStateXml );
