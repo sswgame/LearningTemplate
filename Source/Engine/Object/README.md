@@ -13,7 +13,7 @@
 |------|------|
 | **GameObject** | 이름·태그·수명을 가진 “상자”. 로직은 거의 없고 컴포넌트를 붙입니다. |
 | **Component** | `onBeginPlay` / `onTick` / `onEndPlay` 로 동작하는 실제 기능. |
-| **GameObjectManager** | 한 씬 안의 GO 생성·검색·틱·지연 삭제. |
+| **GameObjectManager** | 한 씬의 얼굴 — 저장소(`GameObjectStore`) · 틱 디스패치(`SceneTickScheduler`) · 틱 중 규칙(`StructuralChangeBuffer`) · 등록부 · 물리를 소유하고 게임 API 를 전달. |
 | **Tag** | `"Player"`, `"Bullet"` 같은 표식. 검색·필터에 사용. |
 
 ```text
@@ -37,12 +37,17 @@ Object/
 ├─ GameObject/          # GO, Manager, 직렬화 (참조 핸들 타입은 Core/Container 의 GameObjectHandle · ComponentHandle)
 │  ├─ GameObject.*              # 액터 — 컴포넌트 목록 · 태그 · 활성 · 계층. 매니저 헤더를 포함하지 **않는다**
 │  ├─ GameObjectManager.h
-│  ├─ GameObjectManager.cpp     # 수명: 생성 · 이름 · id 표 · 조회 · 파괴 · 이름으로 컴포넌트 만들기(TypeInfo 의 생성 함수)
-│  ├─ GameObjectManagerTick.cpp # 프레임: tick 의 단계 · 병렬 틱 디스패치 · 트랜스폼 배치/큐 · 지연 큐
+│  ├─ GameObjectManager.cpp     # 씬의 얼굴 — 단위들을 소유 · 비우기, 이름으로 컴포넌트 만들기(TypeInfo 의 생성 함수). 게임 API 는 헤더의 전달 함수
+│  ├─ GameObjectStore.*         # 저장소(ULevel · FUObjectArray 자리) — 생성 · 이름(번호 되쓰기) · id 슬롯 표 · 조회 · 순회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄
+│  ├─ GameObjectManagerTick.cpp # 프레임: 표의 단계 본문(`runFrameStep*`) · 물리 · 트랜스폼 배치/큐 전달
+│  ├─ SceneFrameStepList.xxx    # 프레임 순서 표 하나(X-macro, 줄 순서 = 실행 순서) — `SceneFrameStep.h` 가 열거로 읽는다
+│  ├─ SceneTickScheduler.*      # 틱 디스패치(FTickTaskManager 자리) — 틱 등록부 소유 · 그룹 포크-조인 · 선행 조건 스테이지 · 경계의 트랜스폼 적용
 │  ├─ TickRegistry.*            # 틱 등록부 — 오브젝트별 항목 · 그룹 목록 · 선행 종속성 스테이지
+│  ├─ StructuralChangeBuffer.*  # 틱 중 규칙(DOTS ECB 자리) — 동결 플래그 하나 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서(`drain`) · 스레드별 틱 상태
 │  ├─ DeferredDelegateQueue.*   # 틱이 미룬 일(계층 변경 · 틱 뒤 작업)의 큐 — 넣기는 아무 스레드, 비우기는 게임 스레드
 │  ├─ PrimitiveRegistry.* · LightRegistry.*  # 빛 등록부는 종류(방향광 · 점광 · 스포트)마다 칸 하나
 │  ├─ CameraRegistry.*          # 카메라 등록부 + 역할 · 우선순위 선택 규칙 하나(게임 · 에디터 카메라가 같이 쓴다)
+│  ├─ SceneOverlapWorld2D.*     # 겹침 월드 — AABB 질의 월드(`PhysicsWorld`) · 2D 콜라이더 등록 · step 직전 바디 맞추기 · 겹침 이벤트 나눠 주기
 │  ├─ SceneAudio.*              # 오디오 컴포넌트 등록부 + 프레임마다 리스너 · 에미터 · 가림 · 리버브 존을 오디오 엔진에 넣기(Engine/Audio/README.md)
 │  ├─ MeshInstanceBatch.* · SpriteInstanceBatch.*  # 컴포넌트 없이 인스턴스 N 개를 드는 렌더 프리미티브(PrimitiveRegistry 에 등록)
 │  ├─ ObjectStateSerializer.*
@@ -75,14 +80,14 @@ Object/
 
 ## 프레임 한 번의 흐름 (Tick)
 
-매 프레임 `GameObjectManager::tick` 이 대략 아래 순서로 돕니다.
+매 프레임 `GameObjectManager::tick` 이 프레임 표(`GameObject/SceneFrameStepList.xxx`)의 단계를 줄 순서대로 돕니다. 아래는 그중 틱 · 적용 부분입니다 — 순서의 정본은 표입니다.
 
 ```mermaid
 flowchart TD
   A[메인 스레드 작업 처리<br/>지연 삭제 병합] --> B[씬 트랜스폼 flush<br/>월드 좌표 스냅샷]
-  B --> C[_bTicking = true<br/>구조 변경 동결]
+  B --> C[StructuralChangeBuffer::freeze<br/>구조 변경 동결]
   C --> D[컴포넌트 onTick<br/>병렬 실행]
-  D --> E[_bTicking = false<br/>동결 해제]
+  D --> E[StructuralChangeBuffer::thaw<br/>동결 해제]
   E --> E2[구조 변경 큐 실행 — 부른 순서<br/>addComponent·attach·detach·태그·활성]
   E2 --> F[틱 중 쓰기 큐 적용<br/>슬롯별 트랜스폼 쓰기 배치]
   F --> G[deferPostTick 실행<br/>스폰·데미지 등]
@@ -134,7 +139,7 @@ B·I 의 "씬 트랜스폼 flush" 는 매니저의 알고리즘이 아니라 **`
   로컬 · 월드 값은 **마지막 적용 지점**의 값이다 — 단계 시작, 또는 그 단계에서 이미 지난 선행 조건 스테이지 경계(아래). 같은 스레드가 같은
   컴포넌트에 잇따라 쓴 값은 마지막이 이기고, 다른 스레드가 같은 컴포넌트를 쓴 경우는 순서가 없다.
 - **선행 조건 스테이지 경계는 적용 지점이다.** 기다리는 스테이지(앞에서 돈 선행 조건이 있는 레벨의 첫 스테이지) 앞에서 그때까지의 쓰기를 적용하고
-  플러시한다(`GameObjectManager::applyStageTransforms`). 그래서 서브틱은 선행 조건이 옮긴 자리를 같은 프레임에 읽는다. 구조 변경 · 틱 뒤 큐는 그대로
+  플러시한다(`SceneTickScheduler::applyStageTransforms`). 그래서 서브틱은 선행 조건이 옮긴 자리를 같은 프레임에 읽는다. 구조 변경 · 틱 뒤 큐는 그대로
   단계 끝이다. 주의: 그 단계에 attach · detach 가 미뤄졌으면(`deferHierarchyChange`) 그 뒤로는 앞당기지 않는다 — 미룬 `KeepWorld` 부착보다 뒤에 부른
   쓰기가 먼저 적용되면 부착이 로컬 값을 다시 구해 덮는다(규칙: 구조 변경 뒤에 쓰기).
 

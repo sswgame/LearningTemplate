@@ -99,7 +99,7 @@ namespace sw
          * @brief 바디 쌍의 겹침을 다시 재고, 지난 step 과 달라진 쌍을 시작 · 끝 이벤트로 냅니다(`getOverlapEvents`).
          * @details 유니티 `OnTriggerEnter2D/Exit2D` · 언리얼 `BeginOverlap/EndOverlap` 의 자리입니다. 계속 겹친 쌍은 다시 내지 않고, 바디가 사라진
          *          쌍은 끝납니다(언리얼은 컴포넌트를 내릴 때 EndOverlap 을 낸다). 강체가 없으므로 적분하지 않습니다 — @p deltaTime 은 그때를 위한
-         *          자리입니다. 매니저가 틱 · 트랜스폼 적용 뒤에 게임 스레드에서 부릅니다(`GameObjectManager::stepPhysics`).
+         *          자리입니다. 매니저가 틱 · 트랜스폼 적용 뒤에 게임 스레드에서 부릅니다(`SceneOverlapWorld2D::step`).
          *
          *          **연속 바디(`_bContinuous`)는 지난 step 의 자리에서 지금 자리까지 쓸립니다**(`ContinuousCollision::sweepAabb`, 유니티 `CollisionDetectionMode2D.Continuous`).
          *          한 프레임에 얇은 바디를 통째로 건너뛴 총알도 그 바디와 겹친 것으로 칩니다 — 이번 step 에 시작하고, 다음 step 에(이미 지나갔으면)

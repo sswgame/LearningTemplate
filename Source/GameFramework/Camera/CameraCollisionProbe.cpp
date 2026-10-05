@@ -121,7 +121,7 @@ namespace sw
             nearest = hit._distance;
             bHit    = true;
         }
-        const PhysicsWorldCameraProbe overlapProbe( _manager.getPhysicsWorld(), 0, _ignoredObjectId );
+        const PhysicsWorldCameraProbe overlapProbe( _manager.getOverlapWorld2D().getPhysicsWorld(), 0, _ignoredObjectId );
         float32                       overlapDistance = 0.0f;
         if ( overlapProbe.sweepSphere( from, to, radius, overlapDistance ) && overlapDistance < nearest )
         {

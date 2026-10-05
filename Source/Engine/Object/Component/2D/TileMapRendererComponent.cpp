@@ -257,7 +257,7 @@ namespace sw
             AABB box{};
             box._min = float3{ MathUtil::min( cornerA._x, cornerB._x ), MathUtil::min( cornerA._y, cornerB._y ), 0.0f };
             box._max = float3{ MathUtil::max( cornerA._x, cornerB._x ), MathUtil::max( cornerA._y, cornerB._y ), 0.0f };
-            _listBody.push_back( pManager->getPhysicsWorld().addBody( box, static_cast<uint8>( _colliderLayer ), pOwner->getObjectId() ) );
+            _listBody.push_back( pManager->getOverlapWorld2D().getPhysicsWorld().addBody( box, static_cast<uint8>( _colliderLayer ), pOwner->getObjectId() ) );
         }
     }
 
@@ -268,7 +268,7 @@ namespace sw
         if ( pManager != nullptr )
         {
             for ( const SlotHandle& body : _listBody )
-                pManager->getPhysicsWorld().removeBody( body );
+                pManager->getOverlapWorld2D().getPhysicsWorld().removeBody( body );
         }
         _listBody.clear();
     }

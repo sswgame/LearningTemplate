@@ -1,6 +1,6 @@
 /**
  * @file GameObjectManager.h
- * @brief 씬 안의 GameObject 생성 · 조회 · 지연 삭제를 관리합니다.
+ * @brief 씬 하나 — 오브젝트 저장소 · 틱 디스패치 · 틱 중 규칙 · 등록부 · 물리를 소유하고, 게임이 부르는 API 를 전달합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -10,42 +10,40 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
-#include "Core/Container/PagedArray.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Memory/PoolAllocator.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
-#include "Engine/Object/GameObject/DeferredDelegateQueue.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectStore.h"
 #include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/SceneAudio.h"
+#include "Engine/Object/GameObject/SceneFrameStep.h"
 #include "Engine/Object/GameObject/SceneNavigation.h"
+#include "Engine/Object/GameObject/SceneOverlapWorld2D.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
-#include "Engine/Object/GameObject/TickRegistry.h"
-#include "Engine/Physics/PhysicsWorld.h"
+#include "Engine/Object/GameObject/SceneTickScheduler.h"
+#include "Engine/Object/GameObject/StructuralChangeBuffer.h"
 
 namespace sw
 {
-    class BoxCollider2DComponent;
     class Component;
     class GameObjectManager;
-    class MeshComponent;
     class SceneComponent;
 
-    /// @brief GameObject 등록 · 지연 삭제와 씬의 등록부(트랜스폼 계층 · 프리미티브 · 빛 · 틱)를 소유합니다.
+    /// @brief 씬 하나의 얼굴입니다 — 저장소(`GameObjectStore`) · 틱 디스패치(`SceneTickScheduler`) · 틱 중 규칙(`StructuralChangeBuffer`) · 등록부 · 물리를 소유하고
+    ///        `tick` 의 단계를 정합니다. 게임이 부르는 API 는 같은 이름으로 각 단위에 전달합니다.
     class SW_API GameObjectManager
     {
         friend class GameObject;
-        friend class SceneComponent;
-        friend class MeshComponent;
+        friend class StructuralChangeBuffer; ///< `drain` 이 틱 뒤 시작 줄(`dispatchPendingBeginPlay`)을 돌린다
 
     public:
         /** @brief 엔진과 모듈의 컴포넌트 팩토리를 등록하며 만듭니다. 오브젝트는 없는 채로 시작합니다. */
@@ -54,7 +52,7 @@ namespace sw
         ~GameObjectManager();
 
         /** @brief 새 GameObject 를 만들고 등록합니다. */
-        GameObject* createGameObject( hashed_string name = hashed_string( "GameObject" ) );
+        GameObject* createGameObject( hashed_string name = hashed_string( "GameObject" ) ) { return _store.createGameObject( name ); }
 
         /**
          * @brief 앞서 발급한 objectId 를 그대로 써서 오브젝트를 다시 만듭니다. 되돌리기 · 플레이 세션 복원 · 핫 리로드가 씁니다.
@@ -64,27 +62,27 @@ namespace sw
          *          않게 하기 위해서입니다. 발급 카운터는 그 id 뒤로 밀어 앞으로의 발급과 겹치지 않게 합니다.
          * @return 만든 오브젝트입니다. 실제로 받은 id 는 `getObjectId()` 로 확인합니다.
          */
-        GameObject* createGameObjectWithId( hashed_string name, uint64 objectId );
+        GameObject* createGameObjectWithId( hashed_string name, uint64 objectId ) { return _store.createGameObjectWithId( name, objectId ); }
 
         /**
          * @brief 등록된 GameObject 의 이름이 바뀐 것을 이름 맵에 반영합니다.
          * @details GameObject::setName 이 부릅니다.
          */
-        void notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName );
+        void notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName ) { _store.notifyNameChanged( pObj, oldName, newName ); }
 
         /** @brief 이름으로 GameObject 를 찾습니다. */
-        GameObject* findGameObjectByName( hashed_string name ) const;
+        GameObject* findGameObjectByName( hashed_string name ) const { return _store.findGameObjectByName( name ); }
 
         /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. 락이 없습니다(칸이 그 id 를 들고 있으면). */
-        GameObject* findGameObjectById( uint64 objectId ) const;
+        GameObject* findGameObjectById( uint64 objectId ) const { return _store.findGameObjectById( objectId ); }
 
         /**
          * @brief 락 없는 id 표의 칸 수입니다. 칸은 id 의 아래 비트(`id % kObjectSlotCount`)입니다.
          * @details 이만큼 떨어진 id 둘이 함께 살아 있을 때만 뒤에 온 것이 맵(잠금 + 해시)으로 갑니다 — `getOverflowObjectCount`.
          */
-        static constexpr uint64 kObjectSlotCount = 1ull << 22;
+        static constexpr uint64 kObjectSlotCount = GameObjectStore::kObjectSlotCount;
         /** @brief 표의 칸을 다른 오브젝트가 써서 맵에 든 오브젝트 수입니다. 진단 · 회귀 테스트용입니다(보통 0). */
-        uint32 getOverflowObjectCount() const { return _overflowObjectCount.load( std::memory_order_relaxed ); }
+        uint32 getOverflowObjectCount() const { return _store.getOverflowObjectCount(); }
 
         /**
          * @brief 살아 있는 오브젝트를 outList 에 채웁니다(부르는 쪽 버퍼 재사용).
@@ -92,27 +90,18 @@ namespace sw
          *          전체를 새로 할당 · 복사하므로, 매 프레임 도는 곳이나 두 번 이상 쓰는 곳은 이쪽을
          *          씁니다. 순회만 하면 되는 곳은 forEachGameObject 가 복사조차 하지 않습니다.
          */
-        void getAllGameObjects( vector<GameObject*>& outListGameObject ) const;
+        void getAllGameObjects( vector<GameObject*>& outListGameObject ) const { _store.getAllGameObjects( outListGameObject ); }
 
         /** @brief 살아 있는 오브젝트 목록을 새 벡터로 반환합니다(한 번만 쓰는 곳 전용). */
-        vector<GameObject*> getAllGameObjects() const;
-
-        /**
-         * @struct WalkScope
-         * @brief `forEachGameObject` 가 공유 잠금을 쥔 동안을 표시합니다(스레드별 깊이). 그 안에서 구조를 바꾸는 호출은 Debug 에서 단언합니다.
-         * @details `_mutex` 는 재진입하지 않습니다. 순회 콜백이 오브젝트를 만들거나(배타 잠금) 컴포넌트를 붙이면(풀 맵의 배타 잠금) 같은
-         *          스레드가 제 공유 잠금을 기다리며 **멈춥니다** — 에디터 Play 가 그렇게 멈췄습니다(beginPlay → onBeginPlay → addTag →
-         *          addComponent). 멈추는 대신 단언으로 알립니다. 깊이는 엔진 쪽 한 칸이라 모듈이 순회를 인스턴스화해도 같은 칸을 셉니다.
-         */
-        struct SW_API WalkScope
+        vector<GameObject*> getAllGameObjects() const
         {
-            WalkScope();
-            ~WalkScope();
-            WalkScope( const WalkScope& )            = delete;
-            WalkScope& operator=( const WalkScope& ) = delete;
-            /** @brief 지금 스레드가 `forEachGameObject` 안에 있으면 true 입니다. */
-            static bool isInsideWalk();
-        };
+            vector<GameObject*> listAllGameObject;
+            _store.getAllGameObjects( listAllGameObject );
+            return listAllGameObject;
+        }
+
+        /** @brief `forEachGameObject` 가 공유 잠금을 쥔 동안의 표시입니다(`GameObjectStore::WalkScope`). */
+        using WalkScope = GameObjectStore::WalkScope;
 
         /**
          * @brief 힙 할당 없이 등록된 모든 유효한 GameObject 를 순회합니다.
@@ -122,18 +111,7 @@ namespace sw
         template <typename Func>
         void forEachGameObject( Func&& func ) const
         {
-            std::shared_lock<std::shared_mutex> lock{ _mutex };
-            const WalkScope                     walkScope{};
-            for ( GameObject* pObj : _listGameObject )
-            {
-                if ( pObj != nullptr && pObj->isPendingDestroy() == false )
-                    func( pObj );
-            }
-            for ( GameObject* pObj : _listPendingAdd )
-            {
-                if ( pObj != nullptr && pObj->isPendingDestroy() == false )
-                    func( pObj );
-            }
+            _store.forEachGameObject( std::forward<Func>( func ) );
         }
 
         /** @brief 힙 할당 없이 씬의 모든 유효한 Component 를 순회합니다. */
@@ -158,33 +136,35 @@ namespace sw
         }
 
         /** @brief 태그를 가진 첫 GameObject 를 반환합니다. 없으면 nullptr 입니다. */
-        GameObject* findGameObjectByTag( TagID tag ) const;
+        GameObject* findGameObjectByTag( TagID tag ) const { return _store.findGameObjectByTag( tag ); }
 
         /** @brief 태그를 가진 GameObject 를 outListGameObject 에 넣습니다. */
-        void findGameObjectsByTag( TagID tag, vector<GameObject*>& outListGameObject ) const;
+        void findGameObjectsByTag( TagID tag, vector<GameObject*>& outListGameObject ) const { _store.findGameObjectsByTag( tag, outListGameObject ); }
 
         /**
          * @brief 플레이를 시작합니다 — 살아 있는 오브젝트의 컴포넌트마다 onBeginPlay 를 한 번 부르고, 이후 붙는 컴포넌트는 다음 틱 단계에서 시작합니다.
          * @details 보통은 직접 부르지 않고 `SceneManager::setWorldPlaying` · 활성 씬 교체가 부릅니다. 두 번 불러도 컴포넌트마다 한 번입니다.
          */
-        void beginPlay();
+        void beginPlay() { _store.beginPlay(); }
 
         /** @brief 플레이를 끝냅니다 — 시작했던 컴포넌트마다 onEndPlay 를 한 번 부르고, 시작을 기다리던 줄을 비웁니다. */
-        void endPlay();
+        void endPlay() { _store.endPlay(); }
 
         /** @brief 플레이 중(`beginPlay` 뒤, `endPlay` 전)이면 true 입니다. 이때 붙는 컴포넌트는 다음 틱 단계에서 onBeginPlay 를 받습니다. */
-        bool hasBegunPlay() const { return _bHasBegunPlay.load( std::memory_order_acquire ); }
+        bool hasBegunPlay() const { return _store.hasBegunPlay(); }
 
         /**
-         * @brief 계층을 지키는 병렬 틱입니다.
-         * @details 0) 지연 파괴 처리, 새로 만든 오브젝트 병합
-         *          1) SceneComponent 월드 캐시 플러시(루트 → 자식, 더티 서브트리만)
-         *          2) 병렬 Component 틱(트랜스폼 캐시는 읽기 전용, 구조 변경은 지연)
-         *          3) 지연된 attach · detach → 틱 중 쌓인 트랜스폼 쓰기 → 지연 큐(deferPostTick) 실행 → 병합,
-         *             더티면 다시 플러시, 마지막으로 지연 파괴 처리
-         *          1) · 2) 는 오브젝트가 있을 때만 돌고, 3) 은 늘 돕니다. 단계마다 `GT.Scene.tick.*` 프로파일 스코프가 있습니다.
+         * @brief 씬 한 프레임을 진행합니다 — 표(`SceneFrameStepList.xxx`)의 단계를 줄 순서대로 돕니다.
+         * @details 순서와 각 단계가 하는 일은 그 표 하나에 있습니다. 단계마다 `GT.Scene.tick.*` 프로파일 스코프가 있습니다.
          */
         void tick( float32 deltaTime );
+
+        using FrameStepObserver = Delegate<void( SceneFrameStep )>;
+        /**
+         * @brief 단계마다 돌기 **직전에** 부를 관찰자를 겁니다(게임 스레드). 묶이지 않은 델리게이트를 주면 풉니다.
+         * @details 진단 · 시험용입니다 — 단계 사이의 상태를 보거나 순서를 기록합니다. 관찰자 안에서 구조를 바꾸지 마십시오.
+         */
+        void setFrameStepObserver( FrameStepObserver observer ) { _frameStepObserver = std::move( observer ); }
 
         /**
          * @brief 트랜스폼 계층입니다(루트 목록 · 더티 세대 · 플러시 알고리즘). 매니저는 소유하고 tick 의 단계만 정합니다.
@@ -215,25 +195,23 @@ namespace sw
         /**
          * @brief 컴포넌트 틱 중이면 true 입니다. 이때 구조 변경(GameObject 생성 · addComponent · attach · detach)은 미뤄지고,
          *        트랜스폼은 읽기 전용이라 세터가 쓰기 큐로 갑니다.
-         * @details 구조 동결과 트랜스폼 읽기 전용은 같은 구간이라 플래그 하나(`_bTicking`)가 둘 다 답합니다.
+         * @details 구조 동결과 트랜스폼 읽기 전용은 같은 구간이라 플래그 하나가 둘 다 답합니다(`StructuralChangeBuffer::isFrozen`).
          */
-        bool isStructuralMutationFrozen() const { return _bTicking.load( std::memory_order_acquire ); }
+        bool isStructuralMutationFrozen() const { return _structuralChangeBuffer.isFrozen(); }
 
-        using StructuralChangeDelegate = DeferredDelegateQueue::Callback;
-        using PostTickDelegate         = DeferredDelegateQueue::Callback;
+        using StructuralChangeDelegate = StructuralChangeBuffer::Callback;
+        using PostTickDelegate         = StructuralChangeBuffer::Callback;
 
         /**
          * @brief 틱 중의 구조 변경(컴포넌트 추가 · 부착 · 떼기 · 태그 · 활성)을 **부른 순서대로** 지연 큐에 넣습니다. 틱 직후 가장 먼저 돕니다.
-         * @details 구조 변경은 이 큐 하나다. 주의: 종류마다 큐를 나누면 틱 안에서 씬 컴포넌트를 붙이고(미뤄짐) 이어 부모에 붙일 때 부착이
-         *          먼저 돌아 붙일 씬 컴포넌트가 없고, 오브젝트는 루트로 남는다.
+         * @details 구조 변경은 이 큐 하나다(`StructuralChangeBuffer` 머리말의 주의).
          */
-        void deferStructuralChange( StructuralChangeDelegate func );
+        void deferStructuralChange( StructuralChangeDelegate func ) { _structuralChangeBuffer.deferStructuralChange( std::move( func ) ); }
         /**
          * @brief 틱 중의 계층 변경(attach · detach)을 구조 변경 큐에 넣고, 이번 단계에 계층 변경이 미뤄졌다고 적습니다.
-         * @details 그 뒤로는 스테이지 경계의 트랜스폼 적용(`applyStageTransforms`)을 하지 않습니다 — 미룬 계층 변경보다 뒤에 부른 쓰기가
-         *          그 변경보다 먼저 적용되면 `KeepWorld` 부착이 쓴 로컬 값을 다시 구해 덮는다(규칙: 구조 변경 뒤에 쓰기).
+         * @details 그 뒤로는 스테이지 경계의 트랜스폼 적용(`SceneTickScheduler`)을 하지 않습니다(`StructuralChangeBuffer::deferHierarchyChange`).
          */
-        void deferHierarchyChange( StructuralChangeDelegate func );
+        void deferHierarchyChange( StructuralChangeDelegate func ) { _structuralChangeBuffer.deferHierarchyChange( std::move( func ) ); }
 
         /**
          * @brief 병렬 틱 중의 트랜스폼 쓰기 한 건을 슬롯 큐에 올립니다. 세터가 `isStructuralMutationFrozen()` 일 때 부릅니다.
@@ -247,19 +225,19 @@ namespace sw
          * @details 씬 컴포넌트의 세터가 "내 오브젝트를 틱하는 스레드인가" 를 묻습니다. 그렇다면 한 오브젝트의 항목은 동시에 한 워커만 도므로
          *          칸의 대기 자리에 잠금 없이 바로 쓰고, 아니면(다른 오브젝트의 컴포넌트) 쓰기 큐로 갑니다.
          */
-        static const GameObject* getTickingObject();
+        static const GameObject* getTickingObject() { return StructuralChangeBuffer::getTickingObject(); }
 
         /**
          * @brief 병렬 틱이 끝난 뒤 메인 스레드에서 실행할 작업을 넣습니다.
          * @details GameObject 생성 · addComponent · 데미지 · 태그 변경 같은 구조 · 공유 상태 변경에 씁니다.
          */
-        void deferPostTick( PostTickDelegate func );
+        void deferPostTick( PostTickDelegate func ) { _structuralChangeBuffer.deferPostTick( std::move( func ) ); }
 
         /**
          * @brief 구조 변경이 얼어 있으면 deferPostTick 으로 미루고, 아니면 바로 실행합니다.
          * @details createGameObject + addComponent + 초기화를 한 람다로 묶을 때 씁니다.
          */
-        void executeOrDeferPostTick( PostTickDelegate func );
+        void executeOrDeferPostTick( PostTickDelegate func ) { _structuralChangeBuffer.executeOrDeferPostTick( std::move( func ) ); }
 
         /** @brief SceneComponent 가 루트가 됐음을 트랜스폼 계층에 알립니다(더티면 플러시 목록에 오릅니다). */
         void registerRootSceneComponent( SceneComponent* pComp );
@@ -302,22 +280,22 @@ namespace sw
 
         /**
          * @brief 틱에 참여하는 오브젝트의 등록부입니다(언리얼 `FTickTaskManager` 의 자리). 자세한 사연은 TickRegistry.h 에 있습니다.
-         * @details 같은 규칙으로 소유만 합니다. 컴포넌트가 틱을 켜고 끄면 소유 오브젝트가 여기에 표시하고, `tick` 이 디스패치 전에
-         *          표시된 오브젝트만 다시 훑습니다. 씬 전체를 훑어 스테이지를 다시 짓던 0.5~1 ms 가 사라진 자리입니다.
+         * @details 틱 디스패치(`SceneTickScheduler`)가 소유합니다. 컴포넌트가 틱을 켜고 끄면 소유 오브젝트가 여기에 표시하고, 디스패치 전에
+         *          표시된 오브젝트만 다시 훑습니다.
          */
-        TickRegistry& getTickRegistry() { return _tickRegistry; }
+        TickRegistry& getTickRegistry() { return _tickScheduler.getTickRegistry(); }
         /** @brief 틱에 참여하는 오브젝트의 등록부입니다. */
-        const TickRegistry& getTickRegistry() const { return _tickRegistry; }
+        const TickRegistry& getTickRegistry() const { return _tickScheduler.getTickRegistry(); }
 
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. */
-        Component* resolveComponent( ComponentHandle handle );
+        Component* resolveComponent( ComponentHandle handle ) { return _store.resolveComponent( handle ); }
 
         /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr 입니다. 락을 잡지 않습니다(`findGameObjectById`). */
-        GameObject* resolveGameObject( GameObjectHandle handle ) const { return findGameObjectById( handle.objectId() ); }
+        GameObject* resolveGameObject( GameObjectHandle handle ) const { return _store.resolveGameObject( handle ); }
 
         /**
          * @brief 이 씬의 강체 물리입니다(3D · 2D 물리 씬 · 고정 스텝 · 물리 컴포넌트 · 접촉 이벤트). 처음 쓸 때 씬을 만듭니다.
-         * @details 겹침 월드(`getPhysicsWorld`)와 따로 돕니다 — 둘 다 `stepPhysics` 에서 이 순서(겹침 → 강체)로 한 번씩 진행합니다.
+         * @details 겹침 월드(`getOverlapWorld2D`)와 따로 돕니다 — 둘 다 `stepPhysics` 에서 이 순서(겹침 → 강체)로 한 번씩 진행합니다.
          */
         ScenePhysics& getScenePhysics() { return _scenePhysics; }
         /** @brief 씬 오디오(리스너 · 에미터 · 가림 · 리버브 존을 엔진에 넣는 자리)입니다. `Scene::tick` 이 틱 뒤에 `update` 를 부릅니다. */
@@ -332,35 +310,35 @@ namespace sw
         /** @brief 이 씬의 내비게이션입니다. */
         const SceneNavigation& getSceneNavigation() const { return _sceneNavigation; }
 
-        /** @brief 이 씬의 AABB 질의 월드입니다. */
-        PhysicsWorld& getPhysicsWorld() { return _physicsWorld; }
-        /** @brief 이 씬의 AABB 질의 월드입니다. */
-        const PhysicsWorld& getPhysicsWorld() const { return _physicsWorld; }
+        /** @brief 이 씬의 겹침 월드입니다(AABB 질의 월드 · 2D 콜라이더 등록 · 겹침 이벤트). 질의는 `getOverlapWorld2D().getPhysicsWorld()` 입니다. */
+        SceneOverlapWorld2D& getOverlapWorld2D() { return _overlapWorld2D; }
+        /** @brief 이 씬의 겹침 월드입니다. */
+        const SceneOverlapWorld2D& getOverlapWorld2D() const { return _overlapWorld2D; }
 
         /**
          * @brief GameObject 를 지연 삭제 큐에 넣습니다.
          * @param pObj 삭제할 게임 오브젝트
          * @param bDestroyChildren 자식 오브젝트도 함께 지울지 여부
          */
-        void destroyObject( GameObject* pObj, bool bDestroyChildren = true );
+        void destroyObject( GameObject* pObj, bool bDestroyChildren = true ) { _store.destroyObject( pObj, bDestroyChildren ); }
 
         /** @brief Component 를 지연 삭제 큐에 넣습니다. 처리 때 핸들로 다시 찾으므로, 그 사이 다른 경로가 먼저 해제해도 안전합니다. */
-        void destroyComponent( Component* pComp );
+        void destroyComponent( Component* pComp ) { _store.destroyComponent( pComp ); }
 
         /**
          * @brief 목록에서 이미 뺀 컴포넌트를 해체합니다: `onUnregister`(정확히 한 번) → `onDestroy` → 소유자 끊기 → 소멸 → 풀 · 힙 반납.
          * @details 컴포넌트 해체는 이 함수 하나를 지납니다. 목록에서 빼는 일은 `GameObject::removeComponent` · `clearComponents` 가 합니다.
          */
-        void destroyComponentInstance( Component* pComp );
+        void destroyComponentInstance( Component* pComp ) { _store.destroyComponentInstance( pComp ); }
 
         /** @brief 지연 삭제 큐의 오브젝트 · 컴포넌트를 실제로 해제합니다. */
-        void processDeferredDestruction();
+        void processDeferredDestruction() { _store.processDeferredDestruction(); }
 
         /** @brief 등록·대기 목록을 모두 비웁니다. */
         void clear();
 
         /** @brief 이번 프레임에 추가된 GameObject 를 활성 목록에 합칩니다. */
-        void mergePendingAdds();
+        void mergePendingAdds() { _store.mergePendingAdds(); }
 
 #if !defined( SW_SHIPPING )
         /**
@@ -370,7 +348,7 @@ namespace sw
          *          그 소멸이 모듈 코드이므로 먼저 지금 처리합니다. 틱 밖에서만 부릅니다(구조 변경이 얼려 있으면 미뤄질 뿐입니다).
          * @return 지운 컴포넌트 수입니다.
          */
-        uint32 destroyComponentsOfModule( string_view moduleName );
+        uint32 destroyComponentsOfModule( string_view moduleName ) { return _store.destroyComponentsOfModule( moduleName ); }
 #endif
 
         /**
@@ -381,28 +359,18 @@ namespace sw
         Component* addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning = true );
 
         /** @brief 모든 오브젝트의 틱 항목을 다음 틱 전에 다시 짓게 합니다(타입 재바인딩 · 씬 초기화). */
-        void markTickStagesDirty() { _tickRegistry.markAllDirty(); }
+        void markTickStagesDirty() { _tickScheduler.getTickRegistry().markAllDirty(); }
         /**
          * @brief 틱 등록부가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다.
          * @details 틱에 참여하는 컴포넌트(`Component::hasTickWork`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 합니다.
          *          틱하지 않는 MeshComponent 를 붙였다 떼는 것으로는 오르지 않습니다. 다시 지을 때도 바뀐 오브젝트의 컴포넌트 몇 개만 훑습니다.
          */
-        uint32 getTickStageBuildCount() const { return _tickStageBuildCount.load( std::memory_order_relaxed ); }
+        uint32 getTickStageBuildCount() const { return _tickScheduler.getStageBuildCount(); }
         /** @brief 선행 조건 스테이지 경계에서 틱 중 트랜스폼 쓰기를 적용한 횟수(누적)입니다. 진단 · 회귀 테스트용입니다. */
-        uint32 getStageTransformApplyCount() const { return _stageTransformApplyCount; }
+        uint32 getStageTransformApplyCount() const { return _tickScheduler.getStageTransformApplyCount(); }
 
         /** @brief 이름으로 만들 수 있는 컴포넌트 타입(리플렉션 표에서 `_addComponent` 가 있는 타입)의 짧은 이름 목록입니다. 에디터의 "Add Component" 가 씁니다. */
         static vector<hashed_string> getRegisteredComponentTypeNames();
-
-        /**
-         * @brief 물리 바디를 맞출 콜라이더를 등록합니다(`BoxCollider2DComponent::onRegister`). 매니저가 step 직전에 한 번에 맞춥니다.
-         * @details 콜라이더가 병렬 틱에서 제 바디를 맞추면 같은 그룹에서 겹침을 묻는 쪽이 스케줄에 따라 옛 · 새 자리를 본다.
-         */
-        void registerCollider( BoxCollider2DComponent* pCollider );
-        /** @brief 콜라이더 등록을 풉니다. 멱등입니다. */
-        void unregisterCollider( BoxCollider2DComponent* pCollider );
-        /** @brief 등록된 콜라이더 목록입니다(순서 없음). 틱 밖에서 읽습니다 — 에디터 시각화가 씬 전체를 훑지 않고 이것을 봅니다. */
-        const vector<BoxCollider2DComponent*>& getColliders() const { return _listCollider; }
 
         /** @brief 트랜스폼이 바뀌었음을 알려 세대를 올립니다(`getTransformHierarchy().notifyDirtied()`). */
         void notifyTransformDirtied() { _transformHierarchy.notifyDirtied(); }
@@ -410,222 +378,52 @@ namespace sw
         uint64 getTransformGeneration() const { return _transformHierarchy.getGeneration(); }
 
     private:
-        /**
-         * @struct NameEntry
-         * @brief 이름 표의 값 — 오브젝트와, 번호를 붙여 만든 이름이면 그 밑 이름과 번호입니다.
-         */
-        struct NameEntry
-        {
-            GameObject*   _pObject{ nullptr };
-            hashed_string _baseName{};  ///< 번호를 붙인 밑 이름(`Bullet_7` 이면 `Bullet`). 번호를 붙이지 않았으면 비어 있습니다
-            uint32        _suffix{ 0 }; ///< 붙인 번호입니다. 0 이면 번호를 붙이지 않은 이름입니다
-        };
-
-        /**
-         * @struct NameSuffixState
-         * @brief 밑 이름 하나의 번호 상태 — 다음 새 번호와, 지운 오브젝트가 돌려준 번호들입니다.
-         * @details 주의: 번호를 오르기만 하게 두면 안 된다. 번호마다 `hashed_string` 을 **새로 인턴**하는데 인턴 풀은 전역 65,536 칸이고
-         *          한번 들어간 문자열은 나가지 않아, 같은 이름으로 스폰 · 파괴를 거듭하는 게임(총알)이 결국 풀을 채우고 그 뒤로 엔진의
-         *          **모든** 새 `hashed_string`(리소스 경로 · 태그 · 프로퍼티 이름)이 None 이 된다. 되쓰면 번호 수는 같은 이름으로
-         *          동시에 살아 있던 오브젝트 수를 넘지 않습니다. 되쓰기도 O(1) 입니다(맨 뒤에서 꺼낸다).
-         */
-        struct NameSuffixState
-        {
-            uint32         _nextSuffix{ 2 };  ///< 빈 번호가 없을 때 쓸 다음 새 번호입니다. 첫 중복이 `_2` 입니다
-            vector<uint32> _listFreeSuffix{}; ///< 지운 오브젝트가 돌려준 번호들입니다
-        };
-
-        /**
-         * @brief 등록부의 오브젝트를 TickGroup 순으로 틱합니다.
-         * @details 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나누고(한 오브젝트의 항목은 한 워커가 순서대로), 이어서 그 그룹의 선행 조건
-         *          스테이지(등록부가 짓는다 — 선행 조건을 가진 항목만)를 차례로 돕니다.
-         */
-        void tickComponents( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
         /** @brief 플레이 중에 붙어 줄을 선 컴포넌트의 onBeginPlay 를 부릅니다(게임 스레드, 틱 밖). 도는 중에 선 것은 다음 번에 돕니다. */
-        void dispatchPendingBeginPlay();
+        void dispatchPendingBeginPlay() { _store.dispatchPendingBeginPlay(); }
         /** @brief 플레이 중에 붙은 컴포넌트를 시작 줄에 세웁니다(`GameObject::attachCreatedComponent`). 핸들로 들어 그새 해체돼도 안전합니다. */
-        void queueBeginPlay( ComponentHandle handle );
-        /**
-         * @brief `tick` 의 컴포넌트 단계 하나입니다 — 플러시 → 쓰기 큐 준비 → 틱 중 표시 → `tickComponents`(그룹 [@p firstGroup, @p endGroup)) → 표시 해제.
-         *        오브젝트가 있을 때만 돕니다. 물리 앞(PrePhysics · DuringPhysics)과 뒤(PostPhysics · PostUpdate)에 한 번씩 불립니다.
-         */
-        void tickComponentsPhase( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
-        /** @brief 틱이 남긴 것을 적용합니다 — 지연 구조 변경 → 틱 쓰기 → 틱 뒤 큐 · 병합 · 시작(게임 스레드, 틱 밖). 물리 앞 · 프레임 끝에 한 번씩. */
-        void applyTickResults();
-        /**
-         * @brief 선행 조건 스테이지 사이(게임 스레드, 동결 중)에서 그때까지 쌓인 틱 중 트랜스폼 쓰기를 적용하고 플러시합니다.
-         * @details 기다리는 항목이 있는 스테이지 앞에서만 불립니다(`TickStage::_bApplyBefore`). 구조 변경 · 틱 뒤 큐는 그대로 단계 끝이고,
-         *          이번 단계에 계층 변경이 미뤄졌으면(`deferHierarchyChange`) 아무것도 하지 않습니다.
-         */
-        void applyStageTransforms();
-        /** @brief 새 ObjectId 를 발급합니다. */
-        uint64 generateNewId();
-        /** @brief `_mutex` 를 쥔 채 @p objectId 로 오브젝트를 만들어 이름 맵 · id 표 · 병합 대기 목록에 올립니다. */
-        GameObject* createGameObjectUnlocked( hashed_string name, uint64 objectId );
-        /**
-         * @brief 잠금 없이 고유 이름을 만듭니다. 번호를 붙였으면 그 밑 이름과 번호를 @p outEntry 에 적습니다(`_pObject` 는 건드리지 않습니다).
-         * @details 번호는 밑 이름마다 **지운 것부터 되씁니다**(`NameSuffixState`). 그래서 인턴되는 이름 수는 같은 이름으로 동시에 살아 있던
-         *          오브젝트 수의 최댓값으로 묶입니다.
-         */
-        hashed_string makeUniqueNameUnlocked( hashed_string requested, NameEntry& outEntry );
-        /** @brief 잠금 없이, 지울 이름 표 항목이 번호를 붙여 만든 이름이면 그 번호를 밑 이름의 빈 번호로 돌려줍니다. 항목은 부르는 쪽이 지웁니다. */
-        void releaseNameSuffixUnlocked( const NameEntry& nameEntry );
-        /**
-         * @brief 잠금 없이 id 로 등록된 오브젝트(삭제 대기 포함)를 찾습니다. 슬롯 표를 보고, 범위 밖이면 맵을 봅니다.
-         * @details `findGameObjectById` 와 달리 삭제 대기 오브젝트도 반환하고 잠그지 않습니다. 이미 `_mutex` 를 쥔 자리에서 씁니다.
-         */
-        GameObject* findRegisteredUnlocked( uint64 objectId ) const;
-        /**
-         * @brief 잠금 없이 이름이 **살아 있는** 오브젝트에 쓰이고 있는지 봅니다.
-         * @details 지연 파괴 대기(pending destroy) 오브젝트는 이름 맵에 남아 있지만 이름으로 찾을 수 없습니다. 그 이름은 비어 있는
-         *          것으로 봅니다 — 모듈 리로드 · RHI 교체 때 새 인스턴스가 옛 오브젝트가 아직 사라지기 전에 같은 이름을 만들기
-         *          때문입니다. 대신 파괴 쪽은 맵 항목이 **자기 것**일 때만 지웁니다.
-         */
-        bool isNameTakenUnlocked( hashed_string name ) const;
+        void queueBeginPlay( ComponentHandle handle ) { _store.queueBeginPlay( handle ); }
+        /** @brief 타입별 컴포넌트 풀을 얻거나 만듭니다(`GameObjectStore::getOrCreateComponentPool`). */
+        PoolAllocator* getOrCreateComponentPool( const TypeInfo* pTypeInfo, size_t typeSize ) { return _store.getOrCreateComponentPool( pTypeInfo, typeSize ); }
 
         /**
-         * @brief 타입별 컴포넌트 풀을 얻거나 만듭니다.
-         * @details 키는 **FQN 이고 TypeInfo 포인터가 아닙니다.** 재등록은 같은 객체에 덮어써 주소가 고정이지만 레지스트리 밖 사본도
-         *          있을 수 있어, 재등록에도 변하지 않는 FQN 을 씁니다. 주의: 포인터로 키를 잡아 한 클래스에 `TypeInfo` 가 둘이 되면
-         *          **생성 때와 해제 때가 서로 다른 풀**을 가리켜 `PoolAllocator::free` 의 "Pointer does not belong to any allocated chunk"
-         *          단정이 걸린다.
-         *          해제는 이 표를 보지 않습니다. 컴포넌트가 `_pPool` 로 자기 풀을 들고, 그리로 돌아갑니다.
-         */
-        PoolAllocator* getOrCreateComponentPool( const TypeInfo* pTypeInfo, size_t typeSize )
-        {
-            if ( pTypeInfo == nullptr || pTypeInfo->_fullyQualifiedName.empty() )
-                return nullptr;
-
-            SW_ASSERT( WalkScope::isInsideWalk() == false );
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
-            auto                                iter = _mapComponentPool.find( pTypeInfo->_fullyQualifiedName );
-            if ( iter != _mapComponentPool.end() )
-                return iter->second.get();
-
-            auto           pNewPool                           = make_unique<PoolAllocator>( typeSize, 64u, true );
-            PoolAllocator* pRaw                               = pNewPool.get();
-            _mapComponentPool[pTypeInfo->_fullyQualifiedName] = std::move( pNewPool );
-            return pRaw;
-        }
-
-    private:
-        /**
-         * @struct ObjectSlotTable
-         * @brief `objectId → GameObject*` 를 **락 없이** 읽는 밀집 표입니다.
-         *
-         * @details 핸들 해석(`resolveComponent`)이 프레임당 오브젝트 수만큼 일어납니다. 매번 매니저 `_mutex` 를 공유 잠금하고
-         *          해시 맵을 조회하면 큐브 20,000 개 벤치에서 **호출당 110ns, 프레임당 2.2ms** 다.
-         *
-         *          id 는 단조 증가 카운터라 **밀집**하므로 배열이면 됩니다. 다만 배열을 늘리면 주소가
-         *          옮겨져 읽는 쪽과 부딪히므로, 절대 재배치되지 않는 청크 배열(`PagedArray`)에 둡니다.
-         *          쓰기는 모두 매니저 락 안에서 일어나고, 읽기는 청크 포인터 하나와 슬롯 하나의 원자적 로드입니다.
-         *
-         * @note **칸은 id 의 아래 비트입니다**(`kObjectSlotCount` 로 나눈 나머지) — id 를 그대로 칸 번호로 쓰면 약 420 만을 넘는 id 가 모두
-         *       맵(잠금 + 해시, 호출당 110 ns)으로 가서, 스폰이 잦은 게임은 몇 시간 뒤 모든 핸들 해석이 그 길이 된다. 칸을 **다른 살아 있는
-         *       오브젝트**가 쓸 때만(이만큼 떨어진 id 둘이
-         *       함께 살아 있을 때 — 오래 사는 오브젝트와 420 만 뒤의 스폰) 뒤에 온 것이 맵으로 갑니다. 칸의 오브젝트가 다른 id 면 "여기 없음" 이라
-         *       읽는 쪽이 id 를 견줍니다 — 묻는 id 가 `_compareFromId` 이상일 때만. 그 값은 칸 수이고, 칸 수를 넘는 id 가 한 번이라도 들어오면
-         *       0 이 됩니다. 그 전에는 칸 번호가 곧 id 라 작은 id 는 견줄 것이 없습니다(늘 견주면 오브젝트의 `_objectId` 를 한 번 더 읽어
-         *       조회가 0.8 ns 느리다. Release · FindById 번갈아 5 회 5.6 → 6.4 ns).
-         *       청크는 늘 1024 개 이하(32 MB 상한)입니다 — id 범위를
-         *       넓히면(2 단 디렉터리) 지난 id 범위마다 청크가 남아 메모리가 스폰 수에 비례해 자랍니다. 언리얼 `FUObjectArray` 는 칸을
-         *       재사용하고 약한 포인터가 일련번호로 견줍니다. 여기서는 id 자체가 일련번호입니다.
-         */
-        struct ObjectSlotTable
-        {
-            /** @brief 청크 하나가 담는 슬롯 수입니다. */
-            static constexpr uint32 kChunkSize = 4096;
-            /** @brief 청크 표의 칸 수입니다. `kChunkSize` 와 곱하면 칸 수(`kObjectSlotCount`)입니다. */
-            static constexpr uint32 kMaxChunk = 1024;
-            static_assert( static_cast<uint64>( kChunkSize ) * kMaxChunk == kObjectSlotCount, "ObjectSlotTable must cover kObjectSlotCount slots" );
-
-            using SlotArray = PagedArray<atomic<GameObject*>, kChunkSize, kMaxChunk>;
-
-            /** @brief id 의 칸 번호입니다. */
-            static constexpr uint64 getSlotIndex( uint64 objectId ) { return objectId & ( kObjectSlotCount - 1 ); }
-            /** @brief 칸이 비었으면 씁니다. 다른 오브젝트가 쓰고 있으면 false — 부르는 쪽이 맵에 넣습니다. 매니저 락을 쥔 채 부르십시오. */
-            [[nodiscard]] bool tryStore( uint64 objectId, GameObject* pObject );
-            /** @brief 칸이 이 오브젝트를 들고 있으면 비웁니다. 아니면 false — 맵에 든 것입니다. 매니저 락을 쥔 채 부르십시오. */
-            [[nodiscard]] bool tryRemove( uint64 objectId, const GameObject* pObject );
-            /** @brief 칸이 **그 id 의** 오브젝트를 들고 있으면 반환합니다. **락이 필요 없습니다.** 비었거나 다른 id 면 nullptr 입니다. */
-            GameObject* load( uint64 objectId ) const;
-            /** @brief 모든 슬롯을 비웁니다. 락 없이 읽는 쪽이 있을 수 있어 청크는 그대로 둡니다. */
-            void clear();
-
-        private:
-            SlotArray      _listSlot;
-            atomic<uint64> _compareFromId{ kObjectSlotCount }; ///< 이 이상의 id 를 물으면 칸의 오브젝트 id 와 견준다. 감긴 id 를 넣으면 0(`clear` 가 되돌린다)
-        };
-
-        TypedPoolAllocator<GameObject>                          _poolGameObject;
-        unordered_map<hashed_string, unique_ptr<PoolAllocator>> _mapComponentPool; ///< 키는 타입 FQN(`getOrCreateComponentPool` 설명 참고)
-
-        vector<GameObject*>                           _listGameObject;
-        unordered_map<hashed_string, NameEntry>       _mapNameToObject;
-        unordered_map<hashed_string, NameSuffixState> _mapNameSuffix; ///< 밑 이름마다 번호 상태. 중복 이름 만들기가 O(1) 입니다(언리얼 MakeUniqueObjectName 의 자리)
-        /**
-         * @brief id → 오브젝트 맵입니다. **슬롯 표의 칸을 다른 살아 있는 오브젝트가 쓰는 id 만** 듭니다(보통 비어 있습니다).
-         * @details 모든 오브젝트를 넣지 않습니다 — 표와 같은 답을 두 번 들고, 스폰마다 노드 할당 하나와 파괴마다 해제 하나가 붙는다.
-         */
-        unordered_map<uint64, GameObject*> _mapIdToObject;
-        /** @brief id → 오브젝트의 **빠른 읽기 길**입니다. 칸이 막힌 id 만 위 맵으로 갑니다. */
-        ObjectSlotTable         _objectSlotTable;
-        atomic<uint32>          _overflowObjectCount; ///< `_mapIdToObject` 의 크기. 0 이면 읽는 쪽이 표에서 못 찾은 id 로 잠그지 않습니다
-        vector<GameObject*>     _listPendingAdd;
-        vector<GameObject*>     _listPendingDestroyObject;
-        vector<ComponentHandle> _listPendingDestroyComponent; ///< 핸들로 든다(`destroyComponent` 설명 참고)
-
-        vector<GameObject*>     _listProcessingDestroyObject;
-        vector<ComponentHandle> _listProcessingDestroyComponent;
-
-        mutable std::shared_mutex _mutex;
-        /**
-         * @brief 오브젝트 id 발급 카운터입니다. **프로세스 전체에서 하나**입니다(컴포넌트 id `Component::_s_nextComponentId` 와 같은 규칙).
-         * @details 씬을 넘어 옮긴 오브젝트(`SceneManager::markPersistent`)가 같은 id 를 지키려면 다른 매니저의 발급과 겹치지 않아야 한다 —
-         *          겹치면 새 id 를 받고 그 오브젝트를 가리키던 핸들이 끊긴다. 유니티의 인스턴스 id 도 프로세스 전체다.
-         */
-        static atomic<uint64> _s_nextObjectId;
-
-        PhysicsWorld _physicsWorld;
-        /** @brief 강체 물리입니다. 컴포넌트보다 늦게 사라지도록 등록부들과 함께 둔다(컴포넌트의 해제가 바디를 놓는다). */
-        ScenePhysics _scenePhysics;
-        /** @brief 오디오 컴포넌트 등록부와 엔진 묶기입니다. 물리처럼 소유만 합니다. */
-        SceneAudio _sceneAudio;
-        /** @brief 내비게이션입니다. 컴포넌트(에이전트 · 장애물 · 표면)보다 늦게 사라진다 — 그들의 해제가 등록을 뺀다. */
-        SceneNavigation _sceneNavigation;
-        /**
-         * @brief 콜라이더 바디를 맞추고 물리를 step 한 뒤 겹침 이벤트를 두 오브젝트의 켜진 컴포넌트에 나눠 줍니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
+         * @brief 겹침 월드 → 강체 물리를 한 번씩 진행합니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
          * @details 유니티는 물리 갱신 뒤 OnTrigger 를, 언리얼은 움직임이 끝난 뒤 Begin/EndOverlap 을 부른다. 여기서는 그 프레임에 적용된 월드 자리로 잰다.
          */
         void stepPhysics( float32 deltaTime );
-        /** @brief 겹침 월드(`PhysicsWorld`)만 진행하고 겹침 이벤트를 나눠 줍니다(`stepPhysics` 의 앞 절반). */
-        void                            stepOverlapWorld( float32 deltaTime );
-        vector<BoxCollider2DComponent*> _listCollider; ///< `registerCollider` 한 콜라이더. 콜라이더가 자기 자리(`_colliderIndex`)를 든다
 
-        atomic<bool>            _bTicking;                 ///< 컴포넌트 틱 중(`isStructuralMutationFrozen`)
-        bool                    _bProcessingDestruction;   ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다
-        atomic<uint8>           _bDeferredHierarchyChange; ///< 이번 단계에 계층 변경이 미뤄졌는지 — 그 뒤로는 스테이지 경계 적용을 하지 않는다
-        uint32                  _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
-        atomic<uint32>          _tickStageBuildCount;      ///< 등록부가 항목을 다시 지은 틱의 수(진단)
-        vector<GameObject*>     _listPlayWalk;             ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)
-        atomic<bool>            _bHasBegunPlay;            ///< 플레이 중(`hasBegunPlay`)
-        mutex                   _beginPlayMutex;           ///< 시작 줄을 지킵니다(비동기 씬 로드는 워커에서 붙입니다)
-        vector<ComponentHandle> _listPendingBeginPlay;     ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
-        vector<ComponentHandle> _listProcessingBeginPlay;  ///< 도는 중인 시작 줄(할당 재사용)
-        DeferredDelegateQueue   _deferredStructuralQueue;  ///< 틱이 미룬 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성), 부른 순서. 틱 직후 가장 먼저 돈다
-        DeferredDelegateQueue   _deferredPostTickQueue;    ///< 틱이 미룬 스폰 · 데미지 · 태그(`deferPostTick`)
+        // 프레임 단계 본문 — 표(`SceneFrameStepList.xxx`)의 줄마다 하나. `tick` 이 줄 순서대로 부른다.
+#define SW_SCENE_FRAME_STEP( Name ) void runFrameStep##Name( float32 deltaTime );
+#include "Engine/Object/GameObject/SceneFrameStepList.xxx"
+#undef SW_SCENE_FRAME_STEP
 
-        /** @brief 트랜스폼 계층입니다. PhysicsWorld 처럼 매니저가 소유만 합니다. */
+        // 단위들은 소유만 한다. 선언 순서가 생성 순서다 — 뒤 단위가 앞 단위를 참조로 받는다(틱 디스패치 → 계층 · 등록부 · 틱 중 규칙,
+        // 저장소 → 틱 등록부 · 틱 중 규칙). 오브젝트는 소멸자의 `clear` 가 먼저 지우므로 단위가 사라지는 순서에 기대지 않는다.
+
+        /** @brief 틱 중 규칙(동결 플래그 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
+        StructuralChangeBuffer _structuralChangeBuffer;
+        /** @brief 트랜스폼 계층입니다. */
         SceneTransformHierarchy _transformHierarchy;
-        /** @brief 그릴 수 있는 컴포넌트의 등록부입니다. PhysicsWorld 처럼 매니저가 소유만 합니다. */
+        /** @brief 그릴 수 있는 컴포넌트의 등록부입니다. */
         PrimitiveRegistry _primitiveRegistry;
-        /** @brief 빛 컴포넌트의 등록부입니다. 같은 규칙으로 소유만 합니다. */
+        /** @brief 빛 컴포넌트의 등록부입니다. */
         LightRegistry _lightRegistry;
-        /** @brief 카메라 컴포넌트의 등록부입니다. 같은 규칙으로 소유만 합니다. */
+        /** @brief 카메라 컴포넌트의 등록부입니다. */
         CameraRegistry _cameraRegistry;
-        /** @brief 애니메이션 시스템입니다. 같은 규칙으로 소유만 합니다. */
+        /** @brief 애니메이션 시스템입니다. */
         AnimationSystem _animationSystem;
-        /** @brief 틱에 참여하는 오브젝트의 등록부입니다. 같은 규칙으로 소유만 합니다. */
-        TickRegistry _tickRegistry;
+        /** @brief 컴포넌트 틱 디스패치(틱 등록부 · 그룹 포크-조인 · 선행 조건 스테이지)입니다. */
+        SceneTickScheduler _tickScheduler;
+        /** @brief 오브젝트 저장소(생성 · 이름 · id 표 · 조회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
+        GameObjectStore _store;
+        /** @brief 겹침 월드입니다. */
+        SceneOverlapWorld2D _overlapWorld2D;
+        /** @brief 강체 물리입니다. 컴포넌트의 해제가 바디를 놓는다. */
+        ScenePhysics _scenePhysics;
+        /** @brief 오디오 컴포넌트 등록부와 엔진 묶기입니다. */
+        SceneAudio _sceneAudio;
+        /** @brief 내비게이션입니다. 컴포넌트(에이전트 · 장애물 · 표면)의 해제가 등록을 뺀다. */
+        SceneNavigation _sceneNavigation;
+        /** @brief 단계마다 돌기 직전에 부르는 관찰자(`setFrameStepObserver`)입니다. 보통 비어 있습니다. */
+        FrameStepObserver _frameStepObserver;
     };
 } // namespace sw

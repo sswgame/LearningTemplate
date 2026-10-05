@@ -929,7 +929,7 @@ cd build/Ninja-Debug/Bin
 
 - **모델 임포트의 옆 폴더(`models/<모델>/`)는 임포트마다 통째로 지워진다**(`ModelImporter::importModel`) — 손으로 쓴 캐릭터 데이터(소켓 · 알림 표 · 물리 에셋 ·
   몸 영역)는 `game/<게임>/characters/<캐릭터>/` 처럼 임포트 산출물 밖에 둔다. 클립 알림은 원본 옆 `<모델>.clips.json` 에 적고 `App --import-models`.
-- **물리는 DuringPhysics 와 PostPhysics 틱 사이에 돈다**(그 앞에 틱 결과 적용 → 애니메이션). PostPhysics 이후 틱은 이번 프레임의 바디 자세 · 겹침을 보고,
+- **물리는 DuringPhysics 와 PostPhysics 틱 사이에 돈다**(그 앞에 틱 결과 적용 → 내비게이션 → 애니메이션 — 프레임 순서의 정본은 `Object/GameObject/SceneFrameStepList.xxx` 한 표, 단계를 더하면 줄 하나 + `runFrameStep*` 본문 하나). PostPhysics 이후 틱은 이번 프레임의 바디 자세 · 겹침을 보고,
   그 그룹에서 쓴 애니메이터 파라미터 · 트랜스폼은 다음 프레임의 포즈 · 물리에 든다(`PhysicsComponentTest.PostPhysicsTickSeesThisFramesBodyPose`).
 - **한 오브젝트의 두 번째 씬 컴포넌트는 첫 씬 컴포넌트(루트)에 붙는다** — 저장하면 `_attachComponent="CameraComponent#0"` 처럼 남는다. 카메라와 같은 오브젝트의 뷰 모델 ·
   조준선은 로컬 자리(카메라 기준)로 다룬다 — 월드 자리를 `setLocalPosition` 에 넣으면 카메라 자리만큼 두 번 밀린다(`FirstPersonCameraComponent`).
@@ -964,7 +964,7 @@ cd build/Ninja-Debug/Bin
 - **틱 중 트랜스폼 쓰기** — 자기 오브젝트를 틱하는 스레드면 칸의 대기 자리에, 남의 오브젝트면 쓰기 큐로(`SceneComponent::queueTickWrite` 하나). 남의 값은 늘 틱 전 값을 읽는다.
   큐는 (대상, 쓴 오브젝트 id, 순번)으로 정렬해 적용하므로 결과가 스레드 배정에 달리지 않는다. 워커가 쓰는 더티 플래그는 바이트 · `atomic<uint8>` relaxed(비트필드는 이웃
   비트를 덮고, 같은 값을 겹쳐 쓰는 것도 데이터 경쟁이다). 예외는 서브틱 선행 조건의 스테이지 경계다 — 기다리는 스테이지 앞에서 그때까지의 쓰기를 적용 · 플러시한다
-  (`applyStageTransforms`). 그 단계에 attach · detach 가 미뤄졌으면(`deferHierarchyChange`) 그 뒤로는 앞당기지 않는다 — `KeepWorld` 부착이 먼저 적용된 쓰기를 덮는다.
+  (`SceneTickScheduler::applyStageTransforms`). 그 단계에 attach · detach 가 미뤄졌으면(`deferHierarchyChange`) 그 뒤로는 앞당기지 않는다 — `KeepWorld` 부착이 먼저 적용된 쓰기를 덮는다.
 - **월드 합성은 `updateWorldTransformFromParent` 한 곳이고, 렌더 더티를 찍는 곳은 `onWorldTransformUpdated` 하나다.** 합성 경로를 하나 더 만들면 메시가 화면에서 얼어붙는다.
   트랜스폼 값은 전역 `SceneTransformStorage`(256 칸 페이지, 옮기지 않는다)에 있고 컴포넌트는 칸 번호만 든다. 쓰기 알고리즘은 `SceneTransformHierarchy` 가 갖는다.
 - **부착** — 오브젝트의 루트 씬 컴포넌트는 하나(둘째는 primary 아래로), `AttachRule { KeepRelative, KeepWorld }`, `canAttachTo`(다른 매니저 · 소켓을 거친 순환 · 파괴 대기 부모)는
@@ -974,7 +974,7 @@ cd build/Ninja-Debug/Bin
   `getAllGameObjects( out )`. 컴포넌트 목록을 범위 for 로 도는 중에 붙이면 반복자가 풀린다 — 인덱스로. 콜백이 형제를 지울 수 있는 걷기는 핸들로 모으고 매번 다시 푼다.
   소멸자에서 미루는 경로를 타지 말 것(`~SceneComponent` 는 `detachFromParentImmediate()`).
 - **`tick()` 에서 `TaskManager::waitAll()` 을 부르지 말 것** — 렌더 기록 · 스트리밍 · 오디오까지 기다린다. 자기 스테이지를 `waitStage` 로.
-- **`finishTick` 순서**: 병렬 읽기 해제 → `_bTicking=false` → 지연 트랜스폼 → 지연 포스트틱 → `mergePendingAdds` → dirty 면 재 flush → 지연 파괴.
+- **틱 뒤 적용 순서는 `StructuralChangeBuffer::drain` 하나가 갖는다**: 동결 해제 → 구조 변경(부른 순서) → 틱 중 트랜스폼 쓰기 → 틱 뒤 큐 → `mergePendingAdds` → 시작 줄. 그 뒤 dirty 면 재 flush → 지연 파괴. 큐마다 자기 시점에 비우게 나누지 말 것.
 - **컴포넌트 해체는 `destroyComponentInstance` 한 곳이고 `removeComponent` 는 순서를 지킨다**(swap-remove 금지 — 첫 일치 · primary · 안정 키가 순서에 기댄다). 컴포넌트는 `_pPool`
   (나온 풀)과 `_pTypeInfo` 를 든다 — 이름표 `_componentName` 은 런타임 라벨일 뿐이라 조회 키로 쓰면 안 된다(Shipping 에서만 힙이 깨졌다). 풀 키는 FQN 이다. 컴포넌트는 풀에서
   제자리에 생기므로 이동 연산을 되살리지 말 것. 멤버 없는 파생 컴포넌트도 `REFLECT_BODY` 가 필요하다.

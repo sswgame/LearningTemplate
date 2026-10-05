@@ -112,7 +112,7 @@ namespace sw
             return pService->raycast( from, to, ignoreObjectId, outHit );
         // 강체 물리와 겹침 월드(BoxCollider2D) 중 가까운 것 — 두 세계가 한 씬에 섞여 있을 수 있다.
         const ScenePhysicsWorldQuery rigid{ manager };
-        const PhysicsWorldQuery      fallback{ manager.getPhysicsWorld() };
+        const PhysicsWorldQuery      fallback{ manager.getOverlapWorld2D().getPhysicsWorld() };
         WorldRayHit                  rigidHit;
         WorldRayHit                  fallbackHit;
         const bool                   bRigid    = rigid.raycast( from, to, ignoreObjectId, rigidHit );

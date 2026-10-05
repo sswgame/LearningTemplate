@@ -21,7 +21,7 @@ namespace sw
     REFLECT( Category = "Physics 2D", DisplayName = "Box Collider 2D", Tooltip = "2D Box collision volume" )
     class SW_API BoxCollider2DComponent : public SceneComponent
     {
-        friend class GameObjectManager; ///< step 직전에 바디를 맞추고(`syncPhysicsBody`) 목록 자리(`_colliderIndex`)를 적는다
+        friend class SceneOverlapWorld2D; ///< step 직전에 바디를 맞추고(`syncPhysicsBody`) 목록 자리(`_colliderIndex`)를 적는다
 
     public:
         REFLECT_BODY();
@@ -112,7 +112,7 @@ namespace sw
         SlotHandle    _physicsBody;
         PROPERTY( Category = "Collider", DisplayName = "Collider Type", Tooltip = "Physics collider type index" )
         int32  _colliderType;
-        uint32 _colliderIndex; ///< 매니저의 콜라이더 목록 자리(`GameObjectManager::registerCollider`). 없으면 `kNotRegistered`
+        uint32 _colliderIndex; ///< 겹침 월드의 콜라이더 목록 자리(`SceneOverlapWorld2D::registerCollider`). 없으면 `kNotRegistered`
         PROPERTY( Category = "Collider", DisplayName = "Continuous", Tooltip = "Sweep the box from its last physics step so a fast mover cannot pass through a thin collider" )
         bool _bContinuous;
         PROPERTY( Category = "Collider", DisplayName = "Is Trigger", Tooltip = "Reports overlaps but does not block - projectiles and attacks ignore it" )

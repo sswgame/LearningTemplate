@@ -35,7 +35,7 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, ColliderOutlineIsThePhysicsBox )
     pBox->setOffsetScale( float2{ 1.0f, 1.0f } );
     manager.flushSceneTransforms();
 
-    const vector<BoxCollider2DComponent*>& listCollider = manager.getColliders();
+    const vector<BoxCollider2DComponent*>& listCollider = manager.getOverlapWorld2D().getColliders();
     SW_ASSERT_EQUAL( size_t( 1 ), listCollider.size() );
     SW_EXPECT_TRUE( listCollider[0] == pBox );
 
