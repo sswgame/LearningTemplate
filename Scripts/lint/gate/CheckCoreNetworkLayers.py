@@ -3,11 +3,12 @@
 """
 Core 네트워크 층 검사 — `Source/Core/Network/` 의 폴더가 곧 층이다.
 
-  뿌리(NetTypes · BitStream) ← Transport ← Connection ← Message ← Replication
+  뿌리(NetTypes · BitStream) ← Transport · Security ← Connection ← Message ← Replication
 
 강제 규칙:
   1) `Core/Network/` 아래 파일은 **자기 층 이하**의 `Core/Network/` 헤더만 include 한다(같은 폴더끼리는 된다).
      전송은 연결을 모르고, 연결은 메시지 라우터를 모르고, 메시지는 복제 부품을 모른다.
+     보안(암호 창구 · 재전송 방지 창 · 세션 키 유도)은 뿌리만 본다 — 연결(UDP AEAD) · 메시지(TLS 끝점)가 쓴다.
   2) 표(_kNetworkTier)에 없는 하위 폴더는 실패다 — 새 폴더는 층을 정하고 넣는다.
 
   python Scripts/lint/gate/CheckCoreNetworkLayers.py [--root <repo>] [--files a.h b.cpp]
@@ -33,6 +34,7 @@ _kSourceNetworkPrefix = "Source/Core/Network/"
 _kNetworkTier: dict[str, int] = {
     "": 0,
     "Transport": 1,
+    "Security": 1,  # 암호 창구 — 뿌리만 본다. 같은 층의 Transport 와는 서로 include 할 일이 없다
     "Connection": 2,
     "Message": 3,
     "Replication": 4,
@@ -86,7 +88,7 @@ def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> 
 class CheckCoreNetworkLayersGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
-    description = "Core/Network 의 폴더 층(뿌리 ← Transport ← Connection ← Message ← Replication)을 거꾸로 include 하지 않는지 검사"
+    description = "Core/Network 의 폴더 층(뿌리 ← Transport · Security ← Connection ← Message ← Replication)을 거꾸로 include 하지 않는지 검사"
     buildComment = "Checking the Core/Network folder layers..."
     timeoutSeconds = 30
     preCommitPattern = ("Source/Core/Network/*",)
@@ -104,6 +106,10 @@ class CheckCoreNetworkLayersGate(LintGate):
         {
             "name": "연결이 복제 부품을 include 한다",
             "files": {"Source/Core/Network/Connection/Probe.cpp": "#include \"pch.h\"\n#include \"Core/Network/Replication/NetPrioritizer.h\"\n"},
+        },
+        {
+            "name": "보안이 연결 헤더를 include 한다",
+            "files": {"Source/Core/Network/Security/Probe.h": "#pragma once\n#include \"Core/Network/Connection/NetHost.h\"\n"},
         },
         {
             "name": "표에 없는 폴더",

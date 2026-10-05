@@ -30,7 +30,8 @@
   (zlib · zstd · LZ4 코덱은 외부 라이브러리를 쓰므로 `Engine/Compression` 에 있다)
 - **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
   얹어, 싱글 게임은 그 키트를 링크하지 않는다.
-  폴더가 층이다 — 뿌리(`NetTypes` · `BitStream`) ← `Transport/`(전송 · 루프백 · UDP · 회선 흉내) ← `Connection/`(`NetConnection` · `NetHost` ·
+  폴더가 층이다 — 뿌리(`NetTypes` · `BitStream`) ← `Transport/`(전송 · 루프백 · UDP · 회선 흉내) · `Security/`(암호 창구 `INetSecurityProvider` — AEAD · X25519 · HKDF · Argon2id · 메모리 TLS 세션, 구현은 Engine 의 OpenSSL ·
+  `NetReplayWindow` 재전송 방지 창 · `NetSessionKeyUtil` 세션 키 유도) ← `Connection/`(`NetConnection` · `NetHost` ·
   `NetHostThread` · `SequenceBuffer`) ← `Message/`(`NetMessage` · `NetSendBudget`) ← `Replication/`(키트가 나눠 쓰는 복제 부품 — `NetPrioritizer` · `NetParallel` · `TickRingBuffer` · `NetInputWindow` ·
   `NetClock` · `InterpolationBuffer`).
   아래 층은 위 층을 include 하지 않는다(`CheckCoreNetworkLayers`).
