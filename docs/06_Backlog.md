@@ -399,7 +399,7 @@ cd build/Ninja-Debug/Bin
   **들어간 기반**(`GameFramework/Base/Online/`): `Store`(영속 계약 `IServiceStore` — 비동기 일 · 트랜잭션 · 조건부 쓰기 · 멱등 기록, 메모리 구현 · 계약 시험) ·
   `Guard`(토큰 버킷 · 크기 상한) · `Identity`(`AccountId` · `IAccountDirectory`) · `Cache`(휘발성 계약 `IEphemeralStore` — 만료 · 원자 증감 · 임대 · 정렬 집합 · 발행/구독, 메모리 구현 · 계약 시험) ·
   `Audit`(감사 줄) · `Bus`(서버 간 버스 — 캐시 위 · 프로세스 안) · `Schedule`(예약 작업 — 회차 차지 · 임대 이어받기) · `Config`(원격 설정 · 기능 플래그 출시 비율).
-  남은 기반: `ILocalStore` · 서비스 틀(캐시 답 · 버스 메시지를 요청 id · 주제별로 나눠 주기 — 그때까지 `EphemeralServerBus` 는 자기 캐시 앞을 혼자 쓴다) · 관측, 드라이버 `GF_Server_SqlStore` 의 PostgreSQL(libpq) · `GF_Server_CacheStore`(RESP), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
+  남은 기반: `ILocalStore` · 서비스 틀(캐시 답 · 버스 메시지를 요청 id · 주제별로 나눠 주기 — 그때까지 `EphemeralServerBus` 는 자기 캐시 앞을 혼자 쓴다) · 관측, 드라이버 `GF_Server_CacheStore`(RESP), PostgreSQL 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
   계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
 - **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는
@@ -643,6 +643,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-2. 검증 · 시험 쓰기
 
+- **바깥 서버가 있어야 하는 시험은 `SW_TEST_REQUIRES_ENVIRONMENT( 스위트, "변수", "까닭" );`** — 변수가 비면 그 스위트만 빠지고 `[ SKIP SUITE ]` 한 줄(실패도 "모두 건너뜀" 도 아님,
+  호스트 스위트와 섞이지 않는다). PostgreSQL 은 `SW_TEST_POSTGRES_URL`. 구현마다 같은 케이스는 계약 매크로로(`SW_SERVICE_STORE_CONTRACT_SUITE` · `SW_SQL_DRIVER_CONTRACT_SUITE` ·
+  `SW_EPHEMERAL_STORE_CONTRACT_SUITE`). 서버 없이 실패 길만 보려면 닿지 않는 주소(`host=127.0.0.1 port=1 connect_timeout=1`)를 준다 — 깨끗이 지고 멈추지 않아야 한다.
 - **`--test_filter` 는 gtest 모양이다** — 패턴 사이는 `:` 도 쉼표도 되고, 첫 `-` 뒤는 모두 빼는 패턴이다(`A.*:B.*-A.X`; `-A.*,B.*` 는 둘 다 뺀다).
   고르는 패턴이 등록된 케이스 하나와도 맞지 않으면 실행이 진다(`TestFrameworkTest.FilterThatSelectsNothingFails`) — 0/0 통과는 확인한 줄 안다.
 - **광선이 두 삼각형이 나누는 모서리를 정확히 지나면 Möller–Trumbore 가 양쪽을 다 놓칠 수 있다** — 같은 각도로 나뉜 합성 원기둥 두 겹에서 실제로 났다

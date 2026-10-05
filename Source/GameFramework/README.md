@@ -237,7 +237,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       갈라지는 곳은 방언 훅뿐이다. 시험: `SqlDriverSqliteTest`(드라이버 계약 `SqlDriverContract.h` · 풀 · 등록부).
     - `Server/SqlStore`(`GF_Server_SqlStore`, Server): `SqlServiceStore`(기반 `IServiceStore` 의 SQL 구현 — `sw_record` 표, 조건부 쓰기는 영향 받은 행 수로,
       마이그레이션은 `Resource/common/sql/servicestore/`), `ServiceStoreFactory`(서버 설정의 저장소 항목 → 저장소, `memory` 는 기반 메모리 구현).
-      시험: `ServiceStoreSqliteTest`(메모리와 같은 계약 여섯 `ServiceStoreContract.h` · 다시 띄우기 · 공장).
+      PostgreSQL 드라이버(`Driver/Postgres/` — libpq 를 아는 유일한 폴더, `?` → `$n` 준비문 캐시 · 이진 결과 · SQLSTATE 로 제약 · 직렬화 실패 · 끊김을 가름, 비밀번호는 접속 글이 아니라 따로).
+      시험: `ServiceStoreSqliteTest`(메모리와 같은 계약 여섯 `ServiceStoreContract.h` · 다시 띄우기 · 공장), `ServiceStorePostgresTest` · `SqlDriverPostgresTest`(서버가 있을 때만 — `SW_TEST_POSTGRES_URL`).
 
 ## 카메라: 프리셋 데이터 + 모드 + 블렌드 + 뷰 타깃
 

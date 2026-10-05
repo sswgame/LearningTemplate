@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""감싼 서드파티(Jolt · Box2D · ACL · Tracy · Recast · OpenSSL · SQLite)의 헤더는 그 백엔드 · 드라이버 폴더에서만 include 하고, 그 라이브러리는 규칙마다 정한 CMakeLists 하나에서만 링크한다.
+"""감싼 서드파티(Jolt · Box2D · ACL · Tracy · Recast · OpenSSL · SQLite · PostgreSQL)의 헤더는 그 백엔드 · 드라이버 폴더에서만 include 하고, 그 라이브러리는 규칙마다 정한 CMakeLists 하나에서만 링크한다.
 
 엔진은 3D 물리 · 2D 물리 · 애니메이션 압축 · 내비메시를 **엔진 쪽 인터페이스** 뒤에 감싼다(`IPhysicsScene3D` · `IPhysicsScene2D` · 애니메이션 코덱 ·
 `INavMesh` · `INavCrowd`).
@@ -11,7 +11,7 @@
      `<acl/...>` · `<rtm/...>` 는 `Source/Engine/Animation/Codec/Acl/` 안에서만, `<tracy/...>` 는 `Source/Engine/Utility/Profiling/Tracy/`
      안에서만, `<recastnavigation/...>`(와 `Recast*.h` · `Detour*.h` · `DebugDraw.h`)는 `Source/Engine/Navigation/Recast/` 안에서만,
      `<openssl/...>` 는 `Source/Engine/Network/OpenSsl/` 안에서만, `<sqlite3.h>` 는 키트 드라이버 폴더 `Source/GameFramework/Kits/Storage/SqlStore/Driver/Sqlite/`
-     안에서만 쓴다
+     안에서만, `<libpq-fe.h>` 는 서버 키트 드라이버 폴더 `Source/GameFramework/Kits/Storage/Server/SqlStore/Driver/Postgres/` 안에서만 쓴다
      (시험 · 도구 · 게임도 예외 없이 인터페이스를 쓴다 — Tracy 는 `IProfilerBackend` · `SW_PROFILE_SCOPE`, Recast 는 `INavMesh`).
   2) 그 라이브러리 타깃(`joltphysics` · `Jolt::Jolt` · `box2d` · `box2d::box2d` · `acl` · `tracy` · `Tracy::TracyClient` · `recastnavigation` · `RecastNavigation::*` · `openssl` · `OpenSSL::SSL` · `OpenSSL::Crypto`)을 `target_link_libraries` 로 링크하는 것은
      규칙의 링크 주인 하나다(엔진 백엔드는 `Source/Engine/CMakeLists.txt`, 키트 안 드라이버는 그 키트의 CMakeLists) — 다른 타깃이 링크하면 헤더 경로 · 정의가 그 타깃으로 번진다. 라이브러리를 정의하는
@@ -63,6 +63,8 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
     LibraryRule("OpenSSL", ("openssl/",), "Source/Engine/Network/OpenSsl/", ("openssl", "OpenSSL::SSL", "OpenSSL::Crypto")),
     LibraryRule("SQLite", ("sqlite3.h", "sqlite3ext.h"), "Source/GameFramework/Kits/Storage/SqlStore/Driver/Sqlite/",
                 ("unofficial::sqlite3::sqlite3", "SQLite::SQLite3"), "Source/GameFramework/Kits/Storage/SqlStore/CMakeLists.txt"),
+    LibraryRule("PostgreSQL", ("libpq-fe.h", "libpq/", "libpq-events.h", "postgres_ext.h"), "Source/GameFramework/Kits/Storage/Server/SqlStore/Driver/Postgres/",
+                ("PostgreSQL::PostgreSQL",), "Source/GameFramework/Kits/Storage/Server/SqlStore/CMakeLists.txt"),
 )
 
 _kListSourceRoot = ("Source", "Test", "Tools")
@@ -142,7 +144,7 @@ def findLinkViolations(repositoryRoot: Path, listFileArgument: list[str] | None)
 class CheckThirdPartyIsolationGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
-    description = "감싼 서드파티(Jolt · Box2D · ACL · Tracy · Recast · OpenSSL · SQLite)의 헤더 · 링크가 백엔드 · 드라이버 폴더와 규칙의 CMakeLists 밖으로 새지 않는지 검사"
+    description = "감싼 서드파티(Jolt · Box2D · ACL · Tracy · Recast · OpenSSL · SQLite · PostgreSQL)의 헤더 · 링크가 백엔드 · 드라이버 폴더와 규칙의 CMakeLists 밖으로 새지 않는지 검사"
     buildComment = "Checking that wrapped third-party libraries stay inside their backend folders..."
     timeoutSeconds = 30
     preCommitPattern = ("Source/*", "Test/*", "Tools/*", "cmake/*", "CMakeLists.txt")
@@ -203,6 +205,10 @@ class CheckThirdPartyIsolationGate(LintGate):
             "files": {"Source/GameFramework/Kits/Storage/SqlStore/Sql/Probe.cpp": "#include <sqlite3.h>\nint probe() { return 0; }\n"},
         },
         {
+            "name": "libpq 헤더를 서버 SQL 키트의 드라이버 폴더 밖에서 include 한다",
+            "files": {"Source/GameFramework/Kits/Storage/Server/SqlStore/Probe.cpp": "#include <libpq-fe.h>\nint probe() { return 0; }\n"},
+        },
+        {
             "name": "SQLite 를 서버 키트의 CMakeLists 에서 링크한다",
             "files": {"Source/GameFramework/Kits/Storage/Server/SqlStore/CMakeLists.txt": "target_link_libraries(GF_Server_SqlStore PRIVATE unofficial::sqlite3::sqlite3)\n"},
         },
@@ -213,7 +219,7 @@ class CheckThirdPartyIsolationGate(LintGate):
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         listViolation = findIncludeViolations(repositoryRoot, args.files) + findLinkViolations(repositoryRoot, args.files)
-        return GateResult(listViolation=listViolation, summary="Jolt · Box2D · ACL · Tracy · Recast · OpenSSL · SQLite 헤더와 링크가 제자리에 있다")
+        return GateResult(listViolation=listViolation, summary="Jolt · Box2D · ACL · Tracy · Recast · OpenSSL · SQLite · PostgreSQL 헤더와 링크가 제자리에 있다")
 
 
 main = CheckThirdPartyIsolationGate.run

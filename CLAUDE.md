@@ -82,6 +82,8 @@ build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (
   `ReflectionTest`, which is sharded (below). **A test that creates an RHI device belongs in `RenderPassGpuTest`.**
   A host-suite case fails on any unexpected `[Error]` log line, since validation-layer and driver errors only log;
   wrap a deliberate rejection in `SW_TEST_DEFENSIVE_SCOPE( "reason" )`.
+- **A suite that needs an outside server declares it too**: `SW_TEST_REQUIRES_ENVIRONMENT( SuiteName, "SW_TEST_POSTGRES_URL", "reason" );`.
+  With the variable unset the suite is not selected and prints one `[ SKIP SUITE ]` line (not a failure, not a host suite).
 - **`-L hostgpu` is the part CI can never run. Run it in Shipping before you call work done**, on the
   machine with the GPU. Nothing else covers it: CI skips those suites and local habit is Debug-only, so a
   Shipping-only GPU failure otherwise sits in the tree unnoticed. A `--host_suites=only` run that selects nothing
