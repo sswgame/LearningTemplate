@@ -755,6 +755,8 @@ cd build/Ninja-Debug/Bin
   `core.autocrlf=true` 체크아웃이 `*.skeleton.json` 을 CRLF 로 바꾸면 그것을 임포트한 워크트리 밖에서만 "손으로 바꿨다" 가 된다. 텍스트 산출물을 새로 만들면 같은 규칙에 든다(`App --check-text` 도 CRLF 체크아웃에서 "OUT OF DATE" 였다).
 - **GPU · 드라이버** — 반복 TDR 은 어댑터를 망가뜨린다(재부팅 필요). DX12 는 실패 지점에서 InfoQueue · DRED 를 강제로 뽑는다. 이름 없는 객체("Unnamed")가 보이면 `SetName` 부터 붙인다.
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
+- **GitHub Windows 러너에는 오디오 출력 장치가 없다**(`CreateMasteringVoice` 0x80070490 = `ERROR_NOT_FOUND`) — 출력 줄의 `[Warning]` 을 세는 시험(`AppCookTest`)이 그것으로 졌다.
+  장치 없음은 Info 로 알리고 오프라인 렌더로 돈다.
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
 

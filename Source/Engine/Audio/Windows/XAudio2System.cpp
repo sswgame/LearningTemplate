@@ -228,7 +228,11 @@ namespace sw
         hr = _impl->_pXAudio->CreateMasteringVoice( &_impl->_pMasterVoice, audio::kChannelCount, audio::kSampleRate );
         if ( FAILED( hr ) || _impl->_pMasterVoice == nullptr )
         {
-            SW_LOG_WARNING( "CreateMasteringVoice failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+            // 출력 장치가 없는 기계(CI 러너 · 서버 · 원격 세션)는 고장이 아니다 — 오프라인 렌더로 돈다는 것만 알린다. 장치가 있는데 실패한 것만 경고다.
+            if ( hr == HRESULT_FROM_WIN32( ERROR_NOT_FOUND ) )
+                SW_LOG_INFO( "No audio output device (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
+            else
+                SW_LOG_WARNING( "CreateMasteringVoice failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             _impl->_pMasterVoice = nullptr;
             closeOutput();
             return false;
