@@ -102,8 +102,10 @@ sw_addTestExecutable(EditorTest
 		meshoptimizer
 	LABELS
 		"unit;editor;nogpu"
+	# 케이스 하나(ModelImporterTest.SkinnedModelImportsSkeletonClipsAndAttachments — VRM 스킨 모델을 Debug 로 임포트)가 혼자 31 초다
+	# (부하 걸린 이 PC). 조각으로 나눠도 그 케이스는 한 조각에 남으므로 한도를 올린다. 실행 전체는 직접 40 초 안팎.
 	TIMEOUT
-		30
+		120
 )
 
 target_include_directories(EditorTest PRIVATE "${CMAKE_SOURCE_DIR}/Source")
