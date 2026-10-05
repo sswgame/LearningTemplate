@@ -5,9 +5,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -166,5 +168,39 @@ namespace sw
         const float32 blend    = getBlend();
         const float32 previous = _pPrevious->_values.getValue( name );
         return previous + ( current - previous ) * blend;
+    }
+
+    void WeatherSystem::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeName( outArchive, getCurrent() );
+        StateArchiveUtil::writeName( outArchive, getPrevious() );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _remaining;
+        outArchive << _transitionElapsed;
+    }
+
+    bool WeatherSystem::readState( Archive& archive )
+    {
+        hashed_string currentId;
+        hashed_string previousId;
+        GameRandom    random            = _random;
+        float32       remaining         = 0.0f;
+        float32       transitionElapsed = 0.0f;
+        const bool    bRead             = StateArchiveUtil::readName( archive, currentId ) && StateArchiveUtil::readName( archive, previousId ) && StateArchiveUtil::readRandom( archive, random );
+        archive >> remaining;
+        archive >> transitionElapsed;
+        if ( bRead == false || archive.isError() )
+            return false;
+        const WeatherDef* pCurrent  = currentId.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findWeather( currentId );
+        const WeatherDef* pPrevious = previousId.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findWeather( previousId );
+        const bool        bKnown    = ( currentId.empty() || pCurrent != nullptr ) && ( previousId.empty() || pPrevious != nullptr );
+        if ( bKnown == false )
+            return false;
+        _pCurrent          = pCurrent;
+        _pPrevious         = pPrevious;
+        _random            = random;
+        _remaining         = remaining;
+        _transitionElapsed = transitionElapsed;
+        return true;
     }
 } // namespace sw

@@ -43,13 +43,13 @@ namespace
         CityCatalog    _catalog;
         CitySimulation _city;
         Wallet         _wallet; ///< 도시가 빌린 금고
+        int32          _monthIndex{ 0 };
 
         bool initialize( int32 money = 5000, float32 wagePerWorkerPerMonth = 0.5f )
         {
             if ( _catalog.loadFromXmlText( kCityTestXml, "CityBuilderTest" ) == false )
                 return false;
             CitySettings settings;
-            settings._secondsPerMonth       = 20.0f;
             settings._wagePerWorkerPerMonth = wagePerWorkerPerMonth;
             _wallet.clear();
             _wallet.add( settings._currency, money );
@@ -60,6 +60,13 @@ namespace
         }
 
         int32 getMoney() const { return static_cast<int32>( _wallet.getBalance( _city.getCurrency() ) ); }
+
+        /** @brief 한 달(20 초)을 돌리고 결산합니다 — 게임에서는 디렉터가 공유 시계의 달 넘김에 부른다. 열두 번째마다 새 해입니다. */
+        void runMonth()
+        {
+            run( 20.0f );
+            _city.settleMonth( ++_monthIndex % 12 == 0 );
+        }
 
         /** @brief y = 10 의 동서 도로(x 2..29)와 x = 2 · 29 의 남북 도로(y 3..20) — 고리 하나. */
         void buildRoadLoop()
@@ -255,6 +262,8 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
     for ( int32 stepIndex = 0; stepIndex < 12 * 80 + 4; ++stepIndex ) // 한 해 하고 조금
     {
         city.update( 0.25f );
+        if ( ( stepIndex + 1 ) % 80 == 0 ) // 20 초 — 한 달
+            city.settleMonth( ( stepIndex + 1 ) / 80 % 12 == 0 );
         listEvent.clear();
         city.drainEvents( listEvent );
         for ( const CityEvent& event : listEvent )
@@ -272,15 +281,41 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
     SW_EXPECT_EQUAL( moneyAfterBuilding + monthIncome, scene.getMoney() );
     SW_EXPECT_EQUAL( 1, floodCount );
     SW_EXPECT_TRUE( floodValue >= 40 && floodValue <= 100 );
-    SW_EXPECT_EQUAL( 2, city.getYear() );
     SW_EXPECT_NEAR_EQUAL( static_cast<float32>( floodValue ) / 100.0f, city.getFloodFertility(), 0.011f );
 
     // 세리를 허물면 세금이 그치고 임금만 남는다(일꾼 없음 → 0).
     SW_ASSERT_TRUE( city.demolish( 4, 9 ) );
     scene.run( 60.0f ); // 세금 효과(30 초)가 다 빠지게
     const int32 before = scene.getMoney();
-    scene.run( 20.0f );
+    scene.runMonth();
     SW_EXPECT_TRUE( scene.getMoney() <= before );
+}
+
+/**
+ * @brief [CityBuilderTest] 범람은 새 해의 결산에서만 굴린다 — 달력은 공유 시계의 것이고 결산은 디렉터가 부른다
+ */
+SW_TEST_CASE( CityBuilderTest, FloodRollsOnlyOnANewYear )
+{
+    CityTestScene scene;
+    SW_ASSERT_TRUE( scene.initialize() );
+    CitySimulation&   city = scene._city;
+    vector<CityEvent> listEvent;
+    const auto        countFloods = [&city, &listEvent]()
+    {
+        listEvent.clear();
+        city.drainEvents( listEvent );
+        int32 floodCount = 0;
+        for ( const CityEvent& event : listEvent )
+            floodCount += event._kind == CityEvent::Kind::Flood ? 1 : 0;
+        return floodCount;
+    };
+    const float32 fertilityBefore = city.getFloodFertility();
+    for ( int32 month = 0; month < 11; ++month )
+        city.settleMonth( false );
+    SW_EXPECT_EQUAL( 0, countFloods() );
+    SW_EXPECT_NEAR_EQUAL( fertilityBefore, city.getFloodFertility(), 1e-6f );
+    city.settleMonth( true );
+    SW_EXPECT_EQUAL( 1, countFloods() );
 }
 
 /**
@@ -297,7 +332,7 @@ SW_TEST_CASE( CityBuilderTest, MonthlyWagesCanRunTheBorrowedWalletIntoDebt )
     SW_ASSERT_TRUE( city.placeBuilding( "tax", 4, 9 ) == CityPlaceResult::Ok );
     scene._wallet.setBalance( city.getCurrency(), 0 );
     for ( int32 month = 0; month < 3 && scene.getMoney() >= 0; ++month )
-        scene.run( 20.0f );
+        scene.runMonth();
     SW_ASSERT_TRUE( city.getEmployed() > 0 );
     SW_EXPECT_TRUE( scene.getMoney() < 0 );
     SW_EXPECT_TRUE( city.placeRoad( 3, 3 ) == CityPlaceResult::NotEnoughMoney );

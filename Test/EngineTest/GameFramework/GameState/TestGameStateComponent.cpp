@@ -17,6 +17,7 @@
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/GameState/GameStateComponent.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/World/WeatherSystem.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -286,4 +287,52 @@ SW_TEST_CASE( GameStateComponentTest, UnknownSectionIsSkippedAndMissingSectionSt
     SW_EXPECT_EQUAL( 0, state.getFlags().getFlag( "old" ) ); // 판이 달라 새 판
     SW_EXPECT_EQUAL( 0, state.getClock().getDay() );         // 빠진 구간 — 새 판(6 시)
     SW_EXPECT_NEAR_EQUAL( 6.0f, state.getClock().getHour(), 1.0e-3f );
+}
+
+/**
+ * @brief [GameStateComponentTest] 공유 날씨는 공유 시계 뒤에 게임 초로 흐르고, 스냅숏 바이트에 실려 같은 날씨 · 같은 다음 날씨로 돌아온다
+ */
+SW_TEST_CASE( GameStateComponentTest, WeatherFollowsTheSharedClockAndRidesTheSnapshot )
+{
+    WeatherCatalog weatherCatalog;
+    SW_ASSERT_TRUE( weatherCatalog.loadFromXmlText( R"(
+<WeatherCatalog transition="0">
+  <Weather id="sun" seasons="Default:1" minDuration="3600" maxDuration="7200"><Values light="1"/></Weather>
+  <Weather id="rain" seasons="Default:1" minDuration="3600" maxDuration="7200"><Values light="0.5"/></Weather>
+  <Weather id="fog" seasons="Default:1" minDuration="3600" maxDuration="7200"><Values light="0.3"/></Weather>
+</WeatherCatalog>
+)",
+                                                    "GameStateComponentTest" ) );
+    GameStateSettings settings;
+    settings._clock._secondsPerDay = 24.0f; // 실제 1 초 = 게임 1 시간(3600 초)
+    settings._pWeatherCatalog      = &weatherCatalog;
+    settings._weatherSeed          = 7u;
+
+    GameStateComponent state;
+    SW_ASSERT_TRUE( state.initialize( settings ) == GameStateInitResult::Fresh );
+    SW_ASSERT_NOT_NULL( state.makeRefs()._pWeather );
+    vector<hashed_string> listSeen;
+    for ( int32 tick = 0; tick < 24; ++tick ) // 하루 — 날씨 길이 1 ~ 2 시간이라 여러 번 바뀐다
+    {
+        state.onTick( 1.0f );
+        if ( listSeen.empty() || listSeen.back() != state.getWeather().getCurrent() )
+            listSeen.push_back( state.getWeather().getCurrent() );
+    }
+    SW_EXPECT_EQUAL( 1, state.getClock().getDay() );
+    SW_EXPECT_TRUE( listSeen.size() > 2 );
+
+    Archive archive;
+    state.writeState( archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+    GameStateComponent restored;
+    restored.restoreState( std::move( bytes ) );
+    SW_ASSERT_TRUE( restored.initialize( settings ) == GameStateInitResult::Restored );
+    SW_EXPECT_TRUE( restored.getWeather().getCurrent() == state.getWeather().getCurrent() );
+    for ( int32 tick = 0; tick < 6; ++tick )
+    {
+        state.onTick( 1.0f );
+        restored.onTick( 1.0f );
+        SW_EXPECT_TRUE( restored.getWeather().getCurrent() == state.getWeather().getCurrent() );
+    }
 }

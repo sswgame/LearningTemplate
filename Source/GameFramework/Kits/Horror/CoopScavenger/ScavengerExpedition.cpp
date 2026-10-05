@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/World/WeatherSystem.h"
+#include "GameFramework/Base/World/WorldClock.h"
 
 #include <algorithm>
 
@@ -56,18 +58,17 @@ namespace sw
         , _data{}
         , _quota{}
         , _facility{}
-        , _clock{}
-        , _weather{}
         , _indoorDirector{}
         , _outdoorDirector{}
         , _shop{}
         , _random{}
         , _pShipStorage{ nullptr }
         , _pWallet{ nullptr }
+        , _pClock{ nullptr }
+        , _pWeather{ nullptr }
         , _pMoon{ nullptr }
         , _seed{ 1u }
         , _hoursOnMoon{ 0.0f }
-        , _dayIndex{ 0 }
         , _phase{ ScavengerPhase::InOrbit }
         , _bDuskAnnounced{ SW_FALSE }
     {
@@ -83,10 +84,11 @@ namespace sw
         _facility.clear();
         _pMoon          = nullptr;
         _hoursOnMoon    = 0.0f;
-        _dayIndex       = 0;
         _phase          = ScavengerPhase::InOrbit;
         _bDuskAnnounced = SW_FALSE;
         _pWallet        = refs._pWallet;
+        _pClock         = refs._pClock;
+        _pWeather       = refs._pWeather;
         _shop.initialize( data._pShopCatalog, data._pItemCatalog );
         _pShipStorage = &shipStorage;
         _listCrew.clear();
@@ -96,11 +98,6 @@ namespace sw
         _quota.initialize( data._pCatalog->getQuotaSettings() );
         if ( _pWallet != nullptr )
             _pWallet->setBalance( data._pCatalog->getCurrency(), data._pCatalog->getQuotaSettings()._startCredits );
-        const ScavengerDaySettings& day = data._pCatalog->getDaySettings();
-        WorldClockSettings          clockSettings;
-        clockSettings._secondsPerDay = day._secondsPerDay;
-        clockSettings._startHour     = day._arrivalHour;
-        _clock.initialize( clockSettings );
         if ( data._pCatalog->getMoons().empty() == false )
             _pMoon = &data._pCatalog->getMoons().front();
         resetCrew();
@@ -130,11 +127,20 @@ namespace sw
         _phase                          = ScavengerPhase::Landed;
         _hoursOnMoon                    = 0.0f;
         _bDuskAnnounced                 = SW_FALSE;
-        _clock.setTime( _dayIndex, catalog.getDaySettings()._arrivalHour );
-        _weather.initialize( _data._pWeatherCatalog, ScavengerExpeditionInternal::makeDaySeed( _seed, _dayIndex, 0x57u ), _pMoon->_id );
+        const float32 arrivalHour       = catalog.getDaySettings()._arrivalHour;
+        if ( _pClock != nullptr && MathUtil::abs( _pClock->getHour() - arrivalHour ) > 0.01f )
+            _pClock->advanceToHour( arrivalHour ); // 아침 — 지났으면 다음 날
+        const int32 dayIndex = getDayIndex();
+        // 위성 = 날씨 표의 계절. 그날의 씨앗으로 굴린 위성 날씨를 공유 날씨에 바로 건다.
+        if ( _pWeather != nullptr && _data._pWeatherCatalog != nullptr )
+        {
+            WeatherSystem moonWeather;
+            moonWeather.initialize( _data._pWeatherCatalog, ScavengerExpeditionInternal::makeDaySeed( _seed, dayIndex, 0x57u ), _pMoon->_id );
+            _pWeather->forceWeather( moonWeather.getCurrent(), moonWeather.getRemaining(), true );
+        }
 
         const float32 valueScale = computeWeatherValue( "scrapValue" );
-        const uint32  layoutSeed = ScavengerExpeditionInternal::makeDaySeed( _seed ^ _pMoon->_id.getHash(), _dayIndex, 0x46u );
+        const uint32  layoutSeed = ScavengerExpeditionInternal::makeDaySeed( _seed ^ _pMoon->_id.getHash(), dayIndex, 0x46u );
         if ( _facility.createLayout( catalog, *_pMoon, layoutSeed, valueScale ) == false )
             SW_LOG_WARNING( "facility layout for '%#' failed to load", _pMoon->_id.c_str() );
 
@@ -142,9 +148,9 @@ namespace sw
         _outdoorDirector.initialize( nullptr, 1u );
         if ( _data._pThreatTable != nullptr && _pMoon->_bCompany == SW_FALSE )
         {
-            _indoorDirector.initialize( _data._pThreatTable, ScavengerExpeditionInternal::makeDaySeed( _seed, _dayIndex, 0x49u ) );
+            _indoorDirector.initialize( _data._pThreatTable, ScavengerExpeditionInternal::makeDaySeed( _seed, dayIndex, 0x49u ) );
             _indoorDirector.setAllowedTags( vector<hashed_string>{ hashed_string( "Indoor" ) } );
-            _outdoorDirector.initialize( _data._pThreatTable, ScavengerExpeditionInternal::makeDaySeed( _seed, _dayIndex, 0x4fu ) );
+            _outdoorDirector.initialize( _data._pThreatTable, ScavengerExpeditionInternal::makeDaySeed( _seed, dayIndex, 0x4fu ) );
             _outdoorDirector.setAllowedTags( vector<hashed_string>{ hashed_string( "Outdoor" ) } );
         }
         resetCrew();
@@ -165,10 +171,8 @@ namespace sw
         if ( _phase != ScavengerPhase::Landed || deltaTime <= 0.0f || _data._pCatalog == nullptr )
             return;
         const ScavengerDaySettings& day = _data._pCatalog->getDaySettings();
-        _clock.update( deltaTime );
         _hoursOnMoon += deltaTime * 24.0f / day._secondsPerDay;
         const float32 hour = day._arrivalHour + _hoursOnMoon;
-        (void)_weather.update( deltaTime * 24.0f * 60.0f * 60.0f / day._secondsPerDay, _pMoon->_id );
 
         for ( ScavengerCrewMember& member : _listCrew )
         {
@@ -237,7 +241,7 @@ namespace sw
                 pushEvent( ScavengerEvent::Kind::BodyRecovered, scrap._bodyOf, 0 );
                 return ScavengerActionResult::Ok;
             }
-            scrap._day = _dayIndex;
+            scrap._day = getDayIndex();
             _listShipScrap.push_back( scrap );
             return ScavengerActionResult::Ok;
         }
@@ -370,9 +374,9 @@ namespace sw
 
     float32 ScavengerExpedition::computeWeatherValue( const utf8* pName ) const
     {
-        if ( _data._pWeatherCatalog == nullptr )
+        if ( _pWeather == nullptr )
             return 1.0f;
-        const float32 value = _weather.computeValue( hashed_string( pName ) );
+        const float32 value = _pWeather->computeValue( hashed_string( pName ) );
         return value > 0.0f ? value : 1.0f;
     }
 
@@ -387,7 +391,7 @@ namespace sw
         {
             if ( bOnShip && scrap.isBody() == false )
             {
-                scrap._day = _dayIndex;
+                scrap._day = getDayIndex();
                 _listShipScrap.push_back( scrap );
             }
             else if ( bOnShip )
@@ -438,7 +442,7 @@ namespace sw
                         pushEvent( ScavengerEvent::Kind::BodyRecovered, scrap._bodyOf, 0 );
                         continue;
                     }
-                    scrap._day = _dayIndex;
+                    scrap._day = getDayIndex();
                     _listShipScrap.push_back( scrap );
                 }
                 continue;
@@ -475,7 +479,8 @@ namespace sw
             _phase = ScavengerPhase::GameOver;
             pushEvent( ScavengerEvent::Kind::GameOver, -1, _quota.getFulfilled() );
         }
-        ++_dayIndex;
+        if ( _pClock != nullptr && _data._pCatalog != nullptr )
+            _pClock->advanceToHour( _data._pCatalog->getDaySettings()._arrivalHour ); // 다음 날 아침
         _shop.advanceDay();
         _facility.clear();
         _indoorDirector.initialize( nullptr, 1u );
@@ -552,4 +557,6 @@ namespace sw
         event._id     = id;
         _eventBuffer.push( event );
     }
+
+    int32 ScavengerExpedition::getDayIndex() const { return _pClock != nullptr ? _pClock->getDay() : 0; }
 } // namespace sw

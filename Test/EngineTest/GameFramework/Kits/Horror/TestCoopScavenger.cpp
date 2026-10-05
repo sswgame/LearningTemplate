@@ -9,6 +9,7 @@
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Base/World/WeatherSystem.h"
+#include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCarry.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCatalog.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerExpedition.h"
@@ -80,6 +81,8 @@ namespace
         ShopCatalog      _shopCatalog;
         Inventory        _shipStorage; ///< 우주선 창고(원정이 빌린다)
         Wallet           _wallet;      ///< 회사 돈(원정이 빌린다)
+        WorldClock       _clock;       ///< 공유 시계(원정이 빌린다 — 흘리는 것은 시험)
+        WeatherSystem    _weather;     ///< 공유 날씨(원정이 빌린다)
 
         bool initialize()
         {
@@ -95,11 +98,18 @@ namespace
             return _shipStorage;
         }
 
-        /** @brief 원정이 빌릴 공유 상태입니다. */
+        /** @brief 원정이 빌릴 공유 상태입니다 — 시계는 도착 시각에서, 날씨는 새로 엽니다. */
         GameStateRefs makeRefs()
         {
+            WorldClockSettings clockSettings;
+            clockSettings._secondsPerDay = _catalog.getDaySettings()._secondsPerDay;
+            clockSettings._startHour     = _catalog.getDaySettings()._arrivalHour;
+            _clock.initialize( clockSettings );
+            _weather.initialize( &_weatherCatalog, 1u, hashed_string{} );
             GameStateRefs refs;
-            refs._pWallet = &_wallet;
+            refs._pWallet  = &_wallet;
+            refs._pClock   = &_clock;
+            refs._pWeather = &_weather;
             return refs;
         }
 
@@ -359,8 +369,8 @@ SW_TEST_CASE( CoopScavengerTest, DayFlowDuskMidnightDepartureAndLeftBehind )
     SW_EXPECT_TRUE( expedition.routeTo( "experimentation" ) == ScavengerActionResult::Ok );
     SW_ASSERT_TRUE( expedition.land() == ScavengerActionResult::Ok );
     SW_EXPECT_TRUE( expedition.getPhase() == ScavengerPhase::Landed );
-    SW_EXPECT_NEAR_EQUAL( 8.0f, expedition.getClock().getHour(), 0.01f );
-    SW_EXPECT_TRUE( expedition.getWeather().getCurrent() == hashed_string( "clear" ) );
+    SW_EXPECT_NEAR_EQUAL( 8.0f, data._clock.getHour(), 0.01f );
+    SW_EXPECT_TRUE( data._weather.getCurrent() == hashed_string( "clear" ) );
     SW_EXPECT_TRUE( expedition.routeTo( "titan" ) == ScavengerActionResult::WrongPhase );
 
     // 0 은 고철 하나를 우주선에 싣고, 1 은 바깥에 남는다.
@@ -523,7 +533,7 @@ SW_TEST_CASE( CoopScavengerTest, ThreatsScaleWithMoonRiskAndWeather )
     expedition.initialize( data.makeData(), data.makeRefs(), data.openShipStorage(), 5u, 1 );
     SW_EXPECT_TRUE( expedition.routeTo( "rend" ) == ScavengerActionResult::Ok );
     SW_ASSERT_TRUE( expedition.land() == ScavengerActionResult::Ok );
-    SW_EXPECT_TRUE( expedition.getWeather().getCurrent() == hashed_string( "eclipsed" ) );
+    SW_EXPECT_TRUE( data._weather.getCurrent() == hashed_string( "eclipsed" ) );
     SW_EXPECT_NEAR_EQUAL( 2.0f, expedition.computeThreatScale(), 0.0001f );
 }
 

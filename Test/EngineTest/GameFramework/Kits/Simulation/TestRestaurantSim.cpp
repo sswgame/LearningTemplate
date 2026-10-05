@@ -8,6 +8,7 @@
 #include "GameFramework/Base/Progression/LevelProgress.h"
 #include "GameFramework/Base/Progression/Reputation.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/Kits/Simulation/RestaurantSim/IngredientStock.h"
 #include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantCatalog.h"
 #include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantSimulation.h"
@@ -55,14 +56,23 @@ namespace
     /** @brief 식당 하나가 빌리는 것 — 섞인 게임에서는 공유 상태의 것입니다. */
     struct RestaurantTestBorrowed
     {
-        Inventory _pantry; ///< 주방 창고
-        Wallet    _wallet; ///< 식당 금고
+        Inventory  _pantry; ///< 주방 창고
+        Wallet     _wallet; ///< 식당 금고
+        WorldClock _clock;  ///< 날(시세 굴림의 씨앗)
 
         GameStateRefs makeRefs()
         {
             GameStateRefs refs;
             refs._pWallet = &_wallet;
+            refs._pClock  = &_clock;
             return refs;
+        }
+
+        /** @brief 하루를 넘기고 식당에 알립니다 — 게임에서는 디렉터가 시계의 날 넘김에 부른다. */
+        void passDay( RestaurantSimulation& sim )
+        {
+            _clock.advanceToHour( _clock.getHour() );
+            sim.advanceDay();
         }
     };
 
@@ -95,6 +105,7 @@ namespace
         void initialize( RestaurantSimulation& sim, const RestaurantSettings& settings, RestaurantTestBorrowed& outBorrowed ) const
         {
             outBorrowed._pantry.initialize( &_items, 40 );
+            outBorrowed._clock.initialize( WorldClockSettings{} );
             sim.initialize( &_catalog, &_recipes, &_items, &_shops, &_reputation, &_curve, outBorrowed.makeRefs(), outBorrowed._pantry, settings );
         }
     };
@@ -261,8 +272,8 @@ SW_TEST_CASE( RestaurantSimTest, MarketBuysRecordBatchesAndPricesMoveDeterminist
     int32 highestPrice = 0;
     for ( int32 dayIndex = 0; dayIndex < 8; ++dayIndex )
     {
-        simA.advanceDay();
-        simB.advanceDay();
+        simABorrowed.passDay( simA );
+        simBBorrowed.passDay( simB );
         const int32 priceA = simA.getMarket().computeBuyPrice( "market", "noodle" );
         SW_EXPECT_EQUAL( priceA, simB.getMarket().computeBuyPrice( "market", "noodle" ) );
         lowestPrice  = priceA < lowestPrice ? priceA : lowestPrice;

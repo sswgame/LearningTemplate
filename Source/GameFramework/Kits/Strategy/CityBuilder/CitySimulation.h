@@ -27,7 +27,6 @@ namespace sw
     /** @brief 도시 규칙의 수치입니다. 시간은 게임 초입니다. */
     struct CitySettings
     {
-        float32       _secondsPerMonth{ 20.0f };
         float32       _walkerSpeed{ 2.5f };         ///< 칸 / 초
         float32       _workerRatio{ 0.4f };         ///< 인구 중 일하는 몫
         float32       _serviceDuration{ 30.0f };    ///< 서비스를 받은 뒤 그 효과가 남는 초
@@ -156,15 +155,14 @@ namespace sw
      *             같은 도로망의 창고에 보내며, 시장은 같은 도로망의 창고에서 사 온다.
      *          3. 일꾼 — 도로를 따라 걷는다. 순회는 안 가 본 길을 먼저 고르고 걸음을 다 쓰면 집으로 돌아간다. 지나는 칸 둘레의 집에 서비스 · 물자를 준다.
      *          4. 집 — 다음 단계의 서비스 · 물자 · 매력도가 이어지면 오르고, 지금 단계를 잃으면 내려간다. 빈 자리가 있고 일자리가 남으면 사람이 들어온다.
-     *          달이 끝나면 물자를 먹고(네 사람에 하나), 세리가 다녀간 집이 세금을 내고, 일꾼 임금을 낸다. 해가 바뀌면 범람이 범람원의 비옥함을 정한다.
+     *          달 결산(`settleMonth` — 디렉터가 공유 시계의 달 넘김에 부른다)에 물자를 먹고(네 사람에 하나), 세리가 다녀간 집이 세금을 내고, 일꾼 임금을 낸다. 해가 바뀌면 범람이 범람원의 비옥함을 정한다.
      *          카탈로그는 빌려 씁니다(시뮬레이션보다 오래 · 바뀌지 않게).
      */
     class SW_GF_API CitySimulation
     {
     public:
-        static constexpr int32  kMonthsPerYear = 12;
-        static constexpr uint32 kStateTag      = 0x59544943u; ///< 'CITY'
-        static constexpr uint32 kStateVersion  = 1;
+        static constexpr uint32 kStateTag     = 0x59544943u; ///< 'CITY'
+        static constexpr uint32 kStateVersion = 1;
 
         CitySimulation();
 
@@ -175,6 +173,12 @@ namespace sw
         void initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const GameStateRefs& refs );
         void setTerrain( int32 x, int32 y, CityTerrain terrain );
         void fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
+
+        /**
+         * @brief 한 달을 결산합니다 — 물자를 먹고, 세리가 다녀간 집이 세금을 내고, 일꾼 임금을 냅니다(모자라면 지갑이 빚). @p bNewYear 면 범람이 다음 해의 비옥함을 정합니다.
+         * @details 달력은 공유 시계의 것이다 — 디렉터가 시계 알림(달 넘김 · 해 넘김)을 받아 부른다. 시뮬레이션은 시간을 세지 않는다.
+         */
+        void settleMonth( bool bNewYear );
 
         CityPlaceResult placeRoad( int32 x, int32 y );
         /** @brief 두 칸 사이에 ㄱ 자 도로를 깝니다(먼저 X, 다음 Y). 깐 칸 수입니다. */
@@ -202,8 +206,6 @@ namespace sw
         int32                getPopulation() const;
         int32                getWorkforce() const { return _workforce; }
         int32                getEmployed() const { return _employed; }
-        int32                getMonth() const { return _month; }
-        int32                getYear() const { return _year; }
         float32              getFloodFertility() const { return _floodFertility; }
         /** @brief 종교 · 오락을 받은 집 사람의 몫(0..1)입니다(파라오의 문화 평가). */
         float32 computeCultureCoverage() const;
@@ -230,7 +232,6 @@ namespace sw
         void updateBuildings( float32 deltaTime );
         void updateWalkers( float32 deltaTime );
         void updateHouses( float32 deltaTime );
-        void endMonth();
         void recomputeRoadComponents();
         void recomputeDesirability();
         void refreshAccess( CityBuilding& building ) const;
@@ -260,15 +261,12 @@ namespace sw
         FixedStepTimer            _stepTimer;
         GameRandom                _random;
         float32                   _time;
-        float32                   _monthTimer;
         float32                   _floodFertility;
         float32                   _wageDebt;
         GridTopology              _topology;
         int32                     _monthIncome;
         int32                     _workforce;
         int32                     _employed;
-        int32                     _month;
-        int32                     _year;
         uint8                     _bRoadsDirty;
         uint8                     _bDesirabilityDirty;
     };

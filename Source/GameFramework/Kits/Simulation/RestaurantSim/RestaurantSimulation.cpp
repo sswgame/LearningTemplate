@@ -6,6 +6,7 @@
 
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantCatalog.h"
 
 namespace sw
@@ -88,13 +89,13 @@ namespace sw
         , _pCatalog{ nullptr }
         , _pPantry{ nullptr }
         , _pWallet{ nullptr }
+        , _pClock{ nullptr }
         , _pRecipeCatalog{ nullptr }
         , _pShopCatalog{ nullptr }
         , _pStaffCurve{ nullptr }
         , _minutes{ 0.0f }
         , _arrival{}
         , _pendingSpoilageCost{ 0 }
-        , _day{ 0 }
         , _nextCustomerId{ 1 }
         , _bOpen{ SW_FALSE }
     {
@@ -111,6 +112,7 @@ namespace sw
         _settings       = settings;
         _pPantry        = &pantry;
         _pWallet        = refs._pWallet;
+        _pClock         = refs._pClock;
         _stock.initialize( _pPantry );
         _crafter.initialize( pRecipeCatalog );
         _market.initialize( pShopCatalog, pItemCatalog );
@@ -133,7 +135,6 @@ namespace sw
         _minutes = 0.0f;
         _arrival.reset();
         _pendingSpoilageCost = 0;
-        _day                 = 0;
         _nextCustomerId      = 1;
         _bOpen               = SW_FALSE;
         rollMarketPrices();
@@ -315,7 +316,6 @@ namespace sw
 
     void RestaurantSimulation::advanceDay()
     {
-        ++_day;
         _listSpoilageScratch.clear();
         _stock.advanceDay( _listSpoilageScratch );
         for ( const IngredientSpoilage& spoilage : _listSpoilageScratch )
@@ -738,9 +738,10 @@ namespace sw
         if ( _pShopCatalog == nullptr )
             return;
         const vector<ShopDef>& listShop = _pShopCatalog->getShops();
+        const int32            day      = _pClock != nullptr ? _pClock->getDay() : 0;
         for ( int32 shopIndex = 0; shopIndex < static_cast<int32>( listShop.size() ); ++shopIndex )
         {
-            const float32 unit     = GameHash::toUnitFloat( GameHash::hashCoord( _day, shopIndex, _settings._randomSeed ) );
+            const float32 unit     = GameHash::toUnitFloat( GameHash::hashCoord( day, shopIndex, _settings._randomSeed ) );
             const float32 modifier = MathUtil::max( 0.1f, 1.0f + _settings._marketVolatility * ( unit * 2.0f - 1.0f ) );
             _market.setPriceModifier( listShop[static_cast<size_t>( shopIndex )]._id, modifier, 1.0f );
         }

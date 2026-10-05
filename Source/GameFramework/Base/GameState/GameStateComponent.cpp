@@ -17,7 +17,7 @@ namespace sw
     {
         struct GameStateComponentInternal
         {
-            static constexpr uint32 kSectionCount = 6;
+            static constexpr uint32 kSectionCount = 7;
 
             /** @brief 읽은 구간 하나 — 본문은 읽은 바이트의 보기입니다. */
             struct Section
@@ -69,10 +69,12 @@ namespace sw
         , _questLog{}
         , _reputation{}
         , _inventory{}
+        , _weather{}
         , _listClockEvent{}
         , _pendingStateBytes{}
         , _bInitialized{ SW_FALSE }
         , _bFreshGame{ SW_FALSE }
+        , _bWeather{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -89,6 +91,8 @@ namespace sw
         _questLog.initialize( settings._pQuestCatalog );
         _reputation.initialize( settings._pReputationCatalog );
         _inventory.initialize( settings._pItemCatalog, MathUtil::max( 0, settings._inventorySlotCount ) );
+        _weather.initialize( settings._pWeatherCatalog, settings._weatherSeed, _clock.getSeasonName() );
+        _bWeather = settings._pWeatherCatalog != nullptr ? SW_TRUE : SW_FALSE;
         _listClockEvent.clear();
         _bInitialized = SW_TRUE;
         _bFreshGame   = SW_TRUE;
@@ -115,6 +119,8 @@ namespace sw
             return;
         _clock.update( deltaTime );
         _clock.drainEvents( _listClockEvent );
+        if ( _bWeather == SW_TRUE && _clock.isPaused() == false )
+            (void)_weather.update( deltaTime * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
     }
 
     void GameStateComponent::writeState( Archive& outArchive ) const
@@ -133,6 +139,7 @@ namespace sw
         GameStateComponentInternal::writeStateSection( outArchive, _questLog );
         GameStateComponentInternal::writeStateSection( outArchive, _reputation );
         GameStateComponentInternal::writeStateSection( outArchive, _inventory );
+        GameStateComponentInternal::writeStateSection( outArchive, _weather );
     }
 
     void GameStateComponent::restoreState( vector<uint8>&& bytes )
@@ -151,6 +158,7 @@ namespace sw
         refs._pQuestLog   = &_questLog;
         refs._pReputation = &_reputation;
         refs._pInventory  = _inventory.getSlotCount() > 0 ? &_inventory : nullptr;
+        refs._pWeather    = _bWeather == SW_TRUE ? &_weather : nullptr;
         return refs;
     }
 
@@ -222,6 +230,11 @@ namespace sw
                 case Inventory::kStateTag:
                 {
                     (void)GameStateComponentInternal::applyStateSection( section, _inventory, "inventory" );
+                    break;
+                }
+                case WeatherSystem::kStateTag:
+                {
+                    (void)GameStateComponentInternal::applyStateSection( section, _weather, "weather" );
                     break;
                 }
                 default:

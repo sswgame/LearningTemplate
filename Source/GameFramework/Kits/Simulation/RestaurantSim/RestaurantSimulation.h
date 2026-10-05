@@ -29,6 +29,7 @@ namespace sw
 
     class ItemCatalog;
     class RestaurantCatalog;
+    class WorldClock;
 
     /** @brief 식당 규칙의 수치입니다. 시간은 게임 분입니다. */
     struct RestaurantSettings
@@ -199,7 +200,7 @@ namespace sw
         RestaurantSimulation();
 
         /**
-         * @brief 새 식당을 엽니다. 돈은 빌린 지갑(@p refs 의 지갑 — 없으면 시장 · 급여 · 계산이 막힌다), 재료는 빌린 창고(@p pantry — 식당보다 오래 살아야 한다)에 듭니다 — 섞인 게임은 플레이어 가방을 넘겨 "밭 → 식탁" 이 그대로 된다.
+         * @brief 새 식당을 엽니다. 돈은 빌린 지갑(@p refs 의 지갑 — 없으면 시장 · 급여 · 계산이 막힌다), 날은 빌린 시계(디렉터가 날 넘김에 `advanceDay` 를 부른다), 재료는 빌린 창고(@p pantry — 식당보다 오래 살아야 한다)에 듭니다 — 섞인 게임은 플레이어 가방을 넘겨 "밭 → 식탁" 이 그대로 된다.
          */
         void initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog, const ShopCatalog* pShopCatalog,
                          const ReputationCatalog* pReputationCatalog, const ExperienceCurve* pStaffCurve, const GameStateRefs& refs, Inventory& pantry,
@@ -252,7 +253,6 @@ namespace sw
         const ShopState&                  getMarket() const { return _market; }
         hashed_string                     getCurrency() const { return Wallet::getDefaultCurrency(); }
         float32                           getMinutes() const { return _minutes; }
-        int32                             getDay() const { return _day; }
         bool                              isOpen() const { return _bOpen != SW_FALSE; }
 
     private:
@@ -309,13 +309,13 @@ namespace sw
         const RestaurantCatalog*     _pCatalog;
         Inventory*                   _pPantry; ///< 주방 창고(빌림)
         Wallet*                      _pWallet; ///< 빌린 지갑
+        const WorldClock*            _pClock;  ///< 빌린 시계(날 — 시세 굴림의 씨앗). 없으면 날 0
         const RecipeCatalog*         _pRecipeCatalog;
         const ShopCatalog*           _pShopCatalog;
         const ExperienceCurve*       _pStaffCurve;
         float32                      _minutes; ///< 문을 연 뒤 지난 분
         RateAccumulator              _arrival; ///< 손님 도착(명)
         int64                        _pendingSpoilageCost;
-        int32                        _day;
         int32                        _nextCustomerId;
         uint8                        _bOpen;
     };

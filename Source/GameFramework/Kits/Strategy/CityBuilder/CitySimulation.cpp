@@ -81,15 +81,12 @@ namespace sw
         , _stepTimer{}
         , _random{}
         , _time{ 0.0f }
-        , _monthTimer{ 0.0f }
         , _floodFertility{ 0.8f }
         , _wageDebt{ 0.0f }
         , _topology{}
         , _monthIncome{ 0 }
         , _workforce{ 0 }
         , _employed{ 0 }
-        , _month{ 0 }
-        , _year{ 1 }
         , _bRoadsDirty{ SW_FALSE }
         , _bDesirabilityDirty{ SW_FALSE }
     {
@@ -110,14 +107,11 @@ namespace sw
         _stepTimer = FixedStepTimer( settings._fixedStep, 5.0f );
         _random.setSeed( settings._randomSeed );
         _time               = 0.0f;
-        _monthTimer         = 0.0f;
         _floodFertility     = 0.8f;
         _wageDebt           = 0.0f;
         _monthIncome        = 0;
         _workforce          = 0;
         _employed           = 0;
-        _month              = 0;
-        _year               = 1;
         _bRoadsDirty        = SW_FALSE;
         _bDesirabilityDirty = SW_TRUE;
     }
@@ -420,13 +414,6 @@ namespace sw
         _listWalker.erase( std::remove_if( _listWalker.begin(), _listWalker.end(), []( const CityWalker& walker )
         { return walker._bAlive == SW_FALSE; } ),
                            _listWalker.end() );
-
-        _monthTimer += deltaTime;
-        if ( _monthTimer >= _settings._secondsPerMonth )
-        {
-            _monthTimer -= _settings._secondsPerMonth;
-            endMonth();
-        }
     }
 
     void CitySimulation::assignLabor()
@@ -880,7 +867,7 @@ namespace sw
         }
     }
 
-    void CitySimulation::endMonth()
+    void CitySimulation::settleMonth( bool bNewYear )
     {
         int32 income = 0;
         for ( CityBuilding& house : _listBuilding )
@@ -909,10 +896,8 @@ namespace sw
         _monthIncome = income - wages;
         _eventBuffer.push( CityEvent{ _monthIncome, -1, CityEvent::Kind::MonthEnded } );
 
-        if ( ++_month >= kMonthsPerYear )
+        if ( bNewYear )
         {
-            _month = 0;
-            ++_year;
             // 범람 — 해마다 다르다(40 % … 100 %). 범람원 농장의 다음 한 해를 정한다.
             _floodFertility = _random.nextRange( 0.4f, 1.0f );
             _eventBuffer.push( CityEvent{ static_cast<int32>( _floodFertility * 100.0f ), -1, CityEvent::Kind::Flood } );
@@ -1024,14 +1009,11 @@ namespace sw
         StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
         StateArchiveUtil::writeRandom( outArchive, _random );
         outArchive << _time;
-        outArchive << _monthTimer;
         outArchive << _floodFertility;
         outArchive << _wageDebt;
         outArchive << _monthIncome;
         outArchive << _workforce;
         outArchive << _employed;
-        outArchive << _month;
-        outArchive << _year;
         outArchive << _bRoadsDirty;
         outArchive << _bDesirabilityDirty;
     }
@@ -1140,25 +1122,19 @@ namespace sw
         if ( StateArchiveUtil::readStepTimer( archive, stepTimer ) == false || StateArchiveUtil::readRandom( archive, random ) == false )
             return false;
         float32 time               = 0.0f;
-        float32 monthTimer         = 0.0f;
         float32 floodFertility     = 0.0f;
         float32 wageDebt           = 0.0f;
         int32   monthIncome        = 0;
         int32   workforce          = 0;
         int32   employed           = 0;
-        int32   month              = 0;
-        int32   year               = 0;
         uint8   bRoadsDirty        = SW_FALSE;
         uint8   bDesirabilityDirty = SW_FALSE;
         archive >> time;
-        archive >> monthTimer;
         archive >> floodFertility;
         archive >> wageDebt;
         archive >> monthIncome;
         archive >> workforce;
         archive >> employed;
-        archive >> month;
-        archive >> year;
         archive >> bRoadsDirty;
         archive >> bDesirabilityDirty;
         if ( archive.isError() )
@@ -1170,14 +1146,11 @@ namespace sw
         _stepTimer          = stepTimer;
         _random             = random;
         _time               = time;
-        _monthTimer         = monthTimer;
         _floodFertility     = floodFertility;
         _wageDebt           = wageDebt;
         _monthIncome        = monthIncome;
         _workforce          = workforce;
         _employed           = employed;
-        _month              = month;
-        _year               = year;
         _bRoadsDirty        = bRoadsDirty;
         _bDesirabilityDirty = bDesirabilityDirty;
         _eventBuffer.clear();

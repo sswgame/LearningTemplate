@@ -15,6 +15,7 @@
 #include "GameFramework/Base/Progression/Reputation.h"
 #include "GameFramework/Base/Quest/QuestLog.h"
 #include "GameFramework/Base/World/GameFlags.h"
+#include "GameFramework/Base/World/WeatherSystem.h"
 #include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -24,6 +25,7 @@ namespace sw
     class ItemCatalog;
     class QuestCatalog;
     class ReputationCatalog;
+    class WeatherCatalog;
 
     /** @brief 판 상태를 여는 데 드는 것입니다. 카탈로그는 빌려 씁니다(컴포넌트보다 오래 살아야 한다 — 보통 게임 인스턴스가 든다). */
     struct GameStateSettings
@@ -32,7 +34,9 @@ namespace sw
         const QuestCatalog*      _pQuestCatalog{ nullptr };
         const ReputationCatalog* _pReputationCatalog{ nullptr };
         const ItemCatalog*       _pItemCatalog{ nullptr };
-        int32                    _inventorySlotCount{ 0 }; ///< 플레이어 가방 칸 수(0 이면 가방 없음 — `makeRefs` 의 가방 칸이 nullptr)
+        int32                    _inventorySlotCount{ 0 };    ///< 플레이어 가방 칸 수(0 이면 가방 없음 — `makeRefs` 의 가방 칸이 nullptr)
+        const WeatherCatalog*    _pWeatherCatalog{ nullptr }; ///< 없으면 날씨 없음 — `makeRefs` 의 날씨 칸이 nullptr
+        uint32                   _weatherSeed{ 0 };
     };
 } // namespace sw
 
@@ -82,7 +86,7 @@ namespace sw
 
         /** @brief 틱 그룹을 디렉터와 같은 `PrePhysics` 로 둡니다. */
         void onBeginPlay() override;
-        /** @brief 열렸으면 시계를 흘리고 이번 틱의 시계 알림을 모읍니다. */
+        /** @brief 열렸으면 시계를 흘리고(날씨는 시계 뒤에 게임 초로) 이번 틱의 시계 알림을 모읍니다. */
         void onTick( float32 deltaTime ) override;
 
         /** @brief 구간 다섯(지갑 · 플래그 · 시계 · 일지 · 평판)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 열리기 전이면 들고 있던 바이트를 그대로 씁니다. */
@@ -103,6 +107,8 @@ namespace sw
         const QuestLog&        getQuestLog() const { return _questLog; }
         ReputationState&       getReputation() { return _reputation; }
         Inventory&             getInventory() { return _inventory; }
+        WeatherSystem&         getWeather() { return _weather; }
+        const WeatherSystem&   getWeather() const { return _weather; }
         const Inventory&       getInventory() const { return _inventory; }
         const ReputationState& getReputation() const { return _reputation; }
         /** @brief 이번 틱에 시계가 넘은 경계입니다(읽기만 — 다음 틱 처음에 비운다). */
@@ -127,10 +133,12 @@ namespace sw
         QuestLog                _questLog;
         ReputationState         _reputation;
         Inventory               _inventory; ///< 플레이어 가방
+        WeatherSystem           _weather;
         vector<WorldClockEvent> _listClockEvent;
         vector<uint8>           _pendingStateBytes; ///< 열리기 전에 받은 복원 바이트
         uint8                   _bInitialized : 1;
         uint8                   _bFreshGame   : 1;
-        uint8                   _reserved     : 6;
+        uint8                   _bWeather     : 1; ///< 날씨 카탈로그로 열었다
+        uint8                   _reserved     : 5;
     };
 } // namespace sw

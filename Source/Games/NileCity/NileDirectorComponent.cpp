@@ -35,7 +35,8 @@ namespace sw
             static constexpr int32   kWalkerKindCount  = 3;
             static constexpr float32 kRoadTileScale    = 4.8f;        ///< 보도 조각(`path_short`, 0.2) × 4.8 = 0.96 m(칸 사이 틈은 옛 상자와 같다)
             static constexpr uint32  kStateTag         = 0x454C494Eu; ///< 'NILE'
-            static constexpr uint32  kStateVersion     = 2;
+            static constexpr uint32  kStateVersion     = 3;
+            static constexpr float32 kSecondsPerMonth  = 20.0f; ///< 실제 초 — 시간 배속이 곱해진다
 
             static constexpr const utf8* kSoundSelect  = "game/nilecity/sounds/select_003.ogg";
             static constexpr const utf8* kSoundBuilt   = "game/nilecity/sounds/confirmation_002.ogg";
@@ -179,8 +180,10 @@ namespace sw
         , _catalog{}
         , _city{}
         , _wallet{}
+        , _clock{}
         , _planner{}
         , _listEvent{}
+        , _listClockEvent{}
         , _listTool{}
         , _listRoadObject{}
         , _listRoadShown{}
@@ -223,7 +226,11 @@ namespace sw
         if ( isAutoPlanOn() )
             (void)_planner.advance( _city, _wallet, _catalog.getRoadCost() );
         if ( _bPaused == SW_FALSE )
+        {
             _city.update( deltaTime * _timeScale );
+            _clock.update( deltaTime * _timeScale ); // 배속은 디렉터가 곱한다(시계 배율은 1)
+            settleMonths();
+        }
         drainEvents();
         if ( areViewsSpawned() )
             collectViewChanges();
@@ -277,6 +284,7 @@ namespace sw
         const CitySettings citySettings = makeCitySettings();
         _wallet.clear();
         _wallet.add( citySettings._currency, _startingMoney );
+        _clock.initialize( makeClockSettings() );
         _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() );
         NileCityPlanner::paintTerrain( _city );
         _planner.reset();
@@ -289,6 +297,33 @@ namespace sw
             _listTool.push_back( &def );
         _selectedTool = 0;
         return true;
+    }
+
+    WorldClockSettings NileDirectorComponent::makeClockSettings() const
+    {
+        WorldClockSettings settings;
+        for ( const utf8* pMonth : { "Akhet1", "Akhet2", "Akhet3", "Akhet4", "Peret1", "Peret2", "Peret3", "Peret4", "Shemu1", "Shemu2", "Shemu3", "Shemu4" } )
+            settings._listSeason.push_back( hashed_string( pMonth ) );
+        settings._daysPerSeason = 1;
+        settings._startHour     = 0.0f; // 첫 달도 꼭 한 달
+        settings._secondsPerDay = NileDirectorComponentInternal::kSecondsPerMonth;
+        return settings;
+    }
+
+    void NileDirectorComponent::settleMonths()
+    {
+        _listClockEvent.clear();
+        _clock.drainEvents( _listClockEvent );
+        for ( size_t index = 0; index < _listClockEvent.size(); ++index )
+        {
+            if ( _listClockEvent[index]._kind != WorldClockEvent::Kind::DayChanged )
+                continue;
+            // 같은 넘김의 알림(다음 날 넘김 전까지)에 해 넘김이 있으면 새 해다.
+            bool bNewYear = false;
+            for ( size_t next = index + 1; next < _listClockEvent.size() && _listClockEvent[next]._kind != WorldClockEvent::Kind::DayChanged; ++next )
+                bNewYear = bNewYear || _listClockEvent[next]._kind == WorldClockEvent::Kind::YearChanged;
+            _city.settleMonth( bNewYear );
+        }
     }
 
     GameStateRefs NileDirectorComponent::makeRefs()
@@ -315,6 +350,7 @@ namespace sw
         _city.writeState( outArchive );
         _planner.writeState( outArchive );
         _wallet.writeState( outArchive );
+        _clock.writeState( outArchive );
         outArchive << _timeScale;
         outArchive << _selectedTool;
         outArchive << _monthCount;
@@ -330,8 +366,10 @@ namespace sw
         CitySimulation  city;
         NileCityPlanner planner;
         Wallet          wallet;
+        WorldClock      clock;
+        clock.initialize( makeClockSettings() );
         city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() );
-        if ( city.readState( archive ) == false || planner.readState( archive ) == false || wallet.readState( archive ) == false )
+        if ( city.readState( archive ) == false || planner.readState( archive ) == false || wallet.readState( archive ) == false || clock.readState( archive ) == false )
             return false;
         float32 timeScale       = 1.0f;
         int32   selectedTool    = 0;
@@ -350,6 +388,7 @@ namespace sw
         _city            = std::move( city );
         _planner         = std::move( planner );
         _wallet          = std::move( wallet );
+        _clock           = std::move( clock );
         _timeScale       = timeScale;
         _selectedTool    = _listTool.empty() ? 0 : MathUtil::clamp( selectedTool, 0, static_cast<int32>( _listTool.size() ) - 1 );
         _monthCount      = monthCount;
@@ -687,7 +726,7 @@ namespace sw
                 }
                 case CityEvent::Kind::Flood:
                 {
-                    SW_LOG_INFO( "[Nile] year %# - the Nile flooded, farm fertility %#%%", _city.getYear(), event._value );
+                    SW_LOG_INFO( "[Nile] year %# - the Nile flooded, farm fertility %#%%", _clock.getYear(), event._value );
                     break;
                 }
                 case CityEvent::Kind::HouseDevolved:
@@ -705,7 +744,7 @@ namespace sw
     void NileDirectorComponent::logStatus() const
     {
         SW_LOG_INFO( "[Nile] year %# month %# · pop %# · money $%# · workers %#/%# · avg house level %# · culture %#%% · fertility %#%% · tool %# · plan %#/%#",
-                     _city.getYear(), _city.getMonth() + 1, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ), _city.getEmployed(), _city.getWorkforce(),
+                     _clock.getYear(), _clock.getSeasonIndex() + 1, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ), _city.getEmployed(), _city.getWorkforce(),
                      _city.computeAverageHouseLevel(), static_cast<int32>( _city.computeCultureCoverage() * 100.0f ), static_cast<int32>( _city.getFloodFertility() * 100.0f ),
                      getToolName(), _planner.getNextStep(), _planner.getStepCount() );
     }

@@ -16,6 +16,7 @@
 
 namespace sw
 {
+    class Archive;
     class XmlNode;
 
     /** @brief 계절 하나의 가중치입니다. */
@@ -76,6 +77,9 @@ namespace sw
     class SW_GF_API WeatherSystem
     {
     public:
+        static constexpr uint32 kStateTag     = 0x52485457u; ///< 'WTHR'
+        static constexpr uint32 kStateVersion = 1;
+
         WeatherSystem();
 
         void initialize( const WeatherCatalog* pCatalog, uint32 seed, const hashed_string& season );
@@ -93,6 +97,11 @@ namespace sw
         /** @brief 넘어간 정도(0 = 이전 그대로, 1 = 지금 날씨)입니다. */
         float32 getBlend() const;
         float32 getRemaining() const { return _remaining; }
+
+        /** @brief 지금 · 이전 날씨 id · 난수 · 남은 시간 · 전환 경과를 씁니다. 카탈로그는 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 날씨 id 가 지금 카탈로그에 없거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         const WeatherDef* pickWeather( const hashed_string& season, GameRandom& random, const WeatherDef* pExclude ) const;
