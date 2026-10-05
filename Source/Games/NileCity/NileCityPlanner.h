@@ -16,6 +16,7 @@ namespace sw
 {
     class Archive;
     class CitySimulation;
+    class Wallet;
 
     /**
      * @class NileCityPlanner
@@ -40,7 +41,7 @@ namespace sw
          * @brief 돈 · 인구가 되는 데까지 순서표를 실행합니다. 이번에 지은(또는 깐) 단계 수입니다.
          * @details 돈이 모자라거나 인구 문턱에 못 미치면 멈추고 다음 부름에 이어 갑니다. 놓을 수 없는 자리(겹침 · 땅)는 경고 없이 건너뜁니다.
          */
-        int32 advance( CitySimulation& city, int32 roadCost );
+        int32 advance( CitySimulation& city, const Wallet& wallet, int32 roadCost );
         bool  isFinished() const { return _nextStep >= static_cast<int32>( _listStep.size() ); }
         int32 getSkippedCount() const { return _skippedCount; }
         int32 getStepCount() const { return static_cast<int32>( _listStep.size() ); }

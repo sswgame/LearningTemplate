@@ -19,22 +19,26 @@
 
 namespace sw
 {
+    struct GameStateRefs;
+
     class Archive;
+    class Wallet;
 
     /** @brief 도시 규칙의 수치입니다. 시간은 게임 초입니다. */
     struct CitySettings
     {
-        float32 _secondsPerMonth{ 20.0f };
-        float32 _walkerSpeed{ 2.5f };         ///< 칸 / 초
-        float32 _workerRatio{ 0.4f };         ///< 인구 중 일하는 몫
-        float32 _serviceDuration{ 30.0f };    ///< 서비스를 받은 뒤 그 효과가 남는 초
-        float32 _immigrationInterval{ 1.5f }; ///< 빈 집 하나에 한 사람이 들어오는 간격
-        float32 _evolveDelay{ 3.0f };         ///< 조건이 이만큼 이어져야 단계가 오르내린다
-        float32 _wagePerWorkerPerMonth{ 0.5f };
-        float32 _fixedStep{ 0.25f };
-        int32   _serviceReach{ 2 };       ///< 일꾼이 지나는 칸에서 이 칸 안의 집에 준다
-        int32   _goodsPerFourPeople{ 1 }; ///< 달마다 네 사람이 먹는 물자 수
-        uint32  _randomSeed{ 3100u };     ///< 범람 · 일꾼의 갈림길
+        float32       _secondsPerMonth{ 20.0f };
+        float32       _walkerSpeed{ 2.5f };         ///< 칸 / 초
+        float32       _workerRatio{ 0.4f };         ///< 인구 중 일하는 몫
+        float32       _serviceDuration{ 30.0f };    ///< 서비스를 받은 뒤 그 효과가 남는 초
+        float32       _immigrationInterval{ 1.5f }; ///< 빈 집 하나에 한 사람이 들어오는 간격
+        float32       _evolveDelay{ 3.0f };         ///< 조건이 이만큼 이어져야 단계가 오르내린다
+        float32       _wagePerWorkerPerMonth{ 0.5f };
+        float32       _fixedStep{ 0.25f };
+        int32         _serviceReach{ 2 };       ///< 일꾼이 지나는 칸에서 이 칸 안의 집에 준다
+        int32         _goodsPerFourPeople{ 1 }; ///< 달마다 네 사람이 먹는 물자 수
+        uint32        _randomSeed{ 3100u };     ///< 범람 · 일꾼의 갈림길
+        hashed_string _currency{ "Deben" };     ///< 빌린 지갑에서 쓰는 통화
     };
 } // namespace sw
 
@@ -158,11 +162,17 @@ namespace sw
     class SW_GF_API CitySimulation
     {
     public:
-        static constexpr int32 kMonthsPerYear = 12;
+        static constexpr int32  kMonthsPerYear = 12;
+        static constexpr uint32 kStateTag      = 0x59544943u; ///< 'CITY'
+        static constexpr uint32 kStateVersion  = 1;
 
         CitySimulation();
 
-        void initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, int32 startingMoney );
+        /**
+         * @brief 빈 도시를 엽니다. 돈은 빌린 지갑(@p refs 의 지갑 — 통화 `CitySettings::_currency`)에서 나가고 들어옵니다.
+         * @details 지갑이 없으면 알리고 짓기 · 도로가 모두 돈 부족으로 거절됩니다. 달 결산이 모자라면 지갑이 빚(`Wallet::charge`)을 진다.
+         */
+        void initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const GameStateRefs& refs );
         void setTerrain( int32 x, int32 y, CityTerrain terrain );
         void fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
 
@@ -186,15 +196,15 @@ namespace sw
         /** @brief 일꾼의 그릴 자리(칸 단위 실수 — 칸 가운데가 .5)입니다. */
         static float2 computeWalkerPosition( const CityWalker& walker );
 
-        int32   getWidth() const { return _topology._width; }
-        int32   getHeight() const { return _topology._height; }
-        int32   getMoney() const { return _money; }
-        int32   getPopulation() const;
-        int32   getWorkforce() const { return _workforce; }
-        int32   getEmployed() const { return _employed; }
-        int32   getMonth() const { return _month; }
-        int32   getYear() const { return _year; }
-        float32 getFloodFertility() const { return _floodFertility; }
+        int32                getWidth() const { return _topology._width; }
+        int32                getHeight() const { return _topology._height; }
+        const hashed_string& getCurrency() const { return _settings._currency; }
+        int32                getPopulation() const;
+        int32                getWorkforce() const { return _workforce; }
+        int32                getEmployed() const { return _employed; }
+        int32                getMonth() const { return _month; }
+        int32                getYear() const { return _year; }
+        float32              getFloodFertility() const { return _floodFertility; }
         /** @brief 종교 · 오락을 받은 집 사람의 몫(0..1)입니다(파라오의 문화 평가). */
         float32 computeCultureCoverage() const;
         /** @brief 집 단계의 사람 가중 평균입니다(번영 평가). */
@@ -245,6 +255,7 @@ namespace sw
         EventBuffer<CityEvent>    _eventBuffer;
         mutable GridSearchScratch _roadSearch; ///< 일꾼 길 찾기(`findRoadPath`)가 호출마다 다시 쓴다
         const CityCatalog*        _pCatalog;
+        Wallet*                   _pWallet; ///< 빌린 지갑
         CitySettings              _settings;
         FixedStepTimer            _stepTimer;
         GameRandom                _random;
@@ -253,7 +264,6 @@ namespace sw
         float32                   _floodFertility;
         float32                   _wageDebt;
         GridTopology              _topology;
-        int32                     _money;
         int32                     _monthIncome;
         int32                     _workforce;
         int32                     _employed;

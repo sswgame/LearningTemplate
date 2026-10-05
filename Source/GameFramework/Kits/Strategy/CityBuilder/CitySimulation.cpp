@@ -6,10 +6,14 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "CitySimulation" );
+
     namespace
     {
         struct CitySimulationInternal
@@ -72,6 +76,7 @@ namespace sw
         , _eventBuffer{}
         , _roadSearch{}
         , _pCatalog{ nullptr }
+        , _pWallet{ nullptr }
         , _settings{}
         , _stepTimer{}
         , _random{}
@@ -80,7 +85,6 @@ namespace sw
         , _floodFertility{ 0.8f }
         , _wageDebt{ 0.0f }
         , _topology{}
-        , _money{ 0 }
         , _monthIncome{ 0 }
         , _workforce{ 0 }
         , _employed{ 0 }
@@ -91,9 +95,12 @@ namespace sw
     {
     }
 
-    void CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, int32 startingMoney )
+    void CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const GameStateRefs& refs )
     {
         _pCatalog = pCatalog;
+        _pWallet  = refs._pWallet;
+        if ( _pWallet == nullptr )
+            SW_LOG_WARNING( "CitySimulation: no wallet was lent - every road and building is refused" );
         _settings = settings;
         _topology = GridTopology{ MathUtil::max( 1, width ), MathUtil::max( 1, height ) };
         _listTile.assign( static_cast<size_t>( _topology.getCellCount() ), CityTile{} );
@@ -106,7 +113,6 @@ namespace sw
         _monthTimer         = 0.0f;
         _floodFertility     = 0.8f;
         _wageDebt           = 0.0f;
-        _money              = startingMoney;
         _monthIncome        = 0;
         _workforce          = 0;
         _employed           = 0;
@@ -170,9 +176,8 @@ namespace sw
         if ( pTile->_terrain == CityTerrain::Water || pTile->_terrain == CityTerrain::Rock )
             return CityPlaceResult::BadTerrain;
         const int32 cost = _pCatalog != nullptr ? _pCatalog->getRoadCost() : 2;
-        if ( _money < cost )
+        if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, cost ) == false )
             return CityPlaceResult::NotEnoughMoney;
-        _money -= cost;
         _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )]._bRoad = SW_TRUE;
         _bRoadsDirty                                                       = SW_TRUE;
         return CityPlaceResult::Ok;
@@ -217,9 +222,8 @@ namespace sw
                     return CityPlaceResult::BadTerrain;
             }
         }
-        if ( _money < pDef->_cost )
+        if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, pDef->_cost ) == false )
             return CityPlaceResult::NotEnoughMoney;
-        _money -= pDef->_cost;
 
         // 허문 자리를 다시 쓴다 — 칸이 가리키는 번호가 안정적이게 목록에서 지우지 않았다.
         int32 index = -1;
@@ -897,7 +901,11 @@ namespace sw
         _wageDebt += static_cast<float32>( _employed ) * _settings._wagePerWorkerPerMonth;
         const int32 wages = static_cast<int32>( _wageDebt );
         _wageDebt -= static_cast<float32>( wages );
-        _money += income - wages;
+        // 결산이 모자라면 빚이다(임금은 미룰 수 없다).
+        if ( _pWallet != nullptr && income > wages )
+            _pWallet->add( _settings._currency, income - wages );
+        else if ( _pWallet != nullptr && income < wages )
+            _pWallet->charge( _settings._currency, wages - income );
         _monthIncome = income - wages;
         _eventBuffer.push( CityEvent{ _monthIncome, -1, CityEvent::Kind::MonthEnded } );
 
@@ -1019,7 +1027,6 @@ namespace sw
         outArchive << _monthTimer;
         outArchive << _floodFertility;
         outArchive << _wageDebt;
-        outArchive << _money;
         outArchive << _monthIncome;
         outArchive << _workforce;
         outArchive << _employed;
@@ -1136,7 +1143,6 @@ namespace sw
         float32 monthTimer         = 0.0f;
         float32 floodFertility     = 0.0f;
         float32 wageDebt           = 0.0f;
-        int32   money              = 0;
         int32   monthIncome        = 0;
         int32   workforce          = 0;
         int32   employed           = 0;
@@ -1148,7 +1154,6 @@ namespace sw
         archive >> monthTimer;
         archive >> floodFertility;
         archive >> wageDebt;
-        archive >> money;
         archive >> monthIncome;
         archive >> workforce;
         archive >> employed;
@@ -1168,7 +1173,6 @@ namespace sw
         _monthTimer         = monthTimer;
         _floodFertility     = floodFertility;
         _wageDebt           = wageDebt;
-        _money              = money;
         _monthIncome        = monthIncome;
         _workforce          = workforce;
         _employed           = employed;

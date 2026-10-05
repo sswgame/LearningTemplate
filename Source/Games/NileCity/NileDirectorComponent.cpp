@@ -35,7 +35,7 @@ namespace sw
             static constexpr int32   kWalkerKindCount  = 3;
             static constexpr float32 kRoadTileScale    = 4.8f;        ///< 보도 조각(`path_short`, 0.2) × 4.8 = 0.96 m(칸 사이 틈은 옛 상자와 같다)
             static constexpr uint32  kStateTag         = 0x454C494Eu; ///< 'NILE'
-            static constexpr uint32  kStateVersion     = 1;
+            static constexpr uint32  kStateVersion     = 2;
 
             static constexpr const utf8* kSoundSelect  = "game/nilecity/sounds/select_003.ogg";
             static constexpr const utf8* kSoundBuilt   = "game/nilecity/sounds/confirmation_002.ogg";
@@ -178,6 +178,7 @@ namespace sw
         , _serviceDuration{ 60.0f }
         , _catalog{}
         , _city{}
+        , _wallet{}
         , _planner{}
         , _listEvent{}
         , _listTool{}
@@ -220,7 +221,7 @@ namespace sw
         if ( pInput != nullptr )
             updateInput( deltaTime, *pInput );
         if ( isAutoPlanOn() )
-            (void)_planner.advance( _city, _catalog.getRoadCost() );
+            (void)_planner.advance( _city, _wallet, _catalog.getRoadCost() );
         if ( _bPaused == SW_FALSE )
             _city.update( deltaTime * _timeScale );
         drainEvents();
@@ -273,7 +274,10 @@ namespace sw
             SW_LOG_WARNING( "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
             return false;
         }
-        _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), _startingMoney );
+        const CitySettings citySettings = makeCitySettings();
+        _wallet.clear();
+        _wallet.add( citySettings._currency, _startingMoney );
+        _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() );
         NileCityPlanner::paintTerrain( _city );
         _planner.reset();
         _listEvent.clear();
@@ -285,6 +289,13 @@ namespace sw
             _listTool.push_back( &def );
         _selectedTool = 0;
         return true;
+    }
+
+    GameStateRefs NileDirectorComponent::makeRefs()
+    {
+        GameStateRefs refs;
+        refs._pWallet = &_wallet;
+        return refs;
     }
 
     CitySettings NileDirectorComponent::makeCitySettings() const
@@ -303,6 +314,7 @@ namespace sw
         StateArchiveUtil::writeHeader( outArchive, NileDirectorComponentInternal::kStateTag, NileDirectorComponentInternal::kStateVersion );
         _city.writeState( outArchive );
         _planner.writeState( outArchive );
+        _wallet.writeState( outArchive );
         outArchive << _timeScale;
         outArchive << _selectedTool;
         outArchive << _monthCount;
@@ -317,8 +329,9 @@ namespace sw
             return false;
         CitySimulation  city;
         NileCityPlanner planner;
-        city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), _startingMoney );
-        if ( city.readState( archive ) == false || planner.readState( archive ) == false )
+        Wallet          wallet;
+        city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() );
+        if ( city.readState( archive ) == false || planner.readState( archive ) == false || wallet.readState( archive ) == false )
             return false;
         float32 timeScale       = 1.0f;
         int32   selectedTool    = 0;
@@ -336,6 +349,7 @@ namespace sw
             return false;
         _city            = std::move( city );
         _planner         = std::move( planner );
+        _wallet          = std::move( wallet );
         _timeScale       = timeScale;
         _selectedTool    = _listTool.empty() ? 0 : MathUtil::clamp( selectedTool, 0, static_cast<int32>( _listTool.size() ) - 1 );
         _monthCount      = monthCount;
@@ -349,7 +363,7 @@ namespace sw
     void NileDirectorComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO( "[Nile] city state restored - month %#, population %#, money %#", _monthCount, _city.getPopulation(), _city.getMoney() );
+            SW_LOG_INFO( "[Nile] city state restored - month %#, population %#, money %#", _monthCount, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ) );
         else
             SW_LOG_WARNING( "[Nile] the saved city state does not match this build - founding a new city" );
     }
@@ -637,7 +651,7 @@ namespace sw
         const CityPlaceResult result = _city.placeBuilding( pDef->_id, _cursorTile._x, _cursorTile._y );
         if ( result == CityPlaceResult::Ok )
         {
-            SW_LOG_INFO( "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _city.getMoney() );
+            SW_LOG_INFO( "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _wallet.getBalance( _city.getCurrency() ) );
             getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundBuilt );
         }
         else
@@ -660,7 +674,7 @@ namespace sw
                 {
                     ++_monthCount;
                     SW_LOG_INFO( "[Nile] month %# pop %# money %# (net %#, workers %#/%#, houses up %#, avg level %#, culture %#%%)", _monthCount, _city.getPopulation(),
-                                 _city.getMoney(), event._value, _city.getEmployed(), _city.getWorkforce(), _evolvedCount, _city.computeAverageHouseLevel(),
+                                 _wallet.getBalance( _city.getCurrency() ), event._value, _city.getEmployed(), _city.getWorkforce(), _evolvedCount, _city.computeAverageHouseLevel(),
                                  static_cast<int32>( _city.computeCultureCoverage() * 100.0f ) );
                     _evolvedCount = 0;
                     break;
@@ -691,7 +705,7 @@ namespace sw
     void NileDirectorComponent::logStatus() const
     {
         SW_LOG_INFO( "[Nile] year %# month %# · pop %# · money $%# · workers %#/%# · avg house level %# · culture %#%% · fertility %#%% · tool %# · plan %#/%#",
-                     _city.getYear(), _city.getMonth() + 1, _city.getPopulation(), _city.getMoney(), _city.getEmployed(), _city.getWorkforce(),
+                     _city.getYear(), _city.getMonth() + 1, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ), _city.getEmployed(), _city.getWorkforce(),
                      _city.computeAverageHouseLevel(), static_cast<int32>( _city.computeCultureCoverage() * 100.0f ), static_cast<int32>( _city.getFloodFertility() * 100.0f ),
                      getToolName(), _planner.getNextStep(), _planner.getStepCount() );
     }

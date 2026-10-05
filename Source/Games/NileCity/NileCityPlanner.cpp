@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 
 namespace sw
@@ -207,7 +208,7 @@ namespace sw
         addBuilding( "tax_collector", 18, 17, third + 80 );
     }
 
-    int32 NileCityPlanner::advance( CitySimulation& city, int32 roadCost )
+    int32 NileCityPlanner::advance( CitySimulation& city, const Wallet& wallet, int32 roadCost )
     {
         int32 doneCount = 0;
         while ( isFinished() == false )
@@ -219,7 +220,7 @@ namespace sw
             {
                 // 도로 — 다 깔 돈이 될 때까지 기다린다(반쯤 깐 길은 끊긴 길이다).
                 const int32 tileCount = MathUtil::abs( step._to._x - step._from._x ) + MathUtil::abs( step._to._y - step._from._y ) + 1;
-                if ( city.getMoney() < tileCount * roadCost )
+                if ( wallet.canAfford( city.getCurrency(), static_cast<int64>( tileCount ) * roadCost ) == false )
                     break;
                 (void)city.placeRoadLine( step._from, step._to );
                 ++_nextStep;

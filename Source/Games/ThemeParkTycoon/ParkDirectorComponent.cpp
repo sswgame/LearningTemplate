@@ -33,7 +33,7 @@ namespace sw
         {
             static constexpr float32 kRailSpacing     = 2.0f;        ///< 레일 조각 간격(m)
             static constexpr uint32  kStateTag        = 0x4B524150u; ///< 'PARK'
-            static constexpr uint32  kStateVersion    = 1;
+            static constexpr uint32  kStateVersion    = 2;
             static constexpr float32 kSupportSpacing  = 8.0f; ///< 기둥 간격(m)
             static constexpr uint32  kCarCount        = 4;
             static constexpr float32 kStatusInterval  = 10.0f;
@@ -93,6 +93,7 @@ namespace sw
         , _gate{}
         , _autoBuildInterval{ 20.0f }
         , _simulation{}
+        , _wallet{}
         , _layoutCatalog{}
         , _settings{}
         , _listPlacement{}
@@ -201,7 +202,9 @@ namespace sw
             SW_LOG_WARNING( "[Park] %# places no rides - the park cannot open", _parkDataPath.c_str() );
             return false;
         }
-        _simulation.initialize( _settings, _startingCash );
+        _wallet.clear();
+        _wallet.add( _settings._currency, _startingCash );
+        _simulation.initialize( _settings, makeRefs() );
         _listCoaster.clear();
 
         // 처음 공원 — 가장 싼 평지 놀이기구 하나와 가장 싼 코스터 하나.
@@ -228,9 +231,9 @@ namespace sw
         RidePlacement& placement = _listPlacement[static_cast<size_t>( placementIndex )];
         if ( placement._rideIndex >= 0 )
             return false;
-        if ( _simulation.getCash() < placement._buildCost )
+        if ( _wallet.canAfford( _settings._currency, placement._buildCost ) == false )
         {
-            SW_LOG_INFO( "[Park] not enough cash for %# ($%# needed, $%# in the bank)", placement._ride._name.c_str(), placement._buildCost, _simulation.getCash() );
+            SW_LOG_INFO( "[Park] not enough cash for %# ($%# needed, $%# in the bank)", placement._ride._name.c_str(), placement._buildCost, _wallet.getBalance( _settings._currency ) );
             getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundError );
             return false;
         }
@@ -268,7 +271,7 @@ namespace sw
         placement._ride      = ride;
         if ( pCoaster != nullptr )
             _listCoaster.push_back( std::move( pCoaster ) );
-        SW_LOG_INFO( "[Park] built %# for $%# - ticket $%#, $%# left", ride._name.c_str(), placement._buildCost, ride._price, _simulation.getCash() );
+        SW_LOG_INFO( "[Park] built %# for $%# - ticket $%#, $%# left", ride._name.c_str(), placement._buildCost, ride._price, _wallet.getBalance( _settings._currency ) );
         getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundBuilt );
         _listPendingRideView.push_back( placementIndex );
         return true;
@@ -313,6 +316,7 @@ namespace sw
         outArchive << _statusTimer;
         outArchive << _autoBuildTimer;
         outArchive << _selectedPlacement;
+        _wallet.writeState( outArchive );
     }
 
     bool ParkDirectorComponent::readState( Archive& archive )
@@ -320,7 +324,7 @@ namespace sw
         if ( StateArchiveUtil::readHeader( archive, ParkDirectorComponentInternal::kStateTag, ParkDirectorComponentInternal::kStateVersion ) == false )
             return false;
         ThemeParkSimulation simulation;
-        simulation.initialize( _settings, _startingCash );
+        simulation.initialize( _settings, makeRefs() );
         uint32 placementCount = 0;
         if ( simulation.readState( archive ) == false || StateArchiveUtil::readCount( archive, sizeof( int32 ), placementCount ) == false )
             return false;
@@ -360,10 +364,12 @@ namespace sw
         archive >> statusTimer;
         archive >> autoBuildTimer;
         archive >> selectedPlacement;
-        if ( archive.isError() || archive.getRemainingBytes() != 0 )
+        Wallet wallet;
+        if ( archive.isError() || wallet.readState( archive ) == false || archive.getRemainingBytes() != 0 )
             return false;
 
         _simulation = std::move( simulation );
+        _wallet     = std::move( wallet );
         for ( uint32 placementIndex = 0; placementIndex < placementCount; ++placementIndex )
         {
             RidePlacement& placement = _listPlacement[placementIndex];
@@ -382,10 +388,17 @@ namespace sw
     void ParkDirectorComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO( "[Park] park state restored - %# guests, $%#, %#s open", _simulation.getGuestCount(), _simulation.getCash(),
+            SW_LOG_INFO( "[Park] park state restored - %# guests, $%#, %#s open", _simulation.getGuestCount(), _wallet.getBalance( _settings._currency ),
                          static_cast<int32>( _simulation.getElapsedTime() ) );
         else
             SW_LOG_WARNING( "[Park] the saved park state does not match this build - opening a new park" );
+    }
+
+    GameStateRefs ParkDirectorComponent::makeRefs()
+    {
+        GameStateRefs refs;
+        refs._pWallet = &_wallet;
+        return refs;
     }
 
     bool ParkDirectorComponent::buildCheapestRemaining()
@@ -399,7 +412,7 @@ namespace sw
         }
         if ( cheapest < 0 )
             return false;
-        if ( _simulation.getCash() < _listPlacement[static_cast<size_t>( cheapest )]._buildCost )
+        if ( _wallet.canAfford( _settings._currency, _listPlacement[static_cast<size_t>( cheapest )]._buildCost ) == false )
             return false;
         return buildPlacement( cheapest );
     }
@@ -643,7 +656,7 @@ namespace sw
             return;
         _statusTimer = 0.0f;
         SW_LOG_INFO( "[Park] %# min · cash $%# · guests %# (visited %#) · happiness %#%% · rating %# · rides %# · entry $%#",
-                     static_cast<int32>( _simulation.getElapsedTime() / 60.0f ), _simulation.getCash(), _simulation.getGuestCount(),
+                     static_cast<int32>( _simulation.getElapsedTime() / 60.0f ), _wallet.getBalance( _settings._currency ), _simulation.getGuestCount(),
                      _simulation.getTotalVisitorCount(), static_cast<int32>( _simulation.getAverageHappiness() * 100.0f ), _simulation.getParkRating(),
                      static_cast<uint32>( _simulation.getRides().size() ), _simulation.getSettings()._entryFee );
         for ( [[maybe_unused]] const ParkRide& ride : _simulation.getRides() )

@@ -5,6 +5,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 
@@ -40,16 +42,24 @@ namespace
     {
         CityCatalog    _catalog;
         CitySimulation _city;
+        Wallet         _wallet; ///< 도시가 빌린 금고
 
-        bool initialize( int32 money = 5000 )
+        bool initialize( int32 money = 5000, float32 wagePerWorkerPerMonth = 0.5f )
         {
             if ( _catalog.loadFromXmlText( kCityTestXml, "CityBuilderTest" ) == false )
                 return false;
             CitySettings settings;
-            settings._secondsPerMonth = 20.0f;
-            _city.initialize( &_catalog, 32, 24, settings, money );
+            settings._secondsPerMonth       = 20.0f;
+            settings._wagePerWorkerPerMonth = wagePerWorkerPerMonth;
+            _wallet.clear();
+            _wallet.add( settings._currency, money );
+            GameStateRefs refs;
+            refs._pWallet = &_wallet;
+            _city.initialize( &_catalog, 32, 24, settings, refs );
             return true;
         }
+
+        int32 getMoney() const { return static_cast<int32>( _wallet.getBalance( _city.getCurrency() ) ); }
 
         /** @brief y = 10 의 동서 도로(x 2..29)와 x = 2 · 29 의 남북 도로(y 3..20) — 고리 하나. */
         void buildRoadLoop()
@@ -109,7 +119,7 @@ SW_TEST_CASE( CityBuilderTest, PlacementChecksTerrainMoneyAndRoadAccess )
     SW_EXPECT_TRUE( city.placeBuilding( "farm", 31, 23 ) == CityPlaceResult::OutOfBounds );
     SW_EXPECT_TRUE( city.placeBuilding( "farm", 10, 2 ) == CityPlaceResult::Ok );
     SW_EXPECT_TRUE( city.placeBuilding( "house", 11, 3 ) == CityPlaceResult::Occupied );
-    SW_EXPECT_EQUAL( 40, city.getMoney() );
+    SW_EXPECT_EQUAL( 40, scene.getMoney() );
     SW_EXPECT_FALSE( city.findBuildingAt( 10, 2 )->hasRoadAccess() );
 
     // 농장은 (10..11, 2..3). 도로는 건물 위에 못 깔고, 한 칸 띄운 도로는 입구가 아니다.
@@ -122,7 +132,7 @@ SW_TEST_CASE( CityBuilderTest, PlacementChecksTerrainMoneyAndRoadAccess )
     SW_ASSERT_TRUE( city.findBuildingAt( 10, 2 )->hasRoadAccess() );
     SW_EXPECT_TRUE( city.findBuildingAt( 10, 2 )->_accessTile == ( int2{ 10, 4 } ) );
 
-    SW_EXPECT_EQUAL( 38, city.getMoney() ); // 도로 둘(1 씩)
+    SW_EXPECT_EQUAL( 38, scene.getMoney() ); // 도로 둘(1 씩)
     SW_EXPECT_TRUE( city.placeBuilding( "granary", 20, 20 ) == CityPlaceResult::Ok );
     SW_EXPECT_TRUE( city.placeBuilding( "granary", 24, 20 ) == CityPlaceResult::NotEnoughMoney ); // 8 남았다
     SW_EXPECT_TRUE( city.demolish( 11, 3 ) );
@@ -236,7 +246,7 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
     for ( int32 x = 5; x <= 9; ++x )
         SW_ASSERT_TRUE( city.placeBuilding( "house", x, 11 ) == CityPlaceResult::Ok );
     SW_ASSERT_TRUE( city.placeBuilding( "tax", 4, 9 ) == CityPlaceResult::Ok );
-    const int32 moneyAfterBuilding = city.getMoney();
+    const int32 moneyAfterBuilding = scene.getMoney();
 
     vector<CityEvent> listEvent;
     int32             monthIncome = 0;
@@ -259,7 +269,7 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
         }
     }
     SW_EXPECT_TRUE( monthIncome > 0 );
-    SW_EXPECT_EQUAL( moneyAfterBuilding + monthIncome, city.getMoney() );
+    SW_EXPECT_EQUAL( moneyAfterBuilding + monthIncome, scene.getMoney() );
     SW_EXPECT_EQUAL( 1, floodCount );
     SW_EXPECT_TRUE( floodValue >= 40 && floodValue <= 100 );
     SW_EXPECT_EQUAL( 2, city.getYear() );
@@ -268,9 +278,29 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
     // 세리를 허물면 세금이 그치고 임금만 남는다(일꾼 없음 → 0).
     SW_ASSERT_TRUE( city.demolish( 4, 9 ) );
     scene.run( 60.0f ); // 세금 효과(30 초)가 다 빠지게
-    const int32 before = city.getMoney();
+    const int32 before = scene.getMoney();
     scene.run( 20.0f );
-    SW_EXPECT_TRUE( city.getMoney() <= before );
+    SW_EXPECT_TRUE( scene.getMoney() <= before );
+}
+
+/**
+ * @brief [CityBuilderTest] 달 결산의 임금은 미룰 수 없다 — 빈 금고에서는 빌린 지갑이 빚을 지고, 빚이 있는 동안 짓기가 거절된다
+ */
+SW_TEST_CASE( CityBuilderTest, MonthlyWagesCanRunTheBorrowedWalletIntoDebt )
+{
+    CityTestScene scene;
+    SW_ASSERT_TRUE( scene.initialize( 5000, 50.0f ) ); // 일꾼 하나에 달마다 50 — 세금으로는 못 메운다
+    CitySimulation& city = scene._city;
+    scene.buildRoadLoop();
+    for ( int32 x = 5; x <= 9; ++x )
+        SW_ASSERT_TRUE( city.placeBuilding( "house", x, 11 ) == CityPlaceResult::Ok );
+    SW_ASSERT_TRUE( city.placeBuilding( "tax", 4, 9 ) == CityPlaceResult::Ok );
+    scene._wallet.setBalance( city.getCurrency(), 0 );
+    for ( int32 month = 0; month < 3 && scene.getMoney() >= 0; ++month )
+        scene.run( 20.0f );
+    SW_ASSERT_TRUE( city.getEmployed() > 0 );
+    SW_EXPECT_TRUE( scene.getMoney() < 0 );
+    SW_EXPECT_TRUE( city.placeRoad( 3, 3 ) == CityPlaceResult::NotEnoughMoney );
 }
 
 /**
@@ -303,7 +333,6 @@ SW_TEST_CASE( CityBuilderTest, StateRoundTripContinuesTheSameCity )
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored._city.readState( reader ) );
     SW_EXPECT_EQUAL( uint64( 0 ), reader.getRemainingBytes() );
-    SW_EXPECT_EQUAL( city.getMoney(), restored._city.getMoney() );
     SW_EXPECT_EQUAL( city.getPopulation(), restored._city.getPopulation() );
     SW_EXPECT_EQUAL( city.getWalkers().size(), restored._city.getWalkers().size() );
 
@@ -327,16 +356,16 @@ SW_TEST_CASE( CityBuilderTest, StateRoundTripContinuesTheSameCity )
         CityCatalog    catalog;
         CitySimulation smallCity;
         SW_ASSERT_TRUE( catalog.loadFromXmlText( kCityTestXml, "CityBuilderTest" ) );
-        smallCity.initialize( &catalog, 8, 8, CitySettings{}, 77 );
+        smallCity.initialize( &catalog, 8, 8, CitySettings{}, GameStateRefs{} );
         Archive smallReader( written.getData(), written.getSize() );
         SW_EXPECT_FALSE( smallCity.readState( smallReader ) );
-        SW_EXPECT_EQUAL( 77, smallCity.getMoney() );
+        SW_EXPECT_TRUE( smallCity.getBuildings().empty() );
 
         CityTestScene cutScene;
         SW_ASSERT_TRUE( cutScene.initialize( 55 ) );
         Archive cut( written.getData(), written.getSize() - 3 );
         SW_EXPECT_FALSE( cutScene._city.readState( cut ) );
-        SW_EXPECT_EQUAL( 55, cutScene._city.getMoney() );
+        SW_EXPECT_EQUAL( 55, cutScene.getMoney() );
         SW_EXPECT_TRUE( cutScene._city.getBuildings().empty() );
     }
 }

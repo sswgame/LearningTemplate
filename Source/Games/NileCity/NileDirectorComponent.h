@@ -20,7 +20,9 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 
@@ -104,6 +106,8 @@ namespace sw
         void        logStatus() const;
         const utf8* getToolName() const;
         bool        isAutoPlanOn() const;
+        /** @brief 도시가 빌릴 공유 상태(디렉터가 든 금고)입니다. */
+        GameStateRefs makeRefs();
 
     private:
         PROPERTY( Category = "Data", DisplayName = "City Data", AssetPath, Tooltip = "City catalog XML" )
@@ -127,6 +131,7 @@ namespace sw
 
         CityCatalog                          _catalog;
         CitySimulation                       _city;
+        Wallet                               _wallet; ///< 도시 금고 — 키트 하나만 쓰는 게임이라 디렉터가 들고 빌려 준다
         NileCityPlanner                      _planner;
         vector<CityEvent>                    _listEvent;
         vector<const CityBuildingDef*>       _listTool;       ///< 0 은 도로(nullptr)

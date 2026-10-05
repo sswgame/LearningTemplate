@@ -20,7 +20,9 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
 #include "GameFramework/Kits/Simulation/ThemePark/ParkLayout.h"
@@ -100,10 +102,12 @@ namespace sw
         bool buildPlacement( int32 placementIndex );
         /** @brief 아직 안 지은 것 중 가장 싼 것을 짓습니다. */
         bool buildCheapestRemaining();
-        void spawnGuestPool( GameObjectManager& manager );
-        void spawnRideView( GameObjectManager& manager, int32 placementIndex );
-        void spawnCoasterView( GameObjectManager& manager, int32 coasterIndex );
-        void spawnPath( GameObjectManager& manager, const float3& from, const float3& to );
+        /** @brief 공원이 빌릴 공유 상태(디렉터가 든 금고)입니다. */
+        GameStateRefs makeRefs();
+        void          spawnGuestPool( GameObjectManager& manager );
+        void          spawnRideView( GameObjectManager& manager, int32 placementIndex );
+        void          spawnCoasterView( GameObjectManager& manager, int32 coasterIndex );
+        void          spawnPath( GameObjectManager& manager, const float3& from, const float3& to );
 
         void  updateInput( const InputManager& input );
         void  updateRides( float32 deltaTime );
@@ -149,6 +153,7 @@ namespace sw
         float32 _autoBuildInterval;
 
         ThemeParkSimulation                _simulation;
+        Wallet                             _wallet; ///< 공원 금고 — 키트 하나만 쓰는 게임이라 디렉터가 들고 빌려 준다
         CoasterLayoutCatalog               _layoutCatalog;
         ThemeParkSettings                  _settings;
         vector<RidePlacement>              _listPlacement;
