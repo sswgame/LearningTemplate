@@ -6,6 +6,7 @@
 
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -187,14 +188,25 @@ namespace sw
         return false;
     }
 
+    void ClimbZoneComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<ClimbZoneComponent>( this );
+    }
+
+    void ClimbZoneComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<ClimbZoneComponent>( this );
+        Component::onUnregister( manager );
+    }
+
     const ClimbZoneComponent* ClimbZoneComponent::findClimbZone( const GameObjectManager& manager, GameObjectHandle object )
     {
-        const ClimbZoneComponent* pFound = nullptr;
-        manager.forEachComponentOfType<ClimbZoneComponent>( [&pFound, object]( ClimbZoneComponent* pZone )
+        for ( const ClimbZoneComponent* pZone : manager.getComponentRegistry().getAll<ClimbZoneComponent>() )
         {
-            if ( pFound == nullptr && pZone != nullptr && pZone->isActive() && pZone->contains( object ) )
-                pFound = pZone;
-        } );
-        return pFound;
+            if ( pZone->isPendingDestroy() == false && pZone->isActive() && pZone->contains( object ) )
+                return pZone;
+        }
+        return nullptr;
     }
 } // namespace sw

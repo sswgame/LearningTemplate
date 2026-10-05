@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw
@@ -28,17 +29,28 @@ namespace sw
         return settings;
     }
 
+    void WindComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<WindComponent>( this );
+    }
+
+    void WindComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<WindComponent>( this );
+        Component::onUnregister( manager );
+    }
+
     bool WindComponent::findWind( const GameObjectManager& manager, WindSettings& outSettings )
     {
         outSettings = WindSettings{};
-        bool bFound = false;
-        manager.forEachComponentOfType<WindComponent>( [&bFound, &outSettings]( WindComponent* pWind )
+        for ( const WindComponent* pWind : manager.getComponentRegistry().getAll<WindComponent>() )
         {
-            if ( bFound || pWind->isActive() == false )
-                return;
+            if ( pWind->isPendingDestroy() || pWind->isActive() == false )
+                continue;
             outSettings = pWind->makeSettings();
-            bFound      = true;
-        } );
-        return bFound;
+            return true;
+        }
+        return false;
     }
 } // namespace sw

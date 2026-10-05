@@ -46,6 +46,9 @@ namespace sw
         CameraDirectorComponent();
         virtual ~CameraDirectorComponent() override = default;
 
+        /** @brief 씬의 카메라 디렉터 목록(`ComponentRegistry`)에 듭니다 — "이 오브젝트를 따라가는 디렉터" 를 씬 전체를 훑지 않고 찾습니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;
 

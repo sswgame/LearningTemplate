@@ -13,6 +13,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -679,16 +680,17 @@ namespace sw
         float3                 camera{};
         float32                cameraYaw = 0.0f;
         const GameObjectHandle player    = _player;
-        pManager->forEachComponentOfType<CameraDirectorComponent>( [&]( CameraDirectorComponent* pCameraDirector )
+        for ( const CameraDirectorComponent* pCameraDirector : pManager->getComponentRegistry().getAll<CameraDirectorComponent>() )
         {
-            const CameraComponent* pCamera = pCameraDirector->getTarget() == player ? pCameraDirector->getOwner()->getComponent<CameraComponent>() : nullptr;
+            const bool             bFollows = pCameraDirector->isPendingDestroy() == false && pCameraDirector->getTarget() == player;
+            const CameraComponent* pCamera  = bFollows ? pCameraDirector->getOwner()->getComponent<CameraComponent>() : nullptr;
             if ( pCamera == nullptr )
-                return;
+                continue;
             const float4x4 world = pCamera->getWorldMatrix();
             camera               = world.getTranslation();
             const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
             cameraYaw            = MathUtil::atan2( forward._x, forward._z );
-        } );
+        }
         float3  enemy{};
         float32 enemyHipsY = 0.0f;
         for ( const EnemyRecord& record : _listEnemy )

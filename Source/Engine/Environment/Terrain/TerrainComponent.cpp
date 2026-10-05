@@ -8,6 +8,7 @@
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
@@ -92,6 +93,7 @@ namespace sw
     void TerrainComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
+        manager.getComponentRegistry().add<TerrainComponent>( this ); // `findTerrainAt` 이 씬을 훑지 않고 본다
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         if ( _heightfieldPath.empty() == false )
             (void)reloadTerrain(); // 실패는 안에서 알린다 — 그리지 않을 뿐이다
@@ -102,6 +104,7 @@ namespace sw
         releaseChunks();
         _material.release();
         _pPrimitiveRegistry = nullptr;
+        manager.getComponentRegistry().remove<TerrainComponent>( this );
         SceneComponent::onUnregister( manager );
     }
 
@@ -372,17 +375,16 @@ namespace sw
 
     TerrainComponent* TerrainComponent::findTerrainAt( const GameObjectManager& manager, float32 worldX, float32 worldZ )
     {
-        TerrainComponent* pFound = nullptr;
-        manager.forEachComponentOfType<TerrainComponent>( [&pFound, worldX, worldZ]( TerrainComponent* pTerrain )
+        for ( TerrainComponent* pTerrain : manager.getComponentRegistry().getAll<TerrainComponent>() )
         {
-            if ( pFound != nullptr || pTerrain->_heightfield.isValid() == false )
-                return;
+            if ( pTerrain->isPendingDestroy() || pTerrain->_heightfield.isValid() == false )
+                continue;
             const float3 origin  = pTerrain->_heightfield.getOrigin();
             const float2 size    = pTerrain->_heightfield.getSize();
             const bool   bInside = origin._x <= worldX && worldX <= origin._x + size._x && origin._z <= worldZ && worldZ <= origin._z + size._y;
             if ( bInside )
-                pFound = pTerrain;
-        } );
-        return pFound;
+                return pTerrain;
+        }
+        return nullptr;
     }
 } // namespace sw

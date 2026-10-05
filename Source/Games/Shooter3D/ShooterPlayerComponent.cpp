@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -602,14 +603,15 @@ namespace sw
         // 이 오브젝트를 따라가는 게임 카메라 디렉터(시점 카메라)의 프리셋 모드.
         const GameObjectHandle self         = pOwner->getHandle();
         bool                   bFirstPerson = true;
-        pManager->forEachComponentOfType<CameraDirectorComponent>( [&self, &bFirstPerson]( CameraDirectorComponent* pCameraDirector )
+        // 틱마다 묻는다 — 씬 전체를 훑지 않고 등록된 디렉터만 본다.
+        for ( const CameraDirectorComponent* pCameraDirector : pManager->getComponentRegistry().getAll<CameraDirectorComponent>() )
         {
-            if ( pCameraDirector->getTarget() != self )
-                return;
+            if ( pCameraDirector->isPendingDestroy() || pCameraDirector->getTarget() != self )
+                continue;
             const CameraPresetDef* pPreset = pCameraDirector->getCatalog().findPreset( pCameraDirector->getActivePresetId() );
             if ( pPreset != nullptr )
                 bFirstPerson = pPreset->_view._mode == CameraPresetMode::FirstPerson;
-        } );
+        }
         return bFirstPerson;
     }
 

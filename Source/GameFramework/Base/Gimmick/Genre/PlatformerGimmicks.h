@@ -162,9 +162,12 @@ namespace sw
         ClimbZoneComponent();
         virtual ~ClimbZoneComponent() override = default;
 
+        /** @brief 씬의 오르기 구역 목록(`ComponentRegistry`)에 듭니다 — `findClimbZone` 가 씬 전체를 훑지 않고 이 목록을 봅니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
         /** @brief @p object 가 이 구역 안인가입니다. */
         bool contains( GameObjectHandle object ) const;
-        /** @brief @p object 가 들어 있는 구역입니다. 없으면 nullptr 입니다(씬의 구역을 훑는다). */
+        /** @brief @p object 가 들어 있는 구역입니다. 없으면 nullptr 입니다(등록된 구역을 본다). */
         static const ClimbZoneComponent* findClimbZone( const GameObjectManager& manager, GameObjectHandle object );
 
         const float3& getAxis() const { return _axis; }

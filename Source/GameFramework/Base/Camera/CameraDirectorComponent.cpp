@@ -9,6 +9,7 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -66,6 +67,18 @@ namespace sw
         , _pendingDeltaTime{ 0.0f }
     {
         setCanEverTick( true );
+    }
+
+    void CameraDirectorComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<CameraDirectorComponent>( this );
+    }
+
+    void CameraDirectorComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<CameraDirectorComponent>( this );
+        Component::onUnregister( manager );
     }
 
     void CameraDirectorComponent::onBeginPlay()

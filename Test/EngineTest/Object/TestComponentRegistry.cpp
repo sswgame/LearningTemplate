@@ -9,6 +9,10 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
+#include "Engine/Environment/Foliage/WindComponent.h"
+#include "Engine/Environment/Terrain/TerrainComponent.h"
+#include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
@@ -19,6 +23,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+
+#include "GameFramework/Base/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Base/Gimmick/Genre/PlatformerGimmicks.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -71,6 +78,16 @@ namespace sw
                         return false;
                 }
                 return collectRegistered<ShadowCaster2DComponent>( manager, 0 ) == scanShadowCasters( manager );
+            }
+
+            /** @brief 타입 T 의 등록 수가 씬 전수 훑기의 수와 같으면 true 입니다. */
+            template <typename T>
+            static bool hasSameCount( const GameObjectManager& manager )
+            {
+                size_t scanned = 0;
+                manager.forEachComponentOfType<T>( [&scanned]( T* )
+                { ++scanned; } );
+                return scanned == manager.getComponentRegistry().getAll<T>().size();
             }
 
             /** @brief 결정적인 작은 난수(LCG)입니다. */
@@ -172,4 +189,86 @@ SW_TEST_CASE( ComponentRegistryTest, HandlesOfRemovedComponentsAreNotRegistered 
     SW_ASSERT_EQUAL( size_t( 1 ), listLamp.size() );
     SW_EXPECT_TRUE( listLamp[0] == pObject->getComponent<PointLightComponent>() );
     SW_EXPECT_TRUE( listLamp.getHandle( 0 ) == listLamp[0]->getHandle() );
+}
+
+/**
+ * @brief [ComponentRegistryTest] 환경 · 기믹 · 카메라 찾기(바람 · 식생 구 · 지형 · 물 · 오르기 구역 · 카메라 디렉터)가 보는 목록이 붙이기 · 떼기 · 파괴 뒤에도 씬 전수 훑기와 같고,
+ *        가까운 식생 구 넷이 전수 훑기로 고른 넷과 같다
+ */
+SW_TEST_CASE( ComponentRegistryTest, EnvironmentFindersSeeTheSameAsTheSceneScan )
+{
+    using Internal = ComponentRegistryTestInternal;
+    GameObjectManager   manager;
+    vector<GameObject*> listObject;
+    uint32              state      = 4242u;
+    uint32              mismatches = 0;
+    for ( uint32 step = 0; step < 300; ++step )
+    {
+        const uint32 roll = Internal::nextRandom( state ) % 10;
+        if ( roll < 6 || listObject.empty() )
+        {
+            GameObject* pObject = manager.createGameObject( hashed_string( "Env" ) );
+            pObject->addComponent<SceneComponent>()->setLocalPosition(
+                float3{ static_cast<float32>( Internal::nextRandom( state ) % 100 ), 0.0f, static_cast<float32>( Internal::nextRandom( state ) % 100 ) } );
+            switch ( Internal::nextRandom( state ) % 6 )
+            {
+                case 0:
+                {
+                    (void)pObject->addComponent<WindComponent>();
+                    break;
+                }
+                case 1:
+                {
+                    (void)pObject->addComponent<TerrainComponent>();
+                    break;
+                }
+                case 2:
+                {
+                    (void)pObject->addComponent<WaterBodyComponent>();
+                    break;
+                }
+                case 3:
+                {
+                    (void)pObject->addComponent<ClimbZoneComponent>();
+                    break;
+                }
+                case 4:
+                {
+                    (void)pObject->addComponent<CameraDirectorComponent>();
+                    break;
+                }
+                default:
+                {
+                    FoliageInfluencerComponent* pInfluencer = pObject->addComponent<FoliageInfluencerComponent>();
+                    pInfluencer->setRadius( 0.5f + static_cast<float32>( Internal::nextRandom( state ) % 4 ) );
+                    break;
+                }
+            }
+            listObject.push_back( pObject );
+        }
+        else
+        {
+            const size_t index = Internal::nextRandom( state ) % listObject.size();
+            manager.destroyObject( listObject[index] );
+            listObject.erase( listObject.begin() + static_cast<ptrdiff_t>( index ) );
+        }
+        manager.processDeferredDestruction();
+        const bool bSame = Internal::hasSameCount<WindComponent>( manager ) && Internal::hasSameCount<TerrainComponent>( manager ) &&
+                           Internal::hasSameCount<WaterBodyComponent>( manager ) && Internal::hasSameCount<ClimbZoneComponent>( manager ) &&
+                           Internal::hasSameCount<FoliageInfluencerComponent>( manager ) && Internal::hasSameCount<CameraDirectorComponent>( manager );
+        mismatches += bSame ? 0u : 1u;
+    }
+    SW_EXPECT_EQUAL( 0u, mismatches );
+
+    // 가까운 식생 구 넷 — 전수 훑기로 모아 거리로 정렬한 앞 넷과 같은 반지름 · 중심이다.
+    const float3    view{ 50.0f, 0.0f, 50.0f };
+    float4          arrSphere[FoliageInfluencerComponent::kMaxInfluencerCount]{};
+    const uint32    count = FoliageInfluencerComponent::collectNearest( manager, view, arrSphere );
+    vector<float32> listDistance;
+    manager.forEachComponentOfType<FoliageInfluencerComponent>( [&listDistance, &view]( FoliageInfluencerComponent* pInfluencer )
+    { listDistance.push_back( ( pInfluencer->getWorldPosition() - view ).getLengthSquared() ); } );
+    std::sort( listDistance.begin(), listDistance.end() );
+    SW_ASSERT_EQUAL( static_cast<uint32>( std::min<size_t>( listDistance.size(), FoliageInfluencerComponent::kMaxInfluencerCount ) ), count );
+    for ( uint32 slot = 0; slot < count; ++slot )
+        SW_EXPECT_NEAR_EQUAL( listDistance[slot], ( float3{ arrSphere[slot]._x, arrSphere[slot]._y, arrSphere[slot]._z } - view ).getLengthSquared(), 1.0e-3f );
 }

@@ -8,6 +8,7 @@
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
@@ -148,6 +149,7 @@ namespace sw
     void WaterBodyComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
+        manager.getComponentRegistry().add<WaterBodyComponent>( this ); // `findWaterAt` · `findUnderwaterFog` 가 씬을 훑지 않고 본다
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         rebuildSurface();
     }
@@ -157,6 +159,7 @@ namespace sw
         _batch.reset(); // 소멸자가 등록부에서 뺀다
         _material.release();
         _pPrimitiveRegistry = nullptr;
+        manager.getComponentRegistry().remove<WaterBodyComponent>( this );
         SceneComponent::onUnregister( manager );
     }
 
@@ -440,28 +443,26 @@ namespace sw
 
     bool WaterBodyComponent::findUnderwaterFog( const GameObjectManager& manager, const float3& viewPosition, WaterUnderwaterFog& outFog )
     {
-        bool bFound = false;
-        manager.forEachComponentOfType<WaterBodyComponent>( [&bFound, &outFog, &viewPosition]( WaterBodyComponent* pWater )
+        for ( const WaterBodyComponent* pWater : manager.getComponentRegistry().getAll<WaterBodyComponent>() )
         {
             float32 depth{ 0.0f };
-            if ( bFound || pWater->_bUnderwaterFog == false || pWater->isUnderwater( viewPosition, depth ) == false )
-                return;
-            bFound          = true;
+            if ( pWater->isPendingDestroy() || pWater->_bUnderwaterFog == false || pWater->isUnderwater( viewPosition, depth ) == false )
+                continue;
             outFog._color   = pWater->_fogColor;
             outFog._density = pWater->_fogDensity;
             outFog._depth   = depth;
-        } );
-        return bFound;
+            return true;
+        }
+        return false;
     }
 
     WaterBodyComponent* WaterBodyComponent::findWaterAt( const GameObjectManager& manager, float32 worldX, float32 worldZ )
     {
-        WaterBodyComponent* pFound = nullptr;
-        manager.forEachComponentOfType<WaterBodyComponent>( [&pFound, worldX, worldZ]( WaterBodyComponent* pWater )
+        for ( WaterBodyComponent* pWater : manager.getComponentRegistry().getAll<WaterBodyComponent>() )
         {
-            if ( pFound == nullptr && pWater->coversPosition( worldX, worldZ ) )
-                pFound = pWater;
-        } );
-        return pFound;
+            if ( pWater->isPendingDestroy() == false && pWater->coversPosition( worldX, worldZ ) )
+                return pWater;
+        }
+        return nullptr;
     }
 } // namespace sw
