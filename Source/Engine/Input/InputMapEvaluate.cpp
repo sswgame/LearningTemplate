@@ -307,13 +307,18 @@ namespace sw
         if ( _pInput == nullptr )
             return false;
 
+        // isControlDown() 만 보면 같은 프레임 안에서 Down 과 Up 이 모두 처리된 순간 탭(예: 매크로 주입, 초고속 입력, 가상 입력 hold=0)을
+        // 놓친다. wasControlPressed() 를 함께 확인해 그 프레임에는 "눌렸었다" 로 취급한다 — 단일 키 · 합성(axis1d · vector2d) 모두 같은 규칙이다.
+        const auto isSlotHeldThisFrame = [this]( const InputSlot& slot ) -> bool
+        {
+            return isSlotDown( slot ) || wasSlotPressed( slot );
+        };
+
         switch ( binding._kind )
         {
             case BindingKind::SingleSlot:
             {
-                // isControlDown() 만 보면 같은 프레임 안에서 Down 과 Up 이 모두 처리된 순간 탭(예: 매크로 주입, 초고속 입력)을
-                // 놓친다. wasControlPressed() 를 함께 확인해 그 프레임에는 "눌렸었다" 로 취급한다.
-                if ( isSlotDown( binding._arrSlot[0] ) || wasSlotPressed( binding._arrSlot[0] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[0] ) )
                 {
                     if ( _bSuppressBaseActionOnChord == SW_TRUE && binding._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
                     {
@@ -335,9 +340,9 @@ namespace sw
             case BindingKind::Axis1DComposite:
             {
                 float32 axisValue = 0.0f;
-                if ( isSlotDown( binding._arrSlot[0] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[0] ) )
                     axisValue -= 1.0f;
-                if ( isSlotDown( binding._arrSlot[1] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[1] ) )
                     axisValue += 1.0f;
                 outValue = float2{ axisValue, 0.0f };
                 return axisValue != 0.0f;
@@ -345,13 +350,13 @@ namespace sw
             case BindingKind::Vector2DComposite:
             {
                 float2 kbdVec{ 0.0f, 0.0f };
-                if ( isSlotDown( binding._arrSlot[0] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[0] ) )
                     kbdVec._y += 1.0f;
-                if ( isSlotDown( binding._arrSlot[1] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[1] ) )
                     kbdVec._y -= 1.0f;
-                if ( isSlotDown( binding._arrSlot[2] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[2] ) )
                     kbdVec._x -= 1.0f;
-                if ( isSlotDown( binding._arrSlot[3] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[3] ) )
                     kbdVec._x += 1.0f;
 
                 const float32 lenSq = kbdVec._x * kbdVec._x + kbdVec._y * kbdVec._y;
