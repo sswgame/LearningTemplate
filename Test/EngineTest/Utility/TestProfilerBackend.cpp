@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Task/TaskManager.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
 #include "Engine/Utility/Profiling/ProfilerBackend.h"
@@ -174,5 +176,36 @@ SW_TEST_CASE( ProfilerBackendTest, TracyBackendAcceptsZonesWithoutViewer )
     tracy.syncGpuClock( gpuContext, 2'000'000 );
     SW_EXPECT_EQUAL( uint64( 2 ), tracy.getGpuZoneCount() );
     SW_EXPECT_TRUE( sw::ProfilerBackend::getTracyPort() != 0 );
+}
+
+/**
+ * @brief [ProfilerBackendTest] 이름 붙은 태스크와 스테이지 대기가 활성 출력에 구간으로 남는다
+ * @details Core 의 TaskManager 는 프로파일러를 모른다 — Tracy 를 켤 때 Engine 이 꽂는 훅(`getTaskProfileHook`)을 시험이 같은 방식으로 꽂는다.
+ */
+SW_TEST_CASE( ProfilerBackendTest, NamedTaskAndStageWaitBecomeZones )
+{
+    test::RecordingProfilerBackend backend;
+    {
+        ScopedActiveBackendInternal active{ &backend };
+        sw::TaskManager::setProfileHook( sw::ProfilerBackend::getTaskProfileHook() );
+
+        sw::TaskManager manager;
+        SW_ASSERT_TRUE( manager.initialize( 2 ) );
+        sw::TaskStageHandle stage  = manager.createStage( "ProbeStage" );
+        sw::TaskHandle      handle = manager.emplaceTask( "ProbeTask", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []()
+             {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) ); // 스테이지를 기다리기 시작할 때 아직 남아 있게
+        } ) );
+        stage.addTask( handle );
+        handle.submit();
+        manager.waitStage( stage );
+        manager.shutdown();
+        sw::TaskManager::setProfileHook( nullptr );
+    }
+
+    SW_EXPECT_EQUAL( 1u, backend.countEvent( "begin ProbeTask" ) );
+    SW_EXPECT_EQUAL( 1u, backend.countEvent( "end ProbeTask" ) );
+    SW_EXPECT_EQUAL( 1u, backend.countEvent( "begin Wait ProbeStage" ) );
+    SW_EXPECT_EQUAL( 1u, backend.countEvent( "end Wait ProbeStage" ) );
 }
 #endif

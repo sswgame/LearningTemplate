@@ -173,7 +173,7 @@ flowchart LR
 ### 5) 스테이지로 묶어서 기다리기
 
 ```cpp
-TaskStageHandle stage = tm.createStage();
+TaskStageHandle stage = tm.createStage( "MyStage" );
 
 TaskHandle a = tm.emplaceTask( [](){} );
 TaskHandle b = tm.emplaceTask( [](){} );
@@ -187,6 +187,7 @@ tm.waitStage( stage ); // 스테이지에 넣은 일이 모두 끝날 때까지
 
 - `addTask` 는 **제출 전에** 부릅니다. 스테이지는 남은 수만 세고 태스크를 붙들지 않습니다.
 - 이름으로 찾는 스테이지는 없습니다. 여러 곳이 같은 스테이지를 봐야 하면 핸들을 복사해 건넵니다.
+- 이름은 디버거와 Tracy 의 "Wait MyStage" 구간이 봅니다(Shipping 에서는 버립니다). 이름 있는 태스크는 실행 구간이 됩니다(`TaskManager::setProfileHook` — Tracy 를 켜면 Engine 이 꽂습니다).
 - 끝날 때까지 기다리기만 할 병렬 for 라면 스테이지 대신 `runParallel` 이 더 쌉니다(노드 · 스테이지 · 힙 없이 호출 스레드가 함께 돕니다).
 
 ### 6) 메인 스레드 전용 작업

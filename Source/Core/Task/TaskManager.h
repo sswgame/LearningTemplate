@@ -135,6 +135,8 @@ namespace sw
          * @details 이름으로 찾는 스테이지는 두지 않습니다. 스테이지를 나눠 쓰려면 핸들을 복사해 건네십시오.
          */
         TaskStageHandle createStage();
+        /** @brief 이름 붙은 스테이지를 만듭니다. 이름은 디버거 · 프로파일러(스테이지 대기 구간)가 봅니다(Shipping 에서는 버립니다). */
+        TaskStageHandle createStage( string_view debugName );
 
         /** @brief 스테이지에 속한 모든 태스크가 끝날 때까지 호출 스레드를 막고 기다립니다(기다리는 동안 다른 일을 돕습니다). */
         void waitStage( const TaskStageHandle& stage );
@@ -237,6 +239,13 @@ namespace sw
          *          두 스레드가 마지막 칸을 나눠 써 **스크래치 벡터가 겹치고**(힙 손상) 깨우기 하나가 엉뚱한 스레드로 갑니다.
          */
         void releaseCurrentThreadHelperSlot();
+#if !defined( SW_SHIPPING )
+        /**
+         * @brief 태스크 실행 · 스테이지 대기 구간을 내보낼 곳을 꽂습니다(nullptr 이면 뗍니다). 프로세스의 모든 매니저가 함께 씁니다.
+         * @details @p pHook 은 프로세스 끝까지 살아 있어야 합니다(실행 중인 태스크가 읽고 있을 수 있다). 꽂혀 있지 않으면 태스크마다 원자 읽기 하나가 비용의 전부입니다.
+         */
+        static void setProfileHook( const TaskProfileHook* pHook );
+#endif
         /** @brief 워커가 아니면서 태스크를 실행할 수 있는 스레드의 상한입니다(메인 · 렌더 · 로더 · 업로드 · 에디터 등). */
         static constexpr uint32 kMaxHelperThreadCount = 8;
 

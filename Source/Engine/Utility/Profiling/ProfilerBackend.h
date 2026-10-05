@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Utility/Profiling/IProfilerBackend.h"
 
@@ -70,6 +71,10 @@ namespace sw
          * @note @p pBackend 는 그것으로 열린 마지막 구간이 닫힐 때까지 살아 있어야 합니다(구간은 연 출력으로 닫는다).
          */
         static void setActiveBackend( IProfilerBackend* pBackend );
+#if SW_PROFILER_BACKEND_COMPILED
+        /** @brief Tracy 가 켜질 때 `TaskManager::setProfileHook` 에 꽂는 훅입니다(시험이 같은 것을 꽂는다). 태스크 · 스테이지 이름이 구간 이름이 됩니다. */
+        static const TaskProfileHook* getTaskProfileHook();
+#endif
 
         /**
          * @brief 계측 지점 하나를 등록하고 프로세스 수명 주소를 돌려줍니다. 같은 (이름 · 파일 · 줄)이면 같은 주소입니다.

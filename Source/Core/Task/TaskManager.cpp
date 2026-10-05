@@ -28,6 +28,10 @@ namespace sw
         /// @brief 매니저 인스턴스 번호를 나눠 주는 카운터입니다(0 은 "없음").
         atomic<uint32>         s_nextInstanceId{ 1 };
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드
+#if !defined( SW_SHIPPING )
+        /// @brief 태스크 · 스테이지 대기 구간을 내보낼 곳입니다(`TaskManager::setProfileHook`). 없으면 nullptr.
+        atomic<const TaskProfileHook*> s_pProfileHook{ nullptr };
+#endif
 
         /// @brief 대기 함수(waitStage/waitAll/runParallel)가 잠들기 전에 도는 `cpuPause` 횟수(약 2 us)입니다. 기다리는 동안에는 다른 일을 돕습니다.
         constexpr uint32 kIdleSpinCount = 64;
@@ -765,16 +769,43 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 5) 스테이지
     // ------------------------------------------------------------------------------
+#if !defined( SW_SHIPPING )
+    void TaskManager::setProfileHook( const TaskProfileHook* pHook )
+    {
+        s_pProfileHook.store( pHook, std::memory_order_release );
+    }
+#endif
+
     TaskStageHandle TaskManager::createStage()
     {
+        return createStage( string_view{} );
+    }
+
+    TaskStageHandle TaskManager::createStage( [[maybe_unused]] string_view debugName )
+    {
         // 풀에서 가져온다. 프레임마다 레벨 수만큼 만드는 곳이라 힙을 쓰면 그 수만큼 할당과 해제가 반복된다(churn).
-        return TaskStageHandle{ _nodePool->allocateStage() };
+        StageNode* pStage = _nodePool->allocateStage();
+#if !defined( SW_SHIPPING )
+        copyTaskDebugName( pStage->_arrName, debugName ); // 풀에서 다시 쓰는 노드라 늘 덮어쓴다(빈 이름 포함)
+#endif
+        return TaskStageHandle{ pStage };
     }
 
     void TaskManager::waitStage( const TaskStageHandle& stage )
     {
-        if ( stage._pNode != nullptr )
-            waitForJoin( stage._pNode->_join, true );
+        if ( stage._pNode == nullptr )
+            return;
+#if !defined( SW_SHIPPING )
+        const TaskProfileHook* pHook = s_pProfileHook.load( std::memory_order_acquire );
+        const TaskProfileZone  zone  = ( pHook != nullptr && stage._pNode->_arrName[0] != '\0' && stage._pNode->_join.getPending() > 0 )
+                                         ? pHook->_pBeginZone( stage._pNode->_arrName, TaskProfileZoneKind::WaitStage )
+                                         : TaskProfileZone{};
+#endif
+        waitForJoin( stage._pNode->_join, true );
+#if !defined( SW_SHIPPING )
+        if ( zone._pContext != nullptr )
+            pHook->_pEndZone( zone );
+#endif
     }
 
     bool TaskManager::isStageComplete( const TaskStageHandle& stage )
@@ -976,6 +1007,11 @@ namespace sw
             TaskNode* pPrevRunningTask = t_pCurrentRunningTask;
             t_pCurrentRunningTask      = pNode;
             const ScopedMemoryTag taskMemoryTag{ pNode->_memoryTag };
+#if !defined( SW_SHIPPING )
+            const TaskProfileHook* pHook = s_pProfileHook.load( std::memory_order_acquire );
+            const TaskProfileZone  zone  = ( pHook != nullptr && pNode->_arrName[0] != '\0' ) ? pHook->_pBeginZone( pNode->_arrName, TaskProfileZoneKind::Execute )
+                                                                                              : TaskProfileZone{};
+#endif
 
             BLOCK( "Execute Task Delegate" )
             {
@@ -983,6 +1019,10 @@ namespace sw
                 std::visit( visitor, pNode->_callable );
             }
 
+#if !defined( SW_SHIPPING )
+            if ( zone._pContext != nullptr )
+                pHook->_pEndZone( zone );
+#endif
             t_pCurrentRunningTask = pPrevRunningTask;
         }
 
