@@ -39,15 +39,16 @@ SW_TEST_CASE( ModuleBuildIdTest, ExecutableHasAStableSymbolKey )
 {
     const sw::ModuleBuildId executable = sw::ModuleBuildId::find( nullptr );
     SW_EXPECT_FALSE( executable._modulePath.empty() );
-#if defined( SW_PLATFORM_WINDOWS ) && !defined( SW_SHIPPING )
-    SW_ASSERT_TRUE_MSG( executable.isValid(), "the Dev test executable is linked with /DEBUG and must carry an RSDS record" );
-    SW_EXPECT_TRUE( executable._id.size() >= 33 );
+    // 모든 구성이 서명을 적는다 — Windows 는 /DEBUG 의 PE CodeView RSDS, 리눅스는 --build-id 의 ELF 노트(cmake/Modules/Compiler/Clang.cmake).
+    SW_ASSERT_TRUE_MSG( executable.isValid(), "every configuration links with a build id (Windows /DEBUG RSDS, Linux --build-id)" );
     SW_EXPECT_TRUE_MSG( ModuleBuildIdTestInternal::isHex( executable._id ), executable._id.c_str() );
+#if defined( SW_PLATFORM_WINDOWS )
+    SW_EXPECT_TRUE( executable._id.size() >= 33 );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::endsWith( executable._debugFile, ".pdb", true ), executable._debugFile.c_str() );
-#else
-    // 링커가 서명 · build-id 를 적지 않았으면 빈 값이다(지금 Shipping 은 /DEBUG 없이 링크한다 — PDB 가 없다).
-    if ( executable.isValid() )
-        SW_EXPECT_TRUE_MSG( ModuleBuildIdTestInternal::isHex( executable._id ), executable._id.c_str() );
+    #if defined( SW_RELEASE )
+    // Release 는 PDB 이름만 적는다(/PDBALTPATH:%_PDB%) — 빌드 기계의 경로가 배포물에 새지 않는다.
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::getFileNamePart( executable._debugFile ) == executable._debugFile, executable._debugFile.c_str() );
+    #endif
 #endif
     // 이 함수의 주소도 실행 파일 안이다(Core 는 시험 실행 파일에 들어 있다).
     const sw::ModuleBuildId self = sw::ModuleBuildId::find( reinterpret_cast<const void*>( &ModuleBuildIdTestInternal::isHex ) );

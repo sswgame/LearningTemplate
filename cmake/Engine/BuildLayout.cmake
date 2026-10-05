@@ -18,6 +18,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Lib")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Lib")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Lib")
+# Shipping 의 링크 PDB 는 배포 폴더(Bin) 밖 `Symbols/` 에 둔다 — 심볼 저장소에는 `py -3 -m Scripts symbols` 가 넣는다. 시험 실행 파일은
+# TestBin 옆에 둔다(`sw_addTestExecutable` — 크래시 스택이 이름을 낸다). Dev(Release 포함)는 실행 파일 옆(디버거 · 핫 리로드가 그 자리에서 찾는다).
+if(SW_SHIPPING_BUILD)
+	set(CMAKE_PDB_OUTPUT_DIRECTORY "${sw_output_directory}/Symbols")
+	set(CMAKE_PDB_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Symbols")
+endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/Resource")
 	install(DIRECTORY "${CMAKE_SOURCE_DIR}/Resource" DESTINATION .)

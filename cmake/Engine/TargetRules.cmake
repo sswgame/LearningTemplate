@@ -595,6 +595,26 @@ endfunction()
 #   RUN_SERIAL    다른 테스트와 겹치면 안 되는 실행 파일(같은 파일 · 같은 장치를 쓰는 경우). **지금 쓰는 타겟은 없다.**
 #                 쓸 때는 그 이유를 옆에 적는다.
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# sw_splitShippingDebugInfo — 리눅스 Shipping: 디버그 정보를 `Symbols/<이름>.debug` 로 떼고 실행 파일에는 `.gnu_debuglink` 만 남긴다
+#   (배포물에 정보가 실리지 않는다). Windows 는 PDB 가 원래 따로다(`CMAKE_PDB_OUTPUT_DIRECTORY`).
+# ------------------------------------------------------------------------------
+function(sw_splitShippingDebugInfo TARGET_NAME)
+	if(NOT SW_SHIPPING_BUILD OR WIN32 OR SW_RELEASE_DEBUG_INFO STREQUAL "none")
+		return()
+	endif()
+	if(NOT CMAKE_OBJCOPY)
+		message(FATAL_ERROR "sw_splitShippingDebugInfo(${TARGET_NAME}): CMAKE_OBJCOPY is not set - install llvm-objcopy or binutils")
+	endif()
+	set(symbolsDir "${sw_output_directory}/Symbols")
+	add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${symbolsDir}"
+		COMMAND ${CMAKE_OBJCOPY} --only-keep-debug "$<TARGET_FILE:${TARGET_NAME}>" "${symbolsDir}/$<TARGET_FILE_NAME:${TARGET_NAME}>.debug"
+		COMMAND ${CMAKE_OBJCOPY} --strip-debug "--add-gnu-debuglink=${symbolsDir}/$<TARGET_FILE_NAME:${TARGET_NAME}>.debug" "$<TARGET_FILE:${TARGET_NAME}>"
+		COMMENT "Splitting debug info of ${TARGET_NAME} into Symbols/"
+		VERBATIM)
+endfunction()
+
 function(sw_addTestExecutable TARGET_NAME)
 	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT;SHARDS;HOST_SHARDS" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
 	if(ARG_HOST_SHARDS AND NOT ARG_HOST_SPLIT)
@@ -614,10 +634,13 @@ function(sw_addTestExecutable TARGET_NAME)
 	# 작업 폴더는 그래도 `Bin` 이다(`sw_registerTestRun`).
 	if(SW_SHIPPING_BUILD)
 		set(testOutputDir "${sw_output_directory}/TestBin")
+		# PDB 도 실행 파일 옆 — 시험은 배포물이 아니고, 크래시 핸들러의 스택(DbgHelp)이 실행 파일 폴더에서 PDB 를 찾는다.
 		set_target_properties(${TARGET_NAME} PROPERTIES
 			RUNTIME_OUTPUT_DIRECTORY "${testOutputDir}"
 			RUNTIME_OUTPUT_DIRECTORY_DEBUG "${testOutputDir}"
 			RUNTIME_OUTPUT_DIRECTORY_RELEASE "${testOutputDir}"
+			PDB_OUTPUT_DIRECTORY "${testOutputDir}"
+			PDB_OUTPUT_DIRECTORY_RELEASE "${testOutputDir}"
 		)
 	endif()
 

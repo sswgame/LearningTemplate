@@ -62,6 +62,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("golden", "qa.GoldenImages", "시험 게임 자동 플레이를 네 백엔드로 그려 골든 이미지와 지표로 견준다"),
     Subcommand("soak", "qa.Soak", "자동 플레이 장시간 실행 — 메모리 · 핸들 증가와 프레임 p99"),
     Subcommand("perf", "qa.PerfRegression", "Release 프레임 p50 · p99 를 이 기계의 기준과 견준다"),
+    Subcommand("symbols", "dev.StoreSymbols", "빌드의 심볼(PDB · .debug)을 심볼 저장소 배치로 복사"),
     Subcommand("defender", "setup.AddDefenderExclusions", "Windows Defender 빌드 디렉터리 제외 등록",
                bForwardArgs=False),
 )

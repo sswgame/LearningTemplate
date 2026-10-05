@@ -421,10 +421,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
 
-- **Shipping 은 심볼 없이 링크한다(/DEBUG · PDB 없음).** 그래서 배포본 크래시 묶음의 `buildId` 가 비고(덤프의 모듈에 RSDS 서명이 없다) 덤프를 심볼과 짝지을
-  수 없다. 상용 엔진처럼 Shipping 도 `/Z7`(또는 `/Zi`) + `/DEBUG:FULL` 로 PDB 를 만들고 패키지에서는 빼서 심볼 저장소에 넣는 단계가 필요하다
-  (`Source/Engine/Telemetry/README.md` "심볼 · 빌드 id 짝짓기"). 빌드 시간 · 캐시에 닿는 결정이라 미뤘다 — 정하면 `ModuleBuildIdTest` · `CrashBundleTest` 의
-  `SW_SHIPPING` 예외를 지운다.
 - **커버리지 안내 퍼징(libFuzzer)은 Windows 에서 엔진과 링크되지 않는다** — `clang_rt.fuzzer-x86_64.lib` 가 정적 CRT(/MT)뿐이라 동적 CRT(/MD) 엔진과 LNK2038.
   `LoaderFuzzTest`(시드 고정 변이)가 같은 대상 표(`Test/EngineTest/LoaderFuzzTargets.cpp`)를 돈다. 리눅스 clang 에서 `LLVMFuzzerTestOneInput` 하나로 그 표를 붙이고
   ASan 과 같이 돌린다(서드파티 디코더만 떼어 /MT 로 돌리면 Windows 에서도 된다 — stb_vorbis 를 그렇게 확인했다).
@@ -570,7 +566,7 @@ cd build/Ninja-Debug/Bin
 - **성능은 Release 로 잰다.** Debug 는 레이스 검출기 · 이터레이터 프록시로 컨테이너 코드를 과장한다(668 vs 87 us). 이전 · 이후 바이너리를 같은 스크립트로
   **번갈아** 2~3 회 잰다(`git stash -u` → 빌드 → 복사 → `stash pop` → 빌드). 아침 기준선과 오후 결과를 견주면 기계 상태가 결과로 읽힌다.
 - **측정 기계**: i5-8500(6 코어 6 스레드). 게임 · 렌더 스레드 + 워커 넷이 코어를 나눠, 나눠도 벽시계가 잘 안 준다 — 틱이 쓰는 CPU 총량이 벽시계를 정한다.
-  프로파일러가 없으면 `build/Ninja-Release-Prof`(Release+PDB, 프리셋 아님) + 외부 DbgHelp 샘플러. ICF 로 함수가 남의 이름으로 보인다.
+  프로파일러가 없으면 `Ninja-Release`(PDB 있음 — 줄 표) + 외부 DbgHelp 샘플러. ICF 로 함수가 남의 이름으로 보인다.
 - **표 읽기.** 열은 avg · p50 · p99 · min · max · per_frame 이고 카운터 값은 per_frame 열에 있다(시간 열 0 을 "죽은 경로" 로 읽지 말 것). 평균이 히치를 가린다 —
   p50 · p99 · 최악 프레임을 본다. 백분위는 옥타브 × 8 칸 히스토그램의 아래 끝(±9 %)이다. 구간 표는 스레드마다 **일한 시간**이고, 프레임이 빨라졌는지는
   `[Profile] wall N frames … us/frame` 와 `startup N ms` 로 본다. 중첩 합이 바깥보다 크면 표부터 의심한다.
@@ -873,6 +869,11 @@ cd build/Ninja-Debug/Bin
   역직렬화되지 않으면 기동을 실패시킨다.
 - **CI 실패는 `Scripts/dev/CiFailureReport.py` 가 주석으로 올린다**(시험 · 구성 실패의 vcpkg 포트 로그 · 크래시 스택 `Bin/Saved/Logs/crash_*.stack.txt`).
   작업 로그 · 아티팩트는 관리자 전용(API 403)이라 밖에서는 주석만 보인다.
+- **Release · Shipping 도 서명 · 심볼을 만든다**(`SW_RELEASE_DEBUG_INFO`, 기본 `lines` = `-gline-tables-only`, `full` = `/Z7`) — 링크 `/DEBUG:FULL` + `/OPT:REF` · `/OPT:ICF`
+  (`/DEBUG` 가 끄므로 다시) · `/PDBALTPATH:%_PDB%`, 리눅스 `--build-id=sha1`. Shipping PDB 는 `Symbols/`(배포 폴더 밖, 시험 실행 파일 PDB 는 `TestBin`), 저장소 배치는
+  `py -3 -m Scripts symbols`. PDB 이름만 적으므로 크래시 스택(DbgHelp)은 실행 파일 폴더를 검색 경로에 더한다(`WindowsCallStackCapture`). 측정(2026-10-06,
+  Windows Shipping 전체 빌드, 기계 공유 중): 오브젝트 합 146 → 262 MB, `Bin` 29.6 MB 그대로(App.exe 크기 같음), `TestBin` 81 → 257 MB(시험 PDB), `Symbols` 31.5 MB,
+  링크 App 26.7 → 30.5 s · EngineTest 68.6 → 79.9 s, 전체 빌드 벽시계는 기계 부하에 묻혀 차이 없음(7.6 · 6.8 분).
 
 ### 3-5. 직렬화 · 리플렉션 · 파서
 

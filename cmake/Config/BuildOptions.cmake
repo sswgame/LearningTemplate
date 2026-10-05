@@ -69,6 +69,13 @@ option(SW_ENABLE_DEADLOCK_DETECTION "sw::Mutex 잠금 순서를 실시간 추적
 option(SW_ENABLE_LTO "Shipping 배포 빌드 시 ThinLTO(링크 타임 최적화) 활성화" ON)
 option(SW_ENABLE_STL_CONTAINER "엔진 커스텀 할당자 대신 std::allocator를 사용하도록 설정" OFF)
 option(SW_ENABLE_TIME_TRACE "Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력)" OFF)
+# Release · Shipping 의 디버그 정보 — lines(함수 · 줄 표만: 크래시 스택이 이름 · 줄을 낸다) | full(지역 변수까지, 오브젝트 · 캐시 · 링크가 크게 는다) | none.
+# 링크는 어느 값이든 서명(Windows RSDS · 리눅스 build-id)을 적는다 — 덤프를 그 빌드의 심볼과 짝짓는 열쇠다.
+set(SW_RELEASE_DEBUG_INFO "lines" CACHE STRING "Release/Shipping debug info: lines | full | none")
+set_property(CACHE SW_RELEASE_DEBUG_INFO PROPERTY STRINGS lines full none)
+if(NOT SW_RELEASE_DEBUG_INFO MATCHES "^(lines|full|none)$")
+	message(FATAL_ERROR "SW_RELEASE_DEBUG_INFO must be lines, full or none (got '${SW_RELEASE_DEBUG_INFO}')")
+endif()
 
 # Tracy 프로파일러 클라이언트(엔진 프로파일러의 두 번째 출력, Source/Engine/Utility/Profiling). Shipping 은 언제나 뺀다.
 # Windows 는 TracyClient.dll 을 지연 로드한다 — `-gv_tracy` 로 켜기 전에는 DLL 도, 수집 스레드도 없다.
