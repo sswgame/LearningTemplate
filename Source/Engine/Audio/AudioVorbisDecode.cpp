@@ -150,25 +150,53 @@ namespace sw
         if ( OggCommentHeaderGuard::isCommentHeaderSane( pBytes, byteCount ) == false )
             return false;
 
-        int32  channelCount = 0;
-        int32  sampleRate   = 0;
-        int16* pSample      = nullptr;
-        // 반환은 채널당 샘플 수다. 음수는 실패이고, 그때 stb 는 버퍼를 잡지 않는다.
-        const int32 frameCount = stb_vorbis_decode_memory( pBytes, static_cast<int32>( byteCount ), &channelCount, &sampleRate, &pSample );
-        if ( frameCount <= 0 || pSample == nullptr || channelCount <= 0 || sampleRate <= 0 )
+        // 디코더 메모리를 우리 버퍼 한 덩어리에서 나눠 준다(`stb_vorbis_alloc`). stb 는 깨진 헤더의 오류 길에서 `setup_temp_malloc` 으로 잡은
+        // 임시 버퍼를 놓지 않는데(변이 Ogg 로 재현), 우리 버퍼 안이면 함께 버려진다. 모자라면(VORBIS_outofmem) 두 배로 다시 열고, 상한을 넘으면
+        // 실패다 — 조작한 헤더가 수백 MB 를 요구하는 길도 여기서 막힌다.
+        constexpr size_t kInitialArenaBytes = 256 * 1024;
+        constexpr size_t kMaxArenaBytes     = 64 * 1024 * 1024;
+        vector<uint8>    listArena;
+        stb_vorbis*      pVorbis = nullptr;
+        for ( size_t arenaBytes = kInitialArenaBytes; arenaBytes <= kMaxArenaBytes; arenaBytes *= 2 )
         {
-            free( pSample );
+            listArena.resize( arenaBytes );
+            stb_vorbis_alloc alloc{ reinterpret_cast<utf8*>( listArena.data() ), static_cast<int32>( arenaBytes ) };
+            int32            error = VORBIS__no_error;
+            pVorbis                = stb_vorbis_open_memory( pBytes, static_cast<int32>( byteCount ), &error, &alloc );
+            if ( pVorbis != nullptr || error != VORBIS_outofmem )
+                break;
+        }
+        if ( pVorbis == nullptr )
+            return false;
+
+        const stb_vorbis_info info = stb_vorbis_get_info( pVorbis );
+        if ( info.channels <= 0 || info.sample_rate == 0 )
+        {
+            stb_vorbis_close( pVorbis );
             return false;
         }
 
+        // stb_vorbis_decode_memory 와 같은 길 — 채널을 섞어 짧은 정수로 끝까지 읽는다.
+        constexpr int32 kChunkFrames = 4096;
+        vector<int16>   listSample;
+        vector<int16>   listChunk( static_cast<size_t>( kChunkFrames ) * static_cast<size_t>( info.channels ) );
+        for ( ;; )
+        {
+            const int32 frameCount = stb_vorbis_get_samples_short_interleaved( pVorbis, info.channels, listChunk.data(), static_cast<int32>( listChunk.size() ) );
+            if ( frameCount <= 0 )
+                break;
+            listSample.insert( listSample.end(), listChunk.begin(), listChunk.begin() + static_cast<ptrdiff_t>( frameCount ) * info.channels );
+        }
+        stb_vorbis_close( pVorbis );
+        if ( listSample.empty() )
+            return false;
+
         AudioPcm pcm;
-        pcm._channelCount     = static_cast<uint16>( channelCount );
-        pcm._sampleRate       = static_cast<uint32>( sampleRate );
-        pcm._bitsPerSample    = 16;
-        const size_t byteSize = static_cast<size_t>( frameCount ) * static_cast<size_t>( channelCount ) * sizeof( int16 );
-        const uint8* pBegin   = reinterpret_cast<const uint8*>( pSample );
-        pcm._listData.assign( pBegin, pBegin + byteSize );
-        free( pSample );
+        pcm._channelCount   = static_cast<uint16>( info.channels );
+        pcm._sampleRate     = info.sample_rate;
+        pcm._bitsPerSample  = 16;
+        const uint8* pBegin = reinterpret_cast<const uint8*>( listSample.data() );
+        pcm._listData.assign( pBegin, pBegin + listSample.size() * sizeof( int16 ) );
         outPcm = std::move( pcm );
         return true;
     }

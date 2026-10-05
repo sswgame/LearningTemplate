@@ -16,15 +16,6 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 로드 한 번의 단계 시간 합(`AssetLoadRecord::computeTotalNanos` 는 Engine 밖으로 내보내지 않는다). */
-    uint64 sumAssetLoadPhases( const AssetLoadRecord& record )
-    {
-        uint64 total = 0;
-        for ( const uint64 nanos : record._arrPhaseNanos )
-            total += nanos;
-        return total;
-    }
-
     /** @brief 단계 하나가 잴 만큼 걸리게 합니다 — 잠들기는 타이머 단위(15 ms)로 늘어나 순서가 흔들리므로 시계를 보며 돈다. */
     void spendAssetLoadPhase( int32 milliseconds )
     {
@@ -94,11 +85,11 @@ SW_TEST_CASE( AssetLoadProfilerTest, ScopesSplitPhasesAndAggregatePerKind )
     vector<AssetLoadRecord> listSlowest;
     profiler.collectSlowest( listSlowest );
     SW_ASSERT_EQUAL( size_t( 3 ), listSlowest.size() );
-    // 느린 순이다. 시계를 보며 도는 시간도 부하에서 선점돼 늘어나므로(ctest -j 8 에서 5 ms 짜리가 26 ms 를 넘었다) 어느 것이 첫째인지가 아니라
-    // 순서를 본다 — 돌지 않은 broken.dds 가 끝이다.
-    SW_EXPECT_TRUE( sumAssetLoadPhases( listSlowest[0] ) >= sumAssetLoadPhases( listSlowest[1] ) );
-    SW_EXPECT_TRUE( sumAssetLoadPhases( listSlowest[1] ) >= sumAssetLoadPhases( listSlowest[2] ) );
-    SW_EXPECT_STREQ( "probe/broken.dds", listSlowest[2]._path.c_str() );
+    // 순서는 **잰 시간**으로 본다. 26 ms > 5 ms > 0 은 바쁜 기계(CI 의 -j 4, 낮은 우선순위)에서 5 ms 쪽이 선점돼 뒤집힐 수 있다 — 기록 순서
+    // (5 ms · 0 · 26 ms)가 그대로 나오면 이 검사가 진다.
+    SW_EXPECT_TRUE( listSlowest[0].computeTotalNanos() >= listSlowest[1].computeTotalNanos() );
+    SW_EXPECT_TRUE( listSlowest[1].computeTotalNanos() >= listSlowest[2].computeTotalNanos() );
+    SW_EXPECT_TRUE( listSlowest[0].computeTotalNanos() >= 25'000'000u ); // 가장 느린 것은 적어도 워커의 26 ms
     profiler.report( "AssetLoadProfilerTest" );
 
     // 끄면 모으지 않는다.

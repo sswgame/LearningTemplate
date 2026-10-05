@@ -26,7 +26,11 @@ namespace sw
             };
 
             /** @brief 최소 거리 격자의 칸 키입니다. 칸 크기가 최소 거리 / √2 라 칸 하나에 점은 많아야 하나입니다. */
-            static int64 makeCellKey( int32 cellU, int32 cellV ) { return ( static_cast<int64>( cellU ) << 32 ) ^ static_cast<int64>( static_cast<uint32>( cellV ) ); }
+            static int64 makeCellKey( int32 cellU, int32 cellV )
+            {
+                // 음수 칸(-1 …)을 부호 있는 채로 밀면 정의되지 않은 동작이다 — 부호 없는 32 비트로 바꿔 민다(값은 같다).
+                return static_cast<int64>( ( static_cast<uint64>( static_cast<uint32>( cellU ) ) << 32 ) | static_cast<uint64>( static_cast<uint32>( cellV ) ) );
+            }
 
             /** @brief @p position 에서 @p minDistance 안에 이미 놓인 점이 있으면 true 입니다. 칸 반경 2 까지 봅니다. */
             static bool isTooClose( const unordered_map<int64, int32>& mapCellToPoint, const vector<float2>& listPoint, const float2& position,

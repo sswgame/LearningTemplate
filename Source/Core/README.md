@@ -6,7 +6,9 @@
 ## 디렉터리
 - **Common/**: `Types.h` · `Macros.h` · `Defines.h`(버퍼 크기 상수) · `StdHeaders.h` · `PlatformOsHeaders.h` · `EnumUtil.h`(비트플래그 연산자) · `BitFlagTrait.h`(`IsBitFlagEnum` 기본 템플릿만 — 강제 include 되는 생성 `*.gen.h` 가 이것만 든다) · `VarIntUtil.h`(LEB128 · ZigZag) ·
   `BuildInfo.h`(`sw::build::kConfigName` · `kPlatformName` — 값은 CMake 가 정한다) · `TopologicalSortUtil`(의존 위상 정렬 — 동점은 이름 순, 순환 경로 찾기. 엔진 기동 단계 · 모듈 적재 순서가 함께 쓴다) · `TargetMacroCheck.h`(아래 "타깃 매크로") ·
-  `X11MacroUndef.h`(Xlib · GLX 를 포함한 바로 뒤에 다시 include)
+  `X11Headers.h`(Xlib 기본 헤더 + 매크로 지우기 — **X11 을 쓰는 `.cpp` 에서만** include 한다. `PlatformOsHeaders.h` 는 PCH 를 거쳐 모든 TU 에 들어가므로
+  X11 을 넣지 않는다 — `Convex` · `None` 같은 매크로가 서드파티 헤더를 덮는다(`CheckX11Isolation.py`, 유니티 묶음에서도 그 `.cpp` 는 뺀다) ·
+  `X11MacroUndef.h`(Xlib · GLX · XKB 를 더 포함한 바로 뒤에 다시 include)
 - **Predefined/**: 엔진과 ReflectionParser 가 함께 include 하는 X-매크로 표(`*.xxx` — 명령줄 인자 · 고정 이름 · 컨테이너 종류 · 애노테이션 종류)와 `AnnotationMeta.txt`
 - **Memory/**: `Memory`(`allocateAligned` · 바이트 유틸) · `sw_new` / `sw_delete` · `sw_new_array` / `sw_delete_array` · `make_unique<T>` / `make_unique<T[]>`(`Memory.h`) ·
   `MemoryTag`(아래 "메모리 태그") · `LinearAllocator` · `FrameArenaAllocator`(+ `FrameDoubleBuffer`) · `PoolAllocator` · `MemoryProfiler`(태그별 통계 · 콜스택 · 누수 검사) ·

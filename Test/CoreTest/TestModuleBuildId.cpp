@@ -7,7 +7,9 @@
 
 #include "TestFramework/TestFramework.h"
 
-#include <cstdio>
+#if defined( SW_PLATFORM_LINUX )
+    #include <gnu/libc-version.h>
+#endif
 
 // 모듈 빌드 id — 실행 파일과 다른 모듈(OS 라이브러리)의 빌드 id 를 올라온 이미지에서 읽는다. 심볼 서버 열쇠의 모양(16진)을 지킨다.
 
@@ -65,7 +67,9 @@ SW_TEST_CASE( ModuleBuildIdTest, AddressInsideAnotherModuleNamesThatModule )
     SW_EXPECT_TRUE( system._id != executable._id );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( system._modulePath, ".dll", true ), system._modulePath.c_str() );
 #else
-    const sw::ModuleBuildId system = sw::ModuleBuildId::find( reinterpret_cast<const void*>( &std::fflush ) );
+    // libc 함수 중 새니타이저가 가로채지 않는 것을 고른다 — ASan · TSan 은 fflush · malloc 같은 함수를 실행 파일에 정적으로 든 런타임에서
+    // 가로채므로, 그 주소는 libc 가 아니라 실행 파일 안이다.
+    const sw::ModuleBuildId system = sw::ModuleBuildId::find( reinterpret_cast<const void*>( &gnu_get_libc_version ) );
     SW_EXPECT_FALSE( system._modulePath.empty() );
     SW_EXPECT_FALSE( sw::FileUtil::pathsEqualNormalized( system._modulePath, executable._modulePath ) );
 #endif

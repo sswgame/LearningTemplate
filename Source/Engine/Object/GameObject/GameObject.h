@@ -413,8 +413,7 @@ namespace sw
         if ( isComponentMutationFrozen() )
         {
             // 틱 중이다. 인자를 값으로 싸 두었다가 틱 뒤에 자기 자신에게 다시 부른다. 그 사이 죽었으면 아무 일도 없다.
-            auto packedArgs = std::make_tuple( std::decay_t<Args>( std::forward<Args>( args ) )... );
-            deferOnSelfStructural( Delegate<void( GameObject& )>( [packedArgs = std::move( packedArgs )]( GameObject& self ) mutable
+            deferOnSelfStructural( Delegate<void( GameObject& )>( [packedArgs = std::make_tuple( std::decay_t<Args>( std::forward<Args>( args ) )... )]( GameObject& self ) mutable
             {
                 std::apply( [&self]( auto&&... forwarded )
                 { self.addComponent<T>( std::forward<decltype( forwarded )>( forwarded )... ); },

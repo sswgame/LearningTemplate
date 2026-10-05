@@ -3,16 +3,13 @@
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
 #if defined( SW_PLATFORM_LINUX )
+    #include "Core/Common/X11Headers.h"
     #include "Core/Time/GameTimer.h"
 
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
 
     #include <imgui.h>
-    #include <X11/Xatom.h>
-    #include <X11/keysym.h>
-
-    #include "Core/Common/X11MacroUndef.h"
 
 namespace sw::editor
 {

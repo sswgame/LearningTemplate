@@ -4,6 +4,10 @@
 
 #include "Engine/Window/NativeWindowEvent.h"
 
+#if defined( SW_PLATFORM_LINUX )
+    #include "Core/Common/X11Headers.h"
+#endif
+
 namespace sw
 {
     SW_LOG_CALLER( "X11Window" );

@@ -12,10 +12,14 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include <vulkan/vulkan_win32.h>
 #elif defined( SW_PLATFORM_LINUX )
+    #include "Core/Common/X11Headers.h"
+
     #include <X11/Xlib-xcb.h>
     #include <vulkan/vulkan_xcb.h>
     #include <vulkan/vulkan_xlib.h>
     #include <xcb/xcb.h>
+
+    #include "Core/Common/X11MacroUndef.h"
 #endif
 
 namespace sw::editor

@@ -18,6 +18,30 @@ namespace sw
         {
             /** @brief json 의 문자열 타입입니다. 키 · 문자열 값 · `dump` 결과가 sw 할당자를 지납니다. */
             using JsonString = std::basic_string<utf8, std::char_traits<utf8>, Allocator<utf8>>;
+
+            /** @brief 실수를 정수 범위로 잘라 바꿉니다. 범위 밖 실수를 그대로 `static_cast` 하면 정의되지 않은 동작입니다(`1e20` → int64). NaN 은 @p fallback 입니다. */
+            static int64 toInt64Saturated( float64 value, int64 fallback )
+            {
+                if ( value != value )
+                    return fallback;
+                if ( value >= static_cast<float64>( std::numeric_limits<int64>::max() ) )
+                    return std::numeric_limits<int64>::max();
+                if ( value <= static_cast<float64>( std::numeric_limits<int64>::min() ) )
+                    return std::numeric_limits<int64>::min();
+                return static_cast<int64>( value );
+            }
+
+            /** @brief 위와 같되 부호 없는 범위입니다(음수는 0). */
+            static uint64 toUint64Saturated( float64 value, uint64 fallback )
+            {
+                if ( value != value )
+                    return fallback;
+                if ( value >= static_cast<float64>( std::numeric_limits<uint64>::max() ) )
+                    return std::numeric_limits<uint64>::max();
+                if ( value <= 0.0 )
+                    return 0;
+                return static_cast<uint64>( value );
+            }
             /**
              * @brief `nlohmann::ordered_json` 과 같은 모양(키 순서 보존)이되 문자열 · 배열 · 객체 · 이진 값이 sw 할당자를 지나는 json 타입입니다.
              * @details 할당자 인자만 바꾼 것이라 동작은 ordered_json 과 같습니다. nlohmann 을 include 하는 곳은 이 파일 하나입니다.
@@ -200,7 +224,7 @@ namespace sw
         if ( pValue->is_number_integer() )
             return pValue->get<int64>();
         if ( pValue->is_number_float() )
-            return static_cast<int64>( pValue->get<float64>() );
+            return JsonDocumentInternal::toInt64Saturated( pValue->get<float64>(), fallback );
         return fallback;
     }
 
@@ -214,7 +238,7 @@ namespace sw
         if ( pValue->is_number_integer() )
             return static_cast<uint64>( pValue->get<int64>() );
         if ( pValue->is_number_float() )
-            return static_cast<uint64>( pValue->get<float64>() );
+            return JsonDocumentInternal::toUint64Saturated( pValue->get<float64>(), fallback );
         return fallback;
     }
 

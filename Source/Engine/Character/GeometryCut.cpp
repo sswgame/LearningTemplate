@@ -295,7 +295,7 @@ namespace sw
             {
                 if ( mapVisited.find( current ) != mapVisited.end() )
                     break;
-                mapVisited.emplace( current, SW_TRUE );
+                mapVisited.emplace( current, static_cast<uint8>( SW_TRUE ) );
                 listLoopVertex.push_back( current );
                 const auto next = mapNext.find( current );
                 if ( next == mapNext.end() )
