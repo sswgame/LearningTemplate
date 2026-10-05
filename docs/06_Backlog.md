@@ -456,11 +456,7 @@ cd build/Ninja-Debug/Bin
 - **`GpuInstance` 96 → 128 B(VAT 위상 · `pixelSnap` 칸)의 비용을 재지 않았다.**
 - **조건부 후보 묶음.** 병렬 틱 문턱의 교차점 · GameObject 레이아웃 · 적응형 틱 문턱 · 스폰 비용(~1.1 us, 잠금 여섯) · 시퀀서 성능 수치. TickItem 인라인
   재시도는 오브젝트의 틱 부기 49 B 를 먼저 줄여야 한다. 측정해서 이기면 한다.
-- **Core 에서 미룬 결정.** 전역 소형 블록 할당자(프레임당 할당이 0 근처가 된 뒤 로드 시간으로 판단 — 지금 ~10 회/프레임).
-- **필드 재배치로 8 B 이상 줄일 수 있는 타입이 남아 있다**(`RunPaddingReport.py` 로 보고만 함). 많이 만들어지는 것: GameObject 200→192, Mesh 112→104,
-  MaterialInstance · Material · InputMap::ActionEntry 16, MaterialProperty · ShaderBindingSlot · InlineSuccessorList · GlobalVariableInfo/Registrar 8. 싱글턴(InputManager ·
-  Logger 64 등)은 이득이 작다. PROPERTY 필드는 직렬화 순서라 옮기지 않는다. 위치 초기화 표(EditorAssetTypeInfo · AssetMatchRow · CommandRow)는 모든 행을 같이 바꿔야 한다.
-  FrameRenderer 진단 세터(`setMeshMorphDiag` · `setDrawMergeEnabled` · `setVertexPoolEnabled`)는 Shipping 제외 후보.
+- **FrameRenderer 진단 세터**(`setMeshMorphDiag` · `setDrawMergeEnabled` · `setVertexPoolEnabled`)는 Shipping 제외 후보.
 - **ReflectionParser 강제 include PCH**(`CoreMinimal.h` 를 PCH 로 — 타깃당 ~0.4 s). 캐시 위치 · 무효화가 필요하다. 값이 작아 보류.
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
@@ -1625,6 +1621,13 @@ cd build/Ninja-Debug/Bin
 - **히치**: 펜스 시그널을 Present 앞으로 · 백버퍼 수 · 인라인/즉시 제출 — 분포가 그대로였다. 어댑터 강제 선택은 A/B 로 악화.
 - **틱 · 오브젝트**: 인라인 `TickItem`(GameObject 192 → 232 B), 적용 단계를 틱에 합치기(칸당 +124 B), 회전 사원수 캐시(+28 B), 축별 sin/cos 건너뛰기(18.0 → 18.7 ns), 쓰기 정렬의
   `id % 버킷`(150 → 450 us) · 키를 건에 넣기(64 → 80 B), 오브젝트 id 표 2 단 디렉터리(1 억 스폰이면 800 MB) · 늘 견주기(5.6 → 6.4 ns), 엔티티당 XML 재파싱 구조 변경(2 ms 뿐).
+- **패딩 재배치 나머지**(2026-10-06, `RunPaddingReport --preset Ninja-Release --min-saving 8` 69 개): GameObject(168 → 160, 풀 칸 176 → 160)만 했다. 나머지는 인스턴스가
+  적거나 나눠 쓴다 — Material · MaterialInstance 16 B(캐시 · `MaterialTintCache` · 스프라이트 공유, 수백 개 이하), Mesh 8 B(`MeshCache` 공유), 컴포넌트(RigidBody 16 · SkeletalMesh 16 ·
+  Camera 8 — PROPERTY 순서 고정), 싱글턴(InputManager 64 · FrameProfiler 8). 수천 개가 만들어지는 타입이 나오면 그것만 한다. 위치 초기화 표(EditorAssetTypeInfo ·
+  AssetMatchRow · CommandRow)는 모든 행을 같이 바꿔야 한다.
+- **전역 소형 블록 할당자**(2026-10-06): Release 프레임당 sw 할당 7.7 회(120 프레임 × 3) — 회당 ~100 ns 로 잡아도 프레임당 1 us 아래. 기동(Release 856~1207 ms)의
+  sw 할당은 Debug 기준 상주 블록 8 만 개 — 회당 100 ns 면 8 ms(1 % 아래)라 절반을 줄여도 기동의 0.5 %. 프레임당 할당이 다시 늘거나 큰 맵 로드의 프로파일에서
+  할당이 5 % 를 넘으면 다시 잰다.
 - **파일 시스템을 플랫폼 API 로 다시 짜기**(2026-10-06, Release 스크래치 · 2920 파일): 존재 확인 p50 10.9 vs 10.3 us · 순회 6.5~9.4 vs 7.6~10.0 ms — 시간은 같고
   할당만 준다(존재 확인 1 → 0, 순회 항목당 3.1 → 1.0). 그 할당은 기동 때만이고 상주가 아니다. `Core/File/Std` 로 감싼 뒤(Debug `FileUtilBenchTest`): 존재 확인 호출당 sw 할당자 밖 2 · sw 4
   (구분자 정규화 · UTF-16 변환 문자열), 순회 파일당 밖 2.3 · sw 6.5 — 감싸기 전 밖 1 · 순회 3.1(스크래치). 줄이려면 `toPath` 를 스택 버퍼 변환으로(sw 0).

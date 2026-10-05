@@ -375,6 +375,7 @@ namespace sw
         atomic<bool> _bActive;              ///< 자기 활성 비트
         atomic<bool> _bIsActiveInHierarchy; ///< 계층을 반영한 활성 비트
         atomic<bool> _bIsPendingDestroy;    ///< 삭제 예정(묘비) 표시
+        uint32       _managerIndex;         ///< 저장소(`GameObjectStore`)의 `_listGameObject` 안 인덱스(플래그 뒤 구멍 — 끝에 두면 크기가 8 B 는다)
         /// @brief 이 액터가 소유한 컴포넌트입니다(= `ComponentList`, 인라인 네 칸). 별칭으로 적으면 리플렉션 파서가 컨테이너로 보지 못합니다.
         PROPERTY()
         vector<Component*, InlineAllocator<Component*, 4>> _listComponent;
@@ -392,7 +393,6 @@ namespace sw
         uint32 _tickPrerequisiteCount;
         /** @brief 틱 멤버십이 바뀌어 등록부의 더티 목록에 올라 있는지 나타냅니다(원자: 워커에서 표시합니다). */
         atomic<uint8> _bTickDirty;
-        uint32        _managerIndex; ///< 저장소(`GameObjectStore`)의 `_listGameObject` 안 인덱스
     };
 
     template <typename T, typename... Args>
