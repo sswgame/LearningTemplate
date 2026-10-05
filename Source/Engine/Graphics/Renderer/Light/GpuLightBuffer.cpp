@@ -7,8 +7,8 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw
@@ -21,7 +21,7 @@ namespace sw
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
 
-        const LightRegistry& registry = pScene->getObjectManager()->getLightRegistry();
+        const ComponentRegistry& registry = pScene->getObjectManager()->getComponentRegistry();
         // 그림자 플래그는 그림자 행렬을 만드는 쪽(EngineLoop · FrameRenderer)과 **같은 빛**에 붙어야 한다. 고르는 규칙은 씬의 한 함수다.
         const DirectionalLightComponent* pShadowLight = pScene->findShadowCastingDirectionalLight();
 
@@ -29,7 +29,7 @@ namespace sw
         // (`LightComponent::writeGpuLight`) — 여기는 종류를 모른다. 그림자 플래그만 씬이 고른 빛에 켠다.
         for ( uint32 lightType = 0; lightType < shaderslot::kLightTypeCount; ++lightType )
         {
-            for ( const LightComponent* pLight : registry.getAll( lightType ) )
+            for ( const LightComponent* pLight : registry.getAll<LightComponent>( lightType ) )
             {
                 if ( pLight == nullptr || pLight->isActive() == false )
                     continue;
@@ -43,7 +43,7 @@ namespace sw
         }
 
         // 2D 그림자 가림막 토막은 빛 **뒤에** 붙는다 — 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting2d.hlsli).
-        for ( const ShadowCaster2DComponent* pCaster : registry.getShadowCasters() )
+        for ( const ShadowCaster2DComponent* pCaster : registry.getAll<ShadowCaster2DComponent>() )
         {
             if ( pCaster != nullptr && pCaster->isActive() )
                 pCaster->appendGpuShadowSegments( outList );

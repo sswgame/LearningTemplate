@@ -83,7 +83,7 @@ namespace sw
             {
                 if ( pObjectManager == nullptr )
                     return nullptr;
-                for ( LightComponent* pLight : pObjectManager->getLightRegistry().getAll( shaderslot::kLightTypeDirectional ) )
+                for ( LightComponent* pLight : pObjectManager->getComponentRegistry().getAll<LightComponent>( shaderslot::kLightTypeDirectional ) )
                 {
                     if ( pLight == nullptr || pLight->isActive() == false )
                         continue;
@@ -438,7 +438,7 @@ namespace sw
     /**
      * @brief 지금 켜져 있는 방향광 하나를 반환합니다. 없으면 nullptr 입니다.
      * @details 등록부만 봅니다. 빛의 수에 비례하고 씬 크기와 무관합니다(EngineLoop 이 매 프레임 부르므로 씬을 훑으면 안 된다 —
-     *          `LightRegistry` 설명).
+     *          `ComponentRegistry` 설명).
      */
     DirectionalLightComponent* Scene::findActiveDirectionalLight() const
     {

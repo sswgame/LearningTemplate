@@ -8,9 +8,9 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/2D/TileMapRendererComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/LightRegistry.h"
 
 namespace sw
 {
@@ -23,12 +23,12 @@ namespace sw
     void ShadowCaster2DComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getLightRegistry().addShadowCaster( this );
+        manager.getComponentRegistry().add<ShadowCaster2DComponent>( this );
     }
 
     void ShadowCaster2DComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getLightRegistry().removeShadowCaster( this );
+        manager.getComponentRegistry().remove<ShadowCaster2DComponent>( this );
         Component::onUnregister( manager );
     }
 

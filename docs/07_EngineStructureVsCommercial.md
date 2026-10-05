@@ -71,7 +71,7 @@ RHI → Renderer)는 자가 검사 조각(`selfTestCases`)으로 못박혀 있�
   `UMaterialInterface` 를 드는 것과 같다. Godot 식 "노드는 RID 만 안다" 로 바꾸면 모든 컴포넌트에 해석 표가 생기고,
   `shared_ptr` 로 풀어 둔 렌더 패킷 수명 문제가 되살아난다.
 - **렌더러가 컴포넌트를 읽는다 (Graphics/Renderer → Object · Scene).** `GpuSceneBuilder` 가 `PrimitiveRegistry` ·
-  `LightRegistry` 를 훑는 것은 언리얼 `FScene` 이 프리미티브 프록시를 훑는 것과 같은 방향이다. 영속 렌더 씬(`FScene`
+  `ComponentRegistry`(빛) 를 훑는 것은 언리얼 `FScene` 이 프리미티브 프록시를 훑는 것과 같은 방향이다. 영속 렌더 씬(`FScene`
   모델)은 두지 않는다 — 빌더가 내용이 그대로면 빌드를 건너뛰고, 움직임만 있으면 제자리 갱신하고, 바뀐 구간만 올리므로
   메시 종류가 8 → 1024 로 늘어도 빌드 비용이 평평하다(`-gv_benchMeshVariants` 로 잰다). 얻을 것이 남아 있지 않다.
 - **`EngineLoop` 이 크다.** `FEngineLoop::Init` 도 그렇다. 서비스 생성·바인딩은 표(`EngineServiceList.xxx`)에서, 초기화 · 종료 순서는

@@ -9,9 +9,9 @@
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Scene/Scene.h"
 
 #include "TestFramework/TestFramework.h"
@@ -96,27 +96,27 @@ SW_TEST_CASE( SceneLightTest, LightsJoinTheRegistryOnAttachAndLeaveWhenRemoved )
     SW_ASSERT_NOT_NULL( pLamp );
     SW_ASSERT_NOT_NULL( pSpot );
 
-    const sw::LightRegistry& registry = pObjects->getLightRegistry();
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypeDirectional ).size() );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypeSpot ).size() );
+    const sw::ComponentRegistry& registry = pObjects->getComponentRegistry();
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypeDirectional ).size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypePoint ).size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypeSpot ).size() );
 
     // 1) 컴포넌트를 떼면 그 자리에서 빠진다.
     sw::GameObject* pSunOwner = pSun->getOwner();
     SW_ASSERT_NOT_NULL( pSunOwner );
     SW_EXPECT_TRUE( pSunOwner->removeComponent( pSun ) );
-    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAll( sw::shaderslot::kLightTypeDirectional ).size() );
+    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypeDirectional ).size() );
 
     // 2) 오브젝트 파괴는 지연된다 — 예약만으로는 빠지지 않는다(그 프레임까지는 살아 있다).
     sw::GameObject* pLampOwner = pLamp->getOwner();
     SW_ASSERT_NOT_NULL( pLampOwner );
     pObjects->destroyObject( pLampOwner );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypePoint ).size() );
 
     // 3) 플러시하면 빠진다. 여기서 안 빠지면 등록부가 죽은 포인터를 든다.
     pObjects->processDeferredDestruction();
-    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypeSpot ).size() );
+    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypePoint ).size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypeSpot ).size() );
 }
 
 /**
@@ -133,19 +133,19 @@ SW_TEST_CASE( SceneLightTest, RegistryIsIdempotentForAddAndRemove )
     sw::PointLightComponent* pLamp = addLightObject<sw::PointLightComponent>( pObjects, "Lamp" );
     SW_ASSERT_NOT_NULL( pLamp );
 
-    sw::LightRegistry& registry = pObjects->getLightRegistry();
-    SW_ASSERT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
+    sw::ComponentRegistry& registry = pObjects->getComponentRegistry();
+    SW_ASSERT_EQUAL( size_t( 1 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypePoint ).size() );
 
-    registry.add( pLamp );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
+    registry.add<sw::LightComponent>( pLamp, sw::shaderslot::kLightTypePoint );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypePoint ).size() );
 
-    registry.add( nullptr );
-    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
+    registry.add<sw::LightComponent>( nullptr, sw::shaderslot::kLightTypePoint );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypePoint ).size() );
 
-    registry.remove( pLamp );
-    registry.remove( pLamp );
-    registry.remove( nullptr );
-    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAll( sw::shaderslot::kLightTypePoint ).size() );
+    registry.remove<sw::LightComponent>( pLamp, sw::shaderslot::kLightTypePoint );
+    registry.remove<sw::LightComponent>( pLamp, sw::shaderslot::kLightTypePoint );
+    registry.remove<sw::LightComponent>( nullptr, sw::shaderslot::kLightTypePoint );
+    SW_EXPECT_EQUAL( size_t( 0 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypePoint ).size() );
 }
 
 /**
@@ -164,9 +164,9 @@ SW_TEST_CASE( SceneLightTest, RemovingALightKeepsTheOthersInRegistrationOrder )
     sw::DirectionalLightComponent* pThird  = addLightObject<sw::DirectionalLightComponent>( pObjects, "SunThird" );
     SW_ASSERT_TRUE( pFirst != nullptr && pSecond != nullptr && pThird != nullptr );
 
-    sw::LightRegistry& registry = pObjects->getLightRegistry();
-    registry.remove( pFirst );
-    const sw::vector<sw::LightComponent*>& listSun = registry.getAll( sw::shaderslot::kLightTypeDirectional );
+    sw::ComponentRegistry& registry = pObjects->getComponentRegistry();
+    registry.remove<sw::LightComponent>( pFirst, sw::shaderslot::kLightTypeDirectional );
+    const sw::ComponentRegistry::View<sw::LightComponent> listSun = registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypeDirectional );
     SW_ASSERT_EQUAL( size_t( 2 ), listSun.size() );
     SW_EXPECT_TRUE_MSG( listSun[0] == pSecond, "첫 빛을 뺀 뒤 맨 앞이 둘째가 아니라 다른 빛입니다" );
     SW_EXPECT_TRUE( listSun[1] == pThird );

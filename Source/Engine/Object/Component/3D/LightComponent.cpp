@@ -9,8 +9,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Shader/Binding/GpuLight.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/LightRegistry.h"
 
 namespace sw
 {
@@ -63,12 +63,12 @@ namespace sw
     void LightComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getLightRegistry().add( this );
+        manager.getComponentRegistry().add<LightComponent>( this, getLightType() ); // 칸은 종류(방향광이 0 — 종류 순서로 돌면 앞에 온다)
     }
 
     void LightComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getLightRegistry().remove( this );
+        manager.getComponentRegistry().remove<LightComponent>( this, getLightType() );
         SceneComponent::onUnregister( manager );
     }
 } // namespace sw
