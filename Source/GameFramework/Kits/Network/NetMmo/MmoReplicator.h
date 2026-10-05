@@ -17,9 +17,9 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
-#include "Core/Network/NetMessage.h"
-#include "Core/Network/NetParallel.h"
-#include "Core/Network/NetPrioritizer.h"
+#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Replication/NetParallel.h"
+#include "Core/Network/Replication/NetPrioritizer.h"
 
 #include "Engine/Spatial/SpatialHashGrid2D.h"
 

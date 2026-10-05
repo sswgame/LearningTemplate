@@ -13,8 +13,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/Connection/SequenceBuffer.h"
 #include "Core/Network/NetTypes.h"
-#include "Core/Network/SequenceBuffer.h"
 
 namespace sw
 {

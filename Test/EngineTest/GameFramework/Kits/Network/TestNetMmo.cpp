@@ -2,9 +2,9 @@
 
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/NetEmulation.h"
-#include "Core/Network/NetHost.h"
-#include "Core/Network/NetTransport.h"
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Transport/NetEmulation.h"
+#include "Core/Network/Transport/NetTransport.h"
 
 #include "GameFramework/Kits/Network/NetMmo/MmoReplicator.h"
 #include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"

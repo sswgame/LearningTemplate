@@ -6,7 +6,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Network/NetTransport.h"
+#include "Core/Network/Transport/NetTransport.h"
 
 namespace sw
 {

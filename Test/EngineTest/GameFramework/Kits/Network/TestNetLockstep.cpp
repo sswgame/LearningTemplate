@@ -2,8 +2,8 @@
 
 #include "Core/Container/deque.h"
 #include "Core/Container/map.h"
-#include "Core/Network/NetHost.h"
-#include "Core/Network/NetTransport.h"
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Transport/NetTransport.h"
 
 #include "GameFramework/Kits/Network/NetLockstep/LockstepSession.h"
 #include "GameFramework/Kits/Network/NetLockstep/RollbackSession.h"

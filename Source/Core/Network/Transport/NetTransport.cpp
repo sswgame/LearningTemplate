@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/NetTransport.h"
+#include "Core/Network/Transport/NetTransport.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"

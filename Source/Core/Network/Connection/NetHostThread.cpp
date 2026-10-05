@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Core/Network/NetHostThread.h"
+#include "Core/Network/Connection/NetHostThread.h"
 
 #include "Core/Concurrency/ThreadName.h"
-#include "Core/Network/NetHost.h"
+#include "Core/Network/Connection/NetHost.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace sw

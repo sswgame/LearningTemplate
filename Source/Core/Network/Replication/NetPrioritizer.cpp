@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/NetPrioritizer.h"
+#include "Core/Network/Replication/NetPrioritizer.h"
 
 #include <algorithm>
 

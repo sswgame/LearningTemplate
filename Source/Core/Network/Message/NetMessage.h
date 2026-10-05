@@ -11,7 +11,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetHost.h"
+#include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/NetTypes.h"
 
 namespace sw

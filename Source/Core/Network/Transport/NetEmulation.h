@@ -7,8 +7,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
-#include "Core/Network/NetTransport.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Transport/NetTransport.h"
 
 namespace sw
 {

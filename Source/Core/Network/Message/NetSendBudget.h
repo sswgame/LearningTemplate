@@ -14,7 +14,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Network/NetConnection.h"
+#include "Core/Network/Connection/NetConnection.h"
 
 namespace sw
 {

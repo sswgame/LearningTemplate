@@ -12,7 +12,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
-#include "Core/Network/NetMessage.h"
+#include "Core/Network/Message/NetMessage.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetKitMessageRange.h"

@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetHost.h"
+#include "Core/Network/Connection/NetHost.h"
 
 #include "Engine/Destruction/FractureComponentBase.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

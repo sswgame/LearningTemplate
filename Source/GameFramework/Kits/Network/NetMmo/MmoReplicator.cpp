@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetHost.h"
-#include "Core/Network/NetSendBudget.h"
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/NetTypes.h"
 
 #include <algorithm>

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/NetEmulation.h"
+#include "Core/Network/Transport/NetEmulation.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"

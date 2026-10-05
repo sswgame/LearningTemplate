@@ -7,10 +7,10 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
-#include "Core/Network/NetMessage.h"
-#include "Core/Network/NetParallel.h"
-#include "Core/Network/NetPrioritizer.h"
+#include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Replication/NetParallel.h"
+#include "Core/Network/Replication/NetPrioritizer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetClientServer/NetSnapshot.h"

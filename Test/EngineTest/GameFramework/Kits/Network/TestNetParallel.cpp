@@ -2,8 +2,8 @@
 
 #include "Core/Container/deque.h"
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetHost.h"
-#include "Core/Network/NetTransport.h"
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Transport/NetTransport.h"
 #include "Core/Task/TaskManager.h"
 
 #include "GameFramework/Kits/Network/NetClientServer/ReplicationClient.h"

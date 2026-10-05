@@ -23,7 +23,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetConnection.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Task/TaskFuture.h"
 

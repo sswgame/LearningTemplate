@@ -25,11 +25,11 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/NetEmulation.h"
-#include "Core/Network/NetHost.h"
-#include "Core/Network/NetMessage.h"
-#include "Core/Network/NetTransport.h"
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Transport/NetEmulation.h"
+#include "Core/Network/Transport/NetTransport.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

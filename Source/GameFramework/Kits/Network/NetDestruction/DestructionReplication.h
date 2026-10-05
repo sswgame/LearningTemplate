@@ -25,7 +25,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Network/NetMessage.h"
+#include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
 
 #include "Engine/Destruction/DestructionDamage.h"

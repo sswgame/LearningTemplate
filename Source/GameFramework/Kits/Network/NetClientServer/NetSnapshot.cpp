@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Network/NetClientServer/NetSnapshot.h"
 
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetSendBudget.h"
+#include "Core/Network/Message/NetSendBudget.h"
 
 #include <algorithm>
 

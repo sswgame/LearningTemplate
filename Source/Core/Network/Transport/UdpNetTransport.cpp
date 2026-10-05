@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Network/UdpNetTransport.h"
+#include "Core/Network/Transport/UdpNetTransport.h"
 
-#include "Core/Network/PlatformSocketUtil.h"
+#include "Core/Network/Transport/PlatformSocketUtil.h"
 
 namespace sw
 {

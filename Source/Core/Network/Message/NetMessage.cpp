@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Network/NetMessage.h"
+#include "Core/Network/Message/NetMessage.h"
 
-#include "Core/Network/NetHost.h"
+#include "Core/Network/Connection/NetHost.h"
 
 #include <algorithm>
 

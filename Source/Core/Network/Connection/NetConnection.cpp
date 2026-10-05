@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/NetConnection.h"
+#include "Core/Network/Connection/NetConnection.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"

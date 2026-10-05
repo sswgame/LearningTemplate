@@ -2,10 +2,10 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/deque.h"
-#include "Core/Network/NetHost.h"
-#include "Core/Network/NetHostThread.h"
-#include "Core/Network/NetTransport.h"
-#include "Core/Network/UdpNetTransport.h"
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetHostThread.h"
+#include "Core/Network/Transport/NetTransport.h"
+#include "Core/Network/Transport/UdpNetTransport.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestFramework.h"

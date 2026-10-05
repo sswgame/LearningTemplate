@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/Network/NetHost.h"
+#include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/NetTypes.h"
 
 #include "GameFramework/Kits/Network/NetLockstep/LockstepSession.h"

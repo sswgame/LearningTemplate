@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Core/Network/NetEmulation.h"
-#include "Core/Network/NetTransport.h"
+#include "Core/Network/Transport/NetEmulation.h"
+#include "Core/Network/Transport/NetTransport.h"
 
 #include "TestFramework/TestFramework.h"
 

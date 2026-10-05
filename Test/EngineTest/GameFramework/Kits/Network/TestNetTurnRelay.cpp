@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Core/Container/deque.h"
-#include "Core/Network/NetHost.h"
-#include "Core/Network/NetTransport.h"
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Transport/NetTransport.h"
 
 #include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
 #include "GameFramework/Kits/Network/NetTurnRelay/TurnRelay.h"
