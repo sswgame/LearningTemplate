@@ -196,9 +196,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
-- **아무도 이름을 부르지 않는 메시가 45 개다**(에셋 검증 `orphans` 경고 — NileCity 건물 · StarSkirmish 탈것 · ThemePark 코스터 조각 등 Kenney 키트에서 들여온 것).
-  쓸 계획이 없으면 `models_raw/` 원본과 함께 지우고, 코드가 이름을 조립해 부르는 것이면 규칙의 `exclude_patterns` 에 적는다.
-
 - **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`. (1) 메뉴 UI(런타임 UI 프레임워크 뒤) ·
   `UserSettingsPanel` 대신 키를 눌러 받는 리바인딩 창. (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 그림자 · 시야 거리 · 후처리 ·
   텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode`(톤맵 패스에 색각 행렬 — 지금 톤맵에 상수 버퍼가 없어 미뤘다) · UI 배율 · 글자 크기 · 자막,
@@ -324,9 +321,6 @@ cd build/Ninja-Debug/Bin
   물리 질의 히트스캔 · 시야(지금 상자 목록 · 캡슐), 쓰러질 때 무기 떨어뜨리기(`SocketBindingComponent::release( Physics )` — 무기 프리팹에 강체를 더하면 된다),
   알림으로 휘두름 피해 · 발소리(지금 휘두름 피해는 `_attackHitTime` 초). 그 밖: 외형 부품 풀(스켈레톤마다 프리팹을 세우고 지운다), 1인칭에서 숨긴 몸의 애니메이션
   LOD(숨겨도 평가한다), 걷기 · 달리기 발 미끄러짐(위 애니메이션 ⑦).
-- **Shooter3D 외형 데이터(`game/shooter3d/data/appearance/`)가 없는 메시 · 프리팹 · 소켓 · 머티리얼 27 곳을 가리킨다**(char-appear 의 자리 채움 데이터).
-  에셋 검증 `references-exist` 가 이 폴더를 빼 두었다(`Config/Editor/AssetValidationRules.json`) — Shooter3D 통합이 실제 에셋을 넣으면 그 제외를 지운다.
-
 - **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
   스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
 - **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** **하지 않기로 한 것:** HP 바 · 피해 숫자의 매 틱 배치 예약을 "바뀔 때만" 으로 줄이는 것 — 월드 변환이 틱 **뒤에** 적용되므로 틱 안에서
@@ -888,6 +882,8 @@ cd build/Ninja-Debug/Bin
   모듈을 쓰는 함수 안에서 import 한다. 동시 처리는 `Scripts/common/Parallel.py` 한 자리 — 파일 읽기 · 하위 프로세스 대기는 스레드, 정규식이 무거우면 `flatMapInProcesses`
   (코어 수만큼의 덩어리). `App.exe` 찾기 · 실행은 `Scripts/common/AppBinary.py` 하나. 파일을 한 번 읽어 나눠 쓰는 캐시는 CRLF 를 LF 로 바꿔야 결과가 같다.
 - **헤더 멤버 초기값은 금지, 정본은 생성자**(면제는 `AGENTS.md`). 네임스페이스 스코프 상수는 `inline constexpr`(`inline static constexpr` 은 TU 마다 사본).
+- **고아 검사(`orphans`)는 전체 경로 · 파일 이름만 찾는다** — 코드가 `"game/<게임>/models/" + 이름 + ".mesh"` 로 조립하는 메시는 규칙의 `exclude_patterns` 에 적는다
+  (NileCity · StarSkirmish · HarvestValley 작물). 아무도 안 쓰는 원본은 `models_raw/` 와 `import.stamp` 줄까지 함께 지운다. 기믹 프리팹(`common/prefabs/gimmicks`)은 가져다 쓰는 라이브러리라 뺀다.
 
 ### 3-5. 직렬화 · 리플렉션 · 파서
 
