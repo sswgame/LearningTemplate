@@ -92,31 +92,49 @@ SW_TEST_CASE( SharedStateArchiveTest, FlagsRoundTripInNameOrder )
 }
 
 /**
- * @brief [SharedStateArchiveTest] 지갑 — 통화 여럿의 잔액이 그대로 오고 알림은 오지 않는다. 음수 잔액은 거절한다
+ * @brief [SharedStateArchiveTest] 지갑 — 통화 여럿의 잔액(빚 포함)이 그대로 오고 알림은 오지 않는다. 빈 통화 이름은 거절한다
  */
-SW_TEST_CASE( SharedStateArchiveTest, WalletRoundTripAndRejectsNegative )
+SW_TEST_CASE( SharedStateArchiveTest, WalletRoundTripKeepsDebtAndRejectsEmptyCurrency )
 {
     Wallet wallet;
     wallet.add( "Gold", 120 );
     wallet.add( "Credits", 5 );
+    wallet.charge( "Upkeep", 30 );
     const vector<uint8> bytes = captureStateBytes( wallet );
 
     Wallet restored;
     SW_ASSERT_TRUE( restoreStateBytes( restored, bytes ) );
     SW_EXPECT_EQUAL( int64{ 120 }, restored.getBalance( "Gold" ) );
     SW_EXPECT_EQUAL( int64{ 5 }, restored.getBalance( "Credits" ) );
+    SW_EXPECT_EQUAL( int64{ -30 }, restored.getBalance( "Upkeep" ) );
     vector<WalletEvent> listEvent;
     restored.drainEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 
-    Archive negative;
-    negative << uint32{ 1 };
-    negative << string_view( "Gold" );
-    negative << int64{ -1 };
-    vector<uint8> negativeBytes;
-    negative.writeData( negativeBytes );
-    SW_EXPECT_FALSE( restoreStateBytes( restored, negativeBytes ) );
+    Archive unnamed;
+    unnamed << uint32{ 1 };
+    unnamed << string_view( "" );
+    unnamed << int64{ 7 };
+    vector<uint8> unnamedBytes;
+    unnamed.writeData( unnamedBytes );
+    SW_EXPECT_FALSE( restoreStateBytes( restored, unnamedBytes ) );
     SW_EXPECT_EQUAL( int64{ 120 }, restored.getBalance( "Gold" ) );
+}
+
+/**
+ * @brief [SharedStateArchiveTest] 거절할 수 없는 지출 — 잔액이 빚이 되고, 빚이 있는 동안 쓰기는 거절된다
+ */
+SW_TEST_CASE( SharedStateArchiveTest, ChargeMakesDebtThatBlocksSpending )
+{
+    Wallet wallet;
+    wallet.add( "Gold", 10 );
+    wallet.charge( "Gold", 25 );
+    SW_EXPECT_EQUAL( int64{ -15 }, wallet.getBalance( "Gold" ) );
+    SW_EXPECT_FALSE( wallet.trySpend( "Gold", 1 ) );
+    SW_EXPECT_FALSE( wallet.canAfford( "Gold", 0 ) );
+    wallet.add( "Gold", 20 );
+    SW_EXPECT_TRUE( wallet.trySpend( "Gold", 5 ) );
+    SW_EXPECT_EQUAL( int64{ 0 }, wallet.getBalance( "Gold" ) );
 }
 
 /**

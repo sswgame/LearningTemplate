@@ -80,6 +80,16 @@ namespace sw
         return true;
     }
 
+    void Wallet::charge( const hashed_string& currency, int64 amount )
+    {
+        if ( amount <= 0 || currency.empty() )
+            return;
+        WalletBalance& balance = findOrAddBalance( currency );
+        balance._amount -= amount;
+        ++_revision;
+        _eventBuffer.push( WalletEvent{ currency, -amount, balance._amount } );
+    }
+
     void Wallet::setBalance( const hashed_string& currency, int64 amount )
     {
         if ( currency.empty() )
@@ -124,7 +134,7 @@ namespace sw
             if ( StateArchiveUtil::readName( archive, balance._currency ) == false )
                 return false;
             archive >> balance._amount;
-            const bool bValid = archive.isOk() && balance._currency.empty() == false && 0 <= balance._amount;
+            const bool bValid = archive.isOk() && balance._currency.empty() == false;
             if ( bValid == false )
                 return false;
             listBalance.push_back( balance );

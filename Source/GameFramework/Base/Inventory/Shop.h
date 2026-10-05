@@ -47,7 +47,7 @@ namespace sw
     /**
      * @class Wallet
      * @brief 통화 여럿(이름 → int64)을 담습니다. 통화 이름은 데이터라 장르마다 정합니다("Gold" · "Credits" · "Souls" · "Tickets").
-     * @details 잔액은 음수가 되지 않습니다 — 쓰기는 `trySpend` 로 모자라면 아무것도 바꾸지 않습니다. 통화 순서는 처음 만난 순서입니다(결정적 — 화면 · 세이브).
+     * @details 잔액은 `charge` 로만 음수(빚)가 됩니다 — 쓰기는 `trySpend` 로 모자라면(빚이 있으면) 아무것도 바꾸지 않습니다. 통화 순서는 처음 만난 순서입니다(결정적 — 화면 · 세이브).
      */
     class SW_GF_API Wallet
     {
@@ -62,6 +62,8 @@ namespace sw
         void add( const hashed_string& currency, int64 amount );
         /** @brief 잔액이 @p amount 이상이면 빼고 true, 모자라면 그대로 두고 false 입니다. */
         [[nodiscard]] bool trySpend( const hashed_string& currency, int64 amount );
+        /** @brief @p amount(0 보다 커야 한다)를 거절 없이 뺍니다 — 운영비 · 급여처럼 미룰 수 없는 지출이고 잔액이 음수(빚)가 될 수 있습니다. 빚이 있으면 `trySpend` 는 거절됩니다. */
+        void charge( const hashed_string& currency, int64 amount );
         /** @brief 잔액을 그대로 둡니다(세이브 불러오기 · 치트). 이벤트는 내지 않습니다. */
         void setBalance( const hashed_string& currency, int64 amount );
         void clear();
@@ -69,7 +71,7 @@ namespace sw
         void drainEvents( vector<WalletEvent>& outListEvent );
         /** @brief 통화마다 이름 · 잔액을 처음 만난 순서로 씁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 모두 바꿉니다(알림 없음). 빈 통화 이름 · 음수 잔액이면 false 이고 그대로입니다. */
+        /** @brief `writeState` 의 바이트로 모두 바꿉니다(알림 없음). 빈 통화 이름이면 false 이고 그대로입니다(음수 잔액 — 빚 — 은 그대로 온다). */
         [[nodiscard]] bool readState( Archive& archive );
 
         int64                        getBalance( const hashed_string& currency ) const;
