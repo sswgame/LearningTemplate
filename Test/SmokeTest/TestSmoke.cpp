@@ -892,6 +892,63 @@ SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
 }
 
 /**
+ * @brief [ArchitectureTest] 키트 둘(GF_Farming · GF_CreatureLife)에 기대는 게임 하나 — 한 키트를 리로드하면 게임은 다시 서고 다른 키트는 그대로다
+ */
+SW_TEST_CASE( ArchitectureTest, LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly )
+{
+    for ( const utf8* pKitName : { "GF_Farming", "GF_CreatureLife" } )
+    {
+        if ( sw::FileUtil::exists( sw::modulePath( pKitName ) ) == false )
+            SW_TEST_SKIP( "kit module is not built" );
+    }
+    sw::LiveReloadManager manager;
+    if ( manager.registerModule( "GF_Farming" ) == false || manager.registerModule( "GF_CreatureLife" ) == false )
+        SW_TEST_SKIP( "kit registration failed" );
+    sw::vector<sw::string> gameDepends;
+    gameDepends.push_back( "GF_Farming" );
+    gameDepends.push_back( "GF_CreatureLife" );
+    if ( manager.registerModule( "SWGame", gameDepends ) == false )
+        SW_TEST_SKIP( "SWGame registration failed" );
+
+    bool farmingReloaded{ false };
+    bool creatureReloaded{ false };
+    bool gameReloaded{ false };
+    manager.setOnAfterReload(
+        "GF_Farming",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&farmingReloaded]( void* )
+    {
+        farmingReloaded = true;
+    } ) );
+    manager.setOnAfterReload(
+        "GF_CreatureLife",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&creatureReloaded]( void* )
+    {
+        creatureReloaded = true;
+    } ) );
+    manager.setOnAfterReload(
+        "SWGame",
+        SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&gameReloaded]( void* )
+    {
+        gameReloaded = true;
+    } ) );
+
+    manager.triggerReload( "GF_Farming" );
+    for ( int32 stepIndex = 0; stepIndex < 100; ++stepIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        manager.update();
+        if ( farmingReloaded && gameReloaded )
+            break;
+    }
+
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+    SW_EXPECT_TRUE( farmingReloaded );
+    SW_EXPECT_TRUE( gameReloaded );
+    SW_EXPECT_FALSE( creatureReloaded ); // 다른 키트는 그대로
+    manager.shutdown();
+}
+
+/**
  * @brief [ArchitectureTest] App 과 같은 사슬(GameFramework → 킷 → SWGame)을 연쇄 리로드해도, 의존 모듈은 **지금의** 복사본에 묶인다
  * @details 섀도 복사본은 파일 이름이 원본과 달라서 의존 모듈이 어느 이미지에 묶일지를 로더가 정한다. Windows 는 지연 로드 훅이
  *          `LiveReloadManager` 에게 물어 지금의 복사본을 받고, 리눅스는 SONAME 이 같은 **먼저 올라온** 이미지가 이긴다. 어긋나면
