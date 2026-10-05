@@ -13,7 +13,7 @@
 |------|------|
 | **GameObject** | 이름·태그·수명을 가진 “상자”. 로직은 거의 없고 컴포넌트를 붙입니다. |
 | **Component** | `onBeginPlay` / `onTick` / `onEndPlay` 로 동작하는 실제 기능. |
-| **GameObjectManager** | 한 씬 안의 GO 생성·검색·틱·지연 삭제. |
+| **GameObjectManager** | 한 씬의 얼굴 — 저장소(`GameObjectStore`) · 틱 디스패치(`SceneTickScheduler`) · 틱 중 규칙(`StructuralChangeBuffer`) · 등록부 · 물리를 소유하고 게임 API 를 전달. |
 | **Tag** | `"Player"`, `"Bullet"` 같은 표식. 검색·필터에 사용. |
 
 ```text
@@ -37,7 +37,8 @@ Object/
 ├─ GameObject/          # GO, Manager, 직렬화 (참조 핸들 타입은 Core/Container 의 GameObjectHandle · ComponentHandle)
 │  ├─ GameObject.*              # 액터 — 컴포넌트 목록 · 태그 · 활성 · 계층. 매니저 헤더를 포함하지 **않는다**
 │  ├─ GameObjectManager.h
-│  ├─ GameObjectManager.cpp     # 수명: 생성 · 이름 · id 표 · 조회 · 파괴 · 이름으로 컴포넌트 만들기(TypeInfo 의 생성 함수)
+│  ├─ GameObjectManager.cpp     # 씬의 얼굴 — 단위들을 소유 · 비우기, 이름으로 컴포넌트 만들기(TypeInfo 의 생성 함수). 게임 API 는 헤더의 전달 함수
+│  ├─ GameObjectStore.*         # 저장소(ULevel · FUObjectArray 자리) — 생성 · 이름(번호 되쓰기) · id 슬롯 표 · 조회 · 순회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄
 │  ├─ GameObjectManagerTick.cpp # 프레임: tick 의 단계 · 물리 · 트랜스폼 배치/큐 전달
 │  ├─ SceneTickScheduler.*      # 틱 디스패치(FTickTaskManager 자리) — 틱 등록부 소유 · 그룹 포크-조인 · 선행 조건 스테이지 · 경계의 트랜스폼 적용
 │  ├─ TickRegistry.*            # 틱 등록부 — 오브젝트별 항목 · 그룹 목록 · 선행 종속성 스테이지

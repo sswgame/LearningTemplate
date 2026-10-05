@@ -290,7 +290,7 @@ namespace sw
     class SW_API Component
     {
         friend class GameObject;
-        friend class GameObjectManager; ///< 생성이 `_pPool` 을 적고 파괴가 읽습니다
+        friend class GameObjectStore; ///< 해체(`destroyComponentInstance`)가 `_pPool` 로 반납합니다
 
     public:
         REFLECT_BODY();

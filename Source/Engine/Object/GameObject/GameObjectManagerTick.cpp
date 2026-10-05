@@ -42,7 +42,7 @@ namespace sw
         // 한 프레임: 물리 앞 그룹(PrePhysics · DuringPhysics) → 결과 적용 → 애니메이션 → 물리 → 물리 뒤 그룹(PostPhysics · PostUpdate) → 결과 적용.
         // 그래서 PostPhysics 컴포넌트(카메라 디렉터 · 상호작용 · 스프라이트 애니메이터)는 **이번 프레임의** 바디 자세와 겹침을 본다(언리얼 TG_PostPhysics).
         constexpr uint32 kPostPhysicsGroup = static_cast<uint32>( TickGroup::PostPhysics );
-        if ( _listGameObject.empty() == false )
+        if ( _store.hasMergedObjects() )
             _tickScheduler.tickPhase( deltaTime, 0, kPostPhysicsGroup );
         _structuralChangeBuffer.drain( *this );
 
@@ -69,7 +69,7 @@ namespace sw
             stepPhysics( deltaTime );
         }
 
-        if ( _listGameObject.empty() == false )
+        if ( _store.hasMergedObjects() )
             _tickScheduler.tickPhase( deltaTime, kPostPhysicsGroup, TickRegistry::kGroupCount );
         _structuralChangeBuffer.drain( *this );
         if ( hasDirtySceneTransforms() )

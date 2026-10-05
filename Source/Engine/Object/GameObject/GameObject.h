@@ -48,6 +48,7 @@ namespace sw
     class SW_API GameObject
     {
         friend class GameObjectManager;
+        friend class GameObjectStore; ///< 만들 때 id · 소유 매니저 · 목록 자리를 적는다
         friend class ObjectStateSerializer;
         friend class SceneComponent; ///< 붙이고 떼는 그 자리에서 소유 오브젝트의 계층 활성을 다시 맞춥니다
         friend class TickRegistry;   ///< 틱 항목 · 그룹 자리를 짓고 지웁니다
@@ -391,7 +392,7 @@ namespace sw
         uint32 _tickPrerequisiteCount;
         /** @brief 틱 멤버십이 바뀌어 등록부의 더티 목록에 올라 있는지 나타냅니다(원자: 워커에서 표시합니다). */
         atomic<uint8> _bTickDirty;
-        uint32        _managerIndex; ///< 매니저의 `_listGameObject` 안 인덱스
+        uint32        _managerIndex; ///< 저장소(`GameObjectStore`)의 `_listGameObject` 안 인덱스
     };
 
     template <typename T, typename... Args>
