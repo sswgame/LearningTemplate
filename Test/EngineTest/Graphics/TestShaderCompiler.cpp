@@ -153,7 +153,7 @@ SW_TEST_CASE( ShaderCompilerTest, ClearCacheAndNonExistentCompile )
     desc._targetFormat = sw::ShaderTargetFormat::SPIRV_Vulkan;
 
     const sw::string absPath = sw::ResourceUtil::getResourcePath( desc._filePath );
-    SW_EXPECT_TRUE( absPath.empty() || sw::FileUtil::fileExists( absPath ) == false );
+    SW_EXPECT_TRUE( absPath.empty() || sw::FileUtil::exists( absPath ) == false );
 
     sw::ShaderCompileResult result = sw::ShaderCompiler::compileHlsl( desc );
     SW_EXPECT_FALSE( result._bSuccess );
@@ -284,7 +284,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendDiskCacheFileSeparation )
 
     // 디스크 캐시 디렉터리에 최소 2개 이상의 독립된 바이너리 캐시 파일이 생성되었는지 검증
     const sw::string cacheDir = sw::ResourceUtil::getRootFolderPath() + "/cache/shaders";
-    if ( sw::FileUtil::directoryExists( cacheDir ) )
+    if ( sw::FileUtil::isDirectory( cacheDir ) )
     {
         sw::vector<sw::string> listFiles;
         sw::FileUtil::collectFiles( cacheDir, "", listFiles, false );

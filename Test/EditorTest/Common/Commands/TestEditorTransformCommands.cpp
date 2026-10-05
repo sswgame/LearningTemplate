@@ -160,9 +160,9 @@ SW_TEST_CASE( EditorTransformCommandsTest, PresetNamesFollowOneRule )
     const string chosenFolder = test::makeTempDirectory( "chosen_presets" );
     const string chosenPath   = FileUtil::joinPath( chosenFolder, "MyPreset.preset.xml" );
     SW_ASSERT_TRUE( EditorTransformCommands::saveComponentPresetTo( pMesh, chosenPath ) );
-    SW_EXPECT_TRUE( FileUtil::fileExists( chosenPath ) ); // 고른 자리 · 고른 이름 그대로
+    SW_EXPECT_TRUE( FileUtil::exists( chosenPath ) ); // 고른 자리 · 고른 이름 그대로
     SW_ASSERT_TRUE( EditorTransformCommands::saveComponentPresetTo( pMesh, FileUtil::joinPath( chosenFolder, "plain.xml" ) ) );
-    SW_EXPECT_TRUE( FileUtil::fileExists( FileUtil::joinPath( chosenFolder, "plain.preset.xml" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::joinPath( chosenFolder, "plain.preset.xml" ) ) );
     SW_EXPECT_TRUE( EditorTransformCommands::loadComponentPreset( pMesh, chosenPath ) );
 }
 

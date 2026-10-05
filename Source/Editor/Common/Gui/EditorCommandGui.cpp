@@ -87,7 +87,7 @@ namespace sw::editor
 
                 const string activePack = GameConfig::getActive()._packRoot;
                 const string mapsDir    = ResourceUtil::getDomainFolderPath( activePack, path::kMapsFolder );
-                if ( FileUtil::directoryExists( mapsDir ) )
+                if ( FileUtil::isDirectory( mapsDir ) )
                     params._initialDirectory = mapsDir;
                 else if ( ResourceUtil::getDomainFolderPath( activePack ).empty() == false )
                     params._initialDirectory = ResourceUtil::getDomainFolderPath( activePack );

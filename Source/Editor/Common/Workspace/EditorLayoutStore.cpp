@@ -62,7 +62,7 @@ namespace sw::editor
     {
         outListName.clear();
         vector<string> listFile;
-        if ( FileUtil::directoryExists( folder ) == false || FileUtil::collectFiles( folder, ".ini", listFile, false ) == false )
+        if ( FileUtil::isDirectory( folder ) == false || FileUtil::collectFiles( folder, ".ini", listFile, false ) == false )
             return;
         const string_view suffix{ kImguiSuffix };
         for ( const string& filePath : listFile )
@@ -88,10 +88,10 @@ namespace sw::editor
     {
         outPanelVisibility.clear();
         const string imguiPath = makeImguiIniPath( folder, name );
-        if ( FileUtil::fileExists( imguiPath ) == false || FileUtil::readTextFile( imguiPath, outImguiIniText ) == false )
+        if ( FileUtil::exists( imguiPath ) == false || FileUtil::readTextFile( imguiPath, outImguiIniText ) == false )
             return false;
         const string visibilityPath = makeVisibilityPath( folder, name );
-        if ( FileUtil::fileExists( visibilityPath ) && KeyValueFile::loadFile( visibilityPath, outPanelVisibility ) == false )
+        if ( FileUtil::exists( visibilityPath ) && KeyValueFile::loadFile( visibilityPath, outPanelVisibility ) == false )
             SW_LOG_WARNING( "Layout '%#': could not read %# - panel visibility is left as it is", string( name ).c_str(), visibilityPath.c_str() );
         return true;
     }

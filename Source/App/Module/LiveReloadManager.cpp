@@ -69,7 +69,7 @@ namespace sw
             {
                 const string originalDebugPath = ModuleImageUtil::getDebugSymbolPath( originalModulePath );
                 const string shadowDebugPath   = ModuleImageUtil::getDebugSymbolPath( shadowModulePath );
-                if ( FileUtil::fileExists( originalDebugPath ) == false )
+                if ( FileUtil::exists( originalDebugPath ) == false )
                     return;
 
                 if ( FileUtil::copyFile( originalDebugPath, shadowDebugPath ) == false )
@@ -472,7 +472,7 @@ namespace sw
 
         const string execDir    = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
         const string modulePath = FileUtil::joinPath( execDir, ModuleImageUtil::formatSharedLibraryName( moduleName ) );
-        if ( FileUtil::fileExists( modulePath ) == false )
+        if ( FileUtil::exists( modulePath ) == false )
         {
             SW_LOG_INFO( "Shared module %# is not built next to the executable — nothing links it", moduleName );
             return true;
@@ -510,7 +510,7 @@ namespace sw
     bool LiveReloadManager::registerModule( string_view moduleName, const vector<string>& listDependsOn )
     {
         string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-        if ( FileUtil::directoryExists( execDir ) == false )
+        if ( FileUtil::isDirectory( execDir ) == false )
         {
             SW_LOG_ERROR( "Executable directory does not exist: %#", execDir );
             return false;
@@ -819,7 +819,7 @@ namespace sw
         out = {};
         BLOCK( "Check Original Module" )
         {
-            if ( FileUtil::fileExists( ctx._originalModulePath ) == false )
+            if ( FileUtil::exists( ctx._originalModulePath ) == false )
             {
                 SW_LOG_ERROR( "Original module not found: %#", ctx._originalModulePath.c_str() );
                 return false;

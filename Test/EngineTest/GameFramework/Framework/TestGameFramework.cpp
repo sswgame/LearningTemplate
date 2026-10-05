@@ -710,7 +710,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
     // 3) 파일 입출력 스냅샷 라운드트립
     const string tempStateFile = test::makeTempPath( "test_game_state.sav" );
     SW_EXPECT_TRUE( gameInstance.saveStateToFile( tempStateFile ) );
-    SW_EXPECT_TRUE( FileUtil::fileExists( tempStateFile ) );
+    SW_EXPECT_TRUE( FileUtil::exists( tempStateFile ) );
 
     CustomStateGameInstance fileRestoredInstance;
     SW_EXPECT_TRUE( fileRestoredInstance.loadStateFromFile( tempStateFile ) );
@@ -2868,7 +2868,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
 
     // 5) 세이브 경로 — 경로 없는 저장 · 읽기는 기본 슬롯이다
     SW_EXPECT_TRUE( instance.saveStateToFile() );
-    SW_EXPECT_TRUE( FileUtil::fileExists( instance._savePath ) );
+    SW_EXPECT_TRUE( FileUtil::exists( instance._savePath ) );
     SW_EXPECT_TRUE( instance.loadStateFromFile() );
 
     // 6) 오버월드 세이브 — 맵 없는 세이브는 시작 맵에서 시작한다(자리 값까지 돌아오는지 — 세이브가 자기 타입으로 쓰는지도 본다)

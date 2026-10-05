@@ -391,7 +391,7 @@ namespace sw
 
     bool ResourcePackManager::scanAndMountPacks( string_view packsDirectory, const vector<string>& listPriority )
     {
-        if ( packsDirectory.empty() || FileUtil::directoryExists( packsDirectory ) == false )
+        if ( packsDirectory.empty() || FileUtil::isDirectory( packsDirectory ) == false )
             return false;
 
         vector<string> listCandidateFile;

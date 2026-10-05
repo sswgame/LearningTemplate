@@ -109,7 +109,7 @@ SW_TEST_CASE( ModuleUnloadListenerTest, RhiModuleUnloadReleasesItsCode )
     for ( const RhiModule& rhiModule : kArrRhiModule )
     {
         const sw::string path = sw::FileUtil::joinPath( executableDir, sw::ModuleImageUtil::formatSharedLibraryName( rhiModule._pBaseName ) );
-        if ( sw::FileUtil::fileExists( path ) == false )
+        if ( sw::FileUtil::exists( path ) == false )
             continue;
         void* pKeepMapped = sw::ModuleImageUtil::loadDynamicLibrary( path );
         if ( pKeepMapped == nullptr )

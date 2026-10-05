@@ -464,7 +464,7 @@ namespace sw
             }
 
             const string llvmClangDir = FileUtil::joinPath( llvmPath, _llvmClangRel );
-            if ( FileUtil::directoryExists( llvmClangDir ) )
+            if ( FileUtil::isDirectory( llvmClangDir ) )
             {
                 vector<string> listClangSubFolder;
                 FileUtil::collectFolders( llvmClangDir, listClangSubFolder, false );
@@ -472,7 +472,7 @@ namespace sw
                 {
                     const string resourceDir = FileUtil::normalizeSeparators( folder );
                     const string clangInc    = FileUtil::joinPath( folder, _clangIncludeRel );
-                    if ( FileUtil::directoryExists( clangInc ) == false )
+                    if ( FileUtil::isDirectory( clangInc ) == false )
                         continue;
 
                     _listBaseArg.emplace_back( _flagResourceDir );
@@ -488,7 +488,7 @@ namespace sw
         BLOCK( "Locate MSVC and Windows SDK Includes" )
         {
             const string msvcInc = FileUtil::joinPath( msvcToolsDir, _msvcIncludeRel );
-            if ( msvcToolsDir.empty() == false && FileUtil::directoryExists( msvcInc ) )
+            if ( msvcToolsDir.empty() == false && FileUtil::isDirectory( msvcInc ) )
             {
                 _listBaseArg.emplace_back( _flagIsystem );
                 _listBaseArg.emplace_back( msvcInc );
@@ -499,7 +499,7 @@ namespace sw
                 const string ucrtPath = FileUtil::joinPath(
                     FileUtil::joinPath( FileUtil::joinPath( winSdkDir, _winSdkIncludeRel ), winSdkVer ),
                     _winSdkUcrtRel );
-                if ( FileUtil::directoryExists( ucrtPath ) )
+                if ( FileUtil::isDirectory( ucrtPath ) )
                 {
                     _listBaseArg.emplace_back( _flagIsystem );
                     _listBaseArg.emplace_back( ucrtPath );

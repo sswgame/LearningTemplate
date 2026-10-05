@@ -35,17 +35,17 @@ namespace sw::editor
         outPath.clear();
         if ( configuredPath.empty() == false )
         {
-            // 폴더를 가리키면 그 안의 실행 파일, 파일을 가리키면 그대로. 폴더를 먼저 본다 — `fileExists` 는 폴더에도 true 다.
-            if ( FileUtil::directoryExists( configuredPath ) )
+            // 폴더를 가리키면 그 안의 실행 파일, 파일을 가리키면 그대로. 폴더를 먼저 본다 — `exists` 는 폴더에도 true 다.
+            if ( FileUtil::isDirectory( configuredPath ) )
             {
                 const string inFolder = FileUtil::joinPath( configuredPath, getViewerFileName() );
-                if ( FileUtil::fileExists( inFolder ) )
+                if ( FileUtil::exists( inFolder ) )
                 {
                     outPath = inFolder;
                     return true;
                 }
             }
-            else if ( FileUtil::fileExists( configuredPath ) )
+            else if ( FileUtil::exists( configuredPath ) )
             {
                 outPath = string( configuredPath );
                 return true;
@@ -54,7 +54,7 @@ namespace sw::editor
         if ( projectRoot.empty() == false )
         {
             const string inTools = FileUtil::joinPath( FileUtil::joinPath( projectRoot, kDefaultViewerFolder ), getViewerFileName() );
-            if ( FileUtil::fileExists( inTools ) )
+            if ( FileUtil::exists( inTools ) )
             {
                 outPath = inTools;
                 return true;

@@ -817,7 +817,7 @@ SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
         SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( root, cooked, failedCount ) );
     }
     SW_EXPECT_EQUAL( 1u, failedCount );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( sw::FileUtil::joinPath( cooked, "game/demo/maps/good.scene.bin" ) ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::joinPath( cooked, "game/demo/maps/good.scene.bin" ) ) );
 }
 
 /**
@@ -860,13 +860,13 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
     SW_EXPECT_FALSE( bRequestAccepted );
     SW_EXPECT_EQUAL( 0u, earlyCookedCount );
     SW_EXPECT_EQUAL( 1u, earlyFailedCount );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( cookedPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( cookedPath ) );
 
     // 단계를 지난 레지스트리로는 같은 쿠킹이 된다.
     uint32 failedCount{ 0 };
     SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( root, cooked, failedCount ) );
     SW_EXPECT_EQUAL( 0u, failedCount );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( cookedPath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( cookedPath ) );
     manager.shutdown();
 }
 
@@ -932,8 +932,8 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
     SW_EXPECT_EQUAL( 1u, missingComponentCount );
     SW_EXPECT_EQUAL( 0u, cookedCount );
     SW_EXPECT_EQUAL( 1u, failedCount );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( sw::FileUtil::joinPath( cooked, "game/demo/maps/unknown.scene.bin" ) ) );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( sw::FileUtil::joinPath( cooked, "game/othergame/maps/unknown.scene.bin" ) ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( cooked, "game/demo/maps/unknown.scene.bin" ) ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( cooked, "game/othergame/maps/unknown.scene.bin" ) ) );
 }
 
 /**

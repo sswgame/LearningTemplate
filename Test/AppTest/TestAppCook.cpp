@@ -71,7 +71,7 @@ SW_TEST_CASE( AppCookTest, SceneCookBuildsGameFrameworkComponents )
     SW_EXPECT_EQUAL( 0, result._exitCode );
     SW_EXPECT_TRUE_MSG( result._listMissingComponentLine.empty(),
                         result._listMissingComponentLine.empty() ? "" : result._listMissingComponentLine.front().c_str() );
-    SW_EXPECT_TRUE( FileUtil::fileExists( FileUtil::joinPath( cookedDir, "game/empty/maps/spriteui.scene.bin" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::joinPath( cookedDir, "game/empty/maps/spriteui.scene.bin" ) ) );
 }
 
 /**
@@ -88,5 +88,5 @@ SW_TEST_CASE( AppCookTest, SceneCookReadsTheSourceTreeCleanly )
     SW_ASSERT_TRUE_MSG( result._bLaunched, "App could not be launched - is it next to the test binary or in the working folder (Bin)?" );
     SW_EXPECT_EQUAL( 0, result._exitCode );
     SW_EXPECT_TRUE_MSG( result._listProblemLine.empty(), result._listProblemLine.empty() ? "" : result._listProblemLine.front().c_str() );
-    SW_EXPECT_TRUE( FileUtil::fileExists( FileUtil::joinPath( cookedDir, "game/empty/prefabs/testprop.prefab.bin" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::joinPath( cookedDir, "game/empty/prefabs/testprop.prefab.bin" ) ) );
 }

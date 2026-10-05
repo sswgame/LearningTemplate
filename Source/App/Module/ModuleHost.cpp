@@ -393,7 +393,7 @@ namespace sw
 #else
         const string modulePath     = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ),
                                                           ModuleImageUtil::formatSharedLibraryName( sw::config::kTargetEditorModule ) );
-        void* const  pLibraryModule = FileUtil::fileExists( modulePath ) ? ModuleImageUtil::loadDynamicLibrary( modulePath ) : nullptr;
+        void* const  pLibraryModule = FileUtil::exists( modulePath ) ? ModuleImageUtil::loadDynamicLibrary( modulePath ) : nullptr;
         if ( pLibraryModule == nullptr )
         {
             SW_LOG_ERROR( "Asset importing needs the editor module next to the executable: %#", modulePath.c_str() );

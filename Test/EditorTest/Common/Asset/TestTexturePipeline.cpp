@@ -231,7 +231,7 @@ namespace sw::editor
         {
             // If textures_raw is not yet set in Resource priority, test direct path
             const string directPath = "Resource/editor/textures_raw/splash.jpg";
-            if ( FileUtil::fileExists( directPath ) == false )
+            if ( FileUtil::exists( directPath ) == false )
                 return;
         }
 
@@ -260,7 +260,7 @@ namespace sw::editor
         SW_EXPECT_EQUAL( 1376u, importResult._width );
         SW_EXPECT_EQUAL( 768u, importResult._height );
         SW_EXPECT_EQUAL( 1u, importResult._mipCount );
-        SW_EXPECT_TRUE( FileUtil::fileExists( tempOutDds ) );
+        SW_EXPECT_TRUE( FileUtil::exists( tempOutDds ) );
 
         // 3. Verify generated DDS with Engine DdsLoader
         DdsImageData ddsData;
@@ -642,15 +642,15 @@ namespace sw::editor
         AssetImportSummary summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly );
         SW_EXPECT_EQUAL( 1u, summary._sourceCount );
         SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
-        SW_EXPECT_FALSE( FileUtil::fileExists( ddsPath ) );
-        SW_EXPECT_FALSE( FileUtil::fileExists( stampPath ) );
+        SW_EXPECT_FALSE( FileUtil::exists( ddsPath ) );
+        SW_EXPECT_FALSE( FileUtil::exists( stampPath ) );
 
         // 2) 임포트한다 → DDS 와 스탬프가 생기고, 다시 보면 맞는다. 맞는 것은 다시 임포트하지 않는다.
         summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::ImportStale );
         SW_EXPECT_TRUE( summary.isClean() );
         SW_EXPECT_EQUAL( 1u, summary._importedCount );
-        SW_EXPECT_TRUE( FileUtil::fileExists( ddsPath ) );
-        SW_EXPECT_TRUE( FileUtil::fileExists( stampPath ) );
+        SW_EXPECT_TRUE( FileUtil::exists( ddsPath ) );
+        SW_EXPECT_TRUE( FileUtil::exists( stampPath ) );
         SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly ).isClean() );
         SW_EXPECT_EQUAL( 0u, TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::ImportStale )._importedCount );
 
@@ -680,7 +680,7 @@ namespace sw::editor
         SW_EXPECT_TRUE( summary.isClean() );
         SW_EXPECT_EQUAL( 0u, summary._sourceCount );
         SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly ).isClean() );
-        SW_EXPECT_TRUE( FileUtil::fileExists( ddsPath ) );
+        SW_EXPECT_TRUE( FileUtil::exists( ddsPath ) );
     }
 
     /**
@@ -699,7 +699,7 @@ namespace sw::editor
         SW_EXPECT_EQUAL( 1u, summary._sourceCount );
         SW_EXPECT_EQUAL( 0u, summary._importedCount );
         SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
-        SW_EXPECT_FALSE( FileUtil::fileExists( FileUtil::joinPath( resourceRoot, "engine/textures/sky.dds" ) ) );
+        SW_EXPECT_FALSE( FileUtil::exists( FileUtil::joinPath( resourceRoot, "engine/textures/sky.dds" ) ) );
     }
 
     /**

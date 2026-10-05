@@ -61,7 +61,7 @@ namespace sw
         if ( _bIsWatching.load( std::memory_order_relaxed ) == true )
             return false;
 
-        if ( FileUtil::directoryExists( directoryPath ) == false )
+        if ( FileUtil::isDirectory( directoryPath ) == false )
         {
             SW_LOG_ERROR( "Directory does not exist: %#", string{ directoryPath }.c_str() );
             return false;

@@ -207,7 +207,7 @@ SW_TEST_CASE( ArchitectureTest, AllRHIModulesAbiStampExports )
     for ( const utf8* modName : kRhiModules )
     {
         const sw::string path = sw::modulePath( modName );
-        if ( sw::FileUtil::fileExists( path ) == false )
+        if ( sw::FileUtil::exists( path ) == false )
             continue;
 
         void* handle = sw::ModuleImageUtil::loadDynamicLibrary( path );
@@ -277,7 +277,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadBrokenGraphIgnoresTrigger )
  */
 SW_TEST_CASE( ArchitectureTest, LiveReloadOnAfterBrokenGraphFailsRegister )
 {
-    if ( sw::FileUtil::fileExists( sw::modulePath( "SWGame" ) ) == false )
+    if ( sw::FileUtil::exists( sw::modulePath( "SWGame" ) ) == false )
         SW_TEST_SKIP( "SWGame MODULE not built in this config" );
     SW_TEST_DEFENSIVE_SCOPE( "Testing registration failure when onAfter breaks the graph" );
     const uint32 shadowCountBefore = sw::countShadowCopies( "SWGame" );
@@ -303,7 +303,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeAbortsAfterOnAfterBrokenGraph )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing cascade abort when a dependency's onAfter breaks the graph" );
     const sw::string gfPath = sw::modulePath( "GameFramework" );
-    if ( sw::FileUtil::fileExists( gfPath ) == false )
+    if ( sw::FileUtil::exists( gfPath ) == false )
         SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
 
     sw::LiveReloadManager manager;
@@ -400,7 +400,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadSuccessfulShadowReload )
 SW_TEST_CASE( ArchitectureTest, LiveReloadRegistrarContentLifecycle )
 {
     const sw::string gfPath = sw::modulePath( "GameFramework" );
-    if ( sw::FileUtil::fileExists( gfPath ) == false )
+    if ( sw::FileUtil::exists( gfPath ) == false )
         SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
 
     sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
@@ -476,7 +476,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadRegistrarContentLifecycle )
 SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeSuccessPath )
 {
     const sw::string gfPath = sw::modulePath( "GameFramework" );
-    if ( sw::FileUtil::fileExists( gfPath ) == false )
+    if ( sw::FileUtil::exists( gfPath ) == false )
         SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
 
     sw::LiveReloadManager manager;
@@ -601,7 +601,7 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
 SW_TEST_CASE( ArchitectureTest, FaultInOnAfterReloadStopsTheModuleNotTheProcess )
 {
     const sw::string gamePath = sw::modulePath( "SWGame" );
-    if ( sw::FileUtil::fileExists( gamePath ) == false )
+    if ( sw::FileUtil::exists( gamePath ) == false )
         SW_TEST_SKIP( "SWGame MODULE not built in this config" );
     SW_TEST_DEFENSIVE_SCOPE( "a fault in onAfterReload is contained" );
 
@@ -641,7 +641,7 @@ SW_TEST_CASE( ArchitectureTest, FaultInOnAfterReloadStopsTheModuleNotTheProcess 
  */
 SW_TEST_CASE( ArchitectureTest, ModuleGlobalVariablesFollowTheModuleLifetime )
 {
-    if ( sw::FileUtil::fileExists( sw::modulePath( "EditorModule" ) ) == false )
+    if ( sw::FileUtil::exists( sw::modulePath( "EditorModule" ) ) == false )
         SW_TEST_SKIP( "EditorModule not built in this config" );
     if ( sw::engine::areEngineServicesBound() == false )
         SW_TEST_SKIP( "engine services not bound" );
@@ -670,7 +670,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleGlobalVariablesFollowTheModuleLifetime )
 SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
 {
     const sw::string editorPath = sw::modulePath( "EditorModule" );
-    if ( sw::FileUtil::fileExists( editorPath ) == false )
+    if ( sw::FileUtil::exists( editorPath ) == false )
         SW_TEST_SKIP( "EditorModule not built in this config" );
 
     sw::LiveReloadManager manager;
@@ -736,7 +736,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
  */
 SW_TEST_CASE( ArchitectureTest, ObjectUndoSurvivesAnEditorModuleReload )
 {
-    if ( sw::FileUtil::fileExists( sw::modulePath( "EditorModule" ) ) == false )
+    if ( sw::FileUtil::exists( sw::modulePath( "EditorModule" ) ) == false )
         SW_TEST_SKIP( "EditorModule not built in this config" );
 
     sw::SceneManager sceneManager;
@@ -780,7 +780,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadGenreKitsIndividuallyAndCascaded )
     for ( const utf8* kitName : kKits )
     {
         const sw::string kitPath = sw::modulePath( kitName );
-        if ( sw::FileUtil::fileExists( kitPath ) == false )
+        if ( sw::FileUtil::exists( kitPath ) == false )
             continue;
 
         sw::LiveReloadManager manager;
@@ -904,7 +904,7 @@ SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
 SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
 {
     const sw::string gfPath = sw::modulePath( "GameFramework" );
-    if ( sw::FileUtil::fileExists( gfPath ) == false )
+    if ( sw::FileUtil::exists( gfPath ) == false )
         SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
 
     sw::LiveReloadManager manager;
@@ -962,7 +962,7 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
  */
 SW_TEST_CASE( ArchitectureTest, ReloadWaitsForTheBuildToSucceed )
 {
-    if ( sw::FileUtil::fileExists( sw::modulePath( "SWGame" ) ) == false )
+    if ( sw::FileUtil::exists( sw::modulePath( "SWGame" ) ) == false )
         SW_TEST_SKIP( "SWGame MODULE not built in this config" );
 
     sw::LiveReloadManager manager;
@@ -1021,7 +1021,7 @@ SW_TEST_CASE( ArchitectureTest, ReloadWaitsForTheBuildToSucceed )
 SW_TEST_CASE( ArchitectureTest, DeferredUnloadImagesStayMappedUntilTheirBatchIsEvicted )
 {
     const sw::string gfPath = sw::modulePath( "GameFramework" );
-    if ( sw::FileUtil::fileExists( gfPath ) == false )
+    if ( sw::FileUtil::exists( gfPath ) == false )
         SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
 
     sw::LiveReloadManager manager;
@@ -1067,7 +1067,7 @@ SW_TEST_CASE( ArchitectureTest, ModulesCarryTheRunningEngineAbiStamp )
     for ( const utf8* pModuleName : arrModuleName )
     {
         const sw::string path = sw::modulePath( pModuleName );
-        if ( sw::FileUtil::fileExists( path ) == false )
+        if ( sw::FileUtil::exists( path ) == false )
             SW_TEST_SKIP( "module not built in this config" );
 
         sw::vector<uint8> bytes;
@@ -1086,7 +1086,7 @@ SW_TEST_CASE( ArchitectureTest, ModulesCarryTheRunningEngineAbiStamp )
 SW_TEST_CASE( ArchitectureTest, ModuleBuiltAgainstOtherEngineHeadersIsRejected )
 {
     const sw::string gamePath = sw::modulePath( "SWGame" );
-    if ( sw::FileUtil::fileExists( gamePath ) == false )
+    if ( sw::FileUtil::exists( gamePath ) == false )
         SW_TEST_SKIP( "SWGame MODULE not built in this config" );
     SW_TEST_DEFENSIVE_SCOPE( "a module built against other engine headers is rejected before it loads" );
 
@@ -1197,7 +1197,7 @@ namespace sw
  */
 SW_TEST_CASE( ArchitectureTest, FailureBeforeTheNewImageTakesOverKeepsTheOldModule )
 {
-    if ( sw::FileUtil::fileExists( sw::modulePath( "SWGame" ) ) == false )
+    if ( sw::FileUtil::exists( sw::modulePath( "SWGame" ) ) == false )
         SW_TEST_SKIP( "SWGame MODULE not built in this config" );
     SW_TEST_DEFENSIVE_SCOPE( "a rejected reload logs why it kept the old module" );
 
@@ -1214,7 +1214,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
     SW_TEST_SKIP( "ModuleCompiler is only supported in Dev / non-shipping builds" );
     #else
     const sw::string editorPath = sw::modulePath( "EditorModule" );
-    if ( sw::FileUtil::fileExists( editorPath ) == false )
+    if ( sw::FileUtil::exists( editorPath ) == false )
         SW_TEST_SKIP( "EditorModule not built in this config" );
 
     sw::LiveReloadManager manager;
@@ -1344,7 +1344,7 @@ SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGpu )
     cache.release( materialPath );
     SW_EXPECT_FALSE( cache.isCached( materialPath ) );
 
-    SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( materialPath + ".meta" ), "acquire wrote a .meta sidecar next to a material that does not exist" );
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( materialPath + ".meta" ), "acquire wrote a .meta sidecar next to a material that does not exist" );
     cache.clear();
 }
 
@@ -1360,7 +1360,7 @@ SW_TEST_CASE( ArchitectureTest, RHIBackendDynamicSwapAndReload )
         for ( const utf8* backendName : kRhiBackends )
         {
             const sw::string modPath = sw::modulePath( backendName );
-            if ( sw::FileUtil::fileExists( modPath ) == false )
+            if ( sw::FileUtil::exists( modPath ) == false )
                 continue;
 
             void* handle = sw::ModuleImageUtil::loadDynamicLibrary( modPath );
@@ -1631,7 +1631,7 @@ SW_TEST_CASE( ModuleApiTest, SharedModuleChildKeepsItsRegistrations )
  */
 SW_TEST_CASE( ModuleApiTest, GameFrameworkRegistersUnderItsOwnName )
 {
-    if ( sw::FileUtil::fileExists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::fileExists( sw::modulePath( "GF_Overworld" ) ) == false )
+    if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::exists( sw::modulePath( "GF_Overworld" ) ) == false )
         SW_TEST_SKIP( "GameFramework · GF_Overworld 모듈이 옆에 없습니다" );
 
     const test::ChildEnvironmentVariable arrEnvironment[] = {
@@ -1690,7 +1690,7 @@ SW_TEST_CASE( ModuleApiTest, EveryModulePropertyHasATypeTheSerializersCanCarry )
 {
     for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_ActionCombat", "SWGame", "EditorModule" } )
     {
-        if ( sw::FileUtil::fileExists( sw::modulePath( pModule ) ) == false )
+        if ( sw::FileUtil::exists( sw::modulePath( pModule ) ) == false )
             SW_TEST_SKIP( "a module is not built next to the test in this config" );
     }
 
@@ -1833,7 +1833,7 @@ SW_TEST_CASE( ModuleApiTest, UnloadChildReleasesTheChannelsItsImageCreated )
  */
 SW_TEST_CASE( ModuleApiTest, UnloadReleasesTheChannelsTheImageCreated )
 {
-    if ( sw::FileUtil::fileExists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::fileExists( sw::modulePath( "SWGame" ) ) == false )
+    if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::exists( sw::modulePath( "SWGame" ) ) == false )
         SW_TEST_SKIP( "GameFramework · SWGame 모듈이 옆에 없습니다" );
 
     const test::ChildEnvironmentVariable arrEnvironment[] = {
@@ -1853,7 +1853,7 @@ SW_TEST_CASE( ModuleApiTest, UnloadReleasesTheChannelsTheImageCreated )
  */
 SW_TEST_CASE( ModuleApiTest, UnloadKeepsTheImagesTheModulePulledIn )
 {
-    if ( sw::FileUtil::fileExists( sw::modulePath( "GameFramework" ) ) == false )
+    if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false )
         SW_TEST_SKIP( "GameFramework 모듈이 옆에 없습니다" );
 
     void* const hGame = sw::loadModule( "SWGame" );

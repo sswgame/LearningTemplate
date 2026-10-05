@@ -140,7 +140,7 @@ namespace sw
     bool MemoryBudgetMonitor::loadBudgetFile( string_view absolutePath )
     {
         MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        if ( pProfiler == nullptr || FileUtil::fileExists( absolutePath ) == false )
+        if ( pProfiler == nullptr || FileUtil::exists( absolutePath ) == false )
             return true;
 
         string text;

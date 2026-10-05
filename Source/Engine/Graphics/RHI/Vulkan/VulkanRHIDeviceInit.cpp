@@ -554,7 +554,7 @@ namespace sw
         vector<uint8> listCacheData;
         const string  cachePath = "Saved/ShaderCache/vk_pipeline_cache.bin";
         // 못 읽으면 빈 캐시로 시작한다 — 파이프라인을 다시 만들 뿐이다.
-        if ( FileUtil::fileExists( cachePath ) )
+        if ( FileUtil::exists( cachePath ) )
             (void)FileUtil::readFile( cachePath, listCacheData );
 
         VkPipelineCacheCreateInfo createInfo{};

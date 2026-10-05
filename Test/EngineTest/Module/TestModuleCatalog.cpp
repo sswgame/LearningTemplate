@@ -226,13 +226,13 @@ SW_TEST_CASE( ModuleCatalogTest, BuildAndRuntimeAgree )
 {
     const sw::string catalogDirectory = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() ), sw::ModuleCatalog::kCatalogFolder );
     const sw::string resolvedPath     = sw::FileUtil::joinPath( catalogDirectory, "ResolvedModules.txt" );
-    if ( sw::FileUtil::fileExists( resolvedPath ) == false )
+    if ( sw::FileUtil::exists( resolvedPath ) == false )
     {
         // 시험 실행 파일이 `Bin` 이 아닌 곳(배포본의 TestBin)에 있다 — 작업 폴더의 `Modules/` 를 본다.
-        if ( sw::FileUtil::fileExists( sw::FileUtil::joinPath( sw::ModuleCatalog::kCatalogFolder, "ResolvedModules.txt" ) ) == false )
+        if ( sw::FileUtil::exists( sw::FileUtil::joinPath( sw::ModuleCatalog::kCatalogFolder, "ResolvedModules.txt" ) ) == false )
             SW_TEST_SKIP( "no module catalog next to the executable (Shipping does not copy manifests)" );
     }
-    const sw::string directory = sw::FileUtil::fileExists( resolvedPath ) ? catalogDirectory : sw::string( sw::ModuleCatalog::kCatalogFolder );
+    const sw::string directory = sw::FileUtil::exists( resolvedPath ) ? catalogDirectory : sw::string( sw::ModuleCatalog::kCatalogFolder );
 
     sw::ModuleCatalog catalog;
     sw::string        error;

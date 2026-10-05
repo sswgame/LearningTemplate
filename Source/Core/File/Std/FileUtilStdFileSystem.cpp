@@ -124,12 +124,12 @@ namespace sw
 
     bool FileUtil::ensureDirectoryExists( string_view directoryPath )
     {
-        if ( directoryPath.empty() || directoryExists( directoryPath ) )
+        if ( directoryPath.empty() || isDirectory( directoryPath ) )
             return true;
 
         std::error_code errorCode;
         std::filesystem::create_directories( FileUtilStdInternal::toPath( directoryPath ), errorCode );
-        if ( errorCode || directoryExists( directoryPath ) == false )
+        if ( errorCode || isDirectory( directoryPath ) == false )
         {
             SW_LOG_ERROR( "Could not create directory '%#': %#", directoryPath, errorCode ? FileUtilStdInternal::describe( errorCode ).c_str() : "a file is in the way" );
             return false;
@@ -137,15 +137,15 @@ namespace sw
         return true;
     }
 
-    bool FileUtil::fileExists( string_view fileName )
+    bool FileUtil::exists( string_view path )
     {
-        if ( fileName.empty() )
+        if ( path.empty() )
             return false;
         std::error_code errorCode;
-        return std::filesystem::exists( FileUtilStdInternal::toPath( fileName ), errorCode );
+        return std::filesystem::exists( FileUtilStdInternal::toPath( path ), errorCode );
     }
 
-    bool FileUtil::directoryExists( string_view path )
+    bool FileUtil::isDirectory( string_view path )
     {
         if ( path.empty() )
             return false;
@@ -282,7 +282,7 @@ namespace sw
             return true;
         std::error_code errorCode;
         std::filesystem::remove( FileUtilStdInternal::toPath( path ), errorCode );
-        if ( fileExists( path ) == false )
+        if ( exists( path ) == false )
             return true;
         SW_LOG_WARNING( "Could not remove '%#': %#", path, errorCode ? FileUtilStdInternal::describe( errorCode ).c_str() : "still there" );
         return false;
@@ -294,7 +294,7 @@ namespace sw
             return true;
         std::error_code errorCode;
         std::filesystem::remove( FileUtilStdInternal::toPath( path ), errorCode );
-        return fileExists( path ) == false;
+        return exists( path ) == false;
     }
 
     bool FileUtil::removeDirectory( string_view path )
@@ -303,7 +303,7 @@ namespace sw
             return true;
         std::error_code errorCode;
         std::filesystem::remove_all( FileUtilStdInternal::toPath( path ), errorCode );
-        if ( directoryExists( path ) == false )
+        if ( isDirectory( path ) == false )
             return true;
         SW_LOG_WARNING( "Could not remove directory '%#': %#", path, errorCode ? FileUtilStdInternal::describe( errorCode ).c_str() : "still there" );
         return false;

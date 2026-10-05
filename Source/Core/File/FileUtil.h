@@ -158,14 +158,14 @@ namespace sw
          * @return 디렉터리가 있으면 true. 만들지 못했으면 경로와 이유를 알리고 false 입니다.
          */
         static bool ensureDirectoryExists( string_view directoryPath );
-        /** @brief 경로에 **항목(파일 또는 디렉터리)** 이 있는지 반환합니다. 디렉터리인지는 `directoryExists` 로 묻습니다. */
-        static bool fileExists( string_view fileName );
+        /** @brief 경로에 **항목(파일 또는 디렉터리)** 이 있는지 반환합니다. 디렉터리인지는 `isDirectory` 로 묻습니다. */
+        static bool exists( string_view path );
         /** @brief 경로에 디렉터리가 있는지 반환합니다. */
-        static bool directoryExists( string_view path );
+        static bool isDirectory( string_view path );
         /**
          * @brief 경로에 **일반 파일**이 있는지 반환합니다(디렉터리 · 없는 경로는 false, 링크는 가리키는 쪽 기준).
          * @details 후보 경로 여럿 중 처음 있는 것을 골라 파일로 읽는 곳(설정 · 리소스 낱개 · 셰이더 include · 폰트 찾기)이 씁니다 — 같은 이름의 폴더가
-         *          있으면 `fileExists` 는 그것을 골라 다음 후보로 넘어가지 못합니다.
+         *          있으면 `exists` 는 그것을 골라 다음 후보로 넘어가지 못합니다.
          */
         static bool isRegularFile( string_view path );
         /**

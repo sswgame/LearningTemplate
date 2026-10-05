@@ -211,9 +211,9 @@ SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
     if ( result._bSuccess == false && result._errorMessage.find( "unavailable" ) != sw::string::npos )
         SW_TEST_SKIP( result._errorMessage.c_str() );
     SW_ASSERT_TRUE( result._bSuccess );
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::fileExists( livePath ), "실시간 컴파일이 자기 코드젠의 자리에 쓰지 않았습니다" );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( livePath ), "실시간 컴파일이 자기 코드젠의 자리에 쓰지 않았습니다" );
     if ( livePath != requestPath )
-        SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( requestPath ), "디버그 코드젠 바이트코드를 최적화 자리(-opt)에 썼습니다" );
+        SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( requestPath ), "디버그 코드젠 바이트코드를 최적화 자리(-opt)에 썼습니다" );
 
     // 핫 리로드도 같은 요청으로 다시 컴파일한다 — 소스가 그대로이니 같은 자리에 같은 바이트다.
     if ( sw::engine::areEngineServicesBound() == false )
@@ -229,7 +229,7 @@ SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
     SW_ASSERT_TRUE( sw::FileUtil::readFile( livePath, listReloaded ) );
     SW_EXPECT_TRUE_MSG( listReloaded == result._bytecode, "핫 리로드가 캐시와 다른 코드젠으로 다시 컴파일했습니다" );
     if ( livePath != requestPath )
-        SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( requestPath ), "핫 리로드가 최적화 자리(-opt)에 썼습니다" );
+        SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( requestPath ), "핫 리로드가 최적화 자리(-opt)에 썼습니다" );
 }
 
 #endif // !SW_SHIPPING

@@ -141,7 +141,7 @@ namespace sw
             if ( _bEnableValidationLayers == SW_TRUE )
             {
                 string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-                if ( FileUtil::fileExists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
+                if ( FileUtil::exists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
                 {
                     SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", execDir.c_str() );
                     SetEnvironmentVariableA( "VK_LAYER_PATH", execDir.c_str() );

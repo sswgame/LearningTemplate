@@ -68,7 +68,7 @@ namespace sw
             return false;
         }
         const string metaPath = metaPathFor( abs );
-        if ( FileUtil::fileExists( metaPath ) && FileUtil::removeFile( metaPath ) == false )
+        if ( FileUtil::exists( metaPath ) && FileUtil::removeFile( metaPath ) == false )
             SW_LOG_WARNING( "Deleted '%#' but its .meta could not be removed", abs );
         return true;
     }
@@ -212,7 +212,7 @@ namespace sw
     uint32 AssetDatabase::refreshFolder( string_view absoluteFolder, bool bCreateMissing )
     {
         uint32 count{ 0 };
-        if ( FileUtil::directoryExists( absoluteFolder ) == false )
+        if ( FileUtil::isDirectory( absoluteFolder ) == false )
             return 0;
 
         vector<string> listFile;
@@ -249,7 +249,7 @@ namespace sw
 
     uint32 AssetDatabase::scanMetaFiles( string_view absoluteRoot )
     {
-        if ( FileUtil::directoryExists( absoluteRoot ) == false )
+        if ( FileUtil::isDirectory( absoluteRoot ) == false )
             return 0;
 
         // 절대 경로는 대소문자를 **보존**해서 받아야 한다(refreshFolder 와 같은 규칙). normalizePath 는

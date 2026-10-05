@@ -113,10 +113,10 @@ SW_TEST_CASE( CrashBundleTest, BundlesPreviousCrashesOnce )
 
     const string bundle = Internal::bundleFolder( reportsFolder, "oldsession01" );
     for ( const utf8* pName : { "crash.dmp", "crash.txt", "crash.stack.txt", "crash.breadcrumbs.txt", "last.log", "manifest.json" } )
-        SW_EXPECT_TRUE_MSG( FileUtil::fileExists( FileUtil::joinPath( bundle, pName ) ), pName );
-    SW_EXPECT_FALSE( FileUtil::fileExists( FileUtil::joinPath( crashFolder, "crash_oldsession01.dmp" ) ) );
-    SW_EXPECT_TRUE( FileUtil::fileExists( FileUtil::joinPath( crashFolder, "crash_currentsession00.dmp" ) ) );
-    SW_EXPECT_FALSE( FileUtil::directoryExists( Internal::bundleFolder( reportsFolder, Internal::kCurrentSession ) ) );
+        SW_EXPECT_TRUE_MSG( FileUtil::exists( FileUtil::joinPath( bundle, pName ) ), pName );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::joinPath( crashFolder, "crash_oldsession01.dmp" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::joinPath( crashFolder, "crash_currentsession00.dmp" ) ) );
+    SW_EXPECT_FALSE( FileUtil::isDirectory( Internal::bundleFolder( reportsFolder, Internal::kCurrentSession ) ) );
 
     string lastLog;
     SW_ASSERT_TRUE( FileUtil::readTextFile( FileUtil::joinPath( bundle, "last.log" ), lastLog ) );
@@ -188,7 +188,7 @@ SW_TEST_CASE( CrashBundleTest, ConsentDecidesWhatLeavesTheMachine )
     SW_EXPECT_TRUE( uploader._listBundle[0]._manifest.find( "\"askyes\"" ) != string::npos );
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( uploader._listBundle[0]._listFilePath.size() ) ); // 덤프 · 컨텍스트 · 스택 · 빵부스러기(이 세션의 로그는 없다)
     SW_EXPECT_TRUE( Internal::stateOf( reportsFolder, "askyes" ) == "sent" );
-    SW_EXPECT_FALSE( FileUtil::fileExists( FileUtil::joinPath( Internal::bundleFolder( reportsFolder, "askyes" ), "crash.dmp" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::joinPath( Internal::bundleFolder( reportsFolder, "askyes" ), "crash.dmp" ) ) );
 
     // send: 바로 보낼 줄. 그런데 보내기 전에 local 로 바꾸면(철회) 보내지 않는다 — 기다리던 ask 묶음도.
     service.setConsent( CrashReportConsent::Send );
@@ -358,5 +358,5 @@ SW_TEST_CASE( CrashBundleTest, RealCrashLeavesABundle )
     string context;
     SW_ASSERT_TRUE( FileUtil::readTextFile( FileUtil::joinPath( report._folder, "crash.txt" ), context ) );
     SW_EXPECT_TRUE_MSG( context.find( "BundleTestRhi" ) != string::npos, context.c_str() );
-    SW_EXPECT_TRUE( FileUtil::fileExists( FileUtil::joinPath( report._folder, "crash.stack.txt" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::joinPath( report._folder, "crash.stack.txt" ) ) );
 }

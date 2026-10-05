@@ -259,7 +259,7 @@ namespace sw
     void ShaderCompiler::clearDiskCache()
     {
         const string cacheDir = ShaderCompilerInternal::getShaderCacheDirectory();
-        if ( cacheDir.empty() == false && FileUtil::directoryExists( cacheDir ) )
+        if ( cacheDir.empty() == false && FileUtil::isDirectory( cacheDir ) )
         {
             vector<string> listFile;
             FileUtil::collectFiles( cacheDir, "", listFile, false );
@@ -278,12 +278,12 @@ namespace sw
         result._bytecode.reserve( 4096 );
 
         string absPathStr;
-        if ( FileUtil::fileExists( desc._filePath ) )
+        if ( FileUtil::exists( desc._filePath ) )
             absPathStr = desc._filePath;
         else
             absPathStr = ResourceUtil::getResourcePath( desc._filePath );
 
-        if ( absPathStr.empty() || FileUtil::fileExists( absPathStr ) == false )
+        if ( absPathStr.empty() || FileUtil::exists( absPathStr ) == false )
         {
             result._errorMessage = "Shader source file not found: " + desc._filePath;
             // 부르는 쪽이 존재 여부를 먼저 검사하는 것이 정상이다. 없는 파일은 ERROR 가 아니라 조용히 실패한다.
@@ -294,7 +294,7 @@ namespace sw
         if ( ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) )
         {
             cachePath = ShaderCompilerInternal::computeCachePath( desc, absPathStr );
-            if ( cachePath.empty() == false && FileUtil::fileExists( cachePath ) )
+            if ( cachePath.empty() == false && FileUtil::exists( cachePath ) )
             {
                 vector<uint8> cachedBytes;
                 if ( FileUtil::readFile( cachePath, cachedBytes ) && cachedBytes.empty() == false )

@@ -730,7 +730,7 @@ namespace sw
 
     bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, const bool bRecursive )
     {
-        if ( directoryExists( directory ) == false )
+        if ( isDirectory( directory ) == false )
             return false;
 
         const bool bHasFilter = filterExtension.empty() == false;
@@ -747,7 +747,7 @@ namespace sw
 
     bool FileUtil::collectFolders( string_view directory, vector<string>& outListFolder, const bool bRecursive )
     {
-        if ( directoryExists( directory ) == false )
+        if ( isDirectory( directory ) == false )
             return false;
 
         (void)forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )

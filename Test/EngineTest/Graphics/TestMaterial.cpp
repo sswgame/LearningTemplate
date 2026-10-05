@@ -45,7 +45,7 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     sw::string tempPath = test::makeTempPath( "test_saved_material.material" );
     bool       saveOk   = material->saveToFile( tempPath );
     SW_EXPECT_TRUE( saveOk );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( tempPath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( tempPath ) );
 
     sw::shared_ptr<sw::Material> reloadedMaterial = sw::Material::create();
     bool                         reloadOk         = reloadedMaterial->loadFromFile( tempPath );

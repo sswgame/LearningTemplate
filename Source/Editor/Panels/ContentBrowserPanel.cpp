@@ -277,7 +277,7 @@ namespace sw::editor
         {
             if ( path.empty() )
                 return;
-            if ( FileUtil::directoryExists( path ) == false )
+            if ( FileUtil::isDirectory( path ) == false )
                 return;
             ContentRoot root;
             root._displayName  = pName;
@@ -667,7 +667,7 @@ namespace sw::editor
                 builtCrumb.append( part.data(), part.size() );
                 const string lowerChild = FileUtil::normalizePath( part );
                 string       next       = FileUtil::joinPath( builtPath, part );
-                if ( FileUtil::directoryExists( next ) == false && builtPath.empty() == false )
+                if ( FileUtil::isDirectory( next ) == false && builtPath.empty() == false )
                 {
                     vector<string> listChild;
                     EditorAssetCommands::collectChildFolders( builtPath, listChild );

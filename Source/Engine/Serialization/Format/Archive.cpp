@@ -48,7 +48,7 @@ namespace sw
             // 에서 느슨한 파일 조회가 꺼져 있어 팩에만 물어보고 그대로 실패한다. 그래서 쓴 것과
             // 같은 규칙으로 먼저 찾고, 없을 때 리소스 id 로 해석한다(engine/... 같은 경로).
             bool bLoaded = false;
-            if ( fileName.empty() == false && FileUtil::fileExists( fileName ) )
+            if ( fileName.empty() == false && FileUtil::exists( fileName ) )
                 bLoaded = FileUtil::readFile( fileName, _bytes );
 
             if ( bLoaded == false )

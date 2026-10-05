@@ -485,12 +485,12 @@ namespace sw
         //
         // 헤더를 **옮긴** 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다. 그러지 않으면 파일을 옮길 때마다 빌드가 막힌다.
         string existingCpp;
-        if ( FileUtil::fileExists( paths._cppPath ) && FileUtil::readTextFile( paths._cppPath, existingCpp ) )
+        if ( FileUtil::exists( paths._cppPath ) && FileUtil::readTextFile( paths._cppPath, existingCpp ) )
         {
             const string_view recordedSource = GeneratedFileUtil::findRecordedSourcePath( existingCpp, config );
             const bool        bOtherOwner    = recordedSource.empty() == false &&
                                      FileUtil::normalizeSeparators( recordedSource ) != FileUtil::normalizeSeparators( inputFile ) &&
-                                     FileUtil::fileExists( recordedSource );
+                                     FileUtil::exists( recordedSource );
             if ( bOtherOwner )
             {
                 SW_LOG_ERROR( "Generated file name collision: '%#' and '%#' both generate '%#'. "
@@ -564,7 +564,7 @@ namespace sw
         {
             const string genHeader = ParserUtil::makeGeneratedPath( _pOptions->_outputDir, inputFile, config._emitHeaderExtension );
             string       genText;
-            if ( FileUtil::fileExists( genHeader ) == false || FileUtil::readTextFile( genHeader, genText ) == false )
+            if ( FileUtil::exists( genHeader ) == false || FileUtil::readTextFile( genHeader, genText ) == false )
                 continue;
             if ( genText.find( config._emitFlagOpsMarker ) == string::npos )
                 continue;

@@ -28,7 +28,7 @@ namespace
             for ( uint32 depth = 0; depth < 8 && directory.empty() == false; ++depth )
             {
                 const sw::string candidate = sw::FileUtil::joinPath( directory, "Resource" );
-                if ( sw::FileUtil::directoryExists( sw::FileUtil::joinPath( candidate, "engine" ) ) )
+                if ( sw::FileUtil::isDirectory( sw::FileUtil::joinPath( candidate, "engine" ) ) )
                     return candidate;
                 directory = sw::FileUtil::getDirectoryPart( directory );
             }
@@ -99,16 +99,16 @@ SW_TEST_CASE( FileUtilBenchTest, QueriesAndDirectoryWalk )
 
     const sw::string existing = sw::FileUtil::joinPath( resourceRoot, "engine/pipeline/forwardpipeline.xml" );
     const sw::string missing  = sw::FileUtil::joinPath( resourceRoot, "engine/pipeline/missing_bench_probe.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::fileExists( existing ) );
+    SW_ASSERT_TRUE( sw::FileUtil::exists( existing ) );
 
     constexpr uint32 kQueryCount = 2000;
     constexpr uint32 kWalkCount  = 5;
-    FileUtilBenchInternal::measure( "fileExists hit", *pProfiler, kQueryCount, [&existing]()
-    { (void)sw::FileUtil::fileExists( existing ); } );
-    FileUtilBenchInternal::measure( "fileExists miss", *pProfiler, kQueryCount, [&missing]()
-    { (void)sw::FileUtil::fileExists( missing ); } );
-    FileUtilBenchInternal::measure( "directoryExists", *pProfiler, kQueryCount, [&resourceRoot]()
-    { (void)sw::FileUtil::directoryExists( resourceRoot ); } );
+    FileUtilBenchInternal::measure( "exists hit", *pProfiler, kQueryCount, [&existing]()
+    { (void)sw::FileUtil::exists( existing ); } );
+    FileUtilBenchInternal::measure( "exists miss", *pProfiler, kQueryCount, [&missing]()
+    { (void)sw::FileUtil::exists( missing ); } );
+    FileUtilBenchInternal::measure( "isDirectory", *pProfiler, kQueryCount, [&resourceRoot]()
+    { (void)sw::FileUtil::isDirectory( resourceRoot ); } );
     FileUtilBenchInternal::measure( "getFileSize", *pProfiler, kQueryCount, [&existing]()
     { (void)sw::FileUtil::getFileSize( existing ); } );
 

@@ -21,7 +21,7 @@ namespace sw
         {
             static void pollFileChange( unordered_map<string, uint64>& mapPollMtime, vector<FileChangeEvent>& outListEvent, const vector<string>& listExtension, const string& filePath )
             {
-                if ( FileUtil::fileExists( filePath ) == false )
+                if ( FileUtil::exists( filePath ) == false )
                     return;
 
                 const string filename           = FileUtil::getFileNamePart( filePath );
@@ -286,7 +286,7 @@ namespace sw
         [[maybe_unused]] uint32 found{ 0 };
         for ( const WatchEntry& entry : _listWatch )
         {
-            if ( FileUtil::directoryExists( entry._pathPrefix ) == false )
+            if ( FileUtil::isDirectory( entry._pathPrefix ) == false )
                 continue;
 
             vector<string> listFile;
@@ -322,11 +322,11 @@ namespace sw
     {
         for ( const WatchEntry& entry : _listWatch )
         {
-            if ( FileUtil::fileExists( entry._pathPrefix ) == false &&
-                 FileUtil::directoryExists( entry._pathPrefix ) == false )
+            if ( FileUtil::exists( entry._pathPrefix ) == false &&
+                 FileUtil::isDirectory( entry._pathPrefix ) == false )
                 continue;
 
-            if ( FileUtil::fileExists( entry._pathPrefix ) )
+            if ( FileUtil::exists( entry._pathPrefix ) )
                 FileWatchDispatcherInternal::pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, entry._pathPrefix );
             else
             {

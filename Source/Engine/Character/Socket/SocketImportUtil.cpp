@@ -31,7 +31,7 @@ namespace sw
     bool SocketImportUtil::writeIfMissing( string_view absolutePath, const SocketSet& sockets, bool& outWritten )
     {
         outWritten = false;
-        if ( FileUtil::fileExists( absolutePath ) )
+        if ( FileUtil::exists( absolutePath ) )
             return true;
         if ( FileUtil::ensureParentDirectoryExists( absolutePath ) == false )
             return false;

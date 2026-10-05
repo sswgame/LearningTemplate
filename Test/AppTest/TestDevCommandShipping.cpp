@@ -47,7 +47,7 @@ SW_TEST_CASE( DevCommandShippingTest, RegistryIsCompiledOutOfShipping )
     // 등록부가 든 이미지를 이름이 아니라 주소로 찾는다 — 리눅스는 libEngine.so 가 Bin 이 아니라 Lib 에 있다.
     const string imagePath = ModuleBuildId::find( reinterpret_cast<const void*>( &DevCommandRegistry::getImageMarker ) )._modulePath;
 #endif
-    if ( imagePath.empty() || FileUtil::fileExists( imagePath ) == false )
+    if ( imagePath.empty() || FileUtil::exists( imagePath ) == false )
         SW_TEST_SKIP( "the image is not next to the test's working directory (run from Bin)" );
     vector<uint8> bytes;
     SW_ASSERT_TRUE( FileUtil::readFile( imagePath, bytes ) );

@@ -1664,6 +1664,7 @@ cd build/Ninja-Debug/Bin
 | `isVisibleIntended` | `isVisibleRequested` |
 | `RHI::applyPendingChange` | `RHI::recreateDevice` |
 | `createParentDirectory` | `ensureParentDirectoryExists` |
+| `FileUtil::fileExists` · `directoryExists` | `FileUtil::exists`(파일 · 폴더 무엇이든) · `isDirectory`(파일만은 `isRegularFile`) |
 | `transformNormal` | `transformVector`(방향 변환) |
 | `-gv_editorOpenAllPanels=1` | `-gv_editorOpenPanel=all` |
 | `RenderResourceXml` | `Serialization/Format/ReflectedXmlFile` |

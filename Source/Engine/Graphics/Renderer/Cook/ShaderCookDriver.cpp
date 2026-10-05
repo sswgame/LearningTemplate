@@ -37,7 +37,7 @@ namespace sw
                 rootDir = "Resource";
         }
 
-        if ( FileUtil::directoryExists( rootDir ) == false )
+        if ( FileUtil::isDirectory( rootDir ) == false )
         {
             SW_LOG_ERROR( "Resource root directory does not exist: %#", rootDir.c_str() );
             ShaderCookSummary nothingCooked{};
@@ -77,12 +77,12 @@ namespace sw
         for ( const ShaderCookRequest& request : listRequest )
         {
             string absPath;
-            if ( FileUtil::fileExists( request._shaderPath ) )
+            if ( FileUtil::exists( request._shaderPath ) )
                 absPath = request._shaderPath;
             else
                 absPath = ResourceUtil::getResourcePath( request._shaderPath );
 
-            if ( FileUtil::fileExists( absPath ) == false )
+            if ( FileUtil::exists( absPath ) == false )
                 continue;
 
             const string normPath  = FileUtil::normalizeSeparators( absPath );
@@ -105,7 +105,7 @@ namespace sw
                 // `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다. 소스가 바뀌었는데도
                 // "산출물이 더 새것" 이 되어 그대로 넘어간다. 낡은 바이너리는 한 백엔드만 다른 그림을 내
                 // 백엔드 버그처럼 보인다.
-                const bool bUpToDate = ( bForceAll == false ) && FileUtil::fileExists( outPath ) &&
+                const bool bUpToDate = ( bForceAll == false ) && FileUtil::exists( outPath ) &&
                                        ShaderCooker::isCookedOutputCurrent( outDir, normPath );
 
                 if ( bUpToDate == false )

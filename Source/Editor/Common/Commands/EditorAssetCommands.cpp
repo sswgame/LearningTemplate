@@ -543,7 +543,7 @@ namespace sw::editor
         // 씬 이름은 쿠커의 규칙 하나다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 쿠킹하지 않는 이름이다.
         EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, params._listFilterExtension );
         const string mapsDir = ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kMapsFolder );
-        if ( FileUtil::directoryExists( mapsDir ) )
+        if ( FileUtil::isDirectory( mapsDir ) )
             params._initialDirectory = mapsDir;
         FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorAssetCommandsInternal::onSaveSceneDialogResult ) );
     }
@@ -559,7 +559,7 @@ namespace sw::editor
         uint32 copied{ 0 };
         for ( const string& sourcePath : listSourcePath )
         {
-            if ( FileUtil::fileExists( sourcePath ) == false )
+            if ( FileUtil::exists( sourcePath ) == false )
             {
                 SW_LOG_WARNING( "Import skipped (missing): %#", sourcePath.c_str() );
                 continue;
@@ -638,7 +638,7 @@ namespace sw::editor
     void EditorAssetCommands::collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList )
     {
         outList.clear();
-        if ( folderAbs.empty() || FileUtil::directoryExists( folderAbs ) == false )
+        if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
         vector<string> listFolder;
@@ -658,7 +658,7 @@ namespace sw::editor
     void EditorAssetCommands::collectChildFolders( string_view folderAbs, vector<string>& outList )
     {
         outList.clear();
-        if ( folderAbs.empty() || FileUtil::directoryExists( folderAbs ) == false )
+        if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
         FileUtil::collectFolders( folderAbs, outList, false );

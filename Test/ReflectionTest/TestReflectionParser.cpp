@@ -48,7 +48,7 @@ namespace
         };
         for ( const sw::string& candidate : arrCandidate )
         {
-            if ( sw::FileUtil::fileExists( candidate ) )
+            if ( sw::FileUtil::exists( candidate ) )
                 return candidate;
         }
         return {};
@@ -141,13 +141,13 @@ namespace
         {
             const sw::string genCpp = sw::FileUtil::joinPath( outGenDir, header._fileStem + ".gen.cpp" );
             sw::string       generated;
-            if ( sw::FileUtil::fileExists( genCpp ) && sw::FileUtil::readTextFile( genCpp, generated ) == false )
+            if ( sw::FileUtil::exists( genCpp ) && sw::FileUtil::readTextFile( genCpp, generated ) == false )
                 generated.clear(); // 못 읽은 산출물은 빈 것으로 본다 — 시험이 내용으로 진다
             result._listGeneratedCpp.push_back( generated );
 
             const sw::string genHeader = sw::FileUtil::joinPath( outGenDir, header._fileStem + ".gen.h" );
             sw::string       generatedHeader;
-            if ( sw::FileUtil::fileExists( genHeader ) && sw::FileUtil::readTextFile( genHeader, generatedHeader ) == false )
+            if ( sw::FileUtil::exists( genHeader ) && sw::FileUtil::readTextFile( genHeader, generatedHeader ) == false )
                 generatedHeader.clear();
             result._listGeneratedHeader.push_back( generatedHeader );
         }
@@ -919,7 +919,7 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
     SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
 
     const sw::string genPath = sw::FileUtil::joinPath( outGenDir, "StalenessProbeSample.gen.cpp" );
-    SW_ASSERT_TRUE( sw::FileUtil::fileExists( genPath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::exists( genPath ) );
 
     // 표식을 심고, 산출물을 파서보다 한 시간 과거로 돌린다.
     sw::string generatedText;
@@ -935,11 +935,11 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
     SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( headerPath, parserTime - 2 * kHourTicks ) );
     SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( genPath, parserTime - kHourTicks ) );
     const sw::string genHeaderPath = sw::FileUtil::joinPath( outGenDir, "StalenessProbeSample.gen.h" );
-    if ( sw::FileUtil::fileExists( genHeaderPath ) )
+    if ( sw::FileUtil::exists( genHeaderPath ) )
         SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( genHeaderPath, parserTime - kHourTicks ) );
     // 최신 판정의 기준은 산출물이 아니라 스탬프(마지막으로 성공한 생성)다 — 같이 과거로 보낸다.
     const sw::string stampPath = genPath + ".stamp";
-    SW_ASSERT_TRUE( sw::FileUtil::fileExists( stampPath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::exists( stampPath ) );
     SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( stampPath, parserTime - kHourTicks ) );
 
     SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
@@ -1030,7 +1030,7 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
     const int32 firstExit = runParser( headerA );
     SW_EXPECT_TRUE_MSG( firstExit == 0, outLog.c_str() );
     SW_ASSERT_EQUAL( 0, firstExit );
-    SW_ASSERT_TRUE( sw::FileUtil::fileExists( genCppPath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::exists( genCppPath ) );
 
     // 정말 A 로 만들어졌는지 확인한다 — 이 다음 단계가 그 사실에 기댄다.
     sw::string firstGenerated;
@@ -1302,7 +1302,7 @@ SW_TEST_CASE( ReflectionParserTest, EditSavedWhileParsingIsNotHiddenByTheStamp )
 
     const sw::string genPath   = sw::FileUtil::joinPath( outGenDir, "MidParseEditSample.gen.cpp" );
     const sw::string stampPath = genPath + ".stamp";
-    SW_ASSERT_TRUE( sw::FileUtil::fileExists( stampPath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::exists( stampPath ) );
 
     // 파싱 도중에 저장한 편집: 내용이 바뀌고 시각은 처음 읽은 때보다 뒤, 스탬프보다는 앞.
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, makeHeader( "        PROPERTY()\n        int32 _addedWhileParsing;\n" ) ) );
@@ -1482,7 +1482,7 @@ SW_TEST_CASE( ReflectionParserTest, LocalConfigCannotOverrideCommittedDefaults )
     for ( const utf8* pName : { "parser_config.defaults.json", "toolchain_config.json" } )
     {
         const sw::string source = sw::FileUtil::joinPath( sw::FileUtil::joinPath( projectRoot, "Config/Environment" ), pName );
-        if ( sw::FileUtil::fileExists( source ) == false )
+        if ( sw::FileUtil::exists( source ) == false )
             SW_TEST_SKIP( "Config/Environment is not set up on this machine (run Scripts/setup/SetupEnvironment.py)" );
         SW_ASSERT_TRUE( sw::FileUtil::copyFile( source, sw::FileUtil::joinPath( envDir, pName ) ) );
     }

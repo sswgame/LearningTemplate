@@ -24,7 +24,7 @@ namespace sw::editor
             /** @brief 해당 디렉터리가 실제로 존재하는 경우에만 정규화하여 출력 목록에 추가합니다. */
             static void appendIfDirectory( vector<string>& outList, const string& candidate )
             {
-                if ( candidate.empty() == false && FileUtil::directoryExists( candidate ) )
+                if ( candidate.empty() == false && FileUtil::isDirectory( candidate ) )
                     outList.push_back( FileUtil::normalizeSeparators( candidate ) );
             }
 

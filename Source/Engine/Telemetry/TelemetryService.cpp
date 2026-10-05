@@ -243,7 +243,7 @@ namespace sw
 
         // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다.
         vector<string> listFile;
-        if ( FileUtil::directoryExists( _spoolFolder ) && FileUtil::collectFiles( _spoolFolder, "", listFile, false ) )
+        if ( FileUtil::isDirectory( _spoolFolder ) && FileUtil::collectFiles( _spoolFolder, "", listFile, false ) )
         {
             for ( const string& path : listFile )
             {
@@ -690,7 +690,7 @@ namespace sw
             listFile.push_back( _currentFile );
         for ( const string& path : listFile )
         {
-            if ( FileUtil::fileExists( path ) && FileUtil::removeFile( path ) )
+            if ( FileUtil::exists( path ) && FileUtil::removeFile( path ) )
                 ++_stats._purgedFiles;
         }
         _listClosedFile.clear();

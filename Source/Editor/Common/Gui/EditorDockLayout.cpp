@@ -237,7 +237,7 @@ namespace sw::editor
             return;
         }
 
-        if ( _windowsIniPath.empty() || FileUtil::fileExists( _windowsIniPath ) == false )
+        if ( _windowsIniPath.empty() || FileUtil::exists( _windowsIniPath ) == false )
             return;
 
         KeyValueMap visibilityKv;

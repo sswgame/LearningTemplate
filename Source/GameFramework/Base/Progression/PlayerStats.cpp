@@ -306,7 +306,7 @@ namespace sw
     bool PlayerStats::loadFromFile( string_view path )
     {
         vector<uint8> bytes;
-        if ( FileUtil::fileExists( path ) == false || FileUtil::readFile( path, bytes ) == false )
+        if ( FileUtil::exists( path ) == false || FileUtil::readFile( path, bytes ) == false )
             return false;
         Archive archive( bytes.data(), bytes.size() );
         return readState( archive );

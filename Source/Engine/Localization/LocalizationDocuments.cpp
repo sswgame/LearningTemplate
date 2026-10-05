@@ -101,7 +101,7 @@ namespace sw
             {
                 // 내용이 같으면 쓰지 않는다 — 파일 시간이 바뀌면 핫 리로드 · 빌드 스탬프가 헛돈다.
                 string existing;
-                if ( FileUtil::fileExists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text )
+                if ( FileUtil::exists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text )
                     return true;
                 return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, text );
             }

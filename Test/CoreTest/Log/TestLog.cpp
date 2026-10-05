@@ -194,7 +194,7 @@ SW_TEST_CASE( LogTest, LogFolderExists )
 {
     const sw::string& folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
     if ( folderPath.empty() == false )
-        SW_EXPECT_TRUE( sw::FileUtil::directoryExists( folderPath ) );
+        SW_EXPECT_TRUE( sw::FileUtil::isDirectory( folderPath ) );
 }
 
 /**
@@ -628,7 +628,7 @@ SW_TEST_CASE( LogTest, FileLogOutputWritesTheFileOfItsHourAndSession )
             (void)sw::FileUtil::removeFile( probePath ); // 없으면 할 일이 없다
         }
     } ) );
-    SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( firstPath ), "열기 전에 쓴 줄이 파일을 만들었습니다" );
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( firstPath ), "열기 전에 쓴 줄이 파일을 만들었습니다" );
 
     output.write( makeProbeRecord( 3, sw::LogLevel::Info, "probe line in hour 3\n" ) );
     output.write( makeProbeRecord( 4, sw::LogLevel::Error, "probe error in hour 4\n" ) );

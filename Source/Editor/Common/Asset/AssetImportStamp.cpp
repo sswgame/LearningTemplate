@@ -60,7 +60,7 @@ namespace sw::editor
             {
                 outMapEntry.clear();
                 string text;
-                if ( FileUtil::fileExists( stampPath ) == false || FileUtil::readTextFile( stampPath, text ) == false )
+                if ( FileUtil::exists( stampPath ) == false || FileUtil::readTextFile( stampPath, text ) == false )
                     return;
 
                 bool   bHeaderSeen = false;
@@ -129,7 +129,7 @@ namespace sw::editor
             /** @brief 스탬프를 씁니다. 내용이 같으면 쓰지 않습니다 — 맞는 트리에서 임포트를 돌려도 작업 트리가 더러워지지 않습니다. */
             static void writeStampIfChanged( const string& stampPath, string_view header, const map<string, StampEntry>& mapCurrent, AssetImportSummary& inoutSummary )
             {
-                const bool bStampExists = FileUtil::fileExists( stampPath );
+                const bool bStampExists = FileUtil::exists( stampPath );
                 if ( mapCurrent.empty() && bStampExists == false )
                     return;
                 const string stampText = makeStampText( header, mapCurrent );
@@ -211,7 +211,7 @@ namespace sw::editor
                     if ( mapCurrent.find( relativePath ) != mapCurrent.end() )
                         continue;
                     const string sourcePath = FileUtil::joinPath( rawFolder, relativePath );
-                    if ( FileUtil::fileExists( sourcePath ) )
+                    if ( FileUtil::exists( sourcePath ) )
                         continue; // 원본은 있다 — 위에서 어긋남 · 실패로 이미 보고했다
                     if ( mode == AssetImportMode::CheckOnly )
                         inoutSummary._listProblem.push_back( sourcePath.substr( rootDir.size() + 1 ) + ": 원본이 없는데 스탬프에 남아 있습니다" );
@@ -269,7 +269,7 @@ namespace sw::editor
     uint64 AssetImportStampUtil::computeFileHash( string_view path )
     {
         vector<uint8> bytes;
-        if ( FileUtil::fileExists( path ) == false || FileUtil::readFile( path, bytes ) == false || bytes.empty() )
+        if ( FileUtil::exists( path ) == false || FileUtil::readFile( path, bytes ) == false || bytes.empty() )
             return 0;
         return StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
     }

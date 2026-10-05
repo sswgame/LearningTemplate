@@ -1107,7 +1107,7 @@ namespace sw::editor
             {
                 outMapExtra.clear();
                 const string clipDataPath = ModelImporter::makeClipDataPath( sourcePath );
-                if ( FileUtil::fileExists( clipDataPath ) == false )
+                if ( FileUtil::exists( clipDataPath ) == false )
                     return true;
                 JsonDocument document;
                 if ( document.loadPath( clipDataPath ) == false )
@@ -1358,7 +1358,7 @@ namespace sw::editor
                         continue;
                     const string  rawPath = FileUtil::joinPath( rawTextureFolder, texture._fileStem + texture._extension );
                     vector<uint8> existing;
-                    const bool    bSame = FileUtil::fileExists( rawPath ) && FileUtil::readFile( rawPath, existing ) && existing == texture._bytes;
+                    const bool    bSame = FileUtil::exists( rawPath ) && FileUtil::readFile( rawPath, existing ) && existing == texture._bytes;
                     if ( bSame == false )
                     {
                         FileUtil::ensureDirectoryExists( rawTextureFolder );
@@ -1818,7 +1818,7 @@ namespace sw::editor
             SW_LOG_INFO( "Fractured %# -> %# (%# pieces, %# links, %# levels, %# interior triangles)", sourcePath, fracturePath.c_str(), fracture.getPieceCount(),
                          fracture._graph._listLink.size(), fracture._graph.getDepthCount(), fracture.countTriangles( FractureSurfaceSlot::Interior ) );
         }
-        else if ( FileUtil::fileExists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
+        else if ( FileUtil::exists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
         {
             SW_LOG_ERROR( "Failed to remove stale fracture asset %#", fracturePath.c_str() );
             return false;
@@ -1944,7 +1944,7 @@ namespace sw::editor
         // 곁 데이터(클립 반복 · 알림 · 커브)를 고쳐도 다시 임포트해야 한다.
         vector<uint8> clipDataBytes;
         const string  clipDataPath = makeClipDataPath( sourcePath );
-        if ( FileUtil::fileExists( clipDataPath ) && FileUtil::readFile( clipDataPath, clipDataBytes ) && clipDataBytes.empty() == false )
+        if ( FileUtil::exists( clipDataPath ) && FileUtil::readFile( clipDataPath, clipDataBytes ) && clipDataBytes.empty() == false )
             hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( clipDataBytes.data() ), clipDataBytes.size(), false, hash );
 
         // `.gltf` 는 버퍼를 옆 파일로 둘 수 있다 — 그 바이트가 바뀌어도 어긋남이어야 한다. data URI 는 이미 본문에 있다.
@@ -1979,14 +1979,14 @@ namespace sw::editor
             return 0;
         // 옆의 `.fracture` 도 결과다 — 지워지거나 바뀌면 어긋남이다.
         const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
-        if ( FileUtil::fileExists( fracturePath ) )
+        if ( FileUtil::exists( fracturePath ) )
         {
             const uint64 fractureHash = AssetImportStampUtil::computeFileHash( fracturePath );
             hash                      = StringUtil::computeHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
         }
         // 옆 폴더의 파일을 이름순으로 섞는다 — 이름도 섞어 파일이 사라지거나 바뀌면 다른 값이 된다.
         const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
-        if ( FileUtil::directoryExists( sideFolder ) == false )
+        if ( FileUtil::isDirectory( sideFolder ) == false )
             return hash;
         vector<string> listFile;
         (void)FileUtil::collectFiles( sideFolder, "", listFile, true );

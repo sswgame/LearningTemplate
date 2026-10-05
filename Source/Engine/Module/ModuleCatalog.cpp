@@ -300,7 +300,7 @@ namespace sw
 
     bool ModuleCatalog::loadDirectory( string_view directoryPath, string& outError )
     {
-        if ( FileUtil::directoryExists( directoryPath ) == false )
+        if ( FileUtil::isDirectory( directoryPath ) == false )
         {
             outError = "Module catalog folder does not exist: " + string( directoryPath );
             return false;

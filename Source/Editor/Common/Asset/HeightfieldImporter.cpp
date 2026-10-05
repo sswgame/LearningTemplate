@@ -53,7 +53,7 @@ namespace sw::editor
             [[nodiscard]] static bool readHoles( string_view sourcePath, HeightfieldData& inoutData )
             {
                 const string holePath = makeHolePath( sourcePath );
-                if ( FileUtil::fileExists( holePath ) == false )
+                if ( FileUtil::exists( holePath ) == false )
                     return true;
                 vector<uint8>  bytes;
                 vector<uint16> listSample;

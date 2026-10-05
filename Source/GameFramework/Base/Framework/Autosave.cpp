@@ -365,7 +365,7 @@ namespace sw
         {
             const string     slotPath = _settings.makeSlotPath( slot );
             AutosaveSlotInfo info{};
-            if ( FileUtil::fileExists( slotPath ) == false || readSlotInfo( AutosaveInternal::makeInfoPath( slotPath ), info ) == false )
+            if ( FileUtil::exists( slotPath ) == false || readSlotInfo( AutosaveInternal::makeInfoPath( slotPath ), info ) == false )
                 continue;
             info._path                             = slotPath;
             info._slot                             = slot;
@@ -388,7 +388,7 @@ namespace sw
     bool AutosaveManager::readSlotInfo( string_view infoPath, AutosaveSlotInfo& outInfo )
     {
         vector<uint8> bytes;
-        if ( FileUtil::fileExists( infoPath ) == false || FileUtil::readFile( infoPath, bytes ) == false )
+        if ( FileUtil::exists( infoPath ) == false || FileUtil::readFile( infoPath, bytes ) == false )
             return false;
         Archive archive( bytes.data(), bytes.size() );
         if ( StateArchiveUtil::readHeader( archive, AutosaveInternal::kInfoTag, AutosaveInternal::kInfoVersion ) == false )

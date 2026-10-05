@@ -245,7 +245,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool UserSettingsManager::loadUserFile( string_view filePath )
     {
-        if ( filePath.empty() || FileUtil::fileExists( filePath ) == false )
+        if ( filePath.empty() || FileUtil::exists( filePath ) == false )
             return false;
         string text;
         if ( FileUtil::readTextFile( filePath, text ) == false )

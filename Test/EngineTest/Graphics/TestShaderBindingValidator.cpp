@@ -312,7 +312,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, AllCookedShadersMatchContract )
         {
             const sw::string binDir = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shaderDir, "bin" ),
                                                               sw::string( sw::ShaderCooker::getSubfolderForFormat( target._format ) ) );
-            if ( sw::FileUtil::directoryExists( binDir ) == false )
+            if ( sw::FileUtil::isDirectory( binDir ) == false )
                 continue;
             sw::vector<sw::string> listFile;
             sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( target._format ) ), listFile, false );
@@ -378,7 +378,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReflectionNamesAreUniformAcrossBackend
         const sw::string             binDir = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shaderDir, "bin" ),
                                                                       sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
         sw::vector<sw::string>       listFile;
-        if ( sw::FileUtil::directoryExists( binDir ) )
+        if ( sw::FileUtil::isDirectory( binDir ) )
             sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
         for ( const sw::string& path : listFile )
         {
@@ -563,7 +563,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCpuStruct 
         const sw::string             binDir = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shaderDir, "bin" ),
                                                                       sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
         sw::vector<sw::string>       listFile;
-        if ( sw::FileUtil::directoryExists( binDir ) )
+        if ( sw::FileUtil::isDirectory( binDir ) )
             sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
 
         for ( const sw::string& path : listFile )

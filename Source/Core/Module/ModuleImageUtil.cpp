@@ -127,7 +127,7 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
         string absPath;
-        if ( FileUtil::makeAbsolutePath( libraryName, absPath ) && FileUtil::fileExists( absPath ) )
+        if ( FileUtil::makeAbsolutePath( libraryName, absPath ) && FileUtil::exists( absPath ) )
         {
             // Windows 커널 로더(LOAD_WITH_ALTERED_SEARCH_PATH)는 '\'(백슬래시)를 기준으로 디렉터리를 잘라 DLL 검색 경로의
             // 첫 순위로 넣는다. '/' 경로를 넘기면 디렉터리 해석에 실패해 의존 DLL(Engine.dll 등)을 찾지 못하고
@@ -165,7 +165,7 @@ namespace sw
         return hModule;
 #else
         string absPath;
-        if ( FileUtil::makeAbsolutePath( libraryName, absPath ) && FileUtil::fileExists( absPath ) )
+        if ( FileUtil::makeAbsolutePath( libraryName, absPath ) && FileUtil::exists( absPath ) )
         {
             void* pHandle = dlopen( absPath.c_str(), RTLD_NOW | RTLD_LOCAL );
             if ( pHandle != nullptr )

@@ -282,7 +282,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveFileIORoundTrip )
     writeArch << -999.5f;
 
     SW_EXPECT_TRUE( writeArch.saveFile( tempFilePath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( tempFilePath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( tempFilePath ) );
 
     sw::Archive readArch( tempFilePath, true );
     SW_EXPECT_TRUE( readArch.isReadMode() );
@@ -412,7 +412,7 @@ SW_TEST_CASE( ArchiveTest, SaveGameBinaryArchiveRoundTrip )
     writeSlot.captureFlags( flags );
 
     SW_EXPECT_TRUE( writeSlot.saveToFile( savePath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( savePath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( savePath ) );
 
     sw::OverworldSaveGame readSlot;
     SW_EXPECT_TRUE( readSlot.loadFromFile( savePath ) );

@@ -130,7 +130,7 @@ SW_TEST_CASE( ResourceTest, MakeUniqueSavePathDoesNotPointAtAnExistingFile )
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     const sw::string tempFolder = test::makeTempDirectory( "sw_unique_save" );
-    SW_ASSERT_TRUE( sw::FileUtil::directoryExists( tempFolder ) );
+    SW_ASSERT_TRUE( sw::FileUtil::isDirectory( tempFolder ) );
 
     const sw::string firstPath  = sw::ResourceUtil::makeUniqueSavePath( tempFolder, "hero.png" );
     const sw::string secondPath = sw::FileUtil::joinPath( tempFolder, "hero_2.png" );
@@ -285,13 +285,13 @@ SW_TEST_CASE( ResourceTest, ResourcePathCaseInsensitiveLookupAndLowerCaseNormali
     // 2. 대문자/혼합 대소문자 전역 ID로 조회 시 소문자 물리 파일 매핑 검증
     const sw::string pathUpperGlobal = sw::ResourceUtil::getResourcePath( "ENGINE/MATERIALS/DEFAULTMATERIAL.MATERIAL" );
     SW_EXPECT_FALSE( pathUpperGlobal.empty() );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperGlobal ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( pathUpperGlobal ) );
     SW_EXPECT_TRUE( sw::StringUtil::endsWith( pathUpperGlobal, "defaultmaterial.material", true ) );
 
     // 3. 엔진 파이프라인 대문자 조회 검증
     const sw::string pathEnginePipeline = sw::ResourceUtil::getResourcePath( "ENGINE/PIPELINE/FORWARDPIPELINE.XML" );
     SW_EXPECT_FALSE( pathEnginePipeline.empty() );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathEnginePipeline ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( pathEnginePipeline ) );
 
     // 4. 팩 상대 키(Mixed case) 조회 검증
     //    게임 콘텐츠에 의존하지 않도록 팩 루트를 엔진 팩으로 지정해 검사한다.
@@ -302,14 +302,14 @@ SW_TEST_CASE( ResourceTest, ResourcePathCaseInsensitiveLookupAndLowerCaseNormali
 
     const sw::string pathMixedPack = sw::ResourceUtil::getResourcePath( "Pipeline/ForwardPipeline.xml" );
     SW_EXPECT_FALSE( pathMixedPack.empty() );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathMixedPack ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( pathMixedPack ) );
 
     sw::GameConfig::setActive( oldActive );
 
     // 5. 다른 엔진 리소스의 대문자 키 조회 검증
     const sw::string pathUpperOther = sw::ResourceUtil::getResourcePath( "ENGINE/PIPELINE/DEFERREDPIPELINE.XML" );
     SW_EXPECT_FALSE( pathUpperOther.empty() );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperOther ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( pathUpperOther ) );
 
     // 6. 텍스트 리소스 읽기 시 대문자 키 전달 검증
     sw::string textContent;
@@ -340,7 +340,7 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
     const sw::string gameFile   = sw::FileUtil::joinPath( gameDir, "priority_test.xml" );
     const sw::string dlcRootDir = sw::FileUtil::joinPath( rootDir, "dlc" );
     const sw::string dlcPackDir = sw::FileUtil::joinPath( dlcRootDir, "test_dlc" );
-    const bool       bHadDlcDir = sw::FileUtil::directoryExists( dlcRootDir );
+    const bool       bHadDlcDir = sw::FileUtil::isDirectory( dlcRootDir );
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [gameDir, dlcRootDir, dlcPackDir, bHadDlcDir]()
     {
         SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( gameDir ) );
@@ -672,12 +672,12 @@ SW_TEST_CASE( ResourceTest, DeletingAnAssetKeepsItsMetaUntilTheAssetIsGone )
         SW_ASSERT_TRUE( sw::FileUtil::setWritable( dir, true ) );
 #endif
     }
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( assetPath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( metaPath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( assetPath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( metaPath ) );
 
     SW_EXPECT_TRUE( sw::AssetDatabase::deleteAssetFile( assetPath ) );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( assetPath ) );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( metaPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( assetPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( metaPath ) );
 }
 
 /**
@@ -720,8 +720,8 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityOutsideTheResourceRoot )
 
     sw::AssetDatabase db;
     SW_EXPECT_TRUE_MSG( db.ensureMeta( outsidePath ).isNull(), "리소스 루트 밖 파일에 GUID 를 지었다" );
-    SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( outsidePath + ".meta" ), "리소스 루트 밖 파일 옆에 .meta 를 썼다" );
-    SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( sw::FileUtil::normalizePath( outsidePath ) + ".meta" ),
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( outsidePath + ".meta" ), "리소스 루트 밖 파일 옆에 .meta 를 썼다" );
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( sw::FileUtil::normalizePath( outsidePath ) + ".meta" ),
                          "리소스 루트 밖 파일의 소문자 경로에 .meta 를 썼다" );
 
     // 루트 안의 에셋은 그대로 식별자를 받는다(개발 빌드 — 배포 빌드는 .meta 가 팩에 없다).
@@ -749,7 +749,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityToAMissingAsset )
 
     sw::AssetDatabase db;
     SW_EXPECT_TRUE_MSG( db.ensureMeta( pMissing ).isNull(), "없는 에셋에 GUID 를 지었다" );
-    SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( metaWritePath ), "없는 에셋 옆에 .meta 를 썼다" );
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( metaWritePath ), "없는 에셋 옆에 .meta 를 썼다" );
     SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), db.getAssetCount() );
 }
 
@@ -983,7 +983,7 @@ SW_TEST_CASE( ResourceTest, PackOnlyModeRefusesAbsolutePathsIntoTheResourceRoot 
 
     const sw::string insideRoot  = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "game/empty/maps/editortest.scene.xml" );
     const sw::string outsideRoot = test::makeTempPath( "sw_test_pack_only_outside.txt" );
-    SW_ASSERT_TRUE( sw::FileUtil::fileExists( insideRoot ) );
+    SW_ASSERT_TRUE( sw::FileUtil::exists( insideRoot ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( outsideRoot, "OUTSIDE" ) );
 
     packManager.setAllowLooseFiles( false );
