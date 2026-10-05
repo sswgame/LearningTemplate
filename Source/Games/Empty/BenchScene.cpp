@@ -257,6 +257,12 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchSpawnChurn, 0, "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 등록부 측정)" );
 
+    /**
+     * @brief `-gv_benchViews=N` — 격자를 둘러보는 캡처 카메라(CCTV) N 개를 둡니다(렌더 텍스처 512², 프레임마다 그린다).
+     * @details 추가 뷰의 비용(컬링 칸 · 풀 · 그림자 패스 · 기록)을 잰다. 한 프레임에 그리는 추가 뷰 수는 `gv_renderViewBudget` 이 자른다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchViews, 0, "격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함)" );
+
     BenchScene::BenchScene()
         : _listBenchMesh{}
         , _listInstanceBatch{}
@@ -491,6 +497,7 @@ namespace sw
             spawnGround( pScene, halfExtentOf( side, kBenchSpacing ) );
             _benchGridSide = side;
             frameCameras( pScene, side, kBenchSpacing );
+            spawnBenchViews( pScene, halfExtentOf( side, kBenchSpacing ) );
             SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 인스턴스 배치 %#개로 만들었습니다 (%#×%# 격자, GameObject 없음).",
                          pScene->getName(), meshCount, meshVariantCount, side, side );
             return;
@@ -529,6 +536,7 @@ namespace sw
         spawnGround( pScene, halfExtentOf( side, kBenchSpacing ) );
         _benchGridSide = side;
         frameCameras( pScene, side, kBenchSpacing );
+        spawnBenchViews( pScene, halfExtentOf( side, kBenchSpacing ) );
 
         SW_LOG_INFO( "[Bench] 메시 종류 %#개 (= 배치 수), 도형 %#종. -gv_benchMeshVariants · -gv_benchMeshShapes 로 바꾼다.",
                      meshVariantCount, shapeCount );
@@ -948,6 +956,41 @@ namespace sw
         _listBenchExtra.push_back( pMesh->getHandle() );
 
         SW_LOG_INFO( "[Bench] 바닥 평면을 깔았습니다 (한 변 %#).", static_cast<int32>( size ) );
+    }
+
+    void BenchScene::spawnBenchViews( Scene* pScene, float32 halfExtent )
+    {
+        if ( pScene == nullptr || gv_benchViews <= 0 )
+            return;
+        GameObjectManager* pObjects = pScene->getObjectManager();
+        if ( pObjects == nullptr )
+            return;
+        // 격자 둘레의 원 위에서 가운데를 내려다본다 — 뷰마다 다른 쪽을 봐 컬링 결과가 다르다.
+        const uint32 viewCount = static_cast<uint32>( gv_benchViews );
+        for ( uint32 viewIndex = 0; viewIndex < viewCount; ++viewIndex )
+        {
+            StringBuilder<constant::kMaxBuffer64> name;
+            name.appendFormat( "BenchView%#", viewIndex );
+            GameObject*      pObject = pObjects->createGameObject( hashed_string( name.c_str(), name.size() ) );
+            CameraComponent* pCamera = pObject != nullptr ? pObject->addComponent<CameraComponent>() : nullptr;
+            if ( pCamera == nullptr )
+                continue;
+            StringBuilder<constant::kMaxBuffer64> texture;
+            texture.appendFormat( "rendertarget/bench_view%#", viewIndex );
+            CameraRenderOutput output;
+            output._target              = CameraOutputTarget::RenderTexture;
+            output._renderTexture       = string( texture.c_str() );
+            output._renderTextureWidth  = 512;
+            output._renderTextureHeight = 512;
+            pCamera->setRole( CameraRole::Capture );
+            const float32 angle = 2.0f * MathUtil::Pi * static_cast<float32>( viewIndex ) / static_cast<float32>( viewCount );
+            pCamera->setLocalPosition( float3{ MathUtil::cos( angle ) * halfExtent * 1.5f, halfExtent * 0.6f, MathUtil::sin( angle ) * halfExtent * 1.5f } );
+            pCamera->setFarPlane( MathUtil::max( pCamera->getFarPlane(), halfExtent * 6.0f ) );
+            pCamera->lookAt( float3{ 0.0f, 0.0f, 0.0f } );
+            pCamera->setRenderOutput( output );
+            _listBenchExtra.push_back( pCamera->getHandle() );
+        }
+        SW_LOG_INFO( "[Bench] 캡처 카메라 %#개(렌더 텍스처 512²)를 격자 둘레에 두었습니다.", viewCount );
     }
 
     void BenchScene::frameCameras( Scene* pScene, uint32 side, float32 spacing )

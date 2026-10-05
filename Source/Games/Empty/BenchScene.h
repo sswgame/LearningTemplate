@@ -122,6 +122,8 @@ namespace sw
          * @details 그림자를 **받을 면**이다. 큐브만 떠 있으면 그림자가 어디에 지는지 그림으로 볼 수 없다.
          */
         void spawnGround( Scene* pScene, float32 halfExtent );
+        /** @brief `-gv_benchViews=N` 이면 격자 둘레에 캡처 카메라(렌더 텍스처) N 개를 둡니다. */
+        void spawnBenchViews( Scene* pScene, float32 halfExtent );
         /** @brief 씬의 모든 카메라를 격자에 맞춥니다(에디터 뷰포트 카메라 포함). */
         void frameCameras( Scene* pScene, uint32 side, float32 spacing );
         /** @brief 카메라 하나를 격자 전체가 들어오도록 물립니다. */
