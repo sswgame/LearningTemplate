@@ -898,9 +898,8 @@ SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
  *          GameFramework 가 한 프로세스에 두 벌 돌고, 옛 복사본을 내리는 순간 그리로 뛰는 코드가 죽는다. 리로드가 "끝났다" 만 보면
  *          이것을 못 잡으므로 누가 누구에게 묶였는지를 본다.
  *
- *          Windows 에서는 SWGame 이 GameFramework 를 실제로 불러야 지연 로드가 풀리므로, 리로드 앞뒤로 게임 인스턴스를 한 번씩
- *          만들고 부순 뒤에 확인한다. (킷의 GameFramework 지연 로드는 킷 코드가 돌기 전까지 풀리지 않을 수 있다 — 그 경우 확인은
- *          "아직 안 묶임" 으로 지나간다. 리눅스는 `RTLD_NOW` 라 로드하는 순간 모두 묶인다.)
+ *          Windows 는 올리는 자리(`LiveReloadManager` 의 커밋)가 지연 import 를 미리 묶으므로(`ModuleImageUtil::bindDelayLoadImports`) 모듈 코드를
+ *          부르기 전에 이미 지금의 GameFramework 에 묶여 있어야 한다. 리눅스는 `RTLD_NOW` 라 로드하는 순간 모두 묶인다.
  */
 SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
 {
@@ -917,6 +916,11 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
         SW_TEST_SKIP( "SWGame registration failed" );
 
     SW_EXPECT_FALSE( manager.isGraphBroken() );
+    #if defined( SW_PLATFORM_WINDOWS )
+    // 올리는 자리가 지연 import 를 미리 묶는다(첫 호출이 묶으면 첫 float 인자가 망가진다) — 모듈 코드를 부르기 전에 이미 지금의 GameFramework 에 묶여 있다.
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "SWGame" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "GF_Overworld" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
+    #endif
     SW_EXPECT_TRUE( sw::createAndDestroyGame( manager.getModuleHandle( "SWGame" ) ) );
     SW_EXPECT_TRUE( manager.verifyModuleBindings() );
 
@@ -940,6 +944,11 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
 
     SW_EXPECT_TRUE( bGameReloaded );
     SW_EXPECT_FALSE( manager.isGraphBroken() );
+    #if defined( SW_PLATFORM_WINDOWS )
+    // 올리는 자리가 지연 import 를 미리 묶는다(첫 호출이 묶으면 첫 float 인자가 망가진다) — 모듈 코드를 부르기 전에 이미 지금의 GameFramework 에 묶여 있다.
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "SWGame" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "GF_Overworld" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
+    #endif
     SW_EXPECT_TRUE( sw::createAndDestroyGame( manager.getModuleHandle( "SWGame" ) ) );
     SW_EXPECT_TRUE( manager.verifyModuleBindings() );
 

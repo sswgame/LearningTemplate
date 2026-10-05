@@ -75,6 +75,13 @@ namespace sw
                 HMODULE hModule = nullptr;
                 return GetModuleHandleExA( GET_MODULE_HANDLE_EX_FLAG_PIN, pDllName, &hModule ) != FALSE;
             }
+
+            /** @brief `EnumerateLoadedModulesW64` 가 이미지마다 부르는 곳 — 기준 주소(= 모듈 핸들)를 @p pContext 의 목록에 모읍니다. */
+            static BOOL CALLBACK collectLoadedModule( PCWSTR, DWORD64 moduleBase, ULONG, PVOID pContext )
+            {
+                static_cast<vector<void*>*>( pContext )->push_back( reinterpret_cast<void*>( static_cast<uintptr_t>( moduleBase ) ) );
+                return TRUE;
+            }
 #endif
         };
     } // namespace
@@ -185,6 +192,36 @@ namespace sw
         return reinterpret_cast<void*>( GetProcAddress( static_cast<HMODULE>( pHandle ), symbolNameNt.c_str() ) );
 #else
         return dlsym( pHandle, symbolNameNt.c_str() );
+#endif
+    }
+
+    uint32 ModuleImageUtil::bindDelayLoadImports( void* pHandle )
+    {
+        using BindDelayLoadImportsFunction         = uint32 ( * )();
+        const BindDelayLoadImportsFunction pfnBind = reinterpret_cast<BindDelayLoadImportsFunction>( getDynamicSymbol( pHandle, kBindDelayLoadImportsSymbol ) );
+        if ( pfnBind == nullptr )
+            return 0;
+        const uint32 failedCount = pfnBind();
+        if ( failedCount > 0 )
+            SW_LOG_WARNING( "A module could not bind %# delay-loaded DLL(s) up front - those imports bind on their first call", failedCount );
+        return failedCount;
+    }
+
+    uint32 ModuleImageUtil::bindDelayLoadImportsOfLoadedModules()
+    {
+        vector<void*> listHandle;
+        collectLoadedModuleHandles( listHandle );
+        uint32 failedCount{ 0 };
+        for ( void* pHandle : listHandle )
+            failedCount += bindDelayLoadImports( pHandle );
+        return failedCount;
+    }
+
+    void ModuleImageUtil::collectLoadedModuleHandles( vector<void*>& outListHandle )
+    {
+        outListHandle.clear();
+#if defined( SW_PLATFORM_WINDOWS )
+        (void)EnumerateLoadedModulesW64( GetCurrentProcess(), &ModuleImageUtilInternal::collectLoadedModule, &outListHandle ); // 실패하면 빈 목록
 #endif
     }
 

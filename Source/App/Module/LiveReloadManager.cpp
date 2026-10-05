@@ -494,11 +494,13 @@ namespace sw
         }
 
         // 불변 조건: 여기서 전역 머리는 비어 있다(등록할 때마다 비운다). 올리면 이 모듈의 정적 등록기만 매달린다.
-        if ( ModuleImageUtil::loadDynamicLibrary( modulePath ) == nullptr )
+        void* const pSharedHandle = ModuleImageUtil::loadDynamicLibrary( modulePath );
+        if ( pSharedHandle == nullptr )
         {
             SW_LOG_ERROR( "Failed to load the shared module %#", modulePath );
             return false;
         }
+        (void)ModuleImageUtil::bindDelayLoadImports( pSharedHandle ); // 못 묶으면 경고했다 — 그 import 는 첫 호출에 묶인다
         engine::registerModuleTypes( moduleName );
         _listSharedModule.push_back( string{ moduleName } );
         SW_LOG_INFO( "Shared module loaded: %#", moduleName );
@@ -958,7 +960,9 @@ namespace sw
                 bKeepPreviousImage = ModuleImageUtil::releaseImageCode( ctx._moduleName, pPreviousHandle ) == false;
             }
 
-            ctx._pLibraryModule    = prepared._pHandle;
+            ctx._pLibraryModule = prepared._pHandle;
+            // 이 이미지의 코드가 처음 돌기 전, 의존 이미지(먼저 커밋됨)가 등록된 뒤에 지연 import 를 묶는다 — 첫 호출이 묶으면 첫 float 인자가 망가진다.
+            (void)ModuleImageUtil::bindDelayLoadImports( ctx._pLibraryModule ); // 못 묶으면 경고했다
             ctx._tempModulePath    = prepared._tempPath;
             ctx._loadedSourceMtime = prepared._sourceMtime;
             ctx._soname._loaded    = ctx._soname._current;

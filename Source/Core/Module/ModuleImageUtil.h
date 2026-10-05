@@ -10,6 +10,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 namespace sw
 {
@@ -19,6 +20,9 @@ namespace sw
      */
     struct SW_API ModuleImageUtil
     {
+        /** @brief 지연 로드 훅을 넣은 모듈이 내보내는 미리 묶기 함수의 이름입니다(`Engine/Module/DelayLoadNotifyHook.cpp`). */
+        static constexpr const utf8* kBindDelayLoadImportsSymbol = "bindDelayLoadImports";
+
         // ------------------------------------------------------------------------------
         // 1) 이름 — 플랫폼 접두어 · 확장자 · 디버그 심볼 파일
         // ------------------------------------------------------------------------------
@@ -49,6 +53,17 @@ namespace sw
          *          으로, 리눅스는 `DT_NEEDED` 를 `RTLD_NODELETE | RTLD_NOLOAD` 로 고정합니다. 아직 올라오지 않은 의존은 올리지 않습니다.
          */
         static uint32 pinDynamicLibraryDependencies( void* pHandle );
+        /**
+         * @brief 모듈 @p pHandle 의 지연 import 를 **지금 전부** 묶고, 묶지 못한 DLL 수를 반환합니다(모듈이 내보낸 `bindDelayLoadImports` 를 부른다).
+         * @details 지연 import 를 첫 호출이 묶게 두면 그 첫 호출의 첫 float 인자가 망가진다 — lld 의 x64 지연 로드 썽크가 xmm0 을 헬퍼 호출의
+         *          홈(shadow) 공간에 저장한다(`Engine/Module/DelayLoadNotifyHook.cpp`). 모듈을 올린 뒤, 그 의존 이미지가 등록된 뒤, 그 코드를 처음
+         *          부르기 **전**에 부릅니다. 그 함수를 내보내지 않는 이미지(지연 로드 훅이 없는 모듈 · Windows 밖)는 아무것도 하지 않습니다.
+         */
+        static uint32 bindDelayLoadImports( void* pHandle );
+        /** @brief 지금 올라와 있는 모든 이미지에 `bindDelayLoadImports` 를 합니다 — OS 로더가 함께 올린 모듈(시험 실행 파일이 링크한 키트)용, 엔진 기동이 부른다. */
+        static uint32 bindDelayLoadImportsOfLoadedModules();
+        /** @brief 지금 프로세스에 올라와 있는 이미지(실행 파일 · DLL)의 핸들을 모읍니다. Windows 밖에서는 아무것도 담지 않습니다. */
+        static void collectLoadedModuleHandles( vector<void*>& outListHandle );
 
         // ------------------------------------------------------------------------------
         // 3) 올라온 이미지 조회

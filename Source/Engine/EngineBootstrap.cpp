@@ -8,6 +8,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/Process/ModuleBuildId.h"
 #include "Core/String/hashed_string.h"
@@ -77,6 +78,10 @@ namespace sw
             SW_LOG_ERROR( "리소스 루트를 찾지 못했습니다 — Resource/ 가 있는 위치에서 실행하십시오." );
             return false;
         }
+
+        // OS 로더가 실행 파일과 함께 올린 모듈(시험 실행 파일이 링크한 키트 · 게임)의 지연 import 를 그 코드가 돌기 전에 묶는다 — 첫 호출이 묶으면
+        // 그 호출의 첫 float 인자가 망가진다(`ModuleImageUtil::bindDelayLoadImports`). 명시적으로 올리는 모듈은 올리는 자리가 묶는다.
+        (void)ModuleImageUtil::bindDelayLoadImportsOfLoadedModules(); // 못 묶으면 경고했다
 
         // 크래시 리포트에 함께 나갈 값들이다. 덤프만으로는 알 수 없는 것들이다. 백엔드는 RHI 단계가 덮어쓴다.
         CrashHandler::setContextValue( "Build", build::kConfigName );
