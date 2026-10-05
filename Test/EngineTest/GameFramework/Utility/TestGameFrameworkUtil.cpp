@@ -369,6 +369,24 @@ SW_TEST_CASE( GameFrameworkUtilTest, GridTopologyAndSearchScratchReuseTheirStora
 }
 
 /**
+ * @brief [GameFrameworkUtilTest] (x, y) 칸 번호와 사각형(발자국) 경계
+ * @details 키트의 칸 저장소(CreatureTown · FarmField · CitySimulation …)가 `y × 너비 + x` · 발자국 경계를 손으로 적지 않고 이 둘을 쓴다.
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, GridTopologyXyIndexAndRectBounds )
+{
+    const GridTopology topology{ 4, 3 };
+    SW_EXPECT_EQUAL( topology.toIndex( int2{ 2, 1 } ), topology.toIndex( 2, 1 ) );
+    SW_EXPECT_EQUAL( 11, topology.toIndex( 3, 2 ) );
+
+    SW_EXPECT_TRUE( topology.isRectInside( int2{ 0, 0 }, int2{ 4, 3 } ) );  // 격자 전체
+    SW_EXPECT_TRUE( topology.isRectInside( int2{ 2, 1 }, int2{ 2, 2 } ) );  // 오른쪽 위 끝에 붙은 2 × 2
+    SW_EXPECT_FALSE( topology.isRectInside( int2{ 3, 1 }, int2{ 2, 1 } ) ); // x 4 칸이 밖
+    SW_EXPECT_FALSE( topology.isRectInside( int2{ 0, 2 }, int2{ 1, 2 } ) ); // y 3 칸이 밖
+    SW_EXPECT_FALSE( topology.isRectInside( int2{ -1, 0 }, int2{ 1, 1 } ) );
+    SW_EXPECT_FALSE( topology.isRectInside( int2{ 0, -1 }, int2{ 1, 1 } ) );
+}
+
+/**
  * @brief [GameFrameworkUtilTest] 바닥 평면 판정은 앞쪽만 · 1인칭 시점의 이동 방향은 길이 1 을 넘지 않고 카메라 오일러는 피치가 뒤집힌다
  */
 SW_TEST_CASE( GameFrameworkUtilTest, RayPlaneAndFirstPersonMoveDirection )

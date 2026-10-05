@@ -14,6 +14,8 @@ namespace sw
      * @brief 너비 × 높이 칸 격자의 칸 번호(`y × 너비 + x`) · 경계 · 이웃 순서입니다.
      * @details 이웃 순서는 하나로 고정입니다 — 앞 넷이 직교(+x, −x, +y, −y), 뒤 넷이 대각선(+x+y, +x−y, −x+y, −x−y). 탐색 결과(경로 ·
      *          흐름장 · 번짐 알림 순서)가 이 순서에 매이므로 바꾸면 결정적 시뮬레이션의 결과가 바뀝니다. 내비 · 기믹 · 키트가 같은 표를 씁니다.
+     *          칸 격자를 든 클래스는 `_width` · `_height` 를 따로 두지 않고 이것 하나를 멤버로 들며, `y × 너비 + x` 를 손으로 적지 않습니다.
+     * @note 칸 번호는 int32 입니다 — 칸 수가 int32 를 넘는 격자는 저장소부터 만들 수 없습니다(타일맵은 `TileMapXmlData::kMaxTileCount` 로 막는다).
      */
     struct GridTopology
     {
@@ -35,9 +37,15 @@ namespace sw
         /** @brief @p cell 의 @p direction 번째 이웃입니다(경계는 보지 않는다). */
         static constexpr int2 getNeighbor( const int2& cell, int32 direction ) { return int2{ cell._x + kArrOffsetX[direction], cell._y + kArrOffsetY[direction] }; }
 
-        constexpr bool  isInside( int32 x, int32 y ) const { return 0 <= x && x < _width && 0 <= y && y < _height; }
-        constexpr bool  isInside( const int2& cell ) const { return isInside( cell._x, cell._y ); }
-        constexpr int32 toIndex( const int2& cell ) const { return cell._y * _width + cell._x; }
+        constexpr bool isInside( int32 x, int32 y ) const { return 0 <= x && x < _width && 0 <= y && y < _height; }
+        constexpr bool isInside( const int2& cell ) const { return isInside( cell._x, cell._y ); }
+        /** @brief @p origin(왼쪽 아래)에서 @p size 칸 사각형(발자국)이 모두 격자 안인지입니다. 크기는 1 이상을 넘깁니다. */
+        constexpr bool isRectInside( const int2& origin, const int2& size ) const
+        {
+            return 0 <= origin._x && 0 <= origin._y && origin._x + size._x <= _width && origin._y + size._y <= _height;
+        }
+        constexpr int32 toIndex( int32 x, int32 y ) const { return y * _width + x; }
+        constexpr int32 toIndex( const int2& cell ) const { return toIndex( cell._x, cell._y ); }
         constexpr int2  toCell( int32 index ) const { return int2{ index % _width, index / _width }; }
         constexpr int32 getCellCount() const { return _width * _height; }
     };
