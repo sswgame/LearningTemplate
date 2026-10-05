@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Crafting.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
@@ -55,6 +56,14 @@ namespace
     struct RestaurantTestBorrowed
     {
         Inventory _pantry; ///< 주방 창고
+        Wallet    _wallet; ///< 식당 금고
+
+        GameStateRefs makeRefs()
+        {
+            GameStateRefs refs;
+            refs._pWallet = &_wallet;
+            return refs;
+        }
     };
 
     /** @brief 시험이 함께 쓰는 카탈로그들입니다. */
@@ -86,7 +95,7 @@ namespace
         void initialize( RestaurantSimulation& sim, const RestaurantSettings& settings, RestaurantTestBorrowed& outBorrowed ) const
         {
             outBorrowed._pantry.initialize( &_items, 40 );
-            sim.initialize( &_catalog, &_recipes, &_items, &_shops, &_reputation, &_curve, outBorrowed._pantry, settings );
+            sim.initialize( &_catalog, &_recipes, &_items, &_shops, &_reputation, &_curve, outBorrowed.makeRefs(), outBorrowed._pantry, settings );
         }
     };
 
@@ -113,7 +122,7 @@ namespace
         (void)sim.hireStaff( "cid", StaffRole::Server, 15 );
         (void)sim.hireStaff( "dee", StaffRole::Cashier, 15 );
         stockPantry( sim, 60 );
-        sim.getWallet().add( sim.getCurrency(), 500 );
+        simBorrowed._wallet.add( sim.getCurrency(), 500 );
         sim.openDay( weatherId );
         const int32 updateCount = static_cast<int32>( 300.0f / stepMinutes );
         for ( int32 updateIndex = 0; updateIndex < updateCount; ++updateIndex )
@@ -236,12 +245,12 @@ SW_TEST_CASE( RestaurantSimTest, MarketBuysRecordBatchesAndPricesMoveDeterminist
     RestaurantTestBorrowed simBBorrowed;
     world.initialize( simA, RestaurantSettings{}, simABorrowed );
     world.initialize( simB, RestaurantSettings{}, simBBorrowed );
-    simA.getWallet().add( simA.getCurrency(), 100 );
+    simABorrowed._wallet.add( simA.getCurrency(), 100 );
 
     const int32 eggPrice = simA.getMarket().computeBuyPrice( "market", "egg" );
     SW_EXPECT_TRUE( eggPrice >= 2 && eggPrice <= 4 ); // 3 ± 20 %
     SW_EXPECT_TRUE( simA.buyIngredient( "market", "egg", 10 ) == ShopResult::Ok );
-    SW_EXPECT_EQUAL( 100 - eggPrice * 10, static_cast<int32>( simA.getWallet().getBalance( simA.getCurrency() ) ) );
+    SW_EXPECT_EQUAL( 100 - eggPrice * 10, static_cast<int32>( simABorrowed._wallet.getBalance( simA.getCurrency() ) ) );
     SW_EXPECT_EQUAL( 10, simA.getStock().getBatchCount( "egg" ) );
     SW_EXPECT_EQUAL( 2, simA.getStock().findEarliestExpiry( "egg" ) );
     SW_EXPECT_EQUAL( eggPrice, static_cast<int32>( simA.getStock().getBatches()[0]._unitCost ) );

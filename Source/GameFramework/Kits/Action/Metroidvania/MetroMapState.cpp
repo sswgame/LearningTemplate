@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Action/Metroidvania/MetroMapState.h"
 
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
 
@@ -27,7 +28,7 @@ namespace sw
 
     bool MetroMapState::enterArea( const hashed_string& areaId ) { return _pGraph != nullptr && _pGraph->enterArea( areaId ); }
 
-    MetroMapPurchase MetroMapState::buyRegionMap( const hashed_string& region, int32& inoutCurrency )
+    MetroMapPurchase MetroMapState::buyRegionMap( const hashed_string& region, Wallet& inoutWallet, const hashed_string& currency )
     {
         if ( _pCatalog == nullptr || _pGraph == nullptr )
             return MetroMapPurchase::UnknownRegion;
@@ -36,9 +37,8 @@ namespace sw
             return MetroMapPurchase::UnknownRegion;
         if ( hasRegionMap( region ) )
             return MetroMapPurchase::AlreadyOwned;
-        if ( inoutCurrency < pMap->_price )
+        if ( inoutWallet.trySpend( currency, pMap->_price ) == false )
             return MetroMapPurchase::NotEnoughCurrency;
-        inoutCurrency -= pMap->_price;
         _listRegionMap.push_back( pMap->_id );
         (void)_pGraph->discoverRegion( pMap->_id );
         return MetroMapPurchase::Bought;

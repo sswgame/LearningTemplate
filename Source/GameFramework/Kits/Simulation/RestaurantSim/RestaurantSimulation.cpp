@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
 #include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantCatalog.h"
 
@@ -78,7 +79,6 @@ namespace sw
         , _stock{}
         , _crafter{}
         , _market{}
-        , _wallet{}
         , _reputation{}
         , _settings{}
         , _today{}
@@ -87,6 +87,7 @@ namespace sw
         , _weatherId{}
         , _pCatalog{ nullptr }
         , _pPantry{ nullptr }
+        , _pWallet{ nullptr }
         , _pRecipeCatalog{ nullptr }
         , _pShopCatalog{ nullptr }
         , _pStaffCurve{ nullptr }
@@ -101,7 +102,7 @@ namespace sw
 
     void RestaurantSimulation::initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog,
                                            const ShopCatalog* pShopCatalog, const ReputationCatalog* pReputationCatalog, const ExperienceCurve* pStaffCurve,
-                                           Inventory& pantry, const RestaurantSettings& settings )
+                                           const GameStateRefs& refs, Inventory& pantry, const RestaurantSettings& settings )
     {
         _pCatalog       = pCatalog;
         _pRecipeCatalog = pRecipeCatalog;
@@ -109,11 +110,11 @@ namespace sw
         _pStaffCurve    = pStaffCurve;
         _settings       = settings;
         _pPantry        = &pantry;
+        _pWallet        = refs._pWallet;
         _stock.initialize( _pPantry );
         _crafter.initialize( pRecipeCatalog );
         _market.initialize( pShopCatalog, pItemCatalog );
         _reputation.initialize( pReputationCatalog );
-        _wallet.clear();
         _random.setSeed( settings._randomSeed );
         _stepTimer = FixedStepTimer( kStepMinutes, 24.0f * 60.0f );
         _listStaff.clear();
@@ -214,8 +215,10 @@ namespace sw
 
     ShopResult RestaurantSimulation::buyIngredient( const hashed_string& shopId, const hashed_string& itemId, int32 count )
     {
+        if ( _pWallet == nullptr )
+            return ShopResult::NotEnoughMoney;
         int64            spent  = 0;
-        const ShopResult result = _market.buy( shopId, itemId, count, _wallet, *_pPantry, &spent );
+        const ShopResult result = _market.buy( shopId, itemId, count, *_pWallet, *_pPantry, &spent );
         if ( result != ShopResult::Ok )
             return result;
         const int32 shelfLife = _pCatalog != nullptr ? _pCatalog->findShelfLife( itemId ) : 0;
@@ -296,10 +299,10 @@ namespace sw
             if ( staff._bHired == SW_FALSE )
                 continue;
             _today._wages += staff._dailyWage;
-            if ( _wallet.trySpend( currency, staff._dailyWage ) == false )
+            if ( _pWallet == nullptr || _pWallet->trySpend( currency, staff._dailyWage ) == false )
             {
-                const int64 balance = _wallet.getBalance( currency );
-                if ( balance > 0 && _wallet.trySpend( currency, balance ) == false )
+                const int64 balance = _pWallet != nullptr ? _pWallet->getBalance( currency ) : 0;
+                if ( balance > 0 && _pWallet->trySpend( currency, balance ) == false )
                     SW_LOG_WARNING( "could not pay the remaining balance %# to '%#'", balance, staff._name.c_str() );
                 SW_LOG_WARNING( "wage for '%#' is short by %#", staff._name.c_str(), staff._dailyWage - balance );
             }
@@ -669,7 +672,8 @@ namespace sw
         _today._revenue += customer._price;
         _today._tips += tip;
         ++_today._served;
-        _wallet.add( getCurrency(), customer._price + tip );
+        if ( _pWallet != nullptr )
+            _pWallet->add( getCurrency(), customer._price + tip );
         customer._state = CustomerState::Paid;
         customer._seat  = -1;
         pushSatisfaction( satisfaction );

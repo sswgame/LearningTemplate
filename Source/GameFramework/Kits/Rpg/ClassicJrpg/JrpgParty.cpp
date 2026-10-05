@@ -53,11 +53,11 @@ namespace sw
     JrpgParty::JrpgParty()
         : _listMember{}
         , _eventBuffer{}
-        , _wallet{}
         , _equipLayout{}
         , _pCatalog{ nullptr }
         , _pItemCatalog{ nullptr }
         , _pInventory{ nullptr }
+        , _pWallet{ nullptr }
     {
     }
 
@@ -68,8 +68,8 @@ namespace sw
         _equipLayout  = string( equipLayout );
         _listMember.clear();
         _eventBuffer.clear();
-        _wallet.clear();
         _pInventory = refs._pInventory;
+        _pWallet    = refs._pWallet;
     }
 
     int32 JrpgParty::addMember( const hashed_string& memberId, string_view name, const hashed_string& classId, int32 level )
@@ -152,9 +152,9 @@ namespace sw
 
     int64 JrpgParty::distributeRewards( int64 exp, int64 gold )
     {
-        if ( gold > 0 )
+        if ( gold > 0 && _pWallet != nullptr )
         {
-            _wallet.add( Wallet::getDefaultCurrency(), gold );
+            _pWallet->add( Wallet::getDefaultCurrency(), gold );
             pushEvent( JrpgPartyEvent::Kind::GoldGained, -1, static_cast<int32>( gold ) );
         }
         const int32 aliveCount = countAlive();
@@ -174,7 +174,7 @@ namespace sw
     bool JrpgParty::restAtInn( int64 pricePerMember )
     {
         const int64 price = MathUtil::max<int64>( 0, pricePerMember ) * countAlive();
-        if ( price > 0 && _wallet.trySpend( Wallet::getDefaultCurrency(), price ) == false )
+        if ( price > 0 && ( _pWallet == nullptr || _pWallet->trySpend( Wallet::getDefaultCurrency(), price ) == false ) )
             return false;
         for ( JrpgMember& member : _listMember )
         {
@@ -195,7 +195,7 @@ namespace sw
         if ( member.isAlive() )
             return false;
         const int64 price = MathUtil::max<int64>( 0, pricePerLevel ) * member._level.getLevel();
-        if ( price > 0 && _wallet.trySpend( Wallet::getDefaultCurrency(), price ) == false )
+        if ( price > 0 && ( _pWallet == nullptr || _pWallet->trySpend( Wallet::getDefaultCurrency(), price ) == false ) )
             return false;
         member._hp = member.getStat( JrpgStat::MaxHp );
         pushEvent( JrpgPartyEvent::Kind::Revived, memberIndex, static_cast<int32>( price ) );

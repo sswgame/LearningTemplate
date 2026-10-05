@@ -7,6 +7,7 @@
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
@@ -44,8 +45,8 @@ namespace sw
         , _pAreaGraph{ nullptr }
         , _pFlags{ nullptr }
         , _pInventory{ nullptr }
+        , _pWallet{ nullptr }
         , _seed{ 0 }
-        , _coinCount{ 0 }
     {
     }
 
@@ -56,13 +57,13 @@ namespace sw
         _pAreaGraph = pAreaGraph;
         _pFlags     = refs._pFlags;
         _pInventory = refs._pInventory;
+        _pWallet    = refs._pWallet;
         _seed       = seed;
         _random.setSeed( GameHash::mix32( seed ^ 0xB00B00u ) );
         _encounter.initialize( pCatalog, seed );
         _eventBuffer.clear();
         _listGhostEvent.clear();
         _currentRoom = hashed_string{};
-        _coinCount   = 0;
         _listBoo.clear();
         _listSearched.clear();
         if ( pCatalog == nullptr )
@@ -126,7 +127,8 @@ namespace sw
             if ( event._type != GhostEventType::Caught )
                 continue;
             bCaughtAny = true;
-            _coinCount += event._coins;
+            if ( _pWallet != nullptr && _pCatalog != nullptr )
+                _pWallet->add( _pCatalog->getCurrency(), event._coins );
             pushEvent( GhostMansionEventType::CoinsCollected, hashed_string{}, _currentRoom, event._coins );
         }
         const bool bCleared = bCaughtAny && _encounter.getGhosts().empty() == false && _encounter.countRemaining() == 0;

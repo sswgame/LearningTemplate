@@ -17,12 +17,15 @@
 
 namespace sw
 {
+    struct GameStateRefs;
+
     class GameFlags;
     class GameRandom;
     class ItemBag;
     class LootCatalog;
     class MetroidvaniaCatalog;
     class Vitality;
+    class Wallet;
 
     /** @brief 죽음 · 휴식 알림의 종류입니다. */
     enum class MetroSoulsEventType : uint8
@@ -80,12 +83,11 @@ namespace sw
     public:
         MetroSoulsState();
 
-        /** @brief 카탈로그 규칙으로 처음 상태(통화 0 · 물약 가득 · 처치 없음)를 둡니다. */
-        void initialize( const MetroidvaniaCatalog* pCatalog );
-
-        void addCurrency( int32 amount );
-        /** @brief 통화를 씁니다. 모자라면 쓰지 않고 false 입니다. */
-        [[nodiscard]] bool trySpendCurrency( int32 amount );
+        /**
+         * @brief 카탈로그 규칙으로 처음 상태(물약 가득 · 처치 없음)를 둡니다. 통화는 빌린 지갑(@p refs 의 지갑)의 카탈로그 통화(`MetroRules::_currency`)입니다.
+         * @details 죽으면 그 통화의 잔액을 시체로 옮기고(지갑은 0), 되찾으면 지갑으로 돌려줍니다. 지갑이 없으면 처치 보상 · 시체가 없습니다.
+         */
+        void initialize( const MetroidvaniaCatalog* pCatalog, const GameStateRefs& refs );
 
         /**
          * @brief 쉬는 지점에서 쉽니다 — 체력 가득(`Vitality::respawn`), 물약 충전, 보스가 아닌 적 부활, 되살아날 자리 갱신.
@@ -120,7 +122,6 @@ namespace sw
         /** @brief 쌓인 알림을 꺼내 갑니다. */
         void drainEvents( vector<MetroSoulsEvent>& outListEvent );
 
-        int32                          getCurrency() const { return _currency; }
         int32                          getFlaskCharges() const { return _flaskCharges; }
         int32                          getFlaskMaxCharges() const { return _flaskMaxCharges; }
         const MetroCorpse&             getCorpse() const { return _corpse; }
@@ -129,15 +130,16 @@ namespace sw
         const vector<MetroKillRecord>& getKills() const { return _listKill; }
 
     private:
-        void refreshWorld( Vitality& vitality );
-        void pushEvent( MetroSoulsEventType type, const hashed_string& id, int32 amount );
+        void          refreshWorld( Vitality& vitality );
+        void          pushEvent( MetroSoulsEventType type, const hashed_string& id, int32 amount );
+        hashed_string getCurrencyName() const;
 
         const MetroidvaniaCatalog*   _pCatalog;
         vector<MetroKillRecord>      _listKill;
         EventBuffer<MetroSoulsEvent> _eventBuffer;
         MetroCorpse                  _corpse;
         hashed_string                _respawnSite;
-        int32                        _currency;
+        Wallet*                      _pWallet;      ///< 빌린 지갑
         int32                        _lostCurrency; ///< 영영 잃은 통화의 합(통계)
         int32                        _flaskCharges;
         int32                        _flaskMaxCharges;

@@ -38,12 +38,16 @@ namespace sw
         , _doorCatalog{}
         , _furnitureCatalog{}
         , _booCatalog{}
+        , _currency{ "Coins" }
     {
         _vacuum._listStagePower.push_back( 10.0f );
     }
 
     uint32 GhostCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
+        const utf8* pCurrency = root.findAttribute( "currency" );
+        if ( pCurrency != nullptr && pCurrency[0] != '\0' )
+            _currency = hashed_string( pCurrency );
         const XmlNode flashlight = root.findChild( "Flashlight" );
         if ( flashlight )
         {

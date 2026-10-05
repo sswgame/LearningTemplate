@@ -5,8 +5,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/ItemBag.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
@@ -19,7 +21,7 @@ namespace sw
         , _eventBuffer{}
         , _corpse{}
         , _respawnSite{}
-        , _currency{ 0 }
+        , _pWallet{ nullptr }
         , _lostCurrency{ 0 }
         , _flaskCharges{ 0 }
         , _flaskMaxCharges{ 0 }
@@ -27,28 +29,18 @@ namespace sw
     {
     }
 
-    void MetroSoulsState::initialize( const MetroidvaniaCatalog* pCatalog )
+    void MetroSoulsState::initialize( const MetroidvaniaCatalog* pCatalog, const GameStateRefs& refs )
     {
         _pCatalog = pCatalog;
+        _pWallet  = refs._pWallet;
         _listKill.clear();
         _eventBuffer.clear();
         _corpse            = MetroCorpse{};
         _respawnSite       = hashed_string{};
-        _currency          = 0;
         _lostCurrency      = 0;
         _flaskMaxCharges   = pCatalog != nullptr ? pCatalog->getRules()._flaskCharges : 0;
         _flaskCharges      = _flaskMaxCharges;
         _flaskPotencyLevel = 0;
-    }
-
-    void MetroSoulsState::addCurrency( int32 amount ) { _currency = MathUtil::max( 0, _currency + amount ); }
-
-    bool MetroSoulsState::trySpendCurrency( int32 amount )
-    {
-        if ( amount < 0 || _currency < amount )
-            return false;
-        _currency -= amount;
-        return true;
     }
 
     bool MetroSoulsState::rest( const hashed_string& siteId, Vitality& vitality )
@@ -73,14 +65,16 @@ namespace sw
             pushEvent( MetroSoulsEventType::CurrencyLost, _corpse._area, _corpse._currency );
             _corpse = MetroCorpse{};
         }
-        if ( _currency > 0 )
+        const hashed_string currency = getCurrencyName();
+        const int64         carried  = _pWallet != nullptr ? _pWallet->getBalance( currency ) : 0;
+        if ( carried > 0 )
         {
             _corpse._area     = areaId;
             _corpse._position = position;
-            _corpse._currency = _currency;
+            _corpse._currency = static_cast<int32>( MathUtil::min( carried, int64{ 0x7FFFFFFF } ) );
             _corpse._bActive  = SW_TRUE;
-            pushEvent( MetroSoulsEventType::CorpseDropped, areaId, _currency );
-            _currency = 0;
+            _pWallet->charge( currency, _corpse._currency );
+            pushEvent( MetroSoulsEventType::CorpseDropped, areaId, _corpse._currency );
         }
         refreshWorld( vitality );
         pushEvent( MetroSoulsEventType::Died, _respawnSite, 0 );
@@ -94,7 +88,8 @@ namespace sw
         const float32 radius = _pCatalog->getRules()._corpseRecoverRadius;
         if ( float2::getDistanceSquared( _corpse._position, position ) > radius * radius )
             return false;
-        _currency += _corpse._currency;
+        if ( _pWallet != nullptr )
+            _pWallet->add( getCurrencyName(), _corpse._currency );
         pushEvent( MetroSoulsEventType::CorpseRecovered, areaId, _corpse._currency );
         _corpse = MetroCorpse{};
         return true;
@@ -139,7 +134,8 @@ namespace sw
         record._spawnId = spawnId;
         record._bBoss   = pEnemy->_bBoss;
         _listKill.push_back( record );
-        _currency += pEnemy->_currency;
+        if ( _pWallet != nullptr )
+            _pWallet->add( getCurrencyName(), pEnemy->_currency );
         if ( pLoot != nullptr && pEnemy->_lootTable.empty() == false )
             (void)pLoot->roll( pEnemy->_lootTable, random, outDrops );
         pushEvent( MetroSoulsEventType::EnemyKilled, pEnemy->_id, pEnemy->_currency );
@@ -191,4 +187,6 @@ namespace sw
         event._amount = amount;
         _eventBuffer.push( event );
     }
+
+    hashed_string MetroSoulsState::getCurrencyName() const { return _pCatalog != nullptr ? _pCatalog->getRules()._currency : MetroRules{}._currency; }
 } // namespace sw

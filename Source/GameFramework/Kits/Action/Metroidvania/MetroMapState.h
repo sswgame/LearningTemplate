@@ -19,6 +19,7 @@ namespace sw
 
     class AreaGraph;
     class MetroidvaniaCatalog;
+    class Wallet;
 
     /** @brief 지도 사기 결과입니다. */
     enum class MetroMapPurchase : uint8
@@ -47,7 +48,7 @@ namespace sw
          * @brief 지역 지도를 삽니다 — 값만큼 @p inoutCurrency 를 줄이고 그 지역의 방을 모두 드러냅니다.
          * @details 실패하면 통화는 그대로입니다.
          */
-        MetroMapPurchase buyRegionMap( const hashed_string& region, int32& inoutCurrency );
+        MetroMapPurchase buyRegionMap( const hashed_string& region, Wallet& inoutWallet, const hashed_string& currency );
         bool             hasRegionMap( const hashed_string& region ) const;
         /** @brief 방이 지도에 그려지는가 — 그 지역 지도를 가졌고 방이 발견되었다입니다. */
         bool isShownOnMap( const hashed_string& areaId ) const;

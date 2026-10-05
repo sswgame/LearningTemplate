@@ -2,8 +2,10 @@
 #include "pch.h"
 
 #include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/ItemBag.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Base/World/AreaGraph.h"
@@ -90,6 +92,20 @@ namespace
 
         MetroScene() { _bLoaded = _catalog.loadFromXmlText( kMetroidvaniaCatalogXml, "metro" ) && _graph.loadFromXmlText( kAreaXml, "areas" ); }
     };
+
+    /** @brief 영혼 상태가 빌릴 지갑 묶음입니다. */
+    GameStateRefs lendMetroWallet( Wallet& wallet )
+    {
+        GameStateRefs refs;
+        refs._pWallet = &wallet;
+        return refs;
+    }
+
+    /** @brief 카탈로그 통화("geo") 잔액입니다. */
+    int32 geoOf( const Wallet& wallet )
+    {
+        return static_cast<int32>( wallet.getBalance( "geo" ) );
+    }
 
     uint32 runMotor( PlatformerMotor2D& motor, const PlatformTileMap& map, const MetroAbilitySet& abilities, const PlatformerInput& input, int32 frameCount )
     {
@@ -187,14 +203,15 @@ SW_TEST_CASE( MetroidvaniaTest, RegionMapPurchaseRevealsRoomsAndUnvisitedItemMar
     SW_EXPECT_EQUAL( 0, static_cast<int32>( listMarker.size() ) );
 
     // 돈이 모자라면 아무것도 바뀌지 않는다.
-    int32 currency = 20;
-    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", currency ) == MetroMapPurchase::NotEnoughCurrency );
-    SW_EXPECT_EQUAL( 20, currency );
-    SW_EXPECT_TRUE( mapState.buyRegionMap( "nowhere", currency ) == MetroMapPurchase::UnknownRegion );
-    currency = 50;
-    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", currency ) == MetroMapPurchase::Bought );
-    SW_EXPECT_EQUAL( 20, currency );
-    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", currency ) == MetroMapPurchase::AlreadyOwned );
+    Wallet wallet;
+    wallet.add( "geo", 20 );
+    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", wallet, "geo" ) == MetroMapPurchase::NotEnoughCurrency );
+    SW_EXPECT_EQUAL( 20, geoOf( wallet ) );
+    SW_EXPECT_TRUE( mapState.buyRegionMap( "nowhere", wallet, "geo" ) == MetroMapPurchase::UnknownRegion );
+    wallet.add( "geo", 30 );
+    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", wallet, "geo" ) == MetroMapPurchase::Bought );
+    SW_EXPECT_EQUAL( 20, geoOf( wallet ) );
+    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", wallet, "geo" ) == MetroMapPurchase::AlreadyOwned );
 
     // 지역의 방이 모두 그려진다(가 보지 않은 cross3 까지). 다른 지역은 아니다.
     SW_EXPECT_TRUE( mapState.isShownOnMap( "cross1" ) );
@@ -252,16 +269,17 @@ SW_TEST_CASE( MetroidvaniaTest, DeathDropsCurrencyAtCorpseAndSecondDeathLosesIt 
 {
     MetroScene scene;
     SW_ASSERT_TRUE( scene._bLoaded );
+    Wallet          soulsWallet;
     MetroSoulsState souls;
-    souls.initialize( &scene._catalog );
+    souls.initialize( &scene._catalog, lendMetroWallet( soulsWallet ) );
     MetroDuelist player;
     player.initialize( &scene._catalog );
     SW_EXPECT_TRUE( souls.rest( "bench_town", player.getVitality() ) );
 
-    souls.addCurrency( 100 );
+    soulsWallet.add( "geo", 100 );
     const hashed_string respawn = souls.die( "cross2", float2{ 10.0f, 2.0f }, player.getVitality() );
     SW_EXPECT_TRUE( respawn == hashed_string( "bench_town" ) );
-    SW_EXPECT_EQUAL( 0, souls.getCurrency() );
+    SW_EXPECT_EQUAL( 0, geoOf( soulsWallet ) );
     SW_EXPECT_TRUE( souls.getCorpse()._bActive != SW_FALSE );
     SW_EXPECT_EQUAL( 100, souls.getCorpse()._currency );
     SW_EXPECT_TRUE( player.getVitality().isAlive() );
@@ -270,12 +288,12 @@ SW_TEST_CASE( MetroidvaniaTest, DeathDropsCurrencyAtCorpseAndSecondDeathLosesIt 
     SW_EXPECT_FALSE( souls.tryRecoverCorpse( "cross1", float2{ 10.0f, 2.0f } ) );
     SW_EXPECT_FALSE( souls.tryRecoverCorpse( "cross2", float2{ 12.0f, 2.0f } ) );
     SW_EXPECT_TRUE( souls.tryRecoverCorpse( "cross2", float2{ 11.0f, 2.5f } ) );
-    SW_EXPECT_EQUAL( 100, souls.getCurrency() );
+    SW_EXPECT_EQUAL( 100, geoOf( soulsWallet ) );
     SW_EXPECT_FALSE( souls.getCorpse()._bActive != SW_FALSE );
 
     // 되찾기 전에 또 죽으면 — 첫 시체의 통화는 영영 사라지고 지금 통화가 새 시체가 된다.
     (void)souls.die( "cross3", float2{ 3.0f, 1.0f }, player.getVitality() );
-    souls.addCurrency( 30 );
+    soulsWallet.add( "geo", 30 );
     (void)souls.die( "cross1", float2{ 5.0f, 1.0f }, player.getVitality() );
     SW_EXPECT_EQUAL( 100, souls.getLostCurrency() );
     SW_EXPECT_EQUAL( 30, souls.getCorpse()._currency );
@@ -297,10 +315,35 @@ SW_TEST_CASE( MetroidvaniaTest, DeathDropsCurrencyAtCorpseAndSecondDeathLosesIt 
 
     // 통화가 0 이면 시체를 남기지 않는다(남은 시체도 그대로 사라진다).
     SW_EXPECT_TRUE( souls.tryRecoverCorpse( "cross1", float2{ 5.0f, 1.0f } ) );
-    SW_EXPECT_TRUE( souls.trySpendCurrency( 30 ) );
-    SW_EXPECT_FALSE( souls.trySpendCurrency( 1 ) );
+    SW_EXPECT_TRUE( soulsWallet.trySpend( "geo", 30 ) );
+    SW_EXPECT_FALSE( soulsWallet.trySpend( "geo", 1 ) );
     (void)souls.die( "cross1", float2{ 5.0f, 1.0f }, player.getVitality() );
     SW_EXPECT_FALSE( souls.getCorpse()._bActive != SW_FALSE );
+}
+
+/**
+ * @brief [MetroidvaniaTest] 죽으면 빌린 지갑의 카탈로그 통화만 시체로 옮기고, 되찾으면 지갑으로 돌아온다 — 같은 지갑의 다른 통화(다른 키트의 돈)는 그대로다
+ */
+SW_TEST_CASE( MetroidvaniaTest, DeathDropsTheWalletCurrencyAndRecoveryReturnsIt )
+{
+    MetroScene scene;
+    SW_ASSERT_TRUE( scene._bLoaded );
+    Wallet shared;
+    shared.add( "geo", 70 );
+    shared.add( "Gold", 15 ); // 다른 키트가 같은 지갑에 둔 돈
+    MetroSoulsState souls;
+    souls.initialize( &scene._catalog, lendMetroWallet( shared ) );
+    MetroDuelist player;
+    player.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( souls.rest( "bench_town", player.getVitality() ) );
+
+    (void)souls.die( "cross2", float2{ 10.0f, 2.0f }, player.getVitality() );
+    SW_EXPECT_EQUAL( 0, geoOf( shared ) );
+    SW_EXPECT_EQUAL( 70, souls.getCorpse()._currency );
+    SW_EXPECT_EQUAL( int64{ 15 }, shared.getBalance( "Gold" ) );
+    SW_ASSERT_TRUE( souls.tryRecoverCorpse( "cross2", float2{ 10.5f, 2.0f } ) );
+    SW_EXPECT_EQUAL( 70, geoOf( shared ) );
+    SW_EXPECT_EQUAL( int64{ 15 }, shared.getBalance( "Gold" ) );
 }
 
 SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses )
@@ -309,8 +352,9 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
     SW_ASSERT_TRUE( scene._bLoaded );
     LootCatalog loot;
     SW_ASSERT_TRUE( loot.loadFromXmlText( kLootXml, "loot" ) );
+    Wallet          soulsWallet;
     MetroSoulsState souls;
-    souls.initialize( &scene._catalog );
+    souls.initialize( &scene._catalog, lendMetroWallet( soulsWallet ) );
     MetroDuelist player;
     player.initialize( &scene._catalog );
 
@@ -332,7 +376,7 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
     SW_EXPECT_EQUAL( 200, souls.registerKill( "cross3.boss", "falseKnight", scene._flags, &loot, random, drops ) );
     SW_EXPECT_TRUE( scene._flags.hasFlag( "boss.falseKnight" ) );
     SW_EXPECT_FALSE( souls.isSpawnAlive( "cross1.husk_a" ) );
-    SW_EXPECT_EQUAL( 205, souls.getCurrency() );
+    SW_EXPECT_EQUAL( 205, geoOf( soulsWallet ) );
 
     // 쉬는 곳이 아니면 쉬지 못한다.
     SW_EXPECT_FALSE( souls.rest( "stag_town", player.getVitality() ) );
@@ -354,15 +398,16 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
     int32 arrShard[2] = { 0, 0 };
     for ( int32 runIndex = 0; runIndex < 2; ++runIndex )
     {
+        Wallet          runWallet;
         MetroSoulsState run;
-        run.initialize( &scene._catalog );
+        run.initialize( &scene._catalog, lendMetroWallet( runWallet ) );
         GameFlags  flags;
         GameRandom runRandom( 1234u );
         ItemBag    runDrops;
         for ( int32 spawnIndex = 0; spawnIndex < 20; ++spawnIndex )
             (void)run.registerKill( hashed_string( string( "husk_" ) + static_cast<utf8>( 'a' + spawnIndex ) ), "husk", flags, &loot, runRandom, runDrops );
         arrShard[runIndex] = runDrops.getItemCount( "shard" );
-        SW_EXPECT_EQUAL( 100, run.getCurrency() );
+        SW_EXPECT_EQUAL( 100, geoOf( runWallet ) );
     }
     SW_EXPECT_EQUAL( arrShard[0], arrShard[1] );
     SW_EXPECT_TRUE( arrShard[0] > 0 );

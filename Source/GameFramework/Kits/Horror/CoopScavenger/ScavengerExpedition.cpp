@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+
 #include <algorithm>
 
 namespace sw
@@ -58,10 +60,10 @@ namespace sw
         , _weather{}
         , _indoorDirector{}
         , _outdoorDirector{}
-        , _wallet{}
         , _shop{}
         , _random{}
         , _pShipStorage{ nullptr }
+        , _pWallet{ nullptr }
         , _pMoon{ nullptr }
         , _seed{ 1u }
         , _hoursOnMoon{ 0.0f }
@@ -71,7 +73,7 @@ namespace sw
     {
     }
 
-    void ScavengerExpedition::initialize( const ScavengerExpeditionData& data, Inventory& shipStorage, uint32 seed, int32 crewCount )
+    void ScavengerExpedition::initialize( const ScavengerExpeditionData& data, const GameStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount )
     {
         _data = data;
         _seed = seed;
@@ -84,7 +86,7 @@ namespace sw
         _dayIndex       = 0;
         _phase          = ScavengerPhase::InOrbit;
         _bDuskAnnounced = SW_FALSE;
-        _wallet.clear();
+        _pWallet        = refs._pWallet;
         _shop.initialize( data._pShopCatalog, data._pItemCatalog );
         _pShipStorage = &shipStorage;
         _listCrew.clear();
@@ -92,7 +94,8 @@ namespace sw
         if ( data._pCatalog == nullptr )
             return;
         _quota.initialize( data._pCatalog->getQuotaSettings() );
-        _wallet.setBalance( data._pCatalog->getCurrency(), data._pCatalog->getQuotaSettings()._startCredits );
+        if ( _pWallet != nullptr )
+            _pWallet->setBalance( data._pCatalog->getCurrency(), data._pCatalog->getQuotaSettings()._startCredits );
         const ScavengerDaySettings& day = data._pCatalog->getDaySettings();
         WorldClockSettings          clockSettings;
         clockSettings._secondsPerDay = day._secondsPerDay;
@@ -112,7 +115,7 @@ namespace sw
             return ScavengerActionResult::UnknownMoon;
         if ( pMoon == _pMoon )
             return ScavengerActionResult::Ok;
-        if ( _wallet.trySpend( _data._pCatalog->getCurrency(), pMoon->_routeCost ) == false )
+        if ( _pWallet == nullptr || _pWallet->trySpend( _data._pCatalog->getCurrency(), pMoon->_routeCost ) == false )
             return ScavengerActionResult::NotEnoughCredits;
         _pMoon = pMoon;
         pushEvent( ScavengerEvent::Kind::Routed, -1, pMoon->_routeCost, pMoon->_id );
@@ -305,7 +308,8 @@ namespace sw
         _listShipScrap.clear();
         if ( credits > 0 )
         {
-            _wallet.add( _data._pCatalog->getCurrency(), credits );
+            if ( _pWallet != nullptr )
+                _pWallet->add( _data._pCatalog->getCurrency(), credits );
             _quota.addFulfilled( credits );
         }
         pushEvent( ScavengerEvent::Kind::ScrapSold, -1, credits );
@@ -324,7 +328,9 @@ namespace sw
     {
         if ( _data._pCatalog == nullptr || _phase == ScavengerPhase::GameOver )
             return ShopResult::UnknownShop;
-        return _shop.buy( _data._pCatalog->getTerminalShopId(), itemId, count, _wallet, *_pShipStorage );
+        if ( _pWallet == nullptr )
+            return ShopResult::NotEnoughMoney;
+        return _shop.buy( _data._pCatalog->getTerminalShopId(), itemId, count, *_pWallet, *_pShipStorage );
     }
 
     void ScavengerExpedition::drainEvents( vector<ScavengerEvent>& outListEvent )
@@ -332,7 +338,7 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    int64 ScavengerExpedition::getCredits() const { return _data._pCatalog != nullptr ? _wallet.getBalance( _data._pCatalog->getCurrency() ) : 0; }
+    int64 ScavengerExpedition::getCredits() const { return _data._pCatalog != nullptr && _pWallet != nullptr ? _pWallet->getBalance( _data._pCatalog->getCurrency() ) : 0; }
 
     int32 ScavengerExpedition::computeShipValue() const
     {
@@ -452,7 +458,7 @@ namespace sw
         if ( countAlive() == 0 )
             loseScrapOnWipe();
         const int64 fine = static_cast<int64>( static_cast<float32>( getCredits() ) * MathUtil::saturate( fineRatio ) );
-        if ( fine > 0 && _wallet.trySpend( _data._pCatalog->getCurrency(), fine ) )
+        if ( fine > 0 && _pWallet != nullptr && _pWallet->trySpend( _data._pCatalog->getCurrency(), fine ) )
             pushEvent( ScavengerEvent::Kind::FinePaid, -1, static_cast<int32>( fine ) );
 
         int32                         overtimeBonus = 0;
@@ -460,7 +466,8 @@ namespace sw
         if ( deadline == ScavengerDeadlineResult::QuotaMet )
         {
             if ( overtimeBonus > 0 )
-                _wallet.add( _data._pCatalog->getCurrency(), overtimeBonus );
+                if ( _pWallet != nullptr )
+                    _pWallet->add( _data._pCatalog->getCurrency(), overtimeBonus );
             pushEvent( ScavengerEvent::Kind::QuotaMet, -1, _quota.getQuota() );
         }
         else if ( deadline == ScavengerDeadlineResult::GameOver )

@@ -90,6 +90,7 @@ namespace
         ShopCatalog _shopCatalog;
         TimingJudge _judge;
         Inventory   _inventory; ///< 플레이어 가방(파티가 빌린다)
+        Wallet      _wallet;    ///< 지갑(파티가 빌린다)
 
         bool initialize()
         {
@@ -104,12 +105,14 @@ namespace
                    _shopCatalog.loadFromXmlText( kJrpgShopXml, "ClassicJrpgTest" );
         }
 
-        /** @brief 파티가 빌릴 공유 상태 — 부를 때마다 가방을 새로 엽니다. */
+        /** @brief 파티가 빌릴 공유 상태 — 부를 때마다 가방 · 지갑을 새로 엽니다. */
         GameStateRefs makeRefs()
         {
             _inventory.initialize( &_itemCatalog, 20 );
+            _wallet.clear();
             GameStateRefs refs;
             refs._pInventory = &_inventory;
+            refs._pWallet    = &_wallet;
             return refs;
         }
     };
@@ -206,14 +209,14 @@ SW_TEST_CASE( ClassicJrpgTest, InnChurchShopAndEquipment )
     (void)party.addMember( hashed_string( "hero" ), "Hero", hashed_string( "hero" ), 5 );
     (void)party.addMember( hashed_string( "sol" ), "Sol", hashed_string( "warrior" ), 4 );
     (void)party.addMember( hashed_string( "mia" ), "Mia", hashed_string( "mage" ), 3 );
-    party.getWallet().setBalance( Wallet::getDefaultCurrency(), 200 );
+    world._wallet.setBalance( Wallet::getDefaultCurrency(), 200 );
 
     // 상점(기반 ShopState) → 인벤토리 → 장비 → 공격력.
     ShopState shop;
     shop.initialize( &world._shopCatalog, &world._itemCatalog );
     const int32 attackBefore = party.computeAttack( 0 );
-    SW_EXPECT_TRUE( shop.buy( hashed_string( "aliahan" ), hashed_string( "copper_sword" ), 1, party.getWallet(), world._inventory ) == ShopResult::Ok );
-    SW_EXPECT_EQUAL( 100, static_cast<int32>( party.getWallet().getBalance( Wallet::getDefaultCurrency() ) ) );
+    SW_EXPECT_TRUE( shop.buy( hashed_string( "aliahan" ), hashed_string( "copper_sword" ), 1, world._wallet, world._inventory ) == ShopResult::Ok );
+    SW_EXPECT_EQUAL( 100, static_cast<int32>( world._wallet.getBalance( Wallet::getDefaultCurrency() ) ) );
     const int32 inventorySlot = world._inventory.findFirstSlot( hashed_string( "copper_sword" ) );
     SW_ASSERT_TRUE( inventorySlot >= 0 );
     SW_EXPECT_TRUE( party.getMember( 0 )._equipment.equipFromInventory( world._inventory, inventorySlot ) == EquipResult::Ok );
@@ -225,18 +228,18 @@ SW_TEST_CASE( ClassicJrpgTest, InnChurchShopAndEquipment )
     party.getMember( 0 )._mp = 0;
     party.getMember( 2 )._hp = 0;
     SW_EXPECT_TRUE( party.restAtInn( 10 ) );
-    SW_EXPECT_EQUAL( 80, static_cast<int32>( party.getWallet().getBalance( Wallet::getDefaultCurrency() ) ) );
+    SW_EXPECT_EQUAL( 80, static_cast<int32>( world._wallet.getBalance( Wallet::getDefaultCurrency() ) ) );
     SW_EXPECT_EQUAL( party.getMember( 0 ).getStat( JrpgStat::MaxHp ), party.getMember( 0 )._hp );
     SW_EXPECT_EQUAL( party.getMember( 0 ).getStat( JrpgStat::MaxMp ), party.getMember( 0 )._mp );
     SW_EXPECT_EQUAL( 0, party.getMember( 2 )._hp );
     SW_EXPECT_FALSE( party.restAtInn( 100 ) ); // 200 이 모자라다 — 아무것도 바뀌지 않는다
-    SW_EXPECT_EQUAL( 80, static_cast<int32>( party.getWallet().getBalance( Wallet::getDefaultCurrency() ) ) );
+    SW_EXPECT_EQUAL( 80, static_cast<int32>( world._wallet.getBalance( Wallet::getDefaultCurrency() ) ) );
 
     // 교회: 레벨 × 값.
     SW_EXPECT_FALSE( party.reviveAtChurch( 2, 30 ) ); // 90 > 80
     SW_EXPECT_EQUAL( 0, party.getMember( 2 )._hp );
     SW_EXPECT_TRUE( party.reviveAtChurch( 2, 20 ) );
-    SW_EXPECT_EQUAL( 20, static_cast<int32>( party.getWallet().getBalance( Wallet::getDefaultCurrency() ) ) );
+    SW_EXPECT_EQUAL( 20, static_cast<int32>( world._wallet.getBalance( Wallet::getDefaultCurrency() ) ) );
     SW_EXPECT_EQUAL( party.getMember( 2 ).getStat( JrpgStat::MaxHp ), party.getMember( 2 )._hp );
     SW_EXPECT_FALSE( party.reviveAtChurch( 2, 0 ) ); // 이미 살아 있다
     SW_EXPECT_EQUAL( 3, party.countAlive() );
@@ -601,7 +604,7 @@ SW_TEST_CASE( ClassicJrpgTest, StepEncounterRewardSplitAndDeterminism )
     JrpgParty               partyB;
     SW_EXPECT_TRUE( runBattle( 64, listA, partyA ) == JrpgBattleOutcome::Victory );
     SW_EXPECT_EQUAL( 4, findEventValue( listA, JrpgBattleEvent::Kind::Victory ) );
-    SW_EXPECT_EQUAL( 8, static_cast<int32>( partyA.getWallet().getBalance( Wallet::getDefaultCurrency() ) ) );
+    SW_EXPECT_EQUAL( 8, static_cast<int32>( world._wallet.getBalance( Wallet::getDefaultCurrency() ) ) );
     SW_EXPECT_EQUAL( 4, static_cast<int32>( partyA.getMember( 0 )._level.getTotalXp() ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( partyA.getMember( 3 )._level.getTotalXp() ) );
     SW_EXPECT_TRUE( countEvents( listA, JrpgBattleEvent::Kind::SpellCast ) >= 1 );

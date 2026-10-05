@@ -25,6 +25,8 @@
 
 namespace sw
 {
+    struct GameStateRefs;
+
     class ItemCatalog;
     class ShopCatalog;
     class SpawnTable;
@@ -127,8 +129,8 @@ namespace sw
 
         ScavengerExpedition();
 
-        /** @brief 새 원정을 엽니다. 터미널에서 산 것은 빌린 우주선 창고(@p shipStorage — 원정보다 오래 살아야 한다)에 듭니다. */
-        void initialize( const ScavengerExpeditionData& data, Inventory& shipStorage, uint32 seed, int32 crewCount );
+        /** @brief 새 원정을 엽니다. 회사 돈은 빌린 지갑(@p refs — 카탈로그 통화, 시작 크레딧으로 맞춘다), 터미널에서 산 것은 빌린 우주선 창고(@p shipStorage — 원정보다 오래 살아야 한다)에 듭니다. */
+        void initialize( const ScavengerExpeditionData& data, const GameStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount );
 
         /** @brief 궤도에서 위성으로 갑니다(비용을 낸다). 이미 그 위성이면 공짜입니다. */
         ScavengerActionResult routeTo( const hashed_string& moonId );
@@ -165,7 +167,6 @@ namespace sw
         ScavengerPhase                getPhase() const { return _phase; }
         const ScavengerMoonDef*       getMoon() const { return _pMoon; }
         const ScavengerQuota&         getQuota() const { return _quota; }
-        const Wallet&                 getWallet() const { return _wallet; }
         int64                         getCredits() const;
         const ScavengerFacility&      getFacility() const { return _facility; }
         const WorldClock&             getClock() const { return _clock; }
@@ -203,10 +204,10 @@ namespace sw
         WeatherSystem               _weather;
         SpawnDirector               _indoorDirector;
         SpawnDirector               _outdoorDirector;
-        Wallet                      _wallet;
         ShopState                   _shop;
         GameRandom                  _random;
         Inventory*                  _pShipStorage; ///< 우주선 창고(빌림)
+        Wallet*                     _pWallet;      ///< 빌린 지갑(회사 돈)
         const ScavengerMoonDef*     _pMoon;
         uint32                      _seed;
         float32                     _hoursOnMoon;

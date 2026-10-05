@@ -5,6 +5,7 @@
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/ItemBag.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
@@ -99,7 +100,8 @@ namespace
         LootCatalog  _loot;
         AreaGraph    _areaGraph;
         GameFlags    _flags;
-        Inventory    _bag; ///< 플레이어 가방(열쇠)
+        Inventory    _bag;    ///< 플레이어 가방(열쇠)
+        Wallet       _wallet; ///< 지갑(동전)
         GhostMansion _mansion;
 
         bool initialize( uint32 seed )
@@ -111,6 +113,7 @@ namespace
             GameStateRefs refs;
             refs._pFlags     = &_flags;
             refs._pInventory = &_bag;
+            refs._pWallet    = &_wallet;
             _mansion.initialize( &_catalog, &_loot, &_areaGraph, refs, seed );
             return true;
         }
@@ -398,7 +401,7 @@ SW_TEST_CASE( GhostHuntTest, RoomLightsAndKeyDoor )
     SW_EXPECT_TRUE( mansion.isRoomLit( "foyer" ) );
     SW_EXPECT_TRUE( scene._flags.hasFlag( "lit.foyer" ) );
     SW_EXPECT_EQUAL( 1, scene._bag.getItemCount( "parlorKey" ) );
-    SW_EXPECT_EQUAL( 20, mansion.getCoinCount() );
+    SW_EXPECT_EQUAL( int64{ 20 }, scene._wallet.getBalance( "Coins" ) );
     vector<GhostMansionEvent> listEvent;
     mansion.drainEvents( listEvent );
     SW_EXPECT_TRUE( hasMansionEvent( listEvent, GhostMansionEventType::RoomLit ) );

@@ -25,6 +25,7 @@
 namespace sw
 {
     struct DishDef;
+    struct GameStateRefs;
 
     class ItemCatalog;
     class RestaurantCatalog;
@@ -198,10 +199,11 @@ namespace sw
         RestaurantSimulation();
 
         /**
-         * @brief 새 식당을 엽니다. 재료는 빌린 창고(@p pantry — 식당보다 오래 살아야 한다)에 듭니다 — 섞인 게임은 플레이어 가방을 넘겨 "밭 → 식탁" 이 그대로 된다.
+         * @brief 새 식당을 엽니다. 돈은 빌린 지갑(@p refs 의 지갑 — 없으면 시장 · 급여 · 계산이 막힌다), 재료는 빌린 창고(@p pantry — 식당보다 오래 살아야 한다)에 듭니다 — 섞인 게임은 플레이어 가방을 넘겨 "밭 → 식탁" 이 그대로 된다.
          */
         void initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog, const ShopCatalog* pShopCatalog,
-                         const ReputationCatalog* pReputationCatalog, const ExperienceCurve* pStaffCurve, Inventory& pantry, const RestaurantSettings& settings );
+                         const ReputationCatalog* pReputationCatalog, const ExperienceCurve* pStaffCurve, const GameStateRefs& refs, Inventory& pantry,
+                         const RestaurantSettings& settings );
         /** @brief 조리 스테이션 수를 정합니다("Stove" 2 개 · "Oven" 1 개). */
         void setStationCount( const hashed_string& station, int32 count );
         /** @brief 직원을 고용합니다. 직원 자리 번호입니다. */
@@ -248,8 +250,6 @@ namespace sw
         const RestaurantDaySummary&       getToday() const { return _today; }
         const IngredientStock&            getStock() const { return _stock; }
         const ShopState&                  getMarket() const { return _market; }
-        Wallet&                           getWallet() { return _wallet; }
-        const Wallet&                     getWallet() const { return _wallet; }
         hashed_string                     getCurrency() const { return Wallet::getDefaultCurrency(); }
         float32                           getMinutes() const { return _minutes; }
         int32                             getDay() const { return _day; }
@@ -300,7 +300,6 @@ namespace sw
         IngredientStock              _stock;
         Crafter                      _crafter;
         ShopState                    _market;
-        Wallet                       _wallet;
         ReputationState              _reputation;
         RestaurantSettings           _settings;
         RestaurantDaySummary         _today;
@@ -309,6 +308,7 @@ namespace sw
         hashed_string                _weatherId;
         const RestaurantCatalog*     _pCatalog;
         Inventory*                   _pPantry; ///< 주방 창고(빌림)
+        Wallet*                      _pWallet; ///< 빌린 지갑
         const RecipeCatalog*         _pRecipeCatalog;
         const ShopCatalog*           _pShopCatalog;
         const ExperienceCurve*       _pStaffCurve;

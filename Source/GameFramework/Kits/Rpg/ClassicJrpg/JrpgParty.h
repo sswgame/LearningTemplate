@@ -109,7 +109,7 @@ namespace sw
 
         JrpgParty();
 
-        /** @brief 새 파티를 엽니다. 파티 가방은 플레이어 가방(@p refs 의 가방 — 빌림)이고, 없으면 아이템이 드는 전직이 막힙니다. */
+        /** @brief 새 파티를 엽니다. 파티 가방 · 지갑은 @p refs 에서 빌립니다 — 가방이 없으면 아이템이 드는 전직이, 지갑이 없으면 골드 보상 · 여관 · 교회가 막힙니다. */
         void initialize( const JrpgCatalog* pCatalog, const ItemCatalog* pItemCatalog, const GameStateRefs& refs,
                          string_view equipLayout = "Weapon,Armor,Shield,Helmet,Accessory" );
         /** @brief 멤버를 더합니다(직업의 레벨 1 능력치에서 @p level 까지 성장). 자리 번호, 못 더하면 −1 입니다. */
@@ -144,8 +144,6 @@ namespace sw
         int32              getMemberCount() const { return static_cast<int32>( _listMember.size() ); }
         const JrpgMember&  getMember( int32 memberIndex ) const { return _listMember[static_cast<size_t>( memberIndex )]; }
         JrpgMember&        getMember( int32 memberIndex ) { return _listMember[static_cast<size_t>( memberIndex )]; }
-        Wallet&            getWallet() { return _wallet; }
-        const Wallet&      getWallet() const { return _wallet; }
         const JrpgCatalog* getCatalog() const { return _pCatalog; }
 
     private:
@@ -156,10 +154,10 @@ namespace sw
 
         vector<JrpgMember>          _listMember;
         EventBuffer<JrpgPartyEvent> _eventBuffer;
-        Wallet                      _wallet;
         string                      _equipLayout;
         const JrpgCatalog*          _pCatalog;
         const ItemCatalog*          _pItemCatalog;
         Inventory*                  _pInventory; ///< 플레이어 가방(빌림)
+        Wallet*                     _pWallet;    ///< 빌린 지갑(골드)
     };
 } // namespace sw

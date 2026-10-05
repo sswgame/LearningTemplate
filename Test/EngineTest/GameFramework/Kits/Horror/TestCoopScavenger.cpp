@@ -3,6 +3,7 @@
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/AI/SpawnDirector.h"
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Inventory/Shop.h"
@@ -78,6 +79,7 @@ namespace
         ItemCatalog      _itemCatalog;
         ShopCatalog      _shopCatalog;
         Inventory        _shipStorage; ///< 우주선 창고(원정이 빌린다)
+        Wallet           _wallet;      ///< 회사 돈(원정이 빌린다)
 
         bool initialize()
         {
@@ -91,6 +93,14 @@ namespace
         {
             _shipStorage.initialize( &_itemCatalog, 64 );
             return _shipStorage;
+        }
+
+        /** @brief 원정이 빌릴 공유 상태입니다. */
+        GameStateRefs makeRefs()
+        {
+            GameStateRefs refs;
+            refs._pWallet = &_wallet;
+            return refs;
         }
 
         ScavengerExpeditionData makeData() const
@@ -342,7 +352,7 @@ SW_TEST_CASE( CoopScavengerTest, DayFlowDuskMidnightDepartureAndLeftBehind )
     ScavengerTestData data;
     SW_ASSERT_TRUE( data.initialize() );
     ScavengerExpedition expedition;
-    expedition.initialize( data.makeData(), data.openShipStorage(), 3u, 2 );
+    expedition.initialize( data.makeData(), data.makeRefs(), data.openShipStorage(), 3u, 2 );
     SW_EXPECT_EQUAL( 100, static_cast<int32>( expedition.getCredits() ) );
     SW_EXPECT_TRUE( expedition.movePlayer( 0, "outside" ) == ScavengerActionResult::WrongPhase );
     SW_EXPECT_TRUE( expedition.routeTo( "nowhere" ) == ScavengerActionResult::UnknownMoon );
@@ -402,7 +412,7 @@ SW_TEST_CASE( CoopScavengerTest, BodyRecoveryFinesAndWipeLoss )
     SW_ASSERT_TRUE( data.initialize() );
     const auto playTwoDays = [&]( ScavengerExpedition& expedition, vector<ScavengerEvent>& outListEvent ) -> bool
     {
-        expedition.initialize( data.makeData(), data.openShipStorage(), 21u, 2 );
+        expedition.initialize( data.makeData(), data.makeRefs(), data.openShipStorage(), 21u, 2 );
         if ( expedition.land() != ScavengerActionResult::Ok )
             return false;
         // 1 이 고철 셋을 싣는다.
@@ -481,7 +491,7 @@ SW_TEST_CASE( CoopScavengerTest, ThreatsScaleWithMoonRiskAndWeather )
     const auto countThreats = [&]( const utf8* pMoonId ) -> ThreatCount
     {
         ScavengerExpedition expedition;
-        expedition.initialize( data.makeData(), data.openShipStorage(), 5u, 1 );
+        expedition.initialize( data.makeData(), data.makeRefs(), data.openShipStorage(), 5u, 1 );
         ThreatCount count;
         if ( expedition.routeTo( hashed_string( pMoonId ) ) != ScavengerActionResult::Ok || expedition.land() != ScavengerActionResult::Ok )
             return count;
@@ -510,7 +520,7 @@ SW_TEST_CASE( CoopScavengerTest, ThreatsScaleWithMoonRiskAndWeather )
     SW_EXPECT_EQUAL( 0, company._indoor + company._outdoor );
 
     ScavengerExpedition expedition;
-    expedition.initialize( data.makeData(), data.openShipStorage(), 5u, 1 );
+    expedition.initialize( data.makeData(), data.makeRefs(), data.openShipStorage(), 5u, 1 );
     SW_EXPECT_TRUE( expedition.routeTo( "rend" ) == ScavengerActionResult::Ok );
     SW_ASSERT_TRUE( expedition.land() == ScavengerActionResult::Ok );
     SW_EXPECT_TRUE( expedition.getWeather().getCurrent() == hashed_string( "eclipsed" ) );
@@ -522,7 +532,7 @@ SW_TEST_CASE( CoopScavengerTest, CompanySellingTerminalAndGameOver )
     ScavengerTestData data;
     SW_ASSERT_TRUE( data.initialize() );
     ScavengerExpedition expedition;
-    expedition.initialize( data.makeData(), data.openShipStorage(), 8u, 1 );
+    expedition.initialize( data.makeData(), data.makeRefs(), data.openShipStorage(), 8u, 1 );
 
     // 터미널 — 궤도에서 산다(우주선 창고로).
     SW_EXPECT_TRUE( expedition.buyFromTerminal( "flashlight", 2 ) == ShopResult::Ok );
