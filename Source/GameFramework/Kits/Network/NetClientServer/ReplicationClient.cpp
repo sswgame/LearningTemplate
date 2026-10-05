@@ -6,6 +6,7 @@
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Message/NetSendBudget.h"
+#include "Core/Network/Replication/InterpolationBuffer.h"
 
 namespace sw
 {
@@ -14,7 +15,7 @@ namespace sw
         , _inputWindow{}
         , _settings{}
         , _pHost{ nullptr }
-        , _renderTime{ 0.0f }
+        , _clock{}
         , _decodeFailureCount{ 0 }
         , _messageWriter{}
     {
@@ -24,6 +25,14 @@ namespace sw
     {
         _pHost    = pHost;
         _settings = settings;
+        NetClockSettings clockSettings;
+        clockSettings._tickInterval       = settings._tickInterval;
+        clockSettings._interpolationDelay = settings._interpolationDelay;
+        clockSettings._sampleInterval     = settings._tickInterval; // 스냅숏은 서버 틱마다 온다
+        clockSettings._clockCorrection    = settings._clockCorrection;
+        clockSettings._mode               = NetClockMode::Smooth;
+        _clock.initialize( clockSettings );
+
         _listSnapshot.initialize( MathUtil::max( 4, settings._historySize ) );
         _inputWindow.initialize( NetClientServerMessage::kMaxInputCount, NetClientServerMessage::kInputFormat );
         _decodeFailureCount = 0;
@@ -34,7 +43,7 @@ namespace sw
     {
         _listSnapshot.reset(); // 스냅숏 버퍼는 자리에 남아 다음 연결이 다시 쓴다
         _inputWindow.reset();  // 새 서버 — 옛 확인은 이 연결의 것이 아니다
-        _renderTime = 0.0f;
+        _clock.reset();        // 새 서버의 틱은 옛 것보다 작을 수 있다 — 첫 스냅숏에서 다시 선다
     }
 
     void ReplicationClient::onConnectionOpened( int32 connectionId )
@@ -64,10 +73,8 @@ namespace sw
             return NetHandleResult::Handled;
         }
         _inputWindow.acknowledge( snapshot._firstMissingInputTick ); // 서버가 빈틈없이 받은 다음 틱 — 그 앞은 다시 싣지 않는다
-        const bool bFirst             = _listSnapshot.hasNewest() == false;
-        _listSnapshot.acquire( tick ) = std::move( snapshot ); // 가장 새 틱도 이것이 된다
-        if ( bFirst )
-            _renderTime = static_cast<float32>( tick ) * _settings._tickInterval - _settings._interpolationDelay;
+        _listSnapshot.acquire( tick ) = std::move( snapshot );       // 가장 새 틱도 이것이 된다
+        _clock.observeServerTick( tick );                            // 첫 스냅숏이면 렌더 틱을 바로 (그 틱 − 지연)에 둔다
         if ( _pHost != nullptr )
         {
             BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kSnapshotAck );
@@ -79,18 +86,8 @@ namespace sw
 
     void ReplicationClient::update( float32 deltaTime )
     {
-        if ( _listSnapshot.hasNewest() == false || deltaTime <= 0.0f )
-            return;
-        // 목표 = 가장 새 스냅샷 시각 − 지연. 벗어난 만큼 조금 빠르게 · 느리게 흘려 맞춘다(튀지 않게). 크게 벗어나면 바로 맞춘다.
-        const float32 target = static_cast<float32>( _listSnapshot.getNewestTick() ) * _settings._tickInterval - _settings._interpolationDelay;
-        const float32 error  = target - ( _renderTime + deltaTime );
-        if ( MathUtil::abs( error ) > _settings._interpolationDelay * 4.0f )
-        {
-            _renderTime = target;
-            return;
-        }
-        const float32 scale = 1.0f + MathUtil::clamp( error / MathUtil::max( 1.0e-3f, _settings._interpolationDelay ), -1.0f, 1.0f ) * _settings._clockCorrection;
-        _renderTime += deltaTime * scale;
+        // 목표 = 가장 새 스냅숏 틱 − 지연. 벗어난 만큼 조금 빠르게 · 느리게 흘려 맞추고 크게 벗어나면 바로 맞춘다(NetClock Smooth). 스냅숏을 받기 전에는 서 있다.
+        _clock.advance( deltaTime );
     }
 
     void ReplicationClient::findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, float32& outAlpha ) const
@@ -125,8 +122,7 @@ namespace sw
             pOutTo = pOutFrom; // 새 스냅샷이 늦는다 — 마지막 것에 멈춘다(외삽하지 않는다)
             return;
         }
-        const float32 span = static_cast<float32>( pOutTo->_tick - pOutFrom->_tick );
-        outAlpha           = span > 0.0f ? MathUtil::saturate( ( renderTick - static_cast<float32>( pOutFrom->_tick ) ) / span ) : 0.0f;
+        outAlpha = NetInterpolationUtil::computeAlpha( pOutFrom->_tick, pOutTo->_tick, renderTick );
     }
 
     bool ReplicationClient::sampleEntity( uint32 entityId, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, float32& outAlpha ) const

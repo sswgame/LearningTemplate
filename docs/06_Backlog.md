@@ -408,8 +408,7 @@ cd build/Ninja-Debug/Bin
 
 - **네트워크 리팩토링 남은 단계(2026-10-05 사용자 요청 — 결함 단계 N0~N12 · 키트 결함 D1~D19 는 끝남).** 공통 부품을 Core `Network/Replication/` 에 두고 키트는
   조립만 하게. 단계마다 커밋 하나, 스레드를 건드린 단계는 `--test_repeat=50`, 파괴 네트워킹 시험(`NetSimDestruction*` · `DestructionSnapshot`)을 매 단계 지킨다.
-  N16 `NetClock` · `InterpolationBuffer<T>`
-  (`ReplicationClient::update/findBracket` 와 파괴 클라이언트의 서버 틱 추정 · 자세 표본) · N17 회선 흉내 하나로(`LoopbackConditions` 삭제) · N18 **측정 먼저**(하니스
+  N17 회선 흉내 하나로(`LoopbackConditions` 삭제) · N18 **측정 먼저**(하니스
   클라이언트 16 × 엔티티 1000, 60 Hz 의 할당 · 시간 → 숫자가 움직일 때만 메시지 풀 · O(n) 델타 · 월드 아레나) · N19 시험 도우미 다섯(`NetTestPair` · `ThreadedCluster` ·
   `NetTestCluster` · `HostCluster` · `TurnRelayScene`)을 하나로 · N20 신뢰 메시지 조각내기(64 KB — 언리얼 partial bunch · GNS, 파괴 스냅숏 조각 · 턴 대기 줄 · MMO 들어옴
   쪼개기를 단순화) · N21 연결 대역폭 상한(토큰 버킷 — 언리얼 `NetSpeed`, 키트 예산의 기본값)과 "신뢰 · 순서 없음" 채널. 하지 않기로 한 것: 암호화 · NAT · 리플렉션
@@ -1398,6 +1397,11 @@ cd build/Ninja-Debug/Bin
 - **틱 · 프레임으로 찾는 고리는 `TickRingBuffer` 하나다**(예측 · 스냅숏 · 보낸 재구성 · 랙 보정 · 롤백 기록 · 락스텝 입력 · 체크섬 · 파괴 최근 해시). 키 전체를 적어
   감김 · 건너뛴 칸 비우기가 없고, 무엇이 낡았나는 쓰는 쪽이 넣기 전에 본다 — 창 너비를 고리 크기로 두면 창 안끼리 덮지 않는다(락스텝 입력 256 · 체크섬 512).
   `acquire` 는 옛 값을 비우지 않는다(버퍼를 다시 쓴다 — 처음 넣는 틱이면 쓰는 쪽이 비운다). 16 비트로 감기는 패킷 시퀀스는 `SequenceBuffer`.
+- **렌더 지연 규칙은 `NetClock` 하나다 — max( 최소 지연, 표본 간격 × 2 )**(유니티 Netcode for Entities 기본 2 틱과 같은 수). 한 간격뿐이면 표본 하나를 잃을 때마다
+  보간할 뒤 표본이 없어 멈춰 선다(파괴 덩어리가 미터 단위로 어긋났다). 따르는 방식은 둘 — 복제 클라이언트는 Smooth(가장 새 스냅숏 − 지연을 초당 ±10 % 로
+  따라가고 지연 × 4 를 넘으면 바로), 파괴는 Monotonic(추정을 흐르는 시간으로 밀고 뒤로 가지 않는다 — 멈춘 덩어리가 많아 자세가 끊긴다). 하나로 맞추는 것은
+  행동이 바뀌는 일이라 수치(덩어리 오차 · 보간 단조 · 지연)로 정한다. 구간 규칙(앞 이하 · 뒤 초과 · 끝이면 멈춤 — 외삽 안 함)은 `InterpolationBuffer` ·
+  `NetInterpolationUtil::computeAlpha` 하나.
 - **확인만 담은 패킷이 확인을 부르면 한가한 연결이 30 Hz 로 핑퐁한다**(`NetConnection` 확인 요청 비트의 이유). 요청을 끄면 거꾸로 두 쪽 유지 시각이 맞물려 한쪽은
   늘 답만 보내 RTT 표본이 0 이 된다 — 그래서 답이라도 마지막 요청에서 유지 간격이 지나면 요청한다. RTT 는 "요청 패킷이 가장 새 확인으로" 돌아올 때만 잰다(묶음으로 늦게
   확인된 것은 상대가 기다렸다 보낸 시간이 섞인다).

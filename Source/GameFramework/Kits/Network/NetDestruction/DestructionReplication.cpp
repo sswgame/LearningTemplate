@@ -19,8 +19,7 @@ namespace sw
             static constexpr float32 kQuaternionResolution = 1.0f / 32767.0f;
             static constexpr int32   kPoseMessageBudget    = 900; ///< 자세 메시지 하나를 이만큼에서 끊는다(한도 1024)
             static constexpr uint8   kRestRepeatCount      = 5;   ///< 멈춘 자세를 비신뢰로 되풀이하는 횟수(자세 주기마다)
-            static constexpr uint32  kMaxPoseSample        = 32;
-            static constexpr float32 kPoseIntervalsBehind  = 2.0f; ///< 렌더 지연은 자세 간격의 이 배 이상 — 자세 하나를 잃거나 흔들림으로 늦어도 다음 것과 사이를 잇는다
+            static constexpr int32   kMaxPoseSample        = 32;  ///< 덩어리마다 드는 자세 표본 수
 
             /** @brief 프로필의 자세 간격(초)입니다. */
             static float32 computePosePeriod( const FractureComponentBase& component ) { return 1.0f / MathUtil::max( 0.1f, component.getProfile()._networkPoseRate ); }
@@ -420,10 +419,7 @@ namespace sw
         , _writer{}
         , _pHost{ nullptr }
         , _pManager{ nullptr }
-        , _renderTick{ -1.0f }
-        , _posePeriodMax{ 0.0f }
-        , _serverTickEstimate{ 0.0f }
-        , _bHasServerTick{ SW_FALSE }
+        , _clock{}
     {
     }
 
@@ -433,11 +429,14 @@ namespace sw
         _pManager = pManager;
         _settings = settings;
         _listEntry.clear();
-        _stats              = DestructionReplicationStats{};
-        _renderTick         = -1.0f;
-        _posePeriodMax      = 0.0f;
-        _serverTickEstimate = 0.0f;
-        _bHasServerTick     = SW_FALSE;
+        _stats = DestructionReplicationStats{};
+        NetClockSettings clockSettings;
+        clockSettings._tickInterval       = settings._tickInterval;
+        clockSettings._interpolationDelay = settings._interpolationDelay;
+        clockSettings._sampleInterval     = 0.0f; // 등록하는 오브젝트의 자세 간격으로 올린다(registerObject)
+        clockSettings._clockCorrection    = 0.0f;
+        clockSettings._mode               = NetClockMode::Monotonic;
+        _clock.initialize( clockSettings );
     }
 
     void DestructionReplicationClient::registerObject( uint32 netId, FractureComponentBase& component )
@@ -452,7 +451,7 @@ namespace sw
         *pEntry            = Entry{};
         pEntry->_netId     = netId;
         pEntry->_component = component.getHandle();
-        _posePeriodMax     = MathUtil::max( _posePeriodMax, DestructionReplicationInternal::computePosePeriod( component ) );
+        _clock.setSampleInterval( MathUtil::max( _clock.getSampleInterval(), DestructionReplicationInternal::computePosePeriod( component ) ) );
     }
 
     void DestructionReplicationClient::skipNextEvent( uint32 netId )
@@ -497,7 +496,7 @@ namespace sw
         {
             const uint32 serverTick = static_cast<uint32>( reader.readVarUint() );
             const uint32 index      = static_cast<uint32>( reader.readVarUint() );
-            observeServerTick( serverTick );
+            _clock.observeServerTick( serverTick );
             BufferedEvent buffered;
             buffered._index = index;
             if ( DestructionReplicationInternal::readEvent( reader, buffered._event ) )
@@ -643,17 +642,15 @@ namespace sw
         if ( reader.hasOverflowed() )
             return;
         Entry* pEntry = findEntry( netId );
-        observeServerTick( tick );
+        _clock.observeServerTick( tick );
         for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
         {
-            PoseSample sample;
-            sample._tick         = tick;
-            sample._bRest        = bRest ? SW_TRUE : SW_FALSE;
+            ChunkPose    pose;
             const uint32 groupId = static_cast<uint32>( reader.readVarUint() );
             if ( bRest )
-                Internal::readExactPose( reader, sample._position, sample._rotation );
+                Internal::readExactPose( reader, pose._position, pose._rotation );
             else
-                Internal::readQuantizedPose( reader, sample._position, sample._rotation, _settings );
+                Internal::readQuantizedPose( reader, pose._position, pose._rotation, _settings );
             if ( pEntry == nullptr || reader.hasOverflowed() )
                 continue;
             ChunkTrack* pTrack = nullptr;
@@ -667,44 +664,19 @@ namespace sw
                 pEntry->_listChunk.emplace_back();
                 pTrack           = &pEntry->_listChunk.back();
                 pTrack->_groupId = groupId;
+                pTrack->_poseBuffer.initialize( Internal::kMaxPoseSample );
             }
-            // 틱 순으로 끼운다(멈춤 확정은 다른 채널이라 앞질러 올 수 있다). 같은 틱이면 멈춤 쪽이 이긴다.
-            auto iter = pTrack->_listSample.begin();
-            while ( iter != pTrack->_listSample.end() && iter->_tick < tick )
-                ++iter;
-            if ( iter != pTrack->_listSample.end() && iter->_tick == tick )
-            {
-                if ( bRest )
-                    *iter = sample;
-            }
-            else
-            {
-                pTrack->_listSample.insert( iter, sample );
-            }
-            while ( pTrack->_listSample.size() > Internal::kMaxPoseSample )
-                pTrack->_listSample.pop_front();
+            // 틱 순으로 끼운다(멈춤 확정은 다른 채널이라 앞질러 올 수 있다). 같은 틱이면 멈춤 쪽이 이긴다. 넘치면 가장 오래된 것을 버린다.
+            pTrack->_poseBuffer.insert( tick, pose, bRest );
         }
-    }
-
-    void DestructionReplicationClient::observeServerTick( uint32 serverTick )
-    {
-        const float32 tick = static_cast<float32>( serverTick );
-        if ( _bHasServerTick == SW_FALSE || tick > _serverTickEstimate )
-            _serverTickEstimate = tick;
-        _bHasServerTick = SW_TRUE;
     }
 
     void DestructionReplicationClient::update( float32 deltaTime )
     {
-        if ( _bHasServerTick == SW_TRUE )
-        {
-            // 서버 틱 추정은 틱마다 흐르고 받은 틱보다 뒤처지지 않는다 — 자세가 오지 않는 동안(모두 멈춤)에도 렌더 틱이 서버 시각을 따른다.
-            const float32 tickInterval = MathUtil::max( 1.0e-4f, _settings._tickInterval );
-            _serverTickEstimate += deltaTime / tickInterval;
-            // 지연이 자세 간격 하나뿐이면 자세 하나를 잃거나 흔들림으로 늦을 때마다 뒤 자세가 없어 덩어리가 멈춰 선다(빨리 떨어지는 덩어리는 미터 단위로 어긋난다).
-            const float32 delay = MathUtil::max( _settings._interpolationDelay, _posePeriodMax * DestructionReplicationInternal::kPoseIntervalsBehind );
-            _renderTick         = MathUtil::max( _renderTick, _serverTickEstimate - delay / tickInterval );
-        }
+        // 서버 틱 추정은 틱마다 흐르고 받은 틱보다 뒤처지지 않는다 — 자세가 오지 않는 동안(모두 멈춤)에도 렌더 틱이 서버 시각을 따른다(NetClock Monotonic).
+        // 지연은 설정값과 가장 긴 자세 간격 × 2 중 큰 것 — 간격 하나뿐이면 자세 하나를 잃거나 흔들림으로 늦을 때마다 뒤 자세가 없어 덩어리가 멈춰 선다
+        // (빨리 떨어지는 덩어리는 미터 단위로 어긋난다).
+        _clock.advance( deltaTime );
         for ( Entry& entry : _listEntry )
         {
             FractureComponentBase* pComponent = resolve( entry );
@@ -770,7 +742,8 @@ namespace sw
 
     void DestructionReplicationClient::driveChunks( Entry& entry, FractureComponentBase& component )
     {
-        if ( _renderTick < 0.0f )
+        const float32 renderTick = _clock.getRenderTick();
+        if ( renderTick < 0.0f )
             return;
         // 그룹 번호는 늘기만 한다 — 지금 가장 큰 번호보다 작은데 없는 그룹은 갈라져 사라진 것, 큰 것은 그 사건이 아직 오지 않은 것(자세를 먼저 받았다).
         uint32 maxGroupId = 0;
@@ -787,34 +760,27 @@ namespace sw
                 continue;
             }
             ++trackIndex;
-            // 첫 자세보다 앞을 그리는 동안은 몰지 않는다 — 그 덩어리는 같은 사건 · 같은 씨앗으로 서버와 같은 속도로 태어나 혼자 날아간다.
-            if ( bHasGroup == false || track._listSample.empty() || static_cast<float32>( track._listSample.front()._tick ) > _renderTick )
+            if ( bHasGroup == false )
                 continue;
-            // 렌더 틱을 사이에 둔 두 자세 — 앞이 없으면 첫 것, 뒤가 없으면 마지막 것(앞으로 내다보지 않는다).
-            const PoseSample* pFrom = &track._listSample.front();
-            const PoseSample* pTo   = pFrom;
-            for ( const PoseSample& sample : track._listSample )
+            // 렌더 틱을 사이에 둔 두 자세 — 뒤가 없으면 마지막 것(앞으로 내다보지 않는다).
+            const InterpolationBuffer<ChunkPose>::Sample* pFrom = nullptr;
+            const InterpolationBuffer<ChunkPose>::Sample* pTo   = nullptr;
+            float32                                       alpha = 0.0f;
+            const InterpolationBracketKind                kind  = track._poseBuffer.findBracket( renderTick, pFrom, pTo, alpha );
+            // 첫 자세보다 앞을 그리는 동안은 몰지 않는다 — 그 덩어리는 같은 사건 · 같은 씨앗으로 서버와 같은 속도로 태어나 혼자 날아간다.
+            const bool bBeforeFirst = kind == InterpolationBracketKind::Empty || kind == InterpolationBracketKind::BeforeFirst;
+            if ( bBeforeFirst )
+                continue;
+            float3     position = pFrom->_value._position;
+            quaternion rotation = pFrom->_value._rotation;
+            if ( kind == InterpolationBracketKind::Between )
             {
-                if ( static_cast<float32>( sample._tick ) <= _renderTick )
-                    pFrom = &sample;
-                pTo = &sample;
-                if ( static_cast<float32>( sample._tick ) > _renderTick )
-                    break;
-            }
-            if ( static_cast<float32>( pFrom->_tick ) > _renderTick )
-                pTo = pFrom;
-            float3     position = pFrom->_position;
-            quaternion rotation = pFrom->_rotation;
-            if ( pTo != pFrom && pTo->_tick > pFrom->_tick )
-            {
-                const float32 alpha = MathUtil::clamp( ( _renderTick - static_cast<float32>( pFrom->_tick ) ) / static_cast<float32>( pTo->_tick - pFrom->_tick ), 0.0f, 1.0f );
-                position            = pFrom->_position + ( pTo->_position - pFrom->_position ) * alpha;
-                rotation            = quaternion::lerp( pFrom->_rotation, pTo->_rotation, alpha );
+                position = pFrom->_value._position + ( pTo->_value._position - pFrom->_value._position ) * alpha;
+                rotation = quaternion::lerp( pFrom->_value._rotation, pTo->_value._rotation, alpha );
             }
             component.driveGroup( track._groupId, position, rotation );
             // 지난 것은 하나만 남긴다(보간의 앞).
-            while ( track._listSample.size() > 2 && static_cast<float32>( track._listSample[1]._tick ) <= _renderTick )
-                track._listSample.pop_front();
+            track._poseBuffer.removeConsumed( renderTick );
         }
     }
 } // namespace sw

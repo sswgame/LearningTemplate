@@ -31,7 +31,8 @@
 - **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
   얹어, 싱글 게임은 그 키트를 링크하지 않는다.
   폴더가 층이다 — 뿌리(`NetTypes` · `BitStream`) ← `Transport/`(전송 · 루프백 · UDP · 회선 흉내) ← `Connection/`(`NetConnection` · `NetHost` ·
-  `NetHostThread` · `SequenceBuffer`) ← `Message/`(`NetMessage` · `NetSendBudget`) ← `Replication/`(키트가 나눠 쓰는 복제 부품 — `NetPrioritizer` · `NetParallel` · `TickRingBuffer` · `NetInputWindow`).
+  `NetHostThread` · `SequenceBuffer`) ← `Message/`(`NetMessage` · `NetSendBudget`) ← `Replication/`(키트가 나눠 쓰는 복제 부품 — `NetPrioritizer` · `NetParallel` · `TickRingBuffer` · `NetInputWindow` ·
+  `NetClock` · `InterpolationBuffer`).
   아래 층은 위 층을 include 하지 않는다(`CheckCoreNetworkLayers`).
   - `BitStream`(`BitWriter` · `BitReader` — 범위 정수 · 양자화 실수 · 가변 정수, 넘침 감지. 비트를 바이트 덩어리로 쓰고 읽고, 경계에 맞은 바이트는 `memcpy` —
     선 위 배치는 비트 단위 시절과 같다. 길이 붙인 덩어리 `writeBlob` / `readBlob( out, maxSize )` · `skipBlob` — 상한을 넘는 길이는 자르지 않고 넘침으로 거부한다.
@@ -41,6 +42,9 @@
     같으면 id 순이라 결정적이다. 예산이 늘 차도 낮은 우선도가 쌓여 차례를 얻는다 — 복제 키트 둘(`ReplicationServer` · `MmoReplicator`)이 같이 쓴다), `SequenceBuffer`(16 비트 감김 시퀀스 고리),
     `TickRingBuffer`(32 비트 틱 · 프레임으로 찾는 고리 — 키 전체를 적어 감김 · 건너뛴 칸 비우기가 없고, 무엇이 낡았나는 쓰는 쪽이 넣기 전에 본다. `acquire` 는 옛 값을
     비우지 않아 버퍼를 다시 쓴다. 예측 · 스냅숏 · 보낸 재구성 · 랙 보정 · 롤백 기록 · 락스텝 입력 · 체크섬이 같이 쓴다),
+    `NetClock`(받은 서버 틱으로 서버 틱을 추정하고 지연만큼 과거의 렌더 틱을 흘린다 — 지연 = max( 최소값, 표본 간격 × 2 ). Smooth: 가장 새 틱 − 지연을 흐름 빠르기로
+    맞춘다(복제 클라이언트), Monotonic: 추정을 흐르는 시간으로 밀고 뒤로 가지 않는다(파괴 클라이언트) — 유니티 NGO `NetworkTimeSystem` · N4E `NetworkTime` 의 자리),
+    `InterpolationBuffer`(틱 순 표본 줄 — 렌더 틱 이하 가장 새 것 · 그보다 큰 첫 것 · 끝이면 멈춤, 첫 것 앞이면 그것을 알린다. 유니티 `BufferedLinearInterpolator` 의 자리),
     `NetInputWindow`(비신뢰 입력 묶음 — `NetInputSendWindow` 는 상대가 확인한 다음 틱부터 가장 새 틱까지를 싣고 예산이 모자라면 오래된 것부터(확인 전에는
     빠지지 않아 연속 손실에 빈틈이 남지 않는다 — GGPO 입력 큐 · 언리얼 `FSavedMove` 목록), `NetInputReceiveBuffer` 는 틱 고리 + 받는 창(위아래 — 고리를 덮지 않게,
     `Manual` · `FollowNewest`) + "빈틈없이 받은 다음 틱" 확인, 깨진 묶음은 하나도 넣지 않는다. 형식 `NetInputFormat` 은 고정 길이(롤백 버튼 1 바이트) · 덩어리 ·

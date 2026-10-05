@@ -21,12 +21,13 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
-#include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Replication/InterpolationBuffer.h"
+#include "Core/Network/Replication/NetClock.h"
 
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/FractureComponentBase.h"
@@ -58,7 +59,7 @@ namespace sw
     {
         float32 _tickInterval{ 1.0f / 60.0f }; ///< 서버 틱 간격(자세 시각)
         float32 _hashInterval{ 1.0f };         ///< 서버가 상태 해시를 보내는 간격(초)
-        float32 _interpolationDelay{ 0.1f };   ///< 클라이언트 — 덩어리 자세를 그리는 과거의 최소값. 실제는 이것과 (자세 간격 × 2) 중 큰 것이다
+        float32 _interpolationDelay{ 0.1f };   ///< 클라이언트 — 덩어리 자세를 그리는 과거의 최소값. 실제는 이것과 (가장 긴 자세 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 것이다
         int32   _snapshotPartBytes{ 900 };     ///< 스냅숏 조각 하나의 바이트(메시지 한도 1024 안)
         float32 _positionResolution{ 0.001f }; ///< 움직이는 덩어리 자리 양자화(미터)
         float32 _positionRange{ 1024.0f };     ///< 자리 범위(±미터)
@@ -199,22 +200,21 @@ namespace sw
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
 
         /** @brief 덩어리를 그리는 서버 틱(보간 지연만큼 과거, 소수)입니다. 자세를 하나도 받지 않았으면 음수입니다. */
-        float32                            getRenderTick() const { return _renderTick; }
+        float32                            getRenderTick() const { return _clock.getRenderTick(); }
         const DestructionReplicationStats& getStats() const { return _stats; }
 
     private:
-        struct PoseSample
+        /** @brief 덩어리 자세 표본 하나입니다(틱은 `InterpolationBuffer` 가 든다). */
+        struct ChunkPose
         {
             float3     _position{};
             quaternion _rotation{};
-            uint32     _tick{ 0 };
-            uint8      _bRest{ SW_FALSE };
         };
 
         struct ChunkTrack
         {
-            deque<PoseSample> _listSample{}; ///< 틱 오름차순
-            uint32            _groupId{ 0 };
+            InterpolationBuffer<ChunkPose> _poseBuffer{}; ///< 틱 오름차순 — 같은 틱이면 멈춤 확정이 이긴다
+            uint32                         _groupId{ 0 };
         };
 
         struct HashCheck
@@ -257,7 +257,6 @@ namespace sw
         void                   compareHashes( Entry& entry, FractureComponentBase& component );
         void                   driveChunks( Entry& entry, FractureComponentBase& component );
         void                   requestSnapshot( Entry& entry );
-        void                   observeServerTick( uint32 serverTick );
 
         vector<Entry>                  _listEntry;
         DestructionReplicationSettings _settings;
@@ -265,9 +264,6 @@ namespace sw
         NetMessageWriter               _writer;
         NetHost*                       _pHost;
         GameObjectManager*             _pManager;
-        float32                        _renderTick;
-        float32                        _posePeriodMax;      ///< 등록한 오브젝트의 가장 긴 자세 간격(초) — 렌더 지연이 그 두 배를 넘게
-        float32                        _serverTickEstimate; ///< 받은 서버 틱 중 가장 늦은 것 + 그 뒤 흐른 틱(받는 순간의 서버 시각 추정)
-        uint8                          _bHasServerTick;
+        NetClock                       _clock; ///< 덩어리를 그리는 서버 틱 — Monotonic: 흐르는 시간으로 민 서버 틱 추정 − 지연, 뒤로 가지 않는다. 표본 간격 = 등록한 오브젝트의 가장 긴 자세 간격
     };
 } // namespace sw

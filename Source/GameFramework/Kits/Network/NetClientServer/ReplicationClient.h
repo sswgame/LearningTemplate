@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Replication/NetClock.h"
 #include "Core/Network/Replication/NetInputWindow.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 
@@ -21,9 +22,9 @@ namespace sw
     /** @brief 클라이언트 설정입니다. */
     struct ReplicationClientSettings
     {
-        float32 _tickInterval{ 1.0f / 30.0f }; ///< 서버 틱 간격
-        float32 _interpolationDelay{ 0.1f };   ///< 이만큼 과거를 그린다(스냅샷 두 개 사이 — 하나를 잃어도 끊기지 않게)
-        float32 _clockCorrection{ 0.1f };      ///< 렌더 시각이 목표에서 벗어나면 초당 이 몫만큼 빠르게 · 느리게
+        float32 _tickInterval{ 1.0f / 30.0f }; ///< 서버 틱 간격 — 스냅숏도 틱마다 와서 표본 간격이기도 하다
+        float32 _interpolationDelay{ 0.1f };   ///< 렌더 지연의 최소값 — 실제는 이것과 (틱 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 것(스냅숏 하나를 잃어도 끊기지 않게)
+        float32 _clockCorrection{ 0.1f };      ///< 렌더 틱이 목표(가장 새 스냅숏 − 지연)에서 벗어나면 초당 이 몫까지 빠르게 · 느리게(`NetClockMode::Smooth`)
         int32   _historySize{ 64 };
     };
 } // namespace sw
@@ -62,9 +63,8 @@ namespace sw
         void collectVisibleEntities( vector<uint32>& outListEntity ) const;
 
         const NetSnapshot* getLatest() const;
-        float32            getRenderTime() const { return _renderTime; }
-        /** @brief 렌더 시각을 틱으로(서버의 랙 보정이 쓴다)입니다. */
-        float32 getRenderTick() const { return _renderTime / _settings._tickInterval; }
+        /** @brief 그리는 서버 틱(보간 지연만큼 과거, 소수 — 서버의 랙 보정이 쓴다)입니다. 스냅숏을 받기 전에는 0 입니다. */
+        float32 getRenderTick() const { return _clock.hasServerTick() ? _clock.getRenderTick() : 0.0f; }
         uint64  getDecodeFailureCount() const { return _decodeFailureCount; }
         bool    hasSnapshot() const { return _listSnapshot.hasNewest(); }
         /** @brief 서버가 아직 확인하지 않은 내 입력 수(다음 메시지가 다시 싣는다)입니다. */
@@ -78,7 +78,7 @@ namespace sw
         NetInputSendWindow          _inputWindow;  ///< 내 입력 — 서버가 스냅숏에 실어 돌려준 확인의 다음 틱부터 싣는다
         ReplicationClientSettings   _settings;
         NetHost*                    _pHost;
-        float32                     _renderTime;
+        NetClock                    _clock; ///< 렌더 틱 — Smooth: 가장 새 스냅숏 틱 − 지연을 흐름 빠르기로 맞춘다
         uint64                      _decodeFailureCount;
         NetMessageWriter            _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
