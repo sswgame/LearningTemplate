@@ -77,7 +77,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   외형 규칙 · 프리셋(`CharacterAppearance`), 순수 해석기(`AppearanceResolver` — 결과 해시가 캐시 키), 외형 상태(`CharacterAppearanceState`),
   공유 코드 · 플레이어 프리셋 세이브 · 네트워크 동기화(`AppearanceSelection`), 그리고 그것을 오브젝트로 조립하는 외형 컴포넌트(`CharacterAppearanceComponent` —
   몸 메시 · 소켓 부착 부품 · 염색, 소켓 이름 공간 `AppearanceSocketRig`). 2D 스프라이트와 3D 메시가 같은 길이다. 자세한 것은 `Appearance/README.md`
-- **Match**: 판 규칙(`MatchState` — 팀 · 역할 · 점수 · 도움 · 부활 대기 · 코스트 게이지 · 탈락 순위 · 시간 제한 · 목표로 끝내기)
+- **Match**: 판 규칙(`MatchState` — 팀 · 역할 · 점수 · 도움 · 부활 대기 · 코스트 게이지 · 탈락 순위 · 시간 제한 · 목표로 끝내기), 라운드 묶음(`RoundSeries` — 순위 점수(비면 1 위 1 점 = 선승) · 목표 점수 · 동점 규칙(무승부 · 서든 데스) · 정수 걸음 라운드 시간 · 라운드 사이 대기 · 상태 바이트, 알림 대신 결과를 돌려준다)
 - **Movement**: 2D 플랫포머 몸(`PlatformerMotor2D` · `PlatformTileMap` — 점프 높이 · 짧은 점프 · 코요테 · 미리 누르기 · 벽 점프 · 대시 · 다단 점프 · 한쪽 발판 · 사다리),
   아케이드 차량(`ArcadeVehicleMotor` — 속도에 따른 조향 · 드리프트 미니터보 단계 · 니트로 · 오프로드 · 점프, 지면은 `IVehicleGround`),
   보는 쪽 기준 이동 방향(`LocomotionMath` — 서기 · 앞 · 뒤 · 옆걸음 · 공중, 애니메이터 이동 상태의 입력)
@@ -151,7 +151,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   - **캐주얼 · 파티** (`Kits/Casual/`)
     - `CardGame`: 카드 게임(포커 · 맞고/고스톱 · 솔리테어 · 우노 · 덱 빌딩) — 공통 덱 · 셔플 · 턴 중계 행동 바이트(`CardDeck`), 족보 판정(`PokerHand`), 블라인드 · 사이드 팟 테이블(`PokerTable`), 화투 48장 · 뻑 · 쪽 · 싹쓸이 · 고/스톱 · 박(`MatgoGame`), 클론다이크 undo · 자동 완료(`KlondikeGame`), 우노 벌칙 · 쌓기(`UnoGame`), XML 카드 덱 빌딩 전투(`DeckBattle`).
     - `Rhythm`: 건반 리듬(오투잼 장르) — 채보(`RhythmChart` — 변속 · 정지 · 변박 · 롱노트, 박 ↔ 초), 판(`RhythmPlaySession` — `TimingJudge` 판정 · 콤보 · 라이프 · 등급 · 오토플레이 · 리플레이), 스크롤 위치.
-    - `PartyArena`: 파티 아레나(바이킹 온 트램펄린 장르) — 트램펄린 튕김 타이밍 콤보 · 공중 공격 · 내려찍기 · 링 아웃 점수 · 락스텝 입력(`TrampolineArena`), 씨앗 무작위 아이템(`PartyItemSpawner`), 라운드 목록 · 순위 점수 · 먼저 N 점 우승(`PartyRoundSeries`).
+    - `PartyArena`: 파티 아레나(바이킹 온 트램펄린 장르) — 트램펄린 튕김 타이밍 콤보 · 공중 공격 · 내려찍기 · 링 아웃 점수 · 락스텝 입력(`TrampolineArena`), 씨앗 무작위 아이템(`PartyItemSpawner`), 라운드 목록 · 순위 점수 · 먼저 N 점 우승(`PartyRoundSeries` — 점수표는 기반 `RoundSeries`, 동점은 서든 데스).
     - `KartRacing`: 카트 레이싱(카트라이더 · 마리오카트 장르) — Catmull-Rom 트랙 · 체크포인트 · 오프로드(`KartTrack`), 순서 랩 · 실시간 순위 · 역주행(`KartRace`), 순위 가중 아이템(`KartItems`), AI 레이싱 라인 · 드리프트 · 러버밴딩(`KartAi`), 고스트(`KartGhost`).
   - **네트워크 방식** (`Kits/Network/`)
     - 네트워크 방식(장르별로 골라 링크 — 싱글 게임은 링크하지 않는다, 공통 계층은 `Core/Network`). 정책은 가상 인터페이스로 게임이 바꾼다.

@@ -386,7 +386,7 @@ cd build/Ninja-Debug/Bin
   롤백 · 락스텝 키트에는 넣지 않는다(프레임 단위 결정성이 계약).
 
 - **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).** ① 팀 · 적대 판정(21 곳, 팀 enum 셋의 값이 달라 상태 바이트에
-  실림) · `RoundSeries`(3 곳, Fighting 롤백 상태 바이트가 바뀜) · `IHealthSource`(체력 모델 3 · 피해 입구 14) — 상태 형식이 바뀌니 시험부터 고정. ② `SpatialHashGrid2D`(RTS · MMO ·
+  실림) · `RoundSeries` 의 Fighting 이전(기반 · 파티는 옮김, 롤백 상태 버전 2 — 바이트는 `FightingTest.RollbackStateBytesKeepTheirLayout` 이 고정) · `IHealthSource`(체력 모델 3 · 피해 입구 14) — 상태 형식이 바뀌니 시험부터 고정. ② `SpatialHashGrid2D`(RTS · MMO ·
   BR · Mech — 질의 모양이 달라 이득부터 볼 것).
   ④ 키트 안 평행 구현: Overworld `TileMap` 이 Engine 타일맵과 따로 산다 · TurnBattle 과 MonsterCollector 가 같은 장르. ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
 

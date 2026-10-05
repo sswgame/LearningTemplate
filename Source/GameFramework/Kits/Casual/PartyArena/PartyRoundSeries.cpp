@@ -13,14 +13,30 @@ namespace sw
 {
     SW_LOG_CALLER( "PartyRoundSeries" );
 
+    namespace
+    {
+        struct PartyRoundSeriesInternal
+        {
+            /** @brief 파티 기본 — 순위 점수 3 · 2 · 1 · 0, 먼저 5 점, 함께 닿아 총점까지 같으면 서든 데스, 라운드 시간 · 대기는 묶음이 세지 않는다. */
+            static RoundSeriesSettings makeDefaultSettings()
+            {
+                RoundSeriesSettings settings;
+                settings._listPlacementPoint = { 3, 2, 1, 0 };
+                settings._winScore           = 5;
+                settings._tieRule            = RoundSeriesTieRule::SuddenDeath;
+                return settings;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     PartyRoundSeries::PartyRoundSeries()
         : _listRound{}
-        , _listPlacementPoint{ 3, 2, 1, 0 }
-        , _listTotal{}
+        , _seriesSettings{ PartyRoundSeriesInternal::makeDefaultSettings() }
+        , _series{}
         , _eventBuffer{}
-        , _winScore{ 5 }
-        , _roundNumber{ 0 }
-        , _winner{ -1 }
     {
     }
 
@@ -28,60 +44,34 @@ namespace sw
     {
         if ( playerCount < 2 || _listRound.empty() )
             return false;
-        _listTotal.assign( static_cast<size_t>( playerCount ), 0 );
+        _series.initialize( _seriesSettings );
+        if ( _series.start( playerCount ) == false )
+            return false;
         _eventBuffer.clear();
-        _roundNumber = 0;
-        _winner      = -1;
         pushEvent( PartySeriesEvent::Kind::RoundStarted, -1, 0, 0 );
         return true;
     }
 
     bool PartyRoundSeries::reportRound( const vector<int32>& listRoundScore )
     {
-        if ( isFinished() || _listTotal.empty() || listRoundScore.size() != _listTotal.size() )
+        const int32 playerCount = getPlayerCount();
+        if ( _series.getPhase() != RoundSeriesPhase::RoundActive || listRoundScore.size() != static_cast<size_t>( playerCount ) )
             return false;
 
-        // 순위 = 1 + 나보다 라운드 점수가 높은 사람 수(같은 점수는 같은 순위).
-        const int32 playerCount = getPlayerCount();
+        // 순위 알림은 라운드를 넘기기 전에 — 끝난 라운드의 id 를 싣는다.
         for ( int32 player = 0; player < playerCount; ++player )
         {
-            int32 rank = 1;
-            for ( int32 other = 0; other < playerCount; ++other )
-                rank += listRoundScore[static_cast<size_t>( other )] > listRoundScore[static_cast<size_t>( player )] ? 1 : 0;
-            const size_t placement = static_cast<size_t>( rank - 1 );
-            const int32  points    = placement < _listPlacementPoint.size() ? _listPlacementPoint[placement] : 0;
-            _listTotal[static_cast<size_t>( player )] += points;
-            pushEvent( PartySeriesEvent::Kind::RoundRanked, player, rank, points );
+            const int32 rank = RoundSeries::computeRank( listRoundScore, player );
+            pushEvent( PartySeriesEvent::Kind::RoundRanked, player, rank, _series.getPlacementPoint( rank ) );
         }
-
-        // 목표에 닿은 사람 중 총점이 가장 높은 한 명 — 같으면 아직 아무도 아니다.
-        int32 best      = -1;
-        int32 bestTotal = 0;
-        bool  bTied     = false;
-        for ( int32 player = 0; player < playerCount; ++player )
+        // 위에서 같은 조건을 봤다 — 거절되지 않는다. 대기가 0 이라 끝나지 않으면 바로 다음 라운드다.
+        const RoundSeriesOutcome outcome = _series.reportRound( listRoundScore );
+        if ( outcome == RoundSeriesOutcome::Finished )
         {
-            const int32 total = _listTotal[static_cast<size_t>( player )];
-            if ( total < _winScore )
-                continue;
-            if ( best < 0 || total > bestTotal )
-            {
-                best      = player;
-                bestTotal = total;
-                bTied     = false;
-            }
-            else if ( total == bestTotal )
-            {
-                bTied = true;
-            }
-        }
-        if ( best >= 0 && bTied == false )
-        {
-            _winner = best;
-            pushEvent( PartySeriesEvent::Kind::SeriesWon, best, bestTotal, 0 );
+            pushEvent( PartySeriesEvent::Kind::SeriesWon, getWinner(), getTotal( getWinner() ), 0 );
             return true;
         }
-        ++_roundNumber;
-        pushEvent( PartySeriesEvent::Kind::RoundStarted, -1, _roundNumber, 0 );
+        pushEvent( PartySeriesEvent::Kind::RoundStarted, -1, getRoundNumber(), 0 );
         return true;
     }
 
@@ -89,12 +79,7 @@ namespace sw
     {
         if ( _listRound.empty() )
             return nullptr;
-        return &_listRound[static_cast<size_t>( _roundNumber ) % _listRound.size()];
-    }
-
-    int32 PartyRoundSeries::getTotal( int32 player ) const
-    {
-        return player >= 0 && player < getPlayerCount() ? _listTotal[static_cast<size_t>( player )] : 0;
+        return &_listRound[static_cast<size_t>( getRoundNumber() ) % _listRound.size()];
     }
 
     void PartyRoundSeries::drainEvents( vector<PartySeriesEvent>& outListEvent )
@@ -104,17 +89,18 @@ namespace sw
 
     uint32 PartyRoundSeries::loadRoot( const XmlNode& root, string_view sourceName )
     {
-        setWinScore( root.getAttributeInt( "winScore", _winScore ) );
+        setWinScore( root.getAttributeInt( "winScore", _seriesSettings._winScore ) );
         const string_view points = root.getAttributeText( "placementPoints" );
         if ( points.empty() == false )
         {
-            _listPlacementPoint.clear();
+            vector<int32>& listPlacementPoint = _seriesSettings._listPlacementPoint;
+            listPlacementPoint.clear();
             GameDataXml::forEachToken( points, ",; ",
                                        [&]( string_view token )
             {
                 int32 value = 0;
                 if ( StringUtil::parseInt( token, value ) )
-                    _listPlacementPoint.push_back( MathUtil::max( 0, value ) );
+                    listPlacementPoint.push_back( MathUtil::max( 0, value ) );
             } );
         }
         uint32 loadedCount = 0;
