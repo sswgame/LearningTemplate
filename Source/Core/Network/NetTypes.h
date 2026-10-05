@@ -123,6 +123,8 @@ namespace sw
             return NetAddress{ ( static_cast<uint32>( a ) << 24 ) | ( static_cast<uint32>( b ) << 16 ) | ( static_cast<uint32>( c ) << 8 ) | d, port };
         }
         static constexpr NetAddress makeLoopback( uint16 port ) { return make( 127, 0, 0, 1, port ); }
+        /** @brief 모든 인터페이스(0.0.0.0)에 묶을 주소입니다 — 리슨 · 바인드에만 씁니다. */
+        static constexpr NetAddress makeAnyInterface( uint16 port ) { return NetAddress{ 0, port }; }
         /** @brief "1.2.3.4:5678" 을 읽습니다. 포트가 없으면 @p defaultPort 입니다. */
         [[nodiscard]] static bool parse( string_view text, uint16 defaultPort, NetAddress& outAddress );
 

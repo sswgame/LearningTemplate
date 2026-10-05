@@ -86,6 +86,10 @@
     `LossPercent` · `DuplicatePercent` · `ReorderPercent` · `BandwidthKilobytesPerSecond` 로 `NetEmulationConditions::makeFromGlobalVariables` —
     언리얼 PktLag · PktLoss · PktDup · PktOrder · 유니티 Network Simulator 의 자리. `NetHost` 는 그냥 전송으로 받는다. 조건의 거르개
     `_pDropFilter` 는 고른 패킷만 버린다 — `NetHost::peekPacketType` 과 함께 "`Accepted` 하나만 잃기" · "위조 주소로 간 답 전부 잃기" 같은 시험을 짓는다)
+  - 스트림(TCP) 전송 — `IStreamTransport`(수락 · 연결 · 읽기 · 쓰기 완료를 `IStreamHandler` 로, I/O 스레드 N 또는 `pollIo`, 리슨은 묶을 주소를 받는다 —
+    운영 끝점은 `NetAddress::makeLoopback`, 서버는 `makeAnyInterface`), 보낼 줄 `StreamSendQueue`
+    (64 KB 덩어리 · 높은/낮은 물금 · 상한 — 구현들이 같은 배압 규칙), 루프백 `LoopbackStreamNetwork`(결정적 · 무작위 조각 · 한 번에 넘길 상한, I/O 스레드 없음).
+    닫힘은 연결의 마지막 콜백이고 한 번이다. 저쪽 FIN 을 받으면 이쪽도 우아하게 닫는다(반쯤 열린 연결은 두지 않는다)
 - **Math/**: `VectorMath` · `MatrixMath` · `MathUtil` · `Frustum`
 - **Time/**: `MonotonicClock`(아래 "시간") · `GameTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE`)
 - **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.
