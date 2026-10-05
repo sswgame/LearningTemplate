@@ -665,6 +665,13 @@ SW_TEST_CASE( StringTest, FixedStringModernFeatures )
     size_t                          h1 = hasher( fs );
     size_t                          h2 = hasher( sw::fixed_string<32>( "ModernCpp" ) );
     SW_EXPECT_EQUAL( h1, h2 );
+
+    // 대소문자는 구분한다 — operator== 와 같다.
+    SW_EXPECT_NOT_EQUAL( hasher( sw::fixed_string<32>( "moderncpp" ) ), hasher( fs ) );
+#if !defined( SW_ENABLE_STL_CONTAINER )
+    // sw::string 과 같은 해시다(이종 조회가 같은 버킷을 본다). STL 구성에서는 std::hash<sw::string> 이 표준 것이라 다르다.
+    SW_EXPECT_EQUAL( std::hash<sw::string>{}( sw::string( "ModernCpp" ) ), hasher( fs ) );
+#endif
 }
 
 /**

@@ -735,7 +735,7 @@ namespace sw
 
     /**
      * @struct RuntimeStringHash
-     * @brief 프로세스 안에서만 쓰는 바이트 해시입니다. 해시 컨테이너의 `std::hash<sw::string>` · `std::hash<sw::wstring>` 이 씁니다.
+     * @brief 프로세스 안에서만 쓰는 바이트 해시입니다. 해시 컨테이너의 `std::hash<sw::string>` · `std::hash<sw::wstring>` · `std::hash<fixed_string>` 이 씁니다.
      * @details **파일이나 네트워크에 남기지 마십시오.** 이 구현이 바뀌면 값도 달라집니다. 밖에 남는 해시(쿠킹 산출물 · intern
      *          이름)의 기준은 `StringUtil::computeHash64`(FNV-1a)이고, 그쪽은 바꾸지 않습니다.
      *          `std::hash<std::string_view>` 로 넘기지 않습니다. MSVC STL 의 그 구현은 바이트마다 앞 결과를 기다리는 곱셈이

@@ -315,7 +315,7 @@ namespace sw
                 // 이상 바이트) 0xFFFFFFFFFFFFFF80 같은 값이 섞여 들어가고, `char` 의 부호 여부는 구현 정의라서 **플랫폼이 바뀌면
                 // 해시가 달라진다**(ARM 은 unsigned char 다).
                 //
-                // 다만 `uint8` 로 고정하면 안 된다. 이 템플릿은 `utf16` 으로도 불리는데(`std::hash<fixed_wstring>`), 그러면 넓은
+                // 다만 `uint8` 로 고정하면 안 된다. 이 템플릿은 `utf16` 으로도 불리는데(`computeHash64( wstring )`), 그러면 넓은
                 // 문자가 **하위 한 바이트로 잘려** 한글처럼 상위 바이트만 다른 문자들이 모두 같은 값으로 해시된다.
                 const uint64 c = static_cast<uint64>(
                     static_cast<std::make_unsigned_t<CharT>>( bIgnoreCase ? toLowerChar( pStr[charIndex] ) : pStr[charIndex] ) );

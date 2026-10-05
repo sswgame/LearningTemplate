@@ -440,8 +440,6 @@ cd build/Ninja-Debug/Bin
   ② 시스템 호출이 지배적이면 일괄 I/O(리눅스 `recvmmsg`/`sendmmsg` → UDP GSO/GRO, Windows RIO — 완료 통지는 IOCP) ③ 한 스레드가 차면 `SO_REUSEPORT` 수신 분산 + 연결 샤딩(`NetHost` 잠금 분할).
 - **순서**: 보안의 UDP 부분은 N13~N21 뒤(연결 수립 · 패킷 머리가 정리된 위에), 스트림 전송 → 프레이밍/요청-응답 → TLS → 로그인 → 채팅 · 거래. 압축은 측정 벤치가 서면 어느 때나.
 
-- **`fixed_string` 의 해시가 FNV(`computeHash64`)다.** 느리지만 프로파일에 안 보여 두었다(낮음).
-
 ### 1-8. 성능 (재고 나서 정할 것)
 
 - **DX12 · Vulkan Present 히치.** 큐브 100 · 600 프레임 중 40 프레임이 1~18 ms 다(DX11 은 없다). 다음 후보는 DXGI 대기 가능 스왑체인
@@ -1495,6 +1493,7 @@ cd build/Ninja-Debug/Bin
 - **문자열** — `formatstring` 은 `string_view` 를 길이로 쓴다(`.data()` 로 풀어 넘기면 뷰 끝을 지나 읽는다 — `CheckLogViewArgument`). `%#` 은 순수 자리표, 모르는 `%…` 는 리터럴, 인자 수 불일치는
   Debug 실행 단언(정본은 `FormatString` 클래스 주석). `setlocale` 이 없다(C 로캘) — 잘못된 UTF-8 은 `escapeInvalidUtf8`. `fixed_string` 은 넘치면 글자 경계에서 자르고 경고한다.
   `StringUtil` 은 비-ASCII 바이트를 `uint8` 로 넓힌다(utf16 에 같은 치환 금지), `stristr` 은 바이트 묶음 "최적화" 금지. Win32 변환은 `utf8ToUtf16`(`ImmGetCompositionStringW` 반환은 바이트 수).
+  `std::hash` 는 `string` · `wstring` · `fixed_string` 모두 `RuntimeStringHash`(프로세스 안 전용, 대소문자 구분).
 - **메모리 · 컨테이너** — 과정렬 판정은 `kUsesAlignedAllocation<T>` 하나(`max_align_t` 는 MSVC 에서 8 이라 힙 계열이 갈린다). `sw::vector` 는 `is_bitwise_copyable_v` 타입을 `Memory::copy`
   한 번으로(ReflectionParser 도 쓴다). `sw_delete_array` 는 원소 소멸자를 부르지 않는다. 해시 버킷 수는 2 의 거듭제곱, 번호는 `bucketIndexOf` 하나(스무 자리가 쓴다 — 한 곳만 달라도
   원소가 사라진다). 락 없는 읽기 + 주소 안정은 `PagedArray`. `SlotHandleTable` 은 점유 + 세대를 한 워드 `_state` 에 든다(둘로 나누지 말 것 — arm64). 순서 없는 삭제는
