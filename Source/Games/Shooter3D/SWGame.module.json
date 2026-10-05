@@ -16,6 +16,10 @@
         "Dev",
         "Shipping"
     ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
     "_bEnabledByDefault": true,
     "_listModuleOverride": []
 }

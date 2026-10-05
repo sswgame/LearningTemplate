@@ -8,12 +8,13 @@
 # 같은 매니페스트를 C++ 로 해석해 견준다.
 #
 #   켜짐 = (프로젝트 `SWGame.module.json` 의 `_listModuleOverride` 에 있으면 그 값, 없으면 `_bEnabledByDefault`)
-#          그리고 이 플랫폼(`_listPlatform`) · 구성(`_listConfiguration` — Dev | Shipping)에 있음. 프로젝트는 늘 켜져 있다.
+#          그리고 이 플랫폼(`_listPlatform`) · 구성(`_listConfiguration` — Dev | Shipping)에 있음
+#          그리고 이 빌드 타깃(`SW_TARGET_TYPE` — Game 은 Client · Server 둘 다)이 `_listTarget`(Client | Server)과 겹침. 프로젝트는 늘 켜져 있다.
 #   켜진 모듈의 의존은 있어야 하고 · 켜져 있어야 하고 · `_minVersion` 이상이어야 하며 · 순환이 없어야 한다 — 아니면 구성이 선다.
 #   적재 순서 = 의존이 먼저, 동점은 이름 순(`TopologicalSortUtil::sortByDependency` 와 같다).
 
 # 매니페스트 키 · 종류 낱말(런타임 `ModuleCatalogInternal` 과 같은 표).
-set(SW_MODULE_MANIFEST_KEYS _name _version _kind _description _listDependency _listPlatform _listConfiguration _bEnabledByDefault _listModuleOverride)
+set(SW_MODULE_MANIFEST_KEYS _name _version _kind _description _listDependency _listPlatform _listConfiguration _listTarget _bEnabledByDefault _listModuleOverride)
 set(SW_MODULE_KINDS GameFramework Kit Game Editor Rhi)
 
 # 매니페스트 하나를 읽어 전역 속성 `SW_MODULE_<이름>_*` 에 담는다. 형식이 틀리면 구성을 세운다.
@@ -46,7 +47,7 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown _kind '${swKind}' (one of ${SW_MODULE_KINDS})")
 	endif()
 
-	foreach(swListKey _listPlatform _listConfiguration)
+	foreach(swListKey _listPlatform _listConfiguration _listTarget)
 		set(swValues "")
 		string(JSON swCount ERROR_VARIABLE swError LENGTH "${swJson}" ${swListKey})
 		if(swError OR swCount EQUAL 0)
@@ -67,6 +68,11 @@ function(sw_readModuleManifest MANIFEST_PATH)
 	foreach(swConfiguration IN LISTS swValues__listConfiguration)
 		if(NOT swConfiguration MATCHES "^(Dev|Shipping)$")
 			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown configuration '${swConfiguration}'")
+		endif()
+	endforeach()
+	foreach(swTarget IN LISTS swValues__listTarget)
+		if(NOT swTarget MATCHES "^(Client|Server)$")
+			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown target '${swTarget}' (Client | Server)")
 		endif()
 	endforeach()
 
@@ -122,6 +128,7 @@ function(sw_readModuleManifest MANIFEST_PATH)
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_VERSION ${swVersion})
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_PLATFORMS ${swValues__listPlatform})
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_CONFIGURATIONS ${swValues__listConfiguration})
+	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_TARGETS ${swValues__listTarget})
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ENABLED_BY_DEFAULT ${swEnabled})
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_DEPENDENCIES ${swDependencyNames})
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_DEPENDENCY_MIN_VERSIONS ${swDependencyMinVersions})
@@ -151,6 +158,12 @@ function(sw_resolveModuleManifests)
 	else()
 		set(swConfiguration Dev)
 	endif()
+	# 빌드 타깃이 담는 모듈 대상 — Game 은 둘 다.
+	if(SW_TARGET_TYPE STREQUAL "Game")
+		set(swBuildTargets Client Server)
+	else()
+		set(swBuildTargets ${SW_TARGET_TYPE})
+	endif()
 
 	get_property(swNames GLOBAL PROPERTY SW_MODULE_NAMES)
 	if(NOT "SWGame" IN_LIST swNames)
@@ -176,6 +189,13 @@ function(sw_resolveModuleManifests)
 		get_property(swDefault GLOBAL PROPERTY SW_MODULE_${swName}_ENABLED_BY_DEFAULT)
 		get_property(swPlatforms GLOBAL PROPERTY SW_MODULE_${swName}_PLATFORMS)
 		get_property(swConfigurations GLOBAL PROPERTY SW_MODULE_${swName}_CONFIGURATIONS)
+		get_property(swModuleTargets GLOBAL PROPERTY SW_MODULE_${swName}_TARGETS)
+		set(swTargetHit OFF)
+		foreach(swTarget IN LISTS swModuleTargets)
+			if(swTarget IN_LIST swBuildTargets)
+				set(swTargetHit ON)
+			endif()
+		endforeach()
 		set(swEnabled ${swDefault})
 		set(swReason "disabled by default")
 		if(DEFINED swOverride_${swName})
@@ -194,6 +214,9 @@ function(sw_resolveModuleManifests)
 		elseif(NOT swConfiguration IN_LIST swConfigurations)
 			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE OFF)
 			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_REASON "not built for ${swConfiguration}")
+		elseif(NOT swTargetHit)
+			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE OFF)
+			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_REASON "not built for the ${SW_TARGET_TYPE} target")
 		else()
 			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE ON)
 			list(APPEND swActive ${swName})
@@ -269,7 +292,7 @@ function(sw_resolveModuleManifests)
 
 	list(LENGTH swNames swManifestCount)
 	list(LENGTH swActive swActiveCount)
-	message(STATUS "[Module] ${swActiveCount} of ${swManifestCount} modules active (${swPlatform} ${swConfiguration})")
+	message(STATUS "[Module] ${swActiveCount} of ${swManifestCount} modules active (${swPlatform} ${swConfiguration} ${SW_TARGET_TYPE})")
 endfunction()
 
 # 모듈 NAME 이 이 구성에서 켜져 있으면 OUT_VAR 를 ON 으로 둔다. 매니페스트가 없는 모듈은 구성을 세운다(모든 동적 모듈은 매니페스트를 갖는다).

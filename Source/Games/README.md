@@ -28,11 +28,13 @@
 {
     "_name": "SWGame", "_version": "1.0.0", "_kind": "Game",
     "_listDependency": [ { "_name": "GameFramework" }, { "_name": "GF_Voxel" } ],
-    "_listPlatform": [ "Windows", "Linux" ], "_listConfiguration": [ "Dev", "Shipping" ],
+    "_listPlatform": [ "Windows", "Linux" ], "_listConfiguration": [ "Dev", "Shipping" ], "_listTarget": [ "Client", "Server" ],
     "_listModuleOverride": [ { "_name": "GF_Fighting", "_bEnabled": false } ]
 }
 ```
 
+- `_listTarget`(필수)은 모듈이 들어가는 빌드 타깃입니다 — 게임 · 공유 키트는 `[ "Client", "Server" ]`, 서버 전용 `GF_Server_<X>` 는 `[ "Server" ]`,
+  에디터 · RHI 는 `[ "Client" ]`(`Source/GameFramework/README.md` "클라이언트 · 서버로 나뉘는 기능").
 - 게임이 링크하는 키트는 `_listDependency` 가 정합니다(`sw_addGameModule` 이 읽는다 — CMake 에 다시 적지 않는다).
 - `_listModuleOverride` 로 끈 모듈은 **짓지 않고**(CMake), 시험 실행 파일에서도 그 키트를 include 하는 시험이 빠지며, App 도 올리지 않습니다.
   Shipping 은 켜진 키트만 정적 링크합니다. 켜진 모듈이 꺼진 모듈에 기대면 구성이 서고 무엇이 왜 꺼졌는지 말합니다.

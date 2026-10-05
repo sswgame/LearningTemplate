@@ -23,6 +23,7 @@ namespace
         manifest._version           = sw::ModuleVersion{ 1, 0, 0 };
         manifest._platformMask      = static_cast<uint8>( sw::ModulePlatform::Windows ) | static_cast<uint8>( sw::ModulePlatform::Linux );
         manifest._configurationMask = static_cast<uint8>( sw::ModuleConfiguration::Dev ) | static_cast<uint8>( sw::ModuleConfiguration::Shipping );
+        manifest._targetMask        = static_cast<uint8>( sw::ModuleTarget::Client ) | static_cast<uint8>( sw::ModuleTarget::Server );
         manifest._sourcePath        = sw::string( pName ) + ".module.json";
         for ( const utf8* pDependency : listDependency )
             manifest._listDependency.push_back( sw::ModuleDependency{ pDependency, sw::ModuleVersion{} } );
@@ -181,7 +182,8 @@ SW_TEST_CASE( ModuleCatalogTest, ParsesManifestsStrictly )
 {
     const utf8*        pGood = R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_description": "farm",
                              "_listDependency": [ { "_name": "GameFramework", "_minVersion": "1.0.0" } ],
-                             "_listPlatform": [ "Windows", "Linux" ], "_listConfiguration": [ "Dev" ], "_bEnabledByDefault": false })";
+                             "_listPlatform": [ "Windows", "Linux" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client", "Server" ],
+                             "_bEnabledByDefault": false })";
     sw::ModuleManifest manifest;
     sw::string         error;
     SW_ASSERT_TRUE_MSG( sw::ModuleCatalog::parseManifest( pGood, "Source/X/GF_Farm.module.json", manifest, error ), error.c_str() );
@@ -191,19 +193,23 @@ SW_TEST_CASE( ModuleCatalogTest, ParsesManifestsStrictly )
     SW_ASSERT_EQUAL( size_t{ 1 }, manifest._listDependency.size() );
     SW_EXPECT_STREQ( "GameFramework", manifest._listDependency[0]._name.c_str() );
     SW_EXPECT_EQUAL( static_cast<uint8>( sw::ModuleConfiguration::Dev ), manifest._configurationMask );
+    SW_EXPECT_EQUAL( uint8{ 3 }, manifest._targetMask );
     SW_EXPECT_FALSE( manifest._bEnabledByDefault );
 
     const utf8* const arrBad[] = {
-        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_enabled": true })",
-        R"({ "_name": "GF_Farm", "_version": "1.2", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ] })",
-        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Plugin", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ] })",
-        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Mac" ], "_listConfiguration": [ "Dev" ] })",
-        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [] })",
-        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ],
+        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ], "_enabled": true })",
+        R"({ "_name": "GF_Farm", "_version": "1.2", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] })",
+        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Plugin", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] })",
+        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Mac" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] })",
+        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [], "_listTarget": [ "Client" ] })",
+        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ],
              "_listModuleOverride": [] })",
-        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ],
+        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ],
              "_listDependency": [ { "_name": "GF_Farm" } ] })",
-        R"({ "_name": "GF_Ranch", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ] })",
+        R"({ "_name": "GF_Ranch", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] })",
+        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [] })",
+        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Editor" ] })",
+        R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ] })",
     };
     for ( const utf8* pBad : arrBad )
     {
@@ -242,6 +248,7 @@ SW_TEST_CASE( ModuleCatalogTest, BuildAndRuntimeAgree )
     sw::ModuleResolveContext context{};
     context._platform      = sw::ModuleCatalog::getCurrentPlatform();
     context._configuration = sw::ModuleCatalog::getCurrentConfiguration();
+    context._targetMask    = sw::ModuleCatalog::getBuildTargetMask();
     sw::ModuleResolution resolution;
     SW_ASSERT_TRUE_MSG( catalog.resolve( context, resolution, error ), error.c_str() );
 
@@ -275,4 +282,41 @@ SW_TEST_CASE( ModuleCatalogTest, EveryRepositoryManifestParses )
         ++manifestCount;
     }
     SW_EXPECT_TRUE( manifestCount > 40 );
+}
+
+/**
+ * @brief [ModuleCatalogTest] 대상이 호스트 역할과 겹치지 않는 모듈은 꺼진다 — 전용 서버는 에디터 · RHI 를, 클라이언트는 서버 전용 모듈을 올리지 않는다
+ * @details 서버 전용 모듈이 플레이어 실행 파일에 들어가면 안 되고(DB 드라이버 · 서비스 서버 로직), 전용 서버가 에디터 · RHI 백엔드를 올리면 창 · GPU 를 찾는다.
+ *          `findUnavailableReason` 의 대상 검사를 빼면 이 시험이 진다.
+ */
+SW_TEST_CASE( ModuleCatalogTest, TargetMaskSeparatesClientAndServerModules )
+{
+    sw::ModuleManifest editor       = makeManifest( "EditorModule", sw::ModuleKind::Editor, {} );
+    editor._targetMask              = static_cast<uint8>( sw::ModuleTarget::Client );
+    sw::ModuleManifest loginServer  = makeManifest( "GF_Server_Login", sw::ModuleKind::Kit, { "GF_Login" } );
+    loginServer._targetMask         = static_cast<uint8>( sw::ModuleTarget::Server );
+    const sw::ModuleCatalog catalog = makeCatalog( { editor, loginServer, makeManifest( "GF_Login", sw::ModuleKind::Kit, { "GameFramework" } ),
+                                                     makeManifest( "GameFramework", sw::ModuleKind::GameFramework, {} ),
+                                                     makeManifest( "SWGame", sw::ModuleKind::Game, { "GameFramework" } ) } );
+    sw::string              error;
+
+    sw::ModuleResolveContext server{};
+    server._targetMask = static_cast<uint8>( sw::ModuleTarget::Server );
+    sw::ModuleResolution serverResolution;
+    SW_ASSERT_TRUE_MSG( catalog.resolve( server, serverResolution, error ), error.c_str() );
+    SW_EXPECT_STREQ( "GameFramework GF_Login GF_Server_Login SWGame", joinOrder( serverResolution ).c_str() );
+    SW_ASSERT_EQUAL( size_t{ 1 }, serverResolution._listInactive.size() );
+    SW_EXPECT_STREQ( "not built for the Server target", serverResolution._listInactive[0]._reason.c_str() );
+
+    sw::ModuleResolveContext client{};
+    client._targetMask = static_cast<uint8>( sw::ModuleTarget::Client );
+    sw::ModuleResolution clientResolution;
+    SW_ASSERT_TRUE_MSG( catalog.resolve( client, clientResolution, error ), error.c_str() );
+    SW_EXPECT_STREQ( "EditorModule GameFramework GF_Login SWGame", joinOrder( clientResolution ).c_str() );
+    SW_EXPECT_FALSE( clientResolution.isActive( "GF_Server_Login" ) );
+
+    sw::ModuleResolveContext game{}; // 기본 = 둘 다(Game 빌드의 App)
+    sw::ModuleResolution     gameResolution;
+    SW_ASSERT_TRUE_MSG( catalog.resolve( game, gameResolution, error ), error.c_str() );
+    SW_EXPECT_TRUE( gameResolution.isActive( "GF_Server_Login" ) && gameResolution.isActive( "EditorModule" ) );
 }

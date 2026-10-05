@@ -1310,6 +1310,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-9. 핫 리로드 · 모듈 · 엔진 서비스
 
+- **모듈 대상은 매니페스트 `_listTarget`(Client · Server, 필수)** — CMake 는 빌드 타깃(`SW_TARGET_TYPE`)으로, 런타임은 호스트 역할(App · Server)로 거른다.
+  키트는 공유 `GF_<X>` · 서버 `GF_Server_<X>` · (필요하면) 클라이언트 `GF_Client_<X>` 로 나누고, 새 매니페스트에는 처음부터 이 키를 적는다(없으면 configure 가 선다).
+
 - **지연 import 는 첫 호출로 묶이게 두지 않는다 — 첫 float 인자가 망가진다**(2026-10-06). lld 20 의 x64 지연 로드 썽크 `__tailMerge_<dll>` 은
   `push rcx … r9; sub rsp,48h; movdqa [rsp],xmm0; movdqa [rsp+10h],xmm1; …; call __delayLoadHelper2` — `[rsp..rsp+1Fh]` 가 그 호출의 홈 공간이라 헬퍼가
   rcx · rdx 를 흘려 저장된 xmm0 을 덮는다(키트의 `DamageMath::applyArmor( 25, 5, 0, 1 )` 첫 호출이 damage = 0 을 받았다). 지연 로드 훅 TU 가

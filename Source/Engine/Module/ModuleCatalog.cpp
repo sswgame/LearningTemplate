@@ -20,7 +20,7 @@ namespace sw
             /** @brief 매니페스트가 가질 수 있는 키입니다. 모르는 키는 오류다(오타를 기본값으로 삼키지 않는다). */
             static constexpr const utf8* kArrManifestKey[]   = { "_name", "_version", "_kind",
                                                                  "_description", "_listDependency", "_listPlatform",
-                                                                 "_listConfiguration", "_bEnabledByDefault", "_listModuleOverride" };
+                                                                 "_listConfiguration", "_listTarget", "_bEnabledByDefault", "_listModuleOverride" };
             static constexpr const utf8* kArrDependencyKey[] = { "_name", "_minVersion" };
             static constexpr const utf8* kArrOverrideKey[]   = { "_name", "_bEnabled" };
 
@@ -70,13 +70,15 @@ namespace sw
                 return true;
             }
 
-            /** @brief 모듈이 이 플랫폼 · 구성에 없으면 그 이유, 있으면 빈 문자열입니다. */
+            /** @brief 모듈이 이 플랫폼 · 구성 · 대상에 없으면 그 이유, 있으면 빈 문자열입니다(CMake 이유 글과 같다). */
             static string findUnavailableReason( const ModuleManifest& manifest, const ModuleResolveContext& context )
             {
                 if ( ( manifest._platformMask & static_cast<uint8>( context._platform ) ) == 0 )
                     return context._platform == ModulePlatform::Windows ? "not available on Windows" : "not available on Linux";
                 if ( ( manifest._configurationMask & static_cast<uint8>( context._configuration ) ) == 0 )
                     return context._configuration == ModuleConfiguration::Dev ? "not built for Dev" : "not built for Shipping";
+                if ( ( manifest._targetMask & context._targetMask ) == 0 )
+                    return ( context._targetMask & static_cast<uint8>( ModuleTarget::Client ) ) != 0 ? "not built for the Client target" : "not built for the Server target";
                 return {};
             }
         };
@@ -222,6 +224,14 @@ namespace sw
              false )
         {
             outError = context + ": _listConfiguration must list Dev and/or Shipping" + ( badWord.empty() ? string{} : " (got '" + badWord + "')" );
+            return false;
+        }
+        static constexpr const utf8*  kArrTargetWord[]  = { "Client", "Server" };
+        static constexpr ModuleTarget kArrTargetValue[] = { ModuleTarget::Client, ModuleTarget::Server };
+        badWord.clear();
+        if ( ModuleCatalogInternal::parseMask( root.get( "_listTarget" ), kArrTargetWord, kArrTargetValue, outManifest._targetMask, badWord ) == false )
+        {
+            outError = context + ": _listTarget must list Client and/or Server" + ( badWord.empty() ? string{} : " (got '" + badWord + "')" );
             return false;
         }
 
@@ -472,6 +482,18 @@ namespace sw
 #else
         return ModuleConfiguration::Dev;
 #endif
+    }
+
+    uint8 ModuleCatalog::getBuildTargetMask()
+    {
+        uint8 mask = 0;
+#if defined( SW_WITH_CLIENT_CODE )
+        mask |= static_cast<uint8>( ModuleTarget::Client );
+#endif
+#if defined( SW_WITH_SERVER_CODE )
+        mask |= static_cast<uint8>( ModuleTarget::Server );
+#endif
+        return mask;
     }
 
     const utf8* ModuleCatalog::getKindName( ModuleKind kind )

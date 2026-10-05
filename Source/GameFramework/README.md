@@ -273,8 +273,20 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 알림을 꺼내는 `drainEvents( outListEvent )` 는 기반 · 키트 모두 **받는 쪽 목록 뒤에 붙이고 자기 목록을 비웁니다**(바꿔치기하지 않는다). 매 프레임 같은 목록을 다시 쓰는 쪽은 먼저 `clear()` 합니다.
 
 키트 하나는 장르 묶음 아래 `Kits/<묶음>/<이름>/CMakeLists.txt` 에 `sw_addGameFrameworkKit(GF_<이름>)` 한 줄, `Kits/CMakeLists.txt` 의 `add_subdirectory(<묶음>/<이름>)`,
-같은 폴더의 매니페스트 `GF_<이름>.module.json`(이름 · 버전 · `_kind: Kit` · 의존 · 플랫폼 · 구성 — `Source/Games/README.md`)입니다. 시험 실행 파일은 켜진 키트를 레지스트리로 링크합니다. 엔진 없이 돌릴 수 있는 규칙(계산 · 데이터)은
+같은 폴더의 매니페스트 `GF_<이름>.module.json`(이름 · 버전 · `_kind: Kit` · 의존 · 플랫폼 · 구성 · 대상 `_listTarget` — `Source/Games/README.md`)입니다. 시험 실행 파일은 켜진 키트를 레지스트리로 링크합니다. 엔진 없이 돌릴 수 있는 규칙(계산 · 데이터)은
 컴포넌트가 아닌 보통 클래스로 두어 시험이 씬 없이 부르게 합니다 — 지금의 키트 넷이 그렇게 되어 있습니다.
+
+### 클라이언트 · 서버로 나뉘는 기능 — 한 기능 = 최대 세 모듈
+
+매니페스트 `_listTarget`(필수)이 모듈이 들어가는 빌드 타깃이다(`Client` · `Server` — 언리얼 모듈 Type 의 ClientOnly · ServerOnly 자리).
+CMake 는 빌드 타깃(`SW_TARGET_TYPE` — Game 은 둘 다)과 겹치지 않는 모듈을 짓지 않고, 런타임은 호스트(App = 빌드 마스크, Server 실행 파일 = Server)로 다시 거른다.
+
+- 공유 `GF_<X>`(`["Client", "Server"]`, `Kits/<묶음>/<X>/`) — 메시지 id · 직렬화 · 프로토콜 상수 · 클라이언트 쪽 요청 함수 · 게임플레이. 지금 있는 키트는 모두 공유다.
+- 서버 전용 `GF_Server_<X>`(`["Server"]`, `Kits/<묶음>/Server/<X>/`) — 인증 · 세션 표 · 저장소 · 관리 명령. `GF_<X>` 에 의존한다.
+- (필요할 때만) 클라이언트 전용 `GF_Client_<X>`(`["Client"]`, `Kits/<묶음>/Client/<X>/`) — UI · 위젯.
+
+의존 · include 는 서버 전용 → 공유 ← 클라이언트 전용 방향만 된다 — `CheckModuleTargets` 가 이름 접두 · 의존 · include 를, `CheckGameFrameworkLayers` 가
+키트 사이 include 를 본다(서버 · 클라이언트 키트는 같은 기능의 공유 키트만 include 한다). DB · 캐시 드라이버와 그 서드파티는 `["Server"]` 모듈 안에만 둔다.
 
 ## 무엇이 키트에 들어가고 무엇이 기반에 남는가
 
