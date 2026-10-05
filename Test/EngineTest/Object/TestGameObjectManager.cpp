@@ -11,6 +11,10 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectStore.h"
+#include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/SceneTickScheduler.h"
+#include "Engine/Object/GameObject/StructuralChangeBuffer.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
@@ -533,6 +537,35 @@ SW_TEST_CASE( ComponentPoolTest, ComponentPoolHighFrequencyChurnStress )
     }
 
     SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), pActor->getComponentCount() );
+}
+
+/**
+ * @brief [ComponentPoolTest] 컴포넌트 풀은 타입 FQN 으로 찾는다 — 같은 클래스의 TypeInfo 사본(테스트 목 · 재등록)도 같은 풀을 받는다
+ * @details 포인터로 키를 잡으면 한 클래스의 TypeInfo 가 둘일 때 만들 때와 지울 때가 다른 풀을 가리켜 PoolAllocator::free 단언이 걸린다.
+ */
+SW_TEST_CASE( ComponentPoolTest, ComponentPoolIsKeyedByTheTypeNameNotTheTypeInfoAddress )
+{
+    // 매니저의 풀 창구는 GameObject 만 쓴다(private) — 같은 저장소 단위를 따로 세워 그 창구를 부른다.
+    sw::GameObjectManager       manager;
+    sw::SceneTransformHierarchy hierarchy;
+    sw::PrimitiveRegistry       primitiveRegistry;
+    sw::StructuralChangeBuffer  structuralChangeBuffer;
+    sw::SceneTickScheduler      tickScheduler( manager, hierarchy, primitiveRegistry, structuralChangeBuffer );
+    sw::GameObjectStore         store( manager, tickScheduler, structuralChangeBuffer );
+    const sw::TypeInfo*         pType = sw::SceneComponent::StaticType();
+    SW_ASSERT_NOT_NULL( pType );
+    // 레지스트리 밖 사본 — 이름(FQN)은 같고 주소는 다르다.
+    sw::TypeInfo copy{};
+    copy._name               = pType->_name;
+    copy._fullyQualifiedName = pType->_fullyQualifiedName;
+    copy._size               = pType->_size;
+
+    sw::PoolAllocator* pFromRegistry = store.getOrCreateComponentPool( pType, sizeof( sw::SceneComponent ) );
+    sw::PoolAllocator* pFromCopy     = store.getOrCreateComponentPool( &copy, sizeof( sw::SceneComponent ) );
+    SW_ASSERT_NOT_NULL( pFromRegistry );
+    SW_EXPECT_TRUE( pFromRegistry == pFromCopy );
+    SW_EXPECT_TRUE( store.getOrCreateComponentPool( sw::MeshComponent::StaticType(), sizeof( sw::MeshComponent ) ) != pFromRegistry );
+    SW_EXPECT_TRUE( store.getOrCreateComponentPool( nullptr, sizeof( sw::SceneComponent ) ) == nullptr );
 }
 
 /**
