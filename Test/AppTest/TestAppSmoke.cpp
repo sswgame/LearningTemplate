@@ -2,6 +2,7 @@
 
 #include "AppTest/AppTestUtil.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Container/string.h"
@@ -9,6 +10,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Process/Process.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
@@ -19,6 +21,7 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <thread>
 
 using namespace sw;
 
@@ -301,7 +304,86 @@ namespace
         }
         return difference;
     }
+
+#if defined( SW_PLATFORM_WINDOWS )
+    /** @brief 프로세스 @p processId 의 엔진 창을 찾습니다. 보일 때까지 @p timeoutSeconds 만큼 기다리고, 못 찾으면 nullptr 입니다. */
+    HWND waitForEngineWindow( DWORD processId, int32 timeoutSeconds )
+    {
+        struct WindowSearch
+        {
+            DWORD _processId{ 0 };
+            HWND  _hWnd{ nullptr };
+        };
+        const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( timeoutSeconds ) * 1000 );
+        while ( deadline.isExpired() == false )
+        {
+            WindowSearch search{ processId, nullptr };
+            EnumWindows( []( HWND hWnd, LPARAM lParam ) -> BOOL
+            {
+                WindowSearch* pSearch = reinterpret_cast<WindowSearch*>( lParam );
+                DWORD         ownerId = 0;
+                GetWindowThreadProcessId( hWnd, &ownerId );
+                utf16 className[64]{};
+                GetClassNameW( hWnd, className, 64 );
+                if ( ownerId == pSearch->_processId && IsWindowVisible( hWnd ) != FALSE && wcscmp( className, L"SWEngineWindowClass_OWNDC" ) == 0 )
+                {
+                    pSearch->_hWnd = hWnd;
+                    return FALSE;
+                }
+                return TRUE;
+            }, reinterpret_cast<LPARAM>( &search ) );
+            if ( search._hWnd != nullptr )
+                return search._hWnd;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        }
+        return nullptr;
+    }
+#endif
 } // namespace
+
+/**
+ * @brief [AppSmokeTest] 창의 X(WM_CLOSE)가 도는 App 을 몇 초 안에 끝낸다
+ * @details 게임 실행에는 닫기를 막는 처리기가 없다(에디터의 저장 확인만 막는다). 프레임 수로 스스로 끝나지 않게 띄워 닫기 하나로만 끝나는지 본다.
+ */
+SW_TEST_CASE( AppSmokeTest, WindowCloseEndsTheApp )
+{
+#if defined( SW_PLATFORM_WINDOWS )
+    Process process;
+    SW_ASSERT_TRUE( test::AppTestUtil::launchApp( process, "" ) );
+    // 출력 파이프가 차면 App 이 쓰기에서 멈춘다 — 다른 스레드가 비운다.
+    std::thread drainThread( [&process]()
+    {
+        string line;
+        while ( process.readOutputLine( line ) )
+        {
+        }
+    } );
+
+    const HWND hWnd          = waitForEngineWindow( static_cast<DWORD>( process.getProcessId() ), 60 );
+    bool       bExitedInTime = false;
+    if ( hWnd != nullptr )
+    {
+        std::this_thread::sleep_for( std::chrono::seconds( 2 ) ); // 메인 루프에 들어간 뒤 닫는다
+        PostMessageW( hWnd, WM_CLOSE, 0, 0 );
+        const Deadline deadline = Deadline::afterMilliseconds( 15000 );
+        while ( process.isRunning() && deadline.isExpired() == false )
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        }
+        bExitedInTime = process.isRunning() == false;
+    }
+    if ( bExitedInTime == false )
+        (void)process.terminate();
+    const int32 exitCode = process.waitForExit();
+    drainThread.join();
+
+    SW_EXPECT_TRUE_MSG( hWnd != nullptr, "App 의 엔진 창을 60 초 안에 찾지 못했습니다" );
+    SW_EXPECT_TRUE_MSG( bExitedInTime, "WM_CLOSE 뒤 15 초 안에 App 이 끝나지 않았습니다" );
+    SW_EXPECT_EQUAL( 0, exitCode );
+#else
+    SW_TEST_SKIP( "엔진 창을 찾아 닫는 경로가 Win32 전용입니다" );
+#endif
+}
 
 /**
  * @brief [AppSmokeTest] 네 백엔드에서 기동 → 프레임 → 종료가 깨끗한가

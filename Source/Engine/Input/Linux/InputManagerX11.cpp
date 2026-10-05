@@ -174,9 +174,10 @@ namespace sw
         if ( XQueryPointer( pDisplay, x11Window, &rootReturn, &childReturn, &rootX, &rootY, &winX, &winY, &maskReturn ) )
         {
             _pMouse->setPosition( winX, winY );
-            _pMouse->setButtonDown( MouseButton::Left, ( maskReturn & Button1Mask ) != 0 );
-            _pMouse->setButtonDown( MouseButton::Middle, ( maskReturn & Button2Mask ) != 0 );
-            _pMouse->setButtonDown( MouseButton::Right, ( maskReturn & Button3Mask ) != 0 );
+            // 잠금을 다시 잡느라 삼킨 버튼은 떼어질 때까지 눌리지 않은 것으로 둔다(이벤트 경로와 같은 규칙).
+            _pMouse->setButtonDown( MouseButton::Left, isMouseButtonConsumed( MouseButton::Left ) == false && ( maskReturn & Button1Mask ) != 0 );
+            _pMouse->setButtonDown( MouseButton::Middle, isMouseButtonConsumed( MouseButton::Middle ) == false && ( maskReturn & Button2Mask ) != 0 );
+            _pMouse->setButtonDown( MouseButton::Right, isMouseButtonConsumed( MouseButton::Right ) == false && ( maskReturn & Button3Mask ) != 0 );
         }
     }
 
@@ -205,6 +206,8 @@ namespace sw
                 const KeySym keySym = XLookupKeysym( const_cast<XKeyEvent*>( &pXev->xkey ), 0 );
                 const Key    key    = InputKeyMap::mapX11KeySym( static_cast<uint64>( keySym ) );
                 const bool   bDown  = ( pXev->type == KeyPress );
+                if ( key == Key::LeftAlt || key == Key::RightAlt )
+                    onPlatformAltChanged( bDown );
                 if ( bDown )
                     postRawEvent( RawInputEvent::makeKeyDown( key ) );
                 else
@@ -295,8 +298,13 @@ namespace sw
                         break;
                     }
                 }
-                if ( button != MouseButton::Count )
-                    postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( button, mouseX, mouseY ) : RawInputEvent::makeMouseButtonUp( button, mouseX, mouseY ) );
+                if ( button == MouseButton::Count )
+                    break;
+                // 창 안 누름만 여기 온다(창 관리자의 제목 표시줄은 우리 창 밖) — 포커스를 잃었다 돌아온 뒤 잠금을 다시 잡는 자리다.
+                // 잠금을 건 그 누름과 짝인 뗌은 게임에 넘기지 않는다(Win32 와 같은 규칙).
+                if ( bDown ? onPlatformPointerPressed( button ) : onPlatformPointerReleased( button ) )
+                    break;
+                postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( button, mouseX, mouseY ) : RawInputEvent::makeMouseButtonUp( button, mouseX, mouseY ) );
                 break;
             }
             case MotionNotify:
@@ -316,24 +324,25 @@ namespace sw
                 postWindowStateEvent( RawInputEvent::makePointerCrossing( false ) );
                 break;
             }
-            // 포커스: OS 쪽 일(포인터 잡기 · 놓기)은 지금 하고, 장치 상태 리셋은 큐 순서 안에서 한다.
+            // 포커스: OS 쪽 일(포인터 잡기 · 놓기)은 지금 하고, 장치 상태 리셋은 큐 순서 안에서 한다. 포커스를 얻어도 잠금은
+            // 다시 걸지 않는다 — 제목 표시줄 · 닫기 버튼을 눌러 돌아온 사용자가 그 버튼까지 포인터를 가져갈 수 있어야 한다.
             case FocusIn:
             {
                 X11InputInternal::s_bWindowFocused = true;
-                applyMouseLockMode();
+                onPlatformFocusChanged( true );
                 postWindowStateEvent( RawInputEvent::makeFocusChange( true ) );
                 break;
             }
             case FocusOut:
             {
                 X11InputInternal::s_bWindowFocused = false;
-                releaseMouseLockMode();
+                onPlatformFocusChanged( false );
                 postWindowStateEvent( RawInputEvent::makeFocusChange( false ) );
                 break;
             }
             case ConfigureNotify:
             {
-                applyMouseLockMode();
+                syncMouseLock();
                 break;
             }
             default:
@@ -382,8 +391,8 @@ namespace sw
         if ( pDisplay == nullptr || x11Window == 0 )
             return;
 
-        const MouseLockMode lockMode = _pMouse->getLockMode();
-        if ( lockMode == MouseLockMode::None )
+        // 포커스가 없는 창은 포인터를 잡지 않는다 — 잡으면 창 관리자의 장식(제목 표시줄)에도 못 간다.
+        if ( X11InputInternal::s_bWindowFocused == false )
         {
             XUngrabPointer( pDisplay, CurrentTime );
             XFlush( pDisplay );
@@ -398,7 +407,7 @@ namespace sw
         XGrabPointer( pDisplay, x11Window, 1, mask, GrabModeAsync, GrabModeAsync, x11Window, 0, CurrentTime );
         XFlush( pDisplay );
 
-        if ( lockMode == MouseLockMode::LockedInCenter )
+        if ( _pMouse->getLockMode() == MouseLockMode::LockedInCenter )
             recenterLockedCursorPlatform();
     }
 
@@ -440,6 +449,12 @@ namespace sw
 
         XUngrabPointer( pDisplay, CurrentTime );
         XFlush( pDisplay );
+    }
+
+    bool InputManager::isWindowFocusedPlatform() const
+    {
+        // X11 포커스는 FocusIn/FocusOut 으로만 안다(서버에 묻는 XGetInputFocus 는 왕복이다). 창이 뜬 직후 FocusIn 전이면 거짓 — 첫 클릭에 잡는다.
+        return _bWindowFocused == SW_TRUE && ( IWindow::getActiveWindow() == nullptr || X11InputInternal::s_bWindowFocused );
     }
 
     void InputManager::disableWindowsAccessibilityShortcuts()

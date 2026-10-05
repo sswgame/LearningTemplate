@@ -721,6 +721,145 @@ SW_TEST_CASE( InputManagerTest, MouseLockModeAndSubRect )
 }
 
 /**
+ * @brief [InputManagerTest] 개발 콘솔이 키보드를 쥐는 동안 마우스 잠금이 쉰다
+ */
+SW_TEST_CASE( InputManagerTest, MouseLockRestsWhileKeyboardFocusIsElsewhere )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+
+    input.setMouseLockMode( sw::MouseLockMode::LockedInCenter );
+    SW_EXPECT_TRUE( input.isMouseLockActive() );
+
+    input.setKeyboardFocus( sw::InputKeyboardFocus::DevConsole );
+    SW_EXPECT_FALSE( input.isMouseLockActive() );
+
+    input.setKeyboardFocus( sw::InputKeyboardFocus::Game );
+    SW_EXPECT_TRUE( input.isMouseLockActive() );
+
+    input.setMouseLockMode( sw::MouseLockMode::None );
+    SW_EXPECT_FALSE( input.isMouseLockActive() );
+    input.shutdown();
+}
+
+#if defined( SW_PLATFORM_WINDOWS )
+/**
+ * @brief [InputManagerTest] 포커스를 잃으면 잠금이 풀리고, 활성화가 아니라 클라이언트 클릭으로만 다시 잡힌다
+ * @details 제목 표시줄 · X 를 눌러 창을 활성화하면 `WM_ACTIVATE` 가 그 클릭보다 먼저 온다. 그때 다시 잠그면 커서가 클라이언트 안으로
+ *          끌려 들어가 X 를 누를 수 없다.
+ */
+SW_TEST_CASE( InputManagerTest, MouseLockWaitsForAClientClickAfterFocusLoss )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.setMouseLockMode( sw::MouseLockMode::LockedInCenter );
+    SW_EXPECT_TRUE( input.isMouseLockActive() );
+
+    sw::NativeWindowEvent deactivate{};
+    deactivate._message = WM_ACTIVATE;
+    deactivate._wParam  = WA_INACTIVE;
+    input.processNativeEvent( deactivate );
+    SW_EXPECT_FALSE( input.isMouseLockActive() );
+
+    sw::NativeWindowEvent clickActivate{};
+    clickActivate._message = WM_ACTIVATE;
+    clickActivate._wParam  = WA_CLICKACTIVE;
+    input.processNativeEvent( clickActivate );
+    SW_EXPECT_FALSE_MSG( input.isMouseLockActive(), "활성화만으로 잠금을 다시 잡았습니다" );
+
+    sw::NativeWindowEvent clientClick{};
+    clientClick._message = WM_LBUTTONDOWN;
+    clientClick._wParam  = MK_LBUTTON;
+    input.processNativeEvent( clientClick );
+    SW_EXPECT_TRUE( input.isMouseLockActive() );
+
+    sw::NativeWindowEvent clientRelease{};
+    clientRelease._message = WM_LBUTTONUP;
+    input.processNativeEvent( clientRelease );
+    input.setMouseLockMode( sw::MouseLockMode::None );
+    input.shutdown();
+}
+
+/**
+ * @brief [InputManagerTest] Alt 를 누르는 동안 잠금이 쉬고, 떼면 돌아온다
+ */
+SW_TEST_CASE( InputManagerTest, MouseLockRestsWhileAltIsHeld )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.setMouseLockMode( sw::MouseLockMode::LockedInCenter );
+
+    sw::NativeWindowEvent altDown{};
+    altDown._message = WM_SYSKEYDOWN;
+    altDown._wParam  = VK_MENU;
+    altDown._lParam  = 0x38 << 16;
+    input.processNativeEvent( altDown );
+    SW_EXPECT_FALSE( input.isMouseLockActive() );
+
+    sw::NativeWindowEvent altUp{};
+    altUp._message = WM_KEYUP;
+    altUp._wParam  = VK_MENU;
+    altUp._lParam  = 0x38 << 16;
+    input.processNativeEvent( altUp );
+    SW_EXPECT_TRUE( input.isMouseLockActive() );
+    input.setMouseLockMode( sw::MouseLockMode::None );
+    input.shutdown();
+}
+
+/**
+ * @brief [InputManagerTest] 포커스를 잃은 뒤 잠금을 다시 잡는 클릭은 게임에 넘기지 않는다
+ * @details 그 클릭은 "창으로 돌아온다" 는 뜻이지 게임 입력이 아니다(언리얼 뷰포트의 마우스 캡처 클릭과 같다) — 넘기면 Shooter3D 에서 한 발 쏜다.
+ *          누름과 그 짝인 뗌을 함께 삼키고, 잠긴 뒤의 클릭은 그대로 게임에 간다.
+ */
+SW_TEST_CASE( InputManagerTest, ClickThatReengagesTheMouseLockIsConsumed )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.setMouseLockMode( sw::MouseLockMode::LockedInCenter );
+
+    sw::NativeWindowEvent deactivate{};
+    deactivate._message = WM_ACTIVATE;
+    deactivate._wParam  = WA_INACTIVE;
+    input.processNativeEvent( deactivate );
+    sw::NativeWindowEvent clickActivate{};
+    clickActivate._message = WM_ACTIVATE;
+    clickActivate._wParam  = WA_CLICKACTIVE;
+    input.processNativeEvent( clickActivate );
+    input.beginFrame( 0.016f );
+    input.endFrame();
+
+    sw::NativeWindowEvent leftDown{};
+    leftDown._message = WM_LBUTTONDOWN;
+    leftDown._wParam  = MK_LBUTTON;
+    sw::NativeWindowEvent leftUp{};
+    leftUp._message = WM_LBUTTONUP;
+
+    input.processNativeEvent( leftDown );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_FALSE_MSG( input.wasMouseButtonPressed( sw::MouseButton::Left ), "잠금을 다시 잡은 클릭이 게임에 눌림으로 갔습니다" );
+    SW_EXPECT_FALSE( input.isMouseButtonDown( sw::MouseButton::Left ) );
+    input.endFrame();
+
+    input.processNativeEvent( leftUp );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_FALSE( input.wasMouseButtonReleased( sw::MouseButton::Left ) );
+    input.endFrame();
+
+    input.processNativeEvent( leftDown );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_TRUE( input.wasMouseButtonPressed( sw::MouseButton::Left ) ); // 잠긴 뒤의 클릭은 게임 것이다
+    input.endFrame();
+    input.processNativeEvent( leftUp );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_TRUE( input.wasMouseButtonReleased( sw::MouseButton::Left ) );
+    input.endFrame();
+
+    input.setMouseLockMode( sw::MouseLockMode::None );
+    input.shutdown();
+}
+#endif
+
+/**
  * @brief [InputManagerTest] 수평 틸트 휠(Horizontal Wheel) 이벤트 및 델타 누적 검증
  */
 SW_TEST_CASE( InputManagerTest, MouseWheelHorizontal )

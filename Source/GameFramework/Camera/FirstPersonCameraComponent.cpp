@@ -90,7 +90,8 @@ namespace sw
         if ( _bMouseLook && pInput != nullptr )
         {
             updateMouseLock( *pInput );
-            const bool bReadMouse = _bLockMouse == false || _bMouseLocked == SW_TRUE;
+            // 잠금이 쉬는 동안(포커스 밖 · Alt · 개발 콘솔 · 클릭 전)에는 시점을 돌리지 않는다 — 풀린 커서를 움직일 때 화면이 따라 돌면 안 된다.
+            const bool bReadMouse = _bLockMouse == false || ( _bMouseLocked == SW_TRUE && pInput->isMouseLockActive() );
             if ( bReadMouse )
             {
                 if ( _lookAction.empty() == false )

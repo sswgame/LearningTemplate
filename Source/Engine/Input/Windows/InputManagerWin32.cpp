@@ -110,6 +110,8 @@ namespace sw
                 const Key   key          = InputKeyMap::mapWin32VirtualKey( event._wParam, event._lParam );
                 const uint8 modifierMask = getWin32ModifierMaskInternal();
                 const bool  bRepeat      = ( event._lParam & 0x40000000 ) != 0;
+                if ( event._wParam == VK_MENU )
+                    onPlatformAltChanged( true );
                 postRawEvent( RawInputEvent::makeKeyDown( key, static_cast<uint16>( event._wParam ), bRepeat, modifierMask ) );
                 break;
             }
@@ -118,6 +120,8 @@ namespace sw
             {
                 const Key   key          = InputKeyMap::mapWin32VirtualKey( event._wParam, event._lParam );
                 const uint8 modifierMask = getWin32ModifierMaskInternal();
+                if ( event._wParam == VK_MENU )
+                    onPlatformAltChanged( false );
                 postRawEvent( RawInputEvent::makeKeyUp( key, static_cast<uint16>( event._wParam ), modifierMask ) );
                 break;
             }
@@ -146,6 +150,11 @@ namespace sw
                 const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
                 if ( btn < MouseButton::Count )
                 {
+                    // 클라이언트 영역 누름만 여기 온다(제목 표시줄 · X 는 WM_NCLBUTTONDOWN) — 포커스를 잃었다 돌아온 뒤 잠금을 다시 잡는 자리다.
+                    // 잠금을 건 그 누름은 게임에 넘기지 않는다(짝인 뗌도 아래에서 삼킨다).
+                    if ( onPlatformPointerPressed( btn ) )
+                        break;
+
                     int32 mouseX = 0;
                     int32 mouseY = 0;
                     readMouseEventPositionInternal( event._lParam, mouseX, mouseY );
@@ -169,7 +178,7 @@ namespace sw
             case WM_XBUTTONDBLCLK:
             {
                 const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
-                if ( btn < MouseButton::Count )
+                if ( btn < MouseButton::Count && isMouseButtonConsumed( btn ) == false )
                 {
                     int32 mouseX = 0;
                     int32 mouseY = 0;
@@ -194,6 +203,9 @@ namespace sw
 
                     if ( ( GetKeyState( VK_LBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_RBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_MBUTTON ) & 0x8000 ) == 0 )
                         ReleaseCapture();
+
+                    if ( onPlatformPointerReleased( btn ) )
+                        break; // 잠금을 건 누름의 짝이다 — 누름을 삼켰으니 뗌도 게임에 없다
 
                     postRawEvent( RawInputEvent::makeMouseButtonUp( btn, mouseX, mouseY, modifierMask ) );
                 }
@@ -304,32 +316,31 @@ namespace sw
                 break;
             }
             // 포커스: OS 쪽 일(커서 가두기 · 풀기)은 지금 하고, 장치 상태 리셋은 큐 순서 안에서 한다(`beginFrame` 참고).
-            // 커서 풀기를 미루면 다음 프레임이 오기 전까지 다른 창에서도 커서가 갇혀 있다.
+            // 커서 풀기를 미루면 다음 프레임이 오기 전까지 다른 창에서도 커서가 갇혀 있다. 포커스를 얻어도 잠금은 다시 걸지 않는다 —
+            // 제목 표시줄 · X 를 눌러 활성화한 사용자가 그 버튼까지 커서를 가져갈 수 있어야 한다(클라이언트를 누르면 다시 잡는다).
             case WM_SETFOCUS:
             {
-                applyMouseLockMode();
+                onPlatformFocusChanged( true );
                 postWindowStateEvent( RawInputEvent::makeFocusChange( true ) );
                 break;
             }
             case WM_KILLFOCUS:
             {
-                releaseMouseLockMode();
+                onPlatformFocusChanged( false );
                 postWindowStateEvent( RawInputEvent::makeFocusChange( false ) );
                 break;
             }
             case WM_SIZE:
             case WM_MOVE:
+            case WM_DISPLAYCHANGE:
             {
-                applyMouseLockMode();
+                syncMouseLock(); // 클립 사각형을 새 창 자리로 다시 잰다(DPI 변경은 SetWindowPos 를 거쳐 여기로 온다)
                 break;
             }
             case WM_ACTIVATE:
             {
                 const bool bGained = ( LOWORD( event._wParam ) != WA_INACTIVE );
-                if ( bGained )
-                    applyMouseLockMode();
-                else
-                    releaseMouseLockMode();
+                onPlatformFocusChanged( bGained );
                 postWindowStateEvent( RawInputEvent::makeFocusChange( bGained ) );
                 break;
             }
@@ -354,11 +365,16 @@ namespace sw
 
         if ( _pMouse != nullptr )
         {
-            _pMouse->setButtonDown( MouseButton::Left, ( GetAsyncKeyState( VK_LBUTTON ) & 0x8000 ) != 0 );
-            _pMouse->setButtonDown( MouseButton::Right, ( GetAsyncKeyState( VK_RBUTTON ) & 0x8000 ) != 0 );
-            _pMouse->setButtonDown( MouseButton::Middle, ( GetAsyncKeyState( VK_MBUTTON ) & 0x8000 ) != 0 );
-            _pMouse->setButtonDown( MouseButton::X1, ( GetAsyncKeyState( VK_XBUTTON1 ) & 0x8000 ) != 0 );
-            _pMouse->setButtonDown( MouseButton::X2, ( GetAsyncKeyState( VK_XBUTTON2 ) & 0x8000 ) != 0 );
+            // 잠금을 다시 잡느라 삼킨 버튼은 떼어질 때까지 눌리지 않은 것으로 둔다(메시지 경로와 같은 규칙).
+            const auto isPolledButtonDown = [this]( MouseButton button, int32 virtualKey ) -> bool
+            {
+                return isMouseButtonConsumed( button ) == false && ( GetAsyncKeyState( virtualKey ) & 0x8000 ) != 0;
+            };
+            _pMouse->setButtonDown( MouseButton::Left, isPolledButtonDown( MouseButton::Left, VK_LBUTTON ) );
+            _pMouse->setButtonDown( MouseButton::Right, isPolledButtonDown( MouseButton::Right, VK_RBUTTON ) );
+            _pMouse->setButtonDown( MouseButton::Middle, isPolledButtonDown( MouseButton::Middle, VK_MBUTTON ) );
+            _pMouse->setButtonDown( MouseButton::X1, isPolledButtonDown( MouseButton::X1, VK_XBUTTON1 ) );
+            _pMouse->setButtonDown( MouseButton::X2, isPolledButtonDown( MouseButton::X2, VK_XBUTTON2 ) );
 
             POINT cursorPoint{};
             if ( GetCursorPos( &cursorPoint ) )
@@ -391,20 +407,17 @@ namespace sw
         if ( _pMouse == nullptr )
             return;
 
-        const MouseLockMode lockMode = _pMouse->getLockMode();
-        if ( lockMode == MouseLockMode::None )
-        {
-            ClipCursor( nullptr );
-            return;
-        }
-
         IWindow* pWindow = IWindow::getActiveWindow();
         if ( pWindow == nullptr )
             return;
 
         HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
-        if ( pHwnd == nullptr )
+        // 전경이 아닌 창은 커서를 가두지 않는다 — ClipCursor 는 화면 전체에 걸린다.
+        if ( pHwnd == nullptr || GetForegroundWindow() != pHwnd )
+        {
+            ClipCursor( nullptr );
             return;
+        }
 
         RECT  clipRect{};
         POINT clientTopLeft{};
@@ -413,7 +426,7 @@ namespace sw
 
         ClipCursor( &clipRect );
 
-        if ( lockMode == MouseLockMode::LockedInCenter )
+        if ( _pMouse->getLockMode() == MouseLockMode::LockedInCenter )
             recenterLockedCursorPlatform();
     }
 
@@ -450,6 +463,15 @@ namespace sw
     void InputManager::releaseMouseLockMode()
     {
         ClipCursor( nullptr );
+    }
+
+    bool InputManager::isWindowFocusedPlatform() const
+    {
+        IWindow* pWindow = IWindow::getActiveWindow();
+        HWND     pHwnd   = pWindow != nullptr ? static_cast<HWND>( pWindow->getNativeHandle() ) : nullptr;
+        if ( pHwnd == nullptr )
+            return _bWindowFocused == SW_TRUE;
+        return GetForegroundWindow() == pHwnd;
     }
 
     void InputManager::disableWindowsAccessibilityShortcuts()

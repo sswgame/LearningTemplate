@@ -168,7 +168,7 @@ namespace sw
         int32                  _clipSubRectTop;
         int32                  _clipSubRectRight;
         int32                  _clipSubRectBottom;
-        MouseLockMode          _lockMode;     /**< 커서 잠금 모드(None/ConfinedToWindow/LockedInCenter). 실제 OS 클리핑은 InputManager::applyMouseLockMode() 가 적용. */
+        MouseLockMode          _lockMode;     /**< 커서 잠금 모드(None/ConfinedToWindow/LockedInCenter). 실제 OS 클리핑은 InputManager::syncMouseLock() 이 적용(조건은 isMouseLockActive). */
         uint8                  _buttonMask;   /**< 이번 프레임의 버튼 눌림 비트마스크(MouseButton 인덱스로 비트 조회). */
         uint8                  _pressedMask;  /**< 이번 프레임에 새로 눌린 버튼 비트마스크(엣지). onFrameBegin/onFrameEnd 에서 초기화. */
         uint8                  _releasedMask; /**< 이번 프레임에 새로 떼어진 버튼 비트마스크(엣지). */

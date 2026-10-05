@@ -42,8 +42,13 @@ namespace sw
         , _arrCapturedKeyMask{}
         , _keyboardFocus{ InputKeyboardFocus::Game }
         , _pendingHighSurrogate{ 0 }
+        , _consumedButtonMask{ 0 }
         , _bInitialized{ SW_FALSE }
         , _bInputMuted{ SW_FALSE }
+        , _bWindowFocused{ SW_TRUE }
+        , _bMouseLockEngaged{ SW_FALSE }
+        , _bAltHeld{ SW_FALSE }
+        , _bCursorHiddenApplied{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -137,6 +142,12 @@ namespace sw
             return;
 
         releaseMouseLockMode();
+        if ( _bCursorHiddenApplied == SW_TRUE )
+        {
+            setCursorVisiblePlatform( true );
+            _bCursorHiddenApplied = SW_FALSE;
+        }
+        _consumedButtonMask = 0;
         restoreWindowsAccessibilityShortcuts();
         resetAllDeviceState();
 
@@ -291,8 +302,9 @@ namespace sw
                 pDev->onEventsDispatched( deltaSeconds );
         }
 
-        // 가운데 고정 잠금: 이번 프레임의 델타를 잰 뒤에 커서를 되돌린다.
-        if ( _pMouse != nullptr && _pMouse->getLockMode() == MouseLockMode::LockedInCenter )
+        // 가운데 고정 잠금: 이번 프레임의 델타를 잰 뒤에 커서를 되돌린다. 잠금이 쉬는 동안(포커스 밖 · Alt · 콘솔)은 되돌리지 않는다 —
+        // 되돌리면 풀린 커서도 프레임마다 가운데로 끌려와 제목 표시줄 · X 에 닿지 못한다.
+        if ( _pMouse != nullptr && _pMouse->getLockMode() == MouseLockMode::LockedInCenter && isMouseLockActive() )
             recenterLockedCursorPlatform();
 
         // 4) 활성 장치 자동 감지(O(1) 플래그 조회)
@@ -497,12 +509,12 @@ namespace sw
 
     void InputManager::onWindowFocusGained()
     {
-        applyMouseLockMode();
+        syncMouseLock();
     }
 
     void InputManager::onWindowFocusLost()
     {
-        releaseMouseLockMode();
+        syncMouseLock();
         resetAllDeviceState();
     }
 
@@ -525,6 +537,8 @@ namespace sw
         if ( focus == InputKeyboardFocus::Count )
             return;
         _keyboardFocus = focus;
+        // 개발 콘솔 · 텍스트 입력이 키보드를 쥐는 동안은 마우스도 놓는다(커서로 창 밖 · 제목 표시줄에 갈 수 있게).
+        syncMouseLock();
     }
 
     bool InputManager::isKeyVisibleToGame( Key key ) const
@@ -634,32 +648,115 @@ namespace sw
         return ( x <= mousePos._x && mousePos._x < ( x + width ) && y <= mousePos._y && mousePos._y < ( y + height ) );
     }
 
+    bool InputManager::isPointerOwnedByGame() const
+    {
+        if ( _bWindowFocused == SW_FALSE || _bAltHeld == SW_TRUE || _keyboardFocus != InputKeyboardFocus::Game )
+            return false;
+        return _pMouse == nullptr || _pMouse->getLockMode() == MouseLockMode::None || _bMouseLockEngaged == SW_TRUE;
+    }
+
+    bool InputManager::isMouseLockActive() const
+    {
+        return _pMouse != nullptr && _pMouse->getLockMode() != MouseLockMode::None && isPointerOwnedByGame();
+    }
+
+    void InputManager::syncMouseLock()
+    {
+        if ( isMouseLockActive() )
+            applyMouseLockMode();
+        else
+            releaseMouseLockMode();
+
+        // `ShowCursor` 는 카운터다 — 바뀔 때만 부른다. 부를 때마다 더하면 레이어 하나 올릴 때마다 숨김 한 번이 더 필요해진다.
+        const bool bHide = _pMouse != nullptr && _pMouse->isCursorVisible() == false && isPointerOwnedByGame();
+        if ( bHide == ( _bCursorHiddenApplied == SW_TRUE ) )
+            return;
+        setCursorVisiblePlatform( bHide == false );
+        _bCursorHiddenApplied = bHide ? SW_TRUE : SW_FALSE;
+    }
+
+    void InputManager::onPlatformFocusChanged( bool bFocused )
+    {
+        _bWindowFocused = bFocused ? SW_TRUE : SW_FALSE;
+        if ( bFocused == false )
+        {
+            _bMouseLockEngaged = SW_FALSE;
+            _bAltHeld          = SW_FALSE; // Alt+Tab 의 Alt 떼기는 다른 창으로 간다
+        }
+        syncMouseLock();
+    }
+
+    bool InputManager::onPlatformPointerPressed( MouseButton button )
+    {
+        if ( _bWindowFocused == SW_FALSE || _bMouseLockEngaged == SW_TRUE )
+            return false;
+        const bool bWasActive = isMouseLockActive();
+        _bMouseLockEngaged    = SW_TRUE;
+        syncMouseLock();
+        // 잠금을 건 그 누름은 "창으로 돌아온다" 는 뜻이라 게임에 넘기지 않는다(언리얼 뷰포트의 마우스 캡처 클릭과 같다).
+        if ( bWasActive || isMouseLockActive() == false || button >= MouseButton::Count )
+            return false;
+        _consumedButtonMask = static_cast<uint8>( _consumedButtonMask | ( 1u << static_cast<uint32>( button ) ) );
+        return true;
+    }
+
+    bool InputManager::onPlatformPointerReleased( MouseButton button )
+    {
+        if ( isMouseButtonConsumed( button ) == false )
+            return false;
+        _consumedButtonMask = static_cast<uint8>( _consumedButtonMask & ~( 1u << static_cast<uint32>( button ) ) );
+        return true;
+    }
+
+    bool InputManager::isMouseButtonConsumed( MouseButton button ) const
+    {
+        return button < MouseButton::Count && ( _consumedButtonMask & ( 1u << static_cast<uint32>( button ) ) ) != 0;
+    }
+
+    void InputManager::onPlatformAltChanged( bool bHeld )
+    {
+        const uint8 bNewHeld = bHeld ? SW_TRUE : SW_FALSE;
+        if ( _bAltHeld == bNewHeld )
+            return;
+        _bAltHeld = bNewHeld;
+        syncMouseLock();
+    }
+
     void InputManager::setMouseLockMode( MouseLockMode mode )
     {
-        if ( _pMouse != nullptr )
-            _pMouse->setLockMode( mode );
-        applyMouseLockMode();
+        if ( _pMouse == nullptr )
+            return;
+        const bool bWasLocked = _pMouse->getLockMode() != MouseLockMode::None;
+        _pMouse->setLockMode( mode );
+        // 잠금을 새로 켤 때 창이 지금 전경이면 바로 잡는다(시작 직후 · Esc 로 다시 잠글 때). 아니면 클라이언트를 눌러야 잡는다.
+        if ( mode != MouseLockMode::None && bWasLocked == false )
+        {
+            const bool bFocused = isWindowFocusedPlatform();
+            _bWindowFocused     = bFocused ? SW_TRUE : SW_FALSE;
+            _bMouseLockEngaged  = bFocused ? SW_TRUE : SW_FALSE;
+        }
+        syncMouseLock();
     }
 
     void InputManager::setCursorVisible( bool bVisible )
     {
         if ( _pMouse != nullptr )
             _pMouse->setCursorVisible( bVisible );
-        setCursorVisiblePlatform( bVisible );
+        syncMouseLock();
     }
 
     void InputManager::setMouseClipSubRect( int32 left, int32 top, int32 right, int32 bottom )
     {
         if ( _pMouse != nullptr )
             _pMouse->setClipSubRect( left, top, right, bottom );
-        applyMouseLockMode();
+        syncMouseLock();
     }
 
     void InputManager::clearMouseClipSubRect()
     {
         if ( _pMouse != nullptr )
             _pMouse->clearClipSubRect();
-        applyMouseLockMode();
+        syncMouseLock();
     }
 
     float32 InputManager::getGamepadLeftTrigger( uint32 deviceIndex ) const

@@ -64,7 +64,8 @@ Input/
 | 훅 | Windows 구현 | Linux 구현 |
 |----|--------------|------------|
 | `registerPlatformGamepads()` | XInput, 4패드 | 커널 조이스틱 API(`/dev/input/jsN`), 4패드 |
-| `applyMouseLockMode()` / `releaseMouseLockMode()` | `ClipCursor` | `XGrabPointer` / `XUngrabPointer` |
+| `applyMouseLockMode()` / `releaseMouseLockMode()` — `syncMouseLock()` 만 부른다(조건은 공용 `isMouseLockActive()`) | `ClipCursor`(전경 창일 때만) | `XGrabPointer`(포커스 있을 때만) / `XUngrabPointer` |
+| `isWindowFocusedPlatform()` | `GetForegroundWindow` | `FocusIn`/`FocusOut` 추적 값 |
 | `setCursorVisiblePlatform()` | `ShowCursor` | 투명 픽스맵 커서 (`XDefineCursor`) |
 | `disable/restoreWindowsAccessibilityShortcuts()` | 고정키/토글키/필터키 SPI | XKB AccessX (StickyKeys 등) |
 | `pollPlatform()` | `GetAsyncKeyState` 폴백 | `XQueryPointer` 마우스 폴백 (키보드는 이벤트로 충분) |

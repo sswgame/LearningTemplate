@@ -1,6 +1,8 @@
 #include "pch.h"
 
+#include "Engine/Input/InputManager.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/NativeWindowEvent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -231,6 +233,63 @@ SW_TEST_CASE( WindowTest, NestedResizeEndsAtTheLastSize )
     SW_EXPECT_EQUAL( size_t( 2 ), listResize.size() );
 
     window->setResizeCallback( sw::WindowResizeDelegate{} );
+    window->destroy();
+}
+
+/**
+ * @brief [WindowTest] 잠금 중 포커스를 잃었다 돌아와도 제목 표시줄 · X 자리에 커서가 갈 수 있다
+ * @details 실제 창 · 실제 `ClipCursor` 로 본다. 제목 표시줄 · X 를 눌러 창을 활성화하면 `WM_ACTIVATE` 가 그 클릭보다 먼저 온다 —
+ *          그때 다시 잠그면 커서가 클라이언트 안으로 끌려 들어가 창을 끌 수 없다. 창이 전경을 못 얻으면(다른 창이 쥐고 있다)
+ *          잠금이 걸리지 않으니 "잠금 중엔 갇힌다" 판정만 건너뛴다.
+ */
+SW_TEST_CASE( WindowTest, MouseLockLeavesTheCloseButtonReachable )
+{
+    sw::IWindow* const pPrevious = sw::IWindow::getActiveWindow();
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [pPrevious]()
+    {
+        sw::IWindow::setActiveWindow( pPrevious );
+        ClipCursor( nullptr );
+    } ) );
+
+    sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
+    SW_ASSERT_TRUE( window != nullptr );
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    window->setCustomMessageHandler( SW_DELEGATE_LAMBDA( sw::WindowMessageHandlerDelegate, [&input]( const sw::NativeWindowEvent& event ) -> bool
+    {
+        input.processNativeEvent( event );
+        return false;
+    } ) );
+    SW_ASSERT_TRUE( window->initializeWindow( "MouseLockCloseButtonWindow", 640, 360 ) );
+    sw::IWindow::setActiveWindow( window.get() );
+    window->showWindow( true );
+
+    const HWND hWnd = static_cast<sw::Win32Window*>( window.get() )->getHwnd();
+    SetForegroundWindow( hWnd );
+    (void)window->processMessages();
+
+    RECT windowRect{};
+    GetWindowRect( hWnd, &windowRect );
+    const POINT closeButton{ windowRect.right - 12, windowRect.top + 8 };
+    const auto  isReachable = [&closeButton]() -> bool
+    {
+        RECT clipRect{};
+        GetClipCursor( &clipRect );
+        return PtInRect( &clipRect, closeButton ) != FALSE;
+    };
+
+    input.setMouseLockMode( sw::MouseLockMode::LockedInCenter );
+    if ( GetForegroundWindow() == hWnd )
+        SW_EXPECT_FALSE( isReachable() ); // 잠금 중엔 클라이언트 안에 갇힌다
+
+    SendMessageW( hWnd, WM_ACTIVATE, WA_INACTIVE, 0 );
+    SW_EXPECT_TRUE( isReachable() );
+    SendMessageW( hWnd, WM_ACTIVATE, WA_CLICKACTIVE, 0 ); // 제목 표시줄을 눌러 활성화했다
+    SW_EXPECT_TRUE_MSG( isReachable(), "활성화만으로 커서를 다시 가둬 X 에 닿을 수 없습니다" );
+
+    input.setMouseLockMode( sw::MouseLockMode::None );
+    input.shutdown();
+    window->setCustomMessageHandler( sw::WindowMessageHandlerDelegate{} );
     window->destroy();
 }
 #endif
