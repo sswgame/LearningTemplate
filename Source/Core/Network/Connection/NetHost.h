@@ -10,6 +10,10 @@
  *          비밀 키 · 주소 · 클라이언트 소금 · 시간 칸에서 만들어 돌려주기만 하고, 그 값을 되돌려 준 응답이 와야 자리를 잡는다. 응답은 값을 만든 칸과
  *          다음 칸 안(`kChallengeWindowSeconds` 의 1~2 배)에만 통한다. 값은 키 섞기(splitmix)라 암호학적 MAC 은 아니다 — 위조 주소의 자리 채우기를 막는 데까지다.
  *
+ *          **대역폭 상한**: 연결마다 토큰 버킷(`NetHostSettings::_maxBytesPerSecond`, 언리얼 `NetSpeed`)이다. 몫이 남으면 보내기 차례 하나에 패킷을 여럿
+ *          (`kMaxPacketsPerSend` 까지) 보내고, 다 쓰면 메시지 없이 머리(확인 · 유지)만 보낸다 — 포화돼도 연결은 끊기지 않는다. 키트의 틱 예산은
+ *          `NetSendBudget::computeTickBudget` 으로 이 값에서 몫을 받는다.
+ *
  *          **스레드**: 공개 함수는 모두 잠금 하나로 지켜져 아무 스레드에서나 부를 수 있습니다(게임 스레드가 보내고, 작업 스레드가 꺼내고, 네트워크
  *          스레드가 `update` 한다). `update` 는 소켓 받기 · 보내기를 **잠금 밖에서** 묶어 하고 잠금 안에서는 패킷 처리만 하므로, 시스템 호출이
  *          보내는 쪽 스레드를 막지 않습니다. `update` 를 부르는 스레드는 한 번에 하나입니다 — 보통 `NetHostThread` 가 맡아 게임 프레임과
@@ -43,6 +47,7 @@ namespace sw
         float64 _sendInterval{ 1.0 / 30.0 }; ///< 연결마다 패킷을 보내는 가장 짧은 간격
         float64 _keepAliveInterval{ 0.25 };  ///< 보낼 것(메시지 · 재전송 · 확인)이 없으면 이 간격으로만 보낸다(유지 · RTT)
         int32   _maxConnections{ 16 };
+        int32   _maxBytesPerSecond{ 100000 }; ///< 연결마다 보내는 바이트 상한(토큰 버킷 — 언리얼 `NetSpeed` 기본과 같다). 다 쓰면 메시지는 기다리고 확인 · 유지만 간다. 패킷 하나(1200) 아래는 그 값으로
     };
 } // namespace sw
 
@@ -123,6 +128,7 @@ namespace sw
     {
     public:
         static constexpr int32   kMaxDatagramPerUpdate   = 512; ///< `update` 한 번에 받는 데이터그램 한도 — 나머지는 다음 번에(소켓 버퍼에 남는다)
+        static constexpr int32   kMaxPacketsPerSend      = 8;   ///< 보내기 차례 하나에 연결마다 보내는 패킷 상한 — 대역폭 몫이 남고 실을 것이 있으면 여럿
         static constexpr float64 kChallengeWindowSeconds = 5.0; ///< 도전 값의 시간 칸 — 만든 칸과 다음 칸 동안 통한다
 
         NetHost();
@@ -181,6 +187,8 @@ namespace sw
         uint64 getRejectedPacketCount() const;
         /** @brief 이 호스트의 프로토콜 id(`NetProtocol::makeProtocolId( 게임 id, 와이어 판 )`)입니다. */
         uint32 getProtocolId() const;
+        /** @brief 연결마다의 보내기 상한(초당 바이트, `NetHostSettings::_maxBytesPerSecond`)입니다 — 키트가 틱 예산을 셈한다(`NetSendBudget::computeTickBudget`). */
+        int32 getMaxBytesPerSecond() const;
 
         /** @brief 패킷 몸의 첫 3 비트 — 핸드셰이크 단계 · 데이터 · 끊김입니다. */
         enum class PacketType : uint8
@@ -211,6 +219,8 @@ namespace sw
             float64            _lastReceiveTime{ 0.0 };
             float64            _lastSendTime{ -1.0 };
             float64            _connectStartTime{ 0.0 };
+            float64            _sendCredit{ 0.0 };                         ///< 대역폭 몫(바이트) — 0 보다 크면 꽉 찬 패킷을 보낼 수 있다(빚 모양 — 보낸 뒤 음수가 될 수 있다)
+            float64            _lastCreditTime{ -1.0 };                    ///< 몫을 마지막으로 채운 때 — 음수면 아직(연결되면 가득 채운다)
             NetConnectionState _state{ NetConnectionState::Disconnected }; ///< 서버의 자리는 Connecting 을 거치지 않는다(응답이 맞아야 잡는다)
         };
 
@@ -256,7 +266,10 @@ namespace sw
         void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt );
         /** @brief `_packetWriter` 의 몸에 헤더(머리 값 · 체크섬)를 붙여 보낼 묶음에 넣습니다. */
         void sendFramed( const NetAddress& to, uint32 headerId );
+        /** @brief 패킷 하나를 씁니다 — 몫이 남았으면 메시지까지, 다 썼으면 머리(확인)만. 몫에서 보낸 바이트를 뺀다. */
         void sendPayload( float64 time, Slot& slot );
+        /** @brief 지난 채움 뒤 흐른 시간만큼 대역폭 몫을 채웁니다(상한 — 보내기 간격 두 번어치, 최소 패킷 하나). */
+        void refillSendCredit( float64 time, Slot& slot ) const;
         void closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote );
         bool startConnect( const NetAddress& serverAddress );
         void pushEvent( const NetHostEvent& event );

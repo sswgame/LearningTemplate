@@ -103,7 +103,7 @@ namespace sw
         float32 _enterRadius{ 60.0f };
         float32 _leaveRadius{ 70.0f };
         float32 _changedBoost{ 4.0f };     ///< 상태가 바뀐 엔티티의 우선도 배율
-        int32   _updateBudgetBytes{ 600 }; ///< 관찰자 · 틱마다 갱신 메시지 바이트(종류 바이트 · 틱 포함, `NetConnection::kMaxSingleMessageSize` 로 잘린다)
+        int32   _updateBudgetBytes{ 600 }; ///< 관찰자 · 틱마다 갱신 메시지 바이트(종류 바이트 · 틱 포함, `NetConnection::kMaxSingleMessageSize` 로 잘린다). 연결 상한의 몫이 더 작으면 그것
         int32   _maxEnterPerTick{ 32 };    ///< 한 틱에 새로 보이는 것 상한(텔레포트 직후 몰리지 않게) — 신뢰 메시지 하나에 묶는다(64 KB 를 넘는 나머지는 다음 틱)
     };
 } // namespace sw
@@ -188,10 +188,11 @@ namespace sw
         uint64                              _sentUpdateCount;
         uint64                              _oversizedEntityCount;
         NetParallelFor                      _parallel;
-        NetParallelScratch<ObserverScratch> _observerScratch; ///< 스레드마다 하나
-        float32                             _tickDeltaTime;   ///< 이번 update 의 시간 — 나눈 본문이 읽는다
-        uint32                              _tick;            ///< `update` 마다 하나씩 — 들어옴 · 갱신에 실어 받는 쪽이 옛것을 버린다
-        Observer*                           _pRangeObserver;  ///< 나눈 본문이 쓰는 `_listObserver.data()` — 워커는 컨테이너를 만지지 않는다
+        NetParallelScratch<ObserverScratch> _observerScratch;       ///< 스레드마다 하나
+        float32                             _tickDeltaTime;         ///< 이번 update 의 시간 — 나눈 본문이 읽는다
+        int32                               _tickUpdateBudgetBytes; ///< 이번 update 의 갱신 예산 — 설정과 연결 상한의 몫 중 작은 것(나눈 본문이 읽는다)
+        uint32                              _tick;                  ///< `update` 마다 하나씩 — 들어옴 · 갱신에 실어 받는 쪽이 옛것을 버린다
+        Observer*                           _pRangeObserver;        ///< 나눈 본문이 쓰는 `_listObserver.data()` — 워커는 컨테이너를 만지지 않는다
     };
 } // namespace sw
 

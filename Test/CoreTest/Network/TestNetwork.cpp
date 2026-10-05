@@ -59,6 +59,27 @@ namespace
             outListMessage.push_back( buffer );
     }
 
+    /** @brief 클라이언트(호스트 1)가 64 KB 신뢰 메시지 @p count 개를 보내고 서버가 모두 받기까지의 손 시각(초)입니다 — 1/60 초마다, @p maxSeconds 를 넘으면 −1. */
+    float64 measureArrivalSeconds( test::LoopbackCluster& cluster, int32 count, float64 maxSeconds )
+    {
+        for ( int32 index = 0; index < count; ++index )
+        {
+            const vector<uint8> message = makePatternMessage( static_cast<uint32>( 100 + index ), NetConnection::kMaxReliableMessageSize );
+            if ( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, message ) == false )
+                return -1.0;
+        }
+        vector<vector<uint8>> listReceived;
+        const float64         step = 1.0 / 60.0;
+        for ( float64 elapsed = step; elapsed <= maxSeconds; elapsed += step )
+        {
+            cluster.step( step );
+            drainServerMessages( cluster, listReceived );
+            if ( static_cast<int32>( listReceived.size() ) >= count )
+                return elapsed;
+        }
+        return -1.0;
+    }
+
     /** @brief 시험용 처리기 — 맡은 영역에서 @p acceptedKind 만 맡고(가변 정수 하나가 몸) 받은 수를 셉니다. */
     class CountingHandler : public INetMessageHandler
     {
@@ -1482,4 +1503,46 @@ SW_TEST_CASE( NetworkTest, LargeReliableMessageDoesNotStarveSequencedMessages )
     }
     SW_ASSERT_EQUAL( size_t{ 1 }, listReceived.size() );
     SW_EXPECT_TRUE( listReceived[0] == large );
+}
+
+/**
+ * @brief [NetworkTest] 연결 상한(초당 바이트)이 큰 메시지의 속도를 정한다 — 몫이 남으면 한 차례에 패킷 여럿, 다 쓰면 확인 · 유지만 가 타임아웃보다 오래 포화돼도 연결이 산다
+ */
+SW_TEST_CASE( NetworkTest, SendRateCapPacesLargeMessagesAndKeepsTheConnection )
+{
+    // 기본 상한(100 KB/s) — 64 KB 셋(192 KB)이 2 초 남짓. 차례(1/30 초)마다 패킷 하나였다면 36 KB/s 라 5 초를 넘는다.
+    {
+        test::LoopbackCluster cluster( 51u );
+        addServerAndClient( cluster, NetHostSettings{} );
+        SW_ASSERT_TRUE( cluster.connectClients( 30 ) );
+        const float64 seconds = measureArrivalSeconds( cluster, 3, 10.0 );
+        SW_EXPECT_TRUE_MSG( seconds > 1.5 && seconds < 3.5, "the default cap moves 192 KB at about 100 KB/s, several packets per send turn" );
+    }
+    // 상한 20 KB/s — 192 KB 는 머리 몫까지 10 초 남짓. 타임아웃(5 초)보다 오래 포화돼도 확인 · 유지가 가 연결이 산다.
+    {
+        NetHostSettings settings;
+        settings._maxBytesPerSecond = 20000;
+        test::LoopbackCluster cluster( 52u );
+        addServerAndClient( cluster, settings );
+        SW_ASSERT_TRUE( cluster.connectClients( 30 ) );
+        const float64 seconds = measureArrivalSeconds( cluster, 3, 20.0 );
+        SW_EXPECT_TRUE_MSG( seconds > 9.0 && seconds < 12.5, "a 20 KB/s cap paces 192 KB to about ten seconds" );
+        SW_EXPECT_TRUE( cluster.areClientsConnected() );
+        SW_EXPECT_EQUAL( 1, cluster.getServer().getConnectedCount() );
+        const NetConnection* pClientSide = cluster.getClient( 0 ).findConnection( 0 );
+        SW_ASSERT_TRUE( pClientSide != nullptr );
+        SW_EXPECT_TRUE( pClientSide->getStats()._sentBandwidth < 20000.0f * 8.0f / 1000.0f * 1.2f ); // 최근 1 초(킬로비트) — 상한 안
+    }
+}
+
+/**
+ * @brief [NetworkTest] 키트 틱 예산은 설정과 연결 상한의 몫(초당 바이트 × 틱 간격 × 0.5) 중 작은 것이다 — 상한 · 간격을 모르면 설정 그대로
+ */
+SW_TEST_CASE( NetworkTest, KitTickBudgetFollowsTheConnectionCap )
+{
+    SW_EXPECT_EQUAL( 1000, NetSendBudget::computeTickBudget( 1000, NetHostSettings{}._maxBytesPerSecond, 1.0 / 30.0 ) ); // 몫 1666 — 설정이 작다
+    SW_EXPECT_EQUAL( 333, NetSendBudget::computeTickBudget( 1000, 20000, 1.0 / 30.0 ) );
+    SW_EXPECT_EQUAL( 1000, NetSendBudget::computeTickBudget( 1000, 0, 1.0 / 30.0 ) );
+    SW_EXPECT_EQUAL( 1000, NetSendBudget::computeTickBudget( 1000, 20000, 0.0 ) );
+    SW_EXPECT_EQUAL( 600, NetSendBudget::computeTickBudget( 600, 100000, 1.0 / 60.0 ) ); // MMO 기본 · 60 Hz — 몫 833
 }

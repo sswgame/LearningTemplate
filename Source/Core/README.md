@@ -37,7 +37,7 @@
   - `BitStream`(`BitWriter` · `BitReader` — 범위 정수 · 양자화 실수 · 가변 정수, 넘침 감지. 비트를 바이트 덩어리로 쓰고 읽고, 경계에 맞은 바이트는 `memcpy` —
     선 위 배치는 비트 단위 시절과 같다. 길이 붙인 덩어리 `writeBlob` / `readBlob( out, maxSize )` · `skipBlob` — 상한을 넘는 길이는 자르지 않고 넘침으로 거부한다.
     `BitMath::computeVarUintBits` · `computeBlobBits` 는 쓸 비트를 정확히 센다), `NetSendBudget`(메시지 하나의 비트 예산 — 보낼 채널의 상한(기본 `NetConnection::kMaxSingleMessageSize`, 신뢰 순서 하나에 묶으면 `kMaxReliableMessageSize`)으로 잘리고,
-    종류 바이트 · 머리 · 목록 길이 · 끝 표시까지 센다. 넘는 메시지는 보내기가 오류와 함께 통째로 버리고, 확인이 안 와 같은 크기를 또 보내는 라이브락이 된다), `NetPrioritizer`(관찰자
+    종류 바이트 · 머리 · 목록 길이 · 끝 표시까지 센다. 넘는 메시지는 보내기가 오류와 함께 통째로 버리고, 확인이 안 와 같은 크기를 또 보내는 라이브락이 된다. 키트 틱 예산은 `computeTickBudget`(설정과 연결 상한 × 틱 간격 × 0.5 중 작은 것)), `NetPrioritizer`(관찰자
     하나의 엔티티마다 누적 우선도 — 언리얼 `NetPriority` × 지난 시간 · 유니티 고스트 중요도 × 나이. 틱마다 `우선도 × 시간` 을 쌓고 보낸 것만 0 으로, 순서는 큰 것부터 ·
     같으면 id 순이라 결정적이다. 예산이 늘 차도 낮은 우선도가 쌓여 차례를 얻는다 — 복제 키트 둘(`ReplicationServer` · `MmoReplicator`)이 같이 쓴다), `SequenceBuffer`(16 비트 감김 시퀀스 고리),
     `TickRingBuffer`(32 비트 틱 · 프레임으로 찾는 고리 — 키 전체를 적어 감김 · 건너뛴 칸 비우기가 없고, 무엇이 낡았나는 쓰는 쪽이 넣기 전에 본다. `acquire` 는 옛 값을
@@ -63,7 +63,8 @@
     **와이어 판**: 프로토콜 id = 게임 id(`_gameId`) + Core 판(`NetWireVersion::kCore`) + 게임 · 키트 판(`_wireVersion`, 키트 판은 `NetKitWireVersion`).
     형식을 바꾸는 커밋은 그 층의 판을 올리고 옛 형식은 읽지 않는다. 판이 다르면 서버가 요청을 `VersionMismatch`(다른 게임이면 `Rejected`)로 거절하고 두 쪽 로그에
     두 프로토콜 id 를 남긴다 — 요청 · 거절 패킷만 판과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로 싸서 판을 넘어 읽힌다(두 패킷 배치는 바꾸지 않는다).
-    보낼 것이 없으면 `_sendInterval` 이 아니라 `_keepAliveInterval`(0.25 초)마다만 보낸다. 도전 소금 씨앗은 0 이면 OS 난수(`_saltSeed` 는 시험 재현용).
+    보낼 것이 없으면 `_sendInterval` 이 아니라 `_keepAliveInterval`(0.25 초)마다만 보낸다. **연결 대역폭 상한**(`_maxBytesPerSecond`, 기본 100000 B/s — 언리얼 `NetSpeed`): 빚 모양 토큰 버킷, 몫이 남으면 차례에 패킷 여럿(`kMaxPacketsPerSend` 8),
+    다 쓰면 메시지 없이 확인 · 유지만. 도전 소금 씨앗은 0 이면 OS 난수(`_saltSeed` 는 시험 재현용).
     주소 → 자리 해시(연결 수에 상관없이 받은 패킷 하나에 O(1)), 패킷 · 쓰기 버퍼는 다시 쓴다.
     **스레드 안전** — 공개 함수는 잠금 하나로 지켜져 아무 스레드에서나 보내고 꺼낸다. `update` 는 소켓 받기 · 보내기를 잠금 밖에서 묶어 하고(한 번에
     최대 512 개) 잠금 안에서는 패킷 처리만 한다. **비동기 연결** `connectAsync` → `TaskFuture<NetConnectResult>`(연결 · 가득 참 · 거절 · 타임아웃 · 끊음,

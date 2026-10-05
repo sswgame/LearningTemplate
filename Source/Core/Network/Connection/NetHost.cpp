@@ -338,9 +338,24 @@ namespace sw
         // 연결 값(두 소금의 섞음) — 같은 주소의 옛 연결 · 위조 패킷을 거른다.
         const uint64 token = slot._clientSalt ^ slot._serverSalt;
         writer.writeBits( static_cast<uint32>( token ), 32 );
-        slot._connection.writePacket( time, writer, kNetMaxPacketSize - NetHostInternal::kHeaderSize, _settings._keepAliveInterval );
+        // 대역폭 몫을 다 썼으면 머리(확인 · 유지)만 — 메시지는 다음 차례에 간다.
+        const int32 maxBytes = slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetHostInternal::kHeaderSize : 0;
+        slot._connection.writePacket( time, writer, maxBytes, _settings._keepAliveInterval );
         sendFramed( slot._address, _protocolId );
+        slot._sendCredit -= static_cast<float64>( writer.getByteCount() + NetHostInternal::kHeaderSize );
         slot._lastSendTime = time;
+    }
+
+    void NetHost::refillSendCredit( float64 time, Slot& slot ) const
+    {
+        const float64 rate = static_cast<float64>( MathUtil::max( kNetMaxPacketSize, _settings._maxBytesPerSecond ) );
+        // 쌓아 둘 수 있는 몫은 보내기 간격 두 번어치(최소 패킷 하나) — 한가했다고 몰아 보내 회선을 넘치게 하지 않는다.
+        const float64 capacity = MathUtil::max( static_cast<float64>( kNetMaxPacketSize ), rate * _settings._sendInterval * 2.0 );
+        if ( slot._lastCreditTime < 0.0 )
+            slot._sendCredit = capacity;
+        else
+            slot._sendCredit = MathUtil::min( capacity, slot._sendCredit + rate * MathUtil::max( 0.0, time - slot._lastCreditTime ) );
+        slot._lastCreditTime = time;
     }
 
     bool NetHost::waitForReceive( float64 timeoutSeconds )
@@ -433,11 +448,19 @@ namespace sw
                         closeSlot( static_cast<int32>( index ), NetDisconnectReason::Timeout, false );
                         break;
                     }
-                    // 보낼 것이 있으면 `_sendInterval` 마다, 없으면 `_keepAliveInterval` 마다만(유지 · RTT · 상대의 확인용).
+                    // 보낼 것이 있으면 `_sendInterval` 마다, 없으면 `_keepAliveInterval` 마다만(유지 · RTT · 상대의 확인용). 대역폭 몫을 다 썼으면
+                    // 메시지는 기다리고 확인할 것만 "보낼 것" 이다.
+                    refillSendCredit( time, slot );
+                    const bool    bCanCarry = slot._sendCredit > 0.0;
+                    const bool    bHasData  = bCanCarry ? slot._connection.hasDataToSend( time ) : slot._connection.isAckPending();
                     const float64 sinceSend = slot._lastSendTime < 0.0 ? 1.0e9 : time - slot._lastSendTime;
-                    const bool    bDue      = sinceSend >= _settings._sendInterval &&
-                                      ( sinceSend >= _settings._keepAliveInterval || slot._connection.hasDataToSend( time ) );
-                    if ( bDue )
+                    const bool    bDue      = sinceSend >= _settings._sendInterval && ( sinceSend >= _settings._keepAliveInterval || bHasData );
+                    if ( bDue == false )
+                        break;
+                    sendPayload( time, slot );
+                    // 몫이 남고 실을 것이 더 있으면 같은 차례에 더 — 큰 신뢰 메시지 · 몰린 스냅샷의 속도는 상한이 정한다.
+                    for ( int32 packetCount = 1; packetCount < kMaxPacketsPerSend && slot._sendCredit > 0.0 && slot._connection.hasDataToSend( time );
+                          ++packetCount )
                         sendPayload( time, slot );
                     break;
                 }
@@ -808,6 +831,12 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _protocolId;
+    }
+
+    int32 NetHost::getMaxBytesPerSecond() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _settings._maxBytesPerSecond;
     }
 
     bool NetHost::getConnectionStats( int32 connectionId, NetConnectionStats& outStats ) const

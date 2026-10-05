@@ -62,9 +62,11 @@ namespace sw
     /** @brief 서버 설정입니다. */
     struct ReplicationServerSettings
     {
-        int32 _snapshotBudgetBytes{ 1000 }; ///< 클라이언트 · 틱마다 스냅샷 메시지 상한(종류 바이트 · 머리 · 사라진 목록 포함, `NetConnection::kMaxSingleMessageSize` 로 잘린다)
-        int32 _historySize{ 64 };           ///< 클라이언트마다 기억하는 보낸 스냅샷(기준 후보) 수
-        int32 _inputBufferSize{ 64 };       ///< 클라이언트마다 받아 두는 입력 틱 수(받은 가장 새 틱에서 이만큼 뒤까지 — 그보다 오래된 것은 놓는다)
+        int32 _snapshotBudgetBytes{ 1000 };    ///< 클라이언트 · 틱마다 스냅샷 메시지 상한(종류 바이트 · 머리 · 사라진 목록 포함, `NetConnection::kMaxSingleMessageSize` 로 잘린다).
+                                               ///< 연결 상한의 몫(`NetSendBudget::computeTickBudget`)이 더 작으면 그것
+        float32 _tickInterval{ 1.0f / 30.0f }; ///< `sendSnapshots` 를 부르는 간격(초) — 연결 상한에서 스냅샷 하나의 몫을 셈한다(클라이언트 설정의 같은 이름과 맞춘다)
+        int32   _historySize{ 64 };            ///< 클라이언트마다 기억하는 보낸 스냅샷(기준 후보) 수
+        int32   _inputBufferSize{ 64 };        ///< 클라이언트마다 받아 두는 입력 틱 수(받은 가장 새 틱에서 이만큼 뒤까지 — 그보다 오래된 것은 놓는다)
     };
 } // namespace sw
 
@@ -161,7 +163,8 @@ namespace sw
         vector<int32>                       _listConnectionScratch; ///< 이번 틱에 보낼 연결
         vector<ClientState*>                _listClientScratch;     ///< 위 연결의 상태 — 나누기 전에 모두 잡아 둔다(나누는 중에 목록이 자라지 않게)
         uint64                              _oversizedEntityCount;
-        const int32*                        _pRangeConnection; ///< 나눈 본문이 읽는 `_listConnectionScratch.data()` — 워커는 컨테이너를 만지지 않는다
-        ClientState* const*                 _ppRangeClient;    ///< 나눈 본문이 읽는 `_listClientScratch.data()`
+        int32                               _snapshotBudgetBytes; ///< 이번 `sendSnapshots` 의 예산 — 나누기 전에 정하고 워커는 읽기만 한다
+        const int32*                        _pRangeConnection;    ///< 나눈 본문이 읽는 `_listConnectionScratch.data()` — 워커는 컨테이너를 만지지 않는다
+        ClientState* const*                 _ppRangeClient;       ///< 나눈 본문이 읽는 `_listClientScratch.data()`
     };
 } // namespace sw

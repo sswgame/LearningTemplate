@@ -159,6 +159,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       메시지 첫 바이트는 키트마다 영역이 나뉘어(`NetMessageRange`) 한 게임이 둘을 같이 써도 섞이지 않는다. 키트의 서버 · 클라이언트는 모두 `INetMessageHandler` 라
       `NetMessageRouter` 에 걸어 두면 `pump( host )` 가 영역대로 나눠 주고 게임 메시지(0x80..)만 돌려준다(`handleMessage( buffer )` 를 직접 불러도 된다 — 제 것만 먹고 false).
       보낼 메시지는 키트마다 `NetMessageWriter` 하나를 다시 쓰고, 서버의 스냅샷 · 관심 영역 계산도 매 틱 목록을 새로 잡지 않는다.
+      **대역폭**: 복제 서버 · MMO 의 틱 예산은 설정(`_snapshotBudgetBytes` · `_updateBudgetBytes`)과 호스트 연결 상한의 몫 중 작은 것이다 — 상한(`NetHostSettings::_maxBytesPerSecond`)을 낮추면 따라 준다.
       **멀티스레드**: `NetHost` 는 아무 스레드에서나 부를 수 있고 `NetHostThread` 가 게임 프레임과 따로 돌린다(Core README). 서버 쪽
       `ReplicationServer` · `MmoReplicator` 는 `setTaskManager( &engine::getTaskManager() )` 를 주면 연결(관찰자)마다의 스냅샷 · 관심 영역 계산을
       작업 스레드에 나눈다 — 결과는 한 스레드와 바이트까지 같고(`NetParallelTest`), 관찰자 128 · 엔티티 8000 에서 틱당 4.4 → 1.5 ms(워커 3).

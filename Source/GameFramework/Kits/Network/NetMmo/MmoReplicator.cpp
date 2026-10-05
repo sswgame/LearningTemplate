@@ -79,6 +79,7 @@ namespace sw
         , _parallel{}
         , _observerScratch{}
         , _tickDeltaTime{ 0.0f }
+        , _tickUpdateBudgetBytes{ 0 }
         , _tick{ 0 }
         , _pRangeObserver{ nullptr }
     {
@@ -163,7 +164,8 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return;
-        _tickDeltaTime = deltaTime;
+        _tickDeltaTime         = deltaTime;
+        _tickUpdateBudgetBytes = NetSendBudget::computeTickBudget( _settings._updateBudgetBytes, _pHost->getMaxBytesPerSecond(), static_cast<float64>( deltaTime ) );
         ++_tick;
         _observerScratch.prepare( _parallel );
         _pRangeObserver = _listObserver.data();
@@ -292,7 +294,7 @@ namespace sw
         prioritizer.collectOrder( listOrder );
         BitWriter& writer = scratch._messageWriter.begin( NetMmoMessage::kUpdate );
         writer.writeVarUint( _tick );
-        NetSendBudget budget( _settings._updateBudgetBytes );
+        NetSendBudget budget( _tickUpdateBudgetBytes );
         budget.reserveBits( writer.getBitCount() + 1 ); // 머리 + 끝 표시
         vector<uint32>& listSent = scratch._listSent;
         listSent.clear();

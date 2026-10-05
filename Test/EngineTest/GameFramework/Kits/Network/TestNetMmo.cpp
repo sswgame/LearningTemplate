@@ -458,3 +458,39 @@ SW_TEST_CASE( NetMmoTest, EntersShareOneReliableMessagePerTick )
         SW_EXPECT_TRUE( pEntity->_listState == game._table._listEntity[index + 1]._listState );
     }
 }
+
+/**
+ * @brief [NetMmoTest] 연결 상한을 낮추면 MMO 갱신 예산이 따라 준다 — 모두 매 틱 바뀌는 이웃 스물을 기본 상한과 6 KB/s(60 Hz 몫 50 B)에서 120 틱 보내 보낸 갱신 수를 견준다
+ */
+SW_TEST_CASE( NetMmoTest, UpdateBudgetFollowsTheConnectionCap )
+{
+    const auto countUpdates = []( int32 maxBytesPerSecond ) -> uint64
+    {
+        MmoNetSimGame game;
+        game._table._bStampTick = SW_TRUE;
+        game._table._listEntity.push_back( MmoEntity{
+            vector<uint8>{},
+            float3{ 0.0f, 0.0f, 0.0f },
+            kMmoObserverId, 0, 1.0f
+        } );
+        for ( uint32 index = 0; index < 20; ++index )
+            game._table._listEntity.push_back( MmoEntity{
+                vector<uint8>( 4, 0 ),
+                float3{ static_cast<float32>( index % 5 ) * 2.0f, 0.0f, static_cast<float32>( index / 5 ) * 2.0f },
+                200 + index, 1, 1.0f
+            } );
+        NetSimSettings settings;
+        settings._hostSettings._maxBytesPerSecond = maxBytesPerSecond;
+        NetSimHarness harness;
+        if ( harness.initialize( settings, &game ) == false )
+            return 0;
+        (void)harness.addClient( NetSimLinkConditions{} );
+        harness.stepTicks( 120 );
+        return getMmoServer( harness ).getServer().getSentUpdateCount();
+    };
+    const uint64 defaultCount = countUpdates( NetHostSettings{}._maxBytesPerSecond );
+    const uint64 cappedCount  = countUpdates( 6000 );
+    SW_LOG_INFO( "[NetMmo] updates in 120 ticks: default cap %#, 6 KB/s cap %#", defaultCount, cappedCount );
+    SW_EXPECT_TRUE( defaultCount > 1000 );            // 600 B 예산 — 스물이 거의 매 틱
+    SW_EXPECT_TRUE( cappedCount * 3 < defaultCount ); // 50 B 예산 — 틱마다 두셋
+}

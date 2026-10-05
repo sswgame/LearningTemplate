@@ -377,3 +377,30 @@ SW_TEST_CASE( NetworkThreadTest, LargeReliableMessagesCrossHostThreads )
     for ( size_t index = 0; index < listSent.size(); ++index )
         SW_EXPECT_TRUE( listReceived[index] == listSent[index] );
 }
+
+/**
+ * @brief [NetworkThreadTest] 네트워크 스레드 위에서도 연결 상한을 넘겨 보내지 않는다 — 64 KB 를 200 KB/s 로(처음 쌓인 몫 13 KB 를 빼도 0.26 초 넘게)
+ */
+SW_TEST_CASE( NetworkThreadTest, SendRateCapHoldsOnHostThreads )
+{
+    NetHostSettings settings;
+    settings._maxBytesPerSecond = 200000;
+    test::LoopbackCluster cluster( 3u );
+    SW_ASSERT_TRUE( startThreadedCluster( cluster, 1, settings ) );
+    NetHost& client = cluster.getClient( 0 );
+    SW_ASSERT_TRUE( client.connectAsync( NetAddress::makeLoopback( 4000 ) ).waitFor( kFutureWaitMilli ) );
+    SW_ASSERT_TRUE( waitUntil( [&cluster]()
+    { return cluster.getServer().getConnectedCount() == 1; } ) );
+
+    const vector<uint8> message( static_cast<size_t>( NetConnection::kMaxReliableMessageSize ), static_cast<uint8>( 0x5A ) );
+    const Stopwatch     stopwatch;
+    SW_ASSERT_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, message ) );
+    int32          connectionId = -1;
+    NetChannelType channel      = NetChannelType::Unreliable;
+    vector<uint8>  buffer;
+    SW_ASSERT_TRUE( waitUntil( [&]()
+    { return cluster.getServer().receiveMessage( connectionId, channel, buffer ); }, 5.0 ) );
+    const int64 milliseconds = stopwatch.getElapsedMilliseconds();
+    SW_EXPECT_TRUE( buffer == message );
+    SW_EXPECT_TRUE_MSG( milliseconds >= 200, "the host thread does not send faster than the cap" );
+}

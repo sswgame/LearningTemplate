@@ -86,6 +86,8 @@ namespace sw
         [[nodiscard]] bool readPacket( float64 time, BitReader& reader );
         /** @brief 보낼 것이 있는가 — 새 메시지 · 재전송 시각이 된 신뢰 메시지 · 확인해 줄 패킷. */
         bool hasDataToSend( float64 time ) const;
+        /** @brief 받은 패킷을 확인해 줘야 하는가 — 대역폭 몫을 다 쓴 호스트가 메시지 없이 확인만 보낼지 정한다. */
+        bool isAckPending() const { return _bAckPending != SW_FALSE; }
 
         const NetConnectionStats& getStats() const { return _stats; }
         int32                     getPendingReliableCount() const;

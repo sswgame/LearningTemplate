@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Message/NetSendBudget.h"
 
 namespace sw
 {
@@ -20,6 +21,7 @@ namespace sw
         , _listConnectionScratch{}
         , _listClientScratch{}
         , _oversizedEntityCount{ 0 }
+        , _snapshotBudgetBytes{ 0 }
         , _pRangeConnection{ nullptr }
         , _ppRangeClient{ nullptr }
     {
@@ -100,6 +102,8 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return;
+        // 이번 틱의 예산 — 설정과 연결 상한의 몫 중 작은 것(호스트 잠금은 여기서 한 번, 워커는 이 값만 읽는다).
+        _snapshotBudgetBytes = NetSendBudget::computeTickBudget( _settings._snapshotBudgetBytes, _pHost->getMaxBytesPerSecond(), static_cast<float64>( _settings._tickInterval ) );
         // 클라이언트 상태는 나누기 전에 모두 잡는다 — `acquireClient` 는 목록을 키울 수 있다(나누는 중에는 아무도 목록을 건드리지 않는다).
         _pHost->collectConnected( _listConnectionScratch );
         _listClientScratch.resize( _listConnectionScratch.size() );
@@ -167,12 +171,12 @@ namespace sw
         if ( &slot == pBaseline )
         {
             NetSnapshot written;
-            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, written, &listOrder, &scratch._listCurrent );
+            filtered.writeDelta( writer, pBaseline, _snapshotBudgetBytes, written, &listOrder, &scratch._listCurrent );
             slot = std::move( written );
         }
         else
         {
-            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, slot, &listOrder, &scratch._listCurrent );
+            filtered.writeDelta( writer, pBaseline, _snapshotBudgetBytes, slot, &listOrder, &scratch._listCurrent );
         }
         // 실었거나 받는 쪽이 이미 지금 상태인 것만 0 으로 — 못 실은 것은 쌓인 채로 다음 스냅샷에서 앞선다.
         for ( size_t index = 0; index < filtered._listEntity.size(); ++index )
