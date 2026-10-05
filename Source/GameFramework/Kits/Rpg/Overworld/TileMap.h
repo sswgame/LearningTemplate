@@ -78,9 +78,9 @@ namespace sw
         const string& getScenePath() const { return _data._scenePath; }
         /** @brief 대응 씬 경로를 설정합니다. */
         void setScenePath( string_view path ) { _data._scenePath = path; }
-        /** @brief 존 역할 문자열을 반환합니다. */
+        /** @brief 존 태그 글(`<role>` — 쉼표 · 공백으로 나눈 태그, `ZoneTracker::setFromMap` 이 읽는다)을 반환합니다. */
         const string& getRole() const { return _data._role; }
-        /** @brief 존 역할 문자열을 설정합니다. */
+        /** @brief 존 태그 글을 설정합니다. */
         void setRole( string_view role ) { _data._role = role; }
         /** @brief 기본 스폰 X를 반환합니다. */
         int32 getSpawnX() const { return _data._spawnX; }

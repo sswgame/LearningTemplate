@@ -2195,53 +2195,36 @@ SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashGaugeFillsAtTheCooldownRate )
 }
 
 /**
- * @brief [GameFrameworkTest] 역할을 경로로 묻든 글자로 묻든 **같은 답**이 나온다
- * @details 글자 → 역할, 경로 → 역할, 역할 → 태그가 같은 대응을 쓴다. 따로 적으면 어긋난다 — 글자 쪽은 대소문자를 무시하는데
- *          경로 쪽이 맨 `find` 면 `Dungeon_01` 은 던전이 아니고 `dungeon_01` 만 던전이 된다.
+ * @brief [GameFrameworkTest] 존 태그는 맵의 역할 글에서 온다 — 쉼표 · 공백으로 나누고, 대소문자를 가리지 않으며, `clear_gate` 태그가 게이트를 잠근다
+ * @details 역할은 열거가 아니라 데이터다(UE GameplayTag 모양). 경로 이름에서 역할을 짐작하지 않는다 — 태그 없는 맵은 경로에 "dungeon" 이 들어 있어도
+ *          태그 없이 시작하고 게이트도 열려 있다.
  */
-SW_TEST_CASE( GameFrameworkTest, ZoneRole_PathAndTextAgreeAndIgnoreCase )
+SW_TEST_CASE( GameFrameworkTest, ZoneTagsComeFromTheMapRoleText )
 {
-    // `ZoneRole` 은 enum class 라 ostream 이 없다 — 번호로 견준다.
-    const auto roleId = []( ZoneRole role )
-    { return static_cast<int32>( role ); };
-
-    // 경로로 물어도 대소문자를 가리지 않는다.
-    SW_EXPECT_EQUAL( roleId( ZoneRole::Dungeon ), roleId( zoneRoleFromMapPath( "Levels/Dungeon_01.scene" ) ) );
-    SW_EXPECT_EQUAL( roleId( ZoneRole::Dungeon ), roleId( zoneRoleFromMapPath( "levels/dungeon_01.scene" ) ) );
-    SW_EXPECT_EQUAL( roleId( ZoneRole::Gym ), roleId( zoneRoleFromMapPath( "Levels/GYM_Rock.scene" ) ) );
-
-    // 표의 줄 순서가 우선순위다 — 보스가 던전보다 위라서 `dungeon_boss` 는 보스다.
-    SW_EXPECT_EQUAL( roleId( ZoneRole::Boss ), roleId( zoneRoleFromMapPath( "levels/dungeon_boss.scene" ) ) );
-    SW_EXPECT_EQUAL( roleId( ZoneRole::Boss ), roleId( zoneRoleFromMapPath( "levels/Dungeon_Boss.scene" ) ) );
-
-    // 아무것도 안 맞으면 마을이다.
-    SW_EXPECT_EQUAL( roleId( ZoneRole::Town ), roleId( zoneRoleFromMapPath( "levels/quiet_place.scene" ) ) );
-}
-
-/**
- * @brief [GameFrameworkTest] 역할 → 태그 이름이 역할을 읽을 때 쓰는 이름과 **같다**
- * @details 역할을 태그로 미러하는 쪽이 이름을 따로 들면 안 된다. 태그 이름과 경로에서
- *          역할을 읽는 이름이 어긋나면 `hasActiveZoneTag( "dungeon" )` 이 던전에서 거짓이 된다.
- *          이 테스트는 **한 바퀴 돌아 제자리로 오는지**를 본다(이름을 여기 다시 적지 않는다).
- */
-SW_TEST_CASE( GameFrameworkTest, ZoneRole_TagNameRoundTripsBackToTheSameRole )
-{
-    constexpr ZoneRole kArrRole[]{ ZoneRole::Town, ZoneRole::Route, ZoneRole::Center, ZoneRole::Mart,
-                                   ZoneRole::Gym, ZoneRole::Wild, ZoneRole::Battle, ZoneRole::Dungeon,
-                                   ZoneRole::Boss };
-    for ( const ZoneRole role : kArrRole )
-    {
-        const utf8* pTag = zoneRoleToTag( role );
-        SW_ASSERT_TRUE( pTag != nullptr );
-        SW_EXPECT_TRUE_MSG( zoneRoleFromMapPath( pTag ) == role, "태그 이름이 역할로 되돌아오지 않습니다" );
-    }
-
-    // 그리고 그 태그가 실제로 존에 붙는다.
     ZoneTracker zones;
-    zones.setFromMap( "Levels/Dungeon_01.scene", "dungeon01", 16, 16, "" );
-    SW_EXPECT_EQUAL( static_cast<int32>( ZoneRole::Dungeon ), static_cast<int32>( zones.getActiveRole() ) );
-    SW_EXPECT_TRUE_MSG( zones.hasActiveZoneTag( "dungeon" ), "역할은 던전인데 태그가 안 붙었습니다" );
-    SW_EXPECT_TRUE_MSG( zones.isClearGateLocked(), "던전인데 클리어 게이트가 안 잠겼습니다" );
+    zones.setFromMap( "levels/dungeon_01.scene", "Dungeon 1", 20, 10, "dungeon, Clear_Gate  indoors" );
+    SW_EXPECT_TRUE( zones.hasActiveZoneTag( "dungeon" ) );
+    SW_EXPECT_TRUE( zones.hasActiveZoneTag( "DUNGEON" ) );
+    SW_EXPECT_TRUE( zones.hasActiveZoneTag( "indoors" ) );
+    SW_EXPECT_FALSE( zones.hasActiveZoneTag( "gym" ) );
+    SW_EXPECT_TRUE_MSG( zones.isClearGateLocked(), "clear_gate 태그가 있는데 게이트가 안 잠겼습니다" );
+    SW_EXPECT_STREQ( "Dungeon 1", zones.getActiveZoneId().c_str() );
+    SW_EXPECT_EQUAL( 19, zones.getCameraBounds()._max._x );
+    SW_EXPECT_EQUAL( 9, zones.getCameraBounds()._max._y );
+
+    zones.setClearGateLocked( false );
+    SW_EXPECT_FALSE( zones.isClearGateLocked() );
+
+    // 경로에 "dungeon" 이 들어 있어도 역할 글이 없으면 태그도 게이트도 없다. 이름이 비면 경로가 ID 다.
+    zones.setFromMap( "levels/dungeon_02.scene", "", 4, 4, "" );
+    SW_EXPECT_FALSE( zones.hasActiveZoneTag( "dungeon" ) );
+    SW_EXPECT_FALSE( zones.isClearGateLocked() );
+    SW_EXPECT_STREQ( "levels/dungeon_02.scene", zones.getActiveZoneId().c_str() );
+
+    // 같은 태그를 두 번 적어도 하나다 — 빈 조각은 건너뛴다.
+    zones.setFromMap( "m", "m", 1, 1, ",,gym,  GYM ," );
+    SW_ASSERT_NOT_NULL( zones.getActiveZone() );
+    SW_EXPECT_EQUAL( size_t( 1 ), zones.getActiveZone()->_listTag.size() );
 }
 
 /**
