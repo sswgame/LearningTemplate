@@ -14,6 +14,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/EngineServiceCollection.h"
+#include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
@@ -131,6 +132,13 @@ namespace sw
         }
         // 표가 가리키던 것이 모두 사라졌다. 이 뒤로 `engine::get*` 은 쓰지 않는다.
         engine::unbindEngineServices();
+
+        // 프로세스 정적 저장소가 기동 뒤 자란 몫을 돌려준다 — 남기면 아래 종료 보고(기준선 대비 태그 증가)에 남는다. 이름 풀은 아래에서 내린다.
+        // 컴포넌트는 모두 사라진 뒤다. 칸이 남았으면 그 컴포넌트가 새는 것이라 놓지 않고 알린다(페이지를 놓으면 그 컴포넌트가 내려간 메모리를 든다).
+        SceneTransformStorage& transformStorage = SceneTransformStorage::get();
+        if ( transformStorage.releaseStorage() == false )
+            SW_LOG_WARNING( "Scene transform storage still has %# live slots at shutdown - a scene component leaked", transformStorage.getLiveSlotCount() );
+        ResourceUtil::clearPathCache();
 
         // 로거 **스레드**는 메모리 프로파일러보다 먼저 세운다. 그 스레드도 메모리를 풀며 프로파일러를 부른다(`Memory::free` → `recordFree`).
         // 로거 객체는 맨 마지막에 놓는다 — 그 사이의 로그는 출력에 바로 쓰인다.

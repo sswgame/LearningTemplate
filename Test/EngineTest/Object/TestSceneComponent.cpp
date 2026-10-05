@@ -479,6 +479,35 @@ SW_TEST_CASE( SceneComponentTest, TransformValuesLiveInTheStorageSlot )
 }
 
 /**
+ * @brief [SceneComponentTest] 칸이 하나도 없을 때만 저장소를 놓고, 놓은 뒤 받은 칸은 새 페이지에 든다
+ * @details 엔진 종료 끝(`EngineBootstrap::shutdown`)이 `releaseStorage` 로 페이지를 놓는다 — 놓지 않으면 첫 SceneComponent 가 잡은 페이지가 종료 누수
+ *          보고(기준선 대비 태그 증가)에 남는다. 살아 있는 칸이 있으면 놓지 않는다(컴포넌트가 페이지 포인터를 들고 있다).
+ */
+SW_TEST_CASE( SceneComponentTest, StorageIsReleasedOnlyWhenNoSlotIsLive )
+{
+    sw::SceneTransformStorage& storage = sw::SceneTransformStorage::get();
+    if ( storage.getLiveSlotCount() != 0 )
+        SW_TEST_SKIP( "other scene components are alive in this host" );
+
+    {
+        const sw::SceneComponent comp;
+        SW_EXPECT_FALSE( storage.releaseStorage() );
+        SW_EXPECT_TRUE( storage.findPage( comp.getTransformSlot() ) != nullptr );
+    }
+
+    // 칸 번호는 0 부터 나가므로 위 컴포넌트까지 오는 동안 0 번 페이지가 생겼다.
+    SW_ASSERT_TRUE( storage.findPage( 0 ) != nullptr );
+    SW_EXPECT_TRUE( storage.releaseStorage() );
+    SW_EXPECT_TRUE( storage.findPage( 0 ) == nullptr );
+
+    {
+        const sw::SceneComponent comp;
+        SW_EXPECT_EQUAL( uint32{ 0 }, comp.getTransformSlot() );
+        SW_EXPECT_TRUE( storage.findPage( comp.getTransformSlot() ) != nullptr );
+    }
+}
+
+/**
  * @brief [SceneComponentTest] 회전 변환 캐시는 회전이 바뀔 때마다 따라가고, 결과는 캐시 없는 합성과 비트까지 같다
  * @details 칸은 쿼터니언과 그것을 만든 오일러를 들고 있다가 같으면 삼각 함수를 건너뛴다(언리얼 `FRotationConversionCache` 의 자리).
  *          회전을 바꾸고 · 0 으로 돌리고 · 처음 값으로 되돌리는 동안 한 번이라도 옛 쿼터니언을 쓰면 행렬이 틀린다.

@@ -766,6 +766,28 @@ SW_TEST_CASE( AppSmokeTest, HeadlessRunReportsLeaksAgainstABaseline )
     SW_EXPECT_TRUE_MSG( bBaselineCaptured, "헤드리스 실행이 누수 기준선을 잡지 않았다" );
     SW_EXPECT_TRUE_MSG( bComparedClean, "헤드리스 실행의 종료 누수 보고가 기준선 대비 깨끗하지 않다" );
 }
+
+/**
+ * @brief [AppSmokeTest] 보통 실행을 끝내면 어느 메모리 태그도 기동 뒤 기준선보다 크지 않다
+ * @details 종료 끝(`EngineBootstrap::shutdown`)이 태그별로 기준선과 견줘 `[MemoryLeak]` 줄을 남긴다. 프로세스 정적 저장소(이름 풀 · 트랜스폼 페이지 ·
+ *          경로 캐시)가 기동 뒤 자란 몫을 돌려주지 않으면 "tag … grew by" 줄이 나온다. CRT 검사는 합계만 봐 이것을 "no CRT leaks" 라고 한다.
+ */
+SW_TEST_CASE( AppSmokeTest, ShutdownReturnsEveryTagToTheBaseline )
+{
+    const AppRunResult result = runApp( "-gv_profileFrames=5 -dx12", "[MemoryLeak]" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
+    if ( result._bBackendUnusableHere )
+        SW_TEST_SKIP( "DX12 is not usable on this machine" );
+    SW_EXPECT_EQUAL( 0, result._exitCode );
+
+    bool bComparedTags = false;
+    for ( const string& line : result._listMarkedLine )
+    {
+        SW_EXPECT_TRUE_MSG( line.find( "grew by" ) == string::npos, line.c_str() );
+        bComparedTags = bComparedTags || line.find( "no memory tag grew" ) != string::npos;
+    }
+    SW_EXPECT_TRUE_MSG( bComparedTags, "종료 보고가 태그를 기준선과 견주지 않았다" );
+}
 #endif
 
 /**

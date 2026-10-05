@@ -448,14 +448,6 @@ cd build/Ninja-Debug/Bin
 - **TaskManager 스테이지 디버그 이름** — 프로파일러에 연결할 때 넣는다(지금은 연결돼 있지 않다).
 - **`fixed_string` 의 해시가 FNV(`computeHash64`)다.** 느리지만 프로파일에 안 보여 두었다(낮음).
 
-- **종료 끝까지 남는 sw 블록이 있다**(Debug App `-dx12 -gv_profileFrames=5`): 모든 서비스를 내린 뒤에도 기동 뒤 기준선보다 Scene 82 KB(12 블록) · Mesh 192 B(2) ·
-  Material 128 B(4) 가 많다(`a380e2ee3`, 세 번 같음). CRT 검사는 합계만 봐 "no CRT leaks" 라고 한다. 기준선 뒤 세부 추적을 켜고 종료 직전 `getTopCallStacks( LiveBytes )` 로
-  뜬 내역(2026-10-05): **HashedStringPool 버킷 ≈ 98 KB**(기동 뒤 처음 쓰인 이름 — FrameProfiler 구간 49 KB · GPU 구간 18 KB · InputMap 12 KB ·
-  ShaderBindingLayoutCache 키 12 KB · AssetLoadScope 6 KB)와 **SceneTransformStorage 슬랩 51.7 KB**(첫 SceneComponent 가 잡는다) · ResourceUtil 경로 2 KB.
-  `HashedStringPool::shutdown` 뒤에도 버킷 메모리가 남고, 그 블록은 **처음 이름을 넣을 때 둘러싼 메모리 범위의 태그**로 세인다 — 그래서 같은 몫이 병합마다
-  태그를 옮겨 다녔다(파괴 병합 뒤 "Mesh 6.3 KB · 4" 와 "Unknown 12 KB" 는 tracy · recast 뒤 Scene 으로 옮겨 갔다). 메시 누수가 아니다. 남은 일: 풀 버킷을
-  자기 태그(`EngineMisc` 등)로 잡고 종료에서 돌려주기, SceneTransformStorage 슬랩을 종료에서 놓기 — 그 뒤 이 줄이 0 이 되는지 본다.
-
 ### 1-8. 성능 (재고 나서 정할 것)
 
 - **DX12 · Vulkan Present 히치.** 큐브 100 · 600 프레임 중 40 프레임이 1~18 ms 다(DX11 은 없다). 다음 후보는 DXGI 대기 가능 스왑체인
@@ -1417,6 +1409,7 @@ cd build/Ninja-Debug/Bin
 - **프로세스 정적 캐시(`ShaderReflectionLibrary` 매니페스트 같은 것)는 엔진 종료 단계가 비운다** — 안 비우면 기동 뒤에 채운 몫이 종료 누수 검사(기준선 대비 바이트 ·
   블록 수)에 남는다(백엔드 교체 뒤 ~1.1 MB). 진단은 MemoryProfiler 세부 추적을 켜고 `destroyAll` 뒤 `getTopCallStacks( LiveBytes )`. 교체 전 백엔드의 매니페스트는
   종료까지 상주한다(상한 4 개라 둔다). 모듈 인스턴스 내리기는 에디터 · 게임 모두 타입을 걷은 **뒤** 서비스를 뗀다(`ModuleHostInternal::destroyInstance`).
+  프로세스 정적 저장소(이름 풀 · 트랜스폼 페이지 · 경로 캐시)는 `EngineBootstrap::shutdown` 이 놓는다 — 컨테이너의 `clear()` 는 버킷 · 밀집 배열 · 용량을 남기므로 타입을 적은 빈 객체를 대입한다(`= {}` 는 initializer_list 대입이 골라져 남는다). 이름 풀 블록은 넣는 쪽 태그가 아니라 `EngineMisc` 로 센다. 종료 보고 0 은 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 지킨다.
 
 - **STL 구성(`SW_ENABLE_STL_CONTAINER=ON`, CI `CI-Debug-STL`)은 C++17 이라 std 해시 컨테이너에 이종 조회 · `contains` 가 없다** — sw 쪽 얇은 클래스가 메운다.
   커스텀 컨테이너 전용 시험은 그 구성에서 건너뛴다.
