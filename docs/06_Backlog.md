@@ -305,7 +305,7 @@ cd build/Ninja-Debug/Bin
     밉 스트리밍 · 카메라 5 · 6 단계 · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 · 탈것/말 ·
     천/머리카락 · 전술 AI · 볼류메트릭 안개/빛/구름 · 캐릭터 셰이딩 · 모션 캡처 공정 · 대규모 좌표 · PCG 저작 그래프 · GI/반사 프로브 · 플랫폼 서비스 ·
     패치/DLC · 모드/UGC.
-  - **아주 큼(XL)**: 비주얼 스크립팅 · 월드 파티션/스트리밍/HLOD · 온라인(매치메이킹 · 로비 · 음성).
+  - **아주 큼(XL)**: 비주얼 스크립팅 · 월드 파티션/스트리밍/HLOD · 음성 채팅(온라인 구성은 1-7 "네트워크 서비스 계층").
 - **오디오 엔진(2026-10-04, `Engine/Audio/README.md`)의 남은 것.** 믹서 · DSP · 공간화 · 이벤트 · 스냅샷 · 적응형 음악 · 씬 묶기는 들어갔다. (1) 데이터 핫 리로드 —
   `loadEventLibrary` · `loadMixer` 는 같은 이름이면 바꾸지만 파일 감시(에디터 `FileWatchDispatcher`)에 걸려 있지 않다. (2) 에디터 — 믹서 패널(버스 미터 · 음소거/솔로),
   이벤트 브라우저 · 미리 듣기, 보이스 · 가상화 프로파일러. (3) 긴 음악 스트리밍(지금은 클립을 통째로 디코드해 메모리에 든다 — 3 분 스테레오 ≈ 69 MB float).
@@ -416,9 +416,16 @@ cd build/Ninja-Debug/Bin
 
 - **네트워크 서비스 계층(2026-10-06 사용자 결정 — 로그인 · 채팅 · 거래, MMO 가 아니어도 쓰는 키트).** 상태 복제(UDP)와 달리 순서 있는 신뢰 스트림 · 긴 연결 · 요청-응답이다.
   ① Core `Network/Transport/` 에 스트림 전송(TCP) — 수락 · 읽기 · 쓰기 완료를 받는 이벤트 루프 인터페이스 하나, 구현은 Windows IOCP · 리눅스 epoll(io_uring 은 측정 뒤), 연결마다 송수신 버퍼 · 배압 ·
-  유휴 시한 ② Core `Network/Message/` 에 길이 접두 프레이밍 + 요청-응답(요청 id · 시한 · 취소 · 멱등 키) — 복제용 RPC 와 다르다(서비스 호출) ③ 키트 셋 —
-  `GF_NetLogin`(인증 · 세션 토큰 발급/검증 · 재접속 · 중복 로그인 처리) · `GF_NetChat`(채널 · 귓속말 · 금칙어 · 도배 제한 · 기록) · `GF_NetTrade`(양쪽 확정 2 단계 · 멱등 요청 · 끊겨도 복사/증발 없는
-  원자성 · 감사 로그) ④ 영속 저장은 엔진에 인터페이스(`IServiceStore` — 트랜잭션 · 조건부 쓰기)만, 시험은 메모리 구현. 실제 DB 어댑터는 쓰는 게임이 생기면.
+  유휴 시한 ② Core `Network/Message/` 에 길이 접두 프레이밍 + 요청-응답(요청 id · 시한 · 취소 · 멱등 키) — 복제용 RPC 와 다르다(서비스 호출)
+  ③ 구성은 `docs/` 가 아니라 이 항목이 정본 — **공통 기반**(GameFramework 기반 `Online/`): 서비스 틀(등록 · 라우팅 · 인증 문맥 · 오류 코드 · 판 협상) · 요청 보호(도배 제한 · 멱등 키 · 크기 상한) ·
+  신원 원형(`AccountId` · 세션 토큰 검증) · 저장 계약(`IServiceStore` 영속 · `IEphemeralStore` 캐시 · `ILocalStore` 로컬 — 파일 백엔드는 바이너리/JSON/XML · 원자적 쓰기 · 체크섬 · 선택 압축/암호화) ·
+  마이그레이션 적용기 · 감사 로그 · 서버 간 버스 · 예약 작업 · 원격 설정/기능 플래그 · 관측(지표 · 구조화 로그 · 추적 id). **드라이버 키트**: `GF_SqlStore`(SQLite · PostgreSQL) ·
+  `GF_CacheStore`(메모리 · RESP). **기능 키트**: `GF_Account` · `GF_ServerDirectory` · `GF_Economy`(원장 · 지갑 · 상점 · 영수증 검증) · `GF_Trade`(원장 위) · `GF_Mailbox` · `GF_Chat` · `GF_Social` ·
+  `GF_Leaderboard` · `GF_Matchmaking` · `GF_LiveOps` · `GF_Admin`(GM 도구 · 제재). 제품 이름은 드라이버 · 제공자 폴더에만. 부하 시험 봇은 시험 도구.
+  ④ **DB 결정(사용자)**: 영속 PostgreSQL(서버) · SQLite(개발 단독 서버 · 클라이언트 로컬), 캐시는 RESP 드라이버 하나 — 리눅스 Valkey(BSD-3), 윈도우 Garnet(MIT)(Redis 7.4+ 는
+  RSAL/SSPL — "오픈소스 · 무료" 조건 밖). 캐시를 잃어도 영속 데이터는 맞아야 한다(거래 정본은 영속 트랜잭션). DB 호출은 전용 워커 + 연결 풀 + 비동기 완료.
+  **서버는 윈도우 · 리눅스 둘 다 1 급**, 서버 전용 모듈은 클라이언트 Shipping 에 넣지 않는다(전용 서버 타깃 — Game · Client · Server).
+  **순서**: 기반 + 드라이버 → Account · ServerDirectory → Economy → Trade · Mailbox · Admin · 관측 → Chat · Social → Leaderboard · Matchmaking · LiveOps.
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
 - **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는
   ChaCha20-Poly1305 · 패킷 번호를 nonce 로 · 재전송 방지 창) — Valve GNS · 언리얼 AESGCM PacketHandler 와 같은 모양. 세션 키는 로그인 키트가 발급한 토큰에 묶는다(UDP 접속 = 토큰 제시).
