@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Transport/IStreamTransport.h"
@@ -94,14 +95,44 @@ namespace
         uint8                          _bLastAccepted{ SW_FALSE };
     };
 
+    /** @brief 받은 것을 같은 핸들로 되돌리는 서버 처리기 — I/O 스레드 둘이 부른다. */
+    class StreamEchoHandler final : public IStreamHandler
+    {
+    public:
+        void setTransport( IStreamTransport* pTransport ) { _pTransport = pTransport; }
+
+        void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override
+        {
+            (void)handle;
+            (void)remote;
+            (void)bAccepted;
+            _openedCount.fetch_add( 1, std::memory_order_relaxed );
+        }
+        void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size ) override { (void)_pTransport->send( handle, pData, size ); }
+        void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override
+        {
+            (void)handle;
+            (void)reason;
+            _closedCount.fetch_add( 1, std::memory_order_relaxed );
+        }
+
+        int32 getOpenedCount() const { return _openedCount.load( std::memory_order_relaxed ); }
+        int32 getClosedCount() const { return _closedCount.load( std::memory_order_relaxed ); }
+
+    private:
+        atomic<int32>     _openedCount{ 0 };
+        atomic<int32>     _closedCount{ 0 };
+        IStreamTransport* _pTransport{ nullptr };
+    };
+
     /** @brief 서버 · 클라이언트 전송 한 쌍과 "조건이 설 때까지 돌리기" 입니다. */
     struct StreamRig
     {
+        StreamRecorder                    _serverRecorder{}; ///< 전송보다 먼저 선언 — 전송이 먼저 죽으며 닫힘을 알린다
+        StreamRecorder                    _clientRecorder{};
         unique_ptr<LoopbackStreamNetwork> _network{};
         unique_ptr<IStreamTransport>      _server{};
         unique_ptr<IStreamTransport>      _client{};
-        StreamRecorder                    _serverRecorder{};
-        StreamRecorder                    _clientRecorder{};
         uint8                             _bManualPoll{ SW_TRUE };
 
         static bool makeLoopback( StreamRig& outRig, const StreamTransportSettings& baseSettings, const LoopbackStreamConditions& conditions )
@@ -113,6 +144,19 @@ namespace
             StreamTransportSettings settings = baseSettings;
             settings._ioThreadCount          = 0;
             outRig._bManualPoll              = SW_TRUE;
+            return outRig._server->initialize( &outRig._serverRecorder, settings ) && outRig._client->initialize( &outRig._clientRecorder, settings );
+        }
+
+        /** @brief 이 플랫폼의 실제 전송 한 쌍 — I/O 스레드 둘(완료가 두 스레드로 갈려도 계약이 선다). */
+        static bool makePlatform( StreamRig& outRig, const StreamTransportSettings& baseSettings )
+        {
+            outRig._server = StreamTransportFactory::createPlatformTransport();
+            outRig._client = StreamTransportFactory::createPlatformTransport();
+            if ( outRig._server == nullptr || outRig._client == nullptr )
+                return false;
+            StreamTransportSettings settings = baseSettings;
+            settings._ioThreadCount          = 2;
+            outRig._bManualPoll              = SW_FALSE;
             return outRig._server->initialize( &outRig._serverRecorder, settings ) && outRig._client->initialize( &outRig._clientRecorder, settings );
         }
 
@@ -317,4 +361,134 @@ SW_TEST_CASE( StreamTransportTest, SendQueueTracksWatermarksAcrossChunks )
     SW_EXPECT_TRUE( queue.consume( 25000 ) );   // 15 000 — 내려왔다(한 번)
     SW_EXPECT_FALSE( queue.consume( 15000 ) );
     SW_EXPECT_TRUE( queue.isEmpty() );
+}
+
+// ---- 플랫폼 전송(Windows IOCP · 리눅스 epoll) — 루프백과 같은 본문 + 실제 소켓만의 것(유휴 시한 · 많은 연결) ----
+
+#define SW_STREAM_PLATFORM_RIG( rigName, settings )                     \
+    StreamRig rigName;                                                  \
+    if ( StreamTransportFactory::createPlatformTransport() == nullptr ) \
+        SW_TEST_SKIP( "no platform stream transport on this OS" );      \
+    SW_ASSERT_TRUE( StreamRig::makePlatform( rigName, settings ) )
+
+SW_TEST_CASE( StreamTransportTest, PlatformOpensSendsInOrderAndClosesGracefully )
+{
+    SW_STREAM_PLATFORM_RIG( rig, StreamTransportSettings{} );
+    runOpenSendGracefulClose( rig );
+}
+
+SW_TEST_CASE( StreamTransportTest, PlatformAbortResetsPeer )
+{
+    SW_STREAM_PLATFORM_RIG( rig, StreamTransportSettings{} );
+    runAbortResetsPeer( rig );
+}
+
+SW_TEST_CASE( StreamTransportTest, PlatformConnectToClosedPortFails )
+{
+    SW_STREAM_PLATFORM_RIG( rig, StreamTransportSettings{} );
+    runConnectToClosedPortFails( rig );
+}
+
+SW_TEST_CASE( StreamTransportTest, PlatformBackpressureFillsThenDrains )
+{
+    StreamTransportSettings settings;
+    settings._sendHighWatermarkBytes = 256 * 1024;
+    settings._sendLowWatermarkBytes  = 64 * 1024;
+    settings._maxQueuedSendBytes     = 1024 * 1024;
+    SW_STREAM_PLATFORM_RIG( rig, settings );
+    runBackpressure( rig );
+}
+
+/**
+ * @brief [StreamTransportTest] 걸린 일이 하나도 없는 연결(읽기를 멈춘 뒤 받기가 끝났고 보낼 것도 없다)을 끊어도 닫힘은 한 번 온다
+ */
+SW_TEST_CASE( StreamTransportTest, PlatformAbortWithNothingPendingStillCloses )
+{
+    SW_STREAM_PLATFORM_RIG( rig, StreamTransportSettings{} );
+    SW_ASSERT_TRUE( rig._server->listen( NetAddress::makeLoopback( 0 ) ) );
+    const StreamConnectionHandle clientHandle = rig._client->connect( NetAddress::makeLoopback( rig._server->getListenPort() ) );
+    SW_ASSERT_TRUE( rig.runUntil( [&]()
+    { return rig._serverRecorder.getOpenedCount() == 1 && rig._clientRecorder.getOpenedCount() == 1; } ) );
+    const StreamConnectionHandle serverHandle = rig._serverRecorder.getOpened( 0 );
+    rig._server->setReceivePaused( serverHandle, true );
+    const uint8 arrBytes[10] = {};
+    (void)rig._client->send( clientHandle, arrBytes, 10 );
+    SW_ASSERT_TRUE( rig.runUntil( [&]()
+    { return rig._serverRecorder.getReceivedCount() == 10; } ) ); // 이미 걸려 있던 받기는 끝나고 다시 걸리지 않는다
+    rig._server->close( serverHandle, StreamCloseMode::Abort );
+    SW_ASSERT_TRUE( rig.runUntil( [&]()
+    { return rig._serverRecorder.getClosedCount() == 1 && rig._clientRecorder.getClosedCount() == 1; } ) );
+    SW_EXPECT_TRUE( rig._serverRecorder.getClosedReason( 0 ) == StreamCloseReason::LocalClose );
+    SW_EXPECT_TRUE( rig._clientRecorder.getClosedReason( 0 ) == StreamCloseReason::Reset );
+    rig.shutdown();
+}
+
+/**
+ * @brief [StreamTransportTest] 유휴 시한 — 받은 바이트가 없는 연결은 시한 뒤 IdleTimeout 으로 닫히고 저쪽은 Reset 을 본다
+ */
+SW_TEST_CASE( StreamTransportTest, PlatformIdleConnectionTimesOut )
+{
+    StreamTransportSettings settings;
+    settings._idleTimeoutSeconds = 0.3;
+    SW_STREAM_PLATFORM_RIG( rig, settings );
+    SW_ASSERT_TRUE( rig._server->listen( NetAddress::makeLoopback( 0 ) ) );
+    (void)rig._client->connect( NetAddress::makeLoopback( rig._server->getListenPort() ) );
+    SW_ASSERT_TRUE( rig.runUntil( [&]()
+    { return rig._serverRecorder.getClosedCount() == 1 && rig._clientRecorder.getClosedCount() == 1; }, 5000 ) );
+    const StreamCloseReason serverReason = rig._serverRecorder.getClosedReason( 0 );
+    const StreamCloseReason clientReason = rig._clientRecorder.getClosedReason( 0 );
+    SW_EXPECT_TRUE( serverReason == StreamCloseReason::IdleTimeout || serverReason == StreamCloseReason::Reset );
+    SW_EXPECT_TRUE( clientReason == StreamCloseReason::IdleTimeout || clientReason == StreamCloseReason::Reset );
+    rig.shutdown();
+}
+
+/**
+ * @brief [StreamTransportTest] 연결 200 개가 동시에 64 KB 씩 보내고 같은 것을 돌려받는다 — 자리 재사용 · 스레드 둘의 완료 섞임
+ */
+SW_TEST_CASE( StreamTransportTest, PlatformManyConnectionsEchoConcurrently )
+{
+    if ( StreamTransportFactory::createPlatformTransport() == nullptr )
+        SW_TEST_SKIP( "no platform stream transport on this OS" );
+    constexpr int32 kConnectionCount = 200;
+    constexpr int32 kPayloadBytes    = 64 * 1024;
+
+    StreamEchoHandler            echo;
+    StreamRecorder               clientRecorder;
+    unique_ptr<IStreamTransport> server = StreamTransportFactory::createPlatformTransport();
+    unique_ptr<IStreamTransport> client = StreamTransportFactory::createPlatformTransport();
+    StreamTransportSettings      settings;
+    settings._ioThreadCount = 2;
+    echo.setTransport( server.get() );
+    SW_ASSERT_TRUE( server->initialize( &echo, settings ) );
+    SW_ASSERT_TRUE( client->initialize( &clientRecorder, settings ) );
+    SW_ASSERT_TRUE( server->listen( NetAddress::makeLoopback( 0 ) ) );
+
+    vector<StreamConnectionHandle> listHandle;
+    for ( int32 index = 0; index < kConnectionCount; ++index )
+        listHandle.push_back( client->connect( NetAddress::makeLoopback( server->getListenPort() ) ) );
+    const Deadline openDeadline = Deadline::afterMilliseconds( 10000 );
+    while ( clientRecorder.getOpenedCount() + clientRecorder.getClosedCount() < kConnectionCount && openDeadline.isExpired() == false )
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    SW_ASSERT_EQUAL( kConnectionCount, clientRecorder.getOpenedCount() );
+
+    const vector<uint8> payload = makePattern( kPayloadBytes, 5u );
+    for ( const StreamConnectionHandle& handle : listHandle )
+        SW_EXPECT_TRUE( client->send( handle, payload.data(), kPayloadBytes ) != StreamSendResult::Closed );
+    const Deadline echoDeadline = Deadline::afterMilliseconds( 20000 );
+    while ( clientRecorder.getReceivedCount() < kConnectionCount * kPayloadBytes && echoDeadline.isExpired() == false )
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    SW_EXPECT_EQUAL( kConnectionCount * kPayloadBytes, clientRecorder.getReceivedCount() );
+
+    for ( const StreamConnectionHandle& handle : listHandle )
+        client->close( handle, StreamCloseMode::Graceful );
+    const Deadline closeDeadline = Deadline::afterMilliseconds( 10000 );
+    while ( ( echo.getClosedCount() < kConnectionCount || clientRecorder.getClosedCount() < kConnectionCount ) && closeDeadline.isExpired() == false )
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    SW_EXPECT_EQUAL( kConnectionCount, echo.getOpenedCount() );
+    SW_EXPECT_EQUAL( kConnectionCount, echo.getClosedCount() );
+    SW_EXPECT_EQUAL( kConnectionCount, clientRecorder.getClosedCount() );
+    SW_EXPECT_EQUAL( 0, server->getStats()._openCount );
+    SW_EXPECT_EQUAL( 0, client->getStats()._openCount );
+    client->shutdown();
+    server->shutdown();
 }

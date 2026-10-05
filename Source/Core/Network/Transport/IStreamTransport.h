@@ -86,3 +86,12 @@ namespace sw
         virtual StreamTransportStats getStats() const                                        = 0;
     };
 } // namespace sw
+
+namespace sw
+{
+    /** @brief 이 플랫폼의 실제 스트림 전송(Windows IOCP · 리눅스 epoll)을 만듭니다. 구현이 없는 플랫폼이면 nullptr 입니다. */
+    struct SW_API StreamTransportFactory
+    {
+        static unique_ptr<IStreamTransport> createPlatformTransport();
+    };
+} // namespace sw

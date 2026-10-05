@@ -89,7 +89,9 @@
   - 스트림(TCP) 전송 — `IStreamTransport`(수락 · 연결 · 읽기 · 쓰기 완료를 `IStreamHandler` 로, I/O 스레드 N 또는 `pollIo`, 리슨은 묶을 주소를 받는다 —
     운영 끝점은 `NetAddress::makeLoopback`, 서버는 `makeAnyInterface`), 보낼 줄 `StreamSendQueue`
     (64 KB 덩어리 · 높은/낮은 물금 · 상한 — 구현들이 같은 배압 규칙), 루프백 `LoopbackStreamNetwork`(결정적 · 무작위 조각 · 한 번에 넘길 상한, I/O 스레드 없음).
-    닫힘은 연결의 마지막 콜백이고 한 번이다. 저쪽 FIN 을 받으면 이쪽도 우아하게 닫는다(반쯤 열린 연결은 두지 않는다)
+    닫힘은 연결의 마지막 콜백이고 한 번이다. 저쪽 FIN 을 받으면 이쪽도 우아하게 닫는다(반쯤 열린 연결은 두지 않는다).
+    구현(`StreamTransportFactory`): Windows IOCP(완료 포트 하나를 I/O 스레드 N 이 나눠 기다림, 연결마다 읽기 · 쓰기 하나씩, AcceptEx 16 · ConnectEx,
+    연결 수명은 걸린 작업 수 — 마지막 작업이 돌아온 순간 닫힘 한 번, 시한은 0.1 초마다 한 스레드가 훑는다)
 - **Math/**: `VectorMath` · `MatrixMath` · `MathUtil` · `Frustum`
 - **Time/**: `MonotonicClock`(아래 "시간") · `GameTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE`)
 - **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.
