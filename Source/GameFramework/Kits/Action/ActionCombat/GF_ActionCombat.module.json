@@ -6,9 +6,6 @@
     "_listDependency": [
         {
             "_name": "GameFramework"
-        },
-        {
-            "_name": "GF_Overworld"
         }
     ],
     "_listPlatform": [
