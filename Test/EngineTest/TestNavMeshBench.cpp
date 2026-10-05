@@ -121,23 +121,24 @@ SW_TEST_CASE( NavMeshBenchTest, ThousandQueriesOnTheShooterArena )
     sw::Stopwatch stopwatch;
     for ( uint32 index = 0; index < Internal::kQueryCount; ++index )
         completeCount += pNavMesh->findPath( listStart[index], listEnd[index], extent, filter, path ) == sw::NavPathStatus::Complete ? 1u : 0u;
-    const int64 pathMicroseconds = stopwatch.getElapsedMicroseconds();
+    [[maybe_unused]] const int64 pathMicroseconds = stopwatch.getElapsedMicroseconds();
     stopwatch.restart();
     uint32            hitCount = 0;
     sw::NavRaycastHit hit;
     for ( uint32 index = 0; index < Internal::kQueryCount; ++index )
         hitCount += pNavMesh->raycast( listStart[index], listEnd[index], extent, filter, hit ) && hit._bHit ? 1u : 0u;
-    const int64 raycastMicroseconds = stopwatch.getElapsedMicroseconds();
+    [[maybe_unused]] const int64 raycastMicroseconds = stopwatch.getElapsedMicroseconds();
     stopwatch.restart();
     uint32          nearestCount = 0;
     sw::NavLocation location;
     for ( uint32 index = 0; index < Internal::kQueryCount; ++index )
         nearestCount += pNavMesh->findNearestPoint( listStart[index], extent, filter, location ) ? 1u : 0u;
-    const int64 nearestMicroseconds = stopwatch.getElapsedMicroseconds();
+    [[maybe_unused]] const int64 nearestMicroseconds = stopwatch.getElapsedMicroseconds();
     SW_LOG_INFO( "[Bench] NavMesh queries x%# on the Shooter3D arena: findPath %# us (%# complete), raycast %# us (%# hit), findNearestPoint %# us (%# found)",
                  Internal::kQueryCount, pathMicroseconds, completeCount, raycastMicroseconds, hitCount, nearestMicroseconds, nearestCount );
     SW_EXPECT_TRUE( completeCount > Internal::kQueryCount / 2 );
     SW_EXPECT_TRUE( hitCount > 0 );
+    SW_EXPECT_TRUE( nearestCount > Internal::kQueryCount / 2 );
 }
 
 /**

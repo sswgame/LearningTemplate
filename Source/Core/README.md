@@ -29,7 +29,11 @@
 - **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
   얹어, 싱글 게임은 그 키트를 링크하지 않는다.
   - `BitStream`(`BitWriter` · `BitReader` — 범위 정수 · 양자화 실수 · 가변 정수, 넘침 감지. 비트를 바이트 덩어리로 쓰고 읽고, 경계에 맞은 바이트는 `memcpy` —
-    선 위 배치는 비트 단위 시절과 같다), `SequenceBuffer`(16 비트 감김 시퀀스 고리), `NetTypes`(`NetAddress` ·
+    선 위 배치는 비트 단위 시절과 같다. 길이 붙인 덩어리 `writeBlob` / `readBlob( out, maxSize )` · `skipBlob` — 상한을 넘는 길이는 자르지 않고 넘침으로 거부한다.
+    `BitMath::computeVarUintBits` · `computeBlobBits` 는 쓸 비트를 정확히 센다), `NetSendBudget`(메시지 하나의 비트 예산 — `NetConnection::kMaxMessageSize` 로 잘리고,
+    종류 바이트 · 머리 · 목록 길이 · 끝 표시까지 센다. 넘는 메시지는 보내기가 통째로 버리고, 확인이 안 와 같은 크기를 또 보내는 라이브락이 된다), `NetPrioritizer`(관찰자
+    하나의 엔티티마다 누적 우선도 — 언리얼 `NetPriority` × 지난 시간 · 유니티 고스트 중요도 × 나이. 틱마다 `우선도 × 시간` 을 쌓고 보낸 것만 0 으로, 순서는 큰 것부터 ·
+    같으면 id 순이라 결정적이다. 예산이 늘 차도 낮은 우선도가 쌓여 차례를 얻는다 — 복제 키트 둘(`ReplicationServer` · `MmoReplicator`)이 같이 쓴다), `SequenceBuffer`(16 비트 감김 시퀀스 고리), `NetTypes`(`NetAddress` ·
     채널 · 연결 상태 · 메시지 첫 바이트 영역 `NetMessageRange` · 와이어 판 `NetWireVersion` · 프로토콜 id `NetProtocol`)
   - `NetConnection` — 연결 하나의 신뢰성: 패킷 시퀀스 · ack + 32 비트 묶음, 채널(신뢰 순서 · 순서만 — 메시지 첫 바이트(종류)마다 가장 새 것 하나, 다른 종류끼리는 서로 지우지 않는다 · 비신뢰), 재전송(RTT + 50 ms, 그리고 뒤 패킷 셋이 확인됐는데 확인이 없는 패킷은 바로 — 빠른 재전송), RTT · 손실률 · 대역폭(최근 1 초).
     받은 패킷은 몸을 다 읽은 뒤에야 시퀀스를 적는다 — 깨진 패킷을 확인하면 보낸 쪽이 그 안의 신뢰 메시지를 전달된 것으로 지운다.

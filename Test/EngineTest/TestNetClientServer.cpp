@@ -3,6 +3,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
+#include "Core/Network/NetConnection.h"
 #include "Core/Network/NetEmulation.h"
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetMessage.h"
@@ -539,4 +540,137 @@ SW_TEST_CASE( NetClientServerTest, KindMaskRoutesSharedRange )
     SW_EXPECT_TRUE( NetHandleResult::Handled == clientRouter.dispatch( NetMessageContext{}, message.data(), static_cast<int32>( message.size() ) ) );
     SW_EXPECT_EQUAL( 1, serverSide._count );
     SW_EXPECT_EQUAL( 1, clientSide._count );
+}
+
+/**
+ * @brief [NetClientServerTest] 사라진 엔티티가 많아도 스냅숏은 메시지 상한 안이고, 못 실은 사라짐은 재구성에 남아 다음 델타가 마저 싣는다.
+ *        상한(255 B)을 넘는 엔티티는 싣지 않아 두 쪽 기준이 같다
+ * @details 예산이 사라진 목록 · 종류 바이트를 세지 않고 id 를 3 바이트로 어림하던 때는 3 바이트 id 400 개가 사라지면 1200 B 를 넘었다(보내기에서 버려진다).
+ *          255 B 를 넘는 엔티티는 255 로 잘려 실리는데 서버는 자르지 않은 원본을 기준으로 기억해, 다음 델타부터 두 쪽 기준이 어긋났다.
+ */
+SW_TEST_CASE( NetClientServerTest, SnapshotStaysUnderMessageLimitWithManyRemovals )
+{
+    NetSnapshot baseline;
+    baseline._tick = 5;
+    for ( uint32 index = 0; index < 400; ++index )
+        baseline._listEntity.push_back( NetEntityState{ vector<uint8>( 4, 1 ), 1000000 + index, 1 } );
+    NetSnapshot current;
+    current._tick = 6;
+    current._listEntity.push_back( NetEntityState{ vector<uint8>( 300, 7 ), 3, 1 } ); // 상한을 넘는다
+    current._listEntity.push_back( NetEntityState{ vector<uint8>( 8, 9 ), 4, 1 } );
+    current.sortEntities();
+
+    // 예산을 상한보다 크게 줘도 메시지(종류 바이트 포함)는 상한 안이다.
+    NetSnapshot clientState = baseline;
+    NetSnapshot serverState = baseline;
+    int32       rounds      = 0;
+    for ( ; rounds < 10 && clientState._listEntity.size() != 1; ++rounds )
+    {
+        NetMessageWriter messageWriter;
+        BitWriter&       writer = messageWriter.begin( NetClientServerMessage::kSnapshot );
+        NetSnapshot      written;
+        current.writeDelta( writer, &serverState, 5000, written );
+        SW_ASSERT_TRUE( messageWriter.getByteCount() <= NetConnection::kMaxMessageSize );
+        BitReader reader( messageWriter.getBytes().data(), messageWriter.getByteCount() );
+        (void)reader.readBits( 8 );
+        NetSnapshot decoded;
+        SW_ASSERT_TRUE( NetSnapshot::readDelta( reader, &clientState, decoded ) );
+        // 서버가 기억하는 재구성과 클라이언트가 푼 것이 엔티티 하나까지 같다.
+        SW_ASSERT_EQUAL( written._listEntity.size(), decoded._listEntity.size() );
+        for ( size_t index = 0; index < written._listEntity.size(); ++index )
+        {
+            SW_EXPECT_EQUAL( written._listEntity[index]._entityId, decoded._listEntity[index]._entityId );
+            SW_EXPECT_TRUE( written._listEntity[index]._buffer == decoded._listEntity[index]._buffer );
+        }
+        clientState = decoded;
+        serverState = written;
+        ++current._tick;
+    }
+    SW_EXPECT_TRUE( rounds >= 2 ); // 한 메시지에 다 들어가지 않는다
+    SW_ASSERT_EQUAL( size_t{ 1 }, clientState._listEntity.size() );
+    SW_EXPECT_EQUAL( 4u, clientState._listEntity[0]._entityId );
+    SW_EXPECT_NULL( clientState.findEntity( 3 ) ); // 넘는 엔티티는 싣지 않았다
+}
+
+/**
+ * @brief [NetClientServerTest] 상한을 넘는 입력은 보내는 쪽이 거절하고, 서버는 상한을 넘는 길이를 잘라 읽지 않고 깨짐으로 본다.
+ *        겹쳐 싣기는 메시지 상한 · 서버의 개수 상한 안에서만 한다
+ * @details 클라이언트는 전체 길이를 쓰는데 서버가 길이를 255 로 잘라 읽어, 남은 바이트가 다음 항목의 길이로 읽혀 옛 틱에 쓰레기 입력이 들어갔다.
+ *          겹침 수가 서버 상한(32)을 넘거나 입력 × 겹침이 1024 B 를 넘으면 메시지가 통째로 거절 · 버려져 입력이 하나도 가지 않았다.
+ */
+SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
+{
+    ReplicationClient offline;
+    offline.initialize( nullptr, ReplicationClientSettings{} );
+    SW_EXPECT_FALSE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes + 1, 1 ) ) );
+    SW_EXPECT_TRUE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes, 1 ) ) );
+
+    // 손으로 지은 메시지 — 틱 5 는 300 B(상한 넘음), 틱 4 는 1 B.
+    ReplicationServer server;
+    server.initialize( nullptr, ReplicationServerSettings{}, nullptr );
+    BitWriter writer;
+    writer.writeBits( NetClientServerMessage::kInput, 8 );
+    writer.writeVarUint( 5 );
+    writer.writeVarUint( 0 );
+    writer.writeVarUint( 2 );
+    const vector<uint8> oversize( 300, 7 );
+    writer.writeVarUint( oversize.size() );
+    writer.writeBytes( oversize.data(), static_cast<int32>( oversize.size() ) );
+    const uint8 tinyInput = 9;
+    writer.writeVarUint( 1 );
+    writer.writeBytes( &tinyInput, 1 );
+    SW_EXPECT_TRUE( NetHandleResult::Malformed == server.handleMessage( 0, writer.getBytes() ) );
+    vector<uint8> input;
+    bool          bExact = false;
+    SW_EXPECT_FALSE( server.popInput( 0, 4, input, bExact ) ); // 쓰레기가 들어가지 않았다
+
+    // 겹침 64 · 입력 200 B — 보내는 쪽이 메시지 상한 안에서 개수를 줄여 실어 매 틱 입력이 간다.
+    NetHostSettings hostSettings;
+    hostSettings._sendInterval = 1.0 / 60.0;
+    LoopbackNetwork network( 43u );
+    NetHost         serverHost;
+    NetHost         clientHost;
+    serverHost.initialize( network.createEndpoint( 4000 ), hostSettings );
+    clientHost.initialize( network.createEndpoint( 5000 ), hostSettings );
+    SW_ASSERT_TRUE( serverHost.listen() );
+    SW_ASSERT_TRUE( clientHost.connect( NetAddress::makeLoopback( 4000 ) ) );
+    ReplicationServer         liveServer;
+    ReplicationClient         liveClient;
+    ReplicationClientSettings clientSettings;
+    clientSettings._inputRedundancy = 64;
+    liveServer.initialize( &serverHost, ReplicationServerSettings{}, nullptr );
+    liveClient.initialize( &clientHost, clientSettings );
+    NetMessageRouter router;
+    router.addHandler( &liveServer );
+    float64 time = 0.0;
+    for ( int32 frame = 0; frame < 30; ++frame )
+    {
+        time += 1.0 / 60.0;
+        serverHost.update( time );
+        clientHost.update( time );
+    }
+    SW_ASSERT_TRUE( clientHost.getConnectionState( 0 ) == NetConnectionState::Connected );
+    for ( uint32 tick = 0; tick < 40; ++tick )
+    {
+        SW_EXPECT_TRUE( liveClient.sendInput( tick, vector<uint8>( 200, static_cast<uint8>( tick ) ) ) );
+        time += 1.0 / 60.0;
+        clientHost.update( time );
+        serverHost.update( time );
+        (void)router.pump( serverHost );
+    }
+    for ( int32 frame = 0; frame < 30; ++frame ) // 보내기 간격이 틱과 어긋나 밀린 패킷까지
+    {
+        time += 1.0 / 60.0;
+        clientHost.update( time );
+        serverHost.update( time );
+        (void)router.pump( serverHost );
+    }
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( router.getMalformedCount() ) );
+    int32 exactCount = 0;
+    for ( uint32 tick = 0; tick < 39; ++tick )
+    {
+        if ( liveServer.popInput( 0, tick, input, bExact ) && bExact && input.size() == 200 && input[0] == static_cast<uint8>( tick ) )
+            ++exactCount;
+    }
+    SW_EXPECT_EQUAL( 39, exactCount );
 }

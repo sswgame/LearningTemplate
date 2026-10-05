@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/NetHost.h"
+#include "Core/Network/NetSendBudget.h"
 
 namespace sw
 {
@@ -175,26 +176,36 @@ namespace sw
             outListEntity.push_back( entity._entityId );
     }
 
-    void ReplicationClient::sendInput( uint32 tick, const vector<uint8>& listInput )
+    bool ReplicationClient::sendInput( uint32 tick, const vector<uint8>& listInput )
     {
+        if ( static_cast<int32>( listInput.size() ) > NetClientServerMessage::kMaxInputBytes )
+        {
+            SW_LOG_WARNING( "ReplicationClient: input for tick %# has %# bytes, more than the limit %# - not sent", tick, static_cast<int32>( listInput.size() ),
+                            NetClientServerMessage::kMaxInputBytes );
+            return false;
+        }
         if ( _listRecentInput.empty() == false && tick != _latestInputTick + 1u )
             _listRecentInput.clear(); // 틱이 끊겼다 — 겹쳐 실을 수 없다
         _listRecentInput.push_front( listInput );
-        while ( static_cast<int32>( _listRecentInput.size() ) > MathUtil::max( 1, _settings._inputRedundancy ) )
+        const int32 redundancy = MathUtil::clamp( _settings._inputRedundancy, 1, NetClientServerMessage::kMaxRedundantInputCount );
+        while ( static_cast<int32>( _listRecentInput.size() ) > redundancy )
             _listRecentInput.pop_back();
         _latestInputTick = tick;
         if ( _pHost == nullptr )
-            return;
+            return true;
         BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kInput );
         writer.writeVarUint( tick );
         writer.writeVarUint( static_cast<uint64>( MathUtil::max( 0.0f, getRenderTick() ) * 256.0f ) );
-        writer.writeVarUint( _listRecentInput.size() );
-        for ( const vector<uint8>& input : _listRecentInput )
-        {
-            writer.writeVarUint( input.size() );
-            if ( input.empty() == false )
-                writer.writeBytes( input.data(), static_cast<int32>( input.size() ) );
-        }
+        // 새 것부터, 메시지 상한 안에 들어가는 만큼만 겹쳐 싣는다(이번 틱의 입력은 늘 들어간다 — 상한 255 바이트).
+        NetSendBudget budget( NetConnection::kMaxMessageSize );
+        budget.reserveBits( writer.getBitCount() + BitMath::computeVarUintBits( _listRecentInput.size() ) );
+        size_t count = 0;
+        while ( count < _listRecentInput.size() && budget.tryReserveBits( BitMath::computeBlobBits( static_cast<int32>( _listRecentInput[count].size() ) ) ) )
+            ++count;
+        writer.writeVarUint( count );
+        for ( size_t index = 0; index < count; ++index )
+            writer.writeBlob( _listRecentInput[index].data(), static_cast<int32>( _listRecentInput[index].size() ) );
         (void)_pHost->sendMessage( 0, NetChannelType::Unreliable, writer.getBytes() );
+        return true;
     }
 } // namespace sw

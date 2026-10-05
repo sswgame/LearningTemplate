@@ -9,36 +9,41 @@
         "-dx12"
       ],
       "frames": 600,
-      "recorded": "2026-10-04",
+      "recorded": "2026-10-05",
       "runs": 3,
       "scopes": {
+        "GPU.Frame": {
+          "avg_us": 468,
+          "p50_us": 262,
+          "p99_us": 2097
+        },
         "GT.Frame": {
-          "avg_us": 1142,
-          "p50_us": 851,
-          "p99_us": 4194
+          "avg_us": 813,
+          "p50_us": 491,
+          "p99_us": 4718
         },
         "GT.Game.update": {
           "avg_us": 2,
-          "p50_us": 2,
-          "p99_us": 4
+          "p50_us": 1,
+          "p99_us": 5
         },
         "GT.Scene.tick": {
-          "avg_us": 9,
-          "p50_us": 7,
-          "p99_us": 45
+          "avg_us": 11,
+          "p50_us": 9,
+          "p99_us": 26
         },
         "RT.ExecutePacket": {
-          "avg_us": 351,
-          "p50_us": 327,
-          "p99_us": 458
+          "avg_us": 330,
+          "p50_us": 294,
+          "p99_us": 589
         },
         "RT.Frame": {
-          "avg_us": 1166,
-          "p50_us": 851,
-          "p99_us": 4194
+          "avg_us": 836,
+          "p50_us": 524,
+          "p99_us": 4718
         },
         "Wall.Frame": {
-          "avg_us": 1176
+          "avg_us": 843
         }
       }
     }

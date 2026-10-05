@@ -164,13 +164,31 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       그때 정책(`IReplicationPolicy` · `IInterestPolicy`)은 여러 스레드에서 동시에 불리므로 읽기만 한다.
       - `NetClientServer`: 권위 서버(슈터 · 배틀로얄 · 액션 · 기체 대전 · 비대칭) — 스냅샷 델타(확인된 기준 대비 · 예산 · 우선도, `IReplicationPolicy` 관련성),
         보간(`ReplicationClient` — 지연만큼 과거 · 시계 맞추기), 입력 겹쳐 보내기, 클라이언트 예측 되맞추기(`ClientPrediction`), 랙 보정 되감기(`LagCompensationHistory`).
+        우선도는 클라이언트마다 `NetPrioritizer` 로 스냅샷마다 쌓고, 실었거나 클라이언트가 이미 최신인 엔티티만 0 으로 돌린다 — 예산이 늘 차도 낮은 우선도가 굶지 않는다
+        (우선도 10 넷이 예산을 채우면 우선도 1 은 11 틱쯤에 한 번). 스냅샷 예산은 메시지 전체(종류 바이트 · 머리 · 사라진 목록 · 끝 표시)를 `NetSendBudget` 으로 정확히 세고 1024 B 로 잘린다 — 못 실은 사라짐 · 바뀜은 재구성에
+        기준 값으로 남아 다음 델타가 다시 고른다. 엔티티 상태는 `NetSnapshot::kMaxEntityBytes`(255 B)까지 — 넘으면 싣지 않는다(`setEntity` 가 처음 한 번 경고).
+        입력은 틱마다 `NetClientServerMessage::kMaxInputBytes`(255 B)까지(넘으면 `sendInput` 이 false), 겹침은 `kMaxRedundantInputCount`(32)와 메시지 상한 안에서 —
+        두 상수를 클라이언트 · 서버가 같이 쓰고, 서버는 넘는 길이를 깨짐으로 본다. 시험: `NetClientServerTest` · `NetSimReplicationTest`(하니스 위 — 대량 사라짐 · 예산 포화에서 굶지 않음).
       - `NetLockstep`: 결정적 — 락스텝(`LockstepSession` — 입력 지연 · 체크섬 비동기 감지, RTS), 롤백(`RollbackSession` · `IRollbackGame` — 예측 · 되감기 · 재시뮬레이션, 격투).
+        롤백 입력은 GGPO 식이다 — 메시지마다 "플레이어마다 빈틈없이 받은 마지막 프레임"(확인)을 싣고, 보내는 쪽은 모두가 확인한 다음 프레임부터 싣는다
+        (연속 손실이 길어도 빈틈이 남지 않는다). 받는 창은 [지금 − 64, 지금 + 64). 앞선 쪽은 (내 이점 − 상대 이점) / 2 가 `_maxFrameAdvantage` 를 넘으면
+        한 프레임 쉰다(시간 동기). 락스텝은 서버가 클라이언트 연결이 닫히면(`onConnectionClosed`) "플레이어 p 는 틱 T 부터 빈 입력"(`kLeave`)을 신뢰 순서로
+        알린다 — T 는 서버가 받은 p 의 마지막 입력 다음 틱이라 모두가 같은 틱에 p 를 뺀다(`getLeaveTick`). 입력은 플레이어마다 다음 틱만 받고(먼 틱 · 겹친 틱은
+        버린다) 내 입력은 지금 + `kMaxInputLead`(127)까지만 예약한다(`submitLocalInput` 이 false). 체크섬은 `kChecksumWindow`(256 틱) 넘게 지나면 지운다.
+        시험: `NetLockstepTest`(하니스 위 30 틱 연속 손실 · 늦게 시작한 상대 · 넷 중 둘이 떠남 · 한쪽만 체크섬).
       - `NetTurnRelay`: 턴제 중계(카드 · 보드 · SRPG) — 방 · 자리 · 표, `ITurnPolicy`(차례 · 허락 · 방향), 행동 기록 방송, 재접속 시 놓친 행동.
-      - `NetMmo`: MMO — 관심 영역 격자(`InterestGrid`, 들어옴 · 나감 히스테리시스), 우선도 누적 대역폭 예산, `IInterestPolicy`(늘 보이기 · 우선도).
+        서버는 자리마다 보낸 행동 수(`TurnSeat::_sentActionCount`)만 들고 방 기록에서 이어 보낸다 — 신뢰 창이 차면 멈췄다가 `TurnRelayServer::update`(매 틱)가
+        이어 가므로 놓친 행동이 창(255)보다 많아도 빠지지 않고, 다른 알림도 창이 차면 연결마다 줄을 선다(64 를 넘게 쌓이면 그 연결을 끊는다). 자리 표는
+        운영체제 난수 비밀에서 섞는다. 표가 맞아도 그 자리 연결이 살아 있으면 `SeatInUse`, 한 연결은 자리 하나(다른 방은 `AlreadySeated`).
+        시험: `NetTurnRelayTest`(하니스 위 300 행동 재동기 · 침입자 · 두 번 들어오기 · 서버마다 다른 표).
+      - `NetMmo`: MMO — 관심 영역 격자(`InterestGrid`, 들어옴 · 나감 히스테리시스), 우선도 누적(`NetPrioritizer`) 대역폭 예산(`NetSendBudget`), `IInterestPolicy`(늘 보이기 · 우선도).
+        나감은 메시지 상한 안에서 여러 메시지로 쪼개고 보낸 것만 보이는 목록에서 뺀다(신뢰 창이 차면 다음 틱에). 들어옴 · 갱신에 서버 틱(`update` 마다 하나)을 싣고
+        클라이언트는 엔티티마다 마지막으로 적용한 틱보다 옛 갱신을 버린다(`getStaleUpdateCount`). 상태는 `NetMmoMessage::kMaxStateBytes`(512 B)까지 — 넘는 `setEntity` 는
+        서버가 받지 않는다. 시험: `NetMmoTest`(하니스 위 — 순간 이동 대량 나감 · 순서 뒤바뀐 갱신 · 상한 넘는 상태).
       - `NetDestruction`: 파괴 네트워킹(`DestructionReplicationServer` · `Client`, 영역 `kDestruction` 0x50). 권한 쪽 피해 사건을 번호(= 서버 상태의
         사건 수)를 붙여 신뢰 순서로 보내고 받는 쪽은 번호 순으로만 적용한다(앞 번호는 버리고 뒤 번호는 기다린다). 덩어리(표의 `keepCollisionVolume` 이상)는
         서버가 질량 중심 · 회전을 `<Network poseRate>` 로 비신뢰로 보내고(멈추면 비트 그대로 신뢰로 확정 + 비신뢰로 몇 번 더), 받는 쪽은 서버 틱 추정 −
-        보간 지연을 그려 키네마틱으로 몬다. 파편은 각자 시뮬레이션하는 꾸밈(Debris 레이어 — 캐릭터와 안 부딪힌다). 늦은 참가 · 해시 어긋남은 상태
+        보간 지연(설정값과 자세 간격 × 2 중 큰 것 — 자세 하나를 잃어도 사이를 잇는다)을 그려 키네마틱으로 몬다. 파편은 각자 시뮬레이션하는 꾸밈(Debris 레이어 — 캐릭터와 안 부딪힌다). 늦은 참가 · 해시 어긋남은 상태
         스냅숏(조각으로 나눠 신뢰)으로 맞춘다. 파괴를 쓰지 않는 게임이 링크하지 않게, 권위 방식(복제 서버 · 리슨 · MMO)과 상관없이 `NetHost` 위에 얹게 키트를 따로 둔다.
         롤백(상태 저장 · 되돌리기)은 없다. 시험: `NetSimDestructionTest` · `NetSimDestructionMatrixTest`(호스트 스위트 — Debug 40 초).
       - `NetSimulation`: 한 프로세스 가상 서버(`NetSimHarness` — 언리얼 PIE "Play As Client, Number of Players N" + Network Emulation, 유니티 Multiplayer

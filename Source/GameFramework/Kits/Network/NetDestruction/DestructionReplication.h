@@ -58,7 +58,7 @@ namespace sw
     {
         float32 _tickInterval{ 1.0f / 60.0f }; ///< 서버 틱 간격(자세 시각)
         float32 _hashInterval{ 1.0f };         ///< 서버가 상태 해시를 보내는 간격(초)
-        float32 _interpolationDelay{ 0.1f };   ///< 클라이언트 — 덩어리 자세를 이만큼 과거로 그린다(자세 둘 사이)
+        float32 _interpolationDelay{ 0.1f };   ///< 클라이언트 — 덩어리 자세를 그리는 과거의 최소값. 실제는 이것과 (자세 간격 × 2) 중 큰 것이다
         int32   _snapshotPartBytes{ 900 };     ///< 스냅숏 조각 하나의 바이트(메시지 한도 1024 안)
         float32 _positionResolution{ 0.001f }; ///< 움직이는 덩어리 자리 양자화(미터)
         float32 _positionRange{ 1024.0f };     ///< 자리 범위(±미터)
@@ -266,6 +266,7 @@ namespace sw
         NetHost*                       _pHost;
         GameObjectManager*             _pManager;
         float32                        _renderTick;
+        float32                        _posePeriodMax;      ///< 등록한 오브젝트의 가장 긴 자세 간격(초) — 렌더 지연이 그 두 배를 넘게
         float32                        _serverTickEstimate; ///< 받은 서버 틱 중 가장 늦은 것 + 그 뒤 흐른 틱(받는 순간의 서버 시각 추정)
         uint8                          _bHasServerTick;
     };

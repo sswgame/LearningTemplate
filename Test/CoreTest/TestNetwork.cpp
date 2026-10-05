@@ -5,6 +5,8 @@
 #include "Core/Network/NetEmulation.h"
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetMessage.h"
+#include "Core/Network/NetPrioritizer.h"
+#include "Core/Network/NetSendBudget.h"
 #include "Core/Network/NetTransport.h"
 #include "Core/Network/SequenceBuffer.h"
 #include "Core/Network/UdpNetTransport.h"
@@ -186,6 +188,131 @@ SW_TEST_CASE( NetworkTest, SkippedBytesLeaveTheFollowingFieldsInPlace )
     SW_EXPECT_FALSE( shortReader.skipBytes( 3 ) );
     SW_EXPECT_EQUAL( position, shortReader.getBitPosition() );
     SW_EXPECT_TRUE( shortReader.hasOverflowed() );
+}
+
+/**
+ * @brief [NetworkTest] 길이 붙인 덩어리는 상한 안에서 그대로 오가고, 상한을 넘는 길이 · 비트로 바꾸면 int32 를 넘는 길이는 읽지 않는다
+ * @details 서버가 길이를 255 로 잘라 읽으면 남은 바이트가 다음 입력의 길이로 읽혀 옛 틱들에 쓰레기가 들어갔다. `byteCount * 8` 이 넘쳐 작은 수가 되면
+ *          넘기기가 "성공" 하고 자리가 움직이지 않았다.
+ */
+SW_TEST_CASE( NetworkTest, BlobRoundTripsAndRejectsOversize )
+{
+    vector<uint8> smallBlob( 5, uint8{ 0x5A } );
+    vector<uint8> largeBlob( 300, uint8{ 0xC3 } );
+    BitWriter     writer;
+    writer.writeBool( true ); // 바이트 경계가 아닌 자리에서도
+    writer.writeBlob( smallBlob.data(), static_cast<int32>( smallBlob.size() ) );
+    writer.writeBlob( largeBlob.data(), static_cast<int32>( largeBlob.size() ) );
+    writer.writeBlob( nullptr, 0 );
+    writer.writeVarUint( 4242 );
+    SW_EXPECT_EQUAL( 1 + BitMath::computeBlobBits( 5 ) + BitMath::computeBlobBits( 300 ) + BitMath::computeBlobBits( 0 ) + BitMath::computeVarUintBits( 4242 ),
+                     writer.getBitCount() );
+
+    BitReader     reader( writer.getBytes().data(), writer.getByteCount() );
+    vector<uint8> blob;
+    SW_EXPECT_TRUE( reader.readBool() );
+    SW_ASSERT_TRUE( reader.readBlob( blob, 255 ) );
+    SW_EXPECT_TRUE( blob == smallBlob );
+    SW_ASSERT_TRUE( reader.readBlob( blob, 512 ) );
+    SW_EXPECT_TRUE( blob == largeBlob );
+    SW_ASSERT_TRUE( reader.skipBlob( 0 ) );
+    SW_EXPECT_EQUAL( 4242, static_cast<int32>( reader.readVarUint() ) );
+    SW_EXPECT_FALSE( reader.hasOverflowed() );
+
+    // 상한을 넘는 길이는 자르지 않고 거부한다 — 넘침으로 남아 뒤를 읽지 않는다.
+    BitReader oversize( writer.getBytes().data(), writer.getByteCount() );
+    (void)oversize.readBool();
+    SW_ASSERT_TRUE( oversize.readBlob( blob, 255 ) );
+    SW_EXPECT_FALSE( oversize.readBlob( blob, 255 ) );
+    SW_EXPECT_TRUE( oversize.hasOverflowed() );
+    SW_EXPECT_TRUE( blob.empty() );
+
+    // 비트로 바꾸면 int32 를 넘는 길이 — 남은 바이트보다 많으니 거부하고 자리를 지킨다.
+    BitReader   huge( writer.getBytes().data(), writer.getByteCount() );
+    const int32 position = huge.getBitPosition();
+    SW_EXPECT_FALSE( huge.skipBytes( 0x20000000 ) );
+    SW_EXPECT_FALSE( huge.skipBytes( 0x10000001 ) );
+    SW_EXPECT_EQUAL( position, huge.getBitPosition() );
+
+    // 가변 정수 비트 수는 실제로 쓴 비트와 같다(경계마다).
+    const uint64 arrValue[] = { 0u, 1u, 127u, 128u, 16383u, 16384u, 0x1FFFFFu, 0x200000u, 0xFFFFFFFFu, 0xFFFFFFFFFFFFFFFFull };
+    for ( const uint64 value : arrValue )
+    {
+        BitWriter varWriter;
+        varWriter.writeVarUint( value );
+        SW_EXPECT_EQUAL( varWriter.getBitCount(), BitMath::computeVarUintBits( value ) );
+    }
+}
+
+/**
+ * @brief [NetworkTest] 보내기 예산은 메시지 상한으로 잘리고, 안 들어가는 항목은 세지 않아 작은 다음 항목이 들어갈 수 있다
+ */
+SW_TEST_CASE( NetworkTest, SendBudgetClampsToMessageLimit )
+{
+    NetSendBudget budget( 4000 );
+    SW_EXPECT_EQUAL( NetConnection::kMaxMessageSize * 8, budget.getMaxBits() );
+    budget.reserveBits( 8 );
+    SW_EXPECT_FALSE( budget.tryReserveBits( NetConnection::kMaxMessageSize * 8 ) );
+    SW_EXPECT_EQUAL( 8, budget.getUsedBits() );
+    SW_EXPECT_TRUE( budget.tryReserveBits( NetConnection::kMaxMessageSize * 8 - 8 ) );
+    SW_EXPECT_EQUAL( 0, budget.getRemainingBits() );
+    SW_EXPECT_FALSE( budget.tryReserveBits( 1 ) );
+    SW_EXPECT_FALSE( budget.hasExceeded() );
+    budget.reserveBits( 1 );
+    SW_EXPECT_TRUE( budget.hasExceeded() );
+    SW_EXPECT_EQUAL( 0, NetSendBudget( -5 ).getMaxBits() );
+}
+
+/**
+ * @brief [NetworkTest] 누적 우선도는 큰 것부터 · 같으면 id 순으로 늘 같은 순서이고, 보낸 것만 0 으로 돌아가 예산이 늘 차도 낮은 우선도가 차례를 얻는다
+ */
+SW_TEST_CASE( NetworkTest, PrioritizerOrderIsDeterministic )
+{
+    NetPrioritizer prioritizer;
+    vector<uint32> listOrder;
+    prioritizer.beginAccumulate();
+    prioritizer.accumulate( 30, 2.0f, 0.5f );
+    prioritizer.accumulate( 10, 1.0f, 1.0f );
+    prioritizer.accumulate( 20, 4.0f, 1.0f );
+    prioritizer.accumulate( 5, 1.0f, 1.0f );
+    prioritizer.removeUntouched();
+    prioritizer.collectOrder( listOrder );
+    SW_ASSERT_EQUAL( size_t{ 4 }, listOrder.size() );
+    SW_EXPECT_EQUAL( 20u, listOrder[0] );
+    SW_EXPECT_EQUAL( 5u, listOrder[1] ); // 1.0 셋 — id 순
+    SW_EXPECT_EQUAL( 10u, listOrder[2] );
+    SW_EXPECT_EQUAL( 30u, listOrder[3] );
+
+    // 이번 틱에 쌓이지 않은 것(더는 관련 없음)은 잊는다.
+    prioritizer.beginAccumulate();
+    prioritizer.accumulate( 20, 4.0f, 1.0f );
+    prioritizer.accumulate( 10, 1.0f, 1.0f );
+    prioritizer.removeUntouched();
+    SW_EXPECT_EQUAL( 2, prioritizer.getCount() );
+    SW_EXPECT_NEAR_EQUAL( 8.0f, prioritizer.getAccumulated( 20 ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, prioritizer.getAccumulated( 5 ), 1.0e-6f );
+
+    // 한 번에 둘만 보낼 수 있고 우선도 10 둘이 늘 있다 — 우선도 1 은 쌓여서 열 번째쯤 차례가 온다.
+    prioritizer.clear();
+    int32 firstLowRound = -1;
+    for ( int32 round = 0; round < 30 && firstLowRound < 0; ++round )
+    {
+        prioritizer.beginAccumulate();
+        prioritizer.accumulate( 1, 10.0f, 1.0f );
+        prioritizer.accumulate( 2, 10.0f, 1.0f );
+        prioritizer.accumulate( 3, 1.0f, 1.0f );
+        prioritizer.removeUntouched();
+        prioritizer.collectOrder( listOrder );
+        for ( size_t index = 0; index < 2; ++index )
+        {
+            prioritizer.markSent( listOrder[index] );
+            if ( listOrder[index] == 3 )
+                firstLowRound = round;
+        }
+    }
+    SW_EXPECT_TRUE( 8 <= firstLowRound && firstLowRound <= 12 );
+    prioritizer.remove( 3 );
+    SW_EXPECT_EQUAL( 2, prioritizer.getCount() );
 }
 
 /**
