@@ -38,13 +38,14 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	float2 texel = g_OutlineParams.yz;
+	const float2 sourceTexel = g_SourceTexel.xy;   // 원본을 비켜 읽는 블룸 — 원본(반해상도일 수 있다)의 텍셀
+	const float2 depthTexel  = g_OutlineParams.yz; // 깊이를 비켜 읽는 외곽선 — 깊이는 나누지 않으므로 프레임 텍셀
 	// 화면과 1:1 이라 UV 가 텍셀 중심에 정확히 떨어진다 — 섞을 것이 없으니 점 샘플러로 읽는다.
 	float3 source = swSampleSourcePoint(input.uv).rgb;
 	float3 color  = source;
 
 #if defined( SW_POST_BLOOM )
-	color = swApplyBloom(input.uv, texel, color);
+	color = swApplyBloom(input.uv, sourceTexel, color);
 	// **여기서 자르는 이유.** 패스를 나눠 두었을 때는 블룸 결과가 `R8G8B8A8_UNORM` 중간 타깃에
 	// 쓰이면서 [0,1] 로 잘렸다. 합치면 그 자름이 사라져 밝은 부분이 달라 보인다 — 합치기는
 	// **성능 변경이지 룩 변경이 아니어야** 하므로 같은 자리에서 똑같이 자른다.
@@ -52,7 +53,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 	color = saturate(color);
 #endif
 #if defined( SW_POST_OUTLINE )
-	color = swApplyOutline(input.uv, texel, color);
+	color = swApplyOutline(input.uv, depthTexel, color);
 #endif
 #if defined( SW_POST_TONEMAP )
 	color = color / (color + 1.0f);

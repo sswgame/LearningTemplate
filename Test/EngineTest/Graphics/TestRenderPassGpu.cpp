@@ -5302,6 +5302,129 @@ SW_TEST_CASE( RenderPassGpuTest, HalfResolutionAttachmentCoversItsWholeTarget )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 반 크기 원본을 읽는 블룸은 그 원본의 텍셀로 비켜 읽는다 — 4 백엔드
+ * @details `forwardpipelinestaged.xml` 의 SceneColor · SceneDepth · BloomColor 를 나눗수 2 로 바꾸면 PostBloom 은 반 크기 원본을 읽어 반 크기에 쓴다. 블룸의 블러는
+ *          원본 텍셀 반 칸을 비켜 두 번 읽으므로 출력 텍셀마다 이웃 넷의 평균이 된다. 프레임 텍셀로 비키면 반의 반 칸이라 자기 텍셀 쪽으로 기운다.
+ *          CPU 로 두 비킴(원본 텍셀 0.5 칸 · 0.25 칸, 바이리니어)을 흉내 내 GPU 결과가 어느 쪽에 가까운지 본다(비킴은 좌우 · 위아래 대칭이라 행 방향이 상관없다).
+ */
+SW_TEST_CASE( RenderPassGpuTest, HalfResolutionBloomBlursByTheSourceTexel )
+{
+    sw::string pipelineText;
+    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
+    // 깊이도 같이 나눈다 — 한 패스의 출력(색 · 깊이)은 같은 크기여야 한다(파이프라인 검증).
+    for ( const utf8* pName : { "SceneColor", "SceneDepth", "BloomColor" } )
+    {
+        const sw::string declaration = sw::string( "<RenderPassAttachment _name=\"" ) + pName + "\"";
+        SW_ASSERT_TRUE( pipelineText.find( declaration ) != sw::string::npos );
+        pipelineText = sw::StringUtil::replace( pipelineText, declaration, declaration + " _resolutionDivisor=\"2\"" );
+    }
+    const sw::string halfPath = test::makeTempPath( "halfsourcebloomforwardpipeline.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( halfPath, pipelineText ) );
+
+    // FrameRendererConstants.cpp 의 kDefaultBloomParams(문턱 · 세기 · 무릎)와 같은 값.
+    constexpr float32 kBloomThreshold = 0.55f;
+    constexpr float32 kBloomIntensity = 0.65f;
+    constexpr float32 kBloomKnee      = 0.25f;
+    // 바이리니어(클램프) 한 번 — 텍셀 좌표의 0.5 가 텍셀 중심이다.
+    auto sampleBilinear = []( const test::RHITestImage& image, float32 u, float32 v, float32( &outRgb )[3] )
+    {
+        const float32     texelX          = u * static_cast<float32>( image.getWidth() ) - 0.5f;
+        const float32     texelY          = v * static_cast<float32>( image.getHeight() ) - 0.5f;
+        const float32     floorX          = sw::MathUtil::floor( texelX );
+        const float32     floorY          = sw::MathUtil::floor( texelY );
+        const float32     fracX           = texelX - floorX;
+        const float32     fracY           = texelY - floorY;
+        const int32       maxX            = static_cast<int32>( image.getWidth() ) - 1;
+        const int32       maxY            = static_cast<int32>( image.getHeight() ) - 1;
+        const int32       x0              = sw::MathUtil::clamp( static_cast<int32>( floorX ), 0, maxX );
+        const int32       y0              = sw::MathUtil::clamp( static_cast<int32>( floorY ), 0, maxY );
+        const int32       x1              = sw::MathUtil::clamp( static_cast<int32>( floorX ) + 1, 0, maxX );
+        const int32       y1              = sw::MathUtil::clamp( static_cast<int32>( floorY ) + 1, 0, maxY );
+        const test::Rgba8 p00             = image.getPixel( static_cast<uint32>( x0 ), static_cast<uint32>( y0 ) );
+        const test::Rgba8 p10             = image.getPixel( static_cast<uint32>( x1 ), static_cast<uint32>( y0 ) );
+        const test::Rgba8 p01             = image.getPixel( static_cast<uint32>( x0 ), static_cast<uint32>( y1 ) );
+        const test::Rgba8 p11             = image.getPixel( static_cast<uint32>( x1 ), static_cast<uint32>( y1 ) );
+        const uint8       arrChannel00[3] = { p00._r, p00._g, p00._b };
+        const uint8       arrChannel10[3] = { p10._r, p10._g, p10._b };
+        const uint8       arrChannel01[3] = { p01._r, p01._g, p01._b };
+        const uint8       arrChannel11[3] = { p11._r, p11._g, p11._b };
+        for ( uint32 channel = 0; channel < 3; ++channel )
+        {
+            const float32 top    = static_cast<float32>( arrChannel00[channel] ) * ( 1.0f - fracX ) + static_cast<float32>( arrChannel10[channel] ) * fracX;
+            const float32 bottom = static_cast<float32>( arrChannel01[channel] ) * ( 1.0f - fracX ) + static_cast<float32>( arrChannel11[channel] ) * fracX;
+            outRgb[channel]      = ( top * ( 1.0f - fracY ) + bottom * fracY ) / 255.0f;
+        }
+    };
+    // 블룸 출력 하나(postbloom.hlsli swApplyBloom, AO 없음)를 원본 텍셀 @p shiftInTexels 칸 비킴으로 흉내 내 GPU 값과의 채널 절대차 합을 냅니다.
+    auto computeBloomError = [&sampleBilinear]( const test::RHITestImage& source, const test::RHITestImage& bloom, float32 shiftInTexels ) -> float64
+    {
+        float64       errorSum = 0.0;
+        const float32 shiftU   = shiftInTexels / static_cast<float32>( source.getWidth() );
+        const float32 shiftV   = shiftInTexels / static_cast<float32>( source.getHeight() );
+        for ( uint32 y = 0; y < bloom.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < bloom.getWidth(); ++x )
+            {
+                const float32 u = ( static_cast<float32>( x ) + 0.5f ) / static_cast<float32>( bloom.getWidth() );
+                const float32 v = ( static_cast<float32>( y ) + 0.5f ) / static_cast<float32>( bloom.getHeight() );
+                float32       arrBefore[3]{};
+                float32       arrAfter[3]{};
+                sampleBilinear( source, u - shiftU, v - shiftV, arrBefore );
+                sampleBilinear( source, u + shiftU, v + shiftV, arrAfter );
+                const float32     arrBlur[3]  = { ( arrBefore[0] + arrAfter[0] ) * 0.5f, ( arrBefore[1] + arrAfter[1] ) * 0.5f, ( arrBefore[2] + arrAfter[2] ) * 0.5f };
+                const float32     peak        = sw::MathUtil::max( sw::MathUtil::max( arrBlur[0], arrBlur[1] ), arrBlur[2] );
+                const float32     soft        = sw::MathUtil::clamp( ( peak - kBloomThreshold + kBloomKnee ) / kBloomKnee, 0.0f, 1.0f );
+                const test::Rgba8 point       = source.getPixel( sw::MathUtil::min( x, source.getWidth() - 1 ), sw::MathUtil::min( y, source.getHeight() - 1 ) );
+                const test::Rgba8 gpu         = bloom.getPixel( x, y );
+                const float32     arrPoint[3] = { static_cast<float32>( point._r ) / 255.0f, static_cast<float32>( point._g ) / 255.0f, static_cast<float32>( point._b ) / 255.0f };
+                const float32     arrGpu[3]   = { static_cast<float32>( gpu._r ) / 255.0f, static_cast<float32>( gpu._g ) / 255.0f, static_cast<float32>( gpu._b ) / 255.0f };
+                for ( uint32 channel = 0; channel < 3; ++channel )
+                {
+                    const float32 expected = sw::MathUtil::clamp( arrPoint[channel] + arrBlur[channel] * soft * soft * kBloomIntensity, 0.0f, 1.0f );
+                    errorSum += static_cast<float64>( sw::MathUtil::abs( expected - arrGpu[channel] ) );
+                }
+            }
+        }
+        return errorSum;
+    };
+
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string   label = sw::string( device->getBackendName() ) + ": ";
+        LitCubeScene       stage;
+        bool               bOk = stage.populate();
+        test::RHITestImage sceneColor;
+        test::RHITestImage bloomColor;
+        if ( bOk )
+        {
+            sw::FrameRenderer renderer;
+            bOk = renderer.initialize( device.get(), halfPath ) && renderer.isReady();
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "반해상도 원본 · 블룸 파이프라인을 만들지 못했다" ).c_str() );
+            for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+                bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+            bOk = bOk && sceneColor.readTransient( renderer, "SceneColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+            renderer.shutdown();
+        }
+        if ( bOk == false )
+            continue;
+        ++comparedCount;
+        SW_EXPECT_EQUAL( sceneColor.getWidth(), bloomColor.getWidth() );
+        SW_EXPECT_EQUAL( sceneColor.getHeight(), bloomColor.getHeight() );
+        const float64 sourceTexelError = computeBloomError( sceneColor, bloomColor, 0.5f );
+        const float64 frameTexelError  = computeBloomError( sceneColor, bloomColor, 0.25f );
+        SW_LOG_INFO( "%#half-res bloom error vs CPU: source texel shift %#, frame texel shift %# (%#x%#)", label, sourceTexelError, frameTexelError,
+                     bloomColor.getWidth(), bloomColor.getHeight() );
+        SW_EXPECT_TRUE_MSG( sourceTexelError < frameTexelError,
+                            ( label + "반 크기 원본의 블룸이 원본 텍셀이 아니라 프레임 텍셀로 비켜 읽는다" ).c_str() );
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the half-resolution source bloom pipeline" );
+}
+
+/**
  * @brief [RenderPassGpuTest] 캡처 카메라 둘이 각자의 렌더 텍스처에 각자 본 것을 그린다(4 백엔드)
  * @details 붉은 큐브만 보는 카메라 → `rendertarget/test_red`, 푸른 큐브만 보는 카메라 → `rendertarget/test_blue`. 두 텍스처를 되읽어 한쪽은 붉고
  *          한쪽은 푸른지 본다. 뷰가 컬링 칸 · 상수버퍼 · 풀을 나눠 쓰면 둘이 같은 그림이 되거나(뒤 뷰의 절두체로 거른다) 비어 있다.

@@ -710,6 +710,13 @@ namespace sw
         if ( attachment._texture != 0 && ctx._pCmd != nullptr )
             ctx._pCmd->prepareTextureForShaderRead( attachment._texture );
         ctx._resourceRegistry.registerTexture( canonicalName, attachment._texture, attachment._srv );
+        // 원본을 비켜 읽는 효과(블룸)는 그 원본의 텍셀로 비켜야 한다 — 반해상도 첨부면 프레임 텍셀의 두 배다. ctx 는 패스마다 시드의 사본이라 다음 패스로 새지 않는다.
+        if ( canonicalName == attachmentNames()._sourceColor && attachment._width > 0 && attachment._height > 0 )
+        {
+            const float32 width  = static_cast<float32>( attachment._width );
+            const float32 height = static_cast<float32>( attachment._height );
+            ctx._passValues.setFloat4( passConstantNames()._sourceTexel, float4{ 1.0f / width, 1.0f / height, width, height } );
+        }
     }
 
     void FrameRenderer::commitBindlessTextureBindings( FramePassContext& ctx )

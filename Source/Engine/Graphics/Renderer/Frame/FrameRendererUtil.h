@@ -448,6 +448,7 @@ namespace sw
         hashed_string _bloomParams{ "g_BloomParams" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };
+        hashed_string _sourceTexel{ "g_SourceTexel" };
         hashed_string _flags{ "g_Flags" };
         /// @brief 인스턴스 버퍼 원소 수입니다. 셰이더 swLoadInstance 가 범위를 막습니다.
         hashed_string _swInstanceCount{ "g_SwInstanceCount" };

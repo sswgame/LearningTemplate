@@ -41,6 +41,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	float4   g_BloomParams;
 	float4   g_OutlineColor;
 	float4   g_OutlineParams;
+	float4   g_SourceTexel;   // xy = 1 / 원본(SourceColor 역할 입력) 크기, zw = 그 크기. 원본이 없는 패스는 프레임 크기 — 반해상도 첨부를 읽는 패스가 비켜 읽는 거리
 	uint     g_ShadowMapIndex;
 	uint     g_GBufferAlbedoIndex;
 	uint     g_GBufferNormalIndex;

@@ -21,7 +21,8 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 float4 PSMain(PSInput input) : SV_TARGET
 {
 	// 본문은 postbloom.hlsli 하나다 — 합친 체인(postchain.hlsl)과 **같은 코드**를 쓴다.
-	float2 texel = g_OutlineParams.yz;
+	// 블룸은 원본을 텍셀 반 칸 비켜 읽는다 — 원본(반해상도일 수 있다)의 텍셀이다(g_SourceTexel).
+	float2 texel = g_SourceTexel.xy;
 	float3 color = swSampleSourcePoint(input.uv).rgb;
 	return float4(swApplyBloom(input.uv, texel, color), 1.0f);
 }
