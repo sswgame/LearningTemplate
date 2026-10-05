@@ -1206,3 +1206,65 @@ SW_TEST_CASE( NetworkTest, ServerTellsManyClientsApartByAddress )
     SW_ASSERT_TRUE( server.receiveMessage( connectionId, channel, buffer ) );
     SW_EXPECT_EQUAL( 6007, static_cast<int32>( server.getConnectionAddress( connectionId )._port ) );
 }
+
+/**
+ * @brief [NetworkTest] 상대 모두에게 보내기 — 클라이언트는 서버에게만, 서버는 모두에게. 서버가 받은 것을 중계하면 보낸 쪽 말고 모두가 받는다(받은 채널 그대로)
+ */
+SW_TEST_CASE( NetworkTest, SendToPeersAndRelayReachEveryOtherPeer )
+{
+    LoopbackNetwork network( 23u );
+    NetHost         server;
+    NetHost         arrClient[2];
+    server.initialize( network.createEndpoint( 4000 ), NetHostSettings{} );
+    SW_ASSERT_TRUE( server.listen() );
+    for ( int32 index = 0; index < 2; ++index )
+    {
+        arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), NetHostSettings{} );
+        SW_ASSERT_TRUE( arrClient[index].connect( NetAddress::makeLoopback( 4000 ) ) );
+    }
+    float64    time   = 0.0;
+    const auto runAll = [&]( float64 seconds )
+    {
+        for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
+        {
+            time += 1.0 / 60.0;
+            server.update( time );
+            for ( NetHost& client : arrClient )
+                client.update( time );
+        }
+    };
+    runAll( 0.5 );
+    SW_ASSERT_EQUAL( 2, server.getConnectedCount() );
+
+    // 클라이언트 0 → 서버만.
+    NetMessageWriter writer;
+    writer.begin( NetMessageRange::kGame ).writeVarUint( 7 );
+    SW_EXPECT_EQUAL( 1, writer.sendToPeers( arrClient[0], NetChannelType::Unreliable ) );
+    runAll( 0.2 );
+    int32          connectionId = -1;
+    NetChannelType channel      = NetChannelType::ReliableOrdered;
+    vector<uint8>  buffer;
+    SW_ASSERT_TRUE( server.receiveMessage( connectionId, channel, buffer ) );
+    SW_EXPECT_TRUE( channel == NetChannelType::Unreliable );
+
+    // 서버의 중계 — 보낸 클라이언트 0 말고 1 만, 같은 채널로.
+    NetMessageContext context;
+    context._pMessage     = buffer.data();
+    context._messageSize  = static_cast<int32>( buffer.size() );
+    context._connectionId = connectionId;
+    context._channel      = channel;
+    context._kind         = buffer[0];
+    SW_EXPECT_EQUAL( 1, NetMessageRouter::relayToOtherPeers( server, context ) );
+    SW_EXPECT_EQUAL( 0, NetMessageRouter::relayToOtherPeers( arrClient[0], context ) ); // 클라이언트는 중계하지 않는다
+    runAll( 0.2 );
+    SW_EXPECT_FALSE( arrClient[0].receiveMessage( connectionId, channel, buffer ) );
+    SW_ASSERT_TRUE( arrClient[1].receiveMessage( connectionId, channel, buffer ) );
+    SW_EXPECT_TRUE( channel == NetChannelType::Unreliable );
+
+    // 서버 → 모두.
+    writer.begin( NetMessageRange::kGame ).writeVarUint( 9 );
+    SW_EXPECT_EQUAL( 2, writer.sendToPeers( server, NetChannelType::ReliableOrdered ) );
+    runAll( 0.2 );
+    for ( NetHost& client : arrClient )
+        SW_EXPECT_TRUE( client.receiveMessage( connectionId, channel, buffer ) );
+}

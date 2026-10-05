@@ -76,16 +76,6 @@ namespace sw
         return true;
     }
 
-    void LockstepSession::sendToPeers( const NetMessageWriter& writer )
-    {
-        if ( _pHost == nullptr )
-            return;
-        if ( _pHost->isServer() )
-            (void)writer.broadcast( *_pHost, NetChannelType::ReliableOrdered );
-        else
-            (void)writer.send( *_pHost, 0, NetChannelType::ReliableOrdered );
-    }
-
     bool LockstepSession::submitLocalInput( const vector<uint8>& listInput )
     {
         const uint32 tick = _listNextInputTick[static_cast<size_t>( _localPlayer )];
@@ -97,7 +87,8 @@ namespace sw
         writer.writeVarUint( listInput.size() );
         if ( listInput.empty() == false )
             writer.writeBytes( listInput.data(), static_cast<int32>( listInput.size() ) );
-        sendToPeers( _messageWriter );
+        if ( _pHost != nullptr )
+            (void)_messageWriter.sendToPeers( *_pHost, NetChannelType::ReliableOrdered );
         return true;
     }
 
@@ -172,7 +163,8 @@ namespace sw
         writer.writeVarUint( static_cast<uint64>( _localPlayer ) );
         writer.writeVarUint( tick );
         writer.writeUint32( checksum );
-        sendToPeers( _messageWriter );
+        if ( _pHost != nullptr )
+            (void)_messageWriter.sendToPeers( *_pHost, NetChannelType::ReliableOrdered );
     }
 
     void LockstepSession::applyLeave( int32 player, uint32 tick )
@@ -200,13 +192,7 @@ namespace sw
         BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kLeave );
         writer.writeVarUint( static_cast<uint64>( player ) );
         writer.writeVarUint( tick );
-        sendToPeers( _messageWriter );
-    }
-
-    void LockstepSession::relay( const NetMessageContext& context )
-    {
-        if ( _pHost != nullptr && _pHost->isServer() )
-            (void)_pHost->broadcast( NetChannelType::ReliableOrdered, context._pMessage, context._messageSize, context._connectionId );
+        (void)_messageWriter.broadcast( *_pHost, NetChannelType::ReliableOrdered );
     }
 
     NetHandleResult LockstepSession::handleNetMessage( const NetMessageContext& context, BitReader& body )
@@ -233,15 +219,16 @@ namespace sw
                 return NetHandleResult::Malformed;
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
-            if ( storeInput( player, tick, listInput ) )
-                relay( context ); // 받아들인 것만 — 버린 입력이 다른 클라이언트의 순서를 흐리지 않게
+            if ( storeInput( player, tick, listInput ) && _pHost != nullptr )
+                (void)NetMessageRouter::relayToOtherPeers( *_pHost, context ); // 받아들인 것만 — 버린 입력이 다른 클라이언트의 순서를 흐리지 않게
             return NetHandleResult::Handled;
         }
         const uint32 checksum = body.readUint32();
         if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;
         storeChecksum( player, tick, checksum );
-        relay( context );
+        if ( _pHost != nullptr )
+            (void)NetMessageRouter::relayToOtherPeers( *_pHost, context );
         return NetHandleResult::Handled;
     }
 } // namespace sw

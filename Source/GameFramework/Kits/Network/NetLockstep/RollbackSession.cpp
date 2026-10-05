@@ -165,10 +165,7 @@ namespace sw
         writer.writeVarUint( static_cast<uint64>( latest - first + 1 ) );
         for ( int32 frame = first; frame <= latest; ++frame )
             writer.writeBits( predictInput( _localPlayer, frame ), 8 );
-        if ( _pHost->isServer() )
-            (void)_pHost->broadcast( NetChannelType::Unreliable, writer.getBytes().data(), writer.getByteCount() );
-        else
-            (void)_pHost->sendMessage( 0, NetChannelType::Unreliable, writer.getBytes() );
+        (void)_messageWriter.sendToPeers( *_pHost, NetChannelType::Unreliable );
     }
 
     bool RollbackSession::advanceFrame( uint8 localInput )
@@ -252,8 +249,8 @@ namespace sw
         }
         for ( int32 index = 0; index < count; ++index )
             receiveInput( player, first + index, arrInput[index] );
-        if ( _pHost != nullptr && _pHost->isServer() )
-            (void)_pHost->broadcast( NetChannelType::Unreliable, context._pMessage, context._messageSize, context._connectionId );
+        if ( _pHost != nullptr )
+            (void)NetMessageRouter::relayToOtherPeers( *_pHost, context );
         return NetHandleResult::Handled;
     }
 } // namespace sw

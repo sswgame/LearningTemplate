@@ -112,8 +112,6 @@ namespace sw
         void applyLeave( int32 player, uint32 tick );
         bool isPresentAt( int32 player, uint32 tick ) const { return tick < _listLeaveTick[static_cast<size_t>( player )]; }
         bool hasLeft( int32 player ) const { return _listLeaveTick[static_cast<size_t>( player )] != kNoLeaveTick; }
-        void sendToPeers( const NetMessageWriter& writer );
-        void relay( const NetMessageContext& context );
 
         map<uint32, TickInput>     _mapInput;
         map<uint32, vector<int64>> _mapChecksum;       ///< 틱 → 플레이어마다 체크섬(−1 = 아직)

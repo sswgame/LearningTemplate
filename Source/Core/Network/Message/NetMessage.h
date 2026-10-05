@@ -35,6 +35,8 @@ namespace sw
         [[nodiscard]] bool send( NetHost& host, int32 connectionId, NetChannelType channel ) const;
         /** @brief 연결된 모두에게(@p exceptId 는 빼고) 보냅니다. 보낸 수입니다. */
         int32 broadcast( NetHost& host, NetChannelType channel, int32 exceptId = -1 ) const;
+        /** @brief 상대 모두에게 보냅니다 — 서버는 연결된 모두에게, 클라이언트는 서버(연결 0)에게. 보낸 수입니다(락스텝 · 롤백처럼 모두가 같은 메시지를 나눌 때). */
+        int32 sendToPeers( NetHost& host, NetChannelType channel ) const;
 
         const vector<uint8>& getBytes() const { return _writer.getBytes(); }
         int32                getByteCount() const { return _writer.getByteCount(); }
@@ -164,8 +166,13 @@ namespace sw
          * @param pOutUnhandled 처리기가 없는 메시지를 뒤에 붙입니다(nullptr 이면 버린다).
          * @param pOutListEvent 꺼낸 사건을 뒤에 붙입니다(처리기 말고도 게임이 알아야 할 때).
          */
-        int32  pump( NetHost& host, vector<NetReceivedMessage>* pOutUnhandled = nullptr, vector<NetHostEvent>* pOutListEvent = nullptr );
-        uint64 getMalformedCount() const { return _malformedCount; }
+        int32 pump( NetHost& host, vector<NetReceivedMessage>* pOutUnhandled = nullptr, vector<NetHostEvent>* pOutListEvent = nullptr );
+        /**
+         * @brief 서버가 받은 메시지를 보낸 연결 말고 모두에게 **받은 채널 그대로** 다시 보냅니다. 클라이언트에서는 하지 않습니다(0). 보낸 수입니다.
+         * @details 처리기 안에서 부른다(@p context 의 메시지 바이트는 처리기 호출 동안만 유효하다).
+         */
+        static int32 relayToOtherPeers( NetHost& host, const NetMessageContext& context );
+        uint64       getMalformedCount() const { return _malformedCount; }
 
     private:
         void rebuildKindTable();

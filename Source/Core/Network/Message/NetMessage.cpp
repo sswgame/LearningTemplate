@@ -31,6 +31,13 @@ namespace sw
         return host.broadcast( channel, _writer.getBytes().data(), _writer.getByteCount(), exceptId );
     }
 
+    int32 NetMessageWriter::sendToPeers( NetHost& host, NetChannelType channel ) const
+    {
+        if ( host.isServer() )
+            return broadcast( host, channel );
+        return send( host, 0, channel ) ? 1 : 0;
+    }
+
     bool INetMessageHandler::isMessageKindHandled( uint8 kind ) const
     {
         const uint8 rangeBase = getMessageRangeBase();
@@ -140,5 +147,12 @@ namespace sw
             pOutUnhandled->push_back( std::move( unhandled ) );
         }
         return static_cast<int32>( _inbound._listMessage.size() );
+    }
+
+    int32 NetMessageRouter::relayToOtherPeers( NetHost& host, const NetMessageContext& context )
+    {
+        if ( host.isServer() == false || context._pMessage == nullptr || context._messageSize <= 0 )
+            return 0;
+        return host.broadcast( context._channel, context._pMessage, context._messageSize, context._connectionId );
     }
 } // namespace sw
