@@ -65,6 +65,33 @@ namespace sw
             vector<string> _listSearchPriority;
         };
 
+        /** @brief 리소스 루트를 바꾸고 끝날 때 되돌립니다. `GlobalVfsScope` 보다 뒤에 두어 먼저 풀리게 한다(검색 우선순위가 원래 루트에서 다시 지어진다). */
+        struct ResourceRootScope
+        {
+            explicit ResourceRootScope( string_view resourceRootFolderPath )
+                : _previous{ ResourceUtil::exchangeRootFolderPath( resourceRootFolderPath ) }
+            {
+            }
+
+            ~ResourceRootScope() { (void)ResourceUtil::exchangeRootFolderPath( _previous ); }
+
+            ResourceRootScope( const ResourceRootScope& )            = delete;
+            ResourceRootScope& operator=( const ResourceRootScope& ) = delete;
+
+        private:
+            string _previous;
+        };
+
+        /** @brief 같은 키를 텍스트 · 바이너리로 둘 다 읽습니다. 둘 다 읽었으면 true. */
+        bool readTextAndBinaryResource( const utf8* pKey, string& outText, string& outBinary )
+        {
+            vector<uint8> bytes;
+            const bool    bText   = ResourceUtil::readTextResource( pKey, outText );
+            const bool    bBinary = ResourceUtil::readBinaryResource( pKey, bytes );
+            outBinary.assign( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
+            return bText && bBinary;
+        }
+
         /** @brief 이미 만들어진 팩 파일의 헤더를 읽고(있는 그대로) 다시 쓰는 테스트 헬퍼. */
         bool readPackHeaderFromDisk( const string& packPath, PackHeader& outHeader )
         {
@@ -432,11 +459,8 @@ SW_TEST_CASE( ResourcePackTest, LooseFileOverrideOption )
  * @details `readTextResource` 와 `readBinaryResource` 는 찾는 순서가 같아야 한다 —
  *          절대경로 → 낱개 파일 → 팩 → 낱개 폴백. 둘은 한 자리(`readResourceCommon`)를 같이 쓴다 — 순서를
  *          **두 벌로 따로** 적으면 한쪽만 고칠 때 같은 키로 텍스트와 바이너리가 서로 다른 파일을 읽는다.
- * @note **이 테스트가 덮는 것과 아닌 것.** 덮는 것은 "둘 중 하나가 어떤 소스를 아예 안 보게
- *       되는" 변이다(팩을 건너뛰게 만들면 깨진다). **낱개 파일과 팩이 경쟁할 때의 우선순위는
- *       못 덮는다** — 같은 상대 키로 디스크와 팩에 서로 다른 내용을 두려면 리소스 루트 안에
- *       파일을 심어야 하는데, 검색 폴더를 테스트에서 더할 창구가 없다(`initialize()` 가
- *       리소스 루트에서만 채운다). 그 창구가 생기면 여기에 우선순위 케이스를 붙일 것.
+ * @note 덮는 것은 "둘 중 하나가 어떤 소스를 아예 안 보게 되는" 변이다(팩을 건너뛰게 만들면 깨진다). 낱개 파일과 팩이 경쟁할 때의
+ *       우선순위는 `LooseFileWinsOnlyWhenLooseFilesAreAllowed` 가 본다.
  */
 SW_TEST_CASE( ResourcePackTest, TextAndBinaryReadsPickTheSameSource )
 {
@@ -484,6 +508,54 @@ SW_TEST_CASE( ResourcePackTest, TextAndBinaryReadsPickTheSameSource )
 
     packManager.setAllowLooseFiles( true );
     packManager.unmountAll();
+}
+
+/**
+ * @brief [ResourcePackTest] 같은 키가 팩과 낱개 파일에 다 있으면 — 낱개 허용(Dev · 쿠킹)은 낱개, 팩 전용(배포)은 팩이다. 팩에 없으면 낱개 허용일 때만 읽힌다
+ * @details 텍스트 · 바이너리 · 있나 질의가 같은 답을 내야 한다(`readResourceCommon` 한 자리). 리소스 루트를 임시 폴더로 바꿔 그 아래 낱개 파일을 둔다.
+ */
+SW_TEST_CASE( ResourcePackTest, LooseFileWinsOnlyWhenLooseFilesAreAllowed )
+{
+    const sw::GlobalVfsScope vfsScope;
+    constexpr const utf8*    kKey      = "engine/lookup_order/probe.txt";
+    const sw::string         root      = test::makeTempDirectory( "lookup_order_root" );
+    const sw::string         loosePath = sw::FileUtil::joinPath( root, kKey );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( loosePath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( loosePath, "FROM_LOOSE" ) );
+    const sw::string packPath = test::makeTempPath( "lookup_order.pack" );
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                                                    { kKey, "FROM_PACK" }
+    } ) );
+
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const sw::ResourceRootScope rootScope( root );
+    sw::ResourcePackManager&    packManager = sw::ResourceUtil::getPackManager();
+    packManager.unmountAll();
+    SW_ASSERT_TRUE( packManager.mountPack( packPath, 5000 ) );
+    sw::string text;
+    sw::string binary;
+
+    packManager.setAllowLooseFiles( true ); // Dev · 쿠킹: 낱개가 이긴다
+    SW_ASSERT_TRUE( sw::readTextAndBinaryResource( kKey, text, binary ) );
+    SW_EXPECT_EQUAL( sw::string( "FROM_LOOSE" ), text );
+    SW_EXPECT_EQUAL( sw::string( "FROM_LOOSE" ), binary );
+
+    packManager.setAllowLooseFiles( false ); // 배포: 팩만
+    SW_ASSERT_TRUE( sw::readTextAndBinaryResource( kKey, text, binary ) );
+    SW_EXPECT_EQUAL( sw::string( "FROM_PACK" ), text );
+    SW_EXPECT_EQUAL( sw::string( "FROM_PACK" ), binary );
+
+    packManager.unmountAll(); // 팩에 없다 — 낱개 허용일 때만
+    packManager.setAllowLooseFiles( true );
+    SW_EXPECT_TRUE( sw::readTextAndBinaryResource( kKey, text, binary ) );
+    SW_EXPECT_TRUE( sw::ResourceUtil::hasResource( kKey ) );
+    packManager.setAllowLooseFiles( false );
+    {
+        test::ScopedDefensiveTestLog expected( "a pack-only build refuses a loose read under the resource root" );
+        SW_EXPECT_FALSE( sw::readTextAndBinaryResource( kKey, text, binary ) );
+    }
+    SW_EXPECT_FALSE( sw::ResourceUtil::hasResource( kKey ) );
+    packManager.setAllowLooseFiles( true );
 }
 
 // ------------------------------------------------------------------------------

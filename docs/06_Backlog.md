@@ -429,7 +429,7 @@ cd build/Ninja-Debug/Bin
   주석(`/check-runs/<job id>/annotations`, 로그인 없이 읽힌다)에서 시험 이름 · 실패 줄을 보고 고친다.
 
 
-- **시험 공백 목록** — 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
+- **시험 공백 목록** — 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
 - **include · 전방 선언 남은 후보.** ① OS 헤더(`Core/Common/PlatformOsHeaders.h` — `Windows.h` · `DbgHelp.h` · `Xinput.h` …)가 `EngineMinimal.h` 를 거쳐
@@ -679,6 +679,7 @@ cd build/Ninja-Debug/Bin
 - **골든 기준은 뜬 장치를 적는다**(`device` — GPU 이름 · 드라이버, 다음 `--record` 부터) — 다른 기계에서 지면 비교 메시지가 두 장치를 함께 찍는다.
   기계별 기준(`<백엔드>.<기계>.json`)은 만들지 않는다(사용자 결정 2026-10-06) — 다른 기계에서 진 기록이 생기면 그 기계에서 `--record` 해 드라이버 차이인지 회귀인지 가른다.
 - **할당 실패 경로는 `Memory::injectAllocationFailures( count )`(Dev, 스레드 국소)로 시험한다** — 이 스레드의 다음 count 번 `allocate` · `allocateAligned` 가 nullptr.
+- **낱개 파일 · 팩 경쟁을 시험하려면 리소스 루트를 임시 폴더로 바꾼다**(`ResourceUtil::exchangeRootFolderPath` — 검색 폴더 · 경로 캐시를 다시 짓고 앞 루트를 돌려준다).
 
 ### 3-3. 환경 · 툴체인
 

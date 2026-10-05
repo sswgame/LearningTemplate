@@ -623,6 +623,15 @@ namespace sw
         return _s_listSearchPriority;
     }
 
+    string ResourceUtil::exchangeRootFolderPath( string_view resourceRootFolderPath )
+    {
+        string previous           = _s_resourceRootFolderPath;
+        _s_resourceRootFolderPath = FileUtil::normalizeSeparators( resourceRootFolderPath );
+        // 검색 폴더를 새 루트에서 다시 짓는다(경로 캐시도 거기서 비운다).
+        (void)setSearchPriority( _s_listSearchPriority );
+        return previous;
+    }
+
     const vector<string>& ResourceUtil::getDefaultSearchPriority()
     {
         static const vector<string> s_listDefaultPriority = EngineConfig{}._listResourcePriority;

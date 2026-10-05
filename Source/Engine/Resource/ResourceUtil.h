@@ -141,6 +141,13 @@ namespace sw
         /** @brief 지금 쓰는 검색 우선순위 토큰 목록을 반환합니다. */
         static const vector<string>& getSearchPriority();
 
+        /**
+         * @brief 리소스 루트(`Resource/` 폴더)를 바꾸고 검색 폴더 · 경로 캐시를 다시 짓습니다. 앞의 루트를 돌려줍니다(되돌릴 때 넘긴다).
+         * @details 시험이 임시 폴더에 낱개 파일을 두고 같은 키의 팩과 겨루게 할 때 씁니다(검색 폴더는 루트에서만 채워진다).
+         * @warning 실행 중 게임에서 부르지 않는다 — 다른 스레드의 경로 풀이와 겹치면 반쪽 상태를 본다.
+         */
+        static string exchangeRootFolderPath( string_view resourceRootFolderPath );
+
         /** @brief EngineConfig 리플렉션 기본값에 정의된 기본 검색 우선순위 목록을 반환합니다. */
         static const vector<string>& getDefaultSearchPriority();
 
