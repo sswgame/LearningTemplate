@@ -59,7 +59,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 - **GameState**: 키트 여럿을 한 게임에 섞을 때 나눠 쓰는 판 상태 — `GameStateComponent`(지갑 · 플래그 · 시계 · 퀘스트 일지 · 평판, 시계 알림을 틱마다 읽기 전용 목록으로).
   키트 디렉터들과 **같은 오브젝트, 맨 앞**에 두고, 상태 바이트는 상태마다 구간(`StateArchiveUtil::writeSection`)이다. 키트는 `GameStateRefs`(`Framework/`)로 빌린다. 아래 "키트 여럿을 한 게임에" 절
   키트 시뮬레이션의 `writeState` · `readState`(`FarmField` · `CitySimulation` · `RtsWorld` · `ThemeParkSimulation` · `VoxelWorld` …)는 임시에 읽어 끝까지 맞을 때만
-  바꾸고, 정의는 카탈로그 id 로, 유닛 참조는 세대 든 id 로 적으며, 다시 만들 수 있는 것(길 · 격자 발자국 · 흐름장)은 적지 않는다
+  바꾸고, 정의는 카탈로그 id 로, 유닛 참조는 세대 든 id 로 적으며, 다시 만들 수 있는 것(길 · 격자 발자국 · 흐름장)은 적지 않는다.
+  키트 상태의 `readState` 는 `Archive&` 하나만 받는다 — 빌린 것(카탈로그 · 파티)은 읽기 전에 `initialize` · `bindCatalog` · `bindParty` 로 묶는다
+  (언리얼 SaveGame 처럼 직렬화는 균일하고 참조는 id 로 다시 잇는다). 키트 안에 든 기반 값 타입(`MoveTimeline`)만 주인이 묶은 카탈로그를 인자로 받는다.
 - **Input**: 커맨드 입력(`InputCommandParser` — 철권 표기 · `InputCommandBuffer` — 새로 넣기 · 누른 채 · 동시 버튼 · 틱 한도 · 좌우 뒤집기 · 상태 바이트, 결정적),
   타이밍 판정(`TimingJudge` — 리듬 · 타이밍 공격 · 스킬 체크 · 저스트 프레임), 1인칭 시점(`FirstPersonLook`)
 - **Data**: 데이터를 읽고 담는 틀 — `GameSettings`, 경로마다 한 번 읽어 나눠 쓰는 표의 캐시(`GameDataCache<T>` — 게임 서비스가 묶이면
@@ -124,11 +126,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `ActionPlatformer`: 스테이지형 액션 플랫포머(검브렐라 · 페퍼 그라인더 · 어스블레이드 장르) — 체크포인트 · 목숨 · 비밀 수집 · 등급(`ActionStageRun`), 활공 · 갈고리 진자 · 드릴 이동(`ActionPlatformerBody`), 근접 콤보 · 총 · 패리 반사(`ActionCombatRig`), 데이터 적 패턴(`ActionEnemyBrain`).
     - `Metroidvania`: 메트로배니아 · 2D 소울라이크(블라스퍼머스 2 · 더 라스트 페이스 · 엠버베인 장르) — 능력 잠금(`MetroAbilitySet`), 탐색률 · 지도 구매(`MetroMapState`), 휴식 · 시체 · 물약(`MetroSoulsState`), 스태미나 · 패리 · 강인도(`MetroDuelist`), 부적 슬롯(`MetroCharmLoadout`).
     - `Fighting`: 3D 격투(철권 장르) — 캐릭터 데이터(커맨드 · 자세 · 조건 · 스트링, `FighterCatalog`), 60프레임 결정적 시뮬레이션(가드 높이 · 프레임 이득 · 저글 감쇠 · 스크류 · 벽꽝 · 잡기 풀기 · 횡이동 · 레이지 · 히트) · 라운드(기반 `RoundSeries` — 선승 · 무승부 라운드는 둘 다 1 승 · 라운드 시간 · 대기) · 롤백 상태 저장/복원(`FightingMatch` — 라운드 묶음은 상태 바이트 맨 뒤).
-    - `MechArena`: 3인칭 팀 기체 대전(SD건담 캡슐파이터 장르) — 기체 · 형태 · 무기 칸 · 분류 보정 · 스킬(`MechCatalog`), 부스트 오버히트 · 다운치 · 기상 무적 · 록온 유도 · 근접 콤보 · 변형 · 팀 전력 게이지 · 기체 교체(`MechArenaWorld`), 상태 바이트(`MechArenaSnapshot`).
+    - `MechArena`: 3인칭 팀 기체 대전(SD건담 캡슐파이터 장르) — 기체 · 형태 · 무기 칸 · 분류 보정 · 스킬(`MechCatalog`), 부스트 오버히트 · 다운치 · 기상 무적 · 록온 유도 · 근접 콤보 · 변형 · 팀 전력 게이지 · 기체 교체(`MechArenaWorld`), 넷 스냅숏(`MechArenaSnapshot` — 화면용 양자화)과 세이브 · 핫 리로드용 전체 상태(`writeState( Archive& )`)를 따로 둔다.
     - `BattleRoyale`: 배틀로얄(배틀그라운드 장르) — 자기장 단계 · 다음 원 고르기(`BrZone`), 비행기 경로 · 낙하 · 착지 예측(`BrDrop`), 지점별 전리품 · 보급 상자(`BrLoot`), 방어구 · 가방 등급 · 탄약(`BrGear`), 기절 · 팀원 부활 · 순위 · 킬 피드(`BrMatch`).
   - **공포 · 조사** (`Kits/Horror/`)
     - `SurvivalHorror`: 생존 공포 · 조사(바이오하자드 · 홀스틴 · 애니그마 오브 피어 장르) — 격자 가방(기반 `GridInventory`), 아이템 상자 · 조합 · 세이브 제한 · 정신력/손전등 · 열쇠 문 · 다이얼/순서 퍼즐 · 단서 보드 추리(`HorrorSession`), 턴제 초자연 전투(`HorrorEncounter`).
-    - `AsymmetricHorror`: 비대칭 공포(데드 바이 데이라이트 장르) — 규칙 · 살인마 · 점수 XML(`AsymmetricHorrorRules`), 건강 → 부상 → 빈사 → 갈고리 단계 · 몸부림 · 구출, 다인 수리 · 치료 · 스킬 체크 · 걷어차기 퇴행, 판자 · 창틀 · 사물함, 탈출구 · 해치 · 붕괴(`HorrorMatch`), 상태 바이트(`HorrorSnapshot`).
+    - `AsymmetricHorror`: 비대칭 공포(데드 바이 데이라이트 장르) — 규칙 · 살인마 · 점수 XML(`AsymmetricHorrorRules`), 건강 → 부상 → 빈사 → 갈고리 단계 · 몸부림 · 구출, 다인 수리 · 치료 · 스킬 체크 · 걷어차기 퇴행, 판자 · 창틀 · 사물함, 탈출구 · 해치 · 붕괴(`HorrorMatch`), 넷 스냅숏(`HorrorSnapshot` — 화면용 양자화)과 세이브 · 핫 리로드용 전체 상태(`writeState( Archive& )`)를 따로 둔다.
     - `CoopScavenger`: 협동 수집 공포(리썰 컴퍼니 장르) — 할당량 주기(`ScavengerQuota`), 위성 · 하루 시각 · 날씨 · 위협 예산 · 죽음과 시신 회수 · 전멸 손실(`ScavengerExpedition`), 절차 시설 방 그래프 · 고철(`ScavengerFacility`), 운반 칸 · 양손 · 무게(`ScavengerCarry`).
     - `GhostHunt`: 유령 사냥(루이지 맨션 장르) — 손전등 원뿔 · 스트로브 기절 · 흡입 줄다리기 · 강화 단계(`GhostEncounter`), 방 불 켜기 · 열쇠 문 · 가구 보물 · 부 탈출(`GhostMansion`), XML(`GhostCatalog`).
   - **RPG** (`Kits/Rpg/`)

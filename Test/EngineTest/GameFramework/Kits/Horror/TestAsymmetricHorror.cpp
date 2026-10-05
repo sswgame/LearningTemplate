@@ -5,6 +5,8 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/AI/AiPerception.h"
 #include "GameFramework/Kits/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Horror/AsymmetricHorror/HorrorMatch.h"
@@ -554,4 +556,71 @@ SW_TEST_CASE( AsymmetricHorrorTest, GatesHatchCollapseAndStateBytes )
     HorrorSnapshot broken;
     BitReader      shortReader( firstRun.getBytes().data(), firstRun.getByteCount() / 2 );
     SW_EXPECT_FALSE( HorrorSnapshotCodec::read( shortReader, broken ) );
+}
+
+/**
+ * @brief [AsymmetricHorrorTest] 세이브(Archive) 왕복 — 넷 스냅숏과 달리 전체 상태(무대 · 수리 진행의 스킬 체크 난수 · 체력 · 살인마 쿨다운)를 실어,
+ *        새로 연 판이 같은 바이트로 돌아오고 같은 걸음을 더 돌려도 같다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( AsymmetricHorrorTest, StateRoundTripContinuesTheSameMatch )
+{
+    // 스킬 체크가 2 초쯤마다 뜨는 규칙 — 응답하지 않아 실패 · 소음 · 난수가 계속 움직인다.
+    string       xml( kHorrorRulesXml );
+    const size_t at = xml.find( "skillCheckInterval=\"0\" kickPenalty" );
+    SW_ASSERT_TRUE( at != string::npos );
+    xml.replace( at, string( "skillCheckInterval=\"0\"" ).size(), "skillCheckInterval=\"2\"" );
+    AsymmetricHorrorRulesCatalog catalog;
+    SW_ASSERT_TRUE( loadRules( catalog, xml.c_str() ) );
+    auto toBytes = []( const HorrorMatch& match )
+    {
+        Archive written;
+        match.writeState( written );
+        vector<uint8> bytes;
+        written.writeData( bytes );
+        return bytes;
+    };
+
+    HorrorMatch match;
+    SW_ASSERT_TRUE( beginMatch( match, catalog ) );
+    const int32 first  = match.addSurvivor( float3{ 0.0f, 0.0f, 0.0f } );
+    const int32 second = match.addSurvivor( float3{ 1.0f, 0.0f, 0.0f } );
+    const int32 third  = match.addSurvivor( float3{ 20.0f, 0.0f, 0.0f } );
+    const int32 genA   = match.addGenerator( float3{ 0.5f, 0.0f, 0.0f } );
+    (void)match.addGenerator( float3{ 40.0f, 0.0f, 0.0f } );
+    (void)match.addHook( float3{ 30.0f, 0.0f, 0.0f } );
+    (void)match.addPallet( float3{ 25.0f, 0.0f, 0.0f } );
+    (void)match.addWindow( float3{ 26.0f, 0.0f, 5.0f } );
+    (void)match.addLocker( float3{ 27.0f, 0.0f, -5.0f } );
+    (void)match.addGate( float3{ 0.0f, 0.0f, 10.0f } );
+    match.setHatchPosition( float3{ -10.0f, 0.0f, 0.0f } );
+    match.start();
+    SW_ASSERT_TRUE( match.startRepair( first, genA ) );
+    SW_ASSERT_TRUE( match.startRepair( second, genA ) );
+    SW_EXPECT_TRUE( swingAt( match, match.findSurvivor( third )->_position ) == KillerAttackResult::Hit );
+    runSeconds( match, 3.0f );
+
+    const vector<uint8> listWritten = toBytes( match );
+    HorrorMatch         restored;
+    SW_ASSERT_TRUE( beginMatch( restored, catalog ) );
+    Archive reader( listWritten.data(), listWritten.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    SW_EXPECT_EQUAL( match.getTick(), restored.getTick() );
+    SW_EXPECT_TRUE( listWritten == toBytes( restored ) );
+    SW_EXPECT_TRUE( restored.findSurvivor( third )->_state == SurvivorState::Injured );
+
+    for ( HorrorMatch* pMatch : { &match, &restored } )
+    {
+        pMatch->moveSurvivor( third, float3{ 1.0f, 0.0f, 0.0f }, 0.5f );
+        pMatch->moveKiller( float3{ 1.0f, 0.0f, 0.0f }, 0.5f );
+        runSeconds( *pMatch, 4.0f );
+    }
+    SW_EXPECT_NEAR_EQUAL( match.findGenerator( genA )->_progress.getProgress(), restored.findGenerator( genA )->_progress.getProgress(), 1.0e-6f );
+    SW_EXPECT_TRUE( toBytes( match ) == toBytes( restored ) );
+
+    HorrorMatch truncated;
+    SW_ASSERT_TRUE( beginMatch( truncated, catalog ) );
+    Archive cut( listWritten.data(), listWritten.size() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_EQUAL( 0, truncated.getSurvivorCount() );
 }

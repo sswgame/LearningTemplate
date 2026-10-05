@@ -4,6 +4,8 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Combat/FrameData.h"
 #include "GameFramework/Base/Combat/Weapon.h"
 #include "GameFramework/Kits/Action/MechArena/MechArenaSnapshot.h"
@@ -493,4 +495,93 @@ SW_TEST_CASE( MechArenaTest, ShotsLockOnAndProjectilesSkipTeammates )
     SW_EXPECT_EQUAL( countEvents( listEvent, MechArenaEvent::Kind::Hit, escort ), 0 );
     SW_EXPECT_EQUAL( countEvents( listEvent, MechArenaEvent::Kind::Hit, victim ), 1 );
     SW_EXPECT_NEAR_EQUAL( projectileWorld.findPilot( escort )->_vitality.getHealth(), 1000.0f, 0.01f );
+}
+
+/**
+ * @brief [MechArenaTest] 세이브(Archive) 왕복 — 넷 스냅숏과 달리 전체 상태를 실어, 새로 연 월드가 같은 바이트로 돌아오고 같은 입력을 더 넣어도 같다.
+ *        격추 뒤 기체를 바꿔 둔 채 실어도 부활 때 바꾼 기체로 나오고, 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( MechArenaTest, StateRoundTripContinuesTheSameArena )
+{
+    MechFixture fixture;
+    SW_ASSERT_TRUE( fixture.load() );
+
+    auto feedInput = [&]( MechArenaWorld& world, int32 frame )
+    {
+        MechInput inputFirst;
+        inputFirst._moveX   = ( frame % 90 ) < 45 ? 1.0f : -0.5f;
+        inputFirst._moveZ   = 0.5f;
+        inputFirst._bLockOn = ( frame % 120 ) == 2 ? SW_TRUE : SW_FALSE;
+        inputFirst._bFire   = ( frame % 20 ) == 5 ? SW_TRUE : SW_FALSE;
+        inputFirst._bDash   = ( frame % 12 ) == 6 ? SW_TRUE : SW_FALSE; // 부스트를 오버히트 가까이 쓴다
+        inputFirst._bMelee  = ( frame % 50 ) == 10 ? SW_TRUE : SW_FALSE;
+        MechInput inputSecond;
+        inputSecond._moveZ      = -1.0f;
+        inputSecond._bLockOn    = ( frame % 120 ) == 3 ? SW_TRUE : SW_FALSE;
+        inputSecond._bSpecial   = ( frame % 70 ) == 30 ? SW_TRUE : SW_FALSE;
+        inputSecond._bTransform = ( frame % 150 ) == 75 ? SW_TRUE : SW_FALSE;
+        world.setInput( 0, inputFirst );
+        world.setInput( 1, inputSecond );
+        world.update( kMechArenaStep );
+    };
+    auto toBytes = []( const MechArenaWorld& world )
+    {
+        Archive written;
+        world.writeState( written );
+        vector<uint8> bytes;
+        written.writeData( bytes );
+        return bytes;
+    };
+
+    MechArenaWorld world;
+    fixture.initialize( world );
+    MechPilotConfig config = makePilot( { "striker", "sniper" }, 0, float3{ -5.0f, 0.0f, 0.0f } );
+    config._listSkillId.push_back( hashed_string( "berserk" ) );
+    SW_ASSERT_EQUAL( world.addPilot( config ), 0 );
+    SW_ASSERT_EQUAL( world.addPilot( makePilot( { "sniper" }, 1, float3{ 5.0f, 0.0f, 30.0f } ) ), 1 );
+    world.start();
+    for ( int32 frame = 0; frame < 120; ++frame )
+        feedInput( world, frame );
+    world.applyDamage( 1, 0, 200.0f, 0.0f, 0.0f ); // 절반 아래 — 체력 조건 스킬이 켜진 채로 싣는다
+
+    const vector<uint8> listWritten = toBytes( world );
+    MechArenaWorld      restored;
+    fixture.initialize( restored );
+    Archive reader( listWritten.data(), listWritten.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    SW_EXPECT_EQUAL( world.getTick(), restored.getTick() );
+    SW_EXPECT_TRUE( listWritten == toBytes( restored ) );
+    SW_EXPECT_NEAR_EQUAL( restored.computeModifier( 0, hashed_string( "attack" ) ), 2.0f, 0.001f );
+
+    for ( int32 frame = 120; frame < 240; ++frame )
+    {
+        feedInput( world, frame );
+        feedInput( restored, frame );
+    }
+    SW_EXPECT_TRUE( toBytes( world ) == toBytes( restored ) );
+
+    // 격추 · 교체 대기 중에 실어도 부활은 바꾼 기체(sniper)로 나온다.
+    world.applyDamage( 1, 0, 10000.0f, 0.0f, 0.0f );
+    SW_ASSERT_TRUE( world.requestMechSwap( 0, 1 ) == MechSwapResult::Ok );
+    const vector<uint8> listDestroyed = toBytes( world );
+    MechArenaWorld      waiting;
+    fixture.initialize( waiting );
+    Archive waitingReader( listDestroyed.data(), listDestroyed.size() );
+    SW_ASSERT_TRUE( waiting.readState( waitingReader ) );
+    SW_EXPECT_TRUE( waiting.findPilot( 0 )->_state == MechPilotState::Destroyed );
+    for ( int32 frame = 240; frame < 600; ++frame )
+    {
+        feedInput( world, frame );
+        feedInput( waiting, frame );
+    }
+    SW_ASSERT_TRUE( waiting.findPilot( 0 )->getMech() != nullptr );
+    SW_EXPECT_TRUE( waiting.findPilot( 0 )->getMech()->_id == hashed_string( "sniper" ) );
+    SW_EXPECT_TRUE( toBytes( world ) == toBytes( waiting ) );
+
+    MechArenaWorld truncated;
+    fixture.initialize( truncated );
+    Archive cut( listWritten.data(), listWritten.size() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_EQUAL( 0, truncated.getPilotCount() );
 }
