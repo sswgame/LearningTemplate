@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Input/TimingJudge.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -217,5 +220,51 @@ namespace sw
     void InteractionProgress::drainEvents( vector<InteractionEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void InteractionProgress::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listParticipant.size() );
+        for ( const uint32 participant : _listParticipant )
+            outArchive << participant;
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _seed;
+        outArchive << _skillCheckActor;
+        outArchive << _progress;
+        outArchive << _time;
+        StateArchiveUtil::writeCountdown( outArchive, _skillCheckCountdown );
+        outArchive << _skillCheckTarget;
+        outArchive << _bCompleted;
+        outArchive << _bSkillCheckPending;
+        outArchive << _bRegressing;
+    }
+
+    bool InteractionProgress::readState( Archive& archive )
+    {
+        InteractionProgress restored         = *this;
+        uint32              participantCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 4, participantCount ) == false || participantCount > static_cast<uint32>( _config._maxParticipants ) )
+            return false;
+        restored._listParticipant.assign( participantCount, 0u );
+        for ( uint32& participant : restored._listParticipant )
+            archive >> participant;
+        if ( StateArchiveUtil::readRandom( archive, restored._random ) == false )
+            return false;
+        archive >> restored._seed;
+        archive >> restored._skillCheckActor;
+        archive >> restored._progress;
+        archive >> restored._time;
+        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._skillCheckCountdown );
+        archive >> restored._skillCheckTarget;
+        archive >> restored._bCompleted;
+        archive >> restored._bSkillCheckPending;
+        archive >> restored._bRegressing;
+        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._progress && restored._progress <= 1.0f && restored._bCompleted <= SW_TRUE &&
+                            restored._bSkillCheckPending <= SW_TRUE && restored._bRegressing <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        restored._eventBuffer.clear();
+        *this = std::move( restored );
+        return true;
     }
 } // namespace sw

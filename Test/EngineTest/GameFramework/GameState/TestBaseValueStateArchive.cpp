@@ -18,6 +18,8 @@
 #include "GameFramework/Base/Data/StatBlock.h"
 #include "GameFramework/Base/Gimmick/ElementGrid.h"
 #include "GameFramework/Base/Gimmick/ElementRuleTable.h"
+#include "GameFramework/Base/Input/TimingJudge.h"
+#include "GameFramework/Base/Interaction/InteractionProgress.h"
 #include "GameFramework/Base/Inventory/Crafting.h"
 #include "GameFramework/Base/Inventory/GridInventory.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
@@ -501,8 +503,16 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
     (void)grid.applyStimulus( int2{ 0, 1 }, table.findStimulus( "Fire" ) );
     (void)grid.update( 0.37f );
 
+    // 크기가 다른 격자는 거절하고 그대로다.
+    ElementGrid smaller;
+    smaller.initialize( 2, 2, &table );
+    const vector<uint8> bytes = captureValueBytes( grid );
+    Archive             smallerReader( bytes.data(), bytes.size() );
+    SW_EXPECT_FALSE( smaller.readState( smallerReader ) );
+    SW_EXPECT_EQUAL( 2, smaller.getWidth() );
+
     ElementGrid restored;
-    restored.initialize( 2, 2, &table );
+    restored.initialize( 8, 3, &table );
     SW_EXPECT_TRUE( replaysAfterRestore( grid, restored, []( ElementGrid& state )
     { (void)state.update( 0.9f ); } ) );
     SW_EXPECT_EQUAL( grid.computeStateHash(), restored.computeStateHash() );
@@ -584,4 +594,41 @@ SW_TEST_CASE( BaseValueStateArchiveTest, MatchStateReplaysAfterRestore )
         state.reportKill( redA, blueA );
     } ) );
     SW_EXPECT_TRUE( match.getPhase() == restored.getPhase() );
+}
+
+/**
+ * @brief [BaseValueStateArchiveTest] 진행형 상호작용 — 참가자 순서 · 진행량 · 시계 · 스킬 체크(대상 · 목표 시각 · 난수) · 씨앗이 와서, 응답 없는 체크의
+ *        실패 · 다음 체크 예약과 떠난 뒤의 퇴행까지 같은 값을 낸다
+ */
+SW_TEST_CASE( BaseValueStateArchiveTest, InteractionProgressReplaysAfterRestore )
+{
+    TimingJudge judge;
+    SW_ASSERT_TRUE( judge.loadFromXmlText( R"(<TimingWindows><Window grade="Good" early="0.15" late="0.15"/></TimingWindows>)", "ValueState" ) );
+    InteractionConfig config;
+    config._duration           = 10.0f;
+    config._maxParticipants    = 2;
+    config._regressionRate     = 0.05f;
+    config._skillCheckInterval = 1.5f;
+    InteractionProgress progress;
+    progress.initialize( config, &judge, 77u );
+    SW_ASSERT_TRUE( progress.join( 3u ) );
+    SW_ASSERT_TRUE( progress.join( 5u ) );
+    progress.update( 2.0f );
+    SW_ASSERT_TRUE( progress.leave( 3u ) );
+
+    InteractionProgress restored;
+    restored.initialize( config, &judge, 1u );
+    SW_EXPECT_TRUE( replaysAfterRestore( progress, restored, []( InteractionProgress& state )
+    {
+        for ( int32 tick = 0; tick < 24; ++tick )
+            state.update( 0.25f ); // 응답 없는 체크가 실패하고 다음 체크가 난수로 예약된다
+        (void)state.leave( 5u );
+        state.update( 3.0f );
+    } ) );
+    SW_EXPECT_NEAR_EQUAL( progress.getProgress(), restored.getProgress(), 1.0e-6f );
+
+    InteractionProgress truncated;
+    truncated.initialize( config, &judge, 1u );
+    SW_EXPECT_TRUE( rejectsTruncated( progress, truncated ) );
+    SW_EXPECT_EQUAL( 0, truncated.getParticipantCount() );
 }

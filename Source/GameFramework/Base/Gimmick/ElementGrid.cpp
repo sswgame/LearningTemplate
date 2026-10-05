@@ -343,6 +343,8 @@ namespace sw
         {
             outArchive << cell._material;
             outArchive << cell._statusBits;
+            for ( const uint8 value : cell._arrStatusValue )
+                outArchive << value; // 상태 값(남은 시간 · 세기) — 비트만 실으면 되살린 불이 처음부터 탄다
         }
         StateArchiveUtil::writeInt2( outArchive, _wind );
         StateArchiveUtil::writeStepTimer( outArchive, _timer );
@@ -356,14 +358,17 @@ namespace sw
         archive >> width;
         archive >> height;
         const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
-        // 칸마다 재질 · 상태(2)
-        if ( archive.isError() || width < 0 || height < 0 || archive.hasBytesAvailable( cellCount * 2 ) == false )
+        // 크기는 initialize 의 것이어야 한다 — 칸마다 재질 · 상태 비트(2) + 상태 값
+        const uint64 cellBytes = 2u + ElementRuleTable::kMaxStatusCount;
+        if ( archive.isError() || width != _width || height != _height || archive.hasBytesAvailable( cellCount * cellBytes ) == false )
             return false;
         vector<Cell> listCell( static_cast<size_t>( cellCount ) );
         for ( Cell& cell : listCell )
         {
             archive >> cell._material;
             archive >> cell._statusBits;
+            for ( uint8& value : cell._arrStatusValue )
+                archive >> value;
         }
         int2           wind      = {};
         FixedStepTimer timer     = _timer;

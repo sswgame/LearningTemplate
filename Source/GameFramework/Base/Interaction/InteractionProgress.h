@@ -18,6 +18,7 @@
 
 namespace sw
 {
+    class Archive;
     class TimingJudge;
 
     /** @brief 상호작용 하나의 규칙입니다. */
@@ -107,6 +108,11 @@ namespace sw
         const InteractionConfig& getConfig() const { return _config; }
         /** @brief 쌓인 일을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<InteractionEvent>& outListEvent );
+
+        /** @brief 참가자 · 난수 · 씨앗 · 진행량 · 시계 · 스킬 체크(대상 · 남은 시간 · 목표 시각 · 대기) · 끝남 · 퇴행을 씁니다. 규칙 · 판정기는 `initialize` 의 것, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 참가자가 규칙의 상한을 넘거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void addProgress( float32 delta );
