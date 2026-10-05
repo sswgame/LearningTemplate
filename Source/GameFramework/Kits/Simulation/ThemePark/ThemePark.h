@@ -18,6 +18,7 @@
 #include "GameFramework/Base/Utility/Countdown.h"
 #include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -41,6 +42,8 @@ namespace sw
         float32       _nausea{ 1.0f };     ///< 0..10 — 탄 뒤 멀미가 오른다
         float32       _cycleTime{ 30.0f }; ///< 한 번 도는 데 걸리는 시간(s, 태우고 내리기 포함)
         float3        _entrance{};         ///< 줄 입구 자리(손님이 걸어온다)
+        float3        _footprintCenter{};  ///< 공유 땅에서 얻는 자리의 가운데(XZ)
+        float3        _footprintSize{};    ///< 공유 땅에서 얻는 크기(XZ, m) — 0 이면 땅을 얻지 않는다(상태 바이트에 싣지 않는다 — 얻은 칸은 땅이 든다)
         int32         _capacity{ 8 };      ///< 한 번에 태우는 수
         int32         _price{ 3 };         ///< 탑승료
         int32         _runningCostPerMinute{ 5 };
@@ -171,7 +174,12 @@ namespace sw
         /** @brief 시간을 흘립니다. 큰 시간은 0.25 초씩 나눠 돈다. */
         void update( float32 deltaTime );
 
-        /** @brief 놀이기구를 짓습니다. 지갑에 @p buildCost 가 없으면 짓지 않고 −1 입니다. 지은 칸 번호를 돌려줍니다. */
+        /**
+         * @brief 공유 땅을 빌립니다(월드 원점이 땅의 원점 · 칸 크기를 따른다 — 공원은 칸 격자가 없어 월드 사각으로 얻는다). @p pLand 가 nullptr 이면 풉니다.
+         * @details 그 뒤로 놀이기구는 지을 때 발자국(`_footprintCenter` · `_footprintSize`)을 막힘으로 얻습니다.
+         */
+        void bindLand( LandRegistry* pLand );
+        /** @brief 놀이기구를 짓습니다. 지갑에 @p buildCost 가 없거나 발자국의 공유 땅이 남의 것이면 짓지 않고 −1 입니다. 지은 칸 번호를 돌려줍니다. */
         int32 buildRide( const ParkRide& ride, int32 buildCost );
         /** @brief 놀이기구를 닫거나 엽니다. 닫으면 줄 선 손님은 나와 다른 것을 고른다. */
         void setRideOpen( int32 rideIndex, bool bOpen );
@@ -230,7 +238,9 @@ namespace sw
         FixedStepTimer    _stepTimer;
         GameRandom        _random;
         Wallet*           _pWallet; ///< 빌린 지갑(공원 돈)
+        LandRegistry*     _pLand;   ///< 빌린 공유 땅(없으면 단독)
         int32             _parkRating;
+        uint16            _landOwner;
         uint32            _nextGuestId;
         uint32            _totalVisitorCount;
     };

@@ -6,6 +6,7 @@
 
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
 #include "GameFramework/Kits/Simulation/ThemePark/ThemePark.h"
 
@@ -255,4 +256,45 @@ SW_TEST_CASE( ThemeParkTest, StateRoundTripContinuesTheSamePark )
     SW_EXPECT_FALSE( untouched.readState( cut ) );
     SW_EXPECT_EQUAL( 77, cashOf( untouchedWallet ) );
     SW_EXPECT_TRUE( untouched.getRides().empty() );
+}
+
+/**
+ * @brief [ThemeParkTest] 땅을 빌린 공원은 놀이기구 발자국을 막힘으로 얻는다 — 남의 땅이면 짓지 않고 돈도 나가지 않는다
+ */
+SW_TEST_CASE( ThemeParkTest, RidesClaimTheirFootprintOnTheSharedLand )
+{
+    LandRegistry land;
+    land.initialize( 32, 32, 1.0f, float3{} );
+    const uint16 other = land.registerOwner( "Other" );
+    SW_ASSERT_TRUE( land.claimRect( other, 10, 10, 10, 10, false ) );
+
+    ThemeParkSimulation park;
+    Wallet              parkWallet;
+    parkWallet.add( "Cash", 1000 );
+    park.initialize( makeClosedGateSettings(), lendWallet( parkWallet ) );
+    park.bindLand( &land );
+
+    ParkRide ride;
+    ride._id              = hashed_string( "carousel" );
+    ride._footprintCenter = float3{ 10.0f, 0.0f, 10.0f };
+    ride._footprintSize   = float3{ 4.0f, 0.0f, 4.0f }; // 8..11 × 8..11
+    SW_EXPECT_EQUAL( -1, park.buildRide( ride, 100 ) );
+    SW_EXPECT_EQUAL( 1000, cashOf( parkWallet ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 8, 8 ) );
+
+    ride._footprintCenter = float3{ 20.0f, 0.0f, 20.0f }; // 18..21
+    SW_ASSERT_TRUE( 0 <= park.buildRide( ride, 100 ) );
+    SW_EXPECT_EQUAL( 900, cashOf( parkWallet ) );
+    SW_EXPECT_TRUE( land.getOwnerName( 18, 18 ) == hashed_string( "ThemePark" ) );
+    SW_EXPECT_TRUE( land.isBlockedFor( other, 21, 21 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 22, 22 ) );
+
+    // 돈이 모자라면 얻은 땅을 되돌린다
+    Wallet              poorWallet;
+    ThemeParkSimulation poorPark;
+    poorPark.initialize( makeClosedGateSettings(), lendWallet( poorWallet ) );
+    poorPark.bindLand( &land );
+    ride._footprintCenter = float3{ 4.0f, 0.0f, 4.0f };
+    SW_EXPECT_EQUAL( -1, poorPark.buildRide( ride, 100 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 3, 3 ) );
 }

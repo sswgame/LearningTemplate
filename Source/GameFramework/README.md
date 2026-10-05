@@ -97,7 +97,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 - **Quest**: 퀘스트(`QuestCatalog` · `QuestLog` — 선행 · 레벨 · 단계 · 목표 · 선택 목표 · 분기 · 보상 알림 · 시간 제한 · 반복)
 - **World**: 시계(`WorldClock` — 시 · 때 · 날 · 계절 · 해 · 햇빛 · 잠), 날씨(`WeatherCatalog` · `WeatherSystem` — 계절 가중치 · 섞기 · 예보),
   방 · 지역 그래프(`AreaGraph` — 잠금 조건 · 일방통행 · 발견 · 탐색률 · 막힌 경계 · 코드로 짓기 · 다른 XML 안에 적기),
-  월드 플래그와 조건식(`GameFlags` — `a && !b || count>=3`), 광선 · 시야 질의(`WorldQuery` — 물리 백엔드 서비스 또는 `PhysicsWorld` 폴백)
+  월드 플래그와 조건식(`GameFlags` — `a && !b || count>=3`), 광선 · 시야 질의(`WorldQuery` — 물리 백엔드 서비스 또는 `PhysicsWorld` 폴백),
+  공유 땅(`LandRegistry` — 칸마다 쓰는 키트 · 막힘, 얻기는 사각 전부이거나 아무것도, 주인은 이름으로 세이브; 키트는 `LandBinding` 으로 제 칸 좌표로 얻고 놓는다)
 - **Interaction**: 상호작용 — 데이터 정의(`InteractionCatalog` — 누름 · 누르고 있기 · 연타 · 단계 · 거리 · 시야각 · 시야 · 쿨다운 · 태그 조건 · 맞춤 마커 · 강조 · 권한),
   고르기(`InteractionSelector`) · 진행(`InteractionSession`, 진행형 `InteractionProgress` — 여럿 · 끊김 · 퇴행 · 스킬 체크), 컴포넌트(`InteractableComponent` ·
   `InteractorComponent` · `SmartObjectComponent` · `GrabberComponent`), 권한 훅(`IInteractionAuthority`). 2D · 3D 공용. `Interaction/README.md`
@@ -296,10 +297,13 @@ CMake 는 빌드 타깃(`SW_TARGET_TYPE` — Game 은 둘 다)과 겹치지 않�
 
 키트는 게임 전체를 쥐지 않는다. 섞인 게임에서 키트 둘이 같은 돈 · 시간 · 퀘스트를 보려면 다음을 지킨다(조립 시험: `KitCompositionTest`, 시험 게임 `MeadowVillage`).
 
-- **공유 상태는 `GameStateComponent` 하나**(지갑 · 플래그 · 시계 · 일지 · 평판). 키트 디렉터들과 **같은 오브젝트에 맨 앞**으로 붙인다 — 한 오브젝트의 틱은 붙은 순서로
+- **공유 상태는 `GameStateComponent` 하나**(지갑 · 플래그 · 시계 · 일지 · 평판 · 가방 · 날씨 · 땅). 키트 디렉터들과 **같은 오브젝트에 맨 앞**으로 붙인다 — 한 오브젝트의 틱은 붙은 순서로
   한 워커가 돈다(`TickRegistry`). 공유 상태를 만지는 디렉터를 다른 오브젝트에 두면 같은 그룹에서 동시에 돌아 데이터 경쟁이다.
 - **키트 시뮬레이션은 기반 상태를 빌린다**(`const GameStateRefs&` — 지갑 · 가방 · 플래그 · 시계 · 날씨 · 일지 · 평판 · 땅의 포인터 묶음). 제 것으로 들지 않는다 —
   키트 하나만 쓰는 게임은 디렉터가 들고 빌려 준다.
+- **땅에 무언가 놓는 키트는 땅을 빌린다**(`bindLand( LandRegistry*, 원점 )` — 밭 · 마을 · 도시 · RTS · SRPG 전장 · 공원 · 복셀). 놓기 전에 얻고 치우면 놓는다 —
+  남의 칸에는 놓지 못하고, 남이 막아 둔 칸(건물 · 나무)은 다른 키트의 길찾기가 피한다(RTS 는 땅 리비전이 바뀌면 땅 격자를 다시 칠한다). 키트 자기 격자(밭 칸 · 도시 칸)는 그대로 키트의 것이다.
+  액션 플랫포머의 굴착 격자는 옆에서 본 2D 레벨의 충돌 칸이라 월드 XZ 땅이 아니다.
 - **빌린 객체의 알림은 꺼내지 않는다**(`drainEvents` 는 게임 화면의 것). 키트는 상태를 본다(`QuestLog::getStatus`). 시계 알림은 `getClockEvents` 를 여럿이 읽는다.
 - **판을 여는 것은 그 오브젝트의 첫 디렉터**(`GameStateComponent::initialize`), 시작값 · 공유 상태를 건드리는 시작 배치는 `isFreshGame()` 일 때만.
 - **상태 바이트는 구간**(`StateArchiveUtil::writeSection` — 표 · 판 · 길이). 키트 상태마다 `kStateTag`(4 글자, 저장소에서 하나 — `CheckKitNamespaces`) · `kStateVersion` 을 키트 클래스가 든다.

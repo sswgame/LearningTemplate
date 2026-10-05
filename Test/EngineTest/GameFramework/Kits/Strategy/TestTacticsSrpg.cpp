@@ -3,6 +3,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Navigation/GridReachability.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgAiController.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgBattlefield.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"
@@ -782,4 +783,26 @@ SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameCampaign )
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_TRUE( truncated.getRoster().empty() );
     SW_EXPECT_FALSE( truncated.isInMission() );
+}
+
+/**
+ * @brief [TacticsSrpgTest] 전장은 전투 동안 전장 전체를 한 번에 빌린다 — 남의 칸이 있으면 거절, 끝나면 놓는다
+ */
+SW_TEST_CASE( TacticsSrpgTest, BattlefieldBorrowsItsLandForTheBattleOnly )
+{
+    SrpgTestScene scene;
+    SW_ASSERT_TRUE( scene.initialize( 6, 4 ) );
+    LandRegistry land;
+    land.initialize( 16, 16, 1.0f, float3{} );
+    const uint16 other = land.registerOwner( "Other" );
+    SW_ASSERT_TRUE( land.claimRect( other, 3, 3, 3, 3, true ) );
+
+    SW_EXPECT_FALSE( scene._field.bindLand( &land, int2{ 0, 0 } ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 0, 0 ) );
+    SW_ASSERT_TRUE( scene._field.bindLand( &land, int2{ 8, 8 } ) );
+    SW_EXPECT_TRUE( land.getOwnerName( 13, 11 ) == hashed_string( "TacticsSrpg" ) );
+    SW_EXPECT_FALSE( land.claimRect( other, 13, 11, 13, 11, false ) );
+    scene._field.releaseLand();
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 13, 11 ) );
+    SW_EXPECT_TRUE( land.claimRect( other, 13, 11, 13, 11, false ) );
 }

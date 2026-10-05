@@ -74,7 +74,9 @@ namespace sw
         , _stepTimer{}
         , _random{ 12345u }
         , _pWallet{ nullptr }
+        , _pLand{ nullptr }
         , _parkRating{ 0 }
+        , _landOwner{ LandRegistry::kNoOwner }
         , _nextGuestId{ 1 }
         , _totalVisitorCount{ 0 }
     {
@@ -103,10 +105,23 @@ namespace sw
             stepFixed( _stepTimer.getStep() );
     }
 
+    void ThemeParkSimulation::bindLand( LandRegistry* pLand )
+    {
+        _pLand     = pLand;
+        _landOwner = pLand != nullptr ? pLand->registerOwner( hashed_string( "ThemePark" ) ) : LandRegistry::kNoOwner;
+    }
+
     int32 ThemeParkSimulation::buildRide( const ParkRide& ride, int32 buildCost )
     {
-        if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, MathUtil::max( 0, buildCost ) ) == false )
+        const bool bClaimLand = _pLand != nullptr && _landOwner != LandRegistry::kNoOwner && ride._footprintSize._x > 0.0f && ride._footprintSize._z > 0.0f;
+        if ( bClaimLand && _pLand->claimWorldRect( _landOwner, ride._footprintCenter, ride._footprintSize, true ) == false )
             return -1;
+        if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, MathUtil::max( 0, buildCost ) ) == false )
+        {
+            if ( bClaimLand )
+                _pLand->releaseWorldRect( _landOwner, ride._footprintCenter, ride._footprintSize );
+            return -1;
+        }
         ParkRide built = ride;
         built._listQueue.clear();
         built._listRider.clear();

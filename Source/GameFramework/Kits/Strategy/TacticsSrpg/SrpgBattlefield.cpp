@@ -56,6 +56,7 @@ namespace sw
         , _random{}
         , _pCatalog{ nullptr }
         , _topology{}
+        , _land{}
         , _turn{ 0 }
         , _activeUnit{ -1 }
         , _phaseTeam{ SrpgTeam::Player }
@@ -129,6 +130,23 @@ namespace sw
         SrpgUnit* pUnit = findUnit( unitIndex );
         if ( pUnit != nullptr )
             pUnit->_bCommander = bCommander ? SW_TRUE : SW_FALSE;
+    }
+
+    bool SrpgBattlefield::bindLand( LandRegistry* pLand, const int2& origin )
+    {
+        LandBinding land;
+        land.bind( pLand, origin, hashed_string( "TacticsSrpg" ) );
+        if ( _topology.getCellCount() > 0 && land.claimRect( 0, 0, _topology._width - 1, _topology._height - 1, false ) == false )
+            return false;
+        _land = land;
+        return true;
+    }
+
+    void SrpgBattlefield::releaseLand()
+    {
+        if ( _topology.getCellCount() > 0 )
+            _land.releaseRect( 0, 0, _topology._width - 1, _topology._height - 1 );
+        _land = LandBinding{};
     }
 
     void SrpgBattlefield::beginBattle()

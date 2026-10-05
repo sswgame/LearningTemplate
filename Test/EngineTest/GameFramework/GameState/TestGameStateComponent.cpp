@@ -336,3 +336,32 @@ SW_TEST_CASE( GameStateComponentTest, WeatherFollowsTheSharedClockAndRidesTheSna
         SW_EXPECT_TRUE( restored.getWeather().getCurrent() == state.getWeather().getCurrent() );
     }
 }
+
+/**
+ * @brief [GameStateComponentTest] 공유 땅은 설정 크기가 있을 때만 빌려 주고(없으면 nullptr — 격자 키트는 단독), 칸 주인이 스냅숏 바이트에 실려 돌아온다
+ */
+SW_TEST_CASE( GameStateComponentTest, LandIsLentOnlyWhenSizedAndRidesTheSnapshot )
+{
+    GameStateComponent landless;
+    SW_ASSERT_TRUE( landless.initialize( GameStateSettings{} ) == GameStateInitResult::Fresh );
+    SW_EXPECT_TRUE( landless.makeRefs()._pLand == nullptr );
+
+    GameStateSettings settings;
+    settings._landWidth  = 8;
+    settings._landHeight = 8;
+    GameStateComponent state;
+    SW_ASSERT_TRUE( state.initialize( settings ) == GameStateInitResult::Fresh );
+    LandRegistry* pLand = state.makeRefs()._pLand;
+    SW_ASSERT_NOT_NULL( pLand );
+    SW_ASSERT_TRUE( pLand->claimRect( pLand->registerOwner( "Farming" ), 1, 1, 2, 2, true ) );
+
+    Archive archive;
+    state.writeState( archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+    GameStateComponent restored;
+    restored.restoreState( std::move( bytes ) );
+    SW_ASSERT_TRUE( restored.initialize( settings ) == GameStateInitResult::Restored );
+    SW_EXPECT_TRUE( restored.getLand().getOwnerName( 2, 2 ) == hashed_string( "Farming" ) );
+    SW_EXPECT_TRUE( restored.getLand().isBlockedFor( restored.getLand().registerOwner( "CityBuilder" ), 1, 1 ) );
+}

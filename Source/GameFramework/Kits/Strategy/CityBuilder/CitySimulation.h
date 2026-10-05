@@ -14,6 +14,7 @@
 #include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Base/Utility/GridTopology.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 
@@ -173,6 +174,11 @@ namespace sw
         void initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const GameStateRefs& refs );
         void setTerrain( int32 x, int32 y, CityTerrain terrain );
         void fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
+        /**
+         * @brief 공유 땅을 빌립니다(도시 칸 (0, 0) = 땅 칸 @p origin). 그 뒤로 도로 · 건물은 놓기 전에 땅을 얻고(건물은 막힘, 도로는 아님) 허물면 놓습니다.
+         * @details 지형(`setTerrain`)은 땅 표와 무관합니다. 이미 놓인 도로 · 건물은 얻지 않으므로 짓기 전에 묶습니다. @p pLand 가 nullptr 이면 풉니다.
+         */
+        void bindLand( LandRegistry* pLand, const int2& origin );
 
         /**
          * @brief 한 달을 결산합니다 — 물자를 먹고, 세리가 다녀간 집이 세금을 내고, 일꾼 임금을 냅니다(모자라면 지갑이 빚). @p bNewYear 면 범람이 다음 해의 비옥함을 정합니다.
@@ -180,10 +186,11 @@ namespace sw
          */
         void settleMonth( bool bNewYear );
 
+        /** @brief 도로 한 칸을 깝니다. 공유 땅이 남의 것이면 `Occupied` 입니다. */
         CityPlaceResult placeRoad( int32 x, int32 y );
         /** @brief 두 칸 사이에 ㄱ 자 도로를 깝니다(먼저 X, 다음 Y). 깐 칸 수입니다. */
         int32 placeRoadLine( const int2& from, const int2& to );
-        /** @brief 건물을 @p x, @p y(왼쪽 아래 칸)에 짓습니다. */
+        /** @brief 건물을 @p x, @p y(왼쪽 아래 칸)에 짓습니다. 발자국의 공유 땅이 한 칸이라도 남의 것이면 `Occupied` 입니다. */
         CityPlaceResult placeBuilding( const hashed_string& buildingId, int32 x, int32 y );
         /** @brief 그 칸의 건물 · 도로를 허뭅니다. 허물었으면 true 입니다. */
         bool demolish( int32 x, int32 y );
@@ -264,6 +271,7 @@ namespace sw
         float32                   _floodFertility;
         float32                   _wageDebt;
         GridTopology              _topology;
+        LandBinding               _land; ///< 빌린 공유 땅(없으면 단독)
         int32                     _monthIncome;
         int32                     _workforce;
         int32                     _employed;

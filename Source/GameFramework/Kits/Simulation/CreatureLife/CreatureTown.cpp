@@ -109,6 +109,8 @@ namespace sw
                 return "OutOfBounds";
             case CreatureAbilityResult::NoRule:
                 return "NoRule";
+            case CreatureAbilityResult::LandTaken:
+                return "LandTaken";
         }
         return "Unknown";
     }
@@ -142,6 +144,7 @@ namespace sw
         , _pQuestLog{ nullptr }
         , _pClock{ nullptr }
         , _topology{}
+        , _land{}
         , _nextHabitatId{ 1 }
         , _lastAttractKey{ -1 }
         , _appealTier{ -1 }
@@ -169,6 +172,28 @@ namespace sw
         _eventBuffer.clear(); // 처음 단계는 알리지 않는다
     }
 
+    bool CreatureTown::bindLand( LandRegistry* pLand, const int2& origin )
+    {
+        LandBinding land;
+        land.bind( pLand, origin, hashed_string( "CreatureLife" ) );
+        // 이미 놓인 칸을 먼저 모두 볼 수 있어야 얻는다(반쯤 얻고 실패하지 않게).
+        for ( int32 index = 0; index < _topology.getCellCount(); ++index )
+        {
+            const int2 cell = _topology.toCell( index );
+            if ( _listObject[static_cast<size_t>( index )].empty() == false && land.isUsable( cell._x, cell._y ) == false )
+                return false;
+        }
+        for ( int32 index = 0; index < _topology.getCellCount(); ++index )
+        {
+            const hashed_string& object = _listObject[static_cast<size_t>( index )];
+            const int2           cell   = _topology.toCell( index );
+            if ( object.empty() == false )
+                (void)land.claimRect( cell._x, cell._y, cell._x, cell._y, isBlockingObject( object ) );
+        }
+        _land = land;
+        return true;
+    }
+
     bool CreatureTown::setObject( int32 x, int32 y, const hashed_string& object )
     {
         if ( _topology.isInside( x, y ) == false )
@@ -176,9 +201,23 @@ namespace sw
         hashed_string& tileObject = _listObject[static_cast<size_t>( _topology.toIndex( x, y ) )];
         if ( tileObject == object )
             return true;
+        if ( object.empty() )
+            _land.releaseRect( x, y, x, y );
+        else if ( _land.claimRect( x, y, x, y, isBlockingObject( object ) ) == false )
+            return false;
         tileObject = object;
         refreshHabitats();
         return true;
+    }
+
+    bool CreatureTown::isBlockingObject( const hashed_string& object ) const
+    {
+        for ( const hashed_string& blockingObject : _settings._listBlockingObject )
+        {
+            if ( blockingObject == object )
+                return true;
+        }
+        return false;
     }
 
     int32 CreatureTown::attractVisitors( const WorldClock& clock, const WeatherSystem& weather )
@@ -328,6 +367,8 @@ namespace sw
         const CreatureTileRule* pRule     = pAbility->findRule( _listObject[static_cast<size_t>( tileIndex )] );
         if ( pRule == nullptr )
             return CreatureAbilityResult::NoRule;
+        if ( _land.isUsable( x, y ) == false )
+            return CreatureAbilityResult::LandTaken;
         ++usedCount;
         if ( pRule->_yieldItem.empty() == false && pYieldInventory != nullptr )
             (void)pYieldInventory->addItem( pRule->_yieldItem, pRule->_yieldCount );
@@ -338,7 +379,7 @@ namespace sw
 
     int32 CreatureTown::placeHouse( int32 x, int32 y, int32 capacity )
     {
-        if ( _topology.isInside( x, y ) == false || _listObject[static_cast<size_t>( _topology.toIndex( x, y ) )].empty() == false )
+        if ( _topology.isInside( x, y ) == false || _listObject[static_cast<size_t>( _topology.toIndex( x, y ) )].empty() == false || _land.isUsable( x, y ) == false )
             return -1;
         CreatureHouse house;
         house._tile     = int2{ x, y };

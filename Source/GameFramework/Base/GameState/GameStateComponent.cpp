@@ -17,7 +17,7 @@ namespace sw
     {
         struct GameStateComponentInternal
         {
-            static constexpr uint32 kSectionCount = 7;
+            static constexpr uint32 kSectionCount = 8;
 
             /** @brief 읽은 구간 하나 — 본문은 읽은 바이트의 보기입니다. */
             struct Section
@@ -70,6 +70,7 @@ namespace sw
         , _reputation{}
         , _inventory{}
         , _weather{}
+        , _land{}
         , _listClockEvent{}
         , _pendingStateBytes{}
         , _bInitialized{ SW_FALSE }
@@ -93,6 +94,7 @@ namespace sw
         _inventory.initialize( settings._pItemCatalog, MathUtil::max( 0, settings._inventorySlotCount ) );
         _weather.initialize( settings._pWeatherCatalog, settings._weatherSeed, _clock.getSeasonName() );
         _bWeather = settings._pWeatherCatalog != nullptr ? SW_TRUE : SW_FALSE;
+        _land.initialize( MathUtil::max( 0, settings._landWidth ), MathUtil::max( 0, settings._landHeight ), settings._landCellSize, settings._landOrigin );
         _listClockEvent.clear();
         _bInitialized = SW_TRUE;
         _bFreshGame   = SW_TRUE;
@@ -146,6 +148,7 @@ namespace sw
         GameStateComponentInternal::writeStateSection( outArchive, _reputation );
         GameStateComponentInternal::writeStateSection( outArchive, _inventory );
         GameStateComponentInternal::writeStateSection( outArchive, _weather );
+        GameStateComponentInternal::writeStateSection( outArchive, _land );
     }
 
     void GameStateComponent::restoreState( vector<uint8>&& bytes )
@@ -165,6 +168,7 @@ namespace sw
         refs._pReputation = &_reputation;
         refs._pInventory  = _inventory.getSlotCount() > 0 ? &_inventory : nullptr;
         refs._pWeather    = _bWeather == SW_TRUE ? &_weather : nullptr;
+        refs._pLand       = _land.isInitialized() ? &_land : nullptr;
         return refs;
     }
 
@@ -241,6 +245,11 @@ namespace sw
                 case WeatherSystem::kStateTag:
                 {
                     (void)GameStateComponentInternal::applyStateSection( section, _weather, "weather" );
+                    break;
+                }
+                case LandRegistry::kStateTag:
+                {
+                    (void)GameStateComponentInternal::applyStateSection( section, _land, "land" );
                     break;
                 }
                 default:

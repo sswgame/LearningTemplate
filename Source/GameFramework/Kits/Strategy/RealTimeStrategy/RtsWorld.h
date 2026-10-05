@@ -19,6 +19,7 @@
 #include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/Base/Utility/GridTopology.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
 
@@ -223,6 +224,12 @@ namespace sw
         void initialize( const RtsCatalog* pCatalog, int32 width, int32 height, const RtsSettings& settings );
         /** @brief 지형 막힘(절벽 · 물)입니다. 유닛을 놓기 전에 칠합니다. */
         void setTerrainBlocked( int32 x, int32 y, bool bBlocked );
+        /**
+         * @brief 공유 땅을 빌립니다(월드 칸 (0, 0) = 땅 칸 @p origin). 그 뒤로 건물은 놓을 때 땅을 얻고(막힘) 부서지면 놓습니다.
+         * @details 다른 키트가 막아 둔 땅은 땅 격자에서 막힘이다 — 땅 리비전이 바뀐 `update` 머리에서 땅 격자를 다시 칠한다(하늘 격자는 그대로).
+         *          막히지 않은 남의 땅(도로)도 짓지는 못한다. 이미 놓인 건물은 얻지 않으므로 건물을 놓기 전에 묶습니다. @p pLand 가 nullptr 이면 풉니다.
+         */
+        void bindLand( LandRegistry* pLand, const int2& origin );
         /** @brief 플레이어를 더합니다. 자원은 빌린 지갑(@p pWallet — 월드보다 오래 살아야 한다, nullptr 이면 아무것도 사지 못한다)입니다. 플레이어 번호입니다. */
         int32 addPlayer( int32 team, Wallet* pWallet, const float3& startPosition );
         /** @brief 유닛 · 건물(다 지은 채) · 자원을 놓습니다. 건물 · 자원은 @p position 이 든 칸이 왼쪽 아래입니다. 놓을 수 없으면 무효 id 입니다. */
@@ -282,7 +289,7 @@ namespace sw
         /** @brief 생산 대기열 · 짓는 중까지 셉니다(AI 가 같은 것을 두 번 시키지 않게). */
         int32 countPlanned( int32 player, const hashed_string& defId ) const;
 
-        /** @brief 건물을 그 칸에 놓을 수 있는가입니다(격자 · 다른 건물 · 땅 유닛 · 정제소는 간헐천 위). @p ignoreUnit 은 짓는 일꾼. */
+        /** @brief 건물을 그 칸에 놓을 수 있는가입니다(격자 · 다른 건물 · 땅 유닛 · 정제소는 간헐천 위 · 빌린 공유 땅이 남의 것이 아님). @p ignoreUnit 은 짓는 일꾼. */
         bool canPlaceBuilding( const hashed_string& buildingId, const int2& cell, RtsUnitId ignoreUnit = RtsUnitId{} ) const;
         /** @brief @p nearPosition 둘레에서 둘레 한 칸을 비운 건물 자리를 찾습니다(AI · 자동 배치). 정제소는 가까운 빈 간헐천입니다. */
         [[nodiscard]] bool findBuildSite( const hashed_string& buildingId, const float3& nearPosition, int32 minRadius, int32 maxRadius, int2& outCell ) const;
@@ -350,14 +357,16 @@ namespace sw
         void             finishOrder( RtsUnit& unit );
         void             clearOrders( RtsUnit& unit );
         /** @brief 목표 쪽으로 걷습니다(목표가 움직이면 간격을 두고 경로를 다시). */
-        void             approach( RtsUnit& unit, const float3& target, bool bForce );
-        bool             isWithinReach( const RtsUnit& unit, const RtsUnit& target, float32 reach ) const;
-        float32          computeEdgeDistance( const RtsUnit& unit, const RtsUnit& target ) const;
-        bool             canAttack( const RtsUnit& attacker, const RtsUnit& target ) const;
-        RtsUnitId        findAutoTarget( const RtsUnit& unit, float32 radius ) const;
-        void             dealDamage( RtsUnit& attacker, RtsUnit& target );
-        void             killUnit( RtsUnit& unit, RtsUnitId killerId );
-        void             placeFootprint( const RtsUnit& unit, bool bBlocked );
+        void      approach( RtsUnit& unit, const float3& target, bool bForce );
+        bool      isWithinReach( const RtsUnit& unit, const RtsUnit& target, float32 reach ) const;
+        float32   computeEdgeDistance( const RtsUnit& unit, const RtsUnit& target ) const;
+        bool      canAttack( const RtsUnit& attacker, const RtsUnit& target ) const;
+        RtsUnitId findAutoTarget( const RtsUnit& unit, float32 radius ) const;
+        void      dealDamage( RtsUnit& attacker, RtsUnit& target );
+        void      killUnit( RtsUnit& unit, RtsUnitId killerId );
+        void      placeFootprint( const RtsUnit& unit, bool bBlocked );
+        /** @brief 땅 격자를 지형 · 남의 막힌 땅 · 서 있는 건물 · 자원의 발자국으로 다시 칠합니다. */
+        void             repaintGrid();
         void             startConstruction( RtsUnit& worker, RtsOrder& order );
         void             completeProduction( RtsUnit& building );
         bool             findSpawnPosition( const RtsUnit& building, float3& outPosition ) const;
@@ -390,7 +399,9 @@ namespace sw
         float32               _time;
         Countdown             _visionTimer;
         GridTopology          _bucketTopology; ///< 이웃 찾기 버킷 격자(버킷 = `_settings._bucketSize` 칸)
+        LandBinding           _land;           ///< 빌린 공유 땅(없으면 단독)
         int32                 _teamCount;
         int32                 _winningTeam;
+        uint32                _landRevision; ///< 마지막으로 땅 격자를 칠한 땅 리비전
     };
 } // namespace sw

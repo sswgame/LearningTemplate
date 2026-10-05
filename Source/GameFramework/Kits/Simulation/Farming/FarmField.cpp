@@ -43,6 +43,7 @@ namespace sw
         : _listTile{}
         , _pCatalog{ nullptr }
         , _topology{}
+        , _land{}
     {
     }
 
@@ -52,6 +53,16 @@ namespace sw
         _pCatalog = pCatalog;
         _listTile.clear();
         _listTile.resize( static_cast<size_t>( _topology.getCellCount() ) );
+    }
+
+    bool FarmField::bindLand( LandRegistry* pLand, const int2& origin )
+    {
+        LandBinding land;
+        land.bind( pLand, origin, hashed_string( "Farming" ) );
+        if ( _topology.getCellCount() > 0 && land.claimRect( 0, 0, _topology._width - 1, _topology._height - 1, false ) == false )
+            return false;
+        _land = land;
+        return true;
     }
 
     void FarmField::writeState( Archive& outArchive ) const

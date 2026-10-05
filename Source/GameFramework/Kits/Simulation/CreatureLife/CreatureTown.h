@@ -12,6 +12,7 @@
 #include "GameFramework/Base/Progression/Reputation.h"
 #include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/Base/Utility/GridTopology.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
@@ -36,6 +37,8 @@ namespace sw
         int32         _foodPoints{ 20 };       ///< 좋아하는 음식
         int32         _requestPoints{ 50 };    ///< 부탁을 끝냈을 때
         uint32        _randomSeed{ 7100u };    ///< 방문 확률의 씨앗
+        /** @brief 공유 땅에서 막힘으로 얻는 오브젝트(다른 키트의 길찾기가 피한다). 나머지(풀 · 꽃)는 막힘 없이 얻는다. */
+        vector<hashed_string> _listBlockingObject{ hashed_string( "house" ), hashed_string( "tree" ), hashed_string( "rock" ) };
     };
 } // namespace sw
 
@@ -68,7 +71,8 @@ namespace sw
         NotKnown,   ///< 그 생물의 능력이 아니다
         NoUsesLeft, ///< 오늘 쓸 수 있는 횟수를 다 썼다
         OutOfBounds,
-        NoRule ///< 그 칸의 오브젝트에 맞는 규칙이 없다(물 위에 나무 심기)
+        NoRule,   ///< 그 칸의 오브젝트에 맞는 규칙이 없다(물 위에 나무 심기)
+        LandTaken ///< 그 칸의 공유 땅을 다른 키트가 쓴다
     };
 
     /** @brief 집 배정 결과입니다. */
@@ -173,7 +177,12 @@ namespace sw
          */
         void initialize( const CreatureLifeCatalog* pCatalog, const GameStateRefs& refs, int32 width, int32 height, const CreatureTownSettings& settings );
 
-        /** @brief 칸에 오브젝트를 놓습니다(빈 id 는 비우기). 서식지를 다시 맞춥니다. 밖이면 false 입니다. */
+        /**
+         * @brief 공유 땅을 빌립니다(마을 칸 (0, 0) = 땅 칸 @p origin). 이미 놓인 오브젝트의 칸을 얻고, 그 뒤로는 오브젝트를 놓을 때 얻고 비우면 놓습니다.
+         * @return 이미 놓인 칸 하나라도 남의 땅이면 false 이고 묶지 않습니다. @p pLand 가 nullptr 이면 풀고 true 입니다.
+         */
+        [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
+        /** @brief 칸에 오브젝트를 놓습니다(빈 id 는 비우기). 서식지를 다시 맞춥니다. 밖이거나 그 칸의 공유 땅이 남의 것이면 false 이고 그대로입니다. */
         bool setObject( int32 x, int32 y, const hashed_string& object );
         /** @brief 시계 · 날씨로 이번 시의 방문을 굴립니다. 찾아온 수입니다. */
         int32 attractVisitors( const WorldClock& clock, const WeatherSystem& weather );
@@ -192,7 +201,7 @@ namespace sw
         /** @brief 능력으로 칸을 바꿉니다. 얻은 아이템은 @p pYieldInventory(없어도 된다)에 넣습니다. */
         CreatureAbilityResult useAbility( const hashed_string& speciesId, const hashed_string& abilityId, int32 x, int32 y, Inventory* pYieldInventory );
 
-        /** @brief 빈 칸에 집을 짓습니다. 집 자리 번호, 밖이거나 칸이 차 있으면 −1 입니다. */
+        /** @brief 빈 칸에 집을 짓습니다. 집 자리 번호, 밖이거나 칸이 차 있거나 공유 땅이 남의 것이면 −1 입니다. */
         int32               placeHouse( int32 x, int32 y, int32 capacity );
         CreatureHouseResult assignHouse( const hashed_string& speciesId, int32 houseIndex );
         /** @brief 집 없는 생물을 온 순서대로 자리가 남은 가장 가까운 집(서식지 기준 맨해튼 거리, 같으면 앞 집)에 넣습니다. 넣은 수입니다. */
@@ -249,6 +258,7 @@ namespace sw
         bool rewardRequest( const hashed_string& questId );
         void updateAppealTier();
         int2 computeCreatureAnchor( const TownCreature& creature ) const;
+        bool isBlockingObject( const hashed_string& object ) const;
 
         vector<hashed_string>          _listObject; ///< 칸마다 오브젝트 id(`_topology` 의 칸 번호) — 빈 id 는 빈 칸
         vector<HabitatInstance>        _listHabitat;
@@ -262,6 +272,7 @@ namespace sw
         QuestLog*                      _pQuestLog;   ///< 빌린 부탁 일지(없으면 부탁 없음)
         const WorldClock*              _pClock;      ///< 빌린 시계(날 — 없으면 0 일)
         GridTopology                   _topology;
+        LandBinding                    _land; ///< 빌린 공유 땅(없으면 단독)
         int32                          _nextHabitatId;
         int32                          _lastAttractKey; ///< 마지막으로 방문을 굴린 날 × 24 + 시
         int32                          _appealTier;

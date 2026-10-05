@@ -6,6 +6,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiController.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsSelection.h"
@@ -664,4 +665,39 @@ SW_TEST_CASE( RealTimeStrategyTest, AttackRateFollowsTheCooldownNotTheStepGrid )
         world.update( 0.1f );
     const float32 shotCount = ( 100000.0f - world.findUnit( blockId )->_hp ) / 10.0f;
     SW_EXPECT_NEAR_EQUAL( seconds / 1.2f, shotCount, 1.5f );
+}
+
+/**
+ * @brief [RealTimeStrategyTest] 땅을 빌린 월드는 남의 땅에 짓지 못하고(막히지 않은 도로도), 남이 막아 둔 땅은 땅 격자에서 막힘이며 땅이 바뀌면 다시 칠한다
+ */
+SW_TEST_CASE( RealTimeStrategyTest, WorldBuildsOnlyOnUsableLandAndRepaintsTheGridFromIt )
+{
+    RtsTestScene scene;
+    SW_ASSERT_TRUE( scene.initialize( 32, 32 ) );
+    LandRegistry land;
+    land.initialize( 32, 32, 1.0f, float3{} );
+    const uint16 other = land.registerOwner( "Other" );
+    SW_ASSERT_TRUE( land.claimRect( other, 8, 8, 11, 11, true ) );   // 남의 건물
+    SW_ASSERT_TRUE( land.claimRect( other, 0, 20, 15, 20, false ) ); // 남의 도로
+    scene._world.bindLand( &land, int2{ 0, 0 } );
+    SW_EXPECT_FALSE( scene._world.getGrid().isWalkable( 9, 9 ) );
+    SW_EXPECT_TRUE( scene._world.getGrid().isWalkable( 5, 20 ) );
+
+    const int32     player = scene.addPlayer( 0, 1000, 0, float3{ 2.0f, 0.0f, 2.0f } );
+    const RtsUnitId worker = scene.spawn( "worker", player, 2.5f, 2.5f );
+    SW_ASSERT_TRUE( worker.isValid() );
+    SW_EXPECT_TRUE( scene._world.issueBuild( worker, hashed_string( "depot" ), int2{ 9, 9 } ) == RtsCommandResult::InvalidPlacement );
+    SW_EXPECT_TRUE( scene._world.issueBuild( worker, hashed_string( "depot" ), int2{ 4, 19 } ) == RtsCommandResult::InvalidPlacement ); // 도로 위
+    SW_EXPECT_TRUE( scene._world.issueBuild( worker, hashed_string( "depot" ), int2{ 20, 4 } ) == RtsCommandResult::Ok );
+
+    const RtsUnitId depot = scene.spawn( "depot", player, 24.5f, 24.5f );
+    SW_ASSERT_TRUE( depot.isValid() );
+    SW_EXPECT_TRUE( land.getOwnerName( 24, 24 ) == hashed_string( "RealTimeStrategy" ) );
+    SW_EXPECT_TRUE( land.isBlockedFor( other, 25, 25 ) );
+    SW_EXPECT_FALSE( scene.spawn( "depot", player, 10.5f, 10.5f ).isValid() );
+
+    land.releaseRect( other, 8, 8, 11, 11 );
+    scene.run( 0.1f ); // 리비전이 바뀐 걸음에 다시 칠한다
+    SW_EXPECT_TRUE( scene._world.getGrid().isWalkable( 9, 9 ) );
+    SW_EXPECT_FALSE( scene._world.getGrid().isWalkable( 24, 24 ) ); // 제 건물은 그대로
 }

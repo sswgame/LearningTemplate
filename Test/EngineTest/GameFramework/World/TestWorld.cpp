@@ -1,11 +1,14 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Base/World/WeatherSystem.h"
 #include "GameFramework/Base/World/WorldClock.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 장르 공통 세계 — 시계(시 · 때 · 날 · 계절 · 해 · 햇빛 · 잠자기 · 배율 · 멈춤)와 날씨(계절 가중치 · 지속 · 섞기 · 강제 · 예보).
+// 장르 공통 세계 — 공유 땅, 시계(시 · 때 · 날 · 계절 · 해 · 햇빛 · 잠자기 · 배율 · 멈춤)와 날씨(계절 가중치 · 지속 · 섞기 · 강제 · 예보).
 
 using namespace sw;
 
@@ -125,4 +128,65 @@ SW_TEST_CASE( WorldTest, WeatherFollowsSeasonWeightsBlendsAndForecasts )
         if ( step > 10 )
             SW_EXPECT_TRUE( weather.getCurrent() != hashed_string( "rain" ) );
     }
+}
+
+/**
+ * @brief [WorldTest] 공유 땅 — 얻기는 사각 전부이거나 아무것도(남의 칸이 하나라도 있으면 거절), 놓기는 내 칸만, 막힘은 남에게만,
+ *        상태 바이트는 주인을 이름으로 실어 등록 순서가 다른 땅에도 같은 칸 주인으로 되살린다
+ */
+SW_TEST_CASE( WorldTest, LandClaimsAreAllOrNothingAndSurviveTheSnapshot )
+{
+    LandRegistry land;
+    land.initialize( 8, 8, 1.0f, float3{} );
+    const uint16 farm = land.registerOwner( "Farming" );
+    const uint16 city = land.registerOwner( "CityBuilder" );
+    SW_EXPECT_EQUAL( farm, land.registerOwner( "Farming" ) ); // 같은 이름은 같은 번호
+    SW_EXPECT_TRUE( farm != city );
+
+    SW_ASSERT_TRUE( land.claimRect( farm, 0, 0, 2, 2, false ) );
+    SW_ASSERT_TRUE( land.claimRect( city, 4, 4, 5, 5, true ) );
+    const uint32 revision = land.getRevision();
+    SW_EXPECT_FALSE( land.claimRect( city, 2, 2, 4, 4, true ) ); // (2, 2) 가 밭의 것 — 반쯤 얻지 않는다
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 3, 3 ) );
+    SW_EXPECT_EQUAL( revision, land.getRevision() );
+    SW_EXPECT_FALSE( land.claimRect( farm, 7, 7, 8, 8, false ) ); // 밖
+    SW_EXPECT_TRUE( land.claimRect( farm, 0, 0, 1, 1, false ) );  // 내 칸은 다시 얻어도 된다
+
+    SW_EXPECT_TRUE( land.isBlockedFor( farm, 4, 4 ) );
+    SW_EXPECT_FALSE( land.isBlockedFor( city, 4, 4 ) ); // 내 칸은 막힘이 아니다
+    SW_EXPECT_FALSE( land.isBlockedFor( city, 0, 0 ) ); // 밭은 막힘 없이 얻었다
+    SW_EXPECT_FALSE( land.isUsableBy( city, 0, 0 ) );
+    SW_EXPECT_TRUE( land.isUsableBy( city, 6, 6 ) );
+
+    land.releaseRect( city, 0, 0, 7, 7 ); // 내 칸만 놓는다
+    SW_EXPECT_EQUAL( farm, land.getOwner( 1, 1 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 4, 4 ) );
+    SW_ASSERT_TRUE( land.claimWorldRect( city, float3{ 5.0f, 0.0f, 5.0f }, float3{ 2.0f, 1.0f, 2.0f }, true ) ); // 4..5 × 4..5
+    SW_EXPECT_EQUAL( city, land.getOwner( 4, 4 ) );
+    SW_EXPECT_EQUAL( city, land.getOwner( 5, 5 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 6, 6 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 3, 3 ) );
+
+    Archive archive;
+    land.writeState( archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+
+    // 다른 실행 — 등록 순서가 반대인 땅
+    LandRegistry restored;
+    restored.initialize( 8, 8, 1.0f, float3{} );
+    const uint16 restoredCity = restored.registerOwner( "CityBuilder" );
+    Archive      reader( bytes.data(), bytes.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reader.getRemainingBytes() ) );
+    SW_EXPECT_EQUAL( restoredCity, restored.getOwner( 4, 4 ) );
+    SW_EXPECT_TRUE( restored.getOwnerName( 1, 1 ) == hashed_string( "Farming" ) );
+    SW_EXPECT_EQUAL( restored.registerOwner( "Farming" ), restored.getOwner( 1, 1 ) );
+    SW_EXPECT_TRUE( restored.isBlockedFor( restored.registerOwner( "Farming" ), 5, 5 ) );
+
+    // 크기가 다른 땅에는 읽지 않는다
+    LandRegistry smaller;
+    smaller.initialize( 4, 4, 1.0f, float3{} );
+    Archive smallReader( bytes.data(), bytes.size() );
+    SW_EXPECT_FALSE( smaller.readState( smallReader ) );
 }

@@ -8,6 +8,7 @@
 #include "GameFramework/Base/Progression/Reputation.h"
 #include "GameFramework/Base/Quest/QuestCatalog.h"
 #include "GameFramework/Base/Quest/QuestLog.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Base/World/WeatherSystem.h"
 #include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
@@ -582,4 +583,39 @@ SW_TEST_CASE( CreatureLifeTest, FriendshipLivesInTheSharedReputation )
     vector<ReputationEvent> listEvent;
     world._friendship.drainEvents( listEvent ); // 마을은 빌린 평판의 알림을 꺼내지 않았다
     SW_EXPECT_TRUE( listEvent.empty() );        // (단계가 바뀌지 않아 알림도 없다)
+}
+
+/**
+ * @brief [CreatureLifeTest] 땅을 빌린 마을은 오브젝트를 놓을 때 땅을 얻고 비우면 놓는다 — 남의 땅에는 놓지도 집을 짓지도 못하고, 나무 · 집만 막힘으로 얻는다
+ */
+SW_TEST_CASE( CreatureLifeTest, TownPlacesOnlyOnUsableLandAndBlocksForTreesAndHouses )
+{
+    LandRegistry land;
+    land.initialize( 16, 16, 1.0f, float3{} );
+    const uint16 other = land.registerOwner( "Other" );
+    SW_ASSERT_TRUE( land.claimRect( other, 2, 2, 2, 2, false ) );
+
+    CreatureTown town;
+    town.initialize( nullptr, GameStateRefs{}, 6, 6, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( town.setObject( 1, 1, "grass" ) ); // 묶기 전에 놓은 것은 묶을 때 얻는다
+    SW_ASSERT_TRUE( town.bindLand( &land, int2{ 0, 0 } ) );
+    SW_EXPECT_TRUE( land.getOwnerName( 1, 1 ) == hashed_string( "CreatureLife" ) );
+    SW_EXPECT_FALSE( land.isBlockedFor( other, 1, 1 ) ); // 풀은 막힘이 아니다
+
+    SW_EXPECT_FALSE( town.setObject( 2, 2, "tree" ) ); // 남의 땅
+    SW_EXPECT_TRUE( town.findObject( 2, 2 )->empty() );
+    SW_EXPECT_EQUAL( -1, town.placeHouse( 2, 2, 1 ) );
+
+    SW_ASSERT_TRUE( town.setObject( 3, 3, "tree" ) );
+    SW_EXPECT_TRUE( land.isBlockedFor( other, 3, 3 ) );
+    SW_ASSERT_TRUE( town.setObject( 3, 3, hashed_string{} ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 3, 3 ) );
+    SW_EXPECT_TRUE( 0 <= town.placeHouse( 4, 4, 2 ) );
+    SW_EXPECT_TRUE( land.isBlockedFor( other, 4, 4 ) );
+
+    // 남의 땅 위에 이미 놓인 오브젝트가 있으면 묶지 않는다
+    CreatureTown second;
+    second.initialize( nullptr, GameStateRefs{}, 6, 6, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( second.setObject( 2, 2, "grass" ) );
+    SW_EXPECT_FALSE( second.bindLand( &land, int2{ 0, 0 } ) );
 }

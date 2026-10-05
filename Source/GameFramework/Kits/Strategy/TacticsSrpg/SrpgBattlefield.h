@@ -15,6 +15,7 @@
 #include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Base/Utility/GridTopology.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"
 
@@ -167,6 +168,13 @@ namespace sw
         void  setCommander( int32 unitIndex, bool bCommander );
         /** @brief 1 턴을 엽니다(유닛을 다 놓은 뒤). */
         void beginBattle();
+        /**
+         * @brief 전투 동안 공유 땅을 빌립니다 — 전장 전체(막힘 아님)를 한 번에 얻습니다(전장 칸 (0, 0) = 땅 칸 @p origin). 전투가 끝나면 `releaseLand` 로 놓습니다.
+         * @return 그 자리에 남의 땅이 있으면 false 이고 묶지 않습니다(전장은 단독). @p pLand 가 nullptr 이면 true 입니다. `initialize` 뒤에 부릅니다.
+         */
+        [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
+        /** @brief 빌린 전장 땅을 놓고 풉니다(전투가 끝났다). */
+        void releaseLand();
 
         // --- 차례 ---
         bool canAct( int32 unitIndex ) const;
@@ -265,6 +273,7 @@ namespace sw
         GameRandom                    _random;
         const SrpgCatalog*            _pCatalog;
         GridTopology                  _topology;
+        LandBinding                   _land; ///< 전투 동안 빌린 공유 땅(없으면 단독)
         int32                         _turn;
         int32                         _activeUnit;
         SrpgTeam                      _phaseTeam;

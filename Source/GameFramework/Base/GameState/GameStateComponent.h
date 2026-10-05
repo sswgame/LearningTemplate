@@ -1,6 +1,6 @@
 /**
  * @file GameStateComponent.h
- * @brief 키트 디렉터 여럿이 나눠 쓰는 판 상태(지갑 · 플래그 · 시계 · 퀘스트 일지 · 평판)를 든 컴포넌트입니다 — 언리얼 Lyra 의 GameState 액터 + GameState 컴포넌트 자리.
+ * @brief 키트 디렉터 여럿이 나눠 쓰는 판 상태(지갑 · 플래그 · 시계 · 퀘스트 일지 · 평판 · 가방 · 날씨 · 땅)를 든 컴포넌트입니다 — 언리얼 Lyra 의 GameState 액터 + GameState 컴포넌트 자리.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -15,6 +15,7 @@
 #include "GameFramework/Base/Progression/Reputation.h"
 #include "GameFramework/Base/Quest/QuestLog.h"
 #include "GameFramework/Base/World/GameFlags.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Base/World/WeatherSystem.h"
 #include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -37,6 +38,10 @@ namespace sw
         int32                    _inventorySlotCount{ 0 };    ///< 플레이어 가방 칸 수(0 이면 가방 없음 — `makeRefs` 의 가방 칸이 nullptr)
         const WeatherCatalog*    _pWeatherCatalog{ nullptr }; ///< 없으면 날씨 없음 — `makeRefs` 의 날씨 칸이 nullptr
         uint32                   _weatherSeed{ 0 };
+        int32                    _landWidth{ 0 }; ///< 공유 땅 칸 수(0 이면 땅 없음 — `makeRefs` 의 땅 칸이 nullptr, 격자 키트는 단독)
+        int32                    _landHeight{ 0 };
+        float32                  _landCellSize{ 1.0f };
+        float3                   _landOrigin{};
     };
 } // namespace sw
 
@@ -89,7 +94,7 @@ namespace sw
         /** @brief 열렸으면 시계를 흘리고(날씨는 시계 뒤에 게임 초로, 날 넘김마다 평판이 식는다) 이번 틱의 시계 알림을 모읍니다. */
         void onTick( float32 deltaTime ) override;
 
-        /** @brief 구간 다섯(지갑 · 플래그 · 시계 · 일지 · 평판)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 열리기 전이면 들고 있던 바이트를 그대로 씁니다. */
+        /** @brief 구간 여덟(지갑 · 플래그 · 시계 · 일지 · 평판 · 가방 · 날씨 · 땅)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 열리기 전이면 들고 있던 바이트를 그대로 씁니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief 열리기 전이면 들고 있다가 `initialize` 에서, 열린 뒤면 바로 적용합니다 — `ComponentStateStore::restore` 가 부릅니다. */
         void restoreState( vector<uint8>&& bytes );
@@ -111,10 +116,12 @@ namespace sw
         const WeatherSystem&   getWeather() const { return _weather; }
         const Inventory&       getInventory() const { return _inventory; }
         const ReputationState& getReputation() const { return _reputation; }
+        LandRegistry&          getLand() { return _land; }
+        const LandRegistry&    getLand() const { return _land; }
         /** @brief 이번 틱에 시계가 넘은 경계입니다(읽기만 — 다음 틱 처음에 비운다). */
         const vector<WorldClockEvent>& getClockEvents() const { return _listClockEvent; }
 
-        /** @brief 이 판 상태를 빌려 줄 포인터 묶음입니다(아직 없는 칸 — 가방 · 날씨 · 땅 — 은 그 상태를 더하는 단위가 채운다). */
+        /** @brief 이 판 상태를 빌려 줄 포인터 묶음입니다. 설정에서 열지 않은 것(가방 칸 0 · 날씨 카탈로그 없음 · 땅 크기 0)은 nullptr 입니다. */
         GameStateRefs makeRefs();
 
         /** @brief @p component 와 같은 오브젝트의 판 상태입니다. 없으면 nullptr 입니다. */
@@ -134,6 +141,7 @@ namespace sw
         ReputationState         _reputation;
         Inventory               _inventory; ///< 플레이어 가방
         WeatherSystem           _weather;
+        LandRegistry            _land; ///< 공유 땅 — 격자 · 배치 키트가 칸을 얻는다
         vector<WorldClockEvent> _listClockEvent;
         vector<uint8>           _pendingStateBytes; ///< 열리기 전에 받은 복원 바이트
         uint8                   _bInitialized : 1;

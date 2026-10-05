@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Utility/GridTopology.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -71,6 +72,11 @@ namespace sw
 
         /** @brief 크기를 정하고 모든 칸을 갈지 않은 빈 땅으로 둡니다. */
         void initialize( int32 width, int32 height, const CropCatalog* pCatalog );
+        /**
+         * @brief 공유 땅을 빌립니다 — 밭은 자리가 정해진 땅이라 밭 전체(막힘 아님)를 한 번에 얻습니다(밭 칸 (0, 0) = 땅 칸 @p origin).
+         * @return 땅의 그 자리에 남의 칸이 있으면 false 이고 묶지 않습니다(밭은 단독). @p pLand 가 nullptr 이면 풀고 true 입니다. `initialize` 뒤에 부릅니다.
+         */
+        [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
 
         FarmActionResult till( int32 x, int32 y );
         FarmActionResult water( int32 x, int32 y );
@@ -106,5 +112,6 @@ namespace sw
         vector<FarmTile>   _listTile; ///< 칸마다(`_topology` 의 칸 번호)
         const CropCatalog* _pCatalog;
         GridTopology       _topology;
+        LandBinding        _land; ///< 빌린 공유 땅(없으면 단독)
     };
 } // namespace sw

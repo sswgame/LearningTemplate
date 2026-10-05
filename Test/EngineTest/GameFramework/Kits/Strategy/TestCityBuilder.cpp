@@ -7,6 +7,7 @@
 
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 
@@ -403,4 +404,35 @@ SW_TEST_CASE( CityBuilderTest, StateRoundTripContinuesTheSameCity )
         SW_EXPECT_EQUAL( 55, cutScene.getMoney() );
         SW_EXPECT_TRUE( cutScene._city.getBuildings().empty() );
     }
+}
+
+/**
+ * @brief [CityBuilderTest] 땅을 빌린 도시는 남의 땅에 도로 · 건물을 놓지 못하고(돈도 나가지 않는다), 건물은 막힘 · 도로는 막힘 없이 얻으며 허물면 놓는다
+ */
+SW_TEST_CASE( CityBuilderTest, CityBuildsOnlyOnUsableLandAndReleasesItWhenDemolished )
+{
+    CityTestScene scene;
+    SW_ASSERT_TRUE( scene.initialize() );
+    LandRegistry land;
+    land.initialize( 32, 24, 1.0f, float3{} );
+    const uint16 other = land.registerOwner( "Other" );
+    SW_ASSERT_TRUE( land.claimRect( other, 10, 10, 11, 11, true ) );
+    scene._city.bindLand( &land, int2{ 0, 0 } );
+
+    const int32 moneyBefore = scene.getMoney();
+    SW_EXPECT_TRUE( scene._city.placeRoad( 10, 10 ) == CityPlaceResult::Occupied );
+    SW_EXPECT_TRUE( scene._city.placeBuilding( "granary", 9, 9 ) == CityPlaceResult::Occupied ); // 발자국 한 칸이 남의 땅
+    SW_EXPECT_EQUAL( moneyBefore, scene.getMoney() );
+
+    SW_ASSERT_TRUE( scene._city.placeRoad( 3, 3 ) == CityPlaceResult::Ok );
+    SW_ASSERT_TRUE( scene._city.placeBuilding( "granary", 5, 5 ) == CityPlaceResult::Ok );
+    SW_EXPECT_TRUE( land.getOwnerName( 3, 3 ) == hashed_string( "CityBuilder" ) );
+    SW_EXPECT_FALSE( land.isBlockedFor( other, 3, 3 ) ); // 도로는 지나갈 수 있다
+    SW_EXPECT_TRUE( land.isBlockedFor( other, 6, 6 ) );  // 건물은 막힘
+    SW_EXPECT_FALSE( land.claimRect( other, 6, 6, 6, 6, false ) );
+
+    SW_ASSERT_TRUE( scene._city.demolish( 6, 6 ) );
+    SW_ASSERT_TRUE( scene._city.demolish( 3, 3 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 5, 5 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 3, 3 ) );
 }

@@ -5,6 +5,7 @@
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmShippingBin.h"
@@ -244,4 +245,26 @@ SW_TEST_CASE( FarmingTest, TwoFarmsShareOneBorrowedWallet )
     SW_EXPECT_EQUAL( 2 * 60, north.settleShipping( catalog, shared ) );
     SW_EXPECT_EQUAL( 60, south.settleShipping( catalog, shared ) );
     SW_EXPECT_EQUAL( int64{ 3 * 60 }, shared.getBalance( "Gold" ) );
+}
+
+/**
+ * @brief [FarmingTest] 땅을 빌린 밭은 밭 전체를 한 번에 얻는다 — 그 자리에 남의 칸이 하나라도 있으면 아무것도 얻지 않고 거절, 얻은 밭은 남이 쓰지 못한다(막힘은 아님)
+ */
+SW_TEST_CASE( FarmingTest, FieldClaimsItsWholeLandOrNothing )
+{
+    LandRegistry land;
+    land.initialize( 16, 16, 1.0f, float3{} );
+    const uint16 other = land.registerOwner( "Other" );
+    SW_ASSERT_TRUE( land.claimRect( other, 5, 5, 5, 5, true ) );
+
+    FarmField field;
+    field.initialize( 4, 4, nullptr );
+    SW_EXPECT_FALSE( field.bindLand( &land, int2{ 3, 3 } ) ); // (5, 5) 가 남의 땅
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 3, 3 ) );
+    SW_ASSERT_TRUE( field.bindLand( &land, int2{ 8, 8 } ) );
+    SW_EXPECT_TRUE( land.getOwnerName( 8, 8 ) == hashed_string( "Farming" ) );
+    SW_EXPECT_TRUE( land.getOwnerName( 11, 11 ) == hashed_string( "Farming" ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 12, 12 ) );
+    SW_EXPECT_FALSE( land.isBlockedFor( other, 9, 9 ) ); // 밭은 지나갈 수 있다
+    SW_EXPECT_FALSE( land.claimRect( other, 11, 11, 12, 12, false ) );
 }

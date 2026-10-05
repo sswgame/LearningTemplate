@@ -4,6 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBody.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelHotbar.h"
@@ -450,4 +451,24 @@ SW_TEST_CASE( VoxelTest, StateRoundTripKeepsEditsAndMarksChunksDirty )
         SW_EXPECT_FALSE( cutScene._world.readState( cut ) );
         SW_EXPECT_EQUAL( static_cast<uint32>( 3 * 2 * kVoxelChunkVolume ), cutScene._world.countBlocks( kVoxelAirBlock ) );
     }
+}
+
+/**
+ * @brief [VoxelTest] 땅을 빌린 복셀 월드는 발자국 전체를 막힘으로 얻는다 — 남의 칸이 하나라도 있으면 아무것도 얻지 않는다
+ */
+SW_TEST_CASE( VoxelTest, WorldClaimsItsWholeFootprintOnTheSharedLand )
+{
+    VoxelTestScene scene;
+    SW_ASSERT_TRUE( scene.initialize( 1, 1 ) ); // 16 × 16
+    LandRegistry land;
+    land.initialize( 40, 40, 1.0f, float3{} );
+    const uint16 other = land.registerOwner( "Other" );
+    SW_ASSERT_TRUE( land.claimRect( other, 15, 15, 15, 15, false ) );
+
+    SW_EXPECT_FALSE( scene._world.bindLand( &land, int2{ 0, 0 } ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 0, 0 ) );
+    SW_ASSERT_TRUE( scene._world.bindLand( &land, int2{ 20, 20 } ) );
+    SW_EXPECT_TRUE( land.getOwnerName( 35, 35 ) == hashed_string( "Voxel" ) );
+    SW_EXPECT_TRUE( land.isBlockedFor( other, 20, 20 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 36, 36 ) );
 }

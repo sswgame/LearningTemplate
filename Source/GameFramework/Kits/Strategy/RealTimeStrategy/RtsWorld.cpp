@@ -89,8 +89,10 @@ namespace sw
         , _time{ 0.0f }
         , _visionTimer{}
         , _bucketTopology{}
+        , _land{}
         , _teamCount{ 0 }
         , _winningTeam{ -1 }
+        , _landRevision{ 0 }
     {
     }
 
@@ -125,7 +127,31 @@ namespace sw
         if ( _grid.isInside( x, y ) == false )
             return;
         _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] = bBlocked ? SW_TRUE : SW_FALSE;
-        _grid.setBlocked( x, y, bBlocked );
+        _grid.setBlocked( x, y, bBlocked || _land.isBlocked( x, y ) );
+    }
+
+    void RtsWorld::bindLand( LandRegistry* pLand, const int2& origin )
+    {
+        _land.bind( pLand, origin, hashed_string( "RealTimeStrategy" ) );
+        repaintGrid();
+        _landRevision = _land.getRevision();
+    }
+
+    void RtsWorld::repaintGrid()
+    {
+        for ( int32 y = 0; y < _grid.getHeight(); ++y )
+        {
+            for ( int32 x = 0; x < _grid.getWidth(); ++x )
+            {
+                const bool bTerrain = _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE;
+                _grid.setBlocked( x, y, bTerrain || _land.isBlocked( x, y ) );
+            }
+        }
+        for ( const RtsUnit& unit : _listUnit )
+        {
+            if ( unit._bAlive != SW_FALSE && unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE )
+                placeFootprint( unit, true );
+        }
     }
 
     int32 RtsWorld::addPlayer( int32 team, Wallet* pWallet, const float3& startPosition )
@@ -209,7 +235,7 @@ namespace sw
                 if ( _grid.isInside( x, y ) == false )
                     continue;
                 const bool bTerrain = _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE;
-                _grid.setBlocked( x, y, bBlocked || bTerrain );
+                _grid.setBlocked( x, y, bBlocked || bTerrain || _land.isBlocked( x, y ) );
             }
         }
     }
@@ -249,6 +275,9 @@ namespace sw
         {
             return RtsUnitId{};
         }
+        const int32 footprint = pDef->_footprint;
+        if ( pDef->_kind == RtsUnitKind::Building && _land.claimRect( cell._x, cell._y, cell._x + footprint - 1, cell._y + footprint - 1, true ) == false )
+            return RtsUnitId{};
 
         const RtsUnitId unitId = allocateUnit();
         RtsUnit&        unit   = _listUnit[unitId.index()];
@@ -576,6 +605,12 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return;
+        // 다른 키트가 땅을 얻거나 놓았으면 땅 격자를 다시 칠한다(흐름장은 격자 리비전으로 스스로 다시 구한다).
+        if ( _land.isBound() && _land.getRevision() != _landRevision )
+        {
+            repaintGrid();
+            _landRevision = _land.getRevision();
+        }
         const int32 stepCount = _stepTimer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
             stepFixed( _stepTimer.getStep() );
@@ -1275,6 +1310,8 @@ namespace sw
         unit._agent.stop();
         if ( unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE )
             placeFootprint( unit, false ); // 정제소는 아니다 — 그 칸은 간헐천이 계속 막는다
+        if ( unit._pDef->_kind == RtsUnitKind::Building )
+            _land.releaseRect( unit._cell._x, unit._cell._y, unit._cell._x + unit._pDef->_footprint - 1, unit._cell._y + unit._pDef->_footprint - 1 );
         // 생산 대기열 값은 돌려주지 않는다(부서진 건물 — 스타크래프트와 같다).
         unit._bAlive = SW_FALSE;
         pushEvent( RtsEvent::Kind::UnitDied, unit._owner, unit._id, unit._pDef->_id, 0, killerId );
@@ -1424,6 +1461,14 @@ namespace sw
         const int32 footprint = pDef->_footprint;
         if ( _grid.isInside( cell ) == false || _grid.isInside( cell._x + footprint - 1, cell._y + footprint - 1 ) == false )
             return false;
+        for ( int32 y = cell._y; y < cell._y + footprint; ++y )
+        {
+            for ( int32 x = cell._x; x < cell._x + footprint; ++x )
+            {
+                if ( _land.isUsable( x, y ) == false )
+                    return false; // 남의 땅 — 막히지 않은 땅(도로)도 짓지 못한다
+            }
+        }
         if ( pDef->_bExtractor )
         {
             // 같은 칸 · 같은 크기의 빈 가스 간헐천 위만.
@@ -1868,7 +1913,7 @@ namespace sw
         {
             for ( int32 x = 0; x < width; ++x )
             {
-                if ( _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE )
+                if ( _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE || _land.isBlocked( x, y ) )
                     _grid.setBlocked( x, y, true );
             }
         }

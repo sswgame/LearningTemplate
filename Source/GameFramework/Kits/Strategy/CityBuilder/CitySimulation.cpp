@@ -84,6 +84,7 @@ namespace sw
         , _floodFertility{ 0.8f }
         , _wageDebt{ 0.0f }
         , _topology{}
+        , _land{}
         , _monthIncome{ 0 }
         , _workforce{ 0 }
         , _employed{ 0 }
@@ -160,18 +161,24 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 짓기
     // ------------------------------------------------------------------------------
+    void CitySimulation::bindLand( LandRegistry* pLand, const int2& origin )
+    {
+        _land.bind( pLand, origin, hashed_string( "CityBuilder" ) );
+    }
+
     CityPlaceResult CitySimulation::placeRoad( int32 x, int32 y )
     {
         const CityTile* pTile = findTile( x, y );
         if ( pTile == nullptr )
             return CityPlaceResult::OutOfBounds;
-        if ( pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 )
+        if ( pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 || _land.isUsable( x, y ) == false )
             return CityPlaceResult::Occupied;
         if ( pTile->_terrain == CityTerrain::Water || pTile->_terrain == CityTerrain::Rock )
             return CityPlaceResult::BadTerrain;
         const int32 cost = _pCatalog != nullptr ? _pCatalog->getRoadCost() : 2;
         if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, cost ) == false )
             return CityPlaceResult::NotEnoughMoney;
+        (void)_land.claimRect( x, y, x, y, false ); // 위에서 볼 수 있음을 확인했다
         _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )]._bRoad = SW_TRUE;
         _bRoadsDirty                                                       = SW_TRUE;
         return CityPlaceResult::Ok;
@@ -208,7 +215,7 @@ namespace sw
             for ( int32 dx = 0; dx < pDef->_size; ++dx )
             {
                 const CityTile* pTile = findTile( x + dx, y + dy );
-                if ( pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 )
+                if ( pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 || _land.isUsable( x + dx, y + dy ) == false )
                     return CityPlaceResult::Occupied;
                 if ( pTile->_terrain == CityTerrain::Water || pTile->_terrain == CityTerrain::Rock )
                     return CityPlaceResult::BadTerrain;
@@ -218,6 +225,7 @@ namespace sw
         }
         if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, pDef->_cost ) == false )
             return CityPlaceResult::NotEnoughMoney;
+        (void)_land.claimRect( x, y, x + pDef->_size - 1, y + pDef->_size - 1, true ); // 위에서 칸마다 볼 수 있음을 확인했다
 
         // 허문 자리를 다시 쓴다 — 칸이 가리키는 번호가 안정적이게 목록에서 지우지 않았다.
         int32 index = -1;
@@ -260,6 +268,7 @@ namespace sw
         {
             tile._bRoad  = SW_FALSE;
             _bRoadsDirty = SW_TRUE;
+            _land.releaseRect( x, y, x, y );
             return true;
         }
         if ( tile._buildingIndex < 0 )
@@ -271,6 +280,7 @@ namespace sw
             for ( int32 dx = 0; dx < building._pDef->_size; ++dx )
                 _listTile[static_cast<size_t>( _topology.toIndex( building._origin._x + dx, building._origin._y + dy ) )]._buildingIndex = -1;
         }
+        _land.releaseRect( building._origin._x, building._origin._y, building._origin._x + building._pDef->_size - 1, building._origin._y + building._pDef->_size - 1 );
         building._bAlive     = SW_FALSE;
         building._population = 0;
         for ( CityWalker& walker : _listWalker )
