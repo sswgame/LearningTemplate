@@ -553,7 +553,7 @@ SW_TEST_CASE( ShaderCookerTest, DepthOnlyPassesHaveNoPixelStage )
  */
 SW_TEST_CASE( ShaderCookerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )
 {
-    for ( uint32 value = 0; value <= static_cast<uint32>( sw::RHIFormat::BC7_UNORM ); ++value )
+    for ( uint32 value = 0; value <= static_cast<uint32>( sw::RHIFormat::BC6H_UF16 ); ++value )
     {
         const sw::RHIFormat format = static_cast<sw::RHIFormat>( value );
         const utf8*         pName  = sw::FrameRendererUtil::attachmentFormatName( format );

@@ -45,6 +45,8 @@ namespace sw
                 return DXGI_FORMAT_BC5_UNORM;
             case RHIFormat::BC7_UNORM:
                 return DXGI_FORMAT_BC7_UNORM;
+            case RHIFormat::BC6H_UF16:
+                return DXGI_FORMAT_BC6H_UF16;
         }
         SW_LOG_ASSERT( false, "Unsupported RHIFormat: %#", static_cast<uint32>( format ) );
         return DXGI_FORMAT_UNKNOWN;
@@ -114,6 +116,8 @@ namespace sw
                 return RHIFormat::BC5_UNORM;
             case DXGI_FORMAT_BC7_UNORM:
                 return RHIFormat::BC7_UNORM;
+            case DXGI_FORMAT_BC6H_UF16:
+                return RHIFormat::BC6H_UF16;
             default:
                 return RHIFormat::Unknown;
         }

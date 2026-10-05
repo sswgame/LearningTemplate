@@ -40,22 +40,23 @@ namespace sw
         };
 
         constexpr OpenGLFormatRow arrFormatRow[] = {
-            {         RHIFormat::BC1_UNORM,     kGlCompressedRgbaS3tcDxt1,                0,                    0},
-            {         RHIFormat::BC2_UNORM,     kGlCompressedRgbaS3tcDxt3,                0,                    0},
-            {         RHIFormat::BC3_UNORM,     kGlCompressedRgbaS3tcDxt5,                0,                    0},
-            {         RHIFormat::BC4_UNORM,       GL_COMPRESSED_RED_RGTC1,                0,                    0},
-            {         RHIFormat::BC5_UNORM,          kGlCompressedRgRgtc2,                0,                    0},
-            {         RHIFormat::BC7_UNORM, GL_COMPRESSED_RGBA_BPTC_UNORM,                0,                    0},
-            {    RHIFormat::R8G8B8A8_UNORM,                      GL_RGBA8,          GL_RGBA,     GL_UNSIGNED_BYTE},
-            {    RHIFormat::B8G8R8A8_UNORM,                      GL_RGBA8,          GL_BGRA,     GL_UNSIGNED_BYTE},
+            {         RHIFormat::BC1_UNORM,             kGlCompressedRgbaS3tcDxt1,                0,                    0},
+            {         RHIFormat::BC2_UNORM,             kGlCompressedRgbaS3tcDxt3,                0,                    0},
+            {         RHIFormat::BC3_UNORM,             kGlCompressedRgbaS3tcDxt5,                0,                    0},
+            {         RHIFormat::BC4_UNORM,               GL_COMPRESSED_RED_RGTC1,                0,                    0},
+            {         RHIFormat::BC5_UNORM,                  kGlCompressedRgRgtc2,                0,                    0},
+            {         RHIFormat::BC7_UNORM,         GL_COMPRESSED_RGBA_BPTC_UNORM,                0,                    0},
+            {         RHIFormat::BC6H_UF16, GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT,                0,                    0},
+            {    RHIFormat::R8G8B8A8_UNORM,                              GL_RGBA8,          GL_RGBA,     GL_UNSIGNED_BYTE},
+            {    RHIFormat::B8G8R8A8_UNORM,                              GL_RGBA8,          GL_BGRA,     GL_UNSIGNED_BYTE},
             // **half 는 GL_HALF_FLOAT 다.** GL_FLOAT 로 두면 GL 이 픽셀당 16 바이트를 읽고 쓰는데 엔진이 잡아 둔 버퍼는
             // 8 바이트/픽셀이다(`getRhiFormatBlockInfo` 가 기준). HDR 첨부를 CPU 로 되읽는 경로(스크린샷 · 렌더 타깃 패널)가
             // 버퍼를 두 배로 넘겨 써서 **그냥 죽는다**.
-            {RHIFormat::R16G16B16A16_FLOAT,                    GL_RGBA16F,          GL_RGBA,        GL_HALF_FLOAT},
-            { RHIFormat::D24_UNORM_S8_UINT,           GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8},
-            {   RHIFormat::R32G32B32_FLOAT,                     GL_RGB32F,           GL_RGB,             GL_FLOAT},
-            {      RHIFormat::R32G32_FLOAT,                      GL_RG32F,            GL_RG,             GL_FLOAT},
-            {         RHIFormat::R32_FLOAT,                       GL_R32F,           GL_RED,             GL_FLOAT},
+            {RHIFormat::R16G16B16A16_FLOAT,                            GL_RGBA16F,          GL_RGBA,        GL_HALF_FLOAT},
+            { RHIFormat::D24_UNORM_S8_UINT,                   GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8},
+            {   RHIFormat::R32G32B32_FLOAT,                             GL_RGB32F,           GL_RGB,             GL_FLOAT},
+            {      RHIFormat::R32G32_FLOAT,                              GL_RG32F,            GL_RG,             GL_FLOAT},
+            {         RHIFormat::R32_FLOAT,                               GL_R32F,           GL_RED,             GL_FLOAT},
         };
 
         const OpenGLFormatRow* findFormatRow( RHIFormat format )

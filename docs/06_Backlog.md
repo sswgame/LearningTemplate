@@ -123,7 +123,6 @@ cd build/Ninja-Debug/Bin
 ### 1-3. 그래픽스 · RHI · 셰이더
 
 
-- **`.hdr` 원본 임포트가 없다** — 지금 임포트는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
 - **2D 의 남은 것(2026-10-04 twod-basics)** — (1) 파이프라인을 게임이 데이터로 고르는 자리(지금은 `-gv_renderPipeline` 뿐 — 게임 프리셋 · gamesettings 에)
   (2) 픽셀 퍼펙트의 Upscale Render Texture(기준 해상도 타깃 + 정수 업스케일 패스) (3) 2D 빛 텍스처 · 자유 모양 빛 · 부드러운 그림자 · 빛 블렌드 스타일
@@ -1275,6 +1274,7 @@ cd build/Ninja-Debug/Bin
 - **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 임포트하지 않는다(8 비트 경로).
 - **인스턴스 배치를 든 컴포넌트는 `setOwnerComponent( this )` 를 부르고, 활성 변화(`onOwnerActiveInHierarchyChanged` · `_bActive` 의 `onPropertyChanged`)에 `markAllEntriesDirty` 를 부른다.**
   빌더는 `MeshComponent` 와 같은 규칙(`Component::isActive`)으로 소유 컴포넌트가 꺼진 배치를 뺀다 — 더티를 찍지 않으면 부분 수집이 지난 프레임 후보를 그대로 쓴다.
+- **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 부동소수점으로 읽어 BC6H_UF16 · RGBA16F 로만 임포트한다(규칙 포맷이 8 비트면 실패) — Debug DirectXTex 의 BC6H 는 BC7 처럼 느리다, 큰 원본은 Release App 으로.
 
 ### 3-8. 에디터
 

@@ -193,7 +193,7 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 - **스탬프**: `textures_raw/` 폴더마다 `import.stamp` 에 `<원본 해시> <DDS 해시> <상대 경로>` 한 줄씩. 원본 해시는 원본 바이트 + 적용한 규칙 +
   임포터 버전(`computeSourceHash`)이라 규칙만 바꿔도 어긋남이고, DDS 해시로 손댄 DDS 도 잡힙니다. 판정은 파일 시간이 아니라 **내용**입니다
   (git 이 시간 순서를 뒤집습니다). 원본이 사라진 줄도 어긋남입니다 — `ImportStale` 은 줄만 지우고 남은 DDS 는 사람이 정리합니다.
-- 주의: `.hdr` 는 임포트하지 않고 보고합니다 — 디코더(stb_image)가 8비트라 값이 잘립니다.
+- `.hdr` 는 stb(8비트)를 거치지 않고 DirectXTex `LoadFromHDRFile` 로 부동소수점으로 읽어 BC6H_UF16(`"format": "bc6h"`) · RGBA16F(`"rgba16f"`)로만 임포트합니다 — 규칙의 포맷이 8 비트면 그 원본의 실패로 보고합니다(쓰는 쪽이 생기면 `"*.hdr"` 규칙에 `"format": "bc6h"`, `"srgb": false`).
 - 시험: `TextureImportStampTest.RepositoryRawTexturesMatchTheirDds`(저장소의 원본과 DDS 가 맞는지), `AppSmokeTest.TextureCheckRunsHeadlessThroughTheEditorModule`.
 - 폴더 훑기 · 스탬프 · 어긋남 판정은 모델과 같은 한 벌입니다(`AssetImportStampUtil` + 종류마다 `IRawAssetImporter`).
 

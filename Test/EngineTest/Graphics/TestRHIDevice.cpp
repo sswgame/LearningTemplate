@@ -576,7 +576,7 @@ SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
 }
 
 /**
- * @brief [RHIDeviceTest] 업로드한 바이트가 읽기(readback)로 그대로 돌아오는가 — 비압축 밉 3단 + BC1 밉 2단, 4백엔드
+ * @brief [RHIDeviceTest] 업로드한 바이트가 읽기(readback)로 그대로 돌아오는가 — 비압축 밉 3단 + BC1 밉 2단 + BC6H 블록 하나, 4백엔드
  * @details 비압축은 픽셀, BC1 은 블록을 GPU 가 해석하지 않고 그대로 저장하므로 바이트 단위 일치를 요구할 수 있다.
  */
 SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
@@ -591,6 +591,11 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
     for ( uint32 byteIndex = 0; byteIndex < sizeof( arrBc1 ); ++byteIndex )
         arrBc1[byteIndex] = static_cast<uint8>( 200 - byteIndex * 3 );
 
+    // BC6H(HDR, `.hdr` 임포트 결과) 4x4 = 블록 하나 x 16 바이트.
+    uint8 arrBc6h[16]{};
+    for ( uint32 byteIndex = 0; byteIndex < sizeof( arrBc6h ); ++byteIndex )
+        arrBc6h[byteIndex] = static_cast<uint8>( 17 + byteIndex * 11 );
+
     struct Case
     {
         sw::RHIFormat _format;
@@ -604,6 +609,7 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
     const Case arrCase[] = {
         {sw::RHIFormat::R8G8B8A8_UNORM, 4, 4, 3, arrRgba, sizeof( arrRgba ), "R8G8B8A8"},
         {     sw::RHIFormat::BC1_UNORM, 8, 8, 2,  arrBc1,  sizeof( arrBc1 ),      "BC1"},
+        {     sw::RHIFormat::BC6H_UF16, 4, 4, 1, arrBc6h, sizeof( arrBc6h ),     "BC6H"},
     };
 
     test::RHIBackendSweep sweep;

@@ -103,13 +103,14 @@ namespace sw
         ///        DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만 허용합니다.
         ///        기존 값의 번호는 바꾸지 않습니다. 새 포맷은 아래처럼 뒤에 이어 붙입니다.
         Unknown = 7,
-        // 블록 압축(4x4 블록). 렌더 타깃 불가, 샘플링·업로드·읽기 전용. DDS 의 DXT1/3/5·BC4/5/7 과 1:1.
+        // 블록 압축(4x4 블록). 렌더 타깃 불가, 샘플링·업로드·읽기 전용. DDS 의 DXT1/3/5·BC4/5/6H/7 과 1:1.
         BC1_UNORM = 8,  ///< 8 B/블록, RGB + 1비트 알파
         BC2_UNORM = 9,  ///< 16 B/블록, 명시 알파
         BC3_UNORM = 10, ///< 16 B/블록, 보간 알파
         BC4_UNORM = 11, ///< 8 B/블록, 단일 채널
         BC5_UNORM = 12, ///< 16 B/블록, 2채널(노멀맵)
         BC7_UNORM = 13, ///< 16 B/블록, 고품질 RGBA
+        BC6H_UF16 = 14, ///< 16 B/블록, 부호 없는 HDR RGB(반정밀도) — `.hdr` 원본 임포트(하늘 · 환경광)
     };
 
     namespace constant
@@ -720,6 +721,7 @@ namespace sw
             case RHIFormat::BC3_UNORM:
             case RHIFormat::BC5_UNORM:
             case RHIFormat::BC7_UNORM:
+            case RHIFormat::BC6H_UF16:
                 return RHIFormatBlockInfo{ 4, 4, 16 };
             case RHIFormat::D24_UNORM_S8_UINT:
             case RHIFormat::Unknown:
@@ -757,6 +759,7 @@ namespace sw
             case RHIFormat::BC4_UNORM:
             case RHIFormat::BC5_UNORM:
             case RHIFormat::BC7_UNORM:
+            case RHIFormat::BC6H_UF16:
                 return false;
         }
     }

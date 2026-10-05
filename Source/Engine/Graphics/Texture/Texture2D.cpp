@@ -63,6 +63,8 @@ namespace sw
                 return RHIFormat::BC4_UNORM;
             case 83: // DXGI_FORMAT_BC5_UNORM
                 return RHIFormat::BC5_UNORM;
+            case 95: // DXGI_FORMAT_BC6H_UF16
+                return RHIFormat::BC6H_UF16;
             case 98: // DXGI_FORMAT_BC7_UNORM
             case 99:
                 return RHIFormat::BC7_UNORM;

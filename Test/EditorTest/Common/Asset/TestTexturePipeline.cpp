@@ -9,6 +9,7 @@
 #include "Editor/Common/Asset/TextureImportConfig.h"
 #include "Editor/Common/Asset/TextureImporter.h"
 
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Resource/DdsLoader.h"
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -684,7 +685,7 @@ namespace sw::editor
     }
 
     /**
-     * @brief [TextureImportStampTest] HDR 원본은 8비트로 잘라 임포트하지 않고 실패로 보고한다
+     * @brief [TextureImportStampTest] HDR 원본에 8 비트 포맷 규칙이 걸리면 잘라 임포트하지 않고 실패로 보고한다
      */
     SW_TEST_CASE( TextureImportStampTest, HdrSourceIsReportedNotTruncated )
     {
@@ -700,6 +701,63 @@ namespace sw::editor
         SW_EXPECT_EQUAL( 0u, summary._importedCount );
         SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
         SW_EXPECT_FALSE( FileUtil::exists( FileUtil::joinPath( resourceRoot, "engine/textures/sky.dds" ) ) );
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] `.hdr` 원본은 1 을 넘는 값을 지닌 채 BC6H 로 임포트된다 — 8 비트로 잘리지 않는다
+     * @details 4x4 Radiance 파일(무압축 RGBE 줄)을 쓰고 bc6h 규칙으로 임포트한 뒤 DirectXTex 로 풀어 픽셀이 4.0 근처인지 본다. 8 비트 포맷 규칙은 실패여야 한다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, HdrSourceKeepsValuesAboveOne )
+    {
+        // RGBE: 값 = 가수 / 256 × 2^(지수 − 128). (128, 128, 128, 131) = 0.5 × 8 = 4.0.
+        const string  sourcePath = test::makeTempPath( "bright.hdr" );
+        const string  header     = "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 4 +X 4\n";
+        vector<uint8> bytes( header.begin(), header.end() );
+        for ( uint32 pixel = 0; pixel < 16; ++pixel )
+        {
+            const uint8 arrRgbe[4] = { 128, 128, 128, 131 };
+            bytes.insert( bytes.end(), arrRgbe, arrRgbe + 4 );
+        }
+        SW_ASSERT_TRUE( FileUtil::writeFile( sourcePath, bytes.data(), bytes.size() ) );
+
+        TextureImportRule rule;
+        rule._format         = "bc6h";
+        rule._bSrgb          = SW_FALSE;
+        rule._bGenerateMips  = SW_FALSE;
+        const string ddsPath = test::makeTempPath( "bright.dds" );
+        SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, ddsPath, rule ) );
+
+        DdsImageData dds;
+        SW_ASSERT_TRUE( DdsLoader::loadFromFile( ddsPath, dds ) );
+        SW_EXPECT_EQUAL( static_cast<uint32>( DXGI_FORMAT_BC6H_UF16 ), dds._dxgiFormat );
+        SW_EXPECT_TRUE( Texture2D::toRhiFormatFromDxgi( dds._dxgiFormat ) == RHIFormat::BC6H_UF16 );
+        SW_ASSERT_TRUE( dds._bytes.size() >= 16 );
+        // 풀어서 값을 본다 — BC6H 블록 하나(4x4)의 첫 픽셀.
+        DirectX::Image block{};
+        block.width      = 4;
+        block.height     = 4;
+        block.format     = DXGI_FORMAT_BC6H_UF16;
+        block.rowPitch   = 16;
+        block.slicePitch = 16;
+        block.pixels     = dds._bytes.data();
+        DirectX::ScratchImage decoded;
+        SW_ASSERT_TRUE( SUCCEEDED( DirectX::Decompress( block, DXGI_FORMAT_R32G32B32A32_FLOAT, decoded ) ) );
+        const float32* pPixel = reinterpret_cast<const float32*>( decoded.GetPixels() );
+        SW_EXPECT_NEAR_EQUAL( 4.0f, pPixel[0], 0.1f );
+        SW_EXPECT_NEAR_EQUAL( 4.0f, pPixel[1], 0.1f );
+        SW_EXPECT_NEAR_EQUAL( 4.0f, pPixel[2], 0.1f );
+
+        // 무압축 HDR(rgba16f)도 같은 갈래다.
+        rule._format             = "rgba16f";
+        const string halfDdsPath = test::makeTempPath( "bright_rgba16f.dds" );
+        SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, halfDdsPath, rule ) );
+        DdsImageData halfDds;
+        SW_ASSERT_TRUE( DdsLoader::loadFromFile( halfDdsPath, halfDds ) );
+        SW_EXPECT_TRUE( Texture2D::toRhiFormatFromDxgi( halfDds._dxgiFormat ) == RHIFormat::R16G16B16A16_FLOAT );
+
+        // 8 비트 포맷 규칙은 거절한다(자르지 않는다).
+        rule._format = "bc7";
+        SW_EXPECT_FALSE( TextureImporter::importTexture( sourcePath, test::makeTempPath( "bright_bc7.dds" ), rule ) );
     }
 
     /**
