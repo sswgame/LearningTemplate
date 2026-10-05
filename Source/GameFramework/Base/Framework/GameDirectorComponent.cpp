@@ -15,6 +15,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "GameDirector" );
+
     namespace
     {
         struct GameDirectorComponentInternal
@@ -29,6 +31,7 @@ namespace sw
 {
     GameDirectorComponent::GameDirectorComponent()
         : _bAutoPlay{ false }
+        , _tickAfter{}
         , _listSpawned{}
         , _pendingStateBytes{}
         , _soundQueue{}
@@ -36,6 +39,7 @@ namespace sw
         , _bStarted{ SW_FALSE }
         , _bViewsSpawned{ SW_FALSE }
         , _bFlushScheduled{ SW_FALSE }
+        , _bRuleOnSubTick{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -51,6 +55,7 @@ namespace sw
         if ( startGame() == false )
             return;
         _bStarted = SW_TRUE;
+        hookTickAfter();
         if ( _pendingStateBytes.empty() == false )
             applyPendingState();
         scheduleFlush();
@@ -67,6 +72,45 @@ namespace sw
     void GameDirectorComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
+        if ( _bRuleOnSubTick == SW_FALSE )
+            runRules( deltaTime );
+    }
+
+    void GameDirectorComponent::onSubTick( uint32 subTickId, float32 deltaTime )
+    {
+        Component::onSubTick( subTickId, deltaTime );
+        if ( subTickId == kRuleSubTick && _bRuleOnSubTick == SW_TRUE )
+            runRules( deltaTime );
+    }
+
+    SubTickHandle GameDirectorComponent::getRuleTickHandle() const
+    {
+        SubTickHandle handle = getTickHandle();
+        // 걸 대상이 있으면 아직 시작 전이어도 서브틱 핸들 — 먼저 시작한 뒤쪽 디렉터가 이것을 걸어도 맞는다.
+        if ( _tickAfter.isValid() )
+            handle._subTickId = kRuleSubTick;
+        return handle;
+    }
+
+    void GameDirectorComponent::hookTickAfter()
+    {
+        if ( _tickAfter.isValid() == false )
+            return;
+        GameObjectManager*           pManager = getObjectManager();
+        const GameObject*            pObject  = pManager != nullptr ? pManager->resolveGameObject( _tickAfter ) : nullptr;
+        const GameDirectorComponent* pBefore  = pObject != nullptr ? pObject->getComponent<GameDirectorComponent>() : nullptr;
+        if ( pBefore == nullptr || pBefore == this )
+        {
+            SW_LOG_WARNING( "GameDirector: _tickAfter does not point at another director - the rules stay on the main tick" );
+            return;
+        }
+        (void)registerSubTick( TickGroup::PrePhysics, kRuleSubTick );
+        (void)addSubTickPrerequisite( kRuleSubTick, pBefore->getRuleTickHandle() );
+        _bRuleOnSubTick = SW_TRUE;
+    }
+
+    void GameDirectorComponent::runRules( float32 deltaTime )
+    {
         if ( _bStarted == SW_FALSE )
             return;
         if ( _bViewsSpawned == SW_FALSE )

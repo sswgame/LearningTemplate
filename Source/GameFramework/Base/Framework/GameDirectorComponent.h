@@ -34,6 +34,9 @@ namespace sw
      *          - **세운 것** — `spawnPrefab` 이 핸들을 들고 `despawnViews` 가 모두 걷습니다(상태 저장 전 · 플레이 끝). 스스로 사라지는 것의 핸들은 플러시가
      *            가끔 덜어 냅니다.
      *          - **자동 플레이** — PROPERTY `_bAutoPlay` 또는 게임이 `SW_GAME_AUTOPLAY` 로 등록한 전역 변수.
+     *          - **다른 오브젝트 디렉터 뒤에** — 키트 디렉터 사이 순서는 보통 한 오브젝트에 붙인 순서다(`GameStateComponent`). 씬을 나눠 디렉터를 다른 오브젝트에
+     *            두면 PROPERTY `_tickAfter` 로 그 오브젝트의 첫 디렉터 뒤에 규칙을 돌린다 — 주 틱은 선행 조건을 받지 못하므로 그때만 규칙을 서브틱
+     *            (`kRuleSubTick`)으로 옮겨 그 디렉터의 규칙 틱(`getRuleTickHandle`)을 선행 조건으로 건다. 걸지 않은 디렉터는 주 틱 그대로다.
      *
      *          디렉터의 시뮬레이션은 키트의 보통 클래스이고 PROPERTY 가 아니다 — 모듈 정적이나 컴포넌트 PROPERTY 가 아닌 곳에 둔 상태는 핫 리로드에서
      *          사라지므로 `writeState` 로만 넘긴다(Lyra 는 게임 상태를 GameState 컴포넌트에 붙인다 — 여기는 디렉터 하나가 그 자리).
@@ -44,6 +47,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr uint32 kRuleSubTick = 0x52554C45u; ///< 규칙을 도는 서브틱 id(`_tickAfter` 를 걸었을 때만)
+
         GameDirectorComponent();
         virtual ~GameDirectorComponent() override;
 
@@ -51,8 +56,14 @@ namespace sw
         void onBeginPlay() override;
         /** @brief 세운 것을 걷고 판을 닫습니다. */
         void onEndPlay() override;
-        /** @brief 걷혀 있으면 다시 세울 플러시를 잡고 `tickGame` 을 부릅니다. 끝에 쌓인 스폰 · 소리가 있으면 플러시를 잡습니다. */
+        /** @brief 규칙을 주 틱에서 돌면 `runRules` 를 부릅니다(`_tickAfter` 를 걸었으면 서브틱이 부른다). */
         void onTick( float32 deltaTime ) override;
+        /** @brief 규칙 서브틱(`kRuleSubTick`)이면 `runRules` 를 부릅니다. */
+        void onSubTick( uint32 subTickId, float32 deltaTime ) override;
+        /** @brief 다른 오브젝트의 디렉터 뒤에 규칙을 돌게 합니다(플레이 시작 전 — 씬 데이터는 PROPERTY `_tickAfter`). */
+        void setTickAfter( GameObjectHandle director ) { _tickAfter = director; }
+        /** @brief 이 디렉터의 규칙이 도는 틱입니다 — `_tickAfter` 를 걸었으면 규칙 서브틱, 아니면 주 틱. 다른 디렉터가 선행 조건으로 겁니다. */
+        SubTickHandle getRuleTickHandle() const;
 
         /** @brief 판의 상태를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 첫 값은 `StateArchiveUtil::writeHeader` 의 표 · 버전입니다. */
         virtual void writeState( Archive& outArchive ) const = 0;
@@ -118,6 +129,10 @@ namespace sw
         GameObjectManager* getObjectManager() const;
 
     private:
+        /** @brief 걷혀 있으면 다시 세울 플러시를 잡고 `tickGame` 을 부릅니다. 끝에 쌓인 스폰 · 소리가 있으면 플러시를 잡습니다. */
+        void runRules( float32 deltaTime );
+        /** @brief `_tickAfter` 가 풀리면 규칙을 서브틱으로 옮기고 그 디렉터의 규칙 틱을 선행 조건으로 겁니다. */
+        void hookTickAfter();
         /** @brief 들고 있던 복원 바이트를 적용하고 모습을 다시 세우게 합니다. */
         void applyPendingState();
         /** @brief 쌓인 요청을 세웁니다. 틱 밖(게임 스레드)에서만 불린다. */
@@ -129,6 +144,10 @@ namespace sw
         PROPERTY( Category = "Director", DisplayName = "Auto Play", Tooltip = "The game drives itself (the game's -gv_<game>AutoPlay=1 also turns it on)" )
         bool _bAutoPlay;
 
+        PROPERTY( Category = "Director", DisplayName = "Tick After",
+                  Tooltip = "Run this director's rules after the director on that object (cross-object order; same-object order is the component order)" )
+        GameObjectHandle _tickAfter;
+
         vector<GameObjectHandle> _listSpawned;
         vector<uint8>            _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         GameSoundQueue           _soundQueue;        ///< 낼 소리(틱 뒤 — 오디오는 게임 스레드에서)
@@ -136,6 +155,7 @@ namespace sw
         uint8                    _bStarted        : 1;
         uint8                    _bViewsSpawned   : 1; ///< 지금 상태의 모습이 서 있다(걷으면 다음 틱이 다시 세운다)
         uint8                    _bFlushScheduled : 1;
-        uint8                    _reserved        : 5;
+        uint8                    _bRuleOnSubTick  : 1; ///< 규칙이 서브틱에서 돈다(`_tickAfter`)
+        uint8                    _reserved        : 4;
     };
 } // namespace sw

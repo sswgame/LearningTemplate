@@ -19,6 +19,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <atomic>
+
 namespace sw
 {
     /**
@@ -32,15 +34,18 @@ namespace sw
         static constexpr uint32 kStateTag     = 0x544B434Du; ///< 'MCKT'
         static constexpr uint32 kStateVersion = 1;
 
-        int32            _value{ 0 };             ///< PROPERTY 가 아닌 판 상태
-        int32            _startCount{ 0 };        ///< `startGame` 횟수
-        int32            _respawnCount{ 0 };      ///< 모습 전부를 세운 플러시 횟수
-        int32            _despawnCount{ 0 };      ///< `onViewsDespawned` 횟수
-        int32            _restoredCount{ 0 };     ///< 읽어 적용한 복원 횟수
-        int32            _rejectedCount{ 0 };     ///< 읽지 못한 복원 횟수
-        int32            _tickCount{ 0 };         ///< `tickGame` 횟수
-        int32            _pendingSpawnCount{ 0 }; ///< 틱이 쌓은 스폰 요청(다음 플러시가 세운다)
-        GameObjectHandle _lastView{};             ///< 마지막으로 세운 모습
+        int32                            _value{ 0 };              ///< PROPERTY 가 아닌 판 상태
+        int32                            _startCount{ 0 };         ///< `startGame` 횟수
+        int32                            _respawnCount{ 0 };       ///< 모습 전부를 세운 플러시 횟수
+        int32                            _despawnCount{ 0 };       ///< `onViewsDespawned` 횟수
+        int32                            _restoredCount{ 0 };      ///< 읽어 적용한 복원 횟수
+        int32                            _rejectedCount{ 0 };      ///< 읽지 못한 복원 횟수
+        int32                            _tickCount{ 0 };          ///< `tickGame` 횟수
+        int32                            _pendingSpawnCount{ 0 };  ///< 틱이 쌓은 스폰 요청(다음 플러시가 세운다)
+        GameObjectHandle                 _lastView{};              ///< 마지막으로 세운 모습
+        std::atomic<int32>               _ruleTickCount{ 0 };      ///< `tickGame` 횟수(다른 워커가 읽는다)
+        std::atomic<int32>               _watchMismatchCount{ 0 }; ///< 지켜보는 디렉터가 이번 틱 규칙을 아직 돌지 않았던 횟수
+        const MockGameDirectorComponent* _pWatched{ nullptr };     ///< 이 디렉터보다 먼저 돌아야 하는 디렉터
 
         const TypeInfo* getTypeInfo() const override { return StaticType(); }
 
@@ -87,6 +92,9 @@ namespace sw
         {
             (void)deltaTime;
             ++_tickCount;
+            const int32 ruleTick = _ruleTickCount.fetch_add( 1 ) + 1;
+            if ( _pWatched != nullptr && _pWatched->_ruleTickCount.load() != ruleTick )
+                _watchMismatchCount.fetch_add( 1 );
         }
 
         void onFlush( GameObjectManager& manager, bool bRespawnViews ) override
@@ -295,5 +303,34 @@ SW_TEST_CASE( GameDirectorTest, RegisteredDirectorRidesTheSnapshot )
     } );
     SW_EXPECT_EQUAL( 2u, objectCountAfter ); // 옛 모습이 스냅샷으로 되살아나 새 모습과 겹치지 않는다
     SW_EXPECT_TRUE( pManager->resolveGameObject( pRestored->_lastView ) != nullptr );
+    pManager->endPlay();
+}
+
+/**
+ * @brief [GameDirectorTest] 다른 오브젝트의 디렉터 뒤에 — `_tickAfter` 를 건 디렉터는 매 틱 앞 디렉터가 이번 틱 규칙을 돈 뒤에 돈다(규칙 서브틱 + 선행 조건),
+ *        걸지 않은 디렉터는 주 틱 그대로다
+ */
+SW_TEST_CASE( GameDirectorTest, TickAfterOrdersDirectorsOnDifferentObjects )
+{
+    RegisterMockComponents();
+    MockGameDirectorComponent::StaticType();
+    GameDirectorTestScene      scene;
+    GameObjectManager*         pManager = scene.getManager();
+    MockGameDirectorComponent* pAfter   = scene.createDirector( "AfterDirector" ); // 먼저 만든다 — 순서를 걸지 않으면 보통 먼저 돈다
+    MockGameDirectorComponent* pBefore  = scene.createDirector( "BeforeDirector" );
+    SW_ASSERT_NOT_NULL( pManager );
+    SW_ASSERT_NOT_NULL( pAfter );
+    SW_ASSERT_NOT_NULL( pBefore );
+    pAfter->setTickAfter( pBefore->getOwner()->getHandle() );
+    pAfter->_pWatched = pBefore;
+    SW_EXPECT_TRUE( pAfter->getRuleTickHandle()._subTickId == GameDirectorComponent::kRuleSubTick );
+    SW_EXPECT_TRUE( pBefore->getRuleTickHandle() == pBefore->getTickHandle() );
+
+    pManager->beginPlay();
+    for ( int32 tick = 0; tick < 100; ++tick )
+        pManager->tick( 1.0f / 60.0f );
+    SW_EXPECT_EQUAL( 100, pBefore->_ruleTickCount.load() );
+    SW_EXPECT_EQUAL( 100, pAfter->_ruleTickCount.load() ); // 규칙은 한 틱에 한 번(주 틱과 서브틱 둘 다 돌지 않는다)
+    SW_EXPECT_EQUAL( 0, pAfter->_watchMismatchCount.load() );
     pManager->endPlay();
 }
