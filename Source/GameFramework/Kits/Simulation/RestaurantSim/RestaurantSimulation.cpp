@@ -870,7 +870,7 @@ namespace sw
         const DishDef*   pDish   = listChoice[static_cast<size_t>( pickIndex )]._pDish;
         const RecipeDef* pRecipe = findRecipe( *pDish );
         int64            cost    = 0;
-        if ( pRecipe == nullptr || _stock.consumeBag( pRecipe->_inputs, 1, cost ) == false )
+        if ( pRecipe == nullptr || _stock.consumeItems( pRecipe->_inputs, 1, cost ) == false )
             return false;
         _today._ingredientCost += cost;
         customer._dishId = pDish->_id;

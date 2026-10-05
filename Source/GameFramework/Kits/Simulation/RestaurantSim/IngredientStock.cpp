@@ -5,7 +5,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -79,22 +79,22 @@ namespace sw
         return true;
     }
 
-    bool IngredientStock::consumeBag( const ItemBag& bag, int32 times, int64& outCost )
+    bool IngredientStock::consumeItems( const ItemStackList& items, int32 times, int64& outCost )
     {
         if ( _pInventory == nullptr || times <= 0 )
             return false;
         // 이름 순으로 돌아 결과(원가 합 · 로그)가 해시 순서에 기대지 않게 한다.
         vector<hashed_string> listItem;
-        bag.getItemIds( listItem );
+        items.getItemIds( listItem );
         std::sort( listItem.begin(), listItem.end(), HashedStringLexicalLess{} );
         for ( const hashed_string& itemId : listItem )
         {
-            if ( _pInventory->hasItem( itemId, bag.getItemCount( itemId ) * times ) == false )
+            if ( _pInventory->hasItem( itemId, items.getItemCount( itemId ) * times ) == false )
                 return false;
         }
         for ( const hashed_string& itemId : listItem )
         {
-            if ( consume( itemId, bag.getItemCount( itemId ) * times, outCost ) == false )
+            if ( consume( itemId, items.getItemCount( itemId ) * times, outCost ) == false )
                 SW_LOG_WARNING( "lost '%#' between the check and the take", itemId.c_str() );
         }
         return true;

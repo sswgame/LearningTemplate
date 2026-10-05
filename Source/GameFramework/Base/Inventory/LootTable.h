@@ -15,7 +15,7 @@
 namespace sw
 {
     class GameRandom;
-    class ItemBag;
+    class ItemStackList;
     class XmlNode;
 
     /** @brief 표의 항목 하나 — 아이템이거나 다른 표입니다. */
@@ -50,7 +50,7 @@ namespace sw
      * @class LootCatalog
      * @brief `<LootCatalog><Table id="wolf" rolls="1" rollsMax="2" none="10"><Entry item="pelt" weight="10" min="1" max="2"/><Entry table="gems" weight="1"/>
      *        <Always item="meat" chance="0.75"/></Table></LootCatalog>` 를 읽고 굴립니다.
-     * @details 결과는 `ItemBag` 에 더합니다(같은 아이템은 합친다). 표 안의 표는 8 단계까지만 따라갑니다(서로 부르는 표가 멈추게).
+     * @details 결과는 `ItemStackList` 에 더합니다(같은 아이템은 합친다). 표 안의 표는 8 단계까지만 따라갑니다(서로 부르는 표가 멈추게).
      *          난수는 부르는 쪽이 넘깁니다 — 씨앗이 같으면 같은 전리품입니다(리플레이 · 시험).
      */
     class SW_GF_API LootCatalog : public XmlCatalog<LootCatalog>
@@ -63,10 +63,10 @@ namespace sw
         void addTable( const LootTableDef& table ) { (void)_catalog.add( table ); }
 
         /**
-         * @brief 표를 굴려 @p outBag 에 더합니다. 표가 없으면 false 입니다.
+         * @brief 표를 굴려 @p outItems 에 더합니다. 표가 없으면 false 입니다.
          * @param luck "없음" 가중치를 나누고 늘 주는 항목의 확률에 곱한다(1 = 그대로).
          */
-        bool roll( const hashed_string& tableId, GameRandom& random, ItemBag& outBag, float32 luck = 1.0f ) const;
+        bool roll( const hashed_string& tableId, GameRandom& random, ItemStackList& outItems, float32 luck = 1.0f ) const;
         /** @brief 아이템 하나가 나올 확률(한 번 굴릴 때 — 표 안의 표 포함, 늘 주는 항목 포함)의 근삿값입니다(도감 · 툴팁). */
         float32 computeDropChance( const hashed_string& tableId, const hashed_string& itemId ) const;
 
@@ -75,8 +75,8 @@ namespace sw
     private:
         static constexpr const utf8* kXmlRootName = "LootCatalog"; ///< 루트 원소(`XmlCatalog`)
         uint32                       loadRoot( const XmlNode& root, string_view sourceName );
-        void                         rollTable( const LootTableDef& table, GameRandom& random, ItemBag& outBag, float32 luck, int32 depth ) const;
-        void                         giveEntry( const LootEntry& entry, GameRandom& random, ItemBag& outBag, float32 luck, int32 depth ) const;
+        void                         rollTable( const LootTableDef& table, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const;
+        void                         giveEntry( const LootEntry& entry, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const;
         float32                      computeEntryChance( const LootEntry& entry, const hashed_string& itemId, int32 depth ) const;
         float32                      computeTableChance( const LootTableDef& table, const hashed_string& itemId, int32 depth ) const;
 

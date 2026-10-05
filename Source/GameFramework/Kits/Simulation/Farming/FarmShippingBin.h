@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -21,7 +21,7 @@ namespace sw
     /**
      * @class FarmShippingBin
      * @brief 출하함 — 넣은 것은 하루 끝에 카탈로그 값으로 팔린다(하베스트 문의 출하 상자). 가방 · 지갑은 빌린다(`Inventory&` · `Wallet&`).
-     * @details 담긴 것은 "팔릴 목록" 이라 `ItemBag`(값 목록)이다 — 칸 · 무게 · 꾸미기가 없다.
+     * @details 담긴 것은 "팔릴 목록" 이라 `ItemStackList`(값 목록)이다 — 칸 · 무게 · 꾸미기가 없다.
      */
     class SW_GF_API FarmShippingBin
     {
@@ -45,7 +45,7 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        ItemBag       _bin;
+        ItemStackList _bin;
         hashed_string _currency;
     };
 } // namespace sw

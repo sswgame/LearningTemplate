@@ -14,8 +14,8 @@
 namespace sw
 {
     class Archive;
-    class ItemBag;
     class ItemCatalog;
+    class ItemStackList;
 
     /**
      * @brief 칸 하나에 든 것입니다.
@@ -78,7 +78,7 @@ namespace sw
 
         int32 getItemCount( const hashed_string& itemId ) const;
         bool  hasItem( const hashed_string& itemId, int32 count = 1 ) const { return getItemCount( itemId ) >= count; }
-        bool  hasItems( const ItemBag& bag ) const;
+        bool  hasItems( const ItemStackList& items ) const;
         /** @brief @p count 개가 다 들어갈 자리(칸 · 무게)가 있는가입니다. */
         bool                 hasRoomFor( const hashed_string& itemId, int32 count ) const;
         int32                findFirstSlot( const hashed_string& itemId ) const;
@@ -87,8 +87,8 @@ namespace sw
         float32              getMaxWeight() const { return _maxWeight; }
         int32                getSlotCount() const { return static_cast<int32>( _listSlot.size() ); }
         const InventorySlot& getSlot( int32 slot ) const { return _listSlot[static_cast<size_t>( slot )]; }
-        /** @brief 아이템마다 개수를 봉투에 더합니다(세이브 · 거래 화면). */
-        void               fillItemBag( ItemBag& outBag ) const;
+        /** @brief 아이템마다 개수를 값 목록에 더합니다(세이브 · 거래 화면). */
+        void               fillItemStackList( ItemStackList& outItems ) const;
         uint32             getRevision() const { return _revision; }
         const ItemCatalog* getCatalog() const { return _pCatalog; }
 

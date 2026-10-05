@@ -18,7 +18,7 @@ namespace sw
 
     bool FarmShippingBin::readState( Archive& archive )
     {
-        ItemBag bin;
+        ItemStackList bin;
         if ( bin.readState( archive ) == false )
             return false;
         _bin = std::move( bin );

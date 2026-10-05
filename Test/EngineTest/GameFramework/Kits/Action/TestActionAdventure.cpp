@@ -5,8 +5,8 @@
 
 #include "GameFramework/Base/Inventory/Crafting.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Action/ActionAdventure/AdventureCooking.h"
@@ -178,7 +178,7 @@ SW_TEST_CASE( ActionAdventureTest, DungeonKeysDoorsMapAndCompass )
     SW_ASSERT_TRUE( scene.initialize() );
     AdventureDungeonState& state = scene._state;
     GameFlags&             flags = scene._flags;
-    ItemBag                reward;
+    ItemStackList          reward;
 
     SW_EXPECT_TRUE( state.openDoor( "forest", "cellDoor", flags ) == AdventureDoorResult::NeedSmallKey );
     SW_EXPECT_FALSE( scene._areaGraph.canTraverse( "hall", "cell", flags ) );
@@ -207,7 +207,7 @@ SW_TEST_CASE( ActionAdventureTest, DungeonKeysDoorsMapAndCompass )
 
     SW_EXPECT_TRUE( state.openTreasure( "forest", "rupeeChest", flags, reward ) );
     SW_EXPECT_EQUAL( 20, reward.getItemCount( "rupee" ) );
-    SW_EXPECT_EQUAL( 0, reward.getItemCount( "SmallKey" ) ); // 던전 아이템은 봉투로 가지 않는다
+    SW_EXPECT_EQUAL( 0, reward.getItemCount( "SmallKey" ) ); // 던전 아이템은 보상 목록으로 가지 않는다
 
     // 지도 — 없으면 아무것도, 있으면 아직 모르는 숲의 방이 모두 드러난다(물의 방은 아니다).
     SW_EXPECT_TRUE( scene._areaGraph.enterArea( "entrance" ) );
@@ -638,7 +638,7 @@ SW_TEST_CASE( ActionAdventureTest, StateRoundTripContinuesTheSameAdventure )
     // 던전 — 열쇠 셋, 시간제 스위치가 2 초 남고 횃불 둘이 켜져 있다.
     AdventureDungeonScene dungeon;
     SW_ASSERT_TRUE( dungeon.initialize() );
-    ItemBag reward;
+    ItemStackList reward;
     SW_EXPECT_TRUE( dungeon._state.openTreasure( "forest", "keyChest", dungeon._flags, reward ) );
     SW_EXPECT_TRUE( dungeon._state.addSmallKey( "forest", 2 ) );
     SW_EXPECT_TRUE( dungeon._state.hitSwitch( "forest", "timer", dungeon._flags ) );

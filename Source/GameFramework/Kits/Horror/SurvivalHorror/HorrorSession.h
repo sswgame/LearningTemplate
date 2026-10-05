@@ -14,7 +14,7 @@
 
 #include "GameFramework/Base/Combat/ResourceGauge.h"
 #include "GameFramework/Base/Inventory/GridInventory.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"

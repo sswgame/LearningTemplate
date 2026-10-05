@@ -79,7 +79,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   체력 상태(`Vitality` — 실드 · 기절 → 출혈 → 부활 · 최대 기절 횟수 · 무적 · 경직 게이지 · 최대 체력 바꾸기), 자원 게이지(`ResourceGauge` — 스태미나 탈진 · 과열 · 회복 배율 · 즉시 깎기),
   프레임 데이터(`MoveCatalog` · `MoveTimeline` — 발생 · 지속 · 경직 · 캔슬 · 히트스톱 · 가드 높이 · 상태 복원), 속성 상성(`ElementChart` — 복합 속성 곱 · 면역 · 상태이상 확률)
   슈터 · 배틀로얄 · 서부극 · 기체 대전 · JRPG · 포켓몬 · 젤다가 함께 쓴다(예전 `GF_Shooter` 키트의 무기는 여기로 옮겼다)
-- **Inventory**: 아이템 봉투(`ItemBag` — id → 개수), 아이템 카탈로그(`ItemCatalog` — 분류 · 겹침 · 무게 · 희귀도 · 장비 칸 · 내구도 · 태그 · 능력치), 칸 인벤토리(`Inventory`), 격자 가방(`GridInventory` — w × h · 돌리기 · 빈자리 찾기 · 겹침, 모양은 연결 함수), 장비(`Equipment` — 칸 배치는
+- **Inventory**: 아이템 값 목록(`ItemStackList` — 원소 `ItemStack` = id · 개수: 레시피 재료 · 전리품 · 보상 · 출하 대기, 칸이 없다 — 들고 있는 가방은 `Inventory`), 아이템 카탈로그(`ItemCatalog` — 분류 · 겹침 · 무게 · 희귀도 · 장비 칸 · 내구도 · 태그 · 능력치), 칸 인벤토리(`Inventory`), 격자 가방(`GridInventory` — w × h · 돌리기 · 빈자리 찾기 · 겹침, 모양은 연결 함수), 장비(`Equipment` — 칸 배치는
   데이터, 장착 조건 `<Requires>` 와 깨질 때의 정책 · 아이템 인스턴스 상태 — 꾸미기 값 · 피해 · 떨어진 부품), 전리품 표(`LootCatalog` — 가중치 · 없음 · 늘 주기 · 표 안의 표 · 행운), 제작(`RecipeCatalog` · `Crafter` — 작업대 · 레벨 · 도구 · 배우기 · 대기열 · 재료를 거두는 쪽 바꾸기),
   지갑 · 가게(`Wallet` · `ShopCatalog` · `ShopState` — 여러 통화 · 재고 · 재입고 · 매입 시세 하락과 회복 · 조건은 `IShopConditionEvaluator`)
 - **Appearance**: 캐릭터 외형 데이터와 해석 — 슬롯 표 · 장비 세트 · 아이템 외형(부품 · 상태 · 피해 단계) · 꾸미기 스키마(캐릭터 · 아이템 공용) ·
@@ -260,7 +260,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 | 히트스캔 · 클릭 고르기 · 1인칭 · 원뿔 시야 | `RayMath` · `FirstPersonLook` | 슈터 · 복셀 · 유령 사냥 |
 | 가중치 고르기 · 섞기 | `GameRandom::pickWeightedIndex` · `shuffle` | 파티 아이템 · 식당 손님 · 카드 |
 | 여러 자원 비용 | `StatBlock::canAfford` · `trySpend` | 횡스크롤 정복 |
-| 아이템 개수 | `ItemBag` | 농장 인벤토리 · 출하함 |
+| 아이템 + 개수 값 목록 | `ItemStackList` | 출하함 · 전리품 · 레시피 · 보상 |
 | 비스듬히 내려다보는 직교 카메라 · 장식 흩뿌리기 | `OrthoCameraRigComponent` · `PropScatterComponent` | ThemeParkTycoon · HarvestValley · NileCity · StarSkirmish |
 | 1인칭 카메라 · 손에 든 모델 · 마우스 잠금 | `FirstPersonCameraComponent` | Shooter3D · VoxelCraft |
 | 피해 숫자 | `DamageNumberComponent::spawnNumber` | 액션 · 어빌리티 |

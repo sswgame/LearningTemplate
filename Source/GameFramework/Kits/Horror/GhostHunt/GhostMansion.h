@@ -11,7 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Utility/Countdown.h"
 #include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
@@ -118,7 +118,7 @@ namespace sw
         /** @brief 열쇠 문을 엽니다(열쇠 하나를 쓴다). */
         GhostDoorResult unlockDoor( const hashed_string& doorId );
         /** @brief 가구를 뒤집니다. 한 가구는 한 번만 전리품을 줍니다. 나온 것은 @p outLoot 에 더합니다. */
-        GhostSearchResult searchFurniture( const hashed_string& furnitureId, GhostSearchMode mode, ItemBag& outLoot );
+        GhostSearchResult searchFurniture( const hashed_string& furnitureId, GhostSearchMode mode, ItemStackList& outLoot );
         /** @brief 들킨 부에게 피해를 줍니다(청소기). 이번에 잡혔으면 true 입니다. */
         bool damageBoo( const hashed_string& booId, float32 amount );
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */

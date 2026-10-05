@@ -249,15 +249,15 @@ SW_TEST_CASE( RestaurantSimTest, IngredientsUseOldestFirstAndSpoil )
     SW_EXPECT_TRUE( stock.consume( "egg", 1, cost ) );
     SW_EXPECT_EQUAL( 0, stock.getBatchCount( "egg" ) );
 
-    ItemBag bag;
-    bag.addItem( "flour", 2 );
-    bag.addItem( "egg", 1 );
+    ItemStackList items;
+    items.addItem( "flour", 2 );
+    items.addItem( "egg", 1 );
     cost = 0;
-    SW_EXPECT_FALSE( stock.consumeBag( bag, 1, cost ) ); // 달걀이 없다 — 밀가루도 그대로
+    SW_EXPECT_FALSE( stock.consumeItems( items, 1, cost ) ); // 달걀이 없다 — 밀가루도 그대로
     SW_EXPECT_EQUAL( 4, inventory.getItemCount( "flour" ) );
-    bag.clear();
-    bag.addItem( "flour", 2 );
-    SW_EXPECT_TRUE( stock.consumeBag( bag, 2, cost ) );
+    items.clear();
+    items.addItem( "flour", 2 );
+    SW_EXPECT_TRUE( stock.consumeItems( items, 2, cost ) );
     SW_EXPECT_EQUAL( 8, static_cast<int32>( cost ) );
     SW_EXPECT_EQUAL( 0, inventory.getItemCount( "flour" ) );
 }

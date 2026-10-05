@@ -8,7 +8,7 @@
 
 #include "GameFramework/Base/Combat/Vitality.h"
 #include "GameFramework/Base/Framework/GameStateRefs.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
@@ -126,7 +126,7 @@ namespace sw
     }
 
     int32 MetroSoulsState::registerKill( const hashed_string& spawnId, const hashed_string& enemyId, GameFlags& flags, const LootCatalog* pLoot, GameRandom& random,
-                                         ItemBag& outDrops )
+                                         ItemStackList& outDrops )
     {
         if ( _pCatalog == nullptr || isSpawnAlive( spawnId ) == false )
             return -1;

@@ -7,7 +7,7 @@
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
 
 namespace sw
@@ -68,35 +68,35 @@ namespace sw
         return loadedCount;
     }
 
-    bool LootCatalog::roll( const hashed_string& tableId, GameRandom& random, ItemBag& outBag, float32 luck ) const
+    bool LootCatalog::roll( const hashed_string& tableId, GameRandom& random, ItemStackList& outItems, float32 luck ) const
     {
         const LootTableDef* pTable = _catalog.find( tableId );
         if ( pTable == nullptr )
             return false;
-        rollTable( *pTable, random, outBag, MathUtil::max( 0.01f, luck ), 0 );
+        rollTable( *pTable, random, outItems, MathUtil::max( 0.01f, luck ), 0 );
         return true;
     }
 
-    void LootCatalog::giveEntry( const LootEntry& entry, GameRandom& random, ItemBag& outBag, float32 luck, int32 depth ) const
+    void LootCatalog::giveEntry( const LootEntry& entry, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const
     {
         if ( entry._tableId.empty() == false )
         {
             const LootTableDef* pTable = _catalog.find( entry._tableId );
             if ( pTable != nullptr && depth + 1 < kMaxDepth )
-                rollTable( *pTable, random, outBag, luck, depth + 1 );
+                rollTable( *pTable, random, outItems, luck, depth + 1 );
             return;
         }
         const int32 count = random.nextInt( entry._minCount, entry._maxCount );
         if ( count > 0 && entry._itemId.empty() == false )
-            outBag.addItem( entry._itemId, count );
+            outItems.addItem( entry._itemId, count );
     }
 
-    void LootCatalog::rollTable( const LootTableDef& table, GameRandom& random, ItemBag& outBag, float32 luck, int32 depth ) const
+    void LootCatalog::rollTable( const LootTableDef& table, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const
     {
         for ( const LootEntry& entry : table._listAlways )
         {
             if ( random.nextChance( MathUtil::saturate( entry._chance * luck ) ) )
-                giveEntry( entry, random, outBag, luck, depth );
+                giveEntry( entry, random, outItems, luck, depth );
         }
         float32 totalWeight = table._noneWeight / luck;
         for ( const LootEntry& entry : table._listEntry )
@@ -111,7 +111,7 @@ namespace sw
             {
                 if ( pick < entry._weight )
                 {
-                    giveEntry( entry, random, outBag, luck, depth );
+                    giveEntry( entry, random, outItems, luck, depth );
                     break;
                 }
                 pick -= entry._weight;

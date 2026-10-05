@@ -163,7 +163,7 @@ namespace sw
         return GhostDoorResult::Opened;
     }
 
-    GhostSearchResult GhostMansion::searchFurniture( const hashed_string& furnitureId, GhostSearchMode mode, ItemBag& outLoot )
+    GhostSearchResult GhostMansion::searchFurniture( const hashed_string& furnitureId, GhostSearchMode mode, ItemStackList& outLoot )
     {
         const int32 furnitureIndex = findFurnitureIndex( furnitureId );
         if ( furnitureIndex < 0 )

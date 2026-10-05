@@ -5,7 +5,7 @@
 
 #include "GameFramework/Base/Data/StatBlock.h"
 #include "GameFramework/Base/Framework/GameStateRefs.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Movement/PlatformerMotor2D.h"
@@ -398,8 +398,8 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
     SW_EXPECT_EQUAL( 0, souls.getFlaskCharges() );
 
     // 적 · 보스 처치 — 같은 자리는 두 번 쓰러뜨릴 수 없다.
-    GameRandom random( 7u );
-    ItemBag    drops;
+    GameRandom    random( 7u );
+    ItemStackList drops;
     SW_EXPECT_EQUAL( 5, souls.registerKill( "cross1.husk_a", "husk", scene._flags, &loot, random, drops ) );
     SW_EXPECT_EQUAL( -1, souls.registerKill( "cross1.husk_a", "husk", scene._flags, &loot, random, drops ) );
     SW_EXPECT_EQUAL( 200, souls.registerKill( "cross3.boss", "falseKnight", scene._flags, &loot, random, drops ) );
@@ -430,9 +430,9 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
         Wallet          runWallet;
         MetroSoulsState run;
         run.initialize( &scene._catalog, lendMetroWallet( runWallet ) );
-        GameFlags  flags;
-        GameRandom runRandom( 1234u );
-        ItemBag    runDrops;
+        GameFlags     flags;
+        GameRandom    runRandom( 1234u );
+        ItemStackList runDrops;
         for ( int32 spawnIndex = 0; spawnIndex < 20; ++spawnIndex )
             (void)run.registerKill( hashed_string( string( "husk_" ) + static_cast<utf8>( 'a' + spawnIndex ) ), "husk", flags, &loot, runRandom, runDrops );
         arrShard[runIndex] = runDrops.getItemCount( "shard" );
@@ -686,8 +686,8 @@ SW_TEST_CASE( MetroidvaniaTest, StateRoundTripContinuesTheSameJourney )
     SW_EXPECT_TRUE( souls.rest( "bench_town", player.getVitality() ) );
     soulsWallet.add( "geo", 100 );
     (void)souls.die( "cross2", float2{ 10.0f, 2.0f }, player.getVitality() );
-    GameRandom random( 7u );
-    ItemBag    drops;
+    GameRandom    random( 7u );
+    ItemStackList drops;
     SW_EXPECT_EQUAL( 5, souls.registerKill( "cross1.husk_a", "husk", scene._flags, nullptr, random, drops ) );
     (void)player.getVitality().applyDamage( 50.0f );
     SW_EXPECT_TRUE( souls.drinkFlask( player.getVitality() ) );

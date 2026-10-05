@@ -9,7 +9,7 @@
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
 
 namespace sw
@@ -125,11 +125,11 @@ namespace sw
         const KartRankTable* pRank = findRankTable( place, racerCount );
         if ( pRank == nullptr )
             return nullptr;
-        ItemBag bag;
-        if ( _lootCatalog.roll( pRank->_tableId, random, bag ) == false || bag.isEmpty() )
+        ItemStackList items;
+        if ( _lootCatalog.roll( pRank->_tableId, random, items ) == false || items.isEmpty() )
             return nullptr;
         vector<hashed_string> listItem;
-        bag.getItemIds( listItem );
+        items.getItemIds( listItem );
         return findItem( listItem.front() );
     }
 

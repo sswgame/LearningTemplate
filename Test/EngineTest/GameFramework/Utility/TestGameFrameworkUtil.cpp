@@ -11,7 +11,7 @@
 #include "GameFramework/Base/Data/XmlCatalog.h"
 #include "GameFramework/Base/Input/FirstPersonLook.h"
 #include "GameFramework/Base/Input/TimingJudge.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Utility/Countdown.h"
 #include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/Base/Utility/FixedStepTimer.h"
@@ -24,7 +24,7 @@
 #include "TestFramework/TestFramework.h"
 
 // 장르를 가리지 않는 게임 프레임워크 도구 — 결정적 난수 · 좌표 해시, 고정 스텝, 남은 시간 · 비율 누적, 광선 판정, 1인칭 시점, 데이터 XML 읽기,
-// id 카탈로그, 아이템 봉투.
+// id 카탈로그, 아이템 값 목록.
 
 using namespace sw;
 
@@ -510,9 +510,9 @@ SW_TEST_CASE( GameFrameworkUtilTest, XmlCatalogBaseGivesBothLoadEntryPoints )
 }
 
 /**
- * @brief [GameFrameworkUtilTest] 카탈로그는 읽은 순서를 지키고 같은 id 는 그 자리에서 바꾸며 빈 id 는 받지 않는다 · 아이템 봉투는 0 이 되면 지우고 모자라면 옮기지 않는다
+ * @brief [GameFrameworkUtilTest] 카탈로그는 읽은 순서를 지키고 같은 id 는 그 자리에서 바꾸며 빈 id 는 받지 않는다 · 아이템 값 목록은 0 이 되면 지우고 모자라면 옮기지 않는다
  */
-SW_TEST_CASE( GameFrameworkUtilTest, CatalogKeepsOrderAndItemBagMovesItems )
+SW_TEST_CASE( GameFrameworkUtilTest, CatalogKeepsOrderAndItemStackListMovesItems )
 {
     GameCatalog<GameFrameworkUtilTestDef> catalog;
     SW_EXPECT_EQUAL( 0, catalog.add( GameFrameworkUtilTestDef{ hashed_string( "b" ), 1 } ) );
@@ -528,15 +528,15 @@ SW_TEST_CASE( GameFrameworkUtilTest, CatalogKeepsOrderAndItemBagMovesItems )
     { return def._value == 2; } )
                             ->_value );
 
-    ItemBag bag;
-    ItemBag box;
-    bag.addItem( "apple", 3 );
-    bag.addItem( "apple", 0 );
-    bag.addItem( hashed_string{}, 5 );
-    SW_EXPECT_EQUAL( 3, bag.getTotalCount() );
-    SW_EXPECT_FALSE( bag.moveItemTo( box, "apple", 4 ) );
-    SW_EXPECT_TRUE( bag.moveItemTo( box, "apple", 3 ) );
-    SW_EXPECT_TRUE( bag.isEmpty() );
+    ItemStackList items;
+    ItemStackList box;
+    items.addItem( "apple", 3 );
+    items.addItem( "apple", 0 );
+    items.addItem( hashed_string{}, 5 );
+    SW_EXPECT_EQUAL( 3, items.getTotalCount() );
+    SW_EXPECT_FALSE( items.moveItemTo( box, "apple", 4 ) );
+    SW_EXPECT_TRUE( items.moveItemTo( box, "apple", 3 ) );
+    SW_EXPECT_TRUE( items.isEmpty() );
     SW_EXPECT_TRUE( box.hasItem( "apple", 3 ) );
     SW_EXPECT_FALSE( box.moveItemTo( box, "apple", 1 ) );
 }

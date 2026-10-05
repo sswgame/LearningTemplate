@@ -5,7 +5,7 @@
 
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/World/AreaGraph.h"
@@ -355,10 +355,10 @@ SW_TEST_CASE( GhostHuntTest, FurnitureLootIsDeterministic )
     GhostMansionScene sceneB;
     SW_ASSERT_TRUE( sceneA.initialize( 7 ) );
     SW_ASSERT_TRUE( sceneB.initialize( 7 ) );
-    ItemBag curtainA;
-    ItemBag chestA;
-    ItemBag curtainB;
-    ItemBag chestB;
+    ItemStackList curtainA;
+    ItemStackList chestA;
+    ItemStackList curtainB;
+    ItemStackList chestB;
     SW_EXPECT_TRUE( sceneA._mansion.searchFurniture( "curtain", GhostSearchMode::Shake, curtainA ) == GhostSearchResult::WrongMode );
     SW_EXPECT_TRUE( sceneA._mansion.searchFurniture( "curtain", GhostSearchMode::Vacuum, curtainA ) == GhostSearchResult::Found );
     SW_EXPECT_TRUE( sceneA._mansion.searchFurniture( "chest", GhostSearchMode::Shake, chestA ) == GhostSearchResult::Found );
@@ -455,7 +455,7 @@ SW_TEST_CASE( GhostHuntTest, BooHidesAndEscapes )
     GhostMansionScene sceneB;
     SW_ASSERT_TRUE( sceneA.initialize( 3 ) );
     SW_ASSERT_TRUE( sceneB.initialize( 3 ) );
-    ItemBag loot;
+    ItemStackList loot;
     for ( GhostMansionScene* pScene : { &sceneA, &sceneB } )
     {
         (void)pScene->_mansion.enterRoom( "hall" );
@@ -502,7 +502,7 @@ SW_TEST_CASE( GhostHuntTest, StateRoundTripContinuesTheSameMansion )
     GhostMansionScene scene;
     SW_ASSERT_TRUE( scene.initialize( 3 ) );
     GhostMansion& mansion = scene._mansion;
-    ItemBag       loot;
+    ItemStackList loot;
     (void)mansion.enterRoom( "hall" );
     SW_EXPECT_TRUE( mansion.searchFurniture( "dresser", GhostSearchMode::Shake, loot ) == GhostSearchResult::BooFound );
     SW_EXPECT_EQUAL( 2, mansion.enterRoom( "foyer" ) );

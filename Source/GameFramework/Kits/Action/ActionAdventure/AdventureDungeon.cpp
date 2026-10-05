@@ -9,7 +9,7 @@
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Base/World/GameFlags.h"
@@ -277,7 +277,7 @@ namespace sw
         return AdventureDoorResult::Opened;
     }
 
-    bool AdventureDungeonState::openTreasure( const hashed_string& dungeonId, const hashed_string& treasureId, GameFlags& flags, ItemBag& outReward )
+    bool AdventureDungeonState::openTreasure( const hashed_string& dungeonId, const hashed_string& treasureId, GameFlags& flags, ItemStackList& outReward )
     {
         const AdventureDungeonDef*  pDungeon  = nullptr;
         DungeonRuntime*             pRuntime  = findRuntime( dungeonId, &pDungeon );

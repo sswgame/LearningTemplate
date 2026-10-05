@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Inventory/ItemBag.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
@@ -299,11 +299,11 @@ namespace sw
         return count;
     }
 
-    bool Inventory::hasItems( const ItemBag& bag ) const
+    bool Inventory::hasItems( const ItemStackList& items ) const
     {
-        for ( const auto& item : bag.getItems() )
+        for ( const auto& item : items.getItems() )
         {
-            if ( getItemCount( item.first ) < item.second )
+            if ( getItemCount( item._itemId ) < item._count )
                 return false;
         }
         return true;
@@ -356,12 +356,12 @@ namespace sw
         return weight;
     }
 
-    void Inventory::fillItemBag( ItemBag& outBag ) const
+    void Inventory::fillItemStackList( ItemStackList& outItems ) const
     {
         for ( const InventorySlot& slot : _listSlot )
         {
             if ( slot.isEmpty() == false )
-                outBag.addItem( slot._itemId, slot._count );
+                outItems.addItem( slot._itemId, slot._count );
         }
     }
 

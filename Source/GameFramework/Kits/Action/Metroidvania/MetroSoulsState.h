@@ -22,7 +22,7 @@ namespace sw
     class Archive;
     class GameFlags;
     class GameRandom;
-    class ItemBag;
+    class ItemStackList;
     class LootCatalog;
     class MetroidvaniaCatalog;
     class Vitality;
@@ -120,7 +120,7 @@ namespace sw
          * @param spawnId 그 적이 놓인 자리(같은 자리는 쉬기 전까지 다시 나오지 않는다)
          * @return 얻은 통화. 모르는 적이거나 이미 쓰러뜨린 자리면 −1.
          */
-        int32 registerKill( const hashed_string& spawnId, const hashed_string& enemyId, GameFlags& flags, const LootCatalog* pLoot, GameRandom& random, ItemBag& outDrops );
+        int32 registerKill( const hashed_string& spawnId, const hashed_string& enemyId, GameFlags& flags, const LootCatalog* pLoot, GameRandom& random, ItemStackList& outDrops );
         /** @brief 그 자리의 적이 지금 살아 있는가(처치 기록이 없다)입니다. */
         bool isSpawnAlive( const hashed_string& spawnId ) const;
         /** @brief 쌓인 알림을 꺼내 갑니다. */

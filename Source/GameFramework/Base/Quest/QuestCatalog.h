@@ -12,7 +12,7 @@
 #include "GameFramework/Base/Data/GameCatalog.h"
 #include "GameFramework/Base/Data/StatBlock.h"
 #include "GameFramework/Base/Data/XmlCatalog.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -42,11 +42,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 보상입니다. 아이템은 봉투, 그 밖(경험치 · 돈 · 평판)은 이름 → 수치입니다. */
+    /** @brief 보상입니다. 아이템은 값 목록(`ItemStackList`), 그 밖(경험치 · 돈 · 평판)은 이름 → 수치입니다. */
     struct QuestReward
     {
-        ItemBag   _items{};
-        StatBlock _values{}; ///< `xp="100" gold="50" rep.town="10"` — 이름은 게임이 읽는다
+        ItemStackList _items{};
+        StatBlock     _values{}; ///< `xp="100" gold="50" rep.town="10"` — 이름은 게임이 읽는다
     };
 } // namespace sw
 

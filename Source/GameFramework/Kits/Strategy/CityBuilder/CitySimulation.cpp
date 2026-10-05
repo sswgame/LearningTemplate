@@ -547,8 +547,8 @@ namespace sw
         const auto&   items    = building._stock.getItems();
         if ( items.empty() )
             return;
-        const hashed_string goodId    = items.begin()->first;
-        const int32         amount    = items.begin()->second;
+        const hashed_string goodId    = items.front()._itemId;
+        const int32         amount    = items.front()._count;
         const int32         component = getRoadComponent( building._accessTile );
         const int32         storage   = findStorageFor( goodId, component, building._accessTile, 1 );
         if ( storage < 0 )

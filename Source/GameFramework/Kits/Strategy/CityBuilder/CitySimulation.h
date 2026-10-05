@@ -9,7 +9,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
@@ -80,7 +80,7 @@ namespace sw
     /** @brief 지은 건물 하나입니다(집 포함). */
     struct CityBuilding
     {
-        ItemBag                _stock{};
+        ItemStackList          _stock{};
         const CityBuildingDef* _pDef{ nullptr };
         int2                   _origin{};
         int2                   _accessTile{ -1, -1 }; ///< 붙어 있는 도로 칸(없으면 −1)

@@ -14,7 +14,7 @@ namespace sw
 {
     class Archive;
     class Inventory;
-    class ItemBag;
+    class ItemStackList;
 
     /** @brief 한 번에 들어온 재료 묶음입니다. */
     struct IngredientBatch
@@ -57,8 +57,8 @@ namespace sw
         void recordBatch( const hashed_string& itemId, int32 count, int32 shelfLife, int64 unitCost );
         /** @brief @p count 개가 모두 있으면 오래된 것부터 빼고 원가 합을 @p outCost 에 더합니다. 모자라면 아무것도 빼지 않고 false 입니다. */
         [[nodiscard]] bool consume( const hashed_string& itemId, int32 count, int64& outCost );
-        /** @brief 봉투의 재료 × @p times 를 다 있으면 모두 뺍니다(다 되거나 아무것도). */
-        [[nodiscard]] bool consumeBag( const ItemBag& bag, int32 times, int64& outCost );
+        /** @brief 목록의 재료 × @p times 를 다 있으면 모두 뺍니다(다 되거나 아무것도). */
+        [[nodiscard]] bool consumeItems( const ItemStackList& items, int32 times, int64& outCost );
         /** @brief 하루를 넘깁니다 — 남은 날을 줄이고 0 이 된 묶음을 인벤토리에서 버립니다. */
         void advanceDay( vector<IngredientSpoilage>& outListSpoilage );
 

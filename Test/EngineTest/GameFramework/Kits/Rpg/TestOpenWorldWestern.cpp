@@ -5,7 +5,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Framework/GameStateRefs.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Progression/Reputation.h"
@@ -444,22 +444,22 @@ SW_TEST_CASE( OpenWorldWesternTest, PeltStarsDependOnWeaponZoneAndHitsAndCarcass
     SW_EXPECT_EQUAL( 2, WesternHunting::computeCarcassStars( catalog, carcass ) );
     SW_EXPECT_EQUAL( 180, WesternHunting::computeCarcassPrice( catalog, carcass ) );
 
-    GameRandom  random( 5u );
-    WesternPelt pelt;
-    ItemBag     bag;
-    SW_ASSERT_TRUE( WesternHunting::skin( catalog, carcass, &loot, random, pelt, bag ) );
-    SW_EXPECT_FALSE( WesternHunting::skin( catalog, carcass, &loot, random, pelt, bag ) ); // 두 번은 못 벗긴다
+    GameRandom    random( 5u );
+    WesternPelt   pelt;
+    ItemStackList items;
+    SW_ASSERT_TRUE( WesternHunting::skin( catalog, carcass, &loot, random, pelt, items ) );
+    SW_EXPECT_FALSE( WesternHunting::skin( catalog, carcass, &loot, random, pelt, items ) ); // 두 번은 못 벗긴다
     SW_EXPECT_EQUAL( 2, pelt._stars );
     SW_EXPECT_EQUAL( 90, WesternHunting::computePeltPrice( catalog, pelt ) );       // 1.5 달러 × 0.6
     SW_EXPECT_EQUAL( 90, WesternHunting::computeCarcassPrice( catalog, carcass ) ); // 벗긴 사체는 반값
-    SW_EXPECT_TRUE( bag.getItemCount( hashed_string( "venison" ) ) >= 2 );
+    SW_EXPECT_TRUE( items.getItemCount( hashed_string( "venison" ) ) >= 2 );
 
     WesternHunting::ageCarcass( carcass, 30.0f );
     SW_EXPECT_TRUE( WesternHunting::isRotten( catalog, carcass ) );
     SW_EXPECT_EQUAL( 0, WesternHunting::computeCarcassPrice( catalog, carcass ) );
     WesternCarcass rotten = WesternHunting::makeCarcass( catalog, kill );
     WesternHunting::ageCarcass( rotten, 48.0f );
-    SW_EXPECT_FALSE( WesternHunting::skin( catalog, rotten, nullptr, random, pelt, bag ) );
+    SW_EXPECT_FALSE( WesternHunting::skin( catalog, rotten, nullptr, random, pelt, items ) );
     SW_EXPECT_EQUAL( 0, WesternHunting::computePeltPrice( catalog, WesternPelt{ hashed_string( "deer" ), 0 } ) );
 }
 

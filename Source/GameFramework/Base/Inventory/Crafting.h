@@ -13,7 +13,7 @@
 
 #include "GameFramework/Base/Data/GameCatalog.h"
 #include "GameFramework/Base/Data/XmlCatalog.h"
-#include "GameFramework/Base/Inventory/ItemBag.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -27,9 +27,9 @@ namespace sw
     {
         hashed_string _id{};
         hashed_string _station{}; ///< 필요한 작업대(비면 어디서나 — 맨손 제작)
-        ItemBag       _inputs{};  ///< 써서 없어지는 재료
-        ItemBag       _tools{};   ///< 있어야 하지만 남는 것(망치 · 절구)
-        ItemBag       _outputs{};
+        ItemStackList _inputs{};  ///< 써서 없어지는 재료
+        ItemStackList _tools{};   ///< 있어야 하지만 남는 것(망치 · 절구)
+        ItemStackList _outputs{};
         float32       _time{ 0.0f }; ///< 대기열에서 걸리는 시간 — `Crafter` 는 `update` 에 넘긴 단위(보통 초) 그대로 쓴다. 게임 분으로 흘리는 키트는 분이다
         int32         _requiredLevel{ 0 };
         uint8         _bStartsKnown{ SW_TRUE }; ///< 처음부터 안다(아니면 배워야 한다 — 설계도 · 레시피 책)
@@ -100,8 +100,8 @@ namespace sw
     class SW_GF_API Crafter
     {
     public:
-        /** @brief 재료를 인벤토리 대신 다른 곳(신선도 묶음 재고 · 원가 장부)에서 거둡니다 — (재료 봉투, 횟수) → 다 거뒀으면 true. */
-        using ConsumeInputsDelegate = Delegate<bool( const ItemBag& inputs, int32 count )>;
+        /** @brief 재료를 인벤토리 대신 다른 곳(신선도 묶음 재고 · 원가 장부)에서 거둡니다 — (재료 목록, 횟수) → 다 거뒀으면 true. */
+        using ConsumeInputsDelegate = Delegate<bool( const ItemStackList& inputs, int32 count )>;
 
         Crafter();
 

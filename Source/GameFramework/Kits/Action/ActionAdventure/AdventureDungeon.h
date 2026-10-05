@@ -24,7 +24,7 @@ namespace sw
     class Archive;
     class AreaGraph;
     class GameFlags;
-    class ItemBag;
+    class ItemStackList;
     class XmlNode;
 
     /** @brief 문이 무엇으로 열리는가입니다. */
@@ -198,7 +198,7 @@ namespace sw
          * @brief 상자를 엽니다. 던전 아이템(작은 열쇠 · 보스 열쇠 · 지도 · 나침반)은 여기서 거두고 나머지는 @p outReward 에 더합니다.
          * @return 처음 열었으면 true(모르는 상자 · 이미 연 상자는 false).
          */
-        [[nodiscard]] bool openTreasure( const hashed_string& dungeonId, const hashed_string& treasureId, GameFlags& flags, ItemBag& outReward );
+        [[nodiscard]] bool openTreasure( const hashed_string& dungeonId, const hashed_string& treasureId, GameFlags& flags, ItemStackList& outReward );
         /** @brief 지도가 있으면 던전 지역의 방을 모두 드러냅니다. 새로 드러난 수입니다(지도가 없으면 0). */
         int32 revealMap( const hashed_string& dungeonId, AreaGraph& areaGraph ) const;
         /** @brief 나침반이 있으면 아직 열지 않은 상자들입니다(없으면 비운다). */

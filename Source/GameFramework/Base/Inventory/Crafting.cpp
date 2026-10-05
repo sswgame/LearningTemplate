@@ -19,37 +19,37 @@ namespace sw
     {
         struct CraftingInternal
         {
-            static void readItems( const XmlNode& node, const utf8* pChildName, ItemBag& outBag )
+            static void readItems( const XmlNode& node, const utf8* pChildName, ItemStackList& outItems )
             {
                 for ( XmlNode child = node.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
                 {
                     const utf8* pItem = child.findAttribute( "item" );
                     if ( pItem != nullptr )
-                        outBag.addItem( hashed_string( pItem ), MathUtil::max( 1, child.getAttributeInt( "count", 1 ) ) );
+                        outItems.addItem( hashed_string( pItem ), MathUtil::max( 1, child.getAttributeInt( "count", 1 ) ) );
                 }
             }
 
             /** @brief 결과를 모두 넣을 자리가 있는가 — 재료를 뺀 뒤를 가정하지 않는다(보수적). */
-            static bool hasRoomForOutputs( const Inventory& inventory, const ItemBag& outputs, int32 count )
+            static bool hasRoomForOutputs( const Inventory& inventory, const ItemStackList& outputs, int32 count )
             {
                 for ( const auto& item : outputs.getItems() )
                 {
-                    if ( inventory.hasRoomFor( item.first, item.second * count ) == false )
+                    if ( inventory.hasRoomFor( item._itemId, item._count * count ) == false )
                         return false;
                 }
                 return true;
             }
 
-            static void giveItems( Inventory& inventory, const ItemBag& items, int32 count )
+            static void giveItems( Inventory& inventory, const ItemStackList& items, int32 count )
             {
                 for ( const auto& item : items.getItems() )
-                    (void)inventory.addItem( item.first, item.second * count );
+                    (void)inventory.addItem( item._itemId, item._count * count );
             }
 
-            static void takeItems( Inventory& inventory, const ItemBag& items, int32 count )
+            static void takeItems( Inventory& inventory, const ItemStackList& items, int32 count )
             {
                 for ( const auto& item : items.getItems() )
-                    (void)inventory.removeItem( item.first, item.second * count );
+                    (void)inventory.removeItem( item._itemId, item._count * count );
             }
         };
     } // namespace
@@ -158,7 +158,7 @@ namespace sw
             return CraftResult::MissingTools;
         for ( const auto& item : pRecipe->_inputs.getItems() )
         {
-            if ( inventory.getItemCount( item.first ) < item.second * count )
+            if ( inventory.getItemCount( item._itemId ) < item._count * count )
                 return CraftResult::MissingInputs;
         }
         return CraftResult::Ok;
@@ -171,7 +171,7 @@ namespace sw
         const RecipeDef* pRecipe  = _pCatalog->findRecipe( recipeId );
         int32            maxCount = 9999;
         for ( const auto& item : pRecipe->_inputs.getItems() )
-            maxCount = MathUtil::min( maxCount, inventory.getItemCount( item.first ) / MathUtil::max( 1, item.second ) );
+            maxCount = MathUtil::min( maxCount, inventory.getItemCount( item._itemId ) / MathUtil::max( 1, item._count ) );
         return maxCount;
     }
 

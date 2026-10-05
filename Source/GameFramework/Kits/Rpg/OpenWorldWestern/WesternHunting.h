@@ -12,7 +12,7 @@
 namespace sw
 {
     class GameRandom;
-    class ItemBag;
+    class ItemStackList;
     class LootCatalog;
     class WesternCatalog;
 
@@ -67,10 +67,10 @@ namespace sw
         static int32 computeCarcassStars( const WesternCatalog& catalog, const WesternCarcass& carcass );
         static bool  isRotten( const WesternCatalog& catalog, const WesternCarcass& carcass );
         /**
-         * @brief 가죽을 벗깁니다(지금 등급 그대로). 이미 벗겼거나 썩었으면 false 입니다. 전리품 표가 있으면 @p pLoot 로 굴려 @p outBag 에 더합니다.
+         * @brief 가죽을 벗깁니다(지금 등급 그대로). 이미 벗겼거나 썩었으면 false 입니다. 전리품 표가 있으면 @p pLoot 로 굴려 @p outItems 에 더합니다.
          */
         [[nodiscard]] static bool skin( const WesternCatalog& catalog, WesternCarcass& inoutCarcass, const LootCatalog* pLoot, GameRandom& random,
-                                        WesternPelt& outPelt, ItemBag& outBag );
+                                        WesternPelt& outPelt, ItemStackList& outItems );
         /** @brief 상인이 가죽에 주는 값입니다(가죽 값 × 등급 배율, 센트 — 달러 소수점을 정수로). */
         static int32 computePeltPrice( const WesternCatalog& catalog, const WesternPelt& pelt );
         /** @brief 정육점이 사체 통째에 주는 값입니다(센트 — 벗긴 사체는 절반, 썩었으면 0). */
