@@ -93,6 +93,10 @@
     구현(`StreamTransportFactory`): Windows IOCP(완료 포트 하나를 I/O 스레드 N 이 나눠 기다림, 연결마다 읽기 · 쓰기 하나씩, AcceptEx 16 · ConnectEx,
     연결 수명은 걸린 작업 수 — 마지막 작업이 돌아온 순간 닫힘 한 번, 시한은 0.1 초마다 한 스레드가 훑는다) · 리눅스 epoll(I/O 스레드마다 epoll(에지 트리거) +
     eventfd, 연결은 돌림차례로 한 루프가 소유, 다른 스레드의 send 는 줄이 비었으면 바로 sendmsg( MSG_NOSIGNAL ), 수락은 루프 0 이 열림 콜백 뒤 배정 루프에 등록)
+  - 스트림 메시지 — 길이 접두 프레임(`StreamFrame`: `[u32 길이][종류][깃발][몸]`, 상한은 머리 4 바이트로 몸이 오기 전에 본다, 모르는 종류 · 깃발은 끊는다)과
+    끝점(`StreamMessageEndpoint` — I/O 스레드에서 프레임을 잘라 연결별 줄에, 게임 스레드의 `pump` 가 한 잠금에 열림 → 프레임 → 닫힘 순서로. 줄이 상한을 넘으면 읽기를 멈춰
+    TCP 창을 닫는다. 핑 · 퐁은 끝점이 I/O 스레드에서 스스로 답해 RTT 를 잰다. 보낼 줄이 넘치면 메시지를 버리지 않고 끊는다(SendQueueOverflow) — 버리면 그 위의 순서가 깨진다).
+    시험 도우미 `test::StreamEndpointPair`(`TestFramework/TestStreamEndpointPair.h` — 루프백 위 끝점 한 쌍, 한 스레드로 돈다)
 - **Math/**: `VectorMath` · `MatrixMath` · `MathUtil` · `Frustum`
 - **Time/**: `MonotonicClock`(아래 "시간") · `GameTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE`)
 - **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.

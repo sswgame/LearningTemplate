@@ -387,7 +387,7 @@ cd build/Ninja-Debug/Bin
 - **네트워크 서비스 계층(2026-10-06 사용자 결정 — 로그인 · 채팅 · 거래, MMO 가 아니어도 쓰는 키트).** 상태 복제(UDP)와 달리 순서 있는 신뢰 스트림 · 긴 연결 · 요청-응답이다.
   ① 스트림 전송(Core `Network/Transport/` — IOCP · epoll · 루프백)은 있다. 리눅스 epoll(`EpollStreamTransport`)은 WSL 빌드 · `StreamTransportTest` 미확인 —
   `WSL-Debug` · `WSL-Shipping` 에서 `--test_repeat=20` 과 변이(`setReceivePaused( false )` 의 할 일 빼기 → 백프레셔 시험이 진다)를 본다. io_uring 은 측정 뒤.
-  ② Core `Network/Message/` 에 길이 접두 프레이밍 + 요청-응답(요청 id · 시한 · 취소 · 멱등 키) — 복제용 RPC 와 다르다(서비스 호출)
+  ② Core `Network/Message/` 의 길이 접두 프레임 · 끝점은 있다 — 요청-응답(요청 id · 시한 · 취소 · 멱등 키) — 복제용 RPC 와 다르다(서비스 호출)
   ③ 구성은 `docs/` 가 아니라 이 항목이 정본 — **공통 기반**(GameFramework 기반 `Online/`): 서비스 틀(등록 · 라우팅 · 인증 문맥 · 오류 코드 · 판 협상) · 요청 보호(도배 제한 · 멱등 키 · 크기 상한) ·
   신원 원형(`AccountId` · 세션 토큰 검증) · 저장 계약(`IServiceStore` 영속 · `IEphemeralStore` 캐시 · `ILocalStore` 로컬 — 파일 백엔드는 바이너리/JSON/XML · 원자적 쓰기 · 체크섬 · 선택 압축/암호화) ·
   마이그레이션 적용기 · 감사 로그 · 서버 간 버스 · 예약 작업 · 원격 설정/기능 플래그 · 관측(지표 · 구조화 로그 · 추적 id). **드라이버 키트**: `GF_SqlStore`(SQLite · PostgreSQL) ·
