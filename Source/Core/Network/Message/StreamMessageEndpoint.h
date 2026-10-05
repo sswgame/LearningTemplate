@@ -14,11 +14,26 @@
 
 namespace sw
 {
+    class ITlsContext;
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 스트림 끝점의 TLS 설정 — 컨텍스트(인증서 · 신뢰)는 `INetSecurityProvider::createTlsContext` 로 만들어 끝점보다 오래 둔다. 없으면 평문. */
+    struct StreamSecuritySettings
+    {
+        ITlsContext* _pTlsContext{ nullptr };
+    };
+} // namespace sw
+
+namespace sw
+{
     struct StreamEndpointSettings
     {
-        int32   _maxFrameBodySize{ StreamFrameConstant::kDefaultMaxFrameSize };
-        int32   _maxPendingReceiveBytes{ 4 * 1024 * 1024 }; ///< 연결 하나가 `pump` 를 기다리는 바이트 — 넘으면 읽기를 멈춘다
-        float64 _pingIntervalSeconds{ 15.0 };               ///< 0 = 끈다. 전송의 유휴 시한보다 짧게
+        int32                  _maxFrameBodySize{ StreamFrameConstant::kDefaultMaxFrameSize };
+        int32                  _maxPendingReceiveBytes{ 4 * 1024 * 1024 }; ///< 연결 하나가 `pump` 를 기다리는 바이트 — 넘으면 읽기를 멈춘다
+        float64                _pingIntervalSeconds{ 15.0 };               ///< 0 = 끈다. 전송의 유휴 시한보다 짧게
+        StreamSecuritySettings _security{};                                ///< TLS 컨텍스트가 있으면 모든 연결이 TLS — 열림은 핸드셰이크 뒤
     };
 } // namespace sw
 
@@ -38,7 +53,7 @@ namespace sw
         IStreamEndpointListener( const IStreamEndpointListener& )            = default;
         IStreamEndpointListener& operator=( const IStreamEndpointListener& ) = default;
 
-        /** @brief 연결이 열렸습니다. */
+        /** @brief 연결이 열렸습니다(TLS 면 핸드셰이크가 끝난 뒤). */
         virtual void onEndpointOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) = 0;
         /** @brief 프레임 하나(Message · Request · Response · Cancel). @p pBody 는 콜백 동안만 유효합니다. */
         virtual void onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize ) = 0;
@@ -53,6 +68,8 @@ namespace sw
      * @brief 스트림 전송 위의 프레임 끝점 — 전송의 처리기가 되어 I/O 스레드에서 프레임을 잘라 연결마다의 받은 줄에 쌓고, `pump` 가 한 잠금에 꺼내 줍니다.
      * @details 받은 줄이 `_maxPendingReceiveBytes` 를 넘으면 읽기를 멈춘다(TCP 창이 닫혀 상대가 멈춘다). 핑 · 퐁은 끝점이 I/O 스레드에서 스스로 답한다.
      *          보낼 줄이 넘치면 메시지를 버리지 않고 끊는다(SendQueueOverflow) — 버리면 그 위의 순서가 깨진다. 보내기는 아무 스레드에서나.
+     *          `_security._pTlsContext` 가 있으면 연결마다 TLS 세션을 두고 모든 바이트가 그것을 지난다 — 열림은 핸드셰이크가 끝난 뒤, 핸드셰이크 · 레코드 검증
+     *          실패는 SecurityFailure 로 끊어 열림 없이 닫힘만 간다. 핸드셰이크 중에 보낸 프레임은 세션이 모았다가 끝나면 보낸다. 위 층은 TLS 를 모른다.
      * @code
      *     unique_ptr<IStreamTransport> transport = StreamTransportFactory::createPlatformTransport();
      *     StreamMessageEndpoint endpoint;
@@ -104,10 +121,15 @@ namespace sw
         struct Event;
 
         shared_ptr<Connection> findConnection( StreamConnectionHandle handle ) const;
-        /** @brief 받은 바이트를 해독기에 넣고 프레임을 줄에 쌓습니다(I/O 스레드, 연결 잠금 안). 깨졌으면 false. */
+        /** @brief 받은 바이트를 (TLS 면 풀어서) 해독기에 넣고 프레임을 줄에 쌓습니다(I/O 스레드, 연결 잠금 안). 깨졌으면 false. */
         bool acceptIncomingLocked( Connection& connection, const uint8* pData, int32 size );
-        /** @brief 프레임 바이트를 전송에 넘깁니다(연결 잠금 안). */
+        /** @brief 평문 바이트를 프레임으로 자릅니다(연결 잠금 안). 깨졌으면 false. */
+        bool decodeFramesLocked( Connection& connection, const uint8* pData, int32 size );
+        /** @brief 프레임 바이트를 (TLS 면 세션을 지나) 전송에 넘깁니다(연결 잠금 안). */
         StreamSendResult writeOutgoingLocked( Connection& connection, const vector<uint8>& frameBytes );
+        /** @brief TLS 세션이 내놓은 암호문(핸드셰이크 · 레코드 · 경고)을 전송에 넘깁니다(연결 잠금 안). */
+        StreamSendResult flushCiphertextLocked( Connection& connection );
+        void             announceOpenLocked( Connection& connection );
         void             pushEvent( Event&& event, const uint8* pBody, int32 bodySize );
         void             closeForError( Connection& connection, StreamCloseReason reason );
 

@@ -96,7 +96,8 @@
     eventfd, 연결은 돌림차례로 한 루프가 소유, 다른 스레드의 send 는 줄이 비었으면 바로 sendmsg( MSG_NOSIGNAL ), 수락은 루프 0 이 열림 콜백 뒤 배정 루프에 등록)
   - 스트림 메시지 — 길이 접두 프레임(`StreamFrame`: `[u32 길이][종류][깃발][몸]`, 상한은 머리 4 바이트로 몸이 오기 전에 본다, 모르는 종류 · 깃발은 끊는다)과
     끝점(`StreamMessageEndpoint` — I/O 스레드에서 프레임을 잘라 연결별 줄에, 게임 스레드의 `pump` 가 한 잠금에 열림 → 프레임 → 닫힘 순서로. 줄이 상한을 넘으면 읽기를 멈춰
-    TCP 창을 닫는다. 핑 · 퐁은 끝점이 I/O 스레드에서 스스로 답해 RTT 를 잰다. 보낼 줄이 넘치면 메시지를 버리지 않고 끊는다(SendQueueOverflow) — 버리면 그 위의 순서가 깨진다).
+    TCP 창을 닫는다. 핑 · 퐁은 끝점이 I/O 스레드에서 스스로 답해 RTT 를 잰다. 보낼 줄이 넘치면 메시지를 버리지 않고 끊는다(SendQueueOverflow) — 버리면 그 위의 순서가 깨진다. `StreamEndpointSettings::_security` 에 TLS 컨텍스트를 주면
+    연결마다 TLS 1.3 세션 — 열림은 핸드셰이크 뒤, 핸드셰이크 · 레코드 검증 실패는 SecurityFailure 로 열림 없이 닫힘만, 우아한 종료는 close_notify 먼저. 위 층은 TLS 를 모른다).
     시험 도우미 `test::StreamEndpointPair`(`TestFramework/TestStreamEndpointPair.h` — 루프백 위 끝점 한 쌍, 한 스레드로 돈다)
   - 서비스 요청-응답 — `NetRequestClient`(요청 id · 시한 · 취소 · 연결 끊김 · 과부하 중 정확히 하나로 콜백 한 번) · `NetRequestServer`(메서드마다 처리기, 바로 또는
     토큰으로 나중에 `respond`, 멱등 키는 (주체, 메서드, 키) 범위로 기억 — 끝난 키는 기억한 응답, 처리 중인 키는 첫 응답을 같이). 복제용 RPC 가 아니라 서비스 호출이다

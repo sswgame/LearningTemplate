@@ -3,6 +3,7 @@
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <cstring>
@@ -46,17 +47,20 @@ namespace sw
     /** @brief 끝점이 보는 연결 하나 — I/O 스레드가 열고 닫고, 보내는 스레드는 shared_ptr 로 붙든다(닫힌 뒤 지워져도 안전). */
     struct StreamMessageEndpoint::Connection
     {
-        mutex                  _mutex; ///< 해독기 · 보낼 프레임 버퍼(S3: TLS 세션)
-        StreamFrameDecoder     _decoder;
-        vector<uint8>          _frameScratch{}; ///< 보낼 프레임을 짓는 자리
-        NetAddress             _remote{};
-        StreamConnectionHandle _handle{};
-        atomic<int64>          _roundTripNanoseconds{ -1 };
-        atomic<int32>          _pendingBytes{ 0 };                      ///< 줄에 쌓였지만 아직 pump 가 넘기지 않은 몸 바이트
-        StreamCloseReason      _errorReason{ StreamCloseReason::None }; ///< 끝점이 끊은 까닭(ProtocolError · SendQueueOverflow · SecurityFailure) — 전송의 까닭보다 앞선다
-        uint8                  _bAccepted{ SW_FALSE };
-        uint8                  _bOpenAnnounced{ SW_FALSE };
-        uint8                  _bReceivePaused{ SW_FALSE };
+        mutex                   _mutex; ///< 해독기 · 보낼 프레임 버퍼 · TLS 세션
+        StreamFrameDecoder      _decoder;
+        vector<uint8>           _frameScratch{};  ///< 보낼 프레임을 짓는 자리
+        unique_ptr<ITlsSession> _tlsSession{};    ///< 있으면 오가는 모든 바이트가 이것을 지난다
+        vector<uint8>           _plainScratch{};  ///< 세션이 푼 평문
+        vector<uint8>           _cipherScratch{}; ///< 세션이 내놓은 보낼 암호문
+        NetAddress              _remote{};
+        StreamConnectionHandle  _handle{};
+        atomic<int64>           _roundTripNanoseconds{ -1 };
+        atomic<int32>           _pendingBytes{ 0 };                      ///< 줄에 쌓였지만 아직 pump 가 넘기지 않은 몸 바이트
+        StreamCloseReason       _errorReason{ StreamCloseReason::None }; ///< 끝점이 끊은 까닭(ProtocolError · SendQueueOverflow · SecurityFailure) — 전송의 까닭보다 앞선다
+        uint8                   _bAccepted{ SW_FALSE };
+        uint8                   _bOpenAnnounced{ SW_FALSE };
+        uint8                   _bReceivePaused{ SW_FALSE };
 
         explicit Connection( int32 maxBodySize )
             : _decoder{ maxBodySize }
@@ -67,7 +71,6 @@ namespace sw
     /** @brief pump 로 넘길 사건 하나 — 프레임 몸은 아레나의 [_offset, _offset + _size). */
     struct StreamMessageEndpoint::Event
     {
-        shared_ptr<Connection> _connection{};
         NetAddress             _remote{};
         StreamConnectionHandle _handle{};
         int32                  _offset{ 0 };
@@ -149,13 +152,33 @@ namespace sw
         connection->_handle               = handle;
         connection->_remote               = remote;
         connection->_bAccepted            = bAccepted ? SW_TRUE : SW_FALSE;
+        // 세션은 표에 넣기 전에 — 표에서 찾은 다른 스레드의 보내기가 세션 없이 평문을 내보내지 않게.
+        if ( _settings._security._pTlsContext != nullptr )
+            connection->_tlsSession = _settings._security._pTlsContext->createSession();
         {
             std::scoped_lock<mutex> lock{ _tableMutex };
             _mapConnection[handle.packed()] = connection;
         }
-        // TLS 가 없으면 바로 열린다(S3: 핸드셰이크가 끝난 뒤에 알린다).
-        connection->_bOpenAnnounced = SW_TRUE;
-        pushEvent( Event{ connection, remote, handle, 0, 0, StreamCloseReason::None, StreamFrameKind::Message, EndpointEventKind::Opened, connection->_bAccepted }, nullptr, 0 );
+        std::scoped_lock<mutex> lock{ connection->_mutex };
+        if ( _settings._security._pTlsContext == nullptr )
+        {
+            announceOpenLocked( *connection );
+            return;
+        }
+        if ( connection->_tlsSession == nullptr || connection->_tlsSession->getState() == TlsSessionState::Failed )
+        {
+            closeForError( *connection, StreamCloseReason::SecurityFailure );
+            return;
+        }
+        // 클라이언트는 만들 때 ClientHello 를 지었다 — 보낸다. 서버는 저쪽 ClientHello 를 기다린다. 열림은 핸드셰이크 뒤.
+        (void)flushCiphertextLocked( *connection );
+    }
+
+    void StreamMessageEndpoint::announceOpenLocked( Connection& connection )
+    {
+        connection._bOpenAnnounced = SW_TRUE;
+        pushEvent( Event{ connection._remote, connection._handle, 0, 0, StreamCloseReason::None, StreamFrameKind::Message, EndpointEventKind::Opened, connection._bAccepted },
+                   nullptr, 0 );
     }
 
     void StreamMessageEndpoint::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
@@ -176,6 +199,38 @@ namespace sw
     }
 
     bool StreamMessageEndpoint::acceptIncomingLocked( Connection& connection, const uint8* pData, int32 size )
+    {
+        if ( connection._tlsSession == nullptr )
+            return decodeFramesLocked( connection, pData, size );
+        ITlsSession& session = *connection._tlsSession;
+        const bool   bFed    = session.feedCiphertext( pData, size );
+        (void)flushCiphertextLocked( connection ); // 핸드셰이크 답 · 세션 표 · 실패 경고
+        if ( bFed == false || session.getState() == TlsSessionState::Failed )
+        {
+            SW_LOG_WARNING( "TLS handshake failed on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
+            closeForError( connection, StreamCloseReason::SecurityFailure );
+            return false;
+        }
+        if ( session.getState() == TlsSessionState::Established && connection._bOpenAnnounced == SW_FALSE )
+        {
+            announceOpenLocked( connection );
+            (void)flushCiphertextLocked( connection ); // 핸드셰이크 중에 모아 둔 평문이 이제 레코드로 나왔다
+        }
+        connection._plainScratch.clear();
+        if ( session.readPlaintext( connection._plainScratch ) == false )
+        {
+            SW_LOG_WARNING( "TLS record rejected on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
+            closeForError( connection, StreamCloseReason::SecurityFailure ); // 변조된 레코드(bad record mac)
+            return false;
+        }
+        (void)flushCiphertextLocked( connection ); // 읽기가 내놓은 레코드(세션 표 답 등)
+        if ( session.getState() == TlsSessionState::Closed )
+            _pTransport->close( connection._handle, StreamCloseMode::Graceful ); // 저쪽 close_notify
+        return connection._plainScratch.empty() ||
+               decodeFramesLocked( connection, connection._plainScratch.data(), static_cast<int32>( connection._plainScratch.size() ) );
+    }
+
+    bool StreamMessageEndpoint::decodeFramesLocked( Connection& connection, const uint8* pData, int32 size )
     {
         connection._decoder.append( pData, size );
         StreamFrameView frame;
@@ -211,7 +266,7 @@ namespace sw
                 case StreamFrameKind::Cancel:
                 {
                     connection._pendingBytes.fetch_add( frame._bodySize, std::memory_order_relaxed );
-                    pushEvent( Event{ nullptr, {}, connection._handle, 0, 0, StreamCloseReason::None, frame._kind, EndpointEventKind::Frame, SW_FALSE }, frame._pBody, frame._bodySize );
+                    pushEvent( Event{ {}, connection._handle, 0, 0, StreamCloseReason::None, frame._kind, EndpointEventKind::Frame, SW_FALSE }, frame._pBody, frame._bodySize );
                     break;
                 }
                 case StreamFrameKind::Count:
@@ -237,16 +292,34 @@ namespace sw
             }
         }
         const StreamCloseReason finalReason = connection != nullptr && connection->_errorReason != StreamCloseReason::None ? connection->_errorReason : reason;
-        pushEvent( Event{ nullptr, {}, handle, 0, 0, finalReason, StreamFrameKind::Message, EndpointEventKind::Closed, SW_FALSE }, nullptr, 0 );
+        pushEvent( Event{ {}, handle, 0, 0, finalReason, StreamFrameKind::Message, EndpointEventKind::Closed, SW_FALSE }, nullptr, 0 );
     }
 
     // ---- 아무 스레드 ----
 
     StreamSendResult StreamMessageEndpoint::writeOutgoingLocked( Connection& connection, const vector<uint8>& frameBytes )
     {
+        if ( connection._tlsSession != nullptr )
+        {
+            if ( connection._tlsSession->writePlaintext( frameBytes.data(), static_cast<int32>( frameBytes.size() ) ) == false )
+                return StreamSendResult::Closed; // 세션이 실패했거나 닫혔다
+            return flushCiphertextLocked( connection );
+        }
         const StreamSendResult result = _pTransport->send( connection._handle, frameBytes.data(), static_cast<int32>( frameBytes.size() ) );
         if ( result == StreamSendResult::QueueFull )
             closeForError( connection, StreamCloseReason::SendQueueOverflow ); // 느린 상대 — 메시지를 버리면 그 위의 순서가 깨지므로 끊는다
+        return result;
+    }
+
+    StreamSendResult StreamMessageEndpoint::flushCiphertextLocked( Connection& connection )
+    {
+        connection._cipherScratch.clear();
+        connection._tlsSession->takeCiphertext( connection._cipherScratch );
+        if ( connection._cipherScratch.empty() )
+            return StreamSendResult::Queued;
+        const StreamSendResult result = _pTransport->send( connection._handle, connection._cipherScratch.data(), static_cast<int32>( connection._cipherScratch.size() ) );
+        if ( result == StreamSendResult::QueueFull )
+            closeForError( connection, StreamCloseReason::SendQueueOverflow );
         return result;
     }
 
@@ -274,8 +347,20 @@ namespace sw
 
     void StreamMessageEndpoint::close( StreamConnectionHandle handle, StreamCloseMode mode )
     {
-        if ( _pTransport != nullptr )
-            _pTransport->close( handle, mode );
+        if ( _pTransport == nullptr )
+            return;
+        const shared_ptr<Connection> connection = findConnection( handle );
+        if ( connection != nullptr && mode == StreamCloseMode::Graceful )
+        {
+            // 우아한 종료 — close_notify 를 먼저 보낸다(저쪽이 잘린 연결과 끝을 가른다).
+            std::scoped_lock<mutex> lock{ connection->_mutex };
+            if ( connection->_tlsSession != nullptr && connection->_tlsSession->getState() == TlsSessionState::Established )
+            {
+                connection->_tlsSession->close();
+                (void)flushCiphertextLocked( *connection );
+            }
+        }
+        _pTransport->close( handle, mode );
     }
 
     IStreamTransport* StreamMessageEndpoint::getTransport() const { return _pTransport; }
