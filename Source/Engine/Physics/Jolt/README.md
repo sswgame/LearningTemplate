@@ -15,3 +15,4 @@
 - 이 폴더의 `.cpp` 는 Jolt 임포트 타깃의 정의 · 대상 기능(AVX2)으로 컴파일되고 PCH 를 쓰지 않는다(`Source/Engine/CMakeLists.txt`).
 - vcpkg 설치본의 헤더 · 라이브러리 설정 어긋남(부동소수 예외 비트)과 그 처리는 `JoltPhysicsBackend.cpp` 의 `findLibraryVersionId` · `assertFailed`.
 - 리눅스(x64-linux 트리플릿)는 Jolt 가 정적 라이브러리라 `libEngine.so` 에 들어간다 — PIC 로 지어져 있어야 한다(vcpkg 기본).
+- TSan 구성(`CI-Debug-TSAN`)은 Jolt 를 `-fsanitize=thread` 로 지은 것과 링크한다(트리플릿 `x64-linux-tsan`). 접촉 콜백(`OnContactValidate` · `OnContact*`)은 Jolt 잡 스레드에서 불리고 그 경쟁을 TSan 이 본다 — 억제 목록으로 Jolt 를 덮지 말 것.

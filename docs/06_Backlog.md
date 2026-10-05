@@ -478,9 +478,6 @@ cd build/Ninja-Debug/Bin
 - **커버리지 안내 퍼징(libFuzzer)은 Windows 에서 엔진과 링크되지 않는다** — `clang_rt.fuzzer-x86_64.lib` 가 정적 CRT(/MT)뿐이라 동적 CRT(/MD) 엔진과 LNK2038.
   `LoaderFuzzTest`(시드 고정 변이)가 같은 대상 표(`Test/EngineTest/LoaderFuzzTargets.cpp`)를 돈다. 리눅스 clang 에서 `LLVMFuzzerTestOneInput` 하나로 그 표를 붙이고
   ASan 과 같이 돌린다(서드파티 디코더만 떼어 /MT 로 돌리면 Windows 에서도 된다 — stb_vorbis 를 그렇게 확인했다).
-- **TSan 잡의 Jolt 는 계측되지 않은 vcpkg 라이브러리다** — 잡 의존 · 장벽 동기화가 라이브러리 .cpp 안이라 TSan 이 못 보고, 헤더 인라인 접근만 보여
-  수백 건의 거짓 경쟁이 난다. `cmake/Modules/Options/TsanSuppressions.txt` 가 Jolt 내부 함수를 억제하고, 그 탓에 Jolt 잡 안에서 불리는 엔진 콜백(접촉
-  리스너 등)의 경쟁도 가려진다. TSan 구성에서 Jolt 를 `-fsanitize=thread` 로 짓는 트리플릿(트리플릿 변경 — 메인 · 사용자 결정)으로 바꾸면 억제를 지운다.
 - **Windows CI 시험 단계 실패(10-02 부터 Debug, 10-03 부터 Shipping)의 원인은 이 PC 에서 재현하지 못했다** — CI-Debug · CI-Shipping 을 같은 라벨로,
   TEMP 를 8.3 짧은 이름으로 바꿔서도 돌렸다(부하로 인한 시간 초과 말고는 통과). CI 의 시험 단계가 이제 진 시험을 주석으로 올리므로 병합 뒤 첫 실행의
   주석(`/check-runs/<job id>/annotations`, 로그인 없이 읽힌다)에서 시험 이름 · 실패 줄을 보고 고친다.
@@ -491,10 +488,6 @@ cd build/Ninja-Debug/Bin
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
-- **TSan 에서 Jolt 를 계측해 짓기(2026-10-05 사용자 "일단 해보고 추가해", 미완).** 지금은 계측 안 된 Jolt 의 거짓 경쟁을 `TsanSuppressions.txt` 로 가리는데, 그 억제가
-  Jolt 잡 안에서 불리는 엔진 콜백의 진짜 경쟁까지 가린다. TSan 전용 오버레이 트리플릿 `x64-linux-tsan`(`-fsanitize=thread`) · CI TSan 잡 · 억제 목록을 고친 **작업 중 커밋**이
-  워크트리 `LT-wt/tsan-jolt`(브랜치 `wt/tsan-jolt`, `d0d9ddb07`)에 있다 — WSL configure 도중 멈춤, 빌드 · 시험 미확인. 이어서: 계측 빌드 → Jolt 억제 지우고 TSan ctest →
-  진짜 경쟁이면 결함으로 재현 · 수정, 거짓만 남으면 함수 단위로 좁혀 남기기. 다른 구성의 트리플릿 · 설치 폴더 · CI 캐시 키는 바뀌면 안 된다(저장소 캐시 10 GB 한도 주의).
 - **include · 전방 선언 남은 후보.** ① OS 헤더(`Core/Common/PlatformOsHeaders.h` — `Windows.h` · `DbgHelp.h` · `Xinput.h` …)가 `EngineMinimal.h` 를 거쳐
   PCH 에 남아 있다(TU 2746 · `windows.h` 1671). 빼려면 먼저 `NOMINMAX` · `WIN32_LEAN_AND_MEAN` 을 CMake 정의로 옮기고(서드파티가 `windows.h` 를 먼저 include 해도
   min/max 매크로가 안 생기게), Win32 · POSIX API 를 쓰는 파일이 직접 include 한다 — 글자 그래프로 찾은 후보 26 개(`Core/Common/Macros.h` · `ModuleCompiler.cpp` ·
@@ -790,6 +783,9 @@ cd build/Ninja-Debug/Bin
   `Bin` 과 `BuildTools` 양쪽(`cmake/Engine/TargetRules.cmake`). Windows 의 memcpy 는 겹쳐도 맞게 옮겨 겹친 복사 버그가 안 보인다 — 리눅스 ASan 이 잡는다.
 - **TSan** 은 `SW_SANITIZER_KIND=thread` · `CI-Debug-TSAN`(GNU/Clang 전용, ASan 과 동시 불가). 크래시 자식 시험은 ASan · TSan 에서 건너뛴다. 새 CI 검사는 매트릭스에
   `reportOnly: true` 로 들여 보고를 추린 뒤 막는 잡으로 바꾼다.
+  원자 연산으로 스스로 동기화하는 서드파티(Jolt · Box2D)는 트리플릿 `x64-linux-tsan`(`cmake/Modules/Toolchain/VcpkgTsan/`)이 계측해 짓는다 — 계측 안 된 정적 라이브러리는 동기화가
+  안 보이는데 헤더 인라인 함수는 링커가 우리 TU 의 계측된 사본을 골라 거짓 경쟁 수백 건이 났다. 트리플릿 파일은 ABI 해시에 들어 고치면 포트를 다 다시 짓고(WSL 약 35 분),
+  기본 CI 캐시 키가 보는 `Toolchain/Vcpkg/**` 밖에 둔다. 포트 컴파일러는 프리셋의 `CC=clang` 이 정한다(빠지면 vcpkg 가 GCC 로 짓는다).
 - **유니티 빌드는 `CI-*` 프리셋에만 켜져 있다.** `Ninja-*` 가 초록이어도 익명 네임스페이스 충돌이 없다는 뜻이 아니다 — 헬퍼 · 상수는 `XxxInternal` 구조체로 감싼다.
   `sw_skipUnitySources` 가 다시 길어지면 규칙이 깨지고 있다는 신호다.
 - **LLVM 을 다시 깔면 PCH 가 전부 낡는다**(`… has been modified since the precompiled header was built`). `.pch` 와 짝 `cmake_pch.cxx.obj` 를 같이 지운다(`SetupLlvm.py` 가 한다).

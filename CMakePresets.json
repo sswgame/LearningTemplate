@@ -227,9 +227,18 @@
     {
       "name": "CI-Debug-TSAN",
       "displayName": "CI Debug + TSan (Ninja, Linux Clang)",
-      "description": "CI Debug with ThreadSanitizer enabled (GNU/Clang only)",
+      "description": "CI Debug with ThreadSanitizer enabled (Linux Clang only). Ports that synchronize their own threads (Jolt, Box2D) are built with -fsanitize=thread by the x64-linux-tsan triplet (cmake/Modules/Toolchain/VcpkgTsan), installed under this preset's own build folder. CC/CXX pin the port compiler to the project's clang.",
       "inherits": "base-vcpkg",
+      "environment": {
+        "CC": "clang",
+        "CXX": "clang++"
+      },
       "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux-tsan",
+        "VCPKG_HOST_TRIPLET": "x64-linux",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/${presetName}/vcpkg_installed",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/VcpkgTsan;${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
+        "SW_VCPKG_FORCE_INSTALL": "ON",
         "CMAKE_BUILD_TYPE": "Debug",
         "SW_ENABLE_SANITIZER": "ON",
         "SW_SANITIZER_KIND": "thread",

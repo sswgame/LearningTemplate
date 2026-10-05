@@ -499,8 +499,8 @@ function(sw_applySanitizerTestProperties TEST_NAME)
 		string(APPEND swAsanOptions ":${swAsanOption}")
 	endforeach()
 
-	# TSan: 경쟁이 하나라도 보고되면 종료 코드 66 으로 끝나 그 시험이 진다. 두 번째 스택까지 적어 교착 · 경쟁 원인을 좁히고,
-	# 계측되지 않은 Jolt 안의 동기화를 못 봐 나는 보고는 억제 목록으로 거른다(파일 머리말). CI 와 손으로 돌린 ctest 가 같은 옵션을 쓴다.
+	# TSan: 경쟁이 하나라도 보고되면 종료 코드 66 으로 끝나 그 시험이 진다. 두 번째 스택까지 적어 교착 · 경쟁 원인을 좁힌다. 억제 목록은 비어 있는
+	# 것이 정상이다(파일 머리말 — 스스로 동기화하는 서드파티는 계측해 짓는다). CI 와 손으로 돌린 ctest 가 같은 옵션을 쓴다.
 	set(swTsanOptions "suppressions=${CMAKE_SOURCE_DIR}/cmake/Modules/Options/TsanSuppressions.txt:second_deadlock_stack=1:history_size=4")
 
 	set_tests_properties(${TEST_NAME} PROPERTIES

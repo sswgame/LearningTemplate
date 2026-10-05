@@ -17,6 +17,11 @@ if(SW_SANITIZER_KIND STREQUAL "thread")
 	if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
 		message(FATAL_ERROR "[Sanitizer] ThreadSanitizer 는 clang-cl · MSVC 에서 지원되지 않는다 — 리눅스 Clang 프리셋(CI-Debug-TSAN)을 쓰십시오")
 	endif()
+	# 원자 연산으로 스스로 동기화하는 포트(Jolt · Box2D)는 TSan 으로 지은 것과 링크해야 한다 — 계측 안 된 라이브러리는 그 동기화가 안 보여
+	# 거짓 경쟁 수백 건을 낸다(cmake/Modules/Toolchain/VcpkgTsan/x64-linux-tsan.cmake 머리말). 억제 목록은 그것을 덮지 않는다.
+	if(SW_USE_VCPKG AND NOT VCPKG_TARGET_TRIPLET STREQUAL "x64-linux-tsan")
+		message(WARNING "[Sanitizer] ThreadSanitizer with vcpkg triplet '${VCPKG_TARGET_TRIPLET}': Jolt/Box2D are not instrumented and will report false races — use the CI-Debug-TSAN preset (x64-linux-tsan)")
+	endif()
 	target_compile_definitions(sw_sanitizer INTERFACE SW_SANITIZER_THREAD=1)
 	target_compile_options(sw_sanitizer INTERFACE -fsanitize=thread -fno-omit-frame-pointer)
 	target_link_options(sw_sanitizer INTERFACE -fsanitize=thread)

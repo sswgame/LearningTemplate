@@ -26,9 +26,10 @@ cmake/
 │   ├── Architecture/            — DetectArchitecture.cmake(컴파일러가 겨냥하는 아키텍처 판정), X64.cmake, ARM64.cmake
 │   ├── BuildType/               — Debug.cmake, Release.cmake
 │   ├── Compiler/                — Clang.cmake, MSVC.cmake, GCC.cmake (SW_COMPILER_* 정의, `-Werror=switch` · `-Werror=unused-result` 등 경고 정책)
-│   ├── Options/                 — CppStandard.cmake, Sanitizer.cmake, TsanSuppressions.txt(계측 안 된 Jolt 의 TSan 거짓 경쟁), UnityBuild.cmake
+│   ├── Options/                 — CppStandard.cmake, Sanitizer.cmake, TsanSuppressions.txt(TSan 억제 — 비어 있는 것이 정상), UnityBuild.cmake
 │   ├── Platform/                — Windows.cmake, Linux.cmake (SW_PLATFORM_* 정의, macOS 는 지원하지 않는다 — 코드는 컴파일러 내장 매크로 대신 이것을 묻는다)
-│   └── Toolchain/Vcpkg/         — vcpkg 에게 건네는 파일: triplet · 포트 툴체인 · 포트 컴파일 규칙
+│   ├── Toolchain/Vcpkg/         — vcpkg 에게 건네는 파일: triplet · 포트 툴체인 · 포트 컴파일 규칙
+│   └── Toolchain/VcpkgTsan/     — TSan 구성(CI-Debug-TSAN) 전용 triplet: Jolt · Box2D 를 -fsanitize=thread 로 (기본 CI 캐시 키 밖에 두려고 폴더를 가른다)
 │
 └── Engine/                      [4계층: 엔진 빌드 파이프라인 및 타겟 헬퍼 (project() 이후)]
     ├── BuildLayout.cmake         — 산출물이 어디 놓이나: 출력 경로 · sw_global_options · IPO · 런타임 복사 큐
