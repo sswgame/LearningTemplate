@@ -23,6 +23,14 @@ namespace sw
         Count
     };
 
+    /** @brief 기동 단계가 도는 호스트입니다(표의 셋째 칸). 비트라 `All` 은 둘 다입니다. */
+    enum class EngineInitTarget : uint8
+    {
+        Client = 1 << 0, ///< 창 · 렌더러 · 플레이어 설정이 있는 호스트(App · 에디터 · 시험 하네스)
+        Server = 1 << 1, ///< 전용 서버(Server 실행 파일)
+        All    = Client | Server,
+    };
+
     /** @brief 단계 하나의 초기화 결과입니다. */
     enum class EngineInitResult : uint8
     {
@@ -135,13 +143,15 @@ namespace sw
         /**
          * @brief 위상 순서로 단계마다 `THost::<단계>StartupStep::initialize` 를 부릅니다.
          * @details `Failed` 면 거기서 멈추고 false 입니다. `SkipDependents` 면 그 단계에 의존하는 단계를 건너뜁니다.
+         *          @p target 과 겹치지 않는 대상의 단계는 부르지 않고 건너뜁니다(전용 서버의 RHI · 렌더러 · 플레이어 설정).
          *          @p host 를 기억해 두었다가 `shutdownAll` · `destroyAll` 이 같은 호스트로 부릅니다. 호스트는 그때까지 살아 있어야 합니다.
+         * @param target 이 호스트의 대상. App · 시험 하네스는 `Client`, 전용 서버는 `Server` 입니다.
          * @return 표가 유효하고 실패한 단계가 없으면 true 입니다.
          */
         template <class THost>
-        [[nodiscard]] bool initializeAll( THost& host )
+        [[nodiscard]] bool initializeAll( THost& host, EngineInitTarget target = EngineInitTarget::Client )
         {
-            return initializeAllInternal( EngineInitStepTable<THost>::kArrEntry, &host );
+            return initializeAllInternal( EngineInitStepTable<THost>::kArrEntry, &host, target );
         }
         /** @brief 초기화한 단계를 역순으로 종료합니다(`shutdown`). 두 번 불러도 됩니다. */
         void shutdownAll();
@@ -177,6 +187,8 @@ namespace sw
         static const utf8* getStepName( EngineInitStep step );
         /** @brief 단계 초기화가 할당하는 메모리의 용도(표의 둘째 칸)입니다. 초기화 · 재시작을 부르는 동안 이 태그가 걸립니다. */
         static MemoryTag getStepMemoryTag( EngineInitStep step );
+        /** @brief 단계가 도는 호스트(표의 셋째 칸)입니다. */
+        static EngineInitTarget getStepTarget( EngineInitStep step );
         /** @brief 표 그대로의 노드 목록입니다(줄 순서). */
         static vector<EngineInitNode> makeStepNodes();
         /**
@@ -187,7 +199,7 @@ namespace sw
 
     private:
         /** @brief `initializeAll` 의 본체입니다. @p pArrEntry 는 `EngineInitStep::Count` 칸입니다. */
-        [[nodiscard]] bool initializeAllInternal( const EngineInitStepEntry* pArrEntry, void* pHost );
+        [[nodiscard]] bool initializeAllInternal( const EngineInitStepEntry* pArrEntry, void* pHost, EngineInitTarget target );
 
     private:
         vector<EngineInitStep>     _listOrder;       ///< 초기화 순서

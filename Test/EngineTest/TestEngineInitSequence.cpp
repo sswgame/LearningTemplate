@@ -401,3 +401,63 @@ SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
     SW_EXPECT_TRUE( MemoryProfiler::getCurrentMemoryTag() == MemoryTag::Unknown );
     sequence.destroyAll();
 }
+
+/**
+ * @brief [EngineInitSequenceTest] 전용 서버(대상 Server)는 창 · RHI · 렌더러 · 플레이어 설정 · 텔레메트리 단계를 돌리지 않고, 씬 · 씬 쿠킹까지는 선다
+ * @details 서버에 GPU 가 없으므로 RHI 단계가 돌면 기동이 실패한다. `initializeAllInternal` 의 대상 검사를 빼면 진다.
+ *          해제는 기동이 어디까지 갔든 모든 단계를 돈다(클라이언트 단계의 객체는 만들지 않았으니 null 안전한 해제가 아무것도 하지 않는다).
+ */
+SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
+{
+    EngineInitSequence  sequence;
+    StartupStepRecorder recorder;
+    SW_ASSERT_TRUE( sequence.initializeAll( recorder, EngineInitTarget::Server ) );
+
+    const EngineInitStep arrClientOnly[]   = { EngineInitStep::UserSettings, EngineInitStep::RHI, EngineInitStep::FrameRenderer, EngineInitStep::RenderThread,
+                                               EngineInitStep::LiveShader, EngineInitStep::SceneRhi, EngineInitStep::Telemetry };
+    bool                 bSceneInitialized = false;
+    for ( const EngineInitStep step : recorder._listInitialized )
+    {
+        bSceneInitialized = bSceneInitialized || step == EngineInitStep::Scene;
+        for ( const EngineInitStep clientStep : arrClientOnly )
+            SW_EXPECT_TRUE_MSG( step != clientStep, EngineInitSequence::getStepName( step ) );
+    }
+    SW_EXPECT_TRUE( bSceneInitialized );
+    SW_EXPECT_EQUAL( static_cast<size_t>( EngineInitStep::Count ) - SW_COUNT_OF( arrClientOnly ), recorder._listInitialized.size() );
+
+    sequence.shutdownAll();
+    SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
+    sequence.destroyAll();
+    SW_EXPECT_STREQ( kFullDestroyOrder, joinStepNames( recorder._listDestroyed ).c_str() );
+}
+
+/**
+ * @brief [EngineInitSequenceTest] 클라이언트(App · 시험 하네스)는 모든 단계를 돌린다 — 대상 칸이 기본 기동을 바꾸지 않는다
+ */
+SW_TEST_CASE( EngineInitSequenceTest, ClientRunsEveryStep )
+{
+    EngineInitSequence  sequence;
+    StartupStepRecorder recorder;
+    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( EngineInitStep::Count ), recorder._listInitialized.size() );
+    sequence.destroyAll();
+}
+
+/**
+ * @brief [EngineInitSequenceTest] 단계가 도는 대상마다 그 의존도 돈다(컴파일 검사 `areTargetsCovered` 를 실행 시간에 다시 본다 — 검사가 빠져도 이 시험이 남는다)
+ */
+SW_TEST_CASE( EngineInitSequenceTest, EveryStepRunsWhereItsDependenciesRun )
+{
+    EngineInitGraph graph{};
+    string          error;
+    SW_ASSERT_TRUE_MSG( EngineInitSequence::computeGraph( EngineInitSequence::makeStepNodes(), graph, error ), error.c_str() );
+    for ( uint32 stepIndex = 0; stepIndex < static_cast<uint32>( EngineInitStep::Count ); ++stepIndex )
+    {
+        const uint8 selfMask = static_cast<uint8>( EngineInitSequence::getStepTarget( static_cast<EngineInitStep>( stepIndex ) ) );
+        for ( const uint32 dependencyIndex : graph._listDependency[stepIndex] )
+        {
+            const uint8 dependencyMask = static_cast<uint8>( EngineInitSequence::getStepTarget( static_cast<EngineInitStep>( dependencyIndex ) ) );
+            SW_EXPECT_TRUE_MSG( ( selfMask & static_cast<uint8>( ~dependencyMask ) ) == 0, EngineInitSequence::getStepName( static_cast<EngineInitStep>( stepIndex ) ) );
+        }
+    }
+}

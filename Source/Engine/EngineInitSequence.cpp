@@ -14,7 +14,7 @@ namespace sw
         {
             /** @brief 표 그대로의 이름 · 의존 칸입니다(줄 순서 = `EngineInitStep` 값). 의존 칸은 `{ A, B }` 를 글로 든다. */
             static constexpr EngineInitNode kArrStepNode[] = {
-#define SW_ENGINE_STARTUP_STEP( Name, Tag, ... ) { #Name, #__VA_ARGS__ },
+#define SW_ENGINE_STARTUP_STEP( Name, Tag, Target, ... ) { #Name, #__VA_ARGS__ },
 #include "Engine/EngineInitStepList.xxx"
 #undef SW_ENGINE_STARTUP_STEP
             };
@@ -23,12 +23,21 @@ namespace sw
 
             /** @brief 표의 메모리 태그 칸입니다(줄 순서 = `EngineInitStep` 값). 단계 초기화를 부르는 동안 건다. */
             static constexpr MemoryTag kArrStepMemoryTag[] = {
-#define SW_ENGINE_STARTUP_STEP( Name, Tag, ... ) MemoryTag::Tag,
+#define SW_ENGINE_STARTUP_STEP( Name, Tag, Target, ... ) MemoryTag::Tag,
 #include "Engine/EngineInitStepList.xxx"
 #undef SW_ENGINE_STARTUP_STEP
             };
             static_assert( sizeof( kArrStepMemoryTag ) / sizeof( kArrStepMemoryTag[0] ) == static_cast<size_t>( EngineInitStep::Count ),
                            "Startup memory tag table must have one row per EngineInitStep" );
+
+            /** @brief 표의 대상 칸입니다(줄 순서 = `EngineInitStep` 값). */
+            static constexpr EngineInitTarget kArrStepTarget[] = {
+#define SW_ENGINE_STARTUP_STEP( Name, Tag, Target, ... ) EngineInitTarget::Target,
+#include "Engine/EngineInitStepList.xxx"
+#undef SW_ENGINE_STARTUP_STEP
+            };
+            static_assert( sizeof( kArrStepTarget ) / sizeof( kArrStepTarget[0] ) == static_cast<size_t>( EngineInitStep::Count ),
+                           "Startup target table must have one row per EngineInitStep" );
 
             static constexpr uint32 kNotFound = 0xFFFFFFFFu;
 
@@ -104,10 +113,30 @@ namespace sw
             return true;
         }
 
+        /** @brief 표의 대상 칸(줄 순서)입니다. 아래 검사가 의존의 대상을 자리로 찾는다. */
+        constexpr uint8 kArrTargetMask[] = {
+#define SW_ENGINE_STARTUP_STEP( Name, Tag, Target, ... ) static_cast<uint8>( EngineInitTarget::Target ),
+#include "Engine/EngineInitStepList.xxx"
+#undef SW_ENGINE_STARTUP_STEP
+        };
+
+        /** @brief @p selfMask 의 대상마다 의존이 모두 도는가 — 서버에서 도는 단계가 클라이언트 전용 단계에 의존하면 false 입니다. */
+        constexpr bool areTargetsCovered( uint8 selfMask, std::initializer_list<uint32> listDependency )
+        {
+            for ( const uint32 dependency : listDependency )
+            {
+                if ( ( selfMask & static_cast<uint8>( ~kArrTargetMask[dependency] ) ) != 0 )
+                    return false;
+            }
+            return true;
+        }
+
 // `{ A, B }` 의 쉼표는 매크로 인자를 가르므로 가변 인자로 받아 다시 붙인다(`__VA_ARGS__` = `{ A, B }`).
-#define SW_ENGINE_STARTUP_STEP( Name, Tag, ... )                                   \
-    static_assert( areAllAbove( Name, std::initializer_list<uint32> __VA_ARGS__ ), \
-                   "EngineInitStepList.xxx: step " #Name " must be listed below every step it depends on" );
+#define SW_ENGINE_STARTUP_STEP( Name, Tag, Target, ... )                                                                           \
+    static_assert( areAllAbove( Name, std::initializer_list<uint32> __VA_ARGS__ ),                                                 \
+                   "EngineInitStepList.xxx: step " #Name " must be listed below every step it depends on" );                       \
+    static_assert( areTargetsCovered( static_cast<uint8>( EngineInitTarget::Target ), std::initializer_list<uint32> __VA_ARGS__ ), \
+                   "EngineInitStepList.xxx: step " #Name " runs on a target where one of its dependencies does not" );
 #include "Engine/EngineInitStepList.xxx"
 #undef SW_ENGINE_STARTUP_STEP
     } // namespace EngineInitTableCheck
@@ -132,7 +161,7 @@ namespace sw
         _listDependency = std::move( graph._listDependency );
     }
 
-    bool EngineInitSequence::initializeAllInternal( const EngineInitStepEntry* pArrEntry, void* pHost )
+    bool EngineInitSequence::initializeAllInternal( const EngineInitStepEntry* pArrEntry, void* pHost, EngineInitTarget target )
     {
         // 표가 틀렸어도 호스트는 기억한다 — 부트스트랩이 이미 만든 단계 객체를 `destroyAll` 이 해제해야 한다.
         _pArrEntry = pArrEntry;
@@ -150,7 +179,13 @@ namespace sw
         for ( const EngineInitStep step : _listOrder )
         {
             const uint32 stepIndex = static_cast<uint32>( step );
-            bool         bBlocked  = false;
+            // 이 호스트의 대상이 아닌 단계는 돌리지 않는다(전용 서버의 RHI · 렌더러 · 플레이어 설정). 그에 의존하는 단계도 같은 대상뿐이다(표의 컴파일 검사).
+            if ( ( static_cast<uint8>( EngineInitSequenceInternal::kArrStepTarget[stepIndex] ) & static_cast<uint8>( target ) ) == 0 )
+            {
+                listBlocked[stepIndex] = SW_TRUE;
+                continue;
+            }
+            bool bBlocked = false;
             for ( const uint32 dependencyIndex : _listDependency[stepIndex] )
             {
                 if ( listBlocked[dependencyIndex] == SW_TRUE )
@@ -274,6 +309,14 @@ namespace sw
         if ( stepIndex >= static_cast<uint32>( EngineInitStep::Count ) )
             return MemoryTag::Unknown;
         return EngineInitSequenceInternal::kArrStepMemoryTag[stepIndex];
+    }
+
+    EngineInitTarget EngineInitSequence::getStepTarget( EngineInitStep step )
+    {
+        const uint32 stepIndex = static_cast<uint32>( step );
+        if ( stepIndex >= static_cast<uint32>( EngineInitStep::Count ) )
+            return EngineInitTarget::All;
+        return EngineInitSequenceInternal::kArrStepTarget[stepIndex];
     }
 
     vector<EngineInitNode> EngineInitSequence::makeStepNodes()

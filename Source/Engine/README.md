@@ -136,7 +136,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   `DevTools/EngineDevCommands.cpp`(`timescale` · `teleport` · `debugdraw.category`). Shipping 실행 파일에 등록부가 없는지는
   `DevCommandShippingTest`(AppTest)가 바이너리를 훑어 봅니다.
 - **루트 파일 — 기동 · 종료**(이 밖의 파일은 루트에 두지 않는다 — `CheckEngineRootFiles` 허용 목록. 폴더 크기 · 파일 하나짜리 폴더는 `Scripts/lint/report/RunFolderFileCount.py`):
-  - `EngineInitStepList.xxx`: 기동 단계의 등록표(X-macro). 줄 순서가 초기화 순서이고, 줄마다 단계 이름 · 그 초기화에 거는 메모리 태그 ·
+  - `EngineInitStepList.xxx`: 기동 단계의 등록표(X-macro). 줄 순서가 초기화 순서이고, 줄마다 단계 이름 · 그 초기화에 거는 메모리 태그 · 도는 호스트(대상 — `All` · `Client` · `Server`, 전용 서버는 `Client` 줄을 건너뛴다) ·
     먼저 서야 하는 단계 `{ A, B }` 를 적습니다. 의존이 자기보다 아래 줄이거나 오타면 컴파일 오류이고(`EngineInitSequence.cpp` 의 static_assert),
     의존만으로 위상 정렬한 순서가 줄 순서와 같아야 합니다(`EngineInitSequenceTest.TableIsWrittenInStartupOrder`).
     `ModuleTypes` 단계(호스트가 타입 공급자 — GF · 킷 · 게임 모듈 — 를 올려 등록을 끝냄)가 서야 씬을 읽고 쿠킹합니다(`Headless` 가 그 뒤).
