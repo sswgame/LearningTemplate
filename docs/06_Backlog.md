@@ -159,6 +159,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-4. 에디터
 
+- **에디터를 켠 실행은 종료 보고에 `Editor` 태그 256 B(1 블록)가 남는다**(2026-10-06, `App.exe -dx12 -EnableEditor -gv_profileFrames=5`). 에디터 없는 실행은 0 이고
+  `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 지킨다. 프로세스 정적 저장소가 기동 뒤 자란 몫일 것 — 기준선 직후 `setDetailedTrackingEnabled( true )` ·
+  종료 보고 직전 `getTopCallStacks( LiveBytes )` 임시 진단으로 자리를 찾아 종료 끝에서 놓는다.
+
 - **에디터 · 개발 편의 기능(2026-10-04 사용자 승인, 순서대로).** 이미 있는 것(gv 표 · 커맨드 팔레트 · 핫 리로드 · Undo · PIE 재생/한 프레임 ·
   InputReplay · 기즈모 · 미니덤프 · RenderTargetPanel)은 다시 만들지 않는다.
   - **C 확장 지점** — 등록부(`EditorRegistry<T>` · `IEditorPanel` · `IInspectorComponent` · 시각화 · `EditorCommandRegistry`)를

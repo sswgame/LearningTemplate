@@ -225,6 +225,15 @@ namespace sw
         _loadCount = 0;
     }
 
+    void AssetLoadProfiler::releaseStorage()
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        // `clear()` 는 용량 · 원소의 문자열을 남긴다 — 프레임 프로파일러 구간 번호도 함께 버린다(다시 쓰면 새로 받는다).
+        _listKind    = vector<KindEntry>{};
+        _listSlowest = vector<AssetLoadRecord>{};
+        _loadCount   = 0;
+    }
+
     // ------------------------------------------------------------------------------
     // 로드 한 번
     // ------------------------------------------------------------------------------

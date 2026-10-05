@@ -14,7 +14,9 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/EngineServiceCollection.h"
+#include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
+#include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
@@ -139,6 +141,9 @@ namespace sw
         if ( transformStorage.releaseStorage() == false )
             SW_LOG_WARNING( "Scene transform storage still has %# live slots at shutdown - a scene component leaked", transformStorage.getLiveSlotCount() );
         ResourceUtil::clearPathCache();
+        AssetLoadProfiler::get().releaseStorage();
+        if ( RHIRenderResource::releaseRegistryStorage() == false )
+            SW_LOG_WARNING( "RHI render resources are still registered at shutdown - a mesh, texture or material leaked" );
 
         // 로거 **스레드**는 메모리 프로파일러보다 먼저 세운다. 그 스레드도 메모리를 풀며 프로파일러를 부른다(`Memory::free` → `recordFree`).
         // 로거 객체는 맨 마지막에 놓는다 — 그 사이의 로그는 출력에 바로 쓰인다.

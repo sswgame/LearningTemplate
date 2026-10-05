@@ -71,5 +71,12 @@ namespace sw
 
         /** @brief 등록된 객체 전부에게 `initRhi` 를 보냅니다. 디바이스가 새로 생긴 직후에 부릅니다. */
         static void initAllFor( IRHIDevice* pDevice );
+
+        /**
+         * @brief 등록부가 비었으면 그 저장소(버킷 · 원소 배열)까지 놓습니다. 엔진 종료 끝이 부릅니다.
+         * @return 아직 등록된 객체가 있으면 아무것도 놓지 않고 false 입니다 — 그 객체가 새는 것입니다.
+         * @details `erase` 는 원소만 지우고 저장소를 남겨, 기동 뒤 만든 메시 몫이 종료 누수 보고(Mesh 태그)에 남는다.
+         */
+        [[nodiscard]] static bool releaseRegistryStorage();
     };
 } // namespace sw
