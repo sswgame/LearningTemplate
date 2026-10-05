@@ -21,6 +21,9 @@ namespace sw
     {
         struct CreatureTownInternal
         {
+            /** @brief 종의 호감도 세력 id 입니다 — 공유 평판에서 키트 접두로 다른 키트의 세력과 갈린다(문자열 붙이기는 여기 한 곳). */
+            static hashed_string makeFactionId( const hashed_string& speciesId ) { return hashed_string( string( "creature." ) + speciesId.c_str() ); }
+
             static constexpr int32 kRotationCount = 4;
 
             /** @brief 회전한 패턴의 가로 · 세로입니다(홀수 회전은 뒤바뀐다). */
@@ -133,10 +136,9 @@ namespace sw
         , _listHouse{}
         , _listOpenRequest{}
         , _eventBuffer{}
-        , _listReputationScratch{}
-        , _friendship{}
         , _settings{}
         , _pCatalog{ nullptr }
+        , _pReputation{ nullptr }
         , _pQuestLog{ nullptr }
         , _pClock{ nullptr }
         , _topology{}
@@ -146,21 +148,20 @@ namespace sw
     {
     }
 
-    void CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, const ReputationCatalog* pReputationCatalog, const GameStateRefs& refs, int32 width,
-                                   int32 height, const CreatureTownSettings& settings )
+    void CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, const GameStateRefs& refs, int32 width, int32 height, const CreatureTownSettings& settings )
     {
-        _pCatalog  = pCatalog;
-        _pQuestLog = refs._pQuestLog;
-        _pClock    = refs._pClock;
-        _settings  = settings;
-        _topology  = GridTopology{ MathUtil::max( 1, width ), MathUtil::max( 1, height ) };
+        _pCatalog    = pCatalog;
+        _pReputation = refs._pReputation;
+        _pQuestLog   = refs._pQuestLog;
+        _pClock      = refs._pClock;
+        _settings    = settings;
+        _topology    = GridTopology{ MathUtil::max( 1, width ), MathUtil::max( 1, height ) };
         _listObject.assign( static_cast<size_t>( _topology.getCellCount() ), hashed_string{} );
         _listHabitat.clear();
         _listCreature.clear();
         _listHouse.clear();
         _listOpenRequest.clear();
         _eventBuffer.clear();
-        _friendship.initialize( pReputationCatalog );
         _nextHabitatId  = 1;
         _lastAttractKey = -1;
         _appealTier     = -1;
@@ -216,7 +217,8 @@ namespace sw
                 creature._listAbilityUse.assign( species._listAbility.size(), 0 );
                 _listCreature.push_back( creature );
                 _eventBuffer.push( CreatureTownEvent{ species._id, {}, instance._id, CreatureTownEvent::Kind::CreatureArrived } );
-                (void)_friendship.changeValue( species._id, 0 ); // 세력 자리를 만들어 둔다(시작값)
+                if ( _pReputation != nullptr )
+                    (void)_pReputation->changeValue( CreatureTownInternal::makeFactionId( species._id ), 0 ); // 세력 자리를 만들어 둔다(시작값)
                 ++arrivedCount;
             }
         }
@@ -234,8 +236,7 @@ namespace sw
         if ( creature._lastTalkDay == getDay() )
             return CreatureInteractResult::AlreadyToday;
         creature._lastTalkDay = getDay();
-        (void)_friendship.changeValue( speciesId, _settings._talkPoints );
-        flushReputationEvents();
+        changeFriendship( speciesId, _settings._talkPoints );
         return CreatureInteractResult::Ok;
     }
 
@@ -256,8 +257,7 @@ namespace sw
             points = _settings._likedGiftPoints;
         else if ( pSpecies != nullptr && pSpecies->likesFood( itemId ) )
             points = _settings._foodPoints;
-        (void)_friendship.changeValue( speciesId, points );
-        flushReputationEvents();
+        changeFriendship( speciesId, points );
         return CreatureInteractResult::Ok;
     }
 
@@ -270,7 +270,7 @@ namespace sw
             return CreatureRequestResult::NotOffered;
         if ( _pQuestLog == nullptr )
             return CreatureRequestResult::Unavailable;
-        const QuestStartResult startResult = _pQuestLog->start( questId, MathUtil::max( 0, _friendship.getTierIndex( speciesId ) ) );
+        const QuestStartResult startResult = _pQuestLog->start( questId, MathUtil::max( 0, _pReputation != nullptr ? _pReputation->getTierIndex( CreatureTownInternal::makeFactionId( speciesId ) ) : 0 ) );
         if ( startResult == QuestStartResult::AlreadyActive )
             return CreatureRequestResult::AlreadyActive;
         if ( startResult != QuestStartResult::Ok )
@@ -403,8 +403,7 @@ namespace sw
     {
         for ( TownCreature& creature : _listCreature )
             std::fill( creature._listAbilityUse.begin(), creature._listAbilityUse.end(), 0 );
-        _friendship.advanceDay();
-        flushReputationEvents();
+        updateAppealTier(); // 공유 평판은 주인이 날 넘김에 식혔다 — 매력도만 다시 본다
     }
 
     void CreatureTown::drainEvents( vector<CreatureTownEvent>& outListEvent )
@@ -481,7 +480,7 @@ namespace sw
             return 0.0f;
         int64 total = 0;
         for ( const TownCreature& creature : _listCreature )
-            total += _friendship.getValue( creature._speciesId );
+            total += getFriendship( creature._speciesId );
         return static_cast<float32>( total ) / static_cast<float32>( _listCreature.size() );
     }
 
@@ -645,15 +644,15 @@ namespace sw
             (void)_pQuestLog->notifyCount( habitatKind, habitat._id, countHabitats( habitat._id ) );
     }
 
-    void CreatureTown::flushReputationEvents()
+    void CreatureTown::changeFriendship( const hashed_string& speciesId, int32 delta )
     {
-        _listReputationScratch.clear();
-        _friendship.drainEvents( _listReputationScratch );
-        for ( const ReputationEvent& reputationEvent : _listReputationScratch )
-        {
-            _eventBuffer.push(
-                CreatureTownEvent{ reputationEvent._factionId, reputationEvent._newTier, reputationEvent._value, CreatureTownEvent::Kind::FriendshipTierChanged } );
-        }
+        if ( _pReputation == nullptr )
+            return;
+        const hashed_string factionId  = CreatureTownInternal::makeFactionId( speciesId );
+        const int32         tierBefore = _pReputation->getTierIndex( factionId );
+        (void)_pReputation->changeValue( factionId, delta );
+        if ( _pReputation->getTierIndex( factionId ) != tierBefore )
+            _eventBuffer.push( CreatureTownEvent{ speciesId, _pReputation->getTierName( factionId ), _pReputation->getValue( factionId ), CreatureTownEvent::Kind::FriendshipTierChanged } );
         updateAppealTier();
     }
 
@@ -661,8 +660,7 @@ namespace sw
     {
         if ( _pQuestLog == nullptr || _listOpenRequest.empty() )
             return;
-        bool   bFriendshipChanged = false;
-        size_t keptCount          = 0;
+        size_t keptCount = 0;
         for ( size_t requestIndex = 0; requestIndex < _listOpenRequest.size(); ++requestIndex )
         {
             const hashed_string questId = _listOpenRequest[requestIndex];
@@ -674,12 +672,10 @@ namespace sw
                 continue;
             }
             // 끝났다 — 완료면 그 부탁을 하는 생물에게 호감도를 준다. 실패 · 포기(NotStarted)는 보상 없이 뺀다.
-            if ( status == QuestStatus::Completed && rewardRequest( questId ) )
-                bFriendshipChanged = true;
+            if ( status == QuestStatus::Completed )
+                (void)rewardRequest( questId );
         }
         _listOpenRequest.resize( keptCount );
-        if ( bFriendshipChanged )
-            flushReputationEvents();
     }
 
     bool CreatureTown::rewardRequest( const hashed_string& questId )
@@ -690,7 +686,7 @@ namespace sw
             if ( pSpecies == nullptr || pSpecies->offersRequest( questId ) == false )
                 continue;
             _eventBuffer.push( CreatureTownEvent{ creature._speciesId, questId, 0, CreatureTownEvent::Kind::RequestCompleted } );
-            (void)_friendship.changeValue( creature._speciesId, _settings._requestPoints );
+            changeFriendship( creature._speciesId, _settings._requestPoints );
             return true;
         }
         return false;
@@ -774,7 +770,6 @@ namespace sw
         {
             StateArchiveUtil::writeName( outArchive, questId );
         }
-        _friendship.writeState( outArchive );
         outArchive << _nextHabitatId;
         outArchive << _lastAttractKey;
     }
@@ -873,8 +868,6 @@ namespace sw
             if ( StateArchiveUtil::readName( archive, questId ) == false )
                 return false;
         }
-        if ( town._friendship.readState( archive ) == false )
-            return false;
         archive >> town._nextHabitatId;
         archive >> town._lastAttractKey;
         if ( archive.isError() )
@@ -890,7 +883,6 @@ namespace sw
                 return false;
         }
         town._eventBuffer.clear();
-        town._listReputationScratch.clear();
         town.updateAppealTier();
         town._eventBuffer.clear(); // 되살린 단계는 알리지 않는다
         *this = std::move( town );
@@ -898,4 +890,14 @@ namespace sw
     }
 
     int32 CreatureTown::getDay() const { return _pClock != nullptr ? _pClock->getDay() : 0; }
+
+    int32 CreatureTown::getFriendship( const hashed_string& speciesId ) const
+    {
+        return _pReputation != nullptr ? _pReputation->getValue( CreatureTownInternal::makeFactionId( speciesId ) ) : 0;
+    }
+
+    hashed_string CreatureTown::getFriendshipTier( const hashed_string& speciesId ) const
+    {
+        return _pReputation != nullptr ? _pReputation->getTierName( CreatureTownInternal::makeFactionId( speciesId ) ) : hashed_string{};
+    }
 } // namespace sw

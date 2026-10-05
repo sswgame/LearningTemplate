@@ -86,7 +86,7 @@ namespace sw
 
         /** @brief 틱 그룹을 디렉터와 같은 `PrePhysics` 로 둡니다. */
         void onBeginPlay() override;
-        /** @brief 열렸으면 시계를 흘리고(날씨는 시계 뒤에 게임 초로) 이번 틱의 시계 알림을 모읍니다. */
+        /** @brief 열렸으면 시계를 흘리고(날씨는 시계 뒤에 게임 초로, 날 넘김마다 평판이 식는다) 이번 틱의 시계 알림을 모읍니다. */
         void onTick( float32 deltaTime ) override;
 
         /** @brief 구간 다섯(지갑 · 플래그 · 시계 · 일지 · 평판)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 열리기 전이면 들고 있던 바이트를 그대로 씁니다. */

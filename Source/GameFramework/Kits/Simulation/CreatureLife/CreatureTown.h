@@ -154,7 +154,7 @@ namespace sw
      *          없어진 서식지의 생물은 좋아하는 다른 서식지에 자리가 있으면 옮겨 갑니다.
      *          방문 — `attractVisitors` 를 시마다 부르면 자리가 남은 서식지마다, 그 서식지를 좋아하고 지금 때 · 날씨에 오는 종(아직 마을에 없는)이
      *          `chance` 확률로 찾아옵니다. 확률은 (날 · 시 · 종 · 서식지 자리 · 씨앗) 해시라 같은 시를 두 번 불러도 같은 답입니다(두 번째는 아무 일 없음).
-     *          호감도 — 기반 `ReputationState` 의 세력 하나가 생물 하나입니다. 대화 · 선물은 각각 하루 한 번, 부탁(기반 `QuestLog`)을 끝내면 오릅니다.
+     *          호감도 — 빌린 기반 `ReputationState` 의 세력 하나(`creature.<종 id>`)가 생물 하나입니다(식기는 공유 상태의 주인이 날 넘김에). 대화 · 선물은 각각 하루 한 번, 부탁(기반 `QuestLog`)을 끝내면 오릅니다.
      *          부탁 일지 · 시계는 빌려 씁니다 — 마을은 일지 알림을 꺼내지 않고 받은 부탁의 상태만 봅니다(알림은 게임 화면 · 다른 키트의 것). 날은 빌린 시계의 날입니다.
      *          부탁 목표는 `Deliver`(아이템) · `Habitat`(그 서식지 수)이고 퀘스트 레벨 조건은 호감도 단계 번호로 봅니다.
      *          카탈로그는 빌려 씁니다(마을보다 오래 살아야 합니다).
@@ -168,11 +168,10 @@ namespace sw
         CreatureTown();
 
         /**
-         * @brief 크기를 정하고 모든 칸을 비웁니다. 평판 카탈로그 · 부탁 일지 · 시계는 없어도 됩니다(평판은 0..1000 단계 없음, 일지가 없으면 부탁 없음, 시계가 없으면 0 일).
-         * @param refs 빌려 쓰는 공유 상태입니다 — 마을은 `_pQuestLog`(부탁 일지) · `_pClock`(날)을 쓴다(마을보다 오래 살아야 한다). 섞인 게임은 `GameStateComponent::makeRefs()`.
+         * @brief 크기를 정하고 모든 칸을 비웁니다. 평판 · 부탁 일지 · 시계는 없어도 됩니다(평판이 없으면 호감도 0, 일지가 없으면 부탁 없음, 시계가 없으면 0 일).
+         * @param refs 빌려 쓰는 공유 상태입니다 — 마을은 `_pReputation`(호감도 — 세력 `creature.<종 id>`) · `_pQuestLog`(부탁 일지) · `_pClock`(날)을 쓴다(마을보다 오래 살아야 한다). 섞인 게임은 `GameStateComponent::makeRefs()`.
          */
-        void initialize( const CreatureLifeCatalog* pCatalog, const ReputationCatalog* pReputationCatalog, const GameStateRefs& refs, int32 width, int32 height,
-                         const CreatureTownSettings& settings );
+        void initialize( const CreatureLifeCatalog* pCatalog, const GameStateRefs& refs, int32 width, int32 height, const CreatureTownSettings& settings );
 
         /** @brief 칸에 오브젝트를 놓습니다(빈 id 는 비우기). 서식지를 다시 맞춥니다. 밖이면 false 입니다. */
         bool setObject( int32 x, int32 y, const hashed_string& object );
@@ -202,7 +201,7 @@ namespace sw
         /** @brief 하루를 넘깁니다 — 능력 횟수를 되돌리고 호감도가 식습니다(대화 · 선물은 시계의 날로 하루 한 번). 디렉터가 시계의 날 넘김에 부릅니다. */
         void advanceDay();
         void drainEvents( vector<CreatureTownEvent>& outListEvent );
-        /** @brief 칸 · 서식지(번호 포함) · 생물 · 집 · 받은 부탁 · 호감도를 씁니다(핫 리로드 · 세이브). 부탁 일지 · 시계는 빌린 것이라 싣지 않는다. */
+        /** @brief 칸 · 서식지(번호 포함) · 생물 · 집 · 받은 부탁을 씁니다(핫 리로드 · 세이브). 평판 · 부탁 일지 · 시계는 빌린 것이라 싣지 않는다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 의 바이트로 바꿉니다. 마을 크기가 다르거나 깨졌으면 false 이고 그대로입니다(카탈로그 · 일지 · 시계는 `initialize` 의 것). */
         [[nodiscard]] bool readState( Archive& archive );
@@ -219,8 +218,8 @@ namespace sw
         int32 countResidents( int32 habitatInstanceId ) const;
         /** @brief 오늘 남은 능력 횟수입니다. 모르면 0 입니다. */
         int32         countAbilityUsesLeft( const hashed_string& speciesId, const hashed_string& abilityId ) const;
-        int32         getFriendship( const hashed_string& speciesId ) const { return _friendship.getValue( speciesId ); }
-        hashed_string getFriendshipTier( const hashed_string& speciesId ) const { return _friendship.getTierName( speciesId ); }
+        int32         getFriendship( const hashed_string& speciesId ) const;
+        hashed_string getFriendshipTier( const hashed_string& speciesId ) const;
         /** @brief 사는 생물의 호감도 평균입니다(없으면 0). */
         float32 computeAverageFriendship() const;
         /** @brief 매력도 점수입니다(서식지 종류 · 생물 수 · 호감도 평균). */
@@ -242,7 +241,8 @@ namespace sw
         int32 findCreatureIndex( const hashed_string& speciesId ) const;
         bool  hasRoom( const HabitatInstance& instance ) const;
         void  notifyHabitatObjectives();
-        void  flushReputationEvents();
+        /** @brief 호감도를 바꾸고 단계가 바뀌었으면 알립니다(빌린 평판의 알림은 꺼내지 않는다 — 앞뒤 단계를 견준다). */
+        void changeFriendship( const hashed_string& speciesId, int32 delta );
         /** @brief 받은 부탁 중 끝난 것에 보상하고 목록에서 뺍니다(실패 · 포기는 보상 없이). 일지 알림은 꺼내지 않는다. */
         void collectCompletedRequests();
         /** @brief 부탁 @p questId 를 하는(마을에 사는) 생물에게 호감도를 줍니다. 준 생물이 있으면 true 입니다. */
@@ -256,12 +256,11 @@ namespace sw
         vector<CreatureHouse>          _listHouse;
         vector<hashed_string>          _listOpenRequest; ///< 이 마을이 받은 부탁 중 아직 끝나지 않은 것(퀘스트 id)
         EventBuffer<CreatureTownEvent> _eventBuffer;
-        vector<ReputationEvent>        _listReputationScratch;
-        ReputationState                _friendship;
         CreatureTownSettings           _settings;
         const CreatureLifeCatalog*     _pCatalog;
-        QuestLog*                      _pQuestLog; ///< 빌린 부탁 일지(없으면 부탁 없음)
-        const WorldClock*              _pClock;    ///< 빌린 시계(날 — 없으면 0 일)
+        ReputationState*               _pReputation; ///< 빌린 평판(호감도 — 없으면 0)
+        QuestLog*                      _pQuestLog;   ///< 빌린 부탁 일지(없으면 부탁 없음)
+        const WorldClock*              _pClock;      ///< 빌린 시계(날 — 없으면 0 일)
         GridTopology                   _topology;
         int32                          _nextHabitatId;
         int32                          _lastAttractKey; ///< 마지막으로 방문을 굴린 날 × 24 + 시

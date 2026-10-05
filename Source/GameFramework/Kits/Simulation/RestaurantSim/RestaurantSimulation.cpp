@@ -75,12 +75,10 @@ namespace sw
         , _listStation{}
         , _listSatisfaction{}
         , _eventBuffer{}
-        , _listReputationScratch{}
         , _listSpoilageScratch{}
         , _stock{}
         , _crafter{}
         , _market{}
-        , _reputation{}
         , _settings{}
         , _today{}
         , _stepTimer{ kStepMinutes, 24.0f * 60.0f }
@@ -89,6 +87,7 @@ namespace sw
         , _pCatalog{ nullptr }
         , _pPantry{ nullptr }
         , _pWallet{ nullptr }
+        , _pReputation{ nullptr }
         , _pClock{ nullptr }
         , _pRecipeCatalog{ nullptr }
         , _pShopCatalog{ nullptr }
@@ -102,7 +101,7 @@ namespace sw
     }
 
     void RestaurantSimulation::initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog,
-                                           const ShopCatalog* pShopCatalog, const ReputationCatalog* pReputationCatalog, const ExperienceCurve* pStaffCurve,
+                                           const ShopCatalog* pShopCatalog, const ExperienceCurve* pStaffCurve,
                                            const GameStateRefs& refs, Inventory& pantry, const RestaurantSettings& settings )
     {
         _pCatalog       = pCatalog;
@@ -112,11 +111,11 @@ namespace sw
         _settings       = settings;
         _pPantry        = &pantry;
         _pWallet        = refs._pWallet;
+        _pReputation    = refs._pReputation;
         _pClock         = refs._pClock;
         _stock.initialize( _pPantry );
         _crafter.initialize( pRecipeCatalog );
         _market.initialize( pShopCatalog, pItemCatalog );
-        _reputation.initialize( pReputationCatalog );
         _random.setSeed( settings._randomSeed );
         _stepTimer = FixedStepTimer( kStepMinutes, 24.0f * 60.0f );
         _listStaff.clear();
@@ -325,9 +324,6 @@ namespace sw
         }
         _market.advanceDay();
         rollMarketPrices();
-        _reputation.advanceDay();
-        _listReputationScratch.clear();
-        _reputation.drainEvents( _listReputationScratch );
     }
 
     void RestaurantSimulation::drainEvents( vector<RestaurantEvent>& outListEvent )
@@ -679,7 +675,8 @@ namespace sw
         pushSatisfaction( satisfaction );
         const int32 reputationDelta = static_cast<int32>( MathUtil::round( ( satisfaction * 2.0f - 1.0f ) * static_cast<float32>( _settings._reputationPerServe ) ) );
         if ( reputationDelta != 0 )
-            (void)_reputation.changeValue( _settings._reputationFaction, reputationDelta );
+            if ( _pReputation != nullptr )
+                (void)_pReputation->changeValue( _settings._reputationFaction, reputationDelta );
         _eventBuffer.push( RestaurantEvent{ customer._dishId, customer._price + tip, customer._id, RestaurantEvent::Kind::CustomerPaid } );
     }
 
@@ -704,7 +701,8 @@ namespace sw
         {
             ++_today._walkouts;
             pushSatisfaction( 0.0f );
-            (void)_reputation.changeValue( _settings._reputationFaction, -_settings._walkoutPenalty );
+            if ( _pReputation != nullptr )
+                (void)_pReputation->changeValue( _settings._reputationFaction, -_settings._walkoutPenalty );
         }
         else
         {
@@ -721,8 +719,6 @@ namespace sw
         const size_t window = static_cast<size_t>( _pCatalog != nullptr ? _pCatalog->getRatingWindow() : 10 );
         if ( _listSatisfaction.size() > window )
             _listSatisfaction.erase( _listSatisfaction.begin(), _listSatisfaction.begin() + static_cast<ptrdiff_t>( _listSatisfaction.size() - window ) );
-        _listReputationScratch.clear();
-        _reputation.drainEvents( _listReputationScratch ); // 단계 알림은 쓰지 않는다 — 쌓이지 않게 비운다
     }
 
     void RestaurantSimulation::grantXp( StaffMember& staff, int64 amount )
@@ -820,4 +816,6 @@ namespace sw
         const float32 ratio = static_cast<float32>( price ) / static_cast<float32>( dish._basePrice );
         return MathUtil::max( RestaurantSimulationInternal::kMinDemand, 1.0f - _settings._priceElasticity * ( ratio - 1.0f ) );
     }
+
+    int32 RestaurantSimulation::getReputation() const { return _pReputation != nullptr ? _pReputation->getValue( _settings._reputationFaction ) : 0; }
 } // namespace sw

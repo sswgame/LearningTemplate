@@ -119,6 +119,12 @@ namespace sw
             return;
         _clock.update( deltaTime );
         _clock.drainEvents( _listClockEvent );
+        // 공유 평판은 공유 날 넘김에 한 번 식는다 — 빌려 쓰는 키트는 식히지 않는다(키트 수만큼 식지 않게).
+        for ( const WorldClockEvent& clockEvent : _listClockEvent )
+        {
+            if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )
+                _reputation.advanceDay();
+        }
         if ( _bWeather == SW_TRUE && _clock.isPaused() == false )
             (void)_weather.update( deltaTime * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
     }

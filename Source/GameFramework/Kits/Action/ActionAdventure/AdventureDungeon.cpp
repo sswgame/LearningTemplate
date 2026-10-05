@@ -26,6 +26,9 @@ namespace sw
                 return pValue != nullptr && pValue[0] != '\0' ? hashed_string( pValue ) : fallback;
             }
 
+            /** @brief 비었을 때 쓰는 플래그 이름 `<종류>.<id>` 입니다 — 공유 플래그에서 다른 키트의 같은 id 와 갈린다. */
+            static hashed_string makeDefaultFlag( const utf8* pKind, const hashed_string& id ) { return hashed_string( string( pKind ) + "." + id.c_str() ); }
+
             static bool isKind( string_view text, const utf8* pKind ) { return StringUtil::equals( text, string_view( pKind ), true ); }
 
             static AdventureDoorKind parseDoorKind( string_view text, string_view sourceName, const utf8* pId )
@@ -148,7 +151,7 @@ namespace sw
                     continue;
                 AdventureDoorDef door;
                 door._id                       = hashed_string( pDoorId );
-                door._flag                     = AdventureDungeonInternal::readName( node, "flag", door._id );
+                door._flag                     = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "door", door._id ) );
                 door._kind                     = AdventureDungeonInternal::parseDoorKind( node.getAttributeText( "kind" ), sourceName, pDoorId );
                 const string_view requiresText = node.getAttributeText( "requires" );
                 door._requires                 = string( requiresText.data(), requiresText.size() );
@@ -165,7 +168,7 @@ namespace sw
                 treasure._id    = hashed_string( pTreasureId );
                 treasure._area  = AdventureDungeonInternal::readName( node, "area", hashed_string{} );
                 treasure._item  = AdventureDungeonInternal::readName( node, "item", hashed_string{} );
-                treasure._flag  = AdventureDungeonInternal::readName( node, "flag", treasure._id );
+                treasure._flag  = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "treasure", treasure._id ) );
                 treasure._count = MathUtil::max( 1, node.getAttributeInt( "count", 1 ) );
                 dungeon._listTreasure.push_back( treasure );
             }
@@ -176,7 +179,7 @@ namespace sw
                     continue;
                 AdventureDeviceDef device;
                 device._id         = hashed_string( pDeviceId );
-                device._flag       = AdventureDungeonInternal::readName( node, "flag", device._id );
+                device._flag       = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "device", device._id ) );
                 device._kind       = AdventureDungeonInternal::parseDeviceKind( node.getAttributeText( "kind" ), sourceName, pDeviceId );
                 device._duration   = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", 0.0f ) );
                 device._torchCount = MathUtil::max( 1, node.getAttributeInt( "torches", 1 ) );

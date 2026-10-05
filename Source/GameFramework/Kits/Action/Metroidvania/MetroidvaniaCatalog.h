@@ -33,7 +33,7 @@ namespace sw
     {
         hashed_string _id{};
         string        _name{};
-        hashed_string _flag{}; ///< 얻으면 켜는 플래그(비면 id 그대로)
+        hashed_string _flag{}; ///< 얻으면 켜는 플래그(비면 `ability.<id>`)
         StatBlock     _motor{};
     };
 } // namespace sw

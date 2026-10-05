@@ -2,9 +2,11 @@
 // 정신력(어둠 · 괴물 목격 · 환각 · 조준 흔들림)과 손전등 배터리, 열쇠 문 · 다이얼 · 순서 퍼즐, 단서 보드 추리, 턴제 초자연 전투의 결정성.
 #include "pch.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/GridInventory.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/World/AreaGraph.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorEncounter.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorSession.h"
@@ -20,8 +22,16 @@ namespace
     {
         GridInventory _grid;
         Inventory     _box;
+        GameFlags     _flags; ///< 빌려 주는 플래그
 
         HorrorTestContainers() { _box.initialize( nullptr, 32 ); }
+
+        GameStateRefs makeRefs()
+        {
+            GameStateRefs refs;
+            refs._pFlags = &_flags;
+            return refs;
+        }
     };
 
     constexpr const utf8* kHorrorTestXml = R"(
@@ -169,7 +179,7 @@ SW_TEST_CASE( SurvivalHorrorTest, ItemBoxAndCombineRollBackWhenTheResultHasNoRoo
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
-    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers._grid, sessionContainers._box );
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
     GridInventory& grid = session.getInventory();
     SW_EXPECT_EQUAL( 2, grid.addItem( "herbGreen", 2 ) ); // (0,0) (1,0)
     SW_EXPECT_EQUAL( 1, grid.addItem( "herbRed", 1 ) );   // (2,0)
@@ -212,7 +222,7 @@ SW_TEST_CASE( SurvivalHorrorTest, SavesNeedInkRibbonsOrRespectTheLimitAndAmmoIsS
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
-    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers._grid, sessionContainers._box );
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
     SW_EXPECT_TRUE( session.trySave() == HorrorSaveResult::NoSaveItem );
     SW_EXPECT_EQUAL( 2, session.getInventory().addItem( "ribbon", 2 ) );
     SW_EXPECT_TRUE( session.trySave() == HorrorSaveResult::Ok );
@@ -227,7 +237,7 @@ SW_TEST_CASE( SurvivalHorrorTest, SavesNeedInkRibbonsOrRespectTheLimitAndAmmoIsS
     limitedCatalog.setRules( rules );
     HorrorSession        limited;
     HorrorTestContainers limitedContainers;
-    limited.initialize( &limitedCatalog, nullptr, hashed_string(), limitedContainers._grid, limitedContainers._box );
+    limited.initialize( &limitedCatalog, nullptr, hashed_string(), limitedContainers.makeRefs(), limitedContainers._grid, limitedContainers._box );
     SW_EXPECT_TRUE( limited.trySave() == HorrorSaveResult::Ok );
     SW_EXPECT_TRUE( limited.trySave() == HorrorSaveResult::NoSavesLeft );
 
@@ -251,7 +261,7 @@ SW_TEST_CASE( SurvivalHorrorTest, SanityFallsInDarknessAndSightingsWhileTheFlash
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
-    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers._grid, sessionContainers._box );
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
     vector<SurvivalHorrorEvent> listEvent;
 
     // 괴물 목격: 처음은 전부, 다시 보면 배율(0.25)만큼.
@@ -305,7 +315,7 @@ SW_TEST_CASE( SurvivalHorrorTest, KeysDialsAndSequencesOpenTheMansionThroughArea
     SW_ASSERT_TRUE( areaGraph.loadFromXmlText( kHorrorAreaXml, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
-    session.initialize( &catalog, &areaGraph, "hall", sessionContainers._grid, sessionContainers._box );
+    session.initialize( &catalog, &areaGraph, "hall", sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
     SW_EXPECT_TRUE( areaGraph.isVisited( "hall" ) );
 
     SW_EXPECT_TRUE( session.tryMoveTo( "dining" ) );
@@ -326,7 +336,7 @@ SW_TEST_CASE( SurvivalHorrorTest, KeysDialsAndSequencesOpenTheMansionThroughArea
     SW_EXPECT_TRUE( session.enterDialCode( "locker", vector<int32>{ 1, 1 } ) == HorrorPuzzleResult::Wrong );
     SW_EXPECT_TRUE( session.enterDialCode( "locker", vector<int32>{ 1, 2 } ) == HorrorPuzzleResult::LockedOut );
     SW_EXPECT_TRUE( session.enterDialCode( "locker", vector<int32>{ 9, 9 } ) == HorrorPuzzleResult::LockedOut );
-    SW_EXPECT_FALSE( session.getFlags().hasFlag( "lockerOpen" ) );
+    SW_EXPECT_FALSE( sessionContainers._flags.hasFlag( "lockerOpen" ) );
     SW_EXPECT_FALSE( session.tryMoveTo( "vault" ) ); // 종 퍼즐이 아직이다
 
     // 순서 퍼즐: 틀리면 처음부터, 벌칙으로 정신력 5.
@@ -347,7 +357,7 @@ SW_TEST_CASE( SurvivalHorrorTest, ClueBoardDeductionNeedsTheRightLinksAndPunishe
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
-    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers._grid, sessionContainers._box );
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
 
     SW_EXPECT_TRUE( session.readDocument( "diary" ) );
     SW_EXPECT_FALSE( session.readDocument( "diary" ) ); // 두 번째는 새 단서가 없다
@@ -375,7 +385,7 @@ SW_TEST_CASE( SurvivalHorrorTest, ClueBoardDeductionNeedsTheRightLinksAndPunishe
     SW_EXPECT_TRUE( session.unlinkClues( "pantry", "gloves" ) );
     SW_EXPECT_TRUE( session.linkClues( "gloves", "pantry" ) );
     SW_EXPECT_TRUE( session.submitDeduction( "culprit", "butler" ) == HorrorPuzzleResult::Solved );
-    SW_EXPECT_TRUE( session.getFlags().hasFlag( "caseSolved" ) );
+    SW_EXPECT_TRUE( sessionContainers._flags.hasFlag( "caseSolved" ) );
     SW_EXPECT_TRUE( session.submitDeduction( "culprit", "maid" ) == HorrorPuzzleResult::AlreadySolved );
     SW_EXPECT_NEAR_EQUAL( 70.0f, session.getSanity().getValue(), 1.0e-4f );
 }

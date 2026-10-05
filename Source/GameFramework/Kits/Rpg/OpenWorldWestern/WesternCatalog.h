@@ -255,7 +255,7 @@ namespace sw
         friend class XmlCatalog<WesternCatalog>;
 
     public:
-        static constexpr const utf8* kHonorFactionId = "honor"; ///< 명예가 쓰는 평판 세력 id
+        static constexpr const utf8* kHonorFactionId = "western.honor"; ///< 명예가 쓰는 평판 세력 id(키트 접두)
 
         WesternCatalog();
 

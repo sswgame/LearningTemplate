@@ -130,7 +130,7 @@ namespace sw
         ScavengerExpedition();
 
         /**
-         * @brief 새 원정을 엽니다. 회사 돈 · 시계 · 날씨는 @p refs 에서 빌립니다 — 지갑은 시작 크레딧으로 맞추고, 시계 · 날씨는 흘리지 않는다
+         * @brief 새 원정을 엽니다. 회사 돈 · 시계 · 날씨 · 플래그(시설 문 잠금 `unlocked.<방>`)는 @p refs 에서 빌립니다 — 지갑은 시작 크레딧으로 맞추고, 시계 · 날씨는 흘리지 않는다
          *        (공유 상태의 주인이 흘린다). 내리면 그 위성의 날씨로 바꾸고, 떠나면 시계를 다음 날 도착 시각으로 넘깁니다. 터미널에서 산 것은 빌린 우주선 창고(@p shipStorage — 원정보다 오래 살아야 한다)에 듭니다.
          */
         void initialize( const ScavengerExpeditionData& data, const GameStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount );

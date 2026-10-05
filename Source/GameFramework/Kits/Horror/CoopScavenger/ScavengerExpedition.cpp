@@ -89,6 +89,7 @@ namespace sw
         _pWallet        = refs._pWallet;
         _pClock         = refs._pClock;
         _pWeather       = refs._pWeather;
+        _facility.setFlags( refs._pFlags );
         _shop.initialize( data._pShopCatalog, data._pItemCatalog );
         _pShipStorage = &shipStorage;
         _listCrew.clear();

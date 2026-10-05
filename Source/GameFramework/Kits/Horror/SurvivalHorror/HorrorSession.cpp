@@ -4,8 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
 #include "GameFramework/Base/World/AreaGraph.h"
+#include "GameFramework/Base/World/GameFlags.h"
 
 namespace sw
 {
@@ -61,8 +63,7 @@ namespace sw
     }
 
     HorrorSession::HorrorSession()
-        : _flags{}
-        , _sanity{}
+        : _sanity{}
         , _battery{}
         , _uniqueSeenMonster{}
         , _uniqueReadDocument{}
@@ -76,6 +77,7 @@ namespace sw
         , _pCatalog{ nullptr }
         , _pInventory{ nullptr }
         , _pItemBox{ nullptr }
+        , _pFlags{ nullptr }
         , _pAreaGraph{ nullptr }
         , _health{ 0.0f }
         , _saveCount{ 0 }
@@ -85,15 +87,16 @@ namespace sw
     {
     }
 
-    void HorrorSession::initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, GridInventory& inventory, Inventory& itemBox )
+    void HorrorSession::initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const GameStateRefs& refs,
+                                    GridInventory& inventory, Inventory& itemBox )
     {
         _pCatalog                       = pCatalog;
         _pAreaGraph                     = pAreaGraph;
         const SurvivalHorrorRules rules = pCatalog != nullptr ? pCatalog->getRules() : SurvivalHorrorRules{};
         _pInventory                     = &inventory;
         _pItemBox                       = &itemBox;
+        _pFlags                         = refs._pFlags;
         _pInventory->initialize( pCatalog != nullptr ? pCatalog->makeShapeLookup() : GridInventory::ShapeDelegate{}, rules._gridWidth, rules._gridHeight );
-        _flags.clear();
         _sanity.initialize( HorrorSessionInternal::makeSanitySettings( rules ) );
         _battery.initialize( HorrorSessionInternal::makeBatterySettings( rules ) );
         _uniqueSeenMonster.clear();
@@ -353,7 +356,8 @@ namespace sw
 
     bool HorrorSession::tryMoveTo( const hashed_string& areaId )
     {
-        if ( _pAreaGraph == nullptr || _pAreaGraph->canTraverse( _currentArea, areaId, _flags ) == false )
+        static const GameFlags kNoFlags; // 빌리지 않은 세션 — 조건 있는 길은 닫힌 채다
+        if ( _pAreaGraph == nullptr || _pAreaGraph->canTraverse( _currentArea, areaId, _pFlags != nullptr ? *_pFlags : kNoFlags ) == false )
             return false;
         (void)_pAreaGraph->enterArea( areaId );
         _currentArea = areaId;
@@ -475,8 +479,8 @@ namespace sw
 
     bool HorrorSession::markSolved( const hashed_string& puzzleId, const hashed_string& flag )
     {
-        if ( flag.empty() == false )
-            _flags.setFlag( flag, 1 );
+        if ( flag.empty() == false && _pFlags != nullptr )
+            _pFlags->setFlag( flag, 1 );
         return _uniqueSolvedPuzzle.insert( puzzleId ).second;
     }
 } // namespace sw

@@ -40,7 +40,7 @@ namespace sw
     /**
      * @class ScavengerFacility
      * @brief 위성 하나의 하루치 지도입니다. 방 id 는 `outside`(바깥) · `ship`(우주선) · `entrance`(정문 안) · `room1`.. 이고 연결 종류는
-     *        `Ship` · `MainEntrance` · `Door` · `FireExit` 입니다. 잠긴 문은 `unlocked_<방>` 플래그 조건이라 `unlockDoor` 로 엽니다(열쇠 · 자물쇠 따개).
+     *        `Ship` · `MainEntrance` · `Door` · `FireExit` 입니다. 잠긴 문은 `unlocked.<방>` 플래그 조건이라 `unlockDoor` 로 엽니다(열쇠 · 자물쇠 따개 — 플래그는 빌린 것, `setFlags`).
      * @details 방 n 은 앞선 방 하나에 이어 나무가 되고(모든 방이 정문에서 닿는다 — 잠금을 빼면), 확률로 고리 통로를 더하며, 정문에서 가장 먼 방들부터
      *          화재 출구가 바깥으로 납니다. 고철은 위성의 목록에서 `spawnWeight` 로 고르고, 가치 = 정의 범위 × 위성 배율 × 날씨 배율입니다.
      *          같은 씨앗 · 같은 위성이면 같은 지도 · 같은 고철입니다.
@@ -62,8 +62,11 @@ namespace sw
         /** @brief 바닥에서 집어 올립니다. 그 방에 없으면 false 입니다. */
         [[nodiscard]] bool tryTakeScrap( int32 uid, const hashed_string& areaId, ScavengerScrap& outScrap );
 
-        const AreaGraph&              getGraph() const { return _graph; }
-        const GameFlags&              getFlags() const { return _flags; }
+        const AreaGraph& getGraph() const { return _graph; }
+        /** @brief 빌린 플래그입니다(빌리지 않았으면 빈 플래그). */
+        const GameFlags& getFlags() const;
+        /** @brief 문 잠금을 둘 플래그를 빌립니다(시설보다 오래 살아야 한다). 없으면 잠긴 문은 열리지 않는다. */
+        void                          setFlags( GameFlags* pFlags ) { _pFlags = pFlags; }
         const vector<ScavengerScrap>& getGroundScrap() const { return _listGroundScrap; }
         const ScavengerScrap*         findGroundScrap( int32 uid ) const;
         /** @brief 바닥 고철 가치의 합입니다(시신 제외). */
@@ -74,8 +77,9 @@ namespace sw
 
     private:
         AreaGraph              _graph;
-        GameFlags              _flags;
         vector<ScavengerScrap> _listGroundScrap;
+        vector<hashed_string>  _listUnlockedFlag; ///< 이 시설이 빌린 플래그에 둔 것(하루가 끝나면 이것만 지운다)
+        GameFlags*             _pFlags;           ///< 빌린 플래그
         int32                  _nextUid;
         int32                  _roomCount;
         int32                  _lockedDoorCount;

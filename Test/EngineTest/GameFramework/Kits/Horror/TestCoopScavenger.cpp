@@ -8,6 +8,7 @@
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Base/World/WeatherSystem.h"
 #include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCarry.h"
@@ -83,6 +84,7 @@ namespace
         Wallet           _wallet;      ///< 회사 돈(원정이 빌린다)
         WorldClock       _clock;       ///< 공유 시계(원정이 빌린다 — 흘리는 것은 시험)
         WeatherSystem    _weather;     ///< 공유 날씨(원정이 빌린다)
+        GameFlags        _flags;       ///< 공유 플래그(시설 문 잠금)
 
         bool initialize()
         {
@@ -110,6 +112,7 @@ namespace
             refs._pWallet  = &_wallet;
             refs._pClock   = &_clock;
             refs._pWeather = &_weather;
+            refs._pFlags   = &_flags;
             return refs;
         }
 
@@ -238,7 +241,9 @@ SW_TEST_CASE( CoopScavengerTest, FacilityGraphIsSeededWithLocksAndFireExits )
 
     // 잠긴 문이 있는 씨앗을 찾는다(문 9 개 이상 × 30 %).
     uint32            seed = 0;
+    GameFlags         facilityFlags; // 시설은 문 잠금 플래그를 빌린다
     ScavengerFacility facility;
+    facility.setFlags( &facilityFlags );
     for ( uint32 candidate = 1; candidate < 50 && seed == 0; ++candidate )
     {
         SW_ASSERT_TRUE( facility.createLayout( catalog, *pMoon, candidate, 1.0f ) );

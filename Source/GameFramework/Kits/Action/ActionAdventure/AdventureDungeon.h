@@ -38,7 +38,7 @@ namespace sw
     struct AdventureDoorDef
     {
         hashed_string     _id{};
-        hashed_string     _flag{};     ///< 비면 id
+        hashed_string     _flag{};     ///< 비면 `door.<id>`
         string            _requires{}; ///< `Condition` 문의 조건식
         AdventureDoorKind _kind{ AdventureDoorKind::SmallKey };
     };
@@ -52,7 +52,7 @@ namespace sw
         hashed_string _id{};
         hashed_string _area{}; ///< 놓인 방(나침반이 지도에 찍는다)
         hashed_string _item{};
-        hashed_string _flag{}; ///< 열린 상자 — 비면 id
+        hashed_string _flag{}; ///< 열린 상자 — 비면 `treasure.<id>`
         int32         _count{ 1 };
     };
 } // namespace sw
@@ -72,7 +72,7 @@ namespace sw
     struct AdventureDeviceDef
     {
         hashed_string       _id{};
-        hashed_string       _flag{}; ///< 비면 id
+        hashed_string       _flag{}; ///< 비면 `device.<id>`
         float32             _duration{ 0.0f };
         int32               _torchCount{ 1 };
         AdventureDeviceKind _kind{ AdventureDeviceKind::Switch };

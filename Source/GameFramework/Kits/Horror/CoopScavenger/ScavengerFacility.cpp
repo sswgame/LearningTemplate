@@ -72,7 +72,7 @@ namespace sw
                 inoutText += pKind;
                 if ( bLocked )
                 {
-                    inoutText += "\" requires=\"unlocked_";
+                    inoutText += "\" requires=\"unlocked.";
                     appendRoomId( inoutText, toRoom );
                 }
                 inoutText += "\"/>";
@@ -100,8 +100,9 @@ namespace sw
 {
     ScavengerFacility::ScavengerFacility()
         : _graph{}
-        , _flags{}
         , _listGroundScrap{}
+        , _listUnlockedFlag{}
+        , _pFlags{ nullptr }
         , _nextUid{ 1 }
         , _roomCount{ 0 }
         , _lockedDoorCount{ 0 }
@@ -187,7 +188,13 @@ namespace sw
 
     void ScavengerFacility::clear()
     {
-        _flags.clear();
+        // 빌린 플래그는 나눠 쓴다 — 이 시설이 둔 잠금 해제만 지운다.
+        for ( const hashed_string& flag : _listUnlockedFlag )
+        {
+            if ( _pFlags != nullptr )
+                (void)_pFlags->clearFlag( flag );
+        }
+        _listUnlockedFlag.clear();
         _listGroundScrap.clear();
         _roomCount       = 0;
         _lockedDoorCount = 0;
@@ -195,23 +202,30 @@ namespace sw
 
     bool ScavengerFacility::unlockDoor( const hashed_string& roomId )
     {
-        string flagText = "unlocked_";
+        string flagText = "unlocked.";
         flagText += roomId.c_str();
         const hashed_string flag( string_view( flagText.data(), flagText.size() ) );
-        if ( _flags.hasFlag( flag ) )
+        if ( _pFlags == nullptr || _pFlags->hasFlag( flag ) )
             return false;
         for ( const AreaLink& link : _graph.getLinks() )
         {
             if ( link._to == roomId && link._requires.empty() == false )
             {
-                _flags.setFlag( flag );
+                _pFlags->setFlag( flag );
+                _listUnlockedFlag.push_back( flag );
                 return true;
             }
         }
         return false;
     }
 
-    bool ScavengerFacility::canTraverse( const hashed_string& fromId, const hashed_string& toId ) const { return _graph.canTraverse( fromId, toId, _flags ); }
+    bool ScavengerFacility::canTraverse( const hashed_string& fromId, const hashed_string& toId ) const { return _graph.canTraverse( fromId, toId, getFlags() ); }
+
+    const GameFlags& ScavengerFacility::getFlags() const
+    {
+        static const GameFlags kNoFlags; // 빌리지 않은 시설 — 잠긴 문은 닫힌 채다
+        return _pFlags != nullptr ? *_pFlags : kNoFlags;
+    }
 
     int32 ScavengerFacility::placeScrap( const ScavengerScrap& scrap, const hashed_string& areaId )
     {

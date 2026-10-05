@@ -4,21 +4,22 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternCatalog.h"
 
 namespace sw
 {
     WesternHonor::WesternHonor()
-        : _reputation{}
+        : _pReputation{ nullptr }
         , _pCatalog{ nullptr }
     {
     }
 
-    void WesternHonor::initialize( const WesternCatalog* pCatalog )
+    void WesternHonor::initialize( const WesternCatalog* pCatalog, const GameStateRefs& refs )
     {
-        _pCatalog = pCatalog;
-        _reputation.initialize( pCatalog != nullptr ? &pCatalog->getHonorReputation() : nullptr );
+        _pCatalog    = pCatalog;
+        _pReputation = refs._pReputation;
     }
 
     int32 WesternHonor::applyAction( const hashed_string& actionId )
@@ -33,11 +34,14 @@ namespace sw
         return pCrime != nullptr ? changeValue( pCrime->_honor ) : 0;
     }
 
-    int32 WesternHonor::changeValue( int32 delta ) { return _reputation.changeValue( hashed_string( WesternCatalog::kHonorFactionId ), delta ); }
+    int32 WesternHonor::changeValue( int32 delta ) { return _pReputation != nullptr ? _pReputation->changeValue( hashed_string( WesternCatalog::kHonorFactionId ), delta ) : 0; }
 
-    int32 WesternHonor::getValue() const { return _reputation.getValue( hashed_string( WesternCatalog::kHonorFactionId ) ); }
+    int32 WesternHonor::getValue() const { return _pReputation != nullptr ? _pReputation->getValue( hashed_string( WesternCatalog::kHonorFactionId ) ) : 0; }
 
-    hashed_string WesternHonor::getTierName() const { return _reputation.getTierName( hashed_string( WesternCatalog::kHonorFactionId ) ); }
+    hashed_string WesternHonor::getTierName() const
+    {
+        return _pReputation != nullptr ? _pReputation->getTierName( hashed_string( WesternCatalog::kHonorFactionId ) ) : hashed_string{};
+    }
 
     const WesternHonorTierDef* WesternHonor::findTier() const { return _pCatalog != nullptr ? _pCatalog->findHonorTier( getTierName() ) : nullptr; }
 

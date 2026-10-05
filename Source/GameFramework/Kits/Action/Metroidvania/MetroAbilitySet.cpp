@@ -48,7 +48,8 @@ namespace sw
             static constexpr const utf8* kWallJumpName = "wallJump";
             static constexpr const utf8* kDashName     = "dash";
 
-            static hashed_string resolveFlag( const MetroAbilityDef& ability ) { return ability._flag.empty() ? ability._id : ability._flag; }
+            /** @brief 능력의 플래그 — 비면 `ability.<id>`(공유 플래그에서 다른 키트의 같은 id 와 갈린다). */
+            static hashed_string resolveFlag( const MetroAbilityDef& ability ) { return ability._flag.empty() ? hashed_string( string( "ability." ) + ability._id.c_str() ) : ability._flag; }
         };
     } // namespace
 } // namespace sw

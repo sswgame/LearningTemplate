@@ -50,21 +50,23 @@ namespace
 )";
 
     constexpr const utf8* kRestaurantTestReputationXml = R"(
-<ReputationCatalog><Faction id="restaurant" min="-1000" max="1000" start="100"/></ReputationCatalog>
+<ReputationCatalog><Faction id="restaurant.guests" min="-1000" max="1000" start="100"/></ReputationCatalog>
 )";
 
     /** @brief 식당 하나가 빌리는 것 — 섞인 게임에서는 공유 상태의 것입니다. */
     struct RestaurantTestBorrowed
     {
-        Inventory  _pantry; ///< 주방 창고
-        Wallet     _wallet; ///< 식당 금고
-        WorldClock _clock;  ///< 날(시세 굴림의 씨앗)
+        Inventory       _pantry;     ///< 주방 창고
+        Wallet          _wallet;     ///< 식당 금고
+        WorldClock      _clock;      ///< 날(시세 굴림의 씨앗)
+        ReputationState _reputation; ///< 손님 평판(세력 restaurant.guests)
 
         GameStateRefs makeRefs()
         {
             GameStateRefs refs;
-            refs._pWallet = &_wallet;
-            refs._pClock  = &_clock;
+            refs._pWallet     = &_wallet;
+            refs._pClock      = &_clock;
+            refs._pReputation = &_reputation;
             return refs;
         }
 
@@ -72,6 +74,7 @@ namespace
         void passDay( RestaurantSimulation& sim )
         {
             _clock.advanceToHour( _clock.getHour() );
+            _reputation.advanceDay(); // 공유 평판은 주인이 날 넘김에 식힌다
             sim.advanceDay();
         }
     };
@@ -106,7 +109,8 @@ namespace
         {
             outBorrowed._pantry.initialize( &_items, 40 );
             outBorrowed._clock.initialize( WorldClockSettings{} );
-            sim.initialize( &_catalog, &_recipes, &_items, &_shops, &_reputation, &_curve, outBorrowed.makeRefs(), outBorrowed._pantry, settings );
+            outBorrowed._reputation.initialize( &_reputation );
+            sim.initialize( &_catalog, &_recipes, &_items, &_shops, &_curve, outBorrowed.makeRefs(), outBorrowed._pantry, settings );
         }
     };
 

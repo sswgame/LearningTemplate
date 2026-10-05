@@ -2,9 +2,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/ItemBag.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
 #include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Progression/Reputation.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternCatalog.h"
@@ -236,8 +238,12 @@ SW_TEST_CASE( OpenWorldWesternTest, HonorTiersGiveDiscountsAndDialogueFlags )
 {
     WesternCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    ReputationState reputation; // 공유 평판 — 그 카탈로그에 명예 세력이 있어야 단계가 선다
+    reputation.initialize( &catalog.getHonorReputation() );
+    GameStateRefs refs;
+    refs._pReputation = &reputation;
     WesternHonor honor;
-    honor.initialize( &catalog );
+    honor.initialize( &catalog, refs );
     GameFlags flags;
     SW_EXPECT_EQUAL( 0, honor.getValue() );
     SW_EXPECT_TRUE( honor.getTierName() == hashed_string( "Neutral" ) );
@@ -260,7 +266,7 @@ SW_TEST_CASE( OpenWorldWesternTest, HonorTiersGiveDiscountsAndDialogueFlags )
     SW_EXPECT_TRUE( honor.getTierName() == hashed_string( "Outlaw" ) );
     SW_EXPECT_NEAR_EQUAL( 1.1f, honor.computePriceScale(), 1.0e-5f ); // 무법자는 웃돈
     vector<ReputationEvent> listEvent;
-    honor.drainEvents( listEvent );
+    reputation.drainEvents( listEvent );                          // 단계 알림은 빌린 평판에 쌓인다(게임 화면이 꺼낸다)
     SW_EXPECT_EQUAL( 3, static_cast<int32>( listEvent.size() ) ); // 중립 → 명예 → 중립 → 무법
 }
 

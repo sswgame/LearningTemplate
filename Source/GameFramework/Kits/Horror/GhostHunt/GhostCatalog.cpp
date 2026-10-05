@@ -133,7 +133,7 @@ namespace sw
             door._key  = GhostCatalogInternal::readName( node, "key" );
             door._flag = GhostCatalogInternal::readName( node, "flag" );
             if ( door._flag.empty() )
-                door._flag = door._id;
+                door._flag = hashed_string( string( "door." ) + pId );
             (void)_doorCatalog.add( door );
         }
         for ( XmlNode node = root.findChild( "Furniture" ); node; node = node.findNextSibling( "Furniture" ) )

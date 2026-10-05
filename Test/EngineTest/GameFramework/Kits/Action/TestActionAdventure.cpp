@@ -221,18 +221,18 @@ SW_TEST_CASE( ActionAdventureTest, DungeonDevicesDriveFlags )
     SW_EXPECT_FALSE( state.hitSwitch( "forest", "plate", flags ) ); // 눌림판은 칠 수 없다
 
     state.setPlatePressed( "forest", "plate", true, flags );
-    SW_EXPECT_TRUE( flags.hasFlag( "plate" ) );
+    SW_EXPECT_TRUE( flags.hasFlag( "device.plate" ) );
     state.setPlatePressed( "forest", "plate", false, flags );
-    SW_EXPECT_FALSE( flags.hasFlag( "plate" ) );
+    SW_EXPECT_FALSE( flags.hasFlag( "device.plate" ) );
     state.setPlatePressed( "forest", "heavyPlate", true, flags );
     state.setPlatePressed( "forest", "heavyPlate", false, flags );
-    SW_EXPECT_TRUE( flags.hasFlag( "heavyPlate" ) );
+    SW_EXPECT_TRUE( flags.hasFlag( "device.heavyPlate" ) );
 
     SW_EXPECT_TRUE( state.hitSwitch( "forest", "timer", flags ) );
     scene.run( 2.8f );
-    SW_EXPECT_TRUE( flags.hasFlag( "timer" ) );
+    SW_EXPECT_TRUE( flags.hasFlag( "device.timer" ) );
     scene.run( 0.3f );
-    SW_EXPECT_FALSE( flags.hasFlag( "timer" ) ); // 문이 닫혔다
+    SW_EXPECT_FALSE( flags.hasFlag( "device.timer" ) ); // 문이 닫혔다
 
     // 횃불 셋을 5 초 안에 — 둘만 켜면 모두 꺼진다.
     SW_EXPECT_TRUE( state.lightTorch( "forest", "torches", flags ) );
@@ -240,22 +240,42 @@ SW_TEST_CASE( ActionAdventureTest, DungeonDevicesDriveFlags )
     SW_EXPECT_EQUAL( 2, state.getLitTorchCount( "forest", "torches" ) );
     scene.run( 5.1f );
     SW_EXPECT_EQUAL( 0, state.getLitTorchCount( "forest", "torches" ) );
-    SW_EXPECT_FALSE( flags.hasFlag( "torches" ) );
+    SW_EXPECT_FALSE( flags.hasFlag( "device.torches" ) );
     for ( int32 torch = 0; torch < 3; ++torch )
     {
         SW_EXPECT_TRUE( state.lightTorch( "forest", "torches", flags ) );
         scene.run( 1.0f );
     }
     SW_EXPECT_TRUE( state.isDeviceActive( "forest", "torches" ) );
-    SW_EXPECT_TRUE( flags.hasFlag( "torches" ) );
+    SW_EXPECT_TRUE( flags.hasFlag( "device.torches" ) );
     SW_EXPECT_FALSE( state.lightTorch( "forest", "torches", flags ) );
     scene.run( 10.0f );
-    SW_EXPECT_TRUE( flags.hasFlag( "torches" ) ); // 풀린 횃불은 꺼지지 않는다
+    SW_EXPECT_TRUE( flags.hasFlag( "device.torches" ) ); // 풀린 횃불은 꺼지지 않는다
 
     vector<AdventureDungeonEvent> listEvent;
     state.drainEvents( listEvent );
     SW_EXPECT_TRUE( hasDungeonEvent( listEvent, AdventureDungeonEventType::TorchesFailed, "torches" ) );
     SW_EXPECT_TRUE( hasDungeonEvent( listEvent, AdventureDungeonEventType::DeviceDeactivated, "timer" ) );
+}
+
+/**
+ * @brief [ActionAdventureTest] 플래그를 적지 않은 상자 · 장치 · 문은 `<종류>.<id>` 를 플래그로 쓴다 — 공유 플래그에서 다른 키트의 같은 id 와 갈린다
+ */
+SW_TEST_CASE( ActionAdventureTest, DefaultFlagNamesCarryTheirKind )
+{
+    AdventureDungeonScene scene;
+    SW_ASSERT_TRUE( scene.initialize() );
+    SW_ASSERT_FALSE( scene._catalog.getDungeons().empty() );
+    const AdventureDungeonDef&  dungeon = scene._catalog.getDungeons().front();
+    const AdventureTreasureDef* pChest  = dungeon.findTreasure( "keyChest" );
+    SW_ASSERT_NOT_NULL( pChest );
+    SW_EXPECT_TRUE( pChest->_flag == hashed_string( "treasure.keyChest" ) );
+    const int32 plateIndex = dungeon.findDeviceIndex( "plate" );
+    SW_ASSERT_TRUE( plateIndex >= 0 );
+    SW_EXPECT_TRUE( dungeon._listDevice[static_cast<size_t>( plateIndex )]._flag == hashed_string( "device.plate" ) );
+    const AdventureDoorDef* pDoor = dungeon.findDoor( "cellDoor" );
+    SW_ASSERT_NOT_NULL( pDoor );
+    SW_EXPECT_TRUE( pDoor->_flag == hashed_string( "forest.cell" ) ); // 적은 이름은 그대로
 }
 
 /**
