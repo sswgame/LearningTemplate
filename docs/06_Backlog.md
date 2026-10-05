@@ -368,8 +368,7 @@ cd build/Ninja-Debug/Bin
   - 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
   - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
   - 네트워크: 회로 상태 바이트(`GimmickCircuit::saveState`)를 `NetClientServer` 스냅샷 · `RollbackSession` 상태에 싣기(모양은 준비됨, 배선 없음).
-  - `InteractorComponent` 는 틱마다 씬의 `InteractableComponent` 를 모두 훑는다 — 하는 쪽이 많아지면 공간 등록부로. `SmartObjectComponent` 는 틱도
-    `onPropertyChanged` 도 없어 상호작용 표를 고쳐도(핫 리로드) 자리 정의를 다시 찾지 않는다 — `InteractionCatalog::getSharedReloadCount` 를 볼 자리를 정한다.
+  - `InteractorComponent` 는 틱마다 씬의 `InteractableComponent` 를 모두 훑는다 — 하는 쪽이 많아지면 공간 등록부로.
   - 카트 트랙(`KartTrack`)은 거리를 수평(XZ) 길이로 재서 공용 `SplinePath` 로 옮기지 않았다(옮기면 랩 · 고스트 값이 바뀐다 — 옮길지 정한다).
 
 - **CS2 식 서브틱 입력(2026-10-05 제안 — 넷 게임이 생기면; 지금 넷 키트를 쓰는 시험 게임은 0).** `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).

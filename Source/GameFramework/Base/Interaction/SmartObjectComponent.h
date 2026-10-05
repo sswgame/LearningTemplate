@@ -69,9 +69,17 @@ namespace sw
 
         void onPostLoad() override;
         void onBeginPlay() override;
+        /** @brief 상호작용 표를 다시 읽었으면(핫 리로드) 새 표에서 자리 정의를 다시 찾습니다. */
+        void onTick( float32 deltaTime ) override;
+        /** @brief 정의 id · 표 경로 · 차지 목록을 고치면 다시 찾습니다. */
+        void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 정의를 코드로 넣습니다(표보다 우선). */
         void setDefinition( const SmartObjectDef& def );
+        /** @brief 정의 id 를 바꾸고 다시 찾습니다. */
+        void setSmartObjectId( const hashed_string& id );
+        /** @brief 상호작용 표 경로를 바꾸고 다시 찾습니다(비면 공용 기본 표). */
+        void setCatalogPath( string_view path );
         /** @brief 자리를 차지합니다. */
         [[nodiscard]] bool claimSlot( const GameObject& claimant, int32 slot );
         /** @brief 태그에 맞는 빈자리를 찾아 차지합니다. 차지한 자리 번호, 없으면 −1 입니다. */
@@ -99,6 +107,7 @@ namespace sw
 
         SmartObjectSlots   _slots;
         mutable std::mutex _mutex;
+        uint32             _seenCatalogReloadCount; ///< 정의를 찾을 때의 `InteractionCatalog::getSharedReloadCount` — 달라지면 다시 찾는다
         uint8              _bHasOverride;
     };
 } // namespace sw

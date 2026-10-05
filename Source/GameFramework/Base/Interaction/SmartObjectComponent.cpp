@@ -84,12 +84,14 @@ namespace sw
         , _listClaimant{}
         , _slots{}
         , _mutex{}
+        , _seenCatalogReloadCount{ 0 }
         , _bHasOverride{ SW_FALSE }
     {
     }
 
     void SmartObjectComponent::resolveDefinition()
     {
+        _seenCatalogReloadCount = InteractionCatalog::getSharedReloadCount();
         if ( _bHasOverride == SW_TRUE || _smartObjectId.empty() )
             return;
         const InteractionCatalog* pCatalog = InteractionCatalog::findShared( _catalogPath.empty() ? string_view( InteractionCatalog::kDefaultPath ) : string_view( _catalogPath ) );
@@ -121,6 +123,32 @@ namespace sw
         Component::onBeginPlay();
         if ( _slots.getSlotCount() == 0 )
             resolveDefinition();
+    }
+
+    void SmartObjectComponent::onTick( float32 deltaTime )
+    {
+        Component::onTick( deltaTime );
+        // 상호작용 표 파일을 고쳤다 — 새 표에서 자리를 다시 찾는다. 차지는 자리 번호로 이어진다(줄어든 자리의 차지는 놓인다).
+        if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != InteractionCatalog::getSharedReloadCount() )
+            resolveDefinition();
+    }
+
+    void SmartObjectComponent::onPropertyChanged( hashed_string propertyName )
+    {
+        Component::onPropertyChanged( propertyName );
+        resolveDefinition();
+    }
+
+    void SmartObjectComponent::setSmartObjectId( const hashed_string& id )
+    {
+        _smartObjectId = id;
+        resolveDefinition();
+    }
+
+    void SmartObjectComponent::setCatalogPath( string_view path )
+    {
+        _catalogPath = string( path );
+        resolveDefinition();
     }
 
     void SmartObjectComponent::setDefinition( const SmartObjectDef& def )

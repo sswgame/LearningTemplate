@@ -445,3 +445,49 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
     SW_EXPECT_NEAR_EQUAL( 2.0f, pBefore->_maxDistance, 1e-4f ); // 옛 정의는 아직 산다
     SW_EXPECT_NEAR_EQUAL( 5.0f, pAfter->_maxDistance, 1e-4f );
 }
+
+/**
+ * @brief [InteractionTest] 상호작용 표를 고쳐 다시 읽으면 스마트 오브젝트가 다음 틱에 새 자리 정의를 쓰고, 이미 차지한 자리는 이어진다
+ * @details 정의를 onPostLoad 에서만 찾으면 표를 고쳐도 다시 시작할 때까지 옛 자리 수로 돈다.
+ */
+SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
+{
+    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    const string path = FileUtil::joinPath( test::makeTempPath( "smartreload" ), "bench.interactions.xml" );
+    FileUtil::ensureParentDirectoryExists( path );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><SmartObject id="Bench"><Slot id="Left" offset="-0.5,0,0" tags="Activity.Sit"/></SmartObject></Interactions>)" ) );
+
+    AssetManager  resources;
+    ModuleService service{};
+    service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::AssetManager )] = &resources;
+    game::bindGameService( service );
+
+    GameObjectManager     manager;
+    GameObject*           pBench  = manager.createGameObject( hashed_string( "Bench" ) );
+    GameObject*           pSitter = manager.createGameObject( hashed_string( "Sitter" ) );
+    SmartObjectComponent* pSmart  = pBench != nullptr ? pBench->addComponent<SmartObjectComponent>() : nullptr;
+    int32                 before  = -1;
+    int32                 after   = -1;
+    bool                  bKept   = false;
+    if ( pSmart != nullptr && pSitter != nullptr )
+    {
+        pSmart->setCatalogPath( path );
+        pSmart->setSmartObjectId( hashed_string( "Bench" ) );
+        before = pSmart->getSlotCount();
+        (void)pSmart->claimSlot( *pSitter, 0 );
+        SW_EXPECT_TRUE( FileUtil::writeTextFile(
+            path, R"(<Interactions><SmartObject id="Bench"><Slot id="Left" offset="-0.5,0,0" tags="Activity.Sit"/><Slot id="Right" offset="0.5,0,0" tags="Activity.Sit"/></SmartObject></Interactions>)" ) );
+        IAssetCache* pCache = resources.findAssetCache( "InteractionCatalog" );
+        if ( pCache != nullptr )
+            pCache->reload( path, nullptr );
+        pSmart->onTick( 0.0f );
+        after = pSmart->getSlotCount();
+        bKept = pSmart->findSlotOf( *pSitter ) == 0;
+    }
+    game::unbindGameService();
+
+    SW_ASSERT_NOT_NULL( pSmart );
+    SW_EXPECT_EQUAL( 1, before );
+    SW_EXPECT_EQUAL( 2, after );
+    SW_EXPECT_TRUE( bKept );
+}
