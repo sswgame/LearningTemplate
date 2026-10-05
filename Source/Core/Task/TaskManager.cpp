@@ -651,7 +651,8 @@ namespace sw
         // 워커가 깨어나기를 기다리지 않는다. 이 스레드가 첫 청크부터 가져간다. 남은 티켓은 이 스레드가 닿을 수 있는 큐(자기
         // 데크 · 전역)에만 있으므로, 조인을 기다리며 다른 일을 돕다 보면 스스로 가져가게 된다.
         runGroupChunks( &group );
-        waitForJoin( group._join );
+        // Low 줄(백그라운드 I/O)은 돕지 않는다 — 합류는 Normal 의 자기 티켓과 남이 도는 청크만 기다린다. Low 하나를 집으면 그 태스크만큼 합류가 늦어진다.
+        waitForJoin( group._join, false );
 
         if ( _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
             notifyBroadcast();
@@ -773,7 +774,7 @@ namespace sw
     void TaskManager::waitStage( const TaskStageHandle& stage )
     {
         if ( stage._pNode != nullptr )
-            waitForJoin( stage._pNode->_join );
+            waitForJoin( stage._pNode->_join, true );
     }
 
     bool TaskManager::isStageComplete( const TaskStageHandle& stage )
@@ -784,12 +785,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 6) 기다리기 — 다른 일을 돕다가 자기 워드에서 잠들기, 브로드캐스트, 메인 스레드 깨우기
     // ------------------------------------------------------------------------------
-    bool TaskManager::helpOrSpin( uint32& inoutSpinCount )
+    bool TaskManager::helpOrSpin( uint32& inoutSpinCount, const bool bHelpLowQueue )
     {
         if ( isMainThread() )
             dispatchMainThreadTasks();
 
-        if ( tryHelpAndExecute() )
+        if ( tryHelpAndExecute( bHelpLowQueue ) )
         {
             inoutSpinCount = 0;
             return true;
@@ -806,12 +807,12 @@ namespace sw
         return false;
     }
 
-    void TaskManager::waitForJoin( JoinCounter& join )
+    void TaskManager::waitForJoin( JoinCounter& join, const bool bHelpLowQueue )
     {
         uint32 spinCount = 0;
         while ( join.getPending() > 0 )
         {
-            if ( helpOrSpin( spinCount ) == false )
+            if ( helpOrSpin( spinCount, bHelpLowQueue ) == false )
                 parkOnJoin( join );
         }
     }
@@ -822,7 +823,7 @@ namespace sw
         uint32          spinCount = 0;
         while ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
         {
-            if ( helpOrSpin( spinCount ) )
+            if ( helpOrSpin( spinCount, true ) )
                 continue;
 
             uint32 waitMilli = 0;
@@ -1070,7 +1071,7 @@ namespace sw
         }
     }
 
-    bool TaskManager::tryTakeItem( int32 workerId, uintptr_t& outItem )
+    bool TaskManager::tryTakeItem( int32 workerId, const bool bTakeLowQueue, uintptr_t& outItem )
     {
         outItem                 = 0;
         const uint32 numWorkers = getWorkerCount();
@@ -1103,17 +1104,17 @@ namespace sw
                 return true;
         }
 
-        if ( _globalLowQueue.dequeue( outItem ) && outItem != 0 )
+        if ( bTakeLowQueue && _globalLowQueue.dequeue( outItem ) && outItem != 0 )
             return true;
 
         outItem = 0;
         return false;
     }
 
-    bool TaskManager::tryHelpAndExecute()
+    bool TaskManager::tryHelpAndExecute( const bool bHelpLowQueue )
     {
         uintptr_t item{ 0 };
-        if ( tryTakeItem( t_currentWorkerIndex, item ) == false )
+        if ( tryTakeItem( t_currentWorkerIndex, bHelpLowQueue, item ) == false )
             return false;
         executeItem( item );
         return true;
@@ -1225,7 +1226,7 @@ namespace sw
         while ( _bStop.load( std::memory_order_relaxed ) == false )
         {
             uintptr_t item{ 0 };
-            if ( tryTakeItem( static_cast<int32>( workerId ), item ) )
+            if ( tryTakeItem( static_cast<int32>( workerId ), true, item ) )
             {
                 executeItem( item );
                 continue;
@@ -1241,7 +1242,7 @@ namespace sw
                 if ( _workEpoch.load( std::memory_order_acquire ) != observedEpoch )
                 {
                     observedEpoch = _workEpoch.load( std::memory_order_acquire );
-                    if ( tryTakeItem( static_cast<int32>( workerId ), item ) )
+                    if ( tryTakeItem( static_cast<int32>( workerId ), true, item ) )
                     {
                         bFoundInSpin = true;
                         break;
@@ -1268,7 +1269,7 @@ namespace sw
             const uint32 observedParkWord = slot._park._word.load( std::memory_order_acquire );
             _idleWorkerMask.fetch_or( idleBit, std::memory_order_seq_cst );
             std::atomic_thread_fence( std::memory_order_seq_cst );
-            if ( tryTakeItem( static_cast<int32>( workerId ), item ) )
+            if ( tryTakeItem( static_cast<int32>( workerId ), true, item ) )
             {
                 _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
                 executeItem( item );

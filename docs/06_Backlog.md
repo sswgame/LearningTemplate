@@ -440,7 +440,6 @@ cd build/Ninja-Debug/Bin
   ② 시스템 호출이 지배적이면 일괄 I/O(리눅스 `recvmmsg`/`sendmmsg` → UDP GSO/GRO, Windows RIO — 완료 통지는 IOCP) ③ 한 스레드가 차면 `SO_REUSEPORT` 수신 분산 + 연결 샤딩(`NetHost` 잠금 분할).
 - **순서**: 보안의 UDP 부분은 N13~N21 뒤(연결 수립 · 패킷 머리가 정리된 위에), 스트림 전송 → 프레이밍/요청-응답 → TLS → 로그인 → 채팅 · 거래. 압축은 측정 벤치가 서면 어느 때나.
 
-- **`runParallel` 합류 대기가 남의 태스크(IO 등)를 도와 실행할 수 있다.** 프로파일에 보이면 IO 레인을 따로 둔다(조건부).
 - **TaskManager 스테이지 디버그 이름** — 프로파일러에 연결할 때 넣는다(지금은 연결돼 있지 않다).
 - **`fixed_string` 의 해시가 FNV(`computeHash64`)다.** 느리지만 프로파일에 안 보여 두었다(낮음).
 
@@ -1471,7 +1470,8 @@ cd build/Ninja-Debug/Bin
   `submitWithoutWake` 후 끝에 `wakeSleepingWorkers( n )` 한 번(세대도 올리지 않으므로 반드시), `notify_all` 은 2 배 손해, 모두 깨우기는 처음 읽은 유휴 마스크 안에서만(다시 잠든 워커를 쫓으면
   WSL 에서 1~90 초). `runParallel` 의 둘째 인자는 문턱이지 청크 크기가 아니다. `addTask` 는 제출 **전에**. `clear()` 는 아무것도 돌지 않을 때만(시험 전용 — 활성 수가 0xFFFFFFFF 로 감긴다),
   `_activeTaskCount` 감소는 스테이지 통지 **앞**. 이름으로 찾는 스테이지는 없다. 병렬 본문 스코프는 "현재 태스크" 를 바꾸기 **전에** 만든다.
-- **`waitStage` · `waitAll` · `runParallel` 의 `tryHelpAndExecute` 는 렌더 · 로더 스레드도 지나며 남의 잡을 실행한다.** 스크래치는 `getCurrentThreadScratchSlot()` · `getScratchSlotCount()`
+- **`waitStage` · `waitAll` · `runParallel` 의 `tryHelpAndExecute` 는 렌더 · 로더 스레드도 지나며 남의 잡을 실행한다.** `runParallel` 의 합류 대기만 Low 줄(백그라운드 I/O)을 집지 않는다 — 합류가 기다리는 것은 Normal 의 자기 티켓과 남이 도는 청크뿐이라
+  Low 를 도우면 그 태스크만큼 늦어진다(`TaskManagerTest.RunParallelJoinDoesNotHelpLowPriorityTasks`). 스테이지 · `waitAll` 대기는 Low 도 돕는다(Low 스테이지를 워커가 기다릴 수 있다). 스크래치는 `getCurrentThreadScratchSlot()` · `getScratchSlotCount()`
   (워커 + 도우미 8). 렌더 스레드는 끝날 때 `releaseCurrentThreadHelperSlot`. 멈춤 표시는 대기 쪽과 같은 락 안에서 세운다(밖에서 세우면 알림을 잃어 `join` 이 멈춘다). 자기 락을 쥔 채
   콜백을 부르지 않는다. 기다림은 횟수가 아니라 시간으로 끊는다(yield 1024 번 상한이 느린 CI 에서 프로세스를 죽였다).
 - **`TaskHandle` 은 refcount 라 `const&` 로 넘긴다.** 스케줄러 시험의 모든 대기에는 타임아웃을. 프레임마다 도는 태스크는 메서드 델리게이트로(인라인 인자 칸은 노드를 키운다).

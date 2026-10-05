@@ -41,6 +41,9 @@ namespace
     /** @brief 작은 태스크 처리량 케이스의 실행 수. */
     sw::atomic<uint32> s_ranCount{ 0 };
 
+    /** @brief 백그라운드 I/O 흉내 태스크 중 아직 끝나지 않은 수. */
+    sw::atomic<uint32> s_lowInFlight{ 0 };
+
     /**
      * @brief 요소 하나에 @p iterationCount 만큼의 의존 연산(xorshift)을 돌립니다 — 요소당 시간을 고르게 만든다.
      */
@@ -84,6 +87,15 @@ namespace
         static void tiny()
         {
             s_ranCount.fetch_add( 1, std::memory_order_relaxed );
+        }
+
+        /** @brief 백그라운드 I/O 흉내 — 2 ms 를 바쁘게 돈다(잠들면 워커가 비어 그 자리를 다른 일이 채운다). */
+        static void backgroundIo()
+        {
+            const sw::Stopwatch stopwatch;
+            while ( stopwatch.getElapsedMicroseconds() < 2000 )
+                sw::cpuPause();
+            s_lowInFlight.fetch_sub( 1, std::memory_order_relaxed );
         }
     };
 
@@ -152,6 +164,40 @@ SW_TEST_CASE( TaskManagerBenchTest, ForkJoinLatency )
     test::logBenchSamples( "forkJoin hot (back to back), 4096 x touch", listHot );
 
     SW_EXPECT_EQUAL( 0u, countWrongHits( kCount, 16 + kColdRound + kHotRound ) );
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerBenchTest] 백그라운드 I/O(Low 줄)가 늘 차 있을 때의 포크-조인 — 합류 대기가 Low 를 도우면 최악이 I/O 태스크 하나만큼 는다
+ */
+SW_TEST_CASE( TaskManagerBenchTest, ForkJoinUnderBackgroundIo )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+
+    constexpr uint32                kCount    = 256; // 요소당 ~1 us
+    constexpr uint32                kRound    = 300;
+    const uint32                    lowTarget = manager.getWorkerCount();
+    const sw::ParallelBlockDelegate body      = SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, BenchBody::computeRange );
+
+    sw::vector<int64> listSample;
+    listSample.reserve( kRound );
+    for ( uint32 round = 0; round < kRound; ++round )
+    {
+        while ( s_lowInFlight.load( std::memory_order_relaxed ) < lowTarget )
+        {
+            s_lowInFlight.fetch_add( 1, std::memory_order_relaxed );
+            sw::TaskHandle low = manager.emplaceTask( "BenchBackgroundIo", SW_DELEGATE_FUNCTION( sw::TaskDelegate, BenchBody::backgroundIo ) );
+            low.setPriority( sw::TaskPriority::Low );
+            low.submit();
+        }
+        const sw::Stopwatch stopwatch;
+        manager.runParallel( kCount, 1, body );
+        listSample.push_back( stopwatch.getElapsedMicroseconds() );
+    }
+    test::logBenchSamples( "forkJoin under background io, 256 x ~1us", listSample );
+
+    SW_EXPECT_TRUE( manager.waitAll( 10000 ) );
     manager.shutdown();
 }
 

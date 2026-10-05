@@ -292,12 +292,13 @@ namespace sw
         // --- 기다리기 ---
         /**
          * @brief 기다리는 동안의 한 걸음입니다. 메인이면 메인 일감을 돌리고, 준비된 일을 하나 돕거나, 잠깐 스핀합니다.
+         * @param bHelpLowQueue false 면 Low 줄(백그라운드 I/O)은 돕지 않습니다(`runParallel` 의 합류 대기 — 그 줄은 합류를 앞당기지 않는다).
          * @return 계속 돌아야 하면 true, 스핀 예산을 다 써서 이제 잠들 차례면 false(예산은 다시 채워 둡니다)
          * @details `waitForJoin` 과 `waitAll` 이 함께 씁니다. 둘이 다른 것은 잠드는 방법뿐입니다.
          */
-        bool helpOrSpin( uint32& inoutSpinCount );
-        /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 일감을 실행하고, 다른 일을 돕고, 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
-        void waitForJoin( JoinCounter& join );
+        bool helpOrSpin( uint32& inoutSpinCount, bool bHelpLowQueue );
+        /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 일감을 실행하고, 다른 일을 돕고(@p bHelpLowQueue 가 false 면 Low 줄은 빼고), 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
+        void waitForJoin( JoinCounter& join, bool bHelpLowQueue );
         /** @brief 이 스레드를 @p join 의 대기자로 등록하고 잠듭니다. 깨어나면 부르는 쪽이 조건을 다시 확인합니다. */
         void parkOnJoin( JoinCounter& join );
         /**
@@ -330,10 +331,10 @@ namespace sw
         // --- 큐 ---
         /** @brief Normal 큐에 넣습니다. 워커면 자기 데크(가득 차면 전역 큐), 아니면 전역 큐에 넣습니다. */
         void pushToNormalQueue( uintptr_t item );
-        /** @brief 큐 순서(High → 내 데크 → Normal 전역 → 훔치기 → Low)대로 항목 하나를 가져옵니다. @p workerId 가 음수면 워커가 아닙니다. */
-        [[nodiscard]] bool tryTakeItem( int32 workerId, uintptr_t& outItem );
+        /** @brief 큐 순서(High → 내 데크 → Normal 전역 → 훔치기 → Low)대로 항목 하나를 가져옵니다. @p workerId 가 음수면 워커가 아닙니다. @p bTakeLowQueue 가 false 면 Low 는 보지 않습니다. */
+        [[nodiscard]] bool tryTakeItem( int32 workerId, bool bTakeLowQueue, uintptr_t& outItem );
         /** @brief 이 스레드가 가져올 수 있는 항목 하나를 가져와 실행합니다. 기다리는 동안 다른 일을 돕는 곳입니다. */
-        [[nodiscard]] bool tryHelpAndExecute();
+        [[nodiscard]] bool tryHelpAndExecute( bool bHelpLowQueue );
 
     private:
         /**
