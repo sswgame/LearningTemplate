@@ -4,8 +4,13 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Quest/QuestLog.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/WeatherSystem.h"
 
 namespace sw
@@ -126,35 +131,36 @@ namespace sw
         , _listHabitat{}
         , _listCreature{}
         , _listHouse{}
+        , _listOpenRequest{}
         , _eventBuffer{}
         , _listReputationScratch{}
-        , _listQuestScratch{}
         , _friendship{}
-        , _questLog{}
         , _settings{}
         , _pCatalog{ nullptr }
+        , _pQuestLog{ nullptr }
+        , _pClock{ nullptr }
         , _topology{}
-        , _day{ 0 }
         , _nextHabitatId{ 1 }
         , _lastAttractKey{ -1 }
         , _appealTier{ -1 }
     {
     }
 
-    void CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, const ReputationCatalog* pReputationCatalog, const QuestCatalog* pQuestCatalog,
-                                   int32 width, int32 height, const CreatureTownSettings& settings )
+    void CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, const ReputationCatalog* pReputationCatalog, const GameStateRefs& refs, int32 width,
+                                   int32 height, const CreatureTownSettings& settings )
     {
-        _pCatalog = pCatalog;
-        _settings = settings;
-        _topology = GridTopology{ MathUtil::max( 1, width ), MathUtil::max( 1, height ) };
+        _pCatalog  = pCatalog;
+        _pQuestLog = refs._pQuestLog;
+        _pClock    = refs._pClock;
+        _settings  = settings;
+        _topology  = GridTopology{ MathUtil::max( 1, width ), MathUtil::max( 1, height ) };
         _listObject.assign( static_cast<size_t>( _topology.getCellCount() ), hashed_string{} );
         _listHabitat.clear();
         _listCreature.clear();
         _listHouse.clear();
+        _listOpenRequest.clear();
         _eventBuffer.clear();
         _friendship.initialize( pReputationCatalog );
-        _questLog.initialize( pQuestCatalog );
-        _day            = 0;
         _nextHabitatId  = 1;
         _lastAttractKey = -1;
         _appealTier     = -1;
@@ -206,7 +212,7 @@ namespace sw
                 TownCreature creature;
                 creature._speciesId  = species._id;
                 creature._habitat    = instance._id;
-                creature._arrivalDay = _day;
+                creature._arrivalDay = getDay();
                 creature._listAbilityUse.assign( species._listAbility.size(), 0 );
                 _listCreature.push_back( creature );
                 _eventBuffer.push( CreatureTownEvent{ species._id, {}, instance._id, CreatureTownEvent::Kind::CreatureArrived } );
@@ -225,9 +231,9 @@ namespace sw
         if ( creatureIndex < 0 )
             return CreatureInteractResult::UnknownCreature;
         TownCreature& creature = _listCreature[static_cast<size_t>( creatureIndex )];
-        if ( creature._lastTalkDay == _day )
+        if ( creature._lastTalkDay == getDay() )
             return CreatureInteractResult::AlreadyToday;
-        creature._lastTalkDay = _day;
+        creature._lastTalkDay = getDay();
         (void)_friendship.changeValue( speciesId, _settings._talkPoints );
         flushReputationEvents();
         return CreatureInteractResult::Ok;
@@ -239,11 +245,11 @@ namespace sw
         if ( creatureIndex < 0 )
             return CreatureInteractResult::UnknownCreature;
         TownCreature& creature = _listCreature[static_cast<size_t>( creatureIndex )];
-        if ( creature._lastGiftDay == _day )
+        if ( creature._lastGiftDay == getDay() )
             return CreatureInteractResult::AlreadyToday;
         if ( inventory.removeItem( itemId, 1 ) == false )
             return CreatureInteractResult::MissingItem;
-        creature._lastGiftDay              = _day;
+        creature._lastGiftDay              = getDay();
         const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( speciesId );
         int32                     points   = _settings._giftPoints;
         if ( pSpecies != nullptr && pSpecies->likesGift( itemId ) )
@@ -262,27 +268,31 @@ namespace sw
         const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( speciesId );
         if ( pSpecies == nullptr || pSpecies->offersRequest( questId ) == false )
             return CreatureRequestResult::NotOffered;
-        const QuestStartResult startResult = _questLog.start( questId, MathUtil::max( 0, _friendship.getTierIndex( speciesId ) ) );
+        if ( _pQuestLog == nullptr )
+            return CreatureRequestResult::Unavailable;
+        const QuestStartResult startResult = _pQuestLog->start( questId, MathUtil::max( 0, _friendship.getTierIndex( speciesId ) ) );
         if ( startResult == QuestStartResult::AlreadyActive )
             return CreatureRequestResult::AlreadyActive;
         if ( startResult != QuestStartResult::Ok )
             return CreatureRequestResult::Unavailable;
+        _listOpenRequest.push_back( questId );
         notifyHabitatObjectives(); // 이미 있는 서식지도 센다
-        flushQuestEvents();
+        collectCompletedRequests();
         return CreatureRequestResult::Ok;
     }
 
     int32 CreatureTown::deliverItem( const hashed_string& itemId, int32 count, Inventory& inventory )
     {
-        if ( count <= 0 || inventory.hasItem( itemId, count ) == false )
+        const bool bCanDeliver = 0 < count && _pQuestLog != nullptr && inventory.hasItem( itemId, count );
+        if ( bCanDeliver == false )
             return 0;
-        const int32 progressedCount = _questLog.notify( CreatureTownInternal::makeDeliverKind(), itemId, count );
+        const int32 progressedCount = _pQuestLog->notify( CreatureTownInternal::makeDeliverKind(), itemId, count );
         if ( progressedCount > 0 )
         {
             if ( inventory.removeItem( itemId, count ) == false )
                 SW_LOG_WARNING( "inventory lost '%#' between hasItem and removeItem", itemId.c_str() );
         }
-        flushQuestEvents();
+        collectCompletedRequests();
         return progressedCount;
     }
 
@@ -391,7 +401,6 @@ namespace sw
 
     void CreatureTown::advanceDay()
     {
-        ++_day;
         for ( TownCreature& creature : _listCreature )
             std::fill( creature._listAbilityUse.begin(), creature._listAbilityUse.end(), 0 );
         _friendship.advanceDay();
@@ -584,7 +593,7 @@ namespace sw
             }
         }
         notifyHabitatObjectives();
-        flushQuestEvents();
+        collectCompletedRequests();
         updateAppealTier();
     }
 
@@ -629,9 +638,11 @@ namespace sw
 
     void CreatureTown::notifyHabitatObjectives()
     {
+        if ( _pQuestLog == nullptr )
+            return;
         const hashed_string habitatKind = CreatureTownInternal::makeHabitatKind();
         for ( const HabitatDef& habitat : _pCatalog->getHabitats() )
-            (void)_questLog.notifyCount( habitatKind, habitat._id, countHabitats( habitat._id ) );
+            (void)_pQuestLog->notifyCount( habitatKind, habitat._id, countHabitats( habitat._id ) );
     }
 
     void CreatureTown::flushReputationEvents()
@@ -646,29 +657,43 @@ namespace sw
         updateAppealTier();
     }
 
-    void CreatureTown::flushQuestEvents()
+    void CreatureTown::collectCompletedRequests()
     {
-        _listQuestScratch.clear();
-        _questLog.drainEvents( _listQuestScratch );
-        bool bFriendshipChanged = false;
-        for ( const QuestEvent& questEvent : _listQuestScratch )
+        if ( _pQuestLog == nullptr || _listOpenRequest.empty() )
+            return;
+        bool   bFriendshipChanged = false;
+        size_t keptCount          = 0;
+        for ( size_t requestIndex = 0; requestIndex < _listOpenRequest.size(); ++requestIndex )
         {
-            if ( questEvent._kind != QuestEvent::Kind::Completed )
-                continue;
-            // 그 부탁을 하는 생물(마을에 사는) 에게 호감도를 준다.
-            for ( const TownCreature& creature : _listCreature )
+            const hashed_string questId = _listOpenRequest[requestIndex];
+            const QuestStatus   status  = _pQuestLog->getStatus( questId );
+            if ( status == QuestStatus::Active )
             {
-                const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( creature._speciesId );
-                if ( pSpecies == nullptr || pSpecies->offersRequest( questEvent._questId ) == false )
-                    continue;
-                _eventBuffer.push( CreatureTownEvent{ creature._speciesId, questEvent._questId, 0, CreatureTownEvent::Kind::RequestCompleted } );
-                (void)_friendship.changeValue( creature._speciesId, _settings._requestPoints );
-                bFriendshipChanged = true;
-                break;
+                _listOpenRequest[keptCount] = questId;
+                ++keptCount;
+                continue;
             }
+            // 끝났다 — 완료면 그 부탁을 하는 생물에게 호감도를 준다. 실패 · 포기(NotStarted)는 보상 없이 뺀다.
+            if ( status == QuestStatus::Completed && rewardRequest( questId ) )
+                bFriendshipChanged = true;
         }
+        _listOpenRequest.resize( keptCount );
         if ( bFriendshipChanged )
             flushReputationEvents();
+    }
+
+    bool CreatureTown::rewardRequest( const hashed_string& questId )
+    {
+        for ( const TownCreature& creature : _listCreature )
+        {
+            const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( creature._speciesId );
+            if ( pSpecies == nullptr || pSpecies->offersRequest( questId ) == false )
+                continue;
+            _eventBuffer.push( CreatureTownEvent{ creature._speciesId, questId, 0, CreatureTownEvent::Kind::RequestCompleted } );
+            (void)_friendship.changeValue( creature._speciesId, _settings._requestPoints );
+            return true;
+        }
+        return false;
     }
 
     void CreatureTown::updateAppealTier()
@@ -696,4 +721,181 @@ namespace sw
             return int2{ 0, 0 };
         return _topology.toCell( pHabitat->_listTile.front() );
     }
+
+    void CreatureTown::writeState( Archive& outArchive ) const
+    {
+        outArchive << _topology._width;
+        outArchive << _topology._height;
+        for ( const hashed_string& object : _listObject )
+        {
+            StateArchiveUtil::writeName( outArchive, object );
+        }
+        outArchive << static_cast<uint32>( _listHabitat.size() );
+        for ( const HabitatInstance& habitat : _listHabitat )
+        {
+            StateArchiveUtil::writeName( outArchive, habitat._habitatId );
+            StateArchiveUtil::writeInt2( outArchive, habitat._origin );
+            outArchive << habitat._id;
+            outArchive << habitat._rotation;
+            outArchive << static_cast<uint32>( habitat._listTile.size() );
+            for ( const int32 tileIndex : habitat._listTile )
+            {
+                outArchive << tileIndex;
+            }
+        }
+        outArchive << static_cast<uint32>( _listCreature.size() );
+        for ( const TownCreature& creature : _listCreature )
+        {
+            StateArchiveUtil::writeName( outArchive, creature._speciesId );
+            outArchive << static_cast<uint32>( creature._listAbilityUse.size() );
+            for ( const int32 useCount : creature._listAbilityUse )
+            {
+                outArchive << useCount;
+            }
+            outArchive << creature._habitat;
+            outArchive << creature._house;
+            outArchive << creature._lastTalkDay;
+            outArchive << creature._lastGiftDay;
+            outArchive << creature._arrivalDay;
+        }
+        outArchive << static_cast<uint32>( _listHouse.size() );
+        for ( const CreatureHouse& house : _listHouse )
+        {
+            outArchive << static_cast<uint32>( house._listResident.size() );
+            for ( const hashed_string& resident : house._listResident )
+            {
+                StateArchiveUtil::writeName( outArchive, resident );
+            }
+            StateArchiveUtil::writeInt2( outArchive, house._tile );
+            outArchive << house._capacity;
+        }
+        outArchive << static_cast<uint32>( _listOpenRequest.size() );
+        for ( const hashed_string& questId : _listOpenRequest )
+        {
+            StateArchiveUtil::writeName( outArchive, questId );
+        }
+        _friendship.writeState( outArchive );
+        outArchive << _nextHabitatId;
+        outArchive << _lastAttractKey;
+    }
+
+    bool CreatureTown::readState( Archive& archive )
+    {
+        int32 width  = 0;
+        int32 height = 0;
+        archive >> width;
+        archive >> height;
+        if ( archive.isError() || width != _topology._width || height != _topology._height )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 설정 · 빌린 일지 · 시계 포인터는 사본이 그대로 든다.
+        CreatureTown town      = *this;
+        const int32  tileCount = width * height;
+        for ( hashed_string& object : town._listObject )
+        {
+            if ( StateArchiveUtil::readName( archive, object ) == false )
+                return false;
+        }
+
+        uint32 habitatCount = 0;
+        // 서식지마다 이름(4) + 자리(8) + 번호(4) + 회전(4) + 칸 수(4) 이상
+        if ( StateArchiveUtil::readCount( archive, 24, habitatCount ) == false )
+            return false;
+        town._listHabitat.assign( habitatCount, HabitatInstance{} );
+        for ( HabitatInstance& habitat : town._listHabitat )
+        {
+            uint32 habitatTileCount = 0;
+            if ( StateArchiveUtil::readName( archive, habitat._habitatId ) == false )
+                return false;
+            StateArchiveUtil::readInt2( archive, habitat._origin );
+            archive >> habitat._id;
+            archive >> habitat._rotation;
+            if ( StateArchiveUtil::readCount( archive, 4, habitatTileCount ) == false )
+                return false;
+            habitat._listTile.resize( habitatTileCount, 0 );
+            for ( int32& tileIndex : habitat._listTile )
+            {
+                archive >> tileIndex;
+                const bool bInside = 0 <= tileIndex && tileIndex < tileCount;
+                if ( bInside == false )
+                    return false;
+            }
+        }
+
+        uint32 creatureCount = 0;
+        // 생물마다 이름(4) + 능력 수(4) + 서식지 · 집 · 대화 날 · 선물 날 · 온 날(20) 이상
+        if ( StateArchiveUtil::readCount( archive, 28, creatureCount ) == false )
+            return false;
+        town._listCreature.assign( creatureCount, TownCreature{} );
+        for ( TownCreature& creature : town._listCreature )
+        {
+            uint32     abilityCount = 0;
+            const bool bHeadRead    = StateArchiveUtil::readName( archive, creature._speciesId ) && StateArchiveUtil::readCount( archive, 4, abilityCount );
+            if ( bHeadRead == false )
+                return false;
+            creature._listAbilityUse.resize( abilityCount, 0 );
+            for ( int32& useCount : creature._listAbilityUse )
+            {
+                archive >> useCount;
+            }
+            archive >> creature._habitat;
+            archive >> creature._house;
+            archive >> creature._lastTalkDay;
+            archive >> creature._lastGiftDay;
+            archive >> creature._arrivalDay;
+        }
+
+        uint32 houseCount = 0;
+        // 집마다 사는 수(4) + 칸(8) + 정원(4) 이상
+        if ( StateArchiveUtil::readCount( archive, 16, houseCount ) == false )
+            return false;
+        town._listHouse.assign( houseCount, CreatureHouse{} );
+        for ( CreatureHouse& house : town._listHouse )
+        {
+            uint32 residentCount = 0;
+            if ( StateArchiveUtil::readCount( archive, 4, residentCount ) == false )
+                return false;
+            house._listResident.assign( residentCount, hashed_string{} );
+            for ( hashed_string& resident : house._listResident )
+            {
+                if ( StateArchiveUtil::readName( archive, resident ) == false )
+                    return false;
+            }
+            StateArchiveUtil::readInt2( archive, house._tile );
+            archive >> house._capacity;
+        }
+
+        uint32 requestCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 4, requestCount ) == false )
+            return false;
+        town._listOpenRequest.assign( requestCount, hashed_string{} );
+        for ( hashed_string& questId : town._listOpenRequest )
+        {
+            if ( StateArchiveUtil::readName( archive, questId ) == false )
+                return false;
+        }
+        if ( town._friendship.readState( archive ) == false )
+            return false;
+        archive >> town._nextHabitatId;
+        archive >> town._lastAttractKey;
+        if ( archive.isError() )
+            return false;
+
+        // 생물이 가리키는 서식지 번호 · 집 자리가 실제로 있어야 한다.
+        const int32 townHouseCount = static_cast<int32>( town._listHouse.size() );
+        for ( const TownCreature& creature : town._listCreature )
+        {
+            const bool bHabitatValid = creature._habitat < 0 || town.findHabitat( creature._habitat ) != nullptr;
+            const bool bHouseValid   = -1 <= creature._house && creature._house < townHouseCount;
+            if ( bHabitatValid == false || bHouseValid == false )
+                return false;
+        }
+        town._eventBuffer.clear();
+        town._listReputationScratch.clear();
+        town.updateAppealTier();
+        town._eventBuffer.clear(); // 되살린 단계는 알리지 않는다
+        *this = std::move( town );
+        return true;
+    }
+
+    int32 CreatureTown::getDay() const { return _pClock != nullptr ? _pClock->getDay() : 0; }
 } // namespace sw

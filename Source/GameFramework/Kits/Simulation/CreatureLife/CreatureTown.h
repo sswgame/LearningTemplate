@@ -10,7 +10,6 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Progression/Reputation.h"
-#include "GameFramework/Base/Quest/QuestLog.h"
 #include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/Base/Utility/GridTopology.h"
 #include "GameFramework/Base/World/WorldClock.h"
@@ -19,8 +18,11 @@
 
 namespace sw
 {
+    struct GameStateRefs;
+
+    class Archive;
     class Inventory;
-    class QuestCatalog;
+    class QuestLog;
     class ReputationCatalog;
     class WeatherSystem;
 
@@ -153,17 +155,24 @@ namespace sw
      *          방문 — `attractVisitors` 를 시마다 부르면 자리가 남은 서식지마다, 그 서식지를 좋아하고 지금 때 · 날씨에 오는 종(아직 마을에 없는)이
      *          `chance` 확률로 찾아옵니다. 확률은 (날 · 시 · 종 · 서식지 자리 · 씨앗) 해시라 같은 시를 두 번 불러도 같은 답입니다(두 번째는 아무 일 없음).
      *          호감도 — 기반 `ReputationState` 의 세력 하나가 생물 하나입니다. 대화 · 선물은 각각 하루 한 번, 부탁(기반 `QuestLog`)을 끝내면 오릅니다.
+     *          부탁 일지 · 시계는 빌려 씁니다 — 마을은 일지 알림을 꺼내지 않고 받은 부탁의 상태만 봅니다(알림은 게임 화면 · 다른 키트의 것). 날은 빌린 시계의 날입니다.
      *          부탁 목표는 `Deliver`(아이템) · `Habitat`(그 서식지 수)이고 퀘스트 레벨 조건은 호감도 단계 번호로 봅니다.
      *          카탈로그는 빌려 씁니다(마을보다 오래 살아야 합니다).
      */
     class SW_GF_API CreatureTown
     {
     public:
+        static constexpr uint32 kStateTag     = 0x4E575443u; ///< 'CTWN'
+        static constexpr uint32 kStateVersion = 1;
+
         CreatureTown();
 
-        /** @brief 크기를 정하고 모든 칸을 비웁니다. 평판 · 퀘스트 카탈로그는 없어도 됩니다(평판은 0..1000 단계 없음, 부탁 없음). */
-        void initialize( const CreatureLifeCatalog* pCatalog, const ReputationCatalog* pReputationCatalog, const QuestCatalog* pQuestCatalog, int32 width,
-                         int32 height, const CreatureTownSettings& settings );
+        /**
+         * @brief 크기를 정하고 모든 칸을 비웁니다. 평판 카탈로그 · 부탁 일지 · 시계는 없어도 됩니다(평판은 0..1000 단계 없음, 일지가 없으면 부탁 없음, 시계가 없으면 0 일).
+         * @param refs 빌려 쓰는 공유 상태입니다 — 마을은 `_pQuestLog`(부탁 일지) · `_pClock`(날)을 쓴다(마을보다 오래 살아야 한다). 섞인 게임은 `GameStateComponent::makeRefs()`.
+         */
+        void initialize( const CreatureLifeCatalog* pCatalog, const ReputationCatalog* pReputationCatalog, const GameStateRefs& refs, int32 width, int32 height,
+                         const CreatureTownSettings& settings );
 
         /** @brief 칸에 오브젝트를 놓습니다(빈 id 는 비우기). 서식지를 다시 맞춥니다. 밖이면 false 입니다. */
         bool setObject( int32 x, int32 y, const hashed_string& object );
@@ -190,9 +199,13 @@ namespace sw
         /** @brief 집 없는 생물을 온 순서대로 자리가 남은 가장 가까운 집(서식지 기준 맨해튼 거리, 같으면 앞 집)에 넣습니다. 넣은 수입니다. */
         int32 assignHomeless();
 
-        /** @brief 하루를 넘깁니다 — 대화 · 선물 · 능력 횟수를 되돌리고 호감도가 식습니다. */
+        /** @brief 하루를 넘깁니다 — 능력 횟수를 되돌리고 호감도가 식습니다(대화 · 선물은 시계의 날로 하루 한 번). 디렉터가 시계의 날 넘김에 부릅니다. */
         void advanceDay();
         void drainEvents( vector<CreatureTownEvent>& outListEvent );
+        /** @brief 칸 · 서식지(번호 포함) · 생물 · 집 · 받은 부탁 · 호감도를 씁니다(핫 리로드 · 세이브). 부탁 일지 · 시계는 빌린 것이라 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 마을 크기가 다르거나 깨졌으면 false 이고 그대로입니다(카탈로그 · 일지 · 시계는 `initialize` 의 것). */
+        [[nodiscard]] bool readState( Archive& archive );
 
         const hashed_string*           findObject( int32 x, int32 y ) const;
         const TownCreature*            findCreature( const hashed_string& speciesId ) const;
@@ -213,12 +226,12 @@ namespace sw
         /** @brief 매력도 점수입니다(서식지 종류 · 생물 수 · 호감도 평균). */
         float32 computeAppealScore() const;
         /** @brief 매력도 단계 번호입니다(단계가 없으면 −1). */
-        int32           getAppealTierIndex() const { return _appealTier; }
-        hashed_string   getAppealTierName() const;
-        const QuestLog& getQuestLog() const { return _questLog; }
-        int32           getDay() const { return _day; }
-        int32           getWidth() const { return _topology._width; }
-        int32           getHeight() const { return _topology._height; }
+        int32         getAppealTierIndex() const { return _appealTier; }
+        hashed_string getAppealTierName() const;
+        /** @brief 빌린 시계의 날입니다(없으면 0). */
+        int32 getDay() const;
+        int32 getWidth() const { return _topology._width; }
+        int32 getHeight() const { return _topology._height; }
 
     private:
         /** @brief 처음부터 다시 맞추고 전 결과와 견줘 생긴 · 없어진 서식지를 알립니다. */
@@ -230,23 +243,26 @@ namespace sw
         bool  hasRoom( const HabitatInstance& instance ) const;
         void  notifyHabitatObjectives();
         void  flushReputationEvents();
-        void  flushQuestEvents();
-        void  updateAppealTier();
-        int2  computeCreatureAnchor( const TownCreature& creature ) const;
+        /** @brief 받은 부탁 중 끝난 것에 보상하고 목록에서 뺍니다(실패 · 포기는 보상 없이). 일지 알림은 꺼내지 않는다. */
+        void collectCompletedRequests();
+        /** @brief 부탁 @p questId 를 하는(마을에 사는) 생물에게 호감도를 줍니다. 준 생물이 있으면 true 입니다. */
+        bool rewardRequest( const hashed_string& questId );
+        void updateAppealTier();
+        int2 computeCreatureAnchor( const TownCreature& creature ) const;
 
         vector<hashed_string>          _listObject; ///< 칸마다 오브젝트 id(`_topology` 의 칸 번호) — 빈 id 는 빈 칸
         vector<HabitatInstance>        _listHabitat;
         vector<TownCreature>           _listCreature; ///< 온 순서
         vector<CreatureHouse>          _listHouse;
+        vector<hashed_string>          _listOpenRequest; ///< 이 마을이 받은 부탁 중 아직 끝나지 않은 것(퀘스트 id)
         EventBuffer<CreatureTownEvent> _eventBuffer;
         vector<ReputationEvent>        _listReputationScratch;
-        vector<QuestEvent>             _listQuestScratch;
         ReputationState                _friendship;
-        QuestLog                       _questLog;
         CreatureTownSettings           _settings;
         const CreatureLifeCatalog*     _pCatalog;
+        QuestLog*                      _pQuestLog; ///< 빌린 부탁 일지(없으면 부탁 없음)
+        const WorldClock*              _pClock;    ///< 빌린 시계(날 — 없으면 0 일)
         GridTopology                   _topology;
-        int32                          _day;
         int32                          _nextHabitatId;
         int32                          _lastAttractKey; ///< 마지막으로 방문을 굴린 날 × 24 + 시
         int32                          _appealTier;
