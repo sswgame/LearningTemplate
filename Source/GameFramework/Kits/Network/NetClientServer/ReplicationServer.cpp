@@ -45,7 +45,7 @@ namespace sw
         {
             client          = ClientState{};
             client._bActive = SW_TRUE;
-            client._listSent.resize( static_cast<size_t>( MathUtil::max( 2, _settings._historySize ) ) );
+            client._listSent.initialize( MathUtil::max( 2, _settings._historySize ) );
         }
         return client;
     }
@@ -156,13 +156,14 @@ namespace sw
         const NetSnapshot* pBaseline = nullptr;
         if ( client._bHasAck )
         {
-            const NetSnapshot& candidate = client._listSent[static_cast<size_t>( client._ackedTick % client._listSent.size() )];
-            if ( candidate._tick == client._ackedTick && _world._tick - client._ackedTick < client._listSent.size() )
-                pBaseline = &candidate;
+            const NetSnapshot* pCandidate = client._listSent.find( client._ackedTick );
+            const bool         bRecent    = _world._tick - client._ackedTick < static_cast<uint32>( client._listSent.getCapacity() );
+            if ( pCandidate != nullptr && bRecent )
+                pBaseline = pCandidate;
         }
         BitWriter& writer = scratch._messageWriter.begin( NetClientServerMessage::kSnapshot );
-        // 보낸 재구성은 그 틱의 자리에 바로 쓴다(기준 자리와 겹치면 — 확인이 한 바퀴 늦었다 — 사본을 거친다).
-        NetSnapshot& slot = client._listSent[static_cast<size_t>( _world._tick % client._listSent.size() )];
+        // 보낸 재구성은 그 틱의 자리에 바로 쓴다(기준 자리와 겹치면 — 같은 틱을 두 번 보낸다 — 사본을 거친다). 자리의 옛 버퍼는 남는다.
+        NetSnapshot& slot = client._listSent.acquire( _world._tick );
         if ( &slot == pBaseline )
         {
             NetSnapshot written;

@@ -407,7 +407,7 @@ cd build/Ninja-Debug/Bin
 
 - **네트워크 리팩토링 남은 단계(2026-10-05 사용자 요청 — 결함 단계 N0~N12 · 키트 결함 D1~D19 는 끝남).** 공통 부품을 Core `Network/Replication/` 에 두고 키트는
   조립만 하게. 단계마다 커밋 하나, 스레드를 건드린 단계는 `--test_repeat=50`, 파괴 네트워킹 시험(`NetSimDestruction*` · `DestructionSnapshot`)을 매 단계 지킨다.
-  N14 `TickRingBuffer<T>`(`ClientPrediction` · `ReplicationClient` 스냅숏 · `ReplicationServer::_listSent` · `LagCompensationHistory` · 롤백 기록/입력 · 락스텝 map) ·
+  N14b `TickRingBuffer<T>` 남은 곳(롤백 기록 · 락스텝 map · 파괴 최근 해시 — 부품과 권위 서버 넷은 끝남) ·
   N15 `NetInputSendWindow` · `NetInputReceiveBuffer`(CS 입력 · 롤백 입력 — 1-6 CS2 식 입력 B5 와 형식 공유) · N16 `NetClock` · `InterpolationBuffer<T>`
   (`ReplicationClient::update/findBracket` 와 파괴 클라이언트의 서버 틱 추정 · 자세 표본) · N17 회선 흉내 하나로(`LoopbackConditions` 삭제) · N18 **측정 먼저**(하니스
   클라이언트 16 × 엔티티 1000, 60 Hz 의 할당 · 시간 → 숫자가 움직일 때만 메시지 풀 · O(n) 델타 · 월드 아레나) · N19 시험 도우미 다섯(`NetTestPair` · `ThreadedCluster` ·

@@ -16,9 +16,7 @@ namespace sw
         , _pHost{ nullptr }
         , _renderTime{ 0.0f }
         , _decodeFailureCount{ 0 }
-        , _latestTick{ 0 }
         , _latestInputTick{ 0 }
-        , _bHasSnapshot{ SW_FALSE }
         , _messageWriter{}
     {
     }
@@ -27,19 +25,16 @@ namespace sw
     {
         _pHost    = pHost;
         _settings = settings;
-        _listSnapshot.assign( static_cast<size_t>( MathUtil::max( 4, settings._historySize ) ), NetSnapshot{} );
+        _listSnapshot.initialize( MathUtil::max( 4, settings._historySize ) );
         _decodeFailureCount = 0;
         resetHistory();
     }
 
     void ReplicationClient::resetHistory()
     {
-        for ( NetSnapshot& snapshot : _listSnapshot )
-            snapshot._tick = 0xFFFFFFFFu;
+        _listSnapshot.reset(); // 스냅숏 버퍼는 자리에 남아 다음 연결이 다시 쓴다
         _listRecentInput.clear();
-        _renderTime   = 0.0f;
-        _latestTick   = 0;
-        _bHasSnapshot = SW_FALSE;
+        _renderTime = 0.0f;
     }
 
     void ReplicationClient::onConnectionOpened( int32 connectionId )
@@ -48,13 +43,7 @@ namespace sw
         resetHistory();
     }
 
-    const NetSnapshot* ReplicationClient::findSnapshot( uint32 tick ) const
-    {
-        const NetSnapshot& snapshot = _listSnapshot[static_cast<size_t>( tick % _listSnapshot.size() )];
-        return snapshot._tick == tick ? &snapshot : nullptr;
-    }
-
-    const NetSnapshot* ReplicationClient::getLatest() const { return _bHasSnapshot ? findSnapshot( _latestTick ) : nullptr; }
+    const NetSnapshot* ReplicationClient::getLatest() const { return _listSnapshot.hasNewest() ? _listSnapshot.find( _listSnapshot.getNewestTick() ) : nullptr; }
 
     NetHandleResult ReplicationClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
@@ -65,19 +54,17 @@ namespace sw
         const uint32 baselineCode = static_cast<uint32>( peek.readVarUint() );
         if ( peek.hasOverflowed() )
             return NetHandleResult::Malformed;
-        if ( _bHasSnapshot && tick <= _latestTick )
+        if ( _listSnapshot.hasNewest() && tick <= _listSnapshot.getNewestTick() )
             return NetHandleResult::Handled; // 늦게 온 옛것
-        const NetSnapshot* pBaseline = baselineCode != 0 ? findSnapshot( baselineCode - 1u ) : nullptr;
+        const NetSnapshot* pBaseline = baselineCode != 0 ? _listSnapshot.find( baselineCode - 1u ) : nullptr;
         NetSnapshot        snapshot;
         if ( NetSnapshot::readDelta( body, pBaseline, snapshot ) == false )
         {
             ++_decodeFailureCount; // 기준을 이미 잃은 델타도 여기로 온다 — 형식은 맞으니 깨짐으로 세지 않는다
             return NetHandleResult::Handled;
         }
-        const bool bFirst                                                 = _bHasSnapshot == SW_FALSE;
-        _listSnapshot[static_cast<size_t>( tick % _listSnapshot.size() )] = std::move( snapshot );
-        _latestTick                                                       = tick;
-        _bHasSnapshot                                                     = SW_TRUE;
+        const bool bFirst             = _listSnapshot.hasNewest() == false;
+        _listSnapshot.acquire( tick ) = std::move( snapshot ); // 가장 새 틱도 이것이 된다
         if ( bFirst )
             _renderTime = static_cast<float32>( tick ) * _settings._tickInterval - _settings._interpolationDelay;
         if ( _pHost != nullptr )
@@ -91,10 +78,10 @@ namespace sw
 
     void ReplicationClient::update( float32 deltaTime )
     {
-        if ( _bHasSnapshot == SW_FALSE || deltaTime <= 0.0f )
+        if ( _listSnapshot.hasNewest() == false || deltaTime <= 0.0f )
             return;
         // 목표 = 가장 새 스냅샷 시각 − 지연. 벗어난 만큼 조금 빠르게 · 느리게 흘려 맞춘다(튀지 않게). 크게 벗어나면 바로 맞춘다.
-        const float32 target = static_cast<float32>( _latestTick ) * _settings._tickInterval - _settings._interpolationDelay;
+        const float32 target = static_cast<float32>( _listSnapshot.getNewestTick() ) * _settings._tickInterval - _settings._interpolationDelay;
         const float32 error  = target - ( _renderTime + deltaTime );
         if ( MathUtil::abs( error ) > _settings._interpolationDelay * 4.0f )
         {
@@ -110,14 +97,14 @@ namespace sw
         pOutFrom = nullptr;
         pOutTo   = nullptr;
         outAlpha = 0.0f;
-        if ( _bHasSnapshot == SW_FALSE )
+        if ( _listSnapshot.hasNewest() == false )
             return;
         const float32 renderTick = getRenderTick();
-        // 렌더 틱 이하의 가장 새 것과 그보다 큰 가장 오래된 것.
-        const uint32 oldestTick = _latestTick >= _listSnapshot.size() ? _latestTick - static_cast<uint32>( _listSnapshot.size() ) + 1u : 0u;
-        for ( uint32 tick = _latestTick + 1u; tick-- > oldestTick; )
+        // 렌더 틱 이하의 가장 새 것과 그보다 큰 가장 오래된 것(고리가 들 수 있는 틱 안에서).
+        const uint32 oldestTick = _listSnapshot.computeOldestTick();
+        for ( uint32 tick = _listSnapshot.getNewestTick() + 1u; tick-- > oldestTick; )
         {
-            const NetSnapshot* pSnapshot = findSnapshot( tick );
+            const NetSnapshot* pSnapshot = _listSnapshot.find( tick );
             if ( pSnapshot == nullptr )
                 continue;
             if ( static_cast<float32>( tick ) <= renderTick )

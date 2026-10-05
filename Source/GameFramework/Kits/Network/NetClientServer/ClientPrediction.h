@@ -5,7 +5,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Container/vector.h"
+#include "Core/Network/Replication/TickRingBuffer.h"
 
 namespace sw
 {
@@ -15,19 +15,16 @@ namespace sw
     public:
         explicit ClientPrediction( int32 capacity = 128 )
         {
-            _listEntry.resize( static_cast<size_t>( capacity > 1 ? capacity : 2 ) );
+            _listEntry.initialize( capacity > 1 ? capacity : 2 );
         }
 
         /** @brief 이 틱에 이 입력을 적용해 나온 상태를 기억합니다. */
         void record( uint32 tick, const TInput& input, const TState& stateAfter )
         {
-            Entry& entry      = _listEntry[static_cast<size_t>( tick % _listEntry.size() )];
-            entry._tick       = tick;
+            Entry& entry      = _listEntry.acquire( tick );
             entry._input      = input;
             entry._stateAfter = stateAfter;
-            entry._bValid     = true;
-            _latestTick       = tick;
-            _bHasLatest       = true;
+            _latestTick       = tick; // 마지막으로 기록한 틱 — 다시 흘리기는 여기까지(가장 큰 틱이 아니다)
         }
 
         /**
@@ -39,21 +36,21 @@ namespace sw
         template <typename TSimulate, typename TIsClose>
         bool reconcile( uint32 serverTick, const TState& serverState, TState& inoutCurrent, TSimulate&& simulate, TIsClose&& isClose )
         {
-            Entry& entry = _listEntry[static_cast<size_t>( serverTick % _listEntry.size() )];
-            if ( _bHasLatest == false || entry._bValid == false || entry._tick != serverTick || serverTick > _latestTick )
+            Entry* pEntry = _listEntry.find( serverTick );
+            if ( pEntry == nullptr || serverTick > _latestTick )
                 return false;
-            if ( isClose( entry._stateAfter, serverState ) )
+            if ( isClose( pEntry->_stateAfter, serverState ) )
                 return false;
             // 서버 상태에서 다시 — 기록도 고친다.
-            TState state      = serverState;
-            entry._stateAfter = serverState;
+            TState state        = serverState;
+            pEntry->_stateAfter = serverState;
             for ( uint32 tick = serverTick + 1u; tick <= _latestTick; ++tick )
             {
-                Entry& next = _listEntry[static_cast<size_t>( tick % _listEntry.size() )];
-                if ( next._bValid == false || next._tick != tick )
+                Entry* pNext = _listEntry.find( tick );
+                if ( pNext == nullptr )
                     break;
-                state            = simulate( state, next._input );
-                next._stateAfter = state;
+                state              = simulate( state, pNext->_input );
+                pNext->_stateAfter = state;
             }
             inoutCurrent = state;
             ++_correctionCount;
@@ -68,13 +65,10 @@ namespace sw
         {
             TState _stateAfter{};
             TInput _input{};
-            uint32 _tick{ 0 };
-            bool   _bValid{ false };
         };
 
-        vector<Entry> _listEntry{};
-        uint32        _latestTick{ 0 };
-        uint32        _correctionCount{ 0 };
-        bool          _bHasLatest{ false };
+        TickRingBuffer<Entry> _listEntry{};
+        uint32                _latestTick{ 0 };
+        uint32                _correctionCount{ 0 };
     };
 } // namespace sw

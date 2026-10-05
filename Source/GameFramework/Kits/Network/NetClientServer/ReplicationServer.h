@@ -11,6 +11,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
+#include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetClientServer/NetSnapshot.h"
@@ -125,16 +126,16 @@ namespace sw
 
         struct ClientState
         {
-            NetPrioritizer      _prioritizer{}; ///< 관련 엔티티마다 쌓인 우선도
-            vector<NetSnapshot> _listSent{};    ///< 틱 % 크기 자리 — 보낸(재구성된) 스냅샷
-            deque<InputEntry>   _listInput{};   ///< 틱 오름차순
-            vector<uint8>       _lastInput{};
-            float32             _viewTick{ 0.0f };
-            uint32              _ackedTick{ 0 };
-            uint32              _lastProcessedInputTick{ 0 };
-            uint8               _bHasAck{ SW_FALSE };
-            uint8               _bHasInput{ SW_FALSE };
-            uint8               _bActive{ SW_FALSE };
+            NetPrioritizer              _prioritizer{}; ///< 관련 엔티티마다 쌓인 우선도
+            TickRingBuffer<NetSnapshot> _listSent{};    ///< 보낸(재구성된) 스냅샷 — 클라이언트가 확인한 틱을 델타의 기준으로 찾는다
+            deque<InputEntry>           _listInput{};   ///< 틱 오름차순
+            vector<uint8>               _lastInput{};
+            float32                     _viewTick{ 0.0f };
+            uint32                      _ackedTick{ 0 };
+            uint32                      _lastProcessedInputTick{ 0 };
+            uint8                       _bHasAck{ SW_FALSE };
+            uint8                       _bHasInput{ SW_FALSE };
+            uint8                       _bActive{ SW_FALSE };
         };
 
         /** @brief 작업 스레드 하나가 스냅샷 하나를 만드는 데 쓰는 자리입니다(틱마다 다시 쓴다). */

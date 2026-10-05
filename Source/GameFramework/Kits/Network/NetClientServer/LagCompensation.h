@@ -8,6 +8,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -34,20 +35,11 @@ namespace sw
         bool sampleAt( float32 tick, uint32 entityId, LagRecord& outRecord ) const;
         /** @brief 그 시각의 광선 맞음(가장 가까운 몸)입니다. 안 맞으면 0 입니다. */
         uint32 raycastAt( float32 tick, const float3& origin, const float3& direction, float32 maxDistance, uint32 ignoreEntityId, float32& outDistance ) const;
-        uint32 getNewestTick() const { return _newestTick; }
+        uint32 getNewestTick() const { return _listFrame.getNewestTick(); }
 
     private:
-        struct Frame
-        {
-            vector<LagRecord> _listRecord{};
-            uint32            _tick{ 0xFFFFFFFFu };
-        };
+        static const LagRecord* findRecord( const vector<LagRecord>& listRecord, uint32 entityId );
 
-        const Frame*            findFrame( uint32 tick ) const;
-        static const LagRecord* findRecord( const Frame& frame, uint32 entityId );
-
-        vector<Frame> _listFrame;
-        uint32        _newestTick;
-        bool          _bHasFrame;
+        TickRingBuffer<vector<LagRecord>> _listFrame; ///< 틱마다 맞을 수 있는 몸들 — 가장 새 틱 = 기록한 틱 중 가장 큰 것
     };
 } // namespace sw

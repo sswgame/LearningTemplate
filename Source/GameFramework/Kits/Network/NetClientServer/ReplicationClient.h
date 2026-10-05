@@ -8,6 +8,7 @@
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetClientServer/NetSnapshot.h"
@@ -63,22 +64,19 @@ namespace sw
         /** @brief 렌더 시각을 틱으로(서버의 랙 보정이 쓴다)입니다. */
         float32 getRenderTick() const { return _renderTime / _settings._tickInterval; }
         uint64  getDecodeFailureCount() const { return _decodeFailureCount; }
-        bool    hasSnapshot() const { return _bHasSnapshot != SW_FALSE; }
+        bool    hasSnapshot() const { return _listSnapshot.hasNewest(); }
 
     private:
-        void               resetHistory();
-        const NetSnapshot* findSnapshot( uint32 tick ) const;
-        void               findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, float32& outAlpha ) const;
+        void resetHistory();
+        void findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, float32& outAlpha ) const;
 
-        vector<NetSnapshot>       _listSnapshot; ///< 틱 % 크기
-        deque<vector<uint8>>      _listRecentInput;
-        ReplicationClientSettings _settings;
-        NetHost*                  _pHost;
-        float32                   _renderTime;
-        uint64                    _decodeFailureCount;
-        uint32                    _latestTick;
-        uint32                    _latestInputTick;
-        uint8                     _bHasSnapshot;
-        NetMessageWriter          _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
+        TickRingBuffer<NetSnapshot> _listSnapshot; ///< 받은 스냅숏 — 델타의 기준 · 보간 구간을 틱으로 찾는다. 가장 새 틱 = 마지막으로 받은 것
+        deque<vector<uint8>>        _listRecentInput;
+        ReplicationClientSettings   _settings;
+        NetHost*                    _pHost;
+        float32                     _renderTime;
+        uint64                      _decodeFailureCount;
+        uint32                      _latestInputTick;
+        NetMessageWriter            _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
 } // namespace sw
