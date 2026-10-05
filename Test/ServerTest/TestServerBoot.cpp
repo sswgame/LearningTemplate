@@ -39,10 +39,10 @@ namespace
     string findServerPath()
     {
         const string inBin = FileUtil::joinPath( FileUtil::getCurrentPath(), kServerExecutableName );
-        if ( FileUtil::fileExists( inBin ) )
+        if ( FileUtil::exists( inBin ) )
             return inBin;
         const string besideTest = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), kServerExecutableName );
-        return FileUtil::fileExists( besideTest ) ? besideTest : string{};
+        return FileUtil::exists( besideTest ) ? besideTest : string{};
     }
 
     /**

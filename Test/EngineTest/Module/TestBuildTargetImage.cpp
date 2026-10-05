@@ -50,7 +50,7 @@ namespace
     string findImageInBin( const utf8* pName )
     {
         const string path = FileUtil::joinPath( FileUtil::getCurrentPath(), pName );
-        return FileUtil::fileExists( path ) ? path : string{};
+        return FileUtil::exists( path ) ? path : string{};
     }
 
     /** @brief 이 빌드의 Engine 이미지(Dev 는 Engine.dll · libEngine.so, Shipping 은 시험 실행 파일 자신)입니다. */
