@@ -13,7 +13,7 @@ namespace sw
 {
     struct DialogueStepInput;
 
-    class IFlagStore;
+    class GameFlags;
 
     ENUM()
     enum class DialogueRunnerState : uint8
@@ -82,7 +82,8 @@ namespace sw
         FUNCTION( Category = "Preview", DisplayName = "Preview Line", EditorPreview = "DialogueLine" )
         void previewLine( string speaker, string text );
 
-        void setFlagStore( IFlagStore* pFlagStore );
+        /** @brief Branch 조건 · `set_flag:` 명령이 읽고 쓰는 월드 플래그입니다(빌려 씁니다 — 러너보다 오래 살아야 합니다). nullptr 이면 모든 플래그가 0 입니다. */
+        void setFlags( GameFlags* pFlags );
 
         DialogueRunnerState   getState() const;
         int32                 getCurrentNodeId() const;
@@ -125,7 +126,7 @@ namespace sw
         void notifyChoices();
 
         DialogueGraphAsset     _graph;
-        IFlagStore*            _pFlagStore;
+        GameFlags*             _pFlags;
         string                 _currentSpeaker;
         string                 _currentText;
         vector<string>         _listCurrentChoice;

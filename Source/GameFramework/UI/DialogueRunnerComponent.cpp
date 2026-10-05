@@ -7,7 +7,7 @@
 
 #include "Engine/Dialogue/DialogueCursor.h"
 
-#include "GameFramework/Framework/SaveGame.h"
+#include "GameFramework/World/GameFlags.h"
 
 namespace sw
 {
@@ -94,7 +94,7 @@ namespace sw
     DialogueRunnerComponent::DialogueRunnerComponent()
         : _graphPath{}
         , _graph{}
-        , _pFlagStore{ nullptr }
+        , _pFlags{ nullptr }
         , _currentSpeaker{}
         , _currentText{}
         , _listCurrentChoice{}
@@ -241,9 +241,9 @@ namespace sw
         notifyLine();
     }
 
-    void DialogueRunnerComponent::setFlagStore( IFlagStore* pFlagStore )
+    void DialogueRunnerComponent::setFlags( GameFlags* pFlags )
     {
-        _pFlagStore = pFlagStore;
+        _pFlags = pFlags;
     }
 
     DialogueRunnerState DialogueRunnerComponent::getState() const
@@ -355,7 +355,7 @@ namespace sw
         if ( StringUtil::startsWith( flagKey, kPrefix ) )
             flagKey = flagKey.substr( kPrefix.size() );
 
-        const int32 currentVal = ( _pFlagStore != nullptr ) ? _pFlagStore->getFlag( flagKey ) : 0;
+        const int32 currentVal = ( _pFlags != nullptr ) ? _pFlags->getFlag( hashed_string( flagKey ) ) : 0;
         return DialogueRunnerComponentInternal::compare( currentVal, op, expectedVal );
     }
 
@@ -371,7 +371,7 @@ namespace sw
         if ( _onEvent.isBound() )
             _onEvent( actionCmd );
 
-        if ( _pFlagStore != nullptr )
+        if ( _pFlags != nullptr )
         {
             constexpr string_view kSetFlag = "set_flag:";
             if ( StringUtil::startsWith( actionCmd, kSetFlag ) )
@@ -382,7 +382,8 @@ namespace sw
                 int32        val{ 1 };
                 if ( colon != string::npos && StringUtil::parseInt( rest.substr( colon + 1 ), val ) == false )
                     SW_LOG_WARNING( "Dialogue action '%#' sets a value that is not a number - using 1", rest );
-                _pFlagStore->setFlag( key, val );
+                // 0 은 지우기다(`GameFlags` 규칙) — 읽는 쪽에는 없는 플래그와 같은 0 이다.
+                _pFlags->setFlag( hashed_string( key ), val );
             }
         }
     }

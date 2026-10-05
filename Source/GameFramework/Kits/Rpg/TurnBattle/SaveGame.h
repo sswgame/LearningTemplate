@@ -22,7 +22,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /** @brief 맵 · 좌표 · 플래그 · 파티를 리플렉션으로 파일에 저장합니다. */
     REFLECT()
-    struct SW_GF_API TurnBattleSaveGame : public SaveGame, public IFlagStore
+    struct SW_GF_API TurnBattleSaveGame : public SaveGame
     {
     public:
         REFLECT_BODY();
@@ -52,9 +52,9 @@ namespace sw
         void ensureStartMap();
 
         /** @brief 플래그 값을 반환합니다. 없으면 defaultValue 입니다. */
-        int32 getFlag( string_view key, int32 defaultValue = 0 ) const override;
+        int32 getFlag( string_view key, int32 defaultValue = 0 ) const;
         /** @brief 플래그 값을 설정합니다. */
-        void setFlag( string_view key, int32 value ) override;
+        void setFlag( string_view key, int32 value );
 
         /** @brief 세이브 데이터를 파일로 저장합니다. */
         [[nodiscard]] bool saveToFile( string_view path ) const override;

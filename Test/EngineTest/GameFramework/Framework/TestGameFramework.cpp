@@ -53,6 +53,7 @@
 #include "GameFramework/UI/HealthBarComponent.h"
 #include "GameFramework/World/DontDestroyOnLoadComponent.h"
 #include "GameFramework/World/FadeOutComponent.h"
+#include "GameFramework/World/GameFlags.h"
 #include "GameFramework/World/GravityComponent.h"
 
 #include "TestFramework/TestFramework.h"
@@ -463,9 +464,9 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentBasicFlow )
  */
 SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentChoiceBranchAndAction )
 {
-    TurnBattleSaveGame      save;
+    GameFlags               flags;
     DialogueRunnerComponent runner;
-    runner.setFlagStore( &save );
+    runner.setFlags( &flags );
 
     const string testJson = R"({
 		"nodes": [
@@ -502,7 +503,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentChoiceBranchAndAction )
 
     // 0번 선택지 (Accept) 선택 -> Action 노드 실행 -> 플래그 설정 -> Dialogue(4)
     SW_EXPECT_TRUE( runner.selectChoice( 0 ) );
-    SW_EXPECT_EQUAL( 1, save.getFlag( "quest_started" ) );
+    SW_EXPECT_EQUAL( 1, flags.getFlag( "quest_started" ) );
     SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::ShowingDialogue ), static_cast<uint8>( runner.getState() ) );
     SW_EXPECT_EQUAL( "Quest accepted!", runner.getCurrentText() );
 
@@ -554,14 +555,14 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentEditorTool100ScaleFormat
  */
 SW_TEST_CASE( GameFrameworkTest, DialogueConditionUnderstandsEveryComparison )
 {
-    TurnBattleSaveGame save;
-    save.setFlag( "gold", 10 );
+    GameFlags flags;
+    flags.setFlag( "gold", 10 );
 
     // Start → Branch(조건) → 참이면 "yes", 거짓이면 "no" 를 보여 준다.
-    const auto takesTrueBranch = [&save]( const utf8* pCondition ) -> bool
+    const auto takesTrueBranch = [&flags]( const utf8* pCondition ) -> bool
     {
         DialogueRunnerComponent runner;
-        runner.setFlagStore( &save );
+        runner.setFlags( &flags );
         string json = R"({ "nodes": [ { "id": 1, "type": "Start" }, { "id": 2, "type": "Branch", "condition": ")";
         json += pCondition;
         json += R"(" }, { "id": 3, "type": "Dialogue", "speaker": "S", "text": "yes" },

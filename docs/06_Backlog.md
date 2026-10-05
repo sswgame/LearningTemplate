@@ -210,7 +210,7 @@ cd build/Ninja-Debug/Bin
   - 중간: `SpatialHashGrid2D`(RTS 버킷 · NetMmo 관심 격자 — 둘의 질의 모양이 달라 함께 뽑을 이득을 아직 못 봤다) · 키트의 칸 저장소를
     `GridTopology` 위로(CreatureTown · FarmField · TileMap · ActionPlatformerBody 의 `y × 너비 + x` 손셈 — 이웃 표 · 탐색은 이미 옮겼다) ·
     NetConnection 메시지 버퍼 재사용 ·
-    `GameFlags` 와 `IFlagStore` 하나로 · TurnBattle 키트 정리.
+    TurnBattle 키트 정리.
   - 동작이 바뀌는 것(시험 먼저): 아이템/효과 처리기 등록부 · `TimedModifierSet`.
 
 - **카메라 — 프리셋 데이터 · 블렌드 · 시퀀서(사용자 승인 로드맵).** 1~3 단계(프리셋 XML · 블렌드 · 디렉터, 모드(직교 · 궤도 · 따라가기 · 1인칭 · 3인칭 ·
