@@ -170,13 +170,11 @@ namespace sw
     void Mesh::releaseVertexBuffer()
     {
         // 소멸자에서도 불린다. 그 시점에 디바이스가 이미 죽었다면 통보가 먼저 와서 여기를 비워 놓았으므로,
-        // getLiveDevice() 는 널을 반환하고 destroy 로 뛰어들지 않는다.
+        // getLiveDevice() 는 널을 반환하고 반환으로 뛰어들지 않는다.
+        // 마지막 소유는 게임 스레드가 아무 때나 놓는다(지형 LOD 교체 · 씬 교체). 렌더 스레드가 프레임을 기록하는 동안이면 반환을 그 프레임 뒤로
+        // 미룬다 — 팩터리를 직접 부르면 기록이 읽는 백엔드 표(DX11 버퍼 SRV · 기록 상태의 묶인 정점 버퍼)를 기록과 겹쳐 쓴다.
         if ( IRHIDevice* pLiveDevice = _vertex.getLiveDevice() )
-        {
-            IRHIResourceFactory* pResource = pLiveDevice->getResourceFactory();
-            if ( pResource != nullptr )
-                pResource->destroyBuffer( _vertex._buffer );
-        }
+            pLiveDevice->releaseHandle( RHIHandleKind::Buffer, _vertex._buffer );
         _vertex.forget();
     }
 } // namespace sw

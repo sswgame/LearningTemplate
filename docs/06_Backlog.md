@@ -129,11 +129,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
-- **DX11 + 환경 쇼케이스에서 bindless 버퍼 SRV 표 경합** — `-dx11 -gv_firstScene=game/empty/maps/envshowcase.scene.xml -gv_profileFrames=2500` 5 번 중 1 번
-  DataRaceDetector 로 종료 3: 렌더 스레드 `D3D11RHICommandContext::findBindlessBufferSrv`(ShaderParameterBinder::bindGraphics)가 표를 읽는 동안 다른 스레드가 쓴다.
-  쓰는 쪽은 스택에 없다 — 지형 · 식생 · 물 컴포넌트가 게임 스레드에서 GPU 버퍼를 만들거나(`registerBindlessResource`) 내리는 자리를 먼저 본다(3-7 의 "bindless 표를
-  바꾸는 일은 병렬 기록과 겹치면 안 된다"). 같은 실행의 MaterialInstance 덮어쓰기 목록 경합은 잠금으로 닫았다.
-
 - **추가 뷰(CCTV · PiP · 렌더 텍스처)의 투명 순서는 주 카메라 기준이다.** 투명 순서의 정본이 CPU `sortTransparent` 하나가 되면서(twod-basics) 시선 축 · 깊이를
   주 카메라로 한 번 정하고, GPU `instancesort` 는 뷰마다 인스턴스 번호로 되돌리기만 한다. 추가 뷰가 주 카메라와 크게 다른 쪽을 보면 겹친 투명 물체의 앞뒤가 틀린다 —
   뷰마다 CPU 정렬 키를 따로 두거나 뷰별 키를 GPU 정렬에 다시 넣는다.
@@ -1115,7 +1110,8 @@ cd build/Ninja-Debug/Bin
 - **GPU 자원을 든 객체의 마지막 소유는 게임 스레드가 아무 때나 놓는다 — 핸들 반환은 `IRHIDevice::releaseHandle` 로.** GpuScene 후보 · 걷은 뷰가 마지막 소유가 되면
   소멸이 수집 잡 안에서 일어나고, 그때 렌더 스레드가 병렬 기록 중이면 bindless 표가 바뀐다(핫 리로드한 StarSkirmish · VoxelCraft · Shooter3D 가 Debug 단언으로 죽었다).
   `releaseHandle` 은 렌더 스레드가 프레임을 들고 있으면 그 프레임 뒤(RT 의 `flushDeferredHandleReleases`)로 미룬다(언리얼 `FDeferredCleanupInterface`).
-  `Material` · `MaterialInstance` · `Texture2D` 가 쓴다 — 새로 GPU 자원을 드는 객체도 팩터리를 직접 부르지 말고 이것으로 내린다.
+  `Material` · `MaterialInstance` · `Texture2D` · `Mesh` 가 쓴다 — 새로 GPU 자원을 드는 객체도 팩터리를 직접 부르지 말고 이것으로 내린다(`Mesh` 만 빠져 있어 지형 LOD 교체가
+  DX11 버퍼 SRV 표를 기록과 겹쳐 썼다). 주의: `sw::unordered_map::erase` 는 없는 키여도 쓰기다(DataRaceDetector 가 잡는다).
 - **기본 포워드 파이프라인의 톤맵(Reinhard `c/(c+1)`)은 흰색을 0.5 로 누른다** — 2D 화면이 회색으로 죽는다. 2D 는 `forward2dpipeline.xml`(`-gv_renderPipeline`).
   씬의 `_localRotation` 은 라디안이다(`Units=rad`) — "0,0,-90" 은 조용히 엉뚱한 방향이다.
 - **머티리얼이 쓰는 새 셰이더는 `ShaderCookRequest.cpp` 의 엔진 셰이더 목록에도 넣는다** — 머티리얼 쿠킹은 퍼뮤테이션 해시가 붙은 변형만 굽는데 머티리얼은

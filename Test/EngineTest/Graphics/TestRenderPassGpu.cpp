@@ -2309,6 +2309,34 @@ SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
 }
 
 /**
+ * @brief 렌더 스레드가 프레임을 든 동안 다른 스레드가 메시의 마지막 소유를 놓으면 정점 버퍼 반환이 그 프레임 뒤로 미뤄진다.
+ * @details 지형 LOD 교체 · 씬 교체가 게임 스레드에서 메시를 놓는다. 그 자리에서 `destroyBuffer` 를 부르면 렌더 스레드가 기록하며 읽는
+ *          백엔드 표(DX11 버퍼 SRV · 기록 상태의 묶인 정점 버퍼)를 쓴다 — DX11 + 환경 쇼케이스가 DataRaceDetector 로 죽었다(5 번 중 2 번).
+ */
+SW_TEST_CASE( RenderPassGpuTest, MeshReleaseWaitsForTheRenderThreadFrame )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label = sw::string( device->getBackendName() );
+        sw::shared_ptr<sw::Mesh> mesh  = sw::MeshUtil::createUnitCube();
+        SW_ASSERT_NOT_NULL( mesh.get() );
+        SW_EXPECT_TRUE_MSG( mesh->initRhi( device.get() ), label.c_str() );
+
+        // 렌더 스레드가 프레임을 들고 있다. 이 시험 스레드는 렌더 스레드가 아니다(묶인 렌더 스레드가 없다).
+        const size_t deferredBefore = device->getDeferredHandleCount();
+        device->notifyRenderFrameQueued();
+        mesh.reset();
+        SW_EXPECT_TRUE_MSG( device->getDeferredHandleCount() == deferredBefore + 1, label.c_str() );
+
+        // 프레임이 끝나고 비우면 내린다.
+        device->notifyRenderFrameRetired();
+        device->flushDeferredHandleReleases();
+        SW_EXPECT_TRUE_MSG( device->getDeferredHandleCount() == 0, label.c_str() );
+    }
+}
+
+/**
  * @brief 새 디바이스가 서면 등록부가 **스스로** 리소스를 되살린다 — 아무도 각 리소스를 손으로 다시 올리지 않는다.
  * @details 이 테스트가 지키는 것은 "어느 캐시를 다시 올려야 하는지 기억하지 않아도 된다" 이다. 되살릴 목록을
  *          바깥이 들면 목록에서 빠진 것은 교체 뒤 조용히 비어 있다. 아래 initAllFor 한 줄을 지우면 이 테스트가 빨개진다.
