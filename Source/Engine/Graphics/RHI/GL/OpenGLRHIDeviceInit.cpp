@@ -456,19 +456,20 @@ namespace sw
         SW_LOG_TRACE( "OpenGL RHI Resized to %#×%#", width, height );
     }
 
+    bool OpenGLRHIDevice::tryMakeCurrentAndRecordOwner()
+    {
+        if ( _platformContext->makeCurrent() == false )
+            return false;
+        _contextOwnerThread.store( std::this_thread::get_id(), std::memory_order_relaxed );
+        _contextOwnedSinceNanos.store( static_cast<uint64>( MonotonicClock::nowNanoseconds() ), std::memory_order_relaxed );
+        return true;
+    }
+
     bool OpenGLRHIDevice::bindGraphicsContext()
     {
-        if ( _bInitialized == SW_FALSE || _platformContext == nullptr )
-            return false;
-
-        // 플랫폼 구현은 조용하므로(경합은 정상이다) 실패 로그는 여기서 남긴다. 기다리지 않고
-        // 부르는 쪽은 이 한 번의 시도로 끝낸다.
-        if ( _platformContext->makeCurrent() == false )
-        {
-            SW_LOG_ERROR( "bindGraphicsContext failed - the context is held by another thread" );
-            return false;
-        }
-        return true;
+        // 렌더 워커 · 자원 생성 가드(ScopedOpenGLContext)는 프레임 끝 · 생성 끝에 놓는다. 한 번만 시도하면 그 짧은 사이에 진 쪽이 [Error] 를 남기고
+        // 그 프레임의 GL 호출을 모두 잃는다 — 기다리는 쪽과 같은 시한으로 기다린다.
+        return acquireGraphicsContextBlocking( kContextAcquireTimeoutMs );
     }
 
     bool OpenGLRHIDevice::acquireGraphicsContextBlocking( uint32 timeoutMs )
@@ -477,7 +478,7 @@ namespace sw
             return false;
 
         // 경합이 없을 때의 정상 경로다. 대개 여기서 끝난다.
-        if ( _platformContext->makeCurrent() )
+        if ( tryMakeCurrentAndRecordOwner() )
             return true;
 
         // 렌더 워커가 프레임 끝마다 놓는다. 조용히 다시 집는다. 시도마다 로그를 남기면 정상
@@ -486,12 +487,18 @@ namespace sw
         while ( deadline.isExpired() == false )
         {
             std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-            if ( _platformContext->makeCurrent() )
+            if ( tryMakeCurrentAndRecordOwner() )
                 return true;
         }
 
-        SW_LOG_ERROR( "acquireGraphicsContextBlocking timed out - GL calls on this thread will be dropped (ms=%#)",
-                      timeoutMs );
+        // 누가 쥐었는지 적는다 — 렌더 스레드인지(드레인 등록 때 받은 id) 다른 스레드인지, 얼마나 오래인지.
+        const std::thread::id owner      = _contextOwnerThread.load( std::memory_order_relaxed );
+        const uint64          nowNanos   = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
+        const uint64          sinceNanos = _contextOwnedSinceNanos.load( std::memory_order_relaxed );
+        const uint64          heldMs     = nowNanos > sinceNanos ? ( nowNanos - sinceNanos ) / 1000000ull : 0ull;
+        const bool            bRtOwner   = owner == _renderThreadId && owner != std::thread::id{};
+        SW_LOG_ERROR( "GL context not acquired in %# ms - held by thread %# (%#) for %# ms; GL calls on this thread are dropped", timeoutMs,
+                      static_cast<uint64>( std::hash<std::thread::id>{}( owner ) ), bRtOwner ? "render thread" : "not the render thread", heldMs );
         return false;
     }
 
@@ -506,6 +513,7 @@ namespace sw
     {
         if ( _bInitialized == SW_FALSE || _platformContext == nullptr )
             return;
+        _contextOwnerThread.store( std::thread::id{}, std::memory_order_relaxed );
         _platformContext->clearCurrent();
     }
 } // namespace sw

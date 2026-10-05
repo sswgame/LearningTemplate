@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
@@ -154,11 +155,16 @@ namespace sw
          * @brief 컨텍스트를 이 스레드로 가져옵니다. 다른 스레드가 쥐고 있으면 놓을 때까지 기다립니다.
          * @details GL 컨텍스트는 한 스레드만 current 로 가질 수 있습니다. 렌더 워커는 프레임이 끝나면
          *          놓으므로(`RenderThread::executePacket`) 기다리면 한 프레임 안에 차례가 옵니다.
-         *          그래서 `bindGraphicsContext` 처럼 한 번 시도하고 포기하는 대신 조용히 다시 집습니다.
+         *          그래서 한 번 시도하고 포기하는 대신 조용히 다시 집습니다. 못 잡으면 쥔 스레드와 쥔 시간을 로그에 남깁니다.
          * @param timeoutMs 포기까지 기다리는 시간(ms).
          * @return 가져왔으면 true. 제한 시간을 넘기면 false 이며 그때만 로그를 남깁니다.
          */
         bool acquireGraphicsContextBlocking( uint32 timeoutMs = kContextAcquireTimeoutMs );
+        /**
+         * @brief 컨텍스트를 이 스레드에 바인딩합니다. 다른 스레드가 쥐고 있으면 `kContextAcquireTimeoutMs` 까지 기다립니다.
+         * @details 렌더 워커 · 자원 생성 가드(ScopedOpenGLContext)와 같은 규칙이다 — 한 번만 시도하면 자원 생성 가드가 쥔 짧은 순간에 렌더 스레드가
+         *          `[Error]` 를 남기고 그 프레임의 GL 호출을 모두 잃는다.
+         */
         bool bindGraphicsContext() override;
         /** @brief 이 스레드에 이미 우리 컨텍스트가 current 인지 묻습니다. ScopedOpenGLContext 가 남의 바인딩을 풀지 않게 하는 근거입니다. */
         bool isGraphicsContextCurrent() const;
@@ -175,6 +181,8 @@ namespace sw
         void executeCommandList( IRHICommandList* pCmdList ) override;
 
     private:
+        /** @brief makeCurrent 한 번을 시도하고, 되면 쥔 스레드와 시각을 적습니다. */
+        [[nodiscard]] bool tryMakeCurrentAndRecordOwner();
         /** @brief 타임스탬프 쿼리 객체를 한 번만 만듭니다. */
         void ensureTimestampQueries();
         /** @brief 다시 쓰기 직전의 묶음에서 결과를 마이크로초로 풉니다 (기다리지 않습니다). */
@@ -333,6 +341,9 @@ namespace sw
         uint32 _materialSampler; ///< 머티리얼 텍스처 유닛 t5..t8 (선형 · 랩, shaderslot::kMaterialTextureSampler)
         uint32 _engineSampler;   ///< 엔진 텍스처 유닛 t0..t3 (선형 · 클램프, shaderslot::kEngineTextureSampler)
         uint32 _defaultTexture;
+        /// @brief 지금 컨텍스트를 쥔 스레드(없으면 기본값)와 쥔 시각입니다 — 잡기에 실패했을 때 누가 쥐었는지 로그에 적는다(진단 전용).
+        atomic<std::thread::id> _contextOwnerThread;
+        atomic<uint64>          _contextOwnedSinceNanos;
 
         RHIHandleTable<uint32> _gpuBuffers;
         /// @brief 기록 상태입니다. GL 은 실제 상태가 하나라 리스트도 이것을 함께 씁니다(OpenGLRecordingState 참고).
