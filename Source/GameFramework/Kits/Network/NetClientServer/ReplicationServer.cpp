@@ -21,6 +21,7 @@ namespace sw
         , _snapshotScratch{}
         , _listConnectionScratch{}
         , _listClientScratch{}
+        , _oversizedEntityCount{ 0 }
         , _pRangeConnection{ nullptr }
         , _ppRangeClient{ nullptr }
     {
@@ -77,6 +78,14 @@ namespace sw
 
     void ReplicationServer::setEntity( uint32 entityId, uint32 typeId, const vector<uint8>& buffer )
     {
+        if ( static_cast<int32>( buffer.size() ) > NetSnapshot::kMaxEntityBytes )
+        {
+            // 월드에는 넣는다(빼면 클라이언트에서 사라진다) — 델타가 싣지 않아 클라이언트는 마지막으로 받은 상태에 머문다.
+            if ( _oversizedEntityCount == 0 )
+                SW_LOG_WARNING( "ReplicationServer: entity %# has %# state bytes, more than the snapshot limit %# - it is not replicated (further ones are only counted)",
+                                entityId, static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
+            ++_oversizedEntityCount;
+        }
         NetEntityState entity;
         entity._entityId = entityId;
         entity._typeId   = typeId;
@@ -119,8 +128,8 @@ namespace sw
         NetSnapshot& filtered            = scratch._filtered;
         filtered._tick                   = _world._tick;
         filtered._lastProcessedInputTick = client._lastProcessedInputTick;
-        vector<float32>& listPriority    = scratch._listPriority;
-        listPriority.clear();
+        NetPrioritizer& prioritizer      = client._prioritizer;
+        prioritizer.beginAccumulate();
         size_t relevantCount = 0;
         for ( const NetEntityState& entity : std::as_const( _world._listEntity ) ) // 여러 워커가 함께 읽는다
         {
@@ -131,16 +140,17 @@ namespace sw
             else
                 filtered._listEntity.push_back( entity );
             ++relevantCount;
-            listPriority.push_back( _pPolicy->computePriority( connectionId, entity ) );
+            prioritizer.accumulate( entity._entityId, _pPolicy->computePriority( connectionId, entity ), 1.0f ); // 스냅샷 하나 = 한 번
         }
         filtered._listEntity.resize( relevantCount );
+        prioritizer.removeUntouched(); // 더는 관련 없는 엔티티는 잊는다(다시 관련되면 0 에서)
+        // 쌓인 것이 큰 것부터 — 관련 엔티티는 id 순이라 자리를 이분 탐색으로 찾는다.
+        vector<uint32>& listOrderEntity = scratch._listOrderEntity;
+        prioritizer.collectOrder( listOrderEntity );
         vector<int32>& listOrder = scratch._listOrder;
-        listOrder.resize( relevantCount );
-        for ( size_t index = 0; index < listOrder.size(); ++index )
-            listOrder[index] = static_cast<int32>( index );
-        std::stable_sort( listOrder.begin(), listOrder.end(),
-                          [&listPriority]( int32 lhs, int32 rhs )
-        { return listPriority[static_cast<size_t>( lhs )] > listPriority[static_cast<size_t>( rhs )]; } );
+        listOrder.resize( listOrderEntity.size() );
+        for ( size_t index = 0; index < listOrderEntity.size(); ++index )
+            listOrder[index] = static_cast<int32>( filtered.findEntity( listOrderEntity[index] ) - filtered._listEntity.data() );
 
         // 기준 — 클라이언트가 확인한 틱의 우리가 보낸 재구성. 너무 오래돼 덮였으면 기준 없이.
         const NetSnapshot* pBaseline = nullptr;
@@ -156,12 +166,18 @@ namespace sw
         if ( &slot == pBaseline )
         {
             NetSnapshot written;
-            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, written, &listOrder );
+            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, written, &listOrder, &scratch._listCurrent );
             slot = std::move( written );
         }
         else
         {
-            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, slot, &listOrder );
+            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, slot, &listOrder, &scratch._listCurrent );
+        }
+        // 실었거나 받는 쪽이 이미 지금 상태인 것만 0 으로 — 못 실은 것은 쌓인 채로 다음 스냅샷에서 앞선다.
+        for ( size_t index = 0; index < filtered._listEntity.size(); ++index )
+        {
+            if ( scratch._listCurrent[index] != 0 )
+                prioritizer.markSent( filtered._listEntity[index]._entityId );
         }
         (void)scratch._messageWriter.send( *_pHost, connectionId, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 — NetHost 가 지킨다
     }
@@ -191,15 +207,15 @@ namespace sw
         const uint32 latestTick = static_cast<uint32>( reader.readVarUint() );
         const uint32 viewTick   = static_cast<uint32>( reader.readVarUint() );
         const uint32 count      = static_cast<uint32>( reader.readVarUint() );
-        if ( reader.hasOverflowed() || count > 32 )
+        if ( reader.hasOverflowed() || count > static_cast<uint32>( NetClientServerMessage::kMaxRedundantInputCount ) )
             return false;
         client._viewTick = static_cast<float32>( viewTick ) / 256.0f;
         // 새 것부터 실려 있다 — 이미 쓴 틱 · 이미 가진 틱은 건너뛴다.
         for ( uint32 index = 0; index < count && index <= latestTick; ++index )
         {
-            const uint32 tick      = latestTick - index;
-            const int32  byteCount = static_cast<int32>( MathUtil::min<uint64>( 255, reader.readVarUint() ) );
-            // 쓸 틱인지 먼저 본다 — 같은 입력이 여러 패킷에 겹쳐 실려 오므로(최대 32 개) 대부분은 버릴 것이고, 버릴 것에는 버퍼를 잡지 않는다.
+            const uint32 tick = latestTick - index;
+            // 쓸 틱인지 먼저 본다 — 같은 입력이 여러 패킷에 겹쳐 실려 오므로 대부분은 버릴 것이고, 버릴 것에는 버퍼를 잡지 않는다.
+            // 길이가 상한을 넘으면 자르지 않고 깨짐으로 본다 — 자르면 남은 바이트를 다음 입력의 길이로 읽는다.
             const auto inputIter    = std::lower_bound( client._listInput.begin(), client._listInput.end(), tick,
                                                         []( const InputEntry& entry, uint32 value )
                { return entry._tick < value; } );
@@ -207,12 +223,12 @@ namespace sw
             const bool bAlreadyHave = inputIter != client._listInput.end() && inputIter->_tick == tick;
             if ( bAlreadyUsed || bAlreadyHave )
             {
-                if ( reader.skipBytes( byteCount ) == false )
+                if ( reader.skipBlob( NetClientServerMessage::kMaxInputBytes ) == false )
                     return false;
                 continue;
             }
-            vector<uint8> inputBuffer( static_cast<size_t>( byteCount ) );
-            if ( byteCount > 0 && reader.readBytes( inputBuffer.data(), byteCount ) == false )
+            vector<uint8> inputBuffer;
+            if ( reader.readBlob( inputBuffer, NetClientServerMessage::kMaxInputBytes ) == false )
                 return false;
             client._listInput.insert( inputIter, InputEntry{ std::move( inputBuffer ), tick } );
         }
@@ -259,6 +275,8 @@ namespace sw
     {
         return connectionId >= 0 && connectionId < static_cast<int32>( _listClient.size() ) ? _listClient[static_cast<size_t>( connectionId )]._viewTick : 0.0f;
     }
+
+    uint64 ReplicationServer::getOversizedEntityCount() const { return _oversizedEntityCount; }
 
     uint32 ReplicationServer::getAckedTick( int32 connectionId ) const
     {

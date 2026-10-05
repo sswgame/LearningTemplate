@@ -214,7 +214,7 @@ cd build/Ninja-Debug/Bin
     `GridTopology` 위로(CreatureTown · FarmField · TileMap · ActionPlatformerBody 의 `y × 너비 + x` 손셈 — 이웃 표 · 탐색은 이미 옮겼다) ·
     NetConnection 메시지 버퍼 재사용 ·
     `GameFlags` 와 `IFlagStore` 하나로 · TurnBattle 키트 정리.
-  - 동작이 바뀌는 것(시험 먼저): `NetPrioritizer` 공유 · 아이템/효과 처리기 등록부 · `TimedModifierSet`.
+  - 동작이 바뀌는 것(시험 먼저): 아이템/효과 처리기 등록부 · `TimedModifierSet`.
 
 - **카메라 — 프리셋 데이터 · 블렌드 · 시퀀서(사용자 승인 로드맵).** 1~3 단계(프리셋 XML · 블렌드 · 디렉터, 모드(직교 · 궤도 · 따라가기 · 1인칭 · 3인칭 ·
   CCTV) · 입력 · 카메라 매니저(뷰 타깃 블렌드), 흔들림 · 제약 · 프레이밍 · 스프링 암)와 4 단계(다중 뷰 렌더 · 컷 프레임 신호 · 초상화 굽기)는 들어갔다
@@ -399,6 +399,10 @@ cd build/Ninja-Debug/Bin
   `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ 전용 서버 프로세스 모드(창 · 렌더러 없는 App 서버 +
   UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다. ⑤ `NetSimDestructionMatrixTest`(나쁜 회선 둘)는 Debug 40 초라
   호스트 스위트로 두었다 — `EngineTest_NoGPU` 가 이미 100 초를 넘어(한도 180) `SHARDS` 와 `HOST_SPLIT` 을 함께 쓸 수 있게 되면 nogpu 로 옮긴다.
+
+- **네트워크 — 복제 키트에서 남은 것**(2026-10-05, N5~N7 뒤). ① MMO 비신뢰 갱신을 잃어도 서버는 모른다 — 보낸 순간 `_listSentState` 를 바꿔 "안 바뀜" 으로 보고
+  가속하지 않으니 다음 차례(누적 우선도)까지 옛 상태가 보인다. 메시지 전달 통지(`NetConnection` 패킷 확인 → 메시지)가 생기면 확인 기준으로 바꾼다. ② 클라이언트-서버도
+  우선도를 보낼 때 0 으로 돌려, 실린 스냅숏이 순서만 채널에서 다음 것에 밀리거나 잃으면 낮은 우선도는 한 차례(우선도 비 만큼) 더 기다린다(하니스: 11 → 최대 20 틱).
 
 - **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는
   표준 API 라 줄이려면 Win32 · POSIX 순회로 바꾼다. 상주량은 1 KB 미만이라 전역 operator new 교체는 하지 않는다(사용자 결정).
@@ -809,6 +813,8 @@ cd build/Ninja-Debug/Bin
 - **`CheckCodeConventions` 알아 둘 것** — 명명 판정은 `kMapContainerVocabulary` × `kMapNamingSubject` 표 하나. `Style/BitfieldBoolean` · `Naming/DuplicateInternalHelper` ·
   `Style/HeaderMemberInitializer` 는 전체 스캔에서만 돈다. `Naming/OutParameter` 는 `out` 이 든 지역 변수(`arrOutput`)를 오탐한다. 게이트는 파일을 동시에 훑으니 규칙
   객체에 상태를 들지 말 것. 자기 시험 조각은 그 검사가 **통과하는** 바탕(`_kCleanFixture`) 위에 위반 하나만 얹는다.
+  `Style/ConstructorOrder` 는 헤더에서 읽은 멤버 순서와 비교하므로, 멤버 선언을 못 읽으면(예전엔 `Widget* const* _ppWidget`) 순서가 맞아도 위반으로 건다 —
+  멤버 정규식 `_kClassMemberRe` 를 넓히면 `_kWholeScanCleanCase` 의 `RangeTable` 조각으로 확인한다.
 - **린트 정규식에 `(식별자+ … \s*)+` 모양을 쓰지 말 것** — 빈 구분자로 식별자를 몇 조각으로든 나눌 수 있어 맞지 않는 줄에서 역추적이 지수로 는다(한 줄 7 초,
   커밋 훅이 부하에서 수십 분). 식별자 뒤에 `(?![A-Za-z0-9_:])` 를 붙인다. 느린 게이트는 파일별 시간부터 정렬해 볼 것 — 평균이 아니라 몇 파일이 지배한다.
   줄 규칙의 `"글자" in line and 정규식` 앞 검사는 그 정규식이 반드시 품는 글자다 — 정규식을 바꾸면 같이 본다.
@@ -1307,6 +1313,8 @@ cd build/Ninja-Debug/Bin
   받기 포함). `SIO_UDP_CONNRESET` 끄기와 받기 고리의 "오류는 건너뛰고 다음 것" 을 둘 다 빼도 시험은 통과한다 — 루프백 ICMP 리셋을 이 시험이 재현하지 못하니 두 방어를 지우지 말 것.
 - **신뢰 재전송 간격을 짧게 고정하면 꼬리는 줄지만 회선을 먹는다**(2026-10-05 측정). 0.1 초 고정은 250 ms · 15 % 에서 사건 최대 지연 1.0 초였지만 메시지당
   재전송 3.5 번 · 서버 올림 3 배로 파괴 시험(덩어리 오차)이 졌다. RTT + 50 ms 와 빠른 재전송(뒤 패킷 셋 확인)이 재전송 1.9 배 · 올림 +9 % 로 4.1 → 1.3 초다.
+- **복제 예산은 메시지 전체를 정확히 센다**(`NetSendBudget`) — 1024 B 를 넘는 메시지는 `sendMessage` 가 버리고 확인이 안 와 기준이 그대로라, 다음 틱도 같은
+  크기로 다시 버려지는 라이브락이 된다(사라진 id 400 개 = 1200 B 에서 클라이언트 틱이 멈췄다). 길이는 `writeBlob` / `readBlob( 상한 )` 하나로 — 자르는 쪽과 쓰는 쪽이 어긋났다.
 - **비신뢰 입력을 "최근 N 개" 만 겹쳐 보내면 N 을 넘는 연속 손실이 영구 빈틈이 된다** — 롤백은 30 틱 끊김 뒤 두 쪽이 120 프레임에서 영원히 멈췄다. 상대가 확인한
   다음 프레임부터 보낸다(`RollbackSession`, GGPO). 고리 버퍼에 받는 입력은 아래 · 위 창을 둘 다 둔다 — 위 창이 없으면 128 칸 뒤의 먼 프레임이 받아 둔 입력을 덮는다.
 - **확인만 담은 패킷이 확인을 부르면 한가한 연결이 30 Hz 로 핑퐁한다**(`NetConnection` 확인 요청 비트의 이유). 요청을 끄면 거꾸로 두 쪽 유지 시각이 맞물려 한쪽은

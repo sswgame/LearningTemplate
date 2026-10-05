@@ -30,6 +30,23 @@ namespace sw
             }
             return bits;
         }
+        /** @brief `writeVarUint( @p value )` 가 쓰는 비트 수입니다(7 비트마다 한 바이트 — 0 도 한 바이트). 예산을 어림이 아니라 정확히 셉니다. */
+        static constexpr int32 computeVarUintBits( uint64 value )
+        {
+            int32 byteCount = 1;
+            while ( value >= 0x80u )
+            {
+                ++byteCount;
+                value >>= 7;
+            }
+            return byteCount * 8;
+        }
+        /** @brief `writeBlob` 이 @p byteCount 바이트에 쓰는 비트 수입니다(길이 + 바이트). */
+        static constexpr int32 computeBlobBits( int32 byteCount )
+        {
+            const int32 size = byteCount > 0 ? byteCount : 0;
+            return computeVarUintBits( static_cast<uint64>( size ) ) + size * 8;
+        }
     };
 } // namespace sw
 
@@ -59,6 +76,8 @@ namespace sw
         void writeVarUint( uint64 value );
         void writeVarInt( int64 value );
         void writeBytes( const uint8* pData, int32 byteCount );
+        /** @brief 길이(가변 정수) + 바이트입니다. 받는 쪽은 `readBlob` 에 상한을 준다 — 쓰는 쪽도 그 상한을 지킨다. */
+        void writeBlob( const uint8* pData, int32 byteCount );
         /** @brief 버퍼를 미리 잡아 둡니다(패킷 하나 = `kNetMaxPacketSize` — 쓰는 동안 다시 잡지 않게). */
         void reserve( int32 byteCount );
         /** @brief 다음 쓰기를 바이트 경계에서 시작합니다. */
@@ -99,6 +118,13 @@ namespace sw
         [[nodiscard]] bool readBytes( uint8* pOutData, int32 byteCount );
         /** @brief @p byteCount 바이트를 읽지 않고 넘깁니다(필요 없는 페이로드 — 받을 버퍼를 잡지 않는다). 모자라면 false 이고 움직이지 않습니다. */
         [[nodiscard]] bool skipBytes( int32 byteCount );
+        /**
+         * @brief `writeBlob` 으로 쓴 길이 + 바이트를 @p outBuffer 에 읽습니다. 길이가 @p maxSize 를 넘거나 모자라면 false 이고 넘침으로 표시합니다
+         *        (깨진 길이를 다음 칸으로 읽어 이어 가지 않는다).
+         */
+        [[nodiscard]] bool readBlob( vector<uint8>& outBuffer, int32 maxSize );
+        /** @brief `readBlob` 과 같은 검사로 길이 + 바이트를 읽지 않고 넘깁니다(필요 없는 페이로드 — 받을 버퍼를 잡지 않는다). */
+        [[nodiscard]] bool skipBlob( int32 maxSize );
         void               alignToByte();
 
         bool  hasOverflowed() const { return _bOverflow != SW_FALSE; }
@@ -106,6 +132,10 @@ namespace sw
         int32 getBitPosition() const { return _bitPosition; }
 
     private:
+        /** @brief 남은 비트에 @p byteCount 바이트가 있는가입니다(음수 · 넘침은 false). */
+        bool               hasBytes( int32 byteCount ) const;
+        [[nodiscard]] bool readBlobSize( int32 maxSize, int32& outSize );
+
         const uint8* _pData;
         int32        _bitCapacity;
         int32        _bitPosition;
