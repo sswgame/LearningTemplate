@@ -93,6 +93,7 @@ namespace sw
         void beginTick( uint32 tick );
         /** @brief 이 틱의 엔티티입니다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 복제하지 않는다(처음 한 번 경고, 그 뒤로는 센다). */
         void setEntity( uint32 entityId, uint32 typeId, const vector<uint8>& buffer );
+        /** @brief 이 틱의 엔티티를 확정합니다(id 순 정렬). 그 전까지 월드에는 지난 틱의 자리가 남아 있다 — `sendSnapshots` · `getWorldSnapshot` 은 이 뒤에 쓴다. */
         void endTick();
         /**
          * @brief 연결된 클라이언트마다 스냅샷을 보냅니다. `setTaskManager` 를 줬으면 클라이언트들을 작업 스레드에 나눠 만든다(클라이언트마다 독립 —
@@ -162,6 +163,7 @@ namespace sw
         NetParallelScratch<SnapshotScratch> _snapshotScratch;       ///< 스레드마다 하나
         vector<int32>                       _listConnectionScratch; ///< 이번 틱에 보낼 연결
         vector<ClientState*>                _listClientScratch;     ///< 위 연결의 상태 — 나누기 전에 모두 잡아 둔다(나누는 중에 목록이 자라지 않게)
+        size_t                              _worldEntityCount;      ///< 이 틱에 `setEntity` 한 수 — 월드 엔티티 자리는 틱을 넘어 다시 쓴다(버퍼 용량을 남긴다)
         uint64                              _oversizedEntityCount;
         int32                               _snapshotBudgetBytes; ///< 이번 `sendSnapshots` 의 예산 — 나누기 전에 정하고 워커는 읽기만 한다
         const int32*                        _pRangeConnection;    ///< 나눈 본문이 읽는 `_listConnectionScratch.data()` — 워커는 컨테이너를 만지지 않는다

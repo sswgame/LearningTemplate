@@ -20,6 +20,7 @@ namespace sw
         , _snapshotScratch{}
         , _listConnectionScratch{}
         , _listClientScratch{}
+        , _worldEntityCount{ 0 }
         , _oversizedEntityCount{ 0 }
         , _snapshotBudgetBytes{ 0 }
         , _pRangeConnection{ nullptr }
@@ -33,7 +34,8 @@ namespace sw
         _settings = settings;
         _pPolicy  = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
         _listClient.clear();
-        _world = NetSnapshot{};
+        _world            = NetSnapshot{};
+        _worldEntityCount = 0;
     }
 
     ReplicationServer::ClientState& ReplicationServer::acquireClient( int32 connectionId )
@@ -73,8 +75,8 @@ namespace sw
 
     void ReplicationServer::beginTick( uint32 tick )
     {
-        _world._tick = tick;
-        _world._listEntity.clear();
+        _world._tick      = tick;
+        _worldEntityCount = 0; // 자리는 지우지 않는다 — `setEntity` 가 덮어쓰고 `endTick` 이 남는 것을 자른다(버퍼 용량을 다시 쓴다)
     }
 
     void ReplicationServer::setEntity( uint32 entityId, uint32 typeId, const vector<uint8>& buffer )
@@ -87,14 +89,19 @@ namespace sw
                                 entityId, static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
             ++_oversizedEntityCount;
         }
-        NetEntityState entity;
-        entity._entityId = entityId;
-        entity._typeId   = typeId;
-        entity._buffer   = buffer;
-        _world._listEntity.push_back( std::move( entity ) );
+        if ( _worldEntityCount == _world._listEntity.size() )
+            _world._listEntity.emplace_back();
+        NetEntityState& entity = _world._listEntity[_worldEntityCount++];
+        entity._entityId       = entityId;
+        entity._typeId         = typeId;
+        entity._buffer         = buffer; // 복사 대입 — 자리의 용량을 다시 쓴다
     }
 
-    void ReplicationServer::endTick() { _world.sortEntities(); }
+    void ReplicationServer::endTick()
+    {
+        _world._listEntity.resize( _worldEntityCount );
+        _world.sortEntities();
+    }
 
     void ReplicationServer::setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold ) { _parallel.setTaskManager( pTaskManager, serialThreshold ); }
 

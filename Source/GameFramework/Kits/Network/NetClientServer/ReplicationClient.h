@@ -73,8 +73,9 @@ namespace sw
         void resetHistory();
         void findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, float32& outAlpha ) const;
 
-        TickRingBuffer<NetSnapshot> _listSnapshot; ///< 받은 스냅숏 — 델타의 기준 · 보간 구간을 틱으로 찾는다. 가장 새 틱 = 마지막으로 받은 것
-        NetInputSendWindow          _inputWindow;  ///< 내 입력 — 서버가 스냅숏에 실어 돌려준 확인의 다음 틱부터 싣는다
+        TickRingBuffer<NetSnapshot> _listSnapshot;  ///< 받은 스냅숏 — 델타의 기준 · 보간 구간을 틱으로 찾는다. 가장 새 틱 = 마지막으로 받은 것
+        NetSnapshot                 _decodeScratch; ///< 받은 델타를 푸는 자리 — 고리 자리와 맞바꿔 밀려난 스냅숏의 버퍼를 다음 해독이 쓴다(기준 자리를 덮지 않는다)
+        NetInputSendWindow          _inputWindow;   ///< 내 입력 — 서버가 스냅숏에 실어 돌려준 확인의 다음 틱부터 싣는다
         ReplicationClientSettings   _settings;
         NetHost*                    _pHost;
         NetClock                    _clock; ///< 렌더 틱 — 받은 스냅숏 틱의 하한 + 흐른 시간 − 지연(받은 가장 새 틱까지, 되돌아가지 않는다)

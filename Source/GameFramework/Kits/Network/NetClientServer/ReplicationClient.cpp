@@ -12,6 +12,7 @@ namespace sw
 {
     ReplicationClient::ReplicationClient()
         : _listSnapshot{}
+        , _decodeScratch{}
         , _inputWindow{}
         , _settings{}
         , _pHost{ nullptr }
@@ -64,15 +65,14 @@ namespace sw
         if ( _listSnapshot.hasNewest() && tick <= _listSnapshot.getNewestTick() )
             return NetHandleResult::Handled; // 늦게 온 옛것
         const NetSnapshot* pBaseline = baselineCode != 0 ? _listSnapshot.find( baselineCode - 1u ) : nullptr;
-        NetSnapshot        snapshot;
-        if ( NetSnapshot::readDelta( body, pBaseline, snapshot ) == false )
+        if ( NetSnapshot::readDelta( body, pBaseline, _decodeScratch ) == false )
         {
             ++_decodeFailureCount; // 기준을 이미 잃은 델타도 여기로 온다 — 형식은 맞으니 깨짐으로 세지 않는다
             return NetHandleResult::Handled;
         }
-        _inputWindow.acknowledge( snapshot._firstMissingInputTick ); // 서버가 빈틈없이 받은 다음 틱 — 그 앞은 다시 싣지 않는다
-        _listSnapshot.acquire( tick ) = std::move( snapshot );       // 가장 새 틱도 이것이 된다
-        _clock.observeServerTick( tick );                            // 첫 스냅숏이면 렌더 틱을 바로 (그 틱 − 지연)에 둔다
+        _inputWindow.acknowledge( _decodeScratch._firstMissingInputTick ); // 서버가 빈틈없이 받은 다음 틱 — 그 앞은 다시 싣지 않는다
+        std::swap( _listSnapshot.acquire( tick ), _decodeScratch );        // 가장 새 틱도 이것이 된다. 밀려난 옛 스냅숏은 다음 해독 자리가 된다
+        _clock.observeServerTick( tick );                                  // 첫 스냅숏이면 렌더 틱을 바로 (그 틱 − 지연)에 둔다
         if ( _pHost != nullptr )
         {
             BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kSnapshotAck );

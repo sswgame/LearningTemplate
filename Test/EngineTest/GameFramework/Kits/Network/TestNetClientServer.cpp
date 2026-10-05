@@ -160,6 +160,42 @@ SW_TEST_CASE( NetClientServerTest, SnapshotDeltasCarryChangesRemovalsAndRespectB
 }
 
 /**
+ * @brief [NetClientServerTest] 한 델타에 사라짐 · 새 엔티티 · 바뀐 엔티티가 섞여도, 그리고 재구성 · 해독 자리를 다시 써도 서버의 재구성과 클라이언트의 해독이 같다
+ */
+SW_TEST_CASE( NetClientServerTest, DeltaReconstructionMatchesAfterSlotReuse )
+{
+    NetSnapshot baseline;
+    baseline._tick = 10;
+    for ( uint32 entityId = 1; entityId <= 50; ++entityId )
+        baseline._listEntity.push_back( NetEntityState{ vector<uint8>( 8, static_cast<uint8>( entityId ) ), entityId, 1 } );
+    NetSnapshot current;
+    current._tick = 11;
+    for ( uint32 entityId = 5; entityId <= 60; ++entityId ) // 1..4 사라짐, 51..60 새것, 7 의 배수는 바뀜
+        current._listEntity.push_back( NetEntityState{ vector<uint8>( 8, static_cast<uint8>( entityId % 7 == 0 ? 0xEE : entityId ) ), entityId, 1 } );
+    // 다시 쓰는 자리 — 크기 · 내용이 다른 옛 재구성이 들어 있다.
+    NetSnapshot written;
+    for ( uint32 entityId = 100; entityId < 180; ++entityId )
+        written._listEntity.push_back( NetEntityState{ vector<uint8>( 32, 0x11 ), entityId, 9 } );
+    NetSnapshot decoded = written;
+    BitWriter   writer;
+    current.writeDelta( writer, &baseline, 1000, written );
+    BitReader reader( writer.getBytes().data(), writer.getByteCount() );
+    SW_ASSERT_TRUE( NetSnapshot::readDelta( reader, &baseline, decoded ) );
+    SW_ASSERT_EQUAL( size_t{ 56 }, written._listEntity.size() );
+    SW_ASSERT_EQUAL( written._listEntity.size(), decoded._listEntity.size() );
+    for ( size_t index = 0; index < written._listEntity.size(); ++index )
+    {
+        SW_EXPECT_EQUAL( current._listEntity[index]._entityId, written._listEntity[index]._entityId );
+        SW_EXPECT_TRUE( current._listEntity[index]._buffer == written._listEntity[index]._buffer );
+        SW_EXPECT_EQUAL( written._listEntity[index]._entityId, decoded._listEntity[index]._entityId );
+        SW_EXPECT_EQUAL( written._listEntity[index]._typeId, decoded._listEntity[index]._typeId );
+        SW_EXPECT_TRUE( written._listEntity[index]._buffer == decoded._listEntity[index]._buffer );
+    }
+    SW_EXPECT_NULL( written.findEntity( 3 ) );
+    SW_EXPECT_NOT_NULL( written.findEntity( 60 ) );
+}
+
+/**
  * @brief [NetClientServerTest] 겹쳐 실려 온 입력 가운데 이미 가진 틱은 넘기고, 그 뒤의 새 틱은 제 페이로드로 받는다
  * @details 클라이언트는 서버가 확인하지 않은 입력을 오래된 것부터 메시지마다 다시 싣는다. 서버는 이미 가진 틱의 페이로드를 버퍼 없이 넘기는데,
  *          넘기는 길이가 틀리면 뒤따르는 새 틱이 남의 바이트를 입력으로 받는다.
