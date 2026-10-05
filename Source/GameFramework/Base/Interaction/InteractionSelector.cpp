@@ -14,9 +14,10 @@ namespace sw
         {
             static constexpr float32 kMinLengthSq = 1.0e-10f;
 
-            /** @brief 닿는 후보 하나 — 정렬 열쇠(우선도 · 거리 · 원래 자리)입니다. */
+            /** @brief 닿는 후보 하나 — 정렬 열쇠(우선도 · 거리 · 오브젝트 id · 원래 자리)입니다. */
             struct ReachableCandidate
             {
+                uint64  _objectId{ 0 };
                 float32 _distance{ 0.0f };
                 int32   _priority{ 0 };
                 int32   _index{ 0 };
@@ -30,6 +31,9 @@ namespace sw
                         return lhs._priority > rhs._priority;
                     if ( lhs._distance != rhs._distance )
                         return lhs._distance < rhs._distance;
+                    // 동률은 오브젝트 id 로 가른다 — 후보를 모은 순서(등록 순서 · 씬 순서)에 기대지 않는다.
+                    if ( lhs._objectId != rhs._objectId )
+                        return lhs._objectId < rhs._objectId;
                     return lhs._index < rhs._index;
                 }
             };
@@ -80,6 +84,7 @@ namespace sw
             if ( isInReach( viewer, listCandidate[index], reachable._distance ) == false )
                 continue;
             reachable._priority = listCandidate[index]._priority;
+            reachable._objectId = listCandidate[index]._objectId;
             reachable._index    = static_cast<int32>( index );
             listReachable.push_back( reachable );
         }

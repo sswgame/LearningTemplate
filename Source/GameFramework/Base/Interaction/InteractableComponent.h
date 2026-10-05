@@ -37,6 +37,9 @@ namespace sw
         InteractableComponent();
         virtual ~InteractableComponent() override = default;
 
+        /** @brief 씬의 상호작용 대상 목록(`ComponentRegistry`)에 듭니다 — 하는 쪽이 씬 전체를 훑지 않고 이 목록에서 고릅니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;

@@ -72,7 +72,7 @@ namespace sw
 
     private:
         void makeViewer( InteractionViewer& outViewer ) const;
-        void gatherCandidates( GameObjectManager& manager, const GameObject& owner );
+        void gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionViewer& viewer );
         void setFocus( GameObjectManager& manager, GameObjectHandle focus, ComponentHandle focusComponent );
         void finishSession( GameObjectManager& manager, const GameObject& owner );
 

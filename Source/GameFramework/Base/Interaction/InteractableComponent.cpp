@@ -6,7 +6,9 @@
 
 #include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Framework/GameService.h"
@@ -50,6 +52,18 @@ namespace sw
         _pDef                              = pCatalog != nullptr ? pCatalog->findInteraction( _interactionId ) : nullptr;
         if ( _pDef == nullptr )
             SW_LOG_ERROR( "Interaction '%#' is not in %#", _interactionId.c_str(), _catalogPath.empty() ? InteractionCatalog::kDefaultPath : _catalogPath.c_str() );
+    }
+
+    void InteractableComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<InteractableComponent>( this );
+    }
+
+    void InteractableComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<InteractableComponent>( this );
+        Component::onUnregister( manager );
     }
 
     void InteractableComponent::onPostLoad()

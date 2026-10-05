@@ -4,6 +4,7 @@
 
 #include "Engine/Object/Animation/MotionWarpingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -96,17 +97,19 @@ namespace sw
         outViewer._forward  = _space == InteractionSpace::Space2D ? _facing2D : float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pScene->getWorldMatrix() );
     }
 
-    void InteractorComponent::gatherCandidates( GameObjectManager& manager, const GameObject& owner )
+    void InteractorComponent::gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionViewer& viewer )
     {
         _listCandidate.clear();
         _listCandidateComponent.clear();
-        manager.forEachComponentOfType<InteractableComponent>( [this, &owner]( InteractableComponent* pInteractable )
+        // 씬 전체를 훑지 않고 등록된 상호작용 대상만 본다(`ComponentRegistry`). 닿지 않는 것(거리 · 시야각)은 여기서 거른다 — 고르기와 같은 판정이다.
+        for ( InteractableComponent* pInteractable : manager.getComponentRegistry().getAll<InteractableComponent>() )
         {
             const GameObject*     pObject = pInteractable != nullptr ? pInteractable->getOwner() : nullptr;
             const SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            const bool            bUsable = pScene != nullptr && pObject != &owner && pInteractable->isActive() && pObject->isActiveInHierarchy();
+            const bool            bUsable = pScene != nullptr && pObject != &owner && pInteractable->isPendingDestroy() == false && pInteractable->isActive() &&
+                                 pObject->isActiveInHierarchy() && pInteractable->getDefinition() != nullptr;
             if ( bUsable == false || pInteractable->isAvailableFor( owner ) == false )
-                return;
+                continue;
             const InteractionDef* pDef = pInteractable->getDefinition();
             InteractionCandidate  candidate;
             candidate._position             = pScene->getWorldPosition();
@@ -115,9 +118,12 @@ namespace sw
             candidate._maxAngle             = pDef->_maxAngle;
             candidate._priority             = pInteractable->getPriority();
             candidate._bRequiresLineOfSight = pDef->_bLineOfSight;
+            float32 distance{ 0.0f };
+            if ( InteractionSelector::isInReach( viewer, candidate, distance ) == false )
+                continue;
             _listCandidate.push_back( candidate );
             _listCandidateComponent.push_back( pInteractable->getHandle() );
-        } );
+        }
     }
 
     void InteractorComponent::setFocus( GameObjectManager& manager, GameObjectHandle focus, ComponentHandle focusComponent )
@@ -161,7 +167,7 @@ namespace sw
 
         InteractionViewer viewer;
         makeViewer( viewer );
-        gatherCandidates( *pManager, *pOwner );
+        gatherCandidates( *pManager, *pOwner, viewer );
 
         if ( _session.isActive() )
         {
