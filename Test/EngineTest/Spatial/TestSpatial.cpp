@@ -725,3 +725,49 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DEntityAtTheCellLimitDoesNotHang )
     grid.remove( entity );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getHandleCount() ) );
 }
+
+/**
+ * @brief [SpatialTest] 같은 셀 안의 update 는 경계만 바꾸고, 셀을 넘는 update 는 옮긴다(점 엔티티 · 음수 셀)
+ * @details `update` 는 덮는 셀 범위가 그대로면 셀 목록을 건드리지 않는다(`PhysicsWorld::setAabbLocked` 와 같은 지름길). 그 길에서도 좁힘 판정은
+ *          **새 경계**로 해야 한다 — 경계를 안 바꾸면 셀 안에서 움직인 것이 옛 자리로 판정된다. NetMmo 관심 영역이 이 모양(점 · 반경)으로 쓴다.
+ * @note 변이 검사: 지름길에서 경계 대입을 빼면 두 번째 (0, 0) 원 질의가 eNear 를 돌려줘 실패한다. 셀을 넘는 update 가 옛 셀에서 빼지 않으면 활성 버킷이 5 가 된다.
+ */
+SW_TEST_CASE( SpatialTest, SpatialHashGrid2DUpdateWithinACellMovesTheBound )
+{
+    const sw::SlotHandle eNear = sw::SlotHandle::make( 1, 1 );
+    const sw::SlotHandle eSide = sw::SlotHandle::make( 2, 1 );
+    const sw::SlotHandle eFar  = sw::SlotHandle::make( 3, 1 );
+    const sw::SlotHandle eNeg  = sw::SlotHandle::make( 4, 1 );
+
+    sw::SpatialHashGrid2D grid{ 10.0f };
+    grid.update( eNear, 5.0f, 5.0f, 5.0f, 5.0f ); // 없던 핸들의 update 는 넣기다
+    grid.update( eSide, 14.0f, 5.0f, 14.0f, 5.0f );
+    grid.update( eFar, 100.0f, 100.0f, 100.0f, 100.0f );
+    grid.update( eNeg, -3.0f, -3.0f, -3.0f, -3.0f ); // 음수 셀 (-1, -1)
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( grid.getHandleCount() ) );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( grid.getActiveBucketCount() ) );
+
+    sw::vector<sw::SlotHandle> listFound{ eFar }; // 지난 답이 남지 않는지도 본다
+    grid.queryCircle( 5.0f, 5.0f, 12.0f, listFound );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( listFound.size() ) ); // eNear · eSide · eNeg(11.3)
+    SW_EXPECT_FALSE( sw::containsHandle( listFound, eFar ) );
+
+    // 같은 셀 (0, 0) 안에서 반경 밖 자리로 — 셀 목록은 그대로, 판정은 새 자리로 한다.
+    grid.queryCircle( 0.0f, 0.0f, 8.0f, listFound );
+    SW_EXPECT_TRUE( sw::containsHandle( listFound, eNear ) ); // (5, 5) 는 7.07
+    grid.update( eNear, 9.0f, 9.0f, 9.0f, 9.0f );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( grid.getActiveBucketCount() ) );
+    grid.queryCircle( 0.0f, 0.0f, 8.0f, listFound );
+    SW_EXPECT_FALSE( sw::containsHandle( listFound, eNear ) ); // (9, 9) 는 12.7
+    SW_EXPECT_TRUE( sw::containsHandle( listFound, eNeg ) );   // (-3, -3) 은 4.24
+
+    // 셀을 넘는 update — 옛 셀 (1, 0) 에서 빠지고 새 셀 (9, 9) 에서 찾힌다.
+    grid.update( eSide, 90.0f, 95.0f, 90.0f, 95.0f );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( grid.getActiveBucketCount() ) ); // (0,0) · (9,9) · (10,10) · (-1,-1)
+    grid.queryCircle( 95.0f, 95.0f, 10.0f, listFound );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listFound.size() ) ); // eSide(5) · eFar(7.07)
+    grid.remove( eFar );
+    grid.queryCircle( 95.0f, 95.0f, 10.0f, listFound );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listFound.size() ) );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( grid.getActiveBucketCount() ) );
+}
