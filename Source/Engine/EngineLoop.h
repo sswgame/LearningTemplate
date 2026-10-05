@@ -68,6 +68,13 @@ namespace sw
      */
     SW_DECLARE_DELEGATE( bool, ModuleTypeLoaderDelegate, void );
 
+    /** @brief 엔진을 띄우는 호스트의 역할입니다 — 기동 표의 대상(`EngineInitTarget`) · 오디오 장치 · 허용하는 헤드리스 작업을 가릅니다. */
+    enum class EngineHostRole : uint8
+    {
+        Client,          ///< App — 창 · 렌더러 · 플레이어 설정(에디터 포함)
+        DedicatedServer, ///< Server — 창 · GPU · 오디오 장치 · 플레이어 설정 없음
+    };
+
     /**
      * @class EngineLoop
      * @brief 코어 매니저들을 소유하고 메인 루프(tick)를 돌립니다.
@@ -81,8 +88,12 @@ namespace sw
         EngineLoop( const EngineLoop& )            = delete;
         EngineLoop& operator=( const EngineLoop& ) = delete;
 
-        /** @brief 서브시스템(창, RHI 포함)을 초기화합니다. */
-        bool initialize( int32 argc, utf8* pArgv[] );
+        /**
+         * @brief 서브시스템(창, RHI 포함)을 초기화합니다.
+         * @details @p role 이 `DedicatedServer` 면 기동 표의 `Client` 단계(창 · RHI · 렌더러 · 플레이어 설정)를 돌리지 않고 장치 없는 오디오를 씁니다.
+         *          이 빌드에 없는 역할이면(Client 빌드의 전용 서버, Server 빌드의 클라이언트) 실패합니다.
+         */
+        bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role = EngineHostRole::Client );
         /** @brief 매니저들을 종료하고 정리합니다. */
         void shutdown();
 
@@ -165,6 +176,8 @@ namespace sw
         RHI*                getRhi() const { return _rhi.get(); }
         RenderThread*       getRenderThread() const { return _renderThread.get(); }
         bool                isHeadless() const { return _bHeadless; }
+        /** @brief 이 엔진을 띄운 호스트의 역할입니다(`initialize` 의 인자). */
+        EngineHostRole getHostRole() const { return _hostRole; }
         /**
          * @brief 프리팹마다 초상화를 그려 @p outputDirectory 에 `<이름>.portrait.dds` · `.png` 로 씁니다(`--render-portraits`).
          * @details 렌더 스레드가 쉬는 동안 이 스레드가 그래픽스 컨텍스트를 잡고 `PortraitRenderer`(따로 만든 스튜디오 씬 · 렌더러)로 그린다. 모듈(게임
@@ -242,9 +255,11 @@ namespace sw
         /** @brief 애니메이션 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
         vector<AnimationLodView> _listAnimationLodView;
 
-        bool _bShellActionsBound;
-        bool _bHeadless;
-        bool _bHeadlessTaskFailed;
+        /** @brief 이 엔진을 띄운 호스트의 역할입니다. 서비스를 만들기 전에 정한다(오디오 장치 · 기동 표 대상). */
+        EngineHostRole _hostRole;
+        bool           _bShellActionsBound;
+        bool           _bHeadless;
+        bool           _bHeadlessTaskFailed;
         /** @brief RHI 기동 단계의 결과입니다(getRhiInitResult 참고). */
         RHIInitResult _rhiInitResult;
         /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */

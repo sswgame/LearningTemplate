@@ -15,7 +15,8 @@
 // `#else` 안에만 두었을 때는 Windows 에서 한 번도 컴파일되지 않아 조용히 썩는다(FileWatcher 의
 // macOS 구현이 그랬다).
 
-#if defined( SW_PLATFORM_WINDOWS )
+// 전용 서버 빌드(SW_WITH_CLIENT_CODE 없음)에는 XAudio2 구현 · 링크가 없다 — 서버는 장치를 열지 않는다.
+#if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Audio/Windows/XAudio2System.h"
 #endif
 
@@ -39,11 +40,16 @@ namespace sw
 {
     unique_ptr<IAudioSystem> IAudioSystem::create()
     {
-#if defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
         return make_unique<XAudio2System>();
 #else
         return make_unique<NullAudioSystem>();
 #endif
+    }
+
+    unique_ptr<IAudioSystem> IAudioSystem::createNull()
+    {
+        return make_unique<NullAudioSystem>();
     }
 
     IAudioSystem::IAudioSystem()

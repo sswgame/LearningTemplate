@@ -46,6 +46,8 @@ namespace sw
 
         /** @brief 현재 플랫폼에 맞는 오디오 시스템 인스턴스를 생성합니다. */
         static unique_ptr<IAudioSystem> create();
+        /** @brief 장치를 열지 않는 오디오 시스템입니다(전용 서버 · 시험). 소리 요청을 받아 버리고, 믹서 · 음량 상태는 그대로 듭니다. */
+        static unique_ptr<IAudioSystem> createNull();
 
         IAudioSystem();
         virtual ~IAudioSystem();

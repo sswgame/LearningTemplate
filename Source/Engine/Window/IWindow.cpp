@@ -125,7 +125,7 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return make_unique<Win32Window>();
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
         return make_unique<X11Window>();
 #else
         return nullptr;

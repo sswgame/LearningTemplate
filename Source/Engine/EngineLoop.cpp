@@ -368,6 +368,31 @@ namespace sw
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
+            // 전용 서버가 하는 헤드리스 작업은 씬 쿠킹(서버 팩)까지다. 셰이더 쿠킹(DXC) · 원본 임포트(에디터 모듈)는 App 의 일이다 — 조용히 넘기지 않고 실패한다.
+            if ( loop._hostRole == EngineHostRole::DedicatedServer )
+            {
+                static constexpr CommandLineArgument kArrClientOnlyTask[] = {
+                    CommandLineArgument::COOK_SHADERS,
+                    CommandLineArgument::IMPORT_TEXTURES,
+                    CommandLineArgument::CHECK_TEXTURES,
+                    CommandLineArgument::IMPORT_MODELS,
+                    CommandLineArgument::CHECK_MODELS,
+                    CommandLineArgument::IMPORT_HEIGHTFIELDS,
+                    CommandLineArgument::CHECK_HEIGHTFIELDS,
+                };
+                for ( const CommandLineArgument argument : kArrClientOnlyTask )
+                {
+                    bool bGiven = false;
+                    if ( loop._owned._pCommandLineManager->getArgument( argument, bGiven ) && bGiven )
+                    {
+                        SW_LOG_ERROR( "This headless task runs in the client build (App), not in the dedicated server" );
+                        loop._bHeadless           = true;
+                        loop._bHeadlessTaskFailed = true;
+                        return EngineInitResult::SkipDependents;
+                    }
+                }
+            }
+
             // 헤드리스 작업은 보통 실행이 누수 기준선을 잡는 자리(`initialize` 끝)에 닿지 않는다. 기준선이 없으면 종료 때 살아 있는 블록을 모두
             // 누수로 찍으므로, 작업 직전에 같은 기준선을 잡는다 — 작업이 만든 것을 종료까지 놓지 않을 때만 누수로 보인다.
             bool bCookShaders = false;
@@ -805,6 +830,7 @@ namespace sw
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
         , _listAnimationLodView{}
+        , _hostRole{ EngineHostRole::Client }
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
@@ -818,7 +844,7 @@ namespace sw
 
     EngineLoop::~EngineLoop() = default;
 
-    bool EngineLoop::initialize( int32 argc, utf8* pArgv[] )
+    bool EngineLoop::initialize( int32 argc, utf8* pArgv[], EngineHostRole role )
     {
         // 이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 진단 도구(Debug) · 명령줄 · 전역 변수 — 시험 하네스와 같은 부트스트랩이다.
 #if defined( SW_DEBUG )
@@ -829,6 +855,14 @@ namespace sw
         if ( _bootstrap.initialize( _owned, kDiagnostics ) == false )
             return false;
         _bootstrap.parseCommandLine( argc, pArgv );
+        // 역할은 서비스를 만들기 전에 정한다 — 오디오 장치 · 기동 표 대상이 이것을 본다. 빌드에 없는 역할로는 서지 않는다.
+        _hostRole                   = role;
+        const bool bDedicatedServer = role == EngineHostRole::DedicatedServer;
+        if ( ( bDedicatedServer && build::kWithServerCode == false ) || ( bDedicatedServer == false && build::kWithClientCode == false ) )
+        {
+            SW_LOG_ERROR( "The %# build cannot host the %# role", build::kTargetName, bDedicatedServer ? "dedicated server" : "client" );
+            return false;
+        }
         // `-gv_memoryTracking=1` 은 기동의 할당부터 센다(Release 는 추적이 꺼진 채 선다).
         _memoryBudgetMonitor.applyTrackingSetting();
 
@@ -840,7 +874,8 @@ namespace sw
             // 만드는 방법이 특별한 것만 손으로 남는다(목록의 HostCreated 셋).
             {
                 SW_MEMORY_SCOPE( Audio );
-                _audioSystem = IAudioSystem::create();
+                // 전용 서버는 장치를 열지 않는다 — 씬 컴포넌트가 드는 오디오 서비스는 그대로 있고 소리 요청을 받아 버린다.
+                _audioSystem = bDedicatedServer ? IAudioSystem::createNull() : IAudioSystem::create();
             }
 #if !defined( SW_SHIPPING )
             {
@@ -871,9 +906,24 @@ namespace sw
 
         // 초기화(`initialize()`)의 순서는 손으로 적지 않는다. 단계마다 먼저 서야 하는 단계를 `EngineInitStepList.xxx` 에 적고,
         // 여기서는 위상 순서로 단계 구조체(`<단계>StartupStep`)의 본문을 부른다. 종료와 해제는 그 역순이다(`shutdown`).
-        const bool bStarted = _startup.initializeAll( *this );
+        const bool bStarted = _startup.initializeAll( *this, bDedicatedServer ? EngineInitTarget::Server : EngineInitTarget::Client );
         if ( bStarted == false )
             return false;
+        if ( bDedicatedServer )
+        {
+            // 실제 바이너리에서 단계가 빠졌는지 시험(ServerBootTest)이 이 줄로 본다.
+            string skipped;
+            for ( uint32 stepIndex = 0; stepIndex < static_cast<uint32>( EngineInitStep::Count ); ++stepIndex )
+            {
+                const EngineInitStep step = static_cast<EngineInitStep>( stepIndex );
+                if ( ( static_cast<uint8>( EngineInitSequence::getStepTarget( step ) ) & static_cast<uint8>( EngineInitTarget::Server ) ) != 0 )
+                    continue;
+                if ( skipped.empty() == false )
+                    skipped += " ";
+                skipped += EngineInitSequence::getStepName( step );
+            }
+            SW_LOG_INFO( "Dedicated server: startup steps not run - %#", skipped.c_str() );
+        }
         // 헤드리스 작업(셰이더 · 씬 쿠킹, 텍스처 임포트)은 RHI 이후 단계를 건너뛰고 여기서 끝난다. 누수 기준선은 그 작업 직전에 잡았다.
         if ( _bHeadless )
             return true;

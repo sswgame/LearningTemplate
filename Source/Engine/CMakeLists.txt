@@ -204,8 +204,13 @@ target_link_libraries(Engine PRIVATE recastnavigation)
 
 # ------------------------------------------------------------------------------
 # 3) RHI 링크 — Shipping 은 백엔드 하나를 Engine 에 정적 링크, Dev 는 RHI_* MODULE 을 런타임에 로드
+# 전용 서버 배포본은 RHI 백엔드를 하나도 링크하지 않는다(기동 표의 RHI 단계가 서버에서 돌지 않는다) — 백엔드 소스는 모두 "이 구성이 짓지 않는다".
+# Dev 서버는 RHI_* 모듈을 매니페스트(`_listTarget: ["Client"]`)가 끈다.
 # ------------------------------------------------------------------------------
-if(SW_SHIPPING_BUILD)
+if(SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Server")
+    message(STATUS "[Engine] Dedicated server: no RHI backend linked")
+    sw_declareUnbuiltSources(${SW_RHI_ALL_DEVICE_SOURCES})
+elseif(SW_SHIPPING_BUILD)
     if(NOT SW_SHIPPING_RHI_BACKEND)
         if(WIN32)
             set(SW_SHIPPING_RHI_BACKEND "DX12" CACHE STRING "Shipping용 대상 RHI 백엔드")
@@ -263,9 +268,14 @@ if(WIN32)
         mfuuid.lib
         ole32.lib
         shell32.lib
-        xaudio2.lib
     )
-    sw_addDelayloadSystemDlls(Engine DLLS d3dcompiler_47.dll mfplat.dll mfreadwrite.dll xaudio2_9.dll)
+    # 전용 서버 빌드에는 XAudio2 구현이 없다(`IAudioSystem.cpp` · `XAudio2System.cpp` 의 SW_WITH_CLIENT_CODE) — 링크 · 지연 로드 항목도 뺀다.
+    if(SW_TARGET_TYPE STREQUAL "Server")
+        sw_addDelayloadSystemDlls(Engine DLLS d3dcompiler_47.dll mfplat.dll mfreadwrite.dll)
+    else()
+        target_link_libraries(Engine PRIVATE xaudio2.lib)
+        sw_addDelayloadSystemDlls(Engine DLLS d3dcompiler_47.dll mfplat.dll mfreadwrite.dll xaudio2_9.dll)
+    endif()
 endif()
 
 # ------------------------------------------------------------------------------

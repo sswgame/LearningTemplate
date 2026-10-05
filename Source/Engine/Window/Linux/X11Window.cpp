@@ -4,7 +4,7 @@
 
 #include "Engine/Window/NativeWindowEvent.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Common/X11Headers.h"
 #endif
 
@@ -36,7 +36,7 @@ namespace sw
         X11Window::destroy();
     }
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     bool X11Window::initializeWindow( const utf8* pTitle, uint32 width, uint32 height )
     {
         _width  = width;

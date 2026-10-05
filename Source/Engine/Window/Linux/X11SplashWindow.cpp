@@ -4,7 +4,7 @@
 
 #include "Core/String/StringUtil.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Common/PlatformOsHeaders.h"
     #include "Core/Common/X11Headers.h"
 #endif
@@ -38,7 +38,7 @@ namespace sw
         X11SplashWindow::dismiss();
     }
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     namespace
     {
         // 스플래시 팔레트. 창 배경과 픽스맵 배경이 **같은 값이어야** 노출 순간에 색이 튀지 않는다.
