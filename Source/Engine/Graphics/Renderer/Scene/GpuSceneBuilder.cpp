@@ -16,6 +16,7 @@
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -282,6 +283,10 @@ namespace sw
             return false;
         // 항목 하나만 숨길 수 있다(데미지 숫자의 남는 자릿수 · 길이 0 인 HP 바 구간). 실릴지가 바뀌면 부분 수집이 전체로 넘어간다.
         if ( pBatch->isEntryVisible( entry._index ) == false )
+            return false;
+        // 배치를 든 컴포넌트를 끄면(자기 비트 · 소유 오브젝트의 계층 활성) 빠진다 — `fillCandidateFromPrimitive` 와 같은 규칙.
+        const Component* pOwnerComponent = pBatch->getOwnerComponent();
+        if ( pOwnerComponent != nullptr && pOwnerComponent->isActive() == false )
             return false;
         Mesh* pMesh = pBatch->getRawMesh();
         if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )

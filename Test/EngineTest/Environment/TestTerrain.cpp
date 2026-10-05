@@ -8,8 +8,10 @@
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -347,4 +349,48 @@ SW_TEST_CASE( TerrainTest, ComponentLoadsAndUpdatesLods )
     SW_EXPECT_TRUE( pTerrain->getChunkLod( 3, 3 ) >= 2u );
     SW_EXPECT_TRUE( pTerrain->getChunkVertexCount( 3, 3 ) < nearVertexCount );
     SW_EXPECT_EQUAL( 0u, pTerrain->updateLods( float3{ 100.0f, 2.0f, -50.0f } ) );
+}
+
+/**
+ * @brief [TerrainTest] 지형 컴포넌트나 그 오브젝트를 끄면 청크가 GPU 씬에서 빠지고, 켜면 돌아온다
+ * @details 청크는 씬 컴포넌트 없는 인스턴스 배치라 빌더가 컴포넌트의 활성을 몰랐다 — 꺼도 지형이 그대로 그려졌다.
+ */
+SW_TEST_CASE( TerrainTest, ChunksLeaveTheGpuSceneWhenTheComponentOrOwnerIsOff )
+{
+    const string    path = test::makeTempPath( "toggle.heightfield" );
+    HeightfieldData data = TerrainTestUtil::makeData( 33, &TerrainTestUtil::wave );
+    SW_ASSERT_TRUE( data.saveToFile( path ) );
+
+    Scene scene( "TerrainToggle" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    GameObject*       pObject  = scene.getObjectManager()->createGameObject( hashed_string( "Terrain" ) );
+    TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();
+    SW_ASSERT_NOT_NULL( pTerrain );
+    pTerrain->setHeightfieldPath( path );
+    pTerrain->setSize( float2{ 32.0f, 32.0f } );
+    pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
+    pTerrain->setChunkCells( 16 );
+    pTerrain->setMaterialPath( "" );
+    SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
+    const uint32 chunkCount = pTerrain->getChunkLayout().getChunkCount();
+    SW_ASSERT_TRUE( chunkCount > 0 );
+
+    GpuSceneBuilder gpuScene;
+    const float3    camPos{ 0.0f, 50.0f, 0.0f };
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_ASSERT_EQUAL( chunkCount, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    pTerrain->setActive( false );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    pTerrain->setActive( true );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( chunkCount, static_cast<uint32>( gpuScene.getInstances().size() ) );
+
+    pObject->setActive( false );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( gpuScene.getInstances().size() ) );
+    pObject->setActive( true );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( chunkCount, static_cast<uint32>( gpuScene.getInstances().size() ) );
 }

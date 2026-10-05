@@ -21,6 +21,7 @@ namespace sw
 
     SpriteInstanceBatch::SpriteInstanceBatch()
         : _batch{}
+        , _pOwnerComponent{ nullptr }
         , _acquiredMaterialPath{}
         , _sortKey{ 0 }
     {
@@ -69,6 +70,7 @@ namespace sw
             _batch->setEntryVisible( index, false );
         }
         _batch->setSortKey( _sortKey );
+        _batch->setOwnerComponent( _pOwnerComponent );
         manager.getPrimitiveRegistry().addInstanceBatch( _batch.get() );
         return true;
     }
@@ -122,6 +124,19 @@ namespace sw
     {
         if ( _batch != nullptr )
             _batch->setVisible( bVisible );
+    }
+
+    void SpriteInstanceBatch::setOwnerComponent( const Component* pOwnerComponent )
+    {
+        _pOwnerComponent = pOwnerComponent;
+        if ( _batch != nullptr )
+            _batch->setOwnerComponent( pOwnerComponent );
+    }
+
+    void SpriteInstanceBatch::markAllEntriesDirty()
+    {
+        if ( _batch != nullptr )
+            _batch->markAllEntriesDirty();
     }
 
     float4x4 SpriteInstanceBatch::makeQuadWorld( const float3& center, float32 width, float32 height )

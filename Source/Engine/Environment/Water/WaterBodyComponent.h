@@ -73,6 +73,8 @@ namespace sw
         /** @brief 로드 순서상 지형이 뒤에 서서 깊이를 못 구웠으면 틱 뒤에 수면을 다시 만듭니다. */
         void onBeginPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
+        /** @brief 소유 오브젝트를 켜고 끄면 수면 배치를 더티로 — 빌더가 다시 본다. */
+        void onOwnerActiveInHierarchyChanged() override;
         void onTick( float32 deltaTime ) override;
         /** @brief 오너가 움직였다고 표시만 합니다(여러 스레드에서 불린다). 다음 틱이 틱 뒤로 다시 만들기를 미룹니다. */
         void onWorldTransformUpdated() override;

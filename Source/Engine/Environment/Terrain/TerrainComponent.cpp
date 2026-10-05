@@ -114,8 +114,30 @@ namespace sw
     void TerrainComponent::onPropertyChanged( hashed_string propertyName )
     {
         SceneComponent::onPropertyChanged( propertyName );
+        // 켜고 끄기는 기하를 바꾸지 않는다 — 청크를 다시 짓지 않고 빌더가 다시 보게만 한다.
+        static const hashed_string s_activeName( "_bActive" );
+        if ( propertyName == s_activeName )
+        {
+            markChunksDirty();
+            return;
+        }
         // 트랜스폼(위치)이 바뀐 것도 여기로 온다 — 지형 원점이 따라 움직인다.
         (void)reloadTerrain();
+    }
+
+    void TerrainComponent::onOwnerActiveInHierarchyChanged()
+    {
+        SceneComponent::onOwnerActiveInHierarchyChanged();
+        markChunksDirty();
+    }
+
+    void TerrainComponent::markChunksDirty()
+    {
+        for ( Chunk& chunk : _listChunk )
+        {
+            if ( chunk._batch != nullptr )
+                chunk._batch->markAllEntriesDirty();
+        }
     }
 
     void TerrainComponent::onWorldTransformUpdated()
@@ -257,6 +279,7 @@ namespace sw
             for ( uint32& neighborLod : chunk._arrNeighborLod )
                 neighborLod = 0;
             chunk._batch = sw::make_unique<MeshInstanceBatch>( Mesh::create(), _material.getMaterial(), _material.getInstance(), 1u );
+            chunk._batch->setOwnerComponent( this );
             chunk._batch->setWorld( 0, float4x4::createTranslation( TerrainMeshBuilder::computeChunkTranslation( _heightfield, _layout, chunkX, chunkZ ) ) );
             chunk._batch->setBoundsRadius( 0, TerrainMeshBuilder::computeChunkBoundsRadius( _heightfield, _layout, chunkX, chunkZ ) );
             rebuildChunkMesh( chunkIndex );

@@ -71,6 +71,8 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
         void onPropertyChanged( hashed_string propertyName ) override;
+        /** @brief 소유 오브젝트를 켜고 끄면 청크 배치를 더티로 — 빌더가 다시 본다. */
+        void onOwnerActiveInHierarchyChanged() override;
         void onTick( float32 deltaTime ) override;
         /** @brief 오너가 움직였다고 표시만 합니다(여러 스레드에서 불린다). 다음 틱이 틱 뒤로 다시 읽기를 미룹니다. */
         void onWorldTransformUpdated() override;
@@ -129,6 +131,8 @@ namespace sw
             uint32                        _vertexCount{ 0 };
         };
 
+        /** @brief 청크 배치 모두를 더티로 — 활성이 바뀌었을 때. */
+        void markChunksDirty();
         /** @brief 청크 배치를 등록부에서 빼고 놓습니다. */
         void releaseChunks();
         /** @brief 지금 LOD 로 청크 배치를 모두 만들어 등록합니다. */

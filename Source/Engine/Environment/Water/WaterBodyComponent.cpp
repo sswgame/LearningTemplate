@@ -185,7 +185,22 @@ namespace sw
     void WaterBodyComponent::onPropertyChanged( hashed_string propertyName )
     {
         SceneComponent::onPropertyChanged( propertyName );
+        // 켜고 끄기는 수면을 바꾸지 않는다 — 다시 짓지 않고 빌더가 다시 보게만 한다.
+        static const hashed_string s_activeName( "_bActive" );
+        if ( propertyName == s_activeName )
+        {
+            if ( _batch != nullptr )
+                _batch->markAllEntriesDirty();
+            return;
+        }
         rebuildSurface();
+    }
+
+    void WaterBodyComponent::onOwnerActiveInHierarchyChanged()
+    {
+        SceneComponent::onOwnerActiveInHierarchyChanged();
+        if ( _batch != nullptr )
+            _batch->markAllEntriesDirty();
     }
 
     void WaterBodyComponent::onWorldTransformUpdated()
@@ -284,6 +299,7 @@ namespace sw
         shared_ptr<Mesh> mesh = Mesh::create();
         mesh->setVertices( std::move( listVertex ) );
         _batch = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), _material.getMaterial(), _material.getInstance(), 1u );
+        _batch->setOwnerComponent( this );
         _batch->setWorld( 0, float4x4::createTranslation( _surfaceOrigin ) );
         _batch->setBoundsRadius( 0, boundsRadius );
         _pPrimitiveRegistry->addInstanceBatch( _batch.get() );

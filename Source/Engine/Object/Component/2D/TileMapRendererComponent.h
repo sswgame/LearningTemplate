@@ -43,6 +43,10 @@ namespace sw
         void onEndPlay() override;
         /** @brief 애니메이션 타일의 프레임을 넘기고, 오브젝트가 움직였으면 칸 자리를 다시 놓습니다. */
         void onTick( float32 deltaTime ) override;
+        /** @brief 켜고 끄면(`_bActive`) 칸 배치를 더티로 — 빌더가 다시 본다. */
+        void onPropertyChanged( hashed_string propertyName ) override;
+        /** @brief 소유 오브젝트를 켜고 끄면 칸 배치를 더티로 — 빌더가 다시 본다. */
+        void onOwnerActiveInHierarchyChanged() override;
 
         /** @brief `_tileMapPath` 의 맵과 그 타일셋을 읽습니다. 읽으면 true 입니다(배치 · 바디는 `rebuild` 가 만듭니다). */
         [[nodiscard]] bool loadTileMap();

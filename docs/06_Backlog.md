@@ -121,8 +121,6 @@ cd build/Ninja-Debug/Bin
   디버그 선 · Shooter3D 적은 들어갔다. (1) 오프 메시 링크(사다리 · 점프 · 문)와 그 애니메이션 (2) 지형 높이장 · 식생을 베이크 기하로(`INavGeometrySource`)
   (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크 (4) 에디터의 내비메시 보기 · 베이크 버튼 (5) 행동 트리 이동 노드가
   `INavMover` 를 쓰게(격자 · 내비메시 공통) (6) 다른 시험 게임(AbilityArena 등)의 적도 내비메시로.
-- **`MeshInstanceBatch` 의 한계.** 항목 수가 만들 때 정해지고(resize 없음, `setEntryVisible` 로 숨기기만), 배치 하나 = 메시 · 머티리얼 하나라 항목별
-  머티리얼 · 투명 정렬이 없다.
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
@@ -1090,6 +1088,7 @@ cd build/Ninja-Debug/Bin
 - **프리팹 오버라이드는 키(`이름표#n`)로 프리팹 컴포넌트를 가리킨다.** 더한 컴포넌트는 `<Add after>` 로 자리를 지킨다. 프리팹에서 사라진 컴포넌트의 오버라이드는
   엔티티 이름과 함께 경고하고 버린다(언리얼과 같다 — 유니티는 남겨 둔다). 물려받은 컴포넌트의 이름표를 바꾸면 제거 + 추가로 기록돼 프리팹 수정이 더는 닿지 않는다 —
   에디터에는 이름표 편집 창구가 없다(`_componentName` 은 `HideInInspector`). 만들게 되면 프리팹 인스턴스의 물려받은 컴포넌트는 막는다(언리얼과 같다).
+- **`MeshInstanceBatch` 는 항목 수 고정 · 메시 · 머티리얼 하나**(언리얼 ISM 과 같다) — 늘리려면 다시 만들고, 항목별 머티리얼 · 투명 정렬이 필요하면 `MeshComponent` 로.
 
 ### 3-7. 그래픽스 · RHI · 셰이더
 
@@ -1263,6 +1262,8 @@ cd build/Ninja-Debug/Bin
 - **RHI 백엔드에 .cpp 를 더하면** `cmake/Engine/RhiBackendSources.cmake` 에도. 파일은 `<Backend>RHIDevice` · `…DeviceInit` · `…DeviceSubmission` 축으로. 백엔드는 별도 MODULE DLL 이라 Engine
   전역 변수를 extern 으로 못 쓴다 — 정책은 Engine, 메커니즘은 디바이스.
 - **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 임포트하지 않는다(8 비트 경로).
+- **인스턴스 배치를 든 컴포넌트는 `setOwnerComponent( this )` 를 부르고, 활성 변화(`onOwnerActiveInHierarchyChanged` · `_bActive` 의 `onPropertyChanged`)에 `markAllEntriesDirty` 를 부른다.**
+  빌더는 `MeshComponent` 와 같은 규칙(`Component::isActive`)으로 소유 컴포넌트가 꺼진 배치를 뺀다 — 더티를 찍지 않으면 부분 수집이 지난 프레임 후보를 그대로 쓴다.
 
 ### 3-8. 에디터
 
