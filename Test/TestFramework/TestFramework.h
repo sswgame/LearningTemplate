@@ -84,7 +84,7 @@ namespace test
         /** @brief 테스트 전용 인자를 파싱하고 나머지 인자를 반환합니다. */
         sw::vector<utf8*> configureFromArgs( int32 argc, utf8* argv[] );
 
-        /** @brief glob 필터를 설정합니다. "Suite.*", 쉼표 include, "-RHI*" exclude. */
+        /** @brief glob 필터를 설정합니다(gtest 모양 — "A.*:B.*" 또는 "A.*,B.*" 로 여럿, 첫 "-" 뒤는 빼는 패턴, `TestFilter::setPattern`). */
         void setFilter( const sw::string& filter );
 
         /** @brief 필터에 맞는 테스트를 모두 실행하고 실패 개수를 반환합니다. */

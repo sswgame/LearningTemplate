@@ -647,8 +647,8 @@ cd build/Ninja-Debug/Bin
 
 ### 3-2. 검증 · 시험 쓰기
 
-- **`--test_filter` 의 구분자는 쉼표다**(`A.*,B.*`). `:` 로 이으면 패턴 하나가 되어 아무것도 맞지 않는다 — 고르는 패턴이 등록된 케이스 하나와도 맞지 않으면
-  실행이 진다(`TestFrameworkTest.FilterThatSelectsNothingFails`). 그 전에는 0/0 으로 통과해 제안서들의 확인 명령이 아무것도 돌리지 않았다.
+- **`--test_filter` 는 gtest 모양이다** — 패턴 사이는 `:` 도 쉼표도 되고, 첫 `-` 뒤는 모두 빼는 패턴이다(`A.*:B.*-A.X`; `-A.*,B.*` 는 둘 다 뺀다).
+  고르는 패턴이 등록된 케이스 하나와도 맞지 않으면 실행이 진다(`TestFrameworkTest.FilterThatSelectsNothingFails`) — 0/0 통과는 확인한 줄 안다.
 - **광선이 두 삼각형이 나누는 모서리를 정확히 지나면 Möller–Trumbore 가 양쪽을 다 놓칠 수 있다** — 같은 각도로 나뉜 합성 원기둥 두 겹에서 실제로 났다
   (`CharacterGeometryUtil::intersectRayTriangle` 은 무게중심 여유 1e-5 로 막는다). 합성 형상 시험은 분할 수를 서로 다르게 하고, 면 모양(다각형)이라 반지름이 면 가운데서
   `r · cos(π/n)` 로 준다는 것도 기댓값에 넣는다.
@@ -1607,6 +1607,10 @@ cd build/Ninja-Debug/Bin
   `GimmickDamageUtil` 처럼 틱 뒤(`executeOrDeferPostTick`)로 미루면 늘 다음 틱이다. Windows 헤더는 `near` · `far` 를 빈 매크로로 둔다 — 지역 변수 이름으로 쓰지 말 것.
 - **가중치 뽑기에서 0 은 "후보 아님" 이다** — `pickWeightedIndex` 가 −1 이면 아무것도 고르지 않는다(식당 주문 · 손님 도착 · 드롭 · 조우 모두 같다). 실수 가중치(수요 · 배율)는
   `pickWeightedIndex`, 정수 표(조우 · 드롭)는 `pickWeightedIndexInt` — 서로 바꾸면 난수 흐름(`nextFloat` ↔ `nextInt`)이 달라져 같은 씨앗의 결과가 바뀐다.
+- **마우스 잠금은 게임의 요청과 OS 적용을 나눈다** — `InputManager::isMouseLockActive` = 잠금 요청 ∧ 포커스 ∧ 포커스를 잃은 뒤 클라이언트 클릭 ∧ Alt 안 누름 ∧
+  키보드 포커스 `Game`. 활성화(`WM_ACTIVATE` · `FocusIn`)로 다시 잠그면 제목 표시줄 · X 를 눌러 활성화한 사용자의 커서가 클라이언트 안으로 끌려가 창을 못 끈다.
+  잠금을 다시 건 클릭(과 그 뗌)은 게임에 넘기지 않는다(언리얼 뷰포트 캡처 클릭과 같다). `ShowCursor` 는 카운터라 `syncMouseLock` 이 전이에서만 부른다.
+  "잠긴 동안만" 할 일(마우스 시점)은 `isMouseLockActive` 로 가린다.
 
 ### 3-12. 기각한 것 — 숫자와 함께 (다시 제안하지 말 것)
 

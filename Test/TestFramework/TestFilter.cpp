@@ -9,28 +9,31 @@ namespace test
         _listIncludePattern.clear();
         _listExcludePattern.clear();
 
-        size_t start{ 0 };
-        while ( start <= filter.size() )
+        // gtest 와 같은 모양이다: 첫 `-` 앞은 고르는 패턴, 뒤는 빼는 패턴이다. 패턴 사이는 `:` 도 쉼표도 된다(`A.*:B.*-A.X` == `A.*,B.*,-A.X`).
+        // 시험 이름에는 `-` 가 없으므로 첫 `-` 가 늘 경계다.
+        const size_t     dash         = filter.find( '-' );
+        const sw::string includePart  = filter.substr( 0, dash );
+        const sw::string excludePart  = dash == sw::string::npos ? sw::string{} : filter.substr( dash + 1 );
+        const auto       splitPattern = []( const sw::string& part, sw::vector<sw::string>& outListPattern )
         {
-            const size_t comma = filter.find( ',', start );
-            sw::string   token = filter.substr( start, comma == sw::string::npos ? sw::string::npos : comma - start );
-            while ( token.empty() == false && token.front() == ' ' )
-                token.erase( token.begin() );
-            while ( token.empty() == false && token.back() == ' ' )
-                token.pop_back();
-
-            if ( token.empty() == false )
+            size_t start{ 0 };
+            while ( start <= part.size() )
             {
-                if ( token.front() == '-' )
-                    _listExcludePattern.push_back( token.substr( 1 ) );
-                else
-                    _listIncludePattern.push_back( token );
+                const size_t separator = part.find_first_of( ",:", start );
+                sw::string   token     = part.substr( start, separator == sw::string::npos ? sw::string::npos : separator - start );
+                while ( token.empty() == false && token.front() == ' ' )
+                    token.erase( token.begin() );
+                while ( token.empty() == false && token.back() == ' ' )
+                    token.pop_back();
+                if ( token.empty() == false )
+                    outListPattern.push_back( token );
+                if ( separator == sw::string::npos )
+                    break;
+                start = separator + 1;
             }
-
-            if ( comma == sw::string::npos )
-                break;
-            start = comma + 1;
-        }
+        };
+        splitPattern( includePart, _listIncludePattern );
+        splitPattern( excludePart, _listExcludePattern );
     }
 
     bool TestFilter::matchGlob( const sw::string& pattern, const sw::string& text )

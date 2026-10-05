@@ -83,7 +83,7 @@ namespace sw
         void beginFrame( float32 deltaSeconds = 0.016f );
         /** @brief 프레임을 마치며 엣지 플래그와 원시 델타를 리셋합니다. */
         void endFrame();
-        /** @brief 창이 포커스를 얻으면 마우스 잠금 모드를 다시 적용합니다. */
+        /** @brief 창이 포커스를 얻었습니다. 잠금은 다시 잡지 않습니다 — 클라이언트를 눌러야 잡습니다(`isMouseLockActive`). */
         void onWindowFocusGained();
         /** @brief 창이 포커스를 잃으면 모든 장치 입력 상태를 초기화하고 마우스 클리핑을 풉니다. */
         void onWindowFocusLost();
@@ -181,8 +181,16 @@ namespace sw
 
         void setMouseClipSubRect( int32 left, int32 top, int32 right, int32 bottom );
         void clearMouseClipSubRect();
-        void applyMouseLockMode();
-        void releaseMouseLockMode();
+        /**
+         * @brief 마우스 잠금이 **지금 OS 에 걸려 있어야 하는지** 반환합니다.
+         * @details 게임이 잠금을 요청했고(`MouseLockMode` 가 None 이 아님) 아래가 모두 참일 때만 참입니다 — 창이 포커스를 쥐고 있다,
+         *          포커스를 잃은 뒤 클라이언트 영역을 한 번 눌렀다(활성화만으로는 다시 잠그지 않는다 — 제목 표시줄 · X 를 눌러야 하니까),
+         *          Alt 를 누르고 있지 않다, 키보드 포커스가 `Game` 이다(개발 콘솔이 열려 있지 않다).
+         *          게임은 마우스 시점처럼 "잠긴 동안만" 하는 일을 이 값으로 가립니다.
+         */
+        bool isMouseLockActive() const;
+        /** @brief 잠금 · 커서 숨김을 지금 상태(`isMouseLockActive`)에 맞춰 OS 에 다시 적용합니다. 창 크기 · 위치가 바뀌면 부릅니다. */
+        void syncMouseLock();
 
         // ------------------------------------------------------------------------------
         // 6) 게임패드 편의 API(장치로 넘겨 줌)
@@ -248,8 +256,32 @@ namespace sw
                 registerDevice( std::move( pGamepad ) );
             }
         }
-        /** @brief 커서 표시 · 숨김을 OS 에 실제로 적용합니다(setCursorVisible() 의 플랫폼 훅). */
+        /** @brief 커서 표시 · 숨김을 OS 에 실제로 적용합니다(`syncMouseLock` 이 숨김 상태가 바뀔 때만 부릅니다 — Win32 `ShowCursor` 는 카운터다). */
         void setCursorVisiblePlatform( bool bVisible );
+        /** @brief 포인터를 게임이 쥘 수 있는 상태인지 — 포커스 있음 · Alt 안 누름 · 키보드 포커스 `Game` · (잠금 요청 중이면) 클릭으로 다시 잡았음. */
+        bool isPointerOwnedByGame() const;
+        /** @brief 창 포커스가 바뀌었습니다(메시지를 받는 그 자리에서 부릅니다). 잃으면 잠금 재획득 표시와 Alt 상태도 지웁니다. */
+        void onPlatformFocusChanged( bool bFocused );
+        /**
+         * @brief 클라이언트 영역에서 마우스 버튼 @p button 이 눌렸습니다. 포커스가 있으면 잠금을 다시 잡습니다(비클라이언트 클릭은 여기 오지 않습니다).
+         * @return 이 누름으로 잠금이 걸렸으면 true — 그 누름과 짝인 뗌은 게임에 넘기지 않습니다(`isMouseButtonConsumed`).
+         */
+        bool onPlatformPointerPressed( MouseButton button );
+        /** @brief 마우스 버튼 @p button 이 떼어졌습니다. 삼킨 누름의 짝이면 true 를 반환하고 삼킴을 풉니다. */
+        bool onPlatformPointerReleased( MouseButton button );
+        /** @brief 잠금을 다시 잡느라 삼킨 누름이 아직 떼어지지 않았는지 반환합니다(더블클릭 · 폴링도 그 버튼을 게임에 넘기지 않습니다). */
+        bool isMouseButtonConsumed( MouseButton button ) const;
+        /** @brief Alt 를 누르거나 뗐습니다. 누르는 동안 잠금을 쉽니다. */
+        void onPlatformAltChanged( bool bHeld );
+        /**
+         * @brief 활성 창이 지금 OS 전경인지 플랫폼에 묻습니다. 창이 없으면(단위 시험) 추적해 둔 값입니다.
+         * @details 게임이 잠금을 처음 켜는 순간 쓰입니다 — 그때까지 포커스 메시지를 하나도 못 받았을 수 있습니다(창이 처음부터 뒤에 떴다).
+         */
+        bool isWindowFocusedPlatform() const;
+        /** @brief OS 잠금을 겁니다(Win32 `ClipCursor` · X11 `XGrabPointer`). `syncMouseLock` 만 부릅니다. */
+        void applyMouseLockMode();
+        /** @brief OS 잠금을 풉니다. */
+        void releaseMouseLockMode();
         /**
          * @brief 가운데 고정 잠금이면, 창이 포커스를 쥐고 있을 때 커서를 잠금 영역 가운데로 되돌립니다(beginFrame 끝의 플랫폼 훅).
          * @details 프레임마다 되돌립니다 — 포커스를 얻을 때 · 창이 움직일 때만 옮기면 커서가 잠금 영역 가장자리에 닿아 더 돌지 않습니다.
@@ -281,8 +313,13 @@ namespace sw
         uint64                               _arrCapturedKeyMask[kKeyMaskWordCount];     /**< 포커스가 `Game` 이 아닐 때 눌려 게임에 가린 키(뗀 다음 프레임에 풀린다). */
         InputKeyboardFocus                   _keyboardFocus;                             /**< 지금 키보드를 받는 쪽. */
         [[maybe_unused]] uint16              _pendingHighSurrogate;                      /**< 짝을 기다리는 서로게이트 앞 반쪽(Win32 WM_CHAR). 0 이면 없음. */
-        uint8                                _bInitialized : 1;
-        uint8                                _bInputMuted  : 1;
-        [[maybe_unused]] uint8               _reserved     : 6;
+        uint8                                _consumedButtonMask;                        /**< 잠금을 다시 잡느라 삼킨, 아직 떼어지지 않은 마우스 버튼 비트(`1 << MouseButton`). */
+        uint8                                _bInitialized         : 1;
+        uint8                                _bInputMuted          : 1;
+        uint8                                _bWindowFocused       : 1; /**< 창이 포커스를 쥐고 있는가(포커스 메시지로 갱신, 창 없는 시험에서는 참). */
+        uint8                                _bMouseLockEngaged    : 1; /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는가. */
+        uint8                                _bAltHeld             : 1; /**< Alt 를 누르고 있는가(누르는 동안 잠금을 쉰다). */
+        uint8                                _bCursorHiddenApplied : 1; /**< OS 커서를 숨겨 둔 상태인가 — `ShowCursor` 는 카운터라 전이에서만 부른다. */
+        [[maybe_unused]] uint8               _reserved             : 2;
     };
 } // namespace sw

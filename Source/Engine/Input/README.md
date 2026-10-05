@@ -64,7 +64,8 @@ Input/
 | 훅 | Windows 구현 | Linux 구현 |
 |----|--------------|------------|
 | `registerPlatformGamepads()` | XInput, 4패드 | 커널 조이스틱 API(`/dev/input/jsN`), 4패드 |
-| `applyMouseLockMode()` / `releaseMouseLockMode()` | `ClipCursor` | `XGrabPointer` / `XUngrabPointer` |
+| `applyMouseLockMode()` / `releaseMouseLockMode()` — `syncMouseLock()` 만 부른다(조건은 공용 `isMouseLockActive()`) | `ClipCursor`(전경 창일 때만) | `XGrabPointer`(포커스 있을 때만) / `XUngrabPointer` |
+| `isWindowFocusedPlatform()` | `GetForegroundWindow` | `FocusIn`/`FocusOut` 추적 값 |
 | `setCursorVisiblePlatform()` | `ShowCursor` | 투명 픽스맵 커서 (`XDefineCursor`) |
 | `disable/restoreWindowsAccessibilityShortcuts()` | 고정키/토글키/필터키 SPI | XKB AccessX (StickyKeys 등) |
 | `pollPlatform()` | `GetAsyncKeyState` 폴백 | `XQueryPointer` 마우스 폴백 (키보드는 이벤트로 충분) |
@@ -98,8 +99,8 @@ flowchart TD
 - **`postRawEvent`는 언제든(다른 스레드에서도) 호출 가능**하지만, 실제로 장치 상태에 반영되는 건 다음
   `beginFrame()`이 큐를 드레인할 때입니다.
 - 같은 `beginFrame()` 안에서 Down 이벤트와 Up 이벤트가 함께 드레인되면(예: 초고속 탭, 매크로 주입),
-  그 프레임엔 "눌렸었다"로 인정됩니다 — `evaluateBindingDown()`의 SingleSlot 케이스가
-  `isControlDown() || wasControlPressed()`를 함께 보기 때문입니다.
+  그 프레임엔 "눌렸었다"로 인정됩니다 — `evaluateBindingDown()`이 단일 키 · 합성(axis1d · vector2d) 모두
+  슬롯마다 `isControlDown() || wasControlPressed()`를 함께 보기 때문입니다(`InputMapTest.CompositeBindingCountsATapWithinOneFrame`).
 - `InputMap::update()`를 프레임마다 부르지 않으면 `isActionDown`/`wasActionTriggered`/커맨드 콤보/버퍼
   만료가 전부 멈춥니다. **통합 맵(`InputManager::getInputMap()`)은 `beginFrame()`이 끝에서 갱신합니다** — 따로 부르면
   한 프레임에 두 번 흐릅니다. 직접 `InputMap`을 만들어 쓰는 도구(에디터 패널 · 셸 맵 등)는 만든 쪽이 매 프레임 호출하세요.

@@ -1213,3 +1213,33 @@ SW_TEST_CASE( InputMapTest, MissingShellInputMapLeavesNoBindings )
     SW_EXPECT_FALSE( pMissing->hasAction( "Jump" ) );
     SW_EXPECT_FALSE( pMissing->hasAction( "ReloadShaders" ) );
 }
+
+/**
+ * @brief [InputMapTest] 합성 바인딩(axis1d · vector2d)도 같은 프레임 안의 누름 + 뗌을 한 번 눌린 것으로 본다 — 단일 키와 같은 규칙
+ * @details 매크로 · 초고속 탭 · 가상 입력(hold=0)은 한 `beginFrame` 에 누름과 뗌이 함께 들어온다. 합성 갈래가 "지금 눌려 있나" 만 보면
+ *          그 프레임 축이 0 이라 `Pressed` 로 묶은 무기 교체(Shooter3D SwitchWeapon)가 발동하지 않는다.
+ */
+SW_TEST_CASE( InputMapTest, CompositeBindingCountsATapWithinOneFrame )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bindAxis1DComposite( "Switch", sw::Key::Q, sw::Key::E, {}, sw::ActionTrigger::Pressed );
+    inputMap.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D );
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::E ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::E ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::W ) );
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::W ) );
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_TRUE_MSG( inputMap.wasActionTriggered( "Switch" ), "한 프레임 안에 누르고 뗀 E 가 axis1d 액션을 발동하지 않았습니다" );
+    SW_EXPECT_TRUE( inputMap.getAxis1D( "Switch" ) > 0.0f );
+    SW_EXPECT_TRUE( inputMap.getVector2D( "Move" )._y > 0.0f );
+    input.endFrame();
+
+    input.beginFrame( 1.0f / 60.0f ); // 다음 프레임은 아무것도 아니다
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "Switch" ) );
+    SW_EXPECT_TRUE( inputMap.getVector2D( "Move" )._y == 0.0f );
+    input.endFrame();
+    input.shutdown();
+}
