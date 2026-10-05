@@ -12,6 +12,8 @@ namespace test
     public:
         void setPattern( const sw::string& filter );
         bool matches( const sw::string& fullName ) const;
+        /** @brief 고르는 패턴(앞에 `-` 가 없는 것)이 하나라도 있는가 — 빼기만 적은 필터는 일부러 고르지 않는 것이다. */
+        bool hasIncludePattern() const { return _listIncludePattern.empty() == false; }
 
     private:
         static bool matchGlob( const sw::string& pattern, const sw::string& text );

@@ -646,6 +646,8 @@ cd build/Ninja-Debug/Bin
 
 ### 3-2. 검증 · 시험 쓰기
 
+- **`--test_filter` 의 구분자는 쉼표다**(`A.*,B.*`). `:` 로 이으면 패턴 하나가 되어 아무것도 맞지 않는다 — 고르는 패턴이 등록된 케이스 하나와도 맞지 않으면
+  실행이 진다(`TestFrameworkTest.FilterThatSelectsNothingFails`). 그 전에는 0/0 으로 통과해 제안서들의 확인 명령이 아무것도 돌리지 않았다.
 - **광선이 두 삼각형이 나누는 모서리를 정확히 지나면 Möller–Trumbore 가 양쪽을 다 놓칠 수 있다** — 같은 각도로 나뉜 합성 원기둥 두 겹에서 실제로 났다
   (`CharacterGeometryUtil::intersectRayTriangle` 은 무게중심 여유 1e-5 로 막는다). 합성 형상 시험은 분할 수를 서로 다르게 하고, 면 모양(다각형)이라 반지름이 면 가운데서
   `r · cos(π/n)` 로 준다는 것도 기댓값에 넣는다.

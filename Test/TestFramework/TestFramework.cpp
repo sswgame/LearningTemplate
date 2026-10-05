@@ -781,6 +781,18 @@ namespace test
         if ( sw::FileUtil::removeDirectory( getProcessTempDirectory() ) == false )
             SW_LOG_WARNING( "Could not remove the process temp directory %# - is a file handle left open?", getProcessTempDirectory().c_str() );
 
+        // 고르는 필터가 등록된 케이스 하나와도 맞지 않으면 잘못 적은 필터다(구분자는 쉼표 — `A.*:B.*` 는 패턴 하나다). 0/0 으로 통과시키면 확인한 줄 안다.
+        // 호스트 스위트 모드 · 샤드와 상관없이 이름만 본다 — 맞는 케이스를 그 모드 · 샤드가 뺀 것은 필터 잘못이 아니다.
+        bool bFilterMatchedNothing = _filter.hasIncludePattern();
+        for ( const TestCaseInfo& testInfo : _listTest )
+        {
+            if ( _filter.matches( testInfo.fullName() ) )
+            {
+                bFilterMatchedNothing = false;
+                break;
+            }
+        }
+
         // 호스트 스위트만 고른 실행이 아무것도 안 돌았다면 그 ctest 항목(`<타깃>_HostOnly`)은 빈 그물이다.
         const bool bHostOnlyRanNothing = _hostSuiteMode == HostSuiteMode::Only && runnableCount == 0;
 
@@ -794,6 +806,8 @@ namespace test
         }
         if ( bHostOnlyRanNothing )
             std::fprintf( stdout, " --host_suites=only selected no test - no SW_TEST_REQUIRES_HOST suite matched\n" );
+        if ( bFilterMatchedNothing )
+            std::fprintf( stdout, " --test_filter matched no test case - separate patterns with ',' (e.g. A.*,B.*), see --test_list\n" );
 
         constexpr size_t                                   kSlowestShown = 5;
         sw::vector<sw::pair<float64, const TestCaseInfo*>> listElapsed;
@@ -827,7 +841,8 @@ namespace test
         std::fprintf( stdout, "====================================================\n" );
         std::fflush( stdout );
 
-        const bool bPassed = failedCount == 0 && bEmptySuiteIsFailure == false && hostSuiteMismatchCount == 0 && bHostOnlyRanNothing == false;
+        const bool bPassed = failedCount == 0 && bEmptySuiteIsFailure == false && hostSuiteMismatchCount == 0 && bHostOnlyRanNothing == false &&
+                             bFilterMatchedNothing == false;
         return bPassed ? 0 : 1;
     }
 } // namespace test
