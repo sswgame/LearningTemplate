@@ -1187,13 +1187,6 @@ namespace sw
                     packet._lightColorAmbient = float4{ color._x, color._y, color._z, pLight->getAmbient() };
                     packet._bHasLight         = SW_TRUE;
                 }
-                // 그림자 행렬과 그 바이어스는 한 볼륨에서 같이 만든다. 텍셀 크기는 렌더 스레드가 만들 그림자 맵과 같은 해상도로 잰다.
-                if ( pLight != nullptr && pShadowLight != nullptr )
-                {
-                    const DirectionalShadowProjection shadow = pShadowLight->buildShadowProjection( FrameRenderer::getShadowMapResolution() );
-                    packet._lightViewProj                    = shadow._viewProj;
-                    packet._shadowParams                     = shadow.computeShaderParams();
-                }
 
                 // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 그림자
                 // 행렬과 앰비언트의 출처이자, 라이트 목록이 비었을 때의 폴백이다.
@@ -1217,6 +1210,17 @@ namespace sw
                     // 투명 정렬의 깊이 — 직교 카메라는 시선 축(같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 바뀌지 않게), 원근은 거리(render2d.xml).
                     _gpuSceneBuilder->setTransparentSortAxis(
                         Render2DSettings::getActive().computeTransparentSortAxis( pCam->isOrthographic(), pCam->getCameraForward() ) );
+                }
+                // 그림자 행렬과 그 바이어스는 한 볼륨에서 같이, 카메라가 정해진 **뒤에** 만든다 — `_shadowViewDistance` 를 준 빛은 볼륨을
+                // 카메라가 보는 곳에 맞춘다. 텍셀 스냅 · 바이어스는 렌더 스레드가 만들 그림자 맵과 같은 해상도로 잰다.
+                if ( pLight != nullptr && pShadowLight != nullptr )
+                {
+                    const uint32                      shadowResolution = FrameRenderer::getShadowMapResolution();
+                    const DirectionalShadowProjection shadow           = packet._bHasViewProj == SW_TRUE
+                                                                           ? pShadowLight->buildShadowProjectionForView( packet._viewProj, shadowResolution )
+                                                                           : pShadowLight->buildShadowProjection( shadowResolution );
+                    packet._lightViewProj                              = shadow._viewProj;
+                    packet._shadowParams                               = shadow.computeShaderParams();
                 }
                 // 추가 뷰(캡처 카메라 · 화면 사각형) — 갱신 주기 · 보이는가 · 예산으로 이번 프레임에 그릴 것을 고른다. 쉬는 뷰도 실린다.
                 _renderViewClock += static_cast<float64>( MathUtil::max( 0.0f, deltaTime ) );

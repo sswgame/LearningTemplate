@@ -643,9 +643,16 @@ namespace sw
             _frameLight._colorAmbient = float4{ lightColor._x, lightColor._y, lightColor._z, pKeyLight->getAmbient() };
             if ( pShadowLight != nullptr )
             {
-                const DirectionalShadowProjection shadow = pShadowLight->buildShadowProjection( getShadowMapResolution() );
-                _frameLight._shadowViewProj              = shadow._viewProj;
-                _frameLight._shadowParams                = shadow.computeShaderParams();
+                // 볼륨 맞춤은 패킷 경로(EngineLoop)와 같은 규칙 — 주 시점 카메라의 뷰-투영으로.
+                const uint32                      shadowResolution = getShadowMapResolution();
+                const DirectionalShadowProjection shadow =
+                    pMainCamera != nullptr
+                        ? pShadowLight->buildShadowProjectionForView(
+                              pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _directOutputWidth, _directOutputHeight ) ),
+                              shadowResolution )
+                        : pShadowLight->buildShadowProjection( shadowResolution );
+                _frameLight._shadowViewProj = shadow._viewProj;
+                _frameLight._shadowParams   = shadow.computeShaderParams();
             }
             else
             {

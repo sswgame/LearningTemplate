@@ -127,6 +127,11 @@ cd build/Ninja-Debug/Bin
 - **2D 의 남은 것(2026-10-04 twod-basics)** — (1) 파이프라인을 게임이 데이터로 고르는 자리(지금은 `-gv_renderPipeline` 뿐 — 게임 프리셋 · gamesettings 에)
   (2) 픽셀 퍼펙트의 Upscale Render Texture(기준 해상도 타깃 + 정수 업스케일 패스) (3) 2D 빛 텍스처 · 자유 모양 빛 · 부드러운 그림자 · 빛 블렌드 스타일
   (4) 타일맵 청크(한 레이어 65536 칸)와 편집 중 미리보기(지금은 플레이 때 배치를 만든다), 에디터 칸에 아틀라스 그림 (5) 테두리를 픽셀로 적는 9-슬라이스.
+- **방향광 그림자의 남은 것(shadow-fix)** — (1) 볼륨 맞춤(`_shadowViewDistance`)을 쓰는 게임은 ThemePark 하나다 — 직교 리그를 쓰는 NileCity · StarSkirmish ·
+  HarvestValley 와 envshowcase(고정 150 m)를 옮겨 볼 것(스크린샷 전후). 바이어스가 텍셀 단위로 줄어 다른 여섯 게임의 여드름은 아직 눈으로 안 봤다(게임별 빌드). (2) 원근 카메라는
+  캐스케이드 하나라 멀리 갈수록 텍셀이 크다 — CSM(분할 2~4, 경계 섞기). (3) 추가 뷰(CCTV · 분할 화면)도 주 시점 볼륨을 쓴다 — 다른 곳을 보는 뷰는 그림자가 빠진다
+  (뷰별 맞춤이면 뷰별 그림자 패스 상수). (4) 깊이 첨부 readback 이 없어 `-gv_screenshotAttachment=ShadowMap` 이 실패한다(`readbackTexture2D 실패`).
+  (5) 카메라 회전 중 2 m 양자화 경계에서 가장자리가 한 번씩 튈 수 있다 — 거슬리면 경계 구(회전 불변)로.
 - **점광 · 스폿 그림자** — RHI 텍스처 차원(배열 · 큐브, 면 단위 타깃 · 올리기 · 읽기)은 있다. 남은 것: 그림자 패스 다중 뷰(면 여섯) → 셰이더 쪽(DX12 · Vulkan
   큐브 · 배열 bindless 테이블, DX11 · GL TextureCube 슬롯) + `swSampleShadowAtWorld`. 3 단계 전에 큐브 대신 2D 아틀라스(Unity URP · Godot — RHI 변경 없음)로 갈지 먼저 정한다.
 - **컷 준비(프리웜)의 선행 조건 셋**(1-6 카메라 항목의 5 단계가 기다린다) — LOD 시스템이 없다, 밉 단위 텍스처 스트리밍이 없다(`AssetStreamingQueue` 는 에셋
@@ -1290,6 +1295,9 @@ cd build/Ninja-Debug/Bin
   `forwardpipelinestaged.xml` · `FusedPostChainMatchesStaged`). 깊이 프리패스는 `SW_PASS_DEPTH_PREPASS` · LessEqual, DX11 은 VS 만.
 - **그림자** — 직교 투영 깊이 범위는 눈 기준 `[거리-반경, 거리+반경]`(아니면 그림자 항이 늘 1), 샘플은 `swSampleShadowAtWorld`, 회귀는 행렬로(`ShadowMatrixDepthRangeContainsScene`) ·
   픽셀로 보려면 바닥(`-gv_benchGround=1`). 그림자 시험은 그림자 깊이 쓰기를 끈 판과 **달라야** 한다. 렌더 차이가 같은 프로세스 안에서는 결정적이고 프로세스마다 갈리면 배치 순서를 의심한다.
+  바이어스는 텍셀 단위로 환산한다(`DirectionalShadowProjection::computeShaderParams` — 깊이 1 · 노멀 오프셋 2 텍셀). NDC 상수로 두면 볼륨에 비례해 커진다
+  (360 m 볼륨에서 0.02 = 7.2 m: 작은 물체 그림자 소실 · 발치 분리). 그림자 맵은 화면 크기와 무관(`gv_shadowQuality` → 1024~4096), 맞춘 볼륨은 절두체 ∩ 받는 높이 띠 + 텍셀 스냅.
+  필터는 3x3 PCF, 에뮬 백엔드(DX11 · GL)는 GatherRed 쌍선형 비교라 네 백엔드 그림이 같다.
 - **타임스탬프 계약** — 칸은 패스 인덱스로 고정(흐르는 카운터는 병렬 기록에서 경쟁), 기다리지 않고 링 슬롯이 펜스를 지난 뒤에만 읽는다, 안 적은 칸은 음수. 계측 게이트는
   `SW_PROFILE_COMPILED` — Shipping 에서는 통째로 빠진다(로그에만 쓰는 값은 `[[maybe_unused]]`).
 - **`GpuUploadQueue`** 는 GT 가 `buildFromScene` 뒤 · 스냅샷 전에 동기로 flush 한다. 워커 생성은 `RHICapabilities::_bThreadSafeResourceCreation`(GL 은 큐가 받지 않는다 — 렌더 스레드가 그 프레임에 만든다. 게임 스레드가 GL 자원을 만들면 렌더 스레드가 쥔 컨텍스트를 기다리다 시간을 넘긴다). 비상 스위치 `-gv_gpuUploadQueue=0`.

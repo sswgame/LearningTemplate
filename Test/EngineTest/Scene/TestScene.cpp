@@ -98,6 +98,68 @@ namespace sw
                 return nonDefaultCount;
             }
         };
+
+        /** @brief 그림자 볼륨 맞춤 시험의 도우미입니다(ThemePark 의 직교 리그 · 해와 같은 모양). */
+        struct ShadowFitTestInternal
+        {
+            static constexpr uint32  kResolution = 2048;
+            static constexpr float32 kPitch      = 0.5235988f; ///< 30°
+            static constexpr float32 kYaw        = 0.7853982f; ///< 45°
+            static constexpr float32 kDistance   = 250.0f;
+
+            /** @brief 행벡터 규약으로 점을 행렬에 곱하고 w 로 나눕니다(셰이더의 `mul( float4( p, 1 ), m )`). */
+            static sw::float3 projectToNdc( const sw::float3& worldPos, const sw::float4x4& matrix )
+            {
+                const sw::float4 clip = sw::float4::transform( sw::float4{ worldPos._x, worldPos._y, worldPos._z, 1.0f }, matrix );
+                return sw::float3{ clip._x / clip._w, clip._y / clip._w, clip._z / clip._w };
+            }
+
+            /** @brief 초점을 내려다보는 직교 카메라의 뷰-투영입니다(16:9, 근 0.1 · 원 625 m — ThemePark 리그와 같다). */
+            static sw::float4x4 makeCameraViewProj( const sw::float3& focus, float32 orthoHeight )
+            {
+                const sw::float3 forward{ sw::MathUtil::cos( kPitch ) * sw::MathUtil::sin( kYaw ), -sw::MathUtil::sin( kPitch ),
+                                          sw::MathUtil::cos( kPitch ) * sw::MathUtil::cos( kYaw ) };
+                const sw::float3 eye = focus - forward * kDistance;
+                return sw::float4x4::createLookAt( eye, focus, sw::float3::Up ) * sw::float4x4::createOrthographic( orthoHeight * 16.0f / 9.0f, orthoHeight, 0.1f, 625.0f );
+            }
+
+            /** @brief 카메라가 보는 바닥(y = 0) 점들 — NDC 격자의 광선이 바닥과 만나는 곳입니다. */
+            static sw::vector<sw::float3> collectVisibleGroundPoints( const sw::float4x4& viewProj )
+            {
+                const sw::float4x4     inverse = viewProj.invert();
+                sw::vector<sw::float3> listPoint;
+                for ( uint32 yIndex = 0; yIndex <= 8; ++yIndex )
+                {
+                    for ( uint32 xIndex = 0; xIndex <= 8; ++xIndex )
+                    {
+                        const float32    ndcX     = -0.95f + 1.9f * static_cast<float32>( xIndex ) / 8.0f;
+                        const float32    ndcY     = -0.95f + 1.9f * static_cast<float32>( yIndex ) / 8.0f;
+                        const sw::float3 nearSide = projectToNdc( sw::float3{ ndcX, ndcY, 0.0f }, inverse );
+                        const sw::float3 farSide  = projectToNdc( sw::float3{ ndcX, ndcY, 1.0f }, inverse );
+                        if ( ( nearSide._y > 0.0f ) == ( farSide._y > 0.0f ) )
+                            continue;
+                        const float32 t = nearSide._y / ( nearSide._y - farSide._y );
+                        listPoint.push_back( nearSide + ( farSide - nearSide ) * t );
+                    }
+                }
+                return listPoint;
+            }
+
+            /** @brief ThemePark 의 해 — 고도 약 20°, 볼륨을 카메라에 맞춘다(띠 -2 ~ 40 m, 빛 쪽 120 m). */
+            static sw::DirectionalLightComponent* addParkSun( sw::Scene& scene )
+            {
+                sw::GameObject*                pSun   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Sun" ) );
+                sw::DirectionalLightComponent* pLight = pSun != nullptr ? pSun->addComponent<sw::DirectionalLightComponent>() : nullptr;
+                if ( pLight == nullptr )
+                    return nullptr;
+                pLight->setLocalRotation( sw::float3{ 0.9f, 0.8f, 0.0f } );
+                pLight->setShadowExtent( 180.0f );
+                pLight->setShadowDistance( 120.0f );
+                pLight->setShadowViewDistance( 1000.0f );
+                pLight->setShadowReceiverHeightRange( -2.0f, 40.0f );
+                return pLight;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -633,6 +695,94 @@ SW_TEST_CASE( SceneTest, ShadowBiasStaysInWorldUnits )
         SW_EXPECT_TRUE_MSG( params._z > 0.0f && params._z <= projection._texelWorldSize * 3.0f, label.c_str() );
         SW_EXPECT_NEAR_EQUAL( 1.0f / static_cast<float32>( kResolution ), params._w, 1e-9f );
     }
+}
+
+/**
+ * @brief [SceneTest] 그림자 볼륨이 직교 카메라가 보는 바닥을 덮고, 줌에 따라 텍셀이 작아진다
+ * @details 볼륨을 원점에 고정하면 공원 안쪽(초점 60,0,230)은 볼륨 밖이라 그림자가 하나도 없고, 확대해도 텍셀이 그대로다(ThemePark).
+ *          보이는 바닥 점이 모두 볼륨 안이어야 하고, 그 점에서 빛 쪽으로 30 m 높이까지 올라간 가리는 점도 깊이 구간 안이어야 한다(가까운 면에 잘리면
+ *          레일 · 나무 그림자가 빠진다). 텍셀은 줌 25 에서 6 cm, 줌 110 에서 20 cm 아래 — 고정 볼륨 360 m 는 17.6 cm 다.
+ */
+SW_TEST_CASE( SceneTest, ShadowVolumeFollowsOrthoCamera )
+{
+    using Internal = sw::ShadowFitTestInternal;
+    sw::Scene scene{ "ShadowFit" };
+    SW_ASSERT_NOT_NULL( scene.getObjectManager() );
+    sw::DirectionalLightComponent* pLight = Internal::addParkSun( scene );
+    SW_ASSERT_NOT_NULL( pLight );
+    const sw::float3 lightDir = pLight->getLightDirection();
+    SW_ASSERT_TRUE( lightDir._y < -0.1f );
+
+    struct ViewCase
+    {
+        sw::float3 _focus;
+        float32    _orthoHeight;
+        float32    _maxTexel;
+    };
+    const ViewCase kArrCase[] = {
+        { sw::float3{ 20.0f, 0.0f, 20.0f }, 110.0f,  0.2f},
+        {sw::float3{ 60.0f, 0.0f, 230.0f }, 110.0f,  0.2f},
+        {sw::float3{ 20.0f, 0.0f, -35.0f },  25.0f, 0.06f},
+    };
+    for ( const ViewCase& viewCase : kArrCase )
+    {
+        const sw::float4x4                    viewProj   = Internal::makeCameraViewProj( viewCase._focus, viewCase._orthoHeight );
+        const sw::DirectionalShadowProjection projection = pLight->buildShadowProjectionForView( viewProj, Internal::kResolution );
+        const sw::vector<sw::float3>          listGround = Internal::collectVisibleGroundPoints( viewProj );
+        SW_ASSERT_TRUE( listGround.size() > 40 );
+
+        const sw::string label = "focus (" + sw::to_string( viewCase._focus._x ) + ", " + sw::to_string( viewCase._focus._z ) + ") ortho " +
+                                 sw::to_string( viewCase._orthoHeight ) + ": ";
+        uint32 outsideCount = 0;
+        for ( const sw::float3& ground : listGround )
+        {
+            const sw::float3 ndc       = Internal::projectToNdc( ground, projection._viewProj );
+            const sw::float3 caster    = ground - lightDir * ( 30.0f / -lightDir._y ); // 해 쪽으로 30 m 높이
+            const sw::float3 casterNdc = Internal::projectToNdc( caster, projection._viewProj );
+            const bool       bInside   = sw::MathUtil::abs( ndc._x ) <= 1.0f && sw::MathUtil::abs( ndc._y ) <= 1.0f && ndc._z >= 0.0f && ndc._z <= 1.0f &&
+                                 casterNdc._z >= 0.0f && casterNdc._z <= 1.0f;
+            if ( bInside == false )
+                ++outsideCount;
+        }
+        SW_EXPECT_TRUE_MSG( outsideCount == 0,
+                            ( label + sw::to_string( outsideCount ) + " visible ground points (or their 30 m casters) are outside the shadow volume" ).c_str() );
+        SW_EXPECT_TRUE_MSG( projection._texelWorldSize < viewCase._maxTexel, ( label + "texel " + sw::to_string( projection._texelWorldSize ) + " m" ).c_str() );
+    }
+}
+
+/**
+ * @brief [SceneTest] 카메라를 팬해도 같은 월드 점이 그림자 맵의 같은 텍셀 자리에 떨어진다(텍셀 스냅)
+ * @details 볼륨 원점을 카메라를 따라 연속으로 옮기면 래스터 격자가 매 프레임 미끄러져 그림자 가장자리가 기어 다닌다(언리얼 · 유니티 CSM 이 스냅하는 이유).
+ */
+SW_TEST_CASE( SceneTest, ShadowVolumeSnapsToTexelsWhilePanning )
+{
+    using Internal = sw::ShadowFitTestInternal;
+    sw::Scene scene{ "ShadowSnap" };
+    SW_ASSERT_NOT_NULL( scene.getObjectManager() );
+    sw::DirectionalLightComponent* pLight = Internal::addParkSun( scene );
+    SW_ASSERT_NOT_NULL( pLight );
+
+    const sw::float3 worldPoint{ 31.3f, 0.0f, 27.9f };
+    auto             texelPhaseOf = [&]( const sw::float3& focus ) -> sw::float2
+    {
+        const sw::DirectionalShadowProjection projection =
+            pLight->buildShadowProjectionForView( Internal::makeCameraViewProj( focus, 110.0f ), Internal::kResolution );
+        const sw::float3 ndc    = Internal::projectToNdc( worldPoint, projection._viewProj );
+        const float32    texelX = ( ndc._x * 0.5f + 0.5f ) * static_cast<float32>( Internal::kResolution );
+        const float32    texelY = ( ndc._y * 0.5f + 0.5f ) * static_cast<float32>( Internal::kResolution );
+        return sw::float2{ texelX - sw::MathUtil::floor( texelX ), texelY - sw::MathUtil::floor( texelY ) };
+    };
+    const sw::float2 before        = texelPhaseOf( sw::float3{ 20.0f, 0.0f, 20.0f } );
+    const sw::float2 after         = texelPhaseOf( sw::float3{ 20.37f, 0.0f, 20.21f } );
+    auto             phaseDistance = []( float32 a, float32 b )
+    {
+        const float32 distance = sw::MathUtil::abs( a - b );
+        return sw::MathUtil::min( distance, 1.0f - distance );
+    };
+    SW_EXPECT_TRUE_MSG( phaseDistance( before._x, after._x ) < 0.02f && phaseDistance( before._y, after._y ) < 0.02f,
+                        ( "texel phase moved: (" + sw::to_string( before._x ) + ", " + sw::to_string( before._y ) + ") -> (" + sw::to_string( after._x ) +
+                          ", " + sw::to_string( after._y ) + ")" )
+                            .c_str() );
 }
 
 /**

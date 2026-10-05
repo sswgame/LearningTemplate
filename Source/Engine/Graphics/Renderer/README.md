@@ -119,6 +119,8 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
   출력 텍스처. GpuScene 의 컬링 칸은 0 = 주 · 1 = 그림자 · 2.. = 추가 뷰(`kFirstExtraCullView`, 최대 `kMaxExtraRenderView`).
 - 프레임 순서: 프리패스(애니메이션 · 모프 · 이번에 그릴 모든 뷰의 컬링) → 렌더 텍스처 뷰 → 주 뷰 → 화면 사각형 뷰(주 화면 위에 덮는다).
   패스 상수는 주 뷰의 시드에서 출발해 뷰-투영 · 풀 크기 · 플래그 · 컬링 칸만 덮어씁니다. 라이트 · 그림자 행렬은 프레임 공통입니다.
+  그림자 볼륨은 주 시점 카메라에 맞춥니다(`DirectionalLightComponent::buildShadowProjectionForView`, `_shadowViewDistance > 0` 인 빛) — 추가 뷰가
+  다른 곳을 보면 그 뷰의 그림자는 주 시점 볼륨 밖에서 빠집니다.
 - 끌 기능: 그림자를 끈 뷰는 그림자 맵을 지우기만 하고, 후처리를 끈 뷰는 `SW_PASS_FLAG_SKIP_POST` 로 포스트 체인이 원본을 고릅니다.
 - **컷 프레임**(`RenderViewSettings::_bCut`, `CameraComponent::markCut` → `consumeCut`): TAA 가 기록 자리에 이번 원본을 겁니다 — 지난 화면이 섞이지 않습니다.
   모션 벡터 · 자동 노출은 렌더러에 아직 없습니다.
