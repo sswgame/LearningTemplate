@@ -29,6 +29,7 @@ sw_addTestExecutable(EditorTest
 		Common/Workspace/TestEditorPlaySession.cpp
 		Common/Commands/TestEditorResourceIndex.cpp
 		Common/Commands/TestEditorSceneCommands.cpp
+		Common/Workspace/TestEditorSceneGenerationSync.cpp
 		Common/Workspace/TestEditorSessionPolicy.cpp
 		Common/SourceControl/TestEditorSourceControl.cpp
 		Common/Workspace/TestEditorTransaction.cpp
@@ -75,6 +76,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetType.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/AssetActions/EditorAssetTypeActions.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorRegistry.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorSceneGenerationSync.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorContext.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorLayoutStore.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorService.cpp"

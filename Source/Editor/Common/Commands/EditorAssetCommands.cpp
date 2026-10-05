@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Common/Workspace/EditorSceneGenerationSync.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -367,28 +368,8 @@ namespace sw::editor
         if ( pContext == nullptr || pSceneManager == nullptr )
             return;
 
-        EditorWorkspace& ws         = pContext->getWorkspace();
-        const uint64     generation = pSceneManager->getSceneGeneration();
-        if ( generation == ws.getObservedSceneGeneration() )
-            return;
-
-        ws.setObservedSceneGeneration( generation );
-        ws.clearSceneDirty();
-        ws.clearSelection();
-
-        /**
-         * 이전 씬을 가리키던 상태를 버린다.
-         *
-         * - **Undo 스택**: 커맨드가 든 XML 스냅샷은 사라진 씬의 것이다. 비우지 않으면 Edit 메뉴가 Undo 를 켜 둔 채로 두고,
-         *   눌러도 아무 일도 없거나 이름이 같은 새 씬의 오브젝트를 덮어쓴다.
-         * - **프리팹 Isolation**: 격리 프레임이 옛 씬의 오브젝트 ID 를 들고 있다. 격리 중에 씬을 열면
-         *   `isPrefabIsolationActive()` 가 계속 true 라 UI 는 격리 중이라고 믿고, `exitPrefabIsolation` 이 새 씬의 무관한
-         *   오브젝트를 되살린다. 씬이 사라졌으니 되돌릴 것도 없다. 상태만 버린다.
-         */
-        CommandStack* pCommandStack = editor::getService<CommandStack>();
-        if ( pCommandStack != nullptr )
-            pCommandStack->clear();
-        ws.clearPrefabIsolation();
+        // 옛 씬을 가리키던 상태(선택 · dirty · Undo · 프리팹 격리)를 버린다 — 이유는 `EditorSceneGenerationSync::apply`.
+        (void)EditorSceneGenerationSync::apply( pContext->getWorkspace(), pSceneManager->getSceneGeneration(), editor::getService<CommandStack>() );
     }
 
     bool EditorAssetCommands::tryBeginQuit()
