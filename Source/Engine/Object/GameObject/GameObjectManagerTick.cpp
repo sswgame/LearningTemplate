@@ -21,68 +21,115 @@ namespace sw
 
     void GameObjectManager::tick( float32 deltaTime )
     {
+        // 순서는 표 하나가 갖는다(`SceneFrameStepList.xxx`). 관찰자는 보통 비어 있어 단계마다 분기 하나다.
+#define SW_SCENE_FRAME_STEP( Name )                 \
+    if ( _frameStepObserver.isBound() )             \
+        _frameStepObserver( SceneFrameStep::Name ); \
+    runFrameStep##Name( deltaTime );
+#include "Engine/Object/GameObject/SceneFrameStepList.xxx"
+#undef SW_SCENE_FRAME_STEP
+    }
+
+    void GameObjectManager::runFrameStepMainThreadTasks( float32 /*deltaTime*/ )
+    {
         if ( engine::areEngineServicesBound() )
             engine::getTaskManager().dispatchMainThreadTasks();
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.destroy" );
-            processDeferredDestruction();
-        }
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.merge" );
-            mergePendingAdds();
-        }
-        // 플레이 중에 붙은 컴포넌트를 틱 **전에** 시작한다 — onBeginPlay 가 틱 그룹을 바꾸거나 구조를 바꾸면 이번 틱에 반영된다.
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.beginPlay" );
-            dispatchPendingBeginPlay();
-        }
+    }
 
-        // 오브젝트가 없으면 컴포넌트 틱까지만 건너뛴다. 아래 단계(지연 큐 · 병합 · 파괴)는 늘 돈다 — 여기서 통째로 돌아가면
-        // 빈 씬에 넣은 `deferPostTick` 이 오브젝트가 생길 때까지 돌지 않는다.
-        // 한 프레임: 물리 앞 그룹(PrePhysics · DuringPhysics) → 결과 적용 → 애니메이션 → 물리 → 물리 뒤 그룹(PostPhysics · PostUpdate) → 결과 적용.
-        // 그래서 PostPhysics 컴포넌트(카메라 디렉터 · 상호작용 · 스프라이트 애니메이터)는 **이번 프레임의** 바디 자세와 겹침을 본다(언리얼 TG_PostPhysics).
-        constexpr uint32 kPostPhysicsGroup = static_cast<uint32>( TickGroup::PostPhysics );
+    void GameObjectManager::runFrameStepDestroy( float32 /*deltaTime*/ )
+    {
+        SW_PROFILE_SCOPE( "GT.Scene.tick.destroy" );
+        processDeferredDestruction();
+    }
+
+    void GameObjectManager::runFrameStepMerge( float32 /*deltaTime*/ )
+    {
+        SW_PROFILE_SCOPE( "GT.Scene.tick.merge" );
+        mergePendingAdds();
+    }
+
+    void GameObjectManager::runFrameStepBeginPlay( float32 /*deltaTime*/ )
+    {
+        SW_PROFILE_SCOPE( "GT.Scene.tick.beginPlay" );
+        dispatchPendingBeginPlay();
+    }
+
+    void GameObjectManager::runFrameStepTickPrePhysics( float32 deltaTime )
+    {
+        // 오브젝트가 없으면 컴포넌트 틱만 건너뛴다(적용 · 병합 · 파괴는 늘 돈다).
         if ( _store.hasMergedObjects() )
-            _tickScheduler.tickPhase( deltaTime, 0, kPostPhysicsGroup );
+            _tickScheduler.tickPhase( deltaTime, 0, static_cast<uint32>( TickGroup::PostPhysics ) );
+    }
+
+    void GameObjectManager::runFrameStepApplyPrePhysics( float32 /*deltaTime*/ )
+    {
         _structuralChangeBuffer.drain( *this );
+    }
 
-        // 내비게이션 — 틱이 건 목적지를 군중에 넣고 한 번에 진행해 오브젝트 자리 · 컨트롤러 속도를 쓴다(그 속도가 아래 물리 프레임에 든다).
+    void GameObjectManager::runFrameStepNavigation( float32 deltaTime )
+    {
         // 끝난 타일 재베이크를 끼우는 것도 여기다 — 컴포넌트 틱이 질의하지 않는 구간이다.
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.navigation" );
-            _sceneNavigation.tick( deltaTime );
-        }
+        SW_PROFILE_SCOPE( "GT.Scene.tick.navigation" );
+        _sceneNavigation.tick( deltaTime );
+    }
 
-        // 애니메이션 — 틱이 정한 파라미터로 포즈 · 스킨 팔레트를 만들고, 루트 모션을 트랜스폼(또는 캐릭터 컨트롤러)에 쓴다. 물리 **앞**이다 —
-        // 키네마틱 히트박스(래그돌)가 이번 프레임 포즈를 쫓고, 래그돌의 바디 자세는 물리 뒤에 읽혀 다음 포즈에 섞인다.
+    void GameObjectManager::runFrameStepAnimation( float32 deltaTime )
+    {
+        // 래그돌의 바디 자세는 물리 뒤에 읽혀 다음 포즈에 섞인다.
         _animationSystem.evaluate( deltaTime );
+    }
 
+    void GameObjectManager::runFrameStepFlushPostAnimation( float32 /*deltaTime*/ )
+    {
         if ( hasDirtySceneTransforms() )
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.flushTransformsPost" );
             flushSceneTransforms();
         }
+    }
 
-        // 이 프레임에 적용된 월드 자리로 겹침을 잰다. 이벤트 처리가 지운 것도 아래에서 함께 놓는다.
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
-            stepPhysics( deltaTime );
-        }
+    void GameObjectManager::runFrameStepPhysics( float32 deltaTime )
+    {
+        // 이 프레임에 적용된 월드 자리로 겹침을 잰다. 이벤트 처리가 지운 것은 마지막 단계가 놓는다.
+        SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
+        stepPhysics( deltaTime );
+    }
 
+    void GameObjectManager::runFrameStepTickPostPhysics( float32 deltaTime )
+    {
         if ( _store.hasMergedObjects() )
-            _tickScheduler.tickPhase( deltaTime, kPostPhysicsGroup, TickRegistry::kGroupCount );
+            _tickScheduler.tickPhase( deltaTime, static_cast<uint32>( TickGroup::PostPhysics ), TickRegistry::kGroupCount );
+    }
+
+    void GameObjectManager::runFrameStepApplyPostPhysics( float32 /*deltaTime*/ )
+    {
         _structuralChangeBuffer.drain( *this );
+    }
+
+    void GameObjectManager::runFrameStepFlushEnd( float32 /*deltaTime*/ )
+    {
         if ( hasDirtySceneTransforms() )
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.flushTransformsEnd" );
             flushSceneTransforms();
         }
+    }
 
-        // 틱이 지운 것(맞은 투사체 등)을 여기서 놓는다.
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.destroyPost" );
-            processDeferredDestruction();
-        }
+    void GameObjectManager::runFrameStepDestroyPost( float32 /*deltaTime*/ )
+    {
+        SW_PROFILE_SCOPE( "GT.Scene.tick.destroyPost" );
+        processDeferredDestruction();
+    }
+
+    const utf8* getSceneFrameStepName( SceneFrameStep step )
+    {
+        static constexpr const utf8* kArrName[] = {
+#define SW_SCENE_FRAME_STEP( Name ) #Name,
+#include "Engine/Object/GameObject/SceneFrameStepList.xxx"
+#undef SW_SCENE_FRAME_STEP
+        };
+        const uint32 index = static_cast<uint32>( step );
+        return index < static_cast<uint32>( SceneFrameStep::Count ) ? kArrName[index] : "Unknown";
     }
 
     void GameObjectManager::stepPhysics( float32 deltaTime )

@@ -105,6 +105,7 @@ namespace sw
         , _scenePhysics{}
         , _sceneAudio{}
         , _sceneNavigation{}
+        , _frameStepObserver{}
     {
         _animationSystem.setObjectManager( this );
         _sceneNavigation.setObjectManager( this );

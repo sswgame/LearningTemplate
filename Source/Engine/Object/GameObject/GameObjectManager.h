@@ -25,6 +25,7 @@
 #include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/SceneAudio.h"
+#include "Engine/Object/GameObject/SceneFrameStep.h"
 #include "Engine/Object/GameObject/SceneNavigation.h"
 #include "Engine/Object/GameObject/SceneOverlapWorld2D.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
@@ -153,15 +154,17 @@ namespace sw
         bool hasBegunPlay() const { return _store.hasBegunPlay(); }
 
         /**
-         * @brief 계층을 지키는 병렬 틱입니다.
-         * @details 0) 지연 파괴 처리, 새로 만든 오브젝트 병합
-         *          1) SceneComponent 월드 캐시 플러시(루트 → 자식, 더티 서브트리만)
-         *          2) 병렬 Component 틱(트랜스폼 캐시는 읽기 전용, 구조 변경은 지연)
-         *          3) 지연된 attach · detach → 틱 중 쌓인 트랜스폼 쓰기 → 지연 큐(deferPostTick) 실행 → 병합,
-         *             더티면 다시 플러시, 마지막으로 지연 파괴 처리
-         *          1) · 2) 는 오브젝트가 있을 때만 돌고, 3) 은 늘 돕니다. 단계마다 `GT.Scene.tick.*` 프로파일 스코프가 있습니다.
+         * @brief 씬 한 프레임을 진행합니다 — 표(`SceneFrameStepList.xxx`)의 단계를 줄 순서대로 돕니다.
+         * @details 순서와 각 단계가 하는 일은 그 표 하나에 있습니다. 단계마다 `GT.Scene.tick.*` 프로파일 스코프가 있습니다.
          */
         void tick( float32 deltaTime );
+
+        using FrameStepObserver = Delegate<void( SceneFrameStep )>;
+        /**
+         * @brief 단계마다 돌기 **직전에** 부를 관찰자를 겁니다(게임 스레드). 묶이지 않은 델리게이트를 주면 풉니다.
+         * @details 진단 · 시험용입니다 — 단계 사이의 상태를 보거나 순서를 기록합니다. 관찰자 안에서 구조를 바꾸지 마십시오.
+         */
+        void setFrameStepObserver( FrameStepObserver observer ) { _frameStepObserver = std::move( observer ); }
 
         /**
          * @brief 트랜스폼 계층입니다(루트 목록 · 더티 세대 · 플러시 알고리즘). 매니저는 소유하고 tick 의 단계만 정합니다.
@@ -388,6 +391,11 @@ namespace sw
          */
         void stepPhysics( float32 deltaTime );
 
+        // 프레임 단계 본문 — 표(`SceneFrameStepList.xxx`)의 줄마다 하나. `tick` 이 줄 순서대로 부른다.
+#define SW_SCENE_FRAME_STEP( Name ) void runFrameStep##Name( float32 deltaTime );
+#include "Engine/Object/GameObject/SceneFrameStepList.xxx"
+#undef SW_SCENE_FRAME_STEP
+
         // 단위들은 소유만 한다. 선언 순서가 생성 순서다 — 뒤 단위가 앞 단위를 참조로 받는다(틱 디스패치 → 계층 · 등록부 · 틱 중 규칙,
         // 저장소 → 틱 등록부 · 틱 중 규칙). 오브젝트는 소멸자의 `clear` 가 먼저 지우므로 단위가 사라지는 순서에 기대지 않는다.
 
@@ -415,5 +423,7 @@ namespace sw
         SceneAudio _sceneAudio;
         /** @brief 내비게이션입니다. 컴포넌트(에이전트 · 장애물 · 표면)의 해제가 등록을 뺀다. */
         SceneNavigation _sceneNavigation;
+        /** @brief 단계마다 돌기 직전에 부르는 관찰자(`setFrameStepObserver`)입니다. 보통 비어 있습니다. */
+        FrameStepObserver _frameStepObserver;
     };
 } // namespace sw

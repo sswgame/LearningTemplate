@@ -1,0 +1,31 @@
+/**
+ * @file Engine/Object/GameObject/SceneFrameStepList.xxx
+ * @brief 씬 한 프레임(`GameObjectManager::tick`)의 단계 순서 단일 표입니다(X-macro). `SceneFrameStep.h` 와 `GameObjectManager` 가 읽습니다.
+ * @details include 하기 전에 `SW_SCENE_FRAME_STEP( Name )` 를 정의합니다(#pragma once 없음).
+ *
+ * - **줄 순서가 실행 순서입니다.** 프레임 순서를 설명하는 곳은 이 표 하나입니다 — 다른 주석(`TickGroup` · `ScenePhysics` · 매니저)은 이 표를 가리킵니다.
+ * - 단계 본문은 매니저의 `runFrameStep<Name>( float32 deltaTime )` 하나입니다. 본문이 없으면 컴파일 오류입니다. 프로파일 스코프(`GT.Scene.tick.*`)는 본문이 듭니다.
+ * - 언리얼 `UWorld::Tick` 의 `RunTickGroup( TG_PrePhysics … TG_PostUpdateWork )` 사이에 물리 · 내비게이션 · 애니메이션을 끼우는 것과 같은 자리이고,
+ *   유니티 `PlayerLoop` 처럼 단계 목록으로 적습니다. 끼워 넣는 것은 줄 하나와 본문 하나입니다(`SceneFrameStepTest` 가 줄 순서를 본다).
+ * - 컴포넌트 틱 그룹은 물리 앞 둘(PrePhysics · DuringPhysics)과 물리 뒤 둘(PostPhysics · PostUpdate)로 나뉩니다. 그래서 PostPhysics 이후의 틱은
+ *   **이번 프레임의** 바디 자세 · 겹침을 보고, 앞의 두 그룹은 지난 프레임의 것을 봅니다. 앞 그룹에서 쓴 애니메이터 파라미터 · 트랜스폼은 같은 프레임의
+ *   애니메이션 · 물리에 들고, PostPhysics 이후에 쓴 것은 다음 프레임에 듭니다.
+ * - 오브젝트가 없으면 컴포넌트 틱 단계만 건너뜁니다. 적용 · 병합 · 파괴는 늘 돕니다 — 빈 씬에 넣은 `deferPostTick` 도 돈다.
+ * - `SceneAudio::update` 는 활성 게임 카메라가 필요해 이 표 밖(`Scene::tick`, 이 프레임 뒤)에 있습니다.
+ */
+
+//                   단계                  // 하는 일
+SW_SCENE_FRAME_STEP( MainThreadTasks )    // 엔진의 메인 스레드 작업(`TaskManager::dispatchMainThreadTasks`)
+SW_SCENE_FRAME_STEP( Destroy )            // 지난 프레임 뒤에 지운 오브젝트 · 컴포넌트를 놓는다
+SW_SCENE_FRAME_STEP( Merge )              // 틱 밖에서 만든 오브젝트를 목록에 합친다
+SW_SCENE_FRAME_STEP( BeginPlay )          // 플레이 중에 붙은 컴포넌트를 틱 **전에** 시작한다 — onBeginPlay 가 틱 그룹 · 구조를 바꾸면 이번 틱에 든다
+SW_SCENE_FRAME_STEP( TickPrePhysics )     // PrePhysics · DuringPhysics 그룹 병렬 틱(`SceneTickScheduler::tickPhase`, 구조 동결)
+SW_SCENE_FRAME_STEP( ApplyPrePhysics )    // 틱이 남긴 것을 적용 — 구조 변경 → 틱 중 트랜스폼 쓰기 → 틱 뒤 큐 → 병합 → 시작(`StructuralChangeBuffer::drain`)
+SW_SCENE_FRAME_STEP( Navigation )         // 틱이 건 목적지로 군중을 진행해 자리 · 컨트롤러 속도를 쓴다 — 그 속도가 이번 물리에 든다
+SW_SCENE_FRAME_STEP( Animation )          // 포즈 · 스킨 팔레트 · 루트 모션. 물리 **앞**이라 키네마틱 히트박스가 이번 포즈를 쫓는다
+SW_SCENE_FRAME_STEP( FlushPostAnimation ) // 더티 트랜스폼을 월드로 펼친다 — 물리가 이번 프레임의 자리를 잰다
+SW_SCENE_FRAME_STEP( Physics )            // 겹침 월드(2D 콜라이더 · 겹침 이벤트) → 강체(고정 스텝 · 보간 · 접촉 이벤트) → 플러시
+SW_SCENE_FRAME_STEP( TickPostPhysics )    // PostPhysics · PostUpdate 그룹 병렬 틱 — 이번 프레임의 바디 자세 · 겹침을 본다
+SW_SCENE_FRAME_STEP( ApplyPostPhysics )   // 위 그룹이 남긴 것을 적용(`StructuralChangeBuffer::drain`)
+SW_SCENE_FRAME_STEP( FlushEnd )           // 그리기 전에 더티 트랜스폼을 펼친다
+SW_SCENE_FRAME_STEP( DestroyPost )        // 이 프레임에 지운 것(맞은 투사체 등)을 놓는다

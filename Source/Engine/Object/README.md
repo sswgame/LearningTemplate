@@ -39,7 +39,8 @@ Object/
 │  ├─ GameObjectManager.h
 │  ├─ GameObjectManager.cpp     # 씬의 얼굴 — 단위들을 소유 · 비우기, 이름으로 컴포넌트 만들기(TypeInfo 의 생성 함수). 게임 API 는 헤더의 전달 함수
 │  ├─ GameObjectStore.*         # 저장소(ULevel · FUObjectArray 자리) — 생성 · 이름(번호 되쓰기) · id 슬롯 표 · 조회 · 순회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄
-│  ├─ GameObjectManagerTick.cpp # 프레임: tick 의 단계 · 물리 · 트랜스폼 배치/큐 전달
+│  ├─ GameObjectManagerTick.cpp # 프레임: 표의 단계 본문(`runFrameStep*`) · 물리 · 트랜스폼 배치/큐 전달
+│  ├─ SceneFrameStepList.xxx    # 프레임 순서 표 하나(X-macro, 줄 순서 = 실행 순서) — `SceneFrameStep.h` 가 열거로 읽는다
 │  ├─ SceneTickScheduler.*      # 틱 디스패치(FTickTaskManager 자리) — 틱 등록부 소유 · 그룹 포크-조인 · 선행 조건 스테이지 · 경계의 트랜스폼 적용
 │  ├─ TickRegistry.*            # 틱 등록부 — 오브젝트별 항목 · 그룹 목록 · 선행 종속성 스테이지
 │  ├─ StructuralChangeBuffer.*  # 틱 중 규칙(DOTS ECB 자리) — 동결 플래그 하나 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서(`drain`) · 스레드별 틱 상태
@@ -79,7 +80,7 @@ Object/
 
 ## 프레임 한 번의 흐름 (Tick)
 
-매 프레임 `GameObjectManager::tick` 이 대략 아래 순서로 돕니다.
+매 프레임 `GameObjectManager::tick` 이 프레임 표(`GameObject/SceneFrameStepList.xxx`)의 단계를 줄 순서대로 돕니다. 아래는 그중 틱 · 적용 부분입니다 — 순서의 정본은 표입니다.
 
 ```mermaid
 flowchart TD

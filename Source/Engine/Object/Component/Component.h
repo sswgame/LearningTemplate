@@ -25,10 +25,8 @@ namespace sw
     /**
      * @enum TickGroup
      * @brief 한 프레임 안에서 컴포넌트 틱이 도는 순서 슬롯입니다.
-     * @details 이름대로 물리 파이프라인 단계(언리얼 ETickingGroup)입니다 — 물리는 **DuringPhysics 와 PostPhysics 사이**에 한 번 step 합니다
-     *          (`GameObjectManager::tick`: PrePhysics · DuringPhysics → 틱 결과 적용(구조 변경 · 틱 쓰기 · 틱 뒤 큐) → 애니메이션 → 물리(겹침 · 강체, 이벤트) →
-     *          PostPhysics · PostUpdate → 틱 결과 적용). 그래서 PostPhysics 이후의 틱은 **이번 프레임의** 바디 자세 · 겹침을 보고, 앞의 두 그룹은 지난 프레임의
-     *          것을 봅니다. 애니메이션 파라미터를 PostPhysics 이후에 쓰면 다음 프레임 포즈에 듭니다.
+     * @details 이름대로 물리 파이프라인 단계(언리얼 ETickingGroup)입니다 — 물리는 **DuringPhysics 와 PostPhysics 사이**에 한 번 step 합니다.
+     *          프레임 안의 자리(어느 단계가 무엇을 보나)는 프레임 표 `Engine/Object/GameObject/SceneFrameStepList.xxx` 하나에 있습니다.
      */
     enum class TickGroup : uint8
     {
