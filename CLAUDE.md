@@ -133,6 +133,9 @@ says when it should run: `preCommitPattern` (fnmatch globs against staged repo-r
 means always), `preCommitFileArgument` (`"--files"`, `"positional"`, or `""` for whole-tree gates), and
 `preCommitSkipReason` for a gate the hook cannot run (`CheckSourceGlob` needs a build directory). A commit
 that touches only `.cmake`, `.py` or data still runs every gate whose pattern matches it.
+A gate whose whole-tree run takes minutes sets `ctestSkipReason`: it is not registered as a CTest lint and runs
+only in the commit hook (and directly) — the reason names the place that does run it over the whole tree
+(`CheckHeaderSelfContained`: the daily `header-self-contained` CI workflow).
 **A merge commit checks only new content file by file**: while `MERGE_HEAD` exists, the file-argument gates,
 the fixers and clang-format get only the staged files whose blob differs from that path in *every* parent
 (conflict resolutions, auto-merged files) — a file byte-identical to one parent was checked when that parent
@@ -180,8 +183,9 @@ py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its rules st
   builds as long as something else included that name first — until the day that something else is
   tidied and the break lands in an unrelated file. `RunHeaderSelfContained.py` compiles each header on
   its own (`-fsyntax-only`, real flags borrowed from the nearest TU in the compile DB) and names the
-  ones that do not stand. ~3 min for `Source/`, so it is a report, not a gate — run it after a folder
-  sweep or an include cleanup. **Keep force-included headers thin:** the generated `FlagOps.gen.h` is
+  ones that do not stand. ~3 min for `Source/`, so the whole tree is a report, not a gate — run it after a folder
+  sweep or an include cleanup; CI runs it daily (`header-self-contained.yml`) and the commit hook checks the staged
+  headers (`CheckHeaderSelfContained`, when a build folder exists). **Keep force-included headers thin:** the generated `FlagOps.gen.h` is
   force-included (`/FI`) into every TU of a target, so anything it `#include`s is "already there" everywhere
   and hides every omission. It carries only opaque enum forward declarations plus the `IsBitFlagEnum`
   specializations, and includes nothing but `Core/Common/BitFlagTrait.h` (`<type_traits>` only) — `EnumUtil.h`
