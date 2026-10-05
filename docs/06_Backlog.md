@@ -406,12 +406,6 @@ cd build/Ninja-Debug/Bin
   가속하지 않으니 다음 차례(누적 우선도)까지 옛 상태가 보인다. 메시지 전달 통지(`NetConnection` 패킷 확인 → 메시지)가 생기면 확인 기준으로 바꾼다. ② 클라이언트-서버도
   우선도를 보낼 때 0 으로 돌려, 실린 스냅숏이 순서만 채널에서 다음 것에 밀리거나 잃으면 낮은 우선도는 한 차례(우선도 비 만큼) 더 기다린다(하니스: 11 → 최대 20 틱).
 
-- **리눅스 Shipping 에서만 파괴 네트워킹 해시가 갈린다**(2026-10-05, 결함 — 가장 먼저). `NetSimDestructionTest.CleanLinkConvergesLateJoinsAndRepairs` 가
-  WSL-Shipping 에서 3/3 으로 진다(`result._convergedTick >= 0` — 클라이언트의 끝 구조 해시가 서버와 다름). Windows Debug · Shipping 과 리눅스 Debug 는 통과.
-  한 프로세스 안의 서버 · 클라이언트가 갈리므로 기계 간 부동소수점이 아니라 **같은 바이너리 안의 다른 경로**(사건 적용 대 스냅숏 · 늦은 참가 · 복구, 최적화의 FMA
-  축약 `-ffp-contract`, 순서 없는 순회, 초기화 안 된 값, 해시에 섞인 패딩)를 의심한다. 처음 갈리는 사건을 찾던 진단 출력(`DBGNET`, `applyDamage` 전후 해시)이
-  워크트리 `LT-wt/net-linux`(브랜치 `wt/net-linux`)에 **커밋하지 않은 채** 남아 있다 — 이어서 쓰고, 고친 뒤 진단 줄은 모두 지운다. CI 리눅스 Shipping 잡이 이것으로 진다.
-
 - **네트워크 리팩토링 남은 단계(2026-10-05 사용자 요청 — 결함 단계 N0~N12 · 키트 결함 D1~D19 는 끝남).** 공통 부품을 Core `Network/Replication/` 에 두고 키트는
   조립만 하게. 단계마다 커밋 하나, 스레드를 건드린 단계는 `--test_repeat=50`, 파괴 네트워킹 시험(`NetSimDestruction*` · `DestructionSnapshot`)을 매 단계 지킨다.
   N13 폴더 나누기(Transport · Connection · Message · Replication) · `sendToPeers` 남은 곳 · 남은 손 블롭(`TurnRelay.cpp` 의 자체 `writeBlob/readBlob` 포함)을 Core 블롭으로 ·
@@ -465,9 +459,6 @@ cd build/Ninja-Debug/Bin
 - **TSan 잡의 Jolt 는 계측되지 않은 vcpkg 라이브러리다** — 잡 의존 · 장벽 동기화가 라이브러리 .cpp 안이라 TSan 이 못 보고, 헤더 인라인 접근만 보여
   수백 건의 거짓 경쟁이 난다. `cmake/Modules/Options/TsanSuppressions.txt` 가 Jolt 내부 함수를 억제하고, 그 탓에 Jolt 잡 안에서 불리는 엔진 콜백(접촉
   리스너 등)의 경쟁도 가려진다. TSan 구성에서 Jolt 를 `-fsanitize=thread` 로 짓는 트리플릿(트리플릿 변경 — 메인 · 사용자 결정)으로 바꾸면 억제를 지운다.
-- **리눅스 Shipping 에서 `NetSimDestructionTest.CleanLinkConvergesLateJoinsAndRepairs` 가 늘 진다**(`_convergedTick >= 0` — 클라이언트 구조 해시가
-  서버와 끝내 같아지지 않는다, WSL CI-Shipping 3/3) — CI 리눅스 Shipping 잡을 세운다. 리눅스 Debug · ASan · TSan · Windows Shipping 은 통과한다 — 최적화
-  구성에서만 갈리는 결정성 문제로 보인다. 재현: `cd build/CI-Shipping/Bin && ../TestBin/EngineTest --test_filter=NetSimDestructionTest.*`.
 - **Windows CI 시험 단계 실패(10-02 부터 Debug, 10-03 부터 Shipping)의 원인은 이 PC 에서 재현하지 못했다** — CI-Debug · CI-Shipping 을 같은 라벨로,
   TEMP 를 8.3 짧은 이름으로 바꿔서도 돌렸다(부하로 인한 시간 초과 말고는 통과). CI 의 시험 단계가 이제 진 시험을 주석으로 올리므로 병합 뒤 첫 실행의
   주석(`/check-runs/<job id>/annotations`, 로그인 없이 읽힌다)에서 시험 이름 · 실패 줄을 보고 고친다.
@@ -652,6 +643,9 @@ cd build/Ninja-Debug/Bin
 - **ThreadSanitizer 는 이 리눅스 환경의 clang 18 에 런타임이 없다** — clang 으로 `-fsanitize=thread` 컴파일하고 링크만 gcc 의
   `/usr/lib/x86_64-linux-gnu/libtsan.so.2` 를 직접 붙이면 돈다(`setarch -R` 으로 ASLR 을 끈다). 일부러 만든 경합을 잡는 것까지 확인했다(2026-10-03,
   `NetworkThreadTest`). 잠금 · 스레드를 바꾼 뒤 그 시험만 이렇게 돌린다.
+- **고정 틱 창 끝에서 "모두 같다" 를 보는 네트워크 시험은 서버 물리가 그 창 안에 가라앉는다고 가정한다** — 물리 궤적은 구성마다 달라 리눅스 Shipping 에서는
+  파괴 벽의 사건이 480 틱 창 너머까지 와 수렴 단언이 졌다(Debug 는 269 틱에 멈춤). 수렴은 창 뒤 상한 안에서 같아질 때까지 돌려 본다(`ScenarioOptions::_settleTickLimit`).
+  해시가 갈리면 먼저 사건마다 적용 전 · 후 해시를 서버 · 클라이언트에 찍어 같은 (오브젝트, 번호) 끼리 맞춰 본다 — 결정성 결함인지 시험 가정인지 한 번에 갈린다.
 
 - **CoreTest 는 엔진을 쓰지 않는다** — include 경로로는 막을 수 없다(`TestFramework` 가 Engine 을 PUBLIC 링크, `TestFramework.h` → `EngineMinimal.h`).
   `CheckTestSuites` 규칙 6 이 CoreTest 파일의 직접 Engine · GameFramework · Editor include 와 `engine::` 호출을 막는다. 엔진 타입이 필요하면 지역 대역을 쓰거나 EngineTest 에.

@@ -3,7 +3,8 @@
  * @brief 가상 서버 하니스 위의 파괴 네트워킹 시나리오 — 쇼케이스 씬(벽 200 조각 · 상자 셋 · 도화선 드럼통 사슬)을 서버 1 + 클라이언트 3 이 각자 씬 · 물리로 돌린다.
  * @details 서버만 드럼통이 터지고(권한), 클라이언트는 사건 · 덩어리 자세 · 스냅숏을 받아 같은 구조 상태가 된다. 수렴 틱 · 사건 지연 · 덩어리 오차 · 대역폭을
  *          재고 로그 줄 `[NetSimDestruction]` 로 남긴다. `NetSimDestructionTest`(깨끗한 회선 · 늦은 참가 · 빠진 사건)와 `NetSimDestructionMatrixTest`
- *          (나쁜 회선 둘 — Debug 50 초라 호스트 스위트)가 함께 쓴다.
+ *          (나쁜 회선 둘 — Debug 50 초라 호스트 스위트)가 함께 쓴다. 창(`_tickCount`)이 끝나도 서버가 아직 부서지고 있으면 모두 같아질 때까지 `_settleTickLimit` 안에서 더 돈다 —
+ *          서버 물리가 가라앉는 시점은 구성마다 다르다(리눅스 Shipping 은 480 틱 뒤).
  */
 #pragma once
 #include "Core/Math/MathUtil.h"
@@ -238,6 +239,7 @@ namespace test
         int32                  _lateJoinTick{ -1 };    ///< 이 틱에 클라이언트 하나가 더 들어온다
         int32                  _skipEventClient{ -1 }; ///< 이 클라이언트(0 부터)가 벽의 다음 사건 하나를 빼먹는다
         uint32                 _seed{ 5u };
+        uint32                 _settleTickLimit{ 600 }; ///< 창(_tickCount) 뒤에 모두가 서버와 같아질 때까지 더 도는 틱 상한
     };
 } // namespace test
 
@@ -253,6 +255,7 @@ namespace test
         float32         _minRenderLagTicks{ 1.0e9f }; ///< 클라이언트가 덩어리를 그리는 틱이 서버 틱보다 가장 덜 뒤처졌을 때(틱)
         int32           _lateJoinMatchTicks{ -1 };
         int32           _desyncRecoverTicks{ -1 };
+        int32           _settleTicks{ 0 }; ///< 창 뒤에 더 돈 틱 — 서버 물리가 창 끝까지 움직이는 구성에서만 0 보다 크다
         uint32          _hashMismatchCount{ 0 };
         uint32          _snapshotAppliedCount{ 0 };
         uint32          _debrisViolationCount{ 0 }; ///< 파편인데 캐릭터와 부딪히는 레이어거나, 덩어리인데 클라이언트가 몰지 않는 것
@@ -314,8 +317,13 @@ namespace test
 
         vector<FractureGroupPose> listPose;
         uint64                    windowStartBytes = 0;
-        for ( uint32 tick = 0; tick < options._tickCount; ++tick )
+        // 서버 물리가 언제 가라앉는지는 구성마다 다르다(리눅스 Shipping 은 벽 사건이 480 틱 뒤까지 온다) — 창이 끝나도 모두 같아질 때까지 상한 안에서 더 돈다.
+        const uint32 tickLimit = options._tickCount + options._settleTickLimit;
+        uint32       tick      = 0;
+        for ( ; tick < tickLimit; ++tick )
         {
+            if ( tick >= options._tickCount && result._convergedTick >= 0 )
+                break;
             if ( tick % 60 == 0 )
             {
                 const uint64 sentBytes                 = harness.getServer().getTraffic()._sentBytes;
@@ -420,6 +428,7 @@ namespace test
                     result._desyncRecoverTicks = static_cast<int32>( tick ) - desyncTick;
             }
         }
+        result._settleTicks = static_cast<int32>( tick ) - static_cast<int32>( options._tickCount );
 
         // 끝 — 멈춘 덩어리 오차, 파편 레이어, 대역폭.
         const PhysicsSettings*    pSettings      = harness.getServer().getObjectManager().getScenePhysics().findSettings();
@@ -480,13 +489,13 @@ namespace test
     {
         SW_LOG_INFO( "[NetSimDestruction] %#: events %#, last server change tick %#, converge %# ticks after it, max event lag %# ticks, chunk error max %# m p99 %# m (%# samples), render lag min %# ticks, "
                      "rest error %# m, chunks %# debris %# violations %#, server up %# B/s (peak %# B/s), client down %# B/s, destruction payload %# B/s, pose messages %#, "
-                     "mismatch %# snapshots %# late-join %# ticks desync-recover %# ticks",
+                     "mismatch %# snapshots %# late-join %# ticks desync-recover %# ticks settle %# ticks",
                      pName, result._serverEventCount, result._lastServerChangeTick, result._convergedTick >= 0 ? result._convergedTick - result._lastServerChangeTick : -1, result._maxEventLagTicks,
                      computePercentile( result._listChunkError, 1.0f ), computePercentile( result._listChunkError, 0.99f ), result._listChunkError.size(), result._minRenderLagTicks,
                      result._maxRestError,
                      result._chunkCount, result._debrisCount, result._debrisViolationCount, result._serverUploadBytesPerSecond, result._peakServerUploadBytesPerSecond, result._clientDownloadBytesPerSecond,
                      result._destructionBytesPerSecond, result._poseMessageCount, result._hashMismatchCount, result._snapshotAppliedCount, result._lateJoinMatchTicks,
-                     result._desyncRecoverTicks );
+                     result._desyncRecoverTicks, result._settleTicks );
     }
 
     inline bool loadShowcase( SceneDocument& outDocument )
@@ -510,7 +519,7 @@ namespace test
     {
         SW_ASSERT_TRUE( result._bValid );
         SW_EXPECT_TRUE( result._serverEventCount > 3 );
-        SW_EXPECT_TRUE_MSG( result._convergedTick >= 0, "every client ends with the server's structure hash" );
+        SW_EXPECT_TRUE_MSG( result._convergedTick >= 0, "every client ends with the server's structure hash (waiting past the window until the server settles)" );
         SW_EXPECT_EQUAL( 0u, result._debrisViolationCount );
         SW_EXPECT_TRUE( result._debrisCount > 0 );
         SW_EXPECT_TRUE( result._chunkCount > 0 );
