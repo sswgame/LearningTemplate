@@ -42,8 +42,8 @@
     같으면 id 순이라 결정적이다. 예산이 늘 차도 낮은 우선도가 쌓여 차례를 얻는다 — 복제 키트 둘(`ReplicationServer` · `MmoReplicator`)이 같이 쓴다), `SequenceBuffer`(16 비트 감김 시퀀스 고리),
     `TickRingBuffer`(32 비트 틱 · 프레임으로 찾는 고리 — 키 전체를 적어 감김 · 건너뛴 칸 비우기가 없고, 무엇이 낡았나는 쓰는 쪽이 넣기 전에 본다. `acquire` 는 옛 값을
     비우지 않아 버퍼를 다시 쓴다. 예측 · 스냅숏 · 보낸 재구성 · 랙 보정 · 롤백 기록 · 락스텝 입력 · 체크섬이 같이 쓴다),
-    `NetClock`(받은 서버 틱으로 서버 틱을 추정하고 지연만큼 과거의 렌더 틱을 흘린다 — 지연 = max( 최소값, 표본 간격 × 2 ). Smooth: 가장 새 틱 − 지연을 흐름 빠르기로
-    맞춘다(복제 클라이언트), Monotonic: 추정을 흐르는 시간으로 밀고 뒤로 가지 않는다(파괴 클라이언트) — 유니티 NGO `NetworkTimeSystem` · N4E `NetworkTime` 의 자리),
+    `NetClock`(받은 서버 틱으로 서버 틱을 추정하고 지연만큼 과거의 렌더 틱을 흘린다 — 지연 = max( 최소값, 표본 간격 × 2 ). 추정은 받은 틱이 하한, 받은 가장 새 틱 +
+    지연이 상한이고 렌더 틱은 되돌아가지 않는다. 복제 · 파괴 클라이언트가 같이 쓴다 — 유니티 N4E `NetworkTime` 의 자리),
     `InterpolationBuffer`(틱 순 표본 줄 — 렌더 틱 이하 가장 새 것 · 그보다 큰 첫 것 · 끝이면 멈춤, 첫 것 앞이면 그것을 알린다. 유니티 `BufferedLinearInterpolator` 의 자리),
     `NetInputWindow`(비신뢰 입력 묶음 — `NetInputSendWindow` 는 상대가 확인한 다음 틱부터 가장 새 틱까지를 싣고 예산이 모자라면 오래된 것부터(확인 전에는
     빠지지 않아 연속 손실에 빈틈이 남지 않는다 — GGPO 입력 큐 · 언리얼 `FSavedMove` 목록), `NetInputReceiveBuffer` 는 틱 고리 + 받는 창(위아래 — 고리를 덮지 않게,

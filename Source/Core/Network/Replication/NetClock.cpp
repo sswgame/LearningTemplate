@@ -10,6 +10,7 @@ namespace sw
         : _settings{}
         , _serverTick{ 0.0f }
         , _renderTick{ kNoRenderTick }
+        , _newestTick{ 0 }
         , _bHasServerTick{ SW_FALSE }
     {
     }
@@ -24,6 +25,7 @@ namespace sw
     {
         _serverTick     = 0.0f;
         _renderTick     = kNoRenderTick;
+        _newestTick     = 0;
         _bHasServerTick = SW_FALSE;
     }
 
@@ -33,52 +35,29 @@ namespace sw
 
     void NetClock::observeServerTick( uint32 serverTick )
     {
-        const float32 tick   = static_cast<float32>( serverTick );
-        const bool    bFirst = _bHasServerTick == SW_FALSE;
-        if ( bFirst || tick > _serverTick )
-            _serverTick = tick;
-        _bHasServerTick = SW_TRUE;
-        // Smooth 는 첫 틱에서 바로 목표에 선다(그 뒤로는 흐르며 맞춘다). Monotonic 은 다음 advance 가 둔다.
-        if ( bFirst && _settings._mode == NetClockMode::Smooth )
-            _renderTick = tick - computeInterpolationDelay() / getTickInterval();
+        const float32 tick = static_cast<float32>( serverTick );
+        if ( _bHasServerTick == SW_FALSE )
+        {
+            _serverTick     = tick;
+            _renderTick     = tick - computeInterpolationDelay() / getTickInterval();
+            _newestTick     = serverTick;
+            _bHasServerTick = SW_TRUE;
+            return;
+        }
+        _newestTick = MathUtil::max( _newestTick, serverTick );
+        _serverTick = MathUtil::max( _serverTick, tick );
     }
 
     void NetClock::advance( float32 deltaTime )
     {
-        if ( _bHasServerTick == SW_FALSE )
+        if ( _bHasServerTick == SW_FALSE || deltaTime <= 0.0f )
             return;
-        if ( _settings._mode == NetClockMode::Smooth )
-            advanceSmooth( deltaTime );
-        else
-            advanceMonotonic( deltaTime );
-    }
-
-    void NetClock::advanceSmooth( float32 deltaTime )
-    {
-        if ( deltaTime <= 0.0f )
-            return;
-        // 목표 = 가장 새로 받은 틱 − 지연. 벗어난 만큼 조금 빠르게 · 느리게 흘려 맞춘다(튀지 않게). 크게 벗어나면 바로 맞춘다.
+        // 추정은 흐르는 시간만큼 앞으로 가되 받은 가장 새 틱 + 지연을 넘지 않는다(렌더 틱이 받은 틱을 지나치지 않게). 렌더 틱은 뒤로 가지 않는다 — 지연이 커져도
+        // (표본 간격이 늘었다) · 받은 틱이 끊겨도 멈춰 기다린다.
         const float32 tickInterval = getTickInterval();
-        const float32 delay        = computeInterpolationDelay();
-        const float32 delayTicks   = delay / tickInterval;
-        const float32 stepTicks    = deltaTime / tickInterval;
-        const float32 target       = _serverTick - delayTicks;
-        const float32 error        = target - ( _renderTick + stepTicks );
-        if ( MathUtil::abs( error ) > delayTicks * kSnapDelayMultiple )
-        {
-            _renderTick = target;
-            return;
-        }
-        const float32 errorRatio = error / ( MathUtil::max( 1.0e-3f, delay ) / tickInterval );
-        const float32 scale      = 1.0f + MathUtil::clamp( errorRatio, -1.0f, 1.0f ) * _settings._clockCorrection;
-        _renderTick += stepTicks * scale;
-    }
-
-    void NetClock::advanceMonotonic( float32 deltaTime )
-    {
-        // 추정은 흐르는 시간만큼 앞으로 간다(받은 틱은 observeServerTick 이 끌어올린다). 렌더 틱은 뒤로 가지 않는다 — 지연이 커져도(표본 간격이 늘었다) 멈춰 기다린다.
-        const float32 tickInterval = getTickInterval();
-        _serverTick += deltaTime / tickInterval;
-        _renderTick = MathUtil::max( _renderTick, _serverTick - computeInterpolationDelay() / tickInterval );
+        const float32 delayTicks   = computeInterpolationDelay() / tickInterval;
+        const float32 ceiling      = static_cast<float32>( _newestTick ) + delayTicks;
+        _serverTick                = MathUtil::min( _serverTick + deltaTime / tickInterval, ceiling );
+        _renderTick                = MathUtil::max( _renderTick, _serverTick - delayTicks );
     }
 } // namespace sw

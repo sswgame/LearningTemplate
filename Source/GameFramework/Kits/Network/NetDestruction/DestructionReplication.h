@@ -261,6 +261,6 @@ namespace sw
         NetMessageWriter               _writer;
         NetHost*                       _pHost;
         GameObjectManager*             _pManager;
-        NetClock                       _clock; ///< 덩어리를 그리는 서버 틱 — Monotonic: 흐르는 시간으로 민 서버 틱 추정 − 지연, 뒤로 가지 않는다. 표본 간격 = 등록한 오브젝트의 가장 긴 자세 간격
+        NetClock                       _clock; ///< 덩어리를 그리는 서버 틱 — 흐르는 시간으로 민 서버 틱 추정(받은 가장 새 틱 + 지연까지) − 지연, 뒤로 가지 않는다. 표본 간격 = 등록한 오브젝트의 가장 긴 자세 간격
     };
 } // namespace sw

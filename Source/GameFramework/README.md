@@ -165,7 +165,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       작업 스레드에 나눈다 — 결과는 한 스레드와 바이트까지 같고(`NetParallelTest`), 관찰자 128 · 엔티티 8000 에서 틱당 4.4 → 1.5 ms(워커 3).
       그때 정책(`IReplicationPolicy` · `IInterestPolicy`)은 여러 스레드에서 동시에 불리므로 읽기만 한다.
       - `NetClientServer`: 권위 서버(슈터 · 배틀로얄 · 액션 · 기체 대전 · 비대칭) — 스냅샷 델타(확인된 기준 대비 · 예산 · 우선도, `IReplicationPolicy` 관련성),
-        보간(`ReplicationClient` — Core `NetClock` Smooth: 가장 새 스냅숏 − 지연(최소값과 틱 간격 × 2 중 큰 것)을 흐름 빠르기로 따라간다), 확인 기반 입력 보내기(Core `NetInputSendWindow` — 서버가 스냅숏에 실어 돌려준 "빈틈없이 받은 다음 틱" 부터),
+        보간(`ReplicationClient` — Core `NetClock`: 받은 스냅숏 틱의 하한 + 흐른 시간 − 지연(최소값과 틱 간격 × 2 중 큰 것), 되돌아가지 않고 받은 틱을 넘지 않는다), 확인 기반 입력 보내기(Core `NetInputSendWindow` — 서버가 스냅숏에 실어 돌려준 "빈틈없이 받은 다음 틱" 부터),
         클라이언트 예측 되맞추기(`ClientPrediction`), 랙 보정 되감기(`LagCompensationHistory`).
         우선도는 클라이언트마다 `NetPrioritizer` 로 스냅샷마다 쌓고, 실었거나 클라이언트가 이미 최신인 엔티티만 0 으로 돌린다 — 예산이 늘 차도 낮은 우선도가 굶지 않는다
         (우선도 10 넷이 예산을 채우면 우선도 1 은 11 틱쯤에 한 번). 스냅샷 예산은 메시지 전체(종류 바이트 · 머리 · 사라진 목록 · 끝 표시)를 `NetSendBudget` 으로 정확히 세고 1024 B 로 잘린다 — 못 실은 사라짐 · 바뀜은 재구성에
@@ -191,7 +191,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
         서버가 받지 않는다. 시험: `NetMmoTest`(하니스 위 — 순간 이동 대량 나감 · 순서 뒤바뀐 갱신 · 상한 넘는 상태).
       - `NetDestruction`: 파괴 네트워킹(`DestructionReplicationServer` · `Client`, 영역 `kDestruction` 0x50). 권한 쪽 피해 사건을 번호(= 서버 상태의
         사건 수)를 붙여 신뢰 · 순서 없음 채널로 보내고(앞 사건을 잃어도 뒤 사건이 기다리지 않는다) 받는 쪽은 번호 순으로만 적용한다(앞 번호는 버리고 뒤 번호는 기다린다 — 청한 스냅숏을 기다리는 동안은 모두 쌓았다 잇는다). 덩어리(표의 `keepCollisionVolume` 이상)는
-        서버가 질량 중심 · 회전을 `<Network poseRate>` 로 비신뢰로 보내고(멈추면 비트 그대로 신뢰로 확정 + 비신뢰로 몇 번 더), 받는 쪽은 Core `NetClock` Monotonic(서버 틱
+        서버가 질량 중심 · 회전을 `<Network poseRate>` 로 비신뢰로 보내고(멈추면 비트 그대로 신뢰로 확정 + 비신뢰로 몇 번 더), 받는 쪽은 Core `NetClock`(서버 틱
         추정 − 보간 지연, 지연은 설정값과 자세 간격 × 2 중 큰 것 — 자세 하나를 잃어도 사이를 잇는다)을 덩어리마다 `InterpolationBuffer` 의 자세 사이에서 그려 키네마틱으로 몬다. 파편은 각자 시뮬레이션하는 꾸밈(Debris 레이어 — 캐릭터와 안 부딪힌다). 늦은 참가 · 해시 어긋남은 상태
         스냅숏(신뢰 메시지 하나 — 64 KB 까지, 창이 차면 다음 틱에 다시)으로 맞춘다. 파괴를 쓰지 않는 게임이 링크하지 않게, 권위 방식(복제 서버 · 리슨 · MMO)과 상관없이 `NetHost` 위에 얹게 키트를 따로 둔다.
         롤백(상태 저장 · 되돌리기)은 없다. 시험: `NetSimDestructionTest` · `NetSimDestructionMatrixTest`(나쁜 회선 둘 — 회선마다 한 케이스, nogpu 조각).

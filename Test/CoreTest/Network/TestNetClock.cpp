@@ -4,21 +4,19 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 서버 시계 — 지연 규칙(최소값 · 표본 간격 × 2), Monotonic(추정이 흐르고 렌더 틱은 뒤로 가지 않는다), Smooth(첫 틱에서 바로 서고 흐름 빠르기로 맞추고
-// 크게 벗어나면 바로), 비우기.
+// 서버 시계 — 지연 규칙(최소값 · 표본 간격 × 2), 처음 받은 틱에서 지연만큼 뒤에 선다, 추정은 흐르되 받은 가장 새 틱 + 지연을 넘지 않는다(렌더 틱은 받은 틱을
+// 지나치지 않는다), 앞선 틱은 추정을 끌어올리고 옛 틱은 아무 일 없다, 렌더 틱은 뒤로 가지 않는다, 비우기.
 
 using namespace sw;
 
 namespace
 {
-    NetClockSettings makeClockSettings( float32 tickInterval, float32 sampleInterval, NetClockMode mode )
+    NetClockSettings makeClockSettings( float32 tickInterval, float32 sampleInterval )
     {
         NetClockSettings settings;
         settings._tickInterval       = tickInterval;
         settings._interpolationDelay = 0.1f;
         settings._sampleInterval     = sampleInterval;
-        settings._clockCorrection    = mode == NetClockMode::Smooth ? 0.1f : 0.0f;
-        settings._mode               = mode;
         return settings;
     }
 } // namespace
@@ -26,23 +24,24 @@ namespace
 /**
  * @brief [NetClockTest] 파괴 덩어리 — 자세 10 Hz · 서버 60 Hz 면 지연 12 틱(자세 간격 × 2), 추정은 흐르는 시간으로 가고 렌더 틱은 뒤로 가지 않는다
  */
-SW_TEST_CASE( NetClockTest, MonotonicDrawsTwoSampleIntervalsBehindAndNeverGoesBack )
+SW_TEST_CASE( NetClockTest, DrawsTwoSampleIntervalsBehindAndNeverGoesBack )
 {
     NetClock clock;
-    clock.initialize( makeClockSettings( 1.0f / 60.0f, 0.1f, NetClockMode::Monotonic ) );
+    clock.initialize( makeClockSettings( 1.0f / 60.0f, 0.1f ) );
     clock.advance( 1.0f ); // 서버 틱을 받기 전 — 서 있다
     SW_EXPECT_FALSE( clock.hasServerTick() );
     SW_EXPECT_NEAR_EQUAL( NetClock::kNoRenderTick, clock.getRenderTick(), 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.2f, clock.computeInterpolationDelay(), 1.0e-6f );
 
     clock.observeServerTick( 100 );
-    SW_EXPECT_NEAR_EQUAL( NetClock::kNoRenderTick, clock.getRenderTick(), 1.0e-6f ); // 첫 advance 가 둔다
+    SW_EXPECT_NEAR_EQUAL( 88.0f, clock.getRenderTick(), 1.0e-3f ); // 처음 받은 틱 − 12
     clock.advance( 1.0f / 60.0f );
     SW_EXPECT_NEAR_EQUAL( 101.0f, clock.getServerTick(), 1.0e-3f );
-    SW_EXPECT_NEAR_EQUAL( 89.0f, clock.getRenderTick(), 1.0e-3f ); // 101 − 12
-    clock.observeServerTick( 90 );                                 // 늦게 온 옛 틱 — 추정은 내려가지 않는다
+    SW_EXPECT_NEAR_EQUAL( 89.0f, clock.getRenderTick(), 1.0e-3f );
+    clock.observeServerTick( 90 ); // 늦게 온 옛 틱 — 추정은 내려가지 않는다
     clock.advance( 1.0f / 60.0f );
     SW_EXPECT_NEAR_EQUAL( 90.0f, clock.getRenderTick(), 1.0e-3f );
+    SW_EXPECT_EQUAL( 100u, clock.getNewestServerTick() );
 
     clock.setSampleInterval( 0.5f ); // 지연 1 초(60 틱) — 목표가 뒤로 가도 렌더 틱은 서서 기다린다
     clock.advance( 1.0f / 60.0f );
@@ -53,22 +52,37 @@ SW_TEST_CASE( NetClockTest, MonotonicDrawsTwoSampleIntervalsBehindAndNeverGoesBa
 }
 
 /**
- * @brief [NetClockTest] 복제 클라이언트 — 첫 틱에서 바로 (틱 − 지연)에 서고, 스냅숏이 서 있으면 흐름을 늦춰 따라가고, 지연의 4 배를 넘게 벗어나면 바로 맞춘다
+ * @brief [NetClockTest] 받은 틱이 끊기면 추정은 받은 가장 새 틱 + 지연에서, 렌더 틱은 받은 가장 새 틱에서 멈춘다(내다보지 않는다 — 로컬 시계가 빨라도 끝없이 앞서지 않는다)
  */
-SW_TEST_CASE( NetClockTest, SmoothStartsAtTheTargetAndSnapsWhenFarOff )
+SW_TEST_CASE( NetClockTest, RenderTickStopsAtTheNewestReceivedTick )
 {
     NetClock clock;
-    clock.initialize( makeClockSettings( 1.0f / 30.0f, 1.0f / 30.0f, NetClockMode::Smooth ) );
-    SW_EXPECT_NEAR_EQUAL( 0.1f, clock.computeInterpolationDelay(), 1.0e-6f ); // 2 틱(0.067 초)보다 최소값이 크다
-    clock.observeServerTick( 30 );
-    SW_EXPECT_NEAR_EQUAL( 27.0f, clock.getRenderTick(), 1.0e-3f ); // 30 − 3
-    clock.advance( 0.0f );                                         // 0 이하는 흐르지 않는다
-    SW_EXPECT_NEAR_EQUAL( 27.0f, clock.getRenderTick(), 1.0e-3f );
-    clock.advance( 1.0f / 30.0f ); // 목표는 27 에 서 있다 — 한 틱 벗어남(지연 3 틱의 1/3) → 흐름 1 − 0.1/3
-    SW_EXPECT_NEAR_EQUAL( 27.0f + ( 1.0f - 0.1f / 3.0f ), clock.getRenderTick(), 1.0e-3f );
-    clock.observeServerTick( 100 ); // 목표 97 — 벗어남 68 틱 > 3 × 4
-    clock.advance( 1.0f / 30.0f );
+    clock.initialize( makeClockSettings( 1.0f / 30.0f, 0.0f ) ); // 지연 0.1 초 = 3 틱
+    clock.observeServerTick( 100 );
     SW_EXPECT_NEAR_EQUAL( 97.0f, clock.getRenderTick(), 1.0e-3f );
+    for ( int32 frame = 0; frame < 30; ++frame )
+        clock.advance( 1.0f / 30.0f );
+    SW_EXPECT_NEAR_EQUAL( 103.0f, clock.getServerTick(), 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, clock.getRenderTick(), 1.0e-3f );
+}
+
+/**
+ * @brief [NetClockTest] 추정보다 앞선 틱은 추정을 끌어올리고(렌더 틱은 다음 흐름에 따라간다), 옛 틱은 아무 일도 하지 않는다
+ */
+SW_TEST_CASE( NetClockTest, LaterTicksPullTheEstimateUpAndOlderTicksDoNothing )
+{
+    NetClock clock;
+    clock.initialize( makeClockSettings( 1.0f / 30.0f, 0.0f ) );
+    clock.observeServerTick( 100 );
+    clock.advance( 1.0f / 30.0f );
+    clock.observeServerTick( 110 );
+    SW_EXPECT_NEAR_EQUAL( 110.0f, clock.getServerTick(), 1.0e-3f );
+    clock.advance( 1.0f / 30.0f );
+    SW_EXPECT_NEAR_EQUAL( 111.0f, clock.getServerTick(), 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 108.0f, clock.getRenderTick(), 1.0e-3f );
+    clock.observeServerTick( 90 );
+    SW_EXPECT_NEAR_EQUAL( 111.0f, clock.getServerTick(), 1.0e-3f );
+    SW_EXPECT_EQUAL( 110u, clock.getNewestServerTick() );
 }
 
 /**
@@ -77,12 +91,13 @@ SW_TEST_CASE( NetClockTest, SmoothStartsAtTheTargetAndSnapsWhenFarOff )
 SW_TEST_CASE( NetClockTest, DelayCoversTwoSampleIntervalsAndResetStartsOver )
 {
     NetClock clock;
-    clock.initialize( makeClockSettings( 0.1f, 0.1f, NetClockMode::Smooth ) );
+    clock.initialize( makeClockSettings( 0.1f, 0.1f ) );
     SW_EXPECT_NEAR_EQUAL( 0.2f, clock.computeInterpolationDelay(), 1.0e-6f );
     clock.observeServerTick( 50 );
     SW_EXPECT_NEAR_EQUAL( 48.0f, clock.getRenderTick(), 1.0e-3f );
     clock.reset();
     SW_EXPECT_FALSE( clock.hasServerTick() );
+    SW_EXPECT_NEAR_EQUAL( NetClock::kNoRenderTick, clock.getRenderTick(), 1.0e-6f );
     clock.observeServerTick( 5 ); // 새 서버 — 옛 것보다 작은 틱에서 다시
     SW_EXPECT_NEAR_EQUAL( 3.0f, clock.getRenderTick(), 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( 5.0f, clock.getServerTick(), 1.0e-6f );

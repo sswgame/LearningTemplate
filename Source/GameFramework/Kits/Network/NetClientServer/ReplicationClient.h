@@ -24,7 +24,6 @@ namespace sw
     {
         float32 _tickInterval{ 1.0f / 30.0f }; ///< 서버 틱 간격 — 스냅숏도 틱마다 와서 표본 간격이기도 하다
         float32 _interpolationDelay{ 0.1f };   ///< 렌더 지연의 최소값 — 실제는 이것과 (틱 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 것(스냅숏 하나를 잃어도 끊기지 않게)
-        float32 _clockCorrection{ 0.1f };      ///< 렌더 틱이 목표(가장 새 스냅숏 − 지연)에서 벗어나면 초당 이 몫까지 빠르게 · 느리게(`NetClockMode::Smooth`)
         int32   _historySize{ 64 };
     };
 } // namespace sw
@@ -78,7 +77,7 @@ namespace sw
         NetInputSendWindow          _inputWindow;  ///< 내 입력 — 서버가 스냅숏에 실어 돌려준 확인의 다음 틱부터 싣는다
         ReplicationClientSettings   _settings;
         NetHost*                    _pHost;
-        NetClock                    _clock; ///< 렌더 틱 — Smooth: 가장 새 스냅숏 틱 − 지연을 흐름 빠르기로 맞춘다
+        NetClock                    _clock; ///< 렌더 틱 — 받은 스냅숏 틱의 하한 + 흐른 시간 − 지연(받은 가장 새 틱까지, 되돌아가지 않는다)
         uint64                      _decodeFailureCount;
         NetMessageWriter            _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };

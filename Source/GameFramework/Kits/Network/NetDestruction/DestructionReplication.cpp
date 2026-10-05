@@ -435,8 +435,6 @@ namespace sw
         clockSettings._tickInterval       = settings._tickInterval;
         clockSettings._interpolationDelay = settings._interpolationDelay;
         clockSettings._sampleInterval     = 0.0f; // 등록하는 오브젝트의 자세 간격으로 올린다(registerObject)
-        clockSettings._clockCorrection    = 0.0f;
-        clockSettings._mode               = NetClockMode::Monotonic;
         _clock.initialize( clockSettings );
     }
 
@@ -661,7 +659,7 @@ namespace sw
 
     void DestructionReplicationClient::update( float32 deltaTime )
     {
-        // 서버 틱 추정은 틱마다 흐르고 받은 틱보다 뒤처지지 않는다 — 자세가 오지 않는 동안(모두 멈춤)에도 렌더 틱이 서버 시각을 따른다(NetClock Monotonic).
+        // 서버 틱 추정은 틱마다 흐르고 받은 틱보다 뒤처지지 않는다 — 자세가 오지 않는 동안(모두 멈춤)에도 렌더 틱이 서버 시각을 따른다(NetClock — 받은 가장 새 틱까지).
         // 지연은 설정값과 가장 긴 자세 간격 × 2 중 큰 것 — 간격 하나뿐이면 자세 하나를 잃거나 흔들림으로 늦을 때마다 뒤 자세가 없어 덩어리가 멈춰 선다
         // (빨리 떨어지는 덩어리는 미터 단위로 어긋난다).
         _clock.advance( deltaTime );

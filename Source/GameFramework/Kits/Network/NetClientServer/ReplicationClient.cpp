@@ -29,8 +29,6 @@ namespace sw
         clockSettings._tickInterval       = settings._tickInterval;
         clockSettings._interpolationDelay = settings._interpolationDelay;
         clockSettings._sampleInterval     = settings._tickInterval; // 스냅숏은 서버 틱마다 온다
-        clockSettings._clockCorrection    = settings._clockCorrection;
-        clockSettings._mode               = NetClockMode::Smooth;
         _clock.initialize( clockSettings );
 
         _listSnapshot.initialize( MathUtil::max( 4, settings._historySize ) );
@@ -86,7 +84,7 @@ namespace sw
 
     void ReplicationClient::update( float32 deltaTime )
     {
-        // 목표 = 가장 새 스냅숏 틱 − 지연. 벗어난 만큼 조금 빠르게 · 느리게 흘려 맞추고 크게 벗어나면 바로 맞춘다(NetClock Smooth). 스냅숏을 받기 전에는 서 있다.
+        // 렌더 틱 = 서버 틱 추정 − 지연. 추정은 받은 스냅숏 틱의 하한 + 흐른 시간(받은 가장 새 틱 + 지연까지)이라 끊겨도 되돌아가지 않고 받은 틱을 지나치지 않는다.
         _clock.advance( deltaTime );
     }
 
