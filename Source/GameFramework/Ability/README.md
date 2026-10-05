@@ -2,7 +2,7 @@
 
 `GameFramework` 타깃의 일부입니다(키트가 아님 — 장르를 가리지 않습니다). 액션 · 턴제 · 오버월드 어느 게임이든
 "숫자 상태 + 그것을 바꾸는 효과 + 조건을 지나 발동하는 행동 + 태그" 가 필요하면 이것을 씁니다.
-시험: `EngineTest` 의 `AbilitySystemTest`(`Test/EngineTest/TestAbilitySystem.cpp`). 실제로 쓰는 게임: `Source/Games/AbilityArena`.
+시험: `EngineTest` 의 `AbilitySystemTest`(`Test/EngineTest/GameFramework/Ability/TestAbilitySystem.cpp`). 실제로 쓰는 게임: `Source/Games/AbilityArena`.
 
 ## 구성 — 언리얼 이름과 1:1
 

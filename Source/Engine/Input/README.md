@@ -185,5 +185,5 @@ inputMap.bindVirtualJoystick2D( "Move", sw::MouseButton::Left, /*radius*/ 100.0f
 - `InputManager.h` — 편의 API(`isKeyDown`, `getMouseDelta` 등) 전체 목록
 - `InputMap.h` — `BindingKind`/`ActionTrigger`/`ActionPhase` 등 스키마 enum 주석
 - `RawInputEvent.h` — `RawInputEvent::makeXxx()` 팩토리 함수 목록
-- `Test/EngineTest/TestInput.cpp` — 각 기능의 실제 사용 예시(테스트 코드가 곧 예제입니다)
+- `Test/EngineTest/Input/TestInput.cpp` — 각 기능의 실제 사용 예시(테스트 코드가 곧 예제입니다)
 - `Source/Editor/Panels/InputMapPanel.cpp` — 액션 바인딩을 시각적으로 편집/테스트하는 에디터 패널

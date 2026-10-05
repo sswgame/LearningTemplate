@@ -113,7 +113,7 @@
 (`commandmenu::kArrHostedMenuPath`)여야 하고, 아니면 `validate` 가 "그려지지 않는 메뉴 경로" 로 시작할 때 Error 를 남깁니다
 (그 목록의 경로에 표의 줄이 없어도 Error). 에디터 스모크의 `[Error]` 0 건이 그것을 잡습니다.
 
-`EditorCommandRegistry::validate` 는 중복 id·중복 조합도 시작할 때 잡습니다(`Test/EditorTest/TestEditorCommandRegistry.cpp`).
+`EditorCommandRegistry::validate` 는 중복 id·중복 조합도 시작할 때 잡습니다(`Test/EditorTest/Common/Commands/TestEditorCommandRegistry.cpp`).
 **패널에서 단축키를 따로 처리하지 마십시오** — ImGui 의 `IsKeyPressed` 는 소비되지 않으므로, 전역 처리기와 패널이 같은 조합을 보면
 같은 프레임에 두 번 실행됩니다(예: `Ctrl+Z` 가 두 번 되돌림).
 
@@ -163,7 +163,7 @@
 들면(`DataTablePanel`) 기반 비트는 "무언가 바뀌었다"만 말하므로, 어느 쪽인지는 패널이 자기
 반쪽 비트로 알고 한곳에서 동기화합니다(`syncDocumentDirty`).
 
-계약 자체는 ImGui 없이 컴파일되므로 테스트가 있습니다: `Test/EditorTest/TestEditorPanelDocument.cpp`.
+계약 자체는 ImGui 없이 컴파일되므로 테스트가 있습니다: `Test/EditorTest/Common/Gui/TestEditorPanelDocument.cpp`.
 
 ## 그려진 결과를 검증하는 법
 

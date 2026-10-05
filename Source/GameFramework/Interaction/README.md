@@ -1,7 +1,7 @@
 # Interaction — 상호작용 · 스마트 오브젝트 · 집기
 
 플레이어와 AI 가 오브젝트를 "쓰는" 공통 틀입니다. 종류(안내 문구 · 입력 방식 · 시간 · 거리 · 조건)는 데이터이고, 장르를 가리지 않아 기반에 있습니다.
-시험: `EngineTest` 의 `InteractionTest`(`Test/EngineTest/TestInteraction.cpp`), 누르고 있기의 진행 규칙은 `WorldSystemsTest`(`InteractionProgress`).
+시험: `EngineTest` 의 `InteractionTest`(`Test/EngineTest/GameFramework/Interaction/TestInteraction.cpp`), 누르고 있기의 진행 규칙은 `WorldSystemsTest`(`InteractionProgress`).
 
 | 타입 | 하는 일 |
 |------|--------|

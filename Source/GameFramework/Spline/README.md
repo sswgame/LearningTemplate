@@ -1,7 +1,7 @@
 # Spline — 곡선 하나를 여러 곳이 나눠 쓴다
 
 움직이는 발판(기믹 `Mover`) · 카메라 레일 · 길 · 레일 그라인드처럼 "곡선 위 거리 s 의 자리" 를 묻는 곳이 같은 곡선을 씁니다.
-시험: `EngineTest` 의 `SplineTest`(`Test/EngineTest/TestSpline.cpp`), 무버는 `GimmickTest.MoverReachesEndAtArcLengthTime`.
+시험: `EngineTest` 의 `SplineTest`(`Test/EngineTest/GameFramework/Spline/TestSpline.cpp`), 무버는 `GimmickTest.MoverReachesEndAtArcLengthTime`.
 
 | 타입 | 하는 일 |
 |------|--------|

@@ -2,7 +2,7 @@
 
 센서 → 신호 → 연산자 → 액추에이터를 데이터로 잇습니다(소스 엔진 엔티티 입출력 · 포탈 2 퍼즐 메이커 · 마리오 메이커의 배선). 장르를 가리지 않아
 키트가 아니라 기반(`GameFramework`)에 있습니다. 2D(XY 평면 · 2D 콜라이더)와 3D 가 같은 코드입니다.
-시험: `EngineTest` 의 `GimmickTest`(회로 — `Test/EngineTest/TestGimmick.cpp`) · `GimmickSceneTest`(씬 — `TestGimmickScene.cpp`).
+시험: `EngineTest` 의 `GimmickTest`(회로 — `Test/EngineTest/GameFramework/Gimmick/TestGimmick.cpp`) · `GimmickSceneTest`(씬 — `TestGimmickScene.cpp`).
 쇼케이스 씬: `Resource/game/empty/maps/gimmickshowcase.scene.xml`(움직이는 발판 · 회전 발판 · 횃불 · 드럼통 · 아이템 상자 · 스프링, 레벨 회로가 시계 → 토글로
 문과 엘리베이터를 움직인다). 보려면 `Config/Game/Empty.json` 의 `_startupScene` 을 그 경로로 바꾸거나 에디터에서 `-gv_editorStartupScene=` 로 연다.
 
@@ -95,7 +95,7 @@ floodStatus + through), 걸음 규칙(`Expire` — 상태가 재질 수치만큼
 ## 장르 기믹 세트(`Genre/`)와 프리팹
 
 회로(B)와 센서를 다시 쓰는 작은 컴포넌트 + `Resource/common/prefabs/gimmicks/<장르>/*.prefab.xml`(엔진 직렬화기로 쓴 것 — 손으로 쓰지 않는다).
-시험: `GimmickGenreTest`(`Test/EngineTest/TestGimmickGenre.cpp` — 동작 + 모든 프리팹이 스폰되고 회로 검증을 지난다).
+시험: `GimmickGenreTest`(`Test/EngineTest/GameFramework/Gimmick/TestGimmickGenre.cpp` — 동작 + 모든 프리팹이 스폰되고 회로 검증을 지난다).
 
 | 장르 | 프리팹 | 컴포넌트 · 회로 |
 |------|--------|----------------|
@@ -120,4 +120,4 @@ floodStatus + through), 걸음 규칙(`Expire` — 상태가 재질 수치만큼
 - **파괴(`Engine/Destruction`)와 잇기.** 오브젝트에 파괴 컴포넌트(`FractureComponent` · 2D `Fracture2DComponent`)가 있고 파쇄 데이터가 있으면 몸을 끄는 대신 조각으로
   부서집니다. 폭발 드럼통은 반경이 경계에 닿은 파괴 오브젝트(자기 포함)에 자리 있는 폭발(`applyRadialDamageAtWorld` — 중심 변형 `_fractureStrain`, 충격량
   `_blastImpulse`)을 주므로 사슬 폭발이 근처 벽 · 상자를 그 자리에서 깹니다. 엄폐물(`DestructibleComponent`)은 단계마다 중심에 `_stageStrain` × 단계 비율로
-  조각을 깎고 마지막 단계에 `_shatterStrain` 으로 부숩니다(단계 · 신호 · 연출은 그대로). 시험: `GimmickFractureTest`(`Test/EngineTest/TestGimmickFracture.cpp`).
+  조각을 깎고 마지막 단계에 `_shatterStrain` 으로 부숩니다(단계 · 신호 · 연출은 그대로). 시험: `GimmickFractureTest`(`Test/EngineTest/GameFramework/Gimmick/TestGimmickFracture.cpp`).

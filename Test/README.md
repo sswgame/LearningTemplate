@@ -23,6 +23,11 @@
 | **`Qa`** | QA 러너의 데이터 | `Games.json`(게임마다 자동 플레이 인자 · 캡처 프레임), `Golden/<게임>/<백엔드>.png · .json`(축소 기준 이미지 · 지표 · 허용 오차), `Perf/<게임>.json`(기계별 p50 · p99 기준). |
 | **`TestFramework`** | 테스트 공통 프레임워크 | 테스트 등록/실행을 조정하고, `TestContext`(결과 수집)와 `TestFilter`(CLI/glob 선택)를 재사용 가능한 구성요소로 제공합니다. |
 
+**시험 파일은 소스 폴더를 따른다.** `CoreTest/<Core 폴더>/` · `EngineTest/<Engine 폴더>/` · `EngineTest/GameFramework/<폴더>/`(킷은
+`GameFramework/Kits/<장르>/`) · `EditorTest/<Editor 폴더>/`(`Common` 은 한 단계 더 — `Common/Workspace/`). 여러 폴더에 걸친 시험은 주 대상의 폴더,
+엔진 루트 파일(`EngineInitSequence` · `EngineServiceCollection`)의 시험과 공용 도우미(`*TestUtil.h` · 목 · RHI 시험 장치 · 퍼징 대상 표)는 실행 파일 루트에 둡니다.
+CMake 는 하위 폴더까지 글롭하고(`EditorTest` 만 목록을 손으로 적는다), 도우미는 실행 파일 루트가 include 경로라 이름만으로 찾습니다.
+
 
 ## 🚀 테스트 실행 방법
 
@@ -194,7 +199,7 @@ ReflectionTest 는 Dev 전용 진단 경로와 배포본에 없는 메타데이�
 `SW_TEST_DEFER_CLEANUP` 으로 지우는 것을 걸어 둡니다(`ResourceTest.ConfigurableResourcePriorityAndDlcSupport`).
 
 ```cpp
-// Test/CoreTest/TestCompression.cpp 에서 실제로 쓰는 모양.
+// Test/CoreTest/Compression/TestCompression.cpp 에서 실제로 쓰는 모양.
 sw::CompressionCodecRegistry& registry  = *sw::CompressionCodecRegistry::getActive();
 const bool                    bHadCodec = registry.isCodecRegistered( sw::CompressionCodecType::Custom );
 
