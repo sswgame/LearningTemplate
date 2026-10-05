@@ -66,6 +66,11 @@ namespace sw
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
         bool allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 resolutionDivisor );
+        /**
+         * @brief 프레임 크기와 상관없는 크기(width × height)로 첨부를 만듭니다 — 그림자 맵처럼 화면이 아니라 빛의 볼륨을 담는 타깃용입니다.
+         * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
+         */
+        bool allocateSized( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 width, uint32 height );
         /** @brief 이름의 첨부(텍스처 + SRV)입니다. 없으면 빈 값입니다. */
         Attachment find( string_view name ) const;
         /** @brief 이름의 텍스처 핸들입니다. 없으면 0 입니다. */

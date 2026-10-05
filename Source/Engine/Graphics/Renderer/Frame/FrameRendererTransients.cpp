@@ -13,6 +13,8 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassInputSignature.h"
+#include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
 {
@@ -52,17 +54,24 @@ namespace sw
 
     bool FrameRenderer::ensureViewTransients( ViewTarget& view, uint32 width, uint32 height )
     {
-        TransientAttachmentPool& pool = view._transientPool;
-        if ( width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false )
+        TransientAttachmentPool& pool             = view._transientPool;
+        const uint32             shadowResolution = getShadowMapResolution();
+        if ( width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false && view._shadowMapResolution == shadowResolution )
             return false;
 
         releaseViewTransients( view );
         pool.setSize( width, height );
+        view._shadowMapResolution = shadowResolution;
 
+        // 그림자 맵은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
         for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
         {
             const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( attachment._format );
-            allocateTransient( pool, attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment._clearColor, attachment._resolutionDivisor );
+            const bool      bDepth = FrameRendererUtil::isDepthFormat( format );
+            if ( resolveRenderPassInputRole( attachment._name, bDepth, attachment._role ) == RenderPassInputRole::ShadowMap )
+                (void)pool.allocateSized( _pDevice, attachment._name, format, bDepth, attachment._clearColor, shadowResolution, shadowResolution );
+            else
+                allocateTransient( pool, attachment._name, format, bDepth, attachment._clearColor, attachment._resolutionDivisor );
         }
 
         auto ensureNamed = [&]( string_view name )
@@ -73,7 +82,10 @@ namespace sw
             float4     clearColor{};
             const bool bHasClear = tryGetAttachmentClearColor( name, clearColor );
 
-            if ( name == FrameRendererUtil::Attachment::kShadowMap || name == FrameRendererUtil::Attachment::kSceneDepth )
+            if ( name == FrameRendererUtil::Attachment::kShadowMap )
+                (void)pool.allocateSized( _pDevice, name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : FrameRendererUtil::kDepthClear,
+                                          shadowResolution, shadowResolution );
+            else if ( name == FrameRendererUtil::Attachment::kSceneDepth )
                 allocateTransient( pool, name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : FrameRendererUtil::kDepthClear );
             else if ( name == FrameRendererUtil::Attachment::kGBufferNormal || name == FrameRendererUtil::Attachment::kLitColor || name == FrameRendererUtil::Attachment::kBloomColor || name == FrameRendererUtil::Attachment::kBloomBright )
                 allocateTransient( pool, name, RHIFormat::R16G16B16A16_FLOAT, false, bHasClear ? clearColor : FrameRendererUtil::kBloomClear );
@@ -232,6 +244,13 @@ namespace sw
                                            uint32 resolutionDivisor )
     {
         pool.allocate( _pDevice, name, format, bDepth, clearColor, resolutionDivisor );
+    }
+
+    uint32 FrameRenderer::getShadowMapResolution()
+    {
+        constexpr uint32 kArrResolution[] = { 1024u, 1536u, 2048u, 4096u };
+        const int32      quality          = MathUtil::clamp( static_cast<int32>( gv_shadowQuality ), 0, 3 );
+        return kArrResolution[quality];
     }
 
     bool FrameRenderer::markAttachmentCleared( const hashed_string& key )

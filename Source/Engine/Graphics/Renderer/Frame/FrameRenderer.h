@@ -183,6 +183,12 @@ namespace sw
          */
         string_view getPresentedAttachmentName() const;
         /**
+         * @brief 그림자 맵 한 변의 텍셀 수입니다 — 그림자 품질(`gv_shadowQuality` 0~3)이 1024 · 1536 · 2048 · 4096 을 고릅니다.
+         * @details 그림자 맵은 화면 크기를 따르지 않는다 — 정사각 볼륨을 1280×720 에 담으면 텍셀이 한 축으로 1.8 배 늘어나고, 출력이 작은
+         *          에디터 게임 뷰에서는 그림자 맵도 같이 작아진다. 게임 스레드(그림자 행렬의 텍셀 스냅)와 렌더 스레드(첨부 할당)가 같은 값을 쓴다.
+         */
+        static uint32 getShadowMapResolution();
+        /**
          * @brief 지금 살아 있는 트랜지언트 목록을 엔진 레지스트리에 공개합니다(에디터 패널이 읽습니다).
          * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로 그때 한 번 부르면 됩니다.
          *          매 프레임 부를 이유가 없습니다.
@@ -332,6 +338,7 @@ namespace sw
             uint32                      _cullSlot{ 0 };
             uint32                      _outputWidth{ 0 }; ///< 출력 크기(렌더 텍스처 · 화면 사각형)
             uint32                      _outputHeight{ 0 };
+            uint32                      _shadowMapResolution{ 0 }; ///< 풀이 든 그림자 맵 한 변(0 = 아직 없음) — 품질이 바뀌면 풀을 다시 만든다
             RenderViewOutputKind        _outputKind{ RenderViewOutputKind::ScreenRect };
             uint8                       _bRenderThisFrame{ SW_FALSE };
             uint8                       _bSeenThisFrame{ SW_FALSE };
