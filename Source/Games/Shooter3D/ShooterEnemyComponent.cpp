@@ -10,7 +10,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Combat/HealthListenerComponent.h"
 #include "GameFramework/Utility/OrientationUtil.h"
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
@@ -85,13 +84,7 @@ namespace sw
             pScene->setLocalPosition( _position );
             pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         }
-        if ( pOwner != nullptr )
-        {
-            HealthChangedEvent event;
-            event._ratio = 1.0f;
-            event._kind  = HealthChangeKind::Reset;
-            HealthListenerComponent::broadcast( *pOwner, event );
-        }
+        notifyHealthChanged( true );
         // 내비메시 에이전트가 있으면 걷기는 그것이 맡는다 — 몸 요는 이 컴포넌트가 돌린다(휘두를 때 플레이어 쪽을 본다).
         NavMeshAgentComponent* pAgent = pOwner != nullptr ? pOwner->getComponent<NavMeshAgentComponent>() : nullptr;
         if ( pAgent != nullptr )
@@ -109,13 +102,8 @@ namespace sw
         if ( isAlive() == false )
             return;
         _health -= amount;
-        // 체력 신호 — HP 바가 보이기 · 숨기기를 스스로 정한다(프리팹의 `_bShowWhenHurt` · `_bHideWhenDead`).
-        const GameObject*  pOwner = getOwner();
-        HealthChangedEvent event;
-        event._ratio = MathUtil::max( 0.0f, _health / MathUtil::max( 1.0f, _maxHealth ) );
-        event._kind  = _health <= 0.0f ? HealthChangeKind::Died : HealthChangeKind::Changed;
-        if ( pOwner != nullptr )
-            HealthListenerComponent::broadcast( *pOwner, event );
+        // 체력 신호 — HP 바가 보이기 · 숨기기를 스스로 정한다(프리팹의 `_bShowWhenHurt` · `_bHideWhenDead`). 쓰러짐은 읽기(`isDead`)가 정한다.
+        notifyHealthChanged( false );
         if ( _health <= 0.0f )
         {
             enterPhase( ShooterEnemyPhase::Dying );
@@ -127,6 +115,15 @@ namespace sw
             _bHitPending = SW_TRUE;
             enterPhase( ShooterEnemyPhase::Staggered );
         }
+    }
+
+    HealthReading ShooterEnemyComponent::getHealthReading() const
+    {
+        HealthReading reading;
+        reading._health    = _health;
+        reading._maxHealth = _maxHealth;
+        reading._bDead     = isDead() ? SW_TRUE : SW_FALSE;
+        return reading;
     }
 
     void ShooterEnemyComponent::enterPhase( ShooterEnemyPhase phase )
