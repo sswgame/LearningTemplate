@@ -426,11 +426,11 @@ cd build/Ninja-Debug/Bin
 - **커버리지 안내 퍼저(`LoaderFuzzer`)는 아직 한 번도 지어지지 않았다**(2026-10-06 들임, 리눅스 전용 — 이 PC 는 WSL 을 쓰지 않았다). 첫 `fuzz.yml` 실행
   (밤 또는 `workflow_dispatch`)이 구성 · 링크(`-fsanitize=fuzzer-no-link` 엔진 + ASan, `-fsanitize=fuzzer` 실행 파일)와 대상마다 60 초가 끝나는지 본다.
   지면 그 실행의 주석 · 아티팩트(`fuzz-findings`)로 고친다.
-- **Windows CI 시험 단계 실패(10-02 부터 Debug, 10-03 부터 Shipping)의 원인은 이 PC 에서 재현하지 못했다** — CI-Debug · CI-Shipping 을 같은 라벨로,
-  TEMP 를 8.3 짧은 이름으로 바꿔서도 돌렸다(부하로 인한 시간 초과 말고는 통과). CI 의 시험 단계가 이제 진 시험을 주석으로 올리므로 병합 뒤 첫 실행의
-  주석(`/check-runs/<job id>/annotations`, 로그인 없이 읽힌다)에서 시험 이름 · 실패 줄을 보고 고친다.
-
-
+- **Windows CI Debug · STL 잡의 키트 시험 22 건(ActionAdventure · Metroidvania · Rhythm …)이 값이 어긋나 진다**(run 37251047781, `a380e2ee3`) — 유니티 켬 +
+  PCH 끔 Debug 에서만(같은 구성의 Shipping · 로컬 Ninja-Debug 통과). 2026-10-06 이 PC 에서 같은 구성(`cmake --preset CI-Debug -DSW_ENABLE_PCH=OFF`, CC/CXX=clang-cl,
+  Tools/LLVM)으로 지은 EngineTest 는 그 키트 시험 74/74 · `--host_suites=exclude` 1974/1976(2 skip) 통과 — 재현하지 못했다. 남은 차이는 러너의 컴파일러
+  (`C:\Program Files\LLVM` · MSVC STL 판)다. `AppCookTest` 실패는 출력 장치 없음(Info 로 바꿈)이었다. 다음 CI 실행의 주석(`CiFailureReport.py`)에 다시 나오면
+  그 잡의 clang 판을 로컬과 맞춰 본다.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
 - **include · 전방 선언 남은 후보.** ① OS 헤더(`Core/Common/PlatformOsHeaders.h` — `Windows.h` · `DbgHelp.h` · `Xinput.h` …)가 `EngineMinimal.h` 를 거쳐
   PCH 에 남아 있다(TU 2746 · `windows.h` 1671). 빼려면 먼저 `NOMINMAX` · `WIN32_LEAN_AND_MEAN` 을 CMake 정의로 옮기고(서드파티가 `windows.h` 를 먼저 include 해도
@@ -879,6 +879,8 @@ cd build/Ninja-Debug/Bin
   `py -3 -m Scripts symbols`. PDB 이름만 적으므로 크래시 스택(DbgHelp)은 실행 파일 폴더를 검색 경로에 더한다(`WindowsCallStackCapture`). 측정(2026-10-06,
   Windows Shipping 전체 빌드, 기계 공유 중): 오브젝트 합 146 → 262 MB, `Bin` 29.6 MB 그대로(App.exe 크기 같음), `TestBin` 81 → 257 MB(시험 PDB), `Symbols` 31.5 MB,
   링크 App 26.7 → 30.5 s · EngineTest 68.6 → 79.9 s, 전체 빌드 벽시계는 기계 부하에 묻혀 차이 없음(7.6 · 6.8 분).
+- **유니티 묶음에서 서드파티 매크로 정리는 "내가 정의한 것만" 지운다** — `AudioVorbisDecode.cpp` 가 stb_vorbis 뒤에 `#undef TRUE` · `FALSE` 를 하자 Windows
+  `windows.h` 의 것이 지워져, 같은 묶음 뒤의 `XAudio2System.cpp`(d3d11.h)가 PCH 끈 빌드(CI Windows)에서 깨졌다. PCH 가 있으면 d3d 헤더가 먼저 들어와 가려진다.
 
 ### 3-5. 직렬화 · 리플렉션 · 파서
 
