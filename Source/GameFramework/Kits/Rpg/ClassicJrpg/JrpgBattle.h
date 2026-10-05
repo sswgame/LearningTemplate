@@ -18,6 +18,7 @@
 
 namespace sw
 {
+    class Archive;
     class JrpgParty;
     class TimingJudge;
 
@@ -171,8 +172,10 @@ namespace sw
     class SW_GF_API JrpgBattle
     {
     public:
-        static constexpr int32 kEnemyActorBase = 100; ///< TurnOrder 의 적 번호 = 이것 + 자리
-        static constexpr int32 kDefendPriority = 1;
+        static constexpr uint32 kStateTag       = 0x4C54424Au; ///< 'JBTL'
+        static constexpr uint32 kStateVersion   = 1;
+        static constexpr int32  kEnemyActorBase = 100; ///< TurnOrder 의 적 번호 = 이것 + 자리
+        static constexpr int32  kDefendPriority = 1;
 
         JrpgBattle();
 
@@ -190,6 +193,15 @@ namespace sw
          */
         [[nodiscard]] bool tryFlee();
         void               drainEvents( vector<JrpgBattleEvent>& outListEvent );
+        /** @brief 적 · 이번 라운드 명령 · 방어 · 턴 순서 · 난수 · 보상 · 콤보 · 라운드 · 도망 횟수 · 결과를 씁니다. 파티 · 카탈로그 · 판정 · 타이밍 입력 · 설정은 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief 전투가 빌려 쓸 파티를 묶습니다 — 새 전투에 `readState` 하기 전에(파티는 따로 싣는다 — `JrpgParty::readState`). `start` 도 묶는다. */
+        void bindParty( JrpgParty* pParty ) { _pParty = pParty; }
+        /**
+         * @brief `writeState` 의 바이트로 바꿉니다. 모르는 적이거나 명령 수가 묶은 파티의 멤버 수와 다르거나 깨졌으면 false 이고 그대로입니다.
+         *        시작 전 전투는 파티를 묶지 않아도 된다.
+         */
+        [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief DQ 식 물리 피해입니다. */
         static int32 computePhysicalDamage( int32 attack, int32 defense, GameRandom& random );

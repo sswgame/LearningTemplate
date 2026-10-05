@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Combat/ElementChart.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCatalog.h"
 
 namespace sw
@@ -144,6 +147,39 @@ namespace sw
             revealed._value      = newLevel;
             _eventBuffer.push( revealed );
         }
+        return true;
+    }
+
+    void WitcherBestiary::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listEntry.size() );
+        for ( const Entry& entry : _listEntry )
+        {
+            StateArchiveUtil::writeName( outArchive, entry._monsterId );
+            outArchive << entry._knowledge;
+            outArchive << entry._killCount;
+        }
+    }
+
+    bool WitcherBestiary::readState( Archive& archive )
+    {
+        uint32 count = 0;
+        // 괴물마다 이름(4) + 지식 · 처치 수(8)
+        if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 12, count ) == false )
+            return false;
+        vector<Entry> listEntry( count );
+        for ( Entry& entry : listEntry )
+        {
+            if ( StateArchiveUtil::readName( archive, entry._monsterId ) == false || _pCatalog->findMonster( entry._monsterId ) == nullptr )
+                return false;
+            archive >> entry._knowledge;
+            archive >> entry._killCount;
+            const bool bValid = archive.isOk() && 0 <= entry._knowledge && 0 <= entry._killCount;
+            if ( bValid == false )
+                return false;
+        }
+        _listEntry = std::move( listEntry );
+        _eventBuffer.clear();
         return true;
     }
 } // namespace sw

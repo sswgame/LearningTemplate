@@ -2,6 +2,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/ItemBag.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
@@ -101,6 +103,17 @@ namespace
         for ( const WesternLawEvent& event : listEvent )
             count += event._kind == kind ? 1 : 0;
         return count;
+    }
+
+    /** @brief 상태 하나의 바이트입니다. */
+    template <typename TState>
+    vector<uint8> captureWesternBytes( const TState& state )
+    {
+        Archive archive;
+        state.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
     }
 } // namespace
 
@@ -448,4 +461,112 @@ SW_TEST_CASE( OpenWorldWesternTest, PeltStarsDependOnWeaponZoneAndHitsAndCarcass
     WesternHunting::ageCarcass( rotten, 48.0f );
     SW_EXPECT_FALSE( WesternHunting::skin( catalog, rotten, nullptr, random, pelt, bag ) );
     SW_EXPECT_EQUAL( 0, WesternHunting::computePeltPrice( catalog, WesternPelt{ hashed_string( "deer" ), 0 } ) );
+}
+
+/**
+ * @brief [OpenWorldWesternTest] 말 · 법 · 생존 상태 바이트 — 유대 · 능력 · 게이지 · 코어 · 겁 · 난수, 지역 기록 · 신고 대기 남은 시간, 옷 · 표시 · 데드아이가 그대로 와서 같은 걸음이 이어진다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( OpenWorldWesternTest, StateRoundTripContinuesTheSameRide )
+{
+    WesternCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+
+    // 말 — 유대 2 단계 · 질주 중 · 겁이 조금 쌓였다.
+    WesternHorse horse;
+    SW_ASSERT_TRUE( horse.initialize( &catalog, hashed_string( "arabian" ), 7u ) );
+    SW_EXPECT_TRUE( horse.brush() );
+    horse.setRidden( true );
+    horse.update( 5.0f, 0.0f );
+    SW_ASSERT_EQUAL( 2, horse.getBondLevel() );
+    for ( int32 frame = 0; frame < 3; ++frame )
+        (void)horse.gallop( 0.1f );
+    SW_EXPECT_TRUE( horse.frighten( 0.5f ) == WesternHorseReaction::Calm );
+
+    const vector<uint8> horseBytes = captureWesternBytes( horse );
+    WesternHorse        restoredHorse;
+    SW_ASSERT_TRUE( restoredHorse.initialize( &catalog, hashed_string( "arabian" ), 1u ) );
+    Archive horseReader( horseBytes.data(), horseBytes.size() );
+    SW_ASSERT_TRUE( restoredHorse.readState( horseReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, horseReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWesternBytes( restoredHorse ) == horseBytes );
+    SW_EXPECT_TRUE( restoredHorse.hasAbility( hashed_string( "rear" ) ) );
+    SW_EXPECT_NEAR_EQUAL( horse.getStamina().getMax(), restoredHorse.getStamina().getMax(), 1.0e-3f );
+
+    // 같은 걸음을 둘 다 더 돌리면 바이트가 같다(겁 문턱을 넘어 난수를 하나 쓴다).
+    SW_EXPECT_TRUE( horse.frighten( 1.5f ) == restoredHorse.frighten( 1.5f ) );
+    horse.update( 1.0f, 1.0f );
+    restoredHorse.update( 1.0f, 1.0f );
+    SW_EXPECT_TRUE( captureWesternBytes( horse ) == captureWesternBytes( restoredHorse ) );
+
+    WesternHorse truncatedHorse;
+    SW_ASSERT_TRUE( truncatedHorse.initialize( &catalog, hashed_string( "arabian" ), 1u ) );
+    Archive horseCut( horseBytes.data(), horseBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedHorse.readState( horseCut ) );
+    SW_EXPECT_EQUAL( 1, truncatedHorse.getBondLevel() );
+
+    // 법 — 보안관이 본 절도는 현상금, 시민 둘이 본 살인은 신고 대기 중.
+    const hashed_string    region( "lemoyne" );
+    vector<WesternWitness> listCandidate{ makeWitness( 1, false ), makeWitness( 2, false ) };
+    vector<WesternWitness> listLawman{ makeWitness( 9, true ) };
+    const ListedSight      twoSee( vector<uint64>{ 1, 2 } );
+    const ListedSight      lawSees( vector<uint64>{ 9 } );
+    WesternLawState        law;
+    law.initialize( &catalog );
+    (void)law.commitCrime( hashed_string( "theft" ), region, float3{}, listLawman, lawSees, false );
+    (void)law.commitCrime( hashed_string( "murder" ), region, float3{}, listCandidate, twoSee, false );
+    law.setDisguised( true );
+    law.update( 5.0f );
+    SW_ASSERT_EQUAL( 2, law.countPendingReports() );
+
+    const vector<uint8> lawBytes = captureWesternBytes( law );
+    WesternLawState     restoredLaw;
+    restoredLaw.initialize( &catalog );
+    Archive lawReader( lawBytes.data(), lawBytes.size() );
+    SW_ASSERT_TRUE( restoredLaw.readState( lawReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, lawReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWesternBytes( restoredLaw ) == lawBytes );
+    SW_EXPECT_EQUAL( law.getBounty( region ), restoredLaw.getBounty( region ) );
+    SW_EXPECT_TRUE( restoredLaw.isDisguised() );
+
+    law.update( 20.0f ); // 신고 시간이 지나 살인이 신고된다
+    restoredLaw.update( 20.0f );
+    SW_EXPECT_EQUAL( 0, restoredLaw.countPendingReports() );
+    SW_EXPECT_EQUAL( law.getBounty( region ), restoredLaw.getBounty( region ) );
+    SW_EXPECT_TRUE( captureWesternBytes( law ) == captureWesternBytes( restoredLaw ) );
+
+    WesternLawState truncatedLaw;
+    truncatedLaw.initialize( &catalog );
+    Archive lawCut( lawBytes.data(), lawBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedLaw.readState( lawCut ) );
+    SW_EXPECT_EQUAL( 0, truncatedLaw.countPendingReports() );
+
+    // 생존 — 옷 · 추위로 준 코어, 2 단계 데드아이로 하나를 표시했다.
+    WesternSurvival survival;
+    survival.initialize( &catalog );
+    survival.setClothing( vector<hashed_string>{ hashed_string( "shirt" ) } );
+    survival.update( 0.0f, 2.0f, -5.0f );
+    survival.setDeadEyeLevel( 2 );
+    SW_ASSERT_TRUE( survival.activateDeadEye() );
+    SW_ASSERT_TRUE( survival.markTarget( 1 ) );
+    survival.update( 0.5f, 0.0f, 20.0f );
+
+    const vector<uint8> survivalBytes = captureWesternBytes( survival );
+    WesternSurvival     restoredSurvival;
+    restoredSurvival.initialize( &catalog );
+    Archive survivalReader( survivalBytes.data(), survivalBytes.size() );
+    SW_ASSERT_TRUE( restoredSurvival.readState( survivalReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, survivalReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWesternBytes( restoredSurvival ) == survivalBytes );
+    SW_EXPECT_NEAR_EQUAL( survival.computeWarmth(), restoredSurvival.computeWarmth(), 1.0e-5f );
+    SW_EXPECT_TRUE( restoredSurvival.isDeadEyeActive() );
+
+    survival.update( 1.0f, 1.0f, -5.0f );
+    restoredSurvival.update( 1.0f, 1.0f, -5.0f );
+    SW_EXPECT_TRUE( captureWesternBytes( survival ) == captureWesternBytes( restoredSurvival ) );
+
+    WesternSurvival truncatedSurvival;
+    truncatedSurvival.initialize( &catalog );
+    Archive survivalCut( survivalBytes.data(), survivalBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedSurvival.readState( survivalCut ) );
+    SW_EXPECT_FALSE( truncatedSurvival.isDeadEyeActive() );
 }

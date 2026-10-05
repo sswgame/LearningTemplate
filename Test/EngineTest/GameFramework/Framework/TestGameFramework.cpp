@@ -156,6 +156,16 @@ namespace
         const bool bNoExtra = pObject->getComponentCount() == countBefore;
         return bBegun && bNoTag && bNoExtra;
     }
+
+    /** @brief 플레이어 컨트롤러 상태의 바이트입니다. */
+    vector<uint8> capturePlayerControllerBytes( const PlayerController& controller )
+    {
+        Archive archive;
+        controller.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
+    }
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -2300,6 +2310,80 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatAndOverworldKitsShareOneFacingDir )
     loco.setFacingFromDelta( 0, -1 );
     input._facing = loco.getFacing();
     SW_EXPECT_TRUE_MSG( input._facing == FacingDir::Up, "두 킷이 같은 FacingDir 을 보고 있지 않습니다" );
+}
+
+/**
+ * @brief [GameFrameworkTest] 플레이어 컨트롤러 상태 바이트 — 타일 · 걷는 중의 남은 시간 · 조우 걸음 수가 그대로 와서 같은 걸음 · 같은 조우 · 같은 워프가 이어진다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( GameFrameworkTest, StateRoundTripContinuesTheSamePlayerController )
+{
+    TileMap tileMap;
+    tileMap.resize( 8, 3 );
+    for ( int32 x = 0; x < 8; ++x )
+        tileMap.setWalkable( x, 1, true );
+    tileMap.setEncounter( 3, 1, true );
+    tileMap.setEncounter( 4, 1, true );
+    TileWarp warp{};
+    warp._tileX       = 5;
+    warp._tileY       = 1;
+    warp._targetMap   = "town";
+    warp._targetTileX = 2;
+    warp._targetTileY = 4;
+    tileMap.setOrUpdateWarp( warp );
+
+    InputManager input;
+    input.initialize();
+    input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
+    input.postRawEvent( RawInputEvent::makeKeyDown( Key::D ) ); // 오른쪽을 누른 채로 걷는다
+
+    PlayerController controller;
+    controller.setTileMap( &tileMap );
+    controller.setEncounterRate( 0.5f ); // 조우 칸 두 걸음마다
+    // 0.1 초 프레임 — 걸음(0.18 초)은 두 프레임마다 하나다. 네 프레임 뒤 (3,1) 조우 칸을 걷는 중이다.
+    for ( int32 frame = 0; frame < 4; ++frame )
+    {
+        input.beginFrame( 0.1f );
+        controller.update( 0.1f, input );
+        input.endFrame();
+    }
+    SW_ASSERT_EQUAL( 3, controller.getTileX() );
+    SW_ASSERT_TRUE( controller.getLocomotion().getState() == LocomotionState::Walk );
+
+    const vector<uint8> bytes = capturePlayerControllerBytes( controller );
+    PlayerController    restored;
+    restored.setTileMap( &tileMap );
+    restored.setEncounterRate( 0.5f );
+    Archive reader( bytes.data(), bytes.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    SW_EXPECT_TRUE( capturePlayerControllerBytes( restored ) == bytes );
+    SW_EXPECT_EQUAL( 3, restored.getTileX() );
+    SW_EXPECT_TRUE( restored.getLocomotion().getFacing() == FacingDir::Right );
+
+    // 같은 프레임을 둘 다 더 돌린다 — (4,1) 에서 조우(두 번째 조우 칸 걸음), (5,1) 에서 워프 대기.
+    for ( int32 frame = 0; frame < 4; ++frame )
+    {
+        input.beginFrame( 0.1f );
+        controller.update( 0.1f, input );
+        restored.update( 0.1f, input );
+        input.endFrame();
+    }
+    SW_EXPECT_EQUAL( 5, restored.getTileX() );
+    SW_EXPECT_TRUE( capturePlayerControllerBytes( controller ) == capturePlayerControllerBytes( restored ) );
+    SW_EXPECT_TRUE( controller.consumeEncounterRequest() );
+    SW_EXPECT_TRUE( restored.consumeEncounterRequest() );
+    string mapPath;
+    int32  spawnX = 0;
+    int32  spawnY = 0;
+    SW_ASSERT_TRUE( restored.consumeWarpRequest( mapPath, spawnX, spawnY ) );
+    SW_EXPECT_STREQ( "town", mapPath.c_str() );
+    SW_EXPECT_EQUAL( 2, spawnX );
+
+    PlayerController truncated;
+    Archive          cut( bytes.data(), bytes.size() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_EQUAL( 1, truncated.getTileX() );
+    input.shutdown();
 }
 
 /**

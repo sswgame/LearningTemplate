@@ -14,6 +14,7 @@
 
 namespace sw
 {
+    class Archive;
     class WeatherSystem;
     class WesternCatalog;
 
@@ -35,7 +36,9 @@ namespace sw
     class SW_GF_API WesternSurvival
     {
     public:
-        static constexpr float32 kCoreMax = 100.0f;
+        static constexpr uint32  kStateTag     = 0x56525357u; ///< 'WSRV'
+        static constexpr uint32  kStateVersion = 1;
+        static constexpr float32 kCoreMax      = 100.0f;
 
         WesternSurvival();
 
@@ -76,6 +79,10 @@ namespace sw
         ResourceGauge&        getGauge( WesternCore core ) { return _arrGauge[static_cast<size_t>( core )]; }
         const ResourceGauge&  getGauge( WesternCore core ) const { return _arrGauge[static_cast<size_t>( core )]; }
         const vector<uint64>& getMarks() const { return _listMark; }
+        /** @brief 입은 옷 · 표시한 대상 · 세 게이지 · 세 코어 · 데드아이 단계 · 켜짐을 씁니다. 카탈로그는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         static constexpr size_t kCoreCount = static_cast<size_t>( WesternCore::Count );

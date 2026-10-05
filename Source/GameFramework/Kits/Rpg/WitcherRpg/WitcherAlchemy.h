@@ -19,6 +19,7 @@ namespace sw
 
     struct WitcherAlchemyDef;
 
+    class Archive;
     class Inventory;
     class WitcherCatalog;
 
@@ -55,6 +56,9 @@ namespace sw
     class SW_GF_API WitcherAlchemy
     {
     public:
+        static constexpr uint32 kStateTag     = 0x434C4157u; ///< 'WALC'
+        static constexpr uint32 kStateVersion = 1;
+
         WitcherAlchemy();
 
         void initialize( const WitcherCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog );
@@ -82,6 +86,10 @@ namespace sw
         int32                              getOilHits() const { return _oilHits; }
         const vector<WitcherActiveEffect>& getActiveEffects() const { return _listEffect; }
         Crafter&                           getCrafter() { return _crafter; }
+        /** @brief 제작기 · 남은 충전 · 도는 효과(남은 시간 · 묶인 독성) · 바른 기름과 남은 타격 · 떠 있는 독성을 씁니다. 카탈로그 · 레시피 카탈로그는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 모르는 연금 아이템이거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         struct ChargeEntry

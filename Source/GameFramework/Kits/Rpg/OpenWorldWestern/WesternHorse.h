@@ -17,6 +17,7 @@ namespace sw
 {
     struct WesternHorseDef;
 
+    class Archive;
     class WesternCatalog;
 
     /** @brief 겁을 먹었을 때의 반응입니다. */
@@ -54,6 +55,8 @@ namespace sw
     class SW_GF_API WesternHorse
     {
     public:
+        static constexpr uint32  kStateTag      = 0x53524857u; ///< 'WHRS'
+        static constexpr uint32  kStateVersion  = 1;
         static constexpr float32 kCoreMax       = 100.0f;
         static constexpr float32 kFearThreshold = 1.0f;
 
@@ -92,6 +95,10 @@ namespace sw
         const ResourceGauge&   getStamina() const { return _stamina; }
         const WesternHorseDef* getDef() const { return _pDef; }
         void                   drainEvents( vector<WesternHorseEvent>& outListEvent );
+        /** @brief 품종 id · 열린 능력 · 체력 · 스태미나 게이지 · 난수 · 코어 · 유대 · 겁 · 손질 뒤 시간 · 탔는지 · 질주를 씁니다. 카탈로그는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 품종이 카탈로그에 없거나 깨졌으면 false 이고 그대로입니다(품종이 다르면 그 품종의 게이지 설정으로 바꾼다). */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void    applyBondLevel( int32 level );

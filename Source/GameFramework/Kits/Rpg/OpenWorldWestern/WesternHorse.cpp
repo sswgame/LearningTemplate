@@ -4,6 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternCatalog.h"
 
 namespace sw
@@ -199,6 +202,66 @@ namespace sw
     void WesternHorse::drainEvents( vector<WesternHorseEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void WesternHorse::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeName( outArchive, _pDef != nullptr ? _pDef->_id : hashed_string{} );
+        outArchive << static_cast<uint32>( _listAbility.size() );
+        for ( const hashed_string& ability : _listAbility )
+        {
+            StateArchiveUtil::writeName( outArchive, ability );
+        }
+        _health.writeState( outArchive );
+        _stamina.writeState( outArchive );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _healthCore;
+        outArchive << _staminaCore;
+        outArchive << _bondExperience;
+        outArchive << _fear;
+        outArchive << _hoursSinceBrush;
+        outArchive << _bondLevel;
+        outArchive << _bRidden;
+        outArchive << _bGalloping;
+    }
+
+    bool WesternHorse::readState( Archive& archive )
+    {
+        hashed_string horseId;
+        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, horseId ) == false )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 품종이 다르면 사본을 그 품종으로 열어 게이지 설정을 맞춘다(값은 아래에서 덮는다).
+        WesternHorse restored = *this;
+        const bool   bSameDef = _pDef != nullptr && _pDef->_id == horseId;
+        if ( bSameDef == false && restored.initialize( _pCatalog, horseId, 1 ) == false )
+            return false;
+        uint32 abilityCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 4, abilityCount ) == false )
+            return false;
+        restored._listAbility.resize( abilityCount );
+        for ( hashed_string& ability : restored._listAbility )
+        {
+            if ( StateArchiveUtil::readName( archive, ability ) == false )
+                return false;
+        }
+        const bool bGaugesRead = restored._health.readState( archive ) && restored._stamina.readState( archive ) &&
+                                 StateArchiveUtil::readRandom( archive, restored._random );
+        if ( bGaugesRead == false )
+            return false;
+        archive >> restored._healthCore;
+        archive >> restored._staminaCore;
+        archive >> restored._bondExperience;
+        archive >> restored._fear;
+        archive >> restored._hoursSinceBrush;
+        archive >> restored._bondLevel;
+        archive >> restored._bRidden;
+        archive >> restored._bGalloping;
+        const bool bValid = archive.isOk() && restored._bRidden <= SW_TRUE && restored._bGalloping <= SW_TRUE && 0.0f <= restored._fear;
+        if ( bValid == false )
+            return false;
+        restored._eventBuffer.clear();
+        *this = std::move( restored );
+        return true;
     }
 
     void WesternHorse::applyBondLevel( int32 level )

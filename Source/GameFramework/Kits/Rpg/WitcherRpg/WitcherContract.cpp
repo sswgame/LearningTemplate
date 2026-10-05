@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Quest/QuestLog.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCatalog.h"
 
 namespace sw
@@ -65,6 +68,7 @@ namespace sw
     WitcherInvestigation::WitcherInvestigation()
         : _listFound{}
         , _eventBuffer{}
+        , _pCatalog{ nullptr }
         , _pContract{ nullptr }
         , _pQuestLog{ nullptr }
         , _stepIndex{ 0 }
@@ -73,6 +77,7 @@ namespace sw
 
     bool WitcherInvestigation::initialize( const WitcherCatalog* pCatalog, const hashed_string& contractId, QuestLog* pQuestLog )
     {
+        _pCatalog  = pCatalog;
         _pContract = pCatalog != nullptr ? pCatalog->findContract( contractId ) : nullptr;
         _pQuestLog = pQuestLog;
         _stepIndex = 0;
@@ -200,7 +205,8 @@ namespace sw
     }
 
     WitcherHaggle::WitcherHaggle()
-        : _pContract{ nullptr }
+        : _pCatalog{ nullptr }
+        , _pContract{ nullptr }
         , _anger{ 0.0f }
         , _offer{ 0 }
         , _finalReward{ 0 }
@@ -210,6 +216,7 @@ namespace sw
 
     bool WitcherHaggle::initialize( const WitcherCatalog* pCatalog, const hashed_string& contractId )
     {
+        _pCatalog    = pCatalog;
         _pContract   = pCatalog != nullptr ? pCatalog->findContract( contractId ) : nullptr;
         _anger       = 0.0f;
         _offer       = _pContract != nullptr ? _pContract->_reward : 0;
@@ -249,5 +256,77 @@ namespace sw
             _bClosed     = SW_TRUE;
         }
         return _finalReward;
+    }
+
+    void WitcherInvestigation::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeName( outArchive, _pContract != nullptr ? _pContract->_id : hashed_string{} );
+        outArchive << _stepIndex;
+        outArchive << static_cast<uint32>( _listFound.size() );
+        for ( const hashed_string& clueId : _listFound )
+        {
+            StateArchiveUtil::writeName( outArchive, clueId );
+        }
+    }
+
+    bool WitcherInvestigation::readState( Archive& archive )
+    {
+        hashed_string contractId;
+        int32         stepIndex = 0;
+        uint32        count     = 0;
+        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, contractId ) == false )
+            return false;
+        const WitcherContractDef* pContract = _pCatalog->findContract( contractId );
+        archive >> stepIndex;
+        if ( pContract == nullptr || archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false )
+            return false;
+        const bool bStepInside = 0 <= stepIndex && stepIndex <= static_cast<int32>( pContract->_listStep.size() );
+        if ( bStepInside == false )
+            return false;
+        vector<hashed_string> listFound( count );
+        for ( hashed_string& clueId : listFound )
+        {
+            if ( StateArchiveUtil::readName( archive, clueId ) == false )
+                return false;
+        }
+        _pContract = pContract;
+        _stepIndex = stepIndex;
+        _listFound = std::move( listFound );
+        _eventBuffer.clear();
+        return true;
+    }
+
+    void WitcherHaggle::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeName( outArchive, _pContract != nullptr ? _pContract->_id : hashed_string{} );
+        outArchive << _anger;
+        outArchive << _offer;
+        outArchive << _finalReward;
+        outArchive << _bClosed;
+    }
+
+    bool WitcherHaggle::readState( Archive& archive )
+    {
+        hashed_string contractId;
+        float32       anger       = 0.0f;
+        int32         offer       = 0;
+        int32         finalReward = 0;
+        uint8         bClosed     = SW_FALSE;
+        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, contractId ) == false )
+            return false;
+        const WitcherContractDef* pContract = _pCatalog->findContract( contractId );
+        archive >> anger;
+        archive >> offer;
+        archive >> finalReward;
+        archive >> bClosed;
+        const bool bValid = pContract != nullptr && archive.isOk() && bClosed <= SW_TRUE && 0.0f <= anger;
+        if ( bValid == false )
+            return false;
+        _pContract   = pContract;
+        _anger       = anger;
+        _offer       = offer;
+        _finalReward = finalReward;
+        _bClosed     = bClosed;
+        return true;
     }
 } // namespace sw

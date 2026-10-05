@@ -13,6 +13,7 @@
 
 namespace sw
 {
+    class Archive;
     class InputManager;
     class InputMap;
     class TileMap;
@@ -45,6 +46,9 @@ namespace sw
     class SW_GF_API PlayerController
     {
     public:
+        static constexpr uint32 kStateTag     = 0x434C504Fu; ///< 'OPLC'
+        static constexpr uint32 kStateVersion = 1;
+
         /** @brief 타일 (1,1), 입력 허용으로 시작합니다. */
         PlayerController();
 
@@ -83,6 +87,13 @@ namespace sw
 
         /** @brief 바라보는 방향의 타일 좌표를 채웁니다. */
         void getFacingTile( int32& outX, int32& outY ) const;
+        /**
+         * @brief 타일 · 이동 상태 · 대기 워프(맵 · 자리) · 조우 걸음 수 · 대기 플래그 · 입력 허용을 씁니다.
+         * @details 타일맵 · 입력 맵(빌림) · 설정은 싣지 않는다. 세이브 틀(`OverworldSaveGame`)은 다른 단위다 — 이것은 핫 리로드 · 상태 바이트용이다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 한 칸 이동을 시도합니다. */

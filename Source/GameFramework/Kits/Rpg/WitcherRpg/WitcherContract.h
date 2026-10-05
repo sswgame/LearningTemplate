@@ -17,6 +17,7 @@ namespace sw
     struct WitcherClueDef;
     struct WitcherContractDef;
 
+    class Archive;
     class QuestLog;
     class WitcherCatalog;
 
@@ -58,6 +59,8 @@ namespace sw
     class SW_GF_API WitcherInvestigation
     {
     public:
+        static constexpr uint32      kStateTag       = 0x564E4957u; ///< 'WINV'
+        static constexpr uint32      kStateVersion   = 1;
         static constexpr const utf8* kClueNotifyKind = "Clue";
         static constexpr const utf8* kStepNotifyKind = "Investigate";
 
@@ -75,6 +78,10 @@ namespace sw
         int32         getStepIndex() const { return _stepIndex; }
         hashed_string getStepId() const;
         void          drainEvents( vector<WitcherInvestigationEvent>& outListEvent );
+        /** @brief 계약 id · 단계 · 지금 단계에서 찾은 단서를 씁니다. 빌린 퀘스트 일지 · 카탈로그는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 계약이 카탈로그에 없거나 단계가 계약 밖이거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 지금 단계에서 아직 못 찾은 단서의 가장 작은 순서입니다. 다 찾았으면 −1 입니다. */
@@ -83,6 +90,7 @@ namespace sw
 
         vector<hashed_string>                  _listFound; ///< 지금 단계에서 찾은 단서
         EventBuffer<WitcherInvestigationEvent> _eventBuffer;
+        const WitcherCatalog*                  _pCatalog; ///< 상태 바이트의 계약 id 를 찾는다
         const WitcherContractDef*              _pContract;
         QuestLog*                              _pQuestLog;
         int32                                  _stepIndex;
@@ -111,6 +119,9 @@ namespace sw
     class SW_GF_API WitcherHaggle
     {
     public:
+        static constexpr uint32 kStateTag     = 0x47414857u; ///< 'WHAG'
+        static constexpr uint32 kStateVersion = 1;
+
         WitcherHaggle();
 
         [[nodiscard]] bool  initialize( const WitcherCatalog* pCatalog, const hashed_string& contractId );
@@ -123,8 +134,13 @@ namespace sw
         /** @brief 끝났으면 받을 보상입니다(끝나지 않았으면 0). */
         int32 getFinalReward() const { return _finalReward; }
         bool  isClosed() const { return _bClosed != SW_FALSE; }
+        /** @brief 계약 id · 화 · 지금 제안 · 받을 보상 · 끝났는지를 씁니다. 카탈로그는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 계약이 카탈로그에 없거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
+        const WitcherCatalog*     _pCatalog; ///< 상태 바이트의 계약 id 를 찾는다
         const WitcherContractDef* _pContract;
         float32                   _anger;
         int32                     _offer;

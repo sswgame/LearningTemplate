@@ -18,6 +18,7 @@ namespace sw
 {
     struct WesternPursuitDef;
 
+    class Archive;
     class NavGrid;
     class Wallet;
     class WesternCatalog;
@@ -120,6 +121,9 @@ namespace sw
     class SW_GF_API WesternLawState
     {
     public:
+        static constexpr uint32 kStateTag     = 0x57414C57u; ///< 'WLAW'
+        static constexpr uint32 kStateVersion = 1;
+
         WesternLawState();
 
         void initialize( const WesternCatalog* pCatalog );
@@ -149,6 +153,10 @@ namespace sw
         int32 countPendingReports() const { return static_cast<int32>( _listPending.size() ); }
         bool  isDisguised() const { return _bDisguised != SW_FALSE; }
         void  drainEvents( vector<WesternLawEvent>& outListEvent );
+        /** @brief 지역 기록(현상금 · 수배 · 안 보인 시간 · 법이 보는지) · 신고 대기(남은 시간까지) · 다음 사건 번호 · 변장을 씁니다. 카탈로그는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 모르는 지역 · 범죄거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         struct RegionRecord

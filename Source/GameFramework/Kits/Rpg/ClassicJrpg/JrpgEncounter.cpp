@@ -2,6 +2,10 @@
 
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgEncounter.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     JrpgEncounterWalker::JrpgEncounterWalker()
@@ -40,5 +44,30 @@ namespace sw
             return nullptr;
         _stepsSinceEncounter = 0;
         return pArea->_listGroup.data() + groupIndex;
+    }
+
+    void JrpgEncounterWalker::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _stepsSinceEncounter;
+        outArchive << _totalSteps;
+    }
+
+    bool JrpgEncounterWalker::readState( Archive& archive )
+    {
+        GameRandom random;
+        int32      stepsSinceEncounter = 0;
+        int32      totalSteps          = 0;
+        if ( StateArchiveUtil::readRandom( archive, random ) == false )
+            return false;
+        archive >> stepsSinceEncounter;
+        archive >> totalSteps;
+        const bool bValid = archive.isOk() && 0 <= stepsSinceEncounter && stepsSinceEncounter <= kNoEncounterYet && 0 <= totalSteps;
+        if ( bValid == false )
+            return false;
+        _random              = random;
+        _stepsSinceEncounter = stepsSinceEncounter;
+        _totalSteps          = totalSteps;
+        return true;
     }
 } // namespace sw

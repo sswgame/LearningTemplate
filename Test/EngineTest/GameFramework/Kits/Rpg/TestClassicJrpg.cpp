@@ -2,6 +2,8 @@
 // 시전 잠금 깨기 · 취소 · 약화, 콤보 포인트 합동기 · 도망 확률, 무협 내공 · 비급 숙련 해금, 걸음 수 인카운터 · 보상 분배 · 결정성.
 #include "pch.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Input/TimingJudge.h"
 #include "GameFramework/Base/Inventory/Inventory.h"
@@ -141,6 +143,17 @@ namespace
                 return event._value;
         }
         return -1;
+    }
+
+    /** @brief 상태 하나의 바이트입니다. */
+    template <typename TState>
+    vector<uint8> captureJrpgBytes( const TState& state )
+    {
+        Archive archive;
+        state.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
     }
 } // namespace
 
@@ -616,4 +629,102 @@ SW_TEST_CASE( ClassicJrpgTest, StepEncounterRewardSplitAndDeterminism )
         bSameBattle = bSameBattle && listA[index]._kind == listB[index]._kind && listA[index]._actor == listB[index]._actor &&
                       listA[index]._target == listB[index]._target && listA[index]._value == listB[index]._value;
     SW_EXPECT_TRUE( bSameBattle );
+}
+
+/**
+ * @brief [ClassicJrpgTest] 파티 · 전투 · 걸음 상태 바이트 — 멤버 · 장비 · 비급, 적 · 둔 명령 · 턴 순서 · 난수, 걸음 수가 그대로 와서 같은 라운드 · 같은 걸음이 이어진다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( ClassicJrpgTest, StateRoundTripContinuesTheSameBattle )
+{
+    JrpgTestWorld world;
+    SW_ASSERT_TRUE( world.initialize() );
+    JrpgParty party;
+    party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
+    (void)party.addMember( hashed_string( "hero" ), "Hero", hashed_string( "hero" ), 5 );
+    (void)party.addMember( hashed_string( "mia" ), "Mia", hashed_string( "mage" ), 3 );
+    party.learnManual( 0, hashed_string( "pine_sword" ) );
+    party.addProficiency( 0, hashed_string( "pine_sword" ), 7 );
+    SW_EXPECT_EQUAL( 1, world._inventory.addItem( hashed_string( "copper_sword" ), 1 ) );
+    const int32 inventorySlot = world._inventory.findFirstSlot( hashed_string( "copper_sword" ) );
+    SW_ASSERT_TRUE( inventorySlot >= 0 );
+    SW_ASSERT_TRUE( party.getMember( 0 )._equipment.equipFromInventory( world._inventory, inventorySlot ) == EquipResult::Ok );
+
+    JrpgBattle battle;
+    battle.initialize( &world._catalog, &world._judge, JrpgBattleSettings{}, 31 );
+    SW_ASSERT_TRUE( battle.start( &party, { hashed_string( "slime" ), hashed_string( "golem" ) } ) );
+    SW_ASSERT_TRUE( battle.setCommand( 0, JrpgCommand::makeAttack( 1 ) ) );
+    SW_ASSERT_TRUE( battle.setCommand( 1, JrpgCommand::makeAttack( 1 ) ) );
+    battle.resolveRound();
+    SW_ASSERT_TRUE( battle.getOutcome() == JrpgBattleOutcome::Ongoing );
+    SW_ASSERT_TRUE( battle.setCommand( 0, JrpgCommand::makeDefend() ) ); // 라운드 중간 — 둔 명령도 싣는다
+
+    JrpgEncounterWalker walker;
+    walker.initialize( &world._catalog, 12 );
+    for ( int32 stepIndex = 0; stepIndex < 6; ++stepIndex )
+        (void)walker.step( hashed_string( "field" ) );
+
+    // 되살린 쪽은 같은 가방 · 지갑을 빌린다(가방을 다시 열지 않는다).
+    GameStateRefs refs;
+    refs._pInventory = &world._inventory;
+    refs._pWallet    = &world._wallet;
+
+    const vector<uint8> partyBytes = captureJrpgBytes( party );
+    JrpgParty           restoredParty;
+    restoredParty.initialize( &world._catalog, &world._itemCatalog, refs );
+    Archive partyReader( partyBytes.data(), partyBytes.size() );
+    SW_ASSERT_TRUE( restoredParty.readState( partyReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, partyReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureJrpgBytes( restoredParty ) == partyBytes );
+    SW_EXPECT_EQUAL( party.computeAttack( 0 ), restoredParty.computeAttack( 0 ) ); // 장비가 그대로 낀다
+    SW_EXPECT_EQUAL( 7, restoredParty.getMember( 0 ).findProficiency( hashed_string( "pine_sword" ) ) );
+
+    const vector<uint8> battleBytes = captureJrpgBytes( battle );
+    JrpgBattle          restoredBattle;
+    restoredBattle.initialize( &world._catalog, &world._judge, JrpgBattleSettings{}, 999 );
+    restoredBattle.bindParty( &restoredParty );
+    Archive battleReader( battleBytes.data(), battleBytes.size() );
+    SW_ASSERT_TRUE( restoredBattle.readState( battleReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, battleReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureJrpgBytes( restoredBattle ) == battleBytes );
+    SW_EXPECT_EQUAL( battle.getRound(), restoredBattle.getRound() );
+
+    const vector<uint8> walkerBytes = captureJrpgBytes( walker );
+    JrpgEncounterWalker restoredWalker;
+    restoredWalker.initialize( &world._catalog, 1 );
+    Archive walkerReader( walkerBytes.data(), walkerBytes.size() );
+    SW_ASSERT_TRUE( restoredWalker.readState( walkerReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, walkerReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureJrpgBytes( restoredWalker ) == walkerBytes );
+
+    // 같은 걸음을 둘 다 더 돌리면 바이트가 같다 — 빠진 칸이 있으면 여기서 갈린다.
+    SW_ASSERT_TRUE( battle.setCommand( 1, JrpgCommand::makeAttack( 1 ) ) );
+    SW_ASSERT_TRUE( restoredBattle.setCommand( 1, JrpgCommand::makeAttack( 1 ) ) );
+    battle.resolveRound();
+    restoredBattle.resolveRound();
+    for ( int32 stepIndex = 0; stepIndex < 10; ++stepIndex )
+    {
+        const JrpgEncounterGroup* pGroup         = walker.step( hashed_string( "field" ) );
+        const JrpgEncounterGroup* pRestoredGroup = restoredWalker.step( hashed_string( "field" ) );
+        SW_EXPECT_TRUE( pGroup == pRestoredGroup );
+    }
+    SW_EXPECT_TRUE( captureJrpgBytes( battle ) == captureJrpgBytes( restoredBattle ) );
+    SW_EXPECT_TRUE( captureJrpgBytes( party ) == captureJrpgBytes( restoredParty ) );
+    SW_EXPECT_TRUE( captureJrpgBytes( walker ) == captureJrpgBytes( restoredWalker ) );
+
+    JrpgParty truncatedParty;
+    truncatedParty.initialize( &world._catalog, &world._itemCatalog, refs );
+    Archive partyCut( partyBytes.data(), partyBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedParty.readState( partyCut ) );
+    SW_EXPECT_EQUAL( 0, truncatedParty.getMemberCount() );
+    JrpgBattle truncatedBattle;
+    truncatedBattle.initialize( &world._catalog, &world._judge, JrpgBattleSettings{}, 999 );
+    truncatedBattle.bindParty( &restoredParty );
+    Archive battleCut( battleBytes.data(), battleBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedBattle.readState( battleCut ) );
+    SW_EXPECT_EQUAL( 0, truncatedBattle.getRound() );
+    JrpgEncounterWalker truncatedWalker;
+    truncatedWalker.initialize( &world._catalog, 1 );
+    Archive walkerCut( walkerBytes.data(), walkerBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedWalker.readState( walkerCut ) );
+    SW_EXPECT_EQUAL( 0, truncatedWalker.getTotalSteps() );
 }

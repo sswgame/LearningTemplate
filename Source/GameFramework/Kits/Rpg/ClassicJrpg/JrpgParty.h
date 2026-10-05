@@ -22,6 +22,7 @@ namespace sw
 {
     struct GameStateRefs;
 
+    class Archive;
     class ItemCatalog;
 
     /** @brief 비급 하나의 숙련입니다. */
@@ -103,9 +104,11 @@ namespace sw
     class SW_GF_API JrpgParty
     {
     public:
-        static constexpr int32 kMaxMembers          = 4;
-        static constexpr int32 kInnerMax            = 100;
-        static constexpr int32 kClassChangeMinLevel = 20; ///< DQ3 다마 신전
+        static constexpr uint32 kStateTag            = 0x5954504Au; ///< 'JPTY'
+        static constexpr uint32 kStateVersion        = 1;
+        static constexpr int32  kMaxMembers          = 4;
+        static constexpr int32  kInnerMax            = 100;
+        static constexpr int32  kClassChangeMinLevel = 20; ///< DQ3 다마 신전
 
         JrpgParty();
 
@@ -132,6 +135,10 @@ namespace sw
         /** @brief 비급 숙련을 더하고 새로 열린 초식을 알립니다. 익히지 않은 비급이면 아무것도 하지 않습니다. */
         void addProficiency( int32 memberIndex, const hashed_string& manualId, int32 amount );
         void drainEvents( vector<JrpgPartyEvent>& outListEvent );
+        /** @brief 멤버(직업 · 이름 · 주문 · 비급 숙련 · 장비 아이템 id · 레벨 · 능력치 · HP/MP · 내공)를 씁니다. 가방 · 지갑은 빌린 것이라 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 모르는 직업 · 아이템, 장비 칸 수가 다르거나 깨졌으면 false 이고 그대로입니다(카탈로그 · 칸 구성은 `initialize` 의 것). */
+        [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 이 주문 · 초식을 쓸 수 있는가입니다(배웠거나, 비급 숙련이 그 단계에 닿았다). */
         bool  canUseSpell( int32 memberIndex, const hashed_string& spellId ) const;

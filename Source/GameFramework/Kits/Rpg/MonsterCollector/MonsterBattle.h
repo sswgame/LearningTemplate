@@ -18,6 +18,7 @@
 
 namespace sw
 {
+    class Archive;
     class ElementChart;
 
     /** @brief 한 라운드의 행동 종류입니다. */
@@ -142,15 +143,17 @@ namespace sw
     class SW_GF_API MonsterBattle
     {
     public:
-        static constexpr int32 kPlayerSide      = 0;
-        static constexpr int32 kFoeSide         = 1;
-        static constexpr int32 kSideCount       = 2;
-        static constexpr int32 kMinStage        = -6;
-        static constexpr int32 kMaxStage        = 6;
-        static constexpr int32 kNonMovePriority = 7; ///< 교체 · 볼 · 도망
-        static constexpr int32 kParalysisChance = 25;
-        static constexpr int32 kThawChance      = 20;
-        static constexpr int32 kMaxSleepTurns   = 3;
+        static constexpr uint32 kStateTag        = 0x5442434Du; ///< 'MCBT'
+        static constexpr uint32 kStateVersion    = 1;
+        static constexpr int32  kPlayerSide      = 0;
+        static constexpr int32  kFoeSide         = 1;
+        static constexpr int32  kSideCount       = 2;
+        static constexpr int32  kMinStage        = -6;
+        static constexpr int32  kMaxStage        = 6;
+        static constexpr int32  kNonMovePriority = 7; ///< 교체 · 볼 · 도망
+        static constexpr int32  kParalysisChance = 25;
+        static constexpr int32  kThawChance      = 20;
+        static constexpr int32  kMaxSleepTurns   = 3;
 
         MonsterBattle();
 
@@ -167,6 +170,10 @@ namespace sw
         /** @brief 쓰러진 자리를 @p partyIndex 로 채웁니다(`NeedsSwitch` 다음). */
         [[nodiscard]] bool switchFainted( int32 side, int32 partyIndex );
         void               drainEvents( vector<MonsterBattleEvent>& outListEvent );
+        /** @brief 양쪽(개체 · 능력 변화 · 둔 행동 · 나선 자리 · 교체 대기) · 턴 순서 · 난수 · 잡은 개체 · 날씨 · 도망 횟수 · 결과 · 야생 여부를 씁니다. 카탈로그 · 상성표는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 모르는 종 · 기술 · 날씨거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 피해 공식입니다. 단계마다 내림하고 상성이 0 이 아니면 최소 1 입니다. */
         static int32 computeDamage( const MonsterDamageInput& input );

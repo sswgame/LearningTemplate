@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Combat/ElementChart.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -706,5 +709,94 @@ namespace sw
     void MonsterBattle::drainEvents( vector<MonsterBattleEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void MonsterBattle::writeState( Archive& outArchive ) const
+    {
+        for ( const Side& side : _arrSide )
+        {
+            outArchive << static_cast<uint32>( side._listMonster.size() );
+            for ( const MonsterInstance& monster : side._listMonster )
+            {
+                monster.writeState( outArchive );
+            }
+            for ( const int32 stage : side._arrStage )
+            {
+                outArchive << stage;
+            }
+            outArchive << side._action._ballMultiplier;
+            outArchive << side._action._index;
+            outArchive << static_cast<uint8>( side._action._kind );
+            outArchive << side._activeIndex;
+            outArchive << side._bNeedsSwitch;
+        }
+        _turnOrder.writeState( outArchive );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        _captured.writeState( outArchive );
+        StateArchiveUtil::writeName( outArchive, _weatherId );
+        outArchive << _weatherTurns;
+        outArchive << _escapeAttempts;
+        outArchive << static_cast<uint8>( _outcome );
+        outArchive << _bWild;
+    }
+
+    bool MonsterBattle::readState( Archive& archive )
+    {
+        if ( _pCatalog == nullptr )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 상성표는 사본이 그대로 든다.
+        MonsterBattle restored = *this;
+        for ( Side& side : restored._arrSide )
+        {
+            uint32 monsterCount = 0;
+            if ( StateArchiveUtil::readCount( archive, MonsterInstance::kStateMinBytes, monsterCount ) == false )
+                return false;
+            side._listMonster.assign( monsterCount, MonsterInstance{} );
+            for ( MonsterInstance& monster : side._listMonster )
+            {
+                if ( monster.readState( archive ) == false || _pCatalog->findSpecies( monster._speciesId ) == nullptr )
+                    return false;
+                for ( const MonsterMoveSlot& slot : monster._arrMove )
+                {
+                    if ( slot.isEmpty() == false && _pCatalog->findMove( slot._moveId ) == nullptr )
+                        return false;
+                }
+            }
+            for ( int32& stage : side._arrStage )
+            {
+                archive >> stage;
+                if ( ( kMinStage <= stage && stage <= kMaxStage ) == false )
+                    return false;
+            }
+            uint8 kind = 0;
+            archive >> side._action._ballMultiplier;
+            archive >> side._action._index;
+            archive >> kind;
+            archive >> side._activeIndex;
+            archive >> side._bNeedsSwitch;
+            const int32 monsterLimit = MathUtil::max( 1, static_cast<int32>( monsterCount ) );
+            const bool  bValid       = archive.isOk() && kind <= static_cast<uint8>( MonsterActionKind::Run ) && 0 <= side._activeIndex && side._activeIndex < monsterLimit;
+            if ( bValid == false )
+                return false;
+            side._action._kind = static_cast<MonsterActionKind>( kind );
+        }
+
+        uint8 outcome = 0;
+        if ( restored._turnOrder.readState( archive ) == false || StateArchiveUtil::readRandom( archive, restored._random ) == false )
+            return false;
+        if ( restored._captured.readState( archive ) == false || StateArchiveUtil::readName( archive, restored._weatherId ) == false )
+            return false;
+        archive >> restored._weatherTurns;
+        archive >> restored._escapeAttempts;
+        archive >> outcome;
+        archive >> restored._bWild;
+        const bool bWeatherKnown = restored._weatherId.empty() || _pCatalog->findWeather( restored._weatherId ) != nullptr;
+        const bool bValid        = archive.isOk() && bWeatherKnown && outcome <= static_cast<uint8>( MonsterBattleOutcome::Escaped );
+        if ( bValid == false )
+            return false;
+        restored._outcome = static_cast<MonsterBattleOutcome>( outcome );
+        restored._eventBuffer.clear();
+        *this = std::move( restored );
+        return true;
     }
 } // namespace sw

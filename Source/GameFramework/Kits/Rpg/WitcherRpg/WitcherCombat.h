@@ -14,6 +14,7 @@
 
 namespace sw
 {
+    class Archive;
     class ElementChart;
     class SkillTreeState;
     class StatBlock;
@@ -61,6 +62,9 @@ namespace sw
     class SW_GF_API WitcherCombat
     {
     public:
+        static constexpr uint32 kStateTag     = 0x424D4357u; ///< 'WCMB'
+        static constexpr uint32 kStateVersion = 1;
+
         WitcherCombat();
 
         void initialize( const WitcherCatalog* pCatalog, uint32 seed );
@@ -86,6 +90,10 @@ namespace sw
         float32              getActionCost( WitcherAction action ) const;
         const ResourceGauge& getStamina() const { return _stamina; }
         ResourceGauge&       getStamina() { return _stamina; }
+        /** @brief 스태미나 게이지 · 난수 · 아드레날린을 씁니다. 카탈로그는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         ResourceGauge         _stamina;

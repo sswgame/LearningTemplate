@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /**
      * @class JrpgEncounterWalker
      * @brief 걸음을 세어 조우를 정합니다. 씨앗이 같고 걸음이 같으면 같은 걸음에서 같은 무리를 만납니다.
@@ -20,7 +22,9 @@ namespace sw
     class SW_GF_API JrpgEncounterWalker
     {
     public:
-        static constexpr int32 kNoEncounterYet = 0x3fffffff;
+        static constexpr uint32 kStateTag       = 0x434E454Au; ///< 'JENC'
+        static constexpr uint32 kStateVersion   = 1;
+        static constexpr int32  kNoEncounterYet = 0x3fffffff;
 
         JrpgEncounterWalker();
 
@@ -29,6 +33,10 @@ namespace sw
         const JrpgEncounterGroup* step( const hashed_string& areaId );
         /** @brief 유예를 처음부터 다시 셉니다(마을에서 나왔을 때 · 성수). */
         void restartGrace() { _stepsSinceEncounter = 0; }
+        /** @brief 난수 · 조우 뒤 걸음 · 총 걸음을 씁니다. 카탈로그는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         int32 getStepsSinceEncounter() const { return _stepsSinceEncounter; }
         int32 getTotalSteps() const { return _totalSteps; }

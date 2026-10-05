@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCatalog.h"
 
 namespace sw
@@ -266,5 +269,66 @@ namespace sw
         ChargeEntry* pEntry = findCharge( itemId );
         if ( pEntry != nullptr && pEntry->_charges > 0 )
             --pEntry->_charges;
+    }
+
+    void WitcherAlchemy::writeState( Archive& outArchive ) const
+    {
+        _crafter.writeState( outArchive );
+        outArchive << static_cast<uint32>( _listCharge.size() );
+        for ( const ChargeEntry& charge : _listCharge )
+        {
+            StateArchiveUtil::writeName( outArchive, charge._itemId );
+            outArchive << charge._charges;
+        }
+        outArchive << static_cast<uint32>( _listEffect.size() );
+        for ( const WitcherActiveEffect& effect : _listEffect )
+        {
+            StateArchiveUtil::writeName( outArchive, effect._itemId );
+            StateArchiveUtil::writeCountdown( outArchive, effect._remaining );
+            outArchive << effect._lockedToxicity;
+        }
+        StateArchiveUtil::writeName( outArchive, _oilId );
+        outArchive << _floatingToxicity;
+        outArchive << _oilHits;
+    }
+
+    bool WitcherAlchemy::readState( Archive& archive )
+    {
+        if ( _pCatalog == nullptr )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 레시피 카탈로그는 사본이 그대로 든다.
+        WitcherAlchemy restored = *this;
+        uint32         count    = 0;
+        // 충전마다 이름(4) + 횟수(4)
+        if ( restored._crafter.readState( archive ) == false || StateArchiveUtil::readCount( archive, 8, count ) == false )
+            return false;
+        restored._listCharge.assign( count, ChargeEntry{} );
+        for ( ChargeEntry& charge : restored._listCharge )
+        {
+            if ( StateArchiveUtil::readName( archive, charge._itemId ) == false || _pCatalog->findAlchemy( charge._itemId ) == nullptr )
+                return false;
+            archive >> charge._charges;
+        }
+        // 효과마다 이름(4) + 남은 시간(4) + 묶인 독성(4)
+        if ( StateArchiveUtil::readCount( archive, 12, count ) == false )
+            return false;
+        restored._listEffect.assign( count, WitcherActiveEffect{} );
+        for ( WitcherActiveEffect& effect : restored._listEffect )
+        {
+            const bool bHeadRead = StateArchiveUtil::readName( archive, effect._itemId ) && StateArchiveUtil::readCountdown( archive, effect._remaining );
+            if ( bHeadRead == false || _pCatalog->findAlchemy( effect._itemId ) == nullptr )
+                return false;
+            archive >> effect._lockedToxicity;
+        }
+        if ( StateArchiveUtil::readName( archive, restored._oilId ) == false )
+            return false;
+        archive >> restored._floatingToxicity;
+        archive >> restored._oilHits;
+        const bool bOilKnown = restored._oilId.empty() || _pCatalog->findAlchemy( restored._oilId ) != nullptr;
+        const bool bValid    = archive.isOk() && bOilKnown && 0 <= restored._oilHits && 0.0f <= restored._floatingToxicity;
+        if ( bValid == false )
+            return false;
+        *this = std::move( restored );
+        return true;
     }
 } // namespace sw

@@ -4,7 +4,9 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
+#include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Rpg/Overworld/TileMap.h"
 
 namespace sw
@@ -152,6 +154,47 @@ namespace sw
                 break;
             }
         }
+    }
+
+    void PlayerController::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeInt2( outArchive, _tile );
+        _loco.writeState( outArchive );
+        outArchive << string_view( _pendingWarpMap );
+        StateArchiveUtil::writeInt2( outArchive, _pendingWarpSpawn );
+        outArchive << _encounterStepCounter;
+        outArchive << static_cast<uint8>( _bMoved );
+        outArchive << static_cast<uint8>( _bWarpPending );
+        outArchive << static_cast<uint8>( _bEncounterPending );
+        outArchive << static_cast<uint8>( _bInteractPending );
+        outArchive << static_cast<uint8>( _bInputEnabled );
+    }
+
+    bool PlayerController::readState( Archive& archive )
+    {
+        PlayerController restored = *this;
+        StateArchiveUtil::readInt2( archive, restored._tile );
+        if ( restored._loco.readState( archive ) == false )
+            return false;
+        archive >> restored._pendingWarpMap;
+        StateArchiveUtil::readInt2( archive, restored._pendingWarpSpawn );
+        archive >> restored._encounterStepCounter;
+        uint8 arrFlag[5]{ SW_FALSE, SW_FALSE, SW_FALSE, SW_FALSE, SW_FALSE };
+        for ( uint8& flag : arrFlag )
+        {
+            archive >> flag;
+            if ( flag > SW_TRUE )
+                return false;
+        }
+        if ( archive.isError() )
+            return false;
+        restored._bMoved            = arrFlag[0];
+        restored._bWarpPending      = arrFlag[1];
+        restored._bEncounterPending = arrFlag[2];
+        restored._bInteractPending  = arrFlag[3];
+        restored._bInputEnabled     = arrFlag[4];
+        *this                       = std::move( restored );
+        return true;
     }
 
     bool PlayerController::tryStep( int32 deltaX, int32 deltaY )
