@@ -19,6 +19,7 @@ sw_addTestExecutable(EditorTest
 	SOURCES
 		Common/Workspace/TestAssetHotReload.cpp
 		Common/Workspace/TestConfigHotReload.cpp
+		Common/Config/TestEditorToolDefaults.cpp
 		Common/Workspace/TestEditorConfigFileSchema.cpp
 		Common/Workspace/TestEditorAssetType.cpp
 		Common/Asset/TestEditorAssetValidation.cpp
