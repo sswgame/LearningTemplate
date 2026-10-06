@@ -201,6 +201,9 @@ cd build/Ninja-Debug/Bin
   텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode` 의 톤맵 쪽(톤맵에 상수 버퍼가 없어 미뤘다 — 함수는 `colorvision.hlsli`, UI 캔버스는 이미 쓴다),
   카메라 `gv_cameraFieldOfView` · `gv_cameraShakeScale` · `gv_cameraHeadBob`(cam-views 가 읽을 자리). (4) 해상도 선택지를 모니터 모드에서(선택지 공급자) · GPU 사양 조회(RHI 어댑터 · 전용 메모리)로 품질 자동 선택.
   (5) 게임 스키마에 키 바인딩 설정 — 시험 게임 일곱이 모두 입력 맵(`data/<게임>.input.xml`)을 쓴다(그 액션부터). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
+- **패드 스틱 시점 · 가상 커서(a4-input 이 남긴 것).** 입력 맵에 바인딩마다의 배율 · 프레임 시간 곱(언리얼 Enhanced Input 의 Scale · Scale By Delta Time 모디파이어)이
+  없어 오른쪽 스틱을 `Look` · `Camera.Look`(마우스 이동량 = 픽셀/프레임)에 묶으면 프레임률을 따르는 느린 값이 된다 — 그래서 시점 액션은 아직 마우스만이다.
+  명령형 게임(StarSkirmish · NileCity)의 패드 A · B 는 커서 자리를 쓰는데 커서를 패드로 옮기는 가상 커서(언리얼 CommonUI 의 아날로그 커서)가 없다.
 - **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 중간: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXmlData` 가 든다) · NetConnection 메시지 버퍼 재사용 ·
     기반의 같은 손셈(NavGrid 4 · FlowField 4 · GridInventory 3 · PlatformTileMap 2 · GridReachability `% 너비` 1, 클래스마다 자기 `isInside` · `computeIndex` ·
@@ -1799,6 +1802,8 @@ cd build/Ninja-Debug/Bin
 - **입력 · 매핑 · 행동 세 층** — 입력 층(Engine/Input)은 장치 사건만, 매핑(InputMap)은 플레이어 조종자 · 플레이어 뷰 · 명령형 디렉터만, 폰은 `ControlIntent` 만
   읽는다(`CheckControlBoundary` 허용 표). 네트워크 · 게임플레이 리플레이는 의도를 싣는다. **탑승 = 빙의를 탈것으로 옮기는 것**, 탑승자는 좌석 소켓에 붙어(이동 멈춤 ·
   자세 파라미터) 피격은 그대로 받는다. 탈것 의도의 연결은 운전석 조종자를 따른다. 명령형 장르(RTS · SRPG · 경영)는 폰이 없다.
+  허용 표의 파일도 장치(키 · 버튼 · 휠 · 이동량 · 패드)를 묻지 않는다 — 클릭 · 시점 · 확대도 입력 맵 액션이고, 남는 장치 조회는 커서 위치
+  `getMousePositionNormalized` 하나다(같은 게이트). 확대처럼 "한 칸씩" 인 축은 `wasActionTriggered` 프레임에만 쓴다 — 패드 버튼 축은 누르는 동안 매 프레임 ±1 이다.
 - **가상 입력은 `IVirtualInputSource` 하나로 넣는다** — `InputManager::attachVirtualInput` 이 붙이면 `beginFrame` 이 OS 사건과 같은 자리에서 그 프레임 사건을
   재생한다. 배타 모드(기본)는 OS 키 · 마우스 · 패드 사건, 패드 폴링, 창 포커스 사건, 커서 가두기를 무시한다 — 사람이 같은 기계를 써도 시험이 흔들리지 않는다.
   엔진 키보드 포커스(개발 콘솔)는 따른다. 바깥 스크립트로 OS 입력(`SendInput`)을 넣지 말 것 — OS 는 사건을 포그라운드 창에만 준다.

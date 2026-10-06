@@ -33,8 +33,8 @@ game::bindLocalService<AbilityCatalog>( &_catalog );
 AbilitySystemComponent* pAbilitySystem = pObject->addComponent<AbilitySystemComponent>();
 (void)pAbilitySystem->grantAbilitySet( "Player" );
 
-// 3) 입력을 넘긴다 — 세트가 준 입력 번호로 발동한다.
-if ( input.wasKeyPressed( Key::K ) )
+// 3) 입력을 넘긴다 — 세트가 준 입력 번호로 발동한다(장치가 아니라 입력 맵 액션 — `CheckControlBoundary`).
+if ( inputMap.wasActionTriggered( "Arena.Heal" ) )
     pAbilitySystem->abilityInputPressed( 2 );
 
 // 4) 반응한다 — 델리게이트 또는 "game" 채널.
