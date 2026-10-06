@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Text/RichTextParser.h"
 #include "Engine/Text/TextLayout.h"
 
@@ -106,4 +108,31 @@ SW_TEST_CASE( RichTextTest, LayoutSplitsRunsAtSpanBoundaries )
     SW_EXPECT_NEAR_EQUAL( 20.0f, result._listLine[0]._height, 1e-4f );     // 가장 큰 글자가 줄 높이를 정한다
     const sw::float2 measured = layout.measure( parsed._plainText, style, 0.0f, &parsed._listSpan );
     SW_EXPECT_NEAR_EQUAL( result._size._x, measured._x, 1e-4f );
+}
+
+/**
+ * @brief [RichTextTest] 행동 태그 [action=이름] 은 지금 장치의 글리프 글로 바뀐다 — 키보드면 "[ E ]", 패드면 패드 버튼. 다른 태그 · [[ 는 그대로
+ * @details 변이: `expandActionTags` 가 태그를 그대로 두면 키보드 글이 "[action=Interact] open" 으로 남아 진다.
+ */
+SW_TEST_CASE( RichTextTest, ActionTagUsesCurrentInputGlyph )
+{
+    sw::InputMap inputMap;
+    inputMap.bind( "Interact", sw::Key::E );
+    inputMap.bind( "Interact", sw::GamepadButton::X );
+    sw::InputGlyphStyle                   style    = sw::InputGlyphStyle::KeyboardMouse;
+    const sw::RichTextActionGlyphResolver resolver = SW_DELEGATE_LAMBDA( sw::RichTextActionGlyphResolver, [&inputMap, &style]( sw::string_view action )
+    {
+        return inputMap.getGlyphForAction( sw::hashed_string( action ), style );
+    } );
+    sw::string                            text;
+    SW_EXPECT_EQUAL( 1u, sw::RichTextParser::expandActionTags( "[action=Interact] [b]open[/b] [[x]", resolver, text ) );
+    SW_EXPECT_STREQ( "[ E ] [b]open[/b] [[x]", text.c_str() );
+
+    style = sw::InputGlyphStyle::GamepadXbox;
+    SW_EXPECT_EQUAL( 1u, sw::RichTextParser::expandActionTags( "[action=Interact] [b]open[/b] [[x]", resolver, text ) );
+    SW_EXPECT_TRUE( text.find( "[ E ]" ) == sw::string::npos );
+    SW_EXPECT_STREQ( ( inputMap.getGlyphForAction( "Interact", style ) + " [b]open[/b] [[x]" ).c_str(), text.c_str() );
+
+    SW_EXPECT_EQUAL( 0u, sw::RichTextParser::expandActionTags( "no tags [[action=Interact]", resolver, text ) );
+    SW_EXPECT_STREQ( "no tags [[action=Interact]", text.c_str() );
 }

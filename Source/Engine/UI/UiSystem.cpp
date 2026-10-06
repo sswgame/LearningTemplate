@@ -141,6 +141,8 @@ namespace sw
         , _themeSetting{}
         , _listReopenDocument{}
         , _bindingConverters{}
+        , _notifications{ *this }
+        , _actionGlyphs{}
         , _focus{}
         , _pointer{}
         , _consumption{}
@@ -173,12 +175,14 @@ namespace sw
         , _nextPushOrder{ 0 }
         , _textRevision{ 0 }
         , _inputMode{ UiInputMode::Pointer }
+        , _glyphStyle{ InputGlyphStyle::KeyboardMouse }
         , _bPauseRequested{ SW_FALSE }
         , _bPendingClose{ SW_FALSE }
         , _bPointerKnown{ SW_FALSE }
         , _bStickHeld{ SW_FALSE }
         , _bMousePixelKnown{ SW_FALSE }
         , _bTextRevisionKnown{ SW_FALSE }
+        , _bGlyphStyleKnown{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -190,8 +194,10 @@ namespace sw
 
     bool UiSystem::initialize( InputManager& inputManager, FontSystem* pFontSystem, string_view uiInputMapPath )
     {
-        _pInput      = &inputManager;
-        _pFontSystem = pFontSystem;
+        _pInput                    = &inputManager;
+        _pFontSystem               = pFontSystem;
+        _actionGlyphs._pInput      = &inputManager;
+        _actionGlyphs._pUiInputMap = nullptr;
         _documentCache.setReloadedHandler( SW_DELEGATE_METHOD( UiAssetReloadedDelegate, &UiSystem::onDocumentReloaded, this ) );
         _styleSheetCache.setReloadedHandler( SW_DELEGATE_METHOD( UiAssetReloadedDelegate, &UiSystem::onStyleSheetReloaded, this ) );
         _textLayout    = pFontSystem != nullptr ? make_unique<TextLayoutEngine>( *pFontSystem ) : nullptr;
@@ -212,6 +218,7 @@ namespace sw
             return false;
         }
         _uiInputMap->setInputManager( _pInput );
+        _actionGlyphs._pUiInputMap = _uiInputMap.get();
         syncInputLayers( getActiveScreen() );
         return true;
     }
@@ -219,6 +226,7 @@ namespace sw
     void UiSystem::shutdown()
     {
         _subtitles.clear();
+        _notifications.clear();
         // 위젯 컴포넌트가 이 시스템보다 오래 남을 수 있다 — 등록 · 마커를 잊게 한다(그 뒤 소멸자가 이 시스템을 부르지 않게).
         for ( WidgetComponent* pComponent : _listWidgetComponent )
             pComponent->forgetUiSystem();
@@ -271,6 +279,7 @@ namespace sw
         reopenClosedScreens();
         _subtitles.update( deltaSeconds );
         tickScreens( deltaSeconds );
+        _notifications.update( deltaSeconds );
         applyPendingCloses();
         updateBindings();
         // 애니메이션 — 문서 애니메이션 · 트윈이 프로퍼티를 쓴다(스타일 · 레이아웃 앞 — 쓴 칸의 무효화가 이번 프레임에 걷힌다). 실제 프레임 시간이다(정지 메뉴도 움직인다).
@@ -283,6 +292,7 @@ namespace sw
             }
             applyPendingCloses(); // 닫기 애니메이션이 끝난 화면
         }
+        refreshInputGlyphs();
         // 스타일 — 스타일 더러운 위젯만 계산된 스타일을 다시 정한다(레이아웃 앞 — 여백 · 글꼴이 크기를 바꾼다).
         {
             SW_PROFILE_SCOPE( "GT.Ui.Style" );
@@ -756,6 +766,26 @@ namespace sw
         return _pLocalization != nullptr ? _pLocalization : engine::getBoundEngineServices()._pLocalizationManager;
     }
 
+    void UiSystem::refreshInputGlyphs()
+    {
+        if ( _pInput == nullptr )
+            return;
+        const InputGlyphStyle style = _pInput->getActiveGlyphStyle();
+        if ( _bGlyphStyleKnown == SW_TRUE && style != _glyphStyle )
+        {
+            vector<Widget*> listWidget;
+            for ( const unique_ptr<UiScreen>& screen : _listScreen )
+            {
+                listWidget.clear();
+                screen->getTree().collectWidgetsInDocumentOrder( listWidget );
+                for ( Widget* pWidget : listWidget )
+                    pWidget->onInputGlyphsChanged();
+            }
+        }
+        _glyphStyle       = style;
+        _bGlyphStyleKnown = SW_TRUE;
+    }
+
     void UiSystem::processPointer()
     {
         const MouseDevice* pMouse = _pInput->getMouse();
@@ -1181,6 +1211,7 @@ namespace sw
         context._frameIndex    = engine::getFrameProfiler().getFrameCount();
         context._pLocalization = findLocalization();
         context._textRevision  = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
+        context._pActionGlyphs = &_actionGlyphs;
         if ( _pFontSystem != nullptr && _pFontSystem->isInitialized() )
         {
             context._pGlyphCache     = &_pFontSystem->getGlyphCache();
@@ -1283,6 +1314,12 @@ namespace sw
         }
         _demoScreen = pushScreen( UiDemoScreen::create() );
         setInputMode( UiInputMode::Navigation );
+        // 알림 · 행동 글리프도 같이 보인다(오버레이 층 — 스크린샷 확인).
+        UiNotificationDesc hint{};
+        hint._text            = "[action=UI.Accept] Select";
+        hint._durationSeconds = 600.0f;
+        hint._kind            = UiNotificationKind::Hint;
+        _notifications.post( hint );
     }
 
     void UiSystem::syncOptionsMenuSwitch()
@@ -1381,6 +1418,7 @@ namespace sw
         context._bRightToLeft  = UiLayoutPass::isCultureRightToLeft( _pLocalization );
         context._pLocalization = findLocalization();
         context._textRevision  = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
+        context._pActionGlyphs = &_actionGlyphs;
         return context;
     }
 } // namespace sw

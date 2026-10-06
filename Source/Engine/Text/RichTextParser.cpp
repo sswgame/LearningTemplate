@@ -281,4 +281,34 @@ namespace sw
     }
 
     bool RichTextParser::hasSameTags( string_view sourceMarkup, string_view translatedMarkup ) { return MarkupTagScanner::hasSameTags( sourceMarkup, translatedMarkup ); }
+
+    uint32 RichTextParser::expandActionTags( string_view markup, const RichTextActionGlyphResolver& resolve, string& outText )
+    {
+        static constexpr string_view kActionTag = "[action=";
+        outText.clear();
+        uint32 expandedCount = 0;
+        size_t cursor        = 0;
+        while ( cursor < markup.size() )
+        {
+            // 글자 [ 는 [[ — 둘을 그대로 옮기고 넘는다(다음 파싱이 하나로 줄인다).
+            if ( markup.compare( cursor, 2, "[[" ) == 0 )
+            {
+                outText.append( "[[" );
+                cursor += 2;
+                continue;
+            }
+            const size_t close = markup.compare( cursor, kActionTag.size(), kActionTag ) == 0 ? markup.find( ']', cursor + kActionTag.size() ) : string_view::npos;
+            if ( close == string_view::npos || resolve.isBound() == false )
+            {
+                outText.push_back( markup[cursor] );
+                ++cursor;
+                continue;
+            }
+            const string_view action = markup.substr( cursor + kActionTag.size(), close - cursor - kActionTag.size() );
+            outText.append( resolve( action ) );
+            ++expandedCount;
+            cursor = close + 1;
+        }
+        return expandedCount;
+    }
 } // namespace sw

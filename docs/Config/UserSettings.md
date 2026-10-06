@@ -40,6 +40,7 @@
 | `gameplay.fieldOfView` | float | `70` | 60 ~ 110 (눈금 1) | confirm | `gv:gv_cameraFieldOfView` |
 | `gameplay.cameraShake` | float | `1` | 0 ~ 1 (눈금 0.1) | confirm | `gv:gv_cameraShakeScale` |
 | `gameplay.headBob` | bool | `true` |  | confirm | `gv:gv_cameraHeadBob` |
+| `gameplay.showTutorials` | bool | `true` |  | confirm | `게임 코드` |
 | `accessibility.colorVision` | enum | `off` |  | confirm | `gv:gv_colorVisionMode` |
 | `accessibility.uiScale` | float | `1` | 0.75 ~ 1.5 (눈금 0.05) | confirm | `gv:gv_uiScale` |
 | `accessibility.uiTheme` | enum | `default` |  | confirm | `gv:gv_uiTheme` |

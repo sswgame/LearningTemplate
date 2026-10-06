@@ -276,6 +276,10 @@ namespace sw
     {
     }
 
+    void Widget::onInputGlyphsChanged()
+    {
+    }
+
     void Widget::notifyValueEdited( const hashed_string& propertyName )
     {
         UiScreen* pScreen = _pTree != nullptr ? _pTree->getScreen() : nullptr;

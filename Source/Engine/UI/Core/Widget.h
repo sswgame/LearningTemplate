@@ -128,6 +128,8 @@ namespace sw
         virtual void onBoundPropertyChanged( const PropertyInfo& property );
         /** @brief 글 판(현지화 — 언어 변경 · 표 다시 읽기)이 바뀌었다. 글 위젯은 키를 다시 풀고 kLayout 입니다. 기본은 아무것도 하지 않습니다. */
         virtual void onTextRevisionChanged();
+        /** @brief 입력 장치 종류(글리프 — 키보드 · 패드)가 바뀌었다. 행동 태그(`[action=이름]`)를 든 글 위젯은 다시 풀고 kLayout 입니다. 기본은 아무것도 하지 않습니다. */
+        virtual void onInputGlyphsChanged();
 
         // --- 포커스 ---------------------------------------------------------------
         /** @brief 포커스를 받을 수 있는 종류인가 — 버튼 · 슬라이더 · 입력 칸이 true. 꺼졌거나 안 보이면 받지 않는다(트리가 따로 본다). */

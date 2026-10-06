@@ -12,6 +12,7 @@
 #include "Engine/UI/Document/UiDocumentLoader.h"
 #include "Engine/UI/Screens/KeyRebindScreen.h"
 #include "Engine/UI/Screens/SettingsConfirmScreen.h"
+#include "Engine/UI/Screens/UiNotificationService.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
@@ -243,6 +244,14 @@ namespace sw
         UiSystem*                     pUi    = getUiSystem();
         if ( result._bAwaitingConfirm && pUi != nullptr && isPromptOpen() == false )
             _promptScreen = SettingsConfirmScreen::open( *pUi, *_pSettings, kConfirmDocument );
+        if ( result._bNeedsRestart && pUi != nullptr )
+        {
+            UiNotificationDesc notice{};
+            notice._text            = "Some changes take effect after a restart.";
+            notice._durationSeconds = 6.0f;
+            notice._kind            = UiNotificationKind::Warning;
+            pUi->getNotifications().post( notice );
+        }
         refreshRestartNotice();
     }
 

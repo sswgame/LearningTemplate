@@ -110,13 +110,6 @@
                 "engine/ui/confirm_countdown.ui.xml"
             ]
         },
-        "Select": {
-            "source": "Select",
-            "context": "TextWidget._text",
-            "origins": [
-                "engine/ui/parts/inputhint.ui.xml"
-            ]
-        },
         "Some changes take effect after a restart.": {
             "source": "Some changes take effect after a restart.",
             "context": "TextWidget._text",
@@ -136,6 +129,13 @@
             "context": "TextWidget._text",
             "origins": [
                 "engine/ui/confirm_unsaved.ui.xml"
+            ]
+        },
+        "[action=UI.Accept] Select": {
+            "source": "[action=UI.Accept] Select",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/parts/inputhint.ui.xml"
             ]
         },
         "settings.accessibility.colorVision": {
@@ -513,6 +513,14 @@
         },
         "settings.gameplay.headBob": {
             "source": "Head Bob",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.gameplay.showTutorials": {
+            "source": "Show Tutorials",
             "context": "Options menu label",
             "maxLength": 32,
             "origins": [

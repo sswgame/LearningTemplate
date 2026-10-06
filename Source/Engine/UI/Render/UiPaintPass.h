@@ -12,6 +12,7 @@
 
 namespace sw
 {
+    struct UiActionGlyphSource;
     struct WidgetGeometry;
 
     class GlyphCache;
@@ -37,6 +38,7 @@ namespace sw
         uint32                     _atlasGeneration{ 0 };     ///< 글리프 아틀라스 세대 — 바뀌면 글 위젯을 다시 칠한다
         const LocalizationManager* _pLocalization{ nullptr }; ///< 글 위젯이 키를 푸는 문화권(레이아웃 문맥과 같은 값)
         uint32                     _textRevision{ 0 };        ///< 그 문화권의 글 판
+        const UiActionGlyphSource* _pActionGlyphs{ nullptr }; ///< `[action=이름]` 태그의 글리프 출처(레이아웃 문맥과 같은 값)
     };
 } // namespace sw
 

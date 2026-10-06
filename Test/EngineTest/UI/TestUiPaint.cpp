@@ -7,6 +7,7 @@
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Text/FontSystem.h"
 #include "Engine/Text/GlyphCache.h"
@@ -16,6 +17,7 @@
 #include "Engine/UI/Core/UiFocusManager.h"
 #include "Engine/UI/Core/UiPointerState.h"
 #include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Input/UiActionGlyphSource.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/OverlayPanel.h"
@@ -692,4 +694,37 @@ SW_TEST_CASE( UiPaintTest, SnappedWidthDoesNotWrapFittingText )
     SW_EXPECT_NEAR_EQUAL( 35.0f, pText->getDesiredSize()._x, 1e-4f );
     SW_EXPECT_TRUE( pText->getGeometry()._size._x < 35.0f ); // 픽셀 맞춤이 줄였다
     SW_EXPECT_EQUAL( size_t{ 1 }, pText->getLastLayout()._listLine.size() );
+}
+
+/**
+ * @brief [UiPaintTest] 글 위젯의 행동 태그는 문맥의 글리프 출처로 풀린다 — 입력 장치가 바뀌면(onInputGlyphsChanged) 다시 풀고 다시 잰다
+ * @details 변이: `TextWidget::onInputGlyphsChanged` 를 비우면 패드로 바꿔도 "[ E ] open" 이 남아 진다.
+ */
+SW_TEST_CASE( UiPaintTest, ActionTagFollowsInputDevice )
+{
+    UiPaintFontFixture fonts;
+    SW_ASSERT_TRUE( fonts._bInitialized );
+    UiPaintFixture fixture( 400.0f, 100.0f );
+    fonts.bind( fixture );
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bind( "Interact", sw::Key::E );
+    input.getInputMap().bind( "Interact", sw::GamepadButton::X );
+    sw::UiActionGlyphSource glyphs{};
+    glyphs._pInput                        = &input;
+    fixture._layoutContext._pActionGlyphs = &glyphs;
+    fixture._paintContext._pActionGlyphs  = &glyphs;
+    sw::OverlayPanel* pRoot               = fixture.setRoot<sw::OverlayPanel>();
+    sw::TextWidget*   pText               = static_cast<sw::TextWidget*>( pRoot->addChild( sw::make_unique<sw::TextWidget>() ) );
+    pText->setRichText( true );
+    pText->setText( "[action=Interact] open" );
+    (void)fixture.runFrame();
+    SW_EXPECT_STREQ( "[ E ] open", pText->getDisplayText().c_str() );
+
+    input.setActiveGlyphStyle( sw::InputGlyphStyle::GamepadXbox );
+    pText->onInputGlyphsChanged(); // UiSystem::refreshInputGlyphs 가 장치가 바뀐 프레임에 부른다
+    SW_EXPECT_TRUE( ( pText->getDirtyFlags() & sw::WidgetDirty::kLayout ) != 0 );
+    (void)fixture.runFrame();
+    SW_EXPECT_STREQ( ( input.getInputMap().getGlyphForAction( "Interact", sw::InputGlyphStyle::GamepadXbox ) + " open" ).c_str(), pText->getDisplayText().c_str() );
+    input.shutdown();
 }

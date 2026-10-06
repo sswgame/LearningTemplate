@@ -240,3 +240,26 @@ SW_TEST_CASE( WidgetComponentTest, WorldSpaceEmitsRenderTextureList )
     ui.collectWorldCanvases( listTarget );
     SW_EXPECT_TRUE( listTarget.empty() );
 }
+
+/**
+ * @brief [WidgetComponentTest] 가장자리에 붙인 마커의 방향 각은 화면 가운데에서 목표 쪽이다 — 오른쪽 π/2 · 왼쪽 −π/2 · 위 0(시계 방향, 라디안), 오른쪽 뒤도 오른쪽
+ * @details 변이: 각을 y 를 뒤집지 않고(UI y 아래가 +) 재면 위의 목표가 π 가 되어 진다.
+ */
+SW_TEST_CASE( WidgetComponentTest, EdgeClampArrowPointsToTarget )
+{
+    using Util = WidgetComponentTestUtil;
+    sw::WidgetComponent component;
+    component.setClampToScreenEdge( true );
+    const sw::WidgetMarkerPlacement right = Util::place( component, sw::float3{ 50.0f, 0.0f, 5.0f } );
+    SW_ASSERT_TRUE( right._bClamped == SW_TRUE );
+    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::kHalfPi, right._edgeAngle, 0.001f );
+    const sw::WidgetMarkerPlacement left = Util::place( component, sw::float3{ -50.0f, 0.0f, 5.0f } );
+    SW_EXPECT_NEAR_EQUAL( -sw::MathUtil::kHalfPi, left._edgeAngle, 0.001f );
+    const sw::WidgetMarkerPlacement up = Util::place( component, sw::float3{ 0.0f, 50.0f, 5.0f } );
+    SW_ASSERT_TRUE( up._bClamped == SW_TRUE );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, up._edgeAngle, 0.001f );
+    const sw::WidgetMarkerPlacement behindRight = Util::place( component, sw::float3{ 1.0f, 0.0f, -5.0f } );
+    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::kHalfPi, behindRight._edgeAngle, 0.001f );
+    const sw::WidgetMarkerPlacement inside = Util::place( component, sw::float3{ 0.0f, 0.0f, 5.0f } );
+    SW_EXPECT_TRUE( inside._bClamped == SW_FALSE ); // 화면 안 — 화살표 없음
+}

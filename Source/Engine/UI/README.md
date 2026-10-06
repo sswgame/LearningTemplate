@@ -473,3 +473,22 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - **일시정지 메뉴**: 게임 프리셋 `_bUiPauseMenu` 를 켜면 화면이 없을 때 UI 맵의 `UIGlobal` 레이어(`UI.Pause` — Esc · 패드 Start)가 `PauseMenuScreen`(`_uiPauseMenu`,
   기본 `engine/ui/pause.ui.xml`)을 연다. 그 입력은 UI 가 먹어 게임의 같은 키 행동(Shooter3D 의 마우스 잠금 토글)이 보지 못한다 — 메뉴가 커서를 바라니 잠금이 쉬고,
   닫으면 돌아온다. `OpenOptions` 명령은 옵션 메뉴를 위에 연다. 개발 스위치 `-gv_uiOptionsMenu=1` 은 옵션 메뉴를 바로 띄운다(스크린샷 · 네 백엔드 확인).
+
+## 알림 · 힌트 · 목표 마커 (`Screens/UiNotificationService` · `Input/UiActionGlyphSource`)
+
+| 이 엔진 | 언리얼 | 유니티 | Godot |
+|---|---|---|---|
+| `UiNotificationService::post` — 오버레이 층 셋까지 · 대기열 | Lyra CommonUI 메시지 · `UCommonUIExtension` | (직접 — 토스트) | (직접) |
+| 리치 텍스트 `[action=Interact]` → `[ E ]` · 패드 버튼 | CommonUI `UCommonActionWidget`(입력 액션 → 아이콘) | Input System `GetBindingDisplayString` | `InputMap` + `get_action_icon`(직접) |
+| `WidgetMarkerPlacement::_edgeAngle` · GF `ObjectiveMarkerComponent` | 게임마다 짓는 목표 마커 | (직접) | (직접) |
+
+- **알림**: `UiSystem::getNotifications().post( UiNotificationDesc{ 글, 길이, 우선순위, 종류 } )`. 보이는 것은 셋까지(오래된 것이 위), 나머지는 대기열 —
+  우선순위가 큰 것, 같으면 먼저 온 것부터. 같은 글이 보이거나 기다리는 중이면 새로 쌓지 않고 센다("x2") · 시간을 다시 잰다. 시간은 보인 뒤부터 잰다.
+  화면은 오버레이 층 문서 `engine/ui/notifications.ui.xml`(입력 · 포커스를 받지 않는다 — 게임 · 메뉴를 막지 않는다), 항목은 조각 `engine/ui/parts/notification.ui.xml`
+  (`Message` · `Count`, 루트 클래스 `notification <info|achievement|warning|hint>` — `styles/notifications.uistyle.xml`). 보일 것이 없으면 화면을 닫는다.
+  첫 사용처: 옵션 메뉴의 "다시 시작하면 적용" · 자동 저장 완료 · 튜토리얼 힌트(GF).
+- **행동 글리프**: 글 위젯의 글(번역을 푼 뒤)에 `[action=이름]` 이 있으면 측정 · 칠하기 문맥의 `UiActionGlyphSource`(게임 입력 맵 → UI 맵, 장치 종류는
+  `InputManager::getActiveGlyphStyle`)로 바꾼다 — 번역가가 태그 자리를 옮길 수 있다. 장치 종류가 바뀌면 `UiSystem` 이 위젯마다 `onInputGlyphsChanged` 를 부르고
+  태그를 든 글만 다시 풀고 잰다. 견본 `engine/ui/parts/inputhint.ui.xml` = `[action=UI.Accept] Select`.
+- **목표 마커**: 화면 마커(`WidgetComponent` Screen)가 가장자리에 붙으면 `_edgeAngle`(화면 위 = 0, 시계 방향) — 파생은 `onMarkerPlaced` 에서 방향 막대를 돌리고
+  거리 글을 쓴다(GF `ObjectiveMarkerComponent`).

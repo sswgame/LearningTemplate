@@ -199,6 +199,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   체력 시스템(어빌리티 · 키트 · 게임)은 바를 모른다 — 바는 시작할 때 같은 오브젝트의 `HealthSourceComponent` 에서 비율을 읽는다(Lyra `ULyraHealthComponent::OnHealthChanged` 를 위젯이 받는 자리). 보이기 정책도 바의 것이다
   (`_bShowWhenHurt` · `_bHideWhenDead`). 데미지 숫자의 입력은 `DamageNumberComponent::setDamageValue` · `spawnNumber`.
   `FadeOutComponent` 의 흐림은 같은 오브젝트 스프라이트들의 색 알파에 곱해진다.
+  `TutorialHintComponent`(트리거 볼륨 — 활성자가 들어오면 한 번, 설정 `gameplay.showTutorials` 가 켜졌을 때 힌트 알림 — 글의 `[action=이름]` 은 지금 장치의 글리프)와
+  `ObjectiveMarkerComponent`(엔진 `WidgetComponent` Screen 파생 — 이름 · 거리(m), 화면 밖이면 가장자리에 붙고 방향 막대를 `_edgeAngle` 로 돌린다)는
+  런타임 UI(`Engine/UI/README.md` "알림 · 힌트 · 목표 마커")를 쓴다. 자동 저장이 끝나면 `AutosaveManager` 가 "Game saved" 알림을 올린다.
 
 별도 타겟:
 

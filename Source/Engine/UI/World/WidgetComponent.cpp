@@ -226,6 +226,8 @@ namespace sw
         const float32 reach      = MathUtil::min( scaleX, scaleY );
         placement._position      = float2{ center._x + direction._x * reach, center._y + direction._y * reach };
         placement._bClamped      = SW_TRUE;
+        // UI 는 y 아래가 + — 위(0, -1)가 0 도, 오른쪽(1, 0)이 90 도.
+        placement._edgeAngle = MathUtil::atan2( direction._x, -direction._y );
         return placement;
     }
 
@@ -289,6 +291,13 @@ namespace sw
         transform._scale                = float2{ placement._scale, placement._scale };
         transform._pivot                = _pivot;
         pMarker->setRenderTransform( transform );
+        onMarkerPlaced( *pMarker, placement );
+    }
+
+    void WidgetComponent::onMarkerPlaced( Widget& marker, const WidgetMarkerPlacement& placement )
+    {
+        (void)marker;
+        (void)placement;
     }
 
     float2 WidgetComponent::getWorldTextureSize() const

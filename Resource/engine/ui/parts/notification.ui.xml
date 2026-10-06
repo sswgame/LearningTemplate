@@ -1,0 +1,12 @@
+<UiDocument _schemaVersion="1">
+	<BorderPanel _styleClass="notification">
+		<BoxPanel _spacing="8">
+			<TextWidget _name="Message" _bRichText="true">
+				<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+			</TextWidget>
+			<TextWidget _name="Count" _styleClass="count" _bLocalized="false" _visibility="Collapsed">
+				<_slot _verticalAlignment="Center" />
+			</TextWidget>
+		</BoxPanel>
+	</BorderPanel>
+</UiDocument>

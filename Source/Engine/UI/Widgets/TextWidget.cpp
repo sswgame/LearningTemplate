@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/UI/Input/UiActionGlyphSource.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
 #include "Engine/UI/Layout/UiScale.h"
 #include "Engine/UI/Render/UiPaintPass.h"
@@ -44,6 +45,7 @@ namespace sw
         , _displayText{}
         , _displayRevision{ 0 }
         , _bDisplayValid{ false }
+        , _bHasActionTag{ false }
         , _richText{}
         , _layoutCache{}
         , _layoutWidth{ 0.0f }
@@ -131,15 +133,32 @@ namespace sw
             invalidateText();
     }
 
-    void TextWidget::resolveDisplayText( const LocalizationManager* pLocalization, uint32 textRevision ) const
+    void TextWidget::onInputGlyphsChanged()
+    {
+        if ( _bHasActionTag )
+            invalidateText();
+    }
+
+    void TextWidget::resolveDisplayText( const LocalizationManager* pLocalization, uint32 textRevision, const UiActionGlyphSource* pActionGlyphs ) const
     {
         if ( _bDisplayValid && _displayRevision == textRevision )
             return;
         const bool  bResolve  = _bLocalized && pLocalization != nullptr && _text.empty() == false;
         const utf8* pResolved = bResolve ? pLocalization->getStringByText( _text, _text.c_str() ) : _text.c_str();
-        if ( _bDisplayValid == false || _displayText != pResolved )
+        // 행동 태그는 풀린 글(번역)에서 바꾼다 — 번역가가 태그 자리를 옮길 수 있다.
+        string expanded;
+        _bHasActionTag = false;
+        if ( pActionGlyphs != nullptr && string_view( pResolved ).find( "[action=" ) != string_view::npos )
         {
-            _displayText  = pResolved;
+            const RichTextActionGlyphResolver resolver =
+                SW_DELEGATE_LAMBDA( RichTextActionGlyphResolver, [pActionGlyphs]( string_view action )
+            { return pActionGlyphs->findGlyph( action ); } );
+            _bHasActionTag = RichTextParser::expandActionTags( pResolved, resolver, expanded ) > 0;
+        }
+        const string_view display = _bHasActionTag ? string_view( expanded ) : string_view( pResolved );
+        if ( _bDisplayValid == false || _displayText != display )
+        {
+            _displayText  = display;
             _bLayoutValid = false;
             _bRichParsed  = false;
         }
@@ -192,7 +211,7 @@ namespace sw
     {
         if ( context._pTextLayout == nullptr || _text.empty() )
             return float2{};
-        resolveDisplayText( context._pLocalization, context._textRevision );
+        resolveDisplayText( context._pLocalization, context._textRevision, context._pActionGlyphs );
         // 줄 바꿈이면 가용 너비 안에서 잰다(무한이면 한 줄). 줄 바꿈이 아니면 늘 한 줄이다.
         const bool    bBounded = UiLayoutPass::isUnbounded( availableSize._x ) == false && availableSize._x > 0.0f;
         const float32 maxWidth = _style._bWrap && bBounded ? availableSize._x : 0.0f;
@@ -203,7 +222,7 @@ namespace sw
     {
         if ( context._pTextLayout == nullptr || context._pGlyphCache == nullptr || _text.empty() )
             return;
-        resolveDisplayText( context._pLocalization, context._textRevision );
+        resolveDisplayText( context._pLocalization, context._textRevision, context._pActionGlyphs );
         const TextLayoutStyle  style  = makeLayoutStyle( context._textScale );
         const float32          width  = getGeometry()._size._x;
         const bool             bRtl   = style._paragraphDirection == TextDirection::RightToLeft;

@@ -12,6 +12,7 @@
 
 namespace sw
 {
+    struct UiActionGlyphSource;
     struct WidgetGeometry;
 
     class LocalizationManager;
@@ -39,6 +40,7 @@ namespace sw
         bool                       _bRightToLeft{ false };    ///< 문화권이 오른쪽에서 왼쪽인가(`UiLayoutPass::isCultureRightToLeft`) — 루트의 Inherit 이 따른다
         const LocalizationManager* _pLocalization{ nullptr }; ///< 글 위젯이 키를 푸는 문화권(없으면 글 그대로)
         uint32                     _textRevision{ 0 };        ///< 그 문화권의 글 판(`getTextRevision`) — 글 위젯의 풀이 캐시 열쇠
+        const UiActionGlyphSource* _pActionGlyphs{ nullptr }; ///< `[action=이름]` 태그의 글리프 출처(없으면 태그를 풀지 않는다)
     };
 } // namespace sw
 

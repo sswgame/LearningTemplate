@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 
 namespace sw
 {
@@ -41,6 +42,9 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 행동 이름 → 지금 입력 장치의 글리프 글(`[ E ]`)입니다(`RichTextParser::expandActionTags`). 글자 층은 입력을 모른다 — UI 가 넘긴다. */
+    using RichTextActionGlyphResolver = Delegate<string( string_view )>;
+
     /**
      * @struct RichTextParser
      * @brief BBCode 꼴 리치 텍스트 파서입니다.
@@ -51,5 +55,10 @@ namespace sw
         static void parse( string_view markup, RichTextParseResult& outResult );
         /** @brief 두 글의 태그 열(이름 · 순서)이 같은지 봅니다 — 번역 검사가 원문과 번역을 견준다(`MarkupTagScanner::hasSameTags`). */
         static bool hasSameTags( string_view sourceMarkup, string_view translatedMarkup );
+        /**
+         * @brief 행동 태그 `[action=이름]` 을 @p resolve 가 준 글리프 글로 바꿔 @p outText 에 씁니다(배치 앞 — 다른 태그는 그대로 둔다). `[[` 는 건드리지 않습니다.
+         * @return 바꾼 태그 수입니다(0 이면 @p outText 는 원문과 같다). 입력 장치가 바뀌면 다시 불러야 한다 — 글 위젯이 `onInputGlyphsChanged` 로 다시 배치한다.
+         */
+        static uint32 expandActionTags( string_view markup, const RichTextActionGlyphResolver& resolve, string& outText );
     };
 } // namespace sw

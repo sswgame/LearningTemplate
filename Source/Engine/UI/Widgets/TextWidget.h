@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    struct UiActionGlyphSource;
+
     class LocalizationManager;
 } // namespace sw
 
@@ -57,6 +59,7 @@ namespace sw
         void setLocalized( bool bLocalized );
         bool isLocalized() const { return _bLocalized; }
         void onTextRevisionChanged() override;
+        void onInputGlyphsChanged() override;
         /** @brief 배치 스타일을 바꿉니다. 바뀌면 kLayout. */
         void                   setTextStyle( const TextLayoutStyle& style );
         const TextLayoutStyle& getTextStyle() const { return _style; }
@@ -87,8 +90,11 @@ namespace sw
         const vector<RichTextSpan>* getSpans() const;
         /** @brief 글 · 스타일이 바뀌었다 — 풀이 · 배치 캐시 · 리치 텍스트 파싱을 버리고 kLayout. */
         void invalidateText();
-        /** @brief 보이는 글을 문화권 @p pLocalization 의 판 @p textRevision 으로 풉니다(같은 판이면 캐시). 바뀌면 배치 · 리치 텍스트 캐시를 버린다. */
-        void resolveDisplayText( const LocalizationManager* pLocalization, uint32 textRevision ) const;
+        /**
+         * @brief 보이는 글을 문화권 @p pLocalization 의 판 @p textRevision 으로 풀고, 행동 태그(`[action=이름]`)를 @p pActionGlyphs 의 글리프로 바꿉니다
+         *        (같은 판이면 캐시). 바뀌면 배치 · 리치 텍스트 캐시를 버린다.
+         */
+        void resolveDisplayText( const LocalizationManager* pLocalization, uint32 textRevision, const UiActionGlyphSource* pActionGlyphs ) const;
 
     private:
         PROPERTY( DisplayName = "Text", Meta = "Localizable", Tooltip = "Localization key, or the text itself when the tables have no such key" )
@@ -109,6 +115,7 @@ namespace sw
         mutable string _displayText;     ///< 푼 보이는 글(`_bDisplayValid` 일 때 유효)
         mutable uint32 _displayRevision; ///< 그 풀이의 글 판
         mutable bool   _bDisplayValid;   ///< `_displayText` 가 지금 글 · 판의 것이다
+        mutable bool   _bHasActionTag;   ///< 푼 글에 행동 태그가 있었다(입력 장치가 바뀌면 다시 푼다)
 
         mutable RichTextParseResult _richText;       ///< 리치 텍스트 파싱 결과(`_bRichParsed` 일 때 유효)
         mutable TextLayoutResult    _layoutCache;    ///< 마지막 칠하기의 배치

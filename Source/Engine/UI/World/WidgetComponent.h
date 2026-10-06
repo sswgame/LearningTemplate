@@ -42,6 +42,7 @@ namespace sw
         float2  _position{};           ///< 마커의 기준점(피벗이 놓일 자리, UI 단위)
         float32 _scale{ 1.0f };        ///< 거리 배율(`_bScaleWithDistance` 일 때만 1 이 아니다)
         float32 _distance{ 0.0f };     ///< 카메라에서 점까지(m)
+        float32 _edgeAngle{ 0.0f };    ///< 가장자리에 붙였을 때 화면 가운데에서 점 쪽 방향(화면 위 = 0, 시계 방향, 라디안) — 방향 화살표의 렌더 변환 각
         uint8   _bVisible{ SW_TRUE };  ///< 보인다(카메라 뒤 · 화면 밖이고 가장자리에 붙이지 않거나, 최대 거리 밖이면 false)
         uint8   _bClamped{ SW_FALSE }; ///< 화면 밖이라 가장자리에 붙였다(방향 화살표 상태)
     };
@@ -110,7 +111,7 @@ namespace sw
                                                       const float2& viewportSize ) const;
         /** @brief 이번 프레임의 마커 자리를 적용합니다(`UiSystem::update` 가 부른다 — 카메라 · 오브젝트 위치를 스스로 찾는다). */
         void updateScreenMarker( const UiViewport& viewport );
-        /** @brief 계산한 자리를 마커 위젯 슬롯에 적습니다(시험이 카메라 없이 부른다). */
+        /** @brief 계산한 자리를 마커 위젯 슬롯에 적습니다(시험이 카메라 없이 부른다). 보이면 끝에 `onMarkerPlaced` 를 부릅니다. */
         void applyPlacement( const WidgetMarkerPlacement& placement );
         /**
          * @brief 등록할 UI 시스템을 바꿉니다(옛 쪽에서 마커를 떼고 등록을 풀고, 새 쪽에 등록하고 마커를 붙인다). nullptr 이면 풀기만.
@@ -135,6 +136,10 @@ namespace sw
         uint64 getWorldCanvasRevision() const { return _worldRevision; }
         /** @brief World 사각형 오브젝트입니다(없으면 무효 — 시작할 때 오브젝트 밑에 만든다). */
         GameObjectHandle getWorldQuad() const { return _worldQuad; }
+
+    protected:
+        /** @brief 화면 마커를 이번 프레임 자리에 놓았다(보일 때만) — 파생(목표 마커)이 방향 화살표 · 거리 글을 쓰는 자리입니다. 기본은 아무것도 하지 않습니다. */
+        virtual void onMarkerPlaced( Widget& marker, const WidgetMarkerPlacement& placement );
 
     private:
         /** @brief 콘텐츠를 UI 시스템의 마커 화면에 붙입니다(등록 · 콘텐츠가 다 있을 때). */

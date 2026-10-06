@@ -20,12 +20,14 @@
 #include "Engine/UI/Core/WidgetTypes.h"
 #include "Engine/UI/Document/UiBindingDesc.h"
 #include "Engine/UI/Document/UiDocumentCache.h"
+#include "Engine/UI/Input/UiActionGlyphSource.h"
 #include "Engine/UI/Input/UiInputConsumption.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
 #include "Engine/UI/Layout/UiScale.h"
 #include "Engine/UI/Render/UiPaintPass.h"
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UI/Screen/UiSubtitleService.h"
+#include "Engine/UI/Screens/UiNotificationService.h"
 #include "Engine/UI/Style/UiStyleSheetCache.h"
 #include "Engine/UI/Style/UiTheme.h"
 
@@ -150,6 +152,11 @@ namespace sw
         const string& getPauseMenuDocument() const { return _pauseMenuDocument; }
         /** @brief 설정 출처입니다(`setUserSettings` 가 준 것, 없으면 엔진 서비스 — 그것도 없으면 nullptr). 옵션 메뉴 · 설정 바인딩이 쓴다. */
         UserSettingsManager* findUserSettings() const;
+        /** @brief 알림 · 토스트입니다(오버레이 층 — 셋까지 쌓고 대기열 · 같은 글 합치기). 게임 · 키트가 `post` 한다. */
+        UiNotificationService&       getNotifications() { return _notifications; }
+        const UiNotificationService& getNotifications() const { return _notifications; }
+        /** @brief `[action=이름]` 태그의 글리프 출처입니다(게임 입력 맵 → UI 맵, 지금 장치 종류). */
+        const UiActionGlyphSource& getActionGlyphs() const { return _actionGlyphs; }
 
         // --- 스타일 · 테마 ---------------------------------------------------------------
         /** @brief 스타일 시트 캐시입니다(기동 단계 `Ui` 가 에셋 캐시 등록부에 올린다). */
@@ -321,6 +328,8 @@ namespace sw
          *        화면마다 바인딩 집합을 돌린다(걸리지 않았으면 걸고, 바뀐 소스의 칸만 쓴다 — 글 판이 바뀌면 형식 바인딩도 다시).
          */
         void updateBindings();
+        /** @brief 입력 장치 종류(글리프)가 바뀌었으면 화면 위젯마다 `onInputGlyphsChanged` 를 부릅니다(행동 태그를 든 글이 다시 배치된다). */
+        void refreshInputGlyphs();
         /** @brief 지금 문화권 출처입니다(`setLocalization` 이 준 것, 없으면 엔진 서비스 — 그것도 없으면 nullptr). */
         const LocalizationManager* findLocalization() const;
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
@@ -355,6 +364,8 @@ namespace sw
         string                       _themeSetting;       ///< 마지막으로 본 `gv_uiTheme` 값(바뀔 때만 테마를 고른다)
         vector<string>               _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면(다음 update 가 다시 연다)
         UiBindingConverterRegistry   _bindingConverters;
+        UiNotificationService        _notifications;
+        UiActionGlyphSource          _actionGlyphs; ///< 입력 관리자 · UI 맵(초기화 때 채운다)
         UiFocusManager               _focus;
         UiPointerState               _pointer;
         UiInputConsumption           _consumption;
@@ -387,12 +398,14 @@ namespace sw
         uint32                       _nextPushOrder;
         uint32                       _textRevision; ///< 마지막 바인딩 단계가 본 글 판
         UiInputMode                  _inputMode;
+        InputGlyphStyle              _glyphStyle;             ///< 마지막으로 본 입력 장치 종류(`refreshInputGlyphs`)
         uint8                        _bPauseRequested    : 1; ///< 게임 정지 요청을 걸어 두었다(정지 화면이 하나라도 있다)
         uint8                        _bPendingClose      : 1; ///< 닫기를 요청한 화면이 있다
         uint8                        _bPointerKnown      : 1; ///< 마우스 위치를 한 번 읽었다(첫 프레임의 Move 기준)
         uint8                        _bStickHeld         : 1; ///< 스틱이 탐색 문턱 너머로 기울어 있다
         uint8                        _bMousePixelKnown   : 1; ///< `_lastMousePixel` 을 한 번 읽었다
         uint8                        _bTextRevisionKnown : 1; ///< `_textRevision` 을 한 번 읽었다
-        [[maybe_unused]] uint8       _reserved           : 2;
+        uint8                        _bGlyphStyleKnown   : 1; ///< `_glyphStyle` 을 한 번 읽었다
+        [[maybe_unused]] uint8       _reserved           : 1;
     };
 } // namespace sw
