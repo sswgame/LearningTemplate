@@ -210,7 +210,10 @@ namespace sw
         const UiComputedStyle* pStyle = getComputedStyle();
         if ( _bLayoutValid == false || _layoutWidth != width || _layoutFontSize != style._fontSize || _bLayoutRtl != bRtl || _pLayoutStyle != pStyle )
         {
-            context._pTextLayout->layout( getPlainText(), style, width, _layoutCache, getSpans() );
+            // 픽셀 맞춤(UiLayoutPass)은 양 끝을 반올림해 원하는 너비에 놓인 글을 물리 픽셀 하나까지 줄인다 — 그만큼은 넘쳐도 한 줄로 둔다
+            // (상자 줄의 단추 글이 끝 글자를 다음 줄로 넘기지 않게).
+            const float32 snapSlack = width > 0.0f && context._uiScale > 0.0f ? 1.0f / context._uiScale : 0.0f;
+            context._pTextLayout->layout( getPlainText(), style, width + snapSlack, _layoutCache, getSpans() );
             _layoutWidth    = width;
             _layoutFontSize = style._fontSize;
             _bLayoutRtl     = bRtl;

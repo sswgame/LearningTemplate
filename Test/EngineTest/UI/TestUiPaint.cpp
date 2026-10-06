@@ -669,3 +669,27 @@ SW_TEST_CASE( UiPaintTest, TextInputTypesAndDeletes )
     ui.shutdown();
     input.shutdown();
 }
+
+/**
+ * @brief [UiPaintTest] 원하는 너비에 딱 맞게 놓인 글은 픽셀 맞춤이 너비를 1 픽셀 안쪽으로 줄여도 한 줄이다 — 상자 줄의 단추 글이 끝 글자를 다음 줄로 넘기지 않는다
+ * @details 배율 2/3 에서 너비 35 의 글은 픽셀 맞춤으로 34.5 에 놓인다. 변이: `TextWidget::paint` 의 맞춤 여유를 빼면 "abcdef" + "g" 두 줄이 된다.
+ */
+SW_TEST_CASE( UiPaintTest, SnappedWidthDoesNotWrapFittingText )
+{
+    UiPaintFontFixture fonts;
+    SW_ASSERT_TRUE( fonts._bInitialized );
+    UiPaintFixture fixture( 600.0f, 300.0f );
+    fonts.bind( fixture );
+    fixture._layoutContext._uiScale = 2.0f / 3.0f;
+    fixture._paintContext._uiScale  = 2.0f / 3.0f;
+    sw::BoxPanel*       pRoot       = fixture.setRoot<sw::BoxPanel>();
+    sw::TextWidget*     pText       = static_cast<sw::TextWidget*>( pRoot->addChild( sw::make_unique<sw::TextWidget>() ) );
+    sw::TextLayoutStyle style{};
+    style._fontSize = 10.0f;
+    pText->setTextStyle( style );
+    pText->setText( "abcdefg" );
+    (void)fixture.runFrame();
+    SW_EXPECT_NEAR_EQUAL( 35.0f, pText->getDesiredSize()._x, 1e-4f );
+    SW_EXPECT_TRUE( pText->getGeometry()._size._x < 35.0f ); // 픽셀 맞춤이 줄였다
+    SW_EXPECT_EQUAL( size_t{ 1 }, pText->getLastLayout()._listLine.size() );
+}
