@@ -113,16 +113,17 @@ namespace sw::editor
                     ImGui::TextUnformatted( "" );
 
                 ImGui::TableNextColumn();
-                fixed_string<constant::kMaxBuffer256> labelBuf;
-                const utf8*                           pCmdLabel = cmd._label.empty() == false ? cmd._label.c_str() : "Command";
-                formatstring( labelBuf.data(), labelBuf.capacity(), "%###step%#", pCmdLabel, stepNum );
+                // 명령 이름은 ImGui 라벨로 쓰지 않는다 — "##" 가 든 이름은 그 뒤가 숨겨진다. 라벨 없는 줄 위에 글을 따로 그린다.
+                const utf8* pCmdLabel = cmd._label.empty() == false ? cmd._label.c_str() : "Command";
 
                 if ( bIsUndone )
                     ImGui::PushStyleColor( ImGuiCol_Text, ImVec4{ 0.5f, 0.5f, 0.5f, 1.0f } );
 
                 ImGui::PushID( static_cast<int32>( stepNum ) );
-                if ( ImGui::Selectable( labelBuf.c_str(), bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns ) )
+                if ( ImGui::Selectable( "##step", bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap ) )
                     cmdStack.jumpTo( stepNum );
+                ImGui::SameLine( 0.0f, 0.0f );
+                ImGui::TextUnformatted( pCmdLabel );
                 ImGui::PopID();
 
                 if ( bIsUndone )

@@ -642,11 +642,11 @@ namespace sw::editor
             return;
         const int64 currentValue = enumInfo.readValueFromMemory( pEnumMemory );
         int64       editedValue  = currentValue;
-        const auto  commitEdit   = [&enumInfo, pEnumMemory, currentValue, &editedValue, pLabel]()
+        const auto  commitEdit   = [&enumInfo, pEnumMemory, currentValue, &editedValue, &prop]()
         {
             if ( editedValue != currentValue )
                 enumInfo.writeValueToMemory( pEnumMemory, editedValue );
-            InspectorPropertyUndo::trackPod( pEnumMemory, enumInfo._size, pLabel );
+            InspectorPropertyUndo::trackPod( pEnumMemory, enumInfo._size, prop );
         };
 
         if ( enumInfo._bIsBitFlag )

@@ -335,7 +335,7 @@ namespace sw::editor
                     *pPtr                = static_cast<T>( InspectorPropertyLayout::clampToAllowedRange( range, stored ) );
                 }
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
+                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -368,7 +368,7 @@ namespace sw::editor
                 showTooltipIfHovered( prop );
                 // atomic<bool> 은 다른 스레드가 쓰는 값이라 되돌리기 기록에 넣지 않는다.
                 if constexpr ( std::is_same_v<T, bool> )
-                    InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
+                    InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -390,7 +390,7 @@ namespace sw::editor
                 }
                 drawValueWidget( _pLabel, *pPtr );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
+                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -432,7 +432,7 @@ namespace sw::editor
                     EditorWidgets::drawTextField( _pLabel, *pPtr );
                 }
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackString( pPtr, _pLabel );
+                InspectorPropertyUndo::trackString( pPtr, prop );
                 return true;
             }
         };
@@ -470,7 +470,7 @@ namespace sw::editor
                 }
                 showTooltipIfHovered( prop );
                 // 인턴 인덱스 하나라 POD 로 되돌린다 — 인턴된 문자열은 해제되지 않으므로 옛 인덱스는 언제나 유효하다.
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
+                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -505,7 +505,7 @@ namespace sw::editor
                 else
                     EditorWidgets::drawVec3Control( _pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
+                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -528,7 +528,7 @@ namespace sw::editor
                 }
                 ImGui::DragFloat2( _pLabel, &pPtr->_x, 0.1f );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
+                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -555,7 +555,7 @@ namespace sw::editor
                 else
                     ImGui::DragFloat4( _pLabel, &pPtr->_x, 0.01f );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
+                InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
                 return true;
             }
         };
