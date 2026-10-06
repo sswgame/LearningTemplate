@@ -220,6 +220,10 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   The engine builds 64-bit only, so there are no 32-bit branches. The one file that reads built-ins is
   `Core/Common/TargetMacroCheck.h`, which fails the build when CMake's choice disagrees with the compiler.
   Enforced by `CheckTargetMacros.py`.
+- **Ask the build target (`SW_TARGET_TYPE`: Game, Client, Server) only through `SW_WITH_CLIENT_CODE` (Game, Client),
+  `SW_WITH_SERVER_CODE` (Game, Server) and `sw::build::kTargetName`**, and only inside `.cpp` bodies — never gate reflection
+  declarations (`REFLECT`, `PROPERTY`) or a header's class layout on them. A feature that splits between client and server
+  splits into modules instead: shared `GF_<X>`, server-only `GF_Server_<X>`, client-only `GF_Client_<X>` (manifest `_listTarget`).
 - **Read time through `Core/Time/MonotonicClock.h`**, never a `std::chrono` clock (`steady_clock`, `high_resolution_clock`,
   `system_clock` — aliases and `using namespace` included): `MonotonicClock::nowNanoseconds()`, `Stopwatch` for elapsed time,
   `Deadline::afterMilliseconds( ms )` + `isExpired()` for a bounded wait. Tests too. Duration values (`sleep_for`) are fine.

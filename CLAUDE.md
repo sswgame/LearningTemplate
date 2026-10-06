@@ -18,7 +18,8 @@ authoritative rule set for naming (`_camelCase` members, `p`/`pp` pointer prefix
 container prefixes with **singular** names, `out`/`pOut` parameter prefixes), function-name vocabulary
 (acronyms are camelCase words; one verb per concept; predicates read as questions), include ordering,
 header declaration order, constructor initialization, and branch style.
-`docs/04_CodingGuidelines.md` is the Korean expansion of the same rules with extra examples.
+`docs/04_CodingGuidelines.md` is a Korean collection of examples per AGENTS.md section; it does not restate the rules
+(a new rule goes into AGENTS.md first, an example into docs/04 in the same commit).
 The rules are machine-enforced — see Linting below.
 
 Documentation and code comments in this repo are written in Korean (`/** @brief */` above declarations,

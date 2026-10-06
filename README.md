@@ -57,6 +57,6 @@ CI 는 `nogpu` 시험만 돌립니다 — GPU · 창 · DXC 가 필요한 `hostg
 
 - [문서 지도](docs/02_DocumentMap.md) — 어떤 문서가 무엇의 정본인지, 모듈 README 전체 목록.
 - [ARCHITECTURE.md](ARCHITECTURE.md) — 타깃 그래프 · 모듈 경계 · 엔진 층 · 주의사항.
-- [AGENTS.md](AGENTS.md) · [코딩 규칙](docs/04_CodingGuidelines.md) — 이름 · include · 선언 순서 규칙(린트가 강제한다).
+- [AGENTS.md](AGENTS.md)(규칙 정본) · [코딩 규칙 예시](docs/04_CodingGuidelines.md) — 이름 · include · 선언 순서 규칙(린트가 강제한다).
 - [설정](docs/07_Configuration.md) — 설정 값을 어디에 두는가, 칸 표는 생성 문서 [docs/Config](docs/Config/README.md).
 - [백로그](docs/06_Backlog.md) — 남은 일. 작업을 시작하기 전에 읽는다.

@@ -27,7 +27,7 @@
 | [01 시작하기](01_GettingStarted.md) | 도구 · 환경 구성 · 빌드 · 실행 인자 · 첫 시험 · 진단 도구 |
 | [02 문서 지도](02_DocumentMap.md) | 이 문서 |
 | [03 핫리로드와 C-ABI](03_LiveReload_and_ABI.md) | 모듈을 다시 읽는 순서 · 실패 정책 · 리로드에서 지킬 것 |
-| [04 코딩 규칙](04_CodingGuidelines.md) | [AGENTS.md](../AGENTS.md) 규칙의 한국어 풀이와 예시 |
+| [04 코딩 규칙 예시](04_CodingGuidelines.md) | [AGENTS.md](../AGENTS.md)(규칙 정본) 절마다 한국어 예시 — 규칙을 다시 적지 않는다 |
 | [05 RHI 프레임 계약](05_RHI_FrameContract.md) | 프레임 · 렌더타깃 순서 계약 · 함정 · 검증 절차 |
 | [06 백로그](06_Backlog.md) | 남은 일 |
 | [07 설정](07_Configuration.md) | 설정 값을 어디에 두는가(층 · 우선순위 · 배포본 · 핫 리로드). 칸 표는 생성 문서 [docs/Config](Config/README.md) |
