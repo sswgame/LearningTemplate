@@ -7,8 +7,8 @@
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "GameFramework/Base/Online/Local/LocalStoreFactory.h"
-#include "GameFramework/Kits/Storage/SqlStore/Driver/Sqlite/SqliteDriver.h"
 #include "GameFramework/Kits/Storage/SqlStore/Sql/SqlDriver.h"
+#include "GameFramework/Kits/Storage/SqlStore/Sql/SqlDriverRegistry.h"
 #include "GameFramework/Kits/Storage/SqlStore/SqlMigrationRunner.h"
 
 namespace sw
@@ -17,6 +17,9 @@ namespace sw
     {
         struct SqlLocalSlotStorageInternal
         {
+            /** @brief 로컬 슬롯이 쓰는 드라이버의 등록 이름 — 제품은 드라이버 폴더만 안다(등록부 `SqlDriverRegistry` 가 고른다). */
+            static constexpr string_view kLocalSlotDriverName = "sqlite";
+
             static int64 makeNowMs() { return FileUtil::getCurrentFileWriteTime() / ( FileUtil::kFileTimeTicksPerSecond / 1000 ); }
         };
     } // namespace
@@ -33,7 +36,10 @@ namespace sw
 
     bool SqlLocalSlotStorage::initialize( string_view databasePath, string& outError )
     {
-        SqliteDriver&        driver     = SqliteDriver::getInstance();
+        ISqlDriver* pDriver = SqlDriverRegistry::findDriver( SqlLocalSlotStorageInternal::kLocalSlotDriverName, outError );
+        if ( pDriver == nullptr )
+            return false;
+        ISqlDriver&          driver     = *pDriver;
         const string         folderPath = ResourceUtil::makeAbsolutePath( kMigrationFolder );
         vector<SqlMigration> listMigration;
         if ( SqlMigrationRunner::loadMigrations( folderPath, driver.getName(), listMigration, outError ) == false )
