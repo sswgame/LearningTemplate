@@ -60,8 +60,9 @@ namespace sw
         InputDeviceKind        _deviceKind{ InputDeviceKind::Keyboard };
         uint8                  _deviceIndex{ 0 };
         uint8                  _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
-        uint8                  _bRepeat  : 1;
-        [[maybe_unused]] uint8 _reserved : 7;
+        uint8                  _bRepeat    : 1;
+        uint8                  _bSynthetic : 1; /**< 가상 입력 원천(`IVirtualInputSource`)이 낸 사건입니다. `InputManager::beginFrame` 이 켭니다. */
+        [[maybe_unused]] uint8 _reserved   : 6;
 
         union
         {
@@ -101,6 +102,7 @@ namespace sw
             , _deviceIndex{ 0 }
             , _modifierMask{ 0 }
             , _bRepeat{ SW_FALSE }
+            , _bSynthetic{ SW_FALSE }
             , _reserved{ 0 }
             , _payload{} {}
 

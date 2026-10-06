@@ -17,6 +17,7 @@
 | **InputSlot** | 장치 종류 + 장치 인덱스 + 컨트롤 인덱스로 "어떤 버튼인지"를 하나로 표현하는 값. |
 | **ActionBinding** | 액션 하나에 달린 바인딩 한 개(단일 키, 조합키, 스틱, 가상 조이스틱 등). |
 | **InputReplay / InputSnapshot** | 입력을 프레임 단위로 기록·재생하는 QA/디버그 도구 및 롤백 넷코드용 링버퍼. |
+| **IVirtualInputSource** | 가상 입력 원천 — 프레임 번호마다 장치 사건을 냅니다(시험 · 자동화 시나리오 · 리플레이). `InputManager::attachVirtualInput` 이 붙입니다. |
 
 ```text
 InputManager
@@ -49,6 +50,8 @@ Input/
 ├─ InputReplay.*           # 입력 녹화/재생 (에디터 QA 툴이 사용)
 ├─ Devices/                # KeyboardDevice, MouseDevice, GamepadDevice 구현체
 ├─ RawInputEvent.h         # OS 이벤트를 표현하는 값 타입 (postRawEvent로 큐에 들어감)
+├─ IVirtualInputSource.h   # 가상 입력 원천 계약 + 모드(배타 · 혼합)
+├─ VirtualInputScript.*    # 프레임 번호에 묶은 사건 목록 — 시험 · 시나리오가 손으로 적는 가장 흔한 원천
 ├─ VirtualJoystick.h       # 마우스 드래그/터치 좌표 -> 2D 축 벡터 계산기 (InputMap의 VirtualJoystick2D 바인딩이 사용)
 ├─ Windows/                # Win32/XInput 구현 (InputManagerWin32.cpp, XInputGamepadDevice.*, InputKeyMapWin32.cpp)
 ├─ Linux/                  # X11/커널 조이스틱 구현 (InputManagerX11.cpp, LinuxJoystickGamepadDevice.*, InputKeyMapX11.cpp)
@@ -179,6 +182,7 @@ inputMap.bindVirtualJoystick2D( "Move", sw::MouseButton::Left, /*radius*/ 100.0f
 | 키보드 포커스(`setKeyboardFocus`) | `Game`(기본) · `DevConsole`. `Game` 이 아니면 게임 쪽 키 조회(`isKeyDown` · `wasKeyPressed` · `wasKeyReleased` · `wasAnyInputPressed` 의 키보드 몫)와 InputMap 의 키보드 바인딩이 "안 눌림" 입니다 — 게임 코드가 `isKeyDown` 을 직접 불러도 막힙니다. 장치 상태(`getKeyboard()`)는 그대로 갱신됩니다. 포커스를 넘긴 동안 눌린 키는 돌아온 뒤에도 **뗄 때까지** 가립니다(콘솔을 닫은 Esc 가 게임의 일시정지로 새지 않게) — 넘기기 전부터 눌려 있던 키는 다시 보입니다. 포커스와 상관없이 읽어야 하는 맵(셸 맵)만 `InputMap::setKeyboardFocusIgnored( true )` 입니다. 패드 · 마우스는 포커스 밖입니다. |
 | 글자 입력(`setTextInputCallback( 콜백, 주인 )`) | 키보드 포커스를 가진 쪽의 콜백에만 갑니다(주인마다 하나 — 다시 걸면 덮어씁니다). 콜백은 UTF-8 한 글자씩 받습니다. Win32 는 BMP 밖 글자(이모지 · 확장 한자)를 서로게이트 `WM_CHAR` 두 개로 보내므로 `InputManager` 가 앞 반쪽을 들고 있다가 합칩니다(`_pendingHighSurrogate`). 짝 없는 반쪽은 U+FFFD 입니다. X11 은 `Xutf8LookupString` 이 UTF-8 을 바로 줍니다. |
 | `InputReplay::seek()` | 인덱스만 옮길 뿐 실제 장치 상태를 재현하지 않습니다. 상태까지 되돌리려면 `stepBackward()`/`stepForward()`를 쓰세요. |
+| 가상 입력(`attachVirtualInput`) | 붙인 원천의 사건은 `beginFrame` 이 OS 사건을 재생하는 **그 자리**에서 OS 사건 뒤에 재생됩니다(`_bSynthetic`). 프레임 번호는 붙인 뒤 `beginFrame` 횟수라 벽시계 · 창 포커스와 무관합니다. 배타 모드(기본)는 OS 키 · 마우스 · 패드 사건, 패드 폴링, 창 포커스 사건, 커서 가두기를 무시하고 패드 연결은 가상 연결 사건이 정합니다 — 사람이 같은 기계를 써도 시험이 흔들리지 않습니다. 엔진 키보드 포커스(개발 콘솔)는 가상 키에도 걸립니다. 혼합 모드는 OS 입력을 함께 받습니다(진짜 창 상태를 보는 시나리오용). |
 | 병렬 tick 중 입력 조회 | `InputMap`/`InputManager` 자체는 스레드 세이프하지 않습니다. 게임 오브젝트 틱(병렬 구간)에서 직접 읽지 말고, 메인 스레드에서 한 번 평가한 결과를 넘겨주는 방식을 권장합니다. |
 
 ---

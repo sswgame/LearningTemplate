@@ -26,12 +26,14 @@ namespace sw
         void poll( float32 deltaTime ) override;
         void pollUser( uint32 userIndex, float32 deltaTime = 0.016f );
 
-        bool               isConnected() const override { return _bConnected == SW_TRUE; }
         GamepadBatteryInfo getBatteryInfo() const override;
 
         bool setVibration( float32 leftMotor, float32 rightMotor ) override;
         void setVibration( float32 leftMotor, float32 rightMotor, uint32 userIndex );
         void stopVibration() override;
+
+    protected:
+        bool isHardwareConnected() const override { return _bConnected == SW_TRUE; }
 
     private:
         /**

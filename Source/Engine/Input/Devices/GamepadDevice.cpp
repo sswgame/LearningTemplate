@@ -76,8 +76,17 @@ namespace sw
         , _triggerDeadzone{ 0.05f }
         , _bTimedVibrationActive{ SW_FALSE }
         , _bSuppressEdgeOnce{ SW_FALSE }
+        , _bVirtualSession{ SW_FALSE }
+        , _bVirtualConnected{ SW_FALSE }
         , _reserved{ 0 }
     {
+    }
+
+    void GamepadDevice::setVirtualSession( bool bVirtual )
+    {
+        _bVirtualSession   = bVirtual ? SW_TRUE : SW_FALSE;
+        _bVirtualConnected = SW_FALSE;
+        resetState();
     }
 
     void GamepadDevice::onFrameBegin( float32 deltaTime )
