@@ -62,6 +62,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   탈것 쪽 `VehicleExitComponent`(Exit). 말 · 차는 같은 틀이고 의도 → 탈것 이동 규칙만 다르다. 빈 좌석 찾기는 등록부로.
   탑승 중에도 탑승자 히트박스는 소켓 계층을 따라가 맞는다(무적 없음, 탈것 체력은 탈것의 것). 탑승자가 쓰러지면(`Died`) `RiderDownWatcherComponent`(타는 순간 붙는다)가
   지금 자리에서 강제 하차(물리 바디가 있으면 물리로). 폰의 의도 연결(`getInputPeer`)은 빙의를 따라가 탈것은 운전석 조종자의 연결이 된다.
+  말 이동 `MountMovementComponent`(의도의 월드 방향 크기 → 걸음새 `MountGait` 서기 · 평보 · 속보 · 구보 · 습보(질주 버튼), 그 방향으로 걸음새마다의 조향 속도만큼
+  돌며 자기 요로 간다, 루트 모션이면 애니메이터 `Gait` · `Turn` 만, 질주 허용 · 걸음새 상한은 키트가). 운전석에서 내리면 탈 때 탈것을 쥐고 있던 조종자(말 AI)가 다시 쥔다.
 - **World**(씬 컴포넌트): 장르 무관 씬 컴포넌트 — `FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`, 장식 흩뿌리기
   (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(`Rules` 모드 — Engine `Environment/Placement` 의 `PlacementRule`: 밀도 · 최소 거리 ·
   경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`, 계산은 `PropScatterMath`).
@@ -211,7 +213,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `Overworld`: 타일 걸음 필드 — 칸 조회(`TileMap` — Engine `TileMapXmlData` 그대로 · 걷기 · 조우 칸 · 통과 · 워프), 걸음 이동(`OverworldTileMover` · `PlayerLocomotion`), 존 태그 · 클리어 게이트(`ZoneTracker`). 세이브는 스냅숏 봉투(타일 · 대기 워프는 `OverworldTileMover` 상태 바이트 'OPLC', 플래그는 공유 상태). 무엇을 만나는지는 장르 키트의 지역 표(`MonsterCollector` · `ClassicJrpg`)가 정한다.
     - `ClassicJrpg`: 클래식 JRPG(드래곤 퀘스트 3 HD-2D · 씨 오브 스타즈 · 완다링 소드 장르) — 직업 · 주문 · 장비 카탈로그(`JrpgCatalog`), 파티 · 전직 · 여관 · 교회(`JrpgParty`), 라운드제 전투 · 타이밍 공격/방어(`JrpgBattle`), 걸음 수 인카운터(`JrpgEncounter`).
     - `MonsterCollector`: 몬스터 수집(포켓몬 장르) — 종 · 기술 · 성격 · 날씨 카탈로그(`MonsterCollectorCatalog`), 개체값 · 노력치 · 능력치 공식 · 경험치 · 진화(`MonsterInstance`), 우선도 · 스피드 순 1:1 전투 · 피해 공식 · 상성 · 포획(`MonsterBattle`), 트레이너 AI(`MonsterTrainerAi`).
-    - `OpenWorldWestern`: 오픈월드 서부극(레드 데드 리뎀션 장르) — 목격자 시야 · 신고 시간 · 처치/위협으로 막기 · 지역별 현상금 · 수배 감쇠 · 보안관 추적(`WesternLaw`), 명예 단계 · 할인 · 대사 플래그(`WesternHonor`), 말 유대 · 능력 해금 · 코어 · 질주 · 겁(`WesternHorse`), 추위/더위 · 옷 · 음식 · 데드아이(`WesternSurvival`), 가죽 등급 · 사체 부패 · 매입 값(`WesternHunting`).
+    - `OpenWorldWestern`: 오픈월드 서부극(레드 데드 리뎀션 장르) — 목격자 시야 · 신고 시간 · 처치/위협으로 막기 · 지역별 현상금 · 수배 감쇠 · 보안관 추적(`WesternLaw`), 명예 단계 · 할인 · 대사 플래그(`WesternHonor`), 말 유대 · 능력 해금 · 코어 · 질주 · 겁(`WesternHorse`) · 탈것 이동 연결(`WesternHorseMountComponent` — 질주는 스태미나가 버틸 때만, 겁먹어 떨어뜨리면 강제 하차) · 주인을 따라오는 말 AI(`HorseFollowAiController` — 휘파람), 추위/더위 · 옷 · 음식 · 데드아이(`WesternSurvival`), 가죽 등급 · 사체 부패 · 매입 값(`WesternHunting`).
     - `WitcherRpg`: 위쳐 RPG(위쳐 3 장르) — 괴물 도감 지식 · 해금된 약점 · 속성 배율(`WitcherBestiary`), 연금술 · 독성 · 변이 혼합물 · 명상 보충 · 오일(`WitcherAlchemy`), 표식 · 대체 시전 · 스태미나 · 아드레날린(`WitcherCombat`), 변이 슬롯 색 맞춤(`WitcherMutagens`), 계약 단서 순서 · 보상 흥정(`WitcherContract`).
   - **전략** (`Kits/Strategy/`)
     - 명령형 장르(RTS · SRPG · 경영)에는 폰이 없다 — 플레이어 디렉터와 AI 커맨더(`RtsAiCommander` · `SrpgAiCommander`)가 같은 키트 명령 API 를 부른다(행동 층 = 명령).

@@ -68,7 +68,8 @@ namespace sw
         PROPERTY( Category = "Seat", DisplayName = "Driver Seat", Tooltip = "The rider here controls the vehicle" )
         bool _bDriverSeat;
 
-        GameObjectHandle _occupant;           ///< 앉은 탑승자의 오브젝트
-        ComponentHandle  _occupantController; ///< 탈 때 탑승자를 쥐고 있던 조종자(운전석 — 내릴 때 탑승자에게 돌려준다)
+        GameObjectHandle _occupant;                  ///< 앉은 탑승자의 오브젝트
+        ComponentHandle  _occupantController;        ///< 탈 때 탑승자를 쥐고 있던 조종자(운전석 — 내릴 때 탑승자에게 돌려준다)
+        ComponentHandle  _previousVehicleController; ///< 탈 때 탈것을 쥐고 있던 조종자(주인을 따라오던 말 AI — 내리면 다시 쥔다)
     };
 } // namespace sw

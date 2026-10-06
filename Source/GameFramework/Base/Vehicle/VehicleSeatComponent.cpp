@@ -21,6 +21,7 @@ namespace sw
         , _bDriverSeat{ true }
         , _occupant{}
         , _occupantController{}
+        , _previousVehicleController{}
     {
     }
 
@@ -38,8 +39,9 @@ namespace sw
         PawnComponent* pRider    = pOccupant != nullptr ? pOccupant->getComponent<PawnComponent>() : nullptr;
         if ( pRider != nullptr )
             (void)MountUtil::dismount( *pRider, true );
-        _occupant           = GameObjectHandle{};
-        _occupantController = ComponentHandle{};
+        _occupant                  = GameObjectHandle{};
+        _occupantController        = ComponentHandle{};
+        _previousVehicleController = ComponentHandle{};
         manager.getComponentRegistry().remove<VehicleSeatComponent>( this );
         Component::onUnregister( manager );
     }

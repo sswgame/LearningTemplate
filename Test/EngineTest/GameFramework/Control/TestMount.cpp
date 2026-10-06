@@ -30,6 +30,7 @@
 #include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Control/PlayerControllerComponent.h"
 #include "GameFramework/Base/Vehicle/MountInteractionComponent.h"
+#include "GameFramework/Base/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Base/Vehicle/MountUtil.h"
 #include "GameFramework/Base/Vehicle/RiderDownWatcherComponent.h"
 #include "GameFramework/Base/Vehicle/VehicleExitComponent.h"
@@ -139,6 +140,26 @@ namespace
         }
 
         static float3 findPosition( const GameObject& object ) { return object.getPrimarySceneComponent()->getWorldPosition(); }
+    };
+
+    struct MountHorseTestInternal
+    {
+        /** @brief 캡슐 말 — 캐릭터 컨트롤러(반지름 0.5) · 폰(버튼 Sprint · Exit) · 말 이동 · 운전석 · 내리기 버튼입니다(모델 없음 — 기본 도형으로 시험). */
+        static GameObject* spawnHorse( GameObjectManager& manager, const utf8* pName, const float3& feet )
+        {
+            GameObject*                   pObject     = manager.createGameObject( hashed_string( pName ) );
+            CharacterControllerComponent* pController = pObject->addComponent<CharacterControllerComponent>();
+            pController->setRadius( 0.5f );
+            pController->setLocalPosition( feet );
+            PawnComponent* pPawn = pObject->addComponent<PawnComponent>();
+            pPawn->setButtonNames( vector<hashed_string>{ hashed_string( "Sprint" ), hashed_string( "Exit" ) } );
+            pObject->addComponent<MountMovementComponent>();
+            VehicleSeatComponent* pSeat = pObject->addComponent<VehicleSeatComponent>();
+            pSeat->setSeatOffset( float3{ 0.0f, 1.4f, 0.0f } );
+            pSeat->setExitOffset( float3{ -1.8f, 0.0f, 0.0f } );
+            pObject->addComponent<VehicleExitComponent>();
+            return pObject;
+        }
     };
 } // namespace
 
@@ -399,4 +420,108 @@ SW_TEST_CASE( MountTest, InputPeerFollowsTheDriver )
     SW_EXPECT_TRUE( MountUtil::dismount( driverPawn, false ) );
     SW_EXPECT_EQUAL( 0u, vehiclePawn.getInputPeer() );
     SW_EXPECT_EQUAL( 7u, driverPawn.getInputPeer() );
+}
+
+/**
+ * @brief [MountTest] 말의 걸음새는 의도를 따른다 — 이동 0.3 은 평보 · 0.7 은 속보 · 1 은 구보 · 질주 버튼은 습보, 질주를 막으면 구보로, 상한을 두면 그 걸음새로 떨어진다
+ */
+SW_TEST_CASE( MountTest, HorseGaitFollowsTheIntent )
+{
+    using Internal = MountTestInternal;
+    using Horse    = MountHorseTestInternal;
+    SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 0.0f, false ) == MountGait::Idle );
+    SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 0.3f, false ) == MountGait::Walk );
+    SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 0.7f, false ) == MountGait::Trot );
+    SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 1.0f, false ) == MountGait::Canter );
+    SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 1.0f, true ) == MountGait::Gallop );
+    SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 0.3f, true ) == MountGait::Walk ); // 질주는 앞 절반 이상에서만
+
+    GameObjectManager manager;
+    Internal::spawnFloor( manager );
+    GameObject*             pHorse    = Horse::spawnHorse( manager, "Horse", float3{ 0.0f, 0.05f, 0.0f } );
+    MountMovementComponent* pMovement = pHorse->getComponent<MountMovementComponent>();
+    auto*                   pRiderAi  = manager.createGameObject( hashed_string( "RiderAi" ) )->addComponent<AiControllerComponent>();
+    manager.beginPlay();
+    pRiderAi->possess( *pHorse->getComponent<PawnComponent>() );
+    pRiderAi->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
+    for ( uint32 frame = 0; frame < 120; ++frame )
+        manager.tick( Internal::kDeltaTime );
+    SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Canter );
+    SW_EXPECT_NEAR_EQUAL( pMovement->computeGaitSpeed( MountGait::Canter ), pMovement->getForwardSpeed(), 1.0e-3f );
+
+    pRiderAi->holdButton( "Sprint", true );
+    for ( uint32 frame = 0; frame < 60; ++frame )
+        manager.tick( Internal::kDeltaTime );
+    SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Gallop );
+    SW_EXPECT_TRUE( pMovement->getForwardSpeed() > pMovement->computeGaitSpeed( MountGait::Canter ) );
+
+    // 스태미나가 바닥났다(키트가 막는다) — 구보로 떨어진다.
+    pMovement->setGallopAllowed( false );
+    manager.tick( Internal::kDeltaTime );
+    SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Canter );
+    pMovement->setMaxGait( MountGait::Trot );
+    for ( uint32 frame = 0; frame < 120; ++frame )
+        manager.tick( Internal::kDeltaTime );
+    SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Trot );
+    SW_EXPECT_NEAR_EQUAL( pMovement->computeGaitSpeed( MountGait::Trot ), pMovement->getForwardSpeed(), 1.0e-3f );
+    // 말은 자기 요로 간다 — 곧장 앞이면 X 로 흐르지 않는다.
+    SW_EXPECT_NEAR_EQUAL( 0.0f, Internal::findPosition( *pHorse )._x, 1.0e-3f );
+}
+
+/**
+ * @brief [MountTest] 플레이어(E 로 타고 W)와 NPC(mount 로 타고 앞의 목적지)가 같은 의도로 말을 몰면 매 프레임 같은 거리를 가고, 내리면 말을 쥐고 있던 말 AI 가 다시 쥔다
+ */
+SW_TEST_CASE( MountTest, PlayerAndNpcRideTheHorseTheSame )
+{
+    using Internal = MountTestInternal;
+    using Horse    = MountHorseTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    Internal::bindKeys( input );
+    input.getInputMap().bind( "Sprint", Key::LeftShift );
+    {
+        GameObjectManager manager;
+        Internal::spawnFloor( manager );
+        GameObject* pPlayerRider = Internal::spawnRider( manager, "PlayerRider", float3{ -6.0f, 0.05f, 0.0f } );
+        GameObject* pNpcRider    = Internal::spawnRider( manager, "NpcRider", float3{ 6.0f, 0.05f, 0.0f } );
+        GameObject* pPlayerHorse = Horse::spawnHorse( manager, "PlayerHorse", float3{ -4.5f, 0.05f, 0.0f } );
+        GameObject* pNpcHorse    = Horse::spawnHorse( manager, "NpcHorse", float3{ 7.5f, 0.05f, 0.0f } );
+        auto*       pPlayer      = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
+        auto*       pNpc         = manager.createGameObject( hashed_string( "Npc" ) )->addComponent<AiControllerComponent>();
+        auto*       pHorseAi     = manager.createGameObject( hashed_string( "HorseAi" ) )->addComponent<AiControllerComponent>();
+        ControlSystem::ensureFor( manager ).setInputManager( &input );
+        manager.beginPlay();
+        pPlayer->possess( *pPlayerRider->getComponent<PawnComponent>() );
+        pNpc->possess( *pNpcRider->getComponent<PawnComponent>() );
+        pHorseAi->possess( *pPlayerHorse->getComponent<PawnComponent>() ); // 탄 사람이 없을 때 말을 쥐는 말 AI
+        for ( uint32 frame = 0; frame < 5; ++frame )
+            Internal::tick( manager, input );
+
+        Internal::tapKey( manager, input, Key::E );
+        SW_ASSERT_TRUE( pPlayer->getPawn() == pPlayerHorse->getComponent<PawnComponent>()->getHandle() );
+        SW_EXPECT_TRUE( pHorseAi->findPawn() == nullptr );
+        SW_ASSERT_TRUE( MountUtil::mount( *pNpcRider->getComponent<PawnComponent>(), *pNpcHorse->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
+        pNpc->moveTo( float3{ 7.5f, 0.0f, 1000.0f } );
+
+        const float32 playerStart = Internal::findPosition( *pPlayerHorse )._z;
+        const float32 npcStart    = Internal::findPosition( *pNpcHorse )._z;
+        (void)input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
+        for ( uint32 frame = 0; frame < 90; ++frame )
+        {
+            Internal::tick( manager, input );
+            const float32 playerTravel = Internal::findPosition( *pPlayerHorse )._z - playerStart;
+            const float32 npcTravel    = Internal::findPosition( *pNpcHorse )._z - npcStart;
+            SW_EXPECT_TRUE_MSG( MathUtil::abs( playerTravel - npcTravel ) <= 1.0e-3f,
+                                ( "frame " + std::to_string( frame ) + " player " + std::to_string( playerTravel ) + " npc " + std::to_string( npcTravel ) ).c_str() );
+        }
+        SW_EXPECT_TRUE( pPlayerHorse->getComponent<MountMovementComponent>()->getGait() == MountGait::Canter );
+        SW_EXPECT_TRUE( Internal::findPosition( *pPlayerHorse )._z - playerStart > 5.0f );
+        (void)input.postRawEvent( RawInputEvent::makeKeyUp( Key::W ) );
+        Internal::tick( manager, input );
+
+        Internal::tapKey( manager, input, Key::F );
+        SW_EXPECT_TRUE( pPlayer->getPawn() == pPlayerRider->getComponent<PawnComponent>()->getHandle() );
+        SW_EXPECT_TRUE( pHorseAi->getPawn() == pPlayerHorse->getComponent<PawnComponent>()->getHandle() );
+    }
+    input.shutdown();
 }

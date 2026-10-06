@@ -157,7 +157,8 @@ namespace sw
         seat._occupant = pRider->getHandle();
         if ( seat.isDriverSeat() )
         {
-            seat._occupantController = pController->getHandle();
+            seat._occupantController        = pController->getHandle();
+            seat._previousVehicleController = pVehiclePawn->getController();
             pController->possess( *pVehiclePawn );
         }
         return MountResult::Mounted;
@@ -194,14 +195,21 @@ namespace sw
         if ( bReleasedToPhysics == false )
             Internal::setRiderMovementSuspended( *pRider, false );
 
-        // 운전석이면 탔을 때의 조종자가 탑승자를 다시 쥔다(탈것 폰은 놓여 의도 0 — 선다).
-        ControllerComponent* pController = pSeat->_occupantController.isValid()
-                                             ? static_cast<ControllerComponent*>( pManager->resolveComponent( pSeat->_occupantController ) )
-                                             : nullptr;
-        pSeat->_occupant                 = GameObjectHandle{};
-        pSeat->_occupantController       = ComponentHandle{};
+        // 운전석이면 탔을 때의 조종자가 탑승자를 다시 쥐고(탈것 폰은 놓여 의도 0 — 선다), 탈 때 탈것을 쥐고 있던 조종자(말 AI)가 탈것을 다시 쥔다.
+        ControllerComponent* pController                = pSeat->_occupantController.isValid()
+                                                            ? static_cast<ControllerComponent*>( pManager->resolveComponent( pSeat->_occupantController ) )
+                                                            : nullptr;
+        ControllerComponent* pPreviousVehicleController = pSeat->_previousVehicleController.isValid()
+                                                            ? static_cast<ControllerComponent*>( pManager->resolveComponent( pSeat->_previousVehicleController ) )
+                                                            : nullptr;
+        pSeat->_occupant                                = GameObjectHandle{};
+        pSeat->_occupantController                      = ComponentHandle{};
+        pSeat->_previousVehicleController               = ComponentHandle{};
         if ( pController != nullptr )
             pController->possess( riderPawn );
+        PawnComponent* pVehiclePawn = pVehicle != nullptr ? pVehicle->getComponent<PawnComponent>() : nullptr;
+        if ( pPreviousVehicleController != nullptr && pVehiclePawn != nullptr && pVehiclePawn->isPossessed() == false )
+            pPreviousVehicleController->possess( *pVehiclePawn );
         return true;
     }
 
