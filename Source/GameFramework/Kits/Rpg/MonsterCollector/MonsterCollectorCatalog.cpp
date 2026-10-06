@@ -284,11 +284,18 @@ namespace sw
             }
             else if ( bNature )
             {
+                // 칸이 없으면 기본값(Attack) 그대로 — up · down 이 같으면 무보정 성격이다. 틀린 이름은 그 성격을 빼고 알린다(반쪽만 보정되지 않게).
                 MonsterNatureDef def;
-                def._id = hashed_string( pId );
-                // 없으면 Attack 그대로(무보정 성격) — 결함 의심: 틀린 능력치 이름도 경고 없이 Attack 으로 남는다
-                (void)parseStat( node.getAttributeText( "up" ), def._raised );
-                (void)parseStat( node.getAttributeText( "down" ), def._lowered ); // 위와 같다
+                def._id                    = hashed_string( pId );
+                const string_view upText   = node.getAttributeText( "up" );
+                const string_view downText = node.getAttributeText( "down" );
+                const bool        bUpOk    = upText.empty() || parseStat( upText, def._raised );
+                const bool        bDownOk  = downText.empty() || parseStat( downText, def._lowered );
+                if ( bUpOk == false || bDownOk == false )
+                {
+                    SW_LOG_WARNING( "%#: Nature '%#' names an unknown stat (up '%#', down '%#') - skipped", sourceName, pId, upText, downText );
+                    continue;
+                }
                 (void)_natureCatalog.add( def );
             }
             else if ( bWeather )

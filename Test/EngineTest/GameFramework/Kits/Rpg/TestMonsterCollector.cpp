@@ -148,6 +148,34 @@ namespace
     }
 } // namespace
 
+/**
+ * @brief [MonsterCollectorTest] 성격의 능력치 이름이 틀리면 그 성격을 빼고 경고한다 — 조용히 Attack(무보정 쪽)으로 남지 않는다
+ */
+SW_TEST_CASE( MonsterCollectorTest, NatureWithAnUnknownStatIsSkippedAndReported )
+{
+    constexpr const utf8*    kXml = R"(
+<MonsterCollectorCatalog>
+  <Nature id="Brave" up="Atack" down="Speed"/>
+  <Nature id="Calm" up="SpecialDefense" down="Attack"/>
+  <Nature id="Hardy"/>
+</MonsterCollectorCatalog>
+)";
+    MonsterCollectorCatalog  catalog;
+    test::ScopedLogCollector collector;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a nature naming an unknown stat is skipped with a warning" );
+        SW_ASSERT_TRUE( catalog.loadFromXmlText( kXml, "MonsterCollectorTest" ) );
+    }
+    SW_EXPECT_TRUE( catalog.findNature( hashed_string( "Brave" ) ) == nullptr );
+    SW_EXPECT_TRUE_MSG( collector.countContaining( "Brave" ) > 0, collector.joined().c_str() );
+
+    const MonsterNatureDef* pCalm = catalog.findNature( hashed_string( "Calm" ) );
+    SW_ASSERT_NOT_NULL( pCalm );
+    SW_EXPECT_TRUE( pCalm->_raised == MonsterStat::SpecialDefense );
+    SW_EXPECT_TRUE( pCalm->_lowered == MonsterStat::Attack );
+    SW_EXPECT_TRUE( catalog.findNature( hashed_string( "Hardy" ) ) != nullptr ); // 칸이 없으면 무보정 성격이다
+}
+
 SW_TEST_CASE( MonsterCollectorTest, StatFormulaIvEvNatureAndExpGroups )
 {
     // 종족값 100 · 개체값 31 · 노력치 252 · 레벨 100 — 잘 알려진 최대치(HP 404, 무보정 299, 올림 328, 내림 269).
