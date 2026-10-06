@@ -92,6 +92,8 @@ namespace sw
         float32       _gallopDrain{ 12.0f };           ///< 질주할 때 초당 스태미나
         float32       _coreDrainPerHour{ 2.0f };       ///< 게임 시간 한 시간마다 코어가 주는 양
         float32       _gallopCoreDrainPerHour{ 6.0f }; ///< 질주 중에는 이만큼 더
+        float32       _fearDecayPerSecond{ 0.25f };    ///< 쌓인 겁이 식는 빠르기(초당)
+        float32       _buckChanceScale{ 0.8f };        ///< 저항이 0 일 때 탄 사람을 떨어뜨릴 확률
     };
 } // namespace sw
 

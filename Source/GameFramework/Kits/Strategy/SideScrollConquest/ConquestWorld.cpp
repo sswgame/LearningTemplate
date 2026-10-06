@@ -14,12 +14,11 @@ namespace sw
     {
         struct ConquestWorldInternal
         {
-            static constexpr float32 kFarAway                = 1.0e9f;
-            static constexpr float32 kGateStandOff           = 0.5f;  ///< 성문 앞에서 멈추는 거리
-            static constexpr float32 kLadderReach            = 1.0f;  ///< 사다리가 이 거리 안이면 그 성문을 넘는다
-            static constexpr float32 kPlantTolerance         = 0.05f; ///< 사다리가 걸칠 자리에 이만큼 가까우면 걸친다
-            static constexpr float32 kApproachRatio          = 0.9f;  ///< 사거리의 이 비율까지 다가간다(경계에서 떨지 않게)
-            static constexpr float32 kCommanderStructureRate = 0.25f; ///< 지휘관이 구조물에 주는 피해 배율
+            static constexpr float32 kFarAway        = 1.0e9f;
+            static constexpr float32 kGateStandOff   = 0.5f;  ///< 성문 앞에서 멈추는 거리
+            static constexpr float32 kLadderReach    = 1.0f;  ///< 사다리가 이 거리 안이면 그 성문을 넘는다
+            static constexpr float32 kPlantTolerance = 0.05f; ///< 사다리가 걸칠 자리에 이만큼 가까우면 걸친다
+            static constexpr float32 kApproachRatio  = 0.9f;  ///< 사거리의 이 비율까지 다가간다(경계에서 떨지 않게)
 
             static float32 computeDirection( ConquestTeam team ) { return team == ConquestTeam::Enemy ? -1.0f : 1.0f; }
 
@@ -575,7 +574,7 @@ namespace sw
         if ( target.isValid() == false )
             return;
         float32 dealt = 0.0f;
-        applyAttack( ConquestTeam::Player, rules._commanderDamage, ConquestWorldInternal::kCommanderStructureRate, target, dealt );
+        applyAttack( ConquestTeam::Player, rules._commanderDamage, rules._commanderStructureRate, target, dealt );
         _commander._attackCooldown.restart( rules._commanderAttackInterval ); // 늦음을 잇는다 — 빈도가 걸음 크기에 매이지 않는다
     }
 

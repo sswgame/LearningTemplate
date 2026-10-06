@@ -15,8 +15,6 @@ namespace sw
     {
         struct WesternHorseInternal
         {
-            static constexpr float32 kFearDecayPerSecond = 0.25f; ///< 쌓인 겁이 식는 빠르기
-            static constexpr float32 kBuckChanceScale    = 0.8f;  ///< 저항이 0 일 때 떨어뜨릴 확률
         };
     } // namespace
 } // namespace sw
@@ -86,7 +84,7 @@ namespace sw
             _stamina.setRegenScale( computeRegenScale( _staminaCore ) );
             _health.update( deltaTime );
             _stamina.update( deltaTime );
-            _fear = MathUtil::max( 0.0f, _fear - WesternHorseInternal::kFearDecayPerSecond * deltaTime );
+            _fear = MathUtil::max( 0.0f, _fear - _pDef->_fearDecayPerSecond * deltaTime );
             if ( _bRidden != SW_FALSE )
                 addBondExperience( _pCatalog->getBondExperience()._ridePerSecond * deltaTime );
         }
@@ -152,7 +150,7 @@ namespace sw
         _fear = 0.0f;
         WesternHorseEvent event;
         // 탄 사람이 있을 때만 떨어뜨릴 수 있다. 난수는 늘 하나 쓴다(탔는지와 상관없이 같은 수열).
-        const bool bBuck = _random.nextChance( ( 1.0f - resist ) * WesternHorseInternal::kBuckChanceScale ) && _bRidden != SW_FALSE;
+        const bool bBuck = _random.nextChance( ( 1.0f - resist ) * _pDef->_buckChanceScale ) && _bRidden != SW_FALSE;
         event._kind      = bBuck ? WesternHorseEvent::Kind::ThrewRider : WesternHorseEvent::Kind::Spooked;
         _eventBuffer.push( event );
         if ( bBuck )

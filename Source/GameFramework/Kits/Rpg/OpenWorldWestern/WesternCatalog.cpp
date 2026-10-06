@@ -259,6 +259,8 @@ namespace sw
                 horse._gallopDrain            = MathUtil::max( 0.0f, node.getAttributeFloat( "gallopDrain", horse._gallopDrain ) );
                 horse._coreDrainPerHour       = MathUtil::max( 0.0f, node.getAttributeFloat( "coreDrain", horse._coreDrainPerHour ) );
                 horse._gallopCoreDrainPerHour = MathUtil::max( 0.0f, node.getAttributeFloat( "gallopCoreDrain", horse._gallopCoreDrainPerHour ) );
+                horse._fearDecayPerSecond     = MathUtil::max( 0.0f, node.getAttributeFloat( "fearDecay", horse._fearDecayPerSecond ) );
+                horse._buckChanceScale        = MathUtil::saturate( node.getAttributeFloat( "buckChance", horse._buckChanceScale ) );
                 (void)_horseCatalog.add( horse );
             }
             else if ( StringUtil::equals( name, string_view( "Food" ), true ) )

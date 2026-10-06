@@ -124,6 +124,7 @@ namespace sw
         float32       _wallProtection{ 0.5f };     ///< 성벽이 서 있는 거점의 수비대가 덜 받는 피해 비율
         float32       _commanderHealth{ 100.0f };
         float32       _commanderDamage{ 8.0f };
+        float32       _commanderStructureRate{ 0.25f }; ///< 지휘관이 구조물(성문 · 성벽)에 주는 피해 배율
         float32       _commanderRange{ 1.5f };
         float32       _commanderSpeed{ 4.0f };
         float32       _commanderAttackInterval{ 0.8f };
