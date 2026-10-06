@@ -73,6 +73,35 @@ ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F
 게임 시간 배율(`GameTimeScale` — `gv_timeScale`)은 최대 델타로 자른 **뒤에** 곱합니다(`FixedTimestep::advance( timeScale )`). 그래서 고정
 스텝 수도 따라 늘고 줄며(상한은 그대로), 0 이면 게임 시간이 멈춥니다.
 
+## 무엇이 일어났는지 보기
+
+디버거 없이 "왜 이렇게 됐나"를 확인하는 방법입니다. 실행 인자는 `App.exe` 뒤에 붙이고, 확인이 끝나면 앱이 스스로 끝나도록 `-gv_profileFrames=3` 을 같이 줍니다.
+`-gv_dump` 로 시작하는 변수는 Debug와 Release 빌드에만 있고 Shipping에서는 빠집니다.
+
+| 알고 싶은 것 | 보는 방법 |
+|---|---|
+| 타입이나 enum이 실행 중에 어떻게 등록됐나 | `-gv_dumpReflection=CameraComponent,CameraRole` |
+| 리플렉션 파서가 헤더에서 무엇을 뽑았나 | `ReflectionParser --dump` |
+| 렌더 패스가 어떤 순서로 돌고 무엇이 컬링됐나 | `-gv_dumpRenderGraph=1` |
+| 렌더 그래프가 순환해서 화면이 나오지 않는다 | 로그의 `'A' waits on 'B'` 줄 |
+| 씬, 프리팹, XML, JSON 파일을 왜 못 읽나 | 로그의 `경로:줄:열: 이유` 줄 |
+| 에셋에 적은 enum 값이 왜 적용되지 않나 | 경고 `'Bogus' is not a value of enum ...` |
+| 짧은 타입 이름이 겹친다 | 경고 `Reflected type name 'X' now means ...` |
+| 디버거 없이 `SW_ASSERT` 가 멈춘 위치 | stderr의 `[SW_ASSERT]` 줄 |
+| 크래시가 난 위치 | `Saved/Logs` 의 `crash_<세션>` 파일 |
+| 화면에 실제로 무엇이 나갔나 | `-gv_screenshot=out.ppm` |
+
+표의 몇 줄은 설명이 더 필요합니다.
+
+- `-gv_dumpReflection` 은 첫 프레임에 그 타입의 부모 클래스, 필드 위치와 범위, 플래그, 열거자를 로그로 남깁니다. 이름은 쉼표로 여러 개 줄 수 있습니다.
+- `ReflectionParser --dump` 의 예시 명령은 [ReflectionParser 문서](../../Tools/ReflectionParser/README.md)에 있습니다.
+- 파일 읽기 오류는 어느 줄의 몇 번째 글자에서 무엇이 틀렸는지 알려 줍니다. 파일이 아예 없을 때만 `not found` 라고 씁니다. 코드에서는 `XmlDocument` 와 `JsonDocument` 의 `getLastError()` 로 같은 내용을 읽습니다.
+- enum 경고가 나면 그 필드는 원래 값을 유지합니다. 오타 하나가 조용히 기본값으로 바뀌지 않게 하려는 것입니다.
+- 타입 이름 경고는 씬과 프리팹이 짧은 이름으로 타입을 찾기 때문에 납니다. 같은 짧은 이름이 둘이면 나중에 등록한 쪽이 이깁니다.
+- `[SW_ASSERT]` 줄 아래에는 실패한 식, 파일과 줄, 함수 이름이 이어서 나옵니다.
+- 로그에 잘못된 UTF-8 바이트가 섞이면 그 바이트만 `\xNN` 으로 바뀌고 나머지 글은 그대로 남습니다.
+- 스크린샷은 기본으로 10번째 프레임을 찍습니다. 다른 프레임은 `-gv_screenshotFrame=N`, 여러 장은 `-gv_screenshotCount=N` 과 `-gv_screenshotInterval=K` 로 정합니다.
+
 ## 게임 창 개발 콘솔(Dev 전용)
 
 에디터 없이 띄우면 `~` 로 게임 창 위의 개발 콘솔(`Engine/DevTools/DevConsoleController`)을 엽니다 — 명령 · `gv_이름 [값]` 을 치고 Enter, Tab 자동완성, ↑↓ 기록,
