@@ -510,6 +510,39 @@ SW_TEST_CASE( UiStyleTest, ReduceMotionDisablesTransitions )
 }
 
 /**
+ * @brief [UiStyleTest] 오프스크린 화면(에디터 미리보기)은 스타일 전환을 기다리지 않고 바뀐 값을 바로 보인다 — 진행 단계가 스택의 화면만 돌므로 시작한 전환이 옛 값에 멈춘다
+ * @details 변이: `UiSystem::updateOffscreenScreens` 의 전환 끝내기 줄을 빼면 상자가 빨강에 남아 진다.
+ */
+SW_TEST_CASE( UiStyleTest, OffscreenScreenFinishesTransitionsAtOnce )
+{
+    using Util = UiStyleTestUtil;
+    UiStyleFixture fixture;
+    fixture._ui.getStyleSheetCache().registerMemorySheet( "test/style.uistyle.xml", kTransitionSheet );
+    const sw::string document = sw::string( "<UiDocument _schemaVersion=\"1\">\n"
+                                            "\t<_listStyleSheet><item>test/style.uistyle.xml</item></_listStyleSheet>\n" ) +
+                                kTransitionBody + "</UiDocument>\n";
+    fixture._ui.getDocumentCache().registerMemoryDocument( "test/offscreen_style.ui.xml", document );
+    const sw::UiScreenHandle handle  = fixture._ui.openOffscreenScreen( "test/offscreen_style.ui.xml", "rendertarget/test_preview" );
+    sw::UiScreen*            pScreen = fixture._ui.findOffscreenScreen( handle );
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::UiViewport viewport{};
+    viewport._size         = sw::float2{ 640.0f, 360.0f };
+    viewport._physicalSize = viewport._size;
+    fixture._ui.setOffscreenView( handle, viewport, 1.0f, sw::hashed_string{} );
+    Util::runFrame( fixture._input, fixture._ui );
+    sw::Widget* pBox = pScreen->getTree().findWidgetByName( "Box" );
+    SW_ASSERT_NOT_NULL( pBox );
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kRed );
+
+    pBox->setStyleClass( "b" );
+    Util::runFrame( fixture._input, fixture._ui );
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kBlue );
+    Util::runFrame( fixture._input, fixture._ui );
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kBlue );
+    fixture._ui.closeOffscreenScreen( handle );
+}
+
+/**
  * @brief [UiStyleTest] 엔진 고대비 테마(engine/ui/uithemes.xml 의 highcontrast)가 읽히고, 견본 pause.ui.xml 에서 창은 불투명 · 테두리 2, 글은 바탕과 7:1 이상 대비다
  * @details 고대비 테마 = 기본 시트 + 고대비 시트(색 · 테두리만 덮는다) — 기본 시트의 여백은 남는다. 대비는 WCAG 상대 휘도로 잰다.
  */

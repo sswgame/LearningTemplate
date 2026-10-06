@@ -7,6 +7,7 @@
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/UI/Animation/UiAnimation.h"
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Document/UiDocumentCache.h"
 #include "Engine/UI/Document/UiDocumentLoader.h"
@@ -559,4 +560,30 @@ SW_TEST_CASE( UiDocumentTest, OffscreenScreenDrawsToItsTargetAndReloads )
     SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "C" ) != nullptr );
     fixture._ui.closeOffscreenScreen( handle );
     SW_EXPECT_TRUE( fixture._ui.findOffscreenScreen( handle ) == nullptr );
+}
+
+/**
+ * @brief [UiDocumentTest] 오프스크린 화면(에디터 미리보기)은 문서의 Open 애니메이션을 틀지 않는다 — 문서에 적힌 값(불투명도 1)을 보이고, 스택에 올린 같은 문서는 첫 키(0)부터 시작한다
+ * @details 미리보기가 Open 을 틀면 첫 프레임 값(투명)이 미리보기 · 저장 값이 된다. 변이: `openOffscreenScreen` 에서 Open 을 틀면 오프스크린 쪽 단언이 진다.
+ */
+SW_TEST_CASE( UiDocumentTest, OffscreenScreenDoesNotPlayOpenAnimation )
+{
+    UiDocumentFixture        fixture;
+    const sw::UiScreenHandle offscreen = fixture._ui.openOffscreenScreen( "engine/ui/pause.ui.xml", "rendertarget/test_preview" );
+    sw::UiScreen*            pPreview  = fixture._ui.findOffscreenScreen( offscreen );
+    SW_ASSERT_NOT_NULL( pPreview );
+    const sw::UiScreenHandle stacked  = fixture._ui.openScreen( "engine/ui/pause.ui.xml" );
+    sw::UiScreen*            pStacked = fixture._ui.findScreen( stacked );
+    SW_ASSERT_NOT_NULL( pStacked );
+    SW_ASSERT_TRUE( pStacked->getAnimationPlayer().isPlaying( sw::hashed_string( sw::UiAnimation::kOpenName ) ) ); // 견본 문서에 Open 이 있다
+
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pStacked->getTree().findWidgetByName( "Window" )->getOpacity(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pPreview->getTree().findWidgetByName( "Window" )->getOpacity(), 1e-4f );
+    sw::UiViewport viewport{};
+    viewport._size         = sw::float2{ 1280.0f, 720.0f };
+    viewport._physicalSize = viewport._size;
+    fixture._ui.setOffscreenView( offscreen, viewport, 1.0f, sw::hashed_string{} );
+    fixture._ui.update( 0.016f, viewport );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pPreview->getTree().findWidgetByName( "Window" )->getOpacity(), 1e-4f );
+    fixture._ui.closeOffscreenScreen( offscreen );
 }

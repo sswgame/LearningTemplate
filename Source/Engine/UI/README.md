@@ -500,4 +500,6 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - `update` 끝에 화면마다 스타일 → 레이아웃 → 그리기를 자기 뷰포트로 돌리고, 그리기 목록은 `collectWorldCanvases` 가 렌더 텍스처 대상(불투명 바탕)으로 낸다 —
   렌더러가 월드 위젯과 같은 길로 그리고 셰이더 읽기 상태로 둔다. 렌더 텍스처 크기는 처음 만들 때 정해지므로 크기마다 경로를 바꾼다.
 - 문서 · 스타일 시트 핫 리로드는 스택의 화면과 같은 길(`onDocumentReloaded` · `onStyleSheetReloaded`)로 미리보기도 다시 짓는다.
+- 애니메이션 단계를 돌지 않는다 — `Open` 을 틀지 않아 문서에 적힌 값 그대로 보이고(Open 첫 키가 투명이면 미리보기가 빈다 — `UiDocumentTest.OffscreenScreenDoesNotPlayOpenAnimation`),
+  스타일 전환은 시작한 그 프레임에 끝 값으로 맞춘다(`UiStyleTest.OffscreenScreenFinishesTransitionsAtOnce`).
 - 에디터 `UiPreviewPanel` 이 첫 사용처 — 그 텍스처를 ImGui 이미지로 보이고 레이아웃 사각형 · 고른 위젯 · 안전 영역은 ImGui 선으로 얹는다(캔버스를 바꾸지 않는다).

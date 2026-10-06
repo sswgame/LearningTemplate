@@ -555,6 +555,8 @@ namespace sw
             WidgetTree& tree   = screen.getTree();
             if ( screen._styleSet != nullptr )
                 (void)UiStylePass::update( tree, *screen._styleSet, false );
+            // 미리보기는 애니메이션 단계를 돌지 않는다 — 방금 시작한 스타일 전환을 끝 값으로 바로 맞춘다(옛 값에 멈추지 않게).
+            (void)UiStyleTransition::update( tree, MathUtil::kMaxFloat );
             // 화면 UI 와 같은 문맥에 이 화면의 뷰포트 · 글자 배율만 바꿔 쓴다(배율 · 글자 배율이 바뀌면 루트부터 다시 잰다 — 트리가 지난 값을 든다).
             UiLayoutContext layout = makeLayoutContext();
             layout._viewportSize   = viewport._size;

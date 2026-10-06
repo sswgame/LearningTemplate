@@ -156,7 +156,7 @@ cd build/Ninja-Debug/Bin
 - **UI 미리보기 패널의 남은 것(runtime-ui 8-5 뒤, `Editor/Panels/UiPreviewPanel`).** (1) 언어 고르기(의사 문화권 `qps-ploc` · `qps-plocm` 포함) — 문화권이 전역이라
   미리보기 화면에만 거는 길(화면별 `LocalizationManager` 출처)이 필요하다. (2) 고른 위젯의 PROPERTY 를 인스펙터로 고치고 `UiDocumentWriter` 로 저장(되돌리기 —
   `CommandStack`) — 지금은 이름 · 사각형만 보인다. (3) 미리보기 안 입력 흉내(마우스 · 탐색 방향). (4) 콘텐츠 브라우저에서 `*.ui.xml` 두 번 누르면 이 패널로 —
-  에셋 종류 `UiDocument` 의 열기 동작. (5) UI 문서 디자이너(팔레트 → 끌어 놓기 · 슬롯 손잡이) — 미리보기 패널 위에.
+  에셋 종류 `UiDocument` 의 열기 동작. (5) 애니메이션 미리 보기(재생 · 시간 막대 — 미리보기 화면은 Open 을 틀지 않아 문서 값 그대로다). (6) UI 문서 디자이너(팔레트 → 끌어 놓기 · 슬롯 손잡이) — 미리보기 패널 위에.
 - **설정 브라우저 패널**(기능 로드맵) — `docs/Config/ConfigReference.json`(생성 메타데이터: 파일 · 칸 · 타입 · 기본값 · 범위 · 설명)을 읽어 `Config/` · 팩 설정 파일을
   찾아 열고 칸을 인스펙터처럼 고치는 창(언리얼 Project Settings · `UDeveloperSettings` 자리). 고친 파일은 `ConfigManager::reloadConfigFile` 로 다시 읽고,
   기본값과 같은 값은 파일에서 지운다(설정 파일에는 다른 값만).
@@ -304,7 +304,7 @@ cd build/Ninja-Debug/Bin
   - **아주 큼(XL)**: 비주얼 스크립팅 · 월드 파티션/스트리밍/HLOD · 음성 채팅(온라인 구성은 1-7 "네트워크 서비스 계층").
 - **런타임 UI 애니메이션 · 전환의 남은 것(runtime-ui 7-1 · 7-2 뒤, `Engine/UI/README.md`).** (1) 스타일 전환은 부모의 보간 값을 물려받는 글 칸에 내리지 않는다
   (자식 규칙에 `_transition` 을 따로 적는다) — CSS 는 물려받은 값도 보간된다. (2) 한쪽만 정한 칸(위젯 자기 칸 ↔ 시트 값)은 전환 없이 바뀐다 — 위젯 칸 값을 읽는 길이 필요.
-  (3) 전환 지연(`transition-delay`) · 키 사이 사건 말고 곡선 위 사건 · 에디터 미리보기(8-5)에서 애니메이션 미리 보기와 Open 을 틀지 않은 값으로 저장하기.
+  (3) 전환 지연(`transition-delay`) · 키 사이 사건 말고 곡선 위 사건.
   (4) 그림 캐시는 조상의 `kTransform` 이면 자손까지 다시 칠한다 — 변환을 캐시 밖에서 곱하는 쪽은 10-4 의 위젯 1 만 개 측정으로 판단.
 - **런타임 UI 입력의 남은 것(위젯 트리 코어 뒤, `Engine/UI/README.md`).** (1) 명령 조종자(디렉터 넷) · 플레이어 뷰 카메라는 아직 UI 가 먹은 입력
   (`UiSystem::isActionConsumed` · `isGameInputBlocked`)을 보지 않는다 — 플레이어 조종자만 본다. 그 게임이 메뉴를 띄우게 되면 같은 질의를 그 자리에 둔다.
