@@ -1,0 +1,3 @@
+enum class FogMode { A, B };
+DEFINE_CVAR( fog_density, float, 0.25f, "Fog density" );
+DEFINE_CVAR( fog_mode, FogMode, FogMode::A, "Fog mode" );

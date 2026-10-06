@@ -1,0 +1,69 @@
+{
+    "$schema": "./ProfileSchema.json",
+    "name": "SW Engine",
+    "global_variable": {
+        "files": [ "Source/**/*.{cpp,h,inl}" ],
+        "macros": [
+            { "name": "SW_GLOBAL_VARIABLE", "tag": "" },
+            { "name": "SW_TEST_GLOBAL_VARIABLE", "tag": "test" },
+            { "name": "SW_TEST_GLOBAL_VARIABLE_SHIPPED", "tag": "test-shipped" }
+        ],
+        "argument_index": { "type": 0, "name": 1, "default_value": 2, "description": 3 },
+        "name_prefix": "gv_",
+        "type_map": { "sw::string": "string" },
+        "default_value_macros": {
+            "SW_RHI_BACKEND_DEFAULT": { "file": "Config/Engine/CookContract.json", "key": "default_rhi_backend" }
+        }
+    },
+    "argument": {
+        "files": [ "Source/Core/Predefined/ArgumentList.xxx" ],
+        "macro": "SW_REGISTER_ARGUMENT",
+        "argument_index": { "name": 0, "default_value": 1, "spelling_start": 3 },
+        "max_comment_lines": 3,
+        "exclusive_groups": [
+            {
+                "id": "rhi",
+                "label": "RHI 백엔드",
+                "table_macro": "SW_RHI_BACKEND_TABLE",
+                "file": "Config/Engine/CookContract.json",
+                "rows_key": "rhi_backends",
+                "name_key": "command_line_argument",
+                "label_key": "name",
+                "spellings_key": "aliases",
+                "default_key": "default_rhi_backend"
+            }
+        ]
+    },
+    "command_line": { "prefix": "-", "separator": "=" },
+    "module": {
+        "root": "Source",
+        "labels": { "Core": "Core", "Engine": "엔진", "App": "앱", "Editor": "에디터", "GameFramework": "게임프레임워크" },
+        "variant_folders": [
+            { "folder": "Games", "cache_variable": "SW_ACTIVE_GAME", "label": "게임" }
+        ]
+    },
+    "status": [
+        { "cache_variable": "SW_SHIPPING_BUILD", "when_true": "Shipping", "when_false": "Dev" },
+        { "cache_variable": "SW_ACTIVE_GAME", "label": "게임" }
+    ],
+    "rules": [
+        {
+            "when": { "cache_variable": "SW_SHIPPING_BUILD", "is_true": true },
+            "match": { "tag": "test" },
+            "level": "unavailable",
+            "message": "Shipping 에서는 등록되지 않는 테스트용 변수입니다(기본값으로만 읽힘)"
+        },
+        {
+            "when": { "cache_variable": "SW_SHIPPING_BUILD", "is_true": true },
+            "match": { "module": "Editor" },
+            "level": "unavailable",
+            "message": "Shipping 에는 에디터가 없습니다"
+        },
+        {
+            "match": { "module": "Editor" },
+            "unless_argument": "EnableEditor",
+            "level": "warning",
+            "message": "-EnableEditor 를 켜야 에디터 모듈이 로드됩니다"
+        }
+    ]
+}

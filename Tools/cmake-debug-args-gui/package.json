@@ -1,0 +1,175 @@
+{
+  "name": "cmake-debug-args-gui",
+  "displayName": "CMake Debug Arguments GUI",
+  "description": "Pick a CMake project's command-line arguments and globals (scanned from source by a profile) in a sidebar and pass them to CMake Tools debug / launch.",
+  "version": "3.0.0",
+  "publisher": "sw-engine",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Debuggers",
+    "Other"
+  ],
+  "keywords": [
+    "cmake",
+    "debug",
+    "arguments",
+    "launch",
+    "command line"
+  ],
+  "activationEvents": [
+    "workspaceContains:CMakeLists.txt",
+    "workspaceContains:CMakePresets.json",
+    "onView:cmakeDebugArgsView"
+  ],
+  "main": "./Source/Extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cmakeDebugArgsContainer",
+          "title": "CMake Debug Args",
+          "icon": "$(debug-alt)"
+        }
+      ]
+    },
+    "views": {
+      "cmakeDebugArgsContainer": [
+        {
+          "id": "cmakeDebugArgsView",
+          "name": "Launch Arguments",
+          "type": "webview",
+          "when": "cmakeDebugArgs.isActive"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "cmakeDebugArgs.refresh",
+        "title": "Rescan Source (reload profile)",
+        "category": "CMake Debug Args",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "cmakeDebugArgs.copyCommandLine",
+        "title": "Copy Command Line",
+        "category": "CMake Debug Args",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "cmakeDebugArgs.run",
+        "title": "Run Launch Target With Arguments",
+        "category": "CMake Debug Args",
+        "icon": "$(play)"
+      },
+      {
+        "command": "cmakeDebugArgs.debug",
+        "title": "Debug Launch Target With Arguments",
+        "category": "CMake Debug Args",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "cmakeDebugArgs.disableAll",
+        "title": "Turn Off Every Argument",
+        "category": "CMake Debug Args",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "cmakeDebugArgs.resetState",
+        "title": "Delete Saved State (values · presets)",
+        "category": "CMake Debug Args"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "cmakeDebugArgs.debug",
+          "when": "view == cmakeDebugArgsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "cmakeDebugArgs.run",
+          "when": "view == cmakeDebugArgsView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "cmakeDebugArgs.copyCommandLine",
+          "when": "view == cmakeDebugArgsView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "cmakeDebugArgs.refresh",
+          "when": "view == cmakeDebugArgsView",
+          "group": "navigation@4"
+        },
+        {
+          "command": "cmakeDebugArgs.disableAll",
+          "when": "view == cmakeDebugArgsView",
+          "group": "more@1"
+        },
+        {
+          "command": "cmakeDebugArgs.resetState",
+          "when": "view == cmakeDebugArgsView",
+          "group": "more@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "cmakeDebugArgs.refresh",
+          "when": "cmakeDebugArgs.isActive"
+        },
+        {
+          "command": "cmakeDebugArgs.copyCommandLine",
+          "when": "cmakeDebugArgs.isActive"
+        },
+        {
+          "command": "cmakeDebugArgs.run",
+          "when": "cmakeDebugArgs.isActive"
+        },
+        {
+          "command": "cmakeDebugArgs.debug",
+          "when": "cmakeDebugArgs.isActive"
+        },
+        {
+          "command": "cmakeDebugArgs.disableAll",
+          "when": "cmakeDebugArgs.isActive"
+        },
+        {
+          "command": "cmakeDebugArgs.resetState",
+          "when": "cmakeDebugArgs.isActive"
+        }
+      ]
+    },
+    "taskDefinitions": [
+      {
+        "type": "cmakeDebugArgs",
+        "required": [
+          "target"
+        ],
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "Executable started with the arguments chosen in the CMake Debug Args view."
+          }
+        }
+      }
+    ],
+    "configuration": {
+      "title": "CMake Debug Args",
+      "properties": {
+        "cmakeDebugArgs.catalog": {
+          "scope": "resource",
+          "markdownDescription": "What to scan for the argument catalog: a profile object, or a workspace-relative path to a profile JSON file. Without it only custom arguments, environment variables and presets are available. See the extension README (`Profiles/SwEngine.json` is a full example).",
+          "default": "",
+          "type": [
+            "string",
+            "object"
+          ]
+        }
+      }
+    }
+  }
+}

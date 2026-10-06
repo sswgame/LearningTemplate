@@ -1,0 +1,177 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "CMake Debug Args catalog profile",
+    "description": "What the CMake Debug Args view scans for command-line arguments and global variables, and how it judges them against the active CMake build.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "$schema": { "type": "string" },
+        "name": { "type": "string", "description": "Shown in the view header." },
+        "global_variable": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Variables defined by a macro call in source, passed as <prefix><name><separator><value>.",
+            "properties": {
+                "files": { "type": "array", "items": { "type": "string" }, "description": "Workspace-relative globs (**, *, ?, {a,b})." },
+                "macros": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            { "type": "string" },
+                            {
+                                "type": "object",
+                                "required": [ "name" ],
+                                "additionalProperties": false,
+                                "properties": {
+                                    "name": { "type": "string" },
+                                    "tag": { "type": "string", "description": "Free label shown as a badge and matched by rules[].match.tag." }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "argument_index": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "Zero-based macro argument positions.",
+                    "properties": {
+                        "type": { "type": "integer", "minimum": 0, "default": 0 },
+                        "name": { "type": "integer", "minimum": 0, "default": 1 },
+                        "default_value": { "type": "integer", "minimum": 0, "default": 2 },
+                        "description": { "type": "integer", "minimum": 0, "default": 3 }
+                    }
+                },
+                "name_prefix": { "type": "string", "description": "Command-line keys starting with this are read back as global variables even when the catalog does not know them." },
+                "type_map": {
+                    "type": "object",
+                    "description": "C++ type text -> value editor. Types not listed are looked up as an enum definition.",
+                    "additionalProperties": { "enum": [ "bool", "int", "float", "string", "enum" ] }
+                },
+                "default_value_macros": {
+                    "type": "object",
+                    "description": "A default value that is this macro (or ends with ::MACRO) resolves to a literal or to a key of a JSON file.",
+                    "additionalProperties": {
+                        "anyOf": [
+                            { "type": "string" },
+                            {
+                                "type": "object",
+                                "required": [ "file", "key" ],
+                                "additionalProperties": false,
+                                "properties": { "file": { "type": "string" }, "key": { "type": "string" } }
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        "argument": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Arguments registered by a macro call: name, default value (its literal type is the value type; bool = flag), spellings.",
+            "properties": {
+                "files": { "type": "array", "items": { "type": "string" } },
+                "macro": { "type": "string" },
+                "argument_index": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "name": { "type": "integer", "minimum": 0, "default": 0 },
+                        "default_value": { "type": "integer", "minimum": 0, "default": 1 },
+                        "spelling_start": { "type": "integer", "minimum": 0, "default": 2 }
+                    }
+                },
+                "max_comment_lines": { "type": "integer", "minimum": 0, "default": 3, "description": "A // block above a call becomes its description when it is at most this many lines." },
+                "exclusive_groups": {
+                    "type": "array",
+                    "description": "Mutually exclusive flags shown as one choice.",
+                    "items": {
+                        "type": "object",
+                        "required": [ "id" ],
+                        "additionalProperties": false,
+                        "properties": {
+                            "id": { "type": "string" },
+                            "label": { "type": "string" },
+                            "arguments": { "type": "array", "items": { "type": "string" }, "description": "Names of flags already in the catalog." },
+                            "table_macro": { "type": "string", "description": "A call of this macro in an argument file is replaced by one flag per row of a JSON table." },
+                            "file": { "type": "string" },
+                            "rows_key": { "type": "string" },
+                            "name_key": { "type": "string", "default": "name" },
+                            "label_key": { "type": "string" },
+                            "spellings_key": { "type": "string", "default": "spellings" },
+                            "default_key": { "type": "string", "description": "Key of the JSON file naming the default choice (shown only)." }
+                        }
+                    }
+                }
+            }
+        },
+        "command_line": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "prefix": { "type": "string", "default": "-", "description": "A prefix made only of '-' accepts any number of dashes when reading." },
+                "separator": { "type": "string", "default": "=" }
+            }
+        },
+        "module": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "root": { "type": "string", "description": "The first folder below this is the module (group) of a variable." },
+                "labels": { "type": "object", "additionalProperties": { "type": "string" } },
+                "variant_folders": {
+                    "type": "array",
+                    "description": "A module folder whose sub-folders are built one at a time; the CMake cache variable names the active one.",
+                    "items": {
+                        "type": "object",
+                        "required": [ "folder", "cache_variable" ],
+                        "additionalProperties": false,
+                        "properties": { "folder": { "type": "string" }, "cache_variable": { "type": "string" }, "label": { "type": "string" } }
+                    }
+                }
+            }
+        },
+        "status": {
+            "type": "array",
+            "description": "CMake cache values shown in the header.",
+            "items": {
+                "type": "object",
+                "required": [ "cache_variable" ],
+                "additionalProperties": false,
+                "properties": {
+                    "cache_variable": { "type": "string" },
+                    "label": { "type": "string" },
+                    "when_true": { "type": "string" },
+                    "when_false": { "type": "string" }
+                }
+            }
+        },
+        "rules": {
+            "type": "array",
+            "description": "First matching rule annotates a global variable.",
+            "items": {
+                "type": "object",
+                "required": [ "level", "message" ],
+                "additionalProperties": false,
+                "properties": {
+                    "when": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "cache_variable": { "type": "string" },
+                            "is_true": { "type": "boolean", "default": true },
+                            "equals": { "type": "string" }
+                        }
+                    },
+                    "match": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": { "tag": { "type": "string" }, "module": { "type": "string" } }
+                    },
+                    "unless_argument": { "type": "string", "description": "Skip the rule while the flag with this spelling is on." },
+                    "level": { "enum": [ "info", "warning", "unavailable" ] },
+                    "message": { "type": "string" }
+                }
+            }
+        }
+    }
+}

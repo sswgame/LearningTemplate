@@ -28,6 +28,8 @@
     "cmake.parallelJobs": 0,
     "cmake.exportCompileCommandsFile": true, // clangd가 CMake 빌드 트리를 즉시 읽도록 연동
     "cmake.options.statusBarVisibility": "compact",
+    // 실행 인자 GUI(Tools/cmake-debug-args-gui) 가 소스에서 -gv_* · 인자 목록을 읽는 규칙
+    "cmakeDebugArgs.catalog": "Tools/cmake-debug-args-gui/Profiles/SwEngine.json",
     "lldb.launch.expressions": "native",
     "lldb.launch.terminal": "integrated",
     "editor.colorDecorators": true,

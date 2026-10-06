@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{CSP_SOURCE}}; script-src 'nonce-{{NONCE}}';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{STYLE_URI}}">
+  <title>Launch Arguments</title>
+</head>
+<body>
+  <header class="summary">
+    <div class="context" id="contextLine"></div>
+    <div id="bannerList"></div>
+    <div class="command-line">
+      <div class="command-line-head">
+        <span id="commandLineCount">명령줄</span>
+        <span class="spacer"></span>
+        <button class="icon-button" id="copyButton" title="명령줄 복사 (셸에 붙여 넣을 수 있게 따옴표 포함)">복사</button>
+      </div>
+      <div class="command-line-body" id="commandLineBody"></div>
+      <div id="issueList"></div>
+      <div class="note warning" id="powerShellNote" hidden>
+        점(.)이 든 인자가 있습니다. 기본 터미널이 Windows PowerShell 이면 CMake Tools 의 ▷ 실행은 이 인자를 둘로 쪼갭니다 —
+        아래 <b>실행</b> 또는 <b>디버그</b>는 셸을 거치지 않아 안전합니다.
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="button" id="debugButton" title="CMake Tools 디버그 (cmake.debugTarget)">디버그</button>
+      <button class="button" id="runButton" title="실행 대상을 셸 없이 실행 (빌드 먼저)">실행</button>
+      <span class="spacer"></span>
+      <button class="button secondary" id="disableAllButton" title="모든 항목 끄기 (값은 기억)">모두 끄기</button>
+    </div>
+  </header>
+
+  <nav class="tab-bar" id="tabBar">
+    <button class="tab" data-tab="globalVariable">전역 변수 <span class="count" id="globalVariableCount"></span></button>
+    <button class="tab" data-tab="argument">인자 <span class="count" id="argumentCount"></span></button>
+    <button class="tab" data-tab="custom">사용자 · 환경 <span class="count" id="customCount"></span></button>
+    <button class="tab" data-tab="preset">프리셋 <span class="count" id="presetCount"></span></button>
+  </nav>
+
+  <section class="filter-bar" id="filterBar">
+    <input class="input" id="searchInput" type="search" placeholder="이름 · 설명 검색">
+    <label class="chip"><input type="checkbox" id="enabledOnlyToggle"> 켜진 것만</label>
+    <label class="chip"><input type="checkbox" id="hideTaggedToggle"> 태그 붙은 것 숨기기</label>
+  </section>
+
+  <section class="tab-page" data-page="globalVariable">
+    <div id="globalVariableList"></div>
+  </section>
+
+  <section class="tab-page" data-page="argument">
+    <div id="exclusiveGroupList"></div>
+    <div id="argumentList"></div>
+  </section>
+
+  <section class="tab-page" data-page="custom">
+    <h3 class="section-title">사용자 인자</h3>
+    <p class="hint">카탈로그에 없는 인자를 적습니다. 여러 개를 한 줄로 붙여 넣으면 나눠 넣고, 아는 것(전역 변수 · 인자)은 제 칸으로 옮깁니다.</p>
+    <div class="add-row">
+      <input class="input" id="customInput" placeholder='-flag -key=value "-path=a b"'>
+      <button class="button" id="customAddButton">추가</button>
+    </div>
+    <div id="customList"></div>
+
+    <h3 class="section-title">환경 변수</h3>
+    <p class="hint">실행 · 디버그 때 프로그램에 줍니다(cmake.debugConfig.environment).</p>
+    <div class="add-row">
+      <input class="input" id="environmentNameInput" placeholder="이름">
+      <input class="input" id="environmentValueInput" placeholder="값">
+      <button class="button" id="environmentAddButton">추가</button>
+    </div>
+    <div id="environmentList"></div>
+  </section>
+
+  <section class="tab-page" data-page="preset">
+    <p class="hint">지금 고른 것 전체(켜짐 · 값 · 사용자 인자 · 환경 변수)를 이름 붙여 둡니다. 같은 이름은 덮어씁니다.</p>
+    <div class="add-row">
+      <input class="input" id="presetNameInput" placeholder="프리셋 이름">
+      <button class="button" id="presetSaveButton">저장</button>
+    </div>
+    <div id="presetList"></div>
+  </section>
+
+  <script nonce="{{NONCE}}" src="{{SCRIPT_URI}}"></script>
+</body>
+</html>
