@@ -80,6 +80,8 @@ namespace sw
         string _shaderTonemap{ "engine/shaders/tonemap.hlsl" }; ///< 톤 매핑
         PROPERTY()
         string _shaderToon{ "engine/shaders/toon.hlsl" }; ///< 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다
+        PROPERTY()
+        string _shaderCanvas{ "engine/shaders/canvas.hlsl" }; ///< 화면 2D(UI · 월드 글자) 사각형 — 사각형 하나 = 인스턴스 하나, SDF 모양 · 글리프
 
         /** @brief 리소스 경로(XML)에서 엔진 테이블을 로드합니다. 빈 경로면 path::kEngineDefaultAssets 를 씁니다. */
 

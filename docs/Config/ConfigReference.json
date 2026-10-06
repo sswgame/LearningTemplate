@@ -421,6 +421,15 @@
        "max": "",
        "units": "",
        "description": "셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다"
+      },
+      {
+       "name": "_shaderCanvas",
+       "type": "string",
+       "default": "engine/shaders/canvas.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "화면 2D(UI · 월드 글자) 사각형 — 사각형 하나 = 인스턴스 하나, SDF 모양 · 글리프"
       }
      ]
     }

@@ -70,8 +70,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 //      파라미터를 드로우별로 싣는 자리와 같다. DX12 루트 상수 / Vulkan 푸시 상수 / DX11·GL 은 b2 에뮬.
 // ------------------------------------------------------------------------------
 //      컴퓨트 셰이더는 자기 루트 상수 블록을 직접 선언하므로(예: computetexturewrite.hlsl) 여기서는 빼 둔다 —
-//      한 셰이더에 블록이 둘이면 재정의다.
-#if !defined( SW_STAGE_COMPUTE )
+//      한 셰이더에 블록이 둘이면 재정의다. 자기 블록을 쓰는 그래픽스 셰이더(canvas.hlsl)는 include 앞에 SW_OWN_ROOT_CONSTANTS 를 정의한다.
+#if !defined( SW_STAGE_COMPUTE ) && !defined( SW_OWN_ROOT_CONSTANTS )
 SW_ROOT_CONSTANTS_BEGIN
 	// 이 드로우 그룹의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다. 그룹(같은 PSO·머티리얼 버퍼) 안에서
 	// 같다. 배치마다 다른 값(인스턴스 시작·모프 풀 시작·정점 풀 시작)은 루트 상수가 아니라 배치 표(g_SwBatches)에 있고, 정점은
@@ -81,7 +81,7 @@ SW_ROOT_CONSTANTS_BEGIN
 SW_ROOT_CONSTANTS_END
 #define SW_DRAW_MATERIAL_COUNT SW_ROOT( g_SwMaterialCount )
 #else
-// 컴퓨트에는 이 블록이 없다 — 그래픽스 전용 헬퍼(SW_MATERIAL)가 컴파일만 되게 0 으로 둔다.
+// 컴퓨트 · 자기 블록을 쓰는 셰이더에는 이 블록이 없다 — 그래픽스 전용 헬퍼(SW_MATERIAL)가 컴파일만 되게 0 으로 둔다.
 #define SW_DRAW_MATERIAL_COUNT 0u
 #endif
 

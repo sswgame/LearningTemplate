@@ -12,6 +12,8 @@ Renderer/
   Scene/      씬을 GPU 가 읽을 수 있는 데이터로 (GT 빌더 → 스냅샷 → RT 씬)
   Frame/      실제로 그리는 것
   Light/      씬 라이트를 한 구조버퍼로 (GpuLightBuffer) — 포워드·디퍼드가 같이 읽는다
+  Canvas/     화면 2D(UI · 월드 글자) — CanvasRenderer(글리프 아틀라스 거울 · 구간 업로드, 사각형 구조버퍼 t15, 일괄마다 가위 + 루트 상수 +
+              drawInstanced( 6, n ), canvas.hlsl). 게임 스레드가 칠한 Graphics/Canvas 의 그리기 목록만 읽는다
   Debug/      에디터가 읽는 통로 — RenderTargetRegistry(프레임 렌더타깃 목록) · DebugDrawQueue(선 · 구 · 상자 · 화살표 · 글자,
               지속 시간 · 카테고리. 넣은 것은 `endFrame` 에 확정돼 다음 에디터 프레임에 보이고, 씬이 멈춘 프레임은 시간이 흐르지 않는다)
   Capture/    격리 스튜디오 렌더 — PortraitRenderer(프리팹 초상화 · 썸네일 굽기)

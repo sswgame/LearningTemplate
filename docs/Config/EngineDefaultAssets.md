@@ -50,3 +50,4 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XmlSerializer
 | `_shaderTaa` | `string` | `engine/shaders/taa.hlsl` |  |  | TAA |
 | `_shaderTonemap` | `string` | `engine/shaders/tonemap.hlsl` |  |  | 톤 매핑 |
 | `_shaderToon` | `string` | `engine/shaders/toon.hlsl` |  |  | 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다 |
+| `_shaderCanvas` | `string` | `engine/shaders/canvas.hlsl` |  |  | 화면 2D(UI · 월드 글자) 사각형 — 사각형 하나 = 인스턴스 하나, SDF 모양 · 글리프 |
