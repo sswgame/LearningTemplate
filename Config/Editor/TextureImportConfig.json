@@ -48,8 +48,7 @@
     {
       "name": "Normal_Maps",
       "inherits": "Base_NormalMap",
-      "include_patterns": ["*_n.*", "*_normal.*", "*_norm.*"],
-      "exclude_patterns": ["*preview*"]
+      "include_patterns": ["*_n.*", "*_normal.*", "*_norm.*"]
     },
     {
       "name": "UI_Textures",

@@ -85,6 +85,12 @@ class RuleTableTest(unittest.TestCase):
         with self.assertRaises(RuleConfigError):
             parseRules({"rules": [{"name": "x", "check": "orphan", "severity": "fatal"}]})
 
+    def testExcludeWithoutReasonIsAnError(self) -> None:
+        with self.assertRaises(RuleConfigError):
+            parseRules({"rules": [{"name": "x", "check": "orphan", "include_patterns": ["*.mesh"], "exclude_patterns": ["a/*.mesh"]}]})
+        parseRules({"rules": [{"name": "x", "check": "orphan", "include_patterns": ["*.mesh"], "exclude_patterns": ["a/*.mesh"],
+                               "exclude_reason": "시험"}]})
+
 
 class HeaderReaderTest(unittest.TestCase):
     def testDdsHeader(self) -> None:
@@ -168,6 +174,16 @@ class CheckTest(AssetValidationFixture):
         self.put("Resource/game/p/models/byname.mesh", makeMeshInternal(1))
         findings = self.findMessages({"name": "o", "check": "orphan", "include_patterns": ["*.mesh"]})
         self.assertEqual(1, len(findings), findings)
+
+    def testStaleExcludeIsAnErrorOnlyOnAFullRun(self) -> None:
+        self.put("Resource/game/p/models/kept.mesh", makeMeshInternal(1))
+        self.put("Resource/game/p/maps/a.scene.xml", '<Scene><x _meshId="game/p/models/kept.mesh"/></Scene>')
+        rule = {"name": "o", "check": "orphan", "include_patterns": ["*.mesh"], "exclude_patterns": ["game/q/*.mesh"],
+                "exclude_reason": "시험"}
+        findings = self.findMessages(rule)
+        self.assertEqual(1, len(findings), findings)
+        self.assertIn("game/q/*.mesh", findings[0])
+        self.assertEqual([], self.findMessages(rule, ["game/p/models/kept.mesh"]))      # 일부만 볼 때는 판단하지 않는다
 
     def testMaterial(self) -> None:
         self.put("Resource/engine/shaders/lit.hlsl", "#if USE_FOG\n#endif\n")

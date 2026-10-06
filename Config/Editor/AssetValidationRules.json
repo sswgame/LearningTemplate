@@ -7,6 +7,7 @@
       "severity": "error",
       "include_patterns": ["*"],
       "exclude_patterns": ["README.md", "*/README.md"],
+      "exclude_reason": "README.md — folder description documents (the name GitHub shows for a folder)",
       "name_pattern": "[a-z0-9_.\\-]+"
     },
     {
@@ -51,6 +52,7 @@
       "severity": "error",
       "include_patterns": ["*/textures/*.dds"],
       "exclude_patterns": ["editor/textures/splash.dds", "*_splat.dds"],
+      "exclude_reason": "splash.dds is the 1376x768 editor splash (one UI image, no mips or tiling, so no reason to be a power of two); *_splat.dds are splat maps paired with 2^n+1 heightfield grids (257x257)",
       "max_size": 4096,
       "power_of_two": true,
       "allowed_formats": ["BC1_UNORM", "BC1_UNORM_SRGB", "BC3_UNORM", "BC3_UNORM_SRGB", "BC4_UNORM", "BC5_UNORM", "BC6H_UF16",
@@ -112,11 +114,12 @@
     {
       "name": "orphans",
       "check": "orphan",
-      "description": "Assets nobody names. Excluded: meshes a game picks by name from a code table (path built at runtime), the merged mesh of a sectioned VRM import, and the gimmick prefab library.",
+      "description": "Assets nobody names.",
       "severity": "warning",
       "include_patterns": ["*.prefab.xml", "*.material", "*.mesh", "*/textures/*.dds", "*.ogg", "*.scene.xml"],
       "exclude_patterns": ["game/nilecity/models/*.mesh", "game/starskirmish/models/*.mesh", "game/harvestvalley/models/crop*.mesh",
-                           "game/empty/models/avatarsample_d.mesh", "common/prefabs/gimmicks/*"]
+                           "game/empty/models/avatarsample_d.mesh", "common/prefabs/gimmicks/*"],
+      "exclude_reason": "meshes a game picks by name from a code table (path built at runtime), the merged mesh of a sectioned VRM import, and the gimmick prefab library"
     },
     {
       "name": "materials",

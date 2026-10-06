@@ -101,6 +101,7 @@ class Rule:
     listIncludePattern: list[str]
     listExcludePattern: list[str]
     params: dict
+    excludeReason: str = ""  # 제외가 있으면 그 까닭 — 이유 없는 제외는 규칙 표를 읽지 못한다
 
     def matches(self, relPath: str) -> bool:
         if not any(fnmatch.fnmatchcase(relPath, pattern) for pattern in self.listIncludePattern):
@@ -585,7 +586,7 @@ _kCheckRegistry: dict[str, tuple[CheckFunction, frozenset[str]]] = {
 }
 
 #: 규칙 줄마다 공통 키.
-_kCommonRuleKey = frozenset({"name", "check", "severity", "include_patterns", "exclude_patterns", "description"})
+_kCommonRuleKey = frozenset({"name", "check", "severity", "include_patterns", "exclude_patterns", "exclude_reason", "description"})
 
 
 def getCheckNames() -> list[str]:
@@ -618,7 +619,11 @@ def parseRules(data: dict) -> list[Rule]:
         listInclude = entry.get("include_patterns", ["*"])
         if not isinstance(listInclude, list) or not listInclude:
             raise RuleConfigError(f"rule '{name}' needs a non-empty include_patterns list")
-        listRule.append(Rule(name, check, severity, listInclude, entry.get("exclude_patterns", []), params))
+        listExclude = entry.get("exclude_patterns", [])
+        excludeReason = str(entry.get("exclude_reason", "")).strip()
+        if listExclude and not excludeReason:
+            raise RuleConfigError(f"rule '{name}' excludes {', '.join(listExclude)} without an exclude_reason - every exception carries its reason")
+        listRule.append(Rule(name, check, severity, listInclude, listExclude, params, excludeReason))
     return listRule
 
 
@@ -651,5 +656,14 @@ def validate(listRule: list[Rule], resourceRoot: Path, repositoryRoot: Path, lis
             function = _kCheckRegistry[rule.check][0]
             for message in function(rule, relPath, context):
                 listFinding.append(Finding(relPath, rule.name, rule.severity, message))
+    # 트리 전체를 볼 때만 — 규칙이 포함하는 파일을 하나도 빼지 않는 제외는 낡은 예외다.
+    if listTarget is None:
+        for rule in listRule:
+            for pattern in rule.listExcludePattern:
+                bCovers = any(fnmatch.fnmatchcase(relPath, pattern) and
+                              any(fnmatch.fnmatchcase(relPath, include) for include in rule.listIncludePattern) for relPath in listAllPath)
+                if bCovers is False:
+                    listFinding.append(Finding("<rules>", rule.name, "error",
+                                               f"exclude pattern '{pattern}' matches no file the rule includes - remove the stale exception"))
     listFinding.sort(key=lambda finding: (kSeverityOrder.index(finding.severity), finding.path, finding.rule))
     return listFinding
