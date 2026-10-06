@@ -62,12 +62,14 @@ namespace sw
         , _worldScratch{}
         , _worldRevision{ 1 }
         , _worldQuad{}
+        , _bHidden{ SW_FALSE }
         , _documentPath{}
         , _space{ WidgetSpace::Screen }
         , _drawSize{}
         , _pivot{ 0.5f, 1.0f }
         , _worldSize{ 1.0f, 0.5f }
         , _screenOffset{}
+        , _worldOffset{}
         , _maxDistance{ 0.0f }
         , _referenceDistance{ 10.0f }
         , _bClampToScreenEdge{ false }
@@ -237,7 +239,7 @@ namespace sw
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         const CameraComponent*   pCamera  = pManager != nullptr ? pManager->getCameraRegistry().selectCamera( CameraRole::Game ) : nullptr;
-        if ( pScene == nullptr || pCamera == nullptr || isActive() == false )
+        if ( pScene == nullptr || pCamera == nullptr || isActive() == false || _bHidden == SW_TRUE )
         {
             WidgetMarkerPlacement hidden{};
             hidden._bVisible = SW_FALSE;
@@ -246,7 +248,8 @@ namespace sw
         }
         const float32  aspect         = viewport._physicalSize._x / viewport._physicalSize._y;
         const float4x4 viewProjection = pCamera->getViewProjectionMatrix( aspect );
-        applyPlacement( computeMarkerPlacement( viewProjection, pCamera->getCameraPosition(), pScene->getWorldPosition(), viewport._size ) );
+        const float3   anchor         = pScene->getWorldPosition() + _worldOffset;
+        applyPlacement( computeMarkerPlacement( viewProjection, pCamera->getCameraPosition(), anchor, viewport._size ) );
     }
 
     void WidgetComponent::applyPlacement( const WidgetMarkerPlacement& placement )

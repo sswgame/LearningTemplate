@@ -17,4 +17,7 @@
 	<Rule _selector="BorderPanel.window TextWidget" _textColor="$text" />
 	<Rule _selector="BorderPanel.warning" _borderWidth="3" _borderColor="$warning" _cornerRadius="0,0,0,0" />
 	<Rule _selector="BorderPanel.success" _borderWidth="1" _borderColor="$success" _cornerRadius="12,12,12,12" />
+	<Rule _selector="TextWidget.damage" _fontSize="28" _textOutlineColor="0,0,0,0.9" _textOutlineWidth="2">
+		<_font _weight="Bold" />
+	</Rule>
 </UiStyleSheet>

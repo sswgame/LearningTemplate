@@ -4,9 +4,12 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/UI/Layout/OverlayPanel.h"
+#include "Engine/UI/Widgets/SliderWidget.h"
+#include "Engine/UI/World/WidgetComponent.h"
 
 #include "GameFramework/Base/Combat/HealthSourceComponent.h"
 
@@ -16,9 +19,6 @@ namespace sw
     {
         struct HealthBarComponentInternal
         {
-            /** @brief 이보다 짧은 조각은 숨깁니다(길이 0 인 사각형을 그리지 않습니다). 바 길이에 대한 비율입니다. */
-            static constexpr float32 kMinSegmentRatio = 1.0e-4f;
-
             /** @brief @p current 를 @p target 쪽으로 옮깁니다. 속도가 0 이하면 바로 갑니다(지수 접근 — 프레임 속도에 덜 민감합니다). */
             static float32 approach( float32 current, float32 target, float32 speed, float32 deltaTime )
             {
@@ -37,16 +37,13 @@ namespace sw
         , _remainRatio{ 0.0f }
         , _targetRatio{ 0.0f }
         , _lerpSpeed{ 5.0f }
-        , _offsetPos{ 0.0f, 0.0f }
-        , _barSize{ 1.0f, 0.12f }
         , _fillColor{ 0.25f, 0.85f, 0.3f, 1.0f }
         , _trailColor{ 0.95f, 0.8f, 0.25f, 1.0f }
         , _backgroundColor{ 0.08f, 0.08f, 0.1f, 0.8f }
-        , _sortingLayer{ "WorldUI" }
         , _bVisible{ false }
         , _bShowWhenHurt{ false }
         , _bHideWhenDead{ false }
-        , _spriteBatch{}
+        , _bWarnedNoWidgetComponent{ false }
     {
     }
 
@@ -64,21 +61,16 @@ namespace sw
         _remainRatio = _hpRatio;
         _targetRatio = _hpRatio;
 
-        if ( pOwner != nullptr )
+        // 막대 위젯을 화면 마커에 넣는다(마커가 아직 UI 시스템에 묶이지 않았으면 묶일 때 붙는다). 끝날 때는 마커가 위젯을 지운다 — 다시 시작하면 다시 짓는다.
+        WidgetComponent* pWidget = findWidgetComponent();
+        if ( pWidget != nullptr && pWidget->getContent() == nullptr )
+            pWidget->setContent( createBarWidget() );
+        else if ( pWidget == nullptr && pOwner != nullptr && _bWarnedNoWidgetComponent == false )
         {
-            GameObjectManager* pManager = pOwner->getManager();
-            // 바탕만 있는 단색 조각이라 텍스처가 없다(머티리얼의 흰색 × 조각 색).
-            _spriteBatch.setSorting( _sortingLayer, 0 );
-            if ( pManager != nullptr && _spriteBatch.initialize( *pManager, {}, kEntryCount ) == false )
-                SW_LOG_WARNING( "HP bar sprites could not be created" );
+            _bWarnedNoWidgetComponent = true;
+            SW_LOG_WARNING( "HP bar on '%#' has no WidgetComponent on its object - the bar is not drawn", pOwner->getName().c_str() );
         }
-        layoutSprites();
-    }
-
-    void HealthBarComponent::onEndPlay()
-    {
-        _spriteBatch.shutdown();
-        Component::onEndPlay();
+        refreshWidgets();
     }
 
     void HealthBarComponent::onTick( float32 deltaTime )
@@ -95,20 +87,20 @@ namespace sw
         else
             _remainRatio = HealthBarComponentInternal::approach( _remainRatio, _hpRatio, _lerpSpeed, deltaTime );
 
-        scheduleLayout();
+        scheduleRefresh();
     }
 
     void HealthBarComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
         if ( hasBegunPlay() )
-            layoutSprites();
+            refreshWidgets();
     }
 
     void HealthBarComponent::onOwnerActiveInHierarchyChanged()
     {
         if ( hasBegunPlay() )
-            layoutSprites();
+            refreshWidgets();
     }
 
     void HealthBarComponent::onHealthChanged( const HealthChangedEvent& event )
@@ -151,17 +143,46 @@ namespace sw
         _hpRatio     = _targetRatio;
         _remainRatio = _targetRatio;
         if ( hasBegunPlay() )
-            scheduleLayout();
+            scheduleRefresh();
     }
 
     void HealthBarComponent::setVisible( bool bVisible )
     {
         _bVisible = bVisible;
         if ( hasBegunPlay() )
-            scheduleLayout();
+            scheduleRefresh();
     }
 
-    void HealthBarComponent::scheduleLayout()
+    WidgetComponent* HealthBarComponent::findWidgetComponent() const
+    {
+        const GameObject* pOwner = getOwner();
+        return pOwner != nullptr ? pOwner->getComponent<WidgetComponent>() : nullptr;
+    }
+
+    unique_ptr<Widget> HealthBarComponent::createBarWidget()
+    {
+        // 겹침 패널 — 자식이 패널 전체를 채운다. 아래가 흔적(바탕 포함), 위가 채움(바탕 없음). 마커는 클릭을 막지 않는다.
+        unique_ptr<OverlayPanel> panel = sw::make_unique<OverlayPanel>();
+        panel->setVisibility( WidgetVisibility::HitTestInvisible );
+        for ( uint32 index = 0; index < 2; ++index )
+        {
+            unique_ptr<ProgressBarWidget> bar = sw::make_unique<ProgressBarWidget>();
+            bar->setVisibility( WidgetVisibility::HitTestInvisible );
+            (void)panel->addChild( std::move( bar ) );
+        }
+        return panel;
+    }
+
+    ProgressBarWidget* HealthBarComponent::findBar( uint32 index ) const
+    {
+        const WidgetComponent* pWidget = findWidgetComponent();
+        const PanelWidget*     pPanel  = pWidget != nullptr ? castTo<PanelWidget>( pWidget->getContent() ) : nullptr;
+        if ( pPanel == nullptr || index >= pPanel->getChildCount() )
+            return nullptr;
+        return castTo<ProgressBarWidget>( pPanel->getChild( index ) );
+    }
+
+    void HealthBarComponent::scheduleRefresh()
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
@@ -173,52 +194,26 @@ namespace sw
         {
             Component* pComponent = pManager->resolveComponent( handle );
             if ( pComponent != nullptr )
-                static_cast<HealthBarComponent*>( pComponent )->layoutSprites();
+                static_cast<HealthBarComponent*>( pComponent )->refreshWidgets();
         } );
     }
 
-    void HealthBarComponent::layoutSprites()
+    void HealthBarComponent::refreshWidgets()
     {
-        if ( _spriteBatch.isInitialized() == false )
+        WidgetComponent* pWidget = findWidgetComponent();
+        if ( pWidget == nullptr )
             return;
-        const GameObject*     pOwner  = getOwner();
-        const SceneComponent* pAnchor = ( pOwner != nullptr ) ? pOwner->getPrimarySceneComponent() : nullptr;
-        const bool            bShown  = _bVisible && isActive() && pAnchor != nullptr;
-        _spriteBatch.setVisible( bShown );
-        if ( bShown == false )
+        pWidget->setHidden( ( _bVisible && isActive() ) == false );
+        ProgressBarWidget* pTrail = findBar( kTrailBarIndex );
+        ProgressBarWidget* pFill  = findBar( kFillBarIndex );
+        if ( pTrail == nullptr || pFill == nullptr )
             return;
-
-        const float3  ownerPosition = pAnchor->getWorldPosition();
-        const float32 width         = _barSize._x;
-        const float32 height        = _barSize._y;
-        const float32 left          = ownerPosition._x + _offsetPos._x - width * 0.5f;
-        const float32 centerY       = ownerPosition._y + _offsetPos._y;
-        const float32 fillEnd       = MathUtil::saturate( _hpRatio );
-        const float32 trailEnd      = MathUtil::max( fillEnd, MathUtil::saturate( _remainRatio ) );
-        const float4  fullUvRect{ 0.0f, 0.0f, 1.0f, 1.0f };
-
-        struct Segment
-        {
-            uint32  _entry;
-            float32 _start;
-            float32 _end;
-            float4  _color;
-        };
-        const Segment arrSegment[kEntryCount] = {
-            {      kFillEntry,     0.0f,  fillEnd,       _fillColor},
-            {     kTrailEntry,  fillEnd, trailEnd,      _trailColor},
-            {kBackgroundEntry, trailEnd,     1.0f, _backgroundColor},
-        };
-        for ( const Segment& segment : arrSegment )
-        {
-            const float32 length = segment._end - segment._start;
-            if ( length < HealthBarComponentInternal::kMinSegmentRatio )
-            {
-                _spriteBatch.setEntryVisible( segment._entry, false );
-                continue;
-            }
-            const float3 center{ left + ( segment._start + length * 0.5f ) * width, centerY, ownerPosition._z };
-            _spriteBatch.setEntry( segment._entry, SpriteInstanceBatch::makeQuadWorld( center, length * width, height ), fullUvRect, segment._color );
-        }
+        const float32 fillEnd = MathUtil::saturate( _hpRatio );
+        pTrail->setPercent( MathUtil::max( fillEnd, MathUtil::saturate( _remainRatio ) ) );
+        pTrail->setFillColor( _trailColor );
+        pTrail->setBackgroundColor( _backgroundColor );
+        pFill->setPercent( fillEnd );
+        pFill->setFillColor( _fillColor );
+        pFill->setBackgroundColor( float4{} );
     }
 } // namespace sw

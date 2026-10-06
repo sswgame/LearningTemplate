@@ -100,7 +100,11 @@ namespace sw
         void    setPercent( float32 percent );
         float32 getPercent() const { return _percent; }
         /** @brief 채움 색을 바꿉니다. kPaint. */
-        void setFillColor( const float4& color );
+        void          setFillColor( const float4& color );
+        const float4& getFillColor() const { return _fillColor; }
+        /** @brief 바탕 색(채우지 않은 쪽)을 바꿉니다. 알파 0 이면 바탕을 칠하지 않는다(막대를 겹칠 때). kPaint. */
+        void          setBackgroundColor( const float4& color );
+        const float4& getBackgroundColor() const { return _backgroundColor; }
 
     protected:
         float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;

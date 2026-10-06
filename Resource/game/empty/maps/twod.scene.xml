@@ -104,7 +104,8 @@
 					                 _materialPath="engine/materials/sprite2dlit.material"
 					                 _sortingLayer="Foreground"
 					                 _orderInLayer="0" />
-					<HealthBarComponent _hpRatio="0.7" _offsetPos="0,0.75" _barSize="1,0.125" _bVisible="true" />
+					<WidgetComponent _drawSize="64,8" _worldOffset="0,0.75,0" />
+					<HealthBarComponent _hpRatio="0.7" _bVisible="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

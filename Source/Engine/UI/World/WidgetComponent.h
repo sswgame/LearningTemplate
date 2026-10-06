@@ -55,8 +55,9 @@ namespace sw
      *        (게임 틱 · 트랜스폼 적용 뒤 — 병렬 틱 밖)가 오브젝트의 월드 점을 게임 카메라로 투영해 그 슬롯을 옮긴다. **World**: 위젯 트리를 렌더 텍스처에 그려
      *        사각형 메시에 붙인다(렌더 텍스처 경로 `getRenderTargetPath`).
      * @details 위젯은 `setContent` 로 코드가 넘긴다(문서 `_documentPath` 를 푸는 것은 5-1). 화면 마커는 `_drawSize` 가 있으면 그 크기로 고정해 레이아웃 경계가 되고
-     *          (자리가 바뀌어도 그 아래만 다시 놓는다), 없으면 위젯의 원하는 크기다. 카메라 뒤 · 화면 밖은 숨기거나(`_bClampToScreenEdge` 면 가장자리에 붙인다),
-     *          `_maxDistance` 밖은 숨긴다. 2D(직교 카메라)도 같은 코드다. 서버처럼 UI 가 없으면 아무것도 하지 않는다.
+     *          (자리가 바뀌어도 그 아래만 다시 놓는다), 없으면 위젯의 원하는 크기다. 기준점은 오브젝트 자리 + `_worldOffset`(월드 축 — 머리 위 HP 바)이다.
+     *          카메라 뒤 · 화면 밖은 숨기거나(`_bClampToScreenEdge` 면 가장자리에 붙인다), `_maxDistance` 밖은 숨긴다. 코드가 `setHidden` 으로 숨길 수도 있다
+     *          (HP 바의 "맞으면 보임" 정책 — 저장하지 않는다). 2D(직교 카메라)도 같은 코드다. 서버처럼 UI 가 없으면 아무것도 하지 않는다.
      */
     REFLECT( Category = "UI", DisplayName = "Widget Component", Tooltip = "Shows a widget attached to this object, as a screen marker or a world quad" )
     class SW_API WidgetComponent : public Component
@@ -84,9 +85,14 @@ namespace sw
         const float2& getPivot() const { return _pivot; }
         void          setPivot( const float2& pivot ) { _pivot = pivot; }
         void          setScreenOffset( const float2& offset ) { _screenOffset = offset; }
-        void          setClampToScreenEdge( bool bClamp ) { _bClampToScreenEdge = bClamp; }
-        void          setMaxDistance( float32 maxDistance ) { _maxDistance = maxDistance; }
-        void          setScaleWithDistance( bool bScale, float32 referenceDistance );
+        const float3& getWorldOffset() const { return _worldOffset; }
+        void          setWorldOffset( const float3& offset ) { _worldOffset = offset; }
+        /** @brief 화면 마커를 숨깁니다(코드의 보이기 정책 — 저장하지 않는다). 다음 `updateScreenMarker` 가 접는다. */
+        void setHidden( bool bHidden ) { _bHidden = bHidden ? SW_TRUE : SW_FALSE; }
+        bool isHidden() const { return _bHidden == SW_TRUE; }
+        void setClampToScreenEdge( bool bClamp ) { _bClampToScreenEdge = bClamp; }
+        void setMaxDistance( float32 maxDistance ) { _maxDistance = maxDistance; }
+        void setScaleWithDistance( bool bScale, float32 referenceDistance );
 
         /** @brief 마지막 갱신의 자리입니다(시험 · 방향 화살표). */
         const WidgetMarkerPlacement& getLastPlacement() const { return _lastPlacement; }
@@ -150,6 +156,7 @@ namespace sw
         CanvasDrawList         _worldScratch;  ///< World — 칠하는 중의 목록
         uint64                 _worldRevision; ///< World — `_worldCanvas` 내용 번호
         GameObjectHandle       _worldQuad;     ///< World — 사각형 자식 오브젝트
+        uint8                  _bHidden;       ///< 코드가 숨겼다(`setHidden` — 저장하지 않는다)
         PROPERTY( DisplayName = "Document", Tooltip = "UI document to show (document loading is a later stage; code uses setContent)" )
         string _documentPath;
         PROPERTY( DisplayName = "Space" )
@@ -162,6 +169,8 @@ namespace sw
         float2 _worldSize;
         PROPERTY( DisplayName = "Screen Offset", Meta = "Units=ui" )
         float2 _screenOffset;
+        PROPERTY( DisplayName = "World Offset", Tooltip = "Screen: offset of the anchor from the object position, on the world axes", Units = m )
+        float3 _worldOffset;
         PROPERTY( DisplayName = "Max Distance", Tooltip = "Hide beyond this distance from the camera; 0 = no limit", Min = 0.0, Units = m )
         float32 _maxDistance;
         PROPERTY( DisplayName = "Reference Distance", Tooltip = "Distance at which a distance-scaled marker has scale 1", Min = 0.01, Units = m )

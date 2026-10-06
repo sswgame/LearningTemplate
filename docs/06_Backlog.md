@@ -1811,9 +1811,9 @@ cd build/Ninja-Debug/Bin
 - **반복 간격(연사 · 스폰 · 자동 공격)은 끝난 걸음에 `Countdown::restart`** — 간격으로 덮으면(`start` · `= 간격`) 지나친 몫을 버려 빈도가 fps · 고정 걸음에
   매이고, float 로 걸음을 빼면 0 에 조금 못 미쳐 한 걸음을 더 기다린다(RTS 0.05 초 걸음에서 1.2 초 → 1.25 초). 잇는 몫은 한 간격까지라 몰아 내지 않는다.
   "원하는 동안 간격마다 한 번" 은 `Countdown::tickRepeat( dt, interval, bWant )` 한 줄이다(Voxel 블록 놓기 · Shooter3D 적 휘두르기).
-- **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. 방어 식은 `DamageMath::applyArmor`(고정 방어, 최소 1 — 액션 룸의 적도 같은 식)이고, 0 이하 피해는 맞지 않은 것이다(HP · 무적 · 이벤트 없음 — 언리얼 `ApplyDamage`). `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. 월드 UI(HP 바 ·
-  데미지 숫자)는 저장되지 않는 `SpriteInstanceBatch` 로 그린다 — 자식 컴포넌트로 만들면 씬 · 프리팹 · 스냅샷에 저장돼 다음 시작에 겹친다. 스프라이트 UV · 색은 인스턴스에 싣는다(같은 텍스처는
-  한 배치). 체력을 가진 컴포넌트는 `Combat/HealthSourceComponent` 를 상속해 읽기(`getHealthReading` — 지금 · 최대 · 쓰러짐) 하나만 내고, 알림은 `notifyHealthChanged` 한 곳이 비율 · 종류(쓰러짐 포함)를 정해 같은 오브젝트의 `HealthListenerComponent` 에 보낸다 — HP 바는 시작할 때 원천을 읽는다(맞은 뒤 붙여도 맞는 비율). RTTI 가 없어 인터페이스가 아니라 리플렉션 베이스다(`getComponent<HealthSourceComponent>()`). 시뮬레이션 키트(`Vitality` · 정수 HP 배열)는 상속하지 않는다 — 그 유닛에 HP 바를 띄울 게임은 뷰 컴포넌트가 상속해 스냅샷을 읽는다. 보이기 정책은 바의 PROPERTY 다. 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`, 글리프 · 클립은 `Scripts/generate/GenerateSpriteTextures.py`.
+- **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. 방어 식은 `DamageMath::applyArmor`(고정 방어, 최소 1 — 액션 룸의 적도 같은 식)이고, 0 이하 피해는 맞지 않은 것이다(HP · 무적 · 이벤트 없음 — 언리얼 `ApplyDamage`). `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. HP 바 ·
+  데미지 숫자는 같은 오브젝트의 화면 마커(`WidgetComponent` Screen — 데이터에 함께 적는다, `spawnNumber` 는 코드로 붙인다)에 위젯을 넣는다 — 마커는 한 트리에 모이므로
+  위젯 이름을 쓰지 않고 자식 순서 · 타입으로 찾는다(이름표가 겹친다). 위젯 값은 틱 뒤 큐에서 넣는다(병렬 틱에서 위젯을 고치지 말 것). 체력을 가진 컴포넌트는 `Combat/HealthSourceComponent` 를 상속해 읽기(`getHealthReading` — 지금 · 최대 · 쓰러짐) 하나만 내고, 알림은 `notifyHealthChanged` 한 곳이 비율 · 종류(쓰러짐 포함)를 정해 같은 오브젝트의 `HealthListenerComponent` 에 보낸다 — HP 바는 시작할 때 원천을 읽는다(맞은 뒤 붙여도 맞는 비율). RTTI 가 없어 인터페이스가 아니라 리플렉션 베이스다(`getComponent<HealthSourceComponent>()`). 시뮬레이션 키트(`Vitality` · 정수 HP 배열)는 상속하지 않는다 — 그 유닛에 HP 바를 띄울 게임은 뷰 컴포넌트가 상속해 스냅샷을 읽는다. 보이기 정책은 바의 PROPERTY 다. 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`.
 - **수명이 다하면 지우는 컴포넌트(이펙트 페이드 · 데미지 숫자 · 투사체)는 `LifeSpanUtil` 로 센다** — 흐른 시간은 저장되는 PROPERTY 이고 `onBeginPlay` 에서 0 으로 돌리지
   않는다(되돌리기 · 핫 리로드 때마다 수명을 다시 산다 — 투사체가 그랬다). 끝나는 경계는 `Countdown::tick` 과 같은 "수명 이상", 수명 0 은 지우지 않음.
 - **액션 룸의 적은 몬스터 정의다** — 종 id(`grunt` · `boss`)를 게임이 건 `MonsterCatalog` 서비스(`game::bindLocalService`)에서 찾고, 없으면 내장 정의(옛 상수와 같은 값)다. 카탈로그가 걸렸는데 그 id 가 없으면 싸움마다 한 번 경고한다. 사격은 `<Shot angle speed life radius damage/>` 줄마다 한 발(겨냥에서 돌린 각). 방어 식은 유닛 스탯과 같다(`DamageMath::applyArmor`). 룸이 돌려주는 플레이어 피해(`_damageToPlayer`)는 방어 전 값이다 — 게임이 플레이어 `UnitStatsComponent::takeDamage` 로 넣으면 방어가 한 번 빠진다. 룸의 적은 오브젝트가 아니라 `UnitStatsComponent` 를 거치지 않는다. 방 배치는 코드 표(`kArr*Spawn`) — 쓰는 게임이 생기면 맵의 스폰 지점으로.
@@ -1994,7 +1994,7 @@ cd build/Ninja-Debug/Bin
   밀어내기 합이 바뀐다, BR 은 근접 질의가 없다, Mech 는 조종사 몇 명 전수 검사가 격자보다 싸다), 키트 칸 저장소 템플릿 `Grid2D<T>`(덮는 자리 4 곳에서 4 줄,
   저장소 모양이 키트마다 다르다).
 - **게임 · 키트**: 복셀 청크 메시 제자리 갱신 — 다시 짓기는 블록이 바뀐 청크만(Debug VoxelCraft 자동 플레이 5,000 프레임에 2 회, 프레임당 최대 4 개), 새 `Mesh` 가
-  렌더 스레드가 든 옛 메시와 겹치지 않는 길. HP 바 · 피해 숫자의 배치 예약을 바뀔 때만 — 월드 변환이 틱 뒤에 적용돼 한 프레임 늦는다(변환 적용 뒤 훅이 필요).
+  렌더 스레드가 든 옛 메시와 겹치지 않는 길.
   카트 트랙을 공용 `SplinePath` 로 — 카트는 XZ 로 달려 랩 · 고스트 거리가 수평 길이다(3D 호 길이로 바꾸면 같은 트랙의 값이 바뀐다), 공유되는 것은 누적 거리 표 하나, 쓰는 게임 0.
 - **늘 상위에 오는 정당한 중복**(`RunDuplicateCode`): 백엔드 인터페이스 선언 · 레이스 래퍼 전달 · 플랫폼 구현 · enum 레이블 나열 · 서비스 로케이터 둘(`sw::editor` 는 nullptr, `sw::game` 은
   assert) · `MaterialPacking` 숫자 case(`-Wswitch-enum`) · DX12 상태 조회 · `TypeInfo` 생성자 · RLE · 콜스택 관문 · 셰이더 반사 D3D11/12(확인 중 — 1-3) · Win32 마우스 case · include 묶음.

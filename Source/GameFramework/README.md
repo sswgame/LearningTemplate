@@ -188,8 +188,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 - **Spline**: 곡선(`SplinePath` — Catmull-Rom · 3차 베지어 · 꺾은선, 호 길이 매개변수, 가장 가까운 점, 고른 간격 샘플)과 씬 컴포넌트(`SplineComponent`),
   누적 거리 표 계산(`ArcLengthUtil` — 코스터 트랙도 쓴다). 기믹 무버 · 카메라 레일 · 길이 함께 쓴다. `Spline/README.md`
 - **UI**: 장르 무관 UI 컴포넌트 — `DialogueRunnerComponent`,
-  `HealthBarComponent`, `DamageNumberComponent`. HP 바 · 데미지 숫자는 월드 공간 스프라이트(`SpriteInstanceBatch`)로 그린다 — 저장되는
-  컴포넌트를 만들지 않는다. HP 바는 `HealthListenerComponent`(Combat)를 상속해 체력 시스템의 알림(`HealthChangedEvent` — 다시 두기 · 바뀜 · 쓰러짐)을 받는다 —
+  `HealthBarComponent`, `DamageNumberComponent`. HP 바 · 데미지 숫자는 같은 오브젝트의 화면 마커(`WidgetComponent` Screen — 크기 · 머리 위 오프셋
+  `_worldOffset` · 피벗은 그 컴포넌트의 데이터)에 위젯을 넣어 그린다 — 거리와 상관없이 같은 크기 · 선명한 글자(HP 바는 겹친 진행 막대 둘, 숫자는 스타일
+  클래스 `damage` 의 글 위젯). 값은 틱 뒤 큐에서 넣는다(위젯은 게임 스레드만). `spawnNumber` 가 마커 · 숫자를 함께 붙인다. HP 바는 `HealthListenerComponent`(Combat)를 상속해 체력 시스템의 알림(`HealthChangedEvent` — 다시 두기 · 바뀜 · 쓰러짐)을 받는다 —
   체력 시스템(어빌리티 · 키트 · 게임)은 바를 모른다 — 바는 시작할 때 같은 오브젝트의 `HealthSourceComponent` 에서 비율을 읽는다(Lyra `ULyraHealthComponent::OnHealthChanged` 를 위젯이 받는 자리). 보이기 정책도 바의 것이다
   (`_bShowWhenHurt` · `_bHideWhenDead`). 데미지 숫자의 입력은 `DamageNumberComponent::setDamageValue` · `spawnNumber`.
   `FadeOutComponent` 의 흐림은 같은 오브젝트 스프라이트들의 색 알파에 곱해진다.

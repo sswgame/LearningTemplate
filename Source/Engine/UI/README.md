@@ -194,7 +194,9 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   `UiSystem::update` 가 레이아웃 앞에서(게임 틱 · 트랜스폼 적용 뒤 — 병렬 틱 밖) 등록된 컴포넌트마다 오브젝트의 월드 점을 게임 카메라로 투영해 슬롯을 옮긴다
   (`computeMarkerPlacement` — 순수 함수). `_drawSize` 가 있으면 그 크기로 고정해 레이아웃 경계가 되고, 없으면 원하는 크기에 피벗을 맞춘다. 카메라 뒤 · 화면 밖은 숨기거나
   `_bClampToScreenEdge` 면 가장자리(여백 24)에 붙이고(카메라 뒤는 나누기 전 클립 방향 — 오른쪽 뒤면 오른쪽 변), `_maxDistance` 밖은 숨긴다. `_bScaleWithDistance` 는
-  기준 거리 / 거리(0.25 ~ 2)를 피벗 둘레 렌더 변환으로. 2D(직교) · 3D 가 같은 코드다.
+  기준 거리 / 거리(0.25 ~ 2)를 피벗 둘레 렌더 변환으로. 2D(직교) · 3D 가 같은 코드다. 기준점 = 오브젝트 자리 + `_worldOffset`(월드 축 — 머리 위 HP 바).
+  코드의 보이기 정책은 `setHidden`(저장하지 않는다 — HP 바의 "맞으면 보임"). 쓰는 곳: GameFramework `HealthBarComponent` · `DamageNumberComponent`(같은 오브젝트의
+  마커에 위젯을 넣는다 — 마커는 한 트리라 위젯 이름을 쓰지 않는다).
 - **World**: 위젯을 컴포넌트 자기 트리(화면 스택 밖 — 포커스 · 입력 없음)에 놓고, `UiSystem::update` 가 렌더 텍스처 크기(`_drawSize`, 배율 1)로 놓고 칠해
   내용이 바뀔 때만 번호를 올린다. `EngineLoop` 가 목록(`rendertarget/widget_<컴포넌트 id>`)을 렌더 패킷 캔버스의 대상 목록에 싣고, 렌더러는 장면 뷰보다 먼저(프리패스 리스트)
   그 텍스처를 지우고 그린다(번호 · 텍스처가 그대로면 건너뛴다 — 텍스처가 그림을 지킨다). 시작할 때 오브젝트 밑에 사각형 자식(스프라이트 사각형 메시 · sprite2d 머티리얼 인스턴스

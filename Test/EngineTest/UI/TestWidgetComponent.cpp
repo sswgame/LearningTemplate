@@ -3,6 +3,10 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UI/UiSystem.h"
@@ -139,6 +143,60 @@ SW_TEST_CASE( WidgetComponentTest, MarkerFollowsPlacementInUiSystem )
     ui.update( 1.0f / 60.0f, viewport );
     SW_EXPECT_EQUAL( 0u, ui.getScreenCount() );
     SW_EXPECT_EQUAL( 0u, ui.getWidgetComponentCount() );
+}
+
+/**
+ * @brief [WidgetComponentTest] 화면 마커의 기준점은 오브젝트 자리 + 월드 오프셋(머리 위 HP 바)이고, 코드가 숨기면(`setHidden`) 카메라 안이어도 숨는다
+ * @details `updateScreenMarker` 는 게임 카메라를 스스로 찾는다 — 기대값은 같은 카메라 행렬로 `computeMarkerPlacement` 에 오프셋 더한 점을 넣은 것이다.
+ *          변이: `updateScreenMarker` 가 `_worldOffset` 을 더하지 않으면 자리가 오브젝트 발밑이라 진다.
+ */
+SW_TEST_CASE( WidgetComponentTest, ScreenMarkerAnchorsAtWorldOffsetAndHides )
+{
+    sw::UiSystem   ui;
+    sw::UiViewport viewport{};
+    viewport._size         = sw::float2{ WidgetComponentTestUtil::kWidth, WidgetComponentTestUtil::kHeight };
+    viewport._physicalSize = viewport._size;
+    sw::GameObjectManager manager;
+    sw::GameObject*       pCameraObject = manager.createGameObject( sw::hashed_string( "Camera" ) );
+    SW_ASSERT_NOT_NULL( pCameraObject );
+    sw::CameraComponent* pCamera = pCameraObject->addComponent<sw::CameraComponent>();
+    SW_ASSERT_NOT_NULL( pCamera );
+    pCamera->setLocalPosition( sw::float3{ 0.0f, 1.0f, -10.0f } );
+    sw::GameObject* pTarget = manager.createGameObject( sw::hashed_string( "Target" ) );
+    SW_ASSERT_NOT_NULL( pTarget );
+    sw::SceneComponent* pRoot = pTarget->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRoot );
+    sw::WidgetComponent* pMarker = pTarget->addComponent<sw::WidgetComponent>();
+    SW_ASSERT_NOT_NULL( pMarker );
+    manager.flushSceneTransforms();
+    manager.beginPlay();
+    pMarker->setWorldOffset( sw::float3{ 0.0f, 2.0f, 0.0f } );
+    pMarker->setContent( sw::make_unique<sw::uitest::TestBoxWidget>( "hp" ) );
+    pMarker->bindUiSystem( &ui );
+
+    const sw::CameraComponent* pGameCamera = manager.getCameraRegistry().selectCamera( sw::CameraRole::Game );
+    SW_ASSERT_NOT_NULL( pGameCamera );
+    const sw::float4x4              viewProjection = pGameCamera->getViewProjectionMatrix( viewport._physicalSize._x / viewport._physicalSize._y );
+    const sw::WidgetMarkerPlacement atOffset =
+        pMarker->computeMarkerPlacement( viewProjection, pGameCamera->getCameraPosition(), sw::float3{ 0.0f, 2.0f, 0.0f }, viewport._size );
+    const sw::WidgetMarkerPlacement atFeet = pMarker->computeMarkerPlacement( viewProjection, pGameCamera->getCameraPosition(), sw::float3{}, viewport._size );
+    SW_ASSERT_TRUE( atOffset._bVisible == SW_TRUE );
+    SW_EXPECT_TRUE( atOffset._position._y < atFeet._position._y - 10.0f ); // 머리 위는 화면에서 위다
+
+    pMarker->updateScreenMarker( viewport );
+    SW_EXPECT_TRUE( pMarker->getLastPlacement()._bVisible == SW_TRUE );
+    SW_EXPECT_NEAR_EQUAL( atOffset._position._x, pMarker->getLastPlacement()._position._x, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( atOffset._position._y, pMarker->getLastPlacement()._position._y, 0.01f );
+
+    pMarker->setHidden( true );
+    pMarker->updateScreenMarker( viewport );
+    SW_EXPECT_TRUE( pMarker->getLastPlacement()._bVisible == SW_FALSE );
+    SW_EXPECT_TRUE( pMarker->getContent()->getVisibility() == sw::WidgetVisibility::Collapsed );
+    pMarker->setHidden( false );
+    pMarker->updateScreenMarker( viewport );
+    SW_EXPECT_TRUE( pMarker->getLastPlacement()._bVisible == SW_TRUE );
+    pMarker->bindUiSystem( nullptr );
+    manager.endPlay();
 }
 
 /**

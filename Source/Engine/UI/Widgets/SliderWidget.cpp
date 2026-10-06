@@ -238,6 +238,14 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
+    void ProgressBarWidget::setBackgroundColor( const float4& color )
+    {
+        if ( _backgroundColor == color )
+            return;
+        _backgroundColor = color;
+        invalidate( WidgetDirty::kPaint );
+    }
+
     float2 ProgressBarWidget::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
     {
         (void)context;
@@ -253,7 +261,8 @@ namespace sw
         CanvasBrush   background{};
         background._color        = _backgroundColor;
         background._cornerRadius = float4{ radius, radius, radius, radius };
-        painter.fillRect( float2{}, size, background );
+        if ( _backgroundColor._w > 0.0f )
+            painter.fillRect( float2{}, size, background );
         const float32 fillWidth = size._x * _percent;
         if ( fillWidth <= 0.0f )
             return;

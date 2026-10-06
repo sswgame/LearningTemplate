@@ -1,11 +1,10 @@
 #pragma once
+#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/GameObject/SpriteInstanceBatch.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -13,56 +12,49 @@
 namespace sw
 {
     class GameObjectManager;
-    class SpriteClipAsset;
+    class TextWidget;
+    class WidgetComponent;
 
     /**
      * @class DamageNumberComponent
      * @brief 소유 오브젝트 자리에 데미지 숫자를 띄웁니다. 위로 떠오르며 흐려지고, 수명이 다하면 오브젝트를 지웁니다.
-     * @details 숫자는 글리프 아틀라스 클립(`_digitClipPath`, 기본 `engine/textures/ui/digits.sprite.json`)의 프레임으로 그립니다 — 프레임 0..9 가
-     *          숫자, 10 이 '-' 입니다. 아틀라스와 클립은 `Scripts/generate/GenerateSpriteTextures.py` 가 함께 만듭니다(배치 규칙이 한 곳에만 있습니다).
-     *          자릿수마다 스프라이트 하나(`SpriteInstanceBatch`, 최대 `kMaxGlyphCount` 장)이고 쓰지 않는 자리는 숨깁니다 — 값이 바뀌어도 구조
-     *          변경이 없어 틱 중에 바꿔도 됩니다. 알파는 `_alpha`(수명에 따라 1 → 0)를 색의 알파에 곱합니다.
+     * @details 숫자는 같은 오브젝트의 `WidgetComponent`(Screen — 화면 마커)에 넣는 글 위젯 하나입니다 — 스타일 클래스 `damage`(테마 시트가 크기 · 굵기 ·
+     *          외곽선을 정한다), 색은 `_color`, 불투명도는 `_alpha`(수명에 따라 1 → 0). 화면 공간이라 거리와 상관없이 같은 크기로 선명합니다.
+     *          값 · 색 · 알파는 틱 **뒤에** 넣습니다(위젯은 게임 스레드만 고친다). 피해를 내는 곳은 `spawnNumber` 하나를 씁니다(마커 · 숫자 컴포넌트를 함께 붙인다).
      */
-    REFLECT( Category = "UI", DisplayName = "Damage Number Component", Tooltip = "Floating damage number drawn with a glyph atlas" )
+    REFLECT( Category = "UI", DisplayName = "Damage Number Component", Tooltip = "Floating damage number drawn by the object's screen-marker WidgetComponent" )
     class SW_GF_API DamageNumberComponent : public Component
     {
     public:
         REFLECT_BODY();
 
-        /** @brief 그릴 수 있는 글자 수입니다. int32 의 가장 긴 글(부호 + 열 자리)입니다. */
-        static constexpr uint32 kMaxGlyphCount = 11;
-        /** @brief '-' 글리프의 클립 프레임 번호입니다(0..9 는 숫자 그대로). */
-        static constexpr int32 kMinusGlyphFrame = 10;
         /** @brief `spawnNumber` 로 띄운 숫자의 수명(초) · 떠오르는 빠르기(m/s)입니다. */
         static constexpr float32 kSpawnedLifeTime   = 0.9f;
         static constexpr float32 kSpawnedFloatSpeed = 1.2f;
+        /** @brief 숫자 글 위젯의 스타일 클래스입니다(엔진 기본 테마 `TextWidget.damage`). */
+        static constexpr const utf8* kStyleClass = "damage";
 
         DamageNumberComponent();
         virtual ~DamageNumberComponent() override = default;
 
         /**
-         * @brief 글리프 클립을 읽어 자릿수 스프라이트를 만들고, 알파를 흐른 수명에서 구합니다.
+         * @brief 글 위젯을 같은 오브젝트의 `WidgetComponent` 에 넣고, 알파를 흐른 수명에서 구합니다.
          * @details 흐른 수명(`_currentLife`)은 되돌리지 않습니다 — 떠 있는 동안 상태를 다시 읽은 숫자(플레이 중 되돌리기 · 핫 리로드)는 남은 수명을
          *          이어 갑니다. 새로 만든 숫자는 0 에서 시작합니다.
          */
         void onBeginPlay() override;
-        /** @brief 스프라이트를 놓습니다. */
-        void onEndPlay() override;
-        /** @brief 떠오르고 흐려지며, 수명이 다하면 오브젝트를 지웁니다. 틱 뒤에 글자 자리를 잡게 합니다. */
+        /** @brief 떠오르고 흐려지며, 수명이 다하면 오브젝트를 지웁니다. 틱 뒤에 글 위젯 값을 넣게 합니다. */
         void onTick( float32 deltaTime ) override;
-        /** @brief 값 · 색 · 크기 칸을 고치면 글자를 다시 잡습니다. 글리프 클립 경로면(값이 같아도) 클립과 스프라이트를 다시 만듭니다. */
+        /** @brief 값 · 색 칸을 고치면 글 위젯을 다시 채웁니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
-        /** @brief 소유 오브젝트가 꺼지면 글자를 숨깁니다. */
+        /** @brief 소유 오브젝트가 꺼지면 숫자를 숨깁니다. */
         void onOwnerActiveInHierarchyChanged() override;
 
-        /**
-         * @brief 보일 값을 정합니다(데미지 이벤트의 입력). 음수면 '-' 를 붙입니다.
-         * @details 자릿수가 바뀌어도 구조 변경이 없습니다(자리는 미리 있고 숨겨 둡니다). 시작 전이면 시작할 때 그립니다.
-         */
+        /** @brief 보일 값을 정합니다(데미지 이벤트의 입력). 음수면 '-' 가 붙습니다. 시작 전이면 시작할 때 그립니다. */
         void setDamageValue( int32 value );
         /** @brief 보일 값입니다. */
         int32 getDamageValue() const { return _damageValue; }
-        /** @brief 글자 색(알파 포함)을 정합니다. 그리는 알파는 이 알파 × `getAlpha()` 입니다. */
+        /** @brief 글자 색(알파 포함)을 정합니다. 그리는 불투명도는 이 알파 × `getAlpha()` 입니다. */
         void setColor( const float4& color );
         /** @brief 글자 색입니다. */
         const float4& getColor() const { return _color; }
@@ -77,29 +69,24 @@ namespace sw
 
         /**
          * @brief 피해 숫자 하나를 @p position 에 띄웁니다 — 떠오르며 흐려지다 `kSpawnedLifeTime` 초 뒤 지워집니다.
-         * @details 피해를 내는 모든 곳(`UnitStatsComponent` · `AbilitySystemComponent`)이 이것 하나를 씁니다. 틱 중이면 만들기를 틱 직후로 미룹니다
-         *          (틱 안에서는 컴포넌트를 붙일 수 없다). 직접 만들지 말 것 — 수명 기본값 0 은 "지우지 않음" 이라 맞을 때마다 숫자 오브젝트가 남습니다.
+         * @details 피해를 내는 모든 곳(`UnitStatsComponent` · `AbilitySystemComponent`)이 이것 하나를 씁니다. 오브젝트에 씬 컴포넌트 · 화면 마커
+         *          (`WidgetComponent` — 가운데 피벗) · 이 컴포넌트를 붙입니다. 틱 중이면 만들기를 틱 직후로 미룹니다(틱 안에서는 컴포넌트를 붙일 수 없다).
+         *          직접 만들지 말 것 — 수명 기본값 0 은 "지우지 않음" 이라 맞을 때마다 숫자 오브젝트가 남습니다.
          */
         static void spawnNumber( GameObjectManager& manager, const float3& position, int32 value );
 
-        /**
-         * @brief 값을 글리프 프레임 번호들로 바꿉니다(왼쪽부터). '-' 는 `kMinusGlyphFrame` 입니다. 글자 수를 돌려줍니다.
-         * @details 그리는 쪽과 시험이 같은 규칙을 씁니다. INT32_MIN 도 자릿수 그대로 냅니다(부호를 뒤집지 않고 자리마다 절댓값을 뽑습니다).
-         */
-        static uint32 makeGlyphFrames( int32 value, int32 ( &outArrFrame )[kMaxGlyphCount] );
-
-        /** @brief 글자를 그리는 스프라이트 배치입니다(시험이 항목을 읽습니다). */
-        const SpriteInstanceBatch& getSpriteBatch() const { return _spriteBatch; }
+        /** @brief 같은 오브젝트의 화면 마커 컴포넌트입니다(없으면 nullptr). */
+        WidgetComponent* findWidgetComponent() const;
+        /** @brief 숫자 글 위젯입니다(아직 넣지 않았으면 nullptr — 시험이 글 · 색 · 불투명도를 읽는다). */
+        const TextWidget* findTextWidget() const;
 
     private:
         /** @brief 흐른 수명에 맞는 흐림(1 → 0)입니다. 수명이 0 이면(사라지지 않는 숫자) 1 입니다. */
         float32 computeAlpha() const;
-        /** @brief `_digitClipPath` 의 클립을 잡고 그 아틀라스로 자릿수 스프라이트를 (다시) 만듭니다. 클립을 못 읽으면 스프라이트 없이 둡니다. */
-        void acquireGlyphSprites();
-        /** @brief 틱 직후(트랜스폼 적용 뒤) 게임 스레드에서 글자 자리를 잡게 합니다. 틱 밖이면 바로 잡습니다. */
-        void scheduleLayout();
-        /** @brief 소유 오브젝트 자리를 가운데로 글자를 늘어놓습니다. 클립이 없거나 꺼졌으면 모두 숨깁니다. */
-        void layoutSprites();
+        /** @brief 틱 직후(트랜스폼 적용 뒤) 게임 스레드에서 글 위젯 값을 넣게 합니다. 틱 밖이면 바로 넣습니다. */
+        void scheduleRefresh();
+        /** @brief 글 위젯에 값 · 색 · 불투명도를 넣고, 꺼졌으면 마커를 숨깁니다. */
+        void refreshWidget();
 
         PROPERTY( Category = "Damage", DisplayName = "Damage Value", Tooltip = "Number to show" )
         int32 _damageValue;
@@ -112,15 +99,8 @@ namespace sw
         float32 _floatSpeed;
         PROPERTY( Category = "Animation", DisplayName = "Alpha", Tooltip = "Current fade (1 to 0)", Min = 0.0, Max = 1.0, ReadOnly )
         float32 _alpha;
-        PROPERTY( Category = "Style", DisplayName = "Glyph Size", Tooltip = "Width (advance) and height of one glyph in world units", Min = 0.0, Units = m )
-        float2 _glyphSize;
-        PROPERTY( Category = "Style", DisplayName = "Color", Meta = "Color", Tooltip = "Glyph color; alpha is multiplied by the fade" )
+        PROPERTY( Category = "Style", DisplayName = "Color", Meta = "Color", Tooltip = "Text color; alpha is multiplied by the fade" )
         float4 _color;
-        PROPERTY( Category = "Style", DisplayName = "Glyph Clip", AssetPath, AssetType = "SpriteClip", Tooltip = "Glyph atlas clip: frames 0-9 are digits, frame 10 is minus" )
-        string _digitClipPath;
-        PROPERTY( Category = "Style", DisplayName = "Sorting Layer", Tooltip = "Sorting layer of the glyphs (render2d.xml); world UI draws above sprites" )
-        hashed_string                     _sortingLayer;
-        shared_ptr<const SpriteClipAsset> _digitClip;   ///< 읽은 글리프 클립입니다. 저장하지 않습니다
-        SpriteInstanceBatch               _spriteBatch; ///< 글자마다 한 장. 저장하지 않습니다
+        bool   _bWarnedNoWidgetComponent; ///< 같은 오브젝트에 WidgetComponent 가 없다고 한 번 알렸다
     };
 } // namespace sw
