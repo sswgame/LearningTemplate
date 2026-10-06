@@ -12,3 +12,11 @@
 | `Server/` | 전용 서버 운영 설정(게임마다) — 비밀은 환경 변수 이름만 | 함 |
 
 명칭 주의: `EngineConfig.json`(런타임 엔진 호스트) ≠ `Environment/toolchain_config.json`(개발 PC 컴파일러 · SDK 경로).
+
+## 함정 · 계약
+
+- **설정 표의 열쇠는 타입이다**(`ensureConfig<T>( path, generated )`). Shipping 은 디스크의 `Config/` 를 보지 않는다. 고정 스텝 상한은 `EngineConfig::_fixedDeltaTime` · `_maxFixedStepPerFrame`
+  (넘친 잔액은 버린다). `ModuleFrameState` 래치 지점이 둘인 것은 의도다(옮기면 에디터 Step 한 칸이 틱 없이 소비된다).
+  틀린 설정 파일(모르는 키 · 대소문자만 다른 키 · `Min`/`Max` 밖)은 키 이름과 함께 오류이고 기동을 멈춘다 — 없는 파일만 생성 JSON → C++ 기본값이다.
+  `EngineConfig.json` 도 configure 의존이다(Shipping 에 굽는 값). 설정 파일에는 기본값과 다른 값만 적는다(언리얼 `Default*.ini` 와 같다) —
+  `ConfigFileSchemaTest` 가 기본값을 다시 적은 키를 막는다(`ConfigManager::collectDefaultEchoKeys`, 앱이 통째로 쓰는 상태는 제외).

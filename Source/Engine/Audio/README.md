@@ -184,3 +184,10 @@ AudioEngine& engine = pAudio->getEngine();                           // 클립 �
   XAudio2 처리 스레드에서 다음 버퍼를 렌더해 제출합니다(지연 ≈ 21 ms + 블록). 장치를 못 열면 오프라인으로 돕니다(로그 `offline - no device`).
 - **Linux**: 출력 백엔드가 없습니다 — `NullAudioSystem`(오프라인 렌더). 엔진 코드는 플랫폼 분기가 없습니다.
 - 공통 디코더(WAV · OGG)가 못 읽는 형식(MP3 · ADPCM WAV)은 백엔드의 대체 디코더(`AudioClipStore::setFallbackDecoder`, Windows 는 Media Foundation)가 풉니다.
+
+## 함정 · 계약
+
+- **GitHub Windows 러너에는 오디오 출력 장치가 없다**(`CreateMasteringVoice` 0x80070490 = `ERROR_NOT_FOUND`) — 출력 줄의 `[Warning]` 을 세는 시험(`AppCookTest`)이 그것으로 졌다.
+  장치 없음은 Info 로 알리고 오프라인 렌더로 돈다.
+- **오디오** — 믹스는 전부 `AudioEngine`(플랫폼 무관)이 하고 백엔드는 출력 장치만 연다(XAudio2 는 스트리밍 보이스 하나). 장치가 없으면 `IAudioSystem::update` 가
+  흐른 시간만큼 렌더한다. 볼륨 · 음소거는 같은 이름 버스의 사용자 볼륨, 음소거는 master 한 곳. 소리 동작은 `AudioEngine::render` 로 버퍼에 렌더해 숫자로 잰다(`Audio/README.md`).

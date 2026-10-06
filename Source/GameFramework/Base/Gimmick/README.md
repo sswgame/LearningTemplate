@@ -121,3 +121,8 @@ floodStatus + through), 걸음 규칙(`Expire` — 상태가 재질 수치만큼
   부서집니다. 폭발 드럼통은 반경이 경계에 닿은 파괴 오브젝트(자기 포함)에 자리 있는 폭발(`applyRadialDamageAtWorld` — 중심 변형 `_fractureStrain`, 충격량
   `_blastImpulse`)을 주므로 사슬 폭발이 근처 벽 · 상자를 그 자리에서 깹니다. 엄폐물(`DestructibleComponent`)은 단계마다 중심에 `_stageStrain` × 단계 비율로
   조각을 깎고 마지막 단계에 `_shatterStrain` 으로 부숩니다(단계 · 신호 · 연출은 그대로). 시험: `GimmickFractureTest`(`Test/EngineTest/GameFramework/Gimmick/TestGimmickFracture.cpp`).
+
+## 함정 · 계약
+
+- **병렬 틱에서 다른 오브젝트의 상태(센서 피해)를 바로 바꾸면 결정적이지 않다** — 받는 쪽이 이번 틱에 볼지가 스케줄에 달린다(사슬 폭발이 한 프레임에 번지거나 말거나).
+  `GimmickDamageUtil` 처럼 틱 뒤(`executeOrDeferPostTick`)로 미루면 늘 다음 틱이다. Windows 헤더는 `near` · `far` 를 빈 매크로로 둔다 — 지역 변수 이름으로 쓰지 말 것.

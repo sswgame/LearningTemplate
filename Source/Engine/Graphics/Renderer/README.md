@@ -158,3 +158,75 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
   를 보세요 — 큐브를 넣고 실제로 그립니다.
 - **`forwardpipeline` 은 완전한 체인**이라 레벨이 전부 1개입니다. 병렬 기록을 실제로 돌려
   보려면 `deferredpipeline` 을 써야 합니다(레벨 0 = Shadow + GBuffer).
+
+## 함정 · 계약
+
+- **한 `FrameRenderer` 로 두 씬을 번갈아 그리면 옛 배치가 나온다** — 씬 빌더의 수집 캐시(프리미티브 집합 세대)는 씬마다가 아니라서, 다른 매니저의 같은 세대
+  번호를 "그대로" 로 본다. 픽셀 비교 시험은 씬마다 렌더러를 둔다(`RenderPassGpuTest.SkinnedMeshFollowsPaletteLikeCpuSkinning`).
+- **UI 는 Present(톤맵) 뒤 Canvas 패스가 같은 출력에 Load 로 그린다** — 스크린샷 캡처 → 백버퍼 복사는 Swapchain 을 쓰는 마지막 패스 끝이다(그 전에 복사하면
+  UI 가 캡처에 없다 — `RenderPassGpuTest.CanvasDrawsOnEveryBackend` 가 백버퍼 사본과 캡처를 견준다). Canvas 는 Swapchain 을 쓰는 마지막 패스여야 한다(검증).
+- **스킨 팔레트는 `AnimationSystem::getUnits()` 에서 모은다, 레벨이 아니다** — `unregisterUnit` 은 레벨을 다음 평가까지 비운다. 레벨로 모으면 시체 하나를 걷는 프레임에
+  모든 스킨드 메시가 팔레트 없이(바인드 포즈 = T 포즈) 한 번 그려진다(`GpuSceneTest.SkinPalettesSurviveAUnitLeavingTheFrame`).
+- **스킨드 메시는 모프 풀의 뒤 구간이다** — 팔레트는 GT 의 `AnimationSystem` → `GpuSceneBuilder::collectSkinPalettes`(수집 건너뛰기와 무관하게 매 프레임) →
+  스냅샷 → `GpuMeshMorphPool::uploadSkinPalettes`(풀 순서) → meshskin.hlsl. 팔레트 행은 행벡터 4x4 의 **열** 셋이다(행을 넣으면 전치된 회전).
+  모프 타깃은 같은 컴퓨트에서 **스키닝 앞에** 더한다(가중치는 팔레트 행 뒤) — 스키닝 뒤에 더하면 민 방향이 본과 같이 돌지 않는다
+  (`RenderPassGpuTest.MorphWeightsDeformBeforeSkinningLikeCpu`).
+- **다중 뷰(`FrameRendererViews.cpp`)의 함정 셋.** ① 디스패치마다 쓰는 상수버퍼(컬링 · 정렬)는 뷰마다 따로다 — 정렬 CB 하나를 주 뷰 · 추가 뷰가 나눠 쓰면 마지막
+  기록만 남는다(`RenderView::_sortCb`). ② 직렬 경로의 패스는 `_frameCtx._pCmd` 리스트에 기록한다 — 프리패스 리스트가 이미 닫힌 뒤라 그 자리를 뷰의 리스트로 바꿔
+  두지 않으면 Vulkan 이 죽고 나머지는 0 을 그린다. ③ D3D 의 `CopyResource` 는 같은 포맷 · 크기만 받는다 — 컷 프레임은 원본을 기록에 복사하지 않고 기록 자리에
+  원본을 건다, 캡처를 백버퍼로 옮기는 것은 출력이 백버퍼 크기일 때만. GL 기본 프레임버퍼는 아래 원점이라 `setViewport` 가 y 를 뒤집는다(오프스크린 FBO 는 그대로).
+  창에 나간 그림은 `blitTexture( 0, 텍스처 )`(src 0 = 백버퍼, Present 전 프레임 스트림)로 읽는다 — `RenderPassGpuTest.PresentedBackBufferMatchesTheCapture` · `ScreenRectViewLandsInItsCornerOfTheBackBuffer`.
+  추가 뷰의 메모리는 뷰 픽셀 × 첨부 바이트다 — 포워드 12 B/px(512² 뷰 3 MB), 디퍼드 64 B/px(TAA 기록 포함, 512² 뷰 17 MB · 1080p 주 뷰 133 MB). 뷰 한도 8 개를 다 512² 디퍼드로
+  써도 주 뷰 하나 수준이라 공유 풀은 하지 않았다 — 4 인 분할 화면(뷰마다 1/4 화면)도 합이 주 화면과 같다. 추가 뷰는 그래프 전체(그림자 패스 포함)를 자기 풀로 돌아
+  그림자 맵도 뷰마다 하나다(크기는 뷰와 무관한 그림자 품질 — 2048² D24S8 = 16 MB/뷰, 품질 3 은 64 MB) — 공유는 비용으로는 이득이 작았다([결정 기록](../../../../docs/09_Decisions.md) 3절), 화질이 문제가 되면 주 뷰 그림자를 먼저 그려 나눠 읽게 한다.
+  초상화 굽기(`PortraitRenderer`)는 동기다 — 부르는 곳이 `App --render-portraits`(일괄 CLI) 하나뿐이라 렌더 스레드를 멈추는 편이 맞다. 런타임 · 에디터 썸네일이 쓰게 되면 그때 큐로.
+- **기본 포워드 파이프라인의 톤맵(Reinhard `c/(c+1)`)은 흰색을 0.5 로 누른다** — 2D 화면이 회색으로 죽는다. 2D 는 `forward2dpipeline.xml`(`-gv_renderPipeline`).
+  씬의 `_localRotation` 은 라디안이다(`Units=rad`) — "0,0,-90" 은 조용히 엉뚱한 방향이다.
+- **투명 순서의 정본은 CPU 의 `sortTransparent` 하나다**(정렬 레이어 키 → 깊이 → 후보 번호). GPU `instancesort.hlsl` 은 압축된 목록을 인스턴스 번호
+  오름차순으로 되돌릴 뿐이다 — 거기서 깊이를 다시 재면 정렬 레이어 · 직교 시선 축을 모르고 같은 깊이를 불안정하게 갈라 CPU 와 다른 순서를 낸다.
+  추가 뷰는 `buildViewTransparentOrders` 가 발행된 꼬리를 그 뷰의 눈으로 다시 정렬해 순번(정렬 디스패치 t2) · 배치 순서 · 뷰 슬롯 스트림(DX11)으로 싣는다 —
+  배치끼리 깊이가 엇갈리는 것과 512 넘는 투명 배치(Preserve)는 그 뷰에서도 주 순서다. 머티리얼을 넘어 묶는 백엔드(DX12 · Vulkan)는 색만 다른 투명 머티리얼이
+  한 배치라 순서가 GPU 정렬 하나로 정해지고, 나머지는 배치 순서가 정한다 — 둘 다 `RenderPassGpuTest.ExtraViewSortsTransparencyFromItsOwnEye` 가 본다.
+- **트랜지언트 크기를 따르는 자원(TAA 히스토리 · Present 캡처)은 `releaseTransientResources` 만 놓는다** — 패스 자원만 다시 세우는 셰이더 리로드는 이것을 다시 만들지
+  않는다(놓으면 리사이즈 전까지 히스토리 0). 컴퓨트 상수버퍼는 `collectComputeConstantBuffers` 표 하나로 만들고 놓는다.
+- **첨부 `_resolutionDivisor` 를 쓰면 패스는 출력 첨부 크기로 열린다** — 한 패스의 출력은 같은 나눗수여야 한다(검증이 본다). Vulkan PSO 는 셰이더가 읽는 정점 속성만 건다.
+  원본을 비켜 읽는 효과는 `g_SourceTexel`(원본 역할 입력의 실제 크기, `registerPassTexture`), 깊이를 비켜 읽는 효과는 `g_OutlineParams.yz`(프레임) — 깊이를 나누지 않은 파이프라인 기준이다.
+- **거울 변환(월드 3x3 행렬식 < 0)은 컬을 뒤집은 PSO 변형으로 그린다** — 배치 키 · 정렬 키 · 투명 병합에 `_bReverseCulling` 이 들어 있고 PSO 변형 키의 한 축이다
+  (언리얼 `bReverseCulling`). 트랜스폼만 바뀐 프레임도 부호를 다시 구한다.
+- **깊이 첨부는 렌더 그래프의 쓰기다.** 그래프는 선언 순서상 앞선 쓰기를 생산자로 고르므로, 불투명 깊이를 읽을 패스(SSAO · 외곽선)는 투명 패스보다 **먼저 선언**한다.
+  D3D11 은 첨부 전이(`prepareTextureForRenderTarget`)가 그 텍스처가 걸린 PS SRV 슬롯을 뗀다(`D3D11RecordingState::_arrPixelSrvTexture`).
+- **패스 종류 하나 = `RenderPassType` 한 값 + `RenderPassTypeInfo.cpp` 의 case 하나**(기본 셰이더 · define · 포맷 · 클리어 · 입력 계약 · 플래그). 전용 실행이
+  필요할 때만 `executePass` 의 switch 에 case. 런타임 PSO 와 쿠커가 같은 `selectRenderPassShader` 를 부른다. 마지막 열거자를 바꾸면
+  `kRenderPassTypeCount` 를 직접 고친다(`RenderPassTest.TypeInfoTableCoversEveryEnumValue` 가 잡는다). 리플렉션 매니페스트는 키 순서로 쓴다(결정적).
+- **패스가 머티리얼로 배치를 거르면(메시 외곽선의 `_pRequiredMaterialDefine`) 드로우 · 머티리얼 PSO 변형 · 쿠커가 같은 `drawsMaterialInPass` 를 본다** — 하나라도 빠지면 쿠킹 안 된 변형을 런타임이 찾거나(Shipping 매니페스트 미스) 외곽선을 모르는 셰이더가 앞면 컬링으로 그려진다. 툰 구 시험은 정점 색을 흰색으로 둔다(생성기의 검증 색이 계단 위에 그라데이션을 얹는다).
+- **렌더 스레드는 씬을 못 본다** — 런타임 경로의 `_pScene` 은 늘 null, `GpuSceneSnapshot` 이 유일한 통로다. CPU 폴백을 다시 만들지 말 것. 스레드 경계 타입은 `GpuSceneBuilder`(GT, GPU
+  핸들 0) / `GpuSceneSnapshot` / `GpuScene`(RT)이다. 스냅샷은 GT 가 만든 것만 옮긴다 — RT 가 파생하는 값(`_indirectCommandCount`)을 실으면 GT 의 0 이 덮는다(증상: "카메라를 움직일
+  때만 메시가 보인다"). 패킷은 자기완결이어야 하고 소유(`shared_ptr`)를 싣는다 — 생포인터는 `CheckRenderOwnership` 이 막고 예외는 `// SW_OWNERSHIP_RAW_OK: <이유>`.
+- **상수버퍼를 드로우 · 디스패치가 나눠 쓰면 안 된다**(같은 함정이 두 번: 패스 CB, 컬링 CB). 값이 바뀔 때만 쓰는 CB 는 `RHIConstantBufferMirror` 로 링의 모든 칸에 채운다(안 그러면
+  DX12 · Vulkan 이 세 프레임 중 둘을 0 으로 그린다). `updateConstantBuffer` 크기는 만든 크기를 넘으면 안 된다(GL 만 막는다) — 셰이더를 다시 구우면 머티리얼 CB 가 커질 수 있어
+  `MaterialInstance` 가 `_constantByteSize` 로 다시 만든다. CB 칸 크기는 리플렉션, 쓰는 크기는 XML `shaderType` — 어긋나면 옆 프로퍼티 색이 오염된다(`writeBoundedValue`).
+- **GPU 모프는 구조버퍼 풀 + 정점 셰이더 인덱스 읽기다**(Vertex 버퍼의 UAV · DX12 VB 의 UPLOAD 힙 · DX11 겸용 불가 때문). `Mesh::setVertices` 는 매번 GPU 버퍼를 다시 만들므로 매 프레임
+  CPU 정점 갱신은 금지.
+- **GPU 가 드로우 커맨드를 만든다** — 컬링이 가시 인스턴스 ID 를 압축해 커맨드를 생성한다(개수만 세면 보이는 쪽이 사라진다). 투명은 GPU 바이토닉 정렬, 블렌드 모드는 머티리얼이다.
+  투명 배치는 정렬된 순서에서 연속한 같은 키를 묶는다(배치 순서 = 깊이 순서). 병합 키의 `_materialCb` 는 레이아웃이 MaterialCB 슬롯을 가질 때만 넣는다. `RHIDispatchIndirectCommand` ·
+  `RHIDrawIndexedIndirectCommand` 는 C++ 참조가 0 이어도 지우지 않는다(인자 버퍼 레이아웃 정본).
+- **GpuSceneBuilder 계약** — 전체 · 부분 수집은 같은 `fillCandidateFromPrimitive`. 집합 · 퍼뮤테이션 세대가 바뀌거나 더티가 1/4 을 넘으면 전체 수집. 부분 프레임에는 회수 시계를
+  멈춘다(머티리얼 원소 회수는 돈다). 퍼뮤테이션 해시는 `SortKey` 에 직접, 정지한 씬의 재수집 트리거는 `MaterialUtil::getPermutationGeneration()`. 발행한 인스턴스 배열은 다시 고치지
+  않는다(`GpuInstanceRing` 은 `use_count()==1` 슬롯에만 짓는다). `rebuildTransparentTail` 은 접두부 갱신과 같은 `runParallel` 의 블록 0 이다. `DrawCandidate` 의 `shared_ptr` 을
+  날 포인터로 바꾸지 말 것(같은 주소에 새 메시가 태어나면 ABA). `PrimitiveRegistry` 의 더티는 렌더 상태 · 월드 행렬만 둘이다.
+- **렌더 패스** — 패스 입력은 선언이 곧 바인딩이다(`RenderPassInputSignature` 역할 표, 첨부 역할은 `_role` 선언 → 정본 이름 → 포맷). `findTransient` 의 핸들 0 은 백버퍼다 — 없는 첨부를
+  열면 씬이 백버퍼로 간다. `beginColorPass` 가 false 면 그리지도 닫지도 않는다. WAR 간선은 "생산자 다음 쓰기", 같은 이름 패스는 거절, `executeParallel` 은 모든 레벨의 리스트를 먼저
+  마련하고 못 하면 false(직렬 폴백은 앞 레벨을 두 번 그린다). 풀스크린 패스의 컬은 `None` 고정. 후처리 효과는 패스가 아니라 함수(`postchain.hlsl` + 퍼뮤테이션, 기준은
+  `forwardpipelinestaged.xml` · `FusedPostChainMatchesStaged`). 깊이 프리패스는 `SW_PASS_DEPTH_PREPASS` · LessEqual, DX11 은 VS 만.
+- **그림자** — 직교 투영 깊이 범위는 눈 기준 `[거리-반경, 거리+반경]`(아니면 그림자 항이 늘 1), 샘플은 `swSampleShadowAtWorld`, 회귀는 행렬로(`ShadowMatrixDepthRangeContainsScene`) ·
+  픽셀로 보려면 바닥(`-gv_benchGround=1`). 그림자 시험은 그림자 깊이 쓰기를 끈 판과 **달라야** 한다. 렌더 차이가 같은 프로세스 안에서는 결정적이고 프로세스마다 갈리면 배치 순서를 의심한다.
+  바이어스는 텍셀 단위로 환산한다(`DirectionalShadowProjection::computeShaderParams` — 깊이 1 · 노멀 오프셋 2 텍셀). NDC 상수로 두면 볼륨에 비례해 커진다
+  (360 m 볼륨에서 0.02 = 7.2 m: 작은 물체 그림자 소실 · 발치 분리). 그림자 맵은 화면 크기와 무관(`gv_shadowQuality` → 1024~4096), 맞춘 볼륨은 절두체 ∩ 받는 높이 띠 + 텍셀 스냅.
+  필터는 3x3 PCF, 에뮬 백엔드(DX11 · GL)는 GatherRed 쌍선형 비교라 네 백엔드 그림이 같다.
+- **타임스탬프 계약** — 칸은 패스 인덱스로 고정(흐르는 카운터는 병렬 기록에서 경쟁), 기다리지 않고 링 슬롯이 펜스를 지난 뒤에만 읽는다, 안 적은 칸은 음수. 계측 게이트는
+  `SW_PROFILE_COMPILED` — Shipping 에서는 통째로 빠진다(로그에만 쓰는 값은 `[[maybe_unused]]`).
+- **`GpuUploadQueue`** 는 GT 가 `buildFromScene` 뒤 · 스냅샷 전에 동기로 flush 한다. 워커 생성은 `RHICapabilities::_bThreadSafeResourceCreation`(GL 은 큐가 받지 않는다 — 렌더 스레드가 그 프레임에 만든다. 게임 스레드가 GL 자원을 만들면 렌더 스레드가 쥔 컨텍스트를 기다리다 시간을 넘긴다). 비상 스위치 `-gv_gpuUploadQueue=0`.
+- **디퍼드의 고정 비용은 채움률이다**(1280×720 2503 us · 640×360 864 us, 라이트 256 개 몫 ~600 us) — 타일/클러스터 컬링은 측정이 가리키는 자리가 아니다. GBuffer 는 같은 머티리얼
+  셰이더에 `SW_PASS_GBUFFER` 를 얹는다(출력은 양쪽 다 구조체).
+- **인스턴스 배치를 든 컴포넌트는 `setOwnerComponent( this )` 를 부르고, 활성 변화(`onOwnerActiveInHierarchyChanged` · `_bActive` 의 `onPropertyChanged`)에 `markAllEntriesDirty` 를 부른다.**
+  빌더는 `MeshComponent` 와 같은 규칙(`Component::isActive`)으로 소유 컴포넌트가 꺼진 배치를 뺀다 — 더티를 찍지 않으면 부분 수집이 지난 프레임 후보를 그대로 쓴다.

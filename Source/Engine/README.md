@@ -200,3 +200,30 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   런타임 모듈이다. 이 저장소는 물리 분할을 하지 않으므로 폴더 티어로 같은 선을 긋는다.
 - **물리 모듈 분할(EngineRHI / EngineReflection)은 하지 않는다.** 그래프가 DAG 라 어디를 잘라도 순환이 없으므로,
   자를 때는 티어 경계를 그대로 링크 단위로 바꾸면 된다.
+
+## 함정 · 계약
+
+- **폴더를 옮기기 전에 옮길 파일의 include 를 티어 표와 대조한다**(2026-10-05 폴더 정리). 계획한 자리(`Animation/` · `Utility/Console/` · `Localization/`)가
+  위층을 include 하는 파일을 받을 수 없어 `Character/Pose/` · `Character/AnimNotify/` · `DevTools/` 로 갔다. 엔진 루트는 `CheckEngineRootFiles` 허용 목록,
+  폴더 크기 · 파일 하나짜리 폴더는 `RunFolderFileCount.py`(보고서). 시험은 소스 폴더를 따른다(`Test/README.md`). 옮긴 헤더의 옛 `.gen.cpp` 는 생성 폴더에서 지운다.
+- **엔진 기동 · 종료 순서는 `EngineInitStepList.xxx` 의 의존 칸이 정하고, 표는 그 순서대로 적는다**(UE `USubsystem` 의존 선언). 의존은 식별자 목록
+  `{ A, B }` 라 오타 · 아래 줄 의존은 컴파일 오류(static_assert), 정렬은 의존만 보고 동점은 이름 순, 그 결과가 줄 순서와 같은지
+  `EngineInitSequenceTest.TableIsWrittenInStartupOrder` 가 본다(의존을 빼먹으면 진다). 종료는 초기화한 단계만 역순.
+  새 단계는 호스트(EngineLoop · 시험 하네스 `Test/TestFramework/main.cpp`)마다 `<단계>StartupStep` 구조체 하나(initialize · shutdown · destroy, 기본은 no-op)를 더한다 —
+  빠지면 `EngineInitStepTable` 이 컴파일 오류. 해제(destroy)는 **표의 모든 단계**를 역순으로 돈다(실패 · 건너뜀 · 닿지 못한 단계 포함)라 본문은 null 안전이어야 하고,
+  백엔드 교체는 `shutdownDependentsOf( RHI )` · `restartStoppedSteps()` 로 같은 initialize 본문을 다시 돌리므로 본문은 다시 설 수 있어야 한다(객체가 있으면 다시 쓰고
+  디바이스 설정은 매번 건다 — 교체 뒤 `setMergeBatchesAcrossMaterials` 가 옛 디바이스 값으로 남던 결함이 이것). 로거 · 명령줄 · 크래시 핸들러는 두 호스트가 `EngineBootstrap`
+  하나를 쓴다(로거 스레드는 메모리 프로파일러보다 먼저, 로거 객체는 맨 마지막 — 해제 중의 진단이 남는다). 서비스 표 칸은 낱말(`Required/Optional` ·
+  `GameVisible/HostOnly` · `EngineCreated/HostCreated`, RuntimeAPI `ServiceListColumns.h`), `destroyAll` 순서는 `makeDestroyOrder()` 로 시험한다.
+- **엔진 서비스는 `EngineServiceList.xxx` 의 `owned` 열에서** `EngineServiceCollection::createAll()` / `bindInto()` 로 생성된다(호스트가 먼저 만든 것은 덮지 않는다, 정의는 `.cpp`, 자리는
+  `Source/Engine/` — `Common` 이면 `CheckEngineLayers` 가 막는다). 호스트 대조는 `CheckEngineServiceBinding`. 시험의 서비스 흔들기 창구는 `test::rebindEngineServices` 하나.
+  `EngineServiceTest` 의 기대값도 같은 X-매크로라 `gameAllowed` 값 자체가 틀린 것은 못 잡는다.
+- **Engine 폴더 include 그래프는 DAG 다**(`RunEngineLayerGraph.py`, 다시 제안하지 말 목록은 `Source/Engine/README.md` "같아서 두는 것"). 일부러 그 층에 둔 것: 핸들 · `TagID` 는 Core,
+  `CommandStack` 은 `EngineLoop` 소유(핫 리로드를 넘어 산다), `TileMapXml.h` 는 Engine. 엔진 창은 `WindowResizeEvent` 를 발행하지 않는다(델리게이트). 상태가 살아남아야 하면 Engine · App 에 둔다.
+- **기동 순서**: 로거 · 크래시 핸들러 → `ResourceUtil::initialize()`(로거 뒤라야 진단이 남는다) → 설정 → `AssetManager::initialize()` + `mountContent`. 종료는 `_rhi->shutdown()` 이
+  `AssetManager::shutdown` 보다 먼저, 오디오는 TaskManager 보다 먼저(`_voiceMutex` 로 `_bInitialized` 를 먼저 내린다), 로거를 세운 뒤 `MemoryProfiler`. 시험 호스트도 앱과 같은 순서
+  (리플렉션 등록 → 설정 → AssetManager).
+- **프로세스 정적 캐시(`ShaderReflectionLibrary` 매니페스트 같은 것)는 엔진 종료 단계가 비운다** — 안 비우면 기동 뒤에 채운 몫이 종료 누수 검사(기준선 대비 바이트 ·
+  블록 수)에 남는다(백엔드 교체 뒤 ~1.1 MB). 진단은 MemoryProfiler 세부 추적을 켜고 `destroyAll` 뒤 `getTopCallStacks( LiveBytes )`. 교체 전 백엔드의 매니페스트는
+  종료까지 상주한다(상한 4 개라 둔다). 모듈 인스턴스 내리기는 에디터 · 게임 모두 타입을 걷은 **뒤** 서비스를 뗀다(`ModuleHostInternal::destroyInstance`).
+  프로세스 정적 저장소(이름 풀 · 트랜스폼 페이지 · 경로 캐시)는 `EngineBootstrap::shutdown` 이 놓는다 — 컨테이너의 `clear()` 는 버킷 · 밀집 배열 · 용량을 남기므로 타입을 적은 빈 객체를 대입한다(`= {}` 는 initializer_list 대입이 골라져 남는다). 이름 풀 블록은 넣는 쪽 태그가 아니라 `EngineMisc` 로 센다. 종료 보고 0 은 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 지킨다.

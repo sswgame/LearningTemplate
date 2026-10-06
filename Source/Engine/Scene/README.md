@@ -177,3 +177,18 @@ if (loadedDoc.load("Resource/game/<pack>/maps/level01.scene.xml"))
     newScene.instantiate(loadedDoc);
 }
 ```
+
+## 함정 · 계약
+
+- **쿠킹 이름은 `AssetCookPath`(`Engine/Resource/AssetFormat.h`) 표 하나** — `.scene.xml` → `.scene.bin`, `.prefab.xml` · `.prefab.json` → `.prefab.bin`, `toSourcePath` ·
+  `isCookableSource`. 로더 · 쿠커 · 에디터 판정 · `SceneManager::saveActiveScene` 이 모두 지난다. 쿠킹은 엔진이 한다(`PrefabCache::cookAllPrefabs` · `App --cook-scenes` ·
+  `AssetDatabase::writeRegistryFiles`), 파이썬 `CookAssets.py` 는 스테이징만. 쿠킹은 왕복 검증한 엔티티만 바이너리로 바꾸고 나머지는 XML 로 남기며 WARNING 을 낸다.
+- **씬 엔티티는 0 이 아닌 `id` 가 필수다** — `SceneDocument::loadXml` · `saveXml` · 쿠커가 거절한다. 손으로 씬 XML 이나 `SceneObjectNode` 를 지을 때 `_fileId` 를 빠뜨리지 말 것.
+  이름만 남은 부착(id 0 + 이름)은 찾지 못한 부모 참조를 다른 id 공간으로 옮겨 적은 **지금 형식**이라(`SceneComponent::syncAttachSerializeFields`) 지우면 안 된다.
+- **씬 · 프리팹 손 XML 을 쓰지 말 것** — 임베디드 오브젝트 XML 은 리플렉션 산출물이다. 머티리얼 XML 에서 `_permutations` 를 빼먹으면 네 백엔드가 제각각 무너져 렌더러 버그로 오인한다
+  — 실제 에셋 + `setPropertyValue` 로 간다.
+- **씬 로드** — `SceneManager` 대기열은 한 자리다. 밀려난 요청 · `shutdown` · 취소도 약속에 `nullptr` 을 채워야 `future.get()` 이 영원히 멈추지 않는다. 로드 중 모듈 팩토리가 바뀌면
+  (`getFactoryHeadSerial`) 다시 짓는다. `SceneManager::shutdown` 은 씬을 내리기 **전에** 활성을 비운다.
+- **씬 쿠킹은 활성 게임 팩만 엄격하다.** 다른 게임 팩(`game/<다른 게임>/`)의 씬이 이 빌드에 없는 게임 모듈의 컴포넌트를 쓰면 건너뛴다(정보 줄) — 실패로 세면 다른
+  게임을 고른 빌드의 쿠킹이 모두 선다. 엔진 · 공용 타입만 쓰는 다른 팩의 씬은 그대로 쿠킹한다(`AppCookTest` 가 `game/empty` 를 본다). 활성 팩의 모르는 타입은 여전히 실패다
+  (`SceneTest.SceneCookFailsOnAComponentOfUnknownType`).

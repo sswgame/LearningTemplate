@@ -527,6 +527,29 @@ py -3 Scripts/dev/RunBackendSmoke.py                                            
 
 ---
 
+## 함정 · 계약
+
+- **GPU 자원을 든 객체의 마지막 소유는 게임 스레드가 아무 때나 놓는다 — 핸들 반환은 `IRHIDevice::releaseHandle` 로.** GpuScene 후보 · 걷은 뷰가 마지막 소유가 되면
+  소멸이 수집 잡 안에서 일어나고, 그때 렌더 스레드가 병렬 기록 중이면 bindless 표가 바뀐다(핫 리로드한 StarSkirmish · VoxelCraft · Shooter3D 가 Debug 단언으로 죽었다).
+  `releaseHandle` 은 렌더 스레드가 프레임을 들고 있으면 그 프레임 뒤(RT 의 `flushDeferredHandleReleases`)로 미룬다(언리얼 `FDeferredCleanupInterface`).
+  `Material` · `MaterialInstance` · `Texture2D` · `Mesh` 가 쓴다 — 새로 GPU 자원을 드는 객체도 팩터리를 직접 부르지 말고 이것으로 내린다(`Mesh` 만 빠져 있어 지형 LOD 교체가
+  DX11 버퍼 SRV 표를 기록과 겹쳐 썼다). 주의: `sw::unordered_map::erase` 는 없는 키여도 쓰기다(DataRaceDetector 가 잡는다).
+- **bindless 표를 바꾸는 일은 렌더 스레드의 병렬 기록과 겹치면 안 된다**(`IRHIDevice::setParallelRecording`). 게임 스레드의 `MaterialCache::initializePending`
+  (씬 로드 · 처음 쓰는 머티리얼의 스폰)은 렌더 스레드가 지난 프레임을 기록하는 동안 돈다 — `EngineLoop` 는 올릴 것이 있는 프레임(`hasPendingInitialize`)만
+  `RenderThread::waitIdle` 로 기다린다. 증상은 `registerBindlessResource 이(가) 병렬 패스 기록 중에…` 단언 · 크래시이고, 단언은 플래그를 경합으로 읽어 재현율이
+  바이너리마다 다르다(같은 실행이 0 · 100 %). 의심되면 `assertRegistryMutableNow` 에 콜스택을 파일로 남겨 본다(로거는 크래시 직전 줄을 잃는다).
+- **머티리얼 · 인스턴스 형식 판정은 `AssetFormatRegistry::upgradeXmlWithActiveRegistry`**(씬 · 프리팹과 같다) — `AssetManager` 없이 돈다. 본문의 enum 글은 `TypeRegistry` 가 필요하다.
+- **GPU 자원 수명은 `RHIRenderResource` 등록부에 통보로 밀어 넣는다**(`Mesh` · `Material` · `MaterialInstance` · `Texture2D`). 디바이스가 살아 있으면 `releaseRhi`, 이미 없으면
+  `forgetRhi`(여기서 destroy 하면 UAF), 교체 뒤에는 `initAllFor( device )` 한 줄. `initRhi` 는 멱등. 디바이스 세대 번호 · `shutdownAllGpu` · `reinitializeAll` 을 되살리지 말 것.
+  동사 표는 `AGENTS.md`. `Material::forgetRhi` 는 `releaseRhi` 와 같은 상태를 남겨야 한다(빌린 텍스처 목록이 남으면 t5..t8 서수가 밀린다).
+- **새 디바이스는 첫 PSO · 버퍼에 옛 것과 같은 번호를 준다** — 디바이스를 넘어 사는 캐시는 `releasePassResources` · `shutdown` 에서 잊는다. 머티리얼 등록부 비우기는 그룹 목록과
+  셰이더 경로 → 인덱스 맵을 같이(한쪽만 비우면 투명이 알파 0 으로 사라진다). 재생성 판정은 bindless 인덱스가 아니라 세대가 든 핸들로(DX11 · GL 은 인덱스를 즉시 회수한다).
+- **텍스처 리로드는 같은 `Texture2D` 에 새 SRV 인덱스를 준다** — `getReloadGeneration` → `refreshTextureBindings` → `refreshReloadedTextures`. DX11 · GL 은 인덱스를 바로 다시 써서 이 종류가
+  숨는다 — DX12 · Vulkan 으로 본다. 머티리얼 인스턴스 텍스처는 에셋 경로로 덮어쓴다(`setTextureParameter`). 디바이스 없이 잡은 머티리얼은 `MaterialCache::requestInitialize` 로 표시한다.
+  `MaterialCache` · `TextureCache` 는 일부러 다르다(소유 · 디바이스 기억 · acquire 순서) — 맞추지 말 것. 두 캐시의 `clear()` 는 GPU 자원을 놓지 않는다(RHI shutdown 이 먼저라 안전).
+- **`Material` · `MaterialInstance` · `Mesh` 는 Engine 의 `create()` 로만 만든다**(모듈이 `make_shared` 하면 제어 블록이 모듈 DLL 에 살아 종료 세그폴트). 팩토리 안에서는 `sw::make_shared`.
+- **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 부동소수점으로 읽어 BC6H_UF16 · RGBA16F 로만 임포트한다(규칙 포맷이 8 비트면 실패) — Debug DirectXTex 의 BC6H 는 BC7 처럼 느리다, 큰 원본은 Release App 으로.
+
 ## 더 볼 곳
 
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — RHI · RenderPass · Pipeline  

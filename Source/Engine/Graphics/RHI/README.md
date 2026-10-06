@@ -158,3 +158,57 @@ RHI/
 
 RTV 힙은 **디바이스가 소유합니다**(DX12). 오프스크린 렌더타깃과 같은 힙을 나눠 쓰기 때문입니다 —
 앞쪽 `getBufferCount()` 칸이 백버퍼, 그 뒤가 오프스크린입니다.
+
+## 함정 · 계약
+
+- **소프트웨어 어댑터**: `-gv_rhiSoftwareAdapter=1` 또는 환경 변수 `SW_RHI_SOFTWARE_ADAPTER=1`(ctest 가 인자 없이) — DX12 · DX11 WARP, Vulkan 은 CPU 디바이스
+  (lavapipe · SwiftShader 가 설치돼 있어야 한다 — 없으면 경고와 함께 그 백엔드가 안 선다), GL 은 무시. 실제로 선 어댑터는 `IRHIDevice::isRunningOnSoftwareAdapter`.
+- **GPU · 드라이버** — 반복 TDR 은 어댑터를 망가뜨린다(재부팅 필요). DX12 는 실패 지점에서 InfoQueue · DRED 를 강제로 뽑는다. 이름 없는 객체("Unnamed")가 보이면 `SetName` 부터 붙인다.
+  비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
+- **GPU 메모리는 `RHIMemoryLedger` 가 센다** — 생성은 핸들 표에 넣는 자리, 해제는 지연 해제 콜백에서만 적는다(destroy 요청 시점이 아니다). 새 자원 경로를
+  더하면 거기서 `recordAllocation` / `recordFree` 를 부른다. Vulkan `heapUsage`(이 AMD 드라이버)는 `vkAllocateMemory` 합뿐이라 "엔진 밖" ≈ 0 — 스왑체인 몫은
+  DX12 · DX11 수치로 본다. GL 은 벤더 확장이 없으면 사용량이 "모름" 이다. DX11 · GL 은 할당 크기 API 가 없어 논리 크기다.
+- **D3D11 `UpdateSubresource` 에 상자가 없으면 버퍼 전체 길이를 원본에서 읽는다** — 용량을 남겨 둔 버퍼에 짧게 올릴 때는 상자를 준다(원본 뒤를 넘어 읽어
+  드라이버 안에서 죽는다 — `RenderPassGpuTest.PartialStructuredBufferUploadReadsOnlyTheSourceRange` 가 가드 페이지로 지킨다).
+- **텍스처 영역 업로드는 `uploadTexture2DRegion`(가끔 · 작게 — Vulkan 은 제출하고 기다린다)** — 매 프레임 큰 구간이 필요해지면 프레임 커맨드 리스트에 복사를 기록하는
+  길을 먼저 만든다. 검사는 `validateTextureRegionUpload` 한 곳(DX12 는 전체 업로드와 같은 스테이징 슬롯 · 배리어 — 새 슬롯 규칙을 만들지 말 것).
+- **블렌드는 곧은(SrcAlpha) · 프리멀티플라이(`_bPremultipliedAlpha`, One) 둘이고 알파 채널은 네 백엔드 모두 One/InvSrcAlpha 다** — GL 도 `glBlendFuncSeparate`
+  (`RHIDeviceTest.PremultipliedBlendAddsColorWithoutAlphaMultiply` 가 알파 255 로 지킨다).
+- **가위(`setScissorRect`)는 `setViewport` · `beginRenderPass` 가 뷰포트 전체로 되돌린다** — DX11 은 래스터라이저 상태에 늘 켜 두고 뷰포트를 거는 세 자리가 가위도 건다
+  (뷰포트를 거는 새 자리를 만들면 가위도 건다 — 안 그러면 Deferred Context 의 빈 가위로 아무것도 안 그려진다). GL 은 가위 시험을 켜고 끄며, 클리어 · 블릿 동안은 끈다.
+- **Vulkan 의 텍스처 하나짜리 프레임버퍼 렌더 패스는 CLEAR 고정이다** — 깊이 없는 컬러 하나를 Load · DontCare 로 여는 패스는 load op 을 키로 드는 합성 경로로 간다
+  (`RHIDeviceTest.LoadOpKeepsSingleOffscreenTarget`). 새 렌더 패스 경로를 만들면 Load 가 앞 그림을 지우지 않는지 그 시험으로 본다.
+- **주의: DX12 `enqueueGpuRelease`(`_fenceValue`)** — 다른 스레드의 `waitForQueueDrain` 이 같은 값을 먼저 Signal 하면 기록 중인 프레임이 제출되기 전에 해제가 돌 수 있다.
+  기존 DX12 해제 경로 전부에 해당한다(열린 일).
+- **배열 · 큐브 텍스처는 bindless 등록이 거부된다**(셰이더 테이블이 Texture2D 뿐). 면은 `_arrColorTargetSlice` · `_depthTargetSlice` 로 고른다.
+- **`IRHIDevice::waitIdle` 은 비가상이다** — 다른 스레드에서 부르면 렌더 스레드 패킷을 먼저 비운다. 렌더 스레드에서 텍스처 · 머티리얼 캐시를 잠그면 교착이다. `RenderThread` 는 패킷을 실행한 뒤에
+  `_tail` 을 올리므로 "큐가 비었다" = "프레임이 끝났다". 리사이즈는 `RenderThread::waitIdle()` 뒤에. GT 버퍼 만들기와 RT 드로우별 맵 읽기는 `_bindlessMutex` 읽기/배타로 나눈다(배타 안에서
+  읽기 락을 잡으면 스스로 멈춘다).
+- **커맨드 리스트는 디바이스보다 오래 살 수 있다** — 디바이스 종료 앞에 `cmdList.reset()`. 기록 상태 캐시는 "기록 스트림마다 하나" 다(GL 은 하나여야 맞다). 웨이브 배리어는 RT 가 첫 패스
+  리스트를 열어 앞머리에 적고 워커가 닫는다 — "연 스레드 ≠ 닫는 스레드" 라 스레드 로컬 묶임이 함정이다.
+- **DX11** — `ID3D11DeviceContext` 는 스레드 안전하지 않다. 드로우 경로의 CB 갱신은 워커가 건 자기 Deferred Context 에 `Map(WRITE_DISCARD)`, 즉시 컨텍스트 자리는
+  `_immediateContextMutex` 뒤. 기록 컨텍스트의 스레드 로컬은 (디바이스 일련번호 · 슬롯 · 세대) **토큰**만 든다 — 포인터로 되돌리면 해제된 컨텍스트에 Map 한다. 모든 드로우 진입점은
+  `bindGraphicsPipelineForDraw()` 를 거친다. 인스턴스 버퍼를 CS UAV 에서 떼지 않으면 D3D11 이 SRV 를 NULL 로 강제한다(해저드는 WARNING 이라 로그에 안 나온다 — 해저드 ID 만 ERROR 로).
+  기록 끝난 `ID3D11CommandList` 가 백버퍼를 붙든다(리사이즈). 버퍼의 SRV 는 버퍼 레코드(`BufferRecord`)에 든다 — 기록 경로가 읽는 자료를 따로 된 해시 맵에
+  두지 않는다(생성 · 삭제의 재해시를 기록이 읽는다).
+- **DX12** — 펜스 대기의 시간 초과는 성공이 아니다. 커맨드 얼로케이터는 리스트마다(공유가 DEVICE_HUNG 의 진짜 원인이었다), 업로드 얼로케이터 Reset 은 그 슬롯의 펜스를 직접 기다린다.
+  업로드 복사 리스트는 열어 두고 기록만 하며 `flushPendingUploads` 가 프레임에 한 번 내보낸다(`_uploadSlotMutex`). bindless 인덱스는 `acquireBindlessIndex(lock)` 로 집는 일과 뷰 생성을
+  한 임계 구역에. CBV 는 256 B 정렬. drawIndirect 가 메시 VB 를 덮어쓴 적이 있다 — 렌더 변경은 스크린샷까지 본다.
+  오프스크린 레코드(`_mapOffscreenTexture`)는 기록 경로에서도 `findOffscreenTargetView`(잠근 채 복사)로만 읽는다 — 이터레이터를 들고 `transitionTexture` 를 부르면 같은 뮤텍스로 교착이다.
+  bindless 0 번은 null Texture2D SRV(`kNullTextureBindlessIndex`) — 힙이 CBV · 버퍼 · 텍스처 한 공간이라 0 으로 남은 텍스처 인덱스(머티리얼 폴백 원소)가 상수버퍼를 텍스처로 읽어
+  채널마다 NaN 이 섞였다(군중 시험이 무관한 커밋 뒤에 DX12 만 실행마다 다른 픽셀 수로 졌다 — 0 번에 무엇이 앉는지가 등록 순서에 달렸다).
+- **Vulkan** — acquire 한 이미지는 present 로만 돌려준다(present 없는 프레임마다 acquire 하면 `UINT64_MAX` acquire 로 교착). 리소스 해제는 실제 GPU 펜스(단조 세대)와 이어야 한다.
+  일회성 업로드는 `VulkanOneShotCommands` · 전용 풀 · `_queueMutex`. `vulkan1.3` DXC 는 `discard` 를 demote 로 내므로 기능을 켠다 — 쿠킹된 셰이더가 바뀌면 검증 레이어 로그를 다시 읽는다.
+  와이어프레임은 `fillModeNonSolid`. 백버퍼 블릿의 이전 레이아웃은 `UNDEFINED`.
+- **GL** — 컨텍스트는 렌더 워커가 프레임마다 쥐었다 놓는다. 잡기는 누구든 기다려서(250 ms) 한다 — 한 번만 시도하면 자원 생성 가드가 쥔 순간 렌더 스레드가
+  프레임을 잃는다. 못 잡으면 로그(`GL context not acquired`)에 쥔 스레드(렌더 스레드인지) · 쥔 시간이 남는다. `ARB_gl_spirv` 가 없으면 초기화에서 끊는다(다른 백엔드로 넘어가지
+  않는다). `glClipControl` 은 `#ifdef GL_CLIP_CONTROL`(없는 토큰) 같은 가드 뒤에 두지 말 것(상하 반전이 오래 숨었다). MRT 클리어는 `glClearBufferfv`, `R16G16B16A16_FLOAT` 는
+  `GL_HALF_FLOAT`, `drawInstanced` 는 startInstance 를 버린다. 로그 문구에 `[Error]` 같은 레벨 토큰을 쓰지 말 것(스모크가 센다).
+- **스왑체인은 진짜 객체다**(`5aea5ef1`) — 가상 인터페이스로 되돌리지 말 것, GL 은 의도적으로 없다. Present PSO 는 대상 포맷(`getBackBufferFormat`)으로, BGRA 는 `-gv_rhiBackBufferFormat=1`
+  로 검증. `IRHIDevice` 에 백엔드 전용 API 를 두지 않는다 — 에디터 같은 외부 모듈은 네이티브 핸들을 판 번호 든 `RHINativeHandles` 로 받는다
+  (`IRHIDevice::queryNativeHandles` 가 판 · 크기를 대조). 구체 디바이스로 캐스팅하지 말 것. 에디터 능력을 `RHICapabilities` 에
+  넣지 말 것(`createRendererBackend` 가 모르는 백엔드에 `nullptr`). 백엔드 능력은 이름이 아니라 `getCapabilities()` 런타임 값으로.
+- **백엔드 하나만 고쳐진 모양이 계속 나온다**(`createStructuredBuffer` 는 DX12 만 64 비트로 곱한다). 시험은 백엔드별 계약으로 쓴다. 안 쓰이는 경로는 조용히 썩는다 — 폴백은 지우고
+  "아직 안 쓰는 기능" 은 시험과 함께 남긴다(인덱스 드로우의 유일한 검증은 `RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream`, `createIndexBuffer` 는 순수 가상).
+- **RHI 백엔드의 .cpp 는 `Graphics/RHI/<백엔드 폴더>/` 에 두면 끝이다**(모듈 · Shipping 이 폴더로 가져간다). 파일은 `<Backend>RHIDevice` · `…DeviceInit` · `…DeviceSubmission` 축으로. 백엔드는 별도 MODULE DLL 이라 Engine
+  전역 변수를 extern 으로 못 쓴다 — 정책은 Engine, 메커니즘은 디바이스.

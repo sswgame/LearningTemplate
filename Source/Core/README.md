@@ -216,3 +216,149 @@
 ## 핵심 규칙
 - **독립성 유지**: `Core`는 `Engine`이나 `GameFramework`, `Game` 폴더의 코드에 **절대 의존해서는 안 됩니다.**
 - **어디서나 쓰임**: ReflectionParser에도 직접 링크되므로 무거운 GPU/에디터 의존성은 피해야 합니다.
+
+## 함정 · 계약
+
+- **`drainEvents` 는 붙이고 비운다(2026-10-03 통일).** 바꿔치기(`swap` · `std::move`) 하던 18 곳을 맞췄다 — 바꿔치기는 받는 쪽 목록의 앞 내용을 지우고, 붙이기에
+  익숙한 호출부는 같은 알림을 매 프레임 다시 받는다(StarSkirmish 에서 패배 로그가 두 번). 매 프레임 같은 목록을 쓰는 쪽이 먼저 `clear()` 한다.
+- **X11 헤더는 X11 을 쓰는 `.cpp` 에서만**(`Core/Common/X11Headers.h`, 게이트 `CheckX11Isolation.py`). `PlatformOsHeaders.h` 가 X11 을 들고 있을 때 PCH 로
+  모든 TU 에 `Convex` · `None` 같은 매크로가 퍼져 Jolt(`EShapeType::Convex`)가 리눅스 다섯 잡을 세웠다 — Windows 빌드는 원리상 못 본다. 유니티 빌드는 X11 `.cpp` 를
+  include 줄을 보고 묶음에서 뺀다(`sw_skipUnityForX11Sources`).
+- **플랫폼 스텁도 인터페이스를 따라간다** — `IWindow` 에 가상 함수를 더하면 `Win32Window` 의 비-Windows `#else` 스텁에도 정의를 둔다(빠지면 리눅스 링크만 진다).
+- **Win32 는 W 판을 이름으로 부른다** — 이 저장소는 UNICODE 를 정의하지 않아 일반 이름(`DefWindowProc` · `LoadCursor` · `CreateFile` …)은 A 판이다. W 클래스로 만든 창의 프로시저가 `DefWindowProcA` 로 끝나 제목이 "S" 한 글자였다(`WindowTest.TitleReachesTheOsAsUtf16`). 게이트 `CheckWin32WideCalls.py`, `IDC_*` 는 `reinterpret_cast<LPCWSTR>` 로 넘긴다. 전역 UNICODE 정의(언리얼)는 대상마다 정의가 빠지면 말없이 A 로 돌아가 택하지 않았다.
+- **A 판도 부르지 않는다 — 실행 파일 매니페스트에 기대지 않는다** — 모든 실행 파일은 `WindowsProcess.manifest` 의 `activeCodePage=UTF-8` 로 ANSI 코드 페이지가 UTF-8 이라 A 판에 UTF-8 경로를 넘겨도 지금은 통한다(한글 폴더 시험 `FileTest.DynamicLibraryLoadsFromANonAsciiFolder` · `CrashReportTest.ReportFolderWithANonAsciiNameReceivesTheFiles` 가 고치기 전에도 통과). 매니페스트가 없는 호스트(남의 프로세스에 올라간 Engine.dll · 1903 이전 Windows)에서는 깨지므로 `CheckWin32WideCalls` 가 A 판 호출도 막는다(예외 `OutputDebugStringA`). 크래시 경로는 힙 없이 스택 버퍼 + `MultiByteToWideChar` 로 바꾼다.
+- **X11 창 제목은 `_NET_WM_NAME`(UTF8_STRING)까지 적는다** — `XStoreName` 은 Latin-1 이라 한글 제목이 깨진다. 확인 시험은 없다(WindowTest 는 host 스위트라 CI 가 못 돌리고, 시험 실행 파일이 libX11 을 직접 링크하지 않는다) — 리눅스 기계에서 `xprop _NET_WM_NAME` 으로 본다.
+  올라온 이미지는 이름이 아니라 주소로 찾는다(`ModuleBuildId::find( &함수 )._modulePath`) — `Engine.dll` 을 글자로 찾던 시험이 리눅스(`Lib/libEngine.so`)에서
+  늘 건너뛰어 "아무것도 검증하지 않은 스위트" 로 졌다.
+- **명령줄 철자는 인자마다 하나다** — `ArgumentList.xxx` 의 줄에 적은 것만 키이고 열거자 이름(`WIDTH` · `COOK_SHADERS`)은 키가 아니다(`CommandLineTest.EnumeratorNameIsNotACommandLineKey`). RHI 백엔드 줄만 쿠킹 표(`CookContract.json`)의 별칭 여럿을 받는다.
+- **플랫폼 · 아키텍처 · 컴파일러는 SW_ 매크로로만 묻는다** — 컴파일러 내장 매크로(`_M_X64` · `__clang__` · `_MSC_VER` …)를 읽는 곳은
+  `Core/Common/TargetMacroCheck.h` 하나(CMake 판정과 대조해 `#error`), 나머지는 `CheckTargetMacros` 게이트가 막는다. 아키텍처 판정은
+  `CMAKE_CXX_COMPILER_ARCHITECTURE_ID` 기준(교차 컴파일에서 `CMAKE_SYSTEM_PROCESSOR` 는 틀린다). "MSVC 확장을 쓸 수 있는가" 는 `SW_PLATFORM_WINDOWS`
+  로 묻는다(clang-cl 도 그렇다 — `SW_COMPILER_MSVC` 로 물으면 clang-cl 이 다른 갈래로 간다). MinGW 를 지원하면 이 전제와 검사 헤더를 함께 바꾼다.
+  ReflectionParser(libclang)는 CMake 를 거치지 않으므로 `ParserConfig::load` 가 대상 매크로를 넘긴다. Linux arm64 · macOS 갈래는 실제 빌드로 확인된 적이 없다.
+- **소유하지 않는 포인터 등록부는 `Core/Container/RegistrationList<T>`**(중복 · 이름 거절, 순서, 이름 찾기, 이름 사본) — 슬롯 인덱스로 O(1) 빼기를 하는 등록부
+  (Primitive · Tick · TransformHierarchy · 콜라이더)와 모양이 다른 것(TypeRegistry · GlobalVariable · 코덱 · RHIBackend)은 예외다.
+- **X-매크로 목록 `.xxx` 의 정본은 `Core/Predefined/`** 이고 죽은 사본은 `CheckDataFileReferences` 가 막는다. `PredefinedNameType.xxx` 의 줄 순서가 곧 intern 인덱스다(중간 삽입
+  금지, 대소문자만 다른 이름 금지). `CheckDataFileReferences` 는 참조 파일(.cpp · .h · .cmake · .py · .txt · .json · .xxx …)이 staged 됐을 때만 훅에서 돈다.
+  게이트의 제외 폴더는 `kNotOurDirNames` 를 쓴다 — 게이트마다 목록을 들지 말 것(자체 목록이 `LLVM` 을 빠뜨려 그 헤더를 참조 파일로 읽고 있었다).
+- **4 글자 표식은 `FourCcUtil::make( "...." )`(파일 바이트 순서) 하나** — 16 진 손글씨는 바이트 순서가 둘로 갈렸었다. 형식을 바꾸면 커밋된 데이터
+  (`Test/AppTest/Golden/*.ppm.z` 압축 스트림 등)의 앞 네 바이트도 같이 고친다.
+- **에셋 · 파일 글로 `hashed_string` 을 만들지 말 것.** intern 표는 줄지 않고(상한에 닿으면 그 뒤 엔진의 **모든** 새 이름이 None), 대소문자를 무시하며 영구 적재된다. 조회는
+  `hashed_string::findInterned`, 해시만 필요하면 `computeHash( string_view )`. 진단은 `getInternedCount`. 같은 이름 번호는 밑 이름별로 되쓴다(`SameNameChurnKeepsInternPoolBounded`).
+- **`hashed_string` 은 FName 규칙이다** — 같음 · 해시는 대소문자 무시, `c_str()` 은 적은 철자, `operator<` 없음(`HashedStringLexicalLess` · `HashedStringFastLess`), 대소문자만 바꾸는
+  이름 변경은 `isEqual( …, NameCase::CaseSensitive )`. FName 과 일부러 다른 셋은 되돌리지 말 것: 해시는 실행마다 같은 FNV(저장된다), 철자 보존은 모든 구성, 숫자 꼬리 없음.
+- **문자열 해시 식을 바꾸지 말 것.** `StringUtil::computeHash64`(FNV-1a, 문자를 `make_unsigned_t<CharT>` 로 넓힌다)에 쿠킹 산출물 · 셰이더 쿠킹 스탬프 · 파이썬 쿠커가 걸려 있다.
+  `RuntimeStringHash` 는 프로세스 안 전용이다. `computeHash64( "리터럴", false, seed )` 는 포인터 오버로드에 묶여 키가 상수가 된다 — `string_view` 로 넘긴다.
+- **`sw::unordered_map` 은 밀집 배열, `sw::map` 은 정렬 벡터다**(`SW_ENABLE_STL_CONTAINER` 꺼짐). 삽입 · 삭제가 원소를 옮기므로 표 안 원소의 포인터를 잠금 밖으로 내주지 말 것 —
+  복사로 주거나 값을 `unique_ptr` 로 든다. 짧은 이름(SSO) `string` 의 `c_str()` 도 이동 뒤 빈자리를 가리킨다(프로파일러 이름은 intern 아레나에).
+- **압축** — 팩 enum `PackCompressionType` 과 스트림 enum `CompressionCodecType` 은 독립된 디스크 포맷이다(`static_cast` 로 잇지 말 것). `CompressionCodecRegistry` 는 `EngineLoop` 가 소유하고
+  Core 에는 슬롯만 있다. 모듈이 등록한 코덱은 그 모듈 shutdown 에서 `unregisterCodec`. zlib 은 Windows 에서 4 GB, LZ4 는 2 GB 가 한계다.
+- **리눅스에서만 지은 코드를 들일 때** — 윈도우 매크로 `near` · `far` · `small` 와 겹치는 이름, DLL 이 내보내지 않은 타입(`SW_GF_API` — 리눅스 .so 는 다 내보낸다),
+  같은 이름의 타입이 두 모듈에 있는 ODR 위반(`CheckDuplicateTypeNames` 가 막는다)을 먼저 본다. 병렬 본문은 컨테이너를 만지지 않고 나누기 전에 받은 포인터로만
+  접근한다(`NetParallelScratch` · `engine::runParallel` — 컨테이너 `operator[]` 는 경합 검출기에 쓰기로 세어진다).
+- **순서만 채널(`UnreliableSequenced`)은 메시지 종류(첫 바이트)마다 흐름이다** — 예전엔 연결 전체가 흐름 하나라 한 보내기 간격의 다른 종류 메시지가 서로 지웠다.
+  같은 종류로 여러 조각(오브젝트 · 부분)을 보내는 것은 여전히 서로 지우므로 비신뢰 + 받는 쪽 틱 정렬로 보낸다(`DestructionReplication` 의 자세).
+- **`quaternion::inverse()` · `conjugate()` 는 const 가 아닌 값에서 제자리 버전(void)이 골라진다** — 식 안에서는 const 참조로 받아 부를 것(`RigIkSolver::makeInverse`).
+  **`quaternion::fromToRotation` 은 코사인 차 1e-6(약 0.08°) 안쪽을 단위 회전으로 버린다** — 반복 IK 의 마지막 몇 mm 가 그 안이라 CCD 가 멈춘다(`RigIkSolver::makeFromToRotation`).
+- **Debug 기동은 CRT 누수 보고를 stderr 로도 낸다**(`EngineBootstrap` 의 진단 갈래가 `MemoryProfiler::enableMemoryLeakChecks` 를 부른다 — 누수 덤프가 콘솔 · CI 로그에
+  나온다, `MemoryTagTest.DiagnosticBootstrapEnablesPlatformLeakChecks`).
+- **Windows UDP 는 돈다**(2026-10-05, `NetworkTest.UdpTransportSendsDatagramsOverLocalhost` · `NetworkThreadTest.UdpHostsRunOnThreadsOverLocalhost`, 닫힌 포트로 보낸 뒤
+  받기 포함). `SIO_UDP_CONNRESET` 끄기와 받기 고리의 "오류는 건너뛰고 다음 것" 을 둘 다 빼도 시험은 통과한다 — 루프백 ICMP 리셋을 이 시험이 재현하지 못하니 두 방어를 지우지 말 것.
+- **회선 나쁨은 `NetEmulationTransport` 하나다**(N17) — 루프백 망은 보낸 순서대로 다음 `update` 에 배달만 한다. 흉내는 보내는 쪽 줄이라 호스트를 한 스레드에서
+  차례로 돌리는 시험은 프레임마다 흉내를 **모두 먼저** `update` 한다(아니면 뒤에 도는 호스트가 보낸 것이 한 프레임 늦다 — `NetSimHarness` 와 시험 도우미가 그렇게 한다).
+  깨짐 난수는 깨짐을 켰을 때만 뽑아 다른 조건의 수열을 바꾸지 않는다(하니스 · 파괴 시험이 바이트까지 그대로인 이유).
+- **큰 신뢰 메시지는 Core 가 조각으로 나른다(64 KB, N20) — 그래도 조각마다 창 한 칸이다.** 메시지를 묶어도 창 몫(바이트 ÷ 1 KB)은 줄지 않으므로, 나누는 까닭이
+  창(앞부분이라도 나가게)이면 키트의 쪼개기를 남긴다(MMO 나감 · 턴 대기 줄). 묶어서 이득은 엔티티마다의 머리 · 창 칸이 작은 것이 많을 때다(MMO 들어옴).
+- **조각이 패킷을 채우면 비신뢰가 굶는다** — 1 KB 조각 뒤에는 150 B 남짓이라 600 B 스냅샷이 못 들어간다. `NetConnection::writePacket` 은 남긴 쪽부터 번갈아 싣는다.
+- **대역폭 상한(N21a)은 빚 모양 토큰 버킷이다** — 몫이 0 보다 크면 꽉 찬 패킷 하나, 쌓는 몫은 보내기 간격 두 번어치. 다 써도 머리(확인 · 유지)는 가므로 타임아웃보다 오래 포화돼도
+  끊기지 않는다. 상한 없이 "한 차례에 여럿" 만 넣으면 회선을 넘친다 — 둘은 같이 간다. 키트 예산은 `NetSendBudget::computeTickBudget`(설정과 상한 × 틱 × 0.5 중 작은 것).
+- **신뢰 · 순서 없음으로 옮긴 메시지는 같은 채널의 다른 메시지와의 앞뒤도 잃는다(N21b).** 파괴 사건은 번호로 서로 줄 세웠지만 "청한 스냅숏보다 뒤 사건은 늦게 온다" 는
+  순서 채널이 주던 것이었다 — 스냅숏을 기다리는 동안 사건을 쌓지 않으면 스냅숏이 앞서 적용한 사건을 덮어 영영 빠진다. 채널을 바꿀 때는 받는 쪽이 기대던 앞뒤를 모두 적는다.
+- **신뢰 재전송 간격을 짧게 고정하면 꼬리는 줄지만 회선을 먹는다**(2026-10-05 측정). 0.1 초 고정은 250 ms · 15 % 에서 사건 최대 지연 1.0 초였지만 메시지당
+  재전송 3.5 번 · 서버 올림 3 배로 파괴 시험(덩어리 오차)이 졌다. RTT + 50 ms 와 빠른 재전송(뒤 패킷 셋 확인)이 재전송 1.9 배 · 올림 +9 % 로 4.1 → 1.3 초다.
+- **복제 예산은 메시지 전체를 정확히 센다**(`NetSendBudget`) — 1024 B 를 넘는 메시지는 `sendMessage` 가 버리고 확인이 안 와 기준이 그대로라, 다음 틱도 같은
+  크기로 다시 버려지는 라이브락이 된다(사라진 id 400 개 = 1200 B 에서 클라이언트 틱이 멈췄다). 길이는 `writeBlob` / `readBlob( 상한 )` 하나로 — 자르는 쪽과 쓰는 쪽이 어긋났다.
+- **비신뢰 입력을 "최근 N 개" 만 겹쳐 보내면 N 을 넘는 연속 손실이 영구 빈틈이 된다** — 롤백은 30 틱 끊김 뒤 두 쪽이 120 프레임에서 영원히 멈췄다. 상대가 확인한
+  다음 틱부터 보낸다(GGPO) — Core `NetInputSendWindow` 가 구조로 그렇게 하고, 예산이 모자라면 **오래된 것부터** 싣는다(새 것부터 실으면 못 실은 옛 것이 같은
+  빈틈이 된다). 받는 고리(`NetInputReceiveBuffer`)는 아래 · 위 창을 둘 다 둔다 — 위 창이 없으면 고리 한 바퀴 뒤의 먼 틱이 받아 둔 입력을 덮는다.
+  권위 서버 입력도 같은 부품이다 — 확인은 스냅숏의 `_firstMissingInputTick`, 서버가 꺼낸 틱은 받는 창 아래로 놓아 확인이 넘어간다(`InputBurstLossLeavesNoGap`).
+- **틱 · 프레임으로 찾는 고리는 `TickRingBuffer` 하나다**(예측 · 스냅숏 · 보낸 재구성 · 랙 보정 · 롤백 기록 · 락스텝 입력 · 체크섬 · 파괴 최근 해시). 키 전체를 적어
+  감김 · 건너뛴 칸 비우기가 없고, 무엇이 낡았나는 쓰는 쪽이 넣기 전에 본다 — 창 너비를 고리 크기로 두면 창 안끼리 덮지 않는다(락스텝 입력 256 · 체크섬 512).
+  `acquire` 는 옛 값을 비우지 않는다(버퍼를 다시 쓴다 — 처음 넣는 틱이면 쓰는 쪽이 비운다). 16 비트로 감기는 패킷 시퀀스는 `SequenceBuffer`.
+- **렌더 지연 규칙은 `NetClock` 하나다 — max( 최소 지연, 표본 간격 × 2 )**(유니티 Netcode for Entities 기본 2 틱과 같은 수). 한 간격뿐이면 표본 하나를 잃을 때마다
+  보간할 뒤 표본이 없어 멈춰 선다(파괴 덩어리가 미터 단위로 어긋났다). 시계는 받은 틱을 하한으로, 받은 가장 새 틱 + 지연을 상한으로 두고 렌더 틱은 되돌아가지
+  않는다 — 복제 클라이언트의 옛 시계("가장 새 스냅숏 − 지연" 쪽으로 기울이다 지연 × 4 를 넘으면 뒤로도 바로 옮김)는 스냅숏이 끊긴 뒤 보간 자리가 되돌아갔고
+  (`NetClientServerTest.RenderTickNeverGoesBackAcrossASnapshotGap`), 파괴 쪽 옛 시계는 상한이 없어 로컬 시계가 빠르면 받은 자세를 지나쳐 갔다. 구간 규칙(앞 이하 · 뒤 초과 · 끝이면 멈춤 — 외삽 안 함)은 `InterpolationBuffer` ·
+  `NetInterpolationUtil::computeAlpha` 하나.
+- **확인만 담은 패킷이 확인을 부르면 한가한 연결이 30 Hz 로 핑퐁한다**(`NetConnection` 확인 요청 비트의 이유). 요청을 끄면 거꾸로 두 쪽 유지 시각이 맞물려 한쪽은
+  늘 답만 보내 RTT 표본이 0 이 된다 — 그래서 답이라도 마지막 요청에서 유지 간격이 지나면 요청한다. RTT 는 "요청 패킷이 가장 새 확인으로" 돌아올 때만 잰다(묶음으로 늦게
+  확인된 것은 상대가 기다렸다 보낸 시간이 섞인다).
+- **상한은 쓰는 쪽도 본다** — 받는 쪽만 상한을 보면 넘는 메시지가 보낸 쪽에선 "보냈다", 받는 쪽에선 깨짐으로 조용히 사라진다(턴 행동 900 B) · 락스텝은 보내기가 실패해도
+  내 입력을 이미 예약해 나만 진행했다. 상한 상수는 메시지 구조체에 하나(`NetTurnRelayMessage::kMaxActionBytes` · `NetLockstepMessage::kMaxInputBytes`)를 두 쪽이 같이 쓴다.
+- **보고의 "(sw 할당자 밖)" 은 CRT 합 − 태그 합**이라 프로파일러보다 먼저 잡힌 sw 블록도 들어간다 — MemoryProfiler 는 부트스트랩 맨 앞에서 선다. 새 스레드는 Unknown
+  에서 시작하므로 띄운 쪽의 태그를 인자로 넘겨 첫 줄에서 건다. 배열은 `sw_new_array` · `make_unique<T[]>`(맨 `new` 는 `Style/RawNew` 가 막는다). 외부 라이브러리는
+  공개 설정 지점으로만 sw 할당자에 잇는다(pugixml `set_memory_management_functions`, nlohmann 할당자 인자, zlib zalloc · zstd advanced · LZ4 extState, stb STBI_*).
+- **메모리 태그(UE LLM 식)는 배포본이 아닌 구성 모두에 있고 추적은 Debug · 시험만 켜져 있다**(Release 는 `-gv_memoryTracking=1`). 거는 자리는 셋 — 기동 단계 표(`EngineInitStepList.xxx`)의 태그 칸, 서비스 생성의 `kServiceMemoryTag<Type>`,
+  하위 시스템 진입점의 `SW_MEMORY_SCOPE`. 태스크 · 병렬 청크는 **만든 쪽의 태그를 상속**한다(`TaskNode` · `ParallelGroup` 의 패딩 자리, 크기 그대로). 분포와 sw 할당자 밖
+  몫은 `-gv_profileFrames` 보고의 "memory by tag" 와 ProfilerPanel 에서 본다 — Unknown 이 커지면 진입점이 빠진 것이다. ImGui 는 `SetAllocatorFunctions` 로 sw 할당자를
+  지나므로 에디터 실행의 alloc/frame 에 ImGui 할당이 들어간다. GPU 메모리는 대상이 아니다(CPU 힙만).
+- **STL 구성(`SW_ENABLE_STL_CONTAINER=ON`, CI `CI-Debug-STL`)은 C++17 이라 std 해시 컨테이너에 이종 조회 · `contains` 가 없다** — sw 쪽 얇은 클래스가 메운다.
+  커스텀 컨테이너 전용 시험은 그 구성에서 건너뛴다.
+- **완료를 모으는 줄에 고정 용량 큐(`ConcurrentQueue`)를 쓰지 말 것** — 가득 차면 `enqueue` 가 false 를 돌려주고 그 완료는 말없이 사라진다. 에셋 스트리밍 큐가 그랬다(한 경로에 편승한
+  콜백 1024 개 초과분 유실, `AssetStreamingTest.ManyCallbacksOnOnePathAreAllDelivered`). 상한 없는 잠금 + deque 로 둔다.
+- **비동기 IO 의 완료 콜백은 IO 스레드가 아니라 태스크 워커에서 돈다(엔진 설정)** — 팩 해제 · CRC 가 IO 스레드를 막지 않게. 그래서 `AsyncFileIo::shutdown` 은 Task 보다 먼저(기동 단계
+  `FileIo` 가 Task · ModuleImages 에 의존), 콜백 안에서 자기 큐의 잠금을 쥔 채 IO 를 걸지 말 것(내린 뒤 요청은 그 스레드에서 바로 완료된다 — `AssetStreamingQueue::issueDataRead`).
+- **레이스 탐지기(Debug)** — 워커의 비-const `sw::vector::operator[]` 를 쓰기로 잡는다: `std::as_const(v).data()` 나 const 참조로 읽는다. `sw::array` 를 락-프리 버퍼에 쓰지 말 것(드물게
+  Fatal). 데드락 탐지기를 피하려면 실패 기록 같은 곳은 `std::mutex`. 잠금은 `std::scoped_lock`. `compare_exchange_weak` 은 실패 순서도 명시한다(기본 `seq_cst`).
+- **`SW_ASSERT` 는 Release · Shipping 에서 사라지고 `SW_LOG_ASSERT` 는 Debug 에서 `SW_DEBUG_BREAK` 까지 한다**(디버거 없는 CI 에서는 프로세스가 죽는다 — 방어 경로 시험은 Release ·
+  Shipping 에서). 배포 구성의 `SW_LOG_ASSERT` 는 진행하므로 뒤가 앞에 달린 전제는 하드 단언으로.
+- **크래시** — 엔진이 만드는 스레드는 시작할 때 `CrashHandler::initializeCurrentThread()`(빠뜨리면 스택 오버플로 덤프가 0 바이트). Windows 덤프는 보고 스레드가 `PssCaptureSnapshot` 으로
+  쓴다(살아 있는 자기 프로세스를 `MiniDumpWriteDump` 하면 로더 락에 멈춘다 — 재현은 자식 12 개 × 400 회). 크래시 경로 로그는 `Logger::flushGlobalForCrash`(락을 못 잡으면 포기).
+  시한은 `setReportDeadline`(20 초), POSIX 는 `alarm` + SIGALRM, `backtrace()` 예열. 실물 확인 `-gv_crashTest=1..5`. 크래시 보고 본문은 `CrashContext.cpp` 의 `writeCrashReport`.
+  묶음 · 올리기는 다음 실행의 `CrashReportService`(Engine/Telemetry). 보고 프로세스는 `setReporterExecutable` 을 정한 호스트(App)만 띄운다 — 경로를
+  `getExecutablePath` 로 잡았더니 시험 실행 파일이 `--crash-reporter=` 를 모른 채 자기를 끝없이 다시 띄웠다(실측).
+- **프로세스** — 자식 상속은 Windows `PROC_THREAD_ATTRIBUTE_HANDLE_LIST`, POSIX CLOEXEC + `close_range`(아니면 동시에 띄운 자식이 서로의 파이프를 문다). 띄우기만 할 때는 `Process::launchDetached`
+  (`execute` 는 UI 스레드를 세운다, `explorer.exe /select,` 는 성공해도 1). POSIX: `isRunning` 은 `waitid(..., WNOWAIT)`, `terminate` 는 그룹째, pid 는 한 번만 읽는다(0 이면 `kill(-0)`).
+- **파일** — 쓰기는 원자적이다(`writeAtomically` → 같은 폴더 임시 파일 → `replaceFile`, Windows 는 `FileRenameInfoEx` POSIX 의미). Windows 읽기는 Win32(`readRange`) — `fopen_s` 는 ANSI 라
+  한글 경로가 깨진다. 실행 파일마다 `WindowsProcess.manifest`(UTF-8 코드페이지 · longPath · PerMonitorV2)를 `sw_embedProcessManifest` 로 박는다(새 exe 에 빠뜨리면 한글 경로를 못 읽는다).
+  `getFileTimestamp` 는 초 단위, 셰이더 소스 캐시는 (크기, 시각) `getFileStamp`. 워처가 알림을 잃으면 빈 `_filename` 의 `Modified`(리스캔 신호) — `expandRescanEvents`.
+  `std::filesystem` 은 `Core/File/Std/FileUtilStdFileSystem.cpp` 한 TU 에만 있다 — `path` 는 넓은 문자로 만들고(좁은 문자 생성자는 잘못된 UTF-8 에서 던진다), 오류는 `error_code` 판으로만.
+  `std::filesystem` 을 직접 쓰지 않는다 — 게이트 `CheckStdFilesystemIsolation` · 순회는 `forEachDirectoryEntry`, 시험의 파일 시각 조작은 `setFileWriteTime`.
+- **문자열** — `formatstring` 은 `string_view` 를 길이로 쓴다(`.data()` 로 풀어 넘기면 뷰 끝을 지나 읽는다 — `CheckLogViewArgument`). `%#` 은 순수 자리표, 모르는 `%…` 는 리터럴, 인자 수 불일치는
+  Debug 실행 단언(정본은 `FormatString` 클래스 주석). `setlocale` 이 없다(C 로캘) — 잘못된 UTF-8 은 `escapeInvalidUtf8`. `fixed_string` 은 넘치면 글자 경계에서 자르고 경고한다.
+  `StringUtil` 은 비-ASCII 바이트를 `uint8` 로 넓힌다(utf16 에 같은 치환 금지), `stristr` 은 바이트 묶음 "최적화" 금지. Win32 변환은 `utf8ToUtf16`(`ImmGetCompositionStringW` 반환은 바이트 수).
+  `std::hash` 는 `string` · `wstring` · `fixed_string` 모두 `RuntimeStringHash`(프로세스 안 전용, 대소문자 구분).
+- **메모리 · 컨테이너** — 과정렬 판정은 `kUsesAlignedAllocation<T>` 하나(`max_align_t` 는 MSVC 에서 8 이라 힙 계열이 갈린다). `sw::vector` 는 `is_bitwise_copyable_v` 타입을 `Memory::copy`
+  한 번으로(ReflectionParser 도 쓴다). `sw_delete_array` 는 원소 소멸자를 부르지 않는다. 해시 버킷 수는 2 의 거듭제곱, 번호는 `bucketIndexOf` 하나(스무 자리가 쓴다 — 한 곳만 달라도
+  원소가 사라진다). 락 없는 읽기 + 주소 안정은 `PagedArray`. `SlotHandleTable` 은 점유 + 세대를 한 워드 `_state` 에 든다(둘로 나누지 말 것 — arm64). 순서 없는 삭제는
+  `VectorUtil::removeAtSwap`, 표준에 없는 함수를 `vector.h` 에 붙이지 않는다. 함수 인자 연속 뷰 이름은 `vector_reference<const T>`.
+- **락을 잡은 getter 는 자기 멤버의 뷰 · 참조를 돌려주면 안 된다**(값으로). 콜백을 부르는 순회는 인덱스로 돌고 부르기 전에 델리게이트를 복사한다. `MulticastDelegate` 는 복사 · 이동 넷을 직접
+  적는다. `Delegate` 의 인라인 람다를 옮기면 원본 소멸자를 부른다.
+- **`EventDispatcher`** — 큐(`push`)는 아무 스레드나, 버스(`subscribe` · `publish`)는 `processEvents` 를 부르는 스레드만. 큐에 남은 이벤트는 `destroyQueuedEvents()`.
+- **명령줄** — 미등록 `gv_` 키는 `_mapPendingGlobal` 에 남았다가 모듈이 변수를 올릴 때 적용된다. gv_ 선언은 읽는 파일에, `extern` 재선언 금지(`SW_EXTERN_GLOBAL_VARIABLE` 은 정의 파일 밖에서
+  읽을 때만 — `CheckGlobalVariableKinds`). 시험용 전역 변수는 `SW_TEST_GLOBAL_VARIABLE`(Shipping 에서 빠진다), 배포본을 스크립트가 조종할 것만 `SW_TEST_GLOBAL_VARIABLE_SHIPPED`. bool 이 아닌 `-gv_*` 에
+  값을 빠뜨리면 경고 + 기본값.
+- **싱글턴을 옮기지 않는 자리**: `CrashContextStore`(시그널 핸들러가 읽는다), 등록자 헤드 · `TestRegistry`(main 이전 자기 등록), `TagID` · `hashed_string` 인터닝(프로세스 전역이어야 뜻이 있다).
+  Core 에 인스턴스가 필요하면 Logger 모양 — 인스턴스는 `EngineLoop`, Core 에는 포인터 슬롯.
+- **비신뢰로 실은 몫은 확인을 기다린다**(`NetPrioritizer::markSentUnconfirmed` · `resolveSend`) — 실은 순간 0 으로만 돌리면 잃은 상태가 한 차례를 통째로
+  다시 기다린다. CS 는 확인한 재구성과 보낸 재구성의 그 엔티티를 견줘 받음 · 잃음을 가린다(하니스 손실 20 % 낮은 우선도 최대 96 → 89 틱; 손실 없는 포화
+  회선의 최대 20 틱은 그대로 — 그 20 은 순서만 채널에 밀린 몫이 아니었다).
+- **비신뢰 갱신의 "보낸 상태" 와 "확인된 상태" 를 나눈다**(MMO `_listInFlightState` · `_listSentState`) — 보낸 순간 기준을 바꾸면 잃은 갱신이 "안 바뀜" 이 되어
+  가속도 없다. 클라이언트는 받은 갱신 틱을 확인(가장 새 틱 + 앞 32 틱 비트)으로 틱마다 보낸다(30 틱 끊김 뒤 먼 엔티티 13 → 4 틱).
+- **스트림 전송의 연결 수명은 "걸린 일 수" 로 센다**(IOCP 는 걸린 overlapped + 콜백 중 표시, epoll 은 루프 스레드 하나가 소유) — 닫힘은 그 수가 0 이 되는 첫 순간 한 번,
+  그 뒤에 자리를 세대 +1 로 돌려준다. 걸린 일이 없는 연결을 닫으면 아무 완료도 오지 않으니 정리 표를 루프에 넣는다. 열림 콜백은 받기를 걸기 **전에** — 열림이 늘 첫 콜백.
+  I/O 스레드를 끝낼 때 완료 포트의 멈춤 표는 깨우기만 쓴다 — `GetQueuedCompletionStatusEx` 는 한 묶음에 표 여럿을 한 스레드에 줘서, 표 수로 끝내면 다른 스레드가 영영 기다린다.
+- **멱등 기억은 연결이 아니라 주체에 묶는다** — 거래 요청이 처리된 뒤 응답 전에 끊기면 클라이언트는 새 연결에서 같은 키로 다시 보낸다. 범위가 연결이면 두 번 처리된다
+  (`NetRequestServer::setPrincipal` — 로그인 키트가 붙인다). 처리 중인 키가 다시 오면 처리하지 않고 첫 응답을 같이 받게 한다. 연결이 닫혀도 처리 중 기록은 남겨 늦은 응답을 기억한다.
+- **로그 문맥 꼬리표는 형식 문자열의 빈 자리다**(Core `LogContext`) — 문맥 없는 스레드(게임 · 렌더 · 에디터)의 줄은 바이트가 같다. 비동기 경계는 넘기는 쪽이
+  복사해 들고 받는 쪽이 `ScopedLogContext` 로 다시 건다(`IServiceStoreWork` — 저장소가 `submit` 에서 잡는다). 지표 라벨에는 추적 id · 계정 id 를 넣지 않는다(시리즈가 끝없이 는다).
+  운영 지표 · 상태 · HTTP 끝점은 엔진(`Engine/Observability`)에 둔다 — 전용 서버 실행 파일은 GameFramework DLL 을 링크하지 않는다.
+- **UDP 암호화는 협상하지 않는다** — 암호화 · 토큰 결속 여부를 프로토콜 id 에 섞어 한쪽만 다르면 `SecurityMismatch` 로 거절한다(평문으로 내려가는 길이 없다).
+  AEAD nonce 는 방향별 IV XOR 64 비트 패킷 번호(감기지 않는다), 재전송 창(1024)은 **복호가 통과한 뒤에** 표시한다 — 먼저 표시하면 위조 패킷이 진짜 번호를 태운다.
+  서버는 주소가 확인된(상태 없는 도전을 통과한) 응답에만 X25519 를 계산하고, 토큰 결속이면 세션 비밀의 증명 태그가 맞아야 자리를 잡는다.
+- **데이터 이름 `None` 은 빈 이름이다** — `hashed_string( "None" )` 은 언리얼 `FName` 처럼 `empty()` 다. 고르기 항목 · id 를 `None` 으로 지으면 "이름 없음" 으로
+  읽힌다(외형 스키마는 로드 오류로 막는다). 항목은 `Off` · `Bare` 처럼 짓는다.
+- **벽시계는 `WallClock` 하나**(`Core/Time`, `system_clock` 을 읽는 유일한 파일) — 서비스는 `nowMs` 매개변수로 받고 시험은 가짜 시각을 넣는다.
+  여러 서비스가 함께 쓰는 비동기 창구(캐시 앞 · 버스 · 접속 상태 찾기)는 결과를 "꺼내 가기(poll)" 로 두지 않는다 — 소비자가 둘이면 서로의 결과를 가져간다.
+  맡길 때 델리게이트를 받아 그 요청에만 알린다(`EphemeralStoreRouter` · `IAccountPresence`). 클라이언트 요청 id ↔ 델리게이트 표는 `sendRequest` 가 그 자리에서
+  실패를 알릴 수 있어 보내기 전에 걸어 둔다(`ServiceClientCallTable::send`). 라우터보다 먼저 내려가는 델리게이트 주인은 기다리던 요청을 `cancel` 한다.

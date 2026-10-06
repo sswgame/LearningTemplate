@@ -192,6 +192,37 @@ inputMap.bindVirtualJoystick2D( "Move", sw::MouseButton::Left, /*radius*/ 100.0f
 
 ---
 
+## 함정 · 계약
+
+- **입력 · 매핑 · 행동 세 층** — 입력 층(Engine/Input)은 장치 사건만, 매핑(InputMap)은 플레이어 조종자 · 플레이어 뷰 · 명령형 디렉터만, 폰은 `ControlIntent` 만
+  읽는다(`CheckControlBoundary` 허용 표). 네트워크 · 게임플레이 리플레이는 의도를 싣는다. **탑승 = 빙의를 탈것으로 옮기는 것**, 탑승자는 좌석 소켓에 붙어(이동 멈춤 ·
+  자세 파라미터) 피격은 그대로 받는다. 탈것 의도의 연결은 운전석 조종자를 따른다. 명령형 장르(RTS · SRPG · 경영)는 폰이 없다.
+  허용 표의 파일도 장치(키 · 버튼 · 휠 · 이동량 · 패드)를 묻지 않는다 — 클릭 · 시점 · 확대도 입력 맵 액션이고, 남는 장치 조회는 커서 위치
+  `getMousePositionNormalized` 하나다(같은 게이트). 확대처럼 "한 칸씩" 인 축은 `wasActionTriggered` 프레임에만 쓴다 — 패드 버튼 축은 누르는 동안 매 프레임 ±1 이다.
+- **가상 입력은 `IVirtualInputSource` 하나로 넣는다** — `InputManager::attachVirtualInput` 이 붙이면 `beginFrame` 이 OS 사건과 같은 자리에서 그 프레임 사건을
+  재생한다. 배타 모드(기본)는 OS 키 · 마우스 · 패드 사건, 패드 폴링, 창 포커스 사건, 커서 가두기를 무시한다 — 사람이 같은 기계를 써도 시험이 흔들리지 않는다.
+  엔진 키보드 포커스(개발 콘솔)는 따른다. 바깥 스크립트로 OS 입력(`SendInput`)을 넣지 말 것 — OS 는 사건을 포그라운드 창에만 준다.
+- 셸 InputMap 을 못 읽으면
+  오류를 알리고 빈 맵이다(손 바인딩으로 바꿔 끼우지 않는다). 입력 리플레이 파일은 `RawInputEvent` 를 통째로 적으므로 배치가 바뀌면 `kReplayVersion` 을 올린다(지금 4).
+  `InputReplay` 는 **입력 층 녹화**다(프레임마다 원시 사건 — 키 바인딩 · 포커스까지 재현하는 QA 용, 재생은 가상 입력 원천). 게임플레이 리플레이 · 네트워크가 싣는 것은 행동(의도)이다.
+  의도 기록(`.swintent`)은 시작 상태를 싣지 않는다 — 같은 씬 · 같은 고정 프레임 시간에서만 같은 궤적이고, 로컬 의도도 `quantize` 를 거쳐야 기록 · 원격과 비트까지 같다
+  (`ControlTest.RecordedIntentsReplayTheSameTrajectory`). 조종자가 `produceIntent` 안에서 빙의를 옮기면 등록 순서에 따라 같은 틱에 두 조종자가 몬다 — `ControlSystem::queuePossess`.
+  **자동 플레이 = AI 조종자의 빙의** — 몸 안에 자동 플레이 분기를 두지 않고, 스위치가 바뀌면 디렉터가 틱 뒤 플러시에서 플레이어 폰을 게임의 AI 조종자 ↔ 플레이어 0 의
+  조종자로 옮긴다(Shooter3D `syncAutoPlayPossession`, 시나리오 `autoplay.scenario.xml`). 자동 빙의 `Ai` 가 세운 조종자는 폰과 함께 지워진다(`isSpawnedForPawn`) —
+  아니면 스폰 · 걷기를 되풀이하는 적마다 조종자 오브젝트가 쌓인다.
+- **통합 `InputMap` 은 `InputManager::beginFrame` 이 갱신한다** — 게임 코드가 `update()` 를 다시 부르면 한 프레임에 두 번 흐른다(Input README 예제가 그랬다).
+- **마우스 `getSmoothDelta` 는 프레임당 한 번 `IInputDevice::onEventsDispatched( dt )` 에서 정해진다** — `setSmoothing(f)` 는 1/60 초 동안 남기는 비율
+  (τ = -(1/60)/ln f, 60 Hz 에서 옛 계수와 같다). 이벤트 처리기 안에서 스무딩을 다시 돌리면 폴링 레이트마다 감각이 달라진다. 프레임 이동은 `getMovementDelta()` 하나.
+- **입력** — 창 메시지는 큐에만 넣고 장치 상태를 바꾸는 길은 `beginFrame` 의 재생 하나다(포커스 · 포인터 진입도 큐 순서 안). `RawInputEventType` 은 뒤에만 덧붙인다(리플레이 파일이 번호를
+  담는다). 입력 시험은 메시지 → `beginFrame` → 조회 → `endFrame`. XInput 트리거도 `setAxis( 4 · 5 )` 로 넣어야 데드존이 먹는다. 리바인딩은 바인딩 종류를 지킨다(`getRebindSlotIndex`),
+  바인딩 종류는 `kArrBindingKindInfo` 표 하나(+ `static_assert`, 저장소는 `-Wswitch-default`). 통합 InputMap 은 `InputManager::beginFrame` 이 갱신한다.
+  입력 XML 의 액션 `trigger` 는 단일 키 · 조합 · 축 합성(`<axis1d>`, 적지 않으면 `Down`)에 간다 — 연속 값(`vector2d` · `stick` · `mouseDelta`)은 `Down` 고정이라
+  다른 값은 로드 경고. 유저 바인딩 저장도 `trigger` 를 싣는다(빼면 다시 읽을 때 종류의 기본값으로 돌아가 Shooter3D 무기가 누르는 동안 매 프레임 바뀌었다).
+- **마우스 잠금은 게임의 요청과 OS 적용을 나눈다** — `InputManager::isMouseLockActive` = 잠금 요청 ∧ 포커스 ∧ 포커스를 잃은 뒤 클라이언트 클릭 ∧ Alt 안 누름 ∧
+  키보드 포커스 `Game`. 활성화(`WM_ACTIVATE` · `FocusIn`)로 다시 잠그면 제목 표시줄 · X 를 눌러 활성화한 사용자의 커서가 클라이언트 안으로 끌려가 창을 못 끈다.
+  잠금을 다시 건 클릭(과 그 뗌)은 게임에 넘기지 않는다(언리얼 뷰포트 캡처 클릭과 같다). `ShowCursor` 는 카운터라 `syncMouseLock` 이 전이에서만 부른다.
+  "잠긴 동안만" 할 일(마우스 시점)은 `isMouseLockActive` 로 가린다.
+
 ## 더 볼 곳
 
 - `InputManager.h` — 편의 API(`isKeyDown`, `getMouseDelta` 등) 전체 목록

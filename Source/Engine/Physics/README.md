@@ -236,3 +236,18 @@ if ( physicsWorld.sweepTest( projectileAABB, velocity * deltaTime, 0, hit ) )
 - 출발점은 바디를 더한 자리부터 잡힙니다. **순간이동은 쓸지 않습니다** — `SceneComponent::teleportTo`(언리얼 `TeleportPhysics` · 유니티 `Rigidbody.position`
   대입)는 그 컴포넌트와 그 아래 붙은 모두를 표시하고, 콜라이더는 바디를 `BodyMoveType::Teleport` 로 맞춰 새 자리를 다음 쓸림의 출발점으로 둡니다. 그냥
   옮기면(`setWorldPosition`) 그 길이 쓸립니다.
+
+## 함정 · 계약
+
+- **물리 후보 범위는 셀 하나 이내로 움직인 바디만으로 넓히고, 먼 이동 바디(`isFarMover`)는 하나씩 잰다** — 하나가 멀리 끌리면 모든 연속 바디가 전체를 훑었다.
+- **물리** — `stepPhysics` 는 틱과 트랜스폼 적용 뒤에 한 번 돈다. 콜라이더는 틱하지 않고 틱 안의 질의는 지난 step 을 본다. `onOverlapBegin( const OverlapInfo& )` 안에서는 스폰 ·
+  파괴해도 된다. 순간이동은 `teleportTo` · `BodyMoveType::Teleport`(아니면 연속 바디가 그 길을 쓴다). 셀 범위는 `CellRange` 하나, 셀 순회 변수는 int64(`MathUtil::kMaxInt32` 로 접히면 안 끝난다),
+  `toCellCoord` 는 float64 로 나눈 뒤 접는다. 공간 색인 규약은 `Source/Engine/Spatial/README.md`.
+- **강체 물리** — `ScenePhysics::step` 이 겹침 월드 다음에 돈다(고정 스텝 → 보간 자세를 트랜스폼에 → 이벤트). 컴포넌트가 쓴 자세와 다른 트랜스폼은 코드가 옮긴 것(순간이동)이다.
+  vcpkg Jolt 는 설치 헤더가 부동소수 예외 비트를 켜고 라이브러리는 끈다 — `JPH::RegisterTypes()` 는 abort 하므로 백엔드가 라이브러리의 ID 로 등록한다(그 비트만 허용).
+  Jolt 임포트 타깃의 `-mavx2` 는 Jolt 백엔드 소스에만 붙인다(`$<LINK_ONLY:>` + 소스 속성). Box2D 의 `totalNormalImpulse` 는 이완 반복까지 더해 약 두 배다.
+  `RigidBodyComponent` 는 오브젝트의 루트여야 몸의 자세가 오브젝트를 옮긴다(메시가 루트면 파괴 · 기믹 시험이 조용히 안 움직인다). 상한에 붙어 돌던 바디의 각속도를 새
+  바디에 넘기면 반올림으로 상한을 넘을 수 있어 `createBody` 가 줄인다.
+- **2D 콜라이더 판정은 `overlapsBounds`(순수 기하)와 `isTouching`(레이어 반영) 둘** — 둘 다 바디 등록 여부와 무관하게 같은 답(Unity `Bounds.Intersects` · `IsTouching`).
+- **2D 콜라이더 바디는 깊이가 없다(Z 0 한 점)** — 3D 광선 · 상자 질의를 `PhysicsWorld` 에 그대로 던지면 Z 가 0 이 아닌 2D 씬에서 아무것도 맞지 않는다.
+  `PhysicsWorldQuery` 는 깊이 없는 바디를 Z 와 상관없이 맞힌다.

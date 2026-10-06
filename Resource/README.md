@@ -30,3 +30,13 @@
   있으면 핫 리로드가 임포트합니다). `App.exe --check-textures` · `TextureImportStampTest` 가 원본 · 규칙 · DDS 의 어긋남을 내용 해시로 잡습니다.
   BC7 은 Debug 에서 느리므로 큰 원본은 Release App 으로 임포트합니다. `.hdr` 은 아직 임포트하지 못합니다(8비트 디코더).
 - 참조하는 곳이 없는 원본은 옮기지 말고 지웁니다. `CheckTextureFolders.py` 게이트가 폴더 규칙을 지킵니다.
+
+## 함정 · 계약
+
+- **임포트 · 수집 산출물은 줄끝 변환을 받지 않는다**(`.gitattributes` 의 `Resource/**/models{,_raw}/** -text` · `Resource/**/localization/** -text`). 스탬프는 원본 · 결과를 바이트 해시로 대조하는데,
+  `core.autocrlf=true` 체크아웃이 `*.skeleton.json` 을 CRLF 로 바꾸면 그것을 임포트한 워크트리 밖에서만 "손으로 바꿨다" 가 된다. 텍스트 산출물을 새로 만들면 같은 규칙에 든다(`App --check-text` 도 CRLF 체크아웃에서 "OUT OF DATE" 였다).
+- **고아 검사(`orphans`)는 전체 경로 · 파일 이름만 찾는다** — 코드가 `"game/<게임>/models/" + 이름 + ".mesh"` 로 조립하는 메시는 규칙의 `exclude_patterns` 에 적는다
+  (NileCity · StarSkirmish · HarvestValley 작물). 아무도 안 쓰는 원본은 `models_raw/` 와 `import.stamp` 줄까지 함께 지운다. 기믹 프리팹(`common/prefabs/gimmicks`)은 가져다 쓰는 라이브러리라 뺀다.
+- **경로** — 리소스 id 하나로 든다(`ResourceUtil::toResourceId` — 루트 밖 · `..` 는 빈 글). 쓰기 경로는 `ResourceUtil::getWritePath` 하나 + `ensureParentDirectoryExists`(bool, 실패하면
+  그 자리에서 경로 · OS 이유를 알린다). 맵 키는 `normalizePath`(소문자), 여는 경로는 `normalizeSeparators`(`collectFiles` 는 대소문자를 보존한다). 배포 빌드는 `.meta` 를 쓰지도
+  GUID 를 지어내지도 않는다 — 배포본 GUID 표는 쿠커가 도메인마다 넣는 `assetregistry.txt` 다. `ensureMeta` 는 루트 밖 절대 경로면 null GUID.

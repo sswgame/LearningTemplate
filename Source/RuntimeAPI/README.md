@@ -44,3 +44,7 @@
 - **구현체 없음**: 뼈대(인터페이스 선언)와 타입만 둔다. 동작 코드는 `Engine`, `Editor`, `SWGame` 쪽에 구현한다
   (`Export/` 의 매크로 본문은 모듈의 `.cpp` 안에서 펼쳐진다).
 - **Engine · App 을 include 하지 않음**: RuntimeAPI 의 헤더는 `Core/` 와 RuntimeAPI 자신만 include 한다(`Export/` 의 모듈 매크로가 모듈 쪽 로케이터 — `Editor/` · `GameFramework/` — 를 끌어오는 것은 그 본문이 모듈 `.cpp` 에서 펼쳐지는 계약이라 예외). `CheckEngineLayers.py` 가 막는다.
+
+## 함정 · 계약
+
+- **서비스 표(`EngineServiceList.xxx`)는 RuntimeAPI(`Service/`)에 있고 Engine 이 include 한다** — 서비스 id 가 호스트 ↔ 모듈 계약이라서다. 타입 이름은 전방 선언만 만든다. RuntimeAPI 는 Engine · App 헤더를 include 하지 않는다(`CheckEngineLayers`). 표를 id 표와 바인딩 표로 나누지 않는다(목록 둘이 된다).

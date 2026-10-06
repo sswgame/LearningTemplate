@@ -17,3 +17,9 @@
 `BVHTree3D` 의 질의 넷(상자 · 광선 · 구 · 절두체)은 `collectOverlapping( predicate )` 하나로 트리를 걷고 겹침 판정만 다릅니다 — 질의 모양을 하나 더하는 것은
 판정 하나를 더하는 일이지 스택 순회를 또 쓰는 일이 아닙니다. 절두체 평면은 `Frustum::fromViewProjection` 에서 오고, 렌더러가 GPU 컬링에 올리는 것(`RenderView::_frustum`)과
 같은 추출이라 CPU 집기와 GPU 컬링이 카메라가 보는 것을 다르게 판단하지 않습니다.
+
+## 함정 · 계약
+
+- **2D 근접 질의는 엔진 `SpatialHashGrid2D` 하나** — NetMmo 관심 영역이 쓴다(키는 엔티티 id 를 index 에 담은 `SlotHandle`, 세대 1). `update` 는 덮는 셀이 그대로면
+  경계만 바꾸고(PhysicsWorld 와 같은 지름길), 질의 결과는 핸들 순이라 순서가 결과에 실리는 쪽은 스스로 정렬한다. RTS 버킷(걸음마다 다시 짓는 밀집 머리 · 다음 배열,
+  결과 순서가 자동 목표 · 채취 · 밀어내기에 실린다)은 옮기지 않는다.

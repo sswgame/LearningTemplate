@@ -106,3 +106,11 @@ Restart=on-failure
 [Install]
 WantedBy=multi-user.target
 ```
+
+## 함정 · 계약
+
+- **전용 서버는 별도 실행 파일 `Server` + 기동 표 대상 칸이다**(언리얼 `<Game>Server` 자리). 널 RHI 를 두지 않는다 — RHI · 렌더러 · 플레이어 설정 단계를
+  돌리지 않으면 된다(시험 하네스가 이미 그렇게 씬을 돌린다). 리눅스 서버는 X11 을 링크하면 X 없는 기계에서 main 전에 죽는다 — `SW_WITH_CLIENT_CODE` 로 뺐다.
+- **전용 서버 배포본은 Info 로그를 컴파일한다**(`BuildLayout.cmake`, 클라이언트 배포본은 Warning 까지) — 준비 · 상태 · 종료 줄과 콘솔 명령의 답이 Info 라
+  빼면 서버가 아무 말도 안 한다(ServerBootTest 가 CI 에서만 졌다 — 이 PC 는 Shipping-Server 를 돌리지 않았다). 서버 패키지에 없는 종류(텍스처 · 오디오)를 가리키는
+  시험은 `EngineTest/HostTargetTestUtil.h` 로 서버 전용 빌드에서 건너뛰고, 그 종류를 찾는 엔진 코드(`DdsLoader` · 지형 스플랫)는 `isExcludedForHost` 로 조용히 진다.

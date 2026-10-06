@@ -243,3 +243,9 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; build/Ninja-Debug/Bin/Engin
 - **퍼징 대상 표**는 `EngineTest/LoaderFuzzTargets.cpp` 다(XML · JSON · `.meta` · DDS · `.mesh` · 압축 스트림 · 팩 · 씬 XML/바이너리 · GameObject 상태 ·
   머티리얼 · 소켓 · 체형 · 표면 채널 · 사용자 설정 스키마 · 스프라이트 · 애님 그래프 · 대화 · 시퀀스 · 문자열 표 · 타일맵 · 입력 스냅숏 · 문자열 풀 · WAV · OGG).
   씨앗은 저장소의 실제 파일이고, 단언도 결함으로 센다(바깥 데이터로 걸리는 단언은 입력 검증이 먼저 막아야 한다). 찾은 결함은 그 로더의 스위트에 회귀 시험으로 둔다.
+
+## 함정 · 계약
+
+- **커버리지 안내 퍼징은 리눅스 전용**(`SW_ENABLE_FUZZING` · 프리셋 `CI-Fuzz` · `.github/workflows/fuzz.yml`, 대상 표 하나를 시드 고정 변이 `LoaderFuzzTest` 와
+  나눠 쓴다). 퍼저와 시험 실행 파일은 같은 기동(`Test/TestFramework/TestHostRuntime`)을 쓴다. Windows 는 clang_rt.fuzzer 가 /MT 뿐이라 엔진(/MD)과 링크되지
+  않는다 — 디코더만 /MT 로 떼어 돌리는 것은 하지 않는다(사용자 결정 2026-10-06, 같은 코드를 리눅스가 돈다).

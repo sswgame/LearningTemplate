@@ -94,3 +94,84 @@ py -3 Scripts/dev/ConfigureSnapshot.py diff before.json after.json              
 
 Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프리셋마다 뜬다. 구성 시간은 `cmake --preset … --profiling-format=google-trace --profiling-output=t.json`
 뒤 `ConfigureSnapshot.py profile t.json --top 25`.
+죽은 CMake 함수 · common 을 비켜 간 파이썬 호출은 `RunBuildScriptInventory.py`(보고서)가 센다.
+
+## 함정 · 계약
+
+- **vcpkg 설치 폴더 · 스탬프는 워크트리 모두가 나눠 쓴다**(`build/vcpkg_installed` junction). 해시만 보고 설치하던 때는 옛 vcpkg.json 의 워크트리가
+  configure(빌드 중 GLOB 로 도는 재구성 포함)하면 다른 워크트리가 쓰는 포트를 지웠다(recast · tracy). 지금 게이트(`Vcpkg.cmake` 5 절)는 스탬프가 다르면
+  `vcpkg install --dry-run` 계획을 보고 — 지을 것이 없으면 skip, 지우게 되면 멈추고 경고(스탬프도 덮지 않는다), 빠진 포트가 있을 때만 install. 재현:
+  `git show <옛 커밋>:vcpkg.json > vcpkg.json` → `cmake --preset Ninja-Debug` → "Install skipped … would remove" 경고 · 포트가 남는지 · `VCPKG_MANIFEST_INSTALL=OFF`
+  → vcpkg.json 되돌림. 스탬프가 다를 때만 dry-run 이 돈다(약 20 초).
+- **ASan (Windows)** — SmokeTest 만 `report_globals=0`(DLL 을 내려도 전역 등록이 안 지워진다), `detect_odr_violation=0`(1 이면 1800 s+), `/MD` 강제, ASan 런타임 DLL 은
+  `Bin` 과 `BuildTools` 양쪽(`cmake/Modules/Options/Sanitizer.cmake`). Windows 의 memcpy 는 겹쳐도 맞게 옮겨 겹친 복사 버그가 안 보인다 — 리눅스 ASan 이 잡는다.
+- **TSan** 은 `SW_SANITIZER_KIND=thread` · `CI-Debug-TSAN`(GNU/Clang 전용, ASan 과 동시 불가). 크래시 자식 시험은 ASan · TSan 에서 건너뛴다. 새 CI 검사는 매트릭스에
+  `reportOnly: true` 로 들여 보고를 추린 뒤 막는 잡으로 바꾼다.
+  원자 연산으로 스스로 동기화하는 서드파티(Jolt · Box2D)는 트리플릿 `x64-linux-tsan`(`cmake/Modules/Toolchain/VcpkgTsan/`)이 계측해 짓는다 — 계측 안 된 정적 라이브러리는 동기화가
+  안 보이는데 헤더 인라인 함수는 링커가 우리 TU 의 계측된 사본을 골라 거짓 경쟁 수백 건이 났다. 트리플릿 파일은 ABI 해시에 들어 고치면 포트를 다 다시 짓고(WSL 약 35 분),
+  기본 CI 캐시 키가 보는 `Toolchain/Vcpkg/**` 밖에 둔다. 포트 컴파일러는 프리셋의 `CC=clang` 이 정한다(빠지면 vcpkg 가 GCC 로 짓는다).
+- **유니티 빌드는 `CI-*` 프리셋에만 켜져 있다.** `Ninja-*` 가 초록이어도 익명 네임스페이스 충돌이 없다는 뜻이 아니다 — 헬퍼 · 상수는 `XxxInternal` 구조체로 감싼다.
+  유니티 제외 목록(옛 skipUnitySources 함수)은 다시 만들지 않는다 — 부딪치는 이름을 고친다.
+- **LTO 함정** — clang `-flto` obj 는 MSVC `lib.exe` 가 못 읽는다(LNK1107). 아카이버는 "지금 컴파일러 옆" 을 먼저 본다(리눅스 `/usr/bin` 에는 llvm-ar 이 없어 LTO 가 조용히 꺼진다).
+  CMake 는 IPO 아카이브 명령을 `project()` 때 정해 두고, `check_ipo_supported` 는 거짓 NO 를 내서 직접 판정한다(`cmake/Environment/ToolchainBinaries.cmake`). `SW_ENABLE_LTO` 하나가 Release · Shipping.
+- **configure 의 PATH 는 `sw_prependEnvPath` 로만 고친다**(`cmake/Environment/HostPath.cmake` — 호스트 구분자, 이미 있으면 그대로). project() 전에는
+  호스트 판정 `CMAKE_HOST_WIN32` 로 고른다(이 PC 의 --fresh 구성에서는 `WIN32` 도 그때 이미 1 이었다 — 문서가 보장하는 것은 호스트 변수다).
+- **빌드 스크립트 리팩터 뒤의 자리**(2026-10-06): 모듈 라이브러리는 `sw_addModuleLibrary` 하나(`cmake/Engine/ModuleTargets.cmake` — 팩토리 밖 SHARED/MODULE 은
+  `CheckCmakeConventions` 가 막는다), 키트는 매니페스트 의존 위상 순서(`PythonTest_TestKitBuildOrder`), RHI 백엔드의 빌드 칸은 `CookContract.json` 의 `rhi_backends`,
+  vcpkg 라이브러리는 `sw_addVcpkgPackage`(REQUIRED) · `sw_addVcpkgHeaderOnly`. 파이썬은 프로세스 `runProcess` · 빌드 폴더 `BuildTree` · 생성 파일 `writeGeneratedFile` ·
+  보고서 `LintReport` 가 한 자리이고 `CheckScriptCommonHelpers` 가 비켜 가는 호출을, `CheckScriptLayout` 이 폴더 → 이름 앞머리 → 기반 클래스 표를 지킨다.
+- **configure 의 파이썬은 `GenerateConfigureFiles.py` 한 프로세스**(생성기 다섯) — 새 configure 생성기는 각자 `sw_executePythonScript` 를 더하지 말고 거기에 한 줄.
+  재는 법: `cmake --preset <p> --profiling-format=google-trace --profiling-output=t.json` → `ConfigureSnapshot.py profile t.json`(CMake 는 B/E 짝으로 적는다).
+  리팩터 전후 configure 동일성은 `ConfigureSnapshot.py take/diff`(실행 파일 시험의 command 는 그 exe 가 지어졌는지에 따라 비거나 찬다 — 차이로 읽지 말 것).
+- **서드파티 격리의 링크 주인은 규칙마다다**(`CheckThirdPartyIsolation` 의 `cmakeLinkOwner`) — 엔진 백엔드는 `Source/Engine/CMakeLists.txt`, 키트 안 드라이버(SQLite)는 그 키트의 CMakeLists 가 링크한다. 어느 드라이버가 실행 파일에 드는지는 빌드 타깃(`_listTarget`)이 정한다 — 드라이버 목록 옵션을 따로 두지 않는다.
+- **빌드 타깃별 제외 에셋은 쿠킹 표 한 줄이다**(`Config/Engine/CookContract.json` 의 `asset_kinds` · `target_excluded_asset_kinds`). 쿠커(`--build-target`)가 팩에서 빼고,
+  같은 호스트의 런타임(`ResourceUtil::setHostTarget`)은 그 종류를 읽지 않는다 — 한쪽만 고치면 서버가 "파일 없음" 을 쏟거나 팩에 쓸모없는 바이트가 남는다.
+  종류를 더하면 `CheckCookContract` · `TestServerPackExclusion` · `ResourceHostTargetTest` 가 같이 본다.
+- **서드파티 고지는 빌드가 만든다** — `ThirdPartyNotices` 타깃(`Scripts/generate/GenerateThirdPartyNotices.py`)이 `Bin/THIRD_PARTY_NOTICES.txt` 에
+  매니페스트가 끌어오는 vcpkg 포트의 `share/<포트>/copyright` 를 모은다(설치 트리를 워크트리끼리 나눠 써 트리 전체가 아니라 `vcpkg/status` 의 의존 닫힘).
+  vcpkg 밖에서 들인 코드(저장소에 복사한 헤더 등)는 여기 저절로 들어가지 않는다 — 그런 것을 들이면 그 고지를 같이 넣는다.
+- **스크립트 시험은 `sw_registerScriptTest`** — 파이썬 단위 시험 · QA · 린트가 같은 속성 철자. 시험 실행 파일 폴더는 `Test/` 아래 CMakeLists 가 있으면 저절로 들어간다.
+- **enum switch 는 LLVM 방식**: 모든 열거자를 다루면 `default:` 없음(`-Werror=switch` 가 빠진 case 를, `-Werror=covered-switch-default` 가 다 다룬 switch 의
+  default 를 잡는다), 일부만 다루면 `default:`(`-Wno-switch-enum` · `-Wno-switch-default`). 파일별 `#pragma` 로 switch 경고를 바꾸지 않는다. 외부 헤더는 `SYSTEM`
+  include 여야 이 규칙이 그 안에 걸리지 않는다(ReflectionParser 의 nlohmann-json 이 일반 `-I` 였다).
+- **RHI 백엔드 표(이름 · 별칭 · 셰이더 폴더 · 포맷)와 쿡 접미사 표의 정본은 `Config/Engine/CookContract.json`** — `GenerateCookContract.py` 가 C++ X-macro
+  (`sw/config/CookContract.gen.h`)를 만들고 Python 은 `Scripts/common/CookContract.py` 로 읽는다. `CheckCookContract` 게이트가 쿠커 함수를 표와 대조한다.
+  두 언어에 목록을 따로 적지 말 것(`PackFormat.json` 과 같은 모양). 백엔드의 빌드 칸(모듈 · 장치 소스 폴더 · 그래픽 라이브러리 · 배포 매크로)도 여기 —
+  CMake 는 `generated/sw/config/CookContract.cmake` 로 읽는다(`cmake/Engine/RhiBackends.cmake`). `SW_SHIPPING_RHI_BACKEND` 는 표의 이름만 받고(별칭 · 소문자는 구성 실패 —
+  옛 빌드 폴더는 캐시 값을 고칠 것), 그 플랫폼에 없는 백엔드면 구성이 선다(`PythonTest_TestRhiBackendTable`).
+- **소스 손 목록은 `Test/EditorTest/CMakeLists.txt` 하나다** — Editor 소스 중 ImGui 없는 것을 고른다(`CheckTestSuites`). Core 는 폴더 GLOB + 플랫폼 폴더 규칙
+  (`sw_filterPlatformSources` — `Windows/` · `Linux/` · `Posix/`), RHI 백엔드 장치 소스는 백엔드 폴더 GLOB 이다(`sw_getRhiBackendSources`). `CheckSourceGlob` 이 디스크와 대조한다. 구성이 일부러 짓지 않는 소스는
+  `sw_excludeUnbuiltSources` · `sw_declareUnbuiltSources` 로 적는다(`<빌드>/generated/sw/config/UnbuiltSources.txt`). 파일을 옮기면 경로를 문자열로 적은 곳은 컴파일러가 안 잡는다.
+- **모듈 라이브러리는 `sw_addModuleLibrary` 로 만든다**(기본값 한 자리 — 팩토리 셋 · GameFramework · 에디터).
+  **동적 모듈은 타깃을 만드는 자리에서** `sw_registerDynamicModule( <타깃> rhi|kit|game|gameframework|editor )` 로 등록한다. `sw_verifyDynamicModuleRegistry` 가 루트부터 훑어
+  미등록 MODULE 이면 FATAL_ERROR.
+- **생성 상수는 `Scripts/common/Constants.py` 의 `k*` 전부를 기계 변환한다**(`kDirSourceEngine` → `SW_DIR_SOURCE_ENGINE`). 경로 조립은 소비 쪽(`ConfigConstants.h.in`)이 한다.
+  `configure_file` 은 빈 값을 조용히 넣는다. `toolchain_config.json` 은 CMake 가 파싱하지 않는다(`GenerateToolchainCMake.py` → `SW_TOOLCHAIN_<KEY>`) — 예외는 vcpkg 가 부르는
+  `FindLlvmBin.cmake` · `VcpkgPortsToolchain.cmake` 둘이고, 거기서 `CMAKE_SOURCE_DIR` 은 vcpkg scripts 폴더다. 상수만 필요한 CMake 는 `LoadConfigConstants.cmake` 를 **파일
+  스코프에서** include 한다(함수 안에서 처음 include 하면 상수가 그 함수에만 생긴다).
+- **`sw_addVcpkgPackage` 는 못 찾으면 구성을 세운다(REQUIRED)** — 설정 파일이 없는 헤더 전용 포트는 `sw_addVcpkgHeaderOnly`(PROBE 헤더 확인). 서드파티 폴더 목록은 없다(폴더 훑기).
+  OBJECT 라이브러리(`Core_objects`)는 링크를 전파하지 않는다 — 외부 라이브러리는 `Core` 와 `Engine` 양쪽에. vcpkg 업스트림 결함은 `ThirdParty/<pkg>/vcpkg-port/` 오버레이로
+  (`.gitattributes` 의 `*.patch -text`).
+- **Shipping 정적 링크는 열거형만 든 `.gen.cpp` 를 버린다**(증상: `findEnum` 이 null, enum 2 개) — `sw_linkWholeArchive` 가 링커별 whole-archive 를 고른다.
+- **PCH 안 헤더의 include 하나가 TU 수를 정한다** — `RHITypes.h`(PCH)가 쓰지도 않는 `RHIBackendType.h` 를 들어 1987 TU 가 그 헤더에 의존했다(끊은 뒤 약 474).
+  끊을 때 직접 include 를 받는 것은 그 이름의 **값**(`RHIBackend::DirectX12`)을 쓰는 파일뿐이다 — 타입 이름만 쓰는 헤더는 불투명 선언(`enum class RHIBackend : uint32;`)으로
+  선다. 거쳐 받던 파일은 글자 include 그래프에서 그 간선을 끊어 후보를 좁힌 뒤 `-fsyntax-only`(PCH 없이)로 확인한다.
+- **D3D · DXGI · D3DCompiler · MF · XAudio2 헤더는 PCH 에 넣지 않는다**(`EngineMinimal.h` 는 OS 헤더만, 쓰는 파일이 `EnginePlatformHeaders.h` 를 직접) — 넣으면
+  1,654 TU 가 `d3d12.h` 를 파싱했다(뺀 뒤 약 43). `#if defined( SW_HAS_DXC_API )` 처럼 정의 여부로 읽는 매크로는 정의 헤더가 빠지면 **조용히** 꺼진다(시험은 "컴파일러
+  없음" 으로 건너뛴다) — `ShaderCompiler.cpp` 의 Windows `#error` 가 막는다.
+- **Shipping 통째 링크는 "링크한 라이브러리" 기준이어야 한다, "적은 `LIBS`" 기준이 아니다** — `CoreTest` 는 Engine 을 `TestFramework` 로만 받아 Shipping 에서 등록기가
+  빠졌고, 하네스 기동의 `[Error] Failed to deserialize config` 한 줄만 남긴 채 모든 시험이 기본값 설정으로 돌았다(종료 코드 0). 배포 구성의 하네스는 생성 JSON 이
+  역직렬화되지 않으면 기동을 실패시킨다.
+- **Release · Shipping 도 서명 · 심볼을 만든다**(`SW_RELEASE_DEBUG_INFO`, 기본 `lines` = `-gline-tables-only`, `full` = `/Z7`) — 링크 `/DEBUG:FULL` + `/OPT:REF` · `/OPT:ICF`
+  (`/DEBUG` 가 끄므로 다시) · `/PDBALTPATH:%_PDB%`, 리눅스 `--build-id=sha1`. Shipping PDB 는 `Symbols/`(배포 폴더 밖, 시험 실행 파일 PDB 는 `TestBin`), 저장소 배치는
+  `py -3 -m Scripts symbols`. PDB 이름만 적으므로 크래시 스택(DbgHelp)은 실행 파일 폴더를 검색 경로에 더한다(`WindowsCallStackCapture`). 측정(2026-10-06,
+  Windows Shipping 전체 빌드, 기계 공유 중): 오브젝트 합 146 → 262 MB, `Bin` 29.6 MB 그대로(App.exe 크기 같음), `TestBin` 81 → 257 MB(시험 PDB), `Symbols` 31.5 MB,
+  링크 App 26.7 → 30.5 s · EngineTest 68.6 → 79.9 s, 전체 빌드 벽시계는 기계 부하에 묻혀 차이 없음(7.6 · 6.8 분).
+- **유니티 묶음에서 서드파티 매크로 정리는 "내가 정의한 것만" 지운다** — `AudioVorbisDecode.cpp` 가 stb_vorbis 뒤에 `#undef TRUE` · `FALSE` 를 하자 Windows
+  `windows.h` 의 것이 지워져, 같은 묶음 뒤의 `XAudio2System.cpp`(d3d11.h)가 PCH 끈 빌드(CI Windows)에서 깨졌다. PCH 가 있으면 d3d 헤더가 먼저 들어와 가려진다.
+- **구성을 넘어 같은 비트가 필요한 TU 는 `sw_markDeterministicSources`** — 부동소수점 축약(FMA 합치기)을 끄고 유니티 묶음에서 뺀다. Release 의
+  `/arch:AVX2` 가 `a * b + c` 를 FMA 로 합쳐 파괴 해시가 Debug 와 갈렸다(파쇄 결과부터). 대상은 Engine `Destruction/` 의 시뮬레이션 TU 여덟 ·
+  `GF_NetDestruction` · Core `Math/VectorMath.cpp`(거리 · 길이가 줄 밖 함수라 그쪽도 — 빼면 사건 넷째의 반경 피해에서 다시 갈린다). 새 결정성 경로는
+  이 함수에 파일을 더하고 기준값 시험을 붙인다.
+- **`cmake -P` 스크립트는 `cmake_minimum_required` 를 먼저 둔다** — 없으면 정책이 OLD 라 CMake 3.x(CI 러너)에서 `IN_LIST` 가 "Unknown arguments" 다.
+  CMake 4.x(이 PC)는 3.5 이전 정책의 OLD 를 지워 늘 통과하므로 로컬에서는 안 보인다. `-P` 로 include 되는 모듈(`ModuleManifest` · `RhiBackends`)은 그것이 없으면 구성을 세운다.

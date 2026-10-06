@@ -531,9 +531,19 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 
 - **벤치**: `App -gv_benchUiWidgets=10000 -gv_benchUiChurn=10 -gv_profileFrames=600`(Release, VSync 꺼짐 — 1/RT.Frame 이 주사율과 같지 않은지 먼저) — `Debug/UiBenchScreen` 이
   스크롤 패널 안 줄 바꿈 격자(칸마다 테두리 · 아이콘 · 글, 고정 크기 = 레이아웃 경계)를 짓고 프레임마다 앞쪽 칸 M 개의 글을 바꾼다. Empty 게임의 `-gv_benchUiMarkers=K` 는
-  벤치 큐브에 화면 마커를 붙인다. 대조군은 같은 바이너리의 `-gv_benchUiChurn=0`. 숫자는 백로그 3-1.
+  벤치 큐브에 화면 마커를 붙인다. 대조군은 같은 바이너리의 `-gv_benchUiChurn=0`. 숫자는 [검증과 측정](../../../docs/08_Verification.md) 2절.
 - **자르기 밖 자식은 걷지 않는다**(`UiPaintPass::paintChild` — Slate 의 자식 컬링): 자르는 조상(스크롤 · `_bClipChildren`)의 자르기 밖에 위젯 사각형이 통째로 있으면
   그 가지를 걷지 않는다. 더러운 비트는 위젯에 남고, 그동안 배율 · 아틀라스가 바뀌었으면 비트를 하나 남겨 다시 보일 때 새로 칠한다. 위젯 사각형 기준이라 그림자 ·
   넘친 자손은 보지 않는다(그것이 자르기 안으로 들어오는 모양은 잘린다).
 - **바뀌지 않은 트리는 걷지 않는다**: 트리는 지난 걷기의 출력(`WidgetTree::_paintOutput`)을 든다. 그 뒤 무효화가 하나도 없고(`notifyDirty` 가 무엇이든 낡음으로 적는다 —
   자식을 떼기만 해 레이아웃만 무효화된 것도) 배율 · 아틀라스 · 대상 크기가 그대로면 그 목록을 이어 붙이기만 한다. 멈춘 HUD · 메뉴는 위젯 수와 무관하다.
+
+## 함정 · 계약
+
+- **UI 위젯은 `WidgetId` 로 들고(포인터는 그 호출 안에서만), 무효화는 이유를 나눠 알린다 — 레이아웃만 부모로 번진다**(레이아웃 경계에서 멈춘다, `Engine/UI/README.md`).
+  리플렉션 파생 위젯은 `getTypeInfo()` 를 자기 `StaticType()` 으로 덮어쓴다(RTTI 가 없다 — 빠뜨리면 `castTo` 가 부모 타입으로 본다).
+- **RTL 배치 거울은 두 자리뿐이다** — 패널은 늘 왼쪽에서 오른쪽으로 계산하고, `PanelWidget::arrangeChild` 가 자식 사각형을 패널 너비로 거울(상자 순서 · 캔버스 앵커 ·
+  격자 열이 한 번에), `UiLayoutPass::arrange` 가 슬롯 여백 · 정렬을 부모 방향으로 읽는다. 새 패널에 방향 분기를 넣지 말 것. 글의 양방향은 줄을 나눈 **뒤** 줄마다 뒤집고(L2),
+  수준은 원문 코드 포인트로 정한다(셰이퍼가 버린 RLO · PDF 도 수준을 바꾼다).
+- **게임 스레드의 UI 그림은 경로로 싣는다** — 위젯은 디바이스가 없어 `TextureCache::acquire` 를 부를 수 없다. 그리기 목록에 경로(`CanvasTextureRef::_texturePath`)를
+  싣고 `CanvasRenderer::prepareFrame`(렌더 스레드 · 기록 전)이 빌린다 — 머티리얼 텍스처와 같은 캐시라 백엔드 교체도 그 길을 탄다.

@@ -112,3 +112,13 @@
   그 굵기 · 기울기의 사슬(굵은 면이 없으면 가짜 굵게), 크기 배는 글리프 크기(줄 높이는 가장 큰 글자), 색은 `LaidOutGlyph::_colorRgba`(0xRRGGBBAA)로 간다.
 - 토큰 읽기는 `Core/String/MarkupTagScanner` 하나다 — 번역 검사(`LocalizationTools` — 번역의 태그 열(이름 · 순서)이 원문과 다르면 보고)와 의사 로컬라이저
   (`PseudoLocalizer` — 태그를 바꾸지 않고, 표기로 시작하는 글은 바깥 `[` 뒤에 폭 없는 공백을 넣어 `[[` 로 읽히지 않게)가 같은 규칙으로 읽는다.
+
+## 함정 · 계약
+
+- **FreeType 는 엔진 직접 의존**(`vcpkg.json` · `ThirdParty/freetype` — imgui[freetype] 과 같은 포트 · 같은 기능): 헤더는 `Engine/Text/FreeType` 에서만,
+  링크는 `Source/Engine/CMakeLists.txt` 에서만(`CheckThirdPartyIsolation`). 임포트 타깃 이름이 `freetype` 그대로라 래퍼 INTERFACE 를 만들지 않고 전역으로 올린다.
+- **글꼴은 `engine/fonts/fontcatalog.xml` 이 정본**(`FontSystem` — 고른 가족 → 문화권 표 `fonts` 의 대체 가족 → 카탈로그 기본 가족). 문화권 표의 가족 이름은
+  카탈로그의 저장소 가족 · 시스템 가족 표에 있어야 쓰이고, 없거나 그 기계에 설치되지 않았으면 처음 한 번 경고하고 건너뛴다(어디에도 없는 글자는 두부 + 경고 한 번).
+  저장소에는 CC0 라틴 글꼴만(결정 R1) — 시스템 글꼴을 쓰는 시험은 글리프 존재 · 사슬만 단언하고, 그 글꼴이 없는 기계에서는 건너뛴다.
+- **리치 텍스트는 BBCode 꼴**(`[b]` · `[i]` · `[color=]` · `[size=]` · `[[`, `Engine/Text/RichTextParser`) — XML 속성 안에서 이스케이프가 필요 없다. 번역 검사가 태그 열을
+  원문과 견주고(`--check-text` 보고), 의사 로컬라이저는 태그를 바꾸지 않는다(토큰 읽기는 `Core/String/MarkupTagScanner` 하나).

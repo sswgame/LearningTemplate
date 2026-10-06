@@ -92,3 +92,17 @@ Esc · `~` 로 닫습니다. 키는 셸 InputMap 의 콘솔 액션(`Resource/eng
 ## ⚠️ 핵심 규칙
 - `App` 폴더 내부는 게임 루프의 시작점일 뿐, 복잡한 로직을 담는 곳이 아닙니다. 새로운 시스템을 추가해야 한다면 `App`이 아니라 `Engine` 폴더를 고려하세요.
 - 프레임 중에 에디터 상태를 **다시 묻지 마세요.** `ModuleHost::getFrameState()` 가 이번 프레임의 답입니다.
+
+## 함정 · 계약
+
+- **리로드 거절 사유는 옛 이미지를 내리기 전에 본다** — `LiveReloadManager::setOnValidateImage`(ABI · API 표)와 배치 콜백(`OnBeforeCommitBatchDelegate` 가 false
+  면 아무것도 내리지 않음, 게임 상태 찍기 실패 포함)이 적용 전 실패를 막아 옛 모듈이 계속 돈다. 적용 뒤 결함만 `markGraphBroken`(UE Live Coding 과 같다).
+- **모듈 리로드는 App 의 것이다.** Engine 에는 `IModuleHandleProvider` 창구만 두고 공개 헤더에 리로드 콜백을 두지 않는다. `LiveReloadManager` 는 `Source/App/Module/`(Shipping 에서 빠진다).
+  Shipping 은 모듈을 내리지 않는다. 검증은 SmokeTest.
+- **핫 리로드는 섀도 복사본을 올린다.** Windows 는 지연 로드 훅(`DelayLoadNotifyHook.cpp`)이 `GameFramework.dll` import 를 지금 복사본으로 돌린다(빼면 원본이 한 벌 더 올라와 정적 상태가
+  둘). 리눅스는 SONAME 을 같은 길이로 제자리에서 고친다(`ModuleImagePatch`). 결속은 `verifyModuleBindings` 가 본다.
+- **옛 이미지는 바로 내리지 않는다**(`deferImageUnload`, 배치 4 개, 배치 안에서는 의존하는 쪽부터). 다른 코드가 구독 중인 채널을 만든 이미지는 프로세스 끝까지 올려 둔다(언리얼도 같다 —
+  되돌리지 말 것).
+- **`ModuleCallGuard` 는 `onAfterReload` 한 호출만 지킨다**(Windows SEH 는 접근 위반 · 잘못된 명령 · 0 나누기만). 잡은 뒤는 온전하지 않다 — 저장하고 재시작할 시간을 버는 장치다.
+- **리눅스 스플래시** — `XPutImage` 는 1:1 이라 우리가 줄인다, `Expose` 마다 지워지므로 배경 픽스맵, `override_redirect` 창은 XWayland 에서 안 뜬다(EWMH `_NET_WM_WINDOW_TYPE_SPLASH`).
+  서버가 "정상" 이어도 화면에 없을 수 있다 — 최종 확인은 사람 눈이다. 창의 `isVisible()`(지금 화면에 있나)과 `isVisibleRequested()`(의도)는 다른 질문이다.

@@ -391,6 +391,8 @@ if ( pTarget != nullptr ) { ... }
   비트필드를 바이트째 다뤄 같은 바이트의 다른 플래그가 "바뀜" 으로 보이고 되돌리면 지워집니다.
 - 컴포넌트는 값에서 자원을 다시 만들지 판단할 때 **무엇으로 만들었는지**를 들고 견줍니다(`MeshComponent::_resolvedMeshId` ·
   `_acquiredMaterialPath`). "이미 있으면 그대로" 로 판단하면 id 를 바꿔도 옛 것이 남습니다.
+- 상태를 다 읽으면 `finishLoad` 가 `onPostLoad` 를 부른다 — 비동기 씬 로드에서는 워커에서
+  불리므로 거기서 닿는 API 는 잠가야 한다.
 
 ---
 
@@ -455,6 +457,80 @@ flowchart TB
 - 단발 `addComponent` / `addTag` 만이면 → 엔진 자동 지연에 맡겨도 됩니다 (반환 포인터는 쓰지 말 것).
 
 ---
+
+## 함정 · 계약
+
+- **물리는 DuringPhysics 와 PostPhysics 틱 사이에 돈다**(그 앞에 틱 결과 적용 → 내비게이션 → 애니메이션 — 프레임 순서의 정본은 `Object/GameObject/SceneFrameStepList.xxx` 한 표, 단계를 더하면 줄 하나 + `runFrameStep*` 본문 하나). PostPhysics 이후 틱은 이번 프레임의 바디 자세 · 겹침을 보고,
+  그 그룹에서 쓴 애니메이터 파라미터 · 트랜스폼은 다음 프레임의 포즈 · 물리에 든다(`PhysicsComponentTest.PostPhysicsTickSeesThisFramesBodyPose`).
+- **한 오브젝트의 두 번째 씬 컴포넌트는 첫 씬 컴포넌트(루트)에 붙는다** — 저장하면 `_attachComponent="CameraComponent#0"` 처럼 남는다. 카메라와 같은 오브젝트의 뷰 모델 ·
+  조준선은 로컬 자리(카메라 기준)로 다룬다 — 월드 자리를 `setLocalPosition` 에 넣으면 카메라 자리만큼 두 번 밀린다(`FirstPersonCameraComponent`).
+- **씬 작성 코드의 `createEmptyActiveScene` 은 `GameCamera` 엔티티를 둔다.** 자기 카메라를 들고 오는 씬(1인칭 플레이어)은 저장 전에 지운다 — 같은 역할 · 우선순위의
+  카메라가 둘이면 어느 쪽이 활성일지가 등록 순서에 걸린다.
+- **이름으로 컴포넌트를 만드는 길은 `TypeInfo::_addComponent` 하나다**(팩토리 표 없음 — UE `UClass`). 코드젠이 구체 컴포넌트마다 채우고 모듈 해제가 비운다.
+  손으로 만든 시험 TypeInfo 는 이 칸을 채워야 `addComponentByName` · 씬 로드가 만든다. 스레드별 이름 캐시는 `TypeRegistry::getGeneration` 으로 무효화된다.
+  전체 상태가 실린 옛 프리팹 엔티티는 원형을 짓지 않는다(프리팹이 있는지만 본다).
+- **씬의 프리팹 엔티티 = 프리팹 경로 + `<PrefabOverrides>`**(프리팹 쪽 `이름표#n` 키, 다른 필드만) — `<GameObject>` 전체 상태를 든 엔티티는 옛 형식이고 그 상태가
+  이긴다(다음 저장에서 오버라이드로). 프리팹 원형 상태는 별도 `GameObjectManager` 에서 만든다 — 한 매니저에만 `registerComponentType` 한 시험용 목 타입은 원형에서
+  MissingComponent 가 되니 시험은 실제 타입으로. 원형은 `forEachGameObject` 안에서 만들 수 없다(순회 전에). 씬 판 1, SCN1 판 3(v0~v2 읽음).
+- **컴포넌트 이름표(`_componentName`)는 저장되고 컴포넌트 키(`ComponentStableKey`)는 이름표로 센다**(없으면 타입 이름) — 옛 키(`SceneComponent#n`)도 맞는다.
+- **`onPostLoad` 는 `ObjectStateBatch::finish` 에서 이름 → 부착 → 핸들이 풀린 뒤에 온다**(언리얼 PostLoad 순서). 플레이 중 재로드는 `onBeginPlay` 를 다시
+  부르므로, 흐른 시간 · 적용한 오프셋 같은 진행 상태는 저장하고 `onBeginPlay` 가 되돌리지 않게 한다.
+- **경로 프로퍼티로 에셋을 여는 컴포넌트는 `onBeginPlay` 만으로 부족하다** — 상태 읽기는 `onPostLoad` 만 부르고 플레이 전이면 BeginPlay 가 없다.
+  `onPostLoad` · `onPropertyChanged`(그 경로) 양쪽에서 연다(`SequencePlayerComponent` · `DialogueRunnerComponent`).
+- **저장된 상태는 이름으로 다른 오브젝트를 가리키지 않는다**(`AGENTS.md`). 부모는 `_attachOwnerId`, 핸들 PROPERTY 는 `ObjectSaveOptions::getSavedObjectId`(프리팹은 0). 상태를 읽는
+  길 아홉은 모두 `ObjectStateBatch` 를 지나고 `finish()` 가 이름 되찾기와 부착을 한 번에 한다. 못 푼 참조는 `keepUnresolvedAttach` 로 보존한다. 표는 `Source/Engine/Object/README.md`.
+- **핸들 PROPERTY 는 바이너리에서도 파일 id 로 적는다.** `GameObjectHandle` 은 내장 타입이라 기본 문맥에 8 바이트 처리기가 있다 — 글 처리기만 바꾸면 XML 은 맞고 바이너리
+  (쿠킹한 씬 · 세이브)는 런타임 id 를 실어, 쿠커 왕복 검증이 그 엔티티를 XML 로 남겼다. `ObjectStateSerializer` 가 글 · 바이너리 처리기를 함께 덮는다
+  (`ActionCombatTest.ObjectReferencesSurviveBinaryFileState`).
+- **빌리기는 포인터(이번 호출 · 프레임), 보관은 `GameObjectHandle` · `ComponentHandle` + `resolve*`.** 이름 기반 `GameObjectPtr` · `ComponentPtr` 를 되살리지 말 것. 게임 모듈은
+  컴포넌트를 생포인터로 들지 않는다(상태 복원이 씬을 갈아엎는다). 되살릴 때 id 보존: `createGameObjectWithId`, `ComponentIdRestoreScope` 는 `onRegister` **전에**, 프로세스 토큰이
+  다르면 id 를 버린다. 오브젝트 id 는 프로세스 전역이다 — 시험에서 "다음 = +1" 을 가정하지 말 것.
+- **틱 중 구조 변경은 큐 하나(`deferStructuralChange`)에 부른 순서대로**, 게임 쪽 `deferPostTick` 은 그 뒤다. 이름 · 틱 설정 · 서브틱 · 태그 쓰기는 `Component::deferIfStructureFrozen` 을
+  지난다. 틱 중 `addComponent` 는 `nullptr` — `executeOrDeferPostTick`. 시험은 틱 **안에서** 본 값을 목 훅으로 기록한다(`getComponentCount` 는 미룸과 해제를 가르지 못한다).
+- **틱 중 트랜스폼 쓰기** — 자기 오브젝트를 틱하는 스레드면 칸의 대기 자리에, 남의 오브젝트면 쓰기 큐로(`SceneComponent::queueTickWrite` 하나). 남의 값은 늘 틱 전 값을 읽는다.
+  큐는 (대상, 쓴 오브젝트 id, 순번)으로 정렬해 적용하므로 결과가 스레드 배정에 달리지 않는다. 워커가 쓰는 더티 플래그는 바이트 · `atomic<uint8>` relaxed(비트필드는 이웃
+  비트를 덮고, 같은 값을 겹쳐 쓰는 것도 데이터 경쟁이다). 예외는 서브틱 선행 조건의 스테이지 경계다 — 기다리는 스테이지 앞에서 그때까지의 쓰기를 적용 · 플러시한다
+  (`SceneTickScheduler::applyStageTransforms`). 그 단계에 attach · detach 가 미뤄졌으면(`deferHierarchyChange`) 그 뒤로는 앞당기지 않는다 — `KeepWorld` 부착이 먼저 적용된 쓰기를 덮는다.
+- **월드 합성은 `updateWorldTransformFromParent` 한 곳이고, 렌더 더티를 찍는 곳은 `onWorldTransformUpdated` 하나다.** 합성 경로를 하나 더 만들면 메시가 화면에서 얼어붙는다.
+  트랜스폼 값은 전역 `SceneTransformStorage`(256 칸 페이지, 옮기지 않는다)에 있고 컴포넌트는 칸 번호만 든다. 쓰기 알고리즘은 `SceneTransformHierarchy` 가 갖는다.
+- **부착** — 오브젝트의 루트 씬 컴포넌트는 하나(둘째는 primary 아래로), `AttachRule { KeepRelative, KeepWorld }`, `canAttachTo`(다른 매니저 · 소켓을 거친 순환 · 파괴 대기 부모)는
+  미루기 **전에** 묻는다. 자식의 정의는 `getParent` 하나(소켓 자식 포함). 월드 값은 `setWorldPosition` · `setWorldTransform`, 크기는 월드 상자 하나(`getWorldBox` · `AABB::transformedBy`),
+  경계는 컴포넌트가 선언한다(`getWorldBounds`). `transformVector` 는 방향(w=0) 변환이지 법선 변환이 아니다 — 법선은 `invert().transpose()`, 셰이더는 `swComputeWorldNormal`.
+- **`forEachGameObject` 콜백에서 생성 · 파괴 · 이름 변경 · 풀 생성을 하지 말 것** — `shared_mutex` 가 재진입하지 않아 교착한다(`WalkScope` 가 Debug 에서 단언). 그런 순회는
+  `getAllGameObjects( out )`. 컴포넌트 목록을 범위 for 로 도는 중에 붙이면 반복자가 풀린다 — 인덱스로. 콜백이 형제를 지울 수 있는 걷기는 핸들로 모으고 매번 다시 푼다.
+  소멸자에서 미루는 경로를 타지 말 것(`~SceneComponent` 는 `detachFromParentImmediate()`).
+- **`tick()` 에서 `TaskManager::waitAll()` 을 부르지 말 것** — 렌더 기록 · 스트리밍 · 오디오까지 기다린다. 자기 스테이지를 `waitStage` 로.
+- **틱 뒤 적용 순서는 `StructuralChangeBuffer::drain` 하나가 갖는다**: 동결 해제 → 구조 변경(부른 순서) → 틱 중 트랜스폼 쓰기 → 틱 뒤 큐 → `mergePendingAdds` → 시작 줄. 그 뒤 dirty 면 재 flush → 지연 파괴. 큐마다 자기 시점에 비우게 나누지 말 것.
+- **컴포넌트 해체는 `destroyComponentInstance` 한 곳이고 `removeComponent` 는 순서를 지킨다**(swap-remove 금지 — 첫 일치 · primary · 안정 키가 순서에 기댄다). 컴포넌트는 `_pPool`
+  (나온 풀)과 `_pTypeInfo` 를 든다 — 이름표 `_componentName` 은 런타임 라벨일 뿐이라 조회 키로 쓰면 안 된다(Shipping 에서만 힙이 깨졌다). 풀 키는 FQN 이다. 컴포넌트는 풀에서
+  제자리에 생기므로 이동 연산을 되살리지 말 것. 멤버 없는 파생 컴포넌트도 `REFLECT_BODY` 가 필요하다.
+- **`markPendingDestroy()` 는 묘비만 세운다** — 파괴 목록에 넣는 것은 `destroyObject` 다. 동시 파괴는 `tryMarkPendingDestroy()`(exchange)가 true 인 스레드 하나만 진행한다.
+  이름은 살아 있는 오브젝트만 차지한다(`isNameTakenUnlocked`).
+- **활성** — 계층 활성 재계산은 값이 그대로면 멈추므로 부모가 바뀌는 모든 자리가 그 자리에서 다시 맞춘다. `Component::isActive` 는 소유자 계층 활성을 포함하므로 오브젝트 `setActive`
+  가 컴포넌트 비트를 복사하면 안 된다. 변화는 `onOwnerActiveInHierarchyChanged` 로 알린다. `TickRegistry` 의 목록에 들어 있는 것이 곧 활성이다.
+- **플레이 수명주기** — 컴포넌트의 "시작됨" 비트가 시작 · 끝을 한 번씩 짝짓는다. 플레이 중 붙은 컴포넌트는 다음 틱 단계(`GT.Scene.tick.beginPlay`)에서 시작한다. 월드 플레이 상태는
+  `SceneManager::setWorldPlaying`. 다시 만든 인스턴스(되돌리기 · 핫 리로드 · DontDestroyOnLoad)는 onBeginPlay 를 다시 받는다 — `markPersistent` 는 같은 id 로 **다시 만든다**.
+- **틱 선언** — 기본은 "`onTick` 을 오버라이드했는가"(`HasOnTickOverride_v<T>`), 우선순위는 `kMaxTickPriority`(63). 다른 그룹의 선행 조건이 있으면 뒤따르는 쪽을 그 그룹으로 옮긴다.
+  **선행 조건을 가진 서브틱만 스테이지로 간다**(그룹마다 보통 길 뒤) — 나머지는 선행 조건이 씬에 있어도 보통 길이다(무버 8000 의 틱 p50 600 → 140 us). 단계
+  (`TickPhase`)는 한 오브젝트 안의 순서일 뿐이다. 선행 조건 핸들은 등록이 준 것을 쓴다 — 소유 오브젝트 id 가 없는 손수 만든 핸들은 거절된다.
+- **기본값은 만들 때 한 번이다**(CDO 자리, `DefaultPatch`). 모듈 등록 · 리로드에서 살아 있는 값에 다시 찍지 말 것. `ComponentDefaults` 의 기본값 파일은 없어도 되는 파일이다
+  ("시도했는가" 로 한 번만 연다). 프리팹 형식은 읽을 때 정해 든다(`PrefabStateFormat`), 쓰기는 `PrefabAsset::saveToFile` 하나, 오버라이드는 `타입#n` 키.
+- **"그 타입 모두" 는 `ComponentRegistry` 에서 묻는다** — `forEachComponentOfType` 은 모든 오브젝트를 공유 잠금 아래 훑어 프레임 경로에 쓰면 씬 크기에 비례한다
+  (상호작용 하는 쪽 하나가 Release 10k 오브젝트에서 +190~207 us → 등록부로 +2~6 us). 등록은 `onRegister` / `onUnregister`(에디터에서도 찾아지고 모듈 해제에서도 맞다),
+  키는 정규 이름이라 모듈을 다시 올려도 같은 칸, 등록부엔 파괴 예약된 것도 플러시까지 남으므로 찾는 쪽이 `isPendingDestroy` 를 건너뛴다.
+- **찾지 말고 등록받는다.** 매 프레임 씬을 훑던 주광 조회가 GT 의 38 % 였다. 빛은 `ComponentRegistry`(타입 · 칸 — 빛은 종류별 칸), 카메라는 `CameraRegistry::selectCamera`(동률은 컴포넌트 id — 등록
+  순서로 가르면 되돌리기마다 뒤집힌다), 그림자 빛은 `Scene::findShadowCastingDirectionalLight`. 프리미티브 등록부에 섞지 않는다(그릴 수 있는 것만 담는 계약).
+- **"바뀌었나" 검사는 제곱 거리를 `MathUtil::kEpsilonSquared` 와 비교한다**(`kEpsilon` 이면 프레임당 1e-3 아래 움직임이 영원히 삼켜진다). `GpuSceneBuilder::bCamSame` 의 이력은 의도다.
+  `float4x4::invert` 는 행렬식이 정확히 0 · NaN 일 때만 항등을 돌려준다(절대 임계값은 작은 부모 · 큰 직교 카메라를 깨뜨렸다).
+- **시퀀서** — "지나갔는가" 는 `previousFrame < start <= frame`, 이전 프레임 없음은 `kNoPreviousFrame`(INT32_MIN — -1 은 frameMin 0 과 겹친다). 프레임은 배 정밀도로 곱하고 천분의 일을
+  얹어 자른다. 반복 재생 시간은 한 바퀴 안으로 감는다(float32 는 10^6 초 근처에서 0.016 을 더해도 안 움직인다).
+- **`getTags()` 와 `getOrCreateTags()` 는 다르다** — 공용 빈 상수를 `const_cast` 로 돌려주면 한 번 쓰는 순간 모든 오브젝트가 그 태그를 갖는다. `TagID::computeId` 하나가 리터럴 · 런타임
+  태그 ID 를 만들고, 계층 비교(`Faction` → `Faction.Player`)에는 문자열이 같이 필요하다.
+- **프리팹 오버라이드는 키(`이름표#n`)로 프리팹 컴포넌트를 가리킨다.** 더한 컴포넌트는 `<Add after>` 로 자리를 지킨다. 프리팹에서 사라진 컴포넌트의 오버라이드는
+  엔티티 이름과 함께 경고하고 버린다(언리얼과 같다 — 유니티는 남겨 둔다). 물려받은 컴포넌트의 이름표를 바꾸면 제거 + 추가로 기록돼 프리팹 수정이 더는 닿지 않는다 —
+  에디터에는 이름표 편집 창구가 없다(`_componentName` 은 `HideInInspector`). 만들게 되면 프리팹 인스턴스의 물려받은 컴포넌트는 막는다(언리얼과 같다).
+- **`getAllGameObjects()` 값 반환은 사건 구동 5 곳만**(에디터 프리팹 명령 둘 · 미리보기 둘 · `Scene::shutdown`) — 프레임 경로에 쓰면 `getAllGameObjects( out )` · `forEachGameObject`.
+- **`MeshInstanceBatch` 는 항목 수 고정 · 메시 · 머티리얼 하나**(언리얼 ISM 과 같다) — 늘리려면 다시 만들고, 항목별 머티리얼 · 투명 정렬이 필요하면 `MeshComponent` 로.
 
 ## 더 볼 곳
 

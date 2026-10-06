@@ -369,6 +369,22 @@ Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README]
 
 ---
 
+## 함정 · 계약
+
+- **스트리밍 I/O 를 `TaskPriority::High` 에 싣지 말 것** — 그 줄은 병렬 그룹의 청크 사이에서도 비우므로 파일 읽기가 프레임 일을 막는다(High · Immediate → Normal,
+  Low · Normal → 백그라운드).
+- **TaskManager 약속** — 워커는 High 전역 큐 → 자기 덱 → Normal 전역 → 훔치기 → Low 순으로 본다(RT 가 곧바로 기다리는 기록 태스크는 High). 깨우기는 넣은 만큼만 — 묶음은
+  `submitWithoutWake` 후 끝에 `wakeSleepingWorkers( n )` 한 번(세대도 올리지 않으므로 반드시), `notify_all` 은 2 배 손해, 모두 깨우기는 처음 읽은 유휴 마스크 안에서만(다시 잠든 워커를 쫓으면
+  WSL 에서 1~90 초). `runParallel` 의 둘째 인자는 문턱이지 청크 크기가 아니다. `addTask` 는 제출 **전에**. `clear()` 는 아무것도 돌지 않을 때만(시험 전용 — 활성 수가 0xFFFFFFFF 로 감긴다),
+  `_activeTaskCount` 감소는 스테이지 통지 **앞**. 이름으로 찾는 스테이지는 없다. 병렬 본문 스코프는 "현재 태스크" 를 바꾸기 **전에** 만든다.
+  태스크 · 스테이지 이름은 Tracy 가 켜지면 구간이 된다(`TaskManager::setProfileHook` — `ProfilerBackend::startTracy` 가 꽂는다, 이름 없는 태스크는 구간이 없다). 스테이지는 `createStage( "이름" )`.
+- **`waitStage` · `waitAll` · `runParallel` 의 `tryHelpAndExecute` 는 렌더 · 로더 스레드도 지나며 남의 잡을 실행한다.** `runParallel` 의 합류 대기만 Low 줄(백그라운드 I/O)을 집지 않는다 — 합류가 기다리는 것은 Normal 의 자기 티켓과 남이 도는 청크뿐이라
+  Low 를 도우면 그 태스크만큼 늦어진다(`TaskManagerTest.RunParallelJoinDoesNotHelpLowPriorityTasks`). 스테이지 · `waitAll` 대기는 Low 도 돕는다(Low 스테이지를 워커가 기다릴 수 있다). 스크래치는 `getCurrentThreadScratchSlot()` · `getScratchSlotCount()`
+  (워커 + 도우미 8). 렌더 스레드는 끝날 때 `releaseCurrentThreadHelperSlot`. 멈춤 표시는 대기 쪽과 같은 락 안에서 세운다(밖에서 세우면 알림을 잃어 `join` 이 멈춘다). 자기 락을 쥔 채
+  콜백을 부르지 않는다. 기다림은 횟수가 아니라 시간으로 끊는다(yield 1024 번 상한이 느린 CI 에서 프로세스를 죽였다).
+- **`TaskHandle` 은 refcount 라 `const&` 로 넘긴다.** 스케줄러 시험의 모든 대기에는 타임아웃을. 프레임마다 도는 태스크는 메서드 델리게이트로(인라인 인자 칸은 노드를 키운다).
+  `TaskFuture::then()` · 콤비네이터는 무효 입력에 무효를 돌려준다. "락 안에서 완료 표시, 알림 · 이어받기는 락 밖" 은 `SharedFutureSignal` 한 벌.
+
 ## 더 볼 곳
 
 - `TaskManager.h` — API 주석  

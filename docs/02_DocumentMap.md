@@ -12,7 +12,7 @@
 | [CLAUDE.md](../CLAUDE.md) · [AGENTS.md](../AGENTS.md) | 에이전트가 매번 읽는 작업 규칙과 명령 요약(영어). 사실마다 정본 문서를 가리킨다 | 정본이 따로 있는 설명의 전문 |
 | `docs/` | 모듈 여럿에 걸친 주제 안내(시작하기 · 핫리로드 · 코딩 규칙 · 프레임 계약) | 한 모듈의 계약 |
 | 모듈 README(`Source/**/README.md` 등) | 그 폴더의 계약 · 함정 · 남은 것 · 파일 배치 | 사용법 예제 — **헤더 주석(`/** @brief */`)이 정본**이다 |
-| [백로그](06_Backlog.md) | 남은 일과 끝난 일에서 얻은 교훈 | 끝난 일의 이력(`git log`) |
+| [백로그](06_Backlog.md) | 남은 일 · 결정을 기다리는 질문 · 조건이 오면 할 일 | 끝난 일의 교훈(그 영역 README 의 "함정 · 계약" 절) · 정한 방향과 기각한 안([09](09_Decisions.md)) · 검증법([08](08_Verification.md)) · 이력(`git log`) |
 | 생성 문서([docs/Config](Config/README.md)) | 코드 · 데이터에서 만든 참조표(설정 키 · 인자 · 전역 변수 · 빌드 옵션) — 손으로 고치지 않는다 | |
 
 - 문서는 한국어 · 현재형으로 씁니다. "예전에는 …했다" · 날짜 붙은 사연은 커밋 메시지로, 지난 결함은 현재형 주의("…하면 …가 깨진다")로 씁니다.
@@ -30,9 +30,11 @@
 | [03 핫리로드와 C-ABI](03_LiveReload_and_ABI.md) | 모듈을 다시 읽는 순서 · 실패 정책 · 리로드에서 지킬 것 |
 | [04 코딩 규칙 예시](04_CodingGuidelines.md) | [AGENTS.md](../AGENTS.md)(규칙 정본) 절마다 한국어 예시 — 규칙을 다시 적지 않는다 |
 | [05 RHI 프레임 계약](05_RHI_FrameContract.md) | 프레임 · 렌더타깃 순서 계약 · 함정 · 검증 절차 |
-| [06 백로그](06_Backlog.md) | 남은 일 |
+| [06 백로그](06_Backlog.md) | 남은 일(할 일 목록) |
 | [07 설정](07_Configuration.md) | 설정 값을 어디에 두는가(층 · 우선순위 · 배포본 · 핫 리로드). 칸 표는 생성 문서 [docs/Config](Config/README.md) |
 | [10 문서 쓰기 지침](10_WritingDocs.md) | 문서 종류와 층, 모듈 README의 틀, 문장 규칙, 용어 대조표 |
+| [08 검증과 측정](08_Verification.md) | 일을 끝내기 전에 돌릴 것 · 측정값 읽는 법 · 테스트를 쓸 때의 함정 · CI |
+| [09 결정 기록](09_Decisions.md) | 정한 방향 · 하지 않기로 한 것 · 측정으로 기각한 안 · 옛 이름 → 지금 이름 |
 
 ## 모듈 README
 
@@ -51,6 +53,8 @@
   - [Component/2D](../Source/Engine/Object/Component/2D/README.md) · [Component/Physics](../Source/Engine/Object/Component/Physics/README.md)
 - [Scene](../Source/Engine/Scene/README.md) — 씬 · 씬 매니저 · 씬 파일 · 쿠킹
 - [Reflection](../Source/Engine/Reflection/README.md) — 리플렉션 런타임(생성기는 [ReflectionParser](../Tools/ReflectionParser/README.md))
+- [Serialization](../Source/Engine/Serialization/README.md) — XML · JSON · 바이너리 직렬화의 계약과 함정
+- [Module](../Source/Engine/Module/README.md) — 모듈 매니페스트 · 모듈 타입 등록 · 엔진 ABI 스탬프
 - [Text](../Source/Engine/Text/README.md) — 런타임 글자(글꼴 · SDF 글리프 · 셰이핑 · 줄 바꿈)
 - [UI](../Source/Engine/UI/README.md) — 런타임(게임) UI(위젯 트리 · 무효화 · 사건 · 포커스 · 화면 스택 · 문서 · 데이터 바인딩)
 - [Animation](../Source/Engine/Animation/README.md) · [Audio](../Source/Engine/Audio/README.md) · [Input](../Source/Engine/Input/README.md) · [Localization](../Source/Engine/Localization/README.md)

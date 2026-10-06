@@ -611,3 +611,124 @@ CMake 는 빌드 타깃(`SW_TARGET_TYPE` — Game 은 둘 다)과 겹치지 않�
 
 키트에 새 타입을 넣기 전에 물어볼 것: *이 장르의 다른 게임이 이 필드를 그대로 쓸 수 있나?*
 "슬롯 2개", "통화 2종", "스탯 이름 고정" 이 나오면 거의 항상 아니다.
+
+## 함정 · 계약
+
+- **캐시 앞 · 서버 버스의 소비자는 호스트 하나**(`OnlineServiceHost` — `getEphemeralRouter` · `subscribeServerBus`) — `IEphemeralStore::pollReplies` · `IServerBus::pollMessages` 는
+  앞 전체의 것을 꺼내므로 서비스 둘이 직접 부르면 서로의 답 · 메시지를 가져간다(가져간 쪽은 버리고 맡긴 쪽은 영원히 기다린다). 메서드 영역(키트마다 256 칸)이 겹치는 서비스는
+  `registerService` 가, 같은 메서드 번호는 `NetRequestServer::registerMethod` 가 거절한다(bool) — 덮어쓰면 한 키트의 요청이 다른 키트로 간다.
+- **캐시(RESP)는 Valkey · Garnet 공통 부분집합만 쓴다**(`GF_Server_CacheStore` README 의 명령 표) — Lua · `SELECT` · RESP3 · Redis 6.2+ 옵션을 쓰면 Garnet(윈도우 서버)에서 갈린다.
+  계약 시험 `EphemeralStoreRespTest` 를 두 서버에 같이 돌려 지킨다. 서버가 없는 PC 는 가짜 RESP 서버(`FakeRespServer.h` — 루프백, 앞이 돌 때 같이 돈다)로 같은 계약을 돌린다.
+  캐시는 잃어도 되는 것만 — 정본은 `IServiceStore`. 끊김을 보기 전에 맡긴 첫 요청은 `Unavailable` 이다(다시 맡기면 다시 연결한다).
+- **온라인 서비스의 내리는 순서는 하나 — 키트(로직 · 바인딩) → 호스트 → 저장소 · 캐시**(실제 서버 · 시험 하니스 `OnlineTestServer::addKit` 모두). 키트 `shutdown` 은
+  빌려 준 것을 모두 거둔다(저장 일 · 라우터 `cancel` · 접속 상태 `IAccountPresence::cancel` · 버스 구독). 늦게 내려가는 서비스는 호스트 `shutdown` 이 `onHostShutdown` 으로
+  떼어 두므로 사라진 호스트를 부르지 않는다 — 선언 순서로 맞추던 시험은 서버가 먼저 사라진 뒤 바인딩이 호스트의 `unsubscribeServerBus` 를 불렀다.
+- **부하 시험 봇은 키트 클라이언트 그대로**(`Tools/OnlineLoadBot`) — 끝점 하나에 연결 수천(공유 끝점 모드), 시나리오는 데이터(모르는 키 · 값은 오류), 백분위는 표본 정렬로
+  정확히. 엔진 서비스 없이 도는 실행 파일은 이름 풀(`HashedStringPool::initialize`)부터 세운다 — 빠뜨리면 첫 `hashed_string` 에서 접근 위반이다(`EngineBootstrap` 앞부분과 같은 순서).
+- **루프백 스트림 전송은 한 스레드에서만 돈다** — 다른 스레드가 `pollIo` 를 돌리면 Debug 경합 검출기가 멈춘다. 가짜 서버는 스레드 대신 클라이언트 전송을 감싸 같이 돈다.
+- **엔진 · 킷 컴포넌트는 태그를 붙이지 않는다** — 종류는 `GameObjectManager::forEachComponentOfType<T>` 로 찾는다(UE `GetAllActorsOfClass`). 프레임마다 쓰는
+  소비자가 생기면 타입별 등록부(O(해당 타입))를 Release 로 재고 정한다. 글자 입력은 `InputManager::setTextInputCallback` 하나(UE `OnKeyChar`).
+- **도구 에셋 종류는 표 하나** — 대화 노드는 `kArrDialogueNodeInfo` 한 줄 + 러너 switch 의 case 하나(`-Wswitch-enum` 이 짚음), 다음 노드는 러너 · 에디터 미리보기가
+  같이 쓰는 `DialogueCursor::step`. 핀 번호 `nodeId*100+offset` 은 디스크 포맷. 타일맵 레이어 표(`kArrTileFlagLayerInfo`)의 XML 속성 이름과 줄 순서는 파일 형식이다
+  (바꾸면 옛 맵의 그 레이어가 기본값으로 읽힌다 — `TileMapXmlTest.SavedBytesMatchTheExistingFormat`). 레이어를 더할 때 손댈 곳은 `TileFlagLayer` 값과
+  이 표 한 줄뿐이다(Overworld `TileMap` 은 `isFlagSet( layer )` 로 묻는다). 맵은 조우가 **일어나는 칸**만 말하고 무엇을 만나는지는 장르 키트의 지역 표
+  (`MonsterCollectorCatalog::rollEncounter` · `JrpgEncounterWalker`, 지역 = 존 id · 태그)가 정한다. `SequenceItemKind` 값은 JSON 정수라 번호를 바꾸지 말 것;
+  시퀀서 이벤트는 `SequencePlayerComponent::registerSequenceEvent` 로 받는다.
+- **월드 플래그는 `GameFlags` 하나다** — 대화 러너(`DialogueRunnerComponent::setFlags`) · 지역 잠금(`AreaGraph`) · 일정이 같은 저장소 · 같은 조건식을 쓴다
+  (`a && !b || count>=3` — 이름 하나는 0 이 아니면 참, 비교 오른쪽은 정수나 다른 플래그, 접두어 없음). 0 을 넣으면 지운다. 세이브는 `fillEntries` 의 이름 순 목록이다.
+- **`GameEvents.h` 의 이벤트는 프레임워크가 그 자리에서 낸다**(세이브 · 로드 완료 = `GameInstanceBase::save/loadStateToFile`, 레벨 로드 요청 · 완료 =
+  `requestFirstScene` · `requestEntranceScene`). `SceneManager` 를 직접 부른 로드는 LevelLoad 이벤트를 내지 않는다.
+  낼 자리가 없는 이벤트는 두지 않는다.
+- **반복 간격(연사 · 스폰 · 자동 공격)은 끝난 걸음에 `Countdown::restart`** — 간격으로 덮으면(`start` · `= 간격`) 지나친 몫을 버려 빈도가 fps · 고정 걸음에
+  매이고, float 로 걸음을 빼면 0 에 조금 못 미쳐 한 걸음을 더 기다린다(RTS 0.05 초 걸음에서 1.2 초 → 1.25 초). 잇는 몫은 한 간격까지라 몰아 내지 않는다.
+  "원하는 동안 간격마다 한 번" 은 `Countdown::tickRepeat( dt, interval, bWant )` 한 줄이다(Voxel 블록 놓기 · Shooter3D 적 휘두르기).
+- **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. 방어 식은 `DamageMath::applyArmor`(고정 방어, 최소 1 — 액션 룸의 적도 같은 식)이고, 0 이하 피해는 맞지 않은 것이다(HP · 무적 · 이벤트 없음 — 언리얼 `ApplyDamage`). `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. HP 바 ·
+  데미지 숫자는 같은 오브젝트의 화면 마커(`WidgetComponent` Screen — 데이터에 함께 적는다, `spawnNumber` 는 코드로 붙인다)에 위젯을 넣는다 — 마커는 한 트리에 모이므로
+  위젯 이름을 쓰지 않고 자식 순서 · 타입으로 찾는다(이름표가 겹친다). 위젯 값은 틱 뒤 큐에서 넣는다(병렬 틱에서 위젯을 고치지 말 것). 체력을 가진 컴포넌트는 `Combat/HealthSourceComponent` 를 상속해 읽기(`getHealthReading` — 지금 · 최대 · 쓰러짐) 하나만 내고, 알림은 `notifyHealthChanged` 한 곳이 비율 · 종류(쓰러짐 포함)를 정해 같은 오브젝트의 `HealthListenerComponent` 에 보낸다 — HP 바는 시작할 때 원천을 읽는다(맞은 뒤 붙여도 맞는 비율). RTTI 가 없어 인터페이스가 아니라 리플렉션 베이스다(`getComponent<HealthSourceComponent>()`). 시뮬레이션 키트(`Vitality` · 정수 HP 배열)는 상속하지 않는다 — 그 유닛에 HP 바를 띄울 게임은 뷰 컴포넌트가 상속해 스냅샷을 읽는다. 보이기 정책은 바의 PROPERTY 다. 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`.
+- **수명이 다하면 지우는 컴포넌트(이펙트 페이드 · 데미지 숫자 · 투사체)는 `LifeSpanUtil` 로 센다** — 흐른 시간은 저장되는 PROPERTY 이고 `onBeginPlay` 에서 0 으로 돌리지
+  않는다(되돌리기 · 핫 리로드 때마다 수명을 다시 산다 — 투사체가 그랬다). 끝나는 경계는 `Countdown::tick` 과 같은 "수명 이상", 수명 0 은 지우지 않음.
+- **액션 룸의 적은 몬스터 정의다** — 종 id(`grunt` · `boss`)를 게임이 건 `MonsterCatalog` 서비스(`game::bindLocalService`)에서 찾고, 없으면 내장 정의(옛 상수와 같은 값)다. 카탈로그가 걸렸는데 그 id 가 없으면 싸움마다 한 번 경고한다. 사격은 `<Shot angle speed life radius damage/>` 줄마다 한 발(겨냥에서 돌린 각). 방어 식은 유닛 스탯과 같다(`DamageMath::applyArmor`). 룸이 돌려주는 플레이어 피해(`_damageToPlayer`)는 방어 전 값이다 — 게임이 플레이어 `UnitStatsComponent::takeDamage` 로 넣으면 방어가 한 번 빠진다. 룸의 적은 오브젝트가 아니라 `UnitStatsComponent` 를 거치지 않는다. 방 배치는 코드 표(`kArr*Spawn`) — 쓰는 게임이 생기면 맵의 스폰 지점으로.
+- **GameSettings** 는 `GameInstanceBase::initialize` 가 서비스로 묶는다. 언어 코드는 `LocalizationManager::normalizeLanguageCode` 의 철자 하나. 로컬라이제이션 조회의 `const utf8*` 는 추가 전용
+  `LocalizedTextArena` 에 있어 영구 유효하다. 대화 핀 번호(`nodeId * 100 + offset`)는 디스크 포맷이고 주인은 `DialogueGraphAsset` 하나다.
+  gamesettings 의 모르는 원소는 로드 오류 — 커스텀 값은 `<custom><prop key>` 안에만. 게임 설정 파일 이름은 `path::kGameSettingsFile` 하나(프리셋 칸 없음).
+- **게임 디렉터는 `GameDirectorComponent` 를 상속한다** — 상태 바이트 보류 · 틱 뒤 플러시 · 대기 소리 · 세운 것 걷기 · 자동 플레이는 베이스에 있고, 게임 인스턴스는
+  생성자에서 `registerDirector<T>()` 한 줄로 스냅샷에 올린다(`Source/Games/README.md`). 디렉터의 시뮬레이션은 PROPERTY 가 아니라 `writeState` · `readState` 로만 넘는다.
+  뷰 · 컨트롤러를 템플릿 베이스(`DirectorViewComponent<T>`)로 묶지 않는다 — 리플렉션 부모는 등록된 타입이어야 해서 템플릿 중간 층을 둘 수 없다.
+- **라운드 묶음은 기반 `Match/RoundSeries` 하나다** — 순위 점수(비면 1 위 1 점 = 선승) · 목표 점수 · 동점 규칙(격투 무승부 · 파티 서든 데스) · 정수 걸음 라운드 시간 · 대기 ·
+  상태 바이트. 알림은 내지 않고 결과(`RoundSeriesOutcome` · `RoundSeriesTick`)를 돌려준다 — 키트가 제 이벤트로 낸다. 롤백 상태에 실을 때는 **맨 뒤**에 둔다:
+  `readState` 가 맞을 때만 바꾸므로 마지막에 읽으면 키트의 `loadState` 가 통째로 원자적이다. 카트 카운트다운은 라운드가 아니라 한 경기의 출발 대기라 옮기지 않았다
+  (그랑프리처럼 여러 경기를 순위 점수로 묶을 때 이것을 쓴다).
+- **팀 적대 판정은 `Match/TeamAttitude.h` 하나** — 팀은 판이 매긴 번호(int32, `TeamAttitudeUtil::kNoTeam` = −1 = 누구와도 중립), 적 · 아군은
+  `TeamAttitudeUtil::isHostile` · `isFriendly`(언리얼 `ETeamAttitude` 자리, `Combat` 이 아니라 `Match` 인 것은 `MatchState`(층 1)가 쓰기 때문). 키트 팀 enum
+  (`ActionTeam` · `ConquestTeam` · `SrpgTeam`)은 상태 바이트에 실리지 않고 역할 이름 · XML 이름 · 페이즈 차례로 쓰여 그대로 둔다. 강타입 `TeamId`(uint8)는
+  팀 번호를 배열 첨자로 쓰는 곳이 많고(약 220 줄 · 18 파일) RTS 상태 바이트(int32)를 바꿔서 하지 않았다. 동맹 표 · 팀킬 허용이 생기면 판정기를
+  `TeamAttitudeUtil` 에 붙이고 `SrpgBattlefield::isHostile` · `ConquestWorldInternal::isHostile` 도 그쪽으로 옮긴다.
+- **턴제 몬스터 전투는 `MonsterCollector` 하나다**(같은 장르의 얇은 `TurnBattle` 키트는 2026-10 에 지웠다 — 레벨 업이 없었고 쓰는 게임이 0 이었다). 전투 연출(단계 타이머 · HUD 한 줄)은 게임 몫이다.
+- **`SaveGame::writeBytes` · `readBytes` 는 순수 가상이다**(`REFLECT( Abstract )`) — `Archive::serializeObject<T>` 가 정적 타입 `T::StaticType()` 을 쓰므로 기반에서
+  `SaveGameSerializer::writeBytes( *this )` 를 부르면 `SaveGame` 의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓰고 성공을 돌려준다. 파생 세이브가 자기 타입으로 부른다. 저장은 로컬 저장 슬롯
+  (`saveToSlot` · `loadFromCompletion` — 판 · 체크섬 · 봉인은 봉투 `SWLS`). 게임 상태(진행 · 세계)는 스냅숏 봉투(`GameInstanceBase::saveStateToFile`) 하나다 — `SaveGame` 은 사용자 파일만.
+- **로컬 저장 봉인은 장치 키다** — 키가 그 PC 에 있어 치트는 막지 못한다(실수 · 가벼운 변조 막기, 경쟁 데이터의 정본은 서버). 키 파일(`device.key`)을 다른 PC 로 옮기면 열지 못한다(IoError),
+  키가 바뀌면 봉인 슬롯은 WrongKey. `GameConfig::_localStore`(팩 데이터의 백엔드 · 루트) 연결은 config-docs D9 몫 — 지금은 `LocalStoreSettings` 를 부르는 쪽이 채운다.
+- **존 역할은 열거가 아니라 맵 `<role>` 의 태그 목록이다**(`ZoneTracker::setFromMap` 이 쉼표 · 공백으로 나눈다, `hashed_string` 이라 대소문자를 가리지 않는다). 클리어 게이트는 `clear_gate` 태그 —
+  경로 이름에서 역할을 짐작하지 않는다.
+- **칸 격자를 든 클래스는 `GridTopology _topology` 하나를 든다** — `_width` · `_height` 를 따로 두지 않고 칸 번호 · 경계 · 발자국은 `toIndex( x, y )` · `isInside` ·
+  `isRectInside` 로만 쓴다(`y × 너비 + x` 손셈 금지). 칸마다 값 저장소 템플릿(`Grid2D<T>`)은 두지 않는다 — 저장소 모양이 키트마다 다르고(칸마다 하나 · 둘 ·
+  팀마다 한 벌) 줄어드는 것이 `findTile` 류의 한 줄씩이다.
+- **키트 소속은 의존 관계로 판별되지 않는다**(전부 Engine 만 include). 다른 장르도 쓰는 것(HP 바 · 데미지 숫자 · 중력)은 `UI/` · `World/`.
+  기반 폴더는 층(DAG)이고 `CheckGameFrameworkLayers` 가 지킨다 — 형식으로 묶은 폴더(옛 `Components/`)는 의존 방향을 숨겨서 두지 않는다. 리플렉션 대상 헤더는 소스와 같은 재귀 규칙으로
+  모은다(다르면 새 폴더의 `REFLECT` 타입이 컴파일되고 등록만 안 된다).
+- **카메라 포즈는 어느 공간 값인지 보고 쓴다** — 대상이 월드(디렉터 · 매니저 · 직교 리그)면 `CameraPoseUtil::applyToCamera`(월드), 대상이 카메라 주인의
+  로컬 값(1인칭의 눈 자리)이면 `applyToCameraLocal`. 로컬 값을 월드로 쓰면 부모가 움직여도 카메라 · 손에 든 모델이 원점 근처에 남는다(루트 카메라는 둘이 같아 안 보인다).
+- **2D(XY 평면) 따라가기 · 흔들림 카메라는 기반 `Camera/Follow2DCameraComponent`** — 데이터 카메라 디렉터의 모드는 Y 가 위인 땅(XZ) 기준이라 2D 씬을 맡지 못한다.
+  흔들림 식은 `CameraImpulse` 하나다.
+- **가중치 뽑기에서 0 은 "후보 아님" 이다** — `pickWeightedIndex` 가 −1 이면 아무것도 고르지 않는다(식당 주문 · 손님 도착 · 드롭 · 조우 모두 같다). 실수 가중치(수요 · 배율)는
+  `pickWeightedIndex`, 정수 표(조우 · 드롭)는 `pickWeightedIndexInt` — 서로 바꾸면 난수 흐름(`nextFloat` ↔ `nextInt`)이 달라져 같은 씨앗의 결과가 바뀐다.
+- **상태 바이트 시험은 "다시 쓴 바이트가 같다" 로 끝내지 않는다** — 빠진 칸은 쓰기 · 읽기 양쪽에서 빠져 있어 왕복 바이트가 늘 같다. 같은 걸음을 둘 다 더 돌려
+  같은지까지 본다(`ElementGrid` 는 상태 비트만 싣고 남은 시간 값을 빠뜨려 되살린 불이 처음부터 탔다). 그 걸음이 칸을 실제로 쓰는지도 본다 — 판정기 없는
+  `InteractionProgress` 는 스킬 체크를 띄우지 않아 난수를 빼도 시험이 통과했다. 변이(칸 하나를 양쪽에서 빼기)로 시험이 지는지 확인한다.
+- **키트를 섞을 때는 공유 상태를 한 오브젝트 맨 앞에 두고 디렉터를 그 뒤에 붙인다**(`GameStateComponent`) — 다른 오브젝트의 디렉터는 같은 그룹에서 동시에 돈다
+  (순서가 필요하면 `_tickAfter`). 시작값(시작 돈 · 공유 일지에 알리는 시작 배치)은 `isFreshGame()` 일 때만. 키트 하나만 쓰는 게임도 같은 모양(디렉터가 기반 상태를 들거나
+  공유 상태 컴포넌트)이다. 같은 틱 흐름을 보는 시험은 **그 틱**에서 단언한다 — 한 틱 뒤에 보면 붙인 순서를 바꿔도 통과한다(`KitCompositionTest` 의 84 틱).
+- **빌린 기반 객체의 알림은 꺼내지 않는다** — `EventBuffer::drainTo` 는 소비자 하나라 키트가 꺼내면 게임 화면 · 다른 키트가 받을 알림이 사라진다. 키트는 상태
+  (`QuestLog::getStatus`)를 본다. 시계 알림은 `GameStateComponent::getClockEvents` 를 여럿이 읽는다(`CheckKitNamespaces` 규칙 6).
+- **상태 바이트는 구간(표 · 판 · 길이)으로 싣는다**(`StateArchiveUtil::writeSection`) — 키트 조각을 이어 쓰면 한 키트의 형식이 바뀔 때 판 전체를 잃는다. 표(4 글자)는
+  저장소에서 하나다(`CheckKitNamespaces` — 주석 네 글자 = 값의 작은 끝 바이트).
+- **키트 조립에서 코드 없이 규칙으로 닫은 것(2026-10-06 판정)** — 자동 플레이 스위치(`-gv_<게임>AutoPlay`)는 게임 전체가 스스로 도는 QA 스위치라 모든 디렉터가 함께
+  켜진다(디렉터 하나만은 PROPERTY `_bAutoPlay`). 한 판에 경기 흐름(`MatchState`)은 하나 — 파티 게임은 미니게임을 차례로, 판 사이 점수는 `RoundSeries`.
+  키트마다 고정 걸음이 달라도 서로의 걸음 중간 값을 읽지 않는다(디렉터 틱 경계에서만 공유 상태를 본다). 알림 채널은 타입이 다르면 다른 알림(타입 이름 겹침은
+  `CheckDuplicateTypeNames`). 섞인 온라인 게임은 `IRollbackGame` 의 상태 버퍼를 상태 구간으로 쓰면 되고, 서버 권한 복제는 키트마다 스냅숏 코덱이 있다.
+  모듈 적재 순서는 매니페스트 의존 순 · 동점 이름순이라 결정적이다(`ArchitectureTest.LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly`).
+- **땅에 놓는 키트는 공유 땅을 빌린다**(`LandRegistry` · `LandBinding`) — 얻기는 사각 전부이거나 아무것도, 상태 바이트는 주인을 이름으로(등록 순서가 실행마다 달라도).
+  RTS 는 막힌 남의 땅을 땅 격자에 칠하고 땅 리비전이 바뀌면 다시 칠한다 — 도로처럼 막히지 않은 남의 땅은 걸을 수 있지만 짓지는 못한다(`canPlaceBuilding`).
+  막힌 땅으로는 짓기 거절이 이미 땅 격자에서 나서 땅 검사를 빼도 시험이 지지 않는다 — 땅 검사의 변이는 막히지 않은 땅(도로)으로 본다.
+- **서버 고르기는 기반 하나**(`Online/Directory/ServerSelection`) — 클라이언트 배정과 매칭의 전용 서버 배정이 같은 규칙(열림 · 판 · 살아 있음 · 자리 → 같은 지역 →
+  찬 비율 → id)을 쓴다. 스냅숏은 읽기 주기(2 초)만큼 늦으니 고른 몫을 다음 읽기까지 얹어 몰림을 막는다.
+- **점검 · 공지는 영속 + 주기 다시 읽기 + 버스 재촉**(GF_Server_ServerDirectory) — 버스만 믿으면 그 순간 내려가 있던 서버는 영영 모른다. 알림은 "보이는 내용의 해시" 가
+  바뀔 때만 — 기간 경계(시작 · 끝)는 다시 읽지 않아도 보이는 것이 바뀐다. 끝단 시험 하니스(`OnlineHostTestUtil.h`)에서 키트 로직 · 바인딩은 `OnlineTestServer` 보다
+  먼저 선언한다 — 서버가 먼저 내려가며 저장소 일 완료 · 캐시 Unavailable 답을 거두는데 그때 로직이 살아 있어야 한다.
+  반대로 바인딩의 버스 구독 풀기(`shutdown`)는 호스트가 살아 있을 때 — 서버 **뒤에** 선언한 가드에서 부른다(`ChatStreamTest` 의 `ChatStopGuard`).
+- **채팅은 계정이 붙은 서버가 주인**(GF_Server_Chat) — 채널은 이 서버 회원이 있는 동안만 버스 주제를 구독하고, 귓속말은 접속 상태로 받는 서버를 찾아 그 서버 주제로
+  보낸다. 차단은 받는 쪽 서버가 보고 조용히 버리며 보낸 이에게는 Ok — 이 서버 · 다른 서버의 답이 같아야 차단 여부가 새지 않는다. 제재는 60 초 묵혀 보고
+  GM 의 `sanction.changed` 버스가 묵힌 값을 버린다. 기록은 최선 노력이고, 채널마다 세는 표는 귓속말 키마다 줄이 생겨 끝없이 크므로 순번으로 정리할 채널을 고른다.
+- **두 사람의 관계는 레코드 둘 + 개수를 한 트랜잭션으로**(GF_Server_Social) — 따로 쓰면 동시 신청 · 상한 경합에서 한쪽만 바뀐 관계가 남는다. 바뀌지 않는 개수도
+  `requireVersion` 으로 본다(상한 판정의 근거). 경합 시험은 실패 주입이 아니라 첫 커밋 직전에 상대 요청을 끼워 넣는 시험 연결로 만든다(`SocialServiceTest`).
+  나를 막은 사람의 신청은 조용히 Ok(막힌 것을 알리지 않는다). 길드 키트는 채팅을 모른다 — 사건 델리게이트를 게임 조립이 채팅에 잇는다.
+- **순위는 캐시, 정본은 영속**(GF_Server_Leaderboard) — 준비 표시가 없으면 영속에서 다시 채우고 그동안 온 읽기는 줄, 그동안 쓴 점수는 채운 뒤 한 번 더(스냅숏이 새 점수를
+  덮지 않게). 시즌 정산은 결과 레코드("없어야 함") + 보상 우편(멱등 키)을 한 트랜잭션으로 — 임대가 지나 다른 서버가 처음부터 다시 돌아도 두 번 주지 않는다.
+  같은 점수의 순위는 계정 id 로 고정한다(다시 돌아도 같은 순위). 사람마다 쓰기 넷(결과 · 우편 · 보낸 기록 · 만료 색인)이라 한 커밋 15 명(상한 64).
+- **매칭 권한은 캐시 임대 하나**(GF_Server_Matchmaking — `mm/lease/<모드>` 10 초, 자기 값일 때만 연장) — 권한이 넘어가면 대기 표는 잃고 낸 서버의 시한(모드 시한 + 30 + 10 초)이
+  Timeout 을 알린다. 파티 · 로비는 캐시 기록의 비교 후 쓰기, 한 계정 한 파티는 계정 색인의 IfAbsent. 비교 후 쓰기의 규칙 실패는 그 읽기로 판정한다(쓰지 않으니 그사이의
+  다른 쓰기를 보지 못한다 — 시험은 앞 요청을 한 걸음 돌린 뒤 판정할 요청을 낸다). 배정 결과는 게임 서버에 먼저(`mm.assign`) — 접속 때 "올 사람" 표로 확인한다.
+- **이벤트 열림은 순수 함수**(GF_Server_LiveOps `LiveEventRules` — 기간 반열림 · 회차 · 대상), 출시 비율은 원격 설정과 같은 해시에 이벤트 id 를 이름으로 — 같은 계정은 늘 같은 쪽,
+  이벤트마다 다른 계정 집합. 알림은 몸 없이 "다시 받아라"(사람마다 대상이 다르다). 푸시 제공자는 계약 + `Push/Provider/<제품>/` 폴더 — 무효 토큰은 지우고 일시 실패는 물러났다
+  다섯 번까지, 계정마다 도배 제한. 규칙 밖 요청은 저장소에 맡기기 전에 답하므로 같은 걸음의 다른 요청보다 먼저 응답이 온다(시험이 순서에 기대면 안 된다).
+- **서비스 저장소의 판은 저장소 전체에서 오르는 수다**(`Base/Online/Store`) — 키마다 1 부터 세면 지웠다 다시 만든 키가 옛 판을 다시 받아, 그 판을 들고 있던 늦은 쓰기가
+  새 레코드를 덮는다(ABA). `Unavailable` 은 "적용됐는지 모른다" 이므로 돈 · 아이템이 움직이는 커밋은 멱등 기록(`ServiceIdempotency`)을 **같은 트랜잭션**에 넣는다.
+  저장 왕복은 일(`IServiceStoreWork`) 하나 — `run` 은 저장소 스레드라 서비스 멤버를 만지지 않고 `SW_EXPECT_*` 도 부르지 않는다(계약 시험은 어긋난 단계 번호만 적는다), 결과는 `complete` 에서 적용한다.
+- **멱등 재시도는 잔액 · 한도 판정보다 먼저 지난 결과를 본다**(`EconomyStoreLogic::purchase`) — 첫 구매로 잔액이 준 뒤의 재시도가 "모자람" 을 받으면 클라이언트는
+  구매가 안 된 줄 안다. 그리고 재생은 **저장된 분개의 다리로** 한다 — 가상 화폐(무상 → 유상 재원) 다리는 지금 잔액으로 짜므로 다시 짜면 처음과 달라 내용 해시가 어긋난다.
+- **여러 키트가 한 트랜잭션에 넣는 쓰기는 기반 `Online/` 에 둔다**(원장 이동 · 우편 넣기 · 제재 · 캠페인) — 키트끼리는 include 하지 못하므로 키트 안에 두면 거래 · 우편 ·
+  GM 이 같은 트랜잭션을 만들 수 없다. 키트에는 요청 처리 · 카탈로그 · 클라이언트가 남는다. 온라인 키트의 업무 결과는 응답 몸에, 오류 코드는 공통(`OnlineError`)만.
+- **자동 플레이 = 디렉터가 빙의를 옮긴다**(AbilityArena · HarvestValley) — 틱(PrePhysics) 안에서는 쥔 조종자와 스위치(`isAutoPlayOn`)가 다른지만 보고 `hasPendingSpawn` 으로
+  틱 뒤 플러시를 잡아 거기서 `possess` 한다(빙의 · AI 조종자 세우기는 틱 밖). 쥔 이가 없는 폰(핫 리로드로 AI 오브젝트가 걷힌 뒤)도 다르다고 본다 — 자동 빙의는 한 번뿐이라
+  그 경우를 빼면 폰이 영영 놓인다. 판단(`think`)은 틱 전이라 디렉터의 판 상태를 읽어도 되고, 행동은 폰 버튼으로만 낸다(디렉터가 규칙대로 한다).

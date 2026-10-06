@@ -260,3 +260,7 @@ Scripts/ExtensionTool.py        test · package · install
 상수 `kPascalCase`, 모듈 안 도우미는 `camelCaseInternal`, 동사 표(`initialize` · `get`/`find` · `make`/`create` · `compute`), 비교는
 `=== false` 처럼 드러내 적기, 한 줄 `if` 는 중괄호 없이 · 반복문은 늘 중괄호. 선언 위 `/** @brief */` 는 한국어 "~합니다" 체,
 본문 `//` 는 "~다" 체, 로그 글은 영어입니다.
+
+## 함정 · 계약
+
+- **VS Code 실행 인자 GUI 는 `Tools/launch-args`**(프로필 `Profiles/SwEngine.json` — 매크로 · 인자 표 · 캐시 규칙을 바꾸면 이 파일을 고친다). 켜진 인자는 추적되는 `.vscode/settings.json` 의 `cmake.debugConfig` 에 쓰인다. 시험 · 패키징은 `py -3 Tools/launch-args/Scripts/ExtensionTool.py test --integration` · `package` — VS Code 터미널에서 띄우는 VS Code 는 물려받은 `ELECTRON_RUN_AS_NODE` 를 빼야 창으로 뜬다(종료 코드 9).

@@ -173,3 +173,12 @@
 `Resource/game/empty/models_raw/`, 어떤 모델을 어떻게 쪼갤지는 `Config/Editor/ModelImportConfig.json` 의 `Destruction_*` 규칙(`App --import-models` 가
 `.mesh` 옆에 `.fracture` 를 쓴다). 보려면 `Resource/game/empty/data/gamesettings.xml` 의 `startMap` 을 이 씬으로 바꿔(또는 `-gv_firstScene=`) App 을 띄웁니다
 (`-gv_screenshotFrame=900 -gv_screenshot=<경로>.ppm` 로 깨진 뒤를 찍는다). 시험: `DestructionShowcaseTest`(도화선 → 사슬 → 벽 · 상자가 깨진다).
+
+## 함정 · 계약
+
+- **파쇄(평면 자르기)** — 모서리 교점은 끝점을 자리 순으로 정렬해 구한다(이웃 칸이 같은 모서리를 반대 방향으로 자르면 비트가 달라 틈이 생긴다). 세 칸이 만나는 곳에는 거의 같은
+  점이 생겨 그때만 용접 + 퇴화 삼각형 정리(`cleanPiece`)를 돈다(늘 돌리면 느리다). 귀 자르기는 일직선 점을 삼각형 없이 버리면 안 된다(T 자 틈). 안쪽 면 다시 짓기는 그 점을
+  쓰는 **모든** 면이 안쪽 면일 때만 뺀다. 쪼개기 결과가 바뀌면 `MeshFractureUtil::kAlgorithmVersion` 을 올린다(임포트 해시).
+- **도는 덩어리는 질량 중심으로 보간한다** — 그룹 원점(오브젝트 원점)은 덩어리에서 수 미터 떨어질 수 있어 원점을 직선으로 이으면 오차가 1 m 를 넘는다(p99 0.44 → 0.07 m).
+- **부서지기 전 통째 움직임은 오브젝트 이동 복제(`ReplicationServer` 엔티티)의 몫이다**(사용자 결정 2026-10-06) — 파괴 키트는 부서진 뒤 조각만 보낸다(언리얼도
+  GC 액터의 통째 움직임은 `bReplicateMovement`). 게임이 안 보내면 클라이언트 조각은 클라이언트의 그 자리에서 태어난다.

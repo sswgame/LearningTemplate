@@ -342,6 +342,22 @@ struct MyComponent : public Component
 
 ---
 
+## 함정 · 계약
+
+- **파서에 레이아웃을 재게 하지 말 것** — 파서 인자에는 `SW_DEBUG` · `_DEBUG` 가 없다. 비트필드 자리는 런타임 `PropertyInfo::resolveBitField` 가 찾는다. 범위는 경계마다
+  (`_bHasMinRange` · `_bHasMaxRange`). `PROPERTY()` 를 `T&` 를 돌려주는 인자 없는 메서드에 붙이면 값이 객체 밖에 있는 프로퍼티가 된다(`Reflection/README.md` 5),
+  `Name = "_옛이름"` 으로 씬 파일을 고치지 않고 이어 쓴다.
+- **ReflectionParser 구조** — 애노테이션 필드 하나 = `AnnotationFields` 표 한 줄(`Emit` 열이 코드젠), 철자 표 `AnnotationMeta.txt` 와 어긋나면 시작에서 멈춘다(`validateBindings`),
+  모르는 토큰은 빌드를 세운다. 선언 소속은 `findTargetIndex`(전개 위치 파일) — `clang_Location_isFromMainFile` 은 매크로 위치를 늘 "아님" 으로 답한다. 별칭은 `resolvePropertyAlias` ·
+  `getBaseClassDeclaration` 으로 풀고, 컨테이너는 바깥 템플릿 이름이 **같을 때만**(`outerTemplateName`). 헤더 여럿은 한 TU 로 묶는다(`parseBatch`, 실패하면 헤더별 재시도).
+- **파서 증분 판정** — 스탬프에 `input <읽기 전 시각>` 과 `dep <시각> <경로>`, `--depfile` → CMake `DEPFILE`. 파서 실행 파일 · 템플릿 · builtins · AnnotationMeta 의 시각도 본다.
+  산출물은 내용이 같으면 다시 쓰지 않으므로 다시 만들었는지는 `<이름>.gen.cpp.stamp` 로 본다. `git mv` 는 mtime 을 안 바꾼다(산출물 머리말 `// Source:` 경로를 대조한다).
+  생성 파일 이름은 소스 파일 이름만으로 지으므로 한 모듈 안 같은 이름의 헤더 둘은 빌드를 세운다. 리눅스 libstdc++ 파일 시계는 지금 시각이 음수다(부호 없는 64 비트로 읽는다).
+- **파서 변경의 검증은 생성물 바이트 비교다** — 새 · 옛 파서로 133 파일(열 타깃 + `ReflectBuiltins.gen.cpp`)을 만들어 `diff -r` 0. 로컬 `parser_config.json` 은 기계 키
+  (`paths.*` · `parser_args.extra` · `parser_args.force_include`)만 받는다. `findReflectionParserExecutable` 은 `BuildTools` 를 먼저 본다 — `Bin` 의 옛 사본을 돌린 결과는 지금 답이 아니다.
+  Shipping 은 Info 로그가 없으므로 도구의 사용법 · 덤프는 stdout 으로.
+- **`AnnotationMeta.txt` 의 `flag.X` 한 줄이 단독 토큰과 `X = true` 를 함께 등록한다.** `ArgumentList.xxx` 의 `bUseDefaultValue` 를 켜면 주지 않은 인자에도 `getArgument` 가 true 다.
+
 ## 더 볼 곳
 
 - [Source/Engine/Reflection/README.md](../../Source/Engine/Reflection/README.md) — 매크로·TypeRegistry  

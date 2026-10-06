@@ -81,3 +81,8 @@
   상태 · 클립으로 고르는 구현을 끼운다. Near NPC 에게만 불리고, 화면 밖은 사건(`drainEvents`)만 남는다.
 - **길 찾기**: 계획 경로는 `AreaGraphSchedulePathing`(지역) 또는 `NavGridSchedulePathing`, 화면 안 고운 경로는 내비 격자. 실제 몸은 게임의 `NavAgent` 가
   `ScheduleNpcView::_location` · `_target` 을 따라 움직인다. 내비메시가 생기면 `ISchedulePathing` 구현 하나를 더한다.
+
+## 함정 · 계약
+
+- **일정의 "일찍 나서기" 는 앞 칸의 끝을 빌린다** — 앞 칸의 우선순위가 더 높으면(약속 · 축제) 빌리지 않는다. 빌리면 점심 약속 중에 일하러 나서 약속 출석
+  판정이 깨진다. 화면 밖 일정이 화면 안과 같으려면 판정 자리(계획 출발점 · 끼어든 자리)를 LOD 와 상관없는 계획 경로로 잰다(`AI/Schedule/README.md`).

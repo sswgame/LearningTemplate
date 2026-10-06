@@ -87,3 +87,6 @@ cd build/Ninja-Debug/Bin
 - 낱개 표(`setString` · `loadLanguageJson`)는 원문 확인 없이 프로젝트 위에 덮인다 — 시험 · 도구용이다. 게임 데이터는 프로젝트로 올린다.
 - 번역 표의 `culture` 는 프로젝트의 `cultures` 철자(정본화 후)와 같아야 한다 — 다르면 그 표를 올리지 않는다.
 - `selectordinal` · 화폐 · 시간대 · 서수는 없다. 날짜는 받은 값을 그대로 쓴다(시간대 변환 없음).
+- **로컬라이제이션의 정본은 원문 표(`*.strings.json`)이고 번역 표(`<culture>.translation.json`)는 번역할 때의 원문 해시를 든다** — 해시가 다르면(원문이
+  바뀌었으면) 그 번역은 화면에 나오지 않는다. 표 파일은 프로젝트(`*.locproject.json`)가 이름으로 부른다(폴더를 훑지 않아 팩 안에서도 같다). 코드 · 데이터의 글을 고치면
+  `App --gather-text` 결과(원문 표 · 번역 표 · `tm/`)를 같이 커밋한다 — `TextGathererTest.RepositoryProjectsAreUpToDate` 가 막는다.

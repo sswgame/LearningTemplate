@@ -345,6 +345,20 @@ CMake 헬퍼: `cmake/Engine/ReflectionCodeGen.cmake` (`sw_addReflectionStep`)
 
 ---
 
+## 함정 · 계약
+
+- **머티리얼 enum · 플래그 글은 `EnumInfo::tryParseText`** — 모르는 이름 · 표식 값(`Count`)은 경고하고 값을 쓰지 않는다. enum 타입 이름은 `findInterned` 로만(에셋 글일 때). 코드가 준 이름(전역 변수의 `#enumType`)은 `hashed_string` 생성자로 찾는다 — 아직 아무도 인턴하지 않은 기동 시점에 `findInterned` 는 빈 해시를 내고, 시험 프로세스는 다른 시험이 먼저 인턴해 두어 그것을 가린다.
+- **`TypeInfo` 주소는 고정이다**(레지스트리의 `unique_ptr` + 모듈 해제는 묘비 `_bAlive`, 같은 FQN 재등록은 같은 객체를 되살림, 묘비는 `clearContent()`). 조회 캐시는 등록 배치
+  끝에 한 번(`buildLookupCaches`). `castTo` 는 `_pParentType` + `TypeLookupCache`(세대)이고 포인터가 다르면 FQN 을 한 번 더 견준다 — 시험 목의 `StaticType()` 이 레지스트리 밖 사본이다.
+  부모 사슬은 순환할 수 있다(`registerClass` 는 값을 검사하지 않는다 — `markVisitedOrStop`). 상속 캐시는 `clearInheritedProperties`.
+- **`TypeInfo::forEachProperty` 의 기본은 `bIncludeBase=false`** 다 — 직렬화기는 `true` 를 넘겨야 상속 PROPERTY(트랜스폼)가 저장된다. `applyTypeDefaults` 는 뿌리 → 파생 순.
+  벡터 기본값 · JSON float4 텍스트는 쉼표 구분이다(공백이면 파싱이 조용히 실패한다).
+- **비트플래그는 `ENUM( Flags )` 로만 말한다**(값 모양 자동 감지는 지웠다). 클래스 안에 중첩된 `ENUM( Flags )` 는 `FlagOps.gen.h` 가 전방 선언할 수 없어 코드젠이 일부러 실패한다.
+  enum 메모리는 `readValueFromMemory` · `writeValueToMemory` 로만(`getValuePtr<int32>` 는 uint8 enum 뒤 3 바이트를 덮었다). enum 값은 생성 코드가 컴파일러에게 계산시킨다.
+- **단위는 `PROPERTY( Units = m )`** — 단위 표(`ReflectUnits.h`)로 철자를 검사한다. `Meta = "Units=…"` 는 표에 없는 글자(`HP` · `dB` · `px` · `BPM`)만 받고, 표에 있는
+  단위를 `Meta` 로 적으면 파서가 거절한다(`ReflectionParserTest.DisplayMetadataIsValidated`). 가속도는 `m/s2`(`m/s^2` 아님). `/` 가 든 단위는 따옴표로
+  (`Units = "m/s"`) — clang-format 이 `m/s` 를 `m / s` 로 띄우고, 따옴표 없는 값은 첫 공백에서 끝나 `m` 이 된다. 파서는 공백이 든 따옴표 없는 값을 거절한다.
+
 ## 더 볼 곳
 
 - [ReflectionParser README](../../../Tools/ReflectionParser/README.md) — 파서 CLI · 템플릿 · 생성물  

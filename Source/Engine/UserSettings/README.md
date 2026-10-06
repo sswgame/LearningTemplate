@@ -105,3 +105,6 @@ settings.registerEventListener( SW_DELEGATE_METHOD( UserSettingEventListener, &M
 - 개인 정보(`privacy`): `telemetry.enabled`(기본 false) · `telemetry.crashReports`(local · ask · send, 기본 local)는 대상이 없다 — `TelemetryService` ·
   `CrashReportService` 의 `bindConsentSetting` 이 확정 값을 읽는다(`Engine/Telemetry/README.md`).
 - 키 바인딩의 빈 값은 "입력 맵의 기본 바인딩" 입니다 — 카테고리 기본값으로 되돌리면 지난 리바인딩이 남지 않습니다.
+- **사용자 설정 파일(`usersettings.json`)은 배포된 플레이어 데이터다** — 설정 id · 선택지 이름을 바꾸면 스키마 `version` 을 올리고 `<Upgrade>` 를 더한다(별칭 금지
+  규칙의 예외). 화면 변경은 적용기가 요청만 쌓고 App 이 프레임 맨 앞에서 렌더 스레드를 기다린 뒤 한다 — 창 크기는 `App::onResize` 한 길로 스왑체인에 닿는다.
+  명령줄로 준 전역 변수(`-gv_*`)는 기동 적용이 덮지 않는다(명령줄이 이긴다, `UserSettingsTargets::_pCommandLineManager`).

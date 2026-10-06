@@ -143,6 +143,14 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
 - **ACL 블롭은 16 바이트 정렬이어야 한다** — `AnimClip` 은 `AnimCodecBlock` 배열로 보관하고, 바이트 배열에서 재는 곳(`measureMaxError`)은 정렬된 사본을 만든다.
 - **ACL 의 정밀도 · shell 거리 기본값은 센티미터 단위**다(0.01 · 3.0). 엔진은 미터라 규칙의 `animation_precision` 0.0001 · `animation_shell_distance` 0.1 이 기본이다.
 | `BlendCurve` | 전환 곡선 · 길이(`BlendCurveSpec`)와 시간 → 가중치(`evaluateBlendWeight`). 카메라 디렉터 · 시퀀서 · 소켓 부착의 되돌아가기가 같은 구현을 쓴다 |
+- **애니메이션이 튀면 본 하나의 프레임 사이 이동량을 재 본다** — Shooter3D 의 튐은 셋이 겹친 것이었다: 반복으로 돌린 겨누기 레이어의 끝 → 처음(1 초마다 32 cm),
+  대각선에서 상태가 오가며 클립을 처음부터 다시 틀기, 끊긴 크로스페이드가 한 칸을 버리기. 튐의 간격이 클립 길이와 맞는지부터 본다.
+  몸 전체가 튀면 프레임별 CSV(Shooter3D `-gv_shooterMotionTrace=<경로>`)로 몸 = 발 자리 · 루트 본 · 요 각속도 · 카메라 이동을 나눠 본다 — 자동 조준이 표적을 바꿀 때
+  20 rad/s 로 돌던 요 스냅이 원인이었다(각속도 상한 `OrientationUtil::turnTowardAngle`).
+- **애니메이션 되감기는 평가를 멈추고 기록된 포즈를 건다**(`AnimationRewind.h`, Shipping 에 없음) — 기록 요청은 프로세스 전역(`-gv_animationRewind` ·
+  콘솔 `anim.rewind` · 에디터 Animation Rewind 패널)이고 씬마다의 기록기가 평가 앞에서 따른다. 시험은 요청을 바꾸면 되돌릴 것(`ScopedRecording`).
+  군중 묶음과 나누는 유닛에는 포즈를 걸지 않는다(포즈가 묶음의 것) — 기록 · 뼈대 그리기만 된다.
+
 
 ---
 
