@@ -162,8 +162,8 @@ namespace sw
      * @brief 머티리얼 데이터 원소 하나를 가리키는 키, 곧 (머티리얼, 인스턴스) 쌍입니다.
      * @details 인스턴스가 없으면 머티리얼 자신이 원소입니다. 인스턴스는 CB 값만 덮어쓰므로 부모 머티리얼과 함께 봐야 합니다.
      */
-    // SW_OWNERSHIP_RAW_OK: 정체성 키다. 비교만 하고 **역참조하지 않는다**. 소유를 실으면 키가 수명을 붙들어,
-    //                      회수돼야 할 머티리얼이 스냅샷이 사는 동안 살아남는다(그것이 원소 표가 따로 있는 이유다).
+    // SW_OWNERSHIP_RAW_OK( _pMaterial, _pInstance ): 정체성 키다. 비교만 하고 **역참조하지 않는다**. 소유를 실으면 키가 수명을 붙들어,
+    //                                               회수돼야 할 머티리얼이 스냅샷이 사는 동안 살아남는다(그것이 원소 표가 따로 있는 이유다).
     struct GpuMaterialElementKey
     {
         Material*         _pMaterial{ nullptr };
@@ -261,7 +261,7 @@ namespace sw
      * @struct GpuSkinPalette
      * @brief 스킨드 메시 하나의 팔레트 구간입니다. 행은 `GpuSceneSnapshot::_pListSkinPaletteRow` 의 float4 이고 본 하나가 셋입니다(행벡터 4x4 의 0 · 1 · 2 열).
      */
-    // SW_OWNERSHIP_RAW_OK: 정체성 키다. RT 의 모프 풀이 자기 구간과 짝짓는 데만 쓰고 역참조하지 않는다 — 메시 소유는 배치(`GpuMeshBatch::_mesh`)가 싣는다.
+    // SW_OWNERSHIP_RAW_OK( _pMesh ): 정체성 키다. RT 의 모프 풀이 자기 구간과 짝짓는 데만 쓰고 역참조하지 않는다 — 메시 소유는 배치(`GpuMeshBatch::_mesh`)가 싣는다.
     struct GpuSkinPalette
     {
         const Mesh* _pMesh{ nullptr };

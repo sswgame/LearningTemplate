@@ -293,7 +293,7 @@ GPU 리소스는 그리기 전에 만듭니다. 게임 스레드가 이번 프�
 
 옮겨지는 값의 집합은 `GpuSceneSnapshot` 타입이, 생성과 소유 방식은 `CreateKey` 생성자가 컴파일 시점에 지킵니다.
 C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드를 더하는 일 하나이고, 이것은 `Scripts/lint/gate/CheckRenderOwnership.py` 가 막습니다.
-예외는 그 줄에 `// SW_OWNERSHIP_RAW_OK: <이유>` 를 붙입니다.
+예외는 그 줄에 `// SW_OWNERSHIP_RAW_OK( _pMember ): <이유>` 를 붙입니다(적은 멤버만 면제, 그 멤버가 사라지면 낡은 표식으로 실패).
 
 회귀 테스트는 `RenderPassGpuTest.MaterialLifetimeFollowsPacket`(ASAN 프리셋에서 해제 후 사용을 잡는다)과 `RenderPassGpuTest.RendererSurvivesDeviceRecreate` 입니다.
 앱에서 재현하려면 `-gv_rhiSwapAtFrame=30 -gv_rhiSwapTo=<0..3> -gv_screenshotFrame=100` 을 씁니다. 번호는 DX11이 0, DX12가 1, Vulkan이 2, OpenGL이 3입니다.

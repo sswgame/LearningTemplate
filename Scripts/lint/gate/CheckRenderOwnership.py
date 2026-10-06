@@ -20,9 +20,11 @@ heap-use-after-free — MaterialInstance 가 대표적이다). 그리고 그 객
   구조체에 생포인터를 넣어도 통과한다), 목록은 파일이 옮겨질 때마다 손으로 고쳐야 한다. 그래서 헤더를 정하고
   그 안의 모든 구조체를 본다 — **목록이 아니라 자리가 규칙이다.**
 
-**예외는 코드 옆에 이유와 함께 적는다.**
+**예외는 코드 옆에 멤버 이름 · 이유와 함께 적는다.**
   정체성 키(비교만 하고 역참조하지 않는다)는 생포인터가 맞다. 그런 구조체는 선언 바로 위에
-  `// SW_OWNERSHIP_RAW_OK: <이유>` 를 적는다. 이유 없는 예외는 다음 사람이 같은 판단을 다시 하게 만든다.
+  `// SW_OWNERSHIP_RAW_OK( _pA, _pB ): <이유>` 를 적는다 — **적은 멤버만** 면제된다. 구조체를 통째로 면제하면 같은 구조체에
+  소유 포인터를 더해도 통과한다. 표식이 적은 멤버가 그 구조체에 원시 포인터로 없으면 낡은 표식으로 실패한다.
+  이유 없는 예외는 다음 사람이 같은 판단을 다시 하게 만든다.
 
   python Scripts/lint/gate/CheckRenderOwnership.py [--root <repo>]
 """
@@ -45,10 +47,12 @@ _kTransportedHeaders: list[str] = [
     "Source/Engine/Graphics/Renderer/Frame/RenderFramePacket.h",
 ]
 
-_kRawPointerMember = re.compile(r"^\s*(?:const\s+)?[A-Za-z_][\w:<>]*\s*\*\s+_\w+\s*(?:\{|;|=)")
+_kRawPointerMember = re.compile(r"^\s*(?:const\s+)?[A-Za-z_][\w:<>]*\s*\*\s+(?P<name>_\w+)\s*(?:\{|;|=)")
 # 선언 시작 — 줄 맨 앞의 `struct X`. 주석 안의 `@struct X` 를 잡지 않으려고 줄 시작을 요구한다.
 _kStructDecl = re.compile(r"^[ \t]*struct\s+(?:SW_API\s+)?(\w+)\b[^;{]*$|^[ \t]*struct\s+(?:SW_API\s+)?(\w+)\b[^;]*\{", re.M)
-_kExemptMarker = re.compile(r"//\s*SW_OWNERSHIP_RAW_OK\s*:\s*(\S.*)")
+_kExemptMarker = re.compile(r"//\s*SW_OWNERSHIP_RAW_OK\s*\(\s*(?P<members>[^)]*)\)\s*:\s*(?P<reason>\S.*)")
+#: 멤버를 적지 않은 옛 모양 — 구조체 통째 면제라 받지 않는다.
+_kBareMarker = re.compile(r"//\s*SW_OWNERSHIP_RAW_OK\b(?!\s*\()")
 
 
 def findStructBodies(text: str) -> list[tuple[str, int, str]]:
@@ -78,8 +82,10 @@ def findStructBodies(text: str) -> list[tuple[str, int, str]]:
     return results
 
 
-def findExemptReason(text: str, declLineNo: int) -> str | None:
-    """선언 바로 위(주석 블록 포함)에 적힌 예외 사유. 없으면 None."""
+def findExemptMembers(text: str, declLineNo: int) -> tuple[set[str], str] | str | None:
+    """
+    선언 바로 위(주석 블록 포함)에 적힌 예외 — (면제 멤버 집합, 이유). 없으면 None, 멤버를 적지 않은 옛 모양이면 그 줄(글자)입니다.
+    """
     lines = text.splitlines()
     index = declLineNo - 2  # 0-기반, 선언 바로 위
     while index >= 0:
@@ -88,7 +94,10 @@ def findExemptReason(text: str, declLineNo: int) -> str | None:
             break
         marker = _kExemptMarker.search(lines[index])
         if marker is not None:
-            return marker.group(1).strip()
+            setMember = {member.strip() for member in marker.group("members").split(",") if member.strip()}
+            return setMember, marker.group("reason").strip()
+        if _kBareMarker.search(lines[index]) is not None:
+            return stripped
         if not stripped.startswith(("//", "*", "/**", "/*")):
             break
         index -= 1
@@ -110,17 +119,28 @@ def checkTransportedHeaders(rootDir: Path) -> tuple[list[str], int]:
             continue
         for structName, declLineNo, body in bodies:
             checkedCount += 1
-            reason = findExemptReason(text, declLineNo)
+            exempt = findExemptMembers(text, declLineNo)
+            if isinstance(exempt, str):
+                errors.append(f"{relPath}:{declLineNo}: {structName} 의 예외 표식이 멤버를 적지 않습니다 — "
+                              f"`// SW_OWNERSHIP_RAW_OK( _pA, _pB ): <이유>` 로 면제할 멤버를 적으세요(`{exempt}`)")
+                exempt = None
+            setExemptMember = exempt[0] if exempt is not None else set()
+            setRawMember: set[str] = set()
             for line in blankComments(body).splitlines():
-                if _kRawPointerMember.match(line) is None:
+                match = _kRawPointerMember.match(line)
+                if match is None:
                     continue
-                if reason is not None:
+                setRawMember.add(match.group("name"))
+                if match.group("name") in setExemptMember:
                     continue
                 errors.append(
                     f"{relPath}:{declLineNo}: {structName} 안의 원시 포인터 멤버 — `{line.strip()}` "
                     f"(소유는 shared_ptr, 값은 값으로. 정체성 키라면 선언 위에 "
-                    f"`// SW_OWNERSHIP_RAW_OK: <이유>` 를 적으세요)"
+                    f"`// SW_OWNERSHIP_RAW_OK( {match.group('name')} ): <이유>` 를 적으세요)"
                 )
+            for member in sorted(setExemptMember - setRawMember):
+                errors.append(f"{relPath}:{declLineNo}: {structName} 의 예외 표식이 적은 '{member}' 는 원시 포인터 멤버로 없습니다 — "
+                              f"낡은 표식에서 지우세요")
     return errors, checkedCount
 
 
@@ -140,6 +160,23 @@ class CheckRenderOwnershipGate(LintGate):
                     "struct GpuProbe\n"
                     "{\n"
                     "    Material* _pMaterial{ nullptr };\n"
+                    "};\n"
+                ),
+                "Source/Engine/Graphics/Renderer/Frame/RenderFramePacket.h": (
+                    "#pragma once\n\nstruct RenderFramePacketProbe\n{\n    int32 _value{ 0 };\n};\n"
+                ),
+            },
+        },
+        {
+            "name": "표식이 _pA 만 면제하는 구조체에 생포인터 _pB 를 더함",
+            "files": {
+                "Source/Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h": (
+                    "#pragma once\n\n"
+                    "// SW_OWNERSHIP_RAW_OK( _pA ): 정체성 키다.\n"
+                    "struct GpuProbeKey\n"
+                    "{\n"
+                    "    Material* _pA{ nullptr };\n"
+                    "    Mesh* _pB{ nullptr };\n"
                     "};\n"
                 ),
                 "Source/Engine/Graphics/Renderer/Frame/RenderFramePacket.h": (
