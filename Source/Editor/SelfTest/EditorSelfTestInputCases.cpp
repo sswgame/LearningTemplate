@@ -53,9 +53,29 @@ namespace sw::editor
             // --------------------------------------------------------------------------------------------------
             struct TypingProbe
             {
+                string _pressDiagnosis{}; ///< 누른 프레임 뒤의 입력 대상(`describeInputTarget`) — 실패 이유에 붙인다
                 uint64 _objectId{ 0 };
                 uint32 _hintCountBefore{ 0 };
             };
+
+            /**
+             * @brief 글자가 어디로 가는지 가르는 상태 한 줄입니다 — 활성 위젯 · 이름표 위젯 · 호버 위젯 · 호버 창 · 글자 입력 요구.
+             * @details 활성 위젯이 이름표 위젯과 같은데 글자가 안 닿으면 글자 주입 경로가, 다르면 클릭이 칸을 잡지 못한 것이다(호버 창이 다른 창이면
+             *          그 창이 가로챘다 — 도킹 구분선(d077a5252) · 처음부터 열린 떠 있는 창).
+             */
+            static string describeInputTarget( const utf8* pMarkKey )
+            {
+                const ImGuiContext&                   imguiContext = *ImGui::GetCurrentContext();
+                EditorSelfTestMark                    mark{};
+                const bool                            bHasMark       = EditorSelfTestMarks::find( pMarkKey, mark );
+                const ImGuiWindow*                    pHoveredWindow = imguiContext.HoveredWindow;
+                fixed_string<constant::kMaxBuffer512> text;
+                formatstring( text.data(), text.capacity(), "active=%u field=%u hoveredId=%u hoveredWindow=%s wantTextInput=%d",
+                              static_cast<uint32>( imguiContext.ActiveId ), bHasMark ? mark._itemId : 0u, static_cast<uint32>( imguiContext.HoveredId ),
+                              pHoveredWindow != nullptr && pHoveredWindow->Name != nullptr ? pHoveredWindow->Name : "(none)",
+                              ImGui::GetIO().WantTextInput ? 1 : 0 );
+                return string{ text.c_str() };
+            }
 
             static TypingProbe& getTypingProbe()
             {
@@ -117,6 +137,8 @@ namespace sw::editor
                     case 2:
                     case 6:
                     {
+                        if ( context.getStepIndex() == 2 )
+                            probe._pressDiagnosis = describeInputTarget( "hierarchy.filter" );
                         (void)pressOnMark( "hierarchy.filter", false );
                         return EditorSelfTestStep::Continue;
                     }
@@ -128,7 +150,13 @@ namespace sw::editor
                     case 4:
                     {
                         // 글자가 든 프레임에 패널이 칸 → 트리 순으로 그렸다. 칸에 닿았는지 · 필터가 탐침을 찾았는지 본다.
-                        (void)context.expect( pHierarchy->getFilterText() == "tag:SwSelfTest", "typing did not reach the search field" );
+                        // 실패하면 이유에 누른 뒤 · 지금의 입력 대상을 붙인다 — 실행 한 번으로 "클릭이 칸을 못 잡았다" 와 "글자가 안 들어갔다" 가 갈린다(패널 점검 D26).
+                        string what{ "typing did not reach the search field [after press: " };
+                        what += probe._pressDiagnosis;
+                        what += " | now: ";
+                        what += describeInputTarget( "hierarchy.filter" );
+                        what += "]";
+                        (void)context.expect( pHierarchy->getFilterText() == "tag:SwSelfTest", what.c_str() );
                         (void)context.expect( pHierarchy->getVisibleRootCount() == 1, "the typed tag filter did not find the probe object" );
                         // 지우고 없는 이름을 친다 — 입력 중인 칸은 ImGui 가 든 글을 쓰므로 먼저 놓고 지운 뒤 다시 누른다.
                         ImGui::ClearActiveID();
