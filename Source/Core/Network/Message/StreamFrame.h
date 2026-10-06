@@ -24,7 +24,8 @@ namespace sw
 
     struct StreamFrameFlag
     {
-        static constexpr uint8 kKnownMask = 0x00; ///< 모르는 깃발 비트는 거절한다
+        static constexpr uint8 kCompressed = 0x01;        ///< 몸이 압축 봉투다(`NetCompressionUtil`) — 받는 쪽은 자기 설정과 상관없이 푼다
+        static constexpr uint8 kKnownMask  = kCompressed; ///< 모르는 깃발 비트는 거절한다
     };
 } // namespace sw
 

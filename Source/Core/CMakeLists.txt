@@ -23,6 +23,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Module/ModuleUnloadListener.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Module/ModuleImageUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/BitStream.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetCompression.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetTypes.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/Connection/NetConnection.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/Connection/NetHost.cpp"

@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/StreamFrame.h"
+#include "Core/Network/NetCompression.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
 namespace sw
@@ -33,6 +34,7 @@ namespace sw
         int32                  _maxFrameBodySize{ StreamFrameConstant::kDefaultMaxFrameSize };
         int32                  _maxPendingReceiveBytes{ 4 * 1024 * 1024 }; ///< 연결 하나가 `pump` 를 기다리는 바이트 — 넘으면 읽기를 멈춘다
         float64                _pingIntervalSeconds{ 15.0 };               ///< 0 = 끈다. 전송의 유휴 시한보다 짧게
+        NetCompressionSettings _compression{};                             ///< 보내는 프레임 몸의 압축(기본 꺼짐). 받는 쪽은 설정과 상관없이 등록부에 있는 코덱이면 푼다
         StreamSecuritySettings _security{};                                ///< TLS 컨텍스트가 있으면 모든 연결이 TLS — 열림은 핸드셰이크 뒤
     };
 } // namespace sw

@@ -412,7 +412,9 @@ cd build/Ninja-Debug/Bin
   작다. 측정 벤치(`NetCompressionBenchTest`, Release 3 회 가운데 값, 패킷마다 봉투 3 B · 줄지 않으면 원문): 스냅숏(평균 1009 B) LZ4 1 %/1.1 us ·
   zstd1 15 %/11.7 us · zstd1+사전 16 KB 34 %/6.0 us, 파괴(302 B) LZ4 3 %/0.37 us · zstd1 4 %/6.4 us · 사전 35 %/1.6 us, 채팅(43 B, 합성) LZ4 1 % · zstd 0 % · 사전 27 %/0.74 us
   (us = 압축 + 해제/패킷). 켜는 규칙(15 % 이상 줄고 2 us 이하)을 등록부 코덱(LZ4 · zstd)은 어느 흐름에서도 못 넘는다 — UDP 패킷 압축은 끈다. 넘는 것은 학습 사전뿐(파괴 · 채팅):
-  사전 배포(판 · id 협상 · 사전 갱신)를 하면 다시 본다. 채팅 숫자는 채팅 키트가 실제 기록을 내면 다시 잰다. 스트림(채팅 기록 · 거래 내역 · 큰 메시지)은 zstd 가 기본 후보.
+  사전 배포(판 · id 협상 · 사전 갱신)를 하면 다시 본다. 채팅 숫자는 채팅 키트가 실제 기록을 내면 다시 잰다. 남은 것: WSL Release 로 같은 벤치 한 번(압축 시간은
+  컴파일러 · libc 에 따라 다르다). 스트림 프레임 압축은 있다(`StreamEndpointSettings::_compression` — 봉투 `NetCompressionUtil`, 기본 꺼짐, 받는 쪽은 푼 크기를 몸 상한으로
+  보고 풀기 전에 거절) — 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
 - **MMO 규모 서버의 UDP 소켓 계층.** 지금은 호스트당 논블로킹 UDP 소켓 하나 + 전용 스레드 하나(`poll`/`WSAPoll`), 데이터그램마다 `recvfrom`/`sendto`, `NetHost` 잠금 하나.
   UDP 는 소켓이 하나라 IOCP · epoll 은 지렛대가 아니다 — ① 측정 먼저(실제 UDP 에 가짜 클라이언트 500 · 2000, 초당 패킷 · 패킷당 CPU · 지연 p99 — N18 은 루프백이라 소켓 비용을 안 본다)
   ② 시스템 호출이 지배적이면 일괄 I/O(리눅스 `recvmmsg`/`sendmmsg` → UDP GSO/GRO, Windows RIO — 완료 통지는 IOCP) ③ 한 스레드가 차면 `SO_REUSEPORT` 수신 분산 + 연결 샤딩(`NetHost` 잠금 분할).

@@ -49,10 +49,12 @@ namespace sw
     {
         mutex                   _mutex; ///< 해독기 · 보낼 프레임 버퍼 · TLS 세션
         StreamFrameDecoder      _decoder;
-        vector<uint8>           _frameScratch{};  ///< 보낼 프레임을 짓는 자리
-        unique_ptr<ITlsSession> _tlsSession{};    ///< 있으면 오가는 모든 바이트가 이것을 지난다
-        vector<uint8>           _plainScratch{};  ///< 세션이 푼 평문
-        vector<uint8>           _cipherScratch{}; ///< 세션이 내놓은 보낼 암호문
+        vector<uint8>           _frameScratch{};      ///< 보낼 프레임을 짓는 자리
+        unique_ptr<ITlsSession> _tlsSession{};        ///< 있으면 오가는 모든 바이트가 이것을 지난다
+        vector<uint8>           _plainScratch{};      ///< 세션이 푼 평문
+        vector<uint8>           _cipherScratch{};     ///< 세션이 내놓은 보낼 암호문
+        vector<uint8>           _compressScratch{};   ///< 보낼 몸의 압축 봉투
+        vector<uint8>           _decompressScratch{}; ///< 받은 봉투를 푼 몸
         NetAddress              _remote{};
         StreamConnectionHandle  _handle{};
         atomic<int64>           _roundTripNanoseconds{ -1 };
@@ -265,8 +267,21 @@ namespace sw
                 case StreamFrameKind::Response:
                 case StreamFrameKind::Cancel:
                 {
-                    connection._pendingBytes.fetch_add( frame._bodySize, std::memory_order_relaxed );
-                    pushEvent( Event{ {}, connection._handle, 0, 0, StreamCloseReason::None, frame._kind, EndpointEventKind::Frame, SW_FALSE }, frame._pBody, frame._bodySize );
+                    const uint8* pFrameBody    = frame._pBody;
+                    int32        frameBodySize = frame._bodySize;
+                    if ( ( frame._flags & StreamFrameFlag::kCompressed ) != 0 )
+                    {
+                        // 원래 크기가 몸 상한을 넘으면 풀기 전에 끊는다(압축 폭탄). 모르는 코덱 · 깨진 봉투도.
+                        if ( NetCompressionUtil::decompressEnvelope( frame._pBody, frame._bodySize, _settings._maxFrameBodySize, connection._decompressScratch ) == false )
+                        {
+                            closeForError( connection, StreamCloseReason::ProtocolError );
+                            return false;
+                        }
+                        pFrameBody    = connection._decompressScratch.data();
+                        frameBodySize = static_cast<int32>( connection._decompressScratch.size() );
+                    }
+                    connection._pendingBytes.fetch_add( frameBodySize, std::memory_order_relaxed );
+                    pushEvent( Event{ {}, connection._handle, 0, 0, StreamCloseReason::None, frame._kind, EndpointEventKind::Frame, SW_FALSE }, pFrameBody, frameBodySize );
                     break;
                 }
                 case StreamFrameKind::Count:
@@ -330,7 +345,18 @@ namespace sw
             return StreamSendResult::Closed;
         std::scoped_lock<mutex> lock{ connection->_mutex };
         connection->_frameScratch.clear();
-        if ( StreamFrameEncoder::appendFrame( connection->_frameScratch, kind, 0, pBody, bodySize, _settings._maxFrameBodySize ) == false )
+        // 압축 → (TLS) 순서. 줄지 않으면 원문. 상한은 원문 크기로 본다(받는 쪽도 푼 크기로 본다).
+        const uint8* pFrameBody    = pBody;
+        int32        frameBodySize = bodySize;
+        uint8        flags         = 0;
+        if ( bodySize <= _settings._maxFrameBodySize && NetCompressionUtil::compressEnvelope( _settings._compression, pBody, bodySize, connection->_compressScratch ) )
+        {
+            pFrameBody    = connection->_compressScratch.data();
+            frameBodySize = static_cast<int32>( connection->_compressScratch.size() );
+            flags         = StreamFrameFlag::kCompressed;
+        }
+        if ( bodySize > _settings._maxFrameBodySize ||
+             StreamFrameEncoder::appendFrame( connection->_frameScratch, kind, flags, pFrameBody, frameBodySize, _settings._maxFrameBodySize ) == false )
         {
             SW_LOG_ERROR( "Stream frame of %# bytes exceeds the limit of %# bytes - not sent", bodySize, _settings._maxFrameBodySize );
             return StreamSendResult::QueueFull;
