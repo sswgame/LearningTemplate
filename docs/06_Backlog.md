@@ -144,6 +144,8 @@ cd build/Ninja-Debug/Bin
 - **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — 노멀 맵(정점에 탄젠트가 없다) · UV 스크롤 애니메이션 · 셰이딩 시프트 / 림 곱 / 외곽선 두께 텍스처(머티리얼 텍스처 칸이 넷이라 기본 · 그림자 · 발광 · 맷캡만 받는다) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다) · 그림자 패스의 알파 컷오프
   (`shadowdepth.hlsl` 은 픽셀 스테이지가 없어 머리카락 카드가 사각형 그림자를 드리운다 — 모든 컷오프 머티리얼이 같다).
 - **VRM 임포트의 남은 것** — 머티리얼(MToon) · 구간 메시 · 스켈레톤만 옮긴다. 표정(모프 타깃 · `blendShapeMaster`) · 스프링 본(`secondaryAnimation`) · humanoid 본 표 · firstPerson 은 읽지 않는다(0.x · 1.0 모두). 본 메시(`<이름>.mesh`)는 구간들을 다시 합친 것이라 디스크에 두 벌이다(VRoid 34k 삼각형 7 MB × 2) — 엔진 메시에 머티리얼 구간이 생기면 하나로 줄인다. VRoid 텍스처는 BC3 이다(Debug DirectXTex 의 BC7 은 512×256 한 장도 10 분이 넘는다 — Release 로 BC7 임포트를 다시 할 것). `ModelImporterTest.SkinnedModelImportsSkeletonClipsAndAttachments` 는 Debug 에서 혼자 31 초라 EditorTest 한도를 30 → 120 초로 올려 두었다 — 임포트를 줄이면 되돌린다.
+- **캔버스(화면 2D)의 남은 것(runtime-ui 4-4)** — (1) 화면 사각형 뷰(PiP · 분할 화면)는 주 시점의 Canvas 뒤에 그려져 UI 를 덮는다 — 뷰를 다 그린 뒤 주 출력에
+  한 번 그리게 옮긴다(언리얼은 모든 장면 뷰 뒤 Slate). (2) 렌더 텍스처 대상 캔버스(월드 공간 UI)는 4-6. (3) 위젯이 없는 지금은 `-gv_canvasTestPattern` 시험 그림만 칠한다.
 - **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것:
   `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
 - **머티리얼 폴백 원소(`FrameRenderer::ensureMaterialFallbackBuffers` — 0 바이트)의 텍스처 인덱스 칸이 0 이다** — Vulkan 은 bindless 0 번 실제 텍스처를 읽는다(DX12 는 0 번을 null SRV 로 비웠다, 머티리얼은 `MaterialPacking` 이 `kInvalidIndex` 를 넣는다). 원소 레이아웃(`ShaderBindingSlot`)은 stride 만, 리플렉션 원소 칸은 `uint` 뿐이라 텍스처 칸을 가를 수 없다 — 셰이더 쪽 표식(텍스처 칸 매크로가 리플렉션에 남기는 이름 규칙)으로 칸을 알아 `kInvalidIndex` 로 채우거나, Vulkan 도 0 번을 null 서술자로 비운다.
@@ -1255,6 +1257,8 @@ cd build/Ninja-Debug/Bin
   (`RHIDeviceTest.PremultipliedBlendAddsColorWithoutAlphaMultiply` 가 알파 255 로 지킨다).
 - **가위(`setScissorRect`)는 `setViewport` · `beginRenderPass` 가 뷰포트 전체로 되돌린다** — DX11 은 래스터라이저 상태에 늘 켜 두고 뷰포트를 거는 세 자리가 가위도 건다
   (뷰포트를 거는 새 자리를 만들면 가위도 건다 — 안 그러면 Deferred Context 의 빈 가위로 아무것도 안 그려진다). GL 은 가위 시험을 켜고 끄며, 클리어 · 블릿 동안은 끈다.
+- **UI 는 Present(톤맵) 뒤 Canvas 패스가 같은 출력에 Load 로 그린다** — 스크린샷 캡처 → 백버퍼 복사는 Swapchain 을 쓰는 마지막 패스 끝이다(그 전에 복사하면
+  UI 가 캡처에 없다 — `RenderPassGpuTest.CanvasDrawsOnEveryBackend` 가 백버퍼 사본과 캡처를 견준다). Canvas 는 Swapchain 을 쓰는 마지막 패스여야 한다(검증).
 - **Vulkan 의 텍스처 하나짜리 프레임버퍼 렌더 패스는 CLEAR 고정이다** — 깊이 없는 컬러 하나를 Load · DontCare 로 여는 패스는 load op 을 키로 드는 합성 경로로 간다
   (`RHIDeviceTest.LoadOpKeepsSingleOffscreenTarget`). 새 렌더 패스 경로를 만들면 Load 가 앞 그림을 지우지 않는지 그 시험으로 본다.
 - **애니메이션이 튀면 본 하나의 프레임 사이 이동량을 재 본다** — Shooter3D 의 튐은 셋이 겹친 것이었다: 반복으로 돌린 겨누기 레이어의 끝 → 처음(1 초마다 32 cm),

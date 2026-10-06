@@ -16,6 +16,8 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/Water/WaterWaveMath.h"
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -65,6 +67,8 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Text/GlyphCache.h"
+#include "Engine/Text/IFontRasterizer.h"
 #include "Engine/Window/IWindow.h"
 
 #include "EngineTest/AnimationTestUtil.h"
@@ -7032,4 +7036,148 @@ SW_TEST_CASE( RenderPassGpuTest, TwoSidedMaterialDrawsBackFaces )
 
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could render the two-sided material test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] Canvas 패스가 장면 위에 UI 를 불러온 채(Load) 그리고 스크린샷 캡처 · 백버퍼 둘 다에 들어간다 — 4 백엔드
+ * @details 큐브 장면을 캔버스 없이 한 번(A), 캔버스와 함께 한 번(B) 그린다. 캔버스: 빨간 둥근 사각형 · 반투명 파랑 겹침(프리멀티플라이) · 가위로 잘린 초록 ·
+ *          엔진 글꼴(라틴, 저장소 글꼴)의 SDF 글리프 "A". 단언은 픽셀 값이 아니라 A 와의 차이로 본다(장면 · 클리어 색 · 톤매핑에 매이지 않게):
+ *          캔버스 밖은 A 그대로(Load — Clear 로 열면 장면이 사라진다), 둥근 모서리 바깥 · 가위 밖도 A 그대로, 겹친 곳은 빨강 반 + 파랑 반,
+ *          글리프 상자의 밝기 증가가 백엔드끼리 2 % 안. 백버퍼 사본이 캡처와 같다 — 캡처 → 백버퍼 복사가 Canvas 뒤에 있다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, CanvasDrawsOnEveryBackend )
+{
+    constexpr float32      kGlyphSize = 64.0f;
+    const sw::float2       glyphOrigin{ 180.0f, 230.0f };
+    sw::vector<float64>    listGlyphMetric;
+    sw::vector<sw::string> listBackend;
+    test::RHIBackendSweep  sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        renderer.setPresentCaptureEnabled( true );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        sw::vector<uint8>     bytesWithout;
+        sw::RHITextureMipSpan layoutWithout{};
+        bOk = bOk && renderer.readbackPresentCapture( bytesWithout, layoutWithout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "캔버스 없는 프레임" ).c_str() );
+        if ( bOk == false )
+        {
+            renderer.shutdown();
+            continue;
+        }
+        test::RHITestImage without;
+        without.assign( std::move( bytesWithout ), layoutWithout, sw::constant::kBackBufferFormat );
+
+        // 캔버스 — 글리프는 저장소 글꼴(라틴)이라 기계마다 같다.
+        sw::unique_ptr<sw::IFontRasterizer> rasterizer = sw::IFontRasterizer::createDefault();
+        sw::vector<uint8>                   fontBytes;
+        SW_ASSERT_TRUE( sw::ResourceUtil::readBinaryResource( "engine/fonts/kenney_future.ttf", fontBytes ) );
+        const sw::FontFaceId face = rasterizer->loadFace( std::move( fontBytes ), 0, "engine/fonts/kenney_future.ttf" );
+        SW_ASSERT_TRUE( face != sw::kInvalidFontFaceId );
+        sw::GlyphCache      glyphCache( *rasterizer );
+        sw::CanvasFrameData canvas{};
+        canvas._mainOutput._targetSize = sw::float2{ static_cast<float32>( without.getWidth() ), static_cast<float32>( without.getHeight() ) };
+        {
+            sw::CanvasPainter painter( canvas._mainOutput, 1.0f );
+            sw::CanvasBrush   red{};
+            red._color        = sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f };
+            red._cornerRadius = sw::float4{ 12.0f, 12.0f, 12.0f, 12.0f };
+            painter.fillRect( sw::float2{ 40.0f, 40.0f }, sw::float2{ 80.0f, 60.0f }, red );
+            sw::CanvasBrush blue{};
+            blue._color = sw::float4{ 0.0f, 0.0f, 1.0f, 0.5f };
+            painter.fillRect( sw::float2{ 100.0f, 40.0f }, sw::float2{ 60.0f, 60.0f }, blue );
+            painter.pushClip( sw::float2{ 20.0f, 120.0f }, sw::float2{ 60.0f, 30.0f }, 0.0f );
+            sw::CanvasBrush green{};
+            green._color = sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f };
+            painter.fillRect( sw::float2{ 20.0f, 120.0f }, sw::float2{ 120.0f, 30.0f }, green );
+            painter.popClip();
+            sw::CanvasGlyphStyle style{};
+            style._fontSize = kGlyphSize;
+            SW_EXPECT_TRUE( painter.drawGlyph( glyphOrigin, face, rasterizer->findGlyphIndex( face, 'A' ), style, glyphCache, 1 ) );
+        }
+        glyphCache.getAtlas().takeUploads( canvas._listAtlasUpload );
+        renderer.setCanvasFrame( canvas );
+
+        test::RHITestImage window;
+        bOk = renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
+        sw::vector<uint8>     bytesWith;
+        sw::RHITextureMipSpan layoutWith{};
+        bOk = bOk && renderer.readbackPresentCapture( bytesWith, layoutWith );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "캔버스 프레임 · 백버퍼 · 캡처 읽기" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage with;
+            with.assign( std::move( bytesWith ), layoutWith, sw::constant::kBackBufferFormat );
+            auto isUnchanged = [&]( uint32 x, uint32 y )
+            { return test::RHITestImage::getColorDistance( with.getPixel( x, y ), without.getPixel( x, y ) ) <= 8; };
+
+            const test::Rgba8 redCenter = with.getPixel( 70, 70 );
+            SW_EXPECT_TRUE_MSG( redCenter._r > 220 && redCenter._g < 40 && redCenter._b < 40, ( label + "빨간 사각형 가운데" ).c_str() );
+            SW_EXPECT_TRUE_MSG( isUnchanged( 41, 41 ), ( label + "둥근 모서리 바깥이 칠해졌다(모서리가 안 깎였다)" ).c_str() );
+            const test::Rgba8 overlap = with.getPixel( 110, 70 );
+            SW_EXPECT_TRUE_MSG( overlap._r > 100 && overlap._r < 160 && overlap._b > 100 && overlap._b < 160 && overlap._g < 40,
+                                ( label + "겹친 곳이 빨강 반 + 파랑 반이 아니다(프리멀티플라이 블렌드) — " + sw::to_string( overlap._r ) + "," +
+                                  sw::to_string( overlap._g ) + "," + sw::to_string( overlap._b ) )
+                                    .c_str() );
+            const test::Rgba8 clipped = with.getPixel( 50, 135 );
+            SW_EXPECT_TRUE_MSG( clipped._g > 220 && clipped._r < 40, ( label + "가위 안의 초록" ).c_str() );
+            SW_EXPECT_TRUE_MSG( isUnchanged( 110, 135 ), ( label + "가위 밖이 칠해졌다" ).c_str() );
+
+            // 캔버스 사각형 밖은 A 그대로여야 한다 — Load 대신 지우면 장면(큐브)이 사라진다.
+            uint32 changedOutside{ 0 };
+            for ( uint32 y = 0; y < with.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < with.getWidth(); ++x )
+                {
+                    const bool bNearCanvas = x < 270 && y < 250;
+                    if ( bNearCanvas == false && isUnchanged( x, y ) == false )
+                        ++changedOutside;
+                }
+            }
+            SW_EXPECT_TRUE_MSG( changedOutside * 1000 < with.getPixelCount(),
+                                ( label + "캔버스 밖 " + sw::to_string( changedOutside ) + " 픽셀이 바뀌었다(장면이 지워졌다)" ).c_str() );
+
+            // 글리프 상자의 밝기 증가 — 픽셀 수가 아니라 배경을 뺀 합(톤매핑 · 배경색에 흔들리지 않게).
+            float64 glyphGain{ 0.0 };
+            for ( uint32 y = 150; y < 240; ++y )
+            {
+                for ( uint32 x = 170; x < 260; ++x )
+                {
+                    const test::Rgba8 after  = with.getPixel( x, y );
+                    const test::Rgba8 before = without.getPixel( x, y );
+                    glyphGain += static_cast<float64>( after._r + after._g + after._b ) - static_cast<float64>( before._r + before._g + before._b );
+                }
+            }
+            SW_EXPECT_TRUE_MSG( glyphGain > 255.0 * 3.0 * 300.0, ( label + "글리프가 보이지 않는다 — 밝기 증가 " + sw::to_string( glyphGain ) ).c_str() );
+            listGlyphMetric.push_back( glyphGain );
+            listBackend.push_back( device->getBackendName() );
+
+            // 백버퍼(화면)에도 UI 가 있다 — 캡처를 백버퍼로 옮기는 것이 Canvas 뒤다.
+            uint32 differCount{ 0 };
+            for ( uint32 y = 0; y < with.getHeight() && y < window.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < with.getWidth() && x < window.getWidth(); ++x )
+                {
+                    if ( test::RHITestImage::getColorDistance( with.getPixel( x, y ), window.getPixel( x, y ) ) > 6 )
+                        ++differCount;
+                }
+            }
+            SW_EXPECT_TRUE_MSG( differCount * 100 < with.getPixelCount(), ( label + "백버퍼가 캡처와 다르다 — " + sw::to_string( differCount ) + " 픽셀" ).c_str() );
+            SW_LOG_INFO( "%#canvas: glyph gain %#, changed outside %#, window vs capture %#", label, glyphGain, changedOutside, differCount );
+        }
+        renderer.shutdown();
+    }
+    for ( size_t index = 1; index < listGlyphMetric.size(); ++index )
+    {
+        const float64 ratio = listGlyphMetric[index] / sw::MathUtil::max( listGlyphMetric[0], 1.0 );
+        SW_EXPECT_TRUE_MSG( 0.98 <= ratio && ratio <= 1.02, ( listBackend[index] + " 글리프 밝기가 " + listBackend[0] + " 와 2 % 넘게 다르다" ).c_str() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the canvas test" );
 }

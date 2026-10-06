@@ -84,21 +84,22 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
 
 - `FrameRenderer` — 프레임 실행의 중심. **파일 이름이 곧 주제**가 되도록 나뉩니다.
   - `FrameRenderer` — 수명(initialize·shutdown·loadPipeline)과 프레임 진입(execute·executePacket)
-  - `FrameRendererResources` — 패스 자원의 수명. 기록 **전에** 만들어야 하는 것들(엔진 PSO 등록 · 상수버퍼 링 · 머티리얼 폴백 · Present 변종)
+  - `FrameRendererResources` — 패스 자원의 수명. 기록 **전에** 만들어야 하는 것들(엔진 PSO 등록 · 상수버퍼 링 · 머티리얼 폴백 · 출력 패스(Present · Canvas)의 포맷별 변종)
   - `FrameRendererTransients` — 첨부(렌더타깃)의 수명과 조회. 창 크기·파이프라인이 바뀔 때만 다시 만든다
   - `FrameRendererReadback` — 첨부를 CPU 로 읽는 길(테스트 픽셀 비교 · `-gv_screenshot` PPM). **프레임 경로가 아니다** — GPU 를 기다린다
   - `FrameRendererCompute` — 컴퓨트 프리패스 다섯(인스턴스 애니메이션 · 메시 모프 · 메시 스킨(meshskin.hlsl, 디스패치 하나) · GPU 컬링 · 인스턴스 정렬).
     그래프 패스가 아니라 그리기 전에 직접 걸린다
   - `FrameRendererConstants` — 뷰/라이트 행렬 등 **프레임 상수 시드** (프레임당 1회)
-  - `FrameRendererPassExecute` — 패스 타입별 실행 분기
+  - `FrameRendererPassExecute` — 패스 타입별 실행 분기. 주 출력(백버퍼 · 게임 뷰 RT · 스크린샷 캡처)은 `resolvePresentTarget` 하나가 고르고 Present · Canvas 가 같이 쓴다.
+    Canvas(화면 2D)는 Present 뒤 같은 출력에 **Load** 로 그리고, 스크린샷 캡처 → 백버퍼 복사는 Swapchain 을 쓰는 마지막 패스 끝에서 한다(그 전에 복사하면 UI 가 캡처에 없다)
   - `FrameRendererDraw` — 드로우 루프
   - `FrameRendererViews` — 추가 뷰(카메라마다 하나)의 자원 준비 · 해제 · 그리기. 아래 "다중 뷰"
   - `FrameRendererPso` — 머티리얼 PSO 생성. 뷰 모드(`RenderViewMode` — Lit · Unlit · Wireframe)가 얹는 define 은
     `FrameRendererUtil::findViewModeDefine` 하나가 정하고 셰이더 쿠킹 요청도 같은 함수를 부릅니다 — 쿠커가 쿠킹하지 않은 define 은 Shipping 에서 PSO 를 못 만듭니다
 - `FrameRenderer` 가 **소유하는 셋** — 각자 뮤텍스와 수명을 가진 상태라 클래스로 떼어 두었습니다:
   - `PassConstantRing` — 드로우마다 하나씩 나눠 주는 패스 상수버퍼 슬롯 링(원자 커서, 프레임마다 되감기)
-  - `RenderPsoCache` — 엔진 패스 PSO · Present 포맷별 PSO · 머티리얼 퍼뮤테이션 변형과 바인딩 레이아웃.
-    만드는 일은 `FrameRendererPso` 가, 소유와 해제 순서(변형 → 패스 → Present)는 캐시가 안다
+  - `RenderPsoCache` — 엔진 패스 PSO · 출력 패스(Present · Canvas)의 대상 포맷별 PSO · 머티리얼 퍼뮤테이션 변형과 바인딩 레이아웃.
+    만드는 일은 `FrameRendererPso` 가, 소유와 해제 순서(변형 → 패스 → 출력 포맷별)는 캐시가 안다
   - `TransientAttachmentPool` — 이름으로 찾는 프레임 첨부(렌더타깃) 풀과 "이번 프레임에 이미 클리어했는가"
 - `RenderView` — 뷰 하나의 행렬·절두체·컬링 · 정렬 상수버퍼. 메인 카메라 · 그림자 라이트 · 추가 뷰가 각자 갖는다.
   `RenderViewSettings`(출력 · 화면 사각형 · 해상도 배율 · 그림자 · 후처리 · 컷)와 `RenderViewRequest`(게임 스레드가 만드는 추가 뷰 하나)도 여기 있다

@@ -275,7 +275,6 @@ namespace sw
                 // 패스가 아닌 엔진 · 시험 셰이더.
                 const vector<string> listEngineShader = {
                     engineDefaultAssets._shaderFullscreenTriangle,
-                    engineDefaultAssets._shaderCanvas,
                     "engine/shaders/sprite2d.hlsl",
                     "engine/shaders/sprite2dlit.hlsl",
                     "common/shaders/provokingvertex.hlsl",

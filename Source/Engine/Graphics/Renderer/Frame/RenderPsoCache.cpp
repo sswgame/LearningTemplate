@@ -16,7 +16,7 @@ namespace sw
         , _mapPsoDesc{}
         , _layoutMutex{}
         , _mapEnginePso{}
-        , _mapPresentPso{}
+        , _mapOutputPso{}
         , _mapMaterialPso{}
         , _materialPsoMutex{}
     {
@@ -74,15 +74,15 @@ namespace sw
         return ( it != _mapEnginePso.end() ) ? it->second : 0;
     }
 
-    void RenderPsoCache::setPresentPso( RHIFormat targetFormat, RHIPipelineStateHandle pso )
+    void RenderPsoCache::setOutputPso( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle pso )
     {
-        _mapPresentPso.insert_or_assign( targetFormat, pso );
+        _mapOutputPso.insert_or_assign( makeOutputPsoKey( passType, targetFormat ), pso );
     }
 
-    bool RenderPsoCache::findPresentPso( RHIFormat targetFormat, RHIPipelineStateHandle& outPso ) const
+    bool RenderPsoCache::findOutputPso( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPso ) const
     {
-        const auto it = _mapPresentPso.find( targetFormat );
-        if ( it == _mapPresentPso.end() )
+        const auto it = _mapOutputPso.find( makeOutputPsoKey( passType, targetFormat ) );
+        if ( it == _mapOutputPso.end() )
             return false;
         outPso = it->second;
         return true;
@@ -144,12 +144,12 @@ namespace sw
         }
         _mapEnginePso.clear();
 
-        for ( auto& [format, pso] : _mapPresentPso )
+        for ( auto& [key, pso] : _mapOutputPso )
         {
             if ( pso != 0 )
                 pDevice->getResourceFactory()->destroyPipelineState( pso );
         }
-        _mapPresentPso.clear();
+        _mapOutputPso.clear();
 
         // 두 맵은 방금 파괴한 PSO 핸들로 키를 잡고 있다. 핸들에 generation 이 들어 있어 되살아난
         // 핸들이 옛 항목을 집는 일은 없지만, 셰이더 리로드마다 재생성을 도는 지금은 그대로 두면
@@ -164,7 +164,7 @@ namespace sw
     void RenderPsoCache::forgetAll()
     {
         _mapEnginePso.clear();
-        _mapPresentPso.clear();
+        _mapOutputPso.clear();
         {
             std::scoped_lock<mutex> lock{ _materialPsoMutex };
             _mapMaterialPso.clear();

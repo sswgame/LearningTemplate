@@ -2119,6 +2119,14 @@
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
+   "name": "gv_canvasTestPattern",
+   "type": "bool",
+   "default": "false",
+   "kind": "시험",
+   "description": "주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자",
+   "source": "Source/Engine/EngineLoop.cpp"
+  },
+  {
    "name": "gv_colorVisionMode",
    "type": "int32",
    "default": "0",

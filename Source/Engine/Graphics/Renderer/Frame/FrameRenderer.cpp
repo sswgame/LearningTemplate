@@ -123,6 +123,9 @@ namespace sw
         , _psoCache{}
         , _outputRenderTarget{ 0 }
         , _presentCapture{ 0 }
+        , _canvasRenderer{}
+        , _canvasFrame{}
+        , _pLastSwapchainWriter{ nullptr }
         , _statusMessage{}
         , _graphContext{}
         , _frameLight{}
@@ -144,7 +147,7 @@ namespace sw
         , _bPassResourcesReady{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
-        , _bPresentPsoMissingLogged{ 0 }
+        , _bOutputPsoMissingLogged{ 0 }
         , _bMaterialFallbackMissingLogged{ 0 }
         , _bMissingColorTargetLogged{ 0 }
         , _bHasExecutedDepthPrepass{ 0 }
@@ -716,6 +719,8 @@ namespace sw
         // 패킷에서는 CPU 스냅샷(인스턴스 · 배치 목록)만 옮겨 온다. 주의: 통째로 move 하면 직전 프레임에 업로드한
         // GPU 버퍼 · 디스크립터를 releaseGpu() 없이 잃어버려 매 프레임 새로 만드는 누수가 된다.
         _gpuScene.adoptCpuSnapshot( packet._gpuScene );
+        // 캔버스(화면 2D)도 패킷으로만 온다(렌더 스레드는 위젯을 볼 수 없다). 바꿔치기라 지난 프레임의 저장소가 패킷으로 돌아간다.
+        setCanvasFrame( packet._canvas );
 
         // 주광은 씬이 아니라 패킷으로 온다. 렌더 스레드는 씬을 볼 수 없다(_pScene = nullptr).
         if ( packet._bHasLight != SW_FALSE )
@@ -754,6 +759,11 @@ namespace sw
         return uploadSceneAndSubmit( pDevice, "executePacket" );
     }
 
+    void FrameRenderer::setCanvasFrame( CanvasFrameData& inoutFrame )
+    {
+        std::swap( _canvasFrame, inoutFrame );
+    }
+
     bool FrameRenderer::uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName )
     {
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
@@ -778,6 +788,9 @@ namespace sw
 
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
         ensureMaterialPsos();
+
+        // 캔버스의 아틀라스 텍스처 · 사각형 버퍼도 기록 전에 갖춘다(Canvas 패스는 그리기만 한다).
+        _canvasRenderer.prepareFrame( *pDevice, _canvasFrame );
 
         if ( prepareCommandList( pDevice, pCallerName ) == false )
             return false;

@@ -67,6 +67,21 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 화면 2D(UI · 월드 글자) — Present(톤맵) 뒤 같은 출력에 불러온 채 그린다. Swapchain 을 쓰는 마지막 패스여야 한다(스크린샷 캡처 복사도 이 뒤). -->
+		<RenderGraphPassDesc _name="Canvas"
+		                     _type="Canvas"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="true">
+			<_listInput />
+			<_listOutput>
+				<item>Swapchain</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 	</_listPass>
 	<_listRenderPassRef>
 		<item>engine/renderpass/defaultrenderpass.xml</item>

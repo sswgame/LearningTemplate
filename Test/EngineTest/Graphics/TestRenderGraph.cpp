@@ -353,3 +353,24 @@ SW_TEST_CASE( RenderGraphTest, ParallelExecutionRecordsInlineWhenTasksCannotBeQu
         SW_EXPECT_FALSE( pList->_bOpen );
     }
 }
+
+/**
+ * @brief [RenderGraphTest] 같은 출력(Swapchain)을 쓰는 두 패스는 선언 순서대로 다른 레벨에 놓인다 — Canvas 가 Present 앞으로 가거나 같은 레벨에서 겨루지 않는다
+ */
+SW_TEST_CASE( RenderGraphTest, TwoSwapchainWritersKeepDeclaredOrder )
+{
+    sw::RenderGraph         graph;
+    const sw::hashed_string sceneColor( "SceneColor" );
+    const sw::hashed_string swapchain( "Swapchain" );
+    graph.addPass( sw::hashed_string( "Geometry" ), {}, { sceneColor } );
+    graph.addPass( sw::hashed_string( "Present" ), { sceneColor }, { swapchain } );
+    graph.addPass( sw::hashed_string( "Canvas" ), {}, { swapchain } );
+    SW_ASSERT_TRUE( graph.compile() );
+
+    const auto& order = graph.getExecutionOrder();
+    SW_ASSERT_EQUAL( size_t( 3 ), order.size() );
+    SW_EXPECT_STREQ( "Geometry", order[0].c_str() );
+    SW_EXPECT_STREQ( "Present", order[1].c_str() );
+    SW_EXPECT_STREQ( "Canvas", order[2].c_str() );
+    SW_EXPECT_EQUAL( size_t( 3 ), graph.getExecutionLevels().size() );
+}

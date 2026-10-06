@@ -315,6 +315,33 @@ namespace sw
             }
         }
 
+        // 3-3) Canvas(화면 2D)는 주 출력(Swapchain)에 그리고, Swapchain 을 쓰는 **마지막** 패스여야 한다 — 뒤에 Swapchain 을 쓰는 패스가 있으면
+        //      UI 가 덮이고, 스크린샷 캡처 → 백버퍼 복사(마지막 Swapchain 쓰기 패스 끝)가 UI 앞에서 일어난다. UI 가 없는 파이프라인(Canvas 없음)은 허용한다.
+        {
+            const RenderGraphPassDesc* pCanvas = nullptr;
+            for ( const RenderGraphPassDesc& pass : _desc._listPass )
+            {
+                const bool bWritesSwapchain =
+                    std::find( pass._listOutput.begin(), pass._listOutput.end(), string( kSwapchainOutputName ) ) != pass._listOutput.end();
+                if ( pass._resolvedType == RenderPassType::Canvas )
+                {
+                    if ( bWritesSwapchain == false )
+                    {
+                        SW_LOG_ERROR( "[%#] pass '%#'(Canvas): 출력이 Swapchain 이 아닙니다 — Canvas 는 주 출력에 그립니다", sourcePath, pass._name );
+                        ++issueCount;
+                    }
+                    pCanvas = &pass;
+                    continue;
+                }
+                if ( pCanvas != nullptr && bWritesSwapchain )
+                {
+                    SW_LOG_ERROR( "[%#] pass '%#': Canvas '%#' 뒤에서 Swapchain 을 씁니다 — Canvas 는 Swapchain 을 쓰는 마지막 패스여야 합니다(UI 가 덮인다)",
+                                  sourcePath, pass._name, pCanvas->_name );
+                    ++issueCount;
+                }
+            }
+        }
+
         if ( issueCount > 0 )
             SW_LOG_ERROR( "[%#] 파이프라인 검증에서 %#건의 문제를 찾았습니다 — 렌더 결과가 어긋나거나 GPU 가 죽을 수 있습니다",
                           sourcePath, issueCount );

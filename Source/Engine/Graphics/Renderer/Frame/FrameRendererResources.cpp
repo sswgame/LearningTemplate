@@ -71,8 +71,8 @@ namespace sw
         if ( caps._bIndirectDraw == SW_FALSE )
             SW_LOG_ERROR( "이 백엔드는 인다이렉트 드로우를 지원하지 않습니다 — 씬 메시를 그릴 수 없습니다." );
 
-        // Present 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(ensurePresentPso 주석 참고).
-        buildPresentPsoVariants();
+        // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPso 주석 참고).
+        buildOutputPsoVariants();
 
         // 폴백 원소는 PSO 를 모두 등록한 뒤에 만든다. 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();
@@ -119,6 +119,8 @@ namespace sw
         _psoCache.releaseAll( _pDevice );
 
         _gpuScene.releaseGpu( _pDevice );
+        // 캔버스의 아틀라스 텍스처 · 사각형 버퍼도 이 디바이스의 것이다(거울은 남아 다음 프레임에 다시 올린다).
+        _canvasRenderer.release( _pDevice );
 
         _passCbRing.release( _pDevice );
         _frameCtx._passCb      = 0;
@@ -229,43 +231,47 @@ namespace sw
         }
     }
 
-    void FrameRenderer::buildPresentPsoVariants()
+    void FrameRenderer::buildOutputPsoVariants()
     {
         if ( _pDevice == nullptr )
             return;
 
-        // Present 가 그리는 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 GameView 등,
+        // 주 출력에 그리는 패스(Present · Canvas)의 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 GameView 등,
         // 계약값 kOffscreenColorFormat), 스크린샷 캡처 텍스처(계약값 kBackBufferFormat)다. 모두 **셋업에서** 만들어 둔다.
-        const RHIFormat arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };
-        for ( const RHIFormat format : arrTargetFormat )
+        const RenderPassType arrPassType[]     = { RenderPassType::Present, RenderPassType::Canvas };
+        const RHIFormat      arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };
+        for ( const RenderPassType passType : arrPassType )
         {
-            RHIPipelineStateHandle existing{ 0 };
-            if ( format == RHIFormat::Unknown || _psoCache.findPresentPso( format, existing ) )
-                continue;
-            const RHIFormat              arrRtvFormat[] = { format };
-            const RHIPipelineStateHandle pso            = createPsoForPassType( RenderPassType::Present, arrRtvFormat );
-            // 실패해도 기록한다. 0 이면 부르는 쪽이 blit 폴백으로 간다.
-            _psoCache.setPresentPso( format, pso );
+            for ( const RHIFormat format : arrTargetFormat )
+            {
+                RHIPipelineStateHandle existing{ 0 };
+                if ( format == RHIFormat::Unknown || _psoCache.findOutputPso( passType, format, existing ) )
+                    continue;
+                const RHIFormat              arrRtvFormat[] = { format };
+                const RHIPipelineStateHandle pso            = createPsoForPassType( passType, arrRtvFormat );
+                // 실패해도 기록한다. 0 이면 부르는 쪽이 폴백으로 간다(Present 는 blit, Canvas 는 그리지 않는다).
+                _psoCache.setOutputPso( passType, format, pso );
+            }
         }
     }
 
-    RHIPipelineStateHandle FrameRenderer::ensurePresentPso( RHIFormat targetFormat )
+    RHIPipelineStateHandle FrameRenderer::findOutputPso( RenderPassType passType, RHIFormat targetFormat )
     {
-        // **조회만 한다.** 없다고 여기서 만들면 안 된다 — 이 함수는 Present 패스 실행 중 = 태스크 워커에서
+        // **조회만 한다.** 없다고 여기서 만들면 안 된다 — 이 함수는 패스 실행 중 = 태스크 워커에서
         // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더 패스 캐시(락 없음)를 건드리므로, 같은
         // 레벨의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. assertRegistryMutableNow 는 bindless
-        // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 buildPresentPsoVariants 가 셋업에서 만든다.
+        // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 buildOutputPsoVariants 가 셋업에서 만든다.
         if ( targetFormat == RHIFormat::Unknown )
-            return getEnginePso( RenderPassType::Present );
+            return getEnginePso( passType );
         RHIPipelineStateHandle pso{ 0 };
-        if ( _psoCache.findPresentPso( targetFormat, pso ) )
+        if ( _psoCache.findOutputPso( passType, targetFormat, pso ) )
             return pso;
 
-        if ( _bPresentPsoMissingLogged.exchange( 1 ) == 0 )
+        if ( _bOutputPsoMissingLogged.exchange( 1 ) == 0 )
         {
-            SW_LOG_ERROR( "Present 대상 포맷 %# 의 PSO 가 셋업에 없습니다 — buildPresentPsoVariants 에 그 포맷을 추가해야 합니다.",
+            SW_LOG_ERROR( "Output pass %# has no PSO for target format %# from setup - add the format to buildOutputPsoVariants", passType,
                           static_cast<uint32>( targetFormat ) );
         }
-        return getEnginePso( RenderPassType::Present );
+        return getEnginePso( passType );
     }
 } // namespace sw

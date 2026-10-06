@@ -28,6 +28,13 @@ namespace sw
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         _graph.clear();
         _mapPassNameToIndex.clear();
+        // Swapchain 을 쓰는 마지막 패스 — 그래프는 같은 출력의 쓰기를 선언 순서로 잇는다(쓰기 사슬). 스크린샷 캡처 → 백버퍼 복사는 그 패스 끝에서 한다.
+        _pLastSwapchainWriter = nullptr;
+        for ( const RenderGraphPassDesc& pass : listPass )
+        {
+            if ( std::find( pass._listOutput.begin(), pass._listOutput.end(), string( kSwapchainOutputName ) ) != pass._listOutput.end() )
+                _pLastSwapchainWriter = &pass;
+        }
 
         for ( uint32 index = 0; index < static_cast<uint32>( listPass.size() ); ++index )
         {
@@ -542,30 +549,22 @@ namespace sw
                 {
                     const string           srcName = resolvePresentSource();
                     const RHITextureHandle src     = srcName.empty() ? 0 : findTransient( srcName );
-                    // 출력은 뷰가 정한다 — 렌더 텍스처 뷰는 자기 텍스처 전체, 주 시점 · 화면 사각형 뷰는 주 출력(백버퍼 · 게임 뷰 RT)의 사각형이다.
-                    // 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고 끝에 복사한다. 백버퍼는 핸들이 없어
-                    // 읽을 수 없고, 후처리가 Present 안에서 끝나면 그 결과를 볼 길이 그것뿐이다.
-                    const ViewTarget& activeView     = *_pActiveView;
-                    const bool        bRenderTexture = activeView._outputKind == RenderViewOutputKind::RenderTexture && isRenderingExtraView() &&
-                                                activeView._pOutputTexture != nullptr;
-                    const bool bCapture = bRenderTexture == false && ( _outputRenderTarget == 0 ) && isPresentCaptureEnabled();
-                    // 캡처를 백버퍼로 옮기는 것은 출력이 곧 백버퍼일 때만이다 — 크기를 덮어쓴 출력(초상화 굽기)은 화면에 나가지 않는다(크기가 다르면 복사도 안 된다).
-                    const bool             bCaptureToBack = bCapture && _outputWidth == _pDevice->getBackBufferWidth() && _outputHeight == _pDevice->getBackBufferHeight();
-                    const RHITextureHandle dstTarget      = bRenderTexture ? activeView._pOutputTexture->getHandle()
-                                                          : bCapture       ? _presentCapture
-                                                                           : _outputRenderTarget;
-                    const uint32           outputWidth    = bRenderTexture ? activeView._outputWidth : _outputWidth;
-                    const uint32           outputHeight   = bRenderTexture ? activeView._outputHeight : _outputHeight;
+                    // 출력은 뷰가 정한다(resolvePresentTarget — Canvas 와 같은 판단). 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고,
+                    // Swapchain 을 쓰는 마지막 패스(보통 Canvas) 끝에서 백버퍼로 복사한다 — 여기서 복사하면 뒤의 UI 가 캡처에 없다.
+                    const ViewTarget&      activeView     = *_pActiveView;
+                    const PresentTarget    target         = resolvePresentTarget();
+                    const bool             bRenderTexture = target._bRenderTexture == SW_TRUE;
+                    const bool             bCaptureToBack = target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( pPassDesc );
+                    const RHITextureHandle dstTarget      = target._texture;
+                    const uint32           outputWidth    = target._width;
+                    const uint32           outputHeight   = target._height;
                     const bool             bFullRect      = bRenderTexture || activeView._settings.isFullRect();
                     // 주 시점이 사각형 하나만 쓰면 바깥은 지운다. 화면 사각형 뷰는 주 시점 위에 겹치므로 남긴다.
                     const RHIRenderPassLoadOp outputLoad = ( isRenderingExtraView() && bRenderTexture == false ) ? RHIRenderPassLoadOp::Load
                                                          : bFullRect                                             ? RHIRenderPassLoadOp::DontCare
                                                                                                                  : RHIRenderPassLoadOp::Clear;
-                    // PSO 는 대상의 실제 포맷으로 고른다. 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과),
-                    // GameView RT 는 텍스처가 기록한 포맷이다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
-                    const RHIFormat              targetFormat = ( dstTarget == 0 ) ? _pDevice->getBackBufferFormat()
-                                                                                   : _pDevice->getResourceFactory()->getTextureFormat( dstTarget );
-                    const RHIPipelineStateHandle psoBlit      = ensurePresentPso( targetFormat );
+                    // PSO 는 대상의 실제 포맷으로 고른다 — 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
+                    const RHIPipelineStateHandle psoBlit = findOutputPso( RenderPassType::Present, target._format );
                     if ( src != 0 && psoBlit != 0 )
                     {
                         registerPassTexture( ctx, attachmentNames()._sourceColor, srcName );
@@ -613,6 +612,32 @@ namespace sw
                         drawFullscreen( ctx, 0, passCb );
                         ctx._pCmd->endRenderPass();
                     }
+                    break;
+                }
+                case RenderPassType::Canvas:
+                {
+                    // 화면 2D 를 주 시점 출력(Present 가 그린 것)에 불러온 채(Load) 그린다. 추가 뷰(렌더 텍스처 · 화면 사각형)에는 그리지 않는다 —
+                    // UI 는 주 시점에만 있다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
+                    const PresentTarget target = resolvePresentTarget();
+                    const bool          bDraw  = isRenderingExtraView() == false && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 &&
+                                       target._height > 0;
+                    const RHIPipelineStateHandle psoCanvas = bDraw ? findOutputPso( RenderPassType::Canvas, target._format ) : RHIPipelineStateHandle{ 0 };
+                    if ( psoCanvas != 0 )
+                    {
+                        RHIRenderPassBeginInfo beginInfo{};
+                        beginInfo._bBindColor        = SW_TRUE;
+                        beginInfo._arrColorTarget[0] = target._texture;
+                        beginInfo._colorTargetCount  = 1;
+                        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
+                        beginInfo._width             = target._width;
+                        beginInfo._height            = target._height;
+                        ctx._pCmd->beginRenderPass( beginInfo );
+                        (void)_canvasRenderer.drawList( *ctx._pCmd, _canvasFrame._mainOutput, psoCanvas, target._width, target._height,
+                                                        _pDevice->supportsNativeBindlessSampling() );
+                        ctx._pCmd->endRenderPass();
+                    }
+                    if ( target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
+                        ctx._pCmd->blitTexture( target._texture, 0 );
                     break;
                 }
                 // 실행 코드가 없는 타입: 일반 풀스크린 패스인데 패스 서술이 없거나, PSO 슬롯만 있는 엔진 내부 타입이다.
@@ -766,6 +791,36 @@ namespace sw
             ctx._pCmd->bindShaderResource( slot2, 2 );
         if ( depth != kInvalidDescriptorIndex || shadow != kInvalidDescriptorIndex )
             ctx._pCmd->bindShaderResource( slot3, 3 );
+    }
+
+    FrameRenderer::PresentTarget FrameRenderer::resolvePresentTarget() const
+    {
+        // 렌더 텍스처 뷰는 자기 텍스처 전체, 주 시점 · 화면 사각형 뷰는 주 출력(백버퍼 · 게임 뷰 RT)이다. 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에
+        // 그린다 — 백버퍼는 핸들이 없어 읽을 수 없고, 후처리 · UI 가 끝난 최종 화면을 볼 길이 그것뿐이다.
+        const ViewTarget& activeView     = *_pActiveView;
+        const bool        bRenderTexture = activeView._outputKind == RenderViewOutputKind::RenderTexture && isRenderingExtraView() &&
+                                    activeView._pOutputTexture != nullptr;
+        const bool bCapture = bRenderTexture == false && ( _outputRenderTarget == 0 ) && isPresentCaptureEnabled();
+        // 캡처를 백버퍼로 옮기는 것은 출력이 곧 백버퍼일 때만이다 — 크기를 덮어쓴 출력(초상화 굽기)은 화면에 나가지 않는다(크기가 다르면 복사도 안 된다).
+        const bool bCaptureToBack = bCapture && _outputWidth == _pDevice->getBackBufferWidth() && _outputHeight == _pDevice->getBackBufferHeight();
+
+        PresentTarget target{};
+        target._texture = bRenderTexture ? activeView._pOutputTexture->getHandle() : bCapture ? _presentCapture
+                                                                                              : _outputRenderTarget;
+        target._width   = bRenderTexture ? activeView._outputWidth : _outputWidth;
+        target._height  = bRenderTexture ? activeView._outputHeight : _outputHeight;
+        // 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과), 텍스처는 그 텍스처가 기록한 포맷이다.
+        target._format         = ( target._texture == 0 ) ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( target._texture );
+        target._bRenderTexture = bRenderTexture ? SW_TRUE : SW_FALSE;
+        target._bCapture       = bCapture ? SW_TRUE : SW_FALSE;
+        target._bCaptureToBack = bCaptureToBack ? SW_TRUE : SW_FALSE;
+        return target;
+    }
+
+    bool FrameRenderer::isLastSwapchainWriter( const RenderGraphPassDesc* pPassDesc ) const
+    {
+        // 패스 서술 없이 불린 Present(검증이 이미 오류를 낸 파이프라인)는 마지막으로 친다 — 캡처가 화면에 안 나가는 것보다 낫다.
+        return _pLastSwapchainWriter == nullptr || pPassDesc == nullptr || pPassDesc == _pLastSwapchainWriter;
     }
 
     RHIFormat FrameRenderer::attachmentFormatOrDefault( string_view attachmentName, RHIFormat fallback ) const

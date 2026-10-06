@@ -62,6 +62,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
+| `gv_canvasTestPattern` | `bool` | `false` | 시험 | 주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자 | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 | `gv_crashTest` | `int32` | `0` | 시험 · 배포본에도 | 일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 | `gv_dumpReflection` | `string` | — | 시험 | 첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 | `gv_navDebugDraw` | `int32` | `0` | 일반 | 내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |

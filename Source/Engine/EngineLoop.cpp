@@ -34,6 +34,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/DevTools/LocalizationTools.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
+#include "Engine/Graphics/Canvas/CanvasTestPattern.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/PhysicsDebugDrawAdapter.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
@@ -85,6 +86,7 @@
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontSystem.h"
+#include "Engine/Text/GlyphCache.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -114,6 +116,11 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSwapAtFrame, 0, "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)" );
     SW_TEST_GLOBAL_VARIABLE( RHIBackend, gv_rhiSwapTo, RHIBackend::DirectX12, "gv_rhiSwapAtFrame 에 바꿀 백엔드" );
+    /**
+     * @brief `-gv_canvasTestPattern=1`: 주 출력에 캔버스 시험 그림(둥근 · 테두리 · 반투명 겹침 · 가위 · 둥근 자르기 · 그림자 · 글자)을 그립니다.
+     * @details 위젯(UI 단계)이 생기기 전에 Canvas 패스 · canvas.hlsl · 글리프 아틀라스를 네 백엔드에서 눈으로 보는 길이다(스크린샷에도 들어간다).
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_canvasTestPattern, false, "주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자" );
     /**
      * @brief `-gv_dumpReflection=CameraComponent,CameraRole`: 첫 프레임에 그 타입 · enum 의 등록 내용을 로그로 남깁니다(`TypeRegistry::describeType`).
      * @details 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다. 한 번 찍고 비운다.
@@ -1328,6 +1335,18 @@ namespace sw
                     _gpuSceneBuilder->exportCpuSnapshot( packet._gpuScene );
                 }
             }
+
+            // 캔버스(화면 2D) — 위젯 단계가 생기기 전에는 개발 시험 그림만 칠한다. 글리프 아틀라스의 새 구간은 칠한 것이 없어도 늘 넘긴다
+            // (렌더러의 거울이 게임 스레드의 페이지와 어긋나지 않게).
+            if ( gv_canvasTestPattern && _rhi != nullptr && _rhi->hasDevice() )
+            {
+                const uint32 canvasWidth  = packet._viewportWidth > 0 ? packet._viewportWidth : _rhi->getDevice().getBackBufferWidth();
+                const uint32 canvasHeight = packet._viewportHeight > 0 ? packet._viewportHeight : _rhi->getDevice().getBackBufferHeight();
+                CanvasTestPattern::paint( packet._canvas._mainOutput, float2{ static_cast<float32>( canvasWidth ), static_cast<float32>( canvasHeight ) },
+                                          _owned._pFontSystem.get(), engine::getFrameProfiler().getFrameCount() );
+            }
+            if ( _owned._pFontSystem != nullptr && _owned._pFontSystem->isInitialized() )
+                _owned._pFontSystem->getGlyphCache().getAtlas().takeUploads( packet._canvas._listAtlasUpload );
 
             if ( _renderThread != nullptr )
             {

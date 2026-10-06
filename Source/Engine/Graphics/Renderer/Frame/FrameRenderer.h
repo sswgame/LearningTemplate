@@ -11,8 +11,10 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
+#include "Engine/Graphics/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/FrameResourceRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/GpuTimelineExporter.h"
@@ -170,6 +172,12 @@ namespace sw
         bool readbackPresentCapture( vector<uint8>& outByte, RHITextureMipSpan& outLayout );
         /** @brief 받아 둔 Present 결과(= 화면에 나간 그림)를 PPM 으로 씁니다. */
         bool dumpPresentCaptureToPpm( string_view outFilePath );
+        /**
+         * @brief 다음 프레임부터 그릴 캔버스(화면 2D)를 받습니다 — 렌더러가 든 것과 **바꿔치기**합니다(용량이 돈다).
+         * @details 패킷 경로는 `executePacket` 이 패킷의 `_canvas` 로 같은 일을 합니다. 씬 직접 경로(에디터 · 시험)는 이것으로 넣고, 바꿀 때까지 매 프레임
+         *          그 목록을 그립니다. 아틀라스 업로드는 한 번만 반영합니다(반영하면 비운다).
+         */
+        void setCanvasFrame( CanvasFrameData& inoutFrame );
 
     private:
         /** @brief 읽어 온 바이트를 PPM(P6) 파일로 씁니다. 트랜지언트 덤프와 Present 캡처 덤프가 같이 씁니다. */
@@ -344,6 +352,18 @@ namespace sw
             uint8                       _bSeenThisFrame{ SW_FALSE };
             uint8                       _bHasTransparentRank{ SW_FALSE }; ///< 이번 프레임 `_transparentRank` 로 정렬한다
             uint8                       _bUsesViewSlotStream{ SW_FALSE }; ///< 이번 프레임 `_instanceSlotStream` 으로 그린다
+        };
+
+        /** @brief 주 출력에 그리는 패스(Present · Canvas)의 대상입니다 — 지금 뷰가 정한다(`resolvePresentTarget`). */
+        struct PresentTarget
+        {
+            RHITextureHandle _texture{ 0 }; ///< 0 = 백버퍼
+            uint32           _width{ 0 };
+            uint32           _height{ 0 };
+            RHIFormat        _format{ RHIFormat::Unknown }; ///< 대상의 실제 포맷(PSO 를 고른다)
+            uint8            _bRenderTexture{ SW_FALSE };   ///< 렌더 텍스처 뷰의 자기 텍스처
+            uint8            _bCapture{ SW_FALSE };         ///< 백버퍼 대신 스크린샷 캡처 텍스처에 그린다
+            uint8            _bCaptureToBack{ SW_FALSE };   ///< 캡처를 Swapchain 을 쓰는 마지막 패스 뒤에 백버퍼로 복사한다(출력이 곧 백버퍼일 때)
         };
 
         // ------------------------------------------------------------------------------
@@ -578,6 +598,13 @@ namespace sw
         RHITextureHandle findTransient( string_view name ) const;
         /** @brief Present 소스 어태치먼트 이름을 정합니다. */
         string resolvePresentSource() const;
+        /**
+         * @brief 지금 뷰의 주 출력 대상을 고릅니다 — 렌더 텍스처 뷰는 자기 텍스처, 주 시점 · 화면 사각형 뷰는 주 출력(백버퍼 · 게임 뷰 RT),
+         *        스크린샷 실행이면 캡처 텍스처입니다. Present 와 Canvas 가 같은 판단을 쓴다.
+         */
+        PresentTarget resolvePresentTarget() const;
+        /** @brief 이 패스가 Swapchain 을 쓰는 마지막 패스면 true 입니다(스크린샷 캡처 → 백버퍼 복사를 이 패스 끝에서 한다). */
+        bool isLastSwapchainWriter( const RenderGraphPassDesc* pPassDesc ) const;
         /** @brief 패스 타입으로 파이프라인 패스 서술을 찾습니다. */
         const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
 
@@ -617,16 +644,17 @@ namespace sw
          */
         void ensureMaterialFallbackBuffers();
         /**
-         * @brief Present 패스 PSO 를 **대상 포맷별로** 얻습니다(없으면 만듭니다).
-         * @details Present 의 대상은 둘입니다. 백버퍼(포맷은 디바이스가 실제로 채택한 값, Vulkan 은 서피스가
+         * @brief 주 출력에 그리는 패스(Present · Canvas)의 PSO 를 **대상 포맷별로** 찾습니다.
+         * @details 주 출력의 대상은 둘입니다. 백버퍼(포맷은 디바이스가 실제로 채택한 값, Vulkan 은 서피스가
          *          B8G8R8A8 만 줄 수 있습니다)와 에디터 GameView RT(R8G8B8A8)입니다. PSO 의 렌더 타깃 포맷이 대상과
          *          다르면 Vulkan 은 렌더 패스 비호환으로 검증 레이어가 매 프레임 웁니다. 언리얼이 PSO 초기화자의
          *          RenderTargetFormats 를 바인딩된 타깃에서 뽑아 PSO 캐시 키로 삼는 것과 같은 방식입니다.
-         *          여기서는 Present 하나만 그 키가 포맷이라 맵 하나로 충분합니다.
+         *          주 출력에 그리는 패스(Present · Canvas)만 그 키가 포맷이라 (패스, 포맷) 맵 하나로 충분합니다.
+         *          **조회만 합니다** — 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 됩니다. 없으면 엔진 PSO 로 물러나고 한 번 알립니다.
          */
-        RHIPipelineStateHandle ensurePresentPso( RHIFormat targetFormat );
-        /** @brief Present 가 그릴 수 있는 대상 포맷(백버퍼 · 오프스크린)의 PSO 를 셋업에서 미리 만듭니다. */
-        void buildPresentPsoVariants();
+        RHIPipelineStateHandle findOutputPso( RenderPassType passType, RHIFormat targetFormat );
+        /** @brief 주 출력에 그리는 패스(Present · Canvas)가 그릴 수 있는 대상 포맷(백버퍼 · 오프스크린 · 캡처)의 PSO 를 셋업에서 미리 만듭니다. */
+        void buildOutputPsoVariants();
 
     private:
         IRHIDevice* _pDevice;
@@ -843,7 +871,13 @@ namespace sw
          * @details 스크린샷은 트랜지언트만 읽을 수 있고 백버퍼는 핸들이 없습니다. 주의: Present 가 **읽는** 첨부를
          *          찍으면 톤맵과 Present 에 합친 후처리가 스크린샷에서 빠집니다. Present 결과를 받아 두면 둘 다 담깁니다.
          */
-        RHITextureHandle            _presentCapture;
+        RHITextureHandle _presentCapture;
+        /// @brief 캔버스(화면 2D) 렌더러입니다 — 아틀라스 거울 · 사각형 버퍼 · 일괄 드로우(렌더 스레드).
+        CanvasRenderer _canvasRenderer;
+        /// @brief 그릴 캔버스입니다 — 패킷 · `setCanvasFrame` 과 바꿔치기로 받는다. 기록 중에는 읽기만 한다.
+        CanvasFrameData _canvasFrame;
+        /// @brief Swapchain 을 쓰는 마지막 패스(선언 순서 — 그래프가 같은 출력의 쓰기를 선언 순서로 잇는다). 콜백을 묶을 때 정한다.
+        const RenderGraphPassDesc*  _pLastSwapchainWriter;
         string                      _statusMessage;
         RenderGraphExecutionContext _graphContext;
 
@@ -884,8 +918,8 @@ namespace sw
          *          `ensureMaterialPsos` 가 그 프레임 시작에 읽은 모드로 이미 준비되어 있습니다.
          */
         atomic<uint8> _viewMode;
-        /// @brief 셋업에 없는 Present 대상 포맷을 만났다고 한 번만 알리기 위한 래치입니다.
-        atomic<uint8> _bPresentPsoMissingLogged;
+        /// @brief 셋업에 없는 출력 대상 포맷(Present · Canvas)을 만났다고 한 번만 알리기 위한 래치입니다.
+        atomic<uint8> _bOutputPsoMissingLogged;
         /// @brief 머티리얼 폴백 stride 가 없다고 한 번만 알리기 위한 래치입니다(드로우 경로라 프레임마다 찍으면 안 됩니다).
         atomic<uint8> _bMaterialFallbackMissingLogged;
         /// @brief 컬러 타깃이 없어 패스를 건너뛴다고 한 번만 알리기 위한 래치입니다(패스 경로라 프레임마다 찍으면 안 됩니다).
