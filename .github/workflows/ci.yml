@@ -53,7 +53,7 @@ jobs:
         echo "code=$code" >> "$GITHUB_OUTPUT"
         echo "build jobs: $code"
 
-    # 게이트 + 셀프테스트 전부(CTest 의 lint 라벨과 같은 목록 · 인자) — 빌드 폴더가 없어 CheckSourceGlob 만 건너뛴다. 시간 표는 단계 요약 · 아티팩트로.
+    # 게이트 + 셀프테스트 전부(CTest 의 lint 라벨과 같은 목록 · 인자) — 빌드 폴더가 없어 CheckSourceGlob 만 건너뛴다(빌드 잡마다 그 구성으로 돈다 — 아래 "Source glob coverage"). 시간 표는 단계 요약 · 아티팩트로.
     - name: Run all lints (gates + self-tests) with timings
       run: |
         python3 Scripts/lint/RunLintSuite.py --json lint-timing.json --hook-sample 1,10
@@ -232,6 +232,12 @@ jobs:
     # 제거로만 드러나는 것)이 드러나는 곳이 배포 구성이므로, Shipping 을 일부 실행 파일로 좁히지 말 것.
     # GPU·디스플레이가 필요한 스위트는 `-L nogpu` 가 걸러내므로 러너에서 돌릴 수 있는 것만 돈다.
     # TSan 옵션(억제 목록 · 두 번째 스택)은 ctest 항목이 든다(`sw_applySanitizerTestProperties`) — 여기서 따로 주지 않는다.
+    # 린트 잡은 빌드 폴더가 없어 CheckSourceGlob 을 건너뛴다(빌드 폴더의 compile_commands.json 과 대조한다). 구성마다 짓지 않는 소스가 다르므로
+    # (플랫폼 · Shipping · 서버 타깃) 빌드 잡마다 그 구성으로 한 번 — 새 .cpp 가 어느 구성에서 빌드 밖으로 빠졌는지 여기서 잡는다.
+    - name: Source glob coverage
+      run: |
+        ctest --test-dir build/${{ matrix.preset }} -R "^CheckSourceGlob$" --output-on-failure
+
     - name: Test
       id: test
       run: |

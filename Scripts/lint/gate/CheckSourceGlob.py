@@ -40,6 +40,7 @@ from common import (  # noqa: E402
     kDirSourceEngine,
     kDirSourceGameFramework,
     kDirSourceGames,
+    kDirSourceServer,
 )
 from LintGate import GateResult, LintGate  # noqa: E402
 
@@ -50,6 +51,7 @@ _kScanRoots = (
     kDirSourceGameFramework,
     kDirSourceGames,
     kDirSourceCore,
+    kDirSourceServer,   # Client 타깃은 짓지 않는다고 적는다(Source/Server/CMakeLists.txt 의 sw_declareUnbuiltSources)
 )
 
 class CheckSourceGlobGate(LintGate):
