@@ -6,11 +6,15 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Text/FontSystem.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Core/PanelWidget.h"
+#include "Engine/UI/Core/UiEventRouter.h"
 #include "Engine/UI/Core/UiFocusManager.h"
+#include "Engine/UI/Core/UiPointerState.h"
 #include "Engine/UI/Core/WidgetTree.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
@@ -20,7 +24,10 @@
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
+#include "Engine/UI/Widgets/ButtonWidget.h"
+#include "Engine/UI/Widgets/CheckBoxWidget.h"
 #include "Engine/UI/Widgets/ImageWidget.h"
+#include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "EngineTest/Text/FakeFontRasterizer.h"
@@ -145,6 +152,25 @@ namespace
             fixture._layoutContext._pTextLayout = _layout.get();
             fixture._paintContext._pTextLayout  = _layout.get();
             fixture._paintContext._pGlyphCache  = &_fonts._fontSystem->getGlyphCache();
+        }
+    };
+    struct UiWidgetTestUtil
+    {
+        /** @brief 캔버스 자식을 왼쪽 위 (@p x, @p y) · 크기 (@p width, @p height) 에 고정합니다. */
+        static void pin( sw::Widget& widget, float32 x, float32 y, float32 width, float32 height )
+        {
+            sw::WidgetLayoutSlot slot = widget.getLayoutSlot();
+            slot._offsetMin           = sw::float2{ x, y };
+            slot._offsetMax           = sw::float2{ x + width, y + height };
+            widget.setLayoutSlot( slot );
+        }
+
+        static sw::UiPointerEvent makePointer( sw::UiPointerEventKind kind, float32 x, float32 y )
+        {
+            sw::UiPointerEvent event{};
+            event._kind     = kind;
+            event._position = sw::float2{ x, y };
+            return event;
         }
     };
 } // namespace
@@ -346,4 +372,135 @@ SW_TEST_CASE( UiPaintTest, UiSystemCanvasRevisionAndFocusRing )
     SW_ASSERT_EQUAL( size_t{ 2 }, ui.getCanvas()._listQuad.size() );
     SW_EXPECT_TRUE( ui.getCanvas()._listQuad[1]._params._x > 0.0f ); // 테두리 두께
     ui.getFocusManager().clearFocus();
+}
+
+/**
+ * @brief [UiPaintTest] 버튼 클릭은 같은 버튼 위에서 누르고 뗀 것이다 — 누르면 포인터를 잡고 포커스를 받고, 밖에서 떼면 클릭이 아니다. 포커스 버튼의 UI.Accept 도 클릭이다
+ * @details 변이: `ButtonWidget::onPointerEvent` 의 "뗀 자리가 버튼 안" 조건을 빼면 밖에서 뗀 것도 클릭이 되어 진다.
+ */
+SW_TEST_CASE( UiPaintTest, ButtonClickRequiresPressAndReleaseOnSameWidget )
+{
+    UiPaintFixture    fixture( 400.0f, 300.0f );
+    sw::CanvasPanel*  pCanvas = fixture.setRoot<sw::CanvasPanel>();
+    sw::ButtonWidget* pButton = static_cast<sw::ButtonWidget*>( pCanvas->addChild( sw::make_unique<sw::ButtonWidget>() ) );
+    UiWidgetTestUtil::pin( *pButton, 10.0f, 10.0f, 100.0f, 40.0f );
+    uint32 notified = 0;
+    (void)pButton->getOnClicked().add( [&notified]( sw::WidgetId )
+    { ++notified; } );
+    (void)fixture.runFrame();
+
+    sw::UiPointerState        pointer;
+    const sw::UiPointerResult down = pointer.process( fixture._tree, UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Down, 50.0f, 30.0f ) );
+    SW_EXPECT_EQUAL( pButton->getId(), down._focusRequest );
+    SW_EXPECT_EQUAL( pButton->getId(), pointer.getCapturedWidget() );
+    SW_EXPECT_TRUE( pButton->isPressed() );
+    (void)pointer.process( fixture._tree, UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Up, 60.0f, 35.0f ) );
+    SW_EXPECT_EQUAL( 1u, pButton->getClickCount() );
+    SW_EXPECT_EQUAL( 1u, notified );
+
+    (void)pointer.process( fixture._tree, UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Down, 50.0f, 30.0f ) );
+    (void)pointer.process( fixture._tree, UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Up, 300.0f, 200.0f ) ); // 밖 — 잡고 있어 버튼이 받지만 클릭은 아니다
+    SW_EXPECT_EQUAL( 1u, pButton->getClickCount() );
+    SW_EXPECT_FALSE( pButton->isPressed() );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetId, pointer.getCapturedWidget() );
+
+    sw::UiWidgetPath path{};
+    SW_ASSERT_TRUE( sw::UiEventRouter::makePathTo( fixture._tree, pButton->getId(), path ) );
+    sw::UiActionEvent accept{};
+    accept._action = sw::hashed_string( sw::UiActionName::kAccept );
+    sw::WidgetId handler{ sw::kInvalidWidgetId };
+    SW_EXPECT_TRUE( sw::UiEventRouter::routeActionEvent( fixture._tree, path, accept, handler ).isHandled() );
+    SW_EXPECT_EQUAL( 2u, pButton->getClickCount() );
+}
+
+/**
+ * @brief [UiPaintTest] 체크 상자는 클릭마다 켜짐 · 꺼짐이 바뀌고 알림을 부르며, 켜지면 상자 안에 표시 사각형이 하나 더 든다
+ * @details 변이: `CheckBoxWidget::handleClick` 의 setChecked 를 빼면 진다.
+ */
+SW_TEST_CASE( UiPaintTest, CheckBoxTogglesOnClick )
+{
+    UiPaintFixture      fixture( 400.0f, 300.0f );
+    sw::CanvasPanel*    pCanvas = fixture.setRoot<sw::CanvasPanel>();
+    sw::CheckBoxWidget* pCheck  = static_cast<sw::CheckBoxWidget*>( pCanvas->addChild( sw::make_unique<sw::CheckBoxWidget>() ) );
+    UiWidgetTestUtil::pin( *pCheck, 0.0f, 0.0f, 100.0f, 30.0f );
+    bool bLast = false;
+    (void)pCheck->getOnCheckedChanged().add( [&bLast]( bool bChecked )
+    { bLast = bChecked; } );
+    sw::UiPointerState pointer;
+    (void)fixture.runFrame();
+    (void)pointer.process( fixture._tree, UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Move, 10.0f, 10.0f ) ); // 호버 바탕을 먼저
+    (void)fixture.runFrame();
+    const size_t uncheckedQuads = fixture._canvas._listQuad.size();
+
+    (void)pointer.process( fixture._tree, UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Down, 10.0f, 10.0f ) );
+    (void)pointer.process( fixture._tree, UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Up, 10.0f, 10.0f ) );
+    SW_EXPECT_TRUE( pCheck->isChecked() );
+    SW_EXPECT_TRUE( bLast );
+    (void)fixture.runFrame();
+    SW_EXPECT_EQUAL( uncheckedQuads + 1, fixture._canvas._listQuad.size() );
+    (void)pointer.process( fixture._tree, UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Down, 10.0f, 10.0f ) );
+    (void)pointer.process( fixture._tree, UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Up, 10.0f, 10.0f ) );
+    SW_EXPECT_FALSE( pCheck->isChecked() );
+    SW_EXPECT_FALSE( bLast );
+}
+
+/**
+ * @brief [UiPaintTest] 포커스 슬라이더는 왼쪽 행동(키 Left)을 먹고 값이 한 칸 준다 — 포커스는 슬라이더에 남는다. 아래 행동은 다음 버튼으로 포커스를 옮긴다
+ * @details 변이: `SliderWidget::onActionEvent` 가 처리하지 않으면 포커스가 옮겨지거나(위 · 아래 버튼만 있다 — 왼쪽은 이웃이 없어 그대로) 값이 그대로라 진다.
+ */
+SW_TEST_CASE( UiPaintTest, SliderTakesLeftRightActions )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::UiSystem ui;
+    SW_ASSERT_TRUE( ui.initialize( input, nullptr, "engine/input/ui.input.xml" ) );
+    sw::unique_ptr<sw::BoxPanel> root = sw::make_unique<sw::BoxPanel>();
+    root->setOrientation( sw::UiOrientation::Vertical );
+    sw::SliderWidget* pSlider = static_cast<sw::SliderWidget*>( root->addChild( sw::make_unique<sw::SliderWidget>() ) );
+    pSlider->setRange( 0.0f, 10.0f, 1.0f );
+    pSlider->setValue( 5.0f );
+    sw::ButtonWidget*        pBelow = static_cast<sw::ButtonWidget*>( root->addChild( sw::make_unique<sw::ButtonWidget>() ) );
+    const sw::UiScreenHandle screen = ui.pushScreen( sw::make_unique<sw::UiScreen>( sw::UiScreenDesc{}, std::move( root ) ) );
+    sw::UiViewport           viewport{};
+    viewport._size         = sw::float2{ 800.0f, 600.0f };
+    viewport._physicalSize = viewport._size;
+    const auto runFrame    = [&]()
+    {
+        input.beginFrame( 1.0f / 60.0f );
+        ui.processInput( 1.0f / 60.0f );
+        ui.update( 1.0f / 60.0f, viewport );
+        input.endFrame();
+    };
+    runFrame();
+    SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pSlider->getId() ) );
+
+    SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Left ) ) );
+    runFrame();
+    SW_EXPECT_NEAR_EQUAL( 4.0f, pSlider->getValue(), 1e-6f );
+    SW_EXPECT_EQUAL( pSlider->getId(), ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::Left ) ) );
+    runFrame();
+
+    SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Down ) ) );
+    runFrame();
+    SW_EXPECT_EQUAL( pBelow->getId(), ui.getFocusManager().getFocusedWidget() );
+    ui.shutdown();
+    input.shutdown();
+}
+
+/** @brief [UiPaintTest] 진행 막대는 비율만큼 채우고, 오른쪽에서 왼쪽이면 오른쪽부터 찬다 */
+SW_TEST_CASE( UiPaintTest, ProgressBarFillsFromFlowStart )
+{
+    UiPaintFixture         fixture( 400.0f, 300.0f );
+    sw::CanvasPanel*       pCanvas = fixture.setRoot<sw::CanvasPanel>();
+    sw::ProgressBarWidget* pBar    = static_cast<sw::ProgressBarWidget*>( pCanvas->addChild( sw::make_unique<sw::ProgressBarWidget>() ) );
+    UiWidgetTestUtil::pin( *pBar, 0.0f, 0.0f, 200.0f, 10.0f );
+    pBar->setPercent( 0.25f );
+    (void)fixture.runFrame();
+    SW_ASSERT_EQUAL( size_t{ 2 }, fixture._canvas._listQuad.size() );
+    SW_EXPECT_NEAR_EQUAL( 50.0f, fixture._canvas._listQuad[1]._rect._z, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, fixture._canvas._listQuad[1]._rect._x, 1e-4f );
+    fixture._layoutContext._bRightToLeft = true;
+    (void)fixture.runFrame();
+    SW_EXPECT_NEAR_EQUAL( 350.0f, fixture._canvas._listQuad[1]._rect._x, 1e-4f ); // 캔버스 거울(400 − 200) + 막대 안 150
 }

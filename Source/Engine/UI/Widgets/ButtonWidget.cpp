@@ -2,7 +2,9 @@
 
 #include "Engine/UI/Widgets/ButtonWidget.h"
 
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Core/String/hashed_string.h"
+
+#include "Engine/UI/Core/UiEvents.h"
 
 namespace sw
 {
@@ -10,13 +12,12 @@ namespace sw
     {
         struct ButtonWidgetInternal
         {
-            /** @brief 화면 점 @p position 이 버튼의 놓인 사각형 안인가(렌더 변환까지 풀어서)입니다. */
-            static bool containsScreenPoint( const Widget& widget, const float2& position )
+            /** @brief 기본 겉모습(스타일 시트 5-2 가 생기기 전 — 어두운 반투명 바탕 · 둥근 모서리)입니다. */
+            static constexpr float32 kCornerRadius = 6.0f;
+
+            static UiBrush makeBrush( float32 shade, float32 alpha )
             {
-                float2 local{};
-                if ( widget.getGeometry().inverseTransformPoint( position, local ) == false )
-                    return false;
-                return widget.getGeometry().containsLocal( local );
+                return UiBrush::makeSolid( float4{ shade, shade * 1.1f, shade * 1.35f, alpha }, kCornerRadius );
             }
         };
     } // namespace
@@ -26,10 +27,16 @@ namespace sw
 {
     ButtonWidget::ButtonWidget()
         : BorderPanel{}
-        , _clickedHandler{}
-        , _command{}
+        , _onClicked{}
+        , _clickCount{ 0 }
+        , _hoveredBrush{ ButtonWidgetInternal::makeBrush( 0.24f, 0.95f ) }
+        , _pressedBrush{ ButtonWidgetInternal::makeBrush( 0.10f, 0.95f ) }
+        , _disabledBrush{ ButtonWidgetInternal::makeBrush( 0.16f, 0.4f ) }
         , _bPressed{ false }
+        , _bHovered{ false }
     {
+        setBackground( ButtonWidgetInternal::makeBrush( 0.16f, 0.95f ) );
+        setContentPadding( float4{ 16.0f, 8.0f, 16.0f, 8.0f } );
     }
 
     ButtonWidget::~ButtonWidget() = default;
@@ -39,60 +46,68 @@ namespace sw
         return StaticType();
     }
 
-    void ButtonWidget::click()
+    void ButtonWidget::setStateBrushes( const UiBrush& hovered, const UiBrush& pressed, const UiBrush& disabled )
+    {
+        _hoveredBrush  = hovered;
+        _pressedBrush  = pressed;
+        _disabledBrush = disabled;
+        invalidate( WidgetDirty::kPaint );
+    }
+
+    const UiBrush& ButtonWidget::getBackgroundBrush() const
     {
         if ( isEnabledInHierarchy() == false )
-            return;
-        if ( _clickedHandler.isBound() )
-            _clickedHandler( *this );
-        WidgetTree* pTree = getTree();
-        if ( pTree != nullptr )
-            pTree->dispatchCommand( _command, *this );
+            return _disabledBrush;
+        if ( _bPressed )
+            return _pressedBrush;
+        if ( _bHovered )
+            return _hoveredBrush;
+        return BorderPanel::getBackgroundBrush();
     }
 
     UiReply ButtonWidget::onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase )
     {
+        // 버블 — 안의 글 · 그림이 먼저 지나가고 버튼이 받는다. 누른 동안은 포인터를 잡아 경로의 잎이 버튼이다.
         if ( phase != UiRoutePhase::Bubble || event._button != MouseButton::Left )
             return UiReply::makeUnhandled();
-        switch ( event._kind )
+        if ( event._kind == UiPointerEventKind::Down )
         {
-            case UiPointerEventKind::Down:
-            {
-                setPressed( true );
-                return UiReply::makeHandled().capturePointer().requestFocus( getId() );
-            }
-            case UiPointerEventKind::Up:
-            {
-                // 잡은 포인터라 밖에서 떼도 여기로 온다 — 누른 버튼 위에서 뗐을 때만 클릭이다.
-                const bool bClicked = _bPressed && ButtonWidgetInternal::containsScreenPoint( *this, event._position );
-                setPressed( false );
-                if ( bClicked )
-                    click();
-                return UiReply::makeHandled().releasePointer();
-            }
-            case UiPointerEventKind::Move:
-            case UiPointerEventKind::Wheel:
-            {
-                return UiReply::makeUnhandled();
-            }
+            _bPressed = true;
+            invalidate( WidgetDirty::kPaint );
+            return UiReply::makeHandled().capturePointer().requestFocus( getId() );
+        }
+        if ( event._kind == UiPointerEventKind::Up && _bPressed )
+        {
+            _bPressed = false;
+            invalidate( WidgetDirty::kPaint );
+            // 누른 위젯 = 뗀 위젯일 때만 클릭이다(밖으로 끌고 나가 떼면 취소).
+            float2 local{};
+            if ( getGeometry().inverseTransformPoint( event._position, local ) && getGeometry().containsLocal( local ) )
+                handleClick();
+            return UiReply::makeHandled().releasePointer();
         }
         return UiReply::makeUnhandled();
     }
 
     UiReply ButtonWidget::onActionEvent( const UiActionEvent& event, UiRoutePhase phase )
     {
-        static const hashed_string s_accept( UiActionName::kAccept );
-        if ( phase != UiRoutePhase::Bubble || event._action != s_accept || event._bRepeat == SW_TRUE )
+        if ( phase != UiRoutePhase::Bubble || event._action != hashed_string( UiActionName::kAccept ) )
             return UiReply::makeUnhandled();
-        click();
+        handleClick();
         return UiReply::makeHandled();
     }
 
-    void ButtonWidget::setPressed( bool bPressed )
+    void ButtonWidget::onHoverChanged( bool bHovered )
     {
-        if ( _bPressed == bPressed )
+        if ( _bHovered == bHovered )
             return;
-        _bPressed = bPressed;
-        invalidate( WidgetDirty::kStyle );
+        _bHovered = bHovered;
+        invalidate( WidgetDirty::kPaint );
+    }
+
+    void ButtonWidget::handleClick()
+    {
+        ++_clickCount;
+        _onClicked.broadcast( getId() );
     }
 } // namespace sw
