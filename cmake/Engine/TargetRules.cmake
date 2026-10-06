@@ -930,25 +930,17 @@ function(sw_addDelayloadHook TARGET_NAME)
 	# 훅 소스가 지어진다는 표시 — 아무도 부탁하지 않으면 `sw_writeUnbuiltSourceList` 가 짓지 않는 소스로 적는다.
 	set_property(GLOBAL PROPERTY SW_DELAYLOAD_HOOK_REQUESTED TRUE)
 
+	# 훅 소스의 자리는 한 곳 — Engine 의 SW_DELAYLOAD_HOOK_SOURCE(Source/Engine/CMakeLists.txt)다. Engine 이 없는 구성에서 훅을 부탁하는
+	# 타깃은 없다. 속성이 비거나 그 파일이 없으면 설정 실수다 — 손으로 적은 폴백 경로로 대신하지 않는다(그러면 옮긴 것을 아무도 모른다).
 	set(swHookSrc "")
-
 	if(TARGET Engine)
 		get_property(swHookSrc TARGET Engine PROPERTY SW_DELAYLOAD_HOOK_SOURCE)
 	endif()
-
-	# 속성이 **있는데 그 파일이 없으면** 그것은 설정 실수다. 조용히 넘어가면 안 된다 — 파일을 옮기고 속성을
-	# 놓치면 아래 폴백이 매번 대신 고쳐 주어 아무도 눈치채지 못한다. 속성을 두는 이유가 "훅 소스의 위치를
-	# 한 곳에서 안다" 이므로, 그 한 곳이 틀리면 여기서 멈춘다.
-	if(swHookSrc AND NOT EXISTS "${swHookSrc}")
-		message(FATAL_ERROR "[sw_addDelayloadHook] SW_DELAYLOAD_HOOK_SOURCE points at a file that does not exist: ${swHookSrc}")
-	endif()
-
 	if(NOT swHookSrc)
-		set(swHookSrc "${CMAKE_SOURCE_DIR}/Source/Engine/Module/DelayLoadNotifyHook.cpp")
-
-		if(NOT EXISTS "${swHookSrc}")
-			message(FATAL_ERROR "[sw_addDelayloadHook] DelayLoadNotifyHook.cpp not found: ${swHookSrc}")
-		endif()
+		message(FATAL_ERROR "[sw_addDelayloadHook] Engine has no SW_DELAYLOAD_HOOK_SOURCE (${TARGET_NAME})")
+	endif()
+	if(NOT EXISTS "${swHookSrc}")
+		message(FATAL_ERROR "[sw_addDelayloadHook] SW_DELAYLOAD_HOOK_SOURCE points at a file that does not exist: ${swHookSrc}")
 	endif()
 
 	target_sources(${TARGET_NAME} PRIVATE "${swHookSrc}")
