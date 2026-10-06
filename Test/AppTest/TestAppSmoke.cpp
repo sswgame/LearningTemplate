@@ -705,6 +705,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|console.devCommands",
         "EditorSelfTest|PASS|hierarchy.selectAllWith",
         "EditorSelfTest|PASS|layout.namedRoundTrip",
+        "EditorSelfTest|PASS|gameView.gizmoMovesTheSelection",
         "EditorSelfTest|PASS|profiler.gpuMemoryTab",
         "EditorSelfTest|PASS|dpi.monitorScaleFollows",
         "EditorSelfTest|PASS|input.hierarchySearchTyping",
