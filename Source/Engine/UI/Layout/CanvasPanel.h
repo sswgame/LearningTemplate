@@ -31,8 +31,9 @@ namespace sw
 
         const TypeInfo* getTypeInfo() const override;
 
+        bool hasCustomPaintOrder() const override { return true; }
         /** @brief 그리는 순서의 자식 자리를 담습니다 — z 순서 오름차순, 같으면 자식 순서(안정). 히트 테스트는 그 역순입니다. */
-        void collectPaintOrder( vector<uint32>& outListIndex ) const;
+        void collectPaintOrder( vector<uint32>& outListIndex ) const override;
 
     protected:
         float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;

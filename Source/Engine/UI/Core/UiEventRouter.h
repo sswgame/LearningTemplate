@@ -39,7 +39,8 @@ namespace sw
     struct SW_API UiEventRouter
     {
         /**
-         * @brief 그리기 역순(위에 그린 것 먼저)으로 내려가며 점이 든 가장 깊은 위젯 경로를 찾습니다. 못 찾으면 false 이고 경로는 빕니다.
+         * @brief 그리기 역순(위에 그린 것 먼저 — z 순서 패널은 `PanelWidget::collectPaintOrder` 의 역순)으로 내려가며 점이 든 가장 깊은 위젯 경로를 찾습니다.
+         *        못 찾으면 false 이고 경로는 빕니다.
          * @details 보임: Collapsed · Hidden · HitTestInvisible 은 자기와 자식 모두 빠지고, SelfHitTestInvisible 은 자식만 받습니다.
          *          렌더 변환은 역변환으로 따르고, 자르는 패널 밖의 점은 그 자식도 받지 않습니다.
          */

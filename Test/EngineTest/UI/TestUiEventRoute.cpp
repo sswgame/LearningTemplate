@@ -4,6 +4,7 @@
 #include "Engine/UI/Core/UiEventRouter.h"
 #include "Engine/UI/Core/UiPointerState.h"
 #include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Layout/CanvasPanel.h"
 
 #include "EngineTest/UI/UiTestWidgets.h"
 
@@ -224,4 +225,23 @@ SW_TEST_CASE( UiEventRouteTest, HoverEnterLeaveDiff )
     fixture._record._listLine.clear();
     pointer.clearHover();
     SW_EXPECT_STREQ( "b Leave, panelB Leave, root Leave", fixture._record.joined().c_str() );
+}
+
+/**
+ * @brief [UiEventRouteTest] 캔버스 패널의 겹친 자식은 z 순서가 큰 쪽이 위라 그쪽이 맞는다 — 자식 순서로는 뒤가 위지만 앞 자식의 z 가 크다
+ * @details 변이: `UiEventRouter::hitTest` 가 `collectPaintOrder` 를 무시하고 자식 역순으로 돌면 "back" 이 맞아 진다.
+ */
+SW_TEST_CASE( UiEventRouteTest, CanvasZOrderDecidesHitTarget )
+{
+    UiRouteFixture   fixture;
+    sw::CanvasPanel* pCanvas = static_cast<sw::CanvasPanel*>( fixture._pRoot->addChild( sw::make_unique<sw::CanvasPanel>() ) );
+    sw::uitest::UiTestUtil::placeWidget( *pCanvas, 0.0f, 0.0f, 400.0f, 300.0f );
+    sw::uitest::TestBoxWidget* pFront = fixture.addBox( *pCanvas, "front", 50.0f, 50.0f, 100.0f, 100.0f );
+    fixture.addBox( *pCanvas, "back", 100.0f, 100.0f, 100.0f, 100.0f );
+    sw::WidgetLayoutSlot slot = pFront->getLayoutSlot();
+    slot._zOrder              = 1;
+    pFront->setLayoutSlot( slot );
+
+    SW_EXPECT_STREQ( "front", fixture.hitLeafName( 120.0f, 120.0f ).c_str() ); // 겹친 곳 — z 1 이 위
+    SW_EXPECT_STREQ( "back", fixture.hitLeafName( 180.0f, 180.0f ).c_str() );  // back 만 있는 곳
 }

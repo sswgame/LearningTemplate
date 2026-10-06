@@ -67,6 +67,13 @@ namespace sw
         invalidate( WidgetDirty::kLayout );
     }
 
+    void PanelWidget::collectPaintOrder( vector<uint32>& outListIndex ) const
+    {
+        outListIndex.clear();
+        for ( uint32 index = 0; index < getChildCount(); ++index )
+            outListIndex.push_back( index );
+    }
+
     uint32 PanelWidget::findChildIndex( const Widget* pChild ) const
     {
         for ( uint32 index = 0; index < static_cast<uint32>( _listChild.size() ); ++index )

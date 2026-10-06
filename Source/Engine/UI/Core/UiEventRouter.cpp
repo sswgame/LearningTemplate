@@ -25,7 +25,18 @@ namespace sw
                 // 자르는 패널 밖의 점은 자식도 받지 않는다(스크롤 영역 밖으로 삐져나온 항목).
                 const bool bChildrenReachable = pPanel != nullptr && ( pPanel->clipsChildren() == false || bInside );
                 inoutListWidget.push_back( widget.getId() );
-                if ( bChildrenReachable )
+                if ( bChildrenReachable && pPanel->hasCustomPaintOrder() )
+                {
+                    // z 순서를 둔 패널(캔버스) — 그리기 순서의 역순.
+                    vector<uint32> listOrder;
+                    pPanel->collectPaintOrder( listOrder );
+                    for ( uint32 order = static_cast<uint32>( listOrder.size() ); order > 0; --order )
+                    {
+                        if ( hitTestRecursive( *pPanel->getChild( listOrder[order - 1] ), screenPoint, inoutListWidget ) )
+                            return true;
+                    }
+                }
+                else if ( bChildrenReachable )
                 {
                     for ( uint32 index = pPanel->getChildCount(); index > 0; --index ) // 나중에 그린 자식이 위다
                     {

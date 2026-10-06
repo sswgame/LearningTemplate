@@ -15,7 +15,7 @@ namespace sw
 {
     /**
      * @class PanelWidget
-     * @brief 자식을 드는 위젯입니다. 자식 순서가 그리기 순서이고(뒤가 위), 히트 테스트는 그 역순입니다.
+     * @brief 자식을 드는 위젯입니다. 자식 순서가 그리기 순서이고(뒤가 위 — z 순서를 둔 패널은 `collectPaintOrder`), 히트 테스트는 그 역순입니다.
      * @details 자식을 붙이고 떼면 자기 kLayout 입니다. 트리에 붙어 있으면 자식도 함께 붙고 떨어집니다(번호 · 이름표).
      */
     REFLECT( Abstract )
@@ -42,6 +42,12 @@ namespace sw
         Widget* getChild( uint32 index ) const { return _listChild[index].get(); }
         /** @brief @p pChild 의 자식 자리입니다. 자식이 아니면 `invalid_index::kUint32` 입니다. */
         uint32 findChildIndex( const Widget* pChild ) const;
+        /**
+         * @brief 그리기 순서가 자식 순서와 다를 수 있는 패널이면 true 입니다(z 순서 — `CanvasPanel`). false 면 그리기 순서 = 자식 순서라 목록을 만들지 않는다.
+         */
+        virtual bool hasCustomPaintOrder() const { return false; }
+        /** @brief 그리는 순서(뒤가 위)의 자식 자리를 담습니다. 히트 테스트는 그 역순입니다. 기본은 자식 순서입니다. */
+        virtual void collectPaintOrder( vector<uint32>& outListIndex ) const;
         /** @brief 자식을 자르는가(스크롤 패널). 히트 테스트와 그리기가 함께 따른다. */
         bool clipsChildren() const { return _bClipChildren; }
         void setClipChildren( bool bClip );
