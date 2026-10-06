@@ -89,7 +89,7 @@ namespace sw
         void getFacingTile( int32& outX, int32& outY ) const;
         /**
          * @brief 타일 · 이동 상태 · 대기 워프(맵 · 자리) · 조우 걸음 수 · 대기 플래그 · 입력 허용을 씁니다.
-         * @details 타일맵 · 입력 맵(빌림) · 설정은 싣지 않는다. 세이브 틀(`OverworldSaveGame`)은 다른 단위다 — 이것은 핫 리로드 · 상태 바이트용이다.
+         * @details 타일맵 · 입력 맵(빌림) · 설정은 싣지 않는다. 세이브도 이 바이트다 — 게임 상태는 스냅숏 봉투(`GameInstanceBase::saveStateToFile`)로만 저장한다(플래그는 공유 상태가 싣는다).
          */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */

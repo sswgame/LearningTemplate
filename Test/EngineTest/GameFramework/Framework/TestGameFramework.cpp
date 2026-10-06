@@ -28,6 +28,8 @@
 #include "EngineTest/StateReloadTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
 
+#include "GameFramework/Base/AI/Schedule/ScheduleSaveState.h"
+#include "GameFramework/Base/Appearance/UserAppearancePresetStore.h"
 #include "GameFramework/Base/Camera/Follow2DCameraComponent.h"
 #include "GameFramework/Base/Data/GameSettings.h"
 #include "GameFramework/Base/Framework/ComponentStateStore.h"
@@ -49,7 +51,6 @@
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
-#include "GameFramework/Kits/Rpg/Overworld/OverworldSaveGame.h"
 #include "GameFramework/Kits/Rpg/Overworld/PlayerController.h"
 #include "GameFramework/Kits/Rpg/Overworld/PlayerLocomotion.h"
 #include "GameFramework/Kits/Rpg/Overworld/TileMap.h"
@@ -165,6 +166,30 @@ namespace
         vector<uint8> bytes;
         archive.writeData( bytes );
         return bytes;
+    }
+
+    /** @brief SAV1 시험의 받침 — 이름 · 지역 · 태그 목록 · 자리 · 분이 다 다른 리플렉션 구조체 하나입니다. */
+    ScheduleNpcSaveState makeSaveSlotProbe( const utf8* pId, int32 minute )
+    {
+        ScheduleNpcSaveState probe;
+        probe._id             = hashed_string( pId );
+        probe._originArea     = hashed_string( "market" );
+        probe._listTag        = { "smith", "night_owl" };
+        probe._originPosition = float3{ 15.0f, 0.0f, -25.0f };
+        probe._originMinute   = minute;
+        return probe;
+    }
+
+    void expectSameSaveSlotProbe( const ScheduleNpcSaveState& expected, const ScheduleNpcSaveState& actual )
+    {
+        SW_EXPECT_TRUE( expected._id == actual._id );
+        SW_EXPECT_TRUE( expected._originArea == actual._originArea );
+        SW_ASSERT_EQUAL( expected._listTag.size(), actual._listTag.size() );
+        for ( size_t tagIndex = 0; tagIndex < expected._listTag.size(); ++tagIndex )
+            SW_EXPECT_EQUAL( expected._listTag[tagIndex], actual._listTag[tagIndex] );
+        SW_EXPECT_NEAR_EQUAL( expected._originPosition._x, actual._originPosition._x, 1.0e-6f );
+        SW_EXPECT_NEAR_EQUAL( expected._originPosition._z, actual._originPosition._z, 1.0e-6f );
+        SW_EXPECT_EQUAL( expected._originMinute, actual._originMinute );
     }
 } // namespace
 
@@ -304,43 +329,22 @@ SW_TEST_CASE( GameFrameworkTest, ScreenTransitionManagerReset )
 }
 
 // ------------------------------------------------------------------------------
-// 3) 세이브 게임(SaveGameSerializer) — 플래그 관리 및 파일 직렬화/역직렬화 검증
+// 3) 세이브 슬롯(SaveGameSerializer) — SAV1 봉투(리플렉션 객체 하나)의 파일 왕복 · 변조 거부. 받침은 리플렉션 세이브 구조체(`ScheduleNpcSaveState`).
+//    게임 상태(진행 · 세계)는 이 길이 아니라 스냅숏 봉투(`GameInstanceBase::saveStateToFile`)다 — SAV1 은 사용자 파일만.
 // ------------------------------------------------------------------------------
 
 /**
- * @brief [GameFrameworkTest] 월드 플래그를 세이브에 받아 두고 파일로 왕복한다 — 목록은 이름 순이고 0 은 싣지 않는다
+ * @brief [GameFrameworkTest] 리플렉션 객체 하나를 세이브 슬롯 파일로 왕복한다 — 목록 · 이름 · 벡터 칸이 그대로 돌아온다
  */
-SW_TEST_CASE( GameFrameworkTest, SaveGameFlagsAndFileIO )
+SW_TEST_CASE( GameFrameworkTest, SaveGameSlotFileRoundTrip )
 {
-    GameFlags flags;
-    SW_EXPECT_EQUAL( 0, flags.getFlag( "boss_defeated", 0 ) );
-    SW_EXPECT_EQUAL( -1, flags.getFlag( "non_existent_flag", -1 ) );
-    flags.setFlag( "player_level", 42 );
-    flags.setFlag( "chest_opened_1", 1 );
-    flags.setFlag( "boss_defeated", 1 );
+    const ScheduleNpcSaveState source = makeSaveSlotProbe( "blacksmith", 480 );
+    const string               path   = test::makeTempPath( "test_saveslot_temp.sav" );
+    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( source, path ) );
 
-    OverworldSaveGame srcSlot{};
-    srcSlot._mapPath = "Assets/Maps/Dungeon1.map";
-    srcSlot._playerX = 15;
-    srcSlot._playerY = 25;
-    srcSlot.captureFlags( flags );
-    SW_ASSERT_EQUAL( size_t( 3 ), srcSlot._listFlag.size() );
-    SW_EXPECT_TRUE_MSG( srcSlot._listFlag[0]._name == hashed_string( "boss_defeated" ), "세이브 플래그가 이름 순이 아닙니다" );
-
-    const string tempSavePath = test::makeTempPath( "test_saveslot_temp.sav" );
-    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( srcSlot, tempSavePath ) );
-
-    OverworldSaveGame dstSlot{};
-    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( dstSlot, tempSavePath ) );
-    SW_EXPECT_EQUAL( srcSlot._mapPath, dstSlot._mapPath );
-    SW_EXPECT_EQUAL( srcSlot._playerX, dstSlot._playerX );
-    SW_EXPECT_EQUAL( srcSlot._playerY, dstSlot._playerY );
-
-    GameFlags loadedFlags;
-    dstSlot.restoreFlags( loadedFlags );
-    SW_EXPECT_EQUAL( 1, loadedFlags.getFlag( "boss_defeated" ) );
-    SW_EXPECT_EQUAL( 1, loadedFlags.getFlag( "chest_opened_1" ) );
-    SW_EXPECT_EQUAL( 42, loadedFlags.getFlag( "player_level" ) );
+    ScheduleNpcSaveState loaded{};
+    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( loaded, path ) );
+    expectSameSaveSlotProbe( source, loaded );
 }
 
 /**
@@ -354,77 +358,32 @@ SW_TEST_CASE( GameFrameworkTest, StringUtilCrc32StandardVector )
 }
 
 /**
- * @brief [GameFrameworkTest] SaveGame SAV1 바이너리 포맷 저장/로드 및 플래그 보존 검증
- */
-SW_TEST_CASE( GameFrameworkTest, SaveGameBinarySav1Format )
-{
-    GameFlags flags;
-    flags.setFlag( "quest_active", 1 );
-    flags.setFlag( "key_silver", 3 );
-    flags.setFlag( "boss_defeated", 0 );
-    flags.setFlag( "difficulty", 2 );
-
-    OverworldSaveGame srcSlot{};
-    srcSlot._mapPath = "Assets/Scenes/Dungeon_B2.scene";
-    srcSlot._playerX = 15;
-    srcSlot._playerY = 48;
-    srcSlot.captureFlags( flags );
-
-    const string binSavePath = test::makeTempPath( "test_saveslot_sav1.sav" );
-    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( srcSlot, binSavePath ) );
-
-    OverworldSaveGame dstSlot{};
-    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( dstSlot, binSavePath ) );
-    SW_EXPECT_EQUAL( srcSlot._mapPath, dstSlot._mapPath );
-    SW_EXPECT_EQUAL( srcSlot._playerX, dstSlot._playerX );
-    SW_EXPECT_EQUAL( srcSlot._playerY, dstSlot._playerY );
-
-    GameFlags loadedFlags;
-    dstSlot.restoreFlags( loadedFlags );
-    SW_EXPECT_EQUAL( 1, loadedFlags.getFlag( "quest_active" ) );
-    SW_EXPECT_EQUAL( 3, loadedFlags.getFlag( "key_silver" ) );
-    SW_EXPECT_EQUAL( 0, loadedFlags.getFlag( "boss_defeated" ) );
-    SW_EXPECT_EQUAL( 2, loadedFlags.getFlag( "difficulty" ) );
-}
-
-/**
  * @brief [GameFrameworkTest] SaveGame SAV1 바이너리 CRC32 위변조/손상 감지 검증
  */
 SW_TEST_CASE( GameFrameworkTest, SaveGameBinaryCrc32TamperingDetection )
 {
-    GameFlags flags;
-    flags.setFlag( "gold", 5000 );
-    OverworldSaveGame srcSlot{};
-    srcSlot._mapPath = "Assets/Scenes/Castle.scene";
-    srcSlot._playerX = 50;
-    srcSlot._playerY = 70;
-    srcSlot.captureFlags( flags );
-
-    const string binPath = "test_sav1_corrupt.sav";
-    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( srcSlot, binPath ) );
+    const ScheduleNpcSaveState source = makeSaveSlotProbe( "guard", 1320 );
+    const string               path   = test::makeTempPath( "test_sav1_corrupt.sav" );
+    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( source, path ) );
 
     // 1) 정상 로드 확인
-    OverworldSaveGame okSlot{};
-    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( okSlot, binPath ) );
-    GameFlags okFlags;
-    okSlot.restoreFlags( okFlags );
-    SW_EXPECT_EQUAL( 5000, okFlags.getFlag( "gold" ) );
+    ScheduleNpcSaveState okSlot{};
+    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( okSlot, path ) );
+    expectSameSaveSlotProbe( source, okSlot );
 
     // 2) 바이너리 페이로드 바이트 1개 변조
     vector<uint8> rawBlob;
-    SW_EXPECT_TRUE( FileUtil::readFile( binPath, rawBlob ) );
+    SW_EXPECT_TRUE( FileUtil::readFile( path, rawBlob ) );
     SW_ASSERT_TRUE( rawBlob.size() > 20 );
     rawBlob[rawBlob.size() - 1] ^= 0xFF; // 마지막 바이트 손상
-    SW_EXPECT_TRUE( FileUtil::writeFile( binPath, rawBlob.data(), rawBlob.size() ) );
+    SW_EXPECT_TRUE( FileUtil::writeFile( path, rawBlob.data(), rawBlob.size() ) );
 
     // 3) CRC32 불일치로 로드 실패 검증
     {
         SW_TEST_DEFENSIVE_SCOPE( "Testing SaveGame binary CRC32 tampering detection" );
-        OverworldSaveGame corruptedSlot{};
-        SW_EXPECT_FALSE( SaveGameSerializer::loadGameFromSlot( corruptedSlot, binPath ) );
+        ScheduleNpcSaveState corruptedSlot{};
+        SW_EXPECT_FALSE( SaveGameSerializer::loadGameFromSlot( corruptedSlot, path ) );
     }
-
-    SW_EXPECT_TRUE( FileUtil::removeFile( binPath ) );
 }
 
 /**
@@ -433,14 +392,8 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameBinaryCrc32TamperingDetection )
  */
 SW_TEST_CASE( GameFrameworkTest, SaveGameSlotFileIsTheSav1Envelope )
 {
-    GameFlags flags;
-    flags.setFlag( "gold", 7 );
-    OverworldSaveGame slot{};
-    slot._mapPath = "Levels/Envelope.scene";
-    slot._playerX = 3;
-    slot.captureFlags( flags );
-
-    const string path = test::makeTempPath( "envelope.sav" );
+    const ScheduleNpcSaveState slot = makeSaveSlotProbe( "envelope", 7 );
+    const string               path = test::makeTempPath( "envelope.sav" );
     SW_ASSERT_TRUE( SaveGameSerializer::saveGameToSlot( slot, path ) );
 
     vector<uint8> bytes;
@@ -457,18 +410,16 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameSlotFileIsTheSav1Envelope )
 }
 
 /**
- * @brief [GameFrameworkTest] 세이브 기반(`SaveGame`)은 파일 입출력의 기본 구현을 갖지 않는다 — 파생 타입이 자기 타입으로 쓴다
+ * @brief [GameFrameworkTest] 세이브 기반(`SaveGame`)은 파일 입출력의 기본 구현을 갖지 않는다 — 파생 타입(사용자 파일)이 자기 형식으로 쓴다
  * @details 기반이 `saveGameToSlot( *this, path )` 를 부르면 템플릿 인자가 `SaveGame` 이라 프로퍼티 0 인 빈 페이로드를 쓰고도 성공을 돌려준다.
  *          그런 기본 구현이 있으면 override 를 빠뜨린 파생 세이브는 말없이 데이터를 잃는다 — 순수 가상이라 컴파일러가 막는다.
  */
 SW_TEST_CASE( GameFrameworkTest, SaveGameBaseHasNoDefaultFileIo )
 {
     SW_EXPECT_TRUE_MSG( std::is_abstract_v<SaveGame>, "SaveGame 에 파일 입출력 기본 구현이 다시 생겼습니다" );
-    SW_EXPECT_TRUE_MSG( std::is_abstract_v<OverworldSaveGame> == false, "OverworldSaveGame 이 saveToFile · loadFromFile 을 정의하지 않습니다" );
-
-    const TypeInfo* pSaveGameType = SaveGame::StaticType();
-    SW_ASSERT_NOT_NULL( pSaveGameType );
-    SW_EXPECT_TRUE( OverworldSaveGame::StaticType() != nullptr && OverworldSaveGame::StaticType()->isDerivedFrom( pSaveGameType ) );
+    SW_EXPECT_TRUE_MSG( std::is_abstract_v<UserAppearancePresetStore> == false, "UserAppearancePresetStore 가 saveToFile · loadFromFile 을 정의하지 않습니다" );
+    SW_EXPECT_TRUE( (std::is_base_of_v<SaveGame, UserAppearancePresetStore>));
+    SW_EXPECT_NOT_NULL( SaveGame::StaticType() );
 }
 
 /**
@@ -2954,18 +2905,6 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     SW_EXPECT_TRUE( instance.saveStateToFile() );
     SW_EXPECT_TRUE( FileUtil::exists( instance._savePath ) );
     SW_EXPECT_TRUE( instance.loadStateFromFile() );
-
-    // 6) 오버월드 세이브 — 맵 없는 세이브는 시작 맵에서 시작한다(자리 값까지 돌아오는지 — 세이브가 자기 타입으로 쓰는지도 본다)
-    const string      mapLessSave = test::makeTempPath( "bootstrap_mapless.sav" );
-    OverworldSaveGame mapLess{};
-    mapLess._playerX = 3;
-    mapLess._playerY = 4;
-    SW_ASSERT_TRUE( mapLess.saveToFile( mapLessSave ) );
-    OverworldSaveGame loaded{};
-    SW_ASSERT_TRUE( loaded.loadFromFile( mapLessSave ) );
-    SW_EXPECT_STREQ( "game/test/maps/start.scene.xml", loaded._mapPath.c_str() );
-    SW_EXPECT_EQUAL( 3, loaded._playerX );
-    SW_EXPECT_EQUAL( 4, loaded._playerY );
 
     instance.shutdown();
     SW_EXPECT_NULL( game::getService<GameSettings>() );
