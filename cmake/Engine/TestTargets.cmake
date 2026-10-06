@@ -221,6 +221,8 @@ function(sw_registerScriptTest TEST_NAME)
 		WORKING_DIRECTORY "${ARG_WORKING_DIRECTORY}"
 		LABELS "${ARG_LABELS}"
 		TIMEOUT ${ARG_TIMEOUT}
+		# 스크립트가 "이 시험을 등록한 빌드" 를 안다 — 작업 폴더(저장소 루트)로는 알 수 없다(PythonTest_TestGenerators).
+		ENVIRONMENT "SW_BUILD_DIR=${CMAKE_BINARY_DIR}"
 	)
 	if(ARG_RUN_SERIAL)
 		set_tests_properties(${TEST_NAME} PROPERTIES RUN_SERIAL TRUE)

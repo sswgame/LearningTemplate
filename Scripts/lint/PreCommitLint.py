@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
 
@@ -31,7 +32,7 @@ scriptDir = Path(__file__).resolve().parent
 sys.path.insert(0, str(scriptDir))
 sys.path.insert(0, str(scriptDir.parent))
 
-from LintCatalog import discoverLintScripts
+from LintCatalog import LintScript, discoverLintScripts
 from fixer import FormatBranchBraces
 from fixer import FormatForwardDeclarations
 from common import (
@@ -82,49 +83,74 @@ def selectFileScopedStagedInternal(projectRoot: Path, listStaged: list[Path]) ->
     return listScoped
 
 
-def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: list[Path]) -> bool:
+@dataclass(frozen=True)
+class GateRunPlan:
     """
-    `gate/` 에 있는 게이트를 **전부** 돌립니다 — 목록이 아니라 자리가 규칙이다.
+    훅이 게이트 하나를 어떻게 다룰지.
+
+    - `script`     : 게이트 파일(`LintCatalog`)
+    - `skipReason` : 비어 있지 않으면 돌리지 않는다(그 이유를 찍는다)
+    - `listArgument`: 돌릴 때 넘길 인자(`--root` · 파일 인자 게이트면 `--files …`)
+    """
+
+    script: LintScript
+    skipReason: str = ""
+    listArgument: list[str] = field(default_factory=list)
+
+
+def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScoped: list[Path],
+                         listScript: list[LintScript] | None = None) -> list[GateRunPlan]:
+    """
+    staged 파일 목록 → 게이트마다의 계획(건너뜀 이유 또는 넘길 인자). 아무것도 돌리거나 찍지 않는다 — 판정만(시험이 이것을 본다).
 
     무엇이 staged 되었을 때 도는지, staged 부분집합을 어떻게 받는지는 게이트가 스스로 선언한다
     (`LintGate.preCommitPattern` · `preCommitFileArgument`). 여기에는 게이트 이름이 없다.
 
     파일을 인자로 받는 게이트는 `listFileScoped`(병합 커밋이면 새 내용인 파일만)에서, 트리 전체 게이트는 `listStaged` 에서 고른다.
     파일 인자 게이트에 넘길 파일이 하나도 없으면 돌리지 않는다 — 빈 `--files` 는 "전체를 훑어라" 로 읽힌다.
+    게이트 클래스가 없는 파일은 계획에 넣지 않는다.
     """
-    listScript = discoverLintScripts("gate")
-    bFailed = False
-
-    for index, script in enumerate(listScript, start=1):
+    listPlan: list[GateRunPlan] = []
+    for script in discoverLintScripts("gate") if listScript is None else listScript:
         gateClass = script.gateClass
         if gateClass is None:
             continue
 
-        head = f"[{index}/{len(listScript)}] {script.name}"
-
         if gateClass.preCommitSkipReason:
-            print(f"\n{head} ... 건너뜀 ({gateClass.preCommitSkipReason})")
+            listPlan.append(GateRunPlan(script, skipReason=gateClass.preCommitSkipReason))
             continue
 
         listMatched = listMatchingStagedInternal(listStaged, projectRoot, gateClass.preCommitPattern)
         if gateClass.preCommitPattern and not listMatched:
-            print(f"\n{head} ... 건너뜀 (해당 파일 변경 없음)")
+            listPlan.append(GateRunPlan(script, skipReason="해당 파일 변경 없음"))
             continue
 
         if gateClass.preCommitFileArgument:
             listMatched = listMatchingStagedInternal(listFileScoped, projectRoot, gateClass.preCommitPattern)
             if not listMatched:
-                print(f"\n{head} ... 건너뜀 (병합 커밋: 부모와 내용이 다른 해당 파일 없음)")
+                listPlan.append(GateRunPlan(script, skipReason="병합 커밋: 부모와 내용이 다른 해당 파일 없음"))
                 continue
 
-        print(f"\n{head} ...")
         listArgument = ["--root", str(projectRoot)]
         if gateClass.preCommitFileArgument == "--files":
             listArgument += ["--files", *(str(path) for path in listMatched)]
+        listPlan.append(GateRunPlan(script, listArgument=listArgument))
+    return listPlan
 
-        if gateClass.run(listArgument) != 0:
+
+def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: list[Path]) -> bool:
+    """`gate/` 에 있는 게이트를 **전부** 훑어 계획대로 돌립니다 — 목록이 아니라 자리가 규칙이다(`selectGatesForStaged`)."""
+    listScript = discoverLintScripts("gate")
+    mapIndex = {script.name: index for index, script in enumerate(listScript, start=1)}
+    bFailed = False
+    for plan in selectGatesForStaged(projectRoot, listStaged, listFileScoped, listScript):
+        head = f"[{mapIndex[plan.script.name]}/{len(listScript)}] {plan.script.name}"
+        if plan.skipReason:
+            print(f"\n{head} ... 건너뜀 ({plan.skipReason})")
+            continue
+        print(f"\n{head} ...")
+        if plan.script.gateClass.run(plan.listArgument) != 0:
             bFailed = True
-
     return bFailed
 
 
