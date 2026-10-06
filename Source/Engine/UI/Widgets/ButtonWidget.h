@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
@@ -17,7 +18,7 @@ namespace sw
      * @class ButtonWidget
      * @brief 포커스를 받는 테두리 패널입니다 — 자식(글 · 그림)을 감싸고, 상태(보통 · 호버 · 누름 · 꺼짐)마다 배경 브러시를 바꿉니다.
      * @details **클릭** = 왼쪽 버튼을 이 버튼 위에서 누르고 이 버튼 위에서 뗐다(누른 동안 포인터를 잡는다 — 밖에서 떼면 클릭이 아니다, Slate 와 같다) 또는
-     *          포커스를 쥔 채 `UI.Accept`. 클릭하면 `getOnClicked()` 를 부릅니다. 누르면 포커스가 이 버튼으로 옵니다. 포커스 표시는 포커스 테두리(탐색 방식)입니다.
+     *          포커스를 쥔 채 `UI.Accept`. 클릭하면 `getOnClicked()` 를 부르고, `_command` 가 있으면 화면의 명령(`UiScreen::onCommand` — UI 문서가 쓰는 길)을 냅니다. 누르면 포커스가 이 버튼으로 옵니다. 포커스 표시는 포커스 테두리(탐색 방식)입니다.
      */
     REFLECT( Category = "UI", DisplayName = "Button", Tooltip = "Focusable bordered panel that fires a click" )
     class SW_API ButtonWidget : public BorderPanel
@@ -39,6 +40,9 @@ namespace sw
         uint32 getClickCount() const { return _clickCount; }
         bool   isPressed() const { return _bPressed; }
         bool   isHovered() const { return _bHovered; }
+        /** @brief 클릭하면 화면에 보낼 명령입니다. 비면 명령을 내지 않습니다. */
+        const hashed_string& getCommand() const { return _command; }
+        void                 setCommand( const hashed_string& command ) { _command = command; }
 
         /** @brief 상태별 브러시를 바꿉니다(보통은 `setBackground`). kPaint. */
         void setStateBrushes( const UiBrush& hovered, const UiBrush& pressed, const UiBrush& disabled );
@@ -61,7 +65,9 @@ namespace sw
         UiBrush _pressedBrush;
         PROPERTY( DisplayName = "Disabled Brush" )
         UiBrush _disabledBrush;
-        bool    _bPressed; ///< 이 버튼 위에서 눌렀고 아직 떼지 않았다(포인터를 잡았다)
-        bool    _bHovered;
+        PROPERTY( DisplayName = "Command", Tooltip = "Command sent to the screen when clicked (UiScreen::onCommand)" )
+        hashed_string _command;
+        bool          _bPressed; ///< 이 버튼 위에서 눌렀고 아직 떼지 않았다(포인터를 잡았다)
+        bool          _bHovered;
     };
 } // namespace sw

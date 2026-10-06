@@ -5,6 +5,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/UI/Core/UiEvents.h"
+#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Screen/UiScreen.h"
 
 namespace sw
 {
@@ -32,6 +34,7 @@ namespace sw
         , _hoveredBrush{ ButtonWidgetInternal::makeBrush( 0.24f, 0.95f ) }
         , _pressedBrush{ ButtonWidgetInternal::makeBrush( 0.10f, 0.95f ) }
         , _disabledBrush{ ButtonWidgetInternal::makeBrush( 0.16f, 0.4f ) }
+        , _command{}
         , _bPressed{ false }
         , _bHovered{ false }
     {
@@ -109,5 +112,8 @@ namespace sw
     {
         ++_clickCount;
         _onClicked.broadcast( getId() );
+        UiScreen* pScreen = getTree() != nullptr ? getTree()->getScreen() : nullptr;
+        if ( pScreen != nullptr )
+            pScreen->dispatchCommand( _command, *this );
     }
 } // namespace sw

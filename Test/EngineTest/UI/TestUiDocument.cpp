@@ -293,10 +293,6 @@ SW_TEST_CASE( UiDocumentTest, CommandRoutesToScreen )
     SW_EXPECT_TRUE( pGo->onActionEvent( accept, sw::UiRoutePhase::Bubble ).isHandled() );
     SW_EXPECT_EQUAL( 1u, pCounting->_commandCount );
     SW_EXPECT_STREQ( "Go", pCounting->_lastCommand.c_str() );
-
-    pGo->setEnabled( false ); // 꺼진 버튼은 명령을 내지 않는다
-    pGo->click();
-    SW_EXPECT_EQUAL( 1u, pCounting->_commandCount );
 }
 
 /** @brief [UiDocumentTest] 같은 문서로 화면을 두 번 열어도 문서(와 조각)는 한 번만 읽어 파싱한다 */

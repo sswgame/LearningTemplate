@@ -7,7 +7,6 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
@@ -19,9 +18,6 @@ namespace sw
 {
     class UiFocusManager;
     class UiScreen;
-
-    /** @brief 위젯이 낸 명령(버튼의 `_command`)을 받는 함수입니다 — 화면(`UiScreen`)이 자기 트리에 겁니다. */
-    using UiCommandDelegate = Delegate<void( const hashed_string&, Widget& )>;
 
     /**
      * @class WidgetTree
@@ -81,11 +77,6 @@ namespace sw
         /** @brief 뿌리부터 모든 위젯을 깊이 우선 문서 순서(부모 다음 자식, 자식은 앞에서부터)로 @p outListWidget 에 담습니다. */
         void collectWidgetsInDocumentOrder( vector<Widget*>& outListWidget ) const;
 
-        /** @brief 위젯 명령을 받을 함수를 겁니다(화면이 만들 때 건다). 비우면 명령은 버려집니다. */
-        void setCommandHandler( const UiCommandDelegate& handler ) { _commandHandler = handler; }
-        /** @brief 위젯 @p source 가 명령 @p command 를 냅니다(버튼 클릭 · 확인). 받을 함수가 없으면 아무것도 하지 않습니다. */
-        void dispatchCommand( const hashed_string& command, Widget& source );
-
     private:
         friend class Widget;
         friend class UiFocusManager;
@@ -111,9 +102,8 @@ namespace sw
         vector<WidgetId>                                               _listLayoutDirtyRoot; ///< kLayout 이 올라가다 멈춘 자리(레이아웃 경계 · 루트)
         vector<WidgetId>                                               _listPaintDirty;
         vector<WidgetId>                                               _listStyleDirty;
-        UiCommandDelegate                                              _commandHandler; ///< 위젯 명령을 받는 함수(화면이 건다)
-        UiFocusManager*                                                _pFocusManager;  ///< 지금 이 트리에 포커스를 둔 관리자(없으면 nullptr — 트리가 지워질 때 알린다)
-        UiScreen*                                                      _pScreen;        ///< 소유한 화면(UiScreen 생성자가 적는다)
+        UiFocusManager*                                                _pFocusManager; ///< 지금 이 트리에 포커스를 둔 관리자(없으면 nullptr — 트리가 지워질 때 알린다)
+        UiScreen*                                                      _pScreen;       ///< 소유한 화면(UiScreen 생성자가 적는다)
         WidgetId                                                       _focusedWidget;
         float32                                                        _layoutUiScale;        ///< 지난 레이아웃 걷기의 UI 배율(바뀌면 전체 다시 — UiLayoutPass)
         float32                                                        _layoutTextScale;      ///< 지난 레이아웃 걷기의 글자 배율

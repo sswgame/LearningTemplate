@@ -7,12 +7,12 @@
 				<_background _color="0.125,0.125,0.25,0.875" _cornerRadius="8,8,8,8" />
 				<BoxPanel _spacing="12" _orientation="Vertical">
 					<TextWidget _name="Title" _styleClass="title" _text="Paused" />
-					<ButtonWidget _name="Resume" _styleClass="primary" _contentPadding="16,8,16,8" _command="Resume">
-						<_background _color="0.25,0.5,1,1" _cornerRadius="6,6,6,6" />
+					<ButtonWidget _name="Resume" _styleClass="primary" _command="Resume">
+						<_background _color="0.25,0.5,1,1" />
 						<TextWidget _text="Resume" />
 					</ButtonWidget>
-					<ButtonWidget _name="Options" _contentPadding="16,8,16,8" _command="OpenOptions">
-						<_background _color="0.25,0.25,0.25,1" _cornerRadius="6,6,6,6" />
+					<ButtonWidget _name="Options" _command="OpenOptions">
+						<_background _color="0.25,0.25,0.25,1" />
 						<TextWidget _text="Options" />
 					</ButtonWidget>
 					<UserWidget _name="Hint" _document="engine/ui/parts/inputhint.ui.xml" />

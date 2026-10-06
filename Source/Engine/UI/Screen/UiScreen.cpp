@@ -25,7 +25,6 @@ namespace sw
     {
         _tree._pScreen = this;
         _tree.setRoot( std::move( root ) );
-        _tree.setCommandHandler( SW_DELEGATE_METHOD( UiCommandDelegate, &UiScreen::dispatchCommand, this ) );
     }
 
     UiScreen::~UiScreen() = default;
@@ -61,15 +60,17 @@ namespace sw
 
     bool UiScreen::onCommand( const hashed_string& command, Widget& source )
     {
-        const auto found = _mapCommandToHandler.find( command );
-        if ( found == _mapCommandToHandler.end() || found->second.isBound() == false )
+        const auto iter = _mapCommandToHandler.find( command );
+        if ( iter == _mapCommandToHandler.end() || iter->second.isBound() == false )
             return false;
-        found->second( command, source );
+        iter->second( command, source );
         return true;
     }
 
     void UiScreen::dispatchCommand( const hashed_string& command, Widget& source )
     {
+        if ( command.empty() )
+            return;
         if ( onCommand( command, source ) == false )
             SW_LOG_WARNING( "[Ui] Command '%#' from widget '%#' is not handled by screen %# (%#)", command.c_str(), source.getName().c_str(), _handle,
                             _documentPath.empty() ? "built in code" : _documentPath.c_str() );

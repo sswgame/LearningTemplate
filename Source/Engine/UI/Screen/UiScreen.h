@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
@@ -37,6 +38,9 @@ namespace sw
     using UiScreenHandle = uint32;
     /** @brief 화면이 없음을 뜻하는 번호입니다. */
     inline constexpr UiScreenHandle kInvalidUiScreenHandle = 0;
+
+    /** @brief 위젯이 낸 명령(버튼의 `_command`)을 받는 함수입니다(`UiScreen::registerCommand`). */
+    using UiCommandDelegate = Delegate<void( const hashed_string&, Widget& )>;
 } // namespace sw
 
 namespace sw
@@ -112,6 +116,8 @@ namespace sw
          * @details 기본은 `registerCommand` 로 건 함수를 부릅니다. 아무도 처리하지 않으면 경고 한 줄(문서의 명령 이름 오타가 조용히 묻히지 않게).
          */
         virtual bool onCommand( const hashed_string& command, Widget& source );
+        /** @brief 트리의 위젯 @p source 가 명령을 냅니다(버튼 클릭) — `onCommand` 로 보내고, 아무도 처리하지 않으면 경고합니다. 빈 명령은 무시합니다. */
+        void dispatchCommand( const hashed_string& command, Widget& source );
 
         /**
          * @brief `UI.Back` 을 아무 위젯도 처리하지 않았을 때 불립니다. 처리했으면 true 입니다.
@@ -122,10 +128,6 @@ namespace sw
     private:
         friend class UiSystem;
 
-        /** @brief 트리가 넘긴 명령을 `onCommand` 로 보냅니다(트리의 명령 함수). */
-        void dispatchCommand( const hashed_string& command, Widget& source );
-
-    private:
         WidgetTree                                                               _tree;
         UiScreenDesc                                                             _desc;
         string                                                                   _documentPath; ///< 지은 문서(코드로 지었으면 빈 글)
