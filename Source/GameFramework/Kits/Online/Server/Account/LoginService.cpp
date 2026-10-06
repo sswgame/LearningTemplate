@@ -236,6 +236,7 @@ namespace sw
 {
     LoginService::LoginService()
         : _eventBuffer{}
+        , _remoteRevokeBuffer{}
         , _completionBuffer{}
         , _ticketAuthority{}
         , _settings{}
@@ -273,6 +274,7 @@ namespace sw
         _listPendingVerification.clear();
         _listPlatformProvider.clear();
         _eventBuffer.clear();
+        _remoteRevokeBuffer.clear();
         _pStore        = nullptr;
         _pCrypto       = nullptr;
         _pRemoteConfig = nullptr;
@@ -536,6 +538,16 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
+    void LoginService::noteRevokedElsewhere( AccountId accountId, uint64 sessionId, LoginRevokeReason reason )
+    {
+        const auto onlineIt = _mapAccountToSession.find( accountId );
+        if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != sessionId )
+            return; // 이 프로세스의 세션이 아니다(이미 새 세션으로 바뀌었다)
+        _mapAccountToSession.erase( onlineIt );
+        _eventBuffer.push( LoginEvent{ accountId, sessionId, reason, LoginEvent::Kind::Revoked } );
+        removeOfflineIdentities();
+    }
+
     bool LoginService::findIdentity( AccountId accountId, AccountIdentity& outIdentity ) const
     {
         const auto identityIt = _mapAccountToIdentity.find( accountId );
@@ -564,7 +576,11 @@ namespace sw
         {
             const auto onlineIt = _mapAccountToSession.find( revoked._accountId );
             if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != revoked._sessionId )
+            {
+                // 다른 서버(또는 재접속 유예)의 세션이다 — 바인딩이 버스로 알린다.
+                _remoteRevokeBuffer.push( LoginEvent{ revoked._accountId, revoked._sessionId, revoked._reason, LoginEvent::Kind::Revoked } );
                 continue;
+            }
             _mapAccountToSession.erase( onlineIt );
             _eventBuffer.push( LoginEvent{ revoked._accountId, revoked._sessionId, revoked._reason, LoginEvent::Kind::Revoked } );
         }

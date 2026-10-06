@@ -129,6 +129,10 @@ namespace sw
 
         void drainCompletions( vector<LoginCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void drainEvents( vector<LoginEvent>& outListEvent ) { _eventBuffer.drainTo( outListEvent ); }
+        /** @brief 이 프로세스에 붙어 있지 않은 세션을 끊은 기록(밀려남 · 운영)입니다 — 바인딩이 버스로 다른 서버에 알린다. */
+        void drainRemoteRevocations( vector<LoginEvent>& outListEvent ) { _remoteRevokeBuffer.drainTo( outListEvent ); }
+        /** @brief 다른 서버가 이 세션을 끊었다(버스) — 이 프로세스에 붙어 있으면 접속 표에서 빼고 `Revoked` 사건을 냅니다. */
+        void noteRevokedElsewhere( AccountId accountId, uint64 sessionId, LoginRevokeReason reason );
 
         // IAccountDirectory — 이 프로세스에 붙어 있는 계정만(메모리, 저장소를 읽지 않는다)
         bool findIdentity( AccountId accountId, AccountIdentity& outIdentity ) const override;
@@ -172,6 +176,7 @@ namespace sw
         void                    removeOfflineIdentities();
 
         EventBuffer<LoginEvent>                _eventBuffer;
+        EventBuffer<LoginEvent>                _remoteRevokeBuffer;
         EventBuffer<LoginCompletion>           _completionBuffer;
         LoginTicketAuthority                   _ticketAuthority;
         LoginSettings                          _settings;

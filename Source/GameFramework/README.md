@@ -283,9 +283,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       기다리면 지역을 풀고, 시한을 넘긴 표는 돌려준다. 경기 id = 권한 서버 씨앗 << 32 | 순번. 파티 · 로비 · 대기열 권한 서버 · 전용 서버 배정은 아직 없다(백로그 1-7).
       시험: `MatchMakerTest`.
       Argon2id · HKDF-SHA256, 서버는 기동 때 `isPasswordHashSupported` 로 확인). 스트림 바인딩 `AccountServer`(IOnlineService · IAccountSessionControl — 연결의 세션 토큰은
-      메모리에, 로그인 · 재접속 성공이면 호스트에 계정을 붙이고 같은 계정의 옛 연결은 알림 뒤 닫는다, 연결이 닫히면 재접속 유예, 탈퇴 쓸기 · 세션 다시 읽기를 주기로),
+      메모리에, 로그인 · 재접속 성공이면 호스트에 계정을 붙이고 같은 계정의 옛 연결은 알림 뒤 닫는다, 연결이 닫히면 재접속 유예, 탈퇴 쓸기 · 세션 다시 읽기를 주기로,
+      서버 여럿이면 다른 서버의 옛 세션을 버스 `account.revoke` 로 닫는다), 접속 상태 `OnlinePresence`(`IAccountPresence` 구현 — 캐시 `presence:` 키를 시한 · 주기로 다시 적고
+      "내 것일 때만" 지움, 이름으로 다른 서버의 계정 찾기, 버스 `push.<서버>` 로 다른 서버의 계정에게 알림),
       UDP 접속 인증기 `AccountConnectAuthenticator`(게임 서버 — 저장소 없이 표 서명 · 서버 · 시한만). 시험: `LoginServiceTest` · `PlatformLoginTest` ·
-      `AccountStreamTest`(루프백 스트림 평문 · TLS, UDP Encrypted 접속까지).
+      `AccountStreamTest`(루프백 스트림 평문 · TLS, UDP Encrypted 접속까지) · `OnlineMultiServerTest`(호스트 둘이 저장소 · 캐시 · 버스를 나눠 씀).
     - `Trade`(`GF_Trade`, Client · Server): 거래 와이어 타입(`TradeTypes.h` — 다리 · 상태 · 닫힌 까닭 · 결과 · 스냅숏 · 코덱 `TradeWire`), 와이어(`TradeProtocol.h` —
       메서드 · 알림 Invited · Update · Closed, 응답에 요청한 계정의 이동 뒤 잔액), 클라이언트(`TradeClient` — 모든 요청에 멱등 키, 확정은 비추는 스냅숏의 두 판),
       인벤토리 칸 → 다리(`TradeInventoryUtil` — 같은 아이템 칸 합침, 인스턴스 상태 칸 거절, 아이템 → 자산 id 는 게임이 잇는다).

@@ -43,6 +43,8 @@ namespace sw
         void  setManualTimeMs( int64 nowMs );
         void  advanceTimeMs( int64 deltaMs );
         int64 getNowMs() const;
+        /** @brief 값 · 정렬 집합을 모두 지웁니다(구독은 남긴다) — 시험의 "캐시 서버가 재시작해 비었다". */
+        void clearData();
 
     private:
         struct ValueEntry

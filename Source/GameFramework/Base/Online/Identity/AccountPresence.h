@@ -43,7 +43,7 @@ namespace sw
         /** @brief 접속한 계정을 표시 이름(대소문자 무시)으로 찾습니다. 0 이 아닌 요청 id — 결과는 `pollFound` 로 한 번. */
         virtual uint64 submitFindByDisplayName( string_view displayName )        = 0;
         virtual int32  pollFound( vector<AccountPresenceResult>& outListResult ) = 0;
-        /** @brief 다른 서버에 붙은 계정에게 알림(`[종류][몸]`)을 맡깁니다. 그 계정의 서버를 모르면 false. */
+        /** @brief 다른 서버에 붙은 계정에게 알림(`[종류][몸]`)을 맡깁니다(그 계정의 서버를 찾아 넘긴다 — 접속해 있지 않으면 버린다). 서버 여럿이 아니면 false. */
         virtual bool sendRemotePush( AccountId accountId, uint16 kind, const BitWriter& body ) = 0;
     };
 } // namespace sw

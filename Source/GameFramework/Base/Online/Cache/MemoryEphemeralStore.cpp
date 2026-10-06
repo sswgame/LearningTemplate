@@ -177,6 +177,13 @@ namespace sw
         return takenCount;
     }
 
+    void MemoryEphemeralDatabase::clearData()
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        _mapValue.clear();
+        _mapScoreSet.clear();
+    }
+
     void MemoryEphemeralDatabase::setManualTimeMs( int64 nowMs )
     {
         std::scoped_lock<mutex> lock{ _mutex };

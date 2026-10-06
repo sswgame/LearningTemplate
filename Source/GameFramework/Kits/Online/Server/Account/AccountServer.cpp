@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Online/Account/AccountProtocol.h"
 
 namespace sw
@@ -37,12 +38,14 @@ namespace sw
         , _mapAccountToReasonCode{}
         , _listCompletionScratch{}
         , _listEventScratch{}
+        , _presence{}
         , _settings{}
         , _pLoginService{ nullptr }
         , _nextTag{ 1 }
         , _nowMs{ 0 }
         , _nextPurgeMs{ 0 }
         , _nextRefreshMs{ 0 }
+        , _bHostAttached{ SW_FALSE }
     {
     }
 
@@ -50,6 +53,7 @@ namespace sw
     {
         _pLoginService = pLoginService;
         _settings      = settings;
+        _presence.setSettings( settings._presence );
     }
 
     void AccountServer::shutdown()
@@ -57,6 +61,7 @@ namespace sw
         _mapTagToCall.clear();
         _mapAccountToSession.clear();
         _mapAccountToReasonCode.clear();
+        _presence.shutdown();
         _pLoginService = nullptr;
     }
 
@@ -202,6 +207,8 @@ namespace sw
     void AccountServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
     {
         _nowMs = nowMs;
+        if ( _bHostAttached == SW_FALSE )
+            attachHost( host );
         _pLoginService->tick( nowMs );
         _listCompletionScratch.clear();
         _pLoginService->drainCompletions( _listCompletionScratch );
@@ -212,6 +219,8 @@ namespace sw
         _pLoginService->drainEvents( _listEventScratch );
         for ( const LoginEvent& event : _listEventScratch )
             handleEvent( host, event );
+        publishRemoteRevocations( host );
+        _presence.tick( nowMs );
         if ( nowMs >= _nextPurgeMs )
         {
             _nextPurgeMs = nowMs + _settings._purgeIntervalMs;
@@ -227,12 +236,38 @@ namespace sw
     void AccountServer::onAccountLeft( OnlineServiceHost& host, AccountId accountId )
     {
         (void)host;
+        _presence.noteOffline( accountId );
         const auto sessionIt = _mapAccountToSession.find( accountId );
         if ( sessionIt == _mapAccountToSession.end() )
             return; // 이 객체가 끊은 연결(밀려남 · 로그아웃) — 세션 표에서 먼저 뺐다
         const uint64 sessionId = sessionIt->second._token._sessionId;
         _mapAccountToSession.erase( sessionIt );
         _pLoginService->markDisconnected( sessionId, _nowMs ); // 클라이언트가 끊겼다 — 재접속 유예
+    }
+
+    void AccountServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
+    {
+        if ( message._topic != kRevokeTopic )
+        {
+            (void)_presence.handlePushMessage( message );
+            return;
+        }
+        if ( host.getServerBus() != nullptr && message._originServerId == host.getServerBus()->getServerId() )
+            return; // 이 서버가 보낸 것 — 이미 끊었다
+        BitReader       reader( message._bytes.data(), static_cast<int32>( message._bytes.size() ) );
+        const AccountId accountId = reader.readVarUint();
+        const uint64    sessionId = reader.readVarUint();
+        const uint64    reason    = reader.readVarUint();
+        string          reasonCode;
+        if ( ServiceKeyUtil::readString( reader, LoginConstant::kMaxReasonCodeSize, reasonCode ) == false || reader.hasOverflowed() ||
+             reason > static_cast<uint64>( LoginRevokeReason::AccountDeleted ) )
+        {
+            SW_LOG_WARNING( "Malformed account revoke bus message from server %#", message._originServerId );
+            return;
+        }
+        if ( reasonCode.empty() == false && findSessionId( accountId ) == sessionId )
+            _mapAccountToReasonCode[accountId] = reasonCode;
+        _pLoginService->noteRevokedElsewhere( accountId, sessionId, static_cast<LoginRevokeReason>( reason ) );
     }
 
     void AccountServer::revokeAccountSessions( AccountId accountId, string_view reasonCode, int64 nowMs )
@@ -303,7 +338,11 @@ namespace sw
                 }
             }
             _mapAccountToSession[accountId] = BoundSession{ completion._grant._token, call._connection };
+            _presence.noteOnline( completion._grant._identity );
         }
+        const bool bLinkOperation = completion._operation == LoginOperation::LinkCredential || completion._operation == LoginOperation::LinkPlatform;
+        if ( bOk && bLinkOperation && _mapAccountToSession.find( completion._identity._accountId ) != _mapAccountToSession.end() )
+            _presence.noteOnline( completion._identity ); // 표시 이름 · 게스트 깃발이 바뀌었다
         (void)host.respondOk( call._token, body );
         if ( bOk && completion._operation == LoginOperation::Logout )
         {
@@ -372,5 +411,40 @@ namespace sw
         AccountWire::writeRevokedPush( push, reason, reasonCode );
         (void)host.sendPush( accountId, AccountMethod::kPushRevoked, push );
         host.unbindAccount( accountId );
+    }
+
+    void AccountServer::attachHost( OnlineServiceHost& host )
+    {
+        _bHostAttached = SW_TRUE;
+        _presence.attach( &host );
+        if ( _presence.isEnabled() == false )
+            return; // 서버 한 대
+        host.subscribeServerBus( kRevokeTopic, this );
+        host.subscribeServerBus( OnlinePresence::makePushTopic( host.getServerBus()->getServerId() ), this );
+    }
+
+    void AccountServer::publishRemoteRevocations( OnlineServiceHost& host )
+    {
+        _listEventScratch.clear();
+        _pLoginService->drainRemoteRevocations( _listEventScratch );
+        IServerBus* pBus = host.getServerBus();
+        for ( const LoginEvent& event : _listEventScratch )
+        {
+            string     reasonCode;
+            const auto codeIt = _mapAccountToReasonCode.find( event._accountId );
+            if ( codeIt != _mapAccountToReasonCode.end() )
+            {
+                reasonCode = codeIt->second;
+                _mapAccountToReasonCode.erase( codeIt );
+            }
+            if ( pBus == nullptr )
+                continue; // 서버 한 대 — 붙어 있지 않은 세션(재접속 유예)은 알릴 곳이 없다
+            BitWriter message;
+            message.writeVarUint( event._accountId );
+            message.writeVarUint( event._sessionId );
+            message.writeVarUint( static_cast<uint64>( event._reason ) );
+            ServiceKeyUtil::writeString( message, reasonCode );
+            pBus->publish( kRevokeTopic, message.getBytes().data(), message.getByteCount() );
+        }
     }
 } // namespace sw
