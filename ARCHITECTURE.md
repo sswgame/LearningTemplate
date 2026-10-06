@@ -101,7 +101,7 @@ GameFramework 기반 폴더의 계층은 [Source/GameFramework/README.md](Source
 모르는 이름을 만나면 텍스트 형식에서는 경고하고 건너뛰고, 바이너리 형식에서는 읽기를 거절합니다(`SchemaMigrate.h`). 이 규칙은 `ResourceDataSchemaTest` 가 검사합니다.
 
 렌더링 데이터는 두 종류로 나뉩니다. `RenderPassAsset` 은 패스 하나의 바인딩 설정이고 `renderpass/` 폴더에 있습니다. `RenderPipelineAsset` 은 패스의 순서이고 `pipeline/` 폴더에 있습니다.
-`FrameRenderer` 가 파이프라인을 읽어 `RenderGraph` 를 만들고 정렬합니다. 셰이더 바인딩 슬롯의 원본은 `Resource/engine/shaders/bindingslots.hlsli` 하나입니다([Graphics/README.md](Source/Engine/Graphics/README.md)).
+`FrameRenderer` 가 파이프라인을 읽어 `RenderGraph` 를 만들고 정렬합니다. 셰이더 바인딩 슬롯의 원본은 `Resource/engine/shaders/bindingslots.hlsli` 하나입니다([Shader/README.md](Source/Engine/Graphics/Shader/README.md)).
 
 리플렉션 코드는 빌드할 때 생성합니다. `Tools/ReflectionParser` 가 헤더의 `REFLECT`, `PROPERTY`, `FUNCTION`, `ENUM` 매크로를 읽어 `*.gen.cpp` 를 만듭니다.
 씬 로드, 에디터 인스펙터, 핫 리로드, 이름으로 컴포넌트 만들기가 모두 이렇게 만든 `TypeInfo` 를 씁니다.
@@ -129,7 +129,7 @@ GameFramework 기반 폴더의 계층은 [Source/GameFramework/README.md](Source
 
 **렌더 패킷은 자기가 참조하는 객체를 소유합니다.** 게임 스레드가 만든 메시, 머티리얼, 인스턴스는 `shared_ptr` 로 `GpuSceneSnapshot` 에 담겨 렌더 스레드로 갑니다.
 raw 포인터를 담지 않고, 렌더 스레드로 보내는 객체는 Engine의 `create()` 로 만듭니다. 모듈 DLL이 만든 `shared_ptr` 은 그 모듈이 언로드된 뒤에 해제할 수 없기 때문입니다.
-규칙은 [Graphics/README.md](Source/Engine/Graphics/README.md)의 "소유와 수명" 절에 있고, `Scripts/lint/gate/CheckRenderOwnership.py` 가 검사합니다.
+규칙은 [Renderer/README.md](Source/Engine/Graphics/Renderer/README.md)의 "소유와 수명" 절에 있고, `Scripts/lint/gate/CheckRenderOwnership.py` 가 검사합니다.
 
 **모듈 리로드는 App이 맡습니다.** 파일 감시, 섀도 복사, 모듈 교체를 하는 `LiveReloadManager` 는 `Source/App/Module/` 에 있고, Shipping 빌드에서는 파일째 빠집니다.
 Engine이 아는 것은 지연 로드 훅이 쓰는 `IModuleHandleProvider` 하나뿐입니다. 모듈 DLL은 씬이 모두 정리되고 엔진 서비스는 아직 남아 있는 구간(`EngineLoop::setOnScenesReleased`)에서만 언로드합니다.

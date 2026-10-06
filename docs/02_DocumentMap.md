@@ -49,8 +49,8 @@
 
 ### 엔진
 - [Source/Engine](../Source/Engine/README.md) — 폴더 계층 표, 루트 파일(시작과 종료), 상용 엔진과의 비교
-- [Graphics](../Source/Engine/Graphics/README.md) — RHI, 머티리얼, 바인딩 계약, 소유와 수명
-  - [RHI](../Source/Engine/Graphics/RHI/README.md), [Renderer](../Source/Engine/Graphics/Renderer/README.md), [Shader](../Source/Engine/Graphics/Shader/README.md), [2D](../Source/Engine/Graphics/2D/README.md)
+- [Graphics](../Source/Engine/Graphics/README.md) — 렌더링 입문(한 프레임의 흐름, 머티리얼과 패스를 더하는 법)
+  - [RHI](../Source/Engine/Graphics/RHI/README.md), [Renderer](../Source/Engine/Graphics/Renderer/README.md), [Shader](../Source/Engine/Graphics/Shader/README.md), [Material](../Source/Engine/Graphics/Material/README.md), [2D](../Source/Engine/Graphics/2D/README.md)
 - [Object](../Source/Engine/Object/README.md) — 게임 오브젝트, 컴포넌트, 틱, 구조 변경
   - [Component/2D](../Source/Engine/Object/Component/2D/README.md), [Component/Physics](../Source/Engine/Object/Component/Physics/README.md)
 - [Scene](../Source/Engine/Scene/README.md) — 씬, 씬 매니저, 씬 파일, 쿠킹
