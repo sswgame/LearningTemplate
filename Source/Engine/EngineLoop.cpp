@@ -87,6 +87,7 @@
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontSystem.h"
 #include "Engine/Text/GlyphCache.h"
+#include "Engine/UI/UiSystem.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -839,6 +840,17 @@ namespace sw
         }
     };
 
+    struct EngineLoop::UiStartupStep : EngineInitStepDefaults<EngineLoop>
+    {
+        static EngineInitResult initialize( EngineLoop& loop )
+        {
+            return loop._owned._pUiSystem->initialize( *loop._owned._pInputManager, loop._owned._pFontSystem.get() ) ? EngineInitResult::Succeeded
+                                                                                                                     : EngineInitResult::Failed;
+        }
+        static void shutdown( EngineLoop& loop ) { loop._owned._pUiSystem->shutdown(); }
+        static void destroy( EngineLoop& loop ) { loop._owned._pUiSystem.reset(); }
+    };
+
     EngineLoop::EngineLoop()
         : _bootstrap{}
         , _configManager{ nullptr }
@@ -1092,6 +1104,9 @@ namespace sw
             _pAutomationRunner->onFrameBegin( *_owned._pInputManager );
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->beginFrame( deltaSeconds );
+        // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
+        if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
+            _owned._pUiSystem->processInput( deltaSeconds );
 
         if ( gv_dumpReflection.empty() == false )
         {
@@ -1213,6 +1228,14 @@ namespace sw
                 sceneId = pTelemetryScene->getSourcePath().empty() ? pTelemetryScene->getName() : pTelemetryScene->getSourcePath();
             _owned._pTelemetryService->recordFrame( sceneId, deltaTime );
             _owned._pTelemetryService->update( deltaTime );
+        }
+
+        // 런타임 UI — 이번 프레임의 게임 상태로 애니메이션 · 스타일 · 레이아웃을 돌린다(게임 틱 뒤 · 렌더 패킷 앞). 뷰포트는 게임이 그려지는 화면이다.
+        if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
+        {
+            UiViewport viewport{};
+            viewport._size = float2{ static_cast<float32>( vpWidth ), static_cast<float32>( vpHeight ) };
+            _owned._pUiSystem->update( deltaTime, viewport );
         }
 
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).

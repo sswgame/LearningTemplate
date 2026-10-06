@@ -1,0 +1,131 @@
+/**
+ * @file WidgetTypes.h
+ * @brief 위젯 계층의 값 타입입니다 — 번호 · 보임 · 무효화 이유 · 기하(배치 결과) · 렌더 변환 · 뷰포트.
+ * @details 좌표는 **UI 단위**(UI 배율을 곱하기 전, 1080p 기준 픽셀과 같은 크기)이고 원점은 화면 왼쪽 위 · y 는 아래가 + 입니다.
+ */
+#pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
+#include "Core/Math/VectorMath.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /** @brief 트리 안에서 위젯을 가리키는 번호입니다. 프로세스 안에서 다시 쓰지 않습니다 — 포커스 · 포인터 잡기 · 호버는 포인터가 아니라 이것을 듭니다. */
+    using WidgetId = uint32;
+    /** @brief 위젯이 없음을 뜻하는 번호입니다(위젯 번호는 1 부터다). */
+    inline constexpr WidgetId kInvalidWidgetId = 0;
+
+    /** @brief 보임 · 히트 테스트 방식입니다(언리얼 ESlateVisibility 와 같은 다섯). */
+    ENUM()
+    enum class WidgetVisibility : uint8
+    {
+        Visible,             ///< 보이고 클릭을 받는다
+        Collapsed,           ///< 안 보이고 자리도 차지하지 않는다(레이아웃이 0)
+        Hidden,              ///< 안 보이지만 자리는 차지한다
+        HitTestInvisible,    ///< 보이지만 자기와 자식 모두 클릭을 받지 않는다(HUD 장식)
+        SelfHitTestInvisible ///< 보이고 자기만 클릭을 받지 않는다 — 자식은 받는다(겹친 패널)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct WidgetDirty
+     * @brief 무효화 이유(비트)입니다. 레이아웃과 그리기를 나누는 것이 유지형 UI 의 핵심입니다(언리얼 EInvalidateWidgetReason).
+     */
+    struct WidgetDirty
+    {
+        static constexpr uint32 kNone        = 0;
+        static constexpr uint32 kLayout      = SW_BIT( 0 ); ///< 원하는 크기가 바뀔 수 있다 — 부모 방향으로 레이아웃 경계까지 올라간다
+        static constexpr uint32 kChildLayout = SW_BIT( 1 ); ///< 자식 중 누가 kLayout — 이 위젯은 자기 원하는 크기를 다시 재야 하는지 자식에게 묻는다
+        static constexpr uint32 kArrange     = SW_BIT( 2 ); ///< 크기는 같지만 자식 자리를 다시 놓는다(정렬 · 스크롤 오프셋)
+        static constexpr uint32 kPaint       = SW_BIT( 3 ); ///< 자기 그림만 다시(색 · 글 색 · 그림 바뀜) — 레이아웃은 그대로
+        static constexpr uint32 kStyle       = SW_BIT( 4 ); ///< 계산된 스타일을 다시(상태 · 클래스 바뀜) — 결과에 따라 kLayout 또는 kPaint 로 번진다
+        static constexpr uint32 kTransform   = SW_BIT( 5 ); ///< 렌더 변환 · 불투명도만 — 레이아웃을 건드리지 않는다(애니메이션의 값싼 길)
+        static constexpr uint32 kVisibility  = SW_BIT( 6 ); ///< 보임이 바뀜 — 보수적으로 레이아웃 · 그리기 둘 다
+        static constexpr uint32 kLayoutRoot  = SW_BIT( 7 ); ///< (트리가 붙인다) 다시 잴 뿌리 목록에 이미 올랐다 — 같은 뿌리를 두 번 적지 않는다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct WidgetGeometry
+     * @brief 배치 결과 — 레이아웃 사각형과 화면으로 가는 누적 렌더 변환입니다.
+     * @details 로컬 점(레이아웃 사각형 왼쪽 위 원점) p 의 화면 점 = _translation + p.x × _axisX + p.y × _axisY 입니다.
+     *          렌더 변환이 없으면 축은 단위이고 _translation 이 곧 _position 입니다.
+     */
+    struct SW_API WidgetGeometry
+    {
+        float2 _position{};          ///< 레이아웃 사각형 왼쪽 위(렌더 변환을 적용하기 전, 화면 UI 단위)
+        float2 _size{};              ///< 레이아웃 사각형 크기
+        float2 _axisX{ 1.0f, 0.0f }; ///< 로컬 x 1 이 화면에서 가는 벡터
+        float2 _axisY{ 0.0f, 1.0f }; ///< 로컬 y 1 이 화면에서 가는 벡터
+        float2 _translation{};       ///< 로컬 원점의 화면 점
+
+        /** @brief 렌더 변환이 없는 기하를 만듭니다(화면 사각형 그대로). */
+        static WidgetGeometry makeAxisAligned( const float2& position, const float2& size );
+
+        /** @brief 로컬 점(레이아웃 사각형 왼쪽 위 원점)을 화면 점으로 바꿉니다. */
+        float2 transformPoint( const float2& local ) const;
+        /** @brief 화면 점을 로컬 점으로 바꿉니다(히트 테스트). 축이 퇴화(넓이 0)면 false 입니다. */
+        [[nodiscard]] bool inverseTransformPoint( const float2& screen, float2& outLocal ) const;
+        /** @brief 로컬 점이 레이아웃 사각형 안이면 true 입니다(왼쪽 · 위 변 포함, 오른쪽 · 아래 변 제외). */
+        bool containsLocal( const float2& local ) const { return 0.0f <= local._x && local._x < _size._x && 0.0f <= local._y && local._y < _size._y; }
+        /** @brief 축이 단위(회전 · 기울임 · 배율 없음)면 true 입니다. */
+        bool isAxisAligned() const;
+
+        bool operator==( const WidgetGeometry& other ) const;
+        bool operator!=( const WidgetGeometry& other ) const { return ( *this == other ) == false; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct WidgetRenderTransform
+     * @brief 렌더 변환입니다 — 레이아웃이 끝난 뒤 그림 · 히트 테스트에만 적용합니다(UMG Render Transform).
+     * @details 피벗(위젯 사각형 안 0..1) 기준으로 배율 → 기울임 → 회전 → 이동 순서로 겁니다.
+     */
+    REFLECT()
+    struct SW_API WidgetRenderTransform
+    {
+        REFLECT_BODY();
+
+        PROPERTY( DisplayName = "Translation", Meta = "Units=ui" )
+        float2 _translation{};
+        PROPERTY( DisplayName = "Scale" )
+        float2 _scale{ 1.0f, 1.0f };
+        PROPERTY( DisplayName = "Shear" )
+        float2 _shear{};
+        PROPERTY( DisplayName = "Angle", Units = deg )
+        float32 _angleDegrees{ 0.0f };
+        PROPERTY( DisplayName = "Pivot", Tooltip = "Pivot in the widget's own rect (0..1)" )
+        float2 _pivot{ 0.5f, 0.5f };
+
+        /** @brief 아무것도 바꾸지 않는 변환이면 true 입니다(피벗은 보지 않는다). */
+        bool isIdentity() const;
+        /**
+         * @brief 이 변환을 레이아웃 사각형 @p geometry 에 겹친 기하를 만듭니다.
+         * @details 피벗 점(사각형 안 _pivot 비율)을 고정한 채 배율 · 기울임 · 회전을 걸고 _translation 만큼 옮깁니다.
+         */
+        WidgetGeometry applyTo( const WidgetGeometry& geometry ) const;
+
+        bool operator==( const WidgetRenderTransform& other ) const;
+        bool operator!=( const WidgetRenderTransform& other ) const { return ( *this == other ) == false; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct UiViewport
+     * @brief UI 가 그려질 화면 하나의 크기입니다(UI 단위). 게임 창이면 백버퍼, 에디터면 게임 뷰 렌더 타깃입니다.
+     */
+    struct UiViewport
+    {
+        float2 _size{}; ///< UI 단위 크기(UI 배율을 곱하기 전)
+    };
+} // namespace sw

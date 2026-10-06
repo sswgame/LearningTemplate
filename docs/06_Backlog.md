@@ -1242,6 +1242,8 @@ cd build/Ninja-Debug/Bin
   에디터에는 이름표 편집 창구가 없다(`_componentName` 은 `HideInInspector`). 만들게 되면 프리팹 인스턴스의 물려받은 컴포넌트는 막는다(언리얼과 같다).
 - **`getAllGameObjects()` 값 반환은 사건 구동 5 곳만**(에디터 프리팹 명령 둘 · 미리보기 둘 · `Scene::shutdown`) — 프레임 경로에 쓰면 `getAllGameObjects( out )` · `forEachGameObject`.
 - **`MeshInstanceBatch` 는 항목 수 고정 · 메시 · 머티리얼 하나**(언리얼 ISM 과 같다) — 늘리려면 다시 만들고, 항목별 머티리얼 · 투명 정렬이 필요하면 `MeshComponent` 로.
+- **UI 위젯은 `WidgetId` 로 들고(포인터는 그 호출 안에서만), 무효화는 이유를 나눠 알린다 — 레이아웃만 부모로 번진다**(레이아웃 경계에서 멈춘다, `Engine/UI/README.md`).
+  리플렉션 파생 위젯은 `getTypeInfo()` 를 자기 `StaticType()` 으로 덮어쓴다(RTTI 가 없다 — 빠뜨리면 `castTo` 가 부모 타입으로 본다).
 
 ### 3-7. 그래픽스 · RHI · 셰이더
 

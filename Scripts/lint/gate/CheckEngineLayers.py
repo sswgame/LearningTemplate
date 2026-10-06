@@ -171,6 +171,9 @@ _kEngineTier: dict[str, int] = {
     "Automation": 8,
     # 파괴(파쇄 · 연결 그래프 · 피해 · 조각 컴포넌트). 캐릭터 형상의 자르기 도구(7)와 컴포넌트 모델(6) 위에 선다 — 렌더러는 모른다.
     "Destruction": 8,
+    # 런타임(게임) UI — 위젯 트리 · 레이아웃 · 사건 · 포커스 · 스타일 · 문서 · 바인딩. 입력(6) · 글자(5) · 캔버스 그리기 목록(Graphics, 5) · 사용자 설정(7)을 쓴다.
+    # 렌더러(8)와는 서로 include 하지 않는다 — 사이의 값은 Graphics/Canvas 의 그리기 목록뿐이다(언리얼 Slate ↔ SlateRHIRenderer 의 선).
+    "UI": 8,
     # 9: 전부를 엮는 자리.
     _kRootLayerName: 9,
 }

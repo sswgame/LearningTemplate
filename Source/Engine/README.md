@@ -20,7 +20,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 | 5 | `Graphics`(Renderer 제외) · `Window` · `Text` | RHI · 셰이더 · 머티리얼 · 메시 · 텍스처 — **디바이스와 GPU 에셋**. 창은 표면(`Common/IRenderSurface`)으로만 RHI 에 보인다. 글자(`Text` — 글꼴 · 글리프 · SDF 아틀라스(CPU 바이트) · 셰이핑 · 줄 바꿈)는 글꼴 파일(Resource)을 읽고 GPU 를 모른다 — 아틀라스 업로드는 렌더러가 한다. |
 | 6 | `Input` · `Object` | 컴포넌트 모델. 컴포넌트가 머티리얼·메시(5)를 든다 — 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 드는 것과 같은 자리. |
 | 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` · `Environment` · `DevTools` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트 · 지형 · 식생 · 물). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. 개발 도구(`DevTools` — 게임 창 개발 콘솔의 판단 · 엔진 개발 명령 · 로컬라이제이션 수집 명령)는 씬(7) · 입력(6) · 창 · 디버그 그리기(5) 위에 선다. |
-| 8 | `Graphics/Renderer` · `Module` · `Telemetry` · `Destruction` · `Automation` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Cook)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. 텔레메트리 · 크래시 보고는 동의를 사용자 설정(7)에서 읽는다. 파괴(`Destruction`)는 캐릭터 형상의 자르기 도구(7) 위에 서는 기능 모듈이라 여기다(렌더러는 모른다). |
+| 8 | `Graphics/Renderer` · `Module` · `Telemetry` · `Destruction` · `Automation` · `UI` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Cook)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. 텔레메트리 · 크래시 보고는 동의를 사용자 설정(7)에서 읽는다. 파괴(`Destruction`)는 캐릭터 형상의 자르기 도구(7) 위에 서는 기능 모듈이라 여기다(렌더러는 모른다). 런타임 UI(`UI`)는 입력(6) · 글자(5) · 사용자 설정(7)을 쓰고, 렌더러와는 서로 include 하지 않는다 — 사이의 값은 그리기 목록뿐이다(언리얼 Slate ↔ SlateRHIRenderer). |
 | 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
 
 강결합 묶음은 없습니다 — 이 표는 DAG 이고 `CheckEngineLayers` 가 그대로 강제합니다.
@@ -70,6 +70,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Localization/**: 문자열 표(원문 · 문화권 번역 · 낡은 번역 판정) · 문화권 데이터 · ICU 메시지 포맷(복수형 · 고르기 · 숫자 · 날짜) · 의사 로컬라이제이션 · `SW_LOCTEXT`. [Localization/README.md](Localization/README.md)
 - **Text/**: 런타임 글자 — 글꼴 래스터라이저 계약(`IFontRasterizer`, 구현은 `Text/FreeType/` 하나 — FreeType 헤더는 거기서만 include 한다,
   `CheckThirdPartyIsolation.py`) · 단일 채널 SDF 글리프 · 글꼴 서비스(`FontSystem` — 카탈로그 · 시스템 글꼴 · 문화권 대체 사슬). GPU 를 모르는 티어 5 다. [Text/README.md](Text/README.md)
+- **UI/**: 런타임(게임) UI — 유지형 위젯 트리(`Widget` · `PanelWidget` · `WidgetTree`, 무효화 이유를 나눠 알린다) · 서비스 `UiSystem`. 티어 8. [UI/README.md](UI/README.md)
 - **DevTools/**: 개발 도구 — 게임 창 콘솔의 판단(`DevConsoleController`) · 엔진 개발 명령(`EngineDevCommands.cpp`) · 로컬라이제이션 수집 · 가져오기 ·
   내보내기 명령의 본문(`LocalizationTools`, `EngineLoop` 이 명령줄로 부른다). 씬 · 오브젝트 · 대화 에셋을 함께 보므로 티어 7 이다.
 - **UserSettings/**: 플레이어 옵션 메뉴의 백엔드 — 데이터 스키마 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기/확인 카운트다운 · 메뉴 바인딩 API. [UserSettings/README.md](UserSettings/README.md)
