@@ -79,15 +79,10 @@ namespace sw
 
     /**
      * @brief DXGI_FORMAT 을 RHIFormat 으로 되돌립니다. 대응이 없으면(typeless 등) Unknown 입니다.
-     * @details DXGI_FORMAT 은 값이 110 개가 넘는 **플랫폼 enum** 이고 이 엔진이 다루는 것은 그중 일부입니다.
-     *          -Wswitch-enum 은 default 가 있어도 모든 값을 적으라고 하는데, 여기서는 그 목록을 유지할 수도
-     *          없고 유지할 이유도 없습니다. 새 DXGI 포맷이 생기면 Unknown 이 맞는 답입니다. 반대 방향인
-     *          toDxgiFormat 은 경고를 그대로 받습니다: RHIFormat 은 **우리 enum** 이라 늘어나면 알려 줘야 합니다.
+     * @details DXGI_FORMAT 은 값이 110 개가 넘는 **플랫폼 enum** 이고 이 엔진이 다루는 것은 그중 일부입니다. 대응이 없는 값은 `default:` 가
+     *          Unknown 으로 돌립니다(새 DXGI 포맷도 Unknown 이 맞는 답입니다). 반대 방향인 toDxgiFormat 은 `default:` 없이 모든
+     *          RHIFormat 을 다룹니다 — RHIFormat 은 **우리 enum** 이라 늘면 `-Werror=switch` 가 빌드를 세웁니다.
      */
-    #if defined( SW_COMPILER_CLANG )
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Wswitch-enum"
-    #endif
     inline RHIFormat fromDxgiFormat( DXGI_FORMAT format )
     {
         switch ( format )
@@ -126,9 +121,6 @@ namespace sw
                 return RHIFormat::Unknown;
         }
     }
-    #if defined( SW_COMPILER_CLANG )
-        #pragma clang diagnostic pop
-    #endif
 } // namespace sw
 
 #endif

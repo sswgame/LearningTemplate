@@ -240,7 +240,7 @@ namespace sw
             for ( size_t index = 0; index < _size; ++index )
             {
                 if constexpr ( std::is_nothrow_move_constructible_v<T> )
-                    // NOLINTNEXTLINE(bugprone-branch-clone)
+                    // NOLINTNEXTLINE(bugprone-branch-clone) — 순서가 규칙이다(위 주석: 예외 없는 이동 먼저, 복사, 예외를 던지는 이동은 마지막)
                     sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
                 else if constexpr ( std::is_copy_constructible_v<T> )
                     sw_placement_new( ( pNewData + ( index ) ) ) T( _pData[index] );

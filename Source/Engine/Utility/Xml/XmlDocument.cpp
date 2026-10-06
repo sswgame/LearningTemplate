@@ -132,7 +132,7 @@ namespace sw
                         ++tokenStart;
 
                     result.push_back( '\n' );
-                    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
+                    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage) — 길이를 함께 넘긴다(위 첫 속성과 같다)
                     result.append( line.data(), indentLen );
                     result.append( alignColumn, ' ' );
                     result.append( line.data() + tokenStart, listAttrEnd[attrIndex] - tokenStart );

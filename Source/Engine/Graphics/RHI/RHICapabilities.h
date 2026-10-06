@@ -60,7 +60,7 @@ namespace sw
             // DX11 · DX12 가 같은 답을 내는 것은 의도다. 둘 다 Windows 전용이다.
             switch ( backend )
             {
-                // NOLINTNEXTLINE(bugprone-branch-clone)
+                // NOLINTNEXTLINE(bugprone-branch-clone) — DX11 · DX12 가 같은 답인 것은 의도다(둘 다 Windows 전용)
                 case RHIBackend::DirectX11:
                 case RHIBackend::DirectX12:
 #if defined( SW_PLATFORM_WINDOWS )
