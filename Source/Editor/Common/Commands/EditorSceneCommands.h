@@ -41,6 +41,12 @@ namespace sw::editor
         static bool unparent( GameObject* pObj, string_view undoLabel = "Unparent GameObject" );
         /** @brief Undo에 삭제를 기록하고 매니저에서 제거합니다. */
         static bool destroy( GameObjectManager* pManager, GameObject* pObj );
+        /**
+         * @brief 고른 오브젝트들을 되돌리기 한 단계로 지웁니다. 고른 조상이 있는 오브젝트는 그 조상과 함께 지워지므로 건너뜁니다. 지운 수를 돌려줍니다.
+         */
+        static uint32 destroyObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject );
+        /** @brief 고른 오브젝트들을 되돌리기 한 단계로 복제하고 새 오브젝트를 @p outListCreated 에 담습니다(먼저 비운다). */
+        static void duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated );
         /** @brief 이름을 바꾸고 Undo에 기록합니다. */
         [[nodiscard]] static bool rename( GameObject* pObj, const utf8* pNewName );
         /**

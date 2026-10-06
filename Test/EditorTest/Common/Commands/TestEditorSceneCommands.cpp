@@ -273,6 +273,62 @@ SW_TEST_CASE( EditorSceneCommandsTest, SetActiveIsUndoable )
 }
 
 /**
+ * @brief [EditorSceneCommandsTest] 여럿을 한 번에 지우거나 복제하면 되돌리기 한 단계다(고른 부모의 자식은 부모와 함께 지워진다)
+ * @details 계층 창이 오브젝트마다 지우기 · 복제를 불러 오브젝트 수만큼 되돌리기 단계가 생겼다 — 한 번에 지운 것을 여러 번 눌러야 돌아왔다.
+ */
+SW_TEST_CASE( EditorSceneCommandsTest, SeveralObjectsAreOneUndoStep )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "MultiEditProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+    GameObject*               pA       = pManager->createGameObject( hashed_string( "A" ) );
+    GameObject*               pB       = pManager->createGameObject( hashed_string( "B" ) );
+    GameObject*               pChild   = pManager->createGameObject( hashed_string( "BChild" ) );
+    SW_ASSERT_TRUE( pA != nullptr && pB != nullptr && pChild != nullptr );
+    SW_ASSERT_TRUE( pA->addComponent<SceneComponent>() != nullptr && pB->addComponent<SceneComponent>() != nullptr &&
+                    pChild->addComponent<SceneComponent>() != nullptr );
+    pManager->mergePendingAdds();
+    SW_ASSERT_TRUE( pChild->attachToParent( pB ) );
+    // 지운 오브젝트는 지연 파괴 뒤 되살아나므로 이름으로 센다(되살린 것은 원래 id 지만 지울 때까지는 묘비가 남는다).
+    const auto countLive = [pManager]()
+    {
+        size_t count = 0;
+        pManager->forEachGameObject( [&count]( const GameObject* pObj )
+        {
+            if ( pObj != nullptr && pObj->isPendingDestroy() == false )
+                ++count;
+        } );
+        return count;
+    };
+
+    // 복제 둘 — 한 단계
+    vector<GameObject*> listCopy;
+    EditorSceneCommands::duplicateObjects( pManager, { pA, pB }, listCopy );
+    SW_EXPECT_EQUAL( size_t{ 2 }, listCopy.size() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCommandCount() );
+    stack.undo();
+    pManager->processDeferredDestruction();
+    SW_EXPECT_EQUAL( size_t{ 3 }, countLive() );
+
+    // 지우기 — 자식도 함께 골랐다: 지운 수는 고른 루트 둘, 단계는 하나(되돌린 복제 기록은 새 기록이 잘라 낸다)
+    SW_EXPECT_EQUAL( 2u, EditorSceneCommands::destroyObjects( pManager, { pA, pChild, pB } ) );
+    pManager->processDeferredDestruction();
+    SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCommandCount() );
+    SW_EXPECT_EQUAL( size_t{ 0 }, countLive() );
+
+    stack.undo();
+    pManager->mergePendingAdds();
+    SW_EXPECT_EQUAL( size_t{ 3 }, countLive() );
+    GameObject* pRestoredChild = pManager->findGameObjectByName( hashed_string( "BChild" ) );
+    SW_ASSERT_NOT_NULL( pRestoredChild );
+    SW_EXPECT_TRUE( pRestoredChild->getParent() == pManager->findGameObjectByName( hashed_string( "B" ) ) );
+}
+
+/**
  * @brief [EditorSceneCommandsTest] 계층 창의 재부모 · 부모 떼기는 오브젝트를 놓인 자리에 둔다
  * @details 붙이기가 로컬을 지키면 끌어 놓은 오브젝트가 새 부모의 위치 · 회전 · 크기만큼 튄다(유니티 계층 창 · 언리얼 아웃라이너는 월드를 지킨다).
  */

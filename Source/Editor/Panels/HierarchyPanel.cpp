@@ -753,12 +753,7 @@ namespace sw::editor
                 if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_D, false ) )
                 {
                     vector<GameObject*> listNewCreated;
-                    for ( GameObject* pSrc : listSel )
-                    {
-                        GameObject* pNewGo = EditorSceneCommands::duplicate( pManager, pSrc );
-                        if ( pNewGo != nullptr )
-                            listNewCreated.push_back( pNewGo );
-                    }
+                    EditorSceneCommands::duplicateObjects( pManager, listSel, listNewCreated ); // 되돌리기 한 단계
                     if ( listNewCreated.empty() == false )
                     {
                         editorSelection.clearObjectSelection();
@@ -778,10 +773,7 @@ namespace sw::editor
                 }
                 else if ( ImGui::IsKeyPressed( ImGuiKey_Delete, false ) )
                 {
-                    for ( GameObject* pGo : listSel )
-                    {
-                        EditorSceneCommands::destroy( pManager, pGo );
-                    }
+                    (void)EditorSceneCommands::destroyObjects( pManager, listSel ); // 되돌리기 한 단계
                     editorSelection.clearObjectSelection();
                 }
             }

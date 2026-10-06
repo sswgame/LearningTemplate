@@ -183,6 +183,56 @@ namespace sw::editor
         return true;
     }
 
+    uint32 EditorSceneCommands::destroyObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject )
+    {
+        if ( EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr )
+            return 0;
+        // 고른 조상이 있으면 건너뛴다 — 조상을 지우면 자식도 지워지고, 먼저 지운 자식을 다시 지우지 않는다.
+        vector<GameObject*> listRoot;
+        for ( GameObject* pObj : listObject )
+        {
+            if ( pObj == nullptr )
+                continue;
+            bool bAncestorPicked = false;
+            for ( const GameObject* pParent = pObj->getParent(); pParent != nullptr && bAncestorPicked == false; pParent = pParent->getParent() )
+            {
+                for ( const GameObject* pOther : listObject )
+                {
+                    bAncestorPicked = bAncestorPicked || pOther == pParent;
+                }
+            }
+            if ( bAncestorPicked == false )
+                listRoot.push_back( pObj );
+        }
+        if ( listRoot.empty() )
+            return 0;
+
+        uint32 destroyedCount = 0;
+        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Destroy GameObject" ) : "Destroy " + to_string( listRoot.size() ) + " GameObjects" );
+        for ( GameObject* pObj : listRoot )
+        {
+            if ( destroy( pManager, pObj ) )
+                ++destroyedCount;
+        }
+        EditorTransaction::endTransaction();
+        return destroyedCount;
+    }
+
+    void EditorSceneCommands::duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated )
+    {
+        outListCreated.clear();
+        if ( EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr || listObject.empty() )
+            return;
+        EditorTransaction::beginTransaction( listObject.size() == 1 ? string( "Duplicate GameObject" ) : "Duplicate " + to_string( listObject.size() ) + " GameObjects" );
+        for ( GameObject* pSource : listObject )
+        {
+            GameObject* pCopy = duplicate( pManager, pSource );
+            if ( pCopy != nullptr )
+                outListCreated.push_back( pCopy );
+        }
+        EditorTransaction::endTransaction();
+    }
+
     bool EditorSceneCommands::destroy( GameObjectManager* pManager, GameObject* pObj )
     {
         if ( EditorSceneCommandsInternal::canMutateScene() == false )
