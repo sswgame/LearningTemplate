@@ -189,6 +189,30 @@ SW_TEST_CASE( InputManagerTest, NativeEventKeyPressReleaseEdges )
 }
 #endif
 
+/**
+ * @brief [InputManagerTest] 처음 받은 마우스 위치는 이동이 아니다 — 기준점이 없으니 (0, 0) 에서 그 자리까지를 이동량으로 내지 않는다(시작할 때 1인칭 시점이 튀지 않게)
+ */
+SW_TEST_CASE( InputManagerTest, FirstMousePositionIsNotAMove )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+
+    SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseMove( 600, 400 ) ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_EQUAL( 600, input.getMousePosition()._x );
+    SW_EXPECT_EQUAL( 0, input.getMouseDelta()._x );
+    SW_EXPECT_EQUAL( 0, input.getMouseDelta()._y );
+    input.endFrame();
+
+    // 그다음부터는 앞 위치에서의 이동이다.
+    SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseMove( 610, 395 ) ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_EQUAL( 10, input.getMouseDelta()._x );
+    SW_EXPECT_EQUAL( -5, input.getMouseDelta()._y );
+    input.endFrame();
+    input.shutdown();
+}
+
 #if defined( SW_PLATFORM_WINDOWS )
 SW_TEST_CASE( InputManagerTest, NativeEventMouseMovementAndDelta )
 {
@@ -981,6 +1005,10 @@ SW_TEST_CASE( InputManagerTest, MouseSmoothingAndAcceleration )
     SW_EXPECT_NEAR_EQUAL( 0.5f, input.getMouse()->getSmoothing(), 0.001f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, input.getMouse()->getAcceleration(), 0.001f );
 
+    // 첫 위치는 이동이 아니다(기준점) — 원점에 한 번 두고 시작한다.
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 0, 0 ) );
+    input.beginFrame( 0.016f );
+    input.endFrame();
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 0 ) );
     input.beginFrame( 0.016f );
 
@@ -1213,6 +1241,10 @@ SW_TEST_CASE( InputManagerTest, SmoothMouseDeltaReturnsToZeroWhenMouseStops )
     input.getMouse()->setAcceleration( 1.0f );
 
     // 1프레임: 마우스가 x 로 10 움직인다.
+    // 첫 위치는 이동이 아니다(기준점) — 원점에 한 번 두고 시작한다.
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 0, 0 ) );
+    input.beginFrame( 0.016f );
+    input.endFrame();
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 0 ) );
     input.beginFrame( 0.016f );
     SW_EXPECT_NEAR_EQUAL( 10.0f, input.getMouse()->getSmoothDelta()._x, 0.001f );

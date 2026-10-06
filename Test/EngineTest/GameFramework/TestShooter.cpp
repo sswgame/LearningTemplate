@@ -339,7 +339,7 @@ SW_TEST_CASE( ShooterTest, InputMapBindsEveryGameplayAction )
     SW_EXPECT_TRUE( pLook->_kind == BindingKind::MouseDelta2D );
 
     // 마우스를 움직인 프레임에 Look 이 그 이동량(배율 1)을 낸다.
-    input.postRawEvent( RawInputEvent::makeMouseMove( 12, -4 ) );
+    input.postRawEvent( RawInputEvent::makeMouseRawDelta( 12.0f, -4.0f ) );
     input.beginFrame( 0.016f );
     const float2 look = inputMap.getVector2D( "Look" );
     SW_EXPECT_TRUE( look._x > 0.0f );

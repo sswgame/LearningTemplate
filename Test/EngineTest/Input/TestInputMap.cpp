@@ -114,6 +114,10 @@ SW_TEST_CASE( InputMapTest, MouseDeltaLookBinding )
     sw::InputMap& inputMap = input.getInputMap();
     inputMap.bindMouseDelta( "Look", 2.0f );
 
+    // 첫 위치는 이동이 아니다(기준점) — 원점에 한 번 두고 시작한다.
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 0, 0 ) );
+    input.beginFrame( 0.016f );
+    input.endFrame();
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 5 ) );
     input.beginFrame( 0.016f );
 
@@ -154,6 +158,10 @@ SW_TEST_CASE( InputMapTest, MouseDeltaIsNotClampedAndInvertsOnce )
     inputMap.bindMouseDelta( "Look", 2.0f );
     const sw::ActionHandle look = inputMap.getActionHandle( "Look" );
 
+    // 첫 위치는 이동이 아니다(기준점) — 원점에 한 번 두고 시작한다.
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 0, 0 ) );
+    input.beginFrame( 0.016f );
+    input.endFrame();
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 30, 0 ) );
     input.beginFrame( 0.016f );
     const sw::float2 raw      = sw::float2{ static_cast<float32>( input.getMouseDelta()._x ), static_cast<float32>( input.getMouseDelta()._y ) };
