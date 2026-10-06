@@ -106,10 +106,7 @@ file(GLOB swLintScriptWatch CONFIGURE_DEPENDS
 	"${CMAKE_SOURCE_DIR}/Scripts/lint/selftest/*.py"
 )
 
+# 파일은 configure 첫머리(GenerateConfigConstants.cmake 의 GenerateConfigureFiles)가 이미 만들었다.
 set(SW_GENERATED_LINT_TARGETS "${CMAKE_BINARY_DIR}/generated/sw/config/LintTargets.cmake")
-sw_executePythonScript("Scripts/generate/GenerateLintTargets.py"
-	ARGS "${SW_GENERATED_LINT_TARGETS}"
-	REQUIRED
-)
 include("${SW_GENERATED_LINT_TARGETS}")
 sw_addGeneratedLintTargets()

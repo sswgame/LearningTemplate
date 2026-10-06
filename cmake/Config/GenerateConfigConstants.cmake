@@ -6,6 +6,16 @@
 # 상수만 필요하면 이 파일이 아니라 `LoadConfigConstants.cmake` 를 include 한다(그 파일 머리말 참고).
 include_guard(GLOBAL)
 
+# 0. configure 생성기 다섯(ConfigVars · PackFormat · CookContract · ShippingHostDefaults · LintTargets)을 한 프로세스로 — 생성기마다 파이썬을
+#    띄우면 configure 의 3 할 가까이가 파이썬 시작 · import 였다. 규칙 · 출력은 각 생성기 한 자리(GenerateConfigureFiles.py 는 차례로 부를 뿐).
+#    ToolchainVars 는 SetupEnvironment 뒤라 DetectToolchain 이 따로 부른다.
+include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
+sw_executePythonScript("Scripts/generate/GenerateConfigureFiles.py"
+	ARGS "${CMAKE_BINARY_DIR}/generated/sw/config" --game "${SW_ACTIVE_GAME}"
+	REQUIRED
+)
+set(SW_CONFIGURE_FILES_GENERATED ON)
+
 # 1~3. Constants.py 의 상수를 CMake 변수로 (SW_GENERATED_CMAKE_VARS 도 거기서 정한다)
 include("${CMAKE_CURRENT_LIST_DIR}/LoadConfigConstants.cmake")
 
@@ -33,21 +43,13 @@ configure_file(
 # 5. .pack 바이너리 포맷 계약 → C++ 헤더 생성
 # Config/Engine/PackFormat.json 이 단일 출처이고, 같은 파일을 Python 쿠커(CookAssets.py)가
 # 읽는다. 생성물의 offsetof/sizeof static_assert 덕분에 계약과 C++ 이 어긋나면 컴파일이 깨진다.
-set(SW_GENERATED_PACK_FORMAT_H "${CMAKE_BINARY_DIR}/generated/sw/config/PackFormat.gen.h")
-sw_executePythonScript("Scripts/generate/GeneratePackFormat.py"
-	ARGS "${SW_GENERATED_PACK_FORMAT_H}"
-	REQUIRED
-)
+set(SW_GENERATED_PACK_FORMAT_H "${CMAKE_BINARY_DIR}/generated/sw/config/PackFormat.gen.h")   # 0 에서 만들었다
 
 # 5b. 쿠킹 표(RHI 백엔드 · 쿡 접미사) → C++ X-macro 헤더 생성
 # Config/Engine/CookContract.json 이 단일 출처이고, 같은 파일을 Python 쿠커(CookAssets.py)가 읽는다.
 # RHI 백엔드의 빌드 칸(모듈 · 장치 소스 폴더 · 그래픽 라이브러리 · 배포 매크로)은 같은 표에서 CMake 쪽으로 옮긴다(cmake/Engine/RhiBackends.cmake 가 읽는다).
 set(SW_GENERATED_COOK_CONTRACT_H "${CMAKE_BINARY_DIR}/generated/sw/config/CookContract.gen.h")
-set(SW_GENERATED_COOK_CONTRACT_CMAKE "${CMAKE_BINARY_DIR}/generated/sw/config/CookContract.cmake")
-sw_executePythonScript("Scripts/generate/GenerateCookContract.py"
-	ARGS "${SW_GENERATED_COOK_CONTRACT_H}" "${SW_GENERATED_COOK_CONTRACT_CMAKE}"
-	REQUIRED
-)
+set(SW_GENERATED_COOK_CONTRACT_CMAKE "${CMAKE_BINARY_DIR}/generated/sw/config/CookContract.cmake")   # 0 에서 만들었다
 include("${SW_GENERATED_COOK_CONTRACT_CMAKE}")
 
 # 계약 파일이 바뀌면 configure 를 다시 돌려 생성 헤더를 새로 만든다.
@@ -57,8 +59,4 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 )
 
 # 6. Shipping/Dev 폴백용 호스트 기본값 생성 (커밋된 Engine/Game Config JSON)
-set(SW_SHIPPING_HOST_DEFAULTS_H "${CMAKE_BINARY_DIR}/generated/sw/config/ShippingHostDefaults.h")
-sw_executePythonScript("Scripts/generate/GenerateShippingHostDefaults.py"
-	ARGS "${SW_SHIPPING_HOST_DEFAULTS_H}" "${SW_FILE_RUNTIME_GAME_CONFIG}"
-	REQUIRED
-)
+set(SW_SHIPPING_HOST_DEFAULTS_H "${CMAKE_BINARY_DIR}/generated/sw/config/ShippingHostDefaults.h")   # 0 에서 만들었다(SW_FILE_RUNTIME_GAME_CONFIG)

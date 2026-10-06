@@ -80,6 +80,7 @@ Scripts/
   │     ├── GenerateConfigReference.py # 설정 참조 문서(docs/Config) — 결과를 커밋한다, 낡음은 CheckConfigReference 가 본다
   │     ├── GenerateThirdPartyNotices.py # 배포물의 서드파티 고지(vcpkg 매니페스트가 끌어오는 포트 전부)
   │     ├── GenerateCMakeConstants.py # Constants.py → CMake set() 목록
+  │     ├── GenerateConfigureFiles.py # configure 가 부르는 하나 — 위 · 아래 생성기 다섯을 한 프로세스로
   │     ├── GenerateToolchainCMake.py # toolchain_config.json → CMake set() 목록
   │     ├── GenerateLintTargets.py    # lint/gate · selftest 폴더 → CMake 린트 타깃 · 테스트
   │     ├── GenerateEngineAbiStamp.py # Core · Engine 헤더 지문 → 핫 리로드 ABI 도장 헤더

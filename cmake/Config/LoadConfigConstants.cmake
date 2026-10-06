@@ -13,9 +13,13 @@ include_guard(GLOBAL)
 include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 
 # Constants.py 가 정본이다. 파이썬이 `set(SW_...)` 목록을 찍고 CMake 는 그것을 읽는다.
+# 최상위 configure 는 GenerateConfigConstants.cmake 가 생성기 다섯을 한 프로세스로 먼저 돌려 두었다(SW_CONFIGURE_FILES_GENERATED) —
+# 여기서는 상수만 필요한 곳(vcpkg 포트 툴체인처럼 따로 도는 CMake)일 때만 이 생성기를 혼자 부른다.
 set(SW_GENERATED_CMAKE_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ConfigVars.cmake")
-sw_executePythonScript("Scripts/generate/GenerateCMakeConstants.py"
-	ARGS "${SW_GENERATED_CMAKE_VARS}"
-	REQUIRED
-)
+if(NOT SW_CONFIGURE_FILES_GENERATED)
+	sw_executePythonScript("Scripts/generate/GenerateCMakeConstants.py"
+		ARGS "${SW_GENERATED_CMAKE_VARS}"
+		REQUIRED
+	)
+endif()
 include("${SW_GENERATED_CMAKE_VARS}")

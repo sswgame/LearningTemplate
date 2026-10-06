@@ -15,6 +15,7 @@
 | `GeneratePackFormat.py` | 팩 바이너리 계약(`Config/Engine/PackFormat.json`)을 C++ 헤더로 | `build/.../PackFormat.gen.h` |
 | `GenerateCookContract.py` | 쿠킹 표(`Config/Engine/CookContract.json`)를 C++ X-매크로 헤더로 — RHI 백엔드 표 · 쿡 접미사 표 (구성 시점). 쿠커는 같은 표를 `common/CookContract.py` 로 읽는다 | `build/.../CookContract.gen.h` |
 | `GenerateCMakeConstants.py` | `Scripts/common/Constants.py` 의 상수를 CMake `set()` 목록으로 (구성 시점) | `build/.../ConfigVars.cmake` |
+| `GenerateConfigureFiles.py` | 구성 시점 생성기 다섯(CMakeConstants · PackFormat · CookContract · ShippingHostDefaults · LintTargets)을 **한 프로세스로** 차례로 부른다 — configure 가 부르는 것은 이것 하나(생성기마다 파이썬을 띄우면 configure 의 3 할이 파이썬이었다). 각 생성기는 단독 실행도 그대로 | 위 다섯의 출력 |
 | `GenerateToolchainCMake.py` | `Config/Environment/toolchain_config.json` 을 CMake `set()` 목록으로 (구성 시점) | `build/.../ToolchainVars.cmake` |
 | `GenerateLintTargets.py` | `lint/gate` · `lint/selftest` 폴더를 CMake 린트 타깃 · 테스트로 (구성 시점) | `build/.../LintTargets.cmake` |
 | `GenerateEngineAbiStamp.py` | Core · Engine 헤더 내용의 지문 — 핫 리로드의 엔진 ABI 도장 (빌드 시점) | `build/.../EngineAbiStamp.gen.h` |

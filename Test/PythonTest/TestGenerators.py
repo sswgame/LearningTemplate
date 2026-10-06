@@ -63,6 +63,21 @@ class GeneratorsTest(unittest.TestCase):
                         self.assertEqual(outPath.read_bytes(), expected.read_bytes(),
                                          f"{name}: {tree.name} 의 산출물과 다르다(출력이 바뀌었거나 그 빌드 폴더가 오래됐다 — 다시 configure)")
 
+    def testCombinedRunMatchesEachGenerator(self) -> None:
+        # configure 는 다섯을 GenerateConfigureFiles 한 프로세스로 부른다 — 단독 실행과 같은 바이트여야 한다.
+        tree = findBuildTreeInternal()
+        if tree is None:
+            self.skipTest("구성된 빌드 폴더가 없다")
+        gameName = tree.readCacheValue("SW_ACTIVE_GAME") or "Empty"
+        with tempfile.TemporaryDirectory() as tempDir:
+            result = subprocess.run([sys.executable, str(kRepositoryRoot / "Scripts/generate/GenerateConfigureFiles.py"), tempDir, "--game", gameName],
+                                    cwd=kRepositoryRoot, capture_output=True, text=True, encoding="utf-8", errors="replace")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for name in ("ConfigVars.cmake", "PackFormat.gen.h", "CookContract.gen.h", "CookContract.cmake", "ShippingHostDefaults.h",
+                         "LintTargets.cmake"):
+                with self.subTest(output=name):
+                    self.assertEqual((Path(tempDir) / name).read_bytes(), (tree.path / "generated/sw/config" / name).read_bytes())
+
 
 if __name__ == "__main__":
     unittest.main()
