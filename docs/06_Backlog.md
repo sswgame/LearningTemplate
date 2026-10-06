@@ -206,8 +206,7 @@ cd build/Ninja-Debug/Bin
     NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이.
 - **키트 조립 — 남은 것(2026-10-06).** 틀 · 키트 전부 · 조립 시험 둘(`KitCompositionTest` — Farming + CreatureLife, RTS + CityBuilder)과 `MeadowVillage` 는
   들어갔다(규칙: `Source/GameFramework/README.md` "키트 여럿을 한 게임에"). 남은 것 — RTS 가 땅 리비전마다 땅 격자 전체를 다시 칠하는 비용(64 × 64 에서 재고
-  결정, 1-8), 둘째 조립(RTS + City)의 시험 게임(필요해지면 MeadowVillage 모양), 로컬 지갑 = 원장 사본(kit-compose U20 의 남은 반 — GF_Economy 가 생길 때
-  `applyLedgerBalances( Wallet& )` · `EconomyClientTest.LedgerResponseOverwritesTheLocalWallet`, 메서드 번호 영역 표는 `Online/Service/OnlineProtocol.h` 로 들어갔다). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `GameStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에
+  결정, 1-8), 둘째 조립(RTS + City)의 시험 게임(필요해지면 MeadowVillage 모양). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `GameStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에
   `releaseLand`, 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다).
 
 - **카메라 — 프리셋 데이터 · 블렌드 · 시퀀서(사용자 승인 로드맵).** 1~3 단계(프리셋 XML · 블렌드 · 디렉터, 모드(직교 · 궤도 · 따라가기 · 1인칭 · 3인칭 ·

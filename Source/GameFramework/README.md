@@ -301,11 +301,14 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       (`CurrencyCatalog` — 상한 · 유상 표시 · 가상 화폐의 재원 차감 순서(데이터, 관례는 무상 먼저) · `ILedgerPolicy`), 상품 카탈로그(`OfferCatalog` — 가격 xor 스토어 상품 ·
       지급 · 판매 기간 · 계정당 한도 · 한 번 수), 거울(`EconomyMirror` — 원장 잔액 → `Wallet`(add · charge, 빚까지) · `Inventory`(addItem · removeItem), 스냅숏은 없는 것 0).
       온라인 게임에서는 원장(서버)이 소유의 정본이고 `Wallet` · `Inventory` 는 읽기 사본이다 — 오프라인 게임의 `Shop` · `Wallet` 은 그대로 쓴다.
-      시험: `EconomyCatalogTest` · `EconomyMirrorTest`.
+      클라이언트(`EconomyClient` — 요청 넷 · 잔액 캐시, 구매 · 지급 재시도는 같은 멱등 키, 로컬 지갑은 `applyLedgerBalances( wallet )` 로만 맞춘다).
+      시험: `EconomyCatalogTest` · `EconomyMirrorTest` · `EconomyClientTest`(루프백 스트림 계정 + 경제).
     - `Server/Economy`(`GF_Server_Economy`, Server): 구매 · 영수증 저장 논리(`EconomyStoreLogic` — 구매는 계정 → 소각 · 발행 → 계정 분개 하나 + 계정당 구매 수 레코드를
       한 트랜잭션에, 분개 키 = 클라이언트 멱등 키라 재시도는 잔액 · 한도 판정보다 먼저 지난 결과, 재원에 빚이 있으면 그 가상 화폐로 못 산다. 영수증 지급은 거래 id 가
       분개 키라 다른 계정의 같은 영수증은 `AlreadyRedeemed`), 영수증 검증 계약(`Receipt/ReceiptValidator.h` — 맡기고 거두는 `IReceiptValidator` · 등록부, 가짜
-      `Receipt/Provider/Fake/` — 개발 전용). 시험: `EconomyPurchaseTest` · `ReceiptRedeemTest`.
+      `Receipt/Provider/Fake/` — 개발 전용). 서비스 `EconomyService`(IOnlineService 영역 kEconomy + 전송과 무관한
+      입구 `submitCall`, 저장소 일 하나 = 요청 하나, 영수증은 등록부 → 틱에서 거둬 지급 일, 기능 플래그 `feature.shop_enabled`, Shipping 은 개발 전용 제공자 거절,
+      `ServiceMetrics`("economy")). 시험: `EconomyPurchaseTest` · `ReceiptRedeemTest` · `EconomyServiceTest`.
   - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
       연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,
