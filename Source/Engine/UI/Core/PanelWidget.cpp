@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Layout/UiLayoutPass.h"
 
 namespace sw
 {
@@ -90,16 +91,8 @@ namespace sw
         (void)size;
     }
 
-    void PanelWidget::arrangeChild( Widget& child, const float2& localPosition, const float2& size )
+    void PanelWidget::arrangeChild( const UiLayoutContext& context, Widget& child, const float2& localPosition, const float2& size )
     {
-        // 자식 기하 = 이 패널의 기하 ∘ (자식 위치로 옮김) ∘ (자식 렌더 변환 — 피벗 기준).
-        const WidgetGeometry& parent = getGeometry();
-        WidgetGeometry        placed{};
-        placed._position    = float2{ parent._position._x + localPosition._x, parent._position._y + localPosition._y };
-        placed._size        = size;
-        placed._axisX       = parent._axisX;
-        placed._axisY       = parent._axisY;
-        placed._translation = parent.transformPoint( localPosition );
-        child.setArrangedGeometry( child.getRenderTransform().applyTo( placed ) );
+        UiLayoutPass::arrange( child, context, getGeometry(), localPosition, size );
     }
 } // namespace sw

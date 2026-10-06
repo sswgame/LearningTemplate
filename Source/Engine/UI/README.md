@@ -93,3 +93,29 @@ UI 는 키 · 버튼을 직접 보지 않고 **행동**을 받습니다 — 키 
   `wantsCursor` 면 마우스 잠금을 쉰다). 입력 맵이 둘이어도(UI 맵 · 게임 맵) 물리 슬롯으로 견주므로 메뉴에서 누른 패드 A 가 점프가 되지 않습니다.
 - **글 입력 칸**(`supportsTextInput`)이 포커스를 쥐면 키보드 포커스 `Ui` 를 잡습니다 — 게임은 키를 보지 못하고(칸에 있는 동안 누른 키는 뗄 때까지), 글자 · 조합은
   그 위젯의 `onTextEvent` 로 갑니다. 그 동안 UI 행동은 `UI.Back` · `UI.FocusNext/Previous` 만(스페이스가 확인이 되지 않게). 개발 콘솔이 열리면 UI 는 행동을 받지 않습니다.
+## 레이아웃 (`Layout/`)
+
+어느 엔진이나 **두 번 걷기**입니다 — 아래에서 위로 "얼마나 크고 싶나"(measure — Slate `ComputeDesiredSize` · WPF `Measure` · Yoga), 위에서 아래로
+"여기에 이 크기로 놓아라"(arrange — Slate `OnArrangeChildren` · Godot `fit_child_in_rect`). `UiLayoutPass::update( tree, context )` 가 돌립니다.
+
+- **measure 는 가용 크기를 받는다**(`computeDesiredSize( context, availableSize )` — WPF · Yoga 와 같고 Slate 와 다르다). 줄 바꿈 글이 Fill 칸에 들어가면 그 칸 너비로
+  높이를 정해 **같은 프레임에** 맞는다. 축이 `kUiUnbounded` 면 그 축은 원하는 만큼이고, 비교는 `UiLayoutPass::isUnbounded`(여백을 빼도 무한으로 남게).
+- **캐시**: 위젯은 마지막 가용 크기와 결과를 든다. 더럽지 않고(`kLayout` · `kChildLayout` 없음) 같은 가용 크기면 다시 재지 않는다. 한 걷기 안에서 같은 위젯을
+  같은 가용 크기로 두 번 재지 않는다(걷기 번호).
+- **뿌리만 다시**: 트리의 "다시 잴 뿌리"(레이아웃 경계 · 루트 · `kArrange` 위젯)만 지난 가용 크기 · 지난 슬롯 자리로 다시 잰다 · 놓는다. 크기 덮어쓰기가 두 축 다 있는 위젯이
+  레이아웃 경계다(`WidgetLayoutSlot::hasFixedSize`). `kArrange`(스크롤 오프셋)는 위로 번지지 않고 그 위젯만 다시 놓는다(measure 0).
+- **접힌(Collapsed) 위젯**은 재지도 놓지도 않는다. 걷기가 끝날 때 그 아래로 내려가지 않고 `kChildLayout` 을 남겨, 다시 보이면 그 아래를 다시 잰다.
+- 배율 · 글자 배율이 지난 걷기와 다르면 트리 전체를 다시 잰다(`invalidateAllLayout`).
+- **픽셀 맞춤**: 부모 축이 단위(회전 · 기울임 없음)면 사각형의 변을 `round( v × uiScale ) / uiScale` 로 — 1 px 테두리가 번지지 않는다(Slate 픽셀 스냅).
+- 기하가 바뀐 위젯만 그리기 더러움(`setArrangedGeometry`).
+
+**슬롯**(`WidgetLayoutSlot`) — Godot 처럼 모든 패널의 칸을 위젯 하나에 모으고 부모는 자기 칸만 읽는다(리플렉션 타입이 하나라 문서 · 인스펙터 · 핫 리로드가 단순하다).
+UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxSlot`)다. 공통: 여백 · 정렬(Fill · Start · Center · End) · 크기 덮어쓰기 · 최소 · 최대.
+
+| 패널 | 규칙 | 언리얼 · 유니티 · Godot |
+|---|---|---|
+| `BoxPanel` | 주축: Auto 는 원하는 크기, 남은 것은 Fill 에 채우기 비대로 · 교차축: 슬롯 정렬 · 간격 | HorizontalBox/VerticalBox · flex-direction · HBox/VBox |
+| `OverlayPanel` | 모든 자식이 패널 전체를 슬롯으로(정렬 · 여백) | Overlay · (겹침) · Container |
+| `CanvasPanel` | 변 = 앵커 × 패널 크기 + 오프셋, 자동 크기는 커지는 쪽으로 · z 순서(`collectPaintOrder`) | Canvas Panel 앵커 · position absolute · 앵커/오프셋 |
+
+결과를 견주는 형식은 `UiLayoutDump::makeDump( tree )` — 줄마다 `<깊이 들여쓰기><이름> x y w h`(소수 둘째 자리).

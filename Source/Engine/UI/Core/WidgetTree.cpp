@@ -39,6 +39,8 @@ namespace sw
         , _listStyleDirty{}
         , _pFocusManager{ nullptr }
         , _focusedWidget{ kInvalidWidgetId }
+        , _layoutUiScale{ 0.0f }
+        , _layoutTextScale{ 0.0f }
     {
     }
 
@@ -90,6 +92,9 @@ namespace sw
             _listPaintDirty.push_back( widget._id );
         if ( ( dirtyReason & WidgetDirty::kStyle ) != 0 && ( previous & WidgetDirty::kStyle ) == 0 )
             _listStyleDirty.push_back( widget._id );
+        // 배치만: 크기는 그대로라 위로 번지지 않는다 — 이 위젯을 지난 자리에 다시 놓을 뿌리로 적는다(스크롤 오프셋).
+        if ( ( dirtyReason & WidgetDirty::kArrange ) != 0 && ( previous & WidgetDirty::kArrange ) == 0 )
+            addLayoutRoot( widget );
         if ( ( widget._dirtyFlags & WidgetDirty::kLayout ) == 0 || ( previous & WidgetDirty::kLayout ) != 0 )
             return;
         // 레이아웃: 부모 쪽으로 kChildLayout 을 올린다. 부모의 크기가 자식에 기대지 않으면(레이아웃 경계) 거기서 멈추고

@@ -99,5 +99,7 @@ namespace sw
         vector<WidgetId>                                               _listStyleDirty;
         UiFocusManager*                                                _pFocusManager; ///< 지금 이 트리에 포커스를 둔 관리자(없으면 nullptr — 트리가 지워질 때 알린다)
         WidgetId                                                       _focusedWidget;
+        float32                                                        _layoutUiScale;   ///< 지난 레이아웃 걷기의 UI 배율(바뀌면 전체 다시 — UiLayoutPass)
+        float32                                                        _layoutTextScale; ///< 지난 레이아웃 걷기의 글자 배율
     };
 } // namespace sw

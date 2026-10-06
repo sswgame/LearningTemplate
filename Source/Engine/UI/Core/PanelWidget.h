@@ -47,10 +47,13 @@ namespace sw
         void setClipChildren( bool bClip );
 
     protected:
-        /** @brief 자식을 배치합니다(레이아웃 — 패널마다 다르다). 각 자식에 `arrangeChild( child, 위치, 크기 )` 를 부릅니다. 기본은 아무것도 하지 않습니다. */
+        /**
+         * @brief 자식을 배치합니다(레이아웃 — 패널마다 다르다). 각 자식에 `arrangeChild( context, child, 위치, 크기 )` 를 부릅니다. 기본은 아무것도 하지 않습니다.
+         * @details 자식의 원하는 크기(`getDesiredSize`)는 같은 걷기의 `computeDesiredSize` 가 이미 쟀습니다. @p size 는 이 패널 자기 크기입니다.
+         */
         virtual void arrangeChildren( const UiLayoutContext& context, const float2& size );
-        /** @brief 자식 하나를 이 패널의 로컬 위치 · 크기에 놓습니다(레이아웃이 채운다). */
-        void arrangeChild( Widget& child, const float2& localPosition, const float2& size );
+        /** @brief 자식 하나를 이 패널의 로컬 슬롯 사각형에 놓습니다 — 자식 슬롯의 여백 · 정렬을 적용하고 자식의 자식까지 놓습니다(`UiLayoutPass::arrange`). */
+        void arrangeChild( const UiLayoutContext& context, Widget& child, const float2& localPosition, const float2& size );
 
     private:
         friend class Widget;

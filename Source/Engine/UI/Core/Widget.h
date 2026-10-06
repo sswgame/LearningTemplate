@@ -87,9 +87,9 @@ namespace sw
         uint32 getDirtyFlags() const { return _dirtyFlags; }
         /**
          * @brief 크기가 자식에 기대지 않는 위젯이면 true 입니다(레이아웃 경계). 자식의 kLayout 이 여기서 멈춥니다.
-         * @details 기본은 false 입니다. 레이아웃이 슬롯의 크기 덮어쓰기(두 축 다)를 보고 답합니다 — 위젯 1 만 개에서 글 하나 바뀐 비용을 국소로 만든다.
+         * @details 기본은 슬롯의 크기 덮어쓰기가 두 축 다 있을 때입니다 — 위젯 1 만 개에서 글 하나 바뀐 비용을 국소로 만든다.
          */
-        virtual bool isLayoutBoundary() const { return false; }
+        virtual bool isLayoutBoundary() const { return _slot.hasFixedSize(); }
 
         // --- 레이아웃 ---------------------------------------------------------------
         /** @brief 원하는 크기입니다(마지막 measure 결과, UI 단위). */
@@ -122,8 +122,11 @@ namespace sw
         virtual void onHoverChanged( bool bHovered );
 
     protected:
-        /** @brief 자식 없이 자기 내용만으로 원하는 크기를 잽니다(레이아웃). 기본은 0 입니다. */
-        virtual float2 computeDesiredSize( const UiLayoutContext& context ) const;
+        /**
+         * @brief 원하는 크기를 잽니다(레이아웃 measure). 패널은 여기서 자식을 `UiLayoutPass::measure` 로 잽니다. 기본은 0 입니다.
+         * @param availableSize 슬롯이 줄 수 있는 크기(여백 · 덮어쓰기 적용 뒤, UI 단위). 축이 `kUiUnbounded` 면 그 축은 원하는 만큼.
+         */
+        virtual float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const;
         /** @brief 자기 그림을 칠합니다(그리기). 자식은 트리가 칠한다. 기본은 아무것도 칠하지 않습니다. */
         virtual void paint( CanvasPainter& painter, const UiPaintContext& context ) const;
         /** @brief 트리에 붙었다(바인딩 · 애니메이션이 여기서 붙는다). 자손은 부모 다음에 불린다. */
@@ -154,12 +157,16 @@ namespace sw
         PROPERTY( DisplayName = "Navigation" )
         WidgetNavigation _navigation;
 
-        WidgetGeometry _geometry;    ///< 마지막 arrange 결과
-        float2         _desiredSize; ///< 마지막 measure 결과
-        PanelWidget*   _pParent;     ///< 소유자(구조 링크 — 원시 포인터)
-        WidgetTree*    _pTree;       ///< 붙은 트리(떨어져 있으면 nullptr)
+        WidgetGeometry _geometry;          ///< 마지막 arrange 결과
+        float2         _desiredSize;       ///< 마지막 measure 결과
+        float2         _lastAvailableSize; ///< 마지막 measure 의 가용 크기(덮어쓰기 적용 뒤) — 캐시 열쇠 · 뿌리 다시 재기
+        float2         _lastSlotPosition;  ///< 마지막 arrange 의 슬롯 자리(부모 로컬) — 뿌리 다시 놓기
+        float2         _lastSlotSize;      ///< 마지막 arrange 의 슬롯 크기
+        PanelWidget*   _pParent;           ///< 소유자(구조 링크 — 원시 포인터)
+        WidgetTree*    _pTree;             ///< 붙은 트리(떨어져 있으면 nullptr)
         WidgetId       _id;
-        uint32         _dirtyFlags; ///< WidgetDirty 비트
+        uint32         _dirtyFlags;   ///< WidgetDirty 비트
+        uint32         _layoutSerial; ///< 마지막으로 잰 레이아웃 걷기 번호(0 = 아직 잰 적 없음)
 
         PROPERTY( DisplayName = "Opacity", Min = 0.0, Max = 1.0 )
         float32 _opacity;

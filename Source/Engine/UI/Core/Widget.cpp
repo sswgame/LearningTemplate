@@ -28,10 +28,14 @@ namespace sw
         , _navigation{}
         , _geometry{}
         , _desiredSize{}
+        , _lastAvailableSize{}
+        , _lastSlotPosition{}
+        , _lastSlotSize{}
         , _pParent{ nullptr }
         , _pTree{ nullptr }
         , _id{ s_nextWidgetId.fetch_add( 1, std::memory_order_relaxed ) }
         , _dirtyFlags{ WidgetDirty::kLayout | WidgetDirty::kPaint | WidgetDirty::kStyle }
+        , _layoutSerial{ 0 }
         , _opacity{ 1.0f }
         , _visibility{ WidgetVisibility::Visible }
         , _bEnabled{ true }
@@ -173,9 +177,10 @@ namespace sw
         (void)bHovered;
     }
 
-    float2 Widget::computeDesiredSize( const UiLayoutContext& context ) const
+    float2 Widget::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
     {
         (void)context;
+        (void)availableSize;
         return float2{};
     }
 
