@@ -65,7 +65,9 @@
 
 ### 에디터 · 게임 쪽
 - [Source/Editor](../Source/Editor/README.md) — 에디터 모듈 · 임포트 · 패널을 더하는 법
-- [Source/GameFramework](../Source/GameFramework/README.md) — 장르 공통 기반(`Base/` — 온라인 기반 `Base/Online` 포함) · 키트 규칙(공유 · 서버 · 클라이언트 키트) · 기반 폴더의 층
+- [Source/GameFramework](../Source/GameFramework/README.md) — 장르 공통 기반과 기반 폴더의 층, 조종(폰과 조종자), 디렉터 베이스, 카메라
+  - [Kits](../Source/GameFramework/Kits/README.md) — 키트 목록, 키트를 만드는 규칙, 키트 여럿을 한 게임에 섞는 법
+  - [Online](../Source/GameFramework/Base/Online/README.md) — 온라인 서비스 기반(호스트, 저장소, 캐시, 버스, 원장)과 온라인 서비스 키트
   - [Ability](../Source/GameFramework/Base/Ability/README.md) · [Appearance](../Source/GameFramework/Base/Appearance/README.md) · [Gimmick](../Source/GameFramework/Base/Gimmick/README.md) ·
     [Interaction](../Source/GameFramework/Base/Interaction/README.md) · [Spline](../Source/GameFramework/Base/Spline/README.md) ·
     [AI/Director](../Source/GameFramework/Base/AI/Director/README.md) · [AI/Schedule](../Source/GameFramework/Base/AI/Schedule/README.md)

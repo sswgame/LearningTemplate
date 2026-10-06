@@ -81,7 +81,7 @@ class CheckKitNamespacesGate(LintGate):
     preCommitFileArgument = ""
     violationHeader = "키트 이름 공간 위반"
     hint = ("상태 표는 새 네 글자로(FourCcUtil::make), 입력은 입력 맵 액션으로(키트는 설정 칸), 키트 설정 칸은 `<키트>.` 접두로, "
-            "공유 상태는 빌린다(`GameStateRefs`) — Source/GameFramework/README.md \"키트 여럿을 한 게임에\"")
+            "공유 상태는 빌린다(`GameStateRefs`) — Source/GameFramework/Kits/README.md \"키트 여럿을 한 게임에\"")
     selfTestCases = [
         {
             "name": "두 파일이 같은 상태 표를 쓴다",
