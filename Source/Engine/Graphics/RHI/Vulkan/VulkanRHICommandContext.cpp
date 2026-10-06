@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Support/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
@@ -709,28 +710,31 @@ namespace sw
         state._bDirty = SW_FALSE;
     }
 
-    void VulkanRHICommandContext::bindMeshVertexBufferOrFallback()
+    bool VulkanRHICommandContext::bindMeshVertexBufferForDraw()
     {
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE )
-            return;
+            return false;
 
         VkBuffer     slot0Buffer = VK_NULL_HANDLE;
         VkDeviceSize slot0Offset = 0;
         if ( _pState->_boundMeshVb != 0 )
         {
+            // 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다 — 장치 공용 버퍼로 대신 그리지 않는다.
             const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pState->_boundMeshVb );
-            if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
+            if ( pVb == nullptr || pVb->_buffer == VK_NULL_HANDLE )
             {
-                slot0Buffer = pVb->_buffer;
-                slot0Offset = static_cast<VkDeviceSize>( _pState->_boundMeshOffset );
+                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "Vulkan", _pState->_boundMeshVb );
+                return false;
             }
+            slot0Buffer = pVb->_buffer;
+            slot0Offset = static_cast<VkDeviceSize>( _pState->_boundMeshOffset );
         }
-        // 안 걸렸거나, 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 풀스크린 버퍼로 떨어진다.
-        if ( slot0Buffer == VK_NULL_HANDLE && _pDevice->_vertexBuffer != VK_NULL_HANDLE )
+        // 메시를 걸지 않은 드로우(풀스크린 · 픽스처)는 장치 공용 버퍼로 그린다.
+        if ( slot0Buffer == VK_NULL_HANDLE )
             slot0Buffer = _pDevice->_vertexBuffer;
         if ( slot0Buffer == VK_NULL_HANDLE )
-            return;
+            return true;
 
         // 바인딩 1(인스턴스 슬롯 스트림)은 파이프라인이 선언하므로 **늘 유효한 버퍼**가 있어야 한다. 스트림이 안 걸린
         // 드로우(풀스크린 · 픽스처)는 그 속성을 읽지 않으므로 슬롯 0 버퍼를 자리만 채우게 건다.
@@ -748,6 +752,7 @@ namespace sw
         VkBuffer     arrVertexBuffer[] = { slot0Buffer, slot1Buffer };
         VkDeviceSize arrOffset[]       = { slot0Offset, slot1Offset };
         vkCmdBindVertexBuffers( cmd, 0, 2, arrVertexBuffer, arrOffset );
+        return true;
     }
 
     bool VulkanRHICommandContext::bindActiveGraphicsPipeline()
@@ -793,7 +798,8 @@ namespace sw
             return;
 
         // b0/b1 은 부르는 쪽이 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 슬롯 상태에 건다. 세트로 굳히는 것은 위의 bindActiveGraphicsPipeline 이다.
-        bindMeshVertexBufferOrFallback();
+        if ( bindMeshVertexBufferForDraw() == false )
+            return;
 
         vkCmdDraw( cmd, vertexCount, 1, startVertex, 0 );
     }
@@ -809,7 +815,8 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        bindMeshVertexBufferOrFallback();
+        if ( bindMeshVertexBufferForDraw() == false )
+            return;
 
         vkCmdDraw( cmd, vertexCount, instanceCount, startVertex, startInstance );
     }
@@ -930,7 +937,8 @@ namespace sw
         // 바인딩 0(메시 정점)과 1(인스턴스 슬롯 스트림)을 다른 드로우와 같은 도우미로 함께 건다. 주의: 바인딩 0 만 직접 걸면
         // 파이프라인이 늘 선언하는 바인딩 1 이 이 커맨드 버퍼에서 한 번도 안 걸렸을 때 정의되지 않은 값을 읽는다
         // (엔진에서 부르는 곳이 없어 RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream 만 이 경로를 지킨다).
-        bindMeshVertexBufferOrFallback();
+        if ( bindMeshVertexBufferForDraw() == false )
+            return;
 
         const VkIndexType indexType = ( _pState->_boundIndexStride == 2 ) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
         vkCmdBindIndexBuffer( cmd, pIb->_buffer, _pState->_boundIndexOffset, indexType );
@@ -963,7 +971,8 @@ namespace sw
             return;
 
         // count 버퍼가 있든 없든 정점버퍼를 건다.
-        bindMeshVertexBufferOrFallback();
+        if ( bindMeshVertexBufferForDraw() == false )
+            return;
 
         constexpr uint32 stride = sizeof( RHIDrawIndirectCommand );
 

@@ -4,6 +4,7 @@
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Support/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -198,11 +199,16 @@ namespace sw
         return true;
     }
 
-    void D3D12RHICommandContext::bindMeshVertexBufferOrFallback()
+    bool D3D12RHICommandContext::bindMeshVertexBufferForDraw()
     {
-        // 안 걸렸거나, 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 풀스크린 버퍼로 떨어진다.
-        if ( _pState->_boundMeshVb == 0 || bindMeshVertexBuffer() == false )
+        // 메시를 걸지 않은 드로우(풀스크린 · 픽스처)는 풀스크린 버퍼로 그린다. 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다.
+        if ( _pState->_boundMeshVb == 0 )
             bindFullscreenVertexBuffer();
+        else if ( bindMeshVertexBuffer() == false )
+        {
+            RHIDrawDiagnostics::reportDestroyedVertexBuffer( "DX12", _pState->_boundMeshVb );
+            return false;
+        }
 
         // 슬롯 1: 인스턴스 슬롯 스트림. 안 걸린 드로우(풀스크린 · 픽스처)는 셰이더가 그 속성을 읽지 않으므로 비워 둔다.
         if ( _pState->_boundInstanceSlotVb != 0 )
@@ -219,6 +225,7 @@ namespace sw
                 commandListForRecord()->IASetVertexBuffers( constant::kInstanceSlotStreamSlot, 1, &vbv );
             }
         }
+        return true;
     }
 
     void D3D12RHICommandContext::bindFullscreenVertexBuffer()
@@ -541,7 +548,8 @@ namespace sw
         if ( flushSlotTables( false ) == false )
             return;
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-        bindMeshVertexBufferOrFallback();
+        if ( bindMeshVertexBufferForDraw() == false )
+            return;
         commandListForRecord()->DrawInstanced( vertexCount, 1, startVertex, 0 );
     }
 
@@ -555,7 +563,8 @@ namespace sw
         if ( flushSlotTables( false ) == false )
             return;
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-        bindMeshVertexBufferOrFallback();
+        if ( bindMeshVertexBufferForDraw() == false )
+            return;
         commandListForRecord()->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
     }
 
@@ -643,7 +652,8 @@ namespace sw
         // 다른 세 백엔드는 원래 메시 VB 를 우선한다.
         if ( flushSlotTables( false ) == false )
             return;
-        bindMeshVertexBufferOrFallback();
+        if ( bindMeshVertexBufferForDraw() == false )
+            return;
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
         // countBuffer 가 있으면 GPU 가 적어 둔 개수를 쓴다(drawCount 는 상한). ExecuteIndirect 는 둘을 같이 받는다.
@@ -695,7 +705,8 @@ namespace sw
             return;
         // 슬롯 0(메시 정점)과 1(인스턴스 슬롯 스트림)을 다른 드로우와 같은 도우미로 함께 건다. 주의: 슬롯 0 만 걸면 이 리스트에서
         // 슬롯 1 이 한 번도 안 걸렸을 때 인스턴스 자리를 0 으로 읽는다(RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream 이 잡는다).
-        bindMeshVertexBufferOrFallback();
+        if ( bindMeshVertexBufferForDraw() == false )
+            return;
         bindBoundIndexBuffer();
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         commandListForRecord()->ExecuteIndirect( _pDevice->_drawIndexedCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );

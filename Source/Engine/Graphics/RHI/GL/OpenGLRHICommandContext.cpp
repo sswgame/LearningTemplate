@@ -4,6 +4,7 @@
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Support/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #include <glad/glad.h>
@@ -550,7 +551,12 @@ namespace sw
         if ( bMeshVertexBuffer )
         {
             const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
-            if ( vbo == 0 || _pDevice->_meshVao == 0 )
+            if ( vbo == 0 )
+            {
+                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_boundMeshVb );
+                return;
+            }
+            if ( _pDevice->_meshVao == 0 )
                 return;
             bindMeshVaoAttribs( vbo );
         }
@@ -724,6 +730,8 @@ namespace sw
 
         const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
         const GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
+        if ( vbo == 0 && _pState->_boundMeshVb != 0 )
+            RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_boundMeshVb );
         if ( vbo == 0 || _pDevice->_meshVao == 0 || buf == 0 )
             return;
 
@@ -773,6 +781,12 @@ namespace sw
 
         const GLuint vbo = _pDevice->resolveGlBuffer( _pState->_boundMeshVb );
         const GLuint ibo = _pDevice->resolveGlBuffer( _pState->_boundIndexBuffer );
+        // 건 메시 버퍼가 부서졌으면 드로우를 버린다(다른 드로우 진입점 · 세 백엔드와 같다).
+        if ( vbo == 0 && _pState->_boundMeshVb != 0 )
+        {
+            RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_boundMeshVb );
+            return;
+        }
 
         if ( vbo != 0 && _pDevice->_meshVao != 0 )
         {

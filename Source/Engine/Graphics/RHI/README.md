@@ -277,6 +277,9 @@ py -3 Scripts/dev/RunBackendSmoke.py
 **백엔드 구조를 가장 약한 백엔드에 맞추지 마세요.** 파일 이름은 엔진 인터페이스의 어휘(`SwapChain`, `CommandContext`)를 쓰고 네 백엔드가 같은 이름을 가집니다.
 그 개념이 없는 백엔드는 빈 파일을 만들지 않고 이 문서에 이유를 적습니다. 백엔드 공용 자료구조는 `Support/` 에 둡니다. 백버퍼 상태는 `transitionTo` 로만 바꿉니다.
 
+**해제된 정점 버퍼를 건 드로우는 네 백엔드 모두 버리고 오류로 알립니다.** 판정은 백엔드가, 문구와 횟수 제한(처음 8 번)은 `Support/RHIDrawDiagnostics.h` 가 맡습니다.
+풀스크린 버퍼나 직전 드로우의 버퍼로 대신 그리지 않습니다. 메시를 걸지 않은 드로우(`_boundMeshVb == 0`)만 풀스크린 버퍼를 씁니다(`RHIDeviceTest.DestroyedVertexBufferSkipsTheDrawAndReportsIt`).
+
 **백엔드 하나만 고쳐진 코드가 자주 나옵니다.** 예를 들어 `createStructuredBuffer` 의 크기 계산을 DirectX 12만 64비트로 곱하고 있었습니다. 테스트는 백엔드별 계약으로 씁니다.
 
 **안 쓰이는 경로는 조용히 망가집니다.** 폴백 경로는 지우고, 아직 안 쓰는 기능은 테스트와 함께 남깁니다.

@@ -102,8 +102,8 @@ namespace sw
         bool allocateOnlineDescriptors( uint32 count, uint32& outBase );
         /** @brief 걸어 둔 메시 정점버퍼를 겁니다. 핸들이 풀리지 않으면(이미 부서졌다) 아무것도 걸지 않고 false 를 반환합니다. */
         bool bindMeshVertexBuffer();
-        /** @brief 메시 정점버퍼가 걸려 있으면 그것을, 없으면 풀스크린 버퍼를 바인딩합니다(Vulkan 과 같은 이름·의미). */
-        void bindMeshVertexBufferOrFallback();
+        /** @brief 메시 정점버퍼가 걸려 있으면 그것을, 없으면 풀스크린 버퍼를 겁니다. 건 메시 버퍼가 부서졌으면 알리고 false — 부르는 쪽은 드로우를 버립니다(네 백엔드가 같다). */
+        [[nodiscard]] bool bindMeshVertexBufferForDraw();
         /** @brief 활성 그래픽스 PSO 를 네이티브 리스트에 겁니다(바뀌었을 때만). PSO 가 없으면 false 이고, 드로우를 내지 않습니다. */
         bool bindActiveGraphicsPso();
         void bindFullscreenVertexBuffer();

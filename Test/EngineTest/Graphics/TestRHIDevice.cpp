@@ -1176,6 +1176,93 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
 }
 
 /**
+ * @brief [RHIDeviceTest] 부서진 정점 버퍼를 건 드로우는 버려지고 오류로 알린다 — 4백엔드가 같다
+ * @details 풀리지 않는 메시 정점 버퍼 핸들로 그리면 DX12 · Vulkan 은 풀스크린 버퍼로, DX11 은 직전 드로우의 버퍼로 대신 그렸고
+ *          GL 만 버렸다(넷 다 말이 없었다). 해제한 버퍼의 핸들을 다시 걸고 그린다 — DX11 · GL 은 **걸려 있던** 버퍼를 해제하면 걸림을 0 으로
+ *          되돌리므로, 해제한 뒤에 거는 순서로 네 백엔드가 같은 판정을 거치게 한다. 렌더 타깃은 클리어 색 그대로여야 한다.
+ *          알림은 백엔드 DLL 마다 처음 `RHIDrawDiagnostics::kMaxReportedDraw` 번만 남으므로 로그는 이 프로세스에서 그 백엔드를 처음 볼 때만 묻는다(--test_repeat).
+ */
+SW_TEST_CASE( RHIDeviceTest, DestroyedVertexBufferSkipsTheDrawAndReportsIt )
+{
+    static sw::vector<sw::string> s_listCheckedBackend;
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const sw::string         backend   = device->getBackendName();
+
+        // 위치는 셰이더가 SV_VertexID 로 만든다 — 정점 버퍼가 풀리지 않아도 드로우가 나가면 픽셀이 칠해진다.
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "common/shaders/instanceslotprobe.hlsl" ) );
+        SW_EXPECT_TRUE_MSG( pso != 0, backend.c_str() );
+
+        const sw::RHIVertex       arrVertex[3]{};
+        const uint32              slotValue  = 7;
+        const sw::RHIBufferHandle staleVb    = pResource->createVertexBuffer( arrVertex, static_cast<uint32>( sizeof( arrVertex ) ) );
+        const sw::RHIBufferHandle slotStream = pResource->createVertexBuffer( &slotValue, static_cast<uint32>( sizeof( slotValue ) ) );
+        SW_EXPECT_TRUE_MSG( staleVb != 0 && slotStream != 0, ( backend + ": 버퍼를 만들지 못했습니다" ).c_str() );
+        if ( staleVb != 0 )
+            pResource->destroyBuffer( staleVb );
+
+        if ( pso != 0 && staleVb != 0 && slotStream != 0 )
+        {
+            const sw::RHITextureDesc   desc = makeOffscreenTargetDesc( 64, 64 );
+            const sw::RHITextureHandle rt   = pResource->createTexture2D( desc );
+            SW_EXPECT_TRUE( rt != 0 );
+
+            sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
+            if ( rt != 0 && cmd != nullptr )
+            {
+                test::ScopedLogCollector collector;
+                {
+                    SW_TEST_DEFENSIVE_SCOPE( "a draw whose vertex buffer was destroyed is skipped and reported" );
+                    cmd->beginCommandList();
+                    beginOffscreenRenderPass( *cmd, rt, desc );
+                    cmd->setPipelineState( pso );
+                    cmd->setVertexBuffer( 0, staleVb, static_cast<uint32>( sizeof( sw::RHIVertex ) ), 0 );
+                    cmd->setVertexBuffer( sw::constant::kInstanceSlotStreamSlot, slotStream, sw::constant::kInstanceSlotStreamStride, 0 );
+                    cmd->draw( 3, 0 );
+                    cmd->endRenderPass();
+                    cmd->endCommandList();
+                    device->executeCommandListImmediate( cmd.get() );
+                    device->waitIdle();
+                }
+
+                sw::vector<uint8>     pixels;
+                sw::RHITextureMipSpan layout{};
+                if ( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) )
+                {
+                    const PrimaryColorCount count = countPrimaryColorPixels( pixels, layout );
+                    SW_EXPECT_TRUE_MSG( count._green == 0 && count._red == 0,
+                                        ( backend + ": 부서진 정점 버퍼로 드로우가 나갔습니다 (green " + sw::to_string( count._green ) + " red " +
+                                          sw::to_string( count._red ) + " / " + sw::to_string( count._total ) + ")" )
+                                            .c_str() );
+                }
+                else
+                    SW_EXPECT_TRUE_MSG( false, "readbackTexture2D 실패" );
+
+                if ( std::find( s_listCheckedBackend.begin(), s_listCheckedBackend.end(), backend ) == s_listCheckedBackend.end() )
+                {
+                    s_listCheckedBackend.push_back( backend );
+                    SW_EXPECT_TRUE_MSG( collector.countContaining( "its vertex buffer" ) > 0,
+                                        ( backend + ": 버린 드로우를 알리지 않았습니다 — " + collector.joined() ).c_str() );
+                }
+            }
+            if ( rt != 0 )
+                pResource->destroyTexture( rt );
+        }
+
+        if ( slotStream != 0 )
+            pResource->destroyBuffer( slotStream );
+        if ( pso != 0 )
+            pResource->destroyPipelineState( pso );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the destroyed vertex buffer draw test" );
+}
+
+/**
  * @brief [RHIDeviceTest] 텍스처가 만들어진 포맷과 디바이스가 채택한 백버퍼 포맷을 물을 수 있다 (4 백엔드).
  * @details 렌더타깃에 그리는 PSO 는 대상의 실제 포맷으로 만들어야 한다 — Present 는 백버퍼(getBackBufferFormat)와
  *          GameView RT(getTextureFormat) 를 오가므로 둘 다 정확해야 Vulkan 렌더패스 호환이 유지된다.
