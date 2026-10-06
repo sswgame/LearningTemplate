@@ -72,6 +72,12 @@ class PreCommitLintSelectionTest(unittest.TestCase):
     def testDeclaredSkipReasonWins(self) -> None:
         self.assertEqual(self.plan(["Source/A.h"])["Skipped"][0], "빌드 폴더가 필요하다")
 
+    def testOnlyRunningWholeTreeGatesGoToBackground(self) -> None:
+        listStagedPath = [self.root / "Source/A.h"]
+        mapBackground = {plan.script.name: plan.bBackground
+                         for plan in selectGatesForStaged(self.root, listStagedPath, listStagedPath, self.listScript)}
+        self.assertEqual(mapBackground, {"Always": True, "SourceFiles": False, "CmakeWholeTree": False, "Skipped": False})
+
 
 class PreCommitLintRealGateTest(unittest.TestCase):
     """실제 게이트의 훅 선언 — 트리 전체 게이트가 관계없는 커밋에서도 돌면 훅의 바닥 시간이 그만큼 는다."""

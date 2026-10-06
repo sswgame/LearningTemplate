@@ -54,12 +54,14 @@ def runProcess(command: Sequence[str | Path],
                bCapture: bool = True,
                env: Mapping[str, str] | None = None,
                stdinText: str | None = None,
-               stdoutPath: Path | None = None) -> ProcessResult:
+               stdoutPath: Path | None = None,
+               bMergeStderr: bool = False) -> ProcessResult:
     """
     `command` 를 돌리고 끝날 때까지 기다립니다.
 
     - `bCapture` : 출력을 잡는다(UTF-8, 깨진 바이트는 대체 글자). 거짓이면 부모 콘솔로 흘린다.
     - `stdoutPath`: 출력(stdout + stderr)을 이 파일에 쓴다(`bCapture` 를 무시한다) — 긴 로그를 남기는 실행(백엔드 스모크).
+    - `bMergeStderr`: 잡을 때 stderr 를 stdout 칸에 섞는다 — 쓰인 순서 그대로 다시 찍을 출력(커밋 훅이 뒤에서 돌린 게이트).
     """
     listArgument = [str(part) for part in command]
     workingDir = str(cwd) if cwd else None
@@ -71,8 +73,12 @@ def runProcess(command: Sequence[str | Path],
                 completed = subprocess.run(listArgument, cwd=workingDir, env=environment, stdout=logFile, stderr=subprocess.STDOUT,
                                            timeout=timeoutSeconds, input=stdinText, encoding="utf-8", errors="replace", check=False)
             return ProcessResult(returnCode=completed.returncode)
-        completed = subprocess.run(listArgument, cwd=workingDir, env=environment, capture_output=bCapture, timeout=timeoutSeconds,
-                                   input=stdinText, encoding="utf-8", errors="replace", check=False)
+        if bCapture and bMergeStderr:
+            completed = subprocess.run(listArgument, cwd=workingDir, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                       timeout=timeoutSeconds, input=stdinText, encoding="utf-8", errors="replace", check=False)
+        else:
+            completed = subprocess.run(listArgument, cwd=workingDir, env=environment, capture_output=bCapture, timeout=timeoutSeconds,
+                                       input=stdinText, encoding="utf-8", errors="replace", check=False)
         return ProcessResult(returnCode=completed.returncode, stdout=completed.stdout or "", stderr=completed.stderr or "")
     except (FileNotFoundError, PermissionError) as error:
         return ProcessResult(returnCode=-1, stderr=f"실행 파일을 띄우지 못했다: {listArgument[0]} ({error})", bLaunched=False)

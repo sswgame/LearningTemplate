@@ -524,6 +524,8 @@ cd build/Ninja-Debug/Bin
   Physics/* · Navigation/* · Animation 보조)가 빠지지만, getter 를 쓰는 85 파일이 직접 include 해야 해 실제로 덜어지는 것은 약 150 TU × 4.7k 줄이다 — 보류
   (2026-10-05 재측정, `_store` · `_transformHierarchy` · `_structuralChangeBuffer` · `_tickScheduler` 는 헤더의 인라인 · 템플릿이 써서 포인터로 못 뺀다).
   이득은 `ninja -t deps` 전후 TU 수로 판정한다.
+- **훅의 `CheckHeaderSelfContained` 도 뒤에서 띄울지.** staged 헤더마다 ~1.3 s CPU(헤더 6 개 1.9 s 벽 / 9 s CPU) — 지금은 이 프로세스에서 다른 파일 단위 게이트와
+  차례로 돈다. 헤더가 든 커밋에서 트리 전체 게이트와 겹치면 ~1.5 s 를 더 벌 수 있다. `LintGate.preCommitRunsInBackground` 같은 선언 하나로 — 재고 넣을 것.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
@@ -906,6 +908,8 @@ cd build/Ninja-Debug/Bin
 
 - **린트 CTest 는 프리셋이 4 개씩 동시에 돌린다**(`Ninja-Debug-lint` 의 `execution.jobs`) — 린트끼리 공유하는 출력이 없어야 한다: 셀프테스트는 `mkdtemp`,
   게이트는 읽기만. 새 린트가 저장소 안에 파일을 쓰면 이 전제가 깨진다. 8 · 16 은 4 와 같거나 느리다(`CheckCodeConventions` · `CheckLintsAreAlive` 가 스스로 여럿을 쓴다).
+- **커밋 훅은 트리 전체 게이트(`preCommitFileArgument = ""`)를 하위 프로세스로 먼저 띄운다**(`GateRunPlan.bBackground`) — 파일 하나 커밋 9.6 → 4.3 s(부하 중).
+  파일 단위 게이트는 이 프로세스에서(기동 0.1~0.3 s 가 게이트보다 비싸다). 훅의 바닥 시간은 가장 긴 트리 전체 게이트다 — 새 게이트는 가능하면 `--files` 를 받게 짓는다.
 - **스크립트 시험은 `sw_registerScriptTest`** — 파이썬 단위 시험 · QA · 린트가 같은 속성 철자. 시험 실행 파일 폴더는 `Test/` 아래 CMakeLists 가 있으면 저절로 들어간다.
 - **파이썬 도구의 단위 시험은 `Test/PythonTest/Test*.py`** — 파일을 놓으면 CTest 항목(`PythonTest_<이름>`, `nogpu`)이다. Blender 애드온처럼 바깥 모듈(bpy)을
   쓰는 것은 그 import 를 한 파일에 가두고 나머지를 시험한다(`TestBlenderExporter` 가 빈 패키지 모듈을 세워 읽는다).
@@ -1932,9 +1936,11 @@ cd build/Ninja-Debug/Bin
   그 TU 에서는 엔진 태스크 대신 이미 쓰는 Jolt 잡 시스템(`JoltJobSystem`)을 쓴다.
 - **태스크**: 워커 스핀 늘리기(2 → 50 us 면 SMT 형제를 빼앗아 GT 889 → 1305 us), hot pool(이득 없음), 스레드별 목록 머리 패딩(잡음), 공유 풀 위 GT 병렬화를 레인 없이(RT 170 → 261 us),
   워커 깨우기 사슬, `TaskArgs` 인라인 4 칸(기록 122 → 196 us), `PagedArray` 통합의 첫 측정(번갈아 재니 차이 없음 — 측정 착시).
-- **도구 · 빌드**: 린트를 파일마다 프로세스로(5.3 → 9.4 s — 덩어리 프로세스는 7.5 → 2.25 s), 커밋 훅 게이트 병렬화(이득 ~1 s), 짝 헤더 메모이즈(차이 없음), `formatstring` 비템플릿 부분
+- **도구 · 빌드**: 린트를 파일마다 프로세스로(5.3 → 9.4 s — 덩어리 프로세스는 7.5 → 2.25 s), 짝 헤더 메모이즈(차이 없음), `formatstring` 비템플릿 부분
   `.cpp` 분리(41 → 44 s) · 타입 소거 배열, `ContainerTypeMap` 선형 탐색 개선(파서 시간은 libclang), 팩 코덱 Zstd(−0.1 %) · LZ4(+28 %) — 이미 압축된 자산이라 Zlib 유지(압축 안 된 자산이
-  들어오면 다시 잰다).
+  들어오면 다시 잰다), 린트 파일 공유 캐시(C++ 2500 개 28.7 MB 를 다 읽어도 0.15–0.7 s — 게이트는 정규식에 쓴다), 린트 CTest 를 한 프로세스로(기동 0.17 s × 항목 수 —
+  항목별 보고 · TIMEOUT 을 잃는다), 린트 증분 해시 캐시(훅 바닥 ~2–4 s 에 교차 파일 규칙 재작성 — 보류), `flatMapInProcesses` 16 → 8 워커(혼자 돌면 3.3 → 3.7 s 로
+  지고 CPU −40 % — `ctest -j` 겹침에서 재 볼 것).
 - **구조**: 백엔드 `*RHIResource.h` · `*RHICommandContext.h` 공통 기반(겹침이 전부 override 선언), `ResourceCache<T>`(나머지 39 % 가 소유 방식), 모듈 팩토리 골격 공통화(공통 4 줄),
   RHI · GF leaf CMakeLists 를 부모 루프로(디렉터리 스코프), `FindWindowsTools` 파이썬 이전, `EngineTest` 에 `GF_*` 자동 링크, `SW_ASSERT_NULL`, `formatstring` 인자 수 컴파일 검사의 매크로 판
   (C++20 으로 올리면 `consteval` 포맷 타입으로 옮긴다), "자유 `static` 함수 금지" 린트(오탐), "CommandList 가 RecordingState 를 소유" 린트, `CheckCodeConventions` 매개변수 · 지역변수 사슬,
