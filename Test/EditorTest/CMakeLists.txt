@@ -42,6 +42,7 @@ sw_addTestExecutable(EditorTest
 		Common/Workspace/TestEditorTransaction.cpp
 		Common/Commands/TestEditorTransformCommands.cpp
 		Common/Commands/TestEditorToolAssetCommands.cpp
+		Common/Commands/TestSequenceTimingUtil.cpp
 		Viewport/TestEditorViewportMath.cpp
 		Common/Workspace/TestEditorWorkspace.cpp
 		Panels/TestContentBrowserLogic.cpp
@@ -72,6 +73,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorToolAssetCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorTracyLauncher.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorInspectorCommands.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/SequenceTimingUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorToolDefaults.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPlaySession.cpp"

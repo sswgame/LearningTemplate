@@ -116,6 +116,7 @@ namespace sw::editor
         , _cinematicNote{ "Cinematic notes (not a clip track)." }
         , _sequence{ make_unique<ClipSequence>() }
         , _previewPlayer{ make_unique<sw::SequencePlayer>() }
+        , _listTimingBefore{}
         , _currentFrame{ 0 }
         , _selected{ -1 }
         , _firstFrame{ 0 }
@@ -181,6 +182,13 @@ namespace sw::editor
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
 
+        constexpr float32 kClipFieldRowCount = 5.0f; // 이름 · 대상 · 이동 · 회전 · 크기
+        // 고른 클립의 편집 칸은 늘 같은 높이의 구역에 그린다 — 고를 때만 칸이 생기면 그만큼 타임라인이 밀려 내려간다.
+        EditorSectionDesc clipDesc{};
+        clipDesc._pId       = "##sequence_clip";
+        clipDesc._kind      = EditorSectionKind::Child;
+        clipDesc._childSize = float2{ 0.0f, ImGui::GetFrameHeightWithSpacing() * kClipFieldRowCount };
+        EditorChrome::beginSection( clipDesc );
         if ( 0 <= _selected && _selected < static_cast<int32>( _sequence->_listItem.size() ) )
         {
             SequenceTrackItem& item = _sequence->_listItem[static_cast<size_t>( _selected )];
@@ -220,10 +228,17 @@ namespace sw::editor
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
         }
+        else
+        {
+            EditorWidgets::drawEmptyHint( "Select a clip on the timeline to edit it." );
+        }
+        EditorChrome::endSection();
 
+        // ImSequencer 는 여러 항목을 그리는 위젯이라 IsItemEdited("마지막 항목")가 클립 끌기 · 더하기 · 지우기를 뜻하지 않는다 — 부르기 전후의 배치를 비교한다.
+        SequenceTimingUtil::captureTiming( _sequence->_listItem, _listTimingBefore );
         ImSequencer::Sequencer( _sequence.get(), &_currentFrame, &_bExpanded, &_selected, &_firstFrame,
                                 ImSequencer::SEQUENCER_EDIT_STARTEND | ImSequencer::SEQUENCER_ADD | ImSequencer::SEQUENCER_DEL | ImSequencer::SEQUENCER_CHANGE_FRAME );
-        if ( ImGui::IsItemEdited() )
+        if ( SequenceTimingUtil::hasTimingChanged( _listTimingBefore, _sequence->_listItem ) )
             notifyDocumentEdited( "Edit Sequence Timeline", "sequence-timeline" );
     }
 
