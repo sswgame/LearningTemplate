@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""감싼 서드파티(Jolt · Box2D · ACL · Tracy · Recast · OpenSSL · FreeType · SQLite · PostgreSQL)의 헤더는 그 백엔드 · 드라이버 폴더에서만 include 하고, 그 라이브러리는 규칙마다 정한 CMakeLists 하나에서만 링크한다.
+"""감싼 서드파티(아래 표 `_kListLibraryRule`)의 헤더는 그 백엔드 · 드라이버 · 감싼 클래스 폴더에서만 include 하고, 그 라이브러리는 규칙마다 정한 CMakeLists 하나에서만 링크한다.
 
 엔진은 3D 물리 · 2D 물리 · 애니메이션 압축 · 내비메시를 **엔진 쪽 인터페이스** 뒤에 감싼다(`IPhysicsScene3D` · `IPhysicsScene2D` · 애니메이션 코덱 ·
 `INavMesh` · `INavCrowd`).
@@ -18,7 +18,9 @@
      규칙의 링크 주인 하나다(엔진 백엔드는 `Source/Engine/CMakeLists.txt`, 키트 안 드라이버는 그 키트의 CMakeLists) — 다른 타깃이 링크하면 헤더 경로 · 정의가 그 타깃으로 번진다. 라이브러리를 정의하는
      `ThirdParty/` 는 보지 않는다.
 
-규칙은 아래 표(`_kListLibraryRule`) 한 곳이다. 라이브러리를 하나 더 감싸면 줄 하나를 더한다.
+규칙은 아래 표(`_kListLibraryRule`) 한 곳이다 — 위 1) · 2) 의 목록은 예일 뿐, 형식(pugixml · json) · 압축(lz4 · zstd · zlib) · 셰이더(DXC) ·
+그래픽 API(glad · Vulkan) · 가져오기(stb · cgltf · meshoptimizer · DirectXTex) · 에디터 UI(ImGui 일가)도 같은 표에 있다. 라이브러리를 하나 더 감싸면 줄 하나를 더한다.
+링크 검사는 `target_link_libraries(` 만 읽는다 — `sw_addModuleLibrary( … LINK_PRIVATE … )` 인자로 링크한 것은 아직 보지 않는다.
 
   python Scripts/lint/gate/CheckThirdPartyIsolation.py [--root <repo>] [--files a.cpp b/CMakeLists.txt]
 """
@@ -40,33 +42,53 @@ from LintGate import GateResult, LintGate  # noqa: E402
 
 @dataclass(frozen=True)
 class LibraryRule:
-    """감싼 라이브러리 하나 — 헤더 접두어 · 그 헤더를 include 해도 되는 폴더 · CMake 타깃 이름 · 그 타깃을 링크해도 되는 CMake 파일."""
+    """감싼 라이브러리 하나 — 헤더 접두어 · 그 헤더를 include 해도 되는 폴더들 · CMake 타깃 이름 · 그 타깃을 링크해도 되는 CMake 파일.
+
+    `listCmakeTarget` 이 비면 링크 검사를 하지 않는다(엔진 · 에디터가 다시 내보내는 라이브러리 — 링크 주인을 따질 뜻이 없다).
+    """
 
     name: str
     listIncludePrefix: tuple[str, ...]
-    allowedRoot: str
+    listAllowedRoot: tuple[str, ...]
     listCmakeTarget: tuple[str, ...]
     cmakeLinkOwner: str = "Source/Engine/CMakeLists.txt"
 
 
 _kListLibraryRule: tuple[LibraryRule, ...] = (
-    LibraryRule("Jolt", ("Jolt/",), "Source/Engine/Physics/Jolt/", ("joltphysics", "Jolt::Jolt")),
-    LibraryRule("Box2D", ("box2d/",), "Source/Engine/Physics/Box2D/", ("box2d", "box2d::box2d")),
-    LibraryRule("ACL", ("acl/", "rtm/"), "Source/Engine/Animation/Codec/Acl/", ("acl",)),
-    LibraryRule("Tracy", ("tracy/", "client/Tracy", "common/Tracy"), "Source/Engine/Utility/Profiling/Tracy/", ("tracy", "Tracy::TracyClient")),
+    LibraryRule("Jolt", ("Jolt/",), ("Source/Engine/Physics/Jolt/",), ("joltphysics", "Jolt::Jolt")),
+    LibraryRule("Box2D", ("box2d/",), ("Source/Engine/Physics/Box2D/",), ("box2d", "box2d::box2d")),
+    LibraryRule("ACL", ("acl/", "rtm/"), ("Source/Engine/Animation/Codec/Acl/",), ("acl",)),
+    LibraryRule("Tracy", ("tracy/", "client/Tracy", "common/Tracy"), ("Source/Engine/Utility/Profiling/Tracy/",), ("tracy", "Tracy::TracyClient")),
     LibraryRule(
         "Recast",
         ("recastnavigation/", "Recast", "Detour", "DebugDraw.h"),
-        "Source/Engine/Navigation/Recast/",
+        ("Source/Engine/Navigation/Recast/",),
         ("recastnavigation", "RecastNavigation::Recast", "RecastNavigation::Detour", "RecastNavigation::DetourCrowd",
          "RecastNavigation::DetourTileCache", "RecastNavigation::DebugUtils"),
     ),
-    LibraryRule("OpenSSL", ("openssl/",), "Source/Engine/Network/OpenSsl/", ("openssl", "OpenSSL::SSL", "OpenSSL::Crypto")),
-    LibraryRule("FreeType", ("ft2build.h", "freetype/"), "Source/Engine/Text/FreeType/", ("freetype", "Freetype::Freetype")),
-    LibraryRule("SQLite", ("sqlite3.h", "sqlite3ext.h"), "Source/GameFramework/Kits/Storage/SqlStore/Driver/Sqlite/",
+    LibraryRule("OpenSSL", ("openssl/",), ("Source/Engine/Network/OpenSsl/",), ("openssl", "OpenSSL::SSL", "OpenSSL::Crypto")),
+    LibraryRule("FreeType", ("ft2build.h", "freetype/"), ("Source/Engine/Text/FreeType/",), ("freetype", "Freetype::Freetype")),
+    LibraryRule("SQLite", ("sqlite3.h", "sqlite3ext.h"), ("Source/GameFramework/Kits/Storage/SqlStore/Driver/Sqlite/",),
                 ("unofficial::sqlite3::sqlite3", "SQLite::SQLite3"), "Source/GameFramework/Kits/Storage/SqlStore/CMakeLists.txt"),
-    LibraryRule("PostgreSQL", ("libpq-fe.h", "libpq/", "libpq-events.h", "postgres_ext.h"), "Source/GameFramework/Kits/Storage/Server/SqlStore/Driver/Postgres/",
+    LibraryRule("PostgreSQL", ("libpq-fe.h", "libpq/", "libpq-events.h", "postgres_ext.h"), ("Source/GameFramework/Kits/Storage/Server/SqlStore/Driver/Postgres/",),
                 ("PostgreSQL::PostgreSQL",), "Source/GameFramework/Kits/Storage/Server/SqlStore/CMakeLists.txt"),
+
+    # 엔진 안의 형식 · 압축 · 셰이더 · 그래픽 API — 감싼 클래스 한 자리(XmlDocument · JsonDocument · 코덱 · ShaderCompiler · RHI 백엔드)에서만.
+    LibraryRule("pugixml", ("pugixml.hpp", "pugiconfig.hpp"), ("Source/Engine/Utility/Xml/",), ()),
+    LibraryRule("nlohmann-json", ("nlohmann/",), ("Source/Engine/Utility/Json/", "Tools/ReflectionParser/"), ()),   # 파서는 Core 만 링크한다(Engine 순환 방지)
+    LibraryRule("lz4", ("lz4.h", "lz4hc.h", "lz4frame.h"), ("Source/Engine/Compression/",), ()),
+    LibraryRule("zstd", ("zstd.h", "zdict.h", "zstd_errors.h"), ("Source/Engine/Compression/",), ()),
+    LibraryRule("zlib", ("zlib.h", "zconf.h"), ("Source/Engine/Compression/",), ()),
+    LibraryRule("DXC", ("dxcapi.h", "dxc/"), ("Source/Engine/Graphics/Shader/Compile/", "Source/Engine/Graphics/Shader/Reflection/"), ()),
+    LibraryRule("glad", ("glad/",), ("Source/Engine/Graphics/RHI/GL/",), ()),
+    LibraryRule("Vulkan", ("vulkan/",), ("Source/Engine/Graphics/RHI/Vulkan/", "Source/Editor/Common/Backend/Render/"), ()),
+    LibraryRule("stb", ("stb_",), ("Source/Editor/Common/Asset/", "Source/Engine/Audio/AudioVorbisDecode.cpp"), ()),
+    # 에디터 쪽 — 가져오기(에셋 파이프라인)와 UI.
+    LibraryRule("cgltf", ("cgltf",), ("Source/Editor/Common/Asset/",), ()),
+    LibraryRule("meshoptimizer", ("meshoptimizer.h",), ("Source/Editor/Common/Asset/",), ()),
+    # 시험은 엔진 DDS 읽기를 독립된 디코더로 대조한다(같은 코드로 같은 코드를 시험하지 않으려고).
+    LibraryRule("DirectXTex", ("DirectXTex",), ("Source/Editor/Common/Asset/", "Test/EditorTest/Common/Asset/"), ()),
+    LibraryRule("ImGui", ("imgui", "implot", "ImGuizmo", "imgui_node_editor", "ImGuiNotify"), ("Source/Editor/", "Test/EditorUiTest/"), ()),
 )
 
 _kListSourceRoot = kLintTargetRelDirs
@@ -91,8 +113,8 @@ def findIncludeViolations(repositoryRoot: Path, listFileArgument: list[str] | No
                 continue
             includePath = normalizePath(match.group(1))
             for rule in _kListLibraryRule:
-                if includePath.startswith(rule.listIncludePrefix) and relative.startswith(rule.allowedRoot) is False:
-                    listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> {rule.name} 헤더는 {rule.allowedRoot} 안에서만 include 합니다")
+                if includePath.startswith(rule.listIncludePrefix) and relative.startswith(rule.listAllowedRoot) is False:
+                    listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> {rule.name} 헤더는 {' · '.join(rule.listAllowedRoot)} 안에서만 include 합니다")
     return listViolation
 
 
@@ -146,7 +168,7 @@ def findLinkViolations(repositoryRoot: Path, listFileArgument: list[str] | None)
 class CheckThirdPartyIsolationGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
-    description = "감싼 서드파티(Jolt · Box2D · ACL · Tracy · Recast · OpenSSL · FreeType · SQLite · PostgreSQL)의 헤더 · 링크가 백엔드 · 드라이버 폴더와 규칙의 CMakeLists 밖으로 새지 않는지 검사"
+    description = "감싼 서드파티(_kListLibraryRule 표)의 헤더 · 링크가 백엔드 · 드라이버 폴더와 규칙의 CMakeLists 밖으로 새지 않는지 검사"
     buildComment = "Checking that wrapped third-party libraries stay inside their backend folders..."
     timeoutSeconds = 30
     preCommitPattern = ("Source/*", "Test/*", "Tools/*", "cmake/*", "CMakeLists.txt")
@@ -163,6 +185,14 @@ class CheckThirdPartyIsolationGate(LintGate):
         "  링크는 규칙마다의 CMakeLists(엔진 백엔드는 Source/Engine/CMakeLists.txt, 키트 드라이버는 그 키트의 CMakeLists)에만 둡니다."
     )
     selfTestCases = [
+        {
+            "name": "pugixml 헤더를 씬에서 include 한다(XmlDocument 를 비켜 감)",
+            "files": {"Source/Engine/Scene/Probe.cpp": "#include <pugixml.hpp>\nint probe() { return 0; }\n"},
+        },
+        {
+            "name": "ImGui 헤더를 엔진에서 include 한다",
+            "files": {"Source/Engine/Scene/ProbeGui.cpp": '#include "imgui.h"\nint probe() { return 0; }\n'},
+        },
         {
             "name": "Jolt 헤더를 오브젝트 층에서 include 한다",
             "files": {"Source/Engine/Object/Component/Probe.cpp": "#include <Jolt/Jolt.h>\nint probe() { return 0; }\n"},
@@ -230,7 +260,7 @@ class CheckThirdPartyIsolationGate(LintGate):
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         listViolation = findIncludeViolations(repositoryRoot, args.files) + findLinkViolations(repositoryRoot, args.files)
-        return GateResult(listViolation=listViolation, summary="Jolt · Box2D · ACL · Tracy · Recast · OpenSSL · FreeType · SQLite · PostgreSQL 헤더와 링크가 제자리에 있다")
+        return GateResult(listViolation=listViolation, summary=f"{len(_kListLibraryRule)} 라이브러리({' · '.join(rule.name for rule in _kListLibraryRule)})의 헤더와 링크가 제자리에 있다")
 
 
 main = CheckThirdPartyIsolationGate.run
