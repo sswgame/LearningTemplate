@@ -42,7 +42,9 @@ namespace sw
         , _serverTimeMs{ 0 }
         , _remoteConfigHash{ 0 }
         , _nextRequestId{ 1 }
+        , _gateOwnerRange{ 0 }
         , _state{ OnlineClientState::Disconnected }
+        , _bGateClosed{ SW_FALSE }
         , _bSharedEndpoint{ SW_FALSE }
         , _bInitialized{ SW_FALSE }
     {
@@ -170,7 +172,7 @@ namespace sw
                 onResponse( response );
             return requestId;
         }
-        if ( _state != OnlineClientState::Ready )
+        if ( _state != OnlineClientState::Ready || isGated( method ) )
         {
             _listQueuedCall.push_back( std::move( call ) );
             return requestId;
@@ -178,6 +180,16 @@ namespace sw
         sendQueuedCall( call );
         return requestId;
     }
+
+    void OnlineServiceClient::setRequestGate( uint16 ownerRange, bool bClosed )
+    {
+        _gateOwnerRange = ownerRange;
+        _bGateClosed    = bClosed ? SW_TRUE : SW_FALSE;
+        if ( bClosed == false && _state == OnlineClientState::Ready )
+            flushQueuedCalls();
+    }
+
+    bool OnlineServiceClient::isGated( uint16 method ) const { return _bGateClosed == SW_TRUE && OnlineMethodRange::getRangeBase( method ) != _gateOwnerRange; }
 
     void OnlineServiceClient::handleFrame( StreamFrameKind kind, const uint8* pBody, int32 bodySize )
     {
@@ -220,6 +232,8 @@ namespace sw
         _connection = StreamConnectionHandle{};
         if ( _state == OnlineClientState::VersionMismatch )
             return;
+        for ( IOnlineClientService* pService : _listService )
+            pService->onClientDisconnected( *this );
         _state         = OnlineClientState::Disconnected;
         _nextConnectMs = _nowMs + _backoffMs;
         _backoffMs     = _backoffMs <= 0 ? OnlineServiceClientInternal::kFirstBackoffMs : std::min( _backoffMs * 2, _settings._maxBackoffMs );
@@ -264,10 +278,10 @@ namespace sw
         _listQueuedCall.clear();
         for ( QueuedCall& call : listCall )
         {
-            if ( _state == OnlineClientState::Ready )
+            if ( _state == OnlineClientState::Ready && isGated( call._method ) == false )
                 sendQueuedCall( call );
             else
-                _listQueuedCall.push_back( std::move( call ) ); // 보내는 도중 끊겼다 — 다음 Hello 를 기다린다
+                _listQueuedCall.push_back( std::move( call ) ); // 보내는 도중 끊겼다 · 문이 닫혔다 — 다음 Hello · 문 열림을 기다린다
         }
     }
 

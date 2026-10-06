@@ -62,6 +62,8 @@ namespace sw
         virtual void   onServicePush( uint16 kind, BitReader& body ) = 0;
         /** @brief Hello 가 끝났다(처음 · 다시 연결). 계정 키트는 여기서 재접속 요청을 보낸다. */
         virtual void onClientReady( OnlineServiceClient& client ) { (void)client; }
+        /** @brief 연결이 끊겼다(다시 연결을 기다린다). 계정 키트는 로그인 상태를 내린다. */
+        virtual void onClientDisconnected( OnlineServiceClient& client ) { (void)client; }
     };
 } // namespace sw
 
@@ -118,8 +120,14 @@ namespace sw
         /** @brief 자기 끝점 모드는 전송 · 끝점 · 요청 시한 · 다시 연결을 돈다. 두 모드 모두 모은 요청의 시한을 본다. */
         void tick( int64 nowMs );
 
-        /** @brief 요청을 보냅니다(Hello 전이면 모은다). id 입니다 — 콜백의 `_requestId`. 콜백은 정확히 한 번. */
+        /** @brief 요청을 보냅니다(Hello 전 · 문이 닫혀 있으면 모은다). id 입니다 — 콜백의 `_requestId`. 콜백은 정확히 한 번. */
         uint64 sendRequest( uint16 method, const BitWriter& body, const NetRequestOptions& options, OnlineResponseDelegate onResponse );
+        /**
+         * @brief 요청 문 — 닫히면 @p ownerRange(계정 키트) 밖의 요청은 문이 열릴 때까지 모은다. 다시 연결한 뒤 재접속 응답 전에 다른 키트의 요청이 서버에 닿아
+         *        "로그인 안 됨" 으로 끝나지 않게 계정 키트가 닫고 연다. 열면 모은 요청을 맡긴 순서대로 보낸다.
+         */
+        void setRequestGate( uint16 ownerRange, bool bClosed );
+        bool isRequestGateClosed() const { return _bGateClosed == SW_TRUE; }
 
         /** @brief 공유 끝점 모드 — Message 프레임(알림)이면 영역의 서비스 `onServicePush` 로. 요청 응답은 부르는 쪽이 `NetRequestClient::handleFrame` 으로 먼저 거른다. */
         void handleFrame( StreamFrameKind kind, const uint8* pBody, int32 bodySize );
@@ -156,6 +164,7 @@ namespace sw
         void        sendHello();
         void        sendQueuedCall( QueuedCall& call );
         void        flushQueuedCalls();
+        bool        isGated( uint16 method ) const;
         void        failQueuedCalls( NetRequestStatus status, uint16 errorCode );
         void        beginConnect();
         void        onHelloResponse( const NetResponse& response );
@@ -180,7 +189,9 @@ namespace sw
         int64                              _serverTimeMs;
         uint64                             _remoteConfigHash;
         uint64                             _nextRequestId;
+        uint16                             _gateOwnerRange;
         OnlineClientState                  _state;
+        uint8                              _bGateClosed;
         uint8                              _bSharedEndpoint;
         uint8                              _bInitialized;
     };

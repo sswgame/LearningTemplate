@@ -196,16 +196,22 @@ namespace sw
 
     void AccountClient::onClientReady( OnlineServiceClient& client )
     {
-        (void)client;
         _bLoggedIn = SW_FALSE; // 새 연결 — 서버는 아직 주체를 모른다
         if ( _token.isEmpty() == false && _bResuming == SW_FALSE )
         {
+            client.setRequestGate( OnlineMethodRange::kAccount, true ); // 다른 키트의 요청은 재접속 응답 뒤에
             BitWriter body;
             AccountWire::writeToken( body, _token );
             AccountWire::writeClientInfo( body, _clientInfo );
             _bResuming = SW_TRUE;
             (void)send( AccountClientOperation::Resume, AccountMethod::kResume, body, false, true );
         }
+    }
+
+    void AccountClient::onClientDisconnected( OnlineServiceClient& client )
+    {
+        (void)client;
+        _bLoggedIn = SW_FALSE;
     }
 
     uint64 AccountClient::send( AccountClientOperation operation, uint16 method, const BitWriter& body, bool bNeedsSession, bool bAutomatic )
@@ -306,6 +312,8 @@ namespace sw
             _bResuming = SW_FALSE;
             _listReply.push_back( std::move( reply ) );
             finishDeferred( bOk ? LoginResult::Ok : LoginResult::InvalidToken );
+            if ( _pClient != nullptr && _pClient->isRequestGateClosed() )
+                _pClient->setRequestGate( OnlineMethodRange::kAccount, false ); // 다른 키트의 모은 요청을 보낸다(실패여도 — 그쪽이 kUnauthenticated 로 안다)
             return;
         }
         _listReply.push_back( std::move( reply ) );
