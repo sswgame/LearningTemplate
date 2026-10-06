@@ -36,7 +36,8 @@ namespace sw::editor
     {
         struct EditorMenuBarInternal
         {
-            inline static bool _s_bShowThemeSettings = false;
+            inline static bool    _s_bShowThemeSettings = false;
+            inline static float32 _s_statusAreaWidth    = 0.0f; ///< 지난 프레임에 잰 상태 영역 너비(0 = 아직 모름)
         };
     } // namespace
 } // namespace sw::editor
@@ -148,43 +149,64 @@ namespace sw::editor
 
     void EditorMenuBar::drawStatusArea()
     {
-        constexpr float32 statusW = 460.0f;
-        ImGui::SameLine( ImGui::GetWindowWidth() - statusW );
+        IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+        if ( pCompiler != nullptr )
+            notifyLiveCodingResult( *pCompiler );
 
-        // --- 라이브 코딩 컴파일 버튼과 상태 ---
+        // 상태 영역은 지난 프레임에 잰 너비로 오른쪽 끝에 붙인다. 메뉴와 겹칠 자리면 이번 프레임은 그리지 않는다 — 창을 줄여도 메뉴가
+        // 가려지지 않고, 넓히면 다시 나온다. 첫 프레임은 너비를 모르므로 오른쪽 끝에서 그려 잰다.
+        const float32 menuEndX     = ImGui::GetCursorPosX();
+        const float32 statusStartX = ImGui::GetWindowWidth() - EditorMenuBarInternal::_s_statusAreaWidth - ImGui::GetStyle().WindowPadding.x;
+        if ( statusStartX < menuEndX )
+            return;
+
+        ImGui::SameLine( statusStartX );
+        ImGui::BeginGroup();
+        drawStatusContent( pCompiler );
+        ImGui::EndGroup();
+        EditorMenuBarInternal::_s_statusAreaWidth = ImGui::GetItemRectSize().x;
+    }
+
+    void EditorMenuBar::notifyLiveCodingResult( IModuleCompiler& compiler )
+    {
         static BuildState s_lastObservedState = BuildState::Idle;
 
-        IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+        const bool       bCompiling = compiler.isCompiling();
+        const BuildState state      = compiler.getBuildState();
+
+        // 컴파일이 끝나는 순간을 잡는다(Compiling -> Success / Failed)
+        if ( s_lastObservedState == BuildState::Compiling && bCompiling == false )
+        {
+            const string   targetName  = compiler.getTargetName();
+            const string   displayName = targetName.empty() ? "All Modules" : targetName;
+            const float32  duration    = compiler.getLastDurationSec();
+            EditorContext* pContext    = EditorContext::get();
+            if ( pContext == nullptr )
+                return;
+
+            if ( state == BuildState::Success )
+            {
+                fixed_string<constant::kMaxBuffer128> contentBuf;
+                formatstring( contentBuf.data(), contentBuf.capacity(), "%# compiled and reloaded in %#s", displayName.c_str(), Fmt( static_cast<float64>( duration ), Format().precision( 2 ) ) );
+                pContext->getNotificationManager().push( "Live Coding Succeeded", contentBuf.c_str(), NotificationType::Success, 4.0f );
+            }
+            else if ( state == BuildState::Failed )
+            {
+                fixed_string<constant::kMaxBuffer128> contentBuf;
+                formatstring( contentBuf.data(), contentBuf.capacity(), "%s build failed (Exit: %d). See Output Log.", displayName.c_str(), compiler.getLastExitCode() );
+                pContext->getNotificationManager().push( "Live Coding Failed", contentBuf.c_str(), NotificationType::Error, 6.0f );
+            }
+        }
+
+        s_lastObservedState = bCompiling ? BuildState::Compiling : state;
+    }
+
+    void EditorMenuBar::drawStatusContent( IModuleCompiler* pCompiler )
+    {
         if ( pCompiler != nullptr )
         {
             const bool       bCompiling = pCompiler->isCompiling();
             const BuildState state      = pCompiler->getBuildState();
-
-            // 컴파일이 끝나는 순간을 잡는다(Compiling -> Success / Failed)
-            if ( s_lastObservedState == BuildState::Compiling && bCompiling == false )
-            {
-                const string   targetName  = pCompiler->getTargetName();
-                const string   displayName = targetName.empty() ? "All Modules" : targetName;
-                const float32  duration    = pCompiler->getLastDurationSec();
-                EditorContext* pContext    = EditorContext::get();
-                if ( pContext == nullptr )
-                    return;
-
-                if ( state == BuildState::Success )
-                {
-                    fixed_string<constant::kMaxBuffer128> contentBuf;
-                    formatstring( contentBuf.data(), contentBuf.capacity(), "%# compiled and reloaded in %#s", displayName.c_str(), Fmt( static_cast<float64>( duration ), Format().precision( 2 ) ) );
-                    pContext->getNotificationManager().push( "Live Coding Succeeded", contentBuf.c_str(), NotificationType::Success, 4.0f );
-                }
-                else if ( state == BuildState::Failed )
-                {
-                    fixed_string<constant::kMaxBuffer128> contentBuf;
-                    formatstring( contentBuf.data(), contentBuf.capacity(), "%s build failed (Exit: %d). See Output Log.", displayName.c_str(), pCompiler->getLastExitCode() );
-                    pContext->getNotificationManager().push( "Live Coding Failed", contentBuf.c_str(), NotificationType::Error, 6.0f );
-                }
-            }
-
-            s_lastObservedState = bCompiling ? BuildState::Compiling : state;
 
             if ( bCompiling )
             {
