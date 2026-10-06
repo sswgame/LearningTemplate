@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Network/NetTurnRelay/TurnRelay.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
@@ -16,22 +17,14 @@ namespace sw
     {
         struct TurnRelayInternal
         {
-            /** @brief splitmix64 의 마무리 섞기입니다. */
-            static uint64 mix64( uint64 value )
-            {
-                value = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-                value = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
-                return value ^ ( value >> 31 );
-            }
-
             /** @brief 운영체제 난수 64 비트(`Uuid::generate`) — 실행마다 · 서버마다 다르고 미리 알 수 없다. */
             static uint64 makeRandomSeed()
             {
                 const Uuid uuid  = Uuid::generate();
                 uint64     value = 0;
                 for ( const uint8 byte : uuid._arrBytes )
-                    value = mix64( value ^ byte );
-                return value != 0 ? value : 0x9E3779B97F4A7C15ull;
+                    value = HashUtil::mix64( value ^ byte );
+                return value != 0 ? value : HashUtil::kGoldenRatio64;
             }
         };
     } // namespace
@@ -73,7 +66,7 @@ namespace sw
     {
         // 비밀 키에 센 값을 섞는다 — 받은 표에서 다음 표를 셈할 수 없다(암호학적 MAC 은 아니다).
         ++_tokenCount;
-        const uint32 token = static_cast<uint32>( TurnRelayInternal::mix64( _tokenSecret + _tokenCount * 0x9E3779B97F4A7C15ull ) );
+        const uint32 token = static_cast<uint32>( HashUtil::mix64( _tokenSecret + _tokenCount * HashUtil::kGoldenRatio64 ) );
         return token != 0 ? token : 1u;
     }
 

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/AI/Schedule/ScheduleSystem.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -23,8 +24,6 @@ namespace sw
         {
             static constexpr int32   kNoWake            = 0x7fffffff;
             static constexpr float32 kSamePlaceDistance = 1.0e-3f;
-            static constexpr uint64  kFnvOffset         = 0xcbf29ce484222325ull;
-            static constexpr uint64  kFnvPrime          = 0x100000001b3ull;
             static constexpr size_t  kNetHeaderSize     = 6;  ///< 분 int32 + 수 uint16
             static constexpr size_t  kNetEntrySize      = 26; ///< 자리 3 × float32 + 지역 · 활동 해시 2 × uint32 + NPC uint16 + 칸 int16 + 상태 2 × uint8
 
@@ -37,7 +36,7 @@ namespace sw
                 for ( size_t byteIndex = 0; byteIndex < size; ++byteIndex )
                 {
                     hash ^= pByte[byteIndex];
-                    hash *= kFnvPrime;
+                    hash *= HashUtil::kFnvPrime64;
                 }
                 return hash;
             }
@@ -60,14 +59,14 @@ namespace sw
                 return hashValue( hash, position._z );
             }
 
-            static uint32 hashNameToKey( const hashed_string& name ) { return static_cast<uint32>( hashName( kFnvOffset, name ) ); }
+            static uint32 hashNameToKey( const hashed_string& name ) { return static_cast<uint32>( hashName( HashUtil::kFnvOffset64, name ) ); }
 
             static uint32 mixKey( uint32 lhs, uint32 rhs ) { return GameHash::mix32( lhs * 0x9e3779b1u ^ GameHash::mix32( rhs + 0x7f4a7c15u ) ); }
 
             /** @brief 칸의 정체 — 같은 출처 · 칸 · 시간 · 자리 · 출발이면 같은 값입니다(사건 · 경로 캐시 · 계획 비교). */
             static uint64 computeSegmentKey( const ScheduleSegment& segment )
             {
-                uint64 hash = kFnvOffset;
+                uint64 hash = HashUtil::kFnvOffset64;
                 hash        = hashName( hash, segment._sourceId );
                 hash        = hashName( hash, segment._activity );
                 hash        = hashValue( hash, segment._startMinute );
@@ -801,7 +800,7 @@ namespace sw
         fillNetSummary( listSummary );
         vector<uint8> bytes;
         encodeNetSummary( _minute, listSummary, bytes );
-        uint64 hash = Internal::hashBytes( Internal::kFnvOffset, bytes.data(), bytes.size() );
+        uint64 hash = Internal::hashBytes( HashUtil::kFnvOffset64, bytes.data(), bytes.size() );
         for ( const NpcRuntime& npc : _listNpc )
         {
             hash = Internal::hashValue( hash, npc._originMinute );

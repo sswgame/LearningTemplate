@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/atomic.h"
 
 #include "Engine/Graphics/Material/Material.h"
@@ -70,11 +71,11 @@ namespace sw
 
     uint64 MaterialUtil::hashDefines( const vector<string>& listDefine )
     {
-        uint64 hash = StringUtil::kOffset64;
+        uint64 hash = HashUtil::kFnvOffset64;
         for ( const string& defineStr : listDefine )
         {
             hash = StringUtil::computeHash64( defineStr, false, hash );
-            hash = ( hash ^ 0xFFull ) * StringUtil::kPrime64;
+            hash = ( hash ^ 0xFFull ) * HashUtil::kFnvPrime64;
         }
         return hash;
     }

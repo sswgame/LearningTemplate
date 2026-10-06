@@ -2,6 +2,7 @@
 
 #include "Core/Network/Connection/NetHost.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
@@ -65,20 +66,12 @@ namespace sw
 
             static uint64 makeAddressKey( const NetAddress& address ) { return ( static_cast<uint64>( address._ipv4 ) << 16 ) | address._port; }
 
-            /** @brief splitmix64 의 마무리 섞기입니다. */
-            static uint64 mix64( uint64 value )
-            {
-                value = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-                value = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
-                return value ^ ( value >> 31 );
-            }
-
             /** @brief 운영체제 난수 64 비트 — 도전 값이 다른 실행 · 다른 호스트와 겹치지 않고 미리 알 수 없게. */
             static uint64 makeRandomSeed()
             {
                 std::random_device randomDevice;
                 const uint64       seed = ( static_cast<uint64>( randomDevice() ) << 32 ) | static_cast<uint64>( randomDevice() );
-                return seed != 0 ? seed : 0x9E3779B97F4A7C15ull;
+                return seed != 0 ? seed : HashUtil::kGoldenRatio64;
             }
 
             static uint32 readUint32( const uint8* pData )
@@ -195,11 +188,11 @@ namespace sw
     uint32 NetHost::computePacketChecksum( uint32 headerId, const uint8* pBody, int32 size )
     {
         // FNV-1a 32 — 머리 값(프로토콜 id)을 먼저 섞어 다른 게임 · 판의 패킷은 체크섬부터 틀린다.
-        uint32 hash = 2166136261u;
+        uint32 hash = HashUtil::kFnvOffset32;
         for ( int32 shift = 0; shift < 32; shift += 8 )
-            hash = ( hash ^ ( ( headerId >> shift ) & 0xFFu ) ) * 16777619u;
+            hash = ( hash ^ ( ( headerId >> shift ) & 0xFFu ) ) * HashUtil::kFnvPrime32;
         for ( int32 index = 0; index < size; ++index )
-            hash = ( hash ^ pBody[index] ) * 16777619u;
+            hash = ( hash ^ pBody[index] ) * HashUtil::kFnvPrime32;
         return hash;
     }
 
@@ -216,20 +209,18 @@ namespace sw
 
     uint64 NetHost::makeChallengeToken( const NetAddress& address, uint64 clientSalt, int64 window ) const
     {
-        uint64 value = NetHostInternal::mix64( _challengeSecret ^ NetHostInternal::makeAddressKey( address ) );
-        value        = NetHostInternal::mix64( value ^ clientSalt );
-        value        = NetHostInternal::mix64( value ^ static_cast<uint64>( window ) ^ ( _challengeSecret << 1 ) );
+        uint64 value = HashUtil::mix64( _challengeSecret ^ NetHostInternal::makeAddressKey( address ) );
+        value        = HashUtil::mix64( value ^ clientSalt );
+        value        = HashUtil::mix64( value ^ static_cast<uint64>( window ) ^ ( _challengeSecret << 1 ) );
         return value | 1u; // 0 은 "아직 도전을 못 받았다" 의 뜻
     }
 
     uint64 NetHost::nextSalt()
     {
         // splitmix64
-        _saltState += 0x9E3779B97F4A7C15ull;
+        _saltState += HashUtil::kGoldenRatio64;
         uint64 value = _saltState;
-        value        = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-        value        = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
-        return value ^ ( value >> 31 );
+        return HashUtil::mix64( value );
     }
 
     bool NetHost::listen()

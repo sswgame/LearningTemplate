@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/AI/Director/AiDirector.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -583,7 +584,7 @@ namespace sw
     uint64 AiDirector::computeStateHash() const
     {
         using Internal = AiDirectorInternal;
-        uint64 hash    = StringUtil::kOffset64;
+        uint64 hash    = HashUtil::kFnvOffset64;
         hash           = Internal::hashValue( hash, _time );
         hash           = Internal::hashValue( hash, _phaseTime );
         hash           = Internal::hashValue( hash, _intensity );

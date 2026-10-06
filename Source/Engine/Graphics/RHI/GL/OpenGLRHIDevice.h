@@ -4,6 +4,7 @@
  * @note glad(GL 심볼)는 이 헤더가 아니라 GL 의 .cpp 들이 직접, 또는 OpenGLRHIDeviceInternal.h 를 거쳐 include 합니다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
@@ -281,11 +282,11 @@ namespace sw
             size_t operator()( const CompositeFboKey& key ) const
             {
                 size_t hash = static_cast<size_t>( key._depth ) * 1315423911u;
-                hash ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
+                hash ^= static_cast<size_t>( key._colorCount ) + HashUtil::kGoldenRatio32;
                 hash ^= static_cast<size_t>( key._depthSlice ) * 2654435761u;
                 for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
                 {
-                    hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
+                    hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
                     hash ^= static_cast<size_t>( key._arrColorSlice[colorIndex] ) * 2246822519u;
                 }
                 return hash;

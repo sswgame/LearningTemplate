@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gimmick/GimmickCircuit.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Data/GameDataXml.h"
@@ -14,14 +15,12 @@ namespace sw
         {
             static constexpr uint32 kStateMagic   = 0x434B4D47u; // "GMKC"
             static constexpr uint32 kStateVersion = 1u;
-            static constexpr uint64 kFnvOffset    = 14695981039346656037ull;
-            static constexpr uint64 kFnvPrime     = 1099511628211ull;
 
             static uint64 hashBytes( uint64 hash, const void* pData, size_t size )
             {
                 const uint8* pByte = static_cast<const uint8*>( pData );
                 for ( size_t index = 0; index < size; ++index )
-                    hash = ( hash ^ pByte[index] ) * kFnvPrime;
+                    hash = ( hash ^ pByte[index] ) * HashUtil::kFnvPrime64;
                 return hash;
             }
 
@@ -301,7 +300,7 @@ namespace sw
     void GimmickCircuit::computeLayoutHash()
     {
         using Internal = GimmickCircuitInternal;
-        uint64 hash    = Internal::kFnvOffset;
+        uint64 hash    = HashUtil::kFnvOffset64;
         for ( const NodeRuntime& node : _listNode )
         {
             const uint64 kindHash = static_cast<uint64>( node._pKind->_name.getHash() );
@@ -502,6 +501,6 @@ namespace sw
     {
         vector<uint8> bytes;
         saveState( bytes );
-        return GimmickCircuitInternal::hashBytes( GimmickCircuitInternal::kFnvOffset, bytes.data(), bytes.size() );
+        return GimmickCircuitInternal::hashBytes( HashUtil::kFnvOffset64, bytes.data(), bytes.size() );
     }
 } // namespace sw

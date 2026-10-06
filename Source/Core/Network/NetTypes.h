@@ -3,6 +3,7 @@
  * @brief 네트워크 공통 타입 — 주소, 패킷 크기 한도, 채널 종류, 연결 상태, 시퀀스 비교입니다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -43,11 +44,11 @@ namespace sw
         /** @brief 층들의 판을 값 하나로 섞습니다(FNV-1a — 순서도 섞인다). */
         static constexpr uint32 combine( std::initializer_list<uint32> listVersion )
         {
-            uint32 hash = 2166136261u;
+            uint32 hash = HashUtil::kFnvOffset32;
             for ( const uint32 version : listVersion )
             {
                 for ( int32 shift = 0; shift < 32; shift += 8 )
-                    hash = ( hash ^ ( ( version >> shift ) & 0xFFu ) ) * 16777619u;
+                    hash = ( hash ^ ( ( version >> shift ) & 0xFFu ) ) * HashUtil::kFnvPrime32;
             }
             return hash;
         }

@@ -15,6 +15,7 @@
  */
 #pragma once
 #include "Core/Common/Defines.h"
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/DataRaceDetector.h"
@@ -126,7 +127,7 @@ namespace sw
          */
         static size_t bucketIndexOf( size_t hash, size_t bucketCount ) noexcept
         {
-            const uint64 product = static_cast<uint64>( hash ) * 0x9E3779B97F4A7C15ull;
+            const uint64 product = static_cast<uint64>( hash ) * HashUtil::kGoldenRatio64;
             return static_cast<size_t>( product ^ ( product >> 32 ) ) & ( bucketCount - 1 );
         }
 

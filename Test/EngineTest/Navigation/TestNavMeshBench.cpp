@@ -1,6 +1,7 @@
 // 내비메시 벤치 — 쇼케이스 · Shooter3D 아레나의 베이크 시간, 경로 · 레이캐스트 · 가까운 점 1000 번, 군중 100 · 500 에이전트의 갱신 한 번. 값은 Release 로 읽는다.
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Navigation/INavMesh.h"
@@ -29,7 +30,7 @@ namespace
         /** @brief 같은 씨앗이면 같은 수열(시험이 기계마다 같은 점을 쓴다). */
         struct Random
         {
-            uint64 _state{ 0x9E3779B97F4A7C15ull };
+            uint64 _state{ sw::HashUtil::kGoldenRatio64 };
 
             float32 nextUnit()
             {

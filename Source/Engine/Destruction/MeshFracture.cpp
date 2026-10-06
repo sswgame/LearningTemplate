@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/MeshFracture.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -63,13 +64,13 @@ namespace sw
                 for ( const uint32 bits : arrBit )
                 {
                     hash ^= bits;
-                    hash *= 1099511628211ull;
+                    hash *= HashUtil::kFnvPrime64;
                     hash ^= hash >> 29;
                 }
                 return hash;
             }
 
-            static uint64 makeEdgeKey( uint64 from, uint64 to ) { return from * 0x9E3779B97F4A7C15ull ^ ( to + 0x632BE59BD9B4E019ull + ( from << 6 ) + ( from >> 2 ) ); }
+            static uint64 makeEdgeKey( uint64 from, uint64 to ) { return from * HashUtil::kGoldenRatio64 ^ ( to + 0x632BE59BD9B4E019ull + ( from << 6 ) + ( from >> 2 ) ); }
 
             /**
              * @brief 허용 오차 안의 자리를 처음 본 자리로 맞추는 용접기입니다(격자 칸 + 이웃 27 칸을 봐 칸 경계에 걸친 점도 맞춘다).

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/World/PropScatterComponent.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
@@ -170,7 +171,7 @@ namespace sw
         , _inwardJitter{ 1.0f }
         , _scaleMin{ 1.0f }
         , _scaleMax{ 1.0f }
-        , _seed{ 0x9E3779B9u }
+        , _seed{ HashUtil::kGoldenRatio32 }
         , _mode{ PropScatterMode::Edge }
         , _rule{}
         , _listSpawned{}

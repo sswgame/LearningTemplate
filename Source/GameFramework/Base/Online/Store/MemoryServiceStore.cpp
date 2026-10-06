@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/String/StringUtil.h"
 
@@ -218,7 +219,7 @@ namespace sw
                 listTable.push_back( table );
         }
         std::sort( listTable.begin(), listTable.end(), HashedStringLexicalLess{} );
-        uint64 hash = StringUtil::kOffset64;
+        uint64 hash = HashUtil::kFnvOffset64;
         for ( const hashed_string& table : listTable )
         {
             hash = MemoryServiceStoreInternal::mixHash( hash, table.c_str(), table.size() );

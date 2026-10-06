@@ -2,6 +2,7 @@
 
 #include "Core/Network/Message/NetRequest.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -18,7 +19,7 @@ namespace sw
         {
             static uint64 mixHash( uint64 hash, uint64 value )
             {
-                hash ^= value + 0x9E3779B97F4A7C15ull + ( hash << 6 ) + ( hash >> 2 );
+                hash = HashUtil::combine( hash, value );
                 return hash;
             }
 

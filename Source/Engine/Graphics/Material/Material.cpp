@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Material/Material.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/mutex.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -865,7 +866,7 @@ namespace sw
     {
         if ( _bShaderPathHashDirty != SW_FALSE )
         {
-            _cachedShaderPathHash = StringUtil::computeHash64( _desc._shaderPath, false, StringUtil::kOffset64 );
+            _cachedShaderPathHash = StringUtil::computeHash64( _desc._shaderPath, false, HashUtil::kFnvOffset64 );
             _bShaderPathHashDirty = SW_FALSE;
         }
         return _cachedShaderPathHash;

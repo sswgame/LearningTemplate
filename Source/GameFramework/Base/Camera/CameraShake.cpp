@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Camera/CameraShake.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Camera/CameraPreset.h"
@@ -13,7 +14,7 @@ namespace sw
         struct CameraShakeInternal
         {
             /** @brief 채널마다 시드를 이만큼 떨어뜨린다 — 여섯 채널이 같은 잡음을 따라가지 않게. */
-            static constexpr uint32 kChannelSeedStride = 0x9E3779B9u;
+            static constexpr uint32 kChannelSeedStride = HashUtil::kGoldenRatio32;
             /** @brief 채널마다 시간을 조금씩 어긋나게 한다 — 시드만 다르면 정수 자리(값 0)가 모든 채널에서 같은 때 온다. */
             static constexpr float32 kChannelTimeOffset = 17.31f;
 

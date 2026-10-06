@@ -5,6 +5,7 @@
  *          보내므로, 같은 씨앗이 모든 기계에서 같은 조각 · 같은 흩기를 내야 합니다. 정수 연산과 2 의 거듭제곱 나눗셈만 씁니다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -23,11 +24,9 @@ namespace sw
         /** @brief 다음 64 비트 값입니다. */
         uint64 nextUint64()
         {
-            _state += 0x9E3779B97F4A7C15ull;
+            _state += HashUtil::kGoldenRatio64;
             uint64 value = _state;
-            value        = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-            value        = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
-            return value ^ ( value >> 31 );
+            return HashUtil::mix64( value );
         }
 
         /** @brief [0, 1) 의 실수입니다(위 24 비트 — float32 가 정확히 담는다). */

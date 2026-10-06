@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
@@ -108,7 +109,7 @@ SW_TEST_CASE( NetCompressionTest, EnvelopeRoundTripsAndKeepsRawWhenNotSmaller )
 
     // 줄지 않는 바이트 — 봉투를 쓰지 않는다(부르는 쪽이 원문을 보낸다).
     vector<uint8> noiseBytes( 200 );
-    uint32        seed = 0x9E3779B9u;
+    uint32        seed = sw::HashUtil::kGoldenRatio32;
     for ( uint8& value : noiseBytes )
     {
         seed  = seed * 1664525u + 1013904223u;

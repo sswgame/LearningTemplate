@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
@@ -91,7 +92,7 @@ namespace sw
 
         std::sort( listSorted.begin(), listSorted.end() );
 
-        uint64 hash{ 14695981039346656037ull }; // FNV-1a 64비트 오프셋 기저값
+        uint64 hash{ HashUtil::kFnvOffset64 }; // FNV-1a 64비트 오프셋 기저값
         for ( const string& define : listSorted )
         {
             if ( define.empty() )

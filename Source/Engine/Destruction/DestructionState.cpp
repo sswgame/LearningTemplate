@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/DestructionState.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/BitStream.h"
@@ -97,8 +98,8 @@ namespace sw
 
             static uint64 mixHash( uint64 hash, uint64 value )
             {
-                hash ^= value + 0x9E3779B97F4A7C15ull + ( hash << 6 ) + ( hash >> 2 );
-                hash = ( hash ^ ( hash >> 31 ) ) * 0xBF58476D1CE4E5B9ull;
+                hash = HashUtil::combine( hash, value );
+                hash = ( hash ^ ( hash >> 31 ) ) * HashUtil::kSplitMixMultiplier0;
                 return hash;
             }
 
@@ -564,7 +565,7 @@ namespace sw
     uint64 DestructionState::computeStateHash() const
     {
         using Internal = DestructionStateInternal;
-        uint64 hash    = 1469598103934665603ull;
+        uint64 hash    = HashUtil::kFnvOffset64;
         for ( size_t node = 0; node < _listNodeStrain.size(); ++node )
         {
             hash = Internal::mixHash( hash, Internal::toBits( _listNodeStrain[node] ) );

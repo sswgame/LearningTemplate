@@ -2,6 +2,7 @@
 
 #include "Engine/Character/Fit/GeometryCut.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 
@@ -16,14 +17,6 @@ namespace sw
 
             static uint64 makeEdgeKey( uint32 from, uint32 to ) { return ( static_cast<uint64>( from ) << 32 ) | static_cast<uint64>( to ); }
 
-            /** @brief splitmix64 의 마무리 섞기입니다. */
-            static uint64 mixBits( uint64 value )
-            {
-                value = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-                value = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
-                return value ^ ( value >> 31 );
-            }
-
             /**
              * @brief 자리를 격자로 반올림한 키 — 용접(같은 자리 = 같은 정점).
              * @details 성분을 차례로 섞어 잇는다. 성분마다 곱해 XOR 로 합치면 부호만 다른 대칭 꼭짓점(±1 · ±0.5 · ±0.25 상자)이 같은 키가 되어
@@ -34,9 +27,9 @@ namespace sw
                 const int64 quantX = static_cast<int64>( MathUtil::round( position._x / kWeldResolution ) );
                 const int64 quantY = static_cast<int64>( MathUtil::round( position._y / kWeldResolution ) );
                 const int64 quantZ = static_cast<int64>( MathUtil::round( position._z / kWeldResolution ) );
-                uint64      hash   = mixBits( static_cast<uint64>( quantX ) + 0x9E3779B97F4A7C15ull );
-                hash               = mixBits( hash ^ ( static_cast<uint64>( quantY ) + 0xC2B2AE3D27D4EB4Full ) );
-                return mixBits( hash ^ ( static_cast<uint64>( quantZ ) + 0x165667B19E3779F9ull ) );
+                uint64      hash   = HashUtil::mix64( static_cast<uint64>( quantX ) + HashUtil::kGoldenRatio64 );
+                hash               = HashUtil::mix64( hash ^ ( static_cast<uint64>( quantY ) + 0xC2B2AE3D27D4EB4Full ) );
+                return HashUtil::mix64( hash ^ ( static_cast<uint64>( quantZ ) + 0x165667B19E3779F9ull ) );
             }
 
             static uint16 findOrAddGroup( AppearanceGeometry& inoutTarget, const hashed_string& name )

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Appearance/AppearanceResolver.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/formatString.h"
 
@@ -39,17 +40,15 @@ namespace sw
             /** @brief FNV-1a 64 로 값을 쌓습니다. 이름은 내용 해시(대소문자 무시)라 프로세스 · 기계가 달라도 같습니다. */
             struct HashBuilder
             {
-                static constexpr uint64 kOffset = 0xcbf29ce484222325ull;
-                static constexpr uint64 kPrime  = 0x100000001b3ull;
 
-                uint64 _value{ kOffset };
+                uint64 _value{ HashUtil::kFnvOffset64 };
 
                 void addUint64( uint64 value )
                 {
                     for ( uint32 byteIndex = 0; byteIndex < 8; ++byteIndex )
                     {
                         _value ^= ( value >> ( byteIndex * 8 ) ) & 0xffu;
-                        _value *= kPrime;
+                        _value *= HashUtil::kFnvPrime64;
                     }
                 }
                 void addName( const hashed_string& name ) { addUint64( name.empty() ? 0ull : static_cast<uint64>( name.getHash() ) ); }

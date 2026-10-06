@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
@@ -151,8 +152,8 @@ namespace sw
             size_t operator()( const CellCoord& coord ) const noexcept
             {
                 size_t hash = std::hash<int32>{}( coord._x );
-                hash ^= std::hash<int32>{}( coord._y ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
-                hash ^= std::hash<int32>{}( coord._z ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
+                hash ^= std::hash<int32>{}( coord._y ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
+                hash ^= std::hash<int32>{}( coord._z ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
                 return hash;
             }
         };

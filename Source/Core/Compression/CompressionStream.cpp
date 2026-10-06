@@ -2,6 +2,7 @@
 
 #include "Core/Compression/CompressionStream.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/NullCompressionCodec.h"
 #include "Core/Compression/RleCompressionCodec.h"
@@ -60,11 +61,11 @@ namespace sw
             return 0;
 
         const auto* const pBytes = static_cast<const uint8*>( pData );
-        uint32            hash   = 2166136261u;
+        uint32            hash   = HashUtil::kFnvOffset32;
         for ( size_t byteIndex = 0; byteIndex < dataSize; ++byteIndex )
         {
             hash ^= pBytes[byteIndex];
-            hash *= 16777619u;
+            hash *= HashUtil::kFnvPrime32;
         }
         return hash;
     }

@@ -17,6 +17,7 @@
  */
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/SlotHandleTable.h"
@@ -43,10 +44,8 @@ namespace
     /** @brief splitmix64 — 키를 고르게 흩는다(연속 정수 키는 해시가 약해도 좋아 보인다). */
     uint64 mixKey( uint64 value )
     {
-        value += 0x9E3779B97F4A7C15ull;
-        value = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-        value = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
-        return value ^ ( value >> 31 );
+        value += sw::HashUtil::kGoldenRatio64;
+        return sw::HashUtil::mix64( value );
     }
 
 } // namespace

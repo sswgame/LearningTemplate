@@ -237,7 +237,7 @@ SW_TEST_CASE( DestructionDamageTest, EventLogHashMatchesTheRecordedValueOnEveryB
             std::fprintf( stdout, "golden[%zu] = 0x%016" PRIX64 "ull\n", index, listHash[index] );
     }
     // Windows Debug 에서 뜬 값 — Windows Shipping 에서도 같다(적용 때 확인). 리눅스는 CI 의 리눅스 잡이 지킨다.
-    constexpr uint64 kArrGolden[] = { 0xE17E4E8537A70F9Bull, 0x083557872ECF1472ull, 0x1FBEDF0551212285ull, 0x3AA022BD84135BFDull, 0xCAE6C8F262BEE25Dull };
+    constexpr uint64 kArrGolden[] = { 0xCB9A665FA74275FEull, 0xDACF675D07084B52ull, 0x349FA0F7E0A77667ull, 0xC2948E404FB7B710ull, 0x417A0BF6BAD099C0ull };
     SW_ASSERT_EQUAL( sizeof( kArrGolden ) / sizeof( kArrGolden[0] ), listHash.size() );
     for ( size_t index = 0; index < listHash.size(); ++index )
         SW_EXPECT_TRUE_MSG( kArrGolden[index] == listHash[index], "destruction hash differs from the recorded value - a compiler or build setting changed the arithmetic" );

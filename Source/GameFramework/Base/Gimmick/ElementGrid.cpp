@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gimmick/ElementGrid.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -324,13 +325,13 @@ namespace sw
 
     uint32 ElementGrid::computeStateHash() const
     {
-        uint32 hash = 2166136261u;
+        uint32 hash = HashUtil::kFnvOffset32;
         for ( const Cell& cell : _listCell )
         {
-            hash = ( hash ^ cell._material ) * 16777619u;
-            hash = ( hash ^ cell._statusBits ) * 16777619u;
+            hash = ( hash ^ cell._material ) * HashUtil::kFnvPrime32;
+            hash = ( hash ^ cell._statusBits ) * HashUtil::kFnvPrime32;
             for ( const uint8 value : cell._arrStatusValue )
-                hash = ( hash ^ value ) * 16777619u;
+                hash = ( hash ^ value ) * HashUtil::kFnvPrime32;
         }
         return hash;
     }

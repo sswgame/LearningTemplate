@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/String/StringUtil.h"
 
@@ -81,9 +82,9 @@ namespace sw
             static uint64 mixBits( uint64 value )
             {
                 value ^= value >> 30;
-                value *= 0xbf58476d1ce4e5b9ull;
+                value *= HashUtil::kSplitMixMultiplier0;
                 value ^= value >> 27;
-                value *= 0x94d049bb133111ebull;
+                value *= HashUtil::kSplitMixMultiplier1;
                 value ^= value >> 31;
                 return value;
             }

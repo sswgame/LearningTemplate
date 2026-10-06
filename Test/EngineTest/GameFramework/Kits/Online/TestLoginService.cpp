@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
+
 #include "Engine/Network/EngineNetSecurity.h"
 
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
@@ -61,12 +63,12 @@ namespace
         {
             for ( int32 blockIndex = 0; blockIndex * 8 < outSize; ++blockIndex )
             {
-                uint64 hash = 1469598103934665603ull ^ ( seed + static_cast<uint64>( blockIndex ) * 0x9E3779B97F4A7C15ull );
+                uint64 hash = 1469598103934665603ull ^ ( seed + static_cast<uint64>( blockIndex ) * sw::HashUtil::kGoldenRatio64 );
                 for ( int32 index = 0; index < firstSize; ++index )
-                    hash = ( hash ^ pFirst[index] ) * 1099511628211ull;
-                hash = ( hash ^ 0xFFu ) * 1099511628211ull;
+                    hash = ( hash ^ pFirst[index] ) * sw::HashUtil::kFnvPrime64;
+                hash = ( hash ^ 0xFFu ) * sw::HashUtil::kFnvPrime64;
                 for ( int32 index = 0; index < secondSize; ++index )
-                    hash = ( hash ^ pSecond[index] ) * 1099511628211ull;
+                    hash = ( hash ^ pSecond[index] ) * sw::HashUtil::kFnvPrime64;
                 for ( int32 byteIndex = 0; byteIndex < 8 && blockIndex * 8 + byteIndex < outSize; ++byteIndex )
                     pOut[blockIndex * 8 + byteIndex] = static_cast<uint8>( hash >> ( byteIndex * 8 ) );
             }

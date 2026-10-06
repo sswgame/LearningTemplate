@@ -6,6 +6,7 @@
  *          게인을 램프합니다(지퍼 잡음 없음).
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Math/MathUtil.h"
@@ -87,16 +88,14 @@ namespace sw
      */
     struct AudioRandom
     {
-        uint64 _state{ 0x9E3779B97F4A7C15ull };
+        uint64 _state{ HashUtil::kGoldenRatio64 };
 
         /** @brief 다음 64 비트 값입니다. */
         uint64 nextUint64()
         {
-            _state += 0x9E3779B97F4A7C15ull;
+            _state += HashUtil::kGoldenRatio64;
             uint64 mixed = _state;
-            mixed        = ( mixed ^ ( mixed >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-            mixed        = ( mixed ^ ( mixed >> 27 ) ) * 0x94D049BB133111EBull;
-            return mixed ^ ( mixed >> 31 );
+            return HashUtil::mix64( mixed );
         }
 
         /** @brief [0, 1) 의 값입니다. */

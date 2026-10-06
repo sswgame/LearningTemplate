@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Process/CallStackCapture.h"
@@ -140,7 +141,7 @@ namespace sw
         uint64 hash{ 0 };
         for ( uint32 frameIndex = 0; frameIndex < outStack._frameCount; ++frameIndex )
         {
-            hash ^= reinterpret_cast<uint64>( outStack._arrFrame[frameIndex] ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= reinterpret_cast<uint64>( outStack._arrFrame[frameIndex] ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
         }
         outStack._hash = hash;
     }

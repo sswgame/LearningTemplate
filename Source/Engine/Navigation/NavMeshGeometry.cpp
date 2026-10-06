@@ -2,6 +2,7 @@
 
 #include "Engine/Navigation/NavMeshGeometry.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -324,7 +325,7 @@ namespace sw
     uint64 NavMeshGeometry::computeHash() const
     {
         using Internal = NavMeshGeometryInternal;
-        uint64 hash    = StringUtil::kOffset64;
+        uint64 hash    = HashUtil::kFnvOffset64;
         hash           = Internal::mixBytes( hash, _listVertex.data(), _listVertex.size() * sizeof( float3 ) );
         hash           = Internal::mixBytes( hash, _listIndex.data(), _listIndex.size() * sizeof( uint32 ) );
         hash           = Internal::mixBytes( hash, _listTriangleArea.data(), _listTriangleArea.size() );

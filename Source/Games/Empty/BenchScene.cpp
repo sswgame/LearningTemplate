@@ -2,6 +2,7 @@
 
 #include "Games/Empty/BenchScene.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -273,7 +274,7 @@ namespace sw
         , _listBenchExtra{}
         , _glassMaterial{ nullptr }
         , _listChurnInstance{}
-        , _churnRandom{ 0x9E3779B9u }
+        , _churnRandom{ HashUtil::kGoldenRatio32 }
         , _churnFrame{ 0 }
         , _benchElapsed{ 0.0f }
         , _benchGridSide{ 0 }

@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -146,7 +147,7 @@ namespace sw
         // 인스턴스가 있으면 그 해시를 쓴다. 키워드 오버라이드가 퍼뮤테이션을 바꾸고, 그 해시는 부모 것을 이미 포함한다.
         const uint64 defineHash = ( pInstance != nullptr ) ? pInstance->getPermutationHash() : pMaterial->getPermutationHash();
         uint64       hash       = pMaterial->getShaderPathHash();
-        hash ^= defineHash + 0x9e3779b97f4a7c15ull + ( hash << 6 ) + ( hash >> 2 );
+        hash                    = HashUtil::combine( hash, defineHash );
         return hash;
     }
 

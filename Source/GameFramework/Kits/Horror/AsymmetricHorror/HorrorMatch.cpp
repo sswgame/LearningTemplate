@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Horror/AsymmetricHorror/HorrorMatch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
@@ -20,7 +21,7 @@ namespace sw
         {
             static constexpr float32 kTiny             = 1.0e-5f;
             static constexpr float32 kNeverReviveTime  = 1.0e9f; ///< 빈사 회복은 치료 진행이 정한다 — Vitality 의 부활 시계는 멈춤용으로만 쓴다
-            static constexpr uint32  kGeneratorSeedMix = 0x9E3779B9u;
+            static constexpr uint32  kGeneratorSeedMix = HashUtil::kGoldenRatio32;
             static constexpr uint32  kHealSeedMix      = 0x85EBCA6Bu;
             static constexpr uint32  kGateSeedMix      = 0xC2B2AE35u;
 

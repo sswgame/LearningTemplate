@@ -3,6 +3,7 @@
  * @brief 씨앗이 같으면 같은 수열을 내는 난수(xorshift32)와 좌표 해시 — 시험 · 리플레이 · 절차 생성이 되풀이되게 합니다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
@@ -18,7 +19,7 @@ namespace sw
     class SW_GF_API GameRandom
     {
     public:
-        static constexpr uint32 kDefaultSeed = 0x9E3779B9u;
+        static constexpr uint32 kDefaultSeed = HashUtil::kGoldenRatio32;
 
         explicit GameRandom( uint32 seed = kDefaultSeed );
 

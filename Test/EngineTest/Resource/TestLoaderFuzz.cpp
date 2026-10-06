@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -33,7 +34,7 @@ namespace
     {
     public:
         explicit FuzzRandom( uint64 seed )
-            : _state{ seed == 0 ? 0x9E3779B97F4A7C15ull : seed }
+            : _state{ seed == 0 ? sw::HashUtil::kGoldenRatio64 : seed }
         {
         }
         uint64 next()
@@ -166,11 +167,11 @@ namespace
     /** @brief FNV-1a 64 — 대상 이름에서 변이 수열을 고른다. */
     uint64 hashTargetName( string_view name )
     {
-        uint64 hash = 0xCBF29CE484222325ull;
+        uint64 hash = sw::HashUtil::kFnvOffset64;
         for ( const utf8 character : name )
         {
             hash ^= static_cast<uint8>( character );
-            hash *= 0x100000001B3ull;
+            hash *= sw::HashUtil::kFnvPrime64;
         }
         return hash;
     }

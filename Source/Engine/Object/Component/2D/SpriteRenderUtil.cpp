@@ -2,6 +2,8 @@
 
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 
+#include "Core/Common/HashUtil.h"
+
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Resource/WeakInternCache.h"
@@ -29,7 +31,7 @@ namespace sw
             {
                 size_t operator()( const TextureInstanceKey& key ) const noexcept
                 {
-                    return std::hash<const void*>{}( key._pParent ) ^ ( static_cast<size_t>( key._texture.getHash() ) * 0x9E3779B97F4A7C15ull ) ^
+                    return std::hash<const void*>{}( key._pParent ) ^ ( static_cast<size_t>( key._texture.getHash() ) * HashUtil::kGoldenRatio64 ) ^
                            ( static_cast<size_t>( key._normalMap.getHash() ) * 0xC2B2AE3D27D4EB4Full );
                 }
             };

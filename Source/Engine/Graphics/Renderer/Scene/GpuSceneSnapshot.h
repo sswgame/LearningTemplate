@@ -6,6 +6,7 @@
  *          소유 규칙(shared_ptr 로 소유를 함께 싣는다)은 `GpuSceneSnapshot` 주석과 Scripts/lint/gate/CheckRenderOwnership.py 참고.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
@@ -198,7 +199,7 @@ namespace sw
         size_t operator()( const GpuMaterialElementKey& key ) const
         {
             size_t hash = reinterpret_cast<size_t>( key._pMaterial ) * 1315423911u;
-            hash ^= reinterpret_cast<size_t>( key._pInstance ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= reinterpret_cast<size_t>( key._pInstance ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             return hash;
         }
     };

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Concurrency/LockFreeObjectPool.h"
 #include "Core/Concurrency/LockFreeQueue.h"
@@ -1289,10 +1290,8 @@ SW_TEST_CASE( DataStructureTest, HashMapOddReserveGrowAndEraseStaysConsistent )
 {
     auto mixKey = []( uint64 value )
     {
-        value += 0x9E3779B97F4A7C15ull;
-        value = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-        value = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
-        return value ^ ( value >> 31 );
+        value += sw::HashUtil::kGoldenRatio64;
+        return sw::HashUtil::mix64( value );
     };
     constexpr uint64 kCount = 5000;
 

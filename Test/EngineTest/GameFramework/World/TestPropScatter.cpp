@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -33,7 +34,7 @@ namespace
             params._inwardJitter = 4.0f;
             params._scaleMin     = 3.0f;
             params._scaleMax     = 4.5f;
-            params._seed         = 0x9E3779B9u;
+            params._seed         = sw::HashUtil::kGoldenRatio32;
             params._mode         = PropScatterMode::Edge;
             return params;
         }
