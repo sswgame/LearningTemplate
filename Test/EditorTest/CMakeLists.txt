@@ -29,6 +29,7 @@ sw_addTestExecutable(EditorTest
 		Common/Backend/TestEditorDrawReleaseQueue.cpp
 		Common/Commands/TestEditorGlobalVariableCommands.cpp
 		Common/Workspace/TestEditorLayoutStore.cpp
+		Common/Widgets/TestEditorLabelLayout.cpp
 		Common/Widgets/TestEditorListFilter.cpp
 		Common/Commands/TestEditorLogCommands.cpp
 		Common/Gui/TestEditorPanelDocument.cpp
@@ -75,6 +76,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPlaySession.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorUtil.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorLabelLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorListFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorBuiltinValue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"

@@ -728,6 +728,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|input.hierarchySearchTyping",
         "EditorSelfTest|PASS|input.tooltipOnHover",
         "EditorSelfTest|PASS|input.classicDarkSwatch",
+        "EditorSelfTest|PASS|hierarchy.visibilityToggleFits",
     };
 
     const string  imguiIniPath = findEditorImguiIniPath();

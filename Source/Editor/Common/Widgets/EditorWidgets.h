@@ -64,6 +64,18 @@ namespace sw::editor
          * @brief 활성 · 비활성 색이 바뀌는 토글 · 필터 칩 버튼입니다. 클릭되면 true 입니다.
          */
         static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color4& activeColor = style::kToggleActive );
+        /**
+         * @brief 켬/끔 아이콘 단추(정사각, 한 줄 높이)입니다. 눌렸으면 true 입니다. 툴팁은 상태에 따라 @p pTooltipOn · @p pTooltipOff 입니다.
+         * @details 한 변은 `GetFrameHeight()` 라 글꼴 · DPI 배율을 함께 받는다. 픽셀 상수로 폭을 주면 150 % 에서 글자가 잘린다.
+         */
+        static bool drawToggleIconButton( const utf8* pId, bool bOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
+                                          const utf8* pTooltipOff );
+        /**
+         * @brief @p width 안에 이름을 최대 @p maxLineCount 줄로 그립니다. 넘치면 마지막 줄 끝을 말줄임으로 줄이고 툴팁에 전체를 보입니다.
+         * @details 줄 바꿈은 공백 · '_' · '-' · '.' 뒤에서 먼저 찾고, 없을 때만 글자 단위다(`EditorLabelLayoutUtil::breakLines`).
+         *          높이는 늘 @p maxLineCount 줄이다 — 타일 격자의 줄 높이가 이름마다 달라지지 않게.
+         */
+        static void drawClampedLabel( string_view text, float32 width, uint32 maxLineCount );
 
         /** @brief 흐린 글씨의 안내 문구를 그립니다. */
         static void drawEmptyHint( const utf8* pText );

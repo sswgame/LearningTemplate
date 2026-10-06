@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorLabelLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -26,6 +27,13 @@ namespace sw::editor
                 static uint32 s_count = 0;
                 return s_count;
             }
+
+            /** @brief ImGui 글꼴로 글자열 너비를 잽니다(`EditorLabelLayoutUtil::MeasureFunc`). */
+            static float32 measureImGuiText( string_view text, void* /*pUserData*/ )
+            {
+                return ImGui::CalcTextSize( text.data(), text.data() + text.size() ).x;
+            }
+
 
             static ImVec4 toIm( const Color4& c )
             {
@@ -211,6 +219,44 @@ namespace sw::editor
         return bClicked;
     }
 
+    bool EditorWidgets::drawToggleIconButton( const utf8* pId, bool bOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
+                                              const utf8* pTooltipOff )
+    {
+        const float32 side = ImGui::GetFrameHeight();
+        ImGui::PushID( pId );
+        const bool bPressed = ImGui::Button( bOn ? pIconOn : pIconOff, ImVec2{ side, side } );
+        ImGui::PopID();
+        if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
+            ImGui::SetTooltip( "%s", bOn ? pTooltipOn : pTooltipOff );
+        return bPressed;
+    }
+
+    void EditorWidgets::drawClampedLabel( string_view text, float32 width, uint32 maxLineCount )
+    {
+        vector<string_view> listLine;
+        EditorLabelLayoutUtil::breakLines( text, width, maxLineCount, &EditorWidgetsInternal::measureImGuiText, nullptr, listLine );
+        ImDrawList*   pDrawList  = ImGui::GetWindowDrawList();
+        const float32 lineHeight = ImGui::GetTextLineHeight();
+        ImVec2        cursor     = ImGui::GetCursorScreenPos();
+        for ( size_t index = 0; index < listLine.size(); ++index )
+        {
+            const string_view line  = listLine[index];
+            const bool        bLast = index + 1 == listLine.size();
+            const ImVec2      lineMax{ cursor.x + width, cursor.y + lineHeight };
+            if ( bLast )
+                ImGui::RenderTextEllipsis( pDrawList, cursor, lineMax, lineMax.x, line.data(), line.data() + line.size(), nullptr );
+            else
+                pDrawList->AddText( cursor, ImGui::GetColorU32( ImGuiCol_Text ), line.data(), line.data() + line.size() );
+            cursor.y += lineHeight;
+        }
+        const uint32 rowCount = maxLineCount > 0 ? maxLineCount : 1u;
+        ImGui::Dummy( ImVec2{ width, lineHeight * static_cast<float32>( rowCount ) } );
+        // 마지막 줄이 넘쳤거나(말줄임) 줄 수가 모자라 남은 글이 있으면 전체 이름을 툴팁으로 보인다.
+        const bool bLastLineOverflows = listLine.empty() == false && EditorWidgetsInternal::measureImGuiText( listLine.back(), nullptr ) > width;
+        if ( bLastLineOverflows && ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
+            ImGui::SetTooltip( "%.*s", static_cast<int32>( text.size() ), text.data() );
+    }
+
     void EditorWidgets::drawEmptyHint( const utf8* pText )
     {
         if ( pText == nullptr )
@@ -235,6 +281,7 @@ namespace sw::editor
     {
         return EditorWidgetsInternal::noSearchResultHintCount();
     }
+
 
     void EditorWidgets::drawCountLabel( uint32 visible, uint32 total, const utf8* pUnit )
     {
