@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # main.cpp 는 **뺀다.** 테스트 실행 파일마다 자기 main 이 필요해서 sw_addTestExecutable 이 타겟마다
-# 따로 붙인다(cmake/Engine/TargetRules.cmake). 여기 넣으면 정적 라이브러리에 main 이 들어가 버린다.
+# 따로 붙인다(cmake/Engine/TestTargets.cmake). 여기 넣으면 정적 라이브러리에 main 이 들어가 버린다.
 file(GLOB TF_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.h")
 # main.cpp · TestHostRuntime.cpp 는 실행 파일마다 들어간다(`sw_addTestExecutable` · `Test/FuzzTest`) — GameFramework · 생성 설정 헤더를 쓰는 호스트다.
 list(REMOVE_ITEM TF_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/TestHostRuntime.cpp")

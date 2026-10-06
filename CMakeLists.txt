@@ -37,11 +37,13 @@ sw_vcpkgWriteManifestStamp()
 # ------------------------------------------------------------------------------
 # 3) 컴파일 플래그 · 모듈 빌드 규칙 · 런타임 DLL 복사 · 리플렉션 코드젠 · 에셋/도구 타겟
 # ------------------------------------------------------------------------------
-# BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 TargetRules 보다 먼저다.
+# BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(UnbuiltSources · ModuleTargets · TestTargets)보다 먼저다.
 # RuntimeDependencies 는 BuildLayout 의 sw_queueRuntimeCopy 를 쓴다.
 include(cmake/Modules/LoadCompileFlags.cmake)
 include(cmake/Engine/BuildLayout.cmake)
-include(cmake/Engine/TargetRules.cmake)
+include(cmake/Engine/UnbuiltSources.cmake)
+include(cmake/Engine/ModuleTargets.cmake)
+include(cmake/Engine/TestTargets.cmake)
 include(cmake/Engine/ModuleManifest.cmake)
 include(cmake/Engine/ThirdPartyLibs.cmake)
 include(cmake/Engine/RuntimeDependencies.cmake)

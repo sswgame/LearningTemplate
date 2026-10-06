@@ -9,7 +9,7 @@ CMake 소스 GLOB 누락 및 컴파일 데이터베이스 일치 검사.
 **구성이 일부러 짓지 않는 소스는 CMake 가 적은 목록으로만 안다** (`<빌드>/generated/sw/config/UnbuiltSources.txt`).
 배포 구성의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드, 다른 OS 의 Core 소스, 짓지 않는 RHI 모듈 엔트리 · DX 모듈(윈도우 밖),
 고르지 않은 게임 팩, 끈 GameFramework 가 그렇다. 무엇을 빼는지는 CMake 가 정하므로 빼는 자리가 직접 적고(`sw_declareUnbuiltSources` ·
-`sw_excludeUnbuiltSources` · `sw_declareUnbuiltDirectory`, `cmake/Engine/TargetRules.cmake`), 여기서는 그 목록만 읽는다 — 이 게이트에는
+`sw_excludeUnbuiltSources` · `sw_declareUnbuiltDirectory`, `cmake/Engine/UnbuiltSources.cmake`), 여기서는 그 목록만 읽는다 — 이 게이트에는
 플랫폼 · 게임 이름을 적은 무시 목록이 없다. 목록에 없는데 지어지지 않은 소스는 위반이다.
 
 (Ninja 빌드는 소스 GLOB 의 `CONFIGURE_DEPENDS` 로 추가 · 삭제를 감지하지만,
@@ -69,7 +69,7 @@ class CheckSourceGlobGate(LintGate):
     listCtestArgument = ("--build-dir", "${CMAKE_BINARY_DIR}")
     maxViolationShown = 40
     hint = ("  reconfigure 가 필요합니다. 이 구성이 일부러 짓지 않는 소스라면\n"
-            "  빼는 자리에서 sw_excludeUnbuiltSources · sw_declareUnbuiltSources 로 적으세요(cmake/Engine/TargetRules.cmake).")
+            "  빼는 자리에서 sw_excludeUnbuiltSources · sw_declareUnbuiltSources 로 적으세요(cmake/Engine/UnbuiltSources.cmake).")
     selfTestCases = [
         {
             "name": "짓지 않는 소스 목록에 없는데 compile_commands 에도 없는 소스",

@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # 이 파일은 함수만 정의하지 않는다. include 되는 순간 출력 경로와 sw_global_options 가 정해진다.
-# 그래서 TargetRules.cmake 보다 먼저 include 해야 한다.
+# 그래서 타깃 규칙(UnbuiltSources · ModuleTargets · TestTargets)보다 먼저 include 해야 한다.
 
 # ------------------------------------------------------------------------------
 # 플랫폼 · 구성 이름 — 매니페스트(_listPlatform · _listConfiguration) · 모듈 해석 · 배포 백엔드 확인이 같은 낱말을 쓴다(런타임 ModuleCatalog 와 같은 표).

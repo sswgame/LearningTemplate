@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) GameFramework — 모듈 라이브러리 기본값은 sw_addModuleLibrary(cmake/Engine/TargetRules.cmake). Kits/ 는 키트마다 따로 짓는다.
+# 1) GameFramework — 모듈 라이브러리 기본값은 sw_addModuleLibrary(cmake/Engine/ModuleTargets.cmake). Kits/ 는 키트마다 따로 짓는다.
 # ------------------------------------------------------------------------------
 sw_skipInactiveModule(GameFramework swSkipGameFramework)
 if(swSkipGameFramework)

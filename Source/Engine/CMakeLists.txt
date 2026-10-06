@@ -238,7 +238,7 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 4) export / IPO / delay-load 훅 경로 / 로그 태그 / Windows 시스템 라이브러리
-# SW_DELAYLOAD_HOOK_SOURCE는 sw_addDelayloadHook(TargetRules.cmake)이 참조
+# SW_DELAYLOAD_HOOK_SOURCE는 sw_addDelayloadHook(ModuleTargets.cmake)이 참조
 # ------------------------------------------------------------------------------
 sw_configureDllExports(Engine ${coreLibType} ENGINE)
 set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")

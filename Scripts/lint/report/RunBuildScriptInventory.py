@@ -43,7 +43,7 @@ _kCmakeDefinitionRe = re.compile(r"^\s*(function|macro)\s*\(\s*([A-Za-z_0-9]+)",
 _kCmakeHandListRe = re.compile(r'"\$\{CMAKE_CURRENT_SOURCE_DIR\}/[^"]+\.(cpp|c)"')
 _kCmakeDirectLibraryRe = re.compile(r"^\s*add_library\(\s*\S+\s+(SHARED|MODULE)\b", re.MULTILINE)
 #: 모듈 라이브러리를 직접 만들어도 되는 파일(팩토리 자신) — 저장소 기준.
-_kDirectLibraryAllowed = ("cmake/Engine/TargetRules.cmake", "cmake/Engine/ModuleTargets.cmake")
+_kDirectLibraryAllowed = ("cmake/Engine/ModuleTargets.cmake",)
 _kLargeCmakeFileLines = 400
 #: `common` 밖에서 보이면 공통부를 비켜 간 것.
 _kBypassPattern: dict[str, re.Pattern[str]] = {
