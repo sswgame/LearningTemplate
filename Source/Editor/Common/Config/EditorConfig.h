@@ -25,25 +25,25 @@ namespace sw::editor
         REFLECT_BODY();
 
         PROPERTY()
-        string _themePreset{ "ModernDark" };
+        string _themePreset{ "ModernDark" }; ///< 테마 프리셋 이름(테마 대화 상자의 목록)
 
-        PROPERTY()
-        float32 _themeAccentR{ 0.27f };
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _themeAccentR{ 0.27f }; ///< 강조색 R(0..1)
 
-        PROPERTY()
-        float32 _themeAccentG{ 0.57f };
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _themeAccentG{ 0.57f }; ///< 강조색 G(0..1)
 
-        PROPERTY()
-        float32 _themeAccentB{ 1.0f };
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _themeAccentB{ 1.0f }; ///< 강조색 B(0..1)
 
-        PROPERTY()
-        float32 _themeWindowRounding{ 4.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _themeWindowRounding{ 4.0f }; ///< 창 모서리 둥글기(픽셀)
 
-        PROPERTY()
-        float32 _themeFrameRounding{ 3.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _themeFrameRounding{ 3.0f }; ///< 입력 칸 · 버튼 모서리 둥글기(픽셀)
 
-        PROPERTY()
-        float32 _themeTabRounding{ 4.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _themeTabRounding{ 4.0f }; ///< 탭 모서리 둥글기(픽셀)
 
         static void                setActive( const EditorConfig& config );
         static const EditorConfig& getActive();

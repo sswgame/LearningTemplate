@@ -18,7 +18,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        string _packRoot{};
+        string _packRoot{}; ///< 활성 게임 팩의 리소스 경로(`game/<팩 폴더>`) — 팩 마운트 · 게임 도메인 경로가 이것으로 풀린다
 
         /**
          * @brief 게임이 시작할 때 여는 씬(리소스 경로)입니다. 비면 씬 없이 뜹니다.
