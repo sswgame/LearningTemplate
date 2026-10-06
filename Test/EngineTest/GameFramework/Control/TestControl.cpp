@@ -5,21 +5,26 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
+#include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "EngineTest/NavMeshTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
 
 #include "GameFramework/Base/Camera/CameraManagerComponent.h"
 #include "GameFramework/Base/Control/AiControllerComponent.h"
+#include "GameFramework/Base/Control/CharacterPawnMovementComponent.h"
 #include "GameFramework/Base/Control/ControlIntent.h"
 #include "GameFramework/Base/Control/ControlSystem.h"
 #include "GameFramework/Base/Control/PawnComponent.h"
@@ -90,6 +95,23 @@ namespace
         }
 
         static float3 findPosition( const GameObject& object ) { return object.getPrimarySceneComponent()->getWorldPosition(); }
+    };
+
+    struct ControlWalkTestInternal
+    {
+        /** @brief 캐릭터 컨트롤러(발 @p position) · 폰 · 폰 이동(걸음 4 m/s)을 가진 걷는 폰입니다. */
+        static GameObject* spawnWalker( GameObjectManager& manager, const utf8* pName, const float3& position )
+        {
+            GameObject*                   pObject     = manager.createGameObject( hashed_string( pName ) );
+            CharacterControllerComponent* pController = pObject->addComponent<CharacterControllerComponent>();
+            pController->setLocalPosition( position );
+            pObject->addComponent<PawnComponent>();
+            CharacterPawnMovementComponent* pMovement = pObject->addComponent<CharacterPawnMovementComponent>();
+            pMovement->setWalkSpeed( 4.0f );
+            return pObject;
+        }
+
+        static float3 findFeet( const GameObject& object ) { return object.getComponent<CharacterControllerComponent>()->getWorldPosition(); }
     };
 } // namespace
 
@@ -299,4 +321,89 @@ SW_TEST_CASE( ControlTest, ControlSystemFollowsItsComponents )
     manager.destroyObject( pObject );
     manager.processDeferredDestruction();
     SW_EXPECT_TRUE( ControlSystem::find( manager ) == nullptr );
+}
+
+/**
+ * @brief [ControlTest] 캐릭터 컨트롤러 위에서도 플레이어(키 W)와 NPC(곧장 앞의 목적지)가 같은 의도로 같은 속도 곡선 · 같은 거리를 걷는다
+ */
+SW_TEST_CASE( ControlTest, PlayerAndNpcWalkTheSameOnTheCharacterController )
+{
+    using Internal = ControlTestInternal;
+    using Walk     = ControlWalkTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
+    SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) ) );
+    {
+        GameObjectManager manager;
+        navtest::spawnStaticBody( manager, "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 30.0f, 0.5f, 30.0f } );
+        GameObject* pPlayerPawn = Walk::spawnWalker( manager, "PlayerWalker", float3{ -3.0f, 0.05f, 0.0f } );
+        GameObject* pNpcPawn    = Walk::spawnWalker( manager, "NpcWalker", float3{ 3.0f, 0.05f, 0.0f } );
+        auto*       pPlayer     = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
+        auto*       pNpc        = manager.createGameObject( hashed_string( "Npc" ) )->addComponent<AiControllerComponent>();
+        ControlSystem::ensureFor( manager ).setInputManager( &input );
+        manager.beginPlay();
+        pPlayer->possess( *pPlayerPawn->getComponent<PawnComponent>() );
+        pNpc->possess( *pNpcPawn->getComponent<PawnComponent>() );
+        pNpc->moveTo( float3{ 3.0f, 0.0f, 1000.0f } );
+
+        for ( uint32 frame = 0; frame < 60; ++frame )
+        {
+            Internal::tick( manager, input );
+            const float3 playerFeet = Walk::findFeet( *pPlayerPawn );
+            const float3 npcFeet    = Walk::findFeet( *pNpcPawn );
+            SW_EXPECT_TRUE_MSG( MathUtil::abs( playerFeet._z - npcFeet._z ) <= 1.0e-3f,
+                                ( "frame " + std::to_string( frame ) + " player z " + std::to_string( playerFeet._z ) + " npc z " + std::to_string( npcFeet._z ) ).c_str() );
+            SW_EXPECT_NEAR_EQUAL( pPlayerPawn->getComponent<CharacterPawnMovementComponent>()->getHorizontalVelocity()._z,
+                                  pNpcPawn->getComponent<CharacterPawnMovementComponent>()->getHorizontalVelocity()._z, 1.0e-5f );
+        }
+        // 1 초 동안 가속(30 m/s²)해 걸음 4 m/s 로 — 4 m 에서 가속 몫을 뺀 만큼 앞에 있다.
+        SW_EXPECT_TRUE( Walk::findFeet( *pPlayerPawn )._z > 3.0f );
+        SW_EXPECT_NEAR_EQUAL( -3.0f, Walk::findFeet( *pPlayerPawn )._x, 1.0e-3f );
+    }
+    input.shutdown();
+}
+
+/**
+ * @brief [ControlTest] NPC 는 내비 에이전트(SteerOnly)가 낸 속도를 의도로 받아 폰 이동으로 상자 벽을 돌아 목적지에 닿는다 — 에이전트는 몸을 옮기지 않는다(걸음 속도를 넘지 않는다)
+ */
+SW_TEST_CASE( ControlTest, NpcRoutesAroundCratesThroughIntent )
+{
+    using Internal = ControlTestInternal;
+    using Walk     = ControlWalkTestInternal;
+    GameObjectManager manager;
+    navtest::spawnPhysicsCrateScene( manager );
+    GameObject*            pWalker = Walk::spawnWalker( manager, "Walker", float3{ -6.0f, 0.05f, 0.0f } );
+    NavMeshAgentComponent* pAgent  = pWalker->addComponent<NavMeshAgentComponent>();
+    pAgent->setMaxSpeed( 4.0f );
+    pAgent->setDriveMode( NavAgentDriveMode::SteerOnly );
+    auto* pNpc = manager.createGameObject( hashed_string( "Npc" ) )->addComponent<AiControllerComponent>();
+
+    manager.beginPlay();
+    pNpc->possess( *pWalker->getComponent<PawnComponent>() );
+    for ( uint32 frame = 0; frame < 10; ++frame )
+        manager.tick( Internal::kDeltaTime );
+    pNpc->moveTo( float3{ 6.0f, 0.0f, 0.0f } );
+    SW_EXPECT_TRUE( pNpc->getMoveStatus() == NavMoveStatus::Moving );
+
+    bool    bEnteredCrates = false;
+    float32 maxSpeed       = 0.0f;
+    float3  previousFeet   = Walk::findFeet( *pWalker );
+    for ( uint32 frame = 0; frame < 900 && pNpc->getMoveStatus() == NavMoveStatus::Moving; ++frame )
+    {
+        manager.tick( Internal::kDeltaTime );
+        const float3  feet   = Walk::findFeet( *pWalker );
+        const float32 deltaX = feet._x - previousFeet._x;
+        const float32 deltaZ = feet._z - previousFeet._z;
+        maxSpeed             = MathUtil::max( maxSpeed, MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ ) / Internal::kDeltaTime );
+        bEnteredCrates       = bEnteredCrates || navtest::isInsideCrates( feet );
+        previousFeet         = feet;
+    }
+    SW_EXPECT_TRUE( pNpc->getMoveStatus() == NavMoveStatus::Arrived );
+    SW_EXPECT_FALSE( bEnteredCrates );
+    SW_EXPECT_TRUE_MSG( maxSpeed <= 4.0f * 1.05f, ( "max speed " + std::to_string( maxSpeed ) ).c_str() );
+    const float3 feet = Walk::findFeet( *pWalker );
+    SW_EXPECT_TRUE_MSG( ( float3{ feet._x, 0.0f, feet._z } - float3{ 6.0f, 0.0f, 0.0f } ).getLength() < 0.8f,
+                        ( "walker ended at " + std::to_string( feet._x ) + ", " + std::to_string( feet._z ) ).c_str() );
+    manager.endPlay();
 }

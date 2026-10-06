@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
@@ -12,6 +13,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "AiControllerComponent" );
+
     namespace
     {
         struct AiControllerComponentInternal
@@ -36,6 +39,7 @@ namespace sw
         , _bHasFocus{ SW_FALSE }
         , _bDestinationSent{ SW_FALSE }
         , _bStopPending{ SW_FALSE }
+        , _bWarnedDriveMode{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -83,7 +87,10 @@ namespace sw
 
     float3 AiControllerComponent::computeMoveDirection( const PawnComponent& pawn, const float3& pawnPosition )
     {
-        (void)pawn;
+        GameObject*            pPawnOwner = pawn.getOwner();
+        NavMeshAgentComponent* pAgent     = pPawnOwner != nullptr ? pPawnOwner->getComponent<NavMeshAgentComponent>() : nullptr;
+        if ( pAgent != nullptr )
+            return computeAgentMoveDirection( *pAgent );
         if ( _bHasDestination == SW_FALSE )
             return float3{};
         const float32 deltaX   = _destination._x - pawnPosition._x;
@@ -96,6 +103,50 @@ namespace sw
             return float3{};
         }
         return float3{ deltaX / distance, 0.0f, deltaZ / distance };
+    }
+
+    float3 AiControllerComponent::computeAgentMoveDirection( NavMeshAgentComponent& agent )
+    {
+        // 에이전트는 경로 · 군중 회피로 속도만 낸다(SteerOnly) — 그 속도를 이동 축으로 넣고, 움직이는 것은 플레이어와 같은 폰 이동이다.
+        if ( agent.getDriveMode() != NavAgentDriveMode::SteerOnly && _bWarnedDriveMode == SW_FALSE )
+        {
+            _bWarnedDriveMode = SW_TRUE;
+            SW_LOG_WARNING( "AI controller '%#' steers a navmesh agent whose drive mode is not SteerOnly - the agent moves the body itself, the controller adds no move intent",
+                            getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
+        }
+        if ( _bStopPending == SW_TRUE )
+        {
+            agent.stop();
+            _bStopPending = SW_FALSE;
+        }
+        if ( _bHasDestination == SW_FALSE )
+            return float3{};
+        if ( _bDestinationSent == SW_FALSE )
+        {
+            // 이번 프레임의 내비게이션 단계가 경로를 잡는다 — 속도는 다음 프레임부터 읽는다.
+            agent.setDestination( _destination );
+            _bDestinationSent = SW_TRUE;
+            return float3{};
+        }
+        const NavMoveStatus status = agent.getMoveStatus();
+        if ( status == NavMoveStatus::Arrived || status == NavMoveStatus::Failed )
+        {
+            _bHasDestination  = SW_FALSE;
+            _bDestinationSent = SW_FALSE;
+            _moveStatus       = status;
+            return float3{};
+        }
+        if ( agent.getDriveMode() != NavAgentDriveMode::SteerOnly )
+            return float3{};
+        const float32 maxSpeed = agent.getMaxSpeed();
+        const float3& velocity = agent.getVelocity();
+        if ( maxSpeed <= 0.0f )
+            return float3{};
+        float3        direction{ velocity._x / maxSpeed, 0.0f, velocity._z / maxSpeed };
+        const float32 length = MathUtil::sqrt( direction._x * direction._x + direction._z * direction._z );
+        if ( length > 1.0f )
+            direction = float3{ direction._x / length, 0.0f, direction._z / length };
+        return direction;
     }
 
     void AiControllerComponent::moveTo( const float3& destination )

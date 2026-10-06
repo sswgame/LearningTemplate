@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    class NavMeshAgentComponent;
+
     /**
      * @class AiControllerComponent
      * @brief AI 조종자 — 파생이 `think` 에서 목표를 정하면(이동 목적지 · 바라볼 곳 · 누를 버튼) 이 클래스가 의도로 옮깁니다. 행동 트리 · 감독은 `think` 안에서 돈다.
@@ -69,6 +71,8 @@ namespace sw
     private:
         /** @brief 이번 틱에 갈 월드 방향(XZ, 길이 0..1)을 정합니다. 닿았으면 목적지를 지웁니다. */
         float3 computeMoveDirection( const PawnComponent& pawn, const float3& pawnPosition );
+        /** @brief 내비 에이전트(SteerOnly)가 낸 속도를 이동 방향으로 — 목적지를 한 번 걸고, 닿거나 길이 없으면 목적지를 지웁니다. */
+        float3 computeAgentMoveDirection( NavMeshAgentComponent& agent );
 
     private:
         PROPERTY( Category = "AI", DisplayName = "Turn Rate", Min = 0.0, Tooltip = "How fast the control rotation turns to the focus or the move direction", Units = "rad/s" )
@@ -85,6 +89,7 @@ namespace sw
         uint8                  _bHasFocus        : 1;
         uint8                  _bDestinationSent : 1; ///< 지금 목적지를 내비 에이전트에 걸었다
         uint8                  _bStopPending     : 1; ///< 다음 틱에 내비 에이전트를 멈춘다
-        [[maybe_unused]] uint8 _reserved         : 4;
+        uint8                  _bWarnedDriveMode : 1; ///< 내비 에이전트가 SteerOnly 가 아니라고 경고했다
+        [[maybe_unused]] uint8 _reserved         : 3;
     };
 } // namespace sw

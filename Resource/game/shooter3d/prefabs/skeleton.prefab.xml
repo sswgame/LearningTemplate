@@ -75,7 +75,7 @@
 			                       _separationWeight="2"
 			                       _avoidanceQuality="Medium"
 			                       _turnRate="8"
-			                       _bUpdatePosition="true"
+			                       _driveMode="Transform"
 			                       _bUpdateRotation="false" />
 		</_listComponent>
 	</GameObject>

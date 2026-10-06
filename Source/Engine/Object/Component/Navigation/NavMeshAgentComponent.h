@@ -15,6 +15,18 @@
 
 namespace sw
 {
+    /** @brief 군중이 정한 속도를 누가 쓰는가입니다(유니티 `NavMeshAgent.updatePosition` 의 자리를 하나의 선택으로). */
+    ENUM()
+    enum class NavAgentDriveMode : uint8
+    {
+        Transform = 0,       ///< 이 컴포넌트가 오브젝트 자리를 옮긴다
+        CharacterController, ///< 같은 오브젝트의 캐릭터 컨트롤러에 원하는 속도를 넘긴다 — 벽 · 턱 · 경사는 물리가 맡는다
+        SteerOnly,           ///< 아무것도 움직이지 않는다 — 속도(`getVelocity`)만 낸다. AI 조종자가 그것을 의도로 바꾸고 폰 이동이 움직인다(빙의)
+    };
+} // namespace sw
+
+namespace sw
+{
     class NavMeshAgentComponent;
     class SceneNavigation;
 
@@ -47,9 +59,11 @@ namespace sw
      * @details 요청(`setDestination` · `stop` · `warp`)은 이 오브젝트의 틱(병렬 워커)에서 불러도 됩니다 — 적어 두었다가 다음 내비게이션 갱신
      *          (그 프레임의 PrePhysics · DuringPhysics 틱 뒤, 애니메이션 · 물리 앞)에 군중에 넣습니다. 상태 · 속도는 그 갱신이 써 둔 것을 읽습니다.
      *
-     *          **움직이는 쪽.** 같은 오브젝트에 `CharacterControllerComponent` 가 있으면 군중이 원한 속도를 컨트롤러에 넘기고(`setMoveVelocity`) 군중은
-     *          컨트롤러가 실제로 간 자리를 다음 갱신에서 받습니다 — 벽 · 턱 · 경사는 물리가 맡습니다. 없으면 이 컴포넌트가 오브젝트 자리를 직접 옮기고
-     *          (`_bUpdatePosition`) 진행 방향으로 몸을 돌립니다(`_bUpdateRotation`). 바깥이 오브젝트를 멀리 옮기면 순간이동으로 봅니다.
+     *          **움직이는 쪽**은 `_driveMode` 하나가 정합니다. `Transform` 이면 이 컴포넌트가 오브젝트 자리를 직접 옮기고(바깥이 멀리 옮기면 순간이동으로 본다),
+     *          `CharacterController` 면 군중이 원한 속도를 같은 오브젝트의 컨트롤러에 넘기고(`setMoveVelocity`) 컨트롤러가 실제로 간 자리를 다음 갱신에서
+     *          받습니다. `SteerOnly` 면 아무것도 옮기지 않고 속도만 내며, 바깥(폰 이동)이 옮긴 자리를 다음 갱신에서 받습니다 — 플레이어와 NPC 가 같은
+     *          이동 컴포넌트로 걷는 길입니다(언리얼 `RequestDirectMove` · 유니티 "에이전트로 조향 · 컨트롤러로 이동"). 진행 방향으로 몸을 돌리는 것은
+     *          `_bUpdateRotation` 입니다.
      */
     REFLECT( Category = "Navigation", DisplayName = "NavMesh Agent", Tooltip = "Walks the navmesh to a destination with crowd avoidance; drives the transform or a character controller" )
     class SW_API NavMeshAgentComponent : public Component
@@ -98,8 +112,8 @@ namespace sw
         void                 setStoppingDistance( float32 distance ) { _stoppingDistance = distance; }
         float32              getRadius() const { return _radius; }
         void                 setRadius( float32 radius );
-        bool                 isUpdatingPosition() const { return _bUpdatePosition; }
-        void                 setUpdatePosition( bool bUpdate ) { _bUpdatePosition = bUpdate; }
+        NavAgentDriveMode    getDriveMode() const { return _driveMode; }
+        void                 setDriveMode( NavAgentDriveMode driveMode ) { _driveMode = driveMode; }
         /** @brief 군중에 넘기는 몸 · 움직임 값입니다. */
         NavCrowdAgentParams makeCrowdParams() const;
 
@@ -122,8 +136,8 @@ namespace sw
         NavAvoidanceQuality _avoidanceQuality;
         PROPERTY( Category = "Movement", Min = 0.0, Tooltip = "How fast the body turns to face its velocity", Units = "rad/s" )
         float32 _turnRate;
-        PROPERTY( Category = "Movement", Tooltip = "Moves the object (off when a character controller or game code moves it)" )
-        bool _bUpdatePosition;
+        PROPERTY( Category = "Movement", DisplayName = "Drive Mode", Tooltip = "Who uses the crowd velocity: this agent moves the transform, the character controller, or nothing (steer only - a controller turns it into intent)" )
+        NavAgentDriveMode _driveMode;
         PROPERTY( Category = "Movement", Tooltip = "Turns the object to face its velocity" )
         bool _bUpdateRotation;
 

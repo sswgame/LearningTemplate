@@ -47,7 +47,7 @@ namespace sw
         , _separationWeight{ 2.0f }
         , _avoidanceQuality{ NavAvoidanceQuality::Medium }
         , _turnRate{ 8.0f }
-        , _bUpdatePosition{ true }
+        , _driveMode{ NavAgentDriveMode::Transform }
         , _bUpdateRotation{ true }
         , _mover{ *this }
         , _pSceneNavigation{ nullptr }

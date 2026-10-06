@@ -21,7 +21,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   조종자(`ControllerComponent` — `possess` / `unpossess`, 조종 회전)는 자기 오브젝트에 산다: `PlayerControllerComponent`(입력 맵 → 의도, 매핑 층을 읽는 유일한 조종자 —
   빙의하면 폰의 입력 레이어 · 플레이어 카메라 매니저 뷰 타깃 · `PossessionChangedEvent`), `AiControllerComponent`(`think` → `moveTo` · `setFocus` · 버튼).
   조종 시스템(`ControlSystem`)이 씬 프레임 단계 `FrameSystems`(시작 뒤 · PrePhysics 틱 앞, 게임 스레드)에서 자동 빙의(`PawnAutoPossess`) · 의도 생산을 하고,
-  조종자 · 폰 목록은 등록부(`ComponentRegistry`)에서 읽는다. 플레이어와 NPC 의 움직임 코드가 하나다.
+  조종자 · 폰 목록은 등록부(`ComponentRegistry`)에서 읽는다. 플레이어와 NPC 의 움직임 코드가 하나다 — 걷는 폰은 `CharacterPawnMovementComponent`
+  (의도 → 캐릭터 컨트롤러: 걷기 · 달리기 · 점프 · 가감속 · 몸 방향 `PawnFacingMode`)로 걷고, AI 는 내비 에이전트를 `SteerOnly`(엔진 `NavAgentDriveMode`)로 두어
+  에이전트가 낸 속도를 의도 이동 축으로 넣는다(언리얼 `RequestDirectMove` · 유니티 `updatePosition = false` 와 같은 길).
 - **Framework**: 게임 모듈의 수명과 배선 — `IGame`, `GameInstanceBase`, 서비스 로케이터(`GameService`), 다국어 창구(`GameStrings` — 엔진 `LocalizationManager` 를 게임 서비스로 부른다), 세이브 베이스(`SaveGame`),
   "game" 채널 이벤트(`GameEvents.h` · 내는 길 `GameEventUtil`), 화면 전환(`ScreenTransitionManager`), 소리(`GameSound` — 이벤트 라이브러리 올리기 · 내리기, 2D 이벤트 `postEvent`, 월드 자리 원샷 `postEventAt`(한 번 쓰는 에미터), 클립 `play( path, bus )`;
   따라 움직이는 · 루프 소리는 엔진의 `AudioEmitterComponent`, 자세한 것은 `Source/Engine/Audio/README.md`). `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료를 그 자리에서 낸다. `onInitialize` 뒤에 사용자 설정을 다시 넣는다(`UserSettingsManager::reapplyAll` — 언어 · 입력 맵이 그때 선다). 공유 타입은 루트의 `GameFrameworkMinimal.h`.

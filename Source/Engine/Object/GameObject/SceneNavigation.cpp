@@ -61,6 +61,14 @@ namespace sw
                 return MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ );
             }
 
+            /** @brief 에이전트가 속도를 넘길 캐릭터 컨트롤러입니다 — 방식이 `CharacterController` 이고 오브젝트에 있을 때만, 아니면 nullptr 입니다. */
+            static CharacterControllerComponent* findDrivenController( const NavMeshAgentComponent& agent )
+            {
+                if ( agent.getDriveMode() != NavAgentDriveMode::CharacterController )
+                    return nullptr;
+                return agent.getOwner()->getComponent<CharacterControllerComponent>();
+            }
+
             static float32 wrapAngle( float32 angle )
             {
                 while ( angle > MathUtil::kPi )
@@ -952,12 +960,14 @@ namespace sw
     {
         using Internal                                = SceneNavigationInternal;
         GameObject*                   pOwner          = agent.getOwner();
-        CharacterControllerComponent* pController     = pOwner->getComponent<CharacterControllerComponent>();
+        CharacterControllerComponent* pController     = Internal::findDrivenController( agent );
         SceneComponent*               pScene          = pOwner->getPrimarySceneComponent();
         const float3                  currentPosition = pController != nullptr ? pController->getWorldPosition() : ( pScene != nullptr ? pScene->getWorldPosition() : agent._agentPosition );
         INavCrowd&                    crowd           = *runtime._pCrowd;
         if ( agent._crowdAgentId == NavigationConstant::kInvalidAgentId )
         {
+            if ( agent._driveMode == NavAgentDriveMode::CharacterController && pController == nullptr )
+                SW_LOG_WARNING( "NavMesh agent '%#' drives a character controller but the object has none - it does not move", pOwner->getName().c_str() );
             NavCrowdAgentParams    params = agent.makeCrowdParams();
             const NavAgentTypeDef& type   = runtime._pNavMesh->getAgentType();
             if ( params._radius <= 0.0f )
@@ -995,8 +1005,9 @@ namespace sw
             agent._writtenPosition   = agent._pendingWarp;
             agent._bDestinationDirty = agent._bHasDestination;
         }
-        else if ( pController != nullptr || agent._bUpdatePosition == false )
+        else if ( agent._driveMode != NavAgentDriveMode::Transform )
         {
+            // 컨트롤러 · 폰 이동이 옮긴 자리를 받아들인다(SteerOnly 는 군중이 낸 속도를 조종자가 의도로 바꿔 폰이 걸었다).
             crowd.syncAgentPosition( agent._crowdAgentId, currentPosition );
         }
         else if ( agent._bHasWritten == SW_TRUE && Internal::computeDistance2D( currentPosition, agent._writtenPosition ) > Internal::kTeleportDistance )
@@ -1063,13 +1074,13 @@ namespace sw
         }
 
         GameObject*                   pOwner      = agent.getOwner();
-        CharacterControllerComponent* pController = pOwner->getComponent<CharacterControllerComponent>();
+        CharacterControllerComponent* pController = Internal::findDrivenController( agent );
         SceneComponent*               pScene      = pOwner->getPrimarySceneComponent();
         if ( pController != nullptr )
         {
             pController->setMoveVelocity( float3{ state._velocity._x, 0.0f, state._velocity._z } );
         }
-        else if ( agent._bUpdatePosition && pScene != nullptr )
+        else if ( agent._driveMode == NavAgentDriveMode::Transform && pScene != nullptr )
         {
             pScene->setWorldPosition( state._position );
             agent._writtenPosition = state._position;
