@@ -51,13 +51,8 @@ endif()
 
 if(Python3_Interpreter_FOUND)
 	# 팩은 실행 파일 옆(Bin/Packs)에 놓는다. App 이 exeDir/Packs 를 먼저 찾기 때문.
-	# 정의되지 않은 변수를 쓰면 "/Packs"(파일시스템 루트)가 되어 조용히 엉뚱한 곳에 쿠킹되거나
-	# Linux 에서 권한 오류로 죽으므로, 비어 있으면 구성 단계에서 잡는다.
-	set(swPackOutputDir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Packs")
-
-	if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-		message(FATAL_ERROR "[CookAssets] CMAKE_RUNTIME_OUTPUT_DIRECTORY is empty — pack output path would resolve to the filesystem root.")
-	endif()
+	# 주의: CMAKE_RUNTIME_OUTPUT_DIRECTORY 를 이어 붙이지 않는다 — 생성기 식(`$<0:>`)이 든 값이라 명령줄 경로가 되지 않는다.
+	set(swPackOutputDir "${CMAKE_BINARY_DIR}/Bin/Packs")
 
 	# 배포 빌드는 런타임 셰이더 컴파일이 없다 — 쿠킹해 둔 바이너리가 소스와 어긋나 있으면 화면이
 	# 통째로 비고, 그 사실이 실행해 보기 전까지 드러나지 않는다. 그래서 Shipping 쿠킹에서만
@@ -93,7 +88,7 @@ if(Python3_Interpreter_FOUND)
 	# 서드파티 고지 — 배포물(Bin · Shipping 패키지)에 함께 놓는다. vcpkg 설치 트리의 `share/<포트>/copyright` 를 이 매니페스트가
 	# 끌어오는 포트만 모아 쓴다(설치 트리는 워크트리끼리 나눠 쓰므로 트리 전체가 아니다). 포트가 바뀌면 status 가 바뀌어 다시 만든다.
 	if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET AND EXISTS "${VCPKG_INSTALLED_DIR}/vcpkg/status")
-		set(swThirdPartyNotices "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/THIRD_PARTY_NOTICES.txt")
+		set(swThirdPartyNotices "${CMAKE_BINARY_DIR}/Bin/THIRD_PARTY_NOTICES.txt")
 		add_custom_command(
 			OUTPUT "${swThirdPartyNotices}"
 			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateThirdPartyNotices.py"

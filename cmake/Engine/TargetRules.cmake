@@ -23,15 +23,11 @@ function(sw_configureDllExports TARGET_NAME LIB_TYPE KIND)
 	endif()
 endfunction()
 
-# MODULE/핫리로드 타겟의 런타임 출력을 Bin/으로 고정합니다.
+# 모듈 · 핫 리로드 타깃의 런타임 출력을 Bin/ 으로 — SHARED/MODULE 은 플랫폼에 따라 LIBRARY 출력(Lib/)으로 갈 수 있다. `$<0:>` 는 BuildLayout 과 같다.
 function(sw_setModuleBinOutput TARGET_NAME)
 	set_target_properties(${TARGET_NAME} PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY "${sw_output_directory}/Bin"
-		LIBRARY_OUTPUT_DIRECTORY "${sw_output_directory}/Bin"
-		RUNTIME_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Bin"
-		RUNTIME_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Bin"
-		LIBRARY_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Bin"
-		LIBRARY_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Bin"
+		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>"
+		LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>"
 	)
 endfunction()
 
@@ -564,7 +560,7 @@ function(sw_registerTestRun TEST_NAME TARGET_NAME)
 
 	add_test(NAME ${TEST_NAME} COMMAND ${TARGET_NAME} ${ARG_ARGS})
 	set_tests_properties(${TEST_NAME} PROPERTIES
-		WORKING_DIRECTORY "${sw_output_directory}/Bin"
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin"
 		LABELS "${ARG_LABELS}"
 		TIMEOUT ${ARG_TIMEOUT}
 	)
@@ -635,7 +631,7 @@ function(sw_splitShippingDebugInfo TARGET_NAME)
 	if(NOT CMAKE_OBJCOPY)
 		message(FATAL_ERROR "sw_splitShippingDebugInfo(${TARGET_NAME}): CMAKE_OBJCOPY is not set - install llvm-objcopy or binutils")
 	endif()
-	set(symbolsDir "${sw_output_directory}/Symbols")
+	set(symbolsDir "${CMAKE_BINARY_DIR}/Symbols")
 	add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${symbolsDir}"
 		COMMAND ${CMAKE_OBJCOPY} --only-keep-debug "$<TARGET_FILE:${TARGET_NAME}>" "${symbolsDir}/$<TARGET_FILE_NAME:${TARGET_NAME}>.debug"
@@ -694,12 +690,10 @@ function(sw_addTestExecutable TARGET_NAME)
 	# 뺀다 — CI 가 Shipping 을 CoreTest 로 스모크할 수 있으면서 배포 산출물은 깨끗하다.
 	# 작업 폴더는 그래도 `Bin` 이다(`sw_registerTestRun`).
 	if(SW_SHIPPING_BUILD)
-		set(testOutputDir "${sw_output_directory}/TestBin")
+		set(testOutputDir "${CMAKE_BINARY_DIR}/TestBin")
 		# PDB 도 실행 파일 옆 — 시험은 배포물이 아니고, 크래시 핸들러의 스택(DbgHelp)이 실행 파일 폴더에서 PDB 를 찾는다.
 		set_target_properties(${TARGET_NAME} PROPERTIES
-			RUNTIME_OUTPUT_DIRECTORY "${testOutputDir}"
-			RUNTIME_OUTPUT_DIRECTORY_DEBUG "${testOutputDir}"
-			RUNTIME_OUTPUT_DIRECTORY_RELEASE "${testOutputDir}"
+			RUNTIME_OUTPUT_DIRECTORY "${testOutputDir}$<0:>"
 			PDB_OUTPUT_DIRECTORY "${testOutputDir}"
 			PDB_OUTPUT_DIRECTORY_RELEASE "${testOutputDir}"
 		)

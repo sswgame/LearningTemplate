@@ -30,8 +30,8 @@ endforeach()
 if(TARGET App)
 	sw_registerScriptTest(QaGoldenImages
 		SCRIPT "Scripts/qa/GoldenImages.py"
-		ARGS --app "$<TARGET_FILE:App>" --game "${SW_ACTIVE_GAME}" --diff-dir "${sw_output_directory}/GoldenDiff"
-		WORKING_DIRECTORY "${sw_output_directory}/Bin"
+		ARGS --app "$<TARGET_FILE:App>" --game "${SW_ACTIVE_GAME}" --diff-dir "${CMAKE_BINARY_DIR}/GoldenDiff"
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin"
 		LABELS "hostgpu;app;qa"
 		TIMEOUT 900
 		RUN_SERIAL
@@ -43,7 +43,7 @@ if(TARGET App)
 		sw_registerScriptTest(QaSoak
 			SCRIPT "Scripts/qa/Soak.py"
 			ARGS --app "$<TARGET_FILE:App>" --game "${SW_ACTIVE_GAME}" --minutes 2
-			WORKING_DIRECTORY "${sw_output_directory}/Bin"
+			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin"
 			LABELS "soak;qa"
 			TIMEOUT 600
 			RUN_SERIAL
@@ -55,7 +55,7 @@ if(TARGET App)
 		sw_registerScriptTest(QaPerfRegression
 			SCRIPT "Scripts/qa/PerfRegression.py"
 			ARGS --app "$<TARGET_FILE:App>" --game "${SW_ACTIVE_GAME}"
-			WORKING_DIRECTORY "${sw_output_directory}/Bin"
+			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin"
 			LABELS "perf;qa"
 			TIMEOUT 900
 			RUN_SERIAL

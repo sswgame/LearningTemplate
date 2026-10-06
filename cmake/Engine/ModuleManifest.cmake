@@ -244,7 +244,7 @@ function(sw_resolveModuleManifests)
 
 	# 5) Dev 는 매니페스트를 실행 파일 옆 `Modules/` 에 둔다 — App 이 같은 규칙으로 다시 해석해 적재 순서를 정한다. 꺼진 모듈의 것도 둔다(무엇이 왜 꺼졌는지 App 도 안다).
 	if(NOT SW_SHIPPING_BUILD)
-		set(swCatalogDirectory "${sw_output_directory}/Bin/Modules")
+		set(swCatalogDirectory "${CMAKE_BINARY_DIR}/Bin/Modules")
 		file(MAKE_DIRECTORY "${swCatalogDirectory}")
 		file(GLOB swStaleList "${swCatalogDirectory}/*.module.json")
 		foreach(swName IN LISTS swNames)

@@ -21,22 +21,17 @@ else()
 endif()
 
 # ------------------------------------------------------------------------------
-# 출력 경로 — Ninja 단일 설정 → 평탄한 Bin/Lib (LiveReload와 동일)
+# 출력 경로 — 산출물은 구성과 무관하게 `Bin/` · `Lib/` 에 놓인다(LiveReload · 시험의 작업 폴더가 이 경로를 안다).
 # ------------------------------------------------------------------------------
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${sw_output_directory}/Bin")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${sw_output_directory}/Lib")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${sw_output_directory}/Lib")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Bin")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Bin")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Lib")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Lib")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Lib")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Lib")
+# `$<0:>`(빈 생성기 식)는 다중 구성 생성기가 구성 하위 폴더를 붙이지 않게 한다 — 구성마다 `*_DEBUG` · `*_RELEASE` 를 따로 적지 않는다.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Lib$<0:>")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Lib$<0:>")
 # Shipping 의 링크 PDB 는 배포 폴더(Bin) 밖 `Symbols/` 에 둔다 — 심볼 저장소에는 `py -3 -m Scripts symbols` 가 넣는다. 시험 실행 파일은
 # TestBin 옆에 둔다(`sw_addTestExecutable` — 크래시 스택이 이름을 낸다). Dev(Release 포함)는 실행 파일 옆(디버거 · 핫 리로드가 그 자리에서 찾는다).
 if(SW_SHIPPING_BUILD)
-	set(CMAKE_PDB_OUTPUT_DIRECTORY "${sw_output_directory}/Symbols")
-	set(CMAKE_PDB_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Symbols")
+	set(CMAKE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Symbols")
+	set(CMAKE_PDB_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Symbols")
 endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/Resource")
