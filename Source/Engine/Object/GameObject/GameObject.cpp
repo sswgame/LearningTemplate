@@ -260,7 +260,7 @@ namespace sw
                 GameObject* pParentObj = pManager->findGameObjectById( parentId );
                 // 미루기 전에 붙일 수 있는지 봤다(`canAttachTo`). 그사이 부모가 죽어 가면 붙지 않는다.
                 if ( pChildObj != nullptr && pParentObj != nullptr )
-                    (void)pChildObj->attachToParent( pParentObj, rule );
+                    (void)pChildObj->attachToParent( pParentObj, rule ); // 거부는 미루기 전에 걸렀다 — 남는 실패는 부모가 사라진 경우뿐이다
             } );
             return true;
         }

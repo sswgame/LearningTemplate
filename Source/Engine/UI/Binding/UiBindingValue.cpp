@@ -390,7 +390,7 @@ namespace sw
             case UiBindingValueKind::Number:
             {
                 float64 number = 0.0;
-                (void)UiBindingValueInternal::tryReadNumber( builtinIndex, pValue, number );
+                (void)UiBindingValueInternal::tryReadNumber( builtinIndex, pValue, number ); // Number 로 분류한 칸이라 실패하지 않는다(실패면 0)
                 return UiBindingValue::makeNumber( number, UiBindingValueInternal::isIntegerBuiltin( builtinIndex ) );
             }
             case UiBindingValueKind::Text:
@@ -449,6 +449,7 @@ namespace sw
                 if ( value._kind != UiBindingValueKind::Bool && value._kind != UiBindingValueKind::Number )
                     return false;
                 bool bChanged = false;
+                // 숫자 칸이 아니면 쓰지 않고 bChanged 는 거짓으로 남는다
                 (void)UiBindingValueInternal::tryWriteNumber( builtinIndex, pValue, value.toNumber(), bChanged );
                 return bChanged;
             }

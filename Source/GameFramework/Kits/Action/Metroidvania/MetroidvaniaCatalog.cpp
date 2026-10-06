@@ -128,7 +128,7 @@ namespace sw
             ability._flag       = MetroidvaniaCatalogInternal::readName( node, "flag" );
             const XmlNode motor = node.findChild( "Motor" );
             if ( motor )
-                (void)ability._motor.loadFromAttributes( motor );
+                (void)ability._motor.loadFromAttributes( motor ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
             for ( const StatValue& value : ability._motor.getValues() )
             {
                 if ( MetroAbilitySet::isMotorSettingName( value._name ) == false )
@@ -149,7 +149,7 @@ namespace sw
             charm._cost         = MathUtil::max( 0, node.getAttributeInt( "cost", charm._cost ) );
             const XmlNode stats = node.findChild( "Stats" );
             if ( stats )
-                (void)charm._stats.loadFromAttributes( stats );
+                (void)charm._stats.loadFromAttributes( stats ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
             (void)_charmCatalog.add( charm );
             ++loadedCount;
         }

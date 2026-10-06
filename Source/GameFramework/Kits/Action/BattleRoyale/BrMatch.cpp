@@ -209,7 +209,7 @@ namespace sw
             const float32 zoneDamage = _zone.computeDamagePerSecond( player._position ) * deltaTime;
             if ( zoneDamage > 0.0f )
             {
-                (void)player._vitality.applyDamage( zoneDamage, 0.0f, -1 );
+                (void)player._vitality.applyDamage( zoneDamage, 0.0f, -1 ); // 결과는 processVitality 가 사건으로 읽는다
                 processVitality( static_cast<int32>( index ) );
             }
         }

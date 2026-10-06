@@ -1383,7 +1383,7 @@ namespace sw
         PanelWidget* pRoot    = pWidget != nullptr ? pWidget->getParent() : nullptr;
         if ( pRoot == nullptr )
             return;
-        (void)pRoot->removeChild( pWidget );
+        (void)pRoot->removeChild( pWidget ); // 부모에서 찾은 위젯이라 늘 빠진다
         if ( pRoot->getChildCount() == 0 )
         {
             closeScreen( _markerScreen );
@@ -1522,7 +1522,7 @@ namespace sw
             return;
         // 열지 못해도 먹는다 — 일시정지를 누른 Esc 가 게임의 마우스 잠금 토글로 새지 않게(오류는 문서 짓기가 남겼다).
         consumeAction( *_uiInputMap, pauseAction );
-        (void)openScreen<PauseMenuScreen>( _pauseMenuDocument );
+        (void)openScreen<PauseMenuScreen>( _pauseMenuDocument ); // 실패는 문서 짓기가 남긴다(위 설명)
     }
 
     void UiSystem::syncInputLayers( const UiScreen* pActive )

@@ -172,7 +172,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, VitalityReplaysAfterRestore )
     VitalitySettings settings;
     settings._maxShield = 50.0f;
     Vitality vitality( settings );
-    (void)vitality.applyDamage( 30.0f, 5.0f, 7 );
+    (void)vitality.applyDamage( 30.0f, 5.0f, 7 ); // 시험 준비 — 피해 결과값은 보지 않고 되살린 상태를 비교한다
     (void)vitality.addShield( 12.0f );
     vitality.setInvulnerable( 0.25f );
     vitality.update( 0.1f );
@@ -181,7 +181,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, VitalityReplaysAfterRestore )
     {
         for ( int32 stepIndex = 0; stepIndex < 30; ++stepIndex )
             state.update( kValueStateStep );
-        (void)state.applyDamage( 20.0f, 3.0f, 9 );
+        (void)state.applyDamage( 20.0f, 3.0f, 9 ); // 재생 단계 — 결과값은 보지 않고 두 상태의 체력을 비교한다
     } ) );
     SW_EXPECT_NEAR_EQUAL( vitality.getHealth(), restored.getHealth(), 1e-6f );
 }
@@ -480,7 +480,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, RunMapReplaysAfterRestore )
         vector<int32> listStepChoice;
         state.collectChoices( listStepChoice );
         if ( listStepChoice.empty() == false )
-            (void)state.moveTo( listStepChoice.back() );
+            (void)state.moveTo( listStepChoice.back() ); // 갈 수 있는 칸만 고른다 — 결과는 아래 두 상태 비교가 본다
     } ) );
     SW_EXPECT_EQUAL( map.getCurrent(), restored.getCurrent() );
 }
@@ -500,7 +500,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
             grid.setMaterial( int2{ x, y }, table.findMaterial( "Grass" ) );
     }
     grid.setWind( int2{ 1, 0 } );
-    (void)grid.applyStimulus( int2{ 0, 1 }, table.findStimulus( "Fire" ) );
+    (void)grid.applyStimulus( int2{ 0, 1 }, table.findStimulus( "Fire" ) ); // 시험 준비 — 바뀐 칸 수는 보지 않고 되살린 격자를 비교한다
     (void)grid.update( 0.37f );
 
     // 크기가 다른 격자는 거절하고 그대로다.

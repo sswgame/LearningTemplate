@@ -523,7 +523,7 @@ namespace sw
             const GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile, config );
             listTarget.push_back( paths._cppPath );
             listTarget.push_back( paths._headerPath );
-            (void)GeneratedFileUtil::readStampDependencies( paths._stampPath, listDependency );
+            (void)GeneratedFileUtil::readStampDependencies( paths._stampPath, listDependency ); // 스탬프가 없으면(첫 빌드) 더할 의존이 없다
         }
         listTarget.push_back( FileUtil::joinPath( _pOptions->_outputDir, config._emitFlagOpsHeader ) );
         std::sort( listDependency.begin(), listDependency.end() );

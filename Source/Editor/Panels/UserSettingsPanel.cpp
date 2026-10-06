@@ -68,7 +68,7 @@ namespace sw::editor
             if ( bPending == false )
                 ImGui::BeginDisabled();
             if ( ImGui::Button( "Apply" ) )
-                (void)settings.applyPending();
+                (void)settings.applyPending(); // 저장 실패는 매니저가 경고로 남긴다 — 결함 의심: 적용기 거절 수(_failedCount)는 어디에도 안 보인다
             ImGui::SameLine();
             if ( ImGui::Button( "Revert" ) )
                 settings.revertPending();

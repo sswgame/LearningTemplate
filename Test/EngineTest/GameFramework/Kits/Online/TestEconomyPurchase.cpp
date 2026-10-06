@@ -30,9 +30,11 @@ namespace
             , _currencies{}
             , _offers{}
         {
+            // 시험 준비 — 깨진 항목은 카탈로그가 경고로 남기고, 상품 · 통화가 없으면 아래 단언이 실패한다
             (void)_currencies.loadFromXmlText( R"(<CurrencyCatalog><Currency id="cur.gold"/><Currency id="cur.gem_free"/><Currency id="cur.gem_paid" paid="true"/>
                 <Currency id="cur.gem"><Funding asset="cur.gem_free"/><Funding asset="cur.gem_paid"/></Currency></CurrencyCatalog>)",
                                                "currency" );
+            // 시험 준비 — 깨진 항목은 카탈로그가 경고로 남기고, 상품 · 통화가 없으면 아래 단언이 실패한다
             (void)_offers.loadFromXmlText( R"(<OfferCatalog>
                 <Offer id="potion" maxCount="10"><Price currency="cur.gold" amount="20"/><Grant asset="item.potion" amount="1"/></Offer>
                 <Offer id="elixir"><Price currency="cur.gem" amount="20"/><Grant asset="item.elixir" amount="1"/></Offer>
@@ -68,7 +70,7 @@ namespace
         int64 readAmount( const utf8* pAsset )
         {
             LedgerBalance balance;
-            (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( kBuyer ), pAsset, balance );
+            (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( kBuyer ), pAsset, balance ); // 실패면 balance 가 0 으로 남아 호출한 단언이 틀린 값으로 잡는다
             return balance._amount;
         }
 

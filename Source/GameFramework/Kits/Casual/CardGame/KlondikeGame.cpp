@@ -207,7 +207,7 @@ namespace sw
         for ( int32 index = baseIndex; index < source.getCount(); ++index )
             _state._arrTableau[toColumn].push( source.getAt( index ) );
         while ( source.getCount() > baseIndex )
-            (void)source.removeAt( source.getCount() - 1 );
+            (void)source.removeAt( source.getCount() - 1 ); // 카드는 위에서 옮겼다 — 뺀 카드는 버린다
         revealColumnTop( fromColumn );
         return true;
     }

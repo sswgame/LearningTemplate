@@ -237,7 +237,7 @@ SW_TEST_CASE( UiNavigationScriptTest, ModalKeepsFocusInsideAndReturnsOnCancel )
 {
     UiNavigationFixture fixture;
     fixture._ui.setInputMode( sw::UiInputMode::Navigation ); // 패드 사용자 — 메뉴가 첫 행에 포커스를 둔다
-    (void)sw::OptionsMenuScreen::open( fixture._ui );
+    (void)sw::OptionsMenuScreen::open( fixture._ui );        // 핸들은 쓰지 않는다 — 열린 화면은 아래 ExpectUi 가 본다
     fixture.runFrame();
     fixture.runScript( R"(<Scenario name="ui.modal" startAfter="Immediately">
         <At frame="1"><ExpectUi screen="engine/ui/options.ui.xml" focus="audio.master.Value"/></At>

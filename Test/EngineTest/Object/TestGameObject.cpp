@@ -2464,7 +2464,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
         pObj->addComponent<sw::MockMeshComponent>();
 
         if ( index > 0 && ( index % 3 != 0 ) )
-            (void)pObj->attachToParent( listAliveObject[index / 2] );
+            (void)pObj->attachToParent( listAliveObject[index / 2] ); // 시험 준비 — 실패해도 루트로 남을 뿐 시험 대상이 아니다
 
         listAliveObject.push_back( pObj );
     }
@@ -2487,7 +2487,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
             {
                 // 1) 부모 재지정 시도 (A -> B)
                 if ( pObjA != pObjB )
-                    (void)pObjA->attachToParent( pObjB );
+                    (void)pObjA->attachToParent( pObjB ); // 무작위 조작 — 순환 등의 거절도 시험하는 경로다
             }
             else if ( actionType == 1 )
             {
@@ -2521,7 +2521,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
                     pNewObj->addComponent<sw::MockMeshComponent>();
 
                     if ( listAliveObject.empty() == false )
-                        (void)pNewObj->attachToParent( listAliveObject.back() );
+                        (void)pNewObj->attachToParent( listAliveObject.back() ); // 무작위 조작 — 거절돼도 루트로 남을 뿐이다
                     listAliveObject.push_back( pNewObj );
                 }
             }

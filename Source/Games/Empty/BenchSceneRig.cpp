@@ -219,7 +219,7 @@ namespace sw
             SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? BenchSceneRigInternal::addUnit( *pWeapon, BenchSceneRigInternal::kWeaponMesh ) : nullptr;
             if ( pWeaponUnit != nullptr && pWeaponUnit->getMesh() != nullptr )
             {
-                (void)pWeapon->attachToParent( pKnight );
+                (void)pWeapon->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
                 pWeaponUnit->setMesh( BenchSceneRigInternal::createRigidSkinnedCopy( *pWeaponUnit->getMesh() ) );
                 pWeaponUnit->resolveRenderAssets();
                 PoseModifierComponent* pWeaponRig = pWeapon->addComponent<PoseModifierComponent>();
@@ -237,7 +237,7 @@ namespace sw
             SkeletalMeshComponent* pCapeUnit = ( pCape != nullptr ) ? BenchSceneRigInternal::addUnit( *pCape, BenchSceneRigInternal::kCapeMesh ) : nullptr;
             if ( pCapeUnit != nullptr && pCapeUnit->getMesh() != nullptr )
             {
-                (void)pCape->attachToParent( pKnight );
+                (void)pCape->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
                 pCapeUnit->setSkeletonPath( BenchSceneRigInternal::kCapeSkeleton );
                 pCapeUnit->setMesh( BenchSceneRigInternal::createCapeSkinnedCopy( *pCapeUnit->getMesh(), pCapeUnit->getSkeleton() ) );
                 pCapeUnit->resolveRenderAssets();

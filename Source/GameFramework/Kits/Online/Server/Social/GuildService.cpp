@@ -158,7 +158,7 @@ namespace sw
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
                 if ( reader.readBits( 8 ) != kFormatVersion )
                     return false;
-                (void)reader.readVarUint();
+                (void)reader.readVarUint(); // 초대한 사람 칸은 건너뛴다 — 넘침은 아래 hasOverflowed 가 본다
                 outExpiresMs = reader.readVarInt();
                 return reader.hasOverflowed() == false;
             }

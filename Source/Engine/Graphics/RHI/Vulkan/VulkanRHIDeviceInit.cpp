@@ -599,7 +599,7 @@ namespace sw
         const string  cachePath = "Saved/ShaderCache/vk_pipeline_cache.bin";
         // 못 읽으면 빈 캐시로 시작한다 — 파이프라인을 다시 만들 뿐이다.
         if ( FileUtil::exists( cachePath ) )
-            (void)FileUtil::readFile( cachePath, listCacheData );
+            (void)FileUtil::readFile( cachePath, listCacheData ); // 못 읽으면 빈 캐시로 시작한다(위 설명)
 
         VkPipelineCacheCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;

@@ -503,9 +503,9 @@ SW_TEST_CASE( BattleRoyaleTest, DownedReviveTeamWipeAndPlacement )
 
     // 팀 0 을 둘 다 기절시키면 팀 전멸 — 둘 다 죽고 처치는 기절시킨 사람에게.
     world._listEvent.clear();
-    (void)world._match.applyDamage( 0, 3, 50.0f, BrHitZone::Head );
+    (void)world._match.applyDamage( 0, 3, 50.0f, BrHitZone::Head ); // 받은 양은 보지 않는다 — 기절 여부를 아래 단언이 본다
     SW_EXPECT_TRUE( world._match.findPlayer( 0 )->isDowned() );
-    (void)world._match.applyDamage( 1, 2, 150.0f, BrHitZone::Body );
+    (void)world._match.applyDamage( 1, 2, 150.0f, BrHitZone::Body ); // 받은 양은 보지 않는다 — 죽음 · 처치를 아래 단언이 본다
     SW_EXPECT_TRUE( world._match.findPlayer( 0 )->isDead() );
     SW_EXPECT_TRUE( world._match.findPlayer( 1 )->isDead() );
     SW_EXPECT_EQUAL( 1, world._match.findPlayer( 3 )->_kills );
@@ -542,7 +542,7 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneDamageBleedoutCreditAndSupplyDrop )
 
     // 2 가 기절시키고 자기장 · 출혈이 끝내도 처치는 2 의 것.
     world._match.setPlayerPosition( 2, float2{ -400.0f, -400.0f } );
-    (void)world._match.applyDamage( 2, 0, 200.0f, BrHitZone::Limb );
+    (void)world._match.applyDamage( 2, 0, 200.0f, BrHitZone::Limb ); // 받은 양은 보지 않는다 — 기절 여부를 아래 단언이 본다
     SW_EXPECT_TRUE( world._match.findPlayer( 2 )->isDowned() );
     world.run( 12.0f );
     SW_EXPECT_TRUE( world._match.findPlayer( 2 )->isDead() );

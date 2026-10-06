@@ -99,7 +99,7 @@ namespace sw
             Widget*      pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetById( entry._widget ) : nullptr;
             PanelWidget* pParent = pWidget != nullptr ? pWidget->getParent() : nullptr;
             if ( pParent != nullptr )
-                (void)pParent->removeChild( pWidget );
+                (void)pParent->removeChild( pWidget ); // 부모에서 찾은 위젯이라 늘 빠진다
             _listVisible.erase( _listVisible.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
         // 2) 자리가 나면 기다리는 것을 올린다 — 우선순위가 큰 것, 같으면 먼저 온 것.

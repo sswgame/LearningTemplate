@@ -223,6 +223,6 @@ SW_TEST_CASE( PackReadBenchTest, ReadsBigPackSeriallyInParallelAndStreamed )
     SW_ASSERT_FALSE( lz4PackPath.empty() );
     SW_EXPECT_TRUE( benchPack( lz4PackPath, "lz4" ) );
 
-    (void)sw::FileUtil::removeFile( rawPackPath );
-    (void)sw::FileUtil::removeFile( lz4PackPath );
+    (void)sw::FileUtil::removeFile( rawPackPath ); // 정리 — 실패는 removeFile 이 경고로 남긴다
+    (void)sw::FileUtil::removeFile( lz4PackPath ); // 정리 — 실패는 removeFile 이 경고로 남긴다
 }

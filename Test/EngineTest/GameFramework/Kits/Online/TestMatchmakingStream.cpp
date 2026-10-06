@@ -112,7 +112,7 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
     clients.login( indexA, 1 );
     clients.login( indexB, 2 );
     test::tickAll( { &server }, clients, 0 );
-    (void)clientA.createParty( recorderA.makeDelegate() );
+    (void)clientA.createParty( recorderA.makeDelegate() ); // 요청 번호는 쓰지 않는다 — 답은 recorder 로 확인한다
     test::tickAll( { &server }, clients, 0 );
     SW_ASSERT_TRUE( recorderA._listReply.back()._reply._result == MatchmakingResult::Ok );
     const uint64 partyId = recorderA._listReply.back()._reply._party._partyId;
@@ -147,7 +147,7 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
     lobbyRequest._name           = "after school";
     lobbyRequest._modeId         = "pair";
     lobbyRequest._maxMemberCount = 2;
-    (void)clientA.createLobby( lobbyRequest, recorderA.makeDelegate() );
+    (void)clientA.createLobby( lobbyRequest, recorderA.makeDelegate() ); // 요청 번호는 쓰지 않는다 — 답은 recorder 로 확인한다
     test::tickAll( { &server }, clients, 0 );
     SW_ASSERT_TRUE( recorderA._listReply.back()._reply._result == MatchmakingResult::Ok );
     (void)clientB.listLobbies( "pair", recorderB.makeDelegate() );
@@ -197,7 +197,7 @@ SW_TEST_CASE( MatchmakingStreamTest, DroppedAccountLeavesThePartyAndTheQueue )
     test::tickAll( { &server }, clients, 0 );
 
     MatchmakingRecorder recorder;
-    (void)clientA.createParty( recorder.makeDelegate() );
+    (void)clientA.createParty( recorder.makeDelegate() ); // 요청 번호는 쓰지 않는다 — 결과는 getParty 로 확인한다
     test::tickAll( { &server }, clients, 0 );
     const uint64 partyId = clientA.getParty()._partyId;
     (void)clientA.inviteToParty( 2, recorder.makeDelegate() );

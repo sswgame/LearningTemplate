@@ -154,13 +154,13 @@ SW_TEST_CASE( CombatStateTest, DownedBleedsOutReviveInterruptsAndDownLimitKills 
     // 리스폰(기절 횟수 1 은 남는다) — 두 번째 기절, 부활 중 맞으면 끊기고 진행은 처음부터.
     vitality.respawn();
     SW_EXPECT_EQUAL( 1, vitality.getDownCount() );
-    (void)vitality.applyDamage( 100.0f );
+    (void)vitality.applyDamage( 100.0f ); // 시험 준비 — 결과는 아래 단언이 상태로 본다
     SW_ASSERT_TRUE( vitality.isDowned() );
     SW_EXPECT_TRUE( vitality.startRevive( 5, 2.0f ) ); // 둘이 살린다 — 2 배
     vitality.update( 1.0f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, vitality.getReviveProgress(), 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 20.0f, vitality.getDownedHealth(), 1.0e-4f ); // 살리는 동안 출혈이 멈춘다
-    (void)vitality.applyDamage( 5.0f, 0.0f, 3 );
+    (void)vitality.applyDamage( 5.0f, 0.0f, 3 );                        // 결과는 아래 단언이 상태로 본다
     SW_EXPECT_TRUE( vitality.isReviving() == false );
     SW_EXPECT_NEAR_EQUAL( 0.0f, vitality.getReviveProgress(), 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 15.0f, vitality.getDownedHealth(), 1.0e-4f );
@@ -186,10 +186,10 @@ SW_TEST_CASE( CombatStateTest, DownedBleedsOutReviveInterruptsAndDownLimitKills 
     settings._bKeepReviveProgress     = SW_TRUE;
     settings._maxDownCount            = 0;
     vitality.initialize( settings );
-    (void)vitality.applyDamage( 100.0f );
+    (void)vitality.applyDamage( 100.0f ); // 시험 준비 — 결과는 아래 단언이 상태로 본다
     SW_EXPECT_TRUE( vitality.startRevive( 2 ) );
     vitality.update( 1.0f );
-    (void)vitality.applyDamage( 5.0f );
+    (void)vitality.applyDamage( 5.0f ); // 결과는 아래 단언이 상태로 본다
     SW_EXPECT_TRUE( vitality.isReviving() );
     vitality.stopRevive();
     SW_EXPECT_NEAR_EQUAL( 0.25f, vitality.getReviveProgress(), 1.0e-4f );
@@ -440,7 +440,7 @@ SW_TEST_CASE( CombatStateTest, MaxHealthChangesAndTimelineRestores )
     VitalitySettings settings;
     settings._maxHealth = 12.0f;
     Vitality vitality( settings );
-    (void)vitality.applyDamage( 5.0f );
+    (void)vitality.applyDamage( 5.0f ); // 시험 준비 — 결과는 아래 단언이 상태로 본다
     vector<VitalityEvent> listEvent;
     vitality.drainEvents( listEvent );
     vitality.setMaxHealth( 16.0f, true ); // 하트 그릇 — 가득

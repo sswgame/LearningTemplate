@@ -206,7 +206,7 @@ namespace sw::editor
             ImGui::Separator();
             // 실패는 deleteAsset 이 알린다(파일과 .meta 를 그대로 둔다).
             if ( ImGui::MenuItem( "Delete" ) )
-                (void)EditorAssetCommands::deleteAsset( entry._absolutePath );
+                (void)EditorAssetCommands::deleteAsset( entry._absolutePath ); // 실패는 deleteAsset 이 알린다(파일과 .meta 를 그대로 둔다)
             ImGui::EndPopup();
         }
     }

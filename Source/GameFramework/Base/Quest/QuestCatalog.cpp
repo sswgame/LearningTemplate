@@ -27,7 +27,7 @@ namespace sw
                 const XmlNode rewardNode = node.findChild( "Reward" );
                 if ( rewardNode.isValid() == false )
                     return;
-                (void)outReward._values.loadFromAttributes( rewardNode );
+                (void)outReward._values.loadFromAttributes( rewardNode ); // 읽은 속성 수만 돌려준다 — 없으면 값 보상이 없다
                 for ( XmlNode item = rewardNode.findChild( "Item" ); item; item = item.findNextSibling( "Item" ) )
                 {
                     const utf8* pItem = item.findAttribute( "item" );

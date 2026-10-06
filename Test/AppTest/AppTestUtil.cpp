@@ -128,7 +128,7 @@ namespace test
         const int32 exitCode = process.waitForExit();
         bDone.store( true );
         watchdog.join();
-        (void)sw::FileUtil::writeTextFile( outputBase + ".log", log );
+        (void)sw::FileUtil::writeTextFile( outputBase + ".log", log ); // 진단용 로그 사본 — 실패는 writeTextFile 이 오류로 남긴다
         return bKilled.load() ? -1 : exitCode;
     }
 

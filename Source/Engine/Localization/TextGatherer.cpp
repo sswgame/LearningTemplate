@@ -72,7 +72,7 @@ namespace sw
                     if ( character == kDoubleQuote || character == kSingleQuote || isRawStringStart() )
                     {
                         string ignored;
-                        (void)readLiteral( ignored );
+                        (void)readLiteral( ignored ); // 건너뛰는 리터럴 — 닫히지 않았으면 그 줄 끝에서 멈추고 훑기를 이어 간다
                         continue;
                     }
                     if ( isIdentifierStart( character ) )
@@ -628,7 +628,7 @@ namespace sw
         }
         for ( const string& key : listStale )
         {
-            (void)inoutGatherTable.removeEntry( key );
+            (void)inoutGatherTable.removeEntry( key ); // 방금 표에서 찾은 키라 늘 지워진다
             report._listRemoved.push_back( key );
         }
         return report;

@@ -243,7 +243,7 @@ namespace sw
         template <typename TComponent, typename TManager = GameObjectManager>
         static void restoreStateOf( const ComponentStateStore& store, TManager& manager )
         {
-            (void)store.restore<TComponent>( manager );
+            (void)store.restore<TComponent>( manager ); // 넘긴 수는 쓰지 않는다 — 짝이 없는 컴포넌트는 그대로 둔다
         }
         template <typename TComponent, typename TManager = GameObjectManager>
         static void despawnViewsOf( TManager& manager )

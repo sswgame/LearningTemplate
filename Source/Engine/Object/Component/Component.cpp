@@ -202,7 +202,7 @@ namespace sw
         if ( subTickId == 0 || prerequisiteHandle.isValid() == false )
             return false;
         if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickId, prerequisiteHandle]( Component& self )
-        { (void)self.removeSubTickPrerequisite( subTickId, prerequisiteHandle ); } ) ) )
+        { (void)self.removeSubTickPrerequisite( subTickId, prerequisiteHandle ); } ) ) ) // 미룬 제거 — 그때 이미 빠졌으면 할 일이 없다
             return true;
 
         for ( SubTickInfo& info : _listSubTick )

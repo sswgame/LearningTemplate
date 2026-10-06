@@ -250,7 +250,7 @@ namespace sw
                 const float32 thumbStart = bVertical ? bar._thumbPosition._y : bar._thumbPosition._x;
                 const float32 point      = bVertical ? local._y : local._x;
                 const float32 page       = ( bVertical ? _viewportSize._y : _viewportSize._x ) * ( point < thumbStart ? -1.0f : 1.0f );
-                (void)applyScrollDelta( bVertical ? float2{ 0.0f, page } : float2{ page, 0.0f } );
+                (void)applyScrollDelta( bVertical ? float2{ 0.0f, page } : float2{ page, 0.0f } ); // 끝에 닿아 못 옮겨도 트랙 누름은 받은 것이다
                 return UiReply::makeHandled();
             }
             _bDraggingBar    = true;

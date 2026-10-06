@@ -294,7 +294,7 @@ namespace sw
                     const size_t selectorStart = _position;
                     if ( _pattern[_position] == '=' )
                         ++_position;
-                    (void)readWord();
+                    (void)readWord(); // 이름 글자를 건너뛸 뿐이다 — 고른 말은 아래 selector 로 다시 잘라 본다
                     const string_view selector = _pattern.substr( selectorStart, _position - selectorStart );
                     if ( selector.empty() || selector == "=" )
                         return fail( "plural/select keyword expected" );

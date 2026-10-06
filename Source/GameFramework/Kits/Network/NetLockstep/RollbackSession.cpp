@@ -176,7 +176,7 @@ namespace sw
         // 확인 안 된 내 입력은 (예측 + 지연) × 2 + 1 프레임을 넘지 않는다(static_assert) — 예산(1024 B)은 닿지 않는다.
         NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         budget.reserveBits( writer.getBitCount() );
-        (void)_sendWindow.write( writer, budget );
+        (void)_sendWindow.write( writer, budget ); // 실은 수는 쓰지 않는다 — 예산이 넘치지 않는다(위 주석)
         (void)_messageWriter.sendToPeers( *_pHost, NetChannelType::Unreliable );
     }
 

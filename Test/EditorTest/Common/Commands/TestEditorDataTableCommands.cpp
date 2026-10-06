@@ -19,10 +19,11 @@ namespace
         static string writeProject( const string& folder, const string& koreanJson )
         {
             const string projectPath = FileUtil::joinPath( folder, "test.locproject.json" );
+            // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤 단언이 깨진다
             (void)FileUtil::writeTextFile( projectPath, R"({ "name": "test", "sourceCulture": "en", "cultures": [ "ko" ], "stringTables": [ "test.strings.json" ] })" );
-            (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "test.strings.json" ),
+            (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "test.strings.json" ), // 위와 같다
                                            R"({ "culture": "en", "entries": { "greeting": { "source": "Hello", "comment": "Title screen" } } })" );
-            (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "ko.translation.json" ), koreanJson );
+            (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "ko.translation.json" ), koreanJson ); // 위와 같다
             return projectPath;
         }
     };

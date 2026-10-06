@@ -88,9 +88,9 @@ namespace sw::editor
                 ws.clearPendingSceneAction();
                 // 실패는 각 함수가 알린다(읽지 못한 씬 · 플레이 중).
                 if ( action == EditorPendingSceneAction::Load )
-                    (void)EditorAssetCommands::loadScene( path );
+                    (void)EditorAssetCommands::loadScene( path ); // 실패는 loadScene 이 알린다
                 else if ( action == EditorPendingSceneAction::New )
-                    (void)EditorAssetCommands::tryCreateNewScene();
+                    (void)EditorAssetCommands::tryCreateNewScene(); // 실패는 tryCreateNewScene 이 알린다(플레이 중)
                 else if ( action == EditorPendingSceneAction::Quit )
                 {
                     IWindow* pWindow = IWindow::getActiveWindow();

@@ -299,7 +299,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
         test::ScopedDefensiveTestLog expected( "enum text that names no enumerator" );
         sw::NarrowEnumHost           fromJson;
         fromJson._mode = sw::NarrowEnum::One;
-        (void)sw::JsonSerializer::deserialize( &fromJson, *pHostType, R"({"_mode":"Bogus"})" );
+        (void)sw::JsonSerializer::deserialize( &fromJson, *pHostType, R"({"_mode":"Bogus"})" ); // 거절이 기대값 — 아래 단언이 원래 값이 남았는지 본다
         SW_EXPECT_TRUE( fromJson._mode == sw::NarrowEnum::One );
 
         sw::NarrowEnumHost source;
@@ -310,7 +310,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
         xml.replace( namePos, 5, "\"Bogus\"" );
         sw::NarrowEnumHost fromXml;
         fromXml._mode = sw::NarrowEnum::One;
-        (void)sw::XmlSerializer::deserialize( &fromXml, *pHostType, xml );
+        (void)sw::XmlSerializer::deserialize( &fromXml, *pHostType, xml ); // 거절이 기대값 — 아래 단언이 원래 값이 남았는지 본다
         SW_EXPECT_TRUE( fromXml._mode == sw::NarrowEnum::One );
     }
     sw::NarrowEnumHost caseInsensitive;

@@ -150,7 +150,7 @@ SW_TEST_CASE( ComponentRegistryTest, MatchesFullSceneScanThroughChurn )
             GameObject* pObject = listObject[Internal::nextRandom( state ) % listObject.size()];
             Component*  pFirst  = pObject->getComponent<Component>();
             if ( pFirst != nullptr )
-                (void)pObject->removeComponent( pFirst );
+                (void)pObject->removeComponent( pFirst ); // 무작위 조작 — 성공 여부와 무관하게 등록부가 버티는지만 본다
         }
         else
         {

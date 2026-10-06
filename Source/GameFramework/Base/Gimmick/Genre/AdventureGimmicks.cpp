@@ -132,7 +132,7 @@ namespace sw
         if ( _grid.getTable() == nullptr )
             rebuild();
         if ( _startStimulus.empty() == false )
-            (void)applyStimulus( _startStimulus );
+            (void)applyStimulus( _startStimulus ); // 바뀐 것이 없거나 모르는 자극이면 false — 시작 상태 그대로 둔다
         publishSignal();
     }
 

@@ -24,7 +24,7 @@ namespace sw
         if ( command == hashed_string( "OpenOptions" ) )
         {
             if ( UiSystem* pUi = getUiSystem(); pUi != nullptr )
-                (void)OptionsMenuScreen::open( *pUi );
+                (void)OptionsMenuScreen::open( *pUi ); // 핸들은 쓰지 않는다 — 열지 못하면 open 이 오류를 남긴다
             return true;
         }
         return UiScreen::onCommand( command, source );

@@ -286,7 +286,7 @@ SW_TEST_CASE( OpenWorldWesternTest, HonorTiersGiveDiscountsAndDialogueFlags )
     SW_EXPECT_TRUE( flags.evaluate( "honor_high && !honor_neutral" ) );
 
     for ( int32 index = 0; index < 20; ++index )
-        (void)honor.applyCrime( hashed_string( "murder" ) );
+        (void)honor.applyCrime( hashed_string( "murder" ) ); // 변화량은 보지 않는다 — 누적 값을 아래 단언이 본다
     SW_EXPECT_EQUAL( -400, honor.getValue() );
     SW_EXPECT_TRUE( honor.getTierName() == hashed_string( "Outlaw" ) );
     SW_EXPECT_NEAR_EQUAL( 1.1f, honor.computePriceScale(), 1.0e-5f ); // 무법자는 웃돈

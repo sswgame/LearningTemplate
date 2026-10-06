@@ -214,42 +214,47 @@ namespace sw
             {
                 case Wallet::kStateTag:
                 {
+                    // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
                     (void)GameStateComponentInternal::applyStateSection( section, _wallet, "wallet" );
                     break;
                 }
                 case GameFlags::kStateTag:
                 {
-                    (void)GameStateComponentInternal::applyStateSection( section, _flags, "flags" );
+                    (void)GameStateComponentInternal::applyStateSection( section, _flags, "flags" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
                     break;
                 }
                 case WorldClock::kStateTag:
                 {
-                    (void)GameStateComponentInternal::applyStateSection( section, _clock, "clock" );
+                    (void)GameStateComponentInternal::applyStateSection( section, _clock, "clock" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
                     break;
                 }
                 case QuestLog::kStateTag:
                 {
+                    // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
                     (void)GameStateComponentInternal::applyStateSection( section, _questLog, "quest log" );
                     break;
                 }
                 case ReputationState::kStateTag:
                 {
+                    // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
                     (void)GameStateComponentInternal::applyStateSection( section, _reputation, "reputation" );
                     break;
                 }
                 case Inventory::kStateTag:
                 {
+                    // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
                     (void)GameStateComponentInternal::applyStateSection( section, _inventory, "inventory" );
                     break;
                 }
                 case WeatherSystem::kStateTag:
                 {
+                    // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
                     (void)GameStateComponentInternal::applyStateSection( section, _weather, "weather" );
                     break;
                 }
                 case LandRegistry::kStateTag:
                 {
-                    (void)GameStateComponentInternal::applyStateSection( section, _land, "land" );
+                    (void)GameStateComponentInternal::applyStateSection( section, _land, "land" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
                     break;
                 }
                 default:

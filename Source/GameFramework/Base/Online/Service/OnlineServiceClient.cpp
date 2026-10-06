@@ -317,8 +317,8 @@ namespace sw
             const uint64 kitCount    = reader.readVarUint();
             for ( uint64 index = 0; index < kitCount && reader.hasOverflowed() == false; ++index )
             {
-                (void)reader.readBits( 16 );
-                (void)reader.readVarUint();
+                (void)reader.readBits( 16 ); // 키트 항목은 건너뛴다 — 넘침은 아래 hasOverflowed 가 본다
+                (void)reader.readVarUint();  // 키트 항목은 건너뛴다 — 넘침은 아래 hasOverflowed 가 본다
             }
             _remoteConfigHash = reader.readVarUint();
             _serverTimeMs     = reader.readVarInt();

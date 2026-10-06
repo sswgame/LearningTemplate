@@ -108,9 +108,9 @@ namespace sw
             if ( pAbilitySystem == nullptr )
                 return;
             if ( spec.isValid() )
-                (void)pAbilitySystem->applyGameplayEffectSpecToSelf( spec );
+                (void)pAbilitySystem->applyGameplayEffectSpecToSelf( spec ); // 대상 태그 조건에 막히면 무효 핸들 — 안 걸리는 것이 규칙이다
             if ( extraSpec.isValid() )
-                (void)pAbilitySystem->applyGameplayEffectSpecToSelf( extraSpec );
+                (void)pAbilitySystem->applyGameplayEffectSpecToSelf( extraSpec ); // 대상 태그 조건에 막히면 무효 핸들 — 안 걸리는 것이 규칙이다
             (void)GameSound::play( "game/abilityarena/sounds/impact_punch_medium_000.ogg" );
         } ) );
     }

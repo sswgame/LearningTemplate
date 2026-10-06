@@ -253,7 +253,7 @@ namespace sw
                     // 끝점이 스스로 답한다 — 게임 스레드를 거치지 않으니 RTT 에 프레임 길이가 섞이지 않는다.
                     connection._frameScratch.clear();
                     if ( StreamFrameEncoder::appendFrame( connection._frameScratch, StreamFrameKind::Pong, 0, frame._pBody, frame._bodySize, _settings._maxFrameBodySize ) )
-                        (void)writeOutgoingLocked( connection, connection._frameScratch );
+                        (void)writeOutgoingLocked( connection, connection._frameScratch ); // Pong 실패는 writeOutgoingLocked 가 연결을 닫아 알린다
                     break;
                 }
                 case StreamFrameKind::Pong:

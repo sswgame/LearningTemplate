@@ -48,7 +48,7 @@ namespace sw
     void FractureAssetCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         (void)pDevice;
-        (void)reloadShared( relativePath );
+        (void)reloadShared( relativePath ); // 쓰는 곳이 없으면 할 일이 없고, 못 읽으면 옛 에셋을 지킨다
     }
 
     size_t FractureAssetCache::getCachedCount() const

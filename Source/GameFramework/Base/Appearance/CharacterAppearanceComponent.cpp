@@ -286,7 +286,7 @@ namespace sw
         _bodyPart = applyBodyPart( *pBody );
         CharacterPoseUtil::makeBindBones( pBody->getSkeleton(), _bodyBindBones );
         _bodyBones = _bodyBindBones;
-        (void)CharacterPoseUtil::copyUnitPose( *pBody, _bodyBones );
+        (void)CharacterPoseUtil::copyUnitPose( *pBody, _bodyBones ); // 포즈가 아직 없으면 바인드 본 그대로 소켓을 구한다
         string socketError;
         if ( _rig.rebuild( _resolved, _bodyBindBones, _socketCache, &socketError ) == false )
             SW_LOG_ERROR( "Appearance '%#' sockets: %#", _presetId.c_str(), socketError.c_str() );
@@ -382,7 +382,7 @@ namespace sw
                     pSkinned->setMaterialPath( part._material.c_str() );
                 pSkinned->setLeaderPose( static_cast<SkeletalMeshComponent*>( manager.resolveComponent( bodyHandle ) ) );
                 if ( pBodyScene != nullptr )
-                    (void)pSkinned->attachToComponent( pBodyScene, AttachRule::KeepRelative );
+                    (void)pSkinned->attachToComponent( pBodyScene, AttachRule::KeepRelative ); // 붙일 수 없는 부모면 false — 부위는 제자리에 남는다
                 spawned._bSocketPart = SW_FALSE;
             }
             if ( pObject == nullptr )

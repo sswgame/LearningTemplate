@@ -51,6 +51,7 @@ namespace
         static sw::string writeProfile( const utf8* pName )
         {
             const sw::string path = test::makeTempPath( pName );
+            // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 프로필 읽기 단언이 깨진다
             (void)sw::FileUtil::writeTextFile( path, R"(<DestructionProfile density="800" physicsMaterial="Wood">
   <Strain thresholds="10 15 10"/>
   <Links strength="40" supportStrength="30000"/>

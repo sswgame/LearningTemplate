@@ -685,6 +685,7 @@ namespace sw
     {
         shared_ptr<TaskPromise<AsyncReadResult>> pPromise = sw::make_shared<TaskPromise<AsyncReadResult>>();
         TaskFuture<AsyncReadResult>              future   = pPromise->getFuture();
+        // 핸들은 쓰지 않는다 — 실패도 완료 콜백(상태)으로 퓨처에 온다
         (void)readFile( filePath, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [pPromise]( AsyncReadResult& result )
         {
             pPromise->setValue( std::move( result ) );

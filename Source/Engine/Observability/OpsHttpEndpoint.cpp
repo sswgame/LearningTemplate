@@ -184,6 +184,7 @@ namespace sw
             }
             else if ( static_cast<int32>( pConnection->_buffer.size() ) > _settings._maxRequestBytes )
             {
+                // 돌려주는 것은 상태 코드다 — 응답은 response 에 담긴다
                 (void)OpsHttpEndpointInternal::writeResponse( 431, OpsHttpEndpointInternal::kTextContentType, "request head too large\n", response );
             }
             else

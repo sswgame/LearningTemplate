@@ -251,7 +251,7 @@ namespace sw
             LocalizationManager&       localization  = *loop._owned._pLocalizationManager;
             const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
             if ( defaultAssets._cultureTable.empty() == false )
-                (void)localization.loadCultureTable( defaultAssets._cultureTable );
+                (void)localization.loadCultureTable( defaultAssets._cultureTable ); // 실패는 loadCultureTable 이 오류로 남긴다
             if ( defaultAssets._localizationProject.empty() == false && localization.mountProject( defaultAssets._localizationProject, LocalizationScope::Engine ) == false )
                 SW_LOG_ERROR( "Engine localization project '%#' is not (fully) loaded", defaultAssets._localizationProject.c_str() );
             string commandLineLanguage;
@@ -477,7 +477,7 @@ namespace sw
                 // 정점 애니메이션(VAT) — 데이터가 고른 (메시, 클립)을 굽는다. 프레임율은 군중 표의 것이라 런타임 굽기와 같다.
                 AnimationCrowdSettings crowdSettings{};
                 if ( ResourceUtil::hasResource( AnimationCrowdSettings::kResourcePath ) )
-                    (void)crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath );
+                    (void)crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath ); // 실패는 loadFromResource 가 오류로 남기고 기본 프레임율로 굽는다
                 uint32                        vertexAnimationFailedCount = 0;
                 [[maybe_unused]] const uint32 vertexAnimationCount =
                     VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, vertexAnimationFailedCount );
@@ -595,7 +595,7 @@ namespace sw
             const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
             settings.setUserFilePath( gv_userSettingsFile.empty() ? UserSettingsManager::makeDefaultUserFilePath( gameName ) : gv_userSettingsFile );
             if ( settings.loadUserFile( settings.getUserFilePath() ) == false )
-                (void)settings.applyAutoDetectedPreset( HardwareProbe::probe() );
+                (void)settings.applyAutoDetectedPreset( HardwareProbe::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
             settings.reapplyAll();
             return EngineInitResult::Succeeded;
         }

@@ -125,7 +125,7 @@ namespace sw
             }
             StatBlock& modifier = _arrClassModifier[static_cast<size_t>( rangeClass )];
             modifier.clear();
-            (void)modifier.loadFromAttributes( node, "id" );
+            (void)modifier.loadFromAttributes( node, "id" ); // 읽은 속성 수만 돌려준다 — 없으면 보정이 없다
         }
 
         uint32 loadedCount = 0;
@@ -200,7 +200,7 @@ namespace sw
             skill._threshold = MathUtil::saturate( node.getAttributeFloat( "threshold", skill._threshold ) );
             skill._duration  = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", skill._duration ) );
             skill._cooldown  = MathUtil::max( 0.0f, node.getAttributeFloat( "cooldown", skill._cooldown ) );
-            (void)skill._modifier.loadFromAttributes( node, "id,trigger,threshold,duration,cooldown" );
+            (void)skill._modifier.loadFromAttributes( node, "id,trigger,threshold,duration,cooldown" ); // 읽은 속성 수만 돌려준다 — 없으면 보정이 없다
             (void)_catalogSkill.add( skill );
         }
         return loadedCount;

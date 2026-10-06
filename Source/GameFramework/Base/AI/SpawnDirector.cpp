@@ -58,7 +58,7 @@ namespace sw
             { entry._listTag.push_back( hashed_string( token ) ); } );
             (void)_catalog.add( entry );
         }
-        (void)_curve.readPoints( root, "Curve", "scale", 0.0f );
+        (void)_curve.readPoints( root, "Curve", "scale", 0.0f ); // 점 수만 돌려준다 — 점이 없으면 곡선이 대체값을 쓴다
         return static_cast<uint32>( _catalog.getCount() );
     }
 

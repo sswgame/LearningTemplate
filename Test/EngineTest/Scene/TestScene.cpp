@@ -1106,7 +1106,7 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
     {
         test::ScopedDefensiveTestLog expected( "a scene with a component type that is not loaded" );
         sw::SceneDocument            direct = doc;
-        (void)sw::SceneCooker::cookEntityState( direct, &missingComponentCount );
+        (void)sw::SceneCooker::cookEntityState( direct, &missingComponentCount ); // 돌려준 수 대신 빠진 컴포넌트 수를 아래 단언이 본다
         cookedCount = sw::SceneCooker::cookAllScenes( root, cooked, failedCount );
     }
     SW_EXPECT_EQUAL( 1u, missingComponentCount );

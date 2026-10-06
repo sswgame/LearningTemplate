@@ -477,11 +477,11 @@ SW_TEST_CASE( TelemetryTest, ConsentFollowsTheUserSetting )
 
     SW_EXPECT_TRUE( settings.setPendingBoolValue( "telemetry.enabled", true ) == UserSettingSetResult::Accepted );
     SW_EXPECT_FALSE( telemetry.hasConsent() ); // 보류는 동의가 아니다
-    (void)settings.applyPending();
+    (void)settings.applyPending();             // 적용 결과는 아래 동의 단언이 확인한다
     SW_EXPECT_TRUE( telemetry.hasConsent() );
 
     (void)settings.setPendingBoolValue( "telemetry.enabled", false );
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 동의 단언이 확인한다
     SW_EXPECT_FALSE( telemetry.hasConsent() );
     telemetry.shutdown();
     settings.shutdown();

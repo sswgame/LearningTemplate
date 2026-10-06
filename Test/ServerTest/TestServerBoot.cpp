@@ -130,7 +130,7 @@ SW_TEST_CASE( ServerBootTest, QuitCommandOnStandardInputStopsTheServer )
     ProcessOptions options;
     options._bPipeStandardInput = true;
     const ServerRun run         = runServer( "-gv_serverExitAfterTicks=100000", options, []( Process& process )
-            { (void)process.writeInput( "status\nquit\n" ); } );
+            { (void)process.writeInput( "status\nquit\n" ); } ); // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
     expectCleanExit( run, "ConsoleCommand" );
     SW_EXPECT_TRUE( run._output.find( "Dedicated server status" ) != string::npos );
 }
@@ -167,7 +167,7 @@ SW_TEST_CASE( ServerBootTest, StopRequestShutsDownGracefully )
             {
         bStopSent = process.requestStop();
         if ( bStopSent == false )
-            (void)process.writeInput( "quit\n" );
+            (void)process.writeInput( "quit\n" ); // 못 쓰면 서버가 끝나지 않아 아래 단언이 실패한다
     } );
     if ( bStopSent == false )
         SW_TEST_SKIP( "this process has no console to send Ctrl+Break through - covered by ShutdownSignalTest" );

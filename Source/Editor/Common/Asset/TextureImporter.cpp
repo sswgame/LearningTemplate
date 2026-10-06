@@ -426,7 +426,7 @@ namespace sw::editor
         // `App --import-textures` 로 임포트된 것이 같은 판정을 받는다. 내용이 그대로면(저장만 다시 했다) 임포트하지 않는다.
         // 설정 파일이 없으면 기본 규칙이다. 깨졌으면 로드가 알리고 기본 규칙으로 임포트한다.
         TextureImportConfig config{};
-        (void)config.loadFromFile( makeDefaultImportConfigPath() );
+        (void)config.loadFromFile( makeDefaultImportConfigPath() ); // 없으면 기본 규칙, 깨졌으면 로드가 알린다
         const AssetImportSummary summary = importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {

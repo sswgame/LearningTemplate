@@ -96,7 +96,7 @@ namespace sw
     float3 GameDataXml::parseFloat3( string_view text, const float3& fallback )
     {
         float32 arrValue[3] = { fallback._x, fallback._y, fallback._z };
-        (void)parseFloats( text, arrValue, 3 );
+        (void)parseFloats( text, arrValue, 3 ); // 못 읽은 칸은 대체값이 남는다
         return float3{ arrValue[0], arrValue[1], arrValue[2] };
     }
 } // namespace sw

@@ -387,7 +387,7 @@ namespace sw
     void GimmickCircuit::resetToInitial()
     {
         if ( _initialStateBytes.empty() == false )
-            (void)loadState( _initialStateBytes );
+            (void)loadState( _initialStateBytes ); // 같은 회로가 저장한 바이트라 모양이 늘 맞는다
     }
 
     void GimmickCircuit::setSensorValue( int32 node, float32 value )
@@ -486,15 +486,15 @@ namespace sw
         _timer._accumulator = accumulator;
         for ( NodeRuntime& node : _listNode )
         {
-            (void)Internal::readValue( bytes, offset, node._outputBits );
-            (void)Internal::readValue( bytes, offset, node._previousInputBits );
-            (void)Internal::readValue( bytes, offset, node._sensorValue );
-            (void)Internal::readValue( bytes, offset, node._sensorImpulse );
+            (void)Internal::readValue( bytes, offset, node._outputBits );        // 크기는 위에서 expectedSize 로 확인했다
+            (void)Internal::readValue( bytes, offset, node._previousInputBits ); // 크기는 위에서 expectedSize 로 확인했다
+            (void)Internal::readValue( bytes, offset, node._sensorValue );       // 크기는 위에서 expectedSize 로 확인했다
+            (void)Internal::readValue( bytes, offset, node._sensorImpulse );     // 크기는 위에서 expectedSize 로 확인했다
         }
         for ( float32& value : _listFloatState )
-            (void)Internal::readValue( bytes, offset, value );
+            (void)Internal::readValue( bytes, offset, value ); // 크기는 위에서 expectedSize 로 확인했다
         for ( int32& value : _listIntState )
-            (void)Internal::readValue( bytes, offset, value );
+            (void)Internal::readValue( bytes, offset, value ); // 크기는 위에서 expectedSize 로 확인했다
         return true;
     }
 

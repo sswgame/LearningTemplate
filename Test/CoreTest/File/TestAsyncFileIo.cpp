@@ -222,6 +222,7 @@ SW_TEST_CASE( AsyncFileIoTest, BackloggedRequestsCompleteInPriorityOrder )
 
         IoGate        gate;
         CompletionLog log;
+        // 핸들은 버린다 — 완료는 콜백이 게이트로 알린다
         (void)io.readRange( path, 0, 16, sw::AsyncIoPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&gate]( sw::AsyncReadResult& )
         {
             gate.holdInCallback();
@@ -267,6 +268,7 @@ SW_TEST_CASE( AsyncFileIoTest, CancelingAQueuedRequestCompletesItAsCanceled )
         SW_ASSERT_TRUE( startSerialIo( io, kind ) );
 
         IoGate gate;
+        // 핸들은 버린다 — 완료는 콜백이 게이트로 알린다
         (void)io.readRange( path, 0, 16, sw::AsyncIoPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&gate]( sw::AsyncReadResult& )
         {
             gate.holdInCallback();
@@ -316,6 +318,7 @@ SW_TEST_CASE( AsyncFileIoTest, ShutdownCancelsBacklogAndRejectsLateRequests )
         SW_ASSERT_TRUE( startSerialIo( io, kind ) );
 
         IoGate gate;
+        // 핸들은 버린다 — 완료는 콜백이 게이트로 알린다
         (void)io.readRange( path, 0, 16, sw::AsyncIoPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&gate]( sw::AsyncReadResult& )
         {
             gate.holdInCallback();
@@ -385,6 +388,7 @@ SW_TEST_CASE( AsyncFileIoTest, ManyRangesOfOneOpenFile )
         for ( uint32 index = 0; index < kRangeCount; ++index )
         {
             const uint64 offset = static_cast<uint64>( index ) * kRangeBytes;
+            // 핸들은 버린다 — 성공은 콜백이 okCount 로 센다
             (void)io.readRange( file, offset, kRangeBytes, sw::AsyncIoPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&okCount, offset]( sw::AsyncReadResult& result )
             {
                 if ( result.isSucceeded() && result._offset == offset && matchesFileRange( result._bytes, offset ) )

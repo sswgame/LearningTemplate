@@ -650,7 +650,7 @@ namespace sw
                 break;
             const string oldest = _listClosedFile.front();
             totalBytes -= MathUtil::min( totalBytes, FileUtil::getFileSize( oldest ) );
-            (void)FileUtil::removeFile( oldest );
+            (void)FileUtil::removeFile( oldest ); // 실패는 removeFile 이 경고로 남긴다
             _listClosedFile.erase( _listClosedFile.begin() );
             ++_stats._droppedFiles;
         }
@@ -673,8 +673,8 @@ namespace sw
             batch._eventCount                  = lineCount > 0 ? lineCount - 1 : 0; // 첫 줄은 문맥
             const TelemetryUploadResult result = uploader.upload( batch );
             if ( result != TelemetryUploadResult::Sent )
-                break; // 보내지 못했다 — 순서를 지켜 다음 flush 에 이 파일부터
-            (void)FileUtil::removeFile( batch._filePath );
+                break;                                     // 보내지 못했다 — 순서를 지켜 다음 flush 에 이 파일부터
+            (void)FileUtil::removeFile( batch._filePath ); // 실패는 removeFile 이 경고로 남긴다
             _listClosedFile.erase( _listClosedFile.begin() );
             ++_stats._uploadedFiles;
         }

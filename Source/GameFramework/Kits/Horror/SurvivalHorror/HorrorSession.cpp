@@ -224,7 +224,7 @@ namespace sw
             return 0;
         const int32 added = _pInventory->addItem( itemId, wanted );
         if ( added > 0 )
-            (void)_pItemBox->removeItem( itemId, added );
+            (void)_pItemBox->removeItem( itemId, added ); // added 는 상자에 있던 수 이하라 늘 빠진다
         return added;
     }
 
@@ -264,7 +264,7 @@ namespace sw
             for ( size_t outputIndex = 0; outputIndex < listOutput.size(); ++outputIndex )
             {
                 if ( listAdded[outputIndex] > 0 )
-                    (void)_pInventory->removeItem( listOutput[outputIndex], listAdded[outputIndex] );
+                    (void)_pInventory->removeItem( listOutput[outputIndex], listAdded[outputIndex] ); // 방금 넣은 수라 늘 빠진다
             }
             (void)_pInventory->addItem( firstItem, 1 );
             (void)_pInventory->addItem( secondItem, 1 );
@@ -376,7 +376,7 @@ namespace sw
         if ( _pInventory->hasItem( pLock->_keyItem ) == false )
             return HorrorPuzzleResult::MissingItem;
         if ( pLock->_bConsumeKey == SW_TRUE )
-            (void)_pInventory->removeItem( pLock->_keyItem, 1 );
+            (void)_pInventory->removeItem( pLock->_keyItem, 1 ); // 열쇠는 위 hasItem 이 확인했다
         (void)markSolved( lockId, pLock->_flag );
         pushEvent( SurvivalHorrorEvent::Kind::DoorUnlocked, lockId );
         return HorrorPuzzleResult::Solved;

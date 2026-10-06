@@ -564,7 +564,7 @@ namespace sw
             InputSlot slot{};
             (void)InputSlotUtil::tryParse( *step.findAttribute( "slot" ), slot ); // validateEngineStep 이 이미 봤다
             uint32 holdFrameCount = 1;
-            (void)AutomationRunnerInternal::readUint( step, "hold", 1, holdFrameCount, outError );
+            (void)AutomationRunnerInternal::readUint( step, "hold", 1, holdFrameCount, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             const bool bAdded = kind == "Tap" ? _inputScript.addTap( frame, slot, holdFrameCount ) : _inputScript.addSlot( frame, slot, kind == "Press" );
             if ( bAdded == false )
                 outError = step.describe() + ": that slot cannot be pressed (an axis or an unknown device)";
@@ -572,8 +572,8 @@ namespace sw
         }
         if ( kind == "MouseDelta" )
         {
-            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError );
-            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError );
+            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             _inputScript.addMouseDelta( frame, valueX, valueY );
             return true;
         }
@@ -586,8 +586,8 @@ namespace sw
                 outError = step.describe() + ": no window to place the pointer in";
                 return false;
             }
-            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError );
-            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError );
+            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             const float32 maxX = static_cast<float32>( pWindow->getWidth() - 1 );
             const float32 maxY = static_cast<float32>( pWindow->getHeight() - 1 );
             _inputScript.addMousePosition( frame, static_cast<int32>( MathUtil::round( valueX * maxX ) ), static_cast<int32>( MathUtil::round( valueY * maxY ) ) );
@@ -597,9 +597,9 @@ namespace sw
         {
             uint32 axisIndex = 0;
             uint32 padIndex  = 0;
-            (void)AutomationRunnerInternal::readUint( step, "axis", 0, axisIndex, outError );
-            (void)AutomationRunnerInternal::readFloat( step, "value", 0.0f, valueX, outError );
-            (void)AutomationRunnerInternal::readUint( step, "pad", 0, padIndex, outError );
+            (void)AutomationRunnerInternal::readUint( step, "axis", 0, axisIndex, outError );   // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "value", 0.0f, valueX, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readUint( step, "pad", 0, padIndex, outError );     // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             _inputScript.addGamepadAxis( frame, static_cast<uint16>( axisIndex ), valueX, static_cast<uint8>( padIndex ) );
             return true;
         }
@@ -648,6 +648,7 @@ namespace sw
         {
             const bool bClose  = kind == "CloseWindow";
             float32    seconds = 0.0f;
+            // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             (void)AutomationRunnerInternal::readFloat( step, bClose ? "withinSeconds" : "seconds", AutomationRunnerInternal::kDefaultExitWithinSeconds, seconds, error );
             _exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + static_cast<float64>( seconds );
             if ( bClose )
@@ -698,26 +699,26 @@ namespace sw
         string  rule;
         if ( step.findAttribute( "equals" ) != nullptr )
         {
-            (void)AutomationRunnerInternal::readFloat( step, "equals", 0.0f, expected, error );
+            (void)AutomationRunnerInternal::readFloat( step, "equals", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             bOk  = value == static_cast<float64>( expected );
             rule = "== " + *step.findAttribute( "equals" );
         }
         else if ( step.findAttribute( "near" ) != nullptr )
         {
-            (void)AutomationRunnerInternal::readFloat( step, "near", 0.0f, expected, error );
-            (void)AutomationRunnerInternal::readFloat( step, "tolerance", 1.0e-4f, tolerance, error );
+            (void)AutomationRunnerInternal::readFloat( step, "near", 0.0f, expected, error );          // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "tolerance", 1.0e-4f, tolerance, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             bOk  = value >= static_cast<float64>( expected ) - static_cast<float64>( tolerance ) && value <= static_cast<float64>( expected ) + static_cast<float64>( tolerance );
             rule = "near " + *step.findAttribute( "near" );
         }
         else if ( step.findAttribute( "atLeast" ) != nullptr )
         {
-            (void)AutomationRunnerInternal::readFloat( step, "atLeast", 0.0f, expected, error );
+            (void)AutomationRunnerInternal::readFloat( step, "atLeast", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             bOk  = value >= static_cast<float64>( expected );
             rule = ">= " + *step.findAttribute( "atLeast" );
         }
         else
         {
-            (void)AutomationRunnerInternal::readFloat( step, "atMost", 0.0f, expected, error );
+            (void)AutomationRunnerInternal::readFloat( step, "atMost", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             bOk  = value <= static_cast<float64>( expected );
             rule = "<= " + *step.findAttribute( "atMost" );
         }
@@ -730,7 +731,7 @@ namespace sw
         const string& needle = *step.findAttribute( "contains" );
         string        error;
         uint32        since = 0;
-        (void)AutomationRunnerInternal::readUint( step, "since", 0, since, error );
+        (void)AutomationRunnerInternal::readUint( step, "since", 0, since, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
         uint32 matchCount = 0;
         {
             std::scoped_lock<mutex> lock{ _logMutex };
@@ -743,12 +744,12 @@ namespace sw
         uint32 expected = 0;
         if ( step.findAttribute( "count" ) != nullptr )
         {
-            (void)AutomationRunnerInternal::readUint( step, "count", 0, expected, error );
+            (void)AutomationRunnerInternal::readUint( step, "count", 0, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             if ( matchCount != expected )
                 recordFailure( step, "ExpectLog '" + needle + "' count == " + to_string( expected ) + ", got " + to_string( matchCount ) );
             return;
         }
-        (void)AutomationRunnerInternal::readUint( step, "atLeast", 0, expected, error );
+        (void)AutomationRunnerInternal::readUint( step, "atLeast", 0, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
         if ( matchCount < expected )
             recordFailure( step, "ExpectLog '" + needle + "' count >= " + to_string( expected ) + ", got " + to_string( matchCount ) );
     }
@@ -760,11 +761,11 @@ namespace sw
         AutomationImageMetricKind metric = AutomationImageMetricKind::MeanLuma;
         AutomationImageRegion     region{};
         float32                   ratio = Internal::kDefaultDarkRatio;
-        (void)AutomationImageMetric::tryParseKind( *step.findAttribute( "metric" ), metric );
+        (void)AutomationImageMetric::tryParseKind( *step.findAttribute( "metric" ), metric ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
         const string* pRegion = step.findAttribute( "region" );
         if ( pRegion != nullptr )
-            (void)AutomationImageMetric::tryParseRegion( *pRegion, region );
-        (void)Internal::readFloat( step, "ratio", Internal::kDefaultDarkRatio, ratio, error );
+            (void)AutomationImageMetric::tryParseRegion( *pRegion, region );                   // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+        (void)Internal::readFloat( step, "ratio", Internal::kDefaultDarkRatio, ratio, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
 
         const string    path = resolveOutputPath( *step.findAttribute( "file" ) );
         AutomationImage image;
@@ -794,26 +795,26 @@ namespace sw
         string  rule;
         if ( step.findAttribute( "equals" ) != nullptr )
         {
-            (void)Internal::readFloat( step, "equals", 0.0f, expected, error );
+            (void)Internal::readFloat( step, "equals", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             bOk  = value == static_cast<float64>( expected );
             rule = "== " + *step.findAttribute( "equals" );
         }
         else if ( step.findAttribute( "near" ) != nullptr )
         {
-            (void)Internal::readFloat( step, "near", 0.0f, expected, error );
-            (void)Internal::readFloat( step, "tolerance", 1.0e-3f, tolerance, error );
+            (void)Internal::readFloat( step, "near", 0.0f, expected, error );          // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)Internal::readFloat( step, "tolerance", 1.0e-3f, tolerance, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             bOk  = MathUtil::abs( value - static_cast<float64>( expected ) ) <= static_cast<float64>( tolerance );
             rule = "near " + *step.findAttribute( "near" );
         }
         else if ( step.findAttribute( "atLeast" ) != nullptr )
         {
-            (void)Internal::readFloat( step, "atLeast", 0.0f, expected, error );
+            (void)Internal::readFloat( step, "atLeast", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             bOk  = value >= static_cast<float64>( expected );
             rule = ">= " + *step.findAttribute( "atLeast" );
         }
         else
         {
-            (void)Internal::readFloat( step, "atMost", 0.0f, expected, error );
+            (void)Internal::readFloat( step, "atMost", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
             bOk  = value <= static_cast<float64>( expected );
             rule = "<= " + *step.findAttribute( "atMost" );
         }

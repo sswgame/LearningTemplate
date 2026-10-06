@@ -57,6 +57,7 @@ namespace
             , _pRecord{ pRecord }
         {
             GameObjectManager& manager = world.getObjectManager();
+            // 바닥은 다시 찾지 않는다 — 실패면 상자가 떨어져 아래 비교가 어긋난다
             (void)spawnBox( manager, "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 20.0f, 0.5f, 20.0f }, PhysicsBodyType::Static );
             for ( uint32 index = 0; index < kCrateCount; ++index )
             {
@@ -110,6 +111,7 @@ namespace
             , _firstSnapshotTick{ -1 }
         {
             _listProxy.assign( kCrateCount, nullptr );
+            // 바닥은 다시 찾지 않는다 — 실패면 상자가 떨어져 비교가 어긋난다
             (void)spawnBox( world.getObjectManager(), "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 20.0f, 0.5f, 20.0f }, PhysicsBodyType::Static );
             ReplicationClientSettings settings;
             settings._tickInterval = kTickSeconds;

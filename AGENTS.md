@@ -132,6 +132,12 @@ and bare getters (`BareGetter`). The `on*` and spell-it-out rules are kept by re
 - **Spell the word out** unless one of this repo's own type names abbreviates it. `XmlNode` spells
   `attribute()`, not `attr()`, because the type beside it is `XmlAttribute`; `TagQueryExpr::…Expr` and
   `ShaderEngineCbMember`'s `…Cb…` are fine because the type carries the same short form.
+- **A fallible verb returns a result you must not drop silently.** A `bool` whose name starts with a fallible verb
+  (`load` · `save` · `read` · `write` · `parse` · `apply` · `remove` · `spawn` · `attach` … — the list lives in
+  `CheckFallibleNodiscard.py`) is `[[nodiscard]]`, so dropping it stops the build. Dropping it on purpose is
+  `(void)call(); // why that is fine` — the reason on the same line or the line above (`CheckDiscardReason.py`):
+  the callee already logs the failure, the file is optional, a test asserts the state below. Other `(void)` casts
+  (an unused query result, an unused parameter) need no reason.
 
 ### Python
 

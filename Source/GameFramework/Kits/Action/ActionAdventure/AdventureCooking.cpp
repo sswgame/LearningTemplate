@@ -205,7 +205,7 @@ namespace sw
         }
 
         for ( const auto& [itemId, count] : pot.getItems() )
-            (void)inventory.removeItem( itemId, count );
+            (void)inventory.removeItem( itemId, count ); // 재료는 위 hasItems 가 확인했다
         if ( inventory.addItem( outDish._itemId, 1 ) == 1 )
             return AdventureCookResult::Ok;
         for ( const auto& [itemId, count] : pot.getItems() )

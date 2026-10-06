@@ -75,6 +75,7 @@ SW_TEST_CASE( DestructionSnapshotTest, SnapshotCarriesStructureStrainAndGroups )
     sw::DestructionChange change;
     // 약한 폭발(변형만 쌓인다) + 센 맞음(떨어져 나간다) — 스냅숏은 끊김과 쌓인 변형을 모두 실어야 한다.
     (void)server.applyDamage( Internal::makeHit( sw::float3{ 1.0f, 1.0f, 0.0f }, 30.0f, 0.8f, sw::DestructionDamageKind::Radial ), change );
+    // 바뀜 여부는 보지 않는다 — 아래 단언이 그룹 수를 본다
     (void)server.applyDamage( Internal::makeHit( sw::float3{ -1.0f, 2.0f, 0.0f }, 300.0f, 1.0f, sw::DestructionDamageKind::Radial ), change );
     SW_ASSERT_TRUE( server.getGroups().size() > 1 );
 
@@ -97,8 +98,8 @@ SW_TEST_CASE( DestructionSnapshotTest, SnapshotCarriesStructureStrainAndGroups )
     const sw::DestructionDamageEvent next = Internal::makeHit( sw::float3{ 1.0f, 1.0f, 0.0f }, 30.0f, 0.8f, sw::DestructionDamageKind::Radial );
     sw::DestructionChange            serverChange;
     sw::DestructionChange            clientChange;
-    (void)server.applyDamage( next, serverChange );
-    (void)client.applyDamage( next, clientChange );
+    (void)server.applyDamage( next, serverChange ); // 바뀜 여부는 보지 않는다 — 아래 상태 해시로 비교한다
+    (void)client.applyDamage( next, clientChange ); // 바뀜 여부는 보지 않는다 — 아래 상태 해시로 비교한다
     SW_EXPECT_EQUAL( server.computeStateHash(), client.computeStateHash() );
     SW_EXPECT_TRUE( serverChange._listCreatedGroup == clientChange._listCreatedGroup );
 }
@@ -116,6 +117,7 @@ SW_TEST_CASE( DestructionSnapshotTest, ForeignOrTruncatedSnapshotIsRejected )
     sw::DestructionState source;
     source.initialize( wall._graph, Internal::makeProfile(), Internal::makeBottomAnchors( wall ) );
     sw::DestructionChange change;
+    // 바뀜 여부는 보지 않는다 — 스냅숏 비교가 결과를 본다
     (void)source.applyDamage( Internal::makeHit( sw::float3{ 0.0f, 1.5f, 0.0f }, 300.0f, 1.0f, sw::DestructionDamageKind::Radial ), change );
     sw::vector<uint8> bytes;
     source.writeSnapshot( bytes );

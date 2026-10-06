@@ -96,7 +96,7 @@ namespace
         uint16          getMessageKindMask() const override { return static_cast<uint16>( 1u << ( _acceptedKind - _rangeBase ) ); }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
         {
-            (void)body.readVarUint();
+            (void)body.readVarUint(); // 값은 쓰지 않는다 — 넘침은 바로 아래에서 본다
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
             ++_handledCount;
@@ -187,7 +187,7 @@ SW_TEST_CASE( NetworkTest, BitStreamPacksRangesFloatsVarIntsAndDetectsOverflow )
     // 끝나지 않는 가변 정수.
     const uint8 arrBroken[2] = { 0xFF, 0xFF };
     BitReader   broken( arrBroken, 2 );
-    (void)broken.readVarUint();
+    (void)broken.readVarUint(); // 넘침을 일으키는 것이 목적이다 — 아래 단언이 본다
     SW_EXPECT_TRUE( broken.hasOverflowed() );
 }
 
@@ -249,7 +249,7 @@ SW_TEST_CASE( NetworkTest, BlobRoundTripsAndRejectsOversize )
 
     // 상한을 넘는 길이는 자르지 않고 거부한다 — 넘침으로 남아 뒤를 읽지 않는다.
     BitReader oversize( writer.getBytes().data(), writer.getByteCount() );
-    (void)oversize.readBool();
+    (void)oversize.readBool(); // 앞의 bool 칸을 건너뛴다 — 뒤는 아래 단언이 본다
     SW_ASSERT_TRUE( oversize.readBlob( blob, 255 ) );
     SW_EXPECT_FALSE( oversize.readBlob( blob, 255 ) );
     SW_EXPECT_TRUE( oversize.hasOverflowed() );
@@ -468,7 +468,7 @@ SW_TEST_CASE( NetworkTest, ConnectionsResendReliableMessagesInOrderAndDropStaleS
         BitWriter ackWriter;
         receiver.writePacket( time + 0.02, ackWriter, 300 );
         BitReader ackReader( ackWriter.getBytes().data(), ackWriter.getByteCount() );
-        (void)sender.readPacket( time + 0.04, ackReader );
+        (void)sender.readPacket( time + 0.04, ackReader ); // ack 만 받으면 된다 — 결과는 아래 수신 메시지로 확인한다
         vector<uint8> buffer;
         while ( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) )
             listReceived.push_back( readMessageValue( buffer ) );
@@ -817,11 +817,11 @@ SW_TEST_CASE( NetworkTest, MalformedPayloadIsNotAcknowledged )
         BitWriter reply;
         receiver.writePacket( time, reply, 300 );
         BitReader replyReader( reply.getBytes().data(), reply.getByteCount() );
-        (void)sender.readPacket( time + 0.01, replyReader );
+        (void)sender.readPacket( time + 0.01, replyReader ); // ack 만 받으면 된다 — 결과는 아래 수신 메시지로 확인한다
         BitWriter next;
         sender.writePacket( time + 0.02, next, 300 );
         BitReader nextReader( next.getBytes().data(), next.getByteCount() );
-        (void)receiver.readPacket( time + 0.03, nextReader );
+        (void)receiver.readPacket( time + 0.03, nextReader ); // 중복이면 false — 결과는 아래 수신 메시지로 확인한다
         while ( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) )
             ++receivedCount;
     }
@@ -918,7 +918,7 @@ SW_TEST_CASE( NetworkTest, LostPacketIsResentBeforeTheResendDelay )
         if ( bDeliver == false )
             return;
         BitReader reader( packet.getBytes().data(), packet.getByteCount() );
-        (void)to.readPacket( receiveTime, reader );
+        (void)to.readPacket( receiveTime, reader ); // 버린 · 중복 패킷이면 false — 결과는 시험 단언이 본다
     };
     // RTT 1 초를 익힌다 — 한쪽 0.5 초.
     float64 time = 0.0;
@@ -1542,7 +1542,7 @@ SW_TEST_CASE( NetworkTest, LargeReliableMessageDoesNotStarveSequencedMessages )
         BitWriter reply;
         receiver.writePacket( time + 0.01, reply, kNetMaxPacketSize - 8 );
         BitReader replyReader( reply.getBytes().data(), reply.getByteCount() );
-        (void)sender.readPacket( time + 0.02, replyReader );
+        (void)sender.readPacket( time + 0.02, replyReader ); // ack 만 받으면 된다 — 결과는 아래 스냅숏 수로 확인한다
     };
     int32         snapshotCount = 0;
     vector<uint8> buffer;

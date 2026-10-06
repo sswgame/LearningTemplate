@@ -296,7 +296,9 @@ SW_TEST_CASE( AppUiTest, DemoScreenMatchesAcrossBackends )
         // 다음 백엔드가 덮어쓰기 전에 백엔드 이름으로 남긴다(실패를 눈으로 볼 때).
         sw::vector<uint8> bytes;
         if ( sw::FileUtil::readFile( imagePath, bytes ) )
+            // 눈으로 볼 사본 — 실패는 writeFile 이 오류로 남긴다
             (void)sw::FileUtil::writeFile( sw::FileUtil::joinPath( Internal::kOutputFolder, "uidemo_" + capture._backend + ".ppm" ), bytes.data(), bytes.size() );
+        // 눈으로 볼 사본 — 실패는 writeTextFile 이 오류로 남긴다
         (void)sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( Internal::kOutputFolder, "uidemo_" + capture._backend + ".layout.txt" ), layout );
         Internal::expectKnownRegions( capture );
         listCapture.push_back( std::move( capture ) );

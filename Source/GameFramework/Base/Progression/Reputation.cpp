@@ -133,12 +133,13 @@ namespace sw
             for ( const ReputationLink& link : pFaction->_listLink )
             {
                 const float32 linked = static_cast<float32>( changed ) * link._ratio;
-                (void)applyDelta( link._factionId, static_cast<int32>( linked < 0.0f ? linked - 0.5f : linked + 0.5f ) );
+                (void)applyDelta( link._factionId, static_cast<int32>( linked < 0.0f ? linked - 0.5f : linked + 0.5f ) ); // 연결 세력의 바뀐 양은 쓰지 않는다
             }
         }
         return changed;
     }
 
+    // 바뀐 양은 쓰지 않는다 — 범위 밖이면 경계에서 멈춘다
     void ReputationState::setValue( const hashed_string& factionId, int32 value ) { (void)applyDelta( factionId, value - getValue( factionId ) ); }
 
     void ReputationState::advanceDay()
@@ -152,7 +153,7 @@ namespace sw
             const int32 value = getValue( faction._id );
             const int32 gap   = faction._startValue - value;
             if ( gap != 0 )
-                (void)applyDelta( faction._id, MathUtil::clamp( gap, -faction._dailyDecay, faction._dailyDecay ) );
+                (void)applyDelta( faction._id, MathUtil::clamp( gap, -faction._dailyDecay, faction._dailyDecay ) ); // 바뀐 양은 쓰지 않는다
         }
     }
 

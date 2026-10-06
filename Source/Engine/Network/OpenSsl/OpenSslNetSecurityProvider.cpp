@@ -317,6 +317,7 @@ namespace sw
                     _state = TlsSessionState::Established;
                     if ( _pendingBytes.empty() == false )
                     {
+                        // 실패는 fail 이 상태(Failed)와 오류 글자로 남긴다
                         (void)writeEstablished( _pendingBytes.data(), static_cast<int32>( _pendingBytes.size() ) );
                         _pendingBytes.clear();
                     }

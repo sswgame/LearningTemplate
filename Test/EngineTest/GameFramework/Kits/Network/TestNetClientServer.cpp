@@ -625,7 +625,7 @@ SW_TEST_CASE( NetClientServerTest, SnapshotStaysUnderMessageLimitWithManyRemoval
         current.writeDelta( writer, &serverState, 5000, written );
         SW_ASSERT_TRUE( messageWriter.getByteCount() <= NetConnection::kMaxSingleMessageSize );
         BitReader reader( messageWriter.getBytes().data(), messageWriter.getByteCount() );
-        (void)reader.readBits( 8 );
+        (void)reader.readBits( 8 ); // 앞의 종류 바이트를 건너뛴다 — 값은 쓰지 않는다
         NetSnapshot decoded;
         SW_ASSERT_TRUE( NetSnapshot::readDelta( reader, &clientState, decoded ) );
         // 서버가 기억하는 재구성과 클라이언트가 푼 것이 엔티티 하나까지 같다.

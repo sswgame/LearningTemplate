@@ -84,9 +84,9 @@ namespace sw
         }
         vector<uint8> listSeamFlag;
         DismembermentInternal::flagSeamVertices( outResult._remaining, listSeamPosition, listSeamFlag );
-        (void)GeometryCutUtil::createCaps( outResult._remaining, outResult._remainingCap, &listSeamFlag );
+        (void)GeometryCutUtil::createCaps( outResult._remaining, outResult._remainingCap, &listSeamFlag ); // 막은 고리 수일 뿐이다 — 0 이면 막을 구멍이 없다
         DismembermentInternal::flagSeamVertices( outResult._severed, listSeamPosition, listSeamFlag );
-        (void)GeometryCutUtil::createCaps( outResult._severed, outResult._severedCap, &listSeamFlag );
+        (void)GeometryCutUtil::createCaps( outResult._severed, outResult._severedCap, &listSeamFlag ); // 막은 고리 수일 뿐이다 — 0 이면 막을 구멍이 없다
         return true;
     }
 } // namespace sw

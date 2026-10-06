@@ -763,6 +763,7 @@ namespace sw
 
             _outcome._listOnline.push_back( LoginSessionRef{ session._accountId, token._sessionId, LoginRevokeReason::None } );
             _outcome._listEvent.push_back( LoginEvent{ session._accountId, token._sessionId, LoginRevokeReason::None, LoginEvent::Kind::Resumed } );
+            // 신원을 못 읽으면 빈 신원으로 간다 — 결함 의심: 로그인은 Ok 인데 신원이 비고, validateSession 은 같은 실패를 StoreUnavailable 로 돌려준다
             (void)readIdentity( _connection, session._accountId, outGrant._identity );
             Internal::ProfileRecord profile;
             if ( Internal::readProfile( _connection, session._accountId, profile ) == ServiceStoreResult::Ok )

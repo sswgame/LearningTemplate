@@ -170,7 +170,7 @@ namespace
             BitWriter     writer;
             NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
             budget.reserveBits( 8 );
-            (void)window.write( writer, budget );
+            (void)window.write( writer, budget ); // 예산이 모자라 덜 쓴 묶음은 받는 쪽 read 결과로 드러난다
             BitReader reader( writer.getBytes().data(), writer.getByteCount() );
             return buffer.read( reader );
         }
@@ -620,7 +620,7 @@ SW_TEST_CASE( ControlTest, IntentFileRoundTrips )
     ControlIntentHistory loaded;
     string               error;
     SW_ASSERT_TRUE_MSG( loaded.loadFromFile( path, error ), error.c_str() );
-    (void)FileUtil::tryRemoveFile( path );
+    (void)FileUtil::tryRemoveFile( path ); // 임시 파일 정리 — 지우지 못해도 시험 결과와 무관하다
 
     SW_ASSERT_EQUAL( 2, loaded.getTrackCount() );
     const int32 walker  = loaded.findTrack( "Walker" );

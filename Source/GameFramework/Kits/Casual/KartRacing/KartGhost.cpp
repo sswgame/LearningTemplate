@@ -182,7 +182,7 @@ namespace sw
         const KartGhostFrame& frame = _pGhost->getFrames()[static_cast<size_t>( _frameIndex )];
         _motor.update( KartGhost::decodeInput( frame ), _pGhost->getStep() );
         if ( _pTrack != nullptr )
-            (void)_pTrack->applyBoostPad( _motor, _lastBoostPad );
+            (void)_pTrack->applyBoostPad( _motor, _lastBoostPad ); // 걸었는지는 쓰지 않는다 — 모터가 상태를 들고 있다
         ++_frameIndex;
         return true;
     }

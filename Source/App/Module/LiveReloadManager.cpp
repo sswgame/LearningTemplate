@@ -388,6 +388,7 @@ namespace sw
         , _bReloadGraphBroken{ SW_FALSE }
         , _reserved{ 0 }
     {
+        // 지운 수일 뿐이다 — 아직 매핑된 사본은 다음 시작 · 종료의 정리가 지운다
         (void)ShadowCopyName::removeStaleCopies( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
 
         // 지연 로드 훅은 모듈 DLL 안에 있어 App 의 심볼을 볼 수 없다. 그래서 이 매니저를 Engine.dll 의 창구에 등록해 둔다.
@@ -406,6 +407,7 @@ namespace sw
         _onBeforeCommitBatch = {};
         clearReloadCallbacks();
 
+        // 지운 수일 뿐이다 — 아직 매핑된 사본은 다음 시작 · 종료의 정리가 지운다
         (void)ShadowCopyName::removeStaleCopies( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
         if ( engine::getModuleHandleProvider() == this )
             engine::setModuleHandleProvider( nullptr );

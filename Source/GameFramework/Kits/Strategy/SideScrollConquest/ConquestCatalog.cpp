@@ -21,7 +21,7 @@ namespace sw
             {
                 outStats.clear();
                 if ( const XmlNode child = node.findChild( pChildName ) )
-                    (void)outStats.loadFromAttributes( child );
+                    (void)outStats.loadFromAttributes( child ); // 반환값은 읽은 개수다 — 숫자 아닌 속성은 건너뛰면 그만이다
             }
 
             [[nodiscard]] static bool parseSiteKind( string_view text, ConquestSiteKind& outKind )
@@ -143,7 +143,7 @@ namespace sw
         if ( const XmlNode startNode = root.findChild( "Start" ) )
         {
             _rules._startResources.clear();
-            (void)_rules._startResources.loadFromAttributes( startNode );
+            (void)_rules._startResources.loadFromAttributes( startNode ); // 반환값은 읽은 개수다 — 숫자 아닌 속성은 건너뛰면 그만이다
         }
 
         for ( XmlNode node = root.findChild( "Unit" ); node; node = node.findNextSibling( "Unit" ) )

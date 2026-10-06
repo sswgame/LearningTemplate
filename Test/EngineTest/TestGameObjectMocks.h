@@ -696,7 +696,7 @@ namespace sw
             if ( _bWriteOnSubTick == SW_TRUE )
                 setLocalPosition( base + _offset );
             if ( _pAttachChild != nullptr && _pAttachParent != nullptr )
-                (void)_pAttachChild->attachToComponent( _pAttachParent, AttachRule::KeepWorld );
+                (void)_pAttachChild->attachToComponent( _pAttachParent, AttachRule::KeepWorld ); // 틱 중이면 미뤄져 true — 결과는 시험이 틱 뒤 계층으로 본다
             if ( _pDestroyObject != nullptr && getOwner() != nullptr && getOwner()->getManager() != nullptr )
             {
                 getOwner()->getManager()->destroyObject( _pDestroyObject );

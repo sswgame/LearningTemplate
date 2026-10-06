@@ -433,7 +433,7 @@ namespace sw
         const string_view integerPart = dotPos == string_view::npos ? digits : digits.substr( 0, dotPos );
 
         int64 integerValue{ 0 };
-        (void)StringUtil::parseInt64( integerPart, integerValue );
+        (void)StringUtil::parseInt64( integerPart, integerValue ); // 정수부는 숫자뿐이다 — 결함 의심: int64 를 넘는 값(≥9.2e18) · inf · NaN 은 실패해 정수부가 0 으로 찍힌다
         const bool bNegative = value < 0.0 && ( integerValue != 0 || visible > 0 );
         string     text      = formatInteger( integerValue );
         if ( bNegative )

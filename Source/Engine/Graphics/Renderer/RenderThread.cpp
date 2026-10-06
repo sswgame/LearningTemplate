@@ -487,7 +487,7 @@ namespace sw
                 }
                 else
                 {
-                    (void)writePresentedImage( path );
+                    (void)writePresentedImage( path ); // 디버그 스크린샷 — 결함 의심: 실패해도 경고가 없다(시나리오 경로는 경고를 남긴다)
                 }
             }
         }

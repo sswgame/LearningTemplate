@@ -25,7 +25,7 @@ namespace sw
                 if ( signalNumber == SIGINT && s_interruptCount.fetch_add( 1, std::memory_order_relaxed ) >= 1 )
                 {
                     static constexpr utf8 kMessage[] = "\nSecond interrupt - exiting immediately\n";
-                    (void)write( STDERR_FILENO, kMessage, sizeof( kMessage ) - 1 );
+                    (void)write( STDERR_FILENO, kMessage, sizeof( kMessage ) - 1 ); // 신호 처리기 안 — 알림을 못 써도 바로 _exit 한다
                     _exit( 130 );
                 }
                 const ShutdownCause cause = signalNumber == SIGTERM ? ShutdownCause::Terminate : ( signalNumber == SIGHUP ? ShutdownCause::Hangup : ShutdownCause::Interrupt );

@@ -76,11 +76,13 @@ namespace sw
                 {
                     case EconomyServiceInternal::kWalletIndex:
                     {
+                        // 결과는 finish 가 _reply._result 에 담는다 — complete 가 그대로 돌려준다
                         (void)EconomyStoreLogic::readWallet( connection, _accountId, _reply );
                         break;
                     }
                     case EconomyServiceInternal::kHistoryIndex:
                     {
+                        // 결과는 finish 가 _reply._result 에 담는다 — complete 가 그대로 돌려준다
                         (void)EconomyStoreLogic::readHistory( connection, _accountId, _history, _reply );
                         break;
                     }

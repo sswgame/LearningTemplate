@@ -335,7 +335,7 @@ namespace
         static void writeSanction( MemoryServiceDatabase& database, uint64 accountId, ServiceSanctionKind kind, int64 untilMs )
         {
             ServiceSanctionState state;
-            (void)ServiceSanction::readState( database, accountId, state );
+            (void)ServiceSanction::readState( database, accountId, state ); // 없으면 빈 상태로 시작한다 — 시험 준비라 아래 commit 결과만 쓴다
             state._arrUntilMs[static_cast<int32>( kind )] = untilMs;
             state._reasonCode                             = "sanction.cheat";
             ServiceTransaction transaction;

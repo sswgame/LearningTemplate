@@ -205,7 +205,7 @@ namespace sw
         Component::onBeginPlay();
         setTickGroup( TickGroup::PrePhysics );
         if ( _circuit.isBuilt() == false && rebuild() && _stateBytes.empty() == false )
-            (void)_circuit.loadState( _stateBytes );
+            (void)_circuit.loadState( _stateBytes ); // 모양이 다른 저장이면 false — 회로는 처음 상태로 시작한다
         bindNodes();
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;

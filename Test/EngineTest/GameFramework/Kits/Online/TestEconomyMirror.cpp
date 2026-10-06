@@ -64,6 +64,7 @@ SW_TEST_CASE( EconomyMirrorTest, InventoryCountsFollowLedgerAndReportOverflow )
     },
                                                                 false, inventory );
     SW_EXPECT_EQUAL( overflowMore, 5 );
+    // 넘친 개수는 0 — 아이템 빚 처리는 아래 개수 단언이 본다
     (void)EconomyMirror::applyToInventory( {
                                                LedgerBalance{ "item.potion", -2, 0 }
     },

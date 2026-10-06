@@ -31,7 +31,7 @@ namespace
         {
             if ( outFixture.load() == false )
                 return false;
-            (void)outFixture._database.loadSectionFromXmlText( pExtraXml, "AppearanceTest.extra" );
+            (void)outFixture._database.loadSectionFromXmlText( pExtraXml, "AppearanceTest.extra" ); // 깨진 구역도 그대로 둔다 — 판정은 finishLoad 와 각 시험이 한다
             return outFixture._database.finishLoad( &outFixture._items );
         }
 

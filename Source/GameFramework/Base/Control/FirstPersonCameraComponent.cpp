@@ -128,7 +128,7 @@ namespace sw
             return;
         // 카메라의 자식이면 로컬 자리만 두면 시점을 따라간다. 아니면 붙인다(틱 중이면 엔진이 틱 뒤로 미룬다).
         if ( pViewModel->getParent() != pCamera )
-            (void)pViewModel->attachToComponent( pCamera, AttachRule::KeepRelative );
+            (void)pViewModel->attachToComponent( pCamera, AttachRule::KeepRelative ); // 붙일 수 없는 부모면 false — 뷰모델은 제자리에 남는다
         pViewModel->setLocalPosition( _viewModelOffset );
         pViewModel->setLocalRotation( float3{ 0.0f, _viewModelYawOffset, 0.0f } );
     }

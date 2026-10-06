@@ -76,7 +76,7 @@ namespace
         floor._listShape.push_back( box );
         floor._position = sw::float3{ 0.0f, -0.5f, 0.0f };
         floor._type     = sw::PhysicsBodyType::Static;
-        (void)pScene->createBody( floor );
+        (void)pScene->createBody( floor ); // 실패는 createBody 가 오류로 남긴다
         return pScene;
     }
 

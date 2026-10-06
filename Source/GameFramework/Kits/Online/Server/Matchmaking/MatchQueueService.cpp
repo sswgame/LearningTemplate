@@ -481,7 +481,7 @@ namespace sw
         ModeState* pState = findModeState( modeId );
         if ( pState != nullptr && pState->_bAuthority != SW_FALSE )
         {
-            (void)pState->_maker.removeTicket( ticketId );
+            (void)pState->_maker.removeTicket( ticketId ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
             return;
         }
         if ( _dependencies._pBus == nullptr )
@@ -509,7 +509,7 @@ namespace sw
             const uint64 ticketId = reader.readVarUint();
             ModeState*   pState   = findModeState( topic.substr( string_view( Internal::kCancelPrefix ).size() ) );
             if ( pState != nullptr && pState->_bAuthority != SW_FALSE && reader.hasOverflowed() == false )
-                (void)pState->_maker.removeTicket( ticketId );
+                (void)pState->_maker.removeTicket( ticketId ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
             return;
         }
         if ( topic == makeResultTopic( _dependencies._serverId ) )

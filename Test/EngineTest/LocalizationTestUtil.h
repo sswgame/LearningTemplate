@@ -28,20 +28,21 @@ namespace sw::test
             if ( extraFields.empty() == false )
                 text += ", " + string( extraFields );
             text += " }";
-            (void)FileUtil::writeTextFile( projectPath, text );
+            (void)FileUtil::writeTextFile( projectPath, text ); // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤의 읽기 단언이 드러낸다
             return projectPath;
         }
 
         /** @brief 원문 표를 씁니다. @p entriesJson 은 `"Key": { "source": "…" }, …` 처럼 entries 객체의 안쪽입니다. */
         static void writeSourceTable( const string& folder, string_view culture, string_view entriesJson )
         {
-            (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "test.strings.json" ),
+            (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "test.strings.json" ), // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤의 읽기 단언이 드러낸다
                                            "{ \"culture\": \"" + string( culture ) + "\", \"entries\": { " + string( entriesJson ) + " } }" );
         }
 
         /** @brief 번역 표를 씁니다. @p entriesJson 은 `"Key": { "text": "…" }, …` 입니다. */
         static void writeTranslation( const string& folder, string_view culture, string_view entriesJson )
         {
+            // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤의 읽기 단언이 드러낸다
             (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, string( culture ) + ".translation.json" ),
                                            "{ \"culture\": \"" + string( culture ) + "\", \"entries\": { " + string( entriesJson ) + " } }" );
         }

@@ -28,14 +28,14 @@ namespace
         static SocketKindTable makeKinds()
         {
             SocketKindTable kinds;
-            (void)kinds.loadFromXmlText( kKindsXml, "test.socketkinds.xml" );
+            (void)kinds.loadFromXmlText( kKindsXml, "test.socketkinds.xml" ); // 시험 준비 — 결과는 각 시험이 상태로 확인한다
             return kinds;
         }
 
         static SocketSet loadSockets( const utf8* pXmlText, const CharacterBoneArray* pBones = nullptr )
         {
             SocketSet sockets;
-            (void)sockets.loadFromXmlText( pXmlText, "test.sockets.xml", makeKinds(), pBones );
+            (void)sockets.loadFromXmlText( pXmlText, "test.sockets.xml", makeKinds(), pBones ); // 시험 준비 — 결과는 각 시험이 상태로 확인한다
             return sockets;
         }
 

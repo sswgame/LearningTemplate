@@ -152,8 +152,8 @@ namespace sw
             }
             case AdventureStaminaAction::Swim:
             {
-                (void)applyDamage( _settings._drownDamage );
-                _stamina.refill(); // 물가로 돌아가면 다시 헤엄칠 수 있다
+                (void)applyDamage( _settings._drownDamage ); // 죽었는지는 체력이 들고 있다 — 여기선 빠졌다는 결과만 알린다
+                _stamina.refill();                           // 물가로 돌아가면 다시 헤엄칠 수 있다
                 return AdventureStaminaOutcome::Drown;
             }
             default:

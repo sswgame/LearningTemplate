@@ -196,7 +196,7 @@ namespace sw
             // 표가 없으면 단계 없는 기본(가시성만)이다. 있는데 틀리면 오류를 남기고 기본으로 간다.
             _bLodSettingsReady = SW_TRUE;
             if ( ResourceUtil::hasResource( AnimationLodSettings::kResourcePath ) )
-                (void)_lodSettings.loadFromResource( AnimationLodSettings::kResourcePath );
+                (void)_lodSettings.loadFromResource( AnimationLodSettings::kResourcePath ); // 틀리면 loadFromResource 가 오류를 남기고 기본으로 돌린다
         }
 
         _listScratchLodState.resize( clientCount );

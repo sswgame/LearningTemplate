@@ -140,7 +140,7 @@ namespace sw
             {
                 // 열지 못한 출력은 쓰기를 무시한다 — 로거에는 자기 실패를 남길 곳이 없다.
                 if ( output != nullptr )
-                    (void)output->open();
+                    (void)output->open(); // 열지 못한 출력은 쓰기를 무시한다 — 남길 곳이 없다
             }
         }
 

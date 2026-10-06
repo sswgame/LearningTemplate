@@ -292,7 +292,7 @@ SW_TEST_CASE( AbilitySystemTest, DurationEffectsAggregateWithUnrealFormulaAndRev
         pAbilitySystem->makeOutgoingSpec( makeModifierEffect( "Add5", EffectDurationPolicy::Infinite, 0.0f, power, AttributeModOp::Add, 5.0f ) ) );
     const ActiveEffectHandle mulHandle = pAbilitySystem->applyGameplayEffectSpecToSelf(
         pAbilitySystem->makeOutgoingSpec( makeModifierEffect( "Mul15", EffectDurationPolicy::Infinite, 0.0f, power, AttributeModOp::Multiply, 1.5f ) ) );
-    (void)pAbilitySystem->applyGameplayEffectSpecToSelf(
+    (void)pAbilitySystem->applyGameplayEffectSpecToSelf( // 핸들은 쓰지 않는다 — 아래 속성 값 단언이 본다
         pAbilitySystem->makeOutgoingSpec( makeModifierEffect( "Mul12", EffectDurationPolicy::Infinite, 0.0f, power, AttributeModOp::Multiply, 1.2f ) ) );
     const ActiveEffectHandle divHandle = pAbilitySystem->applyGameplayEffectSpecToSelf(
         pAbilitySystem->makeOutgoingSpec( makeModifierEffect( "Div2", EffectDurationPolicy::Infinite, 0.0f, power, AttributeModOp::Divide, 2.0f ) ) );
@@ -377,7 +377,7 @@ SW_TEST_CASE( AbilitySystemTest, PeriodicEffectExecutesEachPeriodUntilItExpires 
 
     // 걸 때 실행하면 0 · 1 · 2 · 3 초 네 번이다.
     pDot->_bExecutePeriodicOnApplication = SW_TRUE;
-    (void)pSmallSteps->applyGameplayEffectSpecToSelf( pSmallSteps->makeOutgoingSpec( pDot ) );
+    (void)pSmallSteps->applyGameplayEffectSpecToSelf( pSmallSteps->makeOutgoingSpec( pDot ) ); // 핸들은 쓰지 않는다 — 아래 속성 값 단언이 본다
     SW_EXPECT_NEAR_EQUAL( 60.0f, pSmallSteps->getAttributeBaseValue( power ), 0.001f );
     pSmallSteps->advanceTime( 5.0f );
     SW_EXPECT_NEAR_EQUAL( 30.0f, pSmallSteps->getAttributeBaseValue( power ), 0.001f );
@@ -464,7 +464,7 @@ SW_TEST_CASE( AbilitySystemTest, GrantedTagsAreCountedAndGateApplicationAndClean
 
     shared_ptr<GameplayEffectDef> pCleanse = makeModifierEffect( "Cleanse", EffectDurationPolicy::Instant, 0.0f, power, AttributeModOp::Add, 0.0f );
     pCleanse->_removeEffectsWithTags.addTag( "State.Burning"_tag );
-    (void)pAbilitySystem->applyGameplayEffectSpecToSelf( pAbilitySystem->makeOutgoingSpec( pCleanse ) );
+    (void)pAbilitySystem->applyGameplayEffectSpecToSelf( pAbilitySystem->makeOutgoingSpec( pCleanse ) ); // 즉시 이펙트라 핸들이 남지 않는다 — 아래 단언이 결과를 본다
     SW_EXPECT_EQUAL( 0u, pAbilitySystem->getActiveEffectCount() );
     SW_EXPECT_FALSE( pAbilitySystem->hasMatchingTag( "State.Burning"_tag ) );
 }
@@ -505,14 +505,14 @@ SW_TEST_CASE( AbilitySystemTest, DamageExecutionMitigatesByArmorAndKillsExactlyO
         ++hitCount;
     } ) );
 
-    (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget );
+    (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget ); // 핸들은 쓰지 않는다 — 아래 체력 단언이 본다
     SW_EXPECT_NEAR_EQUAL( 75.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pTarget->getAttributeBaseValue( CombatAttributes::incomingDamage() ), 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.75f, pBar->getTargetRatio(), 0.001f );
     SW_EXPECT_EQUAL( 1, hitCount );
 
     for ( int32 hitIndex = 0; hitIndex < 5; ++hitIndex )
-        (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget );
+        (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget ); // 핸들은 쓰지 않는다 — 아래 체력 단언이 본다
     dispatcher.processEvents();
 
     SW_EXPECT_NEAR_EQUAL( 0.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
@@ -828,6 +828,7 @@ SW_TEST_CASE( AbilitySystemTest, TriggeredApplyEffectsHitsTheOtherPartyOfTheEven
     pExecution->setParameters( hashed_string{}, 1.0f, 0.0f );
     pDamage->_listExecution.push_back( pExecution );
 
+    // 핸들은 쓰지 않는다 — 아래 체력 단언이 본다
     (void)pAttacker->applyGameplayEffectSpecToTarget( pAttacker->makeOutgoingSpec( pDamage ), pDefender );
     SW_EXPECT_NEAR_EQUAL( 90.0f, pDefender->getAttributeValue( CombatAttributes::health() ), 0.001f );
     SW_EXPECT_NEAR_EQUAL( 98.0f, pAttacker->getAttributeValue( CombatAttributes::health() ), 0.001f ); // 방어 50 을 지나지 않았다

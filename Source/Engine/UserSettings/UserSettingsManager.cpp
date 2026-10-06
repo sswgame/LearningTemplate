@@ -432,7 +432,7 @@ namespace sw
             const bool bKeepStartupValue = _bStartupApplied && listSetting[settingIndex]._applyTiming == UserSettingApplyTiming::NeedsRestart;
             if ( bKeepStartupValue == false )
                 state._startupValue = state._committedValue;
-            (void)applyToTarget( settingIndex, state._startupValue, true );
+            (void)applyToTarget( settingIndex, state._startupValue, true ); // 대상이 없는 설정(이 실행에 없는 변수 · 적용기)은 건너뛴다 — 값은 저장된 그대로다
         }
         _bStartupApplied = true;
     }
@@ -660,7 +660,7 @@ namespace sw
             state._pendingValue.clear();
             state._bPending = false;
             if ( bPreviewed )
-                (void)applyToTarget( settingIndex, state._committedValue, false );
+                (void)applyToTarget( settingIndex, state._committedValue, false ); // 미리 보기를 되돌린다 — 대상이 없는 설정은 건너뛴다
             broadcast( listSetting[settingIndex]._id, UserSettingEventKind::Reverted );
         }
     }
@@ -689,7 +689,7 @@ namespace sw
             state._bRollback = false;
             state._rollbackValue.clear();
         }
-        (void)saveIfPathSet();
+        (void)saveIfPathSet(); // 경로가 없으면 저장하지 않는 실행이고, 쓰기 실패는 saveUserFile 이 경고로 남긴다
         broadcast( {}, UserSettingEventKind::Confirmed );
     }
 
@@ -710,10 +710,10 @@ namespace sw
             state._committedValue = state._rollbackValue;
             state._rollbackValue.clear();
             state._bRollback = false;
-            (void)applyToTarget( settingIndex, state._committedValue, false );
+            (void)applyToTarget( settingIndex, state._committedValue, false ); // 확인 전 값으로 되돌린다 — 대상이 없는 설정은 건너뛴다
         }
         SW_LOG_INFO( "Display change was not confirmed - reverted" );
-        (void)saveIfPathSet();
+        (void)saveIfPathSet(); // 경로가 없으면 저장하지 않는 실행이고, 쓰기 실패는 saveUserFile 이 경고로 남긴다
         broadcast( {}, UserSettingEventKind::ConfirmTimedOut );
     }
 
@@ -942,7 +942,7 @@ namespace sw
             state._bPending     = true;
         }
         if ( def._applyTiming == UserSettingApplyTiming::Immediate )
-            (void)applyToTarget( settingIndex, normalized, false );
+            (void)applyToTarget( settingIndex, normalized, false ); // 즉시 미리 보기 — 대상이 없는 설정은 건너뛰고, 확정(commit)이 결과를 다시 본다
         broadcast( def._id, UserSettingEventKind::PendingChanged );
         return normalizeResult == UserSettingValueResult::Clamped ? UserSettingSetResult::Clamped : UserSettingSetResult::Accepted;
     }

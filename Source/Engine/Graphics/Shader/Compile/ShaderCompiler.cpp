@@ -202,7 +202,7 @@ namespace sw
 
                 // 못 읽으면 내용 없이 해시한다 — 컴파일도 같은 파일을 읽다 실패하므로 그 캐시 자리는 쓰이지 않는다.
                 vector<uint8> sourceBytes;
-                (void)FileUtil::readFile( absPathStr, sourceBytes );
+                (void)FileUtil::readFile( absPathStr, sourceBytes ); // 못 읽으면 내용 없이 해시한다(위 설명)
 
                 uint64 hash = StringUtil::computeHash64( desc._filePath, false );
                 hash        = StringUtil::computeHash64( desc._entryPoint, false, hash );

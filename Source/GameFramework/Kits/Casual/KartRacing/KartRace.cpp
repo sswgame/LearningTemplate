@@ -654,7 +654,7 @@ namespace sw
                 if ( projectile._kind == KartItemKind::LeaderShell )
                     explode( projectile, *pItem );
                 else
-                    (void)applyHit( racer, projectile._owner, *pItem );
+                    (void)applyHit( racer, projectile._owner, *pItem ); // 방어막이 막으면 false — 맞지 않았을 뿐이다
                 break;
             }
         }
@@ -676,7 +676,7 @@ namespace sw
             const bool  bTarget  = racer == projectile._target;
             const bool  bInBlast = KartRaceInternal::computeFlatDistanceSq( _listRacer[racerIndex]._motor.getPosition(), projectile._position ) <= reach * reach;
             if ( bTarget || bInBlast )
-                (void)applyHit( racer, projectile._owner, def );
+                (void)applyHit( racer, projectile._owner, def ); // 방어막이 막으면 false — 맞지 않았을 뿐이다
         }
     }
 

@@ -87,7 +87,7 @@ SW_TEST_CASE( ElementRuleTest, FireSpreadsToAdjacentGrassAfterSteps )
     for ( int32 x = 0; x < 5; ++x )
         windy.setMaterial( int2{ x, 0 }, grass );
     windy.setWind( int2{ -1, 0 } );
-    (void)windy.applyStimulus( int2{ 2, 0 }, fire );
+    (void)windy.applyStimulus( int2{ 2, 0 }, fire ); // 시험 준비 — 결과는 아래 단언이 번진 칸으로 확인한다
     windy.step();
     SW_EXPECT_TRUE( windy.hasStatus( int2{ 1, 0 }, burning ) );
     SW_EXPECT_FALSE( windy.hasStatus( int2{ 3, 0 }, burning ) );
@@ -110,7 +110,7 @@ SW_TEST_CASE( ElementRuleTest, AdventureGridMatchesDefaultTable )
     SW_EXPECT_TRUE( shared.applyStimulus( int2{ 0, 1 }, table.findStimulus( "Fire" ) ) > 0 );
     SW_EXPECT_TRUE( kit.applyFire( int2{ 0, 1 } ) );
     SW_EXPECT_EQUAL( 1, shared.applyStimulus( int2{ 6, 1 }, table.findStimulus( "Electric" ) ) ); // 이웃이 모두 풀이라 물 한 칸만
-    (void)kit.applyElectric( int2{ 6, 1 } );
+    (void)kit.applyElectric( int2{ 6, 1 } );                                                      // 공용 격자 쪽에서 칸 수를 단언했다 — 여기는 같은 입력을 넣기만 한다
 
     vector<ElementEvent>          listSharedEvent;
     vector<AdventureElementEvent> listKitEvent;

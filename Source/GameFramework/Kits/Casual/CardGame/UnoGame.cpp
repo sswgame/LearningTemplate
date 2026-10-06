@@ -195,8 +195,8 @@ namespace sw
         if ( bDrawFour && _pendingDraw == 0 && _settings._bStrictWildDrawFour == SW_TRUE && hasColor( player, _color, card._id ) )
             return false; // 지금 색이 있으면 +4 를 낼 수 없다
 
-        _unoTarget = -1; // 앞사람을 잡을 기회는 다음 행동에서 닫힌다
-        (void)hand.removeAt( index );
+        _unoTarget = -1;              // 앞사람을 잡을 기회는 다음 행동에서 닫힌다
+        (void)hand.removeAt( index ); // 뺀 카드는 위에서 읽어 둔 card 다
         _discardPile.push( card );
         _eventBuffer.push( UnoEvent{ player, 0, card._id, UnoEvent::Kind::Played } );
         _color = bWild ? chosenColor : static_cast<UnoColor>( card._suit );

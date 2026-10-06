@@ -81,7 +81,7 @@ namespace
             JsonDocument doc;
             string       text;
             if ( FileUtil::readTextFile( FileUtil::joinPath( bundleFolder( reportsFolder, pSession ), "manifest.json" ), text ) )
-                (void)doc.tryParse( text );
+                (void)doc.tryParse( text ); // 깨진 manifest 는 빈 문서로 남아 부르는 쪽 단언이 값으로 드러낸다
             return doc;
         }
 
@@ -293,7 +293,7 @@ SW_TEST_CASE( CrashBundleTest, ConsentFollowsTheUserSetting )
     SW_EXPECT_TRUE( service.getConsent() == CrashReportConsent::Local );
     SW_EXPECT_TRUE( settings.setPendingValue( "telemetry.crashReports", "ask" ) == UserSettingSetResult::Accepted );
     SW_EXPECT_TRUE( service.getConsent() == CrashReportConsent::Local );
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 동의 단언이 확인한다
     SW_EXPECT_TRUE( service.getConsent() == CrashReportConsent::Ask );
     service.shutdown();
     settings.shutdown();

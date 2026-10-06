@@ -543,7 +543,7 @@ namespace sw
         leaveActivity( victim );
         _killer._attackCooldown.start( def._hitCooldown );
         _match.reportDamage( _killer._participant, target._participant, 1.0f );
-        (void)target._vitality.applyDamage( 1.0f, 0.0f, -1 );
+        (void)target._vitality.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 drainEvents 가 사건으로 읽는다
         _listVitalityScratch.clear();
         target._vitality.drainEvents( _listVitalityScratch );
         awardScore( _killer._score, "Hit", 1.0f );
@@ -665,7 +665,7 @@ namespace sw
         leaveActivity( occupant );
         releaseHealers( occupant, true );
         while ( target._vitality.isAlive() )
-            (void)target._vitality.applyDamage( 1.0f, 0.0f, -1 );
+            (void)target._vitality.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 drainEvents 가 사건으로 읽는다
         _listVitalityScratch.clear();
         target._vitality.drainEvents( _listVitalityScratch );
         target._state          = SurvivorState::Carried;
@@ -1507,7 +1507,7 @@ namespace sw
     void HorrorMatch::restoreInjured( HorrorSurvivor& survivor )
     {
         survivor._vitality.respawn();
-        (void)survivor._vitality.applyDamage( 1.0f, 0.0f, -1 );
+        (void)survivor._vitality.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 drainEvents 가 사건으로 읽는다
         _listVitalityScratch.clear();
         survivor._vitality.drainEvents( _listVitalityScratch );
         survivor._state          = SurvivorState::Injured;

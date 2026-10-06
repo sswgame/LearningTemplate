@@ -69,19 +69,19 @@ namespace sw
                 uint32 readUint()
                 {
                     uint32 value = 0;
-                    (void)readRaw( &value, sizeof( value ) );
+                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다 — 호출자가 끝에 _bFailed 를 본다
                     return value;
                 }
                 int32 readInt()
                 {
                     int32 value = 0;
-                    (void)readRaw( &value, sizeof( value ) );
+                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다 — 호출자가 끝에 _bFailed 를 본다
                     return value;
                 }
                 float32 readFloat()
                 {
                     float32 value = 0.0f;
-                    (void)readRaw( &value, sizeof( value ) );
+                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다 — 호출자가 끝에 _bFailed 를 본다
                     return value;
                 }
                 string readString()

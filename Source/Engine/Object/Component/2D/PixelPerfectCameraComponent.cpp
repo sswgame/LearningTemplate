@@ -89,7 +89,7 @@ namespace sw
         if ( pManager == nullptr )
             return;
         const CameraRegistry& cameras = pManager->getCameraRegistry();
-        (void)applyToCamera( cameras.getViewportWidth(), cameras.getViewportHeight() );
+        (void)applyToCamera( cameras.getViewportWidth(), cameras.getViewportHeight() ); // 돌려주는 배치는 _layout 에도 남는다 — 여기서는 카메라에 거는 것만 필요하다
     }
 
     PixelPerfectLayout PixelPerfectCameraComponent::computeLayout( const float2& referenceResolution, float32 pixelsPerUnit, uint32 viewportWidth,

@@ -172,7 +172,7 @@ SW_TEST_CASE( DestructionDamageTest, SameEventLogGivesTheSameStateOnAnotherMachi
     log._listEvent.push_back( Internal::makeHit( sw::float3{ 0.0f, 0.5f, 0.0f }, 300.0f, 1.2f, sw::DestructionDamageKind::Radial ) );
     sw::DestructionChange change;
     for ( const sw::DestructionDamageEvent& event : log._listEvent )
-        (void)server.applyDamage( event, change );
+        (void)server.applyDamage( event, change ); // 바뀜 여부는 보지 않는다 — 아래 상태 해시로 비교한다
 
     sw::vector<uint8> bytes;
     log.makeBytes( bytes );
@@ -183,7 +183,7 @@ SW_TEST_CASE( DestructionDamageTest, SameEventLogGivesTheSameStateOnAnotherMachi
     sw::DestructionState client;
     client.initialize( asset._graph, Internal::makeProfile(), anchors );
     for ( const sw::DestructionDamageEvent& event : received._listEvent )
-        (void)client.applyDamage( event, change );
+        (void)client.applyDamage( event, change ); // 바뀜 여부는 보지 않는다 — 아래 상태 해시로 비교한다
     SW_EXPECT_EQUAL( server.computeStateHash(), client.computeStateHash() );
     SW_EXPECT_EQUAL( 3u, client.getEventCount() );
     SW_EXPECT_TRUE( server.getGroups().size() > 1 );
@@ -192,7 +192,7 @@ SW_TEST_CASE( DestructionDamageTest, SameEventLogGivesTheSameStateOnAnotherMachi
     sw::DestructionState reordered;
     reordered.initialize( asset._graph, Internal::makeProfile(), anchors );
     for ( size_t index = received._listEvent.size(); index > 0; --index )
-        (void)reordered.applyDamage( received._listEvent[index - 1], change );
+        (void)reordered.applyDamage( received._listEvent[index - 1], change ); // 바뀜 여부는 보지 않는다 — 아래 상태 해시로 비교한다
     SW_EXPECT_NOT_EQUAL( server.computeStateHash(), reordered.computeStateHash() );
 
     test::ScopedDefensiveTestLog expected( "a truncated or foreign event log is rejected" );
@@ -227,7 +227,7 @@ SW_TEST_CASE( DestructionDamageTest, EventLogHashMatchesTheRecordedValueOnEveryB
     arrEvent[1]._leafHint = 5;
     for ( const sw::DestructionDamageEvent& event : arrEvent )
     {
-        (void)state.applyDamage( event, change );
+        (void)state.applyDamage( event, change ); // 바뀜 여부는 보지 않는다 — 아래 상태 해시로 비교한다
         listHash.push_back( state.computeStateHash() );
     }
     const utf8* pPrint = std::getenv( "SW_DESTRUCTION_PRINT_GOLDEN" );

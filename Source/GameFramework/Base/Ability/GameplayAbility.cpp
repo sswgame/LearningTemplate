@@ -83,6 +83,7 @@ namespace sw
         if ( _config._pCostEffect != nullptr )
             (void)_pAbilitySystem->applyGameplayEffectSpecToSelf( _pAbilitySystem->makeOutgoingSpec( _config._pCostEffect, _level ) ); // 막혀도 커밋은 선다
         if ( _config._pCooldownEffect != nullptr )
+            // 막혀도 커밋은 선다 — 쿨다운 효과가 면역으로 막히면 쿨다운 없이 간다
             (void)_pAbilitySystem->applyGameplayEffectSpecToSelf( _pAbilitySystem->makeOutgoingSpec( _config._pCooldownEffect, _level ) );
         return true;
     }
@@ -316,7 +317,7 @@ namespace sw
             GameObject*             pTargetObject = pManager != nullptr ? pManager->resolveGameObject( targetHandle ) : nullptr;
             AbilitySystemComponent* pTarget       = pTargetObject != nullptr ? pTargetObject->getComponent<AbilitySystemComponent>() : nullptr;
             if ( pTarget != nullptr )
-                (void)applyEffectSpecToTarget( makeOutgoingSpec( targetEffect ), pTarget );
+                (void)applyEffectSpecToTarget( makeOutgoingSpec( targetEffect ), pTarget ); // 효과 핸들은 쓰지 않는다 — 막히면 걸리지 않을 뿐이다
             else
                 SW_LOG_WARNING( "ApplyEffects '%#': the trigger event has no target with an AbilitySystemComponent", getConfig()._id.c_str() );
         }

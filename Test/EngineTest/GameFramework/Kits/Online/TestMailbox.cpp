@@ -61,6 +61,7 @@ namespace
         int64 gold( uint64 accountId )
         {
             LedgerBalance balance;
+            // 실패면 balance 가 0 으로 남아 호출한 단언이 틀린 값으로 잡는다
             (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( accountId ), "cur.gold", balance );
             return balance._amount;
         }

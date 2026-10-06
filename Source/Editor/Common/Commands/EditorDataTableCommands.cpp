@@ -163,9 +163,9 @@ namespace sw::editor
         for ( const string& removedKey : inoutSheet._listRemovedKey )
         {
             for ( SourceStringTable& table : listTable )
-                (void)table.removeEntry( removedKey );
+                (void)table.removeEntry( removedKey ); // 그 표에 없는 키면 false — 할 일이 없다
             for ( TranslationTable& translation : listTranslation )
-                (void)translation.removeEntry( removedKey );
+                (void)translation.removeEntry( removedKey ); // 번역이 없는 키면 false — 할 일이 없다
         }
 
         for ( const LocalizationRecord& record : inoutSheet._listRecord )
@@ -185,7 +185,7 @@ namespace sw::editor
                 const string&     text        = record._listTranslation[cultureIndex];
                 if ( text.empty() )
                 {
-                    (void)translation.removeEntry( record._key );
+                    (void)translation.removeEntry( record._key ); // 번역이 없던 키면 false — 할 일이 없다
                     continue;
                 }
                 const TranslationEntry* pExisting = translation.findEntry( record._key );
@@ -228,7 +228,7 @@ namespace sw::editor
 
         LocalizationManager* pLocalizationManager = editor::getService<LocalizationManager>();
         if ( pLocalizationManager != nullptr )
-            (void)pLocalizationManager->reloadChangedFile( inoutSheet._projectPath );
+            (void)pLocalizationManager->reloadChangedFile( inoutSheet._projectPath ); // 올린 프로젝트가 아니면 false — 다시 읽을 것이 없다
         SW_LOG_INFO( "Saved localization project '%#'.", inoutSheet._projectPath.c_str() );
         return true;
     }

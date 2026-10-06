@@ -419,6 +419,7 @@ namespace sw
             }
             case LoadBotAction::PartyCreate:
             {
+                // 요청 id 는 쓰지 않는다 — 결과는 onMatchmakingReply 로 온다
                 (void)_matchmakingClient.createParty( MatchmakingClient::ReplyDelegate::create<&LoadBot::onMatchmakingReply>( this ) );
                 return true;
             }

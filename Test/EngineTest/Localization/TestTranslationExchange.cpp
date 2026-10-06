@@ -41,6 +41,7 @@ namespace
                                                         "\", \"translatorComment\": \"버튼이 좁다\" }, \"menu.quit\": { \"text\": \"종료\", \"sourceHash\": \"" + hashOf( "Quit" ) +
                                                         "\" }, \"menu.removed\": { \"text\": \"사라진 메뉴\" }" );
             (void)sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( folder, "tm" ) );
+            // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤의 읽기 단언이 드러낸다
             (void)sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "tm/ko.tm.json" ),
                                                R"({ "culture": "ko", "entries": [ { "source": "Quit", "text": "종료" }, { "source": "Load game", "text": "불러오기" } ] })" );
             return projectPath;

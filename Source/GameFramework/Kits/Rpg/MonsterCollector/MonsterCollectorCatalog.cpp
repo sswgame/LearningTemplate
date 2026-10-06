@@ -286,8 +286,9 @@ namespace sw
             {
                 MonsterNatureDef def;
                 def._id = hashed_string( pId );
+                // 없으면 Attack 그대로(무보정 성격) — 결함 의심: 틀린 능력치 이름도 경고 없이 Attack 으로 남는다
                 (void)parseStat( node.getAttributeText( "up" ), def._raised );
-                (void)parseStat( node.getAttributeText( "down" ), def._lowered );
+                (void)parseStat( node.getAttributeText( "down" ), def._lowered ); // 위와 같다
                 (void)_natureCatalog.add( def );
             }
             else if ( bWeather )

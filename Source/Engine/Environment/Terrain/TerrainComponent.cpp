@@ -112,7 +112,7 @@ namespace sw
     void TerrainComponent::onPostLoad()
     {
         SceneComponent::onPostLoad();
-        (void)reloadTerrain();
+        (void)reloadTerrain(); // 경로가 없으면 지형 없이 남고, 읽기 실패는 HeightfieldData 가 오류로 남긴다
     }
 
     void TerrainComponent::onPropertyChanged( hashed_string propertyName )
@@ -164,7 +164,7 @@ namespace sw
             {
                 TerrainComponent* pTerrain = static_cast<TerrainComponent*>( pManager->resolveComponent( self ) );
                 if ( pTerrain != nullptr )
-                    (void)pTerrain->reloadTerrain();
+                    (void)pTerrain->reloadTerrain(); // 경로가 없으면 지형 없이 남고, 읽기 실패는 HeightfieldData 가 오류로 남긴다
             } );
             return;
         }

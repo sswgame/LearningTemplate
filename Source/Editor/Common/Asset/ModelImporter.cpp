@@ -392,7 +392,7 @@ namespace sw::editor
                     // COLOR_0 는 vec3 이거나 vec4 다. vec3 이면 알파는 1 이다.
                     float32 arrColor[4]{ 1.0f, 1.0f, 1.0f, 1.0f };
                     if ( pColor != nullptr )
-                        (void)readFloats( pColor, vertexIndex, arrColor, cgltf_num_components( pColor->type ) );
+                        (void)readFloats( pColor, vertexIndex, arrColor, cgltf_num_components( pColor->type ) ); // 못 읽으면 흰색(기본값)으로 둔다
                     vertex._color = float4{ baseColor._x * arrColor[0], baseColor._y * arrColor[1], baseColor._z * arrColor[2], baseColor._w * arrColor[3] };
 
                     if ( bSkinnedPrimitive )
@@ -431,7 +431,7 @@ namespace sw::editor
                 cgltf_uint arrJoint[kInfluenceCount]{};
                 float32    arrWeight[kInfluenceCount]{};
                 (void)cgltf_accessor_read_uint( pJoint, vertexIndex, arrJoint, kInfluenceCount );
-                (void)readFloats( pWeight, vertexIndex, arrWeight, kInfluenceCount );
+                (void)readFloats( pWeight, vertexIndex, arrWeight, kInfluenceCount ); // 못 읽으면 가중치 0 — 아래 합 검사가 처리한다
                 float32 weightSum = 0.0f;
                 for ( uint32 influence = 0; influence < kInfluenceCount; ++influence )
                 {
@@ -907,9 +907,10 @@ namespace sw::editor
                     return;
                 outChannel._listTime.resize( sampler.input->count );
                 for ( cgltf_size keyIndex = 0; keyIndex < sampler.input->count; ++keyIndex )
-                    (void)readFloats( sampler.input, keyIndex, &outChannel._listTime[keyIndex], 1 );
+                    (void)readFloats( sampler.input, keyIndex, &outChannel._listTime[keyIndex], 1 ); // 못 읽은 키는 0 으로 남는다(resize 기본값)
                 outChannel._listValue.resize( sampler.output->count * componentCount );
                 for ( cgltf_size valueIndex = 0; valueIndex < sampler.output->count; ++valueIndex )
+                    // 못 읽은 값은 0 으로 남는다(resize 기본값)
                     (void)readFloats( sampler.output, valueIndex, &outChannel._listValue[valueIndex * componentCount], componentCount );
             }
 
@@ -1067,10 +1068,10 @@ namespace sw::editor
                     data._interpolation  = channel.sampler->interpolation;
                     data._listTime.resize( channel.sampler->input->count );
                     for ( cgltf_size keyIndex = 0; keyIndex < channel.sampler->input->count; ++keyIndex )
-                        (void)readFloats( channel.sampler->input, keyIndex, &data._listTime[keyIndex], 1 );
+                        (void)readFloats( channel.sampler->input, keyIndex, &data._listTime[keyIndex], 1 ); // 못 읽은 키는 0 으로 남는다(resize 기본값)
                     data._listValue.resize( channel.sampler->output->count );
                     for ( cgltf_size valueIndex = 0; valueIndex < channel.sampler->output->count; ++valueIndex )
-                        (void)readFloats( channel.sampler->output, valueIndex, &data._listValue[valueIndex], 1 );
+                        (void)readFloats( channel.sampler->output, valueIndex, &data._listValue[valueIndex], 1 ); // 못 읽은 값은 0 으로 남는다(resize 기본값)
                     const float32 lastTime = findLastTime( data );
                     duration               = MathUtil::max( duration, lastTime );
                     // 키 시각(선형 · 계단) 또는 표본율 격자(큐빅)에서 값을 뽑는다.
@@ -1333,6 +1334,7 @@ namespace sw::editor
                     else if ( pImage->uri != nullptr && StringUtil::startsWith( pImage->uri, "data:" ) == false )
                     {
                         texture._extension = FileUtil::getExtension( pImage->uri );
+                        // 못 읽으면 바이트가 비어 아래 경고가 알린다
                         (void)FileUtil::readFile( FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), pImage->uri ), texture._bytes );
                     }
                     if ( texture._bytes.empty() )
@@ -1889,7 +1891,7 @@ namespace sw::editor
         // 스탬프를 적는 길이 하나여야 에디터에서 임포트된 것과 `App --import-models` 로 임포트된 것이 같은 판정을 받는다.
         // 설정 파일이 없으면 규칙 없이 임포트한다. 깨졌으면 로드가 알린다.
         ModelImportConfig config{};
-        (void)config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() );
+        (void)config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ); // 없으면 규칙 없이, 깨졌으면 로드가 알린다
         const AssetImportSummary summary = importAllModels( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {

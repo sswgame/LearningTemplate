@@ -130,7 +130,7 @@ namespace sw
             static CrashReportState getState( const JsonDocument& manifest )
             {
                 CrashReportState state = CrashReportState::Local;
-                (void)parseState( manifest.getRoot().get( "state" ).asString(), state );
+                (void)parseState( manifest.getRoot().get( "state" ).asString(), state ); // 모르는 이름이면 Local 로 둔다 — 보내지 않는 쪽이 안전하다
                 return state;
             }
 
@@ -352,7 +352,7 @@ namespace sw
             }
             if ( StringUtil::equals( kind._pExtension, "breadcrumbs.txt" ) )
                 breadcrumbCount = Internal::countLines( Internal::readText( target ) );
-            (void)FileUtil::removeFile( source );
+            (void)FileUtil::removeFile( source ); // 실패는 removeFile 이 경고로 남긴다 — 사본은 이미 묶음에 있다
             const JsonValue entry = files.pushBack();
             entry.setObject();
             entry.set( "name" ).setString( kind._pBundleName );
@@ -404,7 +404,7 @@ namespace sw
             if ( nextState == state )
                 continue;
             Internal::setState( manifest, nextState );
-            (void)Internal::saveManifest( folder, manifest );
+            (void)Internal::saveManifest( folder, manifest ); // 못 쓰면 옛 상태로 남아 다음 동기화가 같은 전환을 다시 한다
         }
     }
 
@@ -425,7 +425,7 @@ namespace sw
         }
         std::sort( listByTime.begin(), listByTime.end() );
         for ( size_t index = 0; index + kMaxReports < listByTime.size(); ++index )
-            (void)FileUtil::removeDirectory( listByTime[index].second );
+            (void)FileUtil::removeDirectory( listByTime[index].second ); // 실패는 removeDirectory 가 경고로 남기고, 다음 정리가 다시 지운다
     }
 
     void CrashReportService::collectReports( vector<CrashReportSummary>& outListReport ) const
@@ -524,7 +524,7 @@ namespace sw
             {
                 root.set( "attempts" ).setUint( attempts + 1 );
             }
-            (void)Internal::saveManifest( folder, manifest );
+            (void)Internal::saveManifest( folder, manifest ); // 못 쓰면 옛 상태로 남아 다음 보내기가 다시 시도한다(최소 한 번 전송)
         }
         return sentCount;
     }

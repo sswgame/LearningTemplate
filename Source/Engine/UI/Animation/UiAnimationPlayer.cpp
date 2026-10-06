@@ -213,7 +213,7 @@ namespace sw
         }
         if ( gv_uiReduceMotion || duration < UiAnimationPlayerInternal::kMinDuration )
         {
-            (void)tween._property.writeValue( *pWidget, tween._to );
+            (void)tween._property.writeValue( *pWidget, tween._to ); // false 는 값이 같거나 경로가 사라진 것 — 쓸 것이 없다
             return true;
         }
         tween._from     = tween._property.readValue( *pWidget );
@@ -259,6 +259,7 @@ namespace sw
             if ( pWidget != nullptr )
             {
                 const float32 weight = bFinished ? 1.0f : evaluateUiCurve( tween._curve, tween._elapsed / tween._duration );
+                // false 는 값이 같거나 경로가 사라진 것 — 쓸 것이 없다
                 (void)tween._property.writeValue( *pWidget, UiAnimatedValue::blend( tween._from, tween._to, weight, tween._property._componentCount ) );
             }
             if ( bFinished )
@@ -317,7 +318,7 @@ namespace sw
         {
             Widget* pWidget = _pTree->findWidgetById( track._widget );
             if ( pWidget != nullptr )
-                (void)track._property.writeValue( *pWidget, evaluateTrack( track, active._time ) );
+                (void)track._property.writeValue( *pWidget, evaluateTrack( track, active._time ) ); // false 는 값이 같거나 경로가 사라진 것 — 쓸 것이 없다
         }
     }
 

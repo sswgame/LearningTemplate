@@ -133,7 +133,7 @@ SW_TEST_CASE( UserSettingsTest, CommandLineGlobalVariableWinsAtStartup )
 
     // 2) 메뉴에서 고른 값은 덮는다.
     SW_EXPECT_TRUE( settings.setPendingValue( "video.scale", "0.5" ) == sw::UserSettingSetResult::Accepted );
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     SW_EXPECT_NEAR_EQUAL( 0.5f, gv_userSettingsTestFloat, 0.0001f );
     UserSettingsTestInternal::resetTestVariables();
 }
@@ -220,7 +220,7 @@ SW_TEST_CASE( UserSettingsTest, ApplierRegistryDispatchesByName )
     // 범위 밖은 맞춰 넣고(Clamped), 적용 때 적용기가 받는다.
     SW_EXPECT_TRUE( settings.setPendingIntValue( "g.level", 42 ) == sw::UserSettingSetResult::Clamped );
     SW_EXPECT_EQUAL( 1u, recorder._callCount );
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     SW_EXPECT_EQUAL( 2u, recorder._callCount );
     SW_EXPECT_STREQ( "9", recorder._value );
 
@@ -251,7 +251,7 @@ SW_TEST_CASE( UserSettingsTest, ScalabilityPresetAndCustomDetection )
     SW_EXPECT_TRUE( settings.setPendingValue( "video.scale", "0.5" ) == sw::UserSettingSetResult::Accepted );
     SW_EXPECT_STREQ( "low", settings.getValue( "video.quality" ) );
 
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     SW_EXPECT_NEAR_EQUAL( 0.5f, gv_userSettingsTestFloat, 0.0001f );
     SW_EXPECT_FALSE( gv_userSettingsTestBool );
 
@@ -368,7 +368,7 @@ SW_TEST_CASE( UserSettingsTest, ApplyRevertAndResetCategory )
     // OnConfirm: 적용 전에는 대상이 그대로다.
     SW_EXPECT_TRUE( settings.setPendingBoolValue( "video.shadows", false ) == sw::UserSettingSetResult::Accepted );
     SW_EXPECT_TRUE( gv_userSettingsTestBool );
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     SW_EXPECT_FALSE( gv_userSettingsTestBool );
     SW_EXPECT_STREQ( "custom", settings.getAppliedValue( "video.quality" ) );
 
@@ -384,7 +384,7 @@ SW_TEST_CASE( UserSettingsTest, ApplyRevertAndResetCategory )
     SW_EXPECT_STREQ( "true", settings.getValue( "video.shadows" ) );
     SW_EXPECT_STREQ( "high", settings.getValue( "video.quality" ) );
     SW_EXPECT_FALSE( gv_userSettingsTestBool );
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     SW_EXPECT_TRUE( gv_userSettingsTestBool );
 
     // 다음 실행에 닿는 값은 적용해도 대상에 가지 않고 "다시 시작 필요" 다.
@@ -429,7 +429,7 @@ SW_TEST_CASE( UserSettingsTest, ConfirmCountdownRevertsWithoutConfirmation )
 
     // 2) 확인하면 남는다.
     SW_EXPECT_TRUE( settings.setPendingValue( "video.mode", "b" ) == sw::UserSettingSetResult::Accepted );
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     settings.confirmChanges();
     settings.update( 100.0f );
     SW_EXPECT_STREQ( "b", settings.getAppliedValue( "video.mode" ) );
@@ -488,7 +488,7 @@ SW_TEST_CASE( UserSettingsTest, KeyBindingConflictDetectionAndSwap )
     SW_EXPECT_STREQ( "Crouch", conflict._action.c_str() );
     SW_EXPECT_TRUE( settings.setPendingBinding( "controls.jump", "Key.C", sw::UserSettingBindingPolicy::Swap ) == sw::UserSettingSetResult::Conflict );
 
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     sw::InputSlot slot;
     SW_ASSERT_TRUE( inputMap.findRebindSlot( "Jump", 0, slot ) );
     SW_EXPECT_TRUE( slot == sw::InputSlot::fromMouseButton( sw::MouseButton::Left ) );
@@ -497,7 +497,7 @@ SW_TEST_CASE( UserSettingsTest, KeyBindingConflictDetectionAndSwap )
 
     // 카테고리 기본값 = 입력 맵의 기본 바인딩.
     settings.resetCategoryToDefaults( "controls" );
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     SW_ASSERT_TRUE( inputMap.findRebindSlot( "Jump", 0, slot ) );
     SW_EXPECT_TRUE( slot == sw::InputSlot::fromKey( sw::Key::Space ) );
 }
@@ -550,7 +550,7 @@ SW_TEST_CASE( UserSettingsTest, LanguageSwitchChangesLocalizedString )
     SW_EXPECT_STREQ( "시작", localization.getString( kKey ) );
     // 읽히지 않은 언어는 선택지가 아니다.
     SW_EXPECT_TRUE( settings.setPendingValue( "language.text", "fr_fr" ) == sw::UserSettingSetResult::Rejected );
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     SW_EXPECT_STREQ( "ko_kr", settings.getAppliedValue( "language.text" ) );
 }
 
@@ -614,7 +614,7 @@ SW_TEST_CASE( UserSettingsTest, AccessibilitySettingsReachGlobalVariables )
     SW_EXPECT_TRUE( settings.setPendingValue( "accessibility.subtitleSize", "large" ) == sw::UserSettingSetResult::Accepted );
     SW_EXPECT_TRUE( settings.setPendingFloatValue( "gameplay.cameraShake", 0.0f ) == sw::UserSettingSetResult::Accepted );
     SW_EXPECT_TRUE( settings.setPendingFloatValue( "gameplay.fieldOfView", 95.0f ) == sw::UserSettingSetResult::Accepted );
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
 
     SW_EXPECT_EQUAL( 2, Internal::findVariable( "gv_colorVisionMode" ).getValueAsInt() );
     SW_EXPECT_TRUE( Internal::findVariable( "gv_reduceFlashing" ).getValueAsBool() );
@@ -631,7 +631,7 @@ SW_TEST_CASE( UserSettingsTest, AccessibilitySettingsReachGlobalVariables )
     // 다른 시험이 기본값을 보도록 되돌린다.
     settings.resetCategoryToDefaults( "accessibility" );
     settings.resetCategoryToDefaults( "gameplay" );
-    (void)settings.applyPending();
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     SW_EXPECT_EQUAL( 0, Internal::findVariable( "gv_colorVisionMode" ).getValueAsInt() );
     SW_EXPECT_FALSE( Internal::findVariable( "gv_reduceFlashing" ).getValueAsBool() );
 }

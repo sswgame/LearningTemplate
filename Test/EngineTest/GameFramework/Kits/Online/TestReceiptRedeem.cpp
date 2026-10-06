@@ -30,7 +30,9 @@ namespace
             , _fake{}
             , _registry{}
         {
+            // 시험 준비 — 깨진 항목은 카탈로그가 경고로 남기고, 상품 · 통화가 없으면 아래 단언이 실패한다
             (void)_currencies.loadFromXmlText( R"(<CurrencyCatalog><Currency id="cur.gem_paid" paid="true"/></CurrencyCatalog>)", "currency" );
+            // 시험 준비 — 깨진 항목은 카탈로그가 경고로 남기고, 상품 · 통화가 없으면 아래 단언이 실패한다
             (void)_offers.loadFromXmlText( R"(<OfferCatalog><Offer id="gem_100"><Product store="fake" id="gem100"/><Grant asset="cur.gem_paid" amount="100"/></Offer></OfferCatalog>)",
                                            "offer" );
             (void)_registry.registerValidator( &_fake );
@@ -59,6 +61,7 @@ namespace
         int64 readPaid( uint64 accountId )
         {
             LedgerBalance balance;
+            // 실패면 balance 가 0 으로 남아 호출한 단언이 틀린 값으로 잡는다
             (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( accountId ), "cur.gem_paid", balance );
             return balance._amount;
         }

@@ -117,7 +117,7 @@ namespace sw
             for ( const ConquestGarrisonDef& garrison : def._listGarrison )
             {
                 for ( int32 count = 0; count < garrison._count; ++count )
-                    (void)spawnUnit( garrison._unitId, def._owner, def._x, ConquestOrder::Hold );
+                    (void)spawnUnit( garrison._unitId, def._owner, def._x, ConquestOrder::Hold ); // 모르는 유닛이면 -1 — 카탈로그 로드가 이미 경고했다
             }
         }
         _commander         = ConquestCommander{};
@@ -179,7 +179,7 @@ namespace sw
             return ConquestResult::NoBuildSlot;
         if ( _resource.canAfford( pDef->_cost ) == false )
             return ConquestResult::NotEnoughResources;
-        (void)_resource.trySpend( pDef->_cost );
+        (void)_resource.trySpend( pDef->_cost ); // 바로 위 canAfford 를 지나 늘 성공한다
         ConquestBuilding building;
         building._pDef      = pDef;
         building._siteIndex = siteIndex;
@@ -220,7 +220,7 @@ namespace sw
             return ConquestResult::PopulationCap;
         if ( _resource.canAfford( pUnit->_cost ) == false )
             return ConquestResult::NotEnoughResources;
-        (void)_resource.trySpend( pUnit->_cost );
+        (void)_resource.trySpend( pUnit->_cost ); // 바로 위 canAfford 를 지나 늘 성공한다
         building._listQueue.push_back( unitId );
         return ConquestResult::Ok;
     }
@@ -797,6 +797,7 @@ namespace sw
             return;
         const int32 waveSize = computeWaveSize();
         for ( int32 index = 0; index < waveSize; ++index )
+            // 모르는 waveUnit 이면 -1 — 카탈로그 로드가 이미 경고했다
             (void)spawnUnit( rules._waveUnit, ConquestTeam::Enemy, pSpawnSite->_pDef->_x + static_cast<float32>( index ) * rules._formationSpacing, ConquestOrder::Charge );
         pushEvent( ConquestEvent::Kind::WaveSpawned, pSpawnSite->_pDef->_id, waveSize, ConquestTeam::Enemy );
     }

@@ -148,7 +148,7 @@ namespace
                     shot._position = enemyPosition;
                     shot._velocity = float2{ -action._fireSpeed, 0.0f };
                     shot._damage   = 10.0f;
-                    (void)rig.spawnProjectile( shot );
+                    (void)rig.spawnProjectile( shot ); // id 는 쓰지 않는다 — 탄은 getProjectiles 로 다시 찾는다
                     ++duel._shotCount;
                 }
             }
@@ -486,7 +486,7 @@ SW_TEST_CASE( ActionPlatformerTest, MeleeComboCancelsOnHitWithHitstopAndBuffer )
     ActionProjectile drifting;
     drifting._position = float2{ 15.0f, 5.0f };
     drifting._velocity = float2{ -3.0f, 0.0f };
-    (void)rig.spawnProjectile( drifting );
+    (void)rig.spawnProjectile( drifting ); // id 는 쓰지 않는다 — 탄이 멈췄는지는 아래 단언이 본다
     rig.pressAttack();
     rig.advanceFrame( nullptr, player ); // slash1 프레임 1
     rig.advanceFrame( nullptr, player );
@@ -686,7 +686,7 @@ SW_TEST_CASE( ActionPlatformerTest, StateRoundTripContinuesTheSameRun )
     ActionProjectile incoming;
     incoming._position = float2{ 15.0f, 2.0f };
     incoming._velocity = float2{ -3.0f, 0.0f };
-    (void)rig.spawnProjectile( incoming );
+    (void)rig.spawnProjectile( incoming ); // id 는 쓰지 않는다 — 탄 상태는 아래 바이트 비교가 본다
     rig.advanceFrame( nullptr, player );
     const vector<uint8> rigBytes = capturePlatformerBytes( rig );
     ActionCombatRig     restoredRig;

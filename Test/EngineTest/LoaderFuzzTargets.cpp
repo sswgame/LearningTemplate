@@ -87,27 +87,27 @@ namespace test
             static void runXml( const uint8* pData, size_t size )
             {
                 XmlDocument document;
-                (void)document.parse( asText( pData, size ) );
+                (void)document.parse( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runJson( const uint8* pData, size_t size )
             {
                 JsonDocument document;
-                (void)document.tryParse( asText( pData, size ) );
+                (void)document.tryParse( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runKeyValue( const uint8* pData, size_t size )
             {
                 KeyValueMap mapValue;
-                (void)KeyValueFile::parse( asText( pData, size ), mapValue );
+                (void)KeyValueFile::parse( asText( pData, size ), mapValue ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runDds( const uint8* pData, size_t size )
             {
                 DdsImageData image;
-                (void)DdsLoader::loadFromMemory( pData, size, image );
+                (void)DdsLoader::loadFromMemory( pData, size, image ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runMesh( const uint8* pData, size_t size )
             {
                 vector<RHIVertex> listVertex;
-                (void)MeshAssetFormat::readFromBytes( pData, size, listVertex );
+                (void)MeshAssetFormat::readFromBytes( pData, size, listVertex ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runCompression( const uint8* pData, size_t size )
             {
@@ -125,7 +125,7 @@ namespace test
                     vector<uint8>                bytes;
                     static constexpr string_view kArrPath[] = { "a.txt", "dir/b.bin", "c.xml" };
                     for ( const string_view entryPath : kArrPath )
-                        (void)reader.readFile( entryPath, bytes );
+                        (void)reader.readFile( entryPath, bytes ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
                     reader.close();
                 }
             }
@@ -135,7 +135,7 @@ namespace test
                 if ( FileUtil::writeFile( path, pData, size ) == false )
                     return;
                 SceneDocument document;
-                (void)document.loadXml( path );
+                (void)document.loadXml( path ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSceneBinary( const uint8* pData, size_t size )
             {
@@ -143,17 +143,17 @@ namespace test
                 if ( FileUtil::writeFile( path, pData, size ) == false )
                     return;
                 SceneDocument document;
-                (void)document.loadBinary( path );
+                (void)document.loadBinary( path ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runGameObjectXml( const uint8* pData, size_t size )
             {
                 GameObject object( hashed_string( "FuzzObject" ) );
-                (void)ObjectStateSerializer::loadFromXmlString( &object, asText( pData, size ) );
+                (void)ObjectStateSerializer::loadFromXmlString( &object, asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runMaterial( const uint8* pData, size_t size )
             {
                 const shared_ptr<Material> pMaterial = Material::create();
-                (void)pMaterial->loadFromXml( asText( pData, size ) );
+                (void)pMaterial->loadFromXml( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSockets( const uint8* pData, size_t size )
             {
@@ -162,58 +162,58 @@ namespace test
                 kinds.addKind( hashed_string( "GroundPoint" ) );
                 kinds.addKind( hashed_string( "HitboxCenter" ) );
                 SocketSet sockets;
-                (void)sockets.loadFromXmlText( asText( pData, size ), "fuzz.sockets.xml", kinds );
+                (void)sockets.loadFromXmlText( asText( pData, size ), "fuzz.sockets.xml", kinds ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runBodyShape( const uint8* pData, size_t size )
             {
                 BodyShapeSet shapes;
-                (void)shapes.loadFromXmlText( asText( pData, size ), "fuzz.bodyshape.xml" );
+                (void)shapes.loadFromXmlText( asText( pData, size ), "fuzz.bodyshape.xml" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSurfaceChannels( const uint8* pData, size_t size )
             {
                 SurfaceChannelTable table;
-                (void)table.loadFromXmlText( asText( pData, size ), "fuzz.surfacechannels.xml" );
+                (void)table.loadFromXmlText( asText( pData, size ), "fuzz.surfacechannels.xml" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runUserSettingsSchema( const uint8* pData, size_t size )
             {
                 UserSettingsSchema schema;
-                (void)schema.loadFromXmlText( asText( pData, size ), "fuzz.settings.xml" );
+                (void)schema.loadFromXmlText( asText( pData, size ), "fuzz.settings.xml" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSpriteClip( const uint8* pData, size_t size )
             {
                 SpriteClipAsset asset;
-                (void)asset.parseJson( asText( pData, size ) );
+                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runAnimGraph( const uint8* pData, size_t size )
             {
                 AnimGraphAsset asset;
-                (void)asset.parseJson( asText( pData, size ) );
+                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runDialogue( const uint8* pData, size_t size )
             {
                 DialogueGraphAsset asset;
-                (void)asset.parseJson( asText( pData, size ) );
+                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSequence( const uint8* pData, size_t size )
             {
                 SequenceAsset asset;
-                (void)asset.parseJson( asText( pData, size ) );
+                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runStringTable( const uint8* pData, size_t size )
             {
                 SourceStringTable table;
-                (void)table.loadFromJsonText( asText( pData, size ), "fuzz.strings.json" );
+                (void)table.loadFromJsonText( asText( pData, size ), "fuzz.strings.json" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runTileMap( const uint8* pData, size_t size )
             {
                 TileMapXmlData data;
-                (void)data.loadFromXml( asText( pData, size ) );
+                (void)data.loadFromXml( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runStringPool( const uint8* pData, size_t size )
             {
                 StringPool pool;
                 size_t     offset = 0;
-                (void)pool.loadFromBinaryBuffer( pData, size, offset );
+                (void)pool.loadFromBinaryBuffer( pData, size, offset ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runWav( const uint8* pData, size_t size )
             {

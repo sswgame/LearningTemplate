@@ -167,7 +167,7 @@ namespace sw
                 }
                 for ( const string& key : listOrphan )
                 {
-                    (void)translation.removeEntry( key );
+                    (void)translation.removeEntry( key ); // 번역이 없던 고아 키면 false — 할 일이 없다
                     ++cultureReport._orphanCount;
                     cultureReport._bChanged = true;
                 }
@@ -590,6 +590,7 @@ namespace sw
             }
             TextGatherReport  ignored;
             TranslationMemory memory;
+            // 못 읽으면 빈 메모리로 내보낸다 — 결함 의심: 읽기 문제가 ignored 보고에 묻혀 알리지 않는다
             (void)LocalizationToolsInternal::loadMemory( LocalizationToolsInternal::makeMemoryPath( absolute, culture ), culture, memory, ignored );
             const PortableObjectFile file = LocalizationToolsInternal::makePortableObject( project, culture, mapSource, translation, memory, result );
             const string             text = file.toText();

@@ -78,6 +78,7 @@ namespace sw
                     _report.addError( "%#: cannot read appearance data (%#)", path, doc.getLastError() );
                 continue;
             }
+            // 실패는 각 섹션이 _report 에 오류로 남긴다
             (void)loadSectionFromNode( doc.getRoot(), absolutePath.empty() ? string_view( path ) : string_view( absolutePath ) );
         }
         return finishLoad( pItemCatalog );

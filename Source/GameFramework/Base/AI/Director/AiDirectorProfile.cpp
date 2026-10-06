@@ -245,7 +245,7 @@ namespace sw
         ScheduleCondition::parseNameList( node.getAttributeText( "spawnTags" ), phase._listSpawnTag );
         for ( XmlNode child = node.findChild( "Curve" ); child; child = child.findNextSibling( "Curve" ) )
             bValid = Internal::validateAttributes( child, Internal::kArrCurveAttribute, false, sourceName ) && bValid;
-        (void)phase._spawnCurve.readPoints( node, "Curve", "scale", 0.0f );
+        (void)phase._spawnCurve.readPoints( node, "Curve", "scale", 0.0f ); // 점 수만 돌려준다 — 점이 없으면 곡선이 대체값을 쓴다
         for ( XmlNode child = node.findChild( "Exit" ); child; child = child.findNextSibling( "Exit" ) )
         {
             bValid = Internal::validateAttributes( child, Internal::kArrExitAttribute, false, sourceName ) && bValid;

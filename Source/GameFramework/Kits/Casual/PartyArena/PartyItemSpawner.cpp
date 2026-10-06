@@ -205,7 +205,7 @@ namespace sw
             const utf8* pEffect = itemNode.findAttribute( "effect" );
             def._effect         = hashed_string( pEffect != nullptr ? pEffect : pId );
             def._weight         = itemNode.getAttributeFloat( "weight", def._weight );
-            (void)def._stats.loadFromAttributes( itemNode, "id,effect,weight" );
+            (void)def._stats.loadFromAttributes( itemNode, "id,effect,weight" ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
             addItem( def );
             ++loadedCount;
         }

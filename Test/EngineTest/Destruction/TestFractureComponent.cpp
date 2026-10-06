@@ -52,6 +52,7 @@ namespace
         static sw::string writeProfile( const utf8* pName )
         {
             const sw::string path = test::makeTempPath( pName );
+            // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 프로필 읽기 단언이 깨진다
             (void)sw::FileUtil::writeTextFile( path, R"(<DestructionProfile density="1500" physicsMaterial="Stone">
   <Strain thresholds="20 30 25"/>
   <Links strength="100" supportStrength="30000"/>
@@ -65,6 +66,7 @@ namespace
         static sw::string writeShatterProfile( const utf8* pName )
         {
             const sw::string path = test::makeTempPath( pName );
+            // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 프로필 읽기 단언이 깨진다
             (void)sw::FileUtil::writeTextFile( path, R"(<DestructionProfile density="1500" physicsMaterial="Stone">
   <Strain thresholds="1 1 1"/>
   <Links strength="1" supportStrength="30000"/>

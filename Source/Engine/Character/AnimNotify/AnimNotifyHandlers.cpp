@@ -97,7 +97,7 @@ namespace sw
                         pScene->setWorldTransform( spawnWorld );
                         SceneComponent* pOwnerRoot = context._owner.getPrimarySceneComponent();
                         if ( context._entry.getBoolParam( s_attach, false ) && pOwnerRoot != nullptr )
-                            (void)pScene->attachToComponent( pOwnerRoot, AttachRule::KeepWorld );
+                            (void)pScene->attachToComponent( pOwnerRoot, AttachRule::KeepWorld ); // 붙일 수 없는 부모면 월드 자리에 따로 둔다
                     }
                     record( context, hashed_string( prefab ), position, pSpawned != nullptr ? pSpawned->getObjectId() : 0, AnimNotifyPhase::Instant );
                 }

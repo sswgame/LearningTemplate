@@ -96,7 +96,7 @@ namespace sw
                 } );
                 const XmlNode statNode = node.findChild( "Stats" );
                 if ( statNode )
-                    (void)skill._statsPerRank.loadFromAttributes( statNode );
+                    (void)skill._statsPerRank.loadFromAttributes( statNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
                 tree._listSkill.push_back( skill );
             }
             for ( const SkillDef& skill : tree._listSkill )

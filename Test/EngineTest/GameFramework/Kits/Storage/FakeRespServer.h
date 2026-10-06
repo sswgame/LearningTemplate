@@ -221,6 +221,7 @@ namespace test
                 (void)_transport->send( connection._handle, replyBytes.data(), static_cast<int32>( replyBytes.size() ) );
                 return;
             }
+            // 가짜 서버 — 못 보낸 답은 클라이언트 쪽 시한 초과로 드러난다
             (void)connection._tlsSession->writePlaintext( replyBytes.data(), static_cast<int32>( replyBytes.size() ) );
             flushCiphertext( connection );
         }
@@ -484,7 +485,7 @@ namespace test
                 {
                     const sw::string option = toUpper( listArgument[index].getText() );
                     if ( option == "PX" && index + 1 < listArgument.size() )
-                        (void)parseInteger( listArgument[++index], ttlMs );
+                        (void)parseInteger( listArgument[++index], ttlMs ); // 가짜 서버 — 숫자가 아니면 만료 없음(0)으로 둔다
                     bIfAbsent  = bIfAbsent || option == "NX";
                     bIfPresent = bIfPresent || option == "XX";
                 }
@@ -552,7 +553,7 @@ namespace test
             if ( ( name == "ZADD" || name == "ZINCRBY" ) && listArgument.size() == 4 )
             {
                 int64 score = 0;
-                (void)parseInteger( listArgument[2], score );
+                (void)parseInteger( listArgument[2], score ); // 가짜 서버 — 숫자가 아니면 점수 0 으로 둔다
                 Entry& entry      = _mapEntry[key];
                 entry._bScoreSet  = true;
                 int64&     stored = entry._mapMemberToScore[sw::string( listArgument[3].getText() )];
@@ -599,8 +600,8 @@ namespace test
             {
                 int64 startIndex = 0;
                 int64 stopIndex  = 0;
-                (void)parseInteger( listArgument[2], startIndex );
-                (void)parseInteger( listArgument[3], stopIndex );
+                (void)parseInteger( listArgument[2], startIndex ); // 가짜 서버 — 숫자가 아니면 0 으로 둔다
+                (void)parseInteger( listArgument[3], stopIndex );  // 가짜 서버 — 숫자가 아니면 0 으로 둔다
                 const sw::vector<std::pair<sw::string, int64>> listRanked =
                     pEntry != nullptr ? makeRanking( *pEntry ) : sw::vector<std::pair<sw::string, int64>>{};
                 const int64 endIndex = std::min( stopIndex + 1, static_cast<int64>( listRanked.size() ) );

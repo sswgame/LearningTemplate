@@ -292,6 +292,6 @@ namespace sw
     {
         const int32 remainder = _bitPosition & 7;
         if ( remainder != 0 )
-            (void)readBits( 8 - remainder );
+            (void)readBits( 8 - remainder ); // 채움 비트는 값이 필요 없다 — 넘치면 readBits 가 _bOverflow 를 세운다
     }
 } // namespace sw

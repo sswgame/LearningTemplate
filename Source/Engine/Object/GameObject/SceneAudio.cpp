@@ -88,7 +88,7 @@ namespace sw
     void SceneAudio::removeListener( AudioListenerComponent* pListener )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        (void)_listener.remove( pListener );
+        (void)_listener.remove( pListener ); // 등록돼 있지 않았으면 할 일이 없다
     }
 
     void SceneAudio::addEmitter( AudioEmitterComponent* pEmitter )
@@ -101,7 +101,7 @@ namespace sw
     {
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            (void)_emitter.remove( pEmitter );
+            (void)_emitter.remove( pEmitter ); // 등록돼 있지 않았으면 할 일이 없다
         }
         AudioEngine* pEngine = findAudioEngine();
         if ( pEngine != nullptr && pEmitter != nullptr )
@@ -117,7 +117,7 @@ namespace sw
     void SceneAudio::removeReverbZone( AudioReverbZoneComponent* pZone )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        (void)_zone.remove( pZone );
+        (void)_zone.remove( pZone ); // 등록돼 있지 않았으면 할 일이 없다
     }
 
     void SceneAudio::update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsScene3D* pScene3D )

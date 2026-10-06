@@ -49,7 +49,7 @@ namespace sw
             static void takeItems( Inventory& inventory, const ItemStackList& items, int32 count )
             {
                 for ( const auto& item : items.getItems() )
-                    (void)inventory.removeItem( item._itemId, item._count * count );
+                    (void)inventory.removeItem( item._itemId, item._count * count ); // 재료 수는 canCraft 가 미리 확인했다
             }
         };
     } // namespace

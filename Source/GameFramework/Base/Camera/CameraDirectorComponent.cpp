@@ -261,6 +261,7 @@ namespace sw
         }
         const GameObject* pObject = pManager->resolveGameObject( _target );
         if ( pObject != nullptr )
+            // 씬 컴포넌트가 없으면 target 의 기본 값을 그대로 쓴다
             (void)CameraDirectorComponentInternal::readFacing( *pObject, target._focus, target._yaw, target._pitch );
         return target;
     }

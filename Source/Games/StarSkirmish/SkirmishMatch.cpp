@@ -209,7 +209,7 @@ namespace sw
 
     void SkirmishMatch::spawnResource( const utf8* pDefId, int32 x, int32 y, bool bMirror )
     {
-        (void)spawnAt( pDefId, RtsWorld::kNoOwner, x, y, bMirror );
+        (void)spawnAt( pDefId, RtsWorld::kNoOwner, x, y, bMirror ); // id 는 쓰지 않는다 — 정의가 없으면 spawnAt 이 경고한다
     }
 
     void SkirmishMatch::spawnBase( int32 player, bool bMirror )
@@ -220,7 +220,7 @@ namespace sw
             spawnResource( "minerals", 3, y, bMirror );
         spawnResource( "geyser", 8, 2, bMirror );
         for ( int32 index = 0; index < 4; ++index )
-            (void)spawnAt( "worker", player, 6, 8 + index, bMirror );
+            (void)spawnAt( "worker", player, 6, 8 + index, bMirror ); // id 는 쓰지 않는다 — 정의가 없으면 spawnAt 이 경고한다
 
         // 사람 쪽 일꾼도 놀지 않게 처음 한 번 캐러 보낸다(AI 쪽은 AI 가 보낸다).
         const RtsPlayer*  pPlayer = _world.findPlayer( player );

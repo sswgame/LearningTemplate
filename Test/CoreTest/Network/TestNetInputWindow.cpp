@@ -26,7 +26,7 @@ namespace
             BitWriter     writer;
             NetSendBudget budget( budgetBytes );
             budget.reserveBits( 8 );
-            (void)window.write( writer, budget );
+            (void)window.write( writer, budget ); // 실은 개수는 보지 않는다 — 판정은 받는 쪽 read 가 한다
             BitReader reader( writer.getBytes().data(), writer.getByteCount() );
             return buffer.read( reader );
         }

@@ -163,7 +163,7 @@ namespace sw::editor
         if ( EditorContext* pContext = EditorContext::get(); pContext != nullptr )
             pContext->getAssetValidation().requestValidation( relPath );
 
-        (void)reloadChangedAsset( relPath );
+        (void)reloadChangedAsset( relPath ); // 핫 리로드 대상이 아니면 false — 할 일이 없다
     }
 
     bool AssetHotReload::reloadChangedAsset( string_view relativePath )

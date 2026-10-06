@@ -209,7 +209,7 @@ namespace sw
             frame._listRawEvent.resize( eventCount );
             for ( RawInputEvent& event : frame._listRawEvent )
             {
-                (void)InputReplayInternal::readBytes( pCursor, pEnd, event );
+                (void)InputReplayInternal::readBytes( pCursor, pEnd, event ); // 남은 바이트가 eventCount 개 이상임을 위에서 확인했다 — 실패하지 않는다
             }
             listFrame.push_back( std::move( frame ) );
         }

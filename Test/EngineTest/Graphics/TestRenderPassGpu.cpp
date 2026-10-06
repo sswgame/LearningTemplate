@@ -6559,7 +6559,7 @@ SW_TEST_CASE( RenderPassGpuTest, PixelArtSpritesSnapToTheAssetPixelGrid )
 
         // 스냅을 끄면 0.3 자산 픽셀(1.2 화면 픽셀)만큼 밀린다 — 래스터화만으로는 아트 픽셀이 격자에 서지 않는다.
         pPixel->setPixelSnapping( false );
-        (void)pPixel->applyToCamera( width, height );
+        (void)pPixel->applyToCamera( width, height ); // 배치 값은 쓰지 않는다 — 아래 renderSpan 이 화면으로 확인한다
         const int32 startUnsnapped = renderSpan( 0.3f, listScratch );
         SW_EXPECT_TRUE_MSG( startUnsnapped == startZero + 1,
                             ( label + "스냅을 끈 0.3 자산 픽셀이 1 화면 픽셀 밀리지 않았다 (" + sw::to_string( startUnsnapped ) + ")" ).c_str() );

@@ -45,7 +45,7 @@ SW_TEST_CASE( TutorialHintTest, PostsOnceAndHonorsTheSetting )
     SW_EXPECT_FALSE( pHint->activate( pPlayer ) ); // 튜토리얼을 껐다
     SW_EXPECT_FALSE( pHint->hasFired() );
     SW_EXPECT_TRUE( settings.setPendingBoolValue( "gameplay.showTutorials", true ) == UserSettingSetResult::Accepted );
-    (void)settings.applyPending();
+    (void)settings.applyPending();                // 적용 결과는 아래 activate 단언이 확인한다
     SW_EXPECT_FALSE( pHint->activate( pCrate ) ); // 태그가 없다
     SW_EXPECT_TRUE( pHint->activate( pPlayer ) );
     SW_EXPECT_FALSE( pHint->activate( pPlayer ) ); // 한 번

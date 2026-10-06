@@ -66,7 +66,7 @@ namespace sw
     {
         Component::onOverlapBegin( overlap );
         if ( RacingGimmicksInternal::accepts( overlap, _requiredTags ) )
-            (void)open( *overlap._pOther );
+            (void)open( *overlap._pOther ); // 뽑힌 이름은 쓰지 않는다 — 비어 있으면 열리지 않을 뿐이다
     }
 
     hashed_string ItemBoxComponent::open( GameObject& target )

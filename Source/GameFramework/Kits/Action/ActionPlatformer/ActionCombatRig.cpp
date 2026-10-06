@@ -103,7 +103,7 @@ namespace sw
             projectile._damage   = def._damage;
             projectile._lifetime = def._range / speed;
             projectile._team     = ActionTeam::Player;
-            (void)spawnProjectile( projectile );
+            (void)spawnProjectile( projectile ); // 투사체 id 는 쓰지 않는다
         }
         pushEvent( ActionCombatEventType::GunFired, def._id, static_cast<int32>( shot._listRay.size() ) );
         return result;

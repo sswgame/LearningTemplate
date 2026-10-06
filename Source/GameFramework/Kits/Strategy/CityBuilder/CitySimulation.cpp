@@ -784,7 +784,7 @@ namespace sw
                 {
                     const int32 want = MathUtil::min( target - house._stock.getItemCount( goodId ), market._stock.getItemCount( goodId ) );
                     if ( want > 0 )
-                        (void)market._stock.moveItemTo( house._stock, goodId, want );
+                        (void)market._stock.moveItemTo( house._stock, goodId, want ); // want 는 시장 재고 이하라 늘 성공한다
                 }
             }
         }
@@ -889,6 +889,7 @@ namespace sw
             vector<hashed_string> listGood;
             house._stock.getItemIds( listGood );
             for ( const hashed_string& goodId : listGood )
+                // 재고가 0 이면 false — 먹을 것이 없을 뿐이다
                 (void)house._stock.removeItem( goodId, MathUtil::min( need, house._stock.getItemCount( goodId ) ) );
             // 세금 — 세리가 다녀간 집만.
             const CityHouseLevelDef* pLevel = _pCatalog->findHouseLevel( house._level );

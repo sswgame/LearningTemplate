@@ -377,67 +377,67 @@ namespace sw
     // (iostream 과 같은 관용). 연산자마다 검사하면 체인(`arch >> a >> b`)을 쓸 수 없다.
     Archive& Archive::operator>>( bool& outData )
     {
-        (void)readBytes( &outData, sizeof( bool ) );
+        (void)readBytes( &outData, sizeof( bool ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( uint8& outData )
     {
-        (void)readBytes( &outData, sizeof( uint8 ) );
+        (void)readBytes( &outData, sizeof( uint8 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( uint16& outData )
     {
-        (void)readBytes( &outData, sizeof( uint16 ) );
+        (void)readBytes( &outData, sizeof( uint16 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( uint32& outData )
     {
-        (void)readBytes( &outData, sizeof( uint32 ) );
+        (void)readBytes( &outData, sizeof( uint32 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( uint64& outData )
     {
-        (void)readBytes( &outData, sizeof( uint64 ) );
+        (void)readBytes( &outData, sizeof( uint64 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( int8& outData )
     {
-        (void)readBytes( &outData, sizeof( int8 ) );
+        (void)readBytes( &outData, sizeof( int8 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( int16& outData )
     {
-        (void)readBytes( &outData, sizeof( int16 ) );
+        (void)readBytes( &outData, sizeof( int16 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( int32& outData )
     {
-        (void)readBytes( &outData, sizeof( int32 ) );
+        (void)readBytes( &outData, sizeof( int32 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( int64& outData )
     {
-        (void)readBytes( &outData, sizeof( int64 ) );
+        (void)readBytes( &outData, sizeof( int64 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( float32& outData )
     {
-        (void)readBytes( &outData, sizeof( float32 ) );
+        (void)readBytes( &outData, sizeof( float32 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( float64& outData )
     {
-        (void)readBytes( &outData, sizeof( float64 ) );
+        (void)readBytes( &outData, sizeof( float64 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
@@ -460,7 +460,7 @@ namespace sw
                 return *this;
             }
             outData.resize( len );
-            (void)readBytes( outData.data(), len );
+            (void)readBytes( outData.data(), len ); // 남은 길이를 위에서 확인했다 — 실패하지 않는다
         }
         else
         {
@@ -488,7 +488,7 @@ namespace sw
                 return *this;
             }
             outBytes.resize( len );
-            (void)readBytes( outBytes.data(), len );
+            (void)readBytes( outBytes.data(), len ); // 남은 길이를 위에서 확인했다 — 실패하지 않는다
         }
         else
         {
@@ -499,25 +499,25 @@ namespace sw
 
     Archive& Archive::operator>>( float2& outData )
     {
-        (void)readBytes( &outData, sizeof( float2 ) );
+        (void)readBytes( &outData, sizeof( float2 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( float3& outData )
     {
-        (void)readBytes( &outData, sizeof( float3 ) );
+        (void)readBytes( &outData, sizeof( float3 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( float4& outData )
     {
-        (void)readBytes( &outData, sizeof( float4 ) );
+        (void)readBytes( &outData, sizeof( float4 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 
     Archive& Archive::operator>>( float4x4& outData )
     {
-        (void)readBytes( &outData, sizeof( float4x4 ) );
+        (void)readBytes( &outData, sizeof( float4x4 ) ); // 실패는 _bError 에 남는다(위 설명)
         return *this;
     }
 

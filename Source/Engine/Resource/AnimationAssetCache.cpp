@@ -69,7 +69,7 @@ namespace sw
     void SkeletonCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         (void)pDevice;
-        (void)reloadShared( relativePath );
+        (void)reloadShared( relativePath ); // 읽지 못하면 옛 내용을 그대로 쓴다 — 읽기 오류는 loadFromResource 가 남긴다
     }
 
     size_t SkeletonCache::getCachedCount() const
@@ -101,7 +101,7 @@ namespace sw
     void AnimClipCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         (void)pDevice;
-        (void)reloadShared( relativePath );
+        (void)reloadShared( relativePath ); // 읽지 못하면 옛 내용을 그대로 쓴다 — 읽기 오류는 loadFromResource 가 남긴다
     }
 
     size_t AnimClipCache::getCachedCount() const
@@ -132,7 +132,7 @@ namespace sw
     void SkeletonBoneLodCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         (void)pDevice;
-        (void)reloadShared( relativePath );
+        (void)reloadShared( relativePath ); // 읽지 못하면 옛 내용을 그대로 쓴다 — 읽기 오류는 loadFromResource 가 남긴다
     }
 
     shared_ptr<const RigAsset> RigAssetCache::acquire( string_view path )
@@ -153,7 +153,7 @@ namespace sw
     void RigAssetCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         (void)pDevice;
-        (void)reloadShared( relativePath );
+        (void)reloadShared( relativePath ); // 읽지 못하면 옛 내용을 그대로 쓴다 — 읽기 오류는 loadFromResource 가 남긴다
     }
 
     size_t SkeletonBoneLodCache::getCachedCount() const
