@@ -255,6 +255,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       가릴 때는 구간 안의 끼움 글자도 가림, 가리기 · 거절 두 방식, 잘못된 UTF-8 거절, 목록은 `Config/Server/chat_banned_words.txt` — 저장소에는 시험 낱말만),
       도배 막이(`ChatSpamGuard` — 계정마다 `TokenBucketMap` 몰아 쓰기 5 · 1 초에 하나 + 정규화 해시로 10 초 안 같은 글 셋째 거절). 채널 · 귓속말 · 기록 · 서비스 바인딩은
       아직 없다(백로그 1-7). 시험: `ChatWordFilterTest` · `ChatSpamGuardTest`.
+    - `Matchmaking`(`GF_Matchmaking`, Client · Server): 매칭 타입 — 결과 코드(`MatchmakingResult`), 모드 규칙(`MatchModeDefinition` — 팀 수 · 인원 · 실력 창 기본 ·
+      초당 넓힘 · 상한 · 지역 풀기 · 시한), 표(`MatchTicket` — 혼자 또는 파티), 만든 경기(`MatchFormed`).
+    - `Server/Matchmaking`(`GF_Server_Matchmaking`, Server): 매처(`MatchMaker` — 모드 하나의 대기열, 결정적이고 전송 · 저장을 모른다). 오래 기다린 표가 닻, 두 표의 창 중
+      큰 것 안의 후보를 실력 거리 순으로 넣어 자리를 정확히 채우고, 큰 표부터 실력 합이 낮은 팀에(파티는 쪼개지 않음 — 나눌 수 없으면 그 닻은 이번에 건너뜀),
+      기다리면 지역을 풀고, 시한을 넘긴 표는 돌려준다. 경기 id = 권한 서버 씨앗 << 32 | 순번. 파티 · 로비 · 대기열 권한 서버 · 전용 서버 배정은 아직 없다(백로그 1-7).
+      시험: `MatchMakerTest`.
   - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
       연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,
