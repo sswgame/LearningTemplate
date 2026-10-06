@@ -120,8 +120,6 @@ def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: 
         listArgument = ["--root", str(projectRoot)]
         if gateClass.preCommitFileArgument == "--files":
             listArgument += ["--files", *(str(path) for path in listMatched)]
-        elif gateClass.preCommitFileArgument == "positional":
-            listArgument += [str(path) for path in listMatched]
 
         if gateClass.run(listArgument) != 0:
             bFailed = True

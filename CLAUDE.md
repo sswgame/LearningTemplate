@@ -139,7 +139,7 @@ a `LintGate` too — declares `buildComment` (the English line ninja prints), `t
 
 **The commit hook has no lint list either.** `PreCommitLint.py` walks `gate/` the same way, and each gate
 says when it should run: `preCommitPattern` (fnmatch globs against staged repo-relative paths — empty
-means always), `preCommitFileArgument` (`"--files"`, `"positional"`, or `""` for whole-tree gates), and
+means always), `preCommitFileArgument` (`"--files"`, or `""` for whole-tree gates), and
 `preCommitSkipReason` for a gate the hook cannot run (`CheckSourceGlob` needs a build directory). A commit
 that touches only `.cmake`, `.py` or data still runs every gate whose pattern matches it.
 A gate whose whole-tree run takes minutes sets `ctestSkipReason`: it is not registered as a CTest lint and runs
@@ -154,10 +154,11 @@ guards the reduction with a throwaway git repository.
 
 **Adding a fixer is dropping a file into `lint/fixer/`.** A fixer is one `LintFixer` subclass whose
 `listPass` holds its text transforms (`(text) -> (newText, bChanged)`) plus what to call each one under
-`--check` and after a fix; the base owns target-file selection (explicit paths > `--all` > git-modified >
-everything), concurrency, byte-faithful IO, and the exit code (`--check` + findings = `1`). Scripts that
+`--check` and after a fix; the base owns target-file selection (`--files` — the gates' spelling and rule,
+`common.resolveFileArguments` — > `--all` > git-modified > everything), concurrency, byte-faithful IO (a file that is not UTF-8 is
+reported, never rewritten), and the exit code (`--check` + findings = `1`). Scripts that
 are not fixers but pick files the same way (`RunClangFormat.py`) use `addFileArguments` /
-`selectTargetFiles` from the same module. Anything in `fixer/` that is not a fixer states why in
+`selectFixerTargetFiles` from the same module. Anything in `fixer/` that is not a fixer states why in
 `kFixerSkipReason` (`FormatModified.py` is an orchestrator, not a fixer).
 
 **Every `FixPass` carries two snippets**, and `CheckFixersAreAlive.py` runs both: `badSample` it MUST

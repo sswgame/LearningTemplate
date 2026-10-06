@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 
 from fixer import FormatBranchBraces
 from fixer import FormatForwardDeclarations
-from LintFixer import addFileArguments, selectTargetFiles
+from LintFixer import addFileArguments, selectFixerTargetFiles
 from common import getProjectRoot, runClangFormatBatch
 
 # 파일을 고쳐 쓰므로 `report/` 가 아니라 `fixer/` 에 있다. 변환이 clang-format 이라 파이썬 변환(`FixPass`)이 없다.
@@ -30,13 +30,12 @@ kFixerSkipReason = "파이썬 변환(FixPass)이 아니라 clang-format 을 부�
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-
     parser = argparse.ArgumentParser(description="C++ 소스코드에 clang-format을 적용합니다.")
     addFileArguments(parser)
     args = parser.parse_args(argv)
 
     root = getProjectRoot()
-    fileList = selectTargetFiles(args, root, "RunClangFormat")
+    fileList = selectFixerTargetFiles(args, root, "RunClangFormat")
 
     if not fileList:
         sys.stderr.write("[RunClangFormat] 포맷팅 대상 C++ 파일이 없습니다.\n")

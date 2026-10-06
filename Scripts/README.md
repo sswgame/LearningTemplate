@@ -152,7 +152,7 @@ py -3 -m Scripts setup                # 개발 환경 및 도구체인 탐색/�
 py -3 -m Scripts cook --all           # 프리팹, 씬, 리소스 팩 일괄 쿠킹 (CookAssets)
 py -3 -m Scripts vcpkg                # vcpkg 탐색 및 부트스트랩 (SetupVcpkg)
 py -3 -m Scripts llvm                 # LLVM/Clang 탐색 및 설정 (SetupLlvm)
-py -3 -m Scripts format               # C++ 코드 clang-format 자동 포맷팅 (RunClangFormat)
+py -3 -m Scripts format               # C++ 코드 clang-format 자동 포맷팅 (RunClangFormat) — 파일을 고르면 `--files a.cpp b.h`(게이트와 같은 철자)
 py -3 -m Scripts lint                 # Staged 파일 대상 사전 커밋 린트 검사 (PreCommitLint)
 py -3 -m Scripts docs                 # Doxygen API 레퍼런스 문서 생성 (GenerateDocs)
 py -3 -m Scripts test SceneTest.*     # 스위트 · 케이스 이름으로 테스트 실행 (RunTests)

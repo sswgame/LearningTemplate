@@ -10,7 +10,7 @@
 그 변환이 잡은 것을 검사 모드와 수정 모드에서 각각 뭐라고 부를지. 파일 읽기·쓰기는 기반이 맡는다
 (줄끝을 보존하는 `newline=""` 로 통일했다 — 포맷터가 줄끝을 바꾸면 안 된다).
 
-대상 파일 고르기는 `addFileArguments` / `selectTargetFiles` 로 따로 내놓는다. 픽서가 아닌
+대상 파일 고르기는 `addFileArguments` / `selectFixerTargetFiles` 로 따로 내놓는다. 픽서가 아닌
 `RunClangFormat` 도 같은 규칙으로 파일을 고르기 때문이다.
 """
 
@@ -31,15 +31,18 @@ from common import (  # noqa: E402
     getLintSearchDirs,
     getModifiedCppFiles,
     getProjectRoot,
+    kCppAllExtensions,
+    resolveFileArguments,
 )
 
 
 def addFileArguments(parser: argparse.ArgumentParser) -> None:
     """대상 파일을 고르는 인자 — 세 스크립트가 같은 철자를 쓴다."""
     parser.add_argument(
-        "files",
+        "--files",
         nargs="*",
-        help="대상 C++ 파일 목록 (생략 시 Git 변경 파일, 없으면 전체 대상)",
+        default=None,
+        help="대상 C++ 파일 목록 (생략 시 Git 변경 파일, 없으면 전체 대상) — 게이트와 같은 철자",
     )
     parser.add_argument(
         "--all",
@@ -48,15 +51,15 @@ def addFileArguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def selectTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: str) -> list[Path]:
+def selectFixerTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: str) -> list[Path]:
     """
-    무엇을 고칠지 고릅니다: 지정한 파일 > `--all` > Git 변경 파일 > 전체.
+    무엇을 고칠지 고릅니다: 지정한 파일(`--files` — 게이트와 같은 규칙, `common.resolveFileArguments`) > `--all` > Git 변경 파일 > 전체.
 
     마지막 폴백("변경된 파일이 없으면 전체")이 이 규칙의 핵심이다. 깨끗한 트리에서 돌려도
     아무 일도 안 하는 대신 전체를 본다 — 처음 받은 저장소에서도 한 번에 맞춰진다.
     """
     if args.files:
-        return [Path(name).resolve() for name in args.files if Path(name).is_file()]
+        return resolveFileArguments(repositoryRoot, args.files, suffixes=kCppAllExtensions)
 
     if args.all:
         return collectSourceFiles(getLintSearchDirs(repositoryRoot))
@@ -184,7 +187,7 @@ class LintFixer:
         parser.add_argument("--check", action="store_true", help="파일을 수정하지 않고 규칙 위반 여부만 검사")
         args = parser.parse_args(argv)
 
-        listFile = selectTargetFiles(args, getProjectRoot(), self.tag)
+        listFile = selectFixerTargetFiles(args, getProjectRoot(), self.tag)
         if not listFile:
             print(f"[{self.tag}] 대상 C++ 파일이 없습니다.", file=sys.stderr)
             return 0
