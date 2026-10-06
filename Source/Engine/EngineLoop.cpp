@@ -549,6 +549,7 @@ namespace sw
             UserSettingsManager& settings = *loop._owned._pUserSettingsManager;
             UserSettingsTargets  targets;
             targets._pGlobalVariableManager = loop._owned._pGlobalVariableManager.get();
+            targets._pCommandLineManager    = loop._owned._pCommandLineManager.get();
             targets._pInputMap              = &loop._owned._pInputManager->getInputMap();
             targets._pAudioSystem           = loop._audioSystem.get();
             targets._pLocalizationManager   = loop._owned._pLocalizationManager.get();

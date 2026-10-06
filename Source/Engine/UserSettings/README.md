@@ -66,6 +66,7 @@
 ## 흐름
 
 1. 기동 단계 `UserSettings`(Headless 뒤, RHI 앞): 적용기 등록 → 엔진 + 게임 스키마 → 게임 기본값 → 사용자 파일(없으면 자동 선택) → `reapplyAll`.
+   명령줄로 준 전역 변수(`-gv_*`)는 기동 적용이 덮지 않는다(명령줄이 이긴다 — 메뉴 적용은 덮는다).
 2. `RHI` 단계가 화면 요청을 읽어 창 크기 · 창 방식 · VSync 를 정합니다: EngineConfig → 플레이어가 고른 값(기본값이 아닌 것) → 명령줄.
 3. `GameInstanceBase::initialize` 가 `onInitialize` 뒤에 `reapplyAll` — 언어 팩 · 입력 맵(키 바인딩 · 토글)이 그때 생깁니다.
    액션을 더 늦게 만드는 게임은 그 뒤에 `reapplyAll` 을 부릅니다. `restart` 설정은 첫 `reapplyAll` 에서만 바뀝니다.

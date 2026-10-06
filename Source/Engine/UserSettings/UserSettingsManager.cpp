@@ -2,6 +2,7 @@
 
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/UserDataPath.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -890,6 +891,12 @@ namespace sw
                 GlobalVariableInfo*    pVariable              = pGlobalVariableManager != nullptr ? pGlobalVariableManager->findVariable( def._targetName.c_str() ) : nullptr;
                 if ( pVariable == nullptr )
                     return false;
+                // 기동 · 다시 세울 때의 적용은 명령줄로 준 변수를 덮지 않는다 — 실행 한 번의 값(명령줄)이 저장된 값(사용자 설정)을 이긴다(화면 설정과 같은 순서).
+                // 메뉴에서 바꾼 값(bStartup 거짓)은 덮는다 — 플레이어가 지금 고른 것이다.
+                const CommandLineManager* pCommandLineManager = getTargets()._pCommandLineManager;
+                string                    commandLineValue;
+                if ( bStartup && pCommandLineManager != nullptr && pCommandLineManager->findPendingGlobalValue( def._targetName.view(), commandLineValue ) )
+                    return true;
                 if ( def._type != UserSettingType::Enum )
                     return pVariable->setValueFromString( value );
 

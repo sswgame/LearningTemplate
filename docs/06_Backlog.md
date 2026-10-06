@@ -1676,6 +1676,7 @@ cd build/Ninja-Debug/Bin
 - **액션 룸의 적은 몬스터 정의다** — 종 id(`grunt` · `boss`)를 게임이 건 `MonsterCatalog` 서비스(`game::bindLocalService`)에서 찾고, 없으면 내장 정의(옛 상수와 같은 값)다. 카탈로그가 걸렸는데 그 id 가 없으면 싸움마다 한 번 경고한다. 사격은 `<Shot angle speed life radius damage/>` 줄마다 한 발(겨냥에서 돌린 각). 방어 식은 유닛 스탯과 같다(`DamageMath::applyArmor`). 룸이 돌려주는 플레이어 피해(`_damageToPlayer`)는 방어 전 값이다 — 게임이 플레이어 `UnitStatsComponent::takeDamage` 로 넣으면 방어가 한 번 빠진다. 룸의 적은 오브젝트가 아니라 `UnitStatsComponent` 를 거치지 않는다. 방 배치는 코드 표(`kArr*Spawn`) — 쓰는 게임이 생기면 맵의 스폰 지점으로.
 - **사용자 설정 파일(`usersettings.json`)은 배포된 플레이어 데이터다** — 설정 id · 선택지 이름을 바꾸면 스키마 `version` 을 올리고 `<Upgrade>` 를 더한다(별칭 금지
   규칙의 예외). 화면 변경은 적용기가 요청만 쌓고 App 이 프레임 맨 앞에서 렌더 스레드를 기다린 뒤 한다 — 창 크기는 `App::onResize` 한 길로 스왑체인에 닿는다.
+  명령줄로 준 전역 변수(`-gv_*`)는 기동 적용이 덮지 않는다(명령줄이 이긴다, `UserSettingsTargets::_pCommandLineManager`).
 - **GameSettings** 는 `GameInstanceBase::initialize` 가 서비스로 묶는다. 언어 코드는 `LocalizationManager::normalizeLanguageCode` 의 철자 하나. 로컬라이제이션 조회의 `const utf8*` 는 추가 전용
   `LocalizedTextArena` 에 있어 영구 유효하다. 대화 핀 번호(`nodeId * 100 + offset`)는 디스크 포맷이고 주인은 `DialogueGraphAsset` 하나다.
   gamesettings 의 모르는 원소는 로드 오류 — 커스텀 값은 `<custom><prop key>` 안에만. 게임 설정 파일 이름은 `path::kGameSettingsFile` 하나(프리셋 칸 없음).
