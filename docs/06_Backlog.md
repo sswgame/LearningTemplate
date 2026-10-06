@@ -411,8 +411,9 @@ cd build/Ninja-Debug/Bin
   계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
   **계정**: 서버 키트 `GF_Server_Account`(`Kits/Online/Server/Account`)에 로그인 서비스 본체(`LoginService` — 저장소 일로 맡기고 거둠 · `LoginStoreLogic` · `LoginTicketAuthority`)가 들어갔다.
   암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 남은 것: 공유 `GF_Account`(와이어 타입 · `AccountClient`) · 스트림 바인딩 · UDP 접속 인증기, 게스트 · 연동 · 제재.
-  **채팅**: `GF_Chat`(공통 타입 · 채널 id 규칙 · `ChatProtocol`) · `GF_Server_Chat`(거르개 · 도배 막이 · 채널 · 귓속말 · 기록 · 서버 간 전달 · 채팅 금지 `ChatService`)이 들어갔다.
-  남은 것(online-rest R2c): 호스트 바인딩 · 클라이언트 · 루프백 끝단 시험, 거르개 비용은 부하 봇의 `ChatService.send` p99 로 잰다.
+  **채팅**: `GF_Chat`(타입 · `ChatProtocol` · `ChatClient`) · `GF_Server_Chat`(거르개 · 도배 막이 · `ChatService` · 바인딩 `ChatServer`)이 들어갔다. 남은 것: 서버 실행 파일에
+  채팅 조립(계정 키트 창구 · 친구 키트 차단 표 · 금칙어 경로), 신고(메시지 스냅숏 → GM 도구), 채널 샤딩(world 채널 수천 명 — 부하 봇 수치로 정함, 거르개 비용은 `ChatService.send` p99),
+  클라이언트 UI 위젯, 실제 금칙어 목록(운영), 접속 상태 찾기 취소 창구(`IAccountPresence` — 지금은 채팅이 호스트보다 늦게 내려야 한다).
   **서버 디렉터리**: 기반 `Online/Directory`(등록 · 하트비트 · 읽기 캐시 · 고르기)와 `GF_ServerDirectory` · `GF_Server_ServerDirectory`(점검 · 공지 · 배정 · 바인딩 ·
   클라이언트)가 들어갔다. 남은 것: GM 도구 패널(GF_Admin · 에디터 확장 지점 뒤)에 점검 · 공지 바꾸기 잇기, 서버 고르기 UI 위젯, 서버 실행 파일에 디렉터리 서비스 ·
   등록 조립(서버 설정에 종류 · 지역 · 공개 주소), 오케스트레이터(Agones · 쿠버네티스) 상태와 서버 등록 잇기(지금은 서버가 스스로 캐시에 하트비트).
@@ -1811,6 +1812,10 @@ cd build/Ninja-Debug/Bin
 - **점검 · 공지는 영속 + 주기 다시 읽기 + 버스 재촉**(GF_Server_ServerDirectory) — 버스만 믿으면 그 순간 내려가 있던 서버는 영영 모른다. 알림은 "보이는 내용의 해시" 가
   바뀔 때만 — 기간 경계(시작 · 끝)는 다시 읽지 않아도 보이는 것이 바뀐다. 끝단 시험 하니스(`OnlineHostTestUtil.h`)에서 키트 로직 · 바인딩은 `OnlineTestServer` 보다
   먼저 선언한다 — 서버가 먼저 내려가며 저장소 일 완료 · 캐시 Unavailable 답을 거두는데 그때 로직이 살아 있어야 한다.
+  반대로 바인딩의 버스 구독 풀기(`shutdown`)는 호스트가 살아 있을 때 — 서버 **뒤에** 선언한 가드에서 부른다(`ChatStreamTest` 의 `ChatStopGuard`).
+- **채팅은 계정이 붙은 서버가 주인**(GF_Server_Chat) — 채널은 이 서버 회원이 있는 동안만 버스 주제를 구독하고, 귓속말은 접속 상태로 받는 서버를 찾아 그 서버 주제로
+  보낸다. 차단은 받는 쪽 서버가 보고 조용히 버리며 보낸 이에게는 Ok — 이 서버 · 다른 서버의 답이 같아야 차단 여부가 새지 않는다. 제재는 60 초 묵혀 보고
+  GM 의 `sanction.changed` 버스가 묵힌 값을 버린다. 기록은 최선 노력이고, 채널마다 세는 표는 귓속말 키마다 줄이 생겨 끝없이 크므로 순번으로 정리할 채널을 고른다.
 - **서비스 저장소의 판은 저장소 전체에서 오르는 수다**(`Base/Online/Store`) — 키마다 1 부터 세면 지웠다 다시 만든 키가 옛 판을 다시 받아, 그 판을 들고 있던 늦은 쓰기가
   새 레코드를 덮는다(ABA). `Unavailable` 은 "적용됐는지 모른다" 이므로 돈 · 아이템이 움직이는 커밋은 멱등 기록(`ServiceIdempotency`)을 **같은 트랜잭션**에 넣는다.
   저장 왕복은 일(`IServiceStoreWork`) 하나 — `run` 은 저장소 스레드라 서비스 멤버를 만지지 않고 `SW_EXPECT_*` 도 부르지 않는다(계약 시험은 어긋난 단계 번호만 적는다), 결과는 `complete` 에서 적용한다.

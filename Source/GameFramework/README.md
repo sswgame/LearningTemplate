@@ -281,7 +281,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `Chat`(`GF_Chat`, Client · Server): 채팅의 공통 타입 — 결과 코드(`ChatResult`, 응답 몸의 첫 값), 채널 id 규칙(`ChatChannelId` —
       `world.` · `guild.<16 진>` · `party.<16 진>` · `custom.` · 귓속말 기록 키 `whisper.<작은 id>.<큰 id>`, `[0-9a-z_.]` 48 바이트 — 버스 주제 · 저장소 키에 그대로), `ChatMessage`, 와이어(`ChatProtocol` — 메서드 kChat + 0x01..0x05 · 알림 0x80,
       응답 몸 = 결과 + 기다릴 ms + 칸, 공통 오류만 오류 코드(`fromErrorCode`), 메시지 형식 하나를 알림 · 버스 · 기록 레코드가 같이 씀, 버스 주제 `chat.channel.<id>` ·
-      `chat.server.<16 진>`). 시험: `ChatChannelIdTest`.
+      `chat.server.<16 진>`), 클라이언트(`ChatClient` — IOnlineClientService, 들어가기 · 나가기 · 말하기 · 귓속말 · 기록 요청마다 완료 델리게이트, 받은 메시지는
+      `drainMessages`). 시험: `ChatChannelIdTest`.
     - `Server/Chat`(`GF_Server_Chat`, Server): 금칙어 거르개(`ChatWordFilter` — 코드 포인트 아호-코라식, 대소 · 전각 정규화, 끼움 글자를 건너뛰고 맞춰 `b.a.d` 도 걸고
       가릴 때는 구간 안의 끼움 글자도 가림, 가리기 · 거절 두 방식, 잘못된 UTF-8 거절, 목록은 `Config/Server/chat_banned_words.txt` — 저장소에는 시험 낱말만),
       도배 막이(`ChatSpamGuard` — 계정마다 `TokenBucketMap` 몰아 쓰기 5 · 1 초에 하나 + 정규화 해시로 10 초 안 같은 글 셋째 거절), 채팅 로직(`ChatService` — 전송을 모름:
@@ -289,8 +290,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       첫 읽기 전 말하기는 4 개까지 줄, 버스 `sanction.changed` 면 버림) → 도배 → 거르개 → 이 서버 회원에게 전달(받는 이가 막은 사람의 말은 거름) + 버스 `chat.channel.<id>`
       (이 서버 회원이 있는 동안만 구독) + 기록. 귓속말은 이 서버면 바로, 아니면 `IAccountPresence` 로 서버를 찾아 `chat.server.<서버>` — 차단은 받는 쪽 서버가 조용히
       버리고 보낸 이에게는 Ok. 기록은 `chat_history`(키 = 채널/보낸 시각.서버.순번 — 시간 순), 틱마다 한 트랜잭션 · 최선 노력, 순번이 64 의 배수면 그 채널의
-      보존 기간(30 일) 지난 것을 지움, 읽기는 최근 것부터 커서 · 귓속말 기록은 두 사람만. 차단 표는 게임이 `IChatPolicy` 로 — 친구 키트의 것). 시험: `ChatWordFilterTest` ·
-      `ChatSpamGuardTest` · `ChatServiceTest`.
+      보존 기간(30 일) 지난 것을 지움, 읽기는 최근 것부터 커서 · 귓속말 기록은 두 사람만. 차단 표는 게임이 `IChatPolicy` 로 — 친구 키트의 것), 바인딩(`ChatServer` —
+      IOnlineService 영역 kChat, 요청을 `ServicePendingTable` 꼬리표로 맡기고 서비스 틱에 답 · 알림(`kPushMessage`) · 버스 구독을 내며 계정이 떠나면 채널에서 뺀다;
+      `registerService` 는 부르는 쪽이 호스트 initialize 전에, `shutdown` 은 호스트를 내리기 전에). 서버 조립: 의존성은 호스트의 저장소 · 버스, 계정 키트의
+      `IAccountDirectory` · `AccountServer::getPresence()`, 게임의 `IChatPolicy`(친구 키트 차단 표), 금칙어 `Config/Server/chat_banned_words.txt`, 길드 채팅은 친구 키트
+      사건 → `addMember( 계정, ChatChannelId::makeGuild( 길드 ), now )`, GM 의 `AdminServiceSettings::_pBus` 로 채팅 금지 즉시 반영. 시험: `ChatWordFilterTest` ·
+      `ChatSpamGuardTest` · `ChatServiceTest` · `ChatStreamTest`(루프백 끝단 — 서버 둘).
     - `Matchmaking`(`GF_Matchmaking`, Client · Server): 매칭 타입 — 결과 코드(`MatchmakingResult`), 모드 규칙(`MatchModeDefinition` — 팀 수 · 인원 · 실력 창 기본 ·
       초당 넓힘 · 상한 · 지역 풀기 · 시한), 표(`MatchTicket` — 혼자 또는 파티), 만든 경기(`MatchFormed`).
     - `Server/Matchmaking`(`GF_Server_Matchmaking`, Server): 매처(`MatchMaker` — 모드 하나의 대기열, 결정적이고 전송 · 저장을 모른다). 오래 기다린 표가 닻, 두 표의 창 중
