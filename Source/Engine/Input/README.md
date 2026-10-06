@@ -131,9 +131,10 @@ const sw::float2 move = inputMap.getVector2D( "Move" );
 ```
 
 리소스 XML(`*.input.xml`, 게임은 팩의 `gamesettings.xml` `<inputMap>`)에서는 액션 아래에 `<bind source="key|mouse|gamepad" code=…/>` ·
-`<vector2d up down left right/>` · `<axis1d negative positive [trigger]/>` · `<stick stick="Left|Right"/>` · `<chord modifier trigger/>` · `<mouseDelta scale="1"/>`
+`<vector2d up down left right/>` · `<axis1d negative positive [trigger]/>` · `<stick stick="Left|Right"/>` · `<chord modifier trigger/>` · `<mouseDelta scale="1"/>` · `<mouseWheel scale="1"/>`
 를 씁니다(예: `Resource/game/shooter3d/data/shooter.input.xml`). **마우스 이동량(`MouseDelta2D`)은 픽셀 단위 상대값이라 액션 값이 [-1, 1] 로 묶이지 않습니다** —
 축 · 버튼 · 스틱 몫만 반전 뒤 묶이고(또는 원으로), 이동량은 그 위에 더해집니다. 축 반전은 이동량에 한 번만 걸립니다.
+**마우스 휠(`MouseWheel1D`)은 1D 축**입니다 — 굴린 프레임에만 한 칸 × `scale`(위가 +)이고 다음 프레임은 0 입니다(핫바 넘기기 — 언리얼 Mouse Wheel Axis).
 액션의 `trigger` 는 `<bind>` · `<chord>` · `<axis1d>` 에 갑니다 — `<axis1d>` 는 적지 않으면 `Down`(축을 매 프레임 읽는 쓰임)이고 `Pressed` 면 누를 때마다
 한 번 발화합니다(무기 교체). 축 값(`getAxis1D`)은 trigger 와 관계없이 누르는 동안 읽힙니다. 연속 값(`vector2d` · `stick` · `mouseDelta`)은 `Down` 고정이라 다른 trigger 는 로드 경고입니다.
 

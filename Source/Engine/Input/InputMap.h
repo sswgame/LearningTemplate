@@ -48,6 +48,7 @@ namespace sw
         Shortcut,          ///< 다중 수정자 마스크 + 키 조합 (Ctrl + Shift + Key)
         AnyKey,            ///< 임의의 키/버튼 입력 ("Press Any Key")
         VirtualJoystick2D, ///< 마우스 드래그 기반 가상 조이스틱(온스크린 스틱 프로토타이핑/테스트용)
+        MouseWheel1D,      ///< 마우스 휠 이번 프레임 이동량(한 칸 = 1, 위가 +) — 1D 축(핫바 넘기기 · 확대)
         Count              ///< 종류 수. **저장되지 않음.** 표(`kArrBindingKindInfo`)의 크기를 컴파일 시점에 맞추는 데만 씀.
     };
 
@@ -232,7 +233,7 @@ namespace sw
         float32        _deadzone{ 0.0f };
         float32        _outerDeadzone{ 1.0f };
         float32        _responseExponent{ 1.0f };
-        float32        _scale{ 1.0f };                          /**< MouseDelta2D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
+        float32        _scale{ 1.0f };                          /**< MouseDelta2D · MouseWheel1D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
         mutable uint32 _cachedLayerIndex{ kInvalidLayerIndex }; /**< _listLayerEntry 안정 인덱스. 포인터가 아니라 인덱스라 재할당에 안전합니다. */
         mutable float2 _joystickAnchor{ 0.0f, 0.0f };           /**< VirtualJoystick2D 전용. 드래그를 시작한 순간의 마우스 위치(플로팅 앵커). */
         mutable bool   _bJoystickAnchored{ false };             /**< VirtualJoystick2D 전용. 드래그 중이라 앵커가 잡혀 있는지 여부. */
@@ -318,6 +319,8 @@ namespace sw
         /** @brief 게임패드 아날로그 스틱 2D 이동 축 바인딩을 등록합니다(데드존, 바깥 데드존, 응답 곡선 가속). */
         void bindGamepadStick2D( const hashed_string& action, GamepadStick stick = GamepadStick::Left, float32 deadzone = 0.15f, const hashed_string& layer = {}, uint8 padIndex = 0, float32 outerDeadzone = 1.0f, float32 responseExponent = 1.0f );
         void bindMouseDelta( const hashed_string& action, float32 sensitivity = 1.0f, const hashed_string& layer = {} );
+        /** @brief 마우스 휠을 1D 축으로 등록합니다 — 값은 이번 프레임 휠 이동량(한 칸 = 1, 위가 +) × @p scale 이고, 굴린 프레임에만 0 이 아닙니다. */
+        void bindMouseWheel( const hashed_string& action, float32 scale = 1.0f, const hashed_string& layer = {} );
         /** @brief 마우스 드래그로 움직이는 가상 조이스틱 2D 축 바인딩을 등록합니다(앵커는 activationButton 을 누른 지점에 놓입니다). */
         void   bindVirtualJoystick2D( const hashed_string& action, MouseButton activationButton = MouseButton::Left, float32 radius = 64.0f, float32 deadzone = 0.1f, const hashed_string& layer = {}, float32 outerDeadzone = 1.0f );
         float2 getVector2D( const hashed_string& action ) const;

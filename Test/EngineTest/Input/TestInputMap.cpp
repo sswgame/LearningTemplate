@@ -124,6 +124,26 @@ SW_TEST_CASE( InputMapTest, MouseDeltaLookBinding )
 }
 
 /**
+ * @brief [InputMapTest] 마우스 휠은 1D 축이다 — 굴린 프레임에만 한 칸 × 배율(위가 +), 다음 프레임은 0
+ */
+SW_TEST_CASE( InputMapTest, MouseWheelIsAnAxisForTheFrameItTurns )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bindMouseWheel( "Scroll", 0.5f );
+
+    SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseWheel( -1.0f ) ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( -0.5f, inputMap.getAxis1D( "Scroll" ), 1.0e-6f );
+    input.endFrame();
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, inputMap.getAxis1D( "Scroll" ), 1.0e-6f );
+    input.endFrame();
+    input.shutdown();
+}
+
+/**
  * @brief [InputMapTest] 마우스 이동량은 픽셀 단위 상대값이다 — 액션 값이 [-1, 1] 로 묶이지 않고(이름 · 핸들 조회 둘 다), 축 반전은 한 번만 걸린다
  */
 SW_TEST_CASE( InputMapTest, MouseDeltaIsNotClampedAndInvertsOnce )
@@ -663,6 +683,7 @@ SW_TEST_CASE( InputMapTest, SaveAndLoadAllBindingKinds )
     mapSave.bindShortcut( "ShortcutAction", sw::Key::S, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift );
     mapSave.bindAnyKey( "AnyKeyAction" );
     mapSave.bindVirtualJoystick2D( "MoveJoystick", sw::MouseButton::Right, 80.0f, 0.2f, {}, 0.9f );
+    mapSave.bindMouseWheel( "ScrollWheel", 2.0f );
 
     const sw::string savePath = test::makeTempPath( "test_all_user_bindings.xml" );
     SW_EXPECT_TRUE( mapSave.saveUserBindings( savePath ) );
@@ -679,6 +700,10 @@ SW_TEST_CASE( InputMapTest, SaveAndLoadAllBindingKinds )
     SW_EXPECT_TRUE( mapLoad.hasAction( "ShortcutAction" ) );
     SW_EXPECT_TRUE( mapLoad.hasAction( "AnyKeyAction" ) );
     SW_EXPECT_TRUE( mapLoad.hasAction( "MoveJoystick" ) );
+    const sw::ActionBinding* pWheelBind = mapLoad.getBinding( "ScrollWheel", 0 );
+    SW_ASSERT_NOT_NULL( pWheelBind );
+    SW_EXPECT_TRUE( pWheelBind->_kind == sw::BindingKind::MouseWheel1D );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, pWheelBind->_scale, 0.001f );
 
     const sw::ActionBinding* pJoystickBind = mapLoad.getBinding( "MoveJoystick", 0 );
     if ( pJoystickBind != nullptr )

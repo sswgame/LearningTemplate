@@ -222,6 +222,13 @@ namespace sw
                         deltaNode.appendAttribute( InputMapXml::kAttrLayer, binding._layer.c_str() );
                         return true;
                     }
+                    case BindingKind::MouseWheel1D:
+                    {
+                        XmlNode wheelNode = actionNode.appendChild( "mouseWheel" );
+                        wheelNode.appendAttribute( "scale", binding._scale );
+                        wheelNode.appendAttribute( InputMapXml::kAttrLayer, binding._layer.c_str() );
+                        return true;
+                    }
                     case BindingKind::VirtualJoystick2D:
                     case BindingKind::Shortcut:
                     case BindingKind::AnyKey:
@@ -543,6 +550,19 @@ namespace sw
                 }
                 bindMouseDelta( hashed_string( pActionName ), deltaNode.getAttributeFloat( "scale", 1.0f ), hashed_string( deltaLayer.view() ) );
             }
+
+            // 7) <mouseWheel> 태그 파싱 — 마우스 휠(1D 축). scale 은 배율이다(1 = 한 칸에 1).
+            for ( XmlNode wheelNode = actionNode.findChild( "mouseWheel" ); wheelNode.isValid(); wheelNode = wheelNode.findNextSibling( "mouseWheel" ) )
+            {
+                hashed_string wheelLayer      = layer;
+                const utf8*   pWheelLayerAttr = wheelNode.findAttribute( "layer" );
+                if ( StringUtil::isNullOrEmpty( pWheelLayerAttr ) == false )
+                {
+                    wheelLayer = hashed_string( pWheelLayerAttr );
+                    ensureLayer( wheelLayer );
+                }
+                bindMouseWheel( hashed_string( pActionName ), wheelNode.getAttributeFloat( "scale", 1.0f ), hashed_string( wheelLayer.view() ) );
+            }
         };
 
         for ( XmlNode layerNode = root.findChild( InputMapSerializationInternal::InputMapXml::kLayer ); layerNode.isValid(); layerNode = layerNode.findNextSibling( InputMapSerializationInternal::InputMapXml::kLayer ) )
@@ -705,6 +725,7 @@ namespace sw
                         break;
                     }
                     case BindingKind::MouseDelta2D:
+                    case BindingKind::MouseWheel1D:
                     {
                         bindNode.appendAttribute( "scale", b._scale );
                         break;
@@ -822,6 +843,12 @@ namespace sw
                 {
                     const float32 scale = bindNode.getAttributeFloat( "scale", 1.0f );
                     bindMouseDelta( hashed_string( pAction ), scale, hashed_string( layer ) );
+                    break;
+                }
+                case BindingKind::MouseWheel1D:
+                {
+                    const float32 scale = bindNode.getAttributeFloat( "scale", 1.0f );
+                    bindMouseWheel( hashed_string( pAction ), scale, hashed_string( layer ) );
                     break;
                 }
                 case BindingKind::VirtualJoystick2D:
