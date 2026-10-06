@@ -18,8 +18,9 @@ from pathlib import Path
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
-from common.AssetValidation import (RuleConfigError, loadRules, parseRules, readDdsInfo, readMeshInfo,  # noqa: E402
-                                    validate)
+from common.AssetValidation import (RuleConfigError, ValidationContext, isShaderWordUsedInternal, loadRules,  # noqa: E402
+                                    parseRules, readDdsInfo, readMeshInfo, validate)
+from common.AssetValidation import _kReferenceTokenRe  # noqa: E402
 
 
 def makeDdsInternal(width: int, height: int, mipCount: int, dxgiFormat: int) -> bytes:
@@ -192,6 +193,17 @@ class CheckTest(AssetValidationFixture):
         messages = self.findMessages({"name": "k", "check": "material_keywords", "include_patterns": ["*.material"]})
         self.assertEqual(1, len(messages), messages)
         self.assertIn("NOBODY_READS", messages[0])
+
+    def testReferenceTokenStartsAtChunkStart(self) -> None:
+        # 덩어리 첫 글자에서만 시작해도 토큰은 같다 — 한글 뒤의 `d.json` 은 한글이 덩어리 글자가 아니라 덩어리가 `d` 에서 시작한다.
+        text = "see engine/models/a.mesh and models/b.material.bak, xmodels/c.prefab.xml 한글d.json"
+        self.assertEqual(["engine/models/a.mesh", "models/b.material", "xmodels/c.prefab.xml", "d.json"], _kReferenceTokenRe.findall(text))
+
+    def testShaderKeywordUsesWholeWord(self) -> None:
+        context = ValidationContext(resourceRoot=Path("."), repositoryRoot=Path("."), listAllPath=[])
+        context._shaderText = "#if USE_FOG\n#endif\nUSE_FOGGY"
+        self.assertTrue(isShaderWordUsedInternal("USE_FOG", context))
+        self.assertFalse(isShaderWordUsedInternal("FOG", context))
 
     def testComponentType(self) -> None:
         self.put("Source/Engine/Known.h", 'REFLECT( Tooltip = "uses (parentheses)" )\nclass SW_API KnownComponent : public Component\n{};\n')

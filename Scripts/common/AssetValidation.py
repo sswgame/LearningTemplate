@@ -46,7 +46,14 @@ kSeverityOrder: tuple[str, ...] = ("error", "warning", "info")
 _kResourcePathRe = re.compile(r"^(engine|common|editor|game/[a-z0-9_]+)/[A-Za-z0-9_./\-]+\.[A-Za-z0-9]+$")
 
 #: 소스 · 설정 · 리소스 텍스트에서 리소스 이름을 줍는 패턴(고아 판정용) — 경로든 파일 이름만이든 확장자로 끝나는 토큰.
-_kReferenceTokenRe = re.compile(r"[A-Za-z0-9_./\-]+\.(?:mesh|material|prefab\.xml|scene\.xml|dds|ogg|wav|xml|json|hlsl|hlsli)\b")
+#: 덩어리(`[A-Za-z0-9_./\-]+`)의 **첫 글자에서만** 시작한다(앞 뒤보기) — 없으면 덩어리 안 모든 자리에서 끝까지 먹고 되돌아온다.
+#: 덩어리 안에서는 첫 글자에서 시작한 맞춤이 가장 왼쪽이고 끝이 같으므로 찾는 토큰은 같다.
+_kReferenceTokenRe = re.compile(
+    r"(?<![A-Za-z0-9_./\-])[A-Za-z0-9_./\-]+\.(?:mesh|material|prefab\.xml|scene\.xml|dds|ogg|wav|xml|json|hlsl|hlsli)\b")
+#: 위 토큰이 반드시 품는 꼬리 — 이것이 없는 글(대부분의 .h · .cpp)에는 위 정규식을 부르지 않는다.
+_kReferenceExtensionRe = re.compile(r"\.(?:mesh|material|prefab\.xml|scene\.xml|dds|ogg|wav|xml|json|hlsl|hlsli)\b")
+#: 셰이더 글의 낱말.
+_kWordRe = re.compile(r"\w+")
 
 #: `REFLECT(` 뒤의 첫 class/struct 이름.
 #: 인자 안의 문자열(`Tooltip = "… (…) …"`)에 든 괄호는 건너뛴다.
@@ -114,6 +121,7 @@ class ValidationContext:
     _mapXmlCache: dict[str, ElementTree.Element | None] = field(default_factory=dict)
     _mapGuidByPath: dict[str, str] | None = None
     _shaderText: str | None = None
+    _uniqueShaderWord: set[str] | None = None
 
     def hasResource(self, relPath: str) -> bool:
         # 리소스 id 는 찾을 때 소문자로 맞춘다(`ResourceUtil::normalizePath`) — 비교도 소문자로 한다.
@@ -153,6 +161,8 @@ class ValidationContext:
                     if path.suffix.lower() not in listSuffix or not path.is_file():
                         continue
                     text = path.read_text(encoding="utf-8", errors="replace")
+                    if _kReferenceExtensionRe.search(text) is None:
+                        continue
                     for token in _kReferenceTokenRe.findall(text):
                         token = token.lower().lstrip("./")
                         unique.add(token)
@@ -180,6 +190,12 @@ class ValidationContext:
                     listText.append((self.resourceRoot / relPath).read_text(encoding="utf-8", errors="replace"))
             self._shaderText = "\n".join(listText)
         return self._shaderText
+
+    def getShaderWords(self) -> set[str]:
+        """셰이더 소스에 나오는 낱말(`\\w+`) — 키워드가 쓰이는지 정규식 검색 대신 집합으로 묻는다."""
+        if self._uniqueShaderWord is None:
+            self._uniqueShaderWord = set(_kWordRe.findall(self.getShaderText()))
+        return self._uniqueShaderWord
 
 
 def readMetaFile(path: Path) -> dict[str, str]:
@@ -419,6 +435,13 @@ def checkMaterialInternal(rule: Rule, relPath: str, context: ValidationContext) 
     return listMessage
 
 
+def isShaderWordUsedInternal(keyword: str, context: ValidationContext) -> bool:
+    """키워드가 셰이더 글에 낱말로 나오는가. 낱말 글자만이면 집합으로, 아니면(`\\b` 의 뜻이 달라진다) 정규식으로."""
+    if _kWordRe.fullmatch(keyword):
+        return keyword in context.getShaderWords()
+    return re.search(rf"\b{re.escape(keyword)}\b", context.getShaderText()) is not None
+
+
 def checkMaterialKeywordsInternal(rule: Rule, relPath: str, context: ValidationContext) -> list[str]:
     """정적 스위치 키워드가 어느 셰이더 소스에도 나오지 않으면 그 스위치는 같은 바이트코드를 두 벌 만들 뿐이다."""
     root = context.readXml(relPath)
@@ -428,7 +451,7 @@ def checkMaterialKeywordsInternal(rule: Rule, relPath: str, context: ValidationC
     switches = root.find("_permutations/_staticSwitches")
     for item in (switches.findall("item") if switches is not None else []):
         keyword = item.get("keyword")
-        if keyword and not re.search(rf"\b{re.escape(keyword)}\b", context.getShaderText()):
+        if keyword and not isShaderWordUsedInternal(keyword, context):
             listMessage.append(f"static switch '{item.get('name')}' keyword '{keyword}' is not used by any shader (dead permutation)")
     return listMessage
 
