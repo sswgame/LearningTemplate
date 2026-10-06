@@ -378,6 +378,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       환불 회수(`_bRefund`)만 빚 허용, 자기 등급 변경 금지, 일괄 우편은 계정마다 배치 키라 이어 하기에 중복이 없다, 첫 관리자 `seedRole`), 서비스 `AdminService`(IOnlineService
       영역 kAdmin + `submitCall`, 조회는 계정 창구로 표시 이름 · 접속 여부, 정지 · 영구 정지가 새로 걸리면 `IAccountSessionControl` 로 세션 끊기, 제재를 새로 쓰면 버스 `sanction.changed` — 채팅이 묵힌 제재를 버린다). GM 에디터 패널은 백로그
       (에디터 확장 지점 뒤). 시험: `AdminServiceTest`.
+    - `LiveOps`(`GF_LiveOps`, Client · Server): 라이브 운영 타입(`LiveOpsTypes.h` — 결과 · 반복 · 이벤트 정의 · 열린 이벤트), 와이어(`LiveOpsProtocol.h` — 영역 0x0B00,
+      열린 이벤트 받기(로그인 뒤), 알림 kPushLiveState(몸 없음 — 다시 받아라), 영속 레코드 `[판 1][정의]`), 클라이언트(`LiveOpsClient` — 알림이 오면 스스로 다시 받는다,
+      게임은 `getActiveEvents` · `hasEventKind` 만 본다).
+    - `Server/LiveOps`(`GF_Server_LiveOps`, Server): 열림 판정(`LiveEventRules` — 기간 · 매일/매주 회차(`ServiceScheduler::computeLatestOccurrence`) · 빌드 · 지역 ·
+      출시 비율(`RemoteConfig::computeRolloutBucket` — 원격 설정 플래그와 같은 해시)), 로직(`LiveOpsService` — 정의는 영속 `liveops_event` + 감사 줄 한 트랜잭션, 30 초 주기 +
+      버스 `liveops.changed` 재촉, 매개변수 `@<키>` 는 원격 설정 값, 긴급 스위치 `feature.liveops`, 열린 묶음 해시가 바뀌면(회차 경계 포함) 알림), 바인딩(`LiveOpsServer`).
+      바꾸기는 C++ API(GM 도구가 조립에서). 시험: `LiveEventRulesTest` · `LiveOpsServiceTest` · `LiveOpsStreamTest`.
   - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
       연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,
