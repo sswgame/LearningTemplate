@@ -117,6 +117,30 @@
                 "engine/settings/engine.settings.xml"
             ]
         },
+        "settings.accessibility.uiTheme": {
+            "source": "UI Theme",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.accessibility.uiTheme.default": {
+            "source": "Default",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.accessibility.uiTheme.highcontrast": {
+            "source": "High Contrast",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
         "settings.audio.ambientVolume": {
             "source": "Ambient Volume",
             "context": "Options menu label",

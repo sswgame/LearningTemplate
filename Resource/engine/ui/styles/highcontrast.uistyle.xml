@@ -1,0 +1,23 @@
+<UiStyleSheet _schemaVersion="1">
+	<!-- 고대비 테마(accessibility.uiTheme = highcontrast) — 기본 시트 뒤에 걸려 색 · 테두리만 덮는다(크기 · 여백은 기본 시트 그대로).
+	     바탕은 불투명한 검정, 글은 흰색(대비 21:1), 강조는 노랑(검정 바탕 대비 19.6:1), 상호작용 위젯은 테두리 2. 같은 선택자로 덮어 특정도가 기본 시트와 같다
+	     (같으면 뒤에 건 시트가 이긴다). 경고 · 성공은 색만이 아니라 모양(테두리 두께 · 모서리)으로도 다르다 — 색각 안전 팔레트(주황 · 파랑, 빨강 · 초록을 쓰지 않는다). -->
+	<Variable _name="surface" _value="0,0,0,1" />
+	<Variable _name="text" _value="1,1,1,1" />
+	<Variable _name="accent" _value="1,0.9,0,1" />
+	<Variable _name="accentText" _value="0,0,0,1" />
+	<Variable _name="warning" _value="1,0.6,0,1" />
+	<Variable _name="success" _value="0.35,0.7,1,1" />
+	<Rule _selector="BorderPanel.window" _backgroundColor="$surface" _borderWidth="2" _borderColor="$text" _shadowColor="0,0,0,0" />
+	<Rule _selector="BorderPanel.window TextWidget" _textColor="$text" />
+	<Rule _selector="ButtonWidget" _backgroundColor="$surface" _borderWidth="2" _borderColor="$text" _focusRingColor="$accent" />
+	<Rule _selector="ButtonWidget:hover" _backgroundColor="$accent" />
+	<Rule _selector="ButtonWidget:pressed" _backgroundColor="$accent" />
+	<Rule _selector="ButtonWidget.primary" _backgroundColor="$surface" _borderWidth="3" _borderColor="$accent" />
+	<Rule _selector="ButtonWidget.primary:hover" _backgroundColor="$accent" />
+	<Rule _selector="ButtonWidget.primary:pressed" _backgroundColor="$accent" />
+	<Rule _selector="ButtonWidget:hover TextWidget" _textColor="$accentText" />
+	<Rule _selector="ButtonWidget:pressed TextWidget" _textColor="$accentText" />
+	<Rule _selector="BorderPanel.warning" _backgroundColor="$surface" _borderWidth="4" _borderColor="$warning" _cornerRadius="0,0,0,0" />
+	<Rule _selector="BorderPanel.success" _backgroundColor="$surface" _borderWidth="2" _borderColor="$success" _cornerRadius="12,12,12,12" />
+</UiStyleSheet>

@@ -22,12 +22,13 @@ namespace sw
     {
         struct CanvasRendererInternal
         {
-            /** @brief 루트 상수 칸입니다 — canvas.hlsl 의 SwRootConstants 순서(시작 · 텍스처 넷 · 대상 너비 · 높이). */
+            /** @brief 루트 상수 칸입니다 — canvas.hlsl 의 SwRootConstants 순서(시작 · 텍스처 넷 · 대상 너비 · 높이 · 색각 보정). */
             static constexpr uint32 kRootQuadBase      = 0;
             static constexpr uint32 kRootTexture0      = 1;
             static constexpr uint32 kRootTargetWidth   = kRootTexture0 + shaderslot::kMaterialTextureCount;
             static constexpr uint32 kRootTargetHeight  = kRootTargetWidth + 1;
-            static constexpr uint32 kRootConstantCount = kRootTargetHeight + 1;
+            static constexpr uint32 kRootColorVision   = kRootTargetHeight + 1;
+            static constexpr uint32 kRootConstantCount = kRootColorVision + 1;
             static_assert( kRootConstantCount <= shaderslot::kRootConstantDwords, "canvas root constants exceed the four-backend budget" );
 
             /** @brief 사각형 버퍼가 모자라면 이 배율로 키운다(프레임마다 조금씩 늘 때 다시 만들기를 줄인다). */
@@ -117,7 +118,7 @@ namespace sw
     }
 
     uint32 CanvasRenderer::drawList( IRHICommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth,
-                                     uint32 targetHeight, bool bNativeBindless ) const
+                                     uint32 targetHeight, bool bNativeBindless, uint32 colorVisionMode ) const
     {
         if ( list.isEmpty() || pso == 0 || _quadBuffer.isValid() == false || targetWidth == 0 || targetHeight == 0 )
             return 0;
@@ -142,6 +143,7 @@ namespace sw
             arrRoot[CanvasRendererInternal::kRootQuadBase]     = quadBase + batch._firstQuad;
             arrRoot[CanvasRendererInternal::kRootTargetWidth]  = CanvasRendererInternal::toBits( static_cast<float32>( targetWidth ) );
             arrRoot[CanvasRendererInternal::kRootTargetHeight] = CanvasRendererInternal::toBits( static_cast<float32>( targetHeight ) );
+            arrRoot[CanvasRendererInternal::kRootColorVision]  = colorVisionMode;
             for ( uint32 slot = 0; slot < shaderslot::kMaterialTextureCount; ++slot )
             {
                 RHIDescriptorIndex srv = kInvalidDescriptorIndex;

@@ -2,10 +2,12 @@
 // 모양(둥근 모서리 · 테두리 · 그림자 · 둥근 자르기)은 픽셀 셰이더의 부호 거리(SDF)다. 사각 자르기는 일괄의 가위가 한다(C++ CanvasBatch).
 // 출력은 프리멀티플라이 알파다(PSO _bPremultipliedAlpha — One/InvSrcAlpha) — 렌더 텍스처에 그려도 알파가 두 번 곱해지지 않는다.
 // 사각형 원소는 C++ CanvasQuad(Graphics/Canvas/CanvasDrawList.h)와 같은 배치다(CanvasDrawListTest.QuadLayoutMatchesShader).
+// 색각 보정(gv_colorVisionMode)은 여기서 건다 — UI 는 톤맵 뒤에 그리므로 톤맵 쪽 보정이 닿지 않는다. 함수는 톤맵 쪽과 같은 colorvision.hlsli 하나다.
 
 // 이 셰이더는 루트 상수 블록을 직접 선언한다(binding.hlsli 의 그래픽스 블록 g_SwMaterialCount 대신).
 #define SW_OWN_ROOT_CONSTANTS 1
 #include "binding.hlsli"
+#include "colorvision.hlsli"
 
 static const uint kCanvasQuadRect        = 0u;
 static const uint kCanvasQuadImage       = 1u;
@@ -39,6 +41,7 @@ SW_ROOT_CONSTANTS_BEGIN
 	uint  g_SwCanvasTexture3;
 	float g_SwCanvasTargetWidth; // 대상 픽셀 크기
 	float g_SwCanvasTargetHeight;
+	uint  g_SwCanvasColorVision; // 색각 보정 방식(0 끔 · 1 적색약 · 2 녹색약 · 3 청색약) — 주 출력만, 렌더 텍스처 대상은 0
 SW_ROOT_CONSTANTS_END
 
 struct PSInput
@@ -143,6 +146,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
 		const float2 clipCenter = ( quad.clipRect.zw + quad.clipRect.xy ) * 0.5f;
 		coverage *= saturate( 0.5f - computeRoundedBoxDistance( input.screen - clipCenter, clipHalf, quad.params.wwww ) );
 	}
-	const float alpha = color.a * coverage;
-	return float4( color.rgb * alpha, alpha );
+	const float  alpha     = color.a * coverage;
+	const float3 corrected = swApplyColorVisionCorrection( color.rgb, SW_ROOT( g_SwCanvasColorVision ) );
+	return float4( corrected * alpha, alpha );
 }

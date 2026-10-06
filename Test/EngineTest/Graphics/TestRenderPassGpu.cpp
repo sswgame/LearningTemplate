@@ -7324,3 +7324,102 @@ SW_TEST_CASE( RenderPassGpuTest, WorldWidgetRenderTextureIsSampled )
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the world widget test" );
 }
+
+/**
+ * @brief [RenderPassGpuTest] 캔버스 색각 보정 — 녹색약(2)에서 빨강 · 초록 사각형의 출력이 보정 식의 결과(±2/255)와 같고, 끔(0)이면 그대로다 — 4 백엔드
+ * @details 기대값은 시험 안의 C++ 식(Machado 2009 녹색약 행렬로 흉내 → 빨강 쪽 오차를 초록 · 파랑으로 옮김)이다 — 셰이더(colorvision.hlsli)와 따로 적어 서로를 잡는다.
+ *          사각형은 불투명이라 장면과 섞이지 않는다. 변이: canvas.hlsl 의 보정 호출을 빼면 녹색약에서도 빨강이 (255, 0, 0) 이라 진다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, CanvasColorVisionChangesRedGreen )
+{
+    struct ColorVisionOracle
+    {
+        /** @brief 녹색약 보정 — colorvision.hlsli 의 swApplyColorVisionCorrection( color, 2 ) 과 같은 식. */
+        static sw::float3 correctDeuteranopia( const sw::float3& color )
+        {
+            const float32 simulatedR = 0.367322f * color._x + 0.860646f * color._y - 0.227968f * color._z;
+            const float32 simulatedG = 0.280085f * color._x + 0.672501f * color._y + 0.047413f * color._z;
+            const float32 simulatedB = -0.011820f * color._x + 0.042940f * color._y + 0.968881f * color._z;
+            const float32 errorR     = color._x - simulatedR;
+            const float32 errorG     = color._y - simulatedG;
+            const float32 errorB     = color._z - simulatedB;
+            return sw::float3{ sw::MathUtil::clamp( color._x, 0.0f, 1.0f ), sw::MathUtil::clamp( color._y + 0.7f * errorR + errorG, 0.0f, 1.0f ),
+                               sw::MathUtil::clamp( color._z + 0.7f * errorR + errorB, 0.0f, 1.0f ) };
+        }
+
+        static bool isNear( const test::Rgba8& pixel, const sw::float3& expected )
+        {
+            constexpr int32 kTolerance = 2;
+            auto            toByte     = []( float32 value )
+            { return static_cast<int32>( value * 255.0f + 0.5f ); };
+            return sw::MathUtil::abs( static_cast<int32>( pixel._r ) - toByte( expected._x ) ) <= kTolerance &&
+                   sw::MathUtil::abs( static_cast<int32>( pixel._g ) - toByte( expected._y ) ) <= kTolerance &&
+                   sw::MathUtil::abs( static_cast<int32>( pixel._b ) - toByte( expected._z ) ) <= kTolerance;
+        }
+
+        static sw::string describe( const test::Rgba8& pixel )
+        {
+            return sw::to_string( pixel._r ) + "," + sw::to_string( pixel._g ) + "," + sw::to_string( pixel._b );
+        }
+    };
+    using Oracle = ColorVisionOracle;
+    const sw::float3      red{ 1.0f, 0.0f, 0.0f };
+    const sw::float3      green{ 0.0f, 1.0f, 0.0f };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        renderer.setPresentCaptureEnabled( true );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        sw::vector<uint8>     bytesFirst;
+        sw::RHITextureMipSpan layoutFirst{};
+        bOk = bOk && renderer.readbackPresentCapture( bytesFirst, layoutFirst );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "첫 프레임" ).c_str() );
+        if ( bOk == false )
+        {
+            renderer.shutdown();
+            continue;
+        }
+        test::RHITestImage first;
+        first.assign( std::move( bytesFirst ), layoutFirst, sw::constant::kBackBufferFormat );
+
+        for ( const uint32 mode : { 0u, 2u } )
+        {
+            sw::CanvasFrameData canvas{};
+            canvas._mainOutput._targetSize = sw::float2{ static_cast<float32>( first.getWidth() ), static_cast<float32>( first.getHeight() ) };
+            canvas._colorVisionMode        = mode;
+            {
+                sw::CanvasPainter painter( canvas._mainOutput, 1.0f );
+                sw::CanvasBrush   brush{};
+                brush._color = sw::float4{ red._x, red._y, red._z, 1.0f };
+                painter.fillRect( sw::float2{ 40.0f, 40.0f }, sw::float2{ 80.0f, 60.0f }, brush );
+                brush._color = sw::float4{ green._x, green._y, green._z, 1.0f };
+                painter.fillRect( sw::float2{ 140.0f, 40.0f }, sw::float2{ 80.0f, 60.0f }, brush );
+            }
+            renderer.setCanvasFrame( canvas );
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            const bool            bFrame    = renderSceneFrame( renderer, device.get(), stage._scene, clear ) && renderer.readbackPresentCapture( bytes, layout );
+            const sw::string      modeLabel = label + "방식 " + sw::to_string( mode ) + " ";
+            SW_EXPECT_TRUE_MSG( bFrame, ( modeLabel + "프레임" ).c_str() );
+            if ( bFrame == false )
+                continue;
+            test::RHITestImage image;
+            image.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+            const test::Rgba8 redPixel    = image.getPixel( 80, 70 );
+            const test::Rgba8 greenPixel  = image.getPixel( 180, 70 );
+            const sw::float3  expectRed   = mode == 0u ? red : Oracle::correctDeuteranopia( red );
+            const sw::float3  expectGreen = mode == 0u ? green : Oracle::correctDeuteranopia( green );
+            SW_EXPECT_TRUE_MSG( Oracle::isNear( redPixel, expectRed ), ( modeLabel + "빨강 → " + Oracle::describe( redPixel ) ).c_str() );
+            SW_EXPECT_TRUE_MSG( Oracle::isNear( greenPixel, expectGreen ), ( modeLabel + "초록 → " + Oracle::describe( greenPixel ) ).c_str() );
+            SW_LOG_INFO( "%#red %#, green %#", modeLabel, Oracle::describe( redPixel ), Oracle::describe( greenPixel ) );
+        }
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the canvas color vision test" );
+}

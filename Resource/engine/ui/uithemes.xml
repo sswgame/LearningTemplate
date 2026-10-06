@@ -5,5 +5,11 @@
 				<item>engine/ui/styles/default.uistyle.xml</item>
 			</_listStyleSheet>
 		</UiThemeDesc>
+		<UiThemeDesc _name="highcontrast">
+			<_listStyleSheet>
+				<item>engine/ui/styles/default.uistyle.xml</item>
+				<item>engine/ui/styles/highcontrast.uistyle.xml</item>
+			</_listStyleSheet>
+		</UiThemeDesc>
 	</_listTheme>
 </UiThemeCatalog>

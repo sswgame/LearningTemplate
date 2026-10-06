@@ -122,5 +122,6 @@ namespace sw
         _listTarget.clear();
         _listAtlasUpload.clear();
         _contentRevision = 0;
+        _colorVisionMode = 0;
     }
 } // namespace sw

@@ -21,7 +21,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// UiStyleTest — 스타일 시트(*.uistyle.xml): 선택자 · 특정도 · 상태 · 자손 결합자 · 상속 · 변수 · 무효화 종류 · 나눠 쓰기 · 테마.
+// UiStyleTest — 스타일 시트(*.uistyle.xml): 선택자 · 특정도 · 상태 · 자손 결합자 · 상속 · 변수 · 무효화 종류 · 나눠 쓰기 · 테마(고대비 · 사용자 설정).
 // 시트와 문서는 메모리로 넣는다(UiStyleSheetCache::registerMemorySheet · UiDocumentCache::registerMemoryDocument). 디바이스 없음(nogpu).
 
 namespace
@@ -507,4 +507,96 @@ SW_TEST_CASE( UiStyleTest, ReduceMotionDisablesTransitions )
     pBox->setStyleClass( "b" );
     Util::runFrame( fixture._input, fixture._ui, 0.0f );
     SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kBlue );
+}
+
+/**
+ * @brief [UiStyleTest] 엔진 고대비 테마(engine/ui/uithemes.xml 의 highcontrast)가 읽히고, 견본 pause.ui.xml 에서 창은 불투명 · 테두리 2, 글은 바탕과 7:1 이상 대비다
+ * @details 고대비 테마 = 기본 시트 + 고대비 시트(색 · 테두리만 덮는다) — 기본 시트의 여백은 남는다. 대비는 WCAG 상대 휘도로 잰다.
+ */
+SW_TEST_CASE( UiStyleTest, HighContrastThemeLoads )
+{
+    using Util = UiStyleTestUtil;
+    struct ContrastUtil
+    {
+        static float32 toLinear( float32 channel ) { return channel <= 0.03928f ? channel / 12.92f : sw::MathUtil::pow( ( channel + 0.055f ) / 1.055f, 2.4f ); }
+        static float32 computeLuminance( const sw::float4& color )
+        {
+            return 0.2126f * toLinear( color._x ) + 0.7152f * toLinear( color._y ) + 0.0722f * toLinear( color._z );
+        }
+        static float32 computeContrast( const sw::float4& lhs, const sw::float4& rhs )
+        {
+            const float32 lhsLuminance = computeLuminance( lhs );
+            const float32 rhsLuminance = computeLuminance( rhs );
+            return ( sw::MathUtil::max( lhsLuminance, rhsLuminance ) + 0.05f ) / ( sw::MathUtil::min( lhsLuminance, rhsLuminance ) + 0.05f );
+        }
+    };
+    UiStyleFixture     fixture;
+    sw::UiThemeCatalog catalog{};
+    SW_ASSERT_TRUE( catalog.loadFromResource( "engine/ui/uithemes.xml" ) );
+    SW_ASSERT_NOT_NULL( catalog.findTheme( "highcontrast" ) );
+    fixture._ui.setThemeCatalog( catalog );
+    SW_EXPECT_TRUE( fixture._ui.setTheme( "highcontrast" ) );
+    sw::UiScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( "engine/ui/pause.ui.xml" ) );
+    SW_ASSERT_NOT_NULL( pScreen );
+    Util::runFrame( fixture._input, fixture._ui );
+
+    const sw::WidgetTree&      tree         = pScreen->getTree();
+    const sw::Widget*          pWindow      = tree.findWidgetByName( "Window" );
+    const sw::Widget*          pTitle       = tree.findWidgetByName( "Title" );
+    const sw::UiComputedStyle* pWindowStyle = pWindow != nullptr ? pWindow->getComputedStyle() : nullptr;
+    SW_ASSERT_NOT_NULL( pWindowStyle );
+    const sw::float4 background = Util::findBackground( pWindow );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, background._w, 1e-4f ); // 불투명
+    SW_EXPECT_TRUE( pWindowStyle->has( sw::UiStyleField::BorderWidth ) );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, pWindowStyle->_value._borderWidth, 1e-4f );
+    SW_EXPECT_TRUE( pWindowStyle->has( sw::UiStyleField::Padding ) ); // 기본 시트의 여백은 남는다
+    const sw::float4 title = Util::findTextColor( pTitle );
+    SW_EXPECT_TRUE( title._w > 0.0f );
+    SW_EXPECT_TRUE( ContrastUtil::computeContrast( title, background ) >= 7.0f );
+    // 버튼 안 글도 버튼 바탕과 7:1 이상.
+    const sw::ButtonWidget* pResume = tree.findWidget<sw::ButtonWidget>( "Resume" );
+    SW_ASSERT_NOT_NULL( pResume );
+    SW_ASSERT_TRUE( pResume->getChildCount() > 0 );
+    SW_EXPECT_TRUE( ContrastUtil::computeContrast( Util::findTextColor( pResume->getChild( 0 ) ), Util::findBackground( pResume ) ) >= 7.0f );
+}
+
+/**
+ * @brief [UiStyleTest] 테마가 사용자 설정(gv_uiTheme — accessibility.uiTheme)을 따른다 — 테마 목록을 걸 때 고르고, 실행 중에 바꾸면 다음 update 가 바꾸며,
+ *        목록에 없는 이름이면 목록의 기본(걸 때) · 지금 테마 그대로(실행 중)
+ * @details 변이: `UiSystem::update` 의 `syncThemeSetting` 을 빼면 실행 중 바꾼 값이 테마에 닿지 않아 진다.
+ */
+SW_TEST_CASE( UiStyleTest, ThemeFollowsUserSetting )
+{
+    sw::GlobalVariableInfo* pSetting = sw::engine::getGlobalVariableManager().findVariable( "gv_uiTheme" );
+    SW_ASSERT_NOT_NULL( pSetting );
+    const sw::string   previous = pSetting->getValueAsString();
+    sw::UiThemeCatalog catalog{};
+    SW_ASSERT_TRUE( catalog.loadFromResource( "engine/ui/uithemes.xml" ) );
+    {
+        SW_EXPECT_TRUE( pSetting->setValueAsString( "highcontrast" ) );
+        UiStyleFixture fixture;
+        fixture._ui.setThemeCatalog( catalog );
+        SW_EXPECT_STREQ( "highcontrast", fixture._ui.getThemeName().c_str() );
+
+        SW_EXPECT_TRUE( pSetting->setValueAsString( "default" ) );
+        UiStyleTestUtil::runFrame( fixture._input, fixture._ui );
+        SW_EXPECT_STREQ( "default", fixture._ui.getThemeName().c_str() );
+
+        SW_EXPECT_TRUE( pSetting->setValueAsString( "missing" ) ); // 모르는 이름 — 경고하고 지금 테마를 둔다
+        UiStyleTestUtil::runFrame( fixture._input, fixture._ui );
+        SW_EXPECT_STREQ( "default", fixture._ui.getThemeName().c_str() );
+    }
+    {
+        // 그 이름을 두지 않은 게임 테마 목록 — 걸 때 목록의 기본으로 간다.
+        SW_EXPECT_TRUE( pSetting->setValueAsString( "highcontrast" ) );
+        UiStyleFixture     fixture;
+        sw::UiThemeCatalog gameCatalog{};
+        gameCatalog._defaultTheme = "shooter";
+        sw::UiThemeDesc shooter{};
+        shooter._name = "shooter";
+        gameCatalog._listTheme.push_back( shooter );
+        fixture._ui.setThemeCatalog( gameCatalog );
+        SW_EXPECT_STREQ( "shooter", fixture._ui.getThemeName().c_str() );
+    }
+    SW_EXPECT_TRUE( pSetting->setValueAsString( previous ) );
 }

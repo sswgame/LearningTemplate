@@ -135,6 +135,7 @@ namespace sw
         , _styleSheetCache{}
         , _themeCatalog{}
         , _themeName{}
+        , _themeSetting{}
         , _listReopenDocument{}
         , _bindingConverters{}
         , _focus{}
@@ -257,6 +258,7 @@ namespace sw
     void UiSystem::update( float32 deltaSeconds, const UiViewport& viewport )
     {
         _viewport = viewport;
+        syncThemeSetting();
         syncDemoScreen();
         reopenClosedScreens();
         _subtitles.update( deltaSeconds );
@@ -539,6 +541,13 @@ namespace sw
     void UiSystem::setThemeCatalog( const UiThemeCatalog& catalog )
     {
         _themeCatalog = catalog;
+        // 사용자 설정(gv_uiTheme)의 테마가 목록에 있으면 그것, 없으면 목록의 기본 — 테마를 두지 않은 게임 목록에서 설정 값은 조용히 기본이 된다.
+        _themeSetting = gv_uiTheme;
+        if ( _themeSetting.empty() == false && _themeCatalog.findTheme( hashed_string( _themeSetting ) ) != nullptr )
+        {
+            (void)setTheme( hashed_string( _themeSetting ) );
+            return;
+        }
         if ( _themeCatalog._defaultTheme.empty() == false && setTheme( _themeCatalog._defaultTheme ) == false )
             SW_LOG_ERROR( "[Ui] Default UI theme '%#' is not in the theme catalog", _themeCatalog._defaultTheme.c_str() );
     }
@@ -1206,6 +1215,18 @@ namespace sw
     {
         for ( const WidgetComponent* pComponent : _listWidgetComponent )
             pComponent->appendWorldCanvas( inoutListTarget );
+    }
+
+    void UiSystem::syncThemeSetting()
+    {
+        const string& setting = gv_uiTheme;
+        if ( setting == _themeSetting )
+            return;
+        _themeSetting = setting;
+        if ( setting.empty() || _themeCatalog._listTheme.empty() )
+            return;
+        // 실행 중에 바꾼 값 — 모르는 이름은 setTheme 이 경고하고 지금 테마를 둔다(게임 테마 목록이 그 이름을 두지 않았다).
+        (void)setTheme( hashed_string( setting ) );
     }
 
     void UiSystem::syncDemoScreen()

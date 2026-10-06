@@ -2176,7 +2176,7 @@
    "type": "int32",
    "default": "0",
    "kind": "일반",
-   "description": "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, 셰이더 미구현)",
+   "description": "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스만 — 톤맵 미구현)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
@@ -2817,6 +2817,14 @@
    "default": "1.0",
    "kind": "일반",
    "description": "게임 UI 글자 크기 배율 (사용자 설정 accessibility.textSize)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_uiTheme",
+   "type": "string",
+   "default": "default",
+   "kind": "일반",
+   "description": "게임 UI 테마 이름 default · highcontrast (사용자 설정 accessibility.uiTheme)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {

@@ -49,15 +49,16 @@ namespace sw
          */
         void prepareFrame( IRHIDevice& device, CanvasFrameData& inoutFrame );
         /**
-         * @brief 목록 하나를 지금 열린 렌더 패스에 그립니다. 일괄마다 가위 · 루트 상수(시작 · 텍스처 넷 · 대상 크기) · `drawInstanced( 6, n )`.
+         * @brief 목록 하나를 지금 열린 렌더 패스에 그립니다. 일괄마다 가위 · 루트 상수(시작 · 텍스처 넷 · 대상 크기 · 색각 보정) · `drawInstanced( 6, n )`.
          * @param quadBase       사각형 버퍼에서 이 목록이 시작하는 자리(주 출력 0, 대상은 `getTargetQuadBase`)
          * @param pso            대상 포맷의 캔버스 PSO
          * @param targetWidth    대상 픽셀 크기(가위가 없는 일괄의 가위 · 셰이더의 NDC 변환)
          * @param bNativeBindless DX12 · Vulkan 이면 텍스처를 bindless 전역 번호로, 아니면 t5..t8 에 서수로 건다
+         * @param colorVisionMode 색각 보정 방식(`CanvasFrameData::_colorVisionMode` — 주 출력만, 렌더 텍스처 대상은 0)
          * @return 그린 일괄 수
          */
         uint32 drawList( IRHICommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth, uint32 targetHeight,
-                         bool bNativeBindless ) const;
+                         bool bNativeBindless, uint32 colorVisionMode = 0 ) const;
         /** @brief 마지막 `prepareFrame` 에서 대상 @p targetIndex 의 사각형이 버퍼에서 시작하는 자리입니다. */
         uint32 getTargetQuadBase( uint32 targetIndex ) const { return targetIndex < _listTargetQuadBase.size() ? _listTargetQuadBase[targetIndex] : 0; }
         /** @brief GPU 자원을 놓습니다(디바이스가 없으면 핸들만 잊는다). 아틀라스 거울은 남깁니다 — 다음 `prepareFrame` 이 다시 올린다. */

@@ -91,7 +91,8 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
     그래프 패스가 아니라 그리기 전에 직접 걸린다
   - `FrameRendererConstants` — 뷰/라이트 행렬 등 **프레임 상수 시드** (프레임당 1회)
   - `FrameRendererPassExecute` — 패스 타입별 실행 분기. 주 출력(백버퍼 · 게임 뷰 RT · 스크린샷 캡처)은 `resolvePresentTarget` 하나가 고르고 Present · Canvas 가 같이 쓴다.
-    Canvas(화면 2D)는 Present 뒤 같은 출력에 **Load** 로 그리고, 스크린샷 캡처 → 백버퍼 복사는 Swapchain 을 쓰는 마지막 패스 끝에서 한다(그 전에 복사하면 UI 가 캡처에 없다)
+    Canvas(화면 2D)는 Present 뒤 같은 출력에 **Load** 로 그리고, 스크린샷 캡처 → 백버퍼 복사는 Swapchain 을 쓰는 마지막 패스 끝에서 한다(그 전에 복사하면 UI 가 캡처에 없다).
+    UI 는 톤맵 뒤라 색각 보정(`gv_colorVisionMode`)을 캔버스 셰이더가 직접 건다(루트 상수 `g_SwCanvasColorVision` — 주 출력만, 함수는 `colorvision.hlsli` 하나)
   - `FrameRendererDraw` — 드로우 루프
   - `FrameRendererViews` — 추가 뷰(카메라마다 하나)의 자원 준비 · 해제 · 그리기. 아래 "다중 뷰"
   - `FrameRendererPso` — 머티리얼 PSO 생성. 뷰 모드(`RenderViewMode` — Lit · Unlit · Wireframe)가 얹는 define 은

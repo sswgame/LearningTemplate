@@ -42,6 +42,7 @@
 | `gameplay.headBob` | bool | `true` |  | confirm | `gv:gv_cameraHeadBob` |
 | `accessibility.colorVision` | enum | `off` |  | confirm | `gv:gv_colorVisionMode` |
 | `accessibility.uiScale` | float | `1` | 0.75 ~ 1.5 (눈금 0.05) | confirm | `gv:gv_uiScale` |
+| `accessibility.uiTheme` | enum | `default` |  | confirm | `gv:gv_uiTheme` |
 | `accessibility.textSize` | float | `1` | 0.75 ~ 2 (눈금 0.05) | confirm | `gv:gv_uiTextScale` |
 | `accessibility.reduceFlashing` | bool | `false` |  | confirm | `gv:gv_reduceFlashing` |
 | `accessibility.reduceMotion` | bool | `false` |  | confirm | `gv:gv_uiReduceMotion` |

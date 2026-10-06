@@ -98,8 +98,8 @@ settings.registerEventListener( SW_DELEGATE_METHOD( UserSettingEventListener, &M
 
 - 전역 변수 대상(`UserSettingsVariables.h`)은 Engine.dll 안의 변수입니다. Engine 안의 코드는 `extern` 으로 읽고, 게임 · 키트 모듈 · 시험은
   `engine::getGlobalVariableManager().findVariable( "gv_cameraShakeScale" )` 로 읽습니다(DLL 을 넘는 `extern` 은 링크되지 않습니다).
-- 지금 아무도 읽지 않는 대상: `gv_renderScale` · `gv_upscaler` · 그림자 · 시야 거리 · 후처리 · 텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode`(톤맵 셰이더 미구현) ·
-  UI 배율 · 자막. 오디오 버스 `voice` · `ambient` · `ui` 는 `IAudioSystem::setBusVolume` 에 값만 남습니다(재생 API 가 버스를 받지 않음).
+- 지금 아무도 읽지 않는 대상: `gv_renderScale` · `gv_upscaler` · 그림자 · 시야 거리 · 후처리 · 텍스처 · 이펙트 품질 · 모션 블러 ·
+  `gv_colorVisionMode` 의 톤맵 쪽(UI 캔버스는 읽는다 — `colorvision.hlsli`). UI 배율 · 글자 크기 · 테마 · 자막은 `Engine/UI` 가 읽는다. 오디오 버스 `voice` · `ambient` · `ui` 는 `IAudioSystem::setBusVolume` 에 값만 남습니다(재생 API 가 버스를 받지 않음).
 - 해상도 선택지는 데이터의 고정 목록입니다(모니터 모드 열거 없음). 전용 전체 화면은 없고 `borderless`(모니터를 덮는 창)입니다.
 - 개인 정보(`privacy`): `telemetry.enabled`(기본 false) · `telemetry.crashReports`(local · ask · send, 기본 local)는 대상이 없다 — `TelemetryService` ·
   `CrashReportService` 의 `bindConsentSetting` 이 확정 값을 읽는다(`Engine/Telemetry/README.md`).

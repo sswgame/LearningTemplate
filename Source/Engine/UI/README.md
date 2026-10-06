@@ -292,6 +292,14 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   바뀐 칸이 여백 · 글꼴 · 크기면 `kLayout`, 불투명도면 `kTransform`(자손 그림까지), 그 밖은 `kPaint` 입니다.
 - **테마**(`UiThemeCatalog` — `engine/ui/uithemes.xml`, 게임 프리셋 `_uiThemes` 가 덮어쓴다): 이름 → 시트들. 모든 화면에 테마 시트 → 문서(와 조각) 시트 순서로 겁니다.
   `UiSystem::setTheme( 이름 )` 은 모든 화면을 다시 맞춥니다. 엔진 기본 테마 `default` = `engine/ui/styles/default.uistyle.xml`.
+- **사용자 설정 `accessibility.uiTheme`**(`gv_uiTheme` — `default` · `highcontrast`): 테마 목록을 걸 때 그 이름이 목록에 있으면 그 테마, 없으면 목록의 기본이고,
+  실행 중에 바뀌면 다음 `update` 가 바꾼다. 게임 테마 목록이 설정을 받으려면 같은 이름(`default` · `highcontrast`)의 테마를 둔다.
+- **고대비 테마** `highcontrast` = 기본 시트 + `engine/ui/styles/highcontrast.uistyle.xml`(색 · 테두리만 덮는다 — 기본 시트와 같은 선택자로 덮어 특정도가 같고 뒤 시트가 이긴다):
+  불투명한 검정 바탕 · 흰 글(21:1) · 노랑 강조 · 상호작용 위젯 테두리 2(`UiStyleTest.HighContrastThemeLoads` 가 7:1 이상을 본다).
+- **색각 안전 팔레트**: 두 시트 모두 경고 `warning`(주황) · 성공 `success`(파랑) 변수 — 빨강 · 초록을 짝으로 쓰지 않고, 색만이 아니라 모양으로도 다르다
+  (`BorderPanel.warning` 두꺼운 테두리 · 각진 모서리, `BorderPanel.success` 얇은 테두리 · 둥근 모서리).
+- **색각 보정**(`gv_colorVisionMode` — accessibility.colorVision): UI 는 톤맵 뒤에 그려 톤맵 쪽 보정이 닿지 않으므로 캔버스 셰이더가 직접 건다
+  (`Graphics/Renderer` 의 Canvas 패스, `colorvision.hlsli` — Machado 2009 흉내 + 오차 재분배). 스타일 시트와 무관하다.
 - 문서는 `<_listStyleSheet>` 로 자기 시트를 겁니다(조각 문서의 시트도 모인다). 시트는 `UiStyleSheetCache`(종류 `UiStyleSheet`)가 경로로 듭니다.
 
 ## 핫 리로드 (문서 · 스타일)

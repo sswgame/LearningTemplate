@@ -149,6 +149,12 @@ namespace sw
          * @details 0 은 "모른다" 라 늘 올립니다(시험 · 개발 시험 그림).
          */
         uint64 _contentRevision{ 0 };
+        /**
+         * @brief 주 출력에 거는 색각 보정 방식입니다(`gv_colorVisionMode` — 0 끔 · 1 적색약 · 2 녹색약 · 3 청색약, colorvision.hlsli).
+         * @details UI 는 톤맵 뒤에 그려 톤맵 쪽 보정이 닿지 않으므로 캔버스 셰이더가 직접 건다. 렌더 텍스처 대상(월드 위젯)에는 걸지 않는다 —
+         *          그 그림은 장면을 지나 톤맵 쪽 보정을 받는다.
+         */
+        uint32 _colorVisionMode{ 0 };
 
         /** @brief 비웁니다(용량은 남긴다 — 패킷 재사용, `RenderFramePacket::resetForFrame`). */
         void clear();

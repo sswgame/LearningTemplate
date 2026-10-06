@@ -141,7 +141,11 @@ namespace sw
         // --- 스타일 · 테마 ---------------------------------------------------------------
         /** @brief 스타일 시트 캐시입니다(기동 단계 `Ui` 가 에셋 캐시 등록부에 올린다). */
         UiStyleSheetCache& getStyleSheetCache() { return _styleSheetCache; }
-        /** @brief 고를 수 있는 테마를 겁니다(기동 단계 `Ui` — `engine/ui/uithemes.xml` · 게임 프리셋 `_uiThemes`). 기본 테마로 바꿉니다. */
+        /**
+         * @brief 고를 수 있는 테마를 겁니다(기동 단계 `Ui` — `engine/ui/uithemes.xml` · 게임 프리셋 `_uiThemes`).
+         * @details 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)의 테마가 목록에 있으면 그것, 없으면 목록의 기본 테마로 바꿉니다. 그 뒤 설정이 바뀌면
+         *          `update` 가 따라갑니다(모르는 이름이면 경고하고 지금 테마를 둔다).
+         */
         void                  setThemeCatalog( const UiThemeCatalog& catalog );
         const UiThemeCatalog& getThemeCatalog() const { return _themeCatalog; }
         /**
@@ -304,6 +308,8 @@ namespace sw
         const LocalizationManager* findLocalization() const;
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
         void paintScreens();
+        /** @brief 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)이 바뀌었으면 그 테마로 바꿉니다(빈 값 · 테마 목록이 없으면 그대로). */
+        void syncThemeSetting();
         /** @brief `gv_uiDemo` 를 따라 개발 시험 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 — 첫 버튼에 포커스 테두리). */
         void syncDemoScreen();
         /** @brief 닫기를 요청한 화면을 지웁니다. */
@@ -321,6 +327,7 @@ namespace sw
         UiStyleSheetCache            _styleSheetCache;
         UiThemeCatalog               _themeCatalog;
         hashed_string                _themeName;          ///< 지금 테마(없으면 빈 이름 — 문서 시트만)
+        string                       _themeSetting;       ///< 마지막으로 본 `gv_uiTheme` 값(바뀔 때만 테마를 고른다)
         vector<string>               _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면(다음 update 가 다시 연다)
         UiBindingConverterRegistry   _bindingConverters;
         UiFocusManager               _focus;
