@@ -1599,6 +1599,24 @@
        "description": "서비스(TCP — 로그인 · 채팅 · 거래) 포트입니다. 0 이면 서비스 서버를 열지 않습니다."
       },
       {
+       "name": "_opsPort",
+       "type": "int32",
+       "default": "0",
+       "min": "0",
+       "max": "65535",
+       "units": "",
+       "description": "운영 HTTP 끝점(`/metrics` · `/healthz` · `/readyz`, 평문 · 인증 없음) 포트입니다. 0 이면 열지 않습니다. 기본은 끔 — 한 기계에 서버 여럿(시험 · 개발)이 뜨면 고정 포트가 부딪친다. 운영 설정 파일이 켠다(Prometheus 관례 9100 대)."
+      },
+      {
+       "name": "_opsListenAddress",
+       "type": "string",
+       "default": "127.0.0.1",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "운영 끝점이 받을 주소입니다 — 기본 `127.0.0.1`(이 기계만). 스크레이퍼가 다른 기계면 사설 주소를 준다(공용 인터페이스에 열지 말 것)."
+      },
+      {
        "name": "_tickRateHz",
        "type": "int32",
        "default": "30",
