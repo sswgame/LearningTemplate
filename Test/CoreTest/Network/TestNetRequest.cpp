@@ -112,8 +112,8 @@ namespace
         {
             _serverSide._principalId = principalId;
             _serverSide._server.initialize( &_pair._server, serverSettings );
-            _serverSide._server.registerMethod( 1, &_echo );
-            _serverSide._server.registerMethod( 2, &_echo );
+            SW_EXPECT_TRUE( _serverSide._server.registerMethod( 1, &_echo ) );
+            SW_EXPECT_TRUE( _serverSide._server.registerMethod( 2, &_echo ) );
             _clientSide._client.initialize( &_pair._client );
             _pair.step( 2 );
         }

@@ -107,6 +107,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   회차를 저장소 조건부 쓰기로 차지해 서버 여럿 중 하나만, 지나친 회차는 최근 하나, 임대가 지나면 이어받기). `Online/Config`: 원격 설정 · 기능 플래그(`RemoteConfig` —
   저장소 정본 · 판 조건 바꾸기 + 감사 · 버스 알림, 계정 해시 출시 비율, 클라이언트 묶음 · 해시). 관측(지표 · 구조화 로그 · 요청 추적 id)은 서비스 틀의 요청 문맥이 자리다.
   `Online/Identity`: 신원 원형 — `AccountId` · `AccountIdentity` · `IAccountDirectory`(이 프로세스에 붙어 있는 계정, 발급은 계정 키트).
+  `Online/Service`: 서비스 틀 — 호스트(`OnlineServiceHost` — 스트림 끝점 · 요청 서버, 연결의 첫 요청 Hello 로 기반 · 키트 판 협상, 인증(계정 바인딩 — 익명 메서드만 로그인 없이) ·
+  주소 · 계정 토큰 버킷 · 몸 상한을 먼저 보고 영역을 맡은 `IOnlineService` 로, 계정 ↔ 연결 표로 알림 `sendPush` · `sendPushToAll`, 계정이 떠나면 서비스들에 `onAccountLeft`,
+  캐시 답 · 채널 메시지는 `EphemeralStoreRouter`(`Online/Cache`)로, 버스 메시지는 `subscribeServerBus` 한 서비스로 나눠 준다 — 호스트가 앞 · 버스의 유일한 소비자),
+  와이어 표(`OnlineProtocol.h` — 키트마다 메서드 영역 256 칸: 메서드 영역 + 0x00..0x7F · 알림 영역 + 0x80..0xFF, 공통 오류 코드), 클라이언트(`OnlineServiceClient` —
+  Hello · 모은 요청 · 알림 나누기 · 다시 연결(물러남), 자기 끝점 모드와 공유 끝점 모드(부하 시험 봇 — 끝점 하나에 연결 여럿)). 시험: `OnlineServiceHostTest` · `OnlineServiceTest` ·
+  `EphemeralStoreRouterTest`.
   `Online/Local`: 클라이언트 로컬 저장 계약 `ILocalStore`(슬롯 `save/slot0` → 바이트, 슬롯 하나 단위 원자 쓰기 · 묶음 나열, 맡기고 거둔다 — 서버 계약과 따로 좁게),
   모든 저장소가 같은 봉투(`LocalSlotEnvelope` — `SWLS` 머리 · 형식 판 · 코덱 · 봉인 None(CRC32) / Authenticated(AEAD 태그) / Encrypted(AEAD), 키 표시가 다르면 WrongKey),
   바닥 `ILocalSlotStorage`(파일 `FileLocalSlotStorage` — 임시 파일 → 이름 바꾸기 · 띄울 때 찌꺼기 지우기, 메모리 `MemoryLocalDatabase` — 쓰기 도중 꺼짐 주입) 위의 앞 둘

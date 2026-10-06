@@ -139,6 +139,7 @@ namespace sw
     /**
      * @class IEphemeralStore
      * @brief 휘발성 저장의 앞입니다 — 서비스 스레드 하나가 맡기고 거둔다. 구현: `MemoryEphemeralStore`(서버 한 대 · 시험), RESP 구현(GF_Server_CacheStore).
+     *        서비스는 `pollReplies` · `pollMessages` 를 부르지 않는다 — `host.getEphemeralRouter()`(앞 전체의 것을 꺼내므로 소비자가 둘이면 서로의 답을 가져간다).
      */
     class SW_GF_API IEphemeralStore
     {

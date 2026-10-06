@@ -203,9 +203,10 @@ namespace sw
         void initialize( StreamMessageEndpoint* pEndpoint, const NetRequestServerSettings& settings );
         void shutdown();
 
-        void registerMethod( uint16 method, INetRequestHandler* pHandler );
-        void unregisterMethod( uint16 method );
-        void setPrincipal( StreamConnectionHandle handle, uint64 principalId );
+        /** @brief 메서드에 처리기를 답니다. 이미 단 메서드면 오류 로그와 함께 false 이고 앞 처리기를 그대로 둔다(키트 둘이 같은 번호를 쓰는 조립). */
+        [[nodiscard]] bool registerMethod( uint16 method, INetRequestHandler* pHandler );
+        void               unregisterMethod( uint16 method );
+        void               setPrincipal( StreamConnectionHandle handle, uint64 principalId );
 
         /** @brief 답합니다(아무 스레드). 이미 답했으면 false — 연결이 닫혔어도 멱등 키가 있으면 응답은 기억한다(재시도가 받는다). */
         bool respond( const NetRequestToken& token, NetRequestStatus status, const uint8* pBody, int32 bodySize );

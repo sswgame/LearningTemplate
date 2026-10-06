@@ -29,6 +29,7 @@ namespace sw
     /**
      * @class IServerBus
      * @brief 서버 간 버스의 앞입니다 — 서비스 스레드 하나가 발행하고 틱마다 거둔다.
+     *        서비스는 `pollMessages` 를 부르지 않는다 — 호스트가 비우고 `subscribeServerBus` 한 서비스에 나눠 준다(소비자가 둘이면 서로의 메시지를 가져간다).
      */
     class SW_GF_API IServerBus
     {

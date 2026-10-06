@@ -316,10 +316,13 @@ namespace sw
         _listExpiry.clear();
     }
 
-    void NetRequestServer::registerMethod( uint16 method, INetRequestHandler* pHandler )
+    bool NetRequestServer::registerMethod( uint16 method, INetRequestHandler* pHandler )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _mapHandler[method] = pHandler;
+        const bool              bInserted = _mapHandler.emplace( method, pHandler ).second;
+        if ( bInserted == false )
+            SW_LOG_ERROR( "NetRequestServer: method %# is already registered - two handlers claim one method number", static_cast<uint32>( method ) );
+        return bInserted;
     }
 
     void NetRequestServer::unregisterMethod( uint16 method )

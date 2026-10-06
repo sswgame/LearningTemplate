@@ -203,8 +203,8 @@ cd build/Ninja-Debug/Bin
     NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이.
 - **키트 조립 — 남은 것(2026-10-06).** 틀 · 키트 전부 · 조립 시험 둘(`KitCompositionTest` — Farming + CreatureLife, RTS + CityBuilder)과 `MeadowVillage` 는
   들어갔다(규칙: `Source/GameFramework/README.md` "키트 여럿을 한 게임에"). 남은 것 — RTS 가 땅 리비전마다 땅 격자 전체를 다시 칠하는 비용(64 × 64 에서 재고
-  결정, 1-8), 둘째 조립(RTS + City)의 시험 게임(필요해지면 MeadowVillage 모양), 온라인 요청 메서드 번호 영역 · 로컬 지갑 = 원장 사본(kit-compose U20 — 온라인
-  사슬로 옮김). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `GameStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에
+  결정, 1-8), 둘째 조립(RTS + City)의 시험 게임(필요해지면 MeadowVillage 모양), 로컬 지갑 = 원장 사본(kit-compose U20 의 남은 반 — GF_Economy 가 생길 때
+  `applyLedgerBalances( Wallet& )` · `EconomyClientTest.LedgerResponseOverwritesTheLocalWallet`, 메서드 번호 영역 표는 `Online/Service/OnlineProtocol.h` 로 들어갔다). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `GameStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에
   `releaseLand`, 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다).
 
 - **카메라 — 프리셋 데이터 · 블렌드 · 시퀀서(사용자 승인 로드맵).** 1~3 단계(프리셋 XML · 블렌드 · 디렉터, 모드(직교 · 궤도 · 따라가기 · 1인칭 · 3인칭 ·
@@ -399,7 +399,7 @@ cd build/Ninja-Debug/Bin
   **들어간 기반**(`GameFramework/Base/Online/`): `Store`(영속 계약 `IServiceStore` — 비동기 일 · 트랜잭션 · 조건부 쓰기 · 멱등 기록, 메모리 구현 · 계약 시험) ·
   `Guard`(토큰 버킷 · 크기 상한) · `Identity`(`AccountId` · `IAccountDirectory`) · `Cache`(휘발성 계약 `IEphemeralStore` — 만료 · 원자 증감 · 임대 · 정렬 집합 · 발행/구독, 메모리 구현 · 계약 시험) ·
   `Audit`(감사 줄) · `Bus`(서버 간 버스 — 캐시 위 · 프로세스 안) · `Schedule`(예약 작업 — 회차 차지 · 임대 이어받기) · `Config`(원격 설정 · 기능 플래그 출시 비율).
-  남은 기반: 서비스 틀(캐시 답 · 버스 메시지를 요청 id · 주제별로 나눠 주기 — 그때까지 `EphemeralServerBus` 는 자기 캐시 앞을 혼자 쓴다) · 관측, PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
+  남은 기반: 관측(지표 · 구조화 로그 — 추적 id 자리는 `OnlineCallContext::_traceId`), `EphemeralServerBus` 를 호스트의 캐시 라우터 위로(지금은 자기 캐시 앞을 혼자 쓴다), PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
   계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
   **계정**: 서버 키트 `GF_Server_Account`(`Kits/Online/Server/Account`)에 로그인 서비스 본체(`LoginService` — 저장소 일로 맡기고 거둠 · `LoginStoreLogic` · `LoginTicketAuthority`)가 들어갔다.
   암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 남은 것: 공유 `GF_Account`(와이어 타입 · `AccountClient`) · 스트림 바인딩 · UDP 접속 인증기, 게스트 · 연동 · 제재.
@@ -1608,6 +1608,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
 
+- **캐시 앞 · 서버 버스의 소비자는 호스트 하나**(`OnlineServiceHost` — `getEphemeralRouter` · `subscribeServerBus`) — `IEphemeralStore::pollReplies` · `IServerBus::pollMessages` 는
+  앞 전체의 것을 꺼내므로 서비스 둘이 직접 부르면 서로의 답 · 메시지를 가져간다(가져간 쪽은 버리고 맡긴 쪽은 영원히 기다린다). 메서드 영역(키트마다 256 칸)이 겹치는 서비스는
+  `registerService` 가, 같은 메서드 번호는 `NetRequestServer::registerMethod` 가 거절한다(bool) — 덮어쓰면 한 키트의 요청이 다른 키트로 간다.
 - **캐시(RESP)는 Valkey · Garnet 공통 부분집합만 쓴다**(`GF_Server_CacheStore` README 의 명령 표) — Lua · `SELECT` · RESP3 · Redis 6.2+ 옵션을 쓰면 Garnet(윈도우 서버)에서 갈린다.
   계약 시험 `EphemeralStoreRespTest` 를 두 서버에 같이 돌려 지킨다. 서버가 없는 PC 는 가짜 RESP 서버(`FakeRespServer.h` — 루프백, 앞이 돌 때 같이 돈다)로 같은 계약을 돌린다.
   캐시는 잃어도 되는 것만 — 정본은 `IServiceStore`. 끊김을 보기 전에 맡긴 첫 요청은 `Unavailable` 이다(다시 맡기면 다시 연결한다).
