@@ -85,10 +85,6 @@ string.RepNotify = RepNotify
 flag.SaveGame = SaveGame
 # 시퀀서 값 트랙이 섞을 수 있다 — 실수 · 정수 · float2/3/4 · quaternion 만(그 밖의 타입은 파서 오류)
 flag.Interp = Interp
-# 설정 파일과 묶는다(`PropertyRoleUtil::collectConfigBindings`). 섹션 기본은 선언한 타입 이름, 키 기본은 프로퍼티 이름. 섹션 · 키를 적으면 Config 이기도 하다
-flag.Config = Config
-string.ConfigSection = ConfigSection
-string.ConfigKey = ConfigKey
 # 프로퍼티 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 문제는 context.addError · addWarning 으로 적는다
 string.Validate = Validate
 

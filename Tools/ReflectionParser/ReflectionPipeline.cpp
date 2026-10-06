@@ -96,7 +96,6 @@ namespace sw
                             {     prop._bReplicated,      "Replicated"},
                             {       prop._bSaveGame,        "SaveGame"},
                             {         prop._bInterp,          "Interp"},
-                            {         prop._bConfig,          "Config"},
                             {       prop._bColorHdr,        "ColorHdr"},
                             {      prop._bMultiline,       "Multiline"},
                         };
@@ -119,8 +118,6 @@ namespace sw
                             out.appendFormat( "  Validate=%#", prop._validate );
                         if ( prop._repNotify.empty() == false )
                             out.appendFormat( "  RepNotify=%#%#", prop._repNotify, prop._bRepNotifyTakesOldValue == SW_TRUE ? "(old)" : "()" );
-                        if ( prop._configSection.empty() == false || prop._configKey.empty() == false )
-                            out.appendFormat( "  Config=%#.%#", prop._configSection, prop._configKey );
                         for ( const string& alias : prop._listAlias )
                             out.appendFormat( "  alias=%#", alias );
                         out.append( "\n" );

@@ -98,10 +98,6 @@ namespace sw
         hashed_string _repNotify;
         /** @brief `Validate = fn` — 검증 함수 이름입니다(결과 메시지 · 문서용). 부르는 길은 `PropertyInfo::_pValidate` 입니다. */
         hashed_string _validate;
-        /** @brief `ConfigSection = "…"` — 비면 선언한 타입의 이름입니다(`PropertyRoleUtil::collectConfigBindings`). */
-        hashed_string _configSection;
-        /** @brief `ConfigKey = "…"` — 비면 프로퍼티 이름입니다. */
-        hashed_string _configKey;
         float32       _minRange;
         float32       _maxRange;
         /**
@@ -143,10 +139,8 @@ namespace sw
          */
         uint8 _bSaveGame : 1;
         /** @brief 시퀀서 값 트랙이 섞을 수 있습니다(`Interp` — 숫자 · float2/3/4 · quaternion 만, 파서가 막는다). */
-        uint8 _bInterp : 1;
-        /** @brief 설정 파일의 (섹션 · 키) 칸과 묶습니다(`Config` · `ConfigSection` · `ConfigKey`). */
-        uint8                  _bConfig       : 1;
-        [[maybe_unused]] uint8 _reservedRoles : 4;
+        uint8                  _bInterp       : 1;
+        [[maybe_unused]] uint8 _reservedRoles : 5;
 
         /** @brief 범위 · 플래그를 끈 기본값으로 만듭니다. */
         PropertyMetadata() noexcept;

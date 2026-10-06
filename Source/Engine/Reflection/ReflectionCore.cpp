@@ -158,8 +158,6 @@ namespace sw
         , _assetType{}
         , _repNotify{}
         , _validate{}
-        , _configSection{}
-        , _configKey{}
         , _minRange{ 0.0f }
         , _maxRange{ 1.0f }
         , _bHasMinRange{ SW_FALSE }
@@ -178,7 +176,6 @@ namespace sw
         , _bReplicated{ SW_FALSE }
         , _bSaveGame{ SW_FALSE }
         , _bInterp{ SW_FALSE }
-        , _bConfig{ SW_FALSE }
         , _reservedRoles{ 0 }
     {
     }

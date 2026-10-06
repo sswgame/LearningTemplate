@@ -108,29 +108,6 @@ namespace sw
         return true;
     }
 
-    void PropertyRoleUtil::collectConfigBindings( const TypeInfo& type, vector<ConfigPropertyBinding>& outListBinding )
-    {
-        outListBinding.clear();
-        const TypeInfo* arrChain[constants::reflection::kMaxParentChainDepth];
-        uint32          depth = type.collectTypeChain( arrChain );
-        // 기반부터 — 섹션 기본값은 그 프로퍼티를 **선언한** 타입의 이름이다(파생 타입이 아니다).
-        while ( depth > 0 )
-        {
-            --depth;
-            const TypeInfo& level = *arrChain[depth];
-            for ( const PropertyInfo& prop : level._listProperty )
-            {
-                if ( prop._metadata._bConfig == SW_FALSE )
-                    continue;
-                ConfigPropertyBinding binding;
-                binding._section   = prop._metadata._configSection.empty() ? level._name : prop._metadata._configSection;
-                binding._key       = prop._metadata._configKey.empty() ? prop._name : prop._metadata._configKey;
-                binding._pProperty = &prop;
-                outListBinding.push_back( binding );
-            }
-        }
-    }
-
     bool PropertyRoleUtil::isInterpolatable( const PropertyInfo& prop )
     {
         return PropertyRoleUtilInternal::findBlend( prop ) != nullptr;

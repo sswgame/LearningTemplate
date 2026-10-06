@@ -6,7 +6,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/String/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"
 
@@ -18,18 +17,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 설정 파일의 칸 하나와 프로퍼티의 짝입니다(`PROPERTY( Config, ConfigSection = …, ConfigKey = … )`). */
-    struct ConfigPropertyBinding
-    {
-        hashed_string       _section;   ///< 적지 않았으면 그 프로퍼티를 가진 타입의 이름
-        hashed_string       _key;       ///< 적지 않았으면 프로퍼티 이름
-        const PropertyInfo* _pProperty; ///< 값은 `getRawPtr` 로 읽고 쓴다(글로는 `SerializerUtil::applyPropertyText` · `valueToText`)
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 역할 플래그를 읽는 쪽(네트워크 · 세이브 · 시퀀서 · 설정)의 공통 도우미입니다. */
+    /** @brief 역할 플래그를 읽는 쪽(네트워크 · 세이브 · 시퀀서)의 공통 도우미입니다. */
     struct SW_API PropertyRoleUtil
     {
         // ------------------------------------------------------------------------------
@@ -45,13 +33,7 @@ namespace sw
         static bool callRepNotify( const PropertyInfo& prop, void* pInstance, const void* pOldValue );
 
         // ------------------------------------------------------------------------------
-        // 2) 설정 — Config
-        // ------------------------------------------------------------------------------
-        /** @brief 상속분까지 `Config` 프로퍼티의 (섹션 · 키) 짝을 모읍니다. 섹션 · 키를 적지 않았으면 타입 이름 · 프로퍼티 이름입니다. */
-        static void collectConfigBindings( const TypeInfo& type, vector<ConfigPropertyBinding>& outListBinding );
-
-        // ------------------------------------------------------------------------------
-        // 3) 시퀀서 — Interp
+        // 2) 시퀀서 — Interp
         // ------------------------------------------------------------------------------
         /** @brief 값 트랙이 섞을 수 있는 타입(실수 · 정수 · float2/3/4 · quaternion)인지 봅니다. 비트필드 · 컨테이너는 아닙니다. */
         static bool isInterpolatable( const PropertyInfo& prop );

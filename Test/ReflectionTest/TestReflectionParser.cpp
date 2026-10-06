@@ -1633,7 +1633,7 @@ SW_TEST_CASE( ReflectionParserTest, PropertyRoleAnnotationsAreValidated )
     };
     sw::vector<TempHeader> listHeader;
     listHeader.push_back( TempHeader{ "RoleGoodSample", makeHeader( "RoleGoodSampleActor", "\t\tPROPERTY( RepNotify = onHp, SaveGame )\n\t\tint32 _hp;\n"
-                                                                                           "\t\tPROPERTY( RepNotify = onMp, ConfigSection = \"Stats\" )\n\t\tint32 _mp;\n"
+                                                                                           "\t\tPROPERTY( RepNotify = onMp )\n\t\tint32 _mp;\n"
                                                                                            "\t\tvoid onHp( const int32& oldValue ) {}\n"
                                                                                            "\t\tvoid onMp() {}\n" ) } );
     listHeader.push_back( TempHeader{ "RoleMissingSample", makeHeader( "RoleMissingSampleActor", "\t\tPROPERTY( RepNotify = onNothing )\n\t\tint32 _hp;\n" ) } );
@@ -1648,8 +1648,6 @@ SW_TEST_CASE( ReflectionParserTest, PropertyRoleAnnotationsAreValidated )
     SW_EXPECT_TRUE_MSG( generated.find( "->onMp(); };" ) != sw::string::npos, generated.c_str() );
     SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bReplicated = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
     SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bSaveGame = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
-    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._configSection = \"Stats\";" ) != sw::string::npos, generated.c_str() );
-    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bConfig = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
 
     SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
     for ( size_t brokenIndex = 1; brokenIndex < 4; ++brokenIndex )

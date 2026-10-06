@@ -61,8 +61,6 @@ namespace sw
         string                          _assetType;
         string                          _repNotify;     ///< `RepNotify = fn` — 같은 타입의 메서드 이름(모양은 `validateMemberFunctions` 가 본다)
         string                          _validate;      ///< `Validate = fn` — 같은 타입의 `void fn( ValidationContext& )`
-        string                          _configSection; ///< `ConfigSection = "…"`
-        string                          _configKey;     ///< `ConfigKey = "…"`
         string                          _editCondition; ///< `EditCondition = "…"` — 식은 런타임(`PropertyEditCondition`)이 푼다
         string                          _fileFilter;    ///< `FileFilter = "*.png;*.dds"`
         string                          _units;         ///< `Units = m` — 단위 표(`ReflectUnits.h`)에 있어야 한다. 커스텀 메타 `Units` 로 실린다
@@ -96,7 +94,6 @@ namespace sw
         uint8 _bReplicated : 1;
         uint8 _bSaveGame   : 1;
         uint8 _bInterp     : 1;
-        uint8 _bConfig     : 1;
         /** @brief `RepNotify` 함수가 이전 값을 받는다(`void fn( const T& )`). 선언에서 온 사실이다(애노테이션 줄이 아니다). */
         uint8                   _bRepNotifyTakesOldValue : 1;
         uint8                   _bHasUiMinRange          : 1;
@@ -119,8 +116,6 @@ namespace sw
             , _assetType{}
             , _repNotify{}
             , _validate{}
-            , _configSection{}
-            , _configKey{}
             , _editCondition{}
             , _fileFilter{}
             , _units{}
@@ -149,7 +144,6 @@ namespace sw
             , _bReplicated{ SW_FALSE }
             , _bSaveGame{ SW_FALSE }
             , _bInterp{ SW_FALSE }
-            , _bConfig{ SW_FALSE }
             , _bRepNotifyTakesOldValue{ SW_FALSE }
             , _bHasUiMinRange{ SW_FALSE }
             , _bHasUiMaxRange{ SW_FALSE }
