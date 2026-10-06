@@ -11,12 +11,12 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-#include "GameFramework/Camera/CameraBlend.h"
-#include "GameFramework/Camera/CameraDirector.h"
-#include "GameFramework/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Camera/CameraPreset.h"
-#include "GameFramework/Camera/OrthoCameraRigComponent.h"
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Camera/CameraBlend.h"
+#include "GameFramework/Base/Camera/CameraDirector.h"
+#include "GameFramework/Base/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Base/Camera/CameraPreset.h"
+#include "GameFramework/Base/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -123,12 +123,12 @@ SW_TEST_CASE( CameraPresetTest, BlendPosesTakesTheShortArcAndSwitchesProjectionA
 {
     CameraPose from;
     from._position      = float3{ 0.0f, 0.0f, 0.0f };
-    from._rotation      = quaternion::createFromYawPitchRoll( 170.0f * MathUtil::DegreeToRadian, 0.0f, 0.0f );
+    from._rotation      = quaternion::createFromYawPitchRoll( 170.0f * MathUtil::kDegreeToRadian, 0.0f, 0.0f );
     from._fieldOfViewY  = 1.0f;
     from._bOrthographic = SW_TRUE;
     CameraPose to;
     to._position      = float3{ 10.0f, 4.0f, -2.0f };
-    to._rotation      = quaternion::createFromYawPitchRoll( -170.0f * MathUtil::DegreeToRadian, 0.0f, 0.0f );
+    to._rotation      = quaternion::createFromYawPitchRoll( -170.0f * MathUtil::kDegreeToRadian, 0.0f, 0.0f );
     to._fieldOfViewY  = 2.0f;
     to._bOrthographic = SW_FALSE;
 
@@ -158,11 +158,11 @@ SW_TEST_CASE( CameraPresetTest, PresetModesProduceKnownPoses )
 {
     CameraTarget target;
     target._focus = float3{ 1.0f, 0.0f, 2.0f };
-    target._yaw   = MathUtil::HalfPi; // +X 를 본다
+    target._yaw   = MathUtil::kHalfPi; // +X 를 본다
 
     CameraPresetDef orbit;
     orbit._view._mode          = CameraPresetMode::Orbit;
-    orbit._view._pitch         = 30.0f * MathUtil::DegreeToRadian;
+    orbit._view._pitch         = 30.0f * MathUtil::kDegreeToRadian;
     orbit._view._distance      = 10.0f;
     const CameraPose orbitPose = evaluatePreset( orbit, target );
     SW_EXPECT_NEAR_EQUAL( 1.0f, orbitPose._position._x, 1.0e-4f );
@@ -176,7 +176,7 @@ SW_TEST_CASE( CameraPresetTest, PresetModesProduceKnownPoses )
 
     CameraPresetDef topDown           = orbit;
     topDown._view._mode               = CameraPresetMode::OrthoTopDown;
-    topDown._view._yaw                = 45.0f * MathUtil::DegreeToRadian;
+    topDown._view._yaw                = 45.0f * MathUtil::kDegreeToRadian;
     topDown._view._distance           = 250.0f;
     const CameraPose      topDownPose = evaluatePreset( topDown, target );
     const OrthoCameraView rigView     = OrthoCameraRigMath::computeView( target._focus, topDown._view._yaw, topDown._view._pitch, 250.0f );
@@ -196,7 +196,7 @@ SW_TEST_CASE( CameraPresetTest, PresetModesProduceKnownPoses )
     CameraPresetDef firstPerson;
     firstPerson._view._mode   = CameraPresetMode::FirstPerson;
     firstPerson._view._offset = float3{ 0.0f, 1.7f, 0.5f };
-    target._pitch             = 10.0f * MathUtil::DegreeToRadian;
+    target._pitch             = 10.0f * MathUtil::kDegreeToRadian;
     const CameraPose eyePose  = evaluatePreset( firstPerson, target );
     SW_EXPECT_NEAR_EQUAL( 1.5f, eyePose._position._x, 1.0e-4f ); // 앞 0.5 가 +X 로 돌았다
     SW_EXPECT_NEAR_EQUAL( 1.7f, eyePose._position._y, 1.0e-4f );
@@ -262,11 +262,11 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
     const CameraPresetDef* pA = catalog.findPreset( "a" );
     SW_ASSERT_NOT_NULL( pA );
     SW_EXPECT_TRUE( pA->_view._mode == CameraPresetMode::Orbit );
-    SW_EXPECT_NEAR_EQUAL( 30.0f * MathUtil::DegreeToRadian, pA->_view._pitch, 1.0e-5f );
-    SW_EXPECT_NEAR_EQUAL( MathUtil::HalfPi, pA->_view._yaw, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 30.0f * MathUtil::kDegreeToRadian, pA->_view._pitch, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::kHalfPi, pA->_view._yaw, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 12.0f, pA->_view._distance, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pA->_view._offset._y, 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 60.0f * MathUtil::DegreeToRadian, pA->_lens._fieldOfViewY, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 60.0f * MathUtil::kDegreeToRadian, pA->_lens._fieldOfViewY, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 300.0f, pA->_lens._farPlane, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.3f, pA->_damping._positionTime, 1.0e-6f );
     SW_EXPECT_TRUE( pA->_blendIn._curve == BlendCurve::EaseIn );
@@ -368,7 +368,7 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentDrivesItsCamera )
     CameraDirectorComponent* pDirector    = pCameraObject->addComponent<CameraDirectorComponent>();
     SW_ASSERT_TRUE( pTargetScene != nullptr && pCamera != nullptr && pDirector != nullptr );
     pTargetScene->setLocalPosition( float3{ 3.0f, 0.0f, 4.0f } );
-    pTargetScene->setLocalRotation( float3{ 0.0f, MathUtil::HalfPi, 0.0f } );
+    pTargetScene->setLocalRotation( float3{ 0.0f, MathUtil::kHalfPi, 0.0f } );
 
     SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXmlText( R"(<CameraPresets>
         <Preset id="behind"><View mode="Follow" pitch="0" distance="5" offset="0 2 0"/><Lens fieldOfViewY="60" far="400"/></Preset>
@@ -380,7 +380,7 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentDrivesItsCamera )
 
     SW_EXPECT_TRUE( pDirector->getActivePresetId() == hashed_string( "behind" ) );
     SW_EXPECT_FALSE( pCamera->isOrthographic() );
-    SW_EXPECT_NEAR_EQUAL( 60.0f * MathUtil::DegreeToRadian, pCamera->getFieldOfViewY(), 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 60.0f * MathUtil::kDegreeToRadian, pCamera->getFieldOfViewY(), 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 400.0f, pCamera->getFarPlane(), 1.0e-4f );
     const float3 behind = pCamera->getWorldPosition(); // 대상이 +X 를 보니 뒤는 −X
     SW_EXPECT_NEAR_EQUAL( 3.0f - 5.0f, behind._x, 1.0e-3f );

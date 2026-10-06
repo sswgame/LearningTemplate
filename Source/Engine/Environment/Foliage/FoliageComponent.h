@@ -96,6 +96,8 @@ namespace sw
         void onPostLoad() override;
         void onBeginPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
+        /** @brief 소유 오브젝트를 켜고 끄면 셀 배치를 더티로 — 빌더가 다시 본다. */
+        void onOwnerActiveInHierarchyChanged() override;
         void onTick( float32 deltaTime ) override;
 
         /** @brief 배치를 다시 계산하고 셀 배치를 다시 만듭니다. 등록 전이면 아무것도 하지 않습니다. */
@@ -132,6 +134,8 @@ namespace sw
 
         /** @brief 배치를 계산할 평면 사각형입니다 — 크기가 0 이면 아래 지형 전체, 지형도 없으면 빈 사각형입니다. */
         PlacementRegion computeRegion() const;
+        /** @brief 셀 배치 모두를 더티로 — 활성이 바뀌었을 때. */
+        void markCellsDirty();
         /** @brief 셀 배치를 모두 등록부에서 빼고 놓습니다. */
         void releaseCells();
 

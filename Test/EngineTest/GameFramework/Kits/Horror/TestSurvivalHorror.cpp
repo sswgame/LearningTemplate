@@ -2,11 +2,16 @@
 // 정신력(어둠 · 괴물 목격 · 환각 · 조준 흔들림)과 손전등 배터리, 열쇠 문 · 다이얼 · 순서 퍼즐, 단서 보드 추리, 턴제 초자연 전투의 결정성.
 #include "pch.h"
 
-#include "GameFramework/Inventory/GridInventory.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/GridInventory.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/World/AreaGraph.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorEncounter.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorSession.h"
-#include "GameFramework/World/AreaGraph.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -14,6 +19,23 @@ using namespace sw;
 
 namespace
 {
+    /** @brief 세션이 빌리는 그릇 — 격자 가방(게임이 든다)과 아이템 상자(세계 보관함)입니다. */
+    struct HorrorTestContainers
+    {
+        GridInventory _grid;
+        Inventory     _box;
+        GameFlags     _flags; ///< 빌려 주는 플래그
+
+        HorrorTestContainers() { _box.initialize( nullptr, 32 ); }
+
+        GameStateRefs makeRefs()
+        {
+            GameStateRefs refs;
+            refs._pFlags = &_flags;
+            return refs;
+        }
+    };
+
     constexpr const utf8* kHorrorTestXml = R"(
 <HorrorCatalog>
   <Rules saveMode="InkRibbon" gridWidth="4" gridHeight="2" maxSanity="100" darknessDrain="10" sanityRegen="5" sanityRegenDelay="2"
@@ -157,8 +179,9 @@ SW_TEST_CASE( SurvivalHorrorTest, ItemBoxAndCombineRollBackWhenTheResultHasNoRoo
 {
     HorrorCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
-    HorrorSession session;
-    session.initialize( &catalog, nullptr, hashed_string() );
+    HorrorSession        session;
+    HorrorTestContainers sessionContainers;
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
     GridInventory& grid = session.getInventory();
     SW_EXPECT_EQUAL( 2, grid.addItem( "herbGreen", 2 ) ); // (0,0) (1,0)
     SW_EXPECT_EQUAL( 1, grid.addItem( "herbRed", 1 ) );   // (2,0)
@@ -187,20 +210,21 @@ SW_TEST_CASE( SurvivalHorrorTest, ItemBoxAndCombineRollBackWhenTheResultHasNoRoo
         if ( junkInstance > 0 && grid.findInstance( junkInstance )->_itemId == hashed_string( "junk" ) )
             SW_EXPECT_TRUE( session.storeInBox( junkInstance, 1 ) );
     }
-    SW_EXPECT_EQUAL( 4, session.getItemBox().getItemCount( "junk" ) );
+    SW_EXPECT_EQUAL( 4, sessionContainers._box.getItemCount( "junk" ) );
     SW_EXPECT_FALSE( session.storeInBox( grid.findInstanceAt( 3, 0 ), 2 ) ); // 한 개뿐인 자리에서 둘은 못 맡긴다
     SW_EXPECT_TRUE( session.combineItems( grid.findInstanceAt( 0, 0 ), grid.findInstanceAt( 1, 0 ) ) );
     SW_EXPECT_EQUAL( 1, grid.getItemCount( "herbSuper" ) );
     SW_EXPECT_EQUAL( 3, session.takeFromBox( "junk", 4 ) ); // 2x2 가 왼쪽 네 칸을 차지해 세 칸만 남았다 — 하나는 상자에 남는다
-    SW_EXPECT_EQUAL( 1, session.getItemBox().getItemCount( "junk" ) );
+    SW_EXPECT_EQUAL( 1, sessionContainers._box.getItemCount( "junk" ) );
 }
 
 SW_TEST_CASE( SurvivalHorrorTest, SavesNeedInkRibbonsOrRespectTheLimitAndAmmoIsScarce )
 {
     HorrorCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
-    HorrorSession session;
-    session.initialize( &catalog, nullptr, hashed_string() );
+    HorrorSession        session;
+    HorrorTestContainers sessionContainers;
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
     SW_EXPECT_TRUE( session.trySave() == HorrorSaveResult::NoSaveItem );
     SW_EXPECT_EQUAL( 2, session.getInventory().addItem( "ribbon", 2 ) );
     SW_EXPECT_TRUE( session.trySave() == HorrorSaveResult::Ok );
@@ -213,8 +237,9 @@ SW_TEST_CASE( SurvivalHorrorTest, SavesNeedInkRibbonsOrRespectTheLimitAndAmmoIsS
     rules._saveMode                    = HorrorSaveMode::Limited;
     rules._maxSaves                    = 1;
     limitedCatalog.setRules( rules );
-    HorrorSession limited;
-    limited.initialize( &limitedCatalog, nullptr, hashed_string() );
+    HorrorSession        limited;
+    HorrorTestContainers limitedContainers;
+    limited.initialize( &limitedCatalog, nullptr, hashed_string(), limitedContainers.makeRefs(), limitedContainers._grid, limitedContainers._box );
     SW_EXPECT_TRUE( limited.trySave() == HorrorSaveResult::Ok );
     SW_EXPECT_TRUE( limited.trySave() == HorrorSaveResult::NoSavesLeft );
 
@@ -236,8 +261,9 @@ SW_TEST_CASE( SurvivalHorrorTest, SanityFallsInDarknessAndSightingsWhileTheFlash
 {
     HorrorCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
-    HorrorSession session;
-    session.initialize( &catalog, nullptr, hashed_string() );
+    HorrorSession        session;
+    HorrorTestContainers sessionContainers;
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
     vector<SurvivalHorrorEvent> listEvent;
 
     // 괴물 목격: 처음은 전부, 다시 보면 배율(0.25)만큼.
@@ -289,8 +315,9 @@ SW_TEST_CASE( SurvivalHorrorTest, KeysDialsAndSequencesOpenTheMansionThroughArea
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
     AreaGraph areaGraph;
     SW_ASSERT_TRUE( areaGraph.loadFromXmlText( kHorrorAreaXml, "SurvivalHorrorTest" ) );
-    HorrorSession session;
-    session.initialize( &catalog, &areaGraph, "hall" );
+    HorrorSession        session;
+    HorrorTestContainers sessionContainers;
+    session.initialize( &catalog, &areaGraph, "hall", sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
     SW_EXPECT_TRUE( areaGraph.isVisited( "hall" ) );
 
     SW_EXPECT_TRUE( session.tryMoveTo( "dining" ) );
@@ -311,7 +338,7 @@ SW_TEST_CASE( SurvivalHorrorTest, KeysDialsAndSequencesOpenTheMansionThroughArea
     SW_EXPECT_TRUE( session.enterDialCode( "locker", vector<int32>{ 1, 1 } ) == HorrorPuzzleResult::Wrong );
     SW_EXPECT_TRUE( session.enterDialCode( "locker", vector<int32>{ 1, 2 } ) == HorrorPuzzleResult::LockedOut );
     SW_EXPECT_TRUE( session.enterDialCode( "locker", vector<int32>{ 9, 9 } ) == HorrorPuzzleResult::LockedOut );
-    SW_EXPECT_FALSE( session.getFlags().hasFlag( "lockerOpen" ) );
+    SW_EXPECT_FALSE( sessionContainers._flags.hasFlag( "lockerOpen" ) );
     SW_EXPECT_FALSE( session.tryMoveTo( "vault" ) ); // 종 퍼즐이 아직이다
 
     // 순서 퍼즐: 틀리면 처음부터, 벌칙으로 정신력 5.
@@ -330,8 +357,9 @@ SW_TEST_CASE( SurvivalHorrorTest, ClueBoardDeductionNeedsTheRightLinksAndPunishe
 {
     HorrorCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
-    HorrorSession session;
-    session.initialize( &catalog, nullptr, hashed_string() );
+    HorrorSession        session;
+    HorrorTestContainers sessionContainers;
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
 
     SW_EXPECT_TRUE( session.readDocument( "diary" ) );
     SW_EXPECT_FALSE( session.readDocument( "diary" ) ); // 두 번째는 새 단서가 없다
@@ -359,7 +387,7 @@ SW_TEST_CASE( SurvivalHorrorTest, ClueBoardDeductionNeedsTheRightLinksAndPunishe
     SW_EXPECT_TRUE( session.unlinkClues( "pantry", "gloves" ) );
     SW_EXPECT_TRUE( session.linkClues( "gloves", "pantry" ) );
     SW_EXPECT_TRUE( session.submitDeduction( "culprit", "butler" ) == HorrorPuzzleResult::Solved );
-    SW_EXPECT_TRUE( session.getFlags().hasFlag( "caseSolved" ) );
+    SW_EXPECT_TRUE( sessionContainers._flags.hasFlag( "caseSolved" ) );
     SW_EXPECT_TRUE( session.submitDeduction( "culprit", "maid" ) == HorrorPuzzleResult::AlreadySolved );
     SW_EXPECT_NEAR_EQUAL( 70.0f, session.getSanity().getValue(), 1.0e-4f );
 }
@@ -417,4 +445,143 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
         (void)hopeless.playNextTurn();
     SW_EXPECT_TRUE( hopeless.getState() == HorrorEncounterState::Defeat );
     SW_EXPECT_EQUAL( 4, hopeless.getMonsterToughness() );
+}
+
+/**
+ * @brief [SurvivalHorrorTest] 상태 바이트로 되살린 세션이 같은 조사를 잇는다 — 정신력 · 배터리 · 본 괴물 · 단서 · 시도 · 진행이 같은 바이트(집합 · 맵은 이름 순)이고,
+ *        같은 걸음을 둘 다 더 돌려도 같은 바이트다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameSession )
+{
+    HorrorCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    HorrorSession        session;
+    HorrorTestContainers sessionContainers;
+    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
+    (void)session.witnessMonster( "zombie" );
+    (void)session.witnessMonster( "elder" );
+    SW_EXPECT_TRUE( session.readDocument( "diary" ) );
+    SW_EXPECT_TRUE( session.readDocument( "note" ) );
+    SW_EXPECT_TRUE( session.linkClues( "knife", "gloves" ) );
+    SW_EXPECT_TRUE( session.enterDialCode( "safe", vector<int32>{ 1, 2, 3 } ) == HorrorPuzzleResult::Wrong );
+    SW_EXPECT_TRUE( session.enterDialCode( "locker", vector<int32>{ 1, 1 } ) == HorrorPuzzleResult::Wrong );
+    SW_EXPECT_TRUE( session.pressSequenceStep( "bells", "low" ) == HorrorPuzzleResult::Progress );
+    SW_EXPECT_TRUE( session.trySetFlashlight( true ) );
+    session.update( 1.0f, true );
+
+    Archive written;
+    session.writeState( written );
+    HorrorSession        restored;
+    HorrorTestContainers restoredContainers;
+    restored.initialize( &catalog, nullptr, hashed_string(), restoredContainers.makeRefs(), restoredContainers._grid, restoredContainers._box );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    Archive rewritten;
+    restored.writeState( rewritten );
+    vector<uint8> originalBytes;
+    vector<uint8> restoredBytes;
+    written.writeData( originalBytes );
+    rewritten.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+    SW_EXPECT_TRUE( restored.hasClue( "pantry" ) );
+    SW_EXPECT_TRUE( restored.isLinked( "gloves", "knife" ) );
+    SW_EXPECT_TRUE( restored.isFlashlightOn() );
+    SW_EXPECT_TRUE( restored.isHallucinating() == session.isHallucinating() );
+    SW_EXPECT_NEAR_EQUAL( session.getSanity().getValue(), restored.getSanity().getValue(), 1.0e-4f );
+
+    // 같은 걸음을 둘 다 — 다시 본 괴물은 배율만, 순서 퍼즐은 이어서, 다이얼은 남은 횟수로, 어둠과 배터리가 흐른다.
+    for ( HorrorSession* pSession : { &session, &restored } )
+    {
+        SW_EXPECT_NEAR_EQUAL( 7.5f, pSession->witnessMonster( "zombie" ), 1.0e-4f );
+        SW_EXPECT_TRUE( pSession->pressSequenceStep( "bells", "high" ) == HorrorPuzzleResult::Progress );
+        SW_EXPECT_TRUE( pSession->enterDialCode( "locker", vector<int32>{ 1, 2 } ) == HorrorPuzzleResult::LockedOut );
+        for ( int32 second = 0; second < 12; ++second )
+            pSession->update( 1.0f, true );
+    }
+    SW_EXPECT_FALSE( restored.isFlashlightOn() ); // 배터리가 이어져 같은 때에 꺼졌다
+    Archive afterOriginal;
+    Archive afterRestored;
+    session.writeState( afterOriginal );
+    restored.writeState( afterRestored );
+    afterOriginal.writeData( originalBytes );
+    afterRestored.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+
+    HorrorSession        truncated;
+    HorrorTestContainers truncatedContainers;
+    truncated.initialize( &catalog, nullptr, hashed_string(), truncatedContainers.makeRefs(), truncatedContainers._grid, truncatedContainers._box );
+    Archive cut( written.getData(), written.getSize() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_FALSE( truncated.hasClue( "knife" ) );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, truncated.getSanity().getValue(), 1.0e-4f );
+}
+
+/**
+ * @brief [SurvivalHorrorTest] 상태 바이트로 되살린 전투가 같은 전투를 잇는다 — 조사자 · 차례 · 난수 · 강인함이 같은 바이트이고 남은 차례가 같은 결과를 낸다.
+ *        다른 괴물로 연 전투와 잘린 바이트는 거절한다
+ */
+SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
+{
+    HorrorCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    const HorrorMonsterDef* pZombie = catalog.findMonster( "zombie" );
+    const HorrorMonsterDef* pElder  = catalog.findMonster( "elder" );
+    SW_ASSERT_NOT_NULL( pZombie );
+    SW_ASSERT_NOT_NULL( pElder );
+    vector<HorrorInvestigator> listInvestigator( 2 );
+    listInvestigator[0]._actorId = 1;
+    listInvestigator[0]._health  = 4;
+    listInvestigator[1]._actorId = 2;
+    listInvestigator[1]._health  = 3;
+
+    HorrorEncounter encounter;
+    encounter.initialize( *pZombie, listInvestigator, 77u );
+    for ( int32 turn = 0; turn < 3; ++turn )
+        (void)encounter.playNextTurn();
+
+    Archive written;
+    encounter.writeState( written );
+    HorrorEncounter restored;
+    restored.initialize( *pZombie, listInvestigator, 1u );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    Archive rewritten;
+    restored.writeState( rewritten );
+    vector<uint8> originalBytes;
+    vector<uint8> restoredBytes;
+    written.writeData( originalBytes );
+    rewritten.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+    SW_EXPECT_EQUAL( 3, restored.getTurnCount() );
+
+    // 남은 차례를 둘 다 — 차례마다 같은 결과로 같은 끝에 닿는다.
+    for ( int32 turn = 0; turn < 200 && encounter.getState() == HorrorEncounterState::Ongoing; ++turn )
+    {
+        const HorrorTurnResult original = encounter.playNextTurn();
+        const HorrorTurnResult next     = restored.playNextTurn();
+        SW_EXPECT_EQUAL( original._actorId, next._actorId );
+        SW_EXPECT_EQUAL( original._combatSuccesses, next._combatSuccesses );
+        SW_EXPECT_EQUAL( original._horrorSuccesses, next._horrorSuccesses );
+        SW_EXPECT_EQUAL( original._targetId, next._targetId );
+    }
+    SW_EXPECT_TRUE( encounter.getState() == restored.getState() );
+    Archive afterOriginal;
+    Archive afterRestored;
+    encounter.writeState( afterOriginal );
+    restored.writeState( afterRestored );
+    afterOriginal.writeData( originalBytes );
+    afterRestored.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+
+    HorrorEncounter other;
+    other.initialize( *pElder, listInvestigator, 1u );
+    Archive otherReader( written.getData(), written.getSize() );
+    SW_EXPECT_FALSE( other.readState( otherReader ) );
+    HorrorEncounter truncated;
+    truncated.initialize( *pZombie, listInvestigator, 1u );
+    Archive cut( written.getData(), written.getSize() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_EQUAL( 0, truncated.getTurnCount() );
 }

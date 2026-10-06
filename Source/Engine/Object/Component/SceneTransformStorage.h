@@ -3,6 +3,7 @@
  * @brief 씬 컴포넌트 트랜스폼 값(로컬 TRS · 월드 행렬 · LWC)의 전역 저장소입니다. 값마다 연속 배열이고, 컴포넌트는 칸 번호와 페이지만 듭니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
@@ -64,14 +65,14 @@ namespace sw
         }
         /**
          * @brief 로컬 값 하나를 씁니다. 지금 값과 거의 같으면 쓰지 않고 false 입니다.
-         * @details **제곱 거리에는 제곱한 허용치를 씁니다.** `Epsilon` 을 그대로 대면 실제 거리 1e-3 까지가 "안 움직였다" 가 되는데, 비교
+         * @details **제곱 거리에는 제곱한 허용치를 씁니다.** `kEpsilon` 을 그대로 대면 실제 거리 1e-3 까지가 "안 움직였다" 가 되는데, 비교
          *          기준이 매번 **지금 값**이라 그 아래 움직임은 쌓이지도 않습니다 — 한 프레임에 1e-3 보다 조금씩 가는 물체는 영원히 제자리에
          *          있게 됩니다. 세터 · 틱 뒤 적용 · 배치 쓰기가 모두 이 규칙 하나를 씁니다.
          */
         [[nodiscard]] bool writeLocalValue( uint32 pageIndex, uint8 bit, const float3& value )
         {
             float3& current = getLocalValueRef( pageIndex, bit );
-            if ( float3::getDistanceSquared( current, value ) <= MathUtil::EpsilonSquared )
+            if ( float3::getDistanceSquared( current, value ) <= MathUtil::kEpsilonSquared )
                 return false;
             current = value;
             return true;
@@ -117,9 +118,9 @@ namespace sw
     {
     public:
         /** @brief 칸이 없음을 나타냅니다. */
-        static constexpr uint32 kInvalidSlot = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidSlot = invalid_index::kUint32;
         /** @brief 칸에 렌더 프리미티브가 없음을 나타냅니다(`SceneTransformPage::_arrPrimitiveIndex`). */
-        static constexpr uint32 kNoPrimitive = 0xFFFFFFFFu;
+        static constexpr uint32 kNoPrimitive = invalid_index::kUint32;
         /**
          * @brief 페이지 표의 칸 수입니다. 페이지 16384 × 칸 256 = 씬 컴포넌트 약 400만 개까지입니다.
          * @details 오브젝트 표(`GameObjectManager` 의 id 표)가 약 100만 개에서 끝나므로 오브젝트마다 씬 컴포넌트 넷이 넘어야 닿습니다.

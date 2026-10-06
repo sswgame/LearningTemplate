@@ -7,23 +7,25 @@
  *          나뉘지만, 그래프는 "어디로 이어지는가" 를, 이 카탈로그는 "무엇으로 여는가" 를 적습니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Data/GameCatalog.h"
-#include "GameFramework/Data/XmlCatalog.h"
+#include "GameFramework/Base/Data/GameCatalog.h"
+#include "GameFramework/Base/Data/XmlCatalog.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
+    class Archive;
     class AreaGraph;
     class GameFlags;
-    class ItemBag;
+    class ItemStackList;
     class XmlNode;
 
     /** @brief 문이 무엇으로 열리는가입니다. */
@@ -38,7 +40,7 @@ namespace sw
     struct AdventureDoorDef
     {
         hashed_string     _id{};
-        hashed_string     _flag{};     ///< 비면 id
+        hashed_string     _flag{};     ///< 비면 `door.<id>`
         string            _requires{}; ///< `Condition` 문의 조건식
         AdventureDoorKind _kind{ AdventureDoorKind::SmallKey };
     };
@@ -52,7 +54,7 @@ namespace sw
         hashed_string _id{};
         hashed_string _area{}; ///< 놓인 방(나침반이 지도에 찍는다)
         hashed_string _item{};
-        hashed_string _flag{}; ///< 열린 상자 — 비면 id
+        hashed_string _flag{}; ///< 열린 상자 — 비면 `treasure.<id>`
         int32         _count{ 1 };
     };
 } // namespace sw
@@ -72,7 +74,7 @@ namespace sw
     struct AdventureDeviceDef
     {
         hashed_string       _id{};
-        hashed_string       _flag{}; ///< 비면 id
+        hashed_string       _flag{}; ///< 비면 `device.<id>`
         float32             _duration{ 0.0f };
         int32               _torchCount{ 1 };
         AdventureDeviceKind _kind{ AdventureDeviceKind::Switch };
@@ -182,6 +184,9 @@ namespace sw
     class SW_GF_API AdventureDungeonState
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "ADGN" );
+        static constexpr uint32 kStateVersion = 1;
+
         AdventureDungeonState();
 
         void initialize( const AdventureDungeonCatalog* pCatalog );
@@ -194,7 +199,7 @@ namespace sw
          * @brief 상자를 엽니다. 던전 아이템(작은 열쇠 · 보스 열쇠 · 지도 · 나침반)은 여기서 거두고 나머지는 @p outReward 에 더합니다.
          * @return 처음 열었으면 true(모르는 상자 · 이미 연 상자는 false).
          */
-        [[nodiscard]] bool openTreasure( const hashed_string& dungeonId, const hashed_string& treasureId, GameFlags& flags, ItemBag& outReward );
+        [[nodiscard]] bool openTreasure( const hashed_string& dungeonId, const hashed_string& treasureId, GameFlags& flags, ItemStackList& outReward );
         /** @brief 지도가 있으면 던전 지역의 방을 모두 드러냅니다. 새로 드러난 수입니다(지도가 없으면 0). */
         int32 revealMap( const hashed_string& dungeonId, AreaGraph& areaGraph ) const;
         /** @brief 나침반이 있으면 아직 열지 않은 상자들입니다(없으면 비운다). */
@@ -214,6 +219,14 @@ namespace sw
         const AdventureDungeonProgress* findProgress( const hashed_string& dungeonId ) const;
         bool                            isDeviceActive( const hashed_string& dungeonId, const hashed_string& deviceId ) const;
         int32                           getLitTorchCount( const hashed_string& dungeonId, const hashed_string& deviceId ) const;
+
+        /**
+         * @brief 던전마다 id · 진행(열쇠 · 지도 · 나침반) · 장치(남은 시간 · 켜진 횃불 수 · 활성)를 씁니다. 열린 문 · 상자 · 장치 플래그는 빌린
+         *        `GameFlags` 의 것이라 싣지 않고, 카탈로그는 `initialize` 의 것, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 카탈로그에 없는 던전 · 장치 수가 다르거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 장치 하나의 지금 상태입니다. */

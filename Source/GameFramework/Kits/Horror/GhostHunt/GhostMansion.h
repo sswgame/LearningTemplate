@@ -6,24 +6,30 @@
  *          그래프 · 플래그 · 전리품 표 · 카탈로그는 빌려 씁니다(저택보다 오래 살아야 한다).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostEncounter.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {
+    struct GameStateRefs;
+
+    class Archive;
     class AreaGraph;
     class GameFlags;
+    class Inventory;
     class LootCatalog;
+    class Wallet;
 
     /** @brief 열쇠 문 결과입니다. */
     enum class GhostDoorResult : uint8
@@ -98,9 +104,13 @@ namespace sw
     class SW_GF_API GhostMansion
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "GHMN" );
+        static constexpr uint32 kStateVersion = 1;
+
         GhostMansion();
 
-        void initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, GameFlags* pFlags, uint32 seed );
+        /** @brief 새 판을 엽니다. 플래그 · 플레이어 가방(열쇠) · 지갑(동전)은 @p refs 에서 빌립니다 — 가방이 없으면 열쇠가 드는 문은 열리지 않습니다. */
+        void initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, const GameStateRefs& refs, uint32 seed );
 
         /** @brief 방에 들어갑니다. 불이 꺼진 방이면 그 방 유령이 (숨은 채로) 나옵니다. 나온 유령 수이고 없는 방이면 −1 입니다. */
         int32 enterRoom( const hashed_string& roomId );
@@ -109,7 +119,7 @@ namespace sw
         /** @brief 열쇠 문을 엽니다(열쇠 하나를 쓴다). */
         GhostDoorResult unlockDoor( const hashed_string& doorId );
         /** @brief 가구를 뒤집니다. 한 가구는 한 번만 전리품을 줍니다. 나온 것은 @p outLoot 에 더합니다. */
-        GhostSearchResult searchFurniture( const hashed_string& furnitureId, GhostSearchMode mode, ItemBag& outLoot );
+        GhostSearchResult searchFurniture( const hashed_string& furnitureId, GhostSearchMode mode, ItemStackList& outLoot );
         /** @brief 들킨 부에게 피해를 줍니다(청소기). 이번에 잡혔으면 true 입니다. */
         bool damageBoo( const hashed_string& booId, float32 amount );
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
@@ -117,12 +127,18 @@ namespace sw
         /** @brief 지금 방 싸움의 알림(나타남 · 공격 · 잡힘 …)을 꺼내 갑니다 — 저택이 `update` 에서 싸움 알림을 받아 잡은 수를 세므로 게임은 여기서 받습니다. */
         void drainGhostEvents( vector<GhostEvent>& outListEvent );
 
+        /**
+         * @brief 싸움(`GhostEncounter`) · 난수 · 부(방 · 가구 · 체력 · 시간 · 상태) · 뒤진 가구 · 지금 방 · 씨앗을 씁니다.
+         *        카탈로그 · 빌린 방 그래프 · 열쇠 가방 · 지갑 · 플래그(밝힌 방 · 연 문)는 싣지 않고(주인이 싣는다), 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 같은 카탈로그로 `initialize` 한 뒤에 부릅니다. 깨졌거나 부 · 가구 수가 다르면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
         GhostEncounter&        getEncounter() { return _encounter; }
         const GhostEncounter&  getEncounter() const { return _encounter; }
         const hashed_string&   getCurrentRoom() const { return _currentRoom; }
         bool                   isRoomLit( const hashed_string& roomId ) const;
-        const ItemBag&         getKeys() const { return _keyBag; }
-        int32                  getCoinCount() const { return _coinCount; }
         const GhostBooRuntime* findBoo( const hashed_string& booId ) const;
         int32                  countCaughtBoos() const;
         bool                   isSearched( const hashed_string& furnitureId ) const;
@@ -136,7 +152,6 @@ namespace sw
 
         GhostEncounter                 _encounter;
         GameRandom                     _random;
-        ItemBag                        _keyBag;
         vector<GhostBooRuntime>        _listBoo;      ///< 카탈로그 부 순서
         vector<uint8>                  _listSearched; ///< 카탈로그 가구 순서
         EventBuffer<GhostMansionEvent> _eventBuffer;
@@ -146,7 +161,8 @@ namespace sw
         const LootCatalog*             _pLoot;
         AreaGraph*                     _pAreaGraph;
         GameFlags*                     _pFlags;
+        Inventory*                     _pInventory; ///< 플레이어 가방(열쇠)
+        Wallet*                        _pWallet;    ///< 빌린 지갑(동전 — 카탈로그 통화)
         uint32                         _seed;
-        int32                          _coinCount;
     };
 } // namespace sw

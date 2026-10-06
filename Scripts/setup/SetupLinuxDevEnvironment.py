@@ -21,14 +21,13 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import useUtf8Stdout  # noqa: E402
+from common import runProcess  # noqa: E402
 
 _kMarker = "Template engine linux-dev"
 
@@ -200,23 +199,11 @@ def checkBundledLinker() -> None:
     if not bundledLinker.is_file():
         return  # 번들 LLVM 이 없는 환경 — 시스템 툴체인을 쓰는 중이므로 볼 것이 없다
 
-    try:
-        completed = subprocess.run(
-            [str(bundledLinker), "--version"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            timeout=30,
-            check=False,
-        )
-    except OSError as error:
-        detail = str(error)
-        completed = None
-    else:
-        if completed.returncode == 0:
-            print("[SetupLinuxDevEnvironment] bundled linker: ok (Tools/LLVM/bin/ld.lld)")
-            return
-        detail = completed.stdout.decode("utf-8", errors="replace").strip().splitlines()[-1:] or [""]
-        detail = detail[0]
+    completed = runProcess([bundledLinker, "--version"], timeoutSeconds=30)
+    if completed.bSucceeded:
+        print("[SetupLinuxDevEnvironment] bundled linker: ok (Tools/LLVM/bin/ld.lld)")
+        return
+    detail = (completed.output.strip().splitlines()[-1:] or [""])[0]
 
     host = "WSL" if isWslInternal() else "Linux"
     systemLinker = next((name for name in ("ld.lld", "ld.lld-21", "ld.lld-20") if shutil.which(name)), None)
@@ -268,7 +255,6 @@ def parseArgs(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    useUtf8Stdout()
     args = parseArgs(argv)
     return setupLinuxDevEnvironment(home=args.home)
 

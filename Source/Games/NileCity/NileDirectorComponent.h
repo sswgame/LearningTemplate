@@ -19,8 +19,11 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Framework/GameDirectorComponent.h"
-#include "GameFramework/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 
@@ -84,6 +87,10 @@ namespace sw
     private:
         /** @brief 이 도시의 시뮬레이션 설정입니다(`startGame` · 복원이 같은 것으로 `initialize` 한다). */
         CitySettings makeCitySettings() const;
+        /** @brief 나일 달력 — 아케트 · 페레트 · 셰무 넷씩(열둘), 계절 하루가 한 달입니다. */
+        WorldClockSettings makeClockSettings() const;
+        /** @brief 이번 틱의 달력 알림에서 달 넘김마다 도시를 결산합니다(같은 넘김에 해가 바뀌었으면 범람). */
+        void settleMonths();
         /** @brief 처음(또는 걷은 뒤) — 땅 · 모든 도로 · 모든 건물 · 일꾼 풀. */
         void spawnAll( GameObjectManager& manager );
         void spawnTerrain( GameObjectManager& manager );
@@ -104,6 +111,8 @@ namespace sw
         void        logStatus() const;
         const utf8* getToolName() const;
         bool        isAutoPlanOn() const;
+        /** @brief 도시가 빌릴 공유 상태(디렉터가 든 금고)입니다. */
+        GameStateRefs makeRefs();
 
     private:
         PROPERTY( Category = "Data", DisplayName = "City Data", AssetPath, Tooltip = "City catalog XML" )
@@ -124,11 +133,18 @@ namespace sw
         int32 _startingMoney;
         PROPERTY( Category = "City", DisplayName = "Service Duration", Tooltip = "Seconds a walker's service lasts at a house", Min = 1.0, Units = s )
         float32 _serviceDuration;
+        PROPERTY( Category = "Look", DisplayName = "Road Tile Scale", Tooltip = "Scale of the path piece so one road tile fills a cell", Min = 0.0 )
+        float32 _roadTileScale;
+        PROPERTY( Category = "City", DisplayName = "Seconds Per Month", Tooltip = "Real seconds in one city month before the time scale", Min = 1.0, Units = s )
+        float32 _secondsPerMonth;
 
         CityCatalog                          _catalog;
         CitySimulation                       _city;
+        Wallet                               _wallet; ///< 도시 금고 — 키트 하나만 쓰는 게임이라 디렉터가 들고 빌려 준다
+        WorldClock                           _clock;  ///< 달력 — 하루가 한 달(계절 열둘 × 하루). 디렉터가 들고 흘린다
         NileCityPlanner                      _planner;
         vector<CityEvent>                    _listEvent;
+        vector<WorldClockEvent>              _listClockEvent; ///< 이번 틱의 달력 알림(스크래치)
         vector<const CityBuildingDef*>       _listTool;       ///< 0 은 도로(nullptr)
         vector<GameObjectHandle>             _listRoadObject; ///< 칸마다(도로가 아니면 무효) — 틱 뒤에만 바뀐다
         vector<uint8>                        _listRoadShown;  ///< 칸마다 세웠거나 세울 도로 — 틱이 쓴다

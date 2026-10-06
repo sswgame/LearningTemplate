@@ -4,6 +4,7 @@
  * @details 감기는 시퀀스라 낡은 것을 거절하고 건너뛴 칸을 비웁니다. 감기지 않는 32 비트 틱 · 프레임은 `TickRingBuffer`(Replication 층 — 낡음은 쓰는 쪽이 본다).
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/NetTypes.h"
@@ -18,7 +19,7 @@ namespace sw
     class SequenceBuffer
     {
     public:
-        static constexpr uint32 kEmpty = 0xFFFFFFFFu;
+        static constexpr uint32 kEmpty = invalid_index::kUint32;
 
         explicit SequenceBuffer( int32 size = 256 )
         {

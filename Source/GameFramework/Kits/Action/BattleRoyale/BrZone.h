@@ -3,18 +3,20 @@
  * @brief 자기장 — 단계마다 다음 원을 지금 원 안에서 씨앗 난수로 고르고(맵 경계 · 금지 지형 콜백), 기다렸다 줄이며, 자리마다 안 · 밖과 피해를 답합니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {
+    class Archive;
     class BitReader;
     class BitWriter;
 
@@ -74,6 +76,9 @@ namespace sw
     class SW_GF_API BrZone
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "BRZN" );
+        static constexpr uint32 kStateVersion = 1;
+
         BrZone();
 
         /** @brief 설정 · 맵 크기 · 씨앗 · 지형(빌림, nullptr 가능)을 두고 첫 원을 맵 중심에 놓은 뒤 첫 단계의 다음 원을 고릅니다. */
@@ -93,6 +98,10 @@ namespace sw
         void writeState( BitWriter& writer ) const;
         /** @brief 네트워크용 — `writeState` 를 읽습니다. 넘치면 false 이고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( BitReader& reader );
+        /** @brief 세이브(`Archive`) — 넷 코덱(`writeState( BitWriter& )`)의 바이트를 길이 붙은 본문으로 싣고 난수 상태를 붙입니다. 설정 · 지형은 `initialize` 의 것이고, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState( Archive& )` 를 읽습니다. 본문이 잘렸거나 넷 코덱이 거절하면 false 이고 상태는 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         const float2& getCenter() const { return _center; }
         float32       getRadius() const { return _radius; }

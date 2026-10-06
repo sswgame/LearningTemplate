@@ -41,6 +41,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	float4   g_BloomParams;
 	float4   g_OutlineColor;
 	float4   g_OutlineParams;
+	float4   g_SourceTexel;   // xy = 1 / 원본(SourceColor 역할 입력) 크기, zw = 그 크기. 원본이 없는 패스는 프레임 크기 — 반해상도 첨부를 읽는 패스가 비켜 읽는 거리
 	uint     g_ShadowMapIndex;
 	uint     g_GBufferAlbedoIndex;
 	uint     g_GBufferNormalIndex;
@@ -139,7 +140,6 @@ SwBatchData swLoadBatch( uint batchIndex )
 // OpenGL 만 **같은 원소의 두 멤버를 다른 원소에서 읽는다**(셰이더 모양에 따라 달라진다 — 드라이버의 SPIR-V 경로가
 // 구조체 멤버 로드를 다루는 방식). 평면 배열은 멤버가 없으니 그 자리가 아예 없다.
 // 색은 담지 않는다 — 정점 셰이더가 색·UV 는 **입력 스트림에서** 읽고 풀에서는 위치와 노멀만 가져간다.
-#define SW_MORPH_FLOAT4_PER_VERTEX 2u
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SRV );
 
 /**
@@ -205,8 +205,7 @@ float3 swLoadMorphPosition( uint batchIndex, uint vertexId, float3 restPosition 
 //      텍스처가 아니라 구조버퍼인 것은 모프 풀과 같은 이유다(정점 셰이더가 SV_VertexID 로 읽는다 — 네 백엔드가 같은 길).
 // ------------------------------------------------------------------------------
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMATION_SRV );
-// 노멀 한 칸의 해상도(팔면체 12 + 12 비트). C++ MeshVertexAnimation::packNormal 과 같아야 한다.
-#define SW_VERTEX_ANIMATION_NORMAL_STEPS 4096u
+// 노멀 한 칸의 해상도(팔면체 12 + 12 비트)는 SW_VERTEX_ANIMATION_NORMAL_STEPS(bindingslots.hlsli 10 절 — C++ packNormal 과 같은 정의).
 
 /** @brief VAT 의 노멀 칸(2^24 아래 정수를 담은 실수)을 단위 노멀로 푼다. C++ `MeshVertexAnimation::unpackNormal` 과 같은 식이다. */
 float3 swUnpackVertexAnimationNormal( float packed )
@@ -611,12 +610,24 @@ float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 	return swSampleIndex( index, uv ); // samplerId 는 쓰지 않는다
 }
 #endif
-/** @brief 에뮬 백엔드: 비교 샘플러가 없어 저장된 깊이를 읽어 직접 비교한다 (필터링 없는 하드 섀도). */
+/**
+ * @brief 에뮬 백엔드: 비교 샘플러가 없어 2x2 이웃을 게더로 읽어 각각 비교하고 쌍선형으로 섞는다 — DX12 · Vulkan 의 비교 샘플러(LINEAR)와 같은 값이다.
+ * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 슬롯 0 이다(swSampleIndex 의 표).
+ */
 float swSampleShadowComparison( uint index, float2 uv, float depth )
 {
 	if ( index == kInvalidIndex )
 		return 1.0f;
-	return ( depth <= swSampleIndex( index, uv ).r ) ? 1.0f : 0.0f;
+	if ( index != g_ShadowMapIndex )
+		return ( depth <= swSampleIndex( index, uv ).r ) ? 1.0f : 0.0f;
+	float2 size;
+	g_SwSlot0.GetDimensions( size.x, size.y );
+	const float2 texelPosition = uv * size - 0.5f;
+	const float2 weight        = frac( texelPosition );
+	// 게더는 네 텍셀이 만나는 모서리를 가리킨다. 순서는 w (0,0) · z (1,0) · x (0,1) · y (1,1).
+	const float4 stored = g_SwSlot0.GatherRed( g_SwSlot0Sampler, ( floor( texelPosition ) + 1.0f ) / size );
+	const float4 lit    = step( depth.xxxx, stored ); // depth <= 저장값이면 1 (LESS_EQUAL)
+	return lerp( lerp( lit.w, lit.z, weight.x ), lerp( lit.x, lit.y, weight.x ), weight.y );
 }
 
 #endif // !SW_STAGE_COMPUTE

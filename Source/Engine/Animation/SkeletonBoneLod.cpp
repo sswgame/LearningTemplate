@@ -149,10 +149,9 @@ namespace sw
 
     string SkeletonBoneLod::makePathForSkeleton( string_view skeletonPath )
     {
-        constexpr string_view kSkeletonExtension = ".skeleton.json";
-        if ( StringUtil::endsWith( skeletonPath, kSkeletonExtension ) == false )
+        if ( StringUtil::endsWith( skeletonPath, Skeleton::kExtension ) == false )
             return string{};
-        const string_view stemPath   = skeletonPath.substr( 0, skeletonPath.size() - kSkeletonExtension.size() );
+        const string_view stemPath   = skeletonPath.substr( 0, skeletonPath.size() - Skeleton::kExtension.size() );
         const size_t      slash      = stemPath.find_last_of( '/' );
         const string_view stem       = ( slash == string_view::npos ) ? stemPath : stemPath.substr( slash + 1 );
         const string_view folder     = ( slash == string_view::npos ) ? string_view{} : stemPath.substr( 0, slash );
@@ -173,7 +172,7 @@ namespace sw
         const string_view stemPath = boneLodPath.substr( 0, boneLodPath.size() - kExtension.size() );
         const size_t      slash    = stemPath.find_last_of( '/' );
         const string_view stem     = ( slash == string_view::npos ) ? stemPath : stemPath.substr( slash + 1 );
-        outImportedPath            = string{ stemPath } + "/" + string{ stem } + ".skeleton.json";
-        outSiblingPath             = string{ stemPath } + ".skeleton.json";
+        outImportedPath            = string{ stemPath } + "/" + string{ stem } + string{ Skeleton::kExtension };
+        outSiblingPath             = string{ stemPath } + string{ Skeleton::kExtension };
     }
 } // namespace sw

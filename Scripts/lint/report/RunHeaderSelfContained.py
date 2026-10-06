@@ -27,8 +27,8 @@ staged 헤더만 본다(`gate/CheckHeaderSelfContained.py`). 판정 · 플래그
   py -3 Scripts/lint/report/RunHeaderSelfContained.py                       # Source/ 전부
   py -3 Scripts/lint/report/RunHeaderSelfContained.py --filter Engine/Graphics
   py -3 Scripts/lint/report/RunHeaderSelfContained.py --files Source/Engine/Scene/Scene.h
-  py -3 Scripts/lint/report/RunHeaderSelfContained.py --build build/Ninja-Shipping --jobs 8
-  py -3 Scripts/lint/report/RunHeaderSelfContained.py --build build/CI-Debug --fail-on-violation   # CI 정기 잡
+  py -3 Scripts/lint/report/RunHeaderSelfContained.py --preset Ninja-Shipping --jobs 8
+  py -3 Scripts/lint/report/RunHeaderSelfContained.py --preset CI-Debug --fail-on-violation   # CI 정기 잡
 """
 
 from __future__ import annotations
@@ -39,60 +39,63 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
 
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from LintReport import LintReport, ReportContext  # noqa: E402
 from common.HeaderSelfContained import (collectCheckedHeaders, findHeaderProbeProblem, findHeadersNotSelfContained,  # noqa: E402
-                                        isCheckedHeader, kDefaultHeaderProbeBuildDir)
+                                        isCheckedHeader)
 
 
-def main() -> int:
-    useUtf8Stdout()
-    parser = argparse.ArgumentParser(description="혼자 서지 못하는 헤더를 보고한다 (게이트 아님).")
-    parser.add_argument("--root", default=".", help="저장소 루트")
-    parser.add_argument("--build", default=str(kDefaultHeaderProbeBuildDir), help="컴파일 DB 가 있는 빌드 디렉터리")
-    parser.add_argument("--filter", default="", help="경로에 이 문자열이 든 헤더만")
-    parser.add_argument("--files", nargs="*", default=None, help="검사할 헤더 경로 목록")
-    parser.add_argument("--jobs", type=int, default=0, help="동시 실행 수 (0 이면 CPU 수)")
-    parser.add_argument("--fail-on-violation", action="store_true",
-                        help="서지 못하는 헤더가 있으면 1, 검사할 수 없으면 2 로 끝낸다 (CI 정기 잡)")
-    args = parser.parse_args()
+class RunHeaderSelfContainedReport(LintReport):
+    description = "혼자 서지 못하는 헤더를 보고한다 (게이트 아님)."
+    bUsesBuildTree = True
+    bUsesJobs = True
+    bUsesFilter = True
 
-    repositoryRoot = Path(args.root).resolve()
-    buildDir = Path(args.build)
-    if not buildDir.is_absolute():
-        buildDir = repositoryRoot / buildDir
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--files", nargs="*", default=None, help="검사할 헤더 경로 목록")
+        parser.add_argument("--fail-on-violation", action="store_true",
+                            help="서지 못하는 헤더가 있으면 1, 검사할 수 없으면 2 로 끝낸다 (CI 정기 잡)")
 
-    problem = findHeaderProbeProblem(buildDir)
-    if problem:
-        print(f"[HeaderSelfContained] {problem}", file=sys.stderr)
-        # 보고로 돌 때는 막지 않는다 — 돌 수 없으면 그렇다고 말하고 끝낸다. CI 는 "아무것도 안 봤다" 를 통과로 읽으면 안 된다.
-        return 2 if args.fail_on_violation else 0
+    def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
+        repositoryRoot = context.repositoryRoot
+        buildDir = context.buildTree.path
 
-    if args.files:
-        listHeader = [Path(p) if Path(p).is_absolute() else repositoryRoot / p for p in args.files]
-        listHeader = [p for p in listHeader if p.is_file() and isCheckedHeader(p)]
-    else:
-        listHeader = collectCheckedHeaders(repositoryRoot, args.filter)
+        problem = findHeaderProbeProblem(buildDir)
+        if problem:
+            print(f"[HeaderSelfContained] {problem}", file=sys.stderr)
+            # 보고로 돌 때는 막지 않는다 — 돌 수 없으면 그렇다고 말하고 끝낸다. CI 는 "아무것도 안 봤다" 를 통과로 읽으면 안 된다.
+            return 2 if args.fail_on_violation else 0
 
-    if not listHeader:
-        print("[HeaderSelfContained] 검사할 헤더가 없습니다.")
-        return 2 if args.fail_on_violation else 0
+        if args.files:
+            listHeader = [Path(p) if Path(p).is_absolute() else repositoryRoot / p for p in args.files]
+            listHeader = [p for p in listHeader if p.is_file() and isCheckedHeader(p)]
+        else:
+            listHeader = collectCheckedHeaders(repositoryRoot, args.filter)
 
-    print(f"[HeaderSelfContained] 헤더 {len(listHeader)}개를 단독 컴파일합니다 …")
-    with tempfile.TemporaryDirectory(prefix="swHeaderProbe") as probeDirName:
-        listFailure = findHeadersNotSelfContained(repositoryRoot, buildDir, listHeader, Path(probeDirName),
-                                                  workerCount=args.jobs or None)
+        if not listHeader:
+            print("[HeaderSelfContained] 검사할 헤더가 없습니다.")
+            return 2 if args.fail_on_violation else 0
 
-    if not listFailure:
-        print(f"[HeaderSelfContained] OK — 헤더 {len(listHeader)}개가 전부 혼자 섭니다.")
-        return 0
+        print(f"[HeaderSelfContained] 헤더 {len(listHeader)}개를 단독 컴파일합니다 …")
+        with tempfile.TemporaryDirectory(prefix="swHeaderProbe") as probeDirName:
+            listFailure = findHeadersNotSelfContained(repositoryRoot, buildDir, listHeader, Path(probeDirName),
+                                                      workerCount=context.jobs)
 
-    print(f"\n[HeaderSelfContained] 혼자 서지 못하는 헤더 {len(listFailure)}개:\n")
-    for spelling, reason in listFailure:
-        print(f"  {spelling}\n      {reason}")
-    print("\n  그 헤더가 직접 쓰는 이름의 선언을 그 헤더가 직접 include 하세요.")
-    print("  지금 컴파일되는 것은 남이 먼저 include 해 준 덕이고, 그 남이 바뀌면 깨집니다.")
-    return 1 if args.fail_on_violation else 0
+        if not listFailure:
+            print(f"[HeaderSelfContained] OK — 헤더 {len(listHeader)}개가 전부 혼자 섭니다.")
+            return 0
+
+        print(f"\n[HeaderSelfContained] 혼자 서지 못하는 헤더 {len(listFailure)}개:\n")
+        for spelling, reason in listFailure:
+            print(f"  {spelling}\n      {reason}")
+        print("\n  그 헤더가 직접 쓰는 이름의 선언을 그 헤더가 직접 include 하세요.")
+        print("  지금 컴파일되는 것은 남이 먼저 include 해 준 덕이고, 그 남이 바뀌면 깨집니다.")
+        return 1 if args.fail_on_violation else 0
+
+
+main = RunHeaderSelfContainedReport.run
 
 
 if __name__ == "__main__":

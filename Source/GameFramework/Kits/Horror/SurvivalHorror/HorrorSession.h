@@ -5,6 +5,7 @@
  * @details 시간은 `update` 로만 흐르고 난수를 쓰지 않습니다(결정적). 지도는 게임이 가진 `AreaGraph` 를 빌려 씁니다(방문 상태는 그쪽에 남는다).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
@@ -12,17 +13,21 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Inventory/GridInventory.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/GridInventory.h"
-#include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/World/GameFlags.h"
 
 namespace sw
 {
+    struct GameStateRefs;
+
+    class Archive;
     class AreaGraph;
+    class GameFlags;
+    class Inventory;
 
     /** @brief 퍼즐 · 자물쇠 · 추리의 결과입니다. */
     enum class HorrorPuzzleResult : uint8
@@ -84,19 +89,25 @@ namespace sw
     class SW_GF_API HorrorSession
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "HSES" );
+        static constexpr uint32 kStateVersion = 1;
+
         HorrorSession();
 
-        /** @brief 새 판을 시작합니다. @p pAreaGraph 가 있으면 @p startArea 에 들어갑니다. */
-        void initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea );
+        /**
+         * @brief 새 판을 시작합니다. @p pAreaGraph 가 있으면 @p startArea 에 들어갑니다.
+         * @details 플래그(풀린 퍼즐 · 문 — 길 조건이 읽는다)는 @p refs 에서 빌립니다(없으면 길 조건은 빈 플래그로 본다). 격자 가방(@p inventory — 장르 고유 그릇이라 게임이 든다)과 아이템 상자(@p itemBox — 세계 보관함)는 빌립니다(세션보다 오래 살아야 한다).
+         *          격자 가방은 여기서 카탈로그 모양 · 규칙의 크기로 다시 엽니다. 부르기 전에는 다른 함수를 부르지 않습니다.
+         */
+        void initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const GameStateRefs& refs, GridInventory& inventory,
+                         Inventory& itemBox );
 
         /** @brief 시간을 흘립니다 — 손전등 배터리, 어둠의 정신력 감소, 밝은 곳의 회복. */
         void update( float32 deltaTime, bool bInDarkness );
 
         // ── 가방 · 상자 · 조합 ─────────────────────────────────────────────
-        GridInventory&       getInventory() { return _inventory; }
-        const GridInventory& getInventory() const { return _inventory; }
-        /** @brief 공유 아이템 상자(어느 상자에서 열어도 같은 내용)입니다. */
-        const ItemBag& getItemBox() const { return _itemBox; }
+        GridInventory&       getInventory() { return *_pInventory; }
+        const GridInventory& getInventory() const { return *_pInventory; }
         /** @brief 가방 자리 하나에서 @p count 개를 상자로 넣습니다. 모자라면 false 입니다. */
         [[nodiscard]] bool storeInBox( int32 instanceId, int32 count );
         /** @brief 상자에서 꺼내 가방에 넣고 넣은 개수를 돌려줍니다(자리가 모자란 만큼은 상자에 남는다). */
@@ -151,8 +162,14 @@ namespace sw
 
         void drainEvents( vector<SurvivalHorrorEvent>& outListEvent );
 
-        GameFlags&                    getFlags() { return _flags; }
-        const GameFlags&              getFlags() const { return _flags; }
+        /**
+         * @brief 정신력 · 배터리 게이지, 본 괴물 · 읽은 문서 · 단서 · 푼 퍼즐(이름 순), 다이얼 시도 · 순서 진행(이름 순), 단서 연결, 지금 곳 · 체력 · 세이브 수 ·
+         *        틀린 추리 수 · 손전등 · 환각을 씁니다. 같은 상태면 같은 바이트입니다. 카탈로그 · 빌린 격자 가방 · 아이템 상자 · 플래그 · 방 그래프는 싣지 않고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
         const ResourceGauge&          getSanity() const { return _sanity; }
         const ResourceGauge&          getBattery() const { return _battery; }
         const vector<HorrorClueLink>& getClueLinks() const { return _listClueLink; }
@@ -168,9 +185,6 @@ namespace sw
         void refreshHallucination();
         bool markSolved( const hashed_string& puzzleId, const hashed_string& flag );
 
-        GridInventory                       _inventory;
-        ItemBag                             _itemBox;
-        GameFlags                           _flags;
         ResourceGauge                       _sanity;
         ResourceGauge                       _battery;
         unordered_set<hashed_string>        _uniqueSeenMonster;
@@ -183,6 +197,9 @@ namespace sw
         EventBuffer<SurvivalHorrorEvent>    _eventBuffer;
         hashed_string                       _currentArea;
         const HorrorCatalog*                _pCatalog;
+        GridInventory*                      _pInventory; ///< 격자 가방(빌림)
+        Inventory*                          _pItemBox;   ///< 아이템 상자(빌림 — 세계 보관함)
+        GameFlags*                          _pFlags;     ///< 빌린 플래그
         AreaGraph*                          _pAreaGraph;
         float32                             _health;
         int32                               _saveCount;

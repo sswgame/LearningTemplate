@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, normalizePath, readTextFiles  # noqa: E402
+from common import blankCommentsAndLiterals, normalizePath  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 내장 매크로를 읽어도 되는 유일한 파일(CMake 판정과 실제 컴파일러를 대조한다).
@@ -78,7 +78,7 @@ def findBuiltinMacroUses(repositoryRoot: Path, listTargetFile: list[str] | None)
     """검사 헤더 밖에서 내장 매크로를 읽는 줄과, 어디서든 지원하지 않는 플랫폼 매크로를 읽는 줄을 위반 문자열로 돌려줍니다."""
     listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
     listViolation: list[str] = []
-    for path, text in readTextFiles(listPath):
+    for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         bCheckBuiltin = relative != _kCheckHeader and _kBuiltinRe.search(text) is not None
         bCheckUnsupported = _kUnsupportedRe.search(text) is not None

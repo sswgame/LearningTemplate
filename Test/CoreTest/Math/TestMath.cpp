@@ -323,7 +323,7 @@ SW_TEST_CASE( MathTest, MathUtilFunctionsFull )
     SW_EXPECT_EQUAL( 16u, aligned );
 
     float32 rad = sw::MathUtil::toRadian( 180.0f );
-    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::Pi, rad, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::kPi, rad, 1e-4f );
 
     float32 rndVal = sw::MathUtil::getRandomRange( 1.0f, 5.0f );
     SW_EXPECT_TRUE( 1.0f <= rndVal && rndVal <= 5.0f );
@@ -403,7 +403,7 @@ SW_TEST_CASE( MathTest, MathUtilAlignZeroAndRandomRangeEdgeCases )
 SW_TEST_CASE( MathTest, PerspectiveFieldOfViewNearFarEdgeCase )
 {
     // Near >= Far 시 near/far 역전 크래시 방지 및 유효한 투영 행렬 생성
-    sw::float4x4 proj = sw::float4x4::createPerspectiveFieldOfView( sw::MathUtil::Pi / 4.0f, 1.777f, 100.0f, 10.0f );
+    sw::float4x4 proj = sw::float4x4::createPerspectiveFieldOfView( sw::MathUtil::kPi / 4.0f, 1.777f, 100.0f, 10.0f );
     SW_EXPECT_TRUE( proj._33 != 0.0f );
     SW_EXPECT_TRUE( proj._34 != 0.0f );
 }
@@ -669,3 +669,13 @@ SW_TEST_CASE( MathTest, SmallDeterminantMirrorRefractAndNullConstruct )
     const sw::float4x4 fromNull( static_cast<const float32*>( nullptr ) );
     SW_EXPECT_TRUE( fromNull == sw::float4x4::Identity );
 }
+
+// 리터럴로 흩어져 있던 값을 MathUtil 로 모았다 — 같은 float 이어야 결정적 시뮬레이션 · 파도 CPU↔GPU 값이 그대로다.
+static_assert( sw::MathUtil::kTwoPi == 6.28318530718f, "kTwoPi 는 옛 리터럴과 같은 float 이어야 한다" );
+static_assert( sw::MathUtil::kTwoPi == 6.2831853f, "kTwoPi 는 옛 리터럴과 같은 float 이어야 한다" );
+static_assert( sw::MathUtil::kHalfPi == 1.5707964f, "kHalfPi 는 옛 리터럴과 같은 float 이어야 한다" );
+static_assert( sw::MathUtil::kPi == 3.14159265358979f, "kPi 는 옛 리터럴과 같은 float 이어야 한다" );
+static_assert( sw::MathUtil::kDegreeToRadian == 3.14159265358979f / 180.0f, "kDegreeToRadian 은 옛 식과 같아야 한다" );
+static_assert( sw::MathUtil::kRadianToDegree == 180.0f / 3.14159265358979f, "kRadianToDegree 는 옛 식과 같아야 한다" );
+static_assert( sw::MathUtil::kPi64 / 180.0 == 0.017453292519943295769237, "도 → 라디안(float64)은 ReflectUnits 의 옛 리터럴과 같아야 한다" );
+static_assert( sw::MathUtil::kSqrt2 == 1.41421356f, "kSqrt2 는 옛 kDiagonalFactor 와 같은 float 이어야 한다" );

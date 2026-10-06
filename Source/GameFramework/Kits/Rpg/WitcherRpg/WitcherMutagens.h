@@ -3,6 +3,7 @@
  * @brief 강화 · 변이 슬롯 — 스킬 슬롯 묶음(레벨로 열림)마다 변이원 슬롯 하나, 같은 묶음에 색이 맞는 스킬마다 변이원 보너스가 오릅니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -12,6 +13,7 @@
 
 namespace sw
 {
+    class Archive;
     class StatBlock;
     class WitcherCatalog;
 
@@ -35,6 +37,9 @@ namespace sw
     class SW_GF_API WitcherMutagens
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WMUT" );
+        static constexpr uint32 kStateVersion = 1;
+
         WitcherMutagens();
 
         void              initialize( const WitcherCatalog* pCatalog, int32 characterLevel );
@@ -53,6 +58,10 @@ namespace sw
         void computeStats( StatBlock& outStats ) const;
         /** @brief 열린 슬롯에 끼운 스킬입니다(능동 스킬 목록). */
         void collectEquippedSkills( vector<hashed_string>& outListSkill ) const;
+        /** @brief 캐릭터 레벨과 묶음마다 끼운 스킬 · 변이원을 씁니다. 카탈로그(묶음 구성)는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 묶음 · 슬롯 수가 지금과 다르거나 모르는 변이원이거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         struct Group

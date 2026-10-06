@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Combat/LockOnSelector.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Combat/LockOnSelector.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartGhost.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartTrack.h"
 
@@ -29,12 +32,101 @@ namespace sw
                 const float32 currentYaw = MathUtil::atan2( direction._x, direction._z );
                 const float32 targetYaw  = MathUtil::atan2( target._x - from._x, target._z - from._z );
                 float32       delta      = targetYaw - currentYaw;
-                while ( delta > MathUtil::Pi )
-                    delta -= 2.0f * MathUtil::Pi;
-                while ( delta < -MathUtil::Pi )
-                    delta += 2.0f * MathUtil::Pi;
+                while ( delta > MathUtil::kPi )
+                    delta -= 2.0f * MathUtil::kPi;
+                while ( delta < -MathUtil::kPi )
+                    delta += 2.0f * MathUtil::kPi;
                 const float32 newYaw = currentYaw + MathUtil::clamp( delta, -maxTurn, maxTurn );
                 return float3{ MathUtil::sin( newYaw ), 0.0f, MathUtil::cos( newYaw ) };
+            }
+
+            static constexpr uint8 kLastItemKind = static_cast<uint8>( KartItemKind::LeaderShell ); ///< 상태 읽기의 종류 범위
+
+            static void writeRacer( Archive& outArchive, const KartRacer& kart )
+            {
+                kart._motor.writeState( outArchive );
+                outArchive << kart._ai.getDriftSide();
+                outArchive << kart._input._vehicle._throttle;
+                outArchive << kart._input._vehicle._steer;
+                outArchive << kart._input._vehicle._bDriftHeld;
+                outArchive << kart._input._vehicle._bBoostPressed;
+                outArchive << kart._input._vehicle._bJumpPressed;
+                outArchive << kart._input._bUseItem;
+                outArchive << static_cast<uint32>( kart._listLapTime.size() );
+                for ( const float32 lapTime : kart._listLapTime )
+                {
+                    outArchive << lapTime;
+                }
+                StateArchiveUtil::writeName( outArchive, kart._itemId );
+                outArchive << kart._previousPosition;
+                outArchive << kart._distance;
+                outArchive << kart._progress;
+                outArchive << kart._lapStartTime;
+                outArchive << kart._bestLapTime;
+                outArchive << kart._finishTime;
+                StateArchiveUtil::writeCountdown( outArchive, kart._spinTime );
+                StateArchiveUtil::writeCountdown( outArchive, kart._shieldTime );
+                outArchive << kart._wrongWayTime;
+                outArchive << kart._itemHeldTime;
+                outArchive << kart._speedScale;
+                outArchive << kart._lap;
+                outArchive << kart._nextCheckpoint;
+                outArchive << kart._place;
+                outArchive << kart._finishPlace;
+                outArchive << kart._lastBoostPad;
+                outArchive << kart._bFinished;
+                outArchive << kart._bWrongWay;
+            }
+
+            [[nodiscard]] static bool readRacer( Archive& archive, int32 racerCount, KartRacer& outKart )
+            {
+                int32 driftSide = 0;
+                if ( outKart._motor.readState( archive ) == false )
+                    return false;
+                archive >> driftSide;
+                archive >> outKart._input._vehicle._throttle;
+                archive >> outKart._input._vehicle._steer;
+                archive >> outKart._input._vehicle._bDriftHeld;
+                archive >> outKart._input._vehicle._bBoostPressed;
+                archive >> outKart._input._vehicle._bJumpPressed;
+                archive >> outKart._input._bUseItem;
+                const ArcadeVehicleInput& vehicle       = outKart._input._vehicle;
+                const bool                bVehicleValid = vehicle._bDriftHeld <= SW_TRUE && vehicle._bBoostPressed <= SW_TRUE && vehicle._bJumpPressed <= SW_TRUE;
+                const bool                bDriftValid   = -1 <= driftSide && driftSide <= 1;
+                if ( archive.isError() || bVehicleValid == false || outKart._input._bUseItem > SW_TRUE || bDriftValid == false )
+                    return false;
+                uint32 lapCount = 0;
+                // 바퀴마다 기록(4)
+                if ( StateArchiveUtil::readCount( archive, 4, lapCount ) == false )
+                    return false;
+                outKart._ai.setDriftSide( driftSide );
+                outKart._listLapTime.assign( lapCount, 0.0f );
+                for ( float32& lapTime : outKart._listLapTime )
+                {
+                    archive >> lapTime;
+                }
+                if ( StateArchiveUtil::readName( archive, outKart._itemId ) == false )
+                    return false;
+                archive >> outKart._previousPosition;
+                archive >> outKart._distance;
+                archive >> outKart._progress;
+                archive >> outKart._lapStartTime;
+                archive >> outKart._bestLapTime;
+                archive >> outKart._finishTime;
+                const bool bTimersRead = StateArchiveUtil::readCountdown( archive, outKart._spinTime ) && StateArchiveUtil::readCountdown( archive, outKart._shieldTime );
+                archive >> outKart._wrongWayTime;
+                archive >> outKart._itemHeldTime;
+                archive >> outKart._speedScale;
+                archive >> outKart._lap;
+                archive >> outKart._nextCheckpoint;
+                archive >> outKart._place;
+                archive >> outKart._finishPlace;
+                archive >> outKart._lastBoostPad;
+                archive >> outKart._bFinished;
+                archive >> outKart._bWrongWay;
+                const bool bPlaceValid = 0 <= outKart._place && outKart._place <= racerCount && 0 <= outKart._finishPlace && outKart._finishPlace <= racerCount;
+                const bool bFlagsValid = outKart._bFinished <= SW_TRUE && outKart._bWrongWay <= SW_TRUE;
+                return bTimersRead && archive.isOk() && bPlaceValid && bFlagsValid && outKart._speedScale > 0.0f;
             }
         };
     } // namespace
@@ -653,7 +745,7 @@ namespace sw
         if ( kart._bAi == SW_FALSE || kart._bFinished == SW_TRUE )
             return 1.0f;
         float32 leaderProgress    = kart._progress;
-        float32 bestHumanProgress = MathUtil::MinFloat;
+        float32 bestHumanProgress = MathUtil::kMinFloat;
         for ( const KartRacer& other : _listRacer )
         {
             leaderProgress = MathUtil::max( leaderProgress, other._progress );
@@ -664,7 +756,7 @@ namespace sw
         const float32 behind = leaderProgress - kart._progress;
         if ( behind > 0.0f )
             return 1.0f + _settings._rubberBandMaxBonus * MathUtil::saturate( behind / _settings._rubberBandDistance );
-        const bool bHumanBehind = bestHumanProgress > MathUtil::MinFloat && bestHumanProgress < kart._progress;
+        const bool bHumanBehind = bestHumanProgress > MathUtil::kMinFloat && bestHumanProgress < kart._progress;
         if ( bHumanBehind )
             return 1.0f - _settings._rubberBandLeadPenalty * MathUtil::saturate( ( kart._progress - bestHumanProgress ) / _settings._rubberBandDistance );
         return 1.0f;
@@ -750,6 +842,131 @@ namespace sw
     void KartRace::drainEvents( vector<KartRaceEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void KartRace::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listRacer.size() );
+        for ( const KartRacer& kart : _listRacer )
+        {
+            KartRaceInternal::writeRacer( outArchive, kart );
+        }
+        outArchive << static_cast<uint32>( _listProjectile.size() );
+        for ( const KartProjectile& projectile : _listProjectile )
+        {
+            outArchive << projectile._position;
+            outArchive << projectile._direction;
+            StateArchiveUtil::writeName( outArchive, projectile._itemId );
+            outArchive << projectile._age;
+            outArchive << projectile._owner;
+            outArchive << projectile._target;
+            outArchive << static_cast<uint8>( projectile._kind );
+            outArchive << projectile._bActive;
+        }
+        outArchive << static_cast<uint32>( _listItemBoxTimer.size() );
+        for ( const Countdown& boxTimer : _listItemBoxTimer )
+        {
+            StateArchiveUtil::writeCountdown( outArchive, boxTimer );
+        }
+        outArchive << static_cast<uint32>( _listPlaceOrder.size() );
+        for ( const int32 racer : _listPlaceOrder )
+        {
+            outArchive << racer;
+        }
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        outArchive << _raceTime;
+        StateArchiveUtil::writeCountdown( outArchive, _countdown );
+        outArchive << _bestLapTime;
+        outArchive << _firstFinishTime;
+        outArchive << _finishedCount;
+        outArchive << static_cast<uint8>( _phase );
+    }
+
+    bool KartRace::readState( Archive& archive )
+    {
+        uint32 racerCount = 0;
+        archive >> racerCount;
+        if ( archive.isError() || racerCount != _listRacer.size() )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정 · 트랙 · 카탈로그 · 고스트 · 차마다 기본 차 설정 · AI 설정은 사본이 그대로 든다.
+        KartRace    race  = *this;
+        const int32 count = static_cast<int32>( racerCount );
+        for ( KartRacer& kart : race._listRacer )
+        {
+            if ( KartRaceInternal::readRacer( archive, count, kart ) == false || race.isKnownItem( kart._itemId ) == false )
+                return false;
+            // 러버밴딩 배율이 바꾼 최고 속도를 기본 설정에서 다시 만든다(`updateRubberBand` 와 같은 식).
+            ArcadeVehicleSettings settings = kart._baseSettings;
+            settings._maxSpeed *= kart._speedScale;
+            kart._motor.setSettings( settings );
+        }
+
+        uint32 projectileCount = 0;
+        // 탄마다 자리 · 방향(24) + 이름(4) + 나이 · 쏜 차 · 대상(12) + 종류 · 켜짐(2)
+        if ( StateArchiveUtil::readCount( archive, 42, projectileCount ) == false )
+            return false;
+        race._listProjectile.assign( projectileCount, KartProjectile{} );
+        for ( KartProjectile& projectile : race._listProjectile )
+        {
+            uint8 kind = 0;
+            archive >> projectile._position;
+            archive >> projectile._direction;
+            if ( StateArchiveUtil::readName( archive, projectile._itemId ) == false || race.isKnownItem( projectile._itemId ) == false )
+                return false;
+            archive >> projectile._age;
+            archive >> projectile._owner;
+            archive >> projectile._target;
+            archive >> kind;
+            archive >> projectile._bActive;
+            const bool bOwnerValid  = -1 <= projectile._owner && projectile._owner < count;
+            const bool bTargetValid = -1 <= projectile._target && projectile._target < count;
+            if ( archive.isError() || bOwnerValid == false || bTargetValid == false || kind > KartRaceInternal::kLastItemKind || projectile._bActive > SW_TRUE )
+                return false;
+            projectile._kind = static_cast<KartItemKind>( kind );
+        }
+
+        uint32 boxCount = 0;
+        archive >> boxCount;
+        if ( archive.isError() || boxCount != race._listItemBoxTimer.size() )
+            return false;
+        for ( Countdown& boxTimer : race._listItemBoxTimer )
+        {
+            if ( StateArchiveUtil::readCountdown( archive, boxTimer ) == false )
+                return false;
+        }
+        uint32 placeCount = 0;
+        archive >> placeCount;
+        if ( archive.isError() || ( placeCount != 0 && placeCount != racerCount ) )
+            return false;
+        race._listPlaceOrder.assign( placeCount, -1 );
+        for ( int32& racer : race._listPlaceOrder )
+        {
+            archive >> racer;
+            if ( racer < 0 || count <= racer )
+                return false;
+        }
+
+        uint8      phase       = 0;
+        const bool bRandomRead = StateArchiveUtil::readRandom( archive, race._random ) && StateArchiveUtil::readStepTimer( archive, race._timer );
+        archive >> race._raceTime;
+        const bool bCountdownRead = StateArchiveUtil::readCountdown( archive, race._countdown );
+        archive >> race._bestLapTime;
+        archive >> race._firstFinishTime;
+        archive >> race._finishedCount;
+        archive >> phase;
+        const bool bFinishedValid = 0 <= race._finishedCount && race._finishedCount <= count;
+        if ( bRandomRead == false || bCountdownRead == false || archive.isError() || bFinishedValid == false || phase > static_cast<uint8>( KartRacePhase::Ended ) )
+            return false;
+        race._phase = static_cast<KartRacePhase>( phase );
+        race._eventBuffer.clear();
+        *this = std::move( race );
+        return true;
+    }
+
+    bool KartRace::isKnownItem( const hashed_string& itemId ) const
+    {
+        return itemId.empty() || ( _pItemCatalog != nullptr && _pItemCatalog->findItem( itemId ) != nullptr );
     }
 
     void KartRace::pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time )

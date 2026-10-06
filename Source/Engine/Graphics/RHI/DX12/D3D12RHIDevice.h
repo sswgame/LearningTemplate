@@ -400,8 +400,6 @@ namespace sw
                        "루트 파라미터 배치가 shaderslot::dx12 예산 계산과 어긋난다" );
         /// @brief 슬롯 테이블 하나의 최대 원소 수입니다(t 테이블과 u 테이블 중 큰 쪽).
         static constexpr uint32 kMaxSlotTableSize = shaderslot::kSrvSlotCount > shaderslot::kComputeUavSlotCount ? shaderslot::kSrvSlotCount : shaderslot::kComputeUavSlotCount;
-        /** @brief setComputeRootConstants 용량(dword)입니다. 루트 상수 크기이며 네 백엔드 공통 안전값이기도 합니다. */
-        static constexpr uint32 kMaxComputeRootConstantDwords = shaderslot::kRootConstantDwords;
 
         /// @brief 오프스크린 텍스처와 RTV · SRV 핸들입니다.
         struct OffscreenTextureRecord
@@ -452,6 +450,10 @@ namespace sw
         static constexpr uint32 kOfflineNullSrvIndex         = kBindlessDescriptorCapacity;     ///< 안 걸린 t 슬롯을 채우는 null 버퍼 SRV
         static constexpr uint32 kOfflineNullUavIndex         = kBindlessDescriptorCapacity + 1; ///< 안 걸린 u 슬롯을 채우는 null 버퍼 UAV
         static constexpr uint32 kOfflineDescriptorCount      = kBindlessDescriptorCapacity + 2;
+        /// @brief 레지스트리 0 번은 null Texture2D SRV 로 비워 둡니다 — 등록은 1 부터 받습니다.
+        /// @details 이 힙은 CBV · 버퍼 SRV · 텍스처 SRV · UAV 가 한 인덱스 공간입니다. 0 으로 초기화된 텍스처 인덱스(머티리얼 없는 배치의 폴백 원소 등)가
+        ///          그 자리의 상수버퍼 · 구조버퍼를 Texture2D 로 읽으면 값이 정의되지 않습니다(채널마다 NaN). null 뷰는 0 을 읽습니다.
+        static constexpr uint32 kNullTextureBindlessIndex = 0;
         static_assert( kOnlineBlockDescriptorCount >= kMaxSlotTableSize, "온라인 블록이 슬롯 테이블 하나보다 작다" );
 
         /// @brief 렌더 패스 서술 캐시입니다.

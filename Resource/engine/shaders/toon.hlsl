@@ -261,7 +261,7 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 	return swStoreSurface( float4( litColor.rgb, litColor.a ), litColor, normal );
 #else
 	const float3 shadeColor = input.color.rgb * material.shadeColor.rgb * swSampleMaterialTexture( material.shadeMap, input.uv ).rgb;
-	const float  shadow     = swSampleShadowAtWorld( input.worldPosition );
+	const float  shadow     = swSampleShadowAtWorld( input.worldPosition, normal );
 
 	float3 directLighting;
 	float3 color = shadeToonLights( litColor.rgb, shadeColor, input.worldPosition, normal, shadow, material.shadingShift, material.shadingToony,

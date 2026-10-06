@@ -10,7 +10,6 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
-#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -48,13 +47,13 @@ namespace sw::editor
          */
         struct ToolDocumentDesc
         {
-            const utf8* _pLabel;                        ///< "animation graph" — 로그 · 상태 문구에 들어간다
-            string EditorToolDefaults::* _pDefaultFile; ///< 경로가 비었을 때 여는 기본 파일(`EditorToolDefaults` 칸). nullptr 이면 기본 문서가 없다
+            const utf8* _pLabel;           ///< "animation graph" — 로그 · 상태 문구에 들어간다
+            const utf8* _pDefaultFileName; ///< 경로가 비었을 때 여는 기본 파일(`Saved/Editor` 아래 이름). nullptr 이면 기본 문서가 없다
         };
 
-        constexpr ToolDocumentDesc kAnimGraphDocument{ "animation graph", &EditorToolDefaults::_animGraphDataFile };
-        constexpr ToolDocumentDesc kDialogueGraphDocument{ "dialogue graph", &EditorToolDefaults::_dialogueGraphDataFile };
-        constexpr ToolDocumentDesc kSpriteClipDocument{ "sprite clip", &EditorToolDefaults::_spriteClipFile };
+        constexpr ToolDocumentDesc kAnimGraphDocument{ "animation graph", EditorUtil::kAnimGraphDocumentFileName };
+        constexpr ToolDocumentDesc kDialogueGraphDocument{ "dialogue graph", EditorUtil::kDialogueGraphDocumentFileName };
+        constexpr ToolDocumentDesc kSpriteClipDocument{ "sprite clip", EditorUtil::kSpriteClipDocumentFileName };
         constexpr ToolDocumentDesc kTileMapDocument{ "tile map", nullptr };
         constexpr ToolDocumentDesc kSequenceDocument{ "sequence", nullptr };
 
@@ -79,9 +78,9 @@ namespace sw::editor
             {
                 if ( path.empty() == false )
                     return resolveExistingOrRelativePath( path );
-                if ( desc._pDefaultFile == nullptr )
+                if ( desc._pDefaultFileName == nullptr )
                     return {};
-                return EditorUtil::resolveEditorConfigFile( ( getEditorToolDefaults().*desc._pDefaultFile ).c_str() );
+                return EditorUtil::resolveEditorStateFile( desc._pDefaultFileName );
             }
 
             template <typename TAsset>

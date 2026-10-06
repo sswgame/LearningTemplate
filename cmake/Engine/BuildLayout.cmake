@@ -4,20 +4,35 @@
 # ==============================================================================
 
 # 이 파일은 함수만 정의하지 않는다. include 되는 순간 출력 경로와 sw_global_options 가 정해진다.
-# 그래서 TargetRules.cmake 보다 먼저 include 해야 한다.
+# 그래서 타깃 규칙(UnbuiltSources · ModuleTargets · TestTargets)보다 먼저 include 해야 한다.
 
 # ------------------------------------------------------------------------------
-# 출력 경로 — Ninja 단일 설정 → 평탄한 Bin/Lib (LiveReload와 동일)
+# 플랫폼 · 구성 이름 — 매니페스트(_listPlatform · _listConfiguration) · 모듈 해석 · 배포 백엔드 확인이 같은 낱말을 쓴다(런타임 ModuleCatalog 와 같은 표).
 # ------------------------------------------------------------------------------
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${sw_output_directory}/Bin")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${sw_output_directory}/Lib")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${sw_output_directory}/Lib")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Bin")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Bin")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Lib")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Lib")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Lib")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Lib")
+if(WIN32)
+	set(sw_platform_name "Windows")
+else()
+	set(sw_platform_name "Linux")
+endif()
+if(SW_SHIPPING_BUILD)
+	set(sw_configuration_name "Shipping")
+else()
+	set(sw_configuration_name "Dev")
+endif()
+
+# ------------------------------------------------------------------------------
+# 출력 경로 — 산출물은 구성과 무관하게 `Bin/` · `Lib/` 에 놓인다(LiveReload · 시험의 작업 폴더가 이 경로를 안다).
+# ------------------------------------------------------------------------------
+# `$<0:>`(빈 생성기 식)는 다중 구성 생성기가 구성 하위 폴더를 붙이지 않게 한다 — 구성마다 `*_DEBUG` · `*_RELEASE` 를 따로 적지 않는다.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Lib$<0:>")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Lib$<0:>")
+# Shipping 의 링크 PDB 는 배포 폴더(Bin) 밖 `Symbols/` 에 둔다 — 심볼 저장소에는 `py -3 -m Scripts symbols` 가 넣는다. 시험 실행 파일은
+# TestBin 옆에 둔다(`sw_addTestExecutable` — 크래시 스택이 이름을 낸다). Dev(Release 포함)는 실행 파일 옆(디버거 · 핫 리로드가 그 자리에서 찾는다).
+if(SW_SHIPPING_BUILD)
+	set(CMAKE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Symbols")
+	set(CMAKE_PDB_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Symbols")
+endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/Resource")
 	install(DIRECTORY "${CMAKE_SOURCE_DIR}/Resource" DESTINATION .)
@@ -38,6 +53,19 @@ endif()
 # 빌드 구성 이름(sw::build::kConfigName, Core/Common/BuildInfo.h) — Shipping 이면 "Shipping", 아니면 실제 구성 이름.
 # 생성기 식이라 다중 구성 생성기에서도 그 구성의 이름이 된다.
 target_compile_definitions(sw_global_options INTERFACE "SW_BUILD_CONFIG_NAME=\"$<IF:$<BOOL:${SW_SHIPPING_BUILD}>,Shipping,$<CONFIG>>\"")
+
+# 빌드 타깃 종류(SW_TARGET_TYPE) — 코드는 이 둘과 `sw::build::kTargetName` 만 읽는다(`Core/Common/BuildInfo.h` · `TargetMacroCheck.h`).
+#   SW_WITH_CLIENT_CODE : Game · Client — 창 · 렌더 · 입력 장치 · 오디오 장치 코드
+#   SW_WITH_SERVER_CODE : Game · Server — 서버 코드
+# `#if defined( SW_WITH_*_CODE )` 는 .cpp 본문에서만 쓴다. 리플렉션 선언 · 헤더의 클래스 모양을 가르지 않는다 — 나뉘는 코드는 모듈(`_listTarget`)로 나눈다.
+target_compile_definitions(sw_global_options INTERFACE "SW_TARGET_NAME=\"${SW_TARGET_TYPE}\"")
+if(NOT SW_TARGET_TYPE STREQUAL "Server")
+	target_compile_definitions(sw_global_options INTERFACE SW_WITH_CLIENT_CODE)
+endif()
+if(NOT SW_TARGET_TYPE STREQUAL "Client")
+	target_compile_definitions(sw_global_options INTERFACE SW_WITH_SERVER_CODE)
+endif()
+message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
 
 if(SW_SHIPPING_BUILD)
 	target_compile_definitions(sw_global_options INTERFACE SW_SHIPPING)
@@ -129,4 +157,20 @@ function(sw_emitRuntimeCopies TARGET_NAME)
 		VERBATIM
 	)
 	set_property(TARGET ${TARGET_NAME} PROPERTY SW_RUNTIME_COPIES_EMITTED TRUE)
+endfunction()
+
+# 실행 파일 옆에 놓을 런타임 DLL — 구성마다 실제로 쓰는 것만(무조건 복사하면 배포 산출물에 셰이더 컴파일러 · 검증 레이어가 따라 들어간다).
+#   DXC        : 개발 빌드(런타임 HLSL 컴파일 · DXIL 리플렉션). ALWAYS_DXC 면 배포 구성에서도(시험 — TestBin 이라 배포물과 섞이지 않는다)
+#   검증 레이어 : Debug 만(VulkanRHIDevice 가 SW_DEBUG 에서만 켠다 — 딸려 오는 mimalloc 도 그 의존성일 뿐이다)
+#   Tracy      : 개발 빌드 · Windows · SW_ENABLE_TRACY (함수 안에서 거른다)
+function(sw_deployRuntimeDependencies TARGET_NAME)
+	cmake_parse_arguments(ARG "ALWAYS_DXC" "" "" ${ARGN})
+	if(ARG_ALWAYS_DXC OR NOT SW_SHIPPING_BUILD)
+		sw_copyDxcDlls(${TARGET_NAME})
+	endif()
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+		sw_copyVulkanValidationRuntime(${TARGET_NAME})
+	endif()
+	sw_copyTracyRuntime(${TARGET_NAME})
+	sw_emitRuntimeCopies(${TARGET_NAME})
 endfunction()

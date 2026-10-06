@@ -51,7 +51,7 @@ namespace
             vector<MeshSkinVertex> listSkin;
             auto                   addCorner = [&listVertex, &listSkin]( uint32 side, uint32 ring )
             {
-                const float32 angle = MathUtil::Pi * 2.0f * static_cast<float32>( side % kSideCount ) / static_cast<float32>( kSideCount );
+                const float32 angle = MathUtil::kPi * 2.0f * static_cast<float32>( side % kSideCount ) / static_cast<float32>( kSideCount );
                 RHIVertex     vertex{};
                 vertex._arrPosition[0] = 0.3f * MathUtil::cos( angle );
                 vertex._arrPosition[1] = static_cast<float32>( ring );

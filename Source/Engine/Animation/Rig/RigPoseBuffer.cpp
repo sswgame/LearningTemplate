@@ -16,9 +16,9 @@ namespace sw
 
             static float3 divide( const float3& lhs, const float3& rhs )
             {
-                const float32 x = MathUtil::abs( rhs._x ) > MathUtil::Epsilon ? lhs._x / rhs._x : lhs._x;
-                const float32 y = MathUtil::abs( rhs._y ) > MathUtil::Epsilon ? lhs._y / rhs._y : lhs._y;
-                const float32 z = MathUtil::abs( rhs._z ) > MathUtil::Epsilon ? lhs._z / rhs._z : lhs._z;
+                const float32 x = MathUtil::abs( rhs._x ) > MathUtil::kEpsilon ? lhs._x / rhs._x : lhs._x;
+                const float32 y = MathUtil::abs( rhs._y ) > MathUtil::kEpsilon ? lhs._y / rhs._y : lhs._y;
+                const float32 z = MathUtil::abs( rhs._z ) > MathUtil::kEpsilon ? lhs._z / rhs._z : lhs._z;
                 return float3{ x, y, z };
             }
         };
@@ -206,7 +206,7 @@ namespace sw
         const float3 bonePosition = getModelPosition( boneIndex );
         const float3 current      = getModelPosition( childIndex ) - bonePosition;
         const float3 desired      = newChildPosition - bonePosition;
-        if ( current.getLengthSquared() <= MathUtil::EpsilonSquared || desired.getLengthSquared() <= MathUtil::EpsilonSquared )
+        if ( current.getLengthSquared() <= MathUtil::kEpsilonSquared || desired.getLengthSquared() <= MathUtil::kEpsilonSquared )
             return;
         rotateModel( boneIndex, RigIkSolver::makeFromToRotation( current, desired ) );
     }

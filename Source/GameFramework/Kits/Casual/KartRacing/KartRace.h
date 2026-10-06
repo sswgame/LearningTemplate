@@ -13,23 +13,25 @@
  *          순위 진행값 = (바퀴 − 1) × 길이 + 중심선 거리. 거리는 지금 사이에 있는 두 문의 거리로 잘라, 문을 건너뛴 차가 앞선 것처럼 보이지 않게 합니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Movement/ArcadeVehicleMotor.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartAi.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartItems.h"
-#include "GameFramework/Movement/ArcadeVehicleMotor.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {
+    class Archive;
     class KartGhost;
     class KartTrack;
 
@@ -178,6 +180,9 @@ namespace sw
     class SW_GF_API KartRace
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "KRAC" );
+        static constexpr uint32 kStateVersion = 1;
+
         KartRace();
 
         void initialize( const KartRaceSettings& settings, const KartTrack* pTrack, const KartItemCatalog* pItemCatalog );
@@ -209,6 +214,15 @@ namespace sw
         /** @brief 러버밴딩 최고 속도 배율입니다(사람 · 꺼짐 = 1). */
         float32 computeRubberBandScale( int32 racer ) const;
 
+        /**
+         * @brief 차마다 차체 · 드리프트 쪽 · 받아 둔 입력 · 랩 기록 · 아이템 · 진행 · 타이머 · 순위, 투사체 · 아이템 상자 타이머 · 순위 순서 · 난수 · 고정 걸음 · 시간 · 단계를 씁니다.
+         * @details 설정 · 트랙 · 아이템 카탈로그 · 고스트(빌린 기록기)와 차마다 기본 차 설정 · AI 설정 · 사람/AI 구분(`addRacer` · `setRacerAi` 의 것)은 싣지 않습니다.
+         *          알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 차 수 · 상자 수가 다르거나 모르는 아이템 id 거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
         KartRacePhase    getPhase() const { return _phase; }
         float32          getRaceTime() const { return _raceTime; }
         float32          getCountdown() const { return _countdown.getRemaining(); }
@@ -224,6 +238,7 @@ namespace sw
 
     private:
         bool               isValidRacer( int32 racer ) const { return 0 <= racer && racer < static_cast<int32>( _listRacer.size() ); }
+        bool               isKnownItem( const hashed_string& itemId ) const; ///< 빈 id 거나 카탈로그에 있는 아이템인가(상태 읽기)
         ArcadeVehicleInput resolveInput( int32 racer, bool& outUseItem );
         void               updateProgress( int32 racer );
         void               completeLap( int32 racer );

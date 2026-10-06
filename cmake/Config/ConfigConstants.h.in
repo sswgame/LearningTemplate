@@ -7,7 +7,10 @@ namespace sw::config
     // -------------------------------------------------------------------------
     // 1) 디렉터리 경로
     // -------------------------------------------------------------------------
-    inline constexpr const utf8* kDirConfigEnv = "@SW_DIR_CONFIG_ENV@";
+    inline constexpr const utf8* kDirConfig       = "@SW_DIR_CONFIG@";        ///< 호스트 설정 폴더(프로젝트 루트 기준)
+    inline constexpr const utf8* kDirConfigEditor = "@SW_DIR_CONFIG_EDITOR@"; ///< 사람이 쓰는 에디터 설정 폴더
+    inline constexpr const utf8* kDirSavedEditor  = "@SW_DIR_SAVED_EDITOR@";  ///< 에디터가 쓰는 상태 폴더(git 무시)
+    inline constexpr const utf8* kDirConfigEnv    = "@SW_DIR_CONFIG_ENV@";
 
     // -------------------------------------------------------------------------
     // 2) 설정 및 리플렉션 도구 파일 경로
@@ -25,6 +28,8 @@ namespace sw::config
     inline constexpr const utf8* kFileRuntimeEditorToolDefaults   = "@SW_FILE_RUNTIME_EDITOR_TOOL_DEFAULTS@";
     inline constexpr const utf8* kFileRuntimeEngineConfig = "@SW_FILE_RUNTIME_ENGINE_CONFIG@";
     inline constexpr const utf8* kFileRuntimeGameConfig   = "@SW_FILE_RUNTIME_GAME_CONFIG@";
+    /** @brief 전용 서버 운영 설정(`ServerConfig`)의 기본 경로입니다. 파일이 없을 수 있다(서버가 없는 게임). */
+    inline constexpr const utf8* kFileRuntimeServerConfig = "@SW_FILE_RUNTIME_SERVER_CONFIG@";
 
     // -------------------------------------------------------------------------
     // 4) toolchain_config.json 키

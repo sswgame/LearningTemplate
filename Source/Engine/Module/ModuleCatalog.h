@@ -3,7 +3,11 @@
  * @brief 모듈 매니페스트(`<모듈>.module.json`)와 그 해석 — 켜짐 · 플랫폼 · 구성 · 의존 · 버전 · 순환을 보고 적재 순서를 정합니다.
  * @details 상용 엔진의 같은 자리는 언리얼 플러그인(`.uplugin` — 버전 · 의존 플러그인 · 플랫폼 허용 목록 · `EnabledByDefault`, 프로젝트 `.uproject` 의
  *          `Plugins` 켜기/끄기)과 유니티 Package Manager(`package.json` — 이름 · 버전 · 의존 버전)입니다. 모양은 그 둘을 합친 것입니다.
- *          - 모듈마다 소스 폴더에 매니페스트 하나: 이름(= CMake 타깃) · 버전 · 종류 · 의존(이름 + 최소 버전) · 플랫폼 · 구성(Dev · Shipping) · 기본 켜짐.
+ *          - 모듈마다 소스 폴더에 매니페스트 하나: 이름(= CMake 타깃) · 버전 · 종류 · 의존(이름 + 최소 버전) · 플랫폼 · 구성(Dev · Shipping) ·
+ *            대상(Client · Server — `_listTarget`, 언리얼 모듈 Type 의 ClientOnly · ServerOnly 자리) · 기본 켜짐.
+ *          - 키트를 나누는 규칙: 한 기능 = 최대 세 모듈 — 공유 `GF_<X>`(`["Client","Server"]` — 메시지 · 직렬화 · 프로토콜 · 클라이언트 쪽 요청 · 게임플레이),
+ *            서버 전용 `GF_Server_<X>`(`["Server"]` — 인증 · 세션 표 · 저장소 · 관리 명령, `GF_<X>` 에 의존), 필요할 때만 클라이언트 전용 `GF_Client_<X>`(`["Client"]` — UI).
+ *            의존은 서버 전용 → 공유 ← 클라이언트 전용 방향만 됩니다(`CheckModuleTargets` 게이트).
  *          - 프로젝트(활성 게임 `SWGame.module.json`)가 `_listModuleOverride` 로 모듈을 켜고 끕니다.
  *          - **CMake 와 App 이 같은 매니페스트 · 같은 규칙을 씁니다.** CMake 는 꺼진 모듈을 짓지 않고(`cmake/Engine/ModuleManifest.cmake`),
  *            빌드가 모든 매니페스트를 `Bin/Modules/` 에 복사하면 App 이 그것을 읽어 같은 답(적재 순서)을 냅니다.
@@ -39,6 +43,13 @@ namespace sw
     {
         Dev      = 1 << 0,
         Shipping = 1 << 1,
+    };
+
+    /** @brief 모듈이 들어가는 빌드 타깃 비트입니다(`_listTarget`). 빌드 타깃 Game 은 둘 다를 담습니다. */
+    enum class ModuleTarget : uint8
+    {
+        Client = 1 << 0, ///< 플레이어 실행 파일(App)
+        Server = 1 << 1, ///< 전용 서버 실행 파일(Server)
     };
 } // namespace sw
 
@@ -94,6 +105,7 @@ namespace sw
         ModuleKind               _kind{ ModuleKind::Kit };
         uint8                    _platformMask{ 0 };      ///< `ModulePlatform` 비트
         uint8                    _configurationMask{ 0 }; ///< `ModuleConfiguration` 비트
+        uint8                    _targetMask{ 0 };        ///< `ModuleTarget` 비트
         bool                     _bEnabledByDefault{ true };
     };
 } // namespace sw
@@ -106,6 +118,8 @@ namespace sw
         ModulePlatform      _platform{ ModulePlatform::Windows };
         ModuleConfiguration _configuration{ ModuleConfiguration::Dev };
         string              _projectModule{ "SWGame" }; ///< 켜기/끄기 표를 든 모듈(활성 게임)
+        /** @brief 이 호스트가 올리는 대상(`ModuleTarget` 비트) — App 은 `getBuildTargetMask()`, Server 실행 파일은 `ModuleTarget::Server` 입니다. */
+        uint8 _targetMask{ static_cast<uint8>( ModuleTarget::Client ) | static_cast<uint8>( ModuleTarget::Server ) };
     };
 } // namespace sw
 
@@ -115,7 +129,7 @@ namespace sw
     struct ModuleInactiveEntry
     {
         string _name;
-        string _reason; ///< "disabled by the project" · "not available on Linux" · "not built for Shipping" · "disabled by default"
+        string _reason; ///< "disabled by the project" · "not available on Linux" · "not built for Shipping" · "not built for the Server target" · "disabled by default"
     };
 } // namespace sw
 
@@ -142,7 +156,7 @@ namespace sw
     {
     public:
         /** @brief 매니페스트 파일 이름 끝입니다(`GF_Voxel.module.json`). */
-        static constexpr const utf8* kManifestSuffix = ".module.json";
+        static constexpr const utf8* kManifestExtension = ".module.json";
         /** @brief 빌드가 매니페스트를 복사해 두는 실행 파일 옆 폴더 이름입니다. */
         static constexpr const utf8* kCatalogFolder = "Modules";
 
@@ -174,6 +188,8 @@ namespace sw
         static ModulePlatform getCurrentPlatform();
         /** @brief 지금 빌드의 구성입니다(배포본이면 Shipping). */
         static ModuleConfiguration getCurrentConfiguration();
+        /** @brief 이 빌드가 담는 대상입니다(`SW_WITH_CLIENT_CODE` → Client, `SW_WITH_SERVER_CODE` → Server). CMake 해석이 쓴 마스크와 같습니다. */
+        static uint8 getBuildTargetMask();
         /** @brief 종류 낱말(`"Kit"` …)입니다. */
         static const utf8* getKindName( ModuleKind kind );
 

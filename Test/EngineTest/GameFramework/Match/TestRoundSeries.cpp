@@ -3,7 +3,7 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Match/RoundSeries.h"
+#include "GameFramework/Base/Match/RoundSeries.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -3,6 +3,8 @@
  * @brief `AudioClipDecoder::decodeOgg` — stb_vorbis 구현을 이 TU 하나에만 넣습니다.
  * @note stb_vorbis.c 는 `L` · `C` · `R` · `CHECK` · `TRUE` 같은 짧은 매크로를 남깁니다. 유니티 빌드에서 뒤에 붙는 TU 를 오염시키지 않게
  *       include 바로 뒤에서 모두 지웁니다. stb_vorbis 를 다른 파일에서 include 하지 말 것.
+ *       주의: `TRUE` · `FALSE` 는 stb_vorbis 가 없을 때만 정의한다 — Windows 에서는 `windows.h` 의 것이라 지우면 유니티 묶음의 뒤 파일
+ *       (d3d11.h 를 처음 include 하는 XAudio2System.cpp)이 PCH 없는 빌드에서 깨진다. 이 TU 가 정의한 경우에만 지운다.
  */
 #include "pch.h"
 
@@ -10,6 +12,9 @@
 
 #define STB_VORBIS_NO_STDIO
 #define STB_VORBIS_NO_PUSHDATA_API
+#if !defined( TRUE )
+    #define SW_STB_VORBIS_DEFINES_TRUE_FALSE
+#endif
 #include <stb_vorbis.c>
 #undef C
 #undef CHECK
@@ -22,7 +27,6 @@
 #undef DIVTAB_DENOM
 #undef DIVTAB_NUMER
 #undef EOP
-#undef FALSE
 #undef FAST_HUFFMAN_TABLE_MASK
 #undef FAST_HUFFMAN_TABLE_SIZE
 #undef INVALID_BITS
@@ -42,7 +46,11 @@
 #undef SAMPLE_unknown
 #undef STBV_CDECL
 #undef STBV_NOTUSED
-#undef TRUE
+#if defined( SW_STB_VORBIS_DEFINES_TRUE_FALSE )
+    #undef FALSE
+    #undef TRUE
+    #undef SW_STB_VORBIS_DEFINES_TRUE_FALSE
+#endif
 #undef array_size_required
 #undef temp_alloc
 #undef temp_alloc_restore

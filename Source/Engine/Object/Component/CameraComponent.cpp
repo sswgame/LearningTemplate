@@ -88,7 +88,7 @@ namespace sw
         const float3   eye     = world.getTranslation();
         float3         forward = ( target - eye );
         const float32  lenSq   = forward.getLengthSquared();
-        if ( lenSq <= MathUtil::Epsilon )
+        if ( lenSq <= MathUtil::kEpsilon )
             return;
         forward.normalize();
 
@@ -117,7 +117,7 @@ namespace sw
     float3 CameraComponent::getCameraForward() const
     {
         float3 forward = float3::transformVector( float3( 0.0f, 0.0f, 1.0f ), getWorldMatrix() );
-        if ( forward.getLengthSquared() <= MathUtil::Epsilon )
+        if ( forward.getLengthSquared() <= MathUtil::kEpsilon )
             return float3( 0.0f, 0.0f, 1.0f );
         forward.normalize();
         return forward;

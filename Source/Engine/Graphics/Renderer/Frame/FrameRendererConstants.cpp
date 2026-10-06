@@ -7,13 +7,13 @@
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 
 namespace sw
 {
     namespace
     {
-        constexpr float4 kDefaultShadowParams{ 0.02f, 0.45f, 0.0f, 0.0f };
         constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
         constexpr float4 kDefaultOutlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
 
@@ -22,10 +22,6 @@ namespace sw
         /// @brief 라이트 직교 투영이 담는 가로 · 세로 범위입니다(약 2.222).
         constexpr float32 kLightOrthoExtent = 2.0f / 0.9f;
 
-        /// @brief 폴백 궤도 카메라 파라미터입니다. 약 40도 수직 화각입니다.
-        constexpr float32 kFallbackFovY  = 0.70f;
-        constexpr float32 kFallbackNearZ = 0.1f;
-        constexpr float32 kFallbackFarZ  = 100.0f;
     } // namespace
 
     void FrameRenderer::updatePassConstants( FramePassContext& ctx )
@@ -36,10 +32,22 @@ namespace sw
         // 뷰 · 라이트 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다. 패킷이 자기
         // 뷰 행렬을 갖고 있으면 executePacket 이 그 위에 덮어쓴다.
         float4x4 lightViewProj{};
+        float4   shadowParams{};
         if ( _frameLight._bHasShadowViewProj != SW_FALSE )
+        {
             lightViewProj = _frameLight._shadowViewProj;
+            shadowParams  = _frameLight._shadowParams;
+        }
         else
+        {
             buildLightViewProj( ctx, lightViewProj );
+            // 폴백 볼륨(한 변 kLightOrthoExtent · 깊이 같은 길이)의 크기로 바이어스를 환산한다 — 빛이 있는 경로와 같은 식이다.
+            DirectionalShadowProjection fallback{};
+            fallback._resolution     = getShadowMapResolution();
+            fallback._texelWorldSize = kLightOrthoExtent / static_cast<float32>( fallback._resolution );
+            fallback._depthRange     = kLightOrthoExtent;
+            shadowParams             = fallback.computeShaderParams();
+        }
         ctx._passValues.setMatrix( passConstantNames()._lightViewProj, lightViewProj );
         view( RenderViewType::Shadow ).setViewProjection( lightViewProj );
 
@@ -58,7 +66,7 @@ namespace sw
 
         ctx._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
         ctx._passValues.setFloat4( passConstantNames()._keyLightColor, _frameLight._colorAmbient );
-        ctx._passValues.setFloat4( passConstantNames()._shadowParams, kDefaultShadowParams );
+        ctx._passValues.setFloat4( passConstantNames()._shadowParams, shadowParams );
         ctx._passValues.setFloat4( passConstantNames()._bloomParams, kDefaultBloomParams );
         ctx._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         applyViewPassConstants( ctx );
@@ -71,6 +79,9 @@ namespace sw
         const float32                  outlineY = pool.getWidth() > 0 ? ( 1.0f / static_cast<float32>( pool.getWidth() ) ) : 0.001f;
         const float32                  outlineZ = pool.getHeight() > 0 ? ( 1.0f / static_cast<float32>( pool.getHeight() ) ) : 0.001f;
         ctx._passValues.setFloat4( passConstantNames()._outlineParams, float4{ 0.02f, outlineY, outlineZ, 0.0f } );
+        // 원본 텍셀의 기본값은 프레임 텍셀이다 — 원본 역할 입력을 거는 패스가 그 첨부의 실제 크기로 덮는다(registerPassTexture).
+        ctx._passValues.setFloat4( passConstantNames()._sourceTexel,
+                                   float4{ outlineY, outlineZ, static_cast<float32>( pool.getWidth() ), static_cast<float32>( pool.getHeight() ) } );
         // 패스 플래그 — 비트는 bindingslots.hlsli 의 SW_PASS_FLAG_*(C++ 는 shaderslot::kPassFlag*)가 정본이다. 후처리는 뷰마다 끌 수 있다(CCTV).
         uint32 flags = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? shaderslot::kPassFlagNativeBindless : 0u;
         if ( _pActiveView->_settings._bPostProcess == SW_FALSE )
@@ -107,7 +118,7 @@ namespace sw
         // FrameLightState 의 멤버 초기값 하나뿐이다(값을 두 군데 두면 언젠가 갈라진다).
         const float4& dirIntensity = _frameLight._dirIntensity;
         float3        lightDir     = float3{ dirIntensity._x, dirIntensity._y, dirIntensity._z }.normalize();
-        if ( lightDir.getLengthSquared() < MathUtil::Epsilon )
+        if ( lightDir.getLengthSquared() < MathUtil::kEpsilon )
             lightDir = float3{ 0.57735f, -0.57735f, 0.57735f };
 
         // 라이트를 원점 위(빛이 오는 쪽)에 두고 빛 방향을 따라 원점을 내려다본다. up 이 라이트와
@@ -137,7 +148,7 @@ namespace sw
         const float32                  aspect = ( pool.getHeight() > 0 ) ? ( static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) )
                                                                          : ( 16.0f / 9.0f );
 
-        outMat = float4x4::createLookAt( eye, float3::Zero, float3::Up ) * float4x4::createPerspectiveFieldOfView( kFallbackFovY, aspect, kFallbackNearZ, kFallbackFarZ );
+        outMat = float4x4::createLookAt( eye, float3::Zero, float3::Up ) * float4x4::createPerspectiveFieldOfView( CameraComponent::kDefaultFovY, aspect, CameraComponent::kDefaultNearZ, CameraComponent::kDefaultFarZ );
     }
 
     void FrameRenderer::setIdentityWorld( FramePassContext& ctx )

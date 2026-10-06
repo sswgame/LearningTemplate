@@ -5,6 +5,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
@@ -24,7 +28,7 @@ namespace sw
             static float2 pickInDisk( GameRandom& random, const float2& center, float32 radius )
             {
                 const float32 distance = radius * MathUtil::sqrt( random.nextFloat() );
-                const float32 angle    = random.nextFloat() * MathUtil::Pi * 2.0f;
+                const float32 angle    = random.nextFloat() * MathUtil::kPi * 2.0f;
                 return float2{ center._x + MathUtil::cos( angle ) * distance, center._y + MathUtil::sin( angle ) * distance };
             }
         };
@@ -181,6 +185,31 @@ namespace sw
         _fromRadius     = fromRadius;
         _nextCenter     = float2{ nextX, nextY };
         _nextRadius     = nextRadius;
+        return true;
+    }
+
+    // 세이브(Archive)는 넷 스냅숏 코덱의 바이트를 그대로 싣는다(같은 상태를 두 형식으로 따로 쓰지 않는다).
+    // 넷 코덱은 씨앗을 양쪽이 같다고 보고 난수를 싣지 않으므로, 다음 원을 같은 수열로 고르게 난수 상태만 뒤에 붙인다.
+    void BrZone::writeState( Archive& outArchive ) const
+    {
+        BitWriter writer;
+        writeState( writer );
+        const vector<uint8>& bytes = writer.getBytes();
+        outArchive.writeSection( bytes.data(), static_cast<uint32>( bytes.size() ) );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+    }
+
+    bool BrZone::readState( Archive& archive )
+    {
+        vector<uint8> bytes;
+        GameRandom    random = _random;
+        if ( archive.readSection( bytes ) == false || StateArchiveUtil::readRandom( archive, random ) == false )
+            return false;
+        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+        if ( readState( reader ) == false ) // 넷 코덱의 읽기(임시에 읽어 끝까지 맞을 때만 바꿈)
+            return false;
+        _random = random;
+        _eventBuffer.clear();
         return true;
     }
 

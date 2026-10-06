@@ -15,10 +15,11 @@ import json
 import os
 import struct
 import sys
+from typing import Sequence
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # Scripts — common
 
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 # 5x7 비트맵 글꼴. 프레임 순서가 곧 글리프 번호다(DamageNumberComponent::kMinusGlyphFrame = 10).
 kGlyphRows = (
@@ -48,7 +49,7 @@ kDigitsTexturePath = "engine/textures/ui/digits.dds"
 kQuadrantsTexturePath = "engine/textures/test/quadrants.dds"
 
 
-def makeDdsBytes(width, height, rgbaBytes):
+def makeDdsBytes(width: int, height: int, rgbaBytes: bytes | bytearray) -> bytes:
     """RGBA8 픽셀(행 우선, 위에서 아래)로 DDS 파일 바이트를 만듭니다. 레거시 헤더(DDPF_RGB | ALPHAPIXELS, R 마스크 0xFF) — 엔진은 R8G8B8A8_UNORM 으로 읽습니다."""
     if len(rgbaBytes) != width * height * 4:
         raise ValueError("pixel count does not match the size")
@@ -110,7 +111,7 @@ def makeQuadrantTextureInternal():
     return kQuadrantSize, kQuadrantSize, pixels, listFrame
 
 
-def makeClipText(atlasPath, listFrame, listAnimation):
+def makeClipText(atlasPath: str, listFrame: list, listAnimation: list) -> str:
     """`SpriteClipAsset::toJson` 과 같은 키 · 순서의 클립 글을 만듭니다(atlas · frames · transformKeys · 있으면 animations)."""
     clip = {"atlas": atlasPath, "frames": listFrame, "transformKeys": []}
     if listAnimation:
@@ -118,14 +119,14 @@ def makeClipText(atlasPath, listFrame, listAnimation):
     return json.dumps(clip, indent=2) + "\n"
 
 
-def writeFileInternal(path, data):
+def writeFileInternal(path: str, data: bytes) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as handle:
         handle.write(data)
     print(f"wrote {path} ({len(data)} bytes)")
 
 
-def generate(repositoryRoot):
+def generate(repositoryRoot: str) -> None:
     """네 파일을 씁니다. 리소스 경로는 소문자입니다(CheckResourceCasing)."""
     resourceRoot = os.path.join(repositoryRoot, "Resource")
 
@@ -141,11 +142,10 @@ def generate(repositoryRoot):
                       makeClipText(kQuadrantsTexturePath, listFrame, listAnimation).encode("utf-8"))
 
 
-def main():
-    useUtf8Stdout()
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--root", default=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")), help="repository root")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     generate(args.root)
     return 0
 

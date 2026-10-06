@@ -8,15 +8,18 @@
 
 | 스크립트 | 역할 | 출력/대상 |
 |---|---|---|
-| `CookAssets.py` | 씬 · 프리팹을 `App --cook-scenes` 로 쿠킹하게 하고(SCN1 · PFB2 — 리플렉션이 엔진 안에 있어서 엔진이 쿠킹한다), Resource 도메인을 `.pack` 으로 패킹(SWPK, 4KB 섹터 정렬). 쿠킹된 씬 · 프리팹은 소스 옆이 아니라 스테이징 폴더에 쓰고 팩에 같은 상대 경로로 넣는다 | `--cooked-dir`(기본 `build/*/Bin/Cooked`), `build/*/Bin/Packs/*.pack` |
+| `CookAssets.py` | 씬 · 프리팹을 `App --cook-scenes` 로 쿠킹하게 하고(SCN1 · PFB2 — 리플렉션이 엔진 안에 있어서 엔진이 쿠킹한다), Resource 도메인을 `.pack` 으로 패킹(SWPK, 4KB 섹터 정렬). 쿠킹된 씬 · 프리팹은 소스 옆이 아니라 스테이징 폴더에 쓰고 팩에 같은 상대 경로로 넣는다. `--build-target`(Game · Client · Server)이 빼는 에셋 종류(쿠킹 표 `target_excluded_asset_kinds` — 서버: 텍스처 · 셰이더 바이너리 · 오디오)는 넣지 않는다 | `--cooked-dir`(기본 `build/*/Bin/Cooked`), `build/*/Bin/Packs/*.pack` |
 | `GenerateShippingHostDefaults.py` | 커밋된 런타임 JSON 설정을 읽어 Shipping 및 Fallback용 C++ 헤더로 생성 | `build/.../ShippingHostDefaults.h` |
+| `GenerateConfigReference.py` | 설정 참조 문서 — 설정 구조체 칸 · 키 표 · 전역 변수 · 명령줄 · CMake 옵션 · 사용자 설정을 코드에서 (손으로 돌린다, 결과를 커밋한다 · 낡으면 CheckConfigReference) | `docs/Config/*.md` · `ConfigReference.json` |
 | `GenerateDocs.py` | Doxygen을 구동하여 C++ API 레퍼런스 문서 생성 | `Docs/Doxygen/html/index.html` |
 | `GeneratePackFormat.py` | 팩 바이너리 계약(`Config/Engine/PackFormat.json`)을 C++ 헤더로 | `build/.../PackFormat.gen.h` |
 | `GenerateCookContract.py` | 쿠킹 표(`Config/Engine/CookContract.json`)를 C++ X-매크로 헤더로 — RHI 백엔드 표 · 쿡 접미사 표 (구성 시점). 쿠커는 같은 표를 `common/CookContract.py` 로 읽는다 | `build/.../CookContract.gen.h` |
 | `GenerateCMakeConstants.py` | `Scripts/common/Constants.py` 의 상수를 CMake `set()` 목록으로 (구성 시점) | `build/.../ConfigVars.cmake` |
+| `GenerateConfigureFiles.py` | 구성 시점 생성기 다섯(CMakeConstants · PackFormat · CookContract · ShippingHostDefaults · LintTargets)을 **한 프로세스로** 차례로 부른다 — configure 가 부르는 것은 이것 하나(생성기마다 파이썬을 띄우면 configure 의 3 할이 파이썬이었다). 각 생성기는 단독 실행도 그대로 | 위 다섯의 출력 |
 | `GenerateToolchainCMake.py` | `Config/Environment/toolchain_config.json` 을 CMake `set()` 목록으로 (구성 시점) | `build/.../ToolchainVars.cmake` |
 | `GenerateLintTargets.py` | `lint/gate` · `lint/selftest` 폴더를 CMake 린트 타깃 · 테스트로 (구성 시점) | `build/.../LintTargets.cmake` |
 | `GenerateEngineAbiStamp.py` | Core · Engine 헤더 내용의 지문 — 핫 리로드의 엔진 ABI 도장 (빌드 시점) | `build/.../EngineAbiStamp.gen.h` |
+| `GenerateThirdPartyNotices.py` | 서드파티 라이선스 고지 — 매니페스트(`vcpkg.json`)가 끌어오는 포트의 `share/<포트>/copyright` 를 모은다(빌드 시점, `ThirdPartyNotices` 타깃) | `build/*/Bin/THIRD_PARTY_NOTICES.txt` |
 | `GenerateSpriteTextures.py` | 엔진이 들고 다니는 작은 스프라이트 텍스처(DDS)와 클립 — 데미지 숫자 글리프 아틀라스 · 네 칸 시험 텍스처 (손으로 돌린다, 결과를 커밋한다) | `Resource/engine/textures/ui/digits.*` · `Resource/engine/textures/test/quadrants.*` |
 
 `setup/` 은 **외부 도구를 찾아 설치하는** 폴더이고, 정본에서 파일을 만들어 내는 일은 구성 시점이든 빌드 시점이든 여기다.

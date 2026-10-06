@@ -18,11 +18,21 @@ authoritative rule set for naming (`_camelCase` members, `p`/`pp` pointer prefix
 container prefixes with **singular** names, `out`/`pOut` parameter prefixes), function-name vocabulary
 (acronyms are camelCase words; one verb per concept; predicates read as questions), include ordering,
 header declaration order, constructor initialization, and branch style.
-`docs/04_CodingGuidelines.md` is the Korean expansion of the same rules with extra examples.
+`docs/04_CodingGuidelines.md` is a Korean collection of examples per AGENTS.md section; it does not restate the rules
+(a new rule goes into AGENTS.md first, an example into docs/04 in the same commit).
 The rules are machine-enforced — see Linting below.
 
 Documentation and code comments in this repo are written in Korean (`/** @brief */` above declarations,
 `/**<` beside member fields). Log and assert strings are never translated.
+
+## Documentation map
+
+`docs/02_DocumentMap.md` says which document owns which fact and lists every README. **One fact lives in one place**;
+other documents link to it. A module README holds that folder's contracts, traps and open work — usage lives in the
+header comments (`/** @brief */`), not in a README. Write docs in Korean and in the present tense; how something came
+to be goes in the commit message, and a past defect is written as a present-tense caution.
+`Scripts/lint/gate/CheckDocPaths.py` checks every relative link, heading anchor and backticked repository path, and that
+every README is on the map. A placeholder path is written with angle brackets (`Source/Games/<Game>/`).
 
 ## Build
 
@@ -37,11 +47,16 @@ cmake --build --preset Ninja-Debug
   `WSL-*` (Linux clang), `CI-*` (used by `.github/workflows/ci.yml`).
   Each test game has its own Debug preset `Ninja-Debug-<Game>` (own build folder, `SW_ACTIVE_GAME=<Game>`) — switch games by preset,
   not by re-configuring one folder (two jobs sharing a build folder break each other's builds). `Ninja-Debug` is the Empty game.
+  Dedicated-server presets `*-Server` (`Ninja-Debug-Server`, `Ninja-Shipping-Server`, `WSL-*-Server`, `CI-Shipping-Server`) build the
+  Server target; the `*-Shipping` presets are the Client target.
 - Outputs: `build/<preset>/Bin`. Compile DB: `build/<preset>/compile_commands.json` (`.clangd` points at `Ninja-Debug`).
 - Key cache options (all `SW_*`, declared in `cmake/Config/BuildOptions.cmake`): `SW_SHIPPING_BUILD`,
+  `SW_TARGET_TYPE` (`Game` · `Client` · `Server` — the Unreal TargetType slot; empty = Shipping→Client, else Game; code reads only
+  `SW_WITH_CLIENT_CODE` / `SW_WITH_SERVER_CODE` / `sw::build::kTargetName`, and only inside `.cpp` bodies — split code goes into modules by `_listTarget`),
   `SW_ACTIVE_GAME` (which `Source/Games/<name>` builds as `SWGame`, and which game preset `Config/Game/<name>.json` — pack root,
-  gamesettings, startup scene — the runtime reads; Shipping bakes that file in), `SW_SHIPPING_RHI_BACKEND` (the one RHI backend
-  Shipping links statically — declared in `Source/Engine/CMakeLists.txt`; Dev always loads every `RHI_*` module),
+  window title — the runtime reads; Shipping bakes that file in; the startup scene is the pack's `data/gamesettings.xml`),
+  `SW_SHIPPING_RHI_BACKEND` (the one RHI backend Shipping links statically, a cook-table name or alias such as `DirectX12` · `vk` —
+  a backend missing on that platform stops the configure; the backend table is `Config/Engine/CookContract.json`; Dev always loads every `RHI_*` module),
   `SW_REQUIRE_REFLECTION`, `SW_ENABLE_PCH`, `SW_USE_SCCACHE`.
 
 ## Test
@@ -62,7 +77,9 @@ build/Ninja-Debug/Bin/EngineTest.exe --test_shuffle                # order depen
 build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (also GTEST_SHARD_INDEX / GTEST_TOTAL_SHARDS)
 ```
 
-- Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUiTest`, `AppTest`.
+- Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUiTest`, `AppTest`, `ServerTest`.
+  `ServerTest` launches the built `Server` (Game · Server targets) without a window or GPU and runs under `nogpu` on both platforms;
+  the Server target builds no editor or App tests, and its presets run `-L nogpu` only (a server build has no GPU suite).
   **Always run them with `build/<preset>/Bin` as the working directory** — they walk up from the current
   directory to find `Resource/`, and `Bin` is where that walk succeeds. This is what CTest does, in every
   configuration (`sw_registerTestRun`). In Shipping the binaries themselves live in
@@ -76,6 +93,8 @@ build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (
   `ReflectionTest`, which is sharded (below). **A test that creates an RHI device belongs in `RenderPassGpuTest`.**
   A host-suite case fails on any unexpected `[Error]` log line, since validation-layer and driver errors only log;
   wrap a deliberate rejection in `SW_TEST_DEFENSIVE_SCOPE( "reason" )`.
+- **A suite that needs an outside server declares it too**: `SW_TEST_REQUIRES_ENVIRONMENT( SuiteName, "SW_TEST_POSTGRES_URL", "reason" );`.
+  With the variable unset the suite is not selected and prints one `[ SKIP SUITE ]` line (not a failure, not a host suite).
 - **`-L hostgpu` is the part CI can never run. Run it in Shipping before you call work done**, on the
   machine with the GPU. Nothing else covers it: CI skips those suites and local habit is Debug-only, so a
   Shipping-only GPU failure otherwise sits in the tree unnoticed. A `--host_suites=only` run that selects nothing
@@ -91,7 +110,7 @@ build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (
   parser suite was ~21 s of a 30 s limit). A suite split across shards is not judged by the "every case skipped" check, so a
   suite whose cases skip when a prerequisite is missing keeps one case that asserts the prerequisite
   (`ReflectionParserTest.ParserExecutableIsBuilt`).
-- Labels: `nogpu` (CI-safe), `hostgpu` (GPU/display/DXC — CI cannot), `lint`, `unit`, `core`, `engine`, `editor`, `app`, `module`, `reflection`.
+- Labels: `nogpu` (CI-safe), `hostgpu` (GPU/display/DXC — CI cannot), `lint`, `unit`, `core`, `engine`, `editor`, `app`, `server`, `module`, `reflection`.
 - Cases are declared with `SW_TEST_CASE(Suite, Name)` and assert via `SW_EXPECT_*` / `SW_ASSERT_*`. To test a path
   that trips an engine assert (`SW_ASSERT` / `SW_LOG_ASSERT` break in Debug), hold a `test::ScopedAssertCapture`.
 
@@ -105,11 +124,12 @@ over staged files only). **The folder says what a script does to you** — that 
 |--------|------|-----------|
 | `lint/gate/` | fails the build and blocks the commit | non-zero on any violation |
 | `lint/fixer/` | rewrites your files | 0 (or non-zero under `--check`) |
-| `lint/report/` | prints, you decide | 0 (unless asked: `RunBuildWarnings.py --fail-on`, used by CI) |
+| `lint/report/` | prints, you decide (one `LintReport` subclass per script) | 0 (unless asked: `RunBuildWarnings.py --fail-on`, used by CI) |
 | `lint/selftest/` | checks the **lints**, not the code | non-zero if a lint went blind |
 
-`PreCommitLint.py` stays at `lint/` because it orchestrates all four; `LintGate.py` and `LintFixer.py`
-stay there because every gate and every fixer inherits from them.
+`PreCommitLint.py` and `RunLintSuite.py` stay at `lint/` because they orchestrate all four; `LintGate.py`, `LintFixer.py` and `LintReport.py`
+stay there because every gate, fixer and report inherits from them (a report owns `--root` · `--preset`/`--build-dir` · `--jobs` ·
+`--filter` · `--out` through the base; `selftest/CheckReportsRun.py` checks every report still starts).
 
 **Adding a gate is dropping a file into `lint/gate/`.** A gate is one `LintGate` subclass that implements
 `scan(repositoryRoot, args) -> GateResult`; the base owns `--root`, UTF-8 output, violation printing and
@@ -121,21 +141,22 @@ A gate that takes `--files` picks its files with `addFilesArgument` / `selectTar
 staged subset and the full scan; it never descends into `kNotOurDirNames` — build output and downloaded tools).
 
 **CMake has no lint list either.** `Scripts/lint/LintCatalog.py` walks `gate/` and `selftest/`, and
-`Scripts/generate/GenerateLintTargets.py` turns that into the `add_custom_target` / `add_test` block CMake
-`include()`s at configure time. What differs per lint travels with the lint: a gate declares
-`buildComment` (the English line ninja prints), `timeoutSeconds` and `listCtestArgument` on its class;
-`selftest/` scripts declare `kLintBuildComment` / `kLintTimeoutSeconds` as module constants. A
+`Scripts/generate/GenerateLintTargets.py` turns that into the `add_custom_target` / `sw_registerScriptTest` block CMake
+`include()`s at configure time. What differs per lint travels with the lint: a gate — and a `selftest/` script, which is
+a `LintGate` too — declares `buildComment` (the English line ninja prints), `timeoutSeconds` and `listCtestArgument` on its class. A
 `CONFIGURE_DEPENDS` glob watches both folders, so dropping a file in there re-runs configure by itself.
 **A new gate is one file** — no CMake edit, no path constant.
 
 **The commit hook has no lint list either.** `PreCommitLint.py` walks `gate/` the same way, and each gate
 says when it should run: `preCommitPattern` (fnmatch globs against staged repo-relative paths — empty
-means always), `preCommitFileArgument` (`"--files"`, `"positional"`, or `""` for whole-tree gates), and
+means always), `preCommitFileArgument` (`"--files"`, or `""` for whole-tree gates), and
 `preCommitSkipReason` for a gate the hook cannot run (`CheckSourceGlob` needs a build directory). A commit
 that touches only `.cmake`, `.py` or data still runs every gate whose pattern matches it.
 A gate whose whole-tree run takes minutes sets `ctestSkipReason`: it is not registered as a CTest lint and runs
 only in the commit hook (and directly) — the reason names the place that does run it over the whole tree
 (`CheckHeaderSelfContained`: the daily `header-self-contained` CI workflow).
+Whole-tree gates (`preCommitFileArgument = ""`) start first as child processes and run alongside the file-argument gates;
+their output is printed in gate order, so the hook's floor is its slowest whole-tree gate — prefer `--files` for a new gate.
 **A merge commit checks only new content file by file**: while `MERGE_HEAD` exists, the file-argument gates,
 the fixers and clang-format get only the staged files whose blob differs from that path in *every* parent
 (conflict resolutions, auto-merged files) — a file byte-identical to one parent was checked when that parent
@@ -145,10 +166,11 @@ guards the reduction with a throwaway git repository.
 
 **Adding a fixer is dropping a file into `lint/fixer/`.** A fixer is one `LintFixer` subclass whose
 `listPass` holds its text transforms (`(text) -> (newText, bChanged)`) plus what to call each one under
-`--check` and after a fix; the base owns target-file selection (explicit paths > `--all` > git-modified >
-everything), concurrency, byte-faithful IO, and the exit code (`--check` + findings = `1`). Scripts that
-are not fixers but pick files the same way (`RunClangFormat.py`) use `addFileArguments` /
-`selectTargetFiles` from the same module. Anything in `fixer/` that is not a fixer states why in
+`--check` and after a fix; the base owns target-file selection (`--files` — the gates' spelling and rule,
+`common.resolveFileArguments` — > `--all` > git-modified > everything), concurrency, byte-faithful IO (a file that is not UTF-8 is
+reported, never rewritten), and the exit code (`--check` + findings = `1`). Scripts that
+are not fixers but pick files the same way (`FormatClangFormat.py`) use `addFileArguments` /
+`selectFixerTargetFiles` from the same module. Anything in `fixer/` that is not a fixer states why in
 `kFixerSkipReason` (`FormatModified.py` is an orchestrator, not a fixer).
 
 **Every `FixPass` carries two snippets**, and `CheckFixersAreAlive.py` runs both: `badSample` it MUST
@@ -158,14 +180,25 @@ than for a gate — a gate that over-fires prints a red line, a fixer that over-
 ```powershell
 py -3 Scripts/lint/gate/CheckCodeConventions.py                # naming/style rules (CI gate)
 py -3 Scripts/lint/gate/CheckCodeConventions.py --files <path> # single file
-py -3 Scripts/lint/gate/CheckIncludeOrder.py                   # check only; `--fix` to rewrite
+py -3 Scripts/lint/gate/CheckIncludeOrder.py                   # check only — fixer/FormatIncludeOrder.py rewrites
+py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files <path>  # include order/dupes (same rule as the gate)
 py -3 Scripts/lint/gate/CheckEngineLayers.py                   # Engine must not include Editor/GameFramework/Games; RuntimeAPI must not include Engine/App
+py -3 Scripts/lint/gate/CheckModuleTargets.py                  # module targets (_listTarget): GF_Server_/GF_Client_ names, dependency and include direction
 py -3 Scripts/lint/gate/CheckEngineRootFiles.py                # Source/Engine root holds only the startup/shutdown wiring files
+py -3 Scripts/lint/gate/CheckDocPaths.py                       # links, anchors and backticked repo paths in *.md exist; every README is on docs/02_DocumentMap.md
 py -3 Scripts/lint/gate/CheckResourceCasing.py                 # everything under Resource/ must be lowercase
 py -3 Scripts/lint/gate/CheckFunctionVocabulary.py            # one verb per concept; acronyms are camelCase words
 py -3 Scripts/lint/gate/CheckFallibleNodiscard.py              # bool-returning fallible verbs (load/save/apply…) are [[nodiscard]]
 py -3 Scripts/lint/gate/CheckTargetMacros.py                   # platform/arch/compiler via SW_* macros, never compiler built-ins
+py -3 Scripts/lint/gate/CheckStdFilesystemIsolation.py         # std::filesystem only inside Core/File/Std (engine code asks FileUtil)
 py -3 Scripts/lint/gate/CheckTextureFolders.py                 # textures/ holds DDS only; source images live in textures_raw/
+py -3 Scripts/lint/gate/CheckConfigReference.py                # docs/Config matches the code; every config file is in ConfigCatalog.py
+py -3 Scripts/generate/GenerateConfigReference.py              # regenerate docs/Config after changing a config field, gv, argument or SW_* option
+py -3 Scripts/lint/gate/CheckWin32WideCalls.py                 # Win32 calls name the W variant (UNICODE is not defined)
+py -3 Scripts/lint/gate/CheckWellKnownConstants.py             # π/√2/e/gravity/hash constants only in their home (MathUtil, HashUtil, …)
+py -3 Scripts/lint/gate/CheckKitNamespaces.py                  # state tags unique (comment = little-endian bytes); kits read no raw keys, prefix kit settings keys
+py -3 Scripts/lint/gate/CheckScriptCommonHelpers.py            # Scripts/ use common's one place for processes, build dirs, console, generated files
+py -3 Scripts/lint/gate/CheckScriptLayout.py                   # Scripts/ file-name prefix per folder and lint base classes (Scripts/README.md layout table)
 py -3 Scripts/lint/fixer/FormatBranchBraces.py --check         # if/case 중괄호 규칙 검사
 py -3 Scripts/lint/fixer/FormatModified.py                     # clang-format the working-tree changes
 py -3 Scripts/lint/report/RunBuildWarnings.py                  # compiler warnings still in the tree
@@ -173,9 +206,11 @@ py -3 Scripts/lint/report/RunHeaderSelfContained.py            # headers that on
 py -3 Scripts/lint/report/RunForwardDeclarationCandidates.py  # includes a header could replace with a forward declaration (`--apply` rewrites; then build + RunHeaderSelfContained)
 py -3 Scripts/lint/report/RunClangTidy.py                      # static analysis
 py -3 Scripts/lint/report/RunPaddingReport.py                  # per-record size, padding and the reorder floor (libclang)
+py -3 Scripts/lint/report/RunRepeatedConstants.py              # constants/literals defined in more than one place
 py -3 Scripts/lint/report/RunFolderFileCount.py                # folders over 40 code files, single-file Source folders
 py -3 Scripts/lint/selftest/CheckLintsAreAlive.py              # do the gates still bite? (CI gate)
 py -3 Scripts/lint/selftest/CheckFixersAreAlive.py             # do the fixers still rewrite — and still hold back? (CI gate)
+py -3 Scripts/lint/RunLintSuite.py [--hook-sample 1,10]         # every gate + self-test without a build dir, with timings (what the CI lint job runs)
 py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its rules still bite? (CI gate)
 ```
 
@@ -212,6 +247,9 @@ log/memory/string/file/task/compression) is compiled as an OBJECT library that `
 re-exports. In **Dev**, `Engine` is a DLL and `EditorModule` / `SWGame` / `GF_*` kits / `RHI_*` backends
 are dynamically loaded MODULEs supporting hot reload; in **Shipping** the editor is dropped and everything
 links statically into one exe.
+`Server` is the dedicated-server launcher (Game · Server targets, `Source/Server`): the same `EngineLoop` in the `DedicatedServer` role
+(no window · RHI · user-settings steps, a null audio device) + `ModuleHost` through the shared `AppHost` static library, ticking the game
+at a fixed rate; its operator config is `Config/Server/<game>.json` (read from disk even in Shipping).
 
 **The C-ABI boundary.** `Source/RuntimeAPI` is header-only `INTERFACE` — a pure `extern "C"` contract, never
 implementations. It includes no Engine or App header (`CheckEngineLayers.py`); the engine service table that defines
@@ -221,10 +259,8 @@ interchangeable: `SW_API` (Engine.dll symbols), `SW_MODULE_API` (C-ABI entry poi
 `SW_GF_API` (GameFramework.dll classes), `SW_GAMESERVICE_API` (the RuntimeAPI GameService locator only).
 
 **Engine internal layers.** `Source/Engine` is one link unit but its folder include graph is a DAG, linted by
-`CheckEngineLayers.py`: Common/Compression → Reflection/Utility → Animation/Localization/Serialization →
-Audio/Config/Dialogue/Physics → Resource/Spatial → Graphics (RHI, shaders, GPU assets)/Window → Input/Object →
-Scene/Sequencer/Character/UserSettings/Environment → Graphics/Renderer/Module/Telemetry → root files (`EngineLoop`). The RHI does not know the window, the
-world does not know the renderer, the renderer reads the scene. Engine code must never include `Editor/`,
+`CheckEngineLayers.py`: foundation (`Common`) at the bottom, `Graphics/Renderer` and the root files (`EngineLoop`) at the top.
+The RHI does not know the window, the world does not know the renderer, the renderer reads the scene. Engine code must never include `Editor/`,
 `GameFramework/`, or `Games/`; reach the editor through RuntimeAPI, delegates, or events instead. The tier
 table is in `Source/Engine/README.md` (recompute it with `Scripts/lint/report/RunEngineLayerGraph.py`).
 

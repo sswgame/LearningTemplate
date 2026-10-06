@@ -29,18 +29,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
 from gate import CheckCodeConventions  # noqa: E402
-from common import useUtf8Stdout  # noqa: E402
+from LintGate import GateResult, LintGate  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
-#: CMake 등록 정보 — 게이트는 `LintGate` 클래스가 들고, 클래스가 없는 이쪽은 모듈이 든다
-#: (`Scripts/lint/LintCatalog.py`). 영어인 이유는 ninja 가 찍는 줄이기 때문이다.
-kLintBuildComment = "Checking that every CheckCodeConventions rule still catches a deliberately broken snippet..."
-kLintTimeoutSeconds = 60
 
 
 # ------------------------------------------------------------------------------
 # 1) 파일 하나로는 알 수 없는 규칙 — 트리를 통째로 스캔할 때만 돈다(파일 짝이 있어야 성립해 규칙이 조각을 들 수 없다)
 # ------------------------------------------------------------------------------
-_kWholeScanCases: list[tuple[str, dict[str, str]]] = [
+_kWholeScanCases: list[tuple[str, dict[str, str | bytes]]] = [
     (
         "Style/HeaderMemberInitializer",
         {
@@ -53,6 +50,15 @@ _kWholeScanCases: list[tuple[str, dict[str, str]]] = [
         {
             "Source/Probe/CtorOrder.h": "#pragma once\n\nclass CtorOrder\n{\npublic:\n    CtorOrder();\n\nprivate:\n    int32 _first{ 0 };\n    int32 _second{ 0 };\n};\n",
             "Source/Probe/CtorOrder.cpp": '#include "pch.h"\n\nCtorOrder::CtorOrder()\n    : _second{ 1 }\n    , _first{ 2 }\n{\n}\n',
+        },
+    ),
+    (
+        # 짝 헤더가 UTF-8 이 아니면(CP949 주석) 생성자 순서를 검사할 수 없다 — 통과로 두지 않고 위반으로 알린다.
+        "Style/ConstructorOrder",
+        {
+            "Source/Probe/CtorUnreadable.h": (b"#pragma once\n\n// \xb0\xa1\n\nclass CtorUnreadable\n{\npublic:\n    CtorUnreadable();\n\n"
+                                               b"private:\n    int32 _first{ 0 };\n    int32 _second{ 0 };\n};\n"),
+            "Source/Probe/CtorUnreadable.cpp": '#include "pch.h"\n\nCtorUnreadable::CtorUnreadable()\n    : _second{ 1 }\n    , _first{ 2 }\n{\n}\n',
         },
     ),
     (
@@ -314,10 +320,14 @@ def resetPathMapCacheInternal() -> None:
     CheckCodeConventions._s_exactPathMap = {}
 
 
-def writeFixtureInternal(root: Path, relPath: str, content: str) -> Path:
+def writeFixtureInternal(root: Path, relPath: str, content: str | bytes) -> Path:
+    """조각 파일 하나. `bytes` 면 그대로 쓴다(UTF-8 이 아닌 파일을 만드는 조각)."""
     path = root / relPath
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    if isinstance(content, bytes):
+        path.write_bytes(content)
+    else:
+        path.write_text(content, encoding="utf-8")
     return path
 
 
@@ -335,119 +345,119 @@ def knownCategoriesInternal() -> set[str]:
     return set(re.findall(r'rule_category="([^"]+)"', text))
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="CheckCodeConventions 음성 테스트")
-    parser.add_argument("--root", default=str(Path(__file__).resolve().parents[3]))
-    parser.add_argument("--verbose", action="store_true", help="조각마다 잡힌 카테고리를 모두 출력")
-    args = parser.parse_args(argv)
-    useUtf8Stdout()
+class CheckCodeConventionsSelfTestGate(LintGate):
+    description = "CheckCodeConventions 음성 테스트 — 규칙마다 위반 조각을 잡는지"
+    buildComment = "Checking that every CheckCodeConventions rule still catches a deliberately broken snippet..."
+    timeoutSeconds = 60
+    selfTestSkipReason = "린트를 보는 린트 — 조각을 들지 않는다(대상이 린트 폴더 자체다)"
+    violationHeader = "문제"
 
-    repoRoot = Path(args.root).resolve()
-    errors: list[str] = []
-    covered: set[str] = set()
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--verbose", action="store_true", help="조각마다 잡힌 카테고리를 모두 출력")
 
-    tempRoot = Path(tempfile.mkdtemp(prefix="swConventionsSelfTest"))
-    try:
-        # --- 규칙이 스스로 드는 조각 (표가 아니라 규칙에서 온다) ---
-        ruleOwnedCases: list[tuple[str, str, str]] = []
-        for scopeRules in CheckCodeConventions._kRulesByScope.values():
-            for rule in scopeRules:
-                # 조각이 없으면 아래 "조각이 없는 카테고리" 검사가 잡는다 (파일 짝이 필요한 규칙은
-                # `_kWholeScanCases` 가 대신 덮는다 — 그쪽도 같은 검사에 걸린다).
-                # 규칙이 카테고리를 여럿 내면 조각 하나가 그중 하나만 증명한다 — 전부를 요구하지 않는다.
-                # (나머지는 `extraSamples` 가 덮고, 끝의 "조각이 없는 카테고리" 검사가 빠진 것을 잡는다.)
-                if rule.badSample:
-                    ruleOwnedCases.append((rule.allCategories(), rule.badSampleFile, rule.badSample))
-                for extraFile, extraBody in rule.extraSamples:
-                    ruleOwnedCases.append((None, extraFile, extraBody))
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+        repoRoot = repositoryRoot
+        errors: list[str] = []
+        covered: set[str] = set()
 
-        # --- 파일 단위 규칙 ---
-        for category, relPath, content in ruleOwnedCases:
-            expected = (category,) if isinstance(category, str) else category
-            caseName = Path(relPath).stem if expected is None else expected[0].replace("/", "_")
-            caseRoot = tempRoot / caseName
-            path = writeFixtureInternal(caseRoot, relPath, content)
+        tempRoot = Path(tempfile.mkdtemp(prefix="swConventionsSelfTest"))
+        try:
+            # --- 규칙이 스스로 드는 조각 (표가 아니라 규칙에서 온다) ---
+            ruleOwnedCases: list[tuple[str, str, str]] = []
+            for scopeRules in CheckCodeConventions._kRulesByScope.values():
+                for rule in scopeRules:
+                    # 조각이 없으면 아래 "조각이 없는 카테고리" 검사가 잡는다 (파일 짝이 필요한 규칙은
+                    # `_kWholeScanCases` 가 대신 덮는다 — 그쪽도 같은 검사에 걸린다).
+                    # 규칙이 카테고리를 여럿 내면 조각 하나가 그중 하나만 증명한다 — 전부를 요구하지 않는다.
+                    # (나머지는 `extraSamples` 가 덮고, 끝의 "조각이 없는 카테고리" 검사가 빠진 것을 잡는다.)
+                    if rule.badSample:
+                        ruleOwnedCases.append((rule.allCategories(), rule.badSampleFile, rule.badSample))
+                    for extraFile, extraBody in rule.extraSamples:
+                        ruleOwnedCases.append((None, extraFile, extraBody))
+
+            # --- 파일 단위 규칙 ---
+            for category, relPath, content in ruleOwnedCases:
+                expected = (category,) if isinstance(category, str) else category
+                caseName = Path(relPath).stem if expected is None else expected[0].replace("/", "_")
+                caseRoot = tempRoot / caseName
+                path = writeFixtureInternal(caseRoot, relPath, content)
+                resetPathMapCacheInternal()
+                found = categoriesForFileInternal(caseRoot, path)
+
+                if args.verbose:
+                    print(f"  [{category}] -> {sorted(found) if found else '(없음)'}")
+
+                if expected is None:
+                    # 카테고리를 여럿 내는 규칙의 보조 조각 — 무엇이 잡히든 덮인 것으로 친다.
+                    covered.update(found)
+                    continue
+
+                if found & set(expected):
+                    covered.update(found)
+                else:
+                    errors.append(f"{' / '.join(expected)}: 조각이 잡히지 않았습니다 — 규칙이 죽었거나 "
+                                  f"조각이 낡았습니다 (잡힌 것: {sorted(found) if found else '없음'})")
+
+            # --- 트리 전체를 봐야 아는 규칙 ---
+            for caseIndex, (category, files) in enumerate(_kWholeScanCases):
+                # 같은 카테고리의 조각이 여럿이면(규칙의 갈래마다 하나) 서로 다른 폴더에 둔다 — 한 폴더면 하나만 살아 있어도 둘 다 잡힌 것으로 보인다.
+                caseRoot = tempRoot / f"{category.replace('/', '_')}_{caseIndex}"
+                for relPath, content in files.items():
+                    writeFixtureInternal(caseRoot, relPath, content)
+                resetPathMapCacheInternal()
+                found = categoriesForTreeInternal(caseRoot)
+
+                if args.verbose:
+                    print(f"  [{category}] -> {sorted(found) if found else '(없음)'}")
+
+                if category in found:
+                    covered.add(category)
+                else:
+                    errors.append(f"{category}: 조각이 잡히지 않았습니다 (잡힌 것: {sorted(found) if found else '없음'})")
+
+            # --- 주체 × 어휘 교차표 ---
+            errors.extend(checkSubjectMatrixInternal(tempRoot, args.verbose))
+
+            # --- 체크아웃 경로에 제외 폴더 이름(`build`)이 든 저장소 ---
+            errors.extend(checkCheckoutPathWithExcludedWordInternal(tempRoot))
+
+            # --- 블록 주석 범위 (문자열 · `//` 안의 `/*`) ---
+            errors.extend(checkBlockCommentScopeInternal(tempRoot, args.verbose))
+
+            # --- 오탐 확인 (파일 단위) ---
+            cleanRoot = tempRoot / "clean"
+            cleanPath = writeFixtureInternal(cleanRoot, _kCleanCase[0], _kCleanCase[1])
             resetPathMapCacheInternal()
-            found = categoriesForFileInternal(caseRoot, path)
+            cleanFound = categoriesForFileInternal(cleanRoot, cleanPath)
 
-            if args.verbose:
-                print(f"  [{category}] -> {sorted(found) if found else '(없음)'}")
+            if cleanFound:
+                errors.append(f"깨끗해야 할 조각에서 위반이 나왔습니다 (오탐): {sorted(cleanFound)}")
 
-            if expected is None:
-                # 카테고리를 여럿 내는 규칙의 보조 조각 — 무엇이 잡히든 덮인 것으로 친다.
-                covered.update(found)
-                continue
-
-            if found & set(expected):
-                covered.update(found)
-            else:
-                errors.append(f"{' / '.join(expected)}: 조각이 잡히지 않았습니다 — 규칙이 죽었거나 "
-                              f"조각이 낡았습니다 (잡힌 것: {sorted(found) if found else '없음'})")
-
-        # --- 트리 전체를 봐야 아는 규칙 ---
-        for caseIndex, (category, files) in enumerate(_kWholeScanCases):
-            # 같은 카테고리의 조각이 여럿이면(규칙의 갈래마다 하나) 서로 다른 폴더에 둔다 — 한 폴더면 하나만 살아 있어도 둘 다 잡힌 것으로 보인다.
-            caseRoot = tempRoot / f"{category.replace('/', '_')}_{caseIndex}"
-            for relPath, content in files.items():
-                writeFixtureInternal(caseRoot, relPath, content)
+            # --- 오탐 확인 (트리 전체) ---
+            # 전체 스캔 전용 규칙은 위쪽 파일 단위 검사에서 **아예 돌지 않는다.** 그래서 그 규칙들의
+            # 오탐은 여기서만 보인다.
+            cleanTreeRoot = tempRoot / "clean_tree"
+            for relPath, content in _kWholeScanCleanCase.items():
+                writeFixtureInternal(cleanTreeRoot, relPath, content)
             resetPathMapCacheInternal()
-            found = categoriesForTreeInternal(caseRoot)
+            cleanTreeFound = categoriesForTreeInternal(cleanTreeRoot)
 
-            if args.verbose:
-                print(f"  [{category}] -> {sorted(found) if found else '(없음)'}")
+            if cleanTreeFound:
+                errors.append(f"깨끗해야 할 트리에서 위반이 나왔습니다 (오탐): {sorted(cleanTreeFound)}")
+        finally:
+            shutil.rmtree(tempRoot, ignore_errors=True)
 
-            if category in found:
-                covered.add(category)
-            else:
-                errors.append(f"{category}: 조각이 잡히지 않았습니다 (잡힌 것: {sorted(found) if found else '없음'})")
+        # --- 덮이지 않은 카테고리 ---
+        known = knownCategoriesInternal()
+        uncovered = sorted(known - covered)
 
-        # --- 주체 × 어휘 교차표 ---
-        errors.extend(checkSubjectMatrixInternal(tempRoot, args.verbose))
+        if uncovered:
+            errors.append("조각이 없는 카테고리 " + str(len(uncovered)) + "종: " + ", ".join(uncovered))
 
-        # --- 체크아웃 경로에 제외 폴더 이름(`build`)이 든 저장소 ---
-        errors.extend(checkCheckoutPathWithExcludedWordInternal(tempRoot))
+        return GateResult(listViolation=errors, summary=f"{len(covered)} categories covered")
 
-        # --- 블록 주석 범위 (문자열 · `//` 안의 `/*`) ---
-        errors.extend(checkBlockCommentScopeInternal(tempRoot, args.verbose))
 
-        # --- 오탐 확인 (파일 단위) ---
-        cleanRoot = tempRoot / "clean"
-        cleanPath = writeFixtureInternal(cleanRoot, _kCleanCase[0], _kCleanCase[1])
-        resetPathMapCacheInternal()
-        cleanFound = categoriesForFileInternal(cleanRoot, cleanPath)
-
-        if cleanFound:
-            errors.append(f"깨끗해야 할 조각에서 위반이 나왔습니다 (오탐): {sorted(cleanFound)}")
-
-        # --- 오탐 확인 (트리 전체) ---
-        # 전체 스캔 전용 규칙은 위쪽 파일 단위 검사에서 **아예 돌지 않는다.** 그래서 그 규칙들의
-        # 오탐은 여기서만 보인다.
-        cleanTreeRoot = tempRoot / "clean_tree"
-        for relPath, content in _kWholeScanCleanCase.items():
-            writeFixtureInternal(cleanTreeRoot, relPath, content)
-        resetPathMapCacheInternal()
-        cleanTreeFound = categoriesForTreeInternal(cleanTreeRoot)
-
-        if cleanTreeFound:
-            errors.append(f"깨끗해야 할 트리에서 위반이 나왔습니다 (오탐): {sorted(cleanTreeFound)}")
-    finally:
-        shutil.rmtree(tempRoot, ignore_errors=True)
-
-    # --- 덮이지 않은 카테고리 ---
-    known = knownCategoriesInternal()
-    uncovered = sorted(known - covered)
-
-    if uncovered:
-        errors.append("조각이 없는 카테고리 " + str(len(uncovered)) + "종: " + ", ".join(uncovered))
-
-    if errors:
-        print(f"[CheckCodeConventionsSelfTest] 문제 {len(errors)}건", file=sys.stderr)
-        for error in errors:
-            print(f"  {error}")
-        return 1
-
-    print(f"[CheckCodeConventionsSelfTest] OK ({len(covered)} categories covered)")
-    return 0
+main = CheckCodeConventionsSelfTestGate.run
 
 
 if __name__ == "__main__":

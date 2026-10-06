@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MeadowVillage 팩의 설정 — 시작 맵은 마을 씬이다(게임마다 팩의 data/gamesettings.xml 하나다).
+     inputMap 은 게임플레이 액션(빨리 감기 · 대화)의 기본 바인딩이다. -->
+<GameSettings>
+  <startMap>game/meadowvillage/maps/meadow.scene.xml</startMap>
+  <inputMap>game/meadowvillage/data/meadow.input.xml</inputMap>
+</GameSettings>

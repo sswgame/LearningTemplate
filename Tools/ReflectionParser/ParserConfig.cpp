@@ -27,7 +27,7 @@ namespace sw
                 while ( true )
                 {
                     const string candidate = FileUtil::joinPath( cur, relPath );
-                    if ( FileUtil::fileExists( candidate ) )
+                    if ( FileUtil::isRegularFile( candidate ) )
                         return candidate;
 
                     const string parent = FileUtil::getDirectoryPart( cur );
@@ -450,6 +450,13 @@ namespace sw
             _listBaseArg.emplace_back( "-DSW_ARM64" );
 #endif
             _listBaseArg.emplace_back( "-DSW_COMPILER_CLANG" );
+            // 빌드 타깃 종류 — 파서는 같은 빌드 폴더의 sw_global_options 로 지어지므로 자기 매크로가 곧 그 빌드의 것이다.
+#if defined( SW_WITH_CLIENT_CODE )
+            _listBaseArg.emplace_back( "-DSW_WITH_CLIENT_CODE" );
+#endif
+#if defined( SW_WITH_SERVER_CODE )
+            _listBaseArg.emplace_back( "-DSW_WITH_SERVER_CODE" );
+#endif
         }
 
         BLOCK( "Locate LLVM and Clang Resource Directory" )
@@ -464,7 +471,7 @@ namespace sw
             }
 
             const string llvmClangDir = FileUtil::joinPath( llvmPath, _llvmClangRel );
-            if ( FileUtil::directoryExists( llvmClangDir ) )
+            if ( FileUtil::isDirectory( llvmClangDir ) )
             {
                 vector<string> listClangSubFolder;
                 FileUtil::collectFolders( llvmClangDir, listClangSubFolder, false );
@@ -472,7 +479,7 @@ namespace sw
                 {
                     const string resourceDir = FileUtil::normalizeSeparators( folder );
                     const string clangInc    = FileUtil::joinPath( folder, _clangIncludeRel );
-                    if ( FileUtil::directoryExists( clangInc ) == false )
+                    if ( FileUtil::isDirectory( clangInc ) == false )
                         continue;
 
                     _listBaseArg.emplace_back( _flagResourceDir );
@@ -488,7 +495,7 @@ namespace sw
         BLOCK( "Locate MSVC and Windows SDK Includes" )
         {
             const string msvcInc = FileUtil::joinPath( msvcToolsDir, _msvcIncludeRel );
-            if ( msvcToolsDir.empty() == false && FileUtil::directoryExists( msvcInc ) )
+            if ( msvcToolsDir.empty() == false && FileUtil::isDirectory( msvcInc ) )
             {
                 _listBaseArg.emplace_back( _flagIsystem );
                 _listBaseArg.emplace_back( msvcInc );
@@ -499,7 +506,7 @@ namespace sw
                 const string ucrtPath = FileUtil::joinPath(
                     FileUtil::joinPath( FileUtil::joinPath( winSdkDir, _winSdkIncludeRel ), winSdkVer ),
                     _winSdkUcrtRel );
-                if ( FileUtil::directoryExists( ucrtPath ) )
+                if ( FileUtil::isDirectory( ucrtPath ) )
                 {
                     _listBaseArg.emplace_back( _flagIsystem );
                     _listBaseArg.emplace_back( ucrtPath );

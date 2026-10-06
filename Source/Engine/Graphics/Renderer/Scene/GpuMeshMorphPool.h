@@ -31,6 +31,7 @@
  * 것과 같은 자리). 결과를 읽는 쪽(정점 셰이더)은 모프와 똑같아 새 그리기 코드가 없습니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
@@ -38,6 +39,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
 {
@@ -51,7 +53,7 @@ namespace sw
      * @brief 모프 풀의 정점 하나입니다. GPU 에서는 **float4 둘**로 보입니다(`g_SwMorphVertices`, binding.hlsli).
      * @details 셰이더 쪽은 구조체가 아니라 `StructuredBuffer<float4>` 입니다. 주의: 구조체로 선언하면 레이아웃이 네 백엔드에서
      *          같아도 OpenGL 만 같은 원소의 두 멤버를 **다른 원소**에서 읽습니다. 그래서 버퍼의 원소는 float4 이고 정점당
-     *          `kMorphFloat4PerVertex` 개입니다.
+     *          `shaderslot::kMorphFloat4PerVertex` 개입니다.
      *          이 구조체는 CPU 가 채우는 모양일 뿐이며, 바이트 배치는 float4 둘과 같습니다.
      */
     struct GpuMorphVertex
@@ -65,14 +67,6 @@ namespace sw
 {
     static_assert( sizeof( GpuMorphVertex ) == 2 * sizeof( float4 ), "모프 풀 정점은 float4 둘(32바이트)이어야 한다 — 셰이더가 [2i], [2i+1] 로 읽는다" );
 
-    /// @brief 정점 하나가 차지하는 버퍼 원소(float4) 수입니다. 셰이더의 `SW_MORPH_FLOAT4_PER_VERTEX` 와 같아야 합니다.
-    inline constexpr uint32 kMorphFloat4PerVertex = 2;
-    /// @brief 스킨 팔레트의 본 하나가 차지하는 버퍼 원소(float4) 수입니다(행벡터 4x4 의 0 · 1 · 2 열). 셰이더의 `SW_SKIN_FLOAT4_PER_BONE` 과 같아야 합니다.
-    inline constexpr uint32 kSkinFloat4PerBone = 3;
-    /// @brief 스킨 인스턴스 표의 한 줄이 차지하는 원소(uint4) 수입니다. 셰이더의 `SW_SKIN_UINT4_PER_INSTANCE` 와 같아야 합니다.
-    inline constexpr uint32 kSkinUint4PerInstance = 2;
-    /// @brief 스킨 원본 정점 하나의 가중치 버퍼 원소(float4) 수입니다(가중치 · 본 번호 · 모프 차이 구간). 셰이더의 `SW_SKIN_FLOAT4_PER_VERTEX` 와 같아야 합니다.
-    inline constexpr uint32 kSkinFloat4PerVertex = 3;
 } // namespace sw
 
 namespace sw
@@ -95,7 +89,7 @@ namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GpuSkinInstanceRow ) == kSkinUint4PerInstance * 16, "스킨 인스턴스 줄은 uint4 둘이어야 한다(meshskin.hlsl)" );
+    static_assert( sizeof( GpuSkinInstanceRow ) == shaderslot::kSkinUint4PerInstance * 16, "스킨 인스턴스 줄은 uint4 둘이어야 한다(meshskin.hlsl)" );
 
     /**
      * @class GpuMeshMorphPool
@@ -105,7 +99,7 @@ namespace sw
     {
     public:
         /** @brief 풀에 들어가지 못한 메시가 받는 값입니다. 셰이더의 폴백 조건과 같은 뜻입니다. */
-        static constexpr uint32 kInvalidBase = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidBase = invalid_index::kUint32;
 
         GpuMeshMorphPool()                                     = default;
         ~GpuMeshMorphPool()                                    = default;

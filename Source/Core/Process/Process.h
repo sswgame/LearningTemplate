@@ -28,6 +28,13 @@ namespace sw
     {
         string _workingDirectory{};
         bool   _bCreateWindow{ false };
+        /** @brief 자식의 표준 입력을 파이프로 잇습니다 — `writeInput` · `closeInput` 으로 씁니다. 끄면 자식의 표준 입력은 비어 있다(NUL · /dev/null). */
+        bool _bPipeStandardInput{ false };
+        /**
+         * @brief Windows 에서 자식을 새 프로세스 그룹으로 띄웁니다(`CREATE_NEW_PROCESS_GROUP`) — `requestStop` 이 그 그룹에 Ctrl+Break 를 보낼 수 있게.
+         * @details 모든 자식에 걸면 터미널의 Ctrl+C 가 자식(빌드 중인 컴파일러)에 닿지 않으므로 옵션이다. POSIX 는 늘 자기 그룹이라 무시합니다.
+         */
+        bool _bNewProcessGroup{ false };
     };
 } // namespace sw
 
@@ -96,6 +103,18 @@ namespace sw
          */
         bool terminate( int32 exitCode = 1 );
 
+        /** @brief 자식의 표준 입력에 씁니다(`_bPipeStandardInput` 으로 띄웠을 때만). 다 쓰면 true 입니다. */
+        [[nodiscard]] bool writeInput( string_view text );
+        /** @brief 자식의 표준 입력을 닫습니다(자식은 EOF 를 받는다). 두 번 불러도 됩니다. */
+        void closeInput();
+        /**
+         * @brief 자식에게 **정상 종료**를 요청합니다(강제 종료인 `terminate` 와 다르다). 보냈으면 true 입니다.
+         * @details POSIX 는 자식의 프로세스 그룹에 SIGTERM(`launch` 가 자식을 제 그룹의 우두머리로 세운다 — `sh -c` 너머의 실제 프로그램까지 닿는다).
+         *          Windows 는 `CTRL_BREAK_EVENT` 를 자식의 프로세스 그룹에 보낸다(`_bNewProcessGroup` 으로 띄운 자식만). 이 프로세스가 콘솔에
+         *          붙어 있지 않으면 보낼 수 없어 false 입니다(서비스 · 콘솔 없는 CI) — 부르는 쪽은 표준 입력 명령 같은 다른 길을 씁니다.
+         */
+        [[nodiscard]] bool requestStop();
+
         /**
          * @brief 프로세스가 아직 실행 중인지 반환합니다.
          * @details 양쪽 모두 **OS 에 직접 묻습니다.** POSIX 는 `waitid(WNOHANG | WNOWAIT)` 라서 묻기만 하고 거두지는 않습니다.
@@ -151,6 +170,7 @@ namespace sw
         void*  _pNativeHandle;
         void*  _pStdOutRead;
         void*  _pNativeThread;
+        void*  _pStdInWrite; ///< 표준 입력 파이프의 쓰는 끝(Windows HANDLE, POSIX 는 서술자 + 1 — 0 은 없음)
         string _bufferedOutput;
         /**
          * @brief 자식의 pid(없으면 0). **원자다** — `terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불리는 것이
@@ -158,5 +178,6 @@ namespace sw
          *        두 스레드의 쓰기를 짚는다).
          */
         atomic<int32> _processId;
+        bool          _bNewProcessGroup; ///< `requestStop` 이 보낼 수 있는 자식인가(Windows)
     };
 } // namespace sw

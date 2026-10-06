@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-namespace sw::constants::reflection
+namespace sw::constant::reflection
 {
     /** @brief 기본 카테고리 이름입니다. */
     inline constexpr const utf8* kDefaultCategory = "General";
@@ -55,4 +55,4 @@ namespace sw::constants::reflection
     inline constexpr uint8 kAncestorDepthUnknown = 0xFF;
     /** @brief 조상 표를 세울 수 없다는 깊이 표시입니다(이름 없음 · 순환 · 표보다 깊은 사슬). 등록 · 해제가 다시 비웁니다. */
     inline constexpr uint8 kAncestorDepthNone = 0xFE;
-} // namespace sw::constants::reflection
+} // namespace sw::constant::reflection

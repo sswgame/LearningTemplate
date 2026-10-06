@@ -35,8 +35,24 @@ namespace sw
 
     void OpenGLRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || src == 0 )
+        if ( _pDevice->_bInitialized == SW_FALSE || ( src == 0 && dst == 0 ) )
             return;
+
+        if ( src == 0 )
+        {
+            // 창(기본 프레임버퍼) → 텍스처. 창의 0 행은 **아래**라 원본 y 를 뒤집어 읽는다 — 결과 텍스처의 0 행이 화면 위(D3D 와 같은 뜻)다.
+            const OpenGLRHIDevice::OpenGLTextureRecord* pDstRecord = _pDevice->resolveTexture( dst );
+            if ( pDstRecord == nullptr || pDstRecord->_fbo == 0 || pDstRecord->_bDepthStencil != SW_FALSE )
+                return;
+            const GLint backWidth  = static_cast<GLint>( _pDevice->_width );
+            const GLint backHeight = static_cast<GLint>( _pDevice->_height );
+            glBindFramebuffer( GL_READ_FRAMEBUFFER, 0 );
+            glBindFramebuffer( GL_DRAW_FRAMEBUFFER, pDstRecord->_fbo );
+            glBlitFramebuffer( 0, backHeight, backWidth, 0, 0, 0, static_cast<GLint>( pDstRecord->_width ), static_cast<GLint>( pDstRecord->_height ),
+                               GL_COLOR_BUFFER_BIT, GL_NEAREST );
+            glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+            return;
+        }
 
         const OpenGLRHIDevice::OpenGLTextureRecord* pSrcRecord = _pDevice->resolveTexture( src );
         if ( pSrcRecord == nullptr || pSrcRecord->_fbo == 0 || pSrcRecord->_bDepthStencil != SW_FALSE )
@@ -57,7 +73,7 @@ namespace sw
 
         // 행 순서: FBO 는 UPPER_LEFT 로 그려 0 행이 화면 위다(beginRenderPass). 창(기본 프레임버퍼)은 0 행이 **아래**라,
         // 창으로 옮길 때는 대상 y 를 뒤집어야 화면에 바로 선다. 텍스처끼리는 행 순서가 같아 그대로 옮긴다.
-        // 주의: 창 쪽 반전은 오프스크린 텍스처를 읽는 스크린샷으로는 보이지 않는다(`-gv_screenshot` 이 이 경로를 쓴다).
+        // 창 쪽 반전은 오프스크린을 읽는 스크린샷으로는 보이지 않는다 — RenderPassGpuTest.PresentedBackBufferMatchesTheCapture 가 창을 읽어 본다.
         const GLint dstY0 = dstFbo == 0 ? static_cast<GLint>( dstH ) : 0;
         const GLint dstY1 = dstFbo == 0 ? 0 : static_cast<GLint>( dstH );
         glBindFramebuffer( GL_READ_FRAMEBUFFER, pSrcRecord->_fbo );
@@ -623,10 +639,10 @@ namespace sw
     {
         if ( _pDevice->_bInitialized == SW_FALSE || num32BitValues == 0 || pData == nullptr )
             return;
-        if ( destOffsetIn32BitValues >= OpenGLRHIDevice::kMaxComputeRootConstantDwords )
+        if ( destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
             return;
 
-        const uint32 maxCount = OpenGLRHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+        const uint32 maxCount = shaderslot::kRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = ( num32BitValues > maxCount ) ? maxCount : num32BitValues;
 
         if ( _pDevice->ensureComputeRootConstantUbo() == false )

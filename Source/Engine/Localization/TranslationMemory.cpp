@@ -100,7 +100,7 @@ namespace sw
     {
         const string text = toJsonText();
         string       existing;
-        if ( FileUtil::fileExists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text )
+        if ( FileUtil::exists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text )
             return true;
         return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, text );
     }

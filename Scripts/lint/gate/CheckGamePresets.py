@@ -5,14 +5,13 @@ Scripts/lint/gate/CheckGamePresets.py
 
 게임마다 프리셋(`Config/Game/<게임 폴더 이름>.json`)이 있고, 그것이 실제 팩을 가리키는지 검사합니다.
 
-빌드는 `SW_ACTIVE_GAME` 으로 프리셋 파일을 골라 팩 루트 · gamesettings · 시작 씬을 정합니다(Shipping 은 그 파일을 구워 넣는다).
+빌드는 `SW_ACTIVE_GAME` 으로 프리셋 파일을 골라 팩 루트를 정합니다(Shipping 은 그 파일을 구워 넣는다).
 프리셋이 없으면 그 게임을 고른 configure 가 멈추고, 팩 루트가 틀리면 그 게임은 다른 게임의 팩이나 빈 팩을 읽는다.
 
 검사 규칙:
 - `Source/Games/<G>/CMakeLists.txt` 가 있으면 `Config/Game/<G>.json` 이 있어야 한다.
 - 프리셋에는 게임 폴더가 있어야 한다(지운 게임의 프리셋이 남지 않게).
 - `_packRoot` 는 `game/<폴더>` 이고 `Resource/<_packRoot>/` 가 있어야 한다.
-- `_startupScene` 이 있으면 그 파일이 `Resource/` 아래에 있어야 한다.
 - `_userSettingsSchema` · `_telemetrySchema` 가 있으면 그 파일이 팩(`Resource/<_packRoot>/`) 아래에 있어야 한다.
 - Empty 가 아닌 게임마다 CMake 프리셋 `Ninja-Debug-<게임>`(configure · build)이 있고 `SW_ACTIVE_GAME` 이 그 게임이다 — 게임은 프리셋으로 바꾼다
   (빌드 폴더가 게임마다 따로라 두 작업이 서로의 활성 게임을 바꾸지 않는다). Empty 는 `Ninja-Debug` 다.
@@ -28,11 +27,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
+from common import kDirRuntimeGamePreset, kDirSourceGames  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
-#: 게임 프리셋 폴더(Constants.py 의 kDirRuntimeGamePreset 와 같다).
-_kPresetFolder = "Config/Game"
-_kGamesFolder = "Source/Games"
+_kPresetFolder = kDirRuntimeGamePreset
+_kGamesFolder = kDirSourceGames
 #: 기본 게임 — CMake 프리셋 `Ninja-Debug` 가 그것이다.
 _kDefaultGame = "Empty"
 _kGamePresetPrefix = "Ninja-Debug-"
@@ -97,9 +96,6 @@ def findGamePresetViolations(repositoryRoot: Path) -> tuple[list[str], int]:
             violations.append(f"[Game Preset] `_packRoot` 는 `game/<폴더>` 입니다: {presetPath} (`{packRoot}`)")
         elif (resourceRoot / packRoot).is_dir() is False:
             violations.append(f"[Game Preset] `_packRoot` 의 폴더가 없습니다: {presetPath} → Resource/{packRoot}/")
-        startupScene = str(data.get("_startupScene", ""))
-        if startupScene and (resourceRoot / startupScene).is_file() is False:
-            violations.append(f"[Game Preset] `_startupScene` 파일이 없습니다: {presetPath} → Resource/{startupScene}")
         for schemaKey in ("_userSettingsSchema", "_telemetrySchema"):
             schemaPath = str(data.get(schemaKey, ""))
             if schemaPath and (resourceRoot / packRoot / schemaPath).is_file() is False:
@@ -117,7 +113,7 @@ class CheckGamePresetsGate(LintGate):
     preCommitPattern = ("Config/Game/*", "Source/Games/*/CMakeLists.txt", "Resource/game/*")
     preCommitFileArgument = ""
     violationHeader = "게임 프리셋 위반"
-    hint = ("  `Config/Game/<게임 폴더 이름>.json` 에 `_packRoot`(`game/<폴더>`) · `_gameSettingsFile` · `_startupScene` 을 적습니다. "
+    hint = ("  `Config/Game/<게임 폴더 이름>.json` 에 `_packRoot`(`game/<폴더>`)를 적습니다(시작 씬은 팩의 `data/gamesettings.xml`). "
             "게임 폴더를 지웠으면 그 프리셋도 지웁니다.")
     selfTestCases = [
         {

@@ -2,7 +2,9 @@
 
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/UserDataPath.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
 
@@ -20,10 +22,9 @@ namespace sw
     {
         struct UserSettingsManagerInternal
         {
-            static constexpr utf8 kFileName[]       = "usersettings.json";
-            static constexpr utf8 kVersionKey[]     = "version";
-            static constexpr utf8 kValuesKey[]      = "values";
-            static constexpr utf8 kFallbackFolder[] = "Saved/UserSettings";
+            static constexpr utf8 kFileName[]   = "usersettings.json";
+            static constexpr utf8 kVersionKey[] = "version";
+            static constexpr utf8 kValuesKey[]  = "values";
 
             /** @brief 사용자 파일의 키 · 값 한 줄입니다(버전 올리기가 이 목록을 고친다). */
             struct FileEntry
@@ -245,7 +246,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool UserSettingsManager::loadUserFile( string_view filePath )
     {
-        if ( filePath.empty() || FileUtil::fileExists( filePath ) == false )
+        if ( filePath.empty() || FileUtil::exists( filePath ) == false )
             return false;
         string text;
         if ( FileUtil::readTextFile( filePath, text ) == false )
@@ -386,21 +387,7 @@ namespace sw
 
     string UserSettingsManager::makeDefaultUserFilePath( string_view gameName )
     {
-        using Internal          = UserSettingsManagerInternal;
-        const string folderName = gameName.empty() ? string( "default" ) : StringUtil::toLower( string( gameName ).c_str() );
-#if defined( SW_PLATFORM_WINDOWS )
-        const utf8* pRoot = std::getenv( "LOCALAPPDATA" );
-        if ( StringUtil::isNullOrEmpty( pRoot ) == false )
-            return FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pRoot, "SWEngine" ), folderName ), Internal::kFileName );
-#elif defined( SW_PLATFORM_LINUX )
-        const utf8* pConfigRoot = std::getenv( "XDG_CONFIG_HOME" );
-        if ( StringUtil::isNullOrEmpty( pConfigRoot ) == false )
-            return FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pConfigRoot, "swengine" ), folderName ), Internal::kFileName );
-        const utf8* pHome = std::getenv( "HOME" );
-        if ( StringUtil::isNullOrEmpty( pHome ) == false )
-            return FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pHome, ".config" ), "swengine" ), folderName ), Internal::kFileName );
-#endif
-        return FileUtil::joinPath( FileUtil::joinPath( Internal::kFallbackFolder, folderName ), Internal::kFileName );
+        return FileUtil::joinPath( UserDataPath::getConfigDirectory( gameName ), UserSettingsManagerInternal::kFileName );
     }
 
     // ------------------------------------------------------------------------------
@@ -904,6 +891,12 @@ namespace sw
                 GlobalVariableInfo*    pVariable              = pGlobalVariableManager != nullptr ? pGlobalVariableManager->findVariable( def._targetName.c_str() ) : nullptr;
                 if ( pVariable == nullptr )
                     return false;
+                // 기동 · 다시 세울 때의 적용은 명령줄로 준 변수를 덮지 않는다 — 실행 한 번의 값(명령줄)이 저장된 값(사용자 설정)을 이긴다(화면 설정과 같은 순서).
+                // 메뉴에서 바꾼 값(bStartup 거짓)은 덮는다 — 플레이어가 지금 고른 것이다.
+                const CommandLineManager* pCommandLineManager = getTargets()._pCommandLineManager;
+                string                    commandLineValue;
+                if ( bStartup && pCommandLineManager != nullptr && pCommandLineManager->findPendingGlobalValue( def._targetName.view(), commandLineValue ) )
+                    return true;
                 if ( def._type != UserSettingType::Enum )
                     return pVariable->setValueFromString( value );
 

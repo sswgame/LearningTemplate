@@ -28,6 +28,10 @@ namespace sw
         /// @brief 매니저 인스턴스 번호를 나눠 주는 카운터입니다(0 은 "없음").
         atomic<uint32>         s_nextInstanceId{ 1 };
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드
+#if !defined( SW_SHIPPING )
+        /// @brief 태스크 · 스테이지 대기 구간을 내보낼 곳입니다(`TaskManager::setProfileHook`). 없으면 nullptr.
+        atomic<const TaskProfileHook*> s_pProfileHook{ nullptr };
+#endif
 
         /// @brief 대기 함수(waitStage/waitAll/runParallel)가 잠들기 전에 도는 `cpuPause` 횟수(약 2 us)입니다. 기다리는 동안에는 다른 일을 돕습니다.
         constexpr uint32 kIdleSpinCount = 64;
@@ -651,7 +655,8 @@ namespace sw
         // 워커가 깨어나기를 기다리지 않는다. 이 스레드가 첫 청크부터 가져간다. 남은 티켓은 이 스레드가 닿을 수 있는 큐(자기
         // 데크 · 전역)에만 있으므로, 조인을 기다리며 다른 일을 돕다 보면 스스로 가져가게 된다.
         runGroupChunks( &group );
-        waitForJoin( group._join );
+        // Low 줄(백그라운드 I/O)은 돕지 않는다 — 합류는 Normal 의 자기 티켓과 남이 도는 청크만 기다린다. Low 하나를 집으면 그 태스크만큼 합류가 늦어진다.
+        waitForJoin( group._join, false );
 
         if ( _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
             notifyBroadcast();
@@ -764,16 +769,43 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 5) 스테이지
     // ------------------------------------------------------------------------------
+#if !defined( SW_SHIPPING )
+    void TaskManager::setProfileHook( const TaskProfileHook* pHook )
+    {
+        s_pProfileHook.store( pHook, std::memory_order_release );
+    }
+#endif
+
     TaskStageHandle TaskManager::createStage()
     {
+        return createStage( string_view{} );
+    }
+
+    TaskStageHandle TaskManager::createStage( [[maybe_unused]] string_view debugName )
+    {
         // 풀에서 가져온다. 프레임마다 레벨 수만큼 만드는 곳이라 힙을 쓰면 그 수만큼 할당과 해제가 반복된다(churn).
-        return TaskStageHandle{ _nodePool->allocateStage() };
+        StageNode* pStage = _nodePool->allocateStage();
+#if !defined( SW_SHIPPING )
+        copyTaskDebugName( pStage->_arrName, debugName ); // 풀에서 다시 쓰는 노드라 늘 덮어쓴다(빈 이름 포함)
+#endif
+        return TaskStageHandle{ pStage };
     }
 
     void TaskManager::waitStage( const TaskStageHandle& stage )
     {
-        if ( stage._pNode != nullptr )
-            waitForJoin( stage._pNode->_join );
+        if ( stage._pNode == nullptr )
+            return;
+#if !defined( SW_SHIPPING )
+        const TaskProfileHook* pHook = s_pProfileHook.load( std::memory_order_acquire );
+        const TaskProfileZone  zone  = ( pHook != nullptr && stage._pNode->_arrName[0] != '\0' && stage._pNode->_join.getPending() > 0 )
+                                         ? pHook->_pBeginZone( stage._pNode->_arrName, TaskProfileZoneKind::WaitStage )
+                                         : TaskProfileZone{};
+#endif
+        waitForJoin( stage._pNode->_join, true );
+#if !defined( SW_SHIPPING )
+        if ( zone._pContext != nullptr )
+            pHook->_pEndZone( zone );
+#endif
     }
 
     bool TaskManager::isStageComplete( const TaskStageHandle& stage )
@@ -784,12 +816,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 6) 기다리기 — 다른 일을 돕다가 자기 워드에서 잠들기, 브로드캐스트, 메인 스레드 깨우기
     // ------------------------------------------------------------------------------
-    bool TaskManager::helpOrSpin( uint32& inoutSpinCount )
+    bool TaskManager::helpOrSpin( uint32& inoutSpinCount, const bool bHelpLowQueue )
     {
         if ( isMainThread() )
             dispatchMainThreadTasks();
 
-        if ( tryHelpAndExecute() )
+        if ( tryHelpAndExecute( bHelpLowQueue ) )
         {
             inoutSpinCount = 0;
             return true;
@@ -806,12 +838,12 @@ namespace sw
         return false;
     }
 
-    void TaskManager::waitForJoin( JoinCounter& join )
+    void TaskManager::waitForJoin( JoinCounter& join, const bool bHelpLowQueue )
     {
         uint32 spinCount = 0;
         while ( join.getPending() > 0 )
         {
-            if ( helpOrSpin( spinCount ) == false )
+            if ( helpOrSpin( spinCount, bHelpLowQueue ) == false )
                 parkOnJoin( join );
         }
     }
@@ -822,7 +854,7 @@ namespace sw
         uint32          spinCount = 0;
         while ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
         {
-            if ( helpOrSpin( spinCount ) )
+            if ( helpOrSpin( spinCount, true ) )
                 continue;
 
             uint32 waitMilli = 0;
@@ -975,6 +1007,11 @@ namespace sw
             TaskNode* pPrevRunningTask = t_pCurrentRunningTask;
             t_pCurrentRunningTask      = pNode;
             const ScopedMemoryTag taskMemoryTag{ pNode->_memoryTag };
+#if !defined( SW_SHIPPING )
+            const TaskProfileHook* pHook = s_pProfileHook.load( std::memory_order_acquire );
+            const TaskProfileZone  zone  = ( pHook != nullptr && pNode->_arrName[0] != '\0' ) ? pHook->_pBeginZone( pNode->_arrName, TaskProfileZoneKind::Execute )
+                                                                                              : TaskProfileZone{};
+#endif
 
             BLOCK( "Execute Task Delegate" )
             {
@@ -982,6 +1019,10 @@ namespace sw
                 std::visit( visitor, pNode->_callable );
             }
 
+#if !defined( SW_SHIPPING )
+            if ( zone._pContext != nullptr )
+                pHook->_pEndZone( zone );
+#endif
             t_pCurrentRunningTask = pPrevRunningTask;
         }
 
@@ -1070,7 +1111,7 @@ namespace sw
         }
     }
 
-    bool TaskManager::tryTakeItem( int32 workerId, uintptr_t& outItem )
+    bool TaskManager::tryTakeItem( int32 workerId, const bool bTakeLowQueue, uintptr_t& outItem )
     {
         outItem                 = 0;
         const uint32 numWorkers = getWorkerCount();
@@ -1103,17 +1144,17 @@ namespace sw
                 return true;
         }
 
-        if ( _globalLowQueue.dequeue( outItem ) && outItem != 0 )
+        if ( bTakeLowQueue && _globalLowQueue.dequeue( outItem ) && outItem != 0 )
             return true;
 
         outItem = 0;
         return false;
     }
 
-    bool TaskManager::tryHelpAndExecute()
+    bool TaskManager::tryHelpAndExecute( const bool bHelpLowQueue )
     {
         uintptr_t item{ 0 };
-        if ( tryTakeItem( t_currentWorkerIndex, item ) == false )
+        if ( tryTakeItem( t_currentWorkerIndex, bHelpLowQueue, item ) == false )
             return false;
         executeItem( item );
         return true;
@@ -1225,7 +1266,7 @@ namespace sw
         while ( _bStop.load( std::memory_order_relaxed ) == false )
         {
             uintptr_t item{ 0 };
-            if ( tryTakeItem( static_cast<int32>( workerId ), item ) )
+            if ( tryTakeItem( static_cast<int32>( workerId ), true, item ) )
             {
                 executeItem( item );
                 continue;
@@ -1241,7 +1282,7 @@ namespace sw
                 if ( _workEpoch.load( std::memory_order_acquire ) != observedEpoch )
                 {
                     observedEpoch = _workEpoch.load( std::memory_order_acquire );
-                    if ( tryTakeItem( static_cast<int32>( workerId ), item ) )
+                    if ( tryTakeItem( static_cast<int32>( workerId ), true, item ) )
                     {
                         bFoundInSpin = true;
                         break;
@@ -1268,7 +1309,7 @@ namespace sw
             const uint32 observedParkWord = slot._park._word.load( std::memory_order_acquire );
             _idleWorkerMask.fetch_or( idleBit, std::memory_order_seq_cst );
             std::atomic_thread_fence( std::memory_order_seq_cst );
-            if ( tryTakeItem( static_cast<int32>( workerId ), item ) )
+            if ( tryTakeItem( static_cast<int32>( workerId ), true, item ) )
             {
                 _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
                 executeItem( item );

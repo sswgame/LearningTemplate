@@ -694,12 +694,12 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
     manager.setSaveBlockReason( "test: components removed" );
     SW_EXPECT_TRUE( manager.isSaveBlocked() );
     SW_EXPECT_FALSE( manager.saveActiveScene( savePath ) );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( savePath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( savePath ) );
 
     manager.setSaveBlockReason( {} );
     SW_EXPECT_FALSE( manager.isSaveBlocked() );
     SW_EXPECT_TRUE( manager.saveActiveScene( savePath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( savePath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( savePath ) );
 
     manager.shutdown();
 }
@@ -730,8 +730,8 @@ SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
         test::ScopedDefensiveTestLog expected( "a scene saved under a name the cooker does not cook" );
         SW_EXPECT_TRUE( manager.saveActiveScene( bareName ) );
     }
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( bareName ) );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( bareName + ".scene.xml" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( bareName ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( bareName + ".scene.xml" ) );
     SW_EXPECT_STREQ( ( bareName + ".scene.xml" ).c_str(), manager.getActiveScene()->getSourcePath().c_str() ); // 다음 저장도 그 이름이다
 
     manager.getActiveScene()->setSourcePath( {} );
@@ -739,7 +739,7 @@ SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
         test::ScopedDefensiveTestLog expected( "a scene with no path at all" );
         SW_EXPECT_FALSE( manager.saveActiveScene( {} ) );
     }
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( "Assets/Scenes/DefaultScene.scene" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( "Assets/Scenes/DefaultScene.scene" ) );
 
     manager.shutdown();
 }

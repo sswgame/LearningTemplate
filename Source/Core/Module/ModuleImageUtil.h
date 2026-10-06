@@ -60,7 +60,10 @@ namespace sw
          *          부르기 **전**에 부릅니다. 그 함수를 내보내지 않는 이미지(지연 로드 훅이 없는 모듈 · Windows 밖)는 아무것도 하지 않습니다.
          */
         static uint32 bindDelayLoadImports( void* pHandle );
-        /** @brief 지금 올라와 있는 모든 이미지에 `bindDelayLoadImports` 를 합니다 — OS 로더가 함께 올린 모듈(시험 실행 파일이 링크한 키트)용, 엔진 기동이 부른다. */
+        /**
+         * @brief 지금 올라와 있는 모든 이미지에 `bindDelayLoadImports` 를 합니다 — OS 로더가 함께 올린 모듈(시험 실행 파일이 링크한 키트)용, 엔진 기동이 부른다.
+         * @details 묶기가 올린 이미지(서버 키트가 지연 로드하는 공유 키트)도 묶는다 — 새 이미지가 없을 때까지 다시 모은다.
+         */
         static uint32 bindDelayLoadImportsOfLoadedModules();
         /** @brief 지금 프로세스에 올라와 있는 이미지(실행 파일 · DLL)의 핸들을 모읍니다. Windows 밖에서는 아무것도 담지 않습니다. */
         static void collectLoadedModuleHandles( vector<void*>& outListHandle );

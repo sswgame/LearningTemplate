@@ -11,11 +11,12 @@
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/ImageUtil.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
-#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Resource/ResourceUtil.h"
+
+#include "sw/config/ConfigConstants.h"
 
 #if defined( TileShape )
     #undef TileShape
@@ -54,7 +55,88 @@ namespace sw::editor
             if ( formatStr == "R8G8B8A8_UNORM" || formatStr == "rgba8" )
                 return bSrgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
 
+            if ( formatStr == "R16G16B16A16_FLOAT" || formatStr == "rgba16f" )
+                return DXGI_FORMAT_R16G16B16A16_FLOAT;
+
             return bSrgb ? DXGI_FORMAT_BC7_UNORM_SRGB : DXGI_FORMAT_BC7_UNORM;
+        }
+
+        /** @brief 임포트 결과(밉까지 끝난 이미지)를 DDS 로 쓰고 결과를 채웁니다. 8 비트 · HDR 두 갈래가 같이 씁니다. */
+        [[nodiscard]] bool saveImportedDdsInternal( const DirectX::ScratchImage& finalImage, [[maybe_unused]] string_view sourcePath, string_view outputPath, TextureImportResult* pOutResult )
+        {
+            const string outputDir = FileUtil::getDirectoryPart( outputPath );
+            if ( outputDir.empty() == false )
+                FileUtil::ensureDirectoryExists( outputDir );
+
+            const wstring wOutPath = StringUtil::utf8ToUtf16( string( outputPath ).c_str() );
+            const HRESULT hrSave   = DirectX::SaveToDDSFile( finalImage.GetImages(), finalImage.GetImageCount(), finalImage.GetMetadata(), DirectX::DDS_FLAGS_NONE,
+                                                             wOutPath.c_str() );
+            if ( FAILED( hrSave ) )
+            {
+                SW_LOG_ERROR( "DirectX::SaveToDDSFile failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hrSave ), Format( 8, Format::Padding::Zero ).hex() ),
+                              outputPath );
+                return false;
+            }
+
+            const DirectX::TexMetadata& metadata        = finalImage.GetMetadata();
+            const uint32                mipCount        = static_cast<uint32>( metadata.mipLevels );
+            const uint64                outputSizeBytes = FileUtil::getFileSize( outputPath );
+            if ( pOutResult != nullptr )
+            {
+                pOutResult->_width           = static_cast<uint32>( metadata.width );
+                pOutResult->_height          = static_cast<uint32>( metadata.height );
+                pOutResult->_mipCount        = mipCount;
+                pOutResult->_outputSizeBytes = outputSizeBytes;
+                pOutResult->_bSuccess        = SW_TRUE;
+            }
+            SW_LOG_INFO( "Imported texture: %# -> %# (Format: %#, Mips: %#, %# -> %# bytes)", sourcePath, outputPath,
+                         static_cast<uint32>( metadata.format ), mipCount, FileUtil::getFileSize( sourcePath ), outputSizeBytes );
+            return true;
+        }
+
+        /**
+         * @brief `.hdr`(Radiance RGBE)을 부동소수점으로 읽어 BC6H_UF16 또는 R16G16B16A16_FLOAT 로 임포트합니다.
+         * @details 규칙의 포맷이 다른 것(8 비트)이면 실패로 알린다 — 1 을 넘는 값을 자르지 않는다. 밉은 선형 값 그대로 섞는다(sRGB 가 아니다).
+         */
+        [[nodiscard]] bool importHdrTextureInternal( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult )
+        {
+            const DXGI_FORMAT targetFormat = resolveFormatInternal( rule._format, false );
+            if ( targetFormat != DXGI_FORMAT_BC6H_UF16 && targetFormat != DXGI_FORMAT_R16G16B16A16_FLOAT )
+            {
+                SW_LOG_ERROR( "HDR source needs format bc6h or rgba16f (rule '%#'): %#", rule._format.c_str(), sourcePath );
+                return false;
+            }
+            const wstring         wSourcePath = StringUtil::utf8ToUtf16( string( sourcePath ).c_str() );
+            DirectX::TexMetadata  metadata{};
+            DirectX::ScratchImage sourceImage;
+            HRESULT               hr = DirectX::LoadFromHDRFile( wSourcePath.c_str(), &metadata, sourceImage );
+            if ( FAILED( hr ) )
+            {
+                SW_LOG_ERROR( "DirectX::LoadFromHDRFile failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                              sourcePath );
+                return false;
+            }
+            // 8 비트 갈래와 같은 자체 필터 — 어디서 임포트해도 같은 바이트다.
+            constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = DirectX::TEX_FILTER_DEFAULT | DirectX::TEX_FILTER_FORCE_NON_WIC;
+            DirectX::ScratchImage               mipChain;
+            hr = ( rule._bGenerateMips == SW_TRUE ) ? DirectX::GenerateMipMaps( *sourceImage.GetImage( 0, 0, 0 ), kFilterFlags, 0, mipChain )
+                                                    : mipChain.InitializeFromImage( *sourceImage.GetImage( 0, 0, 0 ) );
+            DirectX::ScratchImage finalImage;
+            if ( SUCCEEDED( hr ) )
+            {
+                hr = ( targetFormat == DXGI_FORMAT_BC6H_UF16 )
+                       ? DirectX::Compress( mipChain.GetImages(), mipChain.GetImageCount(), mipChain.GetMetadata(), targetFormat, DirectX::TEX_COMPRESS_DEFAULT,
+                                            DirectX::TEX_THRESHOLD_DEFAULT, finalImage )
+                       : DirectX::Convert( mipChain.GetImages(), mipChain.GetImageCount(), mipChain.GetMetadata(), targetFormat, kFilterFlags,
+                                           DirectX::TEX_THRESHOLD_DEFAULT, finalImage );
+            }
+            if ( FAILED( hr ) )
+            {
+                SW_LOG_ERROR( "HDR mip/compress failed (hr=0x%#) for %#", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
+                              sourcePath );
+                return false;
+            }
+            return saveImportedDdsInternal( finalImage, sourcePath, outputPath, pOutResult );
         }
 
         /**
@@ -148,7 +230,8 @@ namespace sw::editor
             }
             const utf8* findUnsupportedReason( string_view sourcePath ) const override
             {
-                return FileUtil::hasExtension( sourcePath, ".hdr" ) ? "HDR 원본은 임포트하지 않습니다 (디코더가 8비트라 값이 잘립니다)" : nullptr;
+                (void)sourcePath;
+                return nullptr;
             }
             [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const override
             {
@@ -180,6 +263,10 @@ namespace sw::editor
             pOutResult->_bSuccess        = SW_FALSE;
             pOutResult->_sourceSizeBytes = FileUtil::getFileSize( sourcePath );
         }
+
+        // `.hdr`(Radiance RGBE)은 1 을 넘는 값을 지닌다 — 8 비트 디코더(stb)를 거치지 않고 부동소수점으로 읽어 HDR 포맷으로만 임포트한다.
+        if ( FileUtil::hasExtension( sourcePath, ".hdr" ) )
+            return importHdrTextureInternal( sourcePath, outputPath, rule, pOutResult );
 
         // 1) ImageUtil 로 소스 이미지 디코딩
         RawImageData rawImage;
@@ -239,8 +326,6 @@ namespace sw::editor
             }
         }
 
-        const uint32 mipCount = static_cast<uint32>( mipChain.GetMetadata().mipLevels );
-
         // 4) 압축 또는 포맷 변환
         DirectX::ScratchImage finalImage;
 
@@ -288,43 +373,7 @@ namespace sw::editor
         }
 
         // 5) DDS 파일로 저장
-        const string outputDir = FileUtil::getDirectoryPart( outputPath );
-        if ( outputDir.empty() == false )
-            FileUtil::ensureDirectoryExists( outputDir );
-
-        const wstring wOutPath = StringUtil::utf8ToUtf16( string( outputPath ).c_str() );
-
-        const HRESULT hrSave = DirectX::SaveToDDSFile(
-            finalImage.GetImages(),
-            finalImage.GetImageCount(),
-            finalImage.GetMetadata(),
-            DirectX::DDS_FLAGS_NONE,
-            wOutPath.c_str() );
-
-        if ( FAILED( hrSave ) )
-        {
-            SW_LOG_ERROR(
-                "DirectX::SaveToDDSFile failed (hr=0x%#) for %#",
-                Fmt( static_cast<uint32>( hrSave ), Format( 8, Format::Padding::Zero ).hex() ),
-                outputPath.data() );
-            return false;
-        }
-
-        const uint64 outputSizeBytes = FileUtil::getFileSize( outputPath );
-        if ( pOutResult != nullptr )
-        {
-            pOutResult->_width           = static_cast<uint32>( rawImage._width );
-            pOutResult->_height          = static_cast<uint32>( rawImage._height );
-            pOutResult->_mipCount        = mipCount;
-            pOutResult->_outputSizeBytes = outputSizeBytes;
-            pOutResult->_bSuccess        = SW_TRUE;
-        }
-
-        SW_LOG_INFO( "Imported texture: %# -> %# (Format: %d, Mips: %u, %llu -> %llu bytes)",
-                     sourcePath.data(), outputPath.data(), targetFormat, mipCount,
-                     FileUtil::getFileSize( sourcePath ), outputSizeBytes );
-
-        return true;
+        return saveImportedDdsInternal( finalImage, sourcePath, outputPath, pOutResult );
     }
 
     void TextureImporter::applyChannelManipulations( RawImageData& rawImage, const TextureImportRule& rule, size_t totalPixels )
@@ -365,12 +414,6 @@ namespace sw::editor
         if ( FileUtil::hasExtension( relativePath, ".dds" ) )
             return false;
 
-        if ( FileUtil::hasExtension( relativePath, ".hdr" ) )
-        {
-            SW_LOG_WARNING( "HDR 은 자동 임포트 대상이 아닙니다 (8비트로 잘린다): %#", relativePath );
-            return true;
-        }
-
         const string& resourceRoot = ResourceUtil::getRootFolderPath();
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedTexturePath( normalized ).empty() )
@@ -383,7 +426,7 @@ namespace sw::editor
         // `App --import-textures` 로 임포트된 것이 같은 판정을 받는다. 내용이 그대로면(저장만 다시 했다) 임포트하지 않는다.
         // 설정 파일이 없으면 기본 규칙이다. 깨졌으면 로드가 알리고 기본 규칙으로 임포트한다.
         TextureImportConfig config{};
-        (void)config.loadFromFile( EditorUtil::resolveEditorConfigFile( getEditorToolDefaults()._textureImportConfigFile.c_str() ) );
+        (void)config.loadFromFile( makeDefaultImportConfigPath() );
         const AssetImportSummary summary = importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
@@ -429,12 +472,9 @@ namespace sw::editor
 
     string TextureImporter::makeDefaultImportConfigPath()
     {
-        const EditorToolDefaults defaults{};
-        const string             projectRoot = EditorUtil::getProjectRootPath();
+        const string projectRoot = EditorUtil::getProjectRootPath();
         if ( projectRoot.empty() )
             return {};
-
-        const string configDir = FileUtil::joinPath( FileUtil::joinPath( projectRoot, defaults._configFolder ), defaults._editorConfigFolder );
-        return FileUtil::joinPath( configDir, defaults._textureImportConfigFile );
+        return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorUtil::kTextureImportConfigFileName );
     }
 } // namespace sw::editor

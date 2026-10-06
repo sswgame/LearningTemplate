@@ -117,7 +117,7 @@ SW_TEST_CASE( AudioSceneTest, CameraIsTheDefaultListenerAndOrthoIs2D )
     // 리스너 컴포넌트가 생기면 카메라 대신 그것이다(오른쪽을 보는 리스너 — 같은 소리가 앞이 된다).
     sw::GameObject*             pEars     = manager.createGameObject( sw::hashed_string( "Ears" ) );
     sw::AudioListenerComponent* pListener = pEars->addComponent<sw::AudioListenerComponent>();
-    pListener->setLocalRotation( sw::float3( 0.0f, sw::MathUtil::HalfPi, 0.0f ) );
+    pListener->setLocalRotation( sw::float3( 0.0f, sw::MathUtil::kHalfPi, 0.0f ) );
     pEmitter->setWorldPosition( sw::float3( 4.0f, 0.0f, 0.0f ) );
     manager.flushSceneTransforms();
     manager.getSceneAudio().update( 1.0f / 60.0f, pCamera, nullptr );
@@ -206,7 +206,7 @@ SW_TEST_CASE( AudioSceneTest, PhysicsRaycastOcclusion )
     pScene->step( 1.0f / 60.0f );
 
     sw::PhysicsAudioOcclusionQuery query;
-    query.setScene( pScene.get(), sw::MathUtil::MaxUInt32 );
+    query.setScene( pScene.get(), sw::MathUtil::kMaxUInt32 );
     SW_EXPECT_NEAR_EQUAL( 1.0f, query.computeOcclusion( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 10.0f ) ), 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, query.computeOcclusion( sw::float3( 20.0f, 0.0f, 0.0f ), sw::float3( 20.0f, 0.0f, 10.0f ) ), 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.0f / 3.0f, query.computeOcclusion( sw::float3( 30.0f, 0.0f, 0.0f ), sw::float3( 30.0f, 0.0f, 10.0f ) ), 1e-6f );

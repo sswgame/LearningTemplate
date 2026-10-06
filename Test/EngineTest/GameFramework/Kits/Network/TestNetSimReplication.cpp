@@ -235,3 +235,38 @@ SW_TEST_CASE( NetSimReplicationTest, LowPriorityEntitiesAreNotStarved )
     SW_EXPECT_TRUE( session.getMaxStaleness( kLowId ) <= 24 );
     SW_EXPECT_TRUE( maxHighStaleness <= 4 ); // 높은 것은 여전히 거의 매번
 }
+
+/**
+ * @brief [NetSimReplicationTest] 잃은 스냅숏에 실렸던 낮은 우선도 엔티티는 확인을 보고 바로 다시 앞선다 — 한 차례(우선도 비)를 통째로 다시 기다리지 않는다
+ * @details 내리막 손실 20 %. 서버가 실은 순간 우선도를 0 으로 돌리기만 하면, 잃은 상태는 쌓인 1 이 10 을 넘을 때까지(열한 번째쯤) 다시 기다린다.
+ */
+SW_TEST_CASE( NetSimReplicationTest, LowPriorityStateLostInASnapshotIsResentSoon )
+{
+    constexpr uint32   kHighCount = 4;
+    constexpr uint32   kLowId     = kHighCount + 1;
+    TypePriorityPolicy policy;
+    TableGame          game;
+    game._table._pPolicy    = &policy;
+    game._table._bStampTick = SW_TRUE;
+    for ( uint32 entityId = 1; entityId <= kHighCount; ++entityId )
+        game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), entityId, 10 } );
+    game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), kLowId, 1 } );
+    NetSimSettings settings;
+    settings._hostSettings._sendInterval = 1.0 / 60.0;
+    NetSimHarness harness;
+    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    NetEmulationConditions lossy;
+    lossy._latency  = 0.02;
+    lossy._lossRate = 0.2f;
+    NetSimLinkConditions link;
+    link._downstream   = lossy;
+    const int32 client = harness.addClient( link );
+    harness.stepTicks( 60 );
+
+    TableClientSession& session = getTableClient( harness, client );
+    session.beginMeasure( harness.getServer().getLocalTick(), kLowId + 1 );
+    harness.stepTicks( 1200 );
+    SW_LOG_INFO( "[NetSimReplication] 20 percent downstream loss over 1200 ticks: priority-1 entity at most %# ticks stale", session.getMaxStaleness( kLowId ) );
+    // 씨앗이 고정이라 값은 결정적이다 — 판정 없이(실은 순간 0 으로만) 96, 판정하면 89. 고친 값 + 3.
+    SW_EXPECT_TRUE( session.getMaxStaleness( kLowId ) <= 92u );
+}

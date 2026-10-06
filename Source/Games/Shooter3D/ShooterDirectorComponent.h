@@ -2,7 +2,7 @@
  * @file ShooterDirectorComponent.h
  * @brief Shooter3D 의 규칙을 돌리는 컴포넌트 — 페이싱 감독이 정한 스켈레톤 스폰 · 쓰러뜨린 수 · 막는 상자 · 효과 풀(탄착 · 총구 섬광 · 탄도선) · 로그입니다.
  *
- * @details 언리얼 GameMode/GameState 의 자리입니다. 씬에 하나 둡니다. 무기 규칙(연사 · 탄창 · 재장전 · 퍼짐 · 반동)은 기반(`GameFramework/Combat`)이,
+ * @details 언리얼 GameMode/GameState 의 자리입니다. 씬에 하나 둡니다. 무기 규칙(연사 · 탄창 · 재장전 · 퍼짐 · 반동)은 기반(`GameFramework/Base/Combat`)이,
  *          이동 · 사격 · 체력은 플레이어 컴포넌트(`ShooterPlayerComponent`)가, 적 하나의 움직임은 `ShooterEnemyComponent` 가 맡습니다.
  *
  *          틱 규칙: 디렉터는 `TickGroup::PrePhysics` 에서 쓰러진 적을 세고 · 시체를 걷고 이번 프레임의 적 자리 · 플레이어 자리를 적습니다. 플레이어 · 적
@@ -20,11 +20,11 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/AI/Director/AiDirector.h"
-#include "GameFramework/AI/Director/AiDirectorProfile.h"
-#include "GameFramework/AI/SpawnDirector.h"
-#include "GameFramework/Framework/GameDirectorComponent.h"
-#include "GameFramework/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/AI/Director/AiDirector.h"
+#include "GameFramework/Base/AI/Director/AiDirectorProfile.h"
+#include "GameFramework/Base/AI/SpawnDirector.h"
+#include "GameFramework/Base/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Framework/MaterialTintCache.h"
 
 #include "Games/Shooter3D/ShooterBlockerComponent.h"
 
@@ -67,7 +67,7 @@ namespace sw
      * @details 감독이 쌓기 → 절정 → 쉼을 돌며 적 스폰(예산) · 무리(절정 진입) · 탄 채우기(쉼 진입) · 수리(예산)를 정하고, 여기는 그 사건을 스켈레톤 ·
      *          탄 · 체력으로 바꿉니다. 스켈레톤은 프리팹 `_enemyPrefab` 이고 모습은 외형 프리셋(`_listEnemyPreset` 을 차례로, 정예는 `_eliteEnemyPreset`)
      *          + 스폰 순번 씨앗입니다. 긴장도 신호는 맞은 피해(`reportPlayerDamage`) · 쓰러뜨린 적 · 가까운 적 수 · 탄 부족입니다. 웨이브 번호는
-     *          감독의 순환 수 + 1 입니다. 세운 적 · 효과는 핸들로 들고 상태 저장 전에 걷습니다(`despawnViews` — 감독도 처음으로 돌아간다).
+     *          감독의 순환 수 + 1 입니다. 세운 적 · 효과는 핸들로 들고 상태 저장 전에 걷습니다(`despawnViews` — 감독 예산으로 선 적은 같은 스폰 id 로 다시 선다).
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Director", Tooltip = "Runs the skeleton waves, kills, blockers, the effect pools and the runtime spawns" )
     class ShooterDirectorComponent : public GameDirectorComponent
@@ -81,7 +81,7 @@ namespace sw
         /** @brief 움직임 기록(`-gv_shooterMotionTrace`)을 파일로 쓰고 판을 닫습니다. */
         void onEndPlay() override;
 
-        /** @brief 판의 진행(처치 수)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 적 · 효과는 모습이라 걷고, 페이싱 감독은 처음부터 다시 돈다. */
+        /** @brief 판의 진행(처치 수 · 페이싱 감독 상태)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 적 · 효과는 모습이라 걷는다. */
         void writeState( Archive& outArchive ) const override;
         /** @brief 플레이어가 쓰러졌다 — 적을 걷고 감독을 처음부터 다시 돌립니다(틱 뒤 게임 스레드에서 부른다). */
         void restartRound();
@@ -110,7 +110,7 @@ namespace sw
     protected:
         /** @brief 막는 상자를 모으고 페이싱 감독을 시작합니다(데이터를 못 읽으면 적이 오지 않을 뿐 판은 연다). */
         [[nodiscard]] bool startGame() override;
-        /** @brief 처치 수만 읽습니다 — 적은 걷히고 감독은 처음부터 다시 돈다(감독 상태는 싣지 않는다). */
+        /** @brief 판의 진행(처치 수 · 페이싱 감독 상태)을 읽습니다 — 적은 걷히고 감독 예산으로 섰던 적만 같은 스폰 id 로 다시 선다. */
         [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
@@ -198,6 +198,12 @@ namespace sw
         int32 _effectPoolSize;
         PROPERTY( Category = "Arena", DisplayName = "Tracer Pool Size", Tooltip = "Tracer boxes kept hidden and reused", Min = 1 )
         int32 _tracerPoolSize;
+        PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
+        float32 _statusLogInterval;
+        PROPERTY( Category = "Pacing", DisplayName = "Near Enemy Distance", Tooltip = "Enemies inside this distance count as close to the player (pacing signal)", Min = 0.0, Units = m )
+        float32 _nearEnemyDistance;
+        PROPERTY( Category = "Pacing", DisplayName = "Repair Health Per Scale", Tooltip = "Health one unit of a repair reward restores", Min = 0.0 )
+        float32 _repairHealthPerScale;
 
         vector<ShooterArenaBox>  _listBox;
         vector<ShooterEnemyView> _listEnemyView;
@@ -218,11 +224,10 @@ namespace sw
         float32                  _pendingHeal; ///< 감독의 수리 보상 — 틱 뒤에 플레이어 체력으로
         uint32                   _spawnCursor; ///< 다음 적의 스폰 자리 순번
         uint32                   _killCount;
-        uint32                   _traceFrame;         ///< 움직임 기록의 프레임 번호
-        uint8                    _bAmmoPending   : 1; ///< 탄 보상 — 틱 뒤에 플레이어 탄을 채운다
-        uint8                    _bPacingReady   : 1; ///< 프로필 · 스폰 테이블을 읽었다
-        uint8                    _bPacingRestart : 1; ///< 적을 걷었다 — 다음 틱에 감독을 처음부터
-        uint8                    _bPlayerAlive   : 1;
-        uint8                    _reserved       : 4;
+        uint32                   _traceFrame;       ///< 움직임 기록의 프레임 번호
+        uint8                    _bAmmoPending : 1; ///< 탄 보상 — 틱 뒤에 플레이어 탄을 채운다
+        uint8                    _bPacingReady : 1; ///< 프로필 · 스폰 테이블을 읽었다
+        uint8                    _bPlayerAlive : 1;
+        uint8                    _reserved     : 5;
     };
 } // namespace sw

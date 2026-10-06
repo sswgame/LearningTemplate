@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MeadowVillage 의 호감도 — 생물 하나가 공유 평판의 세력 하나(creature.<종 id>, 키트 접두). -->
+<ReputationCatalog>
+  <Faction id="creature.sprout" min="0" max="1000" start="0"><Tier name="Stranger" min="0"/><Tier name="Friend" min="50"/></Faction>
+</ReputationCatalog>

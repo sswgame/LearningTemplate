@@ -48,6 +48,8 @@ namespace sw
         GameObjectHandle _director;
         PROPERTY( Category = "Tile", DisplayName = "Tile Index", Tooltip = "Row-major tile of the director field" )
         int32 _tileIndex;
+        PROPERTY( Category = "Tile", DisplayName = "Model Scale", Tooltip = "Scale of the grown crop model", Min = 0.0 )
+        float32 _modelScale;
 
         int32 _cropState; ///< 지금 그린 작물 상태(−1 이면 아직 없다)
     };

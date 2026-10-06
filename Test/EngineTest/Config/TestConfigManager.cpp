@@ -181,3 +181,54 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
     SW_EXPECT_EQUAL( 1024u, pBefore->_window._width );
     SW_EXPECT_EQUAL( 1u, notifyCount );
 }
+
+/**
+ * @brief [ConfigManagerTest] 틀린 설정 파일은 기본값으로 떨어지지 않고 nullptr — 모르는 키 · 대소문자만 다른 키 · 범위 밖 값을 이름으로 알린다
+ * @details 구운 사본으로 조용히 떨어지면 고친 값이 무시된 것을 아무도 모른다. 파일이 **없을** 때만 기본값이다.
+ */
+SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "Shipping 은 디스크의 Config/ 를 보지 않는다" );
+#else
+    const string rootDir = test::makeTempPath( "sw_config_invalid_test" );
+    const string path    = FileUtil::joinPath( rootDir, "InvalidEngineConfig.json" );
+    FileUtil::ensureDirectoryExists( rootDir );
+    const string generated = makeEngineConfigJson( 640, 480 );
+
+    struct Case
+    {
+        const utf8* _pJson;
+        const utf8* _pExpectedName;
+    };
+    const Case arrCase[] = {
+        {      "{ \"_maxFrameDeltaTme\": 0.2 }",  "_maxFrameDeltaTme"}, // 모르는 키
+        {     "{ \"_MaxFrameDeltaTime\": 0.2 }", "_MaxFrameDeltaTime"}, // 대소문자만 다르다
+        {          "{ \"_fixedDeltaTime\": 0 }",    "_fixedDeltaTime"}, // Min 밖
+        {"{ \"_window\": { \"_widht\": 800 } }",            "_window"}, // 구조체 칸 안의 모르는 키는 바깥 칸 이름으로
+    };
+    for ( const Case& testCase : arrCase )
+    {
+        SW_ASSERT_TRUE( FileUtil::writeTextFile( path, testCase._pJson ) );
+        test::ScopedDefensiveTestLog defensive( "틀린 설정 파일을 일부러 읽는다" );
+        test::ScopedLogCollector     logs;
+        ConfigManager                manager;
+        SW_EXPECT_TRUE_MSG( manager.ensureConfig<EngineConfig>( path, generated.c_str() ) == nullptr, testCase._pJson );
+        SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
+        SW_EXPECT_TRUE_MSG( logs.countContaining( testCase._pExpectedName ) >= 1u, string( testCase._pJson ) + logs.joined() );
+    }
+    SW_EXPECT_TRUE( FileUtil::removeFile( path ) );
+#endif
+}
+
+/**
+ * @brief [ConfigManagerTest] 맞는 파일은 그대로 읽힌다 — 엄격하게 바꿔도 정상 파일 · 구조체 칸 · enum 칸이 실패하지 않는다(엄격 검사의 짝)
+ */
+SW_TEST_CASE( ConfigManagerTest, ValidFileWithNestedStructLoads )
+{
+    ConfigManager manager;
+    SW_EXPECT_TRUE( manager.loadConfigFromJson<EngineConfig>(
+        string( "{ \"_window\": { \"_width\": 800, \"_defaultRHI\": \"Vulkan\" }, \"_fixedDeltaTime\": 0.02 }" ), "test" ) );
+    SW_ASSERT_NOT_NULL( manager.getConfig<EngineConfig>() );
+    SW_EXPECT_EQUAL( 800u, manager.getConfig<EngineConfig>()->_window._width );
+}

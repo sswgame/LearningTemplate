@@ -71,7 +71,7 @@ namespace sw
                 const float2& holePoint = listPoint[hole[holeStart]];
 
                 size_t  bestPolygonIndex = inoutListPolygon.size();
-                float32 bestDistance     = MathUtil::MaxFloat;
+                float32 bestDistance     = MathUtil::kMaxFloat;
                 for ( size_t index = 0; index < inoutListPolygon.size(); ++index )
                 {
                     const float2& candidate = listPoint[inoutListPolygon[index]];
@@ -263,7 +263,7 @@ namespace sw
             const vector<uint32>& hole      = listLoop[holeIndex];
             const float2&         probe     = listPoint[hole[0]];
             size_t                bestOuter = listShellLoop.size();
-            float32               bestArea  = MathUtil::MaxFloat;
+            float32               bestArea  = MathUtil::kMaxFloat;
             for ( size_t outer = 0; outer < listShellLoop.size(); ++outer )
             {
                 const float32 area = MathUtil::abs( listArea[listShellLoop[outer]] );
@@ -288,8 +288,8 @@ namespace sw
                 listOrder[index] = index;
             std::sort( listOrder.begin(), listOrder.end(), [&listOwnHole, &listPoint]( size_t lhs, size_t rhs )
             {
-                float32 lhsMax = -MathUtil::MaxFloat;
-                float32 rhsMax = -MathUtil::MaxFloat;
+                float32 lhsMax = -MathUtil::kMaxFloat;
+                float32 rhsMax = -MathUtil::kMaxFloat;
                 for ( const uint32 pointIndex : listOwnHole[lhs] )
                     lhsMax = MathUtil::max( lhsMax, listPoint[pointIndex]._x );
                 for ( const uint32 pointIndex : listOwnHole[rhs] )

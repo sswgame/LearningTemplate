@@ -84,6 +84,10 @@ if(MSVC)
 		# 바꾸는 일이라 검증 없이 하지 말 것.
 		$<$<CONFIG:Debug>:-g>
 
+		# Release · Shipping 디버그 정보(`SW_RELEASE_DEBUG_INFO`). /Z7 은 정보를 오브젝트에 넣어 sccache 가 캐시한다(/Zi 의 공유 PDB 는 캐시되지 않는다).
+		$<$<AND:$<CONFIG:Release>,$<STREQUAL:${SW_RELEASE_DEBUG_INFO},full>>:/Z7>
+		$<$<AND:$<CONFIG:Release>,$<STREQUAL:${SW_RELEASE_DEBUG_INFO},lines>>:-gline-tables-only>
+
 		$<$<CONFIG:Release>:/O2>
 		$<$<CONFIG:Release>:/arch:AVX2> # AVX2 256비트 SIMD
 		$<$<CONFIG:Release>:-clang:-fno-math-errno> # 수학 함수의 errno 설정 오버헤드 제거
@@ -103,6 +107,10 @@ else()
 		$<$<CONFIG:Debug>:-g>
 		$<$<CONFIG:Debug>:-O0>
 		$<$<CONFIG:Debug>:-gz=zlib> # 디버그 정보 압축
+
+		$<$<AND:$<CONFIG:Release>,$<STREQUAL:${SW_RELEASE_DEBUG_INFO},full>>:-g>
+		$<$<AND:$<CONFIG:Release>,$<STREQUAL:${SW_RELEASE_DEBUG_INFO},lines>>:-gline-tables-only>
+		$<$<AND:$<CONFIG:Release>,$<NOT:$<STREQUAL:${SW_RELEASE_DEBUG_INFO},none>>>:-gz=zlib>
 
 		$<$<CONFIG:Release>:-O3>
 		$<$<CONFIG:Release>:-mavx2> # AVX2 256비트 SIMD
@@ -129,11 +137,16 @@ endif()
 if(MSVC)
 	target_link_options(sw_compiler_clang INTERFACE
 		$<$<CONFIG:Debug>:/INCREMENTAL:NO> # 단일 패스 결정론적 빠른 링킹
+		# Release 도 PDB 와 RSDS 서명을 만든다 — 크래시 덤프를 그 빌드의 심볼과 짝짓는 열쇠(`ModuleBuildId`). /DEBUG 는 /OPT:REF · /OPT:ICF 를 끄므로 아래에 다시 켠다.
+		# PDB 경로는 이름만 적는다(/PDBALTPATH:%_PDB%) — 빌드 기계의 경로가 배포물에 새지 않고, 심볼 서버는 이름 + GUID 로 찾는다.
+		$<$<CONFIG:Release>:/DEBUG:FULL>
+		$<$<CONFIG:Release>:/PDBALTPATH:%_PDB%>
 		$<$<CONFIG:Release>:/OPT:REF> # 미참조 함수 및 데이터 제거
 		$<$<CONFIG:Release>:/OPT:ICF> # 동일한 코드의 중복 함수 병합
 	)
 else()
-	target_link_options(sw_compiler_clang INTERFACE -fuse-ld=lld)
+	# build-id 노트를 늘 적는다(배포판 clang 의 기본에 기대지 않는다) — `ModuleBuildId` 가 읽고 `.build-id/` 심볼 배치의 열쇠다.
+	target_link_options(sw_compiler_clang INTERFACE -fuse-ld=lld LINKER:--build-id=sha1)
 endif()
 
 target_compile_definitions(sw_compiler_clang INTERFACE SW_COMPILER_CLANG)

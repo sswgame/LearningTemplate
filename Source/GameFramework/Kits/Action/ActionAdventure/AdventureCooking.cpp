@@ -6,10 +6,10 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Data/GameDataXml.h"
-#include "GameFramework/Inventory/Crafting.h"
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/ItemBag.h"
+#include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Inventory/Crafting.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
 
 namespace sw
 {
@@ -26,7 +26,7 @@ namespace sw
             }
 
             /** @brief 레시피의 재료가 냄비와 꼭 같은가(종류도 개수도)입니다. */
-            static bool isSameBag( const ItemBag& lhs, const ItemBag& rhs )
+            static bool isSameItems( const ItemStackList& lhs, const ItemStackList& rhs )
             {
                 if ( lhs.getItems().size() != rhs.getItems().size() )
                     return false;
@@ -179,7 +179,7 @@ namespace sw
         const AdventureCookResult result = evaluate( listIngredient, outDish );
         if ( result != AdventureCookResult::Ok )
             return result;
-        ItemBag pot;
+        ItemStackList pot;
         for ( const hashed_string& ingredientId : listIngredient )
             pot.addItem( ingredientId, 1 );
         if ( inventory.hasItems( pot ) == false )
@@ -191,14 +191,14 @@ namespace sw
             for ( const RecipeDef& recipe : recipes.getRecipes() )
             {
                 const bool bSingleOutput = recipe._outputs.getItems().size() == 1;
-                if ( ( recipe._station == _station ) == false || bSingleOutput == false || AdventureCookingInternal::isSameBag( recipe._inputs, pot ) == false )
+                if ( ( recipe._station == _station ) == false || bSingleOutput == false || AdventureCookingInternal::isSameItems( recipe._inputs, pot ) == false )
                     continue;
                 const CraftResult craftResult = crafter.craft( recipe._id, inventory, _station, level );
                 if ( craftResult == CraftResult::NoRoom )
                     return AdventureCookResult::NoRoom;
                 if ( craftResult != CraftResult::Ok )
                     break; // 아직 모르는 레시피 · 레벨 부족 — 일반 요리로
-                outDish._itemId       = recipe._outputs.getItems().begin()->first;
+                outDish._itemId       = recipe._outputs.getItems().front()._itemId;
                 outDish._bNamedRecipe = SW_TRUE;
                 return AdventureCookResult::Ok;
             }

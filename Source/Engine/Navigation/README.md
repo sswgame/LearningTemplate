@@ -3,7 +3,7 @@
 에이전트가 걸을 수 있는 면을 폴리곤으로 미리 계산해 두고(베이크), 그 위에서 경로를 찾고(A* + 줄 당기기), 여럿이 서로 비켜 걷게(군중 회피) 합니다.
 비교 기준은 언리얼 `ARecastNavMesh` · `UNavigationSystemV1` · `UCrowdManager`, 유니티 `NavMeshSurface` · `NavMeshAgent` · `NavMeshObstacle` 입니다 —
 둘 다 Recast & Detour 위에 서 있고, 이 엔진도 같은 라이브러리를 엔진 쪽 인터페이스 뒤에 감쌌습니다. 격자 내비게이션(RTS · 도시 건설)은 따로
-`GameFramework/Navigation`(`NavGrid` · `NavAgent`)에 있고, 둘은 공통 이동 창구(`INavMover`)로 묶입니다.
+`GameFramework/Base/Navigation`(`NavGrid` · `NavAgent`)에 있고, 둘은 공통 이동 창구(`INavMover`)로 묶입니다.
 
 **티어 4**(공간 분할과 같은 줄): 물리의 셰이프 서술자 · `AABB`(3) · 직렬화(2) · 리플렉션(1)을 읽고, 씬의 내비게이션(`Object/GameObject/SceneNavigation`, 6)과
 컴포넌트(`Object/Component/Navigation`, 6)가 이것을 씁니다.
@@ -147,7 +147,7 @@ Recast 순서(`RecastNavMesh::bakeTile`):
 
 ## 10. 공통 이동 창구 — `INavMover`
 
-`NavMeshAgentComponent::getMover()`(3D 내비메시 + 군중)와 `GameFramework/Navigation/NavGridMover`(격자 A* 행위자)가 같이 구현합니다 — `moveTo` · `stopMoving` ·
+`NavMeshAgentComponent::getMover()`(3D 내비메시 + 군중)와 `GameFramework/Base/Navigation/NavGridMover`(격자 A* 행위자)가 같이 구현합니다 — `moveTo` · `stopMoving` ·
 상태(`Idle` · `Moving` · `Arrived` · `Failed`) · 속도 · 자리. 행동 트리의 이동 노드 · 감독이 이것만 보면 격자 게임과 3D 게임에서 같은 코드로 걷습니다.
 
 시험: `NavMeshDynamicTest`(장애물 — 닿은 타일만 재베이크 · 문턱 아래 그대로 · 비키면 곧은 길, 기하 소스 바꿈, 파괴 쇼케이스의 벽), `NavigationTest.GridMoverSpeaksTheCommonMoverInterface`,

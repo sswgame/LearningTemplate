@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
 {
@@ -159,9 +160,9 @@ namespace sw
             _skinSourceVertexCount += vertexCount;
         }
         // 레스트 버퍼 = [원본 레스트 정점][모프 차이] — 둘 다 float4 둘이라 한 버퍼에 잇는다(컴퓨트 SRV 슬롯은 넷뿐이다).
-        _skinDeltaBase = static_cast<uint32>( listRest.size() ) * kMorphFloat4PerVertex;
+        _skinDeltaBase = static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex;
         listRest.insert( listRest.end(), listDelta.begin(), listDelta.end() );
-        GpuMeshMorphPoolInternal::uploadAll( pDevice, _skinRest, listRest.data(), static_cast<uint32>( listRest.size() ) * kMorphFloat4PerVertex );
+        GpuMeshMorphPoolInternal::uploadAll( pDevice, _skinRest, listRest.data(), static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex );
         GpuMeshMorphPoolInternal::uploadAll( pDevice, _skinWeight, listWeight.data(), static_cast<uint32>( listWeight.size() ) );
     }
 
@@ -212,7 +213,7 @@ namespace sw
         }
         _skinVertexBase = morphCount;
         if ( bSameMorph == false )
-            GpuMeshMorphPoolInternal::uploadAll( pDevice, _rest, listRest.data(), static_cast<uint32>( listRest.size() ) * kMorphFloat4PerVertex );
+            GpuMeshMorphPoolInternal::uploadAll( pDevice, _rest, listRest.data(), static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex );
 
         // 스킨 원본(바뀐 때만 올린다)과 인스턴스 — 인스턴스는 결과 구간 · 원본 구간 · 팔레트 시작을 표에 한 줄씩 갖는다.
         rebuildSkinSources( pDevice, listSkinMesh );
@@ -250,7 +251,7 @@ namespace sw
         }
         // 모프 가중치는 팔레트 버퍼의 본 행 뒤에 float4 로 싣는다 — 셰이더는 그 버퍼를 float 배열로 본다(float4 셋 × 본 수 = float 열둘 × 본 수).
         for ( GpuSkinInstanceRow& row : _listSkinRow )
-            row._morphWeightBase += _skinBoneCount * kSkinFloat4PerBone * 4u;
+            row._morphWeightBase += _skinBoneCount * shaderslot::kSkinFloat4PerBone * 4u;
         _vertexCount = _skinVertexBase + resultOffset;
 
         if ( _vertexCount == 0 )
@@ -262,11 +263,11 @@ namespace sw
         }
 
         // 결과는 컴퓨트가 채우므로 초기값이 필요 없다 — 구간이 바뀌어도 올릴 것이 없다(용량만 맞춘다).
-        _morph.ensureCapacity( pDevice, GpuMeshMorphPoolInternal::kElementStride, _vertexCount * kMorphFloat4PerVertex, GpuMeshMorphPoolInternal::kWriteUsage, true,
+        _morph.ensureCapacity( pDevice, GpuMeshMorphPoolInternal::kElementStride, _vertexCount * shaderslot::kMorphFloat4PerVertex, GpuMeshMorphPoolInternal::kWriteUsage, true,
                                true, nullptr );
-        GpuMeshMorphPoolInternal::uploadAll( pDevice, _skinInstance, _listSkinRow.data(), static_cast<uint32>( _listSkinRow.size() ) * kSkinUint4PerInstance );
+        GpuMeshMorphPoolInternal::uploadAll( pDevice, _skinInstance, _listSkinRow.data(), static_cast<uint32>( _listSkinRow.size() ) * shaderslot::kSkinUint4PerInstance );
         if ( _skinBoneCount > 0 )
-            _skinPalette.ensureCapacity( pDevice, GpuMeshMorphPoolInternal::kElementStride, _skinBoneCount * kSkinFloat4PerBone + ( _skinMorphWeightCount + 3u ) / 4u,
+            _skinPalette.ensureCapacity( pDevice, GpuMeshMorphPoolInternal::kElementStride, _skinBoneCount * shaderslot::kSkinFloat4PerBone + ( _skinMorphWeightCount + 3u ) / 4u,
                                          GpuMeshMorphPoolInternal::kReadUsage, true, false, nullptr );
         else
             _skinPalette.release( pDevice );
@@ -288,7 +289,7 @@ namespace sw
             _mapScratchPaletteIndex.emplace( listPalette[paletteIndex]._pMesh, paletteIndex );
 
         // 풀 순서로 다시 모은다. 팔레트가 없는(아직 평가되지 않은) 메시는 단위 행렬 — 바인드 포즈다.
-        const size_t paletteElementCount = static_cast<size_t>( _skinBoneCount ) * kSkinFloat4PerBone;
+        const size_t paletteElementCount = static_cast<size_t>( _skinBoneCount ) * shaderslot::kSkinFloat4PerBone;
         _listScratchPaletteRow.assign( paletteElementCount + ( _skinMorphWeightCount + 3u ) / 4u, float4{} );
         for ( size_t skinIndex = 0; skinIndex < _listSkinMesh.size(); ++skinIndex )
         {
@@ -299,12 +300,12 @@ namespace sw
             const GpuSkinPalette* pFound    = ( found != _mapScratchPaletteIndex.end() ) ? &listPalette[found->second] : nullptr;
             for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
             {
-                float4*      pRow     = &_listScratchPaletteRow[( static_cast<size_t>( boneBase ) + boneIndex ) * kSkinFloat4PerBone];
-                const size_t rowStart = ( pFound != nullptr ) ? static_cast<size_t>( pFound->_firstRow ) + static_cast<size_t>( boneIndex ) * kSkinFloat4PerBone : 0u;
-                const bool   bHasBone = pFound != nullptr && pListRow != nullptr && boneIndex < pFound->_boneCount && rowStart + kSkinFloat4PerBone <= pListRow->size();
+                float4*      pRow     = &_listScratchPaletteRow[( static_cast<size_t>( boneBase ) + boneIndex ) * shaderslot::kSkinFloat4PerBone];
+                const size_t rowStart = ( pFound != nullptr ) ? static_cast<size_t>( pFound->_firstRow ) + static_cast<size_t>( boneIndex ) * shaderslot::kSkinFloat4PerBone : 0u;
+                const bool   bHasBone = pFound != nullptr && pListRow != nullptr && boneIndex < pFound->_boneCount && rowStart + shaderslot::kSkinFloat4PerBone <= pListRow->size();
                 if ( bHasBone )
                 {
-                    for ( uint32 rowIndex = 0; rowIndex < kSkinFloat4PerBone; ++rowIndex )
+                    for ( uint32 rowIndex = 0; rowIndex < shaderslot::kSkinFloat4PerBone; ++rowIndex )
                         pRow[rowIndex] = ( *pListRow )[rowStart + rowIndex];
                     continue;
                 }

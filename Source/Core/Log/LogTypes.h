@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Log/LogContext.h"
 
 namespace sw
 {
@@ -32,13 +33,14 @@ namespace sw
     /** @brief 싱크 · 리스너에 넘기는 로그 한 줄입니다. */
     struct LogEntry
     {
-        string   _tag;
-        string   _caller;
-        string   _message;
-        string   _file;
-        string   _timeStamp;
-        int32    _line{ 0 };
-        LogLevel _level = LogLevel::Info;
+        string     _tag;
+        string     _caller;
+        string     _message;
+        string     _file;
+        string     _timeStamp;
+        LogContext _context{}; ///< 줄을 쓴 스레드의 로그 문맥(요청 추적 id · 주체) — 리스너가 줄을 거를 수 있게
+        int32      _line{ 0 };
+        LogLevel   _level = LogLevel::Info;
     };
 } // namespace sw
 

@@ -1,0 +1,75 @@
+<Scene formatVersion="1" name="MeadowVillage">
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="6,16,-10.08"
+					                 _localRotation="0.9272952,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerId="0"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="80"
+					                 _orthoHeight="15"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+					<OrthoCameraRigComponent _componentName="OrthoCameraRigComponent"
+					                         _bActive="true"
+					                         _focus="6,0,1.5"
+					                         _yaw="0"
+					                         _pitch="0.9272952"
+					                         _distance="20"
+					                         _orthoHeight="15"
+					                         _minOrthoHeight="15"
+					                         _maxOrthoHeight="15"
+					                         _zoomStep="0.85"
+					                         _panSpeed="40"
+					                         _panReferenceHeight="15"
+					                         _rotateStep="1.5707964"
+					                         _farPlaneScale="4"
+					                         _bInputEnabled="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.9,0.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerId="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.4"
+					                           _ambient="0.28"
+					                           _shadowExtent="20"
+					                           _shadowDistance="40"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="VillageState">
+			<GameObject _schemaVersion="0" _name="VillageState" _bActive="true">
+				<_listComponent>
+					<GameStateComponent _componentName="GameStateComponent" _bActive="true" />
+					<MeadowFarmDirectorComponent _componentName="MeadowFarmDirectorComponent"
+					                             _bActive="true"
+					                             _bAutoPlay="false"
+					                             _tilePrefab="game/meadowvillage/prefabs/tile.prefab.xml" />
+					<MeadowTownDirectorComponent _componentName="MeadowTownDirectorComponent"
+					                             _bActive="true"
+					                             _bAutoPlay="false"
+					                             _tilePrefab="game/meadowvillage/prefabs/tile.prefab.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

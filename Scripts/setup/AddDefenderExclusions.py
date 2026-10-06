@@ -9,20 +9,20 @@ Windows Defender 제외 목록에 등록하고 파일 잠금을 해제합니다.
 
 from __future__ import annotations
 
+import argparse
 import ctypes
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot
+from common import getProjectRoot, runProcess
 
 
 def isUserAdmin() -> bool:
     """현재 프로세스가 관리자 권한으로 실행 중인지 확인합니다."""
     try:
         return ctypes.windll.shell32.IsUserAnAdmin() != 0
-    except Exception:
+    except (OSError, AttributeError):   # shell32 호출 실패 · Windows 가 아님(ctypes.windll 없음)
         return False
 
 
@@ -51,7 +51,7 @@ def addDefenderExclusions() -> None:
     # 1. 제외 경로 등록
     print("[*] 1/4. 프로젝트 및 빌드 출력 디렉터리 실시간 감시 제외 등록 중...")
     cmdPath = f'Add-MpPreference -ExclusionPath @("{projectDir}", "{projectDir}\\build")'
-    subprocess.run(["powershell", "-NoProfile", "-Command", cmdPath], check=False)
+    runProcess(["powershell", "-NoProfile", "-Command", cmdPath], bCapture=False)
 
     # 2. 프로세스 제외 등록
     print("[*] 2/4. 빌드 및 엔진 도구 프로세스 제외 등록 중...")
@@ -69,17 +69,17 @@ def addDefenderExclusions() -> None:
     ]
     procListStr = "@(" + ", ".join(f"'{p}'" for p in processes) + ")"
     cmdProc = f"Add-MpPreference -ExclusionProcess {procListStr}"
-    subprocess.run(["powershell", "-NoProfile", "-Command", cmdProc], check=False)
+    runProcess(["powershell", "-NoProfile", "-Command", cmdProc], bCapture=False)
 
     # 3. DLL 및 바이너리 확장자 제외 등록 (RHI 모듈 / 엔진 DLL 등)
     print("[*] 3/4. RHI 백엔드 및 엔진 DLL / 아카이브 확장자 제외 등록 중...")
     cmdExt = 'Add-MpPreference -ExclusionExtension @("dll", "pdb", "pack", "pak", "rhi")'
-    subprocess.run(["powershell", "-NoProfile", "-Command", cmdExt], check=False)
+    runProcess(["powershell", "-NoProfile", "-Command", cmdExt], bCapture=False)
 
     # 4. 다운로드 및 빌드된 바이너리 잠금 해제
     print("[*] 4/4. 프로젝트 내부 파일 및 DLL 잠금 해제 (Unblock-File) 중...")
     cmdUnblock = f'Get-ChildItem -Path "{projectDir}" -Recurse -ErrorAction SilentlyContinue | Unblock-File'
-    subprocess.run(["powershell", "-NoProfile", "-Command", cmdUnblock], check=False)
+    runProcess(["powershell", "-NoProfile", "-Command", cmdUnblock], bCapture=False)
 
     print("\n" + "=" * 60)
     print("  [성공] Windows Defender 예외 등록이 모두 완료되었습니다!")
@@ -88,7 +88,8 @@ def addDefenderExclusions() -> None:
     input("\n엔터 키를 누르면 창이 닫힙니다...")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    argparse.ArgumentParser(description="Windows Defender 실시간 감시에서 이 저장소 · 빌드 도구를 뺀다(관리자 권한을 요청한다) — 인자 없음").parse_args(argv)
     if sys.platform != "win32":
         print("[안내] 이 스크립트는 Windows 전용입니다.")
         return 0

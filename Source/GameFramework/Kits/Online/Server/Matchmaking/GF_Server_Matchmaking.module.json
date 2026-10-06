@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Server_Matchmaking",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "매칭 키트(서버) — 매처(실력 창 넓히기 · 지역 풀기 · 파티는 한 팀 · 팀 균형) · 대기열 권한 · 전용 서버 배정 (대전 · 협동 온라인 게임)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Matchmaking"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

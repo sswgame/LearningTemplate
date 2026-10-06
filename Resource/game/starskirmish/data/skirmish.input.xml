@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  StarSkirmish 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstanceBase 가 통합 맵(InputManager::getInputMap)에 읽는다.
+  게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다(키 바꾸기는 이 파일 · 사용자 설정의 키 바인딩). 이름은 게임 접두(Skirmish.) — 섞인 게임에서 디렉터 둘이 같은 이름을 나눠 쓰지 않게.
+  Camera.Pan · Camera.Rotate 는 기반 카메라 리그(OrthoCameraRigComponent 의 _panAction · _rotateAction)가 읽는다.
+  플레이할 때 WASD 는 명령 단축키라 카메라는 방향키만, AI 끼리 관전할 때는 Skirmish.SpectatorPan(WASD 도)으로 민다.
+-->
+<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
+	<layers>
+		<layer name="Gameplay" enabled="1" blockLower="0"/>
+	</layers>
+
+	<action name="Camera.Pan" layer="Gameplay">
+		<vector2d up="Up" down="Down" left="Left" right="Right"/>
+	</action>
+
+	<action name="Skirmish.SpectatorPan" layer="Gameplay">
+		<vector2d up="W" down="S" left="A" right="D"/>
+		<vector2d up="Up" down="Down" left="Left" right="Right"/>
+	</action>
+
+	<action name="Skirmish.Slower" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Minus"/>
+	</action>
+
+	<action name="Skirmish.Faster" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Equal"/>
+	</action>
+
+	<action name="Skirmish.Pause" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="P"/>
+	</action>
+
+	<action name="Skirmish.Status" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="F1"/>
+	</action>
+
+	<action name="Skirmish.AddToSelection" layer="Gameplay" trigger="Down">
+		<bind source="key" code="LeftShift"/>
+		<bind source="key" code="RightShift"/>
+	</action>
+
+	<action name="Skirmish.GroupModifier" layer="Gameplay" trigger="Down">
+		<bind source="key" code="LeftControl"/>
+		<bind source="key" code="RightControl"/>
+	</action>
+
+	<action name="Skirmish.AttackMove" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="A"/>
+	</action>
+
+	<action name="Skirmish.Stop" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="S"/>
+	</action>
+
+	<action name="Skirmish.Hold" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="H"/>
+	</action>
+
+	<action name="Skirmish.Command1" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Q"/>
+	</action>
+
+	<action name="Skirmish.Command2" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="W"/>
+	</action>
+
+	<action name="Skirmish.Command3" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="E"/>
+	</action>
+
+	<action name="Skirmish.Build.SupplyDepot" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="B"/>
+	</action>
+
+	<action name="Skirmish.Build.Barracks" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="N"/>
+	</action>
+
+	<action name="Skirmish.Build.Refinery" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="G"/>
+	</action>
+
+	<action name="Skirmish.Build.Academy" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Y"/>
+	</action>
+
+	<action name="Skirmish.Build.Factory" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="F"/>
+	</action>
+
+	<action name="Skirmish.Build.Starport" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="T"/>
+	</action>
+
+	<action name="Skirmish.Build.Bunker" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="U"/>
+	</action>
+
+	<action name="Skirmish.Group0" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit0"/>
+	</action>
+
+	<action name="Skirmish.Group1" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit1"/>
+	</action>
+
+	<action name="Skirmish.Group2" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit2"/>
+	</action>
+
+	<action name="Skirmish.Group3" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit3"/>
+	</action>
+
+	<action name="Skirmish.Group4" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit4"/>
+	</action>
+
+	<action name="Skirmish.Group5" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit5"/>
+	</action>
+
+	<action name="Skirmish.Group6" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit6"/>
+	</action>
+
+	<action name="Skirmish.Group7" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit7"/>
+	</action>
+
+	<action name="Skirmish.Group8" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit8"/>
+	</action>
+
+	<action name="Skirmish.Group9" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit9"/>
+	</action>
+
+	<action name="Skirmish.JumpToSelection" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Space"/>
+	</action>
+</InputMap>

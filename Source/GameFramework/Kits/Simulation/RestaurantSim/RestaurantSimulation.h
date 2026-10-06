@@ -4,47 +4,51 @@
  *        직원(고용 · 급여 · 숙련), 시장 시세, 재료 신선도, 별점 이동 평균, 일 결산입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Inventory/Crafting.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Progression/LevelProgress.h"
+#include "GameFramework/Base/Progression/Reputation.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/Crafting.h"
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/Shop.h"
 #include "GameFramework/Kits/Simulation/RestaurantSim/IngredientStock.h"
-#include "GameFramework/Progression/LevelProgress.h"
-#include "GameFramework/Progression/Reputation.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {
     struct DishDef;
+    struct GameStateRefs;
 
+    class Archive;
     class ItemCatalog;
     class RestaurantCatalog;
+    class WorldClock;
 
     /** @brief 식당 규칙의 수치입니다. 시간은 게임 분입니다. */
     struct RestaurantSettings
     {
-        hashed_string _reputationFaction{ "restaurant" }; ///< 평판 세력 id(기반 `ReputationState`)
-        float32       _serveMinutes{ 2.0f };              ///< 서버가 요리 하나를 나르는 분
-        float32       _checkoutMinutes{ 1.0f };           ///< 계산 하나의 분
-        float32       _priceElasticity{ 1.0f };           ///< 가격 / 기본 가격이 1 오를 때 줄어드는 수요 몫
-        float32       _preferredWeight{ 3.0f };           ///< 좋아하는 분류의 요리를 고르는 배율(0 이면 그 분류는 시키지 않는다)
-        float32       _reputationArrivalScale{ 0.001f };  ///< 평판 1 당 손님 배율 증가
-        float32       _cookSpeedPerLevel{ 0.1f };         ///< 요리사 레벨 1 당 조리 시간 감소 몫(최소 30 %)
-        float32       _marketVolatility{ 0.2f };          ///< 날마다 시장 사는 값이 ±이만큼 흔들린다
-        float32       _qualityWeight{ 0.6f };             ///< 만족도 = 품질 몫 × 이것 + (1 − 기다림 몫) × (1 − 이것)
-        int32         _reputationPerServe{ 10 };          ///< 만족도 1 이면 +이것, 0 이면 −이것
-        int32         _walkoutPenalty{ 15 };              ///< 기다리다 떠나면 평판에서 뺀다
+        hashed_string _reputationFaction{ "restaurant.guests" }; ///< 빌린 평판의 세력 id(키트 접두 — `<키트>.<이름>`)
+        float32       _serveMinutes{ 2.0f };                     ///< 서버가 요리 하나를 나르는 분
+        float32       _checkoutMinutes{ 1.0f };                  ///< 계산 하나의 분
+        float32       _priceElasticity{ 1.0f };                  ///< 가격 / 기본 가격이 1 오를 때 줄어드는 수요 몫
+        float32       _preferredWeight{ 3.0f };                  ///< 좋아하는 분류의 요리를 고르는 배율(0 이면 그 분류는 시키지 않는다)
+        float32       _reputationArrivalScale{ 0.001f };         ///< 평판 1 당 손님 배율 증가
+        float32       _minCookTimeScale{ 0.3f };                 ///< 숙련도가 올라도 조리 시간은 레시피 시간의 이 몫 아래로 줄지 않는다
+        float32       _cookSpeedPerLevel{ 0.1f };                ///< 요리사 레벨 1 당 조리 시간 감소 몫(최소 30 %)
+        float32       _marketVolatility{ 0.2f };                 ///< 날마다 시장 사는 값이 ±이만큼 흔들린다
+        float32       _qualityWeight{ 0.6f };                    ///< 만족도 = 품질 몫 × 이것 + (1 − 기다림 몫) × (1 − 이것)
+        int32         _reputationPerServe{ 10 };                 ///< 만족도 1 이면 +이것, 0 이면 −이것
+        int32         _walkoutPenalty{ 15 };                     ///< 기다리다 떠나면 평판에서 뺀다
         int32         _seatCount{ 4 };
-        int32         _inventorySlots{ 40 };
         int64         _cookXp{ 10 };
         int64         _serveXp{ 5 };
         int64         _checkoutXp{ 5 };
@@ -194,12 +198,18 @@ namespace sw
     class SW_GF_API RestaurantSimulation
     {
     public:
-        static constexpr float32 kStepMinutes = 1.0f;
+        static constexpr float32 kStepMinutes  = 1.0f;
+        static constexpr uint32  kStateTag     = FourCcUtil::make( "RSIM" );
+        static constexpr uint32  kStateVersion = 1;
 
         RestaurantSimulation();
 
+        /**
+         * @brief 새 식당을 엽니다. 돈은 빌린 지갑(@p refs 의 지갑 — 없으면 시장 · 급여 · 계산이 막힌다), 평판은 빌린 평판(세력 `_reputationFaction`), 날은 빌린 시계(디렉터가 날 넘김에 `advanceDay` 를 부른다), 재료는 빌린 창고(@p pantry — 식당보다 오래 살아야 한다)에 듭니다 — 섞인 게임은 플레이어 가방을 넘겨 "밭 → 식탁" 이 그대로 된다.
+         */
         void initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog, const ShopCatalog* pShopCatalog,
-                         const ReputationCatalog* pReputationCatalog, const ExperienceCurve* pStaffCurve, const RestaurantSettings& settings );
+                         const ExperienceCurve* pStaffCurve, const GameStateRefs& refs, Inventory& pantry,
+                         const RestaurantSettings& settings );
         /** @brief 조리 스테이션 수를 정합니다("Stove" 2 개 · "Oven" 1 개). */
         void setStationCount( const hashed_string& station, int32 count );
         /** @brief 직원을 고용합니다. 직원 자리 번호입니다. */
@@ -227,6 +237,14 @@ namespace sw
         void advanceDay();
         void drainEvents( vector<RestaurantEvent>& outListEvent );
 
+        /**
+         * @brief 직원(레벨 포함) · 손님 · 주문 · 메뉴 · 스테이션 · 만족도 · 재료 묶음 · 조리(`Crafter`) · 시세(`ShopState`) · 오늘 결산 · 걸음 · 난수 · 날씨 id · 분 ·
+         *        도착 누적 · 미룬 폐기비 · 다음 손님 번호 · 영업 중을 씁니다. 카탈로그 · 설정 · 빌린 지갑 · 시계 · 평판 · 주방 창고는 싣지 않고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 같은 카탈로그 · 설정으로 `initialize` 한 뒤에 부릅니다. 깨졌거나 메뉴 수가 다르면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
         /** @brief 지금 주문할 수 있는 요리인가입니다(메뉴 · 레시피 · 스테이션 · 레벨 · 재료). */
         bool  canServe( const hashed_string& dishId ) const;
         int64 getMenuPrice( const hashed_string& dishId ) const;
@@ -236,7 +254,7 @@ namespace sw
         float32 computeArrivalRate() const;
         /** @brief 최근 N 손님의 별점(1..5)입니다. 아직 손님이 없으면 0 입니다. */
         float32 computeRating() const;
-        int32   getReputation() const { return _reputation.getValue( _settings._reputationFaction ); }
+        int32   getReputation() const;
         /** @brief 조리 중인 주문 수입니다. */
         int32                             countCooking() const;
         int32                             countOccupiedSeats() const;
@@ -244,14 +262,10 @@ namespace sw
         const vector<RestaurantCustomer>& getCustomers() const { return _listCustomer; }
         const deque<KitchenOrder>&        getOrders() const { return _listOrder; }
         const RestaurantDaySummary&       getToday() const { return _today; }
-        const Inventory&                  getInventory() const { return _inventory; }
         const IngredientStock&            getStock() const { return _stock; }
         const ShopState&                  getMarket() const { return _market; }
-        Wallet&                           getWallet() { return _wallet; }
-        const Wallet&                     getWallet() const { return _wallet; }
         hashed_string                     getCurrency() const { return Wallet::getDefaultCurrency(); }
         float32                           getMinutes() const { return _minutes; }
-        int32                             getDay() const { return _day; }
         bool                              isOpen() const { return _bOpen != SW_FALSE; }
 
     private:
@@ -294,27 +308,26 @@ namespace sw
         vector<StationSlot>          _listStation;
         vector<float32>              _listSatisfaction; ///< 최근 N 손님(오래된 것이 앞)
         EventBuffer<RestaurantEvent> _eventBuffer;
-        vector<ReputationEvent>      _listReputationScratch;
         vector<IngredientSpoilage>   _listSpoilageScratch;
-        Inventory                    _inventory;
         IngredientStock              _stock;
         Crafter                      _crafter;
         ShopState                    _market;
-        Wallet                       _wallet;
-        ReputationState              _reputation;
         RestaurantSettings           _settings;
         RestaurantDaySummary         _today;
         FixedStepTimer               _stepTimer;
         GameRandom                   _random;
         hashed_string                _weatherId;
         const RestaurantCatalog*     _pCatalog;
+        Inventory*                   _pPantry;     ///< 주방 창고(빌림)
+        Wallet*                      _pWallet;     ///< 빌린 지갑
+        ReputationState*             _pReputation; ///< 빌린 평판(식기는 공유 상태의 주인이 날 넘김에)
+        const WorldClock*            _pClock;      ///< 빌린 시계(날 — 시세 굴림의 씨앗). 없으면 날 0
         const RecipeCatalog*         _pRecipeCatalog;
         const ShopCatalog*           _pShopCatalog;
         const ExperienceCurve*       _pStaffCurve;
         float32                      _minutes; ///< 문을 연 뒤 지난 분
         RateAccumulator              _arrival; ///< 손님 도착(명)
         int64                        _pendingSpoilageCost;
-        int32                        _day;
         int32                        _nextCustomerId;
         uint8                        _bOpen;
     };

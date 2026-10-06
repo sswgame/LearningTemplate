@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 
 namespace sw
 {
@@ -24,7 +24,7 @@ namespace sw
             /** @brief 한 축의 슬랩 [0, size] 로 선분 범위 [inoutMin, inoutMax] 를 좁힙니다. */
             static void clipAxis( float32 origin, float32 direction, float32 size, float32& inoutMin, float32& inoutMax )
             {
-                if ( MathUtil::abs( direction ) < MathUtil::Epsilon )
+                if ( MathUtil::abs( direction ) < MathUtil::kEpsilon )
                     return;
                 float32 enter = ( 0.0f - origin ) / direction;
                 float32 leave = ( size - origin ) / direction;
@@ -48,7 +48,7 @@ namespace sw
         GameRandom    random{ seed };
         const float32 size      = MathUtil::max( 1.0f, mapSize );
         const float32 half      = size * 0.5f;
-        const float32 angle     = random.nextFloat() * MathUtil::Pi * 2.0f;
+        const float32 angle     = random.nextFloat() * MathUtil::kPi * 2.0f;
         const float32 offset    = random.nextRange( -1.0f, 1.0f ) * settings._offsetRatio * half;
         const float2  direction = float2{ MathUtil::cos( angle ), MathUtil::sin( angle ) };
         const float2  origin    = float2{ half - direction._y * offset, half + direction._x * offset };

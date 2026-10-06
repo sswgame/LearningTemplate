@@ -1,19 +1,21 @@
 #include "pch.h"
 
-#include "GameFramework/Combat/ElementChart.h"
-#include "GameFramework/Data/StatBlock.h"
-#include "GameFramework/Inventory/Crafting.h"
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Combat/ElementChart.h"
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Inventory/Crafting.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Progression/SkillTree.h"
+#include "GameFramework/Base/Quest/QuestCatalog.h"
+#include "GameFramework/Base/Quest/QuestLog.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherAlchemy.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherBestiary.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCatalog.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCombat.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherContract.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherMutagens.h"
-#include "GameFramework/Progression/SkillTree.h"
-#include "GameFramework/Quest/QuestCatalog.h"
-#include "GameFramework/Quest/QuestLog.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -111,6 +113,17 @@ namespace
                 return true;
         }
         return false;
+    }
+
+    /** @brief 상태 하나의 바이트입니다. */
+    template <typename TState>
+    vector<uint8> captureWitcherBytes( const TState& state )
+    {
+        Archive archive;
+        state.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
     }
 } // namespace
 
@@ -455,4 +468,204 @@ SW_TEST_CASE( WitcherRpgTest, ContractCluesFollowOrderAdvanceTheQuestAndGreedyHa
     SW_EXPECT_TRUE( greedy.propose( 340 ) == WitcherHaggleResult::BrokenOff ); // 0.5 + 0.1 + 0.6 = 1.2
     SW_EXPECT_EQUAL( 200, greedy.getFinalReward() );
     SW_EXPECT_TRUE( greedy.isClosed() );
+}
+
+/**
+ * @brief [WitcherRpgTest] 연금 · 도감 · 전투 · 조사 · 흥정 · 변이 상태 바이트 — 충전 · 효과 · 오일, 지식, 스태미나 · 난수 · 아드레날린, 계약 단계 · 찾은 단서, 제안 · 분노,
+ *        끼운 스킬 · 변이원이 그대로 와서 같은 걸음이 이어진다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( WitcherRpgTest, StateRoundTripContinuesTheSameHunt )
+{
+    WitcherTestData data;
+    SW_ASSERT_TRUE( data.initialize() );
+
+    // 연금 — 제비를 마시고 오일을 발라 한 번 벴다.
+    Inventory inventory;
+    inventory.initialize( &data._itemCatalog, 20 );
+    SW_EXPECT_EQUAL( 10, inventory.addItem( hashed_string( "celandine" ), 10 ) );
+    SW_EXPECT_EQUAL( 2, inventory.addItem( hashed_string( "dwarven_spirit" ), 2 ) );
+    WitcherAlchemy alchemy;
+    alchemy.initialize( &data._catalog, &data._recipeCatalog );
+    SW_ASSERT_TRUE( alchemy.brew( hashed_string( "brew_swallow" ), inventory, hashed_string{}, 1 ) == CraftResult::Ok );
+    SW_ASSERT_TRUE( alchemy.brew( hashed_string( "brew_thunderbolt" ), inventory, hashed_string{}, 1 ) == CraftResult::Ok );
+    SW_ASSERT_TRUE( alchemy.brew( hashed_string( "brew_oil" ), inventory, hashed_string{}, 1 ) == CraftResult::Ok );
+    SW_ASSERT_TRUE( alchemy.drink( hashed_string( "swallow" ), inventory ) == WitcherUseResult::Ok );
+    SW_ASSERT_TRUE( alchemy.applyOil( hashed_string( "necrophage_oil" ), inventory ) == WitcherUseResult::Ok );
+    (void)alchemy.consumeOilHit();
+    alchemy.update( 5.0f );
+
+    const vector<uint8> alchemyBytes = captureWitcherBytes( alchemy );
+    WitcherAlchemy      restoredAlchemy;
+    restoredAlchemy.initialize( &data._catalog, &data._recipeCatalog );
+    Archive alchemyReader( alchemyBytes.data(), alchemyBytes.size() );
+    SW_ASSERT_TRUE( restoredAlchemy.readState( alchemyReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, alchemyReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWitcherBytes( restoredAlchemy ) == alchemyBytes );
+    SW_EXPECT_EQUAL( 2, restoredAlchemy.getOilHits() );
+    SW_EXPECT_NEAR_EQUAL( alchemy.getToxicity(), restoredAlchemy.getToxicity(), 1.0e-4f );
+
+    // 같은 걸음을 둘 다 더 돌리면 바이트가 같다.
+    alchemy.update( 10.0f );
+    restoredAlchemy.update( 10.0f );
+    SW_EXPECT_TRUE( alchemy.drink( hashed_string( "thunderbolt" ), inventory ) == restoredAlchemy.drink( hashed_string( "thunderbolt" ), inventory ) );
+    SW_EXPECT_TRUE( alchemy.consumeOilHit() == restoredAlchemy.consumeOilHit() );
+    SW_EXPECT_TRUE( captureWitcherBytes( alchemy ) == captureWitcherBytes( restoredAlchemy ) );
+
+    WitcherAlchemy truncatedAlchemy;
+    truncatedAlchemy.initialize( &data._catalog, &data._recipeCatalog );
+    Archive alchemyCut( alchemyBytes.data(), alchemyBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedAlchemy.readState( alchemyCut ) );
+    SW_EXPECT_TRUE( truncatedAlchemy.getActiveEffects().empty() );
+
+    // 도감 — 조사 한 번 · 처치 둘.
+    const hashed_string drowner( "drowner" );
+    WitcherBestiary     bestiary;
+    bestiary.initialize( &data._catalog, &data._chart );
+    SW_EXPECT_TRUE( bestiary.investigate( drowner ) );
+    (void)bestiary.recordKill( drowner );
+    (void)bestiary.recordKill( drowner );
+
+    const vector<uint8> bestiaryBytes = captureWitcherBytes( bestiary );
+    WitcherBestiary     restoredBestiary;
+    restoredBestiary.initialize( &data._catalog, &data._chart );
+    Archive bestiaryReader( bestiaryBytes.data(), bestiaryBytes.size() );
+    SW_ASSERT_TRUE( restoredBestiary.readState( bestiaryReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, bestiaryReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWitcherBytes( restoredBestiary ) == bestiaryBytes );
+    SW_EXPECT_EQUAL( bestiary.getKnowledge( drowner ), restoredBestiary.getKnowledge( drowner ) );
+    for ( int32 kill = 0; kill < 2; ++kill )
+    {
+        SW_EXPECT_TRUE( bestiary.recordKill( drowner ) == restoredBestiary.recordKill( drowner ) );
+    }
+    SW_EXPECT_TRUE( captureWitcherBytes( bestiary ) == captureWitcherBytes( restoredBestiary ) );
+
+    WitcherBestiary truncatedBestiary;
+    truncatedBestiary.initialize( &data._catalog, &data._chart );
+    Archive bestiaryCut( bestiaryBytes.data(), bestiaryBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedBestiary.readState( bestiaryCut ) );
+    SW_EXPECT_EQUAL( 0, truncatedBestiary.getKnowledge( drowner ) );
+
+    // 전투 — 강공 한 번 · 적중 셋으로 아드레날린이 쌓였다.
+    WitcherCombat combat;
+    combat.initialize( &data._catalog, 11u );
+    SW_ASSERT_TRUE( combat.performAction( WitcherAction::StrongAttack ) == WitcherCombatResult::Ok );
+    for ( int32 hit = 0; hit < 3; ++hit )
+        combat.registerHitLanded();
+    combat.update( 0.5f );
+
+    const vector<uint8> combatBytes = captureWitcherBytes( combat );
+    WitcherCombat       restoredCombat;
+    restoredCombat.initialize( &data._catalog, 99u );
+    Archive combatReader( combatBytes.data(), combatBytes.size() );
+    SW_ASSERT_TRUE( restoredCombat.readState( combatReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, combatReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWitcherBytes( restoredCombat ) == combatBytes );
+    SW_EXPECT_NEAR_EQUAL( combat.getAdrenaline(), restoredCombat.getAdrenaline(), 1.0e-5f );
+
+    const StatBlock stats;
+    for ( int32 cast = 0; cast < 3; ++cast ) // 상태이상 굴림이 같은 난수를 쓴다
+    {
+        const WitcherSignCast original    = combat.castSign( hashed_string( "igni" ), false, nullptr, stats, &data._chart );
+        const WitcherSignCast restoredOne = restoredCombat.castSign( hashed_string( "igni" ), false, nullptr, stats, &data._chart );
+        SW_EXPECT_TRUE( original._status == restoredOne._status && original._result == restoredOne._result );
+        combat.update( 2.0f );
+        restoredCombat.update( 2.0f );
+    }
+    SW_EXPECT_TRUE( captureWitcherBytes( combat ) == captureWitcherBytes( restoredCombat ) );
+
+    WitcherCombat truncatedCombat;
+    truncatedCombat.initialize( &data._catalog, 99u );
+    Archive combatCut( combatBytes.data(), combatBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedCombat.readState( combatCut ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, truncatedCombat.getAdrenaline(), 1.0e-5f );
+
+    // 조사 — 피 자국을 찾았다. 일지는 빌린 것이라 둘이 각자 든다.
+    QuestCatalog questCatalog;
+    SW_ASSERT_TRUE( questCatalog.loadFromXmlText( R"(
+<QuestCatalog>
+  <Quest id="contract_griffin">
+    <Stage id="tracks" next="lair"><Objective kind="Investigate" target="tracks"/></Stage>
+    <Stage id="lair" next="paid"><Objective kind="Investigate" target="lair"/></Stage>
+    <Stage id="paid" complete="true"/>
+  </Quest>
+</QuestCatalog>)",
+                                                  "WitcherRpgTest" ) );
+    QuestLog questLog;
+    QuestLog restoredQuestLog;
+    questLog.initialize( &questCatalog );
+    restoredQuestLog.initialize( &questCatalog );
+    SW_ASSERT_TRUE( questLog.start( hashed_string( "contract_griffin" ), 1 ) == QuestStartResult::Ok );
+    SW_ASSERT_TRUE( restoredQuestLog.start( hashed_string( "contract_griffin" ), 1 ) == QuestStartResult::Ok );
+    WitcherInvestigation investigation;
+    SW_ASSERT_TRUE( investigation.initialize( &data._catalog, hashed_string( "griffin" ), &questLog ) );
+    SW_ASSERT_TRUE( investigation.investigate( hashed_string( "blood" ), float3{ 1.0f, 0.0f, 1.0f } ) == WitcherClueResult::Found );
+
+    const vector<uint8>  investigationBytes = captureWitcherBytes( investigation );
+    WitcherInvestigation restoredInvestigation;
+    SW_ASSERT_TRUE( restoredInvestigation.initialize( &data._catalog, hashed_string( "griffin" ), &restoredQuestLog ) );
+    Archive investigationReader( investigationBytes.data(), investigationBytes.size() );
+    SW_ASSERT_TRUE( restoredInvestigation.readState( investigationReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, investigationReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWitcherBytes( restoredInvestigation ) == investigationBytes );
+    SW_EXPECT_TRUE( restoredInvestigation.isClueFound( hashed_string( "blood" ) ) );
+
+    SW_EXPECT_TRUE( restoredInvestigation.investigate( hashed_string( "carcass" ), float3{ 10.0f, 0.0f, 9.0f } ) == WitcherClueResult::Found );
+    SW_EXPECT_TRUE( investigation.investigate( hashed_string( "carcass" ), float3{ 10.0f, 0.0f, 9.0f } ) == WitcherClueResult::Found );
+    SW_EXPECT_TRUE( restoredInvestigation.investigate( hashed_string( "feathers" ), float3{ 10.0f, 0.0f, 1.0f } ) == WitcherClueResult::Found );
+    SW_EXPECT_TRUE( investigation.investigate( hashed_string( "feathers" ), float3{ 10.0f, 0.0f, 1.0f } ) == WitcherClueResult::Found );
+    SW_EXPECT_TRUE( restoredInvestigation.getStepId() == hashed_string( "lair" ) ); // 단계가 이어진다
+    SW_EXPECT_TRUE( restoredQuestLog.findProgress( hashed_string( "contract_griffin" ) )->_stageId == hashed_string( "lair" ) );
+    SW_EXPECT_TRUE( captureWitcherBytes( investigation ) == captureWitcherBytes( restoredInvestigation ) );
+
+    WitcherInvestigation truncatedInvestigation;
+    SW_ASSERT_TRUE( truncatedInvestigation.initialize( &data._catalog, hashed_string( "griffin" ), nullptr ) );
+    Archive investigationCut( investigationBytes.data(), investigationBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedInvestigation.readState( investigationCut ) );
+    SW_EXPECT_FALSE( truncatedInvestigation.isClueFound( hashed_string( "blood" ) ) );
+
+    // 흥정 — 한 번 맞제안을 받았다.
+    WitcherHaggle haggle;
+    SW_ASSERT_TRUE( haggle.initialize( &data._catalog, hashed_string( "griffin" ) ) );
+    SW_ASSERT_TRUE( haggle.propose( 300 ) == WitcherHaggleResult::Countered );
+
+    const vector<uint8> haggleBytes = captureWitcherBytes( haggle );
+    WitcherHaggle       restoredHaggle;
+    SW_ASSERT_TRUE( restoredHaggle.initialize( &data._catalog, hashed_string( "griffin" ) ) );
+    Archive haggleReader( haggleBytes.data(), haggleBytes.size() );
+    SW_ASSERT_TRUE( restoredHaggle.readState( haggleReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, haggleReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWitcherBytes( restoredHaggle ) == haggleBytes );
+    SW_EXPECT_EQUAL( 250, restoredHaggle.getOffer() );
+    SW_EXPECT_TRUE( haggle.propose( 320 ) == restoredHaggle.propose( 320 ) );
+    SW_EXPECT_TRUE( captureWitcherBytes( haggle ) == captureWitcherBytes( restoredHaggle ) );
+
+    WitcherHaggle truncatedHaggle;
+    SW_ASSERT_TRUE( truncatedHaggle.initialize( &data._catalog, hashed_string( "griffin" ) ) );
+    Archive haggleCut( haggleBytes.data(), haggleBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedHaggle.readState( haggleCut ) );
+    SW_EXPECT_EQUAL( 200, truncatedHaggle.getOffer() );
+
+    // 변이 — 첫 묶음에 스킬 둘 · 변이원 하나.
+    WitcherMutagens mutagens;
+    mutagens.initialize( &data._catalog, 5 );
+    SW_ASSERT_TRUE( mutagens.equipSkill( 0, 0, hashed_string( "muscle_memory" ) ) == WitcherSlotResult::Ok );
+    SW_ASSERT_TRUE( mutagens.equipSkill( 0, 1, hashed_string( "firestream" ) ) == WitcherSlotResult::Ok );
+    SW_ASSERT_TRUE( mutagens.equipMutagen( 0, hashed_string( "red_greater" ) ) == WitcherSlotResult::Ok );
+
+    const vector<uint8> mutagenBytes = captureWitcherBytes( mutagens );
+    WitcherMutagens     restoredMutagens;
+    restoredMutagens.initialize( &data._catalog, 1 );
+    Archive mutagenReader( mutagenBytes.data(), mutagenBytes.size() );
+    SW_ASSERT_TRUE( restoredMutagens.readState( mutagenReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, mutagenReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWitcherBytes( restoredMutagens ) == mutagenBytes );
+    SW_EXPECT_TRUE( restoredMutagens.getMutagen( 0 ) == hashed_string( "red_greater" ) );
+    SW_EXPECT_TRUE( mutagens.equipSkill( 0, 2, hashed_string( "strength_training" ) ) == restoredMutagens.equipSkill( 0, 2, hashed_string( "strength_training" ) ) );
+    SW_EXPECT_TRUE( captureWitcherBytes( mutagens ) == captureWitcherBytes( restoredMutagens ) );
+
+    WitcherMutagens truncatedMutagens;
+    truncatedMutagens.initialize( &data._catalog, 5 );
+    Archive mutagenCut( mutagenBytes.data(), mutagenBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedMutagens.readState( mutagenCut ) );
+    SW_EXPECT_TRUE( truncatedMutagens.getSkill( 0, 0 ).empty() );
 }

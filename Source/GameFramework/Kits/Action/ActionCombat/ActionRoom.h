@@ -3,6 +3,7 @@
  * @brief 던전 · 보스 룸용 실시간 클리어 게이트 전투입니다(던그리드 스타일 아이디어).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -12,14 +13,16 @@
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/CollisionLayers.h"
 
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/FacingDir.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/GameFrameworkMinimal.h"
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/FacingDir.h"
 
 namespace sw
 {
+    class Archive;
+
     // ------------------------------------------------------------------------------
     // 1) 룸 종류 · 프레임 입출력 (FacingDir 은 Utility/FacingDir.h)
     // ------------------------------------------------------------------------------
@@ -107,6 +110,9 @@ namespace sw
     class SW_GF_API ActionRoom
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "AROM" );
+        static constexpr uint32 kStateVersion = 1;
+
         /** @brief 비활성(None) · 게이트 닫힘으로 시작합니다. */
         ActionRoom();
 
@@ -149,6 +155,17 @@ namespace sw
         void onPlayerDefeated();
         /** @brief 디버그 오버레이를 그립니다. */
         void drawDebug() const;
+
+        /**
+         * @brief 종류 · 클리어 · 공격 · 대시 · 무적 남은 시간, 이번 싸움의 종 id(보스 최대 체력 등 수치는 정의가 든다), 적(자리 · 체력 · 사격 시간 · 종 칸 ·
+         *        생존) · 투사체를 씁니다. 자리(`ActionRoomSite`)는 게임이 `setSite` 로 거는 것이고 충돌 층은 생성자의 것이라 싣지 않습니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 바꿉니다. 종 정의는 지금의 카탈로그 서비스(없으면 내장)에서 다시 찾습니다 — 어디에도 없는 종 · 깨진 바이트면
+         *        false 이고 그대로입니다. 바뀌어도 룸 이벤트(게이트 · 클리어)는 내지 않습니다.
+         */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 룸에 선 적 하나입니다. 수치는 그 종의 정의(`_listMonsterDef[_defIndex]`)에서 읽습니다. */

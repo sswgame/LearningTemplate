@@ -4,3 +4,5 @@
 # ==============================================================================
 
 sw_addGameFrameworkKit(GF_NetDestruction)
+# 사건 · 스냅숏 · 해시 대조를 만든다 — 구성마다 같은 비트여야 한다(엔진 Destruction/ 와 같은 이유, `sw_markDeterministicSources`).
+sw_markDeterministicSources(GF_NetDestruction DestructionReplication.cpp)

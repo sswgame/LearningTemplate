@@ -33,8 +33,8 @@ namespace sw::editor
     {
         shutdown();
 
-        const string configFolder = FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), getEditorToolDefaults()._configFolder );
-        if ( FileUtil::directoryExists( configFolder ) == false )
+        const string configFolder = FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), config::kDirConfig );
+        if ( FileUtil::isDirectory( configFolder ) == false )
         {
             SW_LOG_INFO( "Config hot reload is off - no config folder at %#", configFolder.c_str() );
             return false;

@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Server_Account",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "계정 키트(서버) — 계정 인증(소금 + 느린 해시) · 세션 토큰 · 재접속 · 중복 로그인 · 게스트 · 연동 · 외부 로그인(OIDC · 프로필 API) · 제재 확인 · 탈퇴 · 게임(UDP) 접속 표 (MMO · 로비 · 랭킹 게임)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Account"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

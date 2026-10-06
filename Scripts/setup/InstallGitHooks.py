@@ -7,6 +7,7 @@ Git pre-commit 훅을 .git/hooks/ 디렉터리에 설치하여 커밋 시 레이
 
 from __future__ import annotations
 
+import argparse
 import os
 import platform
 import sys
@@ -56,7 +57,8 @@ def installPreCommitHook(projectRoot: Path | None = None) -> bool:
     return True
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    argparse.ArgumentParser(description="Git pre-commit 훅(PreCommitLint)을 설치한다 — 인자 없음").parse_args(argv)
     if not installPreCommitHook():
         print("[InstallGitHooks] .git 디렉터리를 찾을 수 없습니다.", file=sys.stderr)
         return 1

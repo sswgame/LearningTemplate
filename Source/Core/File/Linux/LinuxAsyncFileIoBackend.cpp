@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/AsyncFileIoBackend.h"
 
@@ -34,8 +35,6 @@ namespace sw
         {
             /** @brief 깨우기용 eventfd 읽기의 user_data 입니다(읽기 연산의 포인터와 겹치지 않는 값). */
             static constexpr uint64 kWakeUserData = 1;
-            /** @brief 한 SQE 가 읽는 최대 바이트입니다. 더 큰 구간은 이어서 읽는다. */
-            static constexpr uint64 kMaxChunkBytes = 1ull << 30;
 
             static int32 setupRing( uint32 entryCount, io_uring_params& params )
             {
@@ -275,7 +274,7 @@ namespace sw
         {
             AsyncReadRequest& request    = *pOperation->_pRequest;
             const uint64      remaining  = request._size - request._bytesDone;
-            const uint64      chunkBytes = remaining < LinuxAsyncFileIoBackendInternal::kMaxChunkBytes ? remaining : LinuxAsyncFileIoBackendInternal::kMaxChunkBytes;
+            const uint64      chunkBytes = remaining < constant::kMaxFileReadChunkBytes ? remaining : constant::kMaxFileReadChunkBytes;
             pOperation->_iov.iov_base    = request._result._bytes.data() + request._bytesDone;
             pOperation->_iov.iov_len     = static_cast<size_t>( chunkBytes );
 

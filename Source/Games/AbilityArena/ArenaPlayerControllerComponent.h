@@ -31,5 +31,13 @@ namespace sw
         void tickInput( float32 deltaTime, const InputManager& input, AbilitySystemComponent& abilitySystem, float3& inoutPosition );
         /** @brief 반쯤 깎이면 회복, 가까우면 근접, 멀면 다가가며 화염구, 둘러싸이면 대시로 빠진다 — 입력 번호만 누른다. */
         void tickAutoPlay( float32 deltaTime, const ArenaDirectorComponent& director, AbilitySystemComponent& abilitySystem, float3& inoutPosition );
+
+    private:
+        PROPERTY( Category = "Auto Play", DisplayName = "Crowd Radius", Tooltip = "Auto play counts enemies inside this distance as surrounding it", Min = 0.0, Units = m )
+        float32 _crowdRadius;
+        PROPERTY( Category = "Auto Play", DisplayName = "Crowd Count", Tooltip = "Auto play dashes away when this many enemies surround it", Min = 1 )
+        uint32 _crowdCount;
+        PROPERTY( Category = "Auto Play", DisplayName = "Melee Range", Tooltip = "Auto play switches to melee inside this distance", Min = 0.0, Units = m )
+        float32 _meleeRange;
     };
 } // namespace sw

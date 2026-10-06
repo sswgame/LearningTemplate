@@ -8,9 +8,9 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Data/GameDataXml.h"
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/Utility/GameRandom.h"
+#include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 
 namespace sw
 {
@@ -105,7 +105,7 @@ namespace sw
             tablePlace          = 1 + static_cast<int32>( MathUtil::round( ratio * static_cast<float32>( _referencePlaceCount - 1 ) ) );
         }
         const KartRankTable* pNearest    = nullptr;
-        int32                nearestDiff = MathUtil::MaxInt32;
+        int32                nearestDiff = MathUtil::kMaxInt32;
         for ( const KartRankTable& rank : _listRankTable )
         {
             if ( rank._fromPlace <= tablePlace && tablePlace <= rank._toPlace )
@@ -125,11 +125,11 @@ namespace sw
         const KartRankTable* pRank = findRankTable( place, racerCount );
         if ( pRank == nullptr )
             return nullptr;
-        ItemBag bag;
-        if ( _lootCatalog.roll( pRank->_tableId, random, bag ) == false || bag.isEmpty() )
+        ItemStackList items;
+        if ( _lootCatalog.roll( pRank->_tableId, random, items ) == false || items.isEmpty() )
             return nullptr;
         vector<hashed_string> listItem;
-        bag.getItemIds( listItem );
+        items.getItemIds( listItem );
         return findItem( listItem.front() );
     }
 

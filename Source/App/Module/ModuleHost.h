@@ -120,6 +120,13 @@ namespace sw
          */
         bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor );
         /**
+         * @brief 전용 서버로 게임 인스턴스를 만듭니다 — 창 · RHI · 렌더 스레드 · 에디터가 없고, 게임은 `initialize( nullptr, nullptr )` 를 받습니다.
+         * @details 모듈 콜백 · 핫 리로드(Dev) · 상태 보존은 `initialize` 와 같습니다. RHI 교체 경로(`reinitializeAfterRhiSwap`)는 서버에서 부르지 않습니다.
+         */
+        [[nodiscard]] bool initializeDedicatedServer( LiveReloadManager* pLiveReloadManager );
+        /** @brief 전용 서버로 섰으면 true 입니다. */
+        bool isDedicatedServer() const { return _bDedicatedServer == SW_TRUE; }
+        /**
          * @brief 모듈 인스턴스를 내리고, 등록부에 걸어 둔 콜백을 **모두** 떼어 냅니다.
          * @details 콜백은 이 객체의 메서드를 가리킵니다. `App` 이 이 객체를 등록부보다 먼저 지우므로, 여기서 떼지 않으면 그 사이에
          *          리로드가 돌 때 이미 사라진 객체를 부르게 됩니다.
@@ -319,6 +326,7 @@ namespace sw
 
         uint8                  _bEnableEditor       : 1;
         uint8                  _bEditorModuleActive : 1; ///< 매니페스트가 에디터 모듈을 켰는가(`loadModuleImages` 가 정한다)
-        [[maybe_unused]] uint8 _reserved            : 6;
+        uint8                  _bDedicatedServer    : 1; ///< 디바이스 없이 게임을 만든다(전용 서버)
+        [[maybe_unused]] uint8 _reserved            : 5;
     };
 } // namespace sw

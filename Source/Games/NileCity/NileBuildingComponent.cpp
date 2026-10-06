@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -20,8 +21,6 @@ namespace sw
              * @brief Kenney City Kit Suburban 모델의 칸당 배율입니다. 가장 넓은 집(`building_type_b`, 폭 1.82)이 한 칸(1 m) 안에 들게 0.5 이고,
              *        n×n 건물은 n 배다.
              */
-            static constexpr float32 kModelScale      = 0.5f;
-            static constexpr float32 kDecorationScale = 3.0f; ///< 나무 · 화분은 집보다 작게 만들어져 있어 칸을 채우게 더 키운다
 
             static constexpr const utf8* kArrHouseModel[] = { "building_type_h", "building_type_a", "building_type_g", "building_type_c",
                                                               "building_type_e", "building_type_f", "building_type_b", "building_type_d" };
@@ -55,6 +54,8 @@ namespace sw
     NileBuildingComponent::NileBuildingComponent()
         : _director{}
         , _buildingIndex{ -1 }
+        , _modelScale{ 0.5f }
+        , _decorationScale{ 3.0f }
         , _shownKey{ -1 }
     {
         setCanEverTick( true );
@@ -126,7 +127,7 @@ namespace sw
 
     string NileBuildingComponent::makeModelPath( const utf8* pName )
     {
-        return string( "game/nilecity/models/" ) + pName + ".mesh";
+        return string( "game/nilecity/models/" ) + pName + string( MeshAssetFormat::kExtension );
     }
 
     void NileBuildingComponent::onTick( float32 deltaTime )
@@ -160,10 +161,10 @@ namespace sw
         const utf8*            pModel = findModel( def, pBuilding->_level, bInhabited );
         if ( pModel != nullptr )
         {
-            const float32 scale = Internal::kModelScale * size * ( def._kind == CityBuildingKind::Decoration ? Internal::kDecorationScale : 1.0f );
+            const float32 scale = _modelScale * size * ( def._kind == CityBuildingKind::Decoration ? _decorationScale : 1.0f );
             pMesh->setMeshId( makeModelPath( pModel ) );
             pMesh->setLocalScale( float3{ scale } );
-            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::Pi, 0.0f } );
+            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             pMesh->setLocalPosition( center );
         }
         else

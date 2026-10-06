@@ -5,22 +5,47 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Utility/Json/ConfigKeyDoc.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw::editor
 {
     namespace
     {
-        TextureSwizzle parseSwizzleInternal( string_view swizzleStr )
-        {
-            if ( swizzleStr == "BGRA" || swizzleStr == "bgra" )
-                return TextureSwizzle::BGRA;
-            if ( swizzleStr == "ARGB" || swizzleStr == "argb" )
-                return TextureSwizzle::ARGB;
-            if ( swizzleStr == "RGB1" || swizzleStr == "rgb1" )
-                return TextureSwizzle::RGB1;
+        /** @brief 파일 뿌리입니다. */
+        static constexpr ConfigKeyDoc kArrTextureImportRootKeyDoc[] = {
+            {"presets",   "object", "", "프리셋 이름 → 규칙(아래 키). 위에서 아래로 읽으니 부모 프리셋을 먼저 적는다"},
+            {  "rules", "object[]", "",             "규칙 목록(아래 키). 첫 매칭이 이긴다 — 조건 없는 규칙은 맨 끝에"},
+        };
+        /** @brief 프리셋 · 규칙 하나입니다. 적지 않은 칸은 `inherits` 의 값, 그것도 없으면 기본값입니다. */
+        static constexpr ConfigKeyDoc kArrTextureImportRuleKeyDoc[] = {
+            {            "name",   "string",          "",                               "규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다"},
+            {        "inherits",   "string",          "",                       "값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류"},
+            {          "format",   "string", "BC7_UNORM", "DXGI 포맷 이름(BC7_UNORM · BC5_UNORM · BC6H_UF16 · B8G8R8A8_UNORM · R8G8B8A8_UNORM …)"},
+            {         "swizzle",   "string",      "RGBA",                              "채널 순서: RGBA · BGRA · ARGB · RGB1 — 그 밖은 로드 오류"},
+            {   "generate_mips",     "bool",      "true",                                                                         "밉맵을 만든다"},
+            {            "srgb",     "bool",      "true",                                 "sRGB 색 공간으로 읽는다(노멀 · 데이터 텍스처는 false)"},
+            {    "invert_green",     "bool",     "false",                                           "G 채널을 뒤집는다(DirectX ↔ OpenGL 노멀 맵)"},
+            {"include_patterns", "string[]",          "",           "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시, 파일 이름이나 리소스 경로)"},
+            {"exclude_patterns", "string[]",          "",                                            "맞으면 빼는 와일드카드(포함보다 먼저 본다)"},
+            {   "include_paths", "string[]",          "",                                                            "들어 있어야 하는 경로 조각"},
+            {   "exclude_paths", "string[]",          "",                                                            "들어 있으면 빼는 경로 조각"},
+        };
 
-            return TextureSwizzle::RGBA;
+        /** @brief 채널 순서 이름을 읽습니다. 모르는 이름이면 false 입니다(기본 RGBA 로 조용히 가지 않는다). */
+        [[nodiscard]] bool parseSwizzleInternal( string_view swizzleStr, TextureSwizzle& outSwizzle )
+        {
+            if ( swizzleStr == "RGBA" || swizzleStr == "rgba" )
+                outSwizzle = TextureSwizzle::RGBA;
+            else if ( swizzleStr == "BGRA" || swizzleStr == "bgra" )
+                outSwizzle = TextureSwizzle::BGRA;
+            else if ( swizzleStr == "ARGB" || swizzleStr == "argb" )
+                outSwizzle = TextureSwizzle::ARGB;
+            else if ( swizzleStr == "RGB1" || swizzleStr == "rgb1" )
+                outSwizzle = TextureSwizzle::RGB1;
+            else
+                return false;
+            return true;
         }
     } // namespace
 
@@ -62,6 +87,8 @@ namespace sw::editor
 
         _mapPreset.clear();
         _listRule.clear();
+        if ( ConfigKeyDocUtil::hasOnlyKnownKeys( root, kArrTextureImportRootKeyDoc, "TextureImportConfig" ) == false )
+            return false;
 
         // 1) 프리셋 파싱
         const JsonValue presetsVal = root.get( "presets" );
@@ -73,25 +100,17 @@ namespace sw::editor
                 const JsonValue   presetObj = presetsVal.get( name );
                 TextureImportRule rule;
                 rule._name = name;
-
-                applyInheritance( presetObj, rule );
+                if ( applyInheritance( presetObj, rule ) == false )
+                    return clearAndFail();
                 rule._name = name; // 상속이 부모 이름을 덮어썼을 수 있다. 이 프리셋의 이름이 정본이다.
-
-                parseRuleObject( presetObj, rule );
+                if ( parseRuleObject( presetObj, rule, "TextureImportConfig preset '" + name + "'" ) == false )
+                    return clearAndFail();
                 _mapPreset[name] = rule;
             }
         }
 
-        // 2) 규칙 파싱
-        //
-        // **`forEachObjectInArray` 로 바꾸지 말 것. 일부러 이 모양이다.** 그 도우미는 객체가 아닌 원소를 건너뛰지만, 이 루프는
-        // **모든 원소를 그대로 통과시킨다.** 둘의 차이는 겉보기보다 크다. 객체가 아닌 원소는 `parseRuleObject` 가 아무 필드도
-        // 읽지 못해 **기본 규칙**이 되고, 기본 규칙은 include 목록이 비어 있어 `findMatchingRule` 의 검사를 모두 통과한다. 즉
-        // **무엇에나 매칭되는 규칙**이 되고, 그 함수는 "첫 매칭이 이긴다" 는 규칙이라 **그 뒤의 규칙이 모두 가려진다.**
-        //
-        // 그런데도 이대로 두는 이유는 이 설정이 **에디터에서만 쓰는, 손으로 적는 파일**이기 때문이다(런타임 · 배포 경로는 읽지
-        // 않는다). 망가진 원소를 넣으면 곧바로 모든 텍스처가 기본 설정으로 임포트되므로 적은 사람이 바로 알아챈다. 조용히 틀리는
-        // 종류의 실패가 아니다. 엄격하게 바꾸는 것은 동작 변경이고, 그것을 지켜 줄 테스트가 아직 없다.
+        // 2) 규칙 파싱 — 객체 아닌 원소 · 모르는 키 · 모르는 swizzle · 없는 inherits 는 로드 오류다(객체 아닌 원소를 규칙으로 받으면
+        //    무엇에나 맞는 규칙이 되어 뒤 규칙을 모두 가린다).
         const JsonValue rulesVal = root.get( "rules" );
         if ( rulesVal.isArray() )
         {
@@ -100,18 +119,15 @@ namespace sw::editor
             {
                 const JsonValue   ruleObj = rulesVal.at( index );
                 TextureImportRule rule;
-
-                applyInheritance( ruleObj, rule );
-
-                parseRuleObject( ruleObj, rule );
+                if ( applyInheritance( ruleObj, rule ) == false || parseRuleObject( ruleObj, rule, "TextureImportConfig rule " + to_string( index ) ) == false )
+                    return clearAndFail();
                 _listRule.push_back( rule );
             }
         }
 
         SW_LOG_INFO( "Loaded TextureImportConfig: %# presets, %# rules.", _mapPreset.size(), _listRule.size() );
 
-        // 규칙을 적어 두었는데 아무 일도 일어나지 않는 것이 이 설정의 **유일한 조용한 실패**다. 위 파싱이 관대해서(객체가 아닌
-        // 원소도 규칙이 된다) 더 쉽게 일어나므로, 그 자리를 이름으로 짚어 준다.
+        // 규칙을 적어 두었는데 아무 일도 일어나지 않는 것(조건 없는 규칙이 중간에 있다)은 로드 오류가 아니라 경고다 — 그 자리를 이름으로 짚어 준다.
         const size_t shadowingIndex = findShadowingRuleIndex();
         if ( shadowingIndex < _listRule.size() )
         {
@@ -125,29 +141,42 @@ namespace sw::editor
         return true;
     }
 
-    void TextureImportConfig::applyInheritance( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule ) const
+    bool TextureImportConfig::clearAndFail()
     {
-        if ( jsonValue.has( "inherits" ) == false )
-            return;
+        _mapPreset.clear();
+        _listRule.clear();
+        return false;
+    }
+
+    bool TextureImportConfig::applyInheritance( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule ) const
+    {
+        if ( jsonValue.isObject() == false || jsonValue.has( "inherits" ) == false )
+            return true;
 
         const string inheritName = jsonValue.get( "inherits" ).asString();
         const auto   itParent    = _mapPreset.find( inheritName );
         if ( itParent == _mapPreset.end() )
         {
-            // **조용히 넘어가지 않는다.** 여기서 아무 말도 하지 않으면 상속이 통째로 사라진 채 기본값으로 임포트되고, JSON 을 고친
-            // 사람은 그것을 알 방법이 없다. 부모를 아래쪽에 적어도 여기로 온다. 찾기는 **그 시점까지 파싱된 프리셋만** 보기 때문이다.
-            SW_LOG_WARNING( "TextureImportConfig: inherits '%#' 를 찾지 못했습니다 — 기본값으로 갑니다. "
-                            "(이름 오타이거나, 부모 프리셋을 아래쪽에 적었을 수 있습니다)",
-                            inheritName.c_str() );
-            return;
+            // 찾기는 그 시점까지 파싱된 프리셋만 본다 — 부모를 아래쪽에 적어도 여기로 온다.
+            SW_LOG_ERROR( "TextureImportConfig: inherits '%#' is not a preset defined above (typo, or the parent is written below)", inheritName.c_str() );
+            return false;
         }
 
         inoutRule           = itParent->second;
         inoutRule._inherits = inheritName;
+        return true;
     }
 
-    void TextureImportConfig::parseRuleObject( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule )
+    bool TextureImportConfig::parseRuleObject( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule, string_view context )
     {
+        if ( jsonValue.isObject() == false )
+        {
+            SW_LOG_ERROR( "%#: must be an object", context );
+            return false;
+        }
+        if ( ConfigKeyDocUtil::hasOnlyKnownKeys( jsonValue, kArrTextureImportRuleKeyDoc, context ) == false )
+            return false;
+
         if ( jsonValue.has( "name" ) )
             inoutRule._name = jsonValue.get( "name" ).asString();
 
@@ -158,7 +187,14 @@ namespace sw::editor
             inoutRule._format = jsonValue.get( "format" ).asString();
 
         if ( jsonValue.has( "swizzle" ) )
-            inoutRule._swizzle = parseSwizzleInternal( jsonValue.get( "swizzle" ).asString() );
+        {
+            const string swizzleName = jsonValue.get( "swizzle" ).asString();
+            if ( parseSwizzleInternal( swizzleName, inoutRule._swizzle ) == false )
+            {
+                SW_LOG_ERROR( "%#: unknown swizzle '%#' (RGBA, BGRA, ARGB, RGB1)", context, swizzleName.c_str() );
+                return false;
+            }
+        }
 
         if ( jsonValue.has( "generate_mips" ) )
             inoutRule._bGenerateMips = jsonValue.get( "generate_mips" ).asBool() ? SW_TRUE : SW_FALSE;
@@ -170,6 +206,7 @@ namespace sw::editor
             inoutRule._bInvertGreen = jsonValue.get( "invert_green" ).asBool() ? SW_TRUE : SW_FALSE;
 
         inoutRule._filter.parse( jsonValue );
+        return true;
     }
 
     bool TextureImportConfig::isCatchAllRule( const TextureImportRule& rule )

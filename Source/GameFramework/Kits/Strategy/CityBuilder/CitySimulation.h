@@ -3,38 +3,43 @@
  * @brief 도시 한 판 — 땅 · 도로 · 건물 배치, 노동 배분, 순회 일꾼(서비스 · 상인 · 수레 · 세리), 집 진화, 이민, 달마다 소비 · 세금 · 임금, 해마다 범람입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/GridTopology.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {
+    struct GameStateRefs;
+
     class Archive;
+    class Wallet;
 
     /** @brief 도시 규칙의 수치입니다. 시간은 게임 초입니다. */
     struct CitySettings
     {
-        float32 _secondsPerMonth{ 20.0f };
-        float32 _walkerSpeed{ 2.5f };         ///< 칸 / 초
-        float32 _workerRatio{ 0.4f };         ///< 인구 중 일하는 몫
-        float32 _serviceDuration{ 30.0f };    ///< 서비스를 받은 뒤 그 효과가 남는 초
-        float32 _immigrationInterval{ 1.5f }; ///< 빈 집 하나에 한 사람이 들어오는 간격
-        float32 _evolveDelay{ 3.0f };         ///< 조건이 이만큼 이어져야 단계가 오르내린다
-        float32 _wagePerWorkerPerMonth{ 0.5f };
-        float32 _fixedStep{ 0.25f };
-        int32   _serviceReach{ 2 };       ///< 일꾼이 지나는 칸에서 이 칸 안의 집에 준다
-        int32   _goodsPerFourPeople{ 1 }; ///< 달마다 네 사람이 먹는 물자 수
-        uint32  _randomSeed{ 3100u };     ///< 범람 · 일꾼의 갈림길
+        float32       _walkerSpeed{ 2.5f };         ///< 칸 / 초
+        float32       _workerRatio{ 0.4f };         ///< 인구 중 일하는 몫
+        float32       _serviceDuration{ 30.0f };    ///< 서비스를 받은 뒤 그 효과가 남는 초
+        float32       _immigrationInterval{ 1.5f }; ///< 빈 집 하나에 한 사람이 들어오는 간격
+        float32       _evolveDelay{ 3.0f };         ///< 조건이 이만큼 이어져야 단계가 오르내린다
+        float32       _wagePerWorkerPerMonth{ 0.5f };
+        float32       _fixedStep{ 0.25f };
+        int32         _serviceReach{ 2 };       ///< 일꾼이 지나는 칸에서 이 칸 안의 집에 준다
+        int32         _goodsPerFourPeople{ 1 }; ///< 달마다 네 사람이 먹는 물자 수
+        uint32        _randomSeed{ 3100u };     ///< 범람 · 일꾼의 갈림길
+        hashed_string _currency{ "Deben" };     ///< 빌린 지갑에서 쓰는 통화
     };
 } // namespace sw
 
@@ -77,7 +82,7 @@ namespace sw
     /** @brief 지은 건물 하나입니다(집 포함). */
     struct CityBuilding
     {
-        ItemBag                _stock{};
+        ItemStackList          _stock{};
         const CityBuildingDef* _pDef{ nullptr };
         int2                   _origin{};
         int2                   _accessTile{ -1, -1 }; ///< 붙어 있는 도로 칸(없으면 −1)
@@ -152,24 +157,41 @@ namespace sw
      *             같은 도로망의 창고에 보내며, 시장은 같은 도로망의 창고에서 사 온다.
      *          3. 일꾼 — 도로를 따라 걷는다. 순회는 안 가 본 길을 먼저 고르고 걸음을 다 쓰면 집으로 돌아간다. 지나는 칸 둘레의 집에 서비스 · 물자를 준다.
      *          4. 집 — 다음 단계의 서비스 · 물자 · 매력도가 이어지면 오르고, 지금 단계를 잃으면 내려간다. 빈 자리가 있고 일자리가 남으면 사람이 들어온다.
-     *          달이 끝나면 물자를 먹고(네 사람에 하나), 세리가 다녀간 집이 세금을 내고, 일꾼 임금을 낸다. 해가 바뀌면 범람이 범람원의 비옥함을 정한다.
+     *          달 결산(`settleMonth` — 디렉터가 공유 시계의 달 넘김에 부른다)에 물자를 먹고(네 사람에 하나), 세리가 다녀간 집이 세금을 내고, 일꾼 임금을 낸다. 해가 바뀌면 범람이 범람원의 비옥함을 정한다.
      *          카탈로그는 빌려 씁니다(시뮬레이션보다 오래 · 바뀌지 않게).
      */
     class SW_GF_API CitySimulation
     {
     public:
-        static constexpr int32 kMonthsPerYear = 12;
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CITY" );
+        static constexpr uint32 kStateVersion = 1;
 
         CitySimulation();
 
-        void initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, int32 startingMoney );
+        /**
+         * @brief 빈 도시를 엽니다. 돈은 빌린 지갑(@p refs 의 지갑 — 통화 `CitySettings::_currency`)에서 나가고 들어옵니다.
+         * @details 지갑이 없으면 알리고 짓기 · 도로가 모두 돈 부족으로 거절됩니다. 달 결산이 모자라면 지갑이 빚(`Wallet::charge`)을 진다.
+         */
+        void initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const GameStateRefs& refs );
         void setTerrain( int32 x, int32 y, CityTerrain terrain );
         void fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
+        /**
+         * @brief 공유 땅을 빌립니다(도시 칸 (0, 0) = 땅 칸 @p origin). 그 뒤로 도로 · 건물은 놓기 전에 땅을 얻고(건물은 막힘, 도로는 아님) 허물면 놓습니다.
+         * @details 지형(`setTerrain`)은 땅 표와 무관합니다. 이미 놓인 도로 · 건물은 얻지 않으므로 짓기 전에 묶습니다. @p pLand 가 nullptr 이면 풉니다.
+         */
+        void bindLand( LandRegistry* pLand, const int2& origin );
 
+        /**
+         * @brief 한 달을 결산합니다 — 물자를 먹고, 세리가 다녀간 집이 세금을 내고, 일꾼 임금을 냅니다(모자라면 지갑이 빚). @p bNewYear 면 범람이 다음 해의 비옥함을 정합니다.
+         * @details 달력은 공유 시계의 것이다 — 디렉터가 시계 알림(달 넘김 · 해 넘김)을 받아 부른다. 시뮬레이션은 시간을 세지 않는다.
+         */
+        void settleMonth( bool bNewYear );
+
+        /** @brief 도로 한 칸을 깝니다. 공유 땅이 남의 것이면 `Occupied` 입니다. */
         CityPlaceResult placeRoad( int32 x, int32 y );
         /** @brief 두 칸 사이에 ㄱ 자 도로를 깝니다(먼저 X, 다음 Y). 깐 칸 수입니다. */
         int32 placeRoadLine( const int2& from, const int2& to );
-        /** @brief 건물을 @p x, @p y(왼쪽 아래 칸)에 짓습니다. */
+        /** @brief 건물을 @p x, @p y(왼쪽 아래 칸)에 짓습니다. 발자국의 공유 땅이 한 칸이라도 남의 것이면 `Occupied` 입니다. */
         CityPlaceResult placeBuilding( const hashed_string& buildingId, int32 x, int32 y );
         /** @brief 그 칸의 건물 · 도로를 허뭅니다. 허물었으면 true 입니다. */
         bool demolish( int32 x, int32 y );
@@ -186,15 +208,13 @@ namespace sw
         /** @brief 일꾼의 그릴 자리(칸 단위 실수 — 칸 가운데가 .5)입니다. */
         static float2 computeWalkerPosition( const CityWalker& walker );
 
-        int32   getWidth() const { return _topology._width; }
-        int32   getHeight() const { return _topology._height; }
-        int32   getMoney() const { return _money; }
-        int32   getPopulation() const;
-        int32   getWorkforce() const { return _workforce; }
-        int32   getEmployed() const { return _employed; }
-        int32   getMonth() const { return _month; }
-        int32   getYear() const { return _year; }
-        float32 getFloodFertility() const { return _floodFertility; }
+        int32                getWidth() const { return _topology._width; }
+        int32                getHeight() const { return _topology._height; }
+        const hashed_string& getCurrency() const { return _settings._currency; }
+        int32                getPopulation() const;
+        int32                getWorkforce() const { return _workforce; }
+        int32                getEmployed() const { return _employed; }
+        float32              getFloodFertility() const { return _floodFertility; }
         /** @brief 종교 · 오락을 받은 집 사람의 몫(0..1)입니다(파라오의 문화 평가). */
         float32 computeCultureCoverage() const;
         /** @brief 집 단계의 사람 가중 평균입니다(번영 평가). */
@@ -220,7 +240,6 @@ namespace sw
         void updateBuildings( float32 deltaTime );
         void updateWalkers( float32 deltaTime );
         void updateHouses( float32 deltaTime );
-        void endMonth();
         void recomputeRoadComponents();
         void recomputeDesirability();
         void refreshAccess( CityBuilding& building ) const;
@@ -245,20 +264,18 @@ namespace sw
         EventBuffer<CityEvent>    _eventBuffer;
         mutable GridSearchScratch _roadSearch; ///< 일꾼 길 찾기(`findRoadPath`)가 호출마다 다시 쓴다
         const CityCatalog*        _pCatalog;
+        Wallet*                   _pWallet; ///< 빌린 지갑
         CitySettings              _settings;
         FixedStepTimer            _stepTimer;
         GameRandom                _random;
         float32                   _time;
-        float32                   _monthTimer;
         float32                   _floodFertility;
         float32                   _wageDebt;
         GridTopology              _topology;
-        int32                     _money;
+        LandBinding               _land; ///< 빌린 공유 땅(없으면 단독)
         int32                     _monthIncome;
         int32                     _workforce;
         int32                     _employed;
-        int32                     _month;
-        int32                     _year;
         uint8                     _bRoadsDirty;
         uint8                     _bDesirabilityDirty;
     };

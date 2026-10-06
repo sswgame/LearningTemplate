@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
@@ -136,7 +137,7 @@ namespace sw
         SceneComponent::onRegister( manager );
         _pAnimationSystem = &manager.getAnimationSystem();
         _pAnimationSystem->registerLodClient( &_lodClient );
-        const uint64 mixed = getHandle().componentId() * 0x9E3779B97F4A7C15ull;
+        const uint64 mixed = getHandle().componentId() * HashUtil::kGoldenRatio64;
         _updatePhase       = static_cast<uint32>( ( mixed ^ ( mixed >> 29 ) ) & 0xFFFFu );
     }
 

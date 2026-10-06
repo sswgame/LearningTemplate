@@ -2,14 +2,14 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Inventory/Crafting.h"
-#include "GameFramework/Inventory/Equipment.h"
-#include "GameFramework/Inventory/GridInventory.h"
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
-#include "GameFramework/Inventory/LootTable.h"
-#include "GameFramework/Utility/GameRandom.h"
+#include "GameFramework/Base/Inventory/Crafting.h"
+#include "GameFramework/Base/Inventory/Equipment.h"
+#include "GameFramework/Base/Inventory/GridInventory.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -102,13 +102,13 @@ SW_TEST_CASE( InventoryTest, SlotsStackRespectWeightAndMoveSplitSortAndWear )
     SW_EXPECT_EQUAL( 0, inventory.getItemCount( hashed_string( "sword" ) ) );
 
     // 가방이 작아지면 넘치는 것이 나온다.
-    vector<ItemStack> listOverflow;
+    vector<InventorySlot> listOverflow;
     inventory.resize( 1, listOverflow );
     SW_EXPECT_EQUAL( 1, inventory.getSlotCount() );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( listOverflow.size() ) );
-    ItemBag bag;
-    inventory.fillItemBag( bag );
-    SW_EXPECT_EQUAL( 5, bag.getItemCount( hashed_string( "ore" ) ) );
+    ItemStackList items;
+    inventory.fillItemStackList( items );
+    SW_EXPECT_EQUAL( 5, items.getItemCount( hashed_string( "ore" ) ) );
 }
 
 SW_TEST_CASE( InventoryTest, EquipmentSlotsAcceptKindsSwapWithInventoryAndSumStats )
@@ -155,40 +155,40 @@ SW_TEST_CASE( InventoryTest, LootTablesRollWeightsNestedTablesAndLuckDeterminist
 {
     LootCatalog loot;
     SW_ASSERT_TRUE( loot.loadFromXmlText( kLootTestXml, "InventoryTest" ) );
-    GameRandom randomA( 77u );
-    GameRandom randomB( 77u );
-    ItemBag    bagA;
-    ItemBag    bagB;
+    GameRandom    randomA( 77u );
+    GameRandom    randomB( 77u );
+    ItemStackList itemsA;
+    ItemStackList itemsB;
     for ( int32 index = 0; index < 200; ++index )
     {
-        SW_EXPECT_TRUE( loot.roll( hashed_string( "wolf" ), randomA, bagA ) );
-        (void)loot.roll( hashed_string( "wolf" ), randomB, bagB );
+        SW_EXPECT_TRUE( loot.roll( hashed_string( "wolf" ), randomA, itemsA ) );
+        (void)loot.roll( hashed_string( "wolf" ), randomB, itemsB );
     }
-    SW_EXPECT_EQUAL( bagA.getItemCount( hashed_string( "herb" ) ), bagB.getItemCount( hashed_string( "herb" ) ) ); // 씨앗이 같으면 같다
-    SW_EXPECT_EQUAL( bagA.getItemCount( hashed_string( "ring" ) ), bagB.getItemCount( hashed_string( "ring" ) ) );
+    SW_EXPECT_EQUAL( itemsA.getItemCount( hashed_string( "herb" ) ), itemsB.getItemCount( hashed_string( "herb" ) ) ); // 씨앗이 같으면 같다
+    SW_EXPECT_EQUAL( itemsA.getItemCount( hashed_string( "ring" ) ), itemsB.getItemCount( hashed_string( "ring" ) ) );
     // 200 번 × 평균 1.5 회 × 6/10 × 평균 2 개 ≈ 360 약초, 반지 ≈ 60, 광석 ≈ 100.
-    const int32 herbCount = bagA.getItemCount( hashed_string( "herb" ) );
-    const int32 ringCount = bagA.getItemCount( hashed_string( "ring" ) );
-    const int32 oreCount  = bagA.getItemCount( hashed_string( "ore" ) );
+    const int32 herbCount = itemsA.getItemCount( hashed_string( "herb" ) );
+    const int32 ringCount = itemsA.getItemCount( hashed_string( "ring" ) );
+    const int32 oreCount  = itemsA.getItemCount( hashed_string( "ore" ) );
     SW_EXPECT_TRUE( herbCount > 280 && herbCount < 440 );
     SW_EXPECT_TRUE( ringCount > 35 && ringCount < 90 );
     SW_EXPECT_TRUE( oreCount > 75 && oreCount < 125 );
 
     // 행운은 "없음" 을 줄이고 늘 주는 확률을 올린다.
-    GameRandom randomLucky( 77u );
-    ItemBag    bagLucky;
+    GameRandom    randomLucky( 77u );
+    ItemStackList itemsLucky;
     for ( int32 index = 0; index < 200; ++index )
-        (void)loot.roll( hashed_string( "wolf" ), randomLucky, bagLucky, 2.0f );
-    SW_EXPECT_EQUAL( 200, bagLucky.getItemCount( hashed_string( "ore" ) ) );
+        (void)loot.roll( hashed_string( "wolf" ), randomLucky, itemsLucky, 2.0f );
+    SW_EXPECT_EQUAL( 200, itemsLucky.getItemCount( hashed_string( "ore" ) ) );
 
     // 확률 표시 · 서로 부르는 표 · 없는 표.
     SW_EXPECT_NEAR_EQUAL( 0.5f, loot.computeDropChance( hashed_string( "gems" ), hashed_string( "ring" ) ) * 0.5f, 1.0e-4f );
     const float32 oreChance = loot.computeDropChance( hashed_string( "wolf" ), hashed_string( "ore" ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, oreChance, 1.0e-4f );
-    ItemBag bagLoop;
-    SW_EXPECT_TRUE( loot.roll( hashed_string( "loop" ), randomA, bagLoop ) );
-    SW_EXPECT_TRUE( bagLoop.isEmpty() );
-    SW_EXPECT_FALSE( loot.roll( hashed_string( "missing" ), randomA, bagLoop ) );
+    ItemStackList itemsLoop;
+    SW_EXPECT_TRUE( loot.roll( hashed_string( "loop" ), randomA, itemsLoop ) );
+    SW_EXPECT_TRUE( itemsLoop.isEmpty() );
+    SW_EXPECT_FALSE( loot.roll( hashed_string( "missing" ), randomA, itemsLoop ) );
 }
 
 SW_TEST_CASE( InventoryTest, CraftingChecksStationLevelToolsAndQueuesTimedJobs )
@@ -261,7 +261,7 @@ SW_TEST_CASE( InventoryTest, CrafterConsumeHandlerAndGridInventoryShapes )
     // 재료를 다른 장부에서 거둔다 — 인벤토리의 약초는 그대로, 결과만 들어온다.
     int32 ledgerHerb = 3;
     crafter.setConsumeInputsHandler( Crafter::ConsumeInputsDelegate::create(
-        [&ledgerHerb]( const ItemBag& inputs, int32 count )
+        [&ledgerHerb]( const ItemStackList& inputs, int32 count )
     {
         const int32 needed = inputs.getItemCount( hashed_string( "herb" ) ) * count;
         if ( ledgerHerb < needed )

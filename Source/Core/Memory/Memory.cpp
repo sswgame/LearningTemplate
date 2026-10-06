@@ -37,9 +37,20 @@ namespace sw
     {
         /** @brief 걸린 할당 관찰자입니다. 할당마다 relaxed 읽기 하나입니다. */
         atomic<const MemoryAllocationObserver*> s_pAllocationObserver{ nullptr };
+        /** @brief 이 스레드에서 실패로 돌릴 남은 할당 수입니다(`injectAllocationFailures`). */
+        thread_local uint32 t_injectedFailureCount{ 0 };
 
         struct MemoryInternal
         {
+            /** @brief 시험이 주입한 실패가 남았으면 하나를 쓰고 true 입니다(`injectAllocationFailures`). */
+            static bool consumeInjectedFailure()
+            {
+                if ( t_injectedFailureCount == 0 )
+                    return false;
+                --t_injectedFailureCount;
+                return true;
+            }
+
             /**
              * @brief 사용자 블록 앞의 헤더를 채우고 프로파일러에 할당을 알립니다. `allocate` · `allocateAligned` 가 함께 씁니다.
              * @return 사용자 블록 주소(`pUserPtr`) 그대로입니다.
@@ -106,6 +117,10 @@ namespace sw
     } // namespace
 #endif
 
+#if !defined( SW_SHIPPING )
+    void Memory::injectAllocationFailures( uint32 count ) { t_injectedFailureCount = count; }
+#endif
+
     /**
      * @brief 지정한 바이트 경계로 정렬된 메모리 블록을 할당합니다.
      */
@@ -132,6 +147,8 @@ namespace sw
         return pRawPtr;
     #endif
 #else // SW_SHIPPING
+        if ( MemoryInternal::consumeInjectedFailure() )
+            return nullptr;
 
         // 헤더와 정렬 여유를 더하다 오버플로하면 **요청보다 작은 블록**이 잡히고, 그 뒤의 헤더 쓰기가 곧바로 범위를 넘는다.
         // 오버플로할 크기는 어차피 할당될 수 없으므로 여기서 거절한다.
@@ -203,7 +220,9 @@ namespace sw
 #if defined( SW_SHIPPING )
         return ::malloc( size );
 #else  // SW_SHIPPING
-       // allocateAligned 와 같은 이유로 오버플로할 크기를 먼저 거절한다.
+        if ( MemoryInternal::consumeInjectedFailure() )
+            return nullptr;
+        // allocateAligned 와 같은 이유로 오버플로할 크기를 먼저 거절한다.
         if ( size > SIZE_MAX - sizeof( AllocHeader ) )
             return nullptr;
 

@@ -102,7 +102,7 @@ namespace sw
         const float32 radius = _halfExtents._x * MathUtil::max( MathUtil::abs( scale._x ), MathUtil::abs( scale._z ) );
         for ( uint32 sideIndex = 0; sideIndex < NavMeshObstacleComponentInternal::kCylinderSideCount; ++sideIndex )
         {
-            const float32 angle = 2.0f * MathUtil::Pi * static_cast<float32>( sideIndex ) / static_cast<float32>( NavMeshObstacleComponentInternal::kCylinderSideCount );
+            const float32 angle = 2.0f * MathUtil::kPi * static_cast<float32>( sideIndex ) / static_cast<float32>( NavMeshObstacleComponentInternal::kCylinderSideCount );
             outVolume._listPoint.push_back( float3{ worldCenter._x + MathUtil::cos( angle ) * radius, worldCenter._y, worldCenter._z + MathUtil::sin( angle ) * radius } );
         }
         return true;

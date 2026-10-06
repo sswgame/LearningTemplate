@@ -16,6 +16,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorCommandGui.h"
 #include "Editor/Common/Gui/EditorFontSetup.h"
@@ -34,6 +35,7 @@
 #include "Editor/Popups/EditorPopupManager.h"
 #include "Editor/SelfTest/EditorRegistryDump.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -60,6 +62,9 @@ namespace sw::editor
     {
         struct ImGuiEditorInternal
         {
+            /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이만큼 넘게 다르면 테마가 따라간다(beginFrame).
+            static constexpr float32 kDpiFollowTolerance = 0.001f;
+
             /** @brief ImGui 할당을 sw 할당자로 보낸다 — 할당 헤더에 태그가 적혀 메모리 프로파일러의 Editor 줄로 세인다. */
             static void* allocateForImGui( size_t size, void* /*pUserData*/ ) { return Memory::allocate( size ); }
             /** @brief `allocateForImGui` 의 짝입니다. */
@@ -259,7 +264,7 @@ namespace sw::editor
                 SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashForwardPipeline ),
                 MakeTaskArgs( forwardPipeline ) );
 
-            TaskStageHandle stage = pTaskManager->createStage();
+            TaskStageHandle stage = pTaskManager->createStage( "EditorSplashLoad" );
             stage.addTask( hDefault ).addTask( hForward );
 
             hDefault.submit();
@@ -396,7 +401,12 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE )
             return;
 
-        waitForDrawSnapshotIdle();
+        // 하위 구간 — `GT.Editor.updateUi`(App) 가 무엇에 쓰이는지 가른다. 패널마다의 시간은 `-gv_editorPanelTimes=N`.
+        {
+            // 지난 UI 프레임을 렌더 스레드가 다 그릴(postPresent) 때까지 기다린다 — 큰 값은 UI 일이 아니라 RT · GPU · Present 대기다.
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.waitDrawSnapshot" );
+            waitForDrawSnapshotIdle();
+        }
 
         if ( _editorContext != nullptr )
         {
@@ -404,30 +414,33 @@ namespace sw::editor
             _editorContext->setGameViewHovered( false );
         }
 
-        BLOCK( "ImGui NewFrame / Dockspace" )
         {
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.newFrame" );
             beginFrame();
             EditorMenuBar::drawThemeDialog();
             EditorMenuBar::draw( _dockLayout );
             _dockLayout.beginDockspace();
         }
 
-        EditorCommandGui::processHotkeys();
-        EditorMenuBar::processOpenPanelRequests();
-        EditorMenuBar::processSceneSession();
-
-        // 에셋 파일 감시는 **에디터 프레임에서만** 돈다. 리로드가 패널 그리기보다
-        // 앞에 있어야 이번 프레임에 바뀐 머티리얼이 그대로 보인다.
-        if ( _editorContext != nullptr )
         {
-            _editorContext->getAssetHotReload().update();
-            _editorContext->getConfigHotReload().update();
-            _editorContext->getAssetValidation().update();
-            _editorContext->getSourceControl().update();
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.commandsAndWatchers" );
+            EditorCommandGui::processHotkeys();
+            EditorMenuBar::processOpenPanelRequests();
+            EditorMenuBar::processSceneSession();
+
+            // 에셋 파일 감시는 **에디터 프레임에서만** 돈다. 리로드가 패널 그리기보다
+            // 앞에 있어야 이번 프레임에 바뀐 머티리얼이 그대로 보인다.
+            if ( _editorContext != nullptr )
+            {
+                _editorContext->getAssetHotReload().update();
+                _editorContext->getConfigHotReload().update();
+                _editorContext->getAssetValidation().update();
+                _editorContext->getSourceControl().update();
+            }
         }
 
-        BLOCK( "Editor Panels Draw" )
         {
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.panels" );
             if ( _editorContext != nullptr )
             {
                 _editorContext->getPanelManager().drawOpenPanels();
@@ -438,9 +451,12 @@ namespace sw::editor
             EditorSelfTestRunner::runFrame();
         }
 
-        BLOCK( "ImGui EndFrame / Platform Windows Update" )
         {
-            endFrame();
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.endFrame" );
+            {
+                SW_EDITOR_PROFILE_SCOPE( "GT.Editor.render" );
+                endFrame();
+            }
 
             // EndFrame 이후여야 창의 DrawList 가 이번 프레임의 최종 내용을 담는다.
             // -gv_editorPanelDump=N 이 없으면 아무것도 하지 않는다.
@@ -462,6 +478,7 @@ namespace sw::editor
                 // 플랫폼(OS 창) 갱신은 항상 UI 스레드에서 한다. imgui 1.92 뷰포트 관리는 단일 스레드 호출을 전제하므로 보조(플로팅)
                 // 뷰포트의 GPU 렌더 · present 는 한 스레드에서만 돌려야 하고, GL 이면 그 스레드는 렌더 스레드다(아래 render() 에서 처리).
                 // 창 생성 · 크기 변경 · 파괴와 렌더가 GPU 큐에 제출 · 대기하므로 렌더러 백엔드의 큐 잠금 안에서 한다.
+                SW_EDITOR_PROFILE_SCOPE( "GT.Editor.platformWindows" );
                 const std::unique_lock<mutex> queueLock =
                     ( _rendererBackend != nullptr ) ? _rendererBackend->lockSubmissionQueue() : std::unique_lock<mutex>{};
                 ImGui::UpdatePlatformWindows();
@@ -476,7 +493,10 @@ namespace sw::editor
 
             // 번호는 내기 전에 알린다. 이 뒤에 놓는 자원은 이 스냅샷이 그릴 수 있으므로 다음 번호를 받아야 한다.
             ++_lastDrawSnapshotSequence;
-            _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence );
+            {
+                SW_EDITOR_PROFILE_SCOPE( "GT.Editor.captureDrawSnapshot" );
+                _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence );
+            }
             if ( _rendererBackend != nullptr )
                 _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
             _publishedDrawSlot.store( writeSlot, std::memory_order_release );
@@ -644,10 +664,22 @@ namespace sw::editor
 
         if ( _platformBackend != nullptr )
             _platformBackend->newFrame();
+        // 자체 시험이 흉내 낸 입력 — 플랫폼 백엔드가 넣은 실제 커서보다 뒤에 넣어야 이긴다(ImGui 는 큐를 순서대로 처리한다).
+        EditorSelfTestInput::flushIntoImGui();
 
         // 이름 붙인 레이아웃은 프레임 밖에서 읽어야 이미 있는 창 · 도킹 노드에 적용된다.
         _dockLayout.applyPendingNamedLayout();
         ImGui::NewFrame();
+        // 모니터를 옮기면 ImGui 가 글자 배율(FontScaleDpi)만 새 DPI 로 덮는다(ConfigDpiScaleFonts). 테마의 여백 · 둥글기는 옛 배율이라 따라가게 한다 —
+        // 안 그러면 150 % 모니터에서 글자만 커지고 칸은 그대로다. 배율을 직접 정했으면(gv_editorUiScale) ImGui 가 덮지 않으므로 여기도 같다.
+        // 이 프레임의 위젯은 아직 안 그렸다 — 스타일 크기는 그릴 때 읽힌다.
+        {
+            const float32 fontScaleDpi = ImGui::GetStyle().FontScaleDpi;
+            const bool    bDpiMoved    = ImGui::GetIO().ConfigDpiScaleFonts && fontScaleDpi > 0.0f &&
+                                   MathUtil::abs( fontScaleDpi - EditorThemeUtil::getDpiScale() ) > ImGuiEditorInternal::kDpiFollowTolerance;
+            if ( bDpiMoved )
+                EditorThemeUtil::setDpiScale( fontScaleDpi );
+        }
         ImGuizmo::BeginFrame();
         // 기즈모를 띄우는 패널이, 캔버스가 입력을 받을 수 있을 때 다시 켠다.
         ImGuizmo::Enable( false );

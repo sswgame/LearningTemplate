@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
@@ -59,7 +60,7 @@ namespace sw
             psoDesc.RasterizerState.CullMode = ( desc._cullMode == RHICullMode::Front )
                                                  ? D3D12_CULL_MODE_FRONT
                                                  : ( ( desc._cullMode == RHICullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
-            psoDesc.SampleMask               = MathUtil::MaxUInt32;
+            psoDesc.SampleMask               = MathUtil::kMaxUInt32;
             psoDesc.PrimitiveTopologyType    = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             // 뎁스 전용은 RT 0 개다(1 로 올려 R8G8B8A8 을 선언하면 실제로는 DSV 만 바인딩되는 것과 어긋난다).
             psoDesc.NumRenderTargets = request._numRenderTargets;
@@ -118,7 +119,7 @@ namespace sw
         {
             ShaderCompileDesc csDesc{};
             csDesc._filePath        = shaderPath;
-            csDesc._entryPoint      = entryPoint;
+            csDesc._entryPoint      = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
             csDesc._stage           = ShaderStage::Compute;
             csDesc._targetFormat    = ShaderTargetFormat::DXIL_D3D12;
             ShaderCompileResult res = RHIShaderRequest::compile( csDesc );

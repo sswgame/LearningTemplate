@@ -2,7 +2,10 @@
 
 #include "GameFramework/Kits/Action/Metroidvania/MetroCharmLoadout.h"
 
-#include "GameFramework/Data/StatBlock.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
 
 namespace sw
@@ -117,5 +120,56 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    void MetroCharmLoadout::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listOwned.size() );
+        for ( const hashed_string& charmId : _listOwned )
+        {
+            StateArchiveUtil::writeName( outArchive, charmId );
+        }
+        outArchive << static_cast<uint32>( _listEquipped.size() );
+        for ( const hashed_string& charmId : _listEquipped )
+        {
+            StateArchiveUtil::writeName( outArchive, charmId );
+        }
+        outArchive << _notchCount;
+    }
+
+    bool MetroCharmLoadout::readState( Archive& archive )
+    {
+        if ( _pCatalog == nullptr )
+            return false;
+        // 가진 것 · 낀 것 순서 — 둘 다 카탈로그의 부적이고 겹치지 않으며, 낀 것은 가진 것이어야 한다
+        vector<hashed_string> listOwned;
+        vector<hashed_string> listEquipped;
+        for ( int32 listIndex = 0; listIndex < 2; ++listIndex )
+        {
+            vector<hashed_string>& listCharm  = listIndex == 0 ? listOwned : listEquipped;
+            uint32                 charmCount = 0;
+            if ( StateArchiveUtil::readCount( archive, 4, charmCount ) == false )
+                return false;
+            listCharm.reserve( charmCount );
+            for ( uint32 entry = 0; entry < charmCount; ++entry )
+            {
+                hashed_string charmId;
+                if ( StateArchiveUtil::readName( archive, charmId ) == false )
+                    return false;
+                const bool bOwnedIfEquipped = listIndex == 0 || contains( listOwned, charmId );
+                const bool bValid           = _pCatalog->findCharm( charmId ) != nullptr && contains( listCharm, charmId ) == false && bOwnedIfEquipped;
+                if ( bValid == false )
+                    return false;
+                listCharm.push_back( charmId );
+            }
+        }
+        int32 notchCount = 0;
+        archive >> notchCount;
+        if ( archive.isError() || notchCount < 0 )
+            return false;
+        _listOwned    = std::move( listOwned );
+        _listEquipped = std::move( listEquipped );
+        _notchCount   = notchCount;
+        return true;
     }
 } // namespace sw

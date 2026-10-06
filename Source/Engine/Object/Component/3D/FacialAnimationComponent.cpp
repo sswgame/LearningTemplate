@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/3D/FacialAnimationComponent.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -113,7 +114,7 @@ namespace sw
         , _blinkElapsed{ -1.0f }
         , _blinkAmount{ 0.0f }
         , _saccadeTimer{ 0.0f }
-        , _randomState{ 0x9E3779B9u }
+        , _randomState{ HashUtil::kGoldenRatio32 }
         , _bBlink{ SW_TRUE }
         , _bSaccades{ SW_TRUE }
         , _bLookAt{ SW_FALSE }
@@ -134,7 +135,7 @@ namespace sw
     {
         Component::onBeginPlay();
         // 깜빡임 · 사카드가 캐릭터마다 다른 박자로 돌게 씨앗을 컴포넌트 id 로 섞는다(결정적).
-        const uint64 mixed = getHandle().componentId() * 0x9E3779B97F4A7C15ull;
+        const uint64 mixed = getHandle().componentId() * HashUtil::kGoldenRatio64;
         _randomState       = static_cast<uint32>( mixed ^ ( mixed >> 32 ) ) | 1u;
         // 경로로 이미 읽었으면(`setFacialRigPath` · `setFacialRig`) 그대로 둔다 — 시작 전에 정한 표정 · 말하기를 지우지 않게.
         if ( _binding.isAnimationActive() == false )
@@ -499,7 +500,7 @@ namespace sw
             const float4x4 toParent    = parentIndex >= 0 ? listModel[static_cast<size_t>( parentIndex )].invert() : float4x4::Identity;
             const float3   eyePosition = listModel[static_cast<size_t>( boneIndex )].getTranslation();
             float3         desired     = float3::transformVector( _lookAtModel - eyePosition, toParent );
-            if ( desired.getLengthSquared() <= MathUtil::Epsilon )
+            if ( desired.getLengthSquared() <= MathUtil::kEpsilon )
                 continue;
             desired                         = float3::transform( desired.normalize(), saccade );
             const quaternion localRotation  = pRotation[boneIndex];

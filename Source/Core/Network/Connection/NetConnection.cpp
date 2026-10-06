@@ -58,6 +58,10 @@ namespace sw
                 return "Rejected";
             case NetDisconnectReason::VersionMismatch:
                 return "VersionMismatch";
+            case NetDisconnectReason::SecurityMismatch:
+                return "SecurityMismatch";
+            case NetDisconnectReason::AuthenticationFailed:
+                return "AuthenticationFailed";
         }
         return "Unknown";
     }

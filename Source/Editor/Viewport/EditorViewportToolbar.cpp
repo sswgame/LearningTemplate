@@ -212,13 +212,14 @@ namespace sw::editor
         ImGui::PopStyleVar( 2 );
     }
 
-    void EditorViewportToolbar::drawTransformBar( ViewportToolbarSettings& settings, const float2& anchorPos,
+    void EditorViewportToolbar::drawTransformBar( ViewportToolbarSettings& settings, const float2& anchorPos, float32 maxWidth,
                                                   bool bEnabled )
     {
         editor::EditorFloatingBarDesc barDesc{};
         barDesc._pId       = "##EditorTransformBar";
         barDesc._anchorPos = anchorPos;
         barDesc._pivot     = float2{ 0.5f, 0.0f };
+        barDesc._maxWidth  = maxWidth;
         barDesc._bEnabled  = bEnabled;
 
         if ( EditorChrome::beginFloatingBar( barDesc ) == false )

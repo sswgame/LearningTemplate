@@ -15,16 +15,19 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {
     struct CoasterRideStats;
+    struct GameStateRefs;
 
     class Archive;
+    class Wallet;
 
     // ------------------------------------------------------------------------------
     // 1) 놀이기구
@@ -39,6 +42,8 @@ namespace sw
         float32       _nausea{ 1.0f };     ///< 0..10 — 탄 뒤 멀미가 오른다
         float32       _cycleTime{ 30.0f }; ///< 한 번 도는 데 걸리는 시간(s, 태우고 내리기 포함)
         float3        _entrance{};         ///< 줄 입구 자리(손님이 걸어온다)
+        float3        _footprintCenter{};  ///< 공유 땅에서 얻는 자리의 가운데(XZ)
+        float3        _footprintSize{};    ///< 공유 땅에서 얻는 크기(XZ, m) — 0 이면 땅을 얻지 않는다(상태 바이트에 싣지 않는다 — 얻은 칸은 땅이 든다)
         int32         _capacity{ 8 };      ///< 한 번에 태우는 수
         int32         _price{ 3 };         ///< 탑승료
         int32         _runningCostPerMinute{ 5 };
@@ -121,6 +126,7 @@ namespace sw
         float3  _gatePosition{};                 ///< 손님이 들어오고 나가는 정문
         float32 _guestArrivalPerMinute{ 12.0f }; ///< 평가 500 · 입장료 0 일 때의 손님 도착률
         float32 _walkSpeed{ 2.5f };              ///< 걷는 속도(m/s) — 걷는 시간은 거리 / 속도
+        float32 _wanderRadius{ 6.0f };           ///< 탈 것이 없을 때 놀이기구 입구 둘레로 돌아다니는 반지름(m)
         float32 _queuePatience{ 90.0f };         ///< 줄에서 이만큼 넘게 기다리면 나온다(s)
         float32 _energyDrainPerSecond{ 1.0f / 480.0f };
         float32 _nauseaRecoveryPerSecond{ 1.0f / 120.0f };
@@ -129,15 +135,16 @@ namespace sw
         int32   _entryFee{ 0 };
         uint32  _randomSeed{ 12345u };
         // ---- 새로 오는 손님의 성향(고르게 뽑는 범위) — 가족 공원 · 스릴 공원을 데이터로 나눈다 ----
-        int32   _guestCashMin{ 20 };
-        int32   _guestCashMax{ 80 };
-        float32 _guestMinIntensityMax{ 3.0f }; ///< "이보다 약하면 시시하다" 의 상한(0 ~ 이 값)
-        float32 _guestMaxIntensityMin{ 3.0f }; ///< "이보다 세면 안 탄다" 의 범위
-        float32 _guestMaxIntensityMax{ 9.0f };
-        float32 _guestNauseaToleranceMin{ 0.3f };
-        float32 _guestNauseaToleranceMax{ 0.9f };
-        float32 _fixedStep{ 0.25f };   ///< 시뮬레이션 간격(s) — 프레임 수와 상관없이 같은 결과
-        float32 _maxFrameTime{ 5.0f }; ///< 한 프레임에 받는 시간 상한(빨리 감기 포함)
+        int32         _guestCashMin{ 20 };
+        int32         _guestCashMax{ 80 };
+        float32       _guestMinIntensityMax{ 3.0f }; ///< "이보다 약하면 시시하다" 의 상한(0 ~ 이 값)
+        float32       _guestMaxIntensityMin{ 3.0f }; ///< "이보다 세면 안 탄다" 의 범위
+        float32       _guestMaxIntensityMax{ 9.0f };
+        float32       _guestNauseaToleranceMin{ 0.3f };
+        float32       _guestNauseaToleranceMax{ 0.9f };
+        float32       _fixedStep{ 0.25f };   ///< 시뮬레이션 간격(s) — 프레임 수와 상관없이 같은 결과
+        float32       _maxFrameTime{ 5.0f }; ///< 한 프레임에 받는 시간 상한(빨리 감기 포함)
+        hashed_string _currency{ "Cash" };   ///< 빌린 지갑에서 쓰는 공원 돈의 통화
     };
 } // namespace sw
 
@@ -160,12 +167,20 @@ namespace sw
     public:
         ThemeParkSimulation();
 
-        /** @brief 설정 · 시작 자금으로 빈 공원을 엽니다. */
-        void initialize( const ThemeParkSettings& settings, int32 startingCash );
+        /**
+         * @brief 설정으로 빈 공원을 엽니다. 공원 돈은 빌린 지갑(@p refs 의 지갑 — 통화 `ThemeParkSettings::_currency`)이고 시작 자금은 게임이 넣습니다.
+         * @details 짓기는 `trySpend`, 입장료 · 탈것 요금은 `add`, 운영비는 `charge`(빚이 될 수 있다). 지갑이 없으면 짓기는 모두 거절, 수입은 버립니다.
+         */
+        void initialize( const ThemeParkSettings& settings, const GameStateRefs& refs );
         /** @brief 시간을 흘립니다. 큰 시간은 0.25 초씩 나눠 돈다. */
         void update( float32 deltaTime );
 
-        /** @brief 놀이기구를 짓습니다. 돈이 @p buildCost 보다 적으면 짓지 않고 −1 입니다. 지은 칸 번호를 돌려줍니다. */
+        /**
+         * @brief 공유 땅을 빌립니다(월드 원점이 땅의 원점 · 칸 크기를 따른다 — 공원은 칸 격자가 없어 월드 사각으로 얻는다). @p pLand 가 nullptr 이면 풉니다.
+         * @details 그 뒤로 놀이기구는 지을 때 발자국(`_footprintCenter` · `_footprintSize`)을 막힘으로 얻습니다.
+         */
+        void bindLand( LandRegistry* pLand );
+        /** @brief 놀이기구를 짓습니다. 지갑에 @p buildCost 가 없거나 발자국의 공유 땅이 남의 것이면 짓지 않고 −1 입니다. 지은 칸 번호를 돌려줍니다. */
         int32 buildRide( const ParkRide& ride, int32 buildCost );
         /** @brief 놀이기구를 닫거나 엽니다. 닫으면 줄 선 손님은 나와 다른 것을 고른다. */
         void setRideOpen( int32 rideIndex, bool bOpen );
@@ -182,7 +197,6 @@ namespace sw
         /** @brief 손님이 생각하는 놀이기구 가치(적정 탑승료)입니다 — 흥분 × 2. */
         static float32 computeRideValue( const ParkRide& ride );
 
-        int32                    getCash() const { return _cash; }
         int32                    getParkRating() const { return _parkRating; }
         const vector<ParkRide>&  getRides() const { return _listRide; }
         const vector<ParkGuest>& getGuests() const { return _listGuest; }
@@ -224,8 +238,10 @@ namespace sw
         float32           _elapsedTime;
         FixedStepTimer    _stepTimer;
         GameRandom        _random;
-        int32             _cash;
+        Wallet*           _pWallet; ///< 빌린 지갑(공원 돈)
+        LandRegistry*     _pLand;   ///< 빌린 공유 땅(없으면 단독)
         int32             _parkRating;
+        uint16            _landOwner;
         uint32            _nextGuestId;
         uint32            _totalVisitorCount;
     };

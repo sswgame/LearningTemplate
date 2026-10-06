@@ -59,7 +59,7 @@ namespace sw
             static bool clipRaySlab( float32 origin, float32 direction, float32 slabMin, float32 slabMax, float32& inoutNear,
                                      float32& inoutFar )
             {
-                if ( MathUtil::abs( direction ) < MathUtil::Epsilon )
+                if ( MathUtil::abs( direction ) < MathUtil::kEpsilon )
                     return slabMin <= origin && origin <= slabMax;
 
                 const float32 invDirection = 1.0f / direction;
@@ -461,7 +461,7 @@ namespace sw
         // 배수로 쓴다. 정규화하지 않으면 같은 인자가 방향 길이에 따라 다른 사거리를 뜻한다(길이 2 짜리 방향이면 사거리가
         // 두 배가 된다). 형제 `SpatialHashGrid2D::queryRay` 도 정규화한다 — 두 자료구조의 같은 인자가 같은 뜻이어야 한다.
         float3 unitDirection = direction;
-        if ( unitDirection.getLengthSquared() <= MathUtil::Epsilon )
+        if ( unitDirection.getLengthSquared() <= MathUtil::kEpsilon )
             return;
         unitDirection.normalize();
 

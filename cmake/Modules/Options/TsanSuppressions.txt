@@ -1,4 +1,4 @@
-# ThreadSanitizer 억제 목록 — `sw_applySanitizerTestProperties`(cmake/Engine/TargetRules.cmake)가 TSan 구성의 모든 ctest 항목에
+# ThreadSanitizer 억제 목록 — `sw_applySanitizerTestProperties`(cmake/Engine/TestTargets.cmake)가 TSan 구성의 모든 ctest 항목에
 # `TSAN_OPTIONS=suppressions=<이 파일>` 로 건다.
 #
 # 비어 있는 것이 정상이다. 원자 연산으로 스스로 동기화하는 서드파티(Jolt · Box2D)는 TSan 구성에서 트리플릿 `x64-linux-tsan`

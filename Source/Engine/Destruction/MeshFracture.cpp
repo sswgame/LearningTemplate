@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/MeshFracture.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -59,17 +60,17 @@ namespace sw
                 Memory::copy( &arrBit[0], &point._x, 4 );
                 Memory::copy( &arrBit[1], &point._y, 4 );
                 Memory::copy( &arrBit[2], &point._z, 4 );
-                uint64 hash = 1469598103934665603ull;
+                uint64 hash = HashUtil::kFnvOffset64;
                 for ( const uint32 bits : arrBit )
                 {
                     hash ^= bits;
-                    hash *= 1099511628211ull;
+                    hash *= HashUtil::kFnvPrime64;
                     hash ^= hash >> 29;
                 }
                 return hash;
             }
 
-            static uint64 makeEdgeKey( uint64 from, uint64 to ) { return from * 0x9E3779B97F4A7C15ull ^ ( to + 0x632BE59BD9B4E019ull + ( from << 6 ) + ( from >> 2 ) ); }
+            static uint64 makeEdgeKey( uint64 from, uint64 to ) { return from * HashUtil::kGoldenRatio64 ^ ( to + 0x632BE59BD9B4E019ull + ( from << 6 ) + ( from >> 2 ) ); }
 
             /**
              * @brief 허용 오차 안의 자리를 처음 본 자리로 맞추는 용접기입니다(격자 칸 + 이웃 27 칸을 봐 칸 경계에 걸친 점도 맞춘다).
@@ -379,8 +380,8 @@ namespace sw
 
             static void collectBounds( vector_reference<const RHIVertex> listVertex, float3& outMin, float3& outMax )
             {
-                outMin = float3{ MathUtil::MaxFloat };
-                outMax = float3{ MathUtil::MinFloat };
+                outMin = float3{ MathUtil::kMaxFloat };
+                outMax = float3{ MathUtil::kMinFloat };
                 for ( const RHIVertex& vertex : listVertex )
                 {
                     outMin = float3::min( outMin, getPosition( vertex ) );
@@ -481,7 +482,7 @@ namespace sw
                     return;
                 }
                 vector<uint8> listPicked( listUnique.size(), 0 );
-                const float32 goldenAngle = MathUtil::Pi * ( 3.0f - MathUtil::sqrt( 5.0f ) );
+                const float32 goldenAngle = MathUtil::kPi * ( 3.0f - MathUtil::sqrt( 5.0f ) );
                 for ( uint32 direction = 0; direction < maxPoint; ++direction )
                 {
                     const float32 y      = 1.0f - 2.0f * ( static_cast<float32>( direction ) + 0.5f ) / static_cast<float32>( maxPoint );
@@ -489,7 +490,7 @@ namespace sw
                     const float32 angle  = goldenAngle * static_cast<float32>( direction );
                     const float3  axis{ MathUtil::cos( angle ) * radius, y, MathUtil::sin( angle ) * radius };
                     size_t        best      = 0;
-                    float32       bestValue = -MathUtil::MaxFloat;
+                    float32       bestValue = -MathUtil::kMaxFloat;
                     for ( size_t index = 0; index < listUnique.size(); ++index )
                     {
                         const float32 value = listUnique[index].dot( axis );
@@ -1204,7 +1205,7 @@ namespace sw
             const float64 denom   = lengthA * lengthB * lengthC + dotAb * lengthC + dotBc * lengthA + dotCa * lengthB;
             solidAngle += 2.0 * ::atan2( numer, denom );
         }
-        const float64 winding = solidAngle / ( 4.0 * 3.14159265358979323846 );
+        const float64 winding = solidAngle / ( 4.0 * MathUtil::kPi64 );
         return MathUtil::abs( winding ) > 0.5;
     }
 
@@ -1294,7 +1295,7 @@ namespace sw
                     const float3  delta       = listSite[entry.second] - listSite[site];
                     const float3  normal      = delta / MathUtil::sqrt( entry.first );
                     const float32 offset      = normal.dot( ( listSite[entry.second] + listSite[site] ) * 0.5f );
-                    float32       maxDistance = -MathUtil::MaxFloat;
+                    float32       maxDistance = -MathUtil::kMaxFloat;
                     for ( const Triangle& triangle : listPieceTriangle )
                     {
                         for ( const RHIVertex& vertex : triangle._arrVertex )

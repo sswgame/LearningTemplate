@@ -1,7 +1,6 @@
 {
     "_packRoot": "game/shooter3d",
-    "_gameSettingsFile": "data/gamesettings.xml",
-    "_startupScene": "",
+    "_windowTitle": "Shooter 3D",
     "_userSettingsSchema": "data/shooter3d.settings.xml",
     "_telemetrySchema": "data/shooter3d.telemetry.xml",
     "_mapUserSettingDefault": {

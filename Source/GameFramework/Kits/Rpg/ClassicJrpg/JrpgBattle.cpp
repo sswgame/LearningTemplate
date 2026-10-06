@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Input/TimingJudge.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Input/TimingJudge.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgParty.h"
 
 namespace sw
@@ -633,5 +636,111 @@ namespace sw
     void JrpgBattle::drainEvents( vector<JrpgBattleEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void JrpgBattle::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listEnemy.size() );
+        for ( const JrpgEnemyState& enemy : _listEnemy )
+        {
+            StateArchiveUtil::writeName( outArchive, enemy._enemyId );
+            outArchive << static_cast<uint32>( enemy._listLock.size() );
+            for ( const hashed_string& lock : enemy._listLock )
+            {
+                StateArchiveUtil::writeName( outArchive, lock );
+            }
+            outArchive << enemy._hp;
+            outArchive << enemy._castTurnsLeft;
+            outArchive << enemy._lockTotal;
+            outArchive << enemy._turnsTaken;
+        }
+        outArchive << static_cast<uint32>( _listCommand.size() );
+        for ( size_t memberIndex = 0; memberIndex < _listCommand.size(); ++memberIndex )
+        {
+            const JrpgCommand& command = _listCommand[memberIndex];
+            StateArchiveUtil::writeName( outArchive, command._id );
+            outArchive << command._target;
+            outArchive << static_cast<uint8>( command._kind );
+            outArchive << _listDefending[memberIndex];
+        }
+        _turnOrder.writeState( outArchive );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _rewardExp;
+        outArchive << _rewardGold;
+        outArchive << _comboPoints;
+        outArchive << _round;
+        outArchive << _fleeAttempts;
+        outArchive << static_cast<uint8>( _outcome );
+    }
+
+    bool JrpgBattle::readState( Archive& archive )
+    {
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 판정 · 타이밍 입력 · 설정은 사본이 그대로 든다.
+        JrpgBattle restored = *this;
+        uint32     count    = 0;
+        // 적마다 이름(4) + 잠금 수(4) + HP · 시전 · 잠금 전체 · 차례(16) 이상
+        if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 24, count ) == false )
+            return false;
+        restored._listEnemy.assign( count, JrpgEnemyState{} );
+        for ( JrpgEnemyState& enemy : restored._listEnemy )
+        {
+            uint32 lockCount = 0;
+            if ( StateArchiveUtil::readName( archive, enemy._enemyId ) == false || _pCatalog->findEnemy( enemy._enemyId ) == nullptr )
+                return false;
+            if ( StateArchiveUtil::readCount( archive, 4, lockCount ) == false )
+                return false;
+            enemy._listLock.resize( lockCount );
+            for ( hashed_string& lock : enemy._listLock )
+            {
+                if ( StateArchiveUtil::readName( archive, lock ) == false )
+                    return false;
+            }
+            archive >> enemy._hp;
+            archive >> enemy._castTurnsLeft;
+            archive >> enemy._lockTotal;
+            archive >> enemy._turnsTaken;
+        }
+
+        // 명령마다 이름(4) + 대상(4) + 종류(1) + 방어(1)
+        if ( StateArchiveUtil::readCount( archive, 10, count ) == false )
+            return false;
+        const uint32 memberCount = _pParty != nullptr ? static_cast<uint32>( _pParty->getMemberCount() ) : 0;
+        if ( count != memberCount )
+            return false;
+        restored._listCommand.assign( count, JrpgCommand{} );
+        restored._listDefending.assign( count, SW_FALSE );
+        for ( uint32 memberIndex = 0; memberIndex < count; ++memberIndex )
+        {
+            JrpgCommand& command = restored._listCommand[memberIndex];
+            uint8        kind    = 0;
+            uint8        bDefend = SW_FALSE;
+            if ( StateArchiveUtil::readName( archive, command._id ) == false )
+                return false;
+            archive >> command._target;
+            archive >> kind;
+            archive >> bDefend;
+            const bool bValid = archive.isOk() && kind <= static_cast<uint8>( JrpgCommandKind::Defend ) && bDefend <= SW_TRUE;
+            if ( bValid == false )
+                return false;
+            command._kind                        = static_cast<JrpgCommandKind>( kind );
+            restored._listDefending[memberIndex] = bDefend;
+        }
+
+        uint8 outcome = 0;
+        if ( restored._turnOrder.readState( archive ) == false || StateArchiveUtil::readRandom( archive, restored._random ) == false )
+            return false;
+        archive >> restored._rewardExp;
+        archive >> restored._rewardGold;
+        archive >> restored._comboPoints;
+        archive >> restored._round;
+        archive >> restored._fleeAttempts;
+        archive >> outcome;
+        const bool bValid = archive.isOk() && outcome <= static_cast<uint8>( JrpgBattleOutcome::Fled ) && 0 <= restored._comboPoints && 0 <= restored._round;
+        if ( bValid == false )
+            return false;
+        restored._outcome = static_cast<JrpgBattleOutcome>( outcome );
+        restored._eventBuffer.clear();
+        *this = std::move( restored );
+        return true;
     }
 } // namespace sw

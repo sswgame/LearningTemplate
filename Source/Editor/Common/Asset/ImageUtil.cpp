@@ -71,7 +71,7 @@ namespace sw::editor
 
         // stb 는 길이를 `int` 로 받는다. 잘라서 넘기면 **뒷부분이 없는 것처럼** 읽혀 디코딩이 엉뚱하게 성공하거나 실패하므로,
         // 넘기기 전에 거절한다.
-        if ( bufferSize > static_cast<size_t>( MathUtil::MaxInt32 ) )
+        if ( bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 ) )
         {
             SW_LOG_ERROR( "Image buffer is larger than stb_image can address (%# bytes).", bufferSize );
             return false;
@@ -111,7 +111,7 @@ namespace sw::editor
         outListSample.clear();
         outWidth  = 0;
         outHeight = 0;
-        if ( pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::MaxInt32 ) )
+        if ( pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 ) )
         {
             SW_LOG_ERROR( "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
             return false;

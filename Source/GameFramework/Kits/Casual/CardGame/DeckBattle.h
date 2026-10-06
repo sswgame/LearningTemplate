@@ -4,19 +4,21 @@
  *        데이터로 적은 카드 효과(피해 · 방어 · 뽑기 · 에너지)와 차례대로 의도를 실행하는 적 하나입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Data/GameCatalog.h"
-#include "GameFramework/Data/XmlCatalog.h"
+#include "GameFramework/Base/Data/GameCatalog.h"
+#include "GameFramework/Base/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
 
 namespace sw
 {
+    class Archive;
     class XmlNode;
 
     /** @brief 효과 종류입니다. */
@@ -119,6 +121,9 @@ namespace sw
     class SW_GF_API DeckBattle
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CDBT" );
+        static constexpr uint32 kStateVersion = 1;
+
         DeckBattle();
 
         /**
@@ -131,6 +136,11 @@ namespace sw
         [[nodiscard]] bool playCard( int32 handIndex );
         /** @brief 턴을 마칩니다 — 손을 버리고, 적이 의도를 실행하고, 살아 있으면 다음 턴(방어 초기화 · 에너지 · 뽑기)입니다. */
         void endTurn();
+
+        /** @brief 덱의 정의 id(카드 번호 순) · 네 더미 · 적 · 난수 · 체력 · 방어 · 에너지 · 턴 · 단계를 씁니다. 카탈로그 · 설정은 `initialize` 의 것이라 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 카탈로그에 없는 정의 id 거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         const DeckBattleCardDef* getCardDef( const Card& card ) const;
         const CardPile&          getDrawPile() const { return _drawPile; }

@@ -2,10 +2,10 @@
 
 #include "GameFramework/Kits/Action/BattleRoyale/BrLoot.h"
 
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/Inventory/LootTable.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 #include <algorithm>
 
@@ -33,18 +33,18 @@ namespace sw
     int32 BrLootPlacement::rollTableAt( const LootCatalog& lootCatalog, const hashed_string& tableId, const float2& position, int32 spotIndex, int32 rollCount,
                                         GameRandom& random, vector<BrGroundItem>& outListItem )
     {
-        ItemBag bag;
+        ItemStackList items;
         for ( int32 rollIndex = 0; rollIndex < rollCount; ++rollIndex )
-            (void)lootCatalog.roll( tableId, random, bag );
+            (void)lootCatalog.roll( tableId, random, items );
         vector<hashed_string> listItemId;
-        bag.getItemIds( listItemId );
+        items.getItemIds( listItemId );
         std::sort( listItemId.begin(), listItemId.end(), HashedStringLexicalLess{} );
         for ( const hashed_string& itemId : listItemId )
         {
             BrGroundItem item;
             item._position  = position;
             item._itemId    = itemId;
-            item._count     = bag.getItemCount( itemId );
+            item._count     = items.getItemCount( itemId );
             item._spotIndex = spotIndex;
             outListItem.push_back( item );
         }

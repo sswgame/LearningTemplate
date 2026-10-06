@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -25,6 +26,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 namespace sw::editor
 {
@@ -78,6 +80,26 @@ namespace sw::editor
 
                 // 3) 일반 이름 매칭
                 return EditorListFilter{ pFilter }.matches( pObj->getName().view() );
+            }
+
+            /**
+             * @brief 이 루트 줄을 그리지 않고 자리만 둘 수 있는지 봅니다 — 접혀 있고, 이름을 바꾸는 중이 아니고, 줄이 창의 보이는 범위 밖일 때.
+             * @details 트리 노드의 열림 상태는 drawGameObjectNode 와 같은 ID 로 읽는다(PushID( 오브젝트 id ) 안의 "###go<id>"). @p cursorY 는 이 줄이 놓일 화면 y 다.
+             */
+            static bool canSkipRootRow( const GameObject* pObj, uint64 renamingObjectId, float32 cursorY, float32 rowHeight )
+            {
+                const uint64 objectId = pObj->getObjectId();
+                if ( objectId == renamingObjectId )
+                    return false;
+                const ImVec2 rowMin{ ImGui::GetCursorScreenPos().x, cursorY };
+                if ( ImGui::IsRectVisible( rowMin, ImVec2( rowMin.x + 1.0f, cursorY + rowHeight ) ) )
+                    return false;
+                fixed_string<constant::kMaxBuffer64> nodeIdLabel;
+                formatstring( nodeIdLabel.data(), nodeIdLabel.capacity(), "###go%#", objectId );
+                ImGui::PushID( static_cast<int32>( objectId ) );
+                const ImGuiID nodeId = ImGui::GetID( nodeIdLabel.c_str() );
+                ImGui::PopID();
+                return ImGui::TreeNodeGetOpen( nodeId ) == false;
             }
 
             static bool subtreeMatchesFilter( GameObject* pObj, const utf8* pFilter )
@@ -553,10 +575,13 @@ namespace sw::editor
 
     HierarchyPanel::HierarchyPanel()
         : _renamingObjectId{ 0 }
+        , _lastDrawnRootId{ 0 }
         , _filterBuffer{}
         , _renameBuffer{}
         , _visibleRootCount{ 0 }
+        , _drawnRootCount{ 0 }
         , _bFocusRenameInput{ false }
+        , _bSkipOffscreenRows{ true }
     {
     }
 
@@ -593,6 +618,7 @@ namespace sw::editor
             ImGui::SameLine();
             EditorWidgets::drawSearchField( "##HierarchyFilter", _filterBuffer,
                                             "Search (t:Mesh, tag:Player)...", 0.0f, false );
+            EditorSelfTestMarks::note( "hierarchy.filter" );
             EditorWidgets::drawTooltip( "오브젝트 이름 검색, 컴포넌트 타입(t:Mesh), 태그(tag:Player) 필터를 지원합니다" );
         }
         EditorChrome::endToolbar();
@@ -607,18 +633,49 @@ namespace sw::editor
             // `drawGameObjectNode` 는 서브트리가 필터에 안 걸리면 조용히 빠진다. 그래서 같은 술어로
             // 미리 세어, 전부 빠질 때는 빈 상자 대신 이유를 보여 준다.
             const EditorListFilter treeFilter{ _filterBuffer.c_str() };
+            const bool             bFilterActive = treeFilter.isActive();
             uint32                 visibleRootCount{ 0 };
+            uint32                 drawnRootCount{ 0 };
+            uint64                 lastDrawnRootId{ 0 };
 
+            // 화면 밖의 접힌 루트는 그리지 않고 같은 높이의 빈자리만 둔다 — 스크롤 막대와 다음 줄 위치는 그대로다. 큐브 8000 이면 노드 8000 개
+            // (버튼 · 뱃지 문자열 · 트리 노드 · 드래그 드롭)를 프레임마다 다 그리던 자리다. 이어진 빈 줄은 빈자리 하나로 모은다.
+            // 접힌 루트 줄의 높이는 프레임 높이(버튼 · 트리 노드) + 줄 간격이다.
+            const float32 rowStride        = ImGui::GetFrameHeightWithSpacing();
+            const float32 rowSpacing       = rowStride - ImGui::GetFrameHeight();
+            uint32        pendingSkipRow   = 0;
+            float32       nextRowY         = ImGui::GetCursorScreenPos().y;
+            auto          flushSkippedRows = [&pendingSkipRow, rowStride, rowSpacing]()
+            {
+                if ( pendingSkipRow == 0 )
+                    return;
+                ImGui::Dummy( ImVec2( 0.0f, static_cast<float32>( pendingSkipRow ) * rowStride - rowSpacing ) );
+                pendingSkipRow = 0;
+            };
             for ( GameObject* pObj : _listSceneObject )
             {
-                if ( pObj != nullptr && pObj->getParent() == nullptr )
+                if ( pObj == nullptr || pObj->getParent() != nullptr )
+                    continue;
+                const bool bMatches = bFilterActive == false || HierarchyPanelInternal::subtreeMatchesFilter( pObj, _filterBuffer.c_str() );
+                if ( bMatches == false )
+                    continue;
+                ++visibleRootCount;
+                const bool bSkip = _bSkipOffscreenRows && HierarchyPanelInternal::canSkipRootRow( pObj, _renamingObjectId, nextRowY, ImGui::GetFrameHeight() );
+                if ( bSkip )
                 {
-                    HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _filterBuffer.c_str(), _renamingObjectId, _renameBuffer,
-                                                                _bFocusRenameInput );
-                    if ( HierarchyPanelInternal::subtreeMatchesFilter( pObj, _filterBuffer.c_str() ) )
-                        ++visibleRootCount;
+                    ++pendingSkipRow;
+                    nextRowY += rowStride;
+                    continue;
                 }
+                flushSkippedRows();
+                HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _filterBuffer.c_str(), _renamingObjectId, _renameBuffer, _bFocusRenameInput );
+                nextRowY = ImGui::GetCursorScreenPos().y;
+                ++drawnRootCount;
+                lastDrawnRootId = pObj->getObjectId();
             }
+            flushSkippedRows();
+            _drawnRootCount  = drawnRootCount;
+            _lastDrawnRootId = lastDrawnRootId;
 
             _visibleRootCount = visibleRootCount;
             if ( visibleRootCount == 0 && treeFilter.isActive() )

@@ -10,8 +10,8 @@
 그 변환이 잡은 것을 검사 모드와 수정 모드에서 각각 뭐라고 부를지. 파일 읽기·쓰기는 기반이 맡는다
 (줄끝을 보존하는 `newline=""` 로 통일했다 — 포맷터가 줄끝을 바꾸면 안 된다).
 
-대상 파일 고르기는 `addFileArguments` / `selectTargetFiles` 로 따로 내놓는다. 픽서가 아닌
-`RunClangFormat` 도 같은 규칙으로 파일을 고르기 때문이다.
+대상 파일 고르기는 `addFileArguments` / `selectFixerTargetFiles` 로 따로 내놓는다. 픽서가 아닌
+`FormatClangFormat` 도 같은 규칙으로 파일을 고르기 때문이다.
 """
 
 from __future__ import annotations
@@ -26,21 +26,25 @@ from typing import Callable, Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import (  # noqa: E402
+    collectRepositoryFiles,
     collectSourceFiles,
     flatMapConcurrent,
     getLintSearchDirs,
     getModifiedCppFiles,
     getProjectRoot,
-    useUtf8Stdout,
+    kCppAllExtensions,
+    kNotOurDirNames,
+    resolveFileArguments,
 )
 
 
 def addFileArguments(parser: argparse.ArgumentParser) -> None:
     """대상 파일을 고르는 인자 — 세 스크립트가 같은 철자를 쓴다."""
     parser.add_argument(
-        "files",
+        "--files",
         nargs="*",
-        help="대상 C++ 파일 목록 (생략 시 Git 변경 파일, 없으면 전체 대상)",
+        default=None,
+        help="대상 C++ 파일 목록 (생략 시 Git 변경 파일, 없으면 전체 대상) — 게이트와 같은 철자",
     )
     parser.add_argument(
         "--all",
@@ -49,15 +53,46 @@ def addFileArguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def selectTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: str) -> list[Path]:
+@dataclass(frozen=True)
+class FixerFileKind:
     """
-    무엇을 고칠지 고릅니다: 지정한 파일 > `--all` > Git 변경 파일 > 전체.
+    C++ 가 아닌 파일을 고치는 픽서의 대상 — 확장자 · 이름, 그리고 손대지 않는 폴더.
+
+    - `suffixes` · `fileNames`: 대상(확장자는 대소문자 무시)
+    - `excludedDirNames`      : 이 이름의 폴더로는 내려가지 않는다(빌드 산출물 · 남의 코드)
+    - `excludedRelDirs`       : 이 저장소 기준 폴더 밑은 고치지 않는다(손대지 않는 영역)
+    """
+
+    suffixes: tuple[str, ...] = ()
+    fileNames: tuple[str, ...] = ()
+    excludedDirNames: frozenset[str] = kNotOurDirNames
+    excludedRelDirs: tuple[str, ...] = ()
+
+    def isTarget(self, path: Path, repositoryRoot: Path) -> bool:
+        if path.name not in self.fileNames and path.suffix.lower() not in self.suffixes:
+            return False
+        try:
+            relative = path.resolve().relative_to(repositoryRoot.resolve()).as_posix()
+        except ValueError:
+            return False
+        if any(part in self.excludedDirNames for part in relative.split("/")[:-1]):
+            return False
+        return not any(relative.startswith(prefix.rstrip("/") + "/") for prefix in self.excludedRelDirs)
+
+
+def selectFixerTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: str, fileKind: FixerFileKind | None = None) -> list[Path]:
+    """
+    무엇을 고칠지 고릅니다: 지정한 파일(`--files` — 게이트와 같은 규칙, `common.resolveFileArguments`) > `--all` > Git 변경 파일 > 전체.
+    `fileKind` 가 없으면 C++ 소스, 있으면 그 종류(CMake 처럼).
 
     마지막 폴백("변경된 파일이 없으면 전체")이 이 규칙의 핵심이다. 깨끗한 트리에서 돌려도
     아무 일도 안 하는 대신 전체를 본다 — 처음 받은 저장소에서도 한 번에 맞춰진다.
     """
+    if fileKind is not None:
+        return selectFileKindTargetsInternal(args, repositoryRoot, tag, fileKind)
+
     if args.files:
-        return [Path(name).resolve() for name in args.files if Path(name).is_file()]
+        return resolveFileArguments(repositoryRoot, args.files, suffixes=kCppAllExtensions)
 
     if args.all:
         return collectSourceFiles(getLintSearchDirs(repositoryRoot))
@@ -72,6 +107,29 @@ def selectTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: str) 
     return listAll
 
 
+def selectFileKindTargetsInternal(args: argparse.Namespace, repositoryRoot: Path, tag: str, fileKind: FixerFileKind) -> list[Path]:
+    """`selectFixerTargetFiles` 의 C++ 가 아닌 갈래 — 같은 순서(`--files` > `--all` > Git 변경 > 전체), 같은 제외."""
+    if args.files:
+        listFile = resolveFileArguments(repositoryRoot, args.files, suffixes=fileKind.suffixes, fileNames=fileKind.fileNames,
+                                        excludedDirNames=fileKind.excludedDirNames)
+        return [path for path in listFile if fileKind.isTarget(path, repositoryRoot)]
+
+    if not args.all:
+        setSuffix = {*fileKind.suffixes, *(Path(name).suffix.lower() for name in fileKind.fileNames)}
+        listModified = [path for path in getModifiedCppFiles(repositoryRoot, extensions=setSuffix)
+                        if fileKind.isTarget(path, repositoryRoot)]
+        if listModified:
+            print(f"[{tag}] Git 변경 파일 {len(listModified)}개 감지.", file=sys.stderr)
+            return listModified
+
+    listAll = [path for path in collectRepositoryFiles(repositoryRoot, ("",), suffixes=fileKind.suffixes, fileNames=fileKind.fileNames,
+                                                       excludedDirNames=fileKind.excludedDirNames)
+               if fileKind.isTarget(path, repositoryRoot)]
+    if not args.all:
+        print(f"[{tag}] 변경된 파일이 없어 전체 {len(listAll)}개 파일 대상 실행.", file=sys.stderr)
+    return listAll
+
+
 @dataclass(frozen=True)
 class FixPass:
     """
@@ -82,6 +140,8 @@ class FixPass:
     - `done`      : 실제로 고쳤을 때 할 말
     - `badSample` : 이 변환이 **반드시 고쳐야 하는** 조각
     - `goodSample`: 이 변환이 **건드리면 안 되는** 조각
+    - `bNeedsPath`: 참이면 변환이 `(텍스트, 저장소 기준 경로)` 를 받는다(include 순서처럼 파일 자리로 판정하는 규칙)
+    - `samplePath`: 그때 조각 둘을 돌릴 가상의 저장소 기준 경로
 
     픽서가 변환을 여럿 들면 **선언 순서대로** 이어 돌린다. 순서가 의미를 갖는 경우가 있어
     (`FormatBranchBraces` 는 if 를 먼저 벗겨야 case 의 문장 수가 부풀지 않는다) 목록 순서가
@@ -93,11 +153,17 @@ class FixPass:
     게이트처럼 "빨간 줄" 이 뜨는 게 아니라 소스가 조용히 바뀐다.
     """
 
-    transform: Callable[[str], tuple[str, bool]]
+    transform: Callable[..., tuple[str, bool]]
     problem: str
     done: str
     badSample: str = ""
     goodSample: str = ""
+    bNeedsPath: bool = False
+    samplePath: str = ""
+
+    def apply(self, text: str, relativePath: str) -> tuple[str, bool]:
+        """변환 한 번 — 경로가 필요한 변환에는 저장소 기준 경로를 함께 넘긴다."""
+        return self.transform(text, relativePath) if self.bNeedsPath else self.transform(text)
 
 
 class LintFixer:
@@ -108,12 +174,16 @@ class LintFixer:
     - `tag`        : 메시지 앞의 `[태그]`. 비우면 `name`.
     - `description`: `--help` 한 줄.
     - `listPass`   : 이 픽서가 하는 변환들 (선언 순서대로 돈다).
+    - `listScopeRelDir`: 비어 있지 않으면 이 저장소 기준 폴더 밑의 파일만 고친다(같은 규칙의 게이트가 보는 범위와 맞춘다).
+    - `fileKind`   : C++ 가 아닌 파일을 고치는 픽서의 대상(`FixerFileKind`). 없으면 C++ 소스.
     """
 
     name: str = ""
     tag: str = ""
     description: str = ""
     listPass: tuple[FixPass, ...] = ()
+    listScopeRelDir: tuple[str, ...] = ()
+    fileKind: FixerFileKind | None = None
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -132,15 +202,25 @@ class LintFixer:
         바뀐 것으로 보이고, 진짜 변경이 그 안에 묻힌다.
         """
         try:
-            with filePath.open("r", encoding="utf-8", errors="ignore", newline="") as file:
+            relativePath = filePath.resolve().relative_to(getProjectRoot().resolve()).as_posix()
+        except ValueError:
+            relativePath = filePath.as_posix()
+        if self.listScopeRelDir and not any(relativePath.startswith(scope + "/") for scope in self.listScopeRelDir):
+            return []
+
+        try:
+            with filePath.open("r", encoding="utf-8", errors="strict", newline="") as file:
                 content = file.read()
-        except Exception as exception:
-            return [f"[{self.tag}] {filePath} 읽기 실패: {exception}"]
+        except UnicodeDecodeError as error:
+            # 고쳐 쓰면 UTF-8 이 아닌 바이트가 사라진다 — 읽지 못한 파일은 손대지 않고 알린다(이 저장소의 소스는 UTF-8 이다).
+            return [f"[{self.tag}] {filePath}: UTF-8 이 아니라 건너뜁니다({error.reason}, 바이트 {error.start}) — 파일을 UTF-8 로 저장하십시오"]
+        except OSError as error:
+            return [f"[{self.tag}] {filePath} 읽기 실패: {error}"]
 
         formatted = content
         listHit: list[FixPass] = []
         for fixPass in self.listPass:
-            formatted, bChanged = fixPass.transform(formatted)
+            formatted, bChanged = fixPass.apply(formatted, relativePath)
             if bChanged:
                 listHit.append(fixPass)
 
@@ -153,8 +233,8 @@ class LintFixer:
         try:
             with filePath.open("w", encoding="utf-8", newline="") as file:
                 file.write(formatted)
-        except Exception as exception:
-            return [f"[{self.tag}] {filePath} 쓰기 실패: {exception}"]
+        except OSError as error:
+            return [f"[{self.tag}] {filePath} 쓰기 실패: {error}"]
 
         return [f"[{self.tag}] {filePath}: {hit.done}" for hit in listHit]
 
@@ -177,17 +257,14 @@ class LintFixer:
         return cls().main(argv)
 
     def main(self, argv: Sequence[str] | None = None) -> int:
-        useUtf8Stdout()
-
-
         parser = argparse.ArgumentParser(description=self.description)
         addFileArguments(parser)
         parser.add_argument("--check", action="store_true", help="파일을 수정하지 않고 규칙 위반 여부만 검사")
         args = parser.parse_args(argv)
 
-        listFile = selectTargetFiles(args, getProjectRoot(), self.tag)
+        listFile = selectFixerTargetFiles(args, getProjectRoot(), self.tag, self.fileKind)
         if not listFile:
-            print(f"[{self.tag}] 대상 C++ 파일이 없습니다.", file=sys.stderr)
+            print(f"[{self.tag}] 대상 파일이 없습니다.", file=sys.stderr)
             return 0
 
         listMessage = self.processFiles(listFile, checkOnly=args.check)

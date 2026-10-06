@@ -68,8 +68,8 @@ GameFramework `PropScatterComponent` 의 `Rules` 모드(게임플레이 오브�
 ## 쇼케이스
 
 `game/empty/maps/envshowcase.scene.xml` — 256 m 계곡(구릉 · 절벽 · 동굴 구멍) + 호수 + 호수로 흘러드는 강 + 풀 · 꽃 · 덤불 · 나무 · 쓰러진 나무(Kenney Nature Kit, CC0).
-`App.exe "-gv_firstScene=game/empty/maps/envshowcase.scene.xml"`. 원본 데이터는 `Scripts/dev/GenerateTerrainShowcase.py` 가 만듭니다.
-2026-10-04 Release(1280×720, 다른 빌드 열한 개가 같은 기계를 쓰는 중이라 꼬리가 길다): 식생 19,640 인스턴스 · 셀 배치 283 개를 로드 때 46 ms 에 계산,
+`App.exe "-gv_firstScene=game/empty/maps/envshowcase.scene.xml"`. 원본 데이터는 `Scripts/dev/MakeTerrainShowcase.py` 가 만듭니다.
+Release · 1280×720 에서 잰 값: 식생 19,640 인스턴스 · 셀 배치 283 개를 로드 때 46 ms 에 계산,
 씬 instantiate 71–87 ms. DX12 프레임 p50 2.6 ms · p99 3.4–8.4 ms(GPU 가 묶는다 — 그림자 패스 p50 1.4 ms 가 가장 크다: 그림자를 끈 풀도 정점 셰이더는 돈다),
 Vulkan p50 3.7 ms.
 

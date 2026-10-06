@@ -7,7 +7,7 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Data/GameDataXml.h"
+#include "GameFramework/Base/Data/GameDataXml.h"
 
 namespace sw
 {
@@ -79,6 +79,7 @@ namespace sw
                 outRules._wallProtection          = MathUtil::saturate( node.getAttributeFloat( "wallProtection", outRules._wallProtection ) );
                 outRules._commanderHealth         = MathUtil::max( 1.0f, node.getAttributeFloat( "commanderHealth", outRules._commanderHealth ) );
                 outRules._commanderDamage         = MathUtil::max( 0.0f, node.getAttributeFloat( "commanderDamage", outRules._commanderDamage ) );
+                outRules._commanderStructureRate  = MathUtil::max( 0.0f, node.getAttributeFloat( "commanderStructureRate", outRules._commanderStructureRate ) );
                 outRules._commanderRange          = MathUtil::max( 0.1f, node.getAttributeFloat( "commanderRange", outRules._commanderRange ) );
                 outRules._commanderSpeed          = MathUtil::max( 0.0f, node.getAttributeFloat( "commanderSpeed", outRules._commanderSpeed ) );
                 outRules._commanderAttackInterval = MathUtil::max( 0.05f, node.getAttributeFloat( "commanderAttackInterval", outRules._commanderAttackInterval ) );

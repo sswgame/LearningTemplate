@@ -5,12 +5,14 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/FacingDir.h"
 #include "GameFramework/GameFrameworkMinimal.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/FacingDir.h"
 
 namespace sw
 {
+    class Archive;
+
     // ------------------------------------------------------------------------------
     // 1) LocomotionState — 타일 스텝 이동 FSM (FacingDir 은 Utility/FacingDir.h)
     // ------------------------------------------------------------------------------
@@ -66,6 +68,10 @@ namespace sw
         void setFacingFromDelta( int32 dx, int32 dy );
         /** @brief 이동 입력을 받을 수 있는지 반환합니다. */
         bool canAcceptMoveInput() const;
+        /** @brief 상태 · 바라보는 방향 · 상태 타이머의 남은 시간을 씁니다(`PlayerController` 상태 안에 실린다). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         LocomotionState _state;

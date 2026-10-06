@@ -110,8 +110,8 @@ namespace sw
         string       resultDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
         const string parentDir = FileUtil::getDirectoryPart( resultDir ); // Bin 의 상위 폴더
 
-        if ( FileUtil::fileExists( FileUtil::joinPath( parentDir, "build.ninja" ) ) ||
-             FileUtil::fileExists( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) ) )
+        if ( FileUtil::exists( FileUtil::joinPath( parentDir, "build.ninja" ) ) ||
+             FileUtil::exists( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) ) )
             resultDir = parentDir;
 
         return resultDir;
@@ -124,7 +124,7 @@ namespace sw
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
         CrashHandler::initializeCurrentThread();
         const string buildDir = findBuildDirectory();
-        if ( buildDir.empty() || FileUtil::directoryExists( buildDir ) == false )
+        if ( buildDir.empty() || FileUtil::isDirectory( buildDir ) == false )
         {
             SW_LOG_ERROR( "Failed to find build directory for compilation!" );
             _buildState.store( BuildState::Failed, std::memory_order_relaxed );

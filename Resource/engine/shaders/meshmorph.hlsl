@@ -16,9 +16,8 @@
  * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( restSrv, 0 ) / bindComputeUav( morphUav, 0 ).
  */
 
-// binding.hlsli 의 g_SwMorphVertices 와 **같은 배치여야 한다** — 정점 하나 = float4 둘([2i] 위치,
-// [2i+1] 노멀). 구조체가 아니라 평면 배열인 이유는 그쪽 주석에 있다(OpenGL 이 구조체 멤버를 옆 원소에서 읽는다).
-#define SW_MORPH_FLOAT4_PER_VERTEX 2u
+// 결과 배치는 binding.hlsli 의 g_SwMorphVertices 와 같다 — 정점 하나 = SW_MORPH_FLOAT4_PER_VERTEX 개의 float4(bindingslots.hlsli 10 절).
+// 구조체가 아니라 평면 배열인 이유는 그쪽 주석에 있다(OpenGL 이 구조체 멤버를 옆 원소에서 읽는다).
 
 SW_DECLARE_CBUFFER( MorphParams, SW_SLOT_COMPUTE_CB )
 {

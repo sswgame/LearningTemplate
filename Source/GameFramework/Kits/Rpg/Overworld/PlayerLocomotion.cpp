@@ -2,6 +2,10 @@
 
 #include "GameFramework/Kits/Rpg/Overworld/PlayerLocomotion.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     PlayerLocomotion::PlayerLocomotion()
@@ -62,5 +66,30 @@ namespace sw
     bool PlayerLocomotion::canAcceptMoveInput() const
     {
         return _state == LocomotionState::Idle;
+    }
+
+    void PlayerLocomotion::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint8>( _state );
+        outArchive << static_cast<uint8>( _facing );
+        StateArchiveUtil::writeCountdown( outArchive, _stateTimer );
+    }
+
+    bool PlayerLocomotion::readState( Archive& archive )
+    {
+        uint8     state  = 0;
+        uint8     facing = 0;
+        Countdown stateTimer;
+        archive >> state;
+        archive >> facing;
+        if ( StateArchiveUtil::readCountdown( archive, stateTimer ) == false )
+            return false;
+        const bool bValid = archive.isOk() && state <= static_cast<uint8>( LocomotionState::Interact ) && facing <= static_cast<uint8>( FacingDir::Up );
+        if ( bValid == false )
+            return false;
+        _state      = static_cast<LocomotionState>( state );
+        _facing     = static_cast<FacingDir>( facing );
+        _stateTimer = stateTimer;
+        return true;
     }
 } // namespace sw

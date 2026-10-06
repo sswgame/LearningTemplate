@@ -6,8 +6,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCatalog.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 #include <algorithm>
 
@@ -72,7 +75,7 @@ namespace sw
                 inoutText += pKind;
                 if ( bLocked )
                 {
-                    inoutText += "\" requires=\"unlocked_";
+                    inoutText += "\" requires=\"unlocked.";
                     appendRoomId( inoutText, toRoom );
                 }
                 inoutText += "\"/>";
@@ -100,8 +103,12 @@ namespace sw
 {
     ScavengerFacility::ScavengerFacility()
         : _graph{}
-        , _flags{}
         , _listGroundScrap{}
+        , _listUnlockedFlag{}
+        , _layoutMoonId{}
+        , _pFlags{ nullptr }
+        , _pCatalog{ nullptr }
+        , _layoutSeed{ 0u }
         , _nextUid{ 1 }
         , _roomCount{ 0 }
         , _lockedDoorCount{ 0 }
@@ -111,6 +118,9 @@ namespace sw
     bool ScavengerFacility::createLayout( const ScavengerCatalog& catalog, const ScavengerMoonDef& moon, uint32 seed, float32 valueScale )
     {
         clear();
+        _pCatalog     = &catalog;
+        _layoutMoonId = moon._id;
+        _layoutSeed   = seed;
         GameRandom                       random{ seed };
         const ScavengerFacilitySettings& settings = catalog.getFacilitySettings();
         string                           xml      = "<AreaGraph>";
@@ -187,7 +197,13 @@ namespace sw
 
     void ScavengerFacility::clear()
     {
-        _flags.clear();
+        // 빌린 플래그는 나눠 쓴다 — 이 시설이 둔 잠금 해제만 지운다.
+        for ( const hashed_string& flag : _listUnlockedFlag )
+        {
+            if ( _pFlags != nullptr )
+                (void)_pFlags->clearFlag( flag );
+        }
+        _listUnlockedFlag.clear();
         _listGroundScrap.clear();
         _roomCount       = 0;
         _lockedDoorCount = 0;
@@ -195,23 +211,30 @@ namespace sw
 
     bool ScavengerFacility::unlockDoor( const hashed_string& roomId )
     {
-        string flagText = "unlocked_";
+        string flagText = "unlocked.";
         flagText += roomId.c_str();
         const hashed_string flag( string_view( flagText.data(), flagText.size() ) );
-        if ( _flags.hasFlag( flag ) )
+        if ( _pFlags == nullptr || _pFlags->hasFlag( flag ) )
             return false;
         for ( const AreaLink& link : _graph.getLinks() )
         {
             if ( link._to == roomId && link._requires.empty() == false )
             {
-                _flags.setFlag( flag );
+                _pFlags->setFlag( flag );
+                _listUnlockedFlag.push_back( flag );
                 return true;
             }
         }
         return false;
     }
 
-    bool ScavengerFacility::canTraverse( const hashed_string& fromId, const hashed_string& toId ) const { return _graph.canTraverse( fromId, toId, _flags ); }
+    bool ScavengerFacility::canTraverse( const hashed_string& fromId, const hashed_string& toId ) const { return _graph.canTraverse( fromId, toId, getFlags() ); }
+
+    const GameFlags& ScavengerFacility::getFlags() const
+    {
+        static const GameFlags kNoFlags; // 빌리지 않은 시설 — 잠긴 문은 닫힌 채다
+        return _pFlags != nullptr ? *_pFlags : kNoFlags;
+    }
 
     int32 ScavengerFacility::placeScrap( const ScavengerScrap& scrap, const hashed_string& areaId )
     {
@@ -253,5 +276,104 @@ namespace sw
         for ( const ScavengerScrap& scrap : _listGroundScrap )
             total += scrap.isBody() ? 0 : scrap._value;
         return total;
+    }
+
+    void ScavengerFacility::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeName( outArchive, _layoutMoonId );
+        outArchive << _layoutSeed;
+        outArchive << static_cast<uint32>( _listGroundScrap.size() );
+        for ( const ScavengerScrap& scrap : _listGroundScrap )
+        {
+            writeScrap( outArchive, scrap );
+        }
+        outArchive << static_cast<uint32>( _listUnlockedFlag.size() );
+        for ( const hashed_string& flag : _listUnlockedFlag )
+        {
+            StateArchiveUtil::writeName( outArchive, flag );
+        }
+        outArchive << _nextUid;
+        outArchive << _roomCount;
+        outArchive << _lockedDoorCount;
+    }
+
+    bool ScavengerFacility::readState( Archive& archive )
+    {
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 빌린 플래그 포인터는 사본이 그대로 든다.
+        ScavengerFacility restored = *this;
+        if ( StateArchiveUtil::readName( archive, restored._layoutMoonId ) == false )
+            return false;
+        archive >> restored._layoutSeed;
+
+        uint32 scrapCount = 0;
+        if ( StateArchiveUtil::readCount( archive, kMinScrapBytes, scrapCount ) == false )
+            return false;
+        restored._listGroundScrap.assign( scrapCount, ScavengerScrap{} );
+        for ( ScavengerScrap& scrap : restored._listGroundScrap )
+        {
+            if ( readScrap( archive, scrap ) == false )
+                return false;
+        }
+
+        uint32 flagCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 4, flagCount ) == false )
+            return false;
+        restored._listUnlockedFlag.assign( flagCount, hashed_string{} );
+        for ( hashed_string& flag : restored._listUnlockedFlag )
+        {
+            if ( StateArchiveUtil::readName( archive, flag ) == false )
+                return false;
+        }
+        archive >> restored._nextUid;
+        archive >> restored._roomCount;
+        archive >> restored._lockedDoorCount;
+        const bool bValid = archive.isOk() && 1 <= restored._nextUid && 0 <= restored._roomCount && 0 <= restored._lockedDoorCount;
+        if ( bValid == false )
+            return false;
+
+        // 그래프는 같은 위성 · 같은 씨앗으로 다시 짓는다(고철 배치는 버리고 읽은 바닥을 쓴다).
+        restored._graph.clear();
+        if ( restored._layoutMoonId.empty() == false )
+        {
+            const ScavengerMoonDef* pMoon = _pCatalog != nullptr ? _pCatalog->findMoon( restored._layoutMoonId ) : nullptr;
+            if ( pMoon == nullptr )
+                return false;
+            ScavengerFacility built;
+            if ( built.createLayout( *_pCatalog, *pMoon, restored._layoutSeed, 1.0f ) == false )
+                return false;
+            restored._graph = std::move( built._graph );
+        }
+        *this = std::move( restored );
+        return true;
+    }
+
+    void ScavengerFacility::writeScrap( Archive& outArchive, const ScavengerScrap& scrap )
+    {
+        StateArchiveUtil::writeName( outArchive, scrap._scrapId );
+        StateArchiveUtil::writeName( outArchive, scrap._areaId );
+        outArchive << scrap._weight;
+        outArchive << scrap._uid;
+        outArchive << scrap._value;
+        outArchive << scrap._bodyOf;
+        outArchive << scrap._day;
+        outArchive << scrap._bTwoHanded;
+    }
+
+    bool ScavengerFacility::readScrap( Archive& archive, ScavengerScrap& outScrap )
+    {
+        ScavengerScrap scrap;
+        if ( StateArchiveUtil::readName( archive, scrap._scrapId ) == false || StateArchiveUtil::readName( archive, scrap._areaId ) == false )
+            return false;
+        archive >> scrap._weight;
+        archive >> scrap._uid;
+        archive >> scrap._value;
+        archive >> scrap._bodyOf;
+        archive >> scrap._day;
+        archive >> scrap._bTwoHanded;
+        const bool bValid = archive.isOk() && -1 <= scrap._bodyOf && scrap._bTwoHanded <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        outScrap = scrap;
+        return true;
     }
 } // namespace sw

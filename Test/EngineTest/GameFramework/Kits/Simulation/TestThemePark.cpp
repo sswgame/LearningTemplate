@@ -4,6 +4,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
 #include "GameFramework/Kits/Simulation/ThemePark/ThemePark.h"
 
@@ -32,6 +35,20 @@ namespace
         return ride;
     }
 
+    /** @brief 공원이 빌릴 지갑 하나를 든 공유 상태 묶음입니다. */
+    GameStateRefs lendWallet( Wallet& wallet )
+    {
+        GameStateRefs refs;
+        refs._pWallet = &wallet;
+        return refs;
+    }
+
+    /** @brief 공원 돈("Cash")입니다. */
+    int32 cashOf( const Wallet& wallet )
+    {
+        return static_cast<int32>( wallet.getBalance( "Cash" ) );
+    }
+
     /** @brief 손님이 저절로 오지 않는 공원입니다(시험이 `admitGuest` 로만 들인다). */
     ThemeParkSettings makeClosedGateSettings()
     {
@@ -49,10 +66,12 @@ namespace
 SW_TEST_CASE( ThemeParkTest, RideCyclesCarryCapacityAndCollectTickets )
 {
     ThemeParkSimulation park;
-    park.initialize( makeClosedGateSettings(), 1000 );
+    Wallet              parkWallet;
+    parkWallet.add( "Cash", 1000 );
+    park.initialize( makeClosedGateSettings(), lendWallet( parkWallet ) );
     const int32 rideIndex = park.buildRide( makeThemeParkTestRide( 5.0f, 3.0f, 4, 4, 10.0f ), 600 );
     SW_ASSERT_TRUE( rideIndex == 0 );
-    SW_EXPECT_EQUAL( 400, park.getCash() );
+    SW_EXPECT_EQUAL( 400, cashOf( parkWallet ) );
     for ( int32 guestIndex = 0; guestIndex < 8; ++guestIndex )
         SW_EXPECT_TRUE( park.admitGuest( 100, 0.0f, 9.0f, 1.0f ) );
 
@@ -64,7 +83,7 @@ SW_TEST_CASE( ThemeParkTest, RideCyclesCarryCapacityAndCollectTickets )
 
     SW_EXPECT_TRUE( ride._totalRiders >= 8u );
     SW_EXPECT_EQUAL( static_cast<int32>( ride._totalRiders + ride._listRider.size() ) * 4, ride._totalIncome );
-    SW_EXPECT_EQUAL( 400 + ride._totalIncome, park.getCash() );
+    SW_EXPECT_EQUAL( 400 + ride._totalIncome, cashOf( parkWallet ) );
     SW_EXPECT_TRUE( park.getAverageHappiness() > 0.7f ); // 탄 뒤 즐거워졌다
 }
 
@@ -74,7 +93,9 @@ SW_TEST_CASE( ThemeParkTest, RideCyclesCarryCapacityAndCollectTickets )
 SW_TEST_CASE( ThemeParkTest, GuestsRefuseTooIntenseOrOverpricedRides )
 {
     ThemeParkSimulation intensePark;
-    intensePark.initialize( makeClosedGateSettings(), 1000 );
+    Wallet              intenseParkWallet;
+    intenseParkWallet.add( "Cash", 1000 );
+    intensePark.initialize( makeClosedGateSettings(), lendWallet( intenseParkWallet ) );
     (void)intensePark.buildRide( makeThemeParkTestRide( 8.0f, 9.0f, 3, 8, 10.0f ), 0 );
     for ( int32 guestIndex = 0; guestIndex < 6; ++guestIndex )
         SW_EXPECT_TRUE( intensePark.admitGuest( 100, 0.0f, 6.0f, 1.0f ) );
@@ -84,7 +105,9 @@ SW_TEST_CASE( ThemeParkTest, GuestsRefuseTooIntenseOrOverpricedRides )
     SW_EXPECT_EQUAL( 6u, intensePark.countGuestsThinking( ParkGuestThought::TooIntense ) );
 
     ThemeParkSimulation pricedPark;
-    pricedPark.initialize( makeClosedGateSettings(), 1000 );
+    Wallet              pricedParkWallet;
+    pricedParkWallet.add( "Cash", 1000 );
+    pricedPark.initialize( makeClosedGateSettings(), lendWallet( pricedParkWallet ) );
     (void)pricedPark.buildRide( makeThemeParkTestRide( 5.0f, 3.0f, 25, 8, 10.0f ), 0 ); // 가치 10 → 21 넘으면 비싸다
     for ( int32 guestIndex = 0; guestIndex < 6; ++guestIndex )
         SW_EXPECT_TRUE( pricedPark.admitGuest( 100, 0.0f, 9.0f, 1.0f ) );
@@ -108,15 +131,18 @@ SW_TEST_CASE( ThemeParkTest, EntryFeeLowersArrivalsAndIsCollected )
     settings._maxGuests             = 1000;
 
     ThemeParkSimulation freePark;
-    freePark.initialize( settings, 0 );
+    Wallet              freeParkWallet;
+    freePark.initialize( settings, lendWallet( freeParkWallet ) );
     (void)freePark.buildRide( makeThemeParkTestRide( 5.0f, 3.0f, 2, 8, 10.0f ), 0 );
     ThemeParkSimulation paidPark;
     settings._entryFee = 15;
-    paidPark.initialize( settings, 0 );
+    Wallet paidParkWallet;
+    paidPark.initialize( settings, lendWallet( paidParkWallet ) );
     (void)paidPark.buildRide( makeThemeParkTestRide( 5.0f, 3.0f, 2, 8, 10.0f ), 0 );
     ThemeParkSimulation closedPark;
     settings._entryFee = 100;
-    closedPark.initialize( settings, 0 );
+    Wallet closedParkWallet;
+    closedPark.initialize( settings, lendWallet( closedParkWallet ) );
     (void)closedPark.buildRide( makeThemeParkTestRide( 5.0f, 3.0f, 2, 8, 10.0f ), 0 );
 
     for ( int32 stepIndex = 0; stepIndex < 600; ++stepIndex )
@@ -130,7 +156,7 @@ SW_TEST_CASE( ThemeParkTest, EntryFeeLowersArrivalsAndIsCollected )
     SW_EXPECT_TRUE( paidPark.getTotalVisitorCount() > 0u );
     SW_EXPECT_EQUAL( 0u, closedPark.getTotalVisitorCount() );
     // 입장료 수입은 들어온 손님 × 15 이상이다(탑승료가 더해진다).
-    SW_EXPECT_TRUE( paidPark.getCash() >= static_cast<int32>( paidPark.getTotalVisitorCount() ) * 15 );
+    SW_EXPECT_TRUE( cashOf( paidParkWallet ) >= static_cast<int32>( paidPark.getTotalVisitorCount() ) * 15 );
 }
 
 /**
@@ -141,7 +167,9 @@ SW_TEST_CASE( ThemeParkTest, TiredGuestsLeaveAndRunningCostsAreCharged )
     ThemeParkSettings settings     = makeClosedGateSettings();
     settings._energyDrainPerSecond = 0.05f; // 18 초면 바닥
     ThemeParkSimulation park;
-    park.initialize( settings, 1000 );
+    Wallet              parkWallet;
+    parkWallet.add( "Cash", 1000 );
+    park.initialize( settings, lendWallet( parkWallet ) );
     ParkRide ride              = makeThemeParkTestRide( 5.0f, 3.0f, 0, 8, 10.0f );
     ride._runningCostPerMinute = 60; // 초당 1
     (void)park.buildRide( ride, 0 );
@@ -152,11 +180,11 @@ SW_TEST_CASE( ThemeParkTest, TiredGuestsLeaveAndRunningCostsAreCharged )
         park.update( 1.0f );
     SW_EXPECT_EQUAL( 0u, park.getGuestCount() );
     SW_EXPECT_EQUAL( 5u, park.getTotalVisitorCount() );
-    SW_EXPECT_EQUAL( 940, park.getCash() );
+    SW_EXPECT_EQUAL( 940, cashOf( parkWallet ) );
 
     park.setRideOpen( 0, false );
     park.update( 60.0f ); // 한 프레임 상한(5 초)에 잘린다
-    SW_EXPECT_EQUAL( 940, park.getCash() );
+    SW_EXPECT_EQUAL( 940, cashOf( parkWallet ) );
 }
 
 /**
@@ -186,7 +214,9 @@ SW_TEST_CASE( ThemeParkTest, StateRoundTripContinuesTheSamePark )
     ThemeParkSettings settings      = makeClosedGateSettings();
     settings._guestArrivalPerMinute = 30.0f;
     ThemeParkSimulation park;
-    park.initialize( settings, 5000 );
+    Wallet              parkWallet;
+    parkWallet.add( "Cash", 5000 );
+    park.initialize( settings, lendWallet( parkWallet ) );
     SW_ASSERT_TRUE( park.buildRide( makeThemeParkTestRide( 5.0f, 3.0f, 4, 4, 10.0f ), 600 ) == 0 );
     SW_ASSERT_TRUE( park.buildRide( makeThemeParkTestRide( 7.0f, 6.0f, 6, 2, 14.0f ), 900 ) == 1 );
     park.setEntryFee( 3 );
@@ -197,11 +227,12 @@ SW_TEST_CASE( ThemeParkTest, StateRoundTripContinuesTheSamePark )
     Archive written;
     park.writeState( written );
     ThemeParkSimulation restored;
-    restored.initialize( settings, 1 );
+    Wallet              restoredWallet;
+    restoredWallet.add( "Cash", 1 );
+    restored.initialize( settings, lendWallet( restoredWallet ) );
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64( 0 ), reader.getRemainingBytes() );
-    SW_EXPECT_EQUAL( park.getCash(), restored.getCash() );
     SW_EXPECT_EQUAL( park.getGuestCount(), restored.getGuestCount() );
     SW_EXPECT_EQUAL( 3, restored.getSettings()._entryFee );
 
@@ -218,9 +249,52 @@ SW_TEST_CASE( ThemeParkTest, StateRoundTripContinuesTheSamePark )
     SW_EXPECT_TRUE( Memory::compare( laterPark.getData(), laterRestored.getData(), laterPark.getSize() ) == 0 );
 
     ThemeParkSimulation untouched;
-    untouched.initialize( settings, 77 );
+    Wallet              untouchedWallet;
+    untouchedWallet.add( "Cash", 77 );
+    untouched.initialize( settings, lendWallet( untouchedWallet ) );
     Archive cut( written.getData(), written.getSize() - 5 );
     SW_EXPECT_FALSE( untouched.readState( cut ) );
-    SW_EXPECT_EQUAL( 77, untouched.getCash() );
+    SW_EXPECT_EQUAL( 77, cashOf( untouchedWallet ) );
     SW_EXPECT_TRUE( untouched.getRides().empty() );
+}
+
+/**
+ * @brief [ThemeParkTest] 땅을 빌린 공원은 놀이기구 발자국을 막힘으로 얻는다 — 남의 땅이면 짓지 않고 돈도 나가지 않는다
+ */
+SW_TEST_CASE( ThemeParkTest, RidesClaimTheirFootprintOnTheSharedLand )
+{
+    LandRegistry land;
+    land.initialize( 32, 32, 1.0f, float3{} );
+    const uint16 other = land.registerOwner( "Other" );
+    SW_ASSERT_TRUE( land.claimRect( other, 10, 10, 10, 10, false ) );
+
+    ThemeParkSimulation park;
+    Wallet              parkWallet;
+    parkWallet.add( "Cash", 1000 );
+    park.initialize( makeClosedGateSettings(), lendWallet( parkWallet ) );
+    park.bindLand( &land );
+
+    ParkRide ride;
+    ride._id              = hashed_string( "carousel" );
+    ride._footprintCenter = float3{ 10.0f, 0.0f, 10.0f };
+    ride._footprintSize   = float3{ 4.0f, 0.0f, 4.0f }; // 8..11 × 8..11
+    SW_EXPECT_EQUAL( -1, park.buildRide( ride, 100 ) );
+    SW_EXPECT_EQUAL( 1000, cashOf( parkWallet ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 8, 8 ) );
+
+    ride._footprintCenter = float3{ 20.0f, 0.0f, 20.0f }; // 18..21
+    SW_ASSERT_TRUE( 0 <= park.buildRide( ride, 100 ) );
+    SW_EXPECT_EQUAL( 900, cashOf( parkWallet ) );
+    SW_EXPECT_TRUE( land.getOwnerName( 18, 18 ) == hashed_string( "ThemePark" ) );
+    SW_EXPECT_TRUE( land.isBlockedFor( other, 21, 21 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 22, 22 ) );
+
+    // 돈이 모자라면 얻은 땅을 되돌린다
+    Wallet              poorWallet;
+    ThemeParkSimulation poorPark;
+    poorPark.initialize( makeClosedGateSettings(), lendWallet( poorWallet ) );
+    poorPark.bindLand( &land );
+    ride._footprintCenter = float3{ 4.0f, 0.0f, 4.0f };
+    SW_EXPECT_EQUAL( -1, poorPark.buildRide( ride, 100 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 3, 3 ) );
 }

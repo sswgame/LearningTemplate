@@ -40,7 +40,7 @@ namespace
 } // namespace
 
 /**
- * @brief [ReflectionPropertyRoleTest] 역할 애노테이션이 프로퍼티 메타에 닿는다 — RepNotify 는 Replicated 를, ConfigSection · ConfigKey 는 Config 를 켠다
+ * @brief [ReflectionPropertyRoleTest] 역할 애노테이션이 프로퍼티 메타에 닿는다 — RepNotify 는 Replicated 를 켠다
  */
 SW_TEST_CASE( ReflectionPropertyRoleTest, AnnotationsReachPropertyMetadata )
 {
@@ -52,11 +52,6 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, AnnotationsReachPropertyMetadata )
     SW_EXPECT_TRUE( getRoleProperty( "_gold" )._metadata._bSaveGame == SW_TRUE );
     SW_EXPECT_TRUE( getRoleProperty( "_sessionScore" )._metadata._bSaveGame == SW_FALSE );
     SW_EXPECT_TRUE( getRoleProperty( "_opacity" )._metadata._bInterp == SW_TRUE );
-
-    const sw::PropertyInfo& master = getRoleProperty( "_masterVolume" );
-    SW_EXPECT_TRUE( master._metadata._bConfig == SW_TRUE );
-    SW_EXPECT_TRUE( master._metadata._configSection == sw::hashed_string( "Audio" ) );
-    SW_EXPECT_TRUE( master._metadata._configKey == sw::hashed_string( "master" ) );
 
     sw::vector<const sw::PropertyInfo*> listReplicated;
     sw::PropertyRoleUtil::collectReplicatedProperties( getRoleType(), listReplicated );
@@ -176,24 +171,6 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, InterpBlendsNumbersVectorsAndRotations
     sw::vector<const sw::PropertyInfo*> listInterp;
     sw::PropertyRoleUtil::collectInterpProperties( getRoleType(), listInterp );
     SW_EXPECT_EQUAL( static_cast<size_t>( 4 ), listInterp.size() );
-}
-
-/**
- * @brief [ReflectionPropertyRoleTest] 설정 묶음 — 섹션 기본은 선언한 타입 이름, 키 기본은 프로퍼티 이름, 적으면 적은 것
- */
-SW_TEST_CASE( ReflectionPropertyRoleTest, ConfigBindingsDefaultToTypeAndPropertyNames )
-{
-    sw::vector<sw::ConfigPropertyBinding> listBinding;
-    sw::PropertyRoleUtil::collectConfigBindings( getRoleType(), listBinding );
-    SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), listBinding.size() );
-    SW_EXPECT_TRUE( listBinding[0]._section == sw::hashed_string( "PropertyRoleActor" ) );
-    SW_EXPECT_TRUE( listBinding[0]._key == sw::hashed_string( "_volume" ) );
-    SW_EXPECT_TRUE( listBinding[1]._section == sw::hashed_string( "Audio" ) );
-    SW_EXPECT_TRUE( listBinding[1]._key == sw::hashed_string( "master" ) );
-
-    sw::PropertyRoleActor actor;
-    *static_cast<float32*>( listBinding[1]._pProperty->getRawPtr( &actor ) ) = 0.3f;
-    SW_EXPECT_NEAR_EQUAL( 0.3f, actor._masterVolume, 1e-6f );
 }
 
 /**

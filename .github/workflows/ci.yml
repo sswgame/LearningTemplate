@@ -1,20 +1,12 @@
 name: CI (Windows · Linux | clang-cl & Clang)
 
+# 문서만 바뀐 push · PR 도 린트 잡은 돈다(문서 경로 게이트 CheckDocPaths · 설정 참조 게이트가 .md 를 본다). 빌드 잡만 건너뛴다 —
+# 린트 잡의 `changes` 단계가 바뀐 파일이 문서 · 편집기 설정뿐인지 보고 `code` 를 낸다.
 on:
   push:
     branches: [ main, develop ]
-    paths-ignore: &paths-ignore
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
-      - '.clang-format'
-      - '.clangd'
-      - '.cursorrules'
-      - '.vscode/**'
   pull_request:
     branches: [ main, develop ]
-    paths-ignore: *paths-ignore
   workflow_dispatch:
 
 # main 은 돌고 있는 실행을 **끝까지** 돌린다. 같은 그룹에 기다리는 실행은 하나만 남고(더 새 push 가 오면 기다리던 것이 취소된다), 앞 실행이
@@ -31,8 +23,10 @@ env:
 
 jobs:
   lint:
-    name: Code Conventions & Include Linter
+    name: Lints (gates + self-tests)
     runs-on: ubuntu-22.04
+    outputs:
+      code: ${{ steps.changes.outputs.code }}
 
     steps:
     - name: Checkout repository
@@ -40,13 +34,41 @@ jobs:
       with:
         fetch-depth: 1
 
-    - name: Run Code Conventions Check
+    # 빌드가 볼 것이 바뀌었나 — 바뀐 파일이 모두 문서 · 편집기 설정이면 code=false 로 빌드 잡을 건너뛴다. 비교 기준을 못 얻으면(첫 push ·
+    # 수동 실행 · 강제 push 로 사라진 커밋) 빌드한다.
+    - name: Detect code changes
+      id: changes
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
       run: |
-        python3 Scripts/lint/gate/CheckCodeConventions.py
+        code=true
+        if [ "$EVENT_NAME" != "workflow_dispatch" ] && [ -n "$BASE_SHA" ] && [ "$BASE_SHA" != "0000000000000000000000000000000000000000" ] \
+           && git fetch --quiet --depth=1 origin "$BASE_SHA"; then
+          if ! git diff --name-only "$BASE_SHA" HEAD \
+               | grep -qvE '(\.md$|^docs/|^\.gitignore$|^LICENSE$|^\.clang-format$|^\.clangd$|^\.cursorrules$|^\.vscode/)'; then
+            code=false
+          fi
+        fi
+        echo "code=$code" >> "$GITHUB_OUTPUT"
+        echo "build jobs: $code"
+
+    # 게이트 + 셀프테스트 전부(CTest 의 lint 라벨과 같은 목록 · 인자) — 빌드 폴더가 없어 CheckSourceGlob 만 건너뛴다. 시간 표는 단계 요약 · 아티팩트로.
+    - name: Run all lints (gates + self-tests) with timings
+      run: |
+        python3 Scripts/lint/RunLintSuite.py --json lint-timing.json --hook-sample 1,10
+
+    - name: Upload lint timings
+      if: always()
+      uses: actions/upload-artifact@v6
+      with:
+        name: lint-timing
+        path: lint-timing.json
 
   build:
     name: ${{ matrix.name }}
     needs: lint
+    if: needs.lint.outputs.code == 'true'
     runs-on: ${{ matrix.os }}
     # 매트릭스 항목에 `reportOnly: true` 를 주면 그 잡은 **보고만 한다**(실패해도 CI 를 붉게 하지 않는다). 새 검사(새니타이저 등)를 처음
     # 켤 때 기존 트리의 보고를 먼저 추리는 동안 쓴다. TSan 은 그렇게 시작해 첫 보고 둘(46c78038)을 고친 뒤 막는 잡이 됐다.
@@ -87,6 +109,16 @@ jobs:
           - name: Build Linux Shipping (Clang)
             os: ubuntu-22.04
             preset: CI-Shipping
+
+          # 전용 서버 배포본(SW_TARGET_TYPE=Server) — 에디터 · App · RHI 백엔드 없이 서는지, ServerTest(nogpu)가 실제 Server 를 띄운다.
+          # 리눅스 러너에는 화면이 없어 서버가 X11 을 찾으면 여기서 진다.
+          - name: Build Windows Dedicated Server Shipping (clang-cl)
+            os: windows-2022
+            preset: CI-Shipping-Server
+
+          - name: Build Linux Dedicated Server Shipping (Clang)
+            os: ubuntu-22.04
+            preset: CI-Shipping-Server
 
     steps:
     - name: Checkout repository
@@ -162,8 +194,20 @@ jobs:
         CC: ${{ runner.os == 'Windows' && 'clang-cl' || 'clang' }}
         CXX: ${{ runner.os == 'Windows' && 'clang-cl' || 'clang++' }}
         VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
+      # 출력을 파일로도 받는다(아래 실패 보고가 읽는다). Windows 에서 Git Bash 를 쓰면 /usr/bin/link 가 MSVC link.exe 를 가리므로 두 OS 모두 pwsh 로 —
+      # pwsh 는 파이프 뒤에도 cmake 의 종료 코드를 $LASTEXITCODE 에 둔다.
+      shell: pwsh
       run: |
-        cmake --preset ${{ matrix.preset }} ${{ runner.os == 'Windows' && '-DSW_ENABLE_PCH=OFF' || '' }}
+        New-Item -ItemType Directory -Force build | Out-Null
+        cmake --preset ${{ matrix.preset }} ${{ runner.os == 'Windows' && '-DSW_ENABLE_PCH=OFF' || '' }} 2>&1 | Tee-Object -FilePath build/configure.log
+        exit $LASTEXITCODE
+
+    # 구성(vcpkg 설치)에서 진 잡은 "vcpkg install failed" 한 줄만 남는다 — vcpkg 가 가리킨 포트 로그의 끝을 주석으로 올린다.
+    - name: Report configure failure as annotations
+      if: failure() && steps.configure.outcome == 'failure'
+      shell: bash
+      run: |
+        ${{ runner.os == 'Windows' && 'python' || 'python3' }} Scripts/dev/CiFailureReport.py configure --log build/configure.log
 
     # 같은 키를 다른 잡이 먼저 저장했으면 경고만 남기고 넘어간다.
     - name: Save vcpkg binary cache
@@ -194,42 +238,12 @@ jobs:
         ctest --test-dir build/${{ matrix.preset }} -L nogpu -j 4 --output-on-failure
 
     # 진 시험을 주석(annotation)으로 올린다. 작업 로그 · 아티팩트는 저장소 관리자만 받을 수 있어(공개 저장소라도 API 는 403), 무엇이
-    # 졌는지 밖에서 보이는 곳은 주석뿐이다. 시험마다 시험 틀의 실패 줄(`[  FAILED  ]` · `[FAILED]` + 조건 · 메시지 · 빈 스위트)과 마지막
-    # `[ RUN ]`, 출력의 마지막 25 줄(크래시 · 시간 초과면 어디서 멈췄는지 보인다)을 싣는다.
+    # 졌는지 밖에서 보이는 곳은 주석뿐이다. 시험마다 실패 줄 · 마지막 `[ RUN ]` · 출력의 마지막 25 줄, 그리고 크래시 스택(Scripts/dev/CiFailureReport.py).
     - name: Report failed tests as annotations
       if: failure() && steps.test.outcome == 'failure'
       shell: bash
-      env:
-        SW_CTEST_DIR: build/${{ matrix.preset }}
       run: |
-        PYTHON=${{ runner.os == 'Windows' && 'python' || 'python3' }}
-        "$PYTHON" - <<'EOF'
-        import os, re
-        kNewline = chr(10)
-        tempDir = os.path.join(os.environ["SW_CTEST_DIR"], "Testing", "Temporary")
-        def readText(name):
-            try:
-                with open(os.path.join(tempDir, name), encoding="utf-8", errors="replace") as file:
-                    return file.read()
-            except OSError:
-                return ""
-        listFailed = [line.split(":", 1)[1].strip() for line in readText("LastTestsFailed.log").splitlines() if ":" in line]
-        log = readText("LastTest.log")
-        if not listFailed:
-            print("::warning title=ctest::LastTestsFailed.log is empty or missing - no test result to report")
-        # 시험 틀이 stdout 에 찍는 실패 줄만 고른다. 로거가 같은 내용을 "[날짜] …" 로 한 번 더 찍으므로 그 줄은 뺀다.
-        kMarker = re.compile(r"^\[  FAILED  \]|^  \[FAILED\]|^    Condition:|^    Message  :|verified nothing|^ Tests failed|^   - |no cases in this executable|selected no test|^Invalid|^Unknown --")
-        kAnsi = re.compile(r"\x1b\[[0-9;]*m")
-        for name in listFailed[:20]:
-            match = re.search(r"Test: " + re.escape(name) + r"\s*$(.*?)^\"" + re.escape(name) + r"\" end time", log, re.S | re.M)
-            listLine = [kAnsi.sub("", line) for line in match.group(1).splitlines()] if match else []
-            listMarked = [line[:300] for line in listLine if kMarker.search(line)][:40]
-            listRun = [line for line in listLine if line.startswith("[ RUN")]
-            listTail = [line[:300] for line in listLine[-25:]]
-            summary = kNewline.join(listMarked + ["--- last RUN: " + (listRun[-1] if listRun else "(none)"), "--- tail:"] + listTail)
-            print("::error title=ctest " + name + "::" + summary.replace("%", "%25").replace(chr(13), "").replace(kNewline, "%0A"))
-            print("===== " + name + " =====" + kNewline + summary + kNewline)
-        EOF
+        ${{ runner.os == 'Windows' && 'python' || 'python3' }} Scripts/dev/CiFailureReport.py tests --ctest-dir build/${{ matrix.preset }}
 
     # Diagnostics & Artifact Upload
     # 시험 단계가 돌았을 때만 올린다 — 빌드에서 진 잡에는 LastTest.log 가 없어 "No files were found" 경고만 남았다.
@@ -241,6 +255,7 @@ jobs:
         path: |
           build/${{ matrix.preset }}/Testing/Temporary/LastTest*.log
           build/${{ matrix.preset }}/Bin/*.log
+          build/${{ matrix.preset }}/Bin/Saved/Logs/crash_*
         if-no-files-found: ignore
         retention-days: 7
 

@@ -12,20 +12,21 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "EngineTest/StateReloadTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
 
-#include "GameFramework/Framework/GameEvents.h"
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameEvents.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/UI/DamageNumberComponent.h"
+#include "GameFramework/Base/UI/HealthBarComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/Action/ActionCombat/MeleeHitboxComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
-#include "GameFramework/UI/DamageNumberComponent.h"
-#include "GameFramework/UI/HealthBarComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -172,6 +173,16 @@ namespace
                 return damage;
         }
         return 0;
+    }
+
+    /** @brief 룸의 상태 바이트를 꺼냅니다. */
+    vector<uint8> captureRoomBytes( const ActionRoom& room )
+    {
+        Archive archive;
+        room.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
     }
 } // namespace
 
@@ -1241,4 +1252,51 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomWarnsWhenTheCatalogLacksItsMonster )
     room.beginHall();
     SW_EXPECT_EQUAL( 3, room.getAliveEnemyCount() );
     SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Monster 'grunt' is not in the monster catalog" ) == 1u, logCollector.joined().c_str() );
+}
+
+/**
+ * @brief [ActionCombatTest] 룸 상태 바이트 — 한 번 맞은 보스 · 날아가는 탄 · 쿨다운이 그대로 오고(보스 게이지는 다시 찾은 정의의 최대 체력으로),
+ *        같은 프레임을 더 돌려도 바이트가 같다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( ActionCombatTest, StateRoundTripContinuesTheSameRoom )
+{
+    EventDispatcher                    dispatcher;
+    const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
+    ActionRoom                         room;
+    room.beginBoss();
+    ActionRoomFrameInput strike;
+    strike._playerPos      = float2{ 5.6f, 4.0f };
+    strike._facing         = FacingDir::Right;
+    strike._bAttackPressed = SW_TRUE;
+    (void)room.update( 0.02f, strike ); // 보스를 한 번 친다 — 202 / 220
+    ActionRoomFrameInput keepAway;
+    keepAway._playerPos = float2{ 7.0f, 12.0f }; // 멀리 서서 탄을 받는다
+    for ( int32 frameIndex = 0; frameIndex < 80; ++frameIndex )
+        (void)room.update( 0.02f, keepAway ); // 첫 사격(1.2 초)을 지나 탄이 날고 있다
+
+    const vector<uint8> bytes = captureRoomBytes( room );
+    ActionRoom          restored;
+    Archive             reader( bytes.data(), bytes.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    SW_EXPECT_TRUE( restored.getKind() == ActionRoomKind::Boss );
+    SW_EXPECT_NEAR_EQUAL( 202.0f / 220.0f, restored.getBossHpFill(), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( room.getDashFill(), restored.getDashFill(), 1e-6f );
+    SW_EXPECT_TRUE( bytes == captureRoomBytes( restored ) );
+
+    int32 volleyCount         = 0;
+    int32 restoredVolleyCount = 0;
+    for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+    {
+        volleyCount += room.update( 0.02f, keepAway )._enemyVolleyCount;
+        restoredVolleyCount += restored.update( 0.02f, keepAway )._enemyVolleyCount;
+    }
+    SW_EXPECT_TRUE( 0 < volleyCount );
+    SW_EXPECT_EQUAL( volleyCount, restoredVolleyCount ); // 사격 시간이 이어진다
+    SW_EXPECT_TRUE( captureRoomBytes( room ) == captureRoomBytes( restored ) );
+
+    ActionRoom truncated;
+    Archive    cut( bytes.data(), bytes.size() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_FALSE( truncated.isActive() );
 }

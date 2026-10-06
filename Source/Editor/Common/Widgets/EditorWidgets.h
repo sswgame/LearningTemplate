@@ -75,6 +75,8 @@ namespace sw::editor
          * @param filter 현재 걸린 검색 문자열. 비어 있으면 필터 언급 없이 안내합니다.
          */
         static void drawNoSearchResultHint( string_view filter );
+        /** @brief 0 건 안내를 그린 횟수입니다(에디터 자체 시험이 "그렸다" 를 본다). */
+        static uint32 getNoSearchResultHintCount();
 
         /**
          * @brief 건수 라벨을 그립니다. total 이 0 이면 "12 items", 아니면 "12 / 40 lines" 형태입니다.

@@ -2,12 +2,14 @@
 // 상태이상 · 능력 변화 · 날씨, 포획 흔들림 · 파티 6 · 박스, 레벨업 기술 · 진화(레벨 · 아이템 · 친밀도), 야생 조우 테이블, 트레이너 AI 와 결정성.
 #include "pch.h"
 
-#include "GameFramework/Combat/ElementChart.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Combat/ElementChart.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterBattle.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterCollectorCatalog.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterInstance.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterTrainerAi.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -132,6 +134,17 @@ namespace
                 return event._side;
         }
         return -1;
+    }
+
+    /** @brief 상태 하나의 바이트입니다. */
+    template <typename TState>
+    vector<uint8> captureMonsterBytes( const TState& state )
+    {
+        Archive archive;
+        state.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
     }
 } // namespace
 
@@ -722,4 +735,84 @@ SW_TEST_CASE( MonsterCollectorTest, TrainerAiPicksBestExpectedDamageSwitchesWhen
         bSame = bSame && listA[index]._kind == listB[index]._kind && listA[index]._side == listB[index]._side && listA[index]._value == listB[index]._value;
     SW_EXPECT_TRUE( bSame );
     SW_EXPECT_TRUE( countKind( listA, MonsterBattleEvent::Kind::Switched ) > 0 );
+}
+
+/**
+ * @brief [MonsterCollectorTest] 보관함 · 전투 상태 바이트 — 파티 · 박스 개체, 양쪽 개체 · 능력 변화 · 둔 행동 · 턴 순서 · 난수 · 날씨가 그대로 와서 같은 라운드가 이어진다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( MonsterCollectorTest, StateRoundTripContinuesTheSameBattle )
+{
+    MonsterTestWorld world;
+    SW_ASSERT_TRUE( world.initialize() );
+
+    MonsterStorage storage;
+    storage.initialize( 3 );
+    GameRandom random( 21 );
+    for ( const utf8* pSpecies : { "squirtle", "bulbasaur", "pikachu" } )
+        SW_EXPECT_TRUE( storage.add( MonsterRules::createMonster( world._catalog, hashed_string( pSpecies ), 12, random ) ) == MonsterStoragePlace::Party );
+    storage.getParty()[0]._nickname = "Shelly";
+    SW_ASSERT_TRUE( storage.depositToBox( 2 ) );
+
+    const vector<uint8> storageBytes = captureMonsterBytes( storage );
+    MonsterStorage      restoredStorage;
+    restoredStorage.initialize( 3 );
+    Archive storageReader( storageBytes.data(), storageBytes.size() );
+    SW_ASSERT_TRUE( restoredStorage.readState( storageReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, storageReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureMonsterBytes( restoredStorage ) == storageBytes );
+    SW_ASSERT_TRUE( restoredStorage.getParty().size() == 2 && restoredStorage.getBox().size() == 1 );
+    SW_EXPECT_STREQ( "Shelly", restoredStorage.getParty()[0]._nickname.c_str() );
+    SW_EXPECT_TRUE( restoredStorage.getBox()[0]._speciesId == hashed_string( "pikachu" ) );
+
+    // 같은 걸음을 둘 다 더 돌리면 바이트가 같다.
+    SW_ASSERT_TRUE( storage.withdrawFromBox( 0 ) );
+    SW_ASSERT_TRUE( restoredStorage.withdrawFromBox( 0 ) );
+    SW_ASSERT_TRUE( storage.swapPartyOrder( 0, 2 ) );
+    SW_ASSERT_TRUE( restoredStorage.swapPartyOrder( 0, 2 ) );
+    SW_EXPECT_TRUE( captureMonsterBytes( storage ) == captureMonsterBytes( restoredStorage ) );
+
+    MonsterStorage noBox;
+    noBox.initialize( 0 );
+    Archive noBoxReader( storageBytes.data(), storageBytes.size() );
+    SW_EXPECT_FALSE( noBox.readState( noBoxReader ) ); // 박스 정원을 넘는다
+    MonsterStorage truncatedStorage;
+    truncatedStorage.initialize( 3 );
+    Archive storageCut( storageBytes.data(), storageBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedStorage.readState( storageCut ) );
+    SW_EXPECT_TRUE( truncatedStorage.getParty().empty() );
+
+    MonsterBattle battle;
+    battle.initialize( &world._catalog, &world._chart, 7 );
+    battle.start( { world.makeMonster( "squirtle", 30, { "tackle", "watergun", "raindance" } ), world.makeMonster( "bulbasaur", 30, { "tackle" } ) },
+                  { world.makeMonster( "pikachu", 30, { "thundershock", "growl" } ) }, false );
+    SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kPlayerSide, MonsterAction::makeMove( 2 ) ) );
+    SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kFoeSide, MonsterAction::makeMove( 1 ) ) );
+    battle.resolveRound();
+    SW_ASSERT_TRUE( battle.getOutcome() == MonsterBattleOutcome::Ongoing );
+    SW_EXPECT_TRUE( battle.getWeather() == hashed_string( "Rain" ) );
+    SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kPlayerSide, MonsterAction::makeMove( 1 ) ) ); // 둔 행동도 싣는다
+
+    const vector<uint8> battleBytes = captureMonsterBytes( battle );
+    MonsterBattle       restoredBattle;
+    restoredBattle.initialize( &world._catalog, &world._chart, 999 );
+    Archive battleReader( battleBytes.data(), battleBytes.size() );
+    SW_ASSERT_TRUE( restoredBattle.readState( battleReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, battleReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureMonsterBytes( restoredBattle ) == battleBytes );
+    SW_EXPECT_EQUAL( battle.getStage( MonsterBattle::kPlayerSide, MonsterStat::Attack ), restoredBattle.getStage( MonsterBattle::kPlayerSide, MonsterStat::Attack ) );
+    SW_EXPECT_EQUAL( battle.getWeatherTurns(), restoredBattle.getWeatherTurns() );
+
+    SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kFoeSide, MonsterAction::makeMove( 0 ) ) );
+    SW_ASSERT_TRUE( restoredBattle.setAction( MonsterBattle::kFoeSide, MonsterAction::makeMove( 0 ) ) );
+    battle.resolveRound();
+    restoredBattle.resolveRound();
+    battle.resolveRound();
+    restoredBattle.resolveRound();
+    SW_EXPECT_TRUE( captureMonsterBytes( battle ) == captureMonsterBytes( restoredBattle ) );
+
+    MonsterBattle truncatedBattle;
+    truncatedBattle.initialize( &world._catalog, &world._chart, 999 );
+    Archive battleCut( battleBytes.data(), battleBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedBattle.readState( battleCut ) );
+    SW_EXPECT_TRUE( truncatedBattle.getParty( MonsterBattle::kPlayerSide ).empty() );
 }

@@ -58,7 +58,7 @@ namespace sw
     }
 
     void RigSpringChain::simulate( RigPoseBuffer& pose, span<const uint32> listBone, const RigSpringSettings& settings, span<const RigSpringCollider> listCollider,
-                                   const float4x4& worldFromModel, float32 deltaSeconds, const RigSolveSpace& space )
+                                   const float4x4& worldFromModel, const float3& worldGravity, float32 deltaSeconds, const RigSolveSpace& space )
     {
         const uint32 count = static_cast<uint32>( listBone.size() );
         _lastStepCount     = 0;
@@ -96,7 +96,8 @@ namespace sw
         const float3  planeNormal  = ( space._bPlanar == SW_TRUE ) ? float3::transformVector( space._planeNormal, worldFromModel ).normalize() : float3::Zero;
         const float32 retain       = 1.0f - MathUtil::saturate( settings._damping );
         const float32 stiffness    = MathUtil::saturate( settings._stiffness );
-        const float3  gravityStep  = settings._gravity * ( step * step );
+        const float3  gravity      = ( settings._bUseGravityOverride == SW_TRUE ) ? settings._gravityOverride : worldGravity * settings._gravityScale;
+        const float3  gravityStep  = gravity * ( step * step );
         const float3  previousRoot = _lastRootPosition;
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {

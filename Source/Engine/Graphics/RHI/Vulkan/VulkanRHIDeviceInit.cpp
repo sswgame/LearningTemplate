@@ -200,7 +200,7 @@ namespace sw
         CreateDebugUtilsMessengerEXT( _instance, &createInfo, nullptr, &_debugMessenger );
     }
 
-    bool VulkanRHIDevice::pickPhysicalDevice()
+    bool VulkanRHIDevice::pickPhysicalDevice( bool bSoftwareAdapter )
     {
         uint32 deviceCount{ 0 };
         vkEnumeratePhysicalDevices( _instance, &deviceCount, nullptr );
@@ -222,6 +222,9 @@ namespace sw
                                 VulkanRHIApiVersion::kRequiredMinor );
                 continue;
             }
+            // 소프트웨어 어댑터를 요청했으면(gv_rhiSoftwareAdapter) CPU 디바이스(lavapipe · SwiftShader)만 후보다.
+            if ( bSoftwareAdapter && candidateProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_CPU )
+                continue;
 
             uint32 queueFamilyCount{ 0 };
             vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, nullptr );
@@ -261,8 +264,15 @@ namespace sw
                           properties.driverVersion, VK_VERSION_MAJOR( properties.apiVersion ),
                           VK_VERSION_MINOR( properties.apiVersion ), VK_VERSION_PATCH( properties.apiVersion ) );
             CrashHandler::setContextValue( "GPU", arrGpu );
+            _bSoftwareAdapter = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
         }
-        if ( _physicalDevice == nullptr )
+        if ( _physicalDevice == nullptr && bSoftwareAdapter )
+        {
+            // 환경 탓이다(CPU 구현이 설치되지 않았다) — 결함으로 알리지 않는다.
+            SW_LOG_WARNING( "No CPU Vulkan device (lavapipe / SwiftShader) for gv_rhiSoftwareAdapter - Vulkan does not start" );
+            _initResult = RHIInitResult::DriverUnsupported;
+        }
+        else if ( _physicalDevice == nullptr )
             SW_LOG_ERROR( "No Vulkan %#.%# device with a graphics queue that can present to this surface", VulkanRHIApiVersion::kRequiredMajor,
                           VulkanRHIApiVersion::kRequiredMinor );
         return _physicalDevice != nullptr;
@@ -546,6 +556,40 @@ namespace sw
         return true;
     }
 
+    void VulkanRHIDevice::noteSurfaceLost( const utf8* pWhere )
+    {
+        ++_surfaceLostCount;
+        SW_LOG_WARNING( "Vulkan surface lost at %# (%# time(s) on this device, frame %#) - recreating the surface and swapchain", pWhere, _surfaceLostCount,
+                        _frameFenceCounter );
+    }
+
+    bool VulkanRHIDevice::recreateSurfaceAndSwapChain()
+    {
+        if ( _device == nullptr || _instance == nullptr )
+            return false;
+        {
+            std::scoped_lock<mutex> queueLock{ _queueMutex };
+            vkDeviceWaitIdle( _device );
+        }
+        // 스왑체인이 서피스 위에 있으므로 스왑체인 → 서피스 순으로 버리고 서피스 → 스왑체인 순으로 만든다.
+        _bSwapChainImageHeld = SW_FALSE;
+        destroyFrameFences();
+        _swapChain.destroySemaphores( _device );
+        _swapChain.destroy( _device );
+        _swapChain.destroySurface( _instance );
+        if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _linuxWsi ) == false )
+            return false;
+        // 새 서피스를 이 큐가 프레젠트할 수 있는지 — 고를 때(pickPhysicalDevice) 본 것은 옛 서피스다.
+        VkBool32 bPresentSupported = VK_FALSE;
+        vkGetPhysicalDeviceSurfaceSupportKHR( _physicalDevice, _graphicsQueueFamilyIndex, _swapChain.getSurface(), &bPresentSupported );
+        if ( bPresentSupported == VK_FALSE )
+        {
+            SW_LOG_ERROR( "The recreated Vulkan surface cannot be presented by queue family %#", _graphicsQueueFamilyIndex );
+            return false;
+        }
+        return recreateSwapChain();
+    }
+
     bool VulkanRHIDevice::initializePipelineCache()
     {
         if ( _device == VK_NULL_HANDLE )
@@ -554,7 +598,7 @@ namespace sw
         vector<uint8> listCacheData;
         const string  cachePath = "Saved/ShaderCache/vk_pipeline_cache.bin";
         // 못 읽으면 빈 캐시로 시작한다 — 파이프라인을 다시 만들 뿐이다.
-        if ( FileUtil::fileExists( cachePath ) )
+        if ( FileUtil::exists( cachePath ) )
             (void)FileUtil::readFile( cachePath, listCacheData );
 
         VkPipelineCacheCreateInfo createInfo{};

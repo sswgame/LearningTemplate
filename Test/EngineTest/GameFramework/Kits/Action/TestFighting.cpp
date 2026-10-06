@@ -4,11 +4,13 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Combat/FrameData.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Combat/FrameData.h"
+#include "GameFramework/Base/Match/RoundSeries.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/Kits/Action/Fighting/FighterCatalog.h"
 #include "GameFramework/Kits/Action/Fighting/FightingMatch.h"
-#include "GameFramework/Match/RoundSeries.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -798,4 +800,67 @@ SW_TEST_CASE( FightingTest, RoundClockIntermissionAndMatchEndCountExactFrames )
     SW_EXPECT_TRUE( match.getPhase() == RoundSeriesPhase::Intermission );
     runFrames( match, 1, neutral0, neutral1, listEvent );
     SW_EXPECT_EQUAL( 2, match.getRound() );
+}
+
+/**
+ * @brief [FightingTest] 세이브(Archive) 왕복 — 롤백 코덱의 바이트를 길이 붙은 본문으로 실어, 새로 연 대전이 같은 롤백 바이트로 돌아오고 같은 입력을 더 넣어도 같다.
+ *        잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( FightingTest, StateRoundTripContinuesTheSameMatch )
+{
+    FightingFixture fixture;
+    SW_ASSERT_TRUE( fixture._bLoaded );
+    const FighterDef& tester = *fixture.findTester();
+    GameRandom        random( 4321u );
+    vector<uint8>     listScript;
+    for ( int32 frame = 0; frame < 300 * 2; ++frame )
+    {
+        InputFrame input;
+        input._direction = static_cast<uint8>( random.nextInt( 1, 9 ) );
+        input._buttons   = random.nextChance( 0.3f ) ? static_cast<uint16>( 1u << random.nextInt( 0, 3 ) ) : 0;
+        listScript.push_back( FightingMatch::encodeInput( input ) );
+    }
+    vector<uint8> listInput( 2 );
+    auto          runScript = [&]( FightingMatch& match, int32 firstFrame, int32 lastFrame )
+    {
+        for ( int32 frame = firstFrame; frame < lastFrame; ++frame )
+        {
+            listInput[0] = listScript[static_cast<size_t>( frame * 2 )];
+            listInput[1] = listScript[static_cast<size_t>( frame * 2 + 1 )];
+            match.advanceFrame( listInput );
+        }
+    };
+
+    FightingMatch match;
+    match.initialize( tester, tester );
+    runScript( match, 0, 150 );
+    vector<uint8> codecBytes;
+    match.saveState( codecBytes );
+    Archive written;
+    match.writeState( written );
+    vector<uint8> archiveBytes;
+    written.writeData( archiveBytes );
+    SW_EXPECT_EQUAL( static_cast<int32>( codecBytes.size() + sizeof( uint32 ) ), static_cast<int32>( archiveBytes.size() ) ); // 길이 + 코덱 바이트 그대로
+
+    FightingMatch restored;
+    restored.initialize( tester, tester );
+    Archive reader( archiveBytes.data(), archiveBytes.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    SW_EXPECT_EQUAL( 150, restored.getFrame() );
+    vector<uint8> restoredBytes;
+    restored.saveState( restoredBytes );
+    SW_EXPECT_TRUE( codecBytes == restoredBytes );
+
+    runScript( match, 150, 300 );
+    runScript( restored, 150, 300 );
+    match.saveState( codecBytes );
+    restored.saveState( restoredBytes );
+    SW_EXPECT_TRUE( codecBytes == restoredBytes );
+
+    FightingMatch truncated;
+    truncated.initialize( tester, tester );
+    Archive cut( archiveBytes.data(), archiveBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_EQUAL( 0, truncated.getFrame() );
 }

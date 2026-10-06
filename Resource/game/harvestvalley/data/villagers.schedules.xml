@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- HarvestValley 마을 사람의 하루 — ScheduleCatalog 가 읽는다(GameFramework/AI/Schedule).
+<!-- HarvestValley 마을 사람의 하루 — ScheduleCatalog 가 읽는다(GameFramework/Base/AI/Schedule).
      시각은 H:MM, 자리는 월드 x y z(지면 XZ), speed 는 게임 1 분에 걷는 거리. 루틴은 조건(days · seasons · weathers · flags · tags)이 맞는 날 쓰고,
      같은 시각에 칸이 여럿이면 priority 가 높은 것이 이긴다. 축제(Event)는 그날 그 시간만 덮는다. 약속(Appointment)은 Meet 칸이 가리키는 NPC 들이 모이는 시간 · 장소다. -->
 <Schedules>

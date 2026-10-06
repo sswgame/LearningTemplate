@@ -2864,7 +2864,7 @@ SW_TEST_CASE( GameObjectTest, CameraLookAtUnderARotatedParentFacesTheTarget )
     sw::GameObject*       pCamObj = manager.createGameObject( sw::hashed_string( "RigCamera" ) );
     sw::CameraComponent*  pCamera = pCamObj->addComponent<sw::CameraComponent>();
     SW_ASSERT_TRUE( pRigSc != nullptr && pCamera != nullptr );
-    pRigSc->setLocalRotation( sw::float3( 0.0f, sw::MathUtil::HalfPi, 0.0f ) );
+    pRigSc->setLocalRotation( sw::float3( 0.0f, sw::MathUtil::kHalfPi, 0.0f ) );
     SW_ASSERT_TRUE( pCamObj->attachToParent( pRig ) );
     manager.flushSceneTransforms();
 

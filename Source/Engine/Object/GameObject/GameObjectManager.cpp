@@ -96,7 +96,7 @@ namespace sw
         : _structuralChangeBuffer{}
         , _transformHierarchy{}
         , _primitiveRegistry{}
-        , _lightRegistry{}
+        , _componentRegistry{}
         , _cameraRegistry{}
         , _animationSystem{}
         , _tickScheduler{ *this, _transformHierarchy, _primitiveRegistry, _structuralChangeBuffer }

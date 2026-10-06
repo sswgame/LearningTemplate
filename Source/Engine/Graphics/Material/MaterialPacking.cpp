@@ -486,10 +486,9 @@ namespace sw
                     if ( StringUtil::parseUint64( prop._value, numericVal, 0 ) )
                         textureIndex = static_cast<uint32>( numericVal );
                 }
-                // 붙은 텍스처가 없으면 0 이 아니라 kInvalidIndex 를 넣는다. 0 은 "첫 번째 슬롯"
-                // 이라는 **유효한** 디스크립터 인덱스라서, 셰이더가 그 자리에 있는 상수버퍼를
-                // Texture2D 로 읽어 DX12 에서 GPU 페이지 폴트(DEVICE_HUNG)가 난다. 셰이더의
-                // swSampleIndex 는 kInvalidIndex 를 "텍스처 없음" 으로 이미 처리한다.
+                // 붙은 텍스처가 없으면 0 이 아니라 kInvalidIndex 를 넣는다. 0 은 Vulkan 에서 첫 번째 텍스처라는
+                // **유효한** 인덱스다(DX12 는 0 을 null 텍스처로 비워 둔다 — D3D12RHIDevice::kNullTextureBindlessIndex).
+                // 셰이더의 swSampleIndex 는 kInvalidIndex 를 "텍스처 없음" 으로 처리한다.
                 return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &textureIndex, sizeof( textureIndex ) );
             }
             case MaterialPropertyType::Range:

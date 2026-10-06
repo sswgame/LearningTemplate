@@ -1,6 +1,8 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -28,8 +30,8 @@ SW_TEST_CASE( StringTest, WideCharHashIsNotTruncatedToOneByte )
     SW_EXPECT_TRUE( sw::StringUtil::computeHash32( arrWideA, 1 ) != sw::StringUtil::computeHash32( arrWideB, 1 ) );
 
     // ASCII utf8 값은 바뀌면 안 된다 — 셰이더 쿠킹 스탬프 같은 것이 이 값으로 디스크에 남는다.
-    SW_EXPECT_EQUAL( sw::StringUtil::kOffset64, sw::StringUtil::computeHash64( "", 0, false ) );
-    SW_EXPECT_EQUAL( ( sw::StringUtil::kOffset64 ^ uint64{ 'a' } ) * sw::StringUtil::kPrime64,
+    SW_EXPECT_EQUAL( sw::HashUtil::kFnvOffset64, sw::StringUtil::computeHash64( "", 0, false ) );
+    SW_EXPECT_EQUAL( ( sw::HashUtil::kFnvOffset64 ^ uint64{ 'a' } ) * sw::HashUtil::kFnvPrime64,
                      sw::StringUtil::computeHash64( "a", 1, false ) );
 }
 
@@ -665,6 +667,13 @@ SW_TEST_CASE( StringTest, FixedStringModernFeatures )
     size_t                          h1 = hasher( fs );
     size_t                          h2 = hasher( sw::fixed_string<32>( "ModernCpp" ) );
     SW_EXPECT_EQUAL( h1, h2 );
+
+    // 대소문자는 구분한다 — operator== 와 같다.
+    SW_EXPECT_NOT_EQUAL( hasher( sw::fixed_string<32>( "moderncpp" ) ), hasher( fs ) );
+#if !defined( SW_ENABLE_STL_CONTAINER )
+    // sw::string 과 같은 해시다(이종 조회가 같은 버킷을 본다). STL 구성에서는 std::hash<sw::string> 이 표준 것이라 다르다.
+    SW_EXPECT_EQUAL( std::hash<sw::string>{}( sw::string( "ModernCpp" ) ), hasher( fs ) );
+#endif
 }
 
 /**
@@ -1582,8 +1591,8 @@ SW_TEST_CASE( StringTest, IntegerParsersShareSignPrefixAndRangeRules )
     int32 value32{ 0 };
     SW_EXPECT_TRUE( sw::StringUtil::parseInt( " 42 ", value32 ) && value32 == 42 );
     SW_EXPECT_TRUE( sw::StringUtil::parseInt( "+7", value32 ) && value32 == 7 );
-    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "-2147483648", value32 ) && value32 == sw::MathUtil::MinInt32 );
-    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "2147483647", value32 ) && value32 == sw::MathUtil::MaxInt32 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "-2147483648", value32 ) && value32 == sw::MathUtil::kMinInt32 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "2147483647", value32 ) && value32 == sw::MathUtil::kMaxInt32 );
     SW_EXPECT_FALSE( sw::StringUtil::parseInt( "2147483648", value32 ) );
     SW_EXPECT_FALSE( sw::StringUtil::parseInt( "-2147483649", value32 ) );
     SW_EXPECT_TRUE( sw::StringUtil::parseInt( "0x1F", value32, 0 ) && value32 == 31 );
@@ -1597,8 +1606,8 @@ SW_TEST_CASE( StringTest, IntegerParsersShareSignPrefixAndRangeRules )
     SW_EXPECT_FALSE( sw::StringUtil::parseInt( "5", value32, 1 ) );
 
     int64 value64{ 0 };
-    SW_EXPECT_TRUE( sw::StringUtil::parseInt64( "-9223372036854775808", value64 ) && value64 == sw::MathUtil::MinInt64 );
-    SW_EXPECT_TRUE( sw::StringUtil::parseInt64( "9223372036854775807", value64 ) && value64 == sw::MathUtil::MaxInt64 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt64( "-9223372036854775808", value64 ) && value64 == sw::MathUtil::kMinInt64 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt64( "9223372036854775807", value64 ) && value64 == sw::MathUtil::kMaxInt64 );
     SW_EXPECT_FALSE( sw::StringUtil::parseInt64( "9223372036854775808", value64 ) );
 
     uint64 valueU64{ 0 };
@@ -1877,3 +1886,24 @@ SW_TEST_CASE( StringTest, BoolTextIsReadByOneTable )
         SW_EXPECT_FALSE_MSG( sw::StringUtil::parseBool( pText, false ), pText );
     }
 }
+
+#if !defined( SW_SHIPPING )
+/**
+ * @brief [StringTest] StringBuilder 가 늘리다 할당에 실패하면 쌓은 글을 그대로 두고, 다음 할당이 되면 다시 이어 붙는다
+ * @details `ensureCapacity` 가 실패를 확인하지 않고 늘린 용량만 적으면 버퍼가 nullptr 인 채로 다음 append 가 그 자리에 쓴다.
+ */
+SW_TEST_CASE( StringTest, StringBuilderKeepsItsTextWhenGrowingFails )
+{
+    sw::StringBuilder<sw::constant::kMaxBuffer16> builder;
+    builder.append( "0123456789" );
+    sw::Memory::injectAllocationFailures( 1 );
+    builder.append( "this text does not fit in sixteen bytes" );
+    sw::Memory::injectAllocationFailures( 0 );
+    SW_EXPECT_EQUAL( 10u, builder.size() );
+    SW_EXPECT_TRUE( builder.view() == "0123456789" );
+
+    builder.append( "abcdefghijklmnopqrstuvwxyz" );
+    SW_EXPECT_EQUAL( 36u, builder.size() );
+    SW_EXPECT_TRUE( builder.view() == "0123456789abcdefghijklmnopqrstuvwxyz" );
+}
+#endif

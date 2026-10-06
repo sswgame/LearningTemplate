@@ -2,6 +2,7 @@
 
 #include "Core/Network/Transport/NetEmulation.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -16,7 +17,7 @@ namespace sw
             static constexpr float64 kMillisecond   = 0.001;
             static constexpr float32 kPercent       = 0.01f;
             static constexpr int32   kKilobyte      = 1024;
-            static constexpr uint32  kDefaultRandom = 0x9E3779B9u;
+            static constexpr uint32  kDefaultRandom = HashUtil::kGoldenRatio32;
             static constexpr uint8   kCorruptMask   = 0x5A; ///< 깨짐 — 고른 바이트에 XOR 한다
         };
     } // namespace

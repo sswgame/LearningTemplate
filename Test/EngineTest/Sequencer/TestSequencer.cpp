@@ -285,8 +285,8 @@ SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersCannotOverflowSpans )
     SW_ASSERT_EQUAL( size_t( 1 ), asset._listItem.size() );
 
     const int64 itemSpan = static_cast<int64>( asset._listItem[0]._end ) - static_cast<int64>( asset._listItem[0]._start );
-    SW_EXPECT_TRUE( itemSpan >= static_cast<int64>( sw::MathUtil::MinInt32 ) );
-    SW_EXPECT_TRUE( itemSpan <= static_cast<int64>( sw::MathUtil::MaxInt32 ) );
+    SW_EXPECT_TRUE( itemSpan >= static_cast<int64>( sw::MathUtil::kMinInt32 ) );
+    SW_EXPECT_TRUE( itemSpan <= static_cast<int64>( sw::MathUtil::kMaxInt32 ) );
 }
 
 /**

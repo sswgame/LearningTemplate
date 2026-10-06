@@ -86,8 +86,6 @@ namespace sw
                     add( "SaveGame" );
                 if ( meta._bInterp == SW_TRUE )
                     add( "Interp" );
-                if ( meta._bConfig == SW_TRUE )
-                    add( "Config" );
                 if ( meta._validate.empty() == false )
                     add( string( "Validate=" ) + meta._validate.c_str() );
                 if ( meta._bAssetPath == SW_TRUE )

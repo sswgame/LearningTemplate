@@ -15,7 +15,6 @@ Linux ext4 등 대소문자 구분 파일시스템 호환성 및 엔진 에셋 �
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -28,45 +27,17 @@ from LintGate import GateResult, LintGate  # noqa: E402
 _kAllowedUppercaseBasenames = {"README.md"}
 
 
-def checkResourceCasing(projectRoot: Path, targetFiles: Sequence[str] | None = None) -> list[str]:
-    """
-    Resource/ 하위의 파일 및 디렉터리명에 대문자가 포함되어 있는지 검사합니다.
-    """
-    resourceRoot = (projectRoot / "Resource").resolve()
-    if not resourceRoot.is_dir():
-        return []
-
+def findCasingViolations(repositoryRoot: Path, listPath: Sequence[Path]) -> list[str]:
+    """Resource/ 아래 파일의 경로 조각(폴더 · 파일 이름)에 대문자가 있으면 위반입니다(README.md 만 예외). 빈 폴더는 git 이 들지 않으므로 파일 경로로 본다."""
     violations: list[str] = []
-
-    if targetFiles is not None:
-        # Staged 파일 목록 검사
-        for filePathStr in targetFiles:
-            p = Path(filePathStr).resolve()
-            try:
-                rel = p.relative_to(resourceRoot)
-            except ValueError:
+    for path in listPath:
+        relative = path.resolve().relative_to(repositoryRoot.resolve())
+        for part in relative.parts[1:]:
+            if part in _kAllowedUppercaseBasenames:
                 continue
-
-            for part in rel.parts:
-                if part in _kAllowedUppercaseBasenames:
-                    continue
-                if any(ch.isupper() for ch in part):
-                    violations.append(f"[Resource Casing] 대문자가 포함된 리소스 경로: Resource/{rel.as_posix()}")
-                    break
-        return violations
-
-    # 전체 Resource/ 트리 검사
-    for root, dirs, files in os.walk(resourceRoot):
-        rel_root = Path(root).relative_to(projectRoot).as_posix()
-        for d in dirs:
-            if any(ch.isupper() for ch in d):
-                violations.append(f"[Resource Casing] 대문자가 포함된 디렉터리: {rel_root}/{d}")
-        for f in files:
-            if f in _kAllowedUppercaseBasenames:
-                continue
-            if any(ch.isupper() for ch in f):
-                violations.append(f"[Resource Casing] 대문자가 포함된 파일: {rel_root}/{f}")
-
+            if any(character.isupper() for character in part):
+                violations.append(f"[Resource Casing] 대문자가 포함된 리소스 경로: {relative.as_posix()}")
+                break
     return violations
 
 
@@ -77,7 +48,7 @@ class CheckResourceCasingGate(LintGate):
     buildComment = "Checking Resource lowercase casing rules..."
     timeoutSeconds = 15
     preCommitPattern = ()
-    preCommitFileArgument = "positional"
+    preCommitFileArgument = "--files"
     violationHeader = "Resource 소문자 규칙 위반"
     hint = "  Resource/ 하위의 모든 파일/폴더는 반드시 소문자여야 합니다 (README.md 만 예외)."
     selfTestCases = [
@@ -90,10 +61,11 @@ class CheckResourceCasingGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("files", nargs="*", help="검사할 특정 파일 경로 목록 (생략 시 전체 Resource/ 검사)")
+        self.addFilesArgument(parser, "검사할 파일 (생략 시 전체 Resource/)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        violations = checkResourceCasing(repositoryRoot, args.files or None)
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Resource",), bAnySuffix=True)
+        violations = findCasingViolations(repositoryRoot, listPath)
         return GateResult(listViolation=violations, summary="Resource 하위 모든 파일/폴더 소문자")
 
 

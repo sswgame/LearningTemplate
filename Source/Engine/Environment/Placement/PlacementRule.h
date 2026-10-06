@@ -11,6 +11,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -66,13 +67,13 @@ namespace sw
         PROPERTY( Units = rad )
         float32 _yawMin{ 0.0f };
         PROPERTY( Units = rad )
-        float32 _yawMax{ 6.2831853f };
+        float32 _yawMax{ MathUtil::kTwoPi };
         PROPERTY( Min = 0.0, Max = 1.0, Units = ratio, Tooltip = "0 stands upright, 1 follows the surface normal" )
         float32 _alignToNormal{ 0.0f };
         PROPERTY( Min = 0.0, Units = rad )
         float32 _slopeMin{ 0.0f };
         PROPERTY( Min = 0.0, Units = rad )
-        float32 _slopeMax{ 1.5707964f };
+        float32 _slopeMax{ MathUtil::kHalfPi };
         PROPERTY( Units = m )
         float32 _heightMin{ -100000.0f };
         PROPERTY( Units = m )

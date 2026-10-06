@@ -1,8 +1,8 @@
 # Shooter3D — 슈터 시험 게임(1인칭 · 3인칭)
 
-기반의 무기 규칙(`GameFramework/Combat` — 무기 카탈로그 · 무기 상태, 히트스캔은 `RayMath` · 1인칭 시점은 `FirstPersonLook`)과 캐릭터 시스템(애니메이션 ·
+기반의 무기 규칙(`GameFramework/Base/Combat` — 무기 카탈로그 · 무기 상태, 히트스캔은 `RayMath` · 1인칭 시점은 `FirstPersonLook`)과 캐릭터 시스템(애니메이션 ·
 외형 · 소켓)을 실제로 쓰는 아레나 슈터입니다. 나무 상자 더미가 놓인 아레나에 땅에서 스켈레톤(KayKit)이 일어나 다가옵니다. 언제 · 얼마나 오는지는 페이싱
-감독(`GameFramework/AI/Director`)이 정합니다. 플레이어는 KayKit 기사(투구 · 망토 · 방패, 오른손에 블래스터)이고, 3인칭 · 궤도 · CCTV 시점에서 보입니다.
+감독(`GameFramework/Base/AI/Director`)이 정합니다. 플레이어는 KayKit 기사(투구 · 망토 · 방패, 오른손에 블래스터)이고, 3인칭 · 궤도 · CCTV 시점에서 보입니다.
 총 · 상자 · 과녁은 Kenney Blaster Kit, 캐릭터는 KayKit(CC0, `Resource/game/shooter3d/credits.md`), 벽 · 바닥은 내장 도형입니다.
 
 ## 빌드 · 실행
@@ -51,7 +51,7 @@ cd build/Ninja-Debug-Shooter3D/Bin
 
 | 무엇 | 어디 |
 |------|------|
-| 외형 데이터 | `data/appearance/`(칸 · 세트 · 아이템 외형 · 꾸미기 · 규칙 · 프리셋 — 형식은 `GameFramework/Appearance/README.md`)와 `data/items.xml`. 게임이 `AppearanceDatabase` 를 게임 서비스로 건다 |
+| 외형 데이터 | `data/appearance/`(칸 · 세트 · 아이템 외형 · 꾸미기 · 규칙 · 프리셋 — 형식은 `GameFramework/Base/Appearance/README.md`)와 `data/items.xml`. 게임이 `AppearanceDatabase` 를 게임 서비스로 건다 |
 | 플레이어 모습 | 프리셋 `ShooterPlayer` — 기사 몸 + 기사 세트(투구 · 망토 · 방패를 다 갖추면 망토가 기사 망토로) + MainHand 블래스터 + 푸른 염색(`OutfitDye` → 머티리얼 `color`) |
 | 적 모습 | `SkeletonMinion` · `SkeletonRaider`(씨앗마다 몸 · 두건 · 무기) · `SkeletonRogue` · 정예 `SkeletonWarrior`(고른 두건을 투구가 감춘다 — 규칙 `HelmetHidesHood`). 뼈 색은 씨앗으로 뽑는다 |
 | 몸 소켓 | `data/sockets/kaykit_humanoid.sockets.xml` — 임포트의 본 부착 표에서 옮긴 Helmet · Back · Gun · Blade · Shield 와 Eyes(1인칭 눈높이) · Chest(히트박스 중심) |
@@ -89,9 +89,9 @@ cd build/Ninja-Debug-Shooter3D/Bin
 쏘고 탄도선은 총구에서 맞은 자리까지 잇습니다. 손 IK(왼손을 `MainHand.SupportHand` 로) · 맞은 부위 · 래그돌 · 무기 떨어뜨리기는 애니메이션 리그 · 게임플레이
 작업이 들어오면 이 소켓 · 물리 에셋 자리를 씁니다.
 
-**핫 리로드 · 상태 저장.** 판의 진행(처치 수)은 디렉터의 `writeState` 로 상태 스냅샷의 컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`).
-상태를 쓰기 전에 게임 인스턴스(생성자의 `registerDirector` 한 줄 — `GameInstanceBase`)가 진행을 싣고 디렉터가 세운 적 · 효과 풀과 플레이어의 몸을 걷으며, 다시 만든 디렉터는 감독을 처음부터
-돌리고 플레이어가 몸을 다시 세웁니다. 무기 카탈로그 · 외형 데이터는 게임 서비스입니다.
+**핫 리로드 · 상태 저장.** 판의 진행(처치 수 · 페이싱 감독 상태)은 디렉터의 `writeState` 로 상태 스냅샷의 컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`).
+상태를 쓰기 전에 게임 인스턴스(생성자의 `registerDirector` 한 줄 — `GameInstanceBase`)가 진행을 싣고 디렉터가 세운 적 · 효과 풀과 플레이어의 몸을 걷으며, 다시 만든 디렉터는
+감독 상태(단계 · 웨이브 · 예산)를 이어 받고 감독 예산으로 섰던 적을 같은 스폰 id 로 다시 세우며(무리 · 정예는 걷힌 채) 플레이어가 몸을 다시 세웁니다. 무기 카탈로그 · 외형 데이터는 게임 서비스입니다.
 
 ## 파일 · 에셋
 

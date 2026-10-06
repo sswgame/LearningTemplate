@@ -65,10 +65,10 @@ namespace sw
                         return false;
                     }
                     spec._limit._type       = ( typeIndex == 0 ) ? RigJointLimitType::Cone : RigJointLimitType::Hinge;
-                    spec._limit._swingLimit = swingDegrees * MathUtil::DegreeToRadian;
-                    spec._limit._twistLimit = twistDegrees * MathUtil::DegreeToRadian;
-                    spec._limit._minAngle   = minDegrees * MathUtil::DegreeToRadian;
-                    spec._limit._maxAngle   = maxDegrees * MathUtil::DegreeToRadian;
+                    spec._limit._swingLimit = swingDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._twistLimit = twistDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._minAngle   = minDegrees * MathUtil::kDegreeToRadian;
+                    spec._limit._maxAngle   = maxDegrees * MathUtil::kDegreeToRadian;
                     spec._limit._hingeAxis  = spec._limit._hingeAxis.normalize();
                     if ( spec._limit._hingeAxis.getLengthSquared() < 0.5f )
                         spec._limit._hingeAxis = float3::UnitX;
@@ -145,7 +145,7 @@ namespace sw
                 _root = listBone[0];
                 _mid  = listBone[1];
                 _end  = listBone[2];
-                _pole = MathUtil::MaxUInt32;
+                _pole = MathUtil::kMaxUInt32;
                 if ( _poleName.empty() == false && context.findTarget( _poleName, _pole ) == false )
                     return false;
                 return true;
@@ -160,7 +160,7 @@ namespace sw
                     return;
                 float3           polePosition{};
                 quaternion       poleRotation{};
-                const bool       bPole     = _pole != MathUtil::MaxUInt32 && context._pInstance->resolveTarget( _pole, pose, polePosition, poleRotation );
+                const bool       bPole     = _pole != MathUtil::kMaxUInt32 && context._pInstance->resolveTarget( _pole, pose, polePosition, poleRotation );
                 const quaternion endBefore = pose.getModelRotation( _end );
                 (void)RigIkSolver::solveTwoBone( pose, _root, _mid, _end, targetPosition, bPole ? &polePosition : nullptr, *context._pSpace );
                 if ( _bMatchRotation == SW_TRUE )
@@ -186,7 +186,7 @@ namespace sw
             uint32        _mid{ 0 };
             uint32        _end{ 0 };
             uint32        _target{ 0 };
-            uint32        _pole{ MathUtil::MaxUInt32 };
+            uint32        _pole{ MathUtil::kMaxUInt32 };
             uint8         _bMatchRotation{ SW_FALSE };
             uint8         _bKeepEndRotation{ SW_TRUE };
         };
@@ -212,7 +212,7 @@ namespace sw
                            reader.readBool( "match_rotation", bMatch, false );
                 if ( _bFabrik == SW_FALSE )
                     bOk = bOk && reader.readFloat( "max_step_degrees", maxStepDegrees, false );
-                _settings._maxStepAngle = maxStepDegrees * MathUtil::DegreeToRadian;
+                _settings._maxStepAngle = maxStepDegrees * MathUtil::kDegreeToRadian;
                 _bMatchRotation         = bMatch ? SW_TRUE : SW_FALSE;
                 bOk                     = bOk && RigIkNodesInternal::parseLimits( reader, _listLimitSpec );
                 if ( bOk && _listBoneName.size() < 2 )
@@ -273,7 +273,7 @@ namespace sw
                 float32 maxDegrees = 180.0f;
                 bool    bOk        = reader.readName( "bone", _boneName, true ) && reader.readName( "target", _targetName, true ) &&
                            reader.readFloat3( "aim_axis", _aimAxis, false ) && reader.readFloat( "max_degrees", maxDegrees, false );
-                _maxAngle             = MathUtil::clamp( maxDegrees, 0.0f, 180.0f ) * MathUtil::DegreeToRadian;
+                _maxAngle             = MathUtil::clamp( maxDegrees, 0.0f, 180.0f ) * MathUtil::kDegreeToRadian;
                 _aimAxis              = _aimAxis.normalize();
                 const JsonValue chain = reader.readArray( "chain", false );
                 for ( size_t index = 0; bOk && chain.isValid() && index < chain.size(); ++index )
@@ -321,7 +321,7 @@ namespace sw
                 const float32 distance  = toTarget.getLength();
                 quaternion    turn      = RigIkSolver::makeFromToRotation( animated, toTarget );
                 const float32 turnAngle = 2.0f * MathUtil::acos( MathUtil::clamp( MathUtil::abs( turn._w ), 0.0f, 1.0f ) );
-                if ( turnAngle > _maxAngle && turnAngle > MathUtil::Epsilon )
+                if ( turnAngle > _maxAngle && turnAngle > MathUtil::kEpsilon )
                     turn = quaternion::slerp( quaternion::Identity, turn, _maxAngle / turnAngle );
                 const float3 aimPoint = bonePosition + float3::transform( animated, turn ) * distance;
 
@@ -334,7 +334,7 @@ namespace sw
                     const quaternion delta = RigIkSolver::makeFromToRotation( currentAim, desired );
                     pose.rotateModel( entry._bone, quaternion::slerp( quaternion::Identity, delta, MathUtil::saturate( entry._weight ) ) );
                 }
-                (void)RigIkSolver::aimBone( pose, _bone, _aimAxis, aimPoint, MathUtil::Pi, 1.0f, space );
+                (void)RigIkSolver::aimBone( pose, _bone, _aimAxis, aimPoint, MathUtil::kPi, 1.0f, space );
             }
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override
@@ -356,7 +356,7 @@ namespace sw
             hashed_string      _boneName{};
             hashed_string      _targetName{};
             float3             _aimAxis{ 0.0f, 0.0f, 1.0f };
-            float32            _maxAngle{ MathUtil::Pi };
+            float32            _maxAngle{ MathUtil::kPi };
             uint32             _bone{ 0 };
             uint32             _target{ 0 };
         };
@@ -382,7 +382,7 @@ namespace sw
                            reader.readFloat( "max_raise", _maxRaise, false ) && reader.readFloat( "interp_speed", _interpSpeed, false ) &&
                            reader.readBool( "align_to_normal", bAlign, false ) && reader.readFloat( "max_align_degrees", maxAlignDegrees, false );
                 _bAlignToNormal      = bAlign ? SW_TRUE : SW_FALSE;
-                _maxAlignAngle       = maxAlignDegrees * MathUtil::DegreeToRadian;
+                _maxAlignAngle       = maxAlignDegrees * MathUtil::kDegreeToRadian;
                 const JsonValue feet = reader.readArray( "feet", true );
                 for ( size_t index = 0; bOk && feet.isValid() && index < feet.size(); ++index )
                 {
@@ -470,7 +470,7 @@ namespace sw
                     {
                         quaternion    tilt  = RigIkSolver::makeFromToRotation( float3::UnitY, foot._normalModel );
                         const float32 angle = 2.0f * MathUtil::acos( MathUtil::clamp( MathUtil::abs( tilt._w ), 0.0f, 1.0f ) );
-                        if ( angle > _maxAlignAngle && angle > MathUtil::Epsilon )
+                        if ( angle > _maxAlignAngle && angle > MathUtil::kEpsilon )
                             tilt = quaternion::slerp( quaternion::Identity, tilt, _maxAlignAngle / angle );
                         aligned = ( tilt * footRotation ).normalize();
                     }

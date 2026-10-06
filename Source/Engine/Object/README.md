@@ -45,7 +45,7 @@ Object/
 │  ├─ TickRegistry.*            # 틱 등록부 — 오브젝트별 항목 · 그룹 목록 · 선행 종속성 스테이지
 │  ├─ StructuralChangeBuffer.*  # 틱 중 규칙(DOTS ECB 자리) — 동결 플래그 하나 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서(`drain`) · 스레드별 틱 상태
 │  ├─ DeferredDelegateQueue.*   # 틱이 미룬 일(계층 변경 · 틱 뒤 작업)의 큐 — 넣기는 아무 스레드, 비우기는 게임 스레드
-│  ├─ PrimitiveRegistry.* · LightRegistry.*  # 빛 등록부는 종류(방향광 · 점광 · 스포트)마다 칸 하나
+│  ├─ PrimitiveRegistry.* · ComponentRegistry.*  # 타입별 컴포넌트 등록부 — 빛은 종류(방향광 · 점광 · 스포트)마다 칸 하나
 │  ├─ CameraRegistry.*          # 카메라 등록부 + 역할 · 우선순위 선택 규칙 하나(게임 · 에디터 카메라가 같이 쓴다)
 │  ├─ SceneOverlapWorld2D.*     # 겹침 월드 — AABB 질의 월드(`PhysicsWorld`) · 2D 콜라이더 등록 · step 직전 바디 맞추기 · 겹침 이벤트 나눠 주기
 │  ├─ SceneAudio.*              # 오디오 컴포넌트 등록부 + 프레임마다 리스너 · 에미터 · 가림 · 리버브 존을 오디오 엔진에 넣기(Engine/Audio/README.md)
@@ -311,7 +311,7 @@ bool isPlayer = go->hasTag( "Player"_tag );
 Games / GameFramework 에서는 `EngineServices` 대신 **`GameService`** 를 씁니다.
 
 ```cpp
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameService.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 GameObject* go = game::getService<AssetManager>()->getPrefabCache().spawn(

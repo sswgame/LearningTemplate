@@ -195,11 +195,13 @@ namespace sw
         PROPERTY( SkipIfEmpty )
         string _shaderPath;
 
-        PROPERTY()
-        string _vertexEntryPoint = "VSMain";
+        /** @brief 정점 셰이더 진입점입니다. 비면 스테이지 기본값(`resolveEntryPoint` — getShaderStageInfo 표)입니다. */
+        PROPERTY( SkipIfEmpty )
+        string _vertexEntryPoint;
 
-        PROPERTY()
-        string _pixelEntryPoint = "PSMain";
+        /** @brief 픽셀 셰이더 진입점입니다. 비면 스테이지 기본값입니다. */
+        PROPERTY( SkipIfEmpty )
+        string _pixelEntryPoint;
 
         PROPERTY( SkipIfEmpty )
         string _computeEntryPoint;

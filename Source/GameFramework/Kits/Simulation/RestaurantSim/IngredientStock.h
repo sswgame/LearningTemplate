@@ -12,8 +12,9 @@
 
 namespace sw
 {
+    class Archive;
     class Inventory;
-    class ItemBag;
+    class ItemStackList;
 
     /** @brief 한 번에 들어온 재료 묶음입니다. */
     struct IngredientBatch
@@ -56,8 +57,8 @@ namespace sw
         void recordBatch( const hashed_string& itemId, int32 count, int32 shelfLife, int64 unitCost );
         /** @brief @p count 개가 모두 있으면 오래된 것부터 빼고 원가 합을 @p outCost 에 더합니다. 모자라면 아무것도 빼지 않고 false 입니다. */
         [[nodiscard]] bool consume( const hashed_string& itemId, int32 count, int64& outCost );
-        /** @brief 봉투의 재료 × @p times 를 다 있으면 모두 뺍니다(다 되거나 아무것도). */
-        [[nodiscard]] bool consumeBag( const ItemBag& bag, int32 times, int64& outCost );
+        /** @brief 목록의 재료 × @p times 를 다 있으면 모두 뺍니다(다 되거나 아무것도). */
+        [[nodiscard]] bool consumeItems( const ItemStackList& items, int32 times, int64& outCost );
         /** @brief 하루를 넘깁니다 — 남은 날을 줄이고 0 이 된 묶음을 인벤토리에서 버립니다. */
         void advanceDay( vector<IngredientSpoilage>& outListSpoilage );
 
@@ -65,6 +66,11 @@ namespace sw
         int32                          findEarliestExpiry( const hashed_string& itemId ) const;
         int32                          getBatchCount( const hashed_string& itemId ) const;
         const vector<IngredientBatch>& getBatches() const { return _listBatch; }
+
+        /** @brief 묶음(재료 · 원가 · 개수 · 남은 날)을 씁니다. 빌린 창고는 싣지 않습니다(주인이 싣는다). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 묶음 합이 인벤토리 개수를 넘으면 오래된 묶음부터 줄입니다(밖에서 뺀 만큼). */

@@ -291,7 +291,7 @@ namespace sw::editor
         _arrFrameTimeHistory[_historyOffset] = frameTimeMs;
         _historyOffset                       = ( _historyOffset + 1 ) % 120;
 
-        float32 minMs{ MathUtil::MaxFloat };
+        float32 minMs{ MathUtil::kMaxFloat };
         float32 maxMs{ 0.0f };
         float32 sumMs{ 0.0f };
         for ( size_t historyIndex = 0; historyIndex < 120; ++historyIndex )

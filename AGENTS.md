@@ -138,7 +138,7 @@ and bare getters (`BareGetter`). The `on*` and spell-it-out rules are kept by re
 - Public functions use `camelCase`; private helpers use `camelCaseInternal`.
 - Module constants use `kPascalCase` or `_kPascalCase`.
 - Module/file names use `PascalCase.py`.
-- JSON configuration keys use `snake_case`.
+- JSON keys of Python-owned contracts (`Config/Engine/CookContract.json` · `PackConfig.json` · `PackFormat.json`, hand-read import configs) use `snake_case`. Configs read through reflection use the C++ member name as the key (`_width`).
 
 ### HLSL
 
@@ -220,9 +220,15 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   The engine builds 64-bit only, so there are no 32-bit branches. The one file that reads built-ins is
   `Core/Common/TargetMacroCheck.h`, which fails the build when CMake's choice disagrees with the compiler.
   Enforced by `CheckTargetMacros.py`.
+- **Ask the build target (`SW_TARGET_TYPE`: Game, Client, Server) only through `SW_WITH_CLIENT_CODE` (Game, Client),
+  `SW_WITH_SERVER_CODE` (Game, Server) and `sw::build::kTargetName`**, and only inside `.cpp` bodies — never gate reflection
+  declarations (`REFLECT`, `PROPERTY`) or a header's class layout on them. A feature that splits between client and server
+  splits into modules instead: shared `GF_<X>`, server-only `GF_Server_<X>`, client-only `GF_Client_<X>` (manifest `_listTarget`).
 - **Read time through `Core/Time/MonotonicClock.h`**, never a `std::chrono` clock (`steady_clock`, `high_resolution_clock`,
   `system_clock` — aliases and `using namespace` included): `MonotonicClock::nowNanoseconds()`, `Stopwatch` for elapsed time,
   `Deadline::afterMilliseconds( ms )` + `isExpired()` for a bounded wait. Tests too. Duration values (`sleep_for`) are fine.
+  A UTC timestamp (expiry, record time, event windows) is `WallClock::nowUnixMilliseconds()` (`Core/Time/WallClock.h`); services take it
+  as a `nowMs` parameter so tests can pass a fake time.
   Exceptions live in one table with their reason. Enforced by `CheckClockReads.py`.
 - Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`
   (`Core/Memory/Memory.h`), never a bare `new ( pMemory ) T( ... )`. Enforced by
@@ -248,6 +254,40 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   `constant` namespace (`Core/Common/Defines.h`) instead: `kMaxBuffer16`
   through `kMaxBuffer8192`, and `kMaxPathSize` for filesystem paths.
 
+## Constants — where a constant lives
+
+One meaning, one definition. A second copy of a value compiles, passes tests, and drifts the day one side changes.
+
+- **Used in one `.cpp`** → that file's `XxxInternal` struct as `static constexpr` (or inside the function). Do not hoist it "in case".
+- **Used across one module** → the owning type as `static constexpr` (`MeshAssetFormat::kExtension`), or the module's namespace in its
+  types header (`audio::kSampleRate` in `AudioTypes.h`). No `*Constants.h` grab-bag per folder. A constant a delay-loaded module reads by
+  reference must not be a static member of an exported (`SW_GF_API`) class — it becomes a data import the delay-load rejects; use a
+  namespace-scope `inline constexpr` (`kMaterialColorParameter`).
+- **A contract between modules or backends** → the contract header: `RHITypes.h` `constant` block (backend ↔ backend),
+  `bindingslots.hlsli` (shader ↔ C++, pure `#define` numeric literals, read through `ShaderBindingSlots.h` as `shaderslot::k*`),
+  `Core/Common/Defines.h` · `Engine/Common/EngineDefines.h` `constant` (engine-wide). If two sides must agree, there is one definition and both
+  read it — even when the values happen to match today. A per-side copy with a "must equal X" comment is the bug, not the fix.
+- **Well-known values have one home**: π family, √2, e → `MathUtil` (`kPi` · `kTwoPi` · `kHalfPi` · `kPi64` · `kDegreeToRadian` · `kSqrt2` ·
+  `kInvSqrt2` · `kEuler`; shaders use `common.hlsli`); gravity → `PhysicsSystem::getConfiguredGravity(Magnitude)` at run time (the physics
+  settings table; `constant::kDefaultGravity` is only its default, shaders get it through a material or root constant); golden-ratio,
+  splitmix64 and FNV-1a → `HashUtil`; four-character tags → `FourCcUtil::make( "SWHF" )` (file byte order). `CheckWellKnownConstants.py`
+  blocks the literals elsewhere.
+- **Sentinels** keep a domain name but take their value from `invalid_index` (`static constexpr uint32 kNotRegistered = invalid_index::kUint32;`).
+  An all-bits mask (`kAllLayers`) is not a sentinel and keeps its literal.
+- **No aliases.** `static constexpr uint32 kFrameCount = constant::kMaxFrameCountInFlight;` is a second name for one concept — use the original.
+  A local name that adds meaning to a shared value is fine only when the meaning differs (`kUnitQuadHalfDiagonal = MathUtil::kInvSqrt2`).
+- **Gameplay tuning values** (speeds, distances, chances, intervals, model scales) are data: a `PROPERTY` on the component (default in the
+  constructor, data without the key keeps it), or a field of the settings / catalog struct a kit already takes from the game. Performance
+  thresholds (spin counts, parallel thresholds, buffer and pool limits) stay named constants next to their use; only one that someone needs
+  to change without a rebuild becomes a `gv_*`. Never a shared header.
+- **Names**: `kPascalCase`, including `MathUtil`. Same meaning, same name across formats: a file or blob format declares `kMagic` · `kVersion` ·
+  `kExtension` on its owning type; a state section declares `kStateTag` · `kStateVersion`; a second format in the same scope prefixes the
+  format (`kBinMagic`). A value with a unit says it in the name unless the type does (`kTimeoutSeconds`, `kBudgetMilliseconds`, `kMaxBytes`,
+  `kSlopeRadians`); a converted value goes through a named rate (`constant::kNanosecondsPerSecond`), not a bare `1000`.
+- **Literals that stay literal**: `0` · `1` · `-1` · `2` in their obvious uses, test expectations, rows of an initializer table, log and assert
+  strings, reflection metadata (`PROPERTY( Max = ... )` — the parser reads literals). Everything else that repeats or needs a comment to be
+  understood gets a name. `RunRepeatedConstants.py` reports what repeats.
+
 ## Helpers: Util vs Internal
 
 - Shared helpers used by more than one translation unit belong on a `XxxUtil`
@@ -255,7 +295,7 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   not name those headers or types `Internal`.
 - **One class or struct definition per named `namespace` block.** A file that defines
   several classes closes the block after each `};` and reopens it for the next, so each
-  class folds on its own (`CheckNamespaceBlocks.py --fix` does it; template
+  class folds on its own (`fixer/FormatNamespaceBlocks.py` does it; template
   specializations of one name stay together, the anonymous namespace stays one block).
 - Helpers used only inside one `.cpp` go in a **separate** `namespace sw` block
   from the class implementation, so the two regions fold independently:

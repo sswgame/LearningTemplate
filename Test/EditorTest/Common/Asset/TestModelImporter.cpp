@@ -271,13 +271,13 @@ SW_TEST_CASE( ModelImporterTest, StampTracksSourceChanges )
     sw::editor::AssetImportSummary summary = sw::editor::ModelImporter::importAllModels( resourceRoot, config, sw::editor::AssetImportMode::CheckOnly );
     SW_EXPECT_EQUAL( 1u, summary._sourceCount );
     SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( meshPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( meshPath ) );
 
     // 2) 임포트한다 → `.mesh` 와 스탬프가 생기고 읽힌다.
     summary = sw::editor::ModelImporter::importAllModels( resourceRoot, config, sw::editor::AssetImportMode::ImportStale );
     SW_EXPECT_TRUE( summary.isClean() );
     SW_EXPECT_EQUAL( 1u, summary._importedCount );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( stampPath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( stampPath ) );
     sw::vector<sw::RHIVertex> listVertex;
     SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( meshPath, listVertex ) );
     SW_EXPECT_EQUAL( size_t( 6 ), listVertex.size() );
@@ -521,8 +521,9 @@ SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments 
     SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( copiedPath, missingRule, result ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::editor::ModelImporter::makeClipDataPath( copiedPath ), R"({ "clips": { "Walking_Z": { "loop": true } } })" ) );
     SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( copiedPath, walkRule, result ) );
-    // 모르는 규칙 키 · 코덱은 설정 오류다.
+    // 모르는 규칙 키 · 뿌리 키 · 코덱은 설정 오류다.
     sw::editor::ModelImportConfig config;
+    SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rulez": [] })" ) );
     SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "zip" } ] })" ) );
     SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animashions": false } ] })" ) );
     SW_EXPECT_TRUE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "raw", "clips": [ "Idle" ] } ] })" ) );
@@ -615,10 +616,10 @@ SW_TEST_CASE( ModelImporterTest, FractureRuleWritesFractureAssetBesideTheMesh )
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( fracturePath ) );
     SW_EXPECT_EQUAL( size_t( 1 ), sw::editor::ModelImporter::importAllModels( resourceRoot, fractureConfig, sw::editor::AssetImportMode::CheckOnly )._listProblem.size() );
     SW_EXPECT_EQUAL( 1u, sw::editor::ModelImporter::importAllModels( resourceRoot, fractureConfig, sw::editor::AssetImportMode::ImportStale )._importedCount );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( fracturePath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( fracturePath ) );
 
     // 규칙에서 파쇄를 빼면 다시 임포트가 옛 `.fracture` 를 지운다.
     const sw::editor::ModelImportConfig noRuleConfig;
     SW_EXPECT_EQUAL( 1u, sw::editor::ModelImporter::importAllModels( resourceRoot, noRuleConfig, sw::editor::AssetImportMode::ImportStale )._importedCount );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( fracturePath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( fracturePath ) );
 }

@@ -21,40 +21,48 @@ namespace sw
      */
     struct MathUtil
     {
-        static constexpr float32 Pi             = 3.1415926535f;
-        static constexpr float32 HalfPi         = Pi * 0.5f;
-        static constexpr float32 DegreeToRadian = Pi / 180.f;
-        static constexpr float32 RadianToDegree = 180.f / Pi;
+        static constexpr float32 kPi             = 3.1415926535f;
+        static constexpr float32 kHalfPi         = kPi * 0.5f;
+        static constexpr float32 kDegreeToRadian = kPi / 180.f;
+        static constexpr float32 kRadianToDegree = 180.f / kPi;
+        static constexpr float32 kTwoPi          = kPi * 2.0f;
+        static constexpr float64 kPi64           = 3.14159265358979323846;
+        /** @brief √2 입니다. 격자 대각선 한 칸의 길이입니다. */
+        static constexpr float32 kSqrt2 = 1.41421356f;
+        /** @brief 1/√2 입니다(45 도의 사인 · 코사인, 단위 정사각형 반대각선). */
+        static constexpr float32 kInvSqrt2 = 0.70710678f;
+        /** @brief 자연로그의 밑 e 입니다. */
+        static constexpr float32 kEuler = 2.718281828f;
         /** @brief float32 를 "거의 같다" 고 볼 때 쓰는 허용치(1e-6)입니다. 머신 엡실론(FLT_EPSILON)보다 넉넉합니다. */
-        static constexpr float32 Epsilon = 1e-6f;
+        static constexpr float32 kEpsilon = 1e-6f;
         /**
-         * @brief **제곱 거리 · 제곱 길이**를 `Epsilon` 과 같은 뜻으로 비교할 때 쓰는 허용치입니다.
-         * @details `getDistanceSquared(...) <= Epsilon` 은 실제 거리로 `1e-3` 까지를 같다고 봅니다. 제곱한 값을 제곱하지 않은
-         *          허용치와 비교하기 때문입니다. 같은 허용치를 뜻하려면 `Epsilon` 도 제곱해야 하고, 그 한 걸음을 잊기 쉬워서
+         * @brief **제곱 거리 · 제곱 길이**를 `kEpsilon` 과 같은 뜻으로 비교할 때 쓰는 허용치입니다.
+         * @details `getDistanceSquared(...) <= kEpsilon` 은 실제 거리로 `1e-3` 까지를 같다고 봅니다. 제곱한 값을 제곱하지 않은
+         *          허용치와 비교하기 때문입니다. 같은 허용치를 뜻하려면 `kEpsilon` 도 제곱해야 하고, 그 한 걸음을 잊기 쉬워서
          *          이름을 따로 두었습니다.
          * @note 정규화하기 직전의 **퇴화 벡터 검사**에는 쓰지 마십시오. 그쪽은 "같은가" 가 아니라 "0 으로 나눌 만큼 짧은가" 를
-         *       묻는 것이라 넉넉한 `Epsilon` 이 오히려 맞습니다.
+         *       묻는 것이라 넉넉한 `kEpsilon` 이 오히려 맞습니다.
          */
-        static constexpr float32 EpsilonSquared = Epsilon * Epsilon;
+        static constexpr float32 kEpsilonSquared = kEpsilon * kEpsilon;
         /** @brief float64 비교용 머신 엡실론(DBL_EPSILON)입니다. */
-        static constexpr float64 Epsilon64 = std::numeric_limits<float64>::epsilon();
+        static constexpr float64 kEpsilon64 = std::numeric_limits<float64>::epsilon();
 
-        static constexpr float32 MaxFloat   = std::numeric_limits<float32>::max();
-        static constexpr float32 MinFloat   = std::numeric_limits<float32>::lowest();
-        static constexpr float64 MaxFloat64 = std::numeric_limits<float64>::max();
-        static constexpr float64 MinFloat64 = std::numeric_limits<float64>::lowest();
-        static constexpr int8    MaxInt8    = static_cast<int8>( invalid_index::kUint8 >> 1 );
-        static constexpr int8    MinInt8    = -MaxInt8 + invalid_index::kInt8;
-        static constexpr int16   MaxInt16   = static_cast<int16>( invalid_index::kUint16 >> 1 );
-        static constexpr int16   MinInt16   = -MaxInt16 + invalid_index::kInt16;
-        static constexpr int32   MaxInt32   = static_cast<int32>( invalid_index::kUint32 >> 1 );
-        static constexpr int32   MinInt32   = -MaxInt32 + invalid_index::kInt32;
-        static constexpr int64   MaxInt64   = static_cast<int64>( invalid_index::kUint64 >> 1 );
-        static constexpr int64   MinInt64   = -MaxInt64 + invalid_index::kInt64;
-        static constexpr uint8   MaxUInt8   = invalid_index::kUint8;
-        static constexpr uint16  MaxUInt16  = invalid_index::kUint16;
-        static constexpr uint32  MaxUInt32  = invalid_index::kUint32;
-        static constexpr uint64  MaxUInt64  = invalid_index::kUint64;
+        static constexpr float32 kMaxFloat   = std::numeric_limits<float32>::max();
+        static constexpr float32 kMinFloat   = std::numeric_limits<float32>::lowest();
+        static constexpr float64 kMaxFloat64 = std::numeric_limits<float64>::max();
+        static constexpr float64 kMinFloat64 = std::numeric_limits<float64>::lowest();
+        static constexpr int8    kMaxInt8    = static_cast<int8>( invalid_index::kUint8 >> 1 );
+        static constexpr int8    kMinInt8    = -kMaxInt8 + invalid_index::kInt8;
+        static constexpr int16   kMaxInt16   = static_cast<int16>( invalid_index::kUint16 >> 1 );
+        static constexpr int16   kMinInt16   = -kMaxInt16 + invalid_index::kInt16;
+        static constexpr int32   kMaxInt32   = static_cast<int32>( invalid_index::kUint32 >> 1 );
+        static constexpr int32   kMinInt32   = -kMaxInt32 + invalid_index::kInt32;
+        static constexpr int64   kMaxInt64   = static_cast<int64>( invalid_index::kUint64 >> 1 );
+        static constexpr int64   kMinInt64   = -kMaxInt64 + invalid_index::kInt64;
+        static constexpr uint8   kMaxUInt8   = invalid_index::kUint8;
+        static constexpr uint16  kMaxUInt16  = invalid_index::kUint16;
+        static constexpr uint32  kMaxUInt32  = invalid_index::kUint32;
+        static constexpr uint64  kMaxUInt64  = invalid_index::kUint64;
 
         /** @brief 최솟값을 반환합니다. */
         template <typename T>
@@ -118,18 +126,18 @@ namespace sw
         }
 
         /** @brief 도(degree) 단위 각도를 라디안으로 바꿉니다. */
-        [[nodiscard]] static SW_INLINE constexpr float32 toRadian( const float32 degree ) noexcept { return degree * DegreeToRadian; }
+        [[nodiscard]] static SW_INLINE constexpr float32 toRadian( const float32 degree ) noexcept { return degree * kDegreeToRadian; }
 
         /** @brief 라디안 단위 각도를 도(degree)로 바꿉니다. */
-        [[nodiscard]] static SW_INLINE constexpr float32 toDegree( const float32 radian ) noexcept { return radian * RadianToDegree; }
+        [[nodiscard]] static SW_INLINE constexpr float32 toDegree( const float32 radian ) noexcept { return radian * kRadianToDegree; }
 
         /** @brief 값을 0.0 ~ 1.0 범위로 자릅니다. */
         [[nodiscard]] static SW_INLINE constexpr float32 saturate( const float32 value ) noexcept { return clamp( value, 0.f, 1.f ); }
 
         /** @brief 거의 같은지 비교합니다. */
-        [[nodiscard]] static SW_INLINE bool nearEqual( const float32 a, const float32 b, const float32 epsilon = Epsilon ) noexcept { return abs( a - b ) < epsilon; }
+        [[nodiscard]] static SW_INLINE bool nearEqual( const float32 a, const float32 b, const float32 epsilon = kEpsilon ) noexcept { return abs( a - b ) < epsilon; }
         /** @brief 거의 같은지 비교합니다. */
-        [[nodiscard]] static SW_INLINE bool nearEqual( const float64 a, const float64 b, const float64 epsilon = Epsilon64 ) noexcept { return abs( a - b ) < epsilon; }
+        [[nodiscard]] static SW_INLINE bool nearEqual( const float64 a, const float64 b, const float64 epsilon = kEpsilon64 ) noexcept { return abs( a - b ) < epsilon; }
 
         /** @brief 무한대(Infinity)인지 확인합니다. */
         [[nodiscard]] static SW_INLINE bool isInfinite( const float32 value ) noexcept { return std::isinf( value ); }
@@ -218,7 +226,7 @@ namespace sw
 
         /** @brief `pos` 가 두 값 사이의 어디쯤인지(t, 0.0 ~ 1.0)를 거꾸로 구합니다. 두 값이 거의 같으면 0 입니다. */
         template <typename T>
-        static SW_INLINE constexpr T inverseLerp( T value1, T value2, T pos, const float32 epsilon = Epsilon )
+        static SW_INLINE constexpr T inverseLerp( T value1, T value2, T pos, const float32 epsilon = kEpsilon )
         {
             static_assert( std::is_arithmetic_v<T>, "T should be arithmetic" );
             return ( MathUtil::abs( value2 - value1 ) < epsilon ) ? T( 0 ) : ( ( pos - value1 ) / ( value2 - value1 ) );

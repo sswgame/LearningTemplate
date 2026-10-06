@@ -6,14 +6,14 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Camera/CameraBlend.h"
-#include "GameFramework/Camera/CameraCollisionProbe.h"
-#include "GameFramework/Camera/CameraDirector.h"
-#include "GameFramework/Camera/CameraManagerComponent.h"
-#include "GameFramework/Camera/CameraMode.h"
-#include "GameFramework/Camera/CameraPreset.h"
-#include "GameFramework/Camera/CameraShake.h"
-#include "GameFramework/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Camera/CameraBlend.h"
+#include "GameFramework/Base/Camera/CameraCollisionProbe.h"
+#include "GameFramework/Base/Camera/CameraDirector.h"
+#include "GameFramework/Base/Camera/CameraManagerComponent.h"
+#include "GameFramework/Base/Camera/CameraMode.h"
+#include "GameFramework/Base/Camera/CameraPreset.h"
+#include "GameFramework/Base/Camera/CameraShake.h"
+#include "GameFramework/Base/Camera/OrthoCameraRigComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -99,7 +99,7 @@ SW_TEST_CASE( CameraModeTest, ThirdPersonFollowsTheTargetLook )
     def._collision._bEnabled = false;
     CameraTarget target;
     target._focus         = float3{ 10.0f, 0.0f, 0.0f };
-    target._yaw           = MathUtil::HalfPi;
+    target._yaw           = MathUtil::kHalfPi;
     const CameraPose pose = evaluatePreset( def, target );
     // 어깨(0.5 오른쪽)는 +X 를 보는 대상에게 −Z 쪽이다.
     SW_EXPECT_NEAR_EQUAL( 10.0f - 5.0f, pose._position._x, 1.0e-4f );
@@ -115,11 +115,11 @@ SW_TEST_CASE( CameraModeTest, OrbitInputTurnsZoomsAndTheConfinerClamps )
     CameraPresetDef def;
     def._view._mode             = CameraPresetMode::Orbit;
     def._view._distance         = 10.0f;
-    def._view._pitch            = 20.0f * MathUtil::DegreeToRadian;
+    def._view._pitch            = 20.0f * MathUtil::kDegreeToRadian;
     def._input._lookSensitivity = 0.01f;
     def._input._zoomStep        = 0.5f;
-    def._confiner._pitchMin     = -10.0f * MathUtil::DegreeToRadian;
-    def._confiner._pitchMax     = 60.0f * MathUtil::DegreeToRadian;
+    def._confiner._pitchMin     = -10.0f * MathUtil::kDegreeToRadian;
+    def._confiner._pitchMax     = 60.0f * MathUtil::kDegreeToRadian;
     def._confiner._zoomMin      = 2.0f;
     def._confiner._zoomMax      = 20.0f;
     const CameraTarget target;
@@ -129,7 +129,7 @@ SW_TEST_CASE( CameraModeTest, OrbitInputTurnsZoomsAndTheConfinerClamps )
     input._lookDelta = float2{ 100.0f, 1000.0f }; // 요 +1 rad, 피치는 한계 너머로 끈다
     applyCameraInput( def, input, 1.0f / 60.0f, state );
     SW_EXPECT_NEAR_EQUAL( 1.0f, state._yawOffset, 1.0e-5f );
-    SW_EXPECT_NEAR_EQUAL( 60.0f * MathUtil::DegreeToRadian, def._view._pitch + state._pitchOffset, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 60.0f * MathUtil::kDegreeToRadian, def._view._pitch + state._pitchOffset, 1.0e-5f );
 
     CameraModeInput zoom;
     zoom._zoomNotches = 3.0f; // 10 × 0.5³ = 1.25 → 아래 한계 2
@@ -141,7 +141,7 @@ SW_TEST_CASE( CameraModeTest, OrbitInputTurnsZoomsAndTheConfinerClamps )
 
     const CameraPose pose = evaluateCameraMode( def, target, 1.0f / 60.0f, state, nullptr );
     SW_EXPECT_NEAR_EQUAL( 20.0f, pose._position.getLength(), 1.0e-3f );
-    SW_EXPECT_NEAR_EQUAL( 20.0f * MathUtil::sin( 60.0f * MathUtil::DegreeToRadian ), pose._position._y, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 20.0f * MathUtil::sin( 60.0f * MathUtil::kDegreeToRadian ), pose._position._y, 1.0e-3f );
     const float2 angles = computeLookAngles( pose._position, target._focus );
     SW_EXPECT_NEAR_EQUAL( 1.0f, angles._x, 1.0e-4f );
 }
@@ -162,7 +162,7 @@ SW_TEST_CASE( CameraModeTest, ConfinerBoundsKeepTheCameraInTheBox )
 
     CameraPresetDef ortho = orbit;
     ortho._view._mode     = CameraPresetMode::OrthoTopDown;
-    ortho._view._pitch    = MathUtil::HalfPi;
+    ortho._view._pitch    = MathUtil::kHalfPi;
     ortho._view._distance = 100.0f;
     CameraTarget farAway;
     farAway._focus             = float3{ 50.0f, 0.0f, -40.0f };
@@ -182,7 +182,7 @@ SW_TEST_CASE( CameraModeTest, FixedCameraLooksAtItsPointAndSweeps )
     def._view._offset        = float3{ 0.0f, 5.0f, 0.0f };
     def._view._aim           = CameraAimMode::Point;
     def._view._lookAt        = float3{ 0.0f, 0.0f, 10.0f };
-    def._sweep._yawAmplitude = 30.0f * MathUtil::DegreeToRadian;
+    def._sweep._yawAmplitude = 30.0f * MathUtil::kDegreeToRadian;
     def._sweep._period       = 4.0f;
     const CameraTarget target;
     CameraModeState    state;
@@ -195,11 +195,11 @@ SW_TEST_CASE( CameraModeTest, FixedCameraLooksAtItsPointAndSweeps )
 
     const CameraPose quarter      = evaluateCameraMode( def, target, 1.0f, state, nullptr ); // 주기 1/4 → +진폭
     const float2     quarterAngle = computeLookAngles( quarter._position, quarter._position + CameraModeTestInternal::computeForward( quarter._rotation ) );
-    SW_EXPECT_NEAR_EQUAL( 30.0f * MathUtil::DegreeToRadian, quarterAngle._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 30.0f * MathUtil::kDegreeToRadian, quarterAngle._x, 1.0e-3f );
     const CameraPose threeQuarter = evaluateCameraMode( def, target, 2.0f, state, nullptr ); // 주기 3/4 → −진폭
     const float2     backAngle    = computeLookAngles( threeQuarter._position,
                                                        threeQuarter._position + CameraModeTestInternal::computeForward( threeQuarter._rotation ) );
-    SW_EXPECT_NEAR_EQUAL( -30.0f * MathUtil::DegreeToRadian, backAngle._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( -30.0f * MathUtil::kDegreeToRadian, backAngle._x, 1.0e-3f );
 }
 
 /**
@@ -210,7 +210,7 @@ SW_TEST_CASE( CameraModeTest, FramingDeadZoneHoldsAndSoftZoneLimits )
     CameraPresetDef def;
     def._view._mode         = CameraPresetMode::Fixed;
     def._view._aim          = CameraAimMode::Target;
-    def._lens._fieldOfViewY = 60.0f * MathUtil::DegreeToRadian;
+    def._lens._fieldOfViewY = 60.0f * MathUtil::kDegreeToRadian;
     def._framing._bCompose  = true;
     def._framing._deadZone  = float2{ 0.2f, 0.2f };
     def._framing._softZone  = float2{ 0.5f, 0.5f };
@@ -227,9 +227,9 @@ SW_TEST_CASE( CameraModeTest, FramingDeadZoneHoldsAndSoftZoneLimits )
 
     target._focus = float3{ 10.0f, 0.0f, 10.0f }; // 45° — 소프트존(약 ±26°) 밖
     (void)evaluateCameraMode( def, target, 0.1f, state, nullptr );
-    const float32 tanHalfX = MathUtil::tan( 30.0f * MathUtil::DegreeToRadian ) * ( 16.0f / 9.0f );
+    const float32 tanHalfX = MathUtil::tan( 30.0f * MathUtil::kDegreeToRadian ) * ( 16.0f / 9.0f );
     const float32 softHalf = MathUtil::atan2( 0.5f * tanHalfX, 1.0f );
-    SW_EXPECT_NEAR_EQUAL( MathUtil::Pi * 0.25f - softHalf, state._aimYaw, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::kPi * 0.25f - softHalf, state._aimYaw, 1.0e-4f );
 }
 
 /**
@@ -254,7 +254,7 @@ SW_TEST_CASE( CameraModeTest, LookAheadLeadsAndGroupFramingBacksOff )
     CameraPresetDef group         = def;
     group._framing._lookAheadTime = 0.0f;
     group._framing._groupPadding  = 1.5f;
-    group._lens._fieldOfViewY     = 60.0f * MathUtil::DegreeToRadian;
+    group._lens._fieldOfViewY     = 60.0f * MathUtil::kDegreeToRadian;
     const float3 arrPoint[]       = {
         float3{-4.0f, 0.0f, 0.0f},
         float3{ 4.0f, 0.0f, 0.0f},
@@ -263,7 +263,7 @@ SW_TEST_CASE( CameraModeTest, LookAheadLeadsAndGroupFramingBacksOff )
     const CameraTarget groupTarget = makeGroupCameraTarget( arrPoint, 3 );
     SW_EXPECT_NEAR_EQUAL( 1.5f, groupTarget._focus._z, 1.0e-5f );
     const CameraPose groupPose = evaluatePreset( group, groupTarget );
-    const float32    expected  = groupTarget._groupRadius * 1.5f / MathUtil::sin( 30.0f * MathUtil::DegreeToRadian );
+    const float32    expected  = groupTarget._groupRadius * 1.5f / MathUtil::sin( 30.0f * MathUtil::kDegreeToRadian );
     SW_EXPECT_NEAR_EQUAL( expected, ( groupPose._position - groupTarget._focus ).getLength(), 1.0e-3f );
 }
 
@@ -459,6 +459,6 @@ SW_TEST_CASE( CameraModeTest, OrthoRigStartsAtItsYawAndFollowsTheFocus )
 
     pRig->setFocus( float3{ 1.0f, 0.0f, 0.0f } ); // 같은 리그 · 다른 초점은 블렌드 없이 그대로 따라간다
     pRig->updateCamera( 0.016f );
-    const OrthoCameraView view = OrthoCameraRigMath::computeView( float3{ 1.0f, 0.0f, 0.0f }, pRig->getYaw(), 30.0f * MathUtil::DegreeToRadian, 250.0f );
+    const OrthoCameraView view = OrthoCameraRigMath::computeView( float3{ 1.0f, 0.0f, 0.0f }, pRig->getYaw(), 30.0f * MathUtil::kDegreeToRadian, 250.0f );
     SW_EXPECT_NEAR_EQUAL( view._position._x, pCamera->getWorldPosition()._x, 1.0e-2f );
 }

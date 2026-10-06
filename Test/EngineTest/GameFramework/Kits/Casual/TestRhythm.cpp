@@ -2,7 +2,9 @@
 // 콤보 끊김 · 최대 콤보 · 콤보 보너스 점수 · 정확도 · 등급 · 리플레이, 라이프 0 실패, 오토플레이, 시간 기반 · BPM 따라 스크롤.
 #include "pch.h"
 
-#include "GameFramework/Input/TimingJudge.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Input/TimingJudge.h"
 #include "GameFramework/Kits/Casual/Rhythm/RhythmChart.h"
 #include "GameFramework/Kits/Casual/Rhythm/RhythmPlaySession.h"
 
@@ -314,4 +316,79 @@ SW_TEST_CASE( RhythmTest, ScrollPositionIsTimeBasedOrFollowsBpmAndStops )
     session.initialize( &chart, &judge, settings );
     SW_EXPECT_NEAR_EQUAL( 100.0f, session.computeNoteY( 10.0f, 4.2f, kHiSpeed ), 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, session.computeNoteY( 14.0f, chart.convertBeatToSeconds( 14.0f ) + 0.2f, kHiSpeed ), 1.0e-3f );
+}
+
+/**
+ * @brief [RhythmTest] 상태 바이트 — 판정 자리 · 누르고 있는 롱노트 · 점수 · 콤보 · 입력 기록이 같은 채보로 연 판에 그대로 오고, 같은 입력을 더 넣어도 바이트가 같다.
+ *        잘린 바이트 · 다른 채보의 판은 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( RhythmTest, StateRoundTripContinuesTheSamePlay )
+{
+    TimingJudge judge;
+    SW_ASSERT_TRUE( judge.loadFromXmlText( kRhythmJudgeXml, "RhythmTest" ) );
+    RhythmChart chart;
+    SW_ASSERT_TRUE( chart.loadFromXmlText( makeSimpleChartXml( R"(<Note lane="0" beat="1"/><Note lane="0" beat="2"/><Note lane="0" beat="3"/><Note lane="0" beat="4"/>
+        <Note lane="0" beat="5"/><Note lane="0" beat="6"/><Note lane="1" beat="2" endBeat="6"/>)" ),
+                                           "RhythmTest" ) );
+    RhythmPlaySession session;
+    session.initialize( &chart, &judge, RhythmPlaySettings{} );
+    session.press( 0, 0.5f );
+    session.release( 0, 0.6f );
+    session.press( 0, 1.0f );
+    session.press( 1, 1.0f ); // 롱노트 머리 — 누르고 있는 채로 저장한다
+    session.update( 1.2f );
+    SW_EXPECT_TRUE( session.isHolding( 1 ) );
+
+    Archive written;
+    session.writeState( written );
+    vector<uint8> originalBytes;
+    written.writeData( originalBytes );
+    RhythmPlaySession restored;
+    restored.initialize( &chart, &judge, RhythmPlaySettings{} );
+    Archive reader( originalBytes.data(), originalBytes.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    SW_EXPECT_TRUE( restored.isHolding( 1 ) );
+    SW_EXPECT_EQUAL( session.getCombo(), restored.getCombo() );
+    SW_EXPECT_EQUAL( static_cast<int32>( session.getScore() ), static_cast<int32>( restored.getScore() ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( session.getInputRecords().size() ), static_cast<int32>( restored.getInputRecords().size() ) );
+    Archive rewritten;
+    restored.writeState( rewritten );
+    vector<uint8> restoredBytes;
+    rewritten.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+
+    // 같은 입력을 더 넣으면 같은 판 — 다음 노트 자리 · 롱노트 끝(끝까지 누름)까지 이어진다.
+    for ( RhythmPlaySession* pPlay : { &session, &restored } )
+    {
+        for ( int32 beat = 3; beat <= 6; ++beat )
+        {
+            const float32 target = static_cast<float32>( beat ) * 0.5f;
+            pPlay->press( 0, target );
+            pPlay->release( 0, target + 0.1f );
+        }
+        pPlay->update( 3.5f );
+    }
+    SW_EXPECT_TRUE( restored.getState() == RhythmPlayState::Cleared );
+    SW_EXPECT_EQUAL( 8, restored.getJudgedCount() );
+    Archive afterOriginal;
+    Archive afterRestored;
+    session.writeState( afterOriginal );
+    restored.writeState( afterRestored );
+    afterOriginal.writeData( originalBytes );
+    afterRestored.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+
+    // 다른 채보(노트 수가 다르다)의 판 · 잘린 바이트는 거절한다.
+    RhythmChart otherChart;
+    SW_ASSERT_TRUE( otherChart.loadFromXmlText( makeSimpleChartXml( R"(<Note lane="0" beat="1"/>)" ), "RhythmTest" ) );
+    RhythmPlaySession other;
+    other.initialize( &otherChart, &judge, RhythmPlaySettings{} );
+    Archive otherReader( originalBytes.data(), originalBytes.size() );
+    SW_EXPECT_FALSE( other.readState( otherReader ) );
+    RhythmPlaySession truncated;
+    truncated.initialize( &chart, &judge, RhythmPlaySettings{} );
+    Archive cut( originalBytes.data(), originalBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_EQUAL( 0, truncated.getJudgedCount() );
 }

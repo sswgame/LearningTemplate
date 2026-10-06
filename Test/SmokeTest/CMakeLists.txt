@@ -67,18 +67,8 @@ target_include_directories(SmokeTest PRIVATE "${CMAKE_SOURCE_DIR}/Source/App")
 
 if(NOT SW_SHIPPING_BUILD)
 	target_compile_definitions(SmokeTest PRIVATE
-		"SW_TEST_MODULE_DIR=\"${sw_output_directory}/Bin\""
+		"SW_TEST_MODULE_DIR=\"${CMAKE_BINARY_DIR}/Bin\""
 	)
-	if(TARGET SWGame)
-		add_dependencies(SmokeTest SWGame)
-	endif()
-	if(TARGET EditorModule)
-		add_dependencies(SmokeTest EditorModule)
-	endif()
-	# 이 테스트는 모듈 DLL 을 실제로 올렸다 내린다 — 백엔드가 옆에 있어야 한다.
-	# 이름을 적지 않고 레지스트리에 묻는다(`cmake/Engine/TargetRules.cmake`).
-	sw_getDynamicModules(listRhiBackend KINDS rhi)
-	foreach(rhiMod IN LISTS listRhiBackend)
-		add_dependencies(SmokeTest ${rhiMod})
-	endforeach()
+	# 이 테스트는 모듈 DLL 을 실제로 올렸다 내린다 — 백엔드 · 게임 · 에디터가 옆에 있어야 한다. 이름을 적지 않고 레지스트리에 묻는다.
+	sw_addDynamicModuleDependencies(SmokeTest KINDS rhi game editor)
 endif()

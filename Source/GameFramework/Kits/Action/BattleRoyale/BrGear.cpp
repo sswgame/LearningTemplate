@@ -4,8 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Combat/Weapon.h"
-#include "GameFramework/Inventory/Inventory.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Combat/Weapon.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"
 
 namespace sw
@@ -111,5 +114,53 @@ namespace sw
             return 0.0f;
         const BrBackpackDef* pBackpack = backpackId.empty() ? nullptr : _pCatalog->findBackpack( backpackId );
         return _pCatalog->getPlayerSettings()._baseCarryWeight + ( pBackpack != nullptr ? pBackpack->_capacity : 0.0f );
+    }
+
+    void BrLoadout::writeState( Archive& outArchive ) const
+    {
+        for ( const BrArmorSlot* pSlot : { &_helmet, &_vest } )
+        {
+            StateArchiveUtil::writeName( outArchive, pSlot->_pDef != nullptr ? pSlot->_pDef->_id : hashed_string{} );
+            outArchive << pSlot->_durability;
+        }
+        StateArchiveUtil::writeName( outArchive, _backpackId );
+    }
+
+    bool BrLoadout::readState( Archive& archive )
+    {
+        if ( _pCatalog == nullptr )
+            return false;
+        // 헬멧 · 조끼 순서 — 방어구는 그 칸의 것이어야 한다
+        BrArmorSlot arrSlot[2] = {};
+        for ( int32 slotIndex = 0; slotIndex < 2; ++slotIndex )
+        {
+            BrArmorSlot&  slot = arrSlot[slotIndex];
+            hashed_string armorId;
+            if ( StateArchiveUtil::readName( archive, armorId ) == false )
+                return false;
+            archive >> slot._durability;
+            if ( archive.isError() )
+                return false;
+            if ( armorId.empty() )
+            {
+                slot = BrArmorSlot{};
+                continue;
+            }
+            slot._pDef               = _pCatalog->findArmor( armorId );
+            const bool bHelmetSlot   = slotIndex == 0;
+            const bool bSlotMatches  = slot._pDef != nullptr && ( slot._pDef->_slot == BrGearInternal::getHelmetName() ) == bHelmetSlot;
+            const bool bDurableValid = 0.0f < slot._durability && slot._durability <= ( slot._pDef != nullptr ? slot._pDef->_durability : 0.0f );
+            if ( bSlotMatches == false || bDurableValid == false )
+                return false;
+        }
+        hashed_string backpackId;
+        if ( StateArchiveUtil::readName( archive, backpackId ) == false )
+            return false;
+        if ( backpackId.empty() == false && _pCatalog->findBackpack( backpackId ) == nullptr )
+            return false;
+        _helmet     = arrSlot[0];
+        _vest       = arrSlot[1];
+        _backpackId = backpackId;
+        return true;
     }
 } // namespace sw

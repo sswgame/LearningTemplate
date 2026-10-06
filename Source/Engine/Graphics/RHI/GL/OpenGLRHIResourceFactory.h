@@ -13,7 +13,7 @@ namespace sw
         explicit OpenGLRHIResourceFactory( OpenGLRHIDevice* pDevice )
             : _pDevice{ pDevice } {}
         RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc ) override;
-        RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = "CSMain" ) override;
+        RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {} ) override;
         void                   destroyPipelineState( RHIPipelineStateHandle pso ) override;
         RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& desc ) override;
         void                   destroyRenderPass( RHIRenderPassHandle pass ) override;

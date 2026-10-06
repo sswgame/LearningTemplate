@@ -3,7 +3,7 @@
  * @brief 카메라 컴포넌트의 등록부입니다. 역할 · 우선순위로 카메라를 고르는 규칙도 여기 하나입니다.
  *
  * [왜 필요한가]
- * `LightRegistry` 와 같은 이유입니다. **찾지 말고 등록받습니다.** 게임 카메라(`Scene`)와 에디터 카메라(`EditorCamera`)가 같은
+ * `ComponentRegistry` 와 같은 이유입니다. **찾지 말고 등록받습니다.** 게임 카메라(`Scene`)와 에디터 카메라(`EditorCamera`)가 같은
  * 규칙 하나(`selectCamera`)로 고릅니다. 모든 GameObject 를 돌며 `getComponent<CameraComponent>()` 를 물으면 에디터 카메라
  * 조회만으로 프레임마다 세 번(뷰포트 update · draw, 게임 스레드의 뷰 카메라) 씬 전체를 훑고, 한 번 골라 캐시하면 나중에 생긴
  * 더 높은 우선순위의 카메라나 꺼진 카메라를 따라가지 못합니다.
@@ -24,7 +24,7 @@ namespace sw
     /**
      * @class CameraRegistry
      * @brief 등록된 카메라 목록과 선택 규칙입니다.
-     * @note 락은 `LightRegistry` 와 같이 가장 안쪽입니다. 목록은 공통 등록 목록(`RegistrationList`)이라 등록 순서를 지킵니다(순서를 지키며
+     * @note 락은 `ComponentRegistry` 와 같이 가장 안쪽입니다. 목록은 공통 등록 목록(`RegistrationList`)이라 등록 순서를 지킵니다(순서를 지키며
      *       뺍니다). 선택 규칙은 그 순서에 기대지 않습니다 — 우선순위가 같으면 컴포넌트 id 가 큰(나중에 만든) 카메라입니다.
      */
     class SW_API CameraRegistry

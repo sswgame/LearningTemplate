@@ -2,7 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Base/Movement/PlatformerMotor2D.h"
 
 #include "TestFramework/TestFramework.h"
 

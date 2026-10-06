@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     ScavengerCarry::ScavengerCarry()
@@ -80,5 +84,29 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    void ScavengerCarry::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listScrap.size() );
+        for ( const ScavengerScrap& scrap : _listScrap )
+        {
+            ScavengerFacility::writeScrap( outArchive, scrap );
+        }
+    }
+
+    bool ScavengerCarry::readState( Archive& archive )
+    {
+        uint32 count = 0;
+        if ( StateArchiveUtil::readCount( archive, ScavengerFacility::kMinScrapBytes, count ) == false || static_cast<int32>( count ) > _settings._slotCount )
+            return false;
+        vector<ScavengerScrap> listScrap( count );
+        for ( ScavengerScrap& scrap : listScrap )
+        {
+            if ( ScavengerFacility::readScrap( archive, scrap ) == false )
+                return false;
+        }
+        _listScrap = std::move( listScrap );
+        return true;
     }
 } // namespace sw

@@ -2,8 +2,12 @@
 
 #include "GameFramework/Kits/Action/Metroidvania/MetroMapState.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/World/AreaGraph.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
-#include "GameFramework/World/AreaGraph.h"
 
 namespace sw
 {
@@ -27,7 +31,7 @@ namespace sw
 
     bool MetroMapState::enterArea( const hashed_string& areaId ) { return _pGraph != nullptr && _pGraph->enterArea( areaId ); }
 
-    MetroMapPurchase MetroMapState::buyRegionMap( const hashed_string& region, int32& inoutCurrency )
+    MetroMapPurchase MetroMapState::buyRegionMap( const hashed_string& region, Wallet& inoutWallet, const hashed_string& currency )
     {
         if ( _pCatalog == nullptr || _pGraph == nullptr )
             return MetroMapPurchase::UnknownRegion;
@@ -36,9 +40,8 @@ namespace sw
             return MetroMapPurchase::UnknownRegion;
         if ( hasRegionMap( region ) )
             return MetroMapPurchase::AlreadyOwned;
-        if ( inoutCurrency < pMap->_price )
+        if ( inoutWallet.trySpend( currency, pMap->_price ) == false )
             return MetroMapPurchase::NotEnoughCurrency;
-        inoutCurrency -= pMap->_price;
         _listRegionMap.push_back( pMap->_id );
         (void)_pGraph->discoverRegion( pMap->_id );
         return MetroMapPurchase::Bought;
@@ -184,5 +187,53 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    void MetroMapState::writeState( Archive& outArchive ) const
+    {
+        for ( const vector<hashed_string>* pListId : { &_listRegionMap, &_listSite, &_listPickup } )
+        {
+            outArchive << static_cast<uint32>( pListId->size() );
+            for ( const hashed_string& id : *pListId )
+            {
+                StateArchiveUtil::writeName( outArchive, id );
+            }
+        }
+    }
+
+    bool MetroMapState::readState( Archive& archive )
+    {
+        if ( _pCatalog == nullptr )
+            return false;
+        // 산 지도 · 연 지점 · 주운 것 순서 — 모두 카탈로그에 있고 겹치지 않아야 한다
+        vector<hashed_string> listRegionMap;
+        vector<hashed_string> listSite;
+        vector<hashed_string> listPickup;
+        for ( int32 listIndex = 0; listIndex < 3; ++listIndex )
+        {
+            vector<hashed_string>& listId  = listIndex == 0 ? listRegionMap : ( listIndex == 1 ? listSite : listPickup );
+            uint32                 idCount = 0;
+            if ( StateArchiveUtil::readCount( archive, 4, idCount ) == false )
+                return false;
+            listId.reserve( idCount );
+            for ( uint32 entry = 0; entry < idCount; ++entry )
+            {
+                hashed_string id;
+                if ( StateArchiveUtil::readName( archive, id ) == false )
+                    return false;
+                bool bKnown = false;
+                if ( listIndex == 0 )
+                    bKnown = _pCatalog->findRegionMap( id ) != nullptr;
+                else if ( listIndex == 1 )
+                    bKnown = _pCatalog->findSite( id ) != nullptr;
+                else
+                    bKnown = _pCatalog->findPickup( id ) != nullptr;
+                if ( bKnown == false || contains( listId, id ) )
+                    return false;
+                listId.push_back( id );
+            }
+        }
+        restoreSaveState( listRegionMap, listSite, listPickup );
+        return true;
     }
 } // namespace sw

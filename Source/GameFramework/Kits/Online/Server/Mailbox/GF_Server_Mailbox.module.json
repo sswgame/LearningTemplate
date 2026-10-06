@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Server_Mailbox",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "우편함 키트(서버) — 목록 · 읽음 · 수령(원장 이동) · 모두 받기 · 지우기 · 만료 쓸기 · 전체 우편 · 서비스 (온라인 게임)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Mailbox"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

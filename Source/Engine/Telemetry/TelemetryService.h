@@ -112,12 +112,12 @@ namespace sw
     class SW_API TelemetryService
     {
     public:
-        static constexpr const utf8* kConsentSettingId   = "telemetry.enabled";
-        static constexpr const utf8* kSceneSummaryEvent  = "perf.sceneSummary";
-        static constexpr const utf8* kSessionStartEvent  = "session.start";
-        static constexpr const utf8* kSessionEndEvent    = "session.end";
-        static constexpr const utf8* kSpoolFilePrefix    = "telemetry_";
-        static constexpr const utf8* kSpoolFileExtension = ".jsonl";
+        static constexpr const utf8* kConsentSettingId  = "telemetry.enabled";
+        static constexpr const utf8* kSceneSummaryEvent = "perf.sceneSummary";
+        static constexpr const utf8* kSessionStartEvent = "session.start";
+        static constexpr const utf8* kSessionEndEvent   = "session.end";
+        static constexpr const utf8* kSpoolFilePrefix   = "telemetry_";
+        static constexpr const utf8* kSpoolExtension    = ".jsonl";
 
         TelemetryService();
         ~TelemetryService();

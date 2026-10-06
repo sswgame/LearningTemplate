@@ -2,7 +2,10 @@
 
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherMutagens.h"
 
-#include "GameFramework/Data/StatBlock.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCatalog.h"
 
 namespace sw
@@ -146,5 +149,48 @@ namespace sw
     bool WitcherMutagens::isValidSlot( int32 group, int32 slot ) const
     {
         return group >= 0 && group < getGroupCount() && slot >= 0 && slot < static_cast<int32>( _listGroup[static_cast<size_t>( group )]._listSkill.size() );
+    }
+
+    void WitcherMutagens::writeState( Archive& outArchive ) const
+    {
+        outArchive << _characterLevel;
+        outArchive << static_cast<uint32>( _listGroup.size() );
+        for ( const Group& group : _listGroup )
+        {
+            outArchive << static_cast<uint32>( group._listSkill.size() );
+            for ( const hashed_string& skillId : group._listSkill )
+            {
+                StateArchiveUtil::writeName( outArchive, skillId );
+            }
+            StateArchiveUtil::writeName( outArchive, group._mutagenId );
+        }
+    }
+
+    bool WitcherMutagens::readState( Archive& archive )
+    {
+        int32  characterLevel = 0;
+        uint32 count          = 0;
+        archive >> characterLevel;
+        // 묶음마다 슬롯 수(4) + 변이원(4) 이상
+        if ( _pCatalog == nullptr || archive.isError() || StateArchiveUtil::readCount( archive, 8, count ) == false || count != _listGroup.size() )
+            return false;
+        vector<Group> listGroup = _listGroup;
+        for ( Group& group : listGroup )
+        {
+            if ( StateArchiveUtil::readCount( archive, 4, count ) == false || count != group._listSkill.size() )
+                return false;
+            for ( hashed_string& skillId : group._listSkill )
+            {
+                if ( StateArchiveUtil::readName( archive, skillId ) == false )
+                    return false;
+            }
+            if ( StateArchiveUtil::readName( archive, group._mutagenId ) == false )
+                return false;
+            if ( group._mutagenId.empty() == false && _pCatalog->findMutagen( group._mutagenId ) == nullptr )
+                return false;
+        }
+        _characterLevel = characterLevel;
+        _listGroup      = std::move( listGroup );
+        return true;
     }
 } // namespace sw

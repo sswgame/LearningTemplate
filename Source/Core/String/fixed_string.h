@@ -31,7 +31,7 @@ namespace sw
      * - **std::basic_string_view 호환**:
      *   `view()` 와 `operator std::basic_string_view<T>()` 로 복사 없이 표준 문자열 뷰로 넘길 수 있습니다.
      * - **std::hash 지원**:
-     *   `StringUtil::computeHash64/32` 기반의 `std::hash` 특수화가 있어 `std::unordered_map` 이나 `std::unordered_set` 의 키로
+     *   `sw::string` 과 같은 `RuntimeStringHash` 기반의 `std::hash` 특수화가 있어(프로세스 안 전용 — 파일 · 네트워크에 남기지 않는다) `std::unordered_map` 이나 `std::unordered_set` 의 키로
      *   바로 쓸 수 있습니다.
      * - **같음 · 사전순 비교(`equals`, `compare`)**:
      *   `StringUtil::equals` 와 `StringUtil::compare` 를 그대로 써서 식별자와 파일 경로를 빠르게 비교합니다.
@@ -726,15 +726,12 @@ namespace sw
 namespace std
 {
     template <typename T, uint32 N>
-    /** @brief basic_fixed_string 을 std::unordered_map · set 키로 쓸 수 있게 하는 FNV 해시 특수화입니다. */
+    /** @brief basic_fixed_string 을 std::unordered_map · set 키로 쓰는 해시입니다. `sw::string` 과 같은 `RuntimeStringHash`(문자 바이트, 대소문자 구분)라 같은 내용이면 같은 값입니다. */
     struct hash<sw::basic_fixed_string<T, N>>
     {
         size_t operator()( const sw::basic_fixed_string<T, N>& key ) const noexcept
         {
-            if constexpr ( sizeof( size_t ) == 8 )
-                return static_cast<size_t>( sw::StringUtil::computeHash64( key.c_str(), key.size() ) );
-            else
-                return static_cast<size_t>( sw::StringUtil::computeHash32( key.c_str(), key.size() ) );
+            return static_cast<size_t>( sw::RuntimeStringHash::compute( key.c_str(), static_cast<size_t>( key.size() ) * sizeof( T ) ) );
         }
     };
 } // namespace std

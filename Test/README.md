@@ -1,6 +1,6 @@
 # Test (자동화 테스트 스위트)
 
-> **[🏠 위키 홈으로 돌아가기](../README.md)** | **[📖 서브시스템 목록](../docs/02_EngineSubsystems.md)**
+> **[🏠 위키 홈으로 돌아가기](../README.md)** | **[📖 문서 지도](../docs/02_DocumentMap.md)**
 > ---
 
 엔진과 코어 프레임워크의 안정성을 보장하기 위한 자동화된 테스트 코드들이 모여있는 디렉터리입니다.
@@ -56,7 +56,7 @@ ctest --test-dir build/Ninja-Debug --output-on-failure
 `soak` · `perf` 는 분 단위라 `hostgpu` 에 넣지 않았다 — 손으로 고른다(`ctest -L soak`).
 `lint` 는 `Scripts/lint/gate/` 의 게이트와 `Scripts/lint/selftest/` 의 자기 검사 전부입니다. 목록은 어디에도 손으로 적지 않습니다 —
 구성 시점에 `Scripts/lint/LintCatalog.py` 가 두 폴더를 훑고 `Scripts/generate/GenerateLintTargets.py` 가 CTest 항목을 만듭니다
-(`sw_registerLintTests`, `cmake/Engine/AssetAndToolTargets.cmake`). 지금 무엇이 도는지는 `ctest --preset Ninja-Debug-lint -N` 으로 봅니다.
+(생성 파일 `LintTargets.cmake` 가 `sw_registerScriptTest` 로). 지금 무엇이 도는지는 `ctest --preset Ninja-Debug-lint -N` 으로 봅니다.
 
 ```powershell
 # GPU 없이 도는 것만 (CI 와 같은 집합)
@@ -224,7 +224,7 @@ Cleanup은 등록한 역순으로 실행됩니다. AssetManager 전체 shutdown�
 py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe
 py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe --record --runs 3   # 기준을 새로 뜬다
 # soak: 자동 플레이를 오래 — 메모리 · 핸들 증가 기울기와 프레임 p99
-py -3 -m Scripts soak --app build/Ninja-Debug-NileCity/Bin/App.exe --minutes 10 --report soak.json
+py -3 -m Scripts soak --app build/Ninja-Debug-NileCity/Bin/App.exe --minutes 10 --out soak.json
 # 성능 회귀: Release 에서만 — 이 기계의 기준(Test/Qa/Perf)과 p50 · p99
 py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe [--record]
 # 로더 퍼징: 시드 고정 변이(EngineTest 의 nogpu 스위트) — 오래 사냥할 때

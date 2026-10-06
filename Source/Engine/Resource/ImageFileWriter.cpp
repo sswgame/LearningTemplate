@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Resource/DdsFormat.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "ImageFileWriter" );
@@ -13,12 +15,7 @@ namespace sw
     {
         struct ImageFileWriterInternal
         {
-            static constexpr uint32 kDdsMagic           = 0x20534444; // "DDS "
-            static constexpr uint32 kDx10FourCc         = 0x30315844; // "DX10"
-            static constexpr uint32 kDdsHeaderSize      = 124;
-            static constexpr uint32 kDdsPixelFormatSize = 32;
             static constexpr uint32 kDdsFlags           = 0x1u | 0x2u | 0x4u | 0x8u | 0x1000u; // CAPS · HEIGHT · WIDTH · PITCH · PIXELFORMAT
-            static constexpr uint32 kDdpfFourCc         = 0x4u;
             static constexpr uint32 kDdsCapsTexture     = 0x1000u;
             static constexpr uint32 kDxgiR8G8B8A8Unorm  = 28;
             static constexpr uint32 kDimensionTexture2D = 3;
@@ -66,9 +63,9 @@ namespace sw
         if ( Internal::isSizeValid( rgbaBytes, width, height ) == false )
             return false;
         vector<uint8> bytes;
-        bytes.reserve( 4 + Internal::kDdsHeaderSize + 20 + static_cast<size_t>( width ) * height * 4u );
-        Internal::appendUint32Le( bytes, Internal::kDdsMagic );
-        Internal::appendUint32Le( bytes, Internal::kDdsHeaderSize );
+        bytes.reserve( 4 + DdsFormat::kHeaderSize + 20 + static_cast<size_t>( width ) * height * 4u );
+        Internal::appendUint32Le( bytes, DdsFormat::kMagic );
+        Internal::appendUint32Le( bytes, DdsFormat::kHeaderSize );
         Internal::appendUint32Le( bytes, Internal::kDdsFlags );
         Internal::appendUint32Le( bytes, height );
         Internal::appendUint32Le( bytes, width );
@@ -77,9 +74,9 @@ namespace sw
         Internal::appendUint32Le( bytes, 1 );          // 밉 수
         for ( uint32 index = 0; index < 11; ++index )
             Internal::appendUint32Le( bytes, 0 ); // 예약
-        Internal::appendUint32Le( bytes, Internal::kDdsPixelFormatSize );
-        Internal::appendUint32Le( bytes, Internal::kDdpfFourCc );
-        Internal::appendUint32Le( bytes, Internal::kDx10FourCc );
+        Internal::appendUint32Le( bytes, DdsFormat::kPixelFormatSize );
+        Internal::appendUint32Le( bytes, DdsFormat::kPixelFormatFourCcFlag );
+        Internal::appendUint32Le( bytes, DdsFormat::kDx10FourCc );
         for ( uint32 index = 0; index < 5; ++index )
             Internal::appendUint32Le( bytes, 0 ); // 비트 수 · 마스크(DX10 머리말이 포맷을 말한다)
         Internal::appendUint32Le( bytes, Internal::kDdsCapsTexture );

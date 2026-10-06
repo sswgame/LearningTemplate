@@ -4,4 +4,4 @@
 #        헤더는 `Source/Engine/Animation/Codec/Acl/` 에서만 include 한다(애니메이션 코덱 인터페이스 뒤에 감춘다).
 # ==============================================================================
 
-sw_addVcpkgConfigLib(NAME acl HEADER_ONLY)
+sw_addVcpkgHeaderOnly(NAME acl PROBE acl/version.h)

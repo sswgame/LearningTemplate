@@ -25,7 +25,6 @@ X-macro 목록 파일(`*.xxx`)이 실제로 참조되는지 검사한다.
 from __future__ import annotations
 
 import argparse
-import os
 import re
 import sys
 from pathlib import Path
@@ -33,7 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import mapConcurrent  # noqa: E402
+from common import kNotOurDirNames, mapConcurrent  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 # 검사 대상 확장자 — X-macro 목록 파일.
@@ -46,27 +45,13 @@ _kScanRoots = ("Source", "Tools")
 _kReferenceRoots = ("Source", "Tools", "cmake", "Scripts", "Config")
 _kReferenceSuffix = (".cpp", ".h", ".hpp", ".c", ".cmake", ".py", ".txt", ".in", ".json", ".xxx")
 
-_kSkipDirName = frozenset({"vcpkg", "build", "__pycache__", ".git", "ThirdParty"})
+#: 걷지 않는 폴더 — 우리 코드가 아닌 것(`kNotOurDirNames`: 빌드 · 내려받은 외부 도구) + 저장소 안의 서드파티.
+_kExcludedDirName = kNotOurDirNames | {"ThirdParty"}
 
 # include 이 `Source/` 를 루트로 쓰는 타깃과, 자기 디렉터리를 쓰는 타깃이 둘 다 있다.
 _kIncludeRootDir = "Source"
 
 _kIncludeRe = re.compile(r'#\s*include\s*"([^"]+)"')
-
-
-def collectFilesInternal(repositoryRoot: Path, roots: tuple[str, ...], suffixes: tuple[str, ...]) -> list[Path]:
-    """지정한 루트 아래에서 해당 확장자 파일을 모읍니다."""
-    collected: list[Path] = []
-    for rootName in roots:
-        rootPath = repositoryRoot / rootName
-        if rootPath.is_dir() is False:
-            continue
-        for dirPath, dirNames, fileNames in os.walk(rootPath):
-            dirNames[:] = [name for name in dirNames if name not in _kSkipDirName]
-            for fileName in fileNames:
-                if fileName.endswith(suffixes):
-                    collected.append(Path(dirPath) / fileName)
-    return collected
 
 
 class CheckDataFileReferencesGate(LintGate):
@@ -75,7 +60,8 @@ class CheckDataFileReferencesGate(LintGate):
     description = "X-macro 목록 파일 참조 검사"
     buildComment = "Checking that every X-macro list file is actually included..."
     timeoutSeconds = 30
-    preCommitPattern = ()
+    # 판정을 바꿀 수 있는 파일은 참조 파일(`.xxx` 자신도 그 안이다 — 대상 루트는 참조 루트 안)뿐이다 — 문서 · 리소스만 고친 커밋에서는 돌지 않는다.
+    preCommitPattern = tuple(f"{root}/*{suffix}" for root in _kReferenceRoots for suffix in _kReferenceSuffix)
     violationHeader = "아무도 include 하지 않는 목록 파일"
     hint = "  고쳐도 빌드 결과가 바뀌지 않는 파일입니다. 사본이면 지우고, 쓰려던 것이면 include 하세요."
     selfTestCases = [
@@ -89,7 +75,8 @@ class CheckDataFileReferencesGate(LintGate):
     ]
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        dataFiles = collectFilesInternal(repositoryRoot, _kScanRoots, (_kDataSuffix,))
+        dataFiles = self.selectTargetFiles(repositoryRoot, None, listScanRoot=_kScanRoots, suffixes=(_kDataSuffix,),
+                                           excludedDirNames=_kExcludedDirName)
         if not dataFiles:
             return GateResult(summary="검사할 .xxx 파일이 없습니다")
 
@@ -109,7 +96,8 @@ class CheckDataFileReferencesGate(LintGate):
                   동시에 훑으므로 "누가 먼저 가리켰나" 는 실행마다 달라진다. 값을 남기면 그 비결정성이
                   메시지로 새어 나간다.
             """
-            if referenceFile.resolve() == selfPath:
+            # 걷는 루트가 이미 `resolve()` 된 저장소 루트다(`LintGate.main`) — 파일마다 `resolve()` 하지 않는다.
+            if referenceFile == selfPath:
                 return []
             try:
                 text = referenceFile.read_text(encoding="utf-8", errors="replace")
@@ -141,7 +129,8 @@ class CheckDataFileReferencesGate(LintGate):
                     found.append(resolved)
             return found
 
-        referenceFiles = collectFilesInternal(repositoryRoot, _kReferenceRoots, _kReferenceSuffix)
+        referenceFiles = self.selectTargetFiles(repositoryRoot, None, listScanRoot=_kReferenceRoots, suffixes=_kReferenceSuffix,
+                                                excludedDirNames=_kExcludedDirName)
         referenced: set[Path] = set()
         for found in mapConcurrent(scanReferenceFileInternal, referenceFiles):
             referenced.update(found)

@@ -4,8 +4,8 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Framework/GameSound.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameSound.h"
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"

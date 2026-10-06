@@ -29,7 +29,7 @@ namespace sw::editor
             {
                 const float4 clip{ ndcX, ndcY, ndcZ, 1.0f };
                 const float4 world = float4::transform( clip, invViewProj );
-                if ( MathUtil::abs( world._w ) < MathUtil::Epsilon )
+                if ( MathUtil::abs( world._w ) < MathUtil::kEpsilon )
                     return false;
                 outWorld = float3{ world._x / world._w, world._y / world._w, world._z / world._w };
                 return true;
@@ -157,7 +157,7 @@ namespace sw::editor
             return false;
 
         EditorPickResult best{};
-        best._distance = MathUtil::MaxFloat;
+        best._distance = MathUtil::kMaxFloat;
 
         pManager->forEachGameObject( [&]( GameObject* pObj )
         {

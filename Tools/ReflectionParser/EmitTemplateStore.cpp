@@ -57,7 +57,7 @@ namespace sw
     {
         clear();
 
-        if ( FileUtil::directoryExists( absDir ) == false )
+        if ( FileUtil::isDirectory( absDir ) == false )
         {
             SW_LOG_WARNING( "Not a directory: %#", absDir );
             return false;

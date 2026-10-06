@@ -39,7 +39,8 @@ Play 를 누르면 디렉터가 밭을 세우며, Stop 은 플레이 전 씬으�
 |------|------|
 | 땅 · 해 · 카메라 · 집 · 출하함 · 가게 · 울타리 · 나무 · 장작 · 덤불 · 꽃 · 농부 · 바라보는 칸 표시 · 디렉터 | 씬(엔티티) — 에디터에서 옮긴다 |
 | 밭 칸의 흙 · 작물(12 × 8) | 프리팹 `prefabs/farmsoil.prefab.xml` · `farmcrop.prefab.xml` — 디렉터가 플레이 시작에 세운다 |
-| 규칙 · 상태(달력 · 밭 · 인벤토리 · 작물 카탈로그) | 키트의 보통 클래스(`FarmCalendar` · `FarmField` · `FarmInventory` · `CropCatalog`) — 씬 없이 시험한다(`FarmingTest`) |
+| 규칙 · 상태(밭 · 출하함 · 작물 카탈로그) | 키트의 보통 클래스(`FarmField` · `FarmShippingBin` · `CropCatalog`) — 씬 없이 시험한다(`FarmingTest`) |
+| 달력 · 돈 · 가방 | 공유 상태(`GameStateComponent` — 디렉터 오브젝트의 맨 앞 컴포넌트, 시계 하루 144 초 · 계절 넷 · 가방 24 칸). 쓰러짐은 다음 날 2 시, 잠은 6 시까지 |
 | 농부 · 도구 · 체력 · 시간 · 가게 · 출하 · 잠 · 날씨 · 자동 농부 | `FarmDirectorComponent`(씬에 하나 — 언리얼 GameMode/GameState 자리) |
 | 모습 | 뷰 `FarmSoilComponent` · `FarmCropComponent`(칸 하나) · `FarmerComponent`(농부 · 바라보는 칸) · `FarmSunComponent`(시각 · 비 → 해) — 디렉터를 **읽기만** 해 자기 오브젝트를 맞춘다 |
 | 카메라 | GameFramework 공용 `OrthoCameraRigComponent`(입력 끔) — 디렉터가 초점을 밭 가운데와 농부 사이에 넣는다 |

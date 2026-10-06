@@ -63,3 +63,17 @@ SW_TEST_CASE( MonotonicClockTest, GameTimerUsesTheSameCounter )
     SW_EXPECT_TRUE( timerMilli >= 15.0 );
     SW_EXPECT_NEAR_EQUAL( stopwatchMilli, timerMilli, 5.0 );
 }
+
+/**
+ * @brief [MonotonicClockTest] 마감까지 잠자기는 마감 전에 돌아오지 않고, 지난 마감은 바로 돌아온다
+ */
+SW_TEST_CASE( MonotonicClockTest, SleepUntilDoesNotWakeBeforeTheDeadline )
+{
+    const int64 start    = sw::MonotonicClock::nowNanoseconds();
+    const int64 deadline = start + 20 * 1000000;
+    sw::MonotonicClock::sleepUntilNanoseconds( deadline );
+    SW_EXPECT_TRUE( sw::MonotonicClock::nowNanoseconds() >= deadline );
+    const int64 pastStart = sw::MonotonicClock::nowNanoseconds();
+    sw::MonotonicClock::sleepUntilNanoseconds( pastStart - 1000000 );
+    SW_EXPECT_TRUE( sw::MonotonicClock::nowNanoseconds() - pastStart < 50 * 1000000 ); // 바로 돌아왔다(넉넉한 상한 — 느린 기계)
+}

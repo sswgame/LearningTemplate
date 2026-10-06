@@ -37,8 +37,8 @@ namespace sw
             {
                 vector<GameObject*> listObject;
                 manager.getAllGameObjects( listObject );
-                float3 boundsMin{ MathUtil::MaxFloat, MathUtil::MaxFloat, MathUtil::MaxFloat };
-                float3 boundsMax{ MathUtil::MinFloat, MathUtil::MinFloat, MathUtil::MinFloat };
+                float3 boundsMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+                float3 boundsMax{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };
                 bool   bAny = false;
                 for ( GameObject* pObject : listObject )
                 {

@@ -2,6 +2,7 @@
 
 #include "Engine/Navigation/NavMeshAsset.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
@@ -22,7 +23,7 @@ namespace sw
     {
         struct NavMeshAssetInternal
         {
-            static constexpr uint32 kMagic = 0x564E5753u; ///< 'SWNV'
+            static constexpr uint32 kMagic = FourCcUtil::make( "SWNV" );
             /** @brief 씬 저작 · 쿠킹 접미사(긴 것부터)입니다. */
             static constexpr string_view kArrSceneSuffix[] = { ".scene.xml", ".scene.bin", ".scene" };
             /** @brief 타일 베이크 한 덩어리 — 워커는 자기 구간의 칸만 쓴다. */

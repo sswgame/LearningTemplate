@@ -20,9 +20,9 @@
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
-#include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/SceneAudio.h"
 #include "Engine/Object/GameObject/SceneFrameStep.h"
@@ -52,7 +52,7 @@ namespace sw
         ~GameObjectManager();
 
         /** @brief 새 GameObject 를 만들고 등록합니다. */
-        GameObject* createGameObject( hashed_string name = hashed_string( "GameObject" ) ) { return _store.createGameObject( name ); }
+        GameObject* createGameObject( hashed_string name = hashed_string( GameObject::kDefaultName ) ) { return _store.createGameObject( name ); }
 
         /**
          * @brief 앞서 발급한 objectId 를 그대로 써서 오브젝트를 다시 만듭니다. 되돌리기 · 플레이 세션 복원 · 핫 리로드가 씁니다.
@@ -262,13 +262,13 @@ namespace sw
         const AnimationSystem& getAnimationSystem() const { return _animationSystem; }
 
         /**
-         * @brief 빛 컴포넌트의 등록부입니다.
-         * @details 프리미티브와 같은 이유로 있습니다. 매 프레임 씬을 뒤져 빛을 **찾지** 않고, 빛이 붙을
-         *          때 **등록받습니다**. 자세한 사연은 LightRegistry.h 에 있습니다.
+         * @brief 타입별 컴포넌트 등록부입니다(빛 · 2D 그림자 가림막 · 상호작용 대상 · 환경 질의 대상 …).
+         * @details 프리미티브와 같은 이유로 있습니다. 매 프레임 씬을 뒤져 **찾지** 않고, 컴포넌트가 붙을 때 **등록받습니다** —
+         *          `forEachComponentOfType` 은 모든 오브젝트를 훑으므로 프레임 경로에 쓰지 않습니다. 자세한 사연은 ComponentRegistry.h 에 있습니다.
          */
-        LightRegistry& getLightRegistry() { return _lightRegistry; }
-        /** @brief 빛 컴포넌트의 등록부입니다. */
-        const LightRegistry& getLightRegistry() const { return _lightRegistry; }
+        ComponentRegistry& getComponentRegistry() { return _componentRegistry; }
+        /** @brief 타입별 컴포넌트 등록부입니다. */
+        const ComponentRegistry& getComponentRegistry() const { return _componentRegistry; }
 
         /**
          * @brief 카메라 컴포넌트의 등록부입니다. 역할 · 우선순위로 고르는 규칙(`selectCamera`)도 여기 하나입니다.
@@ -405,8 +405,8 @@ namespace sw
         SceneTransformHierarchy _transformHierarchy;
         /** @brief 그릴 수 있는 컴포넌트의 등록부입니다. */
         PrimitiveRegistry _primitiveRegistry;
-        /** @brief 빛 컴포넌트의 등록부입니다. */
-        LightRegistry _lightRegistry;
+        /** @brief 타입별 컴포넌트 등록부입니다(빛 포함). */
+        ComponentRegistry _componentRegistry;
         /** @brief 카메라 컴포넌트의 등록부입니다. */
         CameraRegistry _cameraRegistry;
         /** @brief 애니메이션 시스템입니다. */

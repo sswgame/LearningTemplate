@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
@@ -404,5 +408,59 @@ namespace sw
     void MatgoGame::drainEvents( vector<MatgoEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void MatgoGame::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listPlayer.size() );
+        for ( size_t player = 0; player < _listPlayer.size(); ++player )
+        {
+            const MatgoPlayer& entry = _listPlayer[player];
+            entry._hand.writeState( outArchive );
+            entry._captured.writeState( outArchive );
+            outArchive << entry._goCount;
+            outArchive << entry._scoreAtLastGo;
+            outArchive << _listSettlement[player];
+        }
+        _floor.writeState( outArchive );
+        _drawPile.writeState( outArchive );
+        outArchive << _currentPlayer;
+        outArchive << _winner;
+        outArchive << static_cast<uint8>( _phase );
+    }
+
+    bool MatgoGame::readState( Archive& archive )
+    {
+        uint32 playerCount = 0;
+        archive >> playerCount;
+        if ( archive.isError() || playerCount != _listPlayer.size() )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정은 사본이 그대로 든다.
+        MatgoGame game = *this;
+        for ( size_t player = 0; player < game._listPlayer.size(); ++player )
+        {
+            MatgoPlayer& entry = game._listPlayer[player];
+            if ( entry._hand.readState( archive ) == false || entry._captured.readState( archive ) == false )
+                return false;
+            archive >> entry._goCount;
+            archive >> entry._scoreAtLastGo;
+            archive >> game._listSettlement[player];
+        }
+        if ( game._floor.readState( archive ) == false || game._drawPile.readState( archive ) == false )
+            return false;
+        uint8 phase = 0;
+        archive >> game._currentPlayer;
+        archive >> game._winner;
+        archive >> phase;
+        const int32 count         = static_cast<int32>( playerCount );
+        const bool  bPlayerValid  = 0 <= game._currentPlayer && game._currentPlayer < count;
+        const bool  bWinnerValid  = -1 <= game._winner && game._winner < count;
+        const bool  bPhaseInRange = phase <= static_cast<uint8>( MatgoPhase::Finished );
+        if ( archive.isError() || bPlayerValid == false || bWinnerValid == false || bPhaseInRange == false )
+            return false;
+        game._phase = static_cast<MatgoPhase>( phase );
+        game._eventBuffer.clear();
+        *this = std::move( game );
+        return true;
     }
 } // namespace sw

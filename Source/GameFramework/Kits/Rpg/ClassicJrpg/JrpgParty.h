@@ -4,22 +4,26 @@
  *        경험치 · 골드 분배, 여관(살아 있는 멤버 회복) · 교회(부활), 지갑 · 인벤토리(기반 ShopState 와 그대로 쓴다)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Inventory/Equipment.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Progression/LevelProgress.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/Equipment.h"
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/Shop.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgCatalog.h"
-#include "GameFramework/Progression/LevelProgress.h"
-#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
+    struct GameStateRefs;
+
+    class Archive;
     class ItemCatalog;
 
     /** @brief 비급 하나의 숙련입니다. */
@@ -101,13 +105,16 @@ namespace sw
     class SW_GF_API JrpgParty
     {
     public:
-        static constexpr int32 kMaxMembers          = 4;
-        static constexpr int32 kInnerMax            = 100;
-        static constexpr int32 kClassChangeMinLevel = 20; ///< DQ3 다마 신전
+        static constexpr uint32 kStateTag            = FourCcUtil::make( "JPTY" );
+        static constexpr uint32 kStateVersion        = 1;
+        static constexpr int32  kMaxMembers          = 4;
+        static constexpr int32  kInnerMax            = 100;
+        static constexpr int32  kClassChangeMinLevel = 20; ///< DQ3 다마 신전
 
         JrpgParty();
 
-        void initialize( const JrpgCatalog* pCatalog, const ItemCatalog* pItemCatalog, int32 inventorySlotCount,
+        /** @brief 새 파티를 엽니다. 파티 가방 · 지갑은 @p refs 에서 빌립니다 — 가방이 없으면 아이템이 드는 전직이, 지갑이 없으면 골드 보상 · 여관 · 교회가 막힙니다. */
+        void initialize( const JrpgCatalog* pCatalog, const ItemCatalog* pItemCatalog, const GameStateRefs& refs,
                          string_view equipLayout = "Weapon,Armor,Shield,Helmet,Accessory" );
         /** @brief 멤버를 더합니다(직업의 레벨 1 능력치에서 @p level 까지 성장). 자리 번호, 못 더하면 −1 입니다. */
         int32 addMember( const hashed_string& memberId, string_view name, const hashed_string& classId, int32 level = 1 );
@@ -129,6 +136,10 @@ namespace sw
         /** @brief 비급 숙련을 더하고 새로 열린 초식을 알립니다. 익히지 않은 비급이면 아무것도 하지 않습니다. */
         void addProficiency( int32 memberIndex, const hashed_string& manualId, int32 amount );
         void drainEvents( vector<JrpgPartyEvent>& outListEvent );
+        /** @brief 멤버(직업 · 이름 · 주문 · 비급 숙련 · 장비 아이템 id · 레벨 · 능력치 · HP/MP · 내공)를 씁니다. 가방 · 지갑은 빌린 것이라 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 모르는 직업 · 아이템, 장비 칸 수가 다르거나 깨졌으면 false 이고 그대로입니다(카탈로그 · 칸 구성은 `initialize` 의 것). */
+        [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 이 주문 · 초식을 쓸 수 있는가입니다(배웠거나, 비급 숙련이 그 단계에 닿았다). */
         bool  canUseSpell( int32 memberIndex, const hashed_string& spellId ) const;
@@ -141,10 +152,6 @@ namespace sw
         int32              getMemberCount() const { return static_cast<int32>( _listMember.size() ); }
         const JrpgMember&  getMember( int32 memberIndex ) const { return _listMember[static_cast<size_t>( memberIndex )]; }
         JrpgMember&        getMember( int32 memberIndex ) { return _listMember[static_cast<size_t>( memberIndex )]; }
-        Wallet&            getWallet() { return _wallet; }
-        const Wallet&      getWallet() const { return _wallet; }
-        Inventory&         getInventory() { return _inventory; }
-        const Inventory&   getInventory() const { return _inventory; }
         const JrpgCatalog* getCatalog() const { return _pCatalog; }
 
     private:
@@ -155,10 +162,10 @@ namespace sw
 
         vector<JrpgMember>          _listMember;
         EventBuffer<JrpgPartyEvent> _eventBuffer;
-        Wallet                      _wallet;
-        Inventory                   _inventory;
         string                      _equipLayout;
         const JrpgCatalog*          _pCatalog;
         const ItemCatalog*          _pItemCatalog;
+        Inventory*                  _pInventory; ///< 플레이어 가방(빌림)
+        Wallet*                     _pWallet;    ///< 빌린 지갑(골드)
     };
 } // namespace sw

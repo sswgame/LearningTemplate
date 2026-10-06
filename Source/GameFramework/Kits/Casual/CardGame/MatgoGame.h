@@ -11,17 +11,20 @@
  *          흔들기 · 폭탄 · 총통 · 보너스 패 · 고박 · 첫 뻑 보너스는 아직 없습니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Casual/CardGame/HwatuDeck.h"
-#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 규칙 설정입니다. */
     struct MatgoSettings
     {
@@ -171,6 +174,9 @@ namespace sw
     class SW_GF_API MatgoGame
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CMTG" );
+        static constexpr uint32 kStateVersion = 1;
+
         MatgoGame();
 
         /** @brief 48 장을 @p seed 로 섞어 나눕니다(사람마다 손패 → 바닥 → 남은 더미). 바닥에 같은 월 넷이면 다시 섞습니다. */
@@ -184,6 +190,11 @@ namespace sw
         /** @brief 스톱 — @p player 가 이기고 판이 끝납니다. */
         [[nodiscard]] bool declareStop( int32 player );
         [[nodiscard]] bool applyAction( int32 player, const CardAction& action );
+
+        /** @brief 사람마다 손패 · 먹은 패 · 고 · 정산, 바닥 · 더미 · 차례 · 이긴 사람 · 단계를 씁니다. 설정은 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 인원이 다르거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 먹은 패의 점수입니다. 상태가 없습니다. */
         static HwatuScore computeScore( const CardPile& captured, const MatgoSettings& settings );

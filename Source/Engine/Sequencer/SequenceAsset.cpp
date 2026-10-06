@@ -121,7 +121,7 @@ namespace sw
             item._end          = SequenceAssetInternal::clampFrame( itemJson.get( "end" ).asInt( 10 ) );
             // 종류는 정수 그대로 둔다 — 모르는 값(새 버전이 쓴 종류)도 다시 쓸 때 잃지 않고, 적용만 하지 않는다.
             const int64 rawKind = itemJson.get( "type" ).asInt( 0 );
-            item._kind          = static_cast<SequenceItemKind>( static_cast<int32>( MathUtil::clamp<int64>( rawKind, MathUtil::MinInt32, MathUtil::MaxInt32 ) ) );
+            item._kind          = static_cast<SequenceItemKind>( static_cast<int32>( MathUtil::clamp<int64>( rawKind, MathUtil::kMinInt32, MathUtil::kMaxInt32 ) ) );
             if ( findItemKindInfo( item._kind ) == nullptr )
                 SW_LOG_WARNING( "Sequence item '%#' has unknown type %# - it is kept but not applied", item._name, rawKind );
             item._color       = static_cast<uint32>( itemJson.get( "color" ).asUint( 0xFFAA8080u ) );

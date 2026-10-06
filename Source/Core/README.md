@@ -20,17 +20,25 @@
 - **Container/**: 표준 컨테이너 별칭(`vector.h` · `unordered_map.h` …) · `span` · `VectorUtil`(`removeAtSwap` 등) · `sparse_set` · `DynamicBitset` · `PagedArray`(주소가 옮겨지지 않는 청크 배열) ·
   `InlineAllocator`(SBO) · 핸들(`SlotHandle` · `SlotHandleTable` · `GameObjectHandle` · `ComponentHandle`) · `RegistrationList`(등록부의 공통 모양 —
   중복 거절 · 정렬 · 이름 찾기 · 이름 사본)
-- **String/**: `StringUtil` · `StringBuilder` · `fixed_string` · `hashed_string` · `formatString` · `string_splitter` · `TagID`
+- **String/**: `StringUtil` · `StringBuilder` · `fixed_string` · `hashed_string` · `formatString` · `string_splitter` · `TagID` · `Base64Util`(표준 · URL 안전)
 - **Delegate/**: `Delegate`
 - **Event/**: `EventDispatcher` · `EventType`(엔진 예약 이벤트 ID — 이벤트 타입은 그 개념이 사는 층에 둔다)
 - **Module/**: `ModuleImageUtil` — 동적 라이브러리(모듈 이미지)의 단일 자리: 이름(접두어 · 확장자 · 디버그 심볼) · 올리기 · 심볼 · 이미지 범위 · 의존 고정, 그리고 그 이미지의 코드를 쥔 등록을 떼고 내리기(`unloadModuleImage`). `IModuleUnloadListener`(`ModuleUnloadListener.h`) — 모듈 이미지를 내리기 전에 그 코드(델리게이트 스텁 · vtable)를 떼야 하는 등록부의 공통 계약과 목록.
   같은 수명 계약의 Engine 쪽은 `Engine/Module`, App 쪽(라이브 리로드)은 `App/Module` 이다.
--  `Process::terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불러도 된다(pid 는 원자). 자식은 출력 파이프 하나만 물려받는다(남의 핸들 · 서술자 상속 없음). 기다리지 않는 실행은 `Process::launchDetached`.
+- **Process/**: `Process::terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불러도 된다(pid 는 원자). 자식은 출력 파이프 하나만 물려받는다(남의 핸들 · 서술자 상속 없음). 기다리지 않는 실행은 `Process::launchDetached`.
 - **Compression/**: `ICompressionCodec` · `CompressionCodecRegistry` · `CompressionStream` · `NullCompressionCodec` · `RleCompressionCodec`
   (zlib · zstd · LZ4 코덱은 외부 라이브러리를 쓰므로 `Engine/Compression` 에 있다)
+  - 스트림은 28 바이트 머리(`CompressionHeader` — 'SWCS' · 판 · 코덱 · 크기 둘 · FNV-1a 체크섬)로 시작하고 지금 판만 읽는다.
+    `CompressionCodecType` 값은 디스크에 실리므로 새 코덱은 뒤에 덧붙이기만 한다(목록 밖 알고리즘은 `Custom`).
+  - 레지스트리는 엔진 서비스 하나(`engine::getCompressionCodecRegistry()`)이고 `CompressionCodecRegistry::setActive` 로 Core 의 슬롯에 걸린다.
+    슬롯이 비면(Core 만 링크하는 도구) 스트림은 내장 코덱(None · RLE)만 쓴다. 외부 코덱은 `EngineCompressionCodecUtil::registerAll` 이 한 번에 올린다.
+  - 주의: 로드 가능한 모듈이 코덱을 등록했으면 그 모듈의 shutdown 에서 `unregisterCodec` 한다 — 레지스트리는 `Engine.dll` 에 살아 모듈보다 오래 간다.
+  - 리소스 팩의 압축 enum(`PackCompressionType`)은 따로인 디스크 형식이다. `PackCompressionUtil::kArrCodecMapping` 표 한 곳에서 옮기고,
+    두 enum 을 `static_cast` 로 오가지 않는다.
 - **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
   얹어, 싱글 게임은 그 키트를 링크하지 않는다.
-  폴더가 층이다 — 뿌리(`NetTypes` · `BitStream`) ← `Transport/`(전송 · 루프백 · UDP · 회선 흉내) ← `Connection/`(`NetConnection` · `NetHost` ·
+  폴더가 층이다 — 뿌리(`NetTypes` · `BitStream`) ← `Transport/`(전송 · 루프백 · UDP · 회선 흉내) · `Security/`(암호 창구 `INetSecurityProvider` — AEAD · X25519 · HKDF · Argon2id · SHA-256 · 서명 RS256/ES256(확인 · 서명 · 키 쌍) · 메모리 TLS 세션, 구현은 Engine 의 OpenSSL ·
+  `NetReplayWindow` 재전송 방지 창 · `NetSessionKeyUtil` 세션 키 유도) ← `Connection/`(`NetConnection` · `NetHost` ·
   `NetHostThread` · `SequenceBuffer`) ← `Message/`(`NetMessage` · `NetSendBudget`) ← `Replication/`(키트가 나눠 쓰는 복제 부품 — `NetPrioritizer` · `NetParallel` · `TickRingBuffer` · `NetInputWindow` ·
   `NetClock` · `InterpolationBuffer`).
   아래 층은 위 층을 include 하지 않는다(`CheckCoreNetworkLayers`).
@@ -69,6 +77,10 @@
     **스레드 안전** — 공개 함수는 잠금 하나로 지켜져 아무 스레드에서나 보내고 꺼낸다. `update` 는 소켓 받기 · 보내기를 잠금 밖에서 묶어 하고(한 번에
     최대 512 개) 잠금 안에서는 패킷 처리만 한다. **비동기 연결** `connectAsync` → `TaskFuture<NetConnectResult>`(연결 · 가득 참 · 거절 · 타임아웃 · 끊음,
     `then` 은 잠금 밖에서). 여러 스레드가 쓰는 동안 연결 통계는 `getConnectionStats`(사본)
+    **암호화**(`NetHostSettings::_security` — `NetHostSecurity.h`, 기본 꺼짐): 응답 · 수락에 일회 X25519 공개 키, 서버는 주소가 확인된 응답에만 키를 계산한다.
+    키 = HKDF(공유 비밀, 소금 = 세션 비밀), 데이터 · 끊기 패킷은 AEAD(nonce = 방향 IV XOR 64 비트 번호, 1024 재전송 창 — 복호 뒤 표시). 토큰 결속(서버
+    `INetConnectAuthenticator` · 클라이언트 `NetConnectCredentials`)이면 응답의 세션 비밀 증명 태그가 맞아야 자리를 잡고 클라이언트는 수락의 키 확인 태그를 본다.
+    암호화 · 결속 여부는 프로토콜 id 에 섞여(`NetProtocolFeature`) 협상하지 않는다 — 한쪽만이면 `SecurityMismatch`. 인증기 없는 암호화는 개발 빌드만(Shipping 서버는 listen 실패)
   - `NetHostThread` — 전용 네트워크 스레드: 소켓을 기다렸다가(`poll` · `WSAPoll`, 최대 2 ms) `update` 를 돌린다. 게임 프레임이 멈춰도 확인 · 유지 · 재전송이
     돌아 끊기지 않고 RTT 에 프레임 길이가 섞이지 않는다. 기다리는 일이라 TaskManager 워커가 아니라 전용 스레드(로그 · 파일 감시와 같은 규칙)
   - `NetParallel` — 서버 키트가 연결(관찰자)마다의 일을 `TaskManager::runParallel` 로 나누는 `NetParallelFor` 와 스레드마다의 작업 자리
@@ -86,8 +98,25 @@
     `LossPercent` · `DuplicatePercent` · `ReorderPercent` · `BandwidthKilobytesPerSecond` 로 `NetEmulationConditions::makeFromGlobalVariables` —
     언리얼 PktLag · PktLoss · PktDup · PktOrder · 유니티 Network Simulator 의 자리. `NetHost` 는 그냥 전송으로 받는다. 조건의 거르개
     `_pDropFilter` 는 고른 패킷만 버린다 — `NetHost::peekPacketType` 과 함께 "`Accepted` 하나만 잃기" · "위조 주소로 간 답 전부 잃기" 같은 시험을 짓는다)
+  - 스트림(TCP) 전송 — `IStreamTransport`(수락 · 연결 · 읽기 · 쓰기 완료를 `IStreamHandler` 로, I/O 스레드 N 또는 `pollIo`, 리슨은 묶을 주소를 받는다 —
+    운영 끝점은 `NetAddress::makeLoopback`, 서버는 `makeAnyInterface`), 보낼 줄 `StreamSendQueue`
+    (64 KB 덩어리 · 높은/낮은 물금 · 상한 — 구현들이 같은 배압 규칙), 루프백 `LoopbackStreamNetwork`(결정적 · 무작위 조각 · 한 번에 넘길 상한, I/O 스레드 없음).
+    닫힘은 연결의 마지막 콜백이고 한 번이다. 저쪽 FIN 을 받으면 이쪽도 우아하게 닫는다(반쯤 열린 연결은 두지 않는다).
+    구현(`StreamTransportFactory`): Windows IOCP(완료 포트 하나를 I/O 스레드 N 이 나눠 기다림, 연결마다 읽기 · 쓰기 하나씩, AcceptEx 16 · ConnectEx,
+    연결 수명은 걸린 작업 수 — 마지막 작업이 돌아온 순간 닫힘 한 번, 시한은 0.1 초마다 한 스레드가 훑는다) · 리눅스 epoll(I/O 스레드마다 epoll(에지 트리거) +
+    eventfd, 연결은 돌림차례로 한 루프가 소유, 다른 스레드의 send 는 줄이 비었으면 바로 sendmsg( MSG_NOSIGNAL ), 수락은 루프 0 이 열림 콜백 뒤 배정 루프에 등록)
+  - 스트림 메시지 — 길이 접두 프레임(`StreamFrame`: `[u32 길이][종류][깃발][몸]`, 상한은 머리 4 바이트로 몸이 오기 전에 본다, 모르는 종류 · 깃발은 끊는다)과
+    끝점(`StreamMessageEndpoint` — I/O 스레드에서 프레임을 잘라 연결별 줄에, 게임 스레드의 `pump` 가 한 잠금에 열림 → 프레임 → 닫힘 순서로. 줄이 상한을 넘으면 읽기를 멈춰
+    TCP 창을 닫는다. 핑 · 퐁은 끝점이 I/O 스레드에서 스스로 답해 RTT 를 잰다. 보낼 줄이 넘치면 메시지를 버리지 않고 끊는다(SendQueueOverflow) — 버리면 그 위의 순서가 깨진다. `StreamEndpointSettings::_security` 에 TLS 컨텍스트를 주면
+    연결마다 TLS 1.3 세션 — 열림은 핸드셰이크 뒤, 핸드셰이크 · 레코드 검증 실패는 SecurityFailure 로 열림 없이 닫힘만, 우아한 종료는 close_notify 먼저. 위 층은 TLS 를 모른다.
+    `_compression` 이 켜져 있으면 프레임 몸을 압축 봉투로(깃발 `kCompressed`, 압축 → TLS 순서), 받는 쪽은 설정과 상관없이 풀고 원래 크기가 몸 상한을 넘으면 풀기 전에 끊는다).
+  - 압축 봉투 `NetCompressionUtil`(`NetCompression.h`, 뿌리) — `[u8 코덱 id][varuint 원래 크기][압축 바이트]`, 코덱은 `CompressionCodecRegistry` 의 id 로만(LZ4 · zstd 는 Engine 이
+    등록한다), 줄지 않으면 봉투를 쓰지 않는다. UDP 패킷은 측정(`NetCompressionBenchTest`)으로 끔
+    시험 도우미 `test::StreamEndpointPair`(`TestFramework/TestStreamEndpointPair.h` — 루프백 위 끝점 한 쌍, 한 스레드로 돈다)
+  - 서비스 요청-응답 — `NetRequestClient`(요청 id · 시한 · 취소 · 연결 끊김 · 과부하 중 정확히 하나로 콜백 한 번) · `NetRequestServer`(메서드마다 처리기, 바로 또는
+    토큰으로 나중에 `respond`, 멱등 키는 (주체, 메서드, 키) 범위로 기억 — 끝난 키는 기억한 응답, 처리 중인 키는 첫 응답을 같이). 복제용 RPC 가 아니라 서비스 호출이다
 - **Math/**: `VectorMath` · `MatrixMath` · `MathUtil` · `Frustum`
-- **Time/**: `MonotonicClock`(아래 "시간") · `GameTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE`)
+- **Time/**: `MonotonicClock`(아래 "시간") · `GameTimer` · `WallClock`(UTC 유닉스 밀리초 — 기간 · 만료 · 기록 시각, 경과 시간은 MonotonicClock) · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE`)
 - **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.
   - `ILogSink` / `Logger` — 매크로가 말을 거는 파사드. 포맷 · 타임스탬프 · 리스너 · 비동기 큐 · 상세도 ·
     Caller 표를 맡는다. 테스트 프레임워크는 이 인터페이스를 구현해 기존 싱크를 **감싼다**(로그 가로채기).
@@ -96,6 +125,9 @@
     출력을 더 붙이려면 `Logger::addOutput` 을 쓴다 — `Logger` 를 고칠 일은 없다.
   - 값 타입(`LogLevel` · `LogEntry` · `LogRecord`)은 `LogTypes.h` 에 있다. 두 층이 함께 쓰므로
     한쪽 헤더에 두면 장치가 파사드를 include 하게 되어 방향이 뒤집힌다.
+  - 로그 문맥(`LogContext` — 스레드 로컬 요청 추적 id 128 비트 · 주체). 문맥이 있는 스레드의 줄에만 `[trace=… acct=…]` 가 붙고(서버 서비스 ·
+    저장소 일), 없는 줄은 바이트가 같다. 비동기 경계는 넘기는 쪽이 복사해 들고 받는 쪽이 `ScopedLogContext` 로 다시 건다(`IServiceStoreWork` 가 그 예).
+    요청 머리(`NetRequestOptions` · `NetRequestContext::_traceId`)가 클라이언트의 추적 id 를 서버까지 싣는다.
 
 ## 플랫폼 의존 코드는 어디에 두는가
 
@@ -110,8 +142,9 @@
 - `PlatformFileUtil` 은 이름이 다른 원시 연산만 담는다 — `openFile`(Windows 는 UTF-16 경로 · 공유 열기 `_wfsopen`) ·
   `seekTo`(`_fseeki64`↔`fseeko`) · `tellPosition`(`_ftelli64`↔`ftello`) · `replaceFile`(원자적 바꿔치기) · `getOpenFileSizeAndRewind`.
   같은 `#if` 를 `FileUtil` · `Logger` · `ResourcePackReader` 에 다시 쓰지 않는다.
-- 표준 라이브러리가 이미 플랫폼을 덮어 주면 **분기를 만들지 않는다.** 파일 크기·시각·복사·삭제는
-  `std::filesystem` 이 한다(`FileUtil::getFileSize`).
+- 표준 라이브러리가 이미 플랫폼을 덮어 주면 **분기를 만들지 않는다.** 파일 존재 · 크기 · 시각 · 순회 · 복사 · 삭제는 `std::filesystem` 이 하되
+  `File/Std/FileUtilStdFileSystem.cpp` 한 TU 안에서만 쓴다. 엔진은 `FileUtil` 로만 본다 — 한 함수를 플랫폼 API 로
+  바꿀 때는 그 정의만 `File/Windows` · `File/Linux` 로 옮긴다(측정에서 이길 때만).
 - 플랫폼 · 아키텍처 · 컴파일러는 아래 "타깃 매크로" 의 `SW_*` 매크로로만 묻는다.
 
 ## 타깃 매크로
@@ -170,6 +203,8 @@
   직접 읽지 않는다(시험 코드 포함) — 프로파일러 · 로그 · 기한이 같은 시각을 봐야 한다. `Scripts/lint/gate/CheckClockReads.py` 가 막는다.
 - 기다리는 루프는 횟수가 아니라 시간(`Deadline`)으로 묶는다. 횟수 상한은 느린 머신에서 정상을 실패로 만든다.
 - 프레임 델타 · 일시정지가 필요하면 `GameTimer`(같은 OS 카운터)를 쓴다.
+- 기준점(epoch)이 있는 UTC 시각(서버의 만료 · 기록 시각 · 기간)은 `Time/WallClock.h` 하나다(`WallClock::nowUnixMilliseconds`) — `system_clock` 을 읽는 유일한 파일.
+  NTP 보정으로 거꾸로 갈 수 있으니 경과 시간에는 쓰지 않고, 서비스에는 `nowMs` 매개변수로 넘긴다(시험이 가짜 시각을 넣는다).
 
 ## 빌드 모델
 - 소스는 `Core_objects`(OBJECT)에서 **한 번만** 컴파일됩니다.

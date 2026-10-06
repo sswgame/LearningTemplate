@@ -65,7 +65,16 @@ cmake --build --preset Ninja-Debug
 ./build/Ninja-Debug/Bin/App.exe -EnableEditor    # 에디터까지 — 주지 않으면 에디터 모듈을 올리지 않는다
 ./build/Ninja-Debug/Bin/App.exe -vk -EnableEditor # 백엔드 고르기: -dx11 · -dx12 · -vk · -gl
 ```
-실행 인자 전체는 [README 4절](../README.md#실행-인자)(정본: `Source/Core/Predefined/ArgumentList.xxx`)에 있습니다.
+### 실행 인자
+
+인자 전체(철자 · 값 · 설명)는 생성 문서 [명령줄 인자](Config/CommandLine.md), 전역 변수 `-gv_<이름>=<값>` 은 [전역 변수](Config/GlobalVariables.md)에 있습니다
+(정본은 `Source/Core/Predefined/ArgumentList.xxx` 와 `gv_*` 정의 — 고치면 `py -3 Scripts/generate/GenerateConfigReference.py`). 키 앞의 `-` · `--` 는 같고,
+값은 `-key=value` 로 줍니다. 자주 쓰는 것: `-EnableEditor`(에디터, Dev 만) · `-dx11` · `-dx12` · `-vk` · `-gl`(백엔드) · `-W=<폭> -H=<높이>` ·
+`-gv_benchMeshes=8000 -gv_profileFrames=600`(벤치).
+
+창 없이 일만 하고 끝나는 인자(`--cook-shaders` · `--cook-scenes` · `--import-textures` · `--import-models` · `--check-*`)는
+[App/README.md](../Source/App/README.md) "헤드리스 실행" 에 있습니다 — 실패하면 `App.exe` 가 0 이 아닌 코드로 끝납니다.
+`SW_TEST_GLOBAL_VARIABLE` 로 선언한 진단 · 벤치 변수는 에디터 패널에 보이지 않고, `SW_TEST_GLOBAL_VARIABLE_SHIPPED` 로 선언한 것만 배포본에 남습니다.
 
 > **셰이더 · 텍스처는 빌드가 쿠킹 · 임포트하지 않습니다.** HLSL 을 고쳤으면 `App.exe --cook-shaders`, `Resource/**/textures_raw/` 의 원본 이미지를
 > 고쳤으면 `App.exe --import-textures`(Dev 빌드)로 쿠킹 · 임포트하고, 결과(셰이더 바이너리 + `cook.stamp` · DDS + `import.stamp`)를 같이 커밋합니다.
@@ -87,6 +96,8 @@ ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
 ```
 > Ninja 는 단일 구성(single-config) 생성기라 `ctest -C Debug` 의 `-C` 는 아무 일도 하지 않습니다.
 > 구성은 프리셋(=빌드 디렉터리)이 정합니다.
+
+설정 파일 · 전역 변수 · 명령줄 인자의 전체 표는 [docs/Config](Config/README.md), 어디에 두나는 [07_Configuration.md](07_Configuration.md).
 
 ## 5. 무엇이 일어났는지 보기 (진단 도구)
 
@@ -114,4 +125,4 @@ ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
 - `SW_ASSERT_TRUE_MSG( 조건, 메시지 )` — 실패하면 메시지(대개 실제로 받은 글)를 남기고 그 케이스를 멈춘다.
 
 ---
-[🏠 위키 홈으로 돌아가기](../README.md) | [▶ 다음: 서브시스템 개요](02_EngineSubsystems.md)
+[🏠 위키 홈으로 돌아가기](../README.md) | [▶ 다음: 문서 지도](02_DocumentMap.md)

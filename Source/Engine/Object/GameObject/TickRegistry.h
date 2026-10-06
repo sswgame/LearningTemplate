@@ -27,6 +27,7 @@
  * `PhysicsWorld` · `PrimitiveRegistry` · `SceneTransformHierarchy` 와 같은 자리입니다. 능력은 별도 타입이 갖고, 매니저는 순서만 정합니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
@@ -110,7 +111,7 @@ namespace sw
         /** @brief `TickGroup` 의 수입니다. */
         static constexpr uint32 kGroupCount = 4;
         /** @brief 목록에 없다는 표시입니다. */
-        static constexpr uint32 kNotInList = 0xFFFFFFFFu;
+        static constexpr uint32 kNotInList = invalid_index::kUint32;
 
         /** @brief 빈 등록부를 만듭니다. 첫 `refresh` 가 씬 전체를 한 번 훑습니다. */
         TickRegistry();

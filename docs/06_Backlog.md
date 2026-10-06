@@ -7,7 +7,7 @@
 > - 지나간 일의 이력은 `git log` 에 있다. 2026-10-03 까지의 전체 이력이 든 옛 백로그(약 19,400 줄, "최근에 끝낸 일" 포함)는 커밋 `7ce95fc8` 의
 >   `docs/06_Backlog.md` 다 — `git show 7ce95fc8:docs/06_Backlog.md`. 코드 주석 · 커밋 메시지가 옛 날짜 항목("2026-09-17 참고" 등)을 가리키면 거기서 찾는다.
 >
-> 마지막 정리: 2026-10-03 (기준 커밋 `7ce95fc8`).
+> 마지막 정리: 2026-10-06 (2 차 통합 뒤 — 충돌 해결이 남긴 겹침 · 되살아난 끝난 항목을 걷었다).
 
 ---
 
@@ -59,7 +59,7 @@ cd build/Ninja-Debug/Bin
 # ... 고친 뒤 같은 명령으로 after.log 를 떠서 비교한다
 ```
 
-**기본 실기동은 테스트 씬을 연다.** `GameConfig._startupScene` 이 `game/empty/maps/editortest.scene.xml` 을 가리킨다(배포본도 같다).
+**기본 실기동은 테스트 씬을 연다.** Empty 팩 `data/gamesettings.xml` 의 `startMap` 이 `game/empty/maps/editortest.scene.xml` 이다(배포본도 같다).
 그 씬의 메시는 `_meshId` 가 비어 **화면에 기하가 없다** — 픽셀 비교에는 벤치 큐브(`-gv_benchMeshes=N`)를 쓴다.
 다른 씬은 `"-gv_editorStartupScene=<경로>"` 로 연다. **PowerShell 은 점이 든 인자를 쪼갠다 — 따옴표로 감쌀 것.**
 씬 · 프리팹 에셋은 **엔진 직렬화기로 만든다**(손으로 쓴 XML 은 깨진다 — 3절 "직렬화" 참고).
@@ -95,8 +95,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-1. 직렬화 · 리플렉션
 
-- **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
-
 - **XML 문자열 속성은 읽을 때 끝 공백(줄바꿈)을 잘라 왕복이 고정점이 아니다**(2026-10-06, `SerializationRoundTripTest` 가 찾음). `MissingComponent::_originalText`
   가 줄바꿈으로 끝나 다시 쓰면 `&#10;` 이 빠진다 — 지금은 오브젝트 상태 직렬화기가 원문을 그대로 다시 써서 데이터는 잃지 않고, 시험은 이 타입을 뺀다.
   끝 공백이 뜻을 갖는 문자열 칸이 생기면 XML 읽기의 자르기를 속성 값에서 걷어낸다.
@@ -106,15 +104,11 @@ cd build/Ninja-Debug/Bin
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
 
-- **프리팹 오버라이드의 남은 모서리 셋** — (1) 인스턴스에 더한 컴포넌트는 로드 때 목록 끝에 붙어, 가운데 있던 것은 저장 · 로드 뒤 순서가 바뀐다 (2) 물려받은
-  컴포넌트의 이름표를 바꾸면 제거 + 추가로 기록돼 그 컴포넌트에 프리팹 수정이 더는 닿지 않는다(UE 도 물려받은 컴포넌트 이름 변경을 막는다 — 에디터에서 막을지)
-  (3) 프리팹에서 사라진 컴포넌트의 오버라이드는 경고와 함께 버려지고 다음 저장에서 사라진다.
 - **중첩 프리팹이 정식으로 없다.** 프리팹은 GameObject 하나(컴포넌트 트리)라 메시 · 이펙트 여럿을 담을 수는 있지만, 프리팹 안에 다른 프리팹의
   인스턴스를 오버라이드와 함께 두는 형식은 없다 — 지금은 컴포넌트가 로드 뒤 스폰하는 우회뿐이다(순환 스폰 방어는 있다, `PrefabTest.CircularReferenceSpawnProtection`).
   아이템 부품 · 탈것 · 건물처럼 조립하는 것이 늘면 필요하다: 상태 안의 프리팹 인스턴스 노드(경로 + 오버라이드), 원본 프리팹을 고치면 모든 상위가
   따라감, 순환은 로드 오류, 쿠킹은 펼치거나 참조 유지(로드 시간으로 고름), `collectReferencedPrefabPaths` 가 프리로드 수집에 그대로 쓰임.
 
-- **`getAllGameObjects()` 값 반환이 6 곳에 있다(모두 일회성).** 프레임 경로에 들어오면 `getAllGameObjects( out )` 또는 `forEachGameObject` 로 바꾼다(조건부).
 - **강체 물리의 다음 조각.** (1) 볼록 껍질 · 삼각 메시 셰이프를 `.mesh` 에서 채우는 길이 없다 — 지금은 셰이프 서술자에 점 · 인덱스를 직접 적는다
   (`MeshCache` 의 CPU 정점이 필요하다) (3) 에디터에 물리 컴포넌트의 셰이프 시각화 · 기즈모가 없다(`gv_physicsDebugDraw` 가 게임 뷰의 디버그 선으로만 그린다)
   (4) Box2D 는 한 스레드로 돈다 — 2D 바디가 수천이 되면 전용 워커를 붙인다 (5) 3D 질의는 가장 가까운 것 하나 · 겹침 목록뿐이다(레이의 모든 닿음 ·
@@ -124,22 +118,17 @@ cd build/Ninja-Debug/Bin
   디버그 선 · Shooter3D 적은 들어갔다. (1) 오프 메시 링크(사다리 · 점프 · 문)와 그 애니메이션 (2) 지형 높이장 · 식생을 베이크 기하로(`INavGeometrySource`)
   (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크 (4) 에디터의 내비메시 보기 · 베이크 버튼 (5) 행동 트리 이동 노드가
   `INavMover` 를 쓰게(격자 · 내비메시 공통) (6) 다른 시험 게임(AbilityArena 등)의 적도 내비메시로.
-- **`MeshInstanceBatch` 의 한계.** 항목 수가 만들 때 정해지고(resize 없음, `setEntryVisible` 로 숨기기만), 배치 하나 = 메시 · 머티리얼 하나라 항목별
-  머티리얼 · 투명 정렬이 없다.
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
-- **추가 뷰(CCTV · PiP · 렌더 텍스처)의 투명 순서는 주 카메라 기준이다.** 투명 순서의 정본이 CPU `sortTransparent` 하나가 되면서(twod-basics) 시선 축 · 깊이를
-  주 카메라로 한 번 정하고, GPU `instancesort` 는 뷰마다 인스턴스 번호로 되돌리기만 한다. 추가 뷰가 주 카메라와 크게 다른 쪽을 보면 겹친 투명 물체의 앞뒤가 틀린다 —
-  뷰마다 CPU 정렬 키를 따로 두거나 뷰별 키를 GPU 정렬에 다시 넣는다.
-
-- **`.hdr` 원본 임포트가 없다** — 지금 임포트는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
-
-- **창(백버퍼)을 읽는 창구가 없어 창 쪽 반전을 시험이 못 본다.** `-gv_screenshot` 은 오프스크린 텍스처를 읽으므로 창으로 옮기는 단계(GL 캡처 블릿)의
-  상하 반전은 캡처로 보이지 않는다(`3b9a6bdc`). 지금은 `Scripts/dev/CompareWindowToCapture.py` 로 손으로 잰다. 스왑체인에 백버퍼 읽기를 두면 hostgpu 시험으로 바꿀 수 있다.
 - **2D 의 남은 것(2026-10-04 twod-basics)** — (1) 파이프라인을 게임이 데이터로 고르는 자리(지금은 `-gv_renderPipeline` 뿐 — 게임 프리셋 · gamesettings 에)
   (2) 픽셀 퍼펙트의 Upscale Render Texture(기준 해상도 타깃 + 정수 업스케일 패스) (3) 2D 빛 텍스처 · 자유 모양 빛 · 부드러운 그림자 · 빛 블렌드 스타일
   (4) 타일맵 청크(한 레이어 65536 칸)와 편집 중 미리보기(지금은 플레이 때 배치를 만든다), 에디터 칸에 아틀라스 그림 (5) 테두리를 픽셀로 적는 9-슬라이스.
+- **방향광 그림자의 남은 것(shadow-fix)** — (1) 볼륨 맞춤(`_shadowViewDistance`)을 쓰는 게임은 ThemePark 하나다 — 직교 리그를 쓰는 NileCity · StarSkirmish ·
+  HarvestValley 와 envshowcase(고정 150 m)를 옮겨 볼 것(스크린샷 전후). 바이어스가 텍셀 단위로 줄어 다른 여섯 게임의 여드름은 아직 눈으로 안 봤다(게임별 빌드). (2) 원근 카메라는
+  캐스케이드 하나라 멀리 갈수록 텍셀이 크다 — CSM(분할 2~4, 경계 섞기). (3) 추가 뷰(CCTV · 분할 화면)도 주 시점 볼륨을 쓴다 — 다른 곳을 보는 뷰는 그림자가 빠진다
+  (뷰별 맞춤이면 뷰별 그림자 패스 상수). (4) 깊이 첨부 readback 이 없어 `-gv_screenshotAttachment=ShadowMap` 이 실패한다(`readbackTexture2D 실패`).
+  (5) 카메라 회전 중 2 m 양자화 경계에서 가장자리가 한 번씩 튈 수 있다 — 거슬리면 경계 구(회전 불변)로.
 - **점광 · 스폿 그림자** — RHI 텍스처 차원(배열 · 큐브, 면 단위 타깃 · 올리기 · 읽기)은 있다. 남은 것: 그림자 패스 다중 뷰(면 여섯) → 셰이더 쪽(DX12 · Vulkan
   큐브 · 배열 bindless 테이블, DX11 · GL TextureCube 슬롯) + `swSampleShadowAtWorld`. 3 단계 전에 큐브 대신 2D 아틀라스(Unity URP · Godot — RHI 변경 없음)로 갈지 먼저 정한다.
 - **컷 준비(프리웜)의 선행 조건 셋**(1-6 카메라 항목의 5 단계가 기다린다) — LOD 시스템이 없다, 밉 단위 텍스처 스트리밍이 없다(`AssetStreamingQueue` 는 에셋
@@ -149,16 +138,21 @@ cd build/Ninja-Debug/Bin
   `getWaveTime`)을 잇는다. (2) 강 경로가 점 목록이다 — 스플라인 컴포넌트가 들어오면 그것을 경로로 받는다. (3) 하늘 · 시간 · 높이 안개 + 물속 안개 패스(값은
   `WaterBodyComponent::findUnderwaterFog` 가 이미 준다) — 다중 뷰 병합 뒤. (4) 물의 굴절 · 화면 공간 두께는 반투명 패스가 장면 색 사본 · 장면 깊이를 입력으로 받는
   계약이 있어야 한다(지금은 지형 깊이를 정점에 굽는다). (5) 흔드는 식생의 그림자는 흔들리지 않는다(`shadowdepth.hlsl` 이 머티리얼 정점 변형을 모른다 — 풀은 그림자를 끔).
-  (6) 지형 LOD 가 바뀌면 메시 집합이 바뀌어 정점 풀을 통째로 다시 만든다 — Release 에서 바뀌는 프레임의 최악 시간을 재 보고, 크면 LOD 메시를 미리 만들어 두거나
-  청크 정점을 풀에서 부분 갱신한다. 지오모프(LOD 튐) · 레이어 다섯 이상(두 번째 스플랫 — 머티리얼 텍스처 칸이 넷이다) · 에디터 칠하기 도구가 없다.
+  (6) 지형 LOD 교체 프레임 — `TerrainBenchTest.LodSweepWorstFrame`(Release, 쇼케이스 지형을 600 프레임 동안 가로지름, 3 회): 교체 프레임 111 개의
+  updateLods(청크 메시) p50 0.1 ms · 최악 4.0~5.1 ms, GpuScene 수집 p50 0.95 ms · 최악 5.0~5.2 ms — 기준(GT 2 ms)을 넘는다. 메시 집합이 바뀌어 RT 는 정점 풀을
+  통째로 다시 만든다(`RT.GpuScene.vertexPool`, 벤치에는 없다 — App 표로). LOD 메시를 미리 만들어 두거나 청크 정점을 풀에서 부분 갱신한다. 지오모프(LOD 튐) · 레이어 다섯 이상(두 번째 스플랫 — 머티리얼 텍스처 칸이 넷이다) · 에디터 칠하기 도구가 없다.
 - **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — 노멀 맵(정점에 탄젠트가 없다) · UV 스크롤 애니메이션 · 셰이딩 시프트 / 림 곱 / 외곽선 두께 텍스처(머티리얼 텍스처 칸이 넷이라 기본 · 그림자 · 발광 · 맷캡만 받는다) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다) · 그림자 패스의 알파 컷오프
   (`shadowdepth.hlsl` 은 픽셀 스테이지가 없어 머리카락 카드가 사각형 그림자를 드리운다 — 모든 컷오프 머티리얼이 같다).
 - **VRM 임포트의 남은 것** — 머티리얼(MToon) · 구간 메시 · 스켈레톤만 옮긴다. 표정(모프 타깃 · `blendShapeMaster`) · 스프링 본(`secondaryAnimation`) · humanoid 본 표 · firstPerson 은 읽지 않는다(0.x · 1.0 모두). 본 메시(`<이름>.mesh`)는 구간들을 다시 합친 것이라 디스크에 두 벌이다(VRoid 34k 삼각형 7 MB × 2) — 엔진 메시에 머티리얼 구간이 생기면 하나로 줄인다. VRoid 텍스처는 BC3 이다(Debug DirectXTex 의 BC7 은 512×256 한 장도 10 분이 넘는다 — Release 로 BC7 임포트를 다시 할 것). `ModelImporterTest.SkinnedModelImportsSkeletonClipsAndAttachments` 는 Debug 에서 혼자 31 초라 EditorTest 한도를 30 → 120 초로 올려 두었다 — 임포트를 줄이면 되돌린다.
-- **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것: 반해상도 패스가 읽는 입력의 텍셀 크기(`g_OutlineParams.yz` 는 프레임 텍셀),
+- **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것:
   `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
+- **머티리얼 폴백 원소(`FrameRenderer::ensureMaterialFallbackBuffers` — 0 바이트)의 텍스처 인덱스 칸이 0 이다** — Vulkan 은 bindless 0 번 실제 텍스처를 읽는다(DX12 는 0 번을 null SRV 로 비웠다, 머티리얼은 `MaterialPacking` 이 `kInvalidIndex` 를 넣는다). 원소 레이아웃(`ShaderBindingSlot`)은 stride 만, 리플렉션 원소 칸은 `uint` 뿐이라 텍스처 칸을 가를 수 없다 — 셰이더 쪽 표식(텍스처 칸 매크로가 리플렉션에 남기는 이름 규칙)으로 칸을 알아 `kInvalidIndex` 로 채우거나, Vulkan 도 0 번을 null 서술자로 비운다.
 
 ### 1-4. 에디터
 
+- **설정 브라우저 패널**(기능 로드맵) — `docs/Config/ConfigReference.json`(생성 메타데이터: 파일 · 칸 · 타입 · 기본값 · 범위 · 설명)을 읽어 `Config/` · 팩 설정 파일을
+  찾아 열고 칸을 인스펙터처럼 고치는 창(언리얼 Project Settings · `UDeveloperSettings` 자리). 고친 파일은 `ConfigManager::reloadConfigFile` 로 다시 읽고,
+  기본값과 같은 값은 파일에서 지운다(설정 파일에는 다른 값만).
 - **AbilityArena 자동 전투 실행은 종료 보고에 `Scene` 태그 232 B(1 블록)가 남는다**(2026-10-06, `Ninja-Debug-AbilityArena` 네 백엔드 모두 `-gv_arenaAutoPlay=1
   -gv_profileFrames=300`). 다른 게임 여섯 · Empty 는 0. 같은 진단(기준선 뒤 상세 추적 · 종료 직전 `getTopCallStacks`)으로 자리를 찾는다.
 - **Shooter3D 의 Q/E 한 번 = 무기 한 칸은 손으로 확인할 것**(2026-10-06 입력 trigger 결함 수정 뒤). 단위 시험(`InputMapTest.Axis1DBindingFollowsTheActionTrigger`)은
@@ -171,7 +165,7 @@ cd build/Ninja-Debug/Bin
   InputReplay · 기즈모 · 미니덤프 · RenderTargetPanel)은 다시 만들지 않는다.
   - **C 확장 지점** — 등록부(`EditorRegistry<T>` · `IEditorPanel` · `IInspectorComponent` · 시각화 · `EditorCommandRegistry`)를
     EditorFramework SHARED 로 떼어 내보내고, 키트 · 게임이 Dev 전용 `<Module>Editor` 모듈로 패널 · 인스펙터 · 시각화를 등록한다.
-    지금은 EditorModule DLL 안의 함수 정적이라 다른 모듈이 못 쓴다. 첫 사용자는 ThemePark 배치 시각화.
+    지금은 EditorModule DLL 안의 함수 정적이라 다른 모듈이 못 쓴다. 첫 사용자는 ThemePark 배치 시각화. GM 도구 패널(GF_Admin 의 `AdminClient` — 조회 · 지급 · 제재 · 감사 열람)도 이것을 기다린다.
   - **D 콘솔 · 치트(남은 것)** — 게임 · 키트의 치트 명령(무적 · 아이템 주기 · 돈 …)을 각 게임 · 킷에 `SW_DEV_COMMAND` 로 단다(등록부 · 콘솔 ·
     엔진 명령은 들어갔다 — `Source/Engine/README.md` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았다.
     게임 창 콘솔은 셸 InputMap 액션 + `InputManager` 키보드 포커스로 받는다(`DevTools/DevConsoleController`). 남은 것: 패드는 포커스 밖이라 콘솔이 열린 동안
@@ -186,11 +180,7 @@ cd build/Ninja-Debug/Bin
     타임라인은 Tracy).
   - **H 품질 · 작업 흐름** — assert 무시 대화상자(이번만 / 계속) · 버그 리포트 한 방(스크린샷 + 로그 + InputReplay + 씬) · 시험 패널.
 
-- **에디터 자체 시험(`SW_EDITOR_SELF_TEST`)이 입력을 흉내 내지 못한다** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 툴팁 호버 · 드래그 드롭은
-  ImGui 입력 이벤트를 넣는 창구(`ImGuiIO::AddMousePosEvent` 류를 프레임 단계에서 주입)가 있어야 덮인다.
-
-- **DPI 150 % 모니터와 모니터 사이 이동을 실물로 보지 않았다.** 96 DPI 기계에서 `-gv_editorUiScale=1.5` 로만 봤다. 글자 선명도 · 창 · 스왑체인 크기 ·
-  `io.ConfigDpiScaleFonts` · `ConfigDpiScaleViewports` 를 본다.
+- **입력 흉내 창구(`EditorSelfTestInput` · `EditorSelfTestMarks::note`)로 아직 안 덮은 것** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 드래그 드롭.
 
 ### 1-5. 핫 리로드 · 모듈
 
@@ -201,19 +191,20 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
-- **아무도 이름을 부르지 않는 메시가 45 개다**(에셋 검증 `orphans` 경고 — NileCity 건물 · StarSkirmish 탈것 · ThemePark 코스터 조각 등 Kenney 키트에서 들여온 것).
-  쓸 계획이 없으면 `models_raw/` 원본과 함께 지우고, 코드가 이름을 조립해 부르는 것이면 규칙의 `exclude_patterns` 에 적는다.
-
 - **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`. (1) 메뉴 UI(런타임 UI 프레임워크 뒤) ·
-  `UserSettingsPanel` 대신 키를 눌러 받는 리바인딩 창. (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 그림자 · 시야 거리 · 후처리 ·
+  `UserSettingsPanel` 대신 키를 눌러 받는 리바인딩 창. (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 시야 거리 · 후처리 ·
   텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode`(톤맵 패스에 색각 행렬 — 지금 톤맵에 상수 버퍼가 없어 미뤘다) · UI 배율 · 글자 크기 · 자막,
   카메라 `gv_cameraFieldOfView` · `gv_cameraShakeScale` · `gv_cameraHeadBob`(cam-views 가 읽을 자리). (4) 해상도 선택지를 모니터 모드에서(선택지 공급자) · GPU 사양 조회(RHI 어댑터 · 전용 메모리)로 품질 자동 선택.
-  (5) 게임 스키마에 키 바인딩 설정 — Shooter3D 는 입력 맵(`data/shooter.input.xml`)을 쓰니 그 액션부터. 다른 시험 게임은 아직 키를 직접 묻는다(입력 맵으로 옮길 것). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
+  (5) 게임 스키마에 키 바인딩 설정 — 시험 게임 일곱이 모두 입력 맵(`data/<게임>.input.xml`)을 쓴다(그 액션부터). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 - **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 중간: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXmlData` 가 든다) · NetConnection 메시지 버퍼 재사용 ·
     기반의 같은 손셈(NavGrid 4 · FlowField 4 · GridInventory 3 · PlatformTileMap 2 · GridReachability `% 너비` 1, 클래스마다 자기 `isInside` · `computeIndex` ·
     `toIndex` 사본 — NavGrid · GridReachability · ElementGrid)도 `GridTopology` 멤버로 · 게임 손셈(HarvestValley `FarmCropComponent` · `FarmSoilComponent`,
     NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이.
+- **키트 조립 — 남은 것(2026-10-06).** 틀 · 키트 전부 · 조립 시험 둘(`KitCompositionTest` — Farming + CreatureLife, RTS + CityBuilder)과 `MeadowVillage` 는
+  들어갔다(규칙: `Source/GameFramework/README.md` "키트 여럿을 한 게임에"). 남은 것 — RTS 가 땅 리비전마다 땅 격자 전체를 다시 칠하는 비용(64 × 64 에서 재고
+  결정, 1-8), 둘째 조립(RTS + City)의 시험 게임(필요해지면 MeadowVillage 모양). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `GameStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에
+  `releaseLand`, 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다).
 
 - **카메라 — 프리셋 데이터 · 블렌드 · 시퀀서(사용자 승인 로드맵).** 1~3 단계(프리셋 XML · 블렌드 · 디렉터, 모드(직교 · 궤도 · 따라가기 · 1인칭 · 3인칭 ·
   CCTV) · 입력 · 카메라 매니저(뷰 타깃 블렌드), 흔들림 · 제약 · 프레이밍 · 스프링 암)와 4 단계(다중 뷰 렌더 · 컷 프레임 신호 · 초상화 굽기)는 들어갔다
@@ -222,9 +213,7 @@ cd build/Ninja-Debug/Bin
     XML 로 옮기려면 게임 디렉터의 `setViewOverride` · `findGroundPoint` 를 디렉터 창구로 바꿔야 한다. 프레이밍의 가로 존은 16:9 로 센다(모드가 화면 비율을 모른다).
     2D(XY 평면) 카메라는 디렉터 밖의 `Follow2DCameraComponent` 다 — 2D 게임이 프리셋 · 블렌드를 원하면 디렉터 모드에 "XY 평면 따라가기" 를 더하고 그 컴포넌트를 지운다.
   - 4 단계에서 남은 것: 예산 · 보임 판정이 거칠다 — 보임은 "지정한 오브젝트가 주 카메라 절두체 안" 하나(가려짐 · 화면 크기 안 봄), 예산은 프레임당 뷰 수
-    (`gv_renderViewBudget`)지 시간이 아니다. 화면 사각형 뷰는 에디터 GameView(ImGui 이미지)에서 검증하지 않았다. 해상도 배율 뷰의 TAA 기록 · 풀은 뷰마다 따로라
-    뷰가 많으면 메모리가 뷰 수에 비례한다(공유 풀 없음). 초상화 굽기는 동기(렌더 스레드를 멈추고 그린다) — 에디터 썸네일처럼 많이 구우려면 큐로. GL 기본 프레임버퍼의 뷰포트
-    y 뒤집기(`OpenGLRHICommandContext::setViewport`)는 자동 시험이 없다 — 시험의 화면 사각형은 캡처(오프스크린 FBO)에 그려지고 RHI 에 백버퍼 되읽기가 없다.
+    (`gv_renderViewBudget`)지 시간이 아니다. 화면 사각형 뷰는 에디터 GameView(ImGui 이미지)에서 검증하지 않았다.
   - 5 단계(시퀀서): 값 커브 트랙(시야각 · 초점 · 노출 — 블렌드 곡선과 같은 보간 함수), 카메라 컷 트랙(구간마다 프리셋 · 카메라, 프리셋의 블렌드로 전환 — 언리얼
     Camera Cut Track), 흔들림 트랙, 게임 ↔ 시네마틱 블렌드(시퀀스 시작 · 끝). 지금 시퀀서는 Clip(트랜스폼 보간) · Event 두 종류뿐이다.
     - 컷 준비(프리웜) — 컷 순간 LOD · 텍스처 · 셰이더가 바뀌는 게 보이지 않게. 컷 트랙은 다음 컷을 미리 안다 → 컷 N 초(또는 프레임) 전에 카메라 매니저에
@@ -239,7 +228,6 @@ cd build/Ninja-Debug/Bin
   - 1 단계에서 미룬 것: 디렉터의 켠 프리셋 · 블렌드 진행은 저장하지 않는다(다시 읽으면 시작 프리셋부터). 블렌드 도중 재활성은 섞인 포즈를 **고정**해 출발한다 —
     Cinemachine 처럼 나가는 블렌드를 살려 둔 채 겹쳐 섞으려면 블렌드 스택이 필요하다.
 
-
 - **서드파티 — Jolt(3D 물리) · Box2D(2D 물리) · ACL(애니메이션 압축)(2026-10-04 사용자 결정), Recast · Tracy(2026-10-05 추가).** 모두 MIT · vcpkg 에 있다.
   물리 둘은 감쌌다(`IPhysicsScene3D` · `IPhysicsScene2D`, `Source/Engine/Physics/README.md`) — 경계는 `CheckThirdPartyIsolation.py` 가 지킨다(ACL 도 같은 표에 있다).
   ACL 코덱은 `Engine/Animation/Codec/Acl`(쿠킹 때 압축 → 코덱 id + 불투명 블롭). vcpkg 를 바꿀 때는 **다른 워크트리가 빌드 중이
@@ -247,10 +235,9 @@ cd build/Ninja-Debug/Bin
   2026-10-05 사용자 결정으로 **Recast & Detour**(zlib, 정적 — `RecastNavigation::Recast` · `Detour` · `DetourCrowd` · `DetourTileCache`)와
   **Tracy**(BSD-3, 클라이언트만 · 기능 끔 — `Tracy::TracyClient`, Windows 는 공유 TracyClient.dll)를 vcpkg 로 들였다(`ThirdParty/{recastnavigation,tracy}`).
   Tracy 는 clang-cl 트리플릿의 C++14 기본값에 서지 못해 C++17 오버레이 포트(`ThirdParty/tracy/vcpkg-port/tracy`)를 둔다. Tracy 는 엔진 프로파일러의 두 번째
-  출력으로 감쌌다(`Source/Engine/Utility/Profiling/README.md` — 헤더 경계는 같은 게이트, Shipping 은 링크하지 않는다). 남은 것: 배포물에 넣을
-  서드파티 고지 목록이 저장소에 없다 — Shipping 패키지에 `THIRD_PARTY_NOTICES` 를 만들어 vcpkg `share/*/copyright` 를 모은다. Tracy(BSD-3)는 Shipping 에
-  들어가지 않지만 **개발 빌드(TracyClient.dll)를 남에게 줄 때** 고지가 필요하다: "Tracy Profiler (https://github.com/wolfpld/tracy) is licensed under the
-  3-clause BSD license. Copyright (c) 2017-2025, Bartosz Taudul <wolf@nereid.pl>" + BSD-3 본문(`share/tracy/copyright`) — 뷰어(tracy-profiler.exe)는 저장소에 넣지 않는다.
+  출력으로 감쌌다(`Source/Engine/Utility/Profiling/README.md` — 헤더 경계는 같은 게이트, Shipping 은 링크하지 않는다). 뷰어(tracy-profiler.exe)는 저장소에 넣지 않는다.
+  2026-10-06 **OpenSSL**(Apache-2.0 — 감싼 폴더 `Engine/Network/OpenSsl`, 같은 게이트) · **SQLite**(퍼블릭 도메인) · **libpq**(PostgreSQL License, `openssl` 기능만)를
+  들였다 — Windows 는 지금 트리플릿대로 DLL. OpenSSL 은 네트워크 보안, SQLite 는 `GF_SqlStore`, libpq 는 `GF_Server_SqlStore` 가 쓴다(링크도 그 CMakeLists 에서만).
 - **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/README.md`(임포트 · 코덱 · 재생 · 상태 기계 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생).
   알림 디스패치(구간 알림 · 처리기 등록부 · `*.notifies.xml`)는 `Source/Engine/Character/README.md`.
   남은 것 — ① 그래프의 블렌드 스페이스 노드(지금 `BlendSpace` 는 행렬 하나라
@@ -283,7 +270,7 @@ cd build/Ninja-Debug/Bin
   (`SurfaceTransferUtil` — 모프 · 스킨 가중치)를 임포트 · 쿠킹 단계에, 아틀라스 굽기(`IMeshMergeHooks` 구현). **핫 리로드**: 소켓 · 레퍼런스 포즈 · 체형 · 피팅 표 · 부품
   피팅 · 표면 채널 파일을 고치면 외형을 다시 조립 — 소비자(외형 컴포넌트)가 `IAssetCache` 로 올린다(로더는 다 있다). **나중**: 천 시뮬레이션(Jolt 소프트 바디)이 같은 겹
   정보를 충돌체로(Mutable 의 Clip with Mesh · Clip Deform 이 같은 문제를 푼다). 참고: 언리얼 Mutable(Customizable Object) ·
-  Skin Weights 전이, Character Creator 스마트 핏, Daz 오토핏 ⑤ 장비 해석 — 데이터 · 해석기는 있다(`GameFramework/Appearance` — 슬롯 표 · 세트 · 아이템 외형 · 꾸미기 스키마 · 규칙 · `CharacterAppearance`
+  Skin Weights 전이, Character Creator 스마트 핏, Daz 오토핏 ⑤ 장비 해석 — 데이터 · 해석기는 있다(`GameFramework/Base/Appearance` — 슬롯 표 · 세트 · 아이템 외형 · 꾸미기 스키마 · 규칙 · `CharacterAppearance`
   프리셋, 장착 조건은 `Equipment`, 공유 코드 · 플레이어 프리셋 · 네트워크 동기화, 형식은 그 README). 외형 컴포넌트(`CharacterAppearanceComponent` — 프리셋 · 칸 덮어쓰기 → 몸 메시 ·
   소켓 부품 스폰 · 부착 · 포즈 따라가기 · 염색, 소켓 이름 공간 `AppearanceSocketRig`)는 들어갔다. 남은 것: 장비(`Equipment`)를 `CharacterAppearanceState` 로 잇기,
   부품 풀(스폰 대신 숨겨 둔 인스턴스), 외형 상태가 바뀌면 같은 인스턴스를 다른 소켓으로, 떨어져 나감 이벤트를 `SocketBindingComponent` ReleasedPhysics 로,
@@ -316,7 +303,7 @@ cd build/Ninja-Debug/Bin
   (4) 출력: HRTF(바이노럴) · 5.1/7.1 · 다중 리스너 믹스(지금은 가장 크게 들리는 리스너 하나), 리눅스 출력 백엔드(지금 Null — 오프라인 렌더). (5) 2D 물리(Box2D) 가림 ·
   포털/방 기반 가림(Wwise Rooms & Portals) · 회절. (6) 사이드체인 덕킹(대사 때 음악 낮추기 — 지금은 스냅샷으로), 컨볼루션 리버브, 그래뉼러 · 절차 소리
   그래프(MetaSounds 급). (7) 일곱 시험 게임 중 Shooter3D · StarSkirmish 만 이벤트로 바뀌었다 — 나머지는 아직 `GameSound::play( 경로 )`.
-- **NPC 하루 일정(`GameFramework/AI/Schedule`, 2026-10-04) — 연결할 것.** 일정 데이터 · 런타임 · 화면 밖 LOD · 잠 · 저장 · 추적은 들어갔다(`AI/Schedule/README.md`).
+- **NPC 하루 일정(`GameFramework/Base/AI/Schedule`, 2026-10-04) — 연결할 것.** 일정 데이터 · 런타임 · 화면 밖 LOD · 잠 · 저장 · 추적은 들어갔다(`AI/Schedule/README.md`).
   남은 것 — (1) gimmick 병합 뒤: 스마트 오브젝트 시스템이 `IScheduleActivityLocator` 를 구현(`reserve` 는 NPC · 종류 · 날 · 시간 창에 멱등, 지금 점유만 되면
   어댑터가 예약표를 들고 칸 시작에 점유), 끼어들기(말 걸기)를 상호작용 프레임워크에서 `pushInterruption( "Talk" )` 로. (2) char-anim 병합 뒤:
   `IScheduleActivityAnimator` 구현 — `_animation` 이름을 애니메이터 그래프 상태로. (3) 쓰는 게임이 없다 — HarvestValley 마을 사람(데이터
@@ -329,53 +316,22 @@ cd build/Ninja-Debug/Bin
   물리 질의 히트스캔 · 시야(지금 상자 목록 · 캡슐), 쓰러질 때 무기 떨어뜨리기(`SocketBindingComponent::release( Physics )` — 무기 프리팹에 강체를 더하면 된다),
   알림으로 휘두름 피해 · 발소리(지금 휘두름 피해는 `_attackHitTime` 초). 그 밖: 외형 부품 풀(스켈레톤마다 프리팹을 세우고 지운다), 1인칭에서 숨긴 몸의 애니메이션
   LOD(숨겨도 평가한다), 걷기 · 달리기 발 미끄러짐(위 애니메이션 ⑦).
-- **Shooter3D 핫 리로드 · 세이브는 처치 수만 잇는다.** 웨이브를 페이싱 감독(`AiDirector`)이 내게 되면서(ai-telemetry) 웨이브는 감독의 주기라, 되살린 판은
-  적을 걷고 감독을 처음부터 돈다(quick-gf 의 상태 v1 은 웨이브 번호를 실었다 — v2 는 처치 수뿐). 감독 상태(주기 · 시간 · 단계 · 풀 쿨다운 · 예산 · 난수)를
-  `writeState` · `readState` 로 싣고 Shooter3D 가 같이 쓰면 웨이브까지 이어진다.
-
-- **Shooter3D 외형 데이터(`game/shooter3d/data/appearance/`)가 없는 메시 · 프리팹 · 소켓 · 머티리얼 27 곳을 가리킨다**(char-appear 의 자리 채움 데이터).
-  에셋 검증 `references-exist` 가 이 폴더를 빼 두었다(`Config/Editor/AssetValidationRules.json`) — Shooter3D 통합이 실제 에셋을 넣으면 그 제외를 지운다.
-
-- **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
-  스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
-- **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** **하지 않기로 한 것:** HP 바 · 피해 숫자의 매 틱 배치 예약을 "바뀔 때만" 으로 줄이는 것 — 월드 변환이 틱 **뒤에** 적용되므로 틱 안에서
-  자리 변화를 보면 움직이는 막대가 한 프레임씩 건너 늦는다. 줄이려면 변환 적용 뒤의 훅이 필요하다.
 - **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.
-- **리눅스에서 yad 만 깔린 기계에는 "All files" 필터가 없다**(`LinuxFileDialog.cpp`). `yad --file --file-filter='A | *.txt' --file-filter='All files | *'`
-  가 뜨는지 확인한 뒤에만 `buildGtkStyleCommand( ..., true )` 로 바꾼다 — yad 가 인자를 거부하면 다이얼로그가 아예 안 뜬다.
 
-- **장르 공통 기반 · 새 키트의 첫 엔진 빌드(2026-10-03).** 위 두 항목과 같은 이유로 하네스로만 돌렸다. 기반의 새 폴더 —
-  `AI/` · `Navigation/` · `Combat/`(Shooter 키트에서 옮긴 무기 포함) · `Input/`(예전 `Control/`) · `Inventory/` · `Match/` · `Movement/` · `Progression/` · `Quest/` · `World/`,
-  `Input/TimingJudge` · `Utility/TimerQueue` · `Data/StatBlock` — 와 키트 `GF_CityBuilder` · `GF_RealTimeStrategy`. 하네스 통과: `NavigationTest` · `AiTest` ·
-  `CityBuilderTest` · `RealTimeStrategyTest` · `CombatTest` · `InventoryTest` · `ProgressionTest` · `QuestTest` · `WorldTest` · `MatchTest` · `ControlTest` · `PlatformerTest` ·
-  `GameFrameworkUtilTest`, 네트워크 — `Core/Network`(`NetworkTest` 6, 실제 UDP 로컬 송수신 포함) · 키트 `GF_NetClientServer` · `GF_NetLockstep` · `GF_NetTurnRelay` · `GF_NetMmo`
-  (`NetClientServerTest` · `NetLockstepTest` · `NetTurnRelayTest` · `NetMmoTest`). Windows 소켓 경로(`PlatformSocketUtil` 의 winsock 분기)는 **구문 검사도 못 했다**(리눅스뿐). 할 일: 재구성(새 폴더는 GLOB 이라 CMake 수정 없음 — `GF_Shooter` 가 빠졌으니 낡은 빌드의 `GF_Shooter.dll` 을 지운다) → Debug · Shipping →
-  `EngineTest --test_filter=` 위 스위트들. `GameFramework.dll` 이 커졌으니 `SW_GF_API` 내보내기 누락(링크 오류)부터 본다.
-- **새 장르 키트 22 개 · 시험 게임 둘의 첫 엔진 빌드(2026-10-03, 대기열은 모두 만들었다).** 하네스로만 돌렸다 — `GF_TacticsSrpg` · `GF_CardGame` · `GF_OpenWorldWestern` ·
-  `GF_WitcherRpg` · `GF_CreatureLife` · `GF_RestaurantSim` · `GF_SurvivalHorror` · `GF_SideScrollConquest` · `GF_Fighting` · `GF_ActionAdventure` · `GF_GhostHunt` ·
-  `GF_BattleRoyale` · `GF_CoopScavenger` · `GF_MonsterCollector` · `GF_ClassicJrpg` · `GF_Metroidvania` · `GF_ActionPlatformer` · `GF_KartRacing` · `GF_MechArena` ·
-  `GF_AsymmetricHorror` · `GF_PartyArena` · `GF_Rhythm`, 시험 게임 `NileCity` · `StarSkirmish`(화면 · 마우스 집기 · 카메라는 본 적이 없다 — 에디터 게임 뷰에서는
-  창 크기를 써서 커서가 어긋날 수 있다). 할 일: 재구성 → Debug · Shipping → 각 `<Kit>Test`, `SW_ACTIVE_GAME=NileCity` · `StarSkirmish` 로 한 번씩 띄워 보기.
-  **같은 빌드에서 GameFramework 폴더 재배치(2026-10-03)도 처음 확인한다** — `Base/` 를 `Framework` · `Components` · `Stage` · `Utility` · `Input` 으로 쪼개고
-  (`Transition` · `Control` 은 합침, `ItemBag` → `Inventory`, `GameFlags` → `World`), 키트를 `Kits/<장르 묶음>/<키트>` 로 옮겼다. 재구성(`cmake --preset`)으로
-  GLOB · 리플렉션 헤더 목록을 다시 모아야 한다 — 낡은 빌드 폴더의 `generated/**/Base/*.gen.cpp` 가 남아 같은 타입이 두 번 등록되면 그 폴더를 지운다.
 - **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글꼴 렌더러가 생기면: `getFontFallback( culture )` 의 가족 목록으로 CJK ·
   아랍 글리프 대체를 고르고, `isRightToLeft()` 로 배치를 뒤집고, `getTextRevision()` 이 바뀌면 글을 다시 묻는다(언리얼 FText 처럼 키를 든 UI 글 컴포넌트 —
   `Meta = "Localizable"` 프로퍼티 + `getStringByText`). 아직 없는 것: `selectordinal`(서수) · 화폐 · 시간대 · XLIFF · 쿠킹된 이진 표(언리얼 `.locres` — 지금은 JSON 을
   그대로 읽는다) · 아랍어 이외 RTL 문화권 데이터 · `ja` 번역. 아이템 · 무기 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 `getStringByText` 를 거치지 않는다.
 
-- **상호작용 · 기믹(2026-10-04 들어감 — `GameFramework/Interaction` · `Gimmick` · `Spline`) 병합 뒤 남은 것.**
+- **상호작용 · 기믹(2026-10-04 들어감 — `GameFramework/Base/Interaction` · `Gimmick` · `Spline`) 병합 뒤 남은 것.**
   - 물리: 기믹 프리팹의 `BoxCollider2DComponent` 에 3D 게임용 3D 트리거 · 강체 콜라이더 변형을 더한다(`Resource/common/prefabs/gimmicks`). 월드 질의 · 카메라 암 ·
-    집기 · 눌림판 무게 · 발사대 · 컨베이어는 강체 물리에 이어졌다(`GameFramework/Interaction` · `Gimmick` README).
+    집기 · 눌림판 무게 · 발사대 · 컨베이어는 강체 물리에 이어졌다(`GameFramework/Base/Interaction` · `Gimmick` README).
   - 애니메이션: 상호작용 단계에 몽타주(클립)를 이름으로 잇기 — 맞춤 마커 → 워프 목표는 들어갔다(`InteractorComponent` 가 시작할 때 넣는다).
   - 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
   - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
   - 네트워크: 회로 상태 바이트(`GimmickCircuit::saveState`)를 `NetClientServer` 스냅샷 · `RollbackSession` 상태에 싣기(모양은 준비됨, 배선 없음).
-  - `InteractorComponent` 는 틱마다 씬의 `InteractableComponent` 를 모두 훑는다 — 하는 쪽이 많아지면 공간 등록부로. `SmartObjectComponent` 는 틱도
-    `onPropertyChanged` 도 없어 상호작용 표를 고쳐도(핫 리로드) 자리 정의를 다시 찾지 않는다 — `InteractionCatalog::getSharedReloadCount` 를 볼 자리를 정한다.
-  - 카트 트랙(`KartTrack`)은 거리를 수평(XZ) 길이로 재서 공용 `SplinePath` 로 옮기지 않았다(옮기면 랩 · 고스트 값이 바뀐다 — 옮길지 정한다).
 
 - **CS2 식 서브틱 입력(2026-10-05 제안 — 넷 게임이 생기면; 지금 넷 키트를 쓰는 시험 게임은 0).** `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
   B1 사건 시각 + 입력 리플레이 판 4 · B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입) · B3 `InputMap` 이 행동별 "누른 순간" 을 준다 · B4 클릭 순간의 시선으로 발사
@@ -400,14 +356,16 @@ cd build/Ninja-Debug/Bin
 
 - **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b) — 250 ms · 손실 15 % 의 사건 지연
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도
-  받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ② 롤백(파괴 상태 저장 · 되돌리기, `RollbackSession` 에
-  `makeNetworkSnapshot` 바이트 싣기)은 하지 않았다. ③ 부서지기 전 움직이는 파괴 오브젝트(상자 · 드럼통)의 자세는 파괴 키트가 보내지 않는다 — 게임이
-  `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ 전용 서버 프로세스 모드(창 · 렌더러 없는 App 서버 +
-  UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다.
+  받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ② 전용 서버 프로세스(`Server`, 타깃 Game · Server)는 섰다 — 남은 것은 그 위에 파괴 시뮬레이션을 UDP 서버로
+  돌리고 Windows 클라이언트(App)가 붙어 파괴 해시가 컴파일러 · 플랫폼(WSL 리눅스 서버 ↔ Windows 클라이언트)을 넘어 같은지 보는 것(서버 쪽 `NetSimulation` 호스트 모드 ·
+  클라이언트 접속 인자 · 해시 로그 비교 스크립트). 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가
+  지킨다(Windows Debug · Release · Shipping 같은 값 확인, 리눅스는 CI 잡 — 리눅스 clang 에서 다르면 그 잡이 진다).
 
-- **네트워크 — 복제 키트에서 남은 것**(2026-10-05, N5~N7 뒤). ① MMO 비신뢰 갱신을 잃어도 서버는 모른다 — 보낸 순간 `_listSentState` 를 바꿔 "안 바뀜" 으로 보고
-  가속하지 않으니 다음 차례(누적 우선도)까지 옛 상태가 보인다. 메시지 전달 통지(`NetConnection` 패킷 확인 → 메시지)가 생기면 확인 기준으로 바꾼다. ② 클라이언트-서버도
-  우선도를 보낼 때 0 으로 돌려, 실린 스냅숏이 순서만 채널에서 다음 것에 밀리거나 잃으면 낮은 우선도는 한 차례(우선도 비 만큼) 더 기다린다(하니스: 11 → 최대 20 틱).
+- **전용 서버 타깃에서 남은 것**(2026-10-06, server-target). ① 서버의 크래시 묶기 · 텔레메트리 — 기동 표의 `Telemetry` 는 Client 대상(동의가 플레이어 설정)이라
+  서버는 크래시 보고를 묶지 않는다; 서버용 동의 = 운영 설정으로. ② 서버 프로세스 지표 — 틱 시간 · 버린 틱은 `/metrics`(`_opsPort`)로 나간다; 메모리 ·
+  접속 수 지표와, 게임 · 키트 모듈이 서버의 지표 · 상태 등록부를 받는 창구(엔진 서비스 줄 — 첫 서버 서비스 조립 때)는 남음. ③ 게임별 서버 기동 확인 — Empty 말고 각 게임을 `Server -gv_serverExitAfterTicks=60` 으로(게임 · 키트가 디바이스 · 창을 null 확인 없이 쓰는지).
+  ④ 서버 빌드에서 렌더러 코드를 아예 빼기(지금은 컴파일만 되고 돌지 않는다 — 크기 · 링크 시간을 재고). ⑤ 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로
+  libX11 없음 확인 · `ServerTest` — 이 묶음은 Windows 만 확인했다.
 
 - **네트워크 — 포화된 연결의 비신뢰 줄**(N21a 뒤). 대역폭 몫을 다 쓰면 메시지가 기다리는데, 비신뢰 줄(`NetConnection::_listOutgoingUnreliable`)에는 상한이 없어 오래 포화되면
   옛 비신뢰가 쌓였다 몰려 간다. 언리얼은 포화면(`IsNetReady` 거짓) 액터 복제를 건너뛴다 — 키트가 `NetHost` 에 "이 연결이 포화인가" 를 묻거나 줄에 나이 상한을 둔다. 재고 나서.
@@ -416,110 +374,153 @@ cd build/Ninja-Debug/Bin
   하지 않기로 한 것: NAT · 리플렉션 속성 복제(Iris) · 복제용 RPC · 외부 네트워크 라이브러리(암호 라이브러리는 아래 "네트워크 보안" 항목의 예외).
 
 - **네트워크 서비스 계층(2026-10-06 사용자 결정 — 로그인 · 채팅 · 거래, MMO 가 아니어도 쓰는 키트).** 상태 복제(UDP)와 달리 순서 있는 신뢰 스트림 · 긴 연결 · 요청-응답이다.
-  ① Core `Network/Transport/` 에 스트림 전송(TCP) — 수락 · 읽기 · 쓰기 완료를 받는 이벤트 루프 인터페이스 하나, 구현은 Windows IOCP · 리눅스 epoll(io_uring 은 측정 뒤), 연결마다 송수신 버퍼 · 배압 ·
-  유휴 시한 ② Core `Network/Message/` 에 길이 접두 프레이밍 + 요청-응답(요청 id · 시한 · 취소 · 멱등 키) — 복제용 RPC 와 다르다(서비스 호출)
+  ① 스트림 전송(Core `Network/Transport/` — IOCP · epoll · 루프백)은 있다. 리눅스 epoll(`EpollStreamTransport`)은 WSL 빌드 · `StreamTransportTest` 미확인 —
+  `WSL-Debug` · `WSL-Shipping` 에서 `--test_repeat=20` 과 변이(`setReceivePaused( false )` 의 할 일 빼기 → 백프레셔 시험이 진다)를 본다. io_uring 은 측정 뒤.
   ③ 구성은 `docs/` 가 아니라 이 항목이 정본 — **공통 기반**(GameFramework 기반 `Online/`): 서비스 틀(등록 · 라우팅 · 인증 문맥 · 오류 코드 · 판 협상) · 요청 보호(도배 제한 · 멱등 키 · 크기 상한) ·
   신원 원형(`AccountId` · 세션 토큰 검증) · 저장 계약(`IServiceStore` 영속 · `IEphemeralStore` 캐시 · `ILocalStore` 로컬 — 파일 백엔드는 바이너리/JSON/XML · 원자적 쓰기 · 체크섬 · 선택 압축/암호화) ·
-  마이그레이션 적용기 · 감사 로그 · 서버 간 버스 · 예약 작업 · 원격 설정/기능 플래그 · 관측(지표 · 구조화 로그 · 추적 id). **드라이버 키트**: `GF_SqlStore`(SQLite · PostgreSQL) ·
-  `GF_CacheStore`(메모리 · RESP). **기능 키트**: `GF_Account` · `GF_ServerDirectory` · `GF_Economy`(원장 · 지갑 · 상점 · 영수증 검증) · `GF_Trade`(원장 위) · `GF_Mailbox` · `GF_Chat` · `GF_Social` ·
+  마이그레이션 적용기 · 감사 로그 · 서버 간 버스 · 예약 작업 · 원격 설정/기능 플래그 · 관측(지표 · 구조화 로그 · 추적 id). **드라이버 키트**: `GF_SqlStore`(SQLite) · `GF_Server_SqlStore`(PostgreSQL) ·
+  `GF_Server_CacheStore`(RESP — 메모리 구현은 기반 `Online/Cache`). **기능 키트**: `GF_Account` · `GF_ServerDirectory` · `GF_Economy`(원장 · 지갑 · 상점 · 영수증 검증) · `GF_Trade`(원장 위) · `GF_Mailbox` · `GF_Chat` · `GF_Social` ·
   `GF_Leaderboard` · `GF_Matchmaking` · `GF_LiveOps` · `GF_Admin`(GM 도구 · 제재). 제품 이름은 드라이버 · 제공자 폴더에만. 부하 시험 봇은 시험 도구.
   ④ **DB 결정(사용자)**: 영속 PostgreSQL(서버) · SQLite(개발 단독 서버 · 클라이언트 로컬), 캐시는 RESP 드라이버 하나 — 리눅스 Valkey(BSD-3), 윈도우 Garnet(MIT)(Redis 7.4+ 는
   RSAL/SSPL — "오픈소스 · 무료" 조건 밖). 캐시를 잃어도 영속 데이터는 맞아야 한다(거래 정본은 영속 트랜잭션). DB 호출은 전용 워커 + 연결 풀 + 비동기 완료.
   **서버는 윈도우 · 리눅스 둘 다 1 급**, 서버 전용 모듈은 클라이언트 Shipping 에 넣지 않는다(전용 서버 타깃 — Game · Client · Server).
-  **순서**: 기반 + 드라이버 → Account · ServerDirectory → Economy → Trade · Mailbox · Admin · 관측 → Chat · Social → Leaderboard · Matchmaking · LiveOps.
+  **들어간 기반**(`GameFramework/Base/Online/`): `Store`(영속 계약 `IServiceStore` — 비동기 일 · 트랜잭션 · 조건부 쓰기 · 멱등 기록, 메모리 구현 · 계약 시험) ·
+  `Guard`(토큰 버킷 · 크기 상한) · `Identity`(`AccountId` · `IAccountDirectory`) · `Cache`(휘발성 계약 `IEphemeralStore` — 만료 · 원자 증감 · 임대 · 정렬 집합 · 발행/구독, 메모리 구현 · 계약 시험) ·
+  `Audit`(감사 줄) · `Bus`(서버 간 버스 — 캐시 위 · 프로세스 안) · `Schedule`(예약 작업 — 회차 차지 · 임대 이어받기) · `Config`(원격 설정 · 기능 플래그 출시 비율) ·
+  `Ledger`(원장 — 복식 이동 · 분개 키 멱등 · 보존 검사 · 환불 회수 빚) · `Mail`(우편 넣기 — 첨부 맡김 · 멱등 · 만료 색인) ·
+  `Sanction`(계정 제재 레코드) · `IAccountSessionControl`(세션 끊기 창구).
+  관측은 들어갔다 — 지표 · 상태 확인 · 운영 HTTP(`Engine/Observability`, 서비스 묶음 `Online/Observability/ServiceMetrics`), 로그 문맥(Core `LogContext` —
+  요청 머리의 추적 id 128 비트 → 처리기 · 저장소 일의 줄 꼬리표). 관측 남은 것: 서버 로그 JSON lines 출력 장치, OpenTelemetry 내보내기, 감사 줄의 추적 id 칸.
+  남은 기반: `EphemeralServerBus` 를 호스트의 캐시 라우터(`EphemeralStoreRouter`) 위로(지금은 자기 캐시 앞을 혼자 쓴다), PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
+  계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
+  **계정**: 서버 키트 `GF_Server_Account`(`Kits/Online/Server/Account`)에 로그인 서비스 본체(`LoginService` — 저장소 일로 맡기고 거둠 · `LoginStoreLogic` · `LoginTicketAuthority`),
+  공유 `GF_Account`(와이어 타입 · `AccountClient`), 게스트 · 연동 · 외부 로그인 자리 · 빌드 판 · 제재 확인 · 탈퇴, 스트림 바인딩(`AccountServer` · `AccountClient`) · UDP 접속
+  인증기가 들어갔다. 암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF).
+  외부 로그인은 공통부(기반 `Online/Http` · OIDC 확인기 + JWKS 캐시 · 프로필 API 틀 · 제공자 설정 데이터 · PC 루프백 PKCE 클라이언트)와 가짜 제공자까지 — 실제 제공자 설정
+  (구글 · 애플 · 카카오 · 네이버 · 스팀 — 앱 등록 · client id 는 쓰는 게임이 생기면), 호스트 이름 해석(Core 주소는 IPv4 뿐 — 실제 제공자 호스트에 필요), 애플 client secret JWT ·
+  탈퇴 때 토큰 철회(`Provider/Apple/`), 모바일 SDK 클라이언트, OS 브라우저 열기(`IExternalBrowser` 구현 — 게임 몫)가 남았다. 텔레메트리의 `IHttpClient`(Engine, 막는 창구 · 기본 Null)를
+  이 HTTP 클라이언트로 잇는 일도 남았다(Engine 은 GameFramework 를 모른다 — 게임이 어댑터). 서버 실행 파일에 계정 서비스 조립(주 키는 서버 설정 비밀 — 키 배포 · 교체 절차는 아래 "서버 여럿").
+  **채팅**: `GF_Chat`(타입 · `ChatProtocol` · `ChatClient`) · `GF_Server_Chat`(거르개 · 도배 막이 · `ChatService` · 바인딩 `ChatServer`)이 들어갔다. 남은 것: 서버 실행 파일에
+  채팅 조립(계정 키트 창구 · 친구 키트 차단 표 · 금칙어 경로), 신고(메시지 스냅숏 → GM 도구), 채널 샤딩(world 채널 수천 명 — 부하 봇 수치로 정함, 거르개 비용은 `ChatService.send` p99),
+  클라이언트 UI 위젯, 실제 금칙어 목록(운영).
+  **서버 디렉터리**: 기반 `Online/Directory`(등록 · 하트비트 · 읽기 캐시 · 고르기)와 `GF_ServerDirectory` · `GF_Server_ServerDirectory`(점검 · 공지 · 배정 · 바인딩 ·
+  클라이언트)가 들어갔다. 남은 것: GM 도구 패널(GF_Admin · 에디터 확장 지점 뒤)에 점검 · 공지 바꾸기 잇기, 서버 고르기 UI 위젯, 서버 실행 파일에 디렉터리 서비스 ·
+  등록 조립(서버 설정에 종류 · 지역 · 공개 주소), 오케스트레이터(Agones · 쿠버네티스) 상태와 서버 등록 잇기(지금은 서버가 스스로 캐시에 하트비트).
+  **친구 · 길드**: `GF_Social` · `GF_Server_Social`(친구 · 차단 · 접속 상태 · 이름으로 신청 · 길드 · 바인딩 · 클라이언트)이 들어갔다. 남은 것: 채팅 정책(차단)과 길드 채널을
+  서버 조립에서 잇기(`SocialService::isBlockedLocal` · `GuildService::setEventDelegate` → 채팅 키트), 길드 창고(원장 맡김 `esc/guild/<id>`) · 길드 레벨 · 공개 길드 가입 신청,
+  친구 목록 UI 위젯, 부하 봇의 친구 접속 상태 팬아웃 측정(친구 200 명 × 캐시 읽기).
+  **순위표**: `GF_Leaderboard` · `GF_Server_Leaderboard`(순위표 · 통계 · 업적 · 시즌 정산 · 바인딩 · 클라이언트)가 들어갔다. 남은 것: 정산을 페이지 단위 일 여럿으로
+  (지금은 시즌 하나가 저장소 워커 하나를 잡는다 — 참가 수십만이면 부하 봇 숫자로), 지난 기간의 캐시 정렬 집합 지우기, 친구 순위표(친구 목록 × 점수 — 게임 조립),
+  업적 진행률 표시 · 숨김 업적 목록, 서버 조립에서 `setScheduler` · 표 정의 데이터 읽기.
+  **매칭**: `GF_Matchmaking` · `GF_Server_Matchmaking`(매처 · 파티 · 로비 · 대기열 권한 서버 · 전용 서버 배정 · `MatchServerAgent` · 바인딩 · 클라이언트)이 들어갔다.
+  남은 것: 서버 실행 파일에 매칭 조립(모드 표 · 실력 공급 `IMatchRatingSource` · 게임 서버의 `MatchServerAgent` 를 UDP 접속 인증기에 잇기), 백필(경기 중 빈자리),
+  오케스트레이터(Agones · 쿠버네티스) 할당 · 서버 띄우기, 재접속 유예 중 파티 · 로비 유지(지금은 끊기면 바로 뺀다), 파티 채팅 채널 잇기(게임 조립 — 파티 알림 → Chat),
+  다른 서버에서 깨진 파티 표는 낸 서버에 Cancelled 를 버스로 알리지만 권한 매처에서는 모든 모드의 빼기로 뺀다(모드를 모른다). 팀 나누기 · 채우기는 그리디다 — 나눌 수 없는 조합은 그 닻을 건너뛴다;
+  작은 n 전수 탐색은 부하 봇의 대기 시간 p99 를 보고 정한다.
+  **라이브 운영**: `GF_LiveOps` · `GF_Server_LiveOps`(기간 이벤트 · 원격 설정 값 · 경계 알림 · 푸시 제공자 계약 · 기기 등록 · 발송기 · 가짜 제공자 · 바인딩 · 클라이언트)가
+  들어갔다. 남은 것: 실제 푸시 제공자 둘(`Push/Provider/<제품>/` — 공통 HTTPS 클라이언트 위 HTTP/2 · 토큰 인증, 인증서 · 서비스 계정 키는 운영 비밀 — 외부 계정 · 비용이라
+  사용자 결정 전에는 하지 않는다), A/B 실험(원격 설정 출시 비율 + 지표), 이벤트 운영 화면(GF_Admin 패널), 서버 실행 파일에 라이브 운영 조립, 우편 · 이벤트에서 "오프라인이면 푸시" 잇기(게임 조립).
+  **부하 시험 봇**: `Tools/OnlineLoadBot`(키트 클라이언트 그대로 · 공유 끝점 연결 수천 · 시나리오 JSON · 지연 백분위 · `--local-server` 한 프로세스 서버 조립)이 들어갔다.
+  남은 것: 첫 측정 — Release · 서버 한 대 · 봇 1000/5000 으로 `chat_and_match` · `login_storm` 을 돌려 동작별 p99 와 서버 틱 p99 를 적을 것(채팅 world 채널 수천 명의
+  알림 수 · 정산 일의 길이 · 매처 대기 p99 가 위 키트 항목의 판단 근거). 참고(2026-10-06, Debug · `--local-server` — 봇과 서버가 한 스레드라 서로의 시간을 잰다):
+  `quick_check` 봇 300 → 4200 동작 · 28 초 · 오류 0, chat_send p50 377 ms · p99 1081 ms, 채팅 알림 185548. 전용 서버(`Server`)가 온라인 서비스를 조립하면 `--server` 로
+  같은 시나리오를 돌린다(봇 머신 따로).
+  **거래**: 공유 `GF_Trade` · 서버 `GF_Server_Trade`(`TradeService` — 상태 기계 · 거래 레코드 · 원장 분개 하나로 정산 · 재시작 복구 · 시한)와 스트림 바인딩이 들어갔다.
+  **서버 여럿**: 접속 상태(`OnlinePresence` — 캐시 `presence:` 키, 시한 60 초 · 30 초마다 다시 적기)와 버스(`account.revoke` 로 다른 서버의 옛 세션 닫기 · `push.<서버>` 로
+  다른 서버의 계정에게 알림)가 들어갔다(`OnlineMultiServerTest`). 계정 · 거래 몫의 남은 것: 게임 UDP 접속 표 서명 키(로그인 · 게임 서버 공유, 지금 서버 설정 파일)의
+  배포 · 교체 절차, 인스턴스 아이템(지금 거래 다리는 가산 자산만 — 인벤토리 인스턴스 상태 칸은 거절), 실제 지연(루프백이 아닌 망)에서의 버스 · 캐시 왕복 측정.
+  **경제 · 우편함 · GM**: `GF_Economy`/`GF_Server_Economy`(화폐 · 상품 카탈로그 · 구매 · 영수증 계약 + 가짜 제공자 · 서비스 · 클라이언트 · Wallet/Inventory 거울 — 로컬 지갑은
+  원장 사본), `GF_Mailbox`/`GF_Server_Mailbox`(수령 = 원장 이동 · 모두 받기 · 만료 쓸기 · 전체 우편 캠페인 — 기반 `Online/Mail/ServiceMailCampaign`), `GF_Admin`/`GF_Server_Admin`
+  (권한 등급 넷 · 모든 조작이 효과와 같은 트랜잭션의 감사 줄 · 환불 회수 빚)이 들어갔다. 남은 것 — ① 영수증 제공자 셋(`Receipt/Provider/<제품>/`): Apple(App Store Server API —
+  서명된 거래 JWS 의 x5c 사슬을 Apple 루트로 + 거래 조회), Google(Play Developer API `purchases.products` — 서비스 계정 JWT → OAuth 토큰), Steam(`ISteamMicroTxn`
+  InitTxn → FinalizeTxn — 서버가 주문을 여는 흐름) — 외부 스토어 계정 · 비용이 들어 계약 + 가짜까지만(사용자 결정), 호스트 이름 해석(Core 주소는 IPv4 뿐)이 먼저다
+  ② 환불 · 결제 취소 알림 받기(Apple 서버 알림 v2 · Google RTDN · Steam 환불 → GM 회수와 같은 `refund.revoke` 빚 이동) · 유상 재화 청약철회(7 일 · 미사용분) 규칙
+  ③ 인스턴스 아이템(내구도 · 강화 — 원장은 개수만, `item.<정의>#<id>` 개수 1 + 상태 레코드) ④ 잔액 · 새 우편 알림(서버 → 클라이언트 `sendPush` — 지금은 응답에 실린 잔액 · 다음 목록)
+  ⑤ 원장 보존 검사 · 만료 쓸기를 예약 작업(`ServiceScheduler`)으로(지금 쓸기는 우편함 서비스 틱 주기), 분개 · 감사 보존 기간 정리, `mail_sent` · 멱등 기록 · `econ_purchase` 정리
+  ⑥ GM: 에디터 패널(1-4 C 확장 지점 뒤), 접속하지 않은 계정 이름 찾기(계정 키트 저장 부분을 기반 계약으로), 첫 관리자 · GM 전용 호스트 포트를 서버 설정에(`AdminService::seedRole`)
+  ⑦ 서버 실행 파일에 경제 · 우편함 · GM 서비스 조립(카탈로그 경로 · 영수증 등록부 · 지표 등록부를 서버 설정으로) ⑧ 발행 · 소각 총량 지표(보존 검사가 `economy_issued_total{asset}`).
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
 - **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는
   ChaCha20-Poly1305 · 패킷 번호를 nonce 로 · 재전송 방지 창) — Valve GNS · 언리얼 AESGCM PacketHandler 와 같은 모양. 세션 키는 로그인 키트가 발급한 토큰에 묶는다(UDP 접속 = 토큰 제시).
-  암호 구현은 직접 짜지 않는다 — 라이브러리 하나(후보 OpenSSL: TLS · AEAD · X25519 를 한 의존으로, Apache-2.0)를 엔진 인터페이스 뒤에 두고 격리 게이트(`CheckThirdPartyIsolation`)에
-  올린다. vcpkg 변경은 main 에서 먼저(라이브러리 선택은 제안서에서 근거와 함께 사용자 확인). 인증서 · 키 관리(개발용 자체 서명, 배포 설정)와 시험(변조 · 재전송 · 잘못된 키 거절)을 같이.
+  암호 구현은 직접 짜지 않는다 — 라이브러리 하나(OpenSSL 3.6 — vcpkg 에 넣었다, 감싼 폴더는 Engine/Network/OpenSsl)를 엔진 인터페이스 뒤에 두고 격리 게이트(`CheckThirdPartyIsolation`)에
+  올렸다. Core 창구(`Network/Security/`) · OpenSSL 구현(`Engine/Network/OpenSsl`, `EngineNetSecurity`) · 스트림 TLS 1.3(`StreamEndpointSettings::_security`) ·
+  UDP 보안(`NetHostSettings::_security` — X25519 + 패킷 AEAD + 재전송 창 + 토큰 결속, 인증기 없는 암호화는 개발 빌드만)은 있다. 남은 것: 암호화 켠 하니스로 서버 틱
+  시간을 재어 3-12 에 숫자 한 줄(N18a 벤치에 `_security` 를 켠 판), 서버 호스트가 `ServerConfig::_tlsCertificateFile` · `_tlsPrivateKeyFile` · `_tlsPrivateKeySecretEnvironment`(→ `ServerSecret::read`)를 `EngineNetSecurity::createServerTlsContext` 에 넘기는 배선.
 - **패킷 압축(2026-10-06 사용자 결정).** 코덱 틀은 Core `Compression`(코덱 id 등록부), LZ4 · zstd · zlib 은 Engine 이 등록한다 — Core 네트워크는 id 로만 쓴다. 작은 UDP 패킷은 일반 압축의 이득이
-  작으니 **측정 먼저**: 실제 스냅숏 · 파괴 사건 · 채팅을 모아 (양자화 · 비트 패킹 · 델타 뒤) LZ4 · zstd(학습 사전 포함)의 크기 · 시간을 잰다 → 이기는 종류만 켠다(패킷 머리에 코덱 표식,
-  압축 뒤 암호화 순서, 압축 폭탄 상한). 스트림(채팅 기록 · 거래 내역 · 큰 메시지)은 zstd 가 기본 후보.
+  작다. 측정 벤치(`NetCompressionBenchTest`, Release 3 회 가운데 값, 패킷마다 봉투 3 B · 줄지 않으면 원문): 스냅숏(평균 1009 B) LZ4 1 %/1.1 us ·
+  zstd1 15 %/11.7 us · zstd1+사전 16 KB 34 %/6.0 us, 파괴(302 B) LZ4 3 %/0.37 us · zstd1 4 %/6.4 us · 사전 35 %/1.6 us, 채팅(43 B, 합성) LZ4 1 % · zstd 0 % · 사전 27 %/0.74 us
+  (us = 압축 + 해제/패킷). 켜는 규칙(15 % 이상 줄고 2 us 이하)을 등록부 코덱(LZ4 · zstd)은 어느 흐름에서도 못 넘는다 — UDP 패킷 압축은 끈다. 넘는 것은 학습 사전뿐(파괴 · 채팅):
+  사전 배포(판 · id 협상 · 사전 갱신)를 하면 다시 본다. 채팅 숫자는 채팅 키트가 실제 기록을 내면 다시 잰다. 남은 것: WSL Release 로 같은 벤치 한 번(압축 시간은
+  컴파일러 · libc 에 따라 다르다). 스트림 프레임 압축은 있다(`StreamEndpointSettings::_compression` — 봉투 `NetCompressionUtil`, 기본 꺼짐, 받는 쪽은 푼 크기를 몸 상한으로
+  보고 풀기 전에 거절) — 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
 - **MMO 규모 서버의 UDP 소켓 계층.** 지금은 호스트당 논블로킹 UDP 소켓 하나 + 전용 스레드 하나(`poll`/`WSAPoll`), 데이터그램마다 `recvfrom`/`sendto`, `NetHost` 잠금 하나.
-  UDP 는 소켓이 하나라 IOCP · epoll 은 지렛대가 아니다 — ① 측정 먼저(실제 UDP 에 가짜 클라이언트 500 · 2000, 초당 패킷 · 패킷당 CPU · 지연 p99 — N18 은 루프백이라 소켓 비용을 안 본다)
-  ② 시스템 호출이 지배적이면 일괄 I/O(리눅스 `recvmmsg`/`sendmmsg` → UDP GSO/GRO, Windows RIO — 완료 통지는 IOCP) ③ 한 스레드가 차면 `SO_REUSEPORT` 수신 분산 + 연결 샤딩(`NetHost` 잠금 분할).
-- **순서**: 보안의 UDP 부분은 N13~N21 뒤(연결 수립 · 패킷 머리가 정리된 위에), 스트림 전송 → 프레이밍/요청-응답 → TLS → 로그인 → 채팅 · 거래. 압축은 측정 벤치가 서면 어느 때나.
-
-- **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는
-  표준 API 라 줄이려면 Win32 · POSIX 순회로 바꾼다. 상주량은 1 KB 미만이라 전역 operator new 교체는 하지 않는다(사용자 결정).
-
-- **`runParallel` 합류 대기가 남의 태스크(IO 등)를 도와 실행할 수 있다.** 프로파일에 보이면 IO 레인을 따로 둔다(조건부).
-- **TaskManager 스테이지 디버그 이름** — 프로파일러에 연결할 때 넣는다(지금은 연결돼 있지 않다).
-- **`fixed_string` 의 해시가 FNV(`computeHash64`)다.** 느리지만 프로파일에 안 보여 두었다(낮음).
+  UDP 는 소켓이 하나라 IOCP · epoll 은 지렛대가 아니다. ① 측정(`NetUdpBenchTest`, 호스트 스위트 — 서버 20 Hz 200 B · 클라이언트 30 Hz 40 B, 서버 · 클라이언트가 한 PC,
+  Release 3 회 가운데 값, 다른 빌드로 CPU 20~46 % 부하): Windows 500 — 받기 10.7k · 보내기 10.7k pkt/s, 서버 스레드 14 %, 6.6 us/패킷, RTT p50 48 · p99 48 ms /
+  2000 — 42.1k · 42.5k pkt/s, 54 %(51~82 %), 6.5 us/패킷, RTT p50 68 · p99 70 ms, 커널 버림 0(RTT 는 같은 PC 의 클라이언트 드라이버 지연이 대부분). 리눅스(WSL Release,
+  `ulimit -n 8192` 뒤 같은 필터)는 아직 — 숫자를 나란히 놓는다. 패킷당 6.5 us 의 대부분이 `recvfrom`/`sendto` 라 다음 일은 ②.
+  ② 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`)
+  ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUdpBenchTest` 숫자로 전후를 잰다.
 
 ### 1-8. 성능 (재고 나서 정할 것)
 
-- **DX12 · Vulkan Present 히치.** 큐브 100 · 600 프레임 중 40 프레임이 1~18 ms 다(DX11 은 없다). 다음 후보는 DXGI 대기 가능 스왑체인
-  (`FRAME_LATENCY_WAITABLE_OBJECT` + `SetMaximumFrameLatency` + 대기). 함정: 플래그는 `ResizeBuffers` 에도 같게. 재기 전에 VSync 가 정말 꺼졌는지 보고 p99 로 본다.
-- **파괴 잎 셰이프를 플레이 시작에 짓는 비용.** 잎마다 Jolt 볼록 껍질 약 80 us(Release) — 쇼케이스(파괴물 여섯 · 잎 312)가 첫 프레임에 ≈ 25 ms 를 쓴다.
-  파괴물이 많은 맵이면 선형으로 는다. 후보: 쿠킹 때 Jolt 셰이프를 직렬화해 `.fracture` 에 싣기(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리) 또는
-  워커에서 `ShapeSettings::Create`(순수 계산) 후 게임 스레드에서 핸들만 등록. 지금 깨지는 프레임은 200 조각 벽 4 ~ 7 ms(그중 사건 처리 2 ~ 4 ms).
-- **DX12 `releaseOnlineBlocksDeferred` 의 `_onlineBlockMutex` 경합.** 병렬 기록 중 RT `mutex::lock` 의 79 % 였다. 후보는 워커별 대기 목록. 고치기 전에 다시 잴 것.
-- **에디터 모드 `GT.Editor.updateUi` ~5 ms(큐브 8000)를 쪼개 보지 않았다.** 창을 전면에 두고 잰다(가려지면 RT.BeginFrame 이 67 ms 를 기다려 5.8↔75 ms 로 흔들린다).
+- **파괴 잎 셰이프를 플레이 첫 프레임에 짓는 비용.** `FractureBenchTest.ShowcaseBeginPlay`(Release, beginPlay + 첫 틱 — 첫 물리 스텝 앞에서 상태 · 잎 셰이프를 세운다)
+  p50 20.2 · 27.2 · 20.7 ms(쇼케이스 파괴물 여섯 · 잎 312, 200 조각 벽 하나가 볼록 껍질 ~11 ms = 잎당 ~55 us). 파괴물이 많은 맵이면 선형으로 는다.
+  워커로 나누기는 졌다(3-12) — 남은 후보는 쿠킹 때 Jolt 셰이프를 직렬화해 `.fracture` 에 싣기(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리) 또는
+  잎 셰이프를 처음 깨질 때까지 미루기. 지금 깨지는 프레임은 200 조각 벽 4 ~ 7 ms(그중 사건 처리 2 ~ 4 ms).
+
 - **8000 무버의 `components`(onTick) ~325 us.** 남은 비용은 오브젝트 → 틱 항목 → 컴포넌트 포인터 추적이다. 더 줄이려면 오브젝트 모델 밖 배치 경로
   (언리얼 Mass · 유니티 DOTS 자리)나 트랜스폼 SoA 2 단계가 필요하다 — 큰 구조 변경이라 할지부터 정한다(1-11 의 구조 후보).
 - **직렬화기(이름 대조 · 텍스트 파싱)와 리소스 로드의 리플렉션 비용, 비동기 씬 로드 중 최악 프레임을 재지 않았다.** 큰 씬 · 쿠킹본으로 잰다(Dev 는 `Cooked/`
   를 마운트하지 않는다).
-- **`GpuInstance` 96 → 128 B(VAT 위상 · `pixelSnap` 칸)의 비용을 재지 않았다.**
+
 - **조건부 후보 묶음.** 병렬 틱 문턱의 교차점 · GameObject 레이아웃 · 적응형 틱 문턱 · 스폰 비용(~1.1 us, 잠금 여섯) · 시퀀서 성능 수치. TickItem 인라인
   재시도는 오브젝트의 틱 부기 49 B 를 먼저 줄여야 한다. 측정해서 이기면 한다.
-- **Core 에서 미룬 결정.** 전역 소형 블록 할당자(프레임당 할당이 0 근처가 된 뒤 로드 시간으로 판단 — 지금 ~10 회/프레임).
-- **필드 재배치로 8 B 이상 줄일 수 있는 타입이 남아 있다**(`RunPaddingReport.py` 로 보고만 함). 많이 만들어지는 것: GameObject 200→192, Mesh 112→104,
-  MaterialInstance · Material · InputMap::ActionEntry 16, MaterialProperty · ShaderBindingSlot · InlineSuccessorList · GlobalVariableInfo/Registrar 8. 싱글턴(InputManager ·
-  Logger 64 등)은 이득이 작다. PROPERTY 필드는 직렬화 순서라 옮기지 않는다. 위치 초기화 표(EditorAssetTypeInfo · AssetMatchRow · CommandRow)는 모든 행을 같이 바꿔야 한다.
-  FrameRenderer 진단 세터(`setMeshMorphDiag` · `setDrawMergeEnabled` · `setVertexPoolEnabled`)는 Shipping 제외 후보.
-- **ReflectionParser 강제 include PCH**(`CoreMinimal.h` 를 PCH 로 — 타깃당 ~0.4 s). 캐시 위치 · 무효화가 필요하다. 값이 작아 보류.
+- **FrameRenderer 진단 세터**(`setMeshMorphDiag` · `setDrawMergeEnabled` · `setVertexPoolEnabled`)는 Shipping 제외 후보.
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
 
-- **Shipping 은 심볼 없이 링크한다(/DEBUG · PDB 없음).** 그래서 배포본 크래시 묶음의 `buildId` 가 비고(덤프의 모듈에 RSDS 서명이 없다) 덤프를 심볼과 짝지을
-  수 없다. 상용 엔진처럼 Shipping 도 `/Z7`(또는 `/Zi`) + `/DEBUG:FULL` 로 PDB 를 만들고 패키지에서는 빼서 심볼 저장소에 넣는 단계가 필요하다
-  (`Source/Engine/Telemetry/README.md` "심볼 · 빌드 id 짝짓기"). 빌드 시간 · 캐시에 닿는 결정이라 미뤘다 — 정하면 `ModuleBuildIdTest` · `CrashBundleTest` 의
-  `SW_SHIPPING` 예외를 지운다.
-- **커버리지 안내 퍼징(libFuzzer)은 Windows 에서 엔진과 링크되지 않는다** — `clang_rt.fuzzer-x86_64.lib` 가 정적 CRT(/MT)뿐이라 동적 CRT(/MD) 엔진과 LNK2038.
-  `LoaderFuzzTest`(시드 고정 변이)가 같은 대상 표(`Test/EngineTest/LoaderFuzzTargets.cpp`)를 돈다. 리눅스 clang 에서 `LLVMFuzzerTestOneInput` 하나로 그 표를 붙이고
-  ASan 과 같이 돌린다(서드파티 디코더만 떼어 /MT 로 돌리면 Windows 에서도 된다 — stb_vorbis 를 그렇게 확인했다).
-- **Windows CI 시험 단계 실패(10-02 부터 Debug, 10-03 부터 Shipping)의 원인은 이 PC 에서 재현하지 못했다** — CI-Debug · CI-Shipping 을 같은 라벨로,
-  TEMP 를 8.3 짧은 이름으로 바꿔서도 돌렸다(부하로 인한 시간 초과 말고는 통과). CI 의 시험 단계가 이제 진 시험을 주석으로 올리므로 병합 뒤 첫 실행의
-  주석(`/check-runs/<job id>/annotations`, 로그인 없이 읽힌다)에서 시험 이름 · 실패 줄을 보고 고친다.
-- **골든 이미지 기준은 한 PC(RTX 3070 Ti Laptop · 그 드라이버)에서 뜬 것이다** — 다른 GPU · 드라이버는 허용 오차를 넘을 수 있다. 다른 기계에서 지면 그 기계에서 `--record` 로 뜬
-  기준과 견줘 차이가 드라이버인지 회귀인지 가른 뒤, 기계별 기준(`<백엔드>.<기계>.json`)이 필요한지 정한다.
-
-
-- **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
-  `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
-- **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
+- **커버리지 안내 퍼저(`LoaderFuzzer`)는 아직 한 번도 지어지지 않았다**(2026-10-06 들임, 리눅스 전용 — 이 PC 는 WSL 을 쓰지 않았다). 첫 `fuzz.yml` 실행
+  (밤 또는 `workflow_dispatch`)이 구성 · 링크(`-fsanitize=fuzzer-no-link` 엔진 + ASan, `-fsanitize=fuzzer` 실행 파일)와 대상마다 60 초가 끝나는지 본다.
+  지면 그 실행의 주석 · 아티팩트(`fuzz-findings`)로 고친다.
+- **Windows CI Debug · STL 잡의 키트 시험 22 건 실패**(run 37251047781, `a380e2ee3` — 유니티 켬 + PCH 끔 Debug 에서만): 재현 안 됨 — 이 PC 의 같은 구성
+  (`CI-Debug -DSW_ENABLE_PCH=OFF`)에서 통과했다. B4 로 실패 보고(`CiFailureReport.py`)가 나아진 뒤 다음 CI 주석으로 본다.
+- **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다(2026-10-06 확인: 업스트림 vcpkg port-version 4 · 원본 master · develop 모두 아직 없음. vcpkg PR 은 내지 않는다 — 사용자 결정, 외부 공개).
 - **include · 전방 선언 남은 후보.** ① OS 헤더(`Core/Common/PlatformOsHeaders.h` — `Windows.h` · `DbgHelp.h` · `Xinput.h` …)가 `EngineMinimal.h` 를 거쳐
   PCH 에 남아 있다(TU 2746 · `windows.h` 1671). 빼려면 먼저 `NOMINMAX` · `WIN32_LEAN_AND_MEAN` 을 CMake 정의로 옮기고(서드파티가 `windows.h` 를 먼저 include 해도
   min/max 매크로가 안 생기게), Win32 · POSIX API 를 쓰는 파일이 직접 include 한다 — 글자 그래프로 찾은 후보 26 개(`Core/Common/Macros.h` · `ModuleCompiler.cpp` ·
   `WindowsFileWatcher.h` · `InputManagerWin32.cpp` · `XInputGamepadDevice.h` · `TestFramework.cpp` …, 오탐 섞임)를 빌드로 하나씩 확인하는 단계다.
   ② `GameObjectManager.h` 의 값 멤버 서브시스템 8 개(`ScenePhysics` · `SceneNavigation` · `SceneAudio` · `SceneOverlapWorld2D` · `PrimitiveRegistry` ·
-  `LightRegistry` · `CameraRegistry` · `AnimationSystem`)를 `unique_ptr` 로 바꾸면 GOM 을 include 하는 234 TU 에서 헤더 32 개(약 4,700 줄, 서드파티 없음 —
+  `ComponentRegistry` · `CameraRegistry` · `AnimationSystem`)를 `unique_ptr` 로 바꾸면 GOM 을 include 하는 234 TU 에서 헤더 32 개(약 4,700 줄, 서드파티 없음 —
   Physics/* · Navigation/* · Animation 보조)가 빠지지만, getter 를 쓰는 85 파일이 직접 include 해야 해 실제로 덜어지는 것은 약 150 TU × 4.7k 줄이다 — 보류
   (2026-10-05 재측정, `_store` · `_transformHierarchy` · `_structuralChangeBuffer` · `_tickScheduler` 는 헤더의 인라인 · 템플릿이 써서 포인터로 못 뺀다).
   이득은 `ninja -t deps` 전후 TU 수로 판정한다.
+- **CI 린트 잡이 처음으로 린트 전부를 리눅스에서 돈다**(`RunLintSuite`, 2026-10-06 — 그 전엔 `CheckCodeConventions` 하나). 첫 실행에서 지는 게이트가 있으면
+  그 게이트의 결함(경로 대소문자 · 줄끝 · 외부 도구)이다 — 고치고, 급하면 그 단계에 `continue-on-error` 를 한 번 두고 여기 적는다. 훅 상한
+  `kHookBudgetSeconds`(1: 8 · 10: 12 s)는 이 PC 기준 짐작이다 — 첫 `lint-timing` 아티팩트를 보고 러너 값의 1.5 배로 고친다.
+- **훅의 `CheckHeaderSelfContained` 도 뒤에서 띄울지.** staged 헤더마다 ~1.3 s CPU(헤더 6 개 1.9 s 벽 / 9 s CPU) — 지금은 이 프로세스에서 다른 파일 단위 게이트와
+  차례로 돈다. 헤더가 든 커밋에서 트리 전체 게이트와 겹치면 ~1.5 s 를 더 벌 수 있다. `LintGate.preCommitRunsInBackground` 같은 선언 하나로 — 재고 넣을 것.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
-- **GL 백엔드 `[Error] bindGraphicsContext failed - the context is held by another thread`**(2026-10-04, NileCity 자동 플레이 320×180 Debug, 골든 기록 중
-  한 번 — 같은 인자 5 회 재실행은 깨끗). GL 컨텍스트를 렌더 스레드와 다른 스레드가 같이 잡는 순간이 있다. 골든 러너가 진 판의 App 출력을
-  `%TEMP%/sw_golden_<백엔드>_<회차>_app.log` 로 남기니, 다시 보이면 그 로그로 어느 스레드 · 단계인지 본다.
+- **Vulkan(FIFO) + VSync 에서 가끔 한 프레임이 여러 주기를 놓친다**(Release 큐브 100, 165 Hz). 2026-10-06 조사: 46 판 중 4 판에서 600 프레임 창 안에 한 프레임이
+  12~24 ms(제안서 측정의 146 ms 정지는 재현되지 않았다), DXGI(DX12 · DX11)는 같은 조건에서 판당 한 주기 이하. 평소 Vulkan 은 `vkAcquireNextImageKHR` 에서 ~5.2 ms 를
+  기다리고(DXGI 는 Present 안), 느린 프레임을 시각으로 쪼개면 둘로 갈렸다 — 이미지가 한 주기 늦게 돌아온 것(acquire ~10 ms)과, GPU 일이 0.3 ms 인 프레임의 펜스가
+  13 ms 뒤에 신호된 것(창 모드 Vulkan 프레젠트가 합성기를 거치는 길). 그 프레임에 엔진 CPU 일은 없었다. 스왑체인 이미지를 4 개로 늘리면 오히려 잦아졌다(3-12).
+  다시 보이면 `-gv_tracy=1` 로 acquire · 펜스 · present 를 시간축으로 보고, 전체 화면(독점) · NVIDIA "Vulkan/OpenGL 프레젠트 방식" 설정을 바꿔 가른다.
 
-- **ReflectionParserTest 는 파서 프로세스를 케이스마다 1~4 번 띄운다**(2026-10-04 여섯 조각으로 나눔 — 파서 케이스가 25 개로 늘었다). 더 줄이려면 파서 실행
-  비용을 깎는다: CoreMinimal.h 를 PCH 로 미리 컴파일해 `-include-pch` 로 쓰는 것. 함정: PCH 에서 온 헤더를 `clang_getInclusions` 가 의존으로 내는지 먼저
-  확인할 것(안 내면 depfile 이 비어 반사되지 않은 헤더가 바뀌어도 단계가 다시 돌지 않는다). 실행 하나의 0.5~1 초는 프로세스 생성 · 종료라 파서 탓이 아니다.
-
-- **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩). 09-23 에 고친 DX11 기록 컨텍스트 결함과 모양은 같지만 단정하지 않았다.
-  이제 시험 실행 파일에 크래시 핸들러가 있어 다음에는 스택이 남는다 — 직접 실행해 전체 출력을 파일로 받는다.
-- **Shipping `CoreTest` 의 `Failed to deserialize config from: shipping_host_generated`**(한 번, 3 회 재실행 통과). `ConfigManager::loadConfigFromJson`.
-- **WSL lavapipe 의 첫 `vkAcquireNextImageKHR` 가 가끔 `VK_ERROR_SURFACE_LOST_KHR`** 로 진다(`AppTest_HostOnly`, 43 회 중 3 회, 환경 탓으로 판단 — 미확정).
-  다시 보이면 기준선과 번갈아 돌려 가른다. App 로그는 `build/WSL-Debug/Bin/Saved/Logs`.
-- **CI Windows 러너(WARP)에서 픽셀 시험이 지던 원인은 판정하지 않았다**(`RenderPassGpuTest` 를 host 스위트로 빼서 우회). 실패 값이 `좌 0, 우 0` 이면 WARP 가
-  컴퓨트 컬링 · 인디렉트를 못 하는 것이니 초기화에서 끊고, 어중간하면 허용 오차를 본다.
-- **리눅스 전용 경로는 이 PC 에서 돌려 보지 않았다** — `parseWriteTime`, POSIX `pipe2` · `close_range` · `launchDetached`, `alarm` 시한, X11 입력(좌표 · `XkbSetDetectableAutoRepeat`),
-  리눅스 LTO 를 진짜 `llvm-ar` 로 끝까지 링크하기, `verifyModuleBindings` 의 dlsym 도장 갈래(`727b872c` 뒤). 리눅스 CI 가 초록인지 · IPO 가 실제로 켜졌는지를 본다.
+- **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩, 2026-10-06 nogpu 3 회 · host 3 회 재실행 깨끗). 다시 나면: 크래시 핸들러의
+  스택 파일(`Bin/Saved/Logs/crash_<세션>.stack.txt` — Shipping 도 이제 PDB 가 있어 함수 이름), CI 는 그 파일을 아티팩트로 · 스택을 주석으로 올린다(`CiFailureReport.py`).
+- **WSL lavapipe 가 가끔 서피스를 잃는다**(`AppTest_HostOnly` 43 회 중 3 회, 첫 `vkAcquireNextImageKHR` 가 `VK_ERROR_SURFACE_LOST_KHR`) — 이제 서피스 · 스왑체인을
+  다시 만들고(사양대로) `Vulkan surface lost at acquire|present (N time(s) …)` 경고를 남긴다. WSL 에서 50 회 돌려 경고 수 · 실패 수를 본다(복구가 되면 항목을 지운다):
+  `cd build/WSL-Debug/Bin && for i in $(seq 50); do ./AppTest --host_suites=only --test_filter=AppSmokeTest.* || echo FAIL $i; done` 와 `Saved/Logs` 의 경고 줄 수.
+- **CI Windows 러너(WARP)의 픽셀 시험 실패**(`RenderPassGpuTest` 를 host 스위트로 빼서 우회) — 이 PC 에서 `SW_RHI_SOFTWARE_ADAPTER=1`(`-gv_rhiSoftwareAdapter=1`)로
+  같은 래스터라이저를 고를 수 있다. 2026-10-06 이 PC 의 WARP(DX12 · DX11)로 `RenderPassGpuTest.*` 71 개 픽셀 시험이 모두 통과했다(Vulkan 은 CPU 디바이스가
+  없어 빠지고 GL 은 하드웨어) — WARP 자체는 컴퓨트 컬링 · 인디렉트를 한다. 러너 쪽(WARP 판 · 창 없는 세션)을 다음 CI 실패의 주석으로 가른다.
+- **리눅스에서 아직 자동으로 안 도는 것**: X11 입력(좌표 · `XkbSetDetectableAutoRepeat` — WSLg 의 `DISPLAY=:0` 이 있으니 손으로 한 번), yad 파일 대화상자의 두 번째
+  `--file-filter`(man 으로만 확인), 리눅스 CI 가 초록인지 · IPO 가 실제로 켜졌는지(2026-10-05 실행은 네 잡 모두 Configure 의 vcpkg 설치에서 졌다 — 다음 실행부터
+  `CiFailureReport.py configure` 가 포트 로그 끝을 주석으로 올린다). 2026-10-05 WSL-Debug 로 돌려 확인한 것(net-ci-rest 제안서 조사): POSIX `pipe2` · `close_range` ·
+  `launchDetached`, `alarm` 시한, dlsym 도장, `parseWriteTime`(int64 를 넘는 스탬프 시각), 리눅스 ThinLTO(`llvm-ar`) 링크.
 - **수동 확인이 안 된 에디터 동작** — Hierarchy `tag:` 필터, 검색 0 건 힌트, Classic Dark 테마의 대화상자 편집 경로.
-- **DbgHelp 외부 샘플러 소스가 저장소 밖에 있다**(세션 스크래치였다). 다른 PC 에 남아 있는지 확인하고, 필요하면 `Scripts/dev/` 로 들인다.
 
 ### 1-11. 결정이 필요한 것
 
@@ -529,19 +530,25 @@ cd build/Ninja-Debug/Bin
 
 ### 1-12. 낮은 우선순위 · 조건이 오면
 
+- **상호작용 대상의 공유 공간 격자**(조건: 하는 쪽 · 대상이 모두 수천 — 지금 하는 쪽은 등록된 대상 목록을 한 번 돈다, 대상 16 · 10k 오브젝트에서 +2~6 us).
+  대상이 움직일 수 있어 격자를 프레임마다 맞추는 비용이 목록을 도는 비용과 같으므로, 하는 쪽이 여럿일 때만 씬당 하나(`SpatialHashGrid2D`, 셀 = 최대 상호작용 반경)를 틱 앞에 맞춘다.
+
+- **씬 · 프리팹 파일을 넘는 오브젝트 참조**(조건: 레벨 스트리밍 · 하위 레벨 · 다른 씬의 오브젝트를 가리키는 데이터가 생기면). 그때 오브젝트마다
+  영속 GUID 를 싣는다(언리얼 `FSoftObjectPath` 의 하위 오브젝트 경로 자리). 지금은 파일 안에서 엔티티 `id` 로 가리키고, 파일을 넘는 데이터 · 코드가 0 이다.
+- **150 % 모니터 실물 확인** — 대체 시험(`dpi.monitorScaleFollows`: 창 DPI 질의를 +0.5 로 바꿔 끼움 · WM_DPICHANGED)이 글자 · 여백 · 창 · 백버퍼를 본다.
+  남은 것은 글자 래스터 선명도 — 150 % 모니터에서 에디터를 띄워 눈으로 한 번(2026-10-06 이 PC 의 기동 로그가 `Editor UI scale 1.5 (monitor DPI)` 였다).
 - **100 줄 넘는 함수 정리.** 분해는 총량을 줄이지 않는다. 중복을 먼저 없애고, 그래도 문제면 본다. 목록이 필요하면 여러 줄 시그니처를 중괄호 깊이로 재는 스크립트로
   뽑는다(단순 정규식은 틀린다).
-- **MonsterCollector 의 파티 · 박스 세이브**(쓰는 게임이 생기면) — `MonsterStorage` 를 세이브에 싣는 길이 없다. `MonsterInstance` 를 REFLECT 로 하거나 상태 바이트(`writeState`)로.
-  맵 · 타일 자리 · 플래그는 `OverworldSaveGame` 이 든다.
 - **타일맵 칸 데이터를 일반 레이어로**(두 번째 장르가 칸마다 다른 값 — 지형 비용 · 발소리 — 을 원하면): 지금 레이어는 0/1(`kArrTileFlagLayerInfo`)이고 워프 · 역할 · 스폰은
   전용 원소다. 값 종류를 정수로 넓히고 에디터 페인트 · 형식 시험을 같이 바꾼다(Godot TileSet custom data 모양).
 - **걸음 조우 판정 둘**(Overworld `shouldEncounterOnStep` 의 결정적 주기 · ClassicJrpg `JrpgEncounterWalker` 의 확률 + 유예) — 오버월드 위에 JRPG · 몬스터 수집 게임이 서면 기반 `World/` 로 하나를 올린다.
-
----
+- **MMO 갱신 확인을 `NetConnection` 전달 통지로**: 패킷 확인 → 메시지 전달 통지가 Core 에 생기면 키트 확인 메시지(`kUpdateAck`)를 지우고 그 통지로 판정한다(언리얼 NAK 자리).
 
 - **서드파티 빈자리(2026-10-05 후보 중 사용자가 고르지 않은 것).** 리눅스 오디오 출력 없음(`XAudio2System` 만, 리눅스는 `NullAudioSystem`) → miniaudio(퍼블릭 도메인/MIT-0) ·
   `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT) · 아랍어 셰이핑 · 양방향 없음 → HarfBuzz(MIT) + SheenBidi(Apache 2.0). 들이면 Jolt · Recast · Tracy 처럼
   엔진 인터페이스 뒤 + 격리 게이트, vcpkg 변경은 main 에서 먼저.
+
+---
 
 ## 2. 작업 방식 — 정해진 방향
 
@@ -569,7 +576,9 @@ cd build/Ninja-Debug/Bin
 ### 안 하기로 한 것 (다시 제안하지 말 것)
 
 - **지금 하지 않는 구조 후보 — 다시 볼 조건과 함께**(2026-10-03 상용 엔진 비교로 결정): 트랜스폼 SoA 2 단계(UE 액터도 AoS, 측정 근거가 생기면) ·
-  선행 조건 스케줄러(시스템이 서로의 결과에 기대기 시작하면 — UE `AddTickPrerequisite` 모양) · 에셋 로더 등록제(종류가 대여섯이 되면 — UE `UFactory`) ·
+  선행 조건 스케줄러(시스템이 서로의 결과에 기대기 시작하면 — UE `AddTickPrerequisite` 모양. 2026-10-06 키트 조립 점검: 키트 디렉터 사이 순서는 한 오브젝트에
+  붙인 순서가 주고 — `TickRegistry` 가 한 오브젝트의 항목을 한 워커가 붙은 순서로 돌린다 — 다른 오브젝트 사이는 디렉터의 `_tickAfter`(규칙 서브틱 + 선행 조건),
+  키트 코드끼리의 의존은 0 곳이라 스케줄러의 근거가 아직 없다) · 에셋 로더 등록제(종류가 대여섯이 되면 — UE `UFactory`) ·
   참조 카운트 RHI 핸들(한 리소스를 여럿이 나눠 들기 시작하면 — UE `TRefCountPtr`) · Mesh/Material `SlotHandle`(하지 않는다 — `shared_ptr` 이 수명과 RT 안전을 한 번에
   준다) · `ResourceUtil` 소유 객체화(하지 않는다 — UE `FPaths` 도 정적) · 링크 단위 분할(증분 링크 시간이 문제가 되면 별도 PR) — GameFramework 기반(약 58k 줄)을 `GFS_*` DLL 여럿으로 쪼개는 안도 같은 이유로 하지 않는다(2026-10-05 재확인). 기반 폴더의
   층은 폴더 층 게이트(`CheckGameFrameworkLayers`)로 지킨다. · `UnitStatsComponent` 를 기반(`Combat/`)으로(2026-10-05 — 쓰는 게임 · 씬 · 프리팹 0, 옮기면 데미지 숫자(UI 층 4) · `MonsterDef` · `DamageAppliedEvent` 셋을 끊어야 층이 맞는다. 체력 읽기는 `Combat/HealthSourceComponent` 가 맡는다. 다시 볼 조건: 다른 키트 · 게임이 피해 입구(`takeDamage` · 무적 · `DamageAppliedEvent`)를 이 키트 없이 쓰려 할 때 — 그때는 `DamageAppliedEvent` 도 기반으로, `setStats( MonsterDef )` 는 키트의 도우미로, 데미지 숫자는 `HealthListenerComponent` 파생으로 내리고, `CheckGameFrameworkLayers` 자가 시험의 키트 헤더 예를 바꾸고, `generated/GF_ActionCombat/UnitStatsComponent.gen.*` 을 지운 뒤 re-configure) · 피해 입구 인터페이스(19 곳 — 인자 모양이 넷이다. 키트 투사체 · 공격 판정을 다른 체력 모델(어빌리티 시스템 · 게임 컴포넌트)에 쓰는 게임이 생기면 `Combat/` 에 `takeDamage( 양, 쏜 쪽 )` 하나를 `HealthSourceComponent` 옆에 — 언리얼 `AActor::TakeDamage`)
@@ -610,13 +619,19 @@ cd build/Ninja-Debug/Bin
 ### 3-1. 측정 · 프로파일
 
 - **물리 벤치: `PhysicsBenchTest`**(Release) — 먼 이동 바디가 있는 step p50 1124~2468 → 319~330 us(없는 step 은 319~328 us 그대로).
+- **에디터 모듈의 계측은 `SW_EDITOR_PROFILE_SCOPE`**(`Editor/Common/EditorProfile.h`) — 엔진 `SW_PROFILE_SCOPE` 는 엔진 서비스 표(`engine::getFrameProfiler`)를
+  불러 에디터 모듈에서 쓸 수 없다. 같은 표에 쌓이고 이름은 엔진이 복사해 든다(모듈을 다시 올려도 매달리지 않는다). `GT.Editor.updateUi` 의 하위 구간은
+  `GT.Editor.waitDrawSnapshot · newFrame · commandsAndWatchers · panels · endFrame(render · platformWindows · captureDrawSnapshot)`, 패널별 시간은 `-gv_editorPanelTimes=N`.
+- **Hierarchy 는 화면 밖의 접힌 루트를 빈자리로 둔다**(이어진 것은 빈자리 하나) — 큐브 8000 Release `GT.Editor.updateUi` p50 4.2~4.7 → 1.3~1.4 ms, Hierarchy 패널
+  평균 3.4~4.1 → 0.63~0.65 ms(큐브 100 에서는 0.12 ms). 남은 몫은 루트 8000 개를 도는 것(열림 상태 조회) — 더 줄이려면 열린 루트 목록을 들고 보이는 범위만 계산한다.
+  빈자리 높이는 접힌 루트 줄(프레임 높이 + 줄 간격)과 같아야 스크롤이 튀지 않는다(`hierarchy.offscreenRootsKeepTheirPlace`).
 
 - **AppSmokeTest 의 Unknown 태그 상한(8 KB)은 파일 수에도 걸린다** — 태그 없는 호출자(App 스플래시)가 공유 캐시(`ResourceUtil` 경로 캐시)의
   재해시를 일으키면 그 버킷 배열이 Unknown 으로 센다. 데이터 파일 몇 개를 더하자 18 KB 가 넘었다. 공유 캐시는 넣는 자리에서 자기 태그를 건다.
 - **성능은 Release 로 잰다.** Debug 는 레이스 검출기 · 이터레이터 프록시로 컨테이너 코드를 과장한다(668 vs 87 us). 이전 · 이후 바이너리를 같은 스크립트로
   **번갈아** 2~3 회 잰다(`git stash -u` → 빌드 → 복사 → `stash pop` → 빌드). 아침 기준선과 오후 결과를 견주면 기계 상태가 결과로 읽힌다.
 - **측정 기계**: i5-8500(6 코어 6 스레드). 게임 · 렌더 스레드 + 워커 넷이 코어를 나눠, 나눠도 벽시계가 잘 안 준다 — 틱이 쓰는 CPU 총량이 벽시계를 정한다.
-  프로파일러가 없으면 `build/Ninja-Release-Prof`(Release+PDB, 프리셋 아님) + 외부 DbgHelp 샘플러. ICF 로 함수가 남의 이름으로 보인다.
+  프로파일러가 없으면 `Ninja-Release`(PDB 있음 — 줄 표) + `py -3 -m Scripts stacks <pid>`(DbgHelp 샘플러). ICF 로 함수가 남의 이름으로 보인다.
 - **표 읽기.** 열은 avg · p50 · p99 · min · max · per_frame 이고 카운터 값은 per_frame 열에 있다(시간 열 0 을 "죽은 경로" 로 읽지 말 것). 평균이 히치를 가린다 —
   p50 · p99 · 최악 프레임을 본다. 백분위는 옥타브 × 8 칸 히스토그램의 아래 끝(±9 %)이다. 구간 표는 스레드마다 **일한 시간**이고, 프레임이 빨라졌는지는
   `[Profile] wall N frames … us/frame` 와 `startup N ms` 로 본다. 중첩 합이 바깥보다 크면 표부터 의심한다.
@@ -636,17 +651,22 @@ cd build/Ninja-Debug/Bin
 - **`-gv_profileFrames=N` 은 프레임 수다** — VSync 가 꺼진 가벼운 장면은 1500 fps 라 90000 프레임이 1 분에 끝난다(시간 상한은 없다). 시간으로 재려면
   `-gv_profileSeconds=S`(먼저 닿는 쪽이 끝낸다 — soak 이 쓴다).
 - **프레임당 힙 할당**은 `-gv_profileFrames` 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 재지 말 것).
-- **씬 로드 측정**: `Scripts/dev/GenerateStressScene.py` 로 큰 씬(도형 섞기) → 게임 프리셋(`Config/Game/Empty.json`) `_startupScene` → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지
+- **씬 로드 측정**: `Scripts/dev/MakeStressScene.py` 로 큰 씬(도형 섞기) → `-gv_firstScene=<씬>`(또는 Empty 팩 `data/gamesettings.xml` 의 `startMap`) → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지
   않으므로 쿠킹 효과는 `--cooked-dir=<repo>/Resource` 로 쿠킹하고 재고 지운다. `[SceneLoad]` 가 `.xml` 을 가리키면 쿠킹본을 안 읽은 것이다.
 - **벤치가 상태를 공유하면 단계 순서를 잰다.** 손대지 않은 대조군이 움직이면 하니스를 의심한다. 벤치 메시가 공유라 배치 결함을 가린 적이 있다 — 씬에서 온 메시로도 본다.
 - **GPU 업로드 비용은 호출당이다**(DX12 ~3.3 us) — 쪼개면 느려진다. 구간을 배열로 묶어 한 번에.
 - **워커가 쓴 데이터를 다른 코어가 읽으면** 캐시 이동이 항목당 일(~40 ns)보다 비싸다. 쓰는 스레드와 읽는 스레드를 같게 둔다.
 - **워커는 공유 카운터 · 비트필드에 쓰지 않는다.** `fetch_add` 한 줄이 병렬 플러시를 직렬보다 느리게 했다. "하나라도" 플래그는 프레임에 한 번 쓰고 읽기만 한다.
-- **도구**: `RunDuplicateCode.py --filter <dir> --no-headers`(머리말에 "합칠 대상 아님" 목록), `RunEngineLayerGraph.py`, `Scripts/dev/BackendSmoke.py`(4 백엔드 평균 RGB),
+- **도구**: `RunDuplicateCode.py --filter <dir> --no-headers`(머리말에 "합칠 대상 아님" 목록), `RunEngineLayerGraph.py`, `Scripts/dev/RunBackendSmoke.py`(4 백엔드 평균 RGB),
   Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest` · `NetReplicationBenchTest`(클라이언트 16 × 엔티티 1000), `Test/TestFramework/TestBench.h`.
 
 ### 3-2. 검증 · 시험 쓰기
 
+- **설정 파일 시험은 둘이다** — `ConfigFileSchemaTest`(EngineTest, `Config/` 의 엔진 · 게임 · 서버)와 `EditorConfigFileSchemaTest`(EditorTest, `Config/Editor`).
+  둘 다 표에 없는 파일을 실패로 본다 — 새 설정 파일은 그 표와 `Scripts/common/ConfigCatalog.py` 에 한 줄씩.
+- **바깥 서버가 있어야 하는 시험은 `SW_TEST_REQUIRES_ENVIRONMENT( 스위트, "변수", "까닭" );`** — 변수가 비면 그 스위트만 빠지고 `[ SKIP SUITE ]` 한 줄(실패도 "모두 건너뜀" 도 아님,
+  호스트 스위트와 섞이지 않는다). PostgreSQL 은 `SW_TEST_POSTGRES_URL`. 구현마다 같은 케이스는 계약 매크로로(`SW_SERVICE_STORE_CONTRACT_SUITE` · `SW_SQL_DRIVER_CONTRACT_SUITE` ·
+  `SW_EPHEMERAL_STORE_CONTRACT_SUITE`). 서버 없이 실패 길만 보려면 닿지 않는 주소(`host=127.0.0.1 port=1 connect_timeout=1`)를 준다 — 깨끗이 지고 멈추지 않아야 한다.
 - **`--test_filter` 는 gtest 모양이다** — 패턴 사이는 `:` 도 쉼표도 되고, 첫 `-` 뒤는 모두 빼는 패턴이다(`A.*:B.*-A.X`; `-A.*,B.*` 는 둘 다 뺀다).
   고르는 패턴이 등록된 케이스 하나와도 맞지 않으면 실행이 진다(`TestFrameworkTest.FilterThatSelectsNothingFails`) — 0/0 통과는 확인한 줄 안다.
 - **광선이 두 삼각형이 나누는 모서리를 정확히 지나면 Möller–Trumbore 가 양쪽을 다 놓칠 수 있다** — 같은 각도로 나뉜 합성 원기둥 두 겹에서 실제로 났다
@@ -729,6 +749,10 @@ cd build/Ninja-Debug/Bin
   `alignObjects( listObject, … )`, `EditorPlaySession::captureSnapshot( PlaySessionData& )`, `EditorSessionPolicy`. `EditorContext::get()` 을 읽는 함수는 시험할 수 없다.
 - **할당 0 을 보는 시험은 여러 번 재어 최솟값을 본다**(누계는 프로세스 전체 값). 누수 시험은 `MemoryProfiler::getLiveAllocationCount` 로, 노드를 동시에 여럿 쥐고.
 - **공유 시험 픽스처의 등록**(`makeMockComponentTypeInfo` 등)은 짝 `.cpp` 한 TU 에. 헤더에 두면 TU 마다 `TypeInfo` 가 중복 등록된다. 시험 본문(전역 스코프)에서는 `sw::` 로 한정한다.
+- **골든 기준은 뜬 장치를 적는다**(`device` — GPU 이름 · 드라이버, 다음 `--record` 부터) — 다른 기계에서 지면 비교 메시지가 두 장치를 함께 찍는다.
+  기계별 기준(`<백엔드>.<기계>.json`)은 만들지 않는다(사용자 결정 2026-10-06) — 다른 기계에서 진 기록이 생기면 그 기계에서 `--record` 해 드라이버 차이인지 회귀인지 가른다.
+- **할당 실패 경로는 `Memory::injectAllocationFailures( count )`(Dev, 스레드 국소)로 시험한다** — 이 스레드의 다음 count 번 `allocate` · `allocateAligned` 가 nullptr.
+- **낱개 파일 · 팩 경쟁을 시험하려면 리소스 루트를 임시 폴더로 바꾼다**(`ResourceUtil::exchangeRootFolderPath` — 검색 폴더 · 경로 캐시를 다시 짓고 앞 루트를 돌려준다).
 
 ### 3-3. 환경 · 툴체인
 
@@ -749,6 +773,8 @@ cd build/Ninja-Debug/Bin
   → vcpkg.json 되돌림. 스탬프가 다를 때만 dry-run 이 돈다(약 20 초).
 - **sccache 서버 포트(4226)를 Windows 와 WSL 이 나눠 쓴다.** 동시에 빌드하면 모든 컴파일이 `failed to fill whole buffer` 로 깨진다(코드 오류처럼 보인다). WSL 은
   `export SCCACHE_SERVER_PORT=4227`, 아니면 상대 서버를 `sccache --stop-server`.
+- **소프트웨어 어댑터**: `-gv_rhiSoftwareAdapter=1` 또는 환경 변수 `SW_RHI_SOFTWARE_ADAPTER=1`(ctest 가 인자 없이) — DX12 · DX11 WARP, Vulkan 은 CPU 디바이스
+  (lavapipe · SwiftShader 가 설치돼 있어야 한다 — 없으면 경고와 함께 그 백엔드가 안 선다), GL 은 무시. 실제로 선 어댑터는 `IRHIDevice::isRunningOnSoftwareAdapter`.
 - **WSL 에는 GPU 가 없다**(Vulkan 은 `llvmpipe` 하나, GL 은 `ARB_gl_spirv` 가 없어 빠진다) — API 오용은 잡지만 드라이버 거동은 못 본다. `libwayland-dev` 가 필요하다.
   **gdb 가 없다** — `/proc/<pid>/task/*/stat` 의 utime · stime 을 두 번 떠 사용자/커널을 가르고, SIGUSR1 처리기(`backtrace_symbols_fd`)를 임시로 넣어 `tgkill` 로 스레드마다
   스택을 뜬다. 리눅스 파일 하나는 `clang++ -fsyntax-only -DSW_PLATFORM_LINUX … -include Source/Core/pch.h <file>` 로 검사할 수 있다.
@@ -758,6 +784,9 @@ cd build/Ninja-Debug/Bin
   모든 TU 에 `Convex` · `None` 같은 매크로가 퍼져 Jolt(`EShapeType::Convex`)가 리눅스 다섯 잡을 세웠다 — Windows 빌드는 원리상 못 본다. 유니티 빌드는 X11 `.cpp` 를
   include 줄을 보고 묶음에서 뺀다(`sw_skipUnityForX11Sources`).
 - **플랫폼 스텁도 인터페이스를 따라간다** — `IWindow` 에 가상 함수를 더하면 `Win32Window` 의 비-Windows `#else` 스텁에도 정의를 둔다(빠지면 리눅스 링크만 진다).
+- **Win32 는 W 판을 이름으로 부른다** — 이 저장소는 UNICODE 를 정의하지 않아 일반 이름(`DefWindowProc` · `LoadCursor` · `CreateFile` …)은 A 판이다. W 클래스로 만든 창의 프로시저가 `DefWindowProcA` 로 끝나 제목이 "S" 한 글자였다(`WindowTest.TitleReachesTheOsAsUtf16`). 게이트 `CheckWin32WideCalls.py`, `IDC_*` 는 `reinterpret_cast<LPCWSTR>` 로 넘긴다. 전역 UNICODE 정의(언리얼)는 대상마다 정의가 빠지면 말없이 A 로 돌아가 택하지 않았다.
+- **A 판도 부르지 않는다 — 실행 파일 매니페스트에 기대지 않는다** — 모든 실행 파일은 `WindowsProcess.manifest` 의 `activeCodePage=UTF-8` 로 ANSI 코드 페이지가 UTF-8 이라 A 판에 UTF-8 경로를 넘겨도 지금은 통한다(한글 폴더 시험 `FileTest.DynamicLibraryLoadsFromANonAsciiFolder` · `CrashReportTest.ReportFolderWithANonAsciiNameReceivesTheFiles` 가 고치기 전에도 통과). 매니페스트가 없는 호스트(남의 프로세스에 올라간 Engine.dll · 1903 이전 Windows)에서는 깨지므로 `CheckWin32WideCalls` 가 A 판 호출도 막는다(예외 `OutputDebugStringA`). 크래시 경로는 힙 없이 스택 버퍼 + `MultiByteToWideChar` 로 바꾼다.
+- **X11 창 제목은 `_NET_WM_NAME`(UTF8_STRING)까지 적는다** — `XStoreName` 은 Latin-1 이라 한글 제목이 깨진다. 확인 시험은 없다(WindowTest 는 host 스위트라 CI 가 못 돌리고, 시험 실행 파일이 libX11 을 직접 링크하지 않는다) — 리눅스 기계에서 `xprop _NET_WM_NAME` 으로 본다.
   올라온 이미지는 이름이 아니라 주소로 찾는다(`ModuleBuildId::find( &함수 )._modulePath`) — `Engine.dll` 을 글자로 찾던 시험이 리눅스(`Lib/libEngine.so`)에서
   늘 건너뛰어 "아무것도 검증하지 않은 스위트" 로 졌다.
 - **CI 가 끝까지 돌게 하는 세 가지**(`.github/workflows/ci.yml`). ① main 은 `cancel-in-progress: false` — push 가 실행 시간보다 잦으면 끝나는 실행이 0 건이 된다(10-04 7 시간).
@@ -787,14 +816,14 @@ cd build/Ninja-Debug/Bin
   변수 개수를 따라간다). 새 지적은 고치거나 `NOLINTNEXTLINE` + 이유(진단이 붙는 줄 바로 위). 끈 검사의 근거는 `.clang-tidy` 에 있다. `performance-enum-size`(열거형 폭에
   ABI · 직렬화가 달렸다)와 `performance-no-int-to-ptr`(Win32 API)는 기각했다.
 - **ASan (Windows)** — SmokeTest 만 `report_globals=0`(DLL 을 내려도 전역 등록이 안 지워진다), `detect_odr_violation=0`(1 이면 1800 s+), `/MD` 강제, ASan 런타임 DLL 은
-  `Bin` 과 `BuildTools` 양쪽(`cmake/Engine/TargetRules.cmake`). Windows 의 memcpy 는 겹쳐도 맞게 옮겨 겹친 복사 버그가 안 보인다 — 리눅스 ASan 이 잡는다.
+  `Bin` 과 `BuildTools` 양쪽(`cmake/Modules/Options/Sanitizer.cmake`). Windows 의 memcpy 는 겹쳐도 맞게 옮겨 겹친 복사 버그가 안 보인다 — 리눅스 ASan 이 잡는다.
 - **TSan** 은 `SW_SANITIZER_KIND=thread` · `CI-Debug-TSAN`(GNU/Clang 전용, ASan 과 동시 불가). 크래시 자식 시험은 ASan · TSan 에서 건너뛴다. 새 CI 검사는 매트릭스에
   `reportOnly: true` 로 들여 보고를 추린 뒤 막는 잡으로 바꾼다.
   원자 연산으로 스스로 동기화하는 서드파티(Jolt · Box2D)는 트리플릿 `x64-linux-tsan`(`cmake/Modules/Toolchain/VcpkgTsan/`)이 계측해 짓는다 — 계측 안 된 정적 라이브러리는 동기화가
   안 보이는데 헤더 인라인 함수는 링커가 우리 TU 의 계측된 사본을 골라 거짓 경쟁 수백 건이 났다. 트리플릿 파일은 ABI 해시에 들어 고치면 포트를 다 다시 짓고(WSL 약 35 분),
   기본 CI 캐시 키가 보는 `Toolchain/Vcpkg/**` 밖에 둔다. 포트 컴파일러는 프리셋의 `CC=clang` 이 정한다(빠지면 vcpkg 가 GCC 로 짓는다).
 - **유니티 빌드는 `CI-*` 프리셋에만 켜져 있다.** `Ninja-*` 가 초록이어도 익명 네임스페이스 충돌이 없다는 뜻이 아니다 — 헬퍼 · 상수는 `XxxInternal` 구조체로 감싼다.
-  `sw_skipUnitySources` 가 다시 길어지면 규칙이 깨지고 있다는 신호다.
+  유니티 제외 목록(옛 `sw_skipUnitySources`)은 다시 만들지 않는다 — 부딪치는 이름을 고친다.
 - **LLVM 을 다시 깔면 PCH 가 전부 낡는다**(`… has been modified since the precompiled header was built`). `.pch` 와 짝 `cmake_pch.cxx.obj` 를 같이 지운다(`SetupLlvm.py` 가 한다).
 - **LTO 함정** — clang `-flto` obj 는 MSVC `lib.exe` 가 못 읽는다(LNK1107). 아카이버는 "지금 컴파일러 옆" 을 먼저 본다(리눅스 `/usr/bin` 에는 llvm-ar 이 없어 LTO 가 조용히 꺼진다).
   CMake 는 IPO 아카이브 명령을 `project()` 때 정해 두고, `check_ipo_supported` 는 거짓 NO 를 내서 직접 판정한다(`cmake/Environment/ToolchainBinaries.cmake`). `SW_ENABLE_LTO` 하나가 Release · Shipping.
@@ -802,9 +831,46 @@ cd build/Ninja-Debug/Bin
   `core.autocrlf=true` 체크아웃이 `*.skeleton.json` 을 CRLF 로 바꾸면 그것을 임포트한 워크트리 밖에서만 "손으로 바꿨다" 가 된다. 텍스트 산출물을 새로 만들면 같은 규칙에 든다(`App --check-text` 도 CRLF 체크아웃에서 "OUT OF DATE" 였다).
 - **GPU · 드라이버** — 반복 TDR 은 어댑터를 망가뜨린다(재부팅 필요). DX12 는 실패 지점에서 InfoQueue · DRED 를 강제로 뽑는다. 이름 없는 객체("Unnamed")가 보이면 `SetName` 부터 붙인다.
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
+- **GitHub Windows 러너에는 오디오 출력 장치가 없다**(`CreateMasteringVoice` 0x80070490 = `ERROR_NOT_FOUND`) — 출력 줄의 `[Warning]` 을 세는 시험(`AppCookTest`)이 그것으로 졌다.
+  장치 없음은 Info 로 알리고 오프라인 렌더로 돈다.
+- **커버리지 안내 퍼징은 리눅스 전용**(`SW_ENABLE_FUZZING` · 프리셋 `CI-Fuzz` · `.github/workflows/fuzz.yml`, 대상 표 하나를 시드 고정 변이 `LoaderFuzzTest` 와
+  나눠 쓴다). 퍼저와 시험 실행 파일은 같은 기동(`Test/TestFramework/TestHostRuntime`)을 쓴다. Windows 는 clang_rt.fuzzer 가 /MT 뿐이라 엔진(/MD)과 링크되지
+  않는다 — 디코더만 /MT 로 떼어 돌리는 것은 하지 않는다(사용자 결정 2026-10-06, 같은 코드를 리눅스가 돈다).
+- **configure 의 PATH 는 `sw_prependEnvPath` 로만 고친다**(`cmake/Environment/HostPath.cmake` — 호스트 구분자, 이미 있으면 그대로). project() 전에는
+  호스트 판정 `CMAKE_HOST_WIN32` 로 고른다(이 PC 의 --fresh 구성에서는 `WIN32` 도 그때 이미 1 이었다 — 문서가 보장하는 것은 호스트 변수다).
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
 
+- **빌드 스크립트 리팩터 뒤의 자리**(2026-10-06): 모듈 라이브러리는 `sw_addModuleLibrary` 하나(`cmake/Engine/ModuleTargets.cmake` — 팩토리 밖 SHARED/MODULE 은
+  `CheckCmakeConventions` 가 막는다), 키트는 매니페스트 의존 위상 순서(`PythonTest_TestKitBuildOrder`), RHI 백엔드의 빌드 칸은 `CookContract.json` 의 `rhi_backends`,
+  vcpkg 라이브러리는 `sw_addVcpkgPackage`(REQUIRED) · `sw_addVcpkgHeaderOnly`. 파이썬은 프로세스 `runProcess` · 빌드 폴더 `BuildTree` · 생성 파일 `writeGeneratedFile` ·
+  보고서 `LintReport` 가 한 자리이고 `CheckScriptCommonHelpers` 가 비켜 가는 호출을, `CheckScriptLayout` 이 폴더 → 이름 앞머리 → 기반 클래스 표를 지킨다.
+- **configure 의 파이썬은 `GenerateConfigureFiles.py` 한 프로세스**(생성기 다섯) — 새 configure 생성기는 각자 `sw_executePythonScript` 를 더하지 말고 거기에 한 줄.
+  재는 법: `cmake --preset <p> --profiling-format=google-trace --profiling-output=t.json` → `ConfigureSnapshot.py profile t.json`(CMake 는 B/E 짝으로 적는다).
+  리팩터 전후 configure 동일성은 `ConfigureSnapshot.py take/diff`(실행 파일 시험의 command 는 그 exe 가 지어졌는지에 따라 비거나 찬다 — 차이로 읽지 말 것).
+- **게이트는 고치지 않는다** — include 순서 · namespace 블록의 고치기는 `fixer/FormatIncludeOrder` · `FormatNamespaceBlocks`(규칙은 게이트 파일 한 자리). CMake 들여쓰기는
+  `FormatCmakeIndent`(탭, 문자열 안 · vcpkg 툴체인 영역 제외) — 다른 묶음을 받은 뒤 공백 충돌이 나면 `--all` 을 다시 돌린다.
+- **설정 참조 문서(`docs/Config/`)는 생성물이다** — `GenerateConfigReference.py` 가 PROPERTY · `ConfigKeyDoc` · 전역 변수 · `ArgumentList.xxx` ·
+  CMake 옵션 · `*.settings.xml` 에서 만들고 `CheckConfigReference` 가 낡음 · 목록 밖 설정 파일 · 빈 설명을 막는다. 파서는 선언 모양을 읽으므로 칸 대조는
+  `ConfigReferenceTest.FieldsMatchReflection` 이 리플렉션으로 한다. 새 설정 파일 = `ConfigCatalog.py` 한 줄 + 시험 표 한 줄. PROPERTY · gv · 명령줄 ·
+  `SW_*` 옵션을 더하는 커밋은 같은 커밋에서 생성기를 다시 돌린다(커밋 훅이 알린다).
+- **서드파티 격리의 링크 주인은 규칙마다다**(`CheckThirdPartyIsolation` 의 `cmakeLinkOwner`) — 엔진 백엔드는 `Source/Engine/CMakeLists.txt`, 키트 안 드라이버(SQLite)는 그 키트의 CMakeLists 가 링크한다. 어느 드라이버가 실행 파일에 드는지는 빌드 타깃(`_listTarget`)이 정한다 — 드라이버 목록 옵션을 따로 두지 않는다.
+- **빌드 타깃별 제외 에셋은 쿠킹 표 한 줄이다**(`Config/Engine/CookContract.json` 의 `asset_kinds` · `target_excluded_asset_kinds`). 쿠커(`--build-target`)가 팩에서 빼고,
+  같은 호스트의 런타임(`ResourceUtil::setHostTarget`)은 그 종류를 읽지 않는다 — 한쪽만 고치면 서버가 "파일 없음" 을 쏟거나 팩에 쓸모없는 바이트가 남는다.
+  종류를 더하면 `CheckCookContract` · `TestServerPackExclusion` · `ResourceHostTargetTest` 가 같이 본다.
+
+- **서드파티 고지는 빌드가 만든다** — `ThirdPartyNotices` 타깃(`Scripts/generate/GenerateThirdPartyNotices.py`)이 `Bin/THIRD_PARTY_NOTICES.txt` 에
+  매니페스트가 끌어오는 vcpkg 포트의 `share/<포트>/copyright` 를 모은다(설치 트리를 워크트리끼리 나눠 써 트리 전체가 아니라 `vcpkg/status` 의 의존 닫힘).
+  vcpkg 밖에서 들인 코드(저장소에 복사한 헤더 등)는 여기 저절로 들어가지 않는다 — 그런 것을 들이면 그 고지를 같이 넣는다.
+
+- **린트 CTest 는 프리셋이 4 개씩 동시에 돌린다**(`Ninja-Debug-lint` 의 `execution.jobs`) — 린트끼리 공유하는 출력이 없어야 한다: 셀프테스트는 `mkdtemp`,
+  게이트는 읽기만. 새 린트가 저장소 안에 파일을 쓰면 이 전제가 깨진다. 8 · 16 은 4 와 같거나 느리다(`CheckCodeConventions` · `CheckLintsAreAlive` 가 스스로 여럿을 쓴다).
+- **커밋 훅은 트리 전체 게이트(`preCommitFileArgument = ""`)를 하위 프로세스로 먼저 띄운다**(`GateRunPlan.bBackground`) — 파일 하나 커밋 9.6 → 4.3 s(부하 중).
+  파일 단위 게이트는 이 프로세스에서(기동 0.1~0.3 s 가 게이트보다 비싸다). 훅의 바닥 시간은 가장 긴 트리 전체 게이트다 — 새 게이트는 가능하면 `--files` 를 받게 짓는다.
+- **린트 시간은 `RunLintSuite` 가 잰다**(CI 린트 잡 · 손으로 `py -3 -m Scripts lint-suite`): CTest 와 같은 목록 · 인자를 빌드 폴더 없이 돌리고, CTest TIMEOUT 의 절반을
+  넘긴 린트와 훅 표본(staged 1 · 10)이 `kHookBudgetSeconds` 를 넘으면 경고, 기록은 CI 아티팩트 `lint-timing`. 새 린트의 `timeoutSeconds` 는 이 PC 시간의 3~4 배로 —
+  절반 경고가 먼저 울리게.
+- **스크립트 시험은 `sw_registerScriptTest`** — 파이썬 단위 시험 · QA · 린트가 같은 속성 철자. 시험 실행 파일 폴더는 `Test/` 아래 CMakeLists 가 있으면 저절로 들어간다.
 - **파이썬 도구의 단위 시험은 `Test/PythonTest/Test*.py`** — 파일을 놓으면 CTest 항목(`PythonTest_<이름>`, `nogpu`)이다. Blender 애드온처럼 바깥 모듈(bpy)을
   쓰는 것은 그 import 를 한 파일에 가두고 나머지를 시험한다(`TestBlenderExporter` 가 빈 패키지 모듈을 세워 읽는다).
 
@@ -842,6 +908,10 @@ cd build/Ninja-Debug/Bin
   (Primitive · Tick · TransformHierarchy · 콜라이더)와 모양이 다른 것(TypeRegistry · GlobalVariable · 코덱 · RHIBackend)은 예외다.
 - **`SW_ENABLE_DEADLOCK_DETECTION` 은 CI Windows Debug 잡이 `RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error` 로 지킨다.**
 
+- **CMake 를 고치면 구성 결과를 견준다** — `Scripts/dev/ConfigureSnapshot.py prepare/take/diff`(File API · 생성 파일 · ctest 목록). 컴파일러는 빠진 정의 ·
+  바뀐 출력 폴더를 잡지 않는다. 죽은 CMake 함수 · common 을 비켜 간 파이썬 호출은 `RunBuildScriptInventory.py`(보고서)가 센다.
+- **픽서는 UTF-8 로 못 읽는 파일을 고쳐 쓰지 않는다**(`errors="ignore"` 로 읽고 다시 쓰면 그 바이트가 사라진다 — `PythonTest_TestLintFixer`).
+  대상 파일 고르기는 `common.resolveFileArguments` 한 규칙 — 게이트 · 픽서 모두 `--files`(위치 인자 없음), 게이트의 파일 읽기 창구는 `LintGate.readFiles`.
 - **빌드 출력을 `| head` 로 자르지 말 것** — 파이프가 닫히면 빌드가 중간에 죽고 낡은 바이너리가 남는다. 파일로 받은 뒤 본다.
 
 - **린트의 제외 폴더 비교는 저장소 아래 경로의 폴더 이름으로** — 절대 경로 부분 문자열로 비교하면 경로에 "build" 가 든 워크트리에서 파일을 하나도 안 본다
@@ -851,18 +921,21 @@ cd build/Ninja-Debug/Bin
 
 - **RHI 백엔드 표(이름 · 별칭 · 셰이더 폴더 · 포맷)와 쿡 접미사 표의 정본은 `Config/Engine/CookContract.json`** — `GenerateCookContract.py` 가 C++ X-macro
   (`sw/config/CookContract.gen.h`)를 만들고 Python 은 `Scripts/common/CookContract.py` 로 읽는다. `CheckCookContract` 게이트가 쿠커 함수를 표와 대조한다.
-  두 언어에 목록을 따로 적지 말 것(`PackFormat.json` 과 같은 모양).
+  두 언어에 목록을 따로 적지 말 것(`PackFormat.json` 과 같은 모양). 백엔드의 빌드 칸(모듈 · 장치 소스 폴더 · 그래픽 라이브러리 · 배포 매크로)도 여기 —
+  CMake 는 `generated/sw/config/CookContract.cmake` 로 읽는다(`cmake/Engine/RhiBackends.cmake`). `SW_SHIPPING_RHI_BACKEND` 는 이름 · 별칭을 받고, 그 플랫폼에
+  없는 백엔드면 구성이 선다(예전엔 갈래가 하나도 안 맞으면 백엔드 없는 Engine 이 링크됐다 — `PythonTest_TestRhiBackendTable`).
 
-- **소스 목록 중 손 목록이 셋 있다** — `Source/Core/CMakeLists.txt`(`cfSources`, 빠지면 ReflectionParser 링크에서 깨진다), `cmake/Engine/RhiBackendSources.cmake`(빠지면
-  Engine GLOB 이 주워 **모듈의 미정의 심볼**로 나타난다), `Test/EditorTest/CMakeLists.txt`. `CheckSourceGlob` 이 디스크와 대조한다. 구성이 일부러 짓지 않는 소스는
+- **소스 손 목록은 `Test/EditorTest/CMakeLists.txt` 하나다** — Editor 소스 중 ImGui 없는 것을 고른다(`CheckTestSuites`). Core 는 폴더 GLOB + 플랫폼 폴더 규칙
+  (`sw_filterPlatformSources` — `Windows/` · `Linux/` · `Posix/`), RHI 백엔드 장치 소스는 백엔드 폴더 GLOB 이다(`sw_getRhiBackendSources`). `CheckSourceGlob` 이 디스크와 대조한다. 구성이 일부러 짓지 않는 소스는
   `sw_excludeUnbuiltSources` · `sw_declareUnbuiltSources` 로 적는다(`<빌드>/generated/sw/config/UnbuiltSources.txt`). 파일을 옮기면 경로를 문자열로 적은 곳은 컴파일러가 안 잡는다.
-- **동적 모듈은 타깃을 만드는 자리에서** `sw_registerDynamicModule( <타깃> rhi|kit|game|gameframework|editor )` 로 등록한다. `sw_verifyDynamicModuleRegistry` 가 루트부터 훑어
+- **모듈 라이브러리는 `sw_addModuleLibrary` 로 만든다**(기본값 한 자리 — 팩토리 셋 · GameFramework · 에디터).
+  **동적 모듈은 타깃을 만드는 자리에서** `sw_registerDynamicModule( <타깃> rhi|kit|game|gameframework|editor )` 로 등록한다. `sw_verifyDynamicModuleRegistry` 가 루트부터 훑어
   미등록 MODULE 이면 FATAL_ERROR.
 - **생성 상수는 `Scripts/common/Constants.py` 의 `k*` 전부를 기계 변환한다**(`kDirSourceEngine` → `SW_DIR_SOURCE_ENGINE`). 경로 조립은 소비 쪽(`ConfigConstants.h.in`)이 한다.
   `configure_file` 은 빈 값을 조용히 넣는다. `toolchain_config.json` 은 CMake 가 파싱하지 않는다(`GenerateToolchainCMake.py` → `SW_TOOLCHAIN_<KEY>`) — 예외는 vcpkg 가 부르는
   `FindLlvmBin.cmake` · `VcpkgPortsToolchain.cmake` 둘이고, 거기서 `CMAKE_SOURCE_DIR` 은 vcpkg scripts 폴더다. 상수만 필요한 CMake 는 `LoadConfigConstants.cmake` 를 **파일
   스코프에서** include 한다(함수 안에서 처음 include 하면 상수가 그 함수에만 생긴다).
-- **`sw_addVcpkgConfigLib` 는 패키지를 못 찾으면 빈 타겟으로 조용히 대신한다.** 반드시 있어야 하는 것은 `ThirdParty/<이름>/CMakeLists.txt` 에서 `find_package( … CONFIG REQUIRED GLOBAL )`.
+- **`sw_addVcpkgPackage` 는 못 찾으면 구성을 세운다(REQUIRED)** — 설정 파일이 없는 헤더 전용 포트는 `sw_addVcpkgHeaderOnly`(PROBE 헤더 확인). 서드파티 폴더 목록은 없다(폴더 훑기).
   OBJECT 라이브러리(`Core_objects`)는 링크를 전파하지 않는다 — 외부 라이브러리는 `Core` 와 `Engine` 양쪽에. vcpkg 업스트림 결함은 `ThirdParty/<pkg>/vcpkg-port/` 오버레이로
   (`.gitattributes` 의 `*.patch -text`).
 - **Shipping 정적 링크는 열거형만 든 `.gen.cpp` 를 버린다**(증상: `findEnum` 이 null, enum 2 개) — `sw_linkWholeArchive` 가 링커별 whole-archive 를 고른다.
@@ -890,15 +963,21 @@ cd build/Ninja-Debug/Bin
   `common/HeaderSelfContained.py` 한 자리. 유니티 빌드(CI 프리셋)의 컴파일 DB 는 TU 가 빌드 폴더 안이라 `CMakeFiles` 앞을 소스 경로로 옮겨 씨앗 TU 를 고른다(안 그러면
   모든 헤더가 첫 TU 의 플래그를 받는다). 구성만 한 폴더(`FlagOps.gen.h` 자리 표시자)는 검사 불가로 친다 — 가짜 오류 수십 건.
 - **X-매크로 목록 `.xxx` 의 정본은 `Core/Predefined/`** 이고 죽은 사본은 `CheckDataFileReferences` 가 막는다. `PredefinedNameType.xxx` 의 줄 순서가 곧 intern 인덱스다(중간 삽입
-  금지, 대소문자만 다른 이름 금지).
+  금지, 대소문자만 다른 이름 금지). `CheckDataFileReferences` 는 참조 파일(.cpp · .h · .cmake · .py · .txt · .json · .xxx …)이 staged 됐을 때만 훅에서 돈다.
+  게이트의 제외 폴더는 `kNotOurDirNames` 를 쓴다 — 게이트마다 목록을 들지 말 것(자체 목록이 `LLVM` 을 빠뜨려 그 헤더를 참조 파일로 읽고 있었다).
 - **`CheckCodeConventions` 알아 둘 것** — 명명 판정은 `kMapContainerVocabulary` × `kMapNamingSubject` 표 하나. `Style/BitfieldBoolean` · `Naming/DuplicateInternalHelper` ·
   `Style/HeaderMemberInitializer` 는 전체 스캔에서만 돈다. `Naming/OutParameter` 는 `out` 이 든 지역 변수(`arrOutput`)를 오탐한다. 게이트는 파일을 동시에 훑으니 규칙
   객체에 상태를 들지 말 것. 자기 시험 조각은 그 검사가 **통과하는** 바탕(`_kCleanFixture`) 위에 위반 하나만 얹는다.
   `Style/ConstructorOrder` 는 헤더에서 읽은 멤버 순서와 비교하므로, 멤버 선언을 못 읽으면(예전엔 `Widget* const* _ppWidget`) 순서가 맞아도 위반으로 건다 —
   멤버 정규식 `_kClassMemberRe` 를 넓히면 `_kWholeScanCleanCase` 의 `RangeTable` 조각으로 확인한다.
+  교차 파일 검사(`Style/BitfieldBoolean` · `Naming/Duplicate*` · `Style/HeaderMemberInitializer` · `Style/ConstructorInitializesEveryField`)는 파일별 몫을 워커가
+  `CrossFileFacts` 로 모으고 부모는 합치기만 한다 — 새 교차 파일 검사도 그 모양으로(부모에서 파일을 다시 읽으면 그것이 게이트 시간의 2/3 였다).
 - **린트 정규식에 `(식별자+ … \s*)+` 모양을 쓰지 말 것** — 빈 구분자로 식별자를 몇 조각으로든 나눌 수 있어 맞지 않는 줄에서 역추적이 지수로 는다(한 줄 7 초,
   커밋 훅이 부하에서 수십 분). 식별자 뒤에 `(?![A-Za-z0-9_:])` 를 붙인다. 느린 게이트는 파일별 시간부터 정렬해 볼 것 — 평균이 아니라 몇 파일이 지배한다.
   줄 규칙의 `"글자" in line and 정규식` 앞 검사는 그 정규식이 반드시 품는 글자다 — 정규식을 바꾸면 같이 본다.
+  글자마다 도는 파이썬 루프는 트리 전체에서 초 단위다(`CheckNamespaceBlocks` 의 가리기 — 정규식 `sub` 로 바꾸자 직렬 CPU 8.8 → 2.1 s) — 덩어리는 정규식으로 찾고,
+  루프는 반응하는 글자만(`findall(r"[{};]")`) 돈다. 덩어리 글자 집합 + 꼬리 패턴 정규식(`[A-Za-z0-9_./\-]+\.ext`)은 `(?<![집합])` 로 덩어리 첫 글자에서만
+  시작하게 — 없으면 모든 자리에서 끝까지 먹고 되돌아온다(`AssetValidation` 의 참조 토큰, 꼬리 거르기와 함께 2.8 → 1.3 s).
 - **`CheckIncludeOrder` 는 첫 `#if` 를 경계로 삼는다.** include 가 전부 `#if` 안인 파일(`DelayLoadNotifyHook.cpp` · `PlatformOsHeaders.h` · `X11MacroUndef.h`)과 새 플랫폼 전용
   `.cpp` 는 손으로 순서를 지킨다(Core → Engine).
 - **`CheckFunctionVocabulary` 는 헤더 선언만 본다**(호출부를 보면 `vk*KHR` 를 잡는다). 대문자 규칙은 "셋 이상은 어디서든, 둘은 이름 끝에서". `hashed_string` 은 리터럴에서만
@@ -911,6 +990,36 @@ cd build/Ninja-Debug/Bin
   모듈을 쓰는 함수 안에서 import 한다. 동시 처리는 `Scripts/common/Parallel.py` 한 자리 — 파일 읽기 · 하위 프로세스 대기는 스레드, 정규식이 무거우면 `flatMapInProcesses`
   (코어 수만큼의 덩어리). `App.exe` 찾기 · 실행은 `Scripts/common/AppBinary.py` 하나. 파일을 한 번 읽어 나눠 쓰는 캐시는 CRLF 를 LF 로 바꿔야 결과가 같다.
 - **헤더 멤버 초기값은 금지, 정본은 생성자**(면제는 `AGENTS.md`). 네임스페이스 스코프 상수는 `inline constexpr`(`inline static constexpr` 은 TU 마다 사본).
+- **고아 검사(`orphans`)는 전체 경로 · 파일 이름만 찾는다** — 코드가 `"game/<게임>/models/" + 이름 + ".mesh"` 로 조립하는 메시는 규칙의 `exclude_patterns` 에 적는다
+  (NileCity · StarSkirmish · HarvestValley 작물). 아무도 안 쓰는 원본은 `models_raw/` 와 `import.stamp` 줄까지 함께 지운다. 기믹 프리팹(`common/prefabs/gimmicks`)은 가져다 쓰는 라이브러리라 뺀다.
+- **Shipping 통째 링크는 "링크한 라이브러리" 기준이어야 한다, "적은 `LIBS`" 기준이 아니다** — `CoreTest` 는 Engine 을 `TestFramework` 로만 받아 Shipping 에서 등록기가
+  빠졌고, 하네스 기동의 `[Error] Failed to deserialize config` 한 줄만 남긴 채 모든 시험이 기본값 설정으로 돌았다(종료 코드 0). 배포 구성의 하네스는 생성 JSON 이
+  역직렬화되지 않으면 기동을 실패시킨다.
+- **CI 실패는 `Scripts/dev/CiFailureReport.py` 가 주석으로 올린다**(시험 · 구성 실패의 vcpkg 포트 로그 · 크래시 스택 `Bin/Saved/Logs/crash_*.stack.txt`).
+  작업 로그 · 아티팩트는 관리자 전용(API 403)이라 밖에서는 주석만 보인다.
+- **Release · Shipping 도 서명 · 심볼을 만든다**(`SW_RELEASE_DEBUG_INFO`, 기본 `lines` = `-gline-tables-only`, `full` = `/Z7`) — 링크 `/DEBUG:FULL` + `/OPT:REF` · `/OPT:ICF`
+  (`/DEBUG` 가 끄므로 다시) · `/PDBALTPATH:%_PDB%`, 리눅스 `--build-id=sha1`. Shipping PDB 는 `Symbols/`(배포 폴더 밖, 시험 실행 파일 PDB 는 `TestBin`), 저장소 배치는
+  `py -3 -m Scripts symbols`. PDB 이름만 적으므로 크래시 스택(DbgHelp)은 실행 파일 폴더를 검색 경로에 더한다(`WindowsCallStackCapture`). 측정(2026-10-06,
+  Windows Shipping 전체 빌드, 기계 공유 중): 오브젝트 합 146 → 262 MB, `Bin` 29.6 MB 그대로(App.exe 크기 같음), `TestBin` 81 → 257 MB(시험 PDB), `Symbols` 31.5 MB,
+  링크 App 26.7 → 30.5 s · EngineTest 68.6 → 79.9 s, 전체 빌드 벽시계는 기계 부하에 묻혀 차이 없음(7.6 · 6.8 분).
+- **유니티 묶음에서 서드파티 매크로 정리는 "내가 정의한 것만" 지운다** — `AudioVorbisDecode.cpp` 가 stb_vorbis 뒤에 `#undef TRUE` · `FALSE` 를 하자 Windows
+  `windows.h` 의 것이 지워져, 같은 묶음 뒤의 `XAudio2System.cpp`(d3d11.h)가 PCH 끈 빌드(CI Windows)에서 깨졌다. PCH 가 있으면 d3d 헤더가 먼저 들어와 가려진다.
+- **구성을 넘어 같은 비트가 필요한 TU 는 `sw_markDeterministicSources`** — 부동소수점 축약(FMA 합치기)을 끄고 유니티 묶음에서 뺀다. Release 의
+  `/arch:AVX2` 가 `a * b + c` 를 FMA 로 합쳐 파괴 해시가 Debug 와 갈렸다(파쇄 결과부터). 대상은 Engine `Destruction/` 의 시뮬레이션 TU 여덟 ·
+  `GF_NetDestruction` · Core `Math/VectorMath.cpp`(거리 · 길이가 줄 밖 함수라 그쪽도 — 빼면 사건 넷째의 반경 피해에서 다시 갈린다). 새 결정성 경로는
+  이 함수에 파일을 더하고 기준값 시험을 붙인다.
+
+- **상수의 자리는 `AGENTS.md` "Constants" 절** — 한 TU 는 Internal, 모듈은 소유 타입, 계약은 계약 헤더(`RHITypes` · `bindingslots.hlsli` · `Defines`), 잘 알려진 값은 집 하나
+  (`CheckWellKnownConstants`), 반복은 `RunRepeatedConstants.py` 로 본다. "X 와 같아야 한다" 주석이 달린 사본이 결함의 모양이다(루트 상수 16/64, 모프 배치 넷).
+  게임플레이 튜닝 값은 컴포넌트 `PROPERTY` · 키트 설정 구조체 칸, 중력은 `PhysicsSystem::getConfiguredGravity` 하나.
+- **4 글자 표식은 `FourCcUtil::make( "...." )`(파일 바이트 순서) 하나** — 16 진 손글씨는 바이트 순서가 둘로 갈렸었다. 형식을 바꾸면 커밋된 데이터
+  (`Test/AppTest/Golden/*.ppm.z` 압축 스트림 등)의 앞 네 바이트도 같이 고친다.
+- **커밋 훅은 staged 셰이더가 있으면 `App --cook-shaders` 결과(바이너리 · `cook.stamp`)를 자동으로 stage 한다** — 도우미처럼 바이너리를 커밋하지 않을 때는
+  커밋 뒤 그 경로를 빼고 `--amend` 한다(셰이더 소스가 없는 amend 는 훅이 다시 굽지 않는다).
+- **문서의 경로는 `CheckDocPaths` 가 본다** — 상대 링크 · 제목 앵커 · 백틱 안 저장소 경로 · 코드 블록의 `#include` · `py -3 Scripts/…`,
+  그리고 모든 README · `docs/*.md` 가 `docs/02_DocumentMap.md` 에 있는지. 파일을 옮기거나 지우는 커밋은 .md 를 건드리지 않아 훅이 이 게이트를 돌리지 않으므로
+  `ctest -L lint` 가 잡는다. CI 는 문서만 바뀐 push 에도 린트 잡을 돌리고 빌드 잡만 건너뛴다(`ci.yml` 린트 잡의 `changes` 단계).
+  자리만 보이는 예시는 `<게임>` 처럼 꺾쇠로 쓰고(게이트가 경로로 읽지 않는다), 아직 없는 파일은 백로그에만 적는다(백로그는 링크만 본다).
 
 ### 3-5. 직렬화 · 리플렉션 · 파서
 
@@ -1078,7 +1187,10 @@ cd build/Ninja-Debug/Bin
   (`TickPhase`)는 한 오브젝트 안의 순서일 뿐이다. 선행 조건 핸들은 등록이 준 것을 쓴다 — 소유 오브젝트 id 가 없는 손수 만든 핸들은 거절된다.
 - **기본값은 만들 때 한 번이다**(CDO 자리, `DefaultPatch`). 모듈 등록 · 리로드에서 살아 있는 값에 다시 찍지 말 것. `ComponentDefaults` 의 기본값 파일은 없어도 되는 파일이다
   ("시도했는가" 로 한 번만 연다). 프리팹 형식은 읽을 때 정해 든다(`PrefabStateFormat`), 쓰기는 `PrefabAsset::saveToFile` 하나, 오버라이드는 `타입#n` 키.
-- **찾지 말고 등록받는다.** 매 프레임 씬을 훑던 주광 조회가 GT 의 38 % 였다. 빛은 `LightRegistry`(종류별 칸), 카메라는 `CameraRegistry::selectCamera`(동률은 컴포넌트 id — 등록
+- **"그 타입 모두" 는 `ComponentRegistry` 에서 묻는다** — `forEachComponentOfType` 은 모든 오브젝트를 공유 잠금 아래 훑어 프레임 경로에 쓰면 씬 크기에 비례한다
+  (상호작용 하는 쪽 하나가 Release 10k 오브젝트에서 +190~207 us → 등록부로 +2~6 us). 등록은 `onRegister` / `onUnregister`(에디터에서도 찾아지고 모듈 해제에서도 맞다),
+  키는 정규 이름이라 모듈을 다시 올려도 같은 칸, 등록부엔 파괴 예약된 것도 플러시까지 남으므로 찾는 쪽이 `isPendingDestroy` 를 건너뛴다.
+- **찾지 말고 등록받는다.** 매 프레임 씬을 훑던 주광 조회가 GT 의 38 % 였다. 빛은 `ComponentRegistry`(타입 · 칸 — 빛은 종류별 칸), 카메라는 `CameraRegistry::selectCamera`(동률은 컴포넌트 id — 등록
   순서로 가르면 되돌리기마다 뒤집힌다), 그림자 빛은 `Scene::findShadowCastingDirectionalLight`. 프리미티브 등록부에 섞지 않는다(그릴 수 있는 것만 담는 계약).
 - **씬 로드** — `SceneManager` 대기열은 한 자리다. 밀려난 요청 · `shutdown` · 취소도 약속에 `nullptr` 을 채워야 `future.get()` 이 영원히 멈추지 않는다. 로드 중 모듈 팩토리가 바뀌면
   (`getFactoryHeadSerial`) 다시 짓는다. `SceneManager::shutdown` 은 씬을 내리기 **전에** 활성을 비운다.
@@ -1086,7 +1198,7 @@ cd build/Ninja-Debug/Bin
   게임을 고른 빌드의 쿠킹이 모두 선다. 엔진 · 공용 타입만 쓰는 다른 팩의 씬은 그대로 쿠킹한다(`AppCookTest` 가 `game/empty` 를 본다). 활성 팩의 모르는 타입은 여전히 실패다
   (`SceneTest.SceneCookFailsOnAComponentOfUnknownType`).
 - **물리** — `stepPhysics` 는 틱과 트랜스폼 적용 뒤에 한 번 돈다. 콜라이더는 틱하지 않고 틱 안의 질의는 지난 step 을 본다. `onOverlapBegin( const OverlapInfo& )` 안에서는 스폰 ·
-  파괴해도 된다. 순간이동은 `teleportTo` · `BodyMoveType::Teleport`(아니면 연속 바디가 그 길을 쓴다). 셀 범위는 `CellRange` 하나, 셀 순회 변수는 int64(`MaxInt32` 로 접히면 안 끝난다),
+  파괴해도 된다. 순간이동은 `teleportTo` · `BodyMoveType::Teleport`(아니면 연속 바디가 그 길을 쓴다). 셀 범위는 `CellRange` 하나, 셀 순회 변수는 int64(`MathUtil::kMaxInt32` 로 접히면 안 끝난다),
   `toCellCoord` 는 float64 로 나눈 뒤 접는다. 공간 색인 규약은 `Source/Engine/Spatial/README.md`.
 - **강체 물리** — `ScenePhysics::step` 이 겹침 월드 다음에 돈다(고정 스텝 → 보간 자세를 트랜스폼에 → 이벤트). 컴포넌트가 쓴 자세와 다른 트랜스폼은 코드가 옮긴 것(순간이동)이다.
   vcpkg Jolt 는 설치 헤더가 부동소수 예외 비트를 켜고 라이브러리는 끈다 — `JPH::RegisterTypes()` 는 abort 하므로 백엔드가 라이브러리의 ID 로 등록한다(그 비트만 허용).
@@ -1096,12 +1208,17 @@ cd build/Ninja-Debug/Bin
 - **파쇄(평면 자르기)** — 모서리 교점은 끝점을 자리 순으로 정렬해 구한다(이웃 칸이 같은 모서리를 반대 방향으로 자르면 비트가 달라 틈이 생긴다). 세 칸이 만나는 곳에는 거의 같은
   점이 생겨 그때만 용접 + 퇴화 삼각형 정리(`cleanPiece`)를 돈다(늘 돌리면 느리다). 귀 자르기는 일직선 점을 삼각형 없이 버리면 안 된다(T 자 틈). 안쪽 면 다시 짓기는 그 점을
   쓰는 **모든** 면이 안쪽 면일 때만 뺀다. 쪼개기 결과가 바뀌면 `MeshFractureUtil::kAlgorithmVersion` 을 올린다(임포트 해시).
-- **"바뀌었나" 검사는 제곱 거리를 `MathUtil::EpsilonSquared` 와 비교한다**(`Epsilon` 이면 프레임당 1e-3 아래 움직임이 영원히 삼켜진다). `GpuSceneBuilder::bCamSame` 의 이력은 의도다.
+- **"바뀌었나" 검사는 제곱 거리를 `MathUtil::kEpsilonSquared` 와 비교한다**(`kEpsilon` 이면 프레임당 1e-3 아래 움직임이 영원히 삼켜진다). `GpuSceneBuilder::bCamSame` 의 이력은 의도다.
   `float4x4::invert` 는 행렬식이 정확히 0 · NaN 일 때만 항등을 돌려준다(절대 임계값은 작은 부모 · 큰 직교 카메라를 깨뜨렸다).
 - **시퀀서** — "지나갔는가" 는 `previousFrame < start <= frame`, 이전 프레임 없음은 `kNoPreviousFrame`(INT32_MIN — -1 은 frameMin 0 과 겹친다). 프레임은 배 정밀도로 곱하고 천분의 일을
   얹어 자른다. 반복 재생 시간은 한 바퀴 안으로 감는다(float32 는 10^6 초 근처에서 0.016 을 더해도 안 움직인다).
 - **`getTags()` 와 `getOrCreateTags()` 는 다르다** — 공용 빈 상수를 `const_cast` 로 돌려주면 한 번 쓰는 순간 모든 오브젝트가 그 태그를 갖는다. `TagID::computeId` 하나가 리터럴 · 런타임
   태그 ID 를 만들고, 계층 비교(`Faction` → `Faction.Player`)에는 문자열이 같이 필요하다.
+- **프리팹 오버라이드는 키(`이름표#n`)로 프리팹 컴포넌트를 가리킨다.** 더한 컴포넌트는 `<Add after>` 로 자리를 지킨다. 프리팹에서 사라진 컴포넌트의 오버라이드는
+  엔티티 이름과 함께 경고하고 버린다(언리얼과 같다 — 유니티는 남겨 둔다). 물려받은 컴포넌트의 이름표를 바꾸면 제거 + 추가로 기록돼 프리팹 수정이 더는 닿지 않는다 —
+  에디터에는 이름표 편집 창구가 없다(`_componentName` 은 `HideInInspector`). 만들게 되면 프리팹 인스턴스의 물려받은 컴포넌트는 막는다(언리얼과 같다).
+- **`getAllGameObjects()` 값 반환은 사건 구동 5 곳만**(에디터 프리팹 명령 둘 · 미리보기 둘 · `Scene::shutdown`) — 프레임 경로에 쓰면 `getAllGameObjects( out )` · `forEachGameObject`.
+- **`MeshInstanceBatch` 는 항목 수 고정 · 메시 · 머티리얼 하나**(언리얼 ISM 과 같다) — 늘리려면 다시 만들고, 항목별 머티리얼 · 투명 정렬이 필요하면 `MeshComponent` 로.
 
 ### 3-7. 그래픽스 · RHI · 셰이더
 
@@ -1128,6 +1245,11 @@ cd build/Ninja-Debug/Bin
   기록만 남는다(`RenderView::_sortCb`). ② 직렬 경로의 패스는 `_frameCtx._pCmd` 리스트에 기록한다 — 프리패스 리스트가 이미 닫힌 뒤라 그 자리를 뷰의 리스트로 바꿔
   두지 않으면 Vulkan 이 죽고 나머지는 0 을 그린다. ③ D3D 의 `CopyResource` 는 같은 포맷 · 크기만 받는다 — 컷 프레임은 원본을 기록에 복사하지 않고 기록 자리에
   원본을 건다, 캡처를 백버퍼로 옮기는 것은 출력이 백버퍼 크기일 때만. GL 기본 프레임버퍼는 아래 원점이라 `setViewport` 가 y 를 뒤집는다(오프스크린 FBO 는 그대로).
+  창에 나간 그림은 `blitTexture( 0, 텍스처 )`(src 0 = 백버퍼, Present 전 프레임 스트림)로 읽는다 — `RenderPassGpuTest.PresentedBackBufferMatchesTheCapture` · `ScreenRectViewLandsInItsCornerOfTheBackBuffer`.
+  추가 뷰의 메모리는 뷰 픽셀 × 첨부 바이트다 — 포워드 12 B/px(512² 뷰 3 MB), 디퍼드 64 B/px(TAA 기록 포함, 512² 뷰 17 MB · 1080p 주 뷰 133 MB). 뷰 한도 8 개를 다 512² 디퍼드로
+  써도 주 뷰 하나 수준이라 공유 풀은 하지 않았다 — 4 인 분할 화면(뷰마다 1/4 화면)도 합이 주 화면과 같다. 추가 뷰는 그래프 전체(그림자 패스 포함)를 자기 풀로 돌아
+  그림자 맵도 뷰마다 하나다(크기는 뷰와 무관한 그림자 품질 — 2048² D24S8 = 16 MB/뷰, 품질 3 은 64 MB) — 공유는 비용으로는 이득이 작았다(3-12), 화질이 문제가 되면 주 뷰 그림자를 먼저 그려 나눠 읽게 한다.
+  초상화 굽기(`PortraitRenderer`)는 동기다 — 부르는 곳이 `App --render-portraits`(일괄 CLI) 하나뿐이라 렌더 스레드를 멈추는 편이 맞다. 런타임 · 에디터 썸네일이 쓰게 되면 그때 큐로.
 - **GPU 자원을 든 객체의 마지막 소유는 게임 스레드가 아무 때나 놓는다 — 핸들 반환은 `IRHIDevice::releaseHandle` 로.** GpuScene 후보 · 걷은 뷰가 마지막 소유가 되면
   소멸이 수집 잡 안에서 일어나고, 그때 렌더 스레드가 병렬 기록 중이면 bindless 표가 바뀐다(핫 리로드한 StarSkirmish · VoxelCraft · Shooter3D 가 Debug 단언으로 죽었다).
   `releaseHandle` 은 렌더 스레드가 프레임을 들고 있으면 그 프레임 뒤(RT 의 `flushDeferredHandleReleases`)로 미룬다(언리얼 `FDeferredCleanupInterface`).
@@ -1139,6 +1261,9 @@ cd build/Ninja-Debug/Bin
   define 없는 변형의 리플렉션을 묻는다. Debug 는 런타임 리플렉션으로 넘어가 모르고, Shipping hostgpu 만 "매니페스트에 없다" 로 실패한다(sprite2dlit).
 - **투명 순서의 정본은 CPU 의 `sortTransparent` 하나다**(정렬 레이어 키 → 깊이 → 후보 번호). GPU `instancesort.hlsl` 은 압축된 목록을 인스턴스 번호
   오름차순으로 되돌릴 뿐이다 — 거기서 깊이를 다시 재면 정렬 레이어 · 직교 시선 축을 모르고 같은 깊이를 불안정하게 갈라 CPU 와 다른 순서를 낸다.
+  추가 뷰는 `buildViewTransparentOrders` 가 발행된 꼬리를 그 뷰의 눈으로 다시 정렬해 순번(정렬 디스패치 t2) · 배치 순서 · 뷰 슬롯 스트림(DX11)으로 싣는다 —
+  배치끼리 깊이가 엇갈리는 것과 512 넘는 투명 배치(Preserve)는 그 뷰에서도 주 순서다. 머티리얼을 넘어 묶는 백엔드(DX12 · Vulkan)는 색만 다른 투명 머티리얼이
+  한 배치라 순서가 GPU 정렬 하나로 정해지고, 나머지는 배치 순서가 정한다 — 둘 다 `RenderPassGpuTest.ExtraViewSortsTransparencyFromItsOwnEye` 가 본다.
 
 - **bindless 표를 바꾸는 일은 렌더 스레드의 병렬 기록과 겹치면 안 된다**(`IRHIDevice::setParallelRecording`). 게임 스레드의 `MaterialCache::initializePending`
   (씬 로드 · 처음 쓰는 머티리얼의 스폰)은 렌더 스레드가 지난 프레임을 기록하는 동안 돈다 — `EngineLoop` 는 올릴 것이 있는 프레임(`hasPendingInitialize`)만
@@ -1176,6 +1301,7 @@ cd build/Ninja-Debug/Bin
 - **기록 중의 CB 갱신은 `IRHICommandList::updateConstantBuffer`, 기록 밖(에셋)은 `IRHIResourceFactory::updateConstantBuffer`** — 한 버퍼는 프레임에 한 번만 쓴다.
 - **배열 · 큐브 텍스처는 bindless 등록이 거부된다**(셰이더 테이블이 Texture2D 뿐). 면은 `_arrColorTargetSlice` · `_depthTargetSlice` 로 고른다.
 - **첨부 `_resolutionDivisor` 를 쓰면 패스는 출력 첨부 크기로 열린다** — 한 패스의 출력은 같은 나눗수여야 한다(검증이 본다). Vulkan PSO 는 셰이더가 읽는 정점 속성만 건다.
+  원본을 비켜 읽는 효과는 `g_SourceTexel`(원본 역할 입력의 실제 크기, `registerPassTexture`), 깊이를 비켜 읽는 효과는 `g_OutlineParams.yz`(프레임) — 깊이를 나누지 않은 파이프라인 기준이다.
 - **머티리얼 · 인스턴스 형식 판정은 `AssetFormatRegistry::upgradeXmlWithActiveRegistry`**(씬 · 프리팹과 같다) — `AssetManager` 없이 돈다. 본문의 enum 글은 `TypeRegistry` 가 필요하다.
 
 - **거울 변환(월드 3x3 행렬식 < 0)은 컬을 뒤집은 PSO 변형으로 그린다** — 배치 키 · 정렬 키 · 투명 병합에 `_bReverseCulling` 이 들어 있고 PSO 변형 키의 한 축이다
@@ -1249,10 +1375,13 @@ cd build/Ninja-Debug/Bin
   업로드 복사 리스트는 열어 두고 기록만 하며 `flushPendingUploads` 가 프레임에 한 번 내보낸다(`_uploadSlotMutex`). bindless 인덱스는 `acquireBindlessIndex(lock)` 로 집는 일과 뷰 생성을
   한 임계 구역에. CBV 는 256 B 정렬. drawIndirect 가 메시 VB 를 덮어쓴 적이 있다 — 렌더 변경은 스크린샷까지 본다.
   오프스크린 레코드(`_mapOffscreenTexture`)는 기록 경로에서도 `findOffscreenTargetView`(잠근 채 복사)로만 읽는다 — 이터레이터를 들고 `transitionTexture` 를 부르면 같은 뮤텍스로 교착이다.
+  bindless 0 번은 null Texture2D SRV(`kNullTextureBindlessIndex`) — 힙이 CBV · 버퍼 · 텍스처 한 공간이라 0 으로 남은 텍스처 인덱스(머티리얼 폴백 원소)가 상수버퍼를 텍스처로 읽어
+  채널마다 NaN 이 섞였다(군중 시험이 무관한 커밋 뒤에 DX12 만 실행마다 다른 픽셀 수로 졌다 — 0 번에 무엇이 앉는지가 등록 순서에 달렸다).
 - **Vulkan** — acquire 한 이미지는 present 로만 돌려준다(present 없는 프레임마다 acquire 하면 `UINT64_MAX` acquire 로 교착). 리소스 해제는 실제 GPU 펜스(단조 세대)와 이어야 한다.
   일회성 업로드는 `VulkanOneShotCommands` · 전용 풀 · `_queueMutex`. `vulkan1.3` DXC 는 `discard` 를 demote 로 내므로 기능을 켠다 — 쿠킹된 셰이더가 바뀌면 검증 레이어 로그를 다시 읽는다.
   와이어프레임은 `fillModeNonSolid`. 백버퍼 블릿의 이전 레이아웃은 `UNDEFINED`.
-- **GL** — 컨텍스트는 렌더 워커가 프레임마다 쥐었다 놓는다(다른 스레드 생성은 `acquireGraphicsContextBlocking`). `ARB_gl_spirv` 가 없으면 초기화에서 끊는다(다른 백엔드로 넘어가지
+- **GL** — 컨텍스트는 렌더 워커가 프레임마다 쥐었다 놓는다. 잡기는 누구든 기다려서(250 ms) 한다 — 한 번만 시도하면 자원 생성 가드가 쥔 순간 렌더 스레드가
+  프레임을 잃는다. 못 잡으면 로그(`GL context not acquired`)에 쥔 스레드(렌더 스레드인지) · 쥔 시간이 남는다. `ARB_gl_spirv` 가 없으면 초기화에서 끊는다(다른 백엔드로 넘어가지
   않는다). `glClipControl` 은 `#ifdef GL_CLIP_CONTROL`(없는 토큰) 같은 가드 뒤에 두지 말 것(상하 반전이 오래 숨었다). MRT 클리어는 `glClearBufferfv`, `R16G16B16A16_FLOAT` 는
   `GL_HALF_FLOAT`, `drawInstanced` 는 startInstance 를 버린다. 로그 문구에 `[Error]` 같은 레벨 토큰을 쓰지 말 것(스모크가 센다).
 - **스왑체인은 진짜 객체다**(`5aea5ef1`) — 가상 인터페이스로 되돌리지 말 것, GL 은 의도적으로 없다. Present PSO 는 대상 포맷(`getBackBufferFormat`)으로, BGRA 는 `-gv_rhiBackBufferFormat=1`
@@ -1267,14 +1396,19 @@ cd build/Ninja-Debug/Bin
   `forwardpipelinestaged.xml` · `FusedPostChainMatchesStaged`). 깊이 프리패스는 `SW_PASS_DEPTH_PREPASS` · LessEqual, DX11 은 VS 만.
 - **그림자** — 직교 투영 깊이 범위는 눈 기준 `[거리-반경, 거리+반경]`(아니면 그림자 항이 늘 1), 샘플은 `swSampleShadowAtWorld`, 회귀는 행렬로(`ShadowMatrixDepthRangeContainsScene`) ·
   픽셀로 보려면 바닥(`-gv_benchGround=1`). 그림자 시험은 그림자 깊이 쓰기를 끈 판과 **달라야** 한다. 렌더 차이가 같은 프로세스 안에서는 결정적이고 프로세스마다 갈리면 배치 순서를 의심한다.
+  바이어스는 텍셀 단위로 환산한다(`DirectionalShadowProjection::computeShaderParams` — 깊이 1 · 노멀 오프셋 2 텍셀). NDC 상수로 두면 볼륨에 비례해 커진다
+  (360 m 볼륨에서 0.02 = 7.2 m: 작은 물체 그림자 소실 · 발치 분리). 그림자 맵은 화면 크기와 무관(`gv_shadowQuality` → 1024~4096), 맞춘 볼륨은 절두체 ∩ 받는 높이 띠 + 텍셀 스냅.
+  필터는 3x3 PCF, 에뮬 백엔드(DX11 · GL)는 GatherRed 쌍선형 비교라 네 백엔드 그림이 같다.
 - **타임스탬프 계약** — 칸은 패스 인덱스로 고정(흐르는 카운터는 병렬 기록에서 경쟁), 기다리지 않고 링 슬롯이 펜스를 지난 뒤에만 읽는다, 안 적은 칸은 음수. 계측 게이트는
   `SW_PROFILE_COMPILED` — Shipping 에서는 통째로 빠진다(로그에만 쓰는 값은 `[[maybe_unused]]`).
 - **`GpuUploadQueue`** 는 GT 가 `buildFromScene` 뒤 · 스냅샷 전에 동기로 flush 한다. 워커 생성은 `RHICapabilities::_bThreadSafeResourceCreation`(GL 은 큐가 받지 않는다 — 렌더 스레드가 그 프레임에 만든다. 게임 스레드가 GL 자원을 만들면 렌더 스레드가 쥔 컨텍스트를 기다리다 시간을 넘긴다). 비상 스위치 `-gv_gpuUploadQueue=0`.
 - **디퍼드의 고정 비용은 채움률이다**(1280×720 2503 us · 640×360 864 us, 라이트 256 개 몫 ~600 us) — 타일/클러스터 컬링은 측정이 가리키는 자리가 아니다. GBuffer 는 같은 머티리얼
   셰이더에 `SW_PASS_GBUFFER` 를 얹는다(출력은 양쪽 다 구조체).
-- **RHI 백엔드에 .cpp 를 더하면** `cmake/Engine/RhiBackendSources.cmake` 에도. 파일은 `<Backend>RHIDevice` · `…DeviceInit` · `…DeviceSubmission` 축으로. 백엔드는 별도 MODULE DLL 이라 Engine
+- **RHI 백엔드의 .cpp 는 `Graphics/RHI/<백엔드 폴더>/` 에 두면 끝이다**(모듈 · Shipping 이 폴더로 가져간다). 파일은 `<Backend>RHIDevice` · `…DeviceInit` · `…DeviceSubmission` 축으로. 백엔드는 별도 MODULE DLL 이라 Engine
   전역 변수를 extern 으로 못 쓴다 — 정책은 Engine, 메커니즘은 디바이스.
-- **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 임포트하지 않는다(8 비트 경로).
+- **인스턴스 배치를 든 컴포넌트는 `setOwnerComponent( this )` 를 부르고, 활성 변화(`onOwnerActiveInHierarchyChanged` · `_bActive` 의 `onPropertyChanged`)에 `markAllEntriesDirty` 를 부른다.**
+  빌더는 `MeshComponent` 와 같은 규칙(`Component::isActive`)으로 소유 컴포넌트가 꺼진 배치를 뺀다 — 더티를 찍지 않으면 부분 수집이 지난 프레임 후보를 그대로 쓴다.
+- **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 부동소수점으로 읽어 BC6H_UF16 · RGBA16F 로만 임포트한다(규칙 포맷이 8 비트면 실패) — Debug DirectXTex 의 BC6H 는 BC7 처럼 느리다, 큰 원본은 Release App 으로.
 
 ### 3-8. 에디터
 
@@ -1288,7 +1422,13 @@ cd build/Ninja-Debug/Bin
   모듈 람다 명령은 에디터 리로드 때 `CommandStack::releaseCodeWithin` 이 뗀다(묶음은 안쪽 하나라도 걸리면 통째로). 대상 조회는 id, 같은 프레임에 지우고 되살린
   오브젝트는 지연 파괴 때문에 새 id 를 받으므로 이름으로 다시 찾는다. 선택 · dirty 는 `ObjectEditListener` 로.
 - **에디터 동작 검증은 에디터 안 자체 시험** — `SW_EDITOR_SELF_TEST` 로 등록하고 `AppSmokeTest.EditorSelfTestsPassInsideTheEditor` 의 기대 목록에 한 줄 더한다
+- **도크 칸은 창 크기를 비율로 따른다** — ImGui 는 중앙 노드 옆 칸에 마지막 픽셀 크기(`SizeRef`)를 그대로 줘서, 창을 줄이면 옆 패널은 그대로이고 게임 뷰가 32 px 로 눌렸다. `EditorDockLayout::scaleDockSizeToViewport` 가 `DockSpaceOverViewport` 앞에서 `SizeRef` 를 같은 비율로 맞춘다(기준은 마지막 실제 크기 · 처음엔 저장된 루트 크기, 최소화 0×0 은 건너뛴다). 패널 밖으로 넘칠 수 있는 떠 있는 바는 부르는 패널의 뷰포트에 묶는다(`beginFloatingBar` — 묶지 않으면 멀티 뷰포트가 OS 창으로 떼어 낸다). 에디터 창 최소 크기 960×540(`IWindow::setMinimumClientSize`). 시험 `dock.followsWindowSize`.
   (`-gv_editorSelfTest=<패턴>`, 실행 중에는 사용자 `imgui.ini` 를 읽지도 쓰지도 않는다). 워크스페이스는 오브젝트 GUID · 프리팹 경로 사본을 들지 않는다(id · 씬이 정본).
+  입력은 `EditorSelfTestInput`(플랫폼 newFrame 뒤 · NewFrame 앞에 넣는다 — 실제 커서보다 뒤라 이긴다), 누를 위젯은 그린 직후 `EditorSelfTestMarks::note( "키" )`.
+  클릭은 누르기 · 떼기를 단계 둘로, 단계마다 이름표 위로 다시 옮긴 뒤(ImGui 는 한 프레임의 누름 · 뗌을 흘려 처리하고 플랫폼이 실제 커서를 다시 넣는다).
+  떠 있는 창(자기 플랫폼 창)은 플랫폼이 실제 커서로 "커서 아래 뷰포트" 를 넣어 호버가 그리로 간다 — 이름표가 든 뷰포트를 마우스 위치와 함께 넣는다
+  (`AddMouseViewportEvent`, `moveMouseToMark` 가 한다). 시험이 그리는 창은 주 뷰포트 안에 둔다(`SetNextWindowViewport`).
+  설정 파일을 다시 쓰는 경로(테마 저장)를 지나는 시험은 파일 바이트를 떠 두었다 되돌린다(`input.classicDarkSwatch`).
 
 - **DebugDrawQueue 는 `endFrame` 에 비워진다** — 에디터 UI 보다 먼저 채운 것(게임 업데이트)만 보인다(`debug_draw` 시각화). 틱에서 채우는 생산자가 생기면
   이중 버퍼로. `ActionRoom::drawDebug` 를 부르는 곳은 아직 없다. 메뉴 경로는 `EditorCommandRegistry::validate` 가 "그려지지 않는 경로" 를 잡는다.
@@ -1319,20 +1459,27 @@ cd build/Ninja-Debug/Bin
   목록을 지운다).
 - **ImGui 수명 짝** — 플랫폼 백엔드 `shutdown()` 은 `BackendPlatformUserData` 를 확인한 뒤에만, 초기화 실패 경로도 전역을 걷는다, 팝업에 `p_open=&_bOpen` 을 넘기지 말 것(X 버튼이 `onClose`
   를 건너뛴다). 모달이 떠 있으면 키가 `InputManager` 까지 오지 않는다. 에디터 draw 스냅샷은 획득 → present **또는 포기**(`abandonPendingDraw`)로 끝난다. 입력 위젯은 `drawTextField` 하나.
-- **에디터 상태 · 설정** — 설정 파일 경계는 "앱이 다시 쓰는가": `EditorConfig.json`(전체 재생성 — 테마만), 손으로 정하는 경로는 읽기 전용 `editortooldefaults.json`. Game View 클리어 색은
+- **에디터 상태 · 설정** — 설정 파일 경계는 "앱이 다시 쓰는가": 앱이 쓰는 상태(`EditorConfig.json` 테마 · 도킹 · 레이아웃 · 캔버스 · gv 프리셋)는 `Saved/Editor/`(git 무시), 사람이 쓰는 것만 `Config/Editor/`, 에디터 자기 파일 · 폴더 이름은 코드 상수(`EditorUtil::k…FileName`, `config::kDirConfigEditor`) — 설정 파일이 제 위치를 정하지 않는다. Game View 클리어 색은
   `_clearColor`. 상태를 소유자에게 옮길 때는 그 소유자가 언제 서는지부터 본다(테마가 `EditorContext::initialize()` 전에 읽혀 조용히 버려졌다). DPI: 96 DPI 기준값 × 배율, 테마에서 곱하고
-  되읽을 때 나눈다(짝이 깨지면 이중 배율). 에셋 핫 리로드는 에디터 소유(`FileWatchDispatcher`), 감시 접두어는 절대 경로.
+  되읽을 때 나눈다(짝이 깨지면 이중 배율). 모니터를 옮기면 ImGui 는 FontScaleDpi 만 덮는다 — `beginFrame` 이 그 값을 따라 `setDpiScale` 로 여백까지 맞춘다.
+  WM_DPICHANGED 는 게시(PostMessage)하면 창 프로시저에 닿지 않는다 — 시험은 보내기(SendMessage)로. 에셋 핫 리로드는 에디터 소유(`FileWatchDispatcher`), 감시 접두어는 절대 경로.
 - **기계 훑기의 알려진 오탐** — 델리게이트로 묶인 `&Class::method` 는 "죽은 함수" 로 잡힌다. `EditorThemeUtil` 팔레트 · 킷의 소비자 없는 세터 · 게터는 정상이다. 쓰이는지는 `= delete` 로
   바꾸고 빌드해 센다.
 - **패널 시각 검증 사각** — 피킹 클릭 · 기즈모 우선순위는 사람이 눌러야 보인다. 그리기 회귀는 `Game View` 정점 수로 전후를 비교한다.
 
 ### 3-9. 핫 리로드 · 모듈 · 엔진 서비스
 
+- **전용 서버는 별도 실행 파일 `Server` + 기동 표 대상 칸이다**(언리얼 `<Game>Server` 자리). 널 RHI 를 두지 않는다 — RHI · 렌더러 · 플레이어 설정 단계를
+  돌리지 않으면 된다(시험 하네스가 이미 그렇게 씬을 돌린다). 리눅스 서버는 X11 을 링크하면 X 없는 기계에서 main 전에 죽는다 — `SW_WITH_CLIENT_CODE` 로 뺐다.
+
+- **모듈 대상은 매니페스트 `_listTarget`(Client · Server, 필수)** — CMake 는 빌드 타깃(`SW_TARGET_TYPE`)으로, 런타임은 호스트 역할(App · Server)로 거른다.
+  키트는 공유 `GF_<X>` · 서버 `GF_Server_<X>` · (필요하면) 클라이언트 `GF_Client_<X>` 로 나누고, 새 매니페스트에는 처음부터 이 키를 적는다(없으면 configure 가 선다).
+
 - **지연 import 는 첫 호출로 묶이게 두지 않는다 — 첫 float 인자가 망가진다**(2026-10-06). lld 20 의 x64 지연 로드 썽크 `__tailMerge_<dll>` 은
   `push rcx … r9; sub rsp,48h; movdqa [rsp],xmm0; movdqa [rsp+10h],xmm1; …; call __delayLoadHelper2` — `[rsp..rsp+1Fh]` 가 그 호출의 홈 공간이라 헬퍼가
   rcx · rdx 를 흘려 저장된 xmm0 을 덮는다(키트의 `DamageMath::applyArmor( 25, 5, 0, 1 )` 첫 호출이 damage = 0 을 받았다). 지연 로드 훅 TU 가
   `bindDelayLoadImports`(이미지의 지연 import 를 `__HrLoadAllImportsForDll` 로 전부)를 내보내고, `LiveReloadManager` 의 커밋 · `ModuleHost` · 엔진 기동
-  (`bindDelayLoadImportsOfLoadedModules` — 시험 실행 파일이 링크한 키트)이 모듈 코드가 돌기 전에 부른다. `/DELAYLOAD` 는 `TargetRules.cmake` 의 두 함수로만
+  (`bindDelayLoadImportsOfLoadedModules` — 시험 실행 파일이 링크한 키트)이 모듈 코드가 돌기 전에 부른다. `/DELAYLOAD` 는 `ModuleTargets.cmake` 의 두 함수로만
   (`CheckDelayLoadSites`) — Engine 의 시스템 DLL(D3DCompiler · MF · XAudio2 · Tracy)은 미리 묶지 않으니 첫 인자가 float 인 함수를 부르지 않는다.
   Shipping 은 키트 · 게임을 정적으로 링크해 모듈 지연 로드가 없다. 시험: `DelayLoadBindTest` · `ArchitectureTest.ReloadedDependentsBindToTheCurrentImages`.
 
@@ -1342,6 +1489,7 @@ cd build/Ninja-Debug/Bin
 - **모듈 켜기/끄기 · 의존 · 적재 순서는 매니페스트(`<모듈>.module.json`)가 정본이다**(CMake `ModuleManifest.cmake` 와 App `ModuleCatalog` 가 같은 규칙 — 둘의 답을
   `ModuleCatalogTest.BuildAndRuntimeAgree` 가 견준다). 새 동적 모듈은 매니페스트가 없으면 `sw_registerDynamicModule` 에서 구성이 선다. 게임 매니페스트는 활성 게임 것만
   빌드가 읽으므로 다른 게임 것은 `ModuleCatalogTest.EveryRepositoryManifestParses` 가 본다. 꺼진 모듈의 낡은 DLL 은 `Bin` 에 남아도 올리지 않는다.
+  키트 폴더 목록도 매니페스트가 정본(`sw_getModuleDirectoriesOfKind` — 의존 순서로 들어가 `sw_linkSharedKit` 의 공유 키트가 먼저 선다, 링크는 매니페스트 의존이어야 한다).
 
 - **올라온 모듈 이미지를 다루는 코드는 `Core/Module/ModuleImageUtil` 한 곳이다**(이름 · 올리기 · 심볼 · 범위 · 의존 고정 · import 결속 · 코드 떼기 · 내리기). `FileUtil` 에 되돌리지 말 것. 섀도 복사본 **파일 바이트**(`ModuleImagePatch`)와 리로드 정책(`ShadowCopyName` · 리눅스 도장 결속 검사)은 쓰는 곳이 하나라 `LiveReloadManager` 에 있다.
 - **핫 리로드가 아닌 곳에서 모듈 이미지를 내릴 때는 `ModuleImageUtil::unloadModuleImage`(Core) 하나로** — 게임 · 에디터 모듈과 RHI 백엔드 모듈이 같은 창구다(RHI 층은 Module 층을 include 할 수 없어 Core 에 둔다. 로그 이름은 적재 때 받은 경로로 — 종료 중 서비스 소멸자에서 리플렉션 조회(`RHI::getBackendTypeName`)를 부르면 정리 중인 TypeRegistry 를 읽어 죽는다) — `releaseModuleCode` 로 그 이미지 코드를 쥔 등록(디스패처 채널 등)을 떼고,
@@ -1397,7 +1545,7 @@ cd build/Ninja-Debug/Bin
 - **엔진 서비스는 `EngineServiceList.xxx` 의 `owned` 열에서** `EngineServiceCollection::createAll()` / `bindInto()` 로 생성된다(호스트가 먼저 만든 것은 덮지 않는다, 정의는 `.cpp`, 자리는
   `Source/Engine/` — `Common` 이면 `CheckEngineLayers` 가 막는다). 호스트 대조는 `CheckEngineServiceBinding`. 시험의 서비스 흔들기 창구는 `test::rebindEngineServices` 하나.
   `EngineServiceTest` 의 기대값도 같은 X-매크로라 `gameAllowed` 값 자체가 틀린 것은 못 잡는다.
-- **Engine 폴더 include 그래프는 DAG 다**(`RunEngineLayerGraph.py`, 다시 제안하지 말 목록은 `docs/07_EngineStructureVsCommercial.md` 4절). 일부러 그 층에 둔 것: 핸들 · `TagID` 는 Core,
+- **Engine 폴더 include 그래프는 DAG 다**(`RunEngineLayerGraph.py`, 다시 제안하지 말 목록은 `Source/Engine/README.md` "같아서 두는 것"). 일부러 그 층에 둔 것: 핸들 · `TagID` 는 Core,
   `CommandStack` 은 `EngineLoop` 소유(핫 리로드를 넘어 산다), `TileMapXml.h` 는 Engine. 엔진 창은 `WindowResizeEvent` 를 발행하지 않는다(델리게이트). 상태가 살아남아야 하면 Engine · App 에 둔다.
 - **기동 순서**: 로거 · 크래시 핸들러 → `ResourceUtil::initialize()`(로거 뒤라야 진단이 남는다) → 설정 → `AssetManager::initialize()` + `mountContent`. 종료는 `_rhi->shutdown()` 이
   `AssetManager::shutdown` 보다 먼저, 오디오는 TaskManager 보다 먼저(`_voiceMutex` 로 `_bInitialized` 를 먼저 내린다), 로거를 세운 뒤 `MemoryProfiler`. 시험 호스트도 앱과 같은 순서
@@ -1475,7 +1623,9 @@ cd build/Ninja-Debug/Bin
   `submitWithoutWake` 후 끝에 `wakeSleepingWorkers( n )` 한 번(세대도 올리지 않으므로 반드시), `notify_all` 은 2 배 손해, 모두 깨우기는 처음 읽은 유휴 마스크 안에서만(다시 잠든 워커를 쫓으면
   WSL 에서 1~90 초). `runParallel` 의 둘째 인자는 문턱이지 청크 크기가 아니다. `addTask` 는 제출 **전에**. `clear()` 는 아무것도 돌지 않을 때만(시험 전용 — 활성 수가 0xFFFFFFFF 로 감긴다),
   `_activeTaskCount` 감소는 스테이지 통지 **앞**. 이름으로 찾는 스테이지는 없다. 병렬 본문 스코프는 "현재 태스크" 를 바꾸기 **전에** 만든다.
-- **`waitStage` · `waitAll` · `runParallel` 의 `tryHelpAndExecute` 는 렌더 · 로더 스레드도 지나며 남의 잡을 실행한다.** 스크래치는 `getCurrentThreadScratchSlot()` · `getScratchSlotCount()`
+  태스크 · 스테이지 이름은 Tracy 가 켜지면 구간이 된다(`TaskManager::setProfileHook` — `ProfilerBackend::startTracy` 가 꽂는다, 이름 없는 태스크는 구간이 없다). 스테이지는 `createStage( "이름" )`.
+- **`waitStage` · `waitAll` · `runParallel` 의 `tryHelpAndExecute` 는 렌더 · 로더 스레드도 지나며 남의 잡을 실행한다.** `runParallel` 의 합류 대기만 Low 줄(백그라운드 I/O)을 집지 않는다 — 합류가 기다리는 것은 Normal 의 자기 티켓과 남이 도는 청크뿐이라
+  Low 를 도우면 그 태스크만큼 늦어진다(`TaskManagerTest.RunParallelJoinDoesNotHelpLowPriorityTasks`). 스테이지 · `waitAll` 대기는 Low 도 돕는다(Low 스테이지를 워커가 기다릴 수 있다). 스크래치는 `getCurrentThreadScratchSlot()` · `getScratchSlotCount()`
   (워커 + 도우미 8). 렌더 스레드는 끝날 때 `releaseCurrentThreadHelperSlot`. 멈춤 표시는 대기 쪽과 같은 락 안에서 세운다(밖에서 세우면 알림을 잃어 `join` 이 멈춘다). 자기 락을 쥔 채
   콜백을 부르지 않는다. 기다림은 횟수가 아니라 시간으로 끊는다(yield 1024 번 상한이 느린 CI 에서 프로세스를 죽였다).
 - **`TaskHandle` 은 refcount 라 `const&` 로 넘긴다.** 스케줄러 시험의 모든 대기에는 타임아웃을. 프레임마다 도는 태스크는 메서드 델리게이트로(인라인 인자 칸은 노드를 키운다).
@@ -1494,9 +1644,12 @@ cd build/Ninja-Debug/Bin
 - **파일** — 쓰기는 원자적이다(`writeAtomically` → 같은 폴더 임시 파일 → `replaceFile`, Windows 는 `FileRenameInfoEx` POSIX 의미). Windows 읽기는 Win32(`readRange`) — `fopen_s` 는 ANSI 라
   한글 경로가 깨진다. 실행 파일마다 `WindowsProcess.manifest`(UTF-8 코드페이지 · longPath · PerMonitorV2)를 `sw_embedProcessManifest` 로 박는다(새 exe 에 빠뜨리면 한글 경로를 못 읽는다).
   `getFileTimestamp` 는 초 단위, 셰이더 소스 캐시는 (크기, 시각) `getFileStamp`. 워처가 알림을 잃으면 빈 `_filename` 의 `Modified`(리스캔 신호) — `expandRescanEvents`.
+  `std::filesystem` 은 `Core/File/Std/FileUtilStdFileSystem.cpp` 한 TU 에만 있다 — `path` 는 넓은 문자로 만들고(좁은 문자 생성자는 잘못된 UTF-8 에서 던진다), 오류는 `error_code` 판으로만.
+  `std::filesystem` 을 직접 쓰지 않는다 — 게이트 `CheckStdFilesystemIsolation` · 순회는 `forEachDirectoryEntry`, 시험의 파일 시각 조작은 `setFileWriteTime`.
 - **문자열** — `formatstring` 은 `string_view` 를 길이로 쓴다(`.data()` 로 풀어 넘기면 뷰 끝을 지나 읽는다 — `CheckLogViewArgument`). `%#` 은 순수 자리표, 모르는 `%…` 는 리터럴, 인자 수 불일치는
   Debug 실행 단언(정본은 `FormatString` 클래스 주석). `setlocale` 이 없다(C 로캘) — 잘못된 UTF-8 은 `escapeInvalidUtf8`. `fixed_string` 은 넘치면 글자 경계에서 자르고 경고한다.
   `StringUtil` 은 비-ASCII 바이트를 `uint8` 로 넓힌다(utf16 에 같은 치환 금지), `stristr` 은 바이트 묶음 "최적화" 금지. Win32 변환은 `utf8ToUtf16`(`ImmGetCompositionStringW` 반환은 바이트 수).
+  `std::hash` 는 `string` · `wstring` · `fixed_string` 모두 `RuntimeStringHash`(프로세스 안 전용, 대소문자 구분).
 - **메모리 · 컨테이너** — 과정렬 판정은 `kUsesAlignedAllocation<T>` 하나(`max_align_t` 는 MSVC 에서 8 이라 힙 계열이 갈린다). `sw::vector` 는 `is_bitwise_copyable_v` 타입을 `Memory::copy`
   한 번으로(ReflectionParser 도 쓴다). `sw_delete_array` 는 원소 소멸자를 부르지 않는다. 해시 버킷 수는 2 의 거듭제곱, 번호는 `bucketIndexOf` 하나(스무 자리가 쓴다 — 한 곳만 달라도
   원소가 사라진다). 락 없는 읽기 + 주소 안정은 `PagedArray`. `SlotHandleTable` 은 점유 + 세대를 한 워드 `_state` 에 든다(둘로 나누지 말 것 — arm64). 순서 없는 삭제는
@@ -1509,8 +1662,37 @@ cd build/Ninja-Debug/Bin
   값을 빠뜨리면 경고 + 기본값.
 - **싱글턴을 옮기지 않는 자리**: `CrashContextStore`(시그널 핸들러가 읽는다), 등록자 헤드 · `TestRegistry`(main 이전 자기 등록), `TagID` · `hashed_string` 인터닝(프로세스 전역이어야 뜻이 있다).
   Core 에 인스턴스가 필요하면 Logger 모양 — 인스턴스는 `EngineLoop`, Core 에는 포인터 슬롯.
+- **비신뢰로 실은 몫은 확인을 기다린다**(`NetPrioritizer::markSentUnconfirmed` · `resolveSend`) — 실은 순간 0 으로만 돌리면 잃은 상태가 한 차례를 통째로
+  다시 기다린다. CS 는 확인한 재구성과 보낸 재구성의 그 엔티티를 견줘 받음 · 잃음을 가린다(하니스 손실 20 % 낮은 우선도 최대 96 → 89 틱; 손실 없는 포화
+  회선의 최대 20 틱은 그대로 — 그 20 은 순서만 채널에 밀린 몫이 아니었다).
+- **비신뢰 갱신의 "보낸 상태" 와 "확인된 상태" 를 나눈다**(MMO `_listInFlightState` · `_listSentState`) — 보낸 순간 기준을 바꾸면 잃은 갱신이 "안 바뀜" 이 되어
+  가속도 없다. 클라이언트는 받은 갱신 틱을 확인(가장 새 틱 + 앞 32 틱 비트)으로 틱마다 보낸다(30 틱 끊김 뒤 먼 엔티티 13 → 4 틱).
+- **스트림 전송의 연결 수명은 "걸린 일 수" 로 센다**(IOCP 는 걸린 overlapped + 콜백 중 표시, epoll 은 루프 스레드 하나가 소유) — 닫힘은 그 수가 0 이 되는 첫 순간 한 번,
+  그 뒤에 자리를 세대 +1 로 돌려준다. 걸린 일이 없는 연결을 닫으면 아무 완료도 오지 않으니 정리 표를 루프에 넣는다. 열림 콜백은 받기를 걸기 **전에** — 열림이 늘 첫 콜백.
+  I/O 스레드를 끝낼 때 완료 포트의 멈춤 표는 깨우기만 쓴다 — `GetQueuedCompletionStatusEx` 는 한 묶음에 표 여럿을 한 스레드에 줘서, 표 수로 끝내면 다른 스레드가 영영 기다린다.
+- **멱등 기억은 연결이 아니라 주체에 묶는다** — 거래 요청이 처리된 뒤 응답 전에 끊기면 클라이언트는 새 연결에서 같은 키로 다시 보낸다. 범위가 연결이면 두 번 처리된다
+  (`NetRequestServer::setPrincipal` — 로그인 키트가 붙인다). 처리 중인 키가 다시 오면 처리하지 않고 첫 응답을 같이 받게 한다. 연결이 닫혀도 처리 중 기록은 남겨 늦은 응답을 기억한다.
+- **로그 문맥 꼬리표는 형식 문자열의 빈 자리다**(Core `LogContext`) — 문맥 없는 스레드(게임 · 렌더 · 에디터)의 줄은 바이트가 같다. 비동기 경계는 넘기는 쪽이
+  복사해 들고 받는 쪽이 `ScopedLogContext` 로 다시 건다(`IServiceStoreWork` — 저장소가 `submit` 에서 잡는다). 지표 라벨에는 추적 id · 계정 id 를 넣지 않는다(시리즈가 끝없이 는다).
+  운영 지표 · 상태 · HTTP 끝점은 엔진(`Engine/Observability`)에 둔다 — 전용 서버 실행 파일은 GameFramework DLL 을 링크하지 않는다.
+- **UDP 암호화는 협상하지 않는다** — 암호화 · 토큰 결속 여부를 프로토콜 id 에 섞어 한쪽만 다르면 `SecurityMismatch` 로 거절한다(평문으로 내려가는 길이 없다).
+  AEAD nonce 는 방향별 IV XOR 64 비트 패킷 번호(감기지 않는다), 재전송 창(1024)은 **복호가 통과한 뒤에** 표시한다 — 먼저 표시하면 위조 패킷이 진짜 번호를 태운다.
+  서버는 주소가 확인된(상태 없는 도전을 통과한) 응답에만 X25519 를 계산하고, 토큰 결속이면 세션 비밀의 증명 태그가 맞아야 자리를 잡는다.
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
+
+- **캐시 앞 · 서버 버스의 소비자는 호스트 하나**(`OnlineServiceHost` — `getEphemeralRouter` · `subscribeServerBus`) — `IEphemeralStore::pollReplies` · `IServerBus::pollMessages` 는
+  앞 전체의 것을 꺼내므로 서비스 둘이 직접 부르면 서로의 답 · 메시지를 가져간다(가져간 쪽은 버리고 맡긴 쪽은 영원히 기다린다). 메서드 영역(키트마다 256 칸)이 겹치는 서비스는
+  `registerService` 가, 같은 메서드 번호는 `NetRequestServer::registerMethod` 가 거절한다(bool) — 덮어쓰면 한 키트의 요청이 다른 키트로 간다.
+- **캐시(RESP)는 Valkey · Garnet 공통 부분집합만 쓴다**(`GF_Server_CacheStore` README 의 명령 표) — Lua · `SELECT` · RESP3 · Redis 6.2+ 옵션을 쓰면 Garnet(윈도우 서버)에서 갈린다.
+  계약 시험 `EphemeralStoreRespTest` 를 두 서버에 같이 돌려 지킨다. 서버가 없는 PC 는 가짜 RESP 서버(`FakeRespServer.h` — 루프백, 앞이 돌 때 같이 돈다)로 같은 계약을 돌린다.
+  캐시는 잃어도 되는 것만 — 정본은 `IServiceStore`. 끊김을 보기 전에 맡긴 첫 요청은 `Unavailable` 이다(다시 맡기면 다시 연결한다).
+- **온라인 서비스의 내리는 순서는 하나 — 키트(로직 · 바인딩) → 호스트 → 저장소 · 캐시**(실제 서버 · 시험 하니스 `OnlineTestServer::addKit` 모두). 키트 `shutdown` 은
+  빌려 준 것을 모두 거둔다(저장 일 · 라우터 `cancel` · 접속 상태 `IAccountPresence::cancel` · 버스 구독). 늦게 내려가는 서비스는 호스트 `shutdown` 이 `onHostShutdown` 으로
+  떼어 두므로 사라진 호스트를 부르지 않는다 — 선언 순서로 맞추던 시험은 서버가 먼저 사라진 뒤 바인딩이 호스트의 `unsubscribeServerBus` 를 불렀다.
+- **부하 시험 봇은 키트 클라이언트 그대로**(`Tools/OnlineLoadBot`) — 끝점 하나에 연결 수천(공유 끝점 모드), 시나리오는 데이터(모르는 키 · 값은 오류), 백분위는 표본 정렬로
+  정확히. 엔진 서비스 없이 도는 실행 파일은 이름 풀(`HashedStringPool::initialize`)부터 세운다 — 빠뜨리면 첫 `hashed_string` 에서 접근 위반이다(`EngineBootstrap` 앞부분과 같은 순서).
+- **루프백 스트림 전송은 한 스레드에서만 돈다** — 다른 스레드가 `pollIo` 를 돌리면 Debug 경합 검출기가 멈춘다. 가짜 서버는 스레드 대신 클라이언트 전송을 감싸 같이 돈다.
 
 - **로컬라이제이션의 정본은 원문 표(`*.strings.json`)이고 번역 표(`<culture>.translation.json`)는 번역할 때의 원문 해시를 든다** — 해시가 다르면(원문이
   바뀌었으면) 그 번역은 화면에 나오지 않는다. 표 파일은 프로젝트(`*.locproject.json`)가 이름으로 부른다(폴더를 훑지 않아 팩 안에서도 같다). 코드 · 데이터의 글을 고치면
@@ -1559,8 +1741,10 @@ cd build/Ninja-Debug/Bin
 - **액션 룸의 적은 몬스터 정의다** — 종 id(`grunt` · `boss`)를 게임이 건 `MonsterCatalog` 서비스(`game::bindLocalService`)에서 찾고, 없으면 내장 정의(옛 상수와 같은 값)다. 카탈로그가 걸렸는데 그 id 가 없으면 싸움마다 한 번 경고한다. 사격은 `<Shot angle speed life radius damage/>` 줄마다 한 발(겨냥에서 돌린 각). 방어 식은 유닛 스탯과 같다(`DamageMath::applyArmor`). 룸이 돌려주는 플레이어 피해(`_damageToPlayer`)는 방어 전 값이다 — 게임이 플레이어 `UnitStatsComponent::takeDamage` 로 넣으면 방어가 한 번 빠진다. 룸의 적은 오브젝트가 아니라 `UnitStatsComponent` 를 거치지 않는다. 방 배치는 코드 표(`kArr*Spawn`) — 쓰는 게임이 생기면 맵의 스폰 지점으로.
 - **사용자 설정 파일(`usersettings.json`)은 배포된 플레이어 데이터다** — 설정 id · 선택지 이름을 바꾸면 스키마 `version` 을 올리고 `<Upgrade>` 를 더한다(별칭 금지
   규칙의 예외). 화면 변경은 적용기가 요청만 쌓고 App 이 프레임 맨 앞에서 렌더 스레드를 기다린 뒤 한다 — 창 크기는 `App::onResize` 한 길로 스왑체인에 닿는다.
+  명령줄로 준 전역 변수(`-gv_*`)는 기동 적용이 덮지 않는다(명령줄이 이긴다, `UserSettingsTargets::_pCommandLineManager`).
 - **GameSettings** 는 `GameInstanceBase::initialize` 가 서비스로 묶는다. 언어 코드는 `LocalizationManager::normalizeLanguageCode` 의 철자 하나. 로컬라이제이션 조회의 `const utf8*` 는 추가 전용
   `LocalizedTextArena` 에 있어 영구 유효하다. 대화 핀 번호(`nodeId * 100 + offset`)는 디스크 포맷이고 주인은 `DialogueGraphAsset` 하나다.
+  gamesettings 의 모르는 원소는 로드 오류 — 커스텀 값은 `<custom><prop key>` 안에만. 게임 설정 파일 이름은 `path::kGameSettingsFile` 하나(프리셋 칸 없음).
 - **어빌리티 시스템** — 다른 오브젝트로 가는 적용 · 이벤트는 `applyGameplayEffectSpecToTarget` · `sendGameplayEventToTarget` 로만(틱 중이면 틱 직후로 미룬다 —
   남의 `applyGameplayEffectSpecToSelf` 를 틱 안에서 직접 부르면 미루지 않는다). 활성 이펙트 · 스펙은 `unique_ptr` 목록이고 콜백 도중 지우기는 표시만 한다
   (`ScopedListLock` 이 풀릴 때 지운다) — 콜백이 목록을 늘리거나 줄여도 도는 포인터가 산다. 게임 모듈의 어빌리티는 컴포넌트의 `IModuleUnloadListener` 가 모듈을
@@ -1578,8 +1762,11 @@ cd build/Ninja-Debug/Bin
   팀 번호를 배열 첨자로 쓰는 곳이 많고(약 220 줄 · 18 파일) RTS 상태 바이트(int32)를 바꿔서 하지 않았다. 동맹 표 · 팀킬 허용이 생기면 판정기를
   `TeamAttitudeUtil` 에 붙이고 `SrpgBattlefield::isHostile` · `ConquestWorldInternal::isHostile` 도 그쪽으로 옮긴다.
 - **턴제 몬스터 전투는 `MonsterCollector` 하나다**(같은 장르의 얇은 `TurnBattle` 키트는 2026-10 에 지웠다 — 레벨 업이 없었고 쓰는 게임이 0 이었다). 전투 연출(단계 타이머 · HUD 한 줄)은 게임 몫이다.
-- **`SaveGame::saveToFile` · `loadFromFile` 은 순수 가상이다**(`REFLECT( Abstract )`) — `Archive::serializeObject<T>` 가 정적 타입 `T::StaticType()` 을 쓰므로 기반에서
-  `saveGameToSlot( *this )` 를 부르면 `SaveGame` 의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓰고 성공을 돌려준다. 파생 세이브가 자기 타입으로 부른다(`OverworldSaveGame`).
+- **`SaveGame::writeBytes` · `readBytes` 는 순수 가상이다**(`REFLECT( Abstract )`) — `Archive::serializeObject<T>` 가 정적 타입 `T::StaticType()` 을 쓰므로 기반에서
+  `SaveGameSerializer::writeBytes( *this )` 를 부르면 `SaveGame` 의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓰고 성공을 돌려준다. 파생 세이브가 자기 타입으로 부른다. 저장은 로컬 저장 슬롯
+  (`saveToSlot` · `loadFromCompletion` — 판 · 체크섬 · 봉인은 봉투 `SWLS`). 게임 상태(진행 · 세계)는 스냅숏 봉투(`GameInstanceBase::saveStateToFile`) 하나다 — `SaveGame` 은 사용자 파일만.
+- **로컬 저장 봉인은 장치 키다** — 키가 그 PC 에 있어 치트는 막지 못한다(실수 · 가벼운 변조 막기, 경쟁 데이터의 정본은 서버). 키 파일(`device.key`)을 다른 PC 로 옮기면 열지 못한다(IoError),
+  키가 바뀌면 봉인 슬롯은 WrongKey. `GameConfig::_localStore`(팩 데이터의 백엔드 · 루트) 연결은 config-docs D9 몫 — 지금은 `LocalStoreSettings` 를 부르는 쪽이 채운다.
 - **존 역할은 열거가 아니라 맵 `<role>` 의 태그 목록이다**(`ZoneTracker::setFromMap` 이 쉼표 · 공백으로 나눈다, `hashed_string` 이라 대소문자를 가리지 않는다). 클리어 게이트는 `clear_gate` 태그 —
   경로 이름에서 역할을 짐작하지 않는다.
 - **2D 근접 질의는 엔진 `SpatialHashGrid2D` 하나** — NetMmo 관심 영역이 쓴다(키는 엔티티 id 를 index 에 담은 `SlotHandle`, 세대 1). `update` 는 덮는 셀이 그대로면
@@ -1593,6 +1780,9 @@ cd build/Ninja-Debug/Bin
   모은다(다르면 새 폴더의 `REFLECT` 타입이 컴파일되고 등록만 안 된다).
 - **설정 표의 열쇠는 타입이다**(`ensureConfig<T>( path, generated )`). Shipping 은 디스크의 `Config/` 를 보지 않는다. 고정 스텝 상한은 `EngineConfig::_fixedDeltaTime` · `_maxFixedStepPerFrame`
   (넘친 잔액은 버린다). `ModuleFrameState` 래치 지점이 둘인 것은 의도다(옮기면 에디터 Step 한 칸이 틱 없이 소비된다).
+  틀린 설정 파일(모르는 키 · 대소문자만 다른 키 · `Min`/`Max` 밖)은 키 이름과 함께 오류이고 기동을 멈춘다 — 없는 파일만 생성 JSON → C++ 기본값이다.
+  `EngineConfig.json` 도 configure 의존이다(Shipping 에 굽는 값). 설정 파일에는 기본값과 다른 값만 적는다(언리얼 `Default*.ini` 와 같다) —
+  `ConfigFileSchemaTest` 가 기본값을 다시 적은 키를 막는다(`ConfigManager::collectDefaultEchoKeys`, 앱이 통째로 쓰는 상태는 제외).
 - **리눅스 스플래시** — `XPutImage` 는 1:1 이라 우리가 줄인다, `Expose` 마다 지워지므로 배경 픽스맵, `override_redirect` 창은 XWayland 에서 안 뜬다(EWMH `_NET_WM_WINDOW_TYPE_SPLASH`).
   서버가 "정상" 이어도 화면에 없을 수 있다 — 최종 확인은 사람 눈이다. 창의 `isVisible()`(지금 화면에 있나)과 `isVisibleRequested()`(의도)는 다른 질문이다.
 - **데이터 이름 `None` 은 빈 이름이다** — `hashed_string( "None" )` 은 언리얼 `FName` 처럼 `empty()` 다. 고르기 항목 · id 를 `None` 으로 지으면 "이름 없음" 으로
@@ -1612,9 +1802,66 @@ cd build/Ninja-Debug/Bin
   키보드 포커스 `Game`. 활성화(`WM_ACTIVATE` · `FocusIn`)로 다시 잠그면 제목 표시줄 · X 를 눌러 활성화한 사용자의 커서가 클라이언트 안으로 끌려가 창을 못 끈다.
   잠금을 다시 건 클릭(과 그 뗌)은 게임에 넘기지 않는다(언리얼 뷰포트 캡처 클릭과 같다). `ShowCursor` 는 카운터라 `syncMouseLock` 이 전이에서만 부른다.
   "잠긴 동안만" 할 일(마우스 시점)은 `isMouseLockActive` 로 가린다.
+- **페이싱 감독(`AiDirector`)의 상태는 `writeState` · `readState`(표 'AIDR')로 넘긴다** — 프로필 모양(단계 · 풀 · 항목 · 신호 수)이 다르면 거절해 처음부터 돈다. 게임 긴장도 모델
+  (`setIntensityModel`)은 싣지 않는다(게임이 자기 상태로). 스폰 감독의 산 개체는 실리므로, 모습을 걷은 게임은 `collectAliveSpawnIds` 로 다시 세워야 예산 · 상한이 맞다.
+  태그 거르기는 싣지 않고 단계에서 다시 거는데, **읽기 전에** 건다(뒤에 걸면 상한에 걸려 있던 골라 둔 것을 비워 원본과 갈린다).
+- **부서지기 전 통째 움직임은 오브젝트 이동 복제(`ReplicationServer` 엔티티)의 몫이다**(사용자 결정 2026-10-06) — 파괴 키트는 부서진 뒤 조각만 보낸다(언리얼도
+  GC 액터의 통째 움직임은 `bReplicateMovement`). 게임이 안 보내면 클라이언트 조각은 클라이언트의 그 자리에서 태어난다.
+- **상태 바이트 시험은 "다시 쓴 바이트가 같다" 로 끝내지 않는다** — 빠진 칸은 쓰기 · 읽기 양쪽에서 빠져 있어 왕복 바이트가 늘 같다. 같은 걸음을 둘 다 더 돌려
+  같은지까지 본다(`ElementGrid` 는 상태 비트만 싣고 남은 시간 값을 빠뜨려 되살린 불이 처음부터 탔다). 그 걸음이 칸을 실제로 쓰는지도 본다 — 판정기 없는
+  `InteractionProgress` 는 스킬 체크를 띄우지 않아 난수를 빼도 시험이 통과했다. 변이(칸 하나를 양쪽에서 빼기)로 시험이 지는지 확인한다.
+- **키트를 섞을 때는 공유 상태를 한 오브젝트 맨 앞에 두고 디렉터를 그 뒤에 붙인다**(`GameStateComponent`) — 다른 오브젝트의 디렉터는 같은 그룹에서 동시에 돈다
+  (순서가 필요하면 `_tickAfter`). 시작값(시작 돈 · 공유 일지에 알리는 시작 배치)은 `isFreshGame()` 일 때만. 키트 하나만 쓰는 게임도 같은 모양(디렉터가 기반 상태를 들거나
+  공유 상태 컴포넌트)이다. 같은 틱 흐름을 보는 시험은 **그 틱**에서 단언한다 — 한 틱 뒤에 보면 붙인 순서를 바꿔도 통과한다(`KitCompositionTest` 의 84 틱).
+- **빌린 기반 객체의 알림은 꺼내지 않는다** — `EventBuffer::drainTo` 는 소비자 하나라 키트가 꺼내면 게임 화면 · 다른 키트가 받을 알림이 사라진다. 키트는 상태
+  (`QuestLog::getStatus`)를 본다. 시계 알림은 `GameStateComponent::getClockEvents` 를 여럿이 읽는다(`CheckKitNamespaces` 규칙 6).
+- **상태 바이트는 구간(표 · 판 · 길이)으로 싣는다**(`StateArchiveUtil::writeSection`) — 키트 조각을 이어 쓰면 한 키트의 형식이 바뀔 때 판 전체를 잃는다. 표(4 글자)는
+  저장소에서 하나다(`CheckKitNamespaces` — 주석 네 글자 = 값의 작은 끝 바이트).
+- **키트 조립에서 코드 없이 규칙으로 닫은 것(2026-10-06 판정)** — 자동 플레이 스위치(`-gv_<게임>AutoPlay`)는 게임 전체가 스스로 도는 QA 스위치라 모든 디렉터가 함께
+  켜진다(디렉터 하나만은 PROPERTY `_bAutoPlay`). 한 판에 경기 흐름(`MatchState`)은 하나 — 파티 게임은 미니게임을 차례로, 판 사이 점수는 `RoundSeries`.
+  키트마다 고정 걸음이 달라도 서로의 걸음 중간 값을 읽지 않는다(디렉터 틱 경계에서만 공유 상태를 본다). 알림 채널은 타입이 다르면 다른 알림(타입 이름 겹침은
+  `CheckDuplicateTypeNames`). 섞인 온라인 게임은 `IRollbackGame` 의 상태 버퍼를 상태 구간으로 쓰면 되고, 서버 권한 복제는 키트마다 스냅숏 코덱이 있다.
+  모듈 적재 순서는 매니페스트 의존 순 · 동점 이름순이라 결정적이다(`ArchitectureTest.LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly`).
+- **땅에 놓는 키트는 공유 땅을 빌린다**(`LandRegistry` · `LandBinding`) — 얻기는 사각 전부이거나 아무것도, 상태 바이트는 주인을 이름으로(등록 순서가 실행마다 달라도).
+  RTS 는 막힌 남의 땅을 땅 격자에 칠하고 땅 리비전이 바뀌면 다시 칠한다 — 도로처럼 막히지 않은 남의 땅은 걸을 수 있지만 짓지는 못한다(`canPlaceBuilding`).
+  막힌 땅으로는 짓기 거절이 이미 땅 격자에서 나서 땅 검사를 빼도 시험이 지지 않는다 — 땅 검사의 변이는 막히지 않은 땅(도로)으로 본다.
+- **벽시계는 `WallClock` 하나**(`Core/Time`, `system_clock` 을 읽는 유일한 파일) — 서비스는 `nowMs` 매개변수로 받고 시험은 가짜 시각을 넣는다.
+  여러 서비스가 함께 쓰는 비동기 창구(캐시 앞 · 버스 · 접속 상태 찾기)는 결과를 "꺼내 가기(poll)" 로 두지 않는다 — 소비자가 둘이면 서로의 결과를 가져간다.
+  맡길 때 델리게이트를 받아 그 요청에만 알린다(`EphemeralStoreRouter` · `IAccountPresence`). 클라이언트 요청 id ↔ 델리게이트 표는 `sendRequest` 가 그 자리에서
+  실패를 알릴 수 있어 보내기 전에 걸어 둔다(`ServiceClientCallTable::send`). 라우터보다 먼저 내려가는 델리게이트 주인은 기다리던 요청을 `cancel` 한다.
+- **서버 고르기는 기반 하나**(`Online/Directory/ServerSelection`) — 클라이언트 배정과 매칭의 전용 서버 배정이 같은 규칙(열림 · 판 · 살아 있음 · 자리 → 같은 지역 →
+  찬 비율 → id)을 쓴다. 스냅숏은 읽기 주기(2 초)만큼 늦으니 고른 몫을 다음 읽기까지 얹어 몰림을 막는다.
+- **점검 · 공지는 영속 + 주기 다시 읽기 + 버스 재촉**(GF_Server_ServerDirectory) — 버스만 믿으면 그 순간 내려가 있던 서버는 영영 모른다. 알림은 "보이는 내용의 해시" 가
+  바뀔 때만 — 기간 경계(시작 · 끝)는 다시 읽지 않아도 보이는 것이 바뀐다. 끝단 시험 하니스(`OnlineHostTestUtil.h`)에서 키트 로직 · 바인딩은 `OnlineTestServer` 보다
+  먼저 선언한다 — 서버가 먼저 내려가며 저장소 일 완료 · 캐시 Unavailable 답을 거두는데 그때 로직이 살아 있어야 한다.
+  반대로 바인딩의 버스 구독 풀기(`shutdown`)는 호스트가 살아 있을 때 — 서버 **뒤에** 선언한 가드에서 부른다(`ChatStreamTest` 의 `ChatStopGuard`).
+- **채팅은 계정이 붙은 서버가 주인**(GF_Server_Chat) — 채널은 이 서버 회원이 있는 동안만 버스 주제를 구독하고, 귓속말은 접속 상태로 받는 서버를 찾아 그 서버 주제로
+  보낸다. 차단은 받는 쪽 서버가 보고 조용히 버리며 보낸 이에게는 Ok — 이 서버 · 다른 서버의 답이 같아야 차단 여부가 새지 않는다. 제재는 60 초 묵혀 보고
+  GM 의 `sanction.changed` 버스가 묵힌 값을 버린다. 기록은 최선 노력이고, 채널마다 세는 표는 귓속말 키마다 줄이 생겨 끝없이 크므로 순번으로 정리할 채널을 고른다.
+- **두 사람의 관계는 레코드 둘 + 개수를 한 트랜잭션으로**(GF_Server_Social) — 따로 쓰면 동시 신청 · 상한 경합에서 한쪽만 바뀐 관계가 남는다. 바뀌지 않는 개수도
+  `requireVersion` 으로 본다(상한 판정의 근거). 경합 시험은 실패 주입이 아니라 첫 커밋 직전에 상대 요청을 끼워 넣는 시험 연결로 만든다(`SocialServiceTest`).
+  나를 막은 사람의 신청은 조용히 Ok(막힌 것을 알리지 않는다). 길드 키트는 채팅을 모른다 — 사건 델리게이트를 게임 조립이 채팅에 잇는다.
+- **순위는 캐시, 정본은 영속**(GF_Server_Leaderboard) — 준비 표시가 없으면 영속에서 다시 채우고 그동안 온 읽기는 줄, 그동안 쓴 점수는 채운 뒤 한 번 더(스냅숏이 새 점수를
+  덮지 않게). 시즌 정산은 결과 레코드("없어야 함") + 보상 우편(멱등 키)을 한 트랜잭션으로 — 임대가 지나 다른 서버가 처음부터 다시 돌아도 두 번 주지 않는다.
+  같은 점수의 순위는 계정 id 로 고정한다(다시 돌아도 같은 순위). 사람마다 쓰기 넷(결과 · 우편 · 보낸 기록 · 만료 색인)이라 한 커밋 15 명(상한 64).
+- **매칭 권한은 캐시 임대 하나**(GF_Server_Matchmaking — `mm/lease/<모드>` 10 초, 자기 값일 때만 연장) — 권한이 넘어가면 대기 표는 잃고 낸 서버의 시한(모드 시한 + 30 + 10 초)이
+  Timeout 을 알린다. 파티 · 로비는 캐시 기록의 비교 후 쓰기, 한 계정 한 파티는 계정 색인의 IfAbsent. 비교 후 쓰기의 규칙 실패는 그 읽기로 판정한다(쓰지 않으니 그사이의
+  다른 쓰기를 보지 못한다 — 시험은 앞 요청을 한 걸음 돌린 뒤 판정할 요청을 낸다). 배정 결과는 게임 서버에 먼저(`mm.assign`) — 접속 때 "올 사람" 표로 확인한다.
+- **이벤트 열림은 순수 함수**(GF_Server_LiveOps `LiveEventRules` — 기간 반열림 · 회차 · 대상), 출시 비율은 원격 설정과 같은 해시에 이벤트 id 를 이름으로 — 같은 계정은 늘 같은 쪽,
+  이벤트마다 다른 계정 집합. 알림은 몸 없이 "다시 받아라"(사람마다 대상이 다르다). 푸시 제공자는 계약 + `Push/Provider/<제품>/` 폴더 — 무효 토큰은 지우고 일시 실패는 물러났다
+  다섯 번까지, 계정마다 도배 제한. 규칙 밖 요청은 저장소에 맡기기 전에 답하므로 같은 걸음의 다른 요청보다 먼저 응답이 온다(시험이 순서에 기대면 안 된다).
+- **서비스 저장소의 판은 저장소 전체에서 오르는 수다**(`Base/Online/Store`) — 키마다 1 부터 세면 지웠다 다시 만든 키가 옛 판을 다시 받아, 그 판을 들고 있던 늦은 쓰기가
+  새 레코드를 덮는다(ABA). `Unavailable` 은 "적용됐는지 모른다" 이므로 돈 · 아이템이 움직이는 커밋은 멱등 기록(`ServiceIdempotency`)을 **같은 트랜잭션**에 넣는다.
+  저장 왕복은 일(`IServiceStoreWork`) 하나 — `run` 은 저장소 스레드라 서비스 멤버를 만지지 않고 `SW_EXPECT_*` 도 부르지 않는다(계약 시험은 어긋난 단계 번호만 적는다), 결과는 `complete` 에서 적용한다.
+- **멱등 재시도는 잔액 · 한도 판정보다 먼저 지난 결과를 본다**(`EconomyStoreLogic::purchase`) — 첫 구매로 잔액이 준 뒤의 재시도가 "모자람" 을 받으면 클라이언트는
+  구매가 안 된 줄 안다. 그리고 재생은 **저장된 분개의 다리로** 한다 — 가상 화폐(무상 → 유상 재원) 다리는 지금 잔액으로 짜므로 다시 짜면 처음과 달라 내용 해시가 어긋난다.
+- **여러 키트가 한 트랜잭션에 넣는 쓰기는 기반 `Online/` 에 둔다**(원장 이동 · 우편 넣기 · 제재 · 캠페인) — 키트끼리는 include 하지 못하므로 키트 안에 두면 거래 · 우편 ·
+  GM 이 같은 트랜잭션을 만들 수 없다. 키트에는 요청 처리 · 카탈로그 · 클라이언트가 남는다. 온라인 키트의 업무 결과는 응답 몸에, 오류 코드는 공통(`OnlineError`)만.
 
 ### 3-12. 기각한 것 — 숫자와 함께 (다시 제안하지 말 것)
 
+- **`common` 지연 import(PEP 562 `__getattr__`)**(2026-10-06, 12 회 중앙값): `import common` 누적 81.0 → 1.8 ms 이지만 `GenerateCookContract.py` 한 번이 110.5 → 110.1 ms — 생성기는 결국 같은 하위 모듈(GeneratedFile · CookContract · 그 앞의 탐색 순서)을 다 올린다.
+  기준(생성기 30 % 이상)에 한참 못 미치고, 하위 모듈 이름과 같은 공개 이름(`BuildTree`)이 하위 모듈 import 순서에 따라 모듈로 바뀌는 함정이 생긴다.
 - **N18c 메시지 버퍼 풀**(2026-10-06, Release `NetReplicationBenchTest` 16 × 1000, 3 회): N18b 뒤 틱당 할당 1133 중 서버 복제 544 — "전체 − 서버 복제" 589 < 문턱 1 000.
   (N18b 전 25182 · 서버 복제 16886, ReplicationServer tick p50 5.4 → 3.5 ms.)
 - **TaskManager 후보 셋**(Release, 큐브 8000, 16 스레드, 5~8 회 번갈아): 스핀 워커 2 개 제한 + 적응 예산(GT 839→846, RT.ExecutePacket 395→436 us), 워커별 노드
@@ -1625,14 +1872,39 @@ cd build/Ninja-Debug/Bin
   (8 → 1024 에 평평), 인스턴스 채우기 병렬화(모든 크기에서 인라인에 짐), raw 페이로드 워커 쓰기 · `MeshInstanceBatch::updateParallel`, 배치 정렬(잡음), DX12 루트 상수 드로우 ID 주입
   (ExecuteIndirect 2 배 느림 — 인스턴스 슬롯 스트림이 대안), 클리어 `DontCare`(0 us — 타일 GPU 로 가면 다시), 점 샘플러(122 → 121), 머티리얼 CB 워커화(6 us), PSO 병렬 생성(9 %, 드라이버가 직렬),
   `executeCommandLists` 일괄(리스트 수 그대로), 꼬리 재방출 그룹 캐시(98 → 98).
+  DX12 온라인 블록 잠금의 워커별 목록(잠금이 드는 씬 배치 기록 전체가 p50 36~65 us = RT 프레임의 2~4 %, 큐브 8000 · 도형 5 · 디퍼드).
+  `GpuInstance` 128 → 96 B(모든 인스턴스가 매 프레임 올라가는 최악에서도 증분 상한이 RT ~57 · GT ~65 us, 월드 float3x4 · 블렌드 비트 묶기는 모든 셰이더 · 계약 시험을 건드린다).
+  추가 뷰 사이 그림자 공유(2026-10-06, Release 큐브 8000 + 바닥, `-gv_benchViews=4` — 512² 캡처 카메라 넷, 번갈아 4 쌍): 추가 뷰의 그림자 패스를 빼도 `GPU.Frame` 이
+  쌍마다 256 · 390 · −47 · 169 us 줄 뿐(뷰당 ~50 us, 추가 뷰 넷이 GPU 프레임을 0.65 → 1.8~2.1 ms 로 늘리는 몫의 ~15 %). 프레임 순서를 바꾸는 구조 변경에 비해 작다.
 - **히치**: 펜스 시그널을 Present 앞으로 · 백버퍼 수 · 인라인/즉시 제출 — 분포가 그대로였다. 어댑터 강제 선택은 A/B 로 악화.
+  2026-10-06 재측정(Release, 큐브 100 · VSync 끔, 제안서 측정 3 회씩): 꼬리(p99 2.4~4.2 ms · 최악 12~37 ms)는 DX11 에도 같은 크기로 있고(DX11 은 Present 안, DX12 · Vulkan 은
+  BeginFrame 펜스) Present 호출 자체는 p99 0.2 ms — GPU 백프레셔다. VSync 켬은 DXGI 가 판당 많아야 한 주기를 놓친다. 대기 가능 스왑체인으로 고칠 히치가 없다.
+  Vulkan 스왑체인 이미지를 4 개로(+1) 늘려도 VSync 주기 놓침이 줄지 않았다(12 판 중 6 판 최악 13~27 ms — 3 개는 22 판 중 2 판).
 - **틱 · 오브젝트**: 인라인 `TickItem`(GameObject 192 → 232 B), 적용 단계를 틱에 합치기(칸당 +124 B), 회전 사원수 캐시(+28 B), 축별 sin/cos 건너뛰기(18.0 → 18.7 ns), 쓰기 정렬의
   `id % 버킷`(150 → 450 us) · 키를 건에 넣기(64 → 80 B), 오브젝트 id 표 2 단 디렉터리(1 억 스폰이면 800 MB) · 늘 견주기(5.6 → 6.4 ns), 엔티티당 XML 재파싱 구조 변경(2 ms 뿐).
+- **패딩 재배치 나머지**(2026-10-06, `RunPaddingReport --preset Ninja-Release --min-saving 8` 69 개): GameObject(168 → 160, 풀 칸 176 → 160)만 했다. 나머지는 인스턴스가
+  적거나 나눠 쓴다 — Material · MaterialInstance 16 B(캐시 · `MaterialTintCache` · 스프라이트 공유, 수백 개 이하), Mesh 8 B(`MeshCache` 공유), 컴포넌트(RigidBody 16 · SkeletalMesh 16 ·
+  Camera 8 — PROPERTY 순서 고정), 싱글턴(InputManager 64 · FrameProfiler 8). 수천 개가 만들어지는 타입이 나오면 그것만 한다. 위치 초기화 표(EditorAssetTypeInfo ·
+  AssetMatchRow · CommandRow)는 모든 행을 같이 바꿔야 한다.
+- **전역 소형 블록 할당자**(2026-10-06): Release 프레임당 sw 할당 7.7 회(120 프레임 × 3) — 회당 ~100 ns 로 잡아도 프레임당 1 us 아래. 기동(Release 856~1207 ms)의
+  sw 할당은 Debug 기준 상주 블록 8 만 개 — 회당 100 ns 면 8 ms(1 % 아래)라 절반을 줄여도 기동의 0.5 %. 프레임당 할당이 다시 늘거나 큰 맵 로드의 프로파일에서
+  할당이 5 % 를 넘으면 다시 잰다.
+- **파일 시스템을 플랫폼 API 로 다시 짜기**(2026-10-06, Release 스크래치 · 2920 파일): 존재 확인 p50 10.9 vs 10.3 us · 순회 6.5~9.4 vs 7.6~10.0 ms — 시간은 같고
+  할당만 준다(존재 확인 1 → 0, 순회 항목당 3.1 → 1.0). 그 할당은 기동 때만이고 상주가 아니다. `Core/File/Std` 로 감싼 뒤(Debug `FileUtilBenchTest`): 존재 확인 호출당 sw 할당자 밖 2 · sw 4
+  (구분자 정규화 · UTF-16 변환 문자열), 순회 파일당 밖 2.3 · sw 6.5 — 감싸기 전 밖 1 · 순회 3.1(스크래치). 줄이려면 `toPath` 를 스택 버퍼 변환으로(sw 0).
+  다시 재는 법: App Debug `-gv_memoryReport=1` 의 "cumulative since start" 줄 · `FileUtilBenchTest`. `std::filesystem` 은 `Core/File/Std` 뒤에 감췄으니 한 경로가 프로파일에 보이면 그 함수만
+  `File/Windows` · `File/Linux` 로 옮긴다(기준: Release 기동이나 프레임에서 1 ms 이상 · 프레임마다 부르는 경로).
+- **물리**: 파괴 잎 볼록 껍질을 워커로 나눠 짓기(Jolt 잡 시스템, 2026-10-06) — `FractureBenchTest` p50 20.7 → 24.4 ms 로 느려졌다. 워커 15 개가 청크(잎 13 개)마다
+  ~10 ms(잎당 ~750 us — 직렬 55 us 의 14 배)를 썼다: 껍질 짓기는 할당이 많고 Jolt 할당이 엔진 `Memory::allocate` 로 가서 경합한다. 할당을 풀어 주지 않는 한 다시 하지 말 것.
+  주의: Jolt 백엔드 TU(`Physics/Jolt/*.cpp`, PCH 없이 Jolt 정의 · 대상 기능으로 컴파일)에 `Engine/Common/EngineParallel.h` 를 넣자 물리 전체가 깨졌다(질량 · 자세가 쓰레기) —
+  그 TU 에서는 엔진 태스크 대신 이미 쓰는 Jolt 잡 시스템(`JoltJobSystem`)을 쓴다.
 - **태스크**: 워커 스핀 늘리기(2 → 50 us 면 SMT 형제를 빼앗아 GT 889 → 1305 us), hot pool(이득 없음), 스레드별 목록 머리 패딩(잡음), 공유 풀 위 GT 병렬화를 레인 없이(RT 170 → 261 us),
   워커 깨우기 사슬, `TaskArgs` 인라인 4 칸(기록 122 → 196 us), `PagedArray` 통합의 첫 측정(번갈아 재니 차이 없음 — 측정 착시).
-- **도구 · 빌드**: 린트를 파일마다 프로세스로(5.3 → 9.4 s — 덩어리 프로세스는 7.5 → 2.25 s), 커밋 훅 게이트 병렬화(이득 ~1 s), 짝 헤더 메모이즈(차이 없음), `formatstring` 비템플릿 부분
+- **도구 · 빌드**: 린트를 파일마다 프로세스로(5.3 → 9.4 s — 덩어리 프로세스는 7.5 → 2.25 s), 짝 헤더 메모이즈(차이 없음), `formatstring` 비템플릿 부분
   `.cpp` 분리(41 → 44 s) · 타입 소거 배열, `ContainerTypeMap` 선형 탐색 개선(파서 시간은 libclang), 팩 코덱 Zstd(−0.1 %) · LZ4(+28 %) — 이미 압축된 자산이라 Zlib 유지(압축 안 된 자산이
-  들어오면 다시 잰다).
+  들어오면 다시 잰다), 린트 파일 공유 캐시(C++ 2500 개 28.7 MB 를 다 읽어도 0.15–0.7 s — 게이트는 정규식에 쓴다), 린트 CTest 를 한 프로세스로(기동 0.17 s × 항목 수 —
+  항목별 보고 · TIMEOUT 을 잃는다), 린트 증분 해시 캐시(훅 바닥 ~2–4 s 에 교차 파일 규칙 재작성 — 보류), `flatMapInProcesses` 16 → 8 워커(혼자 돌면 3.3 → 3.7 s 로
+  지고 CPU −40 % — `ctest -j` 겹침에서 재 볼 것).
 - **구조**: 백엔드 `*RHIResource.h` · `*RHICommandContext.h` 공통 기반(겹침이 전부 override 선언), `ResourceCache<T>`(나머지 39 % 가 소유 방식), 모듈 팩토리 골격 공통화(공통 4 줄),
   RHI · GF leaf CMakeLists 를 부모 루프로(디렉터리 스코프), `FindWindowsTools` 파이썬 이전, `EngineTest` 에 `GF_*` 자동 링크, `SW_ASSERT_NULL`, `formatstring` 인자 수 컴파일 검사의 매크로 판
   (C++20 으로 올리면 `consteval` 포맷 타입으로 옮긴다), "자유 `static` 함수 금지" 린트(오탐), "CommandList 가 RecordingState 를 소유" 린트, `CheckCodeConventions` 매개변수 · 지역변수 사슬,
@@ -1640,14 +1912,22 @@ cd build/Ninja-Debug/Bin
   RTS 버킷 · MechArena · BattleRoyale 근접 질의를 엔진 `SpatialHashGrid2D` 로(RTS 는 ~40 줄이 순서 계약을 들어 핸들 정렬 격자로 바꾸면 자동 목표 동점 · 첫 빈 광물 ·
   밀어내기 합이 바뀐다, BR 은 근접 질의가 없다, Mech 는 조종사 몇 명 전수 검사가 격자보다 싸다), 키트 칸 저장소 템플릿 `Grid2D<T>`(덮는 자리 4 곳에서 4 줄,
   저장소 모양이 키트마다 다르다).
+- **게임 · 키트**: 복셀 청크 메시 제자리 갱신 — 다시 짓기는 블록이 바뀐 청크만(Debug VoxelCraft 자동 플레이 5,000 프레임에 2 회, 프레임당 최대 4 개), 새 `Mesh` 가
+  렌더 스레드가 든 옛 메시와 겹치지 않는 길. HP 바 · 피해 숫자의 배치 예약을 바뀔 때만 — 월드 변환이 틱 뒤에 적용돼 한 프레임 늦는다(변환 적용 뒤 훅이 필요).
+  카트 트랙을 공용 `SplinePath` 로 — 카트는 XZ 로 달려 랩 · 고스트 거리가 수평 길이다(3D 호 길이로 바꾸면 같은 트랙의 값이 바뀐다), 공유되는 것은 누적 거리 표 하나, 쓰는 게임 0.
 - **늘 상위에 오는 정당한 중복**(`RunDuplicateCode`): 백엔드 인터페이스 선언 · 레이스 래퍼 전달 · 플랫폼 구현 · enum 레이블 나열 · 서비스 로케이터 둘(`sw::editor` 는 nullptr, `sw::game` 은
   assert) · `MaterialPacking` 숫자 case(`-Wswitch-enum`) · DX12 상태 조회 · `TypeInfo` 생성자 · RLE · 콜스택 관문 · 셰이더 반사 D3D11/12(확인 중 — 1-3) · Win32 마우스 case · include 묶음.
+- **ReflectionParser 강제 include PCH**(2026-10-06): Debug `ReflectionParserTest` 35 케이스 25.8 초(여섯 조각, 조각당 약 4.3 초 · 한도 30 초), 파서 한 번
+  1.1~1.3 초 중 공통 include 0.5 초 — 조각당 약 2 초를 위해 depfile 의존(PCH 안 헤더를 `clang_getInclusions` 가 내는가) 재검증을 떠안지 않는다.
+- **롤백에 파괴 상태 싣기**(사용자 결정 2026-10-06): 롤백 키트(격투)에 파괴물이 없고 조각 물리(Jolt)는 되감지 못한다(Chaos GC 도 롤백 없음). 롤백 게임이
+  파괴물을 쓰면 `saveState` 에 `makeNetworkSnapshot` 을 싣고(바뀐 사건 수일 때만) `loadState` 가 즉시 적용하는 창구를 더한다.
 
 ### 3-13. 옛 이름 → 지금 이름 (`git log` 을 읽을 때)
 
 | 옛 이름 | 지금 이름 |
 |---|---|
 | `PendingKill` · `markPendingKill` | `PendingDestroy` · `markPendingDestroy` |
+| `GameConfig::_gameSettingsFile` · `EngineConfig::_engineDefaultAssets` · `EditorToolDefaults::_configFolder` 외 11 칸 | `path::kGameSettingsFile` · `path::kEngineDefaultAssets` · `config::kDirConfig(Editor)` · `EditorUtil::k…FileName` |
 | 렌더 그래프 wave / 틱 wave | level / stage(`GT.Scene.tick.stages`) |
 | `precede` · `succeed` | `runBefore` · `runAfter` |
 | lane | queue |
@@ -1659,10 +1939,11 @@ cd build/Ninja-Debug/Bin
 | `isVisibleIntended` | `isVisibleRequested` |
 | `RHI::applyPendingChange` | `RHI::recreateDevice` |
 | `createParentDirectory` | `ensureParentDirectoryExists` |
+| `FileUtil::fileExists` · `directoryExists` | `FileUtil::exists`(파일 · 폴더 무엇이든) · `isDirectory`(파일만은 `isRegularFile`) |
 | `transformNormal` | `transformVector`(방향 변환) |
 | `-gv_editorOpenAllPanels=1` | `-gv_editorOpenPanel=all` |
 | `RenderResourceXml` | `Serialization/Format/ReflectedXmlFile` |
-| `CameraBlendCurve` · `CameraBlendKey` · `CameraBlendSpec`(GameFramework/Camera) | `BlendCurve` · `BlendCurveKey` · `BlendCurveSpec`(`Engine/Animation/BlendCurve.h`) |
+| `CameraBlendCurve` · `CameraBlendKey` · `CameraBlendSpec`(GameFramework/Base/Camera) | `BlendCurve` · `BlendCurveKey` · `BlendCurveSpec`(`Engine/Animation/BlendCurve.h`) |
 | `Engine/Character/<평면 60 개>` | `Character/{Fit,Socket,Hit,Pose,AnimNotify}/`, 워핑 둘은 `Object/Animation/`(2026-10-05) |
 | `Utility/Debug/*` · `Utility/Format/KeyValueFile` | `Utility/Profiling/*`(`DebugOverlayState` · `KeyValueFile` 은 `Utility/`) |
 | `Graphics/Renderer/Debug/` | `Graphics/Debug/` |

@@ -1,6 +1,6 @@
 /**
  * @file EditorConfig.h
- * @brief **앱이 다시 쓰는** 에디터 상태입니다(Config/Editor/EditorConfig.json).
+ * @brief **앱이 다시 쓰는** 에디터 상태입니다(Saved/Editor/EditorConfig.json — git 무시, 사람이 쓰는 설정은 Config/).
  *
  * @details 여기 있는 값은 에디터가 `saveToHost()` 로 **파일 전체를 다시 만들어** 덮어씁니다(테마 대화 상자의 저장).
  *          그래서 손으로 적은 것(주석 · 순서 · 손으로 고른 목록)은 여기 두면 안 됩니다. 그런 설정은 읽기 전용인
@@ -25,25 +25,25 @@ namespace sw::editor
         REFLECT_BODY();
 
         PROPERTY()
-        string _themePreset{ "ModernDark" };
+        string _themePreset{ "ModernDark" }; ///< 테마 프리셋 이름(테마 대화 상자의 목록)
 
-        PROPERTY()
-        float32 _themeAccentR{ 0.27f };
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _themeAccentR{ 0.27f }; ///< 강조색 R(0..1)
 
-        PROPERTY()
-        float32 _themeAccentG{ 0.57f };
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _themeAccentG{ 0.57f }; ///< 강조색 G(0..1)
 
-        PROPERTY()
-        float32 _themeAccentB{ 1.0f };
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _themeAccentB{ 1.0f }; ///< 강조색 B(0..1)
 
-        PROPERTY()
-        float32 _themeWindowRounding{ 4.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _themeWindowRounding{ 4.0f }; ///< 창 모서리 둥글기(픽셀)
 
-        PROPERTY()
-        float32 _themeFrameRounding{ 3.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _themeFrameRounding{ 3.0f }; ///< 입력 칸 · 버튼 모서리 둥글기(픽셀)
 
-        PROPERTY()
-        float32 _themeTabRounding{ 4.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _themeTabRounding{ 4.0f }; ///< 탭 모서리 둥글기(픽셀)
 
         static void                setActive( const EditorConfig& config );
         static const EditorConfig& getActive();

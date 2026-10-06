@@ -20,10 +20,11 @@ namespace sw
      */
     enum class VulkanSwapChainStatus : uint8
     {
-        Success,    ///< 그대로 쓸 수 있다
-        Suboptimal, ///< 쓸 수는 있지만 창과 어긋나 있음. 다시 만드는 편이 나음
-        OutOfDate,  ///< 못 쓴다. 반드시 다시 만들어야 한다
-        Failed,     ///< 그 밖의 실패 (원인 코드는 호출 지점에서 이미 로그로 남았다)
+        Success,     ///< 그대로 쓸 수 있다
+        Suboptimal,  ///< 쓸 수는 있지만 창과 어긋나 있음. 다시 만드는 편이 나음
+        OutOfDate,   ///< 못 쓴다. 반드시 다시 만들어야 한다
+        SurfaceLost, ///< 서피스가 사라졌다(VK_ERROR_SURFACE_LOST_KHR). 서피스부터 다시 만들어야 한다
+        Failed,      ///< 그 밖의 실패 (원인 코드는 호출 지점에서 이미 로그로 남았다)
     };
 
     /**

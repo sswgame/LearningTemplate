@@ -9,11 +9,11 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/AI/Schedule/ScheduleCondition.h"
-#include "GameFramework/Data/GameCatalog.h"
-#include "GameFramework/Data/XmlCatalog.h"
+#include "GameFramework/Base/AI/Schedule/ScheduleCondition.h"
+#include "GameFramework/Base/Data/GameCatalog.h"
+#include "GameFramework/Base/Data/XmlCatalog.h"
+#include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/World/WorldClock.h"
 
 namespace sw
 {

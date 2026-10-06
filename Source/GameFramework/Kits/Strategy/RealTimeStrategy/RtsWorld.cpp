@@ -6,13 +6,16 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Match/TeamAttitude.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Match/TeamAttitude.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
 
 namespace sw
 {
+    SW_LOG_CALLER( "RtsWorld" );
+
     namespace
     {
         struct RtsWorldInternal
@@ -20,7 +23,7 @@ namespace sw
             static constexpr float32 kMaxUnitExtent       = 4.5f; ///< 버킷 조회에 더하는 몸 크기 상한(건물 반 변)
             static constexpr uint32  kMinUnitStateBytes   = 128;  ///< 유닛 하나의 상태가 적어도 쓰는 바이트(개수 상한)
             static constexpr uint32  kMinOrderStateBytes  = 34;   ///< 명령 하나의 상태가 적어도 쓰는 바이트
-            static constexpr uint32  kMinPlayerStateBytes = 38;   ///< 플레이어 하나의 상태가 적어도 쓰는 바이트
+            static constexpr uint32  kMinPlayerStateBytes = 30;   ///< 플레이어 하나의 상태가 적어도 쓰는 바이트
 
             static float32 computeFlatDistance( const float3& lhs, const float3& rhs )
             {
@@ -86,8 +89,10 @@ namespace sw
         , _time{ 0.0f }
         , _visionTimer{}
         , _bucketTopology{}
+        , _land{}
         , _teamCount{ 0 }
         , _winningTeam{ -1 }
+        , _landRevision{ 0 }
     {
     }
 
@@ -122,15 +127,38 @@ namespace sw
         if ( _grid.isInside( x, y ) == false )
             return;
         _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] = bBlocked ? SW_TRUE : SW_FALSE;
-        _grid.setBlocked( x, y, bBlocked );
+        _grid.setBlocked( x, y, bBlocked || _land.isBlocked( x, y ) );
     }
 
-    int32 RtsWorld::addPlayer( int32 team, int32 minerals, int32 gas, const float3& startPosition )
+    void RtsWorld::bindLand( LandRegistry* pLand, const int2& origin )
+    {
+        _land.bind( pLand, origin, hashed_string( "RealTimeStrategy" ) );
+        repaintGrid();
+        _landRevision = _land.getRevision();
+    }
+
+    void RtsWorld::repaintGrid()
+    {
+        for ( int32 y = 0; y < _grid.getHeight(); ++y )
+        {
+            for ( int32 x = 0; x < _grid.getWidth(); ++x )
+            {
+                const bool bTerrain = _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE;
+                _grid.setBlocked( x, y, bTerrain || _land.isBlocked( x, y ) );
+            }
+        }
+        for ( const RtsUnit& unit : _listUnit )
+        {
+            if ( unit._bAlive != SW_FALSE && unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE )
+                placeFootprint( unit, true );
+        }
+    }
+
+    int32 RtsWorld::addPlayer( int32 team, Wallet* pWallet, const float3& startPosition )
     {
         RtsPlayer player;
         player._team          = MathUtil::max( 0, team );
-        player._minerals      = minerals;
-        player._gas           = gas;
+        player._pWallet       = pWallet;
         player._startPosition = startPosition;
         _listPlayer.push_back( player );
         _teamCount = MathUtil::max( _teamCount, player._team + 1 );
@@ -207,7 +235,7 @@ namespace sw
                 if ( _grid.isInside( x, y ) == false )
                     continue;
                 const bool bTerrain = _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE;
-                _grid.setBlocked( x, y, bBlocked || bTerrain );
+                _grid.setBlocked( x, y, bBlocked || bTerrain || _land.isBlocked( x, y ) );
             }
         }
     }
@@ -247,6 +275,9 @@ namespace sw
         {
             return RtsUnitId{};
         }
+        const int32 footprint = pDef->_footprint;
+        if ( pDef->_kind == RtsUnitKind::Building && _land.claimRect( cell._x, cell._y, cell._x + footprint - 1, cell._y + footprint - 1, true ) == false )
+            return RtsUnitId{};
 
         const RtsUnitId unitId = allocateUnit();
         RtsUnit&        unit   = _listUnit[unitId.index()];
@@ -407,9 +438,9 @@ namespace sw
             return RtsCommandResult::NotOwner;
         if ( def._requires.empty() == false && hasConstructed( player, def._requires ) == false )
             return RtsCommandResult::TechRequired;
-        if ( pPlayer->_minerals < def._minerals )
+        if ( def._minerals > 0 && ( pPlayer->_pWallet == nullptr || pPlayer->_pWallet->canAfford( _settings._mineralCurrency, def._minerals ) == false ) )
             return RtsCommandResult::NotEnoughMinerals;
-        if ( pPlayer->_gas < def._gas )
+        if ( def._gas > 0 && ( pPlayer->_pWallet == nullptr || pPlayer->_pWallet->canAfford( _settings._gasCurrency, def._gas ) == false ) )
             return RtsCommandResult::NotEnoughGas;
         return RtsCommandResult::Ok;
     }
@@ -535,9 +566,7 @@ namespace sw
         const RtsCommandResult costResult = evaluateCost( pBuilding->_owner, *pDef );
         if ( costResult != RtsCommandResult::Ok )
             return costResult;
-        RtsPlayer& player = _listPlayer[static_cast<size_t>( pBuilding->_owner )];
-        player._minerals -= pDef->_minerals;
-        player._gas -= pDef->_gas;
+        payCost( _listPlayer[static_cast<size_t>( pBuilding->_owner )], *pDef );
         pBuilding->_listProduction.push_back( unitId );
         return RtsCommandResult::Ok;
     }
@@ -556,11 +585,7 @@ namespace sw
         }
         pBuilding->_listProduction.pop_back();
         if ( pDef != nullptr )
-        {
-            RtsPlayer& player = _listPlayer[static_cast<size_t>( pBuilding->_owner )];
-            player._minerals += pDef->_minerals;
-            player._gas += pDef->_gas;
-        }
+            refundCost( _listPlayer[static_cast<size_t>( pBuilding->_owner )], *pDef );
         return true;
     }
 
@@ -580,6 +605,12 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return;
+        // 다른 키트가 땅을 얻거나 놓았으면 땅 격자를 다시 칠한다(흐름장은 격자 리비전으로 스스로 다시 구한다).
+        if ( _land.isBound() && _land.getRevision() != _landRevision )
+        {
+            repaintGrid();
+            _landRevision = _land.getRevision();
+        }
         const int32 stepCount = _stepTimer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
             stepFixed( _stepTimer.getStep() );
@@ -695,7 +726,7 @@ namespace sw
     RtsUnitId RtsWorld::pickUnit( const float3& position ) const
     {
         RtsUnitId bestId{};
-        float32   bestDistance = MathUtil::MaxFloat;
+        float32   bestDistance = MathUtil::kMaxFloat;
         for ( const RtsUnit& unit : _listUnit )
         {
             if ( unit._bAlive == SW_FALSE )
@@ -899,10 +930,8 @@ namespace sw
             }
             unit._agent.stop();
             RtsPlayer& player = _listPlayer[static_cast<size_t>( unit._owner )];
-            if ( unit._cargoType == RtsResourceType::Gas )
-                player._gas += unit._cargoAmount;
-            else
-                player._minerals += unit._cargoAmount;
+            if ( player._pWallet != nullptr )
+                player._pWallet->add( unit._cargoType == RtsResourceType::Gas ? _settings._gasCurrency : _settings._mineralCurrency, unit._cargoAmount );
             pushEvent( RtsEvent::Kind::ResourcesDeposited, unit._owner, unit._id, unit._pDef->_id, unit._cargoAmount );
             unit._cargoAmount = 0;
             unit._cargoType   = RtsResourceType::None;
@@ -1007,9 +1036,7 @@ namespace sw
             finishOrder( worker );
             return;
         }
-        RtsPlayer& player = _listPlayer[static_cast<size_t>( worker._owner )];
-        player._minerals -= pDef->_minerals;
-        player._gas -= pDef->_gas;
+        payCost( _listPlayer[static_cast<size_t>( worker._owner )], *pDef );
         pBuilding->_buildProgress = 0.0f;
         pBuilding->_hp            = pDef->_hp * _settings._constructionStartRatio;
         pBuilding->_builder       = worker._id;
@@ -1106,7 +1133,7 @@ namespace sw
         for ( int32 ring = 1; ring <= 4; ++ring )
         {
             bool    bFound       = false;
-            float32 bestDistance = MathUtil::MaxFloat;
+            float32 bestDistance = MathUtil::kMaxFloat;
             for ( int32 y = building._cell._y - ring; y < building._cell._y + footprint + ring; ++y )
             {
                 for ( int32 x = building._cell._x - ring; x < building._cell._x + footprint + ring; ++x )
@@ -1195,7 +1222,7 @@ namespace sw
         vector<RtsUnitId> listCandidate;
         queryUnits( unit._position, radius + ( unit.isMobile() ? unit._pDef->_radius : 0.0f ), listCandidate );
         RtsUnitId bestId{};
-        float32   bestScore = MathUtil::MaxFloat;
+        float32   bestScore = MathUtil::kMaxFloat;
         for ( const RtsUnitId candidateId : listCandidate )
         {
             const RtsUnit* pCandidate = findUnit( candidateId );
@@ -1283,6 +1310,8 @@ namespace sw
         unit._agent.stop();
         if ( unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE )
             placeFootprint( unit, false ); // 정제소는 아니다 — 그 칸은 간헐천이 계속 막는다
+        if ( unit._pDef->_kind == RtsUnitKind::Building )
+            _land.releaseRect( unit._cell._x, unit._cell._y, unit._cell._x + unit._pDef->_footprint - 1, unit._cell._y + unit._pDef->_footprint - 1 );
         // 생산 대기열 값은 돌려주지 않는다(부서진 건물 — 스타크래프트와 같다).
         unit._bAlive = SW_FALSE;
         pushEvent( RtsEvent::Kind::UnitDied, unit._owner, unit._id, unit._pDef->_id, 0, killerId );
@@ -1432,6 +1461,14 @@ namespace sw
         const int32 footprint = pDef->_footprint;
         if ( _grid.isInside( cell ) == false || _grid.isInside( cell._x + footprint - 1, cell._y + footprint - 1 ) == false )
             return false;
+        for ( int32 y = cell._y; y < cell._y + footprint; ++y )
+        {
+            for ( int32 x = cell._x; x < cell._x + footprint; ++x )
+            {
+                if ( _land.isUsable( x, y ) == false )
+                    return false; // 남의 땅 — 막히지 않은 땅(도로)도 짓지 못한다
+            }
+        }
         if ( pDef->_bExtractor )
         {
             // 같은 칸 · 같은 크기의 빈 가스 간헐천 위만.
@@ -1541,7 +1578,7 @@ namespace sw
     RtsUnitId RtsWorld::findNearestDepot( int32 player, const float3& position ) const
     {
         RtsUnitId bestId{};
-        float32   bestDistance = MathUtil::MaxFloat;
+        float32   bestDistance = MathUtil::kMaxFloat;
         for ( const RtsUnit& unit : _listUnit )
         {
             if ( unit._bAlive == SW_FALSE || unit._owner != player || unit._pDef->_bDepot == SW_FALSE || unit.isConstructed() == false )
@@ -1674,8 +1711,6 @@ namespace sw
         for ( const RtsPlayer& player : _listPlayer )
         {
             outArchive << player._startPosition;
-            outArchive << player._minerals;
-            outArchive << player._gas;
             outArchive << player._supplyUsed;
             outArchive << player._supplyCap;
             outArchive << player._team;
@@ -1816,14 +1851,15 @@ namespace sw
                 archive.setError();
         }
         uint32 playerCount = 0;
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, Internal::kMinPlayerStateBytes, playerCount ) == false )
+        // 지갑은 플레이어를 더한 쪽이 빌려 준 것이라 싣지 않는다 — 같은 수의 플레이어를 먼저 더한 월드에만 읽는다.
+        if ( archive.isError() || StateArchiveUtil::readCount( archive, Internal::kMinPlayerStateBytes, playerCount ) == false || playerCount != _listPlayer.size() )
             return false;
         vector<RtsPlayer> listPlayer( playerCount );
+        for ( uint32 playerIndex = 0; playerIndex < playerCount; ++playerIndex )
+            listPlayer[playerIndex]._pWallet = _listPlayer[playerIndex]._pWallet;
         for ( RtsPlayer& player : listPlayer )
         {
             archive >> player._startPosition;
-            archive >> player._minerals;
-            archive >> player._gas;
             archive >> player._supplyUsed;
             archive >> player._supplyCap;
             archive >> player._team;
@@ -1877,7 +1913,7 @@ namespace sw
         {
             for ( int32 x = 0; x < width; ++x )
             {
-                if ( _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE )
+                if ( _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE || _land.isBlocked( x, y ) )
                     _grid.setBlocked( x, y, true );
             }
         }
@@ -1903,5 +1939,34 @@ namespace sw
         }
         rebuildBuckets();
         return true;
+    }
+
+    int64 RtsWorld::getMinerals( int32 player ) const
+    {
+        const RtsPlayer* pPlayer = findPlayer( player );
+        return pPlayer != nullptr && pPlayer->_pWallet != nullptr ? pPlayer->_pWallet->getBalance( _settings._mineralCurrency ) : 0;
+    }
+
+    int64 RtsWorld::getGas( int32 player ) const
+    {
+        const RtsPlayer* pPlayer = findPlayer( player );
+        return pPlayer != nullptr && pPlayer->_pWallet != nullptr ? pPlayer->_pWallet->getBalance( _settings._gasCurrency ) : 0;
+    }
+
+    void RtsWorld::payCost( RtsPlayer& player, const RtsUnitDef& def )
+    {
+        // evaluateCost 가 둘 다 된다고 본 뒤에만 부른다 — 한쪽만 빠지지 않는다.
+        if ( player._pWallet == nullptr )
+            return;
+        if ( player._pWallet->trySpend( _settings._mineralCurrency, def._minerals ) == false || player._pWallet->trySpend( _settings._gasCurrency, def._gas ) == false )
+            SW_LOG_WARNING( "RtsWorld: '%#' cost was checked but could not be paid", def._id.c_str() );
+    }
+
+    void RtsWorld::refundCost( RtsPlayer& player, const RtsUnitDef& def )
+    {
+        if ( player._pWallet == nullptr )
+            return;
+        player._pWallet->add( _settings._mineralCurrency, def._minerals );
+        player._pWallet->add( _settings._gasCurrency, def._gas );
     }
 } // namespace sw

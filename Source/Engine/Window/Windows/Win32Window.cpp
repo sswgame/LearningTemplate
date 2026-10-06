@@ -33,15 +33,16 @@ namespace sw
         _height = height;
         _title  = StringUtil::isNullOrEmpty( pTitle ) ? L"" : StringUtil::utf8ToUtf16( pTitle );
 
-        HINSTANCE hInstance = GetModuleHandle( nullptr );
+        HINSTANCE hInstance = GetModuleHandleW( nullptr );
 
         // CS_OWNDC: DXGI↔OpenGL 핫스왑 때 WGL GetDC/SwapBuffers 가 안정적으로 돌려면 꼭 필요하다
         WNDCLASSEXW wc{};
-        wc.cbSize        = sizeof( WNDCLASSEXW );
-        wc.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-        wc.lpfnWndProc   = wndProc;
-        wc.hInstance     = hInstance;
-        wc.hCursor       = LoadCursor( nullptr, IDC_ARROW );
+        wc.cbSize      = sizeof( WNDCLASSEXW );
+        wc.style       = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+        wc.lpfnWndProc = wndProc;
+        wc.hInstance   = hInstance;
+        // IDC_* 는 TCHAR 매크로(A 판 포인터 모양의 정수 자원 id)라 W 판에 맞게 넘긴다.
+        wc.hCursor       = LoadCursorW( nullptr, reinterpret_cast<LPCWSTR>( IDC_ARROW ) );
         wc.lpszClassName = L"SWEngineWindowClass_OWNDC";
 
         RegisterClassExW( &wc );
@@ -168,13 +169,13 @@ namespace sw
     bool Win32Window::processMessages()
     {
         MSG msg{};
-        while ( PeekMessage( &msg, nullptr, 0, 0, PM_REMOVE ) != 0 )
+        while ( PeekMessageW( &msg, nullptr, 0, 0, PM_REMOVE ) != 0 )
         {
             if ( msg.message == WM_QUIT )
                 return false;
 
             TranslateMessage( &msg );
-            DispatchMessage( &msg );
+            DispatchMessageW( &msg );
         }
         return _bShouldClose == SW_FALSE;
     }
@@ -184,13 +185,13 @@ namespace sw
         Win32Window* pThis{ nullptr };
         if ( msg == WM_NCCREATE )
         {
-            CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>( lParam );
-            pThis                 = reinterpret_cast<Win32Window*>( pCreate->lpCreateParams );
-            SetWindowLongPtr( hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>( pThis ) );
+            CREATESTRUCTW* pCreate = reinterpret_cast<CREATESTRUCTW*>( lParam );
+            pThis                  = reinterpret_cast<Win32Window*>( pCreate->lpCreateParams );
+            SetWindowLongPtrW( hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>( pThis ) );
             pThis->_hWnd = hWnd;
         }
         else
-            pThis = reinterpret_cast<Win32Window*>( GetWindowLongPtr( hWnd, GWLP_USERDATA ) );
+            pThis = reinterpret_cast<Win32Window*>( GetWindowLongPtrW( hWnd, GWLP_USERDATA ) );
 
         if ( pThis != nullptr )
         {
@@ -257,6 +258,21 @@ namespace sw
                     return 0;
                 }
 
+                case WM_GETMINMAXINFO:
+                {
+                    // 창 모드에서 사용자가 줄일 수 있는 바닥(`setMinimumClientSize`)이다. 클라이언트 크기에 테두리 · 제목 줄을 더해 창 크기로 넘긴다
+                    // (`setDisplayMode` 와 같은 `AdjustWindowRect`). SetWindowPos 도 DefWindowProcW 의 WM_WINDOWPOSCHANGING 이 이 값으로 자른다.
+                    // 이 메시지는 WM_NCCREATE 보다 먼저 오는 첫 메시지다 — 그때는 pThis 가 없어 기본 처리로 간다.
+                    if ( pThis->_displayMode != WindowDisplayMode::Windowed || pThis->_minClientWidth == 0 || pThis->_minClientHeight == 0 )
+                        break;
+                    RECT frameRect = { 0, 0, static_cast<LONG>( pThis->_minClientWidth ), static_cast<LONG>( pThis->_minClientHeight ) };
+                    AdjustWindowRect( &frameRect, WS_OVERLAPPEDWINDOW, FALSE );
+                    MINMAXINFO* pInfo       = reinterpret_cast<MINMAXINFO*>( lParam );
+                    pInfo->ptMinTrackSize.x = frameRect.right - frameRect.left;
+                    pInfo->ptMinTrackSize.y = frameRect.bottom - frameRect.top;
+                    return 0;
+                }
+
                 case WM_CLOSE:
                 {
                     if ( pThis->_bRecreating == SW_FALSE )
@@ -281,7 +297,8 @@ namespace sw
             }
         }
 
-        return DefWindowProc( hWnd, msg, wParam, lParam );
+        // 창 클래스 · 창을 W 판으로 만들었으니 기본 처리도 W 판이다. A 판은 WM_NCCREATE · WM_SETTEXT 의 UTF-16 제목을 ANSI 로 읽어 첫 글자에서 끊는다.
+        return DefWindowProcW( hWnd, msg, wParam, lParam );
     }
 } // namespace sw
 #else

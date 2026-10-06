@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -290,6 +292,37 @@ SW_TEST_CASE( WindowTest, MouseLockLeavesTheCloseButtonReachable )
     input.setMouseLockMode( sw::MouseLockMode::None );
     input.shutdown();
     window->setCustomMessageHandler( sw::WindowMessageHandlerDelegate{} );
+    window->destroy();
+}
+
+/**
+ * @brief [WindowTest] 창 제목이 OS 에 UTF-16 그대로 들어간다 — 만들 때도, `SetWindowTextW` 로 바꿀 때도
+ * @details 창 클래스 · 창을 W 판으로 만들고 창 프로시저가 A 판 기본 처리(`DefWindowProc` — 이 저장소는 UNICODE 를 정의하지 않는다)로 끝나면
+ *          `WM_NCCREATE` · `WM_SETTEXT` 의 UTF-16 제목을 ANSI 로 읽어 첫 글자에서 끊는다. 제목 줄 · 작업 표시줄에 "S" 한 글자만 남는다.
+ */
+SW_TEST_CASE( WindowTest, TitleReachesTheOsAsUtf16 )
+{
+    constexpr const utf8* kTitle   = "SWEngine Title Test - 창 제목";
+    constexpr const utf8* kRenamed = "Renamed Title - 바뀐 제목";
+
+    sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
+    SW_ASSERT_TRUE( window != nullptr );
+    SW_ASSERT_TRUE( window->initializeWindow( kTitle, 320, 240 ) );
+    const HWND hWnd = static_cast<sw::Win32Window*>( window.get() )->getHwnd();
+
+    const auto readTitle = [hWnd]() -> sw::string
+    {
+        utf16       arrText[sw::constant::kMaxBuffer256]{};
+        const int32 length               = GetWindowTextW( hWnd, arrText, static_cast<int32>( sw::constant::kMaxBuffer256 ) );
+        arrText[length < 0 ? 0 : length] = L'\0';
+        return sw::StringUtil::utf16ToUtf8( arrText );
+    };
+    SW_EXPECT_EQUAL( sw::string( kTitle ), readTitle() );
+
+    const sw::wstring renamed = sw::StringUtil::utf8ToUtf16( kRenamed );
+    SetWindowTextW( hWnd, renamed.c_str() );
+    SW_EXPECT_EQUAL( sw::string( kRenamed ), readTitle() );
+
     window->destroy();
 }
 #endif

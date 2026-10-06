@@ -68,7 +68,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 	const float direction = (hash & 1u) != 0u ? -1.0f : 1.0f;
 
 	// 위상도 시드마다 어긋나게 — 속도가 달라도 t=0 에서 전부 같은 각도로 출발하면 처음 몇 초가 어색하다.
-	const float phase = hashToUnit(hashSeed(hash)) * 6.2831853f;
+	const float phase = hashToUnit(hashSeed(hash)) * kTwoPi;
 	const float angle = direction * speed * g_Time + phase;
 
 	// CPU 가 올린 월드는 스케일 x 이동으로 본다(회전은 GPU 몫). 행벡터 규약(mul(v, M))이라 0~2행이

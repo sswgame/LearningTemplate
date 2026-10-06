@@ -5,17 +5,20 @@
  *          받은 쪽에서 `applyAction` 으로 같은 순서대로 넣으면 모두 같은 판이 됩니다(덱은 같은 씨앗으로 섞는다).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Casual/CardGame/PokerHand.h"
-#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 스트리트입니다. */
     enum class PokerStreet : uint8
     {
@@ -123,6 +126,9 @@ namespace sw
     class SW_GF_API PokerTable
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CPKR" );
+        static constexpr uint32 kStateVersion = 1;
+
         PokerTable();
 
         /** @brief 자리 수 = @p listStack 의 길이입니다. 버튼은 마지막 자리에서 시작해 첫 판에 0 번이 됩니다. */
@@ -136,6 +142,11 @@ namespace sw
         [[nodiscard]] bool act( int32 seat, PokerActionKind kind, int32 amount = 0 );
         /** @brief 중계로 받은 행동입니다(`_kind` = PokerActionKind, `_amount`). */
         [[nodiscard]] bool applyAction( int32 seat, const CardAction& action );
+
+        /** @brief 자리(홀 카드 · 칩 · 낸 것 · 표시) · 지난 팟 · 덱 · 보드 · 버튼 · 차례 · 베팅 · 스트리트를 씁니다. 설정은 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 자리 수가 다르거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         int32            getSeatCount() const { return static_cast<int32>( _listSeat.size() ); }
         const PokerSeat& getSeat( int32 seat ) const { return _listSeat[static_cast<size_t>( seat )]; }

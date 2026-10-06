@@ -8,9 +8,9 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/2D/TileMapRendererComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/LightRegistry.h"
 
 namespace sw
 {
@@ -23,12 +23,12 @@ namespace sw
     void ShadowCaster2DComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getLightRegistry().addShadowCaster( this );
+        manager.getComponentRegistry().add<ShadowCaster2DComponent>( this );
     }
 
     void ShadowCaster2DComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getLightRegistry().removeShadowCaster( this );
+        manager.getComponentRegistry().remove<ShadowCaster2DComponent>( this );
         Component::onUnregister( manager );
     }
 
@@ -64,7 +64,7 @@ namespace sw
             const float2  middle{ ( start._x + end._x ) * 0.5f - center._x, ( start._y + end._y ) * 0.5f - center._y };
             if ( normal._x * middle._x + normal._y * middle._y < 0.0f )
                 normal = float2{ -normal._x, -normal._y };
-            if ( normal.getLengthSquared() > MathUtil::Epsilon )
+            if ( normal.getLengthSquared() > MathUtil::kEpsilon )
                 normal.normalize();
             outListSegment.push_back( float4{ start._x, start._y, end._x, end._y } );
             outListOutward.push_back( normal );

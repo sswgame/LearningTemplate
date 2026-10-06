@@ -183,6 +183,12 @@ namespace sw
          */
         string_view getPresentedAttachmentName() const;
         /**
+         * @brief 그림자 맵 한 변의 텍셀 수입니다 — 그림자 품질(`gv_shadowQuality` 0~3)이 1024 · 1536 · 2048 · 4096 을 고릅니다.
+         * @details 그림자 맵은 화면 크기를 따르지 않는다 — 정사각 볼륨을 1280×720 에 담으면 텍셀이 한 축으로 1.8 배 늘어나고, 출력이 작은
+         *          에디터 게임 뷰에서는 그림자 맵도 같이 작아진다. 게임 스레드(그림자 행렬의 텍셀 스냅)와 렌더 스레드(첨부 할당)가 같은 값을 쓴다.
+         */
+        static uint32 getShadowMapResolution();
+        /**
          * @brief 지금 살아 있는 트랜지언트 목록을 엔진 레지스트리에 공개합니다(에디터 패널이 읽습니다).
          * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로 그때 한 번 부르면 됩니다.
          *          매 프레임 부를 이유가 없습니다.
@@ -324,12 +330,20 @@ namespace sw
             uint64                      _viewId{ 0 };
             RHITextureHandle            _taaHistory{ 0 }; ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)
             RHIDescriptorIndex          _taaHistorySrv{ kInvalidDescriptorIndex };
+            RHIStructuredBufferSlot     _transparentRank;           ///< 이 뷰의 투명 순번 표(정렬 디스패치 t2) — GPU 정렬 백엔드
+            vector<uint32>              _listTransparentBatchOrder; ///< 이번 프레임 이 뷰의 투명 배치 순서(비면 주 순서)
+            vector<uint32>              _listInstanceSlot;          ///< 지금 `_instanceSlotStream` 에 든 내용(같으면 다시 만들지 않는다)
+            RHIBufferHandle             _instanceSlotStream{ 0 };   ///< 이 뷰의 인스턴스 슬롯 스트림(꼬리만 뷰 순서) — 컬링 없는 백엔드(DX11)
+            uint32                      _transparentTailBase{ 0 };  ///< 순번 표 0 번의 인스턴스 번호
             uint32                      _cullSlot{ 0 };
             uint32                      _outputWidth{ 0 }; ///< 출력 크기(렌더 텍스처 · 화면 사각형)
             uint32                      _outputHeight{ 0 };
+            uint32                      _shadowMapResolution{ 0 }; ///< 풀이 든 그림자 맵 한 변(0 = 아직 없음) — 품질이 바뀌면 풀을 다시 만든다
             RenderViewOutputKind        _outputKind{ RenderViewOutputKind::ScreenRect };
             uint8                       _bRenderThisFrame{ SW_FALSE };
             uint8                       _bSeenThisFrame{ SW_FALSE };
+            uint8                       _bHasTransparentRank{ SW_FALSE }; ///< 이번 프레임 `_transparentRank` 로 정렬한다
+            uint8                       _bUsesViewSlotStream{ SW_FALSE }; ///< 이번 프레임 `_instanceSlotStream` 으로 그린다
         };
 
         // ------------------------------------------------------------------------------
@@ -392,6 +406,13 @@ namespace sw
          *        GpuScene 의 컬링 칸 수를 정합니다. **업로드 전에**(셋업 단계) 부릅니다 — 버퍼 · 텍스처 생성은 기록 중에 할 수 없다.
          */
         void prepareExtraViews( const vector<RenderViewRequest>& listRequest );
+        /**
+         * @brief 스냅샷의 이 뷰 투명 순서를 뷰 자원(순번 표 · 슬롯 스트림 · 배치 순서)에 옮깁니다. 없으면 주 순서로 그립니다.
+         * @details GPU 정렬 백엔드는 순번 표를 정렬 디스패치에, 컬링 없는 백엔드는 배치 안을 뷰 순서로 다시 놓은 슬롯 스트림을 드로우에 쓴다. 업로드 뒤 · 기록 전에 부릅니다.
+         */
+        void applyViewTransparentOrder( ViewTarget& view );
+        /** @brief 뷰 하나의 투명 순서 자원(순번 표 · 슬롯 스트림)을 놓습니다(디바이스가 없으면 핸들만 잊는다). */
+        void releaseViewTransparentOrder( ViewTarget& view );
         /** @brief 추가 뷰 하나를 그래프로 그립니다(직렬, 자기 리스트). 지금 뷰를 그 뷰로 바꿨다가 주 시점으로 돌려놓습니다. */
         void renderExtraView( IRHIDevice* pDevice, ViewTarget& view );
         /** @brief 지금 그리는 뷰의 트랜지언트 풀입니다. */
@@ -452,6 +473,7 @@ namespace sw
             float4   _dirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
             float4   _colorAmbient{ 1.0f, 0.82f, 0.62f, 0.28f };
             float4x4 _shadowViewProj{};
+            float4   _shadowParams{}; ///< g_ShadowParams — 그림자 행렬과 한 묶음
             uint8    _bHasShadowViewProj{ SW_FALSE };
         };
         /** @brief 카메라에서 뷰 · 투영을 적용합니다. */
@@ -785,8 +807,11 @@ namespace sw
          * @details 컬링 결과는 절두체에 종속이라 뷰(메인 · 그림자)마다 자기 인자 · 목록을 따로 만듭니다.
          */
         void dispatchCullAndSort( uint32 instanceCount );
-        /** @brief 컬링 칸 하나를 컬링 · 정렬합니다(그 뷰의 절두체 · 자기 상수버퍼). 돌렸으면 true 입니다. */
-        bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount );
+        /**
+         * @brief 컬링 칸 하나를 컬링 · 정렬합니다(그 뷰의 절두체 · 자기 상수버퍼). 돌렸으면 true 입니다.
+         * @param pExtraView 추가 뷰면 그 뷰(투명 순번 표를 정렬에 건다), 고정 뷰(주 · 그림자)면 nullptr.
+         */
+        bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView );
         /**
          * @brief 인스턴스 애니메이션에 넣는 절대 시간(초)입니다.
          * @details 각도를 프레임마다 누적하지 않고 **이 절대 시간에서 매번 새로 만듭니다**. 누적하면 프레임
@@ -807,6 +832,8 @@ namespace sw
          *          키는 stride 입니다. 셋업(ensureMaterialFallbackBuffers)에서만 만들고 기록 중에는 조회만 합니다.
          */
         unordered_map<uint32, RHIStructuredBufferSlot> _mapMaterialFallback;
+        /// @brief 순번 표가 없는 뷰(주 · 그림자)의 정렬 디스패치가 t2 에 거는 원소 하나짜리 자리표입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않는다.
+        RHIStructuredBufferSlot _transparentRankPlaceholder;
         /// @brief 엔진 패스 PSO · Present PSO · 머티리얼 변형과 그 바인딩 레이아웃입니다. 소유와 해제 순서는 캐시가 압니다.
         RenderPsoCache                       _psoCache;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
@@ -821,7 +848,7 @@ namespace sw
         RenderGraphExecutionContext _graphContext;
 
         // 아래는 8 바이트보다 작은 필드입니다. 사이에 끼면 패딩이 생기므로 큰 것부터 끝에 모아 둡니다.
-        FrameLightState _frameLight; ///< 크기가 8 의 배수가 아니라(100) 4 바이트 필드와 짝을 짓습니다
+        FrameLightState _frameLight; ///< 크기가 8 의 배수가 아니라(116) 4 바이트 필드와 짝을 짓습니다
         /// @brief 주 출력(백버퍼 · 게임 뷰 RT)의 크기입니다. 주 시점의 풀은 이것 × 사각형 × 해상도 배율이고, 화면 사각형 뷰 · Present 캡처는 이 크기다.
         uint32 _outputWidth;
         uint32 _outputHeight;

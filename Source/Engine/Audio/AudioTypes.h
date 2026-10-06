@@ -6,6 +6,7 @@
  *          게인을 램프합니다(지퍼 잡음 없음).
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Math/MathUtil.h"
@@ -21,6 +22,8 @@ namespace sw
         inline constexpr uint32 kChannelCount = 2;
         /** @brief 믹서가 한 번에 처리하는 프레임 수입니다(5.3 ms). 파라미터 · 공간화는 블록마다 갱신됩니다. */
         inline constexpr uint32 kBlockFrameCount = 256;
+        /** @brief 블록 하나의 길이(초)입니다. 이벤트 · 음악 페이드가 블록마다 이만큼 나아갑니다. */
+        inline constexpr float32 kBlockSeconds = static_cast<float32>( kBlockFrameCount ) / static_cast<float32>( kSampleRate );
         /** @brief "들리지 않음" 으로 보는 dB 바닥입니다. 이 아래는 0 으로 다룹니다. */
         inline constexpr float32 kSilenceDb = -96.0f;
         /** @brief 필터 컷오프의 위 끝(Hz)입니다. 이 이상이면 필터를 건너뜁니다. */
@@ -87,16 +90,14 @@ namespace sw
      */
     struct AudioRandom
     {
-        uint64 _state{ 0x9E3779B97F4A7C15ull };
+        uint64 _state{ HashUtil::kGoldenRatio64 };
 
         /** @brief 다음 64 비트 값입니다. */
         uint64 nextUint64()
         {
-            _state += 0x9E3779B97F4A7C15ull;
+            _state += HashUtil::kGoldenRatio64;
             uint64 mixed = _state;
-            mixed        = ( mixed ^ ( mixed >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-            mixed        = ( mixed ^ ( mixed >> 27 ) ) * 0x94D049BB133111EBull;
-            return mixed ^ ( mixed >> 31 );
+            return HashUtil::mix64( mixed );
         }
 
         /** @brief [0, 1) 의 값입니다. */

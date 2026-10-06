@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MeadowVillage 의 작물 — 순무 하나(2 일 자람 · 1 개 · 30 G). 밭 디렉터가 하루 넘김마다 거둬 공유 지갑에 판다. -->
+<CropCatalog>
+  <Crop id="turnip" name="Turnip" seed="turnip_seed" produce="turnip" days="2" seasons="Spring" seedPrice="10" sellPrice="30"/>
+</CropCatalog>

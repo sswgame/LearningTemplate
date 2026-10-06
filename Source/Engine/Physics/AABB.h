@@ -20,16 +20,16 @@ namespace sw
         static constexpr AABB empty() noexcept
         {
             return AABB{
-                float3{MathUtil::MaxFloat, MathUtil::MaxFloat, MathUtil::MaxFloat},
-                float3{MathUtil::MinFloat, MathUtil::MinFloat, MathUtil::MinFloat}
+                float3{MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat},
+                float3{MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat}
             };
         }
 
         static constexpr AABB infinite() noexcept
         {
             return AABB{
-                float3{MathUtil::MinFloat, MathUtil::MinFloat, MathUtil::MinFloat},
-                float3{MathUtil::MaxFloat, MathUtil::MaxFloat, MathUtil::MaxFloat}
+                float3{MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat},
+                float3{MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat}
             };
         }
 

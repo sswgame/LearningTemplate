@@ -77,6 +77,8 @@ namespace test
         void registerTest( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func );
         /** @brief 스위트가 GPU · 창 · DXC 같은 호스트 자원을 요구한다고 등록합니다(`SW_TEST_REQUIRES_HOST`). */
         void registerHostSuite( const utf8* pSuiteName, const utf8* pReason );
+        /** @brief 스위트가 바깥 환경(DB 서버 등)을 요구하며 환경 변수 @p pEnvironmentName 이 그 주소를 준다고 등록합니다(`SW_TEST_REQUIRES_ENVIRONMENT`). */
+        void registerEnvironmentSuite( const utf8* pSuiteName, const utf8* pEnvironmentName, const utf8* pReason );
 
         /** @brief 호스트 스위트의 케이스가 남겨도 실패로 치지 않을 Error 로그(부분 문자열)를 등록합니다(`SW_TEST_KNOWN_ERROR_LOG`). */
         void registerKnownErrorLog( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason );
@@ -125,27 +127,34 @@ namespace test
     private:
         /** @brief 호스트 스위트 선언이 실제 케이스와 맞는지 보고, 어긋난 수를 반환합니다. */
         int32 countHostSuiteMismatch() const;
+        /** @brief 환경 스위트 선언이 실제 케이스와 맞는지 보고, 어긋난 수를 반환합니다. */
+        int32 countEnvironmentSuiteMismatch() const;
+        /** @brief 환경 변수가 비어 빠지는 스위트입니다(이름 필터에 맞는 것만). */
+        void printSkippedEnvironmentSuites() const;
+        /** @brief 이 스위트가 환경 스위트이고 그 변수가 비었는가입니다. */
+        bool isEnvironmentMissing( const sw::string& suiteName ) const;
         /** @brief 견딘 알려진 Error 로그를 실행 요약에 찍습니다. */
         void printKnownErrorLogSummary() const;
         /** @brief 케이스 하나를 돌리고(정리 · 임시 폴더 지우기까지) 결과 줄을 찍습니다. */
         CaseResult runCase( const TestCaseInfo& testInfo, float64& outElapsedMs );
 
-        sw::vector<TestCaseInfo>        _listTest;
-        sw::map<sw::string, sw::string> _mapHostSuiteReason;
-        sw::vector<KnownErrorLog>       _listKnownErrorLog;
-        TestFilter                      _filter;
-        TestContext                     _currentContext;
-        TestEnvironment                 _environment;
-        sw::vector<TestFailure>*        _pFailureCapture{ nullptr };
-        HostSuiteMode                   _hostSuiteMode{ HostSuiteMode::All };
-        uint32                          _repeatCount{ 1 };
-        uint32                          _shuffleSeed{ 0 };
-        bool                            _bShuffle{ false };
-        bool                            _listOnly{ false };
-        bool                            _bAllowEmptySuite{ false };
-        uint32                          _shardIndex{ 0 }; /**< 이 실행의 샤드(0 부터) — `--test_shard=INDEX/COUNT` */
-        uint32                          _shardCount{ 1 }; /**< 샤드 수(1 = 나누지 않는다) */
-        bool                            _bInvalidArgument{ false };
+        sw::vector<TestCaseInfo>                              _listTest;
+        sw::map<sw::string, sw::string>                       _mapHostSuiteReason;
+        sw::map<sw::string, sw::pair<sw::string, sw::string>> _mapEnvironmentSuite; ///< 스위트 → (환경 변수 이름, 까닭)
+        sw::vector<KnownErrorLog>                             _listKnownErrorLog;
+        TestFilter                                            _filter;
+        TestContext                                           _currentContext;
+        TestEnvironment                                       _environment;
+        sw::vector<TestFailure>*                              _pFailureCapture{ nullptr };
+        HostSuiteMode                                         _hostSuiteMode{ HostSuiteMode::All };
+        uint32                                                _repeatCount{ 1 };
+        uint32                                                _shuffleSeed{ 0 };
+        bool                                                  _bShuffle{ false };
+        bool                                                  _listOnly{ false };
+        bool                                                  _bAllowEmptySuite{ false };
+        uint32                                                _shardIndex{ 0 }; /**< 이 실행의 샤드(0 부터) — `--test_shard=INDEX/COUNT` */
+        uint32                                                _shardCount{ 1 }; /**< 샤드 수(1 = 나누지 않는다) */
+        bool                                                  _bInvalidArgument{ false };
     };
 } // namespace test
 
@@ -555,6 +564,22 @@ namespace test
     };
 } // namespace test
 
+namespace test
+{
+    /** @brief 정적 초기화로 환경 스위트 선언을 레지스트리에 붙입니다. */
+    class EnvironmentSuiteRegistrar
+    {
+    public:
+        EnvironmentSuiteRegistrar( const utf8* pSuiteName, const utf8* pEnvironmentName, const utf8* pReason )
+        {
+            TestRegistry::getInstance().registerEnvironmentSuite( pSuiteName, pEnvironmentName, pReason );
+        }
+    };
+
+    /** @brief 환경 변수 값입니다(없으면 빈 글). 환경 스위트의 케이스가 서버 주소를 읽는다. */
+    sw::string getEnvironmentValue( const utf8* pEnvironmentName );
+} // namespace test
+
 // ------------------------------------------------------------------------------
 // 3) 매크로 — 케이스 등록·스킵·어서션
 // ------------------------------------------------------------------------------
@@ -579,6 +604,14 @@ namespace test
  *          **이 한 줄**로 CI 에서 빠지고 호스트 실행에 들어간다. CMake 에는 스위트 이름을 적지 않는다.
  */
 #define SW_TEST_REQUIRES_HOST( SuiteName, reason ) static test::HostSuiteRegistrar hostSuite_##SuiteName( #SuiteName, reason )
+
+/**
+ * @brief 스위트가 바깥 환경(DB · 캐시 서버)을 요구하며 환경 변수 @p envName 이 그 주소를 준다고 선언합니다.
+ * @details 변수가 비면 그 스위트는 고르지 않고 `[ SKIP SUITE ] <스위트> - <envName> is not set (<reason>)` 한 줄만 찍는다 — 실패가 아니고,
+ *          "모두 건너뜀" 판정에도 들지 않는다. 변수가 있으면 보통 스위트처럼 돈다(CI 는 서버를 띄운 잡에서만 변수를 준다). 호스트 스위트가 아니다 —
+ *          `--host_suites` 와 섞이지 않는다. 케이스는 `test::getEnvironmentValue( envName )` 로 주소를 읽는다. 이 파일에는 다른 스위트를 두지 않는다(`CheckTestSuites`).
+ */
+#define SW_TEST_REQUIRES_ENVIRONMENT( SuiteName, envName, reason ) static test::EnvironmentSuiteRegistrar environmentSuite_##SuiteName( #SuiteName, envName, reason )
 
 /**
  * @brief 호스트 스위트가 남기는 Error 로그 가운데 **아직 고치지 못한 것** 하나를 견딥니다.

@@ -4,7 +4,7 @@
 #        DetourTileCache · DebugUtils). 헤더는 엔진의 내비게이션 백엔드 폴더에서만 include 한다(엔진 쪽 인터페이스 뒤에 감춘다).
 # ==============================================================================
 
-sw_addVcpkgConfigLib(
+sw_addVcpkgPackage(
 	NAME recastnavigation
 	PACKAGE recastnavigation
 	CONFIG_TARGET RecastNavigation::Detour

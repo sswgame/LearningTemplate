@@ -12,6 +12,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Physics/CollisionLayers.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -76,13 +77,12 @@ namespace sw
         static constexpr uint32 kMaxLayerCount = CollisionLayers::kLayerCount;
 
         PROPERTY( Tooltip = "3D gravity", Units = "m/s2" )
-        float3 _gravity{ 0.0f, -9.81f, 0.0f };
+        float3 _gravity{ 0.0f, -constant::kDefaultGravity, 0.0f };
         PROPERTY( Tooltip = "2D gravity", Units = "m/s2" )
-        float2 _gravity2D{ 0.0f, -9.81f };
-        PROPERTY( Min = 0.001, Tooltip = "Simulation step; frames accumulate time and run whole steps", Units = s )
-        float32 _fixedTimeStep{ 1.0f / 60.0f };
-        PROPERTY( Min = 1, Tooltip = "Most steps one frame runs; time beyond that is dropped (slow motion instead of a spiral)" )
-        uint32 _maxStepsPerFrame{ 4 };
+        float2 _gravity2D{ 0.0f, -constant::kDefaultGravity };
+        /** @brief 엔진 고정 스텝(`EngineConfig::_fixedDeltaTime`) 하나에 도는 물리 스텝 수입니다. 물리 스텝 = 고정 스텝 / 이 값, 프레임당 상한도 이 배수다. */
+        PROPERTY( Min = 1, Max = 16, Tooltip = "Physics steps per engine fixed step (the step length comes from EngineConfig)" )
+        uint32 _subStepCount{ 1 };
         PROPERTY( Min = 1, Tooltip = "Box2D sub-steps per step" )
         uint32 _subStepCount2D{ 4 };
         PROPERTY( Tooltip = "Collision layers in index order and what they collide with" )

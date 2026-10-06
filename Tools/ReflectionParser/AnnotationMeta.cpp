@@ -2,6 +2,7 @@
 
 #include "ReflectionParser/AnnotationMeta.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
@@ -30,7 +31,7 @@ namespace sw
     uint64 AnnotationMeta::hashScopeAndKey( string_view scope, string_view key ) noexcept
     {
         const uint64 scopeHash = StringUtil::computeHash64( scope, false );
-        const uint64 delimHash = ( scopeHash ^ static_cast<uint64>( ':' ) ) * StringUtil::kPrime64;
+        const uint64 delimHash = ( scopeHash ^ static_cast<uint64>( ':' ) ) * HashUtil::kFnvPrime64;
         return StringUtil::computeHash64( key, false, delimHash );
     }
 

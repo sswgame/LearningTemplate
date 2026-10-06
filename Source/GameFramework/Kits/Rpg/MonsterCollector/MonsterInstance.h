@@ -4,6 +4,7 @@
  *        진화(레벨 · 아이템 · 친밀도), 파티 6 · 박스 보관입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -15,6 +16,7 @@
 
 namespace sw
 {
+    class Archive;
     class GameRandom;
 
     /** @brief 기술 칸 하나입니다. */
@@ -33,7 +35,8 @@ namespace sw
     /** @brief 개체 하나(잡은 몬스터 · 야생 · 트레이너의 몬스터)입니다. 능력치 `_arrStat` 는 `MonsterRules::recomputeStats` 가 채웁니다. */
     struct SW_GF_API MonsterInstance
     {
-        static constexpr int32 kMoveSlotCount = 4;
+        static constexpr int32  kMoveSlotCount = 4;
+        static constexpr uint32 kStateMinBytes = 157; ///< `writeState` 한 개체의 최소 바이트(이름 셋 12 + 기술 칸 48 + 개체값 · 노력치 · 능력치 72 + 경험치 8 + 정수 넷 16 + 상태 1)
 
         hashed_string   _speciesId{};
         hashed_string   _natureId{};
@@ -55,6 +58,10 @@ namespace sw
         int32 countMoves() const;
         /** @brief 이 기술을 가진 칸입니다. 없으면 −1 입니다. */
         int32 findMoveSlot( const hashed_string& moveId ) const;
+        /** @brief 개체 하나(종 · 성격 · 별명 · 기술 칸 · 개체값 · 노력치 · 능력치 · 경험치 · 레벨 · HP · 친밀도 · 상태이상)를 씁니다 — 보관함 · 전투가 함께 씁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다(종 · 기술이 카탈로그에 있는지는 부르는 쪽이 본다). */
+        [[nodiscard]] bool readState( Archive& archive );
     };
 } // namespace sw
 
@@ -144,7 +151,9 @@ namespace sw
     class SW_GF_API MonsterStorage
     {
     public:
-        static constexpr int32 kPartySize = 6;
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MCST" );
+        static constexpr uint32 kStateVersion = 1;
+        static constexpr int32  kPartySize    = 6;
 
         MonsterStorage();
 
@@ -155,6 +164,10 @@ namespace sw
         [[nodiscard]] bool  swapPartyOrder( int32 firstIndex, int32 secondIndex );
         /** @brief 파티 모두를 회복합니다. */
         void restoreParty();
+        /** @brief 파티 · 박스의 개체를 씁니다. 박스 정원은 `initialize` 의 설정이라 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 파티가 6 을, 박스가 정원을 넘거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         bool                           hasUsableMonster() const;
         const vector<MonsterInstance>& getParty() const { return _listParty; }

@@ -11,5 +11,8 @@
     "_listConfiguration": [
         "Dev"
     ],
+    "_listTarget": [
+        "Client"
+    ],
     "_bEnabledByDefault": true
 }

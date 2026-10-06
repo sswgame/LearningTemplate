@@ -2,6 +2,8 @@
 
 #include "Engine/Audio/AudioEngine.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Audio/AudioMixer.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 
@@ -872,7 +874,7 @@ namespace sw
         // 한 극 추종: 블록마다 남은 차이의 (1 − e^(−블록/τ)) 만큼 다가간다.
         const float32 smoothing    = _pMixer->getDesc()._occlusion._smoothingSeconds;
         const float32 blockSeconds = static_cast<float32>( audio::kBlockFrameCount ) / static_cast<float32>( audio::kSampleRate );
-        const float32 step         = smoothing <= 0.0f ? 1.0f : 1.0f - MathUtil::pow( 2.718281828f, -blockSeconds / smoothing );
+        const float32 step         = smoothing <= 0.0f ? 1.0f : 1.0f - MathUtil::pow( MathUtil::kEuler, -blockSeconds / smoothing );
         for ( auto& entry : _mapEmitter )
         {
             AudioEmitterState& emitter = entry.second._state;

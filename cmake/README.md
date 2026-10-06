@@ -14,12 +14,12 @@ cmake/
 │
 ├── Environment/                 [2계층: 개발 환경 및 툴체인 주입 (project() 이전)]
 │   ├── DetectToolchain.cmake    — toolchain_config.json 파싱 & LLVM/Ninja 바인딩
-│   ├── VcpkgIntegration.cmake   — vcpkg 매니페스트 및 오버레이 게이트
 │   ├── FindLlvmBin.cmake        — clang-cl / clang 이 있는 LLVM bin 찾기 (vcpkg 포트 툴체인도 쓴다)
 │   ├── ToolchainBinaries.cmake  — 아카이버를 "지금 쓰는 컴파일러 옆" 에서 고정 (LTO 비트코드를 읽어야 한다)
 │   ├── FindWindowsTools.cmake   — lib.exe / mt.exe 탐색 및 clang-cl 아카이버 재바인딩
 │   ├── WindowsToolSearch.cmake  — MSVC lib.exe · SDK mt.exe 폴더 탐색 (본 프로젝트와 vcpkg 포트 툴체인이 함께 쓴다)
-│   └── PythonUtils.cmake        — Python 인터프리터 탐색 및 스크립트 실행 헬퍼
+│   ├── HostPath.cmake           — PATH 앞에 붙이기(sw_prependEnvPath) · Git for Windows 기본 경로
+│   └── PythonUtils.cmake        — Python 인터프리터 탐색(한 곳) 및 스크립트 실행 헬퍼
 │
 ├── Modules/                     [3계층: 컴파일러/플랫폼/아키텍처 INTERFACE 플래그]
 │   ├── LoadCompileFlags.cmake   — 플래그 모듈 일괄 인클루더
@@ -33,23 +33,25 @@ cmake/
 │
 └── Engine/                      [4계층: 엔진 빌드 파이프라인 및 타겟 헬퍼 (project() 이후)]
     ├── BuildLayout.cmake         — 산출물이 어디 놓이나: 출력 경로 · sw_global_options · IPO · 런타임 복사 큐
-    │                               (include 되는 순간 실행된다 — TargetRules 보다 먼저여야 한다)
-    ├── TargetRules.cmake         — 타겟을 어떻게 만드나: DLL export, RHI·키트·게임·테스트 팩토리, delay-load
+    │                               (include 되는 순간 실행된다 — 타깃 규칙 셋보다 먼저여야 한다)
+    ├── UnbuiltSources.cmake      — 이 구성이 일부러 짓지 않는 소스 목록(sw_declare* · sw_exclude* · 플랫폼 폴더 규칙 → CheckSourceGlob)
+    ├── ModuleTargets.cmake       — 모듈 · 실행 파일 타깃: 내보내기 · 동적 모듈 레지스트리 · ABI 도장 · 모듈 팩토리 · delay-load
+    ├── TestTargets.cmake         — 시험 타깃 · CTest 등록(실행 파일 · 샤드 · 새니타이저 보정 · 스크립트 시험)
     ├── ModuleManifest.cmake      — 모듈 매니페스트(`<모듈>.module.json`) 해석: 켜짐 · 플랫폼 · 구성 · 의존 · 순환, 꺼진 모듈은 짓지 않고 `Bin/Modules/` 에 복사
-    ├── ThirdPartyLibs.cmake      — 서드파티를 어떻게 붙이나: SYSTEM include, vcpkg CONFIG, STATIC 폴백
+    ├── ThirdPartyLibs.cmake      — 서드파티를 어떻게 붙이나: SYSTEM include, vcpkg CONFIG 패키지(못 찾으면 구성 실패), 헤더 전용 포트
     ├── AssetAndToolTargets.cmake— 에셋 쿠킹, Doxygen 문서, 린트 타겟 및 CTest 등록 헬퍼
     ├── ReflectionCodeGen.cmake  — ReflectionParser 코드 생성 파이프라인 (sw_addReflectionStep)
     ├── RuntimeDependencies.cmake— vcpkg 경로 조회, Vulkan 레이어·mimalloc 런타임 DLL 복사
     │                               (DXC 복사는 `ThirdParty/dxc/CMakeLists.txt` 의 `sw_copyDxcDlls` —
     │                                DXC 탐색 로직이 거기 있어 같이 둔다)
-    └── RhiBackendSources.cmake  — RHI 백엔드 소스 파일 목록
+    └── RhiBackends.cmake        — RHI 백엔드 표의 CMake 쪽(장치 소스 · 이름 · 별칭 · 배포 백엔드 확인 — 표는 CookContract.json)
 ```
 
 ## 네이밍 컨벤션
 
 | 종류 | 규칙 | 예시 |
 |------|------|------|
-| function / macro | `sw_camelCase` | `sw_addRhiBackendModule`, `sw_addGameFrameworkKit`, `sw_registerLintTests` |
+| function / macro | `sw_camelCase` | `sw_addRhiBackendModule`, `sw_addGameFrameworkKit`, `sw_registerScriptTest` |
 | 프로젝트 변수 · INTERFACE 타겟 | `sw_snake_case` | `sw_flag_libraries`, `sw_public_source_includes` |
 | option / C++ 매크로 | `SW_UPPER_SNAKE_CASE` | `SW_ENABLE_PCH`, `SW_EXPORTS`, `SW_MODULE_EXPORTS` |
 | 함수 내부 로컬 | `camelCase` (앞에 `_` 없음) | `kitType`, `libType`, `targetName` |
@@ -58,15 +60,37 @@ cmake/
 
 | 함수 | 용도 |
 |------|------|
-| `sw_configurePch` | `SW_ENABLE_PCH`가 ON일 때만 `target_precompile_headers`를 적용 (`BuildOptions.cmake`) |
+| `sw_configurePch` | `SW_ENABLE_PCH`가 ON일 때만 `target_precompile_headers`를 적용 (`ModuleTargets.cmake`) |
+| `sw_configureDllExports` | 내보내기 매크로 짝(ENGINE · GF · MODULE) |
+| `sw_prependEnvPath` | configure 프로세스의 PATH 앞에 폴더를 붙인다(호스트 구분자, 이미 있으면 그대로 — `HostPath.cmake`) |
 | `sw_queueRuntimeCopy` / `sw_emitRuntimeCopies` | 런타임 DLL 복사를 모아 두었다가 타겟당 POST_BUILD 한 번으로 방출 (`BuildLayout.cmake`) |
+| `sw_deployRuntimeDependencies` | 실행 파일 옆 런타임 DLL(DXC · Debug 검증 레이어 · Tracy)을 구성에 맞게 골라 복사 (`BuildLayout.cmake`) |
+| `sw_addDynamicModuleDependencies` | 레지스트리의 동적 모듈(종류로 고름)이 그 타깃보다 먼저 지어지게 한다 — App · 시험이 이름을 적지 않는다 |
 | `sw_configureAppDependencies` | App 타겟의 RHI 모듈, SWGame 딜레이로드/정적링크, CookAssets 의존성 자동 구성 |
 | `sw_addRhiBackendModule` | RHI 그래픽스 백엔드(`RHI_DX11` 등) MODULE 타겟 정의 및 공통 속성 바인딩 |
 | `sw_registerDynamicModule` / `sw_getDynamicModules` | 동적 모듈 레지스트리. **모듈 이름을 적는 곳은 타겟을 만드는 자리 하나뿐이다** — App·EngineTest·SmokeTest 는 목록을 묻는다 (`KINDS rhi` 처럼 종류로 고른다) |
 | `sw_excludeUnbuiltSources` / `sw_declareUnbuiltSources` | 이 구성이 **일부러 짓지 않는** 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드)를 빼는 자리에서 적는다. 구성 끝에 `sw_writeUnbuiltSourceList` 가 빌드 트리(`generated/sw/config/UnbuiltSources.txt`)에 쓰고 `CheckSourceGlob` 이 읽는다 — 게이트가 빼기 규칙을 따로 들지 않는다. 다른 타겟으로 옮겨 짓는 것에는 쓰지 않는다 |
 | `sw_resolveModuleManifests` / `sw_readModuleManifest` | 모듈 매니페스트를 모두 읽고 해석한다(`Source/**/<모듈>.module.json`, 고른 게임의 `SWGame.module.json` 이 켜기/끄기 표). 없는 의존 · 꺼진 의존 · 낮은 버전 · 순환 · 모르는 이름이면 구성이 선다. Dev 는 매니페스트와 적재 순서(`ResolvedModules.txt`)를 `Bin/Modules/` 에 두고 App 이 같은 규칙(`ModuleCatalog`)으로 다시 해석한다 |
 | `sw_isModuleActive` / `sw_skipInactiveModule` | 모듈이 켜져 있나 · 꺼졌으면 그 폴더를 "짓지 않는다" 로 적고 건너뛴다(모듈을 만드는 함수의 첫 줄). 매니페스트가 없는 동적 모듈은 `sw_registerDynamicModule` 에서 구성이 선다 |
+| `sw_filterPlatformSources` | 플랫폼 폴더 규칙(`Windows/` · `Linux/` · `Posix/`)으로 소스 목록을 거르고 고르지 않은 것을 "짓지 않는 소스" 로 적는다(Core) |
 | `sw_excludeSourcesOfInactiveKits` | 꺼진 키트의 헤더를 include 하는 소스를 목록에서 뺀다(EngineTest — 키트를 끄면 그 시험도 짓지 않는다) |
+| `sw_addModuleLibrary` | 엔진 모듈 라이브러리의 기본값(종류 · Bin 출력 · 내보내기 · 등록 · PCH · 유니티 · 리플렉션 · 지연 로드) 한 자리 — 팩토리 셋 · GameFramework · 에디터가 이것을 부른다 |
 | `sw_addGameFrameworkKit` | GameFramework 장르 키트(`GF_Overworld` 등) 라이브러리 정의 및 리플렉션/딜레이로드 자동화 |
-| `sw_registerLintTests` | 린트 CTest 일괄 등록. **목록은 여기 없다** — `Scripts/lint/gate/` · `selftest/` 폴더가 목록이고, `GenerateLintTargets.py` 가 만든 `LintTargets.cmake` 를 부른다 |
+| `sw_registerScriptTest` | 파이썬 스크립트 하나를 CTest 항목 하나로(PythonTest · QA · 린트가 같은 속성 철자). 린트는 **목록이 여기 없다** — `Scripts/lint/gate/` · `selftest/` 폴더가 목록이고, `GenerateLintTargets.py` 가 만든 `LintTargets.cmake` 의 등록 함수가 이것을 부른다 |
 | `sw_addReflectionStep` | ReflectionParser 코드 생성 스텝 자동 연결 |
+
+## 고친 뒤 구성이 같은지
+
+CMake 리팩터는 컴파일러가 잡지 않는다 — 정의 하나 · 링크 순서 · 출력 폴더가 달라져도 configure 는 통과한다. 고치기 전과 뒤의 구성 결과를 견준다
+(`Scripts/dev/ConfigureSnapshot.py` — File API 답 · 생성 파일 해시 · ctest 목록):
+
+```powershell
+py -3 Scripts/dev/ConfigureSnapshot.py prepare --preset Ninja-Debug             # 질의를 둔다(한 번)
+cmake --preset Ninja-Debug ; py -3 Scripts/dev/ConfigureSnapshot.py take --preset Ninja-Debug --out before.json
+# ... CMake 를 고친다 ...
+cmake --preset Ninja-Debug ; py -3 Scripts/dev/ConfigureSnapshot.py take --preset Ninja-Debug --out after.json
+py -3 Scripts/dev/ConfigureSnapshot.py diff before.json after.json              # 다르면 1 · 다른 줄만 찍는다
+```
+
+Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프리셋마다 뜬다. 구성 시간은 `cmake --preset … --profiling-format=google-trace --profiling-output=t.json`
+뒤 `ConfigureSnapshot.py profile t.json --top 25`.

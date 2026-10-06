@@ -22,7 +22,7 @@ namespace sw
             /** @brief 전체 각(라디안)의 반각 cos 입니다. 2π 이상이면 −1(원뿔 없음)입니다. */
             static float32 computeHalfAngleCos( float32 angle )
             {
-                const float32 clamped = MathUtil::clamp( angle, 0.0f, 2.0f * MathUtil::Pi );
+                const float32 clamped = MathUtil::clamp( angle, 0.0f, 2.0f * MathUtil::kPi );
                 return MathUtil::cos( clamped * 0.5f );
             }
         };
@@ -33,8 +33,8 @@ namespace sw
         , _innerRadius{ 0.0f }
         , _outerRadius{ 4.0f }
         , _falloffExponent{ 1.0f }
-        , _innerAngle{ 2.0f * MathUtil::Pi }
-        , _outerAngle{ 2.0f * MathUtil::Pi }
+        , _innerAngle{ 2.0f * MathUtil::kPi }
+        , _outerAngle{ 2.0f * MathUtil::kPi }
         , _normalMapHeight{ 1.0f }
         , _bCastShadows{ true }
     {
@@ -58,7 +58,7 @@ namespace sw
 
     void PointLight2DComponent::setConeAngles( float32 innerAngle, float32 outerAngle )
     {
-        _outerAngle = MathUtil::clamp( outerAngle, 0.0f, 2.0f * MathUtil::Pi );
+        _outerAngle = MathUtil::clamp( outerAngle, 0.0f, 2.0f * MathUtil::kPi );
         _innerAngle = MathUtil::clamp( innerAngle, 0.0f, _outerAngle );
     }
 
@@ -68,7 +68,7 @@ namespace sw
         const float3 position    = getLightPosition();
         const float3 direction   = computeLightDirection( float3{ 1.0f, 0.0f, 0.0f } );
         float2       direction2D = float2{ direction._x, direction._y };
-        if ( direction2D.getLengthSquared() <= MathUtil::Epsilon )
+        if ( direction2D.getLengthSquared() <= MathUtil::kEpsilon )
             direction2D = float2{ 1.0f, 0.0f };
         direction2D.normalize();
         // 칸의 뜻은 lighting2d.hlsli 머리 주석의 표 — z 는 2D 거리에 쓰이지 않아 노멀 맵 높이를 싣는다.

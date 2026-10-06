@@ -74,7 +74,7 @@ namespace
                 _pUnitScene   = _pUnit->addComponent<SceneComponent>();
                 _pBinding     = _pUnit->addComponent<SocketBindingComponent>();
                 _pHolderScene->setLocalPosition( float3( 1.0f, 2.0f, 3.0f ) );
-                _pHolderScene->setLocalRotation( float3( 0.0f, MathUtil::HalfPi, 0.0f ) );
+                _pHolderScene->setLocalRotation( float3( 0.0f, MathUtil::kHalfPi, 0.0f ) );
                 _manager.beginPlay();
             }
         };
@@ -237,7 +237,7 @@ SW_TEST_CASE( Socket2DTest, SocketOnSpriteBoneBindsInPlane )
     using Internal = SocketBindingTestInternal;
     CharacterBoneArray bones2D;
     const int32        root = bones2D.addBone( hashed_string( "root" ), -1, float4x4::Identity );
-    (void)bones2D.addBone( hashed_string( "arm" ), root, float4x4::createRotationZ( MathUtil::HalfPi ) * float4x4::createTranslation( 1.0f, 0.0f, 0.0f ) );
+    (void)bones2D.addBone( hashed_string( "arm" ), root, float4x4::createRotationZ( MathUtil::kHalfPi ) * float4x4::createTranslation( 1.0f, 0.0f, 0.0f ) );
     SocketKindTable kinds;
     kinds.addKind( hashed_string( "Attach" ) );
     SocketSet sockets;
@@ -259,7 +259,7 @@ SW_TEST_CASE( Socket2DTest, SocketOnSpriteBoneBindsInPlane )
     SceneComponent*         pTorchScene = pTorch->addComponent<SceneComponent>();
     SocketBindingComponent* pBinding    = pTorch->addComponent<SocketBindingComponent>();
     pHeroScene->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
-    pHeroScene->setLocalRotation( float3( 0.0f, 0.0f, MathUtil::HalfPi ) );
+    pHeroScene->setLocalRotation( float3( 0.0f, 0.0f, MathUtil::kHalfPi ) );
     manager.beginPlay();
 
     const SocketId tipId = table.findSocket( hashed_string( "Tip" ) );

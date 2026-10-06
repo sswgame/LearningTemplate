@@ -2,11 +2,13 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
@@ -20,6 +22,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -39,6 +42,7 @@
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -112,6 +116,42 @@ namespace
         pDevice->endFrame( false, false );
         pDevice->waitIdle();
         return bExecuted;
+    }
+
+    /**
+     * @brief 한 프레임을 그리고 Present 전에 백버퍼를 텍스처로 읽어 옵니다(창에 나갈 그림 — 0 행이 화면 위). 실패면 false.
+     * @details 백버퍼는 Present 뒤 내용이 버려지므로 프레임 스트림에 복사를 기록한 뒤 endFrame 한다.
+     */
+    bool renderSceneFrameReadingBackBuffer( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene, const sw::float4& clear,
+                                            test::RHITestImage& outImage )
+    {
+        sw::IRHIResourceFactory* pFactory = pDevice->getResourceFactory();
+        sw::RHITextureDesc       desc{};
+        desc._width                         = pDevice->getBackBufferWidth();
+        desc._height                        = pDevice->getBackBufferHeight();
+        desc._format                        = pDevice->getBackBufferFormat();
+        desc._bIsRenderTarget               = SW_TRUE; // GL 블릿 대상은 FBO 가 있어야 한다
+        desc._bIsShaderResource             = SW_TRUE;
+        const sw::RHITextureHandle backCopy = pFactory->createTexture2D( desc );
+        if ( backCopy == 0 )
+            return false;
+
+        pDevice->beginFrame( clear );
+        bool                    bOk     = renderer.execute( pDevice, &scene );
+        sw::IRHICommandContext* pStream = pDevice->getFrameStreamContext();
+        bOk                             = bOk && pStream != nullptr;
+        if ( bOk )
+            pStream->blitTexture( 0, backCopy );
+        pDevice->endFrame( false, false );
+        pDevice->waitIdle();
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        bOk = bOk && pFactory->readbackTexture2D( backCopy, 0, 0, bytes, layout );
+        if ( bOk )
+            outImage.assign( std::move( bytes ), layout, desc._format );
+        pFactory->destroyTexture( backCopy );
+        return bOk;
     }
 
     /**
@@ -602,7 +642,7 @@ namespace
             const DrawnMask maskOff( imageOff );
             const DrawnMask maskOn( imageOn );
             ring._sphereCount = maskOff._drawnCount;
-            ring._radius      = sw::MathUtil::sqrt( static_cast<float32>( maskOff._drawnCount ) / sw::MathUtil::Pi );
+            ring._radius      = sw::MathUtil::sqrt( static_cast<float32>( maskOff._drawnCount ) / sw::MathUtil::kPi );
             if ( maskOff._width != maskOn._width || maskOff._height != maskOn._height )
                 return ring;
             uint64 lumaSum{ 0 };
@@ -640,6 +680,66 @@ namespace
                    " px(띠 안 " + sw::to_string( _inBandCount ) + ", 평균 밝기 " + sw::to_string( _ringMeanLuma ) + ") · 안쪽 차이 " + sw::to_string( _interiorDiffer );
         }
     };
+
+    /**
+     * @brief 그림자 패스가 바닥에 그림자를 드리우는지 — 그림자 맵을 비운 판(그림자 패스 깊이 쓰기를 끈 판)과 그림이 **달라야** 한다.
+     * @param shadowExtent 0 이면 주광의 기본 볼륨, 아니면 그 반경(m)의 볼륨(빛 거리는 그 두 배)
+     */
+    void expectShadowCastsOnEveryBackend( const utf8* pTestName, float32 shadowExtent )
+    {
+        sw::string pipelineText;
+        SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
+        constexpr sw::string_view kDepthWriteOn  = "_bEnableDepthWrite=\"true\"";
+        constexpr sw::string_view kDepthWriteOff = "_bEnableDepthWrite=\"false\"";
+        const size_t              shadowPassAt   = pipelineText.find( "_type=\"Shadow\"" );
+        SW_ASSERT_TRUE( shadowPassAt != sw::string::npos );
+        const size_t depthWriteAt = pipelineText.find( kDepthWriteOn.data(), shadowPassAt );
+        SW_ASSERT_TRUE( depthWriteAt != sw::string::npos );
+        pipelineText.replace( depthWriteAt, kDepthWriteOn.size(), kDepthWriteOff.data() );
+        const sw::string emptyShadowPath = test::makeTempPath( "emptyshadowpipeline.xml" );
+        SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( emptyShadowPath, pipelineText ) );
+
+        uint32                comparedCount{ 0 };
+        test::RHIBackendSweep sweep;
+        for ( test::RHITestDevice& device : sweep )
+        {
+            LitCubeScene          cube;
+            sw::vector<uint8>     listShadow;
+            sw::vector<uint8>     listEmptyShadow;
+            sw::RHITextureMipSpan layoutShadow{};
+            sw::RHITextureMipSpan layoutEmptyShadow{};
+            const utf8*           pName = device->getBackendName();
+            bool                  bOk   = cube.populate();
+            if ( bOk && shadowExtent > 0.0f )
+            {
+                sw::DirectionalLightComponent* pLight = cube._scene.findActiveDirectionalLight();
+                bOk                                   = pLight != nullptr;
+                if ( bOk )
+                {
+                    pLight->setShadowExtent( shadowExtent );
+                    pLight->setShadowDistance( shadowExtent * 2.0f );
+                }
+            }
+            if ( bOk )
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", listShadow, layoutShadow );
+            if ( bOk )
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, emptyShadowPath.c_str(), listEmptyShadow, layoutEmptyShadow );
+
+            if ( bOk && layoutShadow._width == layoutEmptyShadow._width )
+            {
+                ++comparedCount;
+                const CaptureDifference difference = compareCaptures( listShadow, listEmptyShadow );
+                SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+                SW_EXPECT_FALSE_MSG( difference.isSameImage(),
+                                     ( sw::string( pName ) + ": 그림자 맵을 비워도 그림이 같다 — 그림자가 하나도 지지 않는다 (" + difference.describe() + ")" ).c_str() );
+            }
+            else if ( bOk == false )
+                SW_LOG_WARNING( "%#: %# 에서 파이프라인을 돌리지 못했습니다.", pTestName, pName );
+        }
+
+        if ( comparedCount == 0 )
+            SW_TEST_SKIP( "No RHI backend could run the shadow pipelines" );
+    }
 } // namespace
 
 /**
@@ -2939,7 +3039,7 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
         // 변위가 가장 큰 시각에 고정한다(위 @details) — 찍는 순간의 벽시계에 따라 (C) 의 답이 바뀌지 않게.
-        renderer.setAnimationTimeOverride( sw::MathUtil::Pi * 0.75f );
+        renderer.setAnimationTimeOverride( sw::MathUtil::kPi * 0.75f );
 
         sw::Scene scene( "MorphPoolIdentityScene" );
         if ( bOk )
@@ -4377,48 +4477,17 @@ SW_TEST_CASE( RenderPassGpuTest, DepthPrepassRendersTheSameImage )
  */
 SW_TEST_CASE( RenderPassGpuTest, ShadowPassCastsOnEveryBackend )
 {
-    sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
-    constexpr sw::string_view kDepthWriteOn  = "_bEnableDepthWrite=\"true\"";
-    constexpr sw::string_view kDepthWriteOff = "_bEnableDepthWrite=\"false\"";
-    const size_t              shadowPassAt   = pipelineText.find( "_type=\"Shadow\"" );
-    SW_ASSERT_TRUE( shadowPassAt != sw::string::npos );
-    const size_t depthWriteAt = pipelineText.find( kDepthWriteOn.data(), shadowPassAt );
-    SW_ASSERT_TRUE( depthWriteAt != sw::string::npos );
-    pipelineText.replace( depthWriteAt, kDepthWriteOn.size(), kDepthWriteOff.data() );
-    const sw::string emptyShadowPath = test::makeTempPath( "emptyshadowpipeline.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( emptyShadowPath, pipelineText ) );
+    expectShadowCastsOnEveryBackend( "ShadowPassCastsOnEveryBackend", 0.0f );
+}
 
-    uint32                comparedCount{ 0 };
-    test::RHIBackendSweep sweep;
-    for ( test::RHITestDevice& device : sweep )
-    {
-        LitCubeScene          cube;
-        sw::vector<uint8>     listShadow;
-        sw::vector<uint8>     listEmptyShadow;
-        sw::RHITextureMipSpan layoutShadow{};
-        sw::RHITextureMipSpan layoutEmptyShadow{};
-        const utf8*           pName = device->getBackendName();
-        bool                  bOk   = cube.populate();
-        if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", listShadow, layoutShadow );
-        if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, emptyShadowPath.c_str(), listEmptyShadow, layoutEmptyShadow );
-
-        if ( bOk && layoutShadow._width == layoutEmptyShadow._width )
-        {
-            ++comparedCount;
-            const CaptureDifference difference = compareCaptures( listShadow, listEmptyShadow );
-            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
-            SW_EXPECT_FALSE_MSG( difference.isSameImage(),
-                                 ( sw::string( pName ) + ": 그림자 맵을 비워도 그림이 같다 — 그림자 패스가 아무것도 그리지 않는다 (" + difference.describe() + ")" ).c_str() );
-        }
-        else if ( bOk == false )
-            SW_LOG_WARNING( "ShadowPassCastsOnEveryBackend: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
-    }
-
-    if ( comparedCount == 0 )
-        SW_TEST_SKIP( "No RHI backend could run the shadow pipelines" );
+/**
+ * @brief [RenderPassGpuTest] 볼륨이 커도 작은 물체가 그림자를 드리운다 — 네 백엔드 모두
+ * @details 바이어스를 NDC 상수로 두면 볼륨 360 m 에서 월드 7.2 m 가 되어, 그보다 낮게 떠 있는 가리는 물체(이 1 m 큐브 · 벤치 · 레일)의
+ *          그림자가 통째로 사라진다(ThemePark). 바이어스는 텍셀 수로 정하고 볼륨 크기로 환산한다(`DirectionalShadowProjection::computeShaderParams`).
+ */
+SW_TEST_CASE( RenderPassGpuTest, ShadowSurvivesLargeShadowVolume )
+{
+    expectShadowCastsOnEveryBackend( "ShadowSurvivesLargeShadowVolume", 180.0f );
 }
 
 /**
@@ -5265,6 +5334,129 @@ SW_TEST_CASE( RenderPassGpuTest, HalfResolutionAttachmentCoversItsWholeTarget )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 반 크기 원본을 읽는 블룸은 그 원본의 텍셀로 비켜 읽는다 — 4 백엔드
+ * @details `forwardpipelinestaged.xml` 의 SceneColor · SceneDepth · BloomColor 를 나눗수 2 로 바꾸면 PostBloom 은 반 크기 원본을 읽어 반 크기에 쓴다. 블룸의 블러는
+ *          원본 텍셀 반 칸을 비켜 두 번 읽으므로 출력 텍셀마다 이웃 넷의 평균이 된다. 프레임 텍셀로 비키면 반의 반 칸이라 자기 텍셀 쪽으로 기운다.
+ *          CPU 로 두 비킴(원본 텍셀 0.5 칸 · 0.25 칸, 바이리니어)을 흉내 내 GPU 결과가 어느 쪽에 가까운지 본다(비킴은 좌우 · 위아래 대칭이라 행 방향이 상관없다).
+ */
+SW_TEST_CASE( RenderPassGpuTest, HalfResolutionBloomBlursByTheSourceTexel )
+{
+    sw::string pipelineText;
+    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
+    // 깊이도 같이 나눈다 — 한 패스의 출력(색 · 깊이)은 같은 크기여야 한다(파이프라인 검증).
+    for ( const utf8* pName : { "SceneColor", "SceneDepth", "BloomColor" } )
+    {
+        const sw::string declaration = sw::string( "<RenderPassAttachment _name=\"" ) + pName + "\"";
+        SW_ASSERT_TRUE( pipelineText.find( declaration ) != sw::string::npos );
+        pipelineText = sw::StringUtil::replace( pipelineText, declaration, declaration + " _resolutionDivisor=\"2\"" );
+    }
+    const sw::string halfPath = test::makeTempPath( "halfsourcebloomforwardpipeline.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( halfPath, pipelineText ) );
+
+    // FrameRendererConstants.cpp 의 kDefaultBloomParams(문턱 · 세기 · 무릎)와 같은 값.
+    constexpr float32 kBloomThreshold = 0.55f;
+    constexpr float32 kBloomIntensity = 0.65f;
+    constexpr float32 kBloomKnee      = 0.25f;
+    // 바이리니어(클램프) 한 번 — 텍셀 좌표의 0.5 가 텍셀 중심이다.
+    auto sampleBilinear = []( const test::RHITestImage& image, float32 u, float32 v, float32( &outRgb )[3] )
+    {
+        const float32     texelX          = u * static_cast<float32>( image.getWidth() ) - 0.5f;
+        const float32     texelY          = v * static_cast<float32>( image.getHeight() ) - 0.5f;
+        const float32     floorX          = sw::MathUtil::floor( texelX );
+        const float32     floorY          = sw::MathUtil::floor( texelY );
+        const float32     fracX           = texelX - floorX;
+        const float32     fracY           = texelY - floorY;
+        const int32       maxX            = static_cast<int32>( image.getWidth() ) - 1;
+        const int32       maxY            = static_cast<int32>( image.getHeight() ) - 1;
+        const int32       x0              = sw::MathUtil::clamp( static_cast<int32>( floorX ), 0, maxX );
+        const int32       y0              = sw::MathUtil::clamp( static_cast<int32>( floorY ), 0, maxY );
+        const int32       x1              = sw::MathUtil::clamp( static_cast<int32>( floorX ) + 1, 0, maxX );
+        const int32       y1              = sw::MathUtil::clamp( static_cast<int32>( floorY ) + 1, 0, maxY );
+        const test::Rgba8 p00             = image.getPixel( static_cast<uint32>( x0 ), static_cast<uint32>( y0 ) );
+        const test::Rgba8 p10             = image.getPixel( static_cast<uint32>( x1 ), static_cast<uint32>( y0 ) );
+        const test::Rgba8 p01             = image.getPixel( static_cast<uint32>( x0 ), static_cast<uint32>( y1 ) );
+        const test::Rgba8 p11             = image.getPixel( static_cast<uint32>( x1 ), static_cast<uint32>( y1 ) );
+        const uint8       arrChannel00[3] = { p00._r, p00._g, p00._b };
+        const uint8       arrChannel10[3] = { p10._r, p10._g, p10._b };
+        const uint8       arrChannel01[3] = { p01._r, p01._g, p01._b };
+        const uint8       arrChannel11[3] = { p11._r, p11._g, p11._b };
+        for ( uint32 channel = 0; channel < 3; ++channel )
+        {
+            const float32 top    = static_cast<float32>( arrChannel00[channel] ) * ( 1.0f - fracX ) + static_cast<float32>( arrChannel10[channel] ) * fracX;
+            const float32 bottom = static_cast<float32>( arrChannel01[channel] ) * ( 1.0f - fracX ) + static_cast<float32>( arrChannel11[channel] ) * fracX;
+            outRgb[channel]      = ( top * ( 1.0f - fracY ) + bottom * fracY ) / 255.0f;
+        }
+    };
+    // 블룸 출력 하나(postbloom.hlsli swApplyBloom, AO 없음)를 원본 텍셀 @p shiftInTexels 칸 비킴으로 흉내 내 GPU 값과의 채널 절대차 합을 냅니다.
+    auto computeBloomError = [&sampleBilinear]( const test::RHITestImage& source, const test::RHITestImage& bloom, float32 shiftInTexels ) -> float64
+    {
+        float64       errorSum = 0.0;
+        const float32 shiftU   = shiftInTexels / static_cast<float32>( source.getWidth() );
+        const float32 shiftV   = shiftInTexels / static_cast<float32>( source.getHeight() );
+        for ( uint32 y = 0; y < bloom.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < bloom.getWidth(); ++x )
+            {
+                const float32 u = ( static_cast<float32>( x ) + 0.5f ) / static_cast<float32>( bloom.getWidth() );
+                const float32 v = ( static_cast<float32>( y ) + 0.5f ) / static_cast<float32>( bloom.getHeight() );
+                float32       arrBefore[3]{};
+                float32       arrAfter[3]{};
+                sampleBilinear( source, u - shiftU, v - shiftV, arrBefore );
+                sampleBilinear( source, u + shiftU, v + shiftV, arrAfter );
+                const float32     arrBlur[3]  = { ( arrBefore[0] + arrAfter[0] ) * 0.5f, ( arrBefore[1] + arrAfter[1] ) * 0.5f, ( arrBefore[2] + arrAfter[2] ) * 0.5f };
+                const float32     peak        = sw::MathUtil::max( sw::MathUtil::max( arrBlur[0], arrBlur[1] ), arrBlur[2] );
+                const float32     soft        = sw::MathUtil::clamp( ( peak - kBloomThreshold + kBloomKnee ) / kBloomKnee, 0.0f, 1.0f );
+                const test::Rgba8 point       = source.getPixel( sw::MathUtil::min( x, source.getWidth() - 1 ), sw::MathUtil::min( y, source.getHeight() - 1 ) );
+                const test::Rgba8 gpu         = bloom.getPixel( x, y );
+                const float32     arrPoint[3] = { static_cast<float32>( point._r ) / 255.0f, static_cast<float32>( point._g ) / 255.0f, static_cast<float32>( point._b ) / 255.0f };
+                const float32     arrGpu[3]   = { static_cast<float32>( gpu._r ) / 255.0f, static_cast<float32>( gpu._g ) / 255.0f, static_cast<float32>( gpu._b ) / 255.0f };
+                for ( uint32 channel = 0; channel < 3; ++channel )
+                {
+                    const float32 expected = sw::MathUtil::clamp( arrPoint[channel] + arrBlur[channel] * soft * soft * kBloomIntensity, 0.0f, 1.0f );
+                    errorSum += static_cast<float64>( sw::MathUtil::abs( expected - arrGpu[channel] ) );
+                }
+            }
+        }
+        return errorSum;
+    };
+
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string   label = sw::string( device->getBackendName() ) + ": ";
+        LitCubeScene       stage;
+        bool               bOk = stage.populate();
+        test::RHITestImage sceneColor;
+        test::RHITestImage bloomColor;
+        if ( bOk )
+        {
+            sw::FrameRenderer renderer;
+            bOk = renderer.initialize( device.get(), halfPath ) && renderer.isReady();
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "반해상도 원본 · 블룸 파이프라인을 만들지 못했다" ).c_str() );
+            for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+                bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+            bOk = bOk && sceneColor.readTransient( renderer, "SceneColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+            renderer.shutdown();
+        }
+        if ( bOk == false )
+            continue;
+        ++comparedCount;
+        SW_EXPECT_EQUAL( sceneColor.getWidth(), bloomColor.getWidth() );
+        SW_EXPECT_EQUAL( sceneColor.getHeight(), bloomColor.getHeight() );
+        const float64 sourceTexelError = computeBloomError( sceneColor, bloomColor, 0.5f );
+        const float64 frameTexelError  = computeBloomError( sceneColor, bloomColor, 0.25f );
+        SW_LOG_INFO( "%#half-res bloom error vs CPU: source texel shift %#, frame texel shift %# (%#x%#)", label, sourceTexelError, frameTexelError,
+                     bloomColor.getWidth(), bloomColor.getHeight() );
+        SW_EXPECT_TRUE_MSG( sourceTexelError < frameTexelError,
+                            ( label + "반 크기 원본의 블룸이 원본 텍셀이 아니라 프레임 텍셀로 비켜 읽는다" ).c_str() );
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the half-resolution source bloom pipeline" );
+}
+
+/**
  * @brief [RenderPassGpuTest] 캡처 카메라 둘이 각자의 렌더 텍스처에 각자 본 것을 그린다(4 백엔드)
  * @details 붉은 큐브만 보는 카메라 → `rendertarget/test_red`, 푸른 큐브만 보는 카메라 → `rendertarget/test_blue`. 두 텍스처를 되읽어 한쪽은 붉고
  *          한쪽은 푸른지 본다. 뷰가 컬링 칸 · 상수버퍼 · 풀을 나눠 쓰면 둘이 같은 그림이 되거나(뒤 뷰의 절두체로 거른다) 비어 있다.
@@ -5451,6 +5643,334 @@ SW_TEST_CASE( RenderPassGpuTest, ScreenRectViewDrawsOnlyInsideItsRectangle )
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the screen-rect view test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 창으로 나간 그림(백버퍼)이 Present 캡처와 같다 — 4 백엔드
+ * @details 스크린샷(`-gv_screenshot`)은 오프스크린 캡처를 읽으므로 캡처 → 창 블릿의 반전 · 잘림은 거기서 보이지 않는다(GL 창은 0 행이 아래).
+ *          캡처를 켜고 그린 프레임의 백버퍼를 읽어 캡처와 픽셀로 견준다 — 위아래가 뒤집히면 큐브 · 바닥 자리가 갈린다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, PresentedBackBufferMatchesTheCapture )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        // 화면 위쪽에 치우친 큐브 — 상하 반전이 그림을 크게 옮긴다.
+        if ( bOk )
+        {
+            stage._pCube->setLocalPosition( sw::float3{ 0.6f, 0.9f, 0.0f } );
+            stage._scene.getObjectManager()->flushSceneTransforms();
+        }
+        renderer.setPresentCaptureEnabled( true );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        test::RHITestImage window;
+        bOk = bOk && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
+        sw::vector<uint8>     captureBytes;
+        sw::RHITextureMipSpan captureLayout{};
+        bOk = bOk && renderer.readbackPresentCapture( captureBytes, captureLayout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 백버퍼 · 캡처 읽기" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage capture;
+            capture.assign( std::move( captureBytes ), captureLayout, sw::constant::kBackBufferFormat );
+            SW_EXPECT_EQUAL( capture.getWidth(), window.getWidth() );
+            SW_EXPECT_EQUAL( capture.getHeight(), window.getHeight() );
+            uint32 differCount = 0;
+            uint32 drawnCount  = 0;
+            for ( uint32 y = 0; y < capture.getHeight() && y < window.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < capture.getWidth() && x < window.getWidth(); ++x )
+                {
+                    const test::Rgba8 capturePixel = capture.getPixel( x, y );
+                    if ( test::RHITestImage::getColorDistance( capturePixel, capture.getPixel( 0, 0 ) ) >= 24 )
+                        ++drawnCount;
+                    if ( test::RHITestImage::getColorDistance( capturePixel, window.getPixel( x, y ) ) > 6 )
+                        ++differCount;
+                }
+            }
+            SW_LOG_INFO( "%#window vs capture: %# of %# px differ (drawn %#)", label, differCount, capture.getPixelCount(), drawnCount );
+            SW_EXPECT_TRUE_MSG( drawnCount > capture.getPixelCount() / 200, ( label + "캡처에 큐브가 없다 — 비교가 뜻이 없다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( differCount * 100 < drawnCount, ( label + "창에 나간 그림이 캡처와 다르다 (다른 픽셀 " + sw::to_string( differCount ) + ")" ).c_str() );
+        }
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the back buffer readback test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] Present 가 백버퍼에 직접 그릴 때(캡처 끔) 화면 사각형 뷰가 백버퍼의 오른쪽 아래에 앉는다 — 4 백엔드
+ * @details GL 기본 프레임버퍼는 아래 원점이라 `setViewport` 가 y 를 뒤집는다. 캡처를 켜면 Present 가 오프스크린 FBO 에 그려 이 갈래를 안 지난다
+ *          (`ScreenRectViewDrawsOnlyInsideItsRectangle` 은 캡처를 본다). 뒤집기가 빠지면 PiP 가 오른쪽 **위**에 그려진다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ScreenRectViewLandsInItsCornerOfTheBackBuffer )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string       label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer      renderer;
+        MultiViewScene         stage;
+        bool                   bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        sw::CameraRenderOutput output;
+        output._target     = sw::CameraOutputTarget::ScreenRect;
+        output._screenRect = sw::float4{ 0.55f, 0.55f, 0.4f, 0.4f };
+        bOk                = bOk && stage.addViewCamera( "PictureInPicture", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f }, output, sw::CameraRole::Game ) != nullptr;
+        renderer.setPresentCaptureEnabled( false );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        test::RHITestImage window;
+        bOk = bOk && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 백버퍼 읽기" ).c_str() );
+        if ( bOk )
+        {
+            uint32 insideRed  = 0;
+            uint32 outsideRed = 0;
+            for ( uint32 y = 0; y < window.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < window.getWidth(); ++x )
+                {
+                    const test::Rgba8 pixel   = window.getPixel( x, y );
+                    const bool        bRed    = pixel._r > pixel._b + 60 && pixel._r > pixel._g + 40;
+                    const float32     u       = ( static_cast<float32>( x ) + 0.5f ) / static_cast<float32>( window.getWidth() );
+                    const float32     v       = ( static_cast<float32>( y ) + 0.5f ) / static_cast<float32>( window.getHeight() );
+                    const bool        bInside = 0.55f <= u && u <= 0.95f && 0.55f <= v && v <= 0.95f;
+                    if ( bRed && bInside )
+                        ++insideRed;
+                    else if ( bRed )
+                        ++outsideRed;
+                }
+            }
+            SW_LOG_INFO( "%#back buffer PiP red inside %#, outside %#", label, insideRed, outsideRed );
+            SW_EXPECT_TRUE_MSG( insideRed > window.getPixelCount() / 200, ( label + "백버퍼의 사각형 안에 PiP 가 없다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( outsideRed * 50 < insideRed, ( label + "PiP 가 백버퍼의 사각형 밖(위아래 뒤집힘?)에 그려졌다" ).c_str() );
+        }
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the back buffer screen-rect test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 추가 뷰(렌더 텍스처)의 투명 순서는 그 뷰의 눈으로 정한다 — 같은 눈을 주 카메라로 둔 그림과 같다(4 백엔드)
+ * @details 투명 큐브 여섯(같은 메시 · 머티리얼 = 한 배치, 회전을 달리해 순서가 그림에 남게)과 다른 머티리얼의 투명 큐브 하나(배치 순서)를 겹쳐 두고,
+ *          주 카메라는 앞(+Z)에서, 캡처 카메라는 뒤(-Z)에서 본다. 캡처 텍스처를 "그 캡처 카메라를 주 카메라로 둔 렌더러" 의 Present 캡처(같은 크기)와 견준다.
+ *          주 순서로 그리면 뒤에서 본 그림의 겹침이 거꾸로 섞여 색이 갈린다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ExtraViewSortsTransparencyFromItsOwnEye )
+{
+    constexpr uint32      kWidth  = 64;
+    constexpr uint32      kHeight = 48;
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+        // 씬 하나 — 큐브 일곱과 기본 카메라. 캡처 카메라의 자리 · 방향은 기준 렌더에서 주 카메라로 다시 쓴다.
+        auto populate = []( sw::Scene& scene, sw::shared_ptr<sw::Mesh>& outMesh, sw::shared_ptr<sw::Material>& outGlass, sw::shared_ptr<sw::Material>& outTint ) -> bool
+        {
+            if ( scene.ensureDefaultCameras() == false )
+                return false;
+            outMesh  = sw::MeshUtil::createUnitCube();
+            outGlass = sw::Material::create();
+            outTint  = sw::Material::create();
+            if ( outMesh == nullptr || outGlass->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
+                 outGlass->setParameter( nullptr, sw::hashed_string( "color" ), "0.2 0.9 0.3 0.55" ) == false ||
+                 outTint->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
+                 outTint->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.1 0.1 0.6" ) == false )
+                return false;
+            for ( uint32 cubeIndex = 0; cubeIndex < 7; ++cubeIndex )
+            {
+                const sw::string   name    = sw::string( "Glass" ) + sw::to_string( cubeIndex );
+                sw::GameObject*    pObject = scene.getObjectManager()->createGameObject( sw::hashed_string( name ) );
+                sw::MeshComponent* pMesh   = pObject != nullptr ? pObject->addComponent<sw::MeshComponent>() : nullptr;
+                if ( pMesh == nullptr )
+                    return false;
+                pMesh->setMesh( outMesh );
+                pMesh->setMaterial( cubeIndex == 6 ? outTint.get() : outGlass.get() ); // 마지막 하나만 다른 배치
+                const float32 offset = static_cast<float32>( cubeIndex ) * 0.30f;
+                pMesh->setLocalPosition( sw::float3{ offset - 0.9f, 0.0f, offset - 0.9f } );
+                pMesh->setLocalRotation( sw::float3{ 0.3f * static_cast<float32>( cubeIndex % 3 ), 0.65f * static_cast<float32>( cubeIndex ), 0.0f } );
+            }
+            scene.getObjectManager()->flushSceneTransforms();
+            return true;
+        };
+        const sw::float3 captureEye{ 0.4f, 1.0f, -4.0f }; // 주 카메라(기본: +Z 쪽)의 반대편
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+
+        // 1) 추가 뷰로 그린 그림.
+        sw::Scene                    viewScene( "ExtraViewTransparency" );
+        sw::shared_ptr<sw::Mesh>     viewMesh;
+        sw::shared_ptr<sw::Material> viewGlass;
+        sw::shared_ptr<sw::Material> viewTint;
+        sw::FrameRenderer            viewRenderer;
+        bool                         bOk      = viewRenderer.initialize( device.get() ) && viewRenderer.isReady() && populate( viewScene, viewMesh, viewGlass, viewTint );
+        sw::CameraComponent*         pCapture = nullptr;
+        if ( bOk )
+        {
+            sw::GameObject* pObject = viewScene.getObjectManager()->createGameObject( sw::hashed_string( "Capture" ) );
+            pCapture                = pObject != nullptr ? pObject->addComponent<sw::CameraComponent>() : nullptr;
+            bOk                     = pCapture != nullptr;
+        }
+        if ( bOk )
+        {
+            sw::CameraRenderOutput output;
+            output._target              = sw::CameraOutputTarget::RenderTexture;
+            output._renderTexture       = "rendertarget/test_extraviewtransparency";
+            output._renderTextureWidth  = kWidth;
+            output._renderTextureHeight = kHeight;
+            pCapture->setRole( sw::CameraRole::Capture );
+            pCapture->setLocalPosition( captureEye );
+            pCapture->lookAt( sw::float3{} );
+            pCapture->setRenderOutput( output );
+            viewScene.getObjectManager()->flushSceneTransforms();
+        }
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( viewRenderer, device.get(), viewScene, clear );
+        test::RHITestImage viewImage;
+        if ( bOk )
+        {
+            const sw::Texture2D*  pTexture = sw::engine::getAssetManager().getTextureManager().find( "rendertarget/test_extraviewtransparency" );
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            bOk = pTexture != nullptr && device->getResourceFactory()->readbackTexture2D( pTexture->getHandle(), 0, 0, bytes, layout );
+            if ( bOk )
+                viewImage.assign( std::move( bytes ), layout, pTexture->getFormat() );
+        }
+
+        // 2) 같은 눈을 주 카메라로 둔 기준 그림(같은 크기의 Present 캡처).
+        sw::Scene                    mainScene( "MainViewTransparency" );
+        sw::shared_ptr<sw::Mesh>     mainMesh;
+        sw::shared_ptr<sw::Material> mainGlass;
+        sw::shared_ptr<sw::Material> mainTint;
+        sw::FrameRenderer            mainRenderer;
+        bOk = bOk && mainRenderer.initialize( device.get() ) && mainRenderer.isReady() && populate( mainScene, mainMesh, mainGlass, mainTint );
+        if ( bOk )
+        {
+            sw::CameraComponent* pMain = mainScene.getActiveGameCamera();
+            bOk                        = pMain != nullptr;
+            if ( bOk )
+            {
+                pMain->setLocalPosition( captureEye );
+                pMain->lookAt( sw::float3{} );
+                mainScene.getObjectManager()->flushSceneTransforms();
+            }
+        }
+        mainRenderer.setOutputSizeOverride( kWidth, kHeight );
+        mainRenderer.setPresentCaptureEnabled( true );
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( mainRenderer, device.get(), mainScene, clear );
+        sw::vector<uint8>     mainBytes;
+        sw::RHITextureMipSpan mainLayout{};
+        bOk = bOk && mainRenderer.readbackPresentCapture( mainBytes, mainLayout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 읽기" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage mainImage;
+            mainImage.assign( std::move( mainBytes ), mainLayout, sw::constant::kBackBufferFormat );
+            SW_EXPECT_EQUAL( mainImage.getWidth(), viewImage.getWidth() );
+            SW_EXPECT_EQUAL( mainImage.getHeight(), viewImage.getHeight() );
+            uint32 drawnCount  = 0;
+            uint32 differCount = 0;
+            for ( uint32 y = 0; y < mainImage.getHeight() && y < viewImage.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < mainImage.getWidth() && x < viewImage.getWidth(); ++x )
+                {
+                    const test::Rgba8 reference = mainImage.getPixel( x, y );
+                    if ( test::RHITestImage::getColorDistance( reference, mainImage.getPixel( 0, 0 ) ) >= 24 )
+                        ++drawnCount;
+                    if ( test::RHITestImage::getColorDistance( reference, viewImage.getPixel( x, y ) ) > 8 )
+                        ++differCount;
+                }
+            }
+            SW_LOG_INFO( "%#extra view vs main view of the same eye: %# px differ (drawn %#)", label, differCount, drawnCount );
+            SW_EXPECT_TRUE_MSG( drawnCount > kWidth * kHeight / 20, ( label + "기준 그림에 투명 큐브가 없다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( differCount * 50 < drawnCount, ( label + "추가 뷰의 투명 순서가 그 뷰의 눈과 다르다 (다른 픽셀 " + sw::to_string( differCount ) + ")" ).c_str() );
+        }
+        mainRenderer.shutdown();
+        viewRenderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the extra-view transparency test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] GL 컨텍스트를 다른 스레드가 잠깐 쥐고 있으면 바인딩은 기다려서 잡는다 — [Error] 없음
+ * @details 게임 스레드의 자원 생성(ScopedOpenGLContext)이 컨텍스트를 쥔 순간 렌더 스레드가 프레임을 시작하면, 한 번만 시도하던 바인딩이 [Error] 를 남기고
+ *          그 프레임을 잃었다(NileCity 자동 플레이 골든 기록에서 한 번). 다른 스레드가 30 ms 쥐었다 놓는 동안 이 스레드의 bindGraphicsContext 가 성공해야 한다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, GlContextBindWaitsForAShortHolder )
+{
+    test::RHITestDevice device( sw::RHIBackend::OpenGL );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "OpenGL is not available" );
+    sw::IRHIDevice* pDevice = device.get();
+    pDevice->unbindGraphicsContext(); // 시험 스레드가 쥐고 있던 것을 놓는다
+
+    std::atomic<bool>  bHeld{ false };
+    std::atomic<bool>  bHolderDone{ false };
+    std::thread        holder( [pDevice, &bHeld, &bHolderDone]()
+    {
+        if ( pDevice->bindGraphicsContext() )
+        {
+            bHeld.store( true );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 30 ) );
+            pDevice->unbindGraphicsContext();
+        }
+        bHolderDone.store( true );
+    } );
+    const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 5000 );
+    while ( bHeld.load() == false && bHolderDone.load() == false && deadline.isExpired() == false )
+        std::this_thread::yield();
+    const bool bHolderTookIt = bHeld.load();
+    const bool bBound        = pDevice->bindGraphicsContext(); // 30 ms 안에 놓이므로 기다리면 된다
+    holder.join();
+    SW_EXPECT_TRUE_MSG( bHolderTookIt, "the holder thread could not take the GL context" );
+    SW_EXPECT_TRUE_MSG( bBound, "bindGraphicsContext gave up while another thread held the context for 30 ms" );
+    if ( bBound == false )
+        (void)pDevice->bindGraphicsContext(); // 디바이스를 내리는 쪽(이 스레드)이 컨텍스트를 쥐어야 한다
+}
+
+/**
+ * @brief [RenderPassGpuTest] 소프트웨어 어댑터 스위치(`gv_rhiSoftwareAdapter`)로 DX12 · DX11 이 WARP 로 선다(Windows) — CI 러너 조건을 이 PC 에서 만든다
+ * @details 디바이스가 적는 "실제로 선 어댑터가 소프트웨어인가" 를 본다(요청이 아니라 결과). 스위치를 끄면 하드웨어 어댑터로 돌아와야 한다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, SoftwareAdapterSwitchStartsWarp )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "global variable switches (gv_rhiSoftwareAdapter) are a development-build feature" );
+#elif defined( SW_PLATFORM_WINDOWS )
+    sw::GlobalVariableInfo* pSwitch = sw::engine::getGlobalVariableManager().findVariable( "gv_rhiSoftwareAdapter" );
+    SW_ASSERT_TRUE( pSwitch != nullptr );
+    for ( const sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11 } )
+    {
+        SW_EXPECT_TRUE( pSwitch->setValueAsInt( 1 ) );
+        bool bSoftware = false;
+        bool bReady    = false;
+        {
+            test::RHITestDevice device( backend );
+            bReady    = device.isReady();
+            bSoftware = bReady && device->isRunningOnSoftwareAdapter();
+        }
+        SW_EXPECT_TRUE( pSwitch->setValueAsInt( 0 ) );
+        SW_EXPECT_TRUE_MSG( bReady, "the WARP device did not start" );
+        SW_EXPECT_TRUE_MSG( bSoftware, "gv_rhiSoftwareAdapter=1 did not put the device on the software adapter" );
+        // 환경 변수(SW_RHI_SOFTWARE_ADAPTER=1)로 시험 전체를 WARP 로 돌리는 실행이면 "끄면 하드웨어" 는 볼 수 없다.
+        const utf8*         pEnv     = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
+        const bool          bEnvWarp = pEnv != nullptr && sw::StringUtil::equals( pEnv, "1" );
+        test::RHITestDevice hardware( backend );
+        if ( hardware.isReady() && bEnvWarp == false )
+            SW_EXPECT_FALSE_MSG( hardware->isRunningOnSoftwareAdapter(), "the device stayed on the software adapter after the switch went off" );
+    }
+#else
+    SW_TEST_SKIP( "WARP is a Windows adapter" );
+#endif
 }
 
 /**
@@ -5792,10 +6312,11 @@ SW_TEST_CASE( RenderPassGpuTest, PartialStructuredBufferUploadReadsOnlyTheSource
  */
 SW_TEST_CASE( RenderPassGpuTest, WaterWaveShaderMatchesCpu )
 {
-    constexpr uint32  kSampleCount                              = 32;
-    constexpr uint32  kTexelPerRow                              = 8;
-    constexpr float32 kTime                                     = 2.75f;
-    const sw::float4  arrWave[sw::WaterWaveMath::kMaxWaveCount] = {
+    constexpr uint32  kSampleCount                                = 32;
+    constexpr uint32  kTexelPerRow                                = 8;
+    constexpr float32 kTime                                       = 2.75f;
+    constexpr float32 kGravity                                    = sw::constant::kDefaultGravity;
+    const sw::float4  arrWave[sw::shaderslot::kGerstnerWaveCount] = {
         sw::GerstnerWave{ 0.3f, 12.0f, 0.35f, 0.8f}
             .toVector(),
         sw::GerstnerWave{ 2.1f,  5.0f, 0.12f, 0.6f}
@@ -5832,6 +6353,7 @@ SW_TEST_CASE( RenderPassGpuTest, WaterWaveShaderMatchesCpu )
             arrRoot[0] = device->supportsNativeBindlessSampling() ? static_cast<uint32>( uav ) : 0u;
             arrRoot[1] = kSampleCount;
             std::memcpy( &arrRoot[2], &kTime, sizeof( float32 ) );
+            std::memcpy( &arrRoot[3], &kGravity, sizeof( float32 ) );
             std::memcpy( &arrRoot[4], arrWave, sizeof( sw::float4 ) * 3 );
             cmdList->beginCommandList();
             cmdList->prepareTextureForUnorderedAccess( texture );
@@ -5863,7 +6385,7 @@ SW_TEST_CASE( RenderPassGpuTest, WaterWaveShaderMatchesCpu )
                         std::memcpy( &arrGpu[component], &bits, sizeof( float32 ) );
                     }
                     const sw::float2 origin{ -20.0f + static_cast<float32>( sampleIndex % 8u ) * 5.25f, -15.0f + static_cast<float32>( sampleIndex / 8u ) * 4.125f };
-                    const sw::float3 cpu = sw::WaterWaveMath::computeDisplacement( origin, kTime, arrWave );
+                    const sw::float3 cpu = sw::WaterWaveMath::computeDisplacement( origin, kTime, kGravity, arrWave );
                     worstError           = sw::MathUtil::max( worstError, sw::MathUtil::abs( cpu._x - arrGpu[0] ) );
                     worstError           = sw::MathUtil::max( worstError, sw::MathUtil::abs( cpu._y - arrGpu[1] ) );
                     worstError           = sw::MathUtil::max( worstError, sw::MathUtil::abs( cpu._z - arrGpu[2] ) );
@@ -5898,8 +6420,8 @@ SW_TEST_CASE( RenderPassGpuTest, VertexStageMaterialSchemaIsUsed )
         const sw::shared_ptr<sw::Material> water = sw::Material::create();
         SW_ASSERT_TRUE( water->initialize( device.get(), "engine/materials/water.material" ) );
         SW_EXPECT_TRUE_MSG( water->ensureShaderLayout( device.get() ), device->getBackendName() );
-        // water.hlsl 의 SwMaterialData — float4 여덟 = 128 바이트, wave1 은 16 바이트 자리다.
-        SW_EXPECT_EQUAL( 128u, water->getElementStride() );
+        // water.hlsl 의 SwMaterialData — float4 아홉(파도 중력 waveParams 포함) = 144 바이트, wave1 은 16 바이트 자리다.
+        SW_EXPECT_EQUAL( 144u, water->getElementStride() );
         const sw::MaterialProperty* pWave = water->findProperty( sw::hashed_string( "wave1" ) );
         SW_ASSERT_NOT_NULL( pWave );
         SW_EXPECT_EQUAL( 16u, pWave->_offset );
@@ -6287,7 +6809,7 @@ SW_TEST_CASE( RenderPassGpuTest, MeshOutlineDrawsDarkRingAroundSilhouette )
                 continue;
 
             ++comparedCount;
-            const float32 expectedRing = 2.0f * sw::MathUtil::Pi * ring._radius * widthPixel;
+            const float32 expectedRing = 2.0f * sw::MathUtil::kPi * ring._radius * widthPixel;
             SW_EXPECT_TRUE_MSG( static_cast<float32>( ring._ringCount ) >= expectedRing * 0.5f,
                                 ( label + "외곽선 고리가 없다(기대 약 " + sw::to_string( expectedRing ) + " px) — " + ring.describe() ).c_str() );
             SW_EXPECT_TRUE_MSG( ring._inBandCount * 100u >= ring._ringCount * kBandPercent, ( label + "고리가 실루엣 띠 밖에 있다 — " + ring.describe() ).c_str() );
@@ -6448,9 +6970,9 @@ SW_TEST_CASE( RenderPassGpuTest, TwoSidedMaterialDrawsBackFaces )
     };
     // [0] 등진 단면 · [1] 등진 양면 · [2] 마주 본 단면(기준 셰이딩)
     const QuadCase kArrCase[] = {
-        {false, sw::MathUtil::Pi},
-        { true, sw::MathUtil::Pi},
-        {false,             0.0f},
+        {false, sw::MathUtil::kPi},
+        { true, sw::MathUtil::kPi},
+        {false,              0.0f},
     };
     constexpr uint32 kMaxMeanDelta = 6;
 

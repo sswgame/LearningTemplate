@@ -277,7 +277,7 @@ namespace sw::editor
         {
             if ( path.empty() )
                 return;
-            if ( FileUtil::directoryExists( path ) == false )
+            if ( FileUtil::isDirectory( path ) == false )
                 return;
             ContentRoot root;
             root._displayName  = pName;
@@ -452,7 +452,8 @@ namespace sw::editor
         sourcesDesc._pId       = "##cb_sources";
         sourcesDesc._kind      = editor::EditorSectionKind::Child;
         sourcesDesc._childSize = float2{ 220.0f, 0.0f };
-        sourcesDesc._flags     = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::ResizeX;
+        // 오른쪽 Assets 칸과 같은 높이로 — 아래 개수 줄(drawCountLabel)이 창 안에 남는다. 높이 0(남은 전부)이면 그 줄이 창 밖으로 밀려 패널 전체가 스크롤된다.
+        sourcesDesc._flags = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::ResizeX | editor::EditorSectionFlags::FillRemaining;
         EditorChrome::beginSection( sourcesDesc );
 
         EditorWidgets::drawSectionHeader( "Favorites" );
@@ -667,7 +668,7 @@ namespace sw::editor
                 builtCrumb.append( part.data(), part.size() );
                 const string lowerChild = FileUtil::normalizePath( part );
                 string       next       = FileUtil::joinPath( builtPath, part );
-                if ( FileUtil::directoryExists( next ) == false && builtPath.empty() == false )
+                if ( FileUtil::isDirectory( next ) == false && builtPath.empty() == false )
                 {
                     vector<string> listChild;
                     EditorAssetCommands::collectChildFolders( builtPath, listChild );

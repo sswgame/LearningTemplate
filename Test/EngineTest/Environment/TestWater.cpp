@@ -4,6 +4,7 @@
 
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Environment/Water/WaterWaveMath.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -17,7 +18,9 @@ namespace
 {
     struct WaterTestUtil
     {
-        static void makeWaves( float4 ( &outArrWave )[WaterWaveMath::kMaxWaveCount] )
+        static constexpr float32 kGravity = 9.81f; ///< 시험의 파도 분산 중력(m/s²) — 엔진 설정 표의 기본값과 같다
+
+        static void makeWaves( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] )
         {
             outArrWave[0] = GerstnerWave{ 0.3f, 12.0f, 0.35f, 0.8f }.toVector();
             outArrWave[1] = GerstnerWave{ 2.1f, 5.0f, 0.12f, 0.6f }.toVector();
@@ -32,21 +35,21 @@ namespace
  */
 SW_TEST_CASE( WaterTest, SingleSineWaveMatchesClosedForm )
 {
-    float4 arrWave[WaterWaveMath::kMaxWaveCount] = {};
+    float4 arrWave[shaderslot::kGerstnerWaveCount] = {};
     for ( float4& wave : arrWave )
         wave = float4{ 0.0f, 1.0f, 0.0f, 0.0f };
-    const float3 still = WaterWaveMath::computeDisplacement( float2{ 3.0f, 4.0f }, 2.0f, arrWave );
+    const float3 still = WaterWaveMath::computeDisplacement( float2{ 3.0f, 4.0f }, 2.0f, WaterTestUtil::kGravity, arrWave );
     SW_EXPECT_NEAR_EQUAL( 0.0f, still.getLength(), 1.0e-7f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, WaterWaveMath::computeNormal( float2{ 3.0f, 4.0f }, 2.0f, arrWave )._y, 1.0e-7f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, WaterWaveMath::computeNormal( float2{ 3.0f, 4.0f }, 2.0f, WaterTestUtil::kGravity, arrWave )._y, 1.0e-7f );
 
     arrWave[0]                 = GerstnerWave{ 0.0f, 10.0f, 0.5f, 0.0f }.toVector();
     const float32 waveNumber   = 6.28318530718f / 10.0f;
-    const float32 angularSpeed = MathUtil::sqrt( 9.81f * waveNumber );
+    const float32 angularSpeed = MathUtil::sqrt( WaterTestUtil::kGravity * waveNumber );
     for ( uint32 probe = 0; probe < 16; ++probe )
     {
         const float32 x            = static_cast<float32>( probe ) * 1.3f;
         const float32 time         = 0.7f + static_cast<float32>( probe ) * 0.1f;
-        const float3  displacement = WaterWaveMath::computeDisplacement( float2{ x, 5.0f }, time, arrWave );
+        const float3  displacement = WaterWaveMath::computeDisplacement( float2{ x, 5.0f }, time, WaterTestUtil::kGravity, arrWave );
         SW_EXPECT_NEAR_EQUAL( 0.5f * MathUtil::sin( waveNumber * x - angularSpeed * time ), displacement._y, 1.0e-5f );
         SW_EXPECT_NEAR_EQUAL( 0.0f, displacement._x, 1.0e-6f ); // 가파름 0 은 옆으로 옮기지 않는다
     }
@@ -57,7 +60,7 @@ SW_TEST_CASE( WaterTest, SingleSineWaveMatchesClosedForm )
  */
 SW_TEST_CASE( WaterTest, SurfaceHeightQueryInvertsHorizontalDisplacement )
 {
-    float4 arrWave[WaterWaveMath::kMaxWaveCount];
+    float4 arrWave[shaderslot::kGerstnerWaveCount];
     WaterTestUtil::makeWaves( arrWave );
     float32 worstMiss{ 0.0f };
     for ( uint32 probe = 0; probe < 64; ++probe )
@@ -65,8 +68,8 @@ SW_TEST_CASE( WaterTest, SurfaceHeightQueryInvertsHorizontalDisplacement )
         const float2  position{ -20.0f + static_cast<float32>( probe % 8 ) * 5.3f, -15.0f + static_cast<float32>( probe / 8 ) * 4.1f };
         const float32 time = 1.0f + static_cast<float32>( probe ) * 0.05f;
         float2        origin{};
-        const float32 height       = WaterWaveMath::computeSurfaceHeight( position, time, arrWave, 8u, &origin );
-        const float3  displacement = WaterWaveMath::computeDisplacement( origin, time, arrWave );
+        const float32 height       = WaterWaveMath::computeSurfaceHeight( position, time, WaterTestUtil::kGravity, arrWave, 8u, &origin );
+        const float3  displacement = WaterWaveMath::computeDisplacement( origin, time, WaterTestUtil::kGravity, arrWave );
         worstMiss                  = MathUtil::max( worstMiss, ( origin + float2{ displacement._x, displacement._z } - position ).getLength() );
         SW_EXPECT_NEAR_EQUAL( displacement._y, height, 1.0e-6f );
     }
@@ -78,7 +81,7 @@ SW_TEST_CASE( WaterTest, SurfaceHeightQueryInvertsHorizontalDisplacement )
  */
 SW_TEST_CASE( WaterTest, NormalIsPerpendicularToTheDisplacedSurface )
 {
-    float4 arrWave[WaterWaveMath::kMaxWaveCount];
+    float4 arrWave[shaderslot::kGerstnerWaveCount];
     WaterTestUtil::makeWaves( arrWave );
     constexpr float32 kStep = 1.0e-2f;
     float32           worstDot{ 0.0f };
@@ -88,12 +91,12 @@ SW_TEST_CASE( WaterTest, NormalIsPerpendicularToTheDisplacedSurface )
         const float32 time    = 3.0f;
         auto          surface = [&]( const float2& point )
         {
-            const float3 displacement = WaterWaveMath::computeDisplacement( point, time, arrWave );
+            const float3 displacement = WaterWaveMath::computeDisplacement( point, time, WaterTestUtil::kGravity, arrWave );
             return float3{ point._x + displacement._x, displacement._y, point._y + displacement._z };
         };
         const float3 tangentX = surface( origin + float2{ kStep, 0.0f } ) - surface( origin - float2{ kStep, 0.0f } );
         const float3 tangentZ = surface( origin + float2{ 0.0f, kStep } ) - surface( origin - float2{ 0.0f, kStep } );
-        const float3 normal   = WaterWaveMath::computeNormal( origin, time, arrWave );
+        const float3 normal   = WaterWaveMath::computeNormal( origin, time, WaterTestUtil::kGravity, arrWave );
         worstDot              = MathUtil::max( worstDot, MathUtil::max( MathUtil::abs( normal.dot( tangentX.normalize() ) ), MathUtil::abs( normal.dot( tangentZ.normalize() ) ) ) );
     }
     SW_EXPECT_TRUE( worstDot < 2.0e-3f );
@@ -123,9 +126,9 @@ SW_TEST_CASE( WaterTest, LakeQueriesAndUnderwater )
     SW_EXPECT_FALSE( pWater->coversPosition( 21.0f, -1.0f ) );
     float32 height{ 0.0f };
     SW_ASSERT_TRUE( pWater->computeSurfaceHeight( 12.0f, -4.0f, height ) );
-    float4 arrWave[WaterWaveMath::kMaxWaveCount];
+    float4 arrWave[shaderslot::kGerstnerWaveCount];
     pWater->getWaveVectors( arrWave );
-    SW_EXPECT_NEAR_EQUAL( 3.0f + WaterWaveMath::computeSurfaceHeight( float2{ 12.0f, -4.0f }, 1.5f, arrWave ), height, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f + WaterWaveMath::computeSurfaceHeight( float2{ 12.0f, -4.0f }, 1.5f, WaterTestUtil::kGravity, arrWave ), height, 1.0e-5f );
 
     float32 depth{ 0.0f };
     SW_EXPECT_TRUE( pWater->isUnderwater( float3{ 12.0f, 1.0f, -4.0f }, depth ) );

@@ -44,13 +44,13 @@ def toResourcePathInternal(rawPath: str, repositoryRoot: Path, resourceRoot: Pat
 
 
 def main(listArgument: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Validate Resource/ against Config/Editor/AssetValidationRules.json")
-    parser.add_argument("--root", type=Path, default=None, help="repository root (default: auto)")
-    parser.add_argument("--rules", type=Path, default=None, help=f"rule file (default: {kDefaultRulePath})")
-    parser.add_argument("--files", nargs="*", default=None, help="only these assets")
-    parser.add_argument("--severity", choices=kSeverityOrder, default="info", help="lowest severity to report")
-    parser.add_argument("--json", type=Path, default=None, help="also write the findings as JSON")
-    parser.add_argument("--list-checks", action="store_true", help="print the check names a rule may use")
+    parser = argparse.ArgumentParser(description="Resource/ 를 Config/Editor/AssetValidationRules.json 의 규칙으로 검증한다")
+    parser.add_argument("--root", type=Path, default=None, help="저장소 루트(기본: 자동)")
+    parser.add_argument("--rules", type=Path, default=None, help=f"규칙 파일(기본: {kDefaultRulePath})")
+    parser.add_argument("--files", nargs="*", default=None, help="이 에셋만")
+    parser.add_argument("--severity", choices=kSeverityOrder, default="info", help="보고할 가장 낮은 심각도")
+    parser.add_argument("--json", type=Path, default=None, help="찾은 것을 JSON 으로도 쓴다")
+    parser.add_argument("--list-checks", action="store_true", help="규칙이 쓸 수 있는 검사 이름을 찍는다")
     args = parser.parse_args(listArgument)
 
     if args.list_checks:

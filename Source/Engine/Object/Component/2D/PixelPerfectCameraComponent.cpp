@@ -51,6 +51,7 @@ namespace sw
         if ( pManager != nullptr )
         {
             _barBatch.setSorting( _barSortingLayer, Render2DSettings::kMaxOrderInLayer );
+            _barBatch.setOwnerComponent( this );
             if ( _barBatch.initialize( *pManager, {}, PixelPerfectCameraComponentInternal::kBarCount ) == false )
                 SW_LOG_WARNING( "Pixel perfect letterbox bars could not be created" );
         }
@@ -65,6 +66,20 @@ namespace sw
             pCamera->setViewOffset( float3{ 0.0f, 0.0f, 0.0f } );
         _barBatch.shutdown();
         Component::onEndPlay();
+    }
+
+    void PixelPerfectCameraComponent::onPropertyChanged( hashed_string propertyName )
+    {
+        Component::onPropertyChanged( propertyName );
+        static const hashed_string s_activeName( "_bActive" );
+        if ( propertyName == s_activeName )
+            _barBatch.markAllEntriesDirty();
+    }
+
+    void PixelPerfectCameraComponent::onOwnerActiveInHierarchyChanged()
+    {
+        Component::onOwnerActiveInHierarchyChanged();
+        _barBatch.markAllEntriesDirty();
     }
 
     void PixelPerfectCameraComponent::onTick( float32 /*deltaTime*/ )

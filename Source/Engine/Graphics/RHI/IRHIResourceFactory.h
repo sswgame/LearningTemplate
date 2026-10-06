@@ -27,7 +27,7 @@ namespace sw
         virtual RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc ) = 0;
 
         /** @brief 컴퓨트 파이프라인 상태(PSO)를 만듭니다. */
-        virtual RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = "CSMain" ) = 0;
+        virtual RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {} ) = 0;
 
         /** @brief 파이프라인 상태 객체를 해제합니다. */
         virtual void destroyPipelineState( RHIPipelineStateHandle pso ) = 0;

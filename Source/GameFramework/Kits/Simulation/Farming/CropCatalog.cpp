@@ -6,7 +6,10 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Data/GameDataXml.h"
+#include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+
+#include <algorithm>
 
 namespace sw
 {
@@ -16,21 +19,20 @@ namespace sw
     {
         struct CropCatalogInternal
         {
-            /** @brief "Spring,Fall" 같은 목록을 계절 마스크로 읽습니다. 모르는 이름은 경고하고 건너뜁니다. */
-            static uint8 parseSeasonMask( string_view text, string_view sourceName, const utf8* pCropId )
+            /** @brief "Spring, Summer" 를 이름 목록으로 읽습니다. 알려 둔 계절이 있으면 모르는 이름은 알리고 뺀다. */
+            static void parseSeasons( string_view text, const vector<hashed_string>& listKnown, string_view sourceName, const utf8* pCropId,
+                                      vector<hashed_string>& outListSeason )
             {
-                (void)sourceName;
-                (void)pCropId;
-                uint8 mask = 0;
+                outListSeason.clear();
                 GameDataXml::forEachToken( text, ",;| ", [&]( string_view token )
                 {
-                    FarmSeason season{ FarmSeason::Spring };
-                    if ( parseFarmSeason( token, season ) )
-                        mask = static_cast<uint8>( mask | makeFarmSeasonBit( season ) );
+                    const hashed_string season( token );
+                    const bool          bKnown = listKnown.empty() || std::find( listKnown.begin(), listKnown.end(), season ) != listKnown.end();
+                    if ( bKnown )
+                        outListSeason.push_back( season );
                     else
-                        SW_LOG_WARNING( "%#: crop '%#' has an unknown season in '%#'", sourceName, pCropId, text );
+                        SW_LOG_WARNING( "%#: crop '%#' names an unknown season '%#'", sourceName, pCropId, season.c_str() );
                 } );
-                return mask;
             }
         };
     } // namespace
@@ -42,6 +44,7 @@ namespace sw
         : _catalog{}
         , _mapSeedIndex{}
         , _mapProduceIndex{}
+        , _listKnownSeason{}
     {
     }
 
@@ -105,9 +108,11 @@ namespace sw
             crop._sellPrice      = MathUtil::max( 0, node.getAttributeInt( "sellPrice", crop._sellPrice ) );
             crop._harvestCount   = MathUtil::max( 1, node.getAttributeInt( "harvest", crop._harvestCount ) );
             const utf8* pSeasons = node.findAttribute( "seasons" );
-            crop._seasonMask     = pSeasons != nullptr ? CropCatalogInternal::parseSeasonMask( string_view( pSeasons ), sourceName, pId )
-                                                       : makeFarmSeasonBit( FarmSeason::Spring );
-            if ( crop._seasonMask == 0 )
+            if ( pSeasons != nullptr )
+                CropCatalogInternal::parseSeasons( string_view( pSeasons ), _listKnownSeason, sourceName, pId, crop._listSeason );
+            else
+                crop._listSeason.push_back( hashed_string( "Spring" ) );
+            if ( crop._listSeason.empty() )
             {
                 SW_LOG_WARNING( "%#: crop '%#' grows in no season - skipped", sourceName, pId );
                 continue;
@@ -121,5 +126,21 @@ namespace sw
         if ( loadedCount == 0 )
             SW_LOG_WARNING( "%#: no <Crop> entries", sourceName );
         return loadedCount;
+    }
+
+    void CropCatalog::fillItemCatalog( ItemCatalog& inoutItems, int32 maxStack ) const
+    {
+        for ( const CropDef& crop : getCrops() )
+        {
+            for ( const hashed_string& itemId : { crop._seedItem, crop._produceItem } )
+            {
+                if ( itemId.empty() || inoutItems.findItem( itemId ) != nullptr )
+                    continue;
+                ItemDef item;
+                item._id       = itemId;
+                item._maxStack = maxStack;
+                inoutItems.addItem( item );
+            }
+        }
     }
 } // namespace sw

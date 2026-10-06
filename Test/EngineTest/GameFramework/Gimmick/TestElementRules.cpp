@@ -3,8 +3,8 @@
 
 #include "Engine/Resource/ResourceUtil.h"
 
-#include "GameFramework/Gimmick/ElementGrid.h"
-#include "GameFramework/Gimmick/ElementRuleTable.h"
+#include "GameFramework/Base/Gimmick/ElementGrid.h"
+#include "GameFramework/Base/Gimmick/ElementRuleTable.h"
 #include "GameFramework/Kits/Action/ActionAdventure/AdventureElementGrid.h"
 
 #include "TestFramework/TestFramework.h"

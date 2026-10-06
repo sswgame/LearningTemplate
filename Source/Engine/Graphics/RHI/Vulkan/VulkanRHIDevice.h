@@ -302,9 +302,9 @@ namespace sw
          */
         void createDebugMessenger();
         /**
-         * @brief 물리 디바이스를 고릅니다.
+         * @brief 물리 디바이스를 고릅니다. @p bSoftwareAdapter 면 CPU 디바이스(lavapipe · SwiftShader)만 후보로 둡니다.
          */
-        bool pickPhysicalDevice();
+        bool pickPhysicalDevice( bool bSoftwareAdapter );
         /**
          * @brief 논리 디바이스와 큐를 만듭니다.
          */
@@ -335,6 +335,13 @@ namespace sw
          * @details 이미지 개수가 달라질 수 있어 세마포어와 이미지별 펜스 표까지 함께 갱신합니다.
          */
         [[nodiscard]] bool recreateSwapChain();
+        /**
+         * @brief 서피스를 잃었을 때(VK_ERROR_SURFACE_LOST_KHR) 같은 창 위에 서피스 · 스왑체인을 다시 만듭니다. 사양은 스왑체인만이 아니라 서피스부터다.
+         * @return 다시 만들었으면 true. 창이 사라졌거나 새 서피스를 그래픽스 큐가 프레젠트할 수 없으면 false(다음 프레임에 다시 시도한다).
+         */
+        [[nodiscard]] bool recreateSurfaceAndSwapChain();
+        /** @brief 서피스를 잃은 것을 세고 경고로 남깁니다(잃은 횟수 · 그때의 프레임) — 다음 관찰이 환경 탓인지 가르게 한다. */
+        void noteSurfaceLost( const utf8* pWhere );
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
         bool initializePipelineCache();
@@ -369,8 +376,6 @@ namespace sw
         static constexpr uint32 kSlotSetsPerPool = 4096;
         /** @brief 풀 묶음 하나가 가질 수 있는 최대 풀 수입니다. 넘으면 에러 로그 후 직전 세트로 그립니다. */
         static constexpr uint32 kMaxPoolsPerDescriptorPoolSet = 16;
-        /** @brief setComputeRootConstants 용량(dword)입니다. 푸시 상수 크기이며 네 백엔드 공통 안전값이기도 합니다. */
-        static constexpr uint32 kMaxComputeRootConstantDwords = shaderslot::kRootConstantDwords;
 
         /// @brief VkBuffer 와 메모리 · 사용 플래그입니다.
         struct VulkanBufferRecord
@@ -599,7 +604,8 @@ namespace sw
         uint64                  _frameFenceCounter;
         uint32                  _width;
         uint32                  _height;
-        uint32                  _depthFormat; ///< VkFormat. createTexture2D · 렌더패스가 함께 쓰는 깊이 포맷
+        uint32                  _depthFormat;      ///< VkFormat. createTexture2D · 렌더패스가 함께 쓰는 깊이 포맷
+        uint32                  _surfaceLostCount; ///< 이 디바이스가 서피스를 잃은 횟수(진단)
         uint16                  _bFrameStarted           : 1;
         uint16                  _bEnableValidationLayers : 1;
         uint16                  _bMultiDrawIndirect      : 1;
@@ -611,7 +617,8 @@ namespace sw
         uint16                  _bSwapChainImageHeld     : 1; ///< 획득했지만 아직 present 하지 않은 스왑체인 이미지를 쥐고 있는가
         uint16                  _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량 · 예산 질의)
         uint16                  _linuxWsi                : 2; ///< 0=없음, 1=xlib, 2=xcb (Linux만)
-        [[maybe_unused]] uint16 _reservedVulkan          : 2;
+        uint16                  _bSurfaceLost            : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다)
+        [[maybe_unused]] uint16 _reservedVulkan          : 1;
         // 1 바이트 필드는 위 비트필드 뒤에 모은다 — 8 바이트 필드 사이에 끼면 칸마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출만 겁니다).

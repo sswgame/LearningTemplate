@@ -59,7 +59,7 @@ namespace sw
         /** @brief 등록할 수 있는 구간 수입니다. 넘으면 새 구간은 조용히 무시됩니다(측정이 실행을 막으면 안 되기 때문입니다). */
         static constexpr uint32 kMaxScope = 128;
         /** @brief 슬롯을 받지 못했을 때의 값입니다. */
-        static constexpr uint32 kInvalidSlot = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidSlot = invalid_index::kUint32;
         /** @brief 분포 히스토그램에서 옥타브(2배 구간) 하나를 나누는 비트 수입니다. 3 이면 옥타브당 8 칸, 해상도는 약 9% 입니다. */
         static constexpr uint32 kSubBucketBit = 3;
         /** @brief 옥타브당 칸 수입니다. */

@@ -1,0 +1,24 @@
+{
+    "_name": "GF_Account",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "계정 키트(공유) — 와이어 타입 · 메서드 표 · 요청/응답 코덱 · 계정 클라이언트(로그인 · 게스트 · 재접속 · 연동 · 게임 접속 표) · 외부 로그인 클라이언트 계약 (MMO · 로비 · 랭킹 게임)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

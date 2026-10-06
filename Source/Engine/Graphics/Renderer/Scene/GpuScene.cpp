@@ -453,6 +453,16 @@ namespace sw
         _snapshot._bCpuDirty         = SW_TRUE;
     }
 
+    const GpuViewTransparentOrder* GpuScene::findViewTransparentOrder( uint64 viewId ) const
+    {
+        for ( const GpuViewTransparentOrder& order : _snapshot._listViewTransparentOrder )
+        {
+            if ( order._viewId == viewId )
+                return &order;
+        }
+        return nullptr;
+    }
+
     void GpuScene::adoptCpuSnapshot( GpuSceneSnapshot& snapshot )
     {
         // 바꿔치기다. 지난 스냅샷의 저장소가 패킷 자리로 돌아가 다음 프레임에 재사용된다(GpuScene.h 참고).

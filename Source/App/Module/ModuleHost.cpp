@@ -106,16 +106,18 @@ namespace sw
 
             /**
              * @brief 바인딩한 API 표로 인스턴스를 만들고 초기화합니다(에디터 · 게임 공통). 실패하면 만든 것을 부수고 핸들을 비웁니다.
-             * @note **디바이스가 없으면 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로 묻는 것 자체가 죽는 길이고, 만들어 봐야
-             *       초기화가 실패할 것이 정해져 있습니다.
+             * @note @p bRequireDevice 면 **디바이스가 없을 때 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로 묻는 것 자체가 죽는
+             *       길이고, 만들어 봐야 초기화가 실패할 것이 정해져 있습니다. 전용 서버의 게임은 디바이스 없이(nullptr) 만듭니다.
              */
             template <typename TApi>
-            [[nodiscard]] static bool createInstance( const TApi& api, void*& pOutHandle, IWindow* pWindow, RHI* pRHI, const utf8* pModuleLabel )
+            [[nodiscard]] static bool createInstance( const TApi& api, void*& pOutHandle, IWindow* pWindow, RHI* pRHI, bool bRequireDevice,
+                                                      const utf8* pModuleLabel )
             {
-                pOutHandle = nullptr;
-                if ( pRHI == nullptr || pRHI->hasDevice() == false )
+                pOutHandle            = nullptr;
+                const bool bHasDevice = pRHI != nullptr && pRHI->hasDevice();
+                if ( bRequireDevice && bHasDevice == false )
                 {
-                    SW_LOG_ERROR( "RHI 디바이스가 없어 %# 인스턴스를 만들지 않습니다.", pModuleLabel );
+                    SW_LOG_ERROR( "No RHI device - %# instance is not created", pModuleLabel );
                     return false;
                 }
 
@@ -126,7 +128,7 @@ namespace sw
                     return false;
                 }
 
-                if ( api.initialize( pOutHandle, pWindow, &pRHI->getDevice() ) == false )
+                if ( api.initialize( pOutHandle, pWindow, bHasDevice ? &pRHI->getDevice() : nullptr ) == false )
                 {
                     SW_LOG_ERROR( "Failed to initialize %# instance", pModuleLabel );
                     if ( api.destroy != nullptr )
@@ -200,6 +202,7 @@ namespace sw
         , _frameState{}
         , _bEnableEditor{ SW_FALSE }
         , _bEditorModuleActive{ SW_TRUE }
+        , _bDedicatedServer{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -297,7 +300,7 @@ namespace sw
 #endif
 
         // 게임이 먼저, 에디터가 나중이다. 게임은 처음 여는 씬을 요청하고(`GameInstanceBase::requestFirstScene`) 에디터는 제 시작 씬
-        // (`-gv_editorStartupScene`)을 요청한다. 씬 매니저는 마지막 요청을 남기므로 나중에 요청한 에디터의 씬이 열린다(`GameConfig::_startupScene` 주석).
+        // (`-gv_editorStartupScene`)을 요청한다. 씬 매니저는 마지막 요청을 남기므로 나중에 요청한 에디터의 씬이 열린다(`GameSettings::_startMap` 주석).
 #if defined( SW_SHIPPING )
         onAfterGameReload( nullptr );
 #else
@@ -355,6 +358,12 @@ namespace sw
         return true;
     }
 
+    bool ModuleHost::initializeDedicatedServer( LiveReloadManager* pLiveReloadManager )
+    {
+        _bDedicatedServer = SW_TRUE;
+        return initialize( pLiveReloadManager, nullptr, nullptr, nullptr, false );
+    }
+
     void ModuleHost::shutdown()
     {
         if ( _moduleCompiler != nullptr )
@@ -393,7 +402,7 @@ namespace sw
 #else
         const string modulePath     = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ),
                                                           ModuleImageUtil::formatSharedLibraryName( sw::config::kTargetEditorModule ) );
-        void* const  pLibraryModule = FileUtil::fileExists( modulePath ) ? ModuleImageUtil::loadDynamicLibrary( modulePath ) : nullptr;
+        void* const  pLibraryModule = FileUtil::exists( modulePath ) ? ModuleImageUtil::loadDynamicLibrary( modulePath ) : nullptr;
         if ( pLibraryModule == nullptr )
         {
             SW_LOG_ERROR( "Asset importing needs the editor module next to the executable: %#", modulePath.c_str() );
@@ -945,12 +954,12 @@ namespace sw
     bool ModuleHost::createEditorInstance()
     {
         SW_MEMORY_SCOPE( Editor );
-        return ModuleHostInternal::createInstance( _editorApi, _editor, _pWindow, _pRHI, "Editor" );
+        return ModuleHostInternal::createInstance( _editorApi, _editor, _pWindow, _pRHI, true, "Editor" );
     }
 
     bool ModuleHost::createGameInstance()
     {
         SW_MEMORY_SCOPE( Game );
-        return ModuleHostInternal::createInstance( _gameApi, _game, _pWindow, _pRHI, "Game" );
+        return ModuleHostInternal::createInstance( _gameApi, _game, _pWindow, _pRHI, _bDedicatedServer == SW_FALSE, "Game" );
     }
 } // namespace sw

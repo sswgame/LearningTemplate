@@ -1,5 +1,4 @@
 {
     "_packRoot": "game/harvestvalley",
-    "_gameSettingsFile": "data/gamesettings.xml",
-    "_startupScene": ""
+    "_windowTitle": "Harvest Valley"
 }

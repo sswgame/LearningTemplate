@@ -105,6 +105,16 @@ namespace sw
         }
         /** @brief 마지막 `setDisplayMode` 가 고른 창 방식입니다. */
         WindowDisplayMode getDisplayMode() const { return _displayMode; }
+        /**
+         * @brief 사용자가 창을 줄일 수 있는 가장 작은 클라이언트 크기(물리 픽셀)를 정합니다. 0 이면 제한하지 않습니다.
+         * @details 창 모드에만 적용합니다(Win32 `WM_GETMINMAXINFO` · X11 `WM_NORMAL_HINTS` 최소 크기). 지금 창이 이보다 작으면 이 크기로 키웁니다.
+         *          다시 만든 창(`recreate`)에도 그대로 걸립니다. **창 스레드(메인 스레드)에서만 부릅니다.**
+         */
+        void setMinimumClientSize( uint32 width, uint32 height );
+        /** @brief `setMinimumClientSize` 의 가로 크기입니다. 0 이면 제한이 없습니다. */
+        uint32 getMinimumClientWidth() const { return _minClientWidth; }
+        /** @brief `setMinimumClientSize` 의 세로 크기입니다. 0 이면 제한이 없습니다. */
+        uint32 getMinimumClientHeight() const { return _minClientHeight; }
 
         // ------------------------------------------------------------------------------
         // IRenderSurface: RHI 가 창 시스템을 모르는 채로 묻는 다섯 가지
@@ -187,6 +197,11 @@ namespace sw
          * @details 그 값이 플랫폼마다 다릅니다. Win32 는 `CW_USEDEFAULT`, X11 은 좌표 하나입니다.
          */
         virtual void clearRestorePosition() {}
+        /**
+         * @brief 최소 크기를 플랫폼에 알립니다. 값은 `_minClientWidth` · `_minClientHeight` 에 이미 있습니다.
+         * @details 메시지를 받을 때마다 값을 읽는 플랫폼(Win32 `WM_GETMINMAXINFO`)은 할 일이 없습니다.
+         */
+        virtual void applyMinimumClientSize() {}
 
     protected:
         wstring                      _title;
@@ -208,7 +223,9 @@ namespace sw
         WindowDisplayMode      _displayMode; /**< 마지막 `setDisplayMode` 가 고른 방식. */
         uint8                  _arrReserved[6];
         /** @brief 다시 만들 때 놓을 위치입니다. 플랫폼 생성자가 자기 "알아서" 값으로 채웁니다. */
-        int32 _restoreX;
-        int32 _restoreY;
+        int32  _restoreX;
+        int32  _restoreY;
+        uint32 _minClientWidth;  /**< 사용자가 줄일 수 있는 가장 작은 클라이언트 가로(물리 픽셀). 0 = 제한 없음 */
+        uint32 _minClientHeight; /**< 위와 같습니다(세로). */
     };
 } // namespace sw

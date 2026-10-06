@@ -27,14 +27,21 @@ namespace sw
     bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
                                             uint32 resolutionDivisor )
     {
+        return allocateSized( pDevice, name, format, bDepth, clearColor, computeScaledExtent( _width, resolutionDivisor ),
+                              computeScaledExtent( _height, resolutionDivisor ) );
+    }
+
+    bool TransientAttachmentPool::allocateSized( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 width,
+                                                 uint32 height )
+    {
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return false;
         if ( _mapAttachment.find( name ) != _mapAttachment.end() )
             return true;
 
         RHITextureDesc desc{};
-        desc._width                   = computeScaledExtent( _width, resolutionDivisor );
-        desc._height                  = computeScaledExtent( _height, resolutionDivisor );
+        desc._width                   = width;
+        desc._height                  = height;
         desc._format                  = format;
         desc._bIsRenderTarget         = bDepth ? SW_FALSE : SW_TRUE;
         desc._bIsDepthStencil         = bDepth ? SW_TRUE : SW_FALSE;

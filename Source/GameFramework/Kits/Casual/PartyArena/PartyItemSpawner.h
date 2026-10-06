@@ -5,22 +5,24 @@
  *          `Shield`). 같은 씨앗 · 같은 걸음이면 같은 자리에 같은 것이 나옵니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Data/GameCatalog.h"
-#include "GameFramework/Data/StatBlock.h"
-#include "GameFramework/Data/XmlCatalog.h"
+#include "GameFramework/Base/Data/GameCatalog.h"
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Data/XmlCatalog.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {
+    class Archive;
     class XmlNode;
 
     /** @brief 아이템 정의 하나입니다. */
@@ -90,6 +92,9 @@ namespace sw
         friend class XmlCatalog<PartyItemSpawner>;
 
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "PISP" );
+        static constexpr uint32 kStateVersion = 1;
+
         PartyItemSpawner();
 
         /** @brief 규칙과 씨앗을 두고 놓인 것을 비웁니다(정의는 남긴다). 첫 아이템은 최소 간격 뒤입니다. */
@@ -102,6 +107,11 @@ namespace sw
         void               drainEvents( vector<PartyItemEvent>& outListEvent );
         /** @brief 쌓인 알림을 꺼내지 않고 버립니다(쓰지 않는 쪽 — 받을 목록을 만들어 복사하지 않는다). */
         void discardEvents() { _eventBuffer.clear(); }
+
+        /** @brief 놓인 아이템(자리 · 정의 id · 나이 · 번호) · 난수 · 다음 아이템까지 남은 시간 · 다음 번호를 씁니다. 정의 · 규칙은 싣지 않고, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 모르는 아이템 id 거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         const PartyItemDef*              findItem( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<PartyItemInstance>& getInstances() const { return _listInstance; }

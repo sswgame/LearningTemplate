@@ -35,8 +35,6 @@
 
 #include "EngineTest/ResourcePackTestUtil.h"
 
-#include <filesystem>
-
 using namespace sw;
 
 namespace test
@@ -48,9 +46,8 @@ namespace test
             /** @brief 같은 프로세스 · 같은 이름표의 임시 파일 경로입니다(파일 경로만 받는 로더용 — 팩 · 씬). */
             static string makeScratchPath( string_view tag )
             {
-                std::error_code   ec;
-                const std::string tempDir = std::filesystem::temp_directory_path( ec ).generic_string();
-                return FileUtil::joinPath( tempDir.c_str(), string( "sw_fuzz_" ) + to_string( Process::getCurrentProcessId() ) + "_" + string( tag ) );
+                const string tempDir = FileUtil::getTempDirectory();
+                return FileUtil::joinPath( tempDir, string( "sw_fuzz_" ) + to_string( Process::getCurrentProcessId() ) + "_" + string( tag ) );
             }
 
             static string_view asText( const uint8* pData, size_t size ) { return string_view( reinterpret_cast<const utf8*>( pData ), size ); }
@@ -354,7 +351,7 @@ namespace test
             }
             static void seedStringTable( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( SourceStringTable::kFileSuffix, 2, outListSeed );
+                appendResourceSeeds( SourceStringTable::kExtension, 2, outListSeed );
                 appendTextSeed( R"({"culture":"en","entries":{"Menu.Start":{"source":"Start","maxLength":12},"Greeting":{"source":"Hi {name}"}}})", outListSeed );
             }
             static void seedTileMap( vector<vector<uint8>>& outListSeed )
@@ -425,9 +422,8 @@ namespace test
 
     sw::string makeFuzzTracePath( sw::string_view targetName )
     {
-        std::error_code   ec;
-        const std::string tempDir = std::filesystem::temp_directory_path( ec ).generic_string();
-        return FileUtil::joinPath( tempDir.c_str(), string( "sw_fuzz_last_" ) + string( targetName ) + ".bin" );
+        const string tempDir = FileUtil::getTempDirectory();
+        return FileUtil::joinPath( tempDir, string( "sw_fuzz_last_" ) + string( targetName ) + ".bin" );
     }
 
     const LoaderFuzzTarget* findLoaderFuzzTarget( sw::string_view name )

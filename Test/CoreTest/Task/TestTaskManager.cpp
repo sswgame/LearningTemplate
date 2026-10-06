@@ -629,6 +629,59 @@ SW_TEST_CASE( TaskManagerTest, RunParallelInsideWorkerTaskCoversEveryIndex )
 }
 
 /**
+ * @brief [TaskManagerTest] `runParallel` 의 합류를 기다리는 스레드는 Low 줄(백그라운드 I/O)을 돕지 않는다
+ * @details 합류가 기다리는 것은 자기 티켓(Normal 줄)과 다른 스레드가 돌고 있는 청크뿐이다. 그 사이 Low 태스크(에셋 파싱 · 파일 완료, 수 ms)를 집으면
+ *          그 태스크가 끝날 때까지 합류가 늦어진다 — 로딩 중 게임 스레드의 병렬 틱이 그만큼 는다.
+ *          Low 태스크는 워커의 첫 청크 안에서 넣는다. 먼저 넣으면 깨어난 워커가 그것부터 집어 티켓을 가져갈 워커가 없다(호출 스레드가 자기 티켓을 다 가져가
+ *          합류가 바로 끝나 재현되지 않는다). 워커 청크는 10 ms 를 붙들어, 호출 스레드가 자기 청크를 끝내고 기다리는 동안 Low 줄에 일이 있게 한다.
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelJoinDoesNotHelpLowPriorityTasks )
+{
+    constexpr uint32 kRoundCount   = 5;
+    constexpr uint32 kLowTaskCount = 8;
+    constexpr uint32 kChunkCount   = 12;
+
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( 2 ) );
+
+    sw::atomic<uint32> lowOnJoiningThreadCount{ 0 };
+    sw::atomic<bool>   bJoining{ false };
+    for ( uint32 round = 0; round < kRoundCount; ++round )
+    {
+        sw::atomic<bool> bLowSubmitted{ false };
+        bJoining.store( true, std::memory_order_release );
+        manager.runParallel( kChunkCount, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&manager, &bLowSubmitted, &bJoining, &lowOnJoiningThreadCount]( uint32, uint32 )
+        {
+            if ( manager.isMainThread() )
+            {
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+                return;
+            }
+            if ( bLowSubmitted.exchange( true ) == false )
+            {
+                for ( uint32 lowIndex = 0; lowIndex < kLowTaskCount; ++lowIndex )
+                {
+                    sw::TaskHandle low = manager.emplaceTask( "BackgroundIoProbe", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &bJoining, &lowOnJoiningThreadCount]()
+                    {
+                        if ( manager.isMainThread() && bJoining.load( std::memory_order_acquire ) )
+                            lowOnJoiningThreadCount.fetch_add( 1, std::memory_order_relaxed );
+                        std::this_thread::sleep_for( std::chrono::milliseconds( 3 ) );
+                    } ) );
+                    low.setPriority( sw::TaskPriority::Low );
+                    low.submit();
+                }
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        } ) );
+        bJoining.store( false, std::memory_order_release );
+        SW_ASSERT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    }
+
+    SW_EXPECT_EQUAL( 0u, lowOnJoiningThreadCount.load() );
+    manager.shutdown();
+}
+
+/**
  * @brief [TaskManagerTest] 메인 친화도의 병렬 부모는 청크가 워커에서 다 돈 뒤 메인에서만 완료된다
  * @details 청크는 워커가 돌고(티켓), 부모 노드만 `MainThread` 다. 부모는 그룹이 끝나야 준비되고, 준비돼도 워커가
  *          집어가면 안 된다 — `dispatchMainThreadTasks` 를 부르기 전에는 스테이지가 끝나지 않아야 한다.

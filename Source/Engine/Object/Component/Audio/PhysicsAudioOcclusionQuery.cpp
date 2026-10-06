@@ -8,7 +8,7 @@ namespace sw
 {
     PhysicsAudioOcclusionQuery::PhysicsAudioOcclusionQuery()
         : _pScene{ nullptr }
-        , _layerMask{ MathUtil::MaxUInt32 }
+        , _layerMask{ MathUtil::kMaxUInt32 }
     {
     }
 

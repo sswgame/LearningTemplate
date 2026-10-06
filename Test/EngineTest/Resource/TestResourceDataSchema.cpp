@@ -54,17 +54,20 @@
 #include "Engine/Utility/TileMap/TileSetAsset.h"
 #include "Engine/Utility/Xml/TileMapXml.h"
 
-#include "GameFramework/AI/Director/AiDirectorProfile.h"
-#include "GameFramework/AI/Schedule/ScheduleCatalog.h"
-#include "GameFramework/AI/SpawnDirector.h"
-#include "GameFramework/Ability/AbilityCatalog.h"
-#include "GameFramework/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Camera/CameraPreset.h"
-#include "GameFramework/Combat/Weapon.h"
-#include "GameFramework/Data/GameSettings.h"
-#include "GameFramework/Gimmick/ElementRuleTable.h"
-#include "GameFramework/Interaction/InteractionCatalog.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/AI/Director/AiDirectorProfile.h"
+#include "GameFramework/Base/AI/Schedule/ScheduleCatalog.h"
+#include "GameFramework/Base/AI/SpawnDirector.h"
+#include "GameFramework/Base/Ability/AbilityCatalog.h"
+#include "GameFramework/Base/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Base/Camera/CameraPreset.h"
+#include "GameFramework/Base/Combat/Weapon.h"
+#include "GameFramework/Base/Data/GameSettings.h"
+#include "GameFramework/Base/Gimmick/ElementRuleTable.h"
+#include "GameFramework/Base/Interaction/InteractionCatalog.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Progression/Reputation.h"
+#include "GameFramework/Base/Quest/QuestCatalog.h"
+#include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Simulation/ThemePark/ParkLayout.h"
@@ -124,11 +127,11 @@ namespace
         static bool isAudioMixer( sw::string_view resourceId ) { return endsWith( resourceId, ".audiomixer.xml" ); }
         static bool isAudioEvents( sw::string_view resourceId ) { return endsWith( resourceId, ".audioevents.xml" ); }
         static bool isAudioMusic( sw::string_view resourceId ) { return endsWith( resourceId, ".music.xml" ); }
-        static bool isCultureTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::CultureTable::kFileSuffix ); }
-        static bool isLocalizationProject( sw::string_view resourceId ) { return endsWith( resourceId, sw::LocalizationProject::kFileSuffix ); }
-        static bool isSourceStringTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::SourceStringTable::kFileSuffix ); }
-        static bool isTranslationTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationTable::kFileSuffix ); }
-        static bool isTranslationMemory( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationMemory::kFileSuffix ); }
+        static bool isCultureTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::CultureTable::kExtension ); }
+        static bool isLocalizationProject( sw::string_view resourceId ) { return endsWith( resourceId, sw::LocalizationProject::kExtension ); }
+        static bool isSourceStringTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::SourceStringTable::kExtension ); }
+        static bool isTranslationTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationTable::kExtension ); }
+        static bool isTranslationMemory( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationMemory::kExtension ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -384,6 +387,9 @@ namespace
         static bool isGameData( sw::string_view resourceId, sw::string_view fileName ) { return startsWith( resourceId, "game/" ) && endsWith( resourceId, fileName ); }
         static bool isAbilities( sw::string_view resourceId ) { return isGameData( resourceId, "/data/abilities.xml" ); }
         static bool isCrops( sw::string_view resourceId ) { return isGameData( resourceId, "/data/crops.xml" ); }
+        static bool isCreatures( sw::string_view resourceId ) { return isGameData( resourceId, "/data/creatures.xml" ); }
+        static bool isFriendship( sw::string_view resourceId ) { return isGameData( resourceId, "/data/friendship.xml" ); }
+        static bool isQuests( sw::string_view resourceId ) { return isGameData( resourceId, "/data/quests.xml" ); }
         static bool isCity( sw::string_view resourceId ) { return isGameData( resourceId, "/data/city.xml" ); }
         static bool isWeapons( sw::string_view resourceId ) { return isGameData( resourceId, "/data/weapons.xml" ); }
         static bool isRtsUnits( sw::string_view resourceId ) { return isGameData( resourceId, "/data/units.xml" ); }
@@ -449,6 +455,9 @@ namespace
             {       "usersettings",  &isUserSettingsSchema,                            &loadUserSettingsSchema},
             {          "abilities",           &isAbilities,                   &loadCatalog<sw::AbilityCatalog>},
             {              "crops",               &isCrops,                      &loadCatalog<sw::CropCatalog>},
+            {          "creatures",           &isCreatures,              &loadCatalog<sw::CreatureLifeCatalog>},
+            {         "friendship",          &isFriendship,                &loadCatalog<sw::ReputationCatalog>},
+            {             "quests",              &isQuests,                     &loadCatalog<sw::QuestCatalog>},
             {               "city",                &isCity,                      &loadCatalog<sw::CityCatalog>},
             {            "weapons",             &isWeapons,                    &loadCatalog<sw::WeaponCatalog>},
             {           "rtsunits",            &isRtsUnits,                       &loadCatalog<sw::RtsCatalog>},

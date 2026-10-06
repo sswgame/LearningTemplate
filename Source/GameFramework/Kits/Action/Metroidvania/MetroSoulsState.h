@@ -6,23 +6,28 @@
  *          전리품은 기반 `LootCatalog` 를 씨앗이 있는 `GameRandom` 으로 굴립니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
+    struct GameStateRefs;
+
+    class Archive;
     class GameFlags;
     class GameRandom;
-    class ItemBag;
+    class ItemStackList;
     class LootCatalog;
     class MetroidvaniaCatalog;
     class Vitality;
+    class Wallet;
 
     /** @brief 죽음 · 휴식 알림의 종류입니다. */
     enum class MetroSoulsEventType : uint8
@@ -78,14 +83,16 @@ namespace sw
     class SW_GF_API MetroSoulsState
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MSOL" );
+        static constexpr uint32 kStateVersion = 1;
+
         MetroSoulsState();
 
-        /** @brief 카탈로그 규칙으로 처음 상태(통화 0 · 물약 가득 · 처치 없음)를 둡니다. */
-        void initialize( const MetroidvaniaCatalog* pCatalog );
-
-        void addCurrency( int32 amount );
-        /** @brief 통화를 씁니다. 모자라면 쓰지 않고 false 입니다. */
-        [[nodiscard]] bool trySpendCurrency( int32 amount );
+        /**
+         * @brief 카탈로그 규칙으로 처음 상태(물약 가득 · 처치 없음)를 둡니다. 통화는 빌린 지갑(@p refs 의 지갑)의 카탈로그 통화(`MetroRules::_currency`)입니다.
+         * @details 죽으면 그 통화의 잔액을 시체로 옮기고(지갑은 0), 되찾으면 지갑으로 돌려줍니다. 지갑이 없으면 처치 보상 · 시체가 없습니다.
+         */
+        void initialize( const MetroidvaniaCatalog* pCatalog, const GameStateRefs& refs );
 
         /**
          * @brief 쉬는 지점에서 쉽니다 — 체력 가득(`Vitality::respawn`), 물약 충전, 보스가 아닌 적 부활, 되살아날 자리 갱신.
@@ -114,13 +121,12 @@ namespace sw
          * @param spawnId 그 적이 놓인 자리(같은 자리는 쉬기 전까지 다시 나오지 않는다)
          * @return 얻은 통화. 모르는 적이거나 이미 쓰러뜨린 자리면 −1.
          */
-        int32 registerKill( const hashed_string& spawnId, const hashed_string& enemyId, GameFlags& flags, const LootCatalog* pLoot, GameRandom& random, ItemBag& outDrops );
+        int32 registerKill( const hashed_string& spawnId, const hashed_string& enemyId, GameFlags& flags, const LootCatalog* pLoot, GameRandom& random, ItemStackList& outDrops );
         /** @brief 그 자리의 적이 지금 살아 있는가(처치 기록이 없다)입니다. */
         bool isSpawnAlive( const hashed_string& spawnId ) const;
         /** @brief 쌓인 알림을 꺼내 갑니다. */
         void drainEvents( vector<MetroSoulsEvent>& outListEvent );
 
-        int32                          getCurrency() const { return _currency; }
         int32                          getFlaskCharges() const { return _flaskCharges; }
         int32                          getFlaskMaxCharges() const { return _flaskMaxCharges; }
         const MetroCorpse&             getCorpse() const { return _corpse; }
@@ -128,16 +134,25 @@ namespace sw
         int32                          getLostCurrency() const { return _lostCurrency; }
         const vector<MetroKillRecord>& getKills() const { return _listKill; }
 
+        /**
+         * @brief 처치 기록 · 시체 · 되살아날 지점 · 잃은 통화 · 물약(충전 · 최대 · 회복 단계)을 씁니다. 통화 잔액은 빌린 지갑의 것, 카탈로그는 `initialize` 의 것이라
+         *        싣지 않고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 카탈로그에 없는 되살아날 지점이거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
     private:
-        void refreshWorld( Vitality& vitality );
-        void pushEvent( MetroSoulsEventType type, const hashed_string& id, int32 amount );
+        void          refreshWorld( Vitality& vitality );
+        void          pushEvent( MetroSoulsEventType type, const hashed_string& id, int32 amount );
+        hashed_string getCurrencyName() const;
 
         const MetroidvaniaCatalog*   _pCatalog;
         vector<MetroKillRecord>      _listKill;
         EventBuffer<MetroSoulsEvent> _eventBuffer;
         MetroCorpse                  _corpse;
         hashed_string                _respawnSite;
-        int32                        _currency;
+        Wallet*                      _pWallet;      ///< 빌린 지갑
         int32                        _lostCurrency; ///< 영영 잃은 통화의 합(통계)
         int32                        _flaskCharges;
         int32                        _flaskMaxCharges;

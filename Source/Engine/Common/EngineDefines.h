@@ -19,6 +19,8 @@ namespace sw
         inline constexpr float32 kDefaultViewportHeight = 720.0f;
         /** @brief 기본 공간 분할/물리 셀 크기입니다. */
         inline constexpr float32 kDefaultSpatialCellSize = 64.0f;
+        /** @brief 기본 중력 가속도의 크기(m/s²)입니다. 물리 세계 · 탄도 · 파괴 하중 · 코스터가 같은 값을 씁니다. */
+        inline constexpr float32 kDefaultGravity = 9.81f;
         /** @brief 기본 언어 코드입니다. */
         inline constexpr const utf8* kDefaultLanguage = "en_US";
     } // namespace constant
@@ -64,6 +66,8 @@ namespace sw
 
         /** @brief 엔진 셸 부트스트랩 XML 입니다(Resource 기준 상대 경로). */
         inline constexpr const utf8* kEngineDefaultAssets = "engine/data/enginedefaultassets.xml";
+        /** @brief 팩 상대 게임 설정 파일입니다(`GameSettings`). 게임마다 이 이름 하나다(엔진 `render2d.xml` 덮어쓰기와 같은 약속). */
+        inline constexpr const utf8* kGameSettingsFile = "data/gamesettings.xml";
         /** @brief 에셋 메타 파일 확장자입니다. */
         inline constexpr const utf8* kMetaExtension = ".meta";
     } // namespace path

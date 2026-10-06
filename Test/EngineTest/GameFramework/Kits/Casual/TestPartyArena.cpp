@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Kits/Casual/PartyArena/PartyItemSpawner.h"
 #include "GameFramework/Kits/Casual/PartyArena/PartyRoundSeries.h"
 #include "GameFramework/Kits/Casual/PartyArena/TrampolineArena.h"
@@ -92,6 +94,46 @@ namespace
     bool isPartySeriesEvent( const PartySeriesEvent& event, PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points, const hashed_string& roundId )
     {
         return event._kind == kind && event._player == player && event._value == value && event._points == points && event._roundId == roundId;
+    }
+
+    /** @brief 셋이 하는 아레나를 대본 입력으로 @p firstFrame 부터 @p frameCount 걸음 돌립니다(같은 걸음이면 같은 입력). */
+    void runArenaScript( TrampolineArena& arena, int32 firstFrame, int32 frameCount )
+    {
+        for ( int32 frame = firstFrame; frame < firstFrame + frameCount; ++frame )
+        {
+            for ( int32 player = 0; player < 3; ++player )
+            {
+                TrampolineInput scriptInput;
+                scriptInput._moveX          = MathUtil::sin( static_cast<float32>( frame + player * 20 ) * 0.05f );
+                scriptInput._moveZ          = MathUtil::cos( static_cast<float32>( frame * 2 + player ) * 0.03f );
+                scriptInput._bJumpPressed   = ( frame + player ) % 7 == 0 ? SW_TRUE : SW_FALSE;
+                scriptInput._bAttackPressed = ( frame + player * 13 ) % 50 == 0 ? SW_TRUE : SW_FALSE;
+                scriptInput._bPoundPressed  = ( frame + player * 31 ) % 97 == 0 ? SW_TRUE : SW_FALSE;
+                arena.setInput( player, scriptInput );
+            }
+            arena.step();
+        }
+    }
+
+    /** @brief 아이템이 0.5 초마다 나오는 셋의 아레나를 엽니다. */
+    bool beginItemArena( TrampolineArena& outArena, uint32 seed )
+    {
+        if ( outArena.getItemSpawner().loadFromXmlText( kPartyItemXml, "PartyArenaTest" ) == false )
+            return false;
+        if ( outArena.initialize( TrampolineSettings{}, 3, 30.0f, 0, seed ) == false )
+            return false;
+        outArena.start();
+        return true;
+    }
+
+    /** @brief 상태 바이트를 꺼냅니다. */
+    vector<uint8> captureArenaBytes( const TrampolineArena& arena )
+    {
+        Archive archive;
+        arena.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
     }
 } // namespace
 
@@ -499,4 +541,45 @@ SW_TEST_CASE( PartyArenaTest, ItemSpawnRateDoesNotDependOnFrameRate )
         }
         SW_EXPECT_NEAR_EQUAL( seconds / 0.47f, static_cast<float32>( spawnCount ), 1.0f );
     }
+}
+
+/**
+ * @brief [PartyArenaTest] 상태 바이트 — 몸 · 콤보 · 놓인 아이템 · 아이템 난수 · 경기 점수가 다른 씨앗으로 연 아레나에 그대로 오고, 같은 입력을 더 넣어도 바이트가 같다.
+ *        잘린 바이트 · 인원이 다른 아레나는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( PartyArenaTest, StateRoundTripContinuesTheSameArena )
+{
+    TrampolineArena arena;
+    SW_ASSERT_TRUE( beginItemArena( arena, 99u ) );
+    runArenaScript( arena, 0, 60 * 3 );
+    vector<TrampolineEvent> listEvent;
+    arena.drainEvents( listEvent );
+
+    const vector<uint8> written = captureArenaBytes( arena );
+    TrampolineArena     restored;
+    SW_ASSERT_TRUE( beginItemArena( restored, 5u ) );
+    Archive reader( written.data(), written.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    SW_EXPECT_TRUE( arena.getTime() == restored.getTime() );
+    SW_EXPECT_EQUAL( arena.findPlayer( 1 )->_combo, restored.findPlayer( 1 )->_combo );
+    SW_EXPECT_TRUE( arena.findPlayer( 2 )->_position._y == restored.findPlayer( 2 )->_position._y );
+    SW_EXPECT_EQUAL( static_cast<int32>( arena.getItemSpawner().getInstances().size() ), static_cast<int32>( restored.getItemSpawner().getInstances().size() ) );
+    SW_EXPECT_TRUE( written == captureArenaBytes( restored ) );
+
+    // 같은 입력을 더 넣으면 같은 판 — 다음 아이템 자리(난수) · 부활 대기 · 점수까지 갈리지 않는다.
+    runArenaScript( arena, 60 * 3, 60 * 3 );
+    runArenaScript( restored, 60 * 3, 60 * 3 );
+    SW_EXPECT_TRUE( captureArenaBytes( arena ) == captureArenaBytes( restored ) );
+
+    TrampolineArena pair;
+    SW_ASSERT_TRUE( pair.getItemSpawner().loadFromXmlText( kPartyItemXml, "PartyArenaTest" ) );
+    SW_ASSERT_TRUE( pair.initialize( TrampolineSettings{}, 2, 30.0f, 0, 5u ) );
+    Archive pairReader( written.data(), written.size() );
+    SW_EXPECT_FALSE( pair.readState( pairReader ) );
+    TrampolineArena truncated;
+    SW_ASSERT_TRUE( beginItemArena( truncated, 5u ) );
+    Archive cut( written.data(), written.size() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_TRUE( truncated.getTime() == 0.0f );
 }

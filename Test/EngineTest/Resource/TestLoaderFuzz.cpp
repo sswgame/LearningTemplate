@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -23,7 +24,7 @@ using namespace sw;
 //   SW_FUZZ_SEED=<n>         변이 시드(기본 0x5eed) — 다른 입력을 보고 싶을 때
 //   SW_FUZZ_TARGET=<이름>    한 대상만(`LoaderFuzzTargets.cpp` 의 표 이름)
 //   SW_FUZZ_TRACE=1          입력마다 대상 · 씨앗 · 회차를 찍고 입력을 임시 폴더 `sw_fuzz_last_<대상>.bin` 에 남긴다 — 죽은 입력을 건질 때
-// 커버리지 안내 퍼징(libFuzzer)은 Windows 에서 엔진과 링크되지 않는다 — `LoaderFuzzTargets.h` 머리말.
+// 커버리지 안내 퍼징(libFuzzer)은 리눅스 `Test/FuzzTest/LoaderFuzzer` 가 같은 표를 돈다 — `LoaderFuzzTargets.h` 머리말.
 // ------------------------------------------------------------------------------
 
 namespace
@@ -33,7 +34,7 @@ namespace
     {
     public:
         explicit FuzzRandom( uint64 seed )
-            : _state{ seed == 0 ? 0x9E3779B97F4A7C15ull : seed }
+            : _state{ seed == 0 ? sw::HashUtil::kGoldenRatio64 : seed }
         {
         }
         uint64 next()
@@ -166,11 +167,11 @@ namespace
     /** @brief FNV-1a 64 — 대상 이름에서 변이 수열을 고른다. */
     uint64 hashTargetName( string_view name )
     {
-        uint64 hash = 0xCBF29CE484222325ull;
+        uint64 hash = sw::HashUtil::kFnvOffset64;
         for ( const utf8 character : name )
         {
             hash ^= static_cast<uint8>( character );
-            hash *= 0x100000001B3ull;
+            hash *= sw::HashUtil::kFnvPrime64;
         }
         return hash;
     }

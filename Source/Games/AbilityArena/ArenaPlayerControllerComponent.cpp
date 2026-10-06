@@ -5,10 +5,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 
-#include "GameFramework/Ability/AbilitySystemComponent.h"
-#include "GameFramework/Ability/CombatAttributeSet.h"
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Ability/CombatAttributeSet.h"
+#include "GameFramework/Base/Framework/GameService.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 
@@ -18,34 +19,32 @@ namespace sw
     {
         struct ArenaPlayerControllerComponentInternal
         {
-            /** @brief 키 하나 → 입력 번호입니다. 같은 번호에 키가 둘이면 어느 쪽이든 누르면 눌림이다. */
-            struct KeyBinding
+            /** @brief 입력 맵 액션 하나 → 어빌리티 입력 번호입니다(키는 `data/arena.input.xml`). */
+            struct ActionBinding
             {
-                Key   _key;
-                int32 _inputId;
+                const utf8* _pAction;
+                int32       _inputId;
             };
 
-            static constexpr KeyBinding kArrKeyBinding[] = {
-                {        Key::J,    ArenaDirectorComponent::kInputMelee},
-                {    Key::Space,    ArenaDirectorComponent::kInputMelee},
-                {        Key::K, ArenaDirectorComponent::kInputFireball},
-                {   Key::Digit2, ArenaDirectorComponent::kInputFireball},
-                {        Key::L,     ArenaDirectorComponent::kInputHeal},
-                {   Key::Digit3,     ArenaDirectorComponent::kInputHeal},
-                {Key::LeftShift,     ArenaDirectorComponent::kInputDash},
-                {   Key::Digit4,     ArenaDirectorComponent::kInputDash},
+            static constexpr const utf8*   kMoveAction         = "Arena.Move";
+            static constexpr ActionBinding kArrActionBinding[] = {
+                {   "Arena.Melee",    ArenaDirectorComponent::kInputMelee},
+                {"Arena.Fireball", ArenaDirectorComponent::kInputFireball},
+                {    "Arena.Heal",     ArenaDirectorComponent::kInputHeal},
+                {    "Arena.Dash",     ArenaDirectorComponent::kInputDash},
             };
-
-            static constexpr float32 kCrowdRadius = 2.5f; ///< 자동 전투가 "둘러싸였다" 고 보는 거리(m)
-            static constexpr uint32  kCrowdCount  = 3;
-            static constexpr float32 kMeleeRange  = 2.0f; ///< 자동 전투가 근접으로 바꾸는 거리(m)
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    ArenaPlayerControllerComponent::ArenaPlayerControllerComponent() = default;
+    ArenaPlayerControllerComponent::ArenaPlayerControllerComponent()
+        : _crowdRadius{ 2.5f }
+        , _crowdCount{ 3 }
+        , _meleeRange{ 2.0f }
+    {
+    }
 
     void ArenaPlayerControllerComponent::tickController( float32 deltaTime, const ArenaDirectorComponent& director, AbilitySystemComponent& abilitySystem,
                                                          float3& inoutPosition )
@@ -62,23 +61,18 @@ namespace sw
     void ArenaPlayerControllerComponent::tickInput( float32 deltaTime, const InputManager& input, AbilitySystemComponent& abilitySystem, float3& inoutPosition )
     {
         // 입력 → 어빌리티 입력 번호. 눌림 · 뗌을 그대로 넘긴다(차지 · 콤보 어빌리티가 뗌을 받는다).
-        for ( const ArenaPlayerControllerComponentInternal::KeyBinding& binding : ArenaPlayerControllerComponentInternal::kArrKeyBinding )
+        const InputMap& inputMap = input.getInputMap();
+        for ( const ArenaPlayerControllerComponentInternal::ActionBinding& binding : ArenaPlayerControllerComponentInternal::kArrActionBinding )
         {
-            if ( input.wasKeyPressed( binding._key ) )
+            const hashed_string action( binding._pAction );
+            if ( inputMap.wasActionPressed( action ) )
                 abilitySystem.abilityInputPressed( binding._inputId );
-            if ( input.wasKeyReleased( binding._key ) )
+            if ( inputMap.wasActionReleased( action ) )
                 abilitySystem.abilityInputReleased( binding._inputId );
         }
 
-        float3 direction{ 0.0f, 0.0f, 0.0f };
-        if ( input.isKeyDown( Key::W ) || input.isKeyDown( Key::Up ) )
-            direction._z += 1.0f;
-        if ( input.isKeyDown( Key::S ) || input.isKeyDown( Key::Down ) )
-            direction._z -= 1.0f;
-        if ( input.isKeyDown( Key::D ) || input.isKeyDown( Key::Right ) )
-            direction._x += 1.0f;
-        if ( input.isKeyDown( Key::A ) || input.isKeyDown( Key::Left ) )
-            direction._x -= 1.0f;
+        const float2 move = inputMap.getVector2D( hashed_string( ArenaPlayerControllerComponentInternal::kMoveAction ) );
+        float3       direction{ move._x, 0.0f, move._y };
 
         if ( abilitySystem.hasMatchingTag( "State.Dashing"_tag ) )
             direction = getFacing();
@@ -89,7 +83,6 @@ namespace sw
     void ArenaPlayerControllerComponent::tickAutoPlay( float32 deltaTime, const ArenaDirectorComponent& director, AbilitySystemComponent& abilitySystem,
                                                        float3& inoutPosition )
     {
-        using Internal            = ArenaPlayerControllerComponentInternal;
         const float32 healthRatio = abilitySystem.getAttributeValue( CombatAttributes::health() ) /
                                     MathUtil::max( 1.0f, abilitySystem.getAttributeValue( CombatAttributes::maxHealth() ) );
         if ( healthRatio < 0.5f )
@@ -111,11 +104,11 @@ namespace sw
         {
             const ArenaUnitView& view    = pView[viewIndex];
             const bool           bNearby = view._kind != ArenaUnitKind::Player && view._bAlive == SW_TRUE &&
-                                 float3::getDistance( view._position, inoutPosition ) < Internal::kCrowdRadius;
+                                 float3::getDistance( view._position, inoutPosition ) < _crowdRadius;
             if ( bNearby )
                 ++nearbyEnemyCount;
         }
-        if ( nearbyEnemyCount >= Internal::kCrowdCount )
+        if ( nearbyEnemyCount >= _crowdCount )
         {
             setFacing( float3{ 0.0f, 0.0f, 0.0f } - getFacing() );
             tapInput( abilitySystem, ArenaDirectorComponent::kInputDash );
@@ -126,7 +119,7 @@ namespace sw
             moveTowards( abilitySystem, getFacing(), deltaTime, inoutPosition );
             return;
         }
-        if ( distance > Internal::kMeleeRange )
+        if ( distance > _meleeRange )
         {
             tapInput( abilitySystem, ArenaDirectorComponent::kInputFireball );
             moveTowards( abilitySystem, toTarget, deltaTime, inoutPosition );

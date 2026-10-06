@@ -10,6 +10,7 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Container/vector.h"
 #include "Core/Module/ModuleImageUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -66,9 +67,9 @@ SW_TEST_CASE( DelayLoadBindTest, EveryDelayImportIsBoundAfterEngineStartup )
         if ( GetProcAddress( hModule, sw::ModuleImageUtil::kBindDelayLoadImportsSymbol ) == nullptr )
             continue;
         ++hookedModuleCount;
-        utf8 arrModulePath[MAX_PATH]{};
-        (void)GetModuleFileNameA( hModule, arrModulePath, MAX_PATH );
-        SW_EXPECT_TRUE_MSG( DelayLoadBindTestInternal::countUnboundDelayImports( hModule ) == 0u, arrModulePath );
+        utf16 arrModulePath[MAX_PATH]{};
+        (void)GetModuleFileNameW( hModule, arrModulePath, MAX_PATH );
+        SW_EXPECT_TRUE_MSG( DelayLoadBindTestInternal::countUnboundDelayImports( hModule ) == 0u, sw::StringUtil::utf16ToUtf8( arrModulePath ).c_str() );
     }
     SW_EXPECT_TRUE_MSG( hookedModuleCount > 0u, "no module with the delay-load hook is loaded - this executable links the kits, so the hook TU went missing" );
 }

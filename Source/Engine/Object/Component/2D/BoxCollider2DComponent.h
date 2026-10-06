@@ -3,6 +3,7 @@
  * @brief 2D 박스 콜라이더 컴포넌트입니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
@@ -26,7 +27,7 @@ namespace sw
     public:
         REFLECT_BODY();
         /** @brief 매니저의 콜라이더 목록에 없다는 표시입니다. */
-        static constexpr uint32 kNotRegistered = 0xFFFFFFFFu;
+        static constexpr uint32 kNotRegistered = invalid_index::kUint32;
 
         BoxCollider2DComponent();
         virtual ~BoxCollider2DComponent() override = default;

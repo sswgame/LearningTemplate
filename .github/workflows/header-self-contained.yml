@@ -72,4 +72,4 @@ jobs:
 
     - name: Check that every header compiles on its own
       run: |
-        python Scripts/lint/report/RunHeaderSelfContained.py --build build/CI-Debug --fail-on-violation
+        python Scripts/lint/report/RunHeaderSelfContained.py --preset CI-Debug --fail-on-violation

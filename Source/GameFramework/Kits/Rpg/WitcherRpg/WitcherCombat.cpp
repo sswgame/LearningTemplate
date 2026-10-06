@@ -4,10 +4,13 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Combat/ElementChart.h"
-#include "GameFramework/Data/StatBlock.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Combat/ElementChart.h"
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Progression/SkillTree.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCatalog.h"
-#include "GameFramework/Progression/SkillTree.h"
 
 namespace sw
 {
@@ -138,5 +141,28 @@ namespace sw
                 return combat._rollCost;
         }
         return 0.0f;
+    }
+
+    void WitcherCombat::writeState( Archive& outArchive ) const
+    {
+        _stamina.writeState( outArchive );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _adrenaline;
+    }
+
+    bool WitcherCombat::readState( Archive& archive )
+    {
+        ResourceGauge stamina = _stamina; // 게이지 설정은 `initialize` 의 것 — 값만 읽는다
+        GameRandom    random;
+        float32       adrenaline = 0.0f;
+        if ( stamina.readState( archive ) == false || StateArchiveUtil::readRandom( archive, random ) == false )
+            return false;
+        archive >> adrenaline;
+        if ( archive.isError() || adrenaline < 0.0f )
+            return false;
+        _stamina    = stamina;
+        _random     = random;
+        _adrenaline = adrenaline;
+        return true;
     }
 } // namespace sw

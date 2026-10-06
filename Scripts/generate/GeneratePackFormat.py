@@ -19,7 +19,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import PackFormatSpec, PackStruct, getProjectRoot, kPackFormatConfigRelative
+from common import (GeneratorError, PackFormatSpec, PackStruct, getProjectRoot, kPackFormatConfigRelative, runGenerator,  # noqa: E402
+                    writeGeneratedFile)
+
+kTag = "GeneratePackFormat"
 
 
 def emitStructInternal(packStruct: PackStruct) -> str:
@@ -52,12 +55,11 @@ def emitStructInternal(packStruct: PackStruct) -> str:
     return "\n".join(lines)
 
 
-def generatePackFormatHeader(outputPath: Path) -> int:
+def generatePackFormatHeader(outputPath: Path) -> None:
     try:
         spec = PackFormatSpec.load(getProjectRoot())
     except (FileNotFoundError, ValueError) as exception:
-        sys.stderr.write(f"[Error] {kPackFormatConfigRelative}: {exception}\n")
-        return 1
+        raise GeneratorError(f"{kPackFormatConfigRelative}: {exception}") from exception
 
     headerText = emitStructInternal(spec.header)
     entryText = emitStructInternal(spec.entry)
@@ -107,22 +109,13 @@ namespace sw
 }} // namespace sw
 """
 
-    outputPath.parent.mkdir(parents=True, exist_ok=True)
-    previous = outputPath.read_text(encoding="utf-8") if outputPath.is_file() else ""
-    if previous != content:
-        outputPath.write_text(content, encoding="utf-8")
-        print(f"[GeneratePackFormat] Wrote {outputPath}")
-    else:
-        print(f"[GeneratePackFormat] Up to date: {outputPath}")
-    return 0
+    writeGeneratedFile(outputPath, content, tag=kTag)
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    if len(args) != 1:
-        sys.stderr.write("Usage: GeneratePackFormat.py <output_header_path>\n")
-        return 1
-    return generatePackFormatHeader(Path(args[0]))
+    return runGenerator(argv, tag=kTag, description="PackFormat.json → C++ 헤더",
+                        addArguments=lambda parser: parser.add_argument("output", type=Path, help="쓸 헤더"),
+                        generate=lambda args: generatePackFormatHeader(args.output))
 
 
 if __name__ == "__main__":

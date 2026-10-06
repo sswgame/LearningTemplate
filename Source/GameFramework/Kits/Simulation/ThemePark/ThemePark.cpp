@@ -6,8 +6,10 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -21,8 +23,6 @@ namespace sw
             static constexpr float32 kLeaveHappiness     = 0.15f;
             static constexpr float32 kNauseaPerRating    = 0.06f;  ///< 멀미 평가 1 이 손님 멀미에 더하는 양
             static constexpr float32 kQueueUnhappiness   = 0.002f; ///< 줄에서 초당 줄어드는 행복
-            static constexpr float32 kWanderRadius       = 6.0f;
-            static constexpr float32 kPi                 = 3.14159265358979f;
 
             static float3 lerpPosition( const float3& from, const float3& to, float32 alpha )
             {
@@ -71,23 +71,25 @@ namespace sw
         , _elapsedTime{ 0.0f }
         , _stepTimer{}
         , _random{ 12345u }
-        , _cash{ 0 }
+        , _pWallet{ nullptr }
+        , _pLand{ nullptr }
         , _parkRating{ 0 }
+        , _landOwner{ LandRegistry::kNoOwner }
         , _nextGuestId{ 1 }
         , _totalVisitorCount{ 0 }
     {
     }
 
-    void ThemeParkSimulation::initialize( const ThemeParkSettings& settings, int32 startingCash )
+    void ThemeParkSimulation::initialize( const ThemeParkSettings& settings, const GameStateRefs& refs )
     {
         _settings = settings;
+        _pWallet  = refs._pWallet;
         _listRide.clear();
         _listGuest.clear();
         _arrival.reset();
         _runningCost.reset();
         _elapsedTime       = 0.0f;
         _stepTimer         = FixedStepTimer( settings._fixedStep, settings._maxFrameTime );
-        _cash              = startingCash;
         _nextGuestId       = 1;
         _totalVisitorCount = 0;
         _random.setSeed( settings._randomSeed != 0 ? settings._randomSeed : 12345u );
@@ -101,11 +103,23 @@ namespace sw
             stepFixed( _stepTimer.getStep() );
     }
 
+    void ThemeParkSimulation::bindLand( LandRegistry* pLand )
+    {
+        _pLand     = pLand;
+        _landOwner = pLand != nullptr ? pLand->registerOwner( hashed_string( "ThemePark" ) ) : LandRegistry::kNoOwner;
+    }
+
     int32 ThemeParkSimulation::buildRide( const ParkRide& ride, int32 buildCost )
     {
-        if ( buildCost > _cash )
+        const bool bClaimLand = _pLand != nullptr && _landOwner != LandRegistry::kNoOwner && ride._footprintSize._x > 0.0f && ride._footprintSize._z > 0.0f;
+        if ( bClaimLand && _pLand->claimWorldRect( _landOwner, ride._footprintCenter, ride._footprintSize, true ) == false )
             return -1;
-        _cash -= MathUtil::max( 0, buildCost );
+        if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, MathUtil::max( 0, buildCost ) ) == false )
+        {
+            if ( bClaimLand )
+                _pLand->releaseWorldRect( _landOwner, ride._footprintCenter, ride._footprintSize );
+            return -1;
+        }
         ParkRide built = ride;
         built._listQueue.clear();
         built._listRider.clear();
@@ -163,7 +177,8 @@ namespace sw
         guest._nauseaTolerance = nauseaTolerance;
         guest._state           = ParkGuestState::Walking;
         guest._walkTimer       = 0.0f; // 다음 갱신에 바로 고른다
-        _cash += _settings._entryFee;
+        if ( _pWallet != nullptr )
+            _pWallet->add( _settings._currency, _settings._entryFee );
         ++_totalVisitorCount;
         _listGuest.push_back( guest );
         return true;
@@ -243,7 +258,9 @@ namespace sw
                 costPerSecond += static_cast<float32>( ride._runningCostPerMinute ) / 60.0f;
         }
         _runningCost.add( costPerSecond * deltaTime );
-        _cash -= _runningCost.takeWhole();
+        const int32 runningCost = _runningCost.takeWhole();
+        if ( _pWallet != nullptr )
+            _pWallet->charge( _settings._currency, runningCost );
 
         // 떠난 손님을 지운다(놀이기구의 줄 · 탑승자에는 남아 있지 않다 — 떠나기 전에 뺐다). 한 번에 당겨 담아 순서(id 오름차순)를 지킨다 —
         // 손님마다 `erase` 하면 뒤를 매번 옮긴다.
@@ -331,7 +348,8 @@ namespace sw
                     continue;
                 }
                 pGuest->_cash -= ride._price;
-                _cash += ride._price;
+                if ( _pWallet != nullptr )
+                    _pWallet->add( _settings._currency, ride._price );
                 ride._totalIncome += ride._price;
                 pGuest->_state    = ParkGuestState::Riding;
                 pGuest->_position = ride._entrance;
@@ -491,8 +509,8 @@ namespace sw
                 sendHome( guest, ParkGuestThought::OutOfCash );
                 return;
             }
-            const float32 angle  = nextRandom() * 2.0f * ThemeParkInternal::kPi;
-            const float32 radius = nextRandom() * ThemeParkInternal::kWanderRadius;
+            const float32 angle  = nextRandom() * 2.0f * MathUtil::kPi;
+            const float32 radius = nextRandom() * _settings._wanderRadius;
             const float3  anchor = _listRide.empty() ? _settings._gatePosition
                                                      : _listRide[static_cast<size_t>( nextRandom() * static_cast<float32>( _listRide.size() ) ) % _listRide.size()]._entrance;
             startWalking( guest, anchor + float3{ MathUtil::cos( angle ) * radius, 0.0f, MathUtil::sin( angle ) * radius } );
@@ -638,7 +656,6 @@ namespace sw
         outArchive << _arrival._fraction;
         outArchive << _runningCost._fraction;
         outArchive << _elapsedTime;
-        outArchive << _cash;
         outArchive << _parkRating;
         outArchive << _nextGuestId;
         outArchive << _totalVisitorCount;
@@ -724,14 +741,12 @@ namespace sw
         float32 arrivalAccumulator = 0.0f;
         float32 costAccumulator    = 0.0f;
         float32 elapsedTime        = 0.0f;
-        int32   cash               = 0;
         int32   parkRating         = 0;
         uint32  nextGuestId        = 0;
         uint32  totalVisitorCount  = 0;
         archive >> arrivalAccumulator;
         archive >> costAccumulator;
         archive >> elapsedTime;
-        archive >> cash;
         archive >> parkRating;
         archive >> nextGuestId;
         archive >> totalVisitorCount;
@@ -746,7 +761,6 @@ namespace sw
         _arrival._fraction     = arrivalAccumulator;
         _runningCost._fraction = costAccumulator;
         _elapsedTime           = elapsedTime;
-        _cash                  = cash;
         _parkRating            = parkRating;
         _nextGuestId           = nextGuestId;
         _totalVisitorCount     = totalVisitorCount;

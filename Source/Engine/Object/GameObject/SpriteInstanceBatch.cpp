@@ -2,6 +2,8 @@
 
 #include "Engine/Object/GameObject/SpriteInstanceBatch.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -21,6 +23,7 @@ namespace sw
 
     SpriteInstanceBatch::SpriteInstanceBatch()
         : _batch{}
+        , _pOwnerComponent{ nullptr }
         , _acquiredMaterialPath{}
         , _sortKey{ 0 }
     {
@@ -62,13 +65,14 @@ namespace sw
 
         // 스프라이트 사각형은 공유 프리미티브다 — 같은 메시라야 스프라이트 컴포넌트와 한 배치로 묶인다.
         _batch                                  = sw::make_unique<MeshInstanceBatch>( MeshUtil::acquirePrimitive( "Sprite" ), pMaterial, std::move( instance ), count );
-        constexpr float32 kUnitQuadHalfDiagonal = 0.70710678f;
+        constexpr float32 kUnitQuadHalfDiagonal = MathUtil::kInvSqrt2;
         for ( uint32 index = 0; index < count; ++index )
         {
             _batch->setBoundsRadius( index, kUnitQuadHalfDiagonal );
             _batch->setEntryVisible( index, false );
         }
         _batch->setSortKey( _sortKey );
+        _batch->setOwnerComponent( _pOwnerComponent );
         manager.getPrimitiveRegistry().addInstanceBatch( _batch.get() );
         return true;
     }
@@ -122,6 +126,19 @@ namespace sw
     {
         if ( _batch != nullptr )
             _batch->setVisible( bVisible );
+    }
+
+    void SpriteInstanceBatch::setOwnerComponent( const Component* pOwnerComponent )
+    {
+        _pOwnerComponent = pOwnerComponent;
+        if ( _batch != nullptr )
+            _batch->setOwnerComponent( pOwnerComponent );
+    }
+
+    void SpriteInstanceBatch::markAllEntriesDirty()
+    {
+        if ( _batch != nullptr )
+            _batch->markAllEntriesDirty();
     }
 
     float4x4 SpriteInstanceBatch::makeQuadWorld( const float3& center, float32 width, float32 height )

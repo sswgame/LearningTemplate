@@ -7,8 +7,8 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Data/GameDataXml.h"
-#include "GameFramework/Spline/ArcLengthUtil.h"
+#include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Spline/ArcLengthUtil.h"
 
 namespace sw
 {
@@ -18,8 +18,6 @@ namespace sw
     {
         struct CoasterTrackInternal
         {
-            static constexpr float32 kPi               = 3.14159265358979f;
-            static constexpr float32 kDegreeToRadian   = kPi / 180.0f;
             static constexpr float32 kDuplicateEpsilon = 1.0e-4f;
 
             /** @brief 열거자 이름표 한 줄입니다. */
@@ -237,7 +235,7 @@ namespace sw
         _listPoint.clear();
         _startPosition = startPosition;
         _position      = startPosition;
-        _startHeading  = startHeadingDegrees * CoasterTrackInternal::kDegreeToRadian;
+        _startHeading  = startHeadingDegrees * MathUtil::kDegreeToRadian;
         _heading       = _startHeading;
         pushPoint( _position, computeForward(), 0.0f, CoasterSegmentFlag::kNone );
     }
@@ -355,9 +353,9 @@ namespace sw
             float32       slope = 0.0f; // dy / d(수평 거리)
             if ( bHill )
             {
-                const float32 sine = MathUtil::sin( CoasterTrackInternal::kPi * t );
+                const float32 sine = MathUtil::sin( MathUtil::kPi * t );
                 y                  = height * sine * sine;
-                slope              = height * CoasterTrackInternal::kPi * MathUtil::sin( 2.0f * CoasterTrackInternal::kPi * t ) / horizontalLength;
+                slope              = height * MathUtil::kPi * MathUtil::sin( 2.0f * MathUtil::kPi * t ) / horizontalLength;
             }
             else
             {
@@ -373,8 +371,8 @@ namespace sw
     void CoasterTrackBuilder::appendTurn( const CoasterTrackPiece& piece, float32 directionSign )
     {
         const float32 radius       = MathUtil::max( 1.0f, piece._radius );
-        const float32 totalAngle   = MathUtil::max( 1.0f, MathUtil::abs( piece._angle ) ) * CoasterTrackInternal::kDegreeToRadian;
-        const float32 bank         = piece._bank * CoasterTrackInternal::kDegreeToRadian * directionSign;
+        const float32 totalAngle   = MathUtil::max( 1.0f, MathUtil::abs( piece._angle ) ) * MathUtil::kDegreeToRadian;
+        const float32 bank         = piece._bank * MathUtil::kDegreeToRadian * directionSign;
         const float32 rise         = piece._height;
         const float3  start        = _position;
         const float32 startHeading = _heading;
@@ -411,7 +409,7 @@ namespace sw
         const float3  forward      = computeForward();
         const float3  right        = CoasterTrackInternal::rightOf( _heading );
         const float3  worldUp{ 0.0f, 1.0f, 0.0f };
-        const float32 fullTurn  = 2.0f * CoasterTrackInternal::kPi;
+        const float32 fullTurn  = 2.0f * MathUtil::kPi;
         const uint32  stepCount = static_cast<uint32>( MathUtil::ceil( fullTurn * radius * 1.1f / kSampleSpacing ) ) * 2u; // 적분 간격 — 점은 이보다 성기게 둔다
         const float32 stepAngle = fullTurn / static_cast<float32>( stepCount );
 

@@ -2,12 +2,14 @@
 
 #include "Games/NileCity/NileDirectorComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -16,9 +18,9 @@
 #include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Window/IWindow.h"
 
-#include "GameFramework/Camera/OrthoCameraRigComponent.h"
-#include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include "Games/NileCity/NileBuildingComponent.h"
 #include "Games/NileCity/NileWalkerComponent.h"
@@ -31,11 +33,10 @@ namespace sw
     {
         struct NileDirectorComponentInternal
         {
-            static constexpr int32   kWalkerLookStride = 16; ///< 일꾼 모습 번호 = 종류 × 16 + 서비스
-            static constexpr int32   kWalkerKindCount  = 3;
-            static constexpr float32 kRoadTileScale    = 4.8f;        ///< 보도 조각(`path_short`, 0.2) × 4.8 = 0.96 m(칸 사이 틈은 옛 상자와 같다)
-            static constexpr uint32  kStateTag         = 0x454C494Eu; ///< 'NILE'
-            static constexpr uint32  kStateVersion     = 1;
+            static constexpr int32  kWalkerLookStride = 16; ///< 일꾼 모습 번호 = 종류 × 16 + 서비스
+            static constexpr int32  kWalkerKindCount  = 3;
+            static constexpr uint32 kStateTag         = FourCcUtil::make( "NILE" );
+            static constexpr uint32 kStateVersion     = 3;
 
             static constexpr const utf8* kSoundSelect  = "game/nilecity/sounds/select_003.ogg";
             static constexpr const utf8* kSoundBuilt   = "game/nilecity/sounds/confirmation_002.ogg";
@@ -176,10 +177,15 @@ namespace sw
         , _cameraRig{}
         , _startingMoney{ 1500 }
         , _serviceDuration{ 60.0f }
+        , _roadTileScale{ 4.8f }
+        , _secondsPerMonth{ 20.0f }
         , _catalog{}
         , _city{}
+        , _wallet{}
+        , _clock{}
         , _planner{}
         , _listEvent{}
+        , _listClockEvent{}
         , _listTool{}
         , _listRoadObject{}
         , _listRoadShown{}
@@ -220,9 +226,13 @@ namespace sw
         if ( pInput != nullptr )
             updateInput( deltaTime, *pInput );
         if ( isAutoPlanOn() )
-            (void)_planner.advance( _city, _catalog.getRoadCost() );
+            (void)_planner.advance( _city, _wallet, _catalog.getRoadCost() );
         if ( _bPaused == SW_FALSE )
+        {
             _city.update( deltaTime * _timeScale );
+            _clock.update( deltaTime * _timeScale ); // 배속은 디렉터가 곱한다(시계 배율은 1)
+            settleMonths();
+        }
         drainEvents();
         if ( areViewsSpawned() )
             collectViewChanges();
@@ -273,7 +283,11 @@ namespace sw
             SW_LOG_WARNING( "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
             return false;
         }
-        _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), _startingMoney );
+        const CitySettings citySettings = makeCitySettings();
+        _wallet.clear();
+        _wallet.add( citySettings._currency, _startingMoney );
+        _clock.initialize( makeClockSettings() );
+        _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() );
         NileCityPlanner::paintTerrain( _city );
         _planner.reset();
         _listEvent.clear();
@@ -285,6 +299,40 @@ namespace sw
             _listTool.push_back( &def );
         _selectedTool = 0;
         return true;
+    }
+
+    WorldClockSettings NileDirectorComponent::makeClockSettings() const
+    {
+        WorldClockSettings settings;
+        for ( const utf8* pMonth : { "Akhet1", "Akhet2", "Akhet3", "Akhet4", "Peret1", "Peret2", "Peret3", "Peret4", "Shemu1", "Shemu2", "Shemu3", "Shemu4" } )
+            settings._listSeason.push_back( hashed_string( pMonth ) );
+        settings._daysPerSeason = 1;
+        settings._startHour     = 0.0f; // 첫 달도 꼭 한 달
+        settings._secondsPerDay = _secondsPerMonth;
+        return settings;
+    }
+
+    void NileDirectorComponent::settleMonths()
+    {
+        _listClockEvent.clear();
+        _clock.drainEvents( _listClockEvent );
+        for ( size_t index = 0; index < _listClockEvent.size(); ++index )
+        {
+            if ( _listClockEvent[index]._kind != WorldClockEvent::Kind::DayChanged )
+                continue;
+            // 같은 넘김의 알림(다음 날 넘김 전까지)에 해 넘김이 있으면 새 해다.
+            bool bNewYear = false;
+            for ( size_t next = index + 1; next < _listClockEvent.size() && _listClockEvent[next]._kind != WorldClockEvent::Kind::DayChanged; ++next )
+                bNewYear = bNewYear || _listClockEvent[next]._kind == WorldClockEvent::Kind::YearChanged;
+            _city.settleMonth( bNewYear );
+        }
+    }
+
+    GameStateRefs NileDirectorComponent::makeRefs()
+    {
+        GameStateRefs refs;
+        refs._pWallet = &_wallet;
+        return refs;
     }
 
     CitySettings NileDirectorComponent::makeCitySettings() const
@@ -303,6 +351,8 @@ namespace sw
         StateArchiveUtil::writeHeader( outArchive, NileDirectorComponentInternal::kStateTag, NileDirectorComponentInternal::kStateVersion );
         _city.writeState( outArchive );
         _planner.writeState( outArchive );
+        _wallet.writeState( outArchive );
+        _clock.writeState( outArchive );
         outArchive << _timeScale;
         outArchive << _selectedTool;
         outArchive << _monthCount;
@@ -317,8 +367,11 @@ namespace sw
             return false;
         CitySimulation  city;
         NileCityPlanner planner;
-        city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), _startingMoney );
-        if ( city.readState( archive ) == false || planner.readState( archive ) == false )
+        Wallet          wallet;
+        WorldClock      clock;
+        clock.initialize( makeClockSettings() );
+        city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() );
+        if ( city.readState( archive ) == false || planner.readState( archive ) == false || wallet.readState( archive ) == false || clock.readState( archive ) == false )
             return false;
         float32 timeScale       = 1.0f;
         int32   selectedTool    = 0;
@@ -336,6 +389,8 @@ namespace sw
             return false;
         _city            = std::move( city );
         _planner         = std::move( planner );
+        _wallet          = std::move( wallet );
+        _clock           = std::move( clock );
         _timeScale       = timeScale;
         _selectedTool    = _listTool.empty() ? 0 : MathUtil::clamp( selectedTool, 0, static_cast<int32>( _listTool.size() ) - 1 );
         _monthCount      = monthCount;
@@ -349,7 +404,7 @@ namespace sw
     void NileDirectorComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO( "[Nile] city state restored - month %#, population %#, money %#", _monthCount, _city.getPopulation(), _city.getMoney() );
+            SW_LOG_INFO( "[Nile] city state restored - month %#, population %#, money %#", _monthCount, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ) );
         else
             SW_LOG_WARNING( "[Nile] the saved city state does not match this build - founding a new city" );
     }
@@ -451,7 +506,7 @@ namespace sw
         const int32 y     = tileIndex / _city.getWidth();
         GameObject* pRoad = spawnPrefab( manager, _roadPrefab, "NileRoad" );
         (void)NileDirectorComponentInternal::placeMesh( pRoad, float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f },
-                                                        float3{ NileDirectorComponentInternal::kRoadTileScale } );
+                                                        float3{ _roadTileScale } );
         _listRoadObject[static_cast<size_t>( tileIndex )] = pRoad != nullptr ? pRoad->getHandle() : GameObjectHandle{};
     }
 
@@ -563,35 +618,41 @@ namespace sw
     {
         // 카메라 이동 · 확대는 리그(PostUpdate)가 읽는다. 여기는 도구 · 속도 · 짓기.
         (void)deltaTime;
-        const int32 toolCount = static_cast<int32>( _listTool.size() );
-        if ( input.wasKeyPressed( Key::E ) || input.wasKeyPressed( Key::Tab ) )
+        // 키는 입력 맵(`data/nile.input.xml`)이 정한다.
+        const InputMap& inputMap  = input.getInputMap();
+        const int32     toolCount = static_cast<int32>( _listTool.size() );
+        const bool      bNextTool = inputMap.wasActionTriggered( hashed_string( "Nile.NextTool" ) );
+        const bool      bPrevTool = inputMap.wasActionTriggered( hashed_string( "Nile.PrevTool" ) );
+        const bool      bRoadTool = inputMap.wasActionTriggered( hashed_string( "Nile.RoadTool" ) );
+        if ( bNextTool )
             _selectedTool = ( _selectedTool + 1 ) % toolCount;
-        if ( input.wasKeyPressed( Key::Q ) )
+        if ( bPrevTool )
             _selectedTool = ( _selectedTool + toolCount - 1 ) % toolCount;
-        if ( input.wasKeyPressed( Key::R ) )
+        if ( bRoadTool )
             _selectedTool = 0;
-        if ( input.wasKeyPressed( Key::E ) || input.wasKeyPressed( Key::Tab ) || input.wasKeyPressed( Key::Q ) || input.wasKeyPressed( Key::R ) )
+        if ( bNextTool || bPrevTool || bRoadTool )
         {
             [[maybe_unused]] const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
             SW_LOG_INFO( "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _catalog.getRoadCost() );
             getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundSelect );
         }
-        if ( input.wasKeyPressed( Key::Space ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Nile.Pause" ) ) )
         {
             _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
             SW_LOG_INFO( "[Nile] %#", _bPaused == SW_TRUE ? "paused" : "running" );
         }
-        if ( input.wasKeyPressed( Key::Minus ) || input.wasKeyPressed( Key::Equal ) )
+        const bool bFaster = inputMap.wasActionTriggered( hashed_string( "Nile.Faster" ) );
+        if ( bFaster || inputMap.wasActionTriggered( hashed_string( "Nile.Slower" ) ) )
         {
-            _timeScale = MathUtil::clamp( _timeScale * ( input.wasKeyPressed( Key::Equal ) ? 2.0f : 0.5f ), 0.25f, 8.0f );
+            _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
             SW_LOG_INFO( "[Nile] speed x%#", _timeScale );
         }
-        if ( input.wasKeyPressed( Key::P ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Nile.ToggleAutoPlan" ) ) )
         {
             _bAutoPlanToggle = _bAutoPlanToggle == SW_TRUE ? SW_FALSE : SW_TRUE;
             SW_LOG_INFO( "[Nile] auto plan %# (step %# of %#)", _bAutoPlanToggle == SW_TRUE ? "on" : "off", _planner.getNextStep(), _planner.getStepCount() );
         }
-        if ( input.wasKeyPressed( Key::F1 ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Nile.Status" ) ) )
             logStatus();
 
         updateCursor( input );
@@ -637,7 +698,7 @@ namespace sw
         const CityPlaceResult result = _city.placeBuilding( pDef->_id, _cursorTile._x, _cursorTile._y );
         if ( result == CityPlaceResult::Ok )
         {
-            SW_LOG_INFO( "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _city.getMoney() );
+            SW_LOG_INFO( "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _wallet.getBalance( _city.getCurrency() ) );
             getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundBuilt );
         }
         else
@@ -660,7 +721,7 @@ namespace sw
                 {
                     ++_monthCount;
                     SW_LOG_INFO( "[Nile] month %# pop %# money %# (net %#, workers %#/%#, houses up %#, avg level %#, culture %#%%)", _monthCount, _city.getPopulation(),
-                                 _city.getMoney(), event._value, _city.getEmployed(), _city.getWorkforce(), _evolvedCount, _city.computeAverageHouseLevel(),
+                                 _wallet.getBalance( _city.getCurrency() ), event._value, _city.getEmployed(), _city.getWorkforce(), _evolvedCount, _city.computeAverageHouseLevel(),
                                  static_cast<int32>( _city.computeCultureCoverage() * 100.0f ) );
                     _evolvedCount = 0;
                     break;
@@ -673,7 +734,7 @@ namespace sw
                 }
                 case CityEvent::Kind::Flood:
                 {
-                    SW_LOG_INFO( "[Nile] year %# - the Nile flooded, farm fertility %#%%", _city.getYear(), event._value );
+                    SW_LOG_INFO( "[Nile] year %# - the Nile flooded, farm fertility %#%%", _clock.getYear(), event._value );
                     break;
                 }
                 case CityEvent::Kind::HouseDevolved:
@@ -691,7 +752,7 @@ namespace sw
     void NileDirectorComponent::logStatus() const
     {
         SW_LOG_INFO( "[Nile] year %# month %# · pop %# · money $%# · workers %#/%# · avg house level %# · culture %#%% · fertility %#%% · tool %# · plan %#/%#",
-                     _city.getYear(), _city.getMonth() + 1, _city.getPopulation(), _city.getMoney(), _city.getEmployed(), _city.getWorkforce(),
+                     _clock.getYear(), _clock.getSeasonIndex() + 1, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ), _city.getEmployed(), _city.getWorkforce(),
                      _city.computeAverageHouseLevel(), static_cast<int32>( _city.computeCultureCoverage() * 100.0f ), static_cast<int32>( _city.getFloodFertility() * 100.0f ),
                      getToolName(), _planner.getNextStep(), _planner.getStepCount() );
     }

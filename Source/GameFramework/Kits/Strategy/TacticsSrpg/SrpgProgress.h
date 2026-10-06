@@ -3,18 +3,20 @@
  * @brief 택틱스 SRPG 의 진행 — 작전 승패 조건(적 전멸 · 지휘관 격파 · 지점 도달 · 턴 버티기 · 턴 제한 · 아군 지휘관), 로그라이트 작전 지도(기반 `RunMap`)와 명단(레벨 · 개발이 이어진다)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Progression/LevelProgress.h"
+#include "GameFramework/Base/Progression/RunMap.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Progression/LevelProgress.h"
-#include "GameFramework/Progression/RunMap.h"
 
 namespace sw
 {
+    class Archive;
     class SrpgBattlefield;
     class SrpgCatalog;
 
@@ -80,6 +82,9 @@ namespace sw
     class SW_GF_API SrpgCampaign
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "SRCP" );
+        static constexpr uint32 kStateVersion = 1;
+
         SrpgCampaign();
 
         void initialize( const RunMapSettings& settings, uint32 seed );
@@ -102,6 +107,11 @@ namespace sw
         bool                           isFailed() const { return _bFailed == SW_TRUE; }
         /** @brief 끝 칸(보스)의 작전을 이겼는가입니다. */
         bool isCleared() const { return _bFailed == SW_FALSE && _bInMission == SW_FALSE && _runMap.isFinished(); }
+
+        /** @brief 지도(`RunMap`) · 명단(레벨 둘 · 기체 · 파일럿 id · 잃음) · 씨앗 · 임무 중 · 실패를 씁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         RunMap                  _runMap;

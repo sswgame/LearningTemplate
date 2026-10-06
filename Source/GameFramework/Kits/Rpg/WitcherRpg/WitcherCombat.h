@@ -4,16 +4,18 @@
  *        기반 `ElementChart` 상태이상), 아드레날린 포인트(적중으로 쌓이고 피격으로 준다)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {
+    class Archive;
     class ElementChart;
     class SkillTreeState;
     class StatBlock;
@@ -61,6 +63,9 @@ namespace sw
     class SW_GF_API WitcherCombat
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WCMB" );
+        static constexpr uint32 kStateVersion = 1;
+
         WitcherCombat();
 
         void initialize( const WitcherCatalog* pCatalog, uint32 seed );
@@ -86,6 +91,10 @@ namespace sw
         float32              getActionCost( WitcherAction action ) const;
         const ResourceGauge& getStamina() const { return _stamina; }
         ResourceGauge&       getStamina() { return _stamina; }
+        /** @brief 스태미나 게이지 · 난수 · 아드레날린을 씁니다. 카탈로그는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         ResourceGauge         _stamina;

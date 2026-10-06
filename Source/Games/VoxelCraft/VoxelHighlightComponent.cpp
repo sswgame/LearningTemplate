@@ -10,7 +10,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Framework/MaterialTintCache.h"
 
 #include "Games/VoxelCraft/VoxelPlayerComponent.h"
 
@@ -41,7 +42,7 @@ namespace sw
             const float32 step   = static_cast<float32>( level );
             _arrLevelLook[level] = MaterialInstance::create( pMesh->getMaterial() );
             if ( _arrLevelLook[level] != nullptr )
-                _arrLevelLook[level]->setVectorParameter( hashed_string( "color" ), float4{ 1.0f, 1.0f - 0.2f * step, 1.0f - 0.2f * step, 0.18f + 0.15f * step } );
+                _arrLevelLook[level]->setVectorParameter( hashed_string( kMaterialColorParameter ), float4{ 1.0f, 1.0f - 0.2f * step, 1.0f - 0.2f * step, 0.18f + 0.15f * step } );
         }
         _level = -1;
         pMesh->setVisible( false );

@@ -21,7 +21,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
@@ -60,32 +60,6 @@ def findTextureFolderViolations(resourceRelativePaths: Iterable[str]) -> list[st
     return violations
 
 
-def collectResourcePathsInternal(projectRoot: Path, targetFiles: Sequence[str] | None) -> list[str]:
-    """검사할 파일을 `Resource/` 기준 상대 경로로 모읍니다. 파일 목록이 오면(커밋 훅) 그것만 봅니다."""
-    resourceRoot = (projectRoot / "Resource").resolve()
-    if not resourceRoot.is_dir():
-        return []
-
-    if targetFiles is not None:
-        result: list[str] = []
-        for filePath in targetFiles:
-            path = Path(filePath)
-            if not path.is_absolute():
-                path = projectRoot / path
-            try:
-                result.append(path.resolve().relative_to(resourceRoot).as_posix())
-            except ValueError:
-                continue
-        return result
-
-    result = []
-    for root, _dirs, files in os.walk(resourceRoot):
-        relRoot = Path(root).relative_to(resourceRoot).as_posix()
-        for fileName in files:
-            result.append(fileName if relRoot == "." else f"{relRoot}/{fileName}")
-    return result
-
-
 class CheckTextureFoldersGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
@@ -93,7 +67,7 @@ class CheckTextureFoldersGate(LintGate):
     buildComment = "Checking runtime texture folders hold only imported DDS..."
     timeoutSeconds = 15
     preCommitPattern = ("Resource/*",)
-    preCommitFileArgument = "positional"
+    preCommitFileArgument = "--files"
     violationHeader = "텍스처 폴더 규칙 위반"
     hint = ("  원본 이미지는 같은 상대 경로의 `textures_raw/` 로 옮기고 `App --import-textures` 로 임포트해 DDS 와 "
             "`textures_raw/import.stamp` 를 함께 커밋합니다. 참조가 없는 원본은 지웁니다.")
@@ -119,10 +93,12 @@ class CheckTextureFoldersGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("files", nargs="*", help="검사할 특정 파일 경로 목록 (생략 시 전체 Resource/ 검사)")
+        self.addFilesArgument(parser, "검사할 파일 (생략 시 전체 Resource/)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = collectResourcePathsInternal(repositoryRoot, args.files or None)
+        resourceRoot = (repositoryRoot / "Resource").resolve()
+        listPath = [path.resolve().relative_to(resourceRoot).as_posix()
+                    for path in self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Resource",), bAnySuffix=True)]
         violations = findTextureFolderViolations(listPath)
         return GateResult(listViolation=violations, summary=f"Resource 파일 {len(listPath)}개")
 

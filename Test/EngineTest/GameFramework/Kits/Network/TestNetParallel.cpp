@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/deque.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
@@ -24,8 +25,8 @@ namespace
     uint64 mixBytes( uint64 hash, const vector<uint8>& buffer )
     {
         for ( const uint8 byte : buffer )
-            hash = ( hash ^ byte ) * 1099511628211ull;
-        return ( hash ^ 0xFFu ) * 1099511628211ull;
+            hash = ( hash ^ byte ) * sw::HashUtil::kFnvPrime64;
+        return ( hash ^ 0xFFu ) * sw::HashUtil::kFnvPrime64;
     }
 
     /** @brief 연결마다 다른 관련 · 우선도 — 나눠 돌 때 섞이면 드러나게. 상태를 바꾸지 않는다(여러 스레드가 동시에 부른다). */
@@ -78,7 +79,7 @@ namespace
             listReplication.back().initialize( &cluster.getClient( index ), ReplicationClientSettings{} );
         }
 
-        vector<uint64> listHash( kClientCount, 1469598103934665603ull );
+        vector<uint64> listHash( kClientCount, sw::HashUtil::kFnvOffset64 );
         vector<uint8>  buffer;
         for ( uint32 tick = 0; tick < 60; ++tick )
         {
@@ -144,7 +145,7 @@ namespace
         for ( int32 index = 0; index < kClientCount; ++index )
             server.setObserver( index, 1000u + static_cast<uint32>( index ) );
 
-        vector<uint64> listHash( static_cast<size_t>( kClientCount + 1 ), 1469598103934665603ull );
+        vector<uint64> listHash( static_cast<size_t>( kClientCount + 1 ), sw::HashUtil::kFnvOffset64 );
         vector<uint8>  buffer;
         for ( uint32 tick = 0; tick < 60; ++tick )
         {

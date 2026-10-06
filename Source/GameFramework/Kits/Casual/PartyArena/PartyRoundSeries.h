@@ -11,10 +11,10 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Data/XmlCatalog.h"
+#include "GameFramework/Base/Data/XmlCatalog.h"
+#include "GameFramework/Base/Match/RoundSeries.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Match/RoundSeries.h"
-#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {

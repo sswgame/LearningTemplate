@@ -276,8 +276,34 @@ namespace sw
 
     void D3D12RHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
-        if ( _pCmdList == nullptr || src == 0 )
+        if ( _pCmdList == nullptr || ( src == 0 && dst == 0 ) )
             return;
+
+        if ( src == 0 )
+        {
+            // 백버퍼 → 텍스처(창에 나갈 그림을 읽는다). 스왑체인 상태는 스왑체인 객체만 바꾼다.
+            ID3D12Resource* pBack = _pDevice->_swapChain.getCurrentBackBuffer();
+            ID3D12Resource* pDst  = _pDevice->resolveTexture( dst );
+            if ( pBack == nullptr || pDst == nullptr )
+                return;
+            const D3D12_RESOURCE_DESC backDesc   = pBack->GetDesc();
+            const D3D12_RESOURCE_DESC dstDesc    = pDst->GetDesc();
+            const bool                bSameShape = backDesc.Format == dstDesc.Format && backDesc.Width == dstDesc.Width && backDesc.Height == dstDesc.Height;
+            if ( bSameShape == false )
+            {
+                SW_LOG_ERROR( "blitTexture(backbuffer): the target must match the back buffer (fmt %# %#x%# vs %# %#x%#)", static_cast<uint32>( backDesc.Format ),
+                              static_cast<uint32>( backDesc.Width ), backDesc.Height, static_cast<uint32>( dstDesc.Format ), static_cast<uint32>( dstDesc.Width ),
+                              dstDesc.Height );
+                return;
+            }
+            _pDevice->reportBarrierDuringRecording( "blitTexture(backbuffer)" );
+            const D3D12_RESOURCE_STATES backStateBefore = _pDevice->_swapChain.getState();
+            _pDevice->_swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_COPY_SOURCE );
+            transitionTexture( dst, D3D12_RESOURCE_STATE_COPY_DEST );
+            commandListForRecord()->CopyResource( pDst, pBack );
+            _pDevice->_swapChain.transitionTo( commandListForRecord(), backStateBefore );
+            return;
+        }
 
         ID3D12Resource* pSrcResource = _pDevice->resolveTexture( src );
         if ( pSrcResource == nullptr )
@@ -623,10 +649,10 @@ namespace sw
         (void)rootParameterIndex;
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || pData == nullptr || num32BitValues == 0 )
             return;
-        if ( destOffsetIn32BitValues >= D3D12RHIDevice::kMaxComputeRootConstantDwords )
+        if ( destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
             return;
 
-        const uint32 maxCount = D3D12RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+        const uint32 maxCount = shaderslot::kRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
         commandListForRecord()->SetComputeRoot32BitConstants( D3D12RHIDevice::kRootConstantsParam, count, pData, destOffsetIn32BitValues );
     }
@@ -637,10 +663,10 @@ namespace sw
         (void)rootParameterIndex; // 루트 인자 번호는 루트 시그니처가 정한다 (kRootConstantsParam).
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || pData == nullptr || num32BitValues == 0 )
             return;
-        if ( destOffsetIn32BitValues >= D3D12RHIDevice::kMaxComputeRootConstantDwords )
+        if ( destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
             return;
 
-        const uint32 maxCount = D3D12RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+        const uint32 maxCount = shaderslot::kRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
         commandListForRecord()->SetGraphicsRoot32BitConstants( D3D12RHIDevice::kRootConstantsParam, count, pData, destOffsetIn32BitValues );
     }

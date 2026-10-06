@@ -185,8 +185,8 @@ namespace sw
                         {
                             MeshPassInfo passInfo;
                             passInfo._shaderPath          = shaderPath;
-                            passInfo._vertexEntryPoint    = pass._vertexEntryPoint.empty() ? "VSMain" : pass._vertexEntryPoint;
-                            passInfo._pixelEntryPoint     = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
+                            passInfo._vertexEntryPoint    = string( resolveEntryPoint( pass._vertexEntryPoint, ShaderStage::Vertex ) );
+                            passInfo._pixelEntryPoint     = string( resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ) );
                             passInfo._listPermutation     = listPassDefine;
                             passInfo._passType            = pass._resolvedType;
                             passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._resolvedType );
@@ -204,14 +204,14 @@ namespace sw
                         else
                         {
                             // 정점 셰이더
-                            const string vsEntry = pass._vertexEntryPoint.empty() ? "VSMain" : pass._vertexEntryPoint;
+                            const string vsEntry = string( resolveEntryPoint( pass._vertexEntryPoint, ShaderStage::Vertex ) );
                             appendRequestUnique( outListRequest, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine );
 
                             // 픽셀 셰이더. 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)엔 없다. 런타임과 같은 판정
                             // (`hasPixelStage`, 출력 선언의 RT 수)을 써야 둘이 어긋나지 않는다.
                             if ( FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment ) )
                             {
-                                const string psEntry = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
+                                const string psEntry = string( resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ) );
                                 appendRequestUnique( outListRequest, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine );
                             }
 
@@ -251,7 +251,7 @@ namespace sw
                         continue;
                     if ( info.hasFlag( RenderPassTraitFlag::kCompute ) )
                     {
-                        appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, "CSMain", ShaderStage::Compute, {} );
+                        appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, {} );
                         continue;
                     }
                     if ( FrameRendererUtil::drawsSceneMeshes( passType ) )
@@ -259,8 +259,8 @@ namespace sw
                         const RenderPassShaderSelection passShader = selectRenderPassShader( passType, nullptr, engineDefaultAssets );
                         MeshPassInfo                    passInfo;
                         passInfo._shaderPath          = passShader._shaderPath;
-                        passInfo._vertexEntryPoint    = FrameRendererUtil::Entry::kVSMain;
-                        passInfo._pixelEntryPoint     = FrameRendererUtil::Entry::kPSMain;
+                        passInfo._vertexEntryPoint    = getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint;
+                        passInfo._pixelEntryPoint     = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
                         passInfo._listPermutation     = passShader._listDefine;
                         passInfo._passType            = passType;
                         passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( passType );
@@ -268,8 +268,8 @@ namespace sw
                         passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( passType );
                         listMeshPass.push_back( std::move( passInfo ) );
                     }
-                    appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, "VSMain", ShaderStage::Vertex, {} );
-                    appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, "PSMain", ShaderStage::Pixel, {} );
+                    appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
+                    appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {} );
                 }
 
                 // 패스가 아닌 엔진 · 시험 셰이더.
@@ -281,8 +281,8 @@ namespace sw
                     "common/shaders/instanceslotprobe.hlsl" };
                 for ( const string& path : listEngineShader )
                 {
-                    appendRequestUnique( outListRequest, path, "VSMain", ShaderStage::Vertex, {} );
-                    appendRequestUnique( outListRequest, path, "PSMain", ShaderStage::Pixel, {} );
+                    appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
+                    appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {} );
                 }
 
                 const vector<string> listEngineComputeShader = {
@@ -291,8 +291,10 @@ namespace sw
                     "common/shaders/waterwaveprobe.hlsl" };
                 for ( const string& path : listEngineComputeShader )
                 {
-                    appendRequestUnique( outListRequest, path, "CSMain", ShaderStage::Compute, {} );
+                    appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, {} );
                 }
+                // 기본이 아닌 컴퓨트 진입점(RHIDeviceTest.ComputeEntryPointOtherThanCSMainRuns).
+                appendRequestUnique( outListRequest, "common/shaders/computetexturewrite.hlsl", "csWriteSwapped", ShaderStage::Compute, {} );
 
                 // 3) 머티리얼 에셋(.material)
                 vector<string> listMaterialFile;
@@ -317,14 +319,14 @@ namespace sw
                     {
                         variant._listDefine = std::move( listDefine );
                         listMaterialVariant.push_back( variant );
-                        appendRequestUnique( outListRequest, variant._shaderPath, "VSMain", ShaderStage::Vertex, variant._listDefine );
-                        appendRequestUnique( outListRequest, variant._shaderPath, "PSMain", ShaderStage::Pixel, variant._listDefine );
+                        appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, variant._listDefine );
+                        appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, variant._listDefine );
                     }
                     // 정의 없는 변형도 — 머티리얼이 원소 레이아웃을 읽는 자리다(`Material::ensureShaderLayout` 은 define 없이 리플렉션한다). 패스 기본
                     // 셰이더(forwardlit)는 위 1) 에서 이미 쿠킹되지만, 머티리얼만 쓰는 셰이더(지형 · 식생 · 물)는 여기서 쿠킹하지 않으면 Shipping 에서
                     // 매니페스트를 못 찾아 XML 순서 패킹으로 남는다.
-                    appendRequestUnique( outListRequest, variant._shaderPath, "VSMain", ShaderStage::Vertex, {} );
-                    appendRequestUnique( outListRequest, variant._shaderPath, "PSMain", ShaderStage::Pixel, {} );
+                    appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
+                    appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {} );
                 }
 
                 // 4) 패스 x (머티리얼 없음 + 머티리얼) x 뷰 모드: 런타임이 실제로 요구하는 조합

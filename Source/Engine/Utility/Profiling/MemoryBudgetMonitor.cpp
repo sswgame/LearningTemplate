@@ -14,6 +14,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Utility/Json/ConfigKeyDoc.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
 
@@ -23,6 +24,16 @@ namespace sw
     {
         SW_LOG_CALLER( "MemoryBudget" );
 
+        /** @brief 예산 파일의 뿌리입니다. */
+        static constexpr ConfigKeyDoc kArrMemoryBudgetRootKeyDoc[] = {
+            { "_listBudget", "object[]", "", "태그마다 예산 한 줄 — 없는 태그는 예산이 없다(경고하지 않는다)" },
+        };
+        /** @brief `_listBudget` 한 줄입니다. 같은 태그 두 번 · 0 이하 크기는 오류입니다. */
+        static constexpr ConfigKeyDoc kArrMemoryBudgetEntryKeyDoc[] = {
+            {      "_tag", "string", "", "메모리 태그 이름(`MemoryTag` — Texture · Mesh · Audio · Animation · Physics · Navigation · Scene · UI · Script …, 대소문자 무시)"},
+            {"_megabytes", "number", "",                                                                       "예산(MiB, 0 보다 크다). 넘으면 `[MemoryBudget]` 경고 한 번"},
+        };
+
         struct MemoryBudgetMonitorInternal
         {
             /** @brief 바이트를 KB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
@@ -30,24 +41,6 @@ namespace sw
 
             /** @brief 한 메가바이트입니다. */
             static constexpr uint64 kBytesPerMegabyte = 1024ull * 1024ull;
-
-            /** @brief @p value 의 멤버가 @p arrAllowed 밖이면 그 이름을 @p outUnknown 에 담고 false 입니다. */
-            template <size_t N>
-            static bool hasOnlyKnownKeys( const JsonValue& value, const utf8* const ( &arrAllowed )[N], string& outUnknown )
-            {
-                for ( const string& memberName : value.getMemberNames() )
-                {
-                    bool bKnown = false;
-                    for ( const utf8* pAllowed : arrAllowed )
-                        bKnown = bKnown || memberName == pAllowed;
-                    if ( bKnown == false )
-                    {
-                        outUnknown = memberName;
-                        return false;
-                    }
-                }
-                return true;
-            }
         };
     } // namespace
 } // namespace sw
@@ -82,11 +75,9 @@ namespace sw
             return false;
         }
 
-        const JsonValue          root = document.getRoot();
-        string                   unknownKey;
-        static const utf8* const kArrRootKey[]  = { "_listBudget" };
-        static const utf8* const kArrEntryKey[] = { "_tag", "_megabytes" };
-        if ( root.isObject() == false || MemoryBudgetMonitorInternal::hasOnlyKnownKeys( root, kArrRootKey, unknownKey ) == false )
+        const JsonValue root = document.getRoot();
+        string          unknownKey;
+        if ( root.isObject() == false || ConfigKeyDocUtil::hasOnlyKnownKeys( root, kArrMemoryBudgetRootKeyDoc, "MemoryBudget", &unknownKey ) == false )
         {
             outError = root.isObject() ? "unknown key '" + unknownKey + "'" : string( "the root must be an object" );
             return false;
@@ -105,7 +96,7 @@ namespace sw
         for ( size_t index = 0; index < entryCount; ++index )
         {
             const JsonValue entry = list.at( index );
-            if ( entry.isObject() == false || MemoryBudgetMonitorInternal::hasOnlyKnownKeys( entry, kArrEntryKey, unknownKey ) == false )
+            if ( entry.isObject() == false || ConfigKeyDocUtil::hasOnlyKnownKeys( entry, kArrMemoryBudgetEntryKeyDoc, "MemoryBudget entry", &unknownKey ) == false )
             {
                 outError = "budget entry " + to_string( index ) + ( entry.isObject() ? ": unknown key '" + unknownKey + "'" : string( " is not an object" ) );
                 return false;
@@ -140,7 +131,7 @@ namespace sw
     bool MemoryBudgetMonitor::loadBudgetFile( string_view absolutePath )
     {
         MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        if ( pProfiler == nullptr || FileUtil::fileExists( absolutePath ) == false )
+        if ( pProfiler == nullptr || FileUtil::exists( absolutePath ) == false )
             return true;
 
         string text;
@@ -259,6 +250,18 @@ namespace sw
         {
             const uint64 outsideX10 = MemoryBudgetMonitorInternal::toKilobytesX10( platformBytes - swBlockBytes );
             SW_LOG_INFO( "[Memory]   (outside the sw allocator — std::allocator · third-party · static init)  %#.%# KB", outsideX10 / 10, outsideX10 % 10 );
+        }
+
+        uint64 platformTotalBytes{ 0 };
+        uint64 platformRequestCount{ 0 };
+        if ( MemoryProfiler::getPlatformHeapTotals( platformTotalBytes, platformRequestCount ) )
+        {
+            // sw 블록도 CRT 에서 온다(헤더 포함). 추적을 켜기 전(부트스트랩 맨 앞)의 sw 할당은 밖 몫으로 세인다 — 근사다.
+            const uint64 swCount      = profiler.getTotalAllocationCount();
+            const uint64 swBytes      = profiler.getTotalAllocatedBytes() + swCount * Memory::getAllocationHeaderSize();
+            const uint64 outsideCount = platformRequestCount > swCount ? platformRequestCount - swCount : 0;
+            const uint64 outsideX10   = MemoryBudgetMonitorInternal::toKilobytesX10( platformTotalBytes > swBytes ? platformTotalBytes - swBytes : 0 );
+            SW_LOG_INFO( "[Memory]   (outside the sw allocator, cumulative since start)  %#.%# KB in %# allocations", outsideX10 / 10, outsideX10 % 10, outsideCount );
         }
 #endif
     }

@@ -10,8 +10,9 @@
 | 폴더 | 무엇 | 빌드 |
 |------|------|------|
 | `Empty` | 최소 템플릿 + 렌더 벤치 하네스(`-gv_benchMeshes=N`). 기본값 | `-DSW_ACTIVE_GAME=Empty` |
-| `AbilityArena` | 어빌리티 시스템(`GameFramework/Ability`)을 실제로 쓰는 탑다운 웨이브 아레나 — 근접 · 화염구(화상 스택) · 회복(데이터만) · 대시(무적) · 가시 | `-DSW_ACTIVE_GAME=AbilityArena` |
+| `AbilityArena` | 어빌리티 시스템(`GameFramework/Base/Ability`)을 실제로 쓰는 탑다운 웨이브 아레나 — 근접 · 화염구(화상 스택) · 회복(데이터만) · 대시(무적) · 가시 | `-DSW_ACTIVE_GAME=AbilityArena` |
 | `HarvestValley` | 농장 생활(하베스트 문 장르, `GF_Farming`) — 갈기 · 물 · 심기 · 거두기 · 출하 · 잠, 계절 · 비, 직교 탑다운 시점 | `-DSW_ACTIVE_GAME=HarvestValley` |
+| `MeadowVillage` | 키트 조립 시험(농장 `GF_Farming` + 생물 마을 `GF_CreatureLife`) — 공유 상태 `GameStateComponent` 와 키트 디렉터 둘이 한 오브젝트에, 밭이 번 돈으로 마을이 과수원을 심어 부탁이 끝난다 | `-DSW_ACTIVE_GAME=MeadowVillage` |
 | `NileCity` | 도시 건설(파라오 장르, `GF_CityBuilder`) — 절차 나일 강 · 범람원 · 사막, 도로 · 우물 · 농장 → 창고 → 바자 → 집 사슬, 순회 일꾼, 집 진화, 범람, 마우스 짓기 · 허물기, `-gv_nileAutoPlay=1` | `-DSW_ACTIVE_GAME=NileCity` |
 | `Shooter3D` | 1인칭 슈터(기반 `Combat`) — 소총 · 산탄총 · 권총, 히트스캔 · 퍼짐 · 반동, 드론 웨이브, Kenney 조준선(CC0) | `-DSW_ACTIVE_GAME=Shooter3D` |
 | `StarSkirmish` | 실시간 전략(스타크래프트 장르, `GF_RealTimeStrategy`) — 절차 맵(두 기지 · 광물 · 간헐천 · 절벽), 채취 · 생산 · 건설 · 전투 · 안개, 끌어 고르기 · 오른쪽 클릭 · 부대, 사람 대 AI 또는 `-gv_skirmishAutoPlay=1` AI 대 AI | `-DSW_ACTIVE_GAME=StarSkirmish` |
@@ -28,11 +29,13 @@
 {
     "_name": "SWGame", "_version": "1.0.0", "_kind": "Game",
     "_listDependency": [ { "_name": "GameFramework" }, { "_name": "GF_Voxel" } ],
-    "_listPlatform": [ "Windows", "Linux" ], "_listConfiguration": [ "Dev", "Shipping" ],
+    "_listPlatform": [ "Windows", "Linux" ], "_listConfiguration": [ "Dev", "Shipping" ], "_listTarget": [ "Client", "Server" ],
     "_listModuleOverride": [ { "_name": "GF_Fighting", "_bEnabled": false } ]
 }
 ```
 
+- `_listTarget`(필수)은 모듈이 들어가는 빌드 타깃입니다 — 게임 · 공유 키트는 `[ "Client", "Server" ]`, 서버 전용 `GF_Server_<X>` 는 `[ "Server" ]`,
+  에디터 · RHI 는 `[ "Client" ]`(`Source/GameFramework/README.md` "클라이언트 · 서버로 나뉘는 기능").
 - 게임이 링크하는 키트는 `_listDependency` 가 정합니다(`sw_addGameModule` 이 읽는다 — CMake 에 다시 적지 않는다).
 - `_listModuleOverride` 로 끈 모듈은 **짓지 않고**(CMake), 시험 실행 파일에서도 그 키트를 include 하는 시험이 빠지며, App 도 올리지 않습니다.
   Shipping 은 켜진 키트만 정적 링크합니다. 켜진 모듈이 꺼진 모듈에 기대면 구성이 서고 무엇이 왜 꺼졌는지 말합니다.
@@ -41,15 +44,16 @@
 
 ## 새로운 게임 추가하는 방법
 
-1. **템플릿 복사하기**: `Source/Games/Empty/` 를 `Source/Games/MyGame/` 으로 복사합니다.
+1. **템플릿 복사하기**: `Source/Games/Empty/` 를 `Source/Games/<게임>/` 으로 복사합니다.
 2. **벤치 하네스 지우기**: `BenchScene.*` · `BenchMoverComponent.*` 를 지우고, `EmptyGame` 의
    `_benchScene` 멤버와 그것을 쓰는 곳(초기화 · 업데이트 · 상태 직렬화 전후)을 지웁니다. 이건 측정용이고 게임 코드가 아닙니다
    (아래 "Empty 는 왜 비어 있지 않은가" 참고).
-3. **필요한 키트 연결하기**: `MyGame/SWGame.module.json` 의 `_listDependency` 에 필요한 키트를 적습니다(`_kind` 는 `Game`).
-4. **게임 리소스 폴더 · 프리셋 만들기**: `Resource/game/mygame/` 을 만들고, 게임 프리셋 `Config/Game/MyGame.json`(파일 이름 = 게임 폴더 이름)에
-   `_packRoot` 를 `"game/mygame"` 로 적습니다. 시작 씬은 프리셋의 `_startupScene` 또는 팩의 `data/gamesettings.xml` `startMap` 입니다.
+3. **필요한 키트 연결하기**: `<게임>/SWGame.module.json` 의 `_listDependency` 에 필요한 키트를 적습니다(`_kind` 는 `Game`).
+4. **게임 리소스 폴더 · 프리셋 만들기**: `Resource/game/<게임 소문자>/` 을 만들고, 게임 프리셋 `Config/Game/<게임>.json`(파일 이름 = 게임 폴더 이름)에
+   `_packRoot` 를 `"game/<게임 소문자>"`, 창 제목 `_windowTitle` 을 적습니다. 시작 씬은 팩의 `data/gamesettings.xml` `startMap`(타이틀이 있으면 `titleScene`) 하나입니다.
    프리셋이 없으면 configure 가 멈춥니다.
-5. **CMake 활성화**: `-DSW_ACTIVE_GAME=MyGame`.
+5. **CMake 프리셋 더하기**: `CMakePresets.json` 에 `Ninja-Debug-<게임>`(configure · build, `SW_ACTIVE_GAME=<게임>`, 빌드 폴더는 게임마다 따로)을
+   더합니다. 게임은 프리셋으로 바꾸고 한 빌드 폴더를 다시 구성하지 않습니다(`CheckGamePresets.py`).
 6. **쓰지 않는 키트 끄기(선택)**: `_listModuleOverride` 에 `{ "_name": "GF_…", "_bEnabled": false }` 를 적으면 그 키트는 이 게임의 빌드 · 실행에서 빠집니다.
 
 ## 새 게임 = 씬 + 프리팹 + 디렉터 · 뷰 컴포넌트
@@ -71,7 +75,7 @@
 | 장르 무관 카메라 · 장식 | GameFramework `Camera/`(`OrthoCameraRigComponent` · `FirstPersonCameraComponent`) · `World/`(`PropScatterComponent` · `GravityComponent` …) |
 | 게임 클래스 | `requestFirstScene()` 과, 생성자의 `registerDirector<디렉터>()` 한 줄 — 상태 저장 전에 시뮬레이션을 싣고 디렉터가 세운 것을 걷으며, 복원 뒤 돌려준다 |
 
-**디렉터는 베이스를 쓴다** — `GameFramework/Framework/GameDirectorComponent`(언리얼 `AGameModeBase` · `AGameStateBase` 의 자리, Lyra 처럼 게임 상태를 한 컴포넌트에).
+**디렉터는 베이스를 쓴다** — `GameFramework/Base/Framework/GameDirectorComponent`(언리얼 `AGameModeBase` · `AGameStateBase` 의 자리, Lyra 처럼 게임 상태를 한 컴포넌트에).
 골격(틱 그룹 · 상태 바이트 보류 · 틱 뒤 플러시 · 대기 소리 · 세운 것 걷기 · 자동 플레이 · 디렉터 찾기)은 베이스가 들고, 디렉터는 게임마다 다른 것만 적는다:
 
 | 디렉터가 적는 것 | 언제 |
@@ -110,7 +114,7 @@
 `-gv_benchMeshes=N` 을 주면 큐브 N 개를 격자로 세우고 매 프레임 흔듭니다.
 
 그릴 것이 씬에 올라가야 렌더 비용을 잴 수 있고, **씬을 만드는 것은 엔진이 아니라 게임의 일**이라
-여기 있습니다. `Scripts/dev/BackendSmoke.py` 와 `Engine/Graphics/README.md` 의 측정 조건이 이
+여기 있습니다. `Scripts/dev/RunBackendSmoke.py` 와 `Engine/Graphics/README.md` 의 측정 조건이 이
 플래그에 기대고 있어 타깃·플래그 이름은 바꾸지 않습니다.
 
 그래서 파일을 나눠 두었습니다 — `EmptyGame` 은 작은 템플릿이고, 벤치는 `BenchScene`(+ 틱 안에서 위치를 쓰는

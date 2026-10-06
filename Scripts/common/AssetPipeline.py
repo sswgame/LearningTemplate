@@ -7,8 +7,9 @@ Scripts/common/AssetPipeline.py
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
+
+from .BuildTree import BuildTree, BuildTreeError
 
 
 def resolveDefaultOutputDir(projectRoot: Path, subDir: str = "Packs") -> Path:
@@ -20,7 +21,7 @@ def resolveDefaultOutputDir(projectRoot: Path, subDir: str = "Packs") -> Path:
         subDir: Bin 하위의 출력 서브디렉터리 명 (예: "Packs").
 
     Returns:
-        탐색된 대상 출력 디렉터리 Path.
+        탐색된 대상 출력 디렉터리 Path. 구성된 빌드가 없으면 `BuildTreeError`(부르는 쪽이 1 로 끝낸다).
     """
     buildDir = projectRoot / "build"
     if buildDir.is_dir():
@@ -28,21 +29,13 @@ def resolveDefaultOutputDir(projectRoot: Path, subDir: str = "Packs") -> Path:
         for child in buildDir.iterdir():
             if not child.is_dir():
                 continue
-            binDir = child / "Bin"
-            if binDir.is_dir():
-                mtime = 0.0
-                for marker in ("build.ninja", "CMakeCache.txt", "compile_commands.json"):
-                    markerPath = child / marker
-                    if markerPath.is_file():
-                        mtime = max(mtime, markerPath.stat().st_mtime)
-                if mtime == 0.0:
-                    mtime = binDir.stat().st_mtime
-                target = (binDir / subDir) if subDir else binDir
-                candidates.append((mtime, target))
+            tree = BuildTree(child)
+            if tree.binDir.is_dir() and tree.bConfigured:
+                mtime = (tree.path / "CMakeCache.txt").stat().st_mtime
+                candidates.append((mtime, (tree.binDir / subDir) if subDir else tree.binDir))
 
         if candidates:
             candidates.sort(key=lambda item: item[0], reverse=True)
             return candidates[0][1]
 
-    print(f"[Error] Could not find a valid build output directory (build/*/Bin/{subDir}). Please specify output explicitly.", file=sys.stderr)
-    sys.exit(1)
+    raise BuildTreeError(f"구성된 빌드 폴더가 없어 기본 출력 폴더(build/*/Bin/{subDir})를 정하지 못했다 — 출력 폴더를 직접 주거나 cmake --preset 을 먼저 돌린다")

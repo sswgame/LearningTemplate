@@ -2,34 +2,30 @@
 
 #include "Engine/Resource/DdsLoader.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Resource/DdsFormat.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
 {
     namespace
     {
-        constexpr uint32 kDdsMagic      = 0x20534444; // "DDS "
-        constexpr uint32 kDdsHeaderSize = 124;
-        constexpr uint32 kDx10Magic     = 0x30315844; // "DX10"
-
-        constexpr uint32 kDdpfFourCC = 0x00000004;
-        constexpr uint32 kDdpfRgb    = 0x00000040;
 
         // DXT 계열 FourCC 코드
-        constexpr uint32 kFourCC_DXT1 = 0x31545844;
-        constexpr uint32 kFourCC_DXT2 = 0x32545844;
-        constexpr uint32 kFourCC_DXT3 = 0x33545844;
-        constexpr uint32 kFourCC_DXT4 = 0x34545844;
-        constexpr uint32 kFourCC_DXT5 = 0x35545844;
-        constexpr uint32 kFourCC_ATI1 = 0x31495441;
-        constexpr uint32 kFourCC_BC4U = 0x55344342;
-        constexpr uint32 kFourCC_ATI2 = 0x32495441;
-        constexpr uint32 kFourCC_BC5U = 0x55354342;
+        constexpr uint32 kFourCC_DXT1 = FourCcUtil::make( "DXT1" );
+        constexpr uint32 kFourCC_DXT2 = FourCcUtil::make( "DXT2" );
+        constexpr uint32 kFourCC_DXT3 = FourCcUtil::make( "DXT3" );
+        constexpr uint32 kFourCC_DXT4 = FourCcUtil::make( "DXT4" );
+        constexpr uint32 kFourCC_DXT5 = FourCcUtil::make( "DXT5" );
+        constexpr uint32 kFourCC_ATI1 = FourCcUtil::make( "ATI1" );
+        constexpr uint32 kFourCC_BC4U = FourCcUtil::make( "BC4U" );
+        constexpr uint32 kFourCC_ATI2 = FourCcUtil::make( "ATI2" );
+        constexpr uint32 kFourCC_BC5U = FourCcUtil::make( "BC5U" );
 
         // D3DFMT 열거값이 그대로 들어앉은 FourCC — **네 글자 코드가 아니다.**
         // D3D9 시절 DDS 라이터는 부동소수점 포맷에 네 글자 이름을 주지 않고 `D3DFORMAT` 의 정수를
@@ -146,19 +142,19 @@ namespace sw
         }
 
         const uint32 magic = *reinterpret_cast<const uint32*>( pBuffer );
-        if ( magic != kDdsMagic )
+        if ( magic != DdsFormat::kMagic )
         {
             SW_LOG_ERROR(
                 "Invalid DDS magic: 0x%# (expected 0x%#).",
                 Fmt( magic, Format( 8, Format::Padding::Zero ).hex() ),
-                Fmt( static_cast<uint32>( kDdsMagic ), Format( 8, Format::Padding::Zero ).hex() ) );
+                Fmt( static_cast<uint32>( DdsFormat::kMagic ), Format( 8, Format::Padding::Zero ).hex() ) );
             return false;
         }
 
         const DdsFileHeader* pHeader = reinterpret_cast<const DdsFileHeader*>( pBuffer + sizeof( uint32 ) );
-        if ( pHeader->_size != kDdsHeaderSize || pHeader->_pixelFormat._size != sizeof( DdsPixelFormatHeader ) )
+        if ( pHeader->_size != DdsFormat::kHeaderSize || pHeader->_pixelFormat._size != sizeof( DdsPixelFormatHeader ) )
         {
-            SW_LOG_ERROR( "Corrupted DDS header size (%#, expected %#).", pHeader->_size, kDdsHeaderSize );
+            SW_LOG_ERROR( "Corrupted DDS header size (%#, expected %#).", pHeader->_size, DdsFormat::kHeaderSize );
             return false;
         }
 
@@ -169,7 +165,7 @@ namespace sw
 
         size_t dataOffset = sizeof( uint32 ) + sizeof( DdsFileHeader );
 
-        if ( ( pHeader->_pixelFormat._flags & kDdpfFourCC ) != 0 && pHeader->_pixelFormat._fourCC == kDx10Magic )
+        if ( ( pHeader->_pixelFormat._flags & DdsFormat::kPixelFormatFourCcFlag ) != 0 && pHeader->_pixelFormat._fourCC == DdsFormat::kDx10FourCc )
         {
             if ( bufferSize < dataOffset + sizeof( DdsHeaderDxt10 ) )
             {
@@ -181,7 +177,7 @@ namespace sw
             image._dxgiFormat            = pDxt10->_dxgiFormat;
             dataOffset += sizeof( DdsHeaderDxt10 );
         }
-        else if ( ( pHeader->_pixelFormat._flags & kDdpfFourCC ) != 0 )
+        else if ( ( pHeader->_pixelFormat._flags & DdsFormat::kPixelFormatFourCcFlag ) != 0 )
         {
             switch ( pHeader->_pixelFormat._fourCC )
             {
@@ -251,7 +247,7 @@ namespace sw
                 }
             }
         }
-        else if ( ( pHeader->_pixelFormat._flags & kDdpfRgb ) != 0 )
+        else if ( ( pHeader->_pixelFormat._flags & DdsFormat::kPixelFormatRgbFlag ) != 0 )
         {
             if ( pHeader->_pixelFormat._rgbBitCount == 32 )
             {

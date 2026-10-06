@@ -29,7 +29,7 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return make_unique<Win32SplashWindow>();
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
         return make_unique<X11SplashWindow>();
 #else
         return nullptr;

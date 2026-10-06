@@ -32,8 +32,30 @@ namespace sw
 
     void D3D11RHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
     {
-        if ( _pContext == nullptr || src == 0 )
+        if ( _pContext == nullptr || ( src == 0 && dst == 0 ) )
             return;
+
+        if ( src == 0 )
+        {
+            // 백버퍼 → 텍스처. CopyResource 는 포맷 · 크기가 같아야 한다(받는 쪽은 getBackBufferFormat 으로 만든다).
+            const Microsoft::WRL::ComPtr<ID3D11Texture2D> backTex    = _pDevice->_swapChain.getBackBufferTexture();
+            const D3D11RHIDevice::TextureRecord*          pDstRecord = _pDevice->resolveTexture( dst );
+            if ( backTex == nullptr || pDstRecord == nullptr || pDstRecord->_texture == nullptr || pDstRecord->_bDepth != SW_FALSE )
+                return;
+            D3D11_TEXTURE2D_DESC backDesc{};
+            D3D11_TEXTURE2D_DESC dstDesc{};
+            backTex->GetDesc( &backDesc );
+            pDstRecord->_texture->GetDesc( &dstDesc );
+            const bool bSameShape = backDesc.Format == dstDesc.Format && backDesc.Width == dstDesc.Width && backDesc.Height == dstDesc.Height;
+            if ( bSameShape == false )
+            {
+                SW_LOG_ERROR( "blitTexture(backbuffer): the target must match the back buffer (fmt %# %#x%# vs %# %#x%#)", static_cast<uint32>( backDesc.Format ),
+                              backDesc.Width, backDesc.Height, static_cast<uint32>( dstDesc.Format ), dstDesc.Width, dstDesc.Height );
+                return;
+            }
+            _pContext->CopyResource( pDstRecord->_texture.Get(), backTex.Get() );
+            return;
+        }
 
         const D3D11RHIDevice::TextureRecord* pSrcRecord = _pDevice->resolveTexture( src );
         if ( pSrcRecord == nullptr || pSrcRecord->_texture == nullptr || pSrcRecord->_bDepth != SW_FALSE )
@@ -77,7 +99,7 @@ namespace sw
         if ( pRecord->_blendState )
         {
             constexpr float32 arrBlendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-            _pContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::MaxUInt32 );
+            _pContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::kMaxUInt32 );
         }
         if ( pRecord->_depthStencilState )
             _pContext->OMSetDepthStencilState( pRecord->_depthStencilState.Get(), 0 );
@@ -150,7 +172,7 @@ namespace sw
             if ( pRecord->_blendState )
             {
                 constexpr float32 arrBlendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-                _pContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::MaxUInt32 );
+                _pContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::kMaxUInt32 );
             }
         }
         else if ( pDsv != nullptr && _pDevice->_depthEnabledState )
@@ -446,10 +468,10 @@ namespace sw
     {
         if ( _pContext == nullptr || num32BitValues == 0 || pData == nullptr )
             return;
-        if ( destOffsetIn32BitValues >= D3D11RHIDevice::kMaxComputeRootConstantDwords )
+        if ( destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
             return;
 
-        const uint32 maxCount = D3D11RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+        const uint32 maxCount = shaderslot::kRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
         if ( _pDevice->ensureRootConstantCb( *_pState ) == false )
             return;

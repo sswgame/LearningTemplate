@@ -21,7 +21,7 @@
 
 #include "EngineTest/AnimationTestUtil.h"
 
-#include "GameFramework/Interaction/InteractableComponent.h"
+#include "GameFramework/Base/Interaction/InteractableComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -127,7 +127,7 @@ SW_TEST_CASE( MotionWarpingTest, WarpWindowReachesTargetAtWindowEnd )
     pWarping->dispatchBeginPlay();
     pNotify->dispatchBeginPlay();
     SW_ASSERT_TRUE( pAnimator->play( hashed_string( "Walk" ), false, 0.0f ) );
-    pWarping->setWarpTarget( hashed_string( "Seat" ), float3{ 0.5f, 0.0f, 2.0f }, MathUtil::HalfPi );
+    pWarping->setWarpTarget( hashed_string( "Seat" ), float3{ 0.5f, 0.0f, 2.0f }, MathUtil::kHalfPi );
 
     SceneComponent* pRoot = pObject->getPrimarySceneComponent();
     SW_ASSERT_NOT_NULL( pRoot );
@@ -140,7 +140,7 @@ SW_TEST_CASE( MotionWarpingTest, WarpWindowReachesTargetAtWindowEnd )
     SW_EXPECT_NEAR_EQUAL( 0.5f, position._x, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, position._y, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, position._z, 1e-3f );
-    SW_EXPECT_NEAR_EQUAL( MathUtil::HalfPi, TestMotionWarpingInternal::computeYaw( *pRoot ), 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::kHalfPi, TestMotionWarpingInternal::computeYaw( *pRoot ), 1e-3f );
     SW_EXPECT_EQUAL( 0u, pWarping->getOpenWindowCount() );
 
     // 창 밖 — 클립 그대로(요 90° 라 +Z 루트 모션이 월드 +X 로 0.125 m).
@@ -211,7 +211,7 @@ SW_TEST_CASE( MotionWarpingTest, AlignmentPointResolvesSocketMarker )
     SW_EXPECT_TRUE( pInteractable->computeAlignmentPoint( position, yaw ) );
     SW_EXPECT_NEAR_EQUAL( 2.0f, position._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 4.5f, position._z, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( MathUtil::Pi, MathUtil::abs( yaw ), 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::kPi, MathUtil::abs( yaw ), 1e-3f );
 }
 
 /**
@@ -247,7 +247,7 @@ SW_TEST_CASE( MotionWarpingTest, LocomotionWarpingScalesRateAndTurnsLowerBody )
     }
     SW_EXPECT_NEAR_EQUAL( 1.5f, pAnimator->getPlayRate(), 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pLocomotion->getStrideScale(), 1e-3f );
-    SW_EXPECT_NEAR_EQUAL( MathUtil::Pi * 0.25f, pLocomotion->getOrientationAngle(), 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::kPi * 0.25f, pLocomotion->getOrientationAngle(), 1e-3f );
 
     // 한 프레임 더 — 후처리가 지난 프레임의 각으로 뼈 1 을 돌렸다(모델 공간의 앞이 45°).
     pRoot->setWorldPosition( pRoot->getWorldPosition() + step );
@@ -255,5 +255,5 @@ SW_TEST_CASE( MotionWarpingTest, LocomotionWarpingScalesRateAndTurnsLowerBody )
     float4x4 boneModel;
     SW_ASSERT_TRUE( pObject->getComponent<SkeletalMeshComponent>()->findBoneModelTransform( hashed_string( "bone1" ), boneModel ) );
     const float3 boneForward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, boneModel ).normalize();
-    SW_EXPECT_NEAR_EQUAL( MathUtil::Pi * 0.25f, MathUtil::atan2( boneForward._x, boneForward._z ), 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::kPi * 0.25f, MathUtil::atan2( boneForward._x, boneForward._z ), 1e-3f );
 }

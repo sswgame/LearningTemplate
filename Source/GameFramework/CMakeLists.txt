@@ -4,65 +4,35 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) GameFramework — Kits/는 별도 타겟이라 GLOB에서 제외
-# export는 sw_configureGfExports (sw_addGfKit와 동일 로직)
+# 1) GameFramework — 모듈 라이브러리 기본값은 sw_addModuleLibrary(cmake/Engine/ModuleTargets.cmake). Kits/ 는 키트마다 따로 짓는다.
 # ------------------------------------------------------------------------------
 sw_skipInactiveModule(GameFramework swSkipGameFramework)
 if(swSkipGameFramework)
 	return()
 endif()
 
-if(SW_SHIPPING_BUILD)
-	set(gfLibType STATIC)
-else()
-	set(gfLibType SHARED)
+file(GLOB_RECURSE listGameFrameworkSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+list(FILTER listGameFrameworkSource EXCLUDE REGEX "Kits/")
+
+# 리플렉션 대상 헤더는 소스와 **같은 목록**에서 고른다. 주의: 폴더를 이름으로 적어 모으면 최상위 폴더를 하나 더 만들 때 그 안의 REFLECT() 타입이
+# 조용히 등록되지 않는다 — 컴파일은 되고 역직렬화만 실패하므로 찾기 어렵다. (자동 훑기를 쓰지 않는 이유: 폴더 재귀가 Kits/ 까지 내려간다.)
+set(listGameFrameworkHeader ${listGameFrameworkSource})
+list(FILTER listGameFrameworkHeader INCLUDE REGEX "\\.(h|hpp)$")
+
+sw_addModuleLibrary(GameFramework
+	KIND gameframework
+	DEV_TYPE SHARED
+	EXPORTS GF
+	LOG_TAG "GameFramework"
+	FOLDER "Source/GameFramework"
+	SOURCES ${listGameFrameworkSource}
+	LINK_PUBLIC Engine sw_public_source_includes
+	UNITY_BATCH 8
+	REFLECTION_HEADERS ${listGameFrameworkHeader}
+)
+# 로컬 저장의 장치 키(Base/Online/Local/LocalDeviceKeyProvider)는 Windows DPAPI 로 감싼다.
+if(WIN32)
+	target_link_libraries(GameFramework PRIVATE crypt32)
 endif()
-
-file(GLOB_RECURSE GF_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
-list(FILTER GF_SOURCES EXCLUDE REGEX "Kits/")
-
-add_library(GameFramework ${gfLibType} ${GF_SOURCES})
-set_target_properties(GameFramework PROPERTIES FOLDER "Source/GameFramework")
-
-target_include_directories(GameFramework PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(GameFramework
-	PUBLIC
-	Engine
-	sw_public_source_includes
-	PRIVATE
-	sw_global_options
-)
-
-target_compile_definitions(GameFramework
-	PRIVATE
-	"SW_LOG_TAG=\"GameFramework\""
-)
-sw_configurePch(GameFramework "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
-
-sw_configureGfExports(GameFramework ${gfLibType})
-
-if(gfLibType STREQUAL "SHARED")
-	sw_setModuleBinOutput(GameFramework)
-endif()
-
-sw_registerDynamicModule(GameFramework gameframework)
-
-if(COMMAND sw_setUnityBuild)
-	sw_setUnityBuild(GameFramework BATCH_SIZE 8)
-endif()
-
-# 리플렉션 대상 헤더는 소스와 **같은 규칙**으로 모은다. 주의: 폴더를 이름으로 적어 모으면
-# 최상위 폴더를 하나 더 만들 때 그 안의 REFLECT() 타입이 조용히 등록되지 않는다 —
-# 컴파일은 되고 역직렬화만 실패하므로 찾기 어렵다.
-file(GLOB_RECURSE GF_HEADERS CONFIGURE_DEPENDS
-	"${CMAKE_CURRENT_SOURCE_DIR}/*.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
-)
-list(FILTER GF_HEADERS EXCLUDE REGEX "Kits/")
-
-sw_addReflectionStep(GameFramework
-	HEADERS ${GF_HEADERS}
-	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
-)
 
 add_subdirectory(Kits)

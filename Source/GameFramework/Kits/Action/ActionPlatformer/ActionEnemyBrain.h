@@ -5,6 +5,7 @@
  * @details 순찰 → 조준 → 사격 → 쉬기 같은 플랫포머 졸개 · 보스 패턴이 이것으로 충분합니다. 난수가 없고 프레임으로만 가서 결정적입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/String/hashed_string.h"
@@ -15,6 +16,9 @@ namespace sw
 {
     struct ActionPatternDef;
     struct ActionPatternStateDef;
+
+    class ActionPlatformerCatalog;
+    class Archive;
 
     /** @brief 이번 프레임에 적이 할 일입니다. */
     struct ActionEnemyAction
@@ -36,6 +40,9 @@ namespace sw
     class SW_GF_API ActionEnemyBrain
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "APEB" );
+        static constexpr uint32 kStateVersion = 1;
+
         ActionEnemyBrain();
 
         /** @brief 패턴을 두고 시작 상태로 갑니다. 패턴이 비면 false 입니다. */
@@ -53,14 +60,22 @@ namespace sw
         int32                getStateFrame() const { return _stateFrame; }
         int32                getFacing() const { return _facing; }
 
+        /** @brief 패턴 id · 상태 id · 상태 안의 프레임 · 바라보는 쪽 · 들어선 프레임 표시를 씁니다. 패턴 정의는 카탈로그의 것이라 id 만 싣습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief 패턴을 찾을 카탈로그를 빌립니다 — `readState` 하기 전에 묶는다(카탈로그는 뇌보다 오래 산다). */
+        void bindCatalog( const ActionPlatformerCatalog* pCatalog ) { _pCatalog = pCatalog; }
+        /** @brief `writeState` 의 바이트로 바꿉니다 — 패턴은 묶은 카탈로그에서 id 로 찾습니다. 패턴이 있는데 카탈로그가 없거나, 없는 패턴 · 상태거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
     private:
         void                         enterState( int32 stateIndex );
         const ActionPatternStateDef* getState() const;
 
-        const ActionPatternDef* _pPattern;
-        int32                   _stateIndex;
-        int32                   _stateFrame; ///< 지금 상태에서 지난 프레임(들어선 프레임 = 0)
-        int32                   _facing;
-        uint8                   _bEntered; ///< 이번 프레임에 상태에 들어섰다(쏘기 한 번)
+        const ActionPatternDef*        _pPattern;
+        const ActionPlatformerCatalog* _pCatalog; ///< `readState` 가 패턴을 찾는 곳(빌림)
+        int32                          _stateIndex;
+        int32                          _stateFrame; ///< 지금 상태에서 지난 프레임(들어선 프레임 = 0)
+        int32                          _facing;
+        uint8                          _bEntered; ///< 이번 프레임에 상태에 들어섰다(쏘기 한 번)
     };
 } // namespace sw

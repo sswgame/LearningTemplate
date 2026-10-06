@@ -8,7 +8,7 @@
  *          걷으며, 복원 뒤 그 상태를 돌려줍니다.
  */
 #pragma once
-#include "GameFramework/Framework/GameInstanceBase.h"
+#include "GameFramework/Base/Framework/GameInstanceBase.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 
 namespace sw

@@ -10,11 +10,13 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 카드 한 장입니다. 같은 덱 안에서 `_id` 는 하나뿐입니다. */
     struct Card
     {
@@ -98,6 +100,11 @@ namespace sw
         /** @brief 맨 위 카드입니다. 비었으면 빈 카드(`isValid() == false`)입니다. */
         Card                getTop() const { return _listCard.empty() ? Card{} : _listCard.back(); }
         const vector<Card>& getCards() const { return _listCard; }
+
+        /** @brief 장수와 카드마다 번호 · 무늬 · 숫자를 맨 아래부터 씁니다(카드 게임 키트 상태의 더미 한 칸). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         vector<Card> _listCard; ///< [0] = 맨 아래, 끝 = 맨 위

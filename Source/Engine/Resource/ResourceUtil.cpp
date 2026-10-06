@@ -15,6 +15,8 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
 
+#include "sw/config/CookContract.gen.h"
+
 namespace sw
 {
     namespace
@@ -88,11 +90,11 @@ namespace sw
                     {
                         outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, path::kGamePack ), rest );
                         outKeyUnderRoot = {};
-                        return FileUtil::directoryExists( outRoot );
+                        return FileUtil::isDirectory( outRoot );
                     }
                     outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, path::kGamePack ), rest.substr( 0, slash ) );
                     outKeyUnderRoot = rest.substr( slash + 1 );
-                    return FileUtil::directoryExists( outRoot );
+                    return FileUtil::isDirectory( outRoot );
                 }
 
                 // 2. 그 밖의 도메인(<domain>/<key>)을 이름으로 푼다(engine, common, editor, dlc, mods 등)
@@ -103,7 +105,7 @@ namespace sw
                     if ( domain.find( ':' ) == string_view::npos )
                     {
                         const string candidateDomainDir = FileUtil::joinPath( resourceRoot, domain );
-                        if ( FileUtil::directoryExists( candidateDomainDir ) )
+                        if ( FileUtil::isDirectory( candidateDomainDir ) )
                         {
                             outRoot         = candidateDomainDir;
                             outKeyUnderRoot = string( lowerRel.substr( firstSlash + 1 ) );
@@ -129,7 +131,7 @@ namespace sw
                 const string absolutePath = relFolder.empty()
                                               ? FileUtil::joinPath( root, relFile )
                                               : FileUtil::joinPath( FileUtil::joinPath( root, relFolder ), relFile );
-                if ( FileUtil::fileExists( absolutePath ) )
+                if ( FileUtil::exists( absolutePath ) )
                     return FileUtil::normalizeSeparators( absolutePath );
                 return {};
             }
@@ -191,6 +193,9 @@ namespace sw
         {
             if ( relativePath.empty() )
                 return false;
+            // 이 호스트가 읽지 않는 에셋 종류(전용 서버의 텍스처 · 셰이더 바이너리 · 오디오)는 없는 것으로 친다 — 서버 팩에는 들어 있지도 않다.
+            if ( ResourceUtil::isExcludedForHost( relativePath ) )
+                return false;
 
             // 0. OS 절대 경로(임시 파일, 외부 세이브 등)면 디스크에서 바로 읽는다. 단, 팩 전용 모드(낱개 파일 금지 — 배포 구성)에서 리소스 루트
             //    **안**을 가리키면 거절한다 — 절대 경로로 적기만 하면 팩 전용 모드를 지나 낱개 에셋을 읽게 된다.
@@ -201,7 +206,7 @@ namespace sw
                     SW_LOG_WARNING( "Refusing a loose read of '%#' — this build reads resources from packs only", relativePath );
                     return false;
                 }
-                if ( FileUtil::fileExists( relativePath ) == false )
+                if ( FileUtil::isRegularFile( relativePath ) == false )
                     return false;
                 if ( pOutAbsPath != nullptr )
                     *pOutAbsPath = string( relativePath );
@@ -222,7 +227,7 @@ namespace sw
             if ( bLooseFirst )
             {
                 loosePath = ResourceUtil::getResourcePath( relativePath );
-                if ( loosePath.empty() == false && FileUtil::fileExists( loosePath ) )
+                if ( loosePath.empty() == false && FileUtil::isRegularFile( loosePath ) )
                 {
                     if ( pOutAbsPath != nullptr )
                         *pOutAbsPath = loosePath;
@@ -242,7 +247,7 @@ namespace sw
 
             // 3. 낱개 경로를 **못 푼 경우에만** 상대 경로 그대로 마지막으로 본다.
             //    풀렸는데 없었다면 위에서 이미 확인했으므로 다시 묻지 않는다.
-            if ( bLooseFirst && loosePath.empty() && FileUtil::fileExists( relativePath ) )
+            if ( bLooseFirst && loosePath.empty() && FileUtil::isRegularFile( relativePath ) )
             {
                 if ( pOutAbsPath != nullptr )
                     *pOutAbsPath = string( relativePath );
@@ -282,7 +287,7 @@ namespace sw
             while ( currentPath.empty() == false )
             {
                 const string folderPath = FileUtil::joinPath( currentPath, path::kResourceFolder );
-                if ( FileUtil::directoryExists( folderPath ) )
+                if ( FileUtil::isDirectory( folderPath ) )
                 {
                     rootPath = currentPath;
                     break;
@@ -305,7 +310,7 @@ namespace sw
 
             // Resource/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
             _s_resourceRootFolderPath =
-                FileUtil::directoryExists( resourceRoot ) ? FileUtil::normalizeSeparators( resourceRoot ) : "";
+                FileUtil::isDirectory( resourceRoot ) ? FileUtil::normalizeSeparators( resourceRoot ) : "";
 
             if ( _s_listSearchPriority.empty() )
                 _s_listSearchPriority = getDefaultSearchPriority();
@@ -326,7 +331,7 @@ namespace sw
 
         if ( FileUtil::isAbsolutePath( filePath ) )
         {
-            if ( FileUtil::fileExists( filePath ) )
+            if ( FileUtil::exists( filePath ) )
                 return FileUtil::normalizeSeparators( filePath );
             return {};
         }
@@ -502,13 +507,13 @@ namespace sw
 
     bool ResourceUtil::hasResource( string_view relativePath )
     {
-        if ( relativePath.empty() )
+        if ( relativePath.empty() || isExcludedForHost( relativePath ) )
             return false;
 
         // 0. OS 절대 경로면 디스크에서 바로 확인한다
         // 판정은 `FileUtil::isAbsolutePath` 가 기준이다 — 손으로 적은 복사본을 두면 기준과 답이 갈린다.
         if ( FileUtil::isAbsolutePath( relativePath ) )
-            return FileUtil::fileExists( relativePath );
+            return FileUtil::exists( relativePath );
 
         const string         normalizedKey = FileUtil::normalizePath( relativePath );
         ResourcePackManager& packManager   = getPackManager();
@@ -519,10 +524,10 @@ namespace sw
         if ( packManager.isAllowLooseFiles() )
         {
             const string absPath = getResourcePath( relativePath );
-            if ( absPath.empty() == false && FileUtil::fileExists( absPath ) )
+            if ( absPath.empty() == false && FileUtil::exists( absPath ) )
                 return true;
 
-            return FileUtil::fileExists( relativePath );
+            return FileUtil::exists( relativePath );
         }
 
         return false;
@@ -539,14 +544,14 @@ namespace sw
             return {};
 
         const string domainDir = FileUtil::joinPath( _s_resourceRootFolderPath, domainName );
-        if ( FileUtil::directoryExists( domainDir ) == false )
+        if ( FileUtil::isDirectory( domainDir ) == false )
             return {};
 
         if ( subFolder.empty() )
             return FileUtil::normalizeSeparators( domainDir );
 
         const string targetDir = FileUtil::joinPath( domainDir, subFolder );
-        if ( FileUtil::directoryExists( targetDir ) )
+        if ( FileUtil::isDirectory( targetDir ) )
             return FileUtil::normalizeSeparators( targetDir );
 
         return {};
@@ -581,14 +586,14 @@ namespace sw
             if ( token == "game" )
             {
                 const string activePack = getDomainFolderPath( GameConfig::getActive()._packRoot );
-                if ( activePack.empty() == false && FileUtil::directoryExists( activePack ) )
+                if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
                 {
                     const string normPack = FileUtil::normalizeSeparators( activePack );
                     if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), normPack ) == _s_listResourceFolder.end() )
                         _s_listResourceFolder.push_back( normPack );
                 }
                 const string gameDir = getDomainFolderPath( path::kGamePack );
-                if ( gameDir.empty() == false && FileUtil::directoryExists( gameDir ) )
+                if ( gameDir.empty() == false && FileUtil::isDirectory( gameDir ) )
                 {
                     vector<string> listPackFolder;
                     FileUtil::collectFolders( gameDir, listPackFolder, false );
@@ -621,6 +626,15 @@ namespace sw
     const vector<string>& ResourceUtil::getSearchPriority()
     {
         return _s_listSearchPriority;
+    }
+
+    string ResourceUtil::exchangeRootFolderPath( string_view resourceRootFolderPath )
+    {
+        string previous           = _s_resourceRootFolderPath;
+        _s_resourceRootFolderPath = FileUtil::normalizeSeparators( resourceRootFolderPath );
+        // 검색 폴더를 새 루트에서 다시 짓는다(경로 캐시도 거기서 비운다).
+        (void)setSearchPriority( _s_listSearchPriority );
+        return previous;
     }
 
     const vector<string>& ResourceUtil::getDefaultSearchPriority()
@@ -688,7 +702,7 @@ namespace sw
         // 반환은 `savePath` 하나로만 한다. 분기마다 다른 변수를 반환하면 NRVO 가 막힌다(-Wnrvo).
         // 그래서 `const` 도 붙이지 않는다(반환할 때 자동 이동이 막힌다).
         string savePath = makeSavePath( absoluteFolder, fileName );
-        if ( savePath.empty() || FileUtil::fileExists( savePath ) == false )
+        if ( savePath.empty() || FileUtil::exists( savePath ) == false )
             return savePath;
 
         const string stem      = FileUtil::removeExtension( savePath );
@@ -700,7 +714,7 @@ namespace sw
         {
             sb.clear();
             sb.append( stem ).append( '_' ).append( nameSuffix ).append( extension );
-            if ( FileUtil::fileExists( sb.view() ) == false )
+            if ( FileUtil::exists( sb.view() ) == false )
             {
                 SW_LOG_WARNING( "Name already taken '%#' — using '%#'", savePath, sb.view() );
                 savePath.assign( sb.view() );
@@ -721,5 +735,49 @@ namespace sw
     vector<string> ResourceUtil::_s_listSearchPriority;
 
     vector<string> ResourceUtil::_s_listResourceFolder;
+
+    vector<string> ResourceUtil::_s_listHostExcludedExtension;
+
+    vector<string> ResourceUtil::_s_listHostExcludedFolder;
+
+    void ResourceUtil::setHostTarget( string_view buildTargetName )
+    {
+        _s_listHostExcludedExtension.clear();
+        _s_listHostExcludedFolder.clear();
+#define SW_ADD_HOST_EXCLUSION( Target, Kind, Extension, Folder )    \
+    if ( buildTargetName == #Target )                               \
+    {                                                               \
+        if ( string_view{ Extension }.empty() == false )            \
+            _s_listHostExcludedExtension.emplace_back( Extension ); \
+        else                                                        \
+            _s_listHostExcludedFolder.emplace_back( Folder );       \
+    }
+        SW_TARGET_ASSET_EXCLUSION_TABLE( SW_ADD_HOST_EXCLUSION )
+#undef SW_ADD_HOST_EXCLUSION
+        if ( _s_listHostExcludedExtension.empty() == false || _s_listHostExcludedFolder.empty() == false )
+            SW_LOG_INFO( "Host target %# does not read %# asset extensions and %# asset folders", string( buildTargetName ).c_str(),
+                         _s_listHostExcludedExtension.size(), _s_listHostExcludedFolder.size() );
+    }
+
+    bool ResourceUtil::isExcludedForHost( string_view resourcePath )
+    {
+        if ( _s_listHostExcludedExtension.empty() && _s_listHostExcludedFolder.empty() )
+            return false;
+        const string normalized = FileUtil::normalizePath( resourcePath );
+        for ( const string& extension : _s_listHostExcludedExtension )
+        {
+            if ( StringUtil::endsWith( normalized, extension ) )
+                return true;
+        }
+        for ( const string& folder : _s_listHostExcludedFolder )
+        {
+            // 폴더 조각은 경로 처음이거나 '/' 뒤에서 시작해 '/' 로 끝나야 한다(`shaders/bin` 이 `myshaders/binary` 에 맞지 않게).
+            const size_t position = normalized.find( folder );
+            if ( position != string::npos && ( position == 0 || normalized[position - 1] == '/' ) && position + folder.size() < normalized.size() &&
+                 normalized[position + folder.size()] == '/' )
+                return true;
+        }
+        return false;
+    }
 
 } // namespace sw

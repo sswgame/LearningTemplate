@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include <chrono>
 #include <condition_variable>
@@ -21,7 +22,9 @@ namespace test
         void setEnvironmentVariableInternal( const utf8* pName, const utf8* pValue )
         {
 #if defined( SW_PLATFORM_WINDOWS )
-            ::SetEnvironmentVariableA( pName, pValue );
+            const sw::wstring wideName  = sw::StringUtil::utf8ToUtf16( pName );
+            const sw::wstring wideValue = ( pValue != nullptr ) ? sw::StringUtil::utf8ToUtf16( pValue ) : sw::wstring{};
+            ::SetEnvironmentVariableW( wideName.c_str(), ( pValue != nullptr ) ? wideValue.c_str() : nullptr );
 #else
             if ( pValue != nullptr )
                 ::setenv( pName, pValue, 1 );

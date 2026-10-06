@@ -2,12 +2,16 @@
 
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionEnemyBrain.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 
 namespace sw
 {
     ActionEnemyBrain::ActionEnemyBrain()
         : _pPattern{ nullptr }
+        , _pCatalog{ nullptr }
         , _stateIndex{ -1 }
         , _stateFrame{ 0 }
         , _facing{ 1 }
@@ -93,5 +97,42 @@ namespace sw
         if ( _pPattern == nullptr || _stateIndex < 0 || _stateIndex >= static_cast<int32>( _pPattern->_listState.size() ) )
             return nullptr;
         return &_pPattern->_listState[static_cast<size_t>( _stateIndex )];
+    }
+
+    void ActionEnemyBrain::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeName( outArchive, _pPattern != nullptr ? _pPattern->_id : hashed_string{} );
+        StateArchiveUtil::writeName( outArchive, getStateId() );
+        outArchive << _stateFrame;
+        outArchive << _facing;
+        outArchive << _bEntered;
+    }
+
+    bool ActionEnemyBrain::readState( Archive& archive )
+    {
+        hashed_string patternId;
+        hashed_string stateId;
+        int32         stateFrame = 0;
+        int32         facing     = 1;
+        uint8         bEntered   = SW_FALSE;
+        const bool    bNameRead  = StateArchiveUtil::readName( archive, patternId ) && StateArchiveUtil::readName( archive, stateId );
+        archive >> stateFrame;
+        archive >> facing;
+        archive >> bEntered;
+        const bool bValid = bNameRead && archive.isOk() && 0 <= stateFrame && ( facing == -1 || facing == 1 ) && bEntered <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        const ActionPatternDef* pPattern   = patternId.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findPattern( patternId );
+        const int32             stateIndex = pPattern != nullptr && stateId.empty() == false ? pPattern->findStateIndex( stateId ) : -1;
+        // 이름이 있는데 찾지 못하면 다른 데이터의 바이트다
+        const bool bResolved = ( patternId.empty() || pPattern != nullptr ) && ( stateId.empty() || stateIndex >= 0 );
+        if ( bResolved == false )
+            return false;
+        _pPattern   = pPattern;
+        _stateIndex = stateIndex;
+        _stateFrame = stateFrame;
+        _facing     = facing;
+        _bEntered   = bEntered;
+        return true;
     }
 } // namespace sw

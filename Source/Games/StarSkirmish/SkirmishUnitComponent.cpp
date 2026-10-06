@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -58,7 +59,7 @@ namespace sw
         , _unitId{}
         , _pShownLook{ nullptr }
         , _modelWidth{ 1.0f }
-        , _yaw{ MathUtil::Pi }
+        , _yaw{ MathUtil::kPi }
         , _bPlaced{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -78,7 +79,7 @@ namespace sw
         _unitId     = unitId;
         _modelWidth = modelWidth > 0.0f ? modelWidth : 1.0f;
         _pShownLook = nullptr;
-        _yaw        = MathUtil::Pi; // 처음엔 카메라(남쪽) 쪽을 본다
+        _yaw        = MathUtil::kPi; // 처음엔 카메라(남쪽) 쪽을 본다
         _bPlaced    = SW_FALSE;
     }
 
@@ -94,7 +95,7 @@ namespace sw
 
     string SkirmishUnitComponent::makeModelPath( const utf8* pName )
     {
-        return string( "game/starskirmish/models/" ) + pName + ".mesh";
+        return string( "game/starskirmish/models/" ) + pName + string( MeshAssetFormat::kExtension );
     }
 
     void SkirmishUnitComponent::onTick( float32 deltaTime )

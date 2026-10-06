@@ -136,7 +136,7 @@ namespace sw
     /**
      * @class NetMessageRouter
      * @brief 받은 메시지를 종류(첫 바이트)마다 맡은 처리기 하나에게 바로 줍니다(종류 256 칸 표). 연결 사건은 메시지보다 먼저 모든 처리기에 알립니다.
-     * @details - 처리기는 빌려 씁니다(라우터보다 오래 살거나 `removeHandler` 로 뺀다). 한 종류를 둘이 맡으려 하면 먼저 단 쪽이 갖고 오류를 남긴다.
+     * @details - 처리기는 빌려 씁니다(라우터보다 오래 살거나 `removeHandler` 로 뺀다). 한 종류를 둘이 맡으려 하면 나중 것을 받지 않는다(`addHandler` 가 false).
      *          - `pump` 는 호스트에서 사건과 메시지를 잠금 한 번에 꺼내(`NetHost::drainInbound`) 잠금 밖에서 나눠 준다 — 처리기는 그 안에서 보내도 된다.
      *          - 깨진 메시지(처리기가 Malformed)는 세고(`getMalformedCount`) 버린다.
      * @code
@@ -155,7 +155,12 @@ namespace sw
         NetMessageRouter( const NetMessageRouter& )            = delete;
         NetMessageRouter& operator=( const NetMessageRouter& ) = delete;
 
-        void addHandler( INetMessageHandler* pHandler );
+        /**
+         * @brief 처리기를 답니다. 맡으려는 종류 하나라도 이미 다른 처리기가 맡았으면 **통째로 받지 않고** 알린 뒤 false 입니다(반쯤 단 처리기는 없다).
+         * @details 섞인 게임은 false 를 기동 실패로 다룬다 — 키트는 제 영역(`NetKitMessageRange`), 게임 처리기 여럿은 영역 안에서 서로 다른 마스크.
+         *          이미 단 처리기를 다시 달면 true 입니다.
+         */
+        bool addHandler( INetMessageHandler* pHandler );
         void removeHandler( INetMessageHandler* pHandler );
         /** @brief 메시지 하나를 그 종류의 처리기에 넘깁니다. 처리기가 없으면 NotMine 입니다(빈 메시지도). */
         NetHandleResult dispatch( const NetMessageContext& context, const uint8* pData, int32 size );

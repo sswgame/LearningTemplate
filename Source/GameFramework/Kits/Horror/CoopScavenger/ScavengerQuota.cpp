@@ -3,9 +3,10 @@
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerQuota.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 
-#include "GameFramework/Utility/GameRandom.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/GameRandom.h"
 
 namespace sw
 {
@@ -68,29 +69,35 @@ namespace sw
         return static_cast<int32>( increase + 0.5f );
     }
 
-    void ScavengerQuota::writeState( BitWriter& writer ) const
+    void ScavengerQuota::writeState( Archive& outArchive ) const
     {
-        writer.writeVarInt( _quota );
-        writer.writeVarInt( _fulfilled );
-        writer.writeVarInt( _daysLeft );
-        writer.writeVarInt( _cycle );
-        writer.writeBool( _bGameOver == SW_TRUE );
+        outArchive << _quota;
+        outArchive << _fulfilled;
+        outArchive << _daysLeft;
+        outArchive << _cycle;
+        outArchive << _bGameOver;
     }
 
-    bool ScavengerQuota::readState( BitReader& reader )
+    bool ScavengerQuota::readState( Archive& archive )
     {
-        const int64 quota     = reader.readVarInt();
-        const int64 fulfilled = reader.readVarInt();
-        const int64 daysLeft  = reader.readVarInt();
-        const int64 cycle     = reader.readVarInt();
-        const bool  bGameOver = reader.readBool();
-        if ( reader.hasOverflowed() )
+        int32 quota     = 0;
+        int32 fulfilled = 0;
+        int32 daysLeft  = 0;
+        int32 cycle     = 0;
+        uint8 bGameOver = SW_FALSE;
+        archive >> quota;
+        archive >> fulfilled;
+        archive >> daysLeft;
+        archive >> cycle;
+        archive >> bGameOver;
+        const bool bValid = archive.isOk() && 0 <= fulfilled && 0 <= daysLeft && 0 <= cycle && bGameOver <= SW_TRUE;
+        if ( bValid == false )
             return false;
-        _quota     = static_cast<int32>( quota );
-        _fulfilled = static_cast<int32>( fulfilled );
-        _daysLeft  = static_cast<int32>( daysLeft );
-        _cycle     = static_cast<int32>( cycle );
-        _bGameOver = bGameOver ? SW_TRUE : SW_FALSE;
+        _quota     = quota;
+        _fulfilled = fulfilled;
+        _daysLeft  = daysLeft;
+        _cycle     = cycle;
+        _bGameOver = bGameOver;
         return true;
     }
 } // namespace sw

@@ -195,7 +195,7 @@ namespace sw
         {
             vector<uint8> bytes;
             const bool    bRead = ResourceUtil::readBinaryResource( pathView, bytes ) ||
-                               ( FileUtil::fileExists( pathView ) && FileUtil::readFile( pathView, bytes ) );
+                               ( FileUtil::exists( pathView ) && FileUtil::readFile( pathView, bytes ) );
             if ( bRead )
                 bDecoded = AudioClipDecoder::decode( pathView, bytes.data(), bytes.size(), pcm );
         }

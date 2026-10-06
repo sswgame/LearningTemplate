@@ -59,6 +59,7 @@ namespace sw
         , _width{ 0 }
         , _height{ 0 }
         , _depthFormat{ 0 }
+        , _surfaceLostCount{ 0 }
         , _bFrameStarted{ SW_FALSE }
 #if defined( SW_DEBUG )
         , _bEnableValidationLayers{ SW_TRUE }
@@ -74,6 +75,7 @@ namespace sw
         , _bSwapChainImageHeld{ SW_FALSE }
         , _bMemoryBudget{ SW_FALSE }
         , _linuxWsi{ 0 }
+        , _bSurfaceLost{ SW_FALSE }
         , _reservedVulkan{ 0 }
         , _bSwapChainRecreateFailing{ SW_FALSE }
         , _bFrameAcquireWaitPending{ SW_FALSE }
@@ -141,10 +143,11 @@ namespace sw
             if ( _bEnableValidationLayers == SW_TRUE )
             {
                 string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-                if ( FileUtil::fileExists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
+                if ( FileUtil::exists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
                 {
-                    SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", execDir.c_str() );
-                    SetEnvironmentVariableA( "VK_LAYER_PATH", execDir.c_str() );
+                    const wstring wideExecDir = StringUtil::utf8ToUtf16( execDir.c_str() );
+                    SetEnvironmentVariableW( L"VK_ADD_LAYER_PATH", wideExecDir.c_str() );
+                    SetEnvironmentVariableW( L"VK_LAYER_PATH", wideExecDir.c_str() );
                 }
                 else
                 {
@@ -152,7 +155,7 @@ namespace sw
                     if ( StringUtil::isNullOrEmpty( pVulkanSdkEnv ) == false )
                     {
                         string sdkBinPath = FileUtil::joinPath( pVulkanSdkEnv, "Bin" );
-                        SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", sdkBinPath.c_str() );
+                        SetEnvironmentVariableW( L"VK_ADD_LAYER_PATH", StringUtil::utf8ToUtf16( sdkBinPath.c_str() ).c_str() );
                     }
                 }
             }
@@ -177,7 +180,7 @@ namespace sw
             if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _linuxWsi ) == false )
                 return false;
 
-            if ( pickPhysicalDevice() == false )
+            if ( pickPhysicalDevice( desc._bSoftwareAdapter ) == false )
                 return false;
 
             if ( selectDepthFormat() == false )

@@ -4,7 +4,7 @@
 
 #include "Engine/Window/NativeWindowEvent.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Common/X11Headers.h"
 #endif
 
@@ -36,7 +36,7 @@ namespace sw
         X11Window::destroy();
     }
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     bool X11Window::initializeWindow( const utf8* pTitle, uint32 width, uint32 height )
     {
         _width  = width;
@@ -60,7 +60,14 @@ namespace sw
             _restoreX, _restoreY, width, height,
             1, black, white );
 
-        XStoreName( pDisplay, win, pTitle != nullptr ? pTitle : "" );
+        // 제목은 UTF-8 이다. XStoreName 은 WM_NAME 을 Latin-1(STRING)으로 적어 비-ASCII 글자가 깨진다 — 창 관리자는 _NET_WM_NAME(UTF8_STRING)을
+        // 먼저 읽으므로 그것을 같이 적는다(XStoreName 은 _NET_WM_NAME 을 모르는 옛 창 관리자 몫).
+        const utf8* pTitleText = pTitle != nullptr ? pTitle : "";
+        XStoreName( pDisplay, win, pTitleText );
+        const Atom netWmName  = XInternAtom( pDisplay, "_NET_WM_NAME", 0 );
+        const Atom utf8String = XInternAtom( pDisplay, "UTF8_STRING", 0 );
+        XChangeProperty( pDisplay, win, netWmName, utf8String, 8, PropModeReplace, reinterpret_cast<const uint8*>( pTitleText ),
+                         static_cast<int32>( StringUtil::strlen( pTitleText ) ) );
 
         Atom wmDeleteMessage = XInternAtom( pDisplay, "WM_DELETE_WINDOW", 0 );
         XSetWMProtocols( pDisplay, win, &wmDeleteMessage, 1 );
@@ -74,6 +81,7 @@ namespace sw
         _x11Window    = win;
         _x11WmDelete  = wmDeleteMessage;
         _bShouldClose = SW_FALSE;
+        applyMinimumClientSize(); // 다시 만든 창(recreate)도 같은 바닥을 갖는다
 
         SW_LOG_INFO( "Native X11 Window created successfully! (%#×%#)", width, height );
         return true;
@@ -171,6 +179,20 @@ namespace sw
         _restoreY = kDefaultRestoreY;
     }
 
+    void X11Window::applyMinimumClientSize()
+    {
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+            return;
+
+        Display*   pDisplay = static_cast<Display*>( _pX11Display );
+        XSizeHints sizeHints{};
+        sizeHints.flags      = PMinSize;
+        sizeHints.min_width  = static_cast<int32>( _minClientWidth );
+        sizeHints.min_height = static_cast<int32>( _minClientHeight );
+        XSetWMNormalHints( pDisplay, static_cast<Window>( _x11Window ), &sizeHints );
+        XFlush( pDisplay );
+    }
+
     bool X11Window::processMessages()
     {
         if ( _pX11Display == nullptr )
@@ -255,6 +277,10 @@ namespace sw
         // 이 플랫폼에서는 창을 만들지 않지만, 생성자가 부르므로 값은 채워 둔다.
         _restoreX = kDefaultRestoreX;
         _restoreY = kDefaultRestoreY;
+    }
+
+    void X11Window::applyMinimumClientSize()
+    {
     }
 
     bool X11Window::processMessages()

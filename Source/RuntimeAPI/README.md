@@ -14,7 +14,7 @@
 | **Service/** | `ModuleService.h`, `EngineServiceList.xxx`, `HostServiceList.xxx`, `ServiceListColumns.h`, `IModuleCompiler.h` | App, 모듈 | 호스트 ↔ 모듈 C-ABI 단일 통합 서비스 테이블 (`GameService.h`, `EditorService.h`는 각 모듈에 위치). `ServiceListColumns.h` 는 서비스 목록의 낱말 칸을 값으로 바꾸는 매크로(아래). `IModuleCompiler` 는 에디터 안 백그라운드 컴파일러 서비스 — C-ABI 가 아니라 C++ 가상 함수 테이블이다 |
 | **Export/** | `GameModuleExports.h`, `EditorModuleExports.h`, `ModuleForwardUtil.h` | 모듈 `.cpp`만 | `SW_IMPLEMENT_*_MODULE` 매크로. `Memory.h`와 로케이터 bind를 끌어옴. `ModuleForwardUtil` 은 불투명 핸들 → 구현 인스턴스 전달(널 검사 한 곳) |
 
-- Game 모듈은 `ABI/GameAPI.h`, `GameFramework/Framework/GameService.h`, `Export/GameModuleExports.h`만 include 한다.
+- Game 모듈은 `ABI/GameAPI.h`, `GameFramework/Base/Framework/GameService.h`, `Export/GameModuleExports.h`만 include 한다.
 - Editor 모듈은 `ABI/EditorAPI.h`, `Editor/Common/Workspace/EditorService.h`, `Export/EditorModuleExports.h`를 include 한다.
 - 모듈 구현 `.cpp`는 `Export/*ModuleExports.h`만 있으면 테이블 export 매크로까지 포함된다.
 

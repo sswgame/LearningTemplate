@@ -11,22 +11,24 @@
  *          고정 걸음 + 씨앗 난수(아이템)라 같은 입력이면 같은 판입니다(락스텝 — 입력은 `writeInput` · `readInput`).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Input/TimingJudge.h"
+#include "GameFramework/Base/Match/MatchState.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Input/TimingJudge.h"
 #include "GameFramework/Kits/Casual/PartyArena/PartyItemSpawner.h"
-#include "GameFramework/Match/MatchState.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
 {
+    class Archive;
     class BitReader;
     class BitWriter;
 
@@ -154,6 +156,9 @@ namespace sw
     class SW_GF_API TrampolineArena
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "PTRA" );
+        static constexpr uint32 kStateVersion = 1;
+
         TrampolineArena();
 
         /** @brief 2..4 명으로 라운드를 준비합니다. @p roundTime 0 은 시간 제한 없음, @p scoreLimit 0 은 점수 제한 없음입니다. */
@@ -171,6 +176,11 @@ namespace sw
         /** @brief 락스텝 입력 직렬화입니다(3 + 8 + 8 비트). */
         static void            writeInput( BitWriter& writer, const TrampolineInput& input );
         static TrampolineInput readInput( BitReader& reader );
+
+        /** @brief 사람마다 몸 · 받아 둔 입력 · 타이머 · 콤보 · 아이템 효과, 아이템 상태 · 경기(`MatchState`) · 고정 걸음 · 시각을 씁니다. 설정 · 판정 창 · 아이템 정의는 싣지 않고, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 인원이 다르거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 콤보 @p combo 의 튀는 높이입니다. */
         float32 computeBounceHeight( int32 combo ) const;

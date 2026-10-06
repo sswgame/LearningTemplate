@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
@@ -206,7 +207,7 @@ namespace sw
                 uint32            _bindPoint{ 0 };
                 uint32            _bindCount{ kUnknownCount }; ///< 리소스 목록에서 왔으면 배열 크기(무제한=0), CB 목록만 있으면 모름
 
-                static constexpr uint32 kUnknownCount = 0xFFFFFFFFu;
+                static constexpr uint32 kUnknownCount = invalid_index::kUint32;
             };
 
             /// @brief CB 목록과 리소스 목록을 (이름, 종류)로 중복 없이 합칩니다. DX 리플렉션은 cbuffer 를 양쪽에 다 넣습니다.

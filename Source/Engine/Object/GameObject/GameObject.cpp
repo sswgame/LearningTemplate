@@ -58,8 +58,16 @@ namespace sw
 {
     SW_LOG_CALLER( "GameObject" );
 
+    // 오브젝트는 수천 개가 풀(16 B 단위 칸)에서 나온다. 필드 크기 합을 정렬로 올린 값을 넘으면 필드 사이에 구멍이 생긴 것이다(칸이 한 단계 커진다).
+    static_assert( sizeof( GameObject ) <=
+                       ( sizeof( void* ) + sizeof( uint64 ) + sizeof( hashed_string ) + sizeof( GameObjectManager* ) + sizeof( atomic<bool> ) * 3 + sizeof( uint32 ) +
+                         sizeof( vector<Component*, InlineAllocator<Component*, 4>> ) + sizeof( atomic<Component*> ) + sizeof( TickItemList ) +
+                         sizeof( uint32 ) * TickRegistry::kGroupCount + sizeof( uint32 ) + sizeof( atomic<uint8> ) + alignof( GameObject ) - 1 ) /
+                           alignof( GameObject ) * alignof( GameObject ),
+                   "GameObject has padding between fields (or a field was added without adding its size here)" );
+
     GameObject::GameObject()
-        : GameObject( hashed_string( "GameObject" ) )
+        : GameObject( hashed_string( GameObject::kDefaultName ) )
     {
     }
 
@@ -70,13 +78,13 @@ namespace sw
         , _bActive{ true }
         , _bIsActiveInHierarchy{ true }
         , _bIsPendingDestroy{ false }
+        , _managerIndex{ invalid_index::kUint32 }
         , _listComponent{}
         , _pPrimaryScene{ nullptr }
         , _listTickItem{}
         , _arrTickIndex{ TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList }
         , _tickPrerequisiteCount{ 0 }
         , _bTickDirty{ SW_FALSE }
-        , _managerIndex{ invalid_index::kUint32 }
     {
     }
 

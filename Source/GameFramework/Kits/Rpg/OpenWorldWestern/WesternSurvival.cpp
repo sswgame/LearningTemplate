@@ -4,8 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/World/WeatherSystem.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternCatalog.h"
-#include "GameFramework/World/WeatherSystem.h"
 
 namespace sw
 {
@@ -173,5 +176,63 @@ namespace sw
     {
         const float32 minScale = _pCatalog != nullptr ? _pCatalog->getSurvival()._minRegenScale : 0.2f;
         return MathUtil::lerp( minScale, 1.0f, MathUtil::saturate( getCore( core ) / kCoreMax ) );
+    }
+
+    void WesternSurvival::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listClothing.size() );
+        for ( const hashed_string& clothingId : _listClothing )
+        {
+            StateArchiveUtil::writeName( outArchive, clothingId );
+        }
+        outArchive << static_cast<uint32>( _listMark.size() );
+        for ( const uint64 targetId : _listMark )
+        {
+            outArchive << targetId;
+        }
+        for ( size_t coreIndex = 0; coreIndex < kCoreCount; ++coreIndex )
+        {
+            _arrGauge[coreIndex].writeState( outArchive );
+            outArchive << _arrCore[coreIndex];
+        }
+        outArchive << _deadEyeLevel;
+        outArchive << _bDeadEyeActive;
+    }
+
+    bool WesternSurvival::readState( Archive& archive )
+    {
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 게이지 설정 · 카탈로그는 사본이 그대로 든다.
+        WesternSurvival restored = *this;
+        uint32          count    = 0;
+        if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+            return false;
+        restored._listClothing.resize( count );
+        for ( hashed_string& clothingId : restored._listClothing )
+        {
+            if ( StateArchiveUtil::readName( archive, clothingId ) == false )
+                return false;
+        }
+        if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+            return false;
+        restored._listMark.resize( count );
+        for ( uint64& targetId : restored._listMark )
+        {
+            archive >> targetId;
+        }
+        for ( size_t coreIndex = 0; coreIndex < kCoreCount; ++coreIndex )
+        {
+            if ( restored._arrGauge[coreIndex].readState( archive ) == false )
+                return false;
+            archive >> restored._arrCore[coreIndex];
+            const bool bCoreValid = 0.0f <= restored._arrCore[coreIndex] && restored._arrCore[coreIndex] <= kCoreMax;
+            if ( bCoreValid == false )
+                return false;
+        }
+        archive >> restored._deadEyeLevel;
+        archive >> restored._bDeadEyeActive;
+        if ( archive.isError() || restored._bDeadEyeActive > SW_TRUE )
+            return false;
+        *this = std::move( restored );
+        return true;
     }
 } // namespace sw

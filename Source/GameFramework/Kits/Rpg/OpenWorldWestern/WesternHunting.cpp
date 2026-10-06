@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/Inventory/LootTable.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Inventory/LootTable.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternCatalog.h"
 
 namespace sw
@@ -58,7 +58,7 @@ namespace sw
     }
 
     bool WesternHunting::skin( const WesternCatalog& catalog, WesternCarcass& inoutCarcass, const LootCatalog* pLoot, GameRandom& random, WesternPelt& outPelt,
-                               ItemBag& outBag )
+                               ItemStackList& outItems )
     {
         if ( inoutCarcass._bSkinned != SW_FALSE || isRotten( catalog, inoutCarcass ) )
             return false;
@@ -67,7 +67,7 @@ namespace sw
         inoutCarcass._bSkinned          = SW_TRUE;
         const WesternAnimalDef* pAnimal = catalog.findAnimal( inoutCarcass._animalId );
         if ( pLoot != nullptr && pAnimal != nullptr && pAnimal->_lootTable.empty() == false )
-            (void)pLoot->roll( pAnimal->_lootTable, random, outBag );
+            (void)pLoot->roll( pAnimal->_lootTable, random, outItems );
         return true;
     }
 

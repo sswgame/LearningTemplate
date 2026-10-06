@@ -3,24 +3,28 @@
  * @brief 생물과 함께 만드는 마을 — 칸 격자의 오브젝트, 서식지 맞추기(회전 허용), 시간대 · 날씨에 따른 방문(결정적), 호감도 · 부탁, 능력으로 세계 편집, 집 배정, 매력도입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Progression/Reputation.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/GridTopology.h"
+#include "GameFramework/Base/World/LandRegistry.h"
+#include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
-#include "GameFramework/Progression/Reputation.h"
-#include "GameFramework/Quest/QuestLog.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/GridTopology.h"
-#include "GameFramework/World/WorldClock.h"
 
 namespace sw
 {
+    struct GameStateRefs;
+
+    class Archive;
     class Inventory;
-    class QuestCatalog;
+    class QuestLog;
     class ReputationCatalog;
     class WeatherSystem;
 
@@ -34,6 +38,8 @@ namespace sw
         int32         _foodPoints{ 20 };       ///< 좋아하는 음식
         int32         _requestPoints{ 50 };    ///< 부탁을 끝냈을 때
         uint32        _randomSeed{ 7100u };    ///< 방문 확률의 씨앗
+        /** @brief 공유 땅에서 막힘으로 얻는 오브젝트(다른 키트의 길찾기가 피한다). 나머지(풀 · 꽃)는 막힘 없이 얻는다. */
+        vector<hashed_string> _listBlockingObject{ hashed_string( "house" ), hashed_string( "tree" ), hashed_string( "rock" ) };
     };
 } // namespace sw
 
@@ -66,7 +72,8 @@ namespace sw
         NotKnown,   ///< 그 생물의 능력이 아니다
         NoUsesLeft, ///< 오늘 쓸 수 있는 횟수를 다 썼다
         OutOfBounds,
-        NoRule ///< 그 칸의 오브젝트에 맞는 규칙이 없다(물 위에 나무 심기)
+        NoRule,   ///< 그 칸의 오브젝트에 맞는 규칙이 없다(물 위에 나무 심기)
+        LandTaken ///< 그 칸의 공유 땅을 다른 키트가 쓴다
     };
 
     /** @brief 집 배정 결과입니다. */
@@ -152,20 +159,31 @@ namespace sw
      *          없어진 서식지의 생물은 좋아하는 다른 서식지에 자리가 있으면 옮겨 갑니다.
      *          방문 — `attractVisitors` 를 시마다 부르면 자리가 남은 서식지마다, 그 서식지를 좋아하고 지금 때 · 날씨에 오는 종(아직 마을에 없는)이
      *          `chance` 확률로 찾아옵니다. 확률은 (날 · 시 · 종 · 서식지 자리 · 씨앗) 해시라 같은 시를 두 번 불러도 같은 답입니다(두 번째는 아무 일 없음).
-     *          호감도 — 기반 `ReputationState` 의 세력 하나가 생물 하나입니다. 대화 · 선물은 각각 하루 한 번, 부탁(기반 `QuestLog`)을 끝내면 오릅니다.
+     *          호감도 — 빌린 기반 `ReputationState` 의 세력 하나(`creature.<종 id>`)가 생물 하나입니다(식기는 공유 상태의 주인이 날 넘김에). 대화 · 선물은 각각 하루 한 번, 부탁(기반 `QuestLog`)을 끝내면 오릅니다.
+     *          부탁 일지 · 시계는 빌려 씁니다 — 마을은 일지 알림을 꺼내지 않고 받은 부탁의 상태만 봅니다(알림은 게임 화면 · 다른 키트의 것). 날은 빌린 시계의 날입니다.
      *          부탁 목표는 `Deliver`(아이템) · `Habitat`(그 서식지 수)이고 퀘스트 레벨 조건은 호감도 단계 번호로 봅니다.
      *          카탈로그는 빌려 씁니다(마을보다 오래 살아야 합니다).
      */
     class SW_GF_API CreatureTown
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CTWN" );
+        static constexpr uint32 kStateVersion = 1;
+
         CreatureTown();
 
-        /** @brief 크기를 정하고 모든 칸을 비웁니다. 평판 · 퀘스트 카탈로그는 없어도 됩니다(평판은 0..1000 단계 없음, 부탁 없음). */
-        void initialize( const CreatureLifeCatalog* pCatalog, const ReputationCatalog* pReputationCatalog, const QuestCatalog* pQuestCatalog, int32 width,
-                         int32 height, const CreatureTownSettings& settings );
+        /**
+         * @brief 크기를 정하고 모든 칸을 비웁니다. 평판 · 부탁 일지 · 시계는 없어도 됩니다(평판이 없으면 호감도 0, 일지가 없으면 부탁 없음, 시계가 없으면 0 일).
+         * @param refs 빌려 쓰는 공유 상태입니다 — 마을은 `_pReputation`(호감도 — 세력 `creature.<종 id>`) · `_pQuestLog`(부탁 일지) · `_pClock`(날)을 쓴다(마을보다 오래 살아야 한다). 섞인 게임은 `GameStateComponent::makeRefs()`.
+         */
+        void initialize( const CreatureLifeCatalog* pCatalog, const GameStateRefs& refs, int32 width, int32 height, const CreatureTownSettings& settings );
 
-        /** @brief 칸에 오브젝트를 놓습니다(빈 id 는 비우기). 서식지를 다시 맞춥니다. 밖이면 false 입니다. */
+        /**
+         * @brief 공유 땅을 빌립니다(마을 칸 (0, 0) = 땅 칸 @p origin). 이미 놓인 오브젝트의 칸을 얻고, 그 뒤로는 오브젝트를 놓을 때 얻고 비우면 놓습니다.
+         * @return 이미 놓인 칸 하나라도 남의 땅이면 false 이고 묶지 않습니다. @p pLand 가 nullptr 이면 풀고 true 입니다.
+         */
+        [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
+        /** @brief 칸에 오브젝트를 놓습니다(빈 id 는 비우기). 서식지를 다시 맞춥니다. 밖이거나 그 칸의 공유 땅이 남의 것이면 false 이고 그대로입니다. */
         bool setObject( int32 x, int32 y, const hashed_string& object );
         /** @brief 시계 · 날씨로 이번 시의 방문을 굴립니다. 찾아온 수입니다. */
         int32 attractVisitors( const WorldClock& clock, const WeatherSystem& weather );
@@ -184,15 +202,19 @@ namespace sw
         /** @brief 능력으로 칸을 바꿉니다. 얻은 아이템은 @p pYieldInventory(없어도 된다)에 넣습니다. */
         CreatureAbilityResult useAbility( const hashed_string& speciesId, const hashed_string& abilityId, int32 x, int32 y, Inventory* pYieldInventory );
 
-        /** @brief 빈 칸에 집을 짓습니다. 집 자리 번호, 밖이거나 칸이 차 있으면 −1 입니다. */
+        /** @brief 빈 칸에 집을 짓습니다. 집 자리 번호, 밖이거나 칸이 차 있거나 공유 땅이 남의 것이면 −1 입니다. */
         int32               placeHouse( int32 x, int32 y, int32 capacity );
         CreatureHouseResult assignHouse( const hashed_string& speciesId, int32 houseIndex );
         /** @brief 집 없는 생물을 온 순서대로 자리가 남은 가장 가까운 집(서식지 기준 맨해튼 거리, 같으면 앞 집)에 넣습니다. 넣은 수입니다. */
         int32 assignHomeless();
 
-        /** @brief 하루를 넘깁니다 — 대화 · 선물 · 능력 횟수를 되돌리고 호감도가 식습니다. */
+        /** @brief 하루를 넘깁니다 — 능력 횟수를 되돌리고 호감도가 식습니다(대화 · 선물은 시계의 날로 하루 한 번). 디렉터가 시계의 날 넘김에 부릅니다. */
         void advanceDay();
         void drainEvents( vector<CreatureTownEvent>& outListEvent );
+        /** @brief 칸 · 서식지(번호 포함) · 생물 · 집 · 받은 부탁을 씁니다(핫 리로드 · 세이브). 평판 · 부탁 일지 · 시계는 빌린 것이라 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 마을 크기가 다르거나 깨졌으면 false 이고 그대로입니다(카탈로그 · 일지 · 시계는 `initialize` 의 것). */
+        [[nodiscard]] bool readState( Archive& archive );
 
         const hashed_string*           findObject( int32 x, int32 y ) const;
         const TownCreature*            findCreature( const hashed_string& speciesId ) const;
@@ -206,19 +228,19 @@ namespace sw
         int32 countResidents( int32 habitatInstanceId ) const;
         /** @brief 오늘 남은 능력 횟수입니다. 모르면 0 입니다. */
         int32         countAbilityUsesLeft( const hashed_string& speciesId, const hashed_string& abilityId ) const;
-        int32         getFriendship( const hashed_string& speciesId ) const { return _friendship.getValue( speciesId ); }
-        hashed_string getFriendshipTier( const hashed_string& speciesId ) const { return _friendship.getTierName( speciesId ); }
+        int32         getFriendship( const hashed_string& speciesId ) const;
+        hashed_string getFriendshipTier( const hashed_string& speciesId ) const;
         /** @brief 사는 생물의 호감도 평균입니다(없으면 0). */
         float32 computeAverageFriendship() const;
         /** @brief 매력도 점수입니다(서식지 종류 · 생물 수 · 호감도 평균). */
         float32 computeAppealScore() const;
         /** @brief 매력도 단계 번호입니다(단계가 없으면 −1). */
-        int32           getAppealTierIndex() const { return _appealTier; }
-        hashed_string   getAppealTierName() const;
-        const QuestLog& getQuestLog() const { return _questLog; }
-        int32           getDay() const { return _day; }
-        int32           getWidth() const { return _topology._width; }
-        int32           getHeight() const { return _topology._height; }
+        int32         getAppealTierIndex() const { return _appealTier; }
+        hashed_string getAppealTierName() const;
+        /** @brief 빌린 시계의 날입니다(없으면 0). */
+        int32 getDay() const;
+        int32 getWidth() const { return _topology._width; }
+        int32 getHeight() const { return _topology._height; }
 
     private:
         /** @brief 처음부터 다시 맞추고 전 결과와 견줘 생긴 · 없어진 서식지를 알립니다. */
@@ -229,24 +251,29 @@ namespace sw
         int32 findCreatureIndex( const hashed_string& speciesId ) const;
         bool  hasRoom( const HabitatInstance& instance ) const;
         void  notifyHabitatObjectives();
-        void  flushReputationEvents();
-        void  flushQuestEvents();
-        void  updateAppealTier();
-        int2  computeCreatureAnchor( const TownCreature& creature ) const;
+        /** @brief 호감도를 바꾸고 단계가 바뀌었으면 알립니다(빌린 평판의 알림은 꺼내지 않는다 — 앞뒤 단계를 견준다). */
+        void changeFriendship( const hashed_string& speciesId, int32 delta );
+        /** @brief 받은 부탁 중 끝난 것에 보상하고 목록에서 뺍니다(실패 · 포기는 보상 없이). 일지 알림은 꺼내지 않는다. */
+        void collectCompletedRequests();
+        /** @brief 부탁 @p questId 를 하는(마을에 사는) 생물에게 호감도를 줍니다. 준 생물이 있으면 true 입니다. */
+        bool rewardRequest( const hashed_string& questId );
+        void updateAppealTier();
+        int2 computeCreatureAnchor( const TownCreature& creature ) const;
+        bool isBlockingObject( const hashed_string& object ) const;
 
         vector<hashed_string>          _listObject; ///< 칸마다 오브젝트 id(`_topology` 의 칸 번호) — 빈 id 는 빈 칸
         vector<HabitatInstance>        _listHabitat;
         vector<TownCreature>           _listCreature; ///< 온 순서
         vector<CreatureHouse>          _listHouse;
+        vector<hashed_string>          _listOpenRequest; ///< 이 마을이 받은 부탁 중 아직 끝나지 않은 것(퀘스트 id)
         EventBuffer<CreatureTownEvent> _eventBuffer;
-        vector<ReputationEvent>        _listReputationScratch;
-        vector<QuestEvent>             _listQuestScratch;
-        ReputationState                _friendship;
-        QuestLog                       _questLog;
         CreatureTownSettings           _settings;
         const CreatureLifeCatalog*     _pCatalog;
+        ReputationState*               _pReputation; ///< 빌린 평판(호감도 — 없으면 0)
+        QuestLog*                      _pQuestLog;   ///< 빌린 부탁 일지(없으면 부탁 없음)
+        const WorldClock*              _pClock;      ///< 빌린 시계(날 — 없으면 0 일)
         GridTopology                   _topology;
-        int32                          _day;
+        LandBinding                    _land; ///< 빌린 공유 땅(없으면 단독)
         int32                          _nextHabitatId;
         int32                          _lastAttractKey; ///< 마지막으로 방문을 굴린 날 × 24 + 시
         int32                          _appealTier;

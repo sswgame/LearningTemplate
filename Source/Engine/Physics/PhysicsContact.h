@@ -10,6 +10,7 @@
  *          추적기는 잠그지 않습니다. 여러 스레드에서 오는 백엔드 알림은 백엔드가 모아 두었다가 step 뒤에 한 스레드에서 넣습니다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
@@ -194,7 +195,7 @@ namespace sw
             size_t operator()( const PairKey& key ) const noexcept
             {
                 size_t hash = std::hash<uint64>{}( key._first );
-                hash ^= std::hash<uint64>{}( key._second ) + 0x9e3779b97f4a7c15ull + ( hash << 6 ) + ( hash >> 2 );
+                hash        = HashUtil::combine( hash, std::hash<uint64>{}( key._second ) );
                 return hash;
             }
         };

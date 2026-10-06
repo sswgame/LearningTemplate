@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiController.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
 
@@ -84,7 +85,8 @@ namespace sw
 
         RtsWorld         _world;
         RtsAiController  _arrAi[kPlayerCount];
-        vector<RtsEvent> _listEvent; ///< 화면이 꺼내 갈 사본
+        Wallet           _arrWallet[kPlayerCount]; ///< 플레이어마다 광물 · 가스 — 키트 하나만 쓰는 게임이라 매치가 들고 월드에 빌려 준다
+        vector<RtsEvent> _listEvent;               ///< 화면이 꺼내 갈 사본
         vector<RtsEvent> _listFrameEvent;
         vector<uint8>    _listCliff;
         float32          _statusTimer;

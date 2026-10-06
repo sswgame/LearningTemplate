@@ -11,6 +11,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -62,10 +63,10 @@ namespace sw
 
             static float32 wrapAngle( float32 angle )
             {
-                while ( angle > MathUtil::Pi )
-                    angle -= 2.0f * MathUtil::Pi;
-                while ( angle < -MathUtil::Pi )
-                    angle += 2.0f * MathUtil::Pi;
+                while ( angle > MathUtil::kPi )
+                    angle -= 2.0f * MathUtil::kPi;
+                while ( angle < -MathUtil::kPi )
+                    angle += 2.0f * MathUtil::kPi;
                 return angle;
             }
 
@@ -1227,7 +1228,7 @@ namespace sw
                     if ( mesh == nullptr && pMeshComponent->getMeshId().empty() == false )
                     {
                         const string& meshId = pMeshComponent->getMeshId();
-                        mesh                 = StringUtil::endsWith( meshId, ".mesh", true ) ? MeshCache::acquire( meshId ) : MeshUtil::acquirePrimitive( meshId );
+                        mesh                 = StringUtil::endsWith( meshId, MeshAssetFormat::kExtension, true ) ? MeshCache::acquire( meshId ) : MeshUtil::acquirePrimitive( meshId );
                     }
                     if ( mesh == nullptr || mesh->getVertexCount() < 3 )
                         return;

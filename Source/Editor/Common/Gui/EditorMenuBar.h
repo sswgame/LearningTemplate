@@ -4,6 +4,11 @@
  */
 #pragma once
 
+namespace sw
+{
+    class IModuleCompiler;
+} // namespace sw
+
 namespace sw::editor
 {
     class EditorDockLayout;
@@ -16,6 +21,8 @@ namespace sw::editor
         static void drawThemeDialog();
         /** @brief 다음 프레임부터 테마 설정 대화상자를 엽니다 (editor.themeSettings 커맨드가 부릅니다). */
         static void openThemeDialog();
+        /** @brief 테마 설정 대화상자를 닫습니다(에디터 자체 시험이 열었던 것을 되돌린다). */
+        static void closeThemeDialog();
 
         /** @brief 커맨드 표의 메뉴(File / Edit / Build) · Assets / Panel 메뉴와 RHI 상태줄을 그립니다. */
         static void draw( EditorDockLayout& dockLayout );
@@ -36,7 +43,14 @@ namespace sw::editor
         static void drawPanelMenu( EditorDockLayout& dockLayout );
         /** @brief Panel 메뉴 안의 이름 붙인 레이아웃 메뉴(저장 · 불러오기 · 지우기)를 그립니다. */
         static void drawNamedLayoutMenu( EditorDockLayout& dockLayout );
-        /** @brief 메뉴바 오른쪽의 빌드 상태와 RHI·FPS 표시를 그립니다. */
+        /**
+         * @brief 메뉴바 오른쪽의 빌드 상태와 RHI·FPS 표시를 그립니다.
+         * @details 지난 프레임에 잰 너비로 오른쪽 끝에 붙이고, 마지막 메뉴와 겹칠 자리면 그 프레임은 그리지 않습니다.
+         */
         static void drawStatusArea();
+        /** @brief 라이브 코딩 빌드가 끝난 순간(Compiling → Success / Failed)을 알림으로 띄웁니다. 상태 영역을 그리지 않는 프레임에도 부릅니다. */
+        static void notifyLiveCodingResult( IModuleCompiler& compiler );
+        /** @brief 상태 영역의 내용(컴파일 버튼 · 빌드 상태 · RHI · FPS)을 그립니다. */
+        static void drawStatusContent( IModuleCompiler* pCompiler );
     };
 } // namespace sw::editor

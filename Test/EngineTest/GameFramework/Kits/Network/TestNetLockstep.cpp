@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/map.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Transport/NetEmulation.h"
@@ -36,8 +37,8 @@ namespace
         for ( const vector<uint8>& input : listInput )
         {
             for ( const uint8 byte : input )
-                hash = ( hash ^ byte ) * 16777619u;
-            hash = ( hash ^ 0xFFu ) * 16777619u;
+                hash = ( hash ^ byte ) * sw::HashUtil::kFnvPrime32;
+            hash = ( hash ^ 0xFFu ) * sw::HashUtil::kFnvPrime32;
         }
         return hash;
     }
@@ -301,7 +302,7 @@ namespace
             , _pWorld{ &world }
             , _playerCount{ playerCount }
             , _checksumInterval{ checksumInterval }
-            , _hash{ 2166136261u }
+            , _hash{ sw::HashUtil::kFnvOffset32 }
             , _bStarted{ false }
         {
             world.getRouter().addHandler( &_session );
@@ -466,7 +467,7 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
     SW_ASSERT_TRUE( cluster.areClientsConnected() );
 
     vector<LockstepSession>     listSession( 3 );
-    vector<uint32>              listHash( 3, 2166136261u );
+    vector<uint32>              listHash( 3, sw::HashUtil::kFnvOffset32 );
     vector<map<uint32, uint32>> listHashByTick( 3 );
     for ( int32 index = 0; index < 3; ++index )
     {

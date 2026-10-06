@@ -26,6 +26,7 @@ namespace sw
     VoxelWorld::VoxelWorld()
         : _listChunk{}
         , _pCatalog{ nullptr }
+        , _land{}
         , _chunkCountX{ 0 }
         , _chunkCountZ{ 0 }
     {
@@ -40,6 +41,16 @@ namespace sw
         _listChunk.resize( static_cast<size_t>( _chunkCountX * _chunkCountZ ) );
         for ( VoxelChunk& chunk : _listChunk )
             chunk._listBlock.assign( static_cast<size_t>( kVoxelChunkVolume ), kVoxelAirBlock );
+    }
+
+    bool VoxelWorld::bindLand( LandRegistry* pLand, const int2& origin )
+    {
+        LandBinding land;
+        land.bind( pLand, origin, hashed_string( "Voxel" ) );
+        if ( land.claimRect( 0, 0, getSizeX() - 1, getSizeZ() - 1, true ) == false )
+            return false;
+        _land = land;
+        return true;
     }
 
     bool VoxelWorld::isInside( int32 x, int32 y, int32 z ) const

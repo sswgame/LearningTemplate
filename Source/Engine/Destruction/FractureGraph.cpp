@@ -95,9 +95,9 @@ namespace sw
 
                 // 가장 먼 점 고르기 — 첫 씨앗은 무게 중심에 가장 가까운 노드.
                 vector<float3>  listSite;
-                vector<float32> listNearest( count, MathUtil::MaxFloat );
+                vector<float32> listNearest( count, MathUtil::kMaxFloat );
                 uint32          first     = 0;
-                float32         firstDist = MathUtil::MaxFloat;
+                float32         firstDist = MathUtil::kMaxFloat;
                 for ( uint32 index = 0; index < count; ++index )
                 {
                     const float32 distance = float3::getDistanceSquared( listBuild[listCurrent[index]]._centroid, weightedCenter );
@@ -131,7 +131,7 @@ namespace sw
                 {
                     for ( uint32 index = 0; index < count; ++index )
                     {
-                        float32 best = MathUtil::MaxFloat;
+                        float32 best = MathUtil::kMaxFloat;
                         for ( uint32 site = 0; site < static_cast<uint32>( listSite.size() ); ++site )
                         {
                             const float32 distance = float3::getDistanceSquared( listBuild[listCurrent[index]]._centroid, listSite[site] );

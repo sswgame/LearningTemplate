@@ -7,18 +7,29 @@
         "",
         "rhi_backends: 줄 순서 = RHIBackend 열거값(Config/RHIBackendType.h, static_assert 로 맞춘다).",
         "  name = RHIBackend 열거자, shader_folder = Resource/**/shaders/bin/<폴더>, shader_target = ShaderTargetFormat 열거자,",
-        "  command_line_argument = CommandLineArgument 열거자, aliases = 명령줄 · 셰이더 폴더 · 쿠커 --target-rhi 가 받는 이름(소문자).",
+        "  command_line_argument = CommandLineArgument 열거자, aliases = 명령줄 · 셰이더 폴더 · 쿠커 --target-rhi · CMake SW_SHIPPING_RHI_BACKEND 가 받는 이름(소문자),",
+        "  module = RHI_* 모듈 이름(매니페스트 · 타깃), source_folder = Source/Engine/Graphics/RHI/<폴더>(그 아래 .cpp 가 그 백엔드의 장치 소스 전부),",
+        "  graphics_libs = 플랫폼 그래픽 라이브러리 INTERFACE 타깃(cmake/Modules/Platform), shipping_define = 배포 빌드가 백엔드 하나를 Engine 에 넣을 때 붙이는 매크로.",
+        "  CMake 는 configure 가 쓴 generated/sw/config/CookContract.cmake 로 읽는다. 백엔드가 어느 플랫폼에 있는지는 모듈 매니페스트 _listPlatform 이 정본이다.",
         "cook_suffixes: 긴 접미사가 먼저다(.scene.xml 이 .scene 보다 먼저 맞아야 한다). kind = AssetKind 열거자,",
-        "  is_authoring_source = 쿠커가 쿠킹하는 저작 소스인가(아니면 쿠킹본 · 확장자 없는 이름을 정본으로 돌리는 줄)."
+        "  is_authoring_source = 쿠커가 쿠킹하는 저작 소스인가(아니면 쿠킹본 · 확장자 없는 이름을 정본으로 돌리는 줄).",
+        "asset_kinds: 빌드 타깃이 뺄 수 있는 에셋 종류 — extensions(소문자 확장자) 또는 folders(경로 조각 'a/b' — 그 폴더 아래 전부)로 고른다.",
+        "target_excluded_asset_kinds: 빌드 타깃(SW_TARGET_TYPE)마다 패키지에서 빼는 종류. 쿠커(--build-target)는 그 파일을 팩에 넣지 않고,",
+        "  같은 호스트의 런타임(ResourceUtil::setHostTarget)은 그 종류를 읽지 않고 없는 것으로 친다(파일 없음 오류를 내지 않는다).",
+        "  전용 서버: 텍스처 · 셰이더 바이너리 · 오디오를 뺀다. 메시 · 애니메이션은 충돌 · 소켓 · 히트박스 · 루트 모션 때문에 남긴다."
     ],
 
     "default_rhi_backend": "DirectX12",
 
     "rhi_backends": [
-        { "name": "DirectX11", "shader_folder": "dx11", "shader_target": "DXBC_D3D11", "command_line_argument": "DIRECTX_11", "aliases": [ "dx11", "d3d11", "directx11" ] },
-        { "name": "DirectX12", "shader_folder": "dx12", "shader_target": "DXIL_D3D12", "command_line_argument": "DIRECTX_12", "aliases": [ "dx12", "d3d12", "directx12" ] },
-        { "name": "Vulkan", "shader_folder": "vulkan", "shader_target": "SPIRV_Vulkan", "command_line_argument": "VULKAN", "aliases": [ "vk", "vulkan", "spirv" ] },
-        { "name": "OpenGL", "shader_folder": "opengl", "shader_target": "SPIRV_OpenGL", "command_line_argument": "OPENGL", "aliases": [ "gl", "opengl" ] }
+        { "name": "DirectX11", "shader_folder": "dx11", "shader_target": "DXBC_D3D11", "command_line_argument": "DIRECTX_11", "aliases": [ "dx11", "d3d11", "directx11" ],
+          "module": "RHI_DX11", "source_folder": "DX11", "graphics_libs": "sw_graphics_dx11_libs", "shipping_define": "SW_RHI_TARGET_DX11" },
+        { "name": "DirectX12", "shader_folder": "dx12", "shader_target": "DXIL_D3D12", "command_line_argument": "DIRECTX_12", "aliases": [ "dx12", "d3d12", "directx12" ],
+          "module": "RHI_DX12", "source_folder": "DX12", "graphics_libs": "sw_graphics_dx12_libs", "shipping_define": "SW_RHI_TARGET_DX12" },
+        { "name": "Vulkan", "shader_folder": "vulkan", "shader_target": "SPIRV_Vulkan", "command_line_argument": "VULKAN", "aliases": [ "vk", "vulkan", "spirv" ],
+          "module": "RHI_Vulkan", "source_folder": "Vulkan", "graphics_libs": "sw_graphics_vulkan_libs", "shipping_define": "SW_RHI_TARGET_VULKAN" },
+        { "name": "OpenGL", "shader_folder": "opengl", "shader_target": "SPIRV_OpenGL", "command_line_argument": "OPENGL", "aliases": [ "gl", "opengl" ],
+          "module": "RHI_GL", "source_folder": "GL", "graphics_libs": "sw_graphics_gl_libs", "shipping_define": "SW_RHI_TARGET_OPENGL" }
     ],
 
     "cook_suffixes": [
@@ -29,5 +40,15 @@
         { "source": ".prefab.bin", "cooked": ".prefab.bin", "kind": "Prefab", "is_authoring_source": false },
         { "source": ".scene", "cooked": ".scene.bin", "kind": "Scene", "is_authoring_source": false },
         { "source": ".prefab", "cooked": ".prefab.bin", "kind": "Prefab", "is_authoring_source": false }
+    ],
+
+    "asset_kinds": [
+        { "name": "Texture", "extensions": [ ".dds" ], "folders": [] },
+        { "name": "ShaderBinary", "extensions": [], "folders": [ "shaders/bin" ] },
+        { "name": "Audio", "extensions": [ ".ogg", ".wav", ".mp3", ".flac" ], "folders": [] }
+    ],
+
+    "target_excluded_asset_kinds": [
+        { "target": "Server", "kinds": [ "Texture", "ShaderBinary", "Audio" ] }
     ]
 }

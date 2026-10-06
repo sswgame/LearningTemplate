@@ -49,6 +49,10 @@ namespace sw
     {
         /** @brief 엔티티 하나의 상태 바이트 상한입니다. 넘는 엔티티는 싣지 않는다(재구성에도 넣지 않아 두 쪽 기준이 같다). */
         static constexpr int32 kMaxEntityBytes = 255;
+        /** @brief `writeDelta` 의 엔티티별 결과입니다(`pOutListCurrent` 의 값). */
+        static constexpr uint8 kEntityNotSent        = 0; ///< 예산에 못 들었다 — 받는 쪽은 기준 값 그대로
+        static constexpr uint8 kEntityAlreadyCurrent = 1; ///< 받는 쪽 기준이 이미 지금 상태다(확인된 것)
+        static constexpr uint8 kEntityWritten        = 2; ///< 이번 메시지에 실었다 — 받았는지는 확인을 봐야 안다
 
         vector<NetEntityState> _listEntity{};
         uint32                 _tick{ 0 };
@@ -64,7 +68,7 @@ namespace sw
          *        사라진 엔티티는 싣지 않고 @p outWritten 에 실은 것만 반영한다(받는 쪽 재구성 = 기준 + 실은 것 — 못 실은 것은 다음 델타가 다시 고른다).
          *        `kMaxEntityBytes` 를 넘는 엔티티도 싣지 않는다.
          * @param pListOrder 싣는 순서(`_listEntity` 의 자리 — 우선도 높은 것 먼저). 없으면 id 순.
-         * @param pOutListCurrent 있으면 `_listEntity` 자리마다 1 = 받는 쪽이 이 델타로 지금 상태를 갖는다(실었거나 기준과 같다), 0 = 못 실었다.
+         * @param pOutListCurrent 있으면 `_listEntity` 자리마다 `kEntityNotSent` · `kEntityAlreadyCurrent` · `kEntityWritten`.
          */
         void writeDelta( BitWriter& writer, const NetSnapshot* pBaseline, int32 maxBytes, NetSnapshot& outWritten, const vector<int32>* pListOrder = nullptr,
                          vector<uint8>* pOutListCurrent = nullptr ) const;

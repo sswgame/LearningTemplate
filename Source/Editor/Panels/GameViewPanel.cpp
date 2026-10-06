@@ -116,8 +116,9 @@ namespace sw::editor
 
         if ( size.x > 1.0f && size.y > 1.0f )
         {
-            const float2 barAnchor{ imagePos.x + size.x * 0.5f, imagePos.y + 8.0f };
-            _viewportClient.drawTransformBar( barAnchor );
+            const float2  barAnchor{ imagePos.x + size.x * 0.5f, imagePos.y + 8.0f };
+            const float32 barMaxWidth = size.x - 16.0f; // 게임 뷰 양쪽에 8 px 씩 남긴다
+            _viewportClient.drawTransformBar( barAnchor, barMaxWidth );
             drawDebugOverlay( float2{ imagePos.x, imagePos.y }, float2{ size.x, size.y } );
 
             InputManager* pInput = getService<InputManager>();

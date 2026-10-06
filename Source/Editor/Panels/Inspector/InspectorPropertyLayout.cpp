@@ -87,7 +87,7 @@ namespace sw::editor
             return unit;
         if ( *pUnits == "rad" )
         {
-            unit._scale     = MathUtil::RadianToDegree;
+            unit._scale     = MathUtil::kRadianToDegree;
             unit._dragSpeed = kAngleDragSpeed;
             unit._suffix    = "deg";
             return unit;

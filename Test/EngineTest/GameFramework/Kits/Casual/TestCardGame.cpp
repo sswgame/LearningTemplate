@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Casual/CardGame/DeckBattle.h"
 #include "GameFramework/Kits/Casual/CardGame/HwatuDeck.h"
@@ -92,6 +94,33 @@ namespace
         for ( const TEvent& event : listEvent )
             count += event._kind == kind ? 1 : 0;
         return count;
+    }
+
+    /** @brief 상태 바이트를 꺼냅니다. */
+    template <typename StateType>
+    vector<uint8> captureCardBytes( const StateType& state )
+    {
+        Archive archive;
+        state.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
+    }
+
+    /** @brief @p bytes 를 @p outState 에 읽고 끝까지 다 읽었으면 true 입니다. */
+    template <typename StateType>
+    bool restoreCardBytes( const vector<uint8>& bytes, StateType& outState )
+    {
+        Archive reader( bytes.data(), bytes.size() );
+        return outState.readState( reader ) && reader.getRemainingBytes() == 0;
+    }
+
+    /** @brief 마지막 한 바이트를 자른 바이트를 @p outState 에 읽습니다(거절되어야 한다). */
+    template <typename StateType>
+    bool restoreTruncatedCardBytes( const vector<uint8>& bytes, StateType& outState )
+    {
+        Archive reader( bytes.data(), bytes.size() - 1 );
+        return outState.readState( reader );
     }
 } // namespace
 
@@ -795,4 +824,157 @@ SW_TEST_CASE( CardGameTest, DeckBattlePlaysATurnWithEnergyBlockExhaustAndReshuff
         bSame = twin.getHand().getAt( index ) == twinB.getHand().getAt( index );
     SW_EXPECT_TRUE( bSame );
     SW_EXPECT_EQUAL( twin.getDrawPile().getCount(), 2 ); // 7 장 중 다섯을 뽑았다
+}
+
+/**
+ * @brief [CardGameTest] 상태 바이트 — 포커 · 맞고 · 솔리테어 · 우노 · 덱 빌딩 전투가 다른 씨앗으로 연 판에 그대로 오고, 같은 행동을 더 해도 바이트가 같다.
+ *        잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
+{
+    // 포커 — 프리플롭에 둘이 콜했다. 읽는 쪽은 판을 열지 않은 테이블이어도 덱 · 홀 카드까지 이어받는다.
+    PokerSettings pokerSettings;
+    pokerSettings._smallBlind = 5;
+    pokerSettings._bigBlind   = 10;
+    PokerTable table;
+    table.initialize( pokerSettings, { 100, 50, 200 } );
+    GameRandom pokerRandom( 7 );
+    SW_ASSERT_TRUE( table.startHand( pokerRandom ) );
+    SW_EXPECT_TRUE( table.act( 0, PokerActionKind::Call ) );
+    SW_EXPECT_TRUE( table.act( 1, PokerActionKind::Call ) );
+    const vector<uint8> tableBytes = captureCardBytes( table );
+    PokerTable          restoredTable;
+    restoredTable.initialize( pokerSettings, { 100, 50, 200 } );
+    SW_ASSERT_TRUE( restoreCardBytes( tableBytes, restoredTable ) );
+    SW_EXPECT_EQUAL( table.getCurrentSeat(), restoredTable.getCurrentSeat() );
+    SW_EXPECT_EQUAL( table.computePotTotal(), restoredTable.computePotTotal() );
+    SW_EXPECT_TRUE( table.getSeat( 2 )._arrHole[1] == restoredTable.getSeat( 2 )._arrHole[1] );
+    SW_EXPECT_TRUE( tableBytes == captureCardBytes( restoredTable ) );
+    SW_EXPECT_TRUE( table.act( 2, PokerActionKind::Check ) ); // 빅 블라인드가 넘겨 플롭 — 이어받은 덱에서 깐다
+    SW_EXPECT_TRUE( restoredTable.act( 2, PokerActionKind::Check ) );
+    SW_EXPECT_TRUE( restoredTable.getStreet() == PokerStreet::Flop );
+    SW_EXPECT_TRUE( table.getBoard().getTop() == restoredTable.getBoard().getTop() );
+    SW_EXPECT_TRUE( captureCardBytes( table ) == captureCardBytes( restoredTable ) );
+    PokerTable truncatedTable;
+    truncatedTable.initialize( pokerSettings, { 100, 50, 200 } );
+    SW_EXPECT_FALSE( restoreTruncatedCardBytes( tableBytes, truncatedTable ) );
+    SW_EXPECT_TRUE( truncatedTable.getStreet() == PokerStreet::HandOver );
+
+    // 맞고 — 두 차례 낸 판. 다른 씨앗으로 나눈 판에 읽는다.
+    MatgoGame matgo;
+    matgo.initialize( MatgoSettings::makeMatgo(), 99 );
+    for ( int32 turn = 0; turn < 2; ++turn )
+    {
+        const int32 player = matgo.getCurrentPlayer();
+        SW_EXPECT_TRUE( matgo.playCard( player, matgo.getPlayer( player )._hand.getAt( 0 )._id ) );
+    }
+    const vector<uint8> matgoBytes = captureCardBytes( matgo );
+    MatgoGame           restoredMatgo;
+    restoredMatgo.initialize( MatgoSettings::makeMatgo(), 5 );
+    SW_ASSERT_TRUE( restoreCardBytes( matgoBytes, restoredMatgo ) );
+    SW_EXPECT_EQUAL( matgo.getCurrentPlayer(), restoredMatgo.getCurrentPlayer() );
+    SW_EXPECT_EQUAL( matgo.getFloor().getCount(), restoredMatgo.getFloor().getCount() );
+    SW_EXPECT_EQUAL( matgo.getPlayer( 0 )._captured.getCount(), restoredMatgo.getPlayer( 0 )._captured.getCount() );
+    SW_EXPECT_TRUE( matgoBytes == captureCardBytes( restoredMatgo ) );
+    for ( int32 turn = 0; turn < 2; ++turn )
+    {
+        const int32 player  = matgo.getCurrentPlayer();
+        const bool  bPlayed = matgo.playCard( player, matgo.getPlayer( player )._hand.getAt( 0 )._id );
+        SW_EXPECT_TRUE( bPlayed == restoredMatgo.playCard( player, restoredMatgo.getPlayer( player )._hand.getAt( 0 )._id ) );
+    }
+    SW_EXPECT_TRUE( captureCardBytes( matgo ) == captureCardBytes( restoredMatgo ) );
+    MatgoGame truncatedMatgo;
+    truncatedMatgo.initialize( MatgoSettings::makeMatgo(), 5 );
+    const int32 untouchedDrawCount = truncatedMatgo.getDrawPile().getCount();
+    SW_EXPECT_FALSE( restoreTruncatedCardBytes( matgoBytes, truncatedMatgo ) );
+    SW_EXPECT_EQUAL( untouchedDrawCount, truncatedMatgo.getDrawPile().getCount() );
+
+    // 솔리테어 — 스톡을 세 번 뒤집었다. 되돌리기 기록도 이어진다.
+    KlondikeGame klondike;
+    klondike.initialize( KlondikeSettings{}, 5 );
+    for ( int32 draw = 0; draw < 3; ++draw )
+        SW_EXPECT_TRUE( klondike.drawStock() );
+    const vector<uint8> klondikeBytes = captureCardBytes( klondike );
+    KlondikeGame        restoredKlondike;
+    restoredKlondike.initialize( KlondikeSettings{}, 9 );
+    SW_ASSERT_TRUE( restoreCardBytes( klondikeBytes, restoredKlondike ) );
+    SW_EXPECT_EQUAL( 3, restoredKlondike.getUndoCount() );
+    SW_EXPECT_TRUE( klondike.getState()._waste.getTop() == restoredKlondike.getState()._waste.getTop() );
+    SW_EXPECT_TRUE( klondikeBytes == captureCardBytes( restoredKlondike ) );
+    SW_EXPECT_TRUE( klondike.drawStock() );
+    SW_EXPECT_TRUE( restoredKlondike.drawStock() );
+    SW_EXPECT_TRUE( klondike.undo() );
+    SW_EXPECT_TRUE( restoredKlondike.undo() );
+    SW_EXPECT_TRUE( captureCardBytes( klondike ) == captureCardBytes( restoredKlondike ) );
+    KlondikeGame truncatedKlondike;
+    truncatedKlondike.initialize( KlondikeSettings{}, 9 );
+    SW_EXPECT_FALSE( restoreTruncatedCardBytes( klondikeBytes, truncatedKlondike ) );
+    SW_EXPECT_EQUAL( 0, truncatedKlondike.getUndoCount() );
+
+    // 우노 — 세 사람이 뽑았다. 난수(버린 더미 섞기)까지 이어진다.
+    UnoGame uno;
+    uno.initialize( UnoSettings{}, 11 );
+    for ( int32 turn = 0; turn < 3; ++turn )
+        SW_EXPECT_TRUE( uno.drawCard( uno.getCurrentPlayer() ) );
+    const vector<uint8> unoBytes = captureCardBytes( uno );
+    UnoGame             restoredUno;
+    restoredUno.initialize( UnoSettings{}, 99 );
+    SW_ASSERT_TRUE( restoreCardBytes( unoBytes, restoredUno ) );
+    SW_EXPECT_EQUAL( uno.getCurrentPlayer(), restoredUno.getCurrentPlayer() );
+    SW_EXPECT_TRUE( uno.getTopCard() == restoredUno.getTopCard() );
+    SW_EXPECT_EQUAL( uno.getHand( 1 ).getCount(), restoredUno.getHand( 1 ).getCount() );
+    SW_EXPECT_TRUE( unoBytes == captureCardBytes( restoredUno ) );
+    for ( int32 turn = 0; turn < 2; ++turn )
+    {
+        SW_EXPECT_TRUE( uno.drawCard( uno.getCurrentPlayer() ) );
+        SW_EXPECT_TRUE( restoredUno.drawCard( restoredUno.getCurrentPlayer() ) );
+    }
+    SW_EXPECT_TRUE( captureCardBytes( uno ) == captureCardBytes( restoredUno ) );
+    UnoGame truncatedUno;
+    truncatedUno.initialize( UnoSettings{}, 99 );
+    SW_EXPECT_FALSE( restoreTruncatedCardBytes( unoBytes, truncatedUno ) );
+    SW_EXPECT_EQUAL( 108 - 28 - 1, truncatedUno.getDrawPile().getCount() );
+
+    // 덱 빌딩 전투 — 한 장 쓰고 턴을 넘겼다. 카드 번호 → 정의는 id 로 실려 읽는 쪽 카탈로그에서 찾는다.
+    constexpr const utf8* kDeckXml = R"(
+<DeckBattleCatalog>
+  <Card id="strike" name="Strike" cost="1" effects="Damage:6"/>
+  <Card id="defend" name="Defend" cost="1" effects="Block:5"/>
+</DeckBattleCatalog>
+)";
+    DeckBattleCatalog     catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kDeckXml, "CardGameTest" ) );
+    DeckBattleEnemy enemy;
+    enemy._hp         = 40;
+    enemy._listIntent = {
+        DeckBattleEffect{6, DeckBattleEffectKind::Damage},
+        DeckBattleEffect{3,  DeckBattleEffectKind::Block}
+    };
+    const vector<hashed_string> listDeck = { "strike", "strike", "strike", "strike", "defend", "defend", "defend", "defend" };
+    DeckBattle                  battle;
+    SW_ASSERT_TRUE( battle.initialize( &catalog, DeckBattleSettings{}, listDeck, enemy, 2024 ) );
+    SW_EXPECT_TRUE( battle.playCard( 0 ) );
+    battle.endTurn();
+    const vector<uint8> battleBytes = captureCardBytes( battle );
+    DeckBattle          restoredBattle;
+    SW_ASSERT_TRUE( restoredBattle.initialize( &catalog, DeckBattleSettings{}, listDeck, DeckBattleEnemy{}, 77 ) );
+    SW_ASSERT_TRUE( restoreCardBytes( battleBytes, restoredBattle ) );
+    SW_EXPECT_EQUAL( battle.getTurn(), restoredBattle.getTurn() );
+    SW_EXPECT_EQUAL( battle.getPlayerHp(), restoredBattle.getPlayerHp() );
+    SW_EXPECT_EQUAL( battle.getEnemy()._hp, restoredBattle.getEnemy()._hp );
+    SW_ASSERT_NOT_NULL( restoredBattle.getCardDef( restoredBattle.getHand().getAt( 0 ) ) );
+    SW_EXPECT_TRUE( battle.getCardDef( battle.getHand().getAt( 0 ) )->_id == restoredBattle.getCardDef( restoredBattle.getHand().getAt( 0 ) )->_id );
+    SW_EXPECT_TRUE( battleBytes == captureCardBytes( restoredBattle ) );
+    for ( int32 turn = 0; turn < 2; ++turn )
+    {
+        SW_EXPECT_TRUE( battle.playCard( 0 ) );
+        SW_EXPECT_TRUE( restoredBattle.playCard( 0 ) );
+        battle.endTurn(); // 버린 더미를 섞어 뽑는다 — 이어받은 난수가 같은 순서를 낸다
+        restoredBattle.endTurn();
+    }
+    SW_EXPECT_TRUE( captureCardBytes( battle ) == captureCardBytes( restoredBattle ) );
+    DeckBattle truncatedBattle;
+    SW_ASSERT_TRUE( truncatedBattle.initialize( &catalog, DeckBattleSettings{}, listDeck, enemy, 77 ) );
+    SW_EXPECT_FALSE( restoreTruncatedCardBytes( battleBytes, truncatedBattle ) );
+    SW_EXPECT_EQUAL( 1, truncatedBattle.getTurn() );
 }

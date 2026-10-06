@@ -3,6 +3,7 @@
 #include "Games/HarvestValley/FarmCropComponent.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -20,7 +21,6 @@ namespace sw
              *        직교 카메라에서 작물이 콩알만 해서 1.6 배로 키운다(작물 폭 0.35 → 0.56 m, 칸 안에 들어간다).
              * @details 모델은 바닥이 원점보다 0.05 아래다(키트 노드가 내려 둔 값) — 흙 윗면에 얹을 때 그만큼 올린다.
              */
-            static constexpr float32 kModelScale = 1.6f;
             static constexpr float32 kModelFloor = 0.05f;
             static constexpr float32 kSoilTop    = 0.08f;
 
@@ -36,6 +36,7 @@ namespace sw
     FarmCropComponent::FarmCropComponent()
         : _director{}
         , _tileIndex{ -1 }
+        , _modelScale{ 1.6f }
         , _cropState{ -1 }
     {
         setCanEverTick( true );
@@ -83,7 +84,7 @@ namespace sw
 
     string FarmCropComponent::makeModelPath( const utf8* pName )
     {
-        return string( "game/harvestvalley/models/" ) + pName + ".mesh";
+        return string( "game/harvestvalley/models/" ) + pName + string( MeshAssetFormat::kExtension );
     }
 
     void FarmCropComponent::onTick( float32 deltaTime )
@@ -129,7 +130,7 @@ namespace sw
         const shared_ptr<MaterialInstance>& look        = pDirector->findCropLook( pTile->_cropId, bWithered, bReady && pReadyModel == nullptr );
         if ( look == nullptr )
             return;
-        const float32 size = Internal::kModelScale * ( bReady ? 1.0f : 0.7f + 0.3f * ratio );
+        const float32 size = _modelScale * ( bReady ? 1.0f : 0.7f + 0.3f * ratio );
         pMesh->setMeshId( makeModelPath( pModel ) );
         pMesh->setMaterialInstance( look );
         pMesh->setLocalScale( float3{ size } );

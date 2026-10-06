@@ -2,7 +2,7 @@
 
 #include "Engine/Input/InputManager.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Common/X11Headers.h"
     #include "Core/String/fixed_string.h"
 

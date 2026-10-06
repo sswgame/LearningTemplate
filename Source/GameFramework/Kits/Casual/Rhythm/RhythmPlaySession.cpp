@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Input/TimingJudge.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Input/TimingJudge.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -215,6 +218,124 @@ namespace sw
     void RhythmPlaySession::drainEvents( vector<RhythmEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void RhythmPlaySession::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _pChart != nullptr ? _pChart->getNotes().size() : 0 );
+        outArchive << static_cast<uint32>( _listLane.size() );
+        for ( const LaneQueue& lane : _listLane )
+        {
+            outArchive << static_cast<uint32>( lane._cursor );
+            outArchive << lane._holdingNote;
+        }
+        outArchive << static_cast<uint32>( _listGradeCount.size() );
+        for ( const int32 gradeCount : _listGradeCount )
+        {
+            outArchive << gradeCount;
+        }
+        outArchive << static_cast<uint32>( _listInputRecord.size() );
+        for ( const RhythmInputRecord& record : _listInputRecord )
+        {
+            outArchive << record._time;
+            outArchive << record._lane;
+            outArchive << record._bPress;
+        }
+        outArchive << _score;
+        outArchive << _accuracyWeightSum;
+        outArchive << _life;
+        outArchive << _now;
+        outArchive << _combo;
+        outArchive << _maxCombo;
+        outArchive << _missCount;
+        outArchive << _judgedCount;
+        outArchive << static_cast<uint8>( _state );
+    }
+
+    bool RhythmPlaySession::readState( Archive& archive )
+    {
+        if ( _pChart == nullptr )
+            return false;
+        const vector<RhythmNote>& listNote  = _pChart->getNotes();
+        uint32                    noteCount = 0;
+        uint32                    laneCount = 0;
+        archive >> noteCount;
+        archive >> laneCount;
+        // 같은 채보(노트 수 · 레인 수)로 `initialize` 한 판이어야 한다 — 레인 대기열은 채보에서 다시 만든 것을 쓴다.
+        if ( archive.isError() || noteCount != listNote.size() || laneCount != _listLane.size() )
+            return false;
+        vector<LaneQueue> listLane = _listLane;
+        for ( size_t laneIndex = 0; laneIndex < listLane.size(); ++laneIndex )
+        {
+            LaneQueue& lane   = listLane[laneIndex];
+            uint32     cursor = 0;
+            archive >> cursor;
+            archive >> lane._holdingNote;
+            const bool bHoldingValid = lane._holdingNote < 0 ||
+                                       ( static_cast<size_t>( lane._holdingNote ) < listNote.size() && listNote[static_cast<size_t>( lane._holdingNote )]._lane == static_cast<int32>( laneIndex ) );
+            if ( archive.isError() || cursor > lane._listNoteIndex.size() || bHoldingValid == false )
+                return false;
+            lane._cursor = cursor;
+        }
+
+        uint32 gradeCount = 0;
+        archive >> gradeCount;
+        if ( archive.isError() || gradeCount != _listGradeCount.size() )
+            return false;
+        vector<int32> listGradeCount( gradeCount, 0 );
+        for ( int32& count : listGradeCount )
+        {
+            archive >> count;
+        }
+
+        uint32 recordCount = 0;
+        // 입력마다 시각(4) + 레인(4) + 누름(1)
+        if ( StateArchiveUtil::readCount( archive, 9, recordCount ) == false )
+            return false;
+        vector<RhythmInputRecord> listInputRecord( recordCount, RhythmInputRecord{} );
+        for ( RhythmInputRecord& record : listInputRecord )
+        {
+            archive >> record._time;
+            archive >> record._lane;
+            archive >> record._bPress;
+            if ( archive.isError() || record._bPress > SW_TRUE )
+                return false;
+        }
+
+        int64   score             = 0;
+        float64 accuracyWeightSum = 0.0;
+        float32 life              = 0.0f;
+        float32 now               = 0.0f;
+        int32   combo             = 0;
+        int32   maxCombo          = 0;
+        int32   missCount         = 0;
+        int32   judgedCount       = 0;
+        uint8   state             = 0;
+        archive >> score;
+        archive >> accuracyWeightSum;
+        archive >> life;
+        archive >> now;
+        archive >> combo;
+        archive >> maxCombo;
+        archive >> missCount;
+        archive >> judgedCount;
+        archive >> state;
+        if ( archive.isError() || state > static_cast<uint8>( RhythmPlayState::Failed ) || combo < 0 || combo > maxCombo )
+            return false;
+        _listLane          = std::move( listLane );
+        _listGradeCount    = std::move( listGradeCount );
+        _listInputRecord   = std::move( listInputRecord );
+        _score             = score;
+        _accuracyWeightSum = accuracyWeightSum;
+        _life              = life;
+        _now               = now;
+        _combo             = combo;
+        _maxCombo          = maxCombo;
+        _missCount         = missCount;
+        _judgedCount       = judgedCount;
+        _state             = static_cast<RhythmPlayState>( state );
+        _eventBuffer.clear();
+        return true;
     }
 
     float32 RhythmPlaySession::computeAccuracy() const

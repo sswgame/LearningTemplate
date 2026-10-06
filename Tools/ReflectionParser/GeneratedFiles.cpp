@@ -135,7 +135,7 @@ namespace sw
 
     bool GeneratedFileUtil::writeIfChanged( const string& path, const string_view content )
     {
-        if ( FileUtil::fileExists( path ) )
+        if ( FileUtil::exists( path ) )
         {
             string existingContent;
             if ( FileUtil::readTextFile( path, existingContent ) && existingContent.empty() == false && string_view( existingContent ) == content )
@@ -239,7 +239,7 @@ namespace sw
     bool IncrementalCheck::isUpToDate( const string& inputFile, const GeneratedPaths& paths ) const
     {
         const uint64 stampTime = GeneratedFilesInternal::getWriteTime( paths._stampPath );
-        if ( stampTime == 0 || FileUtil::fileExists( paths._cppPath ) == false || FileUtil::fileExists( paths._headerPath ) == false )
+        if ( stampTime == 0 || FileUtil::exists( paths._cppPath ) == false || FileUtil::exists( paths._headerPath ) == false )
             return false;
 
         // 스탬프 파일의 시각은 **도구**가 더 새로운지만 가린다. 입력은 스탬프에 적힌 "파싱 전에 본 시각" 과 같은지로 본다(아래).

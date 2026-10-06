@@ -7,19 +7,22 @@
  *          기반 몸에 돌려줍니다. 고정 틱(권장 1/60)으로 부르면 결정적입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionPlatformerCatalog.h"
-#include "GameFramework/Movement/PlatformerMotor2D.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {
+    class Archive;
+
     /**
      * @class ActionTerrainGrid
      * @brief 키트의 칸 정보 — 흙(드릴로 파는 칸)과 갈고리 지점입니다. 칸 크기 · 원점은 기반 칸 지형과 같습니다.
@@ -104,6 +107,9 @@ namespace sw
     class SW_GF_API ActionPlatformerBody
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "APBD" );
+        static constexpr uint32 kStateVersion = 1;
+
         ActionPlatformerBody();
 
         void initialize( const PlatformerSettings& motorSettings, const ActionBodySettings& settings );
@@ -120,7 +126,17 @@ namespace sw
         const PlatformerMotor2D& getMotor() const { return _motor; }
         PlatformerMotor2D&       getMotor() { return _motor; }
 
+        /**
+         * @brief 이동 모드 · 기반 몸(`PlatformerMotor2D`) · 갈고리 · 드릴의 자리 · 속도 · 밧줄 끝 · 길이 · 드릴 찾기 시간 · 흙 안 표시를 씁니다.
+         *        설정은 `initialize` 의 것(활공이면 활공 설정을 다시 건다), 지형은 `update` 의 인자, 이번 틱의 사건 비트는 싣지 않습니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
     private:
+        /** @brief 기반 몸에 걸 설정입니다 — 활공이면 낙하 상한 · 중력을 줄인 것입니다. */
+        PlatformerSettings makeMotorSettings( bool bGlide ) const;
         void               setGlide( bool bGlide );
         [[nodiscard]] bool tryAttachGrapple( const ActionTerrainGrid& terrain );
         [[nodiscard]] bool tryEnterDrill( const ActionTerrainGrid& terrain, const ActionBodyInput& input );

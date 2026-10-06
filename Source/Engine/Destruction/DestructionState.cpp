@@ -2,11 +2,16 @@
 
 #include "Engine/Destruction/DestructionState.h"
 
+#include "Core/Common/Defines.h"
+#include "Core/Common/FourCcUtil.h"
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Destruction/FractureGraph.h"
+#include "Engine/Physics/PhysicsSystem.h"
 
 namespace sw
 {
@@ -14,9 +19,9 @@ namespace sw
     {
         struct DestructionStateInternal
         {
-            static constexpr uint32 kSnapshotMagic   = 0x53574453u; ///< 'SWDS'
-            static constexpr uint32 kSnapshotVersion = 1;
-            static constexpr uint32 kNoActiveNode    = 0xFFFFFFFFu;
+            static constexpr uint32 kMagic        = FourCcUtil::make( "SWDS" );
+            static constexpr uint32 kVersion      = 1;
+            static constexpr uint32 kNoActiveNode = invalid_index::kUint32;
 
             /** @brief 0/1 바이트 목록을 비트로 씁니다. */
             static void writeFlagBits( BitWriter& writer, const vector<uint8>& listFlag )
@@ -96,8 +101,8 @@ namespace sw
 
             static uint64 mixHash( uint64 hash, uint64 value )
             {
-                hash ^= value + 0x9E3779B97F4A7C15ull + ( hash << 6 ) + ( hash >> 2 );
-                hash = ( hash ^ ( hash >> 31 ) ) * 0xBF58476D1CE4E5B9ull;
+                hash = HashUtil::combine( hash, value );
+                hash = ( hash ^ ( hash >> 31 ) ) * HashUtil::kSplitMixMultiplier0;
                 return hash;
             }
 
@@ -439,13 +444,14 @@ namespace sw
 
         // 깊은 노드부터 — 제 무게 + 받은 하중을 더 얕은 이웃에게 맞닿은 세기 비율로 나눠 넘긴다. 몫이 세기를 넘으면 그 사이가 끊긴다.
         vector<float32> listIncoming( nodeCount, 0.0f );
-        bool            bBroke = false;
+        bool            bBroke  = false;
+        const float32   gravity = PhysicsSystem::getConfiguredGravityMagnitude(); // 설정된 물리 중력 — 서버 · 클라가 같은 설정을 읽는다
         for ( size_t order = listQueue.size(); order > 0; --order )
         {
             const uint32 current = listQueue[order - 1];
             if ( listDepth[current] == 0 )
                 continue;
-            const float32 load          = graph._listNode[listNode[current]]._volume * _profile._density * kGravity + listIncoming[current];
+            const float32 load          = graph._listNode[listNode[current]]._volume * _profile._density * gravity + listIncoming[current];
             float32       totalCapacity = 0.0f;
             for ( const Neighbor& neighbor : listNeighbor[current] )
             {
@@ -563,7 +569,7 @@ namespace sw
     uint64 DestructionState::computeStateHash() const
     {
         using Internal = DestructionStateInternal;
-        uint64 hash    = 1469598103934665603ull;
+        uint64 hash    = HashUtil::kFnvOffset64;
         for ( size_t node = 0; node < _listNodeStrain.size(); ++node )
         {
             hash = Internal::mixHash( hash, Internal::toBits( _listNodeStrain[node] ) );
@@ -591,8 +597,8 @@ namespace sw
     {
         using Internal = DestructionStateInternal;
         BitWriter writer;
-        writer.writeUint32( Internal::kSnapshotMagic );
-        writer.writeVarUint( Internal::kSnapshotVersion );
+        writer.writeUint32( Internal::kMagic );
+        writer.writeVarUint( Internal::kVersion );
         writer.writeVarUint( _listNodeBroken.size() );
         writer.writeVarUint( _listLinkBroken.size() );
         writer.writeVarUint( _listLeafAnchored.size() );
@@ -623,11 +629,11 @@ namespace sw
     bool DestructionState::readSnapshot( const uint8* pData, size_t size )
     {
         using Internal = DestructionStateInternal;
-        if ( _pGraph == nullptr || pData == nullptr || size == 0 || size > static_cast<size_t>( MathUtil::MaxInt32 ) )
+        if ( _pGraph == nullptr || pData == nullptr || size == 0 || size > static_cast<size_t>( MathUtil::kMaxInt32 ) )
             return false;
         const FractureGraph& graph = *_pGraph;
         BitReader            reader( pData, static_cast<int32>( size ) );
-        if ( reader.readUint32() != Internal::kSnapshotMagic || reader.readVarUint() != Internal::kSnapshotVersion )
+        if ( reader.readUint32() != Internal::kMagic || reader.readVarUint() != Internal::kVersion )
             return false;
         const uint64 nodeCount = reader.readVarUint();
         const uint64 linkCount = reader.readVarUint();

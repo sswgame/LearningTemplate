@@ -4,7 +4,7 @@
  *
  * @details **새 게임을 시작할 때 지울 파일이다.** 이 템플릿이 벤치를 들고 있는 이유는 하나다 —
  *          렌더 경로를 재려면 그릴 것을 씬에 올려야 하고, 씬을 만드는 것은 엔진이 아니라 게임의
- *          일이다. `Scripts/dev/BackendSmoke.py` 와 `Engine/Graphics/README.md` 의 측정 조건이
+ *          일이다. `Scripts/dev/RunBackendSmoke.py` 와 `Engine/Graphics/README.md` 의 측정 조건이
  *          이 플래그에 기대고 있으므로 타겟과 플래그 이름은 바꾸지 않는다.
  */
 #pragma once
@@ -122,6 +122,8 @@ namespace sw
          * @details 그림자를 **받을 면**이다. 큐브만 떠 있으면 그림자가 어디에 지는지 그림으로 볼 수 없다.
          */
         void spawnGround( Scene* pScene, float32 halfExtent );
+        /** @brief `-gv_benchViews=N` 이면 격자 둘레에 캡처 카메라(렌더 텍스처) N 개를 둡니다. */
+        void spawnBenchViews( Scene* pScene, float32 halfExtent );
         /** @brief 씬의 모든 카메라를 격자에 맞춥니다(에디터 뷰포트 카메라 포함). */
         void frameCameras( Scene* pScene, uint32 side, float32 spacing );
         /** @brief 카메라 하나를 격자 전체가 들어오도록 물립니다. */

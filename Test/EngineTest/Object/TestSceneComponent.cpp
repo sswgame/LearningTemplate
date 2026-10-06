@@ -81,7 +81,7 @@ SW_TEST_CASE( SceneComponentTest, ParentRotationScalePropagatesToChild )
 
     // yaw 90도: 로컬 +X 가 월드 -Z 가 된다(오른손 Y-up).
     parentComp->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
-    parentComp->setLocalRotation( float3( 0.0f, MathUtil::HalfPi, 0.0f ) );
+    parentComp->setLocalRotation( float3( 0.0f, MathUtil::kHalfPi, 0.0f ) );
     parentComp->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
 
     childComp->setLocalPosition( float3( 1.0f, 0.0f, 0.0f ) );
@@ -233,7 +233,7 @@ SW_TEST_CASE( SceneHierarchyTest, TransformDirtyPropagationAndEarlyOut )
 
 /**
  * @brief [SceneComponentTest] 느리게 움직이는 물체가 제자리에 얼어붙지 않는지 검증
- * @details setter 가 `getDistanceSquared(...) <= MathUtil::Epsilon` 로 "안 바뀌었다" 를 판정하면
+ * @details setter 가 `getDistanceSquared(...) <= MathUtil::kEpsilon` 로 "안 바뀌었다" 를 판정하면
  *          **제곱 거리를 제곱 안 한 허용치와 비교**하는 것이라, 실제 거리로는 1e-3
  *          까지가 변화 없음으로 삼켜진다 — 의도한 부동소수 허용치보다 1000배 크다.
  *
@@ -734,7 +734,7 @@ SW_TEST_CASE( SceneComponentTest, WorldSettersRespectARotatedScaledParent )
     sw::GameObject*       pChildObj  = manager.createGameObject( sw::hashed_string( "WorldChild" ) );
     sw::SceneComponent*   pChild     = pChildObj->addComponent<sw::SceneComponent>();
     pParent->setLocalPosition( sw::float3( 10.0f, 0.0f, 0.0f ) );
-    pParent->setLocalRotation( sw::float3( 0.2f, sw::MathUtil::HalfPi, -0.1f ) );
+    pParent->setLocalRotation( sw::float3( 0.2f, sw::MathUtil::kHalfPi, -0.1f ) );
     pParent->setLocalScale( sw::float3( 2.0f, 2.0f, 2.0f ) );
     SW_ASSERT_TRUE( pChild->attachToComponent( pParent ) );
     manager.flushSceneTransforms();

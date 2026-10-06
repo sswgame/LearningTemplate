@@ -2,6 +2,7 @@
 
 #include "Core/File/PlatformFileUtil.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -21,8 +22,6 @@ namespace sw
     {
         struct PlatformFileUtilInternal
         {
-            /** @brief 위치 지정 읽기 한 번에 넘기는 최대 바이트입니다(Windows DWORD · POSIX ssize_t 아래). */
-            static constexpr size_t kMaxReadChunkBytes = size_t{ 1 } << 30;
 
 #if defined( SW_PLATFORM_WINDOWS )
             /** @brief 스레드마다 하나인 수동 리셋 이벤트입니다 — 동기 위치 읽기가 완료를 기다린다. 스레드가 끝나면 닫는다. */
@@ -236,7 +235,7 @@ namespace sw
         while ( outReadBytes < size )
         {
             const size_t remaining  = size - outReadBytes;
-            const size_t chunkBytes = remaining < PlatformFileUtilInternal::kMaxReadChunkBytes ? remaining : PlatformFileUtilInternal::kMaxReadChunkBytes;
+            const size_t chunkBytes = remaining < constant::kMaxFileReadChunkBytes ? remaining : constant::kMaxFileReadChunkBytes;
             const uint64 position   = offset + outReadBytes;
 #if defined( SW_PLATFORM_WINDOWS )
             const HANDLE hEvent = PlatformFileUtilInternal::getThreadReadEvent();

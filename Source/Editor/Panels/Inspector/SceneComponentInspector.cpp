@@ -35,13 +35,13 @@ namespace sw::editor
 
                 float3 pos = pSceneComp->getLocalPosition();
                 // 회전은 라디안으로 저장하고 도로 보이고 고친다(언리얼 FRotator · 유니티 localEulerAngles).
-                float3 rotDegree = pSceneComp->getLocalRotation() * MathUtil::RadianToDegree;
+                float3 rotDegree = pSceneComp->getLocalRotation() * MathUtil::kRadianToDegree;
                 float3 scl       = pSceneComp->getLocalScale();
 
                 if ( EditorWidgets::drawVec3Control( "Position", pos, 0.0f, 80.0f, 0.1f ) )
                     pSceneComp->setLocalPosition( pos );
                 if ( EditorWidgets::drawVec3Control( "Rotation", rotDegree, 0.0f, 80.0f, InspectorPropertyLayout::kAngleDragSpeed ) )
-                    pSceneComp->setLocalRotation( rotDegree * MathUtil::DegreeToRadian );
+                    pSceneComp->setLocalRotation( rotDegree * MathUtil::kDegreeToRadian );
                 if ( EditorWidgets::drawVec3Control( "Scale", scl, 1.0f, 80.0f, 0.01f ) )
                     pSceneComp->setLocalScale( scl );
 

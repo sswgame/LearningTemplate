@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
@@ -151,8 +152,8 @@ namespace sw
             size_t operator()( const CellCoord& coord ) const noexcept
             {
                 size_t hash = std::hash<int32>{}( coord._x );
-                hash ^= std::hash<int32>{}( coord._y ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
-                hash ^= std::hash<int32>{}( coord._z ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
+                hash ^= std::hash<int32>{}( coord._y ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
+                hash ^= std::hash<int32>{}( coord._z ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
                 return hash;
             }
         };
@@ -222,7 +223,7 @@ namespace sw
 
             /**
              * @brief 범위의 셀마다 콜백을 부릅니다. 비어 있으면 한 번도 부르지 않습니다.
-             * @details 순회 변수는 int64 다. 셀 번호는 int32 끝(`MaxInt32`)까지 접히는데(+inf · 아주 먼 좌표), int32 로 돌면 `++` 가 넘쳐
+             * @details 순회 변수는 int64 다. 셀 번호는 int32 끝(`kMaxInt32`)까지 접히는데(+inf · 아주 먼 좌표), int32 로 돌면 `++` 가 넘쳐
              *          `<= _maxX` 가 영원히 참이었다 — 게임 스레드가 락을 쥔 채 멈추고 셀 표가 끝없이 자랐다.
              */
             template <typename Func>

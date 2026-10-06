@@ -17,6 +17,7 @@ from pathlib import Path
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
+from common import BuildTree  # noqa: E402
 from common.AppRun import computeSlopePerMinute, findUsableBackends, loadGameTable, parseProfileTable, parseProfileWall  # noqa: E402
 from common.ImageMetrics import (RgbImage, compareMetrics, computeMetrics, decodePng, deriveTolerance, downscale,  # noqa: E402
                                  encodePng, parsePpm)
@@ -127,9 +128,9 @@ class UsableBackendTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempDir:
             cachePath = Path(tempDir) / "CMakeCache.txt"
             cachePath.write_text("SW_SHIPPING_BUILD:BOOL=OFF\n", encoding="utf-8")
-            self.assertEqual(["dx12", "dx11", "vk", "gl"], findUsableBackends(Path(tempDir)))
+            self.assertEqual({"dx12", "dx11", "vk", "gl"}, set(findUsableBackends(BuildTree(Path(tempDir)))))
             cachePath.write_text("SW_SHIPPING_BUILD:BOOL=ON\nSW_SHIPPING_RHI_BACKEND:STRING=Vulkan\n", encoding="utf-8")
-            self.assertEqual(["vk"], findUsableBackends(Path(tempDir)))
+            self.assertEqual(["vk"], findUsableBackends(BuildTree(Path(tempDir))))
 
 
 class PerfCompareTest(unittest.TestCase):

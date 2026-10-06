@@ -72,8 +72,9 @@ namespace sw
             /** @brief 이름이 @p pDllName 인 DLL 이 올라와 있으면 프로세스 끝까지 내려가지 않게 고정합니다. 고정했으면 true 입니다. */
             static bool pinLoadedModule( const utf8* pDllName )
             {
-                HMODULE hModule = nullptr;
-                return GetModuleHandleExA( GET_MODULE_HANDLE_EX_FLAG_PIN, pDllName, &hModule ) != FALSE;
+                HMODULE       hModule  = nullptr;
+                const wstring wideName = StringUtil::utf8ToUtf16( pDllName );
+                return GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_PIN, wideName.c_str(), &hModule ) != FALSE;
             }
 
             /** @brief `EnumerateLoadedModulesW64` 가 이미지마다 부르는 곳 — 기준 주소(= 모듈 핸들)를 @p pContext 의 목록에 모읍니다. */
@@ -127,35 +128,37 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
         string absPath;
-        if ( FileUtil::makeAbsolutePath( libraryName, absPath ) && FileUtil::fileExists( absPath ) )
+        if ( FileUtil::makeAbsolutePath( libraryName, absPath ) && FileUtil::exists( absPath ) )
         {
             // Windows 커널 로더(LOAD_WITH_ALTERED_SEARCH_PATH)는 '\'(백슬래시)를 기준으로 디렉터리를 잘라 DLL 검색 경로의
             // 첫 순위로 넣는다. '/' 경로를 넘기면 디렉터리 해석에 실패해 의존 DLL(Engine.dll 등)을 찾지 못하고
             // ERROR_MOD_NOT_FOUND(126) 오류가 나므로, 네이티브 구분자('\')로 바꾼다.
             const string nativePath = FileUtil::toNativeSeparators( absPath );
 
-            const string dir = FileUtil::getDirectoryPart( nativePath );
-            utf8         arrPreviousDllDir[constant::kMaxPathSize]{};
-            const DWORD  previousDllDirLen = GetDllDirectoryA( static_cast<DWORD>( sizeof( arrPreviousDllDir ) ), arrPreviousDllDir );
-            if ( dir.empty() == false )
-                SetDllDirectoryA( dir.c_str() );
+            // 경로는 UTF-8 이다 — W 판에 UTF-16 으로 넘긴다(A 판은 ANSI 코드 페이지로 읽어, 매니페스트가 UTF-8 로 바꿔 두지 않은 호스트에서 한글 경로가 깨진다).
+            const wstring widePath = StringUtil::utf8ToUtf16( nativePath.c_str() );
+            const wstring wideDir  = StringUtil::utf8ToUtf16( FileUtil::getDirectoryPart( nativePath ).c_str() );
+            utf16         arrPreviousDllDir[constant::kMaxPathSize]{};
+            const DWORD   previousDllDirLen = GetDllDirectoryW( static_cast<DWORD>( constant::kMaxPathSize ), arrPreviousDllDir );
+            if ( wideDir.empty() == false )
+                SetDllDirectoryW( wideDir.c_str() );
 
             // 1) LOAD_WITH_ALTERED_SEARCH_PATH 로 대상 DLL 의 위치를 가장 먼저 검색해 로드한다
-            HMODULE hModule = LoadLibraryExA( nativePath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH );
-            // 2) LOAD_WITH_ALTERED_SEARCH_PATH 를 쓰면 SetDllDirectory 가 무시되는 Win32 제약이 있어, 실패하면 LoadLibraryA 로 다시 시도한다
+            HMODULE hModule = LoadLibraryExW( widePath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH );
+            // 2) LOAD_WITH_ALTERED_SEARCH_PATH 를 쓰면 SetDllDirectory 가 무시되는 Win32 제약이 있어, 실패하면 LoadLibraryW 로 다시 시도한다
             if ( hModule == nullptr )
-                hModule = LoadLibraryA( nativePath.c_str() );
+                hModule = LoadLibraryW( widePath.c_str() );
 
-            if ( previousDllDirLen > 0 )
-                SetDllDirectoryA( arrPreviousDllDir );
+            if ( previousDllDirLen > 0 && previousDllDirLen < constant::kMaxPathSize )
+                SetDllDirectoryW( arrPreviousDllDir );
             else
-                SetDllDirectoryA( nullptr );
+                SetDllDirectoryW( nullptr );
 
             if ( hModule != nullptr )
                 return hModule;
         }
         const string  nativeName = FileUtil::toNativeSeparators( libraryName );
-        const HMODULE hModule    = LoadLibraryA( nativeName.c_str() );
+        const HMODULE hModule    = LoadLibraryW( StringUtil::utf8ToUtf16( nativeName.c_str() ).c_str() );
         if ( hModule == nullptr )
         {
             // 실패 이유는 GetLastError 하나뿐이다 — 남기지 않으면 부르는 쪽은 "로드 실패" 밖에 모른다(126 의존 DLL 없음, 1114 DllMain 실패 등).
@@ -165,7 +168,7 @@ namespace sw
         return hModule;
 #else
         string absPath;
-        if ( FileUtil::makeAbsolutePath( libraryName, absPath ) && FileUtil::fileExists( absPath ) )
+        if ( FileUtil::makeAbsolutePath( libraryName, absPath ) && FileUtil::exists( absPath ) )
         {
             void* pHandle = dlopen( absPath.c_str(), RTLD_NOW | RTLD_LOCAL );
             if ( pHandle != nullptr )
@@ -209,12 +212,25 @@ namespace sw
 
     uint32 ModuleImageUtil::bindDelayLoadImportsOfLoadedModules()
     {
+        // 묶기가 지연 로드 DLL 을 새로 올린다(서버 키트 → 공유 키트) — 새로 올라온 이미지의 지연 import 도 묶어야 하므로, 새 이미지가 없을 때까지 돈다.
+        vector<void*> listBound;
         vector<void*> listHandle;
-        collectLoadedModuleHandles( listHandle );
-        uint32 failedCount{ 0 };
-        for ( void* pHandle : listHandle )
-            failedCount += bindDelayLoadImports( pHandle );
-        return failedCount;
+        uint32        failedCount{ 0 };
+        for ( ;; )
+        {
+            collectLoadedModuleHandles( listHandle );
+            bool bBoundAny{ false };
+            for ( void* pHandle : listHandle )
+            {
+                if ( std::find( listBound.begin(), listBound.end(), pHandle ) != listBound.end() )
+                    continue;
+                listBound.push_back( pHandle );
+                failedCount += bindDelayLoadImports( pHandle );
+                bBoundAny = true;
+            }
+            if ( bBoundAny == false )
+                return failedCount;
+        }
     }
 
     void ModuleImageUtil::collectLoadedModuleHandles( vector<void*>& outListHandle )

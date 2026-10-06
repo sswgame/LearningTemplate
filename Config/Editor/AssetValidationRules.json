@@ -107,15 +107,16 @@
       "name": "references-exist",
       "check": "missing_reference",
       "severity": "error",
-      "include_patterns": ["*.xml", "*.material"],
-      "exclude_patterns": ["game/shooter3d/data/appearance/*"]
+      "include_patterns": ["*.xml", "*.material"]
     },
     {
       "name": "orphans",
       "check": "orphan",
-      "description": "Assets nobody names. A warning: some are reached by code that builds the path at runtime.",
+      "description": "Assets nobody names. Excluded: meshes a game picks by name from a code table (path built at runtime), the merged mesh of a sectioned VRM import, and the gimmick prefab library.",
       "severity": "warning",
-      "include_patterns": ["*.prefab.xml", "*.material", "*.mesh", "*/textures/*.dds", "*.ogg", "*.scene.xml"]
+      "include_patterns": ["*.prefab.xml", "*.material", "*.mesh", "*/textures/*.dds", "*.ogg", "*.scene.xml"],
+      "exclude_patterns": ["game/nilecity/models/*.mesh", "game/starskirmish/models/*.mesh", "game/harvestvalley/models/crop*.mesh",
+                           "game/empty/models/avatarsample_d.mesh", "common/prefabs/gimmicks/*"]
     },
     {
       "name": "materials",

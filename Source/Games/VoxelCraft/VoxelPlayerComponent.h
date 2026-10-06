@@ -12,11 +12,11 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Framework/GameSound.h"
+#include "GameFramework/Base/Framework/GameSound.h"
+#include "GameFramework/Base/Utility/Countdown.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBody.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelHotbar.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelRaycast.h"
-#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {

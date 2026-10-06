@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 
@@ -45,6 +46,11 @@ namespace sw
 
         /** @brief 크기를 정하고 모두 공기로 채웁니다. */
         void initialize( int32 chunkCountX, int32 chunkCountZ, const VoxelBlockCatalog* pCatalog );
+        /**
+         * @brief 공유 땅을 빌립니다 — 복셀 땅은 이 키트의 것이라 월드 발자국(X × Z 블록, 막힘) 전체를 한 번에 얻습니다(블록 (0, 0) = 땅 칸 @p origin).
+         * @return 그 자리에 남의 땅이 있으면 false 이고 아무것도 얻지 않습니다. @p pLand 가 nullptr 이면 true 입니다. `initialize` 뒤에 부릅니다.
+         */
+        [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
 
         /** @brief 블록 번호입니다. 월드 밖은 공기입니다. */
         VoxelBlockIndex getBlock( int32 x, int32 y, int32 z ) const;
@@ -89,6 +95,7 @@ namespace sw
 
         vector<VoxelChunk>       _listChunk; ///< `chunkZ × countX + chunkX`
         const VoxelBlockCatalog* _pCatalog;
+        LandBinding              _land; ///< 빌린 공유 땅(없으면 단독)
         int32                    _chunkCountX;
         int32                    _chunkCountZ;
     };

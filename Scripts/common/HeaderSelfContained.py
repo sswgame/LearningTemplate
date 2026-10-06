@@ -25,7 +25,6 @@ TU 를 `-fsyntax-only` 로 컴파일한다.
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import shlex
@@ -35,10 +34,9 @@ from typing import Sequence
 
 from .Parallel import getProcessWorkerCount, mapConcurrent
 from .Paths import normalizePath
-from .TranslationUnits import kCompileDatabaseFileName
+from .BuildTree import BuildTree, BuildTreeError
 
 __all__ = [
-    "kDefaultHeaderProbeBuildDir",
     "kHeaderScanRoot",
     "collectCheckedHeaders",
     "findHeaderProbeProblem",
@@ -52,8 +50,6 @@ __all__ = [
     "runSyntaxOnly",
 ]
 
-#: 따로 주지 않으면 보는 빌드 폴더(저장소 기준). `.clangd` 도 이 폴더를 본다.
-kDefaultHeaderProbeBuildDir = Path("build") / "Ninja-Debug"
 #: 헤더를 찾는 자리이자 include 철자의 기준(`Source/` 아래 상대 경로가 저장소의 include 철자다).
 kHeaderScanRoot = "Source"
 
@@ -75,15 +71,16 @@ _kPchSourceSuffixes = ("cmake_pch.cxx", "cmake_pch.c")
 def loadCompileDatabase(buildDir: Path) -> list[dict]:
     """`compile_commands.json` 을 읽는다. 없거나 읽지 못하면 빈 목록(이유는 `findHeaderProbeProblem` 이 말한다)."""
     try:
-        return json.loads((buildDir / kCompileDatabaseFileName).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        return BuildTree(buildDir).readCompileDatabase()
+    except BuildTreeError:
         return []
 
 
 def findHeaderProbeProblem(buildDir: Path) -> str:
     """이 빌드 폴더로 단독 컴파일을 할 수 없는 이유. 할 수 있으면 빈 문자열."""
-    if not (buildDir / kCompileDatabaseFileName).is_file():
-        return f"컴파일 DB 가 없습니다: {normalizePath(buildDir / kCompileDatabaseFileName)} — 그 프리셋을 configure 하세요"
+    tree = BuildTree(buildDir)
+    if not tree.bHasCompileDatabase:
+        return f"컴파일 DB 가 없습니다: {normalizePath(tree.compileDatabasePath)} — 그 프리셋을 configure 하세요"
     flagOps = buildDir / _kCodegenProbeHeader
     try:
         if _kCodegenPlaceholderMarker in flagOps.read_text(encoding="utf-8", errors="replace"):

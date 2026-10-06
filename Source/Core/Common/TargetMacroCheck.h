@@ -1,7 +1,7 @@
 /**
  * @file TargetMacroCheck.h
  * @brief CMake 가 정한 타깃 매크로(플랫폼 · 아키텍처 · 컴파일러)가 이 TU 를 컴파일하는 컴파일러와 맞는지 검사합니다.
- * @details 코드는 `SW_PLATFORM_*` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 만 읽습니다. 컴파일러 내장 매크로(`_WIN32` · `_MSC_VER` ·
+ * @details 코드는 `SW_PLATFORM_*` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 만 읽습니다. 빌드 타깃 종류는 `SW_WITH_CLIENT_CODE` · `SW_WITH_SERVER_CODE` 입니다. 컴파일러 내장 매크로(`_WIN32` · `_MSC_VER` ·
  *          `__clang__` · `__x86_64__` …)를 읽는 곳은 **이 파일 하나뿐**입니다(`CheckTargetMacros` 게이트). 판정은
  *          `cmake/Modules/{Platform,Architecture,Compiler}/` 가 하고, 여기서는 그 판정이 실제 컴파일러와 어긋나거나 빠지면 빌드를 세웁니다.
  *
@@ -66,4 +66,11 @@
 
 #if defined( SW_COMPILER_GCC ) && !( defined( __GNUC__ ) && !defined( __clang__ ) )
     #error "SW_COMPILER_GCC is defined but the compiler is not GCC (__GNUC__ without __clang__)."
+#endif
+
+// ------------------------------------------------------------------------------
+// 4) 빌드 타깃 종류 — 클라이언트 · 서버 코드 중 하나 이상(Game 은 둘 다)
+// ------------------------------------------------------------------------------
+#if !defined( SW_WITH_CLIENT_CODE ) && !defined( SW_WITH_SERVER_CODE )
+    #error "At least one of SW_WITH_CLIENT_CODE / SW_WITH_SERVER_CODE must be defined (SW_TARGET_TYPE via sw_global_options)."
 #endif

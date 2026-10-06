@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Input/TimingJudge.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Input/TimingJudge.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
 
 namespace sw
@@ -122,5 +125,34 @@ namespace sw
         if ( target.getVitality().isPoiseBroken() )
             return baseDamage * multiplier;
         return baseDamage;
+    }
+
+    void MetroDuelist::writeState( Archive& outArchive ) const
+    {
+        _vitality.writeState( outArchive );
+        _stamina.writeState( outArchive );
+        outArchive << _time;
+        outArchive << _parryPressTime;
+        StateArchiveUtil::writeCountdown( outArchive, _riposteWindow );
+        outArchive << _damageTakenScale;
+        outArchive << _bGuarding;
+    }
+
+    bool MetroDuelist::readState( Archive& archive )
+    {
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 체력 · 지구력 설정은 사본이 그대로 든다.
+        MetroDuelist restored  = *this;
+        const bool   bBodyRead = restored._vitality.readState( archive ) && restored._stamina.readState( archive );
+        archive >> restored._time;
+        archive >> restored._parryPressTime;
+        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._riposteWindow );
+        archive >> restored._damageTakenScale;
+        archive >> restored._bGuarding;
+        const bool bValid =
+            bBodyRead && bTimerRead && archive.isOk() && 0.0f <= restored._time && 0.0f < restored._damageTakenScale && restored._bGuarding <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        *this = std::move( restored );
+        return true;
     }
 } // namespace sw

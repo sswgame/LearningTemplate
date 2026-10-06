@@ -20,7 +20,7 @@ namespace sw
         sw::string ensureSamplePrefabXml()
         {
             const sw::string path = test::makeTempPath( "sample_source.prefab.xml" );
-            if ( sw::FileUtil::fileExists( path ) == false )
+            if ( sw::FileUtil::exists( path ) == false )
             {
                 const utf8* pXmlContent = R"(<?xml version="1.0" encoding="utf-8"?>
 <Prefab version="1" name="SampleHero">
@@ -35,7 +35,7 @@ namespace sw
             // 그냥 죽는다. 쿠커가 하는 일과 같은 변환을 테스트가 자기 손으로 해 둔다.
             sw::string binPath = path;
             binPath.replace( binPath.size() - 4, 4, ".bin" );
-            if ( sw::FileUtil::fileExists( binPath ) == false )
+            if ( sw::FileUtil::exists( binPath ) == false )
             {
                 sw::PrefabAsset cooked;
                 if ( cooked.loadFromXmlFile( path ) )
@@ -119,7 +119,7 @@ SW_TEST_CASE( PrefabTest, MissingSourceDoesNotFallBackToCookedBinaryInDev )
     // 소스는 없고 쿠킹본만 있는 프리팹.
     const sw::string orphanSourcePath = test::makeTempPath( "orphan.prefab.xml" );
     SW_ASSERT_TRUE( src.saveToBinaryFile( sw::AssetCookPath::toCookedPath( orphanSourcePath ) ) );
-    SW_ASSERT_FALSE( sw::FileUtil::fileExists( orphanSourcePath ) );
+    SW_ASSERT_FALSE( sw::FileUtil::exists( orphanSourcePath ) );
 
     sw::PrefabCache  manager;
     sw::PrefabAsset* pLoaded{ nullptr };
@@ -146,7 +146,7 @@ SW_TEST_CASE( PrefabTest, JsonSaveOfUnconvertibleStateWritesNothing )
         SW_TEST_DEFENSIVE_SCOPE( "prefab state that cannot be converted to JSON" );
         SW_EXPECT_FALSE( emptyPrefab.saveToJsonFile( jsonPath ) );
     }
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( jsonPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( jsonPath ) );
 }
 
 /**
@@ -524,8 +524,8 @@ SW_TEST_CASE( PrefabTest, EngineCooksXmlAndJsonPrefabs )
     const uint32 writtenCount = sw::PrefabCache::cookAllPrefabs( sourceRoot, cookedRoot, failedCount );
     SW_EXPECT_EQUAL( 4u, writtenCount ); // crate · barrel · deep · twin 둘 중 하나
     SW_EXPECT_EQUAL( 2u, failedCount );  // broken · twin 의 나머지 하나
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( cookedRoot + "/broken.prefab.bin" ) );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( cookedRoot + "/notes.bin" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( cookedRoot + "/broken.prefab.bin" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( cookedRoot + "/notes.bin" ) );
 
     sw::GameObjectManager check;
     for ( const utf8* pCooked : { "/crate.prefab.bin", "/barrel.prefab.bin", "/sub/deep.prefab.bin" } )

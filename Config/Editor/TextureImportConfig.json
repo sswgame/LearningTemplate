@@ -54,8 +54,7 @@
     {
       "name": "UI_Textures",
       "inherits": "Base_UI",
-      "include_paths": ["ui/", "gui/", "icons/"],
-      "recursive": true
+      "include_paths": ["ui/", "gui/", "icons/"]
     },
     {
       "name": "Palette_Textures",

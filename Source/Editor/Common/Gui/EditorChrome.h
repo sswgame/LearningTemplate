@@ -76,6 +76,7 @@ namespace sw::editor
         const utf8*            _pId;
         float2                 _anchorPos;
         float2                 _pivot;
+        float32                _maxWidth; ///< 0 보다 크면 이 너비로 자르고 가로 스크롤로 넘긴다(부르는 패널보다 넓어지지 않게)
         EditorFloatingBarFlags _flags;
         bool                   _bEnabled;
 

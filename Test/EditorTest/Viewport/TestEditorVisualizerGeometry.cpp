@@ -134,6 +134,6 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, Flat2DViewNeedsAnOrthographicCameraA
     SW_EXPECT_FALSE( EditorVisualizerGeometryUtil::isFlat2DView( false, lookAlongZ ) );
 
     // 위에서 내려다보는(시선이 Y 축) 직교 뷰는 3D 다 — 등각 · 탑다운 3D 게임.
-    const float4x4 lookDown = float4x4::createRotationX( MathUtil::Pi * 0.5f );
+    const float4x4 lookDown = float4x4::createRotationX( MathUtil::kPi * 0.5f );
     SW_EXPECT_FALSE( EditorVisualizerGeometryUtil::isFlat2DView( true, lookDown ) );
 }

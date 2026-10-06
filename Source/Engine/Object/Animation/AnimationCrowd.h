@@ -8,6 +8,7 @@
  *          혼자 평가합니다. LOD 가 아주 멀다고 본 유닛은 정점 애니메이션(VAT) 메시로 넘어가 CPU 포즈도 GPU 스키닝도 없습니다(`findVertexAnimationMesh`).
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -112,9 +113,9 @@ namespace sw
         size_t operator()( const AnimationCrowdBucketKey& key ) const
         {
             size_t hash = reinterpret_cast<size_t>( key._pSkeleton ) * 1315423911u;
-            hash ^= static_cast<size_t>( key._skinDataId ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
-            hash ^= reinterpret_cast<size_t>( key._pClip ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
-            hash ^= static_cast<size_t>( key._variation * 2u + key._bAnchorRootMotion ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= static_cast<size_t>( key._skinDataId ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= reinterpret_cast<size_t>( key._pClip ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= static_cast<size_t>( key._variation * 2u + key._bAnchorRootMotion ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             return hash;
         }
     };

@@ -96,7 +96,7 @@ namespace sw::editor
         if ( _bDisabled == SW_TRUE || _listPendingPath.empty() || _pJob->isPending() )
             return;
         if ( _projectRoot.empty() ||
-             FileUtil::fileExists( FileUtil::joinPath( _projectRoot, EditorAssetValidationInternal::kScriptRelativePath ) ) == false )
+             FileUtil::exists( FileUtil::joinPath( _projectRoot, EditorAssetValidationInternal::kScriptRelativePath ) ) == false )
         {
             SW_LOG_INFO( "Asset validation script is not here (%#) - validation on save is off", _projectRoot.c_str() );
             _bDisabled = SW_TRUE;

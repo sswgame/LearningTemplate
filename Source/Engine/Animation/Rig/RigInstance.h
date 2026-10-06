@@ -150,6 +150,7 @@ namespace sw
         RigPoseBuffer               _pose;
         RigSolveSpace               _space;
         const IRigCurveSource*      _pCurveSource;
+        float3                      _worldGravity; ///< 마지막 준비 단계가 받은 월드 중력
         float32                     _pendingDeltaSeconds;
         uint32                      _evaluationCount;
     };

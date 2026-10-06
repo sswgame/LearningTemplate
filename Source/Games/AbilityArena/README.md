@@ -1,6 +1,6 @@
 # AbilityArena — 어빌리티 시스템 시험 게임
 
-`GameFramework/Ability`(언리얼 GAS 와 같은 어빌리티 시스템)를 실제 게임 흐름에서 쓰는 탑다운 웨이브 아레나입니다.
+`GameFramework/Base/Ability`(언리얼 GAS 와 같은 어빌리티 시스템)를 실제 게임 흐름에서 쓰는 탑다운 웨이브 아레나입니다.
 키트를 링크하지 않습니다 — 어빌리티 시스템은 `GameFramework` 기반에 있습니다. 유닛 · 바닥 · 벽 · 소품은 Kenney Mini Dungeon 모델
 (`Resource/game/abilityarena/credits.md`)이고, 투사체만 내장 구입니다.
 

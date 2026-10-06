@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -12,10 +13,12 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Renderer/Frame/RenderView.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -144,7 +147,7 @@ namespace sw
         // 인스턴스가 있으면 그 해시를 쓴다. 키워드 오버라이드가 퍼뮤테이션을 바꾸고, 그 해시는 부모 것을 이미 포함한다.
         const uint64 defineHash = ( pInstance != nullptr ) ? pInstance->getPermutationHash() : pMaterial->getPermutationHash();
         uint64       hash       = pMaterial->getShaderPathHash();
-        hash ^= defineHash + 0x9e3779b97f4a7c15ull + ( hash << 6 ) + ( hash >> 2 );
+        hash                    = HashUtil::combine( hash, defineHash );
         return hash;
     }
 
@@ -282,6 +285,10 @@ namespace sw
             return false;
         // 항목 하나만 숨길 수 있다(데미지 숫자의 남는 자릿수 · 길이 0 인 HP 바 구간). 실릴지가 바뀌면 부분 수집이 전체로 넘어간다.
         if ( pBatch->isEntryVisible( entry._index ) == false )
+            return false;
+        // 배치를 든 컴포넌트를 끄면(자기 비트 · 소유 오브젝트의 계층 활성) 빠진다 — `fillCandidateFromPrimitive` 와 같은 규칙.
+        const Component* pOwnerComponent = pBatch->getOwnerComponent();
+        if ( pOwnerComponent != nullptr && pOwnerComponent->isActive() == false )
             return false;
         Mesh* pMesh = pBatch->getRawMesh();
         if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
@@ -435,8 +442,8 @@ namespace sw
         const bool               bHasCache     = _listBuiltCandidate.empty() == false;
         const bool               bSetSame      = bHasCache && ( setGeneration == _lastPrimitiveSetGeneration );
         // 정렬 축이 바뀌어도(직교 ↔ 원근 카메라 전환) 투명 순서가 바뀐다 — 카메라가 그대로인 것으로 보지 않는다.
-        const bool bCamSame = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::Epsilon ) &&
-                              ( float3::getDistanceSquared( _transparentSortAxis, _lastTransparentSortAxis ) <= MathUtil::Epsilon );
+        const bool bCamSame = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::kEpsilon ) &&
+                              ( float3::getDistanceSquared( _transparentSortAxis, _lastTransparentSortAxis ) <= MathUtil::kEpsilon );
         // 퍼뮤테이션은 프리미티브를 더럽히지 않는다. 머티리얼 · 인스턴스의 정적 스위치 · 키워드 · 멀티컴파일을
         // 바꾸면 그릴 셰이더가 달라지는데 씬에서는 아무 일도 일어나지 않은 것처럼 보인다. 세대로 가른다.
         const uint64 permutationGeneration = MaterialUtil::getPermutationGeneration();
@@ -897,18 +904,14 @@ namespace sw
         // 키를 한 번만 구한다. 비교 함수 안에서 거리를 다시 구하면 원소마다 raw 를 무작위로 다시 읽는다(헤더 주석).
         // 정렬 레이어 키 0 은 "기본" 자리표다 — 표의 기본 키로 바꿔야 Default 레이어의 스프라이트와 3D 투명 물체가 한 줄에 선다.
         const uint32 defaultSortKey   = Render2DSettings::getActive().getDefaultSortKey();
-        const bool   bAxisDepth       = _transparentSortAxis.getLengthSquared() > MathUtil::Epsilon;
         const size_t transparentCount = _listScratchTransparentIdx.size();
         _listTransparentSortKey.resize( transparentCount );
         for ( size_t sortIndex = 0; sortIndex < transparentCount; ++sortIndex )
         {
-            const uint32        candidateIndex = _listScratchTransparentIdx[sortIndex];
-            const float3&       center         = _listScratchRaw[candidateIndex]._boundsCenter;
-            const uint32        sortKey        = _listScratchCandidate[candidateIndex]._sortKey;
-            TransparentSortKey& key            = _listTransparentSortKey[sortIndex];
-            key._sortKey                       = ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
-            key._depth                         = bAxisDepth ? ( center - cameraPos ).dot( _transparentSortAxis ) : float3::getDistanceSquared( center, cameraPos );
-            key._candidateIndex                = candidateIndex;
+            const uint32 candidateIndex        = _listScratchTransparentIdx[sortIndex];
+            const uint32 sortKey               = _listScratchCandidate[candidateIndex]._sortKey;
+            const uint32 sortLayer             = ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
+            _listTransparentSortKey[sortIndex] = makeTransparentSortKey( sortLayer, _listScratchRaw[candidateIndex]._boundsCenter, cameraPos, _transparentSortAxis, candidateIndex );
         }
         // 레이어 키 → 먼 것 → 후보 인덱스. 정렬이 결정적이어야 "순서가 그대로" 판정이 흔들리지 않는다.
         const auto isFartherFirst = &GpuSceneBuilder::isDrawnBefore;
@@ -949,9 +952,89 @@ namespace sw
         return keyA._candidateIndex < keyB._candidateIndex;
     }
 
+    GpuSceneBuilder::TransparentSortKey GpuSceneBuilder::makeTransparentSortKey( uint32 sortLayer, const float3& center, const float3& eye, const float3& axis,
+                                                                                 uint32 orderIndex )
+    {
+        TransparentSortKey key;
+        key._sortKey        = sortLayer;
+        key._depth          = axis.getLengthSquared() > MathUtil::kEpsilon ? ( center - eye ).dot( axis ) : float3::getDistanceSquared( center, eye );
+        key._candidateIndex = orderIndex;
+        return key;
+    }
+
     void GpuSceneBuilder::setTransparentSortAxis( const float3& axis )
     {
         _transparentSortAxis = axis;
+    }
+
+    void GpuSceneBuilder::buildViewTransparentOrders( const vector<RenderViewRequest>& listView )
+    {
+        _snapshot._listViewTransparentOrder.clear();
+        const vector<GpuInstance>*  pInstance = _instanceRing.getPublished();
+        const vector<GpuMeshBatch>& listBatch = _snapshot._listTransparentBatch;
+        if ( pInstance == nullptr || listBatch.empty() || listView.empty() )
+            return;
+        const uint32 instanceCount = static_cast<uint32>( pInstance->size() );
+        const uint32 tailBase      = MathUtil::min( _opaqueInstanceCount, instanceCount );
+        const uint32 tailCount     = instanceCount - tailBase;
+        // 꼬리는 투명 후보마다 인스턴스 하나다(`_listBuiltTransparentIdx` 순서). 어긋나면 이 프레임은 주 순서로 그린다.
+        if ( tailCount == 0 || _listBuiltTransparentIdx.size() != tailCount )
+            return;
+        SW_PROFILE_SCOPE( "GT.GpuScene.build.viewTransparentOrder" );
+
+        const uint32 defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
+        for ( const RenderViewRequest& view : listView )
+        {
+            if ( view._bRender == SW_FALSE )
+                continue;
+            // 1) 이 뷰의 눈으로 꼬리 전체를 정렬한다. 같은 깊이는 주 순서(꼬리 번호)로 가른다 — 전순서라 결정적이다.
+            _listViewSortKey.resize( tailCount );
+            for ( uint32 tailIndex = 0; tailIndex < tailCount; ++tailIndex )
+            {
+                const uint32 candidateIndex = _listBuiltTransparentIdx[tailIndex];
+                const uint32 sortKey        = candidateIndex < _listBuiltCandidate.size() ? _listBuiltCandidate[candidateIndex]._sortKey : 0u;
+                const uint32 sortLayer      = ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
+                _listViewSortKey[tailIndex] =
+                    makeTransparentSortKey( sortLayer, ( *pInstance )[tailBase + tailIndex]._boundsCenter, view._position, view._transparentSortAxis, tailIndex );
+            }
+            std::sort( _listViewSortKey.begin(), _listViewSortKey.end(), &GpuSceneBuilder::isDrawnBefore );
+
+            GpuViewTransparentOrder order;
+            order._viewId                       = view._viewId;
+            order._tailBase                     = tailBase;
+            shared_ptr<vector<uint32>> listRank = make_shared<vector<uint32>>( tailCount );
+            for ( uint32 rank = 0; rank < tailCount; ++rank )
+                ( *listRank )[_listViewSortKey[rank]._candidateIndex] = rank;
+
+            // 2) 배치 안을 rank 순으로 다시 놓은 꼬리 슬롯(컬링 없는 백엔드의 인스턴스 슬롯 스트림)과, 배치마다 가장 먼저 그릴 인스턴스의 rank.
+            shared_ptr<vector<uint32>> listTailSlot = make_shared<vector<uint32>>( tailCount );
+            for ( uint32 tailIndex = 0; tailIndex < tailCount; ++tailIndex )
+                ( *listTailSlot )[tailIndex] = tailBase + tailIndex;
+            vector<uint32> listBatchFirstRank( listBatch.size(), MathUtil::kMaxUInt32 );
+            for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
+            {
+                const GpuMeshBatch& batch          = listBatch[batchIndex];
+                const bool          bInsideTheTail = tailBase <= batch._instanceBase && batch._instanceBase + batch._instanceCount <= tailBase + tailCount;
+                if ( bInsideTheTail == false )
+                    continue;
+                const uint32 begin = batch._instanceBase - tailBase;
+                const uint32 end   = begin + batch._instanceCount;
+                for ( uint32 tailIndex = begin; tailIndex < end; ++tailIndex )
+                    listBatchFirstRank[batchIndex] = MathUtil::min( listBatchFirstRank[batchIndex], ( *listRank )[tailIndex] );
+                std::sort( listTailSlot->begin() + begin, listTailSlot->begin() + end,
+                           [&listRank, tailBase]( uint32 slotA, uint32 slotB )
+                { return ( *listRank )[slotA - tailBase] < ( *listRank )[slotB - tailBase]; } );
+            }
+            order._listBatchOrder.resize( listBatch.size() );
+            for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
+                order._listBatchOrder[batchIndex] = batchIndex;
+            std::stable_sort( order._listBatchOrder.begin(), order._listBatchOrder.end(),
+                              [&listBatchFirstRank]( uint32 batchA, uint32 batchB )
+            { return listBatchFirstRank[batchA] < listBatchFirstRank[batchB]; } );
+            order._pListRank     = std::move( listRank );
+            order._pListTailSlot = std::move( listTailSlot );
+            _snapshot._listViewTransparentOrder.push_back( std::move( order ) );
+        }
     }
 
     bool GpuSceneBuilder::refreshInstancesInPlace( bool bPartialCollect )

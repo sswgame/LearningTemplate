@@ -36,7 +36,7 @@ namespace sw
                 // 폴백: 제공자가 없거나(Shipping · 리로드 비활성) 그래프가 깨졌으면 실행 파일 디렉터리(Bin)에서 DLL 을 직접 로드한다
                 const string binDir   = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
                 const string fullPath = FileUtil::joinPath( binDir, dllName );
-                if ( FileUtil::fileExists( fullPath ) )
+                if ( FileUtil::exists( fullPath ) )
                 {
                     void* pHandle = ModuleImageUtil::loadDynamicLibrary( fullPath );
                     if ( pHandle != nullptr )
@@ -73,8 +73,8 @@ extern "C" __declspec( dllexport ) uint32 bindDelayLoadImports()
 {
     // 이 함수가 든 이미지 — 훅 TU 는 지연 로드를 쓰는 모듈마다 따로 들어가므로 그 모듈 자신이다.
     HMODULE hSelf = nullptr;
-    if ( GetModuleHandleExA( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                             reinterpret_cast<LPCSTR>( &bindDelayLoadImports ), &hSelf ) == FALSE )
+    if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                             reinterpret_cast<LPCWSTR>( &bindDelayLoadImports ), &hSelf ) == FALSE )
         return 1;
     const uint8*                pBase    = reinterpret_cast<const uint8*>( hSelf );
     const IMAGE_NT_HEADERS*     pNt      = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBase + reinterpret_cast<const IMAGE_DOS_HEADER*>( pBase )->e_lfanew );

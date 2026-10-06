@@ -8,9 +8,12 @@
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Physics/PhysicsSystem.h"
 
 namespace sw
 {
@@ -27,8 +30,8 @@ namespace sw
 
             static const hashed_string& getWaveName( uint32 waveIndex )
             {
-                static const hashed_string s_arrName[WaterWaveMath::kMaxWaveCount] = { hashed_string( "wave0" ), hashed_string( "wave1" ), hashed_string( "wave2" ),
-                                                                                       hashed_string( "wave3" ) };
+                static const hashed_string s_arrName[shaderslot::kGerstnerWaveCount] = { hashed_string( "wave0" ), hashed_string( "wave1" ), hashed_string( "wave2" ),
+                                                                                         hashed_string( "wave3" ) };
                 return s_arrName[waveIndex];
             }
 
@@ -103,7 +106,7 @@ namespace sw
                     const float3& next     = outListSample[index + 1 < outListSample.size() ? index + 1 : index]._center;
                     const float2  delta{ next._x - previous._x, next._z - previous._z };
                     const float32 length = delta.getLength();
-                    if ( length > MathUtil::Epsilon )
+                    if ( length > MathUtil::kEpsilon )
                         outListSample[index]._tangent = delta * ( 1.0f / length );
                 }
             }
@@ -148,6 +151,7 @@ namespace sw
     void WaterBodyComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
+        manager.getComponentRegistry().add<WaterBodyComponent>( this ); // `findWaterAt` · `findUnderwaterFog` 가 씬을 훑지 않고 본다
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         rebuildSurface();
     }
@@ -157,6 +161,7 @@ namespace sw
         _batch.reset(); // 소멸자가 등록부에서 뺀다
         _material.release();
         _pPrimitiveRegistry = nullptr;
+        manager.getComponentRegistry().remove<WaterBodyComponent>( this );
         SceneComponent::onUnregister( manager );
     }
 
@@ -185,7 +190,22 @@ namespace sw
     void WaterBodyComponent::onPropertyChanged( hashed_string propertyName )
     {
         SceneComponent::onPropertyChanged( propertyName );
+        // 켜고 끄기는 수면을 바꾸지 않는다 — 다시 짓지 않고 빌더가 다시 보게만 한다.
+        static const hashed_string s_activeName( "_bActive" );
+        if ( propertyName == s_activeName )
+        {
+            if ( _batch != nullptr )
+                _batch->markAllEntriesDirty();
+            return;
+        }
         rebuildSurface();
+    }
+
+    void WaterBodyComponent::onOwnerActiveInHierarchyChanged()
+    {
+        SceneComponent::onOwnerActiveInHierarchyChanged();
+        if ( _batch != nullptr )
+            _batch->markAllEntriesDirty();
     }
 
     void WaterBodyComponent::onWorldTransformUpdated()
@@ -228,9 +248,9 @@ namespace sw
         _riverWidth     = width;
     }
 
-    void WaterBodyComponent::getWaveVectors( float4 ( &outArrWave )[WaterWaveMath::kMaxWaveCount] ) const
+    void WaterBodyComponent::getWaveVectors( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] ) const
     {
-        for ( uint32 waveIndex = 0; waveIndex < WaterWaveMath::kMaxWaveCount; ++waveIndex )
+        for ( uint32 waveIndex = 0; waveIndex < shaderslot::kGerstnerWaveCount; ++waveIndex )
             outArrWave[waveIndex] = waveIndex < _listWave.size() ? _listWave[waveIndex].toVector() : float4{ 0.0f, 1.0f, 0.0f, 0.0f };
     }
 
@@ -239,15 +259,17 @@ namespace sw
         using Internal = WaterBodyComponentInternal;
         if ( _material.getInstance() == nullptr )
             return;
-        float4 arrWave[WaterWaveMath::kMaxWaveCount];
+        float4 arrWave[shaderslot::kGerstnerWaveCount];
         getWaveVectors( arrWave );
-        for ( uint32 waveIndex = 0; waveIndex < WaterWaveMath::kMaxWaveCount; ++waveIndex )
+        for ( uint32 waveIndex = 0; waveIndex < shaderslot::kGerstnerWaveCount; ++waveIndex )
             _material.setVector( Internal::getWaveName( waveIndex ), arrWave[waveIndex] );
         // x = 파도 시간, y = 깊은 물 깊이, z = 거품 폭, w = 잔물결 세기
         _material.setVector( hashed_string( "waterParams" ), float4{ _waveTime, _deepDepth, _foamWidth, _rippleStrength } );
         _material.setVector( hashed_string( "shallowColor" ), _shallowColor );
         _material.setVector( hashed_string( "deepColor" ), _deepColor );
         _material.setVector( hashed_string( "skyColor" ), _skyColor );
+        // 파도 분산의 중력 — CPU 수면 질의(WaterWaveMath)와 같은 설정된 물리 중력 하나.
+        _material.setVector( hashed_string( "waveParams" ), float4{ PhysicsSystem::getConfiguredGravityMagnitude(), 0.0f, 0.0f, 0.0f } );
     }
 
     void WaterBodyComponent::rebuildSurface()
@@ -284,6 +306,7 @@ namespace sw
         shared_ptr<Mesh> mesh = Mesh::create();
         mesh->setVertices( std::move( listVertex ) );
         _batch = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), _material.getMaterial(), _material.getInstance(), 1u );
+        _batch->setOwnerComponent( this );
         _batch->setWorld( 0, float4x4::createTranslation( _surfaceOrigin ) );
         _batch->setBoundsRadius( 0, boundsRadius );
         _pPrimitiveRegistry->addInstanceBatch( _batch.get() );
@@ -351,7 +374,7 @@ namespace sw
         const float32 localX       = worldX - _surfaceOrigin._x;
         const float32 localZ       = worldZ - _surfaceOrigin._z;
         const float32 halfWidth    = 0.5f * _riverWidth;
-        float32       bestDistance = MathUtil::MaxFloat;
+        float32       bestDistance = MathUtil::kMaxFloat;
         for ( size_t segment = 0; segment + 1 < _listRiverPoint.size(); ++segment )
         {
             const float3  start = _listRiverPoint[segment];
@@ -359,7 +382,7 @@ namespace sw
             const float2  axis{ end._x - start._x, end._z - start._z };
             const float32 lengthSquare = axis.getLengthSquared();
             float32       ratio        = 0.0f;
-            if ( lengthSquare > MathUtil::Epsilon )
+            if ( lengthSquare > MathUtil::kEpsilon )
                 ratio = MathUtil::saturate( ( ( localX - start._x ) * axis._x + ( localZ - start._z ) * axis._y ) / lengthSquare );
             const float32 closestX = start._x + axis._x * ratio;
             const float32 closestZ = start._z + axis._y * ratio;
@@ -393,9 +416,9 @@ namespace sw
         float32 baseHeight{ 0.0f };
         if ( findBaseHeight( worldX, worldZ, baseHeight ) == false )
             return false;
-        float4 arrWave[WaterWaveMath::kMaxWaveCount];
+        float4 arrWave[shaderslot::kGerstnerWaveCount];
         getWaveVectors( arrWave );
-        outHeight = baseHeight + WaterWaveMath::computeSurfaceHeight( float2{ worldX, worldZ }, time < 0.0f ? _waveTime : time, arrWave );
+        outHeight = baseHeight + WaterWaveMath::computeSurfaceHeight( float2{ worldX, worldZ }, time < 0.0f ? _waveTime : time, PhysicsSystem::getConfiguredGravityMagnitude(), arrWave );
         return true;
     }
 
@@ -404,12 +427,13 @@ namespace sw
         float32 baseHeight{ 0.0f };
         if ( findBaseHeight( worldX, worldZ, baseHeight ) == false )
             return false;
-        float4 arrWave[WaterWaveMath::kMaxWaveCount];
+        float4 arrWave[shaderslot::kGerstnerWaveCount];
         getWaveVectors( arrWave );
         const float32 waveTime = time < 0.0f ? _waveTime : time;
         float2        origin{};
-        (void)WaterWaveMath::computeSurfaceHeight( float2{ worldX, worldZ }, waveTime, arrWave, 4u, &origin );
-        outNormal = WaterWaveMath::computeNormal( origin, waveTime, arrWave );
+        const float32 gravity = PhysicsSystem::getConfiguredGravityMagnitude();
+        (void)WaterWaveMath::computeSurfaceHeight( float2{ worldX, worldZ }, waveTime, gravity, arrWave, 4u, &origin );
+        outNormal = WaterWaveMath::computeNormal( origin, waveTime, gravity, arrWave );
         return true;
     }
 
@@ -424,28 +448,26 @@ namespace sw
 
     bool WaterBodyComponent::findUnderwaterFog( const GameObjectManager& manager, const float3& viewPosition, WaterUnderwaterFog& outFog )
     {
-        bool bFound = false;
-        manager.forEachComponentOfType<WaterBodyComponent>( [&bFound, &outFog, &viewPosition]( WaterBodyComponent* pWater )
+        for ( const WaterBodyComponent* pWater : manager.getComponentRegistry().getAll<WaterBodyComponent>() )
         {
             float32 depth{ 0.0f };
-            if ( bFound || pWater->_bUnderwaterFog == false || pWater->isUnderwater( viewPosition, depth ) == false )
-                return;
-            bFound          = true;
+            if ( pWater->isPendingDestroy() || pWater->_bUnderwaterFog == false || pWater->isUnderwater( viewPosition, depth ) == false )
+                continue;
             outFog._color   = pWater->_fogColor;
             outFog._density = pWater->_fogDensity;
             outFog._depth   = depth;
-        } );
-        return bFound;
+            return true;
+        }
+        return false;
     }
 
     WaterBodyComponent* WaterBodyComponent::findWaterAt( const GameObjectManager& manager, float32 worldX, float32 worldZ )
     {
-        WaterBodyComponent* pFound = nullptr;
-        manager.forEachComponentOfType<WaterBodyComponent>( [&pFound, worldX, worldZ]( WaterBodyComponent* pWater )
+        for ( WaterBodyComponent* pWater : manager.getComponentRegistry().getAll<WaterBodyComponent>() )
         {
-            if ( pFound == nullptr && pWater->coversPosition( worldX, worldZ ) )
-                pFound = pWater;
-        } );
-        return pFound;
+            if ( pWater->isPendingDestroy() == false && pWater->coversPosition( worldX, worldZ ) )
+                return pWater;
+        }
+        return nullptr;
     }
 } // namespace sw

@@ -4,8 +4,58 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
+    namespace
+    {
+        struct KlondikeGameInternal
+        {
+            static void writeBoard( Archive& outArchive, const KlondikeState& state )
+            {
+                for ( int32 column = 0; column < KlondikeState::kColumnCount; ++column )
+                {
+                    state._arrTableau[column].writeState( outArchive );
+                    outArchive << state._arrFaceDownCount[column];
+                }
+                for ( const CardPile& foundation : state._arrFoundation )
+                {
+                    foundation.writeState( outArchive );
+                }
+                state._stock.writeState( outArchive );
+                state._waste.writeState( outArchive );
+                outArchive << state._recycleCount;
+                outArchive << state._moveCount;
+            }
+
+            [[nodiscard]] static bool readBoard( Archive& archive, KlondikeState& outState )
+            {
+                for ( int32 column = 0; column < KlondikeState::kColumnCount; ++column )
+                {
+                    if ( outState._arrTableau[column].readState( archive ) == false )
+                        return false;
+                    archive >> outState._arrFaceDownCount[column];
+                    // 뒤집힌 장수는 열의 장수를 넘지 않는다
+                    const bool bFaceDownValid = 0 <= outState._arrFaceDownCount[column] && outState._arrFaceDownCount[column] <= outState._arrTableau[column].getCount();
+                    if ( archive.isError() || bFaceDownValid == false )
+                        return false;
+                }
+                for ( CardPile& foundation : outState._arrFoundation )
+                {
+                    if ( foundation.readState( archive ) == false )
+                        return false;
+                }
+                const bool bPilesRead = outState._stock.readState( archive ) && outState._waste.readState( archive );
+                archive >> outState._recycleCount;
+                archive >> outState._moveCount;
+                return bPilesRead && archive.isOk();
+            }
+        };
+    } // namespace
+
     KlondikeGame::KlondikeGame()
         : _listHistory{}
         , _state{}
@@ -229,5 +279,35 @@ namespace sw
         if ( movedCount == 0 )
             (void)undo(); // 아무것도 못 올렸으면 기록을 남기지 않는다
         return movedCount;
+    }
+
+    void KlondikeGame::writeState( Archive& outArchive ) const
+    {
+        KlondikeGameInternal::writeBoard( outArchive, _state );
+        outArchive << static_cast<uint32>( _listHistory.size() );
+        for ( const KlondikeState& history : _listHistory )
+        {
+            KlondikeGameInternal::writeBoard( outArchive, history );
+        }
+    }
+
+    bool KlondikeGame::readState( Archive& archive )
+    {
+        KlondikeState state;
+        if ( KlondikeGameInternal::readBoard( archive, state ) == false )
+            return false;
+        uint32 historyCount = 0;
+        // 판마다 열 일곱(더미 4 + 뒤집힌 수 4) + 파운데이션 넷 · 스톡 · 웨이스트(더미 4) + 되돌린 수 · 옮긴 수(8)
+        if ( StateArchiveUtil::readCount( archive, 88, historyCount ) == false )
+            return false;
+        vector<KlondikeState> listHistory( historyCount, KlondikeState{} );
+        for ( KlondikeState& history : listHistory )
+        {
+            if ( KlondikeGameInternal::readBoard( archive, history ) == false )
+                return false;
+        }
+        _state       = std::move( state );
+        _listHistory = std::move( listHistory );
+        return true;
     }
 } // namespace sw

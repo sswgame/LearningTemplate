@@ -3,6 +3,7 @@
  * @brief std::basic_string 래퍼입니다. 디버그 빌드에서는 RaceDetectContext 로 동시 접근을 잡아냅니다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/DataRaceDetector.h"
@@ -735,7 +736,7 @@ namespace sw
 
     /**
      * @struct RuntimeStringHash
-     * @brief 프로세스 안에서만 쓰는 바이트 해시입니다. 해시 컨테이너의 `std::hash<sw::string>` · `std::hash<sw::wstring>` 이 씁니다.
+     * @brief 프로세스 안에서만 쓰는 바이트 해시입니다. 해시 컨테이너의 `std::hash<sw::string>` · `std::hash<sw::wstring>` · `std::hash<fixed_string>` 이 씁니다.
      * @details **파일이나 네트워크에 남기지 마십시오.** 이 구현이 바뀌면 값도 달라집니다. 밖에 남는 해시(쿠킹 산출물 · intern
      *          이름)의 기준은 `StringUtil::computeHash64`(FNV-1a)이고, 그쪽은 바꾸지 않습니다.
      *          `std::hash<std::string_view>` 로 넘기지 않습니다. MSVC STL 의 그 구현은 바이트마다 앞 결과를 기다리는 곱셈이
@@ -748,17 +749,15 @@ namespace sw
         /** @brief @p pData 의 @p byteCount 바이트를 해시합니다. */
         static uint64 compute( const void* pData, size_t byteCount ) noexcept
         {
-            constexpr uint64 kWordMultiplier  = 0xBF58476D1CE4E5B9ull;
-            constexpr uint64 kStateMultiplier = 0x94D049BB133111EBull;
-            const uint8*     pByte            = static_cast<const uint8*>( pData );
-            uint64           hash             = 0x9E3779B97F4A7C15ull ^ ( static_cast<uint64>( byteCount ) * 0xC2B2AE3D27D4EB4Full );
+            const uint8* pByte = static_cast<const uint8*>( pData );
+            uint64       hash  = HashUtil::kGoldenRatio64 ^ ( static_cast<uint64>( byteCount ) * 0xC2B2AE3D27D4EB4Full );
             while ( byteCount >= 8 )
             {
                 uint64 word = 0;
                 // 정렬되지 않은 8바이트 읽기. 크기가 상수라 load 한 번으로 접힌다(`Memory::copy` 는 함수 호출이다).
                 std::memcpy( &word, pByte, 8 );
-                hash ^= word * kWordMultiplier;
-                hash = ( ( hash << 27 ) | ( hash >> 37 ) ) * kStateMultiplier;
+                hash ^= word * HashUtil::kSplitMixMultiplier0;
+                hash = ( ( hash << 27 ) | ( hash >> 37 ) ) * HashUtil::kSplitMixMultiplier1;
                 pByte += 8;
                 byteCount -= 8;
             }
@@ -767,13 +766,13 @@ namespace sw
                 uint64 word = 0;
                 for ( size_t byteIndex = 0; byteIndex < byteCount; ++byteIndex )
                     word |= static_cast<uint64>( pByte[byteIndex] ) << ( byteIndex * 8 );
-                hash ^= word * kWordMultiplier;
-                hash = ( ( hash << 27 ) | ( hash >> 37 ) ) * kStateMultiplier;
+                hash ^= word * HashUtil::kSplitMixMultiplier0;
+                hash = ( ( hash << 27 ) | ( hash >> 37 ) ) * HashUtil::kSplitMixMultiplier1;
             }
             hash ^= hash >> 30;
-            hash *= kWordMultiplier;
+            hash *= HashUtil::kSplitMixMultiplier0;
             hash ^= hash >> 27;
-            hash *= kStateMultiplier;
+            hash *= HashUtil::kSplitMixMultiplier1;
             hash ^= hash >> 31;
             return hash;
         }

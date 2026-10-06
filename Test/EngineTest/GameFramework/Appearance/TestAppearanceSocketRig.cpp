@@ -11,11 +11,11 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Appearance/AppearanceResolver.h"
-#include "GameFramework/Appearance/AppearanceSocketRig.h"
-#include "GameFramework/Appearance/CharacterAppearance.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Base/Appearance/AppearanceResolver.h"
+#include "GameFramework/Base/Appearance/AppearanceSocketRig.h"
+#include "GameFramework/Base/Appearance/CharacterAppearance.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
 
 #include "TestFramework/TestFramework.h"
 

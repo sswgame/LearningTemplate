@@ -135,6 +135,8 @@ namespace sw
          * @details 이름으로 찾는 스테이지는 두지 않습니다. 스테이지를 나눠 쓰려면 핸들을 복사해 건네십시오.
          */
         TaskStageHandle createStage();
+        /** @brief 이름 붙은 스테이지를 만듭니다. 이름은 디버거 · 프로파일러(스테이지 대기 구간)가 봅니다(Shipping 에서는 버립니다). */
+        TaskStageHandle createStage( string_view debugName );
 
         /** @brief 스테이지에 속한 모든 태스크가 끝날 때까지 호출 스레드를 막고 기다립니다(기다리는 동안 다른 일을 돕습니다). */
         void waitStage( const TaskStageHandle& stage );
@@ -237,6 +239,13 @@ namespace sw
          *          두 스레드가 마지막 칸을 나눠 써 **스크래치 벡터가 겹치고**(힙 손상) 깨우기 하나가 엉뚱한 스레드로 갑니다.
          */
         void releaseCurrentThreadHelperSlot();
+#if !defined( SW_SHIPPING )
+        /**
+         * @brief 태스크 실행 · 스테이지 대기 구간을 내보낼 곳을 꽂습니다(nullptr 이면 뗍니다). 프로세스의 모든 매니저가 함께 씁니다.
+         * @details @p pHook 은 프로세스 끝까지 살아 있어야 합니다(실행 중인 태스크가 읽고 있을 수 있다). 꽂혀 있지 않으면 태스크마다 원자 읽기 하나가 비용의 전부입니다.
+         */
+        static void setProfileHook( const TaskProfileHook* pHook );
+#endif
         /** @brief 워커가 아니면서 태스크를 실행할 수 있는 스레드의 상한입니다(메인 · 렌더 · 로더 · 업로드 · 에디터 등). */
         static constexpr uint32 kMaxHelperThreadCount = 8;
 
@@ -292,12 +301,13 @@ namespace sw
         // --- 기다리기 ---
         /**
          * @brief 기다리는 동안의 한 걸음입니다. 메인이면 메인 일감을 돌리고, 준비된 일을 하나 돕거나, 잠깐 스핀합니다.
+         * @param bHelpLowQueue false 면 Low 줄(백그라운드 I/O)은 돕지 않습니다(`runParallel` 의 합류 대기 — 그 줄은 합류를 앞당기지 않는다).
          * @return 계속 돌아야 하면 true, 스핀 예산을 다 써서 이제 잠들 차례면 false(예산은 다시 채워 둡니다)
          * @details `waitForJoin` 과 `waitAll` 이 함께 씁니다. 둘이 다른 것은 잠드는 방법뿐입니다.
          */
-        bool helpOrSpin( uint32& inoutSpinCount );
-        /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 일감을 실행하고, 다른 일을 돕고, 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
-        void waitForJoin( JoinCounter& join );
+        bool helpOrSpin( uint32& inoutSpinCount, bool bHelpLowQueue );
+        /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 일감을 실행하고, 다른 일을 돕고(@p bHelpLowQueue 가 false 면 Low 줄은 빼고), 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
+        void waitForJoin( JoinCounter& join, bool bHelpLowQueue );
         /** @brief 이 스레드를 @p join 의 대기자로 등록하고 잠듭니다. 깨어나면 부르는 쪽이 조건을 다시 확인합니다. */
         void parkOnJoin( JoinCounter& join );
         /**
@@ -330,10 +340,10 @@ namespace sw
         // --- 큐 ---
         /** @brief Normal 큐에 넣습니다. 워커면 자기 데크(가득 차면 전역 큐), 아니면 전역 큐에 넣습니다. */
         void pushToNormalQueue( uintptr_t item );
-        /** @brief 큐 순서(High → 내 데크 → Normal 전역 → 훔치기 → Low)대로 항목 하나를 가져옵니다. @p workerId 가 음수면 워커가 아닙니다. */
-        [[nodiscard]] bool tryTakeItem( int32 workerId, uintptr_t& outItem );
+        /** @brief 큐 순서(High → 내 데크 → Normal 전역 → 훔치기 → Low)대로 항목 하나를 가져옵니다. @p workerId 가 음수면 워커가 아닙니다. @p bTakeLowQueue 가 false 면 Low 는 보지 않습니다. */
+        [[nodiscard]] bool tryTakeItem( int32 workerId, bool bTakeLowQueue, uintptr_t& outItem );
         /** @brief 이 스레드가 가져올 수 있는 항목 하나를 가져와 실행합니다. 기다리는 동안 다른 일을 돕는 곳입니다. */
-        [[nodiscard]] bool tryHelpAndExecute();
+        [[nodiscard]] bool tryHelpAndExecute( bool bHelpLowQueue );
 
     private:
         /**

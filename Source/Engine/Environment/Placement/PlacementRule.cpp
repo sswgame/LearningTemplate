@@ -81,7 +81,7 @@ namespace sw
     float32 PlacementScatter::computeSlope( const float3& normal )
     {
         const float32 length = normal.getLength();
-        if ( length <= MathUtil::Epsilon )
+        if ( length <= MathUtil::kEpsilon )
             return 0.0f;
         return MathUtil::acos( MathUtil::clamp( normal._y / length, -1.0f, 1.0f ) );
     }
@@ -155,7 +155,7 @@ namespace sw
 
         // 최소 거리 격자: 칸 = 최소 거리 / √2 라 칸 하나에 점이 많아야 하나다. 칸 반경 2 를 보면 최소 거리 안의 모든 점을 본다.
         const bool                  bPoisson = rule._minDistance > 0.0f;
-        const float32               cellSize = bPoisson ? rule._minDistance * 0.70710678f : 1.0f;
+        const float32               cellSize = bPoisson ? rule._minDistance * MathUtil::kInvSqrt2 : 1.0f;
         unordered_map<int64, int32> mapCellToPoint;
         vector<float2>              listPoint;
 
@@ -224,7 +224,7 @@ namespace sw
         const float3  target = ( float3::Up * ( 1.0f - instance._alignToNormal ) + normal * instance._alignToNormal ).normalize();
         const float3  axis   = float3::Up.cross( target );
         const float32 sine   = axis.getLength();
-        if ( sine <= MathUtil::Epsilon )
+        if ( sine <= MathUtil::kEpsilon )
             return yawScale * float4x4::createTranslation( position );
         const float32 angle = MathUtil::atan2( sine, float3::Up.dot( target ) );
         return yawScale * float4x4::createFromAxisAngle( axis * ( 1.0f / sine ), angle ) * float4x4::createTranslation( position );

@@ -1,149 +1,91 @@
-# Architecture (엔진 아키텍처 및 시스템 가이드)
+# Architecture (엔진 구조)
 
-> **[🏠 위키 홈으로 돌아가기](README.md)** | **[🚀 시작하기](docs/01_GettingStarted.md)**
-> ---
+SW Engine 의 구조 정본입니다 — 무엇이 무엇을 링크하고, 어디가 모듈 경계이고, 엔진 전체에 걸쳐 지킬 것이 무엇인지.
+한 모듈 안의 계약은 그 폴더 README 에 있습니다([문서 지도](docs/02_DocumentMap.md)). 빌드 방법은 [시작하기](docs/01_GettingStarted.md).
 
-이 문서는 SW Engine의 각 서브시스템(Subsystem)이 어떻게 구성되어 있고, 어떤 개념으로 동작하는지 설명합니다. 개발 중 꼭 지켜야 할 주요 **주의사항(Gotchas)** 도 이곳에서 다룹니다.
+## 타깃 그래프
 
-엔진을 처음 사용하시거나 빌드 방법이 궁금하시다면 먼저 [README.md](README.md)를 참고해 주세요.
-
----
-
-## 🏗 타겟 그래프 (Target Graph)
-
-엔진은 여러 모듈(DLL)과 정적 라이브러리로 분리되어 있습니다.
 ```text
-App (exe)  — Engine + RuntimeAPI만 링크. GameFramework는 링크하지 않음.
- ├─ Engine        (Object, RHI, Scene 등 — Core_objects 심볼을 DLL에 포함)
- │   └─ RuntimeAPI / Delegate / Event로 게임·에디터와 통신
- ├─ EditorModule  (Dev 전용, delay-load)
- ├─ GameFramework + Kits  (Dev: delay-load / Shipping: SWGame과 함께 App에 정적 링크)
- ├─ RHI_*         (Dev: 백엔드마다 MODULE — DX11 · DX12 · Vulkan · OpenGL)
- └─ SWGame        (활성 게임 팩)
+App (exe)  — Engine + RuntimeAPI + AppHost 만 링크한다. 게임 · 에디터 · GameFramework 를 컴파일 때 모른다. (빌드 타깃 Game · Client)
+ ├─ Engine        (Core 를 OBJECT 로 흡수해 다시 내보낸다)
+ ├─ EditorModule  (Dev 전용, 지연 로드)
+ ├─ GameFramework + GF_* 키트  (Dev: 모듈 / Shipping: 실행 파일에 정적 링크)
+ ├─ RHI_*         (Dev: 백엔드마다 모듈 — DX11 · DX12 · Vulkan · OpenGL)
+ └─ SWGame        (활성 게임 — SW_ACTIVE_GAME)
+Server (exe) — 전용 서버. App 과 같은 AppHost(ModuleHost · 매니페스트 해석 · 프레임 시간)를 링크하고, 창 · RHI · 플레이어 설정 단계 없이
+               게임 모듈을 고정 틱으로 돌린다. (빌드 타깃 Game · Server — Source/Server/README.md)
 
-Core (STATIC)     — 로그·파일·문자열·메모리. OBJECT를 Engine과 공유 컴파일.
-                    ReflectionParser는 Core만 링크 (Engine.dll 순환 방지).
+Core (OBJECT)     — 로그 · 파일 · 문자열 · 메모리 · 태스크 · 압축 · 네트워크 공통 계층. Engine 을 모른다.
+ReflectionParser  — Core 만 링크한다(Engine.dll 과 순환하지 않게). Engine 보다 먼저 빌드된다.
 ```
-- **Dev 모드**: `Engine` SHARED, `Editor`/`SWGame`/키트/`RHI_*`는 MODULE. App을 끄지 않고 핫리로드할 수 있습니다.
-- **Shipping 모드**: `Editor` 제외. `Engine`/`SWGame` STATIC. RHI 백엔드는 `SW_SHIPPING_RHI_BACKEND` 로 고른 하나를 Engine 에 정적 링크.
 
-### 엔진 기동 · 종료
-- 기동 순서는 **단계 표 하나**(`Source/Engine/EngineInitStepList.xxx`)입니다. 줄마다 단계 하나와 그 단계가 기다리는 단계 목록(`{ A, B }`, 컴파일 때 검사)을 적고,
-  `EngineInitSequence` 가 위상 정렬해 그 순서로 세우고 **역순으로** 내립니다. 단계마다 구조체 하나가 `initialize` · `shutdown` · `destroy` 를 갖습니다.
-- `EngineLoop` 와 시험 하네스(`Test/TestFramework/main.cpp`)는 같은 부트스트랩 · 끝 정리(`EngineBootstrap`)를 씁니다. 서비스 표
-  (`Source/RuntimeAPI/Service/EngineServiceList.xxx`)의 칸은 숫자가 아니라 낱말(`Required` · `GameVisible` · `EngineCreated` …)입니다.
-- 씬은 모든 타입 공급자(엔진 · 게임 · 에디터 모듈)가 등록을 끝낸 단계(`ModuleTypes`) 뒤에만 읽습니다. `ModuleHost` 는 게임 인스턴스를 에디터보다 먼저 세우므로
-  `-gv_editorStartupScene` 이 실제로 열리는 씬입니다.
-- 디바이스에 매인 단계는 기동 표의 본문이라, 백엔드 교체는 그 단계들을 내리고 다시 세웁니다.
+- **Dev**: `Engine` 은 DLL, `EditorModule` · `SWGame` · `GF_*` · `RHI_*` 는 동적으로 읽는 모듈이라 App 을 끄지 않고 다시 읽는다([핫리로드](docs/03_LiveReload_and_ABI.md)).
+- **Shipping**: 에디터와 리로드 기계가 빠지고, `SW_SHIPPING_RHI_BACKEND` 로 고른 백엔드 하나와 게임 · 키트가 실행 파일 하나에 정적 링크된다.
+- **빌드 타깃(`SW_TARGET_TYPE`)**: Game(Dev 기본 — App + Server), Client(배포 `*-Shipping` — App 만, 서버 전용 모듈 없음), Server(`*-Server` 프리셋 —
+  Server 만, 에디터 · RHI 백엔드 · X11 없음). 모듈은 매니페스트 `_listTarget`(Client · Server)로 타깃에 들어간다([Source/Server/README.md](Source/Server/README.md)).
+- 빌드 옵션(`SW_*`)의 정본은 `cmake/Config/BuildOptions.cmake`, CMake 층은 [cmake/README.md](cmake/README.md).
 
-### Engine 내부 레이어
-단일 라이브러리로 링크하지만 폴더 간 include 그래프는 강결합 묶음이 없는 **DAG** 입니다:
-토대(Common·Compression·Physics) → Reflection·Utility → Serialization → Config → Resource → Graphics(RHI·셰이더·GPU 에셋)·Window
-→ Object·Input → Scene·Sequencer → Graphics/Renderer·Module → 루트. 상용 엔진과 같은 선입니다 — **RHI 는 창을
-모르고(표면만 받는다), 월드는 렌더러를 모르고, 렌더러가 씬을 읽어 그립니다.** 상세·린트는
-[Source/Engine/README.md](Source/Engine/README.md)와 `Scripts/lint/gate/CheckEngineLayers.py`, 상용 엔진과의 대조는
-[docs/07_EngineStructureVsCommercial.md](docs/07_EngineStructureVsCommercial.md)를 참고하세요.
+## 모듈 경계 — C-ABI
 
-### 리소스 도메인
-- `Resource/engine/` — 엔진 기본 셰이더, 기본 텍스처, 파이프라인 에셋
-- `Resource/common/` — 공유 공통 에셋
-- `Resource/game/<게임>/` — 활성 게임별 프로젝트 에셋 (지금은 `empty`)
-- 런타임 텍스처 폴더(`textures/`)에는 DDS 만 두고, 원본 이미지는 같은 상대 경로의 `textures_raw/` 에 둡니다(`App --import-textures` 로 임포트하고
-  `textures_raw/import.stamp` 와 함께 커밋, `CheckTextureFolders.py` 가 검사).
+App 과 모듈 사이를 넘는 것은 `Source/RuntimeAPI` 의 `extern "C"` 함수 표 · 불투명 핸들 · 서비스 표뿐입니다. RuntimeAPI 는 헤더만 있고
+Engine · App 헤더를 include 하지 않습니다. export 매크로 넷(`SW_API` · `SW_MODULE_API` · `SW_GF_API` · `SW_GAMESERVICE_API`)은
+서로 바꿔 쓰지 않습니다 — 뜻과 진입점 목록은 [RuntimeAPI/README.md](Source/RuntimeAPI/README.md).
 
-### 외부 의존성 (ThirdParty & Vcpkg)
-프로젝트의 의존성은 주로 `vcpkg` 매니페스트(`vcpkg.json`)를 통해 통합 관리됩니다. `Scripts/setup/SetupVcpkg.py`가 필요한 의존성을 설치하며, 커스텀 패키지(예: `imgui-node-editor`)나 직접 소스 포함이 필요한 일부 라이브러리들은 `ThirdParty/` 디렉터리에 위치합니다.
+## 엔진 기동 · 종료
 
----
+- 순서는 단계 표 하나(`Source/Engine/EngineInitStepList.xxx`)가 정합니다. 줄마다 단계와 그 단계가 기다리는 단계를 적고,
+  `EngineInitSequence` 가 위상 정렬해 세우고 역순으로 내립니다. `EngineLoop` 와 시험 하네스가 같은 부트스트랩(`EngineBootstrap`)을 씁니다.
+- 엔진 서비스는 `Source/RuntimeAPI/Service/EngineServiceList.xxx` 의 줄입니다(칸은 낱말 — `Required` · `GameVisible` · `EngineCreated` …).
+- 씬은 모든 타입 공급자(엔진 · 게임 · 에디터 모듈)가 등록을 끝낸 단계(`ModuleTypes`) 뒤에만 읽습니다. `ModuleHost` 는 게임을 에디터보다 먼저 세웁니다.
+- 디바이스에 매인 단계는 표의 본문이라, 백엔드 교체는 그 단계들을 내리고 다시 세웁니다.
+- 단계 · 루트 파일 하나하나의 계약은 [Source/Engine/README.md](Source/Engine/README.md) "루트 파일".
 
-## ⚙️ 하위 시스템 개념 및 기능 설명
+## 엔진 층
 
-### 1. 핫리로드 (LiveReload)와 C-ABI
-App은 게임이나 에디터 클래스를 직접 알지 못하며 오직 C-ABI(Extern "C") 모듈 진입점(Entry Point)만 동적으로 불러다 씁니다.
-- **동작 원리**: 코드를 수정해 DLL을 다시 빌드하면, 런타임이 이를 감지하여 새로운 DLL을 섀도우(shadow) 복사 후 로드합니다.
-- **주의사항**: `FreeLibrary`가 안전하게 불리려면 기존에 할당한 메모리나 렌더 자원을 정확한 시점에 반환해야 합니다.
+`Source/Engine` 은 링크 단위 하나지만 폴더 include 그래프는 DAG 이고 `Scripts/lint/gate/CheckEngineLayers.py` 가 방향을 강제합니다.
+**RHI 는 창을 모르고(표면만 받는다), 월드는 렌더러를 모르고, 렌더러가 씬을 읽어 그립니다.** Engine 은 `Editor/` · `GameFramework/` · `Games/` 를
+include 하지 않고, 에디터에는 RuntimeAPI · 델리게이트 · 이벤트로 닿습니다. 티어 표와 상용 엔진과의 대조는 [Source/Engine/README.md](Source/Engine/README.md).
+GameFramework 기반 폴더의 층은 [Source/GameFramework/README.md](Source/GameFramework/README.md).
 
-### 2. 리소스 경로 (Resource Paths)
-`Resource/` 폴더는 실제 게임이 바라보는 가장 높은 위치입니다. 리소스를 찾을 때는 항상 상대 경로를 사용합니다.
-- **전역 ID**: `engine/pipeline/forwardpipeline.xml` 같이 도메인(engine, game 등)을 포함한 명확한 식별자.
-- **경로 대소문자**: 리소스를 검색할 때 엔진 내부에서는 **모든 경로를 소문자로 정규화**(`normalizePath`)하여 매칭합니다. 그래서 `Resource/` 아래 이름은 전부 소문자여야 하고, `CheckResourceCasing.py` 가 강제합니다.
+## 리소스 · 데이터
 
-### 3. RHI (Render Hardware Interface)
-DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입니다.
-- **동작 원리**: `IRHIDevice` 인터페이스를 통해 RHI 백엔드를 DLL 형태로 동적으로 불러옵니다(Dev. Shipping 은 하나를 정적 링크).
-- **Caps**: 현재 모든 백엔드는 Bindless(바인드리스) 텍스처 접근과 Compute Root Constants(작은 UBO/CB)를 에뮬레이션 또는 네이티브로 지원합니다. Vulkan 은 1.3 이상(셰이더 쿠킹 타깃)인 물리 디바이스만 고릅니다.
-- **수명**: 디바이스 종료는 `IRHIDevice::shutdown` 템플릿 메서드가 공통 단계 순서를 갖고, 백엔드는 단계 훅만 구현합니다. 엔진 밖 모듈(에디터)은 백엔드 클래스로 캐스팅하지 않고
-  판 번호 든 `RHINativeHandles` 를 디바이스에서 조회하며, 다 쓴 네이티브 자원은 `IRHIDevice::enqueueGpuRelease` 로 백엔드 해제 큐(GPU 펜스 뒤)에 넘깁니다
-  (에디터는 `EditorDrawReleaseQueue` 로 그 자원을 그린 마지막 프레임 뒤에 놓습니다).
-- **바인딩 계약**: 레지스터 ↔ 백엔드 바인딩 위치의 정본은 `Resource/engine/shaders/bindingslots.hlsli` 하나입니다. HLSL 과 C++(`ShaderBindingSlots.h`)가 같은 파일을 include 하고, 4 백엔드는 그 상수로만 바인딩합니다. 바인딩 모델은 **언리얼 GPUScene 방식**입니다 — 셰이더는 네 백엔드에서 똑같이 `register(b#/t#/u#)` 로 선언하고(`SW_DECLARE_CBUFFER`, `SW_DECLARE_STRUCTURED_BUFFER` …), 드로우마다 바뀌는 데이터는 슬롯이 아니라 **버퍼의 원소**입니다: 인스턴스(월드 행렬·머티리얼 인덱스)는 `StructuredBuffer<SwInstanceData> g_SwInstances`(t4) 를 `SV_InstanceID` 로, 머티리얼 파라미터는 셰이더 타입별 `StructuredBuffer<SwMaterialData> g_SwMaterials`(t9, `SW_MATERIAL_BEGIN/END` 로 선언) 를 인스턴스의 `_materialIndex` 로 읽습니다. 그래서 바인딩은 패스·배치 단위로만 일어나고, 패스 상수 `PassCB`(b0) 는 진짜 상수버퍼입니다. 텍스처만 백엔드가 갈립니다 — DX12/Vulkan 은 무제한 배열 `Texture2D g_SwBindlessTex2D[]`(DX12 t0 space1 / Vulkan set 1) 을 PassCB 의 `g_<Name>Index` 나 머티리얼 원소의 인덱스로 고르고, DX11/GL 은 t0..t8 슬롯에 드로우 직전 겁니다. 엔진 텍스처 슬롯(t0..t3)은 네 백엔드가 계약 샘플러 하나(`SW_ENGINE_TEXTURE_SAMPLER` = 선형 · 클램프)로 읽습니다. SM6.6 `ResourceDescriptorHeap` 은 쓰지 않습니다. 백엔드 쪽 구현: DX12 는 루트 시그니처 하나(b0..b2 루트 CBV, t0..t9 슬롯 테이블, u0..u3 슬롯 테이블, 텍스처 배열 테이블 1개, 루트 상수 16 dword, 정적 샘플러 s0..s7 — 25/64 dword, `shaderslot::dx12`) 로, 언리얼 `FD3D12DescriptorCache` 처럼 등록 때 오프라인 힙에 만든 뷰를 드로우/디스패치 직전 온라인 힙 블록에 복사해 테이블로 겁니다(`flushSlotTables`). Vulkan 은 set 0 이 슬롯 세트(binding = 종류별 시프트 + 번호: b 0..15 / t 16..31 / u 32..47, DXC `-fvk-*-shift`) 이고 언리얼 Vulkan RHI 처럼 바인딩이 바뀐 드로우 직전 **커맨드 버퍼 자신의 풀 묶음**(`VulkanDescriptorPoolSet`, 펜스 뒤 통째로 리셋, 락 없음)에서 세트를 하나 할당해 씁니다(`flushSlotSet`); set 1 은 텍스처 배열 + immutable sampler 입니다. 렌더타깃 포맷은 PSO 의 일부라 백버퍼에 그리는 PSO 는 디바이스가 실제 채택한 포맷(`getBackBufferFormat`, Vulkan 은 서피스와 협상)으로, 오프스크린은 `getTextureFormat` 으로 만듭니다(`FrameRenderer::ensurePresentPso`). `ShaderBindingValidator::validate` 가 PSO 레이아웃 빌드·쿠킹·테스트(`ShaderBindingValidatorTest.AllCookedShadersMatchContract`, nogpu)에서 쿠킹된 바이너리의 리플렉션을 계약과 대조하므로, 셰이더 선언·헤더·백엔드 상수 어느 쪽이 어긋나도 이름과 숫자로 실패합니다. 상수버퍼는 `draw()` 인자가 아니라 `bindConstantBuffer( index, shaderslot::k*ConstantBuffer )` 로만 겁니다. 그 밖의 언리얼식 장치: 정적 샘플러 세트 s0..s7(`g_SwSamplers`/`swSampleIndexWith`, DX12 는 개별 정적 샘플러·Vulkan 은 immutable sampler 배열), 컴퓨트 전용 RW 텍스처 배열(`swStoreRwTexture2D`, DX12 u0 space1 / Vulkan set 1 binding 3, DX11/GL 은 u4..u7 슬롯, `registerBindlessTextureUav` + `prepareTextureForUnorderedAccess`), 루트 상수 블록 `SW_ROOT_CONSTANTS_BEGIN/END` + `SW_ROOT(field)`(DX12 b0 space2 / Vulkan 푸시 상수 / DX11·GL b2), 머티리얼 원소 레이아웃의 정본은 셰이더(`Material::ensureShaderLayout` 이 디바이스 백엔드의 리플렉션으로 stride·오프셋을 맞추고, SPIR-V 는 `-fvk-use-dx-layout` 으로 DX 와 같은 패킹), 인스턴스마다 자기 머티리얼 원소를 가지므로 DX12/Vulkan 은 배치를 셰이더 타입 단위로 합칩니다(`GpuSceneBuilder::setMergeBatchesAcrossMaterials`). bindless 인덱스는 GPU 펜스 뒤에 재사용되고(실행 중인 프레임이 새 리소스를 읽지 않도록), 머티리얼 없는 배치는 0 채운 폴백 원소를 걸어 DX12 루트 SRV 가 빈 채로 나가지 않습니다. OpenGL 은 SPIR-V 의 `InstanceIndex`/`VertexIndex` 를 `InstanceId`/`VertexId` 로 바꿔 쿠킹합니다 — 주의: ARB_gl_spirv 는 앞의 둘을 지원하지 않아 바꾸지 않으면 인스턴스 id 가 0 으로 읽힙니다.
-- **명령 기록 (Command List)**: 렌더 스레드 또는 메인 스레드에서 GPU 명령을 모은 뒤, 한 번에 큐에 제출(Submit)하는 지연(Deferred) 방식을 씁니다.
+- 경로는 도메인을 포함한 전역 id(`engine/pipeline/forwardpipeline.xml`)이고 찾을 때 소문자로 정규화합니다(`normalizePath`) — 그래서 `Resource/` 아래 이름은 전부 소문자입니다.
+  도메인 · 검색 순서 · 텍스처 규칙은 [Resource/README.md](Resource/README.md).
+- 텍스처는 DDS 만, 모델은 `.mesh` 만 읽습니다. 원본은 `textures_raw/` · `models_raw/` 에 두고 `App --import-textures` · `--import-models` 로 임포트합니다.
+- 데이터는 지금 형식으로만 읽습니다. 이름이나 형식을 바꾸면 `Resource/` 데이터를 다시 쓰고, 별칭(`Alias` · `ValueAlias`)은 다시 쓸 수 없는 데이터(배포한 세이브)가
+  생긴 뒤에만 씁니다. 모르는 이름은 텍스트 형식에서 알리고 건너뛰고, 바이너리 형식에서 거절합니다(`SchemaMigrate.h`). `ResourceDataSchemaTest` 가 지킵니다.
+- 렌더링은 `RenderPassAsset`(바인딩 틀 — `renderpass/`)과 `RenderPipelineAsset`(패스 순서 — `pipeline/`)으로 나뉘고, `FrameRenderer` 가 파이프라인으로
+  `RenderGraph` 를 지어 정렬합니다. 셰이더 바인딩 계약의 정본은 `Resource/engine/shaders/bindingslots.hlsli` 하나입니다([Graphics/README.md](Source/Engine/Graphics/README.md)).
+- 리플렉션 코드젠: 헤더의 `REFLECT` · `PROPERTY` · `FUNCTION` · `ENUM` 을 `Tools/ReflectionParser` 가 읽어 `*.gen.cpp` 를 만듭니다. 씬 로드 · 인스펙터 · 핫리로드 ·
+  이름으로 컴포넌트 만들기가 모두 그 `TypeInfo` 를 씁니다([Reflection/README.md](Source/Engine/Reflection/README.md) · [ReflectionParser](Tools/ReflectionParser/README.md)).
 
-### 4. RenderPass vs Render Pipeline
-프레임이 그려지는 과정은 패스(Pass)와 파이프라인(Pipeline)으로 철저히 나뉩니다.
-- **RenderPass (`RenderPassAsset`)**: "어떤 포맷의 텍스처에 그릴 것인가?", "그리기 전에 화면을 지울(Clear) 것인가?" 등 바인딩 템플릿 역할. (`renderpass/` 경로에 저장)
-- **Render Pipeline (`RenderPipelineAsset`)**: "이번 프레임은 [그림자 패스] → [메인 패스] → [포스트 프로세스 패스] 순서로 그린다"를 정의하는 전체 프레임 그래프. (`pipeline/` 경로에 저장)
-- **RenderGraph**: 파이프라인 파일을 읽어들여 렌더링 순서와 자원 의존성(Read/Write)을 런타임에 자동으로 정렬해주는 시스템입니다.
-- **셰이더 쿠킹**: `App --cook-shaders` 는 파이프라인 XML 이 아니라 **패스 종류 표 전체 × 뷰 모드 enum** 에서 메시 패스 변형을 모아 쿠킹하고,
-  쿠킹된 매니페스트가 그 요청을 모두 담는지 시험이 확인합니다. 빌드는 HLSL 을 다시 쿠킹하지 않으므로 셰이더를 고쳤으면 직접 쿠킹합니다.
+## 외부 의존성
 
-### 5. 리플렉션과 직렬화 (Reflection & Serialization)
-- **리플렉션 생성**: C++ 소스 코드에 `REFLECT`, `PROPERTY` 매크로를 달아두면 `Tools/ReflectionParser`가 코드를 읽어서 `*.gen.cpp`(메타데이터)를 만들어줍니다.
-- **직렬화**: 이렇게 만들어진 데이터를 통해 JSON, XML, Binary 등으로 오브젝트의 상태를 저장하고 불러옵니다(Scene 로딩). `ObjectDiffSerializer`를 통해 바뀐 값만 따로 델타(Delta) 저장도 가능합니다.
-- **지금 형식만 읽습니다.** 옛 판 · 옛 모양을 짐작해 읽는 갈래를 두지 않고, 엔진 · 게임 코드는 이름 별칭(`Alias` · `ValueAlias` — 다시 쓸 수 없는 데이터가 생긴 뒤의 창구)을 쓰지 않습니다 — 이름이나 형식을 바꾸면 `Resource/` 데이터를
-  새 모양으로 다시 씁니다. 모르는 이름(orphan)은 텍스트 형식에서는 알리고 건너뛰고, 바이너리 형식에서는 거절합니다(`SchemaMigrate.h` 계약).
-  `ResourceDataSchemaTest` 가 `Resource/` 데이터 전부가 모르는 이름 없이 읽히는지 단언합니다.
+vcpkg 매니페스트(`vcpkg.json`)가 정본이고 `Scripts/setup/SetupVcpkg.py` 가 설치합니다. 포트가 없거나 고친 판이 필요한 라이브러리는 `ThirdParty/` 에 있습니다.
+서드파티 헤더는 감싼 폴더에서만 include 합니다(`CheckThirdPartyIsolation.py`).
 
-### 6. Scene (씬)과 Prefab (프리팹)
-- **GameObject**: 씬을 구성하는 기본 단위.
-- **Component**: 게임 오브젝트에 붙어 동작하는 로직(예: `MeshComponent`, `CameraComponent`). C++ RTTI 대신 리플렉션 타입(`TypeInfo`)을 통해 관리됩니다.
-- **Prefab**: 미리 구성해 둔 오브젝트의 템플릿. `PrefabCache::spawn` 으로 짓고, 씬에 놓인 인스턴스는 **덮어쓴 값만** 저장해 로드가 프리팹 원형 위에 얹습니다(`PrefabOverrides`).
-- **쿠킹**: `App --cook-scenes --cooked-dir=<폴더>` 는 소스 트리(`ContentSource::SourceTree`)를 올려 씬 · 프리팹을 바이너리로 쿠킹합니다. 모르는 타입의 컴포넌트
-  (`MissingComponent`)가 든 씬은 쿠킹하지 않고 실패로 셉니다. 확장자 · 백엔드 표는 `Config/Engine/CookContract.json` 하나입니다.
-
----
-
-## ⚠️ 반드시 지켜야 할 주의사항 (Gotchas)
-
-엔진 구조상 다음과 같은 행위를 하면 크래시나 버그가 발생할 수 있습니다. 코드를 짤 때 항상 유의해 주세요.
+## 반드시 지킬 것
 
 > [!CAUTION]
-> **병렬 틱(Tick) 도중의 계층 · 구조 변경은 틱 뒤로 미뤄집니다**
-> `GameObjectManager::tick` 구간에서는 여러 오브젝트가 멀티스레드로 동시에 `onTick()`을 돕니다. 이때 부모/자식 관계 변경(`attachToParent` · `detachFromParent`)과
-> `addComponent` · `addTag` 같은 구조 변경은 그 자리에서 적용되지 않고 구조 변경 큐(`GameObjectManager::deferStructuralChange`)에 쌓였다가
-> **틱 직후 부른 순서대로** 적용됩니다. 그러니 같은 틱 안에서 바뀐 계층 · 붙은 컴포넌트를 기대하면 안 됩니다.
->
-> tick 중 `addComponent`는 `nullptr`을 반환하므로, 생성 직후 필드를 채워야 하면 `GameObjectManager::executeOrDeferPostTick`으로 스폰+초기화를 한 블록에 묶으세요.
+> **틱 중의 구조 변경은 틱 뒤로 미뤄진다.** `GameObjectManager::tick` 은 `onTick()` 을 여러 스레드에서 돌린다. 그 안의 `attachToParent` ·
+> `detachFromParent` · `addComponent` · `addTag` 는 구조 변경 큐에 쌓였다가 틱 직후 부른 순서대로 적용된다 — 같은 틱 안에서 바뀐 계층을 기대하지 않는다.
+> 틱 중 `addComponent` 는 `nullptr` 을 돌려주므로 만들고 채우는 일은 `GameObjectManager::executeOrDeferPostTick` 한 블록에 둔다.
 
 > [!WARNING]
-> **RHI DLL 스탬프 불일치 방지**
-> 렌더링 백엔드(예: `RHI_DX11.dll`)를 핫스왑할 수 있지만, ABI 인터페이스(`RHIModuleAbi.h`)가 변경된 경우 **엔진 전체와 RHI DLL들을 동시에 재빌드**해야 합니다. 오래된 RHI DLL이 남아있으면 함수 포인터가 어긋나 즉시 크래시납니다.
+> **RHI ABI 도장.** `RHIModuleAbi.h` 를 바꾸면 엔진과 모든 `RHI_*` 백엔드를 함께 다시 빌드한다. 낡은 백엔드 DLL 은 함수 포인터가 어긋나 바로 죽는다.
 
 > [!IMPORTANT]
-> **모듈 핫리로드 시 정적 변수(Static Variable) 주의**
-> 핫리로드 기능은 DLL을 내리고 다시 올립니다. 클래스 내의 **static 변수나 싱글톤 메모리**는 DLL이 언로드될 때 증발하거나 주소가 바뀔 수 있습니다. 꼭 유지되어야 하는 전역 상태는 `Engine` 모듈이나 `App` 쪽 저장소에 둡니다.
+> **모듈 안의 static 은 리로드에서 사라진다.** 클래스 static · 싱글턴이 모듈 DLL 에 있으면 교체 때 사라지거나 주소가 바뀐다. 남아야 하는 상태는 `Engine` 이나 `App` 에 둔다
+> (리로드에서 지킬 것 전부는 [핫리로드](docs/03_LiveReload_and_ABI.md) 3 절).
 
-> [!NOTE]
-> **헤더 주석**
-> 함수는 선언 위 `/** @brief */` 한글. 관련 API는 CMakeLists처럼 구간 배너로 묶습니다. 멤버 필드만 옆 `/**<` / `///<`를 씁니다. 로그/assert 문자열은 번역하지 않습니다.
+- **렌더 패킷은 자기가 역참조하는 것을 소유한다.** 게임 스레드가 만든 메시 · 머티리얼 · 인스턴스는 `shared_ptr` 로 `GpuSceneSnapshot` 에 실려 렌더 스레드로 간다.
+  생포인터를 싣지 않고, 렌더에 실리는 객체는 Engine 의 `create()` 로 만든다(모듈 DLL 이 만든 `shared_ptr` 은 모듈이 내려간 뒤 놓을 수 없다).
+  규칙은 [Graphics/README.md](Source/Engine/Graphics/README.md) "소유와 수명", 검사는 `Scripts/lint/gate/CheckRenderOwnership.py`.
+- **모듈 리로드는 App 의 것이다.** 감시 · 그림자 복사 · 교체(`LiveReloadManager`)는 `Source/App/Module/` 에 있고 Shipping 에서는 파일째 빠진다. Engine 은 지연 로드 훅이 묻는
+  `IModuleHandleProvider` 하나만 안다. 모듈 DLL 은 씬이 사라지고 서비스는 남은 구간(`EngineLoop::setOnScenesReleased`)에서만 내린다([App/README.md](Source/App/README.md)).
+- **렌더 스레드는 씬을 읽지 않는다.** 게임 스레드가 만든 스냅샷(`GpuSceneSnapshot`)이 유일한 통로다([Renderer/README.md](Source/Engine/Graphics/Renderer/README.md)).
 
----
+## 시험
 
-- **렌더 패킷은 자기가 역참조하는 것을 소유한다.** 게임 스레드가 만든 메시·머티리얼·인스턴스는 `shared_ptr` 로
-  `GpuSceneSnapshot` 에 실려 렌더 스레드로 간다. 생포인터를 싣지 말고, 렌더에 실리는 객체는 Engine 의 `create()`
-  로 만든다(모듈 DLL 이 만든 `shared_ptr` 은 모듈이 내려간 뒤 놓을 수 없다). 표와 규칙은
-  `Source/Engine/Graphics/README.md` 의 "소유와 수명" 절, 검사는 `Scripts/lint/gate/CheckRenderOwnership.py`.
-
-- **모듈 리로드는 App 의 것이다.** 모듈을 감시하고 그림자 복사하고 갈아 끼우는 기계(`LiveReloadManager`)는
-  `Source/App/Module/` 에 있고 **Shipping 빌드에서는 파일째 빠진다**. Engine 이 아는 것은 지연 로드 훅이 묻는
-  `IModuleHandleProvider`(그래프가 깨졌나 · 이 이름의 모듈 핸들이 뭔가) 하나뿐이다 — 훅은 모듈 DLL 안에 있어
-  App.exe 심볼을 링크할 수 없으므로 그 창구만 Engine.dll 에 둔다. 종료 순서는 `EngineLoop::setOnScenesReleased`
-  훅으로 맞춘다(씬은 사라졌고 서비스는 아직 있는 구간 — 모듈 DLL 을 내리기에 유일하게 맞는 자리다).
-
-## 🧪 테스트 아키텍처
-
-CTest 항목은 `CoreTest`, `EngineTest_NoGPU_Shard1` ~ `_Shard3` · `EngineTest_HostOnly_Shard1` ~ `_Shard2`, `ReflectionTest_Shard1` ~ `ReflectionTest_Shard6`, `SmokeTest`, `EditorTest`,
-`EditorUiTest`, `AppTest_NoGPU` · `AppTest_HostOnly` 입니다. CI 가 못 돌리는 스위트는 자기 파일에서
-`SW_TEST_REQUIRES_HOST( 스위트, "이유" )` 로 선언하고, `HOST_SPLIT` 으로 등록한 실행 파일이 그 선언으로 두 항목을 가릅니다.
-GPU가 없는 CI는 `nogpu` 라벨만 돌립니다. 린트는 `sw_registerLintTests`(`cmake/Engine/AssetAndToolTargets.cmake`)가
-`Scripts/lint/gate/` 의 게이트 전부와 `Scripts/lint/selftest/` 의 자기 검사를 `lint` 라벨로 등록합니다 — 목록은 손으로 적지 않고
-구성 시점에 `Scripts/lint/LintCatalog.py` 가 두 폴더를 훑어 `Scripts/generate/GenerateLintTargets.py` 가 만듭니다. 자세한 것은 [Test/README.md](Test/README.md).
+시험 실행 파일 · CTest 항목 · 라벨(`nogpu` · `hostgpu` · `lint` …) · 스위트 규칙의 정본은 [Test/README.md](Test/README.md)입니다. CI 가 못 돌리는 스위트는
+자기 파일에서 `SW_TEST_REQUIRES_HOST( 스위트, "이유" )` 로 선언하고, 린트 CTest 항목은 `Scripts/lint/LintCatalog.py` 가 `gate/` · `selftest/` 폴더를 훑어 만듭니다.

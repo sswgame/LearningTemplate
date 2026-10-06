@@ -3,6 +3,7 @@
  * @brief 메시를 그리는 SceneComponent 입니다(3D 렌더링). 프리미티브 등록부를 거쳐 GpuScene 으로 들어갑니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -155,7 +156,7 @@ namespace sw
         bool isVisible() const { return _bVisible == SW_TRUE; }
 
         /** @brief 등록되지 않은 프리미티브의 인덱스입니다. */
-        static constexpr uint32 kInvalidPrimitiveIndex = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidPrimitiveIndex = invalid_index::kUint32;
 
         /**
          * @brief 렌더 스냅샷이 다시 읽어야 할 상태로 표시합니다.

@@ -5,6 +5,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 
@@ -40,15 +43,30 @@ namespace
     {
         CityCatalog    _catalog;
         CitySimulation _city;
+        Wallet         _wallet; ///< 도시가 빌린 금고
+        int32          _monthIndex{ 0 };
 
-        bool initialize( int32 money = 5000 )
+        bool initialize( int32 money = 5000, float32 wagePerWorkerPerMonth = 0.5f )
         {
             if ( _catalog.loadFromXmlText( kCityTestXml, "CityBuilderTest" ) == false )
                 return false;
             CitySettings settings;
-            settings._secondsPerMonth = 20.0f;
-            _city.initialize( &_catalog, 32, 24, settings, money );
+            settings._wagePerWorkerPerMonth = wagePerWorkerPerMonth;
+            _wallet.clear();
+            _wallet.add( settings._currency, money );
+            GameStateRefs refs;
+            refs._pWallet = &_wallet;
+            _city.initialize( &_catalog, 32, 24, settings, refs );
             return true;
+        }
+
+        int32 getMoney() const { return static_cast<int32>( _wallet.getBalance( _city.getCurrency() ) ); }
+
+        /** @brief 한 달(20 초)을 돌리고 결산합니다 — 게임에서는 디렉터가 공유 시계의 달 넘김에 부른다. 열두 번째마다 새 해입니다. */
+        void runMonth()
+        {
+            run( 20.0f );
+            _city.settleMonth( ++_monthIndex % 12 == 0 );
         }
 
         /** @brief y = 10 의 동서 도로(x 2..29)와 x = 2 · 29 의 남북 도로(y 3..20) — 고리 하나. */
@@ -109,7 +127,7 @@ SW_TEST_CASE( CityBuilderTest, PlacementChecksTerrainMoneyAndRoadAccess )
     SW_EXPECT_TRUE( city.placeBuilding( "farm", 31, 23 ) == CityPlaceResult::OutOfBounds );
     SW_EXPECT_TRUE( city.placeBuilding( "farm", 10, 2 ) == CityPlaceResult::Ok );
     SW_EXPECT_TRUE( city.placeBuilding( "house", 11, 3 ) == CityPlaceResult::Occupied );
-    SW_EXPECT_EQUAL( 40, city.getMoney() );
+    SW_EXPECT_EQUAL( 40, scene.getMoney() );
     SW_EXPECT_FALSE( city.findBuildingAt( 10, 2 )->hasRoadAccess() );
 
     // 농장은 (10..11, 2..3). 도로는 건물 위에 못 깔고, 한 칸 띄운 도로는 입구가 아니다.
@@ -122,7 +140,7 @@ SW_TEST_CASE( CityBuilderTest, PlacementChecksTerrainMoneyAndRoadAccess )
     SW_ASSERT_TRUE( city.findBuildingAt( 10, 2 )->hasRoadAccess() );
     SW_EXPECT_TRUE( city.findBuildingAt( 10, 2 )->_accessTile == ( int2{ 10, 4 } ) );
 
-    SW_EXPECT_EQUAL( 38, city.getMoney() ); // 도로 둘(1 씩)
+    SW_EXPECT_EQUAL( 38, scene.getMoney() ); // 도로 둘(1 씩)
     SW_EXPECT_TRUE( city.placeBuilding( "granary", 20, 20 ) == CityPlaceResult::Ok );
     SW_EXPECT_TRUE( city.placeBuilding( "granary", 24, 20 ) == CityPlaceResult::NotEnoughMoney ); // 8 남았다
     SW_EXPECT_TRUE( city.demolish( 11, 3 ) );
@@ -236,7 +254,7 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
     for ( int32 x = 5; x <= 9; ++x )
         SW_ASSERT_TRUE( city.placeBuilding( "house", x, 11 ) == CityPlaceResult::Ok );
     SW_ASSERT_TRUE( city.placeBuilding( "tax", 4, 9 ) == CityPlaceResult::Ok );
-    const int32 moneyAfterBuilding = city.getMoney();
+    const int32 moneyAfterBuilding = scene.getMoney();
 
     vector<CityEvent> listEvent;
     int32             monthIncome = 0;
@@ -245,6 +263,8 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
     for ( int32 stepIndex = 0; stepIndex < 12 * 80 + 4; ++stepIndex ) // 한 해 하고 조금
     {
         city.update( 0.25f );
+        if ( ( stepIndex + 1 ) % 80 == 0 ) // 20 초 — 한 달
+            city.settleMonth( ( stepIndex + 1 ) / 80 % 12 == 0 );
         listEvent.clear();
         city.drainEvents( listEvent );
         for ( const CityEvent& event : listEvent )
@@ -259,18 +279,64 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
         }
     }
     SW_EXPECT_TRUE( monthIncome > 0 );
-    SW_EXPECT_EQUAL( moneyAfterBuilding + monthIncome, city.getMoney() );
+    SW_EXPECT_EQUAL( moneyAfterBuilding + monthIncome, scene.getMoney() );
     SW_EXPECT_EQUAL( 1, floodCount );
     SW_EXPECT_TRUE( floodValue >= 40 && floodValue <= 100 );
-    SW_EXPECT_EQUAL( 2, city.getYear() );
     SW_EXPECT_NEAR_EQUAL( static_cast<float32>( floodValue ) / 100.0f, city.getFloodFertility(), 0.011f );
 
     // 세리를 허물면 세금이 그치고 임금만 남는다(일꾼 없음 → 0).
     SW_ASSERT_TRUE( city.demolish( 4, 9 ) );
     scene.run( 60.0f ); // 세금 효과(30 초)가 다 빠지게
-    const int32 before = city.getMoney();
-    scene.run( 20.0f );
-    SW_EXPECT_TRUE( city.getMoney() <= before );
+    const int32 before = scene.getMoney();
+    scene.runMonth();
+    SW_EXPECT_TRUE( scene.getMoney() <= before );
+}
+
+/**
+ * @brief [CityBuilderTest] 범람은 새 해의 결산에서만 굴린다 — 달력은 공유 시계의 것이고 결산은 디렉터가 부른다
+ */
+SW_TEST_CASE( CityBuilderTest, FloodRollsOnlyOnANewYear )
+{
+    CityTestScene scene;
+    SW_ASSERT_TRUE( scene.initialize() );
+    CitySimulation&   city = scene._city;
+    vector<CityEvent> listEvent;
+    const auto        countFloods = [&city, &listEvent]()
+    {
+        listEvent.clear();
+        city.drainEvents( listEvent );
+        int32 floodCount = 0;
+        for ( const CityEvent& event : listEvent )
+            floodCount += event._kind == CityEvent::Kind::Flood ? 1 : 0;
+        return floodCount;
+    };
+    const float32 fertilityBefore = city.getFloodFertility();
+    for ( int32 month = 0; month < 11; ++month )
+        city.settleMonth( false );
+    SW_EXPECT_EQUAL( 0, countFloods() );
+    SW_EXPECT_NEAR_EQUAL( fertilityBefore, city.getFloodFertility(), 1e-6f );
+    city.settleMonth( true );
+    SW_EXPECT_EQUAL( 1, countFloods() );
+}
+
+/**
+ * @brief [CityBuilderTest] 달 결산의 임금은 미룰 수 없다 — 빈 금고에서는 빌린 지갑이 빚을 지고, 빚이 있는 동안 짓기가 거절된다
+ */
+SW_TEST_CASE( CityBuilderTest, MonthlyWagesCanRunTheBorrowedWalletIntoDebt )
+{
+    CityTestScene scene;
+    SW_ASSERT_TRUE( scene.initialize( 5000, 50.0f ) ); // 일꾼 하나에 달마다 50 — 세금으로는 못 메운다
+    CitySimulation& city = scene._city;
+    scene.buildRoadLoop();
+    for ( int32 x = 5; x <= 9; ++x )
+        SW_ASSERT_TRUE( city.placeBuilding( "house", x, 11 ) == CityPlaceResult::Ok );
+    SW_ASSERT_TRUE( city.placeBuilding( "tax", 4, 9 ) == CityPlaceResult::Ok );
+    scene._wallet.setBalance( city.getCurrency(), 0 );
+    for ( int32 month = 0; month < 3 && scene.getMoney() >= 0; ++month )
+        scene.runMonth();
+    SW_ASSERT_TRUE( city.getEmployed() > 0 );
+    SW_EXPECT_TRUE( scene.getMoney() < 0 );
+    SW_EXPECT_TRUE( city.placeRoad( 3, 3 ) == CityPlaceResult::NotEnoughMoney );
 }
 
 /**
@@ -303,7 +369,6 @@ SW_TEST_CASE( CityBuilderTest, StateRoundTripContinuesTheSameCity )
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored._city.readState( reader ) );
     SW_EXPECT_EQUAL( uint64( 0 ), reader.getRemainingBytes() );
-    SW_EXPECT_EQUAL( city.getMoney(), restored._city.getMoney() );
     SW_EXPECT_EQUAL( city.getPopulation(), restored._city.getPopulation() );
     SW_EXPECT_EQUAL( city.getWalkers().size(), restored._city.getWalkers().size() );
 
@@ -327,16 +392,47 @@ SW_TEST_CASE( CityBuilderTest, StateRoundTripContinuesTheSameCity )
         CityCatalog    catalog;
         CitySimulation smallCity;
         SW_ASSERT_TRUE( catalog.loadFromXmlText( kCityTestXml, "CityBuilderTest" ) );
-        smallCity.initialize( &catalog, 8, 8, CitySettings{}, 77 );
+        smallCity.initialize( &catalog, 8, 8, CitySettings{}, GameStateRefs{} );
         Archive smallReader( written.getData(), written.getSize() );
         SW_EXPECT_FALSE( smallCity.readState( smallReader ) );
-        SW_EXPECT_EQUAL( 77, smallCity.getMoney() );
+        SW_EXPECT_TRUE( smallCity.getBuildings().empty() );
 
         CityTestScene cutScene;
         SW_ASSERT_TRUE( cutScene.initialize( 55 ) );
         Archive cut( written.getData(), written.getSize() - 3 );
         SW_EXPECT_FALSE( cutScene._city.readState( cut ) );
-        SW_EXPECT_EQUAL( 55, cutScene._city.getMoney() );
+        SW_EXPECT_EQUAL( 55, cutScene.getMoney() );
         SW_EXPECT_TRUE( cutScene._city.getBuildings().empty() );
     }
+}
+
+/**
+ * @brief [CityBuilderTest] 땅을 빌린 도시는 남의 땅에 도로 · 건물을 놓지 못하고(돈도 나가지 않는다), 건물은 막힘 · 도로는 막힘 없이 얻으며 허물면 놓는다
+ */
+SW_TEST_CASE( CityBuilderTest, CityBuildsOnlyOnUsableLandAndReleasesItWhenDemolished )
+{
+    CityTestScene scene;
+    SW_ASSERT_TRUE( scene.initialize() );
+    LandRegistry land;
+    land.initialize( 32, 24, 1.0f, float3{} );
+    const uint16 other = land.registerOwner( "Other" );
+    SW_ASSERT_TRUE( land.claimRect( other, 10, 10, 11, 11, true ) );
+    scene._city.bindLand( &land, int2{ 0, 0 } );
+
+    const int32 moneyBefore = scene.getMoney();
+    SW_EXPECT_TRUE( scene._city.placeRoad( 10, 10 ) == CityPlaceResult::Occupied );
+    SW_EXPECT_TRUE( scene._city.placeBuilding( "granary", 9, 9 ) == CityPlaceResult::Occupied ); // 발자국 한 칸이 남의 땅
+    SW_EXPECT_EQUAL( moneyBefore, scene.getMoney() );
+
+    SW_ASSERT_TRUE( scene._city.placeRoad( 3, 3 ) == CityPlaceResult::Ok );
+    SW_ASSERT_TRUE( scene._city.placeBuilding( "granary", 5, 5 ) == CityPlaceResult::Ok );
+    SW_EXPECT_TRUE( land.getOwnerName( 3, 3 ) == hashed_string( "CityBuilder" ) );
+    SW_EXPECT_FALSE( land.isBlockedFor( other, 3, 3 ) ); // 도로는 지나갈 수 있다
+    SW_EXPECT_TRUE( land.isBlockedFor( other, 6, 6 ) );  // 건물은 막힘
+    SW_EXPECT_FALSE( land.claimRect( other, 6, 6, 6, 6, false ) );
+
+    SW_ASSERT_TRUE( scene._city.demolish( 6, 6 ) );
+    SW_ASSERT_TRUE( scene._city.demolish( 3, 3 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 5, 5 ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 3, 3 ) );
 }

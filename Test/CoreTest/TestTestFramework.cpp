@@ -460,7 +460,7 @@ SW_TEST_CASE( TestFrameworkTest, TempPathsOfThePreviousCaseAreGone )
         SW_TEST_SKIP( "run together with TestFrameworkTest.TempPathsOfACaseAreCreated" );
 
     for ( const sw::string& path : s_listPathOfPreviousCase )
-        SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( path ) || sw::FileUtil::directoryExists( path ), path.c_str() );
+        SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( path ) || sw::FileUtil::isDirectory( path ), path.c_str() );
     s_listPathOfPreviousCase.clear();
 }
 

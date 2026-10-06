@@ -312,7 +312,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, AllCookedShadersMatchContract )
         {
             const sw::string binDir = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shaderDir, "bin" ),
                                                               sw::string( sw::ShaderCooker::getSubfolderForFormat( target._format ) ) );
-            if ( sw::FileUtil::directoryExists( binDir ) == false )
+            if ( sw::FileUtil::isDirectory( binDir ) == false )
                 continue;
             sw::vector<sw::string> listFile;
             sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( target._format ) ), listFile, false );
@@ -378,7 +378,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReflectionNamesAreUniformAcrossBackend
         const sw::string             binDir = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shaderDir, "bin" ),
                                                                       sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
         sw::vector<sw::string>       listFile;
-        if ( sw::FileUtil::directoryExists( binDir ) )
+        if ( sw::FileUtil::isDirectory( binDir ) )
             sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
         for ( const sw::string& path : listFile )
         {
@@ -563,7 +563,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCpuStruct 
         const sw::string             binDir = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shaderDir, "bin" ),
                                                                       sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
         sw::vector<sw::string>       listFile;
-        if ( sw::FileUtil::directoryExists( binDir ) )
+        if ( sw::FileUtil::isDirectory( binDir ) )
             sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
 
         for ( const sw::string& path : listFile )
@@ -857,4 +857,86 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ConsumedVertexAttributeMaskFollowsShad
         ++checkedCount;
     }
     SW_EXPECT_TRUE( checkedCount >= 3 );
+}
+
+/**
+ * @brief [ShaderBindingValidatorTest] C++ 와 셰이더가 같아야 하는 배치 수는 bindingslots.hlsli 에만 정의된다
+ * @details 모프 · 스킨 버퍼 배치 · VAT 노멀 칸 · 거스트너 파도 수를 셰이더 파일마다 `#define` 으로 다시 적고 C++ 에 사본을 두면, 한쪽만 바뀐 날
+ *          컴파일은 되고 화면 · 부력만 조용히 틀어진다. 정의는 계약 파일 하나이고 C++ 는 `shaderslot::k*` 로 같은 정의를 읽는다.
+ */
+SW_TEST_CASE( ShaderBindingValidatorTest, LayoutNumbersAreDefinedOnlyInBindingSlots )
+{
+    const utf8* const arrMacro[] = {
+        "SW_MORPH_FLOAT4_PER_VERTEX",
+        "SW_SKIN_FLOAT4_PER_VERTEX",
+        "SW_SKIN_FLOAT4_PER_BONE",
+        "SW_SKIN_UINT4_PER_INSTANCE",
+        "SW_VERTEX_ANIMATION_NORMAL_STEPS",
+        "SW_GERSTNER_WAVE_COUNT",
+    };
+    sw::vector<sw::string> listFile;
+    for ( const utf8* pDomain : { "engine", "common" } )
+    {
+        const sw::string shaderFolder = sw::ResourceUtil::getDomainFolderPath( pDomain, "shaders" );
+        SW_ASSERT_FALSE( shaderFolder.empty() );
+        sw::FileUtil::collectFiles( shaderFolder, ".hlsl", listFile, true );
+        sw::FileUtil::collectFiles( shaderFolder, ".hlsli", listFile, true );
+    }
+    SW_ASSERT_TRUE( listFile.size() >= 10 );
+    for ( const utf8* pMacro : arrMacro )
+    {
+        const sw::string define = sw::string( "#define " ) + pMacro + " ";
+        sw::string       listDefiner;
+        uint32           defineCount{ 0 };
+        bool             bInContract{ false };
+        for ( const sw::string& path : listFile )
+        {
+            sw::string text;
+            SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, text ) );
+            if ( text.find( define ) == sw::string::npos )
+                continue;
+            ++defineCount;
+            listDefiner += sw::FileUtil::getFileNamePart( path ) + " ";
+            bInContract = bInContract || sw::FileUtil::getFileNamePart( path ) == "bindingslots.hlsli";
+        }
+        SW_EXPECT_TRUE_MSG( defineCount == 1 && bInContract, ( sw::string( pMacro ) + " 정의가 bindingslots.hlsli 하나가 아니다: " + listDefiner ).c_str() );
+    }
+}
+
+/**
+ * @brief [ShaderBindingValidatorTest] 루트 상수 dword 수는 네 백엔드가 셰이더 계약(shaderslot::kRootConstantDwords) 하나를 읽는다
+ * @details 백엔드가 상한을 숫자로 따로 적으면(DX11 · GL 64, DX12 · Vulkan 16) 오프셋 16 이상의 쓰기가 백엔드마다 다르게 된다 — 셰이더는 16 dword 만 읽는다.
+ *          백엔드 소스에 루트 상수 상한을 숫자 리터럴로 정의한 줄이 없어야 한다.
+ */
+SW_TEST_CASE( ShaderBindingValidatorTest, RootConstantLimitIsTheShaderContract )
+{
+    const sw::string       rhiFolder = sw::FileUtil::joinPath( sw::ResourceUtil::getProjectFolderPath(), "Source/Engine/Graphics/RHI" );
+    sw::vector<sw::string> listFile;
+    sw::FileUtil::collectFiles( rhiFolder, ".h", listFile, true );
+    sw::FileUtil::collectFiles( rhiFolder, ".cpp", listFile, true );
+    SW_ASSERT_TRUE( listFile.size() >= 20 );
+    sw::string listOffender;
+    for ( const sw::string& path : listFile )
+    {
+        sw::string text;
+        SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, text ) );
+        size_t lineStart = 0;
+        while ( lineStart < text.size() )
+        {
+            size_t lineEnd = text.find( '\n', lineStart );
+            lineEnd        = lineEnd == sw::string::npos ? text.size() : lineEnd;
+            const sw::string_view line( text.data() + lineStart, lineEnd - lineStart );
+            const size_t          equal = line.find( '=' );
+            if ( line.find( "constexpr" ) != sw::string_view::npos && line.find( "RootConstant" ) != sw::string_view::npos && equal != sw::string_view::npos )
+            {
+                size_t valueStart = equal + 1;
+                while ( valueStart < line.size() && line[valueStart] == ' ' )
+                    ++valueStart;
+                if ( valueStart < line.size() && line[valueStart] >= '0' && line[valueStart] <= '9' )
+                    listOffender += sw::FileUtil::getFileNamePart( path ) + " ";
+            }
+            lineStart = lineEnd + 1;
+        }
+    }
+    SW_EXPECT_TRUE_MSG( listOffender.empty(), ( "루트 상수 상한을 숫자로 따로 적은 백엔드: " + listOffender ).c_str() );
 }

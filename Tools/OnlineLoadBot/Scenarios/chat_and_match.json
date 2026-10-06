@@ -1,0 +1,24 @@
+{
+    "_name": "chat_and_match",
+    "_botCount": 1000,
+    "_rampUpSeconds": 20,
+    "_durationSeconds": 180,
+    "_seed": 1,
+    "_region": "kr",
+    "_listStep": [
+        { "_action": "login", "_mode": "guest" },
+        { "_action": "directory_status" },
+        { "_action": "liveops_state" },
+        { "_action": "chat_join", "_channel": "world.load" },
+        { "_action": "social_presence", "_status": "online", "_activity": "lobby" },
+        { "_action": "repeat", "_count": 10, "_listStep": [
+            { "_action": "chat_send", "_channel": "world.load", "_text": "hello from {bot} #{seq}" },
+            { "_action": "wait", "_minMs": 2000, "_maxMs": 6000 }
+        ] },
+        { "_action": "leaderboard_top", "_board": "kills", "_count": 20 },
+        { "_action": "matchmaking_queue", "_mode": "duo" },
+        { "_action": "wait_match", "_timeoutMs": 90000 },
+        { "_action": "wait", "_minMs": 5000, "_maxMs": 15000 },
+        { "_action": "logout" }
+    ]
+}

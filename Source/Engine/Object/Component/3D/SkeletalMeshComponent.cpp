@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -42,7 +43,7 @@ namespace sw
             /** @brief 핸들에서 주기 위상을 냅니다(정수 해시 — 이웃한 id 가 이웃한 위상이 되지 않게 섞는다). */
             static uint32 makeUpdatePhase( uint64 id )
             {
-                uint64 mixed = id * 0x9E3779B97F4A7C15ull;
+                uint64 mixed = id * HashUtil::kGoldenRatio64;
                 mixed ^= mixed >> 29;
                 return static_cast<uint32>( mixed & 0xFFFFu );
             }

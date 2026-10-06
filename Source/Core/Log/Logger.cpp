@@ -9,6 +9,7 @@
 #include "Core/Log/ConsoleLogOutput.h"
 #include "Core/Log/FileLogOutput.h"
 #include "Core/Log/ILogOutput.h"
+#include "Core/Log/LogContext.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryProfiler.h"
@@ -514,19 +515,24 @@ namespace sw
         if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) && pFile != nullptr )
             pEffectiveCaller = getCaller( pFile );
 
+        // 문맥(요청 추적 id · 주체)은 부른 스레드의 것이라 큐에 넣기 전에 읽는다. 문맥이 없으면 꼬리표가 빈 글이라 줄은 바이트가 같다.
+        const LogContext& context = LogContext::getCurrent();
+        utf8              arrContextTag[LogContext::kMaxTagSize];
+        (void)context.formatTag( arrContextTag, LogContext::kMaxTagSize );
+
         // 2단계: 스택의 8KB fixed_string 버퍼에 한 번만 포맷한다(힙 할당 없음)
         fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
         if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) == false )
         {
             formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
-                          "[%#] [%#] [%#] [%#] - %#\n -> %#:%#\n",
-                          dateStr.c_str(), pEffectiveTag, pEffectiveCaller, kArrHeader[levelIndex], pEffectiveMsg, pEffectiveFile, line );
+                          "[%#] [%#] [%#] [%#] %#- %#\n -> %#:%#\n",
+                          dateStr.c_str(), pEffectiveTag, pEffectiveCaller, kArrHeader[levelIndex], arrContextTag, pEffectiveMsg, pEffectiveFile, line );
         }
         else
         {
             formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
-                          "[%#] [%#] [%#] - %#\n -> %#:%#\n",
-                          dateStr.c_str(), pEffectiveTag, kArrHeader[levelIndex], pEffectiveMsg, pEffectiveFile, line );
+                          "[%#] [%#] [%#] %#- %#\n -> %#:%#\n",
+                          dateStr.c_str(), pEffectiveTag, kArrHeader[levelIndex], arrContextTag, pEffectiveMsg, pEffectiveFile, line );
         }
 
         // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 **잘못된 바이트만** `\xNN` 으로 바꾼다. 줄 전체를 로캘 변환하면
@@ -565,6 +571,7 @@ namespace sw
             entry._file      = pEffectiveFile;
             entry._line      = line;
             entry._timeStamp = dateStr.c_str();
+            entry._context   = context;
             ++t_broadcastDepth;
             listenersCopy.broadcast( entry );
             --t_broadcastDepth;

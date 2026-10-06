@@ -7,7 +7,7 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Data/GameDataXml.h"
+#include "GameFramework/Base/Data/GameDataXml.h"
 
 namespace sw
 {
@@ -38,12 +38,16 @@ namespace sw
         , _doorCatalog{}
         , _furnitureCatalog{}
         , _booCatalog{}
+        , _currency{ "Coins" }
     {
         _vacuum._listStagePower.push_back( 10.0f );
     }
 
     uint32 GhostCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
+        const utf8* pCurrency = root.findAttribute( "currency" );
+        if ( pCurrency != nullptr && pCurrency[0] != '\0' )
+            _currency = hashed_string( pCurrency );
         const XmlNode flashlight = root.findChild( "Flashlight" );
         if ( flashlight )
         {
@@ -129,7 +133,7 @@ namespace sw
             door._key  = GhostCatalogInternal::readName( node, "key" );
             door._flag = GhostCatalogInternal::readName( node, "flag" );
             if ( door._flag.empty() )
-                door._flag = door._id;
+                door._flag = hashed_string( string( "door." ) + pId );
             (void)_doorCatalog.add( door );
         }
         for ( XmlNode node = root.findChild( "Furniture" ); node; node = node.findNextSibling( "Furniture" ) )

@@ -27,13 +27,13 @@ namespace sw
             [[nodiscard]] static bool readLocalizationFile( string_view path, string& outText )
             {
                 // 디스크에 있는 경로(시험 · 도구의 절대 경로)는 그대로 읽는다 — 리소스 조회는 못 찾으면 오류를 남긴다.
-                if ( FileUtil::fileExists( path ) )
+                if ( FileUtil::isRegularFile( path ) )
                     return FileUtil::readTextFile( path, outText );
                 return ResourceUtil::readTextResource( path, outText );
             }
 
             /** @brief 그 파일이 있는지 — 없는 번역 표를 읽어 "File not found" 오류를 남기지 않게 먼저 묻습니다. */
-            static bool hasLocalizationFile( string_view path ) { return ResourceUtil::hasResource( path ) || FileUtil::fileExists( path ); }
+            static bool hasLocalizationFile( string_view path ) { return ResourceUtil::hasResource( path ) || FileUtil::exists( path ); }
 
             /** @brief 두 경로가 같은 파일인지 — 구분자 · 대소문자를 무시하고, 한쪽이 절대 경로면 꼬리를 맞춰 봅니다. */
             static bool isSamePath( string_view lhs, string_view rhs )

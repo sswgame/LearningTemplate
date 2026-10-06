@@ -119,6 +119,21 @@ namespace sw
         _bLoaded = SW_TRUE;
     }
 
+    void TileMapRendererComponent::onPropertyChanged( hashed_string propertyName )
+    {
+        Component::onPropertyChanged( propertyName );
+        // 켜고 끄기를 빌더가 다시 보게 — 다른 칸은 다음 rebuild 가 맞춘다.
+        static const hashed_string s_activeName( "_bActive" );
+        if ( propertyName == s_activeName )
+            _batch.markAllEntriesDirty();
+    }
+
+    void TileMapRendererComponent::onOwnerActiveInHierarchyChanged()
+    {
+        Component::onOwnerActiveInHierarchyChanged();
+        _batch.markAllEntriesDirty();
+    }
+
     bool TileMapRendererComponent::rebuild()
     {
         GameObject*        pOwner   = getOwner();
@@ -127,6 +142,7 @@ namespace sw
             return false;
         const uint32 count = static_cast<uint32>( _listBrushIndex.size() );
         _batch.setSorting( _sortingLayer, _orderInLayer );
+        _batch.setOwnerComponent( this );
         if ( _batch.initialize( *pManager, _tileSet.getAtlasPath(), count, _materialPath, _tileSet.getNormalAtlasPath() ) == false )
             return false;
         _lastOwnerWorld = getOwnerWorld();

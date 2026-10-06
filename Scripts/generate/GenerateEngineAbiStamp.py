@@ -14,10 +14,12 @@ import argparse
 import hashlib
 import os
 import sys
+from pathlib import Path
+from typing import Sequence
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # Scripts — common
 
-from common import useUtf8Stdout  # noqa: E402
+from common import writeGeneratedFile  # noqa: E402
 
 # 핫 리로드가 갈아 끼우지 않는 쪽의 헤더다 — Core · Engine, 모듈과 호스트의 계약(RuntimeAPI), 공용 모듈(GameFramework — 섀도 복사 없이 한 번
 # 올리고 다시 올리지 않는다). 키트(GameFramework/Kits)는 스스로 리로드되는 모듈이라 뺀다. X 매크로 표(.xxx)도 넣는다 — `EngineServiceList.xxx` 가
@@ -68,21 +70,15 @@ def makeHeaderTextInternal(stamp):
     )
 
 
-def main():
-    useUtf8Stdout()
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Core · Engine 헤더 지문(핫 리로드 ABI 도장)을 씁니다.")
     parser.add_argument("--root", required=True, help="저장소 루트")
     parser.add_argument("--out", required=True, help="쓸 헤더 경로")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     text = makeHeaderTextInternal(computeStampInternal(os.path.abspath(args.root)))
-    if os.path.isfile(args.out):
-        with open(args.out, "r", encoding="utf-8") as handle:
-            if handle.read() == text:
-                return 0
-    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-    with open(args.out, "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(text)
+    # 빌드마다 도는 단계라 바뀐 때만 한 줄 찍는다. 줄끝은 LF(어느 체크아웃에서나 같은 바이트).
+    writeGeneratedFile(Path(args.out), text, tag="GenerateEngineAbiStamp", newline="\n", bReportUnchanged=False)
     return 0
 
 

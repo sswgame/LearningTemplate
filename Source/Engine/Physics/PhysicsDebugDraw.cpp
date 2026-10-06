@@ -38,7 +38,7 @@ namespace sw
                 float3 previous = frame.apply( center + axisA * radius );
                 for ( uint32 segment = 1; segment <= kCircleSegmentCount; ++segment )
                 {
-                    const float32 angle   = 2.0f * MathUtil::Pi * static_cast<float32>( segment ) / static_cast<float32>( kCircleSegmentCount );
+                    const float32 angle   = 2.0f * MathUtil::kPi * static_cast<float32>( segment ) / static_cast<float32>( kCircleSegmentCount );
                     const float3  current = frame.apply( center + axisA * ( ::cosf( angle ) * radius ) + axisB * ( ::sinf( angle ) * radius ) );
                     renderer.drawLine( previous, current, color );
                     previous = current;

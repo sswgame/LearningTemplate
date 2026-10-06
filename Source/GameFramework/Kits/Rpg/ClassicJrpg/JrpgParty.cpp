@@ -4,7 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Data/StatBlock.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -52,23 +56,23 @@ namespace sw
     JrpgParty::JrpgParty()
         : _listMember{}
         , _eventBuffer{}
-        , _wallet{}
-        , _inventory{}
         , _equipLayout{}
         , _pCatalog{ nullptr }
         , _pItemCatalog{ nullptr }
+        , _pInventory{ nullptr }
+        , _pWallet{ nullptr }
     {
     }
 
-    void JrpgParty::initialize( const JrpgCatalog* pCatalog, const ItemCatalog* pItemCatalog, int32 inventorySlotCount, string_view equipLayout )
+    void JrpgParty::initialize( const JrpgCatalog* pCatalog, const ItemCatalog* pItemCatalog, const GameStateRefs& refs, string_view equipLayout )
     {
         _pCatalog     = pCatalog;
         _pItemCatalog = pItemCatalog;
         _equipLayout  = string( equipLayout );
         _listMember.clear();
         _eventBuffer.clear();
-        _wallet.clear();
-        _inventory.initialize( pItemCatalog, inventorySlotCount );
+        _pInventory = refs._pInventory;
+        _pWallet    = refs._pWallet;
     }
 
     int32 JrpgParty::addMember( const hashed_string& memberId, string_view name, const hashed_string& classId, int32 level )
@@ -116,7 +120,7 @@ namespace sw
             return JrpgClassChangeResult::Dead;
         if ( member._level.getLevel() < minLevel )
             return JrpgClassChangeResult::LevelTooLow;
-        if ( pClass->_requiredItem.empty() == false && _inventory.hasItem( pClass->_requiredItem ) == false )
+        if ( pClass->_requiredItem.empty() == false && ( _pInventory == nullptr || _pInventory->hasItem( pClass->_requiredItem ) == false ) )
             return JrpgClassChangeResult::MissingItem;
 
         member._classId = classId;
@@ -151,9 +155,9 @@ namespace sw
 
     int64 JrpgParty::distributeRewards( int64 exp, int64 gold )
     {
-        if ( gold > 0 )
+        if ( gold > 0 && _pWallet != nullptr )
         {
-            _wallet.add( Wallet::getDefaultCurrency(), gold );
+            _pWallet->add( Wallet::getDefaultCurrency(), gold );
             pushEvent( JrpgPartyEvent::Kind::GoldGained, -1, static_cast<int32>( gold ) );
         }
         const int32 aliveCount = countAlive();
@@ -173,7 +177,7 @@ namespace sw
     bool JrpgParty::restAtInn( int64 pricePerMember )
     {
         const int64 price = MathUtil::max<int64>( 0, pricePerMember ) * countAlive();
-        if ( price > 0 && _wallet.trySpend( Wallet::getDefaultCurrency(), price ) == false )
+        if ( price > 0 && ( _pWallet == nullptr || _pWallet->trySpend( Wallet::getDefaultCurrency(), price ) == false ) )
             return false;
         for ( JrpgMember& member : _listMember )
         {
@@ -194,7 +198,7 @@ namespace sw
         if ( member.isAlive() )
             return false;
         const int64 price = MathUtil::max<int64>( 0, pricePerLevel ) * member._level.getLevel();
-        if ( price > 0 && _wallet.trySpend( Wallet::getDefaultCurrency(), price ) == false )
+        if ( price > 0 && ( _pWallet == nullptr || _pWallet->trySpend( Wallet::getDefaultCurrency(), price ) == false ) )
             return false;
         member._hp = member.getStat( JrpgStat::MaxHp );
         pushEvent( JrpgPartyEvent::Kind::Revived, memberIndex, static_cast<int32>( price ) );
@@ -237,6 +241,112 @@ namespace sw
     void JrpgParty::drainEvents( vector<JrpgPartyEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void JrpgParty::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listMember.size() );
+        for ( const JrpgMember& member : _listMember )
+        {
+            StateArchiveUtil::writeName( outArchive, member._id );
+            StateArchiveUtil::writeName( outArchive, member._classId );
+            outArchive << string_view( member._name );
+            outArchive << static_cast<uint32>( member._listSpell.size() );
+            for ( const hashed_string& spellId : member._listSpell )
+            {
+                StateArchiveUtil::writeName( outArchive, spellId );
+            }
+            outArchive << static_cast<uint32>( member._listManual.size() );
+            for ( const JrpgManualProgress& progress : member._listManual )
+            {
+                StateArchiveUtil::writeName( outArchive, progress._manualId );
+                outArchive << progress._proficiency;
+            }
+            // 장비는 칸 순서대로 아이템 id 만(빈 칸은 빈 이름) — 칸 구성은 `initialize` 의 것이다.
+            const vector<EquipSlot>& listSlot = member._equipment.getSlots();
+            outArchive << static_cast<uint32>( listSlot.size() );
+            for ( const EquipSlot& slot : listSlot )
+            {
+                StateArchiveUtil::writeName( outArchive, slot._item.isEmpty() ? hashed_string{} : slot._item._itemId );
+            }
+            member._level.writeState( outArchive );
+            for ( const int32 stat : member._arrStat )
+            {
+                outArchive << stat;
+            }
+            outArchive << member._hp;
+            outArchive << member._mp;
+            outArchive << member._inner;
+        }
+    }
+
+    bool JrpgParty::readState( Archive& archive )
+    {
+        uint32 memberCount = 0;
+        // 멤버마다 id · 직업 · 이름(12) + 주문 · 비급 · 칸 수(12) + 레벨(20) + 능력치(28) + HP · MP · 내공(12) 이상
+        if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 84, memberCount ) == false || memberCount > static_cast<uint32>( kMaxMembers ) )
+            return false;
+        vector<JrpgMember> listMember( memberCount );
+        for ( JrpgMember& member : listMember )
+        {
+            uint32     count     = 0;
+            const bool bHeadRead = StateArchiveUtil::readName( archive, member._id ) && StateArchiveUtil::readName( archive, member._classId );
+            if ( bHeadRead == false || _pCatalog->findClass( member._classId ) == nullptr )
+                return false;
+            archive >> member._name;
+            if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+                return false;
+            member._listSpell.resize( count );
+            for ( hashed_string& spellId : member._listSpell )
+            {
+                if ( StateArchiveUtil::readName( archive, spellId ) == false )
+                    return false;
+            }
+            // 비급마다 이름(4) + 숙련(4)
+            if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+                return false;
+            member._listManual.resize( count );
+            for ( JrpgManualProgress& progress : member._listManual )
+            {
+                if ( StateArchiveUtil::readName( archive, progress._manualId ) == false )
+                    return false;
+                archive >> progress._proficiency;
+            }
+
+            member._equipment.initialize( _pItemCatalog, _equipLayout );
+            if ( StateArchiveUtil::readCount( archive, 4, count ) == false || count != member._equipment.getSlots().size() )
+                return false;
+            for ( uint32 slotIndex = 0; slotIndex < count; ++slotIndex )
+            {
+                hashed_string itemId;
+                if ( StateArchiveUtil::readName( archive, itemId ) == false )
+                    return false;
+                if ( itemId.empty() )
+                    continue;
+                InventorySlot item;
+                item._itemId = itemId;
+                item._count  = 1;
+                vector<InventorySlot> listRemoved;
+                const hashed_string&  slotName = member._equipment.getSlots()[slotIndex]._name;
+                if ( member._equipment.equip( slotName, item, listRemoved ) != EquipResult::Ok )
+                    return false;
+            }
+
+            if ( member._level.readState( archive ) == false )
+                return false;
+            for ( int32& stat : member._arrStat )
+            {
+                archive >> stat;
+            }
+            archive >> member._hp;
+            archive >> member._mp;
+            archive >> member._inner;
+            if ( archive.isError() )
+                return false;
+        }
+        _listMember = std::move( listMember );
+        _eventBuffer.clear();
+        return true;
     }
 
     bool JrpgParty::canUseSpell( int32 memberIndex, const hashed_string& spellId ) const

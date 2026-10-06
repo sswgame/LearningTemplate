@@ -1,0 +1,31 @@
+{
+    "_name": "SWGame",
+    "_version": "1.0.0",
+    "_kind": "Game",
+    "_description": "MeadowVillage — 키트 조립 시험 게임(농장 + 생물 마을) — GF_Farming · GF_CreatureLife 를 한 씬 · 한 공유 상태(GameStateComponent)에 섞는다",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Farming"
+        },
+        {
+            "_name": "GF_CreatureLife"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
+    "_bEnabledByDefault": true,
+    "_listModuleOverride": []
+}

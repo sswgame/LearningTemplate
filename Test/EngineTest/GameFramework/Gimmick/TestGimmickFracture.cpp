@@ -17,8 +17,8 @@
 
 #include "EngineTest/DestructionTestUtil.h"
 
-#include "GameFramework/Gimmick/Genre/ShooterGimmicks.h"
-#include "GameFramework/Gimmick/GimmickSensorComponent.h"
+#include "GameFramework/Base/Gimmick/Genre/ShooterGimmicks.h"
+#include "GameFramework/Base/Gimmick/GimmickSensorComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

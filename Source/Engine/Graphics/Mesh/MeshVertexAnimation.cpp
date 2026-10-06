@@ -13,6 +13,7 @@
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
@@ -23,9 +24,6 @@ namespace sw
     {
         struct MeshVertexAnimationInternal
         {
-            /** @brief 팔면체 한 칸의 해상도입니다(12 비트). 셰이더의 `SW_VERTEX_ANIMATION_NORMAL_STEPS` 와 같아야 합니다. */
-            static constexpr uint32 kNormalSteps = 4096u;
-
             /** @brief 부호(0 은 +)입니다. */
             static float32 signNotZero( float32 value ) { return value >= 0.0f ? 1.0f : -1.0f; }
 
@@ -70,18 +68,18 @@ namespace sw
             u                     = foldedU;
             v                     = foldedV;
         }
-        constexpr float32 kMaxStep = static_cast<float32>( MeshVertexAnimationInternal::kNormalSteps - 1u );
+        constexpr float32 kMaxStep = static_cast<float32>( shaderslot::kVertexAnimationNormalSteps - 1u );
         const uint32      stepU    = static_cast<uint32>( MathUtil::clamp( ( u * 0.5f + 0.5f ) * kMaxStep + 0.5f, 0.0f, kMaxStep ) );
         const uint32      stepV    = static_cast<uint32>( MathUtil::clamp( ( v * 0.5f + 0.5f ) * kMaxStep + 0.5f, 0.0f, kMaxStep ) );
-        return static_cast<float32>( stepU * MeshVertexAnimationInternal::kNormalSteps + stepV );
+        return static_cast<float32>( stepU * shaderslot::kVertexAnimationNormalSteps + stepV );
     }
 
     float3 MeshVertexAnimation::unpackNormal( float32 packed )
     {
-        constexpr float32 kMaxStep = static_cast<float32>( MeshVertexAnimationInternal::kNormalSteps - 1u );
+        constexpr float32 kMaxStep = static_cast<float32>( shaderslot::kVertexAnimationNormalSteps - 1u );
         const uint32      integer  = static_cast<uint32>( packed );
-        const float32     u        = static_cast<float32>( integer / MeshVertexAnimationInternal::kNormalSteps ) / kMaxStep * 2.0f - 1.0f;
-        const float32     v        = static_cast<float32>( integer % MeshVertexAnimationInternal::kNormalSteps ) / kMaxStep * 2.0f - 1.0f;
+        const float32     u        = static_cast<float32>( integer / shaderslot::kVertexAnimationNormalSteps ) / kMaxStep * 2.0f - 1.0f;
+        const float32     v        = static_cast<float32>( integer % shaderslot::kVertexAnimationNormalSteps ) / kMaxStep * 2.0f - 1.0f;
         float3            normal{ u, v, 1.0f - MathUtil::abs( u ) - MathUtil::abs( v ) };
         if ( normal._z < 0.0f )
         {

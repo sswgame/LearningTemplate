@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Server_Leaderboard",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "순위표 키트(서버) — 점수 · 통계 영속 + 캐시 순위(잃으면 다시 채움) · 업적 보상 우편 · 시즌 정산 · 서비스 호스트 바인딩 (온라인 게임)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Leaderboard"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

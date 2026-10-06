@@ -44,7 +44,7 @@ namespace sw::editor
             {
                 outTable = TranslationTable{};
                 outTable.setCulture( culture );
-                if ( FileUtil::fileExists( path ) == false )
+                if ( FileUtil::exists( path ) == false )
                     return true;
                 string error;
                 if ( outTable.loadFromFile( path, &error ) )
@@ -74,7 +74,7 @@ namespace sw::editor
     {
         outListProjectPath.clear();
         const string enginePath = ResourceUtil::getResourcePath( EditorDataTableCommandsInternal::kEngineProject );
-        if ( enginePath.empty() == false && FileUtil::fileExists( enginePath ) )
+        if ( enginePath.empty() == false && FileUtil::exists( enginePath ) )
             outListProjectPath.push_back( FileUtil::normalizeSeparators( enginePath ) );
 
         const string   gameFolder = getLocalizationFolderPath();
@@ -83,7 +83,7 @@ namespace sw::editor
         {
             for ( const string& filePath : listFile )
             {
-                if ( StringUtil::endsWith( filePath, LocalizationProject::kFileSuffix, true ) )
+                if ( StringUtil::endsWith( filePath, LocalizationProject::kExtension, true ) )
                     outListProjectPath.push_back( FileUtil::normalizeSeparators( filePath ) );
             }
         }
@@ -211,7 +211,7 @@ namespace sw::editor
             if ( listWritable[cultureIndex] == 0 )
                 continue;
             const string path = LocalizationProject::makeTranslationPath( inoutSheet._projectPath, inoutSheet._listCulture[cultureIndex] );
-            if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::fileExists( path ) == false )
+            if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::exists( path ) == false )
                 continue; // 번역이 하나도 없는 문화권의 빈 파일은 만들지 않는다
             if ( listTranslation[cultureIndex].saveToFile( path ) == false )
             {

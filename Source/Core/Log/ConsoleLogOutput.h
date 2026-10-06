@@ -29,13 +29,19 @@ namespace sw
         [[nodiscard]] bool open() override;
         /** @brief 표준 출력을 비웁니다(핸들은 이 장치가 연 것이 아니므로 닫지 않습니다). */
         void close() override;
-        /** @brief 수준별 색으로 한 줄을 씁니다. Error 는 바로 flush 합니다. */
+        /** @brief 수준별 색으로 한 줄을 씁니다. Error 는 바로 flush 합니다(`setFlushEveryLine` 이면 모든 줄). */
         void write( const LogRecord& record ) override;
+
+        /**
+         * @brief 줄마다 표준 출력을 비울지 정합니다(기본 꺼짐 — Error 만 비운다). 전용 서버가 켭니다: 자식 프로세스로 띄운 시험 · journald ·
+         *        `docker logs` 가 "Dedicated server ready" 같은 줄을 바로 봐야 한다. 프로세스 전역입니다.
+         */
+        static void setFlushEveryLine( bool bFlushEveryLine );
 
     private:
         mutex                   _mutex;                   ///< 이 장치 전용. 파일 출력과 락을 공유하지 않는다
         void*                   _pCachedConsoleHandle;    ///< GetStdHandle(STD_OUTPUT_HANDLE) 캐시(Windows)
         [[maybe_unused]] uint16 _defaultConsoleAttribute; ///< 처음 콘솔 텍스트 색상 속성(Windows. 다른 플랫폼은 읽지 않는다)
-        bool                    _bHasConsole;             ///< 표준 출력 콘솔이 유효한지 여부
+        bool                    _bHasConsole;             ///< 표준 출력이 콘솔(터미널)인지 — 아니면 색을 쓰지 않는다(리눅스는 journald · 파일 · 파이프에 이스케이프가 섞이지 않게)
     };
 } // namespace sw

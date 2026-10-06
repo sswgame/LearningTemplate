@@ -2,11 +2,13 @@
 
 #include "Games/ThemeParkTycoon/ParkDirectorComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -14,10 +16,11 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Camera/OrthoCameraRigComponent.h"
-#include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Utility/OrientationUtil.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Utility/OrientationUtil.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include "Games/ThemeParkTycoon/CoasterCarComponent.h"
 #include "Games/ThemeParkTycoon/FlatRideComponent.h"
@@ -31,21 +34,15 @@ namespace sw
     {
         struct ParkDirectorComponentInternal
         {
-            static constexpr float32 kRailSpacing     = 2.0f;        ///< 레일 조각 간격(m)
-            static constexpr uint32  kStateTag        = 0x4B524150u; ///< 'PARK'
-            static constexpr uint32  kStateVersion    = 1;
-            static constexpr float32 kSupportSpacing  = 8.0f; ///< 기둥 간격(m)
-            static constexpr uint32  kCarCount        = 4;
-            static constexpr float32 kStatusInterval  = 10.0f;
-            static constexpr float32 kRideFieldOfView = 85.0f * MathUtil::DegreeToRadian;
-            static constexpr float32 kRideFarPlane    = 600.0f;
-            static constexpr float32 kRideEyeHeight   = 1.6f;
+            static constexpr float32 kRailSpacing    = 2.0f; ///< 레일 조각 간격(m)
+            static constexpr uint32  kStateTag       = FourCcUtil::make( "PARK" );
+            static constexpr uint32  kStateVersion   = 2;
+            static constexpr float32 kSupportSpacing = 8.0f; ///< 기둥 간격(m)
             /**
              * @brief Kenney Coaster Kit 모델의 배율입니다. 키트는 열차 폭 0.7 이고 이 공원의 차 폭은 1.4 다(차 · 레일 프리팹의 크기와 같다).
              * @details 레일 조각은 시작점에서 +Z 로 4 만큼 뻗고, 레일 윗면이 원점보다 0.7 아래다(열차 바닥이 원점). 그래서 레일은 트랙 점에서
-             *          `kModelScale × 0.7` 만큼 올려 윗면을 트랙 점에 맞추고, 차는 바닥을 트랙 점에 둔다. 팔레트 텍스처라 늘려도 색이 번지지 않는다.
+             *          `_modelScale × 0.7` 만큼 올려 윗면을 트랙 점에 맞추고, 차는 바닥을 트랙 점에 둔다. 팔레트 텍스처라 늘려도 색이 번지지 않는다.
              */
-            static constexpr float32 kModelScale      = 2.0f;
             static constexpr float32 kRailPieceLength = 4.0f;
             static constexpr float32 kRailTopDepth    = 0.7f;
             static constexpr float32 kRailBottomDepth = 1.0f;
@@ -92,7 +89,14 @@ namespace sw
         , _cameraRig{}
         , _gate{}
         , _autoBuildInterval{ 20.0f }
+        , _statusLogInterval{ 10.0f }
+        , _carCount{ 4 }
+        , _modelScale{ 2.0f }
+        , _rideEyeHeight{ 1.6f }
+        , _rideFieldOfView{ 85.0f * MathUtil::kDegreeToRadian }
+        , _rideFarPlane{ 600.0f }
         , _simulation{}
+        , _wallet{}
         , _layoutCatalog{}
         , _settings{}
         , _listPlacement{}
@@ -201,7 +205,9 @@ namespace sw
             SW_LOG_WARNING( "[Park] %# places no rides - the park cannot open", _parkDataPath.c_str() );
             return false;
         }
-        _simulation.initialize( _settings, _startingCash );
+        _wallet.clear();
+        _wallet.add( _settings._currency, _startingCash );
+        _simulation.initialize( _settings, makeRefs() );
         _listCoaster.clear();
 
         // 처음 공원 — 가장 싼 평지 놀이기구 하나와 가장 싼 코스터 하나.
@@ -228,9 +234,9 @@ namespace sw
         RidePlacement& placement = _listPlacement[static_cast<size_t>( placementIndex )];
         if ( placement._rideIndex >= 0 )
             return false;
-        if ( _simulation.getCash() < placement._buildCost )
+        if ( _wallet.canAfford( _settings._currency, placement._buildCost ) == false )
         {
-            SW_LOG_INFO( "[Park] not enough cash for %# ($%# needed, $%# in the bank)", placement._ride._name.c_str(), placement._buildCost, _simulation.getCash() );
+            SW_LOG_INFO( "[Park] not enough cash for %# ($%# needed, $%# in the bank)", placement._ride._name.c_str(), placement._buildCost, _wallet.getBalance( _settings._currency ) );
             getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundError );
             return false;
         }
@@ -268,7 +274,7 @@ namespace sw
         placement._ride      = ride;
         if ( pCoaster != nullptr )
             _listCoaster.push_back( std::move( pCoaster ) );
-        SW_LOG_INFO( "[Park] built %# for $%# - ticket $%#, $%# left", ride._name.c_str(), placement._buildCost, ride._price, _simulation.getCash() );
+        SW_LOG_INFO( "[Park] built %# for $%# - ticket $%#, $%# left", ride._name.c_str(), placement._buildCost, ride._price, _wallet.getBalance( _settings._currency ) );
         getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundBuilt );
         _listPendingRideView.push_back( placementIndex );
         return true;
@@ -313,6 +319,7 @@ namespace sw
         outArchive << _statusTimer;
         outArchive << _autoBuildTimer;
         outArchive << _selectedPlacement;
+        _wallet.writeState( outArchive );
     }
 
     bool ParkDirectorComponent::readState( Archive& archive )
@@ -320,7 +327,7 @@ namespace sw
         if ( StateArchiveUtil::readHeader( archive, ParkDirectorComponentInternal::kStateTag, ParkDirectorComponentInternal::kStateVersion ) == false )
             return false;
         ThemeParkSimulation simulation;
-        simulation.initialize( _settings, _startingCash );
+        simulation.initialize( _settings, makeRefs() );
         uint32 placementCount = 0;
         if ( simulation.readState( archive ) == false || StateArchiveUtil::readCount( archive, sizeof( int32 ), placementCount ) == false )
             return false;
@@ -360,10 +367,12 @@ namespace sw
         archive >> statusTimer;
         archive >> autoBuildTimer;
         archive >> selectedPlacement;
-        if ( archive.isError() || archive.getRemainingBytes() != 0 )
+        Wallet wallet;
+        if ( archive.isError() || wallet.readState( archive ) == false || archive.getRemainingBytes() != 0 )
             return false;
 
         _simulation = std::move( simulation );
+        _wallet     = std::move( wallet );
         for ( uint32 placementIndex = 0; placementIndex < placementCount; ++placementIndex )
         {
             RidePlacement& placement = _listPlacement[placementIndex];
@@ -382,10 +391,17 @@ namespace sw
     void ParkDirectorComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO( "[Park] park state restored - %# guests, $%#, %#s open", _simulation.getGuestCount(), _simulation.getCash(),
+            SW_LOG_INFO( "[Park] park state restored - %# guests, $%#, %#s open", _simulation.getGuestCount(), _wallet.getBalance( _settings._currency ),
                          static_cast<int32>( _simulation.getElapsedTime() ) );
         else
             SW_LOG_WARNING( "[Park] the saved park state does not match this build - opening a new park" );
+    }
+
+    GameStateRefs ParkDirectorComponent::makeRefs()
+    {
+        GameStateRefs refs;
+        refs._pWallet = &_wallet;
+        return refs;
     }
 
     bool ParkDirectorComponent::buildCheapestRemaining()
@@ -399,7 +415,7 @@ namespace sw
         }
         if ( cheapest < 0 )
             return false;
-        if ( _simulation.getCash() < _listPlacement[static_cast<size_t>( cheapest )]._buildCost )
+        if ( _wallet.canAfford( _settings._currency, _listPlacement[static_cast<size_t>( cheapest )]._buildCost ) == false )
             return false;
         return buildPlacement( cheapest );
     }
@@ -444,7 +460,7 @@ namespace sw
                 {
                     _arrGuestLook[bucket] = MaterialInstance::create( pMesh->getMaterial() );
                     if ( _arrGuestLook[bucket] != nullptr )
-                        _arrGuestLook[bucket]->setVectorParameter( hashed_string( "color" ), arrColor[bucket] );
+                        _arrGuestLook[bucket]->setVectorParameter( hashed_string( kMaterialColorParameter ), arrColor[bucket] );
                 }
             }
             if ( _arrGuestLook[0] != nullptr )
@@ -491,14 +507,14 @@ namespace sw
 
         // 레일 — 2 m 마다 트랙 좌표계로 돌린 직선 레일 조각(조각 시작점이 원점). 기둥 — 8 m 마다 레일 밑에서 땅까지(뒤집힌 구간은 없다).
         // 스테이션 구간은 레일 옆에 승강장을 깐다.
-        const float3 railScale{ Internal::kModelScale, Internal::kModelScale, Internal::kRailSpacing * 1.05f / Internal::kRailPieceLength };
+        const float3 railScale{ _modelScale, _modelScale, Internal::kRailSpacing * 1.05f / Internal::kRailPieceLength };
         const float3 stationScale{ 2.0f, 2.0f, Internal::kRailSpacing * 1.05f };
         float32      nextSupport = 0.0f;
         for ( float32 distance = 0.0f; distance < track.getLength(); distance += Internal::kRailSpacing )
         {
             const CoasterTrackFrame frame    = track.sample( distance );
             const float3            rotation = OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up );
-            const float3            railLift = frame._up * ( Internal::kModelScale * Internal::kRailTopDepth );
+            const float3            railLift = frame._up * ( _modelScale * Internal::kRailTopDepth );
             MeshComponent*          pRail    = Internal::placeMesh( spawnPrefab( manager, _railPrefab, "CoasterRail" ), frame._position + railLift, rotation );
             if ( pRail != nullptr )
                 pRail->setLocalScale( railScale );
@@ -509,7 +525,7 @@ namespace sw
                 if ( pStation != nullptr )
                     pStation->setLocalScale( stationScale );
             }
-            const float32 railBottom = frame._position._y - Internal::kModelScale * ( Internal::kRailBottomDepth - Internal::kRailTopDepth );
+            const float32 railBottom = frame._position._y - _modelScale * ( Internal::kRailBottomDepth - Internal::kRailTopDepth );
             const bool    bSupported = distance >= nextSupport && frame._up._y > 0.6f && railBottom > 1.5f;
             if ( bSupported )
             {
@@ -517,11 +533,11 @@ namespace sw
                 MeshComponent* pSupport = Internal::placeMesh( spawnPrefab( manager, _supportPrefab, "CoasterSupport" ),
                                                                float3{ frame._position._x, 0.0f, frame._position._z }, float3{ 0.0f, 0.0f, 0.0f } );
                 if ( pSupport != nullptr )
-                    pSupport->setLocalScale( float3{ Internal::kModelScale, railBottom, Internal::kModelScale } );
+                    pSupport->setLocalScale( float3{ _modelScale, railBottom, _modelScale } );
             }
         }
         const GameObjectHandle director = getOwner()->getHandle();
-        for ( uint32 carIndex = 0; carIndex < Internal::kCarCount; ++carIndex )
+        for ( uint32 carIndex = 0; carIndex < _carCount; ++carIndex )
         {
             GameObject* pCar = spawnPrefab( manager, carIndex == 0 ? _carFrontPrefab : _carPrefab, "CoasterCar" );
             (void)Internal::placeMesh( pCar, coaster._train.getFrame()._position, float3{ 0.0f, 0.0f, 0.0f } );
@@ -549,7 +565,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ParkDirectorComponent::updateInput( const InputManager& input )
     {
-        if ( input.wasKeyPressed( Key::Tab ) && _listPlacement.empty() == false )
+        // 키는 입력 맵(`data/park.input.xml`)이 정한다.
+        const InputMap& inputMap = input.getInputMap();
+        if ( inputMap.wasActionTriggered( hashed_string( "Park.NextRide" ) ) && _listPlacement.empty() == false )
         {
             _selectedPlacement = ( _selectedPlacement + 1 ) % static_cast<int32>( _listPlacement.size() );
             getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundSelect );
@@ -560,30 +578,32 @@ namespace sw
         if ( rideIndex >= 0 )
         {
             const ParkRide& ride = _simulation.getRides()[static_cast<size_t>( rideIndex )];
-            if ( input.wasKeyPressed( Key::O ) )
+            if ( inputMap.wasActionTriggered( hashed_string( "Park.ToggleOpen" ) ) )
             {
                 _simulation.setRideOpen( rideIndex, ride._bOpen == SW_FALSE );
                 SW_LOG_INFO( "[Park] %# is now %#", ride._name.c_str(), ride._bOpen != SW_FALSE ? "open" : "closed" );
             }
-            if ( input.wasKeyPressed( Key::LeftBracket ) || input.wasKeyPressed( Key::RightBracket ) )
+            const bool bPriceUp = inputMap.wasActionTriggered( hashed_string( "Park.PriceUp" ) );
+            if ( bPriceUp || inputMap.wasActionTriggered( hashed_string( "Park.PriceDown" ) ) )
             {
-                _simulation.setRidePrice( rideIndex, ride._price + ( input.wasKeyPressed( Key::RightBracket ) ? 1 : -1 ) );
+                _simulation.setRidePrice( rideIndex, ride._price + ( bPriceUp ? 1 : -1 ) );
                 SW_LOG_INFO( "[Park] %# ticket $%# (worth about $%#)", ride._name.c_str(), ride._price, static_cast<int32>( ThemeParkSimulation::computeRideValue( ride ) ) );
             }
         }
-        if ( input.wasKeyPressed( Key::Minus ) || input.wasKeyPressed( Key::Equal ) )
+        const bool bFeeUp = inputMap.wasActionTriggered( hashed_string( "Park.FeeUp" ) );
+        if ( bFeeUp || inputMap.wasActionTriggered( hashed_string( "Park.FeeDown" ) ) )
         {
-            _simulation.setEntryFee( _simulation.getSettings()._entryFee + ( input.wasKeyPressed( Key::Equal ) ? 5 : -5 ) );
+            _simulation.setEntryFee( _simulation.getSettings()._entryFee + ( bFeeUp ? 5 : -5 ) );
             SW_LOG_INFO( "[Park] entry fee $%#", _simulation.getSettings()._entryFee );
         }
-        if ( input.wasKeyPressed( Key::B ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Park.Build" ) ) )
         {
             if ( _listPlacement[static_cast<size_t>( _selectedPlacement )]._rideIndex < 0 )
                 (void)buildPlacement( _selectedPlacement );
             else
                 (void)buildCheapestRemaining();
         }
-        if ( input.wasKeyPressed( Key::V ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Park.Ride" ) ) )
         {
             // 타고 있으면 내린다. 아니면 고른 코스터(고른 것이 코스터가 아니면 첫 코스터)에 탄다.
             if ( _ridingCoaster >= 0 )
@@ -599,9 +619,9 @@ namespace sw
             }
             SW_LOG_INFO( "[Park] %#", _ridingCoaster >= 0 ? "riding the coaster - V again to get off" : "back to the park view" );
         }
-        if ( input.wasKeyPressed( Key::G ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Park.Thoughts" ) ) )
             logThoughts();
-        if ( input.wasKeyPressed( Key::F1 ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Park.Status" ) ) )
             logStatus( 0.0f, true );
     }
 
@@ -631,19 +651,19 @@ namespace sw
         }
         // 맨 앞 차량에 탄 시점 — 롤까지 따라간다(루프에서 하늘이 아래로 온다).
         const CoasterTrackFrame frame = _listCoaster[static_cast<size_t>( _ridingCoaster )]->_train.getFrame();
-        pRig->setViewOverride( frame._position + frame._up * ParkDirectorComponentInternal::kRideEyeHeight,
-                               OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up ), ParkDirectorComponentInternal::kRideFieldOfView,
-                               ParkDirectorComponentInternal::kRideFarPlane );
+        pRig->setViewOverride( frame._position + frame._up * _rideEyeHeight,
+                               OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up ), _rideFieldOfView,
+                               _rideFarPlane );
     }
 
     void ParkDirectorComponent::logStatus( float32 deltaTime, bool bForce )
     {
         _statusTimer += deltaTime;
-        if ( bForce == false && _statusTimer < ParkDirectorComponentInternal::kStatusInterval )
+        if ( bForce == false && _statusTimer < _statusLogInterval )
             return;
         _statusTimer = 0.0f;
         SW_LOG_INFO( "[Park] %# min · cash $%# · guests %# (visited %#) · happiness %#%% · rating %# · rides %# · entry $%#",
-                     static_cast<int32>( _simulation.getElapsedTime() / 60.0f ), _simulation.getCash(), _simulation.getGuestCount(),
+                     static_cast<int32>( _simulation.getElapsedTime() / 60.0f ), _wallet.getBalance( _settings._currency ), _simulation.getGuestCount(),
                      _simulation.getTotalVisitorCount(), static_cast<int32>( _simulation.getAverageHappiness() * 100.0f ), _simulation.getParkRating(),
                      static_cast<uint32>( _simulation.getRides().size() ), _simulation.getSettings()._entryFee );
         for ( [[maybe_unused]] const ParkRide& ride : _simulation.getRides() )

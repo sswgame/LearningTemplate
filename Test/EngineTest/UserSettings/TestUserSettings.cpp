@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
@@ -101,6 +102,41 @@ namespace
         }
     };
 } // namespace
+
+/**
+ * @brief [UserSettingsTest] 명령줄로 준 전역 변수는 기동 적용(reapplyAll)이 덮지 않는다 — 메뉴 적용은 덮는다
+ * @details 실행 한 번의 값(명령줄)이 저장된 값(사용자 설정 · 스키마 기본값)을 이긴다. 화면 설정(`-W` · `-vsync`)과 같은 순서다(언리얼 CVar 도 명령줄이 이긴다).
+ */
+SW_TEST_CASE( UserSettingsTest, CommandLineGlobalVariableWinsAtStartup )
+{
+    sw::CommandLineManager commandLine;
+    commandLine.initialize();
+    utf8* argv[] = {
+        const_cast<utf8*>( "TestApp.exe" ),
+        const_cast<utf8*>( "-gv_userSettingsTestFloat=0.75" ),
+    };
+    commandLine.parse( 2, argv );
+
+    UserSettingsTestInternal::resetTestVariables();
+    gv_userSettingsTestFloat = 0.75f; // 엔진 기동은 명령줄을 전역 변수에 먼저 넣는다
+    sw::UserSettingsManager settings;
+    sw::UserSettingsTargets targets;
+    targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
+    targets._pCommandLineManager    = &commandLine;
+    settings.initialize( targets );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( UserSettingsTestInternal::kSchemaXml, "test.settings.xml" ) );
+    settings.reapplyAll();
+
+    // 1) 기동 적용은 명령줄 값을 지킨다(스키마 기본값 1 로 덮지 않는다). 명령줄에 없는 변수는 그대로 적용된다.
+    SW_EXPECT_NEAR_EQUAL( 0.75f, gv_userSettingsTestFloat, 0.0001f );
+    SW_EXPECT_TRUE( gv_userSettingsTestBool );
+
+    // 2) 메뉴에서 고른 값은 덮는다.
+    SW_EXPECT_TRUE( settings.setPendingValue( "video.scale", "0.5" ) == sw::UserSettingSetResult::Accepted );
+    (void)settings.applyPending();
+    SW_EXPECT_NEAR_EQUAL( 0.5f, gv_userSettingsTestFloat, 0.0001f );
+    UserSettingsTestInternal::resetTestVariables();
+}
 
 /**
  * @brief [UserSettingsTest] 시험 스키마가 검사를 통과하고, 기동 적용이 기본값을 전역 변수 대상에 넣는다

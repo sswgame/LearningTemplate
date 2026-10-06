@@ -21,7 +21,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameService.h"
 
 #include "Games/Empty/BenchScene.h"
 
@@ -208,7 +208,7 @@ namespace sw
             // 기사는 +Z 를 본다 — 카메라(-Z 쪽)를 보게 돌린다. 줄은 X 로 — 기울기라 사람마다 땅 높이가 다르다.
             const float32 x = origin + static_cast<float32>( index ) * BenchSceneRigInternal::kRigSpacing;
             pBody->setLocalPosition( float3{ x, MathUtil::tan( BenchSceneRigInternal::kSlopeAngle ) * x, 0.0f } );
-            pBody->setLocalRotation( float3{ 0.0f, MathUtil::Pi, 0.0f } );
+            pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             pAnimator->setClipFolder( BenchSceneRigInternal::kKnightClips );
             pAnimator->setInitialState( BenchSceneRigInternal::kKnightState );
             _listRigBody.push_back( pBody->getHandle() );
@@ -288,7 +288,7 @@ namespace sw
                 continue;
             }
             const float32 tanHalf  = MathUtil::tan( pCamera->getFieldOfViewY() * 0.5f );
-            const float32 distance = ( tanHalf > MathUtil::Epsilon ) ? ( halfSpan * 1.2f / tanHalf ) : ( halfSpan * 3.0f );
+            const float32 distance = ( tanHalf > MathUtil::kEpsilon ) ? ( halfSpan * 1.2f / tanHalf ) : ( halfSpan * 3.0f );
             pCamera->setLocalPosition( float3{ 0.0f, 1.4f, -distance } );
             pCamera->lookAt( float3{ 0.0f, 0.9f, 0.0f } );
         }
@@ -315,7 +315,7 @@ namespace sw
         if ( MeshComponent* pBall = castTo<MeshComponent>( pObjects->resolveComponent( _rigLookTarget ) ) )
             pBall->setLocalPosition( float3{ 0.9f * MathUtil::sin( time * 0.9f ), 1.35f + 0.35f * MathUtil::sin( time * 1.7f ), -1.1f } );
         // 몸을 좌우로 틀어 망토가 관성으로 흔들리게 한다(스프링 본은 월드 공간 입자라 몸이 돌면 뒤처진다).
-        const float32 yaw = MathUtil::Pi + ( ( gv_benchAnimate != 0 ) ? 0.45f * MathUtil::sin( time * 2.2f ) : 0.0f );
+        const float32 yaw = MathUtil::kPi + ( ( gv_benchAnimate != 0 ) ? 0.45f * MathUtil::sin( time * 2.2f ) : 0.0f );
         for ( const ComponentHandle handle : _listRigBody )
         {
             if ( SkeletalMeshComponent* pBody = castTo<SkeletalMeshComponent>( pObjects->resolveComponent( handle ) ) )

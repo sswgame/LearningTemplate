@@ -4,6 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 
 namespace sw
@@ -162,5 +165,69 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    void ActionStageRun::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeName( outArchive, _pStage != nullptr ? _pStage->_id : hashed_string{} );
+        outArchive << static_cast<uint8>( _state );
+        outArchive << _elapsed;
+        outArchive << _lives;
+        outArchive << _checkpointIndex;
+        outArchive << _hitCount;
+        outArchive << _deathCount;
+        outArchive << static_cast<uint32>( _listSecretCommitted.size() );
+        for ( const hashed_string& secretId : _listSecretCommitted )
+        {
+            StateArchiveUtil::writeName( outArchive, secretId );
+        }
+        outArchive << static_cast<uint32>( _listSecretPending.size() );
+        for ( const hashed_string& secretId : _listSecretPending )
+        {
+            StateArchiveUtil::writeName( outArchive, secretId );
+        }
+    }
+
+    bool ActionStageRun::readState( Archive& archive )
+    {
+        hashed_string stageId;
+        uint8         state = 0;
+        if ( StateArchiveUtil::readName( archive, stageId ) == false )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다.
+        ActionStageRun restored = *this;
+        restored._pStage        = stageId.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findStage( stageId );
+        if ( stageId.empty() == false && restored._pStage == nullptr )
+            return false;
+        archive >> state;
+        archive >> restored._elapsed;
+        archive >> restored._lives;
+        archive >> restored._checkpointIndex;
+        archive >> restored._hitCount;
+        archive >> restored._deathCount;
+        const int32 checkpointCount = restored._pStage != nullptr ? static_cast<int32>( restored._pStage->_listCheckpoint.size() ) : 0;
+        const bool  bHeadValid      = archive.isOk() && state <= static_cast<uint8>( ActionStageState::GameOver ) && 0.0f <= restored._elapsed && 0 <= restored._lives &&
+                              -1 <= restored._checkpointIndex && restored._checkpointIndex < checkpointCount && 0 <= restored._hitCount && 0 <= restored._deathCount;
+        if ( bHeadValid == false )
+            return false;
+        restored._state = static_cast<ActionStageState>( state );
+
+        // 확정 · 지닌 비밀 순서 — 비밀은 이 스테이지의 것이어야 한다
+        for ( int32 listIndex = 0; listIndex < 2; ++listIndex )
+        {
+            vector<hashed_string>& listSecret  = listIndex == 0 ? restored._listSecretCommitted : restored._listSecretPending;
+            uint32                 secretCount = 0;
+            if ( StateArchiveUtil::readCount( archive, 4, secretCount ) == false )
+                return false;
+            listSecret.assign( secretCount, hashed_string{} );
+            for ( hashed_string& secretId : listSecret )
+            {
+                const bool bSecretValid = StateArchiveUtil::readName( archive, secretId ) && restored._pStage != nullptr && contains( restored._pStage->_listSecret, secretId );
+                if ( bSecretValid == false )
+                    return false;
+            }
+        }
+        *this = std::move( restored );
+        return true;
     }
 } // namespace sw

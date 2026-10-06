@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "GameFramework/Progression/LevelProgress.h"
-#include "GameFramework/Progression/Reputation.h"
-#include "GameFramework/Progression/RunMap.h"
-#include "GameFramework/Progression/SkillTree.h"
+#include "GameFramework/Base/Progression/LevelProgress.h"
+#include "GameFramework/Base/Progression/Reputation.h"
+#include "GameFramework/Base/Progression/RunMap.h"
+#include "GameFramework/Base/Progression/SkillTree.h"
 
 #include "TestFramework/TestFramework.h"
 

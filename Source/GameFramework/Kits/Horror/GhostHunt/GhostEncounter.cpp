@@ -4,8 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/RayMath.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
-#include "GameFramework/Utility/RayMath.h"
 
 namespace sw
 {
@@ -13,8 +16,7 @@ namespace sw
     {
         struct GhostEncounterInternal
         {
-            static constexpr float32 kDegreeToRadian     = 3.14159265358979f / 180.0f;
-            static constexpr int32   kFleeDirectionCount = 8;
+            static constexpr int32 kFleeDirectionCount = 8;
 
             /** @brief XZ 로 눕혀 길이 1 로 — 너무 짧으면 0 벡터입니다. */
             static float3 flatten( const float3& direction )
@@ -364,7 +366,7 @@ namespace sw
     {
         const int32   index = _random.nextInt( 0, GhostEncounterInternal::kFleeDirectionCount - 1 );
         const float32 angle = static_cast<float32>( index ) * ( 360.0f / static_cast<float32>( GhostEncounterInternal::kFleeDirectionCount ) ) *
-                              GhostEncounterInternal::kDegreeToRadian;
+                              MathUtil::kDegreeToRadian;
         ghost._fleeDirection = float3{ MathUtil::sin( angle ), 0.0f, MathUtil::cos( angle ) };
     }
 
@@ -388,5 +390,83 @@ namespace sw
         event._amount  = amount;
         event._coins   = coins;
         _eventBuffer.push( event );
+    }
+
+    void GhostEncounter::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << static_cast<uint32>( _listGhost.size() );
+        for ( const GhostInstance& ghost : _listGhost )
+        {
+            StateArchiveUtil::writeName( outArchive, ghost._pDef->_id );
+            outArchive << ghost._position;
+            outArchive << ghost._fleeDirection;
+            outArchive << ghost._hp;
+            StateArchiveUtil::writeCountdown( outArchive, ghost._timer );
+            outArchive << ghost._id;
+            outArchive << static_cast<uint8>( ghost._state );
+        }
+        outArchive << _strobeCharge;
+        outArchive << _surgeGauge;
+        outArchive << _suctionTarget;
+        outArchive << _nextGhostId;
+        outArchive << _vacuumStage;
+    }
+
+    bool GhostEncounter::readState( Archive& archive )
+    {
+        if ( _pCatalog == nullptr )
+            return false;
+        GameRandom random = _random;
+        uint32     count  = 0;
+        // 유령마다 이름(4) + 자리 · 도망 방향(24) + 체력 · 시간 · 번호(12) + 상태(1) 이상
+        if ( StateArchiveUtil::readRandom( archive, random ) == false || StateArchiveUtil::readCount( archive, 41, count ) == false )
+            return false;
+        vector<GhostInstance> listGhost( count );
+        for ( GhostInstance& ghost : listGhost )
+        {
+            hashed_string ghostId;
+            uint8         state = 0;
+            if ( StateArchiveUtil::readName( archive, ghostId ) == false )
+                return false;
+            ghost._pDef = _pCatalog->findGhost( ghostId );
+            archive >> ghost._position;
+            archive >> ghost._fleeDirection;
+            archive >> ghost._hp;
+            const bool bTimerRead = StateArchiveUtil::readCountdown( archive, ghost._timer );
+            archive >> ghost._id;
+            archive >> state;
+            const bool bValid = bTimerRead && archive.isOk() && ghost._pDef != nullptr && state <= static_cast<uint8>( GhostState::Caught );
+            if ( bValid == false )
+                return false;
+            ghost._state = static_cast<GhostState>( state );
+        }
+        float32 strobeCharge  = 0.0f;
+        float32 surgeGauge    = 0.0f;
+        uint32  suctionTarget = 0;
+        uint32  nextGhostId   = 1;
+        int32   vacuumStage   = 0;
+        archive >> strobeCharge;
+        archive >> surgeGauge;
+        archive >> suctionTarget;
+        archive >> nextGhostId;
+        archive >> vacuumStage;
+        if ( archive.isError() || vacuumStage < 0 )
+            return false;
+        // 흡입 대상은 있는 유령이어야 한다.
+        bool bTargetFound = suctionTarget == 0;
+        for ( const GhostInstance& ghost : listGhost )
+            bTargetFound = bTargetFound || ghost._id == suctionTarget;
+        if ( bTargetFound == false )
+            return false;
+        _random        = random;
+        _listGhost     = std::move( listGhost );
+        _strobeCharge  = strobeCharge;
+        _surgeGauge    = surgeGauge;
+        _suctionTarget = suctionTarget;
+        _nextGhostId   = nextGhostId;
+        _vacuumStage   = vacuumStage;
+        _eventBuffer.clear();
+        return true;
     }
 } // namespace sw

@@ -1,0 +1,15 @@
+{
+    "_name": "login_storm",
+    "_botCount": 5000,
+    "_rampUpSeconds": 10,
+    "_durationSeconds": 120,
+    "_seed": 2,
+    "_region": "kr",
+    "_listStep": [
+        { "_action": "login", "_mode": "password" },
+        { "_action": "directory_status" },
+        { "_action": "liveops_state" },
+        { "_action": "wait", "_minMs": 30000, "_maxMs": 30000 },
+        { "_action": "logout" }
+    ]
+}

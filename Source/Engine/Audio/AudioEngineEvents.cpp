@@ -3,6 +3,7 @@
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixer.h"
 #include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/Dsp/AudioEffect.h"
 
 namespace sw
@@ -11,8 +12,6 @@ namespace sw
     {
         struct AudioEngineEventsInternal
         {
-            /** @brief 블록 하나의 길이(초)입니다. */
-            static constexpr float32 kBlockSeconds = static_cast<float32>( audio::kBlockFrameCount ) / static_cast<float32>( audio::kSampleRate );
 
             /** @brief 데이터에 적힌(없으면 종류 기본) 이펙트 파라미터 값입니다. */
             static float32 findBaseEffectValue( const AudioEffectDesc& effect, const AudioEffectTypeInfo& typeInfo, uint32 parameterIndex )
@@ -318,7 +317,7 @@ namespace sw
 
     void AudioEngine::updateParameters()
     {
-        const float32 step = AudioEngineEventsInternal::kBlockSeconds;
+        const float32 step = audio::kBlockSeconds;
         for ( auto& entry : _mapParameter )
         {
             ParameterState& parameter = entry.second;
@@ -395,7 +394,7 @@ namespace sw
             {
                 const bool    bRising = snapshot._target > snapshot._intensity;
                 const float32 seconds = bRising ? snapshot._pDesc->_fadeInSeconds : snapshot._pDesc->_fadeOutSeconds;
-                const float32 move    = seconds <= 0.0f ? 1.0f : AudioEngineEventsInternal::kBlockSeconds / seconds;
+                const float32 move    = seconds <= 0.0f ? 1.0f : audio::kBlockSeconds / seconds;
                 snapshot._intensity   = bRising ? MathUtil::min( snapshot._target, snapshot._intensity + move )
                                                 : MathUtil::max( snapshot._target, snapshot._intensity - move );
             }
@@ -542,7 +541,7 @@ namespace sw
         for ( EventInstance& instance : _listInstance )
         {
             instance._audibility = -1.0f;
-            instance._distance   = MathUtil::MaxFloat;
+            instance._distance   = MathUtil::kMaxFloat;
         }
         for ( const VoiceSlot& slot : _listVoice )
         {

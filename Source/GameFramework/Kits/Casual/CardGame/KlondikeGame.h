@@ -3,6 +3,7 @@
  * @brief 솔리테어(클론다이크) — 7 열 · 파운데이션 4 · 스톡 · 웨이스트, 옮기기 규칙 검사, 1 장/3 장 뽑기, 자동 완료, 되돌리기입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -12,6 +13,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 규칙 설정입니다. */
     struct KlondikeSettings
     {
@@ -49,6 +52,9 @@ namespace sw
     class SW_GF_API KlondikeGame
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CKLN" );
+        static constexpr uint32 kStateVersion = 1;
+
         KlondikeGame();
 
         void initialize( const KlondikeSettings& settings, uint32 seed );
@@ -76,6 +82,11 @@ namespace sw
         bool canAutoComplete() const;
         /** @brief 자동 완료 — 올릴 수 있는 패를 파운데이션으로 올립니다(되돌리기 한 번에 묶인다). 올린 장수입니다. */
         int32 autoComplete();
+
+        /** @brief 판(열 · 뒤집힌 장수 · 파운데이션 · 스톡 · 웨이스트 · 되돌린 수 · 옮긴 수)과 되돌리기 기록을 씁니다. 설정은 `initialize` 의 것이라 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         const KlondikeState&    getState() const { return _state; }
         const KlondikeSettings& getSettings() const { return _settings; }

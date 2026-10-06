@@ -14,6 +14,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
@@ -98,6 +100,55 @@ namespace sw
             }
 
             static constexpr MemoryAllocationObserver kObserver{ &onAllocateObserved, &onFreeObserved };
+
+            /** @brief 태스크 구간 지점 캐시의 칸 수입니다(스레드마다). 태스크 이름은 수십 가지다 — 겹치면 그 칸을 덮어쓴다. */
+            static constexpr uint32 kTaskSiteCacheSize = 64;
+
+            /**
+             * @brief 태스크 · 스테이지 이름으로 계측 지점을 찾습니다.
+             * @details 지점 등록(`registerZoneSite`)은 잠금 + 선형 검색이라 태스크마다 부르면 워커끼리 다툰다 — 스레드마다 작은 표를 앞에 둔다.
+             *          대기 구간은 "Wait <이름>" 으로 등록한다(뷰어에서 실행과 갈린다).
+             */
+            static const ProfileZoneSite* findTaskZoneSite( const utf8* pName, TaskProfileZoneKind kind )
+            {
+                struct SiteCacheEntry
+                {
+                    uint64                 _key{ 0 };
+                    const ProfileZoneSite* _pSite{ nullptr };
+                };
+                thread_local SiteCacheEntry t_arrSiteCache[kTaskSiteCacheSize]{};
+
+                const uint64    key   = StringUtil::computeHash64( pName, StringUtil::strlen( pName ), false, static_cast<uint64>( kind ) + 1 ) | 1;
+                SiteCacheEntry& entry = t_arrSiteCache[key % kTaskSiteCacheSize];
+                if ( entry._key == key )
+                    return entry._pSite;
+
+                fixed_string<constant::kMaxBuffer64> zoneName;
+                if ( kind == TaskProfileZoneKind::WaitStage )
+                    zoneName.append( "Wait " );
+                zoneName.append( pName );
+                entry._key   = key;
+                entry._pSite = ProfilerBackend::registerZoneSite( zoneName.c_str(), kind == TaskProfileZoneKind::Execute ? "TaskManager::executeTask" : "TaskManager::waitStage",
+                                                                  "Source/Core/Task/TaskManager.cpp", static_cast<uint32>( kind ) );
+                return entry._pSite;
+            }
+
+            /** @brief 활성 출력에 태스크 · 스테이지 구간을 엽니다. 출력이 없거나 지점 저장소가 찼으면 열지 않습니다. */
+            static TaskProfileZone beginTaskZone( const utf8* pName, TaskProfileZoneKind kind )
+            {
+                IProfilerBackend* pBackend = s_pActive.load( std::memory_order_acquire );
+                if ( pBackend == nullptr )
+                    return {};
+                const ProfileZoneSite* pSite = findTaskZoneSite( pName, kind );
+                if ( pSite == nullptr )
+                    return {};
+                return TaskProfileZone{ pBackend, pBackend->beginZone( *pSite ) };
+            }
+
+            /** @brief 구간은 연 출력으로 닫는다 — 열린 동안 활성 출력이 바뀌어도 짝이 어긋나지 않는다(`ScopedFrameProfile` 과 같은 규칙). */
+            static void endTaskZone( const TaskProfileZone& zone ) { static_cast<IProfilerBackend*>( zone._pContext )->endZone( zone._token ); }
+
+            static constexpr TaskProfileHook kTaskProfileHook{ &beginTaskZone, &endTaskZone };
 #endif
         };
 
@@ -141,6 +192,9 @@ namespace sw
                          ProfilerBackendInternal::s_tracy.getGpuZoneCount(), ProfilerBackendInternal::s_tracy.isViewerConnected() ? "connected" : "not connected" );
         }
         Memory::setAllocationObserver( nullptr );
+#if SW_PROFILER_BACKEND_COMPILED
+        TaskManager::setProfileHook( nullptr );
+#endif
         setActiveBackend( nullptr );
     }
 
@@ -157,6 +211,8 @@ namespace sw
 
         // 첫 Tracy 호출이 TracyClient.dll 을 올리고 수집 스레드 · 리슨 소켓을 세운다(지연 로드).
         setActiveBackend( &ProfilerBackendInternal::s_tracy );
+        // 태스크 · 스테이지 이름이 구간이 된다(Core 는 프로파일러를 모르므로 여기서 꽂는다).
+        TaskManager::setProfileHook( &ProfilerBackendInternal::kTaskProfileHook );
         if ( gv_tracyMemory )
             Memory::setAllocationObserver( &ProfilerBackendInternal::kObserver );
 
@@ -182,6 +238,13 @@ namespace sw
     }
 
     uint16 ProfilerBackend::getTracyPort() { return TracyProfilerBackend::getDataPort(); }
+
+#if SW_PROFILER_BACKEND_COMPILED
+    const TaskProfileHook* ProfilerBackend::getTaskProfileHook()
+    {
+        return &ProfilerBackendInternal::kTaskProfileHook;
+    }
+#endif
 
     IProfilerBackend* ProfilerBackend::getActiveBackend() { return ProfilerBackendInternal::s_pActive.load( std::memory_order_acquire ); }
 

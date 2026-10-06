@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Inventory/Shop.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternCatalog.h"
 
 namespace sw
@@ -220,6 +223,84 @@ namespace sw
     void WesternLawState::drainEvents( vector<WesternLawEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void WesternLawState::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listRecord.size() );
+        for ( const RegionRecord& record : _listRecord )
+        {
+            StateArchiveUtil::writeName( outArchive, record._regionId );
+            outArchive << record._unseenTime;
+            outArchive << record._bounty;
+            outArchive << record._wantedLevel;
+            outArchive << record._bSeenByLaw;
+        }
+        outArchive << static_cast<uint32>( _listPending.size() );
+        for ( const PendingReport& report : _listPending )
+        {
+            StateArchiveUtil::writeName( outArchive, report._crimeId );
+            StateArchiveUtil::writeName( outArchive, report._regionId );
+            outArchive << report._witnessId;
+            outArchive << report._incidentId;
+            StateArchiveUtil::writeCountdown( outArchive, report._remaining );
+            outArchive << report._bMasked;
+        }
+        outArchive << _nextIncidentId;
+        outArchive << _bDisguised;
+    }
+
+    bool WesternLawState::readState( Archive& archive )
+    {
+        uint32 recordCount = 0;
+        // 기록마다 지역(4) + 안 보인 시간 · 현상금 · 수배(12) + 보는지(1)
+        if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 17, recordCount ) == false )
+            return false;
+        vector<RegionRecord> listRecord( recordCount );
+        for ( RegionRecord& record : listRecord )
+        {
+            if ( StateArchiveUtil::readName( archive, record._regionId ) == false || _pCatalog->findRegion( record._regionId ) == nullptr )
+                return false;
+            archive >> record._unseenTime;
+            archive >> record._bounty;
+            archive >> record._wantedLevel;
+            archive >> record._bSeenByLaw;
+            const bool bValid = archive.isOk() && 0 <= record._bounty && 0 <= record._wantedLevel && record._bSeenByLaw <= SW_TRUE;
+            if ( bValid == false )
+                return false;
+        }
+
+        uint32 pendingCount = 0;
+        // 대기마다 범죄 · 지역(8) + 목격자(8) + 사건(4) + 남은 시간(4) + 가렸는지(1)
+        if ( StateArchiveUtil::readCount( archive, 25, pendingCount ) == false )
+            return false;
+        vector<PendingReport> listPending( pendingCount );
+        for ( PendingReport& report : listPending )
+        {
+            const bool bNamesRead = StateArchiveUtil::readName( archive, report._crimeId ) && StateArchiveUtil::readName( archive, report._regionId );
+            if ( bNamesRead == false || _pCatalog->findCrime( report._crimeId ) == nullptr || _pCatalog->findRegion( report._regionId ) == nullptr )
+                return false;
+            archive >> report._witnessId;
+            archive >> report._incidentId;
+            if ( StateArchiveUtil::readCountdown( archive, report._remaining ) == false )
+                return false;
+            archive >> report._bMasked;
+            if ( archive.isError() || report._bMasked > SW_TRUE )
+                return false;
+        }
+
+        uint32 nextIncidentId = 0;
+        uint8  bDisguised     = SW_FALSE;
+        archive >> nextIncidentId;
+        archive >> bDisguised;
+        if ( archive.isError() || nextIncidentId == 0 || bDisguised > SW_TRUE )
+            return false;
+        _listRecord     = std::move( listRecord );
+        _listPending    = std::move( listPending );
+        _nextIncidentId = nextIncidentId;
+        _bDisguised     = bDisguised;
+        _eventBuffer.clear();
+        return true;
     }
 
     WesternLawState::RegionRecord* WesternLawState::findRecordMutable( const hashed_string& regionId )

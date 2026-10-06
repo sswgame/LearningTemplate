@@ -17,6 +17,7 @@
 
 namespace sw
 {
+    class Component;
     class Material;
     class MaterialInstance;
     class Mesh;
@@ -87,6 +88,17 @@ namespace sw
         /** @brief 항목 모두의 투명 정렬 키입니다. */
         uint32 getSortKey() const { return _sortKey; }
 
+        /**
+         * @brief 이 배치를 든 컴포넌트입니다. 그 컴포넌트가 꺼지면(자기 비트 · 소유 오브젝트의 계층 활성 — `Component::isActive`) 빌더가 항목 모두를 뺍니다.
+         * @details `MeshComponent` 와 같은 규칙입니다. 든 쪽은 활성이 바뀔 때 `markAllEntriesDirty` 를 불러야 합니다 — 부르지 않으면 부분 수집이 지난 프레임 후보를 쓴다.
+         *          nullptr 이면(벤치처럼 컴포넌트 없이 쓰는 배치) 늘 그립니다. 소유하지 않습니다.
+         */
+        void setOwnerComponent( const Component* pOwnerComponent ) { _pOwnerComponent = pOwnerComponent; }
+        /** @brief 이 배치를 든 컴포넌트입니다. 없으면 nullptr 입니다. */
+        const Component* getOwnerComponent() const { return _pOwnerComponent; }
+        /** @brief 항목 모두를 더티로 표시합니다 — 든 컴포넌트의 활성이 바뀌었을 때(실릴지가 바뀌므로 그 프레임은 전체 수집이 된다). */
+        void markAllEntriesDirty();
+
         /** @brief 메시(원시 포인터)입니다. */
         Mesh* getRawMesh() const { return _mesh.get(); }
         /** @brief 메시(소유 포인터)입니다. */
@@ -110,9 +122,10 @@ namespace sw
         shared_ptr<Mesh>             _mesh;
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _instance;
-        PrimitiveRegistry*           _pRegistry;  ///< 등록된 등록부. 등록부가 먼저 사라지면 등록부가 비웁니다
-        uint32                       _firstEntry; ///< 등록부의 인스턴스 항목 목록에서 첫 항목 자리. 등록부가 적습니다
-        uint32                       _sortKey;    ///< 항목 모두의 투명 정렬 키(0 = 기본)
+        const Component*             _pOwnerComponent; ///< 든 컴포넌트(빌림). 꺼지면 빌더가 뺀다. nullptr 이면 늘 그린다
+        PrimitiveRegistry*           _pRegistry;       ///< 등록된 등록부. 등록부가 먼저 사라지면 등록부가 비웁니다
+        uint32                       _firstEntry;      ///< 등록부의 인스턴스 항목 목록에서 첫 항목 자리. 등록부가 적습니다
+        uint32                       _sortKey;         ///< 항목 모두의 투명 정렬 키(0 = 기본)
         uint8                        _bVisible;
     };
 } // namespace sw

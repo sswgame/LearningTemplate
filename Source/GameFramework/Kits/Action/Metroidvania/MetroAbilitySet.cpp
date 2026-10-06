@@ -2,10 +2,14 @@
 
 #include "GameFramework/Kits/Action/Metroidvania/MetroAbilitySet.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
-#include "GameFramework/World/GameFlags.h"
 
 namespace sw
 {
@@ -48,7 +52,8 @@ namespace sw
             static constexpr const utf8* kWallJumpName = "wallJump";
             static constexpr const utf8* kDashName     = "dash";
 
-            static hashed_string resolveFlag( const MetroAbilityDef& ability ) { return ability._flag.empty() ? ability._id : ability._flag; }
+            /** @brief 능력의 플래그 — 비면 `ability.<id>`(공유 플래그에서 다른 키트의 같은 id 와 갈린다). */
+            static hashed_string resolveFlag( const MetroAbilityDef& ability ) { return ability._flag.empty() ? hashed_string( string( "ability." ) + ability._id.c_str() ) : ability._flag; }
         };
     } // namespace
 } // namespace sw
@@ -183,5 +188,37 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    void MetroAbilitySet::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listAbility.size() );
+        for ( const hashed_string& abilityId : _listAbility )
+        {
+            StateArchiveUtil::writeName( outArchive, abilityId );
+        }
+    }
+
+    bool MetroAbilitySet::readState( Archive& archive )
+    {
+        if ( _pCatalog == nullptr )
+            return false;
+        uint32 abilityCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 4, abilityCount ) == false )
+            return false;
+        vector<hashed_string> listAbility;
+        listAbility.reserve( abilityCount );
+        for ( uint32 entry = 0; entry < abilityCount; ++entry )
+        {
+            hashed_string abilityId;
+            if ( StateArchiveUtil::readName( archive, abilityId ) == false )
+                return false;
+            const bool bDuplicate = std::find( listAbility.begin(), listAbility.end(), abilityId ) != listAbility.end();
+            if ( _pCatalog->findAbility( abilityId ) == nullptr || bDuplicate )
+                return false;
+            listAbility.push_back( abilityId );
+        }
+        _listAbility = std::move( listAbility );
+        return true;
     }
 } // namespace sw

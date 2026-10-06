@@ -1,12 +1,13 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
-#include "GameFramework/World/PropScatterComponent.h"
+#include "GameFramework/Base/World/PropScatterComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -33,7 +34,7 @@ namespace
             params._inwardJitter = 4.0f;
             params._scaleMin     = 3.0f;
             params._scaleMax     = 4.5f;
-            params._seed         = 0x9E3779B9u;
+            params._seed         = sw::HashUtil::kGoldenRatio32;
             params._mode         = PropScatterMode::Edge;
             return params;
         }
@@ -64,7 +65,7 @@ SW_TEST_CASE( PropScatterTest, SameSeedGivesTheSameLayout )
     {
         const PropScatterPlacement& placement = listFirst[placementIndex];
         bSame                                 = bSame && PropScatterTestUtil::isSamePlacement( placement, listSecond[placementIndex] );
-        bInRange                              = bInRange && 3.0f <= placement._scale && placement._scale <= 4.5f && 0.0f <= placement._yaw && placement._yaw <= MathUtil::Pi * 2.0f;
+        bInRange                              = bInRange && 3.0f <= placement._scale && placement._scale <= 4.5f && 0.0f <= placement._yaw && placement._yaw <= MathUtil::kPi * 2.0f;
     }
     SW_EXPECT_TRUE( bSame );
     SW_EXPECT_TRUE( bInRange );
@@ -213,7 +214,7 @@ SW_TEST_CASE( PropScatterTest, RulesModeUsesThePlacementCore )
     SW_ASSERT_TRUE( listFirst.size() > 50 );
     SW_ASSERT_EQUAL( listFirst.size(), listSecond.size() );
     bool    bRules  = true;
-    float32 closest = MathUtil::MaxFloat;
+    float32 closest = MathUtil::kMaxFloat;
     for ( size_t first = 0; first < listFirst.size(); ++first )
     {
         const PropScatterPlacement& placement = listFirst[first];

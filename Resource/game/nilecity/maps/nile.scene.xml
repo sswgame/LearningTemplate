@@ -35,7 +35,6 @@
 					                         _focusMin="0,0,0"
 					                         _focusMax="48,0,40"
 					                         _bInputEnabled="true"
-					                         _bWasdPan="true"
 					                         _bClampFocus="true" />
 				</_listComponent>
 			</GameObject>

@@ -277,17 +277,17 @@ namespace sw
 
         bool bAllViewsCulled = true;
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
-            bAllViewsCulled = dispatchCullView( viewIndex, _arrView[viewIndex], instanceCount ) && bAllViewsCulled;
+            bAllViewsCulled = dispatchCullView( viewIndex, _arrView[viewIndex], instanceCount, nullptr ) && bAllViewsCulled;
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {
             // 컬링 못 한 추가 뷰는 그리지 않는다 — 가시 목록을 거는 프레임에 갱신 안 된 목록을 읽게 된다.
-            if ( pView->_bRenderThisFrame == SW_TRUE && dispatchCullView( pView->_cullSlot, pView->_cullInput, instanceCount ) == false )
+            if ( pView->_bRenderThisFrame == SW_TRUE && dispatchCullView( pView->_cullSlot, pView->_cullInput, instanceCount, pView.get() ) == false )
                 pView->_bRenderThisFrame = SW_FALSE;
         }
         _bGpuCullingActive = bAllViewsCulled ? 1u : 0u;
     }
 
-    bool FrameRenderer::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount )
+    bool FrameRenderer::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView )
     {
         if ( cullViewIndex >= _gpuScene.getCullViewCount() )
             return false;
@@ -333,20 +333,27 @@ namespace sw
         if ( sortPso != 0 && renderView._sortCb.isValid() && cullParams._batchCount > 0 )
         {
             FrameRendererUtil::GpuSortParams sortParams{};
-            // 셰이더는 인스턴스 번호로 정렬한다(정렬 기준은 CPU 한 곳 — 정렬 레이어 · 시선 축). 카메라 위치는 상수버퍼 꼴을 지키려 그대로 싣는다.
-            sortParams._arrCameraPos[0] = renderView._position._x;
-            sortParams._arrCameraPos[1] = renderView._position._y;
-            sortParams._arrCameraPos[2] = renderView._position._z;
-            sortParams._instanceCount   = instanceCount;
-            sortParams._batchCount      = cullParams._batchCount;
+            // 셰이더는 인스턴스 번호로 정렬한다(정렬 기준은 CPU 한 곳 — 정렬 레이어 · 시선 축). 추가 뷰는 CPU 가 그 뷰의 눈으로 다시 정한 순번(t2)으로.
+            // 카메라 위치는 상수버퍼 꼴을 지키려 그대로 싣는다.
+            const bool bViewRank             = pExtraView != nullptr && pExtraView->_bHasTransparentRank == SW_TRUE;
+            sortParams._arrCameraPos[0]      = renderView._position._x;
+            sortParams._arrCameraPos[1]      = renderView._position._y;
+            sortParams._arrCameraPos[2]      = renderView._position._z;
+            sortParams._instanceCount        = instanceCount;
+            sortParams._batchCount           = cullParams._batchCount;
+            sortParams._bUseViewRank         = bViewRank ? 1u : 0u;
+            sortParams._transparentTailBase  = bViewRank ? pExtraView->_transparentTailBase : 0u;
+            const RHIDescriptorIndex rankSrv = bViewRank ? pExtraView->_transparentRank._srv : _transparentRankPlaceholder._srv;
             // 정렬 상수버퍼도 **뷰마다 자기 것**이다 — 뷰마다 다른 값(눈 자리)을 실으므로 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
             renderView._sortCb.update( *_pCmd, &sortParams, sizeof( sortParams ) );
 
             _pCmd->setComputePipelineState( sortPso );
-            // 바인딩 자리는 컬링과 같다. 인자 · 가시 목록을 그대로 읽고 쓴다.
+            // 바인딩 자리는 컬링과 같다. 인자 · 가시 목록을 그대로 읽고 쓴다. g_ViewRank(t2)는 추가 뷰의 순번 표, 그 밖은 자리표다.
             _pCmd->bindComputeConstantBuffer( renderView._sortCb._index, 0 );
             _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
             _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
+            if ( rankSrv != kInvalidDescriptorIndex )
+                _pCmd->bindComputeShaderResource( rankSrv, 2 );
             _pCmd->bindComputeUav( view._indirectArgs._uav, 0 );
             _pCmd->bindComputeUav( view._visibleInstances._uav, 1 );
             // 배치마다 워크그룹 하나. 그 배치의 목록을 그룹 공유 메모리 안에서 정렬한다.

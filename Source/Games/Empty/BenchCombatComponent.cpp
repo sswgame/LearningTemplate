@@ -94,7 +94,7 @@ namespace sw
         pUnit->resolveRenderAssets();
         pUnit->setAnimateWhenOffscreen( true );
         // KayKit 은 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌린다.
-        pUnit->setLocalRotation( float3{ 0.0f, MathUtil::Pi, 0.0f } );
+        pUnit->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
         pAnimator->setClipFolder( Internal::kEnemyClips );
         pAnimator->setInitialState( "Walking_A" );
         pNotify->setNotifyTablePath( Internal::makeDataPath( ".notifies.xml" ) );

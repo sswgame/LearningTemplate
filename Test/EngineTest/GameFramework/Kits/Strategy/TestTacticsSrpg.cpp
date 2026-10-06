@@ -1,11 +1,14 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Navigation/GridReachability.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgAiController.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgBattlefield.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCombat.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgProgress.h"
-#include "GameFramework/Navigation/GridReachability.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -634,4 +637,172 @@ SW_TEST_CASE( TacticsSrpgTest, LevelUpDevelopmentAndRogueliteCampaign )
     SW_EXPECT_TRUE( campaign.isFailed() );
     campaign.collectChoices( listChoice );
     SW_EXPECT_FALSE( listChoice.empty() == false && campaign.beginMission( listChoice[0] ) ); // 패배하면 판이 끝난다
+}
+
+/**
+ * @brief [TacticsSrpgTest] 상태 바이트로 되살린 전장이 같은 전투를 잇는다 — 지형 · 유닛(탄 · EN · 기력 · 레벨 · 차례 비트) · 차례 · 난수가 같은 바이트이고,
+ *        같은 걸음(적 페이즈의 반격 · 페이즈 넘김)을 둘 다 더 돌려도 같은 바이트다. 크기가 다른 전장과 잘린 바이트는 거절한다
+ */
+SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameBattlefield )
+{
+    SrpgTestScene scene;
+    SW_ASSERT_TRUE( scene.initialize( 10, 5, makeNoSupportSettings() ) );
+    SW_ASSERT_TRUE( scene._field.setTerrain( int2{ 5, 2 }, hashed_string( "forest" ) ) );
+    const int32 gm   = scene.add( "gm", "ace", SrpgTeam::Player, 2, 2 );
+    const int32 zaku = scene.add( "zaku", "grunt", SrpgTeam::Enemy, 4, 2 );
+    const int32 core = scene.add( "core", "grunt", SrpgTeam::Third, 9, 4 );
+    SW_ASSERT_TRUE( gm >= 0 && zaku >= 0 && core >= 0 );
+    scene._field.beginBattle();
+    SrpgCombatResult result;
+    SW_EXPECT_TRUE( SrpgCombat::executeAttack( scene._field, gm, 0, zaku, result ) == SrpgWeaponStatus::Ok );
+    scene._field.endPhase();
+    SW_ASSERT_TRUE( scene._field.getPhaseTeam() == SrpgTeam::Enemy );
+
+    Archive written;
+    scene._field.writeState( written );
+    SrpgTestScene restored;
+    SW_ASSERT_TRUE( restored.initialize( 10, 5, makeNoSupportSettings(), 99 ) );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored._field.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    Archive rewritten;
+    restored._field.writeState( rewritten );
+    vector<uint8> originalBytes;
+    vector<uint8> restoredBytes;
+    written.writeData( originalBytes );
+    rewritten.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+    SW_EXPECT_TRUE( restored._field.findTerrainAt( int2{ 5, 2 } )->_id == hashed_string( "forest" ) );
+    SW_ASSERT_EQUAL( 3, static_cast<int32>( restored._field.getUnits().size() ) );
+    SW_EXPECT_EQUAL( scene._field.findUnit( zaku )->_hp, restored._field.findUnit( zaku )->_hp );
+    SW_EXPECT_EQUAL( 1, restored._field.findUnit( gm )->_listAmmo[0] ); // 발칸 탄 하나를 썼다
+    SW_EXPECT_TRUE( restored._field.getPhaseTeam() == SrpgTeam::Enemy );
+    SW_EXPECT_EQUAL( scene._field.getTurn(), restored._field.getTurn() );
+
+    // 같은 걸음을 둘 다 — 적이 라이플로 쏘고(명중 · 크리티컬 난수) 페이즈가 돌아 다음 턴이 된다.
+    for ( SrpgTestScene* pScene : { &scene, &restored } )
+    {
+        SrpgCombatResult enemyResult;
+        SW_EXPECT_TRUE( SrpgCombat::executeAttack( pScene->_field, zaku, 1, gm, enemyResult ) == SrpgWeaponStatus::Ok );
+        pScene->_field.endPhase();
+        pScene->_field.endPhase();
+    }
+    SW_EXPECT_EQUAL( 2, restored._field.getTurn() );
+    Archive afterOriginal;
+    Archive afterRestored;
+    scene._field.writeState( afterOriginal );
+    restored._field.writeState( afterRestored );
+    afterOriginal.writeData( originalBytes );
+    afterRestored.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+
+    SrpgTestScene smaller;
+    SW_ASSERT_TRUE( smaller.initialize( 8, 5 ) );
+    Archive smallerReader( written.getData(), written.getSize() );
+    SW_EXPECT_FALSE( smaller._field.readState( smallerReader ) );
+    SrpgTestScene truncated;
+    SW_ASSERT_TRUE( truncated.initialize( 10, 5 ) );
+    Archive cut( written.getData(), written.getSize() - 1 );
+    SW_EXPECT_FALSE( truncated._field.readState( cut ) );
+    SW_EXPECT_TRUE( truncated._field.getUnits().empty() );
+}
+
+/**
+ * @brief [TacticsSrpgTest] 상태 바이트로 되살린 캠페인이 같은 판을 잇는다 — 작전 지도 · 명단 · 씨앗 · 작전 중이 같은 바이트이고, 같은 작전을 끝내고 다음 칸을 골라도
+ *        같은 바이트 · 같은 전장 씨앗이다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameCampaign )
+{
+    SrpgCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kSrpgTestXml, "TacticsSrpgTest" ) );
+    RunMapSettings mapSettings;
+    mapSettings._floorCount  = 3;
+    mapSettings._columnCount = 3;
+    mapSettings._pathCount   = 2;
+    RunNodeRule rule;
+    rule._kind = hashed_string( "Battle" );
+    mapSettings._listRule.push_back( rule );
+    SrpgCampaign campaign;
+    campaign.initialize( mapSettings, 99 );
+    SW_EXPECT_EQUAL( 0, campaign.addRosterEntry( catalog, hashed_string( "gm" ), hashed_string( "ace" ), 2 ) );
+    SW_EXPECT_EQUAL( 1, campaign.addRosterEntry( catalog, hashed_string( "zaku" ), hashed_string( "grunt" ) ) );
+    vector<int32> listChoice;
+    campaign.collectChoices( listChoice );
+    SW_ASSERT_TRUE( listChoice.empty() == false );
+    SW_ASSERT_TRUE( campaign.beginMission( listChoice[0] ) );
+
+    Archive written;
+    campaign.writeState( written );
+    SrpgCampaign restored;
+    restored.initialize( mapSettings, 5 );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+    Archive rewritten;
+    restored.writeState( rewritten );
+    vector<uint8> originalBytes;
+    vector<uint8> restoredBytes;
+    written.writeData( originalBytes );
+    rewritten.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+    SW_EXPECT_TRUE( restored.isInMission() );
+    SW_EXPECT_TRUE( restored.getMissionSeed() == campaign.getMissionSeed() );
+    SW_ASSERT_EQUAL( 2, static_cast<int32>( restored.getRoster().size() ) );
+    SW_EXPECT_EQUAL( 2, restored.getRoster()[0]._pilotLevel.getLevel() );
+
+    // 같은 걸음을 둘 다 — 작전에 내보내 하나를 잃고 이긴 뒤 다음 칸을 고른다.
+    vector<int2> listDeploy;
+    listDeploy.push_back( int2{ 0, 0 } );
+    listDeploy.push_back( int2{ 0, 1 } );
+    for ( SrpgCampaign* pCampaign : { &campaign, &restored } )
+    {
+        SrpgBattlefield mission;
+        mission.initialize( &catalog, 8, 4, hashed_string( "plain" ), SrpgSettings{}, pCampaign->getMissionSeed() );
+        SW_EXPECT_EQUAL( 2, pCampaign->deployRoster( mission, listDeploy ) );
+        mission.grantXp( 0, 120 );
+        SW_EXPECT_TRUE( mission.applyDamage( 1, 99999, -1 ) );
+        pCampaign->completeMission( mission, SrpgOutcome::Victory );
+        vector<int32> listNext;
+        pCampaign->collectChoices( listNext );
+        SW_ASSERT_TRUE( listNext.empty() == false );
+        SW_ASSERT_TRUE( pCampaign->beginMission( listNext[0] ) );
+    }
+    SW_EXPECT_TRUE( restored.getRoster()[1]._bLost == SW_TRUE );
+    SW_EXPECT_TRUE( restored.getMissionSeed() == campaign.getMissionSeed() );
+    Archive afterOriginal;
+    Archive afterRestored;
+    campaign.writeState( afterOriginal );
+    restored.writeState( afterRestored );
+    afterOriginal.writeData( originalBytes );
+    afterRestored.writeData( restoredBytes );
+    SW_EXPECT_TRUE( originalBytes == restoredBytes );
+
+    SrpgCampaign truncated;
+    truncated.initialize( mapSettings, 5 );
+    Archive cut( written.getData(), written.getSize() - 1 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_TRUE( truncated.getRoster().empty() );
+    SW_EXPECT_FALSE( truncated.isInMission() );
+}
+
+/**
+ * @brief [TacticsSrpgTest] 전장은 전투 동안 전장 전체를 한 번에 빌린다 — 남의 칸이 있으면 거절, 끝나면 놓는다
+ */
+SW_TEST_CASE( TacticsSrpgTest, BattlefieldBorrowsItsLandForTheBattleOnly )
+{
+    SrpgTestScene scene;
+    SW_ASSERT_TRUE( scene.initialize( 6, 4 ) );
+    LandRegistry land;
+    land.initialize( 16, 16, 1.0f, float3{} );
+    const uint16 other = land.registerOwner( "Other" );
+    SW_ASSERT_TRUE( land.claimRect( other, 3, 3, 3, 3, true ) );
+
+    SW_EXPECT_FALSE( scene._field.bindLand( &land, int2{ 0, 0 } ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 0, 0 ) );
+    SW_ASSERT_TRUE( scene._field.bindLand( &land, int2{ 8, 8 } ) );
+    SW_EXPECT_TRUE( land.getOwnerName( 13, 11 ) == hashed_string( "TacticsSrpg" ) );
+    SW_EXPECT_FALSE( land.claimRect( other, 13, 11, 13, 11, false ) );
+    scene._field.releaseLand();
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 13, 11 ) );
+    SW_EXPECT_TRUE( land.claimRect( other, 13, 11, 13, 11, false ) );
 }

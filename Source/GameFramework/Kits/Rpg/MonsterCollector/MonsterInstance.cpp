@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Utility/GameRandom.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -54,6 +57,67 @@ namespace sw
                 return slot;
         }
         return -1;
+    }
+
+    void MonsterInstance::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeName( outArchive, _speciesId );
+        StateArchiveUtil::writeName( outArchive, _natureId );
+        outArchive << string_view( _nickname );
+        for ( const MonsterMoveSlot& slot : _arrMove )
+        {
+            StateArchiveUtil::writeName( outArchive, slot._moveId );
+            outArchive << slot._pp;
+            outArchive << slot._ppMax;
+        }
+        for ( int32 statIndex = 0; statIndex < kMonsterStatCount; ++statIndex )
+        {
+            outArchive << _arrIv[statIndex];
+            outArchive << _arrEv[statIndex];
+            outArchive << _arrStat[statIndex];
+        }
+        outArchive << _exp;
+        outArchive << _level;
+        outArchive << _hp;
+        outArchive << _friendship;
+        outArchive << _statusTurns;
+        outArchive << static_cast<uint8>( _status );
+    }
+
+    bool MonsterInstance::readState( Archive& archive )
+    {
+        MonsterInstance restored;
+        const bool      bNamesRead = StateArchiveUtil::readName( archive, restored._speciesId ) && StateArchiveUtil::readName( archive, restored._natureId );
+        if ( bNamesRead == false )
+            return false;
+        archive >> restored._nickname;
+        for ( MonsterMoveSlot& slot : restored._arrMove )
+        {
+            if ( StateArchiveUtil::readName( archive, slot._moveId ) == false )
+                return false;
+            archive >> slot._pp;
+            archive >> slot._ppMax;
+        }
+        for ( int32 statIndex = 0; statIndex < kMonsterStatCount; ++statIndex )
+        {
+            archive >> restored._arrIv[statIndex];
+            archive >> restored._arrEv[statIndex];
+            archive >> restored._arrStat[statIndex];
+        }
+        uint8 status = 0;
+        archive >> restored._exp;
+        archive >> restored._level;
+        archive >> restored._hp;
+        archive >> restored._friendship;
+        archive >> restored._statusTurns;
+        archive >> status;
+        const bool bValid = archive.isOk() && 1 <= restored._level && restored._level <= MonsterCollectorCatalog::kMaxLevel &&
+                            status <= static_cast<uint8>( MonsterStatus::Freeze ) && 0 <= restored._exp;
+        if ( bValid == false )
+            return false;
+        restored._status = static_cast<MonsterStatus>( status );
+        *this            = std::move( restored );
+        return true;
     }
 
     int32 MonsterRules::computeStat( MonsterStat stat, int32 baseStat, int32 iv, int32 ev, int32 level, int32 naturePercent )
@@ -318,5 +382,44 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    void MonsterStorage::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listParty.size() );
+        for ( const MonsterInstance& monster : _listParty )
+        {
+            monster.writeState( outArchive );
+        }
+        outArchive << static_cast<uint32>( _listBox.size() );
+        for ( const MonsterInstance& monster : _listBox )
+        {
+            monster.writeState( outArchive );
+        }
+    }
+
+    bool MonsterStorage::readState( Archive& archive )
+    {
+        uint32 partyCount = 0;
+        if ( StateArchiveUtil::readCount( archive, MonsterInstance::kStateMinBytes, partyCount ) == false || partyCount > static_cast<uint32>( kPartySize ) )
+            return false;
+        vector<MonsterInstance> listParty( partyCount );
+        for ( MonsterInstance& monster : listParty )
+        {
+            if ( monster.readState( archive ) == false )
+                return false;
+        }
+        uint32 boxCount = 0;
+        if ( StateArchiveUtil::readCount( archive, MonsterInstance::kStateMinBytes, boxCount ) == false || boxCount > static_cast<uint32>( _boxCapacity ) )
+            return false;
+        vector<MonsterInstance> listBox( boxCount );
+        for ( MonsterInstance& monster : listBox )
+        {
+            if ( monster.readState( archive ) == false )
+                return false;
+        }
+        _listParty = std::move( listParty );
+        _listBox   = std::move( listBox );
+        return true;
     }
 } // namespace sw

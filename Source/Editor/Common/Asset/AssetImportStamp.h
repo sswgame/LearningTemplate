@@ -77,7 +77,7 @@ namespace sw::editor
          *          지워도 어긋남으로 잡힙니다.
          */
         virtual uint64 computeImportedHash( string_view importedPath ) const;
-        /** @brief 임포트하지 않는 원본이면 그 이유, 아니면 nullptr 입니다(텍스처의 `.hdr`). */
+        /** @brief 임포트하지 않는 원본이면 그 이유, 아니면 nullptr 입니다. */
         virtual const utf8* findUnsupportedReason( string_view sourcePath ) const = 0;
         /** @brief 원본 하나를 결과 경로로 임포트합니다. */
         [[nodiscard]] virtual bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const = 0;

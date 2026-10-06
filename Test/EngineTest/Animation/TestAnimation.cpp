@@ -207,7 +207,7 @@ SW_TEST_CASE( AnimationTest, Skeleton_BoneHierarchyAndSkinningMatrices )
     SW_EXPECT_EQUAL( 0u, skeleton.getBoneCount() );
     SW_EXPECT_EQUAL( 0, skeleton.addBone( hashed_string( "Hips" ), -1, test::makeBoneTransform( float3{ 0.0f, 10.0f, 0.0f } ), float4x4::Identity ) );
     // 자식은 부모 기준 Z 축 90 도 회전 + Y 5 — 모델 공간 위치는 (0, 15, 0), 손자 X 1 은 회전을 받아 (0, 16, 0) 이다.
-    const quaternion turn = quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::HalfPi );
+    const quaternion turn = quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kHalfPi );
     SW_EXPECT_EQUAL( 1, skeleton.addBone( hashed_string( "Spine" ), 0, test::makeBoneTransform( float3{ 0.0f, 5.0f, 0.0f }, turn ), float4x4::Identity ) );
     SW_EXPECT_EQUAL( 2, skeleton.addBone( hashed_string( "Chest" ), 1, test::makeBoneTransform( float3{ 1.0f, 0.0f, 0.0f } ), float4x4::Identity ) );
     skeleton.computeInverseBindFromReference();
@@ -266,7 +266,7 @@ SW_TEST_CASE( AnimationTest, BlendSpace_ParametricMotionInterpolation )
  */
 SW_TEST_CASE( AnimationTest, DualQuaternionKeepsRotationOfScaledMatrix )
 {
-    const float4x4 rotationOnly = float4x4::createRotationZ( MathUtil::HalfPi );
+    const float4x4 rotationOnly = float4x4::createRotationZ( MathUtil::kHalfPi );
     const float4x4 scaledPose   = float4x4::createScale( float3{ 2.0f, 1.0f, 1.0f } ) * rotationOnly;
 
     const quaternion expected = DualQuaternion::fromMatrix( rotationOnly ).getRotation();

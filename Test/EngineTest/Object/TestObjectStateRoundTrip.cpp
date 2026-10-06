@@ -797,7 +797,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, AttachRuleKeepsWorldOrRelativeAsAsked )
     GameObject*       pParentObj = manager.createGameObject( hashed_string( "Turntable" ) );
     SceneComponent*   pParent    = pParentObj->addComponent<SceneComponent>();
     pParent->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
-    pParent->setLocalRotation( float3( 0.0f, MathUtil::HalfPi, 0.0f ) );
+    pParent->setLocalRotation( float3( 0.0f, MathUtil::kHalfPi, 0.0f ) );
     pParent->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
     GameObject*     pChildObj = manager.createGameObject( hashed_string( "Vase" ) );
     SceneComponent* pChild    = pChildObj->addComponent<SceneComponent>();

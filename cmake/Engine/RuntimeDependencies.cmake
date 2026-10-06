@@ -4,60 +4,38 @@
 # @note BuildLayout.cmake 의 sw_queueRuntimeCopy 이후에 include 할 것
 # ==============================================================================
 
-if(NOT SW_USE_VCPKG)
-    return()
-endif()
-
 # ------------------------------------------------------------------------------
-# 1) sw_getVcpkgPaths — installed include / bin / lib 경로
-# OUT_INC_DIRS, OUT_BIN_DIRS. triplet 미정이면 OS 기본값
+# 1) sw_getVcpkgPaths — vcpkg 설치 트리의 include · bin/lib 폴더 후보
+# vcpkg 를 쓰지 않는 구성(SW_USE_VCPKG=OFF)이면 둘 다 빈 목록이다 — 그래서 아래 함수들은 늘 정의돼 있다.
 # ------------------------------------------------------------------------------
-macro(sw_getVcpkgPaths OUT_INC_DIRS OUT_BIN_DIRS)
-    set(vcpkgPath "${sw_vcpkg_root}")
-
-    if(NOT vcpkgPath)
-        set(vcpkgPath "${VCPKG_ROOT}")
-    endif()
-
-    if(NOT DEFINED VCPKG_TARGET_TRIPLET OR VCPKG_TARGET_TRIPLET STREQUAL "")
-        if(WIN32)
-            set(triplet "x64-windows")
-        else()
-            set(triplet "x64-linux")
-        endif()
-    else()
-        set(triplet "${VCPKG_TARGET_TRIPLET}")
-    endif()
-
-    set(${OUT_INC_DIRS} "")
-    set(${OUT_BIN_DIRS} "")
-
-    if(DEFINED VCPKG_INSTALLED_DIR)
-        list(APPEND ${OUT_INC_DIRS} "${VCPKG_INSTALLED_DIR}/${triplet}/include")
-        list(APPEND ${OUT_BIN_DIRS} "${VCPKG_INSTALLED_DIR}/${triplet}/bin")
-        list(APPEND ${OUT_BIN_DIRS} "${VCPKG_INSTALLED_DIR}/${triplet}/lib")
-    endif()
-
-    if(vcpkgPath)
-        list(APPEND ${OUT_INC_DIRS} "${vcpkgPath}/installed/${triplet}/include")
-        list(APPEND ${OUT_BIN_DIRS} "${vcpkgPath}/installed/${triplet}/bin")
-        list(APPEND ${OUT_BIN_DIRS} "${vcpkgPath}/installed/${triplet}/lib")
-    endif()
-endmacro()
+function(sw_getVcpkgPaths OUT_INC_DIRS OUT_BIN_DIRS)
+	set(listIncludeDir "")
+	set(listBinDir "")
+	if(SW_USE_VCPKG AND VCPKG_TARGET_TRIPLET)
+		foreach(installedRoot "${VCPKG_INSTALLED_DIR}" "${sw_vcpkg_root}/installed")
+			if(installedRoot AND NOT installedRoot STREQUAL "/installed")
+				list(APPEND listIncludeDir "${installedRoot}/${VCPKG_TARGET_TRIPLET}/include")
+				list(APPEND listBinDir "${installedRoot}/${VCPKG_TARGET_TRIPLET}/bin" "${installedRoot}/${VCPKG_TARGET_TRIPLET}/lib")
+			endif()
+		endforeach()
+	endif()
+	set(${OUT_INC_DIRS} ${listIncludeDir} PARENT_SCOPE)
+	set(${OUT_BIN_DIRS} ${listBinDir} PARENT_SCOPE)
+endfunction()
 
 # ------------------------------------------------------------------------------
 # 2) sw_linkVcpkgHeaderOnlyTarget — vcpkg include를 SYSTEM INTERFACE로
 # ------------------------------------------------------------------------------
 function(sw_linkVcpkgHeaderOnlyTarget TARGET_NAME)
-    sw_getVcpkgPaths(incDirs binDirs)
+	sw_getVcpkgPaths(incDirs binDirs)
 
-    foreach(dir IN LISTS incDirs)
-        if(EXISTS "${dir}")
-            target_include_directories(${TARGET_NAME} SYSTEM INTERFACE "${dir}")
-        endif()
-    endforeach()
+	foreach(dir IN LISTS incDirs)
+		if(EXISTS "${dir}")
+			target_include_directories(${TARGET_NAME} SYSTEM INTERFACE "${dir}")
+		endif()
+	endforeach()
 
-    target_include_directories(${TARGET_NAME} SYSTEM INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
+	target_include_directories(${TARGET_NAME} SYSTEM INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -67,30 +45,26 @@ endfunction()
 # ------------------------------------------------------------------------------
 # vcpkg bin의 지정 파일을 런타임 복사 큐에 넣습니다.
 function(sw_copyVcpkgFile TARGET_NAME FILE_NAME)
-    sw_getVcpkgPaths(incDirs binDirs)
-    set(foundFile "")
+	sw_getVcpkgPaths(incDirs binDirs)
+	set(foundFile "")
 
-    foreach(dir IN LISTS binDirs)
-        if(EXISTS "${dir}/${FILE_NAME}")
-            set(foundFile "${dir}/${FILE_NAME}")
-            break()
-        endif()
-    endforeach()
+	foreach(dir IN LISTS binDirs)
+		if(EXISTS "${dir}/${FILE_NAME}")
+			set(foundFile "${dir}/${FILE_NAME}")
+			break()
+		endif()
+	endforeach()
 
-    if(foundFile)
-        sw_queueRuntimeCopy(${TARGET_NAME} "${foundFile}")
-    endif()
+	if(foundFile)
+		sw_queueRuntimeCopy(${TARGET_NAME} "${foundFile}")
+	endif()
 endfunction()
 
 # 플랫폼 접두사/접미사를 붙여 sw_copyVcpkgFile에 위임합니다.
 function(sw_copyVcpkgSharedLib TARGET_NAME LIB_BASE_NAME)
-    if(WIN32)
-        set(libName "${LIB_BASE_NAME}.dll")
-    else()
-        set(libName "lib${LIB_BASE_NAME}.so")
-    endif()
+	set(libName "${CMAKE_SHARED_LIBRARY_PREFIX}${LIB_BASE_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
-    sw_copyVcpkgFile(${TARGET_NAME} "${libName}")
+	sw_copyVcpkgFile(${TARGET_NAME} "${libName}")
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -99,12 +73,12 @@ endfunction()
 # layer만 복사하면 LoadLibrary(126) → vkCreateInstance LAYER_NOT_PRESENT(-6).
 # ------------------------------------------------------------------------------
 function(sw_copyVulkanValidationRuntime TARGET_NAME)
-    sw_copyVcpkgSharedLib(${TARGET_NAME} "VkLayer_khronos_validation")
-    sw_copyVcpkgFile(${TARGET_NAME} "VkLayer_khronos_validation.json")
+	sw_copyVcpkgSharedLib(${TARGET_NAME} "VkLayer_khronos_validation")
+	sw_copyVcpkgFile(${TARGET_NAME} "VkLayer_khronos_validation.json")
 
-    # vcpkg vulkan-validationlayers 가 mimalloc 을 쓰면 같이 배포 (없으면 no-op)
-    sw_copyVcpkgSharedLib(${TARGET_NAME} "mimalloc")
-    sw_copyVcpkgSharedLib(${TARGET_NAME} "mimalloc-redirect")
+	# vcpkg vulkan-validationlayers 가 mimalloc 을 쓰면 같이 배포 (없으면 no-op)
+	sw_copyVcpkgSharedLib(${TARGET_NAME} "mimalloc")
+	sw_copyVcpkgSharedLib(${TARGET_NAME} "mimalloc-redirect")
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -113,17 +87,17 @@ endfunction()
 # Tracy 를 링크하지 않은 구성(Shipping · SW_ENABLE_TRACY=OFF · 리눅스 정적)은 아무것도 하지 않는다.
 # ------------------------------------------------------------------------------
 function(sw_copyTracyRuntime TARGET_NAME)
-    if(SW_SHIPPING_BUILD OR NOT SW_ENABLE_TRACY OR NOT WIN32 OR NOT TARGET Tracy::TracyClient)
-        return()
-    endif()
+	if(SW_SHIPPING_BUILD OR NOT SW_ENABLE_TRACY OR NOT WIN32 OR NOT TARGET Tracy::TracyClient)
+		return()
+	endif()
 
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        get_target_property(tracyDll Tracy::TracyClient IMPORTED_LOCATION_DEBUG)
-    else()
-        get_target_property(tracyDll Tracy::TracyClient IMPORTED_LOCATION_RELEASE)
-    endif()
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+		get_target_property(tracyDll Tracy::TracyClient IMPORTED_LOCATION_DEBUG)
+	else()
+		get_target_property(tracyDll Tracy::TracyClient IMPORTED_LOCATION_RELEASE)
+	endif()
 
-    if(tracyDll)
-        sw_queueRuntimeCopy(${TARGET_NAME} "${tracyDll}")
-    endif()
+	if(tracyDll)
+		sw_queueRuntimeCopy(${TARGET_NAME} "${tracyDll}")
+	endif()
 endfunction()

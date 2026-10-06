@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
@@ -220,15 +224,24 @@ namespace sw
             setGlide( false );
     }
 
-    void ActionPlatformerBody::setGlide( bool bGlide )
+    PlatformerSettings ActionPlatformerBody::makeMotorSettings( bool bGlide ) const
     {
-        // 기반 몸의 설정을 바꿔 낙하 상한 · 중력을 줄인다. 모드가 바뀔 때만 둔다(setSettings 는 공중 점프 · 대시 횟수를 다시 채운다).
         PlatformerSettings settings = _motorSettings;
         if ( bGlide )
         {
             settings._maxFallSpeed     = MathUtil::min( settings._maxFallSpeed, _settings._glideFallSpeed );
             settings._fallGravityScale = settings._fallGravityScale * _settings._glideGravityScale;
-            _mode                      = ActionMoveMode::Glide;
+        }
+        return settings;
+    }
+
+    void ActionPlatformerBody::setGlide( bool bGlide )
+    {
+        // 기반 몸의 설정을 바꿔 낙하 상한 · 중력을 줄인다. 모드가 바뀔 때만 둔다(setSettings 는 공중 점프 · 대시 횟수를 다시 채운다).
+        const PlatformerSettings settings = makeMotorSettings( bGlide );
+        if ( bGlide )
+        {
+            _mode = ActionMoveMode::Glide;
             _events |= ActionBodyEvent::kGlideStarted;
         }
         else
@@ -386,5 +399,43 @@ namespace sw
         _velocity    = velocity;
         _mode        = ActionMoveMode::Normal;
         _bInsideDirt = SW_FALSE;
+    }
+
+    void ActionPlatformerBody::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint8>( _mode );
+        _motor.writeState( outArchive );
+        outArchive << _position;
+        outArchive << _velocity;
+        outArchive << _anchor;
+        outArchive << _ropeLength;
+        StateArchiveUtil::writeCountdown( outArchive, _drillSearchTimer );
+        outArchive << _bInsideDirt;
+    }
+
+    bool ActionPlatformerBody::readState( Archive& archive )
+    {
+        uint8 mode = 0;
+        archive >> mode;
+        if ( archive.isError() || mode > static_cast<uint8>( ActionMoveMode::Drill ) )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 기반 몸의 설정은 모드가 정한다(활공이면 활공 설정) — 설정을 먼저 걸고 몸의 값을 읽는다.
+        ActionPlatformerBody restored = *this;
+        restored._mode                = static_cast<ActionMoveMode>( mode );
+        restored._motor.setSettings( makeMotorSettings( restored._mode == ActionMoveMode::Glide ) );
+        if ( restored._motor.readState( archive ) == false )
+            return false;
+        archive >> restored._position;
+        archive >> restored._velocity;
+        archive >> restored._anchor;
+        archive >> restored._ropeLength;
+        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._drillSearchTimer );
+        archive >> restored._bInsideDirt;
+        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._ropeLength && restored._bInsideDirt <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        restored._events = 0;
+        *this            = std::move( restored );
+        return true;
     }
 } // namespace sw

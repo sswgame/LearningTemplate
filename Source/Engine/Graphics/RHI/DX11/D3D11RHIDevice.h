@@ -31,9 +31,6 @@ namespace sw
     class D3D11RHICommandList;
     class D3D11RHIResourceFactory;
 
-    /** @brief 루트 상수 에뮬레이션 버퍼의 dword 수입니다. `D3D11RHIDevice::kMaxComputeRootConstantDwords` 의 기준입니다. */
-    inline constexpr uint32 kRootConstantDwordCount = 64;
-
     /**
      * @struct D3D11RecordingState
      * @brief "지금 이 Deferred Context 에 무엇이 걸려 있나" 입니다. 기록 스트림마다 있어야 하는 상태입니다.
@@ -54,7 +51,7 @@ namespace sw
          *          드로우가 **다른 패스의 월드 행렬**로 그려집니다.
          */
         Microsoft::WRL::ComPtr<ID3D11Buffer> _rootConstantCb;
-        uint32                               _arrRootConstantShadow[kRootConstantDwordCount]{};
+        uint32                               _arrRootConstantShadow[shaderslot::kRootConstantDwords]{};
 
         RHIBufferHandle        _boundMeshVb{ 0 };
         uint32                 _boundMeshStride{ 0 };
@@ -314,7 +311,6 @@ namespace sw
 
         /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. 네 백엔드 공통 안전값은
          *         shaderslot::kRootConstantDwords(DX12 · Vulkan 의 루트 · 푸시 상수 크기)입니다. */
-        static constexpr uint32 kMaxComputeRootConstantDwords = kRootConstantDwordCount;
 
         /// @brief VS/PS 와 래스터 · 블렌드 · 깊이 상태 묶음입니다.
         struct D3D11PipelineStateRecord

@@ -12,10 +12,10 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
-#include "GameFramework/Gimmick/Genre/AdventureGimmicks.h"
-#include "GameFramework/Gimmick/GimmickCircuitComponent.h"
-#include "GameFramework/Gimmick/GimmickSensorComponent.h"
-#include "GameFramework/Spline/SplineComponent.h"
+#include "GameFramework/Base/Gimmick/Genre/AdventureGimmicks.h"
+#include "GameFramework/Base/Gimmick/GimmickCircuitComponent.h"
+#include "GameFramework/Base/Gimmick/GimmickSensorComponent.h"
+#include "GameFramework/Base/Spline/SplineComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

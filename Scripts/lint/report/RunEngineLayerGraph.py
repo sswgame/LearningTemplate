@@ -28,9 +28,11 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gate"))   # 게이트 모듈의 규칙을 그대로 쓴다
 
-from common import kDirSourceEngine, normalizePath, useUtf8Stdout  # noqa: E402
+from common import kDirSourceEngine, normalizePath  # noqa: E402
+from LintReport import LintReport, ReportContext  # noqa: E402
 import CheckEngineLayers as gate  # noqa: E402
 
 kSourceSuffix = (".h", ".cpp", ".inl", ".xxx")
@@ -118,41 +120,44 @@ def computeTiersInternal(listEdge: dict[str, dict[str, list[str]]]) -> dict[str,
     return mapTier
 
 
-def main() -> int:
-    useUtf8Stdout()
-    parser = argparse.ArgumentParser(description="Engine 폴더 include 그래프의 묶음과 티어를 계산한다")
-    parser.add_argument("--root", default=None, help="저장소 루트 (기본: 스크립트 위치에서 추정)")
-    parser.add_argument("--edges", action="store_true", help="묶음 안의 엣지를 파일 단위로 찍는다")
-    args = parser.parse_args()
+class RunEngineLayerGraphReport(LintReport):
+    description = "Engine 폴더 include 그래프의 묶음과 티어를 계산한다"
 
-    repositoryRoot = Path(args.root).resolve() if args.root else Path(__file__).resolve().parents[3]
-    listEdge = collectEdgesInternal(repositoryRoot)
-    listComponent = findComponentsInternal(listEdge)
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--edges", action="store_true", help="묶음 안의 엣지를 파일 단위로 찍는다")
 
-    if listComponent:
-        print(f"[RunEngineLayerGraph] 강결합 묶음 {len(listComponent)}개 — 누군가 위층 것을 아래층에 들여왔다:")
-        for component in listComponent:
-            print("  " + " · ".join(component))
-            uniqueComponent = set(component)
-            for sourceLayer in component:
-                for destLayer, listFile in sorted(listEdge[sourceLayer].items()):
-                    if destLayer not in uniqueComponent:
-                        continue
-                    print(f"    {sourceLayer} -> {destLayer}: {len(listFile)}")
-                    if args.edges:
-                        for relativeFilePath in sorted(set(listFile)):
-                            print(f"        {relativeFilePath}")
-    else:
-        print("[RunEngineLayerGraph] 강결합 묶음 없음 — DAG")
+    def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
+        repositoryRoot = context.repositoryRoot
+        listEdge = collectEdgesInternal(repositoryRoot)
+        listComponent = findComponentsInternal(listEdge)
 
-    mapTier = computeTiersInternal(listEdge)
-    print("\n티어 (0 = 토대). 게이트의 _kEngineTier 와 다르면 표가 낡은 것이다:")
-    for layer in sorted(mapTier, key=lambda name: (mapTier[name], name)):
-        expected = gate._kEngineTier.get(layer)
-        marker = "" if expected == mapTier[layer] else f"   <- 게이트 표는 {expected}"
-        listDependency = sorted(listEdge.get(layer, {}))
-        print(f"  {mapTier[layer]:2d}  {layer:20s} -> {', '.join(listDependency)}{marker}")
-    return 0
+        if listComponent:
+            print(f"[RunEngineLayerGraph] 강결합 묶음 {len(listComponent)}개 — 누군가 위층 것을 아래층에 들여왔다:")
+            for component in listComponent:
+                print("  " + " · ".join(component))
+                uniqueComponent = set(component)
+                for sourceLayer in component:
+                    for destLayer, listFile in sorted(listEdge[sourceLayer].items()):
+                        if destLayer not in uniqueComponent:
+                            continue
+                        print(f"    {sourceLayer} -> {destLayer}: {len(listFile)}")
+                        if args.edges:
+                            for relativeFilePath in sorted(set(listFile)):
+                                print(f"        {relativeFilePath}")
+        else:
+            print("[RunEngineLayerGraph] 강결합 묶음 없음 — DAG")
+
+        mapTier = computeTiersInternal(listEdge)
+        print("\n티어 (0 = 토대). 게이트의 _kEngineTier 와 다르면 표가 낡은 것이다:")
+        for layer in sorted(mapTier, key=lambda name: (mapTier[name], name)):
+            expected = gate._kEngineTier.get(layer)
+            marker = "" if expected == mapTier[layer] else f"   <- 게이트 표는 {expected}"
+            listDependency = sorted(listEdge.get(layer, {}))
+            print(f"  {mapTier[layer]:2d}  {layer:20s} -> {', '.join(listDependency)}{marker}")
+        return 0
+
+
+main = RunEngineLayerGraphReport.run
 
 
 if __name__ == "__main__":

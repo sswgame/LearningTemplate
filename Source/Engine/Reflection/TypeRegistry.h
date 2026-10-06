@@ -24,10 +24,10 @@ namespace sw
     {
         string_view inner;
 
-        const size_t equalPos = sig.find( constants::reflection::kSignatureEq );
+        const size_t equalPos = sig.find( constant::reflection::kSignatureEq );
         if ( equalPos != string_view::npos )
         {
-            const size_t eqLength     = StringUtil::strlen( constants::reflection::kSignatureEq );
+            const size_t eqLength     = StringUtil::strlen( constant::reflection::kSignatureEq );
             inner                     = sig.substr( equalPos + eqLength );
             const size_t semicolonPos = inner.find( ';' );
             const size_t bracketPos   = inner.find( ']' );
@@ -40,7 +40,7 @@ namespace sw
         }
         else
         {
-            constexpr string_view kMarker       = constants::reflection::kTypeFqnPrefix;
+            constexpr string_view kMarker       = constant::reflection::kTypeFqnPrefix;
             const size_t          markerPos     = sig.find( kMarker );
             const size_t          closeAnglePos = sig.rfind( '>' );
             if ( markerPos != string_view::npos && closeAnglePos != string_view::npos && closeAnglePos > markerPos + kMarker.size() )
@@ -49,11 +49,11 @@ namespace sw
 
         inner                                           = StringUtil::trim( inner );
         static constexpr const utf8* kArrTypePrefixes[] = {
-            constants::reflection::kEnumClassPrefix,
-            constants::reflection::kEnumStructPrefix,
-            constants::reflection::kEnumPrefix,
-            constants::reflection::kClassPrefix,
-            constants::reflection::kStructPrefix,
+            constant::reflection::kEnumClassPrefix,
+            constant::reflection::kEnumStructPrefix,
+            constant::reflection::kEnumPrefix,
+            constant::reflection::kClassPrefix,
+            constant::reflection::kStructPrefix,
         };
         for ( const utf8* prefix : kArrTypePrefixes )
         {
@@ -394,10 +394,10 @@ namespace sw
             if ( pCstr == nullptr || *pCstr == 0 )
                 return nullptr;
             const string_view fqnView{ pCstr };
-            const size_t      lastScope = fqnView.rfind( constants::reflection::kScopeDelimiter );
+            const size_t      lastScope = fqnView.rfind( constant::reflection::kScopeDelimiter );
             if ( lastScope != string_view::npos )
             {
-                const size_t      delimiterLength = StringUtil::strlen( constants::reflection::kScopeDelimiter );
+                const size_t      delimiterLength = StringUtil::strlen( constant::reflection::kScopeDelimiter );
                 const string_view leaf            = fqnView.substr( lastScope + delimiterLength );
                 return findEnum( hashed_string( leaf.data(), static_cast<uint32>( leaf.size() ) ) );
             }

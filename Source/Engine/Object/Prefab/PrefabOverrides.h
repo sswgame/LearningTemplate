@@ -21,7 +21,8 @@ namespace sw
      *          - `<Object _bActive="false"/>` — 오브젝트 자기 칸 가운데 프리팹과 다른 것. 이름(`_name`)은 엔티티가 들고 있어 넣지 않습니다.
      *          - `<Remove key="BoxCollider2DComponent#0"/>` — 프리팹에 있는데 인스턴스가 지운 컴포넌트.
      *          - `<Override key="SpriteComponent#0"><SpriteComponent _localPosition="1,0,0"/></Override>` — 프리팹 컴포넌트 가운데 값이 다른 칸만.
-     *          - `<Add><TagComponent .../></Add>` — 인스턴스가 더한 컴포넌트(전체 상태). 얹을 때 컴포넌트 목록 끝에 붙습니다.
+     *          - `<Add after="SceneComponent#0"><TagComponent .../></Add>` — 인스턴스가 더한 컴포넌트(전체 상태). `after` 는 인스턴스 목록에서 바로 앞에 있던
+     *            물려받은 컴포넌트의 키이고, 얹을 때 그 뒤에 들어갑니다. 앞에 물려받은 것이 없으면 `after` 가 없고 맨 앞에, 그 키가 프리팹에서 사라졌으면 끝에 붙습니다.
      *
      *          키는 **프리팹 쪽** 컴포넌트의 키(`이름표#n` — `ComponentStableKey` 와 같은 규칙, 이름표가 없으면 타입 이름)입니다. 프리팹 컴포넌트의
      *          이름표를 바꾼 인스턴스는 그 컴포넌트를 지우고 새로 더한 것으로 적힙니다(언리얼도 상속한 컴포넌트의 이름은 바꾸지 못한다).
@@ -50,7 +51,7 @@ namespace sw
         /**
          * @brief 기준 상태에 덮어쓴 것을 얹어 인스턴스의 오브젝트 상태 XML 을 만듭니다. @p overrideXml 이 비면 기준 상태 그대로입니다.
          * @param instanceName 비어 있지 않으면 루트의 `_name` 을 이것으로 씁니다(엔티티 이름).
-         * @details 프리팹에서 사라진 컴포넌트를 가리키는 덮어쓴 값은 버리고 경고합니다 — 다음 저장에서 빠집니다(언리얼 · 유니티도 원형에 없는
+         * @details 프리팹에서 사라진 컴포넌트를 가리키는 덮어쓴 값은 버리고 엔티티 이름과 함께 경고합니다 — 다음 저장에서 빠집니다(언리얼 · 유니티도 원형에 없는
          *          오버라이드는 버린다). 읽지 못하면 false 입니다.
          */
         [[nodiscard]] static bool makeInstanceState( string_view baseStateXml, string_view overrideXml, string_view instanceName, string& outStateXml );

@@ -94,6 +94,14 @@ namespace sw
          *          Windows Debug CRT 에서만 잴 수 있고, 그 밖에서는 0 입니다.
          */
         static uint64 getPlatformHeapBytes();
+        /**
+         * @brief 프로세스가 시작한 뒤 플랫폼 힙(CRT)이 받은 할당의 **누계**입니다(바이트 · 횟수). 해제해도 줄지 않습니다.
+         * @details sw 할당자의 누계(`getTotalAllocatedBytes` · `getTotalAllocationCount`)와 견주면 sw 할당자 밖(`std::allocator` · 외부 라이브러리 ·
+         *          CRT 직접 호출)의 churn 이 나옵니다. 횟수는 CRT 의 할당 요청 번호입니다(블록 하나를 잡아 그 번호를 읽고 바로 놓는다).
+         *          Windows Debug CRT 에서만 잴 수 있습니다.
+         * @return 잴 수 없는 구성이면 false 이고 두 값은 0 입니다.
+         */
+        [[nodiscard]] static bool getPlatformHeapTotals( uint64& outTotalBytes, uint64& outRequestCount );
         // ------------------------------------------------------------------------------
         // 2) 플랫폼 누수 검사 — CRT(Windows) / LSan(그 밖)
         //    enable → (수명 할당) → captureMemoryLeakBaseline → shutdown 뒤 report
@@ -154,6 +162,8 @@ namespace sw
         uint64 getLiveAllocatedBytes() const;
         /** @brief 태그를 지금 살아 있는 바이트가 큰 순서로 늘어놓습니다(같으면 enum 순서). 보고와 에디터 패널이 같은 순서를 씁니다. */
         array<MemoryTag, kMemoryTagCount> makeTagOrderByLiveBytes() const;
+        /** @brief 모든 태그의 할당 바이트 누계를 합한 값입니다(블록 헤더는 빼고). 해제해도 줄지 않습니다. */
+        uint64 getTotalAllocatedBytes() const;
         /** @brief 모든 태그의 할당 횟수 누계를 합한 값입니다. 프레임당 할당 수는 두 시점의 차이입니다. */
         uint64 getTotalAllocationCount() const;
 

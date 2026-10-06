@@ -85,9 +85,9 @@ PSInput VSMain( SwVertexInput input )
 	const float  weight     = swayWeight * swayWeight;
 	const float2 windDirection = material.windParams.xy;
 	const float  time          = material.windParams.w;
-	const float  phase         = hashPosition( instancePosition.xz ) * 6.2831853f + dot( instancePosition.xz, windDirection ) * 0.15f;
-	const float  sway          = sin( time * material.windWave.x * 6.2831853f + phase ) * 0.5f + 0.5f;
-	const float  gust          = sin( time * material.windWave.z * 6.2831853f + dot( instancePosition.xz, windDirection ) * 0.05f ) * 0.5f + 0.5f;
+	const float  phase         = hashPosition( instancePosition.xz ) * kTwoPi + dot( instancePosition.xz, windDirection ) * 0.15f;
+	const float  sway          = sin( time * material.windWave.x * kTwoPi + phase ) * 0.5f + 0.5f;
+	const float  gust          = sin( time * material.windWave.z * kTwoPi + dot( instancePosition.xz, windDirection ) * 0.05f ) * 0.5f + 0.5f;
 	const float  push          = ( material.windParams.z * sway + material.windWave.y * gust ) * weight;
 	worldPosition.xz += windDirection * push;
 
@@ -116,7 +116,7 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 #if defined( SW_PASS_GBUFFER )
 	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), albedo, normal );
 #else
-	const float  shadow = swSampleShadowAtWorld( input.worldPosition );
+	const float  shadow = swSampleShadowAtWorld( input.worldPosition, normal );
 	const float3 lit    = swShadeLights( albedo.rgb, input.worldPosition, normal, shadow );
 	return swStoreSurface( float4( lit, 1.0f ), albedo, normal );
 #endif

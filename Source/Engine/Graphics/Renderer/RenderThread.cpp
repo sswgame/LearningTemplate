@@ -346,7 +346,9 @@ namespace sw
         // 깎아도 프레임은 줄지 않는다.
         SW_PROFILE_SCOPE( "RT.Frame" );
 
-        ensureContextOnCurrentThread();
+        // 컨텍스트를 못 잡은 프레임은 기록하지 않는다(GL 호출이 버려진다). postPresent 통지는 executePacket 이 그래도 보낸다.
+        if ( ensureContextOnCurrentThread() == false )
+            return false;
 
         const bool          bOffscreen   = packet._gameRenderTarget != 0;
         IRHICommandContext* pFrameStream = _pDevice->getFrameStreamContext();
@@ -505,12 +507,9 @@ namespace sw
         if ( _bContextBound.load( std::memory_order_relaxed ) )
             return true;
 
+        // 실패 로그는 디바이스가 남긴다(쥔 스레드 · 시간까지) — 같은 실패를 두 줄로 남기지 않는다.
         if ( _pDevice->bindGraphicsContext() == false )
-        {
-            SW_LOG_ERROR( "bindGraphicsContext failed on executor thread (%#)",
-                          _pDevice->getBackendName() );
             return false;
-        }
         _bContextBound = true;
         return true;
     }

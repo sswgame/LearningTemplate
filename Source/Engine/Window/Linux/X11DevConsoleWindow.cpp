@@ -6,7 +6,7 @@
 
 #include "Engine/Window/DevConsoleWindow.h"
 
-#if SW_DEV_COMMANDS_ENABLED && defined( SW_PLATFORM_LINUX )
+#if SW_DEV_COMMANDS_ENABLED && defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
 
     #include "Core/Log/Logger.h"
 

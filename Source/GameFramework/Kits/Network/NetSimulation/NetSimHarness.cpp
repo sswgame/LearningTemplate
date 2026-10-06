@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -16,10 +17,8 @@ namespace sw
             /** @brief 씨앗 하나에서 끝점마다 다른 씨앗을 냅니다(splitmix64 한 걸음). */
             static uint64 mixSeed( uint64 seed, uint64 salt )
             {
-                uint64 value = seed + 0x9E3779B97F4A7C15ull * ( salt + 1u );
-                value        = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-                value        = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
-                return value ^ ( value >> 31 );
+                uint64 value = seed + HashUtil::kGoldenRatio64 * ( salt + 1u );
+                return HashUtil::mix64( value );
             }
         };
     } // namespace

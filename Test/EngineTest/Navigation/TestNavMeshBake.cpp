@@ -110,8 +110,8 @@ SW_TEST_CASE( NavMeshBakeTest, SlopesSteeperThanTheMaximumAreNotWalkable )
     using Internal                     = NavMeshBakeTestInternal;
     const sw::NavMeshSettings settings = navtest::makeSettings();
     const sw::NavQueryFilter  filter   = settings.makeDefaultFilter();
-    const float32             gentle   = 4.0f * sw::MathUtil::tan( 30.0f * sw::MathUtil::Pi / 180.0f );
-    const float32             steep    = 4.0f * sw::MathUtil::tan( 60.0f * sw::MathUtil::Pi / 180.0f );
+    const float32             gentle   = 4.0f * sw::MathUtil::tan( 30.0f * sw::MathUtil::kPi / 180.0f );
+    const float32             steep    = 4.0f * sw::MathUtil::tan( 60.0f * sw::MathUtil::kPi / 180.0f );
     {
         sw::NavMeshGeometry geometry;
         Internal::addRampScene( geometry, 4.0f, gentle );

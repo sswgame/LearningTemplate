@@ -108,7 +108,7 @@ namespace sw
             const float32 time = MathUtil::min( static_cast<float32>( probeIndex ) * probeSpan, rawClip.getDuration() );
             rawClip.sample( time, rawPose );
             if ( codec.sample( pAligned, byteCount, time, codecPose ) == false )
-                return MathUtil::MaxFloat;
+                return MathUtil::kMaxFloat;
             rawPose.computeModelSpace( rawClip._listTrackParent, listRawModel );
             codecPose.computeModelSpace( rawClip._listTrackParent, listCodecModel );
             for ( size_t trackIndex = 0; trackIndex < listRawModel.size() && trackIndex < listCodecModel.size(); ++trackIndex )

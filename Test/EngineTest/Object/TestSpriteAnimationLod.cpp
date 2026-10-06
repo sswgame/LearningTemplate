@@ -46,7 +46,7 @@ namespace
             const float3   eye{ 0.0f, 0.0f, -5.0f };
             const float3   target = bTowardOrigin ? float3{ 0.0f, 0.0f, 0.0f } : float3{ 0.0f, 0.0f, -10.0f };
             const float4x4 view   = float4x4::createLookAt( eye, target, float3{ 0.0f, 1.0f, 0.0f } );
-            return AnimationLodView::make( view * float4x4::createPerspectiveFieldOfView( MathUtil::Pi * 0.5f, 1.0f, 0.1f, 100.0f ), eye );
+            return AnimationLodView::make( view * float4x4::createPerspectiveFieldOfView( MathUtil::kPi * 0.5f, 1.0f, 0.1f, 100.0f ), eye );
         }
 
         struct Walker

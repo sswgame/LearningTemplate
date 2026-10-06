@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixer.h"
+#include "Engine/Audio/AudioTypes.h"
 
 namespace sw
 {
@@ -11,8 +12,6 @@ namespace sw
         {
             /** @brief 스팅어 보이스의 구간 표시입니다(레이어가 아니라 구간이 바뀌어도 페이드하지 않는다). */
             static constexpr int32 kStingerSegment = -2;
-            /** @brief 블록 하나의 길이(초)입니다. */
-            static constexpr float32 kBlockSeconds = static_cast<float32>( audio::kBlockFrameCount ) / static_cast<float32>( audio::kSampleRate );
         };
     } // namespace
 } // namespace sw
@@ -214,7 +213,7 @@ namespace sw
 
         // 세로 레이어: 파라미터 곡선의 게인으로 `_layerFadeSeconds` 동안 옮긴다.
         const float32 fadeSeconds = _pMusic->_layerFadeSeconds;
-        const float32 maxStep     = fadeSeconds <= 0.0f ? MathUtil::MaxFloat : AudioEngineMusicInternal::kBlockSeconds / fadeSeconds;
+        const float32 maxStep     = fadeSeconds <= 0.0f ? MathUtil::kMaxFloat : audio::kBlockSeconds / fadeSeconds;
         for ( VoiceSlot& slot : _listVoice )
         {
             if ( slot._bInUse == false || slot._playingId != _musicPlayingId || slot._musicSegment < 0 || slot._musicLayer < 0 )

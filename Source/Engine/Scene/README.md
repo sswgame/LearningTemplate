@@ -106,7 +106,7 @@ classDiagram
 
 ### 2.2 바이너리 포맷 (`.scene.bin` — SCN1)
 배포(Shipping) 빌드 및 고속 스트리밍을 위한 바이너리 쿠킹 포맷입니다:
-- **Magic**: `0x53434E31` (`SCN1`)
+- **Magic**: `FourCcUtil::make( "SCN1" )` — 파일 앞 네 바이트가 `SCN1`
 - **Version**: `3` (읽기도 이 판만 — 쿠킹본은 매번 다시 쿠킹한다)
 - **Name**: `u32 length` + `UTF-8 bytes`
 - **Entities**: `u32 count` + 각 엔티티(`name`, `prefabPath`, `prefabGuid`, `embeddedXml`, `embeddedStateBytes`, `fileId`, `prefabOverrideXml`)

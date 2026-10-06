@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Gui/EditorChrome.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Editor/Common/Gui/EditorDockLayout.h"
 
 #include <imgui.h>
@@ -78,6 +80,7 @@ namespace sw::editor
         : _pId{ "##FloatingBar" }
         , _anchorPos{ 0.0f, 0.0f }
         , _pivot{ 0.5f, 0.0f }
+        , _maxWidth{ 0.0f }
         , _flags{ EditorFloatingBarFlags::AutoResize | EditorFloatingBarFlags::NoMove |
                   EditorFloatingBarFlags::PassThroughWhenDisabled }
         , _bEnabled{ true }
@@ -210,6 +213,15 @@ namespace sw::editor
         {
             flags |= ImGuiWindowFlags_NoMove;
             flags |= ImGuiWindowFlags_NoResize;
+        }
+
+        // 바는 부르는 패널의 뷰포트에 묶는다. 묶지 않으면 패널 밖으로 넘친 바를 멀티 뷰포트가 자기 OS 창으로 떼어 내 화면 아무 데나 띄운다.
+        ImGui::SetNextWindowViewport( ImGui::GetWindowViewport()->ID );
+        if ( desc._maxWidth > 0.0f )
+        {
+            ImGui::SetNextWindowSizeConstraints( ImVec2{ 0.0f, 0.0f }, ImVec2{ desc._maxWidth, MathUtil::kMaxFloat } );
+            flags &= ~ImGuiWindowFlags_NoScrollbar;
+            flags |= ImGuiWindowFlags_HorizontalScrollbar;
         }
 
         const bool bPassThrough =

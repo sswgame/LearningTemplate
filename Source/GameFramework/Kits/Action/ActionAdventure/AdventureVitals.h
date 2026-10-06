@@ -6,11 +6,12 @@
  *          `_staminaRecoverLevel` 까지 다시 찰 때까지 아무 행동도 스태미나를 쓰지 못합니다(야생의 숨결의 붉은 바퀴).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "GameFramework/Combat/ResourceGauge.h"
-#include "GameFramework/Combat/Vitality.h"
+#include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Combat/Vitality.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -39,6 +40,8 @@ namespace sw
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 지금 스태미나를 쓰는 행동입니다. */
     enum class AdventureStaminaAction : uint8
     {
@@ -68,7 +71,9 @@ namespace sw
     class SW_GF_API AdventureVitals
     {
     public:
-        static constexpr int32 kQuartersPerHeart = 4;
+        static constexpr uint32 kStateTag         = FourCcUtil::make( "AVIT" );
+        static constexpr uint32 kStateVersion     = 1;
+        static constexpr int32  kQuartersPerHeart = 4;
 
         AdventureVitals();
 
@@ -106,6 +111,11 @@ namespace sw
         const ResourceGauge& getMagic() const { return _magic; }
         const ResourceGauge& getStamina() const { return _stamina; }
         bool                 isMagicUpgraded() const { return _bMagicUpgraded == SW_TRUE; }
+
+        /** @brief 하트 수 · 조각 수 · 두 배 마법 · 체력(`Vitality`) · 마력 · 지구력(`ResourceGauge`)을 씁니다. 설정은 `initialize` 의 것이라 싣지 않습니다(체력 최대는 하트 수로 다시 세운다). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 하트 수가 설정 범위 밖이거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         /** @brief 하트 수에 맞춰 체력을 다시 세웁니다(가득 찬다). */

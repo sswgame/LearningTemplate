@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+#include "Engine/Graphics/Shader/Reflection/SpirvConstants.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #if defined( SW_HAS_DXC_API )
@@ -67,7 +68,7 @@ namespace sw
                     for ( const string& root : _listRoot )
                     {
                         const string candidate = FileUtil::normalizeSeparators( FileUtil::joinPath( root, pFileName ) );
-                        if ( FileUtil::fileExists( candidate ) == false )
+                        if ( FileUtil::isRegularFile( candidate ) == false )
                             continue;
 
                         vector<uint8> bytes;
@@ -108,18 +109,11 @@ namespace sw
              */
             static void patchSpirvBuiltinsForOpenGL( vector<uint8>& ioBytecode )
             {
-                constexpr uint32 kOpDecorate           = 71;
-                constexpr uint32 kOpMemberDecorate     = 72;
-                constexpr uint32 kDecorationBuiltIn    = 11;
-                constexpr uint32 kBuiltInVertexId      = 5;
-                constexpr uint32 kBuiltInInstanceId    = 6;
-                constexpr uint32 kBuiltInVertexIndex   = 42;
-                constexpr uint32 kBuiltInInstanceIndex = 43;
                 if ( ioBytecode.size() < 20 || ( ioBytecode.size() % 4 ) != 0 )
                     return;
                 uint32*      pWord     = reinterpret_cast<uint32*>( ioBytecode.data() );
                 const size_t wordCount = ioBytecode.size() / 4;
-                if ( pWord[0] != 0x07230203u )
+                if ( pWord[0] != spirv::kMagic )
                     return;
                 size_t offset = 5;
                 while ( offset < wordCount )
@@ -129,16 +123,16 @@ namespace sw
                     if ( length == 0 || offset + length > wordCount )
                         break;
                     uint32* pValue = nullptr;
-                    if ( opcode == kOpDecorate && length >= 4 && pWord[offset + 2] == kDecorationBuiltIn )
+                    if ( opcode == spirv::kOpDecorate && length >= 4 && pWord[offset + 2] == spirv::kDecorationBuiltIn )
                         pValue = &pWord[offset + 3];
-                    else if ( opcode == kOpMemberDecorate && length >= 5 && pWord[offset + 3] == kDecorationBuiltIn )
+                    else if ( opcode == spirv::kOpMemberDecorate && length >= 5 && pWord[offset + 3] == spirv::kDecorationBuiltIn )
                         pValue = &pWord[offset + 4];
                     if ( pValue != nullptr )
                     {
-                        if ( *pValue == kBuiltInInstanceIndex )
-                            *pValue = kBuiltInInstanceId;
-                        else if ( *pValue == kBuiltInVertexIndex )
-                            *pValue = kBuiltInVertexId;
+                        if ( *pValue == spirv::kBuiltInInstanceIndex )
+                            *pValue = spirv::kBuiltInInstanceId;
+                        else if ( *pValue == spirv::kBuiltInVertexIndex )
+                            *pValue = spirv::kBuiltInVertexId;
                     }
                     offset += length;
                 }
@@ -259,7 +253,7 @@ namespace sw
     void ShaderCompiler::clearDiskCache()
     {
         const string cacheDir = ShaderCompilerInternal::getShaderCacheDirectory();
-        if ( cacheDir.empty() == false && FileUtil::directoryExists( cacheDir ) )
+        if ( cacheDir.empty() == false && FileUtil::isDirectory( cacheDir ) )
         {
             vector<string> listFile;
             FileUtil::collectFiles( cacheDir, "", listFile, false );
@@ -278,12 +272,12 @@ namespace sw
         result._bytecode.reserve( 4096 );
 
         string absPathStr;
-        if ( FileUtil::fileExists( desc._filePath ) )
+        if ( FileUtil::exists( desc._filePath ) )
             absPathStr = desc._filePath;
         else
             absPathStr = ResourceUtil::getResourcePath( desc._filePath );
 
-        if ( absPathStr.empty() || FileUtil::fileExists( absPathStr ) == false )
+        if ( absPathStr.empty() || FileUtil::exists( absPathStr ) == false )
         {
             result._errorMessage = "Shader source file not found: " + desc._filePath;
             // 부르는 쪽이 존재 여부를 먼저 검사하는 것이 정상이다. 없는 파일은 ERROR 가 아니라 조용히 실패한다.
@@ -294,7 +288,7 @@ namespace sw
         if ( ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) )
         {
             cachePath = ShaderCompilerInternal::computeCachePath( desc, absPathStr );
-            if ( cachePath.empty() == false && FileUtil::fileExists( cachePath ) )
+            if ( cachePath.empty() == false && FileUtil::exists( cachePath ) )
             {
                 vector<uint8> cachedBytes;
                 if ( FileUtil::readFile( cachePath, cachedBytes ) && cachedBytes.empty() == false )
@@ -405,7 +399,7 @@ namespace sw
                     libName };
                 for ( const string& candidatePath : listCandidate )
                 {
-                    if ( FileUtil::fileExists( candidatePath ) )
+                    if ( FileUtil::isRegularFile( candidatePath ) )
                     {
                         void* pLibrary = ModuleImageUtil::loadDynamicLibrary( candidatePath );
                         if ( pLibrary != nullptr )

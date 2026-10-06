@@ -39,6 +39,14 @@ namespace sw::editor
         void setFilterText( string_view filterText ) { _filterBuffer = filterText; }
         /** @brief 마지막으로 그린 프레임에 필터를 지난 루트 오브젝트 수입니다(서브트리 중 하나라도 맞으면 그 루트가 보인다). */
         uint32 getVisibleRootCount() const { return _visibleRootCount; }
+        /** @brief 검색 칸의 지금 글입니다(에디터 자체 시험이 타이핑이 닿았는지 본다). */
+        string_view getFilterText() const { return _filterBuffer.view(); }
+        /** @brief 마지막 프레임에 실제로 그린 루트 수입니다(화면 밖의 접힌 루트는 빈자리만 두고 세지 않는다). */
+        uint32 getDrawnRootCount() const { return _drawnRootCount; }
+        /** @brief 마지막 프레임에 그린 마지막 루트의 오브젝트 id 입니다(없으면 0). */
+        uint64 getLastDrawnRootId() const { return _lastDrawnRootId; }
+        /** @brief 화면 밖의 접힌 루트를 빈자리로 둘지 정합니다(기본 켬). 에디터 자체 시험이 껐다 켜며 자리가 같은지 본다. */
+        void setOffscreenRowSkipEnabled( bool bEnabled ) { _bSkipOffscreenRows = bEnabled; }
 
     private:
         /**
@@ -49,9 +57,12 @@ namespace sw::editor
          */
         vector<GameObject*>                   _listSceneObject;
         uint64                                _renamingObjectId;
+        uint64                                _lastDrawnRootId; ///< 마지막 프레임에 그린 마지막 루트(`getLastDrawnRootId`)
         fixed_string<constant::kMaxBuffer128> _filterBuffer;
         fixed_string<constant::kMaxBuffer256> _renameBuffer;
         uint32                                _visibleRootCount; ///< 마지막 프레임에 보인 루트 수(`getVisibleRootCount`)
+        uint32                                _drawnRootCount;   ///< 마지막 프레임에 실제로 그린 루트 수(`getDrawnRootCount`)
         bool                                  _bFocusRenameInput;
+        bool                                  _bSkipOffscreenRows; ///< 화면 밖의 접힌 루트를 빈자리로 둔다(`setOffscreenRowSkipEnabled`)
     };
 } // namespace sw::editor

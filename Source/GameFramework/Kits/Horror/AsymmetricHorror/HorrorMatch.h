@@ -11,20 +11,21 @@
  *          위치는 XZ 평면(y = 0)이고 이동은 `moveSurvivor` · `moveKiller` 로 — 키트가 상태에 맞는 속도를 곱합니다(벽 충돌은 게임이).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Combat/Vitality.h"
-#include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Interaction/InteractionProgress.h"
+#include "GameFramework/Base/Match/MatchState.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Interaction/InteractionProgress.h"
-#include "GameFramework/Match/MatchState.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
 {
@@ -32,6 +33,7 @@ namespace sw
     struct HorrorKillerDef;
     struct HorrorSnapshot;
 
+    class Archive;
     class AsymmetricHorrorRulesCatalog;
     class BitWriter;
 
@@ -227,6 +229,9 @@ namespace sw
     class SW_GF_API HorrorMatch
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "HMAT" );
+        static constexpr uint32 kStateVersion = 1;
+
         HorrorMatch();
 
         /** @brief 규칙과 살인마를 정합니다. 살인마 id 를 모르면 false 입니다. */
@@ -288,7 +293,18 @@ namespace sw
         void                       makeSnapshot( HorrorSnapshot& outSnapshot ) const;
         /** @brief 서버 권위 상태를 바이트로 씁니다(`HorrorSnapshotCodec::write`). */
         void writeState( BitWriter& outWriter ) const;
-        void drainEvents( vector<AsymmetricHorrorEvent>& outListEvent );
+        /**
+         * @brief 세이브 · 핫 리로드용 전체 상태를 씁니다 — 살인마 id · 판(`MatchState`) · 걸음 · 무대(자리 · 판자 · 사물함 · 창틀 · 발전기 · 탈출구 · 해치) ·
+         *        생존자(체력 · 치료 진행 · 점수 · 타이머 · 갈고리 · 일) · 살인마(점수 · 자리 · 쿨다운 · 들고 있는 생존자) · 엔드게임. 넷 스냅숏(`writeState( BitWriter& )`)은
+         *        화면용으로 양자화해 되살릴 수 없어 따로 둡니다. 설정 · 카탈로그는 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState( Archive& )` 의 바이트로 바꿉니다. 무대 · 생존자는 바이트가 정하고 규칙은 `initialize` 의 카탈로그를 씁니다.
+         *        `initialize` 하지 않았거나, 살인마 id 가 지금 설정과 다르거나, 깨진 바이트면 false 이고 그대로입니다.
+         */
+        [[nodiscard]] bool readState( Archive& archive );
+        void               drainEvents( vector<AsymmetricHorrorEvent>& outListEvent );
 
         const HorrorSurvivor*  findSurvivor( int32 survivor ) const { return isValidSurvivor( survivor ) ? &_listSurvivor[static_cast<size_t>( survivor )] : nullptr; }
         int32                  getSurvivorCount() const { return static_cast<int32>( _listSurvivor.size() ); }
@@ -332,8 +348,12 @@ namespace sw
         void syncHealthState( HorrorSurvivor& survivor );
         void awardScore( StatBlock& outScore, const utf8* pAction, float32 amount );
         void configureGenerator( int32 generator, bool bRegressing );
-        void makeNoise( int32 survivor, float32 radius, const float3& position );
-        void pushEvent( AsymmetricHorrorEvent::Kind kind, int32 actor, int32 target, float32 value, const float3& position );
+        /** @brief `start` 가 판에 주는 설정입니다(되살릴 때 같은 설정으로 판을 다시 연다). */
+        MatchSettings makeMatchSettings() const;
+        /** @brief 생존자 하나의 상태를 읽어 덮습니다(규칙 · 치료 설정은 `addSurvivor` 가 세운 것). 깨졌으면 false 입니다. */
+        [[nodiscard]] bool readSurvivor( Archive& archive, HorrorSurvivor& outSurvivor ) const;
+        void               makeNoise( int32 survivor, float32 radius, const float3& position );
+        void               pushEvent( AsymmetricHorrorEvent::Kind kind, int32 actor, int32 target, float32 value, const float3& position );
 
         HorrorMatchSettings                 _settings;
         HorrorKiller                        _killer;

@@ -5,6 +5,7 @@
 #include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -99,7 +100,10 @@ namespace sw
         const PhysicsSettings* pSettings = findSettings();
         if ( pSettings == nullptr )
             return;
-        _accumulator.configure( pSettings->_fixedTimeStep, pSettings->_maxStepsPerFrame );
+        // 고정 스텝의 출처는 엔진 설정 하나다 — 물리는 그 스텝을 서브스텝 수로 나눈다(상한도 같은 배수).
+        const EngineConfig& engineConfig = EngineConfig::getActive();
+        const uint32        subStepCount = pSettings->_subStepCount;
+        _accumulator.configure( engineConfig._fixedDeltaTime / static_cast<float32>( subStepCount ), engineConfig._maxFixedStepPerFrame * subStepCount );
         _bConfigured = true;
     }
 

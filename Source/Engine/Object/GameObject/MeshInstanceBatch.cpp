@@ -14,6 +14,7 @@ namespace sw
         , _mesh{ std::move( mesh ) }
         , _pMaterial{ pMaterial }
         , _instance{ std::move( instance ) }
+        , _pOwnerComponent{ nullptr }
         , _pRegistry{ nullptr }
         , _firstEntry{ 0 }
         , _sortKey{ 0 }
@@ -48,8 +49,7 @@ namespace sw
         if ( mesh == _mesh )
             return;
         _mesh = std::move( mesh );
-        for ( uint32 index = 0; index < _listEntry.size(); ++index )
-            markDirty( index );
+        markAllEntriesDirty();
     }
 
     void MeshInstanceBatch::setSpinSeed( uint32 index, uint32 seed )
@@ -83,8 +83,7 @@ namespace sw
         if ( _bVisible == newValue )
             return;
         _bVisible = newValue;
-        for ( uint32 index = 0; index < _listEntry.size(); ++index )
-            markDirty( index );
+        markAllEntriesDirty();
     }
 
     void MeshInstanceBatch::setSortKey( uint32 sortKey )
@@ -92,6 +91,11 @@ namespace sw
         if ( _sortKey == sortKey )
             return;
         _sortKey = sortKey;
+        markAllEntriesDirty();
+    }
+
+    void MeshInstanceBatch::markAllEntriesDirty()
+    {
         for ( uint32 index = 0; index < _listEntry.size(); ++index )
             markDirty( index );
     }

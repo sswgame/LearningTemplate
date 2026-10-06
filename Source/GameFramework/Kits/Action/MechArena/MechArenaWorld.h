@@ -10,28 +10,30 @@
  *            그래서 기체를 바꾸면 다음 격추에 바뀐 기체의 코스트가 게이지에서 빠진다(통계는 조종사 단위로 모아 읽는다).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Combat/FrameData.h"
-#include "GameFramework/Combat/LockOnSelector.h"
-#include "GameFramework/Combat/ResourceGauge.h"
-#include "GameFramework/Combat/Vitality.h"
-#include "GameFramework/Combat/Weapon.h"
+#include "GameFramework/Base/Combat/FrameData.h"
+#include "GameFramework/Base/Combat/LockOnSelector.h"
+#include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Combat/Weapon.h"
+#include "GameFramework/Base/Match/MatchState.h"
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Action/MechArena/MechCatalog.h"
-#include "GameFramework/Match/MatchState.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
 {
     struct MechArenaSnapshot;
 
+    class Archive;
     class BitWriter;
 
     /** @brief 판 규칙의 수치입니다. 시간은 초, 거리는 m 입니다. */
@@ -214,6 +216,9 @@ namespace sw
     class SW_GF_API MechArenaWorld
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MCHA" );
+        static constexpr uint32 kStateVersion = 1;
+
         MechArenaWorld();
 
         void initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog, const MoveCatalog* pMoveCatalog );
@@ -237,7 +242,18 @@ namespace sw
         void makeSnapshot( MechArenaSnapshot& outSnapshot ) const;
         /** @brief 서버 권위 상태를 바이트로 씁니다(`MechArenaSnapshotCodec::write`). */
         void writeState( BitWriter& outWriter ) const;
-        void drainEvents( vector<MechArenaEvent>& outListEvent );
+        /**
+         * @brief 세이브 · 핫 리로드용 전체 상태를 씁니다 — 팀 이름 · 판(`MatchState`) · 걸음 · 조종사(덱 · 스킬 id, 자리 · 속도 · 입력 · 타이머 · 체력 · 부스트 ·
+         *        록온 · 근접 시간표 · 무기 · 쿨다운 · 전적) · 탄. 넷 스냅숏(`writeState( BitWriter& )`)은 화면용으로 양자화해 되살릴 수 없어 따로 둡니다.
+         *        설정 · 카탈로그는 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState( Archive& )` 의 바이트로 바꿉니다. 팀 · 조종사는 바이트가 정하고, 기체 · 스킬 · 기술은 `initialize` 의 카탈로그에서 id 로 찾습니다.
+         *        `initialize` 하지 않았거나, 없는 id, 깨진 바이트면 false 이고 그대로입니다.
+         */
+        [[nodiscard]] bool readState( Archive& archive );
+        void               drainEvents( vector<MechArenaEvent>& outListEvent );
 
         const MechPilot*              findPilot( int32 pilot ) const { return isValidPilot( pilot ) ? &_listPilot[static_cast<size_t>( pilot )] : nullptr; }
         int32                         getPilotCount() const { return static_cast<int32>( _listPilot.size() ); }
@@ -251,31 +267,35 @@ namespace sw
         bool    isEnded() const { return _match.getPhase() == MatchPhase::Ended; }
 
     private:
-        bool   isValidPilot( int32 pilot ) const { return pilot >= 0 && pilot < static_cast<int32>( _listPilot.size() ); }
-        void   step( float32 deltaTime );
-        void   spawnPilot( int32 pilot, bool bRespawn );
-        void   stepPilot( int32 pilot, float32 deltaTime );
-        void   stepMovement( int32 pilot, bool bControl, bool bPressedDash, bool bPressedJump, float32 deltaTime );
-        void   stepLockOn( int32 pilot, bool bPressedLockOn, float32 deltaTime );
-        void   stepWeapons( int32 pilot, float32 deltaTime );
-        void   stepMelee( int32 pilot, bool bPressedMelee );
-        void   stepSkills( int32 pilot, float32 deltaTime );
-        void   stepProjectiles( float32 deltaTime );
-        void   stepMatch( float32 deltaTime );
-        void   fireShot( int32 pilot, int32 slotIndex, const MechWeaponSlotDef& slot, bool bPressed );
-        void   fireSpecial( int32 pilot, int32 slotIndex, const MechWeaponSlotDef& slot );
-        void   launch( int32 pilot, int32 target, const float3& direction, float32 speed, float32 range, float32 damage, const MechWeaponSlotDef& slot );
-        void   resolveHit( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 knockback, float32 staggerTime, bool bKnockdown,
-                           MechWeaponKind kind );
-        void   activateSkill( int32 pilot, int32 skillIndex );
-        void   triggerSkills( int32 pilot, MechSkillTrigger trigger );
-        void   equipMech( MechPilot& pilot, int32 pilotIndex );
-        void   collectCandidates( int32 pilot, vector<LockOnCandidate>& outListCandidate ) const;
-        float3 computeCenter( const MechPilot& pilot ) const;
-        int32  findLockTarget( int32 pilot );
-        int32  countActiveSkills( const MechPilot& pilot ) const;
-        int32  findSlot( const MechPilot& pilot, MechWeaponKind kind ) const;
-        bool   isTargetable( int32 pilot ) const;
+        bool isValidPilot( int32 pilot ) const { return pilot >= 0 && pilot < static_cast<int32>( _listPilot.size() ); }
+        void step( float32 deltaTime );
+        void spawnPilot( int32 pilot, bool bRespawn );
+        void stepPilot( int32 pilot, float32 deltaTime );
+        void stepMovement( int32 pilot, bool bControl, bool bPressedDash, bool bPressedJump, float32 deltaTime );
+        void stepLockOn( int32 pilot, bool bPressedLockOn, float32 deltaTime );
+        void stepWeapons( int32 pilot, float32 deltaTime );
+        void stepMelee( int32 pilot, bool bPressedMelee );
+        void stepSkills( int32 pilot, float32 deltaTime );
+        void stepProjectiles( float32 deltaTime );
+        void stepMatch( float32 deltaTime );
+        void fireShot( int32 pilot, int32 slotIndex, const MechWeaponSlotDef& slot, bool bPressed );
+        void fireSpecial( int32 pilot, int32 slotIndex, const MechWeaponSlotDef& slot );
+        void launch( int32 pilot, int32 target, const float3& direction, float32 speed, float32 range, float32 damage, const MechWeaponSlotDef& slot );
+        void resolveHit( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 knockback, float32 staggerTime, bool bKnockdown,
+                         MechWeaponKind kind );
+        void activateSkill( int32 pilot, int32 skillIndex );
+        void triggerSkills( int32 pilot, MechSkillTrigger trigger );
+        void equipMech( MechPilot& pilot, int32 pilotIndex );
+        /** @brief `start` 가 판에 주는 설정입니다(되살릴 때 같은 설정으로 판을 다시 연다). */
+        MatchSettings makeMatchSettings() const;
+        /** @brief 조종사 하나를 읽어 덱 · 스킬을 카탈로그에서 찾고 탄 기체를 장착한 뒤 상태를 덮습니다. 깨졌으면 false 입니다. */
+        [[nodiscard]] bool readPilot( Archive& archive, int32 pilotIndex, MechPilot& outPilot );
+        void               collectCandidates( int32 pilot, vector<LockOnCandidate>& outListCandidate ) const;
+        float3             computeCenter( const MechPilot& pilot ) const;
+        int32              findLockTarget( int32 pilot );
+        int32              countActiveSkills( const MechPilot& pilot ) const;
+        int32              findSlot( const MechPilot& pilot, MechWeaponKind kind ) const;
+        bool               isTargetable( int32 pilot ) const;
         /** @brief @p other 가 @p team 의 적이고 지금 맞힐 수 있는가입니다(근접 · 광선 · 탄 · 록온 후보가 같은 판정을 씁니다). */
         bool isEnemyTarget( int32 team, int32 other ) const;
         void pushEvent( MechArenaEvent::Kind kind, int32 pilot, int32 other, float32 value, const hashed_string& id );

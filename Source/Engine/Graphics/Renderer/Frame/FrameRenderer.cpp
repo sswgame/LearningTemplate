@@ -6,6 +6,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
@@ -118,6 +119,7 @@ namespace sw
         , _lastIndirectDrawCallCount{ 0 }
         , _disabledInputRoleMask{ 0 }
         , _mapMaterialFallback{}
+        , _transparentRankPlaceholder{}
         , _psoCache{}
         , _outputRenderTarget{ 0 }
         , _presentCapture{ 0 }
@@ -635,11 +637,28 @@ namespace sw
         DirectionalLightComponent* pShadowLight = ( pScene != nullptr ) ? pScene->findShadowCastingDirectionalLight() : nullptr;
         if ( pKeyLight != nullptr )
         {
-            const float3 lightDir           = pKeyLight->getLightDirection();
-            const float3 lightColor         = pKeyLight->getColor();
-            _frameLight._dirIntensity       = float4{ lightDir._x, lightDir._y, lightDir._z, pKeyLight->getIntensity() };
-            _frameLight._colorAmbient       = float4{ lightColor._x, lightColor._y, lightColor._z, pKeyLight->getAmbient() };
-            _frameLight._shadowViewProj     = ( pShadowLight != nullptr ) ? pShadowLight->buildShadowViewProj() : float4x4{};
+            const float3 lightDir     = pKeyLight->getLightDirection();
+            const float3 lightColor   = pKeyLight->getColor();
+            _frameLight._dirIntensity = float4{ lightDir._x, lightDir._y, lightDir._z, pKeyLight->getIntensity() };
+            _frameLight._colorAmbient = float4{ lightColor._x, lightColor._y, lightColor._z, pKeyLight->getAmbient() };
+            if ( pShadowLight != nullptr )
+            {
+                // 볼륨 맞춤은 패킷 경로(EngineLoop)와 같은 규칙 — 주 시점 카메라의 뷰-투영으로.
+                const uint32                      shadowResolution = getShadowMapResolution();
+                const DirectionalShadowProjection shadow =
+                    pMainCamera != nullptr
+                        ? pShadowLight->buildShadowProjectionForView(
+                              pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _directOutputWidth, _directOutputHeight ) ),
+                              shadowResolution )
+                        : pShadowLight->buildShadowProjection( shadowResolution );
+                _frameLight._shadowViewProj = shadow._viewProj;
+                _frameLight._shadowParams   = shadow.computeShaderParams();
+            }
+            else
+            {
+                _frameLight._shadowViewProj = float4x4{};
+                _frameLight._shadowParams   = float4{};
+            }
             _frameLight._bHasShadowViewProj = SW_TRUE;
         }
         else
@@ -667,9 +686,13 @@ namespace sw
                                                     static_cast<float64>( getAnimationTime() ), RenderViewCollector::getDefaultBudget(), _directViewScheduler,
                                                     _listDirectViewScratch );
         }
-        prepareExtraViews( _listDirectViewScratch );
         // 패킷 경로와 **같은 길**이다. 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GpuScene 에는 씬을 읽는 메서드가 없다.
+        // 주 카메라의 정렬 축도 패킷 경로(EngineLoop)처럼 건다 — 직교 카메라는 시선 축, 원근은 거리.
+        if ( pMainCamera != nullptr )
+            _sceneBuilder.setTransparentSortAxis( Render2DSettings::getActive().computeTransparentSortAxis( pMainCamera->isOrthographic(), pMainCamera->getCameraForward() ) );
         _sceneBuilder.buildFromScene( pScene, cameraPos );
+        _sceneBuilder.buildViewTransparentOrders( _listDirectViewScratch );
+        prepareExtraViews( _listDirectViewScratch );
         {
             // 스크래치 하나를 돌려 쓴다. 바꿔치기라 지난 스냅샷의 저장소가 여기로 돌아온다.
             _sceneBuilder.exportCpuSnapshot( _sceneSnapshotScratch );
@@ -700,6 +723,7 @@ namespace sw
             _frameLight._dirIntensity       = packet._lightDirIntensity;
             _frameLight._colorAmbient       = packet._lightColorAmbient;
             _frameLight._shadowViewProj     = packet._lightViewProj;
+            _frameLight._shadowParams       = packet._shadowParams;
             _frameLight._bHasShadowViewProj = SW_TRUE;
         }
         else
@@ -739,6 +763,12 @@ namespace sw
         prepareMeshMorphPool();
         _gpuScene.setVertexPoolEnabled( ( ( _vertexPoolOverride >= 0 ) ? _vertexPoolOverride : gv_vertexPool ) != 0 );
         _gpuScene.upload( pDevice );
+        // 추가 뷰의 투명 순서(스냅샷)를 뷰 자원에 옮긴다 — 컬링 · 정렬 디스패치와 기록 전에.
+        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            if ( pView->_bRenderThisFrame == SW_TRUE )
+                applyViewTransparentOrder( *pView );
+        }
 
         if ( _bCallbacksBound == SW_FALSE )
             bindPassCallbacks();

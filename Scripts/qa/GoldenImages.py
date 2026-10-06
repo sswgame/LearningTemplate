@@ -7,7 +7,9 @@
     py -3 -m Scripts golden --app <App> --backends dx12 vk                             # 백엔드를 골라
     py -3 -m Scripts golden --app <App> --record [--runs 3]                            # 기준을 새로 뜬다(같은 조건 여러 판 → 허용 오차)
 
-기준: `Test/Qa/Golden/<게임>/<백엔드>.png`(160x90 축소본, 사람이 열어 보는 그림)와 `<백엔드>.json`(지표 · 지표별 허용 오차 · 캡처 조건).
+기준: `Test/Qa/Golden/<게임>/<백엔드>.png`(160x90 축소본, 사람이 열어 보는 그림)와 `<백엔드>.json`(지표 · 지표별 허용 오차 · 캡처 조건 ·
+뜬 장치 `device` — GPU 이름 · 드라이버 판). 다른 기계에서 지면 비교 메시지가 두 장치를 함께 찍는다 — 그 기계에서 `--record` 로 떠 드라이버 차이인지
+회귀인지 가른다(기계별 기준 파일은 아직 두지 않는다).
 판정은 픽셀이 아니라 지표다(`Scripts/common/ImageMetrics.py`) — 자동 플레이는 프레임 시간이 벽시계를 따라가 같은 프레임 번호에서도 장면이
 조금씩 다르다. 허용 오차는 기록할 때 같은 조건 여러 판의 퍼짐에서 정한다. 언리얼 Automation Screenshot Comparison 의 "Tolerance"
 (Low/Medium/High) 를 손으로 고르는 대신 잡음 바닥을 재서 정하는 것이 다르다.
@@ -26,9 +28,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import getProjectRoot  # noqa: E402
-from common.AppRun import (kBackendSwitch, kSkipExitCode, findBuildDirOfApp, findUsableBackends, loadGameTable,  # noqa: E402
-                           readCMakeCacheValue, runApp)
+from common import getProjectRoot, runProcess  # noqa: E402
+from common import BuildTree  # noqa: E402
+from common.AppRun import addAppRunArguments, kBackendSwitch, kSkipExitCode, findUsableBackends, loadGameTable, runApp  # noqa: E402
 from common.ImageMetrics import (ImageMetrics, averageMetrics, compareMetrics, computeMetrics, deriveTolerance, downscale,  # noqa: E402
                                  readPng, readPpm, writePng)
 
@@ -58,6 +60,32 @@ def captureInternal(appPath: Path, game: dict, table: dict, backend: str, workDi
     return "ok", downscale(image, table["reference_width"], table["reference_height"])
 
 
+def describeGpuInternal() -> dict:
+    """이 기계의 GPU 이름 · 드라이버 판입니다(Windows: 어댑터 메모리가 가장 큰 Win32_VideoController, 그 밖은 빈 값)."""
+    if sys.platform != "win32":
+        return {"gpu": "", "driver": ""}
+    command = ("Get-CimInstance Win32_VideoController | Sort-Object AdapterRAM -Descending | Select-Object -First 1 Name,DriverVersion"
+               " | ConvertTo-Json")
+    output = runProcess(["powershell", "-NoProfile", "-Command", command], timeoutSeconds=30).stdout
+    try:
+        record = json.loads(output) if output.strip() else {}
+    except ValueError:
+        return {"gpu": "", "driver": ""}
+    return {"gpu": record.get("Name", "") or "", "driver": record.get("DriverVersion", "") or ""}
+
+
+def describeDeviceMismatchInternal(record: dict) -> str:
+    """기준을 뜬 장치가 이 기계와 다르면 둘을 함께 적은 꼬리말입니다. 기준에 장치가 없거나 같으면 빈 글입니다."""
+    reference = record.get("device")
+    if not reference:
+        return ""
+    now = describeGpuInternal()
+    if reference.get("gpu") == now["gpu"] and reference.get("driver") == now["driver"]:
+        return ""
+    return (f" (reference captured on {reference.get('gpu', '')} {reference.get('driver', '')}, this machine {now['gpu']} {now['driver']}"
+            " - re-record here to tell a driver difference from a regression)")
+
+
 def recordInternal(appPath: Path, gameName: str, game: dict, table: dict, backend: str, goldenDir: Path, runCount: int,
                    workDir: Path) -> tuple[str, str]:
     listImage = []
@@ -78,6 +106,7 @@ def recordInternal(appPath: Path, gameName: str, game: dict, table: dict, backen
                     "arguments": game["arguments"]},
         "metrics": averageMetrics(listMetrics).toJson(),
         "tolerance": tolerance,
+        "device": describeGpuInternal(),
     }
     (goldenDir / f"{backend}.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     return "recorded", f"{runCount} run(s), tolerance {json.dumps(tolerance)}"
@@ -103,39 +132,38 @@ def compareInternal(appPath: Path, game: dict, table: dict, backend: str, golden
         referencePng = goldenDir / f"{backend}.png"
         if referencePng.is_file():
             writePng(diffDir / f"{backend}_expected.png", readPng(referencePng))
-    return "fail", "; ".join(violation.describe() for violation in listViolation)
+    return "fail", "; ".join(violation.describe() for violation in listViolation) + describeDeviceMismatchInternal(record)
 
 
 def main(listArgument: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Golden-image regression of the test games' autoplay on every RHI backend")
-    parser.add_argument("--app", type=Path, required=True, help="the built App executable (its build decides the game)")
-    parser.add_argument("--game", default=None, help="game name (default: SW_ACTIVE_GAME of the App's build)")
-    parser.add_argument("--backends", nargs="+", default=list(kBackendSwitch), choices=list(kBackendSwitch))
-    parser.add_argument("--record", action="store_true", help="capture new references instead of comparing")
-    parser.add_argument("--runs", type=int, default=3, help="runs per backend when recording (the spread sets the tolerance)")
-    parser.add_argument("--diff-dir", type=Path, default=None, help="where failing captures are kept")
-    parser.add_argument("--extra-arg", action="append", default=[], help="extra App argument for this run only (not recorded) - e.g. -gv_viewMode=2 to see that a broken frame fails")
+    parser = argparse.ArgumentParser(description="시험 게임 자동 플레이의 골든 이미지 회귀 — RHI 백엔드마다")
+    addAppRunArguments(parser, bMultipleBackends=True)
+    parser.add_argument("--record", action="store_true", help="견주지 않고 새 기준을 뜬다")
+    parser.add_argument("--runs", type=int, default=3, help="기준을 뜰 때 백엔드마다 돌리는 횟수(흩어짐이 허용 오차를 정한다)")
+    parser.add_argument("--diff-dir", type=Path, default=None, help="실패한 캡처를 남길 폴더")
+    parser.add_argument("--extra-arg", action="append", default=[], help="이번 실행에만 더할 App 인자(기준에 안 남는다) — 예: -gv_viewMode=2 로 깨진 화면이 지는지 본다")
     args = parser.parse_args(listArgument)
 
     repositoryRoot = getProjectRoot()
-    gameName = args.game or readCMakeCacheValue(findBuildDirOfApp(args.app), "SW_ACTIVE_GAME")
+    appTree = BuildTree.ofApp(args.app)
+    gameName = args.game or appTree.readCacheValue("SW_ACTIVE_GAME")
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
-        print(f"[Golden] unknown game '{gameName}' - add it to Test/Qa/Games.json", file=sys.stderr)
+        print(f"[Golden] 모르는 게임 '{gameName}' — Test/Qa/Games.json 에 더하십시오", file=sys.stderr)
         return 1
     if not args.app.is_file():
-        print(f"[Golden] App not found: {args.app}", file=sys.stderr)
+        print(f"[Golden] App 이 없습니다: {args.app}", file=sys.stderr)
         return 1
     game = dict(table["games"][gameName], extra_arguments=list(args.extra_arg))
     goldenDir = repositoryRoot / kGoldenRelativeDir / gameName
     diffDir = (args.diff_dir / gameName) if args.diff_dir is not None else None
 
     # Shipping 은 백엔드 하나만 링크한다 — 다른 백엔드는 기동 오류라 건너뛴다(골든은 같은 기준과 견준다).
-    listUsable = findUsableBackends(findBuildDirOfApp(args.app))
+    listUsable = findUsableBackends(appTree)
     listBackend = [backend for backend in args.backends if backend in listUsable]
     for backend in args.backends:
         if backend not in listUsable:
-            print(f"[Golden] {gameName} {backend:5} SKIP     not linked into this build", flush=True)
+            print(f"[Golden] {gameName} {backend:5} SKIP     이 빌드에 링크되지 않았다", flush=True)
     mapStatus: dict[str, str] = {}
     with tempfile.TemporaryDirectory(prefix="sw_golden_") as tempDir:
         for backend in listBackend:
@@ -149,7 +177,7 @@ def main(listArgument: list[str] | None = None) -> int:
     if any(status == "fail" for status in mapStatus.values()):
         return 1
     if not any(status in ("pass", "recorded") for status in mapStatus.values()):
-        print(f"[Golden] {gameName}: nothing was compared", flush=True)
+        print(f"[Golden] {gameName}: 견준 것이 없다", flush=True)
         return kSkipExitCode
     return 0
 

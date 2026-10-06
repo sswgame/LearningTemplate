@@ -10,10 +10,11 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Data/GameCatalog.h"
-#include "GameFramework/Data/XmlCatalog.h"
+#include "GameFramework/Base/Data/GameCatalog.h"
+#include "GameFramework/Base/Data/XmlCatalog.h"
+#include "GameFramework/Base/Progression/LevelProgress.h"
+#include "GameFramework/Base/Progression/Reputation.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Progression/Reputation.h"
 
 namespace sw
 {
@@ -91,6 +92,8 @@ namespace sw
         float32       _gallopDrain{ 12.0f };           ///< 질주할 때 초당 스태미나
         float32       _coreDrainPerHour{ 2.0f };       ///< 게임 시간 한 시간마다 코어가 주는 양
         float32       _gallopCoreDrainPerHour{ 6.0f }; ///< 질주 중에는 이만큼 더
+        float32       _fearDecayPerSecond{ 0.25f };    ///< 쌓인 겁이 식는 빠르기(초당)
+        float32       _buckChanceScale{ 0.8f };        ///< 저항이 0 일 때 탄 사람을 떨어뜨릴 확률
     };
 } // namespace sw
 
@@ -100,7 +103,7 @@ namespace sw
     struct WesternBondLevelDef
     {
         vector<hashed_string> _listUnlock{};       ///< 이 단계에서 열리는 능력(뒷발 들기 · 드리프트 · 피아페 …)
-        float32               _experience{ 0.0f }; ///< 이 단계가 되는 누적 경험치
+        float32               _experience{ 0.0f }; ///< 이 단계가 되는 누적 경험치(정수로 반올림해 `getBondCurve` 의 표가 된다)
         float32               _staminaBonus{ 0.0f };
         float32               _healthBonus{ 0.0f };
         float32               _fearResist{ 0.0f }; ///< 겁 저항에 더한다
@@ -255,7 +258,7 @@ namespace sw
         friend class XmlCatalog<WesternCatalog>;
 
     public:
-        static constexpr const utf8* kHonorFactionId = "honor"; ///< 명예가 쓰는 평판 세력 id
+        static constexpr const utf8* kHonorFactionId = "western.honor"; ///< 명예가 쓰는 평판 세력 id(키트 접두)
 
         WesternCatalog();
 
@@ -275,8 +278,10 @@ namespace sw
         const WesternDeadEyeLevelDef* findDeadEyeLevel( int32 level ) const;
 
         const vector<WesternBondLevelDef>& getBondLevels() const { return _listBondLevel; }
-        const WesternBondExperience&       getBondExperience() const { return _bondExperience; }
-        const WesternSurvivalSettings&     getSurvival() const { return _survival; }
+        /** @brief 유대 단계 사이 경험치 표(기반 `ExperienceCurve`) — 레벨 L 은 `getBondLevels()[L − 1]` 단계입니다. */
+        const ExperienceCurve&         getBondCurve() const { return _bondCurve; }
+        const WesternBondExperience&   getBondExperience() const { return _bondExperience; }
+        const WesternSurvivalSettings& getSurvival() const { return _survival; }
         /** @brief 명예 세력 하나가 든 평판 카탈로그입니다(`ReputationState` 가 빌려 쓴다). */
         const ReputationCatalog& getHonorReputation() const { return _honorReputation; }
         /** @brief 등급(0..3)의 값 배율입니다. */
@@ -305,6 +310,7 @@ namespace sw
         vector<float32>                    _listGradeScale;   ///< 등급 0..3
         ReputationCatalog                  _honorReputation;
         WesternBondExperience              _bondExperience;
+        ExperienceCurve                    _bondCurve; ///< 단계 사이 경험치(정렬한 `_listBondLevel` 의 문턱 차이)
         WesternSurvivalSettings            _survival;
         hashed_string                      _currency;
         int32                              _extraHitPenalty; ///< 첫 발 뒤 한 발마다 떨어지는 등급

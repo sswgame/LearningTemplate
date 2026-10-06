@@ -37,7 +37,7 @@ namespace sw
                     const float32 high    = MathUtil::clamp( highHz, low + 5.0f, nyquist );
                     const float32 center  = MathUtil::sqrt( low * high );
                     const float32 quality = center / ( high - low );
-                    const float32 omega   = 2.0f * MathUtil::Pi * center / sampleRate;
+                    const float32 omega   = 2.0f * MathUtil::kPi * center / sampleRate;
                     const float32 alpha   = MathUtil::sin( omega ) / ( 2.0f * quality );
                     const float32 a0      = 1.0f + alpha;
                     _b0                   = alpha / a0;
@@ -330,7 +330,7 @@ namespace sw
             for ( uint32 bandIndex = 0; bandIndex < 3; ++bandIndex )
                 arrShape[bandIndex] = bandSum > 0.0 ? static_cast<float32>( arrBandEnergy[bandIndex] / bandSum ) : 0.0f;
             const float32 shapeLength = MathUtil::sqrt( arrShape[0] * arrShape[0] + arrShape[1] * arrShape[1] + arrShape[2] * arrShape[2] );
-            float32       maxScore    = -MathUtil::MaxFloat;
+            float32       maxScore    = -MathUtil::kMaxFloat;
             for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )
             {
                 const float32* pBand         = settings._listViseme[visemeIndex]._arrBand;

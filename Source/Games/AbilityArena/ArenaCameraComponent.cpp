@@ -9,8 +9,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Camera/CameraMode.h"
-#include "GameFramework/Camera/CameraPoseUtil.h"
+#include "GameFramework/Base/Camera/CameraMode.h"
+#include "GameFramework/Base/Camera/CameraPoseUtil.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 
@@ -55,7 +55,7 @@ namespace sw
         GameObject*      pOwner  = getOwner();
         CameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
         const float32    length  = _offset.getLength();
-        if ( pCamera == nullptr || length <= MathUtil::Epsilon )
+        if ( pCamera == nullptr || length <= MathUtil::kEpsilon )
             return;
         // 오프셋은 궤도 모드(`CameraPresetMode::Orbit`)의 요 · 피치 · 거리다 — 카메라는 초점에서 오프셋만큼 떨어져 초점을 본다.
         // 모드 계산은 틱 중의 월드 행렬을 읽지 않으므로(틱 안의 자리 쓰기는 틱 뒤에 보인다) 이번 프레임의 초점으로 바로 놓인다.

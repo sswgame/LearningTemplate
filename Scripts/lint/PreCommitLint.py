@@ -17,27 +17,28 @@ C++ 파일이 staged 됐을 때만 돌리면 **`.cmake` 나 `.py` 만 커밋할 
 게이트와 셰이더 쿠킹 검증은 staged 전체를 기준으로 그대로 돈다. 두 부모에서 따로 온 파일끼리의 관계(헤더는 한쪽, 짝 `.cpp` 는
 다른 쪽에서 온 생성자 초기화 순서 같은 것)는 파일 단위 검사가 원래 못 보는 것이라, 병합 뒤 `ctest -L lint`(CI 도 같다)가 트리
 전체로 다시 본다.
+
+**트리 전체 게이트는 하위 프로세스로 먼저 띄운다**(`runGatesInternal`). staged 파일 수와 상관없이 저장소를 훑는 게이트가 차례로 돌면
+C++ 파일 하나짜리 커밋도 그 합만큼 걸린다. 파일 단위 게이트는 이 프로세스에서 차례로 돈다(기동이 게이트보다 비싸다).
+찍히는 순서는 게이트 순서 그대로다.
 """
 
 from __future__ import annotations
 
+import argparse
+import concurrent.futures
+import os
 import sys
+from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
-
-if sys.platform == "win32":
-    try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
 
 # 부모 경로들을 sys.path에 추가하여 공통 스크립트 모듈 로드
 scriptDir = Path(__file__).resolve().parent
 sys.path.insert(0, str(scriptDir))
 sys.path.insert(0, str(scriptDir.parent))
 
-from LintCatalog import discoverLintScripts
+from LintCatalog import LintScript, discoverLintScripts
 from fixer import FormatBranchBraces
 from fixer import FormatForwardDeclarations
 from common import (
@@ -46,11 +47,13 @@ from common import (
     getAllStagedFiles,
     getMergeHeadRevisions,
     getProjectRoot,
+    getCpuCount,
     getStagedCppFiles,
     listFilesUnlikeEveryParent,
     runClangFormatBatch,
+    runGit,
+    runProcess,
     runShaderCook,
-    useUtf8Stdout,
 )
 
 
@@ -88,51 +91,113 @@ def selectFileScopedStagedInternal(projectRoot: Path, listStaged: list[Path]) ->
     return listScoped
 
 
-def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: list[Path]) -> bool:
+@dataclass(frozen=True)
+class GateRunPlan:
     """
-    `gate/` 에 있는 게이트를 **전부** 돌립니다 — 목록이 아니라 자리가 규칙이다.
+    훅이 게이트 하나를 어떻게 다룰지.
+
+    - `script`     : 게이트 파일(`LintCatalog`)
+    - `skipReason` : 비어 있지 않으면 돌리지 않는다(그 이유를 찍는다)
+    - `listArgument`: 돌릴 때 넘길 인자(`--root` · 파일 인자 게이트면 `--files …`)
+    """
+
+    script: LintScript
+    skipReason: str = ""
+    listArgument: list[str] = field(default_factory=list)
+
+    @property
+    def bBackground(self) -> bool:
+        """
+        하위 프로세스로 먼저 띄우는가 — 돌리는 트리 전체 게이트(`preCommitFileArgument == ""`)다. staged 파일 수와 상관없이 저장소를
+        훑으므로 다른 게이트와 겹친다. 파일 단위 게이트는 대개 수십 ms 라 프로세스 기동(0.1~0.3 s)이 더 비싸 이 프로세스에서 돈다.
+        """
+        return not self.skipReason and self.script.gateClass.preCommitFileArgument == ""
+
+
+def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScoped: list[Path],
+                         listScript: list[LintScript] | None = None) -> list[GateRunPlan]:
+    """
+    staged 파일 목록 → 게이트마다의 계획(건너뜀 이유 또는 넘길 인자). 아무것도 돌리거나 찍지 않는다 — 판정만(시험이 이것을 본다).
 
     무엇이 staged 되었을 때 도는지, staged 부분집합을 어떻게 받는지는 게이트가 스스로 선언한다
     (`LintGate.preCommitPattern` · `preCommitFileArgument`). 여기에는 게이트 이름이 없다.
 
     파일을 인자로 받는 게이트는 `listFileScoped`(병합 커밋이면 새 내용인 파일만)에서, 트리 전체 게이트는 `listStaged` 에서 고른다.
     파일 인자 게이트에 넘길 파일이 하나도 없으면 돌리지 않는다 — 빈 `--files` 는 "전체를 훑어라" 로 읽힌다.
+    게이트 클래스가 없는 파일은 계획에 넣지 않는다.
     """
-    listScript = discoverLintScripts("gate")
-    bFailed = False
-
-    for index, script in enumerate(listScript, start=1):
+    listPlan: list[GateRunPlan] = []
+    for script in discoverLintScripts("gate") if listScript is None else listScript:
         gateClass = script.gateClass
         if gateClass is None:
             continue
 
-        head = f"[{index}/{len(listScript)}] {script.name}"
-
         if gateClass.preCommitSkipReason:
-            print(f"\n{head} ... 건너뜀 ({gateClass.preCommitSkipReason})")
+            listPlan.append(GateRunPlan(script, skipReason=gateClass.preCommitSkipReason))
             continue
 
         listMatched = listMatchingStagedInternal(listStaged, projectRoot, gateClass.preCommitPattern)
         if gateClass.preCommitPattern and not listMatched:
-            print(f"\n{head} ... 건너뜀 (해당 파일 변경 없음)")
+            listPlan.append(GateRunPlan(script, skipReason="해당 파일 변경 없음"))
             continue
 
         if gateClass.preCommitFileArgument:
             listMatched = listMatchingStagedInternal(listFileScoped, projectRoot, gateClass.preCommitPattern)
             if not listMatched:
-                print(f"\n{head} ... 건너뜀 (병합 커밋: 부모와 내용이 다른 해당 파일 없음)")
+                listPlan.append(GateRunPlan(script, skipReason="병합 커밋: 부모와 내용이 다른 해당 파일 없음"))
                 continue
 
-        print(f"\n{head} ...")
         listArgument = ["--root", str(projectRoot)]
         if gateClass.preCommitFileArgument == "--files":
             listArgument += ["--files", *(str(path) for path in listMatched)]
-        elif gateClass.preCommitFileArgument == "positional":
-            listArgument += [str(path) for path in listMatched]
+        listPlan.append(GateRunPlan(script, listArgument=listArgument))
+    return listPlan
 
-        if gateClass.run(listArgument) != 0:
-            bFailed = True
 
+def runGateProcessInternal(plan: GateRunPlan, projectRoot: Path) -> tuple[int, str]:
+    """
+    게이트를 하위 프로세스로 돌려 (종료 코드, 출력)을 돌려준다. 출력은 UTF-8, stderr 를 stdout 에 섞고 버퍼 없이 써서 — 위반 머리말(stderr)과
+    목록(stdout)이 이 프로세스에서 돌 때와 같은 순서로 남는다.
+    """
+    environment = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1")
+    result = runProcess([sys.executable, plan.script.scriptPath, *plan.listArgument], cwd=projectRoot, env=environment, bMergeStderr=True)
+    return result.returnCode, result.stdout
+
+
+def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: list[Path]) -> bool:
+    """
+    `gate/` 에 있는 게이트를 **전부** 훑어 계획대로 돌립니다 — 목록이 아니라 자리가 규칙이다(`selectGatesForStaged`).
+
+    **트리 전체 게이트(`GateRunPlan.bBackground`)는 하위 프로세스로 먼저 띄운다.** 파일 단위 게이트는 이 프로세스에서 차례로 돌고,
+    하위 프로세스의 출력은 그 게이트의 차례에 붙인다 — 찍히는 순서는 게이트 순서 그대로다.
+    """
+    listScript = discoverLintScripts("gate")
+    mapIndex = {script.name: index for index, script in enumerate(listScript, start=1)}
+    listPlan = selectGatesForStaged(projectRoot, listStaged, listFileScoped, listScript)
+    listBackground = [plan for plan in listPlan if plan.bBackground]
+    bFailed = False
+
+    # 하위 프로세스를 기다리는 일이라 스레드로 띄운다(기다리는 동안 GIL 을 놓는다). 코어 수보다 많이 띄우면 경합만 는다.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(listBackground), getCpuCount()))) as executor:
+        mapFuture = {plan.script.name: executor.submit(runGateProcessInternal, plan, projectRoot) for plan in listBackground}
+        for plan in listPlan:
+            head = f"[{mapIndex[plan.script.name]}/{len(listScript)}] {plan.script.name}"
+            if plan.skipReason:
+                print(f"\n{head} ... 건너뜀 ({plan.skipReason})")
+                continue
+            print(f"\n{head} ...", flush=True)
+            future = mapFuture.get(plan.script.name)
+            if future is None:
+                if plan.script.gateClass.run(plan.listArgument) != 0:
+                    bFailed = True
+                sys.stdout.flush()
+                sys.stderr.flush()
+                continue
+            returnCode, output = future.result()
+            sys.stdout.write(output)
+            sys.stdout.flush()
+            if returnCode != 0:
+                bFailed = True
     return bFailed
 
 
@@ -178,22 +243,16 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
 
     print("  - 모든 RHI 백엔드(DirectX 12, Vulkan, DirectX 11) 컴파일 검증 통과.")
 
-    import subprocess
-    gitCmd = subprocess.run(
-        ["git", "status", "--porcelain", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"],
-        capture_output=True,
-        text=True,
-        cwd=str(projectRoot),
-    )
-    if gitCmd.returncode == 0 and gitCmd.stdout.strip():
-        subprocess.run(["git", "add", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=str(projectRoot))
+    gitCmd = runGit(["status", "--porcelain", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=projectRoot)
+    if gitCmd.returnCode == 0 and gitCmd.stdout.strip():
+        runGit(["add", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=projectRoot)
         print("  - 갱신된 RHI별 바이너리(.dxil, .spv, .dxbc)를 자동으로 Git Stage에 추가했습니다.")
 
     return True
 
 
-def main() -> int:
-    useUtf8Stdout()
+def main(argv: list[str] | None = None) -> int:
+    argparse.ArgumentParser(description="Git staged 파일에 커밋 전 검사(게이트 · 픽서 · clang-format · 셰이더)를 돌린다 — 인자 없음").parse_args(argv)
 
     projectRoot = getProjectRoot()
     allStagedFiles = getAllStagedFiles(projectRoot)

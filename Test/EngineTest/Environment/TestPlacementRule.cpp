@@ -109,7 +109,7 @@ SW_TEST_CASE( PlacementRuleTest, PoissonMinimumDistanceHolds )
     vector<PlacementInstance> listInstance;
     PlacementScatter::scatter( rule, PlacementRuleTestUtil::makeRegion( 30.0f ), nullptr, {}, {}, listInstance );
     SW_ASSERT_TRUE( listInstance.size() > 100 );
-    float32 closest = MathUtil::MaxFloat;
+    float32 closest = MathUtil::kMaxFloat;
     for ( size_t first = 0; first < listInstance.size(); ++first )
     {
         for ( size_t second = first + 1; second < listInstance.size(); ++second )
@@ -119,7 +119,7 @@ SW_TEST_CASE( PlacementRuleTest, PoissonMinimumDistanceHolds )
 
     rule._minDistance = 0.0f;
     PlacementScatter::scatter( rule, PlacementRuleTestUtil::makeRegion( 30.0f ), nullptr, {}, {}, listInstance );
-    float32 closestFree = MathUtil::MaxFloat;
+    float32 closestFree = MathUtil::kMaxFloat;
     for ( size_t first = 0; first < listInstance.size(); ++first )
     {
         for ( size_t second = first + 1; second < listInstance.size(); ++second )
@@ -249,7 +249,7 @@ SW_TEST_CASE( PlacementRuleTest, ScatterOnTwoDimensionalTiles )
     PlacementScatter::scatter( rule, region, &surface, {}, {}, listInstance );
     SW_ASSERT_TRUE( listInstance.size() > 20 );
     bool    bOnGrass = true;
-    float32 closest  = MathUtil::MaxFloat;
+    float32 closest  = MathUtil::kMaxFloat;
     for ( size_t first = 0; first < listInstance.size(); ++first )
     {
         bOnGrass = bOnGrass && surface.getTileAt( listInstance[first]._planePosition ) == 0u && listInstance[first]._height == 0.0f;

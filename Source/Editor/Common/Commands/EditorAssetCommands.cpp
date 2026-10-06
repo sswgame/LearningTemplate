@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Common/Workspace/EditorSceneGenerationSync.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -120,7 +121,7 @@ namespace sw::editor
                 if ( item._relativePath.empty() )
                     item._relativePath = FileUtil::normalizePath( item._name );
 
-                if ( item._bIsDirectory == false && FileUtil::hasExtension( item._name, ".meta" ) )
+                if ( item._bIsDirectory == false && FileUtil::hasExtension( item._name, path::kMetaExtension ) )
                     return;
 
                 outList.push_back( std::move( item ) );
@@ -367,28 +368,8 @@ namespace sw::editor
         if ( pContext == nullptr || pSceneManager == nullptr )
             return;
 
-        EditorWorkspace& ws         = pContext->getWorkspace();
-        const uint64     generation = pSceneManager->getSceneGeneration();
-        if ( generation == ws.getObservedSceneGeneration() )
-            return;
-
-        ws.setObservedSceneGeneration( generation );
-        ws.clearSceneDirty();
-        ws.clearSelection();
-
-        /**
-         * 이전 씬을 가리키던 상태를 버린다.
-         *
-         * - **Undo 스택**: 커맨드가 든 XML 스냅샷은 사라진 씬의 것이다. 비우지 않으면 Edit 메뉴가 Undo 를 켜 둔 채로 두고,
-         *   눌러도 아무 일도 없거나 이름이 같은 새 씬의 오브젝트를 덮어쓴다.
-         * - **프리팹 Isolation**: 격리 프레임이 옛 씬의 오브젝트 ID 를 들고 있다. 격리 중에 씬을 열면
-         *   `isPrefabIsolationActive()` 가 계속 true 라 UI 는 격리 중이라고 믿고, `exitPrefabIsolation` 이 새 씬의 무관한
-         *   오브젝트를 되살린다. 씬이 사라졌으니 되돌릴 것도 없다. 상태만 버린다.
-         */
-        CommandStack* pCommandStack = editor::getService<CommandStack>();
-        if ( pCommandStack != nullptr )
-            pCommandStack->clear();
-        ws.clearPrefabIsolation();
+        // 옛 씬을 가리키던 상태(선택 · dirty · Undo · 프리팹 격리)를 버린다 — 이유는 `EditorSceneGenerationSync::apply`.
+        (void)EditorSceneGenerationSync::apply( pContext->getWorkspace(), pSceneManager->getSceneGeneration(), editor::getService<CommandStack>() );
     }
 
     bool EditorAssetCommands::tryBeginQuit()
@@ -543,7 +524,7 @@ namespace sw::editor
         // 씬 이름은 쿠커의 규칙 하나다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 쿠킹하지 않는 이름이다.
         EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, params._listFilterExtension );
         const string mapsDir = ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kMapsFolder );
-        if ( FileUtil::directoryExists( mapsDir ) )
+        if ( FileUtil::isDirectory( mapsDir ) )
             params._initialDirectory = mapsDir;
         FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorAssetCommandsInternal::onSaveSceneDialogResult ) );
     }
@@ -559,7 +540,7 @@ namespace sw::editor
         uint32 copied{ 0 };
         for ( const string& sourcePath : listSourcePath )
         {
-            if ( FileUtil::fileExists( sourcePath ) == false )
+            if ( FileUtil::exists( sourcePath ) == false )
             {
                 SW_LOG_WARNING( "Import skipped (missing): %#", sourcePath.c_str() );
                 continue;
@@ -638,7 +619,7 @@ namespace sw::editor
     void EditorAssetCommands::collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList )
     {
         outList.clear();
-        if ( folderAbs.empty() || FileUtil::directoryExists( folderAbs ) == false )
+        if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
         vector<string> listFolder;
@@ -658,7 +639,7 @@ namespace sw::editor
     void EditorAssetCommands::collectChildFolders( string_view folderAbs, vector<string>& outList )
     {
         outList.clear();
-        if ( folderAbs.empty() || FileUtil::directoryExists( folderAbs ) == false )
+        if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
         FileUtil::collectFolders( folderAbs, outList, false );

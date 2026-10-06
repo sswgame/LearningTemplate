@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- StarSkirmish 팩의 설정 — 시작 맵은 전장 씬이다(게임 프리셋 Config/Game/StarSkirmish.json 이 이 파일을 가리킨다). -->
+<!-- StarSkirmish 팩의 설정 — 시작 맵은 전장 씬이다(게임마다 팩의 data/gamesettings.xml 하나다). -->
 <GameSettings>
   <startMap>game/starskirmish/maps/skirmish.scene.xml</startMap>
+  <inputMap>game/starskirmish/data/skirmish.input.xml</inputMap>
 </GameSettings>

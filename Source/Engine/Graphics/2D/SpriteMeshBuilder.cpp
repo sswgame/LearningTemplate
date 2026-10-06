@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/2D/SpriteMeshBuilder.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 
@@ -120,9 +121,9 @@ namespace sw
                     Memory::copy( &arrWord[0], &desc._size, sizeof( float32 ) * 2 );
                     Memory::copy( &arrWord[2], &desc._border, sizeof( float32 ) * 4 );
                     arrWord[6]  = desc._bTiled;
-                    uint64 hash = 1469598103934665603ull;
+                    uint64 hash = HashUtil::kFnvOffset64;
                     for ( const uint32 word : arrWord )
-                        hash = ( hash ^ word ) * 1099511628211ull;
+                        hash = ( hash ^ word ) * HashUtil::kFnvPrime64;
                     return static_cast<size_t>( hash );
                 }
             };

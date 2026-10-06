@@ -118,7 +118,29 @@ namespace sw
     void FoliageComponent::onPropertyChanged( hashed_string propertyName )
     {
         SceneComponent::onPropertyChanged( propertyName );
+        // 켜고 끄기는 배치를 바꾸지 않는다 — 셀을 다시 짓지 않고 빌더가 다시 보게만 한다.
+        static const hashed_string s_activeName( "_bActive" );
+        if ( propertyName == s_activeName )
+        {
+            markCellsDirty();
+            return;
+        }
         rebuildFoliage();
+    }
+
+    void FoliageComponent::onOwnerActiveInHierarchyChanged()
+    {
+        SceneComponent::onOwnerActiveInHierarchyChanged();
+        markCellsDirty();
+    }
+
+    void FoliageComponent::markCellsDirty()
+    {
+        for ( Cell& cell : _listCell )
+        {
+            if ( cell._batch != nullptr )
+                cell._batch->markAllEntriesDirty();
+        }
     }
 
     void FoliageComponent::onTick( float32 deltaTime )
@@ -255,8 +277,9 @@ namespace sw
                 Cell                     cell;
                 cell._layerIndex = layerIndex;
                 cell._batch      = sw::make_unique<MeshInstanceBatch>( listMesh[meshIndex], material.getMaterial(), material.getInstance(), static_cast<uint32>( listIndex.size() ) );
-                float3  minimum{ MathUtil::MaxFloat, MathUtil::MaxFloat, MathUtil::MaxFloat };
-                float3  maximum{ MathUtil::MinFloat, MathUtil::MinFloat, MathUtil::MinFloat };
+                cell._batch->setOwnerComponent( this );
+                float3  minimum{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+                float3  maximum{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };
                 float32 maxScale{ 0.0f };
                 for ( uint32 entry = 0; entry < listIndex.size(); ++entry )
                 {

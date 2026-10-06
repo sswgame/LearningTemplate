@@ -4,31 +4,35 @@
  *        시설 · 고철 운반 · 위협(기반 SpawnDirector 실내 · 실외) · 죽음과 시신 회수 · 벌금 · 전멸 손실 · 회사 매입 · 할당량 · 터미널 상점(기반 ShopState/Wallet)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/AI/SpawnDirector.h"
-#include "GameFramework/Combat/Vitality.h"
+#include "GameFramework/Base/AI/SpawnDirector.h"
+#include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/Shop.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCarry.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCatalog.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerFacility.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerQuota.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/World/WeatherSystem.h"
-#include "GameFramework/World/WorldClock.h"
 
 namespace sw
 {
+    struct GameStateRefs;
+
+    class Archive;
     class ItemCatalog;
     class ShopCatalog;
     class SpawnTable;
     class WeatherCatalog;
+    class WeatherSystem;
+    class WorldClock;
 
     /** @brief 판의 단계입니다. */
     enum class ScavengerPhase : uint8
@@ -124,10 +128,16 @@ namespace sw
     public:
         static constexpr const utf8* kShipAreaId    = "ship";
         static constexpr const utf8* kOutsideAreaId = "outside";
+        static constexpr uint32      kStateTag      = FourCcUtil::make( "SCEX" );
+        static constexpr uint32      kStateVersion  = 1;
 
         ScavengerExpedition();
 
-        void initialize( const ScavengerExpeditionData& data, uint32 seed, int32 crewCount );
+        /**
+         * @brief 새 원정을 엽니다. 회사 돈 · 시계 · 날씨 · 플래그(시설 문 잠금 `unlocked.<방>`)는 @p refs 에서 빌립니다 — 지갑은 시작 크레딧으로 맞추고, 시계 · 날씨는 흘리지 않는다
+         *        (공유 상태의 주인이 흘린다). 내리면 그 위성의 날씨로 바꾸고, 떠나면 시계를 다음 날 도착 시각으로 넘깁니다. 터미널에서 산 것은 빌린 우주선 창고(@p shipStorage — 원정보다 오래 살아야 한다)에 듭니다.
+         */
+        void initialize( const ScavengerExpeditionData& data, const GameStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount );
 
         /** @brief 궤도에서 위성으로 갑니다(비용을 낸다). 이미 그 위성이면 공짜입니다. */
         ScavengerActionResult routeTo( const hashed_string& moonId );
@@ -161,21 +171,27 @@ namespace sw
         ShopResult buyFromTerminal( const hashed_string& itemId, int32 count );
         void       drainEvents( vector<ScavengerEvent>& outListEvent );
 
+        /**
+         * @brief 사람(체력 · 든 것 · 자리 · 시신) · 우주선 고철 · 할당량 · 시설 · 위협 감독 둘 · 상점 시세 · 난수 · 위성 id · 씨앗 · 내린 시간 · 단계 · 해 질 녘 알림을 씁니다.
+         *        카탈로그 · 빌린 지갑 · 시계 · 날씨 · 플래그 · 우주선 창고는 싣지 않습니다(주인이 싣는다). 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 같은 데이터 · 같은 사람 수로 `initialize` 한 뒤에 부릅니다. 깨졌거나 없는 위성이면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
         ScavengerPhase                getPhase() const { return _phase; }
         const ScavengerMoonDef*       getMoon() const { return _pMoon; }
         const ScavengerQuota&         getQuota() const { return _quota; }
-        const Wallet&                 getWallet() const { return _wallet; }
         int64                         getCredits() const;
         const ScavengerFacility&      getFacility() const { return _facility; }
-        const WorldClock&             getClock() const { return _clock; }
-        const WeatherSystem&          getWeather() const { return _weather; }
-        const Inventory&              getShipInventory() const { return _shipInventory; }
+        const Inventory&              getShipInventory() const { return *_pShipStorage; }
         const vector<ScavengerScrap>& getShipScrap() const { return _listShipScrap; }
         int32                         computeShipValue() const;
         const ScavengerCrewMember*    findCrewMember( int32 player ) const;
         int32                         getCrewCount() const { return static_cast<int32>( _listCrew.size() ); }
         int32                         countAlive() const;
-        int32                         getDayIndex() const { return _dayIndex; }
+        /** @brief 빌린 시계의 날입니다(없으면 0) — 그날의 배치 · 위협 · 날씨 씨앗이다. */
+        int32 getDayIndex() const;
         /** @brief 내린 뒤 흐른 게임 시간(시)입니다. */
         float32 getHoursOnMoon() const { return _hoursOnMoon; }
         /** @brief 위협 예산 배율(위성 위험도 × 날씨)입니다. */
@@ -198,18 +214,17 @@ namespace sw
         ScavengerExpeditionData     _data;
         ScavengerQuota              _quota;
         ScavengerFacility           _facility;
-        WorldClock                  _clock;
-        WeatherSystem               _weather;
         SpawnDirector               _indoorDirector;
         SpawnDirector               _outdoorDirector;
-        Wallet                      _wallet;
         ShopState                   _shop;
-        Inventory                   _shipInventory;
         GameRandom                  _random;
+        Inventory*                  _pShipStorage; ///< 우주선 창고(빌림)
+        Wallet*                     _pWallet;      ///< 빌린 지갑(회사 돈)
+        WorldClock*                 _pClock;       ///< 빌린 시계 — 떠나면 다음 날 도착 시각으로 넘긴다
+        WeatherSystem*              _pWeather;     ///< 빌린 날씨 — 내리면 그 위성의 날씨로 바꾼다
         const ScavengerMoonDef*     _pMoon;
         uint32                      _seed;
         float32                     _hoursOnMoon;
-        int32                       _dayIndex;
         ScavengerPhase              _phase;
         uint8                       _bDuskAnnounced;
     };

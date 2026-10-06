@@ -654,7 +654,7 @@ namespace sw
             _lastError = "empty path";
             return false;
         }
-        if ( FileUtil::fileExists( path ) )
+        if ( FileUtil::exists( path ) )
         {
             if ( pOutAbsPath != nullptr )
                 *pOutAbsPath = string{ path };

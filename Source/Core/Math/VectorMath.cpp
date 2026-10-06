@@ -64,7 +64,7 @@ namespace sw
     float2 float2::reflect( const float2& source, const float2& normal ) noexcept
     {
         const float32 normalLenSq = normal.getLengthSquared();
-        if ( normalLenSq < MathUtil::Epsilon )
+        if ( normalLenSq < MathUtil::kEpsilon )
             return source;
         const float2 n = normal / MathUtil::sqrt( normalLenSq );
         return source - ( 2.f * source.dot( n ) ) * n;
@@ -249,7 +249,7 @@ namespace sw
         // 식은 DirectXMath XMVector3Refract 와 같다(법선은 단위 벡터로 만든다).
         // 전반사(근이 음수)면 영 벡터다.
         const float32 normalLenSq = normal.getLengthSquared();
-        if ( normalLenSq < MathUtil::Epsilon )
+        if ( normalLenSq < MathUtil::kEpsilon )
             return source;
         const float3  direction   = normal / MathUtil::sqrt( normalLenSq );
         const float32 incidentDot = source.dot( direction );
@@ -262,7 +262,7 @@ namespace sw
     float3 float3::reflect( const float3& source, const float3& normal ) noexcept
     {
         const float32 normalLenSq = normal.getLengthSquared();
-        if ( normalLenSq < MathUtil::Epsilon )
+        if ( normalLenSq < MathUtil::kEpsilon )
             return source;
         const float3  direction  = normal / MathUtil::sqrt( normalLenSq );
         const float32 dotProduct = source.dot( direction );
@@ -272,7 +272,7 @@ namespace sw
     float3 float3::project( const float3& from, const float3& to ) noexcept
     {
         const float32 toLenSq = to.getLengthSquared();
-        if ( toLenSq < MathUtil::Epsilon )
+        if ( toLenSq < MathUtil::kEpsilon )
             return Zero;
         const float3  direction  = to / MathUtil::sqrt( toLenSq );
         const float32 dotProduct = from.dot( direction );
@@ -386,7 +386,7 @@ namespace sw
             return MathUtil::acos( MathUtil::clamp( dotProduct, -1.0f, 1.0f ) );
 
         const float32 length = MathUtil::sqrt( lengthSquaredA ) * MathUtil::sqrt( lengthSquaredB );
-        if ( length <= MathUtil::Epsilon )
+        if ( length <= MathUtil::kEpsilon )
             return 0.0f;
         return MathUtil::acos( MathUtil::clamp( dotProduct / length, -1.0f, 1.0f ) );
     }

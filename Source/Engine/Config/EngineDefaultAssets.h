@@ -38,44 +38,44 @@ namespace sw
         string _localizationProject{ "engine/localization/engine.locproject.json" }; ///< 엔진 문자열(설정 메뉴 등)의 로컬라이제이션 프로젝트
 
         PROPERTY()
-        string _defaultForwardPipeline{ "engine/pipeline/forwardpipeline.xml" };
+        string _defaultForwardPipeline{ "engine/pipeline/forwardpipeline.xml" }; ///< 포워드 렌더 파이프라인(프레임 그래프)
         PROPERTY()
-        string _defaultDeferredPipeline{ "engine/pipeline/deferredpipeline.xml" };
+        string _defaultDeferredPipeline{ "engine/pipeline/deferredpipeline.xml" }; ///< 디퍼드 렌더 파이프라인
         PROPERTY()
-        string _defaultRenderPass{ "engine/renderpass/defaultrenderpass.xml" };
+        string _defaultRenderPass{ "engine/renderpass/defaultrenderpass.xml" }; ///< 기본 렌더 패스 바인드 틀
 
         PROPERTY()
-        string _shaderShadowDepth{ "engine/shaders/shadowdepth.hlsl" };
+        string _shaderShadowDepth{ "engine/shaders/shadowdepth.hlsl" }; ///< 그림자 깊이 패스
         PROPERTY()
-        string _shaderForwardLit{ "engine/shaders/forwardlit.hlsl" };
+        string _shaderForwardLit{ "engine/shaders/forwardlit.hlsl" }; ///< 포워드 조명
         PROPERTY()
-        string _shaderGBuffer{ "engine/shaders/gbuffer.hlsl" };
+        string _shaderGBuffer{ "engine/shaders/gbuffer.hlsl" }; ///< 디퍼드 G 버퍼 채우기
         PROPERTY()
-        string _shaderDeferredLighting{ "engine/shaders/deferredlighting.hlsl" };
+        string _shaderDeferredLighting{ "engine/shaders/deferredlighting.hlsl" }; ///< 디퍼드 조명
         PROPERTY()
-        string _shaderPostBloom{ "engine/shaders/postbloom.hlsl" };
+        string _shaderPostBloom{ "engine/shaders/postbloom.hlsl" }; ///< 후처리 블룸
         PROPERTY()
-        string _shaderPostOutline{ "engine/shaders/postoutline.hlsl" };
+        string _shaderPostOutline{ "engine/shaders/postoutline.hlsl" }; ///< 후처리 외곽선
         PROPERTY()
-        string _shaderFullscreenBlit{ "engine/shaders/fullscreenblit.hlsl" };
+        string _shaderFullscreenBlit{ "engine/shaders/fullscreenblit.hlsl" }; ///< 전체 화면 복사
         PROPERTY()
-        string _shaderGpuCull{ "engine/shaders/gpucull.hlsl" };
+        string _shaderGpuCull{ "engine/shaders/gpucull.hlsl" }; ///< GPU 컬링 · 드로우 커맨드 생성(컴퓨트)
         PROPERTY()
-        string _shaderInstanceAnim{ "engine/shaders/instanceanim.hlsl" };
+        string _shaderInstanceAnim{ "engine/shaders/instanceanim.hlsl" }; ///< 인스턴스 애니메이션(컴퓨트)
         PROPERTY()
-        string _shaderMeshMorph{ "engine/shaders/meshmorph.hlsl" };
+        string _shaderMeshMorph{ "engine/shaders/meshmorph.hlsl" }; ///< 모프 타깃(컴퓨트)
         PROPERTY()
-        string _shaderMeshSkin{ "engine/shaders/meshskin.hlsl" };
+        string _shaderMeshSkin{ "engine/shaders/meshskin.hlsl" }; ///< 스키닝(컴퓨트)
         PROPERTY()
-        string _shaderInstanceSort{ "engine/shaders/instancesort.hlsl" };
+        string _shaderInstanceSort{ "engine/shaders/instancesort.hlsl" }; ///< 투명 인스턴스 바이토닉 정렬(컴퓨트)
         PROPERTY()
-        string _shaderFullscreenTriangle{ "engine/shaders/fullscreentriangle.hlsl" };
+        string _shaderFullscreenTriangle{ "engine/shaders/fullscreentriangle.hlsl" }; ///< 전체 화면 삼각형 정점 셰이더
         PROPERTY()
-        string _shaderSsao{ "engine/shaders/ssao.hlsl" };
+        string _shaderSsao{ "engine/shaders/ssao.hlsl" }; ///< SSAO
         PROPERTY()
-        string _shaderTaa{ "engine/shaders/taa.hlsl" };
+        string _shaderTaa{ "engine/shaders/taa.hlsl" }; ///< TAA
         PROPERTY()
-        string _shaderTonemap{ "engine/shaders/tonemap.hlsl" };
+        string _shaderTonemap{ "engine/shaders/tonemap.hlsl" }; ///< 톤 매핑
         PROPERTY()
         string _shaderToon{ "engine/shaders/toon.hlsl" }; ///< 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다
 

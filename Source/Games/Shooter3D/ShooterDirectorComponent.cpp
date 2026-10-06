@@ -2,6 +2,7 @@
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -13,6 +14,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -20,10 +22,10 @@
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Appearance/CharacterAppearanceComponent.h"
-#include "GameFramework/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Base/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include "Games/Shooter3D/ShooterEffectComponent.h"
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
@@ -37,13 +39,8 @@ namespace sw
     {
         struct ShooterDirectorComponentInternal
         {
-            static constexpr float32 kStatusInterval = 5.0f;
-            static constexpr uint32  kStateTag       = 0x544F4853u; ///< 'SHOT'
-            static constexpr uint32  kStateVersion   = 2;
-            /** @brief 이 거리(m) 안의 적이 "가까운 적" 신호입니다. */
-            static constexpr float32 kNearDistance = 7.0f;
-            /** @brief 수리 보상의 scale 1 이 채우는 체력입니다. */
-            static constexpr float32 kRepairPerScale = 10.0f;
+            static constexpr uint32 kStateTag     = FourCcUtil::make( "SHOT" );
+            static constexpr uint32 kStateVersion = 3;
             /** @brief 이 게임이 아는 조우 · 보상 · 스폰 id 입니다 — 프로필이 다른 이름을 쓰면 시작할 때 알린다. */
             static constexpr const utf8* kArrKnownEncounter[] = { "swarm", "elite", "ammo", "repair" };
             static constexpr const utf8* kArrKnownSpawn[]     = { "skeleton" };
@@ -130,6 +127,9 @@ namespace sw
         , _pacingSeed{ 1 }
         , _effectPoolSize{ 32 }
         , _tracerPoolSize{ 24 }
+        , _statusLogInterval{ 5.0f }
+        , _nearEnemyDistance{ 7.0f }
+        , _repairHealthPerScale{ 10.0f }
         , _listBox{}
         , _listEnemyView{}
         , _profile{}
@@ -152,7 +152,6 @@ namespace sw
         , _traceFrame{ 0 }
         , _bAmmoPending{ SW_FALSE }
         , _bPacingReady{ SW_FALSE }
-        , _bPacingRestart{ SW_FALSE }
         , _bPlayerAlive{ SW_TRUE }
         , _reserved{ 0 }
     {
@@ -177,17 +176,26 @@ namespace sw
     {
         StateArchiveUtil::writeHeader( outArchive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion );
         outArchive << _killCount;
+        outArchive << static_cast<uint8>( _bPacingReady );
+        if ( _bPacingReady == SW_TRUE )
+            _director.writeState( outArchive );
     }
 
     bool ShooterDirectorComponent::readState( Archive& archive )
     {
         uint32 killCount = 0;
+        uint8  bPacing   = SW_FALSE;
         if ( StateArchiveUtil::readHeader( archive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion ) == false )
             return false;
         archive >> killCount;
-        if ( archive.isError() || archive.getRemainingBytes() != 0 )
+        archive >> bPacing;
+        if ( archive.isError() || ( bPacing == SW_TRUE && _bPacingReady == SW_FALSE ) )
             return false;
-        // 적은 걷히고(`onViewsDespawned` 가 다음 틱에 감독도 처음부터 돌리게 한다) 처치 수만 잇는다 — 감독의 주기 · 시간 · 풀은 싣지 않는다.
+        // 감독은 단계 · 웨이브 · 예산 · 산 스폰까지 잇는다. 적 모습은 복원 뒤 걷히고(`onViewsDespawned`) 감독 예산으로 섰던 것만 같은 스폰 id 로 다시 선다.
+        if ( bPacing == SW_TRUE && _director.readState( archive ) == false )
+            return false;
+        if ( archive.getRemainingBytes() != 0 )
+            return false;
         _killCount = killCount;
         return true;
     }
@@ -195,9 +203,17 @@ namespace sw
     void ShooterDirectorComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO( "[Shooter] arena state restored - %# kills", _killCount );
+        {
+            SW_LOG_INFO( "[Shooter] arena state restored - %# kills, wave %#", _killCount, getWave() );
+        }
         else
+        {
+            // 감독은 읽었는데 끝 바이트가 남은 경우도 여기로 온다 — 새 판으로 되돌린다.
             SW_LOG_WARNING( "[Shooter] the saved arena state does not match this build - starting a new round" );
+            _killCount = 0;
+            if ( _bPacingReady == SW_TRUE )
+                _director.restart();
+        }
     }
 
     void ShooterDirectorComponent::onEndPlay()
@@ -216,11 +232,6 @@ namespace sw
         if ( step > 0.0f )
         {
             updateEnemies();
-            if ( _bPacingReady == SW_TRUE && _bPacingRestart == SW_TRUE )
-            {
-                _bPacingRestart = SW_FALSE;
-                _director.restart();
-            }
             if ( _bPacingReady == SW_TRUE )
             {
                 _director.update( step );
@@ -243,7 +254,14 @@ namespace sw
         _listEnemyView.clear();
         _listPendingEnemy.clear();
         _listPendingEffect.clear();
-        _bPacingRestart = SW_TRUE; // 걷은 적의 스폰 id 를 돌려줄 수 없다 — 다음 틱에 감독도 처음부터
+        // 감독 예산으로 선 적은 감독이 아직 산 것으로 센다 — 같은 스폰 id 로 다시 세운다(체력은 새로). 무리 · 정예는 예산 밖이라 걷힌 채 끝난다.
+        if ( _bPacingReady == SW_TRUE )
+        {
+            vector<uint32> listSpawnId;
+            _director.getSpawnDirector().collectAliveSpawnIds( listSpawnId );
+            for ( const uint32 spawnId : listSpawnId )
+                requestEnemies( 1, 1.0f, spawnId, false );
+        }
     }
 
     void ShooterDirectorComponent::restartRound()
@@ -326,9 +344,8 @@ namespace sw
 
     void ShooterDirectorComponent::startPacing()
     {
-        using Internal  = ShooterDirectorComponentInternal;
-        _bPacingReady   = SW_FALSE;
-        _bPacingRestart = SW_FALSE;
+        using Internal = ShooterDirectorComponentInternal;
+        _bPacingReady  = SW_FALSE;
         if ( _profile.loadFromResource( _pacingProfile ) == false || _table.loadFromResource( _spawnTable ) == false )
         {
             SW_LOG_ERROR( "[Shooter] pacing data '%#' / '%#' could not be loaded - no enemies will come", _pacingProfile.c_str(), _spawnTable.c_str() );
@@ -372,7 +389,6 @@ namespace sw
 
     void ShooterDirectorComponent::applyDirectorEvents()
     {
-        using Internal = ShooterDirectorComponentInternal;
         _listDirectorEvent.clear();
         _director.drainEvents( _listDirectorEvent );
         for ( const AiDirectorEvent& event : _listDirectorEvent )
@@ -410,7 +426,7 @@ namespace sw
                     if ( event._id == hashed_string( "ammo" ) )
                         _bAmmoPending = SW_TRUE;
                     else if ( event._id == hashed_string( "repair" ) )
-                        _pendingHeal += event._scale * Internal::kRepairPerScale;
+                        _pendingHeal += event._scale * _repairHealthPerScale;
                     break;
                 }
                 case AiDirectorEventKind::Despawned:
@@ -584,7 +600,7 @@ namespace sw
             view._height   = pEnemy->getHeight();
             _listEnemyView.push_back( view );
             const float3 toPlayer = view._position - _playerFeet;
-            nearCount += toPlayer.getLength() < ShooterDirectorComponentInternal::kNearDistance ? 1 : 0;
+            nearCount += toPlayer.getLength() < _nearEnemyDistance ? 1 : 0;
         }
         if ( _bPacingReady == SW_TRUE )
             (void)_director.getBuiltinIntensityModel().setSignal( hashed_string( "enemiesNear" ), static_cast<float32>( nearCount ) );
@@ -607,7 +623,7 @@ namespace sw
     void ShooterDirectorComponent::logStatus( float32 deltaTime )
     {
         _statusTimer += deltaTime;
-        if ( _statusTimer < ShooterDirectorComponentInternal::kStatusInterval )
+        if ( _statusTimer < _statusLogInterval )
             return;
         _statusTimer                           = 0.0f;
         GameObjectManager*            pManager = getObjectManager();
@@ -662,16 +678,17 @@ namespace sw
         float3                 camera{};
         float32                cameraYaw = 0.0f;
         const GameObjectHandle player    = _player;
-        pManager->forEachComponentOfType<CameraDirectorComponent>( [&]( CameraDirectorComponent* pCameraDirector )
+        for ( const CameraDirectorComponent* pCameraDirector : pManager->getComponentRegistry().getAll<CameraDirectorComponent>() )
         {
-            const CameraComponent* pCamera = pCameraDirector->getTarget() == player ? pCameraDirector->getOwner()->getComponent<CameraComponent>() : nullptr;
+            const bool             bFollows = pCameraDirector->isPendingDestroy() == false && pCameraDirector->getTarget() == player;
+            const CameraComponent* pCamera  = bFollows ? pCameraDirector->getOwner()->getComponent<CameraComponent>() : nullptr;
             if ( pCamera == nullptr )
-                return;
+                continue;
             const float4x4 world = pCamera->getWorldMatrix();
             camera               = world.getTranslation();
             const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
             cameraYaw            = MathUtil::atan2( forward._x, forward._z );
-        } );
+        }
         float3  enemy{};
         float32 enemyHipsY = 0.0f;
         for ( const EnemyRecord& record : _listEnemy )

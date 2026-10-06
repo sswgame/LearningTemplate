@@ -1,13 +1,18 @@
 #include "pch.h"
 
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Progression/Reputation.h"
+#include "GameFramework/Base/Quest/QuestCatalog.h"
+#include "GameFramework/Base/Quest/QuestLog.h"
+#include "GameFramework/Base/World/LandRegistry.h"
+#include "GameFramework/Base/World/WeatherSystem.h"
+#include "GameFramework/Base/World/WorldClock.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureTown.h"
-#include "GameFramework/Progression/Reputation.h"
-#include "GameFramework/Quest/QuestCatalog.h"
-#include "GameFramework/World/WeatherSystem.h"
-#include "GameFramework/World/WorldClock.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -39,7 +44,7 @@ namespace
 
     constexpr const utf8* kCreatureLifeTestReputationXml = R"(
 <ReputationCatalog>
-  <Faction id="sprout" min="0" max="1000" start="0"><Tier name="Stranger" min="0"/><Tier name="Friend" min="50"/><Tier name="Best" min="150"/></Faction>
+  <Faction id="creature.sprout" min="0" max="1000" start="0"><Tier name="Stranger" min="0"/><Tier name="Friend" min="50"/><Tier name="Best" min="150"/></Faction>
 </ReputationCatalog>
 )";
 
@@ -67,6 +72,9 @@ namespace
         ReputationCatalog   _reputation;
         QuestCatalog        _quests;
         ItemCatalog         _items;
+        QuestLog            _questLog;   ///< 마을이 빌리는 부탁 일지
+        ReputationState     _friendship; ///< 마을이 빌리는 평판(호감도)
+        WorldClock          _clock;      ///< 마을이 빌리는 시계(날)
 
         bool load()
         {
@@ -77,8 +85,30 @@ namespace
                 item._maxStack = 99;
                 _items.addItem( item );
             }
-            return _catalog.loadFromXmlText( kCreatureLifeTestXml, "CreatureLifeTest" ) && _reputation.loadFromXmlText( kCreatureLifeTestReputationXml, "CreatureLifeTest" ) &&
-                   _quests.loadFromXmlText( kCreatureLifeTestQuestXml, "CreatureLifeTest" );
+            const bool bLoaded = _catalog.loadFromXmlText( kCreatureLifeTestXml, "CreatureLifeTest" ) &&
+                                 _reputation.loadFromXmlText( kCreatureLifeTestReputationXml, "CreatureLifeTest" ) &&
+                                 _quests.loadFromXmlText( kCreatureLifeTestQuestXml, "CreatureLifeTest" );
+            _questLog.initialize( &_quests );
+            _friendship.initialize( &_reputation );
+            _clock.initialize( WorldClockSettings{} );
+            return bLoaded;
+        }
+
+        GameStateRefs makeRefs()
+        {
+            GameStateRefs refs;
+            refs._pQuestLog   = &_questLog;
+            refs._pReputation = &_friendship;
+            refs._pClock      = &_clock;
+            return refs;
+        }
+
+        /** @brief 하루를 넘기고 마을에 알립니다 — 게임에서는 디렉터가 시계의 날 넘김에 부른다. */
+        void passDay( CreatureTown& town )
+        {
+            _clock.advanceToHour( _clock.getHour() );
+            _friendship.advanceDay(); // 공유 평판은 주인이 날 넘김에 식힌다
+            town.advanceDay();
         }
     };
 
@@ -105,9 +135,9 @@ namespace
     }
 
     /** @brief 풀숲을 만들고 낮 · 맑음에 sprout 를 부릅니다. */
-    void makeTownWithSprout( CreatureTown& town, const CreatureLifeTestWorld& world )
+    void makeTownWithSprout( CreatureTown& town, CreatureLifeTestWorld& world )
     {
-        town.initialize( &world._catalog, &world._reputation, &world._quests, 10, 10, CreatureTownSettings{} );
+        town.initialize( &world._catalog, world.makeRefs(), 10, 10, CreatureTownSettings{} );
         placeTallGrass( town, 0, 0, true );
         (void)town.attractVisitorsAt( 0, 9, DayPhase::Day, "sunny" );
     }
@@ -195,7 +225,7 @@ SW_TEST_CASE( CreatureLifeTest, HabitatsMatchRotatedPatternsAndLargestWins )
     CreatureLifeTestWorld world;
     SW_ASSERT_TRUE( world.load() );
     CreatureTown town;
-    town.initialize( &world._catalog, nullptr, nullptr, 8, 8, CreatureTownSettings{} );
+    town.initialize( &world._catalog, GameStateRefs{}, 8, 8, CreatureTownSettings{} );
 
     // 돌린 풀숲: 2×2 풀 + 그 위 줄 오른쪽에 나무(돌리지 않은 패턴은 나무가 풀 줄의 오른쪽 끝에 있어야 한다).
     (void)town.setObject( 2, 2, "grass" );
@@ -245,7 +275,7 @@ SW_TEST_CASE( CreatureLifeTest, VisitorsFollowPhaseWeatherAndAreDeterministic )
     clock.initialize( WorldClockSettings{} );
 
     CreatureTown town;
-    town.initialize( &world._catalog, &world._reputation, &world._quests, 10, 10, CreatureTownSettings{} );
+    town.initialize( &world._catalog, world.makeRefs(), 10, 10, CreatureTownSettings{} );
     weather.forceWeather( "sunny", 0.0f, true );
     clock.setTime( 0, 9.0f );
     SW_EXPECT_EQUAL( 0, town.attractVisitors( clock, weather ) ); // 서식지가 없다
@@ -267,7 +297,7 @@ SW_TEST_CASE( CreatureLifeTest, VisitorsFollowPhaseWeatherAndAreDeterministic )
 
     // 연못(자리 2): 밤 · 비의 frog 는 늘, newt 는 35 % — 같은 씨앗이면 두 마을이 같은 시각에 받는다.
     CreatureTown townB;
-    townB.initialize( &world._catalog, nullptr, nullptr, 10, 10, CreatureTownSettings{} );
+    townB.initialize( &world._catalog, GameStateRefs{}, 10, 10, CreatureTownSettings{} );
     (void)town.setObject( 0, 5, "water" );
     (void)town.setObject( 1, 5, "water" );
     (void)townB.setObject( 0, 5, "water" );
@@ -318,7 +348,7 @@ SW_TEST_CASE( CreatureLifeTest, FriendshipTalkAndGiftOncePerDay )
     vector<CreatureTownEvent> listEvent;
     town.drainEvents( listEvent );
     listEvent.clear();
-    town.advanceDay();
+    world.passDay( town );
     SW_EXPECT_TRUE( town.giveGift( "sprout", "berry", inventory ) == CreatureInteractResult::Ok );
     SW_EXPECT_EQUAL( 55, town.getFriendship( "sprout" ) );
     SW_EXPECT_TRUE( town.getFriendshipTier( "sprout" ) == hashed_string( "Friend" ) );
@@ -356,16 +386,16 @@ SW_TEST_CASE( CreatureLifeTest, RequestsDeliverItemsAndHabitats )
     listEvent.clear();
     SW_EXPECT_EQUAL( 1, town.deliverItem( "berry", 3, inventory ) );
     SW_EXPECT_EQUAL( 1, inventory.getItemCount( "berry" ) );
-    SW_EXPECT_TRUE( town.getQuestLog().getStatus( "sprout_berries" ) == QuestStatus::Completed );
+    SW_EXPECT_TRUE( world._questLog.getStatus( "sprout_berries" ) == QuestStatus::Completed );
     SW_EXPECT_EQUAL( 50, town.getFriendship( "sprout" ) );
     town.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, countTownEvents( listEvent, CreatureTownEvent::Kind::RequestCompleted ) );
 
     SW_EXPECT_TRUE( town.startRequest( "sprout", "sprout_pond" ) == CreatureRequestResult::Ok );
     (void)town.setObject( 6, 6, "water" );
-    SW_EXPECT_TRUE( town.getQuestLog().getStatus( "sprout_pond" ) == QuestStatus::Active );
+    SW_EXPECT_TRUE( world._questLog.getStatus( "sprout_pond" ) == QuestStatus::Active );
     (void)town.setObject( 6, 7, "water" ); // 세로로 돌린 연못
-    SW_EXPECT_TRUE( town.getQuestLog().getStatus( "sprout_pond" ) == QuestStatus::Completed );
+    SW_EXPECT_TRUE( world._questLog.getStatus( "sprout_pond" ) == QuestStatus::Completed );
     SW_EXPECT_EQUAL( 100, town.getFriendship( "sprout" ) );
 }
 
@@ -402,7 +432,7 @@ SW_TEST_CASE( CreatureLifeTest, AbilitiesEditTilesWithinDailyUses )
     SW_EXPECT_TRUE( town.findObject( 0, 8 )->empty() );
     SW_EXPECT_EQUAL( 2, inventory.getItemCount( "stone" ) );
 
-    town.advanceDay();
+    world.passDay( town );
     SW_EXPECT_EQUAL( 2, town.countAbilityUsesLeft( "sprout", "plant_tree" ) );
     SW_EXPECT_TRUE( town.useAbility( "sprout", "plant_tree", 3, 4, nullptr ) == CreatureAbilityResult::Ok );
 }
@@ -415,7 +445,7 @@ SW_TEST_CASE( CreatureLifeTest, HousesAndTownAppealTiers )
     CreatureLifeTestWorld world;
     SW_ASSERT_TRUE( world.load() );
     CreatureTown town;
-    town.initialize( &world._catalog, &world._reputation, nullptr, 12, 12, CreatureTownSettings{} );
+    town.initialize( &world._catalog, world.makeRefs(), 12, 12, CreatureTownSettings{} );
     SW_EXPECT_TRUE( town.getAppealTierName() == hashed_string( "Camp" ) );
 
     placeTallGrass( town, 0, 0, true );
@@ -450,4 +480,142 @@ SW_TEST_CASE( CreatureLifeTest, HousesAndTownAppealTiers )
     SW_EXPECT_TRUE( town.assignHouse( "sprout", farHouse ) == CreatureHouseResult::Ok );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( town.getHouses()[static_cast<size_t>( nearHouse )]._listResident.size() ) );
     SW_EXPECT_EQUAL( 0, town.assignHomeless() );
+}
+
+/**
+ * @brief [CreatureLifeTest] 부탁 완료 알림은 빌린 일지에 남는다 — 마을은 상태를 보고 보상하고, 알림은 게임 화면 · 다른 키트가 받는다
+ */
+SW_TEST_CASE( CreatureLifeTest, RequestsLeaveTheQuestEventsToTheGame )
+{
+    CreatureLifeTestWorld world;
+    SW_ASSERT_TRUE( world.load() );
+    CreatureTown town;
+    makeTownWithSprout( town, world );
+    Inventory inventory;
+    inventory.initialize( &world._items, 8 );
+    (void)inventory.addItem( "berry", 3 );
+
+    vector<QuestEvent> listEvent;
+    SW_EXPECT_TRUE( town.startRequest( "sprout", "sprout_berries" ) == CreatureRequestResult::Ok );
+    SW_EXPECT_EQUAL( 1, town.deliverItem( "berry", 3, inventory ) );
+    world._questLog.drainEvents( listEvent );
+    int32 completedCount = 0;
+    for ( const QuestEvent& questEvent : listEvent )
+    {
+        if ( questEvent._kind == QuestEvent::Kind::Completed && questEvent._questId == hashed_string( "sprout_berries" ) )
+            ++completedCount;
+    }
+    SW_EXPECT_EQUAL( 1, completedCount );                  // 마을이 꺼내 먹지 않았다
+    SW_EXPECT_EQUAL( 50, town.getFriendship( "sprout" ) ); // 보상은 상태를 보고 줬다
+}
+
+/**
+ * @brief [CreatureLifeTest] 마을 상태 바이트 — 서식지 번호 · 생물 · 집 · 받은 부탁 · 호감도 · 날이 그대로 오고, 부탁이 이어진다. 크기가 다르거나 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( CreatureLifeTest, TownStateRoundTripContinuesTheSameTown )
+{
+    CreatureLifeTestWorld world;
+    SW_ASSERT_TRUE( world.load() );
+    CreatureTown town;
+    makeTownWithSprout( town, world );
+    SW_EXPECT_TRUE( town.talkTo( "sprout" ) == CreatureInteractResult::Ok );
+    const int32 houseIndex = town.placeHouse( 5, 5, 1 );
+    SW_ASSERT_TRUE( 0 <= houseIndex );
+    SW_EXPECT_TRUE( town.assignHouse( "sprout", houseIndex ) == CreatureHouseResult::Ok );
+    SW_EXPECT_TRUE( town.startRequest( "sprout", "sprout_berries" ) == CreatureRequestResult::Ok );
+    town.advanceDay();
+
+    Archive written;
+    town.writeState( written );
+    CreatureTown restored;
+    restored.initialize( &world._catalog, world.makeRefs(), 10, 10, CreatureTownSettings{} );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
+
+    const TownCreature* pOriginal = town.findCreature( "sprout" );
+    const TownCreature* pRestored = restored.findCreature( "sprout" );
+    SW_ASSERT_NOT_NULL( pOriginal );
+    SW_ASSERT_NOT_NULL( pRestored );
+    SW_EXPECT_EQUAL( pOriginal->_habitat, pRestored->_habitat ); // 서식지 번호가 이어진다
+    SW_EXPECT_EQUAL( houseIndex, pRestored->_house );
+    SW_EXPECT_EQUAL( town.getFriendship( "sprout" ), restored.getFriendship( "sprout" ) );
+    SW_EXPECT_EQUAL( town.getDay(), restored.getDay() );
+    SW_EXPECT_EQUAL( town.countHabitats( "tall_grass" ), restored.countHabitats( "tall_grass" ) );
+    SW_EXPECT_TRUE( town.getAppealTierName() == restored.getAppealTierName() );
+
+    // 받은 부탁도 이어진다 — 되살린 마을이 열매를 건네받아 끝내고 보상한다(호감도는 공유 평판이라 두 마을이 같은 값을 본다)
+    const int32 friendshipBefore = town.getFriendship( "sprout" );
+    Inventory   inventory;
+    inventory.initialize( &world._items, 8 );
+    (void)inventory.addItem( "berry", 3 );
+    SW_EXPECT_EQUAL( 1, restored.deliverItem( "berry", 3, inventory ) );
+    SW_EXPECT_EQUAL( friendshipBefore + 50, restored.getFriendship( "sprout" ) );
+
+    CreatureTown smaller;
+    smaller.initialize( &world._catalog, GameStateRefs{}, 8, 8, CreatureTownSettings{} );
+    Archive smallerReader( written.getData(), written.getSize() );
+    SW_EXPECT_FALSE( smaller.readState( smallerReader ) );
+    CreatureTown truncated;
+    truncated.initialize( &world._catalog, GameStateRefs{}, 10, 10, CreatureTownSettings{} );
+    Archive cut( written.getData(), written.getSize() - 2 );
+    SW_EXPECT_FALSE( truncated.readState( cut ) );
+    SW_EXPECT_TRUE( truncated.getCreatures().empty() );
+}
+
+/**
+ * @brief [CreatureLifeTest] 호감도는 공유 평판에 산다 — 마을 둘이 한 평판을 빌리면 같은 생물의 호감도가 하나이고, 세력 id 는 키트 접두(creature.<종>)다
+ */
+SW_TEST_CASE( CreatureLifeTest, FriendshipLivesInTheSharedReputation )
+{
+    CreatureLifeTestWorld world;
+    SW_ASSERT_TRUE( world.load() );
+    CreatureTown north;
+    CreatureTown south;
+    makeTownWithSprout( north, world );
+    makeTownWithSprout( south, world );
+    SW_ASSERT_NOT_NULL( south.findCreature( "sprout" ) );
+    SW_EXPECT_TRUE( north.talkTo( "sprout" ) == CreatureInteractResult::Ok );
+    SW_EXPECT_EQUAL( 5, north.getFriendship( "sprout" ) );
+    SW_EXPECT_EQUAL( 5, south.getFriendship( "sprout" ) ); // 같은 세력 — 한 호감도
+    SW_EXPECT_EQUAL( 5, world._friendship.getValue( "creature.sprout" ) );
+    SW_EXPECT_EQUAL( 0, world._friendship.getValue( "sprout" ) ); // 접두 없는 이름은 다른 키트의 것
+    vector<ReputationEvent> listEvent;
+    world._friendship.drainEvents( listEvent ); // 마을은 빌린 평판의 알림을 꺼내지 않았다
+    SW_EXPECT_TRUE( listEvent.empty() );        // (단계가 바뀌지 않아 알림도 없다)
+}
+
+/**
+ * @brief [CreatureLifeTest] 땅을 빌린 마을은 오브젝트를 놓을 때 땅을 얻고 비우면 놓는다 — 남의 땅에는 놓지도 집을 짓지도 못하고, 나무 · 집만 막힘으로 얻는다
+ */
+SW_TEST_CASE( CreatureLifeTest, TownPlacesOnlyOnUsableLandAndBlocksForTreesAndHouses )
+{
+    LandRegistry land;
+    land.initialize( 16, 16, 1.0f, float3{} );
+    const uint16 other = land.registerOwner( "Other" );
+    SW_ASSERT_TRUE( land.claimRect( other, 2, 2, 2, 2, false ) );
+
+    CreatureTown town;
+    town.initialize( nullptr, GameStateRefs{}, 6, 6, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( town.setObject( 1, 1, "grass" ) ); // 묶기 전에 놓은 것은 묶을 때 얻는다
+    SW_ASSERT_TRUE( town.bindLand( &land, int2{ 0, 0 } ) );
+    SW_EXPECT_TRUE( land.getOwnerName( 1, 1 ) == hashed_string( "CreatureLife" ) );
+    SW_EXPECT_FALSE( land.isBlockedFor( other, 1, 1 ) ); // 풀은 막힘이 아니다
+
+    SW_EXPECT_FALSE( town.setObject( 2, 2, "tree" ) ); // 남의 땅
+    SW_EXPECT_TRUE( town.findObject( 2, 2 )->empty() );
+    SW_EXPECT_EQUAL( -1, town.placeHouse( 2, 2, 1 ) );
+
+    SW_ASSERT_TRUE( town.setObject( 3, 3, "tree" ) );
+    SW_EXPECT_TRUE( land.isBlockedFor( other, 3, 3 ) );
+    SW_ASSERT_TRUE( town.setObject( 3, 3, hashed_string{} ) );
+    SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 3, 3 ) );
+    SW_EXPECT_TRUE( 0 <= town.placeHouse( 4, 4, 2 ) );
+    SW_EXPECT_TRUE( land.isBlockedFor( other, 4, 4 ) );
+
+    // 남의 땅 위에 이미 놓인 오브젝트가 있으면 묶지 않는다
+    CreatureTown second;
+    second.initialize( nullptr, GameStateRefs{}, 6, 6, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( second.setObject( 2, 2, "grass" ) );
+    SW_EXPECT_FALSE( second.bindLand( &land, int2{ 0, 0 } ) );
 }

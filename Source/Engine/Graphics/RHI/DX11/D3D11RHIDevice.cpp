@@ -6,6 +6,7 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -158,7 +159,7 @@ namespace sw
             return false;
 
         D3D11_BUFFER_DESC desc{};
-        desc.ByteWidth      = kMaxComputeRootConstantDwords * sizeof( uint32 );
+        desc.ByteWidth      = shaderslot::kRootConstantDwords * sizeof( uint32 );
         desc.Usage          = D3D11_USAGE_DYNAMIC;
         desc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;

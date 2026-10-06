@@ -51,4 +51,4 @@ SW Engine의 가장 강력한 기능 중 하나는 게임을 실행한 채로 �
 > 보존이 필요한 상태는 `PROPERTY` 로 등록하고, 다른 오브젝트는 생포인터가 아니라 `GameObjectHandle` · `ComponentHandle` 로 드세요.
 
 ---
-[◀ 이전: 서브시스템 개요](02_EngineSubsystems.md) | [🏠 위키 홈으로 돌아가기](../README.md) | [▶ 다음: 코딩 컨벤션](04_CodingGuidelines.md)
+[◀ 이전: 문서 지도](02_DocumentMap.md) | [🏠 위키 홈으로 돌아가기](../README.md) | [▶ 다음: 코딩 규칙 예시](04_CodingGuidelines.md)

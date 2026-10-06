@@ -14,8 +14,8 @@
 namespace sw::editor
 {
     // ------------------------------------------------------------------------------
-    // 1) EditorToolDefaults: 맵 · 아틀라스 · 폰트 시드와 설정 폴더 · 도구 파일 이름
-    //    사람이 적는 파일이고, 앱은 다시 쓰지 않는다(앱이 쓰는 것은 EditorConfig)
+    // 1) EditorToolDefaults: 맵 · 아틀라스 · 폰트 시드
+    //    사람이 적는 파일이고, 앱은 다시 쓰지 않는다(앱이 쓰는 것은 EditorConfig). 에디터 자기 파일 · 폴더 이름은 코드 상수(`EditorUtil::k…FileName`)다
     // ------------------------------------------------------------------------------
 
     /**
@@ -27,21 +27,16 @@ namespace sw::editor
     {
         REFLECT_BODY();
         PROPERTY()
-        string _defaultMap{};
+        string _defaultMap{}; ///< 타일맵 패널이 처음 여는 맵(리소스 경로, 비면 없음)
         PROPERTY()
-        string _warpMap{};
+        string _warpMap{}; ///< 타일맵 패널의 워프 대상 기본값(리소스 경로)
         PROPERTY()
-        string _spriteAtlas{};
+        string _spriteAtlas{}; ///< 스프라이트 클립 패널의 기본 아틀라스(리소스 경로)
 
-        PROPERTY()
-        float32 _fontSize{ 16.0f };
+        PROPERTY( Min = 6.0 )
+        float32 _fontSize{ 16.0f }; ///< 에디터 글꼴 크기(픽셀, DPI 배율 전)
         PROPERTY()
         float4 _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }; ///< Game View 렌더 타깃 클리어 색
-
-        PROPERTY()
-        string _editorFolder{ "editor" };
-        PROPERTY()
-        string _fontsFolder{ "fonts" };
 
         PROPERTY()
         vector<string> _listBaseFont{
@@ -54,7 +49,7 @@ namespace sw::editor
             "NotoSansMono-Regular.ttf",
             "UbuntuMono-R.ttf",
             "FreeMono.ttf",
-        };
+        }; ///< 라틴 글꼴 후보 — 에디터 팩 `fonts/` → OS 글꼴 폴더 순으로 앞의 것부터 찾는다
         PROPERTY()
         vector<string> _listKoreanFont{
             "malgun.ttf",
@@ -65,36 +60,7 @@ namespace sw::editor
             "NotoSansCJKkr-Regular.otf",
             "NotoSansKR-Regular.otf",
             "DroidSansFallbackFull.ttf",
-        };
-
-        // ------------------------------------------------------------------------------
-        // 설정 폴더와 도구 파일 이름. 사람이 정하고, 앱은 다시 쓰지 않는다.
-        //
-        // EditorConfig 는 테마를 바꿀 때마다 `saveToHost()` 가 **통째로 다시 만들므로** 손으로 적는 값을 거기 두지 않는다.
-        // 경계는 "무슨 내용인가" 가 아니라 **"누가 쓰는가"** 다. 앱이 쓰는 것만 EditorConfig 에 둔다.
-        // ------------------------------------------------------------------------------
-        PROPERTY()
-        string _configFolder{ "Config" };
-        PROPERTY()
-        string _editorConfigFolder{ "Editor" };
-
-        PROPERTY()
-        string _imguiIniFile{ "imgui.ini" };
-        PROPERTY()
-        string _windowsIniFile{ "windows.ini" };
-
-        PROPERTY()
-        string _animGraphSettingsFile{ "AnimGraph.json" };
-        PROPERTY()
-        string _animGraphDataFile{ "AnimGraphData.json" };
-        PROPERTY()
-        string _dialogueGraphDataFile{ "DialogueGraphData.json" };
-        PROPERTY()
-        string _spriteClipFile{ "SpriteClip.json" };
-        PROPERTY()
-        string _textureImportConfigFile{ "TextureImportConfig.json" };
-        PROPERTY()
-        string _modelImportConfigFile{ "ModelImportConfig.json" };
+        }; ///< 한글 글꼴 후보(병합) — 찾는 순서는 위와 같다
 
         /**
          * @brief 실행 중에 다시 읽을 애셋 확장자입니다. **비우면 처리기가 있는 확장자 전부**를 봅니다.

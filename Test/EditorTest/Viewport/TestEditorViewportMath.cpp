@@ -16,20 +16,20 @@ using namespace sw::editor;
  */
 SW_TEST_CASE( EditorViewportMathTest, OrbitPitchClampingPreventsGimbalInversion )
 {
-    constexpr float32 kMinPitchRad = -89.0f * MathUtil::DegreeToRadian;
-    constexpr float32 kMaxPitchRad = 89.0f * MathUtil::DegreeToRadian;
+    constexpr float32 kMinPitchRad = -89.0f * MathUtil::kDegreeToRadian;
+    constexpr float32 kMaxPitchRad = 89.0f * MathUtil::kDegreeToRadian;
 
     // 극단적인 피치 입력 (+120도, -150도) 시뮬레이션
-    float32 rawPitchPositive     = 120.0f * MathUtil::DegreeToRadian;
+    float32 rawPitchPositive     = 120.0f * MathUtil::kDegreeToRadian;
     float32 clampedPitchPositive = MathUtil::clamp( rawPitchPositive, kMinPitchRad, kMaxPitchRad );
     SW_EXPECT_NEAR_EQUAL( kMaxPitchRad, clampedPitchPositive, 1e-4f );
 
-    float32 rawPitchNegative     = -150.0f * MathUtil::DegreeToRadian;
+    float32 rawPitchNegative     = -150.0f * MathUtil::kDegreeToRadian;
     float32 clampedPitchNegative = MathUtil::clamp( rawPitchNegative, kMinPitchRad, kMaxPitchRad );
     SW_EXPECT_NEAR_EQUAL( kMinPitchRad, clampedPitchNegative, 1e-4f );
 
     // 정상 범위 내 입력은 유지
-    float32 normalPitch   = 45.0f * MathUtil::DegreeToRadian;
+    float32 normalPitch   = 45.0f * MathUtil::kDegreeToRadian;
     float32 clampedNormal = MathUtil::clamp( normalPitch, kMinPitchRad, kMaxPitchRad );
     SW_EXPECT_NEAR_EQUAL( normalPitch, clampedNormal, 1e-4f );
 }
@@ -39,7 +39,7 @@ SW_TEST_CASE( EditorViewportMathTest, OrbitPitchClampingPreventsGimbalInversion 
  */
 SW_TEST_CASE( EditorViewportMathTest, ViewportProjectionMatrixAspectScaling )
 {
-    float32 fovY  = 60.0f * MathUtil::DegreeToRadian;
+    float32 fovY  = 60.0f * MathUtil::kDegreeToRadian;
     float32 nearZ = 0.1f;
     float32 farZ  = 1000.0f;
 

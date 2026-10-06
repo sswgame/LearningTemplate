@@ -51,7 +51,7 @@ from typing import Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import collectRepositoryFiles, getProjectRoot, kNotOurDirNames, useUtf8Stdout  # noqa: E402
+from common import collectRepositoryFiles, getProjectRoot, kNotOurDirNames, readTextFiles, resolveFileArguments  # noqa: E402
 
 
 class GateError(Exception):
@@ -125,7 +125,7 @@ class LintGate:
     #
     # - `preCommitPattern`     : 이 패턴에 맞는 파일이 staged 되었을 때만 돈다 (`fnmatch`,
     #                            저장소 기준 POSIX 경로). **비우면 항상 돈다.**
-    # - `preCommitFileArgument`: staged 부분집합을 넘기는 방법. `"--files"` · `"positional"` ·
+    # - `preCommitFileArgument`: staged 부분집합을 넘기는 방법. `"--files"`(게이트 · 픽서 같은 철자) ·
     #                            `""`(전체를 훑는 게이트).
     # - `preCommitSkipReason`  : 훅에서 돌 수 없는 이유. 이유 없는 예외는 없다.
     preCommitPattern: tuple[str, ...] = ()
@@ -156,8 +156,6 @@ class LintGate:
         return cls().main(argv)
 
     def main(self, argv: list[str] | None = None) -> int:
-        useUtf8Stdout()
-
         parser = argparse.ArgumentParser(description=self.description)
         parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
         self.addArguments(parser)
@@ -201,46 +199,36 @@ class LintGate:
                           listScanRoot: Iterable[str] = ("",),
                           suffixes: Iterable[str] = (),
                           fileNames: Iterable[str] = (),
-                          excludedDirNames: Iterable[str] = kNotOurDirNames) -> list[Path]:
+                          excludedDirNames: Iterable[str] = kNotOurDirNames,
+                          bAnySuffix: bool = False) -> list[Path]:
         """
-        게이트가 볼 파일을 고릅니다. `--files` 가 있으면 그 파일 가운데서, 없으면 `listScanRoot` 를 걸어서 — **같은 규칙으로**.
+        게이트가 볼 파일을 고릅니다. `--files` 가 있으면 그 파일 가운데서(`common.resolveFileArguments`), 없으면 `listScanRoot` 를 걸어서
+        (`common.collectRepositoryFiles`) — **같은 규칙으로**.
 
-        - 확장자가 `suffixes` 이거나 이름이 `fileNames` 인 파일만.
+        - 확장자가 `suffixes` 이거나 이름이 `fileNames` 인 파일만(`bAnySuffix` 면 모두).
         - `excludedDirNames` 의 폴더 아래는 뺀다(기본은 빌드 산출물 · 내려받은 외부 도구, `kNotOurDirNames`). 걸을 때는 그 폴더로 내려가지 않는다.
         - `listScanRoot`(저장소 기준, `""` 은 전체) 밖의 파일은 뺀다.
         - `--files` 의 상대 경로는 **저장소 루트 기준**으로 풀고, 거기 없으면 현재 폴더 기준으로 푼다. 저장소 밖 파일은 뺀다.
 
         게이트마다 이 일을 따로 하지 말 것 — 상대 경로를 푸는 기준과 제외 목록이 갈리고, `--files` 에 제외를 빠뜨리면
-        **커밋 훅과 전체 검사가 서로 다른 파일을 본다.**
+        **커밋 훅과 전체 검사가 서로 다른 파일을 본다.** 픽서도 같은 함수로 고른다(`LintFixer.selectFixerTargetFiles`).
         """
         listScanRoot = tuple(listScanRoot)
-        setExcluded = set(excludedDirNames)
         if not listFileArgument:
             return collectRepositoryFiles(repositoryRoot, listScanRoot, suffixes=suffixes, fileNames=fileNames,
-                                          excludedDirNames=setExcluded)
+                                          excludedDirNames=excludedDirNames, bAnySuffix=bAnySuffix)
+        return resolveFileArguments(repositoryRoot, listFileArgument, listScanRoot=listScanRoot, suffixes=suffixes, fileNames=fileNames,
+                                    excludedDirNames=excludedDirNames, bAnySuffix=bAnySuffix)
 
-        setSuffix = {suffix.lower() for suffix in suffixes}
-        setFileName = set(fileNames)
-        listScanPrefix = [root.rstrip("/") + "/" for root in listScanRoot if root]
-        resultSet: set[Path] = set()
-        for item in listFileArgument:
-            path = Path(item)
-            if not path.is_absolute():
-                candidate = repositoryRoot / path
-                path = candidate if candidate.exists() else path.resolve()
-            path = path.resolve()
-            if not path.is_file() or not (path.name in setFileName or path.suffix.lower() in setSuffix):
-                continue
-            try:
-                relative = path.relative_to(repositoryRoot).as_posix()
-            except ValueError:
-                continue
-            if any(part in setExcluded for part in relative.split("/")[:-1]):
-                continue
-            if listScanPrefix and not any(relative.startswith(prefix) for prefix in listScanPrefix):
-                continue
-            resultSet.add(path)
-        return sorted(resultSet)
+    @staticmethod
+    def readFiles(listPath: Iterable[Path], *, encoding: str = "utf-8", errors: str = "replace",
+                  mustContain: str | None = None) -> list[tuple[Path, str]]:
+        """
+        게이트가 파일 내용을 읽는 **창구** — 지금은 `common.readTextFiles`(동시 읽기 · `mustContain` 앞 거르기)를 그대로 부른다.
+        한 번 읽어 여러 게이트가 나눠 쓰기 · 내용 해시 캐시를 얹을 자리는 이 메서드와 `selectTargetFiles` 둘이다 — 게이트가 `open()` ·
+        `read_text()` 를 직접 부르면 그 최적화를 비켜 간다.
+        """
+        return readTextFiles(listPath, encoding=encoding, errors=errors, mustContain=mustContain)
 
     @staticmethod
     def printListInternal(lines: list[str], maxShown: int) -> None:

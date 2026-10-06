@@ -23,10 +23,10 @@ namespace sw
 
             static float32 wrapAngle( float32 angle )
             {
-                while ( angle > MathUtil::Pi )
-                    angle -= MathUtil::Pi * 2.0f;
-                while ( angle <= -MathUtil::Pi )
-                    angle += MathUtil::Pi * 2.0f;
+                while ( angle > MathUtil::kPi )
+                    angle -= MathUtil::kPi * 2.0f;
+                while ( angle <= -MathUtil::kPi )
+                    angle += MathUtil::kPi * 2.0f;
                 return angle;
             }
         };
@@ -155,10 +155,10 @@ namespace sw
             const float32 movingYaw  = MathUtil::atan2( _measuredVelocity._x, _measuredVelocity._z );
             float32       difference = LocomotionWarpingComponentInternal::wrapAngle( movingYaw - facingYaw );
             // 뒤로 가는 이동은 뒷걸음 클립이 맡는다 — 하체를 반 바퀴 돌리지 않고 반대쪽으로 접는다.
-            if ( difference > MathUtil::HalfPi )
-                difference -= MathUtil::Pi;
-            else if ( difference < -MathUtil::HalfPi )
-                difference += MathUtil::Pi;
+            if ( difference > MathUtil::kHalfPi )
+                difference -= MathUtil::kPi;
+            else if ( difference < -MathUtil::kHalfPi )
+                difference += MathUtil::kPi;
             _orientationAngle = MathUtil::clamp( difference, -_maxOrientationAngle, _maxOrientationAngle );
         }
     }

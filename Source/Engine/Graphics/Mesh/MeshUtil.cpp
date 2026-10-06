@@ -59,7 +59,7 @@ namespace sw
         void pushTriangle( vector<RHIVertex>& outList, const BuildVertex& a, const BuildVertex& b, const BuildVertex& c )
         {
             const float3 faceNormal = ( b._position - a._position ).cross( c._position - a._position );
-            if ( faceNormal.getLengthSquared() <= MathUtil::Epsilon )
+            if ( faceNormal.getLengthSquared() <= MathUtil::kEpsilon )
                 return; // 면적 0. 극에서 접힌 자리다. 넣어 봐야 그려지지 않는다.
 
             const float3 centroid = ( a._position + b._position + c._position ) * ( 1.0f / 3.0f );
@@ -93,7 +93,7 @@ namespace sw
         void pushFlatTriangle( vector<RHIVertex>& outList, const float3& a, const float3& b, const float3& c )
         {
             float3 normal = ( b - a ).cross( c - a );
-            if ( normal.getLengthSquared() <= MathUtil::Epsilon )
+            if ( normal.getLengthSquared() <= MathUtil::kEpsilon )
                 return;
 
             normal                  = normal.normalize();
@@ -108,13 +108,13 @@ namespace sw
         /** @brief 원점 중심 도형의 바깥 방향입니다. 길이가 0 이면 +Y 로 둡니다(극에서만 생깁니다). */
         float3 radialNormal( const float3& position )
         {
-            return ( position.getLengthSquared() > MathUtil::Epsilon ) ? position.normalize() : float3::Up;
+            return ( position.getLengthSquared() > MathUtil::kEpsilon ) ? position.normalize() : float3::Up;
         }
 
         /** @brief 둘레 각도입니다. */
         float32 sliceAngle( uint32 slice, uint32 sliceCount )
         {
-            return 2.0f * MathUtil::Pi * static_cast<float32>( slice ) / static_cast<float32>( sliceCount );
+            return 2.0f * MathUtil::kPi * static_cast<float32>( slice ) / static_cast<float32>( sliceCount );
         }
 
         /** @brief 둘레를 도는 도형의 UV 입니다. u 는 각도 비율, v 는 부르는 쪽이 줍니다(높이 · 극각). */
@@ -324,7 +324,7 @@ namespace sw
         constexpr float32 kRadius = 0.5f;
         auto              pointAt = [&]( uint32 stack, uint32 slice ) -> float3
         {
-            const float32 phi   = MathUtil::Pi * static_cast<float32>( stack ) / static_cast<float32>( stackCount );
+            const float32 phi   = MathUtil::kPi * static_cast<float32>( stack ) / static_cast<float32>( stackCount );
             const float32 theta = sliceAngle( slice, sliceCount );
             return float3{ kRadius * MathUtil::sin( phi ) * MathUtil::cos( theta ),
                            kRadius * MathUtil::cos( phi ),
@@ -397,7 +397,7 @@ namespace sw
         // 반구는 중심을 ±kHalfY 로 옮긴 구면이다. 원통부와 이어 붙이면 캡슐이 된다.
         auto capPoint = [&]( uint32 stack, uint32 slice, bool bTop ) -> float3
         {
-            const float32 phi    = MathUtil::HalfPi * static_cast<float32>( stack ) / static_cast<float32>( stackCount );
+            const float32 phi    = MathUtil::kHalfPi * static_cast<float32>( stack ) / static_cast<float32>( stackCount );
             const float32 theta  = sliceAngle( slice, sliceCount );
             const float32 ringY  = kRadius * MathUtil::sin( phi );
             const float32 ringR  = kRadius * MathUtil::cos( phi );
@@ -416,7 +416,7 @@ namespace sw
             {
                 const float3 center{ 0.0f, bTop ? kHalfY : -kHalfY, 0.0f };
                 const float3 delta = position - center;
-                return ( delta.getLengthSquared() > MathUtil::Epsilon ) ? delta.normalize() : float3{ 0.0f, bTop ? 1.0f : -1.0f, 0.0f };
+                return ( delta.getLengthSquared() > MathUtil::kEpsilon ) ? delta.normalize() : float3{ 0.0f, bTop ? 1.0f : -1.0f, 0.0f };
             };
 
             for ( uint32 stack = 0; stack < stackCount; ++stack )
@@ -630,17 +630,16 @@ namespace sw
         };
 
         constexpr uint32  kSegmentCount = 3;
-        constexpr float32 kTwoPi        = 6.28318530718f;
         vector<RHIVertex> listVertex;
         listVertex.reserve( static_cast<size_t>( bladeCount ) * kSegmentCount * 12 );
         for ( uint32 bladeIndex = 0; bladeIndex < bladeCount; ++bladeIndex )
         {
-            const float32 angle  = nextUnit() * kTwoPi;
+            const float32 angle  = nextUnit() * MathUtil::kTwoPi;
             const float32 radius = nextUnit() * 0.22f;
             const float32 height = 0.5f + nextUnit() * 0.3f;
             const float32 width  = 0.05f + nextUnit() * 0.03f;
             const float32 lean   = 0.08f + nextUnit() * 0.18f;
-            const float32 facing = nextUnit() * kTwoPi;
+            const float32 facing = nextUnit() * MathUtil::kTwoPi;
             const float3  root{ MathUtil::cos( angle ) * radius, 0.0f, MathUtil::sin( angle ) * radius };
             const float3  across{ MathUtil::cos( facing ), 0.0f, MathUtil::sin( facing ) };
             const float3  outward{ -across._z, 0.0f, across._x };

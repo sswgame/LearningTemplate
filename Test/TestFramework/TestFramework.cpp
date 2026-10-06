@@ -224,6 +224,67 @@ namespace test
         _mapHostSuiteReason[pSuiteName] = pReason;
     }
 
+    void TestRegistry::registerEnvironmentSuite( const utf8* pSuiteName, const utf8* pEnvironmentName, const utf8* pReason )
+    {
+        _mapEnvironmentSuite[pSuiteName] = { pEnvironmentName, pReason };
+    }
+
+    sw::string getEnvironmentValue( const utf8* pEnvironmentName )
+    {
+        const utf8* pValue = std::getenv( pEnvironmentName );
+        return pValue == nullptr ? sw::string{} : sw::string( pValue );
+    }
+
+    bool TestRegistry::isEnvironmentMissing( const sw::string& suiteName ) const
+    {
+        const auto suiteIt = _mapEnvironmentSuite.find( suiteName );
+        return suiteIt != _mapEnvironmentSuite.end() && getEnvironmentValue( suiteIt->second.first.c_str() ).empty();
+    }
+
+    int32 TestRegistry::countEnvironmentSuiteMismatch() const
+    {
+        int32 mismatchCount{ 0 };
+        for ( const auto& [suiteName, environment] : _mapEnvironmentSuite )
+        {
+            bool bHasCase{ false };
+            for ( const TestCaseInfo& testInfo : _listTest )
+            {
+                if ( testInfo._groupName == suiteName )
+                {
+                    bHasCase = true;
+                    break;
+                }
+            }
+            if ( bHasCase )
+                continue;
+            ++mismatchCount;
+            std::fprintf( stdout, " SW_TEST_REQUIRES_ENVIRONMENT( %s ) names a suite with no cases in this executable\n", suiteName.c_str() );
+            SW_LOG_ERROR( "SW_TEST_REQUIRES_ENVIRONMENT( %# ) names a suite with no cases in this executable", suiteName.c_str() );
+        }
+        return mismatchCount;
+    }
+
+    void TestRegistry::printSkippedEnvironmentSuites() const
+    {
+        for ( const auto& [suiteName, environment] : _mapEnvironmentSuite )
+        {
+            if ( isEnvironmentMissing( suiteName ) == false )
+                continue;
+            bool bNameMatched{ false };
+            for ( const TestCaseInfo& testInfo : _listTest )
+            {
+                if ( testInfo._groupName == suiteName && _filter.matches( testInfo.fullName() ) )
+                {
+                    bNameMatched = true;
+                    break;
+                }
+            }
+            if ( bNameMatched )
+                std::fprintf( stdout, "[ SKIP SUITE ] %s - %s is not set (%s)\n", suiteName.c_str(), environment.first.c_str(), environment.second.c_str() );
+        }
+        std::fflush( stdout );
+    }
+
     void TestRegistry::registerKnownErrorLog( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason )
     {
         _listKnownErrorLog.push_back( { pSuiteName, pSubstring, pReason, 0 } );
@@ -249,6 +310,8 @@ namespace test
     bool TestRegistry::isSelected( const TestCaseInfo& testInfo ) const
     {
         if ( _filter.matches( testInfo.fullName() ) == false )
+            return false;
+        if ( isEnvironmentMissing( testInfo._groupName ) )
             return false;
 
         const bool bHostSuite = _mapHostSuiteReason.find( testInfo._groupName ) != _mapHostSuiteReason.end();
@@ -639,7 +702,8 @@ namespace test
             return 0;
         }
 
-        const int32 hostSuiteMismatchCount = countHostSuiteMismatch();
+        const int32 hostSuiteMismatchCount = countHostSuiteMismatch() + countEnvironmentSuiteMismatch();
+        printSkippedEnvironmentSuites();
 
         int32   passedCount{ 0 };
         int32   failedCount{ 0 };

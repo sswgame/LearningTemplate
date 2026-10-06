@@ -14,7 +14,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 include(cmake/Config/BuildOptions.cmake)
 include(cmake/Config/GenerateConfigConstants.cmake)
 include(cmake/Environment/DetectToolchain.cmake)
-include(cmake/Environment/VcpkgIntegration.cmake)
+# vcpkg 매니페스트 게이트 — 실제 툴체인은 그 안에서 CMAKE_TOOLCHAIN_FILE 로 확정한다(project() 전이어야 한다).
+if(SW_USE_VCPKG)
+	include(cmake/Modules/Toolchain/Vcpkg/Vcpkg.cmake)
+endif()
 
 project(
 	${sw_workspace_name}
@@ -34,15 +37,18 @@ sw_vcpkgWriteManifestStamp()
 # ------------------------------------------------------------------------------
 # 3) 컴파일 플래그 · 모듈 빌드 규칙 · 런타임 DLL 복사 · 리플렉션 코드젠 · 에셋/도구 타겟
 # ------------------------------------------------------------------------------
-# BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 TargetRules 보다 먼저다.
+# BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(UnbuiltSources · ModuleTargets · TestTargets)보다 먼저다.
 # RuntimeDependencies 는 BuildLayout 의 sw_queueRuntimeCopy 를 쓴다.
 include(cmake/Modules/LoadCompileFlags.cmake)
 include(cmake/Engine/BuildLayout.cmake)
-include(cmake/Engine/TargetRules.cmake)
+include(cmake/Engine/UnbuiltSources.cmake)
+include(cmake/Engine/ModuleTargets.cmake)
+include(cmake/Engine/TestTargets.cmake)
 include(cmake/Engine/ModuleManifest.cmake)
 include(cmake/Engine/ThirdPartyLibs.cmake)
 include(cmake/Engine/RuntimeDependencies.cmake)
 include(cmake/Engine/ReflectionCodeGen.cmake)
+include(cmake/Engine/RhiBackends.cmake)
 
 # 모든 엔진 타겟이 공유하는 include 루트 (Source/, Resource/, generated/)
 add_library(sw_third_party_includes INTERFACE)
@@ -65,12 +71,14 @@ include(cmake/Engine/AssetAndToolTargets.cmake)
 # 모듈 매니페스트를 먼저 해석한다 — 모듈을 만드는 함수가 "켜져 있는가" 를 묻는다(`cmake/Engine/ModuleManifest.cmake`).
 sw_resolveModuleManifests()
 
-add_subdirectory(Source)
-add_subdirectory(Tools)
+# 순서: Core → ReflectionParser(Core 를 링크한다) → Engine(파서가 있어야 리플렉션 단계가 선다) → RuntimeAPI → Editor → App → GameFramework/Games.
+add_subdirectory(Source/Core)
+add_subdirectory(Tools/ReflectionParser)
 add_subdirectory(Source/Engine)
 add_subdirectory(Source/RuntimeAPI)
 add_subdirectory(Source/Editor)
 add_subdirectory(Source/App)
+add_subdirectory(Source/Server)
 
 # 끈 것은 소스 검사 게이트에 "이 구성이 짓지 않는다" 로 적는다.
 if(SW_BUILD_GAMEFRAMEWORK OR SW_BUILD_GAME)
@@ -85,12 +93,18 @@ else()
 	sw_declareUnbuiltDirectory("${CMAKE_SOURCE_DIR}/Source/Games")
 endif()
 
+# 온라인 부하 시험 봇 — 개발 도구. 클라이언트 · 서버 키트가 함께 있는 개발 구성(Game 타깃)에서만 짓는다(배포물 · Client · Server 타깃에 없다).
+if(NOT SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Game" AND (SW_BUILD_GAMEFRAMEWORK OR SW_BUILD_GAME))
+	add_subdirectory(Tools/OnlineLoadBot)
+endif()
+
 # 여기까지 오면 동적 모듈이 전부 만들어졌다 — 레지스트리에 빠진 것이 없는지 먼저 확인한다.
 # (빠지면 App 이 그 DLL 보다 먼저 빌드될 수 있고, 증상은 "가끔 실패" 로만 나타난다.)
 sw_verifyDynamicModuleRegistry()
 
-# App 타겟의 RHI 플러그인, 게임 모듈(SWGame), 에셋 쿠킹 빌드 순서 및 링크 의존성 자동 구성
+# App · Server 타겟의 RHI 플러그인, 게임 모듈(SWGame), 에셋 쿠킹 빌드 순서 및 링크 의존성 자동 구성(없는 타깃은 건너뛴다)
 sw_configureAppDependencies(App)
+sw_configureAppDependencies(Server)
 
 # 이 구성이 일부러 짓지 않는 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드 …)를 빌드 트리에 적는다 — `CheckSourceGlob` 이 읽는다.
 sw_writeUnbuiltSourceList()
@@ -103,5 +117,6 @@ if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
 	set(CTEST_TEST_TIMEOUT 180)
 	enable_testing()
 	add_subdirectory(Test)
-	sw_registerLintTests()
+	# 린트 시험 — 목록은 `Scripts/lint/gate/` · `selftest/` 폴더다(GenerateLintTargets.py 가 만든 LintTargets.cmake 의 등록 함수).
+	sw_registerGeneratedLintTests()
 endif()

@@ -2,11 +2,13 @@
 
 #include "Games/StarSkirmish/SkirmishDirectorComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -16,9 +18,9 @@
 #include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Window/IWindow.h"
 
-#include "GameFramework/Camera/OrthoCameraRigComponent.h"
-#include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
 
@@ -30,10 +32,10 @@ namespace sw
     {
         struct SkirmishDirectorComponentInternal
         {
-            static constexpr float32 kClickSlop        = 0.6f;        ///< 이보다 짧게 끌면 클릭
-            static constexpr int32   kUnitLookCategory = 5;           ///< 0 번 · 1 번 · 주인 없음 · 광물 · 가스
-            static constexpr uint32  kStateTag         = 0x534D5452u; ///< 'RTMS'
-            static constexpr uint32  kStateVersion     = 1;
+            static constexpr float32 kClickSlop        = 0.6f; ///< 이보다 짧게 끌면 클릭
+            static constexpr int32   kUnitLookCategory = 5;    ///< 0 번 · 1 번 · 주인 없음 · 광물 · 가스
+            static constexpr uint32  kStateTag         = FourCcUtil::make( "RTMS" );
+            static constexpr uint32  kStateVersion     = 2;
 
             // 사운드 이벤트 이름(starskirmish.audioevents.xml).
             static constexpr const utf8* kSoundSelect   = "Select";
@@ -118,7 +120,7 @@ namespace sw
         OrthoCameraRigComponent* pRig = findCameraRig();
         if ( pRig != nullptr )
         {
-            pRig->setWasdPanEnabled( _bHuman == SW_FALSE );
+            pRig->setPanAction( hashed_string( _bHuman == SW_TRUE ? "Camera.Pan" : "Skirmish.SpectatorPan" ) ); // 플레이할 때 WASD 는 명령 단축키
             if ( _bHuman == SW_FALSE )
             {
                 pRig->setFocus( _watchFocus );
@@ -362,17 +364,20 @@ namespace sw
     void SkirmishDirectorComponent::updateInput( const InputManager& input )
     {
         // 카메라 이동 · 확대는 리그(PostUpdate)가 읽는다. 여기는 속도 · 멈춤 · 명령.
-        if ( input.wasKeyPressed( Key::Minus ) || input.wasKeyPressed( Key::Equal ) )
+        // 키는 입력 맵(`data/skirmish.input.xml`)이 정한다.
+        const InputMap& inputMap = input.getInputMap();
+        const bool      bFaster  = inputMap.wasActionTriggered( hashed_string( "Skirmish.Faster" ) );
+        if ( bFaster || inputMap.wasActionTriggered( hashed_string( "Skirmish.Slower" ) ) )
         {
-            _timeScale = MathUtil::clamp( _timeScale * ( input.wasKeyPressed( Key::Equal ) ? 2.0f : 0.5f ), 0.25f, 8.0f );
+            _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
             SW_LOG_INFO( "[Skirmish] speed x%#", _timeScale );
         }
-        if ( input.wasKeyPressed( Key::P ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Pause" ) ) )
         {
             _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
             SW_LOG_INFO( "[Skirmish] %#", _bPaused == SW_TRUE ? "paused" : "running" );
         }
-        if ( input.wasKeyPressed( Key::F1 ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Status" ) ) )
             _match.logStatus();
         if ( _bHuman == SW_TRUE && _match.isOver() == false )
             updateHumanCommands( input );
@@ -380,11 +385,12 @@ namespace sw
 
     void SkirmishDirectorComponent::updateHumanCommands( const InputManager& input )
     {
-        RtsWorld&  world = _match.getWorld();
-        float3     point{};
-        const bool bPointValid = findGroundPoint( input, point );
-        const bool bShift      = input.isKeyDown( Key::LeftShift ) || input.isKeyDown( Key::RightShift );
-        const bool bControl    = input.isKeyDown( Key::LeftControl ) || input.isKeyDown( Key::RightControl );
+        RtsWorld&       world    = _match.getWorld();
+        const InputMap& inputMap = input.getInputMap();
+        float3          point{};
+        const bool      bPointValid = findGroundPoint( input, point );
+        const bool      bShift      = inputMap.isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
+        const bool      bControl    = inputMap.isActionDown( hashed_string( "Skirmish.GroupModifier" ) );
         updateDrag( input, point, bPointValid );
 
         if ( bPointValid && input.wasMouseButtonPressed( MouseButton::Right ) )
@@ -393,42 +399,42 @@ namespace sw
         // 명령 단축키 — 고른 것이 모두 내 것일 때만.
         if ( _selection.isCommandable( world ) && _selection.getSelected().empty() == false )
         {
-            if ( input.wasKeyPressed( Key::A ) )
+            if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.AttackMove" ) ) )
             {
                 _bAttackMovePending = SW_TRUE;
                 SW_LOG_INFO( "[Skirmish] attack-move - left click a target point" );
             }
-            if ( input.wasKeyPressed( Key::S ) || input.wasKeyPressed( Key::H ) )
+            const bool bHold = inputMap.wasActionTriggered( hashed_string( "Skirmish.Hold" ) );
+            if ( bHold || inputMap.wasActionTriggered( hashed_string( "Skirmish.Stop" ) ) )
             {
-                const bool bHold = input.wasKeyPressed( Key::H );
                 for ( const RtsUnitId unitId : _selection.getSelected() )
                     (void)( bHold ? world.issueHold( unitId ) : world.issueStop( unitId ) );
             }
-            if ( input.wasKeyPressed( Key::Q ) )
+            if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Command1" ) ) )
                 trainFromPrimary( 0 );
-            if ( input.wasKeyPressed( Key::W ) )
+            if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Command2" ) ) )
                 trainFromPrimary( 1 );
-            if ( input.wasKeyPressed( Key::E ) )
+            if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Command3" ) ) )
                 trainFromPrimary( 2 );
             if ( bPointValid )
             {
-                struct BuildKey
+                struct BuildAction
                 {
-                    Key         _key;
+                    const utf8* _pAction;
                     const utf8* _pBuildingId;
                 };
-                constexpr BuildKey kArrBuildKey[] = {
-                    {Key::B, "supply_depot"},
-                    {Key::N,     "barracks"},
-                    {Key::G,     "refinery"},
-                    {Key::Y,      "academy"},
-                    {Key::F,      "factory"},
-                    {Key::T,     "starport"},
-                    {Key::U,       "bunker"},
+                constexpr BuildAction kArrBuildAction[] = {
+                    {"Skirmish.Build.SupplyDepot", "supply_depot"},
+                    {   "Skirmish.Build.Barracks",     "barracks"},
+                    {   "Skirmish.Build.Refinery",     "refinery"},
+                    {    "Skirmish.Build.Academy",      "academy"},
+                    {    "Skirmish.Build.Factory",      "factory"},
+                    {   "Skirmish.Build.Starport",     "starport"},
+                    {     "Skirmish.Build.Bunker",       "bunker"},
                 };
-                for ( const BuildKey& entry : kArrBuildKey )
+                for ( const BuildAction& entry : kArrBuildAction )
                 {
-                    if ( input.wasKeyPressed( entry._key ) )
+                    if ( inputMap.wasActionTriggered( hashed_string( entry._pAction ) ) )
                         orderBuild( entry._pBuildingId, point );
                 }
             }
@@ -437,8 +443,10 @@ namespace sw
         // 부대 — Ctrl + 숫자 정하기, Shift + 숫자 더하기, 숫자 부르기.
         for ( int32 group = 0; group < RtsSelection::kGroupCount; ++group )
         {
-            const Key key = static_cast<Key>( static_cast<int32>( Key::Digit0 ) + group );
-            if ( input.wasKeyPressed( key ) == false )
+            constexpr const utf8* kArrGroupAction[] = { "Skirmish.Group0", "Skirmish.Group1", "Skirmish.Group2", "Skirmish.Group3", "Skirmish.Group4",
+                                                        "Skirmish.Group5", "Skirmish.Group6", "Skirmish.Group7", "Skirmish.Group8", "Skirmish.Group9" };
+            static_assert( sizeof( kArrGroupAction ) / sizeof( kArrGroupAction[0] ) == RtsSelection::kGroupCount, "one group action per group" );
+            if ( inputMap.wasActionTriggered( hashed_string( kArrGroupAction[group] ) ) == false )
                 continue;
             if ( bControl )
                 _selection.assignGroup( group );
@@ -447,7 +455,7 @@ namespace sw
             else if ( _selection.recallGroup( world, group ) )
                 SW_LOG_INFO( "[Skirmish] group %# - %# units", group, static_cast<int32>( _selection.getSelected().size() ) );
         }
-        if ( input.wasKeyPressed( Key::Space ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.JumpToSelection" ) ) )
         {
             // 고른 유닛으로 — 리그는 PostUpdate 에서 이 초점을 읽는다(리그의 오브젝트에는 다른 쓰기가 없다).
             const RtsUnit*           pPrimary = world.findUnit( _selection.getPrimary() );
@@ -460,7 +468,7 @@ namespace sw
     void SkirmishDirectorComponent::updateDrag( const InputManager& input, const float3& point, bool bPointValid )
     {
         RtsWorld&  world  = _match.getWorld();
-        const bool bShift = input.isKeyDown( Key::LeftShift ) || input.isKeyDown( Key::RightShift );
+        const bool bShift = input.getInputMap().isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
         if ( bPointValid && input.wasMouseButtonPressed( MouseButton::Left ) )
         {
             if ( _bAttackMovePending == SW_TRUE )

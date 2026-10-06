@@ -64,7 +64,7 @@ namespace sw
     {
         if ( path.empty() )
             return false;
-        if ( FileUtil::fileExists( path ) )
+        if ( FileUtil::exists( path ) )
         {
             if ( pOutAbsPath != nullptr )
                 *pOutAbsPath = string{ path };

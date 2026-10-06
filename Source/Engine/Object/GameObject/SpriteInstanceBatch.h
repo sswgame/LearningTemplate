@@ -12,6 +12,7 @@
 
 namespace sw
 {
+    class Component;
     class GameObjectManager;
     class MeshInstanceBatch;
 
@@ -68,6 +69,10 @@ namespace sw
         bool isEntryVisible( uint32 index ) const;
         /** @brief 항목 전체를 숨기거나 다시 보입니다(각 항목의 보임 여부는 그대로입니다). */
         void setVisible( bool bVisible );
+        /** @brief 이 배치를 든 컴포넌트입니다(`MeshInstanceBatch::setOwnerComponent`). `initialize` 전에 불러도 됩니다 — 만들 때 넘깁니다. */
+        void setOwnerComponent( const Component* pOwnerComponent );
+        /** @brief 항목 모두를 더티로 표시합니다 — 든 컴포넌트의 활성이 바뀌었을 때. */
+        void markAllEntriesDirty();
 
         /**
          * @brief 정렬 레이어 · 레이어 안 순서를 정합니다(`initialize` 앞뒤 어느 쪽이든). 모르는 레이어는 오류를 남기고 `Default` 입니다.
@@ -83,6 +88,7 @@ namespace sw
 
     private:
         unique_ptr<MeshInstanceBatch> _batch;
+        const Component*              _pOwnerComponent;      ///< 든 컴포넌트(빌림). 배치를 다시 만들어도 넘깁니다
         hashed_string                 _acquiredMaterialPath; ///< 캐시에서 잡은 머티리얼 경로입니다. 비어 있으면 잡은 것이 없습니다
         uint32                        _sortKey;              ///< 항목 모두의 투명 정렬 키(0 = 기본). 배치를 다시 만들어도 남습니다
     };

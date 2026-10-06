@@ -51,6 +51,8 @@ namespace sw
         inline constexpr size_t kDefaultFrameArenaCapacity = size_t{ 1024 } * 1024;
         /** @brief 작업 훔치기(work stealing) 덱의 기본 용량(1024)입니다. */
         inline constexpr size_t kDefaultDequeCapacity = 1024;
+        /** @brief 파일 읽기 호출 하나가 읽는 최대 바이트(1 GiB)입니다. 길이 칸이 32 비트인 OS 호출(ReadFile · io_uring SQE)에 맞춥니다. 큰 구간은 이어서 읽습니다. */
+        inline constexpr uint64 kMaxFileReadChunkBytes = uint64{ 1 } << 30;
     } // namespace constant
 
     // ------------------------------------------------------------------------------

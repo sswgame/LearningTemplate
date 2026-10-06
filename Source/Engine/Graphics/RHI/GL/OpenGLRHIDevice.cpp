@@ -29,6 +29,8 @@ namespace sw
         , _materialSampler{ 0 }
         , _engineSampler{ 0 }
         , _defaultTexture{ 0 }
+        , _contextOwnerThread{}
+        , _contextOwnedSinceNanos{ 0 }
         , _gpuBuffers{}
         , _listRegisteredBindless{}
         , _listBindlessFree{}

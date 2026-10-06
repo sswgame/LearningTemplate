@@ -20,9 +20,25 @@ namespace sw::editor
     {
     public:
         // ------------------------------------------------------------------------------
-        // 1) 프로젝트 루트 · Config/Editor
-        //    Resource의 부모가 프로젝트 루트. 설정 폴더는 없으면 생성
+        // 1) 프로젝트 루트 · 에디터 상태 폴더(Saved/Editor)
+        //    Resource의 부모가 프로젝트 루트. 상태 폴더는 없으면 생성. 사람이 쓰는 설정(Config/Editor)은 config::kDirConfigEditor 를 바로 쓴다
         // ------------------------------------------------------------------------------
+        /**
+         * @brief 에디터가 쓰는 파일 이름입니다. 이름은 코드가 정하고 설정 파일이 바꾸지 않는다 — 설정 파일이 제 위치 ·
+         *        이웃 파일 이름을 정하면 그 설정 파일을 찾는 길이 순환한다. 임포트 설정 둘만 `Config/Editor`(사람이 쓴다), 나머지는 `Saved/Editor`(앱이 쓴다).
+         */
+        static constexpr const utf8* kImguiIniFileName              = "imgui.ini";
+        static constexpr const utf8* kWindowsIniFileName            = "windows.ini";
+        static constexpr const utf8* kAnimGraphCanvasFileName       = "AnimGraph.json";           ///< 노드 에디터 캔버스 상태
+        static constexpr const utf8* kDialogueGraphCanvasFileName   = "DialogueGraphEditor.json"; ///< 노드 에디터 캔버스 상태
+        static constexpr const utf8* kAnimGraphDocumentFileName     = "AnimGraphData.json";       ///< 경로 없는 애니 그래프 문서
+        static constexpr const utf8* kDialogueGraphDocumentFileName = "DialogueGraphData.json";   ///< 경로 없는 대화 그래프 문서
+        static constexpr const utf8* kSpriteClipDocumentFileName    = "SpriteClip.json";          ///< 경로 없는 스프라이트 클립 문서
+        static constexpr const utf8* kTextureImportConfigFileName   = "TextureImportConfig.json";
+        static constexpr const utf8* kModelImportConfigFileName     = "ModelImportConfig.json";
+        /** @brief 에디터 팩(`path::kEditorPack`) 안의 글꼴 폴더 이름입니다. */
+        static constexpr const utf8* kFontsFolderName = "fonts";
+
         /**
          * @brief 프로젝트 루트(<Project>, Resource 의 부모)를 반환합니다.
          * @return 해석에 실패하면 빈 문자열
@@ -30,16 +46,18 @@ namespace sw::editor
         static string getProjectRootPath();
 
         /**
-         * @brief <Project>/Config/Editor 디렉터리를 반환합니다(없으면 만듭니다).
+         * @brief 에디터가 쓰는 상태 폴더 <Project>/Saved/Editor 를 반환합니다(없으면 만듭니다).
+         * @details 도킹(`imgui.ini` · `windows.ini`) · 이름 붙인 레이아웃 · 노드 캔버스 · 경로 없는 도구 문서 · 테마(`EditorConfig.json`) · gv 프리셋이
+         *          여기 산다. 사람이 고쳐 커밋하는 `Config/` 와 나눈다(언리얼 `Saved/` · 유니티 `UserSettings/` 와 같다).
          * @return 해석에 실패하면 빈 문자열
          */
-        static string getEditorConfigDirectory();
+        static string getEditorStateDirectory();
 
         /**
-         * @brief Config/Editor 아래 사용자 설정 파일의 절대 경로를 반환합니다.
+         * @brief Saved/Editor 아래 상태 파일의 절대 경로를 반환합니다.
          * @return 해석에 실패하면 빈 문자열
          */
-        static string resolveEditorConfigFile( const utf8* pFileName );
+        static string resolveEditorStateFile( const utf8* pFileName );
 
         /**
          * @brief 호스트 상대 경로를 프로젝트 루트 기준 절대 경로로 만듭니다. 이미 절대 경로면 그대로 둡니다.

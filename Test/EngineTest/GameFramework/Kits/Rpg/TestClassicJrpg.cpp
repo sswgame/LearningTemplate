@@ -2,9 +2,13 @@
 // 시전 잠금 깨기 · 취소 · 약화, 콤보 포인트 합동기 · 도망 확률, 무협 내공 · 비급 숙련 해금, 걸음 수 인카운터 · 보상 분배 · 결정성.
 #include "pch.h"
 
-#include "GameFramework/Input/TimingJudge.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
-#include "GameFramework/Inventory/Shop.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Input/TimingJudge.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgBattle.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgCatalog.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgEncounter.h"
@@ -87,6 +91,8 @@ namespace
         ItemCatalog _itemCatalog;
         ShopCatalog _shopCatalog;
         TimingJudge _judge;
+        Inventory   _inventory; ///< 플레이어 가방(파티가 빌린다)
+        Wallet      _wallet;    ///< 지갑(파티가 빌린다)
 
         bool initialize()
         {
@@ -99,6 +105,17 @@ namespace
             _judge.setWindows( listWindow );
             return _catalog.loadFromXmlText( kJrpgCatalogXml, "ClassicJrpgTest" ) && _itemCatalog.loadFromXmlText( kJrpgItemXml, "ClassicJrpgTest" ) &&
                    _shopCatalog.loadFromXmlText( kJrpgShopXml, "ClassicJrpgTest" );
+        }
+
+        /** @brief 파티가 빌릴 공유 상태 — 부를 때마다 가방 · 지갑을 새로 엽니다. */
+        GameStateRefs makeRefs()
+        {
+            _inventory.initialize( &_itemCatalog, 20 );
+            _wallet.clear();
+            GameStateRefs refs;
+            refs._pInventory = &_inventory;
+            refs._pWallet    = &_wallet;
+            return refs;
         }
     };
 
@@ -127,6 +144,17 @@ namespace
         }
         return -1;
     }
+
+    /** @brief 상태 하나의 바이트입니다. */
+    template <typename TState>
+    vector<uint8> captureJrpgBytes( const TState& state )
+    {
+        Archive archive;
+        state.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
+    }
 } // namespace
 
 SW_TEST_CASE( ClassicJrpgTest, ClassChangeHalvesStatsKeepsSpellsAndResetsLevel )
@@ -134,7 +162,7 @@ SW_TEST_CASE( ClassicJrpgTest, ClassChangeHalvesStatsKeepsSpellsAndResetsLevel )
     JrpgTestWorld world;
     SW_ASSERT_TRUE( world.initialize() );
     JrpgParty party;
-    party.initialize( &world._catalog, &world._itemCatalog, 20 );
+    party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     const int32 mage   = party.addMember( hashed_string( "maya" ), "Maya", hashed_string( "mage" ), 20 );
     const int32 novice = party.addMember( hashed_string( "nina" ), "Nina", hashed_string( "mage" ), 19 );
     SW_ASSERT_TRUE( mage == 0 && novice == 1 );
@@ -174,7 +202,7 @@ SW_TEST_CASE( ClassicJrpgTest, ClassChangeHalvesStatsKeepsSpellsAndResetsLevel )
     SW_EXPECT_EQUAL( strengthBefore + 2 * 4, party.getMember( mage ).getStat( JrpgStat::Strength ) );
 
     // 깨달음의 책을 가지면 현자로.
-    SW_EXPECT_EQUAL( 1, party.getInventory().addItem( hashed_string( "book_of_satori" ), 1 ) );
+    SW_EXPECT_EQUAL( 1, world._inventory.addItem( hashed_string( "book_of_satori" ), 1 ) );
     party.getMember( novice )._level.setLevel( world._catalog.getCurve(), 20 );
     SW_EXPECT_TRUE( party.changeClass( novice, hashed_string( "sage" ) ) == JrpgClassChangeResult::Ok );
     vector<JrpgPartyEvent> listEvent;
@@ -190,41 +218,41 @@ SW_TEST_CASE( ClassicJrpgTest, InnChurchShopAndEquipment )
     JrpgTestWorld world;
     SW_ASSERT_TRUE( world.initialize() );
     JrpgParty party;
-    party.initialize( &world._catalog, &world._itemCatalog, 20 );
+    party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     (void)party.addMember( hashed_string( "hero" ), "Hero", hashed_string( "hero" ), 5 );
     (void)party.addMember( hashed_string( "sol" ), "Sol", hashed_string( "warrior" ), 4 );
     (void)party.addMember( hashed_string( "mia" ), "Mia", hashed_string( "mage" ), 3 );
-    party.getWallet().setBalance( Wallet::getDefaultCurrency(), 200 );
+    world._wallet.setBalance( Wallet::getDefaultCurrency(), 200 );
 
     // 상점(기반 ShopState) → 인벤토리 → 장비 → 공격력.
     ShopState shop;
     shop.initialize( &world._shopCatalog, &world._itemCatalog );
     const int32 attackBefore = party.computeAttack( 0 );
-    SW_EXPECT_TRUE( shop.buy( hashed_string( "aliahan" ), hashed_string( "copper_sword" ), 1, party.getWallet(), party.getInventory() ) == ShopResult::Ok );
-    SW_EXPECT_EQUAL( 100, static_cast<int32>( party.getWallet().getBalance( Wallet::getDefaultCurrency() ) ) );
-    const int32 inventorySlot = party.getInventory().findFirstSlot( hashed_string( "copper_sword" ) );
+    SW_EXPECT_TRUE( shop.buy( hashed_string( "aliahan" ), hashed_string( "copper_sword" ), 1, world._wallet, world._inventory ) == ShopResult::Ok );
+    SW_EXPECT_EQUAL( 100, static_cast<int32>( world._wallet.getBalance( Wallet::getDefaultCurrency() ) ) );
+    const int32 inventorySlot = world._inventory.findFirstSlot( hashed_string( "copper_sword" ) );
     SW_ASSERT_TRUE( inventorySlot >= 0 );
-    SW_EXPECT_TRUE( party.getMember( 0 )._equipment.equipFromInventory( party.getInventory(), inventorySlot ) == EquipResult::Ok );
+    SW_EXPECT_TRUE( party.getMember( 0 )._equipment.equipFromInventory( world._inventory, inventorySlot ) == EquipResult::Ok );
     SW_EXPECT_EQUAL( attackBefore + 12, party.computeAttack( 0 ) );
-    SW_EXPECT_EQUAL( 0, party.getInventory().getItemCount( hashed_string( "copper_sword" ) ) );
+    SW_EXPECT_EQUAL( 0, world._inventory.getItemCount( hashed_string( "copper_sword" ) ) );
 
     // 여관: 살아 있는 멤버 수 × 값 — 쓰러진 멤버는 그대로.
     party.getMember( 0 )._hp = 1;
     party.getMember( 0 )._mp = 0;
     party.getMember( 2 )._hp = 0;
     SW_EXPECT_TRUE( party.restAtInn( 10 ) );
-    SW_EXPECT_EQUAL( 80, static_cast<int32>( party.getWallet().getBalance( Wallet::getDefaultCurrency() ) ) );
+    SW_EXPECT_EQUAL( 80, static_cast<int32>( world._wallet.getBalance( Wallet::getDefaultCurrency() ) ) );
     SW_EXPECT_EQUAL( party.getMember( 0 ).getStat( JrpgStat::MaxHp ), party.getMember( 0 )._hp );
     SW_EXPECT_EQUAL( party.getMember( 0 ).getStat( JrpgStat::MaxMp ), party.getMember( 0 )._mp );
     SW_EXPECT_EQUAL( 0, party.getMember( 2 )._hp );
     SW_EXPECT_FALSE( party.restAtInn( 100 ) ); // 200 이 모자라다 — 아무것도 바뀌지 않는다
-    SW_EXPECT_EQUAL( 80, static_cast<int32>( party.getWallet().getBalance( Wallet::getDefaultCurrency() ) ) );
+    SW_EXPECT_EQUAL( 80, static_cast<int32>( world._wallet.getBalance( Wallet::getDefaultCurrency() ) ) );
 
     // 교회: 레벨 × 값.
     SW_EXPECT_FALSE( party.reviveAtChurch( 2, 30 ) ); // 90 > 80
     SW_EXPECT_EQUAL( 0, party.getMember( 2 )._hp );
     SW_EXPECT_TRUE( party.reviveAtChurch( 2, 20 ) );
-    SW_EXPECT_EQUAL( 20, static_cast<int32>( party.getWallet().getBalance( Wallet::getDefaultCurrency() ) ) );
+    SW_EXPECT_EQUAL( 20, static_cast<int32>( world._wallet.getBalance( Wallet::getDefaultCurrency() ) ) );
     SW_EXPECT_EQUAL( party.getMember( 2 ).getStat( JrpgStat::MaxHp ), party.getMember( 2 )._hp );
     SW_EXPECT_FALSE( party.reviveAtChurch( 2, 0 ) ); // 이미 살아 있다
     SW_EXPECT_EQUAL( 3, party.countAlive() );
@@ -241,7 +269,7 @@ SW_TEST_CASE( ClassicJrpgTest, AgilityOrderDefendPriorityAndTimedAttackAndBlock 
                                int32& outHeroHp )
     {
         JrpgParty party;
-        party.initialize( &world._catalog, &world._itemCatalog, 4 );
+        party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
         (void)party.addMember( hashed_string( "hero" ), "Hero", hashed_string( "hero" ), 1 );
         timing._bAttackPressed = bAttackPressed;
         timing._attackOffset   = attackOffset;
@@ -321,7 +349,7 @@ SW_TEST_CASE( ClassicJrpgTest, CastingEnemyLocksBreakCancelAndWeaken )
     const auto runCast = [&]( const utf8* pRound2, const utf8* pRound3, vector<JrpgBattleEvent>& outListEvent ) -> int32
     {
         JrpgParty party;
-        party.initialize( &world._catalog, &world._itemCatalog, 4 );
+        party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
         (void)party.addMember( hashed_string( "zale" ), "Zale", hashed_string( "sunblade" ), 10 );
         (void)party.addMember( hashed_string( "valere" ), "Valere", hashed_string( "moonstaff" ), 10 );
         JrpgBattle battle;
@@ -375,7 +403,7 @@ SW_TEST_CASE( ClassicJrpgTest, ComboPointsJointTechniqueAndFleeChance )
     JrpgTestWorld world;
     SW_ASSERT_TRUE( world.initialize() );
     JrpgParty party;
-    party.initialize( &world._catalog, &world._itemCatalog, 4 );
+    party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     (void)party.addMember( hashed_string( "zale" ), "Zale", hashed_string( "sunblade" ), 10 );
     (void)party.addMember( hashed_string( "valere" ), "Valere", hashed_string( "moonstaff" ), 10 );
     ScriptedTiming timing;
@@ -421,7 +449,7 @@ SW_TEST_CASE( ClassicJrpgTest, ComboPointsJointTechniqueAndFleeChance )
 
     // 도망: 0.5 + (평균 민첩 차) × 0.02 + 실패 × 0.1. 보스 앞에서는 0 이고 실패하면 적만 행동한다.
     JrpgParty runners;
-    runners.initialize( &world._catalog, &world._itemCatalog, 4 );
+    runners.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     (void)runners.addMember( hashed_string( "zale" ), "Zale", hashed_string( "sunblade" ), 1 );
     JrpgBattle bossBattle;
     bossBattle.initialize( &world._catalog, &world._judge, JrpgBattleSettings{}, 5 );
@@ -436,7 +464,7 @@ SW_TEST_CASE( ClassicJrpgTest, ComboPointsJointTechniqueAndFleeChance )
     const auto runFlee = [&]( uint32 seed, float32& outFirstChance ) -> int32
     {
         JrpgParty fleeParty;
-        fleeParty.initialize( &world._catalog, &world._itemCatalog, 4 );
+        fleeParty.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
         (void)fleeParty.addMember( hashed_string( "zale" ), "Zale", hashed_string( "sunblade" ), 1 );
         JrpgBattle fleeBattle;
         fleeBattle.initialize( &world._catalog, &world._judge, JrpgBattleSettings{}, seed );
@@ -462,7 +490,7 @@ SW_TEST_CASE( ClassicJrpgTest, WuxiaInnerEnergyAndManualProficiencyUnlockTechniq
     JrpgBattleSettings settings;
     settings._bWuxia = true;
     JrpgParty party;
-    party.initialize( &world._catalog, &world._itemCatalog, 4 );
+    party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     (void)party.addMember( hashed_string( "li" ), "Li", hashed_string( "swordsman" ), 5 );
     SW_EXPECT_FALSE( party.canUseSpell( 0, hashed_string( "pine_cut" ) ) );
     party.learnManual( 0, hashed_string( "pine_sword" ) );
@@ -508,7 +536,7 @@ SW_TEST_CASE( ClassicJrpgTest, WuxiaInnerEnergyAndManualProficiencyUnlockTechniq
 
     // 무협 옵션을 끄면 내공은 차지 않고 초식의 내공 비용도 보지 않는다.
     JrpgParty plain;
-    plain.initialize( &world._catalog, &world._itemCatalog, 4 );
+    plain.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
     (void)plain.addMember( hashed_string( "li" ), "Li", hashed_string( "swordsman" ), 5 );
     plain.learnManual( 0, hashed_string( "pine_sword" ) );
     JrpgBattle plainBattle;
@@ -556,7 +584,7 @@ SW_TEST_CASE( ClassicJrpgTest, StepEncounterRewardSplitAndDeterminism )
     // 승리 보상: 경험치 6 × 2 = 12 를 살아 있는 셋이 4 씩, 골드 8 은 지갑으로. 쓰러진 멤버는 받지 않는다.
     const auto runBattle = [&]( uint32 seed, vector<JrpgBattleEvent>& outListEvent, JrpgParty& outParty ) -> JrpgBattleOutcome
     {
-        outParty.initialize( &world._catalog, &world._itemCatalog, 4 );
+        outParty.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
         (void)outParty.addMember( hashed_string( "hero" ), "Hero", hashed_string( "hero" ), 1 );
         (void)outParty.addMember( hashed_string( "sol" ), "Sol", hashed_string( "warrior" ), 1 );
         (void)outParty.addMember( hashed_string( "mia" ), "Mia", hashed_string( "mage" ), 1 );
@@ -589,7 +617,7 @@ SW_TEST_CASE( ClassicJrpgTest, StepEncounterRewardSplitAndDeterminism )
     JrpgParty               partyB;
     SW_EXPECT_TRUE( runBattle( 64, listA, partyA ) == JrpgBattleOutcome::Victory );
     SW_EXPECT_EQUAL( 4, findEventValue( listA, JrpgBattleEvent::Kind::Victory ) );
-    SW_EXPECT_EQUAL( 8, static_cast<int32>( partyA.getWallet().getBalance( Wallet::getDefaultCurrency() ) ) );
+    SW_EXPECT_EQUAL( 8, static_cast<int32>( world._wallet.getBalance( Wallet::getDefaultCurrency() ) ) );
     SW_EXPECT_EQUAL( 4, static_cast<int32>( partyA.getMember( 0 )._level.getTotalXp() ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( partyA.getMember( 3 )._level.getTotalXp() ) );
     SW_EXPECT_TRUE( countEvents( listA, JrpgBattleEvent::Kind::SpellCast ) >= 1 );
@@ -601,4 +629,102 @@ SW_TEST_CASE( ClassicJrpgTest, StepEncounterRewardSplitAndDeterminism )
         bSameBattle = bSameBattle && listA[index]._kind == listB[index]._kind && listA[index]._actor == listB[index]._actor &&
                       listA[index]._target == listB[index]._target && listA[index]._value == listB[index]._value;
     SW_EXPECT_TRUE( bSameBattle );
+}
+
+/**
+ * @brief [ClassicJrpgTest] 파티 · 전투 · 걸음 상태 바이트 — 멤버 · 장비 · 비급, 적 · 둔 명령 · 턴 순서 · 난수, 걸음 수가 그대로 와서 같은 라운드 · 같은 걸음이 이어진다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( ClassicJrpgTest, StateRoundTripContinuesTheSameBattle )
+{
+    JrpgTestWorld world;
+    SW_ASSERT_TRUE( world.initialize() );
+    JrpgParty party;
+    party.initialize( &world._catalog, &world._itemCatalog, world.makeRefs() );
+    (void)party.addMember( hashed_string( "hero" ), "Hero", hashed_string( "hero" ), 5 );
+    (void)party.addMember( hashed_string( "mia" ), "Mia", hashed_string( "mage" ), 3 );
+    party.learnManual( 0, hashed_string( "pine_sword" ) );
+    party.addProficiency( 0, hashed_string( "pine_sword" ), 7 );
+    SW_EXPECT_EQUAL( 1, world._inventory.addItem( hashed_string( "copper_sword" ), 1 ) );
+    const int32 inventorySlot = world._inventory.findFirstSlot( hashed_string( "copper_sword" ) );
+    SW_ASSERT_TRUE( inventorySlot >= 0 );
+    SW_ASSERT_TRUE( party.getMember( 0 )._equipment.equipFromInventory( world._inventory, inventorySlot ) == EquipResult::Ok );
+
+    JrpgBattle battle;
+    battle.initialize( &world._catalog, &world._judge, JrpgBattleSettings{}, 31 );
+    SW_ASSERT_TRUE( battle.start( &party, { hashed_string( "slime" ), hashed_string( "golem" ) } ) );
+    SW_ASSERT_TRUE( battle.setCommand( 0, JrpgCommand::makeAttack( 1 ) ) );
+    SW_ASSERT_TRUE( battle.setCommand( 1, JrpgCommand::makeAttack( 1 ) ) );
+    battle.resolveRound();
+    SW_ASSERT_TRUE( battle.getOutcome() == JrpgBattleOutcome::Ongoing );
+    SW_ASSERT_TRUE( battle.setCommand( 0, JrpgCommand::makeDefend() ) ); // 라운드 중간 — 둔 명령도 싣는다
+
+    JrpgEncounterWalker walker;
+    walker.initialize( &world._catalog, 12 );
+    for ( int32 stepIndex = 0; stepIndex < 6; ++stepIndex )
+        (void)walker.step( hashed_string( "field" ) );
+
+    // 되살린 쪽은 같은 가방 · 지갑을 빌린다(가방을 다시 열지 않는다).
+    GameStateRefs refs;
+    refs._pInventory = &world._inventory;
+    refs._pWallet    = &world._wallet;
+
+    const vector<uint8> partyBytes = captureJrpgBytes( party );
+    JrpgParty           restoredParty;
+    restoredParty.initialize( &world._catalog, &world._itemCatalog, refs );
+    Archive partyReader( partyBytes.data(), partyBytes.size() );
+    SW_ASSERT_TRUE( restoredParty.readState( partyReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, partyReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureJrpgBytes( restoredParty ) == partyBytes );
+    SW_EXPECT_EQUAL( party.computeAttack( 0 ), restoredParty.computeAttack( 0 ) ); // 장비가 그대로 낀다
+    SW_EXPECT_EQUAL( 7, restoredParty.getMember( 0 ).findProficiency( hashed_string( "pine_sword" ) ) );
+
+    const vector<uint8> battleBytes = captureJrpgBytes( battle );
+    JrpgBattle          restoredBattle;
+    restoredBattle.initialize( &world._catalog, &world._judge, JrpgBattleSettings{}, 999 );
+    restoredBattle.bindParty( &restoredParty );
+    Archive battleReader( battleBytes.data(), battleBytes.size() );
+    SW_ASSERT_TRUE( restoredBattle.readState( battleReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, battleReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureJrpgBytes( restoredBattle ) == battleBytes );
+    SW_EXPECT_EQUAL( battle.getRound(), restoredBattle.getRound() );
+
+    const vector<uint8> walkerBytes = captureJrpgBytes( walker );
+    JrpgEncounterWalker restoredWalker;
+    restoredWalker.initialize( &world._catalog, 1 );
+    Archive walkerReader( walkerBytes.data(), walkerBytes.size() );
+    SW_ASSERT_TRUE( restoredWalker.readState( walkerReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, walkerReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureJrpgBytes( restoredWalker ) == walkerBytes );
+
+    // 같은 걸음을 둘 다 더 돌리면 바이트가 같다 — 빠진 칸이 있으면 여기서 갈린다.
+    SW_ASSERT_TRUE( battle.setCommand( 1, JrpgCommand::makeAttack( 1 ) ) );
+    SW_ASSERT_TRUE( restoredBattle.setCommand( 1, JrpgCommand::makeAttack( 1 ) ) );
+    battle.resolveRound();
+    restoredBattle.resolveRound();
+    for ( int32 stepIndex = 0; stepIndex < 10; ++stepIndex )
+    {
+        const JrpgEncounterGroup* pGroup         = walker.step( hashed_string( "field" ) );
+        const JrpgEncounterGroup* pRestoredGroup = restoredWalker.step( hashed_string( "field" ) );
+        SW_EXPECT_TRUE( pGroup == pRestoredGroup );
+    }
+    SW_EXPECT_TRUE( captureJrpgBytes( battle ) == captureJrpgBytes( restoredBattle ) );
+    SW_EXPECT_TRUE( captureJrpgBytes( party ) == captureJrpgBytes( restoredParty ) );
+    SW_EXPECT_TRUE( captureJrpgBytes( walker ) == captureJrpgBytes( restoredWalker ) );
+
+    JrpgParty truncatedParty;
+    truncatedParty.initialize( &world._catalog, &world._itemCatalog, refs );
+    Archive partyCut( partyBytes.data(), partyBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedParty.readState( partyCut ) );
+    SW_EXPECT_EQUAL( 0, truncatedParty.getMemberCount() );
+    JrpgBattle truncatedBattle;
+    truncatedBattle.initialize( &world._catalog, &world._judge, JrpgBattleSettings{}, 999 );
+    truncatedBattle.bindParty( &restoredParty );
+    Archive battleCut( battleBytes.data(), battleBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedBattle.readState( battleCut ) );
+    SW_EXPECT_EQUAL( 0, truncatedBattle.getRound() );
+    JrpgEncounterWalker truncatedWalker;
+    truncatedWalker.initialize( &world._catalog, 1 );
+    Archive walkerCut( walkerBytes.data(), walkerBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedWalker.readState( walkerCut ) );
+    SW_EXPECT_EQUAL( 0, truncatedWalker.getTotalSteps() );
 }

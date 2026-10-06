@@ -141,7 +141,7 @@ namespace sw
             {
                 outListFolder.clear();
                 vector<string> listFolder;
-                if ( FileUtil::directoryExists( reportsFolder ) == false || FileUtil::collectFolders( reportsFolder, listFolder, false ) == false )
+                if ( FileUtil::isDirectory( reportsFolder ) == false || FileUtil::collectFolders( reportsFolder, listFolder, false ) == false )
                     return;
                 for ( const string& folder : listFolder )
                 {
@@ -278,7 +278,7 @@ namespace sw
     uint32 CrashReportService::collectNewCrashes()
     {
         using Internal = CrashReportServiceInternal;
-        if ( _bInitialized == SW_FALSE || _crashFolder.empty() || FileUtil::directoryExists( _crashFolder ) == false )
+        if ( _bInitialized == SW_FALSE || _crashFolder.empty() || FileUtil::isDirectory( _crashFolder ) == false )
             return 0;
         vector<string> listFile;
         if ( FileUtil::collectFiles( _crashFolder, "", listFile, false ) == false )
@@ -301,7 +301,7 @@ namespace sw
     {
         using Internal            = CrashReportServiceInternal;
         const string bundleFolder = FileUtil::joinPath( _reportsFolder, string( kBundlePrefix ) + string( sessionId ) );
-        if ( FileUtil::directoryExists( bundleFolder ) || FileUtil::ensureDirectoryExists( bundleFolder ) == false )
+        if ( FileUtil::isDirectory( bundleFolder ) || FileUtil::ensureDirectoryExists( bundleFolder ) == false )
             return false;
 
         JsonDocument    manifest;
@@ -342,7 +342,7 @@ namespace sw
         for ( const Internal::CrashFileKind& kind : Internal::kArrCrashFile )
         {
             const string source = Internal::makeCrashFilePath( _crashFolder, sessionId, kind._pExtension );
-            if ( FileUtil::fileExists( source ) == false )
+            if ( FileUtil::exists( source ) == false )
                 continue;
             const string target = FileUtil::joinPath( bundleFolder, kind._pBundleName );
             if ( FileUtil::copyFile( source, target ) == false )

@@ -3,10 +3,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Gimmick/GimmickCircuit.h"
-#include "GameFramework/Gimmick/GimmickCircuitDef.h"
-#include "GameFramework/Gimmick/GimmickNodeRegistry.h"
-#include "GameFramework/Spline/SplinePath.h"
+#include "GameFramework/Base/Gimmick/GimmickCircuit.h"
+#include "GameFramework/Base/Gimmick/GimmickCircuitDef.h"
+#include "GameFramework/Base/Gimmick/GimmickNodeRegistry.h"
+#include "GameFramework/Base/Spline/SplinePath.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -226,7 +226,7 @@ namespace sw
         void dispatchRawEvent( const RawInputEvent& rawEvent );
 
         // ------------------------------------------------------------------------------
-        // 9) 플랫폼별 구현(Windows: InputManagerWin32.cpp / Linux: InputManagerX11.cpp)
+        // 9) 플랫폼별 구현(Windows: InputManagerWin32.cpp / Linux: InputManagerX11.cpp / 리눅스 전용 서버: Headless/InputManagerHeadless.cpp)
         //    InputManager.cpp 는 이 함수들을 부르기만 한다. 거기에 #ifdef 를 더하지 말 것.
         // ------------------------------------------------------------------------------
         /** @brief 플랫폼별 게임패드 백엔드를 만들어 registerDevice() 로 등록합니다(Windows: XInput, Linux: 조이스틱 API). */

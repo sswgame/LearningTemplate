@@ -18,7 +18,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Framework/GameDirectorComponent.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelWorld.h"
 
 namespace sw
@@ -79,6 +79,8 @@ namespace sw
         int32 _terrainSeed;
         PROPERTY( Category = "World", DisplayName = "Chunk Builds Per Frame", Tooltip = "Changed chunks handed out for meshing each frame, nearest to the body first", Min = 1 )
         int32 _chunkBuildsPerFrame;
+        PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
+        float32 _statusLogInterval;
 
         VoxelWorld               _world;
         vector<GameObjectHandle> _listChunk; ///< 청크 번호(z × 청크 수 X + x) 순

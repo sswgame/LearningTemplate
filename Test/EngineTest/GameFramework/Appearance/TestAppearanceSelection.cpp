@@ -5,10 +5,10 @@
 
 #include "EngineTest/AppearanceTestFixture.h"
 
-#include "GameFramework/Appearance/AppearanceResolver.h"
-#include "GameFramework/Appearance/AppearanceSelection.h"
-#include "GameFramework/Appearance/UserAppearancePresetStore.h"
-#include "GameFramework/Inventory/Equipment.h"
+#include "GameFramework/Base/Appearance/AppearanceResolver.h"
+#include "GameFramework/Base/Appearance/AppearanceSelection.h"
+#include "GameFramework/Base/Appearance/UserAppearancePresetStore.h"
+#include "GameFramework/Base/Inventory/Equipment.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -210,11 +210,11 @@ SW_TEST_CASE( AppearanceSelectionTest, UserPresetStoreRoundTripsAndUpgrades )
     SW_EXPECT_FALSE( store.renamePreset( "Hair only", "Parade Look" ) );
     SW_EXPECT_TRUE( store.renamePreset( "Hair only", "Barber" ) );
 
-    const string path = test::makeTempPath( "appearance_presets.sav" );
-    SW_ASSERT_TRUE( store.saveToFile( path ) );
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( store.writeBytes( bytes ) );
     UserAppearancePresetStore loaded;
     loaded.setDatabase( &fixture._database );
-    SW_ASSERT_TRUE( loaded.loadFromFile( path ) );
+    SW_ASSERT_TRUE( loaded.readBytes( bytes.data(), bytes.size() ) );
     SW_ASSERT_EQUAL( size_t( 2 ), loaded.getPresets().size() );
     const UserAppearancePreset* pParade = loaded.findPresetByName( "Parade Look" );
     SW_ASSERT_NOT_NULL( pParade );
@@ -269,8 +269,8 @@ SW_TEST_CASE( AppearanceSelectionTest, NetworkSyncResolvesToTheSameHash )
     // 장비가 프리셋을 덮는다 — 내구도가 닳은 칼 · 조건이 깨져 숨긴 망토.
     Equipment equipment;
     fixture.makeEquipment( equipment );
-    vector<ItemStack> listRemoved;
-    ItemStack         item;
+    vector<InventorySlot> listRemoved;
+    InventorySlot         item;
     item._count                     = 1;
     const utf8* const arrPiece[][2] = {
         {"Head",    "helm"},
@@ -285,7 +285,7 @@ SW_TEST_CASE( AppearanceSelectionTest, NetworkSyncResolvesToTheSameHash )
     item._itemId = hashed_string( "cape_hidden" );
     SW_ASSERT_TRUE( equipment.equip( hashed_string( "Back" ), item, listRemoved ) == EquipResult::Ok );
     SW_ASSERT_TRUE( equipment.unequip( hashed_string( "Legs" ), listRemoved ) == EquipResult::Ok );
-    ItemStack sword;
+    InventorySlot sword;
     sword._itemId           = hashed_string( "sword" );
     sword._count            = 1;
     sword._durability       = 37.0f;

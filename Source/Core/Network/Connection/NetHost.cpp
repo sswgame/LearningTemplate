@@ -2,8 +2,10 @@
 
 #include "Core/Network/Connection/NetHost.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/NetTransport.h"
 
 #include <chrono>
@@ -18,18 +20,42 @@ namespace sw
     {
         struct NetHostInternal
         {
-            static constexpr int32 kTypeBits   = 3;
-            static constexpr int32 kHeaderSize = 8; ///< 프로토콜 id 4 + 체크섬 4
+            static constexpr int32 kTypeBits          = 3;
+            static constexpr int32 kHeaderSize        = 8;         ///< 프로토콜 id 4 + 체크섬 4
+            static constexpr int32 kSecureHeadSize    = 1 + 4 + 8; ///< 암호화 몸의 머리 — 종류 바이트 · 연결 값 · 패킷 번호(BE)
+            static constexpr int32 kAadSize           = 4 + kSecureHeadSize;
+            static constexpr int32 kKeyConfirmAadSize = 4 + 8; ///< 서버가 준 자리 번호 ‖ 서버 소금
 
-            /** @brief FNV-1a 32 — 프로토콜 id 를 먼저 섞어 다른 게임의 패킷은 체크섬부터 틀린다. */
-            static uint32 computeChecksum( uint32 protocolId, const uint8* pData, int32 size )
+            /** @brief 증명 태그의 AAD — 클라이언트 소금 ‖ 도전 값 ‖ 클라이언트 공개 키 ‖ 토큰(다른 응답에 옮겨 붙이지 못한다). */
+            static vector<uint8> makeProofAad( uint64 clientSalt, uint64 challenge, const uint8* pPublicKey, const uint8* pToken, int32 tokenSize )
             {
-                uint32 hash = 2166136261u;
-                for ( int32 shift = 0; shift < 32; shift += 8 )
-                    hash = ( hash ^ ( ( protocolId >> shift ) & 0xFFu ) ) * 16777619u;
-                for ( int32 index = 0; index < size; ++index )
-                    hash = ( hash ^ pData[index] ) * 16777619u;
-                return hash;
+                vector<uint8> listAad( 16u + static_cast<size_t>( NetSecurityConstant::kX25519KeySize ) + static_cast<size_t>( tokenSize ) );
+                for ( int32 index = 0; index < 8; ++index )
+                {
+                    listAad[static_cast<size_t>( index )]     = static_cast<uint8>( clientSalt >> ( index * 8 ) );
+                    listAad[static_cast<size_t>( 8 + index )] = static_cast<uint8>( challenge >> ( index * 8 ) );
+                }
+                std::memcpy( listAad.data() + 16, pPublicKey, NetSecurityConstant::kX25519KeySize );
+                if ( tokenSize > 0 )
+                    std::memcpy( listAad.data() + 16 + NetSecurityConstant::kX25519KeySize, pToken, static_cast<size_t>( tokenSize ) );
+                return listAad;
+            }
+
+            /** @brief 키 확인 태그의 AAD — 서버가 준 자리 번호 4 LE ‖ 서버 소금 8 LE. */
+            static void makeKeyConfirmAad( uint32 serverIndex, uint64 serverSalt, uint8* pOutAad )
+            {
+                for ( int32 index = 0; index < 4; ++index )
+                    pOutAad[index] = static_cast<uint8>( serverIndex >> ( index * 8 ) );
+                for ( int32 index = 0; index < 8; ++index )
+                    pOutAad[4 + index] = static_cast<uint8>( serverSalt >> ( index * 8 ) );
+            }
+
+            /** @brief 데이터 · 끊기 패킷의 AAD — 프로토콜 id 4 LE ‖ 몸의 머리(종류 · 연결 값 · 패킷 번호). */
+            static void makePacketAad( uint32 protocolId, const uint8* pBodyHead, uint8* pOutAad )
+            {
+                for ( int32 index = 0; index < 4; ++index )
+                    pOutAad[index] = static_cast<uint8>( protocolId >> ( index * 8 ) );
+                std::memcpy( pOutAad + 4, pBodyHead, kSecureHeadSize );
             }
 
             static void writeUint32( vector<uint8>& outBytes, size_t offset, uint32 value )
@@ -40,20 +66,12 @@ namespace sw
 
             static uint64 makeAddressKey( const NetAddress& address ) { return ( static_cast<uint64>( address._ipv4 ) << 16 ) | address._port; }
 
-            /** @brief splitmix64 의 마무리 섞기입니다. */
-            static uint64 mix64( uint64 value )
-            {
-                value = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-                value = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
-                return value ^ ( value >> 31 );
-            }
-
             /** @brief 운영체제 난수 64 비트 — 도전 값이 다른 실행 · 다른 호스트와 겹치지 않고 미리 알 수 없게. */
             static uint64 makeRandomSeed()
             {
                 std::random_device randomDevice;
                 const uint64       seed = ( static_cast<uint64>( randomDevice() ) << 32 ) | static_cast<uint64>( randomDevice() );
-                return seed != 0 ? seed : 0x9E3779B97F4A7C15ull;
+                return seed != 0 ? seed : HashUtil::kGoldenRatio64;
             }
 
             static uint32 readUint32( const uint8* pData )
@@ -71,6 +89,10 @@ namespace sw
                         return NetDisconnectReason::ServerFull;
                     case NetDisconnectReason::VersionMismatch:
                         return NetDisconnectReason::VersionMismatch;
+                    case NetDisconnectReason::SecurityMismatch:
+                        return NetDisconnectReason::SecurityMismatch;
+                    case NetDisconnectReason::AuthenticationFailed:
+                        return NetDisconnectReason::AuthenticationFailed;
                     case NetDisconnectReason::None:
                     case NetDisconnectReason::Requested:
                     case NetDisconnectReason::Remote:
@@ -99,10 +121,16 @@ namespace sw
         , _flushBatch{}
         , _listDeliver{}
         , _listDrainScratch{}
+        , _plainWriter{}
+        , _listSealScratch{}
+        , _listOpenScratch{}
+        , _credentials{}
         , _settings{}
         , _pTransport{ nullptr }
         , _saltState{ 0 }
         , _rejectedPacketCount{ 0 }
+        , _authenticationFailureCount{ 0 }
+        , _replayRejectedCount{ 0 }
         , _mismatchLogCount{ 0 }
         , _challengeSecret{ 0 }
         , _protocolId{ 0 }
@@ -111,8 +139,11 @@ namespace sw
         , _receiveCursor{ 0 }
         , _bServer{ SW_FALSE }
         , _bConnectPending{ SW_FALSE }
+        , _bHasCredentials{ SW_FALSE }
     {
     }
+
+    NetHost::~NetHost() = default;
 
     void NetHost::initialize( INetTransport* pTransport, const NetHostSettings& settings )
     {
@@ -130,11 +161,16 @@ namespace sw
             _pendingBatch.clear();
             _pendingBatch._bytes.reserve( static_cast<size_t>( kNetMaxPacketSize ) * 4 );
             _listEvent.clear();
-            _rejectedPacketCount = 0;
-            _mismatchLogCount    = 0;
-            _protocolId          = NetProtocol::makeProtocolId( settings._gameId, settings._wireVersion );
-            _clientIndex         = -1;
-            _bServer             = SW_FALSE;
+            _rejectedPacketCount        = 0;
+            _authenticationFailureCount = 0;
+            _replayRejectedCount        = 0;
+            _mismatchLogCount           = 0;
+            _clientIndex                = -1;
+            _bServer                    = SW_FALSE;
+            _bHasCredentials            = SW_FALSE;
+            _credentials                = NetConnectCredentials{};
+            _plainWriter.reserve( kNetMaxPacketSize );
+            _protocolId = NetProtocol::makeProtocolId( settings._gameId, settings._wireVersion, computeFeatureMask() ); // listen · connect 가 역할에 맞춰 다시 셈한다
             listFinished.swap( _listFinished );
         }
         deliverFinished( listFinished );
@@ -149,24 +185,42 @@ namespace sw
         return type < static_cast<uint32>( PacketType::Count ) ? static_cast<PacketType>( type ) : PacketType::Count;
     }
 
+    uint32 NetHost::computePacketChecksum( uint32 headerId, const uint8* pBody, int32 size )
+    {
+        // FNV-1a 32 — 머리 값(프로토콜 id)을 먼저 섞어 다른 게임 · 판의 패킷은 체크섬부터 틀린다.
+        uint32 hash = HashUtil::kFnvOffset32;
+        for ( int32 shift = 0; shift < 32; shift += 8 )
+            hash = ( hash ^ ( ( headerId >> shift ) & 0xFFu ) ) * HashUtil::kFnvPrime32;
+        for ( int32 index = 0; index < size; ++index )
+            hash = ( hash ^ pBody[index] ) * HashUtil::kFnvPrime32;
+        return hash;
+    }
+
+    uint32 NetHost::computeFeatureMask() const
+    {
+        if ( isEncrypted() == false )
+            return 0;
+        // 토큰 결속 — 서버는 인증기가 있을 때, 클라이언트는 자격을 내밀 때. 한쪽만이면 프로토콜 id 가 달라 SecurityMismatch 로 갈린다.
+        const bool bTokenBound = _bServer == SW_TRUE ? _settings._security._pAuthenticator != nullptr : _bHasCredentials == SW_TRUE;
+        return NetProtocolFeature::kEncrypted | ( bTokenBound ? NetProtocolFeature::kTokenBound : 0u );
+    }
+
     int64 NetHost::computeChallengeWindow( float64 time ) { return static_cast<int64>( MathUtil::floor( time / kChallengeWindowSeconds ) ); }
 
     uint64 NetHost::makeChallengeToken( const NetAddress& address, uint64 clientSalt, int64 window ) const
     {
-        uint64 value = NetHostInternal::mix64( _challengeSecret ^ NetHostInternal::makeAddressKey( address ) );
-        value        = NetHostInternal::mix64( value ^ clientSalt );
-        value        = NetHostInternal::mix64( value ^ static_cast<uint64>( window ) ^ ( _challengeSecret << 1 ) );
+        uint64 value = HashUtil::mix64( _challengeSecret ^ NetHostInternal::makeAddressKey( address ) );
+        value        = HashUtil::mix64( value ^ clientSalt );
+        value        = HashUtil::mix64( value ^ static_cast<uint64>( window ) ^ ( _challengeSecret << 1 ) );
         return value | 1u; // 0 은 "아직 도전을 못 받았다" 의 뜻
     }
 
     uint64 NetHost::nextSalt()
     {
         // splitmix64
-        _saltState += 0x9E3779B97F4A7C15ull;
+        _saltState += HashUtil::kGoldenRatio64;
         uint64 value = _saltState;
-        value        = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-        value        = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
-        return value ^ ( value >> 31 );
+        return HashUtil::mix64( value );
     }
 
     bool NetHost::listen()
@@ -174,28 +228,56 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         if ( _pTransport == nullptr )
             return false;
-        _bServer = SW_TRUE;
-        _listSlot.assign( static_cast<size_t>( MathUtil::max( 1, _settings._maxConnections ) ), Slot{} );
+        if ( isEncrypted() && _settings._security._pProvider == nullptr )
+        {
+            SW_LOG_ERROR( "NetHost: encrypted mode needs a security provider (EngineNetSecurity::getProvider())" );
+            return false;
+        }
+#if defined( SW_SHIPPING )
+        if ( isEncrypted() && _settings._security._pAuthenticator == nullptr )
+        {
+            // 인증기 없는 암호화(일회 키)는 도청만 막고 중간자는 못 막는다 — 개발 빌드 전용이다.
+            SW_LOG_ERROR( "NetHost: a shipping server must bind encrypted connections to session tokens (set NetSecuritySettings::_pAuthenticator)" );
+            return false;
+        }
+#endif
+        _bServer    = SW_TRUE;
+        _protocolId = NetProtocol::makeProtocolId( _settings._gameId, _settings._wireVersion, computeFeatureMask() );
+        _listSlot.clear();
+        _listSlot.resize( static_cast<size_t>( MathUtil::max( 1, _settings._maxConnections ) ) );
         _mapSlotByAddress.clear();
         _mapSlotByAddress.reserve( _listSlot.size() * 2 );
         return true;
     }
 
-    bool NetHost::connect( const NetAddress& serverAddress )
+    bool NetHost::connect( const NetAddress& serverAddress ) { return connectLocked( serverAddress, nullptr ); }
+
+    bool NetHost::connect( const NetAddress& serverAddress, const NetConnectCredentials& credentials ) { return connectLocked( serverAddress, &credentials ); }
+
+    bool NetHost::connectLocked( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials )
     {
         vector<FinishedConnect> listFinished;
         bool                    bStarted = false;
         {
             std::scoped_lock<mutex> lock{ _mutex };
             finishConnect( NetDisconnectReason::Requested ); // 앞의 비동기 연결은 끝난다
-            bStarted = startConnect( serverAddress );
+            _credentials     = pCredentials != nullptr ? *pCredentials : NetConnectCredentials{};
+            _bHasCredentials = pCredentials != nullptr && pCredentials->_tokenSize > 0 ? SW_TRUE : SW_FALSE;
+            bStarted         = startConnect( serverAddress );
             listFinished.swap( _listFinished );
         }
         deliverFinished( listFinished );
         return bStarted;
     }
 
-    TaskFuture<NetConnectResult> NetHost::connectAsync( const NetAddress& serverAddress )
+    TaskFuture<NetConnectResult> NetHost::connectAsync( const NetAddress& serverAddress ) { return connectAsyncWith( serverAddress, nullptr ); }
+
+    TaskFuture<NetConnectResult> NetHost::connectAsync( const NetAddress& serverAddress, const NetConnectCredentials& credentials )
+    {
+        return connectAsyncWith( serverAddress, &credentials );
+    }
+
+    TaskFuture<NetConnectResult> NetHost::connectAsyncWith( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials )
     {
         vector<FinishedConnect>      listFinished;
         TaskFuture<NetConnectResult> future;
@@ -205,6 +287,8 @@ namespace sw
             _connectPromise  = TaskPromise<NetConnectResult>{};
             future           = _connectPromise.getFuture();
             _bConnectPending = SW_TRUE;
+            _credentials     = pCredentials != nullptr ? *pCredentials : NetConnectCredentials{};
+            _bHasCredentials = pCredentials != nullptr && pCredentials->_tokenSize > 0 ? SW_TRUE : SW_FALSE;
             if ( startConnect( serverAddress ) == false )
                 finishConnect( NetDisconnectReason::Rejected );
             listFinished.swap( _listFinished );
@@ -217,8 +301,15 @@ namespace sw
     {
         if ( _pTransport == nullptr || serverAddress.isValid() == false )
             return false;
-        _bServer = SW_FALSE;
-        _listSlot.assign( 1, Slot{} );
+        if ( _bHasCredentials == SW_TRUE && _credentials._tokenSize > NetSecurityConstant::kMaxTokenSize )
+        {
+            SW_LOG_ERROR( "NetHost: session token of %# bytes exceeds the limit of %# bytes", _credentials._tokenSize, NetSecurityConstant::kMaxTokenSize );
+            return false;
+        }
+        _bServer    = SW_FALSE;
+        _protocolId = NetProtocol::makeProtocolId( _settings._gameId, _settings._wireVersion, computeFeatureMask() );
+        _listSlot.clear();
+        _listSlot.resize( 1 );
         _mapSlotByAddress.clear();
         bindAddress( 0, serverAddress );
         Slot& slot             = _listSlot[0];
@@ -227,6 +318,16 @@ namespace sw
         slot._state            = NetConnectionState::Connecting;
         slot._connectStartTime = -1.0; // 첫 update 에서 시각을 잡는다
         slot._lastSendTime     = -1.0;
+        if ( isEncrypted() )
+        {
+            slot._security = make_unique<SlotSecurity>();
+            if ( _settings._security._pProvider == nullptr || _settings._security._pProvider->makeX25519KeyPair( slot._security->_keyPair ) == false )
+            {
+                SW_LOG_ERROR( "NetHost: cannot create a key pair - is NetSecuritySettings::_pProvider set?" );
+                closeSlot( 0, NetDisconnectReason::Rejected, false );
+                return false;
+            }
+        }
         return true;
     }
 
@@ -269,7 +370,7 @@ namespace sw
         if ( bodySize > 0 )
             std::memcpy( pPacket + NetHostInternal::kHeaderSize, body.data(), static_cast<size_t>( bodySize ) );
         NetHostInternal::writeUint32( _pendingBatch._bytes, offset, headerId );
-        NetHostInternal::writeUint32( _pendingBatch._bytes, offset + 4, NetHostInternal::computeChecksum( headerId, pPacket + NetHostInternal::kHeaderSize, bodySize ) );
+        NetHostInternal::writeUint32( _pendingBatch._bytes, offset + 4, computePacketChecksum( headerId, pPacket + NetHostInternal::kHeaderSize, bodySize ) );
         _pendingBatch._listDatagram.push_back( OutgoingDatagram{ to, static_cast<int32>( offset ), NetHostInternal::kHeaderSize + bodySize } );
     }
 
@@ -330,8 +431,229 @@ namespace sw
         sendControl( to, PacketType::Denied, static_cast<uint64>( reason ) | ( static_cast<uint64>( _protocolId ) << 32 ), clientSalt );
     }
 
+    void NetHost::sendChallengeResponse( Slot& slot )
+    {
+        BitWriter& writer = _packetWriter;
+        writer.clear();
+        writer.writeBits( static_cast<uint32>( PacketType::ChallengeResponse ), NetHostInternal::kTypeBits );
+        writer.writeBits( static_cast<uint32>( slot._clientSalt ), 32 );
+        writer.writeBits( static_cast<uint32>( slot._clientSalt >> 32 ), 32 );
+        writer.writeBits( static_cast<uint32>( slot._serverSalt ), 32 );
+        writer.writeBits( static_cast<uint32>( slot._serverSalt >> 32 ), 32 );
+        if ( isEncrypted() && slot._security != nullptr )
+        {
+            writer.writeBytes( slot._security->_keyPair._arrPublicKey, NetSecurityConstant::kX25519KeySize );
+            if ( _bHasCredentials == SW_TRUE )
+            {
+                writer.writeBlob( _credentials._arrToken, _credentials._tokenSize );
+                // 증명 — 세션 비밀로 유도한 키의 빈 봉인. AAD 가 이 응답의 소금 · 도전 값 · 공개 키 · 토큰이라 다른 응답에 옮겨 붙이지 못한다.
+                uint8                 arrProofKey[NetSecurityConstant::kAeadKeySize]{};
+                uint8                 arrTag[NetSecurityConstant::kAeadTagSize]{};
+                const uint8           arrZeroNonce[NetSecurityConstant::kAeadNonceSize]{};
+                const vector<uint8>   aad      = NetHostInternal::makeProofAad( slot._clientSalt, slot._serverSalt, slot._security->_keyPair._arrPublicKey, _credentials._arrToken,
+                                                                                _credentials._tokenSize );
+                INetSecurityProvider& provider = *_settings._security._pProvider;
+                if ( NetSessionKeyUtil::computeProofKey( provider, _credentials._secret, arrProofKey ) )
+                {
+                    unique_ptr<INetAead> proof = provider.createAead( _settings._security._algorithm, arrProofKey );
+                    if ( proof != nullptr )
+                        (void)proof->seal( arrZeroNonce, aad.data(), static_cast<int32>( aad.size() ), nullptr, 0, arrTag );
+                }
+                std::memset( arrProofKey, 0, sizeof( arrProofKey ) );
+                writer.writeBytes( arrTag, NetSecurityConstant::kAeadTagSize );
+            }
+        }
+        sendFramed( slot._address, _protocolId );
+    }
+
+    void NetHost::sendAccepted( int32 slotIndex )
+    {
+        const Slot& slot   = _listSlot[static_cast<size_t>( slotIndex )];
+        BitWriter&  writer = _packetWriter;
+        writer.clear();
+        writer.writeBits( static_cast<uint32>( PacketType::Accepted ), NetHostInternal::kTypeBits );
+        writer.writeBits( static_cast<uint32>( slotIndex ), 32 );
+        writer.writeBits( 0u, 32 );
+        writer.writeBits( static_cast<uint32>( slot._serverSalt ), 32 );
+        writer.writeBits( static_cast<uint32>( slot._serverSalt >> 32 ), 32 );
+        if ( isEncrypted() && slot._security != nullptr )
+        {
+            writer.writeBytes( slot._security->_keyPair._arrPublicKey, NetSecurityConstant::kX25519KeySize );
+            writer.writeBytes( slot._security->_arrKeyConfirmTag, NetSecurityConstant::kAeadTagSize );
+        }
+        sendFramed( slot._address, _protocolId );
+    }
+
+    bool NetHost::acceptSecureResponse( BitReader& reader, const NetAddress& from, uint64 clientSalt, uint64 challenge, unique_ptr<SlotSecurity>& outSecurity )
+    {
+        INetSecurityProvider& provider    = *_settings._security._pProvider;
+        const bool            bTokenBound = _settings._security._pAuthenticator != nullptr;
+        uint8                 arrClientPublic[NetSecurityConstant::kX25519KeySize]{};
+        uint8                 arrProof[NetSecurityConstant::kAeadTagSize]{};
+        vector<uint8>         listToken;
+        bool                  bRead = reader.readBytes( arrClientPublic, NetSecurityConstant::kX25519KeySize );
+        if ( bTokenBound )
+            bRead = bRead && reader.readBlob( listToken, NetSecurityConstant::kMaxTokenSize ) && reader.readBytes( arrProof, NetSecurityConstant::kAeadTagSize );
+        if ( bRead == false || reader.hasOverflowed() )
+        {
+            ++_rejectedPacketCount;
+            return false;
+        }
+        NetSessionSecret secret;
+        uint64           principalId = 0;
+        if ( bTokenBound )
+        {
+            uint8                arrProofKey[NetSecurityConstant::kAeadKeySize]{};
+            const uint8          arrZeroNonce[NetSecurityConstant::kAeadNonceSize]{};
+            const vector<uint8>  aad = NetHostInternal::makeProofAad( clientSalt, challenge, arrClientPublic, listToken.data(), static_cast<int32>( listToken.size() ) );
+            unique_ptr<INetAead> proof;
+            const bool           bKnown = _settings._security._pAuthenticator->findSessionSecret( listToken.data(), static_cast<int32>( listToken.size() ), secret, principalId ) &&
+                                NetSessionKeyUtil::computeProofKey( provider, secret, arrProofKey ) &&
+                                ( proof = provider.createAead( _settings._security._algorithm, arrProofKey ) ) != nullptr &&
+                                proof->open( arrZeroNonce, aad.data(), static_cast<int32>( aad.size() ), arrProof, NetSecurityConstant::kAeadTagSize, nullptr );
+            std::memset( arrProofKey, 0, sizeof( arrProofKey ) );
+            if ( bKnown == false )
+            {
+                ++_authenticationFailureCount;
+                sendDenied( from, NetDisconnectReason::AuthenticationFailed, clientSalt );
+                return false;
+            }
+        }
+        unique_ptr<SlotSecurity> security = make_unique<SlotSecurity>();
+        uint8                    arrShared[NetSecurityConstant::kX25519KeySize]{};
+        const bool               bKeys = provider.makeX25519KeyPair( security->_keyPair ) &&
+                           provider.computeX25519SharedSecret( security->_keyPair._arrPrivateKey, arrClientPublic, arrShared ) &&
+                           NetSessionKeyUtil::computeSessionKeys( provider, arrShared, bTokenBound ? &secret : nullptr, clientSalt, challenge, _protocolId, security->_keys );
+        std::memset( arrShared, 0, sizeof( arrShared ) );
+        security->_keyPair.wipe(); // 서버는 공개 키만 남긴다(수락 재전송)
+        if ( bKeys )
+        {
+            security->_sendAead    = provider.createAead( _settings._security._algorithm, security->_keys._serverToClient._arrKey );
+            security->_receiveAead = provider.createAead( _settings._security._algorithm, security->_keys._clientToServer._arrKey );
+        }
+        if ( bKeys == false || security->_sendAead == nullptr || security->_receiveAead == nullptr )
+        {
+            ++_authenticationFailureCount; // 작은 차수 공개 키 등
+            sendDenied( from, NetDisconnectReason::AuthenticationFailed, clientSalt );
+            return false;
+        }
+        security->_principalId = principalId;
+        security->_bKeysReady  = SW_TRUE;
+        outSecurity            = std::move( security );
+        return true;
+    }
+
+    bool NetHost::acceptSecureAccepted( BitReader& reader, Slot& slot, int32 slotIndex, uint32 serverIndex )
+    {
+        INetSecurityProvider& provider = *_settings._security._pProvider;
+        SlotSecurity&         security = *slot._security;
+        uint8                 arrServerPublic[NetSecurityConstant::kX25519KeySize]{};
+        uint8                 arrTag[NetSecurityConstant::kAeadTagSize]{};
+        uint8                 arrShared[NetSecurityConstant::kX25519KeySize]{};
+        bool                  bOk = reader.readBytes( arrServerPublic, NetSecurityConstant::kX25519KeySize ) && reader.readBytes( arrTag, NetSecurityConstant::kAeadTagSize ) &&
+                   provider.computeX25519SharedSecret( security._keyPair._arrPrivateKey, arrServerPublic, arrShared ) &&
+                   NetSessionKeyUtil::computeSessionKeys( provider, arrShared, _bHasCredentials == SW_TRUE ? &_credentials._secret : nullptr, slot._clientSalt, slot._serverSalt,
+                                                          _protocolId, security._keys );
+        std::memset( arrShared, 0, sizeof( arrShared ) );
+        if ( bOk )
+        {
+            security._sendAead    = provider.createAead( _settings._security._algorithm, security._keys._clientToServer._arrKey );
+            security._receiveAead = provider.createAead( _settings._security._algorithm, security._keys._serverToClient._arrKey );
+            bOk                   = security._sendAead != nullptr && security._receiveAead != nullptr;
+        }
+        if ( bOk )
+        {
+            // 키 확인 — 서버가 같은 키(같은 세션 비밀 · 같은 공유 비밀)를 가졌는지. 다르면 중간자이거나 비밀이 틀렸다.
+            uint8 arrNonce[NetSecurityConstant::kAeadNonceSize]{};
+            uint8 arrAad[NetHostInternal::kKeyConfirmAadSize]{};
+            NetSessionKeyUtil::makeNonce( security._keys._serverToClient._arrIv, NetSessionKeyUtil::kKeyConfirmPacketNumber, arrNonce );
+            NetHostInternal::makeKeyConfirmAad( serverIndex, slot._serverSalt, arrAad );
+            bOk = security._receiveAead->open( arrNonce, arrAad, NetHostInternal::kKeyConfirmAadSize, arrTag, NetSecurityConstant::kAeadTagSize, nullptr );
+        }
+        if ( bOk == false )
+        {
+            ++_authenticationFailureCount;
+            closeSlot( slotIndex, NetDisconnectReason::AuthenticationFailed, false );
+            return false;
+        }
+        security._keyPair.wipe();
+        security._bKeysReady = SW_TRUE;
+        return true;
+    }
+
+    int32 NetHost::sendSealed( Slot& slot, PacketType type, const uint8* pPlain, int32 plainSize )
+    {
+        SlotSecurity& security     = *slot._security;
+        const uint64  packetNumber = security._sendPacketNumber++;
+        const uint32  token        = static_cast<uint32>( slot._clientSalt ^ slot._serverSalt );
+        uint8         arrHead[NetHostInternal::kSecureHeadSize]{};
+        arrHead[0] = static_cast<uint8>( type ); // 종류 3 비트 + 0 5 비트 — BitWriter 는 낮은 비트부터라 받는 쪽 readBits( 3 ) · peekPacketType 이 그대로 읽는다
+        for ( int32 index = 0; index < 4; ++index )
+            arrHead[1 + index] = static_cast<uint8>( token >> ( index * 8 ) );
+        for ( int32 index = 0; index < 8; ++index )
+            arrHead[5 + index] = static_cast<uint8>( packetNumber >> ( 56 - index * 8 ) );
+        uint8 arrAad[NetHostInternal::kAadSize]{};
+        NetHostInternal::makePacketAad( _protocolId, arrHead, arrAad );
+        uint8                   arrNonce[NetSecurityConstant::kAeadNonceSize]{};
+        const NetDirectionKeys& keys = _bServer == SW_TRUE ? security._keys._serverToClient : security._keys._clientToServer;
+        NetSessionKeyUtil::makeNonce( keys._arrIv, packetNumber, arrNonce );
+        _listSealScratch.resize( static_cast<size_t>( plainSize + NetSecurityConstant::kAeadTagSize ) );
+        if ( security._sendAead->seal( arrNonce, arrAad, NetHostInternal::kAadSize, pPlain, plainSize, _listSealScratch.data() ) == false )
+            return 0;
+        BitWriter& writer = _packetWriter;
+        writer.clear();
+        writer.writeBytes( arrHead, NetHostInternal::kSecureHeadSize );
+        writer.writeBytes( _listSealScratch.data(), static_cast<int32>( _listSealScratch.size() ) );
+        sendFramed( slot._address, _protocolId );
+        return NetHostInternal::kHeaderSize + writer.getByteCount();
+    }
+
+    bool NetHost::openSealed( Slot& slot, const uint8* pBody, int32 bodySize )
+    {
+        SlotSecurity& security = *slot._security;
+        if ( bodySize < NetHostInternal::kSecureHeadSize + NetSecurityConstant::kAeadTagSize )
+        {
+            ++_rejectedPacketCount;
+            return false;
+        }
+        uint64 packetNumber = 0;
+        for ( int32 index = 0; index < 8; ++index )
+            packetNumber = ( packetNumber << 8 ) | pBody[5 + index];
+        if ( security._replayWindow.isAcceptable( packetNumber ) == false )
+        {
+            ++_replayRejectedCount;
+            return false;
+        }
+        uint8 arrAad[NetHostInternal::kAadSize]{};
+        NetHostInternal::makePacketAad( _protocolId, pBody, arrAad );
+        uint8                   arrNonce[NetSecurityConstant::kAeadNonceSize]{};
+        const NetDirectionKeys& keys = _bServer == SW_TRUE ? security._keys._clientToServer : security._keys._serverToClient;
+        NetSessionKeyUtil::makeNonce( keys._arrIv, packetNumber, arrNonce );
+        const int32 cipherSize = bodySize - NetHostInternal::kSecureHeadSize;
+        _listOpenScratch.resize( static_cast<size_t>( cipherSize - NetSecurityConstant::kAeadTagSize ) );
+        if ( security._receiveAead->open( arrNonce, arrAad, NetHostInternal::kAadSize, pBody + NetHostInternal::kSecureHeadSize, cipherSize, _listOpenScratch.data() ) == false )
+        {
+            ++_authenticationFailureCount;
+            return false;
+        }
+        security._replayWindow.markReceived( packetNumber ); // 복호가 통과한 뒤에만 — 먼저 표시하면 위조 패킷이 진짜 번호를 태운다
+        return true;
+    }
+
     void NetHost::sendPayload( float64 time, Slot& slot )
     {
+        if ( slot._security != nullptr )
+        {
+            // 암호화 — NetConnection 패킷을 평문으로 짓고 봉인한다. 예산에서 암호화 머리 · 태그 몫을 뺀다.
+            _plainWriter.clear();
+            const int32 maxBytes =
+                slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetHostInternal::kHeaderSize - NetHostInternal::kSecureHeadSize - NetSecurityConstant::kAeadTagSize : 0;
+            slot._connection.writePacket( time, _plainWriter, maxBytes, _settings._keepAliveInterval );
+            const int32 sentBytes = sendSealed( slot, PacketType::Payload, _plainWriter.getBytes().data(), _plainWriter.getByteCount() );
+            slot._sendCredit -= static_cast<float64>( sentBytes );
+            slot._lastSendTime = time;
+            return;
+        }
         BitWriter& writer = _packetWriter;
         writer.clear();
         writer.writeBits( static_cast<uint32>( PacketType::Payload ), NetHostInternal::kTypeBits );
@@ -433,7 +755,7 @@ namespace sw
                     {
                         // 도전을 받았으면 응답을, 아니면 요청을 되풀이한다.
                         if ( slot._serverSalt != 0 )
-                            sendControl( slot._address, PacketType::ChallengeResponse, slot._clientSalt, slot._serverSalt );
+                            sendChallengeResponse( slot );
                         else
                             sendControl( slot._address, PacketType::ConnectRequest, slot._clientSalt,
                                          ( static_cast<uint64>( _settings._gameId ) << 32 ) | _protocolId );
@@ -478,7 +800,7 @@ namespace sw
         const uint32 headerId = size > NetHostInternal::kHeaderSize ? NetHostInternal::readUint32( pData ) : 0u;
         if ( size <= NetHostInternal::kHeaderSize || ( headerId != _protocolId && headerId != NetProtocol::kHandshakeId ) ||
              NetHostInternal::readUint32( pData + 4 ) !=
-                 NetHostInternal::computeChecksum( headerId, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
+                 computePacketChecksum( headerId, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
         {
             ++_rejectedPacketCount; // 다른 판 · 다른 게임 · 깨진 패킷
             return;
@@ -491,6 +813,11 @@ namespace sw
             return;
         }
         const int32 slotIndex = findSlotByAddress( from );
+        if ( isEncrypted() && ( type == PacketType::Payload || type == PacketType::Disconnect ) )
+        {
+            handleSealedPacket( time, type, slotIndex, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize );
+            return;
+        }
         if ( type == PacketType::Payload )
         {
             const uint32 token = reader.readBits( 32 );
@@ -502,7 +829,7 @@ namespace sw
                 if ( _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
                      token == static_cast<uint32>( pSlot->_clientSalt ^ pSlot->_serverSalt ) )
                 {
-                    sendControl( pSlot->_address, PacketType::ChallengeResponse, pSlot->_clientSalt, pSlot->_serverSalt );
+                    sendChallengeResponse( *pSlot );
                     pSlot->_lastSendTime = time;
                     return;
                 }
@@ -536,8 +863,14 @@ namespace sw
                 const uint32 requestProtocolId = static_cast<uint32>( valueB );
                 if ( requestProtocolId != _protocolId )
                 {
-                    const uint32              requestGameId = static_cast<uint32>( valueB >> 32 );
-                    const NetDisconnectReason reason        = requestGameId == _settings._gameId ? NetDisconnectReason::VersionMismatch : NetDisconnectReason::Rejected;
+                    const uint32        requestGameId = static_cast<uint32>( valueB >> 32 );
+                    NetDisconnectReason reason        = requestGameId == _settings._gameId ? NetDisconnectReason::VersionMismatch : NetDisconnectReason::Rejected;
+                    // 같은 게임 · 같은 판인데 기능 마스크만 다르면 — 한쪽만 암호화 · 토큰 결속이다.
+                    for ( uint32 mask = 0; reason == NetDisconnectReason::VersionMismatch && mask <= NetProtocolFeature::kAllMask; ++mask )
+                    {
+                        if ( NetProtocol::makeProtocolId( _settings._gameId, _settings._wireVersion, mask ) == requestProtocolId )
+                            reason = NetDisconnectReason::SecurityMismatch;
+                    }
                     ++_mismatchLogCount;
                     if ( ( _mismatchLogCount & ( _mismatchLogCount - 1 ) ) == 0 )
                         SW_LOG_WARNING( "NetHost: refused a connection from %# (%#) — it speaks protocol 0x%08x (game 0x%08x), this server 0x%08x (game 0x%08x); %# such requests so far",
@@ -551,7 +884,7 @@ namespace sw
                     // 이 주소는 이미 연결돼 있다 — 같은 요청의 늦은 재전송이면 수락을 다시, 다른 소금(새로 시작한 클라이언트)이면 옛 연결이 끝날 때까지 답하지 않는다.
                     const Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
                     if ( slot._clientSalt == valueA )
-                        sendControl( from, PacketType::Accepted, static_cast<uint64>( slotIndex ), slot._serverSalt );
+                        sendAccepted( slotIndex );
                     return;
                 }
                 if ( findFreeSlot() < 0 )
@@ -571,7 +904,7 @@ namespace sw
                 if ( slot._state != NetConnectionState::Connecting || valueA != slot._clientSalt )
                     return;
                 slot._serverSalt = valueB;
-                sendControl( from, PacketType::ChallengeResponse, slot._clientSalt, slot._serverSalt );
+                sendChallengeResponse( slot );
                 slot._lastSendTime = time;
                 return;
             }
@@ -585,8 +918,9 @@ namespace sw
                     Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
                     if ( slot._clientSalt == valueA && slot._serverSalt == valueB )
                     {
+                        // 확장 바이트(공개 키 · 토큰)는 다시 읽지 않는다 — 기억한 키 확인 태그로 같은 수락을 보낸다.
                         slot._lastReceiveTime = time;
-                        sendControl( from, PacketType::Accepted, static_cast<uint64>( slotIndex ), slot._serverSalt );
+                        sendAccepted( slotIndex );
                     }
                     return;
                 }
@@ -603,6 +937,10 @@ namespace sw
                     sendDenied( from, NetDisconnectReason::ServerFull, valueA );
                     return;
                 }
+                // 암호화 — 주소가 확인된(도전을 통과한) 응답에만 X25519 를 계산한다. 토큰 결속이면 증명이 맞아야 자리를 잡는다.
+                unique_ptr<SlotSecurity> security;
+                if ( isEncrypted() && acceptSecureResponse( reader, from, valueA, valueB, security ) == false )
+                    return; // 거절은 그 안에서 보냈다
                 Slot& slot    = _listSlot[static_cast<size_t>( freeIndex )];
                 slot          = Slot{};
                 slot._address = from;
@@ -613,8 +951,18 @@ namespace sw
                 slot._lastReceiveTime = time;
                 slot._lastSendTime    = -1.0;
                 slot._connection.reset();
+                slot._security = std::move( security );
+                if ( slot._security != nullptr )
+                {
+                    // 키 확인 태그 — 서버 → 클라이언트 키의 빈 봉인. 수락을 다시 보낼 때도 같은 태그.
+                    uint8 arrNonce[NetSecurityConstant::kAeadNonceSize]{};
+                    uint8 arrAad[NetHostInternal::kKeyConfirmAadSize]{};
+                    NetSessionKeyUtil::makeNonce( slot._security->_keys._serverToClient._arrIv, NetSessionKeyUtil::kKeyConfirmPacketNumber, arrNonce );
+                    NetHostInternal::makeKeyConfirmAad( static_cast<uint32>( freeIndex ), slot._serverSalt, arrAad );
+                    (void)slot._security->_sendAead->seal( arrNonce, arrAad, NetHostInternal::kKeyConfirmAadSize, nullptr, 0, slot._security->_arrKeyConfirmTag );
+                }
                 pushEvent( NetHostEvent{ freeIndex, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
-                sendControl( from, PacketType::Accepted, static_cast<uint64>( freeIndex ), slot._serverSalt );
+                sendAccepted( freeIndex );
                 return;
             }
             case PacketType::Accepted:
@@ -624,6 +972,8 @@ namespace sw
                 Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
                 if ( slot._state != NetConnectionState::Connecting || valueB != slot._serverSalt )
                     return;
+                if ( slot._security != nullptr && acceptSecureAccepted( reader, slot, slotIndex, static_cast<uint32>( valueA ) ) == false )
+                    return; // 키 확인이 틀렸다 — 그 안에서 닫았다
                 slot._state           = NetConnectionState::Connected;
                 slot._lastReceiveTime = time;
                 slot._lastSendTime    = -1.0;
@@ -663,6 +1013,39 @@ namespace sw
         }
     }
 
+    void NetHost::handleSealedPacket( float64 time, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize )
+    {
+        // 몸 = [종류 · 0][연결 값 4][패킷 번호 8][AEAD + 태그] — 바이트 정렬이라 BitReader 를 거치지 않는다.
+        const uint32 token  = bodySize >= 5 ? NetHostInternal::readUint32( pBody + 1 ) : 0u;
+        Slot*        pSlot  = isValidSlot( slotIndex ) ? &_listSlot[static_cast<size_t>( slotIndex )] : nullptr;
+        const bool   bReady = pSlot != nullptr && pSlot->_state == NetConnectionState::Connected && pSlot->_security != nullptr &&
+                            pSlot->_security->_bKeysReady == SW_TRUE && token == static_cast<uint32>( pSlot->_clientSalt ^ pSlot->_serverSalt );
+        if ( bReady == false )
+        {
+            // 평문 갈래와 같다 — 클라이언트가 Accepted 를 잃었으면 응답을 다시 보낸다(서버가 수락을 다시 보낸다), 아니면 버린다.
+            if ( type == PacketType::Payload && _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
+                 token == static_cast<uint32>( pSlot->_clientSalt ^ pSlot->_serverSalt ) )
+            {
+                sendChallengeResponse( *pSlot );
+                pSlot->_lastSendTime = time;
+                return;
+            }
+            ++_rejectedPacketCount;
+            return;
+        }
+        if ( openSealed( *pSlot, pBody, bodySize ) == false )
+            return; // 변조 · 재전송 — 세고 버린다(연결은 산다)
+        if ( type == PacketType::Disconnect )
+        {
+            if ( _listOpenScratch.empty() )
+                closeSlot( slotIndex, NetDisconnectReason::Remote, false );
+            return;
+        }
+        BitReader plainReader( _listOpenScratch.data(), static_cast<int32>( _listOpenScratch.size() ) );
+        if ( pSlot->_connection.readPacket( time, plainReader ) )
+            pSlot->_lastReceiveTime = time;
+    }
+
     void NetHost::closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote )
     {
         Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
@@ -670,14 +1053,25 @@ namespace sw
             return;
         if ( bNotifyRemote && slot._state == NetConnectionState::Connected )
         {
-            // 끊김 알림은 잃을 수 있으니 몇 번 보낸다(못 받아도 저쪽은 타임아웃으로 안다).
+            // 끊김 알림은 잃을 수 있으니 몇 번 보낸다(못 받아도 저쪽은 타임아웃으로 안다). 암호화면 빈 평문의 봉인이라 엿본 소금으로 위조하지 못한다.
             for ( int32 repeat = 0; repeat < 3; ++repeat )
-                sendControl( slot._address, PacketType::Disconnect, slot._clientSalt ^ slot._serverSalt, 0 );
+            {
+                if ( slot._security == nullptr )
+                    sendControl( slot._address, PacketType::Disconnect, slot._clientSalt ^ slot._serverSalt, 0 );
+                else if ( slot._security->_bKeysReady == SW_TRUE )
+                    (void)sendSealed( slot, PacketType::Disconnect, nullptr, 0 );
+            }
         }
         const bool bWasVisible = slot._state == NetConnectionState::Connected || _bServer == SW_FALSE;
         unbindAddress( slotIndex );
         slot._state = NetConnectionState::Disconnected;
         slot._connection.reset();
+        if ( slot._security != nullptr )
+        {
+            slot._security->_keys.wipe();
+            slot._security->_keyPair.wipe();
+            slot._security.reset();
+        }
         if ( bWasVisible )
             pushEvent( NetHostEvent{ slotIndex, reason, NetHostEvent::Kind::Disconnected } );
         if ( _bServer == SW_FALSE )
@@ -825,6 +1219,27 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _rejectedPacketCount;
+    }
+
+    uint64 NetHost::getConnectionPrincipal( int32 connectionId ) const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        if ( _bServer == SW_FALSE || isValidSlot( connectionId ) == false )
+            return 0;
+        const Slot& slot = _listSlot[static_cast<size_t>( connectionId )];
+        return slot._state == NetConnectionState::Connected && slot._security != nullptr ? slot._security->_principalId : 0;
+    }
+
+    uint64 NetHost::getAuthenticationFailureCount() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _authenticationFailureCount;
+    }
+
+    uint64 NetHost::getReplayRejectedCount() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _replayRejectedCount;
     }
 
     uint32 NetHost::getProtocolId() const

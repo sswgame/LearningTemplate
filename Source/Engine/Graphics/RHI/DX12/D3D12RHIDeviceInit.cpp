@@ -43,10 +43,18 @@ namespace sw
         if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
             return false;
 
+        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter).
+        Microsoft::WRL::ComPtr<IDXGIAdapter1> softwareAdapter;
+        if ( desc._bSoftwareAdapter && FAILED( factory->EnumWarpAdapter( IID_PPV_ARGS( softwareAdapter.GetAddressOf() ) ) ) )
+        {
+            SW_LOG_ERROR( "WARP adapter is not available (gv_rhiSoftwareAdapter)" );
+            return false;
+        }
+
         // 크래시 리포트용 어댑터 정보. 실패해도 디바이스 생성에는 영향이 없다.
         {
-            Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
-            if ( SUCCEEDED( factory->EnumAdapters1( 0, adapter.GetAddressOf() ) ) && adapter != nullptr )
+            Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter;
+            if ( adapter != nullptr || ( SUCCEEDED( factory->EnumAdapters1( 0, adapter.GetAddressOf() ) ) && adapter != nullptr ) )
             {
                 DXGI_ADAPTER_DESC1 adapterDesc{};
                 if ( SUCCEEDED( adapter->GetDesc1( &adapterDesc ) ) )
@@ -61,10 +69,18 @@ namespace sw
             }
         }
 
-        if ( FAILED( D3D12CreateDevice( nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
+        if ( FAILED( D3D12CreateDevice( softwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
             return false;
         // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다(기본 어댑터를 가정하지 않는다). 못 찾으면 드라이버 값은 "모름" 이다.
         _memoryAdapter = findDxgiAdapterByLuid( _device->GetAdapterLuid() );
+        // 실제로 선 어댑터가 소프트웨어인지 — 요청이 아니라 결과를 적는다.
+        if ( softwareAdapter != nullptr )
+        {
+            DXGI_ADAPTER_DESC1 softwareDesc{};
+            const LUID         deviceLuid = _device->GetAdapterLuid();
+            _bSoftwareAdapter             = SUCCEEDED( softwareAdapter->GetDesc1( &softwareDesc ) ) && softwareDesc.AdapterLuid.LowPart == deviceLuid.LowPart &&
+                                softwareDesc.AdapterLuid.HighPart == deviceLuid.HighPart;
+        }
 
         D3D12_FEATURE_DATA_D3D12_OPTIONS options{};
         if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) )
@@ -152,6 +168,19 @@ namespace sw
             nullUav.Buffer.NumElements = 1;
             nullUav.Buffer.Flags       = D3D12_BUFFER_UAV_FLAG_RAW;
             _device->CreateUnorderedAccessView( nullptr, nullptr, &nullUav, offlineDescriptorAt( kOfflineNullUavIndex ) );
+
+            // 레지스트리 0 번 = null Texture2D SRV(kNullTextureBindlessIndex). 등록은 그 다음 칸부터 받는다 — 0 으로 남은 텍스처 인덱스가
+            // 상수버퍼 · 구조버퍼 뷰를 Texture2D 로 읽지 않고 0 을 읽는다.
+            D3D12_SHADER_RESOURCE_VIEW_DESC nullTexture{};
+            nullTexture.ViewDimension              = D3D12_SRV_DIMENSION_TEXTURE2D;
+            nullTexture.Format                     = DXGI_FORMAT_R8G8B8A8_UNORM;
+            nullTexture.Shader4ComponentMapping    = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            nullTexture.Texture2D.MipLevels        = 1;
+            D3D12_CPU_DESCRIPTOR_HANDLE onlineNull = _cbvHeap->GetCPUDescriptorHandleForHeapStart();
+            onlineNull.ptr += static_cast<SIZE_T>( kNullTextureBindlessIndex ) * _cbvDescriptorSize;
+            _device->CreateShaderResourceView( nullptr, &nullTexture, onlineNull );
+            _device->CreateShaderResourceView( nullptr, &nullTexture, offlineDescriptorAt( kNullTextureBindlessIndex ) );
+            _allocatedDescriptorsCount = kNullTextureBindlessIndex + 1;
         }
         {
             std::scoped_lock<mutex> lock{ _onlineBlockMutex };
@@ -184,7 +213,7 @@ namespace sw
         if ( FAILED( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _fence.GetAddressOf() ) ) ) )
             return false;
         _fenceValue = 1;
-        _fenceEvent = CreateEvent( nullptr, FALSE, FALSE, nullptr );
+        _fenceEvent = CreateEventW( nullptr, FALSE, FALSE, nullptr );
 
         if ( createGlobalResources() == false )
             return false;

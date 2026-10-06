@@ -12,6 +12,7 @@
  *          자리입니다. 스레드 안전하지 않다(쓰는 쪽 하나 — 읽기만 하는 `find` · `get*` 는 쓰기와 겹치지 않으면 여러 스레드가 같이 불러도 된다).
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -26,7 +27,7 @@ namespace sw
     class TickRingBuffer
     {
     public:
-        static constexpr uint32 kEmpty = 0xFFFFFFFFu;
+        static constexpr uint32 kEmpty = invalid_index::kUint32;
 
         TickRingBuffer()
             : _listEntry{}

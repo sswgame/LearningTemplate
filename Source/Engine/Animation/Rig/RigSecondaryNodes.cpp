@@ -106,13 +106,18 @@ namespace sw
 
             [[nodiscard]] bool parse( RigJsonReader& reader ) override
             {
-                bool bShared = false;
-                bool bOk     = reader.readNameList( "bones", _listBoneName, true ) && reader.readFloat( "stiffness", _settings._stiffness, false ) &&
-                           reader.readFloat( "damping", _settings._damping, false ) && reader.readFloat3( "gravity", _settings._gravity, false ) &&
+                bool bShared               = false;
+                _settings._gravityOverride = float3{ MathUtil::kMaxFloat, 0.0f, 0.0f }; // 표식 — "gravity" 를 읽었는지 가린다
+                bool bOk                   = reader.readNameList( "bones", _listBoneName, true ) && reader.readFloat( "stiffness", _settings._stiffness, false ) &&
+                           reader.readFloat( "damping", _settings._damping, false ) && reader.readFloat3( "gravity", _settings._gravityOverride, false ) && reader.readFloat( "gravity_scale", _settings._gravityScale, false ) &&
                            reader.readFloat( "particle_radius", _settings._particleRadius, false ) && reader.readFloat( "fixed_step", _settings._fixedStep, false ) &&
                            reader.readUint( "max_substeps", _settings._maxSubStep, false ) &&
                            reader.readFloat( "teleport_distance", _settings._teleportDistance, false ) && reader.readFloat( "lod_distance", _lodDistance, false ) &&
                            reader.readBool( "use_shared_colliders", bShared, false );
+                // "gravity" 가 적혀 있으면 월드 중력 대신 그 값(덮어쓰기), 없으면 월드 중력 × gravity_scale.
+                _settings._bUseGravityOverride = ( _settings._gravityOverride._x != MathUtil::kMaxFloat ) ? SW_TRUE : SW_FALSE;
+                if ( _settings._bUseGravityOverride == SW_FALSE )
+                    _settings._gravityOverride = float3{};
                 _bUseSharedColliders      = bShared ? SW_TRUE : SW_FALSE;
                 const JsonValue colliders = reader.readArray( "colliders", false );
                 for ( size_t index = 0; bOk && colliders.isValid() && index < colliders.size(); ++index )
@@ -175,10 +180,10 @@ namespace sw
                 {
                     _listScratchCollider.assign( _listCollider.begin(), _listCollider.end() );
                     _listScratchCollider.insert( _listScratchCollider.end(), listShared.begin(), listShared.end() );
-                    _chain.simulate( *context._pPose, _listBone, _settings, _listScratchCollider, context._worldFromModel, context._deltaSeconds, *context._pSpace );
+                    _chain.simulate( *context._pPose, _listBone, _settings, _listScratchCollider, context._worldFromModel, context._worldGravity, context._deltaSeconds, *context._pSpace );
                     return;
                 }
-                _chain.simulate( *context._pPose, _listBone, _settings, _listCollider, context._worldFromModel, context._deltaSeconds, *context._pSpace );
+                _chain.simulate( *context._pPose, _listBone, _settings, _listCollider, context._worldFromModel, context._worldGravity, context._deltaSeconds, *context._pSpace );
             }
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.insert( inoutListBone.end(), _listBone.begin(), _listBone.end() ); }
@@ -225,7 +230,7 @@ namespace sw
             {
                 float32 radiusDegrees = 45.0f;
                 bool    bOk           = reader.readName( "driver", _driverName, true ) && reader.readFloat( "radius_degrees", radiusDegrees, false );
-                _radius               = MathUtil::max( radiusDegrees, 1.0f ) * MathUtil::DegreeToRadian;
+                _radius               = MathUtil::max( radiusDegrees, 1.0f ) * MathUtil::kDegreeToRadian;
                 const JsonValue poses = reader.readArray( "poses", true );
                 for ( size_t index = 0; bOk && poses.isValid() && index < poses.size(); ++index )
                 {

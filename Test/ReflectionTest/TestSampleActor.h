@@ -822,10 +822,10 @@ namespace sw
         PROPERTY( Interp )
         int32 _step = 0;
 
-        PROPERTY( Config )
+        PROPERTY()
         float32 _volume = 0.5f;
 
-        PROPERTY( ConfigSection = "Audio", ConfigKey = "master" )
+        PROPERTY()
         float32 _masterVolume = 1.0f;
 
         int32 _oldHealthSeen   = -1;

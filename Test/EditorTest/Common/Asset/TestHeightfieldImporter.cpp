@@ -84,7 +84,7 @@ SW_TEST_CASE( HeightfieldImporterTest, StampTracksSourceAndHoleMask )
     summary = sw::editor::HeightfieldImporter::importAllHeightfields( resourceRoot, sw::editor::AssetImportMode::ImportStale );
     SW_EXPECT_EQUAL( 1u, summary._importedCount );
     const sw::string imported = sw::FileUtil::joinPath( resourceRoot, "game/test/heightfields/hill.heightfield" );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( imported ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( imported ) );
     SW_EXPECT_TRUE( sw::editor::HeightfieldImporter::importAllHeightfields( resourceRoot, sw::editor::AssetImportMode::CheckOnly ).isClean() );
 
     // 곁 구멍 마스크가 생기면 다시 임포트할 것이 된다.

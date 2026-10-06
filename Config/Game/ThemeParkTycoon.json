@@ -1,5 +1,4 @@
 {
     "_packRoot": "game/themepark",
-    "_gameSettingsFile": "data/gamesettings.xml",
-    "_startupScene": ""
+    "_windowTitle": "Theme Park Tycoon"
 }

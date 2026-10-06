@@ -7,6 +7,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/IRenderSurface.h"
@@ -244,6 +245,7 @@ namespace sw
         , _bPreferredVSync{ false }
         , _bImmediateSubmit{ false }
         , _bParallelRecording{ false }
+        , _bSoftwareAdapter{ false }
         , _initResult{ RHIInitResult::NotStarted }
         , _memoryLedger{ make_unique<RHIMemoryLedger>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
@@ -255,6 +257,9 @@ namespace sw
     // 포맷이라 항상 기본). 백버퍼를 타깃으로 하는 PSO 는 그 값으로 만들어야 한다. 이 변수는 그 경로를 다른 포맷으로
     // 실제 돌려 보는 스위치이기도 하다(`-gv_rhiBackBufferFormat=1`).
     SW_GLOBAL_VARIABLE( int32, gv_rhiBackBufferFormat, 0, "요청 백버퍼 포맷: 0=R8G8B8A8_UNORM, 1=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)" );
+    // 소프트웨어 어댑터(WARP · CPU Vulkan)로 띄운다 — GPU 없는 CI 러너와 같은 래스터라이저를 이 PC 에서 고른다. 환경 변수 SW_RHI_SOFTWARE_ADAPTER=1 도 같다
+    // (ctest 가 인자 없이 켠다). 언제 켤지는 엔진이 정하고, 어떻게 고를지는 백엔드가 안다.
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSoftwareAdapter, 0, "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
 
     bool IRHIDevice::initialize()
     {
@@ -275,6 +280,12 @@ namespace sw
         swapChainDesc._bufferCount    = kBackBufferCount;
         swapChainDesc._format         = ( gv_rhiBackBufferFormat == 1 ) ? RHIFormat::B8G8R8A8_UNORM : constant::kBackBufferFormat;
         swapChainDesc._bVSync         = _bPreferredVSync;
+        {
+            const utf8* pSoftwareEnv        = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
+            const bool  bSoftwareEnv        = pSoftwareEnv != nullptr && StringUtil::equals( pSoftwareEnv, "1" );
+            swapChainDesc._bSoftwareAdapter = gv_rhiSoftwareAdapter == 1 || bSoftwareEnv;
+        }
+        _bSoftwareAdapter = false;
         if ( engine::areEngineServicesBound() )
         {
             bool bCliVSync{ false };
@@ -287,6 +298,13 @@ namespace sw
         if ( initializeInternal( swapChainDesc ) == false )
             return false;
         _initResult = RHIInitResult::Succeeded;
+        if ( swapChainDesc._bSoftwareAdapter )
+        {
+            if ( _bSoftwareAdapter )
+                SW_LOG_WARNING( "RHI %# is running on a software adapter (gv_rhiSoftwareAdapter) - timings are not representative", getBackendName() );
+            else
+                SW_LOG_WARNING( "RHI %# ignored the software adapter request (gv_rhiSoftwareAdapter) - it runs on the hardware adapter", getBackendName() );
+        }
         // 요청과 채택이 다를 수 있다(Vulkan 서피스 협상). 백버퍼 PSO 는 채택값으로 만들어진다. 어느 쪽인지 로그로 남긴다.
         SW_LOG_INFO( "백버퍼 포맷: 요청 %# → 채택 %# (getBackBufferFormat)",
                      static_cast<uint32>( swapChainDesc._format ), static_cast<uint32>( getBackBufferFormat() ) );

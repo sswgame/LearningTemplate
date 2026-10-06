@@ -4,10 +4,14 @@
 GameFramework 층 검사 — 기반 폴더의 층(DAG)과 키트의 의존 방향.
 
 강제 규칙:
-  1) 기반 폴더(`Source/GameFramework/<폴더>/`, `Kits` 제외)는 **자기보다 낮은 층**의 기반 폴더만 include 한다(_kBaseTier).
+  0) `Source/GameFramework/` 최상위 폴더는 `Base`(기반) · `Kits`(키트) 둘뿐이다 — 그 밖의 폴더는 실패다.
+  1) 기반 폴더(`Source/GameFramework/Base/<폴더>/`)는 **자기보다 낮은 층**의 기반 폴더만 include 한다(_kBaseTier).
      같은 층끼리도 서로 모른다 — 그래서 표가 곧 순환이 없다는 증거다. 표에 없는 폴더는 실패다(새 폴더는 층을 정하고 넣는다).
   2) 기반은 키트(`GameFramework/Kits/`)를 include 하지 않는다 — 키트끼리 나눠 쓰는 것은 기반으로 내린다.
   3) 키트(`Kits/<묶음>/<키트>/`)는 다른 키트를 include 하지 않는다. 묶음이 함께 쓰는 헤더(`Kits/<묶음>/x.h` — 키트 폴더 밖)만 된다.
+     서버 · 클라이언트 전용 키트(`Kits/<묶음>/Server/<키트>/` · `Kits/<묶음>/Client/<키트>/` — 모듈 `GF_Server_<키트>` · `GF_Client_<키트>`)도
+     키트 하나다. 예외는 하나 — 같은 기능의 공유 키트(`Kits/<묶음>/<키트>/`)는 include 해도 된다(서버 → 공유 ← 클라이언트).
+     서버 키트끼리 · 다른 기능의 키트는 여전히 안 된다.
   4) GameFramework 의 어느 파일도 `Games/` · `Editor/` 를 include 하지 않는다.
 
 키트 → 기반은 어느 층이든 된다(키트는 기반 위의 층이다). 기반을 DLL 여럿으로 나누지는 않는다 — 층은 폴더로만 지킨다
@@ -26,19 +30,20 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectSourceFiles, kDirSourceGameFramework, readTextFiles  # noqa: E402
+from common import collectSourceFiles, kDirSourceGameFramework  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
 
 _kKitsFolderName = "Kits"
+_kBaseFolderName = "Base"
 
 # ------------------------------------------------------------------------------
 # 기반 폴더의 층 — 숫자가 큰 쪽이 위다. 폴더는 **자기보다 작은 층**만 include 한다(같은 층끼리도 금지).
 #
 # 층은 include 그래프에서 읽었다(언리얼 GameplayAbilities · AIModule 이 Engine GameFramework 위에 서는 모양):
 #   0  계산 도구 — 무엇도 모른다.
-#   1  데이터 틀 · 의존 없는 잎 시스템(판 규칙 · 격자 길 찾기 · 곡선).
+#   1  데이터 틀 · 의존 없는 잎 시스템(판 규칙 · 격자 길 찾기 · 곡선) · 온라인 기반 계약(`Online/` — 저장 · 캐시 · 보호 · 신원 · 감사 · 버스 · 예약 · 원격 설정, Core 만 본다).
 #   2  게임 모듈의 수명 · 배선 · 서비스 창구(Framework) — 데이터를 읽는다.
 #   3  장르 공통 시스템 — 전투 수치 · 입력 · 인벤토리 · 성장 · 이동 · 월드(씬 컴포넌트 포함).
 #   4  그 위의 시스템 — AI(길 찾기 · 월드 위) · 외형(인벤토리 위) · 카메라(1인칭 시점 입력 위) · 상호작용(입력 · 월드 위) · 퀘스트(인벤토리 위) ·
@@ -52,6 +57,7 @@ _kBaseTier: dict[str, int] = {
     "Data": 1,
     "Match": 1,
     "Navigation": 1,
+    "Online": 1,
     "Spline": 1,
     "Framework": 2,
     "Combat": 3,
@@ -68,27 +74,45 @@ _kBaseTier: dict[str, int] = {
     "UI": 4,
     "Ability": 5,
     "Gimmick": 5,
+    "GameState": 5,
 }
 
+# 키트 묶음 안에서 서버 · 클라이언트 전용 키트를 담는 폴더 이름(모듈 `GF_Server_<키트>` · `GF_Client_<키트>`).
+_kSideFolderNames: tuple[str, ...] = ("Server", "Client")
 # GameFramework 아래 어디서 include 해도 금지인 경로 앞부분.
 _kForbiddenPrefixes: tuple[str, ...] = ("Games/", "Editor/")
 
 
 def classifyInternal(relativePath: str) -> tuple[str, str]:
     """
-    GameFramework 아래 상대 경로 → (종류, 이름). 종류는 "base"(기반 폴더) · "kit"(키트 하나) · "kitGroup"(묶음 공용 헤더) · "root"(루트 파일).
-    키트 이름은 `<묶음>/<키트>` 다.
+    GameFramework 아래 상대 경로 → (종류, 이름). 종류는 "base"(기반 폴더) · "kit"(키트 하나) · "kitGroup"(묶음 공용 헤더) · "root"(루트 파일) ·
+    "stray"(최상위의 `Base` · `Kits` 아닌 폴더). 키트 이름은 `<묶음>/<키트>` 다.
     """
     parts = relativePath.split("/")
     if len(parts) == 1:
         return "root", ""
+    if parts[0] == _kBaseFolderName:
+        if len(parts) == 2:
+            return "root", ""
+        return "base", parts[1]
     if parts[0] != _kKitsFolderName:
-        return "base", parts[0]
+        return "stray", parts[0]
+    # 서버 · 클라이언트 전용 키트는 한 단 더 깊다 — `Kits/<묶음>/Server/<키트>/…` 가 키트 `<묶음>/Server/<키트>` 하나다.
+    if len(parts) >= 5 and parts[2] in _kSideFolderNames:
+        return "kit", f"{parts[1]}/{parts[2]}/{parts[3]}"
+    if len(parts) == 4 and parts[2] in _kSideFolderNames:
+        return "kitGroup", parts[1]
     if len(parts) >= 4:
         return "kit", f"{parts[1]}/{parts[2]}"
     if len(parts) == 3:
         return "kitGroup", parts[1]
     return "root", ""
+
+
+def isSameFeatureSharedKitInternal(sourceKit: str, destKit: str) -> bool:
+    """서버 · 클라이언트 전용 키트(`<묶음>/Server/<키트>`)가 같은 기능의 공유 키트(`<묶음>/<키트>`)를 보는가."""
+    sourceParts = sourceKit.split("/")
+    return len(sourceParts) == 3 and sourceParts[1] in _kSideFolderNames and destKit == f"{sourceParts[0]}/{sourceParts[2]}"
 
 
 def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
@@ -97,6 +121,9 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
     gameFrameworkRelative = relativeFilePath[len(prefix):]
     sourceKind, sourceName = classifyInternal(gameFrameworkRelative)
     listViolation: list[str] = []
+    if sourceKind == "stray":
+        listViolation.append(f"{relativeFilePath}: GameFramework 최상위 폴더 '{sourceName}' — 기반은 Base/ 아래, 키트는 Kits/ 아래에 둔다")
+        return listViolation
     if sourceKind == "base" and sourceName not in _kBaseTier:
         listViolation.append(f"{relativeFilePath}: 기반 폴더 '{sourceName}' 가 층 표(_kBaseTier)에 없습니다")
         return listViolation
@@ -108,7 +135,7 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
         if include.startswith("GameFramework/") is False:
             continue
         destKind, destName = classifyInternal(include[len("GameFramework/"):])
-        if destKind == "root":
+        if destKind in ("root", "stray"):
             continue
         if sourceKind == "base":
             if destKind in ("kit", "kitGroup"):
@@ -125,7 +152,7 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
                 listViolation.append(
                     f'{relativeFilePath}: #include "{includePath}"  (층 {sourceName}(L{sourceTier}) -> {destName}(L{destTier}) — 아래 층만 볼 수 있다)')
             continue
-        if sourceKind == "kit" and destKind == "kit" and destName != sourceName:
+        if sourceKind == "kit" and destKind == "kit" and destName != sourceName and isSameFeatureSharedKitInternal(sourceName, destName) is False:
             listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (키트 {sourceName} -> 다른 키트 {destName})')
             continue
         if sourceKind == "kit" and destKind == "kitGroup" and sourceName.split("/")[0] != destName:
@@ -147,38 +174,57 @@ class CheckGameFrameworkLayersGate(LintGate):
             # 순환을 다시 만드는 가장 쉬운 엣지 — 상호작용이 기믹을 직접 부른다.
             "name": "Interaction 이 Gimmick 을 include (아래층이 위층을)",
             "files": {
-                "Source/GameFramework/Interaction/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Gimmick/GimmickSensorComponent.h"\n',
+                "Source/GameFramework/Base/Interaction/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Gimmick/GimmickSensorComponent.h"\n',
             },
         },
         {
             # 모델이 뷰를 아는 방향 — 체력 시스템이 HP 바를 민다.
             "name": "Combat 이 UI 를 include",
             "files": {
-                "Source/GameFramework/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/UI/HealthBarComponent.h"\n',
+                "Source/GameFramework/Base/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/UI/HealthBarComponent.h"\n',
             },
         },
         {
             "name": "같은 층끼리 include",
             "files": {
-                "Source/GameFramework/World/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Combat/Vitality.h"\n',
+                "Source/GameFramework/Base/World/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Combat/Vitality.h"\n',
             },
         },
         {
             "name": "층 표에 없는 기반 폴더",
             "files": {
-                "Source/GameFramework/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Utility/GameRandom.h"\n',
+                "Source/GameFramework/Base/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Utility/GameRandom.h"\n',
+            },
+        },
+        {
+            # 기반 폴더를 Base/ 밖(최상위)에 다시 만든다.
+            "name": "최상위에 Base · Kits 아닌 폴더",
+            "files": {
+                "Source/GameFramework/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Utility/GameRandom.h"\n',
             },
         },
         {
             "name": "기반이 키트를 include",
             "files": {
-                "Source/GameFramework/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"\n',
+                "Source/GameFramework/Base/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"\n',
             },
         },
         {
             "name": "키트가 다른 키트를 include",
             "files": {
                 "Source/GameFramework/Kits/Rpg/ClassicJrpg/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Rpg/MonsterCollector/MonsterBattle.h"\n',
+            },
+        },
+        {
+            "name": "서버 키트가 다른 서버 키트를 include",
+            "files": {
+                "Source/GameFramework/Kits/Online/Server/Trade/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Online/Server/Account/AccountService.h"\n',
+            },
+        },
+        {
+            "name": "서버 키트가 다른 기능의 공유 키트를 include",
+            "files": {
+                "Source/GameFramework/Kits/Online/Server/Trade/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Online/Account/AccountMessages.h"\n',
             },
         },
         {
@@ -195,7 +241,7 @@ class CheckGameFrameworkLayersGate(LintGate):
             raise GateError(f"GameFramework 경로 없음: {gameFrameworkDir}")
         listPath = collectSourceFiles([gameFrameworkDir])
         listViolation: list[str] = []
-        for path, text in readTextFiles(listPath, errors="strict"):
+        for path, text in LintGate.readFiles(listPath, errors="strict"):
             listViolation.extend(checkFileInternal(path.relative_to(repositoryRoot).as_posix(), text))
         return GateResult(listViolation=listViolation, summary=f"{len(listPath)} files, {len(_kBaseTier)} base folders")
 

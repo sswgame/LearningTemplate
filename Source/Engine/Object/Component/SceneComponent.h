@@ -3,6 +3,7 @@
  * @brief 트랜스폼(위치 · 회전 · 크기)과 부모-자식 계층을 가진 SceneComponent 입니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
@@ -338,7 +339,7 @@ namespace sw
          * @details 해제가 이 자리로 O(1) swap-remove 합니다(선형으로 찾으면 8000 개를 지울 때 3200만 번 비교다).
          *          자리는 플러시가 비웁니다.
          */
-        static constexpr uint32 kNotInList = 0xFFFFFFFFu;
+        static constexpr uint32 kNotInList = invalid_index::kUint32;
         uint32                  _dirtyRootIndex;
         /**
          * @brief 이 컴포넌트가 속한 매니저입니다. 등록 시점에 받아 둡니다.

@@ -1,0 +1,3324 @@
+{
+ "files": [
+  {
+   "page": "EngineConfig",
+   "path": "Config/Engine/EngineConfig.json",
+   "layer": "엔진 기본값",
+   "type": "EngineConfig",
+   "types": [
+    {
+     "name": "EngineConfig",
+     "source": "Source/Engine/Config/EngineConfig.h",
+     "fields": [
+      {
+       "name": "_window",
+       "type": "WindowConfig",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "창·백엔드 설정"
+      },
+      {
+       "name": "_maxFrameDeltaTime",
+       "type": "float32",
+       "default": "0.1",
+       "min": "0.001",
+       "max": "",
+       "units": "s",
+       "description": "한 프레임이 인정하는 최대 가변 델타(초)입니다. 디버거 정지 같은 긴 멈춤을 잘라 냅니다."
+      },
+      {
+       "name": "_fixedDeltaTime",
+       "type": "float32",
+       "default": "1.0 / 60.0",
+       "min": "0.001",
+       "max": "",
+       "units": "s",
+       "description": "고정 주기 한 스텝의 길이(초)입니다. 기본은 60Hz 입니다. 고정 스텝 값의 출처는 이것 하나다 — 게임 `fixedUpdate` 와 씬 물리가 같이 쓴다(물리는 `PhysicsSettings::_subStepCount` 로 이 스텝을 나눈다, 유니티 `Time.fixedDeltaTime` 과 같다)."
+      },
+      {
+       "name": "_maxFixedStepPerFrame",
+       "type": "uint32",
+       "default": "6",
+       "min": "1",
+       "max": "",
+       "units": "",
+       "description": "한 프레임이 돌릴 수 있는 고정 스텝 수의 상한입니다. 상한을 넘긴 남은 시간은 버립니다. 남기면 느린 프레임이 더 많은 스텝을 불러 더 느려지는 악순환이 됩니다. FixedTimestep 이 이 값을 적용합니다."
+      },
+      {
+       "name": "_listResourcePriority",
+       "type": "vector<string>",
+       "default": "game, common, engine, editor",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "리소스 팩 탐색 우선순위(앞이 먼저)"
+      }
+     ]
+    },
+    {
+     "name": "WindowConfig",
+     "source": "Source/Engine/Config/EngineConfig.h",
+     "fields": [
+      {
+       "name": "_clearColor",
+       "type": "string",
+       "default": "0.12 0.15 0.18 1.0",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "백버퍼 클리어 색(공백 또는 쉼표로 구분한 RGBA)"
+      },
+      {
+       "name": "_width",
+       "type": "uint32",
+       "default": "1280",
+       "min": "1",
+       "max": "",
+       "units": "",
+       "description": "클라이언트 영역 너비(픽셀)"
+      },
+      {
+       "name": "_height",
+       "type": "uint32",
+       "default": "720",
+       "min": "1",
+       "max": "",
+       "units": "",
+       "description": "클라이언트 영역 높이(픽셀)"
+      },
+      {
+       "name": "_defaultRHI",
+       "type": "RHIBackend",
+       "default": "DirectX12",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "명령줄이 고르지 않았을 때 쓸 백엔드(기본값은 쿠킹 표 `default_rhi_backend`)"
+      },
+      {
+       "name": "_bVSync",
+       "type": "bool",
+       "default": "false",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "수직 동기화 여부"
+      }
+     ]
+    }
+   ],
+   "enums": [
+    {
+     "name": "RHIBackend",
+     "values": [
+      "DirectX11",
+      "DirectX12",
+      "Vulkan",
+      "OpenGL"
+     ]
+    }
+   ]
+  },
+  {
+   "page": "MemoryBudget",
+   "path": "Config/Engine/MemoryBudget.json",
+   "layer": "엔진 기본값",
+   "type": "",
+   "types": [
+    {
+     "name": "kArrMemoryBudgetRootKeyDoc",
+     "source": "Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp",
+     "fields": [
+      {
+       "name": "_listBudget",
+       "type": "object[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "태그마다 예산 한 줄 — 없는 태그는 예산이 없다(경고하지 않는다)"
+      }
+     ]
+    },
+    {
+     "name": "kArrMemoryBudgetEntryKeyDoc",
+     "source": "Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp",
+     "fields": [
+      {
+       "name": "_tag",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "메모리 태그 이름(`MemoryTag` — Texture · Mesh · Audio · Animation · Physics · Navigation · Scene · UI · Script …, 대소문자 무시)"
+      },
+      {
+       "name": "_megabytes",
+       "type": "number",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "예산(MiB, 0 보다 크다). 넘으면 `[MemoryBudget]` 경고 한 번"
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "EngineDefaultAssets",
+   "path": "Resource/engine/data/enginedefaultassets.xml",
+   "layer": "엔진 기본값",
+   "type": "EngineDefaultAssets",
+   "types": [
+    {
+     "name": "EngineDefaultAssets",
+     "source": "Source/Engine/Config/EngineDefaultAssets.h",
+     "fields": [
+      {
+       "name": "_defaultMaterial",
+       "type": "string",
+       "default": "engine/materials/defaultmaterial.material",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "씬 폴백 머티리얼"
+      },
+      {
+       "name": "_shellInputMap",
+       "type": "string",
+       "default": "engine/input/default.input.xml",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "App 셸 InputMap"
+      },
+      {
+       "name": "_userSettingsSchema",
+       "type": "string",
+       "default": "engine/settings/engine.settings.xml",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "플레이어 옵션 메뉴의 엔진 설정 스키마(`UserSettingsManager`)"
+      },
+      {
+       "name": "_telemetrySchema",
+       "type": "string",
+       "default": "engine/telemetry/engine.telemetry.xml",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "엔진 텔레메트리 사건 스키마(`TelemetryService`)"
+      },
+      {
+       "name": "_cultureTable",
+       "type": "string",
+       "default": "engine/localization/engine.cultures.json",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "문화권 표 — 복수형 규칙 · 숫자 · 날짜 형식 · 쓰기 방향 · 글꼴 대체(`LocalizationManager`)"
+      },
+      {
+       "name": "_localizationProject",
+       "type": "string",
+       "default": "engine/localization/engine.locproject.json",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "엔진 문자열(설정 메뉴 등)의 로컬라이제이션 프로젝트"
+      },
+      {
+       "name": "_defaultForwardPipeline",
+       "type": "string",
+       "default": "engine/pipeline/forwardpipeline.xml",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "포워드 렌더 파이프라인(프레임 그래프)"
+      },
+      {
+       "name": "_defaultDeferredPipeline",
+       "type": "string",
+       "default": "engine/pipeline/deferredpipeline.xml",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "디퍼드 렌더 파이프라인"
+      },
+      {
+       "name": "_defaultRenderPass",
+       "type": "string",
+       "default": "engine/renderpass/defaultrenderpass.xml",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "기본 렌더 패스 바인드 틀"
+      },
+      {
+       "name": "_shaderShadowDepth",
+       "type": "string",
+       "default": "engine/shaders/shadowdepth.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "그림자 깊이 패스"
+      },
+      {
+       "name": "_shaderForwardLit",
+       "type": "string",
+       "default": "engine/shaders/forwardlit.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "포워드 조명"
+      },
+      {
+       "name": "_shaderGBuffer",
+       "type": "string",
+       "default": "engine/shaders/gbuffer.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "디퍼드 G 버퍼 채우기"
+      },
+      {
+       "name": "_shaderDeferredLighting",
+       "type": "string",
+       "default": "engine/shaders/deferredlighting.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "디퍼드 조명"
+      },
+      {
+       "name": "_shaderPostBloom",
+       "type": "string",
+       "default": "engine/shaders/postbloom.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "후처리 블룸"
+      },
+      {
+       "name": "_shaderPostOutline",
+       "type": "string",
+       "default": "engine/shaders/postoutline.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "후처리 외곽선"
+      },
+      {
+       "name": "_shaderFullscreenBlit",
+       "type": "string",
+       "default": "engine/shaders/fullscreenblit.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "전체 화면 복사"
+      },
+      {
+       "name": "_shaderGpuCull",
+       "type": "string",
+       "default": "engine/shaders/gpucull.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "GPU 컬링 · 드로우 커맨드 생성(컴퓨트)"
+      },
+      {
+       "name": "_shaderInstanceAnim",
+       "type": "string",
+       "default": "engine/shaders/instanceanim.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "인스턴스 애니메이션(컴퓨트)"
+      },
+      {
+       "name": "_shaderMeshMorph",
+       "type": "string",
+       "default": "engine/shaders/meshmorph.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "모프 타깃(컴퓨트)"
+      },
+      {
+       "name": "_shaderMeshSkin",
+       "type": "string",
+       "default": "engine/shaders/meshskin.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "스키닝(컴퓨트)"
+      },
+      {
+       "name": "_shaderInstanceSort",
+       "type": "string",
+       "default": "engine/shaders/instancesort.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "투명 인스턴스 바이토닉 정렬(컴퓨트)"
+      },
+      {
+       "name": "_shaderFullscreenTriangle",
+       "type": "string",
+       "default": "engine/shaders/fullscreentriangle.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "전체 화면 삼각형 정점 셰이더"
+      },
+      {
+       "name": "_shaderSsao",
+       "type": "string",
+       "default": "engine/shaders/ssao.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "SSAO"
+      },
+      {
+       "name": "_shaderTaa",
+       "type": "string",
+       "default": "engine/shaders/taa.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "TAA"
+      },
+      {
+       "name": "_shaderTonemap",
+       "type": "string",
+       "default": "engine/shaders/tonemap.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "톤 매핑"
+      },
+      {
+       "name": "_shaderToon",
+       "type": "string",
+       "default": "engine/shaders/toon.hlsl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다"
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "PhysicsSettings",
+   "path": "Resource/engine/physics/physicssettings.xml",
+   "layer": "엔진 기본값",
+   "type": "PhysicsSettings",
+   "types": [
+    {
+     "name": "PhysicsSettings",
+     "source": "Source/Engine/Physics/PhysicsSettings.h",
+     "fields": [
+      {
+       "name": "_gravity",
+       "type": "float3",
+       "default": "0.0, -kDefaultGravity, 0.0",
+       "min": "",
+       "max": "",
+       "units": "m/s2",
+       "description": "3D gravity"
+      },
+      {
+       "name": "_gravity2D",
+       "type": "float2",
+       "default": "0.0, -kDefaultGravity",
+       "min": "",
+       "max": "",
+       "units": "m/s2",
+       "description": "2D gravity"
+      },
+      {
+       "name": "_subStepCount",
+       "type": "uint32",
+       "default": "1",
+       "min": "1",
+       "max": "16",
+       "units": "",
+       "description": "엔진 고정 스텝(`EngineConfig::_fixedDeltaTime`) 하나에 도는 물리 스텝 수입니다. 물리 스텝 = 고정 스텝 / 이 값, 프레임당 상한도 이 배수다."
+      },
+      {
+       "name": "_subStepCount2D",
+       "type": "uint32",
+       "default": "4",
+       "min": "1",
+       "max": "",
+       "units": "",
+       "description": "Box2D sub-steps per step"
+      },
+      {
+       "name": "_listLayer",
+       "type": "vector<PhysicsLayerDef>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Collision layers in index order and what they collide with"
+      },
+      {
+       "name": "_listMaterial",
+       "type": "vector<PhysicsMaterialDef>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Physics materials"
+      }
+     ]
+    },
+    {
+     "name": "PhysicsLayerDef",
+     "source": "Source/Engine/Physics/PhysicsSettings.h",
+     "fields": [
+      {
+       "name": "_name",
+       "type": "hashed_string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Layer name"
+      },
+      {
+       "name": "_listCollidesWith",
+       "type": "vector<hashed_string>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Layers this one collides with (symmetric)"
+      }
+     ]
+    },
+    {
+     "name": "PhysicsMaterialDef",
+     "source": "Source/Engine/Physics/PhysicsSettings.h",
+     "fields": [
+      {
+       "name": "_name",
+       "type": "hashed_string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Name the bodies and shapes pick it by"
+      },
+      {
+       "name": "_friction",
+       "type": "float32",
+       "default": "0.5",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "Coulomb friction coefficient"
+      },
+      {
+       "name": "_restitution",
+       "type": "float32",
+       "default": "0.0",
+       "min": "0.0",
+       "max": "1.0",
+       "units": "",
+       "description": "Bounciness: 0 stops, 1 keeps the speed"
+      },
+      {
+       "name": "_density",
+       "type": "float32",
+       "default": "1000.0",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "Mass per volume (3D, kg/m^3) or per area (2D, kg/m^2)"
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "NavMeshSettings",
+   "path": "Resource/engine/navigation/navmeshsettings.xml",
+   "layer": "엔진 기본값",
+   "type": "NavMeshSettings",
+   "types": [
+    {
+     "name": "NavMeshSettings",
+     "source": "Source/Engine/Navigation/NavMeshSettings.h",
+     "fields": [
+      {
+       "name": "_listAgentType",
+       "type": "vector<NavAgentTypeDef>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Agent kinds; each bakes its own navmesh"
+      },
+      {
+       "name": "_listArea",
+       "type": "vector<NavAreaDef>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Areas in index order (at most 16); index 0 is plain ground"
+      },
+      {
+       "name": "_defaultAgentType",
+       "type": "hashed_string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Agent kind used when an agent or surface names none (empty = the first)"
+      },
+      {
+       "name": "_maxConcurrentTileBakeCount",
+       "type": "uint32",
+       "default": "4",
+       "min": "1",
+       "max": "",
+       "units": "",
+       "description": "Tile rebakes running on workers at once; more wait for the next frame"
+      },
+      {
+       "name": "_obstacleMoveThreshold",
+       "type": "float32",
+       "default": "0.25",
+       "min": "0.0",
+       "max": "",
+       "units": "m",
+       "description": "An obstacle has to move this far before the mesh around it rebakes"
+      }
+     ]
+    },
+    {
+     "name": "NavAgentTypeDef",
+     "source": "Source/Engine/Navigation/NavMeshSettings.h",
+     "fields": [
+      {
+       "name": "_name",
+       "type": "hashed_string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Name agents and surfaces pick it by"
+      },
+      {
+       "name": "_radius",
+       "type": "float32",
+       "default": "0.4",
+       "min": "0.0",
+       "max": "",
+       "units": "m",
+       "description": "Body radius; walls are eroded by this much"
+      },
+      {
+       "name": "_height",
+       "type": "float32",
+       "default": "2.0",
+       "min": "0.0",
+       "max": "",
+       "units": "m",
+       "description": "Body height; lower ceilings are not walkable"
+      },
+      {
+       "name": "_maxClimb",
+       "type": "float32",
+       "default": "0.4",
+       "min": "0.0",
+       "max": "",
+       "units": "m",
+       "description": "Highest step the body walks up"
+      },
+      {
+       "name": "_maxSlope",
+       "type": "float32",
+       "default": "kHalfPi * 0.5",
+       "min": "0.0",
+       "max": "1.553343",
+       "units": "rad",
+       "description": "Steepest walkable slope"
+      },
+      {
+       "name": "_cellSize",
+       "type": "float32",
+       "default": "0.2",
+       "min": "0.01",
+       "max": "",
+       "units": "m",
+       "description": "Voxel size on XZ (smaller is more exact and slower to bake)"
+      },
+      {
+       "name": "_cellHeight",
+       "type": "float32",
+       "default": "0.1",
+       "min": "0.01",
+       "max": "",
+       "units": "m",
+       "description": "Voxel size on Y"
+      },
+      {
+       "name": "_tileSize",
+       "type": "uint32",
+       "default": "48",
+       "min": "8",
+       "max": "256",
+       "units": "",
+       "description": "Tile edge in cells; a change rebakes one tile"
+      },
+      {
+       "name": "_minRegionSize",
+       "type": "uint32",
+       "default": "4",
+       "min": "0",
+       "max": "",
+       "units": "",
+       "description": "Islands smaller than this many cells (as a square side) are dropped"
+      },
+      {
+       "name": "_mergeRegionSize",
+       "type": "uint32",
+       "default": "16",
+       "min": "0",
+       "max": "",
+       "units": "",
+       "description": "Regions smaller than this many cells (as a square side) merge into neighbours"
+      },
+      {
+       "name": "_maxEdgeLength",
+       "type": "float32",
+       "default": "12.0",
+       "min": "0.0",
+       "max": "",
+       "units": "m",
+       "description": "Longest polygon edge along walls (0 = no limit)"
+      },
+      {
+       "name": "_maxEdgeError",
+       "type": "float32",
+       "default": "1.3",
+       "min": "0.1",
+       "max": "",
+       "units": "",
+       "description": "How far the simplified outline may stray from the voxels, in cells"
+      },
+      {
+       "name": "_detailSampleDistance",
+       "type": "float32",
+       "default": "6.0",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "Height detail sample spacing in cells (0 = no detail)"
+      },
+      {
+       "name": "_detailSampleMaxError",
+       "type": "float32",
+       "default": "1.0",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "Height detail error in cell heights"
+      },
+      {
+       "name": "_maxCrowdAgentCount",
+       "type": "uint32",
+       "default": "512",
+       "min": "1",
+       "max": "",
+       "units": "",
+       "description": "Agents one crowd of this type holds"
+      }
+     ]
+    },
+    {
+     "name": "NavAreaDef",
+     "source": "Source/Engine/Navigation/NavMeshSettings.h",
+     "fields": [
+      {
+       "name": "_name",
+       "type": "hashed_string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Area name"
+      },
+      {
+       "name": "_cost",
+       "type": "float32",
+       "default": "1.0",
+       "min": "1.0",
+       "max": "",
+       "units": "",
+       "description": "Path cost multiplier per metre (1 = plain ground)"
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "GameConfig",
+   "path": "Config/Game/*.json",
+   "layer": "게임 프리셋",
+   "type": "GameConfig",
+   "types": [
+    {
+     "name": "GameConfig",
+     "source": "Source/Engine/Config/GameConfig.h",
+     "fields": [
+      {
+       "name": "_packRoot",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "활성 게임 팩의 리소스 경로(`game/<팩 폴더>`) — 팩 마운트 · 게임 도메인 경로가 이것으로 풀린다"
+      },
+      {
+       "name": "_windowTitle",
+       "type": "string",
+       "default": "SWEngine",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "주 창 제목 — 게임마다 다르다(언리얼 ProjectName 자리). 창은 팩을 마운트하기 전에 생긴다"
+      },
+      {
+       "name": "_userSettingsSchema",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "엔진 스키마에 덧붙이는 게임의 사용자 설정 스키마(팩 상대 경로, 예: `data/usersettings.settings.xml`)입니다. 비면 없습니다."
+      },
+      {
+       "name": "_telemetrySchema",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "엔진 스키마에 덧붙이는 게임의 텔레메트리 사건 스키마(팩 상대 경로, 예: `data/mygame.telemetry.xml`)입니다. 비면 없습니다."
+      },
+      {
+       "name": "_mapUserSettingDefault",
+       "type": "map<string, string>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "게임마다 다른 사용자 설정 기본값입니다(설정 id → 값). 엔진 스키마의 기본값을 덮어씁니다. 플레이어가 바꾸지 않은 값만 따라갑니다. 모르는 id · 받을 수 없는 값은 기동 오류로 알립니다(`UserSettingsManager::setGameDefault`)."
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "GameSettings",
+   "path": "Resource/game/*/data/gamesettings.xml",
+   "layer": "팩 데이터",
+   "type": "GameSettings",
+   "types": [
+    {
+     "name": "GameSettings",
+     "source": "Source/GameFramework/Base/Data/GameSettings.h",
+     "fields": [
+      {
+       "name": "_startMap",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "시작 맵 / 레벨 경로"
+      },
+      {
+       "name": "_titleScene",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "타이틀 씬"
+      },
+      {
+       "name": "_entranceScene",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "타이틀 다음 씬"
+      },
+      {
+       "name": "_defaultSavePath",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "기본 세이브 슬롯 경로(파일 경로 — 경로 없는 `GameInstanceBase::saveStateToFile` · `loadStateFromFile`)"
+      },
+      {
+       "name": "_localizationProject",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "로컬라이제이션 프로젝트(`*.locproject.json`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다"
+      },
+      {
+       "name": "_defaultLanguage",
+       "type": "string",
+       "default": "ko_kr",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "기본 활성 언어"
+      },
+      {
+       "name": "_fallbackLanguage",
+       "type": "string",
+       "default": "en_us",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "대체(Fallback) 언어"
+      },
+      {
+       "name": "_inputMap",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "게임플레이 InputMap 경로(통합 맵 `InputManager::getInputMap()` 에 읽힌다)"
+      },
+      {
+       "name": "_mapCustomProperty",
+       "type": "map<string, string>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "범용 커스텀 키-값 프로퍼티 저장소"
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "EditorToolDefaults",
+   "path": "Config/Editor/editortooldefaults.json",
+   "layer": "에디터 도구",
+   "type": "EditorToolDefaults",
+   "types": [
+    {
+     "name": "EditorToolDefaults",
+     "source": "Source/Editor/Common/Config/EditorToolDefaults.h",
+     "fields": [
+      {
+       "name": "_defaultMap",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "타일맵 패널이 처음 여는 맵(리소스 경로, 비면 없음)"
+      },
+      {
+       "name": "_warpMap",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "타일맵 패널의 워프 대상 기본값(리소스 경로)"
+      },
+      {
+       "name": "_spriteAtlas",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "스프라이트 클립 패널의 기본 아틀라스(리소스 경로)"
+      },
+      {
+       "name": "_fontSize",
+       "type": "float32",
+       "default": "16.0",
+       "min": "6.0",
+       "max": "",
+       "units": "",
+       "description": "에디터 글꼴 크기(픽셀, DPI 배율 전)"
+      },
+      {
+       "name": "_clearColor",
+       "type": "float4",
+       "default": "0.12, 0.15, 0.18, 1.0",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Game View 렌더 타깃 클리어 색"
+      },
+      {
+       "name": "_listBaseFont",
+       "type": "vector<string>",
+       "default": "consola.ttf, Consolas.ttf, DejaVuSansMono.ttf, … (8 개)",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "라틴 글꼴 후보 — 에디터 팩 `fonts/` → OS 글꼴 폴더 순으로 앞의 것부터 찾는다"
+      },
+      {
+       "name": "_listKoreanFont",
+       "type": "vector<string>",
+       "default": "malgun.ttf, malgunsl.ttf, NanumGothic.ttf, … (8 개)",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "한글 글꼴 후보(병합) — 찾는 순서는 위와 같다"
+      },
+      {
+       "name": "_listHotReloadExtension",
+       "type": "vector<string>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "실행 중에 다시 읽을 애셋 확장자입니다. **비우면 처리기가 있는 확장자 전부**를 봅니다. 무엇을 감시할지는 설정이 정하고, 다시 읽는 방법이 있는지는 코드가 정합니다(`AssetHotReload` 의 처리기 표). 처리기가 없는 확장자를 적으면 경고를 남기고 뺍니다. 감시만 하고 아무 일도 하지 않는 자리를 만들지 않습니다. 변경이 쏟아지는 폴더를 잠시 빼고 싶을 때 이 목록을 좁히면 됩니다."
+      },
+      {
+       "name": "_ideOpenCommand",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "출력 로그 줄을 IDE 로 여는 명령 틀입니다. `{file}` · `{line}` 이 위치로 바뀝니다(예: `code -g \"{file}:{line}\"`, `rider64 --line {line} \"{file}\"`). 비우면 VS Code 입니다(`EditorLogCommands::getOpenCommandTemplate`)."
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "EditorConfig",
+   "path": "Saved/Editor/EditorConfig.json",
+   "layer": "에디터 도구",
+   "type": "EditorConfig",
+   "types": [
+    {
+     "name": "EditorConfig",
+     "source": "Source/Editor/Common/Config/EditorConfig.h",
+     "fields": [
+      {
+       "name": "_themePreset",
+       "type": "string",
+       "default": "ModernDark",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "테마 프리셋 이름(테마 대화 상자의 목록)"
+      },
+      {
+       "name": "_themeAccentR",
+       "type": "float32",
+       "default": "0.27",
+       "min": "0.0",
+       "max": "1.0",
+       "units": "",
+       "description": "강조색 R(0..1)"
+      },
+      {
+       "name": "_themeAccentG",
+       "type": "float32",
+       "default": "0.57",
+       "min": "0.0",
+       "max": "1.0",
+       "units": "",
+       "description": "강조색 G(0..1)"
+      },
+      {
+       "name": "_themeAccentB",
+       "type": "float32",
+       "default": "1.0",
+       "min": "0.0",
+       "max": "1.0",
+       "units": "",
+       "description": "강조색 B(0..1)"
+      },
+      {
+       "name": "_themeWindowRounding",
+       "type": "float32",
+       "default": "4.0",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "창 모서리 둥글기(픽셀)"
+      },
+      {
+       "name": "_themeFrameRounding",
+       "type": "float32",
+       "default": "3.0",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "입력 칸 · 버튼 모서리 둥글기(픽셀)"
+      },
+      {
+       "name": "_themeTabRounding",
+       "type": "float32",
+       "default": "4.0",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "탭 모서리 둥글기(픽셀)"
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "TextureImportConfig",
+   "path": "Config/Editor/TextureImportConfig.json",
+   "layer": "에디터 도구",
+   "type": "",
+   "types": [
+    {
+     "name": "kArrTextureImportRootKeyDoc",
+     "source": "Source/Editor/Common/Asset/TextureImportConfig.cpp",
+     "fields": [
+      {
+       "name": "presets",
+       "type": "object",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "프리셋 이름 → 규칙(아래 키). 위에서 아래로 읽으니 부모 프리셋을 먼저 적는다"
+      },
+      {
+       "name": "rules",
+       "type": "object[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "규칙 목록(아래 키). 첫 매칭이 이긴다 — 조건 없는 규칙은 맨 끝에"
+      }
+     ]
+    },
+    {
+     "name": "kArrTextureImportRuleKeyDoc",
+     "source": "Source/Editor/Common/Asset/TextureImportConfig.cpp",
+     "fields": [
+      {
+       "name": "name",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다"
+      },
+      {
+       "name": "inherits",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류"
+      },
+      {
+       "name": "format",
+       "type": "string",
+       "default": "BC7_UNORM",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "DXGI 포맷 이름(BC7_UNORM · BC5_UNORM · BC6H_UF16 · B8G8R8A8_UNORM · R8G8B8A8_UNORM …)"
+      },
+      {
+       "name": "swizzle",
+       "type": "string",
+       "default": "RGBA",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "채널 순서: RGBA · BGRA · ARGB · RGB1 — 그 밖은 로드 오류"
+      },
+      {
+       "name": "generate_mips",
+       "type": "bool",
+       "default": "true",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "밉맵을 만든다"
+      },
+      {
+       "name": "srgb",
+       "type": "bool",
+       "default": "true",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "sRGB 색 공간으로 읽는다(노멀 · 데이터 텍스처는 false)"
+      },
+      {
+       "name": "invert_green",
+       "type": "bool",
+       "default": "false",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "G 채널을 뒤집는다(DirectX ↔ OpenGL 노멀 맵)"
+      },
+      {
+       "name": "include_patterns",
+       "type": "string[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시, 파일 이름이나 리소스 경로)"
+      },
+      {
+       "name": "exclude_patterns",
+       "type": "string[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "맞으면 빼는 와일드카드(포함보다 먼저 본다)"
+      },
+      {
+       "name": "include_paths",
+       "type": "string[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "들어 있어야 하는 경로 조각"
+      },
+      {
+       "name": "exclude_paths",
+       "type": "string[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "들어 있으면 빼는 경로 조각"
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "ModelImportConfig",
+   "path": "Config/Editor/ModelImportConfig.json",
+   "layer": "에디터 도구",
+   "type": "",
+   "types": [
+    {
+     "name": "kArrModelImportRootKeyDoc",
+     "source": "Source/Editor/Common/Asset/ModelImportConfig.cpp",
+     "fields": [
+      {
+       "name": "rules",
+       "type": "object[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "규칙 목록(아래 키). 첫 매칭이 이긴다. 맞는 규칙이 없는 원본은 기본값(옮기지 않음 · 애니메이션 모두 · ACL)"
+      }
+     ]
+    },
+    {
+     "name": "kArrModelImportRuleKeyDoc",
+     "source": "Source/Editor/Common/Asset/ModelImportConfig.cpp",
+     "fields": [
+      {
+       "name": "name",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "규칙 이름(로그에 나온다)"
+      },
+      {
+       "name": "include_patterns",
+       "type": "string[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시)"
+      },
+      {
+       "name": "exclude_patterns",
+       "type": "string[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "맞으면 빼는 와일드카드"
+      },
+      {
+       "name": "include_paths",
+       "type": "string[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "들어 있어야 하는 경로 조각"
+      },
+      {
+       "name": "exclude_paths",
+       "type": "string[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "들어 있으면 빼는 경로 조각"
+      },
+      {
+       "name": "translation",
+       "type": "number[3]",
+       "default": "0, 0, 0",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "모든 노드 월드 위치에 더하는 이동(glTF 원본 공간 — 축 변환 전)"
+      },
+      {
+       "name": "recenter",
+       "type": "string",
+       "default": "none",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "none · xz(경계 상자 XZ 중심을 원점) · bottom-center(XZ 중심 + 가장 낮은 Y 를 0)"
+      },
+      {
+       "name": "animations",
+       "type": "bool",
+       "default": "true",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "애니메이션을 가져온다"
+      },
+      {
+       "name": "clips",
+       "type": "string[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "가져올 클립 이름(비면 모두 — 원본에 없는 이름은 임포트 오류)"
+      },
+      {
+       "name": "animation_codec",
+       "type": "string",
+       "default": "acl",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "애니메이션 코덱 이름(`AnimCodecRegistry` 에 없으면 설정 오류)"
+      },
+      {
+       "name": "animation_sample_rate",
+       "type": "number",
+       "default": "30",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "초당 표본 수"
+      },
+      {
+       "name": "animation_precision",
+       "type": "number",
+       "default": "0.0001",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "코덱 정밀도(`AnimCodecSettings`)"
+      },
+      {
+       "name": "animation_shell_distance",
+       "type": "number",
+       "default": "0.1",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "코덱 껍질 거리(미터)"
+      },
+      {
+       "name": "root_motion_bone",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "루트 모션 트랙이 될 본(비면 없음)"
+      },
+      {
+       "name": "attachments",
+       "type": "bool",
+       "default": "true",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "본 아래 스킨 없는 메시를 따로 임포트한다"
+      },
+      {
+       "name": "fracture",
+       "type": "object",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "있으면 `.mesh` 옆에 `.fracture` 를 쓴다(스킨 없는 메시만, 아래 키)"
+      }
+     ]
+    },
+    {
+     "name": "kArrModelImportFractureKeyDoc",
+     "source": "Source/Editor/Common/Asset/ModelImportConfig.cpp",
+     "fields": [
+      {
+       "name": "pattern",
+       "type": "string",
+       "default": "uniform",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "uniform · clustered(맞은 자리 둘레에 몰림) · slices(격자에 흔들림)"
+      },
+      {
+       "name": "volume",
+       "type": "string",
+       "default": "mesh",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "mesh(닫힌 메시) · bounds(경계 상자) · hull(볼록 껍질) — 닫히지 않은 모델의 대리 부피"
+      },
+      {
+       "name": "pieces",
+       "type": "number",
+       "default": "16",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "조각 수(uniform · clustered)"
+      },
+      {
+       "name": "seed",
+       "type": "number",
+       "default": "1",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "씨앗 난수"
+      },
+      {
+       "name": "levels",
+       "type": "number[]",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "묶음 레벨마다 묶음 수(위 → 아래), 비면 뿌리 하나"
+      },
+      {
+       "name": "impact_point",
+       "type": "number[3]",
+       "default": "0, 0, 0",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "clustered: 맞은 자리(메시 공간)"
+      },
+      {
+       "name": "cluster_radius",
+       "type": "number",
+       "default": "0.5",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "clustered: 몰리는 반경(미터)"
+      },
+      {
+       "name": "cluster_fraction",
+       "type": "number",
+       "default": "0.7",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "clustered: 반경 안에 놓을 씨앗 몫(0..1)"
+      },
+      {
+       "name": "slices",
+       "type": "number[3]",
+       "default": "4, 1, 1",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "slices: 축마다 칸 수"
+      },
+      {
+       "name": "slice_jitter",
+       "type": "number",
+       "default": "0.15",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "slices: 칸 크기에 대한 흔들림(0..0.5)"
+      },
+      {
+       "name": "interior_color",
+       "type": "number[4]",
+       "default": "0.62, 0.58, 0.52, 1",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "안쪽 면 정점 색"
+      },
+      {
+       "name": "interior_uv_scale",
+       "type": "number",
+       "default": "1",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "안쪽 면 UV 의 미터당 배율"
+      },
+      {
+       "name": "max_hull_points",
+       "type": "number",
+       "default": "48",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "조각 껍질 점의 상한"
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "ServerConfig",
+   "path": "Config/Server/*.json",
+   "layer": "서버 운영",
+   "type": "ServerConfig",
+   "types": [
+    {
+     "name": "ServerConfig",
+     "source": "Source/Engine/Config/ServerConfig.h",
+     "fields": [
+      {
+       "name": "_listenAddress",
+       "type": "string",
+       "default": "0.0.0.0",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "받는 주소(`0.0.0.0` 모두 · `127.0.0.1` 이 기계만)입니다."
+      },
+      {
+       "name": "_gamePort",
+       "type": "int32",
+       "default": "7777",
+       "min": "1",
+       "max": "65535",
+       "units": "",
+       "description": "게임(UDP) 포트입니다."
+      },
+      {
+       "name": "_gamePortShardCount",
+       "type": "int32",
+       "default": "1",
+       "min": "1",
+       "max": "64",
+       "units": "",
+       "description": "게임 UDP 샤드 수입니다 — 서버는 `_gamePort` 부터 `_gamePort + _gamePortShardCount - 1` 까지 포트마다 소켓 하나(샤드마다 NetHost)를 엽니다. 두 플랫폼 공통 받기 분산 계약(포트 샤딩): 로그인 토큰이 클라이언트에게 샤드 포트를 알려 줍니다. 리눅스에서 `_bGamePortReuse` 를 켜면 같은 포트 하나에 `SO_REUSEPORT` 소켓 N 개(커널이 4-튜플로 나눔)로 바뀝니다. 1 이면 소켓 하나."
+      },
+      {
+       "name": "_bGamePortReuse",
+       "type": "bool",
+       "default": "false",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "리눅스 전용 — 샤드를 포트 여러 개 대신 `SO_REUSEPORT` 한 포트로 엽니다. Windows 는 무시하고 포트 샤딩으로 엽니다."
+      },
+      {
+       "name": "_servicePort",
+       "type": "int32",
+       "default": "7780",
+       "min": "0",
+       "max": "65535",
+       "units": "",
+       "description": "서비스(TCP — 로그인 · 채팅 · 거래) 포트입니다. 0 이면 서비스 서버를 열지 않습니다."
+      },
+      {
+       "name": "_opsPort",
+       "type": "int32",
+       "default": "0",
+       "min": "0",
+       "max": "65535",
+       "units": "",
+       "description": "운영 HTTP 끝점(`/metrics` · `/healthz` · `/readyz`, 평문 · 인증 없음) 포트입니다. 0 이면 열지 않습니다. 기본은 끔 — 한 기계에 서버 여럿(시험 · 개발)이 뜨면 고정 포트가 부딪친다. 운영 설정 파일이 켠다(Prometheus 관례 9100 대)."
+      },
+      {
+       "name": "_opsListenAddress",
+       "type": "string",
+       "default": "127.0.0.1",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "운영 끝점이 받을 주소입니다 — 기본 `127.0.0.1`(이 기계만). 스크레이퍼가 다른 기계면 사설 주소를 준다(공용 인터페이스에 열지 말 것)."
+      },
+      {
+       "name": "_tickRateHz",
+       "type": "int32",
+       "default": "30",
+       "min": "1",
+       "max": "240",
+       "units": "",
+       "description": "서버 틱 수(초당)입니다. 한 틱이 게임 고정 스텝 하나입니다."
+      },
+      {
+       "name": "_maxCatchUpTicks",
+       "type": "int32",
+       "default": "5",
+       "min": "1",
+       "max": "60",
+       "units": "",
+       "description": "밀렸을 때 잠자지 않고 몰아 도는 틱 상한입니다. 넘으면 밀린 시간을 버리고 경고합니다."
+      },
+      {
+       "name": "_bConsoleInput",
+       "type": "bool",
+       "default": "true",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "표준 입력 명령(quit · status …)을 받을지입니다. 서비스 · 컨테이너는 꺼도 된다(EOF 로는 종료하지 않는다)."
+      },
+      {
+       "name": "_shutdownGraceSeconds",
+       "type": "int32",
+       "default": "10",
+       "min": "0",
+       "max": "120",
+       "units": "",
+       "description": "종료 요청 뒤 연결 정리 · 저장에 주는 시간(초)입니다(키트가 읽는다)."
+      },
+      {
+       "name": "_tlsCertificateFile",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "서비스 TLS 1.3 인증서(PEM, 체인 포함) 경로입니다 — 네트워크 보안 제공자의 서버 TLS 문맥에 그대로 넘깁니다. 둘 다 비면 **Dev 에서만** `Saved/Certificates/` 의 개발용 자체 서명 인증서, Shipping 은 서비스 포트를 열 때 오류입니다. 상대 경로는 이 설정 파일이 아니라 프로젝트 루트 기준(ConfigManager 와 같다)입니다."
+      },
+      {
+       "name": "_tlsPrivateKeyFile",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "TLS 개인키(PEM) 경로입니다. 키는 파일 권한(리눅스 0600 · Windows ACL)으로 지키고, 이 설정 파일에는 경로만 둡니다 — 키 암호가 있으면 `_tlsPrivateKeySecretEnvironment` 의 환경 변수에서 읽습니다(비밀은 파일에 쓰지 않는다)."
+      },
+      {
+       "name": "_tlsPrivateKeySecretEnvironment",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "개인키 암호를 담은 환경 변수 이름입니다. 비면 암호 없는 키."
+      },
+      {
+       "name": "_listStore",
+       "type": "vector<ServerStoreEntry>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "영속 저장소 항목입니다."
+      },
+      {
+       "name": "_listCache",
+       "type": "vector<ServerCacheEntry>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "메모리 캐시 항목입니다."
+      }
+     ]
+    },
+    {
+     "name": "ServerStoreEntry",
+     "source": "Source/Engine/Config/ServerConfig.h",
+     "fields": [
+      {
+       "name": "_name",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "키트가 찾는 저장소 이름(`accounts` · `trades`)"
+      },
+      {
+       "name": "_driver",
+       "type": "string",
+       "default": "memory",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "드라이버 이름(`postgres` · `sqlite` · `memory`)입니다. 해석은 서버 전용 모듈이 합니다."
+      },
+      {
+       "name": "_connection",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "비밀이 빠진 접속 문자열(`host=127.0.0.1 port=5432 dbname=game user=game` · SQLite 파일 경로)입니다."
+      },
+      {
+       "name": "_secretEnvironment",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "비밀번호를 담은 환경 변수 이름(`SW_DB_ACCOUNTS_PASSWORD`)입니다. 비면 비밀 없음."
+      }
+     ]
+    },
+    {
+     "name": "ServerCacheEntry",
+     "source": "Source/Engine/Config/ServerConfig.h",
+     "fields": [
+      {
+       "name": "_name",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "키트가 찾는 캐시 이름(`presence` · `sessions`)"
+      },
+      {
+       "name": "_driver",
+       "type": "string",
+       "default": "memory",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "드라이버 이름(`resp` · `memory`)입니다."
+      },
+      {
+       "name": "_endpoint",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "`host:port`(RESP)입니다. `memory` 는 비웁니다."
+      },
+      {
+       "name": "_secretEnvironment",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "AUTH 비밀번호를 담은 환경 변수 이름입니다. 비면 AUTH 없음."
+      }
+     ]
+    }
+   ],
+   "enums": []
+  }
+ ],
+ "globalVariables": [
+  {
+   "name": "gv_aiDirectorTrace",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "AiDirector: log every phase change, spawn, encounter and reward (1=on)",
+   "source": "Source/GameFramework/Base/AI/Director/AiDirector.cpp"
+  },
+  {
+   "name": "gv_animationForceVertexAnimation",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "Draw every crowd-shared unit with vertex animation regardless of distance (verification)",
+   "source": "Source/Engine/Object/Animation/AnimationSystem.cpp"
+  },
+  {
+   "name": "gv_animationLod",
+   "type": "int32",
+   "default": "1",
+   "kind": "일반",
+   "description": "Animation LOD: frustum visibility, update rate, bone LOD and budget (0 = every unit every frame)",
+   "source": "Source/Engine/Object/Animation/AnimationSystem.cpp"
+  },
+  {
+   "name": "gv_animationRewind",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "Record animation rewind history (poses, graph state, notifies, curves, root motion)",
+   "source": "Source/Engine/Object/Animation/AnimationRewind.cpp"
+  },
+  {
+   "name": "gv_animationRewindSeconds",
+   "type": "float32",
+   "default": "10.0",
+   "kind": "시험",
+   "description": "Seconds of animation rewind history kept per unit",
+   "source": "Source/Engine/Object/Animation/AnimationRewind.cpp"
+  },
+  {
+   "name": "gv_arenaAutoPlay",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "AbilityArena: 플레이어도 AI 가 조종 (1=켜기)",
+   "source": "Source/Games/AbilityArena/ArenaDirectorComponent.cpp"
+  },
+  {
+   "name": "gv_assetLoadProfile",
+   "type": "int32",
+   "default": "1",
+   "kind": "일반",
+   "description": "에셋 로드 시간 · 바이트 기록 (0=끄기)",
+   "source": "Source/Engine/Resource/AssetLoadProfiler.cpp"
+  },
+  {
+   "name": "gv_assetLoadReport",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "엔진 종료 때 에셋 로드 표를 로그로 (1=켜기)",
+   "source": "Source/Engine/Resource/AssetLoadProfiler.cpp"
+  },
+  {
+   "name": "gv_benchAnimate",
+   "type": "int32",
+   "default": "1",
+   "kind": "시험 · 배포본에도",
+   "description": "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchCharacterColumns",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "벤치 캐릭터를 N 열 격자로 세운다 (0=한 줄)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchCharacters",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "벤치 스킨드 캐릭터 수 (0=사용 안 함, KayKit 기사 · Idle/Walking_A)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchCharacterStagger",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchCombat",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "벤치 전투 연출 (0=사용 안 함, KayKit 스켈레톤 — 알림 · 히트 존 · 래그돌 · 칼 떨어뜨리기)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchCrowdShare",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=묶음 공유 + 먼 캐릭터 VAT)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchFaces",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "벤치 시험 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchGround",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "격자 아래에 바닥 평면을 깝니다 (그림자를 받는 면)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchInstanced",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "1 이면 큐브를 GameObject 없이 메시 인스턴스 배치로 만든다 (기본 0)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchLightRadius",
+   "type": "float32",
+   "default": "0.0",
+   "kind": "시험",
+   "description": "벤치 라이트 반경 (0=격자 간격에서 정한다)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchLights",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "격자에 흩뿌릴 점광·스포트라이트 수 (주광은 별개)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchMaterialChurn",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "프레임당 값을 무작위로 바꿀 머티리얼 인스턴스 수 (0=사용 안 함)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchMaterialChurnAdd",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "프레임당 새로 붙이거나 떼어낼 머티리얼 인스턴스 수 (0=사용 안 함)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchMaterialChurnKeyword",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "N 프레임마다 키워드·멀티컴파일을 흔듭니다 (0=사용 안 함)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchMaterialInstances",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "벤치 큐브마다 MaterialInstance 부여 (배치를 큐브 수만큼 가른다)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchMeshes",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchMeshMorph",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "벤치 도형의 정점을 GPU 가 매 프레임 변형합니다 (0=사용 안 함)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchMeshShapes",
+   "type": "int32",
+   "default": "1",
+   "kind": "시험",
+   "description": "벤치가 섞어 쓸 도형 수 (1=큐브만 · 최대 5: 큐브·구·실린더·캡슐·원뿔)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchMeshVariants",
+   "type": "int32",
+   "default": "1",
+   "kind": "시험",
+   "description": "벤치 메시 종류 수 (= 배치 수, 드로우 경로 측정용)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchMovePercent",
+   "type": "int32",
+   "default": "100",
+   "kind": "시험",
+   "description": "프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (퍼센트, 기본 100)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchRig",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링)",
+   "source": "Source/Games/Empty/BenchSceneRig.cpp"
+  },
+  {
+   "name": "gv_benchRigEnabled",
+   "type": "int32",
+   "default": "1",
+   "kind": "시험 · 배포본에도",
+   "description": "리그 데모의 PoseModifierComponent 를 켤지 (0=대조군)",
+   "source": "Source/Games/Empty/BenchSceneRig.cpp"
+  },
+  {
+   "name": "gv_benchRigView",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤)",
+   "source": "Source/Games/Empty/BenchSceneRig.cpp"
+  },
+  {
+   "name": "gv_benchSpawnChurn",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 등록부 측정)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchTickMovers",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "큐브마다 틱 무버 컴포넌트 N 개 — 첫 번째가 틱 안에서 위치를 쓴다 (0=배치 쓰기)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchTransparent",
+   "type": "int32",
+   "default": "25",
+   "kind": "시험 · 배포본에도",
+   "description": "벤치 큐브 중 투명으로 만들 비율 (퍼센트)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchViews",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_cameraFieldOfView",
+   "type": "float32",
+   "default": "70.0",
+   "kind": "일반",
+   "description": "카메라 시야각(도) (사용자 설정 gameplay.fieldOfView)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_cameraHeadBob",
+   "type": "bool",
+   "default": "true",
+   "kind": "일반",
+   "description": "걷기 머리 흔들림 (사용자 설정 gameplay.headBob)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_cameraPreset",
+   "type": "string",
+   "default": "",
+   "kind": "시험 · 배포본에도",
+   "description": "카메라 디렉터의 시작 프리셋 id (캡처 카메라 제외, 비우면 데이터대로)",
+   "source": "Source/GameFramework/Base/Camera/CameraDirectorComponent.cpp"
+  },
+  {
+   "name": "gv_cameraShakeScale",
+   "type": "float32",
+   "default": "1.0",
+   "kind": "일반",
+   "description": "카메라 흔들림 배율 0~1 (사용자 설정 gameplay.cameraShake)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_colorVisionMode",
+   "type": "int32",
+   "default": "0",
+   "kind": "일반",
+   "description": "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, 셰이더 미구현)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_crashTest",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출)",
+   "source": "Source/Engine/EngineLoop.cpp"
+  },
+  {
+   "name": "gv_defaultMaterial",
+   "type": "string",
+   "default": "",
+   "kind": "일반",
+   "description": "씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineDefaultAssets)",
+   "source": "Source/Engine/Scene/Scene.cpp"
+  },
+  {
+   "name": "gv_deferred",
+   "type": "bool",
+   "default": "false",
+   "kind": "일반",
+   "description": "기본 파이프라인을 디퍼드로 (기본 포워드)",
+   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp"
+  },
+  {
+   "name": "gv_destructionMaxDebrisBodies",
+   "type": "int32",
+   "default": "512",
+   "kind": "일반",
+   "description": "한 씬(월드)의 모든 파괴 오브젝트가 함께 드는 떨어진 덩어리 바디의 상한(넘으면 오래된 작은 것부터 사라진다)",
+   "source": "Source/Engine/Destruction/FractureComponentBase.cpp"
+  },
+  {
+   "name": "gv_devConsoleExec",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)",
+   "source": "Source/App/App.cpp"
+  },
+  {
+   "name": "gv_devConsoleOpen",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "게임 창 개발 콘솔을 연 채로 시작 (1=열기)",
+   "source": "Source/App/App.cpp"
+  },
+  {
+   "name": "gv_drawMerge",
+   "type": "int32",
+   "default": "1",
+   "kind": "일반",
+   "description": "씬 배치 멀티 드로우 묶기 (0=배치마다 호출, 진단용)",
+   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp"
+  },
+  {
+   "name": "gv_dumpReflection",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)",
+   "source": "Source/Engine/EngineLoop.cpp"
+  },
+  {
+   "name": "gv_dumpRenderGraph",
+   "type": "bool",
+   "default": "false",
+   "kind": "시험",
+   "description": "렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다",
+   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRendererPassExecute.cpp"
+  },
+  {
+   "name": "gv_editorOpenPanel",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)",
+   "source": "Source/Editor/Common/Gui/EditorDockLayout.cpp"
+  },
+  {
+   "name": "gv_editorPanelDump",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함)",
+   "source": "Source/Editor/Common/Gui/EditorPanelDump.cpp"
+  },
+  {
+   "name": "gv_editorPanelTimes",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "N 프레임 동안 에디터 패널마다 그리기 시간을 모아 한 번 로그로 찍는다 (0=끄기)",
+   "source": "Source/Editor/Panels/EditorPanelManager.cpp"
+  },
+  {
+   "name": "gv_editorRegistryDump",
+   "type": "bool",
+   "default": "false",
+   "kind": "시험",
+   "description": "기동 때 에디터 등록부(패널 · 팝업 · 인스펙터 · 시각화 · 메뉴)를 로그로 덤프",
+   "source": "Source/Editor/SelfTest/EditorRegistryDump.cpp"
+  },
+  {
+   "name": "gv_editorSelfTest",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 시험을 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함)",
+   "source": "Source/Editor/SelfTest/EditorSelfTest.cpp"
+  },
+  {
+   "name": "gv_editorSelfTestReport",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "에디터 자체 시험 결과를 쓸 파일 (비우면 로그에만)",
+   "source": "Source/Editor/SelfTest/EditorSelfTest.cpp"
+  },
+  {
+   "name": "gv_editorStartupScene",
+   "type": "string",
+   "default": "",
+   "kind": "일반",
+   "description": "에디터 시작 시 열 씬의 리소스 경로 (비우면 열지 않는다)",
+   "source": "Source/Editor/ImGuiEditor.cpp"
+  },
+  {
+   "name": "gv_editorUiScale",
+   "type": "float32",
+   "default": "0.0",
+   "kind": "일반",
+   "description": "에디터 UI 배율 (0 = 모니터 DPI 를 따름)",
+   "source": "Source/Editor/ImGuiEditor.cpp"
+  },
+  {
+   "name": "gv_effectsQuality",
+   "type": "int32",
+   "default": "2",
+   "kind": "일반",
+   "description": "이펙트 품질 0~3 (사용자 설정 graphics.effectsQuality)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_environmentAnimate",
+   "type": "int32",
+   "default": "1",
+   "kind": "시험 · 배포본에도",
+   "description": "바람 · 파도 시간이 흐른다 (0=멈춤, 스크린샷 비교용)",
+   "source": "Source/Engine/Environment/EnvironmentUtil.cpp"
+  },
+  {
+   "name": "gv_farmAutoPlay",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "HarvestValley: 농부도 AI 가 조종 (1=켜기)",
+   "source": "Source/Games/HarvestValley/FarmDirectorComponent.cpp"
+  },
+  {
+   "name": "gv_firstScene",
+   "type": "string",
+   "default": "",
+   "kind": "시험 · 배포본에도",
+   "description": "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)",
+   "source": "Source/GameFramework/Base/Framework/GameInstanceBase.cpp"
+  },
+  {
+   "name": "gv_foliageDensity",
+   "type": "float32",
+   "default": "1.0",
+   "kind": "일반",
+   "description": "식생 밀도 배율 (사용자 설정 graphics.foliageDensity)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_gpuCulling",
+   "type": "int32",
+   "default": "1",
+   "kind": "일반",
+   "description": "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)",
+   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRendererCompute.cpp"
+  },
+  {
+   "name": "gv_gpuUploadQueue",
+   "type": "int32",
+   "default": "1",
+   "kind": "일반",
+   "description": "GPU 업로드를 워커로 앞당긴다 (0=렌더 스레드가 그 자리에서 만든다)",
+   "source": "Source/Engine/Graphics/Upload/GpuUploadQueue.cpp"
+  },
+  {
+   "name": "gv_meadowAutoPlay",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "MeadowVillage: 시계를 8 배로 흘려 날을 넘긴다 (1=켜기)",
+   "source": "Source/Games/MeadowVillage/MeadowFarmDirectorComponent.cpp"
+  },
+  {
+   "name": "gv_memoryReport",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "다음 프레임에 메모리 태그 표(살아 있는 · 최고치 · 예산)를 한 번 남김 (1=남기기)",
+   "source": "Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp"
+  },
+  {
+   "name": "gv_memoryTracking",
+   "type": "int32",
+   "default": "-1",
+   "kind": "시험",
+   "description": "메모리 태그 추적 (-1=구성 기본, 0=끄기, 1=켜기)",
+   "source": "Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp"
+  },
+  {
+   "name": "gv_morphDiag",
+   "type": "int32",
+   "default": "0",
+   "kind": "일반",
+   "description": "메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표)",
+   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRendererCompute.cpp"
+  },
+  {
+   "name": "gv_motionBlur",
+   "type": "bool",
+   "default": "true",
+   "kind": "일반",
+   "description": "모션 블러 (사용자 설정 graphics.motionBlur)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_navDebugDraw",
+   "type": "int32",
+   "default": "0",
+   "kind": "일반",
+   "description": "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔)",
+   "source": "Source/Engine/EngineLoop.cpp"
+  },
+  {
+   "name": "gv_netEmuBandwidthKilobytesPerSecond",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "네트워크 흉내: 회선 속도(KB/s, 0=제한 없음)",
+   "source": "Source/Core/Network/Transport/NetEmulation.cpp"
+  },
+  {
+   "name": "gv_netEmuDuplicatePercent",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "네트워크 흉내: 중복(%) — PktDup",
+   "source": "Source/Core/Network/Transport/NetEmulation.cpp"
+  },
+  {
+   "name": "gv_netEmuJitterMs",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "네트워크 흉내: ± 흔들림(ms) — PktLagVariance",
+   "source": "Source/Core/Network/Transport/NetEmulation.cpp"
+  },
+  {
+   "name": "gv_netEmuLatencyMs",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "네트워크 흉내: 한쪽 지연(ms) — 언리얼 PktLag",
+   "source": "Source/Core/Network/Transport/NetEmulation.cpp"
+  },
+  {
+   "name": "gv_netEmuLossPercent",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "네트워크 흉내: 손실(%) — PktLoss",
+   "source": "Source/Core/Network/Transport/NetEmulation.cpp"
+  },
+  {
+   "name": "gv_netEmuReorderPercent",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "네트워크 흉내: 순서 뒤바뀜(%) — PktOrder",
+   "source": "Source/Core/Network/Transport/NetEmulation.cpp"
+  },
+  {
+   "name": "gv_nileAutoPlay",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "NileCity: 자동 계획으로 도시를 짓고 돌리기 (1=켜기)",
+   "source": "Source/Games/NileCity/NileDirectorComponent.cpp"
+  },
+  {
+   "name": "gv_parkAutoBuild",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "ThemeParkTycoon: 돈이 모이면 자동으로 짓기 (1=켜기)",
+   "source": "Source/Games/ThemeParkTycoon/ParkDirectorComponent.cpp"
+  },
+  {
+   "name": "gv_physicsDebugDraw",
+   "type": "bool",
+   "default": "false",
+   "kind": "일반",
+   "description": "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다",
+   "source": "Source/Engine/EngineLoop.cpp"
+  },
+  {
+   "name": "gv_postQuality",
+   "type": "int32",
+   "default": "2",
+   "kind": "일반",
+   "description": "후처리 품질 0~3 (사용자 설정 graphics.postQuality)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_profileAllocSites",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기)",
+   "source": "Source/Engine/Utility/Profiling/FrameProfileSession.cpp"
+  },
+  {
+   "name": "gv_profileFrames",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "프레임 프로파일 측정 프레임 수 (0=사용 안 함)",
+   "source": "Source/Engine/Utility/Profiling/FrameProfileSession.cpp"
+  },
+  {
+   "name": "gv_profileSeconds",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "프레임 프로파일 측정 시간(초, 0=사용 안 함)",
+   "source": "Source/Engine/Utility/Profiling/FrameProfileSession.cpp"
+  },
+  {
+   "name": "gv_reduceFlashing",
+   "type": "bool",
+   "default": "false",
+   "kind": "일반",
+   "description": "번쩍임 줄이기 (사용자 설정 accessibility.reduceFlashing)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_reloadGameAtFrame",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함)",
+   "source": "Source/App/App.cpp"
+  },
+  {
+   "name": "gv_renderPipeline",
+   "type": "string",
+   "default": "",
+   "kind": "일반",
+   "description": "이 파이프라인 XML 로 그린다 (비우면 기본 포워드 · gv_deferred)",
+   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp"
+  },
+  {
+   "name": "gv_renderScale",
+   "type": "float32",
+   "default": "1.0",
+   "kind": "일반",
+   "description": "3D 렌더 해상도 배율 0.5~1 (사용자 설정 graphics.renderScale, 렌더러 미구현)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_renderViewBudget",
+   "type": "int32",
+   "default": "4",
+   "kind": "일반",
+   "description": "한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음)",
+   "source": "Source/Engine/Graphics/Renderer/Frame/RenderViewCollector.cpp"
+  },
+  {
+   "name": "gv_rhiBackBufferFormat",
+   "type": "int32",
+   "default": "0",
+   "kind": "일반",
+   "description": "요청 백버퍼 포맷: 0=R8G8B8A8_UNORM, 1=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)",
+   "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
+  },
+  {
+   "name": "gv_rhiBackend",
+   "type": "RHIBackend",
+   "default": "SW_RHI_BACKEND_DEFAULT",
+   "kind": "일반",
+   "description": "Current RHI Backend",
+   "source": "Source/Engine/Graphics/RHI/RHI.cpp"
+  },
+  {
+   "name": "gv_rhiImmediateSubmit",
+   "type": "bool",
+   "default": "false",
+   "kind": "일반",
+   "description": "RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼)",
+   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+  },
+  {
+   "name": "gv_rhiSoftwareAdapter",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)",
+   "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
+  },
+  {
+   "name": "gv_rhiSwapAtFrame",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)",
+   "source": "Source/Engine/EngineLoop.cpp"
+  },
+  {
+   "name": "gv_rhiSwapTo",
+   "type": "RHIBackend",
+   "default": "DirectX12",
+   "kind": "시험",
+   "description": "gv_rhiSwapAtFrame 에 바꿀 백엔드",
+   "source": "Source/Engine/EngineLoop.cpp"
+  },
+  {
+   "name": "gv_scheduleTrace",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes",
+   "source": "Source/GameFramework/Base/AI/Schedule/ScheduleSystem.cpp"
+  },
+  {
+   "name": "gv_screenshot",
+   "type": "string",
+   "default": "",
+   "kind": "시험 · 배포본에도",
+   "description": "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)",
+   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+  },
+  {
+   "name": "gv_screenshotAttachment",
+   "type": "string",
+   "default": "",
+   "kind": "시험 · 배포본에도",
+   "description": "Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과)",
+   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+  },
+  {
+   "name": "gv_screenshotCount",
+   "type": "int32",
+   "default": "1",
+   "kind": "시험 · 배포본에도",
+   "description": "연속으로 찍을 스크린샷 수 (기본 1)",
+   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+  },
+  {
+   "name": "gv_screenshotFrame",
+   "type": "int32",
+   "default": "10",
+   "kind": "시험 · 배포본에도",
+   "description": "스크린샷을 찍을 프레임 번호 (기본 10)",
+   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+  },
+  {
+   "name": "gv_screenshotInterval",
+   "type": "int32",
+   "default": "1",
+   "kind": "시험 · 배포본에도",
+   "description": "연속 스크린샷 사이 프레임 수 (기본 1)",
+   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+  },
+  {
+   "name": "gv_serverExitAfterTicks",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "이 틱 수를 돈 뒤 정상 종료 (0=끄기)",
+   "source": "Source/Server/ServerApp.cpp"
+  },
+  {
+   "name": "gv_shadowQuality",
+   "type": "int32",
+   "default": "2",
+   "kind": "일반",
+   "description": "그림자 품질 0~3 (사용자 설정 graphics.shadowQuality)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_shooterAutoPlay",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "Shooter3D: 조준 · 사격도 AI 가 (1=켜기)",
+   "source": "Source/Games/Shooter3D/ShooterDirectorComponent.cpp"
+  },
+  {
+   "name": "gv_shooterMotionTrace",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "Shooter3D: 프레임마다 몸 · 본 · 카메라 · 적 자리를 CSV 로 (경로, 비면 끔)",
+   "source": "Source/Games/Shooter3D/ShooterDirectorComponent.cpp"
+  },
+  {
+   "name": "gv_skirmishAutoPlay",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "StarSkirmish: 두 플레이어 모두 AI 로 돌리기 (1=켜기)",
+   "source": "Source/Games/StarSkirmish/SkirmishDirectorComponent.cpp"
+  },
+  {
+   "name": "gv_subtitleBackgroundOpacity",
+   "type": "float32",
+   "default": "0.5",
+   "kind": "일반",
+   "description": "자막 배경 불투명도 0~1 (사용자 설정 accessibility.subtitleBackground)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_subtitles",
+   "type": "bool",
+   "default": "true",
+   "kind": "일반",
+   "description": "자막 표시 (사용자 설정 accessibility.subtitles)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_subtitleSize",
+   "type": "int32",
+   "default": "1",
+   "kind": "일반",
+   "description": "자막 크기 0 작게 1 보통 2 크게 (사용자 설정 accessibility.subtitleSize)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_telemetryFolder",
+   "type": "string",
+   "default": "",
+   "kind": "시험 · 배포본에도",
+   "description": "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)",
+   "source": "Source/Engine/EngineLoop.cpp"
+  },
+  {
+   "name": "gv_textureQuality",
+   "type": "int32",
+   "default": "2",
+   "kind": "일반",
+   "description": "텍스처 품질 0~3 (사용자 설정 graphics.textureQuality)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_timeScale",
+   "type": "float32",
+   "default": "1.0",
+   "kind": "일반",
+   "description": "게임 시간 배율 (1=실시간, 0.25=슬로 모션, 0=멈춤)",
+   "source": "Source/Engine/Utility/GameTimeScale.cpp"
+  },
+  {
+   "name": "gv_tracy",
+   "type": "bool",
+   "default": "false",
+   "kind": "시험",
+   "description": "Tracy 프로파일러로 계측을 내보낸다(기동부터, 뷰어는 localhost 로 붙는다)",
+   "source": "Source/Engine/Utility/Profiling/ProfilerBackend.cpp"
+  },
+  {
+   "name": "gv_tracyMemory",
+   "type": "bool",
+   "default": "false",
+   "kind": "시험",
+   "description": "Tracy 에 할당 · 해제를 메모리 태그별로 보낸다(느림, gv_tracy 와 같이)",
+   "source": "Source/Engine/Utility/Profiling/ProfilerBackend.cpp"
+  },
+  {
+   "name": "gv_tracyViewerPath",
+   "type": "string",
+   "default": "",
+   "kind": "일반",
+   "description": "Tracy 뷰어(tracy-profiler 0.13.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy)",
+   "source": "Source/Editor/Common/Commands/EditorTracyLauncher.cpp"
+  },
+  {
+   "name": "gv_uiScale",
+   "type": "float32",
+   "default": "1.0",
+   "kind": "일반",
+   "description": "게임 UI 배율 (사용자 설정 accessibility.uiScale)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_uiTextScale",
+   "type": "float32",
+   "default": "1.0",
+   "kind": "일반",
+   "description": "게임 UI 글자 크기 배율 (사용자 설정 accessibility.textSize)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_upscaler",
+   "type": "int32",
+   "default": "0",
+   "kind": "일반",
+   "description": "업스케일러 (0 끔, 사용자 설정 graphics.upscaler)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_useRenderThread",
+   "type": "bool",
+   "default": "true",
+   "kind": "일반",
+   "description": "전용 RenderThread 사용 (false = 게임 스레드 인라인 submit)",
+   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+  },
+  {
+   "name": "gv_userSettingsApply",
+   "type": "string",
+   "default": "",
+   "kind": "시험 · 배포본에도",
+   "description": "사용자 설정을 메뉴와 같은 길로 바꾼다: \"id=value;id=value\" (자동화)",
+   "source": "Source/App/UserSettingsHost.cpp"
+  },
+  {
+   "name": "gv_userSettingsApplyFrame",
+   "type": "int32",
+   "default": "30",
+   "kind": "시험 · 배포본에도",
+   "description": "gv_userSettingsApply 를 적용할 프레임",
+   "source": "Source/App/UserSettingsHost.cpp"
+  },
+  {
+   "name": "gv_userSettingsAutoConfirm",
+   "type": "bool",
+   "default": "true",
+   "kind": "시험 · 배포본에도",
+   "description": "gv_userSettingsApply 의 화면 변경을 바로 확인한다 (false 면 카운트다운이 되돌린다)",
+   "source": "Source/App/UserSettingsHost.cpp"
+  },
+  {
+   "name": "gv_userSettingsFile",
+   "type": "string",
+   "default": "",
+   "kind": "시험 · 배포본에도",
+   "description": "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_vertexPool",
+   "type": "int32",
+   "default": "1",
+   "kind": "일반",
+   "description": "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)",
+   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp"
+  },
+  {
+   "name": "gv_viewDistanceScale",
+   "type": "float32",
+   "default": "1.0",
+   "kind": "일반",
+   "description": "시야 거리 배율 (사용자 설정 graphics.viewDistance)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_viewMode",
+   "type": "int32",
+   "default": "0",
+   "kind": "일반",
+   "description": "씬 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe)",
+   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp"
+  },
+  {
+   "name": "gv_voxelAutoPlay",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "VoxelCraft: 걷기 · 부수기 · 놓기도 AI 가 (1=켜기)",
+   "source": "Source/Games/VoxelCraft/VoxelDirectorComponent.cpp"
+  }
+ ],
+ "arguments": [
+  {
+   "name": "WIDTH",
+   "spellings": [
+    "W"
+   ],
+   "value": "숫자 값(`-이름=값`)",
+   "description": "창 클라이언트 영역 너비 · 높이(픽셀) — EngineConfig · 플레이어 해상도보다 이긴다"
+  },
+  {
+   "name": "HEIGHT",
+   "spellings": [
+    "H"
+   ],
+   "value": "숫자 값(`-이름=값`)",
+   "description": "창 클라이언트 영역 너비 · 높이(픽셀) — EngineConfig · 플레이어 해상도보다 이긴다"
+  },
+  {
+   "name": "VSYNC",
+   "spellings": [
+    "vsync"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "수직 동기화를 켠다 — EngineConfig · 플레이어 값보다 이긴다"
+  },
+  {
+   "name": "DIRECTX_11",
+   "spellings": [
+    "dx11",
+    "d3d11",
+    "directx11"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "DirectX11 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름"
+  },
+  {
+   "name": "DIRECTX_12",
+   "spellings": [
+    "dx12",
+    "d3d12",
+    "directx12"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "DirectX12 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름"
+  },
+  {
+   "name": "VULKAN",
+   "spellings": [
+    "vk",
+    "vulkan",
+    "spirv"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "Vulkan 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름"
+  },
+  {
+   "name": "OPENGL",
+   "spellings": [
+    "gl",
+    "opengl"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "OpenGL 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름"
+  },
+  {
+   "name": "ENABLE_EDITOR",
+   "spellings": [
+    "EnableEditor"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "에디터 모듈을 올린다(Dev 만) — 없으면 에디터 없이 게임만 뜬다"
+  },
+  {
+   "name": "LANGUAGE",
+   "spellings": [
+    "lang"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "시작 언어(`ko_kr` · `en_us` …)"
+  },
+  {
+   "name": "COOK_SHADERS",
+   "spellings": [
+    "cook-shaders"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "셰이더를 모든 백엔드 바이너리로 굽고 끝낸다(헤드리스)"
+  },
+  {
+   "name": "COOK_SCENES",
+   "spellings": [
+    "cook-scenes"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "씬 · 프리팹을 바이너리(SCN1 · PFB2)로 굽고 끝낸다 — `-cooked-dir=<폴더>` 가 쓸 곳(CookAssets.py 가 부른다)"
+  },
+  {
+   "name": "COOKED_DIR",
+   "spellings": [
+    "cooked-dir"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "씬 · 프리팹을 바이너리(SCN1 · PFB2)로 굽고 끝낸다 — `-cooked-dir=<폴더>` 가 쓸 곳(CookAssets.py 가 부른다)"
+  },
+  {
+   "name": "SERVER_CONFIG",
+   "spellings": [
+    "server-config"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<SW_ACTIVE_GAME>.json`. Shipping 도 디스크에서 읽는다."
+  },
+  {
+   "name": "SERVICE",
+   "spellings": [
+    "service"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "전용 서버를 Windows 서비스(SCM)로 돈다(`Server --service`). SCM 이 띄운 프로세스만 된다."
+  },
+  {
+   "name": "WRITE_REFLECTION_DOCS",
+   "spellings": [
+    "write-reflection-docs"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "등록된 리플렉션 타입(엔진 · GameFramework · 킷 · 게임)으로 Markdown API 문서를 그 폴더에 쓰고 끝난다(헤드리스). 빌드 산출물이라 커밋하지 않는다."
+  },
+  {
+   "name": "IMPORT_TEXTURES",
+   "spellings": [
+    "import-textures"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "텍스처 원본(`textures_raw/`)을 DDS 로 임포트한다 · 원본과 DDS 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다."
+  },
+  {
+   "name": "CHECK_TEXTURES",
+   "spellings": [
+    "check-textures"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "텍스처 원본(`textures_raw/`)을 DDS 로 임포트한다 · 원본과 DDS 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다."
+  },
+  {
+   "name": "IMPORT_MODELS",
+   "spellings": [
+    "import-models"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "모델 원본(`models_raw/` 의 glTF)을 `.mesh` 로 임포트한다 · 원본과 `.mesh` 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다."
+  },
+  {
+   "name": "CHECK_MODELS",
+   "spellings": [
+    "check-models"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "모델 원본(`models_raw/` 의 glTF)을 `.mesh` 로 임포트한다 · 원본과 `.mesh` 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다."
+  },
+  {
+   "name": "IMPORT_LIPSYNC",
+   "spellings": [
+    "import-lipsync"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "음성(`voice/` 폴더의 .wav · .ogg)을 분석해 곁에 비즘 트랙(`.visemes.json`)을 쓴다 — 립싱크 오프라인 분석(엔진 일, 헤드리스)."
+  },
+  {
+   "name": "BAKE_RETARGET",
+   "spellings": [
+    "bake-retarget"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "리타깃 굽기 — 값은 `<프로필 *.retarget.json>,<원본 .animclip>,<출력 .animclip>`. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 굽고 끝낸다(헤드리스)."
+  },
+  {
+   "name": "RENDER_PORTRAITS",
+   "spellings": [
+    "render-portraits"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits)."
+  },
+  {
+   "name": "PORTRAIT_SIZE",
+   "spellings": [
+    "portrait-size"
+   ],
+   "value": "숫자 값(`-이름=값`)",
+   "description": "프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits)."
+  },
+  {
+   "name": "PORTRAIT_DIR",
+   "spellings": [
+    "portrait-dir"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits)."
+  },
+  {
+   "name": "IMPORT_HEIGHTFIELDS",
+   "spellings": [
+    "import-heightfields"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "높이장 원본(`heightfields_raw/` 의 16 비트 PNG · `.r16`)을 `.heightfield` 로 임포트한다 · 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다."
+  },
+  {
+   "name": "CHECK_HEIGHTFIELDS",
+   "spellings": [
+    "check-heightfields"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "높이장 원본(`heightfields_raw/` 의 16 비트 PNG · `.r16`)을 `.heightfield` 로 임포트한다 · 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다."
+  },
+  {
+   "name": "GATHER_TEXT",
+   "spellings": [
+    "gather-text"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "로컬라이제이션 글 수집(`LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다(CI). 소스 트리가 있어야 한다. `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다."
+  },
+  {
+   "name": "CHECK_TEXT",
+   "spellings": [
+    "check-text"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "로컬라이제이션 글 수집(`LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다(CI). 소스 트리가 있어야 한다. `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다."
+  },
+  {
+   "name": "LOC_PROJECT",
+   "spellings": [
+    "loc-project"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "로컬라이제이션 글 수집(`LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다(CI). 소스 트리가 있어야 한다. `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다."
+  },
+  {
+   "name": "EXPORT_PO",
+   "spellings": [
+    "export-po"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`)."
+  },
+  {
+   "name": "IMPORT_PO",
+   "spellings": [
+    "import-po"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`)."
+  }
+ ],
+ "buildOptions": [
+  {
+   "name": "SW_ACTIVE_GAME",
+   "type": "STRING",
+   "default": "Empty",
+   "choices": [],
+   "description": "활성화할 Source/Games 게임 팩 — 게임을 바꿀 때는 이 값이 아니라 프리셋(Ninja-Debug-<게임>)을 고른다",
+   "presets": [
+    "Ninja-Debug-AbilityArena",
+    "Ninja-Debug-HarvestValley",
+    "Ninja-Debug-MeadowVillage",
+    "Ninja-Debug-NileCity",
+    "Ninja-Debug-Shooter3D",
+    "Ninja-Debug-StarSkirmish",
+    "Ninja-Debug-ThemeParkTycoon",
+    "Ninja-Debug-VoxelCraft"
+   ]
+  },
+  {
+   "name": "SW_BUILD_DOCS",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "Doxygen 코드 문서화 생성 타겟 추가",
+   "presets": []
+  },
+  {
+   "name": "SW_BUILD_GAME",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "GameFramework 및 게임 모듈(SWGame DLL/정적 링크) 빌드",
+   "presets": []
+  },
+  {
+   "name": "SW_BUILD_GAMEFRAMEWORK",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드",
+   "presets": []
+  },
+  {
+   "name": "SW_CPP_STANDARD",
+   "type": "STRING",
+   "default": "17",
+   "choices": [],
+   "description": "C++ 표준(17 이상 — 20 · 23)",
+   "presets": []
+  },
+  {
+   "name": "SW_ENABLE_DEADLOCK_DETECTION",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "sw::Mutex 잠금 순서를 실시간 추적하여 데드락 사이클 탐지 (성능 저하 주의)",
+   "presets": []
+  },
+  {
+   "name": "SW_ENABLE_FUZZING",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "리눅스 clang + ASan 에서 libFuzzer 대상(LoaderFuzzer)과 엔진 커버리지 계측",
+   "presets": [
+    "CI-Fuzz"
+   ]
+  },
+  {
+   "name": "SW_ENABLE_LTO",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "Shipping 배포 빌드 시 ThinLTO(링크 타임 최적화) 활성화",
+   "presets": []
+  },
+  {
+   "name": "SW_ENABLE_PCH",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "빌드 속도 단축을 위한 프리컴파일드 헤더(PCH) 사용",
+   "presets": []
+  },
+  {
+   "name": "SW_ENABLE_SANITIZER",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "Address/UB Sanitizer 컴파일러 플래그 모듈 활성화",
+   "presets": [
+    "CI-Debug-ASAN",
+    "CI-Debug-TSAN",
+    "Ninja-Debug-ASAN"
+   ]
+  },
+  {
+   "name": "SW_ENABLE_STL_CONTAINER",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "엔진 커스텀 할당자 대신 std::allocator를 사용하도록 설정",
+   "presets": [
+    "CI-Debug-STL"
+   ]
+  },
+  {
+   "name": "SW_ENABLE_TESTING",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "단위/통합 테스트 프로젝트 빌드 및 CTest 등록",
+   "presets": []
+  },
+  {
+   "name": "SW_ENABLE_TIME_TRACE",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력)",
+   "presets": []
+  },
+  {
+   "name": "SW_ENABLE_TRACY",
+   "type": "BOOL",
+   "default": "${swTracyDefault}",
+   "choices": [],
+   "description": "Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시)",
+   "presets": []
+  },
+  {
+   "name": "SW_ENABLE_UNITY_BUILD",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "대형 라이브러리 타겟에 CMake UNITY_BUILD(소스 묶음 컴파일) 사용",
+   "presets": [
+    "CI-Debug",
+    "CI-Debug-ASAN",
+    "CI-Debug-TSAN",
+    "CI-Fuzz",
+    "CI-Shipping"
+   ]
+  },
+  {
+   "name": "SW_LLVM_AUTO_BOOTSTRAP",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "LLVM이 없을 때 SetupLlvm.py를 통해 Tools/LLVM에 최소 clang-cl+libclang 키트 자동 다운로드 허용",
+   "presets": []
+  },
+  {
+   "name": "SW_RELEASE_DEBUG_INFO",
+   "type": "STRING",
+   "default": "lines",
+   "choices": [
+    "lines",
+    "full",
+    "none"
+   ],
+   "description": "Release/Shipping debug info: lines | full | none",
+   "presets": []
+  },
+  {
+   "name": "SW_REQUIRE_REFLECTION",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구",
+   "presets": []
+  },
+  {
+   "name": "SW_SANITIZER_KIND",
+   "type": "STRING",
+   "default": "address",
+   "choices": [
+    "address",
+    "thread"
+   ],
+   "description": "SW_ENABLE_SANITIZER 가 켤 새니타이저: address | thread",
+   "presets": [
+    "CI-Debug-TSAN"
+   ]
+  },
+  {
+   "name": "SW_SHIPPING_BUILD",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "배포용 단일 실행 파일 정적 링크 빌드 (Editor 모듈 제외 및 최고 성능 최적화)",
+   "presets": [
+    "CI-Shipping",
+    "Ninja-Shipping",
+    "WSL-Shipping"
+   ]
+  },
+  {
+   "name": "SW_SHIPPING_RHI_BACKEND",
+   "type": "STRING",
+   "default": "DirectX12 · Vulkan",
+   "choices": [
+    "DirectX11",
+    "DirectX12",
+    "Vulkan",
+    "OpenGL"
+   ],
+   "description": "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름 · 별칭)",
+   "presets": []
+  },
+  {
+   "name": "SW_TARGET_TYPE",
+   "type": "STRING",
+   "default": "",
+   "choices": [
+    "\"\"",
+    "Game",
+    "Client",
+    "Server"
+   ],
+   "description": "빌드 타깃 종류: Game | Client | Server (비우면 Shipping=Client, 그 밖=Game)",
+   "presets": [
+    "CI-Shipping",
+    "CI-Shipping-Server",
+    "Ninja-Debug-Server",
+    "Ninja-Shipping",
+    "Ninja-Shipping-Server",
+    "WSL-Debug-Server",
+    "WSL-Shipping",
+    "WSL-Shipping-Server"
+   ]
+  },
+  {
+   "name": "SW_USE_SCCACHE",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "사용 가능 시 sccache 컴파일러 캐시를 활성화하여 빌드 가속",
+   "presets": []
+  },
+  {
+   "name": "SW_USE_VCPKG",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "vcpkg 패키지 매니저 연동 및 툴체인 사용",
+   "presets": []
+  },
+  {
+   "name": "SW_VCPKG_AUTO_BOOTSTRAP",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "vcpkg가 없을 때 Scripts/setup/SetupVcpkg.py를 통해 Tools/vcpkg로 자동 git clone 허용",
+   "presets": []
+  },
+  {
+   "name": "SW_VCPKG_FORCE_INSTALL",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "설치 트리 및 스탬프가 일치해도 vcpkg manifest install 강제 실행",
+   "presets": [
+    "CI-Debug-TSAN"
+   ]
+  }
+ ]
+}

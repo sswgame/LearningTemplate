@@ -5,12 +5,14 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Data/GameDataXml.h"
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/World/AreaGraph.h"
-#include "GameFramework/World/GameFlags.h"
+#include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/World/AreaGraph.h"
+#include "GameFramework/Base/World/GameFlags.h"
 
 namespace sw
 {
@@ -25,6 +27,9 @@ namespace sw
                 const utf8* pValue = node.findAttribute( pName );
                 return pValue != nullptr && pValue[0] != '\0' ? hashed_string( pValue ) : fallback;
             }
+
+            /** @brief 비었을 때 쓰는 플래그 이름 `<종류>.<id>` 입니다 — 공유 플래그에서 다른 키트의 같은 id 와 갈린다. */
+            static hashed_string makeDefaultFlag( const utf8* pKind, const hashed_string& id ) { return hashed_string( string( pKind ) + "." + id.c_str() ); }
 
             static bool isKind( string_view text, const utf8* pKind ) { return StringUtil::equals( text, string_view( pKind ), true ); }
 
@@ -148,7 +153,7 @@ namespace sw
                     continue;
                 AdventureDoorDef door;
                 door._id                       = hashed_string( pDoorId );
-                door._flag                     = AdventureDungeonInternal::readName( node, "flag", door._id );
+                door._flag                     = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "door", door._id ) );
                 door._kind                     = AdventureDungeonInternal::parseDoorKind( node.getAttributeText( "kind" ), sourceName, pDoorId );
                 const string_view requiresText = node.getAttributeText( "requires" );
                 door._requires                 = string( requiresText.data(), requiresText.size() );
@@ -165,7 +170,7 @@ namespace sw
                 treasure._id    = hashed_string( pTreasureId );
                 treasure._area  = AdventureDungeonInternal::readName( node, "area", hashed_string{} );
                 treasure._item  = AdventureDungeonInternal::readName( node, "item", hashed_string{} );
-                treasure._flag  = AdventureDungeonInternal::readName( node, "flag", treasure._id );
+                treasure._flag  = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "treasure", treasure._id ) );
                 treasure._count = MathUtil::max( 1, node.getAttributeInt( "count", 1 ) );
                 dungeon._listTreasure.push_back( treasure );
             }
@@ -176,7 +181,7 @@ namespace sw
                     continue;
                 AdventureDeviceDef device;
                 device._id         = hashed_string( pDeviceId );
-                device._flag       = AdventureDungeonInternal::readName( node, "flag", device._id );
+                device._flag       = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "device", device._id ) );
                 device._kind       = AdventureDungeonInternal::parseDeviceKind( node.getAttributeText( "kind" ), sourceName, pDeviceId );
                 device._duration   = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", 0.0f ) );
                 device._torchCount = MathUtil::max( 1, node.getAttributeInt( "torches", 1 ) );
@@ -272,7 +277,7 @@ namespace sw
         return AdventureDoorResult::Opened;
     }
 
-    bool AdventureDungeonState::openTreasure( const hashed_string& dungeonId, const hashed_string& treasureId, GameFlags& flags, ItemBag& outReward )
+    bool AdventureDungeonState::openTreasure( const hashed_string& dungeonId, const hashed_string& treasureId, GameFlags& flags, ItemStackList& outReward )
     {
         const AdventureDungeonDef*  pDungeon  = nullptr;
         DungeonRuntime*             pRuntime  = findRuntime( dungeonId, &pDungeon );
@@ -461,5 +466,83 @@ namespace sw
         event._item    = item;
         event._count   = count;
         _eventBuffer.push( event );
+    }
+
+    void AdventureDungeonState::writeState( Archive& outArchive ) const
+    {
+        const vector<AdventureDungeonDef>* pListDungeon = _pCatalog != nullptr ? &_pCatalog->getDungeons() : nullptr;
+        outArchive << static_cast<uint32>( _listRuntime.size() );
+        for ( size_t dungeonIndex = 0; dungeonIndex < _listRuntime.size(); ++dungeonIndex )
+        {
+            const DungeonRuntime& runtime = _listRuntime[dungeonIndex];
+            StateArchiveUtil::writeName( outArchive, pListDungeon != nullptr ? ( *pListDungeon )[dungeonIndex]._id : hashed_string{} );
+            outArchive << runtime._progress._smallKeyCount;
+            outArchive << runtime._progress._smallKeyUsedCount;
+            outArchive << runtime._progress._bBossKey;
+            outArchive << runtime._progress._bMap;
+            outArchive << runtime._progress._bCompass;
+            outArchive << static_cast<uint32>( runtime._listDevice.size() );
+            for ( const DeviceRuntime& device : runtime._listDevice )
+            {
+                StateArchiveUtil::writeCountdown( outArchive, device._timer );
+                outArchive << device._litCount;
+                outArchive << device._bActive;
+            }
+        }
+    }
+
+    bool AdventureDungeonState::readState( Archive& archive )
+    {
+        if ( _pCatalog == nullptr )
+            return false;
+        uint32 dungeonCount = 0;
+        // 던전마다 id(4) + 진행(11) + 장치 수(4) 이상
+        if ( StateArchiveUtil::readCount( archive, 19, dungeonCount ) == false )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 실리지 않은 던전은 새 판(`initialize` 의 모양)으로 남는다.
+        vector<DungeonRuntime> listRuntime = _listRuntime;
+        for ( uint32 entry = 0; entry < dungeonCount; ++entry )
+        {
+            hashed_string dungeonId;
+            if ( StateArchiveUtil::readName( archive, dungeonId ) == false )
+                return false;
+            const int32 dungeonIndex = _pCatalog->findDungeonIndex( dungeonId );
+            if ( dungeonIndex < 0 || static_cast<size_t>( dungeonIndex ) >= listRuntime.size() )
+                return false;
+            const AdventureDungeonDef& dungeon = _pCatalog->getDungeons()[static_cast<size_t>( dungeonIndex )];
+            DungeonRuntime&            runtime = listRuntime[static_cast<size_t>( dungeonIndex )];
+            AdventureDungeonProgress   progress;
+            uint32                     deviceCount = 0;
+            archive >> progress._smallKeyCount;
+            archive >> progress._smallKeyUsedCount;
+            archive >> progress._bBossKey;
+            archive >> progress._bMap;
+            archive >> progress._bCompass;
+            // 장치마다 남은 시간(4) + 켜진 수(4) + 활성(1)
+            if ( StateArchiveUtil::readCount( archive, 9, deviceCount ) == false || deviceCount != runtime._listDevice.size() )
+                return false;
+            const bool bProgressValid = 0 <= progress._smallKeyCount && 0 <= progress._smallKeyUsedCount && progress._bBossKey <= SW_TRUE &&
+                                        progress._bMap <= SW_TRUE && progress._bCompass <= SW_TRUE;
+            if ( bProgressValid == false )
+                return false;
+            runtime._progress = progress;
+            for ( size_t deviceIndex = 0; deviceIndex < runtime._listDevice.size(); ++deviceIndex )
+            {
+                DeviceRuntime& device = runtime._listDevice[deviceIndex];
+                if ( StateArchiveUtil::readCountdown( archive, device._timer ) == false )
+                    return false;
+                archive >> device._litCount;
+                archive >> device._bActive;
+                const bool bDeviceValid = archive.isOk() && 0 <= device._litCount && device._litCount <= dungeon._listDevice[deviceIndex]._torchCount &&
+                                          device._bActive <= SW_TRUE;
+                if ( bDeviceValid == false )
+                    return false;
+            }
+        }
+        if ( archive.isError() )
+            return false;
+        _listRuntime = std::move( listRuntime );
+        _eventBuffer.clear();
+        return true;
     }
 } // namespace sw

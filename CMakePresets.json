@@ -80,6 +80,15 @@
       }
     },
     {
+      "name": "Ninja-Debug-MeadowVillage",
+      "displayName": "Windows Ninja Debug — MeadowVillage",
+      "description": "Ninja-Debug 와 같고 활성 게임만 MeadowVillage (빌드 폴더 build/Ninja-Debug-MeadowVillage, 게임 프리셋 Config/Game/MeadowVillage.json)",
+      "inherits": "Ninja-Debug",
+      "cacheVariables": {
+        "SW_ACTIVE_GAME": "MeadowVillage"
+      }
+    },
+    {
       "name": "Ninja-Debug-NileCity",
       "displayName": "Windows Ninja Debug — NileCity",
       "description": "Ninja-Debug 와 같고 활성 게임만 NileCity (빌드 폴더 build/Ninja-Debug-NileCity, 게임 프리셋 Config/Game/NileCity.json)",
@@ -150,7 +159,26 @@
       "inherits": "base-windows",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "SW_SHIPPING_BUILD": "ON"
+        "SW_SHIPPING_BUILD": "ON",
+        "SW_TARGET_TYPE": "Client"
+      }
+    },
+    {
+      "name": "Ninja-Debug-Server",
+      "displayName": "Windows Ninja Debug - Dedicated Server (Clang-cl)",
+      "description": "전용 서버 타깃(SW_TARGET_TYPE=Server) Debug — 창 · GPU · 에디터 · RHI 백엔드 없음, Server 실행 파일만. 빌드 폴더 build/Ninja-Debug-Server",
+      "inherits": "Ninja-Debug",
+      "cacheVariables": {
+        "SW_TARGET_TYPE": "Server"
+      }
+    },
+    {
+      "name": "Ninja-Shipping-Server",
+      "displayName": "Windows Ninja Shipping - Dedicated Server (Clang-cl)",
+      "description": "전용 서버 배포본(SW_TARGET_TYPE=Server, 정적 링크 한 실행 파일)",
+      "inherits": "Ninja-Shipping",
+      "cacheVariables": {
+        "SW_TARGET_TYPE": "Server"
       }
     },
     {
@@ -178,7 +206,26 @@
       "inherits": "base-wsl",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "SW_SHIPPING_BUILD": "ON"
+        "SW_SHIPPING_BUILD": "ON",
+        "SW_TARGET_TYPE": "Client"
+      }
+    },
+    {
+      "name": "WSL-Debug-Server",
+      "displayName": "WSL Ninja Debug - Dedicated Server (Clang)",
+      "description": "리눅스 전용 서버 Debug — X11 · Vulkan · GL 을 링크하지 않는다",
+      "inherits": "WSL-Debug",
+      "cacheVariables": {
+        "SW_TARGET_TYPE": "Server"
+      }
+    },
+    {
+      "name": "WSL-Shipping-Server",
+      "displayName": "WSL Ninja Shipping - Dedicated Server (Clang)",
+      "description": "리눅스 전용 서버 배포본",
+      "inherits": "WSL-Shipping",
+      "cacheVariables": {
+        "SW_TARGET_TYPE": "Server"
       }
     },
     {
@@ -200,7 +247,17 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "SW_SHIPPING_BUILD": "ON",
-        "SW_ENABLE_UNITY_BUILD": "ON"
+        "SW_ENABLE_UNITY_BUILD": "ON",
+        "SW_TARGET_TYPE": "Client"
+      }
+    },
+    {
+      "name": "CI-Shipping-Server",
+      "displayName": "CI Shipping - Dedicated Server",
+      "description": "CI 전용 서버 배포본(Windows · Linux 잡)",
+      "inherits": "CI-Shipping",
+      "cacheVariables": {
+        "SW_TARGET_TYPE": "Server"
       }
     },
     {
@@ -245,6 +302,16 @@
         "SW_ENABLE_UNITY_BUILD": "ON",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
+    },
+    {
+      "name": "CI-Fuzz",
+      "displayName": "CI Fuzz (Ninja, Linux Clang + ASan + libFuzzer)",
+      "description": "Coverage-guided fuzzing of the loader target table (Test/FuzzTest/LoaderFuzzer). Linux clang only - the Windows clang_rt.fuzzer is /MT only. Built nightly by .github/workflows/fuzz.yml.",
+      "inherits": "CI-Debug-ASAN",
+      "cacheVariables": {
+        "SW_ENABLE_FUZZING": "ON",
+        "SW_ENABLE_UNITY_BUILD": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -259,6 +326,10 @@
     {
       "name": "Ninja-Debug-HarvestValley",
       "configurePreset": "Ninja-Debug-HarvestValley"
+    },
+    {
+      "name": "Ninja-Debug-MeadowVillage",
+      "configurePreset": "Ninja-Debug-MeadowVillage"
     },
     {
       "name": "Ninja-Debug-NileCity",
@@ -293,6 +364,14 @@
       "configurePreset": "Ninja-Shipping"
     },
     {
+      "name": "Ninja-Debug-Server",
+      "configurePreset": "Ninja-Debug-Server"
+    },
+    {
+      "name": "Ninja-Shipping-Server",
+      "configurePreset": "Ninja-Shipping-Server"
+    },
+    {
       "name": "WSL-Debug",
       "configurePreset": "WSL-Debug"
     },
@@ -303,6 +382,14 @@
     {
       "name": "WSL-Shipping",
       "configurePreset": "WSL-Shipping"
+    },
+    {
+      "name": "WSL-Debug-Server",
+      "configurePreset": "WSL-Debug-Server"
+    },
+    {
+      "name": "WSL-Shipping-Server",
+      "configurePreset": "WSL-Shipping-Server"
     },
     {
       "name": "CI-Debug",
@@ -323,6 +410,14 @@
     {
       "name": "CI-Shipping",
       "configurePreset": "CI-Shipping"
+    },
+    {
+      "name": "CI-Fuzz",
+      "configurePreset": "CI-Fuzz"
+    },
+    {
+      "name": "CI-Shipping-Server",
+      "configurePreset": "CI-Shipping-Server"
     }
   ],
   "testPresets": [
@@ -331,6 +426,9 @@
       "configurePreset": "Ninja-Debug",
       "output": {
         "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 4
       },
       "filter": {
         "include": {
@@ -341,6 +439,18 @@
     {
       "name": "Ninja-Debug-nogpu",
       "configurePreset": "Ninja-Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "nogpu"
+        }
+      }
+    },
+    {
+      "name": "Ninja-Debug-Server-nogpu",
+      "configurePreset": "Ninja-Debug-Server",
       "output": {
         "outputOnFailure": true
       },
@@ -365,6 +475,18 @@
     {
       "name": "WSL-Debug-nogpu",
       "configurePreset": "WSL-Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "nogpu"
+        }
+      }
+    },
+    {
+      "name": "WSL-Debug-Server-nogpu",
+      "configurePreset": "WSL-Debug-Server",
       "output": {
         "outputOnFailure": true
       },

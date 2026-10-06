@@ -7,7 +7,7 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Data/GameDataXml.h"
+#include "GameFramework/Base/Data/GameDataXml.h"
 
 #include <algorithm>
 
@@ -76,6 +76,7 @@ namespace sw
         , _listGradeScale{}
         , _honorReputation{}
         , _bondExperience{}
+        , _bondCurve{}
         , _survival{}
         , _currency{ "Dollar" }
         , _extraHitPenalty{ 1 }
@@ -258,6 +259,8 @@ namespace sw
                 horse._gallopDrain            = MathUtil::max( 0.0f, node.getAttributeFloat( "gallopDrain", horse._gallopDrain ) );
                 horse._coreDrainPerHour       = MathUtil::max( 0.0f, node.getAttributeFloat( "coreDrain", horse._coreDrainPerHour ) );
                 horse._gallopCoreDrainPerHour = MathUtil::max( 0.0f, node.getAttributeFloat( "gallopCoreDrain", horse._gallopCoreDrainPerHour ) );
+                horse._fearDecayPerSecond     = MathUtil::max( 0.0f, node.getAttributeFloat( "fearDecay", horse._fearDecayPerSecond ) );
+                horse._buckChanceScale        = MathUtil::saturate( node.getAttributeFloat( "buckChance", horse._buckChanceScale ) );
                 (void)_horseCatalog.add( horse );
             }
             else if ( StringUtil::equals( name, string_view( "Food" ), true ) )
@@ -318,6 +321,14 @@ namespace sw
         std::stable_sort( _listPursuit.begin(), _listPursuit.end(), byPursuitLevel );
         std::stable_sort( _listBondLevel.begin(), _listBondLevel.end(), byBondLevel );
         std::stable_sort( _listDeadEyeLevel.begin(), _listDeadEyeLevel.end(), byDeadEyeLevel );
+        // 유대 단계는 기반 레벨 진행으로 센다 — 단계 사이 문턱 차이가 표다(첫 단계가 시작).
+        vector<int64> listXpToNext;
+        for ( size_t bondIndex = 1; bondIndex < _listBondLevel.size(); ++bondIndex )
+        {
+            const float32 gap = _listBondLevel[bondIndex]._experience - _listBondLevel[bondIndex - 1]._experience;
+            listXpToNext.push_back( MathUtil::max( int64{ 1 }, static_cast<int64>( MathUtil::round( gap ) ) ) );
+        }
+        _bondCurve.setTable( listXpToNext );
         return loadedCount;
     }
 

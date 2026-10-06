@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Action/MechArena/MechArenaSnapshot.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
@@ -11,7 +12,7 @@ namespace sw
     {
         struct MechArenaSnapshotInternal
         {
-            static constexpr uint32  kMagic         = 0x4D454348u; ///< "MECH"
+            static constexpr uint32  kMagic         = FourCcUtil::make( "MECH" );
             static constexpr int32   kMaxCount      = 255;
             static constexpr int32   kMaxAmmo       = 4095;
             static constexpr float32 kPositionStep  = 0.01f;

@@ -244,7 +244,7 @@ namespace
         for ( uint32 depth = 0; depth < 8 && directory.empty() == false; ++depth )
         {
             const string candidate = FileUtil::joinPath( directory, "Test/AppTest/Golden" );
-            if ( FileUtil::directoryExists( candidate ) )
+            if ( FileUtil::isDirectory( candidate ) )
                 return candidate;
             const string parent = FileUtil::getDirectoryPart( directory );
             if ( parent == directory )
@@ -659,7 +659,7 @@ namespace
         for ( uint32 depth = 0; depth < 8 && directory.empty() == false; ++depth )
         {
             const string configDirectory = FileUtil::joinPath( directory, "Config/Editor" );
-            if ( FileUtil::directoryExists( configDirectory ) )
+            if ( FileUtil::isDirectory( configDirectory ) )
                 return FileUtil::joinPath( configDirectory, "imgui.ini" );
             const string parent = FileUtil::getDirectoryPart( directory );
             if ( parent == directory )
@@ -673,7 +673,7 @@ namespace
     bool readOptionalFile( const string& path, vector<uint8>& outBytes )
     {
         outBytes.clear();
-        return path.empty() == false && FileUtil::fileExists( path ) && FileUtil::readFile( path, outBytes );
+        return path.empty() == false && FileUtil::exists( path ) && FileUtil::readFile( path, outBytes );
     }
 } // namespace
 
@@ -691,9 +691,11 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|widgets.helpMarker",
         "EditorSelfTest|PASS|widgets.propertyRow",
         "EditorSelfTest|PASS|dock.corePanelsAreDocked",
+        "EditorSelfTest|PASS|dock.followsWindowSize",
         "EditorSelfTest|PASS|inspector.drawLeavesTheObjectAlone",
         "EditorSelfTest|PASS|preview.materialHoldsOneReference",
         "EditorSelfTest|PASS|hierarchy.tagFilter",
+        "EditorSelfTest|PASS|hierarchy.offscreenRootsKeepTheirPlace",
         "EditorSelfTest|PASS|gameView.resizeEveryFrame",
         "EditorSelfTest|PASS|gameView.debugDraw",
         "EditorSelfTest|PASS|gameView.debugOverlay",
@@ -703,6 +705,10 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|hierarchy.selectAllWith",
         "EditorSelfTest|PASS|layout.namedRoundTrip",
         "EditorSelfTest|PASS|profiler.gpuMemoryTab",
+        "EditorSelfTest|PASS|dpi.monitorScaleFollows",
+        "EditorSelfTest|PASS|input.hierarchySearchTyping",
+        "EditorSelfTest|PASS|input.tooltipOnHover",
+        "EditorSelfTest|PASS|input.classicDarkSwatch",
     };
 
     const string  imguiIniPath = findEditorImguiIniPath();
@@ -961,7 +967,7 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
                 continue;
             }
 
-            if ( kMissingGoldenFails == false && FileUtil::fileExists( goldenPath ) == false )
+            if ( kMissingGoldenFails == false && FileUtil::exists( goldenPath ) == false )
             {
                 SW_LOG_WARNING( "No golden image for this platform yet - record it with SW_UPDATE_GOLDEN=1: %#", goldenPath.c_str() );
                 continue;

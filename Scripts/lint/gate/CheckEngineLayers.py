@@ -6,7 +6,7 @@ Engine 레이어 금지 include 검사.
 강제 규칙:
   1) Source/Engine/** 에서 Editor / GameFramework / Games 경로 include 금지.
   2) Source/Games/**, Source/GameFramework/** 에서 Engine/Common/EngineServices.h 금지
-     (게임 쪽은 GameFramework/Framework/GameService.h 의 game:: 만 사용).
+     (게임 쪽은 GameFramework/Base/Framework/GameService.h 의 game:: 만 사용).
   3) Engine 내부 티어: 아래 티어가 위 티어를 include 하지 못한다 (_kEngineTier).
      `Graphics/Renderer` 만 최상위 폴더보다 잘게 본다 — 그리는 쪽은 씬 위, 나머지 Graphics 는 컴포넌트 아래.
   4) Source/RuntimeAPI/** 에서 Engine / App / Games 경로 include 금지 — 호스트 ↔ 모듈 계약이 구현을 알면 안 된다.
@@ -103,7 +103,7 @@ _kGraphicsRendererLayerName = "Graphics/Renderer"
 #
 # **강결합 묶음은 없다.** 그래프가 DAG 라 모든 폴더에 참인 순서가 있다. 묶음이 다시 생기면 대개 "위층 것을
 # 아래층이 드는" 모양이다 — Object 가 SceneManager 에게 활성 씬을 묻거나, RHI 디바이스가 렌더 패스 에셋 캐시를
-# 소유하거나, RHI 가 IWindow 전역을 읽는 식. 처방은 Source/Engine/README.md 와 docs/07_EngineStructureVsCommercial.md.
+# 소유하거나, RHI 가 IWindow 전역을 읽는 식. 처방은 Source/Engine/README.md "상용 엔진과의 대조".
 #
 # `Graphics` 만 최상위 폴더보다 잘게 본다: `Graphics/Renderer`(FrameRenderer · RenderGraph · GpuScene ·
 # RenderThread · Cook)는 씬과 컴포넌트를 **읽어서 그리는 쪽**이라 그 위(8)이고, 나머지 `Graphics`(RHI ·
@@ -117,6 +117,12 @@ _kEngineTier: dict[str, int] = {
     # 외부 압축 라이브러리(lz4·zstd) 코덱. Core 의 ICompressionCodec 만 구현하고 Engine 것은 안 본다
     # — Core 를 압축 라이브러리에 종속시키지 않으려고 여기 둔다(Source/Engine/CMakeLists.txt 주석 참고).
     "Compression": 0,
+    # 네트워크 보안 구현(OpenSSL). Core 의 INetSecurityProvider 만 구현하고 Engine 의 다른 폴더는 안 본다(ResourceUtil 은 어디서나 되는 경로 도우미)
+    # — Core 를 암호 라이브러리에 종속시키지 않으려고 여기 둔다(압축 코덱과 같은 이유).
+    "Network": 0,
+    # 서버 운영 관측(지표 등록부 · 상태 확인 · 운영 HTTP 끝점). Core(로그 · 스트림 전송)만 보고 Engine 의 다른 폴더는 안 본다 — 전용 서버 실행 파일이
+    # GameFramework DLL 없이 들고, 기반 Online 의 서비스 지표 묶음이 그 위에 선다.
+    "Observability": 0,
     # 1: 리플렉션과, 토대 위의 잎 서브시스템·헬퍼.
     "Reflection": 1,
     "Utility": 1,

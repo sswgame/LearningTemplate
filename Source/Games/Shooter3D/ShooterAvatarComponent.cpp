@@ -9,8 +9,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Utility/OrientationUtil.h"
+#include "GameFramework/Base/Utility/OrientationUtil.h"
 
+#include "Games/Shooter3D/ShooterAnimParameter.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
 namespace sw
@@ -19,15 +20,6 @@ namespace sw
     {
         struct ShooterAvatarComponentInternal
         {
-            static constexpr float32 kMoveIdle     = 0.0f;
-            static constexpr float32 kMoveWalk     = 1.0f;
-            static constexpr float32 kMoveRun      = 2.0f;
-            static constexpr float32 kMoveBackward = 3.0f;
-            static constexpr float32 kMoveLeft     = 4.0f;
-            static constexpr float32 kMoveRight    = 5.0f;
-            static constexpr float32 kMoveAir      = 6.0f;
-            /** @brief 레이어 가중치가 목표로 가는 빠르기(1/s)입니다. */
-            static constexpr float32 kLayerBlendRate = 10.0f;
 
             static float32 approach( float32 current, float32 target, float32 maxStep )
             {
@@ -40,19 +32,19 @@ namespace sw
                 switch ( direction )
                 {
                     case LocomotionDirection::Idle:
-                        return kMoveIdle;
+                        return ShooterAnimParameter::kMoveIdle;
                     case LocomotionDirection::Forward:
-                        return forwardSpeed >= runThreshold ? kMoveRun : kMoveWalk;
+                        return forwardSpeed >= runThreshold ? ShooterAnimParameter::kMoveRun : ShooterAnimParameter::kMoveWalk;
                     case LocomotionDirection::Backward:
-                        return kMoveBackward;
+                        return ShooterAnimParameter::kMoveBackward;
                     case LocomotionDirection::Left:
-                        return kMoveLeft;
+                        return ShooterAnimParameter::kMoveLeft;
                     case LocomotionDirection::Right:
-                        return kMoveRight;
+                        return ShooterAnimParameter::kMoveRight;
                     case LocomotionDirection::Airborne:
-                        return kMoveAir;
+                        return ShooterAnimParameter::kMoveAir;
                 }
-                return kMoveIdle;
+                return ShooterAnimParameter::kMoveIdle;
             }
         };
     } // namespace
@@ -69,6 +61,7 @@ namespace sw
         , _runThreshold{ 3.0f }
         , _hitPause{ 0.45f }
         , _turnRate{ 10.0f }
+        , _layerBlendRate{ 10.0f }
         , _locomotion{ 0.25f }
         , _aimWeight{ 0.0f }
         , _shootWeight{ 0.0f }
@@ -142,7 +135,7 @@ namespace sw
             if ( bAlive )
             {
                 _hitTimer = _hitPause;
-                pAnimator->getParameters().setTrigger( hashed_string( "Hit" ) );
+                pAnimator->getParameters().setTrigger( hashed_string( ShooterAnimParameter::kHit ) );
             }
         }
         _hitTimer -= step;
@@ -152,15 +145,15 @@ namespace sw
                                                                             pPlayer->isOnGround(), _walkThreshold );
         const LocomotionDirection direction = _locomotion.update( candidate, step );
         const float32             forward   = LocomotionMath::computeLocalVelocity( pPlayer->getMoveVelocity(), _bodyYaw )._x;
-        parameters.setFloat( hashed_string( "Move" ), Internal::computeMoveCode( direction, forward, _runThreshold ) );
-        parameters.setBool( hashed_string( "Dead" ), bAlive == false );
+        parameters.setFloat( hashed_string( ShooterAnimParameter::kMove ), Internal::computeMoveCode( direction, forward, _runThreshold ) );
+        parameters.setBool( hashed_string( ShooterAnimParameter::kDead ), bAlive == false );
 
         // 상체 — 겨눈 자세는 늘, 쏘는 동작은 막 쏜 동안. 맞음 · 쓰러짐 동안은 비켜선다.
         const bool    bUpperBodyFree = bAlive && _hitTimer <= 0.0f;
         const float32 aimTarget      = bUpperBodyFree ? 1.0f : 0.0f;
         const float32 shootTarget    = bUpperBodyFree && pPlayer->getTimeSinceShot() < 0.2f ? 1.0f : 0.0f;
-        _aimWeight                   = Internal::approach( _aimWeight, aimTarget, Internal::kLayerBlendRate * step );
-        _shootWeight                 = Internal::approach( _shootWeight, shootTarget, Internal::kLayerBlendRate * 2.0f * step );
+        _aimWeight                   = Internal::approach( _aimWeight, aimTarget, _layerBlendRate * step );
+        _shootWeight                 = Internal::approach( _shootWeight, shootTarget, _layerBlendRate * 2.0f * step );
         if ( _aimLayer >= 0 )
             pAnimator->setLayerWeight( static_cast<uint32>( _aimLayer ), _aimWeight );
         if ( _shootLayer >= 0 )

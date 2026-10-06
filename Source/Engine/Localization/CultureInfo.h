@@ -165,7 +165,7 @@ namespace sw
     {
     public:
         /** @brief 문화권 표 파일의 접미사입니다. */
-        static constexpr const utf8* kFileSuffix = ".cultures.json";
+        static constexpr const utf8* kExtension = ".cultures.json";
 
         /** @brief 언어 코드의 정본 철자입니다 — 소문자, `-` 는 `_`(`ko-KR` → `ko_kr`). */
         static string normalizeCode( string_view code );

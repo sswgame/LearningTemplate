@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "GameFramework/Combat/ElementChart.h"
-#include "GameFramework/Combat/FrameData.h"
-#include "GameFramework/Combat/ResourceGauge.h"
-#include "GameFramework/Combat/Vitality.h"
-#include "GameFramework/Utility/GameRandom.h"
+#include "GameFramework/Base/Combat/ElementChart.h"
+#include "GameFramework/Base/Combat/FrameData.h"
+#include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
 

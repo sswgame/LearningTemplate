@@ -56,7 +56,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankComments  # noqa: E402
+from common import blankComments, collectRepositoryFiles  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kTestRoot = "Test"
@@ -72,6 +72,9 @@ _kMarkerRe = re.compile(r'^[ \t]*SW_TEST_REQUIRES_HOST\(\s*(\w+)\s*,\s*"([^"]*)"
 # 선언도 케이스처럼 토큰을 따로 세어 대조한다 - 여러 줄로 쪼갠 표기를 놓치면 그 스위트가 조용히 CI 로 간다.
 _kMarkerTokenRe = re.compile(r"^[ \t]*SW_TEST_REQUIRES_HOST\s*\(", re.M)
 _kLegacyMarkerRe = re.compile(r"//\s*SW_TEST_REQUIRES_HOST\(\s*(\w+)\s*\)\s*:")
+# 바깥 환경(DB 서버)이 있어야 도는 스위트 — 변수가 비면 그 스위트만 빠진다. 호스트 스위트처럼 파일을 혼자 쓴다.
+_kEnvironmentMarkerRe = re.compile(r'^[ \t]*SW_TEST_REQUIRES_ENVIRONMENT\(\s*(\w+)\s*,\s*"(\w+)"\s*,\s*"([^"]*)"\s*\)\s*;', re.M)
+_kEnvironmentMarkerTokenRe = re.compile(r"^[ \t]*SW_TEST_REQUIRES_ENVIRONMENT\s*\(", re.M)
 _kHostSplitRe = re.compile(r"\bHOST_SPLIT\b")
 _kEditorSourceRe = re.compile(r"\$\{CMAKE_SOURCE_DIR\}/(Source/Editor/[\w/]+\.cpp)")
 _kImGuiIncludeRe = re.compile(r"^\s*#\s*include\s*[<\"][^>\"]*imgui[^>\"]*[>\"]", re.I | re.M)
@@ -81,11 +84,16 @@ _kEngineNamespaceRe = re.compile(r"\bengine::\w+")
 _kDocBlockTagRe = re.compile(r"@brief\s+\[(\w+)\]")
 
 
+def listTestSourceInternal(rootDir: Path) -> list[Path]:
+    """`Test/` 아래 .cpp 전부(빌드 산출물 · 생성 폴더로는 내려가지 않는다 — `collectRepositoryFiles`)."""
+    return collectRepositoryFiles(rootDir, (_kTestRoot,), suffixes=(".cpp",))
+
+
 def collectCases(rootDir: Path) -> tuple[list[tuple[str, str, str]], list[str]]:
     """(스위트, 케이스, 저장소 상대 경로) 전부와, 파싱이 놓친 자리."""
     out: list[tuple[str, str, str]] = []
     missed: list[str] = []
-    for path in sorted((rootDir / _kTestRoot).rglob("*.cpp")):
+    for path in listTestSourceInternal(rootDir):
         relPath = path.relative_to(rootDir).as_posix()
         text = path.read_text(encoding="utf-8", errors="ignore")
         parsed = list(_kCaseRe.finditer(text))
@@ -101,7 +109,7 @@ def collectMarkers(rootDir: Path) -> tuple[dict[str, tuple[str, str]], list[str]
     """(스위트 -> (파일, 이유), 오류들). 선언은 그 스위트가 사는 파일에 둔다."""
     out: dict[str, tuple[str, str]] = {}
     errors: list[str] = []
-    for path in sorted((rootDir / _kTestRoot).rglob("*.cpp")):
+    for path in listTestSourceInternal(rootDir):
         relPath = path.relative_to(rootDir).as_posix()
         text = path.read_text(encoding="utf-8", errors="ignore")
         parsed = list(_kMarkerRe.finditer(text))
@@ -114,6 +122,23 @@ def collectMarkers(rootDir: Path) -> tuple[dict[str, tuple[str, str]], list[str]
         for legacy in _kLegacyMarkerRe.finditer(text):
             errors.append(f"{relPath}: 옛 주석 마커 `// SW_TEST_REQUIRES_HOST( {legacy.group(1)} ): ...` 는 아무 효력이 "
                           f"없습니다 — `SW_TEST_REQUIRES_HOST( {legacy.group(1)}, \"이유\" );` 로 선언하세요")
+    return out, errors
+
+
+def collectEnvironmentMarkers(rootDir: Path) -> tuple[dict[str, tuple[str, str]], list[str]]:
+    """(스위트 -> (파일, 이유), 오류들) — `SW_TEST_REQUIRES_ENVIRONMENT` 선언."""
+    out: dict[str, tuple[str, str]] = {}
+    errors: list[str] = []
+    for path in listTestSourceInternal(rootDir):
+        relPath = path.relative_to(rootDir).as_posix()
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        parsed = list(_kEnvironmentMarkerRe.finditer(text))
+        for match in parsed:
+            out[match.group(1)] = (relPath, match.group(3).strip())
+        tokenCount = len(_kEnvironmentMarkerTokenRe.findall(text))
+        if tokenCount != len(parsed):
+            errors.append(f"{relPath}: SW_TEST_REQUIRES_ENVIRONMENT 를 {tokenCount}개 썼는데 {len(parsed)}개만 읽혔습니다 "
+                          f"— 한 줄에 `SW_TEST_REQUIRES_ENVIRONMENT( 스위트, \"변수\", \"이유\" );` 로 쓰세요")
     return out, errors
 
 
@@ -185,7 +210,7 @@ def checkCoreTestIsEngineFree(rootDir: Path) -> list[str]:
 def checkTestDocBlocks(rootDir: Path) -> list[str]:
     """태그(`@brief [스위트]`)를 단 doc 블록이 자기 `SW_TEST_CASE` 바로 위에 있고 태그가 그 스위트인지 봅니다."""
     errors: list[str] = []
-    for path in sorted((rootDir / _kTestRoot).rglob("*.cpp")):
+    for path in listTestSourceInternal(rootDir):
         relPath = path.relative_to(rootDir).as_posix()
         lines = path.read_text(encoding="utf-8", errors="ignore").split("\n")
         lineIndex = 0
@@ -276,6 +301,22 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
             errors.append(f"{relPath}: `{suite}` 는 CI 가 못 돌리는데 같은 파일에 "
                           f"{' · '.join(others)} 가 있습니다 — 파일을 가르세요 "
                           f"(안 그러면 새 케이스가 CI 쪽 스위트에 붙어 CI 로 들어갑니다)")
+
+    # 4-1) 환경 스위트 선언 — 그 스위트가 이 파일에 있고, 파일을 혼자 쓴다
+    environmentMarkers, environmentErrors = collectEnvironmentMarkers(rootDir)
+    errors += environmentErrors
+    for suite, (relPath, reason) in sorted(environmentMarkers.items()):
+        if suite not in homes:
+            errors.append(f"{relPath}: `SW_TEST_REQUIRES_ENVIRONMENT( {suite} )` — 그런 스위트가 없습니다")
+            continue
+        if relPath not in homes[suite]:
+            errors.append(f"{relPath}: `SW_TEST_REQUIRES_ENVIRONMENT( {suite} )` — 그 스위트는 이 파일에 없습니다 "
+                          f"({' · '.join(sorted(homes[suite]))} 에 있습니다)")
+        if not reason:
+            errors.append(f"{relPath}: `SW_TEST_REQUIRES_ENVIRONMENT( {suite} )` 에 이유가 없습니다")
+        others = sorted(suitesByFile.get(relPath, set()) - {suite})
+        if others:
+            errors.append(f"{relPath}: `{suite}` 는 바깥 환경이 있어야 도는데 같은 파일에 {' · '.join(others)} 가 있습니다 — 파일을 가르세요")
 
     # 5) EditorTest 가 손으로 나열한 Editor 소스
     errors += checkEditorTestSources(rootDir)
@@ -380,6 +421,16 @@ class CheckTestSuitesGate(LintGate):
                 "Test/CoreTest/TestProbe.cpp": (
                     "// ModuleImageUtil::releaseModuleCode 가 부르는 길\n"
                     "SW_TEST_CASE( ProbeTest, One )\n{\n    sw::engine::getGlobalVariableManager();\n}\n"
+                ),
+            },
+        },
+        {
+            "name": "환경 스위트 파일에 다른 스위트가 섞임",
+            "files": {
+                **_kCleanFixture,
+                "Test/EngineTest/TestProbe.cpp": (
+                    'SW_TEST_REQUIRES_ENVIRONMENT( ProbeTest, "SW_TEST_PROBE_URL", "needs a server" );\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n'
+                    "SW_TEST_CASE( NeighbourTest, Two )\n{\n}\n"
                 ),
             },
         },

@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Uuid/Uuid.h"
 
@@ -45,12 +46,12 @@ namespace sw
                 return resolvedPath;
             }
 
-            static constexpr const utf8* kRoot             = "Prefab";
-            static constexpr const utf8* kName             = "name";
-            static constexpr const utf8* kGameObject       = "GameObject";
-            static constexpr const utf8* kDefaultInstance  = "PrefabInstance";
-            static constexpr uint32      kPrefabBinMagic2  = 0x50464232u; // 'PFB2'
-            static constexpr uint32      kPrefabBinVersion = 0;
+            static constexpr const utf8* kRoot            = "Prefab";
+            static constexpr const utf8* kName            = "name";
+            static constexpr const utf8* kGameObject      = "GameObject";
+            static constexpr const utf8* kDefaultInstance = "PrefabInstance";
+            static constexpr uint32      kBinMagic        = FourCcUtil::make( "PFB2" );
+            static constexpr uint32      kBinVersion      = 0;
 
             static string makePrefabCacheKey( string_view assetRelativePath )
             {
@@ -252,7 +253,7 @@ namespace sw
 
         uint32 magic{ 0 };
         arch >> magic;
-        if ( magic != PrefabAssetInternal::kPrefabBinMagic2 )
+        if ( magic != PrefabAssetInternal::kBinMagic )
         {
             SW_LOG_ERROR( "Bad binary magic: %#", absPath );
             return false;
@@ -260,7 +261,7 @@ namespace sw
 
         uint32 version{ 0 };
         arch >> version;
-        if ( version > PrefabAssetInternal::kPrefabBinVersion )
+        if ( version > PrefabAssetInternal::kBinVersion )
         {
             SW_LOG_ERROR( "Unsupported binary version %# in %#", version, absPath );
             return false;
@@ -375,8 +376,8 @@ namespace sw
         const string absPath = ResourceUtil::getWritePath( assetRelativePath );
 
         Archive arch;
-        arch << PrefabAssetInternal::kPrefabBinMagic2;
-        arch << PrefabAssetInternal::kPrefabBinVersion;
+        arch << PrefabAssetInternal::kBinMagic;
+        arch << PrefabAssetInternal::kBinVersion;
         arch << _name;
         arch << _stateData;
 

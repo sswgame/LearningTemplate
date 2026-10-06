@@ -102,7 +102,7 @@ namespace
                 const float32 time  = static_cast<float32>( start + sampleIndex ) / static_cast<float32>( kSampleRate );
                 float32       value = 0.0f;
                 for ( size_t harmonic = 0; harmonic < listHarmonicFrequency.size(); ++harmonic )
-                    value += listHarmonicAmplitude[harmonic] * MathUtil::sin( 2.0f * MathUtil::Pi * listHarmonicFrequency[harmonic] * time );
+                    value += listHarmonicAmplitude[harmonic] * MathUtil::sin( 2.0f * MathUtil::kPi * listHarmonicFrequency[harmonic] * time );
                 inoutListSample.push_back( 0.5f * value / amplitudeSum );
             }
         }

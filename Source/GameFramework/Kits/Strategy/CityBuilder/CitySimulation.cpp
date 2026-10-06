@@ -6,10 +6,14 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "CitySimulation" );
+
     namespace
     {
         struct CitySimulationInternal
@@ -72,28 +76,29 @@ namespace sw
         , _eventBuffer{}
         , _roadSearch{}
         , _pCatalog{ nullptr }
+        , _pWallet{ nullptr }
         , _settings{}
         , _stepTimer{}
         , _random{}
         , _time{ 0.0f }
-        , _monthTimer{ 0.0f }
         , _floodFertility{ 0.8f }
         , _wageDebt{ 0.0f }
         , _topology{}
-        , _money{ 0 }
+        , _land{}
         , _monthIncome{ 0 }
         , _workforce{ 0 }
         , _employed{ 0 }
-        , _month{ 0 }
-        , _year{ 1 }
         , _bRoadsDirty{ SW_FALSE }
         , _bDesirabilityDirty{ SW_FALSE }
     {
     }
 
-    void CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, int32 startingMoney )
+    void CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const GameStateRefs& refs )
     {
         _pCatalog = pCatalog;
+        _pWallet  = refs._pWallet;
+        if ( _pWallet == nullptr )
+            SW_LOG_WARNING( "CitySimulation: no wallet was lent - every road and building is refused" );
         _settings = settings;
         _topology = GridTopology{ MathUtil::max( 1, width ), MathUtil::max( 1, height ) };
         _listTile.assign( static_cast<size_t>( _topology.getCellCount() ), CityTile{} );
@@ -103,15 +108,11 @@ namespace sw
         _stepTimer = FixedStepTimer( settings._fixedStep, 5.0f );
         _random.setSeed( settings._randomSeed );
         _time               = 0.0f;
-        _monthTimer         = 0.0f;
         _floodFertility     = 0.8f;
         _wageDebt           = 0.0f;
-        _money              = startingMoney;
         _monthIncome        = 0;
         _workforce          = 0;
         _employed           = 0;
-        _month              = 0;
-        _year               = 1;
         _bRoadsDirty        = SW_FALSE;
         _bDesirabilityDirty = SW_TRUE;
     }
@@ -160,19 +161,24 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 짓기
     // ------------------------------------------------------------------------------
+    void CitySimulation::bindLand( LandRegistry* pLand, const int2& origin )
+    {
+        _land.bind( pLand, origin, hashed_string( "CityBuilder" ) );
+    }
+
     CityPlaceResult CitySimulation::placeRoad( int32 x, int32 y )
     {
         const CityTile* pTile = findTile( x, y );
         if ( pTile == nullptr )
             return CityPlaceResult::OutOfBounds;
-        if ( pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 )
+        if ( pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 || _land.isUsable( x, y ) == false )
             return CityPlaceResult::Occupied;
         if ( pTile->_terrain == CityTerrain::Water || pTile->_terrain == CityTerrain::Rock )
             return CityPlaceResult::BadTerrain;
         const int32 cost = _pCatalog != nullptr ? _pCatalog->getRoadCost() : 2;
-        if ( _money < cost )
+        if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, cost ) == false )
             return CityPlaceResult::NotEnoughMoney;
-        _money -= cost;
+        (void)_land.claimRect( x, y, x, y, false ); // 위에서 볼 수 있음을 확인했다
         _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )]._bRoad = SW_TRUE;
         _bRoadsDirty                                                       = SW_TRUE;
         return CityPlaceResult::Ok;
@@ -209,7 +215,7 @@ namespace sw
             for ( int32 dx = 0; dx < pDef->_size; ++dx )
             {
                 const CityTile* pTile = findTile( x + dx, y + dy );
-                if ( pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 )
+                if ( pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 || _land.isUsable( x + dx, y + dy ) == false )
                     return CityPlaceResult::Occupied;
                 if ( pTile->_terrain == CityTerrain::Water || pTile->_terrain == CityTerrain::Rock )
                     return CityPlaceResult::BadTerrain;
@@ -217,9 +223,9 @@ namespace sw
                     return CityPlaceResult::BadTerrain;
             }
         }
-        if ( _money < pDef->_cost )
+        if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, pDef->_cost ) == false )
             return CityPlaceResult::NotEnoughMoney;
-        _money -= pDef->_cost;
+        (void)_land.claimRect( x, y, x + pDef->_size - 1, y + pDef->_size - 1, true ); // 위에서 칸마다 볼 수 있음을 확인했다
 
         // 허문 자리를 다시 쓴다 — 칸이 가리키는 번호가 안정적이게 목록에서 지우지 않았다.
         int32 index = -1;
@@ -262,6 +268,7 @@ namespace sw
         {
             tile._bRoad  = SW_FALSE;
             _bRoadsDirty = SW_TRUE;
+            _land.releaseRect( x, y, x, y );
             return true;
         }
         if ( tile._buildingIndex < 0 )
@@ -273,6 +280,7 @@ namespace sw
             for ( int32 dx = 0; dx < building._pDef->_size; ++dx )
                 _listTile[static_cast<size_t>( _topology.toIndex( building._origin._x + dx, building._origin._y + dy ) )]._buildingIndex = -1;
         }
+        _land.releaseRect( building._origin._x, building._origin._y, building._origin._x + building._pDef->_size - 1, building._origin._y + building._pDef->_size - 1 );
         building._bAlive     = SW_FALSE;
         building._population = 0;
         for ( CityWalker& walker : _listWalker )
@@ -416,13 +424,6 @@ namespace sw
         _listWalker.erase( std::remove_if( _listWalker.begin(), _listWalker.end(), []( const CityWalker& walker )
         { return walker._bAlive == SW_FALSE; } ),
                            _listWalker.end() );
-
-        _monthTimer += deltaTime;
-        if ( _monthTimer >= _settings._secondsPerMonth )
-        {
-            _monthTimer -= _settings._secondsPerMonth;
-            endMonth();
-        }
     }
 
     void CitySimulation::assignLabor()
@@ -556,8 +557,8 @@ namespace sw
         const auto&   items    = building._stock.getItems();
         if ( items.empty() )
             return;
-        const hashed_string goodId    = items.begin()->first;
-        const int32         amount    = items.begin()->second;
+        const hashed_string goodId    = items.front()._itemId;
+        const int32         amount    = items.front()._count;
         const int32         component = getRoadComponent( building._accessTile );
         const int32         storage   = findStorageFor( goodId, component, building._accessTile, 1 );
         if ( storage < 0 )
@@ -876,7 +877,7 @@ namespace sw
         }
     }
 
-    void CitySimulation::endMonth()
+    void CitySimulation::settleMonth( bool bNewYear )
     {
         int32 income = 0;
         for ( CityBuilding& house : _listBuilding )
@@ -897,14 +898,16 @@ namespace sw
         _wageDebt += static_cast<float32>( _employed ) * _settings._wagePerWorkerPerMonth;
         const int32 wages = static_cast<int32>( _wageDebt );
         _wageDebt -= static_cast<float32>( wages );
-        _money += income - wages;
+        // 결산이 모자라면 빚이다(임금은 미룰 수 없다).
+        if ( _pWallet != nullptr && income > wages )
+            _pWallet->add( _settings._currency, income - wages );
+        else if ( _pWallet != nullptr && income < wages )
+            _pWallet->charge( _settings._currency, wages - income );
         _monthIncome = income - wages;
         _eventBuffer.push( CityEvent{ _monthIncome, -1, CityEvent::Kind::MonthEnded } );
 
-        if ( ++_month >= kMonthsPerYear )
+        if ( bNewYear )
         {
-            _month = 0;
-            ++_year;
             // 범람 — 해마다 다르다(40 % … 100 %). 범람원 농장의 다음 한 해를 정한다.
             _floodFertility = _random.nextRange( 0.4f, 1.0f );
             _eventBuffer.push( CityEvent{ static_cast<int32>( _floodFertility * 100.0f ), -1, CityEvent::Kind::Flood } );
@@ -1016,15 +1019,11 @@ namespace sw
         StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
         StateArchiveUtil::writeRandom( outArchive, _random );
         outArchive << _time;
-        outArchive << _monthTimer;
         outArchive << _floodFertility;
         outArchive << _wageDebt;
-        outArchive << _money;
         outArchive << _monthIncome;
         outArchive << _workforce;
         outArchive << _employed;
-        outArchive << _month;
-        outArchive << _year;
         outArchive << _bRoadsDirty;
         outArchive << _bDesirabilityDirty;
     }
@@ -1133,27 +1132,19 @@ namespace sw
         if ( StateArchiveUtil::readStepTimer( archive, stepTimer ) == false || StateArchiveUtil::readRandom( archive, random ) == false )
             return false;
         float32 time               = 0.0f;
-        float32 monthTimer         = 0.0f;
         float32 floodFertility     = 0.0f;
         float32 wageDebt           = 0.0f;
-        int32   money              = 0;
         int32   monthIncome        = 0;
         int32   workforce          = 0;
         int32   employed           = 0;
-        int32   month              = 0;
-        int32   year               = 0;
         uint8   bRoadsDirty        = SW_FALSE;
         uint8   bDesirabilityDirty = SW_FALSE;
         archive >> time;
-        archive >> monthTimer;
         archive >> floodFertility;
         archive >> wageDebt;
-        archive >> money;
         archive >> monthIncome;
         archive >> workforce;
         archive >> employed;
-        archive >> month;
-        archive >> year;
         archive >> bRoadsDirty;
         archive >> bDesirabilityDirty;
         if ( archive.isError() )
@@ -1165,15 +1156,11 @@ namespace sw
         _stepTimer          = stepTimer;
         _random             = random;
         _time               = time;
-        _monthTimer         = monthTimer;
         _floodFertility     = floodFertility;
         _wageDebt           = wageDebt;
-        _money              = money;
         _monthIncome        = monthIncome;
         _workforce          = workforce;
         _employed           = employed;
-        _month              = month;
-        _year               = year;
         _bRoadsDirty        = bRoadsDirty;
         _bDesirabilityDirty = bDesirabilityDirty;
         _eventBuffer.clear();

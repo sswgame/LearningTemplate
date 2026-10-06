@@ -4,7 +4,7 @@
 # ==============================================================================
 
 if(NOT sw_target_architecture STREQUAL "arm64")
-    return()
+	return()
 endif()
 
 add_library(sw_architecture_arm64 INTERFACE)

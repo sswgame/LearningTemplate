@@ -18,10 +18,10 @@ namespace sw
             static float32 lerpAngle( float32 from, float32 to, float32 weight )
             {
                 float32 delta = to - from;
-                while ( delta > MathUtil::Pi )
-                    delta -= 2.0f * MathUtil::Pi;
-                while ( delta < -MathUtil::Pi )
-                    delta += 2.0f * MathUtil::Pi;
+                while ( delta > MathUtil::kPi )
+                    delta -= 2.0f * MathUtil::kPi;
+                while ( delta < -MathUtil::kPi )
+                    delta += 2.0f * MathUtil::kPi;
                 return from + delta * weight;
             }
 

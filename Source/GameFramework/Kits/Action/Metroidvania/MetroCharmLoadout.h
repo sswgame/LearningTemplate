@@ -4,6 +4,7 @@
  * @details 할로우 나이트의 부적 · 블라스퍼머스의 묵주 구슬 · 더 라스트 페이스의 문양이 같은 규칙입니다. 능력치는 기반 `StatBlock` 이라 이름은 게임이 정합니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -13,6 +14,7 @@
 
 namespace sw
 {
+    class Archive;
     class MetroidvaniaCatalog;
     class StatBlock;
 
@@ -36,6 +38,9 @@ namespace sw
     class SW_GF_API MetroCharmLoadout
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MCHM" );
+        static constexpr uint32 kStateVersion = 1;
+
         MetroCharmLoadout();
 
         /** @brief 카탈로그 규칙의 처음 슬롯 수로 시작합니다(가진 것 · 낀 것은 비운다). */
@@ -60,6 +65,11 @@ namespace sw
 
         int32                        getNotchCount() const { return _notchCount; }
         const vector<hashed_string>& getEquipped() const { return _listEquipped; }
+
+        /** @brief 가진 부적 · 낀 부적(낀 순서) · 슬롯 수를 씁니다. 카탈로그는 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 카탈로그에 없는 부적 · 가지지 않은 부적을 꼈거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         static bool contains( const vector<hashed_string>& listId, const hashed_string& id );

@@ -3,18 +3,20 @@
  * @brief 괴물 도감 — 읽기 · 처치 · 조사로 오르는 지식 단계, 해금된 약점만 보여 주기, 기반 `ElementChart` 로 오일 · 폭탄 · 표식의 속성 배율입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
     struct WitcherWeakness;
 
+    class Archive;
     class ElementChart;
     class WitcherCatalog;
 
@@ -43,6 +45,9 @@ namespace sw
     class SW_GF_API WitcherBestiary
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WBST" );
+        static constexpr uint32 kStateVersion = 1;
+
         WitcherBestiary();
 
         void initialize( const WitcherCatalog* pCatalog, const ElementChart* pChart );
@@ -60,6 +65,10 @@ namespace sw
         /** @brief 공격 속성 @p attackElement 가 그 괴물에게 주는 배율입니다(방어 속성 모두의 곱 — 모르는 괴물 · 표가 없으면 1). */
         float32 computeMultiplier( const hashed_string& monsterId, const hashed_string& attackElement ) const;
         void    drainEvents( vector<WitcherBestiaryEvent>& outListEvent );
+        /** @brief 괴물마다 지식 단계 · 처치 수를 씁니다. 카탈로그 · 상성표는 싣지 않는다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 모르는 괴물이거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         struct Entry

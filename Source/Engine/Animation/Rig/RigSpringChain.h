@@ -39,13 +39,15 @@ namespace sw
     /** @brief 스프링 사슬의 물성입니다. */
     struct RigSpringSettings
     {
-        float3  _gravity{ 0.0f, -9.8f, 0.0f }; ///< 월드 가속도(m/s²)
-        float32 _stiffness{ 0.1f };            ///< 스텝마다 애니메이션 자세 쪽으로 당기는 몫(0..1)
-        float32 _damping{ 0.1f };              ///< 스텝마다 잃는 속도 몫(0..1)
-        float32 _particleRadius{ 0.02f };      ///< 입자 반지름(충돌)
-        float32 _fixedStep{ 1.0f / 60.0f };    ///< 스텝 길이(초) — 프레임 시간과 무관하게 같은 결과
-        float32 _teleportDistance{ 1.0f };     ///< 한 프레임에 뿌리가 이만큼 넘게 움직이면 순간이동으로 보고 다시 시작
-        uint32  _maxSubStep{ 4 };              ///< 프레임당 스텝 상한(넘는 시간은 버린다)
+        float3  _gravityOverride{};               ///< `_bUseGravityOverride` 일 때 쓰는 월드 가속도(m/s²) — 리그 데이터의 "gravity"
+        float32 _gravityScale{ 1.0f };            ///< 월드 중력(설정된 물리 중력)에 곱하는 배율 — 리그 데이터의 "gravity_scale"
+        float32 _stiffness{ 0.1f };               ///< 스텝마다 애니메이션 자세 쪽으로 당기는 몫(0..1)
+        float32 _damping{ 0.1f };                 ///< 스텝마다 잃는 속도 몫(0..1)
+        float32 _particleRadius{ 0.02f };         ///< 입자 반지름(충돌)
+        float32 _fixedStep{ 1.0f / 60.0f };       ///< 스텝 길이(초) — 프레임 시간과 무관하게 같은 결과
+        float32 _teleportDistance{ 1.0f };        ///< 한 프레임에 뿌리가 이만큼 넘게 움직이면 순간이동으로 보고 다시 시작
+        uint32  _maxSubStep{ 4 };                 ///< 프레임당 스텝 상한(넘는 시간은 버린다)
+        uint8   _bUseGravityOverride{ SW_FALSE }; ///< 월드 중력 대신 `_gravityOverride` 를 쓴다(언리얼 AnimDynamics 의 GravityOverride)
     };
 } // namespace sw
 
@@ -78,7 +80,7 @@ namespace sw
          * @param worldFromModel 유닛의 월드 행렬
          */
         void simulate( RigPoseBuffer& pose, span<const uint32> listBone, const RigSpringSettings& settings, span<const RigSpringCollider> listCollider,
-                       const float4x4& worldFromModel, float32 deltaSeconds, const RigSolveSpace& space );
+                       const float4x4& worldFromModel, const float3& worldGravity, float32 deltaSeconds, const RigSolveSpace& space );
 
     private:
         vector<float3>  _listPosition;

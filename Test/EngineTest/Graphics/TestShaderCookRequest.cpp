@@ -382,9 +382,9 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
     sw::unordered_set<sw::string> uniqueExpectedBinary;
     for ( const sw::ShaderCookRequest& request : listRequest )
     {
-        const sw::string absPath = sw::FileUtil::fileExists( request._shaderPath ) ? request._shaderPath
-                                                                                   : sw::ResourceUtil::getResourcePath( request._shaderPath );
-        if ( sw::FileUtil::fileExists( absPath ) == false )
+        const sw::string absPath = sw::FileUtil::exists( request._shaderPath ) ? request._shaderPath
+                                                                               : sw::ResourceUtil::getResourcePath( request._shaderPath );
+        if ( sw::FileUtil::exists( absPath ) == false )
             continue;
         const sw::string normPath  = sw::FileUtil::normalizeSeparators( absPath );
         const size_t     shaderPos = normPath.find( "/shaders/" );

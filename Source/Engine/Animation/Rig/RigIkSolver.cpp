@@ -101,7 +101,7 @@ namespace sw
         const float3  goal         = space.projectPoint( target, rootPosition );
         const float3  toGoal       = goal - rootPosition;
         const float32 goalDistance = toGoal.getLength();
-        if ( goalDistance < MathUtil::Epsilon || upperLength < MathUtil::Epsilon || lowerLength < MathUtil::Epsilon )
+        if ( goalDistance < MathUtil::kEpsilon || upperLength < MathUtil::kEpsilon || lowerLength < MathUtil::kEpsilon )
             return false;
 
         const float3  direction = toGoal / goalDistance;
@@ -227,7 +227,7 @@ namespace sw
             return 0.0f;
         quaternion    delta = makeFromToRotation( current, desired );
         const float32 angle = RigIkSolverInternal::computeRotationAngle( delta );
-        if ( angle > maxAngle && angle > MathUtil::Epsilon )
+        if ( angle > maxAngle && angle > MathUtil::kEpsilon )
             delta = RigIkSolverInternal::scaleRotation( delta, maxAngle / angle );
         delta = RigIkSolverInternal::scaleRotation( delta, weight );
         pose.rotateModel( bone, delta );
@@ -245,7 +245,7 @@ namespace sw
             float3 axis = fromUnit.cross( float3::Right );
             if ( axis.getLengthSquared() < 1e-6f )
                 axis = fromUnit.cross( float3::Up );
-            return quaternion::createFromAxisAngle( axis.normalize(), MathUtil::Pi );
+            return quaternion::createFromAxisAngle( axis.normalize(), MathUtil::kPi );
         }
         const float3 axis = fromUnit.cross( toUnit );
         return quaternion{ axis._x, axis._y, axis._z, 1.0f + cosine }.normalize();
@@ -290,7 +290,7 @@ namespace sw
             if ( swing._w < 0.0f )
                 swing = -swing;
             const float32 swingAngle = RigIkSolverInternal::computeRotationAngle( swing );
-            if ( swingAngle > limit._swingLimit && swingAngle > MathUtil::Epsilon )
+            if ( swingAngle > limit._swingLimit && swingAngle > MathUtil::kEpsilon )
                 swing = RigIkSolverInternal::scaleRotation( swing, limit._swingLimit / swingAngle );
             const float32 twistAngle = MathUtil::clamp( computeTwistAngle( twist, limit._boneAxis ), -limit._twistLimit, limit._twistLimit );
             limited                  = swing * quaternion::createFromAxisAngle( limit._boneAxis, twistAngle );

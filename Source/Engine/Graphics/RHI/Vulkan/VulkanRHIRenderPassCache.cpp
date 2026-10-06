@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRenderPassCache.h"
 
+#include "Core/Common/HashUtil.h"
+
 #include <vulkan/vulkan.h>
 
 namespace sw
@@ -43,13 +45,13 @@ namespace sw
     size_t VulkanRHIRenderPassCache::CompositeKeyHash::operator()( const CompositeKey& key ) const
     {
         size_t hash = static_cast<size_t>( key._depth ) * 1315423911u;
-        hash ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
-        hash ^= static_cast<size_t>( key._depthLoadOp ) + 0x9e3779b9u;
+        hash ^= static_cast<size_t>( key._colorCount ) + HashUtil::kGoldenRatio32;
+        hash ^= static_cast<size_t>( key._depthLoadOp ) + HashUtil::kGoldenRatio32;
         hash ^= static_cast<size_t>( key._depthSlice ) * 2654435761u;
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
-            hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
-            hash ^= static_cast<size_t>( key._arrColorLoadOp[colorIndex] ) + 0x9e3779b9u;
+            hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= static_cast<size_t>( key._arrColorLoadOp[colorIndex] ) + HashUtil::kGoldenRatio32;
             hash ^= static_cast<size_t>( key._arrColorSlice[colorIndex] ) * 2246822519u;
         }
         return hash;
@@ -70,10 +72,10 @@ namespace sw
     size_t VulkanRHIRenderPassCache::PipelineKeyHash::operator()( const PipelineKey& key ) const
     {
         size_t hash = static_cast<size_t>( key._depthFormat ) * 1315423911u;
-        hash ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
+        hash ^= static_cast<size_t>( key._colorCount ) + HashUtil::kGoldenRatio32;
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
-            hash ^= static_cast<size_t>( key._arrColorFormat[colorIndex] ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= static_cast<size_t>( key._arrColorFormat[colorIndex] ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
         }
         return hash;
     }

@@ -73,7 +73,7 @@ namespace sw::editor
          * @brief 핫 리로드가 넘긴 텍스처 파일이 소스 이미지면 임포트합니다(`textures_raw/` 아래 → 옆 `textures/` 의 DDS).
          * @details 런타임은 DDS 만 읽으므로 소스 이미지는 임포트하는 것이 리로드입니다. 임포트된 DDS 의 쓰기가 다음 감시 이벤트로 와서
          *          텍스처 캐시가 다시 읽습니다. 임포트 설정은 매번 읽습니다(규칙을 고치면 재시작 없이 반영됩니다).
-         *          `.hdr` 는 임포트하지 않고 경고합니다 — 디코더가 8비트(stb_image)라 값이 잘립니다. `textures_raw/` 밖의 소스 이미지도 경고만 합니다.
+         *          `.hdr` 는 부동소수점으로 읽어 BC6H · RGBA16F 로만 임포트합니다(규칙의 포맷이 8 비트면 실패). `textures_raw/` 밖의 소스 이미지는 경고만 합니다.
          * @return 소스 이미지였으면(임포트했든 경고했든) true 이고, 호출자는 캐시를 다시 읽지 않습니다. `.dds` 면 false 입니다.
          */
         [[nodiscard]] static bool importChangedSourceImage( string_view relativePath );
@@ -84,7 +84,7 @@ namespace sw::editor
          *          (`computeSourceHash`)이라 규칙만 바꿔도 어긋남이 됩니다. DDS 해시는 임포트된 결과 그대로라 손으로 바꾼 DDS 도 잡힙니다.
          *          판정은 파일 시간이 아니라 내용입니다 — 원본과 DDS 를 둘 다 커밋하므로 `git` 이 시간 순서를 임의로 뒤집습니다.
          *          원본이 사라진 스탬프 줄도 어긋남입니다(ImportStale 은 줄만 지우고 DDS 는 두므로, 남은 DDS 는 사람이 정리합니다).
-         *          `.hdr` 는 임포트하지 못한 것으로 보고합니다 — 디코더가 8비트라 값이 잘립니다.
+         *          `.hdr` 는 부동소수점으로 읽어 BC6H · RGBA16F 로만 임포트합니다(규칙의 포맷이 8 비트면 그 원본의 실패로 보고합니다).
          * @param resourceRoot `Resource/` 의 절대 경로
          * @param config 원본마다 규칙을 고를 임포트 설정(리소스 루트 기준 상대 경로로 매칭합니다)
          */

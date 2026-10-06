@@ -24,7 +24,7 @@ namespace sw
      *          자르면 어떤 두 값의 차도 반드시 int32 안에 들어오므로, 빼는 자리마다 넓은 타입으로
      *          올리지 않아도 됩니다. 30fps 기준 1,000만 일이 넘는 길이라 실사용을 자르지 않습니다.
      */
-    constexpr int32 kSequenceFrameLimit = MathUtil::MaxInt32 / 2;
+    constexpr int32 kSequenceFrameLimit = MathUtil::kMaxInt32 / 2;
 
     /**
      * @brief 시퀀서 트랙 항목의 종류입니다. JSON 에는 정수(`"type"`)로 적힙니다 — 값을 바꾸면 기존 시퀀스 파일이 다른 종류로 읽힙니다.

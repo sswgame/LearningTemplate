@@ -593,7 +593,9 @@ SW_TEST_CASE( InputMapTest, EditorSavedDefinitionReloadsWithTheSameBindings )
  */
 SW_TEST_CASE( InputMapTest, ShippedInputMapsSurviveTheEditorSave )
 {
-    for ( const sw::string_view resourceId : { "engine/input/default.input.xml", "game/shooter3d/data/shooter.input.xml" } )
+    for ( const sw::string_view resourceId : { "engine/input/default.input.xml", "game/shooter3d/data/shooter.input.xml", "game/abilityarena/data/arena.input.xml",
+                                               "game/harvestvalley/data/farm.input.xml", "game/nilecity/data/nile.input.xml", "game/starskirmish/data/skirmish.input.xml",
+                                               "game/themepark/data/park.input.xml", "game/voxelcraft/data/voxel.input.xml" } )
     {
         sw::InputMap original;
         SW_ASSERT_TRUE( original.loadFromResource( resourceId ) );
@@ -602,6 +604,47 @@ SW_TEST_CASE( InputMapTest, ShippedInputMapsSurviveTheEditorSave )
         sw::InputMap reloaded;
         SW_ASSERT_TRUE( reloaded.loadFromResource( savedPath ) );
         expectSameBindings( original, reloaded );
+    }
+}
+
+/**
+ * @brief [InputMapTest] 게임 팩의 입력 맵은 게임 코드가 묻는 액션을 모두 키에 묶는다 — 게임 코드는 원시 키를 묻지 않는다(`CheckKitNamespaces`)
+ * @details 액션이 맵에 없거나 바인딩이 없으면 그 조작이 소리 없이 죽는다(축은 0, 눌림은 false). 게임마다 코드가 묻는 이름 전부를 본다.
+ */
+SW_TEST_CASE( InputMapTest, GameInputMapsBindEveryActionTheGamesAsk )
+{
+    struct GameInputMap
+    {
+        const utf8*                        _pResourceId;
+        std::initializer_list<const utf8*> _listAction;
+    };
+    const GameInputMap arrGameMap[] = {
+        {   "game/abilityarena/data/arena.input.xml",{ "Arena.Move", "Arena.Melee", "Arena.Fireball", "Arena.Heal", "Arena.Dash" }                                                     },
+        {   "game/harvestvalley/data/farm.input.xml",
+         { "Farm.Move", "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4", "Farm.SeedPrev", "Farm.SeedNext", "Farm.Use", "Farm.Ship", "Farm.Buy", "Farm.Sleep",
+         "Farm.Status" }                                                                                                                                      },
+        {        "game/nilecity/data/nile.input.xml",
+         { "Camera.Pan", "Nile.NextTool", "Nile.PrevTool", "Nile.RoadTool", "Nile.Pause", "Nile.Slower", "Nile.Faster", "Nile.ToggleAutoPlan", "Nile.Status" }},
+        {"game/starskirmish/data/skirmish.input.xml",
+         { "Camera.Pan", "Skirmish.SpectatorPan", "Skirmish.Slower", "Skirmish.Faster", "Skirmish.Pause", "Skirmish.Status", "Skirmish.AddToSelection",
+         "Skirmish.GroupModifier", "Skirmish.AttackMove", "Skirmish.Stop", "Skirmish.Hold", "Skirmish.Command1", "Skirmish.Command2", "Skirmish.Command3",
+         "Skirmish.Build.SupplyDepot", "Skirmish.Build.Barracks", "Skirmish.Build.Refinery", "Skirmish.Build.Academy", "Skirmish.Build.Factory",
+         "Skirmish.Build.Starport", "Skirmish.Build.Bunker", "Skirmish.Group0", "Skirmish.Group9", "Skirmish.JumpToSelection" }                               },
+        {       "game/themepark/data/park.input.xml",
+         { "Camera.Pan", "Camera.Rotate", "Park.NextRide", "Park.ToggleOpen", "Park.PriceDown", "Park.PriceUp", "Park.FeeDown", "Park.FeeUp", "Park.Build",
+         "Park.Ride", "Park.Thoughts", "Park.Status" }                                                                                                        },
+        {     "game/voxelcraft/data/voxel.input.xml",                             { "Voxel.Move", "Voxel.Jump", "Voxel.Sprint", "Voxel.Slot1", "Voxel.Slot9" }},
+    };
+    for ( const GameInputMap& gameMap : arrGameMap )
+    {
+        sw::InputMap inputMap;
+        SW_ASSERT_TRUE( inputMap.loadFromResource( gameMap._pResourceId ) );
+        for ( const utf8* pAction : gameMap._listAction )
+        {
+            const sw::hashed_string action( pAction );
+            SW_EXPECT_TRUE( inputMap.hasAction( action ) );
+            SW_EXPECT_TRUE( inputMap.getBindingCount( action ) > 0 );
+        }
     }
 }
 

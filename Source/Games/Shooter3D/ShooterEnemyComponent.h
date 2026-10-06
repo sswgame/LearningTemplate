@@ -10,8 +10,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Combat/HealthSourceComponent.h"
-#include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Base/Combat/HealthSourceComponent.h"
+#include "GameFramework/Base/Utility/Countdown.h"
 
 namespace sw
 {
@@ -101,6 +101,10 @@ namespace sw
         float32 _runSpeed;
         PROPERTY( Category = "Enemy", DisplayName = "Turn Rate", Tooltip = "How fast the body turns to its heading", Min = 0.0, Units = "rad/s" )
         float32 _turnRate;
+        PROPERTY( Category = "Enemy", DisplayName = "Retarget Distance", Tooltip = "The path is asked again when the player moved this far", Min = 0.0, Units = m )
+        float32 _retargetDistance;
+        PROPERTY( Category = "Enemy", DisplayName = "Walk Clip Speed", Tooltip = "Below this speed the standing clip plays", Min = 0.0, Units = "m/s" )
+        float32 _walkClipSpeed;
 
         float3            _position;   ///< 발
         float3            _lastTarget; ///< 내비메시 에이전트에 마지막으로 건 목적지

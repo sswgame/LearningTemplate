@@ -60,9 +60,11 @@ def collectRepositoryFiles(repositoryRoot: Path,
                            *,
                            suffixes: Iterable[str] = (),
                            fileNames: Iterable[str] = (),
-                           excludedDirNames: Iterable[str] = kNotOurDirNames) -> list[Path]:
+                           excludedDirNames: Iterable[str] = kNotOurDirNames,
+                           bAnySuffix: bool = False) -> list[Path]:
     """
-    저장소의 `listRoot`(저장소 기준 경로, 비우면 전체) 아래에서 확장자가 `suffixes` 이거나 이름이 `fileNames` 인 파일을 모읍니다.
+    저장소의 `listRoot`(저장소 기준 경로, 비우면 전체) 아래에서 확장자가 `suffixes` 이거나 이름이 `fileNames` 인 파일을 모읍니다
+    (`bAnySuffix` 면 확장자를 보지 않는다 — 리소스 폴더처럼 파일 종류를 가리지 않는 검사).
 
     `excludedDirNames` 의 폴더로는 **내려가지 않습니다**(걷는 중에 가지를 친다). `Path.rglob` 로 전부 걸은 뒤 거르면 빌드 트리와
     내려받은 외부 도구까지 다 걷는다. 정렬된 목록을 돌려줍니다.
@@ -78,8 +80,48 @@ def collectRepositoryFiles(repositoryRoot: Path,
         for current, listDirName, listFileName in os.walk(baseDir):
             listDirName[:] = [name for name in listDirName if name not in setExcluded]
             for fileName in listFileName:
-                if fileName in setFileName or os.path.splitext(fileName)[1].lower() in setSuffix:
+                if bAnySuffix or fileName in setFileName or os.path.splitext(fileName)[1].lower() in setSuffix:
                     resultSet.add(Path(current) / fileName)
+    return sorted(resultSet)
+
+
+def resolveFileArguments(repositoryRoot: Path,
+                         listFileArgument: Iterable[str],
+                         *,
+                         listScanRoot: Iterable[str] = ("",),
+                         suffixes: Iterable[str] = (),
+                         fileNames: Iterable[str] = (),
+                         excludedDirNames: Iterable[str] = kNotOurDirNames,
+                         bAnySuffix: bool = False) -> list[Path]:
+    """
+    `--files` 로 받은 경로를 대상 파일로 풉니다 — 게이트 · 픽서 · 훅이 **같은 규칙**을 쓴다(`collectRepositoryFiles` 의 걷기 규칙과 같다).
+
+    - 상대 경로는 **저장소 루트 기준**으로 풀고, 거기 없으면 현재 폴더 기준으로 푼다. 저장소 밖 파일 · 없는 파일은 뺀다.
+    - 확장자가 `suffixes` 이거나 이름이 `fileNames` 인 파일만(`bAnySuffix` 면 모두).
+    - `excludedDirNames` 의 폴더 아래 · `listScanRoot`(저장소 기준, `""` 은 전체) 밖은 뺀다.
+    """
+    setSuffix = {suffix.lower() for suffix in suffixes}
+    setFileName = set(fileNames)
+    setExcluded = set(excludedDirNames)
+    listScanPrefix = [root.rstrip("/") + "/" for root in listScanRoot if root]
+    resultSet: set[Path] = set()
+    for item in listFileArgument:
+        path = Path(item)
+        if not path.is_absolute():
+            candidate = repositoryRoot / path
+            path = candidate if candidate.exists() else path.resolve()
+        path = path.resolve()
+        if not path.is_file() or not (bAnySuffix or path.name in setFileName or path.suffix.lower() in setSuffix):
+            continue
+        try:
+            relative = path.relative_to(repositoryRoot.resolve()).as_posix()
+        except ValueError:
+            continue
+        if any(part in setExcluded for part in relative.split("/")[:-1]):
+            continue
+        if listScanPrefix and not any(relative.startswith(prefix) for prefix in listScanPrefix):
+            continue
+        resultSet.add(path)
     return sorted(resultSet)
 
 
@@ -233,7 +275,7 @@ def findFirstValidRoot(templates: Iterable[str],
     )
 
 
-def _naturalVersionKeyInternal(text: str) -> list[Any]:
+def naturalVersionKey(text: str) -> list[Any]:
     """`llvm-9` 와 `llvm-21` 을 사전순이 아니라 숫자로 비교하기 위한 정렬 키입니다."""
     parts: list[Any] = []
     digits = ""
@@ -249,6 +291,11 @@ def _naturalVersionKeyInternal(text: str) -> list[Any]:
         parts.append(int(digits))
     # int 와 str 이 섞이면 비교가 터진다 — 종류를 앞에 붙여 같은 종류끼리만 비교되게 한다.
     return [(0, v, "") if isinstance(v, int) else (1, 0, v) for v in parts]
+
+
+def selectLatestVersion(listVersion: list[str]) -> str:
+    """버전 폴더 이름들 중 최신(자연순 — `14.44.x` 가 `14.9.x` 보다 새것). 비면 빈 문자열."""
+    return max(listVersion, key=naturalVersionKey, default="")
 
 
 def expandSearchRootGlobsInternal(roots: list[str]) -> list[str]:
@@ -271,7 +318,7 @@ def expandSearchRootGlobsInternal(roots: list[str]) -> list[str]:
                 else [str(m) for m in Path(".").glob(root) if m.is_dir()]
         except OSError:
             matches = []
-        expanded.extend(sorted(matches, key=_naturalVersionKeyInternal, reverse=True))
+        expanded.extend(sorted(matches, key=naturalVersionKey, reverse=True))
     return expanded
 
 

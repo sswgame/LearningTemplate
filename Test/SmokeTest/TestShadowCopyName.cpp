@@ -111,9 +111,9 @@ SW_TEST_CASE( ShadowCopyNameTest, CleanupKeepsCopiesOfOtherLiveProcesses )
     }
 
     SW_EXPECT_EQUAL( 3u, sw::ShadowCopyName::removeStaleCopies( directory ) );
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::fileExists( livePath ), "a copy another running process just wrote was deleted" );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( ownPath ) );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( donePath ) );
-    SW_EXPECT_FALSE( sw::FileUtil::fileExists( legacyPath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( unrelatedPath ) );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( livePath ), "a copy another running process just wrote was deleted" );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( ownPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( donePath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( legacyPath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( unrelatedPath ) );
 }

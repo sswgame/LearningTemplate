@@ -8,22 +8,24 @@
 #include "Engine/Object/Animation/MotionWarpingComponent.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/IAssetCache.h"
 #include "Engine/Resource/ResourceUtil.h"
 
-#include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Gimmick/GimmickCircuitComponent.h"
-#include "GameFramework/Gimmick/GimmickSensorComponent.h"
-#include "GameFramework/Interaction/GrabberComponent.h"
-#include "GameFramework/Interaction/InteractableComponent.h"
-#include "GameFramework/Interaction/InteractionCatalog.h"
-#include "GameFramework/Interaction/InteractionSelector.h"
-#include "GameFramework/Interaction/InteractionSession.h"
-#include "GameFramework/Interaction/InteractorComponent.h"
-#include "GameFramework/Interaction/SmartObjectComponent.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Gimmick/GimmickCircuitComponent.h"
+#include "GameFramework/Base/Gimmick/GimmickSensorComponent.h"
+#include "GameFramework/Base/Interaction/GrabberComponent.h"
+#include "GameFramework/Base/Interaction/InteractableComponent.h"
+#include "GameFramework/Base/Interaction/InteractionCatalog.h"
+#include "GameFramework/Base/Interaction/InteractionSelector.h"
+#include "GameFramework/Base/Interaction/InteractionSession.h"
+#include "GameFramework/Base/Interaction/InteractorComponent.h"
+#include "GameFramework/Base/Interaction/SmartObjectComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -60,7 +62,7 @@ namespace
             candidate._objectId    = objectId;
             candidate._position    = position;
             candidate._maxDistance = 5.0f;
-            candidate._maxAngle    = 60.0f * MathUtil::DegreeToRadian;
+            candidate._maxAngle    = 60.0f * MathUtil::kDegreeToRadian;
             return candidate;
         }
 
@@ -357,7 +359,7 @@ SW_TEST_CASE( InteractionTest, CatalogReadsStepsTagsAndSlots )
     SW_ASSERT_NOT_NULL( pUnlock );
     SW_EXPECT_TRUE( pUnlock->_requiredTags.hasTag( TagID::request( "Item.Key" ) ) );
     SW_EXPECT_TRUE( pUnlock->_authority == InteractionAuthority::Server );
-    SW_EXPECT_NEAR_EQUAL( 70.0f * MathUtil::DegreeToRadian, pUnlock->_maxAngle, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 70.0f * MathUtil::kDegreeToRadian, pUnlock->_maxAngle, 1.0e-4f );
     const SmartObjectDef* pBench = catalog.findSmartObject( "Bench" );
     SW_ASSERT_NOT_NULL( pBench );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), pBench->_listSlot.size() );
@@ -444,4 +446,143 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
     SW_ASSERT_NOT_NULL( pAfter );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pBefore->_maxDistance, 1e-4f ); // 옛 정의는 아직 산다
     SW_EXPECT_NEAR_EQUAL( 5.0f, pAfter->_maxDistance, 1e-4f );
+}
+
+/**
+ * @brief [InteractionTest] 상호작용 표를 고쳐 다시 읽으면 스마트 오브젝트가 다음 틱에 새 자리 정의를 쓰고, 이미 차지한 자리는 이어진다
+ * @details 정의를 onPostLoad 에서만 찾으면 표를 고쳐도 다시 시작할 때까지 옛 자리 수로 돈다.
+ */
+SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
+{
+    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    const string path = FileUtil::joinPath( test::makeTempPath( "smartreload" ), "bench.interactions.xml" );
+    FileUtil::ensureParentDirectoryExists( path );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><SmartObject id="Bench"><Slot id="Left" offset="-0.5,0,0" tags="Activity.Sit"/></SmartObject></Interactions>)" ) );
+
+    AssetManager  resources;
+    ModuleService service{};
+    service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::AssetManager )] = &resources;
+    game::bindGameService( service );
+
+    GameObjectManager     manager;
+    GameObject*           pBench  = manager.createGameObject( hashed_string( "Bench" ) );
+    GameObject*           pSitter = manager.createGameObject( hashed_string( "Sitter" ) );
+    SmartObjectComponent* pSmart  = pBench != nullptr ? pBench->addComponent<SmartObjectComponent>() : nullptr;
+    int32                 before  = -1;
+    int32                 after   = -1;
+    bool                  bKept   = false;
+    if ( pSmart != nullptr && pSitter != nullptr )
+    {
+        pSmart->setCatalogPath( path );
+        pSmart->setSmartObjectId( hashed_string( "Bench" ) );
+        before = pSmart->getSlotCount();
+        (void)pSmart->claimSlot( *pSitter, 0 );
+        SW_EXPECT_TRUE( FileUtil::writeTextFile(
+            path, R"(<Interactions><SmartObject id="Bench"><Slot id="Left" offset="-0.5,0,0" tags="Activity.Sit"/><Slot id="Right" offset="0.5,0,0" tags="Activity.Sit"/></SmartObject></Interactions>)" ) );
+        IAssetCache* pCache = resources.findAssetCache( "InteractionCatalog" );
+        if ( pCache != nullptr )
+            pCache->reload( path, nullptr );
+        pSmart->onTick( 0.0f );
+        after = pSmart->getSlotCount();
+        bKept = pSmart->findSlotOf( *pSitter ) == 0;
+    }
+    game::unbindGameService();
+
+    SW_ASSERT_NOT_NULL( pSmart );
+    SW_EXPECT_EQUAL( 1, before );
+    SW_EXPECT_EQUAL( 2, after );
+    SW_EXPECT_TRUE( bKept );
+}
+
+/**
+ * @brief [InteractionTest] 하는 쪽은 등록된 대상(`ComponentRegistry`)에서 고른다 — 씬 전수 훑기로 고른 것과 자리마다 같고, 모듈을 내렸다 다시 붙여도 목록이 맞다
+ * @details 후보를 등록부에서 모으고 닿지 않는 것을 미리 거르므로, 등록이 빠지거나(대상이 사라진다) 죽은 것이 남거나(해제된 메모리) 거르기가 고르기와
+ *          다르면 여기서 갈린다. 동률은 오브젝트 id 로 가르므로 모은 순서와 무관하다.
+ */
+SW_TEST_CASE( InteractionTest, RegistryCandidatesMatchFullSceneScan )
+{
+    GameObjectManager manager;
+    uint32            state    = 777u;
+    const auto        nextUnit = [&state]()
+    {
+        state = state * 1664525u + 1013904223u;
+        return static_cast<float32>( ( state >> 8 ) % 10000u ) / 10000.0f;
+    };
+    vector<InteractableComponent*> listInteractable;
+    for ( uint32 index = 0; index < 300; ++index )
+    {
+        GameObject* pObject = manager.createGameObject( hashed_string( "Prop" ) );
+        pObject->addComponent<SceneComponent>()->setLocalPosition( float3{ nextUnit() * 20.0f - 10.0f, 0.0f, nextUnit() * 20.0f - 10.0f } );
+        if ( index % 6 != 0 )
+            continue;
+        InteractionDef def                   = InteractionTestInternal::makeDef( "Use", InteractionInputMode::Press );
+        def._maxDistance                     = 1.5f + nextUnit() * 4.0f;
+        def._maxAngle                        = nextUnit() < 0.5f ? 0.0f : 1.2f;
+        InteractableComponent* pInteractable = pObject->addComponent<InteractableComponent>();
+        pInteractable->setDefinition( def );
+        pInteractable->setEnabled( nextUnit() > 0.2f );
+        listInteractable.push_back( pInteractable );
+    }
+    GameObject*          pPlayer     = manager.createGameObject( hashed_string( "Player" ) );
+    SceneComponent*      pPlayerRoot = pPlayer->addComponent<SceneComponent>();
+    InteractorComponent* pInteractor = pPlayer->addComponent<InteractorComponent>();
+    pInteractor->setEyeOffset( float3{} );
+    SW_ASSERT_EQUAL( listInteractable.size(), manager.getComponentRegistry().getAll<InteractableComponent>().size() );
+
+    /** @brief 전수 훑기로 고른 대상(없으면 무효 핸들)입니다 — 등록부 이전의 고르기 그대로. */
+    const auto selectByScan = [&manager, pPlayer]()
+    {
+        InteractionViewer viewer;
+        viewer._space    = InteractionSpace::Space3D;
+        viewer._objectId = pPlayer->getObjectId();
+        viewer._position = pPlayer->getPrimarySceneComponent()->getWorldPosition();
+        viewer._forward  = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pPlayer->getPrimarySceneComponent()->getWorldMatrix() );
+        vector<InteractionCandidate> listCandidate;
+        manager.forEachComponentOfType<InteractableComponent>( [&]( InteractableComponent* pInteractable )
+        {
+            const GameObject* pObject = pInteractable->getOwner();
+            if ( pObject == pPlayer || pInteractable->isActive() == false || pInteractable->isAvailableFor( *pPlayer ) == false )
+                return;
+            InteractionCandidate candidate;
+            candidate._position    = pObject->getPrimarySceneComponent()->getWorldPosition();
+            candidate._objectId    = pObject->getObjectId();
+            candidate._maxDistance = pInteractable->getDefinition()->_maxDistance;
+            candidate._maxAngle    = pInteractable->getDefinition()->_maxAngle;
+            candidate._priority    = pInteractable->getPriority();
+            listCandidate.push_back( candidate );
+        } );
+        const int32 best = InteractionSelector::selectBest( viewer, listCandidate, nullptr );
+        return best >= 0 ? GameObjectHandle::make( listCandidate[static_cast<size_t>( best )]._objectId ) : GameObjectHandle{};
+    };
+
+    manager.beginPlay();
+    uint32 mismatches = 0;
+    uint32 focused    = 0;
+    for ( uint32 spot = 0; spot < 60; ++spot )
+    {
+        pPlayerRoot->setLocalPosition( float3{ nextUnit() * 20.0f - 10.0f, 0.0f, nextUnit() * 20.0f - 10.0f } );
+        pPlayerRoot->setLocalRotation( float3{ 0.0f, nextUnit() * 6.28f, 0.0f } );
+        InteractionTestInternal::tickFrames( manager, 1, pInteractor, false );
+        const GameObjectHandle expected = selectByScan();
+        mismatches += pInteractor->getFocus() == expected ? 0u : 1u;
+        focused += expected.isValid() ? 1u : 0u;
+    }
+    SW_EXPECT_EQUAL( 0u, mismatches );
+    SW_EXPECT_TRUE( focused > 5u ); // 고를 것이 있는 자리가 충분해야 "같다" 가 뜻이 있다
+
+#if !defined( SW_SHIPPING )
+    // 모듈 리로드(Dev 만 — 배포 구성에는 모듈을 내리는 길이 없다): 그 모듈의 컴포넌트를 모두 내리면 목록이 비고, 다시 붙이면 새 것만 든다.
+    const TypeInfo* pType = InteractableComponent::StaticType();
+    SW_ASSERT_NOT_NULL( pType );
+    manager.endPlay();
+    (void)manager.destroyComponentsOfModule( pType->_moduleName.c_str() );
+    manager.processDeferredDestruction();
+    SW_EXPECT_TRUE( manager.getComponentRegistry().getAll<InteractableComponent>().empty() );
+    GameObject*            pDoor  = manager.createGameObject( hashed_string( "Door" ) );
+    InteractableComponent* pAgain = pDoor->addComponent<InteractableComponent>();
+    SW_ASSERT_NOT_NULL( pAgain );
+    const ComponentRegistry::View<InteractableComponent> listAfter = manager.getComponentRegistry().getAll<InteractableComponent>();
+    SW_ASSERT_EQUAL( size_t( 1 ), listAfter.size() );
+    SW_EXPECT_TRUE( listAfter[0] == pAgain );
+#endif
 }

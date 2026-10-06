@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Movement/LocomotionMath.h"
+#include "GameFramework/Base/Movement/LocomotionMath.h"
 
 namespace sw
 {
@@ -61,6 +61,8 @@ namespace sw
         float32 _hitPause;
         PROPERTY( Category = "Avatar", DisplayName = "Turn Rate", Tooltip = "Fastest the body turns to the view direction", Min = 0.0, Units = "rad/s" )
         float32 _turnRate;
+        PROPERTY( Category = "Avatar", DisplayName = "Layer Blend Rate", Tooltip = "How fast the aim and shoot layer weights follow their target", Min = 0.0 )
+        float32 _layerBlendRate;
 
         LocomotionDirectionFilter _locomotion;
 

@@ -153,7 +153,7 @@ namespace sw
         _targetPelvisReference     = _targetBuffer.getModelPosition( _targetPelvis );
         const float32 sourceHeight = _sourcePelvisReference._y - _sourceRootReference._y;
         const float32 targetHeight = _targetPelvisReference._y - _targetRootReference._y;
-        _heightRatio               = ( MathUtil::abs( sourceHeight ) > MathUtil::Epsilon ) ? targetHeight / sourceHeight : 1.0f;
+        _heightRatio               = ( MathUtil::abs( sourceHeight ) > MathUtil::kEpsilon ) ? targetHeight / sourceHeight : 1.0f;
         _bInitialized              = SW_TRUE;
         return true;
     }

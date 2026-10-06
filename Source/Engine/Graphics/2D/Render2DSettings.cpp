@@ -162,7 +162,7 @@ namespace sw
                 if ( axisText.empty() == false )
                 {
                     float3 axis{};
-                    if ( Internal::parseFloat3( axisText, axis ) == false || axis.getLengthSquared() <= MathUtil::Epsilon )
+                    if ( Internal::parseFloat3( axisText, axis ) == false || axis.getLengthSquared() <= MathUtil::kEpsilon )
                     {
                         SW_LOG_ERROR( "%#: transparency sort axis '%#' must be three numbers with a non-zero length", sourceName, axisText );
                         return false;

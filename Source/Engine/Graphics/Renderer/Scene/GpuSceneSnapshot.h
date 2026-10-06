@@ -6,6 +6,8 @@
  *          소유 규칙(shared_ptr 로 소유를 함께 싣는다)은 `GpuSceneSnapshot` 주석과 Scripts/lint/gate/CheckRenderOwnership.py 참고.
  */
 #pragma once
+#include "Core/Common/Defines.h"
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
@@ -21,9 +23,9 @@ namespace sw
     class Mesh;
 
     /// @brief 배치에 머티리얼 데이터 그룹이 없음을 뜻합니다(GpuMeshBatch::_materialGroup).
-    inline constexpr uint32 kInvalidMaterialGroup = 0xFFFFFFFFu;
+    inline constexpr uint32 kInvalidMaterialGroup = invalid_index::kUint32;
     /// @brief 배치에 셰이더 퍼뮤테이션이 없음을 뜻합니다. 그러면 패스가 자기 PSO 로 그립니다(GpuMeshBatch::_shaderPermutation).
-    inline constexpr uint32 kInvalidShaderPermutation = 0xFFFFFFFFu;
+    inline constexpr uint32 kInvalidShaderPermutation = invalid_index::kUint32;
 
     /**
      * @brief GPU 인스턴스 하나입니다(월드 행렬 · 바운드 · 배치 인덱스 · 머티리얼 원소 인덱스 · 블렌드 · 회전 시드 · 스프라이트 프레임과 색).
@@ -129,6 +131,27 @@ namespace sw
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
         /** @brief 배치의 머티리얼 인스턴스입니다. RT 가 upload() 에서 updateRhi 합니다. 수명은 이 shared_ptr 이 쥐어, 패킷이 살아 있는 동안 삽니다. */
         shared_ptr<MaterialInstance> _materialInstance;
+
+        /**
+         * @brief 두 배치가 머티리얼 쪽에서 한 멀티 드로우로 묶일 수 있는가입니다 — 버퍼 · SRV · 원소 수 · 텍스처가 같아야 하고, 머티리얼 CB 는
+         *        셰이더가 그 슬롯을 걸 때만(@p bShaderBindsMaterialCb) 본다.
+         * @details GPUScene 경로의 셰이더는 머티리얼을 구조버퍼(`g_SwMaterials`, t9)에서 인스턴스의 `_materialIndex` 로 읽어 CB 슬롯이 없다 —
+         *          그런 셰이더에서 `_materialCb` 를 키에 넣으면 깊이순으로 섞인 투명 배치들이 그림에 영향 없는 값 때문에 하나씩 따로 그려진다
+         *          (큐브 8000 · 도형 8 종: 배치 1795 개가 드로우 1206 회, 이 값을 빼면 3 회이고 화면은 같다).
+         */
+        static bool canShareMaterialBinding( const GpuMeshBatch& head, const GpuMeshBatch& other, bool bShaderBindsMaterialCb )
+        {
+            if ( other._materialBuffer != head._materialBuffer || other._materialSrv != head._materialSrv || other._materialCount != head._materialCount )
+                return false;
+            if ( bShaderBindsMaterialCb && other._materialCb != head._materialCb )
+                return false;
+            for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
+            {
+                if ( other._arrMaterialTexSrv[texIndex] != head._arrMaterialTexSrv[texIndex] )
+                    return false;
+            }
+            return true;
+        }
     };
 } // namespace sw
 
@@ -177,7 +200,7 @@ namespace sw
         size_t operator()( const GpuMaterialElementKey& key ) const
         {
             size_t hash = reinterpret_cast<size_t>( key._pMaterial ) * 1315423911u;
-            hash ^= reinterpret_cast<size_t>( key._pInstance ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= reinterpret_cast<size_t>( key._pInstance ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             return hash;
         }
     };
@@ -246,6 +269,24 @@ namespace sw
         uint32      _boneCount{ 0 };
         uint32      _firstMorphWeight{ 0 }; ///< `GpuSceneSnapshot::_pListMorphWeight` 안의 이 메시 모프 가중치 시작
         uint32      _morphWeightCount{ 0 }; ///< 모프 가중치 수(0 이면 모프 없음)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct GpuViewTransparentOrder
+     * @brief 추가 뷰 하나의 투명 그리기 순서입니다. 주 뷰의 순서(꼬리 인스턴스 배치)는 그대로 두고 이 뷰가 다르게 그릴 것만 싣습니다.
+     * @details GT 가 그 뷰의 눈 · 시선 축으로 꼬리를 다시 정렬해 만든다(`GpuSceneBuilder::buildViewTransparentOrders`). RT 는 순번 표를 정렬 디스패치에,
+     *          꼬리 슬롯 표를 컬링이 없는 백엔드의 인스턴스 슬롯 스트림에, 배치 순서를 투명 패스 드로우 순서에 쓴다.
+     */
+    struct GpuViewTransparentOrder
+    {
+        shared_ptr<const vector<uint32>> _pListRank;      ///< 꼬리 인스턴스(꼬리 시작 기준)마다 이 뷰에서 그리는 순번(0 = 가장 먼저 = 가장 멀다)
+        shared_ptr<const vector<uint32>> _pListTailSlot;  ///< 배치마다 안쪽을 이 뷰 순서로 다시 놓은 꼬리 인스턴스 번호(전역) — 꼬리 길이와 같다
+        vector<uint32>                   _listBatchOrder; ///< 이 뷰에서 투명 배치를 그리는 순서(`_listTransparentBatch` 의 번호)
+        uint64                           _viewId{ 0 };    ///< `RenderViewRequest::_viewId`
+        uint32                           _tailBase{ 0 };  ///< 꼬리의 첫 인스턴스 번호(불투명 인스턴스 수)
     };
 } // namespace sw
 
@@ -323,6 +364,8 @@ namespace sw
          *          작은 업로드가 도리어 비싸므로, 빌더가 개수 상한을 넘기면 전체로 돌립니다.
          */
         vector<GpuInstanceRun> _listDirtyInstanceRun;
+        /// @brief 이번 프레임에 그리는 추가 뷰마다의 투명 순서입니다. 뷰가 투명을 안 보거나 꼬리가 없으면 비어 있습니다(그 뷰는 주 순서로 그린다).
+        vector<GpuViewTransparentOrder> _listViewTransparentOrder;
 
         /** @brief 인스턴스 배열을 반환합니다. 아직 발행 전이면 빈 배열입니다. */
         const vector<GpuInstance>& getInstances() const

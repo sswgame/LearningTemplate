@@ -143,7 +143,7 @@ namespace sw
         // 경로는 **실시간 컴파일이 실제로 쓰는 요청**으로 정한다 — 아래 3순위가 그 요청으로 컴파일해 여기에 쓰고, 핫 리로드도 같은 요청으로 쓴다.
         const ShaderCompileDesc liveDesc       = makeLiveCompileDesc( desc );
         const string            localCachePath = makeLocalCachePath( liveDesc );
-        if ( FileUtil::fileExists( localCachePath ) )
+        if ( FileUtil::exists( localCachePath ) )
         {
             // 경로에 이미 유효 소스 해시가 들어 있다. 찾혔다는 것이 곧 "이 소스에서 나온 것" 이다.
             {
@@ -176,7 +176,7 @@ namespace sw
         if ( absPath.empty() == false )
         {
             const string precookedAbsPath = ResourceUtil::getResourcePath( precookedRelPath );
-            if ( precookedAbsPath.empty() == false && FileUtil::fileExists( precookedAbsPath ) )
+            if ( precookedAbsPath.empty() == false && FileUtil::exists( precookedAbsPath ) )
             {
                 const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( precookedAbsPath ) );
                 if ( ShaderCooker::isCookedOutputCurrent( binDirAbs, absPath ) == false )

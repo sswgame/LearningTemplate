@@ -164,6 +164,31 @@ namespace sw
 #endif
     }
 
+    bool MemoryProfiler::getPlatformHeapTotals( uint64& outTotalBytes, uint64& outRequestCount )
+    {
+        outTotalBytes   = 0;
+        outRequestCount = 0;
+#if defined( SW_HAS_CRT_LEAK_CHECK )
+        _CrtMemState state{};
+        _CrtMemCheckpoint( &state );
+        outTotalBytes = static_cast<uint64>( state.lTotalCount );
+
+        // 요청 번호는 할당마다 하나씩 오른다. 새 블록의 번호가 곧 지금까지의 할당 수다(이 탐침 하나가 더해진다).
+        void* pProbe = _malloc_dbg( 1, _NORMAL_BLOCK, __FILE__, __LINE__ );
+        if ( pProbe == nullptr )
+            return false;
+        LONG       requestNumber{ 0 }; // _CrtIsMemoryBlock 이 long* 을 받는다(Windows 갈래만)
+        const bool bKnown = _CrtIsMemoryBlock( pProbe, 1, &requestNumber, nullptr, nullptr ) != 0;
+        _free_dbg( pProbe, _NORMAL_BLOCK );
+        if ( bKnown == false || requestNumber <= 0 )
+            return false;
+        outRequestCount = static_cast<uint64>( requestNumber );
+        return true;
+#else
+        return false;
+#endif
+    }
+
     void MemoryProfiler::enableMemoryLeakChecks()
     {
 #if defined( SW_HAS_CRT_LEAK_CHECK )
@@ -541,6 +566,14 @@ namespace sw
                                                       getMemoryTagName( growth._tag ), growth._byteDelta, growth._countDelta );
         }
         return static_cast<uint32>( listGrowth.size() );
+    }
+
+    uint64 MemoryProfiler::getTotalAllocatedBytes() const
+    {
+        uint64 totalBytes{ 0 };
+        for ( const MemoryProfileStats& stat : _arrStat )
+            totalBytes += stat._totalAllocatedBytes.load( std::memory_order_relaxed );
+        return totalBytes;
     }
 
     uint64 MemoryProfiler::getTotalAllocationCount() const

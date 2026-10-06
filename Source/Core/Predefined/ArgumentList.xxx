@@ -13,57 +13,83 @@
  *
  *          줄 순서 = CommandLineArgument 열거값 = _listArgument 인덱스이고, 이 일치 덕분에 findArgument 가 이름 조회 없이
  *          O(1) 인덱싱으로 끝납니다. initialize() 가 줄마다 이 일치를 확인합니다.
+ *
+ *          줄 바로 위 `//` 는 사용자 설명이고 빈 줄까지의 줄 모두에 붙습니다(생성 문서 `docs/Config/CommandLine.md`). 짝인 줄은 빈 줄 없이 붙여 씁니다.
+ *
+ *          bUseDefaultValue 를 켜면 getArgument 의 반환값이 더 이상 "이 인자가 주어졌다" 는 뜻이 아닙니다. 창 크기의 기본값은
+ *          **EngineConfig 가 가집니다**(`_window._width` / `_height`). 여기서 켜 두면 인자를 주지 않아도 getArgument 가 등록된
+ *          기본값으로 true 를 반환하고, 호출하는 쪽의 `uint32 h = config._window._height; getArgument( HEIGHT, h );` 패턴이 설정값을
+ *          **항상** 덮어씁니다(기본값이 설정값과 같은 쪽은 우연히 맞아 알아채기 어렵다). 그래서 WIDTH · HEIGHT 의 기본값(0)은 쓰이지 않습니다.
+ *          기본값이 false 인 단독 플래그는 켤 이유가 없습니다 — "주지 않았다" 와 "false 로 주었다" 를 구별할 수 없게 될 뿐입니다.
+ *          주지 않았는지 알고 싶으면 isArgumentProvided 를 씁니다.
  */
 
-// bUseDefaultValue 를 켜면 getArgument 의 반환값이 더 이상 "이 인자가 주어졌다" 는 뜻이 아니다.
-// 창 크기의 기본값은 **EngineConfig 가 가진다**(`_window._width` / `_height`). 여기서 켜 두면 인자를 주지 않아도
-// getArgument 가 등록된 기본값으로 true 를 반환하고, 호출하는 쪽의
-//   uint32 h = config._window._height;  getArgument( HEIGHT, h );
-// 패턴이 설정값을 **항상** 덮어쓴다(1280×720 설정이 무시되고 창이 1280×1280 으로 뜨는 식 — 기본값이 설정값과 같은
-// 쪽은 우연히 맞아 알아채기 어렵다).
-//
-// 기본값이 false 인 단독 플래그는 켤 이유가 전혀 없다. 켜 봐야 "주지 않았다" 와 "false 로 주었다" 를 구별할 수 없게
-// 될 뿐이고, 호출하는 쪽은 반환값을 믿지 못해 `getArgument(...) && bFlag` 로 한 번 더 확인해야 한다(RHI.cpp 가 실제로
-// 그렇게 쓴다). 주지 않았는지 알고 싶으면 isArgumentProvided 를 쓴다.
-SW_REGISTER_ARGUMENT( WIDTH, 1280, false, "W" )
-SW_REGISTER_ARGUMENT( HEIGHT, 1280, false, "H" )
+// 창 클라이언트 영역 너비 · 높이(픽셀) — EngineConfig · 플레이어 해상도보다 이긴다
+SW_REGISTER_ARGUMENT( WIDTH, 0, false, "W" )
+SW_REGISTER_ARGUMENT( HEIGHT, 0, false, "H" )
+
+// 수직 동기화를 켠다 — EngineConfig · 플레이어 값보다 이긴다
 SW_REGISTER_ARGUMENT( VSYNC, false, false, "vsync" )
-// RHI 백엔드 플래그(-dx11 · -vk …)는 쿠킹 표(Config/Engine/CookContract.json)의 줄마다 하나다 — 별칭을 셰이더 폴더 · 쿠커와
-// 같은 표에서 읽는다.
+
+// 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름
 #include "sw/config/CookContract.gen.h"
 #define SW_REGISTER_RHI_BACKEND_ARGUMENT( Backend, ShaderFolder, ShaderTarget, Argument, ... ) SW_REGISTER_ARGUMENT( Argument, false, false, __VA_ARGS__ )
 SW_RHI_BACKEND_TABLE( SW_REGISTER_RHI_BACKEND_ARGUMENT )
 #undef SW_REGISTER_RHI_BACKEND_ARGUMENT
+
+// 에디터 모듈을 올린다(Dev 만) — 없으면 에디터 없이 게임만 뜬다
 SW_REGISTER_ARGUMENT( ENABLE_EDITOR, false, false, "EnableEditor" )
+
+// 시작 언어(`ko_kr` · `en_us` …)
 SW_REGISTER_ARGUMENT( LANGUAGE, "", false, "lang" )
+
+// 셰이더를 모든 백엔드 바이너리로 굽고 끝낸다(헤드리스)
 SW_REGISTER_ARGUMENT( COOK_SHADERS, false, false, "cook-shaders" )
+
+// 씬 · 프리팹을 바이너리(SCN1 · PFB2)로 굽고 끝낸다 — `-cooked-dir=<폴더>` 가 쓸 곳(CookAssets.py 가 부른다)
 SW_REGISTER_ARGUMENT( COOK_SCENES, false, false, "cook-scenes" )
 SW_REGISTER_ARGUMENT( COOKED_DIR, "", false, "cooked-dir" )
+
+// 전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<SW_ACTIVE_GAME>.json`. Shipping 도 디스크에서 읽는다.
+SW_REGISTER_ARGUMENT( SERVER_CONFIG, "", false, "server-config" )
+
+// 전용 서버를 Windows 서비스(SCM)로 돈다(`Server --service`). SCM 이 띄운 프로세스만 된다.
+SW_REGISTER_ARGUMENT( SERVICE, false, false, "service" )
+
 // 등록된 리플렉션 타입(엔진 · GameFramework · 킷 · 게임)으로 Markdown API 문서를 그 폴더에 쓰고 끝난다(헤드리스). 빌드 산출물이라 커밋하지 않는다.
 SW_REGISTER_ARGUMENT( WRITE_REFLECTION_DOCS, "", false, "write-reflection-docs" )
+
 // 텍스처 원본(`textures_raw/`)을 DDS 로 임포트한다 · 원본과 DDS 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
 SW_REGISTER_ARGUMENT( IMPORT_TEXTURES, false, false, "import-textures" )
 SW_REGISTER_ARGUMENT( CHECK_TEXTURES, false, false, "check-textures" )
+
 // 모델 원본(`models_raw/` 의 glTF)을 `.mesh` 로 임포트한다 · 원본과 `.mesh` 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
 SW_REGISTER_ARGUMENT( IMPORT_MODELS, false, false, "import-models" )
 SW_REGISTER_ARGUMENT( CHECK_MODELS, false, false, "check-models" )
+
 // 음성(`voice/` 폴더의 .wav · .ogg)을 분석해 곁에 비즘 트랙(`.visemes.json`)을 쓴다 — 립싱크 오프라인 분석(엔진 일, 헤드리스).
 SW_REGISTER_ARGUMENT( IMPORT_LIPSYNC, false, false, "import-lipsync" )
+
 // 리타깃 굽기 — 값은 `<프로필 *.retarget.json>,<원본 .animclip>,<출력 .animclip>`. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 굽고 끝낸다(헤드리스).
 SW_REGISTER_ARGUMENT( BAKE_RETARGET, "", false, "bake-retarget" )
+
 // 프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits).
 SW_REGISTER_ARGUMENT( RENDER_PORTRAITS, "", false, "render-portraits" )
 SW_REGISTER_ARGUMENT( PORTRAIT_SIZE, 256, false, "portrait-size" )
 SW_REGISTER_ARGUMENT( PORTRAIT_DIR, "", false, "portrait-dir" )
+
 // 높이장 원본(`heightfields_raw/` 의 16 비트 PNG · `.r16`)을 `.heightfield` 로 임포트한다 · 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다.
 SW_REGISTER_ARGUMENT( IMPORT_HEIGHTFIELDS, false, false, "import-heightfields" )
 SW_REGISTER_ARGUMENT( CHECK_HEIGHTFIELDS, false, false, "check-heightfields" )
+
 // 로컬라이제이션 글 수집(`LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다(CI). 소스 트리가 있어야 한다.
 // `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다.
 SW_REGISTER_ARGUMENT( GATHER_TEXT, false, false, "gather-text" )
 SW_REGISTER_ARGUMENT( CHECK_TEXT, false, false, "check-text" )
 SW_REGISTER_ARGUMENT( LOC_PROJECT, "", false, "loc-project" )
+
 // 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`).
 SW_REGISTER_ARGUMENT( EXPORT_PO, false, false, "export-po" )
 SW_REGISTER_ARGUMENT( IMPORT_PO, "", false, "import-po" )
+
 // 크래시 보고 프로세스 `--crash-reporter=<묶음 폴더>` 는 이 목록에 없다 — App 의 main 이 엔진을 세우기 전에 읽고 끝낸다(`CrashReportService::runReporterFromCommandLine`).

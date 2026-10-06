@@ -30,12 +30,12 @@ namespace test
     {
         // 반환은 이 변수 하나로만 한다 — 갈래마다 다른 객체를 돌려주면 NRVO 가 막힌다(-Wnrvo).
         sw::string candidate = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), AppTestUtilInternal::getAppExecutableName() );
-        if ( sw::FileUtil::fileExists( candidate ) )
+        if ( sw::FileUtil::exists( candidate ) )
             return candidate;
 
         const sw::string executableFolder = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
         candidate                         = sw::FileUtil::joinPath( executableFolder, AppTestUtilInternal::getAppExecutableName() );
-        if ( sw::FileUtil::fileExists( candidate ) == false )
+        if ( sw::FileUtil::exists( candidate ) == false )
             candidate.clear();
         return candidate;
     }

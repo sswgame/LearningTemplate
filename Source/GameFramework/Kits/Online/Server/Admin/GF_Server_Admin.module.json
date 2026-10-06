@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Server_Admin",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "GM 도구 키트(서버) — 권한 등급 문지기 · 조회 · 지급/회수 · 제재 · 우편 · 일괄 지급 · 전체 우편 · 감사 열람 · 권한, 모두 감사 + 멱등 (온라인 게임)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Admin"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

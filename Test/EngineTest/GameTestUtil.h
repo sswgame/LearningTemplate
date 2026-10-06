@@ -3,7 +3,7 @@
  * @brief GameFramework 단위 테스트 격리를 위한 테스트 유틸리티.
  */
 #pragma once
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameService.h"
 
 namespace sw::test
 {

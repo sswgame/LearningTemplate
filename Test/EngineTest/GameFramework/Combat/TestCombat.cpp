@@ -2,11 +2,16 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Combat/Ballistics.h"
-#include "GameFramework/Combat/DamageMath.h"
-#include "GameFramework/Combat/LockOnSelector.h"
-#include "GameFramework/Combat/TurnOrder.h"
-#include "GameFramework/Combat/Weapon.h"
+#include "Engine/Common/EngineDefines.h"
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Physics/PhysicsSystem.h"
+
+#include "GameFramework/Base/Combat/Ballistics.h"
+#include "GameFramework/Base/Combat/DamageMath.h"
+#include "GameFramework/Base/Combat/LockOnSelector.h"
+#include "GameFramework/Base/Combat/TurnOrder.h"
+#include "GameFramework/Base/Combat/Weapon.h"
+#include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -51,7 +56,7 @@ SW_TEST_CASE( CombatTest, WeaponDamageFallsOffWithDistanceAndScalesOnHeadshots )
 SW_TEST_CASE( CombatTest, BallisticsDropsAimsArcsAndLeadsMovingTargets )
 {
     // 낙차 — 100 m 를 100 m/s 로 1 초: ½ g.
-    SW_EXPECT_NEAR_EQUAL( 0.5f * Ballistics::kGravity, Ballistics::computeDrop( 100.0f, 100.0f, 1.0f ), 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f * sw::constant::kDefaultGravity, Ballistics::computeDrop( 100.0f, 100.0f, 1.0f ), 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, Ballistics::computeDrop( 100.0f, 100.0f, 0.0f ), 1.0e-6f );
 
     // 발사각으로 쏜 탄을 걸음으로 흘리면 목표 근처를 지난다(낮은 · 높은 탄도 모두).
@@ -62,7 +67,7 @@ SW_TEST_CASE( CombatTest, BallisticsDropsAimsArcsAndLeadsMovingTargets )
         float3 direction{};
         SW_ASSERT_TRUE( Ballistics::computeLaunchDirection( from, to, 30.0f, 1.0f, bHighArc, direction ) );
         Projectile projectile = Ballistics::launch( from, direction, 30.0f, 1.0f, 10.0f );
-        float32    bestGap    = MathUtil::MaxFloat;
+        float32    bestGap    = MathUtil::kMaxFloat;
         while ( projectile.isExpired() == false && projectile._position._y > -5.0f )
         {
             Ballistics::step( projectile, 0.001f );
@@ -173,4 +178,24 @@ SW_TEST_CASE( CombatTest, LockOnPicksCentredTargetsCyclesSidewaysAndBreaksWhenLo
     SW_EXPECT_EQUAL( 1, static_cast<int32>( selector.getTarget() ) );
     listCandidate[0]._position = float3{ 0.0f, 0.0f, 33.0f };
     SW_EXPECT_FALSE( selector.update( eye, listCandidate, 0.1f ) );
+}
+
+/**
+ * @brief [CombatTest] 탄도 · 코스터는 설정된 물리 중력 하나를 읽는다 — 물리 설정 표의 중력을 바꾸면 낙차 · 코스터 기본 중력이 따라 바뀐다
+ * @details 중력을 계산마다 숫자로 따로 적으면(탄도 9.81 · 스프링 사슬 9.8 …) 설정 표를 바꾼 날 한쪽만 그대로다. 한 출처는 `PhysicsSystem::getConfiguredGravity`.
+ */
+SW_TEST_CASE( CombatTest, BallisticsAndCoasterReadTheConfiguredPhysicsGravity )
+{
+    PhysicsSystem&        system   = engine::getPhysicsSystem();
+    const PhysicsSettings original = system.getSettings();
+    PhysicsSettings       heavy    = original;
+    heavy._gravity                 = float3{ 0.0f, -20.0f, 0.0f };
+    SW_ASSERT_TRUE( system.setSettings( heavy ) );
+
+    SW_EXPECT_NEAR_EQUAL( 20.0f, PhysicsSystem::getConfiguredGravityMagnitude(), 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f * 20.0f, Ballistics::computeDrop( 100.0f, 100.0f, 1.0f ), 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 20.0f, CoasterPhysicsParams{}._gravity, 1.0e-5f );
+
+    SW_EXPECT_TRUE( system.setSettings( original ) );
+    SW_EXPECT_NEAR_EQUAL( -original._gravity._y, Ballistics::computeDrop( 100.0f, 100.0f, 1.0f ) * 2.0f, 1.0e-3f );
 }

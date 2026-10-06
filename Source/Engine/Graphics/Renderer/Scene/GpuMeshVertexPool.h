@@ -16,6 +16,7 @@
  * 메시 집합이 바뀔 때만 다시 만듭니다(장면 로드 · 메시 추가). 정점 데이터는 CPU 사본(`Mesh::getVertices`)에서 옵니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
@@ -36,7 +37,7 @@ namespace sw
     {
     public:
         /** @brief 풀에 들어가지 못한 메시가 받는 값입니다. 그 배치는 자기 정점 버퍼로 그립니다. */
-        static constexpr uint32 kInvalidBase = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidBase = invalid_index::kUint32;
 
         GpuMeshVertexPool()                                      = default;
         ~GpuMeshVertexPool()                                     = default;

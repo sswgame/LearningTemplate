@@ -12,13 +12,13 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Combat/ResourceGauge.h"
-#include "GameFramework/Combat/Vitality.h"
-#include "GameFramework/Data/GameCatalog.h"
-#include "GameFramework/Data/StatBlock.h"
-#include "GameFramework/Data/XmlCatalog.h"
+#include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Data/GameCatalog.h"
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Data/XmlCatalog.h"
+#include "GameFramework/Base/Input/TimingJudge.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Input/TimingJudge.h"
 
 namespace sw
 {
@@ -33,7 +33,7 @@ namespace sw
     {
         hashed_string _id{};
         string        _name{};
-        hashed_string _flag{}; ///< 얻으면 켜는 플래그(비면 id 그대로)
+        hashed_string _flag{}; ///< 얻으면 켜는 플래그(비면 `ability.<id>`)
         StatBlock     _motor{};
     };
 } // namespace sw

@@ -354,14 +354,14 @@ namespace sw::editor
         EditorViewportToolbar::draw( _toolbarSettings, viewportWidth );
     }
 
-    void EditorViewportClient::drawTransformBar( const float2& anchorPos )
+    void EditorViewportClient::drawTransformBar( const float2& anchorPos, float32 maxWidth )
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;
 
         const bool bHasSelection = pContext->getEditorSelection().getSelectedObjectCount() > 0;
-        EditorViewportToolbar::drawTransformBar( _toolbarSettings, anchorPos, bHasSelection );
+        EditorViewportToolbar::drawTransformBar( _toolbarSettings, anchorPos, maxWidth, bHasSelection );
     }
 
     void EditorViewportClient::draw( const void* pTextureId, const float2& canvasSize )

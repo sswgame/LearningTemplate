@@ -1,7 +1,7 @@
 /**
  * @file INavMover.h
  * @brief 길을 따라 움직이는 것의 공통 창구 — 목적지 걸기 · 멈추기 · 상태 · 속도입니다.
- * @details 내비메시 에이전트(`NavMeshAgentComponent`, 3D 내비메시 + 군중)와 격자 행위자(`GameFramework/Navigation/NavGridMover`, 격자 A*)가
+ * @details 내비메시 에이전트(`NavMeshAgentComponent`, 3D 내비메시 + 군중)와 격자 행위자(`GameFramework/Base/Navigation/NavGridMover`, 격자 A*)가
  *          같이 구현합니다. AI(행동 트리의 이동 노드 · 감독)는 이것만 보고 어느 쪽으로 걷는지 모릅니다 — 언리얼 `UPathFollowingComponent` 의 자리.
  */
 #pragma once

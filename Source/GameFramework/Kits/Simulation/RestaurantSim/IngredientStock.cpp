@@ -2,8 +2,11 @@
 
 #include "GameFramework/Kits/Simulation/RestaurantSim/IngredientStock.h"
 
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/ItemBag.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -76,22 +79,22 @@ namespace sw
         return true;
     }
 
-    bool IngredientStock::consumeBag( const ItemBag& bag, int32 times, int64& outCost )
+    bool IngredientStock::consumeItems( const ItemStackList& items, int32 times, int64& outCost )
     {
         if ( _pInventory == nullptr || times <= 0 )
             return false;
         // 이름 순으로 돌아 결과(원가 합 · 로그)가 해시 순서에 기대지 않게 한다.
         vector<hashed_string> listItem;
-        bag.getItemIds( listItem );
+        items.getItemIds( listItem );
         std::sort( listItem.begin(), listItem.end(), HashedStringLexicalLess{} );
         for ( const hashed_string& itemId : listItem )
         {
-            if ( _pInventory->hasItem( itemId, bag.getItemCount( itemId ) * times ) == false )
+            if ( _pInventory->hasItem( itemId, items.getItemCount( itemId ) * times ) == false )
                 return false;
         }
         for ( const hashed_string& itemId : listItem )
         {
-            if ( consume( itemId, bag.getItemCount( itemId ) * times, outCost ) == false )
+            if ( consume( itemId, items.getItemCount( itemId ) * times, outCost ) == false )
                 SW_LOG_WARNING( "lost '%#' between the check and the take", itemId.c_str() );
         }
         return true;
@@ -160,5 +163,38 @@ namespace sw
     {
         std::stable_sort( _listBatch.begin(), _listBatch.end(), []( const IngredientBatch& lhs, const IngredientBatch& rhs )
         { return IngredientStockInternal::makeExpiryKey( lhs ) < IngredientStockInternal::makeExpiryKey( rhs ); } );
+    }
+
+    void IngredientStock::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listBatch.size() );
+        for ( const IngredientBatch& batch : _listBatch )
+        {
+            StateArchiveUtil::writeName( outArchive, batch._itemId );
+            outArchive << batch._unitCost;
+            outArchive << batch._count;
+            outArchive << batch._daysLeft;
+        }
+    }
+
+    bool IngredientStock::readState( Archive& archive )
+    {
+        uint32 count = 0;
+        // 묶음마다 이름(4) + 원가(8) + 개수 · 남은 날(8)
+        if ( StateArchiveUtil::readCount( archive, 20, count ) == false )
+            return false;
+        vector<IngredientBatch> listBatch( count );
+        for ( IngredientBatch& batch : listBatch )
+        {
+            if ( StateArchiveUtil::readName( archive, batch._itemId ) == false )
+                return false;
+            archive >> batch._unitCost;
+            archive >> batch._count;
+            archive >> batch._daysLeft;
+            if ( archive.isError() || batch._count < 0 )
+                return false;
+        }
+        _listBatch = std::move( listBatch );
+        return true;
     }
 } // namespace sw

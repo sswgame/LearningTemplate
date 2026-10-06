@@ -2,14 +2,14 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/AI/Schedule/ScheduleActivity.h"
-#include "GameFramework/AI/Schedule/ScheduleCatalog.h"
-#include "GameFramework/AI/Schedule/SchedulePathing.h"
-#include "GameFramework/AI/Schedule/ScheduleSaveState.h"
-#include "GameFramework/AI/Schedule/ScheduleSystem.h"
-#include "GameFramework/Navigation/GridPathfinder.h"
-#include "GameFramework/Navigation/NavGrid.h"
-#include "GameFramework/World/GameFlags.h"
+#include "GameFramework/Base/AI/Schedule/ScheduleActivity.h"
+#include "GameFramework/Base/AI/Schedule/ScheduleCatalog.h"
+#include "GameFramework/Base/AI/Schedule/SchedulePathing.h"
+#include "GameFramework/Base/AI/Schedule/ScheduleSaveState.h"
+#include "GameFramework/Base/AI/Schedule/ScheduleSystem.h"
+#include "GameFramework/Base/Navigation/GridPathfinder.h"
+#include "GameFramework/Base/Navigation/NavGrid.h"
+#include "GameFramework/Base/World/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 

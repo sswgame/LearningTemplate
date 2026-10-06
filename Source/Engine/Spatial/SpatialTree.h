@@ -26,16 +26,16 @@ namespace sw
         static constexpr AABB2D empty() noexcept
         {
             return AABB2D{
-                float2{MathUtil::MaxFloat, MathUtil::MaxFloat},
-                float2{MathUtil::MinFloat, MathUtil::MinFloat}
+                float2{MathUtil::kMaxFloat, MathUtil::kMaxFloat},
+                float2{MathUtil::kMinFloat, MathUtil::kMinFloat}
             };
         }
 
         static constexpr AABB2D infinite() noexcept
         {
             return AABB2D{
-                float2{MathUtil::MinFloat, MathUtil::MinFloat},
-                float2{MathUtil::MaxFloat, MathUtil::MaxFloat}
+                float2{MathUtil::kMinFloat, MathUtil::kMinFloat},
+                float2{MathUtil::kMaxFloat, MathUtil::kMaxFloat}
             };
         }
 

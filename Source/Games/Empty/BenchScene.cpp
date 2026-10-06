@@ -2,6 +2,7 @@
 
 #include "Games/Empty/BenchScene.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -26,7 +27,8 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
-#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Framework/MaterialTintCache.h"
 
 #include "Games/Empty/BenchCombatComponent.h"
 #include "Games/Empty/BenchMoverComponent.h"
@@ -257,6 +259,12 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchSpawnChurn, 0, "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 등록부 측정)" );
 
+    /**
+     * @brief `-gv_benchViews=N` — 격자를 둘러보는 캡처 카메라(CCTV) N 개를 둡니다(렌더 텍스처 512², 프레임마다 그린다).
+     * @details 추가 뷰의 비용(컬링 칸 · 풀 · 그림자 패스 · 기록)을 잰다. 한 프레임에 그리는 추가 뷰 수는 `gv_renderViewBudget` 이 자른다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchViews, 0, "격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함)" );
+
     BenchScene::BenchScene()
         : _listBenchMesh{}
         , _listInstanceBatch{}
@@ -267,7 +275,7 @@ namespace sw
         , _listBenchExtra{}
         , _glassMaterial{ nullptr }
         , _listChurnInstance{}
-        , _churnRandom{ 0x9E3779B9u }
+        , _churnRandom{ HashUtil::kGoldenRatio32 }
         , _churnFrame{ 0 }
         , _benchElapsed{ 0.0f }
         , _benchGridSide{ 0 }
@@ -453,7 +461,7 @@ namespace sw
                 const float4                 tint     = makeBenchColor( slot * 977u + 13u );
                 // 알파를 눈에 띄게 낮춘다 — 1.0 에 가까우면 블렌딩이 됐는지 그림으로 구분할 수 없다.
                 const float32 alpha = 0.30f + 0.15f * static_cast<float32>( slot );
-                instance->setVectorParameter( hashed_string( "color" ), float4{ tint._x, tint._y, tint._z, alpha } );
+                instance->setVectorParameter( hashed_string( kMaterialColorParameter ), float4{ tint._x, tint._y, tint._z, alpha } );
                 _listChurnInstance.push_back( instance );
                 arrTransparentMaterial[slot] = std::move( instance );
             }
@@ -491,6 +499,7 @@ namespace sw
             spawnGround( pScene, halfExtentOf( side, kBenchSpacing ) );
             _benchGridSide = side;
             frameCameras( pScene, side, kBenchSpacing );
+            spawnBenchViews( pScene, halfExtentOf( side, kBenchSpacing ) );
             SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 인스턴스 배치 %#개로 만들었습니다 (%#×%# 격자, GameObject 없음).",
                          pScene->getName(), meshCount, meshVariantCount, side, side );
             return;
@@ -510,7 +519,7 @@ namespace sw
             if ( bPerCubeMaterial && pSceneMaterial != nullptr )
             {
                 shared_ptr<MaterialInstance> instance = MaterialInstance::create( pSceneMaterial );
-                instance->setVectorParameter( hashed_string( "color" ), makeBenchColor( index ) );
+                instance->setVectorParameter( hashed_string( kMaterialColorParameter ), makeBenchColor( index ) );
                 _listChurnInstance.push_back( instance );
                 pMesh->setMaterialInstance( std::move( instance ) );
             }
@@ -529,6 +538,7 @@ namespace sw
         spawnGround( pScene, halfExtentOf( side, kBenchSpacing ) );
         _benchGridSide = side;
         frameCameras( pScene, side, kBenchSpacing );
+        spawnBenchViews( pScene, halfExtentOf( side, kBenchSpacing ) );
 
         SW_LOG_INFO( "[Bench] 메시 종류 %#개 (= 배치 수), 도형 %#종. -gv_benchMeshVariants · -gv_benchMeshShapes 로 바꾼다.",
                      meshVariantCount, shapeCount );
@@ -575,7 +585,7 @@ namespace sw
             const uint32 column = index % columns;
             const uint32 row    = index / columns;
             pMesh->setLocalPosition( float3{ origin + static_cast<float32>( column ) * kBenchCharacterSpacing, 0.0f, static_cast<float32>( row ) * kBenchCharacterSpacing } );
-            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::Pi, 0.0f } );
+            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             pAnimator->setClipFolder( kBenchCharacterClips );
             pAnimator->setInitialState( kArrBenchCharacterClip[index % SW_COUNT_OF( kArrBenchCharacterClip )] );
             if ( gv_benchCharacterStagger != 0 )
@@ -653,7 +663,7 @@ namespace sw
             pMesh->setSkeletonPath( kBenchFaceSkeleton );
             pMesh->resolveRenderAssets();
             pMesh->setLocalPosition( float3{ origin + static_cast<float32>( index ) * kBenchFaceSpacing, 0.0f, 0.0f } );
-            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::Pi, 0.0f } );
+            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             const bool bTalkClip = ( index % 2 ) == 0;
             if ( bTalkClip )
             {
@@ -719,7 +729,7 @@ namespace sw
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
             const float32 tanHalf  = MathUtil::tan( pCamera->getFieldOfViewY() * 0.5f );
-            const float32 distance = ( tanHalf > MathUtil::Epsilon ) ? ( halfExtent * 1.2f / tanHalf ) : ( halfExtent * 3.0f );
+            const float32 distance = ( tanHalf > MathUtil::kEpsilon ) ? ( halfExtent * 1.2f / tanHalf ) : ( halfExtent * 3.0f );
             if ( depth <= 0.0f )
             {
                 pCamera->setLocalPosition( float3{ 0.0f, 1.4f, -distance } );
@@ -950,6 +960,41 @@ namespace sw
         SW_LOG_INFO( "[Bench] 바닥 평면을 깔았습니다 (한 변 %#).", static_cast<int32>( size ) );
     }
 
+    void BenchScene::spawnBenchViews( Scene* pScene, float32 halfExtent )
+    {
+        if ( pScene == nullptr || gv_benchViews <= 0 )
+            return;
+        GameObjectManager* pObjects = pScene->getObjectManager();
+        if ( pObjects == nullptr )
+            return;
+        // 격자 둘레의 원 위에서 가운데를 내려다본다 — 뷰마다 다른 쪽을 봐 컬링 결과가 다르다.
+        const uint32 viewCount = static_cast<uint32>( gv_benchViews );
+        for ( uint32 viewIndex = 0; viewIndex < viewCount; ++viewIndex )
+        {
+            StringBuilder<constant::kMaxBuffer64> name;
+            name.appendFormat( "BenchView%#", viewIndex );
+            GameObject*      pObject = pObjects->createGameObject( hashed_string( name.c_str(), name.size() ) );
+            CameraComponent* pCamera = pObject != nullptr ? pObject->addComponent<CameraComponent>() : nullptr;
+            if ( pCamera == nullptr )
+                continue;
+            StringBuilder<constant::kMaxBuffer64> texture;
+            texture.appendFormat( "rendertarget/bench_view%#", viewIndex );
+            CameraRenderOutput output;
+            output._target              = CameraOutputTarget::RenderTexture;
+            output._renderTexture       = string( texture.c_str() );
+            output._renderTextureWidth  = 512;
+            output._renderTextureHeight = 512;
+            pCamera->setRole( CameraRole::Capture );
+            const float32 angle = 2.0f * MathUtil::kPi * static_cast<float32>( viewIndex ) / static_cast<float32>( viewCount );
+            pCamera->setLocalPosition( float3{ MathUtil::cos( angle ) * halfExtent * 1.5f, halfExtent * 0.6f, MathUtil::sin( angle ) * halfExtent * 1.5f } );
+            pCamera->setFarPlane( MathUtil::max( pCamera->getFarPlane(), halfExtent * 6.0f ) );
+            pCamera->lookAt( float3{ 0.0f, 0.0f, 0.0f } );
+            pCamera->setRenderOutput( output );
+            _listBenchExtra.push_back( pCamera->getHandle() );
+        }
+        SW_LOG_INFO( "[Bench] 캡처 카메라 %#개(렌더 텍스처 512²)를 격자 둘레에 두었습니다.", viewCount );
+    }
+
     void BenchScene::frameCameras( Scene* pScene, uint32 side, float32 spacing )
     {
         if ( pScene == nullptr )
@@ -976,7 +1021,7 @@ namespace sw
         const float32 halfExtent = halfExtentOf( side, spacing );
         const float32 fovY       = pCamera->getFieldOfViewY();
         const float32 tanHalf    = MathUtil::tan( fovY * 0.5f );
-        const float32 distance   = ( tanHalf > MathUtil::Epsilon ) ? ( halfExtent / tanHalf ) : ( halfExtent * 2.0f );
+        const float32 distance   = ( tanHalf > MathUtil::kEpsilon ) ? ( halfExtent / tanHalf ) : ( halfExtent * 2.0f );
 
         // 격자는 카메라 축(Z)으로도 ±halfExtent 펼쳐져 있다. 중심까지의 거리만 쓰면 가까운 쪽이
         // 화면을 넘치고, 깊이까지 다 빼면 격자가 점처럼 작아진다 — 절반만 더한다.
@@ -1131,7 +1176,7 @@ namespace sw
             const float4  tint   = makeBenchColor( nextChurnRandom() );
             const bool    bGlass = ( pInstance->getParent() != nullptr ) && ( pInstance->getParent() == _glassMaterial.get() );
             const float32 alpha  = bGlass ? ( 0.25f + 0.35f * static_cast<float32>( nextChurnRandom() & 0xFFu ) / 255.0f ) : 1.0f;
-            pInstance->setVectorParameter( hashed_string( "color" ), float4{ tint._x, tint._y, tint._z, alpha } );
+            pInstance->setVectorParameter( hashed_string( kMaterialColorParameter ), float4{ tint._x, tint._y, tint._z, alpha } );
         }
         else
         {

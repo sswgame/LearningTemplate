@@ -118,7 +118,7 @@ namespace sw
         const float32 scaleY     = MathUtil::sqrt( m._12 * m._12 + m._22 * m._22 + m._32 * m._32 );
         const float3  toEye      = center - view._position;
         const bool    bEyeInside = toEye.getLengthSquared() <= radius * radius;
-        if ( bEyeInside || clipW <= MathUtil::Epsilon )
+        if ( bEyeInside || clipW <= MathUtil::kEpsilon )
             return 1.0f;
         return radius * scaleY / clipW;
     }

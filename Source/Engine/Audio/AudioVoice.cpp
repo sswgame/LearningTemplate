@@ -58,7 +58,7 @@ namespace sw
         else
         {
             // 등전력: θ = (pan + 1)·π/4, L = cos θ, R = sin θ.
-            const float32 theta = ( clampedPan + 1.0f ) * MathUtil::Pi * 0.25f;
+            const float32 theta = ( clampedPan + 1.0f ) * MathUtil::kPi * 0.25f;
             _targetGainLeft     = volume * MathUtil::cos( theta );
             _targetGainRight    = volume * MathUtil::sin( theta );
         }
@@ -76,12 +76,12 @@ namespace sw
         _bStopAtFade     = bStopAtEnd ? SW_TRUE : SW_FALSE;
         if ( durationFrames == 0 )
         {
-            _fadeStep = MathUtil::MaxFloat;
+            _fadeStep = MathUtil::kMaxFloat;
             return;
         }
         _fadeStep = MathUtil::abs( _fadeTarget - _fadeGain ) / static_cast<float32>( durationFrames );
         if ( _fadeStep <= 0.0f )
-            _fadeStep = MathUtil::MaxFloat;
+            _fadeStep = MathUtil::kMaxFloat;
     }
 
     bool AudioVoice::stepFade()

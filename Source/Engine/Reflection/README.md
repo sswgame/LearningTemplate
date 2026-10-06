@@ -1,6 +1,6 @@
 # Reflection (리플렉션 런타임 코어)
 
-> **[🏠 위키 홈으로 돌아가기](../../../README.md)** | **[📖 서브시스템 목록](../../../docs/02_EngineSubsystems.md)**
+> **[🏠 위키 홈으로 돌아가기](../../../README.md)** | **[📖 문서 지도](../../../docs/02_DocumentMap.md)**
 
 C++ 타입의 **이름 · 필드 · 함수 · enum** 정보를 런타임에 조회하고,  
 직렬화·에디터·핫리로드·컴포넌트 생성(`TypeInfo::_addComponent`)이 그걸 쓰게 하는 레이어입니다.
@@ -198,8 +198,6 @@ PROPERTY( SaveGame )                              // 타입에 하나라도 있�
 int32 _gold = 0;
 PROPERTY( Interp )                                // 시퀀서 값 트랙이 섞는다 — 숫자 · float2/3/4 · quaternion 만(그 밖은 파서 오류)
 float32 _opacity = 1.0f;
-PROPERTY( ConfigSection = "Audio", ConfigKey = "master" )   // Config 이기도 하다. 섹션 기본 = 선언 타입 이름, 키 기본 = 프로퍼티 이름
-float32 _masterVolume = 1.0f;
 ```
 
 | 쓰는 쪽 | 부를 것 |
@@ -207,7 +205,6 @@ float32 _masterVolume = 1.0f;
 | 네트워크 | `PropertyRoleUtil::collectReplicatedProperties( type, out )` 로 복제할 칸을 모으고, 받은 값을 쓴 **뒤** `callRepNotify( prop, pInstance, &oldValue )` |
 | 세이브 | `SerializeContext::setSaveGameOnly( true )` 로 직렬화(`SaveGameSerializer::makeSaveContext`). 옵트인 타입(`TypeInfo::hasSaveGameProperty`)은 `SaveGame` 만 쓰고 읽으며, 읽을 때 나머지는 지금 값 그대로(기본값으로도 되돌리지 않는다). 지금은 태그 바이너리(`Archive::serializeObject`) 길이 이것을 본다 |
 | 시퀀서 | `collectInterpProperties` · `isInterpolatable` · `applyInterpolated( prop, pInstance, &from, &to, alpha )`(정수 반올림 · quaternion slerp) |
-| 설정 | `collectConfigBindings( type, out )` → (섹션 · 키 · 프로퍼티). 값은 `SerializerUtil::applyPropertyText` · `valueToText` 로 글과 오간다 |
 
 ### 8) 표시 메타 — 인스펙터
 

@@ -21,7 +21,7 @@ namespace sw
      * @details 모양: 같은 오브젝트에 `TileMapRendererComponent` 가 있으면 그 외곽선(단단한 칸의 바깥 변, 바깥쪽 방향 포함), 없으면 오브젝트 원점의 `_size`
      *          상자(월드 트랜스폼을 따름)입니다. 토막은 프레임마다 빛 목록 뒤에 그림자 원소(`shaderslot::kLightTypeShadow2D`)로 붙고, 셰이더는 빛을 등진
      *          토막만 가림막으로 셉니다 — 가림막 안쪽은 자기 그림자를 받지 않습니다(Self Shadows 꺼짐).
-     *          빛 등록부(`LightRegistry::addShadowCaster`)에 붙을 때 등록합니다.
+     *          빛 등록부(`ComponentRegistry`)에 붙을 때 등록합니다.
      */
     REFLECT( Category = "Rendering 2D", DisplayName = "Shadow Caster 2D", Tooltip = "Blocks 2D lights with a box or the tile map outline" )
     class SW_API ShadowCaster2DComponent : public Component

@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Action/ActionAdventure/AdventureWeaponWear.h"
 
-#include "GameFramework/Inventory/Inventory.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
 
 namespace sw
 {
@@ -17,7 +17,7 @@ namespace sw
         AdventureStrikeResult result;
         if ( slot < 0 || slot >= inventory.getSlotCount() )
             return result;
-        const ItemStack stack = inventory.getSlot( slot );
+        const InventorySlot stack = inventory.getSlot( slot );
         if ( stack.isEmpty() )
             return result;
         result._itemId                   = stack._itemId;

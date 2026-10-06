@@ -6,6 +6,7 @@
  *          같은 표를 나누는 메시들은 한 구간을 씁니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
@@ -28,7 +29,7 @@ namespace sw
     {
     public:
         /** @brief 풀에 없는 메시가 받는 값입니다(셰이더의 kInvalidIndex). */
-        static constexpr uint32 kInvalidBase = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidBase = invalid_index::kUint32;
 
         GpuVertexAnimationPool()                                           = default;
         ~GpuVertexAnimationPool()                                          = default;

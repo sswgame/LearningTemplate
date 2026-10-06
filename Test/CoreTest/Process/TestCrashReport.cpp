@@ -75,6 +75,24 @@ SW_TEST_CASE( CrashReportTest, RegisteredContextReachesTheContextFile )
 }
 
 /**
+ * @brief [CrashReportTest] 경로에 한글이 든 리포트 폴더에도 파일이 써진다
+ * @details 크래시 리포트 폴더는 사용자 폴더(`Saved/`) 아래라 사용자 이름이 한글이면 경로도 한글이다. 쓰기(`CreateFileA`)가 UTF-8 경로를
+ *          ANSI 로 읽으면 폴더를 못 찾아 리포트가 하나도 남지 않는다 — 크래시 경로라 아무 말도 없다.
+ */
+SW_TEST_CASE( CrashReportTest, ReportFolderWithANonAsciiNameReceivesTheFiles )
+{
+    const sw::string folder = test::makeTempDirectory( "SwCrashReport_한글 폴더" );
+    sw::setCrashReportFolder( folder );
+
+    sw::writeCrashContextFile( "non-ascii folder", nullptr, 1, 2 );
+    sw::writeCrashStackFile( "frame 0" );
+
+    sw::string text;
+    SW_EXPECT_TRUE( readReportFileInternal( "txt", text ) && text.find( "non-ascii folder" ) != sw::string::npos );
+    SW_EXPECT_TRUE( readReportFileInternal( "stack.txt", text ) && text.find( "frame 0" ) != sw::string::npos );
+}
+
+/**
  * @brief [CrashReportTest] 같은 키는 덮어쓰고, 자리가 차면 조용히 버린다
  * @details 자리가 없을 때 버리는 것은 의도다 — 크래시 진단을 돕자고 넣은 것이 실패를 키우면 안 된다.
  *          다만 **버리되 망가뜨리지는 않아야** 한다. 이미 들어간 값은 그대로 남아야 한다.

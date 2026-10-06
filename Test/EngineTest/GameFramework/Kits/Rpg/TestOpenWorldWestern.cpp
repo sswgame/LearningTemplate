@@ -2,17 +2,21 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/Inventory/LootTable.h"
-#include "GameFramework/Inventory/Shop.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Progression/Reputation.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternCatalog.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternHonor.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternHorse.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternHunting.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternLaw.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternSurvival.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/World/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -99,6 +103,17 @@ namespace
         for ( const WesternLawEvent& event : listEvent )
             count += event._kind == kind ? 1 : 0;
         return count;
+    }
+
+    /** @brief 상태 하나의 바이트입니다. */
+    template <typename TState>
+    vector<uint8> captureWesternBytes( const TState& state )
+    {
+        Archive archive;
+        state.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
     }
 } // namespace
 
@@ -236,8 +251,12 @@ SW_TEST_CASE( OpenWorldWesternTest, HonorTiersGiveDiscountsAndDialogueFlags )
 {
     WesternCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    ReputationState reputation; // 공유 평판 — 그 카탈로그에 명예 세력이 있어야 단계가 선다
+    reputation.initialize( &catalog.getHonorReputation() );
+    GameStateRefs refs;
+    refs._pReputation = &reputation;
     WesternHonor honor;
-    honor.initialize( &catalog );
+    honor.initialize( &catalog, refs );
     GameFlags flags;
     SW_EXPECT_EQUAL( 0, honor.getValue() );
     SW_EXPECT_TRUE( honor.getTierName() == hashed_string( "Neutral" ) );
@@ -260,8 +279,51 @@ SW_TEST_CASE( OpenWorldWesternTest, HonorTiersGiveDiscountsAndDialogueFlags )
     SW_EXPECT_TRUE( honor.getTierName() == hashed_string( "Outlaw" ) );
     SW_EXPECT_NEAR_EQUAL( 1.1f, honor.computePriceScale(), 1.0e-5f ); // 무법자는 웃돈
     vector<ReputationEvent> listEvent;
-    honor.drainEvents( listEvent );
+    reputation.drainEvents( listEvent );                          // 단계 알림은 빌린 평판에 쌓인다(게임 화면이 꺼낸다)
     SW_EXPECT_EQUAL( 3, static_cast<int32>( listEvent.size() ) ); // 중립 → 명예 → 중립 → 무법
+}
+
+/**
+ * @brief [OpenWorldWesternTest] 유대 단계는 카탈로그의 누적 경험치 문턱에서 오른다 — 타기의 소수 경험치는 버려지지 않고 쌓인다, 한 번에 두 단계를 넘으면 둘 다 열린다,
+ *        세이브 왕복 뒤에도 같은 걸음에서 오른다
+ */
+SW_TEST_CASE( OpenWorldWesternTest, HorseBondLevelsAtTheCatalogThresholds )
+{
+    WesternCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    WesternHorse horse;
+    SW_ASSERT_TRUE( horse.initialize( &catalog, hashed_string( "arabian" ), 7u ) );
+    horse.setRidden( true ); // 타면 초당 1
+    for ( int32 step = 0; step < 39; ++step )
+        horse.update( 0.5f, 0.0f ); // 19.5
+    SW_EXPECT_EQUAL( 1, horse.getBondLevel() );
+    horse.update( 0.5f, 0.0f ); // 20 — 단계 2 문턱
+    SW_EXPECT_EQUAL( 2, horse.getBondLevel() );
+    for ( int32 step = 0; step < 59; ++step )
+        horse.update( 0.25f, 0.0f ); // 34.75
+    SW_EXPECT_EQUAL( 2, horse.getBondLevel() );
+
+    Archive archive;
+    horse.writeState( archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+    WesternHorse restored;
+    SW_ASSERT_TRUE( restored.initialize( &catalog, hashed_string( "arabian" ), 7u ) );
+    Archive reader( bytes.data(), bytes.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    restored.setRidden( true );
+    for ( int32 step = 0; step < 60; ++step )
+        restored.update( 0.25f, 0.0f ); // 49.75
+    SW_EXPECT_EQUAL( 2, restored.getBondLevel() );
+    restored.update( 0.25f, 0.0f ); // 50 — 단계 3 문턱
+    SW_EXPECT_EQUAL( 3, restored.getBondLevel() );
+
+    // 한 번에 두 단계 — 둘 다의 능력이 열린다
+    WesternHorse fresh;
+    SW_ASSERT_TRUE( fresh.initialize( &catalog, hashed_string( "arabian" ), 7u ) );
+    fresh.addBondExperience( 60.0f );
+    SW_EXPECT_EQUAL( 3, fresh.getBondLevel() );
+    SW_EXPECT_TRUE( fresh.hasAbility( hashed_string( "rear" ) ) && fresh.hasAbility( hashed_string( "drift" ) ) );
 }
 
 SW_TEST_CASE( OpenWorldWesternTest, HorseBondUnlocksAbilitiesCoresSlowRegenAndFearIsDeterministic )
@@ -425,21 +487,129 @@ SW_TEST_CASE( OpenWorldWesternTest, PeltStarsDependOnWeaponZoneAndHitsAndCarcass
     SW_EXPECT_EQUAL( 2, WesternHunting::computeCarcassStars( catalog, carcass ) );
     SW_EXPECT_EQUAL( 180, WesternHunting::computeCarcassPrice( catalog, carcass ) );
 
-    GameRandom  random( 5u );
-    WesternPelt pelt;
-    ItemBag     bag;
-    SW_ASSERT_TRUE( WesternHunting::skin( catalog, carcass, &loot, random, pelt, bag ) );
-    SW_EXPECT_FALSE( WesternHunting::skin( catalog, carcass, &loot, random, pelt, bag ) ); // 두 번은 못 벗긴다
+    GameRandom    random( 5u );
+    WesternPelt   pelt;
+    ItemStackList items;
+    SW_ASSERT_TRUE( WesternHunting::skin( catalog, carcass, &loot, random, pelt, items ) );
+    SW_EXPECT_FALSE( WesternHunting::skin( catalog, carcass, &loot, random, pelt, items ) ); // 두 번은 못 벗긴다
     SW_EXPECT_EQUAL( 2, pelt._stars );
     SW_EXPECT_EQUAL( 90, WesternHunting::computePeltPrice( catalog, pelt ) );       // 1.5 달러 × 0.6
     SW_EXPECT_EQUAL( 90, WesternHunting::computeCarcassPrice( catalog, carcass ) ); // 벗긴 사체는 반값
-    SW_EXPECT_TRUE( bag.getItemCount( hashed_string( "venison" ) ) >= 2 );
+    SW_EXPECT_TRUE( items.getItemCount( hashed_string( "venison" ) ) >= 2 );
 
     WesternHunting::ageCarcass( carcass, 30.0f );
     SW_EXPECT_TRUE( WesternHunting::isRotten( catalog, carcass ) );
     SW_EXPECT_EQUAL( 0, WesternHunting::computeCarcassPrice( catalog, carcass ) );
     WesternCarcass rotten = WesternHunting::makeCarcass( catalog, kill );
     WesternHunting::ageCarcass( rotten, 48.0f );
-    SW_EXPECT_FALSE( WesternHunting::skin( catalog, rotten, nullptr, random, pelt, bag ) );
+    SW_EXPECT_FALSE( WesternHunting::skin( catalog, rotten, nullptr, random, pelt, items ) );
     SW_EXPECT_EQUAL( 0, WesternHunting::computePeltPrice( catalog, WesternPelt{ hashed_string( "deer" ), 0 } ) );
+}
+
+/**
+ * @brief [OpenWorldWesternTest] 말 · 법 · 생존 상태 바이트 — 유대 · 능력 · 게이지 · 코어 · 겁 · 난수, 지역 기록 · 신고 대기 남은 시간, 옷 · 표시 · 데드아이가 그대로 와서 같은 걸음이 이어진다. 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( OpenWorldWesternTest, StateRoundTripContinuesTheSameRide )
+{
+    WesternCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+
+    // 말 — 유대 2 단계 · 질주 중 · 겁이 조금 쌓였다.
+    WesternHorse horse;
+    SW_ASSERT_TRUE( horse.initialize( &catalog, hashed_string( "arabian" ), 7u ) );
+    SW_EXPECT_TRUE( horse.brush() );
+    horse.setRidden( true );
+    horse.update( 5.0f, 0.0f );
+    SW_ASSERT_EQUAL( 2, horse.getBondLevel() );
+    for ( int32 frame = 0; frame < 3; ++frame )
+        (void)horse.gallop( 0.1f );
+    SW_EXPECT_TRUE( horse.frighten( 0.5f ) == WesternHorseReaction::Calm );
+
+    const vector<uint8> horseBytes = captureWesternBytes( horse );
+    WesternHorse        restoredHorse;
+    SW_ASSERT_TRUE( restoredHorse.initialize( &catalog, hashed_string( "arabian" ), 1u ) );
+    Archive horseReader( horseBytes.data(), horseBytes.size() );
+    SW_ASSERT_TRUE( restoredHorse.readState( horseReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, horseReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWesternBytes( restoredHorse ) == horseBytes );
+    SW_EXPECT_TRUE( restoredHorse.hasAbility( hashed_string( "rear" ) ) );
+    SW_EXPECT_NEAR_EQUAL( horse.getStamina().getMax(), restoredHorse.getStamina().getMax(), 1.0e-3f );
+
+    // 같은 걸음을 둘 다 더 돌리면 바이트가 같다(겁 문턱을 넘어 난수를 하나 쓴다).
+    SW_EXPECT_TRUE( horse.frighten( 1.5f ) == restoredHorse.frighten( 1.5f ) );
+    horse.update( 1.0f, 1.0f );
+    restoredHorse.update( 1.0f, 1.0f );
+    SW_EXPECT_TRUE( captureWesternBytes( horse ) == captureWesternBytes( restoredHorse ) );
+
+    WesternHorse truncatedHorse;
+    SW_ASSERT_TRUE( truncatedHorse.initialize( &catalog, hashed_string( "arabian" ), 1u ) );
+    Archive horseCut( horseBytes.data(), horseBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedHorse.readState( horseCut ) );
+    SW_EXPECT_EQUAL( 1, truncatedHorse.getBondLevel() );
+
+    // 법 — 보안관이 본 절도는 현상금, 시민 둘이 본 살인은 신고 대기 중.
+    const hashed_string    region( "lemoyne" );
+    vector<WesternWitness> listCandidate{ makeWitness( 1, false ), makeWitness( 2, false ) };
+    vector<WesternWitness> listLawman{ makeWitness( 9, true ) };
+    const ListedSight      twoSee( vector<uint64>{ 1, 2 } );
+    const ListedSight      lawSees( vector<uint64>{ 9 } );
+    WesternLawState        law;
+    law.initialize( &catalog );
+    (void)law.commitCrime( hashed_string( "theft" ), region, float3{}, listLawman, lawSees, false );
+    (void)law.commitCrime( hashed_string( "murder" ), region, float3{}, listCandidate, twoSee, false );
+    law.setDisguised( true );
+    law.update( 5.0f );
+    SW_ASSERT_EQUAL( 2, law.countPendingReports() );
+
+    const vector<uint8> lawBytes = captureWesternBytes( law );
+    WesternLawState     restoredLaw;
+    restoredLaw.initialize( &catalog );
+    Archive lawReader( lawBytes.data(), lawBytes.size() );
+    SW_ASSERT_TRUE( restoredLaw.readState( lawReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, lawReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWesternBytes( restoredLaw ) == lawBytes );
+    SW_EXPECT_EQUAL( law.getBounty( region ), restoredLaw.getBounty( region ) );
+    SW_EXPECT_TRUE( restoredLaw.isDisguised() );
+
+    law.update( 20.0f ); // 신고 시간이 지나 살인이 신고된다
+    restoredLaw.update( 20.0f );
+    SW_EXPECT_EQUAL( 0, restoredLaw.countPendingReports() );
+    SW_EXPECT_EQUAL( law.getBounty( region ), restoredLaw.getBounty( region ) );
+    SW_EXPECT_TRUE( captureWesternBytes( law ) == captureWesternBytes( restoredLaw ) );
+
+    WesternLawState truncatedLaw;
+    truncatedLaw.initialize( &catalog );
+    Archive lawCut( lawBytes.data(), lawBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedLaw.readState( lawCut ) );
+    SW_EXPECT_EQUAL( 0, truncatedLaw.countPendingReports() );
+
+    // 생존 — 옷 · 추위로 준 코어, 2 단계 데드아이로 하나를 표시했다.
+    WesternSurvival survival;
+    survival.initialize( &catalog );
+    survival.setClothing( vector<hashed_string>{ hashed_string( "shirt" ) } );
+    survival.update( 0.0f, 2.0f, -5.0f );
+    survival.setDeadEyeLevel( 2 );
+    SW_ASSERT_TRUE( survival.activateDeadEye() );
+    SW_ASSERT_TRUE( survival.markTarget( 1 ) );
+    survival.update( 0.5f, 0.0f, 20.0f );
+
+    const vector<uint8> survivalBytes = captureWesternBytes( survival );
+    WesternSurvival     restoredSurvival;
+    restoredSurvival.initialize( &catalog );
+    Archive survivalReader( survivalBytes.data(), survivalBytes.size() );
+    SW_ASSERT_TRUE( restoredSurvival.readState( survivalReader ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, survivalReader.getRemainingBytes() );
+    SW_EXPECT_TRUE( captureWesternBytes( restoredSurvival ) == survivalBytes );
+    SW_EXPECT_NEAR_EQUAL( survival.computeWarmth(), restoredSurvival.computeWarmth(), 1.0e-5f );
+    SW_EXPECT_TRUE( restoredSurvival.isDeadEyeActive() );
+
+    survival.update( 1.0f, 1.0f, -5.0f );
+    restoredSurvival.update( 1.0f, 1.0f, -5.0f );
+    SW_EXPECT_TRUE( captureWesternBytes( survival ) == captureWesternBytes( restoredSurvival ) );
+
+    WesternSurvival truncatedSurvival;
+    truncatedSurvival.initialize( &catalog );
+    Archive survivalCut( survivalBytes.data(), survivalBytes.size() - 1 );
+    SW_EXPECT_FALSE( truncatedSurvival.readState( survivalCut ) );
+    SW_EXPECT_FALSE( truncatedSurvival.isDeadEyeActive() );
 }

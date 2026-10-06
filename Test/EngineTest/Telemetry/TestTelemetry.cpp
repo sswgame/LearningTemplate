@@ -104,7 +104,7 @@ namespace
         static uint32 countSpoolFiles( const string& folder )
         {
             vector<string> listFile;
-            if ( FileUtil::directoryExists( folder ) == false || FileUtil::collectFiles( folder, "", listFile, false ) == false )
+            if ( FileUtil::isDirectory( folder ) == false || FileUtil::collectFiles( folder, "", listFile, false ) == false )
                 return 0;
             return static_cast<uint32>( listFile.size() );
         }
@@ -113,7 +113,7 @@ namespace
         {
             vector<string> listFile;
             string         all;
-            if ( FileUtil::directoryExists( folder ) == false || FileUtil::collectFiles( folder, "", listFile, false ) == false )
+            if ( FileUtil::isDirectory( folder ) == false || FileUtil::collectFiles( folder, "", listFile, false ) == false )
                 return all;
             for ( const string& path : listFile )
             {

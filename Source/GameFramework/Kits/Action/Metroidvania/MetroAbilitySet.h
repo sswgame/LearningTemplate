@@ -5,16 +5,18 @@
  *          같은 능력 집합이면 늘 같은 설정입니다(결정적). 세이브는 `GameFlags` 하나로 충분합니다 — `restoreFromFlags` 가 플래그에서 능력을 되살립니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Movement/PlatformerMotor2D.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Movement/PlatformerMotor2D.h"
 
 namespace sw
 {
+    class Archive;
     class GameFlags;
     class MetroidvaniaCatalog;
 
@@ -25,6 +27,9 @@ namespace sw
     class SW_GF_API MetroAbilitySet
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MABL" );
+        static constexpr uint32 kStateVersion = 1;
+
         MetroAbilitySet();
 
         /** @brief 카탈로그와 기본 몸 설정을 둡니다. 기본 설정의 벽 점프 · 공중 점프 · 공중 대시 · 대시는 잠깁니다(능력이 연다). 얻은 능력은 비웁니다. */
@@ -46,6 +51,11 @@ namespace sw
         bool canDash() const;
 
         const vector<hashed_string>& getAbilities() const { return _listAbility; }
+
+        /** @brief 얻은 능력 id(얻은 순서)를 씁니다. 카탈로그 · 기본 몸 설정은 `initialize` 의 것, 능력 플래그는 빌린 `GameFlags` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다(몸에 거는 것은 부르는 쪽이 `applyToMotor`). 카탈로그에 없는 능력 · 겹친 능력이거나 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 능력의 `<Motor>` 에 쓸 수 있는 이름인가입니다(카탈로그가 읽을 때 오타를 알린다). */
         static bool isMotorSettingName( const hashed_string& name );

@@ -2,10 +2,19 @@
 
 #include "Editor/Panels/EditorPanelManager.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Time/MonotonicClock.h"
+
 #include "Editor/Common/Gui/IEditorPanel.h"
 
 namespace sw::editor
 {
+    SW_LOG_CALLER( "EditorPanelManager" );
+
+    // `-gv_editorPanelTimes=N` — N 프레임 동안 패널마다 그리기 시간을 모아 한 번 찍는다(평균 · 최대 us, 큰 순). 프로파일러 칸을 패널 수만큼 쓰지 않는다.
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_editorPanelTimes, 0, "N 프레임 동안 에디터 패널마다 그리기 시간을 모아 한 번 로그로 찍는다 (0=끄기)" );
+
     void EditorPanelManager::registerPanel( unique_ptr<IEditorPanel> pPanel,
                                             string_view              panelId,
                                             EditorPanelCategory      category )
@@ -65,10 +74,42 @@ namespace sw::editor
 
     void EditorPanelManager::drawOpenPanels()
     {
+        const bool bTimed = gv_editorPanelTimes > 0 && _bPanelTimesReported == false;
+        for ( EditorPanelEntry& entry : _listPanel )
+        {
+            if ( entry._pInstance == nullptr || entry._pInstance->isOpen() == false )
+                continue;
+            if ( bTimed == false )
+            {
+                entry._pInstance->draw();
+                continue;
+            }
+            const Stopwatch stopwatch;
+            entry._pInstance->draw();
+            const uint64 elapsedNanos = static_cast<uint64>( stopwatch.getElapsedNanoseconds() );
+            entry._drawNanosSum += elapsedNanos;
+            entry._drawNanosMax = MathUtil::max( entry._drawNanosMax, elapsedNanos );
+        }
+        if ( bTimed && ++_panelTimeFrameCount >= static_cast<uint32>( gv_editorPanelTimes ) )
+            reportPanelTimes();
+    }
+
+    void EditorPanelManager::reportPanelTimes()
+    {
+        _bPanelTimesReported = true;
+        vector<const EditorPanelEntry*> listEntry;
         for ( const EditorPanelEntry& entry : _listPanel )
         {
-            if ( entry._pInstance != nullptr && entry._pInstance->isOpen() )
-                entry._pInstance->draw();
+            if ( entry._drawNanosSum > 0 )
+                listEntry.push_back( &entry );
+        }
+        std::sort( listEntry.begin(), listEntry.end(),
+                   []( const EditorPanelEntry* pLeft, const EditorPanelEntry* pRight )
+        { return pLeft->_drawNanosSum > pRight->_drawNanosSum; } );
+        const uint64 frameCount = MathUtil::max<uint64>( 1u, _panelTimeFrameCount );
+        for ( const EditorPanelEntry* pEntry : listEntry )
+        {
+            SW_LOG_INFO( "EditorPanelTime|%#|avg %# us|max %# us", pEntry->_id.c_str(), pEntry->_drawNanosSum / 1000ull / frameCount, pEntry->_drawNanosMax / 1000ull );
         }
     }
 

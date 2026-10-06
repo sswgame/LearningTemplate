@@ -8,6 +8,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include <IconsFontAwesome6.h>
 #include <imgui.h>
@@ -609,6 +610,8 @@ namespace sw::editor
                     setAccentColor( arrSwatches[index] );
                     editorConfig = getActiveTheme();
                 }
+                if ( index == 2 )
+                    EditorSelfTestMarks::note( "theme.swatch.violet" ); // 에디터 자체 시험(input.classicDarkSwatch)이 누른다
                 EditorWidgets::drawTooltip( "추천 액센트 색상 팔레트" );
                 ImGui::PopID();
             }

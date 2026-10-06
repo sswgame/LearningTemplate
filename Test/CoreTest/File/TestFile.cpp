@@ -3,12 +3,12 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleImageUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestFramework.h"
 
 #include <atomic>
-#include <filesystem>
 #include <thread>
 
 namespace
@@ -65,7 +65,7 @@ SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
     const sw::string content = "case-sensitive-io";
 
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathStr, reinterpret_cast<const uint8*>( content.data() ), content.size() ) );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathStr ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( pathStr ) );
 
     sw::vector<uint8> readBuffer;
     SW_EXPECT_TRUE( sw::FileUtil::readFile( pathStr, readBuffer ) );
@@ -82,7 +82,7 @@ SW_TEST_CASE( FileTest, CreateParentDirectoryMakesNestedFolders )
     const sw::string root     = test::makeTempPath( "SwParentDirTest" );
     const sw::string filePath = root + "/a\\b/c/leaf.txt";
     SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::directoryExists( root + "/a/b/c" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isDirectory( root + "/a/b/c" ) );
     SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "leaf" ) );
 
     SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( "LeafWithoutFolder.txt" ) ); // 폴더 부분이 없다 — 할 일이 없다
@@ -193,7 +193,7 @@ SW_TEST_CASE( FileTest, WriteAndReadFile )
 
     bool writeOk = sw::FileUtil::writeFile( testPath, reinterpret_cast<const uint8*>( testContent.data() ), testContent.size() );
     SW_EXPECT_TRUE( writeOk );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( testPath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( testPath ) );
 
     sw::vector<uint8> readBuffer;
     bool              readOk = sw::FileUtil::readFile( testPath, readBuffer );
@@ -220,13 +220,13 @@ SW_TEST_CASE( FileTest, ExecutablePathPointsAtARealFile )
     const sw::string executablePath = sw::FileUtil::getExecutablePath();
 
     SW_ASSERT_TRUE( executablePath.empty() == false );
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::fileExists( executablePath ),
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( executablePath ),
                         "실행 파일 경로가 없는 파일을 가리킵니다 — 잘렸거나 깨졌습니다" );
     SW_EXPECT_TRUE_MSG( sw::FileUtil::isAbsolutePath( executablePath ), "실행 파일 경로가 절대 경로가 아닙니다" );
 
     // 디렉터리 부분도 실제로 있어야 한다 — 엔진이 리소스·모듈을 찾는 기준점이다.
     const sw::string executableDirectory = sw::FileUtil::getDirectoryPart( executablePath );
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::directoryExists( executableDirectory ),
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::isDirectory( executableDirectory ),
                         "실행 파일의 디렉터리가 없습니다" );
 
     // 두 번 물어도 같은 답이어야 한다(버퍼를 키우는 루프가 상태를 남기지 않는다).
@@ -311,6 +311,36 @@ SW_TEST_CASE( FileTest, LoadedImageRangeContainsTheAddress )
     SW_EXPECT_FALSE( sw::ModuleImageUtil::findLoadedImageRange( nullptr, pBegin, pEnd ) );
 }
 
+#if defined( SW_PLATFORM_WINDOWS )
+/**
+ * @brief [FileTest] 경로에 한글이 든 폴더의 DLL 도 올라온다
+ * @details 경로는 UTF-8 로 들고 다닌다. Win32 의 A 판(`LoadLibraryExA` · `SetDllDirectoryA`)에 그대로 넘기면 OS 가 ANSI 코드 페이지로 읽어
+ *          비-ASCII 글자가 깨지고 "파일 없음" 으로 진다 — 한글 사용자 폴더 · 한글 설치 경로에서 모듈이 하나도 안 올라온다.
+ *          시스템 폴더의 `version.dll`(의존이 시스템 DLL 뿐)을 한글 이름 임시 폴더에 복사해 그 경로로 올린다.
+ */
+SW_TEST_CASE( FileTest, DynamicLibraryLoadsFromANonAsciiFolder )
+{
+    utf16        arrSystemDir[MAX_PATH]{};
+    const uint32 systemDirLength = GetSystemDirectoryW( arrSystemDir, MAX_PATH );
+    SW_ASSERT_TRUE( systemDirLength > 0 && systemDirLength < MAX_PATH );
+
+    const sw::string sourcePath = sw::FileUtil::joinPath( sw::StringUtil::utf16ToUtf8( arrSystemDir ), "version.dll" );
+    const sw::string folder     = test::makeTempDirectory( "SwModuleLoad_한글 폴더" );
+    const sw::string copyPath   = sw::FileUtil::joinPath( folder, "version.dll" );
+    SW_ASSERT_TRUE( sw::FileUtil::copyFile( sourcePath, copyPath ) );
+
+    void* pHandle = sw::ModuleImageUtil::loadDynamicLibrary( copyPath );
+    SW_ASSERT_TRUE_MSG( pHandle != nullptr, copyPath.c_str() );
+
+    // 같은 이름의 시스템 DLL 이 아니라 복사한 그 파일이 올라왔다.
+    utf16 arrLoadedPath[MAX_PATH]{};
+    (void)GetModuleFileNameW( static_cast<HMODULE>( pHandle ), arrLoadedPath, MAX_PATH );
+    const sw::string loadedPath = sw::StringUtil::utf16ToUtf8( arrLoadedPath );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::pathsEqualNormalized( loadedPath, copyPath ), loadedPath.c_str() );
+    sw::ModuleImageUtil::unloadDynamicLibrary( pHandle );
+}
+#endif
+
 /**
  * @brief [FileTest] 쓰기는 원자적이다: 다 쓴 뒤 바꿔 끼우고, 같은 폴더에 임시 파일을 남기지 않는다.
  * @details 원본을 "wb" 로 열어 그 자리에 쓰면 도중에 실패할 때 원본이 빈 파일로 남는다.
@@ -353,7 +383,7 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( blockedPath, "child" ) ) );
 
     SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( blockedPath, "must-not-land" ) );
-    SW_EXPECT_TRUE( sw::FileUtil::directoryExists( sw::FileUtil::joinPath( blockedPath, "child" ) ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isDirectory( sw::FileUtil::joinPath( blockedPath, "child" ) ) );
 
     // 폴더 안에 임시 파일을 남기지 않는다.
     sw::vector<sw::string> listFile;
@@ -369,18 +399,18 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
 /**
  * @brief [FileTest] 한글이 들어간 경로도 쓰기 · 읽기 · 존재 확인 · 폴더 훑기가 같은 파일을 본다.
  * @details Windows 에서 좁은 문자 경로는 실행 파일 매니페스트(activeCodePage=UTF-8)가 없으면 ANSI 코드 페이지(CP949)로 해석된다. 경로 API 마다
- *          해석이 다르면 사용자 폴더 이름이 한글일 때 `fileExists` 는 있다고 하는데 읽기는 "File not found" 가 된다.
+ *          해석이 다르면 사용자 폴더 이름이 한글일 때 `exists` 는 있다고 하는데 읽기는 "File not found" 가 된다.
  */
 SW_TEST_CASE( FileTest, NonAsciiPathRoundTrips )
 {
     const sw::string dir = test::makeTempPath( "SwUnicodePath_한글폴더" );
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( dir ) );
     sw::FileUtil::ensureDirectoryExists( dir );
-    SW_ASSERT_TRUE( sw::FileUtil::directoryExists( dir ) );
+    SW_ASSERT_TRUE( sw::FileUtil::isDirectory( dir ) );
 
     const sw::string filePath = sw::FileUtil::joinPath( dir, "세이브_1.txt" );
     SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "저장됨" ) );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( filePath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( filePath ) );
 
     sw::string text;
     SW_EXPECT_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
@@ -504,14 +534,117 @@ SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "locked" ) );
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( filePath ) );
 
-    std::filesystem::permissions( std::filesystem::path( filePath.c_str() ), std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write,
-                                  std::filesystem::perm_options::remove );
+    SW_ASSERT_TRUE( sw::FileUtil::setWritable( filePath, false ) );
     SW_EXPECT_TRUE( sw::FileUtil::isReadOnlyFile( filePath ) );
 
-    std::filesystem::permissions( std::filesystem::path( filePath.c_str() ), std::filesystem::perms::owner_write, std::filesystem::perm_options::add );
+    SW_ASSERT_TRUE( sw::FileUtil::setWritable( filePath, true ) );
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( filePath ) );
 
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( root + "/missing.txt" ) );
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( root ) );
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
+}
+
+/**
+ * @brief [FileTest] 잘못된 UTF-8 경로는 "없다" 로 답하고 예외를 던지지 않는다
+ * @details 경로는 씬 · 에셋 데이터에서 온다. Windows 에서 좁은 문자 경로를 `std::filesystem::path` 에 넘기면 ANSI 코드 페이지(UTF-8) 변환이 잘못된 바이트에서
+ *          `system_error` 를 던져, 깨진 데이터 한 줄이 존재 확인에서 프로세스를 내린다. 리눅스는 변환이 없어 원래 통과한다.
+ *          넓은 문자로 바꿀 때 잘못된 바이트는 U+FFFD 로 바뀌고 경고가 남는다(기대한 경고).
+ */
+SW_TEST_CASE( FileTest, InvalidUtf8PathIsAnsweredNotThrown )
+{
+    const sw::string root        = test::makeTempPath( "SwInvalidUtf8PathTest" );
+    const sw::string invalidPath = root + "/\xFF\xFE.txt";
+
+    SW_EXPECT_FALSE( sw::FileUtil::exists( invalidPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isDirectory( invalidPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( invalidPath ) );
+    SW_EXPECT_EQUAL( 0ull, sw::FileUtil::getFileSize( invalidPath ) );
+    SW_EXPECT_EQUAL( 0ull, sw::FileUtil::getFileTimestamp( invalidPath ) );
+    int64 writeTicks{ 0 };
+    SW_EXPECT_FALSE( sw::FileUtil::getFileWriteTime( invalidPath, writeTicks ) );
+
+    sw::vector<sw::string> listFilePath;
+    SW_EXPECT_FALSE( sw::FileUtil::collectFiles( invalidPath, "", listFilePath, true ) );
+    SW_EXPECT_TRUE( listFilePath.empty() );
+}
+
+/**
+ * @brief [FileTest] 파일 시각은 100 ns 눈금으로 읽고 쓰며, 다시 읽으면 쓴 값이다
+ */
+SW_TEST_CASE( FileTest, FileWriteTimeRoundTrips )
+{
+    const sw::string filePath = test::makeTempPath( "SwWriteTimeTest" ) + "/stamp.txt";
+    SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "time" ) );
+
+    int64 written{ 0 };
+    SW_ASSERT_TRUE( sw::FileUtil::getFileWriteTime( filePath, written ) );
+    const int64 now = sw::FileUtil::getCurrentFileWriteTime();
+    SW_EXPECT_TRUE( written <= now + sw::FileUtil::kFileTimeTicksPerSecond ); // 같은 시계다
+
+    const int64 pastTicks = written - 3600 * sw::FileUtil::kFileTimeTicksPerSecond;
+    SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( filePath, pastTicks ) );
+    int64 readBack{ 0 };
+    SW_ASSERT_TRUE( sw::FileUtil::getFileWriteTime( filePath, readBack ) );
+    SW_EXPECT_EQUAL( pastTicks, readBack );
+    SW_EXPECT_EQUAL( static_cast<uint64>( pastTicks / sw::FileUtil::kFileTimeTicksPerSecond ), sw::FileUtil::getFileTimestamp( filePath ) );
+}
+
+/**
+ * @brief [FileTest] 순회 콜백은 루트로 시작하는 `/` 경로와 디렉터리 여부를 주고, false 를 돌려주면 멈춘다
+ */
+SW_TEST_CASE( FileTest, DirectoryVisitorReportsEntriesAndStops )
+{
+    const sw::string root = test::makeTempDirectory( "SwVisitorTest" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( root + "/a.txt", "a" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( root + "/sub" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( root + "/sub/b.txt", "b" ) );
+
+    uint32 fileCount{ 0 };
+    uint32 directoryCount{ 0 };
+    bool   bAllUnderRoot = true;
+    SW_EXPECT_TRUE( sw::FileUtil::forEachDirectoryEntry( root, true, [&]( const sw::DirectoryEntry& entry )
+    {
+        bAllUnderRoot = bAllUnderRoot && sw::FileUtil::startsWithPathComponent( entry._path, root ) && entry._path.find( '\\' ) == sw::string_view::npos;
+        if ( entry._bDirectory )
+            ++directoryCount;
+        else
+            ++fileCount;
+        return true;
+    } ) );
+    SW_EXPECT_EQUAL( 2u, fileCount );
+    SW_EXPECT_EQUAL( 1u, directoryCount );
+    SW_EXPECT_TRUE( bAllUnderRoot );
+
+    uint32 visitedBeforeStop{ 0 };
+    SW_EXPECT_TRUE( sw::FileUtil::forEachDirectoryEntry( root, true, [&visitedBeforeStop]( const sw::DirectoryEntry& )
+    {
+        ++visitedBeforeStop;
+        return false;
+    } ) );
+    SW_EXPECT_EQUAL( 1u, visitedBeforeStop );
+    SW_EXPECT_FALSE( sw::FileUtil::forEachDirectoryEntry( root + "/missing", true, []( const sw::DirectoryEntry& )
+    { return true; } ) );
+}
+
+/**
+ * @brief [FileTest] isRegularFile 은 파일에만 true 이고, exists 는 파일과 폴더 모두에 true 다
+ * @details 후보 경로를 차례로 보는 곳(설정 · 리소스 낱개 · 폰트)은 같은 이름의 폴더를 건너뛰어야 다음 후보로 간다.
+ */
+SW_TEST_CASE( FileTest, RegularFileExcludesDirectories )
+{
+    const sw::string root     = test::makeTempDirectory( "SwRegularFileTest" );
+    const sw::string filePath = root + "/plain.txt";
+    const sw::string dirPath  = root + "/folder.txt";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "plain" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( dirPath ) );
+
+    SW_EXPECT_TRUE( sw::FileUtil::isRegularFile( filePath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( dirPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( root + "/missing.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( "" ) );
+
+    SW_EXPECT_TRUE( sw::FileUtil::exists( filePath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( dirPath ) );
 }

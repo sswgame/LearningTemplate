@@ -6,7 +6,7 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Data/GameDataXml.h"
+#include "GameFramework/Base/Data/GameDataXml.h"
 
 namespace sw
 {
@@ -157,7 +157,7 @@ namespace sw
         KartTrackProjection best;
         if ( isValid() == false )
             return best;
-        float32     bestDistanceSq = MathUtil::MaxFloat;
+        float32     bestDistanceSq = MathUtil::kMaxFloat;
         const int32 count          = static_cast<int32>( _listSample.size() );
         for ( int32 segment = 0; segment < count; ++segment )
         {
@@ -188,7 +188,7 @@ namespace sw
                 center = segment;
         }
         KartTrackProjection best           = projectSegment( position, center );
-        float32             bestDistanceSq = MathUtil::MaxFloat;
+        float32             bestDistanceSq = MathUtil::kMaxFloat;
         for ( int32 step = -count; step <= count; ++step )
         {
             const int32   segment = ( ( center + step ) % count + count ) % count;
@@ -262,10 +262,10 @@ namespace sw
         const float3  toTangent   = sample( distance + ahead )._tangent;
         const float32 fromYaw     = MathUtil::atan2( fromTangent._x, fromTangent._z );
         float32       change      = MathUtil::atan2( toTangent._x, toTangent._z ) - fromYaw;
-        if ( change > MathUtil::Pi )
-            change -= 2.0f * MathUtil::Pi;
-        else if ( change < -MathUtil::Pi )
-            change += 2.0f * MathUtil::Pi;
+        if ( change > MathUtil::kPi )
+            change -= 2.0f * MathUtil::kPi;
+        else if ( change < -MathUtil::kPi )
+            change += 2.0f * MathUtil::kPi;
         return change;
     }
 

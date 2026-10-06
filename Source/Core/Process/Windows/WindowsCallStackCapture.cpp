@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Process/CallStackCapture.h"
@@ -17,6 +18,33 @@ namespace sw
         // 참조 카운트로 마지막 소유자만 정리한다.
         atomic<int32> s_initRefCount{ 0 };
         mutex         s_symbolMutex{};
+
+        /**
+         * @brief 실행 파일 폴더를 심볼 검색 경로에 더합니다.
+         * @details Release · Shipping 은 PDB 이름만 적어 링크한다(`/PDBALTPATH:%_PDB%` — 빌드 기계 경로가 배포물에 새지 않게). 그러면 DbgHelp 는 기본 검색 경로
+         *          (작업 폴더 · `_NT_SYMBOL_PATH`)에서만 찾는데, 시험 실행 파일은 `TestBin` 에 있고 작업 폴더는 `Bin` 이라 스택이 주소로만 남는다.
+         */
+        void appendExecutableFolderToSymbolPath( HANDLE process )
+        {
+            utf16       arrModulePath[constant::kMaxPathSize]{};
+            const DWORD length = GetModuleFileNameW( nullptr, arrModulePath, constant::kMaxPathSize );
+            if ( length == 0 || length >= constant::kMaxPathSize )
+                return;
+            utf16* pSlash = wcsrchr( arrModulePath, L'\\' );
+            if ( pSlash == nullptr )
+                return;
+            *pSlash = L'\0';
+            utf16 arrSearchPath[constant::kMaxBuffer4096]{};
+            if ( SymGetSearchPathW( process, arrSearchPath, constant::kMaxBuffer4096 ) == FALSE )
+                arrSearchPath[0] = L'\0';
+            const size_t used = wcslen( arrSearchPath );
+            if ( used + 1 + wcslen( arrModulePath ) + 1 > constant::kMaxBuffer4096 )
+                return;
+            if ( used > 0 )
+                wcscat_s( arrSearchPath, constant::kMaxBuffer4096, L";" );
+            wcscat_s( arrSearchPath, constant::kMaxBuffer4096, arrModulePath );
+            (void)SymSetSearchPathW( process, arrSearchPath );
+        }
 
         /** @brief CallStack / DeepCallStack 이 함께 쓰는 심볼 변환 본체입니다. */
         string symbolizeFrames( void* const* ppFrame, uint32 frameCount )
@@ -80,6 +108,7 @@ namespace sw
         SymSetOptions( SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES );
         HANDLE process = GetCurrentProcess();
         SymInitialize( process, nullptr, FALSE );
+        appendExecutableFolderToSymbolPath( process );
         SymRefreshModuleList( process );
     }
 
@@ -112,7 +141,7 @@ namespace sw
         uint64 hash{ 0 };
         for ( uint32 frameIndex = 0; frameIndex < outStack._frameCount; ++frameIndex )
         {
-            hash ^= reinterpret_cast<uint64>( outStack._arrFrame[frameIndex] ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= reinterpret_cast<uint64>( outStack._arrFrame[frameIndex] ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
         }
         outStack._hash = hash;
     }

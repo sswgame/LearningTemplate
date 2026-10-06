@@ -1,7 +1,7 @@
 # Destruction — 파괴 가능 메시
 
 미리 쪼갠 메시(언리얼 Chaos 의 Geometry Collection 자리)와 그 위의 구조 · 피해 · 런타임입니다. **티어 8**(렌더러 · 모듈과 같은 줄): 캐릭터 형상의
-자르기 도구(`Character/GeometryCutUtil`, 7) · 컴포넌트 모델(6) · 물리(3) 위에 서고, 렌더러는 모릅니다.
+자르기 도구(`Character/Fit/GeometryCut` 의 `GeometryCutUtil`, 7) · 컴포넌트 모델(6) · 물리(3) 위에 서고, 렌더러는 모릅니다.
 
 ## 1. 쿠킹 — 보로노이 파쇄(`MeshFractureUtil`) → `.fracture`
 
@@ -146,8 +146,8 @@
 
 `ExplosiveBarrelComponent` 의 폭발은 반경이 경계 구에 닿은(`isReachedBy`) 파괴 오브젝트에 `applyRadialDamageAtWorld`(중심 변형 `_fractureStrain`, 충격량
 `_blastImpulse`)를 주고, 자기에게 파쇄 데이터가 있으면 몸을 끄지 않고 스스로 부서집니다 — 사슬 폭발이 근처 벽 · 상자를 그 자리에서 깹니다.
-`DestructibleComponent` 는 단계마다 중심에 변형을 주어 깎고 마지막 단계에 통째로 부숩니다(파쇄 데이터가 없으면 예전처럼 몸을 끈다).
-`GameFramework/Gimmick/README.md` 참고. 시험: `GimmickFractureTest`.
+`DestructibleComponent` 는 단계마다 중심에 변형을 주어 깎고 마지막 단계에 통째로 부숩니다(파쇄 데이터가 없으면 몸을 끈다).
+`GameFramework/Base/Gimmick/README.md` 참고. 시험: `GimmickFractureTest`.
 
 ## 6. 2D — `Fracture2DComponent` · `PolygonFractureUtil`
 
@@ -171,5 +171,5 @@
 벽돌 벽(200 조각, 앵커 바닥) · 나무 상자 셋(대리 부피 24 조각, `wood.destruction.xml`) · 폭발 통 둘(20 조각). `BarrelFuse` 가 1.5 초 도화선(`_fuseTime`)으로
 터지고 반경 3 m 안의 `BarrelChain` 이 사슬로 이어 터집니다 — 벽 아래쪽이 깨지고 받침을 잃은 위쪽이 큰 덩어리로 무너진다(지지 붕괴). 모델 원본은
 `Resource/game/empty/models_raw/`, 어떤 모델을 어떻게 쪼갤지는 `Config/Editor/ModelImportConfig.json` 의 `Destruction_*` 규칙(`App --import-models` 가
-`.mesh` 옆에 `.fracture` 를 쓴다). 보려면 `Config/Game/Empty.json` 의 `_startupScene` 을 이 씬으로 바꿔 App 을 띄웁니다
+`.mesh` 옆에 `.fracture` 를 쓴다). 보려면 `Resource/game/empty/data/gamesettings.xml` 의 `startMap` 을 이 씬으로 바꿔(또는 `-gv_firstScene=`) App 을 띄웁니다
 (`-gv_screenshotFrame=900 -gv_screenshot=<경로>.ppm` 로 깨진 뒤를 찍는다). 시험: `DestructionShowcaseTest`(도화선 → 사슬 → 벽 · 상자가 깨진다).

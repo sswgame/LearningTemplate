@@ -6,17 +6,19 @@
  *          부른 시각입니다 — 너무 이르면(창 밖) 패리가 아니라 그냥 맞습니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Combat/ResourceGauge.h"
-#include "GameFramework/Combat/Vitality.h"
+#include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Combat/Vitality.h"
+#include "GameFramework/Base/Utility/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
+    class Archive;
     class MetroidvaniaCatalog;
 
     /** @brief 공격을 받은 결과입니다. */
@@ -48,6 +50,9 @@ namespace sw
     class SW_GF_API MetroDuelist
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MDUE" );
+        static constexpr uint32 kStateVersion = 1;
+
         MetroDuelist();
 
         /** @brief 카탈로그의 체력 · 스태미나 · 패리 규칙으로 가득 찬 상태로 시작합니다. */
@@ -82,6 +87,11 @@ namespace sw
         Vitality&            getVitality() { return _vitality; }
         const ResourceGauge& getStamina() const { return _stamina; }
         ResourceGauge&       getStamina() { return _stamina; }
+
+        /** @brief 체력(`Vitality`) · 지구력(`ResourceGauge`) · 시각 · 패리 누른 시각 · 반격 창 · 받는 피해 배율 · 막기를 씁니다. 카탈로그 규칙은 `initialize` 의 것이라 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         const MetroidvaniaCatalog* _pCatalog;

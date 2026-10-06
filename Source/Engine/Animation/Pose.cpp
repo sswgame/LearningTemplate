@@ -18,9 +18,9 @@ namespace sw
             /** @brief 성분별 나눗셈입니다. 0 에 가까운 분모는 1 로 봅니다(스케일 0 인 레퍼런스는 비율이 없다). */
             static float3 divide( const float3& lhs, const float3& rhs )
             {
-                const float32 x = MathUtil::abs( rhs._x ) > MathUtil::Epsilon ? lhs._x / rhs._x : 1.0f;
-                const float32 y = MathUtil::abs( rhs._y ) > MathUtil::Epsilon ? lhs._y / rhs._y : 1.0f;
-                const float32 z = MathUtil::abs( rhs._z ) > MathUtil::Epsilon ? lhs._z / rhs._z : 1.0f;
+                const float32 x = MathUtil::abs( rhs._x ) > MathUtil::kEpsilon ? lhs._x / rhs._x : 1.0f;
+                const float32 y = MathUtil::abs( rhs._y ) > MathUtil::kEpsilon ? lhs._y / rhs._y : 1.0f;
+                const float32 z = MathUtil::abs( rhs._z ) > MathUtil::kEpsilon ? lhs._z / rhs._z : 1.0f;
                 return float3{ x, y, z };
             }
 

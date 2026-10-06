@@ -166,7 +166,7 @@ namespace sw
             VkPushConstantRange pushRange{};
             pushRange.stageFlags = allStages;
             pushRange.offset     = 0;
-            pushRange.size       = kMaxComputeRootConstantDwords * sizeof( uint32 );
+            pushRange.size       = shaderslot::kRootConstantDwords * sizeof( uint32 );
 
             VkDescriptorSetLayout arrSetLayout[2] = { _slotSetLayout, _textureSetLayout };
 

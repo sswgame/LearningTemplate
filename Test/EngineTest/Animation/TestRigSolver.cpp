@@ -65,7 +65,7 @@ namespace
             {
                 RigPoseBuffer buffer;
                 openReference( skeleton, buffer ); // 애니메이션은 늘 수평 레퍼런스 — 스프링이 매 프레임 그 위에 얹는다
-                chain.simulate( buffer, listBone, settings, listCollider, float4x4::Identity, frameSeconds, space );
+                chain.simulate( buffer, listBone, settings, listCollider, float4x4::Identity, float3{ 0.0f, -9.81f, 0.0f }, frameSeconds, space );
             }
             return chain.getParticles().back();
         }
@@ -176,7 +176,7 @@ SW_TEST_CASE( RigSolverTest, ChainSolversReachTargetAndRespectLimits )
     {
         limit._type      = RigJointLimitType::Hinge;
         limit._hingeAxis = float3::UnitZ;
-        limit._minAngle  = -30.0f * MathUtil::DegreeToRadian;
+        limit._minAngle  = -30.0f * MathUtil::kDegreeToRadian;
         limit._maxAngle  = 0.0f;
     }
     for ( uint32 solver = 0; solver < 2; ++solver )
@@ -194,7 +194,7 @@ SW_TEST_CASE( RigSolverTest, ChainSolversReachTargetAndRespectLimits )
             quaternion twist{};
             RigIkSolver::decomposeSwingTwist( limited.getLocalRotation( boneIndex ), float3::UnitZ, swing, twist );
             const float32 angle = RigIkSolver::computeTwistAngle( twist, float3::UnitZ );
-            SW_EXPECT_TRUE( -30.5f * MathUtil::DegreeToRadian <= angle && angle <= 0.5f * MathUtil::DegreeToRadian );
+            SW_EXPECT_TRUE( -30.5f * MathUtil::kDegreeToRadian <= angle && angle <= 0.5f * MathUtil::kDegreeToRadian );
             SW_EXPECT_TRUE( 2.0f * MathUtil::acos( MathUtil::min( 1.0f, MathUtil::abs( swing._w ) ) ) < 1e-3f ); // 경첩 밖 흔들림 없음
         }
         // 제한 안에서 최대한 가까이 갔다 — 굽힘 쪽(+X)으로 기울었다.
@@ -211,30 +211,30 @@ SW_TEST_CASE( RigSolverTest, AimClampsToMaxAngleAndConeLimitsSwing )
     RigPoseBuffer  buffer;
     TestRigSolverInternal::openReference( skeleton, buffer );
     const RigSolveSpace space{};
-    const float32       turned = RigIkSolver::aimBone( buffer, 0, float3::UnitZ, float3{ 5.0f, 0.0f, 0.0f }, 30.0f * MathUtil::DegreeToRadian, 1.0f, space );
-    SW_EXPECT_NEAR_EQUAL( 30.0f * MathUtil::DegreeToRadian, turned, 1e-3f );
+    const float32       turned = RigIkSolver::aimBone( buffer, 0, float3::UnitZ, float3{ 5.0f, 0.0f, 0.0f }, 30.0f * MathUtil::kDegreeToRadian, 1.0f, space );
+    SW_EXPECT_NEAR_EQUAL( 30.0f * MathUtil::kDegreeToRadian, turned, 1e-3f );
     const float3 facing = float3::transform( float3::UnitZ, buffer.getModelRotation( 0 ) );
-    SW_EXPECT_NEAR_EQUAL( MathUtil::cos( 30.0f * MathUtil::DegreeToRadian ), facing._z, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::cos( 30.0f * MathUtil::kDegreeToRadian ), facing._z, 1e-3f );
 
     TestRigSolverInternal::openReference( skeleton, buffer );
-    (void)RigIkSolver::aimBone( buffer, 0, float3::UnitZ, float3{ 3.0f, 4.0f, 0.0f }, MathUtil::Pi, 1.0f, space );
+    (void)RigIkSolver::aimBone( buffer, 0, float3::UnitZ, float3{ 3.0f, 4.0f, 0.0f }, MathUtil::kPi, 1.0f, space );
     SW_EXPECT_TRUE( TestRigSolverInternal::isNear( float3{ 0.6f, 0.8f, 0.0f }, float3::transform( float3::UnitZ, buffer.getModelRotation( 0 ) ), 1e-3f ) );
 
     // 원뿔 20°: 본 축(+Y)을 X 축으로 60° 눕힌 로컬 회전은 20° 로 잘린다.
     RigJointLimit cone{};
     cone._type       = RigJointLimitType::Cone;
     cone._boneAxis   = float3::UnitY;
-    cone._swingLimit = 20.0f * MathUtil::DegreeToRadian;
-    cone._twistLimit = 5.0f * MathUtil::DegreeToRadian;
+    cone._swingLimit = 20.0f * MathUtil::kDegreeToRadian;
+    cone._twistLimit = 5.0f * MathUtil::kDegreeToRadian;
     TestRigSolverInternal::openReference( skeleton, buffer );
-    buffer.setLocalRotation( 1, quaternion::createFromAxisAngle( float3::UnitX, 60.0f * MathUtil::DegreeToRadian ) * quaternion::createFromAxisAngle( float3::UnitY, 0.5f ) );
+    buffer.setLocalRotation( 1, quaternion::createFromAxisAngle( float3::UnitX, 60.0f * MathUtil::kDegreeToRadian ) * quaternion::createFromAxisAngle( float3::UnitY, 0.5f ) );
     RigIkSolver::applyJointLimit( buffer, 1, cone );
     const float3 boneAxis = float3::transform( float3::UnitY, buffer.getLocalRotation( 1 ) );
-    SW_EXPECT_NEAR_EQUAL( MathUtil::cos( 20.0f * MathUtil::DegreeToRadian ), boneAxis._y, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::cos( 20.0f * MathUtil::kDegreeToRadian ), boneAxis._y, 1e-3f );
     quaternion swing{};
     quaternion twist{};
     RigIkSolver::decomposeSwingTwist( buffer.getLocalRotation( 1 ), float3::UnitY, swing, twist );
-    SW_EXPECT_NEAR_EQUAL( 5.0f * MathUtil::DegreeToRadian, RigIkSolver::computeTwistAngle( twist, float3::UnitY ), 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f * MathUtil::kDegreeToRadian, RigIkSolver::computeTwistAngle( twist, float3::UnitY ), 1e-3f );
 }
 
 /**
@@ -278,14 +278,15 @@ SW_TEST_CASE( RigSolverTest, PlanarSolversStayInPlane )
     // 스프링: 평면 밖 중력(+Z 성분)을 줘도 입자는 평면에 남는다.
     const Skeleton    horizontal = TestRigSolverInternal::makeHorizontalChain( 3, 0.5f );
     RigSpringSettings springSettings{};
-    springSettings._gravity   = float3{ 0.0f, -9.8f, 5.0f };
-    springSettings._stiffness = 0.0f;
+    springSettings._gravityOverride     = float3{ 0.0f, -9.8f, 5.0f };
+    springSettings._bUseGravityOverride = SW_TRUE;
+    springSettings._stiffness           = 0.0f;
     RigSpringChain chain;
     for ( uint32 frame = 0; frame < 60; ++frame )
     {
         RigPoseBuffer buffer;
         TestRigSolverInternal::openReference( horizontal, buffer );
-        chain.simulate( buffer, TestRigSolverInternal::makeChainIndices( 3 ), springSettings, {}, float4x4::Identity, 1.0f / 60.0f, planar );
+        chain.simulate( buffer, TestRigSolverInternal::makeChainIndices( 3 ), springSettings, {}, float4x4::Identity, float3{}, 1.0f / 60.0f, planar );
         if ( frame == 59 )
             SW_EXPECT_NEAR_EQUAL( 0.0f, buffer.getModelPosition( 2 )._z, 1e-4f );
     }

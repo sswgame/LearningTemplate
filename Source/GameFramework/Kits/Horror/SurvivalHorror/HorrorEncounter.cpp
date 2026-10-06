@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     HorrorEncounter::HorrorEncounter()
@@ -127,5 +131,62 @@ namespace sw
                 return;
         }
         _state = HorrorEncounterState::Defeat;
+    }
+
+    void HorrorEncounter::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeName( outArchive, _monster._id );
+        outArchive << static_cast<uint32>( _listInvestigator.size() );
+        for ( const HorrorInvestigator& investigator : _listInvestigator )
+        {
+            outArchive << investigator._speed;
+            outArchive << investigator._actorId;
+            outArchive << investigator._health;
+            outArchive << investigator._sanity;
+            outArchive << investigator._will;
+            outArchive << investigator._strength;
+            outArchive << investigator._bDefeated;
+        }
+        _turnOrder.writeState( outArchive );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _monsterToughness;
+        outArchive << _turnCount;
+        outArchive << static_cast<uint8>( _state );
+    }
+
+    bool HorrorEncounter::readState( Archive& archive )
+    {
+        hashed_string monsterId;
+        uint32        count = 0;
+        // 조사자마다 속도 · 번호 · 체력 · 정신력 · 의지 · 힘(24) + 빠짐(1)
+        const bool bHeadRead = StateArchiveUtil::readName( archive, monsterId ) && StateArchiveUtil::readCount( archive, 25, count );
+        if ( bHeadRead == false || monsterId != _monster._id )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 괴물 정의 · 성공 눈은 사본이 그대로 든다.
+        HorrorEncounter restored = *this;
+        restored._listInvestigator.assign( count, HorrorInvestigator{} );
+        for ( HorrorInvestigator& investigator : restored._listInvestigator )
+        {
+            archive >> investigator._speed;
+            archive >> investigator._actorId;
+            archive >> investigator._health;
+            archive >> investigator._sanity;
+            archive >> investigator._will;
+            archive >> investigator._strength;
+            archive >> investigator._bDefeated;
+            if ( archive.isError() || investigator._bDefeated > SW_TRUE )
+                return false;
+        }
+        uint8      state     = 0;
+        const bool bPartRead = restored._turnOrder.readState( archive ) && StateArchiveUtil::readRandom( archive, restored._random );
+        archive >> restored._monsterToughness;
+        archive >> restored._turnCount;
+        archive >> state;
+        const bool bValid = bPartRead && archive.isOk() && 0 <= restored._turnCount && state <= static_cast<uint8>( HorrorEncounterState::Defeat );
+        if ( bValid == false )
+            return false;
+        restored._state = static_cast<HorrorEncounterState>( state );
+        *this           = std::move( restored );
+        return true;
     }
 } // namespace sw

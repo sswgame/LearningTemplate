@@ -68,7 +68,7 @@ namespace sw
             return false;
         }
         const string metaPath = metaPathFor( abs );
-        if ( FileUtil::fileExists( metaPath ) && FileUtil::removeFile( metaPath ) == false )
+        if ( FileUtil::exists( metaPath ) && FileUtil::removeFile( metaPath ) == false )
             SW_LOG_WARNING( "Deleted '%#' but its .meta could not be removed", abs );
         return true;
     }
@@ -88,7 +88,7 @@ namespace sw
     {
         Uuid   result{};
         string path = FileUtil::normalizePath( relativePath );
-        if ( path.empty() || FileUtil::hasExtension( path, ".meta" ) )
+        if ( path.empty() || FileUtil::hasExtension( path, path::kMetaExtension ) )
             return result;
 
         // **리소스 루트 밖의 절대 경로에는 식별자를 주지 않는다**(null GUID). 그런 경로(테스트의 임시 프리팹, 사용자가 연 바깥 파일)에
@@ -165,7 +165,7 @@ namespace sw
     bool AssetDatabase::registerExisting( string_view relativePath )
     {
         string path = FileUtil::normalizePath( relativePath );
-        if ( path.empty() || FileUtil::hasExtension( path, ".meta" ) )
+        if ( path.empty() || FileUtil::hasExtension( path, path::kMetaExtension ) )
             return false;
 
         Uuid guid{};
@@ -212,7 +212,7 @@ namespace sw
     uint32 AssetDatabase::refreshFolder( string_view absoluteFolder, bool bCreateMissing )
     {
         uint32 count{ 0 };
-        if ( FileUtil::directoryExists( absoluteFolder ) == false )
+        if ( FileUtil::isDirectory( absoluteFolder ) == false )
             return 0;
 
         vector<string> listFile;
@@ -223,7 +223,7 @@ namespace sw
             BLOCK( "Filter and Normalize Path" )
             {
                 const string name = FileUtil::getFileNamePart( filePath );
-                if ( FileUtil::hasExtension( name, ".meta" ) )
+                if ( FileUtil::hasExtension( name, path::kMetaExtension ) )
                     continue;
 
                 const string abs = FileUtil::normalizeSeparators( filePath );
@@ -249,7 +249,7 @@ namespace sw
 
     uint32 AssetDatabase::scanMetaFiles( string_view absoluteRoot )
     {
-        if ( FileUtil::directoryExists( absoluteRoot ) == false )
+        if ( FileUtil::isDirectory( absoluteRoot ) == false )
             return 0;
 
         // 절대 경로는 대소문자를 **보존**해서 받아야 한다(refreshFolder 와 같은 규칙). normalizePath 는

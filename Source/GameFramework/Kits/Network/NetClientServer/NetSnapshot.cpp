@@ -27,7 +27,7 @@ namespace sw
                                   vector<uint8>* pOutListCurrent ) const
     {
         if ( pOutListCurrent != nullptr )
-            pOutListCurrent->assign( _listEntity.size(), uint8{ 0 } );
+            pOutListCurrent->assign( _listEntity.size(), kEntityNotSent );
         // 재구성은 @p outWritten 의 엔티티 자리를 덮어쓴다 — 버퍼 용량이 남아 틱마다 엔티티 수만큼 할당하지 않는다(서버는 보낸 고리의 자리를 넘긴다).
         SW_ASSERT( pBaseline != &outWritten && this != &outWritten );
         outWritten._tick                   = _tick;
@@ -90,7 +90,7 @@ namespace sw
             if ( pOld != nullptr && pOld->_typeId == entity._typeId && pOld->_buffer == entity._buffer )
             {
                 if ( pOutListCurrent != nullptr )
-                    ( *pOutListCurrent )[entityIndex] = 1; // 받는 쪽 기준이 이미 지금 상태다
+                    ( *pOutListCurrent )[entityIndex] = kEntityAlreadyCurrent;
                 continue;
             }
             const int32 size = static_cast<int32>( entity._buffer.size() );
@@ -104,7 +104,7 @@ namespace sw
             writer.writeVarUint( entity._typeId );
             writer.writeBlob( entity._buffer.data(), size );
             if ( pOutListCurrent != nullptr )
-                ( *pOutListCurrent )[entityIndex] = 1;
+                ( *pOutListCurrent )[entityIndex] = kEntityWritten;
             // 기준에 있던 것은 그 자리를 덮고(id 순 — 이분 탐색), 새 것은 뒤에 붙인 뒤 끝에서 한 번 정렬한다. 붙이면 저장소가 옮겨질 수 있어 시작은 매번 다시 읽는다.
             NetEntityState* const pBegin = outWritten._listEntity.data();
             NetEntityState* const pEnd   = pBegin + baselineCount;

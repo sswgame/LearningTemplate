@@ -26,7 +26,7 @@ namespace sw
                        float32& inoutNear, float32& inoutFar, float3& inoutNearNormal )
         {
             // 이 축으로 움직이지 않으면 시작 좌표가 슬랩 안에 있는지만 본다. 나누면 무한대가 된다.
-            if ( MathUtil::abs( delta ) < MathUtil::Epsilon )
+            if ( MathUtil::abs( delta ) < MathUtil::kEpsilon )
                 return slabMin <= origin && origin <= slabMax;
 
             const float32 invDelta = 1.0f / delta;
@@ -52,8 +52,8 @@ namespace sw
         bool clipAllSlabs( const float3& origin, const float3& displacement, const AABB& slabBox,
                            float32& outNear, float3& outNearNormal )
         {
-            outNear         = -MathUtil::MaxFloat;
-            float32 farTime = MathUtil::MaxFloat;
+            outNear         = -MathUtil::kMaxFloat;
+            float32 farTime = MathUtil::kMaxFloat;
             outNearNormal   = float3{ 0.0f, 0.0f, 0.0f };
 
             if ( clipSlab( origin._x, displacement._x, slabBox._min._x, slabBox._max._x,
@@ -136,7 +136,7 @@ namespace sw
             outHit._time      = 0.0f;
             outHit._hitPoint  = initialClosest;
             const float32 len = MathUtil::sqrt( distSqInitial );
-            outHit._hitNormal = len > MathUtil::Epsilon ? float3{ toCenterInitial._x / len, toCenterInitial._y / len, toCenterInitial._z / len } : float3{ 0.0f, 1.0f, 0.0f };
+            outHit._hitNormal = len > MathUtil::kEpsilon ? float3{ toCenterInitial._x / len, toCenterInitial._y / len, toCenterInitial._z / len } : float3{ 0.0f, 1.0f, 0.0f };
             return true;
         }
 
@@ -168,7 +168,7 @@ namespace sw
             outHit._time      = tNear;
             outHit._hitPoint  = closestOnBox;
             const float32 len = MathUtil::sqrt( distSqHit );
-            outHit._hitNormal = len > MathUtil::Epsilon ? float3{ toCenter._x / len, toCenter._y / len, toCenter._z / len } : nearNormal;
+            outHit._hitNormal = len > MathUtil::kEpsilon ? float3{ toCenter._x / len, toCenter._y / len, toCenter._z / len } : nearNormal;
             return true;
         }
 
@@ -187,7 +187,7 @@ namespace sw
             outHit._time      = clampedProj;
             outHit._hitPoint  = closestOnBox;
             const float32 len = MathUtil::sqrt( edgeDistSq );
-            outHit._hitNormal = len > MathUtil::Epsilon ? float3{ diff._x / len, diff._y / len, diff._z / len } : nearNormal;
+            outHit._hitNormal = len > MathUtil::kEpsilon ? float3{ diff._x / len, diff._y / len, diff._z / len } : nearNormal;
             return true;
         }
 

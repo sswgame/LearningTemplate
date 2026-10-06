@@ -193,7 +193,7 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 - **스탬프**: `textures_raw/` 폴더마다 `import.stamp` 에 `<원본 해시> <DDS 해시> <상대 경로>` 한 줄씩. 원본 해시는 원본 바이트 + 적용한 규칙 +
   임포터 버전(`computeSourceHash`)이라 규칙만 바꿔도 어긋남이고, DDS 해시로 손댄 DDS 도 잡힙니다. 판정은 파일 시간이 아니라 **내용**입니다
   (git 이 시간 순서를 뒤집습니다). 원본이 사라진 줄도 어긋남입니다 — `ImportStale` 은 줄만 지우고 남은 DDS 는 사람이 정리합니다.
-- 주의: `.hdr` 는 임포트하지 않고 보고합니다 — 디코더(stb_image)가 8비트라 값이 잘립니다.
+- `.hdr` 는 stb(8비트)를 거치지 않고 DirectXTex `LoadFromHDRFile` 로 부동소수점으로 읽어 BC6H_UF16(`"format": "bc6h"`) · RGBA16F(`"rgba16f"`)로만 임포트합니다 — 규칙의 포맷이 8 비트면 그 원본의 실패로 보고합니다(쓰는 쪽이 생기면 `"*.hdr"` 규칙에 `"format": "bc6h"`, `"srgb": false`).
 - 시험: `TextureImportStampTest.RepositoryRawTexturesMatchTheirDds`(저장소의 원본과 DDS 가 맞는지), `AppSmokeTest.TextureCheckRunsHeadlessThroughTheEditorModule`.
 - 폴더 훑기 · 스탬프 · 어긋남 판정은 모델과 같은 한 벌입니다(`AssetImportStampUtil` + 종류마다 `IRawAssetImporter`).
 
@@ -341,7 +341,7 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
 ## Output Log · 설정 · 선택 · 레이아웃
 
 - **로그 줄 → IDE**: 줄을 더블 클릭(또는 오른쪽 클릭 `Open in IDE`)하면 그 줄이 가리키는 소스 위치를 IDE 로 연다. 메시지 안의 위치
-  (`경로(줄,열)` · `경로:줄:열` — 컴파일러 · 셰이더 오류)가 먼저, 없으면 로그를 쓴 자리다. 명령 틀은 `editortooldefaults.json` 의
+  (`경로(줄,열)` · `경로:줄:열` — 컴파일러 · 셰이더 오류)가 먼저, 없으면 로그를 쓴 자리다. 명령 틀은 `Config/Editor/editortooldefaults.json`(기본값과 다른 값만 적는 파일 — 없으면 기본값)의
   `_ideOpenCommand`(`{file}` · `{line}`), 비우면 VS Code(`code -g`, Windows 는 `cmd /c`)다. 판정은 `Common/Commands/EditorLogCommands`.
 - **카테고리 필터**: 툴바 `Tags` 팝업이 로그 카테고리(로그를 쓴 자리 `SW_LOG_CALLER`, 없으면 모듈 태그)마다 보이기를 켜고 끈다(`EditorLogTagFilter`).
 - **설정 파일 핫 리로드**: `Common/Workspace/ConfigHotReload` 가 `Config/` 의 `.json` 을 감시한다(에셋과 같은 `FileWatchDispatcher`, 루트만 다름).
@@ -351,7 +351,7 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
 - **같은 종류 · 태그 모두 선택**: Hierarchy 오른쪽 클릭 `Select All With` — 그 오브젝트의 컴포넌트 종류(파생 포함) · 태그(아래 계층 포함)마다
   (`EditorSceneCommands::collectObjectsWithComponent` · `collectObjectsWithTag` · `selectObjects`).
 - **이름 붙인 레이아웃**: `Panel > Layouts` — 이름을 적고 Save, 목록에서 고르면 불러오고 `x` 로 지운다. 도킹 배치(`<이름>.imgui.ini`)와 패널
-  가시성(`<이름>.windows.ini`)이 `Config/Editor/Layouts/` 에 남는다(git 무시). 불러오기는 다음 프레임 `NewFrame` 앞에서 한다
+  가시성(`<이름>.windows.ini`)이 `Saved/Editor/Layouts/` 에 남는다(git 무시). 불러오기는 다음 프레임 `NewFrame` 앞에서 한다
   (`EditorDockLayout::applyPendingNamedLayout`) — 프레임 안에서 ImGui 설정을 읽으면 이미 있는 창 · 도킹 노드에 적용되지 않는다.
 - 시험: `EditorLogCommandsTest` · `ConfigHotReloadTest` · `EditorLayoutStoreTest` · `EditorSceneCommandsTest.CollectObjectsByComponentTypeAndTag`
   (EditorTest), `ConfigManagerTest.ReloadConfigFileUpdatesInPlaceAndNotifies`(EngineTest), 에디터 자체 시험 `console.tagFilter` ·

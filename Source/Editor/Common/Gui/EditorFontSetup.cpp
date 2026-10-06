@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Resource/ResourceUtil.h"
@@ -24,7 +25,7 @@ namespace sw::editor
             /** @brief 해당 디렉터리가 실제로 존재하는 경우에만 정규화하여 출력 목록에 추가합니다. */
             static void appendIfDirectory( vector<string>& outList, const string& candidate )
             {
-                if ( candidate.empty() == false && FileUtil::directoryExists( candidate ) )
+                if ( candidate.empty() == false && FileUtil::isDirectory( candidate ) )
                     outList.push_back( FileUtil::normalizeSeparators( candidate ) );
             }
 
@@ -57,22 +58,20 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( pFileName ) )
                     return {};
 
-                const EditorToolDefaults& data       = editor::getEditorToolDefaults();
-                const string              editorRoot = ResourceUtil::getDomainFolderPath( path::kEditorPack );
+                const string editorRoot = ResourceUtil::getDomainFolderPath( path::kEditorPack );
                 if ( editorRoot.empty() == false )
                 {
-                    const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, data._fontsFolder ), pFileName );
-                    if ( FileUtil::fileExists( candidate ) )
+                    const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, editor::EditorUtil::kFontsFolderName ), pFileName );
+                    if ( FileUtil::isRegularFile( candidate ) )
                         return candidate;
                 }
 
                 const string& resourceRoot = ResourceUtil::getRootFolderPath();
-                if ( resourceRoot.empty() == false && data._editorFolder.empty() == false )
+                if ( resourceRoot.empty() == false )
                 {
                     const string candidate = FileUtil::joinPath(
-                        FileUtil::joinPath( FileUtil::joinPath( resourceRoot, data._editorFolder ), data._fontsFolder ),
-                        pFileName );
-                    if ( FileUtil::fileExists( candidate ) )
+                        FileUtil::joinPath( FileUtil::joinPath( resourceRoot, path::kEditorPack ), editor::EditorUtil::kFontsFolderName ), pFileName );
+                    if ( FileUtil::isRegularFile( candidate ) )
                         return candidate;
                 }
 
@@ -80,7 +79,7 @@ namespace sw::editor
                 for ( const string& fontsDir : getSystemFontsDirectories() )
                 {
                     string direct = FileUtil::joinPath( fontsDir, pFileName );
-                    if ( FileUtil::fileExists( direct ) )
+                    if ( FileUtil::isRegularFile( direct ) )
                         return string( std::move( direct ) );
                 }
 

@@ -4,10 +4,12 @@
  */
 #include "pch.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -102,9 +104,10 @@ SW_TEST_CASE( PrefabOverridesTest, OverridesHoldOnlyWhatDiffersAndRebuildTheInst
     // 루트의 덮어쓴 것은 위치 한 칸이다 — 같은 값(회전 · 스케일 · 부착)은 적지 않는다.
     SW_EXPECT_TRUE_MSG( overrides.find( "<Override key=\"SceneComponent#0\">\n\t\t<SceneComponent _localPosition=\"5,5,5\" />" ) != sw::string::npos,
                         overrides.c_str() );
-    SW_EXPECT_TRUE_MSG( overrides.find( "Socket" ) == sw::string::npos, overrides.c_str() ); // 고치지 않은 컴포넌트도
+    SW_EXPECT_TRUE_MSG( overrides.find( "key=\"Socket#0\"" ) == sw::string::npos, overrides.c_str() ); // 고치지 않은 컴포넌트도
     SW_EXPECT_TRUE_MSG( overrides.find( "<Remove key=\"MeshComponent#0\"" ) != sw::string::npos, overrides.c_str() );
-    SW_EXPECT_TRUE_MSG( overrides.find( "<Add>" ) != sw::string::npos && overrides.find( "Extra" ) != sw::string::npos, overrides.c_str() );
+    // 더한 것은 바로 앞의 물려받은 컴포넌트(Socket) 뒤 자리를 적는다.
+    SW_EXPECT_TRUE_MSG( overrides.find( "<Add after=\"Socket#0\">" ) != sw::string::npos && overrides.find( "Extra" ) != sw::string::npos, overrides.c_str() );
 
     sw::string rebuiltState;
     SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, overrides, "CrateA", rebuiltState ) );
@@ -269,8 +272,8 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
 SW_TEST_CASE( PrefabOverridesTest, CookedSceneOfAnotherVersionIsRefused )
 {
     sw::Archive arch;
-    arch << static_cast<uint32>( 0x53434E31u ); // 'SCN1'
-    arch << static_cast<uint32>( 2 );           // v2: 이름 · 프리팹 · GUID · XML · 바이너리 상태 · 파일 id(덮어쓴 것 칸이 없다)
+    arch << sw::FourCcUtil::make( "SCN1" );
+    arch << static_cast<uint32>( 2 ); // v2: 이름 · 프리팹 · GUID · XML · 바이너리 상태 · 파일 id(덮어쓴 것 칸이 없다)
     arch << sw::string( "OldCooked" );
     arch << static_cast<uint32>( 1 );
     arch << sw::string( "Plain" ) << sw::string() << sw::string()
@@ -288,4 +291,83 @@ SW_TEST_CASE( PrefabOverridesTest, CookedSceneOfAnotherVersionIsRefused )
         SW_EXPECT_TRUE( doc._listSceneObjectNode.empty() );
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "Unsupported binary version 2" ) == 1, logs.joined().c_str() );
+}
+
+/**
+ * @brief [PrefabOverridesTest] 가운데에 더한 컴포넌트는 앞의 물려받은 컴포넌트 뒤 자리를 지킨다 — 원형에 얹어도 순서가 그대로다
+ * @details 더한 것을 늘 끝에 붙이면 저장 · 로드 한 번에 순서가 바뀌고, 같은 타입의 `타입#n` 키가 다른 컴포넌트를 가리키게 된다.
+ */
+SW_TEST_CASE( PrefabOverridesTest, AddedComponentKeepsItsPlaceBetweenInheritedOnes )
+{
+    const sw::PrefabAsset prefab = sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
+    sw::string            baseState;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::makeBaseState( prefab, baseState ) );
+
+    // 원형은 [루트, Socket, 메시] — 메시를 떼고 이름표 단 씬 컴포넌트를 넣은 뒤 메시를 다시 붙여 [루트, Socket, Extra, 메시] 로 만든다.
+    sw::GameObjectManager world;
+    sw::GameObject*       pInstance = world.createGameObject( sw::hashed_string( "CrateMid" ) );
+    SW_ASSERT_TRUE( prefab.applyStateTo( pInstance ) );
+    pInstance->setName( sw::hashed_string( "CrateMid" ) );
+    SW_ASSERT_TRUE( pInstance->removeComponent( pInstance->getComponent<sw::MeshComponent>() ) );
+    sw::SceneComponent* pExtra = pInstance->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pExtra );
+    pExtra->setComponentName( sw::hashed_string( "Extra" ) );
+    SW_ASSERT_NOT_NULL( pInstance->addComponent<sw::MeshComponent>() );
+    world.flushSceneTransforms();
+
+    const sw::string instanceState = sw::ObjectStateSerializer::saveToXmlString( pInstance );
+    sw::string       overrides;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( instanceState, baseState, overrides ) );
+    SW_EXPECT_TRUE_MSG( overrides.find( "<Add after=\"Socket#0\">" ) != sw::string::npos, overrides.c_str() );
+    SW_EXPECT_TRUE_MSG( overrides.find( "<Remove" ) == sw::string::npos, overrides.c_str() ); // 다시 붙인 메시는 같은 키 · 같은 값 — 물려받은 것이다
+
+    sw::string rebuiltState;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, overrides, "CrateMid", rebuiltState ) );
+    sw::GameObjectManager rebuiltWorld;
+    sw::GameObject*       pRebuilt = rebuiltWorld.createGameObject( sw::hashed_string( "Rebuilt" ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pRebuilt, rebuiltState ) );
+    SW_EXPECT_STREQ( instanceState.c_str(), sw::ObjectStateSerializer::saveToXmlString( pRebuilt ).c_str() );
+
+    // 앞의 물려받은 컴포넌트가 프리팹에서 사라진 더한 것은 버리지 않고 끝에 붙인다.
+    const sw::string lostAnchor = "<PrefabOverrides><Add after=\"Gone#0\"><SceneComponent _componentName=\"Late\" /></Add></PrefabOverrides>";
+    SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, lostAnchor, "CrateTail", rebuiltState ) );
+    SW_EXPECT_TRUE_MSG( rebuiltState.find( "\"Late\"" ) != sw::string::npos && rebuiltState.find( "\"Late\"" ) > rebuiltState.find( "MeshComponent" ), rebuiltState.c_str() );
+}
+
+/**
+ * @brief [PrefabOverridesTest] 프리팹에서 사라진 컴포넌트의 오버라이드는 엔티티 이름과 함께 경고하고 버린다 — 얹은 상태에 남지 않는다
+ */
+SW_TEST_CASE( PrefabOverridesTest, OverrideOfVanishedComponentIsDroppedWithTheEntityName )
+{
+    const sw::PrefabAsset prefab = sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
+    sw::string            baseState;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::makeBaseState( prefab, baseState ) );
+    const sw::string overrides = "<PrefabOverrides><Override key=\"Gone#0\"><SceneComponent _localPosition=\"9,9,9\" /></Override></PrefabOverrides>";
+
+    test::ScopedLogCollector logs;
+    sw::string               rebuiltState;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, overrides, "CrateGone", rebuiltState ) );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "'Gone#0' of 'CrateGone' is dropped" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( rebuiltState.find( "9,9,9" ) == sw::string::npos, rebuiltState.c_str() );
+}
+
+/**
+ * @brief [PrefabOverridesTest] 물려받은 컴포넌트의 이름표를 바꾸면 제거 + 추가로 기록된다 — 그 컴포넌트에 프리팹 수정이 더는 닿지 않는다(에디터가 막을 자리)
+ */
+SW_TEST_CASE( PrefabOverridesTest, RenamedInheritedComponentIsRecordedAsRemoveAndAdd )
+{
+    const sw::PrefabAsset prefab = sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
+    sw::string            baseState;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::makeBaseState( prefab, baseState ) );
+    sw::GameObjectManager world;
+    sw::GameObject*       pInstance = world.createGameObject( sw::hashed_string( "CrateRenamed" ) );
+    SW_ASSERT_TRUE( prefab.applyStateTo( pInstance ) );
+    sw::Component* pSocket = sw::ComponentStableKey::findComponent( pInstance, "Socket#0" );
+    SW_ASSERT_NOT_NULL( pSocket );
+    pSocket->setComponentName( sw::hashed_string( "Mount" ) );
+
+    sw::string overrides;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( sw::ObjectStateSerializer::saveToXmlString( pInstance ), baseState, overrides ) );
+    SW_EXPECT_TRUE_MSG( overrides.find( "<Remove key=\"Socket#0\"" ) != sw::string::npos, overrides.c_str() );
+    SW_EXPECT_TRUE_MSG( overrides.find( "_componentName=\"Mount\"" ) != sw::string::npos, overrides.c_str() );
 }

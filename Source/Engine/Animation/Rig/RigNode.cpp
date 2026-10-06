@@ -141,7 +141,7 @@ namespace sw
         float3 degrees{};
         if ( readFloat3( key, degrees, bRequired ) == false )
             return false;
-        outValue = quaternion::createFromYawPitchRoll( degrees * MathUtil::DegreeToRadian );
+        outValue = quaternion::createFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
         return true;
     }
 

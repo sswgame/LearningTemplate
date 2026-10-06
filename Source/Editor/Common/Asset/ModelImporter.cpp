@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Asset/ModelImporter.h"
 
+#include "Core/Common/FourCcUtil.h"
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -15,7 +17,6 @@
 #include "Editor/Common/Asset/ModelImportConfig.h"
 #include "Editor/Common/Asset/TextureImporter.h"
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
-#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -63,8 +64,8 @@ namespace sw::editor
             /** @brief 머티리얼이 쓰는 내장 이미지를 꺼내 두는 원본 텍스처 폴더 이름입니다(텍스처 임포트가 옆 `textures/` 의 DDS 로 만든다). */
             static constexpr string_view kRawTextureFolder = "textures_raw";
             /** @brief GLB 머리 · 청크 머리 크기와 표식("glTF" · "JSON")입니다. */
-            static constexpr uint32 kGlbMagic           = 0x46546C67u;
-            static constexpr uint32 kGlbJsonChunkType   = 0x4E4F534Au;
+            static constexpr uint32 kGlbMagic           = FourCcUtil::make( "glTF" );
+            static constexpr uint32 kGlbJsonChunkType   = FourCcUtil::make( "JSON" );
             static constexpr size_t kGlbHeaderSize      = 12;
             static constexpr size_t kGlbChunkHeaderSize = 8;
             /** @brief meshopt_optimizeOverdraw 가 정점 캐시 효율을 얼마나 잃어도 되는지입니다(라이브러리 권장값). */
@@ -264,7 +265,7 @@ namespace sw::editor
             static float3 normalizeOrZero( const float3& value )
             {
                 const float32 length = value.getLength();
-                return length > MathUtil::Epsilon ? value * ( 1.0f / length ) : float3{};
+                return length > MathUtil::kEpsilon ? value * ( 1.0f / length ) : float3{};
             }
 
             /**
@@ -381,7 +382,7 @@ namespace sw::editor
                     if ( readFloats( pNormal, vertexIndex, arrNormal, 3 ) )
                     {
                         vertex._normal     = convertToEngineSpace( transformNormal( arrWorld, float3{ arrNormal } ) );
-                        vertex._bHasNormal = vertex._normal.getLength() > MathUtil::Epsilon;
+                        vertex._bHasNormal = vertex._normal.getLength() > MathUtil::kEpsilon;
                     }
 
                     float32 arrUv[2]{};
@@ -439,7 +440,7 @@ namespace sw::editor
                     inoutVertex._arrWeight[influence] = bValid ? MathUtil::max( arrWeight[influence], 0.0f ) : 0.0f;
                     weightSum += inoutVertex._arrWeight[influence];
                 }
-                if ( weightSum <= MathUtil::Epsilon )
+                if ( weightSum <= MathUtil::kEpsilon )
                 {
                     inoutVertex._arrJoint[0]  = skin._rigidBone;
                     inoutVertex._arrWeight[0] = 1.0f;
@@ -1107,7 +1108,7 @@ namespace sw::editor
             {
                 outMapExtra.clear();
                 const string clipDataPath = ModelImporter::makeClipDataPath( sourcePath );
-                if ( FileUtil::fileExists( clipDataPath ) == false )
+                if ( FileUtil::exists( clipDataPath ) == false )
                     return true;
                 JsonDocument document;
                 if ( document.loadPath( clipDataPath ) == false )
@@ -1358,7 +1359,7 @@ namespace sw::editor
                         continue;
                     const string  rawPath = FileUtil::joinPath( rawTextureFolder, texture._fileStem + texture._extension );
                     vector<uint8> existing;
-                    const bool    bSame = FileUtil::fileExists( rawPath ) && FileUtil::readFile( rawPath, existing ) && existing == texture._bytes;
+                    const bool    bSame = FileUtil::exists( rawPath ) && FileUtil::readFile( rawPath, existing ) && existing == texture._bytes;
                     if ( bSame == false )
                     {
                         FileUtil::ensureDirectoryExists( rawTextureFolder );
@@ -1390,7 +1391,7 @@ namespace sw::editor
                     // 머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다 — 옆 폴더에 실행마다 다른 GUID 가 생기면 임포트 결과 해시가 어긋난다.
                     // 그래서 임포터가 경로에서 정해지는 GUID 로 미리 쓴다(언리얼 · 유니티의 임포트 부산물도 임포터가 식별자를 정한다).
                     const string resourceId = ResourceUtil::toResourceId( materialPath );
-                    if ( FileUtil::writeTextFile( materialPath + ".meta", "guid=" + makeImportedGuid( resourceId ) + "\nsourcePath=" + resourceId + "\nimported=1\n" ) == false )
+                    if ( FileUtil::writeTextFile( materialPath + path::kMetaExtension, "guid=" + makeImportedGuid( resourceId ) + "\nsourcePath=" + resourceId + "\nimported=1\n" ) == false )
                     {
                         SW_LOG_ERROR( "Failed to write %#.meta", materialPath.c_str() );
                         return false;
@@ -1411,7 +1412,7 @@ namespace sw::editor
             static string makeImportedGuid( string_view resourceId )
             {
                 const uint64 high = StringUtil::computeHash64( resourceId.data(), resourceId.size(), false );
-                const uint64 low  = StringUtil::computeHash64( resourceId.data(), resourceId.size(), false, high ^ 0x9E3779B97F4A7C15ull );
+                const uint64 low  = StringUtil::computeHash64( resourceId.data(), resourceId.size(), false, high ^ HashUtil::kGoldenRatio64 );
                 // 8-4-4-4-12 자리 16 진. 셋째 묶음 첫 자리는 버전 4, 넷째 묶음 첫 자리는 변형(8..b)이다.
                 auto appendHex = []( string& inoutText, uint64 value, uint32 digitCount )
                 {
@@ -1818,7 +1819,7 @@ namespace sw::editor
             SW_LOG_INFO( "Fractured %# -> %# (%# pieces, %# links, %# levels, %# interior triangles)", sourcePath, fracturePath.c_str(), fracture.getPieceCount(),
                          fracture._graph._listLink.size(), fracture._graph.getDepthCount(), fracture.countTriangles( FractureSurfaceSlot::Interior ) );
         }
-        else if ( FileUtil::fileExists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
+        else if ( FileUtil::exists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
         {
             SW_LOG_ERROR( "Failed to remove stale fracture asset %#", fracturePath.c_str() );
             return false;
@@ -1888,7 +1889,7 @@ namespace sw::editor
         // 스탬프를 적는 길이 하나여야 에디터에서 임포트된 것과 `App --import-models` 로 임포트된 것이 같은 판정을 받는다.
         // 설정 파일이 없으면 규칙 없이 임포트한다. 깨졌으면 로드가 알린다.
         ModelImportConfig config{};
-        (void)config.loadFromFile( EditorUtil::resolveEditorConfigFile( getEditorToolDefaults()._modelImportConfigFile.c_str() ) );
+        (void)config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() );
         const AssetImportSummary summary = importAllModels( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
@@ -1944,7 +1945,7 @@ namespace sw::editor
         // 곁 데이터(클립 반복 · 알림 · 커브)를 고쳐도 다시 임포트해야 한다.
         vector<uint8> clipDataBytes;
         const string  clipDataPath = makeClipDataPath( sourcePath );
-        if ( FileUtil::fileExists( clipDataPath ) && FileUtil::readFile( clipDataPath, clipDataBytes ) && clipDataBytes.empty() == false )
+        if ( FileUtil::exists( clipDataPath ) && FileUtil::readFile( clipDataPath, clipDataBytes ) && clipDataBytes.empty() == false )
             hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( clipDataBytes.data() ), clipDataBytes.size(), false, hash );
 
         // `.gltf` 는 버퍼를 옆 파일로 둘 수 있다 — 그 바이트가 바뀌어도 어긋남이어야 한다. data URI 는 이미 본문에 있다.
@@ -1979,14 +1980,14 @@ namespace sw::editor
             return 0;
         // 옆의 `.fracture` 도 결과다 — 지워지거나 바뀌면 어긋남이다.
         const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
-        if ( FileUtil::fileExists( fracturePath ) )
+        if ( FileUtil::exists( fracturePath ) )
         {
             const uint64 fractureHash = AssetImportStampUtil::computeFileHash( fracturePath );
             hash                      = StringUtil::computeHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
         }
         // 옆 폴더의 파일을 이름순으로 섞는다 — 이름도 섞어 파일이 사라지거나 바뀌면 다른 값이 된다.
         const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
-        if ( FileUtil::directoryExists( sideFolder ) == false )
+        if ( FileUtil::isDirectory( sideFolder ) == false )
             return hash;
         vector<string> listFile;
         (void)FileUtil::collectFiles( sideFolder, "", listFile, true );

@@ -146,7 +146,7 @@ namespace sw
         bool hasLoadedUserFile() const { return _bUserFileLoaded; }
         /**
          * @brief 사용자 폴더의 설정 파일 경로입니다 — Windows `%LOCALAPPDATA%/SWEngine/<game>/usersettings.json`,
-         *        Linux `$XDG_CONFIG_HOME`(없으면 `~/.config`)`/swengine/<game>/usersettings.json`. 사용자 폴더를 모르면 `Saved/` 아래입니다.
+         *        Linux `$XDG_CONFIG_HOME`(없으면 `~/.config`)`/swengine/<game>/usersettings.json`. 사용자 폴더를 모르면 `Saved/<game>/` 입니다(`UserDataPath::getConfigDirectory`).
          */
         static string makeDefaultUserFilePath( string_view gameName );
 

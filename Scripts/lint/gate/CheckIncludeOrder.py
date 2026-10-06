@@ -7,8 +7,10 @@ Include 순서 및 스타일 검사 린터.
 1. .cpp 파일의 첫 번째 include는 무조건 "pch.h" 이어야 합니다.
 2. 프로젝트 헤더 ("...") 인클루드가 시스템/외부 헤더 (<...>) 인클루드보다 먼저 와야 합니다.
 
+이 게이트는 검사만 한다 — 고치는 것은 같은 규칙을 부르는 픽서 `Scripts/lint/fixer/FormatIncludeOrder.py`(규칙 · 판정은 이 파일 한 자리).
+
 사용법:
-  python Scripts/lint/gate/CheckIncludeOrder.py [--root <repo>]
+  python Scripts/lint/gate/CheckIncludeOrder.py [--root <repo>] [--files <path> ...]
 """
 
 import argparse
@@ -19,7 +21,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectRepositoryFiles, collectSourceFiles, flatMapConcurrent, getLintSearchDirs, kCppSourceExtensions  # noqa: E402
+from common import (collectRepositoryFiles, flatMapConcurrent, getProjectRoot, kCppAllExtensions, kCppSourceExtensions,  # noqa: E402
+                    kLintTargetRelDirs)
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
@@ -107,19 +110,13 @@ def findSplitConditionalIncludes(lines: list[str], relativeFilePath: str) -> lis
     return violationsList
 
 
-def processFile(filePath: Path, repositoryRoot: Path,
-                sourceHeaderMap: dict[str, str] | None = None,
-                testHeaderMap: dict[str, str] | None = None,
-                toolsHeaderMap: dict[str, str] | None = None,
-                checkOnly: bool = False) -> list[str]:
-    relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
-    try:
-        text = filePath.read_text(encoding="utf-8-sig", errors="strict")
-    except Exception as exception:
-        return [f"[CheckIncludeOrder] 읽기 실패: {relativeFilePath}: {exception}"]
-
+def computeIncludeOrderInternal(text: str, relativeFilePath: str,
+                                sourceHeaderMap: dict[str, str] | None,
+                                testHeaderMap: dict[str, str] | None,
+                                toolsHeaderMap: dict[str, str] | None) -> tuple[str, list[str]]:
+    """규칙대로 정리한 글과, 정리로 풀 수 없는 위반(같은 조건의 include 블록 둘 등). 글은 줄끝 `\n` 으로 받는다."""
     violationsList = []
-    isCpp = filePath.suffix.lower() in kCppSourceExtensions
+    isCpp = Path(relativeFilePath).suffix.lower() in kCppSourceExtensions
     
     lines = text.split('\n')
     violationsList.extend(findSplitConditionalIncludes(lines, relativeFilePath))
@@ -294,25 +291,52 @@ def processFile(filePath: Path, repositoryRoot: Path,
     if text.endswith("\n") and not newText.endswith("\n"):
         newText += "\n"
 
-    if newText != text:
-        if checkOnly:
-            violationsList.append(f'{relativeFilePath}: Include 순서/중복 문제가 발견되었습니다. (FormatModified.py를 실행하세요)')
-        else:
-            try:
-                filePath.write_text(newText, encoding="utf-8")
-            except Exception as exception:
-                violationsList.append(f'{relativeFilePath}: 파일 쓰기 실패: {exception}')
+    return newText, violationsList
 
+
+def findViolations(filePath: Path, repositoryRoot: Path,
+                   sourceHeaderMap: dict[str, str] | None = None,
+                   testHeaderMap: dict[str, str] | None = None,
+                   toolsHeaderMap: dict[str, str] | None = None) -> list[str]:
+    """파일 하나의 위반 — 읽기만 한다(고치는 것은 `fixText` · `FormatIncludeOrder`)."""
+    relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
+    try:
+        text = filePath.read_text(encoding="utf-8-sig", errors="strict")
+    except (OSError, UnicodeDecodeError) as error:
+        return [f"[CheckIncludeOrder] 읽기 실패: {relativeFilePath}: {error}"]
+    newText, violationsList = computeIncludeOrderInternal(text, relativeFilePath, sourceHeaderMap, testHeaderMap, toolsHeaderMap)
+    if newText != text:
+        violationsList.append(f"{relativeFilePath}: Include 순서/중복 문제가 발견되었습니다. "
+                              f"(`py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files {relativeFilePath}` 로 고친다)")
     return violationsList
+
+
+#: 헤더 조회표(저장소 루트 → 표 셋) — 픽서는 파일마다 변환을 부르므로 한 번 만들어 둔다.
+_s_mapHeaderLookup: dict[Path, tuple[dict[str, str], dict[str, str], dict[str, str]]] = {}
+
+
+def fixText(text: str, relativeFilePath: str) -> tuple[str, bool]:
+    """픽서 변환(`FixPass.transform`, 경로 필요) — 줄끝(CRLF)은 지킨다. 헤더 조회표는 이 저장소의 것이다."""
+    repositoryRoot = getProjectRoot().resolve()
+    if repositoryRoot not in _s_mapHeaderLookup:
+        _s_mapHeaderLookup[repositoryRoot] = buildHeaderLookupMap(repositoryRoot)
+    newline = "\r\n" if "\r\n" in text else "\n"
+    bom = "\ufeff" if text.startswith("\ufeff") else ""   # 게이트처럼 BOM 을 떼고 판정하고, 있던 BOM 은 돌려놓는다
+    plainText = text.removeprefix(bom).replace("\r\n", "\n")
+    newText, _ = computeIncludeOrderInternal(plainText, relativeFilePath, *_s_mapHeaderLookup[repositoryRoot])
+    newText = bom + newText.replace("\n", newline)
+    return newText, newText != text
+
+
+#: 픽서의 조각 — 게이트의 첫 자가 시험 조각(Engine 이 Core 보다 앞)과 그것을 고친 결과.
+kFixBadSample = '#include "pch.h"\n\n#include "Engine/Common/EngineServices.h"\n#include "Core/File/FileUtil.h"\n'
+kFixGoodSample = '#include "pch.h"\n\n#include "Core/File/FileUtil.h"\n\n#include "Engine/Common/EngineServices.h"\n'
 
 
 class CheckIncludeOrderGate(LintGate):
     """
-    기본은 **검사만** 한다. 고치려면 `--fix` 를 준다.
-
-    주의: 게이트의 기본 모드가 고치는 모드면 위반을 고쳐 놓고 `0` 을 돌려주므로 CTest 에 게이트로 등록돼 있어도
-    **실패할 수가 없다**. 기본은 검사, 고치기는 `--fix` 로만 둔다(자가 검사 조각이 이것을 지킨다).
-    포맷 단계의 고치기는 `FormatModified.py` 가 `processFile(...)` 을 직접 불러서 한다.
+    검사만 한다(게이트는 고치지 않는다 — 고치는 모드가 있으면 CTest 에 게이트로 등록돼 있어도 실패할 수 없다).
+    고치는 것은 `fixer/FormatIncludeOrder.py`(같은 `computeIncludeOrderInternal`)와 그것을 부르는 `FormatModified.py`.
     """
 
     description = "Include 순서 검사"
@@ -351,22 +375,16 @@ class CheckIncludeOrderGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--fix", action="store_true", help="보고만 하지 않고 파일을 고칩니다")
         parser.add_argument("--files", nargs="*", default=None,
                             help="검사할 파일 (생략 시 전체). 헤더 조회표는 어차피 전체를 봐야 만들어진다")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        if args.files:
-            allFiles = [Path(item).resolve() for item in args.files]
-            allFiles = [path for path in allFiles if path.is_file()]
-        else:
-            allFiles = collectSourceFiles(getLintSearchDirs(repositoryRoot))
+        allFiles = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=kCppAllExtensions)
 
         sourceHeaderMap, testHeaderMap, toolsHeaderMap = buildHeaderLookupMap(repositoryRoot)
 
         violations = flatMapConcurrent(
-            lambda path: processFile(path, repositoryRoot, sourceHeaderMap, testHeaderMap, toolsHeaderMap,
-                                     checkOnly=not args.fix),
+            lambda path: findViolations(path, repositoryRoot, sourceHeaderMap, testHeaderMap, toolsHeaderMap),
             allFiles,
         )
         return GateResult(listViolation=violations, summary=f"{len(allFiles)} files scanned")

@@ -4,9 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Data/GameDataXml.h"
+#include "GameFramework/Base/Data/GameDataXml.h"
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -34,6 +36,51 @@ namespace sw
         _eventBuffer.clear();
         _nextSerial = 1;
         _spawnTimer.start( MathUtil::max( 0.0f, settings._minInterval ) );
+    }
+
+    void PartyItemSpawner::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listInstance.size() );
+        for ( const PartyItemInstance& instance : _listInstance )
+        {
+            outArchive << instance._position;
+            StateArchiveUtil::writeName( outArchive, instance._itemId );
+            outArchive << instance._age;
+            outArchive << instance._serial;
+        }
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateArchiveUtil::writeCountdown( outArchive, _spawnTimer );
+        outArchive << _nextSerial;
+    }
+
+    bool PartyItemSpawner::readState( Archive& archive )
+    {
+        uint32 instanceCount = 0;
+        // 놓인 것마다 자리(12) + 이름(4) + 나이(4) + 번호(4)
+        if ( StateArchiveUtil::readCount( archive, 24, instanceCount ) == false )
+            return false;
+        vector<PartyItemInstance> listInstance( instanceCount, PartyItemInstance{} );
+        for ( PartyItemInstance& instance : listInstance )
+        {
+            archive >> instance._position;
+            if ( StateArchiveUtil::readName( archive, instance._itemId ) == false || findItem( instance._itemId ) == nullptr )
+                return false;
+            archive >> instance._age;
+            archive >> instance._serial;
+        }
+        GameRandom random     = _random;
+        Countdown  spawnTimer = {};
+        int32      nextSerial = 0;
+        const bool bRead      = StateArchiveUtil::readRandom( archive, random ) && StateArchiveUtil::readCountdown( archive, spawnTimer );
+        archive >> nextSerial;
+        if ( bRead == false || archive.isError() )
+            return false;
+        _listInstance = std::move( listInstance );
+        _random       = random;
+        _spawnTimer   = spawnTimer;
+        _nextSerial   = nextSerial;
+        _eventBuffer.clear();
+        return true;
     }
 
     float32 PartyItemSpawner::rollInterval()
@@ -92,7 +139,7 @@ namespace sw
             return;
         // 원판 안 고르게 — 반지름에 제곱근.
         const float32     radius = _settings._spawnRadius * MathUtil::sqrt( _random.nextFloat() );
-        const float32     angle  = _random.nextRange( 0.0f, 2.0f * MathUtil::Pi );
+        const float32     angle  = _random.nextRange( 0.0f, 2.0f * MathUtil::kPi );
         PartyItemInstance instance;
         instance._itemId   = pDef->_id;
         instance._serial   = _nextSerial++;

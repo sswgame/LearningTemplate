@@ -96,7 +96,6 @@ namespace sw
                             {     prop._bReplicated,      "Replicated"},
                             {       prop._bSaveGame,        "SaveGame"},
                             {         prop._bInterp,          "Interp"},
-                            {         prop._bConfig,          "Config"},
                             {       prop._bColorHdr,        "ColorHdr"},
                             {      prop._bMultiline,       "Multiline"},
                         };
@@ -119,8 +118,6 @@ namespace sw
                             out.appendFormat( "  Validate=%#", prop._validate );
                         if ( prop._repNotify.empty() == false )
                             out.appendFormat( "  RepNotify=%#%#", prop._repNotify, prop._bRepNotifyTakesOldValue == SW_TRUE ? "(old)" : "()" );
-                        if ( prop._configSection.empty() == false || prop._configKey.empty() == false )
-                            out.appendFormat( "  Config=%#.%#", prop._configSection, prop._configKey );
                         for ( const string& alias : prop._listAlias )
                             out.appendFormat( "  alias=%#", alias );
                         out.append( "\n" );
@@ -205,10 +202,9 @@ namespace sw
                 vector<StampDependency> listDependency;
                 // 출력 폴더는 받은 꼴과 실제 경로 둘로 거른다 — clang 은 include 한 파일을 실제 경로로 주는데, 받은 경로는 8.3 짧은 이름
                 // (`RUNNER~1`)이거나 링크일 수 있다(Windows CI 의 TEMP 가 그렇다).
-                std::error_code    errorCode;
-                const auto         realOutputDir = std::filesystem::canonical( std::filesystem::path( outputDir.c_str() ), errorCode );
-                InclusionCollector collector{ translationUnit, FileUtil::normalizeSeparators( outputDir ),
-                                              errorCode ? string() : FileUtil::normalizeSeparators( string( realOutputDir.generic_string().c_str() ) ),
+                string             realOutputDir;
+                const bool         bHasRealOutputDir = FileUtil::makeCanonicalPath( outputDir, realOutputDir );
+                InclusionCollector collector{ translationUnit, FileUtil::normalizeSeparators( outputDir ), bHasRealOutputDir ? realOutputDir : string(),
                                               runStartTime, &listDependency };
                 for ( string* pPrefix : { &collector._outputDirPrefix, &collector._outputDirRealPrefix } )
                 {
@@ -486,12 +482,12 @@ namespace sw
         //
         // 헤더를 **옮긴** 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다. 그러지 않으면 파일을 옮길 때마다 빌드가 막힌다.
         string existingCpp;
-        if ( FileUtil::fileExists( paths._cppPath ) && FileUtil::readTextFile( paths._cppPath, existingCpp ) )
+        if ( FileUtil::exists( paths._cppPath ) && FileUtil::readTextFile( paths._cppPath, existingCpp ) )
         {
             const string_view recordedSource = GeneratedFileUtil::findRecordedSourcePath( existingCpp, config );
             const bool        bOtherOwner    = recordedSource.empty() == false &&
                                      FileUtil::normalizeSeparators( recordedSource ) != FileUtil::normalizeSeparators( inputFile ) &&
-                                     FileUtil::fileExists( recordedSource );
+                                     FileUtil::exists( recordedSource );
             if ( bOtherOwner )
             {
                 SW_LOG_ERROR( "Generated file name collision: '%#' and '%#' both generate '%#'. "
@@ -565,7 +561,7 @@ namespace sw
         {
             const string genHeader = ParserUtil::makeGeneratedPath( _pOptions->_outputDir, inputFile, config._emitHeaderExtension );
             string       genText;
-            if ( FileUtil::fileExists( genHeader ) == false || FileUtil::readTextFile( genHeader, genText ) == false )
+            if ( FileUtil::exists( genHeader ) == false || FileUtil::readTextFile( genHeader, genText ) == false )
                 continue;
             if ( genText.find( config._emitFlagOpsMarker ) == string::npos )
                 continue;

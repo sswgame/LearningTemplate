@@ -3,7 +3,7 @@
 # @brief pugixml — C++ XML 라이브러리
 # ==============================================================================
 
-sw_addVcpkgConfigLib(
+sw_addVcpkgPackage(
 	NAME pugixml
 	PACKAGE pugixml
 	CONFIG_TARGET pugixml::pugixml

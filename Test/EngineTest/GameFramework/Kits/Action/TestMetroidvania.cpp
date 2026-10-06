@@ -1,19 +1,23 @@
 // 메트로배니아 · 2D 소울라이크 키트 — 능력 → 몸 설정 · 길 잠금, 지도 구매 · 아이템 표시 · 빠른 이동, 시체 · 영구 손실, 휴식 · 물약 · 적 부활 · 보스, 패리 · 막기 · 강인도, 부적 슬롯.
 #include "pch.h"
 
-#include "GameFramework/Data/StatBlock.h"
-#include "GameFramework/Inventory/ItemBag.h"
-#include "GameFramework/Inventory/LootTable.h"
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Data/StatBlock.h"
+#include "GameFramework/Base/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/World/AreaGraph.h"
+#include "GameFramework/Base/World/GameFlags.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroAbilitySet.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroCharmLoadout.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroDuelist.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroMapState.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroSoulsState.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
-#include "GameFramework/Movement/PlatformerMotor2D.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/World/AreaGraph.h"
-#include "GameFramework/World/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -91,6 +95,20 @@ namespace
         MetroScene() { _bLoaded = _catalog.loadFromXmlText( kMetroidvaniaCatalogXml, "metro" ) && _graph.loadFromXmlText( kAreaXml, "areas" ); }
     };
 
+    /** @brief 영혼 상태가 빌릴 지갑 묶음입니다. */
+    GameStateRefs lendMetroWallet( Wallet& wallet )
+    {
+        GameStateRefs refs;
+        refs._pWallet = &wallet;
+        return refs;
+    }
+
+    /** @brief 카탈로그 통화("geo") 잔액입니다. */
+    int32 geoOf( const Wallet& wallet )
+    {
+        return static_cast<int32>( wallet.getBalance( "geo" ) );
+    }
+
     uint32 runMotor( PlatformerMotor2D& motor, const PlatformTileMap& map, const MetroAbilitySet& abilities, const PlatformerInput& input, int32 frameCount )
     {
         uint32 events = 0;
@@ -100,6 +118,33 @@ namespace
             events |= motor.getEvents();
         }
         return events;
+    }
+
+    /** @brief 상태 바이트를 꺼냅니다. */
+    template <typename StateType>
+    vector<uint8> captureMetroBytes( const StateType& state )
+    {
+        Archive archive;
+        state.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
+    }
+
+    /** @brief @p bytes 를 @p outState 에 읽고 끝까지 다 읽었으면 true 입니다. */
+    template <typename StateType>
+    bool restoreMetroBytes( const vector<uint8>& bytes, StateType& outState )
+    {
+        Archive reader( bytes.data(), bytes.size() );
+        return outState.readState( reader ) && reader.getRemainingBytes() == 0;
+    }
+
+    /** @brief 마지막 한 바이트를 자른 바이트를 @p outState 에 읽습니다(거절되어야 한다). */
+    template <typename StateType>
+    bool restoreTruncatedMetroBytes( const vector<uint8>& bytes, StateType& outState )
+    {
+        Archive reader( bytes.data(), bytes.size() - 1 );
+        return outState.readState( reader );
     }
 } // namespace
 
@@ -187,14 +232,15 @@ SW_TEST_CASE( MetroidvaniaTest, RegionMapPurchaseRevealsRoomsAndUnvisitedItemMar
     SW_EXPECT_EQUAL( 0, static_cast<int32>( listMarker.size() ) );
 
     // 돈이 모자라면 아무것도 바뀌지 않는다.
-    int32 currency = 20;
-    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", currency ) == MetroMapPurchase::NotEnoughCurrency );
-    SW_EXPECT_EQUAL( 20, currency );
-    SW_EXPECT_TRUE( mapState.buyRegionMap( "nowhere", currency ) == MetroMapPurchase::UnknownRegion );
-    currency = 50;
-    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", currency ) == MetroMapPurchase::Bought );
-    SW_EXPECT_EQUAL( 20, currency );
-    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", currency ) == MetroMapPurchase::AlreadyOwned );
+    Wallet wallet;
+    wallet.add( "geo", 20 );
+    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", wallet, "geo" ) == MetroMapPurchase::NotEnoughCurrency );
+    SW_EXPECT_EQUAL( 20, geoOf( wallet ) );
+    SW_EXPECT_TRUE( mapState.buyRegionMap( "nowhere", wallet, "geo" ) == MetroMapPurchase::UnknownRegion );
+    wallet.add( "geo", 30 );
+    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", wallet, "geo" ) == MetroMapPurchase::Bought );
+    SW_EXPECT_EQUAL( 20, geoOf( wallet ) );
+    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", wallet, "geo" ) == MetroMapPurchase::AlreadyOwned );
 
     // 지역의 방이 모두 그려진다(가 보지 않은 cross3 까지). 다른 지역은 아니다.
     SW_EXPECT_TRUE( mapState.isShownOnMap( "cross1" ) );
@@ -252,16 +298,17 @@ SW_TEST_CASE( MetroidvaniaTest, DeathDropsCurrencyAtCorpseAndSecondDeathLosesIt 
 {
     MetroScene scene;
     SW_ASSERT_TRUE( scene._bLoaded );
+    Wallet          soulsWallet;
     MetroSoulsState souls;
-    souls.initialize( &scene._catalog );
+    souls.initialize( &scene._catalog, lendMetroWallet( soulsWallet ) );
     MetroDuelist player;
     player.initialize( &scene._catalog );
     SW_EXPECT_TRUE( souls.rest( "bench_town", player.getVitality() ) );
 
-    souls.addCurrency( 100 );
+    soulsWallet.add( "geo", 100 );
     const hashed_string respawn = souls.die( "cross2", float2{ 10.0f, 2.0f }, player.getVitality() );
     SW_EXPECT_TRUE( respawn == hashed_string( "bench_town" ) );
-    SW_EXPECT_EQUAL( 0, souls.getCurrency() );
+    SW_EXPECT_EQUAL( 0, geoOf( soulsWallet ) );
     SW_EXPECT_TRUE( souls.getCorpse()._bActive != SW_FALSE );
     SW_EXPECT_EQUAL( 100, souls.getCorpse()._currency );
     SW_EXPECT_TRUE( player.getVitality().isAlive() );
@@ -270,12 +317,12 @@ SW_TEST_CASE( MetroidvaniaTest, DeathDropsCurrencyAtCorpseAndSecondDeathLosesIt 
     SW_EXPECT_FALSE( souls.tryRecoverCorpse( "cross1", float2{ 10.0f, 2.0f } ) );
     SW_EXPECT_FALSE( souls.tryRecoverCorpse( "cross2", float2{ 12.0f, 2.0f } ) );
     SW_EXPECT_TRUE( souls.tryRecoverCorpse( "cross2", float2{ 11.0f, 2.5f } ) );
-    SW_EXPECT_EQUAL( 100, souls.getCurrency() );
+    SW_EXPECT_EQUAL( 100, geoOf( soulsWallet ) );
     SW_EXPECT_FALSE( souls.getCorpse()._bActive != SW_FALSE );
 
     // 되찾기 전에 또 죽으면 — 첫 시체의 통화는 영영 사라지고 지금 통화가 새 시체가 된다.
     (void)souls.die( "cross3", float2{ 3.0f, 1.0f }, player.getVitality() );
-    souls.addCurrency( 30 );
+    soulsWallet.add( "geo", 30 );
     (void)souls.die( "cross1", float2{ 5.0f, 1.0f }, player.getVitality() );
     SW_EXPECT_EQUAL( 100, souls.getLostCurrency() );
     SW_EXPECT_EQUAL( 30, souls.getCorpse()._currency );
@@ -297,10 +344,35 @@ SW_TEST_CASE( MetroidvaniaTest, DeathDropsCurrencyAtCorpseAndSecondDeathLosesIt 
 
     // 통화가 0 이면 시체를 남기지 않는다(남은 시체도 그대로 사라진다).
     SW_EXPECT_TRUE( souls.tryRecoverCorpse( "cross1", float2{ 5.0f, 1.0f } ) );
-    SW_EXPECT_TRUE( souls.trySpendCurrency( 30 ) );
-    SW_EXPECT_FALSE( souls.trySpendCurrency( 1 ) );
+    SW_EXPECT_TRUE( soulsWallet.trySpend( "geo", 30 ) );
+    SW_EXPECT_FALSE( soulsWallet.trySpend( "geo", 1 ) );
     (void)souls.die( "cross1", float2{ 5.0f, 1.0f }, player.getVitality() );
     SW_EXPECT_FALSE( souls.getCorpse()._bActive != SW_FALSE );
+}
+
+/**
+ * @brief [MetroidvaniaTest] 죽으면 빌린 지갑의 카탈로그 통화만 시체로 옮기고, 되찾으면 지갑으로 돌아온다 — 같은 지갑의 다른 통화(다른 키트의 돈)는 그대로다
+ */
+SW_TEST_CASE( MetroidvaniaTest, DeathDropsTheWalletCurrencyAndRecoveryReturnsIt )
+{
+    MetroScene scene;
+    SW_ASSERT_TRUE( scene._bLoaded );
+    Wallet shared;
+    shared.add( "geo", 70 );
+    shared.add( "Gold", 15 ); // 다른 키트가 같은 지갑에 둔 돈
+    MetroSoulsState souls;
+    souls.initialize( &scene._catalog, lendMetroWallet( shared ) );
+    MetroDuelist player;
+    player.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( souls.rest( "bench_town", player.getVitality() ) );
+
+    (void)souls.die( "cross2", float2{ 10.0f, 2.0f }, player.getVitality() );
+    SW_EXPECT_EQUAL( 0, geoOf( shared ) );
+    SW_EXPECT_EQUAL( 70, souls.getCorpse()._currency );
+    SW_EXPECT_EQUAL( int64{ 15 }, shared.getBalance( "Gold" ) );
+    SW_ASSERT_TRUE( souls.tryRecoverCorpse( "cross2", float2{ 10.5f, 2.0f } ) );
+    SW_EXPECT_EQUAL( 70, geoOf( shared ) );
+    SW_EXPECT_EQUAL( int64{ 15 }, shared.getBalance( "Gold" ) );
 }
 
 SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses )
@@ -309,8 +381,9 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
     SW_ASSERT_TRUE( scene._bLoaded );
     LootCatalog loot;
     SW_ASSERT_TRUE( loot.loadFromXmlText( kLootXml, "loot" ) );
+    Wallet          soulsWallet;
     MetroSoulsState souls;
-    souls.initialize( &scene._catalog );
+    souls.initialize( &scene._catalog, lendMetroWallet( soulsWallet ) );
     MetroDuelist player;
     player.initialize( &scene._catalog );
 
@@ -325,14 +398,14 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
     SW_EXPECT_EQUAL( 0, souls.getFlaskCharges() );
 
     // 적 · 보스 처치 — 같은 자리는 두 번 쓰러뜨릴 수 없다.
-    GameRandom random( 7u );
-    ItemBag    drops;
+    GameRandom    random( 7u );
+    ItemStackList drops;
     SW_EXPECT_EQUAL( 5, souls.registerKill( "cross1.husk_a", "husk", scene._flags, &loot, random, drops ) );
     SW_EXPECT_EQUAL( -1, souls.registerKill( "cross1.husk_a", "husk", scene._flags, &loot, random, drops ) );
     SW_EXPECT_EQUAL( 200, souls.registerKill( "cross3.boss", "falseKnight", scene._flags, &loot, random, drops ) );
     SW_EXPECT_TRUE( scene._flags.hasFlag( "boss.falseKnight" ) );
     SW_EXPECT_FALSE( souls.isSpawnAlive( "cross1.husk_a" ) );
-    SW_EXPECT_EQUAL( 205, souls.getCurrency() );
+    SW_EXPECT_EQUAL( 205, geoOf( soulsWallet ) );
 
     // 쉬는 곳이 아니면 쉬지 못한다.
     SW_EXPECT_FALSE( souls.rest( "stag_town", player.getVitality() ) );
@@ -354,15 +427,16 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
     int32 arrShard[2] = { 0, 0 };
     for ( int32 runIndex = 0; runIndex < 2; ++runIndex )
     {
+        Wallet          runWallet;
         MetroSoulsState run;
-        run.initialize( &scene._catalog );
-        GameFlags  flags;
-        GameRandom runRandom( 1234u );
-        ItemBag    runDrops;
+        run.initialize( &scene._catalog, lendMetroWallet( runWallet ) );
+        GameFlags     flags;
+        GameRandom    runRandom( 1234u );
+        ItemStackList runDrops;
         for ( int32 spawnIndex = 0; spawnIndex < 20; ++spawnIndex )
             (void)run.registerKill( hashed_string( string( "husk_" ) + static_cast<utf8>( 'a' + spawnIndex ) ), "husk", flags, &loot, runRandom, runDrops );
         arrShard[runIndex] = runDrops.getItemCount( "shard" );
-        SW_EXPECT_EQUAL( 100, run.getCurrency() );
+        SW_EXPECT_EQUAL( 100, geoOf( runWallet ) );
     }
     SW_EXPECT_EQUAL( arrShard[0], arrShard[1] );
     SW_EXPECT_TRUE( arrShard[0] > 0 );
@@ -485,4 +559,156 @@ SW_TEST_CASE( MetroidvaniaTest, CharmNotchesOvercharmOnceAndStatsMerge )
     SW_EXPECT_TRUE( strict.equip( "strength" ) == MetroCharmResult::Equipped );
     SW_EXPECT_TRUE( strict.equip( "quickSlash" ) == MetroCharmResult::NotEnoughNotches );
     SW_EXPECT_NEAR_EQUAL( 1.0f, strict.computeDamageTakenScale(), 1.0e-4f );
+}
+
+/**
+ * @brief [MetroidvaniaTest] 상태 바이트 — 능력 · 부적 · 결투(체력 · 지구력 · 패리 · 막기) · 지도(산 지도 · 지점 · 주운 것) · 영혼(처치 · 시체 · 물약)이
+ *        그대로 오고, 같은 걸음을 더 돌려도 바이트가 같다. 빌린 그래프 · 지갑 · 플래그는 싣지 않고, 잘린 바이트는 거절하고 그대로 둔다
+ */
+SW_TEST_CASE( MetroidvaniaTest, StateRoundTripContinuesTheSameJourney )
+{
+    MetroScene scene;
+    SW_ASSERT_TRUE( scene._bLoaded );
+
+    // 능력 — 대시 · 벽 점프를 얻었다.
+    MetroAbilitySet abilities;
+    abilities.initialize( &scene._catalog, PlatformerSettings{} );
+    SW_EXPECT_TRUE( abilities.grantAbility( "dash", scene._flags ) );
+    SW_EXPECT_TRUE( abilities.grantAbility( "wallJump", scene._flags ) );
+    const vector<uint8> abilityBytes = captureMetroBytes( abilities );
+    MetroAbilitySet     restoredAbilities;
+    restoredAbilities.initialize( &scene._catalog, PlatformerSettings{} );
+    SW_ASSERT_TRUE( restoreMetroBytes( abilityBytes, restoredAbilities ) );
+    SW_EXPECT_TRUE( restoredAbilities.canDash() );
+    SW_EXPECT_TRUE( restoredAbilities.hasAbility( "wallJump" ) );
+    SW_EXPECT_TRUE( abilityBytes == captureMetroBytes( restoredAbilities ) );
+    GameFlags restoredFlags;
+    SW_EXPECT_TRUE( abilities.grantAbility( "doubleJump", scene._flags ) );
+    SW_EXPECT_TRUE( restoredAbilities.grantAbility( "doubleJump", restoredFlags ) );
+    SW_EXPECT_TRUE( captureMetroBytes( abilities ) == captureMetroBytes( restoredAbilities ) );
+    MetroAbilitySet truncatedAbilities;
+    truncatedAbilities.initialize( &scene._catalog, PlatformerSettings{} );
+    SW_EXPECT_FALSE( restoreTruncatedMetroBytes( abilityBytes, truncatedAbilities ) );
+    SW_EXPECT_TRUE( truncatedAbilities.getAbilities().empty() );
+
+    // 부적 — 셋 중 둘을 꼈고 슬롯 조각 하나.
+    MetroCharmLoadout charms;
+    charms.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( charms.grantCharm( "strength" ) && charms.grantCharm( "compass" ) && charms.grantCharm( "quickSlash" ) );
+    SW_EXPECT_TRUE( charms.equip( "strength" ) == MetroCharmResult::Equipped );
+    SW_EXPECT_TRUE( charms.equip( "compass" ) == MetroCharmResult::Equipped );
+    charms.addNotches( 1 );
+    const vector<uint8> charmBytes = captureMetroBytes( charms );
+    MetroCharmLoadout   restoredCharms;
+    restoredCharms.initialize( &scene._catalog );
+    SW_ASSERT_TRUE( restoreMetroBytes( charmBytes, restoredCharms ) );
+    SW_EXPECT_EQUAL( 4, restoredCharms.getNotchCount() );
+    SW_EXPECT_EQUAL( 3, restoredCharms.computeUsedNotches() );
+    SW_EXPECT_TRUE( restoredCharms.isOwned( "quickSlash" ) );
+    SW_EXPECT_TRUE( charmBytes == captureMetroBytes( restoredCharms ) );
+    SW_EXPECT_TRUE( charms.equip( "quickSlash" ) == MetroCharmResult::Overcharmed );
+    SW_EXPECT_TRUE( restoredCharms.equip( "quickSlash" ) == MetroCharmResult::Overcharmed ); // 슬롯 수가 이어져 같은 판정
+    SW_EXPECT_TRUE( captureMetroBytes( charms ) == captureMetroBytes( restoredCharms ) );
+    MetroCharmLoadout truncatedCharms;
+    truncatedCharms.initialize( &scene._catalog );
+    SW_EXPECT_FALSE( restoreTruncatedMetroBytes( charmBytes, truncatedCharms ) );
+    SW_EXPECT_EQUAL( 3, truncatedCharms.getNotchCount() );
+
+    // 결투 — 한 대 맞고, 패리를 누르고, 막는 중.
+    MetroDuelist duelist;
+    duelist.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( duelist.tryAttack() );
+    (void)duelist.receiveAttack( 20.0f, 10.0f );
+    duelist.pressParry();
+    for ( int32 frame = 0; frame < 5; ++frame )
+        duelist.update( kMetroidvaniaStep );
+    duelist.setGuarding( true );
+    const vector<uint8> duelistBytes = captureMetroBytes( duelist );
+    MetroDuelist        restoredDuelist;
+    restoredDuelist.initialize( &scene._catalog );
+    SW_ASSERT_TRUE( restoreMetroBytes( duelistBytes, restoredDuelist ) );
+    SW_EXPECT_NEAR_EQUAL( 80.0f, restoredDuelist.getVitality().getHealth(), 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( duelist.getStamina().getValue(), restoredDuelist.getStamina().getValue(), 1.0e-5f );
+    SW_EXPECT_TRUE( restoredDuelist.isGuarding() );
+    SW_EXPECT_TRUE( duelistBytes == captureMetroBytes( restoredDuelist ) );
+    const MetroDefenseOutcome outcome         = duelist.receiveAttack( 25.0f, 10.0f );
+    const MetroDefenseOutcome restoredOutcome = restoredDuelist.receiveAttack( 25.0f, 10.0f ); // 패리 누른 시각이 이어져 같은 판정
+    SW_EXPECT_TRUE( outcome._result == restoredOutcome._result );
+    for ( int32 frame = 0; frame < 30; ++frame )
+    {
+        duelist.update( kMetroidvaniaStep );
+        restoredDuelist.update( kMetroidvaniaStep );
+    }
+    SW_EXPECT_TRUE( captureMetroBytes( duelist ) == captureMetroBytes( restoredDuelist ) );
+    MetroDuelist truncatedDuelist;
+    truncatedDuelist.initialize( &scene._catalog );
+    SW_EXPECT_FALSE( restoreTruncatedMetroBytes( duelistBytes, truncatedDuelist ) );
+    SW_EXPECT_FALSE( truncatedDuelist.isGuarding() );
+
+    // 지도 — 교차로 지도를 사고, 가면 하나를 줍고, 정거장을 열었다. 되살린 쪽의 그래프에도 산 지역이 드러난다.
+    MetroMapState mapState;
+    mapState.initialize( &scene._catalog, &scene._graph );
+    SW_EXPECT_TRUE( mapState.enterArea( "town" ) );
+    SW_EXPECT_TRUE( mapState.enterArea( "cross1" ) );
+    Wallet wallet;
+    wallet.add( "geo", 50 );
+    SW_EXPECT_TRUE( mapState.buyRegionMap( "crossroads", wallet, "geo" ) == MetroMapPurchase::Bought );
+    SW_EXPECT_NOT_NULL( mapState.collectPickup( "mask_cross3" ) );
+    SW_EXPECT_TRUE( mapState.activateSite( "stag_town" ) );
+    const vector<uint8> mapBytes = captureMetroBytes( mapState );
+    AreaGraph           restoredGraph;
+    SW_ASSERT_TRUE( restoredGraph.loadFromXmlText( kAreaXml, "areas" ) );
+    MetroMapState restoredMap;
+    restoredMap.initialize( &scene._catalog, &restoredGraph );
+    SW_ASSERT_TRUE( restoreMetroBytes( mapBytes, restoredMap ) );
+    SW_EXPECT_TRUE( restoredMap.hasRegionMap( "crossroads" ) );
+    SW_EXPECT_TRUE( restoredMap.isCollected( "mask_cross3" ) );
+    SW_EXPECT_TRUE( restoredMap.isSiteActive( "stag_town" ) );
+    SW_EXPECT_TRUE( restoredGraph.isDiscovered( "cross3" ) );
+    SW_EXPECT_TRUE( mapBytes == captureMetroBytes( restoredMap ) );
+    SW_EXPECT_NOT_NULL( mapState.collectPickup( "wings" ) );
+    SW_EXPECT_NOT_NULL( restoredMap.collectPickup( "wings" ) );
+    SW_EXPECT_NULL( restoredMap.collectPickup( "mask_cross3" ) ); // 주운 것은 다시 줍지 못한다
+    SW_EXPECT_TRUE( captureMetroBytes( mapState ) == captureMetroBytes( restoredMap ) );
+    AreaGraph truncatedGraph;
+    SW_ASSERT_TRUE( truncatedGraph.loadFromXmlText( kAreaXml, "areas" ) );
+    MetroMapState truncatedMap;
+    truncatedMap.initialize( &scene._catalog, &truncatedGraph );
+    SW_EXPECT_FALSE( restoreTruncatedMetroBytes( mapBytes, truncatedMap ) );
+    SW_EXPECT_FALSE( truncatedMap.hasRegionMap( "crossroads" ) );
+
+    // 영혼 — 쉬고, 100 을 들고 죽어 시체가 남았고, 졸개 하나를 쓰러뜨렸고, 물약 하나를 마셨다.
+    Wallet          soulsWallet;
+    MetroSoulsState souls;
+    souls.initialize( &scene._catalog, lendMetroWallet( soulsWallet ) );
+    MetroDuelist player;
+    player.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( souls.rest( "bench_town", player.getVitality() ) );
+    soulsWallet.add( "geo", 100 );
+    (void)souls.die( "cross2", float2{ 10.0f, 2.0f }, player.getVitality() );
+    GameRandom    random( 7u );
+    ItemStackList drops;
+    SW_EXPECT_EQUAL( 5, souls.registerKill( "cross1.husk_a", "husk", scene._flags, nullptr, random, drops ) );
+    (void)player.getVitality().applyDamage( 50.0f );
+    SW_EXPECT_TRUE( souls.drinkFlask( player.getVitality() ) );
+    const vector<uint8> soulsBytes = captureMetroBytes( souls );
+    Wallet              restoredWallet;
+    MetroSoulsState     restoredSouls;
+    restoredSouls.initialize( &scene._catalog, lendMetroWallet( restoredWallet ) );
+    SW_ASSERT_TRUE( restoreMetroBytes( soulsBytes, restoredSouls ) );
+    SW_EXPECT_EQUAL( 100, restoredSouls.getCorpse()._currency );
+    SW_EXPECT_TRUE( restoredSouls.getRespawnSite() == hashed_string( "bench_town" ) );
+    SW_EXPECT_EQUAL( souls.getFlaskCharges(), restoredSouls.getFlaskCharges() );
+    SW_EXPECT_FALSE( restoredSouls.isSpawnAlive( "cross1.husk_a" ) );
+    SW_EXPECT_TRUE( soulsBytes == captureMetroBytes( restoredSouls ) );
+    MetroDuelist restoredPlayer;
+    restoredPlayer.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( souls.rest( "bench_town", player.getVitality() ) );
+    SW_EXPECT_TRUE( restoredSouls.rest( "bench_town", restoredPlayer.getVitality() ) ); // 졸개가 되살아나고 물약이 찬다
+    SW_EXPECT_TRUE( restoredSouls.isSpawnAlive( "cross1.husk_a" ) );
+    SW_EXPECT_TRUE( captureMetroBytes( souls ) == captureMetroBytes( restoredSouls ) );
+    MetroSoulsState truncatedSouls;
+    truncatedSouls.initialize( &scene._catalog, lendMetroWallet( restoredWallet ) );
+    SW_EXPECT_FALSE( restoreTruncatedMetroBytes( soulsBytes, truncatedSouls ) );
+    SW_EXPECT_TRUE( truncatedSouls.getKills().empty() );
 }

@@ -8,8 +8,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Data/GameCatalog.h"
-#include "GameFramework/Data/XmlCatalog.h"
+#include "GameFramework/Base/Data/GameCatalog.h"
+#include "GameFramework/Base/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -135,7 +135,9 @@ namespace sw
     public:
         GhostCatalog();
 
-        const GhostFlashlightSettings&   getFlashlight() const { return _flashlight; }
+        const GhostFlashlightSettings& getFlashlight() const { return _flashlight; }
+        /** @brief 잡은 유령의 동전을 넣는 지갑 통화입니다(루트 `currency`, 기본 "Coins"). */
+        const hashed_string&             getCurrency() const { return _currency; }
         const GhostVacuumSettings&       getVacuum() const { return _vacuum; }
         const GhostDef*                  findGhost( const hashed_string& id ) const { return _ghostCatalog.find( id ); }
         const GhostRoomDef*              findRoom( const hashed_string& id ) const { return _roomCatalog.find( id ); }
@@ -156,5 +158,6 @@ namespace sw
         GameCatalog<GhostDoorDef>      _doorCatalog;
         GameCatalog<GhostFurnitureDef> _furnitureCatalog;
         GameCatalog<GhostBooDef>       _booCatalog;
+        hashed_string                  _currency;
     };
 } // namespace sw

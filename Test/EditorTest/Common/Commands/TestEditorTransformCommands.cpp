@@ -29,7 +29,7 @@ SW_TEST_CASE( EditorTransformCommandsTest, AlignUsesWorldPositionsUnderARotatedS
     GameObject*       pParent   = manager.createGameObject( hashed_string( "Turntable" ) );
     SceneComponent*   pParentSc = pParent->addComponent<SceneComponent>();
     pParentSc->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
-    pParentSc->setLocalRotation( float3( 0.0f, MathUtil::HalfPi, 0.0f ) );
+    pParentSc->setLocalRotation( float3( 0.0f, MathUtil::kHalfPi, 0.0f ) );
     pParentSc->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
     GameObject*     pChild   = manager.createGameObject( hashed_string( "OnTurntable" ) );
     SceneComponent* pChildSc = pChild->addComponent<SceneComponent>();
@@ -160,9 +160,9 @@ SW_TEST_CASE( EditorTransformCommandsTest, PresetNamesFollowOneRule )
     const string chosenFolder = test::makeTempDirectory( "chosen_presets" );
     const string chosenPath   = FileUtil::joinPath( chosenFolder, "MyPreset.preset.xml" );
     SW_ASSERT_TRUE( EditorTransformCommands::saveComponentPresetTo( pMesh, chosenPath ) );
-    SW_EXPECT_TRUE( FileUtil::fileExists( chosenPath ) ); // 고른 자리 · 고른 이름 그대로
+    SW_EXPECT_TRUE( FileUtil::exists( chosenPath ) ); // 고른 자리 · 고른 이름 그대로
     SW_ASSERT_TRUE( EditorTransformCommands::saveComponentPresetTo( pMesh, FileUtil::joinPath( chosenFolder, "plain.xml" ) ) );
-    SW_EXPECT_TRUE( FileUtil::fileExists( FileUtil::joinPath( chosenFolder, "plain.preset.xml" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::joinPath( chosenFolder, "plain.preset.xml" ) ) );
     SW_EXPECT_TRUE( EditorTransformCommands::loadComponentPreset( pMesh, chosenPath ) );
 }
 

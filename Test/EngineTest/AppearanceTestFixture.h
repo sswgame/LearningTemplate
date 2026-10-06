@@ -3,10 +3,10 @@
  * @brief 외형 시험의 공통 데이터 — 기사 세트 · 로브 · 양손검 · 망토(세트 조건) · 칼(꾸미기 · 상태 · 피해 단계) · 사람 스키마 · 규칙 · 프리셋입니다.
  */
 #pragma once
-#include "GameFramework/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Appearance/AppearanceResolver.h"
-#include "GameFramework/Inventory/Equipment.h"
-#include "GameFramework/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Base/Appearance/AppearanceResolver.h"
+#include "GameFramework/Base/Inventory/Equipment.h"
+#include "GameFramework/Base/Inventory/ItemCatalog.h"
 
 namespace appearancetest
 {

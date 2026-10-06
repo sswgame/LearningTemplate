@@ -209,7 +209,7 @@ KayKit 리그의 영역 표: `Resource/game/shooter3d/characters/skeleton_warrio
 ## 통합이 할 일(해석된 외형 + 메시 · 포즈 → 그린 결과)
 
 지금 있는 것: 스켈레톤 · 유닛 포즈 → 본 배열 다리(`CharacterPoseUtil::makeBindBones` · `copyUnitPose`)와, 그것으로 소켓 이름 공간을 짓고 부품을 소켓에 붙여
-포즈를 따라가게 하는 외형 컴포넌트(`GameFramework/Appearance` 의 `CharacterAppearanceComponent` · `AppearanceSocketRig` — 5 의 소켓 부분). 남은 것은 아래 1 의 형상 쪽, 2 ~ 4, 6 이다.
+포즈를 따라가게 하는 외형 컴포넌트(`GameFramework/Base/Appearance` 의 `CharacterAppearanceComponent` · `AppearanceSocketRig` — 5 의 소켓 부분). 남은 것은 아래 1 의 형상 쪽, 2 ~ 4, 6 이다.
 
 1. 유닛(부품 GameObject)마다 `Mesh` · 스켈레톤을 `AppearanceGeometry` · `CharacterBoneArray` 로 바꾼다(레퍼런스 포즈 덮어쓰기 `apply` → 바인드 본).
 2. 체형: `BodyShapeSet::evaluate` → 몸 형상에 `BodyShapeUtil::applyMorphs`, 바인드 본에 `BoneProportion::apply` → `BodyShapeUtil::skinToPose` 로 체형 바인드 형상.

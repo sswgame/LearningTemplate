@@ -6,21 +6,23 @@
  *          (높이를 무시하는 XZ 원뿔)입니다. 흡입 중 도망 방향은 씨앗 고정 `GameRandom` 이 정해 같은 씨앗 · 같은 입력이면 같은 싸움입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Utility/Countdown.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {
     struct GhostDef;
 
+    class Archive;
     class GhostCatalog;
 
     /** @brief 유령 상태입니다. */
@@ -95,6 +97,9 @@ namespace sw
     class SW_GF_API GhostEncounter
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "GHEN" );
+        static constexpr uint32 kStateVersion = 1;
+
         GhostEncounter();
 
         void initialize( const GhostCatalog* pCatalog, uint32 seed );
@@ -129,6 +134,11 @@ namespace sw
         void update( float32 deltaTime );
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<GhostEvent>& outListEvent );
+
+        /** @brief 난수 · 유령(정의 id · 자리 · 도망 방향 · 체력 · 상태 시간 · 번호 · 상태) · 스트로브 충전 · 서지 · 흡입 대상 · 다음 번호 · 강화 단계를 씁니다. 카탈로그는 싣지 않고, 알림은 읽을 때 비웁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌거나 카탈로그에 없는 유령이면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
         const GhostInstance*         findGhost( uint32 ghostId ) const;
         const vector<GhostInstance>& getGhosts() const { return _listGhost; }

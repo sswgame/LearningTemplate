@@ -135,7 +135,7 @@ SW_TEST_CASE( DebugDrawQueueTest, BoxExpandsToEdges )
 
     // Z 축으로 90 도 돌린 상자의 X 반 크기는 Y 방향으로 간다.
     queue.clear();
-    const quaternion rotation = quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::Pi * 0.5f );
+    const quaternion rotation = quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kPi * 0.5f );
     queue.drawOrientedBox( float3{}, float3{ 3.0f, 0.5f, 0.0f }, rotation, kWhite );
     queue.endFrame( 0.0f );
     float32 maxAbsY{ 0.0f };

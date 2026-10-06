@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
-#include "GameFramework/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -43,6 +43,7 @@ namespace sw
         : _listTile{}
         , _pCatalog{ nullptr }
         , _topology{}
+        , _land{}
     {
     }
 
@@ -52,6 +53,16 @@ namespace sw
         _pCatalog = pCatalog;
         _listTile.clear();
         _listTile.resize( static_cast<size_t>( _topology.getCellCount() ) );
+    }
+
+    bool FarmField::bindLand( LandRegistry* pLand, const int2& origin )
+    {
+        LandBinding land;
+        land.bind( pLand, origin, hashed_string( "Farming" ) );
+        if ( _topology.getCellCount() > 0 && land.claimRect( 0, 0, _topology._width - 1, _topology._height - 1, false ) == false )
+            return false;
+        _land = land;
+        return true;
     }
 
     void FarmField::writeState( Archive& outArchive ) const
@@ -121,7 +132,7 @@ namespace sw
         return FarmActionResult::Done;
     }
 
-    FarmActionResult FarmField::plant( int32 x, int32 y, const hashed_string& seedItem, FarmSeason season )
+    FarmActionResult FarmField::plant( int32 x, int32 y, const hashed_string& seedItem, const hashed_string& season )
     {
         FarmTile* pTile = findTileMutable( x, y );
         if ( pTile == nullptr )
@@ -186,7 +197,7 @@ namespace sw
         return FarmActionResult::Done;
     }
 
-    void FarmField::advanceDay( FarmSeason newSeason, bool bRain )
+    void FarmField::advanceDay( const hashed_string& newSeason, bool bRain )
     {
         for ( FarmTile& tile : _listTile )
         {

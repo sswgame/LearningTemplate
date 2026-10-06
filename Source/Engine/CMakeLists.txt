@@ -10,16 +10,14 @@
 # ------------------------------------------------------------------------------
 # 1) 라이브러리 타입 · RHI 소스 목록
 # Dev: SHARED / Shipping: STATIC
-# RHI MODULE 엔트리(Modules/)와 백엔드 device .cpp 는 항상 Engine GLOB 에서 뺀다.
-# Dev 는 RHI_* MODULE 이, Shipping 은 아래 3) 이 고른 백엔드 하나를 같은 목록에서 가져다 짓는다.
+# RHI MODULE 엔트리(Modules/)와 백엔드 장치 .cpp 는 항상 Engine GLOB 에서 뺀다(장치 소스는 cmake/Engine/RhiBackends.cmake 가 백엔드 폴더로 안다).
+# Dev 는 RHI_* MODULE 이, Shipping 은 아래 3) 이 고른 백엔드 하나를 같은 함수로 가져다 짓는다.
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD)
-    set(coreLibType STATIC)
+	set(coreLibType STATIC)
 else()
-    set(coreLibType SHARED)
+	set(coreLibType SHARED)
 endif()
-
-include("${CMAKE_SOURCE_DIR}/cmake/Engine/RhiBackendSources.cmake")
 
 # DelayLoadNotifyHook 이 Engine 에서 빠지는 것은 **의도한 것**이다. 이 훅은 지연 로드된 DLL 을
 # 이미 로드된 엔진 모듈 핸들로 돌려주는 장치라, 그런 DLL 을 지연 로드하는 쪽(kit · SWGame)이
@@ -28,15 +26,9 @@ include("${CMAKE_SOURCE_DIR}/cmake/Engine/RhiBackendSources.cmake")
 # DLL 이고, 그것들은 훅이 돌려줄 핸들이 없다(Bin 에도 없다). 훅을 넣으면 정상 로드마다 훅이
 # "못 찾았다" 는 ERROR 를 남기게 된다.
 set(coreExclude
-    "Graphics/RHI/Modules/"
-    "Module/DelayLoadNotifyHook.cpp"
+	"Graphics/RHI/Modules/"
+	"Module/DelayLoadNotifyHook.cpp"
 )
-
-foreach(src IN LISTS SW_RHI_ALL_DEVICE_SOURCES)
-    file(RELATIVE_PATH rel "${CMAKE_CURRENT_SOURCE_DIR}" "${src}")
-    string(REPLACE "." "\\." relEsc "${rel}")
-    list(APPEND coreExclude "${relEsc}")
-endforeach()
 
 # ------------------------------------------------------------------------------
 # 2) Engine 타겟 — include 전파, Core_objects 재사용
@@ -47,14 +39,18 @@ endforeach()
 file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 
 foreach(exPattern IN LISTS coreExclude)
-    list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
+	list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
 endforeach()
+
+# RHI 백엔드 장치 소스는 Engine 이 짓지 않는다 — Dev 는 RHI_* 모듈이, Shipping 은 아래 3) 이 고른 하나를 가져간다.
+sw_getAllRhiBackendSources(listRhiBackendSource)
+list(REMOVE_ITEM ENGINE_SOURCES ${listRhiBackendSource})
 
 # 셰이더 라이브 리로드는 개발 도구다. Shipping 은 쿠킹된 셰이더만 읽으므로 감시할 것이 없다.
 # 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다. 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
 # (위 `coreExclude` 는 다른 타겟이 짓는 것 — RHI 모듈 · 지연 로드 훅 — 이라 적지 않는다.)
 if(SW_SHIPPING_BUILD)
-    sw_excludeUnbuiltSources(ENGINE_SOURCES "Graphics/Shader/Compile/ShaderRecompiler\\.(cpp|h)$")
+	sw_excludeUnbuiltSources(ENGINE_SOURCES "Graphics/Shader/Compile/ShaderRecompiler\\.(cpp|h)$")
 endif()
 
 # ResourcePackReader 가 uncompress 를 직접 부른다.
@@ -92,7 +88,7 @@ message(STATUS "[Engine] ZLIB_LIBRARIES=${ZLIB_LIBRARIES} ZLIB_INCLUDE_DIRS=${ZL
 # 임포트 타겟이 아무 라이브러리도 가리키지 않으면 링크는 조용히 통과하고(공유 라이브러리는 미해결 심볼을
 # 허용한다) 그걸 링크하는 실행 파일에서야 터진다. 여기서 먼저 멈춘다.
 if(NOT swZlibLocationDebug AND NOT swZlibLocationRelease AND NOT swZlibLocationNoConfig AND NOT ZLIB_LIBRARIES)
-    message(FATAL_ERROR "ZLIB::ZLIB 이 어떤 라이브러리도 가리키지 않습니다 — 이대로 링크하면 libEngine 이 uncompress 를 미해결로 남깁니다.")
+	message(FATAL_ERROR "ZLIB::ZLIB 이 어떤 라이브러리도 가리키지 않습니다 — 이대로 링크하면 libEngine 이 uncompress 를 미해결로 남깁니다.")
 endif()
 
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
@@ -102,43 +98,43 @@ sw_defineEngineAbiStamp()
 add_dependencies(Engine SwEngineAbiStamp)
 target_include_directories(Engine PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
 set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineAbiStamp.cpp" PROPERTIES
-    OBJECT_DEPENDS "${SW_ENGINE_ABI_STAMP_HEADER}"
+	OBJECT_DEPENDS "${SW_ENGINE_ABI_STAMP_HEADER}"
 )
 
 target_include_directories(Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 # 셰이더 바인딩 계약(bindingslots.hlsli)은 HLSL 과 C++ 가 같은 파일을 읽는다. ShaderBindingSlots.h 가 include 한다.
 target_include_directories(Engine PUBLIC "${CMAKE_SOURCE_DIR}/Resource/engine/shaders")
 target_link_libraries(Engine
-    PUBLIC
-    sw_public_source_includes
-    PRIVATE
-    sw_global_options
+	PUBLIC
+	sw_public_source_includes
+	PRIVATE
+	sw_global_options
 
-    # 리소스 팩 압축 해제(ResourcePackReader). Core 는 압축 라이브러리에 종속되지 않게
-    # 두고(ICompressionCodec 주석 참고), 실제로 쓰는 Engine 에만 붙인다.
-    #
-    # raw 이름 `zlib` 을 넘기면 안 된다. 그건 링커에 그대로 `-lzlib` 로 전달되는데,
-    # Windows vcpkg 는 zlib.lib 라 우연히 맞지만 Linux 는 libz.so 라 못 찾는다. 공유
-    # 라이브러리는 미해결 심볼을 허용해서 libEngine.so 링크는 통과하고, 그걸 링크하는
-    # App 에서야 `undefined reference to uncompress` 로 터진다. 임포트 타겟을 쓴다.
-    ZLIB::ZLIB
-    # 임포트 타겟 **하나에만** 기대지 않는다. Linux CI 에서 `libEngine.so: undefined reference to uncompress`
-    # 가 세 번 났는데, 매번 링크 줄에 zlib 이 아예 붙지 않은 결과였다(임포트 타겟이 왜 비었는지는 이
-    # 머신에서 재현하지 못했다). find_package 가 채우는 ZLIB_LIBRARIES 는
-    # `optimized;<경로>;debug;<경로>` 형태의 **확정된 경로 목록**이라 타겟 속성 해석에 좌우되지 않는다.
-    # 둘 다 걸어 어느 한쪽이 비어도 심볼이 남지 않게 한다(중복 지정은 링커가 무시한다).
-    ${ZLIB_LIBRARIES}
+	# 리소스 팩 압축 해제(ResourcePackReader). Core 는 압축 라이브러리에 종속되지 않게
+	# 두고(ICompressionCodec 주석 참고), 실제로 쓰는 Engine 에만 붙인다.
+	#
+	# raw 이름 `zlib` 을 넘기면 안 된다. 그건 링커에 그대로 `-lzlib` 로 전달되는데,
+	# Windows vcpkg 는 zlib.lib 라 우연히 맞지만 Linux 는 libz.so 라 못 찾는다. 공유
+	# 라이브러리는 미해결 심볼을 허용해서 libEngine.so 링크는 통과하고, 그걸 링크하는
+	# App 에서야 `undefined reference to uncompress` 로 터진다. 임포트 타겟을 쓴다.
+	ZLIB::ZLIB
+	# 임포트 타겟 **하나에만** 기대지 않는다. Linux CI 에서 `libEngine.so: undefined reference to uncompress`
+	# 가 세 번 났는데, 매번 링크 줄에 zlib 이 아예 붙지 않은 결과였다(임포트 타겟이 왜 비었는지는 이
+	# 머신에서 재현하지 못했다). find_package 가 채우는 ZLIB_LIBRARIES 는
+	# `optimized;<경로>;debug;<경로>` 형태의 **확정된 경로 목록**이라 타겟 속성 해석에 좌우되지 않는다.
+	# 둘 다 걸어 어느 한쪽이 비어도 심볼이 남지 않게 한다(중복 지정은 링커가 무시한다).
+	${ZLIB_LIBRARIES}
 
-    # LZ4 · Zstd — CompressionCodecRegistry 에 EngineLoop 이 등록하는 코덱들이 쓴다.
-    lz4::lz4
-    ${swZstdTarget}
+	# LZ4 · Zstd — CompressionCodecRegistry 에 EngineLoop 이 등록하는 코덱들이 쓴다.
+	lz4::lz4
+	${swZstdTarget}
 )
 
 target_compile_definitions(Engine PRIVATE "SW_LOG_TAG=\"Engine\"" SW_ENGINE_INTERNAL)
 sw_configurePch(Engine "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
 
 target_sources(Engine PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"
 )
 
 target_sources(Engine PRIVATE $<TARGET_OBJECTS:Core_objects>)
@@ -149,7 +145,7 @@ target_link_libraries(Engine PRIVATE acl)
 
 # ThirdParty include/link 는 PRIVATE 로 둔다. Engine 밖으로 헤더가 노출되지 않게 해 C-ABI 격리를 유지한다.
 if(TARGET sw_third_party_includes)
-    target_link_libraries(Engine PRIVATE sw_third_party_includes)
+	target_link_libraries(Engine PRIVATE sw_third_party_includes)
 endif()
 
 # ------------------------------------------------------------------------------
@@ -164,9 +160,9 @@ endif()
 target_link_libraries(Engine PRIVATE $<LINK_ONLY:joltphysics> box2d)
 file(GLOB swJoltBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/*.cpp")
 set_source_files_properties(${swJoltBackendSources} PROPERTIES
-    COMPILE_DEFINITIONS "$<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_DEFINITIONS>"
-    COMPILE_OPTIONS "$<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_OPTIONS>"
-    SKIP_PRECOMPILE_HEADERS ON
+	COMPILE_DEFINITIONS "$<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_DEFINITIONS>"
+	COMPILE_OPTIONS "$<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_OPTIONS>"
+	SKIP_PRECOMPILE_HEADERS ON
 )
 
 # ------------------------------------------------------------------------------
@@ -177,25 +173,25 @@ set_source_files_properties(${swJoltBackendSources} PROPERTIES
 # Windows 는 DLL 을 지연 로드한다 — `-gv_tracy` 로 켜기 전에는 올라오지 않는다(C API 함수만 쓰므로 지연 로드가 된다).
 # ------------------------------------------------------------------------------
 if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
-    target_link_libraries(Engine PRIVATE $<LINK_ONLY:tracy>)
-    target_compile_definitions(Engine PRIVATE SW_PROFILER_TRACY)
-    file(GLOB swTracyBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Utility/Profiling/Tracy/*.cpp")
-    # include 경로는 시스템 경로로 준다 — Tracy C API 의 `___tracy_*` 이름이 -Wreserved-identifier 경고를 낸다.
-    get_target_property(swTracyIncludeDir Tracy::TracyClient INTERFACE_INCLUDE_DIRECTORIES)
-    if(MSVC)
-        set(swTracyIncludeOption "/external:I${swTracyIncludeDir}")
-    else()
-        set(swTracyIncludeOption "-isystem${swTracyIncludeDir}")
-    endif()
-    set_source_files_properties(${swTracyBackendSources} PROPERTIES
-        COMPILE_DEFINITIONS "$<TARGET_PROPERTY:Tracy::TracyClient,INTERFACE_COMPILE_DEFINITIONS>"
-        COMPILE_OPTIONS "${swTracyIncludeOption}"
-        SKIP_PRECOMPILE_HEADERS ON
-    )
-    if(WIN32)
-        sw_addDelayloadSystemDlls(Engine DLLS TracyClient.dll)
-    endif()
-    message(STATUS "[Engine] Tracy profiler client linked (delay-loaded on Windows)")
+	target_link_libraries(Engine PRIVATE $<LINK_ONLY:tracy>)
+	target_compile_definitions(Engine PRIVATE SW_PROFILER_TRACY)
+	file(GLOB swTracyBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Utility/Profiling/Tracy/*.cpp")
+	# include 경로는 시스템 경로로 준다 — Tracy C API 의 `___tracy_*` 이름이 -Wreserved-identifier 경고를 낸다.
+	get_target_property(swTracyIncludeDir Tracy::TracyClient INTERFACE_INCLUDE_DIRECTORIES)
+	if(MSVC)
+		set(swTracyIncludeOption "/external:I${swTracyIncludeDir}")
+	else()
+		set(swTracyIncludeOption "-isystem${swTracyIncludeDir}")
+	endif()
+	set_source_files_properties(${swTracyBackendSources} PROPERTIES
+		COMPILE_DEFINITIONS "$<TARGET_PROPERTY:Tracy::TracyClient,INTERFACE_COMPILE_DEFINITIONS>"
+		COMPILE_OPTIONS "${swTracyIncludeOption}"
+		SKIP_PRECOMPILE_HEADERS ON
+	)
+	if(WIN32)
+		sw_addDelayloadSystemDlls(Engine DLLS TracyClient.dll)
+	endif()
+	message(STATUS "[Engine] Tracy profiler client linked (delay-loaded on Windows)")
 endif()
 # 2-3) 내비메시 백엔드 — Recast & Detour(정적 라이브러리, 굽기 · 질의 · 군중). 헤더는 Navigation/Recast 에서만 include 한다
 # (CheckThirdPartyIsolation.py) — 다른 코드는 엔진 인터페이스(INavMesh · INavCrowd)만 본다.
@@ -203,76 +199,80 @@ endif()
 target_link_libraries(Engine PRIVATE recastnavigation)
 
 # ------------------------------------------------------------------------------
-# 3) RHI 링크 — Shipping 은 백엔드 하나를 Engine 에 정적 링크, Dev 는 RHI_* MODULE 을 런타임에 로드
+# 2-4) 네트워크 보안 — OpenSSL 3(TLS 1.3 · X25519 · AEAD · HKDF · Argon2id). 헤더는 Network/OpenSsl 에서만 include 한다(CheckThirdPartyIsolation.py)
+# — Core · 키트 · 게임은 Core/Network/Security/INetSecurityProvider.h 와 Engine/Network/EngineNetSecurity.h 만 본다.
+# x64-windows 는 DLL 두 개(libssl-3-x64 · libcrypto-3-x64), 리눅스는 정적.
 # ------------------------------------------------------------------------------
-if(SW_SHIPPING_BUILD)
-    if(NOT SW_SHIPPING_RHI_BACKEND)
-        if(WIN32)
-            set(SW_SHIPPING_RHI_BACKEND "DX12" CACHE STRING "Shipping용 대상 RHI 백엔드")
-        else()
-            set(SW_SHIPPING_RHI_BACKEND "Vulkan" CACHE STRING "Shipping용 대상 RHI 백엔드")
-        endif()
-    endif()
+target_link_libraries(Engine PRIVATE openssl)
 
-    message(STATUS "[Engine] Shipping monolithic RHI backend: ${SW_SHIPPING_RHI_BACKEND}")
+# ------------------------------------------------------------------------------
+# 3) RHI 링크 — Shipping 은 백엔드 하나를 Engine 에 정적 링크, Dev 는 RHI_* MODULE 을 런타임에 로드
+# 전용 서버 배포본은 RHI 백엔드를 하나도 링크하지 않는다(기동 표의 RHI 단계가 서버에서 돌지 않는다) — 백엔드 소스는 모두 "이 구성이 짓지 않는다".
+# Dev 서버는 RHI_* 모듈을 매니페스트(`_listTarget: ["Client"]`)가 끈다.
+# ------------------------------------------------------------------------------
+if(SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Server")
+	message(STATUS "[Engine] Dedicated server: no RHI backend linked")
+	sw_declareUnbuiltSources(${listRhiBackendSource})
+elseif(SW_SHIPPING_BUILD)
+	# 이름 · 별칭은 쿠킹 표(`Config/Engine/CookContract.json` `rhi_backends`)가 풀고, 이 플랫폼에 없는 백엔드면 구성을 세운다(sw_resolveShippingRhiBackend).
+	# 주의: 여기서 백엔드를 못 고른 채 지나가면 Engine 은 백엔드 없이 링크되고 실행에서야 "백엔드 없음" 으로 진다(RHIBackendRegistry.cpp 의 #error 가 다음 방어선).
+	sw_resolveShippingRhiBackend("${SW_SHIPPING_RHI_BACKEND}" swShippingBackend)
+	# EngineConfig 가 다른 백엔드를 고르면 알린다 — 배포본은 링크한 하나만 띄운다.
+	file(READ "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}" swEngineConfigText)
+	string(JSON swEngineConfigRhi ERROR_VARIABLE swEngineConfigRhiError GET "${swEngineConfigText}" _window _defaultRHI)
+	if(NOT swEngineConfigRhiError AND NOT swEngineConfigRhi STREQUAL swShippingBackend)
+		message(WARNING "${SW_FILE_RUNTIME_ENGINE_CONFIG} picks _defaultRHI='${swEngineConfigRhi}' but Shipping links only '${swShippingBackend}'")
+	endif()
 
-    if(SW_SHIPPING_RHI_BACKEND STREQUAL "DX12" AND TARGET sw_graphics_dx12_libs)
-        target_sources(Engine PRIVATE ${SW_RHI_DX12_DEVICE_SOURCES})
-        target_link_libraries(Engine PUBLIC sw_graphics_dx12_libs)
-        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_DX12)
-    elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "DX11" AND TARGET sw_graphics_dx11_libs)
-        target_sources(Engine PRIVATE ${SW_RHI_DX11_DEVICE_SOURCES})
-        target_link_libraries(Engine PUBLIC sw_graphics_dx11_libs)
-        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_DX11)
-    elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "Vulkan" AND TARGET sw_graphics_vulkan_libs)
-        target_sources(Engine PRIVATE ${SW_RHI_VULKAN_DEVICE_SOURCES})
-        target_link_libraries(Engine PUBLIC sw_graphics_vulkan_libs)
-        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_VULKAN)
-    elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "OpenGL" AND TARGET sw_graphics_gl_libs)
-        target_sources(Engine PRIVATE ${SW_RHI_GL_DEVICE_SOURCES})
-        target_link_libraries(Engine PUBLIC sw_graphics_gl_libs)
-        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_OPENGL)
-    endif()
+	message(STATUS "[Engine] Shipping monolithic RHI backend: ${swShippingBackend}")
+	sw_getRhiBackendSources(${swShippingBackend} listShippingRhiSource)
+	target_sources(Engine PRIVATE ${listShippingRhiSource})
+	target_link_libraries(Engine PUBLIC ${SW_RHI_BACKEND_${swShippingBackend}_GRAPHICS_LIBS})
+	target_compile_definitions(Engine PUBLIC ${SW_RHI_BACKEND_${swShippingBackend}_SHIPPING_DEFINE})
 
-    # 고르지 않은 백엔드는 이 구성에서 아무도 짓지 않는다 — 소스 검사 게이트가 알도록 적는다. 고른 것은 Engine 의 소스 목록이 답한다.
-    get_target_property(listEngineSource Engine SOURCES)
-    set(listUnbuiltRhiSource ${SW_RHI_ALL_DEVICE_SOURCES})
-    list(REMOVE_ITEM listUnbuiltRhiSource ${listEngineSource})
-    sw_declareUnbuiltSources(${listUnbuiltRhiSource})
+	# 고르지 않은 백엔드는 이 구성에서 아무도 짓지 않는다 — 소스 검사 게이트가 알도록 적는다.
+	set(listUnbuiltRhiSource ${listRhiBackendSource})
+	list(REMOVE_ITEM listUnbuiltRhiSource ${listShippingRhiSource})
+	sw_declareUnbuiltSources(${listUnbuiltRhiSource})
 endif()
 
 # ------------------------------------------------------------------------------
 # 4) export / IPO / delay-load 훅 경로 / 로그 태그 / Windows 시스템 라이브러리
-# SW_DELAYLOAD_HOOK_SOURCE는 sw_addDelayloadHook(TargetRules.cmake)이 참조
+# SW_DELAYLOAD_HOOK_SOURCE는 sw_addDelayloadHook(ModuleTargets.cmake)이 참조
 # ------------------------------------------------------------------------------
-sw_configureEngineDllExports(Engine ${coreLibType})
+sw_configureDllExports(Engine ${coreLibType} ENGINE)
 set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 
 set_property(TARGET Engine PROPERTY SW_DELAYLOAD_HOOK_SOURCE
-    "${CMAKE_CURRENT_SOURCE_DIR}/Module/DelayLoadNotifyHook.cpp")
+	"${CMAKE_CURRENT_SOURCE_DIR}/Module/DelayLoadNotifyHook.cpp")
 
 # Windows: Input(XInput) + Audio(XAudio2) + 파일 대화상자 + 셰이더 컴파일러 유틸리티
 if(WIN32)
-    target_link_libraries(Engine PRIVATE
-        comdlg32.lib
-        d3dcompiler.lib
-        dbghelp.lib
-        synchronization.lib
-        mfplat.lib
-        mfreadwrite.lib
-        mfuuid.lib
-        ole32.lib
-        shell32.lib
-        xaudio2.lib
-    )
-    sw_addDelayloadSystemDlls(Engine DLLS d3dcompiler_47.dll mfplat.dll mfreadwrite.dll xaudio2_9.dll)
+	target_link_libraries(Engine PRIVATE
+		comdlg32.lib
+		d3dcompiler.lib
+		dbghelp.lib
+		synchronization.lib
+		mfplat.lib
+		mfreadwrite.lib
+		mfuuid.lib
+		ole32.lib
+		shell32.lib
+	)
+	# 전용 서버 빌드에는 XAudio2 구현이 없다(`IAudioSystem.cpp` · `XAudio2System.cpp` 의 SW_WITH_CLIENT_CODE) — 링크 · 지연 로드 항목도 뺀다.
+	if(SW_TARGET_TYPE STREQUAL "Server")
+		sw_addDelayloadSystemDlls(Engine DLLS d3dcompiler_47.dll mfplat.dll mfreadwrite.dll)
+	else()
+		target_link_libraries(Engine PRIVATE xaudio2.lib)
+		sw_addDelayloadSystemDlls(Engine DLLS d3dcompiler_47.dll mfplat.dll mfreadwrite.dll xaudio2_9.dll)
+	endif()
 endif()
 
 # ------------------------------------------------------------------------------
 # 5) Unity — 제외 목록이 **없다.** 그게 정상이고, 다시 만들지 말 것
 #
-# `sw_skipUnitySources` 목록은 **TU 를 나눌 때마다 같이 고쳐야 하는 자리**가 되고, 빠뜨려도 Ninja-* 프리셋은
-# 유니티가 꺼져 있어 조용히 지나가 CI 에서만 터진다.
+# **유니티 제외 목록을 다시 만들지 말 것** — 목록은 TU 를 나눌 때마다 같이 고쳐야 하는 자리가 되고, 빠뜨려도 Ninja-* 프리셋은
+# 유니티가 꺼져 있어 CI 에서만 터진다.
 #
 # "익명 네임스페이스가 합쳐져 이름이 부딪친다" 는 **이름 규칙으로 막혀 있다**. 익명 네임스페이스의 도우미는
 # 클래스가 아니라 **TU 이름**을 딴다(`ShaderCookStampInternal` 등, AGENTS.md). `CheckCodeConventions` 의
@@ -283,23 +283,34 @@ endif()
 # 매크로는 이름 규칙으로 못 막는다. X11 을 include 하는 .cpp(`Convex` · `None` … 매크로)는 리눅스에서 `sw_setUnityBuild` 가
 # include 줄을 보고 저절로 묶음에서 뺀다 — 이것도 목록이 아니다(`cmake/Modules/Options/UnityBuild.cmake`).
 # ------------------------------------------------------------------------------
-if(COMMAND sw_setUnityBuild)
-    sw_setUnityBuild(Engine BATCH_SIZE 12)
-endif()
+sw_setUnityBuild(Engine BATCH_SIZE 12)
+
+# 파괴 · 파쇄는 씨앗과 사건만 보내고 받는 쪽이 같은 계산을 한다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`,
+# `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`). 화면용(컴포넌트 · 렌더 도우미)은 넣지 않는다.
+sw_markDeterministicSources(Engine
+	Destruction/DestructionDamage.cpp
+	Destruction/DestructionProfile.cpp
+	Destruction/DestructionState.cpp
+	Destruction/FractureAsset.cpp
+	Destruction/FractureGraph.cpp
+	Destruction/MeshFracture.cpp
+	Destruction/PolygonFracture.cpp
+	Destruction/PolygonTriangulation.cpp
+)
 
 # ------------------------------------------------------------------------------
 # 6) ENUM() 코드젠 — ReflectionParser 필요 (루트가 Tools 이후 이 파일을 호출)
 # RHI_* MODULE은 런타임 로드이므로 빌드 순서만 묶음 (링크하지 않음)
 # ------------------------------------------------------------------------------
 sw_addReflectionStep(Engine
-    INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 )
 sw_addReflectBuiltinsGen(Engine)
 
 # RHI 백엔드 MODULE 플러그인 (DX는 Windows 전용, GL/Vulkan은 전 플랫폼) — Dev 만 짓는다.
 # Shipping 은 모듈 엔트리(Modules/<백엔드>/ModuleEntry.cpp)를 짓지 않는다 — 소스 검사 게이트에 적는다.
 if(SW_SHIPPING_BUILD)
-    sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RHI/Modules")
+	sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RHI/Modules")
 else()
-    add_subdirectory(Graphics/RHI/Modules)
+	add_subdirectory(Graphics/RHI/Modules)
 endif()

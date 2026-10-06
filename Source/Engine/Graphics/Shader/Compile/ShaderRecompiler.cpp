@@ -19,7 +19,7 @@ namespace sw
             /** @brief 파일 내용이 주어진 바이트열과 같은지 봅니다. 파일이 없으면 false 입니다. */
             static bool fileHasSameBytes( const string& filePath, const vector<uint8>& bytes )
             {
-                if ( FileUtil::fileExists( filePath ) == false )
+                if ( FileUtil::exists( filePath ) == false )
                     return false;
 
                 vector<uint8> listExisting;

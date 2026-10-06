@@ -4,6 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
@@ -313,5 +317,59 @@ namespace sw
     void UnoGame::drainEvents( vector<UnoEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
+    }
+
+    void UnoGame::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listHand.size() );
+        for ( const CardPile& hand : _listHand )
+        {
+            hand.writeState( outArchive );
+        }
+        _drawPile.writeState( outArchive );
+        _discardPile.writeState( outArchive );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _currentPlayer;
+        outArchive << _direction;
+        outArchive << _pendingDraw;
+        outArchive << _unoTarget;
+        outArchive << _winner;
+        outArchive << static_cast<uint8>( _color );
+    }
+
+    bool UnoGame::readState( Archive& archive )
+    {
+        uint32 handCount = 0;
+        archive >> handCount;
+        if ( archive.isError() || handCount != _listHand.size() )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정은 사본이 그대로 든다.
+        UnoGame game = *this;
+        for ( CardPile& hand : game._listHand )
+        {
+            if ( hand.readState( archive ) == false )
+                return false;
+        }
+        const bool bPilesRead = game._drawPile.readState( archive ) && game._discardPile.readState( archive );
+        if ( bPilesRead == false || StateArchiveUtil::readRandom( archive, game._random ) == false )
+            return false;
+        uint8 color = 0;
+        archive >> game._currentPlayer;
+        archive >> game._direction;
+        archive >> game._pendingDraw;
+        archive >> game._unoTarget;
+        archive >> game._winner;
+        archive >> color;
+        const int32 count           = static_cast<int32>( handCount );
+        const bool  bPlayerValid    = 0 <= game._currentPlayer && game._currentPlayer < count;
+        const bool  bDirectionValid = game._direction == 1 || game._direction == -1;
+        const bool  bTargetValid    = -1 <= game._unoTarget && game._unoTarget < count && -1 <= game._winner && game._winner < count;
+        const bool  bColorValid     = color <= static_cast<uint8>( UnoColor::Wild );
+        if ( archive.isError() || bPlayerValid == false || bDirectionValid == false || bTargetValid == false || bColorValid == false || game._pendingDraw < 0 )
+            return false;
+        game._color = static_cast<UnoColor>( color );
+        game._eventBuffer.clear();
+        *this = std::move( game );
+        return true;
     }
 } // namespace sw

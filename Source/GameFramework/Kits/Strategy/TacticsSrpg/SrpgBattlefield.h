@@ -4,22 +4,25 @@
  *        HP · EN · 탄수 · 기력 · 이동 회피 · 경험치 · 개발입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Combat/TurnOrder.h"
+#include "GameFramework/Base/Combat/TurnOrder.h"
+#include "GameFramework/Base/Progression/LevelProgress.h"
+#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Utility/GridTopology.h"
+#include "GameFramework/Base/World/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"
-#include "GameFramework/Progression/LevelProgress.h"
-#include "GameFramework/Utility/EventBuffer.h"
-#include "GameFramework/Utility/GameRandom.h"
-#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {
+    class Archive;
     class GridReachability;
 
     /** @brief 팀입니다. 다른 팀끼리는 모두 적입니다(제3세력은 양쪽 모두와 싸운다). */
@@ -152,6 +155,9 @@ namespace sw
     class SW_GF_API SrpgBattlefield
     {
     public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "SRBF" );
+        static constexpr uint32 kStateVersion = 1;
+
         SrpgBattlefield();
 
         void               initialize( const SrpgCatalog* pCatalog, int32 width, int32 height, const hashed_string& defaultTerrain, const SrpgSettings& settings, uint32 seed );
@@ -163,6 +169,13 @@ namespace sw
         void  setCommander( int32 unitIndex, bool bCommander );
         /** @brief 1 턴을 엽니다(유닛을 다 놓은 뒤). */
         void beginBattle();
+        /**
+         * @brief 전투 동안 공유 땅을 빌립니다 — 전장 전체(막힘 아님)를 한 번에 얻습니다(전장 칸 (0, 0) = 땅 칸 @p origin). 전투가 끝나면 `releaseLand` 로 놓습니다.
+         * @return 그 자리에 남의 땅이 있으면 false 이고 묶지 않습니다(전장은 단독). @p pLand 가 nullptr 이면 true 입니다. `initialize` 뒤에 부릅니다.
+         */
+        [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
+        /** @brief 빌린 전장 땅을 놓고 풉니다(전투가 끝났다). */
+        void releaseLand();
 
         // --- 차례 ---
         bool canAct( int32 unitIndex ) const;
@@ -209,6 +222,14 @@ namespace sw
         void pushEvent( const SrpgEvent& event ) { _eventBuffer.push( event ); }
         void drainEvents( vector<SrpgEvent>& outListEvent );
 
+        /**
+         * @brief 크기 · 칸마다 지형 정의 id · 유닛(기체 · 파일럿 id, 탄, 레벨 둘, 칸 · HP · EN · 기력 · 회피 · 명단 자리 · 팀 · 차례 비트) · 차례(`TurnOrder`) · 난수 ·
+         *        턴 · 활성 유닛 · 페이즈 팀을 씁니다. 정의는 id 로 싣고 카탈로그에서 찾습니다(무기 목록은 기체 정의에서 다시 만든다). 설정은 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 같은 카탈로그 · 같은 크기로 `initialize` 한 뒤에 부릅니다. 깨졌거나 없는 정의면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
         // --- 개발 ---
         /** @brief 기체 레벨 조건을 채운 개발 갈래입니다. */
         void collectDevelopOptions( int32 unitIndex, vector<hashed_string>& outListUnitId ) const;
@@ -253,6 +274,7 @@ namespace sw
         GameRandom                    _random;
         const SrpgCatalog*            _pCatalog;
         GridTopology                  _topology;
+        LandBinding                   _land; ///< 전투 동안 빌린 공유 땅(없으면 단독)
         int32                         _turn;
         int32                         _activeUnit;
         SrpgTeam                      _phaseTeam;

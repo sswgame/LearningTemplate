@@ -585,10 +585,10 @@ SW_TEST_CASE( NetClientServerTest, KindMaskRoutesSharedRange )
     KindCounter      clientSide{ otherKind };
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
-    serverRouter.addHandler( &server ); // 먼저 등록된 쪽이 넘겨야 뒤가 받는다
-    serverRouter.addHandler( &serverSide );
-    clientRouter.addHandler( &client );
-    clientRouter.addHandler( &clientSide );
+    SW_ASSERT_TRUE( serverRouter.addHandler( &server ) ); // 키트 처리기와 게임 처리기는 서로 다른 종류를 맡는다(겹치면 라우터가 받지 않는다)
+    SW_ASSERT_TRUE( serverRouter.addHandler( &serverSide ) );
+    SW_ASSERT_TRUE( clientRouter.addHandler( &client ) );
+    SW_ASSERT_TRUE( clientRouter.addHandler( &clientSide ) );
     SW_EXPECT_TRUE( NetHandleResult::Handled == serverRouter.dispatch( NetMessageContext{}, message.data(), static_cast<int32>( message.size() ) ) );
     SW_EXPECT_TRUE( NetHandleResult::Handled == clientRouter.dispatch( NetMessageContext{}, message.data(), static_cast<int32>( message.size() ) ) );
     SW_EXPECT_EQUAL( 1, serverSide._count );

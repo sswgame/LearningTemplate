@@ -30,6 +30,8 @@ namespace sw
                 return VulkanSwapChainStatus::Suboptimal;
             if ( result == VK_ERROR_OUT_OF_DATE_KHR )
                 return VulkanSwapChainStatus::OutOfDate;
+            if ( result == VK_ERROR_SURFACE_LOST_KHR )
+                return VulkanSwapChainStatus::SurfaceLost;
             return VulkanSwapChainStatus::Failed;
         }
     } // namespace
@@ -43,7 +45,7 @@ namespace sw
         VkWin32SurfaceCreateInfoKHR createInfo{};
         createInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
         createInfo.hwnd      = static_cast<HWND>( pWindowHandle );
-        createInfo.hinstance = GetModuleHandle( nullptr );
+        createInfo.hinstance = GetModuleHandleW( nullptr );
 
         if ( vkCreateWin32SurfaceKHR( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
         {

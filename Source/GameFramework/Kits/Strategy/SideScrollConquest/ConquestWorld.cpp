@@ -4,18 +4,21 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+
 namespace sw
 {
     namespace
     {
         struct ConquestWorldInternal
         {
-            static constexpr float32 kFarAway                = 1.0e9f;
-            static constexpr float32 kGateStandOff           = 0.5f;  ///< 성문 앞에서 멈추는 거리
-            static constexpr float32 kLadderReach            = 1.0f;  ///< 사다리가 이 거리 안이면 그 성문을 넘는다
-            static constexpr float32 kPlantTolerance         = 0.05f; ///< 사다리가 걸칠 자리에 이만큼 가까우면 걸친다
-            static constexpr float32 kApproachRatio          = 0.9f;  ///< 사거리의 이 비율까지 다가간다(경계에서 떨지 않게)
-            static constexpr float32 kCommanderStructureRate = 0.25f; ///< 지휘관이 구조물에 주는 피해 배율
+            static constexpr float32 kFarAway        = 1.0e9f;
+            static constexpr float32 kGateStandOff   = 0.5f;  ///< 성문 앞에서 멈추는 거리
+            static constexpr float32 kLadderReach    = 1.0f;  ///< 사다리가 이 거리 안이면 그 성문을 넘는다
+            static constexpr float32 kPlantTolerance = 0.05f; ///< 사다리가 걸칠 자리에 이만큼 가까우면 걸친다
+            static constexpr float32 kApproachRatio  = 0.9f;  ///< 사거리의 이 비율까지 다가간다(경계에서 떨지 않게)
 
             static float32 computeDirection( ConquestTeam team ) { return team == ConquestTeam::Enemy ? -1.0f : 1.0f; }
 
@@ -245,6 +248,179 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
+    void ConquestWorld::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listSite.size() );
+        for ( const ConquestSite& site : _listSite )
+        {
+            StateArchiveUtil::writeName( outArchive, site._pDef->_id );
+            outArchive << site._gateHealth;
+            outArchive << site._wallHealth;
+            outArchive << site._captureProgress;
+            outArchive << static_cast<uint8>( site._owner );
+            outArchive << static_cast<uint8>( site._captureTeam );
+        }
+        outArchive << static_cast<uint32>( _listBuilding.size() );
+        for ( const ConquestBuilding& building : _listBuilding )
+        {
+            StateArchiveUtil::writeName( outArchive, building._pDef->_id );
+            outArchive << static_cast<uint32>( building._listQueue.size() );
+            for ( const hashed_string& unitId : building._listQueue )
+            {
+                StateArchiveUtil::writeName( outArchive, unitId );
+            }
+            outArchive << building._cycleProgress;
+            outArchive << building._trainProgress;
+            outArchive << building._siteIndex;
+            outArchive << building._workers;
+        }
+        outArchive << static_cast<uint32>( _listUnit.size() );
+        for ( const ConquestUnit& unit : _listUnit )
+        {
+            StateArchiveUtil::writeName( outArchive, unit._pDef->_id );
+            outArchive << unit._x;
+            outArchive << unit._health;
+            StateArchiveUtil::writeCountdown( outArchive, unit._attackCooldown );
+            outArchive << unit._holdX;
+            outArchive << unit._damageDealt;
+            outArchive << unit._unitId;
+            outArchive << unit._squadSlot;
+            outArchive << static_cast<uint8>( unit._team );
+            outArchive << static_cast<uint8>( unit._order );
+            outArchive << unit._bAlive;
+            outArchive << unit._bPlanted;
+        }
+        _resource.writeState( outArchive );
+        outArchive << _commander._x;
+        outArchive << _commander._health;
+        StateArchiveUtil::writeCountdown( outArchive, _commander._attackCooldown );
+        StateArchiveUtil::writeCountdown( outArchive, _commander._respawnTimer );
+        outArchive << _commander._moveAxis;
+        outArchive << _commander._facing;
+        outArchive << _commander._bAlive;
+        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        outArchive << _elapsed;
+        outArchive << _incomeTimer;
+        outArchive << _waveTimer;
+        outArchive << _nextUnitId;
+        outArchive << _bVictory;
+        outArchive << _bDefeat;
+    }
+
+    bool ConquestWorld::readState( Archive& archive )
+    {
+        if ( _pCatalog == nullptr )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그는 사본이 그대로 든다.
+        ConquestWorld restored = *this;
+        uint32        count    = 0;
+        // 거점은 카탈로그 거점마다 하나다 — 이름(4) + 성문 · 성벽 · 점령(12) + 주인 · 점령 편(2)
+        if ( StateArchiveUtil::readCount( archive, 18, count ) == false || count != _listSite.size() )
+            return false;
+        for ( ConquestSite& site : restored._listSite )
+        {
+            hashed_string siteId;
+            uint8         owner       = 0;
+            uint8         captureTeam = 0;
+            if ( StateArchiveUtil::readName( archive, siteId ) == false )
+                return false;
+            site._pDef = _pCatalog->findSite( siteId );
+            archive >> site._gateHealth;
+            archive >> site._wallHealth;
+            archive >> site._captureProgress;
+            archive >> owner;
+            archive >> captureTeam;
+            const bool bValid = archive.isOk() && site._pDef != nullptr && owner <= static_cast<uint8>( ConquestTeam::Enemy ) &&
+                                captureTeam <= static_cast<uint8>( ConquestTeam::Enemy );
+            if ( bValid == false )
+                return false;
+            site._owner       = static_cast<ConquestTeam>( owner );
+            site._captureTeam = static_cast<ConquestTeam>( captureTeam );
+        }
+
+        // 건물마다 이름(4) + 대기열 수(4) + 진행 둘(8) + 자리 · 일꾼(8)
+        if ( StateArchiveUtil::readCount( archive, 24, count ) == false )
+            return false;
+        const int32 siteCount = static_cast<int32>( restored._listSite.size() );
+        restored._listBuilding.assign( count, ConquestBuilding{} );
+        for ( ConquestBuilding& building : restored._listBuilding )
+        {
+            hashed_string buildingId;
+            uint32        queueCount = 0;
+            if ( StateArchiveUtil::readName( archive, buildingId ) == false || StateArchiveUtil::readCount( archive, 4, queueCount ) == false )
+                return false;
+            building._pDef = _pCatalog->findBuilding( buildingId );
+            building._listQueue.assign( queueCount, hashed_string{} );
+            for ( hashed_string& unitId : building._listQueue )
+            {
+                if ( StateArchiveUtil::readName( archive, unitId ) == false || _pCatalog->findUnit( unitId ) == nullptr )
+                    return false;
+            }
+            archive >> building._cycleProgress;
+            archive >> building._trainProgress;
+            archive >> building._siteIndex;
+            archive >> building._workers;
+            const bool bValid = archive.isOk() && building._pDef != nullptr && 0 <= building._siteIndex && building._siteIndex < siteCount && 0 <= building._workers;
+            if ( bValid == false )
+                return false;
+        }
+
+        // 병사마다 이름(4) + 자리 · 체력 · 쿨다운 · 대기 자리 · 준 피해(20) + 번호 · 부대 자리(8) + 편 · 명령 · 삶 · 사다리(4)
+        if ( StateArchiveUtil::readCount( archive, 36, count ) == false )
+            return false;
+        restored._listUnit.assign( count, ConquestUnit{} );
+        for ( ConquestUnit& unit : restored._listUnit )
+        {
+            hashed_string unitId;
+            uint8         team  = 0;
+            uint8         order = 0;
+            if ( StateArchiveUtil::readName( archive, unitId ) == false )
+                return false;
+            unit._pDef = _pCatalog->findUnit( unitId );
+            archive >> unit._x;
+            archive >> unit._health;
+            const bool bCooldownRead = StateArchiveUtil::readCountdown( archive, unit._attackCooldown );
+            archive >> unit._holdX;
+            archive >> unit._damageDealt;
+            archive >> unit._unitId;
+            archive >> unit._squadSlot;
+            archive >> team;
+            archive >> order;
+            archive >> unit._bAlive;
+            archive >> unit._bPlanted;
+            const bool bValid = bCooldownRead && archive.isOk() && unit._pDef != nullptr && team <= static_cast<uint8>( ConquestTeam::Enemy ) &&
+                                order <= static_cast<uint8>( ConquestOrder::Charge ) && unit._bAlive <= SW_TRUE && unit._bPlanted <= SW_TRUE;
+            if ( bValid == false )
+                return false;
+            unit._team  = static_cast<ConquestTeam>( team );
+            unit._order = static_cast<ConquestOrder>( order );
+        }
+
+        if ( restored._resource.readState( archive ) == false )
+            return false;
+        archive >> restored._commander._x;
+        archive >> restored._commander._health;
+        const bool bCommanderTimerRead =
+            StateArchiveUtil::readCountdown( archive, restored._commander._attackCooldown ) && StateArchiveUtil::readCountdown( archive, restored._commander._respawnTimer );
+        archive >> restored._commander._moveAxis;
+        archive >> restored._commander._facing;
+        archive >> restored._commander._bAlive;
+        const bool bStepRead = StateArchiveUtil::readStepTimer( archive, restored._timer );
+        archive >> restored._elapsed;
+        archive >> restored._incomeTimer;
+        archive >> restored._waveTimer;
+        archive >> restored._nextUnitId;
+        archive >> restored._bVictory;
+        archive >> restored._bDefeat;
+        const bool bValid = bCommanderTimerRead && bStepRead && archive.isOk() && restored._commander._bAlive <= SW_TRUE && restored._bVictory <= SW_TRUE &&
+                            restored._bDefeat <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        restored._eventBuffer.clear();
+        *this = std::move( restored );
+        return true;
+    }
+
     int32 ConquestWorld::getResource( const hashed_string& resource ) const
     {
         return static_cast<int32>( _resource.getValue( resource ) + 0.5f );
@@ -398,7 +574,7 @@ namespace sw
         if ( target.isValid() == false )
             return;
         float32 dealt = 0.0f;
-        applyAttack( ConquestTeam::Player, rules._commanderDamage, ConquestWorldInternal::kCommanderStructureRate, target, dealt );
+        applyAttack( ConquestTeam::Player, rules._commanderDamage, rules._commanderStructureRate, target, dealt );
         _commander._attackCooldown.restart( rules._commanderAttackInterval ); // 늦음을 잇는다 — 빈도가 걸음 크기에 매이지 않는다
     }
 
