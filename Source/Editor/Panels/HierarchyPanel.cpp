@@ -482,9 +482,10 @@ namespace sw::editor
                 const bool bHasComponents = pObj->getComponentCount() > 0;
                 const bool bLeaf          = ( bHasChildGos == false && bHasComponents == false );
 
+                // SpanAvailWidth — 선택 배경 · 클릭 영역이 앞의 가시성 토글 오른쪽부터다(SpanFullWidth 면 창 왼쪽부터 칠해 토글을 덮는다).
                 const bool bOpen = ImGui::TreeNodeEx(
                     arrLabel.c_str(),
-                    ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth |
+                    ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth |
                         ( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) | ( bLeaf ? ImGuiTreeNodeFlags_Leaf : 0 ) );
                 if ( bSelected )
                     EditorSelfTestMarks::note( "hierarchy.selectedRow" ); // 시나리오가 오른쪽 클릭으로 오브젝트 메뉴를 연다

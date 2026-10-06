@@ -369,6 +369,59 @@ namespace sw::editor
                 objectId = 0;
                 return EditorSelfTestStep::Done;
             }
+
+            // --------------------------------------------------------------------------------------------------
+            // hierarchy.selectedRowLeavesTheToggleVisible — 고른 줄의 선택 배경 · 클릭 영역이 가시성 토글을 덮지 않는다
+            // --------------------------------------------------------------------------------------------------
+            static uint64& getRowProbeObjectId()
+            {
+                static uint64 s_objectId = 0;
+                return s_objectId;
+            }
+
+            static EditorSelfTestStep runSelectedRowLeavesTheToggleVisible( EditorSelfTestContext& context )
+            {
+                constexpr const utf8* kProbeName       = "EditorSelfTestRowProbe";
+                constexpr uint32      kMaxMarkWaitStep = 10;
+                EditorContext*        pContext         = EditorContext::get();
+                GameObjectManager*    pManager         = editor::getActiveObjectManager();
+                if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
+                    return EditorSelfTestStep::Done;
+                (void)pContext->getPanelManager().setPanelOpen( "hierarchy", true );
+                HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) );
+                uint64&         objectId   = getRowProbeObjectId();
+                const uint32    stepIndex  = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    if ( pHierarchy != nullptr )
+                        pHierarchy->setFilterText( "" );
+                    GameObject* pObj = pManager->createGameObject( hashed_string( kProbeName ) );
+                    if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
+                        return EditorSelfTestStep::Done;
+                    objectId = pObj->getObjectId();
+                    pContext->getWorkspace().selectGameObject( pObj );
+                    return EditorSelfTestStep::Continue;
+                }
+
+                EditorSelfTestMark row{};
+                EditorSelfTestMark toggle{};
+                const bool         bMarked = EditorSelfTestMarks::find( string( "hierarchy.row." ) + kProbeName, row ) &&
+                                     EditorSelfTestMarks::find( string( "hierarchy.toggle." ) + kProbeName, toggle );
+                if ( bMarked == false && stepIndex < kMaxMarkWaitStep )
+                    return EditorSelfTestStep::Continue;
+                if ( context.expect( bMarked, "the probe row or its toggle left no mark" ) )
+                {
+                    string what{ "the selected row starts at x " };
+                    what += to_string( row._min._x ) + ", over the toggle that ends at x " + to_string( toggle._max._x );
+                    (void)context.expect( toggle._max._x <= row._min._x + 0.5f, what.c_str() );
+                }
+                pContext->getWorkspace().clearSelection();
+                GameObject* pObj = pManager->findGameObjectById( objectId );
+                if ( pObj != nullptr )
+                    pManager->destroyObject( pObj );
+                objectId = 0;
+                return EditorSelfTestStep::Done;
+            }
         };
     } // namespace
 
@@ -376,4 +429,6 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( TooltipOnHover, "input.tooltipOnHover", 1010, &EditorSelfTestInputCasesInternal::runTooltipOnHover );
     SW_EDITOR_SELF_TEST( ClassicDarkSwatch, "input.classicDarkSwatch", 1020, &EditorSelfTestInputCasesInternal::runClassicDarkSwatch );
     SW_EDITOR_SELF_TEST( VisibilityToggleFits, "hierarchy.visibilityToggleFits", 1030, &EditorSelfTestInputCasesInternal::runVisibilityToggleFits );
+    SW_EDITOR_SELF_TEST( SelectedRowToggle, "hierarchy.selectedRowLeavesTheToggleVisible", 1040,
+                         &EditorSelfTestInputCasesInternal::runSelectedRowLeavesTheToggleVisible );
 } // namespace sw::editor
