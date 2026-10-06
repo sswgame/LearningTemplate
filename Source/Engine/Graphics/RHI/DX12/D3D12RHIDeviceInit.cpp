@@ -168,6 +168,19 @@ namespace sw
             nullUav.Buffer.NumElements = 1;
             nullUav.Buffer.Flags       = D3D12_BUFFER_UAV_FLAG_RAW;
             _device->CreateUnorderedAccessView( nullptr, nullptr, &nullUav, offlineDescriptorAt( kOfflineNullUavIndex ) );
+
+            // 레지스트리 0 번 = null Texture2D SRV(kNullTextureBindlessIndex). 등록은 그 다음 칸부터 받는다 — 0 으로 남은 텍스처 인덱스가
+            // 상수버퍼 · 구조버퍼 뷰를 Texture2D 로 읽지 않고 0 을 읽는다.
+            D3D12_SHADER_RESOURCE_VIEW_DESC nullTexture{};
+            nullTexture.ViewDimension              = D3D12_SRV_DIMENSION_TEXTURE2D;
+            nullTexture.Format                     = DXGI_FORMAT_R8G8B8A8_UNORM;
+            nullTexture.Shader4ComponentMapping    = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            nullTexture.Texture2D.MipLevels        = 1;
+            D3D12_CPU_DESCRIPTOR_HANDLE onlineNull = _cbvHeap->GetCPUDescriptorHandleForHeapStart();
+            onlineNull.ptr += static_cast<SIZE_T>( kNullTextureBindlessIndex ) * _cbvDescriptorSize;
+            _device->CreateShaderResourceView( nullptr, &nullTexture, onlineNull );
+            _device->CreateShaderResourceView( nullptr, &nullTexture, offlineDescriptorAt( kNullTextureBindlessIndex ) );
+            _allocatedDescriptorsCount = kNullTextureBindlessIndex + 1;
         }
         {
             std::scoped_lock<mutex> lock{ _onlineBlockMutex };

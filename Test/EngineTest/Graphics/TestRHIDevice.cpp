@@ -510,6 +510,48 @@ SW_TEST_CASE( RHIDeviceTest, Dx12FailedCbvRegistrationReturnsItsIndex )
     if ( bSequential == false )
         SW_TEST_SKIP( "DX12 free list was not empty on a fresh device; index sequence is not predictable" );
 }
+
+/**
+ * @brief [RHIDeviceTest] DX12 — bindless 인덱스 0 은 아무 등록에도 나가지 않는다(null 텍스처 자리)
+ * @details DX12 는 CBV · 버퍼 SRV · 텍스처 SRV · UAV 가 한 힙 · 한 인덱스 공간이라, 0 으로 초기화된 텍스처 인덱스(머티리얼 없는 배치의 폴백
+ *          원소처럼)가 그 자리의 상수버퍼 · 구조버퍼를 Texture2D 로 읽는다 — 정의되지 않은 값(NaN)이 채널마다 섞인다. 새 디바이스의 첫
+ *          등록들이 0 을 받지 않아야 한다.
+ */
+SW_TEST_CASE( RHIDeviceTest, Dx12BindlessIndexZeroIsNeverHandedOut )
+{
+    test::RHITestDevice device( sw::RHIBackend::DirectX12 );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "DX12 device unavailable" );
+    sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+    sw::RHIBufferHandle    arrBuffer[3]{};
+    sw::RHIDescriptorIndex arrIndex[3]{};
+    for ( uint32 slot = 0; slot < 3; ++slot )
+    {
+        arrBuffer[slot] = pResource->createConstantBuffer( 256 );
+        SW_ASSERT_TRUE( arrBuffer[slot] != 0 );
+        arrIndex[slot] = pResource->registerBindlessResource( arrBuffer[slot] );
+        SW_ASSERT_TRUE( arrIndex[slot] != sw::kInvalidDescriptorIndex );
+        SW_EXPECT_TRUE_MSG( arrIndex[slot] != 0u, "a constant buffer took bindless index 0 - a zero texture index would read it as Texture2D" );
+    }
+    sw::RHITextureDesc texDesc{};
+    texDesc._width                     = 4;
+    texDesc._height                    = 4;
+    texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+    texDesc._bIsShaderResource         = SW_TRUE;
+    const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+    SW_ASSERT_TRUE( texture != 0 );
+    const sw::RHIDescriptorIndex textureSrv = pResource->registerBindlessTexture( texture );
+    SW_EXPECT_TRUE( textureSrv != sw::kInvalidDescriptorIndex && textureSrv != 0u );
+
+    pResource->unregisterBindlessTexture( textureSrv );
+    pResource->destroyTexture( texture );
+    for ( uint32 slot = 0; slot < 3; ++slot )
+    {
+        pResource->unregisterBindlessResource( arrIndex[slot] );
+        pResource->destroyBuffer( arrBuffer[slot] );
+    }
+}
 #endif
 
 /**

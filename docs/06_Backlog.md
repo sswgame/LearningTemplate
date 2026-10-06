@@ -1357,6 +1357,8 @@ cd build/Ninja-Debug/Bin
   업로드 복사 리스트는 열어 두고 기록만 하며 `flushPendingUploads` 가 프레임에 한 번 내보낸다(`_uploadSlotMutex`). bindless 인덱스는 `acquireBindlessIndex(lock)` 로 집는 일과 뷰 생성을
   한 임계 구역에. CBV 는 256 B 정렬. drawIndirect 가 메시 VB 를 덮어쓴 적이 있다 — 렌더 변경은 스크린샷까지 본다.
   오프스크린 레코드(`_mapOffscreenTexture`)는 기록 경로에서도 `findOffscreenTargetView`(잠근 채 복사)로만 읽는다 — 이터레이터를 들고 `transitionTexture` 를 부르면 같은 뮤텍스로 교착이다.
+  bindless 0 번은 null Texture2D SRV(`kNullTextureBindlessIndex`) — 힙이 CBV · 버퍼 · 텍스처 한 공간이라 0 으로 남은 텍스처 인덱스(머티리얼 폴백 원소)가 상수버퍼를 텍스처로 읽어
+  채널마다 NaN 이 섞였다(군중 시험이 무관한 커밋 뒤에 DX12 만 실행마다 다른 픽셀 수로 졌다 — 0 번에 무엇이 앉는지가 등록 순서에 달렸다).
 - **Vulkan** — acquire 한 이미지는 present 로만 돌려준다(present 없는 프레임마다 acquire 하면 `UINT64_MAX` acquire 로 교착). 리소스 해제는 실제 GPU 펜스(단조 세대)와 이어야 한다.
   일회성 업로드는 `VulkanOneShotCommands` · 전용 풀 · `_queueMutex`. `vulkan1.3` DXC 는 `discard` 를 demote 로 내므로 기능을 켠다 — 쿠킹된 셰이더가 바뀌면 검증 레이어 로그를 다시 읽는다.
   와이어프레임은 `fillModeNonSolid`. 백버퍼 블릿의 이전 레이아웃은 `UNDEFINED`.
