@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  NileCity 조작 시나리오 — 디렉터는 마우스 버튼이 아니라 액션(Nile.Place · Nile.Demolish)을 읽는다.
+  커서는 포인터 위치(MousePosition — 화면 가운데 = 리그 초점 칸), 누르는 것은 패드 버튼(A = 짓기, B = 허물기) — 처음 도구(도로)를 깔고 같은 칸을 허문다.
+  App -scenario=game/nilecity/automation/control.scenario.xml (종료 코드 0 = 통과)
+-->
+<Scenario name="nilecity.control" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" input="exclusive">
+	<At frame="0"><Variable name="gv_nileAutoPlay" value="0"/></At>
+	<At frame="20"><MousePosition x="0.5" y="0.5"/></At>
+	<At frame="22"><Tap slot="Gamepad.A" hold="1"/></At>
+	<At frame="26"><Tap slot="Gamepad.B" hold="1"/></At>
+	<At frame="30"><ExpectLog contains="[Nile] demolished" count="1"/></At>
+	<At frame="31"><Pass/></At>
+</Scenario>

@@ -13,6 +13,7 @@ cmake --preset Ninja-Debug-NileCity        # 빌드 폴더 build/Ninja-Debug-Nil
 cmake --build --preset Ninja-Debug-NileCity
 cd build/Ninja-Debug-NileCity/Bin
 ./App.exe -dx12
+./App.exe -dx12 -scenario=game/nilecity/automation/control.scenario.xml   # 패드 A · B(액션 Nile.Place · Nile.Demolish)로 도로를 깔고 허문다(종료 코드 0 = 통과)
 ./App.exe -dx12 -gv_nileAutoPlay=1      # 계획표대로 도로 고리 · 우물 · 농장 · 창고 · 시장 · 집 … 을 지으며 달마다 [Nile] month N pop P money M
 ```
 
