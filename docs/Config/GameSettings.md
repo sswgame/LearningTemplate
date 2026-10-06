@@ -32,4 +32,5 @@ XML 자식 원소 이름은 아래 칸 이름에서 앞의 `_` 를 뗀 것입니
 | `_defaultLanguage` | `string` | `ko_kr` |  |  | 기본 활성 언어 |
 | `_fallbackLanguage` | `string` | `en_us` |  |  | 대체(Fallback) 언어 |
 | `_inputMap` | `string` | — |  |  | 게임플레이 InputMap 경로(통합 맵 `InputManager::getInputMap()` 에 읽힌다) |
+| `_loadingScreen` | `string` | `engine/ui/loading.ui.xml` |  |  | 씬을 비동기로 바꾸는 동안 띄우는 로딩 화면 문서(Loading 층 — `LoadingScreenController`). 비우면 로딩 화면 없음 |
 | `_mapCustomProperty` | `map<string, string>` | — |  |  | 범용 커스텀 키-값 프로퍼티 저장소 |

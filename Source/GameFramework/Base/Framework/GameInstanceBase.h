@@ -13,6 +13,7 @@
 #include "GameFramework/Base/Data/GameSettings.h"
 #include "GameFramework/Base/Framework/ComponentStateStore.h"
 #include "GameFramework/Base/Framework/IGame.h"
+#include "GameFramework/Base/Framework/ScreenTransitionManager.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -20,6 +21,7 @@ namespace sw
     struct TypeInfo;
 
     class GameObjectManager;
+    class LoadingScreenController;
     class Scene;
 
     // ------------------------------------------------------------------------------
@@ -44,7 +46,10 @@ namespace sw
         bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) final;
         /** @brief onShutdown 뒤에 `GameSettings` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
         void shutdown() final;
-        /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 낸 뒤 onUpdate 로 한 프레임을 넘깁니다. */
+        /**
+         * @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 낸 뒤 onUpdate 로 한 프레임을 넘깁니다.
+         * @details 그 앞에 화면 전환(페이드)을 넘기고 로딩 화면을 갱신합니다 — 씬 로드 요청이 남았거나 씬 매니저가 전환 중이면 로딩 중이다.
+         */
         void update( float32 deltaTime ) final;
 
         // --------------------------------------------------------------------------
@@ -92,6 +97,17 @@ namespace sw
         [[nodiscard]] bool requestFirstScene();
         /** @brief `getEntranceScene()` 의 로드를 요청합니다. 타이틀 화면이 "시작" 에서 부릅니다. 레벨 이벤트는 `requestFirstScene` 과 같습니다. */
         [[nodiscard]] bool requestEntranceScene();
+
+        // --------------------------------------------------------------------------
+        // 화면 전환 · 로딩 화면
+        // --------------------------------------------------------------------------
+        /** @brief 화면 페이드 · 전환 순서(FadeOut → 실행 → FadeIn)입니다. 페이드 알파는 로딩 화면 제어가 전체 화면 검은 패널로 그린다. */
+        ScreenTransitionManager& getScreenTransition() { return _screenTransition; }
+        /**
+         * @brief 로딩 화면 제어입니다 — 씬 로드를 요청하면(`requestFirstScene` · `requestEntranceScene`) gamesettings 의 `_loadingScreen` 문서를 Loading 층에 띄우고,
+         *        로드가 끝나고 최소 표시 시간이 지나면 닫으며 페이드 인을 겁니다. UI 시스템이 없으면(전용 서버) 아무것도 띄우지 않는다.
+         */
+        LoadingScreenController& getLoadingScreen() { return *_pLoadingScreen; }
 
     protected:
         /** @brief 파생 클래스가 팩 루트 · 부트스트랩을 설정합니다. */
@@ -244,9 +260,11 @@ namespace sw
             }
         }
 
-        vector<PendingSceneLoad>        _listPendingSceneLoad; ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
-        vector<StatefulComponentType>   _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
-        unique_ptr<ComponentStateStore> _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
-        uint8                           _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
+        vector<PendingSceneLoad>            _listPendingSceneLoad; ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
+        vector<StatefulComponentType>       _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
+        unique_ptr<ComponentStateStore>     _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
+        ScreenTransitionManager             _screenTransition;     ///< 화면 페이드 · 전환 순서
+        unique_ptr<LoadingScreenController> _pLoadingScreen;       ///< 로딩 화면 · 페이드 패널(UI 시스템에 화면을 띄운다)
+        uint8                               _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

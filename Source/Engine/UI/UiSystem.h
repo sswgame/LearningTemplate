@@ -197,6 +197,8 @@ namespace sw
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달 · 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 조종자가 의도를 0 으로 둔다). */
         bool isGameInputBlocked() const;
+        /** @brief Loading 층 화면(로딩 화면)이 떠 있으면 true 입니다(닫는 중은 뺀다) — 자동화의 "씬 플레이 중" 은 이것이 걷힌 뒤다. */
+        bool isLoadingScreenShown() const;
         /** @brief 활성 화면이 OS 커서를 바라면 true 입니다(플레이어 조종자가 마우스 잠금을 쉰다). */
         bool wantsCursor() const;
         /** @brief @p inputMap 의 행동 @p action 을 지금 누르는 물리 입력이 모두 UI 가 먹은 것이면 true 입니다(플레이어 조종자가 묻는다). */

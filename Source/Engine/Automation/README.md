@@ -40,7 +40,7 @@ echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 �
 | `name` | (필수) | 보고 · 산출물 폴더 이름 |
 | `fixedDelta` | `1/60` | 프레임마다 흘릴 시간(초) |
 | `timeoutFrames` | 3600 | 이 프레임을 넘도록 `<Pass/>` 가 없으면 12 |
-| `startAfter` | `ScenePlaying` | `ScenePlaying`(활성 씬이 플레이를 시작한 첫 프레임) · `Immediately` |
+| `startAfter` | `ScenePlaying` | `ScenePlaying`(활성 씬이 플레이를 시작했고 로딩 화면이 걷힌 첫 프레임 — 로딩 화면은 게임 입력을 막는다) · `Immediately` |
 | `startTimeoutFrames` | 1200 | 시작 조건을 이만큼 기다려도 안 오면 12 |
 | `input` | `exclusive` | `exclusive`(OS 입력 무시 — 기본) · `mixed`(OS 입력도 받는다, 진짜 창 상태를 볼 때) |
 

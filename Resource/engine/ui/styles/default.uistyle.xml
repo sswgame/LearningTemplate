@@ -23,4 +23,8 @@
 	<Rule _selector="TextWidget.damage" _fontSize="28" _textOutlineColor="0,0,0,0.9" _textOutlineWidth="2">
 		<_font _weight="Bold" />
 	</Rule>
+	<Rule _selector="TextWidget.loading" _fontSize="28" _textColor="$text">
+		<_font _weight="Bold" />
+	</Rule>
+	<Rule _selector="TextWidget.tip" _fontSize="20" _textColor="0.7,0.72,0.78,1" />
 </UiStyleSheet>

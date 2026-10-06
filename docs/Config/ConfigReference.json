@@ -984,6 +984,15 @@
        "description": "게임플레이 InputMap 경로(통합 맵 `InputManager::getInputMap()` 에 읽힌다)"
       },
       {
+       "name": "_loadingScreen",
+       "type": "string",
+       "default": "engine/ui/loading.ui.xml",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "씬을 비동기로 바꾸는 동안 띄우는 로딩 화면 문서(Loading 층 — `LoadingScreenController`). 비우면 로딩 화면 없음"
+      },
+      {
        "name": "_mapCustomProperty",
        "type": "map<string, string>",
        "default": "",

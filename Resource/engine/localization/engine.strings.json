@@ -1,6 +1,13 @@
 {
     "culture": "en",
     "entries": {
+        "Loading": {
+            "source": "Loading",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/loading.ui.xml"
+            ]
+        },
         "Options": {
             "source": "Options",
             "context": "TextWidget._text",

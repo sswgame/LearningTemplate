@@ -54,6 +54,9 @@ namespace sw
         string _inputMap{}; ///< 게임플레이 InputMap 경로(통합 맵 `InputManager::getInputMap()` 에 읽힌다)
 
         PROPERTY()
+        string _loadingScreen{ "engine/ui/loading.ui.xml" }; ///< 씬을 비동기로 바꾸는 동안 띄우는 로딩 화면 문서(Loading 층 — `LoadingScreenController`). 비우면 로딩 화면 없음
+
+        PROPERTY()
         map<string, string> _mapCustomProperty{}; ///< 범용 커스텀 키-값 프로퍼티 저장소
 
         /** @brief 커스텀 문자열 프로퍼티를 조회합니다(없으면 fallback 을 반환합니다). */

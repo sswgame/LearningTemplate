@@ -17,12 +17,14 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/UI/UiSystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Base/Framework/ComponentStateStore.h"
 #include "GameFramework/Base/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/Framework/GameStrings.h"
+#include "GameFramework/Base/Framework/LoadingScreenController.h"
 
 namespace sw
 {
@@ -53,6 +55,8 @@ namespace sw
         , _listPendingSceneLoad{}
         , _listStatefulType{}
         , _pComponentStateStore{ make_unique<ComponentStateStore>() }
+        , _screenTransition{}
+        , _pLoadingScreen{ make_unique<LoadingScreenController>() }
         , _bResumingWorld{ SW_FALSE }
     {
     }
@@ -85,6 +89,12 @@ namespace sw
             SW_LOG_TRACE( "No custom bootstrap in pack '%#' — using defaults.", _bootstrap._packRoot );
         game::bindLocalService<GameSettings>( &_bootstrap._data );
         applyBootstrap();
+        // 로딩 화면 — 첫 씬 요청(onInitialize 안)이 띄울 수 있게 그 앞에 묶는다. UI 시스템이 없으면(전용 서버) 띄우지 않는다.
+        LoadingScreenSettings loadingSettings = _pLoadingScreen->getSettings();
+        loadingSettings._documentPath         = _bootstrap._data._loadingScreen;
+        _pLoadingScreen->setSettings( loadingSettings );
+        UiSystem* pUiSystem = game::getService<UiSystem>();
+        _pLoadingScreen->bindUiSystem( pUiSystem != nullptr && pUiSystem->isInitialized() ? pUiSystem : nullptr );
         const bool bInitialized = onInitialize();
 
         // 플레이어 설정을 다시 넣는다 — 언어 팩 · 입력 맵(키 바인딩 · 누르기/토글)은 위에서 막 생겼다. 엔진 기동 때의 적용은 그 대상이 없을 때였다.
@@ -102,6 +112,8 @@ namespace sw
         if ( game::getService<GameSettings>() == &_bootstrap._data )
             game::unbindLocalService<GameSettings>();
         _listPendingSceneLoad.clear();
+        _pLoadingScreen->bindUiSystem( nullptr );
+        _screenTransition.reset();
         _pWindow    = nullptr;
         _pRhiDevice = nullptr;
     }
@@ -175,6 +187,8 @@ namespace sw
             return false;
         }
         _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, std::move( future ) } );
+        if ( _pLoadingScreen->getSettings()._documentPath.empty() == false )
+            (void)_pLoadingScreen->beginLoading();
 
         SceneLoadRequestedEvent event{};
         event._levelName = scenePath;
@@ -206,6 +220,11 @@ namespace sw
 
     void GameInstanceBase::update( float32 deltaTime )
     {
+        // 로딩 중 = 맡긴 씬 로드가 남았거나 씬 매니저가 전환 중이다. 페이드를 먼저 넘기고, 로딩 화면이 닫히면 페이드 인을 건다.
+        const SceneManager* pSceneManager = game::getService<SceneManager>();
+        const bool          bLoading      = _listPendingSceneLoad.empty() == false || ( pSceneManager != nullptr && pSceneManager->isTransitioning() );
+        _screenTransition.update( deltaTime );
+        _pLoadingScreen->update( deltaTime, bLoading, _screenTransition.fade() );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
         onUpdate( deltaTime );

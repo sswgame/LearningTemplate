@@ -16,7 +16,7 @@ namespace sw
     enum class AutomationStartCondition : uint8
     {
         Immediately = 0, ///< 시나리오를 시작한 뒤 첫 프레임
-        ScenePlaying,    ///< 활성 씬의 오브젝트 매니저가 플레이를 시작한 첫 프레임(기본)
+        ScenePlaying,    ///< 활성 씬의 오브젝트 매니저가 플레이를 시작했고 로딩 화면(UI Loading 층)이 걷힌 첫 프레임(기본)
     };
 } // namespace sw
 

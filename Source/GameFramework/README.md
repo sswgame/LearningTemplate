@@ -187,6 +187,10 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `GimmickSensorComponent`), 원소 상호작용 규칙표(`ElementRuleTable` · `ElementGrid` — 기본표 `common/data/elements/default.elements.xml`), 장르 기믹 세트(`Genre/` — 플랫포머 · 어드벤처 · 슈터 · 레이싱 · 공포 · 잠입 · 메트로배니아 · RPG, 프리팹 `common/prefabs/gimmicks`). 2D · 3D 공용. `Gimmick/README.md`
 - **Spline**: 곡선(`SplinePath` — Catmull-Rom · 3차 베지어 · 꺾은선, 호 길이 매개변수, 가장 가까운 점, 고른 간격 샘플)과 씬 컴포넌트(`SplineComponent`),
   누적 거리 표 계산(`ArcLengthUtil` — 코스터 트랙도 쓴다). 기믹 무버 · 카메라 레일 · 길이 함께 쓴다. `Spline/README.md`
+- **로딩 화면 · 화면 페이드**(`Framework/LoadingScreenController` — `GameInstanceBase` 가 든다): 씬 로드를 요청하면 gamesettings `_loadingScreen` 문서
+  (기본 `engine/ui/loading.ui.xml`)를 Loading 층에 띄우고(입력을 막는다 · Back 으로 닫히지 않는다 · `Spinner` 를 돌리고 `Tip` 에 팁 하나), 로드가 끝나고 최소 표시 시간
+  (0.5 초 — 깜박임 방지)이 지나면 닫고 페이드 인을 건다. `ScreenFade` 의 알파는 Overlay 층(입력 없음)의 전체 화면 검은 패널 불투명도로 그린다
+  (`GameInstanceBase::getScreenTransition` — Lyra `ULoadingScreenManager` 자리). Framework(층 2)라 UI 층(4)이 아니라 이 폴더에 있다 — Engine UI 만 쓴다.
 - **UI**: 장르 무관 UI 컴포넌트 — `DialogueRunnerComponent`, `HudControllerComponent`(오브젝트가 플레이하는 동안 HUD 문서를 Hud 층에 연다 — 게임이
   `findWidget<T>( 이름 )` 으로 값을 넣는다, 언리얼 `AHUD` 자리),
   `HealthBarComponent`, `DamageNumberComponent`. HP 바 · 데미지 숫자는 같은 오브젝트의 화면 마커(`WidgetComponent` Screen — 크기 · 머리 위 오프셋

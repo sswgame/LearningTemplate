@@ -622,6 +622,16 @@ namespace sw
         return false;
     }
 
+    bool UiSystem::isLoadingScreenShown() const
+    {
+        for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
+            if ( screen->isClosing() == false && screen->getDesc()._layer == UiLayer::Loading )
+                return true;
+        }
+        return false;
+    }
+
     bool UiSystem::wantsCursor() const
     {
         const UiScreen* pActive = getActiveScreen();
