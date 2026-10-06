@@ -362,10 +362,11 @@ namespace sw
             RHITextureHandle _texture{ 0 }; ///< 0 = 백버퍼
             uint32           _width{ 0 };
             uint32           _height{ 0 };
-            RHIFormat        _format{ RHIFormat::Unknown }; ///< 대상의 실제 포맷(PSO 를 고른다)
-            uint8            _bRenderTexture{ SW_FALSE };   ///< 렌더 텍스처 뷰의 자기 텍스처
-            uint8            _bCapture{ SW_FALSE };         ///< 백버퍼 대신 스크린샷 캡처 텍스처에 그린다
-            uint8            _bCaptureToBack{ SW_FALSE };   ///< 캡처를 Swapchain 을 쓰는 마지막 패스 뒤에 백버퍼로 복사한다(출력이 곧 백버퍼일 때)
+            RHIFormat        _format{ RHIFormat::Unknown };   ///< 대상의 실제 포맷(PSO 를 고른다)
+            uint8            _bRenderTexture{ SW_FALSE };     ///< 렌더 텍스처 뷰의 자기 텍스처
+            uint8            _bCapture{ SW_FALSE };           ///< 백버퍼 대신 스크린샷 캡처 텍스처에 그린다
+            uint8            _bCaptureToBack{ SW_FALSE };     ///< 캡처를 Swapchain 을 쓰는 마지막 패스 뒤에 백버퍼로 복사한다(출력이 곧 백버퍼일 때)
+            uint8            _bCaptureFromOutput{ SW_FALSE }; ///< Swapchain 을 쓰는 마지막 패스 뒤에 출력 RT(에디터 게임 뷰)를 캡처로 복사한다
         };
 
         // ------------------------------------------------------------------------------
@@ -462,6 +463,12 @@ namespace sw
         void ensureTaaHistory( ViewTarget& view );
         /** @brief Present 캡처 텍스처를 한 번만 만듭니다(켜져 있을 때만). */
         void ensurePresentCapture();
+        /**
+         * @brief 출력 RT(에디터 게임 뷰)를 Present 캡처로 복사합니다. 크기 · 포맷이 다르면 한 번 경고하고 건너뜁니다.
+         * @details 백버퍼 출력은 캡처에 그린 뒤 백버퍼로 복사하지만(백버퍼는 읽을 핸들이 없다), RT 출력은 그 RT 가 곧 읽을 수 있는 텍스처라
+         *          그린 뒤 복사한다 — RT 에 그린 그림이 에디터 게임 뷰에 그대로 나가야 하므로 대상을 캡처로 바꿔치지 않는다.
+         */
+        void copyOutputToPresentCapture( const FramePassContext& ctx, const PresentTarget& target );
         /** @brief 일시 텍스처를 해제합니다. */
         void releaseTransientResources();
         /** @brief 그래프 패스 콜백을 한 번 바인딩합니다. */
@@ -943,6 +950,8 @@ namespace sw
         atomic<uint8> _viewMode;
         /// @brief 셋업에 없는 출력 대상 포맷(Present · Canvas)을 만났다고 한 번만 알리기 위한 래치입니다.
         atomic<uint8> _bOutputPsoMissingLogged;
+        /// @brief 출력 RT 와 Present 캡처의 크기 · 포맷이 달라 복사를 건너뛴다고 한 번만 알리기 위한 래치입니다.
+        atomic<uint8> _bCaptureMismatchLogged;
         /// @brief 머티리얼 폴백 stride 가 없다고 한 번만 알리기 위한 래치입니다(드로우 경로라 프레임마다 찍으면 안 됩니다).
         atomic<uint8> _bMaterialFallbackMissingLogged;
         /// @brief 컬러 타깃이 없어 패스를 건너뛴다고 한 번만 알리기 위한 래치입니다(패스 경로라 프레임마다 찍으면 안 됩니다).

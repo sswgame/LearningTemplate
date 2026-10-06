@@ -150,6 +150,7 @@ namespace sw
         , _reservedFlags{ 0 }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _bOutputPsoMissingLogged{ 0 }
+        , _bCaptureMismatchLogged{ 0 }
         , _bMaterialFallbackMissingLogged{ 0 }
         , _bMissingColorTargetLogged{ 0 }
         , _bHasExecutedDepthPrepass{ 0 }
