@@ -104,10 +104,10 @@ namespace sw
             {
                 const string_view alias{ pAliasName };
                 const string_view canonical{ pCanonicalName };
-                if ( alias.find( constants::reflection::kScopeDelimiter ) != string_view::npos )
+                if ( alias.find( constant::reflection::kScopeDelimiter ) != string_view::npos )
                     return {};
 
-                const size_t lastScope = canonical.rfind( constants::reflection::kScopeDelimiter );
+                const size_t lastScope = canonical.rfind( constant::reflection::kScopeDelimiter );
                 if ( lastScope == string_view::npos )
                     return {};
 
@@ -123,7 +123,7 @@ namespace sw
 {
     TypeMetadata::TypeMetadata() noexcept
 #if !defined( SW_SHIPPING )
-        : _category{ constants::reflection::kDefaultCategory }
+        : _category{ constant::reflection::kDefaultCategory }
         , _displayName{}
         , _tooltip{}
         , _mapCustomMeta{}
@@ -137,7 +137,7 @@ namespace sw
 
     PropertyMetadata::PropertyMetadata() noexcept
 #if !defined( SW_SHIPPING )
-        : _category{ constants::reflection::kDefaultCategory }
+        : _category{ constant::reflection::kDefaultCategory }
         , _displayName{}
         , _tooltip{}
         , _mapCustomMeta{}
@@ -182,7 +182,7 @@ namespace sw
 
     FunctionMetadata::FunctionMetadata() noexcept
 #if !defined( SW_SHIPPING )
-        : _category{ constants::reflection::kDefaultCategory }
+        : _category{ constant::reflection::kDefaultCategory }
         , _displayName{}
         , _tooltip{}
         , _editorPreview{}
@@ -380,7 +380,7 @@ namespace sw
         , _parentMissGeneration{ 0 }
         , _typeId{ 0 }
         , _arrAncestorNameIndex{}
-        , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
+        , _ancestorDepth{ constant::reflection::kAncestorDepthUnknown }
         , _bAlive{ SW_TRUE }
         , _bAbstract{ SW_FALSE }
         , _bStatic{ SW_FALSE }
@@ -657,7 +657,7 @@ namespace sw
         if ( _activeModuleName.empty() == false )
             stored._moduleName = _activeModuleName;
         else if ( stored._moduleName.empty() )
-            stored._moduleName = hashed_string( constants::reflection::kDefaultModuleName );
+            stored._moduleName = hashed_string( constant::reflection::kDefaultModuleName );
 
         // 타입 하나가 곧 TypeInfo 하나다. 짧은 이름 키는 복사본이 아니라 FQN 을 가리킨다 — 복사본을 두면
         // `findType("sw::Foo")` 와 `findType("Foo")` 가 서로 다른 포인터를 돌려주고, `const TypeInfo*` 를 키로 쓰는 쪽이
@@ -728,7 +728,7 @@ namespace sw
         if ( _activeModuleName.empty() == false )
             stored._moduleName = _activeModuleName;
         else if ( stored._moduleName.empty() )
-            stored._moduleName = hashed_string( constants::reflection::kDefaultModuleName );
+            stored._moduleName = hashed_string( constant::reflection::kDefaultModuleName );
 
         // 같은 FQN 이면 그 객체에 덮어쓴다(주소 고정 — 별칭 · 밖에서 든 포인터가 새 내용을 본다). 새 enum 은 새 객체다.
         unique_ptr<EnumInfo>& pOwned = _mapFqnToEnum[stored._fullyQualifiedName];
@@ -1254,7 +1254,7 @@ namespace sw
         // 넘지 않는다. 부모가 미등록이어도 `_parentFQN` 이 같으면 파생으로 본다 — 모듈이 아직 안
         // 올라온 동안 이름으로 묻는 쪽(직렬화)이 그것에 기댄다.
         const TypeInfo* pCurrent = this;
-        for ( uint32 depth = 0; depth < constants::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
+        for ( uint32 depth = 0; depth < constant::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
         {
             if ( pCurrent->_fullyQualifiedName == targetFqn || pCurrent->_name == targetFqn )
                 return true;
@@ -1272,12 +1272,12 @@ namespace sw
         // 헤더의 인라인 버전이 nullptr · 자기 자신 · 양쪽 모두 표가 있는 경우를 걸렀다. 아직 세우지 않은 쪽은 여기서
         // 세운다(배치 밖에서 등록된 타입 · 레지스트리 밖 사본 · 해제 뒤 첫 조회). 세울 수 없는 쪽은 아래 걷기가 답한다.
         uint8 selfDepth = _ancestorDepth.load( std::memory_order_acquire );
-        if ( selfDepth == constants::reflection::kAncestorDepthUnknown && buildAncestorDisplay() )
+        if ( selfDepth == constant::reflection::kAncestorDepthUnknown && buildAncestorDisplay() )
             selfDepth = _ancestorDepth.load( std::memory_order_acquire );
         uint8 targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
-        if ( targetDepth == constants::reflection::kAncestorDepthUnknown && pTarget->buildAncestorDisplay() )
+        if ( targetDepth == constant::reflection::kAncestorDepthUnknown && pTarget->buildAncestorDisplay() )
             targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
-        if ( selfDepth < constants::reflection::kAncestorDisplayDepth && targetDepth < constants::reflection::kAncestorDisplayDepth )
+        if ( selfDepth < constant::reflection::kAncestorDisplayDepth && targetDepth < constant::reflection::kAncestorDisplayDepth )
         {
             // pTarget 의 자기 칸이 곧 pTarget 의 이름이다 — 이름을 다시 계산하지 않는다.
             return targetDepth <= selfDepth && _arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed ) ==
@@ -1286,7 +1286,7 @@ namespace sw
 
         // 표가 없는 쪽(이름 없음 · 순환 · 표보다 깊은 사슬)은 부모 포인터를 걷는다.
         const TypeInfo* pCurrent = this;
-        for ( uint32 depth = 0; depth < constants::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
+        for ( uint32 depth = 0; depth < constant::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
         {
             if ( pCurrent == pTarget || ReflectionCoreInternal::isSameTypeName( *pCurrent, *pTarget ) )
                 return true;
@@ -1318,7 +1318,7 @@ namespace sw
 
     bool TypeInfo::buildAncestorDisplay() const
     {
-        constexpr uint32 kDepth = constants::reflection::kAncestorDisplayDepth;
+        constexpr uint32 kDepth = constant::reflection::kAncestorDisplayDepth;
         constexpr uint32 kNone  = static_cast<uint32>( PredefinedNameType::NameType_None );
 
         // 자기부터 위로 이름을 모은다. 순환은 표 깊이에서 걸린다. **풀리지 않는 부모는 사슬의 끝이다.** `Component`
@@ -1332,7 +1332,7 @@ namespace sw
             const uint32 nameIndex = ReflectionCoreInternal::canonicalNameIndex( *pCurrent );
             if ( chainCount == kDepth || nameIndex == kNone )
             {
-                _ancestorDepth.store( constants::reflection::kAncestorDepthNone, std::memory_order_release );
+                _ancestorDepth.store( constant::reflection::kAncestorDepthNone, std::memory_order_release );
                 return false;
             }
             arrChain[chainCount++] = nameIndex;
@@ -1348,11 +1348,11 @@ namespace sw
         return true;
     }
 
-    uint32 TypeInfo::collectTypeChain( const TypeInfo* ( &outArrType )[constants::reflection::kMaxParentChainDepth] ) const
+    uint32 TypeInfo::collectTypeChain( const TypeInfo* ( &outArrType )[constant::reflection::kMaxParentChainDepth] ) const
     {
         uint32          depth    = 0;
         const TypeInfo* pCurrent = this;
-        while ( pCurrent != nullptr && depth < constants::reflection::kMaxParentChainDepth )
+        while ( pCurrent != nullptr && depth < constant::reflection::kMaxParentChainDepth )
         {
             outArrType[depth++] = pCurrent;
             if ( pCurrent->_parentFQN.empty() )
@@ -1364,7 +1364,7 @@ namespace sw
 
     const EventInfo* TypeInfo::findEventInHierarchy( const hashed_string& eventName ) const
     {
-        const TypeInfo* arrChain[constants::reflection::kMaxParentChainDepth];
+        const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
         const uint32    depth = collectTypeChain( arrChain );
         for ( uint32 level = 0; level < depth; ++level )
         {
@@ -1377,7 +1377,7 @@ namespace sw
 
     const FunctionInfo* TypeInfo::findMethodInHierarchy( const hashed_string& methodName ) const
     {
-        const TypeInfo* arrChain[constants::reflection::kMaxParentChainDepth];
+        const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
         const uint32    depth = collectTypeChain( arrChain );
         for ( uint32 level = 0; level < depth; ++level )
         {
@@ -1396,7 +1396,7 @@ namespace sw
             return findProperty( propNameOrAlias );
 
         // 작으면 선형으로 찾는다. 뒤(파생)부터 보아 병합 규칙(파생이 이긴다)과 같은 답을 낸다.
-        if ( listWithBase.size() <= constants::reflection::kLinearSearchThreshold )
+        if ( listWithBase.size() <= constant::reflection::kLinearSearchThreshold )
         {
             for ( size_t index = listWithBase.size(); index > 0; --index )
             {

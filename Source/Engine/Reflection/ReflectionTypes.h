@@ -599,7 +599,7 @@ namespace sw
             if ( val == 0 )
             {
                 auto iter = _mapValueToName.find( 0 );
-                return iter != _mapValueToName.end() ? iter->second : hashed_string( constants::reflection::kNone );
+                return iter != _mapValueToName.end() ? iter->second : hashed_string( constant::reflection::kNone );
             }
 
             vector<hashed_string> listName;
@@ -609,7 +609,7 @@ namespace sw
             for ( const hashed_string& name : listName )
             {
                 if ( result.empty() == false )
-                    result += constants::reflection::kFlagSeparator;
+                    result += constant::reflection::kFlagSeparator;
                 result += name.c_str();
             }
 
@@ -773,7 +773,7 @@ namespace sw
                         }
                     }
                     // `None` 은 0 열거자가 없는 플래그에 `toStringFlags` 가 0 을 적는 이름이다 — 읽을 때도 0 이어야 왕복이 맞는다.
-                    if ( bKnown == false && StringUtil::equals( token, constants::reflection::kNone, true ) == false )
+                    if ( bKnown == false && StringUtil::equals( token, constant::reflection::kNone, true ) == false )
                         return false;
                     bAnyToken = true;
                 }
@@ -927,7 +927,7 @@ namespace sw
          *          원자값인 이유는 `_pParentType` 과 같습니다. 첫 조회는 여러 스레드에서 올 수 있고 같은 값을 씁니다. 등록과
          *          캐스트가 겹치는 것은 `_pParentType` 과 마찬가지로 전제하지 않습니다(모듈 로드는 단일 스레드).
          */
-        mutable atomic<uint32> _arrAncestorNameIndex[constants::reflection::kAncestorDisplayDepth];
+        mutable atomic<uint32> _arrAncestorNameIndex[constant::reflection::kAncestorDisplayDepth];
         /** @brief 조상 표에서 자기 칸의 깊이. Unknown 이면 아직 안 세웠고, None 이면 세울 수 없어 부모 포인터를 걷는다. */
         mutable atomic<uint8> _ancestorDepth;
         /**
@@ -1051,7 +1051,7 @@ namespace sw
                 return true;
             const uint8 selfDepth   = _ancestorDepth.load( std::memory_order_acquire );
             const uint8 targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
-            if ( selfDepth < constants::reflection::kAncestorDisplayDepth && targetDepth < constants::reflection::kAncestorDisplayDepth )
+            if ( selfDepth < constant::reflection::kAncestorDisplayDepth && targetDepth < constant::reflection::kAncestorDisplayDepth )
             {
                 return targetDepth <= selfDepth && _arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed ) ==
                                                        pTarget->_arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed );
@@ -1074,7 +1074,7 @@ namespace sw
         /** @brief 조상 표가 세워져 있으면 true 입니다. 상속 검사가 걷지 않고 O(1) 로 답합니다. */
         bool hasAncestorDisplay() const
         {
-            return _ancestorDepth.load( std::memory_order_acquire ) < constants::reflection::kAncestorDisplayDepth;
+            return _ancestorDepth.load( std::memory_order_acquire ) < constant::reflection::kAncestorDisplayDepth;
         }
         /**
          * @brief 부모 포인터를 따라 조상 표를 세웁니다. 사슬이 모두 풀려 있고 표 깊이 안이면 true 입니다.
@@ -1087,7 +1087,7 @@ namespace sw
         /** @brief 조상 표를 비웁니다. 사슬이 바뀔 수 있는 등록 · 해제 뒤에 `TypeRegistry` 가 부릅니다. */
         void clearAncestorDisplay() const
         {
-            _ancestorDepth.store( constants::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
+            _ancestorDepth.store( constant::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
         }
         /**
          * @brief 부모에게서 **복사해 온** 캐시(상속 포함 목록과 그 이름 맵 · POD 판정)를 비웁니다. 다음 조회가 지금 부모로 다시 만듭니다.
@@ -1157,7 +1157,7 @@ namespace sw
         /** @brief 이름 또는 alias로 프로퍼티를 찾습니다. */
         const PropertyInfo* findProperty( const hashed_string& propertyNameOrAlias ) const
         {
-            if ( _listProperty.size() <= constants::reflection::kLinearSearchThreshold )
+            if ( _listProperty.size() <= constant::reflection::kLinearSearchThreshold )
             {
                 for ( const PropertyInfo& propertyInfo : _listProperty )
                 {
@@ -1175,7 +1175,7 @@ namespace sw
         /** @brief 이름으로 메서드를 찾습니다. */
         const FunctionInfo* findMethod( const hashed_string& methodName ) const
         {
-            if ( _listMethod.size() <= constants::reflection::kLinearSearchThreshold )
+            if ( _listMethod.size() <= constant::reflection::kLinearSearchThreshold )
             {
                 for ( const FunctionInfo& method : _listMethod )
                 {
@@ -1257,7 +1257,7 @@ namespace sw
         template <typename Func>
         void forEachEventWithBase( Func&& func ) const
         {
-            const TypeInfo* arrChain[constants::reflection::kMaxParentChainDepth];
+            const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
             uint32          depth = collectTypeChain( arrChain );
             while ( depth > 0 )
             {
@@ -1268,7 +1268,7 @@ namespace sw
         }
 
         /** @brief 자기부터 기반까지의 사슬을 @p outArrType 에 담고 길이를 돌려줍니다(풀리지 않는 부모에서 끝나고, 순환이면 상한에서 멈춘다). */
-        uint32 collectTypeChain( const TypeInfo* ( &outArrType )[constants::reflection::kMaxParentChainDepth] ) const;
+        uint32 collectTypeChain( const TypeInfo* ( &outArrType )[constant::reflection::kMaxParentChainDepth] ) const;
     };
 
 } // namespace sw

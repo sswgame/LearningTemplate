@@ -956,7 +956,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyUsesMergedMapWhenLa
     SW_ASSERT_NOT_NULL( pLeaf );
     const sw::vector<sw::PropertyInfo>& listMerged = pLeaf->getPropertiesWithBase();
     SW_EXPECT_EQUAL( size_t( 5 ), listMerged.size() ); // 3 + 3 - 겹친 이름 1
-    SW_EXPECT_TRUE( listMerged.size() > sw::constants::reflection::kLinearSearchThreshold );
+    SW_EXPECT_TRUE( listMerged.size() > sw::constant::reflection::kLinearSearchThreshold );
 
     // 이름마다 병합 목록의 그 항목 자신.
     for ( const sw::PropertyInfo& prop : listMerged )

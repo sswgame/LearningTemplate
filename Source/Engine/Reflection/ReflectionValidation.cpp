@@ -37,9 +37,9 @@ namespace sw
              */
             static bool computeHasValidator( const TypeInfo& type, const uint32 depth )
             {
-                if ( depth > constants::reflection::kMaxParentChainDepth )
+                if ( depth > constant::reflection::kMaxParentChainDepth )
                     return false;
-                const TypeInfo* arrChain[constants::reflection::kMaxParentChainDepth];
+                const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
                 const uint32    chainLength = type.collectTypeChain( arrChain );
                 for ( uint32 level = 0; level < chainLength; ++level )
                 {
@@ -59,7 +59,7 @@ namespace sw
 
             static uint32 validate( const TypeInfo& type, const void* pInstance, ValidationContext& context, const uint32 depth )
             {
-                if ( pInstance == nullptr || depth > constants::reflection::kMaxParentChainDepth || ReflectionValidation::hasValidator( type ) == false )
+                if ( pInstance == nullptr || depth > constant::reflection::kMaxParentChainDepth || ReflectionValidation::hasValidator( type ) == false )
                     return 0;
                 const size_t issueCountBefore = context.getIssues().size();
 
@@ -90,7 +90,7 @@ namespace sw
                 }
 
                 // 타입 검증은 기반부터 — 파생의 검증이 기반이 이미 본 것을 다시 적지 않게 순서를 정해 둔다.
-                const TypeInfo* arrChain[constants::reflection::kMaxParentChainDepth];
+                const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
                 uint32          level = type.collectTypeChain( arrChain );
                 while ( level > 0 )
                 {
