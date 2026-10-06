@@ -1443,6 +1443,9 @@ cd build/Ninja-Debug/Bin
   떠 있는 창(자기 플랫폼 창)은 플랫폼이 실제 커서로 "커서 아래 뷰포트" 를 넣어 호버가 그리로 간다 — 이름표가 든 뷰포트를 마우스 위치와 함께 넣는다
   (`AddMouseViewportEvent`, `moveMouseToMark` 가 한다). 시험이 그리는 창은 주 뷰포트 안에 둔다(`SetNextWindowViewport`).
   설정 파일을 다시 쓰는 경로(테마 저장)를 지나는 시험은 파일 바이트를 떠 두었다 되돌린다(`input.classicDarkSwatch`).
+  입력 시험이 이 PC 에서만 지면 모니터 배율부터 본다 — 시험은 100 % 와 150 % 에서 다른 스타일 크기를 본다.
+- **테마 적용은 스타일 크기를 ImGui 기본(96 DPI)에서 다시 시작한다**(`EditorThemeInternal::resetSizesToDefault`) — `ScaleAllSizes` 는 테마가 적지 않는
+  크기(도킹 구분선 · 테두리 호버 여백 · 창 최소 크기)까지 곱하므로, 안 그러면 1 이 아닌 배율에서 적용마다 거듭 곱해져 구분선 호버 여백(84 px)이 옆 패널의 클릭을 가로챈다. 시험 `theme.reapplyKeepsSizes`.
 
 - **DebugDrawQueue 는 `endFrame` 에 비워진다** — 에디터 UI 보다 먼저 채운 것(게임 업데이트)만 보인다(`debug_draw` 시각화). 틱에서 채우는 생산자가 생기면
   이중 버퍼로. `ActionRoom::drawDebug` 를 부르는 곳은 아직 없다. 메뉴 경로는 `EditorCommandRegistry::validate` 가 "그려지지 않는 경로" 를 잡는다.

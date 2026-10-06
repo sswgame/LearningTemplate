@@ -122,6 +122,34 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
+            // theme.reapplyKeepsSizes — 1 이 아닌 DPI 에서 테마를 거듭 적용해도 테마가 적지 않는 크기(도킹 구분선 · 테두리 호버 여백)는 기본 × 배율 한 번이다
+            // ------------------------------------------------------------------------------
+            static EditorSelfTestStep runThemeReapplyKeepsSizes( EditorSelfTestContext& context )
+            {
+                const EditorThemeConfig savedTheme = EditorThemeUtil::getActiveTheme();
+                const float32           savedScale = EditorThemeUtil::getDpiScale();
+                const float32           probeScale = savedScale + 0.5f; // 배율 1 은 ScaleAllSizes 를 건너뛰어 거듭 곱해지는지 볼 수 없다 — 모니터 배율과 무관하게 1 이 아닌 값
+                EditorThemeUtil::applyPreset( EditorThemePreset::ModernDark );
+                EditorThemeUtil::setDpiScale( probeScale );
+                const EditorThemeConfig probeTheme = EditorThemeUtil::getActiveTheme();
+                for ( uint32 applyIndex = 0; applyIndex < 3; ++applyIndex )
+                {
+                    EditorThemeUtil::applyTheme( probeTheme );
+                }
+
+                const ImGuiStyle  defaults;
+                const ImGuiStyle& style = ImGui::GetStyle();
+                (void)context.expect( style.DockingSeparatorSize == ImTrunc( defaults.DockingSeparatorSize * probeScale ),
+                                      "re-applying the theme compounds the DPI scale into the docking separator size" );
+                (void)context.expect( style.WindowBorderHoverPadding == ImTrunc( defaults.WindowBorderHoverPadding * probeScale ),
+                                      "re-applying the theme compounds the DPI scale into the window border hover padding" );
+
+                EditorThemeUtil::setDpiScale( savedScale );
+                EditorThemeUtil::applyTheme( savedTheme );
+                return EditorSelfTestStep::Done;
+            }
+
+            // ------------------------------------------------------------------------------
             // widgets.* — 도움말 표식 · 프로퍼티 행 라벨
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runHelpMarkerDrawsTheMarker( EditorSelfTestContext& context )
@@ -856,6 +884,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_SELF_TEST( Palette, "theme.palette", 100, &EditorSelfTestCasesInternal::runPaletteFollowsTheTheme );
+    SW_EDITOR_SELF_TEST( ThemeReapply, "theme.reapplyKeepsSizes", 110, &EditorSelfTestCasesInternal::runThemeReapplyKeepsSizes );
     SW_EDITOR_SELF_TEST( HelpMarker, "widgets.helpMarker", 200, &EditorSelfTestCasesInternal::runHelpMarkerDrawsTheMarker );
     SW_EDITOR_SELF_TEST( PropertyRow, "widgets.propertyRow", 210, &EditorSelfTestCasesInternal::runPropertyRowPlacesTheValueColumn );
     SW_EDITOR_SELF_TEST( CoreDock, "dock.corePanelsAreDocked", 300, &EditorSelfTestCasesInternal::runCorePanelsAreDocked );

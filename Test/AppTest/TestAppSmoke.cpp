@@ -688,6 +688,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
 {
     constexpr const utf8* kArrExpectedPass[] = {
         "EditorSelfTest|PASS|theme.palette",
+        "EditorSelfTest|PASS|theme.reapplyKeepsSizes",
         "EditorSelfTest|PASS|widgets.helpMarker",
         "EditorSelfTest|PASS|widgets.propertyRow",
         "EditorSelfTest|PASS|dock.corePanelsAreDocked",
