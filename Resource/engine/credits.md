@@ -4,6 +4,7 @@
 |------|------|----------|
 | `fonts/kenney_future.ttf` · `fonts/kenney_future_narrow.ttf` | Kenney "Kenney Fonts" (<https://kenney.nl/assets/kenney-fonts>) — `Kenney Future.ttf` · `Kenney Future Narrow.ttf` | CC0 1.0 |
 | `textures_raw/terrain/terrain_detail.png` | `Scripts/dev/MakeTerrainShowcase.py` 가 만든 절차 생성 데이터 | 이 저장소 |
+| `textures_raw/prototype/grid_dark.png` · `textures_raw/prototype/grid_light.png` · `textures_raw/prototype/grid_orange.png` | Kenney "Prototype Textures" 1.0 (<https://kenney.nl/assets/prototype-textures>) — `PNG/Dark/texture_02.png` · `PNG/Light/texture_02.png` · `PNG/Orange/texture_02.png` 를 1024 → 512 로 줄임(Lanczos) | CC0 1.0 |
 | `textures_raw/perlin.png` | `Scripts/dev/MakeNoiseTexture.py` 가 만든 이음매 없는 Perlin 잡음(채널마다 다른 씨앗) | 이 저장소 |
 | `textures_raw/random/grass.jpg` | ambientCG "Grass001" (<https://ambientcg.com/a/Grass001>) — `Grass001_1K-JPG_Color.jpg` 를 1024 → 512 로 줄임(Lanczos, JPEG 품질 92) | CC0 1.0 |
 | `textures/missing.dds` | `Scripts/generate/GenerateSpriteTextures.py` 가 만든 누락 표시 체커(마젠타 · 검정) | 이 저장소 |

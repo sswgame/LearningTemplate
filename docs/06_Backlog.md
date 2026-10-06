@@ -73,6 +73,7 @@
 - **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것:
   `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
 - **머티리얼 폴백 원소(`FrameRenderer::ensureMaterialFallbackBuffers` — 0 바이트)의 텍스처 인덱스 칸이 0 이다** — Vulkan 은 bindless 0 번 실제 텍스처를 읽는다(DX12 는 0 번을 null SRV 로 비웠다, 머티리얼은 `MaterialPacking` 이 `kInvalidIndex` 를 넣는다). 원소 레이아웃(`ShaderBindingSlot`)은 stride 만, 리플렉션 원소 칸은 `uint` 뿐이라 텍스처 칸을 가를 수 없다 — 셰이더 쪽 표식(텍스처 칸 매크로가 리플렉션에 남기는 이름 규칙)으로 칸을 알아 `kInvalidIndex` 로 채우거나, Vulkan 도 0 번을 null 서술자로 비운다.
+- **월드 좌표 UV(트라이플래너) 프로토타입 머티리얼** — `engine/materials/prototypegrid_*` 는 메시 UV 를 따라 큐브 크기마다 칸이 늘어난다. 언리얼 `WorldGridMaterial` 처럼 월드 1 m 격자로 보이려면 셰이더 분기(월드 위치로 샘플)가 필요하다.
 
 ### 1-4. 에디터
 
