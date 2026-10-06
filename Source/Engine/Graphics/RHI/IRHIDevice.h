@@ -192,7 +192,7 @@ namespace sw
          *          백버퍼 바인딩과 클리어는 `IRHICommandList::beginRenderPass`(타깃 핸들 0)가 명시적으로 합니다(`RenderThread::executeFrameBody`).
          *          프레임 수명주기(beginFrame · endFrame · resize)는 디바이스의 일입니다 — 스왑체인 쪽에 두면 디바이스의 private 상태를 만져야 합니다.
          * @note 스왑체인 자체(백버퍼 · 이미지 인덱스 · 동기화 · present)는 백엔드 안의 구체 클래스
-         *       `<백엔드>RHISwapChain` 이 소유합니다. 가상 인터페이스로 되돌리지 않습니다(Graphics/README.md). GL 에는 없습니다.
+         *       `<백엔드>RHISwapChain` 이 소유합니다. 가상 인터페이스로 되돌리지 않습니다(RHI/README.md). GL 에는 없습니다.
          */
         virtual void beginFrame( const float4& clearColor ) = 0;
         /** @brief 기록을 닫고 큐에 제출합니다. bPresent=false 면 제출만 하고 Present 는 생략합니다. */

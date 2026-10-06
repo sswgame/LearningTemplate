@@ -68,6 +68,9 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("symbols", "dev.StoreSymbols", "빌드의 심볼(PDB · .debug)을 심볼 저장소 배치로 복사"),
     Subcommand("editor-state", "dev.MoveEditorState", "옛 자리의 에디터 로컬 상태(imgui.ini · 레이아웃 · gv 프리셋)를 Saved/Editor 로 옮긴다(PC 마다 한 번)"),
     Subcommand("stacks", "dev.SampleStacks", "살아 있는 프로세스의 스택을 여러 번 떠서 함수별로 모은다(Windows · DbgHelp)"),
+    Subcommand("worktree-make", "dev.MakeWorktree", "작업 단위용 git 워크트리를 만들고 도구 · vcpkg 폴더를 main 체크아웃과 나눠 쓰게 연결한다"),
+    Subcommand("worktree-remove", "dev.RemoveWorktree", "워크트리를 나눠 쓰는 링크를 먼저 끊고 지운다(브랜치 wt/<이름> 도)"),
+    Subcommand("ci-jobs", "dev.ListCiJobs", "GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로 읽는다"),
     Subcommand("defender", "setup.AddDefenderExclusions", "Windows Defender 빌드 디렉터리 제외 등록"),
 )
 
