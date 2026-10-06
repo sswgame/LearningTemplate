@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Server_Trade",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "거래 키트(서버) — 양쪽 제시 → 잠금 → 양쪽 확정, 정산은 원장 이동 하나의 트랜잭션(맡김 없음) · 재시작 복구 · 시한 (MMO · 교환이 있는 온라인 게임)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Trade"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

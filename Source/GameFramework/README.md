@@ -286,6 +286,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       메모리에, 로그인 · 재접속 성공이면 호스트에 계정을 붙이고 같은 계정의 옛 연결은 알림 뒤 닫는다, 연결이 닫히면 재접속 유예, 탈퇴 쓸기 · 세션 다시 읽기를 주기로),
       UDP 접속 인증기 `AccountConnectAuthenticator`(게임 서버 — 저장소 없이 표 서명 · 서버 · 시한만). 시험: `LoginServiceTest` · `PlatformLoginTest` ·
       `AccountStreamTest`(루프백 스트림 평문 · TLS, UDP Encrypted 접속까지).
+    - `Trade`(`GF_Trade`, Client · Server): 거래 와이어 타입(`TradeTypes.h` — 다리 · 상태 · 닫힌 까닭 · 결과 · 스냅숏 · 코덱 `TradeWire`).
+    - `Server/Trade`(`GF_Server_Trade`, Server): 거래 서비스 — 양쪽 제시 → 잠금 → 양쪽 확정, 정산은 **맡김 없이 원장 이동 하나의 트랜잭션**(두 방향 다리를 분개 하나로 —
+      키 = 거래 id, 거래 레코드 · 활성 링크 · 감사 줄과 한 커밋, 모자라면 아무것도 안 움직이고 Failed). 상태 기계는 순수 함수(`TradeStateMachine` — 제시를 바꾸면 양쪽 잠금 ·
+      확정이 풀리고 확정은 본 판 둘을 싣는다), 거래 레코드는 저장소에(`TradeStoreLogic` — 계정마다 열린 거래 하나 "없어야 함", 시한 · 남은 링크는 게으르게 정리, 주인 서버
+      색인으로 재시작 복구), 거래 가능 정책 `ITradePolicy`. 시험: `TradeServiceTest`.
   - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
       연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,
