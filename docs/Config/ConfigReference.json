@@ -198,6 +198,15 @@
        "description": "App 셸 InputMap"
       },
       {
+       "name": "_uiInputMap",
+       "type": "string",
+       "default": "engine/input/ui.input.xml",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "런타임 UI 의 행동 맵 — 탐색 · 확인 · 뒤로 · 탭(`UiSystem`, Shipping 에도 있다)"
+      },
+      {
        "name": "_userSettingsSchema",
        "type": "string",
        "default": "engine/settings/engine.settings.xml",

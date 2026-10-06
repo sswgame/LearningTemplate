@@ -14,7 +14,7 @@
 #include "Engine/UI/Core/WidgetTree.h"
 #include "Engine/UI/Screen/UiScreen.h"
 
-namespace sw::test
+namespace sw::uitest
 {
     /** @brief 시험 위젯이 받은 사건 한 줄입니다("이름 단계 종류"). */
     struct UiEventRecord
@@ -34,9 +34,9 @@ namespace sw::test
             return result;
         }
     };
-} // namespace sw::test
+} // namespace sw::uitest
 
-namespace sw::test
+namespace sw::uitest
 {
     /** @brief 고정 원하는 크기 · 포커스 받기 여부를 정하는 잎 위젯입니다. 받은 사건을 기록에 적고, 정한 단계에서 처리합니다. */
     class TestBoxWidget : public Widget
@@ -46,6 +46,7 @@ namespace sw::test
             : Widget{}
             , _pRecord{ nullptr }
             , _pScreenToClose{ nullptr }
+            , _receivedText{}
             , _focusChangeCount{ 0 }
             , _hoverChangeCount{ 0 }
             , _clickCount{ 0 }
@@ -91,6 +92,14 @@ namespace sw::test
             return UiReply::makeUnhandled();
         }
 
+        UiReply onTextEvent( const UiTextEvent& event ) override
+        {
+            if ( event._bComposition == SW_TRUE )
+                return UiReply::makeUnhandled();
+            _receivedText += event._text;
+            return UiReply::makeHandled();
+        }
+
         void onFocusChanged( bool bFocused ) override
         {
             (void)bFocused;
@@ -106,6 +115,7 @@ namespace sw::test
 
         UiEventRecord* _pRecord;
         UiScreen*      _pScreenToClose; ///< 포인터 누름의 버블 단계에서 이 화면을 닫는다
+        string         _receivedText;   ///< 받은 글자(확정된 것만)
         uint32         _focusChangeCount;
         uint32         _hoverChangeCount;
         uint32         _clickCount;
@@ -115,9 +125,9 @@ namespace sw::test
         bool           _bHandleBubble;
         bool           _bCaptureOnDown;
     };
-} // namespace sw::test
+} // namespace sw::uitest
 
-namespace sw::test
+namespace sw::uitest
 {
     /** @brief 자식을 드는 시험 패널입니다. `_bLayoutBoundary` 면 크기가 고정된 패널(레이아웃 경계)로 답합니다. */
     class TestPanelWidget : public PanelWidget
@@ -152,9 +162,9 @@ namespace sw::test
         bool           _bLayoutBoundary;
         bool           _bHandleTunnel;
     };
-} // namespace sw::test
+} // namespace sw::uitest
 
-namespace sw::test
+namespace sw::uitest
 {
     struct UiTestUtil
     {
@@ -165,4 +175,4 @@ namespace sw::test
             widget.setArrangedGeometry( widget.getRenderTransform().applyTo( rect ) );
         }
     };
-} // namespace sw::test
+} // namespace sw::uitest

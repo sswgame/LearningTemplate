@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/UiFocusManager.h"
@@ -23,19 +24,19 @@ namespace
 
         /** @brief 루트 패널(@p x, @p y, @p width × @p height) 하나와 그 안의 포커스 받는 버튼들(가로 한 줄, 100 × 40, 틈 10)로 된 화면입니다. 버튼 이름은 @p pPrefix + 번호. */
         static sw::unique_ptr<sw::UiScreen> makeScreen( const sw::UiScreenDesc& desc, float32 x, float32 y, float32 width, float32 height, const utf8* pPrefix,
-                                                        uint32 buttonCount, sw::test::UiEventRecord* pRecord = nullptr )
+                                                        uint32 buttonCount, sw::uitest::UiEventRecord* pRecord = nullptr )
         {
-            auto                       root  = sw::make_unique<sw::test::TestPanelWidget>( sw::hashed_string( sw::string( pPrefix ) + "root" ) );
-            sw::test::TestPanelWidget* pRoot = root.get();
-            pRoot->_pRecord                  = pRecord;
-            sw::test::UiTestUtil::placeWidget( *pRoot, x, y, width, height );
+            auto                         root  = sw::make_unique<sw::uitest::TestPanelWidget>( sw::hashed_string( sw::string( pPrefix ) + "root" ) );
+            sw::uitest::TestPanelWidget* pRoot = root.get();
+            pRoot->_pRecord                    = pRecord;
+            sw::uitest::UiTestUtil::placeWidget( *pRoot, x, y, width, height );
             for ( uint32 index = 0; index < buttonCount; ++index )
             {
-                auto* pButton           = static_cast<sw::test::TestBoxWidget*>( pRoot->addChild(
-                    sw::make_unique<sw::test::TestBoxWidget>( sw::hashed_string( sw::string( pPrefix ) + sw::to_string( index ) ), true ) ) );
+                auto* pButton           = static_cast<sw::uitest::TestBoxWidget*>( pRoot->addChild(
+                    sw::make_unique<sw::uitest::TestBoxWidget>( sw::hashed_string( sw::string( pPrefix ) + sw::to_string( index ) ), true ) ) );
                 pButton->_pRecord       = pRecord;
                 pButton->_bHandleBubble = true;
-                sw::test::UiTestUtil::placeWidget( *pButton, x + 10.0f + static_cast<float32>( index ) * 110.0f, y + 10.0f, 100.0f, 40.0f );
+                sw::uitest::UiTestUtil::placeWidget( *pButton, x + 10.0f + static_cast<float32>( index ) * 110.0f, y + 10.0f, 100.0f, 40.0f );
             }
             return sw::make_unique<sw::UiScreen>( desc, std::move( root ) );
         }
@@ -105,9 +106,9 @@ namespace
 SW_TEST_CASE( UiScreenStackTest, ModalBlocksLowerScreensAndGame )
 {
     using Util = UiScreenTestUtil;
-    UiScreenFixture          fixture;
-    sw::test::UiEventRecord  record;
-    const sw::UiScreenHandle menu = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 2, &record ) );
+    UiScreenFixture           fixture;
+    sw::uitest::UiEventRecord record;
+    const sw::UiScreenHandle  menu = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 2, &record ) );
     SW_EXPECT_FALSE( fixture._ui.isGameInputBlocked() );
     Util::click( fixture._input, fixture._ui, 20, 20 );
     SW_EXPECT_TRUE( record.joined().find( "menu0 B" ) != sw::string::npos );
@@ -183,13 +184,13 @@ SW_TEST_CASE( UiScreenStackTest, DefaultFocusOnOpenInNavigationMode )
 SW_TEST_CASE( UiScreenStackTest, CloseDuringEventIsDeferred )
 {
     using Util = UiScreenTestUtil;
-    UiScreenFixture         fixture;
-    sw::test::UiEventRecord record;
-    auto                    screen  = Util::makeScreen( Util::makeDesc( sw::UiLayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 1, &record );
-    auto*                   pButton = static_cast<sw::test::TestBoxWidget*>( screen->getTree().findWidgetByName( "menu0" ) );
-    pButton->_bHandleBubble         = false;
-    pButton->_pScreenToClose        = screen.get();
-    const sw::UiScreenHandle menu   = fixture._ui.pushScreen( std::move( screen ) );
+    UiScreenFixture           fixture;
+    sw::uitest::UiEventRecord record;
+    auto                      screen  = Util::makeScreen( Util::makeDesc( sw::UiLayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 1, &record );
+    auto*                     pButton = static_cast<sw::uitest::TestBoxWidget*>( screen->getTree().findWidgetByName( "menu0" ) );
+    pButton->_bHandleBubble           = false;
+    pButton->_pScreenToClose          = screen.get();
+    const sw::UiScreenHandle menu     = fixture._ui.pushScreen( std::move( screen ) );
 
     SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseMove( 20, 20 ) ) );
     SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, 20, 20 ) ) );
@@ -259,4 +260,32 @@ SW_TEST_CASE( UiScreenStackTest, ModuleUnloadClosesScreensWithItsWidgets )
     SW_EXPECT_EQUAL( 1u, logs.countContaining( "closed for module reload" ) );
     SW_EXPECT_FALSE( bKeepMapped );
     SW_EXPECT_TRUE( fixture._ui.findScreen( other ) != nullptr );
+}
+
+/** @brief [UiScreenStackTest] UI.Back(Esc)은 아무 위젯도 처리하지 않으면 맨 위 화면을 닫고(기본 onBack), 그 아래가 활성 화면이 된다 — Esc 는 먹힌 입력이다 */
+SW_TEST_CASE( UiScreenStackTest, BackClosesTopScreen )
+{
+    using Util = UiScreenTestUtil;
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bind( "Pause", sw::Key::Escape );
+    {
+        sw::UiSystem ui;
+        SW_ASSERT_TRUE( ui.initialize( input, nullptr, "engine/input/ui.input.xml" ) );
+        const sw::UiScreenHandle menu    = ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 1 ) );
+        const sw::UiScreenHandle options = ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "options", 1 ) );
+        SW_EXPECT_EQUAL( options, ui.getActiveScreen()->getHandle() );
+
+        SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Escape ) ) );
+        input.beginFrame( Util::kFrameSeconds );
+        ui.processInput( Util::kFrameSeconds );
+        SW_EXPECT_TRUE( ui.findScreen( options ) == nullptr );
+        SW_ASSERT_NOT_NULL( ui.getActiveScreen() );
+        SW_EXPECT_EQUAL( menu, ui.getActiveScreen()->getHandle() );
+        SW_EXPECT_TRUE( input.getInputMap().wasActionTriggered( "Pause" ) );
+        SW_EXPECT_TRUE( ui.isActionConsumed( input.getInputMap(), "Pause" ) ); // 게임의 일시정지는 같은 Esc 를 받지 않는다
+        input.endFrame();
+        ui.shutdown();
+    }
+    input.shutdown();
 }

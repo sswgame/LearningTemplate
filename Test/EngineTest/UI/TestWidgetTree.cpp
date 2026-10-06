@@ -29,20 +29,20 @@ namespace
 SW_TEST_CASE( WidgetTreeTest, AddRemoveRegistersIdsAndNames )
 {
     sw::WidgetTree   tree;
-    auto             root  = sw::make_unique<sw::test::TestPanelWidget>( "root" );
+    auto             root  = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
     sw::PanelWidget* pRoot = root.get();
     tree.setRoot( std::move( root ) );
 
-    sw::Widget* const pA = pRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "a" ) );
+    sw::Widget* const pA = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "a" ) );
     SW_EXPECT_EQUAL( 2u, tree.getWidgetCount() );
     SW_EXPECT_TRUE( tree.findWidgetById( pA->getId() ) == pA );
-    SW_EXPECT_TRUE( tree.findWidget<sw::test::TestBoxWidget>( "a" ) == pA );
+    SW_EXPECT_TRUE( tree.findWidget<sw::uitest::TestBoxWidget>( "a" ) == pA );
     SW_EXPECT_TRUE( pA->getTree() == &tree );
     SW_EXPECT_TRUE( pA->getParent() == pRoot );
 
     {
         test::ScopedLogCollector logs;
-        sw::Widget* const        pSecond = pRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "a" ) );
+        sw::Widget* const        pSecond = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "a" ) );
         SW_EXPECT_EQUAL( 1u, logs.countContaining( "used twice" ) );
         SW_EXPECT_TRUE( tree.findWidgetByName( "a" ) == pA );
         SW_EXPECT_TRUE( tree.findWidgetById( pSecond->getId() ) == pSecond );
@@ -60,18 +60,18 @@ SW_TEST_CASE( WidgetTreeTest, AddRemoveRegistersIdsAndNames )
     // 번호는 다시 쓰지 않는다 — 떼었다 다시 붙여도 같은 번호, 새 위젯은 새 번호.
     sw::Widget* const pReattached = pRoot->addChild( std::move( removed ) );
     SW_EXPECT_EQUAL( removedId, pReattached->getId() );
-    SW_EXPECT_TRUE( tree.findWidget<sw::test::TestBoxWidget>( "a" ) == pReattached );
+    SW_EXPECT_TRUE( tree.findWidget<sw::uitest::TestBoxWidget>( "a" ) == pReattached );
 }
 
 /** @brief [WidgetTreeTest] 루트 > 고정 크기 패널 > 박스: 박스의 kLayout 은 고정 패널에서 멈춘다 — 더러운 뿌리 = 그 패널, 루트에는 kChildLayout 이 없다 */
 SW_TEST_CASE( WidgetTreeTest, LayoutDirtyStopsAtLayoutBoundary )
 {
     sw::WidgetTree   tree;
-    auto             root  = sw::make_unique<sw::test::TestPanelWidget>( "root" );
+    auto             root  = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
     sw::PanelWidget* pRoot = root.get();
     tree.setRoot( std::move( root ) );
-    sw::PanelWidget* pFixed = static_cast<sw::PanelWidget*>( pRoot->addChild( sw::make_unique<sw::test::TestPanelWidget>( "fixed", true ) ) );
-    sw::Widget*      pBox   = pFixed->addChild( sw::make_unique<sw::test::TestBoxWidget>( "box" ) );
+    sw::PanelWidget* pFixed = static_cast<sw::PanelWidget*>( pRoot->addChild( sw::make_unique<sw::uitest::TestPanelWidget>( "fixed", true ) ) );
+    sw::Widget*      pBox   = pFixed->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "box" ) );
     tree.clearAllDirty();
     SW_EXPECT_FALSE( tree.hasPendingWork() );
 
@@ -87,7 +87,7 @@ SW_TEST_CASE( WidgetTreeTest, LayoutDirtyStopsAtLayoutBoundary )
 
     // 경계가 없으면 루트까지 올라간다.
     tree.clearAllDirty();
-    static_cast<sw::test::TestPanelWidget*>( pFixed )->_bLayoutBoundary = false;
+    static_cast<sw::uitest::TestPanelWidget*>( pFixed )->_bLayoutBoundary = false;
     pBox->invalidate( sw::WidgetDirty::kLayout );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) );
     SW_EXPECT_EQUAL( pRoot->getId(), tree.getLayoutDirtyRoots()[0] );
@@ -97,10 +97,10 @@ SW_TEST_CASE( WidgetTreeTest, LayoutDirtyStopsAtLayoutBoundary )
 SW_TEST_CASE( WidgetTreeTest, PaintDirtyDoesNotTouchLayout )
 {
     sw::WidgetTree   tree;
-    auto             root  = sw::make_unique<sw::test::TestPanelWidget>( "root" );
+    auto             root  = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
     sw::PanelWidget* pRoot = root.get();
     tree.setRoot( std::move( root ) );
-    sw::Widget* pBox = pRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "box" ) );
+    sw::Widget* pBox = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "box" ) );
     tree.clearAllDirty();
 
     pBox->invalidate( sw::WidgetDirty::kPaint );
@@ -124,10 +124,10 @@ SW_TEST_CASE( WidgetTreeTest, PaintDirtyDoesNotTouchLayout )
 SW_TEST_CASE( WidgetTreeTest, CollapsedToggleIsLayoutDirty )
 {
     sw::WidgetTree   tree;
-    auto             root  = sw::make_unique<sw::test::TestPanelWidget>( "root" );
+    auto             root  = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
     sw::PanelWidget* pRoot = root.get();
     tree.setRoot( std::move( root ) );
-    sw::Widget* pBox = pRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "box" ) );
+    sw::Widget* pBox = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "box" ) );
     tree.clearAllDirty();
 
     pBox->setVisibility( sw::WidgetVisibility::Collapsed );
@@ -145,10 +145,10 @@ SW_TEST_CASE( WidgetTreeTest, CollapsedToggleIsLayoutDirty )
 SW_TEST_CASE( WidgetTreeTest, SettersWithSameValueDoNotInvalidate )
 {
     sw::WidgetTree   tree;
-    auto             root  = sw::make_unique<sw::test::TestPanelWidget>( "root" );
+    auto             root  = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
     sw::PanelWidget* pRoot = root.get();
     tree.setRoot( std::move( root ) );
-    sw::Widget* pBox = pRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "box" ) );
+    sw::Widget* pBox = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "box" ) );
     pBox->setOpacity( 0.5f );
     tree.clearAllDirty();
 
@@ -166,12 +166,12 @@ SW_TEST_CASE( WidgetTreeTest, SettersWithSameValueDoNotInvalidate )
 SW_TEST_CASE( WidgetTreeTest, DetachedInvalidationArrivesOnAttach )
 {
     sw::WidgetTree   tree;
-    auto             root  = sw::make_unique<sw::test::TestPanelWidget>( "root" );
+    auto             root  = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
     sw::PanelWidget* pRoot = root.get();
     tree.setRoot( std::move( root ) );
     tree.clearAllDirty();
 
-    auto        box  = sw::make_unique<sw::test::TestBoxWidget>( "box" );
+    auto        box  = sw::make_unique<sw::uitest::TestBoxWidget>( "box" );
     sw::Widget* pBox = pRoot->addChild( std::move( box ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) );
     SW_EXPECT_TRUE( WidgetTreeTestUtil::containsId( tree.getPaintDirtyWidgets(), pBox->getId() ) );

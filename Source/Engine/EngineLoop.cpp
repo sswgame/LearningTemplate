@@ -844,8 +844,11 @@ namespace sw
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
-            return loop._owned._pUiSystem->initialize( *loop._owned._pInputManager, loop._owned._pFontSystem.get() ) ? EngineInitResult::Succeeded
-                                                                                                                     : EngineInitResult::Failed;
+            // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
+            const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
+            UiSystem&                  ui            = *loop._owned._pUiSystem;
+            return ui.initialize( *loop._owned._pInputManager, loop._owned._pFontSystem.get(), defaultAssets._uiInputMap ) ? EngineInitResult::Succeeded
+                                                                                                                           : EngineInitResult::Failed;
         }
         static void shutdown( EngineLoop& loop ) { loop._owned._pUiSystem->shutdown(); }
         static void destroy( EngineLoop& loop ) { loop._owned._pUiSystem.reset(); }

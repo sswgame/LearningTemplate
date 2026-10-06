@@ -16,35 +16,35 @@ namespace
     /** @brief 루트 패널(0, 0, 400 × 300)이 든 트리입니다. 위젯은 붙이고 `place` 로 화면 사각형에 놓습니다. */
     struct UiRouteFixture
     {
-        sw::WidgetTree             _tree;
-        sw::test::UiEventRecord    _record;
-        sw::test::TestPanelWidget* _pRoot;
+        sw::WidgetTree               _tree;
+        sw::uitest::UiEventRecord    _record;
+        sw::uitest::TestPanelWidget* _pRoot;
 
         UiRouteFixture()
             : _tree{}
             , _record{}
             , _pRoot{ nullptr }
         {
-            auto root        = sw::make_unique<sw::test::TestPanelWidget>( "root" );
+            auto root        = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
             _pRoot           = root.get();
             _pRoot->_pRecord = &_record;
             _tree.setRoot( std::move( root ) );
-            sw::test::UiTestUtil::placeWidget( *_pRoot, 0.0f, 0.0f, 400.0f, 300.0f );
+            sw::uitest::UiTestUtil::placeWidget( *_pRoot, 0.0f, 0.0f, 400.0f, 300.0f );
         }
 
-        sw::test::TestPanelWidget* addPanel( sw::PanelWidget& parent, const sw::hashed_string& name, float32 x, float32 y, float32 width, float32 height )
+        sw::uitest::TestPanelWidget* addPanel( sw::PanelWidget& parent, const sw::hashed_string& name, float32 x, float32 y, float32 width, float32 height )
         {
-            auto* pPanel     = static_cast<sw::test::TestPanelWidget*>( parent.addChild( sw::make_unique<sw::test::TestPanelWidget>( name ) ) );
+            auto* pPanel     = static_cast<sw::uitest::TestPanelWidget*>( parent.addChild( sw::make_unique<sw::uitest::TestPanelWidget>( name ) ) );
             pPanel->_pRecord = &_record;
-            sw::test::UiTestUtil::placeWidget( *pPanel, x, y, width, height );
+            sw::uitest::UiTestUtil::placeWidget( *pPanel, x, y, width, height );
             return pPanel;
         }
 
-        sw::test::TestBoxWidget* addBox( sw::PanelWidget& parent, const sw::hashed_string& name, float32 x, float32 y, float32 width, float32 height )
+        sw::uitest::TestBoxWidget* addBox( sw::PanelWidget& parent, const sw::hashed_string& name, float32 x, float32 y, float32 width, float32 height )
         {
-            auto* pBox     = static_cast<sw::test::TestBoxWidget*>( parent.addChild( sw::make_unique<sw::test::TestBoxWidget>( name ) ) );
+            auto* pBox     = static_cast<sw::uitest::TestBoxWidget*>( parent.addChild( sw::make_unique<sw::uitest::TestBoxWidget>( name ) ) );
             pBox->_pRecord = &_record;
-            sw::test::UiTestUtil::placeWidget( *pBox, x, y, width, height );
+            sw::uitest::UiTestUtil::placeWidget( *pBox, x, y, width, height );
             return pBox;
         }
 
@@ -71,8 +71,8 @@ namespace
 /** @brief [UiEventRouteTest] 겹친 두 자식 — 뒤에 붙인 것이 위라 겹친 곳은 위 자식, 경로는 뿌리 → 잎 */
 SW_TEST_CASE( UiEventRouteTest, HitTestPicksTopmostDeepest )
 {
-    UiRouteFixture             fixture;
-    sw::test::TestPanelWidget* pBack = fixture.addPanel( *fixture._pRoot, "back", 0.0f, 0.0f, 200.0f, 200.0f );
+    UiRouteFixture               fixture;
+    sw::uitest::TestPanelWidget* pBack = fixture.addPanel( *fixture._pRoot, "back", 0.0f, 0.0f, 200.0f, 200.0f );
     fixture.addBox( *pBack, "backBox", 0.0f, 0.0f, 50.0f, 50.0f );
     fixture.addBox( *fixture._pRoot, "front", 100.0f, 100.0f, 200.0f, 150.0f );
 
@@ -92,14 +92,14 @@ SW_TEST_CASE( UiEventRouteTest, HitTestPicksTopmostDeepest )
 /** @brief [UiEventRouteTest] HitTestInvisible 패널 아래 자식은 못 받고 SelfHitTestInvisible 패널 아래 자식은 받는다 — 패널 자신은 둘 다 못 받는다. Hidden 은 못 받는다 */
 SW_TEST_CASE( UiEventRouteTest, HitTestRespectsVisibility )
 {
-    UiRouteFixture             fixture;
-    sw::test::TestPanelWidget* pBlocked = fixture.addPanel( *fixture._pRoot, "blocked", 0.0f, 0.0f, 100.0f, 100.0f );
+    UiRouteFixture               fixture;
+    sw::uitest::TestPanelWidget* pBlocked = fixture.addPanel( *fixture._pRoot, "blocked", 0.0f, 0.0f, 100.0f, 100.0f );
     fixture.addBox( *pBlocked, "blockedChild", 0.0f, 0.0f, 50.0f, 50.0f );
     pBlocked->setVisibility( sw::WidgetVisibility::HitTestInvisible );
-    sw::test::TestPanelWidget* pPassing = fixture.addPanel( *fixture._pRoot, "passing", 200.0f, 0.0f, 100.0f, 100.0f );
+    sw::uitest::TestPanelWidget* pPassing = fixture.addPanel( *fixture._pRoot, "passing", 200.0f, 0.0f, 100.0f, 100.0f );
     fixture.addBox( *pPassing, "passingChild", 200.0f, 0.0f, 50.0f, 50.0f );
     pPassing->setVisibility( sw::WidgetVisibility::SelfHitTestInvisible );
-    sw::test::TestBoxWidget* pHidden = fixture.addBox( *fixture._pRoot, "hidden", 0.0f, 200.0f, 50.0f, 50.0f );
+    sw::uitest::TestBoxWidget* pHidden = fixture.addBox( *fixture._pRoot, "hidden", 0.0f, 200.0f, 50.0f, 50.0f );
     pHidden->setVisibility( sw::WidgetVisibility::Hidden );
 
     SW_EXPECT_STREQ( "root", fixture.hitLeafName( 10.0f, 10.0f ).c_str() );
@@ -114,11 +114,11 @@ SW_TEST_CASE( UiEventRouteTest, HitTestRespectsRenderTransform )
 {
     UiRouteFixture fixture;
     fixture._pRoot->setVisibility( sw::WidgetVisibility::SelfHitTestInvisible );
-    sw::test::TestBoxWidget*  pBox = fixture.addBox( *fixture._pRoot, "diamond", 100.0f, 100.0f, 100.0f, 100.0f );
-    sw::WidgetRenderTransform transform{};
+    sw::uitest::TestBoxWidget* pBox = fixture.addBox( *fixture._pRoot, "diamond", 100.0f, 100.0f, 100.0f, 100.0f );
+    sw::WidgetRenderTransform  transform{};
     transform._angleDegrees = 45.0f;
     pBox->setRenderTransform( transform );
-    sw::test::UiTestUtil::placeWidget( *pBox, 100.0f, 100.0f, 100.0f, 100.0f );
+    sw::uitest::UiTestUtil::placeWidget( *pBox, 100.0f, 100.0f, 100.0f, 100.0f );
 
     SW_EXPECT_STREQ( "diamond", fixture.hitLeafName( 150.0f, 150.0f ).c_str() ); // 가운데(피벗)
     SW_EXPECT_STREQ( "", fixture.hitLeafName( 105.0f, 105.0f ).c_str() );        // 축 상자의 모서리 — |dx| + |dy| = 90 > 70.7
@@ -130,7 +130,7 @@ SW_TEST_CASE( UiEventRouteTest, ClippingPanelBlocksOutsidePoints )
 {
     UiRouteFixture fixture;
     fixture._pRoot->setVisibility( sw::WidgetVisibility::SelfHitTestInvisible );
-    sw::test::TestPanelWidget* pClip = fixture.addPanel( *fixture._pRoot, "clip", 0.0f, 0.0f, 100.0f, 100.0f );
+    sw::uitest::TestPanelWidget* pClip = fixture.addPanel( *fixture._pRoot, "clip", 0.0f, 0.0f, 100.0f, 100.0f );
     fixture.addBox( *pClip, "overflow", 50.0f, 50.0f, 100.0f, 100.0f );
     pClip->setClipChildren( true );
 
@@ -144,8 +144,8 @@ SW_TEST_CASE( UiEventRouteTest, ClippingPanelBlocksOutsidePoints )
 /** @brief [UiEventRouteTest] 루트 > 패널 > 버튼: 터널링(뿌리부터) 다음 버블링(잎부터) */
 SW_TEST_CASE( UiEventRouteTest, TunnelThenBubbleOrder )
 {
-    UiRouteFixture             fixture;
-    sw::test::TestPanelWidget* pPanel = fixture.addPanel( *fixture._pRoot, "panel", 0.0f, 0.0f, 200.0f, 200.0f );
+    UiRouteFixture               fixture;
+    sw::uitest::TestPanelWidget* pPanel = fixture.addPanel( *fixture._pRoot, "panel", 0.0f, 0.0f, 200.0f, 200.0f );
     fixture.addBox( *pPanel, "button", 10.0f, 10.0f, 50.0f, 50.0f );
 
     sw::UiWidgetPath path{};
@@ -161,8 +161,8 @@ SW_TEST_CASE( UiEventRouteTest, TunnelThenBubbleOrder )
 /** @brief [UiEventRouteTest] 패널이 터널링에서 처리하면 경로가 멈춘다 — 버튼은 아무것도 받지 않는다 */
 SW_TEST_CASE( UiEventRouteTest, HandledStopsRoute )
 {
-    UiRouteFixture             fixture;
-    sw::test::TestPanelWidget* pPanel = fixture.addPanel( *fixture._pRoot, "panel", 0.0f, 0.0f, 200.0f, 200.0f );
+    UiRouteFixture               fixture;
+    sw::uitest::TestPanelWidget* pPanel = fixture.addPanel( *fixture._pRoot, "panel", 0.0f, 0.0f, 200.0f, 200.0f );
     fixture.addBox( *pPanel, "button", 10.0f, 10.0f, 50.0f, 50.0f );
     pPanel->_bHandleTunnel = true;
 
@@ -179,12 +179,12 @@ SW_TEST_CASE( UiEventRouteTest, HandledStopsRoute )
 /** @brief [UiEventRouteTest] Down 에서 포인터를 잡은 슬라이더는 포인터가 밖으로 나가도 Move · Up 을 받고, Up 에서 놓는다 */
 SW_TEST_CASE( UiEventRouteTest, CaptureRoutesToCapturerOutsideItsRect )
 {
-    UiRouteFixture           fixture;
-    sw::test::TestBoxWidget* pSlider = fixture.addBox( *fixture._pRoot, "slider", 10.0f, 10.0f, 100.0f, 20.0f );
-    sw::test::TestBoxWidget* pOther  = fixture.addBox( *fixture._pRoot, "other", 200.0f, 200.0f, 100.0f, 50.0f );
-    pSlider->_bHandleBubble          = true;
-    pSlider->_bCaptureOnDown         = true;
-    pOther->_bHandleBubble           = true;
+    UiRouteFixture             fixture;
+    sw::uitest::TestBoxWidget* pSlider = fixture.addBox( *fixture._pRoot, "slider", 10.0f, 10.0f, 100.0f, 20.0f );
+    sw::uitest::TestBoxWidget* pOther  = fixture.addBox( *fixture._pRoot, "other", 200.0f, 200.0f, 100.0f, 50.0f );
+    pSlider->_bHandleBubble            = true;
+    pSlider->_bCaptureOnDown           = true;
+    pOther->_bHandleBubble             = true;
 
     sw::UiPointerState        pointer;
     const sw::UiPointerResult down = pointer.process( fixture._tree, UiRouteFixture::makePointer( sw::UiPointerEventKind::Down, 20.0f, 20.0f ) );
@@ -207,10 +207,10 @@ SW_TEST_CASE( UiEventRouteTest, CaptureRoutesToCapturerOutsideItsRect )
 /** @brief [UiEventRouteTest] A 에서 B 로 옮기면 A 쪽은 잎부터 Leave, B 쪽은 뿌리부터 Enter — 공통 조상(루트)은 아무것도 받지 않는다 */
 SW_TEST_CASE( UiEventRouteTest, HoverEnterLeaveDiff )
 {
-    UiRouteFixture             fixture;
-    sw::test::TestPanelWidget* pPanelA = fixture.addPanel( *fixture._pRoot, "panelA", 0.0f, 0.0f, 100.0f, 100.0f );
+    UiRouteFixture               fixture;
+    sw::uitest::TestPanelWidget* pPanelA = fixture.addPanel( *fixture._pRoot, "panelA", 0.0f, 0.0f, 100.0f, 100.0f );
     fixture.addBox( *pPanelA, "a", 10.0f, 10.0f, 50.0f, 50.0f );
-    sw::test::TestPanelWidget* pPanelB = fixture.addPanel( *fixture._pRoot, "panelB", 200.0f, 0.0f, 100.0f, 100.0f );
+    sw::uitest::TestPanelWidget* pPanelB = fixture.addPanel( *fixture._pRoot, "panelB", 200.0f, 0.0f, 100.0f, 100.0f );
     fixture.addBox( *pPanelB, "b", 210.0f, 10.0f, 50.0f, 50.0f );
 
     sw::UiPointerState pointer;

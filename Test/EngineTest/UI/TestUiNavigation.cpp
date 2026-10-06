@@ -22,26 +22,26 @@ namespace
     /** @brief 열 × 행 버튼 격자입니다. 버튼 이름은 "b<행><열>", 격자 패널 이름은 "grid"(루트). */
     struct UiNavigationFixture
     {
-        sw::WidgetTree             _tree;
-        sw::UiFocusManager         _focus;
-        sw::test::TestPanelWidget* _pGrid;
+        sw::WidgetTree               _tree;
+        sw::UiFocusManager           _focus;
+        sw::uitest::TestPanelWidget* _pGrid;
 
         UiNavigationFixture( uint32 columnCount, uint32 rowCount, float32 width, float32 height, float32 gap )
             : _tree{}
             , _focus{}
             , _pGrid{ nullptr }
         {
-            auto grid = sw::make_unique<sw::test::TestPanelWidget>( "grid" );
+            auto grid = sw::make_unique<sw::uitest::TestPanelWidget>( "grid" );
             _pGrid    = grid.get();
             _tree.setRoot( std::move( grid ) );
-            sw::test::UiTestUtil::placeWidget( *_pGrid, 0.0f, 0.0f, 2000.0f, 2000.0f );
+            sw::uitest::UiTestUtil::placeWidget( *_pGrid, 0.0f, 0.0f, 2000.0f, 2000.0f );
             for ( uint32 row = 0; row < rowCount; ++row )
             {
                 for ( uint32 column = 0; column < columnCount; ++column )
                 {
                     const sw::string name    = "b" + sw::to_string( row ) + sw::to_string( column );
-                    sw::Widget*      pButton = _pGrid->addChild( sw::make_unique<sw::test::TestBoxWidget>( sw::hashed_string( name ), true ) );
-                    sw::test::UiTestUtil::placeWidget( *pButton, static_cast<float32>( column ) * ( width + gap ), static_cast<float32>( row ) * ( height + gap ), width, height );
+                    sw::Widget*      pButton = _pGrid->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( sw::hashed_string( name ), true ) );
+                    sw::uitest::UiTestUtil::placeWidget( *pButton, static_cast<float32>( column ) * ( width + gap ), static_cast<float32>( row ) * ( height + gap ), width, height );
                 }
             }
         }
@@ -185,10 +185,10 @@ SW_TEST_CASE( UiNavigationTest, DestroyedTreeReleasesFocus )
     sw::UiFocusManager focus;
     {
         sw::WidgetTree   tree;
-        auto             root  = sw::make_unique<sw::test::TestPanelWidget>( "root" );
+        auto             root  = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
         sw::PanelWidget* pRoot = root.get();
         tree.setRoot( std::move( root ) );
-        sw::Widget* pButton = pRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "button", true ) );
+        sw::Widget* pButton = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "button", true ) );
         SW_ASSERT_TRUE( focus.setFocus( tree, pButton->getId() ) );
         SW_EXPECT_TRUE( focus.getFocusedTree() == &tree );
     }
@@ -210,16 +210,16 @@ SW_TEST_CASE( UiNavigationTest, PerpendicularGapIsPenalized )
     SW_EXPECT_TRUE( sw::UiNavigationSolver::computeSpatialScore( from, sameRow, sw::UiNavigationDirection::Left ) < 0.0f );
 
     sw::WidgetTree   tree;
-    auto             root  = sw::make_unique<sw::test::TestPanelWidget>( "root" );
+    auto             root  = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
     sw::PanelWidget* pRoot = root.get();
     tree.setRoot( std::move( root ) );
-    sw::test::UiTestUtil::placeWidget( *pRoot, 0.0f, 0.0f, 500.0f, 500.0f );
-    sw::Widget* pFrom = pRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "from", true ) );
-    sw::Widget* pB    = pRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "B", true ) ); // 문서 순서가 앞이라도 점수로 진다
-    sw::Widget* pA    = pRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "A", true ) );
-    sw::test::UiTestUtil::placeWidget( *pFrom, 0.0f, 0.0f, 100.0f, 50.0f );
-    sw::test::UiTestUtil::placeWidget( *pB, 110.0f, 80.0f, 100.0f, 50.0f );
-    sw::test::UiTestUtil::placeWidget( *pA, 150.0f, 0.0f, 100.0f, 50.0f );
+    sw::uitest::UiTestUtil::placeWidget( *pRoot, 0.0f, 0.0f, 500.0f, 500.0f );
+    sw::Widget* pFrom = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "from", true ) );
+    sw::Widget* pB    = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "B", true ) ); // 문서 순서가 앞이라도 점수로 진다
+    sw::Widget* pA    = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "A", true ) );
+    sw::uitest::UiTestUtil::placeWidget( *pFrom, 0.0f, 0.0f, 100.0f, 50.0f );
+    sw::uitest::UiTestUtil::placeWidget( *pB, 110.0f, 80.0f, 100.0f, 50.0f );
+    sw::uitest::UiTestUtil::placeWidget( *pA, 150.0f, 0.0f, 100.0f, 50.0f );
     SW_EXPECT_EQUAL( pA->getId(), sw::UiNavigationSolver::findNextWidget( tree, pFrom->getId(), sw::UiNavigationDirection::Right ) );
 }
 
@@ -233,16 +233,16 @@ SW_TEST_CASE( UiNavigationTest, NavigationStaysInsideModalScreen )
         SW_ASSERT_TRUE( ui.initialize( input, nullptr ) );
         ui.setInputMode( sw::UiInputMode::Navigation );
 
-        auto menuRoot = sw::make_unique<sw::test::TestPanelWidget>( "menuRoot" );
-        sw::test::UiTestUtil::placeWidget( *menuRoot, 0.0f, 0.0f, 800.0f, 600.0f );
-        sw::Widget* pMenuButton = menuRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "menuButton", true ) );
-        sw::test::UiTestUtil::placeWidget( *pMenuButton, 500.0f, 100.0f, 100.0f, 40.0f );
+        auto menuRoot = sw::make_unique<sw::uitest::TestPanelWidget>( "menuRoot" );
+        sw::uitest::UiTestUtil::placeWidget( *menuRoot, 0.0f, 0.0f, 800.0f, 600.0f );
+        sw::Widget* pMenuButton = menuRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "menuButton", true ) );
+        sw::uitest::UiTestUtil::placeWidget( *pMenuButton, 500.0f, 100.0f, 100.0f, 40.0f );
         (void)ui.pushScreen( sw::make_unique<sw::UiScreen>( sw::UiScreenDesc{}, std::move( menuRoot ) ) );
 
-        auto modalRoot = sw::make_unique<sw::test::TestPanelWidget>( "modalRoot" );
-        sw::test::UiTestUtil::placeWidget( *modalRoot, 0.0f, 80.0f, 300.0f, 100.0f );
-        sw::Widget* pModalButton = modalRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "modalButton", true ) );
-        sw::test::UiTestUtil::placeWidget( *pModalButton, 10.0f, 100.0f, 100.0f, 40.0f );
+        auto modalRoot = sw::make_unique<sw::uitest::TestPanelWidget>( "modalRoot" );
+        sw::uitest::UiTestUtil::placeWidget( *modalRoot, 0.0f, 80.0f, 300.0f, 100.0f );
+        sw::Widget* pModalButton = modalRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "modalButton", true ) );
+        sw::uitest::UiTestUtil::placeWidget( *pModalButton, 10.0f, 100.0f, 100.0f, 40.0f );
         sw::UiScreenDesc modalDesc{};
         modalDesc._layer  = sw::UiLayer::Modal;
         modalDesc._bModal = true;

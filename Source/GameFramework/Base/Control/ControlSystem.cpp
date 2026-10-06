@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/UI/UiSystem.h"
 
 #include "GameFramework/Base/Control/AiControllerComponent.h"
 #include "GameFramework/Base/Control/ControlAutomationSteps.h"
@@ -64,6 +65,7 @@ namespace sw
         , _listAutoPossessPawn{}
         , _listQueuedPossess{}
         , _pInputOverride{ nullptr }
+        , _pUiSystemOverride{ nullptr }
         , _tick{ 0 }
         , _bRecording{ SW_FALSE }
         , _reserved{ 0 }
@@ -115,6 +117,12 @@ namespace sw
         return _pInputOverride != nullptr ? _pInputOverride : game::getService<InputManager>();
     }
 
+    const UiSystem* ControlSystem::findUiSystem() const
+    {
+        const UiSystem* pUiSystem = _pUiSystemOverride != nullptr ? _pUiSystemOverride : game::getService<UiSystem>();
+        return pUiSystem != nullptr && pUiSystem->isInitialized() ? pUiSystem : nullptr;
+    }
+
     void ControlSystem::setRecording( bool bRecording, int32 capacityTicks )
     {
         if ( bRecording && _bRecording == SW_FALSE )
@@ -136,6 +144,7 @@ namespace sw
 
         ControlFrameContext context{};
         context._pInput    = findInputManager();
+        context._pUiSystem = findUiSystem();
         context._deltaTime = deltaTime;
         context._tick      = _tick;
 

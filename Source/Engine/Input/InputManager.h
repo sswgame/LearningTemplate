@@ -44,6 +44,7 @@ namespace sw
     {
         Game = 0,   ///< 게임 코드 · 통합 InputMap
         DevConsole, ///< 게임 창의 개발 콘솔(열려 있는 동안)
+        Ui,         ///< 런타임 UI 의 글 입력 칸(포커스를 쥔 동안 — `UiSystem` 이 잡고 놓는다)
         Count
     };
 

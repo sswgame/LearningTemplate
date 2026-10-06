@@ -621,7 +621,7 @@ SW_TEST_CASE( InputMapTest, EditorSavedDefinitionReloadsWithTheSameBindings )
  */
 SW_TEST_CASE( InputMapTest, ShippedInputMapsSurviveTheEditorSave )
 {
-    for ( const sw::string_view resourceId : { "engine/input/default.input.xml", "game/shooter3d/data/shooter.input.xml", "game/abilityarena/data/arena.input.xml",
+    for ( const sw::string_view resourceId : { "engine/input/default.input.xml", "engine/input/ui.input.xml", "game/shooter3d/data/shooter.input.xml", "game/abilityarena/data/arena.input.xml",
                                                "game/harvestvalley/data/farm.input.xml", "game/nilecity/data/nile.input.xml", "game/starskirmish/data/skirmish.input.xml",
                                                "game/themepark/data/park.input.xml", "game/voxelcraft/data/voxel.input.xml" } )
     {

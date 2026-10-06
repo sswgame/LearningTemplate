@@ -74,3 +74,22 @@
 - `_bPausesGame` 화면이 하나라도 있으면 `GameTimeScale::addPauseRequest` 하나를 걸어 둡니다(`gv_timeScale` 은 그대로).
 - 게임이 마우스를 잠가 쥔 동안(1 인칭)은 포인터 사건을 만들지 않습니다.
 - 핫 리로드: 내려가는 모듈에 vtable 이 있는 화면 · 위젯이 든 화면은 그 자리에서 닫습니다(경고 "closed for module reload"). 위젯 타입의 정적 상태는 모듈에 두지 않습니다.
+
+## 행동 입력 · 먹은 입력 (`Input/UiInputConsumption` · `UiSystem::processInput`)
+
+UI 는 키 · 버튼을 직접 보지 않고 **행동**을 받습니다 — 키 바인딩 · 패드 · 가상 입력(자동화)이 한 길로 옵니다.
+
+| 이 엔진 | 언리얼 | 유니티 | Godot |
+|---|---|---|---|
+| UI 행동 맵 `engine/input/ui.input.xml`(레이어 `UI`) | CommonUI 입력 액션 데이터 · `FNavigationConfig` | Input System UI 모듈(`InputSystemUIInputModule`) | `ui_*` 입력 액션 |
+| `UiInputConsumption` · `UiSystem::isActionConsumed` | Enhanced Input 입력 소비 · CommonUI 액션 라우터 | `EventSystem.IsPointerOverGameObject` 로 게임이 거른다 | `accept_event()` · `set_input_as_handled()` |
+
+- **UI 행동 맵**은 `UiSystem` 이 소유합니다(`EngineDefaultAssets::_uiInputMap`, Shipping 에도 있다 — 셸 맵은 개발 도구라 쓰지 않는다). 레이어 `UI` 는 활성 화면이
+  있을 때만 켭니다 — HUD 만 있으면 패드 A 는 게임의 것입니다. 탐색은 `trigger="Repeat"`(누를 때 한 번 · 지연 뒤 간격마다), 스틱은 큰 축 방향으로 한 칸 뒤 같은 간격으로.
+- 순서: 뗀 입력 풀기 → UI 맵 갱신 → 입력 방식(이번 프레임 마지막 장치 — `InputManager::getLastFrameEvents`) → 포인터 → 행동(포커스 경로에 먼저, 아무도 안 먹으면
+  포커스 이동 · `UI.Back` 은 화면의 `onBack`) → 닫기 요청 → 글 포커스.
+- **먹은 입력**: UI 가 쓴 행동의 물리 입력(키 · 패드 버튼 · 조합 키의 트리거 키 · 기운 스틱)과 위젯이 처리한 마우스 버튼은 **뗀 프레임까지** 먹힌 입력입니다.
+  게임 쪽에서 이것을 보는 자리는 **플레이어 조종자 하나**입니다(`PlayerControllerComponent` — 먹힌 행동은 의도에 넣지 않고, 모달 · 로딩이면 의도 0,
+  `wantsCursor` 면 마우스 잠금을 쉰다). 입력 맵이 둘이어도(UI 맵 · 게임 맵) 물리 슬롯으로 견주므로 메뉴에서 누른 패드 A 가 점프가 되지 않습니다.
+- **글 입력 칸**(`supportsTextInput`)이 포커스를 쥐면 키보드 포커스 `Ui` 를 잡습니다 — 게임은 키를 보지 못하고(칸에 있는 동안 누른 키는 뗄 때까지), 글자 · 조합은
+  그 위젯의 `onTextEvent` 로 갑니다. 그 동안 UI 행동은 `UI.Back` · `UI.FocusNext/Previous` 만(스페이스가 확인이 되지 않게). 개발 콘솔이 열리면 UI 는 행동을 받지 않습니다.

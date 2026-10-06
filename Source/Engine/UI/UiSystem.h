@@ -5,20 +5,25 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/UI/Core/UiFocusManager.h"
 #include "Engine/UI/Core/UiPointerState.h"
+#include "Engine/UI/Core/WidgetNavigation.h"
 #include "Engine/UI/Core/WidgetTypes.h"
+#include "Engine/UI/Input/UiInputConsumption.h"
 #include "Engine/UI/Screen/UiScreen.h"
 
 namespace sw
 {
     class FontSystem;
     class InputManager;
+    class InputMap;
 
     /** @brief UI 를 지금 무엇으로 다루는가입니다(CommonUI 의 입력 방식). 탐색이면 포커스 테두리를 보이고, 포인터면 숨긴다. */
     enum class UiInputMode : uint8
@@ -41,6 +46,12 @@ namespace sw
      *          **활성 화면**이고 포커스 · UI 행동을 받습니다. 모달 · 로딩 화면은 아래 화면과 게임의 입력을 막습니다(`isGameInputBlocked` — 플레이어 조종자가 본다).
      *          덮인 화면은 그때의 포커스를 기억했다가 다시 활성이 되면 돌려줍니다. 닫기는 지연입니다(이번 입력 처리가 끝난 뒤).
      *
+     *          **행동 입력**: UI 는 키 · 버튼을 직접 보지 않고 자기 입력 맵(`EngineDefaultAssets::_uiInputMap` — 레이어 `UI`, 활성 화면이 있을 때만 켠다)의
+     *          행동(`UI.Navigate*` · `UI.Accept` · `UI.Back` · `UI.FocusNext` …)을 받아 활성 화면의 포커스 경로로 보냅니다. UI 가 쓴 행동의 물리 입력은
+     *          뗄 때까지 **먹힌 입력**입니다(`isActionConsumed` — 플레이어 조종자가 의도를 만들 때 이것을 보는 한 자리라, 패드 A 로 메뉴를 누르면 점프하지 않는다).
+     *          위젯이 처리한 마우스 버튼도 먹힌다. 입력 방식(포인터 / 탐색)은 이번 프레임 마지막으로 쓴 장치로 정합니다. 글 입력 칸이 포커스를 쥐면
+     *          키보드 포커스 `Ui` 를 잡습니다(그동안 게임은 키를 보지 못하고, UI 행동은 Back · Tab 만).
+     *
      *          핫 리로드: 내려가는 모듈 이미지에 vtable 이 있는 화면 · 위젯(게임 · 키트가 만든 타입)이 든 화면은 그 자리에서 닫습니다. 게임 스레드만.
      */
     class SW_API UiSystem final : public IModuleUnloadListener
@@ -55,13 +66,15 @@ namespace sw
          * @brief 입력을 묶고 일을 시작합니다.
          * @param inputManager 행동 · 포인터를 읽는 입력(시험은 자기 것을 넘긴다).
          * @param pFontSystem 글 측정 · 그리기가 쓰는 글꼴(레이아웃부터). 없으면 글 위젯이 크기 0 입니다.
+         * @param uiInputMapPath UI 행동 맵 리소스(`engine/input/ui.input.xml`). 비우면 UI 행동이 없습니다(포인터만).
+         * @return 행동 맵을 주었는데 읽지 못하면 false 입니다.
          */
-        [[nodiscard]] bool initialize( InputManager& inputManager, FontSystem* pFontSystem );
+        [[nodiscard]] bool initialize( InputManager& inputManager, FontSystem* pFontSystem, string_view uiInputMapPath = {} );
         /** @brief 화면을 모두 닫고(지연 없이) 입력을 놓습니다. 건 게임 정지 요청도 풉니다. */
         void shutdown();
         bool isInitialized() const { return _pInput != nullptr; }
 
-        /** @brief 입력 → UI 사건(게임 틱 앞). 포인터 → 닫기 요청 적용 순서입니다. */
+        /** @brief 입력 → UI 사건(게임 틱 앞). 뗀 입력 풀기 → UI 맵 갱신 → 입력 방식 → 포인터 → 행동 → 글 포커스 → 닫기 요청 적용 순서입니다. */
         void processInput( float32 deltaSeconds );
         /** @brief 애니메이션 → 바인딩 → 스타일 → 레이아웃 → 그리기(게임 틱 뒤). @p viewport 는 이번 프레임에 UI 를 그릴 화면입니다. */
         void update( float32 deltaSeconds, const UiViewport& viewport );
@@ -82,6 +95,15 @@ namespace sw
         bool isGameInputBlocked() const;
         /** @brief 활성 화면이 OS 커서를 바라면 true 입니다(플레이어 조종자가 마우스 잠금을 쉰다). */
         bool wantsCursor() const;
+        /** @brief @p inputMap 의 행동 @p action 을 지금 누르는 물리 입력이 모두 UI 가 먹은 것이면 true 입니다(플레이어 조종자가 묻는다). */
+        bool isActionConsumed( const InputMap& inputMap, const hashed_string& action ) const;
+        /** @brief @p inputMap 의 행동 @p action 이 지금 쓰는 물리 입력을 먹습니다(UI 가 그 행동을 처리했다). */
+        void consumeAction( const InputMap& inputMap, const hashed_string& action );
+        /** @brief 마우스 버튼 @p button 을 먹습니다. */
+        void                      consumeMouseButton( MouseButton button ) { _consumption.consumeMouseButton( button ); }
+        const UiInputConsumption& getInputConsumption() const { return _consumption; }
+        /** @brief UI 행동 맵입니다(행동 맵을 주지 않았으면 nullptr). */
+        InputMap* getUiInputMap() const { return _uiInputMap.get(); }
 
         // --- 포커스 · 입력 방식 ---------------------------------------------------------------
         UiFocusManager&       getFocusManager() { return _focus; }
@@ -100,6 +122,24 @@ namespace sw
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
     private:
+        /** @brief 이번 프레임 원시 사건에서 마지막으로 쓴 장치로 입력 방식을 정합니다. */
+        void updateInputMode();
+        /** @brief UI 행동을 활성 화면으로 보냅니다(탐색 · 스틱 · 확인 · 뒤로 · 탭). */
+        void processActions( float32 deltaSeconds );
+        /** @brief 탐색 행동 하나 — 포커스 경로에 먼저, 아무도 안 먹으면 포커스를 옮긴다. 썼으면 true 입니다. */
+        bool handleNavigation( UiScreen& screen, const hashed_string& action, UiNavigationDirection direction );
+        /** @brief 스틱 탐색 — 크게 기울면 큰 축 방향으로 한 번, 그 뒤 탐색 반복 간격으로 반복합니다. */
+        void processStickNavigation( UiScreen& screen, float32 deltaSeconds );
+        /** @brief 행동 사건 하나를 활성 화면의 포커스 경로로 보냅니다. 처리됐으면 true 입니다. */
+        bool routeAction( UiScreen& screen, const hashed_string& action, const float2& value );
+        /** @brief 포커스 위젯이 글 입력 칸이면 키보드 포커스 `Ui` 를 잡고, 아니면 놓습니다. */
+        void updateKeyboardFocus();
+        /** @brief 키보드 포커스가 `Ui` 일 때 오는 글자를 포커스 위젯에 보냅니다. */
+        void onTextInput( string_view text );
+        /** @brief 키보드 포커스가 `Ui` 일 때 오는 조합 중 글자를 포커스 위젯에 보냅니다. */
+        void onTextComposition( string_view text );
+        /** @brief 글자 사건을 포커스 위젯 하나에 보냅니다. */
+        void dispatchTextEvent( string_view text, bool bComposition );
         /** @brief 마우스 상태를 포인터 사건으로 바꿔 화면들로 보냅니다. */
         void processPointer();
         /** @brief 포인터 사건 하나를 받을 화면으로 보냅니다. 처리했으면 true 입니다. */
@@ -119,10 +159,14 @@ namespace sw
         vector<unique_ptr<UiScreen>> _listScreen; ///< 그리기 순서(층 → 쌓인 순서). 입력은 역순.
         UiFocusManager               _focus;
         UiPointerState               _pointer;
+        UiInputConsumption           _consumption;
+        unique_ptr<InputMap>         _uiInputMap; ///< UI 행동 맵(레이어 `UI` — 활성 화면이 있을 때만 켠다)
         InputManager*                _pInput;
         FontSystem*                  _pFontSystem;
         UiViewport                   _viewport;
         float2                       _lastPointerPosition;
+        float32                      _stickRepeatSeconds; ///< 스틱 탐색의 다음 반복까지 남은 시간
+        UiNavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향(기울지 않았으면 Next — 쓰지 않는 값)
         UiScreenHandle               _activeScreen;
         UiScreenHandle               _nextScreenHandle;
         uint32                       _nextPushOrder;
@@ -130,6 +174,7 @@ namespace sw
         uint8                        _bPauseRequested : 1; ///< 게임 정지 요청을 걸어 두었다(정지 화면이 하나라도 있다)
         uint8                        _bPendingClose   : 1; ///< 닫기를 요청한 화면이 있다
         uint8                        _bPointerKnown   : 1; ///< 마우스 위치를 한 번 읽었다(첫 프레임의 Move 기준)
-        [[maybe_unused]] uint8       _reserved        : 5;
+        uint8                        _bStickHeld      : 1; ///< 스틱이 탐색 문턱 너머로 기울어 있다
+        [[maybe_unused]] uint8       _reserved        : 4;
     };
 } // namespace sw

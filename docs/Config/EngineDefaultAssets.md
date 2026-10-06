@@ -25,6 +25,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XmlSerializer
 |---|---|---|---|---|---|
 | `_defaultMaterial` | `string` | `engine/materials/defaultmaterial.material` |  |  | 씬 폴백 머티리얼 |
 | `_shellInputMap` | `string` | `engine/input/default.input.xml` |  |  | App 셸 InputMap |
+| `_uiInputMap` | `string` | `engine/input/ui.input.xml` |  |  | 런타임 UI 의 행동 맵 — 탐색 · 확인 · 뒤로 · 탭(`UiSystem`, Shipping 에도 있다) |
 | `_userSettingsSchema` | `string` | `engine/settings/engine.settings.xml` |  |  | 플레이어 옵션 메뉴의 엔진 설정 스키마(`UserSettingsManager`) |
 | `_telemetrySchema` | `string` | `engine/telemetry/engine.telemetry.xml` |  |  | 엔진 텔레메트리 사건 스키마(`TelemetryService`) |
 | `_cultureTable` | `string` | `engine/localization/engine.cultures.json` |  |  | 문화권 표 — 복수형 규칙 · 숫자 · 날짜 형식 · 쓰기 방향 · 글꼴 대체(`LocalizationManager`) |

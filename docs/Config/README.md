@@ -23,6 +23,7 @@
 | `Resource/engine/navigation/navmeshsettings.xml` | `NavMeshSettings` (`ResourceCatalog`) — 처음 쓸 때 · 내비메시 쿠킹 | 엔진 팩에 실림 | 한다 | [NavMeshSettings](NavMeshSettings.md) |
 | `Resource/engine/data/render2d.xml` | `Render2DSettings::getActive` (손으로 읽음 — 모르는 요소 · 속성은 오류) — 처음 쓸 때 · `reloadActive`. 활성 게임 팩의 `data/render2d.xml` 이 있으면 통째로 대신한다 | 엔진 팩에 실림 | 한다 | [정본](../../Source/Engine/Graphics/2D/Render2DSettings.h) |
 | `Resource/engine/input/default.input.xml` | `InputMap::loadFromResource` (셸 입력 맵 — `EngineDefaultAssets::_shellInputMap`) — 기동 · 에셋 핫 리로드 | 엔진 팩에 실림 | 한다 | [정본](../../Source/Engine/Input/README.md) |
+| `Resource/engine/input/ui.input.xml` | `InputMap::loadFromResource` (런타임 UI 행동 맵 — `EngineDefaultAssets::_uiInputMap`, `UiSystem::initialize`) — 기동(Ui 단계) | 엔진 팩에 실림 | 한다 | [정본](../../Source/Engine/UI/README.md) |
 | `Resource/engine/settings/engine.settings.xml` | `UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계) — 기동. 플레이어 옵션 메뉴의 스키마 — 설정 표는 생성 페이지 `UserSettings.md` | 엔진 팩에 실림 | 한다 | [UserSettings](UserSettings.md) |
 
 ## 게임 프리셋

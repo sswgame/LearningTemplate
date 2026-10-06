@@ -24,9 +24,12 @@
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/UI/Screen/UiScreen.h"
+#include "Engine/UI/UiSystem.h"
 
 #include "EngineTest/NavMeshTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
+#include "EngineTest/UI/UiTestWidgets.h"
 
 #include "GameFramework/Base/Camera/CameraManagerComponent.h"
 #include "GameFramework/Base/Control/AiControllerComponent.h"
@@ -101,6 +104,18 @@ namespace
         {
             input.beginFrame( kDeltaTime );
             manager.tick( kDeltaTime );
+            input.endFrame();
+        }
+
+        /** @brief 입력 → UI 입력(게임 틱 앞) → 씬 → UI 갱신 한 프레임입니다(EngineLoop 와 같은 순서). */
+        static void tickWithUi( GameObjectManager& manager, InputManager& input, UiSystem& ui )
+        {
+            input.beginFrame( kDeltaTime );
+            ui.processInput( kDeltaTime );
+            manager.tick( kDeltaTime );
+            ui.update( kDeltaTime, UiViewport{
+                                       float2{ 1280.0f, 720.0f }
+            } );
             input.endFrame();
         }
 
@@ -935,6 +950,74 @@ SW_TEST_CASE( ControlTest, PlayerControllerTogglesTheMouseLockOfItsPawn )
         SW_EXPECT_TRUE( input.getMouse()->getLockMode() == MouseLockMode::None );
         SW_EXPECT_TRUE( input.getMouse()->isCursorVisible() );
         manager.endPlay();
+    }
+    input.shutdown();
+}
+
+/**
+ * @brief [ControlTest] UI 가 먹은 입력은 폰의 의도에 들지 않는다 — 메뉴 버튼에서 누른 패드 A 는 클릭이고 Jump 비트는 꺼져 있으며, 메뉴를 닫고 다시 누르면 켜진다.
+ *        모달이 떠 있는 동안은 이동 의도도 0 이다(플레이어 조종자가 UI 를 보는 한 자리)
+ * @details 변이: `PlayerControllerComponent::isActionDownForGame` · `wasActionTriggeredForGame` 이 UI 를 보지 않으면 진다.
+ */
+SW_TEST_CASE( ControlTest, UiConsumedInputDoesNotReachThePawn )
+{
+    using Internal = ControlTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bind( "Jump", GamepadButton::A, ActionTrigger::Down );
+    input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
+    VirtualInputScript script;
+    script.addEvent( 0, RawInputEvent::makeGamepadConnection( 0, true ) );
+    SW_ASSERT_TRUE( script.addSlot( 1, InputSlot::fromGamepadButton( GamepadButton::A ), true ) );
+    SW_ASSERT_TRUE( script.addSlot( 3, InputSlot::fromGamepadButton( GamepadButton::A ), false ) );
+    SW_ASSERT_TRUE( script.addSlot( 5, InputSlot::fromGamepadButton( GamepadButton::A ), true ) );
+    SW_ASSERT_TRUE( script.addSlot( 7, InputSlot::fromKey( Key::W ), true ) );
+    {
+        UiSystem ui;
+        SW_ASSERT_TRUE( ui.initialize( input, nullptr, "engine/input/ui.input.xml" ) );
+        auto                 root    = sw::make_unique<uitest::TestPanelWidget>( "menuRoot" );
+        auto*                pButton = static_cast<uitest::TestBoxWidget*>( root->addChild( sw::make_unique<uitest::TestBoxWidget>( "play", true ) ) );
+        const UiScreenHandle menu    = ui.pushScreen( sw::make_unique<UiScreen>( UiScreenDesc{}, std::move( root ) ) );
+        SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( menu )->getTree(), pButton->getId() ) );
+
+        GameObjectManager manager;
+        GameObject*       pPawnObject = Internal::spawnPawn( manager, "Hero", float3{ 0.0f, 0.0f, 0.0f } );
+        auto*             pPlayer     = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
+        ControlSystem&    control     = ControlSystem::ensureFor( manager );
+        control.setInputManager( &input );
+        control.setUiSystem( &ui );
+        manager.beginPlay();
+        pPlayer->possess( *pPawnObject->getComponent<PawnComponent>() );
+        const PawnComponent* pPawn = pPawnObject->getComponent<PawnComponent>();
+        input.attachVirtualInput( &script, VirtualInputMode::Exclusive );
+
+        Internal::tickWithUi( manager, input, ui ); // 0 — 패드 연결
+        Internal::tickWithUi( manager, input, ui ); // 1 — A: 메뉴 클릭
+        SW_EXPECT_EQUAL( 1u, pButton->_clickCount );
+        SW_EXPECT_TRUE( input.getInputMap().isActionDown( "Jump" ) );
+        SW_EXPECT_FALSE( pPawn->getIntent().isDown( 0 ) );
+        Internal::tickWithUi( manager, input, ui ); // 2 — 누른 채
+        SW_EXPECT_FALSE( pPawn->getIntent().isDown( 0 ) );
+        Internal::tickWithUi( manager, input, ui ); // 3 — 뗌
+        ui.closeScreen( menu );
+        Internal::tickWithUi( manager, input, ui ); // 4 — 메뉴 닫힘
+        Internal::tickWithUi( manager, input, ui ); // 5 — 다시 누름: 폰의 것
+        SW_EXPECT_TRUE( pPawn->getIntent().isDown( 0 ) );
+
+        // 모달이 뜨면 이동 의도가 0 이다(W 를 누르고 있어도).
+        UiScreenDesc modalDesc{};
+        modalDesc._layer  = UiLayer::Modal;
+        modalDesc._bModal = true;
+        (void)ui.pushScreen( sw::make_unique<UiScreen>( modalDesc, sw::make_unique<uitest::TestPanelWidget>( "modalRoot" ) ) );
+        Internal::tickWithUi( manager, input, ui ); // 6
+        Internal::tickWithUi( manager, input, ui ); // 7 — W
+        SW_EXPECT_TRUE( input.getInputMap().getVector2D( "Move" )._y > 0.0f );
+        SW_EXPECT_EQUAL( 0.0f, pPawn->getIntent()._move._y );
+        SW_EXPECT_FALSE( pPawn->getIntent().isDown( 0 ) );
+
+        input.detachVirtualInput();
+        manager.endPlay();
+        ui.shutdown();
     }
     input.shutdown();
 }

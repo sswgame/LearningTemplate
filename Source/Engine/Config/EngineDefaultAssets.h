@@ -29,6 +29,8 @@ namespace sw
         PROPERTY()
         string _shellInputMap{ "engine/input/default.input.xml" }; ///< App 셸 InputMap
         PROPERTY()
+        string _uiInputMap{ "engine/input/ui.input.xml" }; ///< 런타임 UI 의 행동 맵 — 탐색 · 확인 · 뒤로 · 탭(`UiSystem`, Shipping 에도 있다)
+        PROPERTY()
         string _userSettingsSchema{ "engine/settings/engine.settings.xml" }; ///< 플레이어 옵션 메뉴의 엔진 설정 스키마(`UserSettingsManager`)
         PROPERTY()
         string _telemetrySchema{ "engine/telemetry/engine.telemetry.xml" }; ///< 엔진 텔레메트리 사건 스키마(`TelemetryService`)
