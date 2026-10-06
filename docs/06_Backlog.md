@@ -7,7 +7,7 @@
 > - 지나간 일의 이력은 `git log` 에 있다. 2026-10-03 까지의 전체 이력이 든 옛 백로그(약 19,400 줄, "최근에 끝낸 일" 포함)는 커밋 `7ce95fc8` 의
 >   `docs/06_Backlog.md` 다 — `git show 7ce95fc8:docs/06_Backlog.md`. 코드 주석 · 커밋 메시지가 옛 날짜 항목("2026-09-17 참고" 등)을 가리키면 거기서 찾는다.
 >
-> 마지막 정리: 2026-10-03 (기준 커밋 `7ce95fc8`).
+> 마지막 정리: 2026-10-06 (2 차 통합 뒤 — 충돌 해결이 남긴 겹침 · 되살아난 끝난 항목을 걷었다).
 
 ---
 
@@ -95,7 +95,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-1. 직렬화 · 리플렉션
 
-
 - **XML 문자열 속성은 읽을 때 끝 공백(줄바꿈)을 잘라 왕복이 고정점이 아니다**(2026-10-06, `SerializationRoundTripTest` 가 찾음). `MissingComponent::_originalText`
   가 줄바꿈으로 끝나 다시 쓰면 `&#10;` 이 빠진다 — 지금은 오브젝트 상태 직렬화기가 원문을 그대로 다시 써서 데이터는 잃지 않고, 시험은 이 타입을 뺀다.
   끝 공백이 뜻을 갖는 문자열 칸이 생기면 XML 읽기의 자르기를 속성 값에서 걷어낸다.
@@ -121,8 +120,6 @@ cd build/Ninja-Debug/Bin
   `INavMover` 를 쓰게(격자 · 내비메시 공통) (6) 다른 시험 게임(AbilityArena 등)의 적도 내비메시로.
 
 ### 1-3. 그래픽스 · RHI · 셰이더
-
-
 
 - **2D 의 남은 것(2026-10-04 twod-basics)** — (1) 파이프라인을 게임이 데이터로 고르는 자리(지금은 `-gv_renderPipeline` 뿐 — 게임 프리셋 · gamesettings 에)
   (2) 픽셀 퍼펙트의 Upscale Render Texture(기준 해상도 타깃 + 정수 업스케일 패스) (3) 2D 빛 텍스처 · 자유 모양 빛 · 부드러운 그림자 · 빛 블렌드 스타일
@@ -185,7 +182,6 @@ cd build/Ninja-Debug/Bin
 
 - **입력 흉내 창구(`EditorSelfTestInput` · `EditorSelfTestMarks::note`)로 아직 안 덮은 것** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 드래그 드롭.
 
-
 ### 1-5. 핫 리로드 · 모듈
 
 - **바깥 빌드(터미널 · IDE)의 리로드 트리거는 여전히 mtime 디바운스뿐이다** — 에디터가 시킨 빌드는 성공 뒤에만 올린다(`LiveReloadManager::notifyBuildStarted/Finished`).
@@ -232,7 +228,6 @@ cd build/Ninja-Debug/Bin
   - 1 단계에서 미룬 것: 디렉터의 켠 프리셋 · 블렌드 진행은 저장하지 않는다(다시 읽으면 시작 프리셋부터). 블렌드 도중 재활성은 섞인 포즈를 **고정**해 출발한다 —
     Cinemachine 처럼 나가는 블렌드를 살려 둔 채 겹쳐 섞으려면 블렌드 스택이 필요하다.
 
-
 - **서드파티 — Jolt(3D 물리) · Box2D(2D 물리) · ACL(애니메이션 압축)(2026-10-04 사용자 결정), Recast · Tracy(2026-10-05 추가).** 모두 MIT · vcpkg 에 있다.
   물리 둘은 감쌌다(`IPhysicsScene3D` · `IPhysicsScene2D`, `Source/Engine/Physics/README.md`) — 경계는 `CheckThirdPartyIsolation.py` 가 지킨다(ACL 도 같은 표에 있다).
   ACL 코덱은 `Engine/Animation/Codec/Acl`(쿠킹 때 압축 → 코덱 id + 불투명 블롭). vcpkg 를 바꿀 때는 **다른 워크트리가 빌드 중이
@@ -241,8 +236,8 @@ cd build/Ninja-Debug/Bin
   **Tracy**(BSD-3, 클라이언트만 · 기능 끔 — `Tracy::TracyClient`, Windows 는 공유 TracyClient.dll)를 vcpkg 로 들였다(`ThirdParty/{recastnavigation,tracy}`).
   Tracy 는 clang-cl 트리플릿의 C++14 기본값에 서지 못해 C++17 오버레이 포트(`ThirdParty/tracy/vcpkg-port/tracy`)를 둔다. Tracy 는 엔진 프로파일러의 두 번째
   출력으로 감쌌다(`Source/Engine/Utility/Profiling/README.md` — 헤더 경계는 같은 게이트, Shipping 은 링크하지 않는다). 뷰어(tracy-profiler.exe)는 저장소에 넣지 않는다.
-  2026-10-06 **OpenSSL**(Apache-2.0 — 감쌀 폴더 `Engine/Network/OpenSsl`, 같은 게이트) · **SQLite**(퍼블릭 도메인) · **libpq**(PostgreSQL License, `openssl` 기능만)를
-  들였다 — Windows 는 지금 트리플릿대로 DLL. 아직 쓰는 코드는 없다(네트워크 보안 · 저장 드라이버 단위가 쓴다).
+  2026-10-06 **OpenSSL**(Apache-2.0 — 감싼 폴더 `Engine/Network/OpenSsl`, 같은 게이트) · **SQLite**(퍼블릭 도메인) · **libpq**(PostgreSQL License, `openssl` 기능만)를
+  들였다 — Windows 는 지금 트리플릿대로 DLL. OpenSSL 은 네트워크 보안, SQLite 는 `GF_SqlStore`, libpq 는 `GF_Server_SqlStore` 가 쓴다(링크도 그 CMakeLists 에서만).
 - **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/README.md`(임포트 · 코덱 · 재생 · 상태 기계 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생).
   알림 디스패치(구간 알림 · 처리기 등록부 · `*.notifies.xml`)는 `Source/Engine/Character/README.md`.
   남은 것 — ① 그래프의 블렌드 스페이스 노드(지금 `BlendSpace` 는 행렬 하나라
@@ -338,7 +333,6 @@ cd build/Ninja-Debug/Bin
   - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
   - 네트워크: 회로 상태 바이트(`GimmickCircuit::saveState`)를 `NetClientServer` 스냅샷 · `RollbackSession` 상태에 싣기(모양은 준비됨, 배선 없음).
 
-
 - **CS2 식 서브틱 입력(2026-10-05 제안 — 넷 게임이 생기면; 지금 넷 키트를 쓰는 시험 게임은 0).** `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
   B1 사건 시각 + 입력 리플레이 판 4 · B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입) · B3 `InputMap` 이 행동별 "누른 순간" 을 준다 · B4 클릭 순간의 시선으로 발사
   (쿨다운 남은 몫은 이미 고침) · B5 넷 입력 항목마다 스탬프 · `viewTick`(지금은 메시지마다 하나라 다시 보낸 옛 입력도 최신으로 판정 — 자리는 있다:
@@ -362,24 +356,16 @@ cd build/Ninja-Debug/Bin
 
 - **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b) — 250 ms · 손실 15 % 의 사건 지연
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도
-  받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ④ 전용 서버 프로세스 ↔ 클라이언트 해시 비교는 server-target(Server
-  실행 파일) 뒤의 시험이다 — 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가
+  받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ② 전용 서버 프로세스(`Server`, 타깃 Game · Server)는 섰다 — 남은 것은 그 위에 파괴 시뮬레이션을 UDP 서버로
+  돌리고 Windows 클라이언트(App)가 붙어 파괴 해시가 컴파일러 · 플랫폼(WSL 리눅스 서버 ↔ Windows 클라이언트)을 넘어 같은지 보는 것(서버 쪽 `NetSimulation` 호스트 모드 ·
+  클라이언트 접속 인자 · 해시 로그 비교 스크립트). 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가
   지킨다(Windows Debug · Release · Shipping 같은 값 확인, 리눅스는 CI 잡 — 리눅스 clang 에서 다르면 그 잡이 진다).
-  받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ② 롤백(파괴 상태 저장 · 되돌리기, `RollbackSession` 에
-  `makeNetworkSnapshot` 바이트 싣기)은 하지 않았다. ③ 부서지기 전 움직이는 파괴 오브젝트(상자 · 드럼통)의 자세는 파괴 키트가 보내지 않는다 — 게임이
-  `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ 전용 서버 프로세스(`Server`, 타깃 Game · Server)는 섰다 —
-  남은 것은 그 위에 파괴 시뮬레이션을 UDP 서버로 돌리고 Windows 클라이언트(App)가 붙어 파괴 해시가 컴파일러 · 플랫폼(WSL 리눅스 서버 ↔ Windows 클라이언트)을
-  넘어 같은지 보는 것(서버 쪽 `NetSimulation` 호스트 모드 · 클라이언트 접속 인자 · 해시 로그 비교 스크립트).
 
 - **전용 서버 타깃에서 남은 것**(2026-10-06, server-target). ① 서버의 크래시 묶기 · 텔레메트리 — 기동 표의 `Telemetry` 는 Client 대상(동의가 플레이어 설정)이라
   서버는 크래시 보고를 묶지 않는다; 서버용 동의 = 운영 설정으로. ② 서버 프로세스 지표 — 틱 시간 · 버린 틱은 `/metrics`(`_opsPort`)로 나간다; 메모리 ·
   접속 수 지표와, 게임 · 키트 모듈이 서버의 지표 · 상태 등록부를 받는 창구(엔진 서비스 줄 — 첫 서버 서비스 조립 때)는 남음. ③ 게임별 서버 기동 확인 — Empty 말고 각 게임을 `Server -gv_serverExitAfterTicks=60` 으로(게임 · 키트가 디바이스 · 창을 null 확인 없이 쓰는지).
   ④ 서버 빌드에서 렌더러 코드를 아예 빼기(지금은 컴파일만 되고 돌지 않는다 — 크기 · 링크 시간을 재고). ⑤ 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로
   libX11 없음 확인 · `ServerTest` — 이 묶음은 Windows 만 확인했다.
-
-- **네트워크 — 복제 키트에서 남은 것**(2026-10-05, N5~N7 뒤). ① MMO 비신뢰 갱신을 잃어도 서버는 모른다 — 보낸 순간 `_listSentState` 를 바꿔 "안 바뀜" 으로 보고
-  가속하지 않으니 다음 차례(누적 우선도)까지 옛 상태가 보인다. 메시지 전달 통지(`NetConnection` 패킷 확인 → 메시지)가 생기면 확인 기준으로 바꾼다. ② 클라이언트-서버도
-  우선도를 보낼 때 0 으로 돌려, 실린 스냅숏이 순서만 채널에서 다음 것에 밀리거나 잃으면 낮은 우선도는 한 차례(우선도 비 만큼) 더 기다린다(하니스: 11 → 최대 20 틱).
 
 - **네트워크 — 포화된 연결의 비신뢰 줄**(N21a 뒤). 대역폭 몫을 다 쓰면 메시지가 기다리는데, 비신뢰 줄(`NetConnection::_listOutgoingUnreliable`)에는 상한이 없어 오래 포화되면
   옛 비신뢰가 쌓였다 몰려 간다. 언리얼은 포화면(`IsNetReady` 거짓) 액터 복제를 건너뛴다 — 키트가 `NetHost` 에 "이 연결이 포화인가" 를 묻거나 줄에 나이 상한을 둔다. 재고 나서.
@@ -392,26 +378,28 @@ cd build/Ninja-Debug/Bin
   `WSL-Debug` · `WSL-Shipping` 에서 `--test_repeat=20` 과 변이(`setReceivePaused( false )` 의 할 일 빼기 → 백프레셔 시험이 진다)를 본다. io_uring 은 측정 뒤.
   ③ 구성은 `docs/` 가 아니라 이 항목이 정본 — **공통 기반**(GameFramework 기반 `Online/`): 서비스 틀(등록 · 라우팅 · 인증 문맥 · 오류 코드 · 판 협상) · 요청 보호(도배 제한 · 멱등 키 · 크기 상한) ·
   신원 원형(`AccountId` · 세션 토큰 검증) · 저장 계약(`IServiceStore` 영속 · `IEphemeralStore` 캐시 · `ILocalStore` 로컬 — 파일 백엔드는 바이너리/JSON/XML · 원자적 쓰기 · 체크섬 · 선택 압축/암호화) ·
-  마이그레이션 적용기 · 감사 로그 · 서버 간 버스 · 예약 작업 · 원격 설정/기능 플래그 · 관측(지표 · 구조화 로그 · 추적 id). **드라이버 키트**: `GF_SqlStore`(SQLite · PostgreSQL) ·
-  `GF_CacheStore`(메모리 · RESP). **기능 키트**: `GF_Account` · `GF_ServerDirectory` · `GF_Economy`(원장 · 지갑 · 상점 · 영수증 검증) · `GF_Trade`(원장 위) · `GF_Mailbox` · `GF_Chat` · `GF_Social` ·
+  마이그레이션 적용기 · 감사 로그 · 서버 간 버스 · 예약 작업 · 원격 설정/기능 플래그 · 관측(지표 · 구조화 로그 · 추적 id). **드라이버 키트**: `GF_SqlStore`(SQLite) · `GF_Server_SqlStore`(PostgreSQL) ·
+  `GF_Server_CacheStore`(RESP — 메모리 구현은 기반 `Online/Cache`). **기능 키트**: `GF_Account` · `GF_ServerDirectory` · `GF_Economy`(원장 · 지갑 · 상점 · 영수증 검증) · `GF_Trade`(원장 위) · `GF_Mailbox` · `GF_Chat` · `GF_Social` ·
   `GF_Leaderboard` · `GF_Matchmaking` · `GF_LiveOps` · `GF_Admin`(GM 도구 · 제재). 제품 이름은 드라이버 · 제공자 폴더에만. 부하 시험 봇은 시험 도구.
   ④ **DB 결정(사용자)**: 영속 PostgreSQL(서버) · SQLite(개발 단독 서버 · 클라이언트 로컬), 캐시는 RESP 드라이버 하나 — 리눅스 Valkey(BSD-3), 윈도우 Garnet(MIT)(Redis 7.4+ 는
   RSAL/SSPL — "오픈소스 · 무료" 조건 밖). 캐시를 잃어도 영속 데이터는 맞아야 한다(거래 정본은 영속 트랜잭션). DB 호출은 전용 워커 + 연결 풀 + 비동기 완료.
   **서버는 윈도우 · 리눅스 둘 다 1 급**, 서버 전용 모듈은 클라이언트 Shipping 에 넣지 않는다(전용 서버 타깃 — Game · Client · Server).
-  **순서**: 기반 + 드라이버 → Account · ServerDirectory → Economy → Trade · Mailbox · Admin · 관측 → Chat · Social → Leaderboard · Matchmaking · LiveOps.
   **들어간 기반**(`GameFramework/Base/Online/`): `Store`(영속 계약 `IServiceStore` — 비동기 일 · 트랜잭션 · 조건부 쓰기 · 멱등 기록, 메모리 구현 · 계약 시험) ·
   `Guard`(토큰 버킷 · 크기 상한) · `Identity`(`AccountId` · `IAccountDirectory`) · `Cache`(휘발성 계약 `IEphemeralStore` — 만료 · 원자 증감 · 임대 · 정렬 집합 · 발행/구독, 메모리 구현 · 계약 시험) ·
-  `Audit`(감사 줄) · `Bus`(서버 간 버스 — 캐시 위 · 프로세스 안) · `Schedule`(예약 작업 — 회차 차지 · 임대 이어받기) · `Config`(원격 설정 · 기능 플래그 출시 비율).
-  관측은 들어갔다 — 지표 · 상태 확인 · 운영 HTTP(`Engine/Observability`, 서비스 묶음 `Online/Observability/ServiceMetrics`), 로그 문맥(Core `LogContext` —
-  요청 머리의 추적 id 128 비트 → 처리기 · 저장소 일의 줄 꼬리표). 관측 남은 것: 서버 로그 JSON lines 출력 장치, OpenTelemetry 내보내기, 감사 줄의 추적 id 칸.
-  남은 기반: `EphemeralServerBus` 를 호스트의 캐시 라우터 위로(지금은 자기 캐시 앞을 혼자 쓴다), PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
   `Audit`(감사 줄) · `Bus`(서버 간 버스 — 캐시 위 · 프로세스 안) · `Schedule`(예약 작업 — 회차 차지 · 임대 이어받기) · `Config`(원격 설정 · 기능 플래그 출시 비율) ·
   `Ledger`(원장 — 복식 이동 · 분개 키 멱등 · 보존 검사 · 환불 회수 빚) · `Mail`(우편 넣기 — 첨부 맡김 · 멱등 · 만료 색인) ·
   `Sanction`(계정 제재 레코드) · `IAccountSessionControl`(세션 끊기 창구).
-  남은 기반: 관측(지표 · 구조화 로그 — 추적 id 자리는 `OnlineCallContext::_traceId`), `EphemeralServerBus` 를 호스트의 캐시 라우터 위로(지금은 자기 캐시 앞을 혼자 쓴다), PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
+  관측은 들어갔다 — 지표 · 상태 확인 · 운영 HTTP(`Engine/Observability`, 서비스 묶음 `Online/Observability/ServiceMetrics`), 로그 문맥(Core `LogContext` —
+  요청 머리의 추적 id 128 비트 → 처리기 · 저장소 일의 줄 꼬리표). 관측 남은 것: 서버 로그 JSON lines 출력 장치, OpenTelemetry 내보내기, 감사 줄의 추적 id 칸.
+  남은 기반: `EphemeralServerBus` 를 호스트의 캐시 라우터(`EphemeralStoreRouter`) 위로(지금은 자기 캐시 앞을 혼자 쓴다), PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
   계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
-  **계정**: 서버 키트 `GF_Server_Account`(`Kits/Online/Server/Account`)에 로그인 서비스 본체(`LoginService` — 저장소 일로 맡기고 거둠 · `LoginStoreLogic` · `LoginTicketAuthority`)가 들어갔다.
-  암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 남은 것: 공유 `GF_Account`(와이어 타입 · `AccountClient`) · 스트림 바인딩 · UDP 접속 인증기, 게스트 · 연동 · 제재.
+  **계정**: 서버 키트 `GF_Server_Account`(`Kits/Online/Server/Account`)에 로그인 서비스 본체(`LoginService` — 저장소 일로 맡기고 거둠 · `LoginStoreLogic` · `LoginTicketAuthority`),
+  공유 `GF_Account`(와이어 타입 · `AccountClient`), 게스트 · 연동 · 외부 로그인 자리 · 빌드 판 · 제재 확인 · 탈퇴, 스트림 바인딩(`AccountServer` · `AccountClient`) · UDP 접속
+  인증기가 들어갔다. 암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF).
+  외부 로그인은 공통부(기반 `Online/Http` · OIDC 확인기 + JWKS 캐시 · 프로필 API 틀 · 제공자 설정 데이터 · PC 루프백 PKCE 클라이언트)와 가짜 제공자까지 — 실제 제공자 설정
+  (구글 · 애플 · 카카오 · 네이버 · 스팀 — 앱 등록 · client id 는 쓰는 게임이 생기면), 호스트 이름 해석(Core 주소는 IPv4 뿐 — 실제 제공자 호스트에 필요), 애플 client secret JWT ·
+  탈퇴 때 토큰 철회(`Provider/Apple/`), 모바일 SDK 클라이언트, OS 브라우저 열기(`IExternalBrowser` 구현 — 게임 몫)가 남았다. 텔레메트리의 `IHttpClient`(Engine, 막는 창구 · 기본 Null)를
+  이 HTTP 클라이언트로 잇는 일도 남았다(Engine 은 GameFramework 를 모른다 — 게임이 어댑터). 서버 실행 파일에 계정 서비스 조립(주 키는 서버 설정 비밀 — 키 배포 · 교체 절차는 아래 "서버 여럿").
   **채팅**: `GF_Chat`(타입 · `ChatProtocol` · `ChatClient`) · `GF_Server_Chat`(거르개 · 도배 막이 · `ChatService` · 바인딩 `ChatServer`)이 들어갔다. 남은 것: 서버 실행 파일에
   채팅 조립(계정 키트 창구 · 친구 키트 차단 표 · 금칙어 경로), 신고(메시지 스냅숏 → GM 도구), 채널 샤딩(world 채널 수천 명 — 부하 봇 수치로 정함, 거르개 비용은 `ChatService.send` p99),
   클라이언트 UI 위젯, 실제 금칙어 목록(운영).
@@ -424,10 +412,6 @@ cd build/Ninja-Debug/Bin
   **순위표**: `GF_Leaderboard` · `GF_Server_Leaderboard`(순위표 · 통계 · 업적 · 시즌 정산 · 바인딩 · 클라이언트)가 들어갔다. 남은 것: 정산을 페이지 단위 일 여럿으로
   (지금은 시즌 하나가 저장소 워커 하나를 잡는다 — 참가 수십만이면 부하 봇 숫자로), 지난 기간의 캐시 정렬 집합 지우기, 친구 순위표(친구 목록 × 점수 — 게임 조립),
   업적 진행률 표시 · 숨김 업적 목록, 서버 조립에서 `setScheduler` · 표 정의 데이터 읽기.
-  **매칭**: `GF_Matchmaking`(타입 · 모드 규칙) · `GF_Server_Matchmaking`(매처 `MatchMaker` — 순수 · 결정적)이 들어갔다. 남은 것(online-rest R5b · R5c): 파티 · 로비(캐시 기록 + 비교 후 쓰기),
-  대기열 권한 서버(모드마다 캐시 임대 10 초) · 전용 서버 배정 · `MatchServerAgent` · 바인딩 · 클라이언트. 팀 나누기 · 채우기는 그리디다 — 나눌 수 없는 조합은 그 닻을 건너뛴다;
-  **매칭**: `GF_Matchmaking`(타입 · 모드 규칙 · 와이어) · `GF_Server_Matchmaking`(매처 `MatchMaker` — 순수 · 결정적, 파티 · 로비 — 캐시 기록 + 비교 후 쓰기)이 들어갔다.
-  남은 것(online-rest R5c): 대기열 권한 서버(모드마다 캐시 임대 10 초) · 전용 서버 배정 · `MatchServerAgent` · 바인딩 · 클라이언트. 팀 나누기 · 채우기는 그리디다 — 나눌 수 없는 조합은 그 닻을 건너뛴다;
   **매칭**: `GF_Matchmaking` · `GF_Server_Matchmaking`(매처 · 파티 · 로비 · 대기열 권한 서버 · 전용 서버 배정 · `MatchServerAgent` · 바인딩 · 클라이언트)이 들어갔다.
   남은 것: 서버 실행 파일에 매칭 조립(모드 표 · 실력 공급 `IMatchRatingSource` · 게임 서버의 `MatchServerAgent` 를 UDP 접속 인증기에 잇기), 백필(경기 중 빈자리),
   오케스트레이터(Agones · 쿠버네티스) 할당 · 서버 띄우기, 재접속 유예 중 파티 · 로비 유지(지금은 끊기면 바로 뺀다), 파티 채팅 채널 잇기(게임 조립 — 파티 알림 → Chat),
@@ -441,12 +425,6 @@ cd build/Ninja-Debug/Bin
   알림 수 · 정산 일의 길이 · 매처 대기 p99 가 위 키트 항목의 판단 근거). 참고(2026-10-06, Debug · `--local-server` — 봇과 서버가 한 스레드라 서로의 시간을 잰다):
   `quick_check` 봇 300 → 4200 동작 · 28 초 · 오류 0, chat_send p50 377 ms · p99 1081 ms, 채팅 알림 185548. 전용 서버(`Server`)가 온라인 서비스를 조립하면 `--server` 로
   같은 시나리오를 돌린다(봇 머신 따로).
-  암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 공유 `GF_Account`(와이어 타입)와 게스트 · 연동 · 외부 로그인 자리 · 빌드 판 · 제재 확인 · 탈퇴가 들어갔다.
-  외부 로그인은 공통부(기반 `Online/Http` · OIDC 확인기 + JWKS 캐시 · 프로필 API 틀 · 제공자 설정 데이터 · PC 루프백 PKCE 클라이언트)와 가짜 제공자까지 — 실제 제공자 설정
-  (구글 · 애플 · 카카오 · 네이버 · 스팀 — 앱 등록 · client id 는 쓰는 게임이 생기면), 호스트 이름 해석(Core 주소는 IPv4 뿐 — 실제 제공자 호스트에 필요), 애플 client secret JWT ·
-  탈퇴 때 토큰 철회(`Provider/Apple/`), 모바일 SDK 클라이언트, OS 브라우저 열기(`IExternalBrowser` 구현 — 게임 몫)가 남았다. 텔레메트리의 `IHttpClient`(Engine, 막는 창구 · 기본 Null)를
-  이 HTTP 클라이언트로 잇는 일도 남았다(Engine 은 GameFramework 를 모른다 — 게임이 어댑터).
-  스트림 바인딩(`AccountServer` · `AccountClient`)과 UDP 접속 인증기도 들어갔다. 남은 것: 서버 실행 파일에 계정 서비스 조립(주 키는 서버 설정 비밀 — 키 배포 · 교체 절차는 아래 항목).
   **거래**: 공유 `GF_Trade` · 서버 `GF_Server_Trade`(`TradeService` — 상태 기계 · 거래 레코드 · 원장 분개 하나로 정산 · 재시작 복구 · 시한)와 스트림 바인딩이 들어갔다.
   **서버 여럿**: 접속 상태(`OnlinePresence` — 캐시 `presence:` 키, 시한 60 초 · 30 초마다 다시 적기)와 버스(`account.revoke` 로 다른 서버의 옛 세션 닫기 · `push.<서버>` 로
   다른 서버의 계정에게 알림)가 들어갔다(`OnlineMultiServerTest`). 계정 · 거래 몫의 남은 것: 게임 UDP 접속 표 서명 키(로그인 · 게임 서버 공유, 지금 서버 설정 파일)의
@@ -482,10 +460,8 @@ cd build/Ninja-Debug/Bin
   `ulimit -n 8192` 뒤 같은 필터)는 아직 — 숫자를 나란히 놓는다. 패킷당 6.5 us 의 대부분이 `recvfrom`/`sendto` 라 다음 일은 ②.
   ② 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`)
   ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUdpBenchTest` 숫자로 전후를 잰다.
-- **순서**: 보안의 UDP 부분은 N13~N21 뒤(연결 수립 · 패킷 머리가 정리된 위에), 스트림 전송 → 프레이밍/요청-응답 → TLS → 로그인 → 채팅 · 거래. 압축은 측정 벤치가 서면 어느 때나.
 
 ### 1-8. 성능 (재고 나서 정할 것)
-
 
 - **파괴 잎 셰이프를 플레이 첫 프레임에 짓는 비용.** `FractureBenchTest.ShowcaseBeginPlay`(Release, beginPlay + 첫 틱 — 첫 물리 스텝 앞에서 상태 · 잎 셰이프를 세운다)
   p50 20.2 · 27.2 · 20.7 ms(쇼케이스 파괴물 여섯 · 잎 312, 200 조각 벽 하나가 볼록 껍질 ~11 ms = 잎당 ~55 us). 파괴물이 많은 맵이면 선형으로 는다.
@@ -500,12 +476,6 @@ cd build/Ninja-Debug/Bin
 - **조건부 후보 묶음.** 병렬 틱 문턱의 교차점 · GameObject 레이아웃 · 적응형 틱 문턱 · 스폰 비용(~1.1 us, 잠금 여섯) · 시퀀서 성능 수치. TickItem 인라인
   재시도는 오브젝트의 틱 부기 49 B 를 먼저 줄여야 한다. 측정해서 이기면 한다.
 - **FrameRenderer 진단 세터**(`setMeshMorphDiag` · `setDrawMergeEnabled` · `setVertexPoolEnabled`)는 Shipping 제외 후보.
-- **ReflectionParser 강제 include PCH**(`CoreMinimal.h` 를 PCH 로 — 타깃당 ~0.4 s). 캐시 위치 · 무효화가 필요하다. 값이 작아 보류.
-- **Core 에서 미룬 결정.** 전역 소형 블록 할당자(프레임당 할당이 0 근처가 된 뒤 로드 시간으로 판단 — 지금 ~10 회/프레임).
-- **필드 재배치로 8 B 이상 줄일 수 있는 타입이 남아 있다**(`RunPaddingReport.py` 로 보고만 함). 많이 만들어지는 것: GameObject 200→192, Mesh 112→104,
-  MaterialInstance · Material · InputMap::ActionEntry 16, MaterialProperty · ShaderBindingSlot · InlineSuccessorList · GlobalVariableInfo/Registrar 8. 싱글턴(InputManager ·
-  Logger 64 등)은 이득이 작다. PROPERTY 필드는 직렬화 순서라 옮기지 않는다. 위치 초기화 표(EditorAssetTypeInfo · AssetMatchRow · CommandRow)는 모든 행을 같이 바꿔야 한다.
-  FrameRenderer 진단 세터(`setMeshMorphDiag` · `setDrawMergeEnabled` · `setVertexPoolEnabled`)는 Shipping 제외 후보.
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
 
@@ -538,36 +508,19 @@ cd build/Ninja-Debug/Bin
   13 ms 뒤에 신호된 것(창 모드 Vulkan 프레젠트가 합성기를 거치는 길). 그 프레임에 엔진 CPU 일은 없었다. 스왑체인 이미지를 4 개로 늘리면 오히려 잦아졌다(3-12).
   다시 보이면 `-gv_tracy=1` 로 acquire · 펜스 · present 를 시간축으로 보고, 전체 화면(독점) · NVIDIA "Vulkan/OpenGL 프레젠트 방식" 설정을 바꿔 가른다.
 
-
 - **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩, 2026-10-06 nogpu 3 회 · host 3 회 재실행 깨끗). 다시 나면: 크래시 핸들러의
   스택 파일(`Bin/Saved/Logs/crash_<세션>.stack.txt` — Shipping 도 이제 PDB 가 있어 함수 이름), CI 는 그 파일을 아티팩트로 · 스택을 주석으로 올린다(`CiFailureReport.py`).
-- **WSL lavapipe 의 첫 `vkAcquireNextImageKHR` 가 가끔 `VK_ERROR_SURFACE_LOST_KHR`** 로 진다(`AppTest_HostOnly`, 43 회 중 3 회, 환경 탓으로 판단 — 미확정).
-  다시 보이면 기준선과 번갈아 돌려 가른다. App 로그는 `build/WSL-Debug/Bin/Saved/Logs`.
-- **ReflectionParserTest 는 파서 프로세스를 케이스마다 1~4 번 띄운다**(2026-10-04 여섯 조각으로 나눔 — 파서 케이스가 25 개로 늘었다). 더 줄이려면 파서 실행
-  비용을 깎는다: CoreMinimal.h 를 PCH 로 미리 컴파일해 `-include-pch` 로 쓰는 것. 함정: PCH 에서 온 헤더를 `clang_getInclusions` 가 의존으로 내는지 먼저
-  확인할 것(안 내면 depfile 이 비어 반사되지 않은 헤더가 바뀌어도 단계가 다시 돌지 않는다). 실행 하나의 0.5~1 초는 프로세스 생성 · 종료라 파서 탓이 아니다.
-
-- **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩). 09-23 에 고친 DX11 기록 컨텍스트 결함과 모양은 같지만 단정하지 않았다.
-  이제 시험 실행 파일에 크래시 핸들러가 있어 다음에는 스택이 남는다 — 직접 실행해 전체 출력을 파일로 받는다.
-- **Shipping `CoreTest` 의 `Failed to deserialize config from: shipping_host_generated`**(한 번, 3 회 재실행 통과). `ConfigManager::loadConfigFromJson`.
-  설정 로드는 이제 틀린 키를 이름으로 찍고 기동을 멈춘다(`ConfigManager::readConfigJson`) — 다시 나면 그 이름을 본다.
 - **WSL lavapipe 가 가끔 서피스를 잃는다**(`AppTest_HostOnly` 43 회 중 3 회, 첫 `vkAcquireNextImageKHR` 가 `VK_ERROR_SURFACE_LOST_KHR`) — 이제 서피스 · 스왑체인을
   다시 만들고(사양대로) `Vulkan surface lost at acquire|present (N time(s) …)` 경고를 남긴다. WSL 에서 50 회 돌려 경고 수 · 실패 수를 본다(복구가 되면 항목을 지운다):
   `cd build/WSL-Debug/Bin && for i in $(seq 50); do ./AppTest --host_suites=only --test_filter=AppSmokeTest.* || echo FAIL $i; done` 와 `Saved/Logs` 의 경고 줄 수.
 - **CI Windows 러너(WARP)의 픽셀 시험 실패**(`RenderPassGpuTest` 를 host 스위트로 빼서 우회) — 이 PC 에서 `SW_RHI_SOFTWARE_ADAPTER=1`(`-gv_rhiSoftwareAdapter=1`)로
   같은 래스터라이저를 고를 수 있다. 2026-10-06 이 PC 의 WARP(DX12 · DX11)로 `RenderPassGpuTest.*` 71 개 픽셀 시험이 모두 통과했다(Vulkan 은 CPU 디바이스가
   없어 빠지고 GL 은 하드웨어) — WARP 자체는 컴퓨트 컬링 · 인디렉트를 한다. 러너 쪽(WARP 판 · 창 없는 세션)을 다음 CI 실패의 주석으로 가른다.
-- **리눅스 전용 경로는 이 PC 에서 돌려 보지 않았다** — `parseWriteTime`, POSIX `pipe2` · `close_range` · `launchDetached`, `alarm` 시한, X11 입력(좌표 · `XkbSetDetectableAutoRepeat`),
-  리눅스 LTO 를 진짜 `llvm-ar` 로 끝까지 링크하기, `verifyModuleBindings` 의 dlsym 도장 갈래(`727b872c` 뒤) · yad 파일 대화상자의 두 번째 `--file-filter`(man 으로만 확인).
-  리눅스 CI 가 초록인지 · IPO 가 실제로 켜졌는지를 본다.
-- **리눅스에서 아직 자동으로 안 도는 것**: X11 입력(좌표 · `XkbSetDetectableAutoRepeat` — WSLg 의 `DISPLAY=:0` 이 있으니 손으로 한 번), 리눅스 CI 가 초록인지(2026-10-05
-  실행은 네 잡 모두 Configure 의 vcpkg 설치에서 졌다 — 다음 실행부터 `CiFailureReport.py configure` 가 포트 로그 끝을 주석으로 올린다). 2026-10-05 WSL-Debug 로 돌려
-  확인한 것(net-ci-rest 제안서 조사): POSIX `pipe2` · `close_range` · `launchDetached`, `alarm` 시한, dlsym 도장, `parseWriteTime`(int64 를 넘는 스탬프 시각),
-  리눅스 ThinLTO(`llvm-ar`) 링크.
+- **리눅스에서 아직 자동으로 안 도는 것**: X11 입력(좌표 · `XkbSetDetectableAutoRepeat` — WSLg 의 `DISPLAY=:0` 이 있으니 손으로 한 번), yad 파일 대화상자의 두 번째
+  `--file-filter`(man 으로만 확인), 리눅스 CI 가 초록인지 · IPO 가 실제로 켜졌는지(2026-10-05 실행은 네 잡 모두 Configure 의 vcpkg 설치에서 졌다 — 다음 실행부터
+  `CiFailureReport.py configure` 가 포트 로그 끝을 주석으로 올린다). 2026-10-05 WSL-Debug 로 돌려 확인한 것(net-ci-rest 제안서 조사): POSIX `pipe2` · `close_range` ·
+  `launchDetached`, `alarm` 시한, dlsym 도장, `parseWriteTime`(int64 를 넘는 스탬프 시각), 리눅스 ThinLTO(`llvm-ar`) 링크.
 - **수동 확인이 안 된 에디터 동작** — Hierarchy `tag:` 필터, 검색 0 건 힌트, Classic Dark 테마의 대화상자 편집 경로.
-  리눅스 LTO 를 진짜 `llvm-ar` 로 끝까지 링크하기, `verifyModuleBindings` 의 dlsym 도장 갈래(`727b872c` 뒤). 리눅스 CI 가 초록인지 · IPO 가 실제로 켜졌는지를 본다.
-
-- **DbgHelp 외부 샘플러 소스가 저장소 밖에 있다**(세션 스크래치였다). 다른 PC 에 남아 있는지 확인하고, 필요하면 `Scripts/dev/` 로 들인다.
 
 ### 1-11. 결정이 필요한 것
 
@@ -591,11 +544,11 @@ cd build/Ninja-Debug/Bin
 - **걸음 조우 판정 둘**(Overworld `shouldEncounterOnStep` 의 결정적 주기 · ClassicJrpg `JrpgEncounterWalker` 의 확률 + 유예) — 오버월드 위에 JRPG · 몬스터 수집 게임이 서면 기반 `World/` 로 하나를 올린다.
 - **MMO 갱신 확인을 `NetConnection` 전달 통지로**: 패킷 확인 → 메시지 전달 통지가 Core 에 생기면 키트 확인 메시지(`kUpdateAck`)를 지우고 그 통지로 판정한다(언리얼 NAK 자리).
 
----
-
 - **서드파티 빈자리(2026-10-05 후보 중 사용자가 고르지 않은 것).** 리눅스 오디오 출력 없음(`XAudio2System` 만, 리눅스는 `NullAudioSystem`) → miniaudio(퍼블릭 도메인/MIT-0) ·
   `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT) · 아랍어 셰이핑 · 양방향 없음 → HarfBuzz(MIT) + SheenBidi(Apache 2.0). 들이면 Jolt · Recast · Tracy 처럼
   엔진 인터페이스 뒤 + 격리 게이트, vcpkg 변경은 main 에서 먼저.
+
+---
 
 ## 2. 작업 방식 — 정해진 방향
 
@@ -1452,7 +1405,6 @@ cd build/Ninja-Debug/Bin
   셰이더에 `SW_PASS_GBUFFER` 를 얹는다(출력은 양쪽 다 구조체).
 - **RHI 백엔드의 .cpp 는 `Graphics/RHI/<백엔드 폴더>/` 에 두면 끝이다**(모듈 · Shipping 이 폴더로 가져간다). 파일은 `<Backend>RHIDevice` · `…DeviceInit` · `…DeviceSubmission` 축으로. 백엔드는 별도 MODULE DLL 이라 Engine
   전역 변수를 extern 으로 못 쓴다 — 정책은 Engine, 메커니즘은 디바이스.
-- **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 임포트하지 않는다(8 비트 경로).
 - **인스턴스 배치를 든 컴포넌트는 `setOwnerComponent( this )` 를 부르고, 활성 변화(`onOwnerActiveInHierarchyChanged` · `_bActive` 의 `onPropertyChanged`)에 `markAllEntriesDirty` 를 부른다.**
   빌더는 `MeshComponent` 와 같은 규칙(`Component::isActive`)으로 소유 컴포넌트가 꺼진 배치를 뺀다 — 더티를 찍지 않으면 부분 수집이 지난 프레임 후보를 그대로 쓴다.
 - **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 부동소수점으로 읽어 BC6H_UF16 · RGBA16F 로만 임포트한다(규칙 포맷이 8 비트면 실패) — Debug DirectXTex 의 BC6H 는 BC7 처럼 느리다, 큰 원본은 Release App 으로.
