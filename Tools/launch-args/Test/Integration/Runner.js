@@ -17,7 +17,7 @@ const fs = require('fs');
 const path = require('path');
 const vscode = require('vscode');
 
-const kExtensionId = 'sw-engine.cmake-debug-args-gui';
+const kExtensionId = 'sw-engine.launch-args';
 
 /** @brief 조건이 참이 될 때까지 기다립니다. 시한을 넘기면 던집니다. */
 async function waitUntil(predicate, description, timeoutMs = 10000) {
@@ -60,7 +60,7 @@ async function run() {
     await waitUntil(() => readSettingsText().includes('--fog_density=0.5'), 'settings.json gets the argument');
     const settingsText = readSettingsText();
     assert.ok(settingsText.includes('// fixture comment that must survive'), 'comments in settings.json are preserved');
-    assert.ok(settingsText.includes('"cmakeDebugArgs.catalog"'), 'other settings are preserved');
+    assert.ok(settingsText.includes('"launchArgs.catalog"'), 'other settings are preserved');
     const debugConfig = vscode.workspace.getConfiguration('cmake').get('debugConfig');
     assert.deepEqual(debugConfig.args, ['--vk', '--width=800', '--fog_density=0.5']);
     assert.deepEqual(debugConfig.environment, [{ name: 'FOG_LOG', value: '1' }]);
@@ -94,7 +94,7 @@ async function run() {
     await controller.handleMessage({ type: 'loadPreset', name: 'fog' });
     await controller.flush();
     assert.deepEqual(vscode.workspace.getConfiguration('cmake').get('debugConfig').args, ['--fog_mode=B']);
-    const stateFile = JSON.parse(fs.readFileSync(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.vscode', 'cmakeDebugArgsGui.json'), 'utf8'));
+    const stateFile = JSON.parse(fs.readFileSync(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.vscode', 'launchArgs.json'), 'utf8'));
     assert.equal(stateFile.format_version, 1);
     assert.deepEqual(stateFile.preset.map((preset) => preset.name), ['fog']);
 
@@ -112,12 +112,12 @@ async function run() {
         return resolved;
     };
     await controller.handleMessage({ type: 'addEnvironment', name: 'FOG_LOG', value: '2' });
-    const launchConfig = { type: 'lldb', request: 'launch', name: 'Fixture (CodeLLDB)', program: 'C:/nowhere/app.exe', args: ['--keep'], env: { PATH: 'p' }, cmakeDebugArgs: 'append' };
+    const launchConfig = { type: 'lldb', request: 'launch', name: 'Fixture (CodeLLDB)', program: 'C:/nowhere/app.exe', args: ['--keep'], env: { PATH: 'p' }, launchArgs: 'append' };
     await Promise.resolve(vscode.debug.startDebugging(vscode.workspace.workspaceFolders[0], launchConfig)).catch(() => false);
     await waitUntil(() => listResolved.length > 0, 'VS Code calls the debug configuration provider');
     assert.deepEqual(listResolved[0].args, ['--keep', '--fog_mode=B']);
     assert.deepEqual(listResolved[0].env, { PATH: 'p', FOG_LOG: '2' });
-    assert.equal('cmakeDebugArgs' in listResolved[0], false);
+    assert.equal('launchArgs' in listResolved[0], false);
     const fromCmakeTools = await originalResolve(undefined, { type: 'lldb', name: 'Debug app', args: ['--x'], environment: [{ name: 'FOG_LOG', value: '2' }] });
     assert.deepEqual(fromCmakeTools.env, { FOG_LOG: '2' }, 'a CMake Tools environment array becomes CodeLLDB env');
     assert.deepEqual(fromCmakeTools.args, ['--x']);

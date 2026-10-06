@@ -175,19 +175,19 @@ test('PowerShell split detection matches what CMake Tools leaves unquoted', () =
 test('applyLaunchArguments injects only into marked configurations', () => {
     const unmarked = { type: 'lldb', name: 'a', args: ['-dx12'] };
     const unmarkedResult = LaunchArgumentUtil.applyLaunchArguments(unmarked, ['-gv_x=1'], []);
-    assert.deepEqual(unmarkedResult.config.args, ['-dx12'], 'a configuration without cmakeDebugArgs keeps its args');
+    assert.deepEqual(unmarkedResult.config.args, ['-dx12'], 'a configuration without launchArgs keeps its args');
     assert.equal(unmarkedResult.bInjected, false);
 
-    const append = LaunchArgumentUtil.applyLaunchArguments({ type: 'lldb', args: ['-dx12'], env: { PATH: 'p' }, cmakeDebugArgs: 'append' }, ['-gv_x=1'], [{ name: 'A', value: '1' }]);
+    const append = LaunchArgumentUtil.applyLaunchArguments({ type: 'lldb', args: ['-dx12'], env: { PATH: 'p' }, launchArgs: 'append' }, ['-gv_x=1'], [{ name: 'A', value: '1' }]);
     assert.deepEqual(append.config.args, ['-dx12', '-gv_x=1']);
     assert.deepEqual(append.config.env, { PATH: 'p', A: '1' });
-    assert.equal('cmakeDebugArgs' in append.config, false, 'the marker is removed before the debugger sees it');
+    assert.equal('launchArgs' in append.config, false, 'the marker is removed before the debugger sees it');
 
-    const replace = LaunchArgumentUtil.applyLaunchArguments({ type: 'cppvsdbg', args: '-dx12 -W=1', environment: [{ name: 'A', value: 'old' }], cmakeDebugArgs: 'replace' }, ['-vk'], [{ name: 'A', value: 'new' }]);
+    const replace = LaunchArgumentUtil.applyLaunchArguments({ type: 'cppvsdbg', args: '-dx12 -W=1', environment: [{ name: 'A', value: 'old' }], launchArgs: 'replace' }, ['-vk'], [{ name: 'A', value: 'new' }]);
     assert.deepEqual(replace.config.args, ['-vk']);
     assert.deepEqual(replace.config.environment, [{ name: 'A', value: 'new' }], 'MS debuggers get the environment array');
 
-    assert.notEqual(LaunchArgumentUtil.applyLaunchArguments({ type: 'lldb', cmakeDebugArgs: 'add' }, [], []).problem, '', 'an unknown mode is reported');
+    assert.notEqual(LaunchArgumentUtil.applyLaunchArguments({ type: 'lldb', launchArgs: 'add' }, [], []).problem, '', 'an unknown mode is reported');
 });
 
 test('applyLaunchArguments moves a CMake Tools environment array into CodeLLDB env', () => {

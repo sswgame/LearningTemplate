@@ -480,14 +480,14 @@ function makeShellCommandLine(listArgument) {
     return listQuoted.join(' ');
 }
 
-/** @brief 디버그 구성(launch.json)에 패널의 인자를 넣는 방식입니다 — 구성의 `cmakeDebugArgs` 칸 값입니다. */
+/** @brief 디버그 구성(launch.json)에 패널의 인자를 넣는 방식입니다 — 구성의 `launchArgs` 칸 값입니다. */
 const LaunchInjectMode = Object.freeze({
     Append: 'append',
     Replace: 'replace',
 });
 
 /** @brief 디버그 구성에서 주입 방식을 적는 칸 이름입니다. 디버거에 넘기기 전에 지웁니다. */
-const kLaunchInjectKey = 'cmakeDebugArgs';
+const kLaunchInjectKey = 'launchArgs';
 
 /**
  * @brief 디버거 종류 → 환경 변수 칸 모양입니다. 표에 없는 디버거(CodeLLDB `lldb` · node · python …)는 `env` 객체를 씁니다.
@@ -508,7 +508,7 @@ function getDebuggerEnvironmentStyle(debuggerType) {
  * @details 둘을 합니다.
  *          1. 환경 변수 모양 맞추기 — `env` 객체를 읽는 디버거(CodeLLDB 등)인데 `environment` 배열이 있으면 `env` 로 옮깁니다.
  *             CMake Tools 디버그(`cmake.debugConfig.type: "lldb"`)가 환경 변수를 cppdbg 모양으로 넘기기 때문입니다. 이미 있는 `env` 키가 이깁니다.
- *          2. 주입 — 구성에 `"cmakeDebugArgs": "append"`(기존 `args` 뒤에) · `"replace"`(기존 `args` 대신)가 있으면 패널의 인자 · 환경 변수를 넣습니다.
+ *          2. 주입 — 구성에 `"launchArgs": "append"`(기존 `args` 뒤에) · `"replace"`(기존 `args` 대신)가 있으면 패널의 인자 · 환경 변수를 넣습니다.
  *             그 칸이 없는 구성은 인자를 건드리지 않습니다(손으로 적은 구성을 몰래 바꾸지 않는다).
  * @return `{ config, bInjected, problem }` — `config` 는 새 객체이고 @p config 는 바꾸지 않습니다. `problem` 은 모르는 주입 방식 등입니다.
  */

@@ -1,6 +1,6 @@
 {
-    // 실행 인자는 사이드바 "CMake Debug Args"(Tools/cmake-debug-args-gui)에서 고른다 — 백엔드 · 에디터 · -gv_* 를 구성마다 적지 않는다.
-    // "cmakeDebugArgs": "replace" 인 구성은 F5 순간 그 패널의 인자 · 환경 변수를 받는다(확장이 없으면 인자 없이 뜬다).
+    // 실행 인자는 사이드바 "Launch Args"(Tools/launch-args)에서 고른다 — 백엔드 · 에디터 · -gv_* 를 구성마다 적지 않는다.
+    // "launchArgs": "replace" 인 구성은 F5 순간 그 패널의 인자 · 환경 변수를 받는다(확장이 없으면 인자 없이 뜬다).
     // 실행 파일 경로는 CMake Tools 가 고른 구성 프리셋의 빌드 폴더를 따른다(${command:cmake.buildDirectory}) —
     // Ninja-Debug · 게임별 Debug 프리셋 · ASAN 을 바꾸면 구성을 고치지 않아도 그 빌드를 띄운다.
     "version": "0.2.0",
@@ -11,7 +11,7 @@
             "request": "launch",
             "program": "${command:cmake.buildDirectory}/Bin/App.exe",
             "args": [],
-            "cmakeDebugArgs": "replace",
+            "launchArgs": "replace",
             "cwd": "${command:cmake.buildDirectory}/Bin",
             "terminal": "integrated",
             "sourceLanguages": [
@@ -25,7 +25,7 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
-            "cmakeDebugArgs": "replace",
+            "launchArgs": "replace",
             "cwd": "${command:cmake.buildDirectory}/Bin",
             "terminal": "integrated",
             "sourceLanguages": [
@@ -65,7 +65,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/WSL-Debug/Bin/App",
             "args": [],
-            "cmakeDebugArgs": "replace",
+            "launchArgs": "replace",
             "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
             "terminal": "integrated",
             "sourceLanguages": [

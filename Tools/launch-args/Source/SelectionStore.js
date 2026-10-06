@@ -2,7 +2,7 @@
 
 /**
  * @file SelectionStore.js
- * @brief 꺼 둔 항목의 값 · 사용자 인자 순서 · 프리셋을 `.vscode/cmakeDebugArgsGui.json` 에 둡니다.
+ * @brief 꺼 둔 항목의 값 · 사용자 인자 순서 · 프리셋을 `.vscode/launchArgs.json` 에 둡니다.
  * @details CMake Tools 설정(`cmake.debugConfig.args`)에는 **켜진 것만** 들어가므로, 껐다 켤 때 되살릴 값과 프리셋은 여기 둡니다.
  *          `.vscode/*` 는 `.gitignore` 로 빠져 있어 PC 마다 따로입니다. JSON 키는 저장소 규칙대로 snake_case 입니다.
  *          읽지 못한 파일은 덮어쓰지 않고 `.bad-<시각>.json` 으로 옮겨 두고 알립니다(프리셋을 조용히 잃지 않게).
@@ -15,7 +15,7 @@ const path = require('path');
 const LaunchArgumentUtil = require('./LaunchArgumentUtil');
 
 /** @brief 저장소 루트 기준 상태 파일 경로입니다. */
-const kStateRelativePath = '.vscode/cmakeDebugArgsGui.json';
+const kStateRelativePath = '.vscode/launchArgs.json';
 /** @brief 상태 파일 형식 판입니다. 형식을 바꾸면 올리고, 다른 판은 읽지 않습니다(옛 형식 리더를 두지 않는다). */
 const kFormatVersion = 1;
 /** @brief 프리셋 최대 수입니다. 넘으면 가장 오래된 것부터 지웁니다. */

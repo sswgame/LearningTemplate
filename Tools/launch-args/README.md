@@ -1,4 +1,4 @@
-# CMake Debug Args — 실행 인자를 클릭으로 고르는 VS Code 확장
+# Launch Args — 실행 인자를 클릭으로 고르는 VS Code 확장
 
 게임 · 에디터를 띄울 때마다 `-dx12 -EnableEditor -gv_viewMode=2 …` 같은 인자를 손으로 적고 있었다면, 이 확장이 그 일을 대신합니다.
 
@@ -9,6 +9,10 @@
 
 > 이 확장은 C++ 코드를 읽기만 하고 바꾸지 않습니다. 엔진에 새 전역 변수를 추가하면 저장하는 즉시 목록에 나타납니다.
 
+**CMake Tools 와의 관계** — 디버그 · 실행 자체는 CMake Tools(와 CodeLLDB 등 디버거)가 합니다. Launch Args 는 "어떤 인자로" 만 정해
+CMake Tools 설정(`cmake.debugConfig`)에 써 주는 도구입니다. 이름 · 설정 키(`launchArgs.*`) · launch.json 칸(`"launchArgs"`)을
+CMake Tools 의 `cmake.*` 와 겹치지 않게 지었습니다. 상태 표시줄의 **`인자 3`** 항목이 지금 넘기는 인자 수이고, 마우스를 올리면 명령줄 전체가, 누르면 이 패널이 열립니다.
+
 ---
 
 ## 1. 설치 (처음 한 번)
@@ -18,21 +22,21 @@
 저장소 루트에서 아래를 실행한 뒤, VS Code 에서 `Ctrl+Shift+P` → **Developer: Reload Window**.
 
 ```powershell
-py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install
+py -3 Tools/launch-args/Scripts/ExtensionTool.py install
 ```
 
-왼쪽 활동 막대에 **CMake Debug Args** 아이콘(벌레 모양)이 생기면 설치된 것입니다.
+왼쪽 활동 막대에 **Launch Args** 아이콘이, 아래 상태 표시줄에 **`인자 없음`** 항목이 생기면 설치된 것입니다.
 
-> 예전 판(`yourname.cmake-debug-args-gui` 2.x)을 쓰고 있었다면 확장 목록에서 먼저 제거하세요. 확장 id 가 `sw-engine.cmake-debug-args-gui` 로 바뀌었습니다.
+> 예전 판(`yourname.launch-args` 2.x)을 쓰고 있었다면 확장 목록에서 먼저 제거하세요. 확장 id 가 `sw-engine.launch-args` 로 바뀌었습니다.
 
 ## 2. 3분 안에 써 보기
 
 1. CMake Tools 상태 표시줄에서 **구성 프리셋**(예: `Ninja-Debug`)과 **실행 대상**(예: `App`)을 평소처럼 고릅니다.
-2. 활동 막대의 **CMake Debug Args** 를 엽니다.
+2. 활동 막대의 **Launch Args** 를 엽니다.
 3. **인자** 탭 → `RHI 백엔드` 에서 `DirectX12 (-dx12)` 를 고르고, `-EnableEditor` 를 체크합니다.
 4. **전역 변수** 탭 → 검색창에 `viewMode` → `gv_viewMode` 의 값을 `2` 로 바꿉니다(값을 고치면 자동으로 체크됩니다).
 5. 위쪽 **명령줄** 상자에 `-dx12 -EnableEditor -gv_viewMode=2` 가 보이는지 확인합니다.
-6. **디버그** 버튼(또는 평소처럼 CMake Tools 의 디버그)을 누르면 이 인자로 App 이 뜹니다.
+6. **CMake Tools 로 디버그** 버튼(또는 평소처럼 CMake Tools 의 디버그 · Run and Debug 의 "App (CodeLLDB · 사이드바 인자)")을 누르면 이 인자로 App 이 뜹니다.
 
 끝입니다. 끄고 싶으면 체크를 풀거나 **모두 끄기** 를 누릅니다.
 
@@ -46,8 +50,8 @@ py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install
 | 명령줄 | 지금 넘길 인자 전부. **복사** 는 PowerShell 에 그대로 붙여 넣을 수 있게 따옴표까지 넣어 복사합니다 |
 | 빨간 줄 | 값이 틀려서 **명령줄에서 뺀** 항목과 그 이유(예: `-W: 정수여야 합니다`) |
 | 노란 줄 | 점(`.`)이 든 인자가 있을 때의 주의 — 아래 [자주 묻는 것](#7-자주-묻는-것--문제-해결) 참고 |
-| **디버그** | CMake Tools 디버그를 시작합니다(중단점이 걸립니다) |
-| **실행** | 디버거 없이 실행합니다. 필요하면 먼저 빌드합니다 |
+| **CMake Tools 로 디버그** | CMake Tools 의 디버그를 이 인자로 시작합니다(중단점이 걸립니다) |
+| **실행 (셸 없이)** | 디버거 없이 실행합니다. 셸(PowerShell)을 거치지 않아 인자가 깨지지 않습니다. 필요하면 먼저 빌드합니다 |
 | **모두 끄기** | 전부 끕니다. 입력해 둔 값은 기억합니다 |
 
 ### 탭
@@ -102,7 +106,7 @@ py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install
 ## 5. CodeLLDB · launch.json 구성에서 쓰기
 
 `launch.json` 에 직접 적은 디버그 구성은 원래 그 안에 적힌 `args` 로만 뜹니다.
-구성에 **`"cmakeDebugArgs"`** 한 줄을 넣으면, F5 를 누르는 순간 패널에서 고른 인자 · 환경 변수가 들어갑니다.
+구성에 **`"launchArgs"`** 한 줄을 넣으면, F5 를 누르는 순간 패널에서 고른 인자 · 환경 변수가 들어갑니다.
 
 | 값 | 결과 |
 |----|------|
@@ -126,23 +130,23 @@ py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install
     "request": "launch",
     "program": "${command:cmake.buildDirectory}/Bin/App.exe",   // 프리셋을 바꾸면 그 빌드를 띄운다
     "args": [],
-    "cmakeDebugArgs": "replace",
+    "launchArgs": "replace",
     "cwd": "${command:cmake.buildDirectory}/Bin"
 }
 ```
 
-- `cmakeDebugArgs` 가 없는 구성은 건드리지 않습니다. CodeLLDB(`lldb`) 말고 MS C++ 디버거(`cppdbg` · `cppvsdbg`) 구성에서도 같은 한 줄로 됩니다.
+- `launchArgs` 가 없는 구성은 건드리지 않습니다. CodeLLDB(`lldb`) 말고 MS C++ 디버거(`cppdbg` · `cppvsdbg`) 구성에서도 같은 한 줄로 됩니다.
 - `append` 를 쓰는 구성에 `-dx12` 가 적혀 있으면 패널의 RHI 백엔드는 "지정 안 함" 으로 두세요. 백엔드 인자가 둘이 됩니다.
-- 패널의 **디버그** 버튼(CMake Tools 디버그)도 CodeLLDB 로 띄우려면 설정에 `"cmake.debugConfig": { "type": "lldb" }` 를 넣습니다 — 이 저장소의 `.vscode/settings.json` 에는 들어 있습니다.
+- 패널의 **CMake Tools 로 디버그** 버튼도 CodeLLDB 로 띄우려면 설정에 `"cmake.debugConfig": { "type": "lldb" }` 를 넣습니다 — 이 저장소의 `.vscode/settings.json` 에는 들어 있습니다.
   이때 CMake Tools 가 환경 변수를 MS 디버거 모양으로 넘기는데, 확장이 CodeLLDB 모양(`env`)으로 바꿔 주므로 그대로 전달됩니다.
-- 무엇이 들어갔는지는 출력 창 **CMake Debug Args** 에 `injected [...]` 로 남습니다.
+- 무엇이 들어갔는지는 출력 창 **Launch Args** 에 `injected [...]` 로 남습니다.
 
 ## 6. 무엇이 어디에 저장되나
 
 | 내용 | 저장 위치 | 공유 |
 |------|-----------|------|
 | **켜 둔** 인자 · 환경 변수 | `.vscode/settings.json` 의 `cmake.debugConfig` (CMake Tools 가 읽는 곳) | git 에 추적됨 |
-| 꺼 둔 값 · 사용자 인자 · 프리셋 | `.vscode/cmakeDebugArgsGui.json` | PC 마다 따로(git 무시) |
+| 꺼 둔 값 · 사용자 인자 · 프리셋 | `.vscode/launchArgs.json` | PC 마다 따로(git 무시) |
 
 - `settings.json` 의 주석과 다른 설정은 건드리지 않습니다. 넘길 것이 없으면 `cmake.debugConfig` 키를 지웁니다.
 - **커밋 전에 "모두 끄기" 를 누르세요.** 켜 둔 인자가 `settings.json` 변경으로 보여 실수로 커밋될 수 있습니다.
@@ -151,20 +155,20 @@ py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install
 ## 7. 자주 묻는 것 · 문제 해결
 
 **목록이 비어 있어요.**
-설정 `cmakeDebugArgs.catalog` 가 프로필을 가리키는지 보세요. 이 저장소에서는 이미 들어 있습니다:
-`"cmakeDebugArgs.catalog": "Tools/cmake-debug-args-gui/Profiles/SwEngine.json"`.
-그래도 비면 출력 창(`Ctrl+Shift+U`)에서 **CMake Debug Args** 채널을 보세요. 읽지 못한 항목과 이유가 적혀 있습니다.
+설정 `launchArgs.catalog` 가 프로필을 가리키는지 보세요. 이 저장소에서는 이미 들어 있습니다:
+`"launchArgs.catalog": "Tools/launch-args/Profiles/SwEngine.json"`.
+그래도 비면 출력 창(`Ctrl+Shift+U`)에서 **Launch Args** 채널을 보세요. 읽지 못한 항목과 이유가 적혀 있습니다.
 
 **새로 추가한 전역 변수가 안 보여요.**
 소스를 저장하면 자동으로 다시 읽습니다. 그래도 안 보이면 패널 제목 줄의 새로고침(Rescan Source)을 누르세요.
 다른 게임 폴더(`Source/Games/<게임>`)의 변수는 그 게임이 활성일 때만 보입니다.
 
 **launch.json 의 CodeLLDB 구성으로 띄웠더니 패널 인자가 안 들어가요.**
-그 구성에 `"cmakeDebugArgs": "replace"`(또는 `"append"`)가 있는지 보세요 — [5절](#5-codelldb--launchjson-구성에서-쓰기).
+그 구성에 `"launchArgs": "replace"`(또는 `"append"`)가 있는지 보세요 — [5절](#5-codelldb--launchjson-구성에서-쓰기).
 
 **`gv_screenshot=out.ppm` 이 이상하게 들어가요.** *(노란 경고가 뜰 때)*
 Windows PowerShell 은 `-` 로 시작하고 점(`.`)이 든 인자를 `-gv_screenshot=out` 과 `.ppm` 으로 **쪼갭니다.**
-CMake Tools 상태 표시줄의 ▷(실행)가 이렇게 깨집니다. 이 패널의 **실행** · **디버그** 버튼은 셸을 거치지 않아 안전합니다.
+CMake Tools 상태 표시줄의 ▷(실행)가 이렇게 깨집니다. 이 패널의 **실행 (셸 없이)** · **CMake Tools 로 디버그** 버튼은 셸을 거치지 않아 안전합니다.
 
 **"빌드 문맥 모름" 이라고 나와요.**
 CMake Tools 에서 아직 구성(configure)을 하지 않은 빌드입니다. 구성하면 Debug/Shipping · 활성 게임을 알아내 판정이 붙습니다.
@@ -173,7 +177,7 @@ CMake Tools 에서 아직 구성(configure)을 하지 않은 빌드입니다. �
 타입에 맞지 않는 값입니다(정수 칸에 글자 등). 그 항목은 명령줄에서 빠져 있으니 고치면 다시 들어갑니다.
 
 **프리셋 · 기억해 둔 값을 모두 지우고 싶어요.**
-`Ctrl+Shift+P` → **CMake Debug Args: Delete Saved State**. 지금 켜진 인자는 남습니다.
+`Ctrl+Shift+P` → **Launch Args: Delete Saved State**. 지금 켜진 인자는 남습니다.
 
 ---
 
@@ -182,7 +186,7 @@ CMake Tools 에서 아직 구성(configure)을 하지 않은 빌드입니다. �
 확장 코드는 이 엔진을 모릅니다. "소스에서 무엇을 읽을지" 는 **프로필**(JSON) 하나가 정하므로, 다른 CMake 프로젝트에서도 프로필만 쓰면 됩니다.
 프로필이 없어도 사용자 인자 · 환경 변수 · 프리셋 · 실행 · 디버그는 그대로 쓸 수 있습니다.
 
-설정 `cmakeDebugArgs.catalog` 에 프로필 파일 경로(작업 폴더 기준)나 객체를 적습니다.
+설정 `launchArgs.catalog` 에 프로필 파일 경로(작업 폴더 기준)나 객체를 적습니다.
 프로필 파일 첫 줄에 `"$schema": "<경로>/ProfileSchema.json"` 을 넣으면 편집기가 칸을 자동 완성 · 검사해 줍니다.
 
 참고할 예:
@@ -208,10 +212,10 @@ CMake 캐시 값은 CMake Tools 가 고른 빌드 폴더의 `CMakeCache.txt` 를
 ## 9. 확장을 고치는 사람에게
 
 ```powershell
-py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py test                 # 단위 시험
-py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py test --integration   # + 격리된 VS Code 에서 통합 시험(CMake Tools 필요)
-py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py package              # dist/cmake-debug-args-gui-<판>.vsix
-py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install              # 지금 VS Code 에 설치
+py -3 Tools/launch-args/Scripts/ExtensionTool.py test                 # 단위 시험
+py -3 Tools/launch-args/Scripts/ExtensionTool.py test --integration   # + 격리된 VS Code 에서 통합 시험(CMake Tools 필요)
+py -3 Tools/launch-args/Scripts/ExtensionTool.py package              # dist/launch-args-<판>.vsix
+py -3 Tools/launch-args/Scripts/ExtensionTool.py install              # 지금 VS Code 에 설치
 ```
 
 - 시험은 VS Code 안에 든 Node 로 돌고, VSIX 는 파이썬이 직접 만듭니다. 판을 올리면 `package.json` 의 `version` 을 바꿉니다.
@@ -222,7 +226,7 @@ py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install              #
 ### 구조
 
 ```
-package.json                    확장 매니페스트(명령 · 뷰 · 설정 cmakeDebugArgs.catalog)
+package.json                    확장 매니페스트(명령 · 뷰 · 설정 launchArgs.catalog)
 Source/
   Extension.js                  진입점 — CMake 작업 폴더를 골라 잇는다
   LaunchArgumentController.js   카탈로그 · 선택 · 설정 · 상태 파일을 맞춘다(화면 의도 → 선택 → 미뤄 쓰기, 밖의 변경 읽기)
@@ -231,11 +235,12 @@ Source/
   CatalogScanner.js             프로필대로 소스를 읽어 카탈로그        │ vscode 를 모르는 순수 모듈 —
   CppTextUtil.js                주석 지우기 · 매크로 인자 · 리터럴     │ Test/*.js 가 시험한다
   LaunchArgumentUtil.js         선택 ↔ 명령줄 · 값 검사 · 규칙 판정   │
-  SelectionStore.js             .vscode/cmakeDebugArgsGui.json        ┘
+  SelectionStore.js             .vscode/launchArgs.json        ┘
   BuildContextProvider.js       CMake Tools API — 프리셋 · 빌드 폴더 · 캐시 값
   DebugConfigWriter.js          cmake.debugConfig 읽기 · 쓰기(설정 API, 주석 보존)
   TargetRunner.js               디버그(cmake.debugTarget) · 셸 없는 실행
-  DebugConfigurationInjector.js 모든 디버거의 시작 직전 훅 — cmakeDebugArgs 구성에 주입 · CodeLLDB env 변환
+  DebugConfigurationInjector.js 모든 디버거의 시작 직전 훅 — launchArgs 구성에 주입 · CodeLLDB env 변환
+  StatusBarIndicator.js         상태 표시줄 "인자 N" — 마우스를 올리면 명령줄, 누르면 패널
 Webview/                        Index.html · Style.css · Main.js (VS Code 테마 색만 쓴다)
 Profiles/                       ProfileSchema.json · SwEngine.json
 Test/                           단위 시험 · Integration/(확장 호스트 시험 + 엔진과 무관한 Fixture)

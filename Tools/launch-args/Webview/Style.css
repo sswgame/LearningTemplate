@@ -520,3 +520,7 @@ select.input.small {
 .filter-line.single .filter-label {
   display: none;
 }
+
+#deliveryNote {
+  color: var(--vscode-descriptionForeground);
+}

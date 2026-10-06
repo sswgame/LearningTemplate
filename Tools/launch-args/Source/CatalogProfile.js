@@ -3,8 +3,8 @@
 /**
  * @file CatalogProfile.js
  * @brief "소스의 무엇이 넘길 수 있는 것인가" 를 적은 프로필을 읽고 기본값으로 채웁니다. 확장 코드는 특정 프로젝트를 모릅니다.
- * @details 프로필은 설정 `cmakeDebugArgs.catalog` 에 객체로 적거나, 작업 폴더 기준 JSON 파일 경로로 적습니다
- *          (예: `Tools/cmake-debug-args-gui/Profiles/SwEngine.json`). 프로필이 없으면 카탈로그가 비고, 사용자 인자 · 환경 변수 ·
+ * @details 프로필은 설정 `launchArgs.catalog` 에 객체로 적거나, 작업 폴더 기준 JSON 파일 경로로 적습니다
+ *          (예: `Tools/launch-args/Profiles/SwEngine.json`). 프로필이 없으면 카탈로그가 비고, 사용자 인자 · 환경 변수 ·
  *          프리셋 · 실행 · 디버그만 됩니다(어느 CMake 프로젝트에서나).
  *          JSON 키는 snake_case 입니다. 칸의 뜻은 `README.md` "프로필" 절과 `Profiles/SwEngine.json` 이 보여 줍니다.
  *          vscode 를 모르는 순수 모듈입니다.
@@ -218,7 +218,7 @@ function loadProfile(settingValue, workspaceRoot) {
     if (isPlainObjectInternal(settingValue))
         return { profile: normalizeProfile(settingValue), sourceText: 'settings', problem: '' };
     if (typeof settingValue !== 'string')
-        return { profile: makeEmptyProfile(), sourceText: '', problem: 'cmakeDebugArgs.catalog must be an object or a JSON file path' };
+        return { profile: makeEmptyProfile(), sourceText: '', problem: 'launchArgs.catalog must be an object or a JSON file path' };
     const profilePath = path.isAbsolute(settingValue) ? settingValue : path.join(workspaceRoot, settingValue);
     try {
         return { profile: normalizeProfile(JSON.parse(fs.readFileSync(profilePath, 'utf8'))), sourceText: settingValue, problem: '' };

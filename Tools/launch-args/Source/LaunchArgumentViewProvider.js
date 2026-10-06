@@ -12,7 +12,7 @@ const fs = require('fs');
 const vscode = require('vscode');
 
 /** @brief package.json 의 웹뷰 view id 입니다. */
-const kViewId = 'cmakeDebugArgsView';
+const kViewId = 'launchArgsView';
 
 /**
  * @brief 웹뷰 공급자입니다. 뷰가 닫혔다 열려도 같은 컨트롤러를 씁니다.

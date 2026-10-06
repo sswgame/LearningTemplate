@@ -7,7 +7,7 @@
  *          1. 웹뷰가 의도(`setGlobalVariable` …)를 보내면 선택을 고치고 바로 화면 상태를 다시 보냅니다(미리보기는 즉시).
  *          2. 디스크 쓰기는 `kWriteDelayMs` 동안 모았다가 한 번 합니다: `cmake.debugConfig`(켜진 것) · 상태 파일(꺼진 값 · 프리셋).
  *          3. 설정이 밖에서 바뀌면(손으로 고침 · git pull) 그 명령줄을 정본으로 읽어 들입니다. 자기가 쓴 메아리는 서명으로 거릅니다.
- *          4. 소스가 바뀌면 그 파일만 다시 읽어 카탈로그를 고칩니다. 무엇을 읽을지는 설정 `cmakeDebugArgs.catalog` 의 프로필이 정하고,
+ *          4. 소스가 바뀌면 그 파일만 다시 읽어 카탈로그를 고칩니다. 무엇을 읽을지는 설정 `launchArgs.catalog` 의 프로필이 정하고,
  *             프로필이 바뀌면 처음부터 다시 읽습니다(감시도 프로필의 glob 으로 다시 건다).
  */
 
@@ -27,7 +27,7 @@ const kWriteDelayMs = 250;
 const kRescanDelayMs = 400;
 const kDeleteActionLabel = '지우기';
 /** @brief 프로필 설정 이름입니다(package.json `contributes.configuration`). */
-const kProfileSection = 'cmakeDebugArgs';
+const kProfileSection = 'launchArgs';
 const kProfileKey = 'catalog';
 
 /** @brief 설정에 쓰는 두 칸의 서명입니다. 같으면 같은 내용입니다. */
@@ -186,7 +186,7 @@ class LaunchArgumentController {
             await handler.call(this, message);
         } catch (error) {
             this._logger.error(`${message.type} failed: ${error.stack || error.message}`);
-            void vscode.window.showErrorMessage(`CMake Debug Args: ${message.type} 실패 — ${error.message}`);
+            void vscode.window.showErrorMessage(`Launch Args: ${message.type} 실패 — ${error.message}`);
         }
     }
 
@@ -232,6 +232,17 @@ class LaunchArgumentController {
         return {
             listArgument: this._composeCommandLine().listArgument,
             listEnvironment: LaunchArgumentUtil.composeEnvironment(this._selection),
+        };
+    }
+
+    /** @brief 상태 표시줄이 쓰는 요약입니다: 인자 수 · 환경 변수 수 · 뺀 항목 수 · 셸 한 줄. */
+    makeCommandLineSummary() {
+        const composed = this._composeCommandLine();
+        return {
+            argumentCount: composed.listArgument.length,
+            environmentCount: LaunchArgumentUtil.composeEnvironment(this._selection).length,
+            issueCount: composed.listIssue.length,
+            shellText: LaunchArgumentUtil.makeShellCommandLine(composed.listArgument),
         };
     }
 
@@ -375,7 +386,7 @@ class LaunchArgumentController {
     }
 
     /**
-     * @brief 설정 `cmakeDebugArgs.catalog` 에서 프로필을 읽고, 스캐너 · 빌드 문맥 · 파일 감시를 그 프로필로 갈아 끼웁니다.
+     * @brief 설정 `launchArgs.catalog` 에서 프로필을 읽고, 스캐너 · 빌드 문맥 · 파일 감시를 그 프로필로 갈아 끼웁니다.
      */
     _loadProfile() {
         const settingValue = this._readProfileSetting();
@@ -425,7 +436,7 @@ class LaunchArgumentController {
         for (const problem of this._listProfileProblem)
             listBanner.push({ level: 'warning', text: `프로필: ${problem}` });
         if (this._catalog.listProblem.length > 0)
-            listBanner.push({ level: 'warning', text: `소스에서 읽지 못한 것이 ${this._catalog.listProblem.length} 개 있습니다 — 출력 창 "CMake Debug Args" 를 보세요.` });
+            listBanner.push({ level: 'warning', text: `소스에서 읽지 못한 것이 ${this._catalog.listProblem.length} 개 있습니다 — 출력 창 "Launch Args" 를 보세요.` });
         return listBanner;
     }
 
@@ -492,7 +503,7 @@ class LaunchArgumentController {
     /** @brief 설정 변경 이벤트입니다. 자기 쓰기의 메아리가 아니면 읽어 들입니다. */
     _onConfigurationChanged(event) {
         if (event.affectsConfiguration(`${kProfileSection}.${kProfileKey}`, this._workspaceFolder.uri)) {
-            this._logger.info('cmakeDebugArgs.catalog changed - reloading the profile');
+            this._logger.info('launchArgs.catalog changed - reloading the profile');
             void this.refresh();
             return;
         }

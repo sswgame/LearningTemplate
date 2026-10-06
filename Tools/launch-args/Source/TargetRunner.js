@@ -14,8 +14,8 @@
 const path = require('path');
 const vscode = require('vscode');
 
-const kTaskType = 'cmakeDebugArgs';
-const kTaskSource = 'CMake Debug Args';
+const kTaskType = 'launchArgs';
+const kTaskSource = 'Launch Args';
 
 /**
  * @brief 실행 · 디버그를 맡습니다.

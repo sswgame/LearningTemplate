@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""CMake Debug Args 확장의 시험 · 패키징 도구입니다. Node.js · npm · vsce 없이 돕니다.
+"""Launch Args 확장의 시험 · 패키징 도구입니다. Node.js · npm · vsce 없이 돕니다.
 
 VS Code 안에 든 Node 런타임(`ELECTRON_RUN_AS_NODE=1 Code.exe`)으로 시험을 돌리고, VSIX(zip + 매니페스트)는 파이썬이 직접 씁니다.
 
-  py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py test                 # 단위 시험(node:test)
-  py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py test --integration   # + 격리된 VS Code 확장 호스트 통합 시험
-  py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py package              # 시험 뒤 dist/<이름>-<판>.vsix
-  py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install              # 만든 VSIX 를 지금 VS Code 에 설치
+  py -3 Tools/launch-args/Scripts/ExtensionTool.py test                 # 단위 시험(node:test)
+  py -3 Tools/launch-args/Scripts/ExtensionTool.py test --integration   # + 격리된 VS Code 확장 호스트 통합 시험
+  py -3 Tools/launch-args/Scripts/ExtensionTool.py package              # 시험 뒤 dist/<이름>-<판>.vsix
+  py -3 Tools/launch-args/Scripts/ExtensionTool.py install              # 만든 VSIX 를 지금 VS Code 에 설치
 
 VS Code 위치는 `--code <Code.exe>` · 환경 변수 `VSCODE_EXECUTABLE` · 흔한 설치 경로 · PATH 의 `code` 순으로 찾습니다.
 """
@@ -102,7 +102,7 @@ def runIntegrationTestInternal(codePath: Path) -> int:
     if cmakeTools is None:
         print("[integration] CMake Tools is not installed in ~/.vscode/extensions - cannot run", file=sys.stderr)
         return 2
-    with tempfile.TemporaryDirectory(prefix="cmake-debug-args-it-") as temporaryText:
+    with tempfile.TemporaryDirectory(prefix="launch-args-it-") as temporaryText:
         temporaryRoot = Path(temporaryText)
         workspacePath = temporaryRoot / "workspace"
         shutil.copytree(_kExtensionRoot / "Test" / "Integration" / "Fixture", workspacePath)
@@ -212,7 +212,7 @@ def installVsixInternal(codePath: Path, vsixPath: Path) -> int:
 
 def main(listArgument: list[str] | None = None) -> int:
     """명령줄 진입점입니다."""
-    parser = argparse.ArgumentParser(description="Test, package and install the CMake Debug Args VS Code extension")
+    parser = argparse.ArgumentParser(description="Test, package and install the Launch Args VS Code extension")
     parser.add_argument("command", choices=("test", "package", "install"))
     parser.add_argument("--code", help="path to Code.exe (VS Code executable)")
     parser.add_argument("--integration", action="store_true", help="test: also run the extension-host integration test")

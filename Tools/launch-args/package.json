@@ -1,0 +1,238 @@
+{
+  "name": "launch-args",
+  "displayName": "Launch Args",
+  "description": "Pick command-line arguments and globals scanned from source in a sidebar and hand them to CMake Tools debug / launch and to launch.json configurations (CodeLLDB, cppdbg, cppvsdbg).",
+  "version": "4.0.0",
+  "publisher": "sw-engine",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Debuggers",
+    "Other"
+  ],
+  "keywords": [
+    "cmake",
+    "debug",
+    "arguments",
+    "launch",
+    "command line"
+  ],
+  "activationEvents": [
+    "workspaceContains:CMakeLists.txt",
+    "workspaceContains:CMakePresets.json",
+    "onView:launchArgsView",
+    "onDebugResolve"
+  ],
+  "main": "./Source/Extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "launchArgsContainer",
+          "title": "Launch Args",
+          "icon": "$(debug-alt)"
+        }
+      ]
+    },
+    "views": {
+      "launchArgsContainer": [
+        {
+          "id": "launchArgsView",
+          "name": "인자",
+          "type": "webview",
+          "when": "launchArgs.isActive"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "launchArgs.refresh",
+        "title": "Rescan Source (reload profile)",
+        "category": "Launch Args",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "launchArgs.copyCommandLine",
+        "title": "Copy Command Line",
+        "category": "Launch Args",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "launchArgs.run",
+        "title": "Run Launch Target Without Shell",
+        "category": "Launch Args",
+        "icon": "$(play)"
+      },
+      {
+        "command": "launchArgs.debug",
+        "title": "Debug With CMake Tools",
+        "category": "Launch Args",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "launchArgs.disableAll",
+        "title": "Turn Off Every Argument",
+        "category": "Launch Args",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "launchArgs.resetState",
+        "title": "Delete Saved State (values · presets)",
+        "category": "Launch Args"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "launchArgs.debug",
+          "when": "view == launchArgsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "launchArgs.run",
+          "when": "view == launchArgsView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "launchArgs.copyCommandLine",
+          "when": "view == launchArgsView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "launchArgs.refresh",
+          "when": "view == launchArgsView",
+          "group": "navigation@4"
+        },
+        {
+          "command": "launchArgs.disableAll",
+          "when": "view == launchArgsView",
+          "group": "more@1"
+        },
+        {
+          "command": "launchArgs.resetState",
+          "when": "view == launchArgsView",
+          "group": "more@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "launchArgs.refresh",
+          "when": "launchArgs.isActive"
+        },
+        {
+          "command": "launchArgs.copyCommandLine",
+          "when": "launchArgs.isActive"
+        },
+        {
+          "command": "launchArgs.run",
+          "when": "launchArgs.isActive"
+        },
+        {
+          "command": "launchArgs.debug",
+          "when": "launchArgs.isActive"
+        },
+        {
+          "command": "launchArgs.disableAll",
+          "when": "launchArgs.isActive"
+        },
+        {
+          "command": "launchArgs.resetState",
+          "when": "launchArgs.isActive"
+        }
+      ]
+    },
+    "taskDefinitions": [
+      {
+        "type": "launchArgs",
+        "required": [
+          "target"
+        ],
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "Executable started with the arguments chosen in the Launch Args view."
+          }
+        }
+      }
+    ],
+    "configuration": {
+      "title": "Launch Args",
+      "properties": {
+        "launchArgs.catalog": {
+          "scope": "resource",
+          "markdownDescription": "What to scan for the argument catalog: a profile object, or a workspace-relative path to a profile JSON file. Without it only custom arguments, environment variables and presets are available. See the extension README (`Profiles/SwEngine.json` is a full example).",
+          "default": "",
+          "type": [
+            "string",
+            "object"
+          ]
+        }
+      }
+    },
+    "debuggers": [
+      {
+        "type": "lldb",
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "launchArgs": {
+                "enum": [
+                  "append",
+                  "replace"
+                ],
+                "enumDescriptions": [
+                  "Add the arguments and environment chosen in the Launch Args view after this configuration's args.",
+                  "Use only the arguments chosen in the Launch Args view (this configuration's args are ignored)."
+                ],
+                "markdownDescription": "Launch Args: inject the arguments and environment variables chosen in the sidebar when this configuration starts."
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "cppdbg",
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "launchArgs": {
+                "enum": [
+                  "append",
+                  "replace"
+                ],
+                "enumDescriptions": [
+                  "Add the arguments and environment chosen in the Launch Args view after this configuration's args.",
+                  "Use only the arguments chosen in the Launch Args view (this configuration's args are ignored)."
+                ],
+                "markdownDescription": "Launch Args: inject the arguments and environment variables chosen in the sidebar when this configuration starts."
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "cppvsdbg",
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "launchArgs": {
+                "enum": [
+                  "append",
+                  "replace"
+                ],
+                "enumDescriptions": [
+                  "Add the arguments and environment chosen in the Launch Args view after this configuration's args.",
+                  "Use only the arguments chosen in the Launch Args view (this configuration's args are ignored)."
+                ],
+                "markdownDescription": "Launch Args: inject the arguments and environment variables chosen in the sidebar when this configuration starts."
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

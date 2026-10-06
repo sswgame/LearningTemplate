@@ -134,7 +134,7 @@ test('the SW profile on this repository: every macro call under Source is in the
 });
 
 test('rescanFile picks up a new definition and forgets a removed one', async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cmake-debug-args-'));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'launch-args-'));
     try {
         const sourcePath = path.join(root, 'src', 'core', 'Probe.cc');
         fs.mkdirSync(path.dirname(sourcePath), { recursive: true });

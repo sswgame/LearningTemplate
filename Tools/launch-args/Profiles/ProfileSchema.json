@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "CMake Debug Args catalog profile",
-    "description": "What the CMake Debug Args view scans for command-line arguments and global variables, and how it judges them against the active CMake build.",
+    "title": "Launch Args catalog profile",
+    "description": "What the Launch Args view scans for command-line arguments and global variables, and how it judges them against the active CMake build.",
     "type": "object",
     "additionalProperties": false,
     "properties": {

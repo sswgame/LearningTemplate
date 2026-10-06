@@ -3,7 +3,7 @@
 /**
  * @file Extension.js
  * @brief 확장 진입점입니다 — CMake 작업 폴더를 골라 컨트롤러 · 웹뷰 · 명령을 잇습니다.
- * @details 어느 CMake 프로젝트에서나 돕니다. 카탈로그(전역 변수 · 인자 목록)는 설정 `cmakeDebugArgs.catalog` 의 프로필이 있을 때만
+ * @details 어느 CMake 프로젝트에서나 돕니다. 카탈로그(전역 변수 · 인자 목록)는 설정 `launchArgs.catalog` 의 프로필이 있을 때만
  *          생기고, 없으면 사용자 인자 · 환경 변수 · 프리셋 · 실행 · 디버그만 됩니다. 시작은 기다리지 않습니다(스캔은 뒤에서 돈다).
  */
 
@@ -14,9 +14,10 @@ const vscode = require('vscode');
 const { DebugConfigurationInjector } = require('./DebugConfigurationInjector');
 const { LaunchArgumentController } = require('./LaunchArgumentController');
 const { LaunchArgumentViewProvider, kViewId } = require('./LaunchArgumentViewProvider');
+const { StatusBarIndicator } = require('./StatusBarIndicator');
 
-const kContextKey = 'cmakeDebugArgs.isActive';
-const kOutputChannelName = 'CMake Debug Args';
+const kContextKey = 'launchArgs.isActive';
+const kOutputChannelName = 'Launch Args';
 /** @brief CMake 프로젝트 루트를 알아보는 파일입니다. */
 const kListCmakeRootFile = ['CMakePresets.json', 'CMakeLists.txt'];
 
@@ -33,12 +34,12 @@ function findWorkspaceFolderInternal() {
 /** @brief 명령 팔레트 · 뷰 제목 줄 명령을 겁니다. */
 function registerCommandInternal(context, controller) {
     const mapCommand = new Map([
-        ['cmakeDebugArgs.refresh', () => controller.refresh()],
-        ['cmakeDebugArgs.copyCommandLine', () => controller.copyCommandLine()],
-        ['cmakeDebugArgs.run', () => controller.run()],
-        ['cmakeDebugArgs.debug', () => controller.debug()],
-        ['cmakeDebugArgs.disableAll', () => controller.disableAll()],
-        ['cmakeDebugArgs.resetState', () => controller.resetState()],
+        ['launchArgs.refresh', () => controller.refresh()],
+        ['launchArgs.copyCommandLine', () => controller.copyCommandLine()],
+        ['launchArgs.run', () => controller.run()],
+        ['launchArgs.debug', () => controller.debug()],
+        ['launchArgs.disableAll', () => controller.disableAll()],
+        ['launchArgs.resetState', () => controller.resetState()],
     ]);
     for (const [commandId, callback] of mapCommand)
         context.subscriptions.push(vscode.commands.registerCommand(commandId, callback));
@@ -65,7 +66,7 @@ async function activate(context) {
     );
     registerCommandInternal(context, controller);
     const injector = new DebugConfigurationInjector(controller, logger);
-    context.subscriptions.push(injector.register());
+    context.subscriptions.push(injector.register(), new StatusBarIndicator(controller));
 
     const initialization = controller.initialize().catch((error) => {
         logger.error(`initialization failed: ${error.stack || error.message}`);

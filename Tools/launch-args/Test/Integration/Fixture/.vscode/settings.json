@@ -2,7 +2,7 @@
     // fixture comment that must survive
     "cmake.configureOnOpen": false,
     "cmake.automaticReconfigure": false,
-    "cmakeDebugArgs.catalog": "profile.json",
+    "launchArgs.catalog": "profile.json",
     "cmake.debugConfig": {
         "stopAtEntry": false
     }

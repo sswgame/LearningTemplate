@@ -642,7 +642,7 @@
                 }
                 emptyElement.textContent = state.profile.bHasCatalogSource
                     ? `프로필이 가리키는 소스에서 ${page.what}를 찾지 못했습니다.`
-                    : `${page.what} 목록은 설정 cmakeDebugArgs.catalog 의 프로필로 소스에서 읽습니다. 프로필이 없어도 "사용자 · 환경" 탭의 인자는 넘길 수 있습니다.`;
+                    : `${page.what} 목록은 설정 launchArgs.catalog 의 프로필로 소스에서 읽습니다. 프로필이 없어도 "사용자 · 환경" 탭의 인자는 넘길 수 있습니다.`;
             }
         }
 
