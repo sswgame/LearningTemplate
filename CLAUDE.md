@@ -253,10 +253,8 @@ interchangeable: `SW_API` (Engine.dll symbols), `SW_MODULE_API` (C-ABI entry poi
 `SW_GF_API` (GameFramework.dll classes), `SW_GAMESERVICE_API` (the RuntimeAPI GameService locator only).
 
 **Engine internal layers.** `Source/Engine` is one link unit but its folder include graph is a DAG, linted by
-`CheckEngineLayers.py`: Common/Compression → Reflection/Utility → Animation/Localization/Serialization →
-Audio/Config/Dialogue/Physics → Resource/Spatial → Graphics (RHI, shaders, GPU assets)/Window → Input/Object →
-Scene/Sequencer/Character/UserSettings/Environment → Graphics/Renderer/Module/Telemetry → root files (`EngineLoop`). The RHI does not know the window, the
-world does not know the renderer, the renderer reads the scene. Engine code must never include `Editor/`,
+`CheckEngineLayers.py`: foundation (`Common`) at the bottom, `Graphics/Renderer` and the root files (`EngineLoop`) at the top.
+The RHI does not know the window, the world does not know the renderer, the renderer reads the scene. Engine code must never include `Editor/`,
 `GameFramework/`, or `Games/`; reach the editor through RuntimeAPI, delegates, or events instead. The tier
 table is in `Source/Engine/README.md` (recompute it with `Scripts/lint/report/RunEngineLayerGraph.py`).
 

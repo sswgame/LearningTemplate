@@ -187,6 +187,27 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
    - 루트 상수    : `SW_ROOT_CONSTANTS_BEGIN … SW_ROOT_CONSTANTS_END` + `SW_ROOT( field )` ← setComputeRootConstants (16 dword)
 ```
 
+### 바인딩 모델과 백엔드 쪽 구현
+
+- 언리얼 GPUScene 방식이다 — 셰이더는 네 백엔드에서 똑같이 `register(b#/t#/u#)` 로 선언하고, 드로우마다 바뀌는 데이터는 슬롯이 아니라 버퍼의 원소다
+  (인스턴스 `g_SwInstances` t4 를 `SV_InstanceID` 로, 머티리얼 `g_SwMaterials` t9 를 인스턴스의 `_materialIndex` 로). 그래서 바인딩은 패스 · 배치 단위로만 일어난다.
+  SM6.6 `ResourceDescriptorHeap` 은 쓰지 않는다.
+- 텍스처만 백엔드가 갈린다 — DX12 · Vulkan 은 무제한 배열 `g_SwBindlessTex2D[]`(DX12 t0 space1 · Vulkan set 1)을 인덱스로 고르고, DX11 · GL 은 t0..t8 슬롯에 드로우 직전 건다.
+- DX12: 루트 시그니처 하나(b0..b2 루트 CBV · t0..t9 슬롯 테이블 · u0..u3 슬롯 테이블 · 텍스처 배열 테이블 · 루트 상수 16 dword · 정적 샘플러 s0..s7 — 25/64 dword,
+  `shaderslot::dx12`). 언리얼 `FD3D12DescriptorCache` 처럼 등록 때 오프라인 힙에 만든 뷰를 드로우 · 디스패치 직전 온라인 힙 블록에 복사해 테이블로 건다(`flushSlotTables`).
+- Vulkan: set 0 이 슬롯 세트(binding = 종류별 시프트 + 번호: b 0..15 · t 16..31 · u 32..47, DXC `-fvk-*-shift`). 바인딩이 바뀐 드로우 직전 커맨드 버퍼 자신의
+  풀 묶음(`VulkanDescriptorPoolSet` — 펜스 뒤 통째로 리셋, 락 없음)에서 세트 하나를 할당한다(`flushSlotSet`). set 1 은 텍스처 배열 + immutable sampler.
+- 렌더타깃 포맷은 PSO 의 일부다 — 백버퍼에 그리는 PSO 는 디바이스가 실제 채택한 포맷(`getBackBufferFormat`, Vulkan 은 서피스와 협상)으로, 오프스크린은
+  `getTextureFormat` 으로 만든다(`FrameRenderer::ensurePresentPso`).
+- 상수버퍼는 `draw()` 인자가 아니라 `bindConstantBuffer( index, shaderslot::k*ConstantBuffer )` 로만 건다.
+- 머티리얼 원소 레이아웃의 정본은 셰이더다 — `Material::ensureShaderLayout` 이 디바이스 백엔드의 리플렉션으로 stride · 오프셋을 맞추고, SPIR-V 는
+  `-fvk-use-dx-layout` 으로 DX 와 같은 패킹을 쓴다. 인스턴스마다 자기 머티리얼 원소를 가지므로 DX12 · Vulkan 은 배치를 셰이더 타입 단위로 합친다
+  (`GpuSceneBuilder::setMergeBatchesAcrossMaterials`).
+- bindless 인덱스는 GPU 펜스 뒤에 다시 쓴다(실행 중인 프레임이 새 리소스를 읽지 않게). 머티리얼 없는 배치는 0 으로 채운 폴백 원소를 걸어 DX12 루트 SRV 가 빈 채로 나가지 않는다.
+- OpenGL 은 SPIR-V 의 `InstanceIndex` · `VertexIndex` 를 `InstanceId` · `VertexId` 로 바꿔 쿠킹한다 — 주의: ARB_gl_spirv 는 앞의 둘을 지원하지 않아 바꾸지 않으면 인스턴스 id 가 0 으로 읽힌다.
+- `ShaderBindingValidator::validate` 가 PSO 레이아웃 빌드 · 쿠킹 · 시험(`ShaderBindingValidatorTest.AllCookedShadersMatchContract`, nogpu)에서 쿠킹된 바이너리의 리플렉션을
+  계약과 대조한다 — 셰이더 선언 · 헤더 · 백엔드 상수 어느 쪽이 어긋나도 이름과 숫자로 실패한다.
+
 | 파일 | 역할 |
 |------|------|
 | `Shader/Binding/ShaderBindingSlots.h` | 슬롯·공간·Vulkan 시프트 상수 (C++ 측). `Resource/engine/shaders/bindingslots.hlsli` 를 include 해 정본을 공유 |
