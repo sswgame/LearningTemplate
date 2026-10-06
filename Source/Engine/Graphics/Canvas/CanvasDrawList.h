@@ -109,6 +109,14 @@ namespace sw
         void clear();
         /** @brief 그릴 것이 없으면 true 입니다. */
         bool isEmpty() const { return _listQuad.empty(); }
+        /**
+         * @brief @p source 의 사각형 · 일괄을 뒤에 이어 붙입니다(위젯 그림 캐시 → 프레임 목록).
+         * @details 첫 일괄은 지금 마지막 일괄과 가위가 같고 텍스처 합이 넷 안이면 합치고(사각형의 텍스처 번호를 다시 매긴다), 아니면 새 일괄입니다.
+         *          칠하기 도구가 한 목록에 바로 칠한 것과 같은 일괄 수가 됩니다.
+         */
+        void appendDrawList( const CanvasDrawList& source );
+        /** @brief 사각형 바이트 · 일괄(텍스처 · 가위 · 범위)이 같으면 true 입니다 — 내용 번호를 올릴지 정한다. */
+        bool isSameContent( const CanvasDrawList& other ) const;
     };
 } // namespace sw
 

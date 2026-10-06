@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/UI/Core/UiEvents.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
 
@@ -77,7 +78,7 @@ namespace sw
         if ( clamped == _scrollOffset )
             return;
         _scrollOffset = clamped;
-        invalidate( WidgetDirty::kArrange );
+        invalidate( WidgetDirty::kArrange | WidgetDirty::kPaint ); // 막대 엄지 자리
     }
 
     void ScrollPanel::scrollBy( const float2& delta )
@@ -210,6 +211,23 @@ namespace sw
         return applyScrollDelta( delta ) ? UiReply::makeHandled() : UiReply::makeUnhandled();
     }
 
+    void ScrollPanel::paintOverChildren( CanvasPainter& painter, const UiPaintContext& context ) const
+    {
+        (void)context;
+        const UiOrientation arrAxis[] = { UiOrientation::Vertical, UiOrientation::Horizontal };
+        for ( const UiOrientation axis : arrAxis )
+        {
+            ScrollBarLayout bar{};
+            if ( computeScrollBar( axis, bar ) == false )
+                continue;
+            const float32 radius = _scrollBarThickness * 0.5f;
+            CanvasBrush   thumb{};
+            thumb._color        = float4{ 1.0f, 1.0f, 1.0f, _bDraggingBar && _dragAxis == axis ? 0.65f : 0.35f };
+            thumb._cornerRadius = float4{ radius, radius, radius, radius };
+            painter.fillRect( bar._thumbPosition, bar._thumbSize, thumb );
+        }
+    }
+
     bool ScrollPanel::applyScrollDelta( const float2& delta )
     {
         const float2 before = _scrollOffset;
@@ -274,7 +292,10 @@ namespace sw
 
     void ScrollPanel::arrangeChildren( const UiLayoutContext& context, const float2& size )
     {
-        _viewportSize = size;
+        const float2 previousContent  = _contentSize;
+        const float2 previousViewport = _viewportSize;
+        const float2 previousOffset   = _scrollOffset;
+        _viewportSize                 = size;
         if ( getChildCount() == 0 )
         {
             _contentSize  = float2{};
@@ -288,5 +309,8 @@ namespace sw
                                _bScrollVertical ? MathUtil::max( desired._y + padding._y + padding._w, size._y ) : size._y };
         _scrollOffset = clampOffset( _scrollOffset ); // 내용이 줄었으면 끝에 붙는다(무효화 없이 — 지금 놓는 중이다)
         arrangeChild( context, content, float2{ -_scrollOffset._x, -_scrollOffset._y }, _contentSize );
+        // 막대 엄지의 길이 · 자리는 내용 · 보이는 크기 · 오프셋에서 나온다 — 그리기만 다시(레이아웃 비트는 건드리지 않는다).
+        if ( previousContent != _contentSize || previousViewport != _viewportSize || previousOffset != _scrollOffset )
+            invalidate( WidgetDirty::kPaint );
     }
 } // namespace sw

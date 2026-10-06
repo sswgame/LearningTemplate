@@ -42,6 +42,8 @@ namespace sw
         , _layoutUiScale{ 0.0f }
         , _layoutTextScale{ 0.0f }
         , _layoutSafeInsets{}
+        , _paintUiScale{ 0.0f }
+        , _paintAtlasGeneration{ 0 }
     {
     }
 

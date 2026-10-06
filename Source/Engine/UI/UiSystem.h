@@ -12,6 +12,7 @@
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Core/UiFocusManager.h"
 #include "Engine/UI/Core/UiPointerState.h"
 #include "Engine/UI/Core/WidgetNavigation.h"
@@ -19,6 +20,7 @@
 #include "Engine/UI/Input/UiInputConsumption.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
 #include "Engine/UI/Layout/UiScale.h"
+#include "Engine/UI/Render/UiPaintPass.h"
 #include "Engine/UI/Screen/UiScreen.h"
 
 namespace sw
@@ -140,6 +142,15 @@ namespace sw
          * @details 루트의 흐름 방향 = 문화권이 오른쪽에서 왼쪽인가(`UiLayoutPass::isCultureRightToLeft`) — 문화권이 바뀌면 다음 걷기가 트리를 다시 놓는다.
          */
         UiLayoutContext makeLayoutContext() const;
+        /** @brief 지금 글리프 캐시 · 글 배치 · 배율 · 프레임 번호로 그리기 문맥을 만듭니다(그리기 걷기에 넘긴다). */
+        UiPaintContext makePaintContext() const;
+        /**
+         * @brief 이번 프레임의 UI 그리기 목록입니다(물리 픽셀 — 대상 크기 = 뷰포트 물리 크기). `EngineLoop` 가 렌더 패킷의 주 출력 캔버스에 싣는다.
+         * @details 화면을 그리기 순서(층 → 쌓인 순서)로, 화면마다 위젯 그림 캐시를 이어 붙이고, 탐색 입력 방식이면 포커스 테두리를 그 화면 위에 얹는다.
+         */
+        const CanvasDrawList& getCanvas() const { return _canvas; }
+        /** @brief 그리기 목록 내용이 바뀔 때만 오르는 번호입니다(1 부터 — 렌더러가 같으면 사각형을 다시 올리지 않는다). */
+        uint64 getCanvasRevision() const { return _canvasRevision; }
         /** @brief 문화권 출처를 정합니다(시험이 자기 것을 넘긴다 — 전역 문화권을 건드리지 않게). nullptr 이면 바인딩된 엔진 서비스입니다. */
         void setLocalization( const LocalizationManager* pLocalization ) { _pLocalization = pLocalization; }
 
@@ -176,6 +187,8 @@ namespace sw
         bool dispatchPointerEvent( const UiPointerEvent& event );
         /** @brief 점 아래의 맨 위 화면입니다(막는 화면 아래로는 내려가지 않는다). 없으면 nullptr 입니다. */
         UiScreen* findPointerScreen( const float2& point ) const;
+        /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
+        void paintScreens();
         /** @brief 닫기를 요청한 화면을 지웁니다. */
         void applyPendingCloses();
         /** @brief 화면 @p index 를 바로 지웁니다(포인터 · 포커스가 그 트리를 놓게). */
@@ -197,6 +210,9 @@ namespace sw
         unique_ptr<TextLayoutEngine> _textLayout;
         UiScaleSettings              _scaleSettings;
         UiViewport                   _viewport;
+        CanvasDrawList               _canvas;         ///< 이번 프레임 그리기 목록
+        CanvasDrawList               _canvasScratch;  ///< 칠하는 중의 목록(같은 내용이면 버린다)
+        uint64                       _canvasRevision; ///< `_canvas` 내용 번호
         float2                       _lastPointerPosition;
         float32                      _stickRepeatSeconds; ///< 스틱 탐색의 다음 반복까지 남은 시간
         float32                      _inputDeltaSeconds;  ///< 이번 `processInput` 의 프레임 시간(행동 사건에 싣는다)

@@ -105,7 +105,7 @@ namespace sw
     }
 
     CanvasPainter::CanvasPainter( CanvasDrawList& outCanvas, float32 uiScale )
-        : _drawList{ outCanvas }
+        : _pDrawList{ &outCanvas }
         , _listTransform{}
         , _listClip{}
         , _listOpacity{}
@@ -219,9 +219,9 @@ namespace sw
 
         CanvasTextureRef texture{};
         texture._atlasPage  = atlasRect._page;
-        const size_t before = _drawList._listQuad.size();
+        const size_t before = _pDrawList->_listQuad.size();
         appendQuad( quad, &texture );
-        return _drawList._listQuad.size() != before;
+        return _pDrawList->_listQuad.size() != before;
     }
 
     void CanvasPainter::drawShadow( const float2& position, const float2& size, const float4& cornerRadius, const float4& color, float32 blur, const float2& offset )
@@ -320,25 +320,25 @@ namespace sw
         }
 
         // 가위가 바뀌면 일괄이 끊긴다 — 지금 일괄과 같은 가위인지 본다.
-        const bool bSameScissor = _drawList._listBatch.empty() == false &&
-                                  ( _drawList._listBatch.back()._bScissor == SW_TRUE ) == bHasScissor &&
-                                  ( bHasScissor == false || Memory::compare( &_drawList._listBatch.back()._scissor, &scissor, sizeof( RHIScissorRect ) ) == 0 );
+        const bool bSameScissor = _pDrawList->_listBatch.empty() == false &&
+                                  ( _pDrawList->_listBatch.back()._bScissor == SW_TRUE ) == bHasScissor &&
+                                  ( bHasScissor == false || Memory::compare( &_pDrawList->_listBatch.back()._scissor, &scissor, sizeof( RHIScissorRect ) ) == 0 );
         if ( bSameScissor == false )
         {
-            CanvasBatch& batch = _drawList._listBatch.emplace_back();
-            batch._firstQuad   = static_cast<uint32>( _drawList._listQuad.size() );
+            CanvasBatch& batch = _pDrawList->_listBatch.emplace_back();
+            batch._firstQuad   = static_cast<uint32>( _pDrawList->_listQuad.size() );
             batch._scissor     = scissor;
             batch._bScissor    = bHasScissor ? SW_TRUE : SW_FALSE;
         }
         quad._textureSlot = selectBatch( pTexture );
-        _drawList._listQuad.push_back( quad );
-        ++_drawList._listBatch.back()._quadCount;
+        _pDrawList->_listQuad.push_back( quad );
+        ++_pDrawList->_listBatch.back()._quadCount;
     }
 
     uint32 CanvasPainter::selectBatch( const CanvasTextureRef* pTexture )
     {
         // appendQuad 가 가위가 같은 일괄을 이미 끝에 두었다. 여기서는 텍스처만 본다.
-        CanvasBatch& current = _drawList._listBatch.back();
+        CanvasBatch& current = _pDrawList->_listBatch.back();
         if ( pTexture == nullptr )
             return invalid_index::kUint32;
         for ( uint32 slot = 0; slot < current._textureCount; ++slot )
@@ -353,9 +353,9 @@ namespace sw
         }
 
         // 텍스처 자리가 찼다 — 같은 가위로 새 일괄을 연다.
-        CanvasBatch& next   = _drawList._listBatch.emplace_back();
-        CanvasBatch& prior  = _drawList._listBatch[_drawList._listBatch.size() - 2];
-        next._firstQuad     = static_cast<uint32>( _drawList._listQuad.size() );
+        CanvasBatch& next   = _pDrawList->_listBatch.emplace_back();
+        CanvasBatch& prior  = _pDrawList->_listBatch[_pDrawList->_listBatch.size() - 2];
+        next._firstQuad     = static_cast<uint32>( _pDrawList->_listQuad.size() );
         next._scissor       = prior._scissor;
         next._bScissor      = prior._bScissor;
         next._arrTexture[0] = *pTexture;
@@ -371,10 +371,10 @@ namespace sw
         const float4& bounds = _listClip.back()._bounds;
         float32       right  = MathUtil::ceil( bounds._z );
         float32       bottom = MathUtil::ceil( bounds._w );
-        if ( _drawList._targetSize._x > 0.0f )
-            right = MathUtil::min( right, _drawList._targetSize._x );
-        if ( _drawList._targetSize._y > 0.0f )
-            bottom = MathUtil::min( bottom, _drawList._targetSize._y );
+        if ( _pDrawList->_targetSize._x > 0.0f )
+            right = MathUtil::min( right, _pDrawList->_targetSize._x );
+        if ( _pDrawList->_targetSize._y > 0.0f )
+            bottom = MathUtil::min( bottom, _pDrawList->_targetSize._y );
         const float32 left = MathUtil::max( 0.0f, MathUtil::floor( bounds._x ) );
         const float32 top  = MathUtil::max( 0.0f, MathUtil::floor( bounds._y ) );
         if ( right <= left || bottom <= top )

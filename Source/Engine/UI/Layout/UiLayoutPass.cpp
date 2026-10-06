@@ -185,7 +185,12 @@ namespace sw
         // 흐름 방향: 자기 슬롯(여백 · 정렬)은 부모의 방향으로 읽고, 자기 방향은 자식을 놓을 때 쓴다.
         const PanelWidget* const pParent            = widget.getParent();
         const bool               bParentRightToLeft = pParent != nullptr ? pParent->isRightToLeft() : context._bRightToLeft;
-        widget._bRightToLeft                        = resolveRightToLeft( widget.getFlowDirection(), bParentRightToLeft );
+        const bool               bRightToLeft       = resolveRightToLeft( widget.getFlowDirection(), bParentRightToLeft );
+        if ( widget._bRightToLeft != bRightToLeft )
+        {
+            widget._bRightToLeft = bRightToLeft;
+            widget.invalidate( WidgetDirty::kPaint ); // 기하가 그대로여도 그림이 방향을 따른다(글 문단 방향 · 거울 그림)
+        }
 
         float2 position{};
         float2 size{};

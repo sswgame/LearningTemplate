@@ -1374,12 +1374,18 @@ namespace sw
                 }
             }
 
-            // 캔버스(화면 2D) — 위젯 단계가 생기기 전에는 개발 시험 그림만 칠한다. 글리프 아틀라스의 새 구간은 칠한 것이 없어도 늘 넘긴다
-            // (렌더러의 거울이 게임 스레드의 페이지와 어긋나지 않게).
+            // 캔버스(화면 2D) — 런타임 UI 가 칠한 목록(내용 번호가 같으면 렌더러가 사각형을 다시 올리지 않는다), 개발 시험 그림은 그 위에.
+            // 글리프 아틀라스의 새 구간은 칠한 것이 없어도 늘 넘긴다(렌더러의 거울이 게임 스레드의 페이지와 어긋나지 않게).
+            if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() && _owned._pUiSystem->getCanvas().isEmpty() == false )
+            {
+                packet._canvas._mainOutput      = _owned._pUiSystem->getCanvas();
+                packet._canvas._contentRevision = _owned._pUiSystem->getCanvasRevision();
+            }
             if ( gv_canvasTestPattern && _rhi != nullptr && _rhi->hasDevice() )
             {
-                const uint32 canvasWidth  = packet._viewportWidth > 0 ? packet._viewportWidth : _rhi->getDevice().getBackBufferWidth();
-                const uint32 canvasHeight = packet._viewportHeight > 0 ? packet._viewportHeight : _rhi->getDevice().getBackBufferHeight();
+                packet._canvas._contentRevision = 0; // 시험 그림은 내용 번호가 없다 — 늘 올린다
+                const uint32 canvasWidth        = packet._viewportWidth > 0 ? packet._viewportWidth : _rhi->getDevice().getBackBufferWidth();
+                const uint32 canvasHeight       = packet._viewportHeight > 0 ? packet._viewportHeight : _rhi->getDevice().getBackBufferHeight();
                 CanvasTestPattern::paint( packet._canvas._mainOutput, float2{ static_cast<float32>( canvasWidth ), static_cast<float32>( canvasHeight ) },
                                           _owned._pFontSystem.get(), engine::getFrameProfiler().getFrameCount() );
             }

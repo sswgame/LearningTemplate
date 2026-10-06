@@ -146,6 +146,26 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - 방향을 바꾸면 `kArrange`(크기는 그대로 — measure 0). 문화권이 바뀌어 루트의 방향이 달라지면 다음 걷기가 트리 전체를 다시 놓는다.
 - 포커스 탐색 Left · Right 는 화면 기준이라 그대로다(결과 사각형으로 고르므로 거울 배치에 저절로 맞는다). 히트 테스트도 기하를 보므로 따로 할 일이 없다.
 
+## 그리기 (`Render/UiPaintPass` · `Widgets/`)
+
+| 이 엔진 | 언리얼 | 유니티 UI Toolkit | Godot |
+|---|---|---|---|
+| 위젯 그림 캐시 · `UiPaintPass` | Slate 캐시된 요소 목록 · 전역 무효화 | UIR 더러운 요소 다시 칠하기 | CanvasItem 명령 캐시 |
+| `TextWidget` · `ImageWidget` · `BorderPanel` · `UiBrush` | `STextBlock` · `SImage` · `SBorder` · `FSlateBrush` | Label · Image · VisualElement 배경 | Label · TextureRect · PanelContainer + StyleBox |
+
+- 위젯은 `paint( painter, context )` 에 **자기 로컬 (0, 0) ~ 크기**로 칠합니다(칠하기 도구의 변환이 위젯 기하다). 결과는 위젯의 **그림 캐시**(물리 픽셀 사각형 — 조상의
+  자르기 · 불투명도가 구워져 있다)에 남고, 그리기 걷기는 그리기 순서(z 순서 패널은 `collectPaintOrder`)로 트리를 걸으며 캐시를 프레임 목록에 **이어 붙입니다**
+  (`CanvasDrawList::appendDrawList` — 가위 · 텍스처가 맞으면 일괄을 합친다).
+- 다시 칠하는 위젯: `kPaint` · `kStyle`(스타일 걷기 전에는 상태 겉모습이 위젯 칸이라) · `kVisibility` · 처음 · **조상의 `kTransform`**(불투명도 · 렌더 변환은 자손 캐시에
+  구워져 있다) · UI 배율 변화(전부) · 글리프 아틀라스 세대 변화(글 위젯만 — 비운 페이지의 사각형이 다른 글자를 그린다). 흐름 방향이 바뀌면 레이아웃이 `kPaint` 를 건다.
+- 자르는 패널은 자기 사각형을 가위로 쌓고, 자식 위 그림(스크롤 막대)은 `paintOverChildren` — 자르기 밖이다.
+- `UiSystem::update` 가 화면을 그리기 순서로 칠하고(구간 `GT.Ui.Paint` · 카운터 `Ui.PaintWidgets`), **탐색 입력 방식이면** 포커스 위젯 둘레에 테두리를 그 화면 위에
+  얹는다(포인터 방식이면 숨긴다 — CommonUI 와 같다). 목록 내용이 지난 프레임과 같으면 내용 번호(`getCanvasRevision`)를 올리지 않아 렌더러가 사각형을 다시 올리지 않는다.
+  `EngineLoop` 가 목록을 렌더 패킷의 주 출력 캔버스에 싣는다(`-gv_canvasTestPattern` 은 그 위).
+- 글 위젯: 원하는 크기 = 측정(글자 배율을 곱한 크기, 줄 바꿈이면 가용 너비 안), 칠하기는 위젯 너비로 배치하고 결과를 캐시한다. 글 · 스타일은 `kLayout`, 색은 `kPaint`.
+  문단 방향 = 위젯의 흐름 방향. 리치 텍스트(`_bRichText`)는 `RichTextParser` 표기.
+- 그림 위젯: 브러시(색 · 둥근 모서리 · 9-슬라이스) × 그림, 그림이 없으면 단색 상자. `_bMirrorInRtl` 이면 오른쪽에서 왼쪽에서 좌우로 뒤집는다.
+
 ## 배율 · 안전 영역
 
 레이아웃은 **UI 단위**(기준 해상도 1920×1080 의 픽셀)로 하고, 화면에 낼 때 배율을 곱합니다(`UiViewport` — `_size` · `_physicalSize` · `_uiScale` · `_safeInsets`).

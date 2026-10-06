@@ -122,6 +122,12 @@ namespace sw
 
         /** @brief UI 단위 → 물리 픽셀 배율입니다. */
         float32 getUiScale() const { return _uiScale; }
+        /**
+         * @brief 칠할 목록을 바꿉니다 — 변환 · 자르기 · 불투명도 스택은 그대로입니다(위젯 그리기가 위젯마다 자기 그림 캐시로 바꾼다).
+         * @details 가위를 대상 안으로 자르는 크기(`_targetSize`)는 새 목록의 것을 씁니다.
+         */
+        void            setDrawList( CanvasDrawList& outCanvas ) { _pDrawList = &outCanvas; }
+        CanvasDrawList& getDrawList() const { return *_pDrawList; }
 
     private:
         /** @brief 자르기 스택 한 칸입니다(물리 픽셀). */
@@ -142,7 +148,7 @@ namespace sw
         /** @brief UI 단위 사각형을 지금 변환으로 옮겨 물리 픽셀 사각형(위치 · 크기 · 축)을 채웁니다. */
         void placeRect( const float2& position, const float2& size, CanvasQuad& outQuad ) const;
 
-        CanvasDrawList&         _drawList;
+        CanvasDrawList*         _pDrawList; ///< 칠하는 목록(소유하지 않는다)
         vector<CanvasTransform> _listTransform;
         vector<ClipState>       _listClip;
         vector<float32>         _listOpacity;

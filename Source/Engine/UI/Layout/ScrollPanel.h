@@ -79,6 +79,8 @@ namespace sw
     protected:
         float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
         void   arrangeChildren( const UiLayoutContext& context, const float2& size ) override;
+        /** @brief 스크롤 막대 엄지를 내용 위에 칠합니다(끄는 중이면 더 밝게). */
+        void paintOverChildren( CanvasPainter& painter, const UiPaintContext& context ) const override;
         /** @brief 내용 자리는 스크롤 오프셋이다 — 거울로 놓지 않는다(내용 안의 패널은 자기 방향으로 거울한다). 가로 스크롤의 RTL 시작점은 왼쪽이다. */
         bool mirrorsChildrenInRightToLeft() const override { return false; }
 

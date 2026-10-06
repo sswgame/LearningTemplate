@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -20,6 +21,7 @@ namespace sw
     struct TypeInfo;
     struct UiLayoutContext;
     struct UiPaintContext;
+    struct WidgetPaintCache;
 
     class CanvasPainter;
     class PanelWidget;
@@ -109,6 +111,10 @@ namespace sw
          */
         void setArrangedGeometry( const WidgetGeometry& geometry );
 
+        // --- 그리기 ---------------------------------------------------------------
+        /** @brief 글리프 아틀라스를 쓰는 위젯이면 true 입니다(글 위젯) — 아틀라스 페이지를 비우면(세대가 오르면) 그림 캐시를 다시 칠한다. */
+        virtual bool usesGlyphAtlas() const { return false; }
+
         // --- 포커스 ---------------------------------------------------------------
         /** @brief 포커스를 받을 수 있는 종류인가 — 버튼 · 슬라이더 · 입력 칸이 true. 꺼졌거나 안 보이면 받지 않는다(트리가 따로 본다). */
         virtual bool supportsFocus() const { return false; }
@@ -135,8 +141,14 @@ namespace sw
          * @param availableSize 슬롯이 줄 수 있는 크기(여백 · 덮어쓰기 적용 뒤, UI 단위). 축이 `kUiUnbounded` 면 그 축은 원하는 만큼.
          */
         virtual float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const;
-        /** @brief 자기 그림을 칠합니다(그리기). 자식은 트리가 칠한다. 기본은 아무것도 칠하지 않습니다. */
+        /**
+         * @brief 자기 그림을 칠합니다(그리기 — `UiPaintPass`). 자식은 트리가 칠한다. 기본은 아무것도 칠하지 않습니다.
+         * @details 칠하기 도구의 변환은 이 위젯의 기하입니다 — 로컬 (0, 0) ~ 크기(`getGeometry()._size`, UI 단위)에 칠한다. 결과는 위젯의 그림 캐시에 남아
+         *          그리기 더러움(`kPaint` · `kStyle` · 조상의 `kTransform`)이 없으면 다시 부르지 않습니다.
+         */
         virtual void paint( CanvasPainter& painter, const UiPaintContext& context ) const;
+        /** @brief 자식 위에 칠합니다(스크롤 막대 · 패널 테두리). 자르기 밖이다. 기본은 아무것도 칠하지 않습니다. */
+        virtual void paintOverChildren( CanvasPainter& painter, const UiPaintContext& context ) const;
         /** @brief 트리에 붙었다(바인딩 · 애니메이션이 여기서 붙는다). 자손은 부모 다음에 불린다. */
         virtual void onAttachedToTree();
         /** @brief 트리에서 떨어지기 직전이다(바인딩 · 애니메이션을 뗀다). */
@@ -164,6 +176,8 @@ namespace sw
         WidgetLayoutSlot _slot;
         PROPERTY( DisplayName = "Navigation" )
         WidgetNavigation _navigation;
+
+        unique_ptr<WidgetPaintCache> _paintCache; ///< 마지막으로 칠한 사각형(물리 픽셀) — `UiPaintPass` 가 채운다, 처음 칠할 때 만든다
 
         WidgetGeometry _geometry;          ///< 마지막 arrange 결과
         float2         _desiredSize;       ///< 마지막 measure 결과

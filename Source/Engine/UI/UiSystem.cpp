@@ -6,10 +6,14 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/GlyphAtlas.h"
+#include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Core/UiEventRouter.h"
 #include "Engine/UI/Core/UiNavigationSolver.h"
@@ -123,6 +127,9 @@ namespace sw
         , _textLayout{}
         , _scaleSettings{}
         , _viewport{}
+        , _canvas{}
+        , _canvasScratch{}
+        , _canvasRevision{ 1 }
         , _lastPointerPosition{}
         , _stickRepeatSeconds{ 0.0f }
         , _inputDeltaSeconds{ 0.0f }
@@ -220,9 +227,8 @@ namespace sw
                 measuredCount += UiLayoutPass::update( screen->getTree(), context );
             SW_PROFILE_COUNT( "Ui.LayoutWidgets", measuredCount );
         }
-        // 스타일 · 그리기 걷기가 생기기 전까지는 남은 무효화(그리기 · 스타일)를 프레임마다 처리한 것으로 둔다(목록이 쌓이지 않게).
-        for ( const unique_ptr<UiScreen>& screen : _listScreen )
-            screen->getTree().clearAllDirty();
+        // 그리기 — 더러운 위젯만 다시 칠하고 화면마다 캐시를 이어 붙인다(스타일 걷기(5-2) 전까지 kStyle 도 그리기가 비운다).
+        paintScreens();
     }
 
     UiScreenHandle UiSystem::pushScreen( unique_ptr<UiScreen> screen )
@@ -691,6 +697,50 @@ namespace sw
         const WidgetId target   = pDefault != nullptr ? pDefault->getId() : UiNavigationSolver::findFirstFocusable( *tree.getRoot() );
         if ( target != kInvalidWidgetId )
             (void)_focus.setFocus( tree, target );
+    }
+
+    UiPaintContext UiSystem::makePaintContext() const
+    {
+        UiPaintContext context{};
+        context._pTextLayout = _textLayout.get();
+        context._uiScale     = _viewport._uiScale > 0.0f ? _viewport._uiScale : 1.0f;
+        context._textScale   = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
+        context._frameIndex  = engine::getFrameProfiler().getFrameCount();
+        if ( _pFontSystem != nullptr && _pFontSystem->isInitialized() )
+        {
+            context._pGlyphCache     = &_pFontSystem->getGlyphCache();
+            context._atlasGeneration = context._pGlyphCache->getAtlas().getGeneration();
+        }
+        return context;
+    }
+
+    void UiSystem::paintScreens()
+    {
+        SW_PROFILE_SCOPE( "GT.Ui.Paint" );
+        const UiPaintContext context = makePaintContext();
+        _canvasScratch.clear();
+        _canvasScratch._targetSize = _viewport._physicalSize;
+        CanvasPainter painter( _canvasScratch, context._uiScale );
+        uint32        paintedCount = 0;
+        for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
+            WidgetTree& tree = screen->getTree();
+            paintedCount += UiPaintPass::paint( tree, context, painter, _canvasScratch );
+            // 포커스 테두리 — 패드 · 키보드로 다룰 때만(언리얼 CommonUI · 콘솔 게임과 같다), 그 화면 위 · 위 화면 아래.
+            if ( _inputMode != UiInputMode::Navigation || _focus.getFocusedTree() != &tree )
+                continue;
+            const Widget* pFocused = tree.findWidgetById( _focus.getFocusedWidget() );
+            if ( pFocused != nullptr && pFocused->isVisible() )
+                UiPaintPass::paintFocusRing( *pFocused, painter );
+        }
+        SW_PROFILE_COUNT( "Ui.PaintWidgets", paintedCount );
+        SW_PROFILE_COUNT( "Ui.CanvasQuads", _canvasScratch._listQuad.size() );
+        if ( _canvasScratch.isSameContent( _canvas ) )
+            return;
+        _canvas.clear();
+        _canvas.appendDrawList( _canvasScratch );
+        _canvas._targetSize = _canvasScratch._targetSize;
+        ++_canvasRevision;
     }
 
     UiViewport UiSystem::computeViewport( const float2& physicalSize, float32 contentScale ) const

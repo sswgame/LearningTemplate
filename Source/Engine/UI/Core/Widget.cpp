@@ -8,6 +8,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Render/UiPaintPass.h"
 
 namespace sw
 {
@@ -26,6 +27,7 @@ namespace sw
         , _renderTransform{}
         , _slot{}
         , _navigation{}
+        , _paintCache{}
         , _geometry{}
         , _desiredSize{}
         , _lastAvailableSize{}
@@ -131,7 +133,7 @@ namespace sw
     void Widget::setLayoutSlot( const WidgetLayoutSlot& slot )
     {
         _slot = slot;
-        invalidate( WidgetDirty::kLayout );
+        invalidate( WidgetDirty::kLayout | WidgetDirty::kPaint ); // z 순서도 슬롯이다 — 기하가 그대로여도 그리기 순서가 바뀐다
     }
 
     void Widget::invalidate( uint32 dirtyReason )
@@ -195,6 +197,12 @@ namespace sw
     }
 
     void Widget::paint( CanvasPainter& painter, const UiPaintContext& context ) const
+    {
+        (void)painter;
+        (void)context;
+    }
+
+    void Widget::paintOverChildren( CanvasPainter& painter, const UiPaintContext& context ) const
     {
         (void)painter;
         (void)context;

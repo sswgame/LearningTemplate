@@ -291,3 +291,46 @@ SW_TEST_CASE( CanvasDrawListTest, ManySmallUploadsMergeToBoundingRect )
     SW_EXPECT_EQUAL( static_cast<uint32>( lastIndex * 10 + 6 ), static_cast<uint32>( listRegion[0]._width ) );
     SW_EXPECT_EQUAL( static_cast<uint32>( lastIndex + 9 ), static_cast<uint32>( listRegion[0]._height ) );
 }
+
+/**
+ * @brief [CanvasDrawListTest] 따로 칠한 목록(위젯 그림 캐시)을 이어 붙이면 가위가 같고 텍스처 합이 넷 안일 때 한 일괄로 합치고 텍스처 번호를 다시 매긴다 —
+ *        가위가 다르면 새 일괄이다. 같은 내용 비교(`isSameContent`)는 텍스처 · 사각형 바이트를 본다
+ * @details 변이: `appendDrawList` 의 번호 다시 매기기를 빼면 두 번째 목록의 사각형이 t2 를 0 번으로 가리켜 진다.
+ */
+SW_TEST_CASE( CanvasDrawListTest, AppendMergesBatchesAndRemapsTextures )
+{
+    const sw::shared_ptr<const sw::Texture2D> t1 = CanvasDrawListTestUtil::makeTexture();
+    const sw::shared_ptr<const sw::Texture2D> t2 = CanvasDrawListTestUtil::makeTexture();
+    sw::CanvasDrawList                        first{};
+    sw::CanvasPainter                         firstPainter( first, 1.0f );
+    firstPainter.fillRect( sw::float2{}, sw::float2{ 4.0f, 4.0f }, CanvasDrawListTestUtil::makeImageBrush( t1 ) );
+    sw::CanvasDrawList second{};
+    sw::CanvasPainter  secondPainter( second, 1.0f );
+    secondPainter.fillRect( sw::float2{}, sw::float2{ 4.0f, 4.0f }, CanvasDrawListTestUtil::makeImageBrush( t2 ) );
+    secondPainter.fillRect( sw::float2{}, sw::float2{ 4.0f, 4.0f }, CanvasDrawListTestUtil::makeImageBrush( t1 ) );
+    sw::CanvasDrawList clipped{};
+    sw::CanvasPainter  clippedPainter( clipped, 1.0f );
+    clippedPainter.pushClip( sw::float2{}, sw::float2{ 2.0f, 2.0f }, 0.0f );
+    clippedPainter.fillRect( sw::float2{}, sw::float2{ 4.0f, 4.0f }, CanvasDrawListTestUtil::makeImageBrush( t1 ) );
+    clippedPainter.popClip();
+
+    sw::CanvasDrawList frame{};
+    frame.appendDrawList( first );
+    frame.appendDrawList( second );
+    SW_ASSERT_EQUAL( size_t{ 1 }, frame._listBatch.size() );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( frame._listBatch[0]._textureCount ) );
+    SW_EXPECT_EQUAL( 3u, frame._listBatch[0]._quadCount );
+    SW_EXPECT_EQUAL( 0u, frame._listQuad[0]._textureSlot ); // t1
+    SW_EXPECT_EQUAL( 1u, frame._listQuad[1]._textureSlot ); // t2 — 두 번째 목록에서는 0 번이었다
+    SW_EXPECT_EQUAL( 0u, frame._listQuad[2]._textureSlot ); // t1 — 두 번째 목록에서는 1 번이었다
+    frame.appendDrawList( clipped );
+    SW_ASSERT_EQUAL( size_t{ 2 }, frame._listBatch.size() );
+    SW_EXPECT_EQUAL( 3u, frame._listBatch[1]._firstQuad );
+    SW_EXPECT_TRUE( frame._listBatch[1]._bScissor == SW_TRUE );
+
+    sw::CanvasDrawList copy{};
+    copy.appendDrawList( frame );
+    SW_EXPECT_TRUE( copy.isSameContent( frame ) );
+    copy._listQuad[0]._color._x = 0.5f;
+    SW_EXPECT_FALSE( copy.isSameContent( frame ) );
+}
