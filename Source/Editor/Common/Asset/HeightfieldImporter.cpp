@@ -24,7 +24,6 @@ namespace sw::editor
         {
             static constexpr string_view kRawFolder         = "heightfields_raw";
             static constexpr string_view kImportedFolder    = "heightfields";
-            static constexpr string_view kImportedExtension = ".heightfield";
             static constexpr string_view kImportStampHeader = "SWHEIGHTFIELDIMPORT 1";
             static constexpr string_view kHoleSuffix        = "_holes";
             /** @brief 임포트 동작을 바꾸면 올린다 — 모든 스탬프가 어긋남이 되어 한 번 다시 임포트한다. */
@@ -156,7 +155,7 @@ namespace sw::editor
     string HeightfieldImporter::makeImportedHeightfieldPath( string_view rawPath )
     {
         using Internal = HeightfieldImporterInternal;
-        return AssetImportStampUtil::makeImportedPath( rawPath, Internal::kRawFolder, Internal::kImportedFolder, Internal::kImportedExtension );
+        return AssetImportStampUtil::makeImportedPath( rawPath, Internal::kRawFolder, Internal::kImportedFolder, HeightfieldData::kExtension );
     }
 
     uint64 HeightfieldImporter::computeSourceHash( string_view sourcePath )

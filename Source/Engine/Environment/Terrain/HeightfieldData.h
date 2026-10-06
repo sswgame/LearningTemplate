@@ -27,10 +27,11 @@ namespace sw
      */
     struct SW_API HeightfieldData
     {
-        static constexpr uint32 kMagic         = FourCcUtil::make( "SWHF" );
-        static constexpr uint32 kVersion       = 1u;
-        static constexpr uint32 kFlagHoleMask  = 1u;
-        static constexpr uint32 kMaxResolution = 8193u;
+        static constexpr uint32      kMagic         = FourCcUtil::make( "SWHF" );
+        static constexpr string_view kExtension     = ".heightfield";
+        static constexpr uint32      kVersion       = 1u;
+        static constexpr uint32      kFlagHoleMask  = 1u;
+        static constexpr uint32      kMaxResolution = 8193u;
 
         vector<uint16> _listHeight;   ///< N × N, 인덱스 = z × N + x
         vector<uint8>  _listHoleCell; ///< (N−1) × (N−1), 비었으면 구멍이 없다

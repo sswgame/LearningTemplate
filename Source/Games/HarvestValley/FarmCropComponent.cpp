@@ -3,6 +3,7 @@
 #include "Games/HarvestValley/FarmCropComponent.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -83,7 +84,7 @@ namespace sw
 
     string FarmCropComponent::makeModelPath( const utf8* pName )
     {
-        return string( "game/harvestvalley/models/" ) + pName + ".mesh";
+        return string( "game/harvestvalley/models/" ) + pName + string( MeshAssetFormat::kExtension );
     }
 
     void FarmCropComponent::onTick( float32 deltaTime )

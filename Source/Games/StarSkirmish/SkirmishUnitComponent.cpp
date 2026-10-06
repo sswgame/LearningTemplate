@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -94,7 +95,7 @@ namespace sw
 
     string SkirmishUnitComponent::makeModelPath( const utf8* pName )
     {
-        return string( "game/starskirmish/models/" ) + pName + ".mesh";
+        return string( "game/starskirmish/models/" ) + pName + string( MeshAssetFormat::kExtension );
     }
 
     void SkirmishUnitComponent::onTick( float32 deltaTime )

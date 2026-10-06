@@ -88,7 +88,7 @@ namespace sw
     {
         Uuid   result{};
         string path = FileUtil::normalizePath( relativePath );
-        if ( path.empty() || FileUtil::hasExtension( path, ".meta" ) )
+        if ( path.empty() || FileUtil::hasExtension( path, path::kMetaExtension ) )
             return result;
 
         // **리소스 루트 밖의 절대 경로에는 식별자를 주지 않는다**(null GUID). 그런 경로(테스트의 임시 프리팹, 사용자가 연 바깥 파일)에
@@ -165,7 +165,7 @@ namespace sw
     bool AssetDatabase::registerExisting( string_view relativePath )
     {
         string path = FileUtil::normalizePath( relativePath );
-        if ( path.empty() || FileUtil::hasExtension( path, ".meta" ) )
+        if ( path.empty() || FileUtil::hasExtension( path, path::kMetaExtension ) )
             return false;
 
         Uuid guid{};
@@ -223,7 +223,7 @@ namespace sw
             BLOCK( "Filter and Normalize Path" )
             {
                 const string name = FileUtil::getFileNamePart( filePath );
-                if ( FileUtil::hasExtension( name, ".meta" ) )
+                if ( FileUtil::hasExtension( name, path::kMetaExtension ) )
                     continue;
 
                 const string abs = FileUtil::normalizeSeparators( filePath );

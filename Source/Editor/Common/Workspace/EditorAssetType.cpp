@@ -9,6 +9,13 @@
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImporter.h"
 
+#include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/Rig/RigAsset.h"
+#include "Engine/Animation/Skeleton.h"
+#include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Environment/Terrain/HeightfieldData.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Resource/AssetFormat.h"
 
 #include <IconsFontAwesome6.h>
@@ -44,16 +51,16 @@ namespace sw::editor
         constexpr string_view kArrSpriteImageExt[]     = { ".png", ".jpg", ".jpeg", ".dds", ".tga" };
         constexpr string_view kArrSequenceSuffix[]     = { ".seq.json", ".seq" };
         constexpr string_view kArrTileMapSuffix[]      = { ".tilemap.xml", ".tilemap" };
-        constexpr string_view kArrMeshExt[]            = { ".mesh" };
-        constexpr string_view kArrSkeletonSuffix[]     = { ".skeleton.json" };
-        constexpr string_view kArrRigSuffix[]          = { ".rig.json" };
-        constexpr string_view kArrAnimClipExt[]        = { ".animclip" };
-        constexpr string_view kArrFractureExt[]        = { ".fracture" };
+        constexpr string_view kArrMeshExt[]            = { MeshAssetFormat::kExtension };
+        constexpr string_view kArrSkeletonSuffix[]     = { Skeleton::kExtension };
+        constexpr string_view kArrRigSuffix[]          = { RigAsset::kExtension };
+        constexpr string_view kArrAnimClipExt[]        = { AnimClip::kExtension };
+        constexpr string_view kArrFractureExt[]        = { FractureAsset::kExtension };
         constexpr string_view kArrModelSourceExt[]     = { ".glb", ".gltf", ".vrm" }; ///< `models_raw/` 의 원본 — 임포트하는 것이 리로드다
         constexpr string_view kArrHeightfieldRawExt[]  = { ".png", ".r16" };          ///< `heightfields_raw/` 의 원본 · 구멍 마스크 — 임포트하는 것이 리로드다
-        constexpr string_view kArrHeightfieldExt[]     = { ".heightfield" };
-        constexpr string_view kArrLocalizationSuffix[] = { ".strings.json", ".translation.json", ".locproject.json" }; ///< 올린 프로젝트를 다시 읽는다(`LocalizationManager`)
-        constexpr string_view kArrModuleDataSuffix[]   = { ".interactions.xml", ".elements.xml" };                     ///< 모듈이 올린 데이터 표 캐시(GameFramework 상호작용 · 원소 규칙 표)
+        constexpr string_view kArrHeightfieldExt[]     = { HeightfieldData::kExtension };
+        constexpr string_view kArrLocalizationSuffix[] = { SourceStringTable::kExtension, TranslationTable::kExtension, LocalizationProject::kExtension }; ///< 올린 프로젝트를 다시 읽는다(`LocalizationManager`)
+        constexpr string_view kArrModuleDataSuffix[]   = { ".interactions.xml", ".elements.xml" };                                                         ///< 모듈이 올린 데이터 표 캐시(GameFramework 상호작용 · 원소 규칙 표)
         /**
          * @struct AssetMatchRow
          * @brief 경로 판정 규칙 한 줄입니다 — 어느 종류인지, 그리고 핫 리로드가 그 파일을 어떻게 다시 읽는지.

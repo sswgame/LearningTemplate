@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -126,7 +127,7 @@ namespace sw
 
     string NileBuildingComponent::makeModelPath( const utf8* pName )
     {
-        return string( "game/nilecity/models/" ) + pName + ".mesh";
+        return string( "game/nilecity/models/" ) + pName + string( MeshAssetFormat::kExtension );
     }
 
     void NileBuildingComponent::onTick( float32 deltaTime )
