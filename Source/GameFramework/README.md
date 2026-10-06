@@ -316,6 +316,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       `mail.claim/<우편 토큰>` 이 두 기기 동시 수령 · 응답 유실에도 원장 한 번, 상한을 넘으면 우편이 남는다. 모두 받기는 16 통까지 우편마다 커밋, 지우기는 받았거나 첨부 없는 것만,
       만료 쓸기는 시각 순 색인으로 버림(맡김 → 소각) · 돌려줌(맡김 → 보낸 계정, 상한 무시) · 발행 재원은 지우기만, 캠페인은 목록 첫 쪽 맨 앞에), 서비스 `MailboxService`
       (IOnlineService 영역 kMailbox + `submitCall`, 주기 쓸기 · 캠페인 다시 읽기 일, 지표 `mailbox_expired_total{action}`). 시험: `MailboxTest`.
+    - `Admin`(`GF_Admin`, Client · Server — 운영 도구 · 에디터만 의존, 플레이어 게임은 의존하지 않는다): GM 와이어(`AdminProtocol.h` — 메서드 · 권한 등급 넷
+      `Viewer` < `Support` < `Operator` < `Super` · 명령별 필요 등급 `getRequiredRole` · `AdminResult` · 요청/응답 한 형식), 클라이언트(`AdminClient` — 바꾸는 명령은 멱등 키).
+    - `Server/Admin`(`GF_Server_Admin`, Server): GM 저장 논리(`AdminStoreLogic` — 등급(`admin_role`)을 명령마다 저장소에서 읽고, 바꾸는 명령은 멱등 기록(범위 `gm.<id>`)을 먼저 보고
+      효과(원장 분개 · 제재 레코드 · 우편 · 일괄 우편 · 캠페인 · 등급)와 감사 줄과 멱등 기록을 한 트랜잭션에 — 거절 · 커밋 실패면 감사 줄도 없다. 메모(티켓) 필수, 회수는 음수 금지 ·
+      환불 회수(`_bRefund`)만 빚 허용, 자기 등급 변경 금지, 일괄 우편은 계정마다 배치 키라 이어 하기에 중복이 없다, 첫 관리자 `seedRole`), 서비스 `AdminService`(IOnlineService
+      영역 kAdmin + `submitCall`, 조회는 계정 창구로 표시 이름 · 접속 여부, 정지 · 영구 정지가 새로 걸리면 `IAccountSessionControl` 로 세션 끊기). GM 에디터 패널은 백로그
+      (에디터 확장 지점 뒤). 시험: `AdminServiceTest`.
   - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
       연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,
