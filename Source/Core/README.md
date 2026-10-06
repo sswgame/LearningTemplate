@@ -28,6 +28,13 @@
 -  `Process::terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불러도 된다(pid 는 원자). 자식은 출력 파이프 하나만 물려받는다(남의 핸들 · 서술자 상속 없음). 기다리지 않는 실행은 `Process::launchDetached`.
 - **Compression/**: `ICompressionCodec` · `CompressionCodecRegistry` · `CompressionStream` · `NullCompressionCodec` · `RleCompressionCodec`
   (zlib · zstd · LZ4 코덱은 외부 라이브러리를 쓰므로 `Engine/Compression` 에 있다)
+  - 스트림은 28 바이트 머리(`CompressionHeader` — 'SWCS' · 판 · 코덱 · 크기 둘 · FNV-1a 체크섬)로 시작하고 지금 판만 읽는다.
+    `CompressionCodecType` 값은 디스크에 실리므로 새 코덱은 뒤에 덧붙이기만 한다(목록 밖 알고리즘은 `Custom`).
+  - 레지스트리는 엔진 서비스 하나(`engine::getCompressionCodecRegistry()`)이고 `CompressionCodecRegistry::setActive` 로 Core 의 슬롯에 걸린다.
+    슬롯이 비면(Core 만 링크하는 도구) 스트림은 내장 코덱(None · RLE)만 쓴다. 외부 코덱은 `EngineCompressionCodecUtil::registerAll` 이 한 번에 올린다.
+  - 주의: 로드 가능한 모듈이 코덱을 등록했으면 그 모듈의 shutdown 에서 `unregisterCodec` 한다 — 레지스트리는 `Engine.dll` 에 살아 모듈보다 오래 간다.
+  - 리소스 팩의 압축 enum(`PackCompressionType`)은 따로인 디스크 형식이다. `PackCompressionUtil::kArrCodecMapping` 표 한 곳에서 옮기고,
+    두 enum 을 `static_cast` 로 오가지 않는다.
 - **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
   얹어, 싱글 게임은 그 키트를 링크하지 않는다.
   폴더가 층이다 — 뿌리(`NetTypes` · `BitStream`) ← `Transport/`(전송 · 루프백 · UDP · 회선 흉내) · `Security/`(암호 창구 `INetSecurityProvider` — AEAD · X25519 · HKDF · Argon2id · SHA-256 · 서명 RS256/ES256(확인 · 서명 · 키 쌍) · 메모리 TLS 세션, 구현은 Engine 의 OpenSSL ·

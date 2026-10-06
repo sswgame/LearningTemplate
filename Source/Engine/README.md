@@ -81,6 +81,8 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Resource/**: AssetDatabase · AssetManager · ResourceUtil · ResourcePackManager (VFS .pack) · AssetStreamingQueue · AssetLoadProfiler
   (팩 리더는 위치 지정 읽기라 여러 스레드가 잠금 없이 읽고 — 매니저는 리더를 찾는 동안만 잠근다 — `readFileAsync` 로 `AsyncFileIo` 에 구간 읽기를 걸어 해제 · CRC 를 태스크 워커에서 한다.
   스트리밍 큐의 바이트 요청은 `ResourceUtil::readBinaryResourceAsync` 로 간다)
+  - **스트리밍 큐(`AssetStreamingQueue`)는 호스트 전용 서비스(`HostOnly`)다** — `EngineLoop` 의 기동 단계가 만들고 내리며 게임 모듈에는 보이지 않는다.
+    완료 콜백은 엔진 루프가 메인 스레드에서 프레임마다 내보낸다(`update()`). 값으로 받으려면 `requestAssetFuture`.
   - **에셋 로드 시간은 `AssetLoadScope` 로 잰다**(`AssetLoadProfiler` — 종류별 수 · 바이트 · IO / 해석 / GPU 올리기 시간 · 가장 긴 로드 · 비동기(워커 스레드)
     · 실패, 가장 느린 16 개, 프레임 프로파일러 구간 `Asset.<종류>.<단계>` · `Asset.Bytes`). 텍스처 · 메시 · 머티리얼 · 프리팹 · 씬 로더가 연다 — 새 로더도
     `AssetLoadScope scope( "Kind", path )` → `beginPhase` → `setBytes` → `setSucceeded`(안 부르면 실패). `-gv_assetLoadProfile=0` 은 끄고,
