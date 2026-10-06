@@ -24,10 +24,16 @@ kKitRoot = kRepositoryRoot / "Source" / "GameFramework" / "Kits"
 _kLinkSharedKitRe = re.compile(r"sw_linkSharedKit\(\s*(\w+)\s+(\w+)\s*\)")
 
 
+def readCmakeMinimumLineInternal() -> str:
+    """루트 CMakeLists 의 `cmake_minimum_required` 줄 — `cmake -P` 스크립트도 프로젝트와 같은 정책으로 돈다(없으면 정책이 OLD 라 모듈이 구성을 세운다)."""
+    text = (kRepositoryRoot / "CMakeLists.txt").read_text(encoding="utf-8")
+    return re.search(r"^cmake_minimum_required\([^)]*\)", text, re.MULTILINE).group(0)
+
+
 def runOrderScriptInternal(listManifest: list[Path], outputPath: Path) -> subprocess.CompletedProcess:
     """매니페스트들을 읽고 Kit 폴더 순서를 `outputPath` 에 한 줄씩 쓰는 CMake 스크립트를 돌립니다."""
     scriptPath = outputPath.with_suffix(".cmake")
-    listLine = [f'include("{(kRepositoryRoot / "cmake/Engine/ModuleManifest.cmake").as_posix()}")']
+    listLine = [readCmakeMinimumLineInternal(), f'include("{(kRepositoryRoot / "cmake/Engine/ModuleManifest.cmake").as_posix()}")']
     listLine += [f'sw_readModuleManifest("{manifest.as_posix()}")' for manifest in listManifest]
     listLine += ["sw_getModuleDirectoriesOfKind(Kit listDirectory)",
                  'list(JOIN listDirectory "\\n" text)',

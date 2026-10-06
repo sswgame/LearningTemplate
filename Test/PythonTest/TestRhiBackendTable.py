@@ -11,6 +11,7 @@ RHI 백엔드 표(Config/Engine/CookContract.json rhi_backends)의 CMake 쪽 —
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -21,12 +22,19 @@ from pathlib import Path
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 
 
+def readCmakeMinimumLineInternal() -> str:
+    """루트 CMakeLists 의 `cmake_minimum_required` 줄 — `cmake -P` 스크립트도 프로젝트와 같은 정책으로 돈다(없으면 정책이 OLD 라 모듈이 구성을 세운다)."""
+    text = (kRepositoryRoot / "CMakeLists.txt").read_text(encoding="utf-8")
+    return re.search(r"^cmake_minimum_required\([^)]*\)", text, re.MULTILINE).group(0)
+
+
 def runResolveInternal(folder: Path, backendText: str, platform: str, listPlatformOfDx12: list[str]) -> subprocess.CompletedProcess:
     """생성기로 표를 만들고, 매니페스트 플랫폼을 꾸며 `sw_resolveShippingRhiBackend` 를 부르는 CMake 스크립트."""
     headerPath, cmakePath = folder / "CookContract.gen.h", folder / "CookContract.cmake"
     subprocess.run([sys.executable, str(kRepositoryRoot / "Scripts/generate/GenerateCookContract.py"), str(headerPath), str(cmakePath)],
                    check=True, capture_output=True)
-    listLine = [f'include("{cmakePath.as_posix()}")',
+    listLine = [readCmakeMinimumLineInternal(),
+                f'include("{cmakePath.as_posix()}")',
                 f'include("{(kRepositoryRoot / "cmake/Engine/RhiBackends.cmake").as_posix()}")',
                 f"set(sw_platform_name {platform})"]
     for name in ("RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL"):
