@@ -216,7 +216,7 @@ def runClangFormatBatch(files: Sequence[Path | str],
     clangFormatExe = clangFormatPath or resolveClangFormat()
     if not clangFormatExe:
         sys.stderr.write(
-            "[RunClangFormat] clang-format을 찾을 수 없습니다. "
+            "[FormatClangFormat] clang-format을 찾을 수 없습니다. "
             "'py -3 Scripts/setup/SetupEnvironment.py'를 먼저 실행해주세요.\n"
         )
         return 1

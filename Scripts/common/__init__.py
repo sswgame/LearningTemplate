@@ -18,6 +18,17 @@ Scripts/common package
   - TranslationUnits: 컴파일 DB 에서 TU 를 골라 자식 프로세스로 훑는 자리 (RunClangTidy · RunBuildWarnings 공용)
   - ConfigCatalog: 설정 파일 목록(층 · 읽는 곳 · 언제 · 배포본 · 커밋) — docs/Config 생성과 CheckConfigReference 게이트가 같이 읽는다
   - ConfigReference: 설정 참조 문서(docs/Config)를 코드(PROPERTY · ConfigKeyDoc · 전역 변수 · ArgumentList · CMake 옵션)에서 만든다
+  - ToolLocator: 선언적 ToolSpec 기반 도구 탐색(환경 변수 · PATH · 검색 루트 · 다운로드)
+  - ClangFormat: clang-format 찾기 · 고정 버전 확인 · 설치(포맷하는 쪽과 설치하는 쪽이 같은 규칙)
+  - CodeText: C++ · HLSL 글에서 주석 · 리터럴을 같은 길이 공백으로 가리기(게이트 공용)
+  - AssetPipeline: 쿠커의 기본 출력 폴더(가장 최근에 구성된 build/*/Bin/<subDir>)
+
+패키지가 다시 내보내지 않는 모듈(쓰는 쪽이 `from common.X import …` 로 직접 부른다 — 위의 ConfigCatalog · ConfigReference 도):
+  - HeaderSelfContained: 헤더 하나를 혼자 컴파일해 보는 자리(자립 보고서 · 훅 게이트 · 전방 선언 후보)
+  - AppRun: 빌드된 App 한 판 — 출력 모으기 · 못 도는 백엔드 판정 · 프로파일 표 · 밖에서 자원 재기 · QA 공통 인자(qa/ · dev/)
+  - ImageMetrics: 스크린샷 비교 — PPM · PNG, 축소, 배경을 뺀 지표 · 허용 오차
+  - AssetValidation: 에셋 검증 규칙의 연산자들(Config/Editor/AssetValidationRules.json)
+  - XmlAssetMerge: XML 에셋 의미 비교 · 3-way 병합
 """
 
 from __future__ import annotations

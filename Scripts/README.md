@@ -18,6 +18,19 @@ CMake는 빌드만 담당하고, 도구 탐색·설정·보조 생성 및 코드
 규칙으로 훑으면 `qa/`, 사람과 git 이 부르는 에셋 비교 · 병합이면 `asset/`. 모두 `common/` 만 import 하고 서로는 부르지 않는다
 (`common` 은 위층을 부르지 않는다).
 
+**파일 이름의 앞머리가 폴더를 말한다** — 이름만 보고 무엇을 하는지(실패하는가 · 고쳐 쓰는가 · 찍기만 하는가) 안다.
+
+| 폴더 | 파일 이름 | 무엇 |
+| --- | --- | --- |
+| `lint/gate/` | `Check*` | `LintGate` |
+| `lint/selftest/` | `Check*AreAlive` · `Check*SelfTest` · `Check*`(린트를 보는 것) | `LintGate` |
+| `lint/fixer/` | `Format*` | `LintFixer`(조율자는 `kFixerSkipReason`) |
+| `lint/report/` | `Run*` | `LintReport` |
+| `generate/` | `Generate*` · `Cook*` | 빌드 · configure 가 부르는 생성기(`runGenerator`) |
+| `setup/` | `Setup*` · `Install*` · `Add*` | 외부 도구 찾기 · 설치(`__main__` 이 없는 파일은 라이브러리 — `HostTools`) |
+| `dev/` | 동사로 시작(`Run*` · `Compare*` · `Make*` · `Configure*` · `Sample*` …) | 사람이 가끔 — 시험 데이터를 만드는 것은 `Make*`(`generate/` 와 겹치지 않게) |
+| `qa/` | 명사(`GoldenImages` · `Soak` …) | App 을 돌려 견주기 |
+
 ```
 Scripts/
   ├── common/                         # [공용 계층] 다른 폴더는 여기만 import 한다
@@ -33,6 +46,12 @@ Scripts/
   │     ├── TranslationUnits.py       # 컴파일 DB 를 읽어 TU 를 골라 하나씩 돌리는 자리 (clang-tidy · 경고 스윕)
   │     ├── HeaderSelfContained.py    # 헤더 하나를 혼자 컴파일해 보는 자리 (자립 보고서 · 커밋 훅 게이트 · 전방 선언 후보 공용)
   │     ├── AppBinary.py              # 빌드된 App 을 찾고 헤드리스로 셰이더를 쿠킹하는 자리
+  │     ├── BuildTree.py              # 빌드 폴더 하나(build/<프리셋>) — --preset · --build-dir 고르기 · 컴파일 DB · CMakeCache · 짓지 않는 소스
+  │     ├── Process.py                # 자식 프로세스 한 창구(runProcess — UTF-8 디코딩, 못 띄움 · 시간 초과를 칸으로)
+  │     ├── GeneratedFile.py          # 생성 파일 쓰기(바뀌었을 때만) · CMake 값 · 생성기 진입점(runGenerator)
+  │     ├── CodeText.py               # C++ · HLSL 글에서 주석 · 리터럴을 같은 길이 공백으로 가리기(게이트 공용)
+  │     ├── ConfigCatalog.py          # 설정 파일 목록(층 · 읽는 곳 · 언제 · 배포본) — docs/Config 생성기와 CheckConfigReference 가 같이 읽는다
+  │     ├── ConfigReference.py        # 설정 참조 문서(docs/Config)를 코드에서 만든다
   │     ├── AppRun.py                 # App 한 판 — 출력 모으기 · 못 도는 백엔드 판정 · 프로파일 표 읽기 · 밖에서 메모리 · 핸들 재기(qa/ 셋이 쓴다)
   │     ├── AssetValidation.py        # 에셋 검증 규칙 — 규칙 표(Config/Editor/AssetValidationRules.json)의 `check` 이름이 고르는 연산자들
   │     ├── ImageMetrics.py           # 스크린샷 비교 — PPM · PNG 읽기/쓰기, 축소, 배경을 뺀 지표 · 잡음 바닥에서 정한 허용 오차
@@ -46,7 +65,7 @@ Scripts/
   │     ├── SetupLlvm.py              # LLVM/libclang 부트스트랩 (kLlvmToolSpec 적용)
   │     ├── SetupVcpkg.py             # vcpkg 부트스트랩 (kVcpkgToolSpec 적용)
   │     ├── SetupLinuxDevEnvironment.py # Linux · WSL 홈 디렉터리 설정
-  │     ├── HostTools.py              # MSVC, WinSDK, DXC, system include 탐색
+  │     ├── HostTools.py              # MSVC, WinSDK, DXC, system include 탐색 (라이브러리 — SetupEnvironment 가 쓴다)
   │     ├── InstallGitHooks.py        # Git pre-commit 훅 설치
   │     └── AddDefenderExclusions.py  # Windows Defender 빌드 폴더 예외 등록
   │
@@ -56,6 +75,8 @@ Scripts/
   │     ├── GenerateShippingHostDefaults.py # 런타임 JSON → Shipping 용 C++ 헤더
   │     ├── GeneratePackFormat.py     # PackFormat.json → C++ 헤더
   │     ├── GenerateCookContract.py   # CookContract.json → C++ X-매크로 헤더(RHI 백엔드 표 · 쿡 접미사 표)
+  │     ├── GenerateConfigReference.py # 설정 참조 문서(docs/Config) — 결과를 커밋한다, 낡음은 CheckConfigReference 가 본다
+  │     ├── GenerateThirdPartyNotices.py # 배포물의 서드파티 고지(vcpkg 매니페스트가 끌어오는 포트 전부)
   │     ├── GenerateCMakeConstants.py # Constants.py → CMake set() 목록
   │     ├── GenerateToolchainCMake.py # toolchain_config.json → CMake set() 목록
   │     ├── GenerateLintTargets.py    # lint/gate · selftest 폴더 → CMake 린트 타깃 · 테스트
@@ -86,6 +107,19 @@ Scripts/
   │     │     ├── CheckDelayLoadSites.py      # /DELAYLOAD 는 ModuleTargets.cmake 의 두 함수로만(지연 로드 첫 호출이 첫 float 인자를 망가뜨린다)
   │     │     ├── CheckResourceCasing.py      # 리소스 소문자 명명
   │     │     ├── CheckTextureFolders.py      # 런타임 textures/ 에는 DDS 만, 원본 이미지는 textures_raw/ 에만
+  │     │     ├── CheckClockReads.py          # std::chrono 시계가 아니라 MonotonicClock · Stopwatch · Deadline
+  │     │     ├── CheckConfigReference.py     # docs/Config 가 코드와 같은지 · 설정 파일이 모두 목록에 있는지
+  │     │     ├── CheckDuplicateTypeNames.py  # 같은 이름의 타입 정의(ODR)
+  │     │     ├── CheckEngineRootFiles.py     # Source/Engine 루트에는 기동 · 종료 배선 파일만
+  │     │     ├── CheckGameFrameworkLayers.py # GameFramework 기반 폴더 층 · 키트 의존 방향
+  │     │     ├── CheckGamePresets.py         # 게임마다 Config/Game/<게임>.json 이 있고 실제 팩 · 시작 씬을 가리키는지
+  │     │     ├── CheckKitNamespaces.py       # 키트를 섞을 때 부딪히는 이름 공간 · 소유
+  │     │     ├── CheckModuleTargets.py       # 모듈 대상(Client · Server)의 이름 · 의존 · include 방향
+  │     │     ├── CheckNamespaceBlocks.py     # 한 namespace 블록에 정의 하나 (고치기는 fixer/FormatNamespaceBlocks.py)
+  │     │     ├── CheckStdFilesystemIsolation.py # std::filesystem 은 Source/Core/File/Std 안에서만
+  │     │     ├── CheckThirdPartyIsolation.py # 감싼 서드파티의 헤더 · 링크가 백엔드 폴더 밖으로 새지 않는지
+  │     │     ├── CheckWellKnownConstants.py  # 잘 알려진 상수(π · √2 · 중력 · 해시 상수)를 집 밖에서 리터럴로
+  │     │     ├── CheckWin32WideCalls.py      # Win32 API 는 W 판 이름으로
   │     │     ├── CheckAssetRules.py          # 에셋 검증 규칙의 오류 심각도(이름 · 텍스처 · 메시 예산 · 참조 · 머티리얼 · 컴포넌트 · id · guid · 팩 규칙)
   │     │     ├── CheckTargetMacros.py        # 플랫폼 · 아키텍처 · 컴파일러를 SW_* 매크로로만 묻기 (컴파일러 내장 매크로 금지)
   │     │     ├── CheckX11Isolation.py        # X11 헤더는 X11 구현 .cpp 에서만 · 뒤에 매크로 지우기 · 서드파티와 한 TU 에 두지 않기
@@ -103,7 +137,7 @@ Scripts/
   │     │     ├── FormatForwardDeclarations.py
   │     │     ├── FormatIncludeOrder.py       # include 순서 · 중복 (규칙은 gate/CheckIncludeOrder.py)
   │     │     ├── FormatNamespaceBlocks.py    # 정의마다 namespace 블록 (규칙은 gate/CheckNamespaceBlocks.py)
-  │     │     ├── RunClangFormat.py           # clang-format 적용 (`py -3 -m Scripts format`)
+  │     │     ├── FormatClangFormat.py        # clang-format 적용 (`py -3 -m Scripts format`)
   │     │     └── FormatModified.py           # 작업 트리 변경분에 위 픽서들 + clang-format
   │     ├── report/                   # 찍어 줄 뿐, 0 으로 끝난다 (`RunBuildWarnings.py --fail-on` 을 명시했을 때만 예외)
   │     │                             #   보고서 = `LintReport` 하위 클래스(`main = XxxReport.run`) — --root · --preset/--build-dir · --jobs · --filter · --out 은 기반이
@@ -115,6 +149,8 @@ Scripts/
   │     │     ├── RunForwardDeclarationCandidates.py # 전방 선언으로 바꿀 수 있는 include (`--apply` 는 고쳐 쓴다)
   │     │     ├── RunDuplicateCode.py         # 복사돼 있는 코드 블록 (C++ · `--language py` · `--language cmake`)
   │     │     ├── RunEngineLayerGraph.py      # Engine 폴더 간 include 그래프 · 강결합 묶음
+  │     │     ├── RunFolderFileCount.py       # 너무 큰 평면 폴더 · 파일 하나짜리 폴더
+  │     │     ├── RunRepeatedConstants.py     # 같은 뜻이 여러 곳에 따로 적힌 상수 · 리터럴
   │     │     └── RunBuildScriptInventory.py  # 빌드 스크립트 재고 — 죽은 CMake 함수 · 큰 CMake 파일 · 손 목록 · common 을 비켜 간 파이썬 호출
   │     └── selftest/                 # 코드가 아니라 **린트** 를 본다
   │           ├── CheckLintsAreAlive.py       # gate/ 를 훑어 각 게이트가 아직 무는지 확인
@@ -155,7 +191,7 @@ py -3 -m Scripts setup                # 개발 환경 및 도구체인 탐색/�
 py -3 -m Scripts cook --all           # 프리팹, 씬, 리소스 팩 일괄 쿠킹 (CookAssets)
 py -3 -m Scripts vcpkg                # vcpkg 탐색 및 부트스트랩 (SetupVcpkg)
 py -3 -m Scripts llvm                 # LLVM/Clang 탐색 및 설정 (SetupLlvm)
-py -3 -m Scripts format               # C++ 코드 clang-format 자동 포맷팅 (RunClangFormat) — 파일을 고르면 `--files a.cpp b.h`(게이트와 같은 철자)
+py -3 -m Scripts format               # C++ 코드 clang-format 자동 포맷팅 (FormatClangFormat) — 파일을 고르면 `--files a.cpp b.h`(게이트와 같은 철자)
 py -3 -m Scripts lint                 # Staged 파일 대상 사전 커밋 린트 검사 (PreCommitLint)
 py -3 -m Scripts docs                 # Doxygen API 레퍼런스 문서 생성 (GenerateDocs)
 py -3 -m Scripts test SceneTest.*     # 스위트 · 케이스 이름으로 테스트 실행 (RunTests)
@@ -183,7 +219,7 @@ staged 67 → 4, 73 → 18, 759 → 0, 442 → 40 개였다. 이 줄이기는 `s
 py -3 Scripts/setup/SetupEnvironment.py
 py -3 Scripts/generate/CookAssets.py --all
 py -3 Scripts/lint/gate/CheckEngineLayers.py
-py -3 Scripts/lint/fixer/RunClangFormat.py
+py -3 Scripts/lint/fixer/FormatClangFormat.py
 py -3 Scripts/generate/GenerateShippingHostDefaults.py build/Ninja-Shipping/generated/sw/config/ShippingHostDefaults.h  # 빌드가 읽는 자리(<빌드 폴더>/generated)
 ```
 

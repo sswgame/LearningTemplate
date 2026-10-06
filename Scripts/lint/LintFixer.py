@@ -11,7 +11,7 @@
 (줄끝을 보존하는 `newline=""` 로 통일했다 — 포맷터가 줄끝을 바꾸면 안 된다).
 
 대상 파일 고르기는 `addFileArguments` / `selectFixerTargetFiles` 로 따로 내놓는다. 픽서가 아닌
-`RunClangFormat` 도 같은 규칙으로 파일을 고르기 때문이다.
+`FormatClangFormat` 도 같은 규칙으로 파일을 고르기 때문이다.
 """
 
 from __future__ import annotations

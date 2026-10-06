@@ -157,7 +157,7 @@ guards the reduction with a throwaway git repository.
 `--check` and after a fix; the base owns target-file selection (`--files` — the gates' spelling and rule,
 `common.resolveFileArguments` — > `--all` > git-modified > everything), concurrency, byte-faithful IO (a file that is not UTF-8 is
 reported, never rewritten), and the exit code (`--check` + findings = `1`). Scripts that
-are not fixers but pick files the same way (`RunClangFormat.py`) use `addFileArguments` /
+are not fixers but pick files the same way (`FormatClangFormat.py`) use `addFileArguments` /
 `selectFixerTargetFiles` from the same module. Anything in `fixer/` that is not a fixer states why in
 `kFixerSkipReason` (`FormatModified.py` is an orchestrator, not a fixer).
 
