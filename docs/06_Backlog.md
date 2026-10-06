@@ -1305,6 +1305,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-7. 그래픽스 · RHI · 셰이더
 
+- **보기 모드 define 은 조명을 하는 모든 셰이더가 읽는다** — Unlit 은 toon 만 읽어 기본 파이프라인에서 Lit 과 픽셀 0 개 달랐다. 셰이더를 더하면
+  `binding.hlsli` 의 `SW_VIEWMODE_SKIPS_LIGHTING` 으로 조명을 가르고, 디퍼드는 G버퍼 알베도 알파(셰이딩 모델 `SW_GBUFFER_SHADING`)로 조명 패스에 넘긴다
+  (조명 패스는 머티리얼 PSO 가 아니라 뷰 모드 변형이 없다). `RenderPassGpuTest.UnlitViewModeChangesThePicture` 가 포워드 · 디퍼드를 본다.
 - **한 `FrameRenderer` 로 두 씬을 번갈아 그리면 옛 배치가 나온다** — 씬 빌더의 수집 캐시(프리미티브 집합 세대)는 씬마다가 아니라서, 다른 매니저의 같은 세대
   번호를 "그대로" 로 본다. 픽셀 비교 시험은 씬마다 렌더러를 둔다(`RenderPassGpuTest.SkinnedMeshFollowsPaletteLikeCpuSkinning`).
 - **Debug App 의 `--import-textures` 는 BC7 1024² 한 장에 20 분을 넘긴다**(CPU 압축기가 최적화 없이 돈다) — 색 칸 아틀라스(KayKit)는 BC1 규칙
