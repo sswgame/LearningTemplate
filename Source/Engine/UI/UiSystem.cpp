@@ -134,6 +134,7 @@ namespace sw
     UiSystem::UiSystem()
         : IModuleUnloadListener{}
         , _listScreen{}
+        , _listOffscreen{}
         , _documentCache{}
         , _styleSheetCache{}
         , _themeCatalog{}
@@ -236,6 +237,7 @@ namespace sw
         _focus.clearFocus();
         while ( _listScreen.empty() == false )
             destroyScreenAt( static_cast<uint32>( _listScreen.size() ) - 1 );
+        _listOffscreen.clear();
         _bPendingClose = SW_FALSE;
         _listReopenDocument.clear();
         _documentCache.setReloadedHandler( {} );
@@ -327,6 +329,7 @@ namespace sw
             for ( WidgetComponent* pComponent : _listWidgetComponent )
                 pComponent->updateWorldCanvas( layout, paint );
         }
+        updateOffscreenScreens();
     }
 
     UiScreenHandle UiSystem::pushScreen( unique_ptr<UiScreen> screen )
@@ -445,6 +448,15 @@ namespace sw
             if ( rebuildScreenFromDocument( *screen ) )
                 ++rebuiltCount;
         }
+        for ( OffscreenScreen& offscreen : _listOffscreen )
+        {
+            UiScreen& screen = *offscreen._screen;
+            if ( isDocumentUsing( screen._documentPath, documentPath ) && rebuildScreenFromDocument( screen ) )
+            {
+                rebuildStyleSet( screen, offscreen._theme );
+                ++rebuiltCount;
+            }
+        }
         if ( rebuiltCount > 0 )
             SW_LOG_INFO( "[Ui] Reloaded %# screen(s) for %#", rebuiltCount, documentPath );
     }
@@ -461,6 +473,106 @@ namespace sw
                 bUses = bUses || ( sheet != nullptr && sheet->_path == sheetPath );
             if ( bUses )
                 rebuildStyleSet( *screen );
+        }
+        for ( OffscreenScreen& offscreen : _listOffscreen )
+        {
+            if ( offscreen._screen->_styleSet == nullptr )
+                continue;
+            bool bUses = false;
+            for ( const shared_ptr<const UiStyleSheetAsset>& sheet : offscreen._screen->_styleSet->getSheets() )
+                bUses = bUses || ( sheet != nullptr && sheet->_path == sheetPath );
+            if ( bUses )
+                rebuildStyleSet( *offscreen._screen, offscreen._theme );
+        }
+    }
+
+    UiScreenHandle UiSystem::openOffscreenScreen( string_view documentPath, string_view targetPath )
+    {
+        UiScreenDesc          desc{};
+        vector<UiBindingDesc> listBinding{};
+        vector<string>        listStyleSheet{};
+        unique_ptr<Widget>    root = instantiateDocument( documentPath, desc, listBinding, listStyleSheet );
+        if ( root == nullptr )
+            return kInvalidUiScreenHandle;
+        OffscreenScreen& offscreen = _listOffscreen.emplace_back();
+        offscreen._screen          = sw::make_unique<UiScreen>( desc, std::move( root ) );
+        offscreen._targetPath      = hashed_string( targetPath );
+        UiScreen& screen           = *offscreen._screen;
+        screen._documentPath       = FileUtil::normalizePath( documentPath );
+        screen._listBinding        = std::move( listBinding );
+        screen._listStyleSheet     = std::move( listStyleSheet );
+        screen._handle             = _nextScreenHandle++;
+        rebuildStyleSet( screen );
+        return screen._handle;
+    }
+
+    void UiSystem::closeOffscreenScreen( UiScreenHandle handle )
+    {
+        for ( size_t index = 0; index < _listOffscreen.size(); ++index )
+        {
+            if ( _listOffscreen[index]._screen->_handle != handle )
+                continue;
+            _listOffscreen.erase( _listOffscreen.begin() + static_cast<ptrdiff_t>( index ) );
+            return;
+        }
+    }
+
+    UiScreen* UiSystem::findOffscreenScreen( UiScreenHandle handle ) const
+    {
+        for ( const OffscreenScreen& offscreen : _listOffscreen )
+        {
+            if ( offscreen._screen->_handle == handle )
+                return offscreen._screen.get();
+        }
+        return nullptr;
+    }
+
+    void UiSystem::setOffscreenView( UiScreenHandle handle, const UiViewport& viewport, float32 textScale, const hashed_string& theme )
+    {
+        for ( OffscreenScreen& offscreen : _listOffscreen )
+        {
+            if ( offscreen._screen->_handle != handle )
+                continue;
+            offscreen._viewport  = viewport;
+            offscreen._textScale = textScale > 0.0f ? textScale : 1.0f;
+            if ( offscreen._theme != theme )
+            {
+                offscreen._theme = theme;
+                rebuildStyleSet( *offscreen._screen, theme );
+            }
+            return;
+        }
+    }
+
+    void UiSystem::updateOffscreenScreens()
+    {
+        for ( OffscreenScreen& offscreen : _listOffscreen )
+        {
+            const UiViewport& viewport = offscreen._viewport;
+            if ( viewport._physicalSize._x <= 0.0f || viewport._physicalSize._y <= 0.0f )
+                continue;
+            UiScreen&   screen = *offscreen._screen;
+            WidgetTree& tree   = screen.getTree();
+            if ( screen._styleSet != nullptr )
+                (void)UiStylePass::update( tree, *screen._styleSet, false );
+            // 화면 UI 와 같은 문맥에 이 화면의 뷰포트 · 글자 배율만 바꿔 쓴다(배율 · 글자 배율이 바뀌면 루트부터 다시 잰다 — 트리가 지난 값을 든다).
+            UiLayoutContext layout = makeLayoutContext();
+            layout._viewportSize   = viewport._size;
+            layout._safeInsets     = viewport._safeInsets;
+            layout._uiScale        = viewport._uiScale;
+            layout._textScale      = offscreen._textScale;
+            (void)UiLayoutPass::update( tree, layout );
+            UiPaintContext paint = makePaintContext();
+            paint._uiScale       = viewport._uiScale;
+            paint._textScale     = offscreen._textScale;
+            offscreen._scratch.clear();
+            offscreen._scratch._targetSize = viewport._physicalSize;
+            CanvasPainter painter( offscreen._scratch, viewport._uiScale );
+            (void)UiPaintPass::paint( tree, paint, painter, offscreen._scratch );
+            if ( offscreen._scratch.isSameContent( offscreen._canvas ) && offscreen._scratch._targetSize == offscreen._canvas._targetSize )
+                continue;
+            std::swap( offscreen._canvas, offscreen._scratch );
+            ++offscreen._revision;
         }
     }
 
@@ -582,6 +694,8 @@ namespace sw
         _themeName = name;
         for ( const unique_ptr<UiScreen>& screen : _listScreen )
             rebuildStyleSet( *screen );
+        for ( OffscreenScreen& offscreen : _listOffscreen )
+            rebuildStyleSet( *offscreen._screen, offscreen._theme );
         return true;
     }
 
@@ -600,10 +714,11 @@ namespace sw
         }
     }
 
-    void UiSystem::rebuildStyleSet( UiScreen& screen )
+    void UiSystem::rebuildStyleSet( UiScreen& screen, const hashed_string& themeName )
     {
         vector<shared_ptr<const UiStyleSheetAsset>> listSheet;
-        const UiThemeDesc*                          pTheme = _themeName.empty() ? nullptr : _themeCatalog.findTheme( _themeName );
+        const hashed_string&                        theme  = themeName.empty() ? _themeName : themeName;
+        const UiThemeDesc*                          pTheme = theme.empty() ? nullptr : _themeCatalog.findTheme( theme );
         if ( pTheme != nullptr )
             appendStyleSheets( pTheme->_listStyleSheet, listSheet );
         appendStyleSheets( screen._listStyleSheet, listSheet );
@@ -1287,6 +1402,18 @@ namespace sw
     {
         for ( const WidgetComponent* pComponent : _listWidgetComponent )
             pComponent->appendWorldCanvas( inoutListTarget );
+        // 오프스크린 화면(에디터 미리보기) — 불투명 바탕으로 지운다(ImGui 이미지가 알파를 섞지 않게).
+        for ( const OffscreenScreen& offscreen : _listOffscreen )
+        {
+            if ( offscreen._viewport._physicalSize._x <= 0.0f || offscreen._viewport._physicalSize._y <= 0.0f )
+                continue;
+            CanvasTargetDrawList& target = inoutListTarget.emplace_back();
+            target._targetPath           = offscreen._targetPath;
+            target._list                 = offscreen._canvas;
+            target._list._targetSize     = offscreen._viewport._physicalSize;
+            target._clearColor           = float4{ 0.06f, 0.07f, 0.09f, 1.0f };
+            target._contentRevision      = offscreen._revision;
+        }
     }
 
     void UiSystem::syncThemeSetting()

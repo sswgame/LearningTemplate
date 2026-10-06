@@ -492,3 +492,12 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   태그를 든 글만 다시 풀고 잰다. 견본 `engine/ui/parts/inputhint.ui.xml` = `[action=UI.Accept] Select`.
 - **목표 마커**: 화면 마커(`WidgetComponent` Screen)가 가장자리에 붙으면 `_edgeAngle`(화면 위 = 0, 시계 방향) — 파생은 `onMarkerPlaced` 에서 방향 막대를 돌리고
   거리 글을 쓴다(GF `ObjectiveMarkerComponent`).
+
+## 오프스크린 화면 (에디터 UI 미리보기)
+
+- `UiSystem::openOffscreenScreen( 문서, 렌더 텍스처 경로 )` 는 문서를 화면 스택 **밖**에서 짓는다 — 입력 · 포커스 · 활성 화면 · 게임 정지와 무관하다.
+  `setOffscreenView( 핸들, 뷰포트, 글자 배율, 테마 )` 로 이 화면에만 뷰포트(UI 크기 · 배율 · 안전 영역)와 테마를 건다(게임 UI 의 테마는 그대로).
+- `update` 끝에 화면마다 스타일 → 레이아웃 → 그리기를 자기 뷰포트로 돌리고, 그리기 목록은 `collectWorldCanvases` 가 렌더 텍스처 대상(불투명 바탕)으로 낸다 —
+  렌더러가 월드 위젯과 같은 길로 그리고 셰이더 읽기 상태로 둔다. 렌더 텍스처 크기는 처음 만들 때 정해지므로 크기마다 경로를 바꾼다.
+- 문서 · 스타일 시트 핫 리로드는 스택의 화면과 같은 길(`onDocumentReloaded` · `onStyleSheetReloaded`)로 미리보기도 다시 짓는다.
+- 에디터 `UiPreviewPanel` 이 첫 사용처 — 그 텍스처를 ImGui 이미지로 보이고 레이아웃 사각형 · 고른 위젯 · 안전 영역은 ImGui 선으로 얹는다(캔버스를 바꾸지 않는다).

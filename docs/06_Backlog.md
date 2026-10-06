@@ -153,6 +153,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-4. 에디터
 
+- **UI 미리보기 패널의 남은 것(runtime-ui 8-5 뒤, `Editor/Panels/UiPreviewPanel`).** (1) 언어 고르기(의사 문화권 `qps-ploc` · `qps-plocm` 포함) — 문화권이 전역이라
+  미리보기 화면에만 거는 길(화면별 `LocalizationManager` 출처)이 필요하다. (2) 고른 위젯의 PROPERTY 를 인스펙터로 고치고 `UiDocumentWriter` 로 저장(되돌리기 —
+  `CommandStack`) — 지금은 이름 · 사각형만 보인다. (3) 미리보기 안 입력 흉내(마우스 · 탐색 방향). (4) 콘텐츠 브라우저에서 `*.ui.xml` 두 번 누르면 이 패널로 —
+  에셋 종류 `UiDocument` 의 열기 동작. (5) UI 문서 디자이너(팔레트 → 끌어 놓기 · 슬롯 손잡이) — 미리보기 패널 위에.
 - **설정 브라우저 패널**(기능 로드맵) — `docs/Config/ConfigReference.json`(생성 메타데이터: 파일 · 칸 · 타입 · 기본값 · 범위 · 설명)을 읽어 `Config/` · 팩 설정 파일을
   찾아 열고 칸을 인스펙터처럼 고치는 창(언리얼 Project Settings · `UDeveloperSettings` 자리). 고친 파일은 `ConfigManager::reloadConfigFile` 로 다시 읽고,
   기본값과 같은 값은 파일에서 지운다(설정 파일에는 다른 값만).

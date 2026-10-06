@@ -42,7 +42,8 @@
   `ProfilerScopeHistory`, "Open Tracy" 는 `Common/Commands/EditorTracyLauncher` 가 같은 판 Tracy 뷰어를 띄워 localhost 에 붙인다),
   Sequencer, Animation Graph, Animation Rewind(기록된 포즈 · 상태를 시간 막대로 훑기 — 훑으면 PIE 를 멈춘다), Dialogue Graph, Prefab Editor, Tile Map,
   Sprite Clip, User Settings(플레이어 옵션을 메뉴 바인딩 API 로 바꿔 보는 창 —
-  셀프 시험 `userSettings.panelDrawsEveryTab`)
+  셀프 시험 `userSettings.panelDrawsEveryTab`), UI Preview(런타임 UI 문서를 게임 UI 와 따로 오프스크린 화면으로 지어 보는 창 — 해상도 견본 · UI/글자 배율 ·
+  안전 영역 · 테마 · 레이아웃 사각형 · 위젯 트리 선택, 판단은 ImGui 없는 `UiPreviewLogic` — EditorTest `UiPreviewLogicTest`)
   - `Panels/Inspector/`: 프로퍼티·컴포넌트 인스펙터 확장 — 컴포넌트 확장은 `<Component>Inspector.cpp` 하나씩
 - **Viewport/**: 뷰포트 클라이언트, 툴바, 에디터 카메라(`EditorCamera`),
   화면 투영(`EditorViewportProjection`), 컴포넌트 시각화 등록부(`EditorViewportVisualizer`),

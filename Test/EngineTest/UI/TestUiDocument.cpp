@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Reflection/ReflectionCast.h"
@@ -519,4 +520,43 @@ SW_TEST_CASE( UiDocumentTest, UserWidgetChangeReloadsParents )
     SW_ASSERT_NOT_NULL( pLabel );
     SW_EXPECT_STREQ( "New", pLabel->getText().c_str() );
     SW_EXPECT_EQUAL( otherId, pOther->getTree().findWidgetByName( "Other" )->getId() );
+}
+
+/**
+ * @brief [UiDocumentTest] 오프스크린 화면(에디터 미리보기)은 스택 밖 — 활성 화면 · 화면 수와 무관하게 자기 렌더 텍스처 대상(뷰포트 물리 크기)으로 그려지고,
+ *        문서를 다시 읽으면 같이 다시 짓는다
+ * @details 변이: `UiSystem::onDocumentReloaded` 의 오프스크린 줄을 빼면 다시 읽은 뒤에도 옛 위젯 번호가 남아 진다.
+ */
+SW_TEST_CASE( UiDocumentTest, OffscreenScreenDrawsToItsTargetAndReloads )
+{
+    UiDocumentFixture    fixture;
+    sw::UiDocumentCache& cache = fixture._ui.getDocumentCache();
+    cache.registerMemoryDocument( "test/offscreen.ui.xml", UiReloadTestUtil::makeReloadDocument( false, "Old" ) );
+    const sw::UiScreenHandle handle  = fixture._ui.openOffscreenScreen( "test/offscreen.ui.xml", "rendertarget/test_preview" );
+    sw::UiScreen*            pScreen = fixture._ui.findOffscreenScreen( handle );
+    SW_ASSERT_NOT_NULL( pScreen );
+    SW_EXPECT_EQUAL( 0u, fixture._ui.getScreenCount() );
+    SW_EXPECT_TRUE( fixture._ui.getActiveScreen() == nullptr );
+    sw::UiViewport viewport{};
+    viewport._size         = sw::float2{ 640.0f, 360.0f };
+    viewport._physicalSize = sw::float2{ 1280.0f, 720.0f };
+    viewport._uiScale      = 2.0f;
+    fixture._ui.setOffscreenView( handle, viewport, 1.0f, sw::hashed_string{} );
+    fixture._ui.update( 0.016f, sw::UiViewport{
+                                    sw::float2{ 1920.0f, 1080.0f }
+    } );
+    sw::vector<sw::CanvasTargetDrawList> listTarget;
+    fixture._ui.collectWorldCanvases( listTarget );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listTarget.size() ) );
+    SW_EXPECT_STREQ( "rendertarget/test_preview", listTarget[0]._targetPath.c_str() );
+    SW_EXPECT_NEAR_EQUAL( 1280.0f, listTarget[0]._list._targetSize._x, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 640.0f, pScreen->getTree().getRoot()->getGeometry()._size._x, 1e-3f ); // 루트 = 미리보기 뷰포트(UI 단위)
+
+    const sw::WidgetId oldId = pScreen->getTree().findWidgetByName( "B" )->getId();
+    cache.registerMemoryDocument( "test/offscreen.ui.xml", UiReloadTestUtil::makeReloadDocument( true, "New" ) );
+    cache.reload( "test/offscreen.ui.xml", nullptr );
+    SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "B" )->getId() != oldId );
+    SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "C" ) != nullptr );
+    fixture._ui.closeOffscreenScreen( handle );
+    SW_EXPECT_TRUE( fixture._ui.findOffscreenScreen( handle ) == nullptr );
 }

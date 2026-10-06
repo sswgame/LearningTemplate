@@ -191,6 +191,21 @@ namespace sw
         /** @brief World 위젯 컴포넌트의 렌더 텍스처 목록을 덧붙입니다(`EngineLoop` 가 렌더 패킷 캔버스의 대상 목록에 — 렌더러가 장면 앞에서 그린다). */
         void collectWorldCanvases( vector<CanvasTargetDrawList>& inoutListTarget ) const;
 
+        // --- 오프스크린 화면(에디터 UI 미리보기) -----------------------------------------------
+        /**
+         * @brief 문서 @p documentPath 를 화면 스택 **밖**에서 지어 렌더 텍스처 @p targetPath(`rendertarget/...`)에 그립니다 — 입력 · 포커스 없음, 게임 UI 와 섞이지 않는다.
+         * @details 스타일 · 테마 · 핫 리로드는 스택의 화면과 같은 길이다(문서를 고치면 미리보기도 다시 짓는다). 그리기 목록은 `collectWorldCanvases` 가 렌더 텍스처 대상으로 낸다.
+         * @return 짓지 못하면 무효 핸들입니다(오류는 로그).
+         */
+        UiScreenHandle openOffscreenScreen( string_view documentPath, string_view targetPath );
+        void           closeOffscreenScreen( UiScreenHandle handle );
+        UiScreen*      findOffscreenScreen( UiScreenHandle handle ) const;
+        /**
+         * @brief 오프스크린 화면의 뷰포트(UI 단위 크기 · 배율 · 안전 영역 — 렌더 텍스처 = 물리 크기) · 글자 배율 · 테마(빈 이름 = 지금 테마)를 정합니다.
+         * @details 테마가 바뀌면 그 화면의 스타일 묶음만 다시 건다(게임 UI 의 테마는 그대로).
+         */
+        void setOffscreenView( UiScreenHandle handle, const UiViewport& viewport, float32 textScale, const hashed_string& theme );
+
         // --- 핫 리로드 ---------------------------------------------------------------
         /**
          * @brief 문서 @p documentPath 가 바뀌었다 — 그 문서(또는 그것을 조각으로 쓰는 문서)로 연 화면을 새로 짓습니다(캐시의 다시 읽기 알림이 부른다).
@@ -283,8 +298,10 @@ namespace sw
         unique_ptr<Widget> instantiateDocument( string_view documentPath, UiScreenDesc& outDesc, vector<UiBindingDesc>& outListBinding, vector<string>& outListStyleSheet );
         /** @brief 문서로 지은 화면에 문서 경로 · 바인딩 · 스타일 시트를 적고 올립니다. */
         UiScreenHandle pushDocumentScreen( unique_ptr<UiScreen> screen, string_view documentPath, vector<UiBindingDesc> listBinding, vector<string> listStyleSheet );
-        /** @brief 화면의 스타일 묶음을 지금 테마 시트 → 화면 시트로 다시 걸고 트리 전체를 다시 맞추게 합니다. */
-        void rebuildStyleSet( UiScreen& screen );
+        /** @brief 화면의 스타일 묶음을 테마 @p themeName(빈 이름 = 지금 테마) 시트 → 화면 시트로 다시 걸고 트리 전체를 다시 맞추게 합니다. */
+        void rebuildStyleSet( UiScreen& screen, const hashed_string& themeName = hashed_string{} );
+        /** @brief 오프스크린 화면마다 스타일 · 레이아웃 · 그리기를 자기 뷰포트로 돌립니다(`update` 끝). */
+        void updateOffscreenScreens();
         /** @brief 화면 @p screen 의 트리를 그 문서로 새로 짓습니다(포커스 · 스크롤을 이름으로 이어 간다). 실패하면 옛 트리를 두고 false 입니다. */
         bool rebuildScreenFromDocument( UiScreen& screen );
         /** @brief 화면 문서(`_documentPath`)의 애니메이션을 재생기에 겁니다 — 재생 중인 애니메이션 · 트윈은 멈춘다(옛 트리의 위젯 번호를 가리킨다). */
@@ -356,7 +373,21 @@ namespace sw
         void restoreFocus( UiScreen& screen );
 
     private:
-        vector<unique_ptr<UiScreen>> _listScreen; ///< 그리기 순서(층 → 쌓인 순서). 입력은 역순.
+        /** @struct OffscreenScreen @brief 화면 스택 밖의 화면 하나 — 렌더 텍스처 경로 · 뷰포트 · 그리기 목록입니다(에디터 미리보기). */
+        struct OffscreenScreen
+        {
+            unique_ptr<UiScreen> _screen{};
+            hashed_string        _targetPath{};
+            hashed_string        _theme{}; ///< 빈 이름 = 지금 테마
+            UiViewport           _viewport{};
+            CanvasDrawList       _canvas{};
+            CanvasDrawList       _scratch{};
+            uint64               _revision{ 0 };
+            float32              _textScale{ 1.0f };
+        };
+
+        vector<unique_ptr<UiScreen>> _listScreen;    ///< 그리기 순서(층 → 쌓인 순서). 입력은 역순.
+        vector<OffscreenScreen>      _listOffscreen; ///< 스택 밖 화면(에디터 미리보기 — 입력 없음)
         UiDocumentCache              _documentCache;
         UiStyleSheetCache            _styleSheetCache;
         UiThemeCatalog               _themeCatalog;
