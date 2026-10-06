@@ -1730,7 +1730,8 @@ SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
     sw::unordered_map<sw::hashed_string, uint32> mapModuleTypeCount;
     sw::engine::getTypeRegistry().forEachType( [&mapModuleTypeCount]( const sw::TypeInfo& info )
     { ++mapModuleTypeCount[info._moduleName]; } );
-    for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_ActionCombat", "SWGame", "EditorModule" } )
+    // GF_Overworld 는 리플렉션 타입이 없는 키트다(올리기만 본다) — 타입 수는 타입을 내는 모듈만 본다.
+    for ( const utf8* pModule : { "GameFramework", "GF_ActionCombat", "SWGame", "EditorModule" } )
         SW_EXPECT_TRUE_MSG( mapModuleTypeCount[sw::hashed_string( pModule )] > 0, pModule );
 
     const test::PropertyCarryReport report = test::makePropertyCarryReport();
