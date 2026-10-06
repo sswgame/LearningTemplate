@@ -218,6 +218,19 @@ namespace sw::editor
         return destroyedCount;
     }
 
+    void EditorSceneCommands::collectRootsInOrder( GameObjectManager& manager, vector<GameObject*>& outListRoot )
+    {
+        outListRoot.clear();
+        manager.forEachGameObject( [&outListRoot]( GameObject* pObj )
+        {
+            if ( pObj != nullptr && pObj->getParent() == nullptr && pObj->isPendingDestroy() == false )
+                outListRoot.push_back( pObj );
+        } );
+        std::sort( outListRoot.begin(), outListRoot.end(),
+                   []( const GameObject* pLeft, const GameObject* pRight )
+        { return pLeft->getObjectId() < pRight->getObjectId(); } );
+    }
+
     void EditorSceneCommands::duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated )
     {
         outListCreated.clear();

@@ -612,7 +612,7 @@ namespace sw::editor
         }
 
         GameObjectManager* pManager = pScene->getObjectManager();
-        pManager->getAllGameObjects( _listSceneObject );
+        EditorSceneCommands::collectRootsInOrder( *pManager, _listSceneObject ); // 루트만, id 순 — 지우고 되돌려도 자리가 그대로다
 
         // 상단 툴바: 생성 버튼 + 검색창
         if ( EditorChrome::beginToolbar( "##HierarchyToolbar" ) )
@@ -675,7 +675,7 @@ namespace sw::editor
             const GameObject*      pEditorCameraObject = pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
             for ( GameObject* pObj : _listSceneObject )
             {
-                if ( pObj == nullptr || pObj->getParent() != nullptr || pObj == pEditorCameraObject )
+                if ( pObj == pEditorCameraObject )
                     continue;
                 const bool bMatches = bFilterActive == false || HierarchyPanelInternal::subtreeMatchesFilter( pObj, _filterBuffer.c_str() );
                 if ( bMatches == false )

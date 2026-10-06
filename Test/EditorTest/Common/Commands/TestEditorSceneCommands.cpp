@@ -329,6 +329,47 @@ SW_TEST_CASE( EditorSceneCommandsTest, SeveralObjectsAreOneUndoStep )
 }
 
 /**
+ * @brief [EditorSceneCommandsTest] 계층 창의 루트 순서는 지우고 되돌려도 그대로다(오브젝트 id 순)
+ * @details 저장소는 지울 때 마지막 원소를 빈자리로 옮긴다(swap-remove) — 그 순서로 그리면 지우기만 해도 다른 오브젝트가 자리를 옮겼다.
+ */
+SW_TEST_CASE( EditorSceneCommandsTest, RootOrderSurvivesDestroyAndUndo )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "RootOrderProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+    for ( const utf8* pName : { "A", "B", "C" } )
+    {
+        GameObject* pObj = pManager->createGameObject( hashed_string( pName ) );
+        SW_ASSERT_NOT_NULL( pObj );
+        SW_ASSERT_NOT_NULL( pObj->addComponent<SceneComponent>() );
+    }
+    pManager->mergePendingAdds();
+    const auto rootNames = [pManager]()
+    {
+        vector<GameObject*> listRoot;
+        EditorSceneCommands::collectRootsInOrder( *pManager, listRoot );
+        string names;
+        for ( const GameObject* pRoot : listRoot )
+        {
+            names += pRoot->getName().c_str();
+        }
+        return names;
+    };
+    SW_EXPECT_EQUAL( string( "ABC" ), rootNames() );
+
+    SW_ASSERT_TRUE( EditorSceneCommands::destroy( pManager, pManager->findGameObjectByName( hashed_string( "A" ) ) ) );
+    pManager->processDeferredDestruction();
+    SW_EXPECT_EQUAL( string( "BC" ), rootNames() );
+    stack.undo();
+    pManager->mergePendingAdds();
+    SW_EXPECT_EQUAL( string( "ABC" ), rootNames() );
+}
+
+/**
  * @brief [EditorSceneCommandsTest] 계층 창의 재부모 · 부모 떼기는 오브젝트를 놓인 자리에 둔다
  * @details 붙이기가 로컬을 지키면 끌어 놓은 오브젝트가 새 부모의 위치 · 회전 · 크기만큼 튄다(유니티 계층 창 · 언리얼 아웃라이너는 월드를 지킨다).
  */
