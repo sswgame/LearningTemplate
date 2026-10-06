@@ -44,7 +44,11 @@ GAS 를 아는 사람은 이름만 보고 바로 쓸 수 있고, 처음 보는 �
 <!-- snippet: Source/Games/AbilityArena/ArenaAbilities.cpp · AbilityArenaGame.cpp 의 등록과 읽기 — 5b U7 에서 대조 -->
 ```cpp
 catalog.registerAbilityClass<ArenaProjectileAbility>( "Projectile" );
-(void)catalog.loadFromResource( "game/abilityarena/data/abilities.xml" );
+if ( catalog.loadFromResource( "game/abilityarena/data/abilities.xml" ) == false )
+{
+    SW_LOG_WARNING( "[Arena] abilities.xml could not be loaded - the arena cannot start" );
+    return true; // 카탈로그 없이 시작하지 않는다 — 모듈만 띄워 데이터를 에디터에서 고칠 수 있게 한다
+}
 game::bindLocalService<AbilityCatalog>( &catalog );
 ```
 
