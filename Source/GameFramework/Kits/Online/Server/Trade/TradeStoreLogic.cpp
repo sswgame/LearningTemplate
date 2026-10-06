@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Online/Server/Trade/TradeStoreLogic.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
@@ -23,10 +24,7 @@ namespace sw
 
             static uint64 mixSeed( uint64 value )
             {
-                value += 0x9E3779B97F4A7C15ull;
-                value = ( value ^ ( value >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
-                value = ( value ^ ( value >> 27 ) ) * 0x94D049BB133111EBull;
-                return value ^ ( value >> 31 );
+                return HashUtil::mix64( value + HashUtil::kGoldenRatio64 );
             }
 
             static string makeOwnerKey( uint64 serverId, uint64 tradeId )

@@ -74,11 +74,11 @@ add_subdirectory(Network/NetTurnRelay)
 add_subdirectory(Online/Account)
 add_subdirectory(Online/Chat)
 add_subdirectory(Online/Matchmaking)
+add_subdirectory(Online/Trade)
 add_subdirectory(Online/Server/Account)
 add_subdirectory(Online/Server/Chat)
 add_subdirectory(Online/Server/Matchmaking)
 add_subdirectory(Online/Server/Trade)
-add_subdirectory(Online/Trade)
 
 # ------------------------------------------------------------------------------
 # 9) 저장 — 서비스 저장 계약(기반 Online/Store)의 드라이버. 서버 전용은 `<묶음>/Server/<키트>`(GF_Server_<키트>)

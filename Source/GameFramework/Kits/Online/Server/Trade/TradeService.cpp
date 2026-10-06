@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Online/Server/Trade/TradeService.h"
 
+#include "Core/Common/HashUtil.h"
+
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 
 namespace sw
@@ -120,7 +122,7 @@ namespace sw
         _pLedgerPolicy = pLedgerPolicy;
         _serverId      = serverId;
         _settings      = settings;
-        _nextSeed      = serverId * 0x100000001B3ull;
+        _nextSeed      = serverId * HashUtil::kFnvPrime64;
     }
 
     void TradeService::shutdown()
