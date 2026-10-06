@@ -634,7 +634,11 @@ namespace sw
             if ( applyToTarget( settingIndex, state._committedValue, false ) )
                 ++result._appliedCount;
             else
+            {
+                // 대상이 거절한 값은 저장은 되지만 지금 실행에는 닿지 않았다 — 어느 설정인지 남긴다(메뉴 · 에디터는 수만 받는다).
                 ++result._failedCount;
+                SW_LOG_WARNING( "User setting '%#' = '%#' was rejected by its target '%#'", def._id.c_str(), state._committedValue.c_str(), def._targetName.c_str() );
+            }
             broadcast( def._id, UserSettingEventKind::Applied );
         }
 

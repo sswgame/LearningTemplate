@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/UserSettingsPanel.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
@@ -21,6 +22,7 @@ namespace sw::editor
     UserSettingsPanel::UserSettingsPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
         , _selectedCategory{ 0 }
+        , _lastRejectedCount{ 0 }
     {
     }
 
@@ -68,7 +70,7 @@ namespace sw::editor
             if ( bPending == false )
                 ImGui::BeginDisabled();
             if ( ImGui::Button( "Apply" ) )
-                (void)settings.applyPending(); // 저장 실패는 매니저가 경고로 남긴다 — 결함 의심: 적용기 거절 수(_failedCount)는 어디에도 안 보인다
+                _lastRejectedCount = settings.applyPending()._failedCount; // 저장 실패 · 거절된 설정 이름은 매니저가 경고로 남긴다
             ImGui::SameLine();
             if ( ImGui::Button( "Revert" ) )
                 settings.revertPending();
@@ -84,6 +86,13 @@ namespace sw::editor
             {
                 ImGui::SameLine();
                 EditorWidgets::drawPanelStatus( "Restart required" );
+            }
+            if ( _lastRejectedCount > 0 )
+            {
+                StringBuilder<constant::kMaxBuffer64> status;
+                status.appendFormat( "%# setting(s) rejected - see the log", _lastRejectedCount );
+                ImGui::SameLine();
+                EditorWidgets::drawPanelStatus( status.c_str() );
             }
         }
         EditorChrome::endToolbar();
