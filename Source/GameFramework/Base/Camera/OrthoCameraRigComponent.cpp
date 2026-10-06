@@ -80,8 +80,8 @@ namespace sw
 
     OrthoCameraRigComponent::OrthoCameraRigComponent()
         : _focus{ 0.0f, 0.0f, 0.0f }
-        , _yaw{ 45.0f * MathUtil::DegreeToRadian }
-        , _pitch{ 30.0f * MathUtil::DegreeToRadian }
+        , _yaw{ 45.0f * MathUtil::kDegreeToRadian }
+        , _pitch{ 30.0f * MathUtil::kDegreeToRadian }
         , _distance{ 250.0f }
         , _orthoHeight{ 110.0f }
         , _minOrthoHeight{ 25.0f }
@@ -89,7 +89,7 @@ namespace sw
         , _zoomStep{ 0.85f }
         , _panSpeed{ 40.0f }
         , _panReferenceHeight{ 110.0f }
-        , _rotateStep{ MathUtil::HalfPi }
+        , _rotateStep{ MathUtil::kHalfPi }
         , _farPlaneScale{ 2.5f }
         , _focusMin{ 0.0f, 0.0f, 0.0f }
         , _focusMax{ 0.0f, 0.0f, 0.0f }

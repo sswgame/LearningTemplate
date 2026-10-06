@@ -109,7 +109,7 @@ namespace sw
         bool bValid          = Internal::checkAttributes( node, Internal::kArrInteractionAttribute, sourceName );
         outDef._id           = hashed_string( node.findAttribute( "id" ) != nullptr ? node.findAttribute( "id" ) : "" );
         outDef._maxDistance  = MathUtil::max( 0.0f, node.getAttributeFloat( "maxDistance", outDef._maxDistance ) );
-        outDef._maxAngle     = MathUtil::clamp( node.getAttributeFloat( "maxAngle", 0.0f ), 0.0f, 180.0f ) * MathUtil::DegreeToRadian;
+        outDef._maxAngle     = MathUtil::clamp( node.getAttributeFloat( "maxAngle", 0.0f ), 0.0f, 180.0f ) * MathUtil::kDegreeToRadian;
         outDef._cooldown     = MathUtil::max( 0.0f, node.getAttributeFloat( "cooldown", outDef._cooldown ) );
         outDef._bLineOfSight = node.getAttributeBool( "lineOfSight", true ) ? SW_TRUE : SW_FALSE;
         Internal::readTags( node.getAttributeText( "requiredTags" ), outDef._requiredTags );
@@ -158,7 +158,7 @@ namespace sw
             SmartObjectSlotDef slot;
             slot._id     = hashed_string( slotNode.findAttribute( "id" ) != nullptr ? slotNode.findAttribute( "id" ) : "" );
             slot._offset = GameDataXml::parseFloat3( slotNode.getAttributeText( "offset" ), float3{} );
-            slot._yaw    = slotNode.getAttributeFloat( "yaw", 0.0f ) * MathUtil::DegreeToRadian;
+            slot._yaw    = slotNode.getAttributeFloat( "yaw", 0.0f ) * MathUtil::kDegreeToRadian;
             Internal::readTags( slotNode.getAttributeText( "tags" ), slot._tags );
             outDef._listSlot.push_back( slot );
         }

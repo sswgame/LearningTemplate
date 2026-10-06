@@ -974,12 +974,12 @@ namespace sw
 
     bool StringUtil::parseInt( string_view token, int32& outValue, int32 base )
     {
-        return StringUtilInternal::parseSignedInteger<int32, uint32>( token, base, MathUtil::MinInt32, MathUtil::MaxInt32, outValue );
+        return StringUtilInternal::parseSignedInteger<int32, uint32>( token, base, MathUtil::kMinInt32, MathUtil::kMaxInt32, outValue );
     }
 
     bool StringUtil::parseInt64( string_view token, int64& outValue, int32 base )
     {
-        return StringUtilInternal::parseSignedInteger<int64, uint64>( token, base, MathUtil::MinInt64, MathUtil::MaxInt64, outValue );
+        return StringUtilInternal::parseSignedInteger<int64, uint64>( token, base, MathUtil::kMinInt64, MathUtil::kMaxInt64, outValue );
     }
 
     bool StringUtil::parseUint64( string_view token, uint64& outValue, int32 base )

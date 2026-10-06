@@ -15,7 +15,7 @@ namespace sw
         struct ContainerVisitorInternal
         {
             /** @brief 읽기 전에 잡는 원소 수의 상한입니다 — 파일의 개수 칸 하나로 큰 할당을 하지 않게. */
-            static constexpr size_t kMaxReserveElementCount = MathUtil::MaxUInt16;
+            static constexpr size_t kMaxReserveElementCount = MathUtil::kMaxUInt16;
 
             static void writeElement( const void* pElement, const NestedContainerInfo& nested, const ContainerElementPlan& plan, const ContainerSlot slot,
                                       IContainerWriter& writer, const SerializeContext& ctx )

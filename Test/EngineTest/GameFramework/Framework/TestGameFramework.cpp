@@ -2687,7 +2687,7 @@ SW_TEST_CASE( GameFrameworkTest, MovementComponentsMoveInWorldSpaceUnderAParent 
     GameObject*       pPlatform   = manager.createGameObject( hashed_string( "Platform" ) );
     SceneComponent*   pPlatformSc = pPlatform->addComponent<SceneComponent>();
     pPlatformSc->setLocalPosition( float3( 0.0f, 10.0f, 0.0f ) );
-    pPlatformSc->setLocalRotation( float3( 0.0f, MathUtil::HalfPi, 0.0f ) );
+    pPlatformSc->setLocalRotation( float3( 0.0f, MathUtil::kHalfPi, 0.0f ) );
 
     // 중력: 부모(높이 10) 아래에서 떨어져도 월드 땅(0)에 선다.
     GameObject*       pFaller   = manager.createGameObject( hashed_string( "Faller" ) );

@@ -222,7 +222,7 @@ namespace sw
         , _cachedNameHash{ 0 }
         , _bitOffset{ 0 }
         , _containerKind{ ContainerKind::None }
-        , _bitMask{ MathUtil::MaxUInt8 }
+        , _bitMask{ MathUtil::kMaxUInt8 }
         , _bIsContainer{ SW_FALSE }
         , _bIsBitField{ SW_FALSE }
         , _reservedFlags{ 0 } {}
@@ -305,7 +305,7 @@ namespace sw
         , _cachedNameHash{ 0 }
         , _bitOffset{ 0 }
         , _containerKind{ containerKind }
-        , _bitMask{ MathUtil::MaxUInt8 }
+        , _bitMask{ MathUtil::kMaxUInt8 }
         , _bIsContainer{ static_cast<uint8>( bIsContainer ? SW_TRUE : SW_FALSE ) }
         , _bIsBitField{ SW_FALSE }
         , _reservedFlags{ 0 }

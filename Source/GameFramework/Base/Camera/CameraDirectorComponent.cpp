@@ -40,7 +40,7 @@ namespace sw
                 const float4x4 world = pScene->getWorldMatrix();
                 outPosition          = world.getTranslation();
                 float3 forward       = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
-                if ( forward.getLengthSquared() <= MathUtil::Epsilon )
+                if ( forward.getLengthSquared() <= MathUtil::kEpsilon )
                     return true;
                 forward.normalize();
                 outYaw   = MathUtil::atan2( forward._x, forward._z );

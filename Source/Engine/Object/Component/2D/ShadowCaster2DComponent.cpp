@@ -64,7 +64,7 @@ namespace sw
             const float2  middle{ ( start._x + end._x ) * 0.5f - center._x, ( start._y + end._y ) * 0.5f - center._y };
             if ( normal._x * middle._x + normal._y * middle._y < 0.0f )
                 normal = float2{ -normal._x, -normal._y };
-            if ( normal.getLengthSquared() > MathUtil::Epsilon )
+            if ( normal.getLengthSquared() > MathUtil::kEpsilon )
                 normal.normalize();
             outListSegment.push_back( float4{ start._x, start._y, end._x, end._y } );
             outListOutward.push_back( normal );

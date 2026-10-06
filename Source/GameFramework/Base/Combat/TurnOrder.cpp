@@ -104,7 +104,7 @@ namespace sw
     {
         // 남은 시간 = 게이지 / 속도. 가장 이른 쪽이 차례, 그만큼 모두 흐른다. 같으면 먼저 넣은 쪽.
         size_t  bestIndex = 0;
-        float32 bestTime  = MathUtil::MaxFloat;
+        float32 bestTime  = MathUtil::kMaxFloat;
         for ( size_t index = 0; index < listActor.size(); ++index )
         {
             const float32 time = listActor[index]._gauge / listActor[index]._speed;

@@ -379,8 +379,8 @@ namespace sw
 
             static void collectBounds( vector_reference<const RHIVertex> listVertex, float3& outMin, float3& outMax )
             {
-                outMin = float3{ MathUtil::MaxFloat };
-                outMax = float3{ MathUtil::MinFloat };
+                outMin = float3{ MathUtil::kMaxFloat };
+                outMax = float3{ MathUtil::kMinFloat };
                 for ( const RHIVertex& vertex : listVertex )
                 {
                     outMin = float3::min( outMin, getPosition( vertex ) );
@@ -481,7 +481,7 @@ namespace sw
                     return;
                 }
                 vector<uint8> listPicked( listUnique.size(), 0 );
-                const float32 goldenAngle = MathUtil::Pi * ( 3.0f - MathUtil::sqrt( 5.0f ) );
+                const float32 goldenAngle = MathUtil::kPi * ( 3.0f - MathUtil::sqrt( 5.0f ) );
                 for ( uint32 direction = 0; direction < maxPoint; ++direction )
                 {
                     const float32 y      = 1.0f - 2.0f * ( static_cast<float32>( direction ) + 0.5f ) / static_cast<float32>( maxPoint );
@@ -489,7 +489,7 @@ namespace sw
                     const float32 angle  = goldenAngle * static_cast<float32>( direction );
                     const float3  axis{ MathUtil::cos( angle ) * radius, y, MathUtil::sin( angle ) * radius };
                     size_t        best      = 0;
-                    float32       bestValue = -MathUtil::MaxFloat;
+                    float32       bestValue = -MathUtil::kMaxFloat;
                     for ( size_t index = 0; index < listUnique.size(); ++index )
                     {
                         const float32 value = listUnique[index].dot( axis );
@@ -1294,7 +1294,7 @@ namespace sw
                     const float3  delta       = listSite[entry.second] - listSite[site];
                     const float3  normal      = delta / MathUtil::sqrt( entry.first );
                     const float32 offset      = normal.dot( ( listSite[entry.second] + listSite[site] ) * 0.5f );
-                    float32       maxDistance = -MathUtil::MaxFloat;
+                    float32       maxDistance = -MathUtil::kMaxFloat;
                     for ( const Triangle& triangle : listPieceTriangle )
                     {
                         for ( const RHIVertex& vertex : triangle._arrVertex )

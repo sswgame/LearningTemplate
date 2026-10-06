@@ -14,7 +14,7 @@ namespace sw
         {
             /** @brief 프레이밍이 화면 가로를 셀 때의 비율입니다. 모드는 화면을 모르므로 흔한 16:9 로 셉니다(세로 위치 · 존은 정확하다). */
             static constexpr float32 kComposeAspect = 16.0f / 9.0f;
-            static constexpr float32 kTwoPi         = MathUtil::Pi * 2.0f;
+            static constexpr float32 kTwoPi         = MathUtil::kPi * 2.0f;
 
             static float3 rotateByYaw( const float3& value, float32 yaw ) { return float3::transform( value, quaternion::createFromYawPitchRoll( yaw, 0.0f, 0.0f ) ); }
 
@@ -29,10 +29,10 @@ namespace sw
             /** @brief 각을 [−π, π) 로 감습니다. */
             static float32 wrapAngle( float32 angle )
             {
-                float32 wrapped = ::fmodf( angle + MathUtil::Pi, kTwoPi );
+                float32 wrapped = ::fmodf( angle + MathUtil::kPi, kTwoPi );
                 if ( wrapped < 0.0f )
                     wrapped += kTwoPi;
-                return wrapped - MathUtil::Pi;
+                return wrapped - MathUtil::kPi;
             }
 
             static float32 computeAtan( float32 value ) { return MathUtil::atan2( value, 1.0f ); }
@@ -103,7 +103,7 @@ namespace sw
     float2 computeLookAngles( const float3& from, const float3& to )
     {
         float3 direction = to - from;
-        if ( direction.getLengthSquared() <= MathUtil::Epsilon )
+        if ( direction.getLengthSquared() <= MathUtil::kEpsilon )
             return float2{ 0.0f, 0.0f };
         direction.normalize();
         return float2{ MathUtil::atan2( direction._x, direction._z ), -MathUtil::asin( MathUtil::clamp( direction._y, -1.0f, 1.0f ) ) };

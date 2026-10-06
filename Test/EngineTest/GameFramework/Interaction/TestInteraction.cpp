@@ -62,7 +62,7 @@ namespace
             candidate._objectId    = objectId;
             candidate._position    = position;
             candidate._maxDistance = 5.0f;
-            candidate._maxAngle    = 60.0f * MathUtil::DegreeToRadian;
+            candidate._maxAngle    = 60.0f * MathUtil::kDegreeToRadian;
             return candidate;
         }
 
@@ -359,7 +359,7 @@ SW_TEST_CASE( InteractionTest, CatalogReadsStepsTagsAndSlots )
     SW_ASSERT_NOT_NULL( pUnlock );
     SW_EXPECT_TRUE( pUnlock->_requiredTags.hasTag( TagID::request( "Item.Key" ) ) );
     SW_EXPECT_TRUE( pUnlock->_authority == InteractionAuthority::Server );
-    SW_EXPECT_NEAR_EQUAL( 70.0f * MathUtil::DegreeToRadian, pUnlock->_maxAngle, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 70.0f * MathUtil::kDegreeToRadian, pUnlock->_maxAngle, 1.0e-4f );
     const SmartObjectDef* pBench = catalog.findSmartObject( "Bench" );
     SW_ASSERT_NOT_NULL( pBench );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), pBench->_listSlot.size() );

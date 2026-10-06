@@ -105,7 +105,7 @@ namespace sw
             tablePlace          = 1 + static_cast<int32>( MathUtil::round( ratio * static_cast<float32>( _referencePlaceCount - 1 ) ) );
         }
         const KartRankTable* pNearest    = nullptr;
-        int32                nearestDiff = MathUtil::MaxInt32;
+        int32                nearestDiff = MathUtil::kMaxInt32;
         for ( const KartRankTable& rank : _listRankTable )
         {
             if ( rank._fromPlace <= tablePlace && tablePlace <= rank._toPlace )

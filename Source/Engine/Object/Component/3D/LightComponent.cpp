@@ -53,7 +53,7 @@ namespace sw
         // 반환 변수는 하나다. 경로마다 다른 객체를 돌려주면 복사 생략(NRVO)이 걸리지 않는다(-Wnrvo).
         const float3 localDirection = float3{ defaultLocalDirection }.normalize();
         float3       worldDirection = float3::transformVector( localDirection, getWorldMatrix() );
-        if ( worldDirection.getLengthSquared() <= MathUtil::Epsilon )
+        if ( worldDirection.getLengthSquared() <= MathUtil::kEpsilon )
             worldDirection = localDirection;
         else
             worldDirection.normalize();

@@ -80,7 +80,7 @@ namespace sw
         if ( event._radius <= 0.0f )
         {
             uint32  target = bHint ? static_cast<uint32>( event._leafHint ) : 0u;
-            float32 best   = MathUtil::MaxFloat;
+            float32 best   = MathUtil::kMaxFloat;
             if ( bHint == false )
             {
                 for ( uint32 leaf = 0; leaf < graph._leafCount; ++leaf )
@@ -95,7 +95,7 @@ namespace sw
                     }
                 }
             }
-            if ( best < MathUtil::MaxFloat || bHint )
+            if ( best < MathUtil::kMaxFloat || bHint )
                 outListStrain.push_back( DestructionLeafStrain{ target, event._strain } );
             return;
         }

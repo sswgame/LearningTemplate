@@ -50,7 +50,7 @@ namespace sw
 
             static float32 readDegrees( const XmlNode& node, const utf8* pName, float32 fallbackRadians )
             {
-                return node.getAttributeFloat( pName, fallbackRadians * MathUtil::RadianToDegree ) * MathUtil::DegreeToRadian;
+                return node.getAttributeFloat( pName, fallbackRadians * MathUtil::kRadianToDegree ) * MathUtil::kDegreeToRadian;
             }
 
             template <typename TEnum>
@@ -174,8 +174,8 @@ namespace sw
             {
                 warnUnknownAttributes( node, kArrNoiseAttribute, sourceName );
                 outNoise._positionAmplitude  = GameDataXml::parseFloat3( node.getAttributeText( "position" ), outNoise._positionAmplitude );
-                const float3 rotationDegrees = GameDataXml::parseFloat3( node.getAttributeText( "rotation" ), outNoise._rotationAmplitude * MathUtil::RadianToDegree );
-                outNoise._rotationAmplitude  = rotationDegrees * MathUtil::DegreeToRadian;
+                const float3 rotationDegrees = GameDataXml::parseFloat3( node.getAttributeText( "rotation" ), outNoise._rotationAmplitude * MathUtil::kRadianToDegree );
+                outNoise._rotationAmplitude  = rotationDegrees * MathUtil::kDegreeToRadian;
                 outNoise._frequency          = MathUtil::max( 0.0f, node.getAttributeFloat( "frequency", outNoise._frequency ) );
                 outNoise._seed               = static_cast<uint32>( MathUtil::max( 0, node.getAttributeInt( "seed", static_cast<int32>( outNoise._seed ) ) ) );
             }

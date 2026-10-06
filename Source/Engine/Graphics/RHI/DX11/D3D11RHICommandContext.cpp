@@ -99,7 +99,7 @@ namespace sw
         if ( pRecord->_blendState )
         {
             constexpr float32 arrBlendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-            _pContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::MaxUInt32 );
+            _pContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::kMaxUInt32 );
         }
         if ( pRecord->_depthStencilState )
             _pContext->OMSetDepthStencilState( pRecord->_depthStencilState.Get(), 0 );
@@ -172,7 +172,7 @@ namespace sw
             if ( pRecord->_blendState )
             {
                 constexpr float32 arrBlendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-                _pContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::MaxUInt32 );
+                _pContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::kMaxUInt32 );
             }
         }
         else if ( pDsv != nullptr && _pDevice->_depthEnabledState )

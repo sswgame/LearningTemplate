@@ -48,7 +48,7 @@ namespace sw
     void DualQuaternion::normalize()
     {
         const float32 mag = _real.norm();
-        if ( mag > MathUtil::Epsilon )
+        if ( mag > MathUtil::kEpsilon )
         {
             const float32 invMag = 1.0f / mag;
             _real *= invMag;

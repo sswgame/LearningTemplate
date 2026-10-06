@@ -151,7 +151,7 @@ namespace sw
         if ( hasAttribute( node, pName ) == false )
             return fallback;
         const float3 degrees = readFloat3( node, pName, float3::Zero );
-        return quaternion::createFromYawPitchRoll( degrees * MathUtil::DegreeToRadian );
+        return quaternion::createFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
     }
 
     hashed_string CharacterDataReader::readName( const XmlNode& node, const utf8* pName, bool bRequired )
@@ -237,7 +237,7 @@ namespace sw
 
     string CharacterDataReader::formatRotation( const quaternion& rotation )
     {
-        return formatFloat3( rotation.getEulerAngles() * MathUtil::RadianToDegree );
+        return formatFloat3( rotation.getEulerAngles() * MathUtil::kRadianToDegree );
     }
 
     string CharacterDataReader::formatNameList( const vector<hashed_string>& listName )

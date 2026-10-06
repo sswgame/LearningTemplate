@@ -16,7 +16,7 @@ namespace sw
              */
             static float32 getNonZeroSpan( float32 span ) noexcept
             {
-                return MathUtil::abs( span ) > MathUtil::Epsilon ? span : 1.0f;
+                return MathUtil::abs( span ) > MathUtil::kEpsilon ? span : 1.0f;
             }
 
             /**
@@ -27,15 +27,15 @@ namespace sw
             static void buildBasis( const float3& forward, const float3& up, float3& outRight, float3& outUp, float3& outForward ) noexcept
             {
                 float3 zAxis = forward.normalize();
-                if ( zAxis.getLengthSquared() < MathUtil::Epsilon )
+                if ( zAxis.getLengthSquared() < MathUtil::kEpsilon )
                     zAxis = float3::Forward;
 
                 float3 upVec = up.normalize();
-                if ( upVec.getLengthSquared() < MathUtil::Epsilon )
+                if ( upVec.getLengthSquared() < MathUtil::kEpsilon )
                     upVec = float3::Up;
 
                 float3 xAxis = upVec.cross( zAxis ).normalize();
-                if ( xAxis.getLengthSquared() < MathUtil::Epsilon )
+                if ( xAxis.getLengthSquared() < MathUtil::kEpsilon )
                 {
                     const float3 altUp = MathUtil::abs( zAxis._y ) > 0.99f ? float3::Forward : float3::Up;
                     xAxis              = altUp.cross( zAxis ).normalize();
@@ -87,7 +87,7 @@ namespace sw
         if ( trace > 0.f )
         {
             const float32 s    = MathUtil::sqrt( MathUtil::max( 0.0f, trace + 1.0f ) ) * 2.f;
-            const float32 invS = s > MathUtil::Epsilon ? ( 1.f / s ) : 1.f;
+            const float32 invS = s > MathUtil::kEpsilon ? ( 1.f / s ) : 1.f;
             return quaternion{
                 ( matrix._23 - matrix._32 ) * invS,
                 ( matrix._31 - matrix._13 ) * invS,
@@ -97,7 +97,7 @@ namespace sw
         if ( matrix._11 >= matrix._22 && matrix._11 >= matrix._33 )
         {
             const float32 s    = MathUtil::sqrt( MathUtil::max( 0.0f, 1.0f + matrix._11 - matrix._22 - matrix._33 ) ) * 2.f;
-            const float32 invS = s > MathUtil::Epsilon ? ( 1.f / s ) : 1.f;
+            const float32 invS = s > MathUtil::kEpsilon ? ( 1.f / s ) : 1.f;
             return quaternion{
                 0.25f * s,
                 ( matrix._12 + matrix._21 ) * invS,
@@ -107,7 +107,7 @@ namespace sw
         if ( matrix._22 >= matrix._33 )
         {
             const float32 s    = MathUtil::sqrt( MathUtil::max( 0.0f, 1.0f + matrix._22 - matrix._11 - matrix._33 ) ) * 2.f;
-            const float32 invS = s > MathUtil::Epsilon ? ( 1.f / s ) : 1.f;
+            const float32 invS = s > MathUtil::kEpsilon ? ( 1.f / s ) : 1.f;
             return quaternion{
                 ( matrix._12 + matrix._21 ) * invS,
                 0.25f * s,
@@ -115,7 +115,7 @@ namespace sw
                 ( matrix._31 - matrix._13 ) * invS };
         }
         const float32 s    = MathUtil::sqrt( MathUtil::max( 0.0f, 1.0f + matrix._33 - matrix._11 - matrix._22 ) ) * 2.f;
-        const float32 invS = s > MathUtil::Epsilon ? ( 1.f / s ) : 1.f;
+        const float32 invS = s > MathUtil::kEpsilon ? ( 1.f / s ) : 1.f;
         return quaternion{
             ( matrix._13 + matrix._31 ) * invS,
             ( matrix._23 + matrix._32 ) * invS,
@@ -175,15 +175,15 @@ namespace sw
         const float3  t = to.normalize();
         const float32 d = f.dot( t );
 
-        if ( d >= 1.f - MathUtil::Epsilon )
+        if ( d >= 1.f - MathUtil::kEpsilon )
             return Identity;
 
-        if ( d <= -1.f + MathUtil::Epsilon )
+        if ( d <= -1.f + MathUtil::kEpsilon )
         {
             float3 axis = float3::Right.cross( f );
-            if ( axis.getLengthSquared() < MathUtil::Epsilon )
+            if ( axis.getLengthSquared() < MathUtil::kEpsilon )
                 axis = float3::Up.cross( f );
-            return createFromAxisAngle( axis, MathUtil::Pi );
+            return createFromAxisAngle( axis, MathUtil::kPi );
         }
 
         const float3 c = f.cross( t );
@@ -193,15 +193,15 @@ namespace sw
     quaternion quaternion::lookRotation( const float3& direction, const float3& up ) noexcept
     {
         float3 f = direction.normalize();
-        if ( f.getLengthSquared() < MathUtil::Epsilon )
+        if ( f.getLengthSquared() < MathUtil::kEpsilon )
             return Identity;
 
         float3 upVec = up.normalize();
-        if ( upVec.getLengthSquared() < MathUtil::Epsilon )
+        if ( upVec.getLengthSquared() < MathUtil::kEpsilon )
             upVec = float3::Up;
 
         float3 r = upVec.cross( f ).normalize();
-        if ( r.getLengthSquared() < MathUtil::Epsilon )
+        if ( r.getLengthSquared() < MathUtil::kEpsilon )
         {
             const float3 altUp = MathUtil::abs( f._y ) > 0.99f ? float3::Forward : float3::Up;
             r                  = altUp.cross( f ).normalize();
@@ -261,7 +261,7 @@ namespace sw
     void quaternion::inverse() noexcept
     {
         const float32 nSq = normSquared();
-        if ( nSq > MathUtil::Epsilon )
+        if ( nSq > MathUtil::kEpsilon )
         {
             conjugate();
             ( *this ) /= nSq;
@@ -275,7 +275,7 @@ namespace sw
     quaternion quaternion::inverse() const noexcept
     {
         const float32 nSq = normSquared();
-        if ( nSq > MathUtil::Epsilon )
+        if ( nSq > MathUtil::kEpsilon )
             return conjugate() / nSq;
         return Identity;
     }
@@ -291,7 +291,7 @@ namespace sw
         const float32 sinp = 2.f * ( _w * _x - _y * _z );
         float32       pitch{};
         if ( MathUtil::abs( sinp ) >= 1.f )
-            pitch = ( sinp >= 0.f ) ? MathUtil::HalfPi : -MathUtil::HalfPi;
+            pitch = ( sinp >= 0.f ) ? MathUtil::kHalfPi : -MathUtil::kHalfPi;
         else
             pitch = MathUtil::asin( sinp );
 
@@ -441,8 +441,8 @@ namespace sw
 
     float4x4 float4x4::createPerspectiveFieldOfView( float32 fov, float32 aspectRatio, float32 nearPlane, float32 farPlane ) noexcept
     {
-        const float32 safeFov    = MathUtil::clamp( fov, 0.001f, MathUtil::Pi - 0.001f );
-        const float32 safeAspect = aspectRatio > MathUtil::Epsilon ? aspectRatio : 1.0f;
+        const float32 safeFov    = MathUtil::clamp( fov, 0.001f, MathUtil::kPi - 0.001f );
+        const float32 safeAspect = aspectRatio > MathUtil::kEpsilon ? aspectRatio : 1.0f;
         const float32 safeSpan   = MatrixMathInternal::getNonZeroSpan( farPlane - nearPlane );
 
         const float32 yScale = 1.0f / MathUtil::tan( safeFov * 0.5f );
@@ -631,7 +631,7 @@ namespace sw
     void float4x4::setScale( const float3& scale ) noexcept
     {
         const float3 curScale = getScale();
-        if ( curScale._x > MathUtil::Epsilon )
+        if ( curScale._x > MathUtil::kEpsilon )
         {
             const float32 inv = scale._x / curScale._x;
             _11 *= inv;
@@ -645,7 +645,7 @@ namespace sw
             _13 = 0.f;
         }
 
-        if ( curScale._y > MathUtil::Epsilon )
+        if ( curScale._y > MathUtil::kEpsilon )
         {
             const float32 inv = scale._y / curScale._y;
             _21 *= inv;
@@ -659,7 +659,7 @@ namespace sw
             _23 = 0.f;
         }
 
-        if ( curScale._z > MathUtil::Epsilon )
+        if ( curScale._z > MathUtil::kEpsilon )
         {
             const float32 inv = scale._z / curScale._z;
             _31 *= inv;

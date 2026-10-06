@@ -46,7 +46,7 @@ namespace sw
     {
         for ( uint32 layerIndex = 0; layerIndex < kLayerCount; ++layerIndex )
         {
-            _arrMatrix[layerIndex] = MathUtil::MaxUInt32;
+            _arrMatrix[layerIndex] = MathUtil::kMaxUInt32;
         }
     }
 } // namespace sw

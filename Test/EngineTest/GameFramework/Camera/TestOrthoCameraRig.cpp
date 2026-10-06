@@ -18,7 +18,7 @@ namespace
 {
     struct OrthoCameraRigTestInternal
     {
-        static constexpr float32 kPitch       = 55.0f * MathUtil::DegreeToRadian;
+        static constexpr float32 kPitch       = 55.0f * MathUtil::kDegreeToRadian;
         static constexpr float32 kOrthoHeight = 34.0f;
         static constexpr float32 kAspect      = 16.0f / 9.0f;
 
@@ -43,8 +43,8 @@ SW_TEST_CASE( OrthoCameraRigTest, ViewLooksAtTheFocusFromItsDistance )
     const float3 focus{ 20.0f, 0.0f, 20.0f };
     for ( int32 quarter = 0; quarter < 4; ++quarter )
     {
-        const float32         yaw   = ( 45.0f + 90.0f * static_cast<float32>( quarter ) ) * MathUtil::DegreeToRadian;
-        const float32         pitch = 30.0f * MathUtil::DegreeToRadian;
+        const float32         yaw   = ( 45.0f + 90.0f * static_cast<float32>( quarter ) ) * MathUtil::kDegreeToRadian;
+        const float32         pitch = 30.0f * MathUtil::kDegreeToRadian;
         const OrthoCameraView view  = OrthoCameraRigMath::computeView( focus, yaw, pitch, 250.0f );
 
         const float3 toFocus = focus - view._position;
@@ -69,7 +69,7 @@ SW_TEST_CASE( OrthoCameraRigTest, PanFollowsTheYaw )
     const float3 rightAtZero = OrthoCameraRigMath::computePanDirection( 0.0f, 0.0f, 1.0f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, rightAtZero._x, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, rightAtZero._z, 1.0e-5f );
-    const float3 forwardAtQuarter = OrthoCameraRigMath::computePanDirection( MathUtil::HalfPi, 1.0f, 0.0f );
+    const float3 forwardAtQuarter = OrthoCameraRigMath::computePanDirection( MathUtil::kHalfPi, 1.0f, 0.0f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, forwardAtQuarter._x, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, forwardAtQuarter._z, 1.0e-5f );
     const float3 backLeft = OrthoCameraRigMath::computePanDirection( 0.0f, -1.0f, -1.0f );
@@ -106,7 +106,7 @@ SW_TEST_CASE( OrthoCameraRigTest, RigDrivesItsCameraAndHonoursTheOverride )
     pRig->applyToCamera();
     SW_EXPECT_TRUE( pCamera->isOrthographic() );
     SW_EXPECT_NEAR_EQUAL( pRig->getOrthoHeight(), pCamera->getOrthoHeight(), 1.0e-5f );
-    const OrthoCameraView expected = OrthoCameraRigMath::computeView( float3{ 20.0f, 0.0f, 20.0f }, 45.0f * MathUtil::DegreeToRadian, 30.0f * MathUtil::DegreeToRadian, 250.0f );
+    const OrthoCameraView expected = OrthoCameraRigMath::computeView( float3{ 20.0f, 0.0f, 20.0f }, 45.0f * MathUtil::kDegreeToRadian, 30.0f * MathUtil::kDegreeToRadian, 250.0f );
     SW_EXPECT_NEAR_EQUAL( expected._position._x, pCamera->getLocalPosition()._x, 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( expected._position._y, pCamera->getLocalPosition()._y, 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( expected._position._z, pCamera->getLocalPosition()._z, 1.0e-3f );
@@ -164,10 +164,10 @@ SW_TEST_CASE( OrthoCameraRigTest, ScreenRayHitsTheGroundUnderTheScreenPoint )
     const float3 topEdge = Internal::hitGround( focus, 0.0f, float2{ 0.5f, 0.0f } );
     SW_EXPECT_NEAR_EQUAL( focus._x, topEdge._x, 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( focus._z + halfHeight / MathUtil::sin( Internal::kPitch ), topEdge._z, 1.0e-3f );
-    const float3 turnedCenter = Internal::hitGround( focus, MathUtil::HalfPi, float2{ 0.5f, 0.5f } );
+    const float3 turnedCenter = Internal::hitGround( focus, MathUtil::kHalfPi, float2{ 0.5f, 0.5f } );
     SW_EXPECT_NEAR_EQUAL( focus._x, turnedCenter._x, 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( focus._z, turnedCenter._z, 1.0e-3f );
-    const float3 turnedRight = Internal::hitGround( focus, MathUtil::HalfPi, float2{ 1.0f, 0.5f } ); // 앞이 +X 면 오른쪽은 −Z
+    const float3 turnedRight = Internal::hitGround( focus, MathUtil::kHalfPi, float2{ 1.0f, 0.5f } ); // 앞이 +X 면 오른쪽은 −Z
     SW_EXPECT_NEAR_EQUAL( focus._z - halfHeight * Internal::kAspect, turnedRight._z, 1.0e-3f );
 }
 

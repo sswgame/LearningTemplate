@@ -31,10 +31,10 @@ namespace sw
             static int32 toCellCoord( float32 val, float32 cellSize )
             {
                 const float64 scaled = MathUtil::floor( static_cast<float64>( val ) / static_cast<float64>( cellSize ) );
-                if ( ( scaled >= static_cast<float64>( MathUtil::MinInt32 ) ) == false ) // NaN 도 이쪽으로 온다
-                    return MathUtil::MinInt32;
-                if ( scaled > static_cast<float64>( MathUtil::MaxInt32 ) )
-                    return MathUtil::MaxInt32;
+                if ( ( scaled >= static_cast<float64>( MathUtil::kMinInt32 ) ) == false ) // NaN 도 이쪽으로 온다
+                    return MathUtil::kMinInt32;
+                if ( scaled > static_cast<float64>( MathUtil::kMaxInt32 ) )
+                    return MathUtil::kMaxInt32;
                 return static_cast<int32>( scaled );
             }
         };
@@ -73,11 +73,11 @@ namespace sw
         // 그리드 삽입을 돌아오지 않게 만든다. 부르는 쪽은 이 값을 상한과 견주기만 하므로, 넘칠 때는
         // 표현 가능한 최댓값으로 붙여 두면 답이 맞는다.
         int64 cellCount = spanX;
-        if ( cellCount > MathUtil::MaxInt64 / spanY )
-            return MathUtil::MaxInt64;
+        if ( cellCount > MathUtil::kMaxInt64 / spanY )
+            return MathUtil::kMaxInt64;
         cellCount *= spanY;
-        if ( cellCount > MathUtil::MaxInt64 / spanZ )
-            return MathUtil::MaxInt64;
+        if ( cellCount > MathUtil::kMaxInt64 / spanZ )
+            return MathUtil::kMaxInt64;
         return cellCount * spanZ;
     }
 

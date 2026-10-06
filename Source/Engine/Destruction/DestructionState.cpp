@@ -623,7 +623,7 @@ namespace sw
     bool DestructionState::readSnapshot( const uint8* pData, size_t size )
     {
         using Internal = DestructionStateInternal;
-        if ( _pGraph == nullptr || pData == nullptr || size == 0 || size > static_cast<size_t>( MathUtil::MaxInt32 ) )
+        if ( _pGraph == nullptr || pData == nullptr || size == 0 || size > static_cast<size_t>( MathUtil::kMaxInt32 ) )
             return false;
         const FractureGraph& graph = *_pGraph;
         BitReader            reader( pData, static_cast<int32>( size ) );

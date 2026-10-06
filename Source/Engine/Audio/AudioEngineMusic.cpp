@@ -214,7 +214,7 @@ namespace sw
 
         // 세로 레이어: 파라미터 곡선의 게인으로 `_layerFadeSeconds` 동안 옮긴다.
         const float32 fadeSeconds = _pMusic->_layerFadeSeconds;
-        const float32 maxStep     = fadeSeconds <= 0.0f ? MathUtil::MaxFloat : AudioEngineMusicInternal::kBlockSeconds / fadeSeconds;
+        const float32 maxStep     = fadeSeconds <= 0.0f ? MathUtil::kMaxFloat : AudioEngineMusicInternal::kBlockSeconds / fadeSeconds;
         for ( VoiceSlot& slot : _listVoice )
         {
             if ( slot._bInUse == false || slot._playingId != _musicPlayingId || slot._musicSegment < 0 || slot._musicLayer < 0 )

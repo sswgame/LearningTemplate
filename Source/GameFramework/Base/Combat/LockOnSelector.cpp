@@ -50,7 +50,7 @@ namespace sw
     uint64 LockOnSelector::pickBest( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate )
     {
         uint64  bestId    = 0;
-        float32 bestScore = MathUtil::MaxFloat;
+        float32 bestScore = MathUtil::kMaxFloat;
         for ( const LockOnCandidate& candidate : listCandidate )
         {
             if ( candidate._bVisible == SW_FALSE || candidate._id == 0 )
@@ -80,7 +80,7 @@ namespace sw
                 currentYaw = computeYawOffset( eye, forward, candidate._position );
         }
         uint64  bestId  = 0;
-        float32 bestGap = MathUtil::MaxFloat;
+        float32 bestGap = MathUtil::kMaxFloat;
         for ( const LockOnCandidate& candidate : listCandidate )
         {
             if ( candidate._id == _target || candidate._id == 0 || candidate._bVisible == SW_FALSE ||

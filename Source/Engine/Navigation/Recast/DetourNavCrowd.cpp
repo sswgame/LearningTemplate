@@ -256,7 +256,7 @@ namespace sw
             {
                 // 마지막 모퉁이가 끝점이고 몸 반지름의 4 분의 1 안이면 닿았다(Detour 는 끝점 앞에서 감속해 멈춘다).
                 const bool bLastIsEnd = pAgent->ncorners > 0 && ( pAgent->cornerFlags[pAgent->ncorners - 1] & DT_STRAIGHTPATH_END ) != 0;
-                float32    remaining  = MathUtil::MaxFloat;
+                float32    remaining  = MathUtil::kMaxFloat;
                 if ( bLastIsEnd )
                     remaining = dtVdist2D( pAgent->npos, &pAgent->cornerVerts[( pAgent->ncorners - 1 ) * 3] );
                 const bool bArrived = pAgent->ncorners == 0 || ( bLastIsEnd && pAgent->ncorners == 1 && remaining <= pAgent->params.radius * 0.25f + 0.01f );

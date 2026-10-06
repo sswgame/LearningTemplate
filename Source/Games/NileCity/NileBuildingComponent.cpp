@@ -163,7 +163,7 @@ namespace sw
             const float32 scale = Internal::kModelScale * size * ( def._kind == CityBuildingKind::Decoration ? Internal::kDecorationScale : 1.0f );
             pMesh->setMeshId( makeModelPath( pModel ) );
             pMesh->setLocalScale( float3{ scale } );
-            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::Pi, 0.0f } );
+            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             pMesh->setLocalPosition( center );
         }
         else

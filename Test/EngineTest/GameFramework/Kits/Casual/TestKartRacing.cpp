@@ -211,7 +211,7 @@ SW_TEST_CASE( KartRacingTest, LapNeedsEveryCheckpointInOrder )
     // 3) 거꾸로 달려 결승선을 뒤로 넘으면 역주행 경고와 함께 바퀴가 내려간다.
     float32      yaw      = 0.0f;
     const float3 position = makeTrackPoint( track, 20.0f, 0.0f, yaw );
-    race.placeRacer( 0, position, yaw + MathUtil::Pi );
+    race.placeRacer( 0, position, yaw + MathUtil::kPi );
     runSteps( race, 150 );
     listEvent.clear();
     race.drainEvents( listEvent );

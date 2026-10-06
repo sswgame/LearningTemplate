@@ -323,7 +323,7 @@ SW_TEST_CASE( MathTest, MathUtilFunctionsFull )
     SW_EXPECT_EQUAL( 16u, aligned );
 
     float32 rad = sw::MathUtil::toRadian( 180.0f );
-    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::Pi, rad, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::kPi, rad, 1e-4f );
 
     float32 rndVal = sw::MathUtil::getRandomRange( 1.0f, 5.0f );
     SW_EXPECT_TRUE( 1.0f <= rndVal && rndVal <= 5.0f );
@@ -403,7 +403,7 @@ SW_TEST_CASE( MathTest, MathUtilAlignZeroAndRandomRangeEdgeCases )
 SW_TEST_CASE( MathTest, PerspectiveFieldOfViewNearFarEdgeCase )
 {
     // Near >= Far 시 near/far 역전 크래시 방지 및 유효한 투영 행렬 생성
-    sw::float4x4 proj = sw::float4x4::createPerspectiveFieldOfView( sw::MathUtil::Pi / 4.0f, 1.777f, 100.0f, 10.0f );
+    sw::float4x4 proj = sw::float4x4::createPerspectiveFieldOfView( sw::MathUtil::kPi / 4.0f, 1.777f, 100.0f, 10.0f );
     SW_EXPECT_TRUE( proj._33 != 0.0f );
     SW_EXPECT_TRUE( proj._34 != 0.0f );
 }

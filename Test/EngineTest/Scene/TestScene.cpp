@@ -650,7 +650,7 @@ SW_TEST_CASE( SceneTest, ShadowMatrixDepthRangeContainsScene )
                               worldPos._z * lightViewProj._33 + lightViewProj._43;
         const float32 clipW = worldPos._x * lightViewProj._14 + worldPos._y * lightViewProj._24 +
                               worldPos._z * lightViewProj._34 + lightViewProj._44;
-        return ( sw::MathUtil::abs( clipW ) > sw::MathUtil::Epsilon ) ? ( clipZ / clipW ) : clipZ;
+        return ( sw::MathUtil::abs( clipW ) > sw::MathUtil::kEpsilon ) ? ( clipZ / clipW ) : clipZ;
     };
 
     // 원점은 볼륨의 한가운데다.

@@ -34,7 +34,7 @@ namespace sw
             static bool isAgentTypeInRange( const NavAgentTypeDef& agentType )
             {
                 const bool bBody   = agentType._radius >= 0.0f && agentType._height > 0.0f && agentType._maxClimb >= 0.0f;
-                const bool bSlope  = 0.0f <= agentType._maxSlope && agentType._maxSlope < MathUtil::HalfPi;
+                const bool bSlope  = 0.0f <= agentType._maxSlope && agentType._maxSlope < MathUtil::kHalfPi;
                 const bool bVoxel  = agentType._cellSize >= 0.01f && agentType._cellHeight >= 0.01f;
                 const bool bTile   = 8u <= agentType._tileSize && agentType._tileSize <= 256u;
                 const bool bDetail = agentType._maxEdgeError >= 0.1f && agentType._detailSampleDistance >= 0.0f && agentType._detailSampleMaxError >= 0.0f;

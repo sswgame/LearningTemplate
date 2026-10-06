@@ -64,14 +64,14 @@ namespace sw
         }
         /**
          * @brief 로컬 값 하나를 씁니다. 지금 값과 거의 같으면 쓰지 않고 false 입니다.
-         * @details **제곱 거리에는 제곱한 허용치를 씁니다.** `Epsilon` 을 그대로 대면 실제 거리 1e-3 까지가 "안 움직였다" 가 되는데, 비교
+         * @details **제곱 거리에는 제곱한 허용치를 씁니다.** `kEpsilon` 을 그대로 대면 실제 거리 1e-3 까지가 "안 움직였다" 가 되는데, 비교
          *          기준이 매번 **지금 값**이라 그 아래 움직임은 쌓이지도 않습니다 — 한 프레임에 1e-3 보다 조금씩 가는 물체는 영원히 제자리에
          *          있게 됩니다. 세터 · 틱 뒤 적용 · 배치 쓰기가 모두 이 규칙 하나를 씁니다.
          */
         [[nodiscard]] bool writeLocalValue( uint32 pageIndex, uint8 bit, const float3& value )
         {
             float3& current = getLocalValueRef( pageIndex, bit );
-            if ( float3::getDistanceSquared( current, value ) <= MathUtil::EpsilonSquared )
+            if ( float3::getDistanceSquared( current, value ) <= MathUtil::kEpsilonSquared )
                 return false;
             current = value;
             return true;

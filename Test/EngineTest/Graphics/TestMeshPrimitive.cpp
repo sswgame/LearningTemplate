@@ -120,7 +120,7 @@ SW_TEST_CASE( MeshPrimitiveTest, WorldBoxFollowsTheMeshAndItsParents )
     sw::GameObject*       pParent   = manager.createGameObject( sw::hashed_string( "Stage" ) );
     sw::SceneComponent*   pParentSc = pParent->addComponent<sw::SceneComponent>();
     pParentSc->setLocalScale( sw::float3( 2.0f, 2.0f, 2.0f ) );
-    pParentSc->setLocalRotation( sw::float3( 0.0f, sw::MathUtil::HalfPi, 0.0f ) );
+    pParentSc->setLocalRotation( sw::float3( 0.0f, sw::MathUtil::kHalfPi, 0.0f ) );
 
     sw::GameObject*    pFloor = manager.createGameObject( sw::hashed_string( "Floor" ) );
     sw::MeshComponent* pMesh  = pFloor->addComponent<sw::MeshComponent>();
@@ -197,7 +197,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
             }
 
             const sw::float3 normal = ( b - a ).cross( c - a );
-            if ( normal.getLengthSquared() <= sw::MathUtil::Epsilon )
+            if ( normal.getLengthSquared() <= sw::MathUtil::kEpsilon )
             {
                 ++degenerateCount;
                 continue;

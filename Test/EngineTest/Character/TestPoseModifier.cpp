@@ -400,7 +400,7 @@ SW_TEST_CASE( PoseModifierTest, PoseDriverCorrectiveMorphDrivesMeshMorphWeight )
             if ( phase != AnimationPhase::BasePose )
                 return;
             BoneTransform elbow = unit.getLocalPose().getBoneTransform( 1 );
-            elbow._rotation     = quaternion::createFromYawPitchRoll( 0.0f, _degrees * MathUtil::DegreeToRadian, 0.0f );
+            elbow._rotation     = quaternion::createFromYawPitchRoll( 0.0f, _degrees * MathUtil::kDegreeToRadian, 0.0f );
             unit.getLocalPose().setBoneTransform( 1, elbow );
         }
         float32 _degrees{ 90.0f };

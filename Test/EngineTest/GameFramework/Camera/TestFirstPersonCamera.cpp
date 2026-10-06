@@ -36,7 +36,7 @@ SW_TEST_CASE( FirstPersonCameraTest, ViewModelSitsAtTheOffsetFromTheEye )
     SW_EXPECT_NEAR_EQUAL( eye._y - 0.15f, straight._y, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( eye._z + 0.42f, straight._z, 1.0e-5f );
 
-    look.setAngles( MathUtil::HalfPi, 0.0f );
+    look.setAngles( MathUtil::kHalfPi, 0.0f );
     const float3 turned = FirstPersonCameraMath::computeViewModelPosition( eye, look, offset );
     SW_EXPECT_NEAR_EQUAL( eye._x + 0.42f, turned._x, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( eye._z - 0.16f, turned._z, 1.0e-5f );
@@ -88,7 +88,7 @@ SW_TEST_CASE( FirstPersonCameraTest, ComponentDrivesItsCameraAndViewModel )
 
     const float3 eye{ 2.0f, 1.6f, -16.0f };
     const float3 offset{ 0.16f, -0.15f, 0.42f };
-    pRig->setViewModel( hashed_string( "ViewWeapon" ), offset, MathUtil::Pi );
+    pRig->setViewModel( hashed_string( "ViewWeapon" ), offset, MathUtil::kPi );
     pRig->setAngles( 0.4f, -0.2f );
     pRig->setEyePosition( eye );
 
@@ -103,7 +103,7 @@ SW_TEST_CASE( FirstPersonCameraTest, ComponentDrivesItsCameraAndViewModel )
     // 뷰 모델은 카메라의 자식으로 로컬 오프셋에 놓인다 — 월드에서는 눈 기준 오프셋 자리이고, 총구(-Z)가 시점의 앞(피치까지)을 본다.
     SW_EXPECT_TRUE( pViewModel->getParent() == pCamera );
     SW_EXPECT_NEAR_EQUAL( offset._z, pViewModel->getLocalPosition()._z, 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( MathUtil::Pi, pViewModel->getLocalRotation()._y, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::kPi, pViewModel->getLocalRotation()._y, 1.0e-6f );
     const float4x4 world    = pViewModel->getWorldMatrix();
     const float3   expected = FirstPersonCameraMath::computeViewModelPosition( eye, pRig->getLook(), offset );
     SW_EXPECT_NEAR_EQUAL( expected._x, world.getTranslation()._x, 1.0e-4f );
@@ -145,9 +145,9 @@ SW_TEST_CASE( FirstPersonCameraTest, CameraFollowsItsParentWhenTheEyeIsLocal )
     manager.beginPlay();
 
     const float3 offset{ 0.16f, -0.15f, 0.42f };
-    pRig->setViewModel( hashed_string( "ViewWeapon" ), offset, MathUtil::Pi );
+    pRig->setViewModel( hashed_string( "ViewWeapon" ), offset, MathUtil::kPi );
     pBody->setLocalPosition( float3{ 5.0f, 0.0f, 3.0f } );
-    pBody->setLocalRotation( float3{ 0.0f, MathUtil::HalfPi, 0.0f } ); // 몸이 +X 를 본다
+    pBody->setLocalRotation( float3{ 0.0f, MathUtil::kHalfPi, 0.0f } ); // 몸이 +X 를 본다
     const float3 eye{ 0.0f, 1.6f, 0.2f };
     pRig->setAngles( 0.0f, 0.0f );
     pRig->setEyePosition( eye );

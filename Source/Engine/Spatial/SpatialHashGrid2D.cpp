@@ -23,10 +23,10 @@ namespace sw
             static int32 toCellCoord( float32 value, float32 cellSize )
             {
                 const float64 scaled = MathUtil::floor( static_cast<float64>( value ) / static_cast<float64>( cellSize ) );
-                if ( ( scaled >= static_cast<float64>( MathUtil::MinInt32 ) ) == false ) // NaN 도 이쪽으로 온다
-                    return MathUtil::MinInt32;
-                if ( scaled > static_cast<float64>( MathUtil::MaxInt32 ) )
-                    return MathUtil::MaxInt32;
+                if ( ( scaled >= static_cast<float64>( MathUtil::kMinInt32 ) ) == false ) // NaN 도 이쪽으로 온다
+                    return MathUtil::kMinInt32;
+                if ( scaled > static_cast<float64>( MathUtil::kMaxInt32 ) )
+                    return MathUtil::kMaxInt32;
                 return static_cast<int32>( scaled );
             }
 
@@ -61,7 +61,7 @@ namespace sw
 
             for ( int32 axis = 0; axis < 2; ++axis )
             {
-                if ( MathUtil::abs( arrDir[axis] ) <= MathUtil::Epsilon )
+                if ( MathUtil::abs( arrDir[axis] ) <= MathUtil::kEpsilon )
                 {
                     // 이 축으로는 움직이지 않는다. 시작부터 상자 밖이면 영영 만나지 못한다.
                     if ( arrOrigin[axis] < arrMin[axis] || arrOrigin[axis] > arrMax[axis] )
@@ -111,8 +111,8 @@ namespace sw
         // 2^64 라 int64 를 넘는다. 넘친 곱은 작은 수(심지어 0)가 되어 "좁은 범위" 로 읽히고, 그러면
         // 상한 검사를 통과해서 **막으려던 순회를 그대로 돌게 된다.** 부르는 쪽은 이 값을 상한과 견주기만
         // 하므로, 넘칠 때는 표현 가능한 최댓값으로 붙여 두면 답이 맞는다.
-        if ( spanX > MathUtil::MaxInt64 / spanY )
-            return MathUtil::MaxInt64;
+        if ( spanX > MathUtil::kMaxInt64 / spanY )
+            return MathUtil::kMaxInt64;
         return spanX * spanY;
     }
 
@@ -256,7 +256,7 @@ namespace sw
         outListHandle.clear();
 
         float2 dir{ dirX, dirY };
-        if ( dir.getLengthSquared() <= MathUtil::Epsilon || maxDist <= 0.0f )
+        if ( dir.getLengthSquared() <= MathUtil::kEpsilon || maxDist <= 0.0f )
             return;
 
         dir.normalize();
@@ -286,11 +286,11 @@ namespace sw
         const float32 nextBoundaryX = static_cast<float32>( boundaryCellX ) * _cellSize;
         const float32 nextBoundaryY = static_cast<float32>( boundaryCellY ) * _cellSize;
 
-        float32 tMaxX = ( stepX != 0 ) ? ( nextBoundaryX - startX ) / directionX : MathUtil::MaxFloat;
-        float32 tMaxY = ( stepY != 0 ) ? ( nextBoundaryY - startY ) / directionY : MathUtil::MaxFloat;
+        float32 tMaxX = ( stepX != 0 ) ? ( nextBoundaryX - startX ) / directionX : MathUtil::kMaxFloat;
+        float32 tMaxY = ( stepY != 0 ) ? ( nextBoundaryY - startY ) / directionY : MathUtil::kMaxFloat;
 
-        const float32 tDeltaX = ( stepX != 0 ) ? ( _cellSize * static_cast<float32>( stepX ) ) / directionX : MathUtil::MaxFloat;
-        const float32 tDeltaY = ( stepY != 0 ) ? ( _cellSize * static_cast<float32>( stepY ) ) / directionY : MathUtil::MaxFloat;
+        const float32 tDeltaX = ( stepX != 0 ) ? ( _cellSize * static_cast<float32>( stepX ) ) / directionX : MathUtil::kMaxFloat;
+        const float32 tDeltaY = ( stepY != 0 ) ? ( _cellSize * static_cast<float32>( stepY ) ) / directionY : MathUtil::kMaxFloat;
 
         // 걸음 수를 막는 이유는 나머지 셋이 셀 수를 막는 이유와 같다. 셀 크기에 견줘 사거리가
         // 길면 훑을 셀이 끝없이 늘어난다. 상한은 `kMaxQueryCellCount` 하나를 같이 쓴다.
@@ -316,8 +316,8 @@ namespace sw
             }
 
             // 셀 번호가 int32 끝에 닿았으면 더 나아갈 수 없다. 증감 자체가 넘침이다.
-            if ( ( stepX > 0 && cellX == MathUtil::MaxInt32 ) || ( stepX < 0 && cellX == MathUtil::MinInt32 ) ||
-                 ( stepY > 0 && cellY == MathUtil::MaxInt32 ) || ( stepY < 0 && cellY == MathUtil::MinInt32 ) )
+            if ( ( stepX > 0 && cellX == MathUtil::kMaxInt32 ) || ( stepX < 0 && cellX == MathUtil::kMinInt32 ) ||
+                 ( stepY > 0 && cellY == MathUtil::kMaxInt32 ) || ( stepY < 0 && cellY == MathUtil::kMinInt32 ) )
                 break;
 
             if ( tMaxX < tMaxY )

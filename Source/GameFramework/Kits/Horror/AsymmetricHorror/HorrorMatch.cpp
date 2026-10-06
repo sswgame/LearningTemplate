@@ -511,7 +511,7 @@ namespace sw
         const HorrorKillerDef& def    = *_killer._pDef;
         const float32          minDot = MathUtil::cos( MathUtil::toRadian( def._lungeAngle * 0.5f ) );
         int32                  victim = -1;
-        float32                best   = MathUtil::MaxFloat;
+        float32                best   = MathUtil::kMaxFloat;
         for ( int32 index = 0; index < getSurvivorCount(); ++index )
         {
             const HorrorSurvivor& candidate = _listSurvivor[static_cast<size_t>( index )];

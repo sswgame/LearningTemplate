@@ -222,7 +222,7 @@ namespace sw
 
             /**
              * @brief 범위의 셀마다 콜백을 부릅니다. 비어 있으면 한 번도 부르지 않습니다.
-             * @details 순회 변수는 int64 다. 셀 번호는 int32 끝(`MaxInt32`)까지 접히는데(+inf · 아주 먼 좌표), int32 로 돌면 `++` 가 넘쳐
+             * @details 순회 변수는 int64 다. 셀 번호는 int32 끝(`kMaxInt32`)까지 접히는데(+inf · 아주 먼 좌표), int32 로 돌면 `++` 가 넘쳐
              *          `<= _maxX` 가 영원히 참이었다 — 게임 스레드가 락을 쥔 채 멈추고 셀 표가 끝없이 자랐다.
              */
             template <typename Func>

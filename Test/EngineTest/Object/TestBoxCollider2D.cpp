@@ -127,7 +127,7 @@ SW_TEST_CASE( BoxCollider2DTest, RotatedBoxIsCoveredByItsAxisAlignedBounds )
     sw::SceneComponent*   pRoot   = pTurned->addComponent<sw::SceneComponent>();
     SW_ASSERT_NOT_NULL( pRoot );
     pRoot->setLocalScale( sw::float3{ 2.0f, 3.0f, 1.0f } );
-    pRoot->setLocalRotation( sw::float3{ 0.0f, 0.0f, sw::MathUtil::HalfPi } );
+    pRoot->setLocalRotation( sw::float3{ 0.0f, 0.0f, sw::MathUtil::kHalfPi } );
     sw::BoxCollider2DComponent* pBox = spawnCrate( manager, pTurned );
     SW_ASSERT_NOT_NULL( pBox );
     manager.flushSceneTransforms();

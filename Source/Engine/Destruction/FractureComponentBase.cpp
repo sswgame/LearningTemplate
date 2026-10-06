@@ -124,7 +124,7 @@ namespace sw
                 while ( outListPolygon.size() > maxPoint )
                 {
                     size_t  weakest  = 0;
-                    float32 smallest = MathUtil::MaxFloat;
+                    float32 smallest = MathUtil::kMaxFloat;
                     for ( size_t index = 0; index < outListPolygon.size(); ++index )
                     {
                         const size_t  count = outListPolygon.size();

@@ -100,8 +100,8 @@ namespace sw
     void Mesh::refreshBoundingRadius()
     {
         float32 maxLengthSquared = 0.0f;
-        float3  boundsMin{ MathUtil::MaxFloat, MathUtil::MaxFloat, MathUtil::MaxFloat };
-        float3  boundsMax{ MathUtil::MinFloat, MathUtil::MinFloat, MathUtil::MinFloat };
+        float3  boundsMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+        float3  boundsMax{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };
         for ( const RHIVertex& vertex : _listVertex )
         {
             const float3 position{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };

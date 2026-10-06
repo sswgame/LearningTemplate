@@ -542,7 +542,7 @@ namespace sw
         for ( EventInstance& instance : _listInstance )
         {
             instance._audibility = -1.0f;
-            instance._distance   = MathUtil::MaxFloat;
+            instance._distance   = MathUtil::kMaxFloat;
         }
         for ( const VoiceSlot& slot : _listVoice )
         {

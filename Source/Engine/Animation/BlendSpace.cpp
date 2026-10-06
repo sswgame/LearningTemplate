@@ -77,7 +77,7 @@ namespace sw
             if ( s0._parameter <= parameter && parameter <= s1._parameter )
             {
                 const float32 span = s1._parameter - s0._parameter;
-                const float32 t    = span > MathUtil::Epsilon ? ( ( parameter - s0._parameter ) / span ) : 0.0f;
+                const float32 t    = span > MathUtil::kEpsilon ? ( ( parameter - s0._parameter ) / span ) : 0.0f;
 
                 float3               scale0{};
                 float3               scale1{};
@@ -128,11 +128,11 @@ namespace sw
         }
         const float2 targetParam{ MathUtil::clamp( paramX, minParam._x, maxParam._x ), MathUtil::clamp( paramY, minParam._y, maxParam._y ) };
 
-        float32 nearestDistSq = MathUtil::MaxFloat;
+        float32 nearestDistSq = MathUtil::kMaxFloat;
         for ( const BlendSample2D& sample : _listSample )
         {
             const float32 distSq = float2::getDistanceSquared( targetParam, sample._parameter );
-            if ( distSq < MathUtil::Epsilon )
+            if ( distSq < MathUtil::kEpsilon )
                 return sample._pose;
             nearestDistSq = MathUtil::min( nearestDistSq, distSq );
         }
@@ -153,7 +153,7 @@ namespace sw
             const BlendSample2D& sample           = _listSample[index];
             const float32        normalizedWeight = invTotalWeight / float2::getDistanceSquared( targetParam, sample._parameter );
             const float32        weightSum        = accumWeight + normalizedWeight;
-            if ( weightSum < MathUtil::Epsilon )
+            if ( weightSum < MathUtil::kEpsilon )
                 continue;
 
             const DualQuaternion sampleDq = BlendSpaceInternal::splitPose( sample._pose, sampleScale );

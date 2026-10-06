@@ -1147,7 +1147,7 @@ cd build/Ninja-Debug/Bin
   게임을 고른 빌드의 쿠킹이 모두 선다. 엔진 · 공용 타입만 쓰는 다른 팩의 씬은 그대로 쿠킹한다(`AppCookTest` 가 `game/empty` 를 본다). 활성 팩의 모르는 타입은 여전히 실패다
   (`SceneTest.SceneCookFailsOnAComponentOfUnknownType`).
 - **물리** — `stepPhysics` 는 틱과 트랜스폼 적용 뒤에 한 번 돈다. 콜라이더는 틱하지 않고 틱 안의 질의는 지난 step 을 본다. `onOverlapBegin( const OverlapInfo& )` 안에서는 스폰 ·
-  파괴해도 된다. 순간이동은 `teleportTo` · `BodyMoveType::Teleport`(아니면 연속 바디가 그 길을 쓴다). 셀 범위는 `CellRange` 하나, 셀 순회 변수는 int64(`MaxInt32` 로 접히면 안 끝난다),
+  파괴해도 된다. 순간이동은 `teleportTo` · `BodyMoveType::Teleport`(아니면 연속 바디가 그 길을 쓴다). 셀 범위는 `CellRange` 하나, 셀 순회 변수는 int64(`MathUtil::kMaxInt32` 로 접히면 안 끝난다),
   `toCellCoord` 는 float64 로 나눈 뒤 접는다. 공간 색인 규약은 `Source/Engine/Spatial/README.md`.
 - **강체 물리** — `ScenePhysics::step` 이 겹침 월드 다음에 돈다(고정 스텝 → 보간 자세를 트랜스폼에 → 이벤트). 컴포넌트가 쓴 자세와 다른 트랜스폼은 코드가 옮긴 것(순간이동)이다.
   vcpkg Jolt 는 설치 헤더가 부동소수 예외 비트를 켜고 라이브러리는 끈다 — `JPH::RegisterTypes()` 는 abort 하므로 백엔드가 라이브러리의 ID 로 등록한다(그 비트만 허용).
@@ -1157,7 +1157,7 @@ cd build/Ninja-Debug/Bin
 - **파쇄(평면 자르기)** — 모서리 교점은 끝점을 자리 순으로 정렬해 구한다(이웃 칸이 같은 모서리를 반대 방향으로 자르면 비트가 달라 틈이 생긴다). 세 칸이 만나는 곳에는 거의 같은
   점이 생겨 그때만 용접 + 퇴화 삼각형 정리(`cleanPiece`)를 돈다(늘 돌리면 느리다). 귀 자르기는 일직선 점을 삼각형 없이 버리면 안 된다(T 자 틈). 안쪽 면 다시 짓기는 그 점을
   쓰는 **모든** 면이 안쪽 면일 때만 뺀다. 쪼개기 결과가 바뀌면 `MeshFractureUtil::kAlgorithmVersion` 을 올린다(임포트 해시).
-- **"바뀌었나" 검사는 제곱 거리를 `MathUtil::EpsilonSquared` 와 비교한다**(`Epsilon` 이면 프레임당 1e-3 아래 움직임이 영원히 삼켜진다). `GpuSceneBuilder::bCamSame` 의 이력은 의도다.
+- **"바뀌었나" 검사는 제곱 거리를 `MathUtil::kEpsilonSquared` 와 비교한다**(`kEpsilon` 이면 프레임당 1e-3 아래 움직임이 영원히 삼켜진다). `GpuSceneBuilder::bCamSame` 의 이력은 의도다.
   `float4x4::invert` 는 행렬식이 정확히 0 · NaN 일 때만 항등을 돌려준다(절대 임계값은 작은 부모 · 큰 직교 카메라를 깨뜨렸다).
 - **시퀀서** — "지나갔는가" 는 `previousFrame < start <= frame`, 이전 프레임 없음은 `kNoPreviousFrame`(INT32_MIN — -1 은 frameMin 0 과 겹친다). 프레임은 배 정밀도로 곱하고 천분의 일을
   얹어 자른다. 반복 재생 시간은 한 바퀴 안으로 감는다(float32 는 10^6 초 근처에서 0.016 을 더해도 안 움직인다).

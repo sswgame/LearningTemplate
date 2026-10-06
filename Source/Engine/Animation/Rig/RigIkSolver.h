@@ -47,10 +47,10 @@ namespace sw
         quaternion        _referenceRotation{};
         float3            _boneAxis{ 0.0f, 1.0f, 0.0f };
         float3            _hingeAxis{ 1.0f, 0.0f, 0.0f };
-        float32           _swingLimit{ MathUtil::Pi };
-        float32           _twistLimit{ MathUtil::Pi };
-        float32           _minAngle{ -MathUtil::Pi };
-        float32           _maxAngle{ MathUtil::Pi };
+        float32           _swingLimit{ MathUtil::kPi };
+        float32           _twistLimit{ MathUtil::kPi };
+        float32           _minAngle{ -MathUtil::kPi };
+        float32           _maxAngle{ MathUtil::kPi };
         RigJointLimitType _type{ RigJointLimitType::None };
     };
 } // namespace sw
@@ -60,8 +60,8 @@ namespace sw
     /** @brief 사슬 IK 의 반복 설정입니다. */
     struct RigChainSettings
     {
-        float32 _tolerance{ 0.001f };          ///< 끝이 목표에 이만큼 가까우면 멈춘다(미터)
-        float32 _maxStepAngle{ MathUtil::Pi }; ///< CCD 한 관절 한 걸음의 최대 회전(라디안) — 작으면 부드럽게 휜다
+        float32 _tolerance{ 0.001f };           ///< 끝이 목표에 이만큼 가까우면 멈춘다(미터)
+        float32 _maxStepAngle{ MathUtil::kPi }; ///< CCD 한 관절 한 걸음의 최대 회전(라디안) — 작으면 부드럽게 휜다
         uint32  _iterationCount{ 10 };
     };
 } // namespace sw

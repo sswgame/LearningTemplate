@@ -389,7 +389,7 @@ namespace sw
     {
         // 가장 가까운 적의 가슴을 천천히 겨누고, 교전 거리 안이고 조준이 맞으면 쏜다. 아레나 가운데를 중심으로 원을 그리며 움직인다.
         const float3                    eye          = getEyePosition();
-        float32                         bestDistance = MathUtil::MaxFloat;
+        float32                         bestDistance = MathUtil::kMaxFloat;
         float3                          aimPoint{ 0.0f, 0.0f, 0.0f };
         bool                            bHasTarget = false;
         const vector<ShooterEnemyView>& listView   = director.getEnemyViews();
@@ -420,7 +420,7 @@ namespace sw
         const float32 yaw     = OrientationUtil::turnTowardAngle( look.getYaw(), look.getYaw() + yawError * blend, maxTurn );
         const float32 pitch   = look.getPitch() + MathUtil::clamp( ( targetPitch - look.getPitch() ) * blend, -maxTurn, maxTurn );
         camera.setAngles( yaw, pitch );
-        const bool bAimed       = MathUtil::abs( yawError ) < 3.0f * MathUtil::DegreeToRadian && bestDistance < ShooterPlayerComponentInternal::kAutoEngageDistance;
+        const bool bAimed       = MathUtil::abs( yawError ) < 3.0f * MathUtil::kDegreeToRadian && bestDistance < ShooterPlayerComponentInternal::kAutoEngageDistance;
         outIntent._bTrigger     = bAimed ? SW_TRUE : SW_FALSE;
         outIntent._bJustPressed = bAimed ? SW_TRUE : SW_FALSE;
         // 가까우면 산탄총, 멀면 소총.
@@ -515,7 +515,7 @@ namespace sw
             _soundQueue.queueEvent( Internal::kSoundHitCover );
         }
         // 반동 — 위로 튀고 옆으로 살짝.
-        const float32 kick = weapon.getDef()._recoilPitch * MathUtil::DegreeToRadian;
+        const float32 kick = weapon.getDef()._recoilPitch * MathUtil::kDegreeToRadian;
         camera.addRecoil( kick, kick * 0.25f * ( ( _shotCount % 2u ) == 0u ? 1.0f : -1.0f ) );
     }
 

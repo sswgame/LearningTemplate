@@ -62,7 +62,7 @@ SW_TEST_CASE( CombatTest, BallisticsDropsAimsArcsAndLeadsMovingTargets )
         float3 direction{};
         SW_ASSERT_TRUE( Ballistics::computeLaunchDirection( from, to, 30.0f, 1.0f, bHighArc, direction ) );
         Projectile projectile = Ballistics::launch( from, direction, 30.0f, 1.0f, 10.0f );
-        float32    bestGap    = MathUtil::MaxFloat;
+        float32    bestGap    = MathUtil::kMaxFloat;
         while ( projectile.isExpired() == false && projectile._position._y > -5.0f )
         {
             Ballistics::step( projectile, 0.001f );

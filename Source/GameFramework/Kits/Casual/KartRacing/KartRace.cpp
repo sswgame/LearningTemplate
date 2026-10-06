@@ -32,10 +32,10 @@ namespace sw
                 const float32 currentYaw = MathUtil::atan2( direction._x, direction._z );
                 const float32 targetYaw  = MathUtil::atan2( target._x - from._x, target._z - from._z );
                 float32       delta      = targetYaw - currentYaw;
-                while ( delta > MathUtil::Pi )
-                    delta -= 2.0f * MathUtil::Pi;
-                while ( delta < -MathUtil::Pi )
-                    delta += 2.0f * MathUtil::Pi;
+                while ( delta > MathUtil::kPi )
+                    delta -= 2.0f * MathUtil::kPi;
+                while ( delta < -MathUtil::kPi )
+                    delta += 2.0f * MathUtil::kPi;
                 const float32 newYaw = currentYaw + MathUtil::clamp( delta, -maxTurn, maxTurn );
                 return float3{ MathUtil::sin( newYaw ), 0.0f, MathUtil::cos( newYaw ) };
             }
@@ -745,7 +745,7 @@ namespace sw
         if ( kart._bAi == SW_FALSE || kart._bFinished == SW_TRUE )
             return 1.0f;
         float32 leaderProgress    = kart._progress;
-        float32 bestHumanProgress = MathUtil::MinFloat;
+        float32 bestHumanProgress = MathUtil::kMinFloat;
         for ( const KartRacer& other : _listRacer )
         {
             leaderProgress = MathUtil::max( leaderProgress, other._progress );
@@ -756,7 +756,7 @@ namespace sw
         const float32 behind = leaderProgress - kart._progress;
         if ( behind > 0.0f )
             return 1.0f + _settings._rubberBandMaxBonus * MathUtil::saturate( behind / _settings._rubberBandDistance );
-        const bool bHumanBehind = bestHumanProgress > MathUtil::MinFloat && bestHumanProgress < kart._progress;
+        const bool bHumanBehind = bestHumanProgress > MathUtil::kMinFloat && bestHumanProgress < kart._progress;
         if ( bHumanBehind )
             return 1.0f - _settings._rubberBandLeadPenalty * MathUtil::saturate( ( kart._progress - bestHumanProgress ) / _settings._rubberBandDistance );
         return 1.0f;

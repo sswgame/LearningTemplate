@@ -84,8 +84,8 @@ namespace sw
 
             static void placeSites( vector_reference<const float2> listBorder, const FractureSettings& settings, vector<float2>& outListSite )
             {
-                float2 boundsMin{ MathUtil::MaxFloat, MathUtil::MaxFloat };
-                float2 boundsMax{ MathUtil::MinFloat, MathUtil::MinFloat };
+                float2 boundsMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+                float2 boundsMax{ MathUtil::kMinFloat, MathUtil::kMinFloat };
                 for ( const float2& point : listBorder )
                 {
                     boundsMin = float2::min( boundsMin, point );
@@ -127,7 +127,7 @@ namespace sw
                 const float2 impact{ settings._impactPoint._x, settings._impactPoint._y };
                 for ( uint32 attempt = 0; outListSite.size() < nearTarget && attempt < nearTarget * kSiteAttemptFactor; ++attempt )
                 {
-                    const float32 angle  = random.nextRange( 0.0f, MathUtil::Pi * 2.0f );
+                    const float32 angle  = random.nextRange( 0.0f, MathUtil::kPi * 2.0f );
                     const float32 radius = MathUtil::sqrt( random.nextFloat01() ) * settings._clusterRadius;
                     addIfInside( impact + float2{ MathUtil::cos( angle ) * radius, MathUtil::sin( angle ) * radius } );
                 }
@@ -290,8 +290,8 @@ namespace sw
         vector<uint32> listLeafOrder;
         FractureGraphUtil::buildHierarchy( graph, settings._listLevelCount, listLeafOrder );
 
-        float2 boundsMin{ MathUtil::MaxFloat, MathUtil::MaxFloat };
-        float2 boundsMax{ MathUtil::MinFloat, MathUtil::MinFloat };
+        float2 boundsMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+        float2 boundsMax{ MathUtil::kMinFloat, MathUtil::kMinFloat };
         for ( const float2& point : listShape )
         {
             boundsMin = float2::min( boundsMin, point );
@@ -333,8 +333,8 @@ namespace sw
             piece._vertexCount        = static_cast<uint32>( outAsset._listVertex.size() ) - piece._firstVertex;
             piece._firstHullPoint     = static_cast<uint32>( outAsset._listHullPoint.size() );
             const float3& pieceCenter = outAsset._graph._listNode[leaf]._centroid;
-            float2        pieceMin{ MathUtil::MaxFloat, MathUtil::MaxFloat };
-            float2        pieceMax{ MathUtil::MinFloat, MathUtil::MinFloat };
+            float2        pieceMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+            float2        pieceMax{ MathUtil::kMinFloat, MathUtil::kMinFloat };
             for ( const float2& point : listPoint )
             {
                 outAsset._listHullPoint.push_back( float3{ point, 0.0f } - pieceCenter );

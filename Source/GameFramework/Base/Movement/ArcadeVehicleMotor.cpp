@@ -126,10 +126,10 @@ namespace sw
             yawRate *= _settings._airSteerScale;
         const float32 oldYaw = _yaw;
         _yaw += yawRate * deltaTime;
-        if ( _yaw > MathUtil::Pi )
-            _yaw -= 2.0f * MathUtil::Pi;
-        else if ( _yaw < -MathUtil::Pi )
-            _yaw += 2.0f * MathUtil::Pi;
+        if ( _yaw > MathUtil::kPi )
+            _yaw -= 2.0f * MathUtil::kPi;
+        else if ( _yaw < -MathUtil::kPi )
+            _yaw += 2.0f * MathUtil::kPi;
 
         // 6) 옛 방향의 앞 · 옆 속도를 새 방향으로 다시 나눈다 — 돈 만큼 옆 성분이 생기고, 접지가 그것을 줄인다(미끄러짐).
         const float32 oldSin   = MathUtil::sin( oldYaw );

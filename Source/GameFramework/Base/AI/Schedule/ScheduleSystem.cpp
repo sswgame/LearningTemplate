@@ -1078,7 +1078,7 @@ namespace sw
                 for ( int32 hopStart = startMinute; hopStart < endMinute; hopStart += stepMinutes )
                 {
                     const uint32    hash   = GameHash::hashCoord( day, hopStart, _settings._seed ^ npcKey );
-                    const float32   angle  = GameHash::toUnitFloat( hash ) * ( 2.0f * MathUtil::Pi );
+                    const float32   angle  = GameHash::toUnitFloat( hash ) * ( 2.0f * MathUtil::kPi );
                     const float32   length = radius * ::sqrtf( GameHash::toUnitFloat( GameHash::mix32( hash ) ) );
                     ScheduleSegment hop    = segment;
                     hop._startMinute       = hopStart;

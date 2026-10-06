@@ -33,7 +33,7 @@ namespace
         static AnimationLodView makeForwardView( const float3& eye, const float3& target )
         {
             const float4x4 view       = float4x4::createLookAt( eye, target, float3{ 0.0f, 1.0f, 0.0f } );
-            const float4x4 projection = float4x4::createPerspectiveFieldOfView( MathUtil::Pi * 0.5f, 1.0f, 0.1f, 1000.0f );
+            const float4x4 projection = float4x4::createPerspectiveFieldOfView( MathUtil::kPi * 0.5f, 1.0f, 0.1f, 1000.0f );
             return AnimationLodView::make( view * projection, eye );
         }
 

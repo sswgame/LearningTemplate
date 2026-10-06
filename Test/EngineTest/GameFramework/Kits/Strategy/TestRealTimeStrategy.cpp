@@ -93,7 +93,7 @@ namespace
         {
             const RtsUnit* pUnit = _world.findUnit( unitId );
             if ( pUnit == nullptr )
-                return MathUtil::MaxFloat;
+                return MathUtil::kMaxFloat;
             const float32 dx = pUnit->_position._x - point._x;
             const float32 dz = pUnit->_position._z - point._z;
             return MathUtil::sqrt( dx * dx + dz * dz );

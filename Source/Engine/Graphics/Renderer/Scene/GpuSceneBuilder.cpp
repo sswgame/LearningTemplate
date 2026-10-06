@@ -441,8 +441,8 @@ namespace sw
         const bool               bHasCache     = _listBuiltCandidate.empty() == false;
         const bool               bSetSame      = bHasCache && ( setGeneration == _lastPrimitiveSetGeneration );
         // 정렬 축이 바뀌어도(직교 ↔ 원근 카메라 전환) 투명 순서가 바뀐다 — 카메라가 그대로인 것으로 보지 않는다.
-        const bool bCamSame = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::Epsilon ) &&
-                              ( float3::getDistanceSquared( _transparentSortAxis, _lastTransparentSortAxis ) <= MathUtil::Epsilon );
+        const bool bCamSame = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::kEpsilon ) &&
+                              ( float3::getDistanceSquared( _transparentSortAxis, _lastTransparentSortAxis ) <= MathUtil::kEpsilon );
         // 퍼뮤테이션은 프리미티브를 더럽히지 않는다. 머티리얼 · 인스턴스의 정적 스위치 · 키워드 · 멀티컴파일을
         // 바꾸면 그릴 셰이더가 달라지는데 씬에서는 아무 일도 일어나지 않은 것처럼 보인다. 세대로 가른다.
         const uint64 permutationGeneration = MaterialUtil::getPermutationGeneration();
@@ -956,7 +956,7 @@ namespace sw
     {
         TransparentSortKey key;
         key._sortKey        = sortLayer;
-        key._depth          = axis.getLengthSquared() > MathUtil::Epsilon ? ( center - eye ).dot( axis ) : float3::getDistanceSquared( center, eye );
+        key._depth          = axis.getLengthSquared() > MathUtil::kEpsilon ? ( center - eye ).dot( axis ) : float3::getDistanceSquared( center, eye );
         key._candidateIndex = orderIndex;
         return key;
     }
@@ -1009,7 +1009,7 @@ namespace sw
             shared_ptr<vector<uint32>> listTailSlot = make_shared<vector<uint32>>( tailCount );
             for ( uint32 tailIndex = 0; tailIndex < tailCount; ++tailIndex )
                 ( *listTailSlot )[tailIndex] = tailBase + tailIndex;
-            vector<uint32> listBatchFirstRank( listBatch.size(), MathUtil::MaxUInt32 );
+            vector<uint32> listBatchFirstRank( listBatch.size(), MathUtil::kMaxUInt32 );
             for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
             {
                 const GpuMeshBatch& batch          = listBatch[batchIndex];

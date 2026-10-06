@@ -263,7 +263,7 @@ namespace sw::editor
             static float3 normalizeOrZero( const float3& value )
             {
                 const float32 length = value.getLength();
-                return length > MathUtil::Epsilon ? value * ( 1.0f / length ) : float3{};
+                return length > MathUtil::kEpsilon ? value * ( 1.0f / length ) : float3{};
             }
 
             /**
@@ -380,7 +380,7 @@ namespace sw::editor
                     if ( readFloats( pNormal, vertexIndex, arrNormal, 3 ) )
                     {
                         vertex._normal     = convertToEngineSpace( transformNormal( arrWorld, float3{ arrNormal } ) );
-                        vertex._bHasNormal = vertex._normal.getLength() > MathUtil::Epsilon;
+                        vertex._bHasNormal = vertex._normal.getLength() > MathUtil::kEpsilon;
                     }
 
                     float32 arrUv[2]{};
@@ -438,7 +438,7 @@ namespace sw::editor
                     inoutVertex._arrWeight[influence] = bValid ? MathUtil::max( arrWeight[influence], 0.0f ) : 0.0f;
                     weightSum += inoutVertex._arrWeight[influence];
                 }
-                if ( weightSum <= MathUtil::Epsilon )
+                if ( weightSum <= MathUtil::kEpsilon )
                 {
                     inoutVertex._arrJoint[0]  = skin._rigidBone;
                     inoutVertex._arrWeight[0] = 1.0f;

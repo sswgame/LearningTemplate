@@ -210,10 +210,10 @@ namespace sw::editor
             }
             else if constexpr ( kWidget == InspectorValueWidget::Rotation )
             {
-                float3 degrees = value.getEulerAngles() * MathUtil::RadianToDegree;
+                float3 degrees = value.getEulerAngles() * MathUtil::kRadianToDegree;
                 if ( ImGui::DragFloat3( pLabel, &degrees._x, 0.5f, 0.0f, 0.0f, "%.1f deg" ) == false )
                     return false;
-                value = quaternion::createFromYawPitchRoll( degrees * MathUtil::DegreeToRadian );
+                value = quaternion::createFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
                 return true;
             }
             else if constexpr ( kWidget == InspectorValueWidget::Handle )

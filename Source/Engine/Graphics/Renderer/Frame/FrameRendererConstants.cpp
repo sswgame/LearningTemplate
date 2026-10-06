@@ -122,7 +122,7 @@ namespace sw
         // FrameLightState 의 멤버 초기값 하나뿐이다(값을 두 군데 두면 언젠가 갈라진다).
         const float4& dirIntensity = _frameLight._dirIntensity;
         float3        lightDir     = float3{ dirIntensity._x, dirIntensity._y, dirIntensity._z }.normalize();
-        if ( lightDir.getLengthSquared() < MathUtil::Epsilon )
+        if ( lightDir.getLengthSquared() < MathUtil::kEpsilon )
             lightDir = float3{ 0.57735f, -0.57735f, 0.57735f };
 
         // 라이트를 원점 위(빛이 오는 쪽)에 두고 빛 방향을 따라 원점을 내려다본다. up 이 라이트와

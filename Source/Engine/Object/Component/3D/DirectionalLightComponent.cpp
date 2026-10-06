@@ -60,7 +60,7 @@ namespace sw
     float4 DirectionalShadowProjection::computeShaderParams() const
     {
         using Internal                  = DirectionalLightComponentInternal;
-        const float32 depthRange        = MathUtil::max( _depthRange, MathUtil::Epsilon );
+        const float32 depthRange        = MathUtil::max( _depthRange, MathUtil::kEpsilon );
         const float32 resolution        = static_cast<float32>( MathUtil::max( _resolution, 1u ) );
         const float32 depthBiasWorld    = _texelWorldSize * Internal::kShadowDepthBiasTexels;
         const float32 normalOffsetWorld = _texelWorldSize * Internal::kShadowNormalOffsetTexels;
@@ -168,7 +168,7 @@ namespace sw
         {
             const float4  ndc{ ( cornerIndex & 1u ) != 0 ? 1.0f : -1.0f, ( cornerIndex & 2u ) != 0 ? 1.0f : -1.0f, ( cornerIndex & 4u ) != 0 ? 1.0f : 0.0f, 1.0f };
             const float4  world    = float4::transform( ndc, invViewProj );
-            const float32 inverseW = MathUtil::abs( world._w ) > MathUtil::Epsilon ? 1.0f / world._w : 1.0f;
+            const float32 inverseW = MathUtil::abs( world._w ) > MathUtil::kEpsilon ? 1.0f / world._w : 1.0f;
             arrCorner[cornerIndex] = float3{ world._x * inverseW, world._y * inverseW, world._z * inverseW };
         }
 
@@ -198,7 +198,7 @@ namespace sw
                 const float3& from = arrCorner[edge[0]];
                 const float3& to   = arrCorner[edge[1]];
                 const float32 rise = to._y - from._y;
-                if ( MathUtil::abs( rise ) <= MathUtil::Epsilon )
+                if ( MathUtil::abs( rise ) <= MathUtil::kEpsilon )
                     continue;
                 for ( const float32 planeHeight : arrPlaneHeight )
                 {

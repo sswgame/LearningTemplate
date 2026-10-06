@@ -47,7 +47,7 @@ namespace sw
                 return pValue != nullptr ? &pValue->_text : nullptr;
             }
 
-            static float3 toRadians( const float3& degrees ) { return degrees * MathUtil::DegreeToRadian; }
+            static float3 toRadians( const float3& degrees ) { return degrees * MathUtil::kDegreeToRadian; }
         };
     } // namespace
 } // namespace sw

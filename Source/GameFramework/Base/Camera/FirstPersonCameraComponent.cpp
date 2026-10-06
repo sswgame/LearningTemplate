@@ -36,12 +36,12 @@ namespace sw
     FirstPersonCameraComponent::FirstPersonCameraComponent()
         : _yaw{ 0.0f }
         , _pitch{ 0.0f }
-        , _maxPitch{ 85.0f * MathUtil::DegreeToRadian }
+        , _maxPitch{ 85.0f * MathUtil::kDegreeToRadian }
         , _mouseSensitivity{ 0.0022f }
         , _lookAction{}
         , _bMouseLook{ true }
         , _bLockMouse{ true }
-        , _fieldOfViewY{ 75.0f * MathUtil::DegreeToRadian }
+        , _fieldOfViewY{ 75.0f * MathUtil::kDegreeToRadian }
         , _nearPlane{ 0.05f }
         , _farPlane{ 120.0f }
         , _viewModelName{}

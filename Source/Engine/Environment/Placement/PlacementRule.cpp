@@ -81,7 +81,7 @@ namespace sw
     float32 PlacementScatter::computeSlope( const float3& normal )
     {
         const float32 length = normal.getLength();
-        if ( length <= MathUtil::Epsilon )
+        if ( length <= MathUtil::kEpsilon )
             return 0.0f;
         return MathUtil::acos( MathUtil::clamp( normal._y / length, -1.0f, 1.0f ) );
     }
@@ -224,7 +224,7 @@ namespace sw
         const float3  target = ( float3::Up * ( 1.0f - instance._alignToNormal ) + normal * instance._alignToNormal ).normalize();
         const float3  axis   = float3::Up.cross( target );
         const float32 sine   = axis.getLength();
-        if ( sine <= MathUtil::Epsilon )
+        if ( sine <= MathUtil::kEpsilon )
             return yawScale * float4x4::createTranslation( position );
         const float32 angle = MathUtil::atan2( sine, float3::Up.dot( target ) );
         return yawScale * float4x4::createFromAxisAngle( axis * ( 1.0f / sine ), angle ) * float4x4::createTranslation( position );

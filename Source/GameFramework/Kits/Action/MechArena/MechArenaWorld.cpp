@@ -627,7 +627,7 @@ namespace sw
         const MechWeaponSlotDef& slot   = pilot.getMode()->_listWeapon[static_cast<size_t>( pilot._meleeSlot - pilot.getMech()->computeSlotOffset( pilot._mode ) )];
         const MechDef*           pMech  = pilot.getMech();
         int32                    target = -1;
-        float32                  best   = MathUtil::MaxFloat;
+        float32                  best   = MathUtil::kMaxFloat;
         for ( int32 other = 0; other < getPilotCount(); ++other )
         {
             const MechPilot& candidate = _listPilot[static_cast<size_t>( other )];

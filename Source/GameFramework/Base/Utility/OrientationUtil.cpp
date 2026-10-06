@@ -35,10 +35,10 @@ namespace sw
 
     float32 OrientationUtil::wrapAngle( float32 angle )
     {
-        while ( angle > MathUtil::Pi )
-            angle -= 2.0f * MathUtil::Pi;
-        while ( angle < -MathUtil::Pi )
-            angle += 2.0f * MathUtil::Pi;
+        while ( angle > MathUtil::kPi )
+            angle -= 2.0f * MathUtil::kPi;
+        while ( angle < -MathUtil::kPi )
+            angle += 2.0f * MathUtil::kPi;
         return angle;
     }
 

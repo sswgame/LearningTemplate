@@ -38,7 +38,7 @@ namespace sw
 
     CameraComponent* CameraRegistry::selectCamera( CameraRole role ) const
     {
-        int32            bestPriority = MathUtil::MinInt32;
+        int32            bestPriority = MathUtil::kMinInt32;
         CameraComponent* pBest{ nullptr };
         for ( CameraComponent* pCamera : _registeredCamera.getItems() )
         {

@@ -172,7 +172,7 @@ SW_TEST_CASE( PhysicsScene3DTest, RaycastReportsHitDistance )
     SW_EXPECT_FALSE( pScene->raycast( sw::float3{}, sw::float3{ 1.0f, 0.0f, 0.0f }, 4.0f, filter, hit ) ); // 닿기 전에 끝난다
 
     // 셰이프 캐스트: 반지름 0.5 구가 x 로 가면 표면까지 4.5 - 0.5 = 4 m 에서 닿는다.
-    filter._layerMask = sw::MathUtil::MaxUInt32;
+    filter._layerMask = sw::MathUtil::kMaxUInt32;
     SW_ASSERT_TRUE( pScene->shapeCast( makeSphere( 0.5f ), sw::float3{}, sw::quaternion{}, sw::float3{ 1.0f, 0.0f, 0.0f }, 100.0f, filter, hit ) );
     SW_EXPECT_NEAR_EQUAL( 4.0f, hit._distance, 1e-2f );
     SW_EXPECT_TRUE( hit._body == target );
@@ -449,8 +449,8 @@ SW_TEST_CASE( PhysicsScene3DTest, StartingAngularVelocityIsClampedToBodyLimit )
     const sw::PhysicsBodyHandle body = pScene->createBody( desc );
     SW_ASSERT_TRUE( body.isValid() );
     const float32 speed = pScene->getAngularVelocity( body ).getLength();
-    SW_EXPECT_TRUE( speed > 1.0f );                              // 방향은 남긴다
-    SW_EXPECT_TRUE( speed <= 0.25f * sw::MathUtil::Pi * 60.0f ); // Jolt 기본 상한(초당 15 바퀴)
+    SW_EXPECT_TRUE( speed > 1.0f );                               // 방향은 남긴다
+    SW_EXPECT_TRUE( speed <= 0.25f * sw::MathUtil::kPi * 60.0f ); // Jolt 기본 상한(초당 15 바퀴)
 }
 
 /**

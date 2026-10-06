@@ -139,7 +139,7 @@ namespace sw
             return;
         // 원판 안 고르게 — 반지름에 제곱근.
         const float32     radius = _settings._spawnRadius * MathUtil::sqrt( _random.nextFloat() );
-        const float32     angle  = _random.nextRange( 0.0f, 2.0f * MathUtil::Pi );
+        const float32     angle  = _random.nextRange( 0.0f, 2.0f * MathUtil::kPi );
         PartyItemInstance instance;
         instance._itemId   = pDef->_id;
         instance._serial   = _nextSerial++;

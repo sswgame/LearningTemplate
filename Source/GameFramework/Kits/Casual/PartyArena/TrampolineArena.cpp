@@ -351,7 +351,7 @@ namespace sw
 
     float3 TrampolineArena::makeSpawnPosition( int32 player ) const
     {
-        const float32 angle  = MathUtil::Pi * 2.0f * static_cast<float32>( player ) / static_cast<float32>( MathUtil::max( 1, getPlayerCount() ) );
+        const float32 angle  = MathUtil::kPi * 2.0f * static_cast<float32>( player ) / static_cast<float32>( MathUtil::max( 1, getPlayerCount() ) );
         const float32 radius = _settings._arenaRadius * 0.5f;
         return float3{ MathUtil::cos( angle ) * radius, _settings._spawnHeight, MathUtil::sin( angle ) * radius };
     }

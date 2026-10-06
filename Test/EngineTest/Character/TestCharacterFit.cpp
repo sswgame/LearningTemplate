@@ -100,7 +100,7 @@ namespace
         /** @brief 삼각형의 세 정점 y 의 최솟값. */
         static float32 findTriangleMinY( const AppearanceGeometry& geometry, uint32 triangle )
         {
-            float32 minY = MathUtil::MaxFloat;
+            float32 minY = MathUtil::kMaxFloat;
             for ( uint32 corner = 0; corner < 3; ++corner )
             {
                 minY = MathUtil::min( minY, geometry._listPosition[geometry._listIndex[triangle * 3 + corner]]._y );
@@ -345,7 +345,7 @@ SW_TEST_CASE( FitSolverTest, PushMovesSoftOuterLayerOutOfRigidInner )
     {
         const float32 radius = test::CharacterTestUtil::computeRadius( cloak._listPosition[vertex] + cloakResult._listVertexDelta[vertex] );
         // 갑옷은 24 각형이라 면의 가운데가 가장 안쪽이다(0.05 × cos 7.5°).
-        SW_EXPECT_TRUE_MSG( radius >= 0.05f * MathUtil::cos( MathUtil::Pi / 24.0f ) + 0.004f - 1.0e-4f, "the cloak must sit outside the armor by the push distance" );
+        SW_EXPECT_TRUE_MSG( radius >= 0.05f * MathUtil::cos( MathUtil::kPi / 24.0f ) + 0.004f - 1.0e-4f, "the cloak must sit outside the armor by the push distance" );
         SW_EXPECT_TRUE_MSG( radius <= 0.05f + 0.004f + 1.0e-3f, "and not much further" );
     }
     for ( const float3& delta : result._listPart[0]._listVertexDelta )

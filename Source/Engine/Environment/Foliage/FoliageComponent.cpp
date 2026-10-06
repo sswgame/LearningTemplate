@@ -278,8 +278,8 @@ namespace sw
                 cell._layerIndex = layerIndex;
                 cell._batch      = sw::make_unique<MeshInstanceBatch>( listMesh[meshIndex], material.getMaterial(), material.getInstance(), static_cast<uint32>( listIndex.size() ) );
                 cell._batch->setOwnerComponent( this );
-                float3  minimum{ MathUtil::MaxFloat, MathUtil::MaxFloat, MathUtil::MaxFloat };
-                float3  maximum{ MathUtil::MinFloat, MathUtil::MinFloat, MathUtil::MinFloat };
+                float3  minimum{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+                float3  maximum{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };
                 float32 maxScale{ 0.0f };
                 for ( uint32 entry = 0; entry < listIndex.size(); ++entry )
                 {

@@ -48,7 +48,7 @@ namespace sw
         const float32 length       = displacement.getLength();
         float32       nearest      = length;
         bool          bHit         = false;
-        if ( length <= MathUtil::Epsilon )
+        if ( length <= MathUtil::kEpsilon )
             return false;
         for ( const AABB& box : _listBox )
             CameraCollisionProbeInternal::sweepAgainst( from, displacement, length, radius, box, nearest, bHit );
@@ -67,7 +67,7 @@ namespace sw
     {
         const float3  displacement = to - from;
         const float32 length       = displacement.getLength();
-        if ( _pWorld == nullptr || length <= MathUtil::Epsilon )
+        if ( _pWorld == nullptr || length <= MathUtil::kEpsilon )
             return false;
         // 쓸리는 구간을 덮는 상자로 후보를 모으고, 바디마다 구를 쓸어 가장 가까운 것을 고른다. 대상 자신(피벗이 그 안에 있다)은 건너뛴다.
         const float3                     extent{ radius, radius, radius };
@@ -99,10 +99,10 @@ namespace sw
     {
         const float3  displacement = to - from;
         const float32 length       = displacement.getLength();
-        if ( length <= MathUtil::Epsilon )
+        if ( length <= MathUtil::kEpsilon )
             return false;
         // 강체 — 세상의 막는 것(Default · Static)만. 래그돌 뼈 · 파편 · 캐릭터 캡슐에 암이 걸리지 않게 한다.
-        uint32                 layerMask = MathUtil::MaxUInt32;
+        uint32                 layerMask = MathUtil::kMaxUInt32;
         const PhysicsSettings* pSettings = _manager.getScenePhysics().findSettings();
         uint8                  layer     = 0;
         if ( pSettings != nullptr )

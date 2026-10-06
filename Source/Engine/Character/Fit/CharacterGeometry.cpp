@@ -129,7 +129,7 @@ namespace sw
     float3 CharacterGeometryUtil::makeUnitOr( const float3& value, const float3& fallback )
     {
         const float32 lengthSquared = value.getLengthSquared();
-        if ( lengthSquared <= MathUtil::EpsilonSquared )
+        if ( lengthSquared <= MathUtil::kEpsilonSquared )
             return fallback;
         return value * ( 1.0f / MathUtil::sqrt( lengthSquared ) );
     }

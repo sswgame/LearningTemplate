@@ -489,7 +489,7 @@ namespace sw
             {
                 const SocketId   socketId  = _pSocketTable->resolveTarget( _pSocketTable->findSocket( def._socket ) );
                 const SocketDef* pDef      = ( socketId != kInvalidSocketId ) ? _pSocketTable->findSocketDef( socketId ) : nullptr;
-                const uint32     unitIndex = ( pDef != nullptr ) ? _pSocketTable->getSocketUnit( socketId ) : MathUtil::MaxUInt32;
+                const uint32     unitIndex = ( pDef != nullptr ) ? _pSocketTable->getSocketUnit( socketId ) : MathUtil::kMaxUInt32;
                 if ( unitIndex < _listTableUnit.size() && getOwner()->getManager() != nullptr )
                     pTargetUnit = castTo<SkeletalMeshComponent>( getOwner()->getManager()->resolveComponent( _listTableUnit[unitIndex] ) );
                 if ( pDef != nullptr )

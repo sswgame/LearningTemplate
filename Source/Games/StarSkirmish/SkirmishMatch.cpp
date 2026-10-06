@@ -317,7 +317,7 @@ namespace sw
         } );
         if ( listArrived.empty() )
             return;
-        float32 bestDistance = MathUtil::MaxFloat;
+        float32 bestDistance = MathUtil::kMaxFloat;
         float3  target{};
         _world.forEachUnit( [&]( const RtsUnit& unit )
         {
@@ -330,7 +330,7 @@ namespace sw
                 target       = unit._position;
             }
         } );
-        if ( bestDistance < MathUtil::MaxFloat )
+        if ( bestDistance < MathUtil::kMaxFloat )
             (void)_world.issueGroupMove( listArrived, target, true );
     }
 

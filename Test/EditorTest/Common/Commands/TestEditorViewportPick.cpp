@@ -206,7 +206,7 @@ SW_TEST_CASE( EditorViewportPickTest, EmptySceneAndNullManagerAreSafe )
 SW_TEST_CASE( EditorViewportPickTest, RayFromCanvasCenterLooksAlongCameraForward )
 {
     const float4x4 view        = float4x4::createLookAt( float3{ 0.0f, 0.0f, -10.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f } );
-    const float4x4 proj        = float4x4::createPerspectiveFieldOfView( 60.0f * MathUtil::DegreeToRadian, 16.0f / 9.0f, 0.1f, 100.0f );
+    const float4x4 proj        = float4x4::createPerspectiveFieldOfView( 60.0f * MathUtil::kDegreeToRadian, 16.0f / 9.0f, 0.1f, 100.0f );
     const float4x4 invViewProj = ( view * proj ).invert();
 
     EditorPickRay center{};

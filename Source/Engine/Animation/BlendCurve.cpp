@@ -10,7 +10,7 @@ namespace sw
     {
         struct BlendCurveInternal
         {
-            static constexpr float32 kTwoPi = MathUtil::Pi * 2.0f;
+            static constexpr float32 kTwoPi = MathUtil::kPi * 2.0f;
 
             /** @brief 0 에서 출발해 1 로 다가가는 스프링의 자리입니다(속도 0 출발, 감쇠비 ≥ 1 이라 넘치지 않는다). */
             static float32 computeSpringPosition( float32 seconds, float32 angularFrequency, float32 dampingRatio )
@@ -50,7 +50,7 @@ namespace sw
                         continue;
                     const BlendCurveKey& previous = listKey[index - 1];
                     const float32        span     = next._time - previous._time;
-                    if ( span <= MathUtil::Epsilon )
+                    if ( span <= MathUtil::kEpsilon )
                         return next._value;
                     return MathUtil::lerp( previous._value, next._value, ( normalizedTime - previous._time ) / span );
                 }

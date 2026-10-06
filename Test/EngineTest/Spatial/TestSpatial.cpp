@@ -579,7 +579,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInfiniteBoundsTerminate )
     SW_EXPECT_TRUE( sw::containsHandle( listHandle, eInfinite ) );
 
     // 사거리가 아주 긴 광선도 걸음 수 상한에 걸려 끝난다.
-    grid.queryRay( 0.0f, 0.0f, 1.0f, 0.0f, sw::MathUtil::MaxFloat, listHandle );
+    grid.queryRay( 0.0f, 0.0f, 1.0f, 0.0f, sw::MathUtil::kMaxFloat, listHandle );
     SW_EXPECT_TRUE( sw::containsHandle( listHandle, eInfinite ) );
 
     grid.remove( eInfinite );

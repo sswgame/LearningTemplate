@@ -641,7 +641,7 @@ namespace
             const DrawnMask maskOff( imageOff );
             const DrawnMask maskOn( imageOn );
             ring._sphereCount = maskOff._drawnCount;
-            ring._radius      = sw::MathUtil::sqrt( static_cast<float32>( maskOff._drawnCount ) / sw::MathUtil::Pi );
+            ring._radius      = sw::MathUtil::sqrt( static_cast<float32>( maskOff._drawnCount ) / sw::MathUtil::kPi );
             if ( maskOff._width != maskOn._width || maskOff._height != maskOn._height )
                 return ring;
             uint64 lumaSum{ 0 };
@@ -3038,7 +3038,7 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
         // 변위가 가장 큰 시각에 고정한다(위 @details) — 찍는 순간의 벽시계에 따라 (C) 의 답이 바뀌지 않게.
-        renderer.setAnimationTimeOverride( sw::MathUtil::Pi * 0.75f );
+        renderer.setAnimationTimeOverride( sw::MathUtil::kPi * 0.75f );
 
         sw::Scene scene( "MorphPoolIdentityScene" );
         if ( bOk )
@@ -6804,7 +6804,7 @@ SW_TEST_CASE( RenderPassGpuTest, MeshOutlineDrawsDarkRingAroundSilhouette )
                 continue;
 
             ++comparedCount;
-            const float32 expectedRing = 2.0f * sw::MathUtil::Pi * ring._radius * widthPixel;
+            const float32 expectedRing = 2.0f * sw::MathUtil::kPi * ring._radius * widthPixel;
             SW_EXPECT_TRUE_MSG( static_cast<float32>( ring._ringCount ) >= expectedRing * 0.5f,
                                 ( label + "외곽선 고리가 없다(기대 약 " + sw::to_string( expectedRing ) + " px) — " + ring.describe() ).c_str() );
             SW_EXPECT_TRUE_MSG( ring._inBandCount * 100u >= ring._ringCount * kBandPercent, ( label + "고리가 실루엣 띠 밖에 있다 — " + ring.describe() ).c_str() );
@@ -6965,9 +6965,9 @@ SW_TEST_CASE( RenderPassGpuTest, TwoSidedMaterialDrawsBackFaces )
     };
     // [0] 등진 단면 · [1] 등진 양면 · [2] 마주 본 단면(기준 셰이딩)
     const QuadCase kArrCase[] = {
-        {false, sw::MathUtil::Pi},
-        { true, sw::MathUtil::Pi},
-        {false,             0.0f},
+        {false, sw::MathUtil::kPi},
+        { true, sw::MathUtil::kPi},
+        {false,              0.0f},
     };
     constexpr uint32 kMaxMeanDelta = 6;
 

@@ -583,7 +583,7 @@ namespace sw
             const uint32 column = index % columns;
             const uint32 row    = index / columns;
             pMesh->setLocalPosition( float3{ origin + static_cast<float32>( column ) * kBenchCharacterSpacing, 0.0f, static_cast<float32>( row ) * kBenchCharacterSpacing } );
-            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::Pi, 0.0f } );
+            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             pAnimator->setClipFolder( kBenchCharacterClips );
             pAnimator->setInitialState( kArrBenchCharacterClip[index % SW_COUNT_OF( kArrBenchCharacterClip )] );
             if ( gv_benchCharacterStagger != 0 )
@@ -661,7 +661,7 @@ namespace sw
             pMesh->setSkeletonPath( kBenchFaceSkeleton );
             pMesh->resolveRenderAssets();
             pMesh->setLocalPosition( float3{ origin + static_cast<float32>( index ) * kBenchFaceSpacing, 0.0f, 0.0f } );
-            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::Pi, 0.0f } );
+            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             const bool bTalkClip = ( index % 2 ) == 0;
             if ( bTalkClip )
             {
@@ -727,7 +727,7 @@ namespace sw
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
             const float32 tanHalf  = MathUtil::tan( pCamera->getFieldOfViewY() * 0.5f );
-            const float32 distance = ( tanHalf > MathUtil::Epsilon ) ? ( halfExtent * 1.2f / tanHalf ) : ( halfExtent * 3.0f );
+            const float32 distance = ( tanHalf > MathUtil::kEpsilon ) ? ( halfExtent * 1.2f / tanHalf ) : ( halfExtent * 3.0f );
             if ( depth <= 0.0f )
             {
                 pCamera->setLocalPosition( float3{ 0.0f, 1.4f, -distance } );
@@ -983,7 +983,7 @@ namespace sw
             output._renderTextureWidth  = 512;
             output._renderTextureHeight = 512;
             pCamera->setRole( CameraRole::Capture );
-            const float32 angle = 2.0f * MathUtil::Pi * static_cast<float32>( viewIndex ) / static_cast<float32>( viewCount );
+            const float32 angle = 2.0f * MathUtil::kPi * static_cast<float32>( viewIndex ) / static_cast<float32>( viewCount );
             pCamera->setLocalPosition( float3{ MathUtil::cos( angle ) * halfExtent * 1.5f, halfExtent * 0.6f, MathUtil::sin( angle ) * halfExtent * 1.5f } );
             pCamera->setFarPlane( MathUtil::max( pCamera->getFarPlane(), halfExtent * 6.0f ) );
             pCamera->lookAt( float3{ 0.0f, 0.0f, 0.0f } );
@@ -1019,7 +1019,7 @@ namespace sw
         const float32 halfExtent = halfExtentOf( side, spacing );
         const float32 fovY       = pCamera->getFieldOfViewY();
         const float32 tanHalf    = MathUtil::tan( fovY * 0.5f );
-        const float32 distance   = ( tanHalf > MathUtil::Epsilon ) ? ( halfExtent / tanHalf ) : ( halfExtent * 2.0f );
+        const float32 distance   = ( tanHalf > MathUtil::kEpsilon ) ? ( halfExtent / tanHalf ) : ( halfExtent * 2.0f );
 
         // 격자는 카메라 축(Z)으로도 ±halfExtent 펼쳐져 있다. 중심까지의 거리만 쓰면 가까운 쪽이
         // 화면을 넘치고, 깊이까지 다 빼면 격자가 점처럼 작아진다 — 절반만 더한다.

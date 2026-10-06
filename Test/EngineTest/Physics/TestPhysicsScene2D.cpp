@@ -152,7 +152,7 @@ SW_TEST_CASE( PhysicsScene2DTest, RaycastReportsHitDistance )
     filter._layerMask = 1u << 1;
     SW_EXPECT_FALSE( pScene->raycast( sw::float2{}, sw::float2{ 1.0f, 0.0f }, 100.0f, filter, hit ) );
 
-    filter._layerMask = sw::MathUtil::MaxUInt32;
+    filter._layerMask = sw::MathUtil::kMaxUInt32;
     SW_ASSERT_TRUE( pScene->shapeCast( makeCircle( 0.5f ), sw::float2{}, 0.0f, sw::float2{ 1.0f, 0.0f }, 100.0f, filter, hit ) );
     SW_EXPECT_NEAR_EQUAL( 4.0f, hit._distance, 2e-2f );
     sw::vector<sw::PhysicsBodyHandle> listFound;

@@ -200,13 +200,13 @@ namespace sw::editor
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
             // 회전 델타는 라디안으로 저장하고(`setLocalRotation` 에 그대로 간다) 도로 보이고 고친다 — 인스펙터의 트랜스폼 섹션과 같은 규칙.
-            float32 arrRotation[3] = { item._rotation._x * MathUtil::RadianToDegree, item._rotation._y * MathUtil::RadianToDegree,
-                                       item._rotation._z * MathUtil::RadianToDegree };
+            float32 arrRotation[3] = { item._rotation._x * MathUtil::kRadianToDegree, item._rotation._y * MathUtil::kRadianToDegree,
+                                       item._rotation._z * MathUtil::kRadianToDegree };
             if ( ImGui::DragFloat3( "Rotation", arrRotation, InspectorPropertyLayout::kAngleDragSpeed, 0.0f, 0.0f, "%.2f deg" ) )
             {
-                item._rotation._x = arrRotation[0] * MathUtil::DegreeToRadian;
-                item._rotation._y = arrRotation[1] * MathUtil::DegreeToRadian;
-                item._rotation._z = arrRotation[2] * MathUtil::DegreeToRadian;
+                item._rotation._x = arrRotation[0] * MathUtil::kDegreeToRadian;
+                item._rotation._y = arrRotation[1] * MathUtil::kDegreeToRadian;
+                item._rotation._z = arrRotation[2] * MathUtil::kDegreeToRadian;
             }
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );

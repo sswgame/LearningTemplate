@@ -92,7 +92,7 @@ namespace sw
     const AiPerceivedTarget* AiPerception::findNearestSeen( const float3& origin ) const
     {
         const AiPerceivedTarget* pNearest = nullptr;
-        float32                  best     = MathUtil::MaxFloat;
+        float32                  best     = MathUtil::kMaxFloat;
         for ( const AiPerceivedTarget& target : _listTarget )
         {
             const float32 distance = float3::getDistance( origin, target._lastKnownPosition );

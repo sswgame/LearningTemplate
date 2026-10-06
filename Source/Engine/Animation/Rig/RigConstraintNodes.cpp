@@ -280,7 +280,7 @@ namespace sw
                     return;
                 const float3  offset   = pose.getModelPosition( _bone ) - targetPosition;
                 const float32 distance = offset.getLength();
-                if ( distance < MathUtil::Epsilon )
+                if ( distance < MathUtil::kEpsilon )
                     return;
                 const float32 clamped = MathUtil::clamp( distance, _min, _max );
                 if ( clamped != distance )
@@ -323,12 +323,12 @@ namespace sw
             {
                 RigPoseBuffer&   pose  = *context._pPose;
                 const quaternion delta = ( RigIkSolver::makeInverse( _reference ) * pose.getLocalRotation( _bone ) ).normalize();
-                const float3     euler = delta.getEulerAngles() * MathUtil::RadianToDegree;
+                const float3     euler = delta.getEulerAngles() * MathUtil::kRadianToDegree;
                 const float3     clamped{ MathUtil::clamp( euler._x, _minAngle._x, _maxAngle._x ), MathUtil::clamp( euler._y, _minAngle._y, _maxAngle._y ),
                                       MathUtil::clamp( euler._z, _minAngle._z, _maxAngle._z ) };
                 if ( clamped == euler )
                     return;
-                pose.setLocalRotation( _bone, ( _reference * quaternion::createFromYawPitchRoll( clamped * MathUtil::DegreeToRadian ) ).normalize() );
+                pose.setLocalRotation( _bone, ( _reference * quaternion::createFromYawPitchRoll( clamped * MathUtil::kDegreeToRadian ) ).normalize() );
             }
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.push_back( _bone ); }

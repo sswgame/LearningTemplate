@@ -38,7 +38,7 @@ namespace sw
             static constexpr float32 kSupportSpacing  = 8.0f; ///< 기둥 간격(m)
             static constexpr uint32  kCarCount        = 4;
             static constexpr float32 kStatusInterval  = 10.0f;
-            static constexpr float32 kRideFieldOfView = 85.0f * MathUtil::DegreeToRadian;
+            static constexpr float32 kRideFieldOfView = 85.0f * MathUtil::kDegreeToRadian;
             static constexpr float32 kRideFarPlane    = 600.0f;
             static constexpr float32 kRideEyeHeight   = 1.6f;
             /**

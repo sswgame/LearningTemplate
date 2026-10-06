@@ -432,7 +432,7 @@ namespace sw
                 _delayFrames           = MathUtil::clamp( static_cast<uint32>( _listParameter[0] * 0.001f * static_cast<float32>( audio::kSampleRate ) ), 1u, slotCount - 1 );
                 const float32 cutoff   = _listParameter[4];
                 _dampCoefficient       = cutoff >= audio::kFilterOpenHz ? 0.0f
-                                                                        : MathUtil::pow( 2.718281828f, -2.0f * MathUtil::Pi * cutoff / static_cast<float32>( audio::kSampleRate ) );
+                                                                        : MathUtil::pow( 2.718281828f, -2.0f * MathUtil::kPi * cutoff / static_cast<float32>( audio::kSampleRate ) );
             }
 
         private:

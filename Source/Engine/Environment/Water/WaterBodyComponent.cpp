@@ -104,7 +104,7 @@ namespace sw
                     const float3& next     = outListSample[index + 1 < outListSample.size() ? index + 1 : index]._center;
                     const float2  delta{ next._x - previous._x, next._z - previous._z };
                     const float32 length = delta.getLength();
-                    if ( length > MathUtil::Epsilon )
+                    if ( length > MathUtil::kEpsilon )
                         outListSample[index]._tangent = delta * ( 1.0f / length );
                 }
             }
@@ -370,7 +370,7 @@ namespace sw
         const float32 localX       = worldX - _surfaceOrigin._x;
         const float32 localZ       = worldZ - _surfaceOrigin._z;
         const float32 halfWidth    = 0.5f * _riverWidth;
-        float32       bestDistance = MathUtil::MaxFloat;
+        float32       bestDistance = MathUtil::kMaxFloat;
         for ( size_t segment = 0; segment + 1 < _listRiverPoint.size(); ++segment )
         {
             const float3  start = _listRiverPoint[segment];
@@ -378,7 +378,7 @@ namespace sw
             const float2  axis{ end._x - start._x, end._z - start._z };
             const float32 lengthSquare = axis.getLengthSquared();
             float32       ratio        = 0.0f;
-            if ( lengthSquare > MathUtil::Epsilon )
+            if ( lengthSquare > MathUtil::kEpsilon )
                 ratio = MathUtil::saturate( ( ( localX - start._x ) * axis._x + ( localZ - start._z ) * axis._y ) / lengthSquare );
             const float32 closestX = start._x + axis._x * ratio;
             const float32 closestZ = start._z + axis._y * ratio;

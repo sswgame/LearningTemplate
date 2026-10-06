@@ -152,9 +152,9 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Tooltip = "Lowest pitch (up is negative)", Units = rad )
-        float32 _pitchMin{ -MathUtil::HalfPi };
+        float32 _pitchMin{ -MathUtil::kHalfPi };
         PROPERTY( Tooltip = "Highest pitch (down is positive)", Units = rad )
-        float32 _pitchMax{ MathUtil::HalfPi };
+        float32 _pitchMax{ MathUtil::kHalfPi };
         PROPERTY( Min = 0.0, Tooltip = "Closest distance / smallest ortho height; 0 has no limit", Units = m )
         float32 _zoomMin{ 0.0f };
         PROPERTY( Min = 0.0, Tooltip = "Farthest distance / largest ortho height; 0 has no limit", Units = m )

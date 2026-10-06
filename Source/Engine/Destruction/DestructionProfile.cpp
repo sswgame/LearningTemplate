@@ -61,7 +61,7 @@ namespace sw
     float32 DestructionProfile::getStrainThreshold( uint32 depth ) const
     {
         if ( _listStrainThreshold.empty() )
-            return MathUtil::MaxFloat;
+            return MathUtil::kMaxFloat;
         return _listStrainThreshold[MathUtil::min( static_cast<size_t>( depth ), _listStrainThreshold.size() - 1 )];
     }
 

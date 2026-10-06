@@ -54,7 +54,7 @@ namespace test
                 for ( uint32 column = 0; column < columnCount; ++column )
                 {
                     const float32 u     = static_cast<float32>( column ) / static_cast<float32>( desc._segmentCount );
-                    const float32 angle = u * sw::MathUtil::Pi * 2.0f;
+                    const float32 angle = u * sw::MathUtil::kPi * 2.0f;
                     const float32 x     = column == desc._segmentCount ? desc._radius : desc._radius * sw::MathUtil::cos( angle );
                     const float32 z     = column == desc._segmentCount ? 0.0f : desc._radius * sw::MathUtil::sin( angle );
                     geometry._listPosition.push_back( sw::float3( x, y, z ) );

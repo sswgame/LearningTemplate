@@ -104,7 +104,7 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipSamplingMatchesHandComputedValues )
     raw._listTrackName        = { hashed_string( "root" ), hashed_string( "child" ) };
     raw._listTrackParent      = { -1, 0 };
     const float32 arrX[3]     = { 0.0f, 1.0f, 3.0f };
-    const float32 arrAngle[3] = { 0.0f, MathUtil::HalfPi, MathUtil::Pi };
+    const float32 arrAngle[3] = { 0.0f, MathUtil::kHalfPi, MathUtil::kPi };
     for ( uint32 sampleIndex = 0; sampleIndex < 3; ++sampleIndex )
     {
         raw._listSample.push_back( test::makeBoneTransform( float3{ arrX[sampleIndex], 0.0f, 0.0f } ) );
@@ -120,12 +120,12 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipSamplingMatchesHandComputedValues )
     Pose pose;
     SW_ASSERT_TRUE( clip.sampleTracks( 0.25f, pose ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pose.getBoneTransform( 0 )._translation._x, 1e-5f );
-    const quaternion expected45 = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, MathUtil::Pi * 0.25f );
+    const quaternion expected45 = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, MathUtil::kPi * 0.25f );
     SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameRotation( expected45, pose.getBoneTransform( 1 )._rotation, 1e-5f ) );
 
     SW_ASSERT_TRUE( clip.sampleTracks( 0.75f, pose ) );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pose.getBoneTransform( 0 )._translation._x, 1e-5f );
-    const quaternion expected135 = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, MathUtil::Pi * 0.75f );
+    const quaternion expected135 = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, MathUtil::kPi * 0.75f );
     SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameRotation( expected135, pose.getBoneTransform( 1 )._rotation, 1e-5f ) );
 
     SW_ASSERT_TRUE( clip.sampleTracks( 5.0f, pose ) );
@@ -274,7 +274,7 @@ SW_TEST_CASE( SkeletalAnimationTest, BlendWeightsMaskAndAdditive )
     from.resize( 2 );
     to.resize( 2 );
     to.setBoneTransform( 0, test::makeBoneTransform( float3{ 4.0f, 0.0f, 0.0f } ) );
-    to.setBoneTransform( 1, test::makeBoneTransform( float3{ 0.0f, 8.0f, 0.0f }, quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::HalfPi ) ) );
+    to.setBoneTransform( 1, test::makeBoneTransform( float3{ 0.0f, 8.0f, 0.0f }, quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kHalfPi ) ) );
 
     Pose blended;
     Pose::blend( from, to, 0.25f, blended );
@@ -282,7 +282,7 @@ SW_TEST_CASE( SkeletalAnimationTest, BlendWeightsMaskAndAdditive )
     SW_EXPECT_NEAR_EQUAL( 2.0f, blended.getBoneTransform( 1 )._translation._y, 1e-5f );
     // nlerp 의 각은 선형이 아니지만 0 과 90° 사이 · 45° 보다 작아야 한다.
     const float32 angle = 2.0f * MathUtil::acos( MathUtil::clamp( blended.getBoneTransform( 1 )._rotation._w, -1.0f, 1.0f ) );
-    SW_EXPECT_TRUE( angle > 0.1f && angle < MathUtil::Pi * 0.25f );
+    SW_EXPECT_TRUE( angle > 0.1f && angle < MathUtil::kPi * 0.25f );
 
     // 마스크: 본 1 만 섞는다.
     const float32 arrMask[2] = { 0.0f, 1.0f };
@@ -296,7 +296,7 @@ SW_TEST_CASE( SkeletalAnimationTest, BlendWeightsMaskAndAdditive )
     Pose layered = from;
     layered.applyAdditive( additive, 0.5f, nullptr );
     SW_EXPECT_NEAR_EQUAL( 2.0f, layered.getBoneTransform( 0 )._translation._x, 1e-5f );
-    const quaternion expected45 = quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::Pi * 0.25f );
+    const quaternion expected45 = quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kPi * 0.25f );
     SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameRotation( expected45, layered.getBoneTransform( 1 )._rotation, 1e-4f ) );
     // 가중치 1 이면 정확히 to.
     Pose full = from;

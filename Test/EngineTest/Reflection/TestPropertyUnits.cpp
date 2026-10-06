@@ -71,7 +71,7 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
     { listType.push_back( &typeInfo ); } );
     SW_ASSERT_TRUE( listType.size() > 50 );
 
-    constexpr float32 kMaxRadian = sw::MathUtil::Pi * 2.0f + 0.01f;
+    constexpr float32 kMaxRadian = sw::MathUtil::kPi * 2.0f + 0.01f;
     sw::string        offenders;
     uint32            unitCount{ 0 };
     uint32            angleCount{ 0 };

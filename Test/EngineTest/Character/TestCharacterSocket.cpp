@@ -119,10 +119,10 @@ SW_TEST_CASE( SocketSetTest, LayersOverrideOnlyWrittenFieldsByName )
     layered.applyOverride( lookLayer );
     const SocketDef* pBack = layered.findSocket( hashed_string( "Back" ) );
     SW_ASSERT_NOT_NULL( pBack );
-    SW_EXPECT_TRUE( pBack->_parent == hashed_string( "upperarm" ) );                                                           // 스켈레톤 몫
-    SW_EXPECT_TRUE( pBack->_kind == hashed_string( "Attach" ) );                                                               // 스켈레톤 몫
-    SW_EXPECT_TRUE( Internal::isNear( float3( 0.0f, 0.3f, -0.2f ), pBack->_translation, 1.0e-6f ) );                           // 메시 몫
-    SW_EXPECT_NEAR_EQUAL( 180.0f, MathUtil::abs( pBack->_rotation.getEulerAngles()._y * MathUtil::RadianToDegree ), 1.0e-2f ); // 외형 몫
+    SW_EXPECT_TRUE( pBack->_parent == hashed_string( "upperarm" ) );                                                            // 스켈레톤 몫
+    SW_EXPECT_TRUE( pBack->_kind == hashed_string( "Attach" ) );                                                                // 스켈레톤 몫
+    SW_EXPECT_TRUE( Internal::isNear( float3( 0.0f, 0.3f, -0.2f ), pBack->_translation, 1.0e-6f ) );                            // 메시 몫
+    SW_EXPECT_NEAR_EQUAL( 180.0f, MathUtil::abs( pBack->_rotation.getEulerAngles()._y * MathUtil::kRadianToDegree ), 1.0e-2f ); // 외형 몫
     SW_EXPECT_NOT_NULL( layered.findSocket( hashed_string( "Hip" ) ) );
 
     // 쓰고 다시 읽어도 같은 것 — 적은 칸만 쓴다.
@@ -300,7 +300,7 @@ SW_TEST_CASE( ReferencePoseOverrideTest, OverridesWrittenFieldsAndMirrorsPairs )
     const BoneOverride* pRight = pose.findOverride( hashed_string( "arm_r" ) );
     SW_ASSERT_NOT_NULL( pRight );
     SW_EXPECT_NEAR_EQUAL( 0.25f, pRight->_translation._x, 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 40.0f, pRight->_rotation.getEulerAngles()._z * MathUtil::RadianToDegree, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 40.0f, pRight->_rotation.getEulerAngles()._z * MathUtil::kRadianToDegree, 1.0e-3f );
 
     CharacterBoneArray applied = bones;
     pose.apply( applied );
@@ -409,7 +409,7 @@ SW_TEST_CASE( BodyShapeTest, BoneProportionLayersOverAnimationAndSkinsGeometry )
     const CharacterBoneArray bindBones = test::CharacterTestUtil::makeArmBones();
     CharacterBoneArray       animated  = bindBones;
     // 애니메이션: 아래팔을 Z 축으로 90° 굽힘.
-    animated._listLocal[2] = float4x4::createRotationZ( MathUtil::HalfPi ) * float4x4::createTranslation( 0.0f, 0.5f, 0.0f );
+    animated._listLocal[2] = float4x4::createRotationZ( MathUtil::kHalfPi ) * float4x4::createTranslation( 0.0f, 0.5f, 0.0f );
     animated.computeModelTransforms();
     BoneProportion proportion;
     proportion.setBone( hashed_string( "hand" ), float3( 1.0f ), float3( 0.0f, 0.1f, 0.0f ) ); // 아래팔 길이 +0.1

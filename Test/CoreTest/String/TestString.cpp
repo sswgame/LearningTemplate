@@ -1590,8 +1590,8 @@ SW_TEST_CASE( StringTest, IntegerParsersShareSignPrefixAndRangeRules )
     int32 value32{ 0 };
     SW_EXPECT_TRUE( sw::StringUtil::parseInt( " 42 ", value32 ) && value32 == 42 );
     SW_EXPECT_TRUE( sw::StringUtil::parseInt( "+7", value32 ) && value32 == 7 );
-    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "-2147483648", value32 ) && value32 == sw::MathUtil::MinInt32 );
-    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "2147483647", value32 ) && value32 == sw::MathUtil::MaxInt32 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "-2147483648", value32 ) && value32 == sw::MathUtil::kMinInt32 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt( "2147483647", value32 ) && value32 == sw::MathUtil::kMaxInt32 );
     SW_EXPECT_FALSE( sw::StringUtil::parseInt( "2147483648", value32 ) );
     SW_EXPECT_FALSE( sw::StringUtil::parseInt( "-2147483649", value32 ) );
     SW_EXPECT_TRUE( sw::StringUtil::parseInt( "0x1F", value32, 0 ) && value32 == 31 );
@@ -1605,8 +1605,8 @@ SW_TEST_CASE( StringTest, IntegerParsersShareSignPrefixAndRangeRules )
     SW_EXPECT_FALSE( sw::StringUtil::parseInt( "5", value32, 1 ) );
 
     int64 value64{ 0 };
-    SW_EXPECT_TRUE( sw::StringUtil::parseInt64( "-9223372036854775808", value64 ) && value64 == sw::MathUtil::MinInt64 );
-    SW_EXPECT_TRUE( sw::StringUtil::parseInt64( "9223372036854775807", value64 ) && value64 == sw::MathUtil::MaxInt64 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt64( "-9223372036854775808", value64 ) && value64 == sw::MathUtil::kMinInt64 );
+    SW_EXPECT_TRUE( sw::StringUtil::parseInt64( "9223372036854775807", value64 ) && value64 == sw::MathUtil::kMaxInt64 );
     SW_EXPECT_FALSE( sw::StringUtil::parseInt64( "9223372036854775808", value64 ) );
 
     uint64 valueU64{ 0 };

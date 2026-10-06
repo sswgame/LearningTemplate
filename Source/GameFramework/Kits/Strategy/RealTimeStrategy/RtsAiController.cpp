@@ -277,7 +277,7 @@ namespace sw
             return BehaviorStatus::Failure;
         // 가장 가까운 적 플레이어의 시작 지점으로.
         const RtsPlayer* pSelf        = world.findPlayer( self._player );
-        float32          bestDistance = MathUtil::MaxFloat;
+        float32          bestDistance = MathUtil::kMaxFloat;
         float3           target{};
         bool             bFound = false;
         for ( int32 player = 0; player < world.getPlayerCount(); ++player )

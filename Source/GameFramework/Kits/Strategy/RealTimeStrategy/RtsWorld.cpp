@@ -726,7 +726,7 @@ namespace sw
     RtsUnitId RtsWorld::pickUnit( const float3& position ) const
     {
         RtsUnitId bestId{};
-        float32   bestDistance = MathUtil::MaxFloat;
+        float32   bestDistance = MathUtil::kMaxFloat;
         for ( const RtsUnit& unit : _listUnit )
         {
             if ( unit._bAlive == SW_FALSE )
@@ -1133,7 +1133,7 @@ namespace sw
         for ( int32 ring = 1; ring <= 4; ++ring )
         {
             bool    bFound       = false;
-            float32 bestDistance = MathUtil::MaxFloat;
+            float32 bestDistance = MathUtil::kMaxFloat;
             for ( int32 y = building._cell._y - ring; y < building._cell._y + footprint + ring; ++y )
             {
                 for ( int32 x = building._cell._x - ring; x < building._cell._x + footprint + ring; ++x )
@@ -1222,7 +1222,7 @@ namespace sw
         vector<RtsUnitId> listCandidate;
         queryUnits( unit._position, radius + ( unit.isMobile() ? unit._pDef->_radius : 0.0f ), listCandidate );
         RtsUnitId bestId{};
-        float32   bestScore = MathUtil::MaxFloat;
+        float32   bestScore = MathUtil::kMaxFloat;
         for ( const RtsUnitId candidateId : listCandidate )
         {
             const RtsUnit* pCandidate = findUnit( candidateId );
@@ -1578,7 +1578,7 @@ namespace sw
     RtsUnitId RtsWorld::findNearestDepot( int32 player, const float3& position ) const
     {
         RtsUnitId bestId{};
-        float32   bestDistance = MathUtil::MaxFloat;
+        float32   bestDistance = MathUtil::kMaxFloat;
         for ( const RtsUnit& unit : _listUnit )
         {
             if ( unit._bAlive == SW_FALSE || unit._owner != player || unit._pDef->_bDepot == SW_FALSE || unit.isConstructed() == false )

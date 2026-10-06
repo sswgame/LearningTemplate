@@ -225,7 +225,7 @@ namespace sw
             {
                 float32 radiusDegrees = 45.0f;
                 bool    bOk           = reader.readName( "driver", _driverName, true ) && reader.readFloat( "radius_degrees", radiusDegrees, false );
-                _radius               = MathUtil::max( radiusDegrees, 1.0f ) * MathUtil::DegreeToRadian;
+                _radius               = MathUtil::max( radiusDegrees, 1.0f ) * MathUtil::kDegreeToRadian;
                 const JsonValue poses = reader.readArray( "poses", true );
                 for ( size_t index = 0; bOk && poses.isValid() && index < poses.size(); ++index )
                 {

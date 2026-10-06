@@ -272,7 +272,7 @@ namespace sw
         const int32  level       = 1 + static_cast<int32>( ( _wave - 1u ) / 2u );
         for ( uint32 spawnIndex = 0; spawnIndex < totalCount; ++spawnIndex )
         {
-            const float32       angle = 2.0f * MathUtil::Pi * static_cast<float32>( spawnIndex ) / static_cast<float32>( totalCount );
+            const float32       angle = 2.0f * MathUtil::kPi * static_cast<float32>( spawnIndex ) / static_cast<float32>( totalCount );
             const float3        position{ MathUtil::cos( angle ) * _waveRadius, 0.0f, MathUtil::sin( angle ) * _waveRadius };
             const ArenaUnitKind kind = spawnIndex < gruntCount ? ArenaUnitKind::Grunt : ArenaUnitKind::Caster;
             requestUnit( kind, position, level );

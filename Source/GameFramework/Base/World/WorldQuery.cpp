@@ -78,11 +78,11 @@ namespace sw
         outHit               = WorldRayHit{};
         const float3  delta  = to - from;
         const float32 length = delta.getLength();
-        if ( length <= MathUtil::Epsilon )
+        if ( length <= MathUtil::kEpsilon )
             return false;
         bool            bHit = false;
         CharacterRayHit hit;
-        if ( CharacterHitUtil::raycast3D( _manager, from, delta, length, MathUtil::MaxUInt32, ignoreObjectId, hit ) )
+        if ( CharacterHitUtil::raycast3D( _manager, from, delta, length, MathUtil::kMaxUInt32, ignoreObjectId, hit ) )
         {
             bHit             = true;
             outHit._fraction = hit._distance / length;
@@ -91,7 +91,7 @@ namespace sw
         }
         // 2D 씬은 XY 평면 — 같은 선분의 평면 길이로 잰다.
         const float32 planarLength = float2{ delta._x, delta._y }.getLength();
-        if ( planarLength > MathUtil::Epsilon && CharacterHitUtil::raycast2D( _manager, from, delta, planarLength, MathUtil::MaxUInt32, ignoreObjectId, hit ) )
+        if ( planarLength > MathUtil::kEpsilon && CharacterHitUtil::raycast2D( _manager, from, delta, planarLength, MathUtil::kMaxUInt32, ignoreObjectId, hit ) )
         {
             const float32 fraction = hit._distance / planarLength;
             if ( bHit == false || fraction < outHit._fraction )

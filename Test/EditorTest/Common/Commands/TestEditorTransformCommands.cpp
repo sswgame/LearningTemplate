@@ -29,7 +29,7 @@ SW_TEST_CASE( EditorTransformCommandsTest, AlignUsesWorldPositionsUnderARotatedS
     GameObject*       pParent   = manager.createGameObject( hashed_string( "Turntable" ) );
     SceneComponent*   pParentSc = pParent->addComponent<SceneComponent>();
     pParentSc->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
-    pParentSc->setLocalRotation( float3( 0.0f, MathUtil::HalfPi, 0.0f ) );
+    pParentSc->setLocalRotation( float3( 0.0f, MathUtil::kHalfPi, 0.0f ) );
     pParentSc->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
     GameObject*     pChild   = manager.createGameObject( hashed_string( "OnTurntable" ) );
     SceneComponent* pChildSc = pChild->addComponent<SceneComponent>();

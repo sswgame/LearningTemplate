@@ -193,7 +193,7 @@ namespace sw
         const IAudioOcclusionQuery* pQuery = _pOcclusionOverride;
         if ( pQuery == nullptr && pScene3D != nullptr )
         {
-            physicsQuery.setScene( pScene3D, MathUtil::MaxUInt32 );
+            physicsQuery.setScene( pScene3D, MathUtil::kMaxUInt32 );
             pQuery = &physicsQuery;
         }
         const uint32 emitterCount = static_cast<uint32>( _listEmitterSnapshot.size() );

@@ -18,8 +18,8 @@ namespace sw
                 if ( MathUtil::abs( direction ) < 1.0e-8f )
                 {
                     outStep   = 0;
-                    outNextT  = MathUtil::MaxFloat;
-                    outDeltaT = MathUtil::MaxFloat;
+                    outNextT  = MathUtil::kMaxFloat;
+                    outDeltaT = MathUtil::kMaxFloat;
                     return;
                 }
                 outStep                = direction > 0.0f ? 1 : -1;

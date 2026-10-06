@@ -499,7 +499,7 @@ namespace sw
             const float4x4 toParent    = parentIndex >= 0 ? listModel[static_cast<size_t>( parentIndex )].invert() : float4x4::Identity;
             const float3   eyePosition = listModel[static_cast<size_t>( boneIndex )].getTranslation();
             float3         desired     = float3::transformVector( _lookAtModel - eyePosition, toParent );
-            if ( desired.getLengthSquared() <= MathUtil::Epsilon )
+            if ( desired.getLengthSquared() <= MathUtil::kEpsilon )
                 continue;
             desired                         = float3::transform( desired.normalize(), saccade );
             const quaternion localRotation  = pRotation[boneIndex];

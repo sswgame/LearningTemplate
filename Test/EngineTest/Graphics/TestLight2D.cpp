@@ -51,7 +51,7 @@ SW_TEST_CASE( Light2DTest, CollectWritesLightsThenShadowSegments )
     SW_ASSERT_NOT_NULL( pLight );
     pLight->setLocalPosition( sw::float3{ -1.0f, 2.0f, 0.0f } );
     pLight->setRadius( 0.5f, 5.0f );
-    pLight->setConeAngles( 60.0f * sw::MathUtil::DegreeToRadian, 90.0f * sw::MathUtil::DegreeToRadian );
+    pLight->setConeAngles( 60.0f * sw::MathUtil::kDegreeToRadian, 90.0f * sw::MathUtil::kDegreeToRadian );
     pLight->setFalloffExponent( 2.0f );
     pLight->setNormalMapHeight( 0.75f );
     sw::GameObject* pAmbientObject = pManager->createGameObject( sw::hashed_string( "Ambient" ) );
@@ -75,8 +75,8 @@ SW_TEST_CASE( Light2DTest, CollectWritesLightsThenShadowSegments )
     SW_EXPECT_NEAR_EQUAL( 1.0f, point._directionType._x, 1e-5f ); // 로컬 +X
     SW_EXPECT_NEAR_EQUAL( 0.5f, point._directionType._z, 1e-5f ); // 안 반경
     SW_EXPECT_NEAR_EQUAL( 1.0f, point._params._x, 1e-6f );        // 그림자
-    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::cos( 45.0f * sw::MathUtil::DegreeToRadian ), point._params._y, 1e-5f );
-    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::cos( 30.0f * sw::MathUtil::DegreeToRadian ), point._params._z, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::cos( 45.0f * sw::MathUtil::kDegreeToRadian ), point._params._y, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::cos( 30.0f * sw::MathUtil::kDegreeToRadian ), point._params._z, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, point._params._w, 1e-6f );
 
     // 상자 토막 넷: 바깥쪽은 가운데(3, 1)에서 멀어진다.

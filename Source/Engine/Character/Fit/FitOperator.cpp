@@ -59,7 +59,7 @@ namespace sw
                         continue;
                     const float3& position        = part._listBindPosition[vertex];
                     uint32        nearest         = listConstrained.front();
-                    float32       nearestDistance = MathUtil::MaxFloat;
+                    float32       nearestDistance = MathUtil::kMaxFloat;
                     for ( const uint32 constrained : listConstrained )
                     {
                         const float32 distanceSquared = float3::getDistanceSquared( position, part._listBindPosition[constrained] );

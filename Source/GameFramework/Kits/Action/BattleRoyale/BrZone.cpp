@@ -28,7 +28,7 @@ namespace sw
             static float2 pickInDisk( GameRandom& random, const float2& center, float32 radius )
             {
                 const float32 distance = radius * MathUtil::sqrt( random.nextFloat() );
-                const float32 angle    = random.nextFloat() * MathUtil::Pi * 2.0f;
+                const float32 angle    = random.nextFloat() * MathUtil::kPi * 2.0f;
                 return float2{ center._x + MathUtil::cos( angle ) * distance, center._y + MathUtil::sin( angle ) * distance };
             }
         };

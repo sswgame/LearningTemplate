@@ -58,7 +58,7 @@ namespace sw
         , _unitId{}
         , _pShownLook{ nullptr }
         , _modelWidth{ 1.0f }
-        , _yaw{ MathUtil::Pi }
+        , _yaw{ MathUtil::kPi }
         , _bPlaced{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -78,7 +78,7 @@ namespace sw
         _unitId     = unitId;
         _modelWidth = modelWidth > 0.0f ? modelWidth : 1.0f;
         _pShownLook = nullptr;
-        _yaw        = MathUtil::Pi; // 처음엔 카메라(남쪽) 쪽을 본다
+        _yaw        = MathUtil::kPi; // 처음엔 카메라(남쪽) 쪽을 본다
         _bPlaced    = SW_FALSE;
     }
 

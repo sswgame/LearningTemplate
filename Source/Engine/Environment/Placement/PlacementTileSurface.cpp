@@ -20,7 +20,7 @@ namespace sw
         SW_LOG_ASSERT( bSizeMatches, "PlacementTileSurface tile count does not match width x height" );
         _width    = bSizeMatches ? width : 0u;
         _height   = bSizeMatches ? height : 0u;
-        _tileSize = MathUtil::max( tileSize, MathUtil::Epsilon );
+        _tileSize = MathUtil::max( tileSize, MathUtil::kEpsilon );
         _listTile = bSizeMatches ? listTile : vector<uint8>{};
     }
 

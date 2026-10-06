@@ -64,7 +64,7 @@ SW_TEST_CASE( PropScatterTest, SameSeedGivesTheSameLayout )
     {
         const PropScatterPlacement& placement = listFirst[placementIndex];
         bSame                                 = bSame && PropScatterTestUtil::isSamePlacement( placement, listSecond[placementIndex] );
-        bInRange                              = bInRange && 3.0f <= placement._scale && placement._scale <= 4.5f && 0.0f <= placement._yaw && placement._yaw <= MathUtil::Pi * 2.0f;
+        bInRange                              = bInRange && 3.0f <= placement._scale && placement._scale <= 4.5f && 0.0f <= placement._yaw && placement._yaw <= MathUtil::kPi * 2.0f;
     }
     SW_EXPECT_TRUE( bSame );
     SW_EXPECT_TRUE( bInRange );
@@ -213,7 +213,7 @@ SW_TEST_CASE( PropScatterTest, RulesModeUsesThePlacementCore )
     SW_ASSERT_TRUE( listFirst.size() > 50 );
     SW_ASSERT_EQUAL( listFirst.size(), listSecond.size() );
     bool    bRules  = true;
-    float32 closest = MathUtil::MaxFloat;
+    float32 closest = MathUtil::kMaxFloat;
     for ( size_t first = 0; first < listFirst.size(); ++first )
     {
         const PropScatterPlacement& placement = listFirst[first];

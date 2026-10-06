@@ -46,10 +46,10 @@ namespace sw
             /** @brief 각을 (−π, π] 로 감습니다. */
             static float32 wrapAngle( float32 radians )
             {
-                float32 wrapped = MathUtil::fmod( radians + MathUtil::Pi, MathUtil::Pi * 2.0f );
+                float32 wrapped = MathUtil::fmod( radians + MathUtil::kPi, MathUtil::kPi * 2.0f );
                 if ( wrapped < 0.0f )
-                    wrapped += MathUtil::Pi * 2.0f;
-                return wrapped - MathUtil::Pi;
+                    wrapped += MathUtil::kPi * 2.0f;
+                return wrapped - MathUtil::kPi;
             }
         };
     } // namespace
@@ -142,8 +142,8 @@ namespace sw
         : _targetTags{}
         , _range{ 15.0f }
         , _viewAngle{ 0.0f }
-        , _turnSpeed{ MathUtil::Pi }
-        , _aimTolerance{ 5.0f * MathUtil::DegreeToRadian }
+        , _turnSpeed{ MathUtil::kPi }
+        , _aimTolerance{ 5.0f * MathUtil::kDegreeToRadian }
         , _fireInterval{ 0.5f }
         , _damage{ 10.0f }
         , _target{}
