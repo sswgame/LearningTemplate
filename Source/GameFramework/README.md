@@ -129,6 +129,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   거래 · 우편 · 상점 · GM 지급이 `Ledger::stageTransfer` 로 자기 트랜잭션에 붙인다. 시험: `LedgerTest`.
   `Online/Mail`: 우편 넣기(`ServiceMail::stageSend` — 발행 재원은 수령 때, 그 밖은 넣을 때 맡김으로, 같은 멱등 키 한 번, 만료 색인, 기본 보관 30 일 ·
   만료 때 운영 · 보상 우편은 첨부 소멸 · 플레이어 우편은 반환). `Online/Sanction`: 계정 제재 레코드(채팅 금지 · 정지 · 영구 정지 — 끝 시각 · 사유, 판 조건 쓰기).
+  `Online/Mail/ServiceMailCampaign.h`: 전체 우편(캠페인 레코드 하나 + 계정마다 수령 표식 "없어야 함" — 계정마다 행을 만들지 않는다, GM 키트가 만들고 우편함 키트가 끼운다).
   `Online/Identity/AccountSessionControl.h`: 세션 끊기 창구 `IAccountSessionControl`(계정 키트가 구현). 시험: `ServiceMailTest` · `ServiceSanctionTest`.
 - **Progression**: 경험치 곡선 · 레벨(`ExperienceCurve` · `LevelProgress`), 스킬 트리(`SkillTreeCatalog` · `SkillTreeState`), 평판 · 호감도(`ReputationCatalog` ·
   `ReputationState`), 로그라이트 지도(`RunMap`), 로컬 통계(`StatCatalog` · `PlayerStats` — `<Stats><Stat id kind="Counter|Max|Min|Time" max/>` 정의, `increment` ·
@@ -309,6 +310,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       `Receipt/Provider/Fake/` — 개발 전용). 서비스 `EconomyService`(IOnlineService 영역 kEconomy + 전송과 무관한
       입구 `submitCall`, 저장소 일 하나 = 요청 하나, 영수증은 등록부 → 틱에서 거둬 지급 일, 기능 플래그 `feature.shop_enabled`, Shipping 은 개발 전용 제공자 거절,
       `ServiceMetrics`("economy")). 시험: `EconomyPurchaseTest` · `ReceiptRedeemTest` · `EconomyServiceTest`.
+    - `Mailbox`(`GF_Mailbox`, Client · Server): 우편함 와이어(`MailboxProtocol.h` — 메서드 · `MailboxResult` · 화면 우편 `MailView` · 응답 몸 = 결과 + 칸, 캠페인 키 `campaign/<id>`),
+      클라이언트(`MailboxClient` — 첫 쪽 목록 캐시 · 안 읽은 수, 수령 · 모두 받기는 멱등 키, 수령 잔액은 게임이 경제 클라이언트로).
+    - `Server/Mailbox`(`GF_Server_Mailbox`, Server): 우편함 저장 논리(`MailboxStoreLogic` — 수령 = 재원 → 계정 원장 이동 + 상태 받음 + 만료 색인 지우기 한 트랜잭션, 분개 키
+      `mail.claim/<우편 토큰>` 이 두 기기 동시 수령 · 응답 유실에도 원장 한 번, 상한을 넘으면 우편이 남는다. 모두 받기는 16 통까지 우편마다 커밋, 지우기는 받았거나 첨부 없는 것만,
+      만료 쓸기는 시각 순 색인으로 버림(맡김 → 소각) · 돌려줌(맡김 → 보낸 계정, 상한 무시) · 발행 재원은 지우기만, 캠페인은 목록 첫 쪽 맨 앞에), 서비스 `MailboxService`
+      (IOnlineService 영역 kMailbox + `submitCall`, 주기 쓸기 · 캠페인 다시 읽기 일, 지표 `mailbox_expired_total{action}`). 시험: `MailboxTest`.
   - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
       연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,
