@@ -71,6 +71,7 @@ namespace sw
             {
                 _bMouseLockRequested = _bMouseLockRequested == SW_TRUE ? SW_FALSE : SW_TRUE;
                 applyMouseLock( input, _bMouseLockRequested == SW_TRUE );
+                SW_LOG_INFO( "Player %# mouse lock %# (%#)", _playerIndex, _bMouseLockRequested == SW_TRUE ? "engaged" : "released", _mouseLockAction.c_str() );
             }
             // 잠금이 실제로 걸린 동안만 시선을 쌓는다. 배타 가상 입력(시나리오)은 OS 포인터를 쥐지 않으니 잠금 요청만 본다.
             bLook = _bMouseLockRequested == SW_TRUE && ( input.isMouseLockActive() || input.isOsInputSuppressed() );
