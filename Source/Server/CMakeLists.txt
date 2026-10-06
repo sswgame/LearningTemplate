@@ -15,11 +15,11 @@ sw_embedProcessManifest(Server)
 set_target_properties(Server PROPERTIES FOLDER "Source/Server")
 
 target_link_libraries(Server
-    PRIVATE
-        AppHost
-        Engine
-        RuntimeAPI
-        sw_global_options
+	PRIVATE
+		AppHost
+		Engine
+		RuntimeAPI
+		sw_global_options
 )
 target_compile_definitions(Server PRIVATE "SW_LOG_TAG=\"Server\"" SW_APP_INTERNAL)
 sw_configurePch(Server "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

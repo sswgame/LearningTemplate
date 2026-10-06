@@ -26,12 +26,14 @@ from typing import Callable, Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import (  # noqa: E402
+    collectRepositoryFiles,
     collectSourceFiles,
     flatMapConcurrent,
     getLintSearchDirs,
     getModifiedCppFiles,
     getProjectRoot,
     kCppAllExtensions,
+    kNotOurDirNames,
     resolveFileArguments,
 )
 
@@ -51,13 +53,44 @@ def addFileArguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def selectFixerTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: str) -> list[Path]:
+@dataclass(frozen=True)
+class FixerFileKind:
+    """
+    C++ 가 아닌 파일을 고치는 픽서의 대상 — 확장자 · 이름, 그리고 손대지 않는 폴더.
+
+    - `suffixes` · `fileNames`: 대상(확장자는 대소문자 무시)
+    - `excludedDirNames`      : 이 이름의 폴더로는 내려가지 않는다(빌드 산출물 · 남의 코드)
+    - `excludedRelDirs`       : 이 저장소 기준 폴더 밑은 고치지 않는다(손대지 않는 영역)
+    """
+
+    suffixes: tuple[str, ...] = ()
+    fileNames: tuple[str, ...] = ()
+    excludedDirNames: frozenset[str] = kNotOurDirNames
+    excludedRelDirs: tuple[str, ...] = ()
+
+    def isTarget(self, path: Path, repositoryRoot: Path) -> bool:
+        if path.name not in self.fileNames and path.suffix.lower() not in self.suffixes:
+            return False
+        try:
+            relative = path.resolve().relative_to(repositoryRoot.resolve()).as_posix()
+        except ValueError:
+            return False
+        if any(part in self.excludedDirNames for part in relative.split("/")[:-1]):
+            return False
+        return not any(relative.startswith(prefix.rstrip("/") + "/") for prefix in self.excludedRelDirs)
+
+
+def selectFixerTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: str, fileKind: FixerFileKind | None = None) -> list[Path]:
     """
     무엇을 고칠지 고릅니다: 지정한 파일(`--files` — 게이트와 같은 규칙, `common.resolveFileArguments`) > `--all` > Git 변경 파일 > 전체.
+    `fileKind` 가 없으면 C++ 소스, 있으면 그 종류(CMake 처럼).
 
     마지막 폴백("변경된 파일이 없으면 전체")이 이 규칙의 핵심이다. 깨끗한 트리에서 돌려도
     아무 일도 안 하는 대신 전체를 본다 — 처음 받은 저장소에서도 한 번에 맞춰진다.
     """
+    if fileKind is not None:
+        return selectFileKindTargetsInternal(args, repositoryRoot, tag, fileKind)
+
     if args.files:
         return resolveFileArguments(repositoryRoot, args.files, suffixes=kCppAllExtensions)
 
@@ -71,6 +104,29 @@ def selectFixerTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: 
 
     listAll = collectSourceFiles(getLintSearchDirs(repositoryRoot))
     print(f"[{tag}] 변경된 파일이 없어 전체 {len(listAll)}개 파일 대상 실행.", file=sys.stderr)
+    return listAll
+
+
+def selectFileKindTargetsInternal(args: argparse.Namespace, repositoryRoot: Path, tag: str, fileKind: FixerFileKind) -> list[Path]:
+    """`selectFixerTargetFiles` 의 C++ 가 아닌 갈래 — 같은 순서(`--files` > `--all` > Git 변경 > 전체), 같은 제외."""
+    if args.files:
+        listFile = resolveFileArguments(repositoryRoot, args.files, suffixes=fileKind.suffixes, fileNames=fileKind.fileNames,
+                                        excludedDirNames=fileKind.excludedDirNames)
+        return [path for path in listFile if fileKind.isTarget(path, repositoryRoot)]
+
+    if not args.all:
+        setSuffix = {*fileKind.suffixes, *(Path(name).suffix.lower() for name in fileKind.fileNames)}
+        listModified = [path for path in getModifiedCppFiles(repositoryRoot, extensions=setSuffix)
+                        if fileKind.isTarget(path, repositoryRoot)]
+        if listModified:
+            print(f"[{tag}] Git 변경 파일 {len(listModified)}개 감지.", file=sys.stderr)
+            return listModified
+
+    listAll = [path for path in collectRepositoryFiles(repositoryRoot, ("",), suffixes=fileKind.suffixes, fileNames=fileKind.fileNames,
+                                                       excludedDirNames=fileKind.excludedDirNames)
+               if fileKind.isTarget(path, repositoryRoot)]
+    if not args.all:
+        print(f"[{tag}] 변경된 파일이 없어 전체 {len(listAll)}개 파일 대상 실행.", file=sys.stderr)
     return listAll
 
 
@@ -119,6 +175,7 @@ class LintFixer:
     - `description`: `--help` 한 줄.
     - `listPass`   : 이 픽서가 하는 변환들 (선언 순서대로 돈다).
     - `listScopeRelDir`: 비어 있지 않으면 이 저장소 기준 폴더 밑의 파일만 고친다(같은 규칙의 게이트가 보는 범위와 맞춘다).
+    - `fileKind`   : C++ 가 아닌 파일을 고치는 픽서의 대상(`FixerFileKind`). 없으면 C++ 소스.
     """
 
     name: str = ""
@@ -126,6 +183,7 @@ class LintFixer:
     description: str = ""
     listPass: tuple[FixPass, ...] = ()
     listScopeRelDir: tuple[str, ...] = ()
+    fileKind: FixerFileKind | None = None
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -204,9 +262,9 @@ class LintFixer:
         parser.add_argument("--check", action="store_true", help="파일을 수정하지 않고 규칙 위반 여부만 검사")
         args = parser.parse_args(argv)
 
-        listFile = selectFixerTargetFiles(args, getProjectRoot(), self.tag)
+        listFile = selectFixerTargetFiles(args, getProjectRoot(), self.tag, self.fileKind)
         if not listFile:
-            print(f"[{self.tag}] 대상 C++ 파일이 없습니다.", file=sys.stderr)
+            print(f"[{self.tag}] 대상 파일이 없습니다.", file=sys.stderr)
             return 0
 
         listMessage = self.processFiles(listFile, checkOnly=args.check)

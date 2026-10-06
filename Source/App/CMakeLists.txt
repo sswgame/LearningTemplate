@@ -23,11 +23,11 @@ endif()
 add_library(AppHost STATIC ${APP_HOST_SOURCES})
 set_target_properties(AppHost PROPERTIES FOLDER "Source/App")
 target_link_libraries(AppHost
-    PUBLIC
-        Engine
-        RuntimeAPI
-    PRIVATE
-        sw_global_options
+	PUBLIC
+		Engine
+		RuntimeAPI
+	PRIVATE
+		sw_global_options
 )
 target_compile_definitions(AppHost PRIVATE "SW_LOG_TAG=\"Engine\"" SW_APP_INTERNAL)
 sw_configurePch(AppHost "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
@@ -46,11 +46,11 @@ set_target_properties(App PROPERTIES FOLDER "Source/App")
 
 target_include_directories(App PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(App
-    PRIVATE
-        AppHost
-        Engine
-        RuntimeAPI
-        sw_global_options
+	PRIVATE
+		AppHost
+		Engine
+		RuntimeAPI
+		sw_global_options
 )
 target_compile_definitions(App PRIVATE "SW_LOG_TAG=\"Engine\"" SW_APP_INTERNAL)
 sw_configurePch(App "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

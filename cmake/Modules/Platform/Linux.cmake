@@ -6,7 +6,7 @@
 # ==============================================================================
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    return()
+	return()
 endif()
 
 add_library(sw_platform_linux INTERFACE)
@@ -15,39 +15,39 @@ target_compile_definitions(sw_platform_linux INTERFACE SW_PLATFORM_LINUX SW_PLAT
 # 전용 서버(SW_TARGET_TYPE=Server)는 창이 없다 — X11 · xcb 를 찾지도 링크하지도 않는다. 서버 기계에는 X 가 없고, 링크해 두면 동적 링커가
 # main 전에 libX11.so 를 찾다 실패한다. X11 을 쓰는 .cpp 는 `SW_WITH_CLIENT_CODE` 로 서버 빌드에서 빠진다(Window · Input 의 Linux 폴더).
 if(NOT SW_TARGET_TYPE STREQUAL "Server")
-    # ------------------------------------------------------------------------------
-    # 1) X11 / xcb — 윈도잉 + WSLg Vulkan WSI (XGetXCBConnection / VK_KHR_xcb_surface)
-    # ------------------------------------------------------------------------------
-    find_package(X11)
+	# ------------------------------------------------------------------------------
+	# 1) X11 / xcb — 윈도잉 + WSLg Vulkan WSI (XGetXCBConnection / VK_KHR_xcb_surface)
+	# ------------------------------------------------------------------------------
+	find_package(X11)
 
-    if(X11_FOUND)
-        target_link_libraries(sw_platform_linux INTERFACE ${X11_LIBRARIES})
-        target_include_directories(sw_platform_linux INTERFACE ${X11_INCLUDE_DIR})
-    endif()
+	if(X11_FOUND)
+		target_link_libraries(sw_platform_linux INTERFACE ${X11_LIBRARIES})
+		target_include_directories(sw_platform_linux INTERFACE ${X11_INCLUDE_DIR})
+	endif()
 
-    find_path(SW_XCB_INCLUDE_DIR NAMES xcb/xcb.h)
-    find_library(SW_XCB_LIBRARY NAMES xcb)
-    find_library(SW_X11_XCB_LIBRARY NAMES X11-xcb)
+	find_path(SW_XCB_INCLUDE_DIR NAMES xcb/xcb.h)
+	find_library(SW_XCB_LIBRARY NAMES xcb)
+	find_library(SW_X11_XCB_LIBRARY NAMES X11-xcb)
 
-    if(SW_XCB_INCLUDE_DIR)
-        target_include_directories(sw_platform_linux INTERFACE ${SW_XCB_INCLUDE_DIR})
-    endif()
+	if(SW_XCB_INCLUDE_DIR)
+		target_include_directories(sw_platform_linux INTERFACE ${SW_XCB_INCLUDE_DIR})
+	endif()
 
-    if(SW_XCB_LIBRARY)
-        target_link_libraries(sw_platform_linux INTERFACE ${SW_XCB_LIBRARY})
-    endif()
+	if(SW_XCB_LIBRARY)
+		target_link_libraries(sw_platform_linux INTERFACE ${SW_XCB_LIBRARY})
+	endif()
 
-    if(SW_X11_XCB_LIBRARY)
-        target_link_libraries(sw_platform_linux INTERFACE ${SW_X11_XCB_LIBRARY})
-    endif()
+	if(SW_X11_XCB_LIBRARY)
+		target_link_libraries(sw_platform_linux INTERFACE ${SW_X11_XCB_LIBRARY})
+	endif()
 
-    if(NOT SW_XCB_INCLUDE_DIR OR NOT SW_XCB_LIBRARY)
-        message(WARNING "[Linux] libxcb headers/libs not found — install libxcb1-dev (Vulkan xcb WSI)")
-    endif()
+	if(NOT SW_XCB_INCLUDE_DIR OR NOT SW_XCB_LIBRARY)
+		message(WARNING "[Linux] libxcb headers/libs not found — install libxcb1-dev (Vulkan xcb WSI)")
+	endif()
 
-    if(NOT SW_X11_XCB_LIBRARY)
-        message(WARNING "[Linux] libX11-xcb not found — install libx11-xcb-dev (XGetXCBConnection / WSLg Vulkan)")
-    endif()
+	if(NOT SW_X11_XCB_LIBRARY)
+		message(WARNING "[Linux] libX11-xcb not found — install libx11-xcb-dev (XGetXCBConnection / WSLg Vulkan)")
+	endif()
 endif()
 
 # ------------------------------------------------------------------------------
@@ -56,60 +56,60 @@ endif()
 # Vulkan: vcpkg vulkan-loader[xcb,xlib], 없으면 시스템 폴백
 # ------------------------------------------------------------------------------
 if(NOT TARGET sw_graphics_gl_libs)
-    add_library(sw_graphics_gl_libs INTERFACE)
+	add_library(sw_graphics_gl_libs INTERFACE)
 endif()
 
 find_package(OpenGL)
 
 if(OpenGL_FOUND)
-    if(TARGET OpenGL::GL)
-        target_link_libraries(sw_graphics_gl_libs INTERFACE OpenGL::GL)
-    elseif(OPENGL_gl_LIBRARY)
-        target_link_libraries(sw_graphics_gl_libs INTERFACE ${OPENGL_gl_LIBRARY})
-    endif()
+	if(TARGET OpenGL::GL)
+		target_link_libraries(sw_graphics_gl_libs INTERFACE OpenGL::GL)
+	elseif(OPENGL_gl_LIBRARY)
+		target_link_libraries(sw_graphics_gl_libs INTERFACE ${OPENGL_gl_LIBRARY})
+	endif()
 
-    if(TARGET OpenGL::GLX)
-        target_link_libraries(sw_graphics_gl_libs INTERFACE OpenGL::GLX)
-    elseif(OPENGL_opengl_LIBRARY AND NOT TARGET OpenGL::GL)
-        target_link_libraries(sw_graphics_gl_libs INTERFACE ${OPENGL_opengl_LIBRARY})
-    else()
-        find_library(SW_GLX_LIBRARY NAMES GLX glx)
+	if(TARGET OpenGL::GLX)
+		target_link_libraries(sw_graphics_gl_libs INTERFACE OpenGL::GLX)
+	elseif(OPENGL_opengl_LIBRARY AND NOT TARGET OpenGL::GL)
+		target_link_libraries(sw_graphics_gl_libs INTERFACE ${OPENGL_opengl_LIBRARY})
+	else()
+		find_library(SW_GLX_LIBRARY NAMES GLX glx)
 
-        if(SW_GLX_LIBRARY)
-            target_link_libraries(sw_graphics_gl_libs INTERFACE ${SW_GLX_LIBRARY})
-        endif()
-    endif()
+		if(SW_GLX_LIBRARY)
+			target_link_libraries(sw_graphics_gl_libs INTERFACE ${SW_GLX_LIBRARY})
+		endif()
+	endif()
 else()
-    message(WARNING "[Linux] OpenGL not found — GL/GLX RHI link may fail")
+	message(WARNING "[Linux] OpenGL not found — GL/GLX RHI link may fail")
 endif()
 
 if(NOT TARGET sw_graphics_vulkan_libs)
-    add_library(sw_graphics_vulkan_libs INTERFACE)
+	add_library(sw_graphics_vulkan_libs INTERFACE)
 endif()
 
 find_package(Vulkan QUIET)
 
 if(TARGET Vulkan::Vulkan)
-    target_link_libraries(sw_graphics_vulkan_libs INTERFACE Vulkan::Vulkan)
+	target_link_libraries(sw_graphics_vulkan_libs INTERFACE Vulkan::Vulkan)
 elseif(Vulkan_LIBRARIES)
-    target_link_libraries(sw_graphics_vulkan_libs INTERFACE ${Vulkan_LIBRARIES})
+	target_link_libraries(sw_graphics_vulkan_libs INTERFACE ${Vulkan_LIBRARIES})
 else()
-    find_library(SW_SYSTEM_VULKAN_LIBRARY NAMES vulkan)
+	find_library(SW_SYSTEM_VULKAN_LIBRARY NAMES vulkan)
 
-    if(SW_SYSTEM_VULKAN_LIBRARY)
-        target_link_libraries(sw_graphics_vulkan_libs INTERFACE ${SW_SYSTEM_VULKAN_LIBRARY})
-        message(STATUS "[Linux] Vulkan loader (system): ${SW_SYSTEM_VULKAN_LIBRARY}")
-    else()
-        message(WARNING "[Linux] Vulkan loader not found — Vulkan RHI link may fail")
-    endif()
+	if(SW_SYSTEM_VULKAN_LIBRARY)
+		target_link_libraries(sw_graphics_vulkan_libs INTERFACE ${SW_SYSTEM_VULKAN_LIBRARY})
+		message(STATUS "[Linux] Vulkan loader (system): ${SW_SYSTEM_VULKAN_LIBRARY}")
+	else()
+		message(WARNING "[Linux] Vulkan loader not found — Vulkan RHI link may fail")
+	endif()
 endif()
 
 if(NOT TARGET sw_graphics_libs)
-    add_library(sw_graphics_libs INTERFACE)
-    target_link_libraries(sw_graphics_libs INTERFACE
-        sw_graphics_gl_libs
-        sw_graphics_vulkan_libs
-    )
+	add_library(sw_graphics_libs INTERFACE)
+	target_link_libraries(sw_graphics_libs INTERFACE
+		sw_graphics_gl_libs
+		sw_graphics_vulkan_libs
+	)
 endif()
 
 list(APPEND sw_flag_libraries sw_platform_linux)

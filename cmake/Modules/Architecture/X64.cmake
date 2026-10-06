@@ -4,7 +4,7 @@
 # ==============================================================================
 
 if(NOT sw_target_architecture STREQUAL "x64")
-    return()
+	return()
 endif()
 
 add_library(sw_architecture_x64 INTERFACE)

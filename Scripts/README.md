@@ -135,6 +135,7 @@ Scripts/
   │     │     └── CheckTextFilesAreText.py    # 텍스트 파일의 널 바이트
   │     ├── fixer/                    # 파일을 실제로 고쳐 쓴다 (게이트가 아니다)
   │     │     ├── FormatBranchBraces.py       # if 계열 중괄호 (`--check` 면 검사만)
+  │     │     ├── FormatCmakeIndent.py        # CMake 줄머리 공백 들여쓰기 → 탭 (문자열 안 · vcpkg 툴체인 영역은 그대로)
   │     │     ├── FormatForwardDeclarations.py
   │     │     ├── FormatIncludeOrder.py       # include 순서 · 중복 (규칙은 gate/CheckIncludeOrder.py)
   │     │     ├── FormatNamespaceBlocks.py    # 정의마다 namespace 블록 (규칙은 gate/CheckNamespaceBlocks.py)

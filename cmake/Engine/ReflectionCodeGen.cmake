@@ -7,17 +7,17 @@
 # 0) 파서 타깃이 없을 때 — SW_REQUIRE_REFLECTION 이면 구성을 세우고, 아니면 경고 후 이 단계를 건너뛴다(OUT_VAR = ON 이면 건너뛸 것).
 # ------------------------------------------------------------------------------
 function(sw_skipWithoutReflectionParser TARGET_NAME OUT_VAR)
-    if(TARGET ReflectionParser)
-        set(${OUT_VAR} OFF PARENT_SCOPE)
-        return()
-    endif()
-    if(SW_REQUIRE_REFLECTION)
-        message(FATAL_ERROR
-            "[Reflection] ReflectionParser target missing but SW_REQUIRE_REFLECTION=ON (${TARGET_NAME}).\n"
-            "  Install LLVM/libclang (Config/Environment/toolchain_config.json llvm_path) or set -DSW_REQUIRE_REFLECTION=OFF.")
-    endif()
-    message(WARNING "[Reflection] ReflectionParser target not found. Skipping reflection for: ${TARGET_NAME}")
-    set(${OUT_VAR} ON PARENT_SCOPE)
+	if(TARGET ReflectionParser)
+		set(${OUT_VAR} OFF PARENT_SCOPE)
+		return()
+	endif()
+	if(SW_REQUIRE_REFLECTION)
+		message(FATAL_ERROR
+			"[Reflection] ReflectionParser target missing but SW_REQUIRE_REFLECTION=ON (${TARGET_NAME}).\n"
+			"  Install LLVM/libclang (Config/Environment/toolchain_config.json llvm_path) or set -DSW_REQUIRE_REFLECTION=OFF.")
+	endif()
+	message(WARNING "[Reflection] ReflectionParser target not found. Skipping reflection for: ${TARGET_NAME}")
+	set(${OUT_VAR} ON PARENT_SCOPE)
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -26,152 +26,152 @@ endfunction()
 # 루트가 Tools(ReflectionParser) 이후 Engine을 호출해야 이 스텝이 살아 있음
 # ------------------------------------------------------------------------------
 function(sw_addReflectionStep TARGET_NAME)
-    cmake_parse_arguments(ARG "" "OUTPUT_DIR" "HEADERS;INCLUDES" ${ARGN})
+	cmake_parse_arguments(ARG "" "OUTPUT_DIR" "HEADERS;INCLUDES" ${ARGN})
 
-    sw_skipWithoutReflectionParser(${TARGET_NAME} swSkip)
-    if(swSkip)
-        return()
-    endif()
+	sw_skipWithoutReflectionParser(${TARGET_NAME} swSkip)
+	if(swSkip)
+		return()
+	endif()
 
-    if(NOT ARG_OUTPUT_DIR)
-        set(ARG_OUTPUT_DIR "${CMAKE_BINARY_DIR}/generated/${TARGET_NAME}")
-    endif()
+	if(NOT ARG_OUTPUT_DIR)
+		set(ARG_OUTPUT_DIR "${CMAKE_BINARY_DIR}/generated/${TARGET_NAME}")
+	endif()
 
-    if(NOT ARG_HEADERS)
-        message(VERBOSE "[Reflection] No HEADERS specified for target: ${TARGET_NAME}, auto-scanning for REFLECT macros...")
-        file(GLOB_RECURSE listCandidateHeader "${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
+	if(NOT ARG_HEADERS)
+		message(VERBOSE "[Reflection] No HEADERS specified for target: ${TARGET_NAME}, auto-scanning for REFLECT macros...")
+		file(GLOB_RECURSE listCandidateHeader "${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
 
-        foreach(hdr IN LISTS listCandidateHeader)
-            file(STRINGS "${hdr}" listReflectLine REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")
+		foreach(hdr IN LISTS listCandidateHeader)
+			file(STRINGS "${hdr}" listReflectLine REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")
 
-            if(listReflectLine)
-                list(APPEND ARG_HEADERS "${hdr}")
-            endif()
-        endforeach()
+			if(listReflectLine)
+				list(APPEND ARG_HEADERS "${hdr}")
+			endif()
+		endforeach()
 
-        if(NOT ARG_HEADERS)
-            message(VERBOSE "[Reflection] Auto-scan found no headers with REFLECT macros for target: ${TARGET_NAME}")
-            return()
-        endif()
-    endif()
+		if(NOT ARG_HEADERS)
+			message(VERBOSE "[Reflection] Auto-scan found no headers with REFLECT macros for target: ${TARGET_NAME}")
+			return()
+		endif()
+	endif()
 
-    set(parserArgs "")
+	set(parserArgs "")
 
-    foreach(header IN LISTS ARG_HEADERS)
-        list(APPEND parserArgs "--input" "${header}")
-    endforeach()
+	foreach(header IN LISTS ARG_HEADERS)
+		list(APPEND parserArgs "--input" "${header}")
+	endforeach()
 
-    list(APPEND parserArgs "--output" "${ARG_OUTPUT_DIR}")
-    set(swReflectBuiltins "${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}")
-    set(swAnnotationMeta "${CMAKE_SOURCE_DIR}/${SW_FILE_ANNOTATION_META}")
-    set(swEmitTemplatesDir "${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}")
-    list(APPEND parserArgs "--builtins" "${swReflectBuiltins}")
-    list(APPEND parserArgs "--annotation-meta" "${swAnnotationMeta}")
-    list(APPEND parserArgs "--emit-templates" "${swEmitTemplatesDir}")
+	list(APPEND parserArgs "--output" "${ARG_OUTPUT_DIR}")
+	set(swReflectBuiltins "${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}")
+	set(swAnnotationMeta "${CMAKE_SOURCE_DIR}/${SW_FILE_ANNOTATION_META}")
+	set(swEmitTemplatesDir "${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}")
+	list(APPEND parserArgs "--builtins" "${swReflectBuiltins}")
+	list(APPEND parserArgs "--annotation-meta" "${swAnnotationMeta}")
+	list(APPEND parserArgs "--emit-templates" "${swEmitTemplatesDir}")
 
-    # 모듈 판별을 소스 루트 기준 상대 경로로 하게 한다. 절대 경로로 매칭하면
-    # 리포지토리를 담은 상위 폴더 이름(.../AppData/..., D:/Games/... 등)에 걸려 오분류된다.
-    list(APPEND parserArgs "--source-root" "${CMAKE_SOURCE_DIR}/Source")
-    file(GLOB swEmitTpls "${swEmitTemplatesDir}/*.tpl")
+	# 모듈 판별을 소스 루트 기준 상대 경로로 하게 한다. 절대 경로로 매칭하면
+	# 리포지토리를 담은 상위 폴더 이름(.../AppData/..., D:/Games/... 등)에 걸려 오분류된다.
+	list(APPEND parserArgs "--source-root" "${CMAKE_SOURCE_DIR}/Source")
+	file(GLOB swEmitTpls "${swEmitTemplatesDir}/*.tpl")
 
-    # 리플렉션 대상 헤더가 생성 헤더(sw/config/*.gen.h 등)를 include 할 수 있으므로 항상 넣어준다.
-    # 없으면 libclang 파싱이 "file not found" 로 실패한다.
-    if(EXISTS "${CMAKE_BINARY_DIR}/generated")
-        list(APPEND parserArgs "--include" "${CMAKE_BINARY_DIR}/generated")
-    endif()
+	# 리플렉션 대상 헤더가 생성 헤더(sw/config/*.gen.h 등)를 include 할 수 있으므로 항상 넣어준다.
+	# 없으면 libclang 파싱이 "file not found" 로 실패한다.
+	if(EXISTS "${CMAKE_BINARY_DIR}/generated")
+		list(APPEND parserArgs "--include" "${CMAKE_BINARY_DIR}/generated")
+	endif()
 
-    # 셰이더 바인딩 계약(bindingslots.hlsli)은 Engine 의 PUBLIC include 자리다 — 계약 수(shaderslot::k*)를 배열 크기로 쓰는 반사 헤더
-    # (WaterBodyComponent 등)를 파서도 컴파일러와 같은 자리에서 읽게 한다.
-    list(APPEND parserArgs "--include" "${CMAKE_SOURCE_DIR}/Resource/engine/shaders")
-    foreach(inc IN LISTS ARG_INCLUDES)
-        list(APPEND parserArgs "--include" "${inc}")
-    endforeach()
+	# 셰이더 바인딩 계약(bindingslots.hlsli)은 Engine 의 PUBLIC include 자리다 — 계약 수(shaderslot::k*)를 배열 크기로 쓰는 반사 헤더
+	# (WaterBodyComponent 등)를 파서도 컴파일러와 같은 자리에서 읽게 한다.
+	list(APPEND parserArgs "--include" "${CMAKE_SOURCE_DIR}/Resource/engine/shaders")
+	foreach(inc IN LISTS ARG_INCLUDES)
+		list(APPEND parserArgs "--include" "${inc}")
+	endforeach()
 
-    # 파서가 런타임에 읽는 설정. 바뀌면 clang 인자/SDK 경로가 달라지므로 재생성해야 함.
-    set(swParserConfigs "")
+	# 파서가 런타임에 읽는 설정. 바뀌면 clang 인자/SDK 경로가 달라지므로 재생성해야 함.
+	set(swParserConfigs "")
 
-    foreach(cfg
-        "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_CONFIG}"
-        "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}"
-        "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
-        if(EXISTS "${cfg}")
-            list(APPEND swParserConfigs "${cfg}")
-        endif()
-    endforeach()
+	foreach(cfg
+		"${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_CONFIG}"
+		"${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}"
+		"${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
+		if(EXISTS "${cfg}")
+			list(APPEND swParserConfigs "${cfg}")
+		endif()
+	endforeach()
 
-    file(MAKE_DIRECTORY "${ARG_OUTPUT_DIR}")
-    set(generatedFiles "")
-    set(generatedCppFiles "")
+	file(MAKE_DIRECTORY "${ARG_OUTPUT_DIR}")
+	set(generatedFiles "")
+	set(generatedCppFiles "")
 
-    foreach(header IN LISTS ARG_HEADERS)
-        get_filename_component(stem "${header}" NAME_WE)
-        set(genFile "${ARG_OUTPUT_DIR}/${stem}.gen.cpp")
-        set(genHeader "${ARG_OUTPUT_DIR}/${stem}.gen.h")
-        list(APPEND generatedFiles "${genFile}" "${genHeader}")
-        list(APPEND generatedCppFiles "${genFile}")
+	foreach(header IN LISTS ARG_HEADERS)
+		get_filename_component(stem "${header}" NAME_WE)
+		set(genFile "${ARG_OUTPUT_DIR}/${stem}.gen.cpp")
+		set(genHeader "${ARG_OUTPUT_DIR}/${stem}.gen.h")
+		list(APPEND generatedFiles "${genFile}" "${genHeader}")
+		list(APPEND generatedCppFiles "${genFile}")
 
-        if(NOT EXISTS "${genFile}")
-            file(WRITE "${genFile}" "// AUTO-GENERATED placeholder — regenerated by ReflectionParser\n")
-        endif()
+		if(NOT EXISTS "${genFile}")
+			file(WRITE "${genFile}" "// AUTO-GENERATED placeholder — regenerated by ReflectionParser\n")
+		endif()
 
-        if(NOT EXISTS "${genHeader}")
-            file(WRITE "${genHeader}" "// AUTO-GENERATED placeholder\n#pragma once\n")
-        endif()
-    endforeach()
+		if(NOT EXISTS "${genHeader}")
+			file(WRITE "${genHeader}" "// AUTO-GENERATED placeholder\n#pragma once\n")
+		endif()
+	endforeach()
 
-    set(swFlagOpsHeader "${ARG_OUTPUT_DIR}/FlagOps.gen.h")
-    list(APPEND generatedFiles "${swFlagOpsHeader}")
+	set(swFlagOpsHeader "${ARG_OUTPUT_DIR}/FlagOps.gen.h")
+	list(APPEND generatedFiles "${swFlagOpsHeader}")
 
-    if(NOT EXISTS "${swFlagOpsHeader}")
-        file(WRITE "${swFlagOpsHeader}" "// AUTO-GENERATED placeholder\n#pragma once\n#if !defined(__REFLECT_PARSER__)\n// no ENUM(Flags) in this target\n#endif\n")
-    endif()
+	if(NOT EXISTS "${swFlagOpsHeader}")
+		file(WRITE "${swFlagOpsHeader}" "// AUTO-GENERATED placeholder\n#pragma once\n#if !defined(__REFLECT_PARSER__)\n// no ENUM(Flags) in this target\n#endif\n")
+	endif()
 
-    # 헤더를 옮기기만 하면(내용은 그대로) mtime 이 안 바뀌어 파서가 다시 돌지 않고,
-    # 옛 경로를 #include 한 .gen.cpp 가 그대로 남아 빌드가 깨진다. 입력 경로 목록을
-    # 스탬프로 남겨 의존에 넣는다 — 내용이 같으면 COPYONLY 가 파일을 건드리지 않는다.
-    set(swReflectInputList "${ARG_OUTPUT_DIR}/ReflectionInputs.list")
-    string(REPLACE ";" "\n" swReflectInputText "${ARG_HEADERS}")
-    file(WRITE "${swReflectInputList}.in" "${swReflectInputText}\n")
-    configure_file("${swReflectInputList}.in" "${swReflectInputList}" COPYONLY)
+	# 헤더를 옮기기만 하면(내용은 그대로) mtime 이 안 바뀌어 파서가 다시 돌지 않고,
+	# 옛 경로를 #include 한 .gen.cpp 가 그대로 남아 빌드가 깨진다. 입력 경로 목록을
+	# 스탬프로 남겨 의존에 넣는다 — 내용이 같으면 COPYONLY 가 파일을 건드리지 않는다.
+	set(swReflectInputList "${ARG_OUTPUT_DIR}/ReflectionInputs.list")
+	string(REPLACE ";" "\n" swReflectInputText "${ARG_HEADERS}")
+	file(WRITE "${swReflectInputList}.in" "${swReflectInputText}\n")
+	configure_file("${swReflectInputList}.in" "${swReflectInputList}" COPYONLY)
 
-    # 반사된 헤더가 include 한 **반사되지 않은** 헤더(예: `using ScoreList = …`)가 바뀌어도 이 단계가 다시 돌게 한다. 파서가 실행마다
-    # include 목록을 이 파일에 쓰고 ninja 가 읽는다. DEPENDS 가 반사된 헤더뿐이면 생성 코드가 낡은 타입 정보로 남는다.
-    set(swReflectDepfile "${ARG_OUTPUT_DIR}/ReflectionParser.d")
+	# 반사된 헤더가 include 한 **반사되지 않은** 헤더(예: `using ScoreList = …`)가 바뀌어도 이 단계가 다시 돌게 한다. 파서가 실행마다
+	# include 목록을 이 파일에 쓰고 ninja 가 읽는다. DEPENDS 가 반사된 헤더뿐이면 생성 코드가 낡은 타입 정보로 남는다.
+	set(swReflectDepfile "${ARG_OUTPUT_DIR}/ReflectionParser.d")
 
-    add_custom_command(
-        OUTPUT ${generatedFiles}
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIR}"
-        COMMAND "$<TARGET_FILE:ReflectionParser>" ${parserArgs} --depfile "${swReflectDepfile}"
-        DEPFILE "${swReflectDepfile}"
-        DEPENDS ${ARG_HEADERS} "${swReflectInputList}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
-        "${swReflectBuiltins}" "${swAnnotationMeta}" ${swEmitTpls}
-        ${swParserConfigs}
-        COMMENT "[Reflection] Running ReflectionParser for target: ${TARGET_NAME}"
-        VERBATIM
-    )
+	add_custom_command(
+		OUTPUT ${generatedFiles}
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIR}"
+		COMMAND "$<TARGET_FILE:ReflectionParser>" ${parserArgs} --depfile "${swReflectDepfile}"
+		DEPFILE "${swReflectDepfile}"
+		DEPENDS ${ARG_HEADERS} "${swReflectInputList}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
+		"${swReflectBuiltins}" "${swAnnotationMeta}" ${swEmitTpls}
+		${swParserConfigs}
+		COMMENT "[Reflection] Running ReflectionParser for target: ${TARGET_NAME}"
+		VERBATIM
+	)
 
-    target_sources(${TARGET_NAME} PRIVATE ${generatedCppFiles})
-    set_source_files_properties(${generatedCppFiles} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
-    target_include_directories(${TARGET_NAME} PUBLIC "${ARG_OUTPUT_DIR}")
+	target_sources(${TARGET_NAME} PRIVATE ${generatedCppFiles})
+	set_source_files_properties(${generatedCppFiles} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+	target_include_directories(${TARGET_NAME} PUBLIC "${ARG_OUTPUT_DIR}")
 
-    # ENUM(Flags) 트레이트 우산은 **조건 없이** 강제 include 한다.
-    #
-    # 주의: 여기서 `ENUM( Flags` 를 정규식으로 훑어 조건부로 붙이지 말 것. 파서는 `AnnotationMeta.txt` 의 동의어를
-    # 전부 받으므로(Flags · BitFlag · FLAG · Bitwise) 철자 하나가 다르면 우산은 만들어지는데 `/FI` 는 안 붙어
-    # "invalid operands to binary expression" 으로 깨진다 — 같은 판정을 두 곳이 따로 내리면 안 된다.
-    # 플래그가 없는 타깃의 우산은 사실상 빈 파일이라 붙여도 비용이 없다.
-    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-        target_compile_options(${TARGET_NAME} PUBLIC "/FI${swFlagOpsHeader}")
-    else()
-        target_compile_options(${TARGET_NAME} PUBLIC "SHELL:-include ${swFlagOpsHeader}")
-    endif()
+	# ENUM(Flags) 트레이트 우산은 **조건 없이** 강제 include 한다.
+	#
+	# 주의: 여기서 `ENUM( Flags` 를 정규식으로 훑어 조건부로 붙이지 말 것. 파서는 `AnnotationMeta.txt` 의 동의어를
+	# 전부 받으므로(Flags · BitFlag · FLAG · Bitwise) 철자 하나가 다르면 우산은 만들어지는데 `/FI` 는 안 붙어
+	# "invalid operands to binary expression" 으로 깨진다 — 같은 판정을 두 곳이 따로 내리면 안 된다.
+	# 플래그가 없는 타깃의 우산은 사실상 빈 파일이라 붙여도 비용이 없다.
+	if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+		target_compile_options(${TARGET_NAME} PUBLIC "/FI${swFlagOpsHeader}")
+	else()
+		target_compile_options(${TARGET_NAME} PUBLIC "SHELL:-include ${swFlagOpsHeader}")
+	endif()
 
-    add_custom_target(${TARGET_NAME}_ReflectionGen DEPENDS ${generatedFiles})
-    add_dependencies(${TARGET_NAME} ReflectionParser ${TARGET_NAME}_ReflectionGen)
+	add_custom_target(${TARGET_NAME}_ReflectionGen DEPENDS ${generatedFiles})
+	add_dependencies(${TARGET_NAME} ReflectionParser ${TARGET_NAME}_ReflectionGen)
 
-    # 타깃마다 두 줄씩 configure 출력을 메우지 않는다 — `cmake --log-level=VERBOSE` 로 다시 본다.
-    list(LENGTH ARG_HEADERS headerCount)
-    message(VERBOSE "[Reflection] ${TARGET_NAME}: ${headerCount} headers -> ${ARG_OUTPUT_DIR}")
+	# 타깃마다 두 줄씩 configure 출력을 메우지 않는다 — `cmake --log-level=VERBOSE` 로 다시 본다.
+	list(LENGTH ARG_HEADERS headerCount)
+	message(VERBOSE "[Reflection] ${TARGET_NAME}: ${headerCount} headers -> ${ARG_OUTPUT_DIR}")
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -179,54 +179,54 @@ endfunction()
 # Engine 전용. Unity 배치에서 제외
 # ------------------------------------------------------------------------------
 function(sw_addReflectBuiltinsGen TARGET_NAME)
-    sw_skipWithoutReflectionParser(${TARGET_NAME} swSkip)
-    if(swSkip)
-        return()
-    endif()
+	sw_skipWithoutReflectionParser(${TARGET_NAME} swSkip)
+	if(swSkip)
+		return()
+	endif()
 
-    set(swReflectBuiltins "${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}")
-    set(swEmitTemplatesDir "${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}")
-    file(GLOB swBuiltinTpls
-        "${swEmitTemplatesDir}/${SW_FILE_TPL_BUILTIN_HEADER}"
-        "${swEmitTemplatesDir}/${SW_FILE_TPL_BUILTIN_REGISTRAR}"
-        "${swEmitTemplatesDir}/${SW_FILE_TPL_BUILTIN_FOOTER}")
-    set(outDir "${CMAKE_BINARY_DIR}/generated/${TARGET_NAME}")
-    set(genFile "${outDir}/ReflectBuiltins.gen.cpp")
-    file(MAKE_DIRECTORY "${outDir}")
+	set(swReflectBuiltins "${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}")
+	set(swEmitTemplatesDir "${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}")
+	file(GLOB swBuiltinTpls
+		"${swEmitTemplatesDir}/${SW_FILE_TPL_BUILTIN_HEADER}"
+		"${swEmitTemplatesDir}/${SW_FILE_TPL_BUILTIN_REGISTRAR}"
+		"${swEmitTemplatesDir}/${SW_FILE_TPL_BUILTIN_FOOTER}")
+	set(outDir "${CMAKE_BINARY_DIR}/generated/${TARGET_NAME}")
+	set(genFile "${outDir}/ReflectBuiltins.gen.cpp")
+	file(MAKE_DIRECTORY "${outDir}")
 
-    # 플레이스홀더는 target_sources 가 설정 시점에 붙일 파일이 있어야 해서 쓴다. 그런데 이걸
-    # 그냥 쓰면 **출력이 이미 존재하고 의존물보다 새것**이 되어 ninja 가 커스텀 커맨드를 영영
-    # 돌리지 않는다 — 생성 파일을 지우면 플레이스홀더가 최종 산출물로 굳어 링크가
-    # `forceLinkBuiltinTypes` 미정의로 깨진다(리컨피그해도 같은 덫이 다시 놓인다).
-    # 그래서 스탬프를 함께 출력물로 두고, 플레이스홀더를 새로 쓴 경우엔 스탬프를 지운다.
-    # sw_addReflectionStep 쪽은 파서의 isUpToDate 가 플레이스홀더를 알아보고 다시 생성하므로
-    # 이 문제가 없다.
-    set(swBuiltinStamp "${genFile}.stamp")
+	# 플레이스홀더는 target_sources 가 설정 시점에 붙일 파일이 있어야 해서 쓴다. 그런데 이걸
+	# 그냥 쓰면 **출력이 이미 존재하고 의존물보다 새것**이 되어 ninja 가 커스텀 커맨드를 영영
+	# 돌리지 않는다 — 생성 파일을 지우면 플레이스홀더가 최종 산출물로 굳어 링크가
+	# `forceLinkBuiltinTypes` 미정의로 깨진다(리컨피그해도 같은 덫이 다시 놓인다).
+	# 그래서 스탬프를 함께 출력물로 두고, 플레이스홀더를 새로 쓴 경우엔 스탬프를 지운다.
+	# sw_addReflectionStep 쪽은 파서의 isUpToDate 가 플레이스홀더를 알아보고 다시 생성하므로
+	# 이 문제가 없다.
+	set(swBuiltinStamp "${genFile}.stamp")
 
-    if(NOT EXISTS "${genFile}")
-        file(WRITE "${genFile}" "// AUTO-GENERATED placeholder — regenerated by ReflectionParser\n")
-        file(REMOVE "${swBuiltinStamp}")
-    endif()
+	if(NOT EXISTS "${genFile}")
+		file(WRITE "${genFile}" "// AUTO-GENERATED placeholder — regenerated by ReflectionParser\n")
+		file(REMOVE "${swBuiltinStamp}")
+	endif()
 
-    add_custom_command(
-        OUTPUT "${genFile}" "${swBuiltinStamp}"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${outDir}"
-        COMMAND "$<TARGET_FILE:ReflectionParser>"
-        "--builtins" "${swReflectBuiltins}"
-        "--emit-templates" "${swEmitTemplatesDir}"
-        "--emit-builtins-gen" "${genFile}"
-        COMMAND ${CMAKE_COMMAND} -E touch "${swBuiltinStamp}"
-        DEPENDS ReflectionParser "${swReflectBuiltins}" ${swBuiltinTpls}
-        COMMENT "[Reflection] Emitting ReflectBuiltins.gen.cpp for ${TARGET_NAME}"
-        VERBATIM
-    )
+	add_custom_command(
+		OUTPUT "${genFile}" "${swBuiltinStamp}"
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${outDir}"
+		COMMAND "$<TARGET_FILE:ReflectionParser>"
+		"--builtins" "${swReflectBuiltins}"
+		"--emit-templates" "${swEmitTemplatesDir}"
+		"--emit-builtins-gen" "${genFile}"
+		COMMAND ${CMAKE_COMMAND} -E touch "${swBuiltinStamp}"
+		DEPENDS ReflectionParser "${swReflectBuiltins}" ${swBuiltinTpls}
+		COMMENT "[Reflection] Emitting ReflectBuiltins.gen.cpp for ${TARGET_NAME}"
+		VERBATIM
+	)
 
-    target_sources(${TARGET_NAME} PRIVATE "${genFile}")
-    add_custom_target(${TARGET_NAME}_ReflectBuiltinsGen DEPENDS "${swBuiltinStamp}")
-    add_dependencies(${TARGET_NAME} ${TARGET_NAME}_ReflectBuiltinsGen)
-    set_target_properties(${TARGET_NAME}_ReflectBuiltinsGen PROPERTIES FOLDER "Reflection")
-    set_source_files_properties("${genFile}" PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
-    target_include_directories(${TARGET_NAME} PRIVATE "${outDir}")
-    add_dependencies(${TARGET_NAME} ReflectionParser)
-    message(VERBOSE "[Reflection] Builtins TypeRegistrar gen -> ${genFile}")
+	target_sources(${TARGET_NAME} PRIVATE "${genFile}")
+	add_custom_target(${TARGET_NAME}_ReflectBuiltinsGen DEPENDS "${swBuiltinStamp}")
+	add_dependencies(${TARGET_NAME} ${TARGET_NAME}_ReflectBuiltinsGen)
+	set_target_properties(${TARGET_NAME}_ReflectBuiltinsGen PROPERTIES FOLDER "Reflection")
+	set_source_files_properties("${genFile}" PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+	target_include_directories(${TARGET_NAME} PRIVATE "${outDir}")
+	add_dependencies(${TARGET_NAME} ReflectionParser)
+	message(VERBOSE "[Reflection] Builtins TypeRegistrar gen -> ${genFile}")
 endfunction()

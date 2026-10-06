@@ -13,10 +13,10 @@ add_library(TestFramework STATIC ${TF_SOURCES})
 
 target_include_directories(TestFramework PUBLIC "${CMAKE_SOURCE_DIR}/Test" "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(TestFramework
-    PUBLIC
-    Engine
-    PRIVATE
-    sw_global_options
+	PUBLIC
+	Engine
+	PRIVATE
+	sw_global_options
 )
 
 target_compile_definitions(TestFramework PRIVATE "SW_LOG_TAG=\"Test\"")
