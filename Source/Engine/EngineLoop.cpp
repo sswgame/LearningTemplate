@@ -1254,10 +1254,19 @@ namespace sw
         // UI 단위 크기 · 배율 · 안전 영역은 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
         if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
         {
+            // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 시험 그림과 같은 규칙)다.
             const IWindow* const pWindow      = IWindow::getActiveWindow();
             const float32        contentScale = pWindow != nullptr ? pWindow->getContentScale() : 1.0f;
-            const UiViewport     viewport =
-                _owned._pUiSystem->computeViewport( float2{ static_cast<float32>( vpWidth ), static_cast<float32>( vpHeight ) }, contentScale );
+            const bool           bHasDevice   = _rhi != nullptr && _rhi->hasDevice();
+            uint32               uiWidth      = vpWidth;
+            uint32               uiHeight     = vpHeight;
+            if ( uiWidth == 0 || uiHeight == 0 )
+            {
+                uiWidth  = bHasDevice ? _rhi->getDevice().getBackBufferWidth() : ( pWindow != nullptr ? pWindow->getWidth() : 0 );
+                uiHeight = bHasDevice ? _rhi->getDevice().getBackBufferHeight() : ( pWindow != nullptr ? pWindow->getHeight() : 0 );
+            }
+            const UiViewport viewport =
+                _owned._pUiSystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
             _owned._pUiSystem->update( deltaTime, viewport );
         }
 

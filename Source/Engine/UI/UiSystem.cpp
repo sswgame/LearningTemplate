@@ -19,6 +19,7 @@
 #include "Engine/UI/Core/UiEventRouter.h"
 #include "Engine/UI/Core/UiNavigationSolver.h"
 #include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Debug/UiDemoScreen.h"
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Document/UiDocumentLoader.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -135,10 +136,12 @@ namespace sw
         , _canvasScratch{}
         , _canvasRevision{ 1 }
         , _lastPointerPosition{}
+        , _lastMousePixel{}
         , _stickRepeatSeconds{ 0.0f }
         , _inputDeltaSeconds{ 0.0f }
         , _stickDirection{ UiNavigationDirection::Next }
         , _activeScreen{ kInvalidUiScreenHandle }
+        , _demoScreen{ kInvalidUiScreenHandle }
         , _nextScreenHandle{ 1 }
         , _nextPushOrder{ 0 }
         , _inputMode{ UiInputMode::Pointer }
@@ -146,6 +149,7 @@ namespace sw
         , _bPendingClose{ SW_FALSE }
         , _bPointerKnown{ SW_FALSE }
         , _bStickHeld{ SW_FALSE }
+        , _bMousePixelKnown{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -221,6 +225,7 @@ namespace sw
     {
         (void)deltaSeconds;
         _viewport = viewport;
+        syncDemoScreen();
         applyPendingCloses();
         // 레이아웃 — 화면 트리마다 더러운 뿌리만 다시 잰다. 화면마다 뷰포트 전체가 루트 사각형이다.
         {
@@ -533,6 +538,17 @@ namespace sw
         bool        bChange = false;
         for ( const RawInputEvent& rawEvent : _pInput->getLastFrameEvents() )
         {
+            // 커서 이동은 실제로 자리가 바뀔 때만 포인터 방식이다 — 창이 뜰 때 · 포커스를 받을 때 OS 가 같은 자리로 보내는 이동 사건이
+            // 패드로 고른 포커스를 지우지 않게(첫 사건은 자리만 기억한다).
+            if ( rawEvent._type == RawInputEventType::MouseMove )
+            {
+                const int2 pixel{ rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y };
+                const bool bMoved = _bMousePixelKnown == SW_TRUE && ( pixel._x != _lastMousePixel._x || pixel._y != _lastMousePixel._y );
+                _lastMousePixel   = pixel;
+                _bMousePixelKnown = SW_TRUE;
+                if ( bMoved == false )
+                    continue;
+            }
             UiInputMode eventMode = mode;
             if ( UiSystemInternal::tryGetInputMode( rawEvent, eventMode ) )
             {
@@ -747,6 +763,21 @@ namespace sw
             context._atlasGeneration = context._pGlyphCache->getAtlas().getGeneration();
         }
         return context;
+    }
+
+    void UiSystem::syncDemoScreen()
+    {
+        const bool bOpen = _demoScreen != kInvalidUiScreenHandle && findScreen( _demoScreen ) != nullptr;
+        if ( gv_uiDemo == bOpen )
+            return;
+        if ( bOpen )
+        {
+            closeScreen( _demoScreen );
+            _demoScreen = kInvalidUiScreenHandle;
+            return;
+        }
+        _demoScreen = pushScreen( UiDemoScreen::create() );
+        setInputMode( UiInputMode::Navigation );
     }
 
     void UiSystem::paintScreens()

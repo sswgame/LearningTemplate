@@ -186,7 +186,7 @@ namespace sw
         unique_ptr<Widget> instantiateDocument( string_view documentPath, UiScreenDesc& outDesc, vector<UiBindingDesc>& outListBinding );
         /** @brief 문서로 지은 화면에 문서 경로 · 바인딩을 적고 올립니다. */
         UiScreenHandle pushDocumentScreen( unique_ptr<UiScreen> screen, string_view documentPath, vector<UiBindingDesc> listBinding );
-        /** @brief 이번 프레임 원시 사건에서 마지막으로 쓴 장치로 입력 방식을 정합니다. */
+        /** @brief 이번 프레임 원시 사건에서 마지막으로 쓴 장치로 입력 방식을 정합니다(커서는 자리가 실제로 바뀐 이동만). */
         void updateInputMode();
         /** @brief UI 행동을 활성 화면으로 보냅니다(탐색 · 스틱 · 확인 · 뒤로 · 탭). */
         void processActions( float32 deltaSeconds );
@@ -216,6 +216,8 @@ namespace sw
         UiScreen* findPointerScreen( const float2& point ) const;
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
         void paintScreens();
+        /** @brief `gv_uiDemo` 를 따라 개발 시험 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 — 첫 버튼에 포커스 테두리). */
+        void syncDemoScreen();
         /** @brief 닫기를 요청한 화면을 지웁니다. */
         void applyPendingCloses();
         /** @brief 화면 @p index 를 바로 지웁니다(포인터 · 포커스가 그 트리를 놓게). */
@@ -242,17 +244,20 @@ namespace sw
         CanvasDrawList               _canvasScratch;  ///< 칠하는 중의 목록(같은 내용이면 버린다)
         uint64                       _canvasRevision; ///< `_canvas` 내용 번호
         float2                       _lastPointerPosition;
+        int2                         _lastMousePixel;     ///< 입력 방식을 정할 때 본 마지막 커서 자리(창 픽셀)
         float32                      _stickRepeatSeconds; ///< 스틱 탐색의 다음 반복까지 남은 시간
         float32                      _inputDeltaSeconds;  ///< 이번 `processInput` 의 프레임 시간(행동 사건에 싣는다)
         UiNavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향(기울지 않았으면 Next — 쓰지 않는 값)
         UiScreenHandle               _activeScreen;
+        UiScreenHandle               _demoScreen; ///< `-gv_uiDemo` 가 연 시험 화면(없으면 무효)
         UiScreenHandle               _nextScreenHandle;
         uint32                       _nextPushOrder;
         UiInputMode                  _inputMode;
-        uint8                        _bPauseRequested : 1; ///< 게임 정지 요청을 걸어 두었다(정지 화면이 하나라도 있다)
-        uint8                        _bPendingClose   : 1; ///< 닫기를 요청한 화면이 있다
-        uint8                        _bPointerKnown   : 1; ///< 마우스 위치를 한 번 읽었다(첫 프레임의 Move 기준)
-        uint8                        _bStickHeld      : 1; ///< 스틱이 탐색 문턱 너머로 기울어 있다
-        [[maybe_unused]] uint8       _reserved        : 4;
+        uint8                        _bPauseRequested  : 1; ///< 게임 정지 요청을 걸어 두었다(정지 화면이 하나라도 있다)
+        uint8                        _bPendingClose    : 1; ///< 닫기를 요청한 화면이 있다
+        uint8                        _bPointerKnown    : 1; ///< 마우스 위치를 한 번 읽었다(첫 프레임의 Move 기준)
+        uint8                        _bStickHeld       : 1; ///< 스틱이 탐색 문턱 너머로 기울어 있다
+        uint8                        _bMousePixelKnown : 1; ///< `_lastMousePixel` 을 한 번 읽었다
+        [[maybe_unused]] uint8       _reserved         : 3;
     };
 } // namespace sw

@@ -253,14 +253,20 @@ SW_TEST_CASE( UiInputTest, MouseClickOnWidgetIsConsumed )
     fixture.endFrame();
 }
 
-/** @brief [UiInputTest] 입력 방식은 마지막으로 쓴 장치를 따른다 — 패드 버튼 뒤 탐색(포커스가 기본 위젯으로), 마우스 이동 뒤 포인터 */
+/**
+ * @brief [UiInputTest] 입력 방식은 마지막으로 쓴 장치를 따른다 — 패드 버튼 뒤 탐색(포커스가 기본 위젯으로), 마우스가 실제로 움직인 뒤 포인터.
+ *        같은 자리의 이동 사건(창이 뜰 때 OS 가 보낸다)은 방식을 바꾸지 않는다
+ * @details 변이: `UiSystem::updateInputMode` 의 자리 비교를 빼면 3 프레임에 포인터로 바뀌어 진다.
+ */
 SW_TEST_CASE( UiInputTest, InputModeSwitchesWithLastDevice )
 {
     UiInputFixture fixture;
     fixture.openMenu( 2 );
     SW_EXPECT_TRUE( fixture._ui.getInputMode() == sw::UiInputMode::Pointer );
     SW_EXPECT_EQUAL( -1, fixture.getFocusedIndex() );
+    fixture._script.addEvent( 0, sw::RawInputEvent::makeMouseMove( 640, 480 ) ); // 창이 뜰 때의 자리(이동 아님)
     SW_ASSERT_TRUE( fixture._script.addTap( 1, sw::InputSlot::fromGamepadButton( sw::GamepadButton::X ), 1 ) );
+    fixture._script.addEvent( 3, sw::RawInputEvent::makeMouseMove( 640, 480 ) ); // 같은 자리 — 탐색 방식이 남는다
     fixture._script.addEvent( 4, sw::RawInputEvent::makeMouseMove( 700, 500 ) );
     fixture.attachScript();
 
@@ -269,7 +275,8 @@ SW_TEST_CASE( UiInputTest, InputModeSwitchesWithLastDevice )
     SW_EXPECT_TRUE( fixture._ui.getInputMode() == sw::UiInputMode::Navigation );
     SW_EXPECT_EQUAL( 0, fixture.getFocusedIndex() ); // 탐색으로 바뀌는 순간 기본 포커스
     fixture.runFrame();
-    fixture.runFrame();
+    fixture.runFrame(); // 3 — 같은 자리 이동 사건
+    SW_EXPECT_TRUE( fixture._ui.getInputMode() == sw::UiInputMode::Navigation );
     fixture.runFrame(); // 4 — 마우스 이동
     SW_EXPECT_TRUE( fixture._ui.getInputMode() == sw::UiInputMode::Pointer );
 }

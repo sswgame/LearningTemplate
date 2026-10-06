@@ -2770,6 +2770,14 @@
    "source": "Source/Engine/UI/Layout/UiScale.cpp"
   },
   {
+   "name": "gv_uiDemo",
+   "type": "bool",
+   "default": "false",
+   "kind": "시험",
+   "description": "UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 칸(코드로 지은 위젯 트리)",
+   "source": "Source/Engine/UI/Debug/UiDemoScreen.cpp"
+  },
+  {
    "name": "gv_uiScale",
    "type": "float32",
    "default": "1.0",
