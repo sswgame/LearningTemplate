@@ -36,5 +36,6 @@ namespace sw::editor
 
     private:
         uint32 _selectedCategory;
+        uint32 _lastRejectedCount; ///< 마지막 Apply 에서 대상이 거절한 설정 수(어느 설정인지는 매니저가 경고로 남긴다)
     };
 } // namespace sw::editor

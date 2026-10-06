@@ -233,6 +233,38 @@ SW_TEST_CASE( UserSettingsTest, ApplierRegistryDispatchesByName )
 }
 
 /**
+ * @brief [UserSettingsTest] 대상이 거절한 적용은 결과의 수로 세고 어느 설정인지 경고로 남긴다
+ * @details 메뉴 · 에디터는 `_failedCount` 수만 받는다 — 어느 설정이 왜 지금 실행에 닿지 않았는지는 로그가 알려야 한다.
+ */
+SW_TEST_CASE( UserSettingsTest, RejectedApplyIsCountedAndReported )
+{
+    struct Refuser
+    {
+        bool refuse( const sw::UserSettingApplyContext& /*context*/ ) { return false; }
+    };
+    Refuser refuser;
+
+    sw::UserSettingsManager settings;
+    settings.initialize( sw::UserSettingsTargets{} );
+    settings.getRegistry().registerApplier( "game.refuse", SW_DELEGATE_METHOD( sw::UserSettingApplierDelegate, &Refuser::refuse, &refuser ) );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1"><Category id="g"/>
+        <Setting id="g.refused" category="g" type="int" default="3" min="1" max="9" target="applier:game.refuse"/></UserSettingsSchema>)",
+                                                    "refuse.settings.xml" ) );
+    SW_EXPECT_TRUE( settings.setPendingIntValue( "g.refused", 5 ) == sw::UserSettingSetResult::Accepted );
+
+    test::ScopedLogCollector    collector;
+    sw::UserSettingsApplyResult result;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an applier that refuses the value" );
+        result = settings.applyPending();
+    }
+    SW_EXPECT_EQUAL( 1u, result._failedCount );
+    SW_EXPECT_EQUAL( 0u, result._appliedCount );
+    SW_EXPECT_TRUE_MSG( collector.countContaining( "g.refused" ) > 0, collector.joined().c_str() );
+    settings.getRegistry().unregisterApplier( "game.refuse" );
+}
+
+/**
  * @brief [UserSettingsTest] 품질 프리셋을 고르면 묶인 값이 따라가고, 묶인 값 하나를 바꾸면 Custom, 되돌리면 다시 그 프리셋이다 — 자동 선택은 사양 규칙대로
  */
 SW_TEST_CASE( UserSettingsTest, ScalabilityPresetAndCustomDetection )
