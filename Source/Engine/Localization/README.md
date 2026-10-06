@@ -75,6 +75,7 @@ cd build/Ninja-Debug/Bin
 - 포맷: `formatText( pattern, TextArgumentList().addText( "name", n ).addInteger( "count", c ) )` · `getFormattedString( key, args )` · `SW_LOCFORMAT`.
 - 의사 문화권 `qps-ploc` · `qps-plocm` 은 Dev 빌드에서 고를 수 있는 언어에 들어 있다 — 명령줄 `-lang=qps-ploc` 또는 설정 메뉴. 괄호 없이 보이는 글은 하드코딩이다.
 - 글꼴: `getFontFallback( culture )` — 문화권(없으면 부모 · 폴백)의 글꼴 가족 목록. 이 목록으로 면 사슬을 만드는 것은 `Engine/Text/FontSystem` 이다(가족 이름은 `engine/fonts/fontcatalog.xml` 에 있어야 쓰인다).
+- 리치 텍스트 표기(`[b]` · `[color=…]` — `Core/String/MarkupTagScanner`): 번역 검사가 원문과 번역의 태그 열을 견주고(다르면 보고), 의사 로컬라이저는 태그를 바꾸지 않는다.
 - 다시 읽기: `reloadChangedFile( path )` 는 그 파일이 든 프로젝트를 다시 읽고(실패하면 예전 글을 지킨다) 글 판을 올린 뒤 언어 변경 콜백을 같은 언어로 부른다.
   에디터 핫 리로드는 `.strings.json` · `.translation.json` · `.locproject.json` 을 에셋 캐시 "StringTable"(`Resource/LocalizationReloadCache`)로 보내 이 길을 탄다.
   에디터 Data Table 패널(Localization 탭)은 프로젝트(엔진 · 게임)를 골라 원문 · 문화권 번역을 한 표로 고치고, 저장하면 같은 길로 다시 읽힌다.

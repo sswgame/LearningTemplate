@@ -1714,6 +1714,8 @@ cd build/Ninja-Debug/Bin
 - **글꼴은 `engine/fonts/fontcatalog.xml` 이 정본**(`FontSystem` — 고른 가족 → 문화권 표 `fonts` 의 대체 가족 → 카탈로그 기본 가족). 문화권 표의 가족 이름은
   카탈로그의 저장소 가족 · 시스템 가족 표에 있어야 쓰이고, 없거나 그 기계에 설치되지 않았으면 처음 한 번 경고하고 건너뛴다(어디에도 없는 글자는 두부 + 경고 한 번).
   저장소에는 CC0 라틴 글꼴만(결정 R1) — 시스템 글꼴을 쓰는 시험은 글리프 존재 · 사슬만 단언하고, 그 글꼴이 없는 기계에서는 건너뛴다.
+- **리치 텍스트는 BBCode 꼴**(`[b]` · `[i]` · `[color=]` · `[size=]` · `[[`, `Engine/Text/RichTextParser`) — XML 속성 안에서 이스케이프가 필요 없다. 번역 검사가 태그 열을
+  원문과 견주고(`--check-text` 보고), 의사 로컬라이저는 태그를 바꾸지 않는다(토큰 읽기는 `Core/String/MarkupTagScanner` 하나).
 - **캐시 앞 · 서버 버스의 소비자는 호스트 하나**(`OnlineServiceHost` — `getEphemeralRouter` · `subscribeServerBus`) — `IEphemeralStore::pollReplies` · `IServerBus::pollMessages` 는
   앞 전체의 것을 꺼내므로 서비스 둘이 직접 부르면 서로의 답 · 메시지를 가져간다(가져간 쪽은 버리고 맡긴 쪽은 영원히 기다린다). 메서드 영역(키트마다 256 칸)이 겹치는 서비스는
   `registerService` 가, 같은 메서드 번호는 `NetRequestServer::registerMethod` 가 거절한다(bool) — 덮어쓰면 한 키트의 요청이 다른 키트로 간다.

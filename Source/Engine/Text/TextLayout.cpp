@@ -142,17 +142,42 @@ namespace sw
                 float32 _maxLineGap{ 0.0f };
                 bool    _bHasMetrics{ false };
 
-                void accumulate( const IFontRasterizer& rasterizer, FontFaceId face )
+                /** @brief 면 하나를 그 글꼴 크기로 더합니다(값은 UI 단위). */
+                void accumulate( const IFontRasterizer& rasterizer, FontFaceId face, float32 fontSize )
                 {
                     FontFaceMetrics metrics{};
                     if ( rasterizer.findFaceMetrics( face, metrics ) == false )
                         return;
-                    _maxAscender  = _bHasMetrics ? MathUtil::max( _maxAscender, metrics._ascender ) : metrics._ascender;
-                    _minDescender = _bHasMetrics ? MathUtil::min( _minDescender, metrics._descender ) : metrics._descender;
-                    _maxLineGap   = _bHasMetrics ? MathUtil::max( _maxLineGap, metrics._lineGap ) : metrics._lineGap;
-                    _bHasMetrics  = true;
+                    const float32 ascender  = metrics._ascender * fontSize;
+                    const float32 descender = metrics._descender * fontSize;
+                    const float32 lineGap   = metrics._lineGap * fontSize;
+                    _maxAscender            = _bHasMetrics ? MathUtil::max( _maxAscender, ascender ) : ascender;
+                    _minDescender           = _bHasMetrics ? MathUtil::min( _minDescender, descender ) : descender;
+                    _maxLineGap             = _bHasMetrics ? MathUtil::max( _maxLineGap, lineGap ) : lineGap;
+                    _bHasMetrics            = true;
                 }
             };
+
+            static constexpr uint8 kFauxBoldBit   = 1u << 0;
+            static constexpr uint8 kFauxItalicBit = 1u << 1;
+
+            static uint8 makeFauxBits( const FontFaceChain& chain )
+            {
+                const uint8 bold   = chain._bFauxBold == SW_TRUE ? kFauxBoldBit : static_cast<uint8>( 0 );
+                const uint8 italic = chain._bFauxItalic == SW_TRUE ? kFauxItalicBit : static_cast<uint8>( 0 );
+                return static_cast<uint8>( bold | italic );
+            }
+
+            /** @brief 리치 텍스트 구간이 바꾼 글꼴(굵게 · 기울임)입니다. */
+            static FontSpec makeSpanFont( const FontSpec& base, const RichTextSpan& span )
+            {
+                FontSpec font = base;
+                if ( span._bBold == SW_TRUE && static_cast<uint16>( font._weight ) < static_cast<uint16>( FontWeight::Bold ) )
+                    font._weight = FontWeight::Bold;
+                if ( span._bItalic == SW_TRUE )
+                    font._slant = FontSlant::Italic;
+                return font;
+            }
 
             /** @brief 줄임표 글리프입니다(면 · 글리프 · 폭). */
             struct EllipsisGlyph
@@ -175,20 +200,65 @@ namespace sw
         , _listShapedScratch{}
         , _listBreakScratch{}
         , _listWidthScratch{}
+        , _listSizeScratch{}
+        , _listColorScratch{}
+        , _listFauxScratch{}
         , _mapMeasure{}
         , _measureScratch{}
     {
     }
 
-    void TextLayoutEngine::shapeText( string_view text, const TextLayoutStyle& style, const FontFaceChain& chain )
+    void TextLayoutEngine::shapeSegment( string_view text, size_t segmentStart, size_t segmentEnd, const TextLayoutStyle& style, const FontFaceChain& chain,
+                                         const RichTextSpan* pSpan )
+    {
+        using Internal                   = TextLayoutInternal;
+        const FontFaceChain segmentChain = pSpan != nullptr ? _fontSystem.getFaceChain( Internal::makeSpanFont( style._font, *pSpan ) ) : chain;
+        const float32       fontSize     = pSpan != nullptr ? style._fontSize * pSpan->_sizeScale : style._fontSize;
+        const uint32        colorRgba    = pSpan != nullptr ? pSpan->_colorRgba : 0xFFFFFFFFu;
+        const uint8         fauxBits     = Internal::makeFauxBits( segmentChain );
+        const size_t        firstGlyph   = _listShapedScratch.size();
+        TextItemizer::itemize( _fontSystem, segmentChain, text.substr( segmentStart, segmentEnd - segmentStart ), _listRunScratch );
+        const IFontRasterizer& rasterizer = _fontSystem.getRasterizer();
+        for ( ShapingRun& run : _listRunScratch )
+        {
+            run._byteOffset += static_cast<uint32>( segmentStart ); // 클러스터를 전체 글 기준으로
+            _shaper.shape( rasterizer, run, _listShapedScratch );
+        }
+        for ( size_t index = firstGlyph; index < _listShapedScratch.size(); ++index )
+        {
+            _listSizeScratch.push_back( fontSize );
+            _listColorScratch.push_back( colorRgba );
+            _listFauxScratch.push_back( fauxBits );
+        }
+    }
+
+    void TextLayoutEngine::shapeText( string_view text, const TextLayoutStyle& style, const FontFaceChain& chain, const vector<RichTextSpan>* pListSpan )
     {
         using Internal = TextLayoutInternal;
-        TextItemizer::itemize( _fontSystem, chain, text, _listRunScratch );
         _listShapedScratch.clear();
-        const IFontRasterizer& rasterizer = _fontSystem.getRasterizer();
-        for ( const ShapingRun& run : _listRunScratch )
+        _listSizeScratch.clear();
+        _listColorScratch.clear();
+        _listFauxScratch.clear();
+        if ( pListSpan == nullptr || pListSpan->empty() )
         {
-            _shaper.shape( rasterizer, run, _listShapedScratch );
+            shapeSegment( text, 0, text.size(), style, chain, nullptr );
+        }
+        else
+        {
+            // 구간 경계에서 끊는다 — 구간 밖은 기본 스타일, 구간 안은 그 구간의 글꼴 · 크기 · 색.
+            size_t cursor = 0;
+            for ( const RichTextSpan& span : *pListSpan )
+            {
+                const size_t spanStart = MathUtil::min( static_cast<size_t>( span._firstByte ), text.size() );
+                const size_t spanEnd   = MathUtil::min( spanStart + span._byteCount, text.size() );
+                if ( spanStart > cursor )
+                    shapeSegment( text, cursor, spanStart, style, chain, nullptr );
+                if ( spanEnd > spanStart && spanStart >= cursor )
+                    shapeSegment( text, spanStart, spanEnd, style, chain, &span );
+                cursor = MathUtil::max( cursor, spanEnd );
+            }
+            if ( cursor < text.size() )
+                shapeSegment( text, cursor, text.size(), style, chain, nullptr );
         }
         const size_t glyphCount = _listShapedScratch.size();
         _listWidthScratch.resize( glyphCount );
@@ -197,7 +267,7 @@ namespace sw
         {
             const ShapedGlyph& glyph      = _listShapedScratch[index];
             const bool         bLineBreak = Internal::isLineBreakCharacter( glyph._codepoint );
-            _listWidthScratch[index]      = bLineBreak ? 0.0f : ( glyph._advance + style._letterSpacing ) * style._fontSize;
+            _listWidthScratch[index]      = bLineBreak ? 0.0f : ( glyph._advance + style._letterSpacing ) * _listSizeScratch[index];
             const uint32        next      = index + 1 < glyphCount ? _listShapedScratch[index + 1]._codepoint : 0u;
             Internal::BreakKind kind      = Internal::classifyBreakAfter( glyph._codepoint, next, style._wordBreak );
             if ( index + 1 == glyphCount && kind == Internal::BreakKind::Allowed )
@@ -206,7 +276,7 @@ namespace sw
         }
     }
 
-    void TextLayoutEngine::layout( string_view text, const TextLayoutStyle& style, float32 maxWidth, TextLayoutResult& outResult )
+    void TextLayoutEngine::layout( string_view text, const TextLayoutStyle& style, float32 maxWidth, TextLayoutResult& outResult, const vector<RichTextSpan>* pListSpan )
     {
         using Internal = TextLayoutInternal;
         outResult._listGlyph.clear();
@@ -219,7 +289,7 @@ namespace sw
         const FontFaceChain chain = _fontSystem.getFaceChain( style._font );
         if ( chain._faceCount == 0 )
             return;
-        shapeText( text, style, chain );
+        shapeText( text, style, chain, pListSpan );
         const uint32 glyphCount = static_cast<uint32>( _listShapedScratch.size() );
         const bool   bWrap      = style._bWrap && maxWidth > 0.0f;
 
@@ -365,22 +435,22 @@ namespace sw
 
             // 줄의 가장 큰 면 메트릭 — 대체 면이 섞인 줄이 겹치지 않게.
             Internal::LineFaceMetrics faceMetrics{};
-            faceMetrics.accumulate( rasterizer, chain._arrFace[0] );
+            faceMetrics.accumulate( rasterizer, chain._arrFace[0], style._fontSize );
             for ( uint32 index = range._begin; index < end; ++index )
             {
-                faceMetrics.accumulate( rasterizer, _listShapedScratch[index]._face );
+                faceMetrics.accumulate( rasterizer, _listShapedScratch[index]._face, _listSizeScratch[index] );
             }
             if ( range._bEllipsis )
-                faceMetrics.accumulate( rasterizer, ellipsis._face );
+                faceMetrics.accumulate( rasterizer, ellipsis._face, style._fontSize );
             const float32 maxAscender   = faceMetrics._maxAscender;
-            const float32 naturalHeight = ( maxAscender - faceMetrics._minDescender ) * style._fontSize;
-            const float32 lineHeight    = ( maxAscender - faceMetrics._minDescender + faceMetrics._maxLineGap ) * style._fontSize * style._lineHeight;
+            const float32 naturalHeight = maxAscender - faceMetrics._minDescender;
+            const float32 lineHeight    = ( naturalHeight + faceMetrics._maxLineGap ) * style._lineHeight;
 
             LaidOutLine line{};
             line._firstGlyph = static_cast<uint32>( outResult._listGlyph.size() );
             line._width      = trimmed + ellipsisWidth;
             line._height     = lineHeight;
-            line._baseline   = lineTop + ( lineHeight - naturalHeight ) * 0.5f + maxAscender * style._fontSize;
+            line._baseline   = lineTop + ( lineHeight - naturalHeight ) * 0.5f + maxAscender;
             line._firstByte  = range._begin < glyphCount ? _listShapedScratch[range._begin]._cluster : static_cast<uint32>( text.size() );
             const uint32 nextByte =
                 lineIndex + 1 < listLine.size() && listLine[lineIndex + 1]._begin < glyphCount ? _listShapedScratch[listLine[lineIndex + 1]._begin]._cluster : static_cast<uint32>( text.size() );
@@ -392,14 +462,17 @@ namespace sw
                 const ShapedGlyph& shaped = _listShapedScratch[index];
                 if ( Internal::isLineBreakCharacter( shaped._codepoint ) == false )
                 {
-                    LaidOutGlyph glyph{};
-                    glyph._origin      = float2{ pen + shaped._offset._x * style._fontSize, line._baseline - shaped._offset._y * style._fontSize };
-                    glyph._fontSize    = style._fontSize;
-                    glyph._glyphIndex  = shaped._glyphIndex;
-                    glyph._cluster     = shaped._cluster;
-                    glyph._face        = shaped._face;
-                    glyph._bFauxBold   = chain._bFauxBold;
-                    glyph._bFauxItalic = chain._bFauxItalic;
+                    LaidOutGlyph  glyph{};
+                    const float32 glyphSize = _listSizeScratch[index];
+                    const uint8   fauxBits  = _listFauxScratch[index];
+                    glyph._origin           = float2{ pen + shaped._offset._x * glyphSize, line._baseline - shaped._offset._y * glyphSize };
+                    glyph._fontSize         = glyphSize;
+                    glyph._glyphIndex       = shaped._glyphIndex;
+                    glyph._cluster          = shaped._cluster;
+                    glyph._colorRgba        = _listColorScratch[index];
+                    glyph._face             = shaped._face;
+                    glyph._bFauxBold        = ( fauxBits & Internal::kFauxBoldBit ) != 0 ? SW_TRUE : SW_FALSE;
+                    glyph._bFauxItalic      = ( fauxBits & Internal::kFauxItalicBit ) != 0 ? SW_TRUE : SW_FALSE;
                     outResult._listGlyph.push_back( glyph );
                 }
                 pen += _listWidthScratch[index];
@@ -445,7 +518,7 @@ namespace sw
         }
     }
 
-    float2 TextLayoutEngine::measure( string_view text, const TextLayoutStyle& style, float32 maxWidth )
+    float2 TextLayoutEngine::measure( string_view text, const TextLayoutStyle& style, float32 maxWidth, const vector<RichTextSpan>* pListSpan )
     {
         using Internal = TextLayoutInternal;
         if ( text.empty() || _fontSystem.isInitialized() == false )
@@ -457,10 +530,20 @@ namespace sw
         {
             key = HashUtil::combine( key, chain._arrFace[index] );
         }
+        if ( pListSpan != nullptr )
+        {
+            for ( const RichTextSpan& span : *pListSpan )
+            {
+                key = HashUtil::combine( key, ( static_cast<uint64>( span._firstByte ) << 32 ) | span._byteCount );
+                key = HashUtil::combine( key, span._colorRgba );
+                key = Internal::hashFloat( key, span._sizeScale );
+                key = HashUtil::combine( key, ( static_cast<uint64>( span._bBold ) << 1 ) | span._bItalic );
+            }
+        }
         const auto iter = _mapMeasure.find( key );
         if ( iter != _mapMeasure.end() )
             return iter->second;
-        layout( text, style, maxWidth, _measureScratch );
+        layout( text, style, maxWidth, _measureScratch, pListSpan );
         if ( _mapMeasure.size() >= Internal::kMaxMeasureCacheEntryCount )
             _mapMeasure.clear();
         _mapMeasure.emplace( key, _measureScratch._size );

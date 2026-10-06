@@ -1,10 +1,12 @@
 #include "pch.h"
 
+#include "Core/String/MarkupTagScanner.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/PseudoLocalizer.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Text/RichTextParser.h"
 
 #include "EngineTest/LocalizationTestUtil.h"
 
@@ -134,4 +136,22 @@ SW_TEST_CASE( PseudoLocalizerTest, FontFallbackComesFromCultureData )
     SW_EXPECT_STREQ( "Noto Sans JP", loc.getFontFallback( "ja" )[0].c_str() );
     SW_EXPECT_STREQ( "Noto Sans Arabic", loc.getFontFallback( "ar" )[0].c_str() );
     SW_EXPECT_STREQ( "Noto Sans", loc.getFontFallback( "xx-unknown" )[0].c_str() ); // 폴백(en)의 목록
+}
+
+/**
+ * @brief [PseudoLocalizerTest] 리치 텍스트 표기는 그대로다 — 태그 이름 · 값을 바꾸지 않고, 표기로 시작하는 글도 바깥 괄호와 붙어 `[[` 가 되지 않는다
+ */
+SW_TEST_CASE( PseudoLocalizerTest, PseudoLocalizerKeepsTags )
+{
+    const sw::string_view source = "[b]Start[/b] [color=accent]now[/color]";
+    const sw::string      pseudo = sw::PseudoLocalizer::transform( source, sw::PseudoLocaleMode::Accented );
+    SW_EXPECT_TRUE( sw::PseudoLocalizer::isPseudoText( pseudo ) );
+    SW_EXPECT_TRUE_MSG( sw::MarkupTagScanner::hasSameTags( source, pseudo ), pseudo.c_str() );
+    SW_EXPECT_TRUE( pseudo.find( "Start" ) == sw::string::npos ); // 글은 바뀐다
+
+    sw::RichTextParseResult parsed{};
+    sw::RichTextParser::parse( pseudo, parsed );
+    SW_EXPECT_EQUAL( 0u, parsed._problemCount );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listSpan.size() ) );
+    SW_EXPECT_TRUE( parsed._plainText.empty() == false && parsed._plainText.front() == '[' );
 }
