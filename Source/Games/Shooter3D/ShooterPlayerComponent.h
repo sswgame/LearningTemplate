@@ -1,6 +1,6 @@
 /**
  * @file ShooterPlayerComponent.h
- * @brief 슈터 플레이어(폰) — 무기 셋(연사 · 탄창 · 재장전 · 퍼짐 · 반동), 히트스캔, 체력(`Vitality`), 조준선 · 맞음 표시, 몸(KayKit 캐릭터) · 탄도선. 의도만 읽는다.
+ * @brief 슈터 플레이어(폰) — 무기 셋(연사 · 탄창 · 재장전 · 퍼짐 · 반동), 히트스캔, 체력(`Vitality`), HUD(조준선 · 맞음 표시 · 체력 · 탄약 · 무기 이름), 몸(KayKit 캐릭터) · 탄도선. 의도만 읽는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -28,8 +28,8 @@ namespace sw
 
     /**
      * @class ShooterPlayerComponent
-     * @brief 플레이어 오브젝트(카메라 · `FirstPersonCameraComponent` · `PawnComponent` · `ShooterBodyMovementComponent` · 1인칭 손에 든 총 · 조준선 스프라이트와 같은
-     *        오브젝트)의 게임 규칙입니다.
+     * @brief 플레이어 오브젝트(카메라 · `FirstPersonCameraComponent` · `PawnComponent` · `ShooterBodyMovementComponent` · 1인칭 손에 든 총 · HUD(`HudControllerComponent`)와
+     *        같은 오브젝트)의 게임 규칙입니다.
      * @details 기본 틱 그룹(`DuringPhysics`)에서 돕니다 — 같은 오브젝트의 1인칭 카메라가 `PrePhysics` 에서 폰의 조종 회전으로 시점을 둔 뒤라, 그 시점으로
      *          걷고 쏘고 `setEyePosition` 으로 눈 자리를 넣습니다. **폰의 의도만 읽습니다**(버튼 Jump · Sprint · Fire · Reload · SwitchWeapon · Weapon1..3, 아날로그
      *          SwitchWeapon) — 사람(플레이어 조종자가 입력 맵 `data/shooter.input.xml` 에서 만든다)이든 자동 플레이 AI(`ShooterAutoAimControllerComponent`)든 같다.
@@ -39,6 +39,10 @@ namespace sw
      *          상태(발 · 요 · 속도 · 사격 · 맞음 · 쓰러짐 · 무기)를 읽어 스스로 움직이고, 무기는 외형의 MainHand 칸 아이템(`_listWeaponItem`)이 됩니다.
      *          시점 카메라의 프리셋이 1인칭(`CameraPresetMode::FirstPerson`)이면 몸을 숨기고 손에 든 총 · 조준선을 보이고, 아니면 반대입니다. 눈높이는 몸 소켓
      *          `Eyes` 의 바인드 포즈 높이입니다(없으면 `_eyeHeight`).
+     *
+     *          **HUD**: 같은 오브젝트의 `HudControllerComponent` 가 연 문서(`game/shooter3d/ui/hud.ui.xml`)의 위젯을 이름으로 찾아 틱 뒤에 값을 넣습니다 — 조준선(1인칭 ·
+     *          살아 있을 때) · 맞음 표시(맞힌 직후 · 1인칭) · 체력 막대 · 체력 수 · 탄약(탄창 / 예비) · 무기 이름(무기 표의 이름을 현지화 표로 — `getStringByText`).
+     *          값 바인딩(뷰모델)이 들어오면 `updateHud` 가 그 바인딩 자리입니다.
      *
      *          **탄도선 · 총구 섬광**: 총구(1인칭이면 손에 든 총 × 무기 소켓 `Muzzle`, 아니면 몸 외형의 `MainHand.Muzzle`)에서 맞은 자리까지의 상자 ·
      *          섬광 구를 디렉터의 풀에서 꺼냅니다 — 에디터 없이 App 에서도 보입니다.
@@ -137,15 +141,15 @@ namespace sw
         void   switchWeapon( int32 weaponIndex );
         /** @brief 시점 카메라(대상이 이 오브젝트인 게임 카메라 디렉터)의 프리셋이 1인칭인지 봅니다. */
         bool queryFirstPerson() const;
-        /** @brief 같은 오브젝트의 조준선 · 맞음 표시 스프라이트를 눈앞에 둡니다. */
-        void placeOverlay();
+        /** @brief 같은 오브젝트의 HUD 화면에 조준선 · 맞음 표시 보임과 체력 · 탄약 · 무기 이름을 넣습니다(게임 스레드 — 틱 뒤). HUD 가 없으면 아무것도 하지 않는다. */
+        void updateHud();
         void resetRound();
         void scheduleFlush();
         void flushPending();
         bool hasPending() const;
         /** @brief 몸을 세웁니다(게임 스레드, 틱 밖). */
         void spawnBody();
-        /** @brief 1인칭 / 그 밖 — 손에 든 총 · 조준선 · 몸 보임을 맞춥니다(게임 스레드). */
+        /** @brief 1인칭 / 그 밖 — 손에 든 총 · 몸 보임을 맞춥니다(게임 스레드). 조준선은 `updateHud` 가 맞춘다. */
         void applyViewMode();
 
     private:
@@ -167,8 +171,6 @@ namespace sw
         float32 _regenPerSecond;
         PROPERTY( Category = "Health", DisplayName = "Down Time", Tooltip = "Seconds the death clip plays before the round starts over", Min = 0.0, Units = s )
         float32 _downTime;
-        PROPERTY( Category = "View", DisplayName = "Crosshair Distance", Tooltip = "Distance of the crosshair sprites in front of the eye", Min = 0.05, Units = m )
-        float32 _crosshairDistance;
         PROPERTY( Category = "Effects", DisplayName = "Hit Effect Lifetime", Tooltip = "Seconds a hit or muzzle flash sphere stays", Min = 0.0, Units = s )
         float32 _hitEffectLifetime;
         PROPERTY( Category = "Effects", DisplayName = "Tracer Lifetime", Tooltip = "Seconds a tracer stays", Min = 0.0, Units = s )

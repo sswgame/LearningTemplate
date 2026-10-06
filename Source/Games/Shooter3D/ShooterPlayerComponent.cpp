@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/AutomationProbe.h"
-#include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/ComponentRegistry.h"
@@ -15,6 +15,9 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
+#include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Widgets/SliderWidget.h"
+#include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Base/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Appearance/CharacterAppearanceComponent.h"
@@ -26,6 +29,7 @@
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/Framework/GameSound.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/UI/HudControllerComponent.h"
 #include "GameFramework/Base/Utility/OrientationUtil.h"
 
 #include "Games/Shooter3D/ShooterAvatarComponent.h"
@@ -51,11 +55,16 @@ namespace sw
             static constexpr const utf8* kReloadButton       = "Reload";
             static constexpr const utf8* kSwitchWeaponButton = "SwitchWeapon";
             static constexpr const utf8* kViewWeaponName     = "ViewWeapon";
-            static constexpr const utf8* kCrosshairName      = "Crosshair";
-            static constexpr const utf8* kHitMarkerName      = "HitMarker";
             static constexpr const utf8* kMuzzleSocket       = "Muzzle";
             static constexpr const utf8* kBodyMuzzleSocket   = "MainHand.Muzzle";
             static constexpr const utf8* kEyesSocket         = "Eyes";
+            // HUD 문서(game/shooter3d/ui/hud.ui.xml)의 위젯 이름.
+            static constexpr const utf8* kHudCrosshair  = "Crosshair";
+            static constexpr const utf8* kHudHitMarker  = "HitMarker";
+            static constexpr const utf8* kHudHealth     = "Health";
+            static constexpr const utf8* kHudHealthBar  = "HealthBar";
+            static constexpr const utf8* kHudAmmo       = "Ammo";
+            static constexpr const utf8* kHudWeaponName = "WeaponName";
 
             static constexpr float4 kEnemyHitColor{ 1.0f, 0.45f, 0.2f, 1.0f };
             static constexpr float4 kCoverHitColor{ 0.9f, 0.85f, 0.6f, 1.0f };
@@ -78,6 +87,13 @@ namespace sw
                         pFound = pComponent;
                 } );
                 return pFound;
+            }
+
+            /** @brief HUD 위젯을 보이거나(클릭은 받지 않는다) 접습니다. 없으면 아무것도 하지 않는다. */
+            static void setHudWidgetShown( Widget* pWidget, bool bShown )
+            {
+                if ( pWidget != nullptr )
+                    pWidget->setVisibility( bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed );
             }
 
             /** @brief 아이템의 외형에서 소켓 에셋을 가진 첫 부품의 소켓 에셋입니다(무기의 총구). 없으면 빈 이름입니다. */
@@ -190,7 +206,6 @@ namespace sw
         , _regenDelay{ 4.0f }
         , _regenPerSecond{ 6.0f }
         , _downTime{ 2.5f }
-        , _crosshairDistance{ 0.6f }
         , _hitEffectLifetime{ 0.12f }
         , _tracerLifetime{ 0.07f }
         , _tracerWidth{ 0.025f }
@@ -246,7 +261,6 @@ namespace sw
         {
             pCamera->setAngles( 0.0f, 0.0f );
             pCamera->setEyePosition( getEyePosition() );
-            placeOverlay();
         }
         _bWeaponModelDirty = SW_TRUE;
         _bViewModeDirty    = SW_TRUE;
@@ -317,10 +331,8 @@ namespace sw
         {
             // 쓰러짐 클립이 도는 동안 멈춰 있다가 판을 처음부터.
             _downTimer += step;
-            if ( _downTimer >= _downTime )
-                scheduleFlush();
             pCamera->setEyePosition( getEyePosition() );
-            placeOverlay();
+            scheduleFlush(); // HUD — 쓰러짐 클립이 끝나면 판도 다시 시작한다
             return;
         }
 
@@ -339,9 +351,8 @@ namespace sw
 
         _lookYaw = pCamera->getLook().getYaw();
         pCamera->setEyePosition( getEyePosition() );
-        placeOverlay();
-        if ( hasPending() )
-            scheduleFlush();
+        // HUD 는 틱 뒤에 넣는다(위젯은 게임 스레드만 고친다) — 탄약 · 체력 · 맞음 표시가 거의 매 프레임 바뀐다.
+        scheduleFlush();
     }
 
     void ShooterPlayerComponent::takeDamage( float32 amount )
@@ -631,30 +642,37 @@ namespace sw
         return bFirstPerson;
     }
 
-    void ShooterPlayerComponent::placeOverlay()
+    void ShooterPlayerComponent::updateHud()
     {
-        // 조준선 · 맞음 표시는 같은 오브젝트의 카메라 자식이다(같은 오브젝트의 씬 컴포넌트는 첫 씬 컴포넌트에 붙는다) — 눈앞 로컬 자리에 두면 시점을 따라간다.
-        using Internal                 = ShooterPlayerComponentInternal;
-        const GameObject* pOwner       = getOwner();
-        CameraComponent*  pCamera      = pOwner->getComponent<CameraComponent>();
-        SpriteComponent*  arrSprite[2] = { Internal::findNamed<SpriteComponent>( *pOwner, Internal::kCrosshairName ),
-                                           Internal::findNamed<SpriteComponent>( *pOwner, Internal::kHitMarkerName ) };
-        for ( int32 spriteIndex = 0; spriteIndex < 2; ++spriteIndex )
+        using Internal                       = ShooterPlayerComponentInternal;
+        const GameObject*             pOwner = getOwner();
+        const HudControllerComponent* pHud   = pOwner != nullptr ? pOwner->getComponent<HudControllerComponent>() : nullptr;
+        if ( pHud == nullptr || pHud->getScreen() == nullptr )
+            return;
+        // 조준선은 1인칭에서만(다른 시점에서는 몸이 보인다), 맞음 표시는 맞힌 직후 1인칭에서만.
+        const bool bCrosshair = _bFirstPerson == SW_TRUE && _vitality.isAlive();
+        Internal::setHudWidgetShown( pHud->findWidget( hashed_string( Internal::kHudCrosshair ) ), bCrosshair );
+        Internal::setHudWidgetShown( pHud->findWidget( hashed_string( Internal::kHudHitMarker ) ), bCrosshair && _hitMarkerTimer > 0.0f );
+
+        const float32      health     = MathUtil::max( 0.0f, _vitality.getHealth() );
+        ProgressBarWidget* pHealthBar = pHud->findWidget<ProgressBarWidget>( hashed_string( Internal::kHudHealthBar ) );
+        if ( pHealthBar != nullptr )
+            pHealthBar->setPercent( _vitality.getHealthRatio() );
+        TextWidget* pHealth = pHud->findWidget<TextWidget>( hashed_string( Internal::kHudHealth ) );
+        if ( pHealth != nullptr )
+            pHealth->setText( to_string( static_cast<int32>( MathUtil::ceil( health ) ) ) );
+
+        const WeaponState& weapon = getCurrentWeapon();
+        TextWidget*        pAmmo  = pHud->findWidget<TextWidget>( hashed_string( Internal::kHudAmmo ) );
+        if ( pAmmo != nullptr )
+            pAmmo->setText( to_string( weapon.getMagazineAmmo() ) + " / " + to_string( weapon.getReserveAmmo() ) );
+        // 무기 이름은 무기 표의 이름(원문)이 현지화 키다 — 지금 문화권의 글로(표에 없으면 원문).
+        TextWidget* pWeaponName = pHud->findWidget<TextWidget>( hashed_string( Internal::kHudWeaponName ) );
+        if ( pWeaponName != nullptr )
         {
-            SpriteComponent* pSprite = arrSprite[spriteIndex];
-            if ( pSprite == nullptr || pCamera == nullptr )
-                continue;
-            if ( pSprite->getParent() != pCamera )
-                (void)pSprite->attachToComponent( pCamera, AttachRule::KeepRelative );
-            const float32 distance = _crosshairDistance - 0.01f * static_cast<float32>( spriteIndex );
-            const float32 size     = spriteIndex == 0 ? 0.03f : 0.05f;
-            pSprite->setLocalPosition( float3{ 0.0f, 0.0f, distance } );
-            pSprite->setLocalRotation( float3{ 0.0f, 0.0f, 0.0f } );
-            pSprite->setLocalScale( float3{ size, size, 1.0f } );
-            // 조준선은 1인칭에서만(다른 시점에서는 눈앞에 떠 있는 판이 된다), 맞음 표시는 맞힌 직후 1인칭에서만.
-            const bool bWanted = _bFirstPerson == SW_TRUE && ( spriteIndex == 0 || _hitMarkerTimer > 0.0f );
-            if ( pSprite->isVisible() != bWanted )
-                pSprite->setVisible( bWanted );
+            const string&              name          = weapon.getDef()._name;
+            const LocalizationManager* pLocalization = game::getService<LocalizationManager>();
+            pWeaponName->setText( pLocalization != nullptr ? pLocalization->getStringByText( name, name.c_str() ) : name.c_str() );
         }
     }
 
@@ -747,6 +765,7 @@ namespace sw
         }
         if ( _bViewModeDirty == SW_TRUE )
             applyViewMode();
+        updateHud();
         // 쓰러짐 클립이 끝났다 — 디렉터가 적을 걷고 감독을 처음부터, 플레이어는 처음 자리에서.
         if ( _vitality.isAlive() == false && _downTimer >= _downTime )
         {
@@ -796,7 +815,6 @@ namespace sw
         CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
         if ( pAppearance != nullptr )
             pAppearance->setPartsVisible( _bFirstPerson == SW_FALSE );
-        placeOverlay();
     }
 
     GameObject* ShooterPlayerComponent::findBodyObject() const

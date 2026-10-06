@@ -187,7 +187,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `GimmickSensorComponent`), 원소 상호작용 규칙표(`ElementRuleTable` · `ElementGrid` — 기본표 `common/data/elements/default.elements.xml`), 장르 기믹 세트(`Genre/` — 플랫포머 · 어드벤처 · 슈터 · 레이싱 · 공포 · 잠입 · 메트로배니아 · RPG, 프리팹 `common/prefabs/gimmicks`). 2D · 3D 공용. `Gimmick/README.md`
 - **Spline**: 곡선(`SplinePath` — Catmull-Rom · 3차 베지어 · 꺾은선, 호 길이 매개변수, 가장 가까운 점, 고른 간격 샘플)과 씬 컴포넌트(`SplineComponent`),
   누적 거리 표 계산(`ArcLengthUtil` — 코스터 트랙도 쓴다). 기믹 무버 · 카메라 레일 · 길이 함께 쓴다. `Spline/README.md`
-- **UI**: 장르 무관 UI 컴포넌트 — `DialogueRunnerComponent`,
+- **UI**: 장르 무관 UI 컴포넌트 — `DialogueRunnerComponent`, `HudControllerComponent`(오브젝트가 플레이하는 동안 HUD 문서를 Hud 층에 연다 — 게임이
+  `findWidget<T>( 이름 )` 으로 값을 넣는다, 언리얼 `AHUD` 자리),
   `HealthBarComponent`, `DamageNumberComponent`. HP 바 · 데미지 숫자는 같은 오브젝트의 화면 마커(`WidgetComponent` Screen — 크기 · 머리 위 오프셋
   `_worldOffset` · 피벗은 그 컴포넌트의 데이터)에 위젯을 넣어 그린다 — 거리와 상관없이 같은 크기 · 선명한 글자(HP 바는 겹친 진행 막대 둘, 숫자는 스타일
   클래스 `damage` 의 글 위젯). 값은 틱 뒤 큐에서 넣는다(위젯은 게임 스레드만). `spawnNumber` 가 마커 · 숫자를 함께 붙인다. HP 바는 `HealthListenerComponent`(Combat)를 상속해 체력 시스템의 알림(`HealthChangedEvent` — 다시 두기 · 바뀜 · 쓰러짐)을 받는다 —

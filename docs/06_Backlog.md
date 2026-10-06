@@ -335,7 +335,7 @@ cd build/Ninja-Debug/Bin
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.
 
 - **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글 위젯은 글 판을 따라 다시 푼다(runtime-ui 6-2). 아직 없는 것: `selectordinal`(서수) · 화폐 · 시간대 · XLIFF · 쿠킹된 이진 표(언리얼 `.locres` — 지금은 JSON 을
-  그대로 읽는다) · 아랍어 이외 RTL 문화권 데이터 · `ja` 번역. 아이템 · 무기 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 `getStringByText` 를 거치지 않는다.
+  그대로 읽는다) · 아랍어 이외 RTL 문화권 데이터 · `ja` 번역. 아이템 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 없다(무기 이름은 HUD 가 `getStringByText` 로 쓴다).
 
 - **상호작용 · 기믹(2026-10-04 들어감 — `GameFramework/Base/Interaction` · `Gimmick` · `Spline`) 병합 뒤 남은 것.**
   - 물리: 기믹 프리팹의 `BoxCollider2DComponent` 에 3D 게임용 3D 트리거 · 강체 콜라이더 변형을 더한다(`Resource/common/prefabs/gimmicks`). 월드 질의 · 카메라 암 ·
