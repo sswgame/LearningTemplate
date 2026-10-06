@@ -1,6 +1,6 @@
 /**
  * @file SocialTypes.h
- * @brief 친구 키트의 타입 — 결과 · 관계 상태 · 관계 한 줄 · 접속 상태 · 알림 종류 · 상한입니다.
+ * @brief 친구 키트의 타입 — 결과 · 관계 상태 · 관계 한 줄 · 접속 상태 · 알림 종류 · 상한 · 길드(역할 · 회원 · 정보 · 상한)입니다.
  * @details 관계는 방향이 있다 — "나 → 상대" 한 줄의 상태(친구 · 보낸 신청 · 받은 신청 · 내가 막음). 친구는 양쪽 줄이 모두 친구다.
  *          접속 상태는 친구에게 보이는 "상태 + 짧은 활동 글"(Steam Rich Presence · EOS Presence 와 같은 자리)이다 — 계정이 어느 서버에 붙었는지(`IAccountPresence`)와 따로.
  */
@@ -8,6 +8,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -29,6 +30,12 @@ namespace sw
         YouBlocked,  ///< 내가 막은 상대
         Unavailable, ///< 저장소 · 캐시 — 다시 하면 된다
         Conflict,    ///< 다시 해도 경합 — 잠시 뒤
+        GuildNameTaken,
+        AlreadyInGuild,
+        NotInGuild,
+        NotAllowed, ///< 길드 역할이 모자란다
+        GuildFull,
+        InviteExpired,
         Count
     };
 
@@ -94,6 +101,8 @@ namespace sw
         FriendAdded,         ///< 친구가 됨
         FriendRemoved,
         PresenceChanged, ///< 친구의 접속 상태
+        GuildInvited,    ///< 길드 초대(상대 = 초대한 이, `_guildId`)
+        GuildChanged,    ///< 회원 · 역할 · 공지가 바뀜(다시 조회하라 — 내보내졌으면 조회가 NotInGuild)
         Count
     };
 } // namespace sw
@@ -106,6 +115,7 @@ namespace sw
         SocialPresence         _presence{}; ///< PresenceChanged
         AccountId              _recipientId{ kInvalidAccountId };
         AccountId              _otherId{ kInvalidAccountId };
+        uint64                 _guildId{ 0 }; ///< 길드 알림
         SocialNotificationKind _kind{ SocialNotificationKind::FriendRequested };
     };
 } // namespace sw
@@ -121,5 +131,55 @@ namespace sw
         static constexpr int32 kMaxBlocked      = 500;
         static constexpr int32 kMaxActivitySize = 64;   ///< UTF-8 바이트
         static constexpr int32 kMaxLinkPage     = 1000; ///< 친구 + 받은 신청 + 보낸 신청 + 막음 합보다 크게
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 길드 역할입니다. 와이어 · 레코드 값. */
+    enum class GuildRole : uint8
+    {
+        Member = 0,
+        Officer, ///< 초대 · 공지 · 회원 내보내기
+        Master,  ///< 하나 — 역할 바꾸기 · 길드장 넘기기, 혼자일 때만 떠난다(그러면 해산)
+        Count
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 길드 회원 하나입니다. */
+    struct GuildMember
+    {
+        AccountId _accountId{ kInvalidAccountId };
+        int64     _joinedMs{ 0 };
+        GuildRole _role{ GuildRole::Member };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 길드 정보입니다(조회는 회원 목록까지, 만들기 응답은 id · 이름만). */
+    struct GuildInfo
+    {
+        vector<GuildMember> _listMember{};
+        string              _name{};
+        string              _notice{};
+        uint64              _guildId{ 0 };
+        AccountId           _masterId{ kInvalidAccountId };
+        int64               _createdMs{ 0 };
+        int32               _memberCount{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 길드 상한입니다. */
+    struct GuildLimit
+    {
+        static constexpr int32 kMaxMember        = 100;
+        static constexpr int32 kMaxNameSize      = 24;        ///< UTF-8 바이트
+        static constexpr int32 kMaxNoticeSize    = 256;       ///< UTF-8 바이트
+        static constexpr int64 kInviteLifetimeMs = 604800000; ///< 7 일
     };
 } // namespace sw

@@ -389,14 +389,14 @@ namespace sw
         }
 
         if ( decision._bNotifyOtherRequested == SW_TRUE )
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherId, accountId, SocialNotificationKind::FriendRequested } );
+            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherId, accountId, 0, SocialNotificationKind::FriendRequested } );
         if ( decision._bNotifyBothAdded == SW_TRUE )
         {
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherId, accountId, SocialNotificationKind::FriendAdded } );
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, accountId, otherId, SocialNotificationKind::FriendAdded } );
+            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherId, accountId, 0, SocialNotificationKind::FriendAdded } );
+            _notificationBuffer.push( SocialNotification{ SocialPresence{}, accountId, otherId, 0, SocialNotificationKind::FriendAdded } );
         }
         if ( decision._bNotifyOtherRemoved == SW_TRUE )
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherId, accountId, SocialNotificationKind::FriendRemoved } );
+            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherId, accountId, 0, SocialNotificationKind::FriendRemoved } );
     }
 
     void SocialService::listLinks( AccountId accountId, uint64 requestTag )
@@ -586,7 +586,7 @@ namespace sw
             {
                 if ( link._otherId == presence._accountId && link._state == SocialLinkState::Friend )
                 {
-                    _notificationBuffer.push( SocialNotification{ presence, accountId, presence._accountId, SocialNotificationKind::PresenceChanged } );
+                    _notificationBuffer.push( SocialNotification{ presence, accountId, presence._accountId, 0, SocialNotificationKind::PresenceChanged } );
                     break;
                 }
             }
