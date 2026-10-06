@@ -479,16 +479,12 @@ namespace sw
                 }
                 ++_screenshotShotCount;
                 _bScreenshotTaken = _screenshotShotCount >= shotCount ? SW_TRUE : SW_FALSE;
+                // 중간 단계를 보고 싶다고 첨부 이름을 찍어 주었으면 그 첨부를, 아니면 화면에 나간 그림을 덤프한다.
+                // 실패는 경로와 함께 알린다(시나리오 경로와 같다) — 읽기 · 쓰기 실패 줄만으로는 어느 촬영이 빠졌는지 모른다.
                 const string_view attachment{ gv_screenshotAttachment };
-                if ( attachment.empty() == false )
-                {
-                    // 중간 단계를 보고 싶다고 이름을 찍어 준 경우. 그 첨부를 그대로 덤프한다.
-                    _pFrameRenderer->dumpTransientToPpm( attachment, path );
-                }
-                else
-                {
-                    (void)writePresentedImage( path ); // 디버그 스크린샷 — 결함 의심: 실패해도 경고가 없다(시나리오 경로는 경고를 남긴다)
-                }
+                const bool        bWritten = attachment.empty() == false ? _pFrameRenderer->dumpTransientToPpm( attachment, path ) : writePresentedImage( path );
+                if ( bWritten == false )
+                    SW_LOG_WARNING( "Screenshot was not written: %#", path.c_str() );
             }
         }
 

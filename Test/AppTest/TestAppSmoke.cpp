@@ -508,6 +508,23 @@ SW_TEST_CASE( AppSmokeTest, RuntimeMemoryIsAttributedByTag )
 }
 
 /**
+ * @brief [AppSmokeTest] `-gv_screenshot` 을 쓰지 못하면 그 경로를 경고로 알린다
+ * @details 디버그 스크린샷은 실패해도 조용히 지나갔다(시나리오 스크린샷만 경고했다). 폴더를 파일 경로로 주어 쓰기를 실패시킨다.
+ */
+SW_TEST_CASE( AppSmokeTest, UnwritableScreenshotIsReported )
+{
+    const string blockedPath = test::makeTempDirectory( "screenshot_is_a_folder" ); // 이 경로는 폴더라 파일로 쓸 수 없다
+    string       arguments{ "-W=128 -H=72 -gv_profileFrames=20 -dx12 \"-gv_screenshot=" };
+    arguments += blockedPath;
+    arguments += "\"";
+    const AppRunResult result = runApp( arguments, "Screenshot was not written" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
+    if ( result._bBackendUnusableHere )
+        SW_TEST_SKIP( "DX12 is not usable on this machine" );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( result._listMarkedLine.size() ) );
+}
+
+/**
  * @brief [AppSmokeTest] 백엔드 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 검증
  * @details 교체는 디바이스에 의존하는 기동 단계를 다시 세운다. 씬 스냅샷 빌더의 "머티리얼을 넘어 배치 합치기" 는 디바이스가
  *          텍스처를 인덱스로 고를 수 있을 때(DX12 · Vulkan 의 네이티브 bindless)만 켜져야 한다 — DX11 · GL 은 머티리얼 텍스처를
