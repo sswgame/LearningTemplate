@@ -5,6 +5,8 @@
 
 관련 상위 문서: [엔진 개요](../README.md) · [아키텍처 / Gotchas](../../../ARCHITECTURE.md)
 
+입력 층은 장치만 안다 — 액션 → 의도(`ControlIntent`)는 GameFramework `Base/Control` 의 플레이어 조종자가 만들고, 폰은 의도만 읽는다(`CheckControlBoundary`).
+
 ---
 
 ## 한 줄로 이해하기

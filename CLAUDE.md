@@ -197,6 +197,7 @@ py -3 Scripts/generate/GenerateConfigReference.py              # regenerate docs
 py -3 Scripts/lint/gate/CheckWin32WideCalls.py                 # Win32 calls name the W variant (UNICODE is not defined)
 py -3 Scripts/lint/gate/CheckWellKnownConstants.py             # π/√2/e/gravity/hash constants only in their home (MathUtil, HashUtil, …)
 py -3 Scripts/lint/gate/CheckKitNamespaces.py                  # state tags unique (comment = little-endian bytes); kits read no raw keys, prefix kit settings keys
+py -3 Scripts/lint/gate/CheckControlBoundary.py                # only player controllers, player views and command directors read input; pawns read ControlIntent
 py -3 Scripts/lint/gate/CheckScriptCommonHelpers.py            # Scripts/ use common's one place for processes, build dirs, console, generated files
 py -3 Scripts/lint/gate/CheckScriptLayout.py                   # Scripts/ file-name prefix per folder and lint base classes (Scripts/README.md layout table)
 py -3 Scripts/lint/fixer/FormatBranchBraces.py --check         # if/case 중괄호 규칙 검사

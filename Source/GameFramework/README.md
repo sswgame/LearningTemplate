@@ -17,7 +17,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   틱을 끄고 턴마다 `advanceTime( 1 )`). 체력 변화는 같은 오브젝트의 `HealthListenerComponent`(HP 바)에 알리고 피해는 `DamageNumberComponent` 로 띄웁니다. 자세한 것은 `Ability/README.md`,
   쓰는 예는 `Source/Games/AbilityArena`
 - **Control**(빙의): 조종 대상(폰)과 조종자를 나눈다(언리얼 `APawn` / `AController` · `Possess`). 폰(`PawnComponent`)은 행동 층 의도(`ControlIntent` —
-  이동 축 · 위아래 · 절대 조종 회전 · 아날로그 4 · 버튼 32, 양자화 `write` / `read` 하나)만 들고, 같은 오브젝트의 이동 · 행동 컴포넌트는 그것만 읽는다(InputMap 을 읽지 않는다).
+  이동 축 · 위아래 · 절대 조종 회전 · 아날로그 4 · 버튼 32, 양자화 `write` / `read` 하나)만 들고, 같은 오브젝트의 이동 · 행동 컴포넌트는 그것만 읽는다(InputMap 을 읽지 않는다 — 입력을 읽어도 되는 파일은 게이트 `CheckControlBoundary` 의 허용 표).
   조종자(`ControllerComponent` — `possess` / `unpossess`, 조종 회전)는 자기 오브젝트에 산다: `PlayerControllerComponent`(입력 맵 → 의도, 매핑 층을 읽는 유일한 조종자 —
   빙의하면 폰의 입력 레이어 · 플레이어 카메라 매니저 뷰 타깃 · `PossessionChangedEvent`, 폰이 바라면(`_bLockMouse` — 1인칭) 마우스 잠금 · 잠금 토글 액션
   `ToggleMouseLock`(Esc), 잠금이 실제로 걸린 동안만 시선을 쌓는다), `AiControllerComponent`(`think` → `moveTo` · `setFocus` · 버튼).

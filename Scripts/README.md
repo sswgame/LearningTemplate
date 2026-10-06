@@ -100,6 +100,7 @@ Scripts/
   │     │     ├── CheckCoreNetworkLayers.py   # Core/Network 폴더 층(뿌리 ← Transport · Security ← Connection ← Message ← Replication)
   │     │     ├── CheckEngineServiceBinding.py # 엔진 서비스 표와 바인딩 호스트 대조
   │     │     ├── CheckNullableServiceUse.py  # nullptr 가능 서비스 조회를 확인 없이 역참조
+  │     │     ├── CheckControlBoundary.py     # 입력을 읽는 파일은 플레이어 조종자 · 플레이어 뷰 · 명령 디렉터만(폰은 의도만)
   │     │     ├── CheckLogViewArgument.py     # 로그 인자의 string_view::data()
   │     │     ├── CheckGlobalVariableKinds.py # 전역 변수 정의와 extern 참조의 종류 일치
   │     │     ├── CheckRenderOwnership.py     # 렌더 스냅샷 소유 규칙

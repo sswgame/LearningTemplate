@@ -285,13 +285,13 @@ cd build/Ninja-Debug/Bin
     버그 리포트 · 시험 패널) · 단축키 편집기 · 환경설정 창 · 모듈 켜고 끄기 · DPI 실물 확인.
   - **중간(M)**: 대역폭 프로파일러 · 게임플레이 디버거 · 비주얼 로거 · 모듈 패키지 관리 · 점광/스폿 그림자 · SSAO ·
     HZB 가림 컬링 · 메시 LOD(meshopt) · PSO 미리 만들기 · 에디터 G(RenderDoc · 보기 모드 — 프로파일러 표 · GPU 타임스탬프 · Tracy 는 들어갔다) · 에디터 C(확장 지점) · 에디터 F
-    (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · UI 시험 입력 흉내 · 패키징 UI · 에디터 자동화 ·
-    로딩 흐름 · 입력 확장 · 에셋 DCC 내보내기 · QA 봇 · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 · 하늘/시간대/높이
+    (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · 패키징 UI · 시나리오 녹화(실행 중 입력 → `.scenario.xml`) ·
+    로딩 흐름 · 입력 확장 · 에셋 DCC 내보내기 · 포토 모드 · 리플레이/킬캠(바탕인 의도 기록 `.swintent` 은 있다 — 남은 것: 재생 UI · 카메라 · 되감기) · SSR · 업스케일러 · HDR 출력 · 데칼 · 하늘/시간대/높이
     안개 · 2D 스켈레탈 · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
     [넷 다: 런타임 UI].
   - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 제약 ·
     파티클/VFX · 텍스처
-    밉 스트리밍 · 카메라 5 · 6 단계 · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 · 탈것/말 ·
+    밉 스트리밍 · 카메라 5 · 6 단계 · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 ·
     천/머리카락 · 전술 AI · 볼류메트릭 안개/빛/구름 · 캐릭터 셰이딩 · 모션 캡처 공정 · 대규모 좌표 · PCG 저작 그래프 · GI/반사 프로브 · 플랫폼 서비스 ·
     패치/DLC · 모드/UGC.
   - **아주 큼(XL)**: 비주얼 스크립팅 · 월드 파티션/스트리밍/HLOD · 음성 채팅(온라인 구성은 1-7 "네트워크 서비스 계층").
@@ -1708,6 +1708,9 @@ cd build/Ninja-Debug/Bin
   정확히. 엔진 서비스 없이 도는 실행 파일은 이름 풀(`HashedStringPool::initialize`)부터 세운다 — 빠뜨리면 첫 `hashed_string` 에서 접근 위반이다(`EngineBootstrap` 앞부분과 같은 순서).
 - **루프백 스트림 전송은 한 스레드에서만 돈다** — 다른 스레드가 `pollIo` 를 돌리면 Debug 경합 검출기가 멈춘다. 가짜 서버는 스레드 대신 클라이언트 전송을 감싸 같이 돈다.
 
+- **입력 · 매핑 · 행동 세 층** — 입력 층(Engine/Input)은 장치 사건만, 매핑(InputMap)은 플레이어 조종자 · 플레이어 뷰 · 명령형 디렉터만, 폰은 `ControlIntent` 만
+  읽는다(`CheckControlBoundary` 허용 표). 네트워크 · 게임플레이 리플레이는 의도를 싣는다. **탑승 = 빙의를 탈것으로 옮기는 것**, 탑승자는 좌석 소켓에 붙어(이동 멈춤 ·
+  자세 파라미터) 피격은 그대로 받는다. 탈것 의도의 연결은 운전석 조종자를 따른다. 명령형 장르(RTS · SRPG · 경영)는 폰이 없다.
 - **가상 입력은 `IVirtualInputSource` 하나로 넣는다** — `InputManager::attachVirtualInput` 이 붙이면 `beginFrame` 이 OS 사건과 같은 자리에서 그 프레임 사건을
   재생한다. 배타 모드(기본)는 OS 키 · 마우스 · 패드 사건, 패드 폴링, 창 포커스 사건, 커서 가두기를 무시한다 — 사람이 같은 기계를 써도 시험이 흔들리지 않는다.
   엔진 키보드 포커스(개발 콘솔)는 따른다. 바깥 스크립트로 OS 입력(`SendInput`)을 넣지 말 것 — OS 는 사건을 포그라운드 창에만 준다.
@@ -1977,5 +1980,10 @@ cd build/Ninja-Debug/Bin
 | `Input/Events/` · `Input/Utils/` · `Reflection/Rpc/` | 한 단계 위(`Input/` · `Reflection/`) |
 | `Test/<실행 파일>/Test*.cpp`(평면) | 소스 폴더를 따르는 하위 폴더(`Test/README.md`) |
 | Overworld `PlayerController` · `PlayerControllerSettings` | `OverworldTileMover` · `OverworldTileMoverSettings`(의도를 받는 몸 — 조종자는 `PlayerControllerComponent`) |
+| `RtsAiController` · `SrpgAiController` | `RtsAiCommander` · `SrpgAiCommander`(명령형 장르의 AI — 조종자가 아니다) |
+| `NavMeshAgentComponent::_bUpdatePosition` | `_driveMode`(`NavAgentDriveMode` — Transform · CharacterController · SteerOnly) |
+| `InputReplay::play` · `updatePlayback` | `InputManager::attachVirtualInput`(재생은 가상 입력 원천) |
+| `InputSnapshot` · `InputHistoryBuffer` · `InputManager::recordSnapshot` | 삭제 — 행동 층은 `ControlIntent` · `ControlIntentHistory` |
+| `Base/Camera/FirstPersonCameraComponent` | `Base/Control/FirstPersonCameraComponent`(시점 = 폰의 조종 회전) |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
