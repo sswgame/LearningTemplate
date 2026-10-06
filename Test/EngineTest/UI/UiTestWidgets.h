@@ -137,6 +137,12 @@ namespace sw::test
             return phase == UiRoutePhase::Tunnel && _bHandleTunnel ? UiReply::makeHandled() : UiReply::makeUnhandled();
         }
 
+        void onHoverChanged( bool bHovered ) override
+        {
+            if ( _pRecord != nullptr )
+                _pRecord->add( getName(), bHovered ? "Enter" : "Leave" );
+        }
+
         UiEventRecord* _pRecord;
         bool           _bLayoutBoundary;
         bool           _bHandleTunnel;
