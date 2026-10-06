@@ -106,13 +106,17 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (`IServerBus` — 주제 발행/구독 · 최대 한 번, `EphemeralServerBus` 캐시 위 · `LocalServerBus` 프로세스 안). `Online/Schedule`: 예약 작업(`ServiceScheduler` — 일일 · 주간 · 기간,
   회차를 저장소 조건부 쓰기로 차지해 서버 여럿 중 하나만, 지나친 회차는 최근 하나, 임대가 지나면 이어받기). `Online/Config`: 원격 설정 · 기능 플래그(`RemoteConfig` —
   저장소 정본 · 판 조건 바꾸기 + 감사 · 버스 알림, 계정 해시 출시 비율, 클라이언트 묶음 · 해시). 관측(지표 · 구조화 로그 · 요청 추적 id)은 서비스 틀의 요청 문맥이 자리다.
-  `Online/Identity`: 신원 원형 — `AccountId` · `AccountIdentity` · `IAccountDirectory`(이 프로세스에 붙어 있는 계정, 발급은 계정 키트).
+  `Online/Identity`: 신원 원형 — `AccountId` · `AccountIdentity` · `IAccountDirectory`(이 프로세스에 붙어 있는 계정, 발급은 계정 키트) ·
+  `IAccountPresence`(서버 여럿의 접속 상태 — 계정 id · 표시 이름으로 붙은 서버 찾기, 결과는 맡긴 델리게이트로 한 번 · 다른 서버 계정에게 알림) ·
+  `IAccountNameIndex`(오프라인 계정을 저장소에서 이름 · id 로 — 부르는 키트의 저장소 일 안에서). 셋 다 계정 키트가 구현하고 다른 키트는 창구만 본다.
   `Online/Service`: 서비스 틀 — 호스트(`OnlineServiceHost` — 스트림 끝점 · 요청 서버, 연결의 첫 요청 Hello 로 기반 · 키트 판 협상, 인증(계정 바인딩 — 익명 메서드만 로그인 없이) ·
   주소 · 계정 토큰 버킷 · 몸 상한을 먼저 보고 영역을 맡은 `IOnlineService` 로, 계정 ↔ 연결 표로 알림 `sendPush` · `sendPushToAll`, 계정이 떠나면 서비스들에 `onAccountLeft`,
   캐시 답 · 채널 메시지는 `EphemeralStoreRouter`(`Online/Cache`)로, 버스 메시지는 `subscribeServerBus` 한 서비스로 나눠 준다 — 호스트가 앞 · 버스의 유일한 소비자),
   와이어 표(`OnlineProtocol.h` — 키트마다 메서드 영역 256 칸: 메서드 영역 + 0x00..0x7F · 알림 영역 + 0x80..0xFF, 공통 오류 코드), 클라이언트(`OnlineServiceClient` —
-  Hello · 모은 요청 · 알림 나누기 · 다시 연결(물러남), 자기 끝점 모드와 공유 끝점 모드(부하 시험 봇 — 끝점 하나에 연결 여럿)). 시험: `OnlineServiceHostTest` · `OnlineServiceTest` ·
-  `EphemeralStoreRouterTest`.
+  Hello · 모은 요청 · 알림 나누기 · 다시 연결(물러남), 자기 끝점 모드와 공유 끝점 모드(부하 시험 봇 — 끝점 하나에 연결 여럿)), 키트 바인딩 · 클라이언트 도우미
+  (`ServicePendingTable` — 로직에 맡긴 요청의 꼬리표 ↔ 토큰, `ServiceClientCallTable` — 요청 id ↔ 사용자 델리게이트, `send` 안에서 바로 온 실패도 잃지 않는다).
+  시험: `OnlineServiceHostTest` · `OnlineServiceTest` · `EphemeralStoreRouterTest` · `ServicePendingTableTest` · `ServiceClientCallTableTest`. 키트 끝단 시험 하니스는
+  `Test/EngineTest/GameFramework/Online/OnlineHostTestUtil.h`(루프백 서버 · 공유 끝점 클라이언트 묶음 · 시험 로그인 · 가짜 접속 상태).
   `Online/Observability`: 서비스 표준 지표 묶음(`ServiceMetrics` — `service_requests_total{service,method,result}` · `service_request_seconds` ·
   `service_store_pending`). 등록부는 엔진 `Engine/Observability/MetricRegistry`(전용 서버 실행 파일이 하나 들고 넘긴다 — null 이면 세지 않는다).
   `Online/Local`: 클라이언트 로컬 저장 계약 `ILocalStore`(슬롯 `save/slot0` → 바이트, 슬롯 하나 단위 원자 쓰기 · 묶음 나열, 맡기고 거둔다 — 서버 계약과 따로 좁게),
@@ -286,9 +290,10 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       Argon2id · HKDF-SHA256, 서버는 기동 때 `isPasswordHashSupported` 로 확인). 스트림 바인딩 `AccountServer`(IOnlineService · IAccountSessionControl — 연결의 세션 토큰은
       메모리에, 로그인 · 재접속 성공이면 호스트에 계정을 붙이고 같은 계정의 옛 연결은 알림 뒤 닫는다, 연결이 닫히면 재접속 유예, 탈퇴 쓸기 · 세션 다시 읽기를 주기로,
       서버 여럿이면 다른 서버의 옛 세션을 버스 `account.revoke` 로 닫는다), 접속 상태 `OnlinePresence`(`IAccountPresence` 구현 — 캐시 `presence:` 키를 시한 · 주기로 다시 적고
-      "내 것일 때만" 지움, 이름으로 다른 서버의 계정 찾기, 버스 `push.<서버>` 로 다른 서버의 계정에게 알림),
+      "내 것일 때만" 지움, 계정 id · 이름으로 붙은 서버 찾기, 버스 `push.<서버>` 로 다른 서버의 계정에게 알림), 이름 색인 `AccountNameIndex`(`IAccountNameIndex` 구현 —
+      정식 계정의 소문자 로그인 이름 표 · 프로필 표를 읽는다, 상태 없음),
       UDP 접속 인증기 `AccountConnectAuthenticator`(게임 서버 — 저장소 없이 표 서명 · 서버 · 시한만). 시험: `LoginServiceTest` · `PlatformLoginTest` ·
-      `AccountStreamTest`(루프백 스트림 평문 · TLS, UDP Encrypted 접속까지) · `OnlineMultiServerTest`(호스트 둘이 저장소 · 캐시 · 버스를 나눠 씀).
+      `AccountStreamTest`(루프백 스트림 평문 · TLS, UDP Encrypted 접속까지) · `OnlineMultiServerTest`(호스트 둘이 저장소 · 캐시 · 버스를 나눠 씀) · `AccountNameIndexTest`.
     - `Trade`(`GF_Trade`, Client · Server): 거래 와이어 타입(`TradeTypes.h` — 다리 · 상태 · 닫힌 까닭 · 결과 · 스냅숏 · 코덱 `TradeWire`), 와이어(`TradeProtocol.h` —
       메서드 · 알림 Invited · Update · Closed, 응답에 요청한 계정의 이동 뒤 잔액), 클라이언트(`TradeClient` — 모든 요청에 멱등 키, 확정은 비추는 스냅숏의 두 판),
       인벤토리 칸 → 다리(`TradeInventoryUtil` — 같은 아이템 칸 합침, 인스턴스 상태 칸 거절, 아이템 → 자산 id 는 게임이 잇는다).

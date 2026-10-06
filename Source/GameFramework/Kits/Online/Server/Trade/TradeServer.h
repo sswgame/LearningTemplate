@@ -58,6 +58,7 @@ namespace sw
 
         void        pushSnapshot( OnlineServiceHost& host, const TradeSnapshot& snapshot );
         void        respondImmediately( OnlineServiceHost& host, const NetRequestToken& token, TradeResult result );
+        void        onPresenceFound( const AccountPresenceResult& found );
         static void collectBalances( const LedgerTransferOutcome& ledger, AccountId accountId, vector<TradeBalance>& outListBalance );
 
         unordered_map<uint64, PendingCall>           _mapTagToCall;
@@ -65,6 +66,7 @@ namespace sw
         unordered_map<uint64, LedgerTransferOutcome> _mapTradeToLedger; ///< 이번 틱에 정산된 거래의 이동 뒤 잔액(알림에 싣는다)
         vector<TradeCompletion>                      _listCompletionScratch;
         vector<TradeSnapshot>                        _listUpdateScratch;
+        vector<AccountPresenceResult>                _listFound; ///< 접속 상태 창구가 알린 찾기 결과 — 다음 서비스 틱에 신청으로
         vector<AccountPresenceResult>                _listFoundScratch;
         TradeService*                                _pTradeService;
         const IAccountDirectory*                     _pDirectory;

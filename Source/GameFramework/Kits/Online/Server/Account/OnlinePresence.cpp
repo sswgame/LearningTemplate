@@ -40,7 +40,7 @@ namespace sw
     OnlinePresence::OnlinePresence()
         : _mapRequestToPending{}
         , _mapAccountToIdentity{}
-        , _listFound{}
+        , _listDeferred{}
         , _settings{}
         , _pHost{ nullptr }
         , _serverId{ 0 }
@@ -66,7 +66,7 @@ namespace sw
         _pHost = nullptr;
         _mapRequestToPending.clear();
         _mapAccountToIdentity.clear();
-        _listFound.clear();
+        _listDeferred.clear();
     }
 
     void OnlinePresence::noteOnline( const AccountIdentity& identity )
@@ -102,6 +102,7 @@ namespace sw
 
     void OnlinePresence::tick( int64 nowMs )
     {
+        deliverDeferred();
         if ( _pHost == nullptr || nowMs < _nextRefreshMs )
             return;
         _nextRefreshMs = nowMs + _settings._refreshIntervalMs;
@@ -136,29 +137,44 @@ namespace sw
         return string( OnlinePresenceInternal::kNameKeyPrefix ) + ServiceKeyUtil::makeHex64( StringUtil::computeHash64( displayName.data(), displayName.size() ) );
     }
 
-    uint64 OnlinePresence::submitFindByDisplayName( string_view displayName )
+    uint64 OnlinePresence::submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound )
     {
         const uint64 lookupId = _nextLookupId++;
         if ( _pHost == nullptr )
         {
-            _listFound.push_back( AccountPresenceResult{ AccountIdentity{}, lookupId, 0 } );
+            _listDeferred.push_back( DeferredFound{
+                AccountPresenceResult{ AccountIdentity{}, lookupId, 0 },
+                onFound
+            } );
             return lookupId;
         }
         PendingOperation pending;
         pending._nameKey     = StringUtil::toLower( string( displayName ).c_str() );
+        pending._onFound     = onFound;
         pending._lookupId    = lookupId;
-        pending._pendingKind = PendingKind::Find;
+        pending._pendingKind = PendingKind::FindName;
         submitPending( EphemeralRequest::makeGet( makeNameKey( displayName ) ), std::move( pending ) );
         return lookupId;
     }
 
-    int32 OnlinePresence::pollFound( vector<AccountPresenceResult>& outListResult )
+    uint64 OnlinePresence::submitFindByAccount( AccountId accountId, const AccountPresenceDelegate& onFound )
     {
-        const int32 foundCount = static_cast<int32>( _listFound.size() );
-        for ( AccountPresenceResult& found : _listFound )
-            outListResult.push_back( std::move( found ) );
-        _listFound.clear();
-        return foundCount;
+        const uint64 lookupId = _nextLookupId++;
+        if ( _pHost == nullptr || accountId == kInvalidAccountId )
+        {
+            _listDeferred.push_back( DeferredFound{
+                AccountPresenceResult{ AccountIdentity{}, lookupId, 0 },
+                onFound
+            } );
+            return lookupId;
+        }
+        PendingOperation pending;
+        pending._onFound     = onFound;
+        pending._accountId   = accountId;
+        pending._lookupId    = lookupId;
+        pending._pendingKind = PendingKind::FindAccount;
+        submitPending( EphemeralRequest::makeGet( makeAccountKey( accountId ) ), std::move( pending ) );
+        return lookupId;
     }
 
     bool OnlinePresence::sendRemotePush( AccountId accountId, uint16 kind, const BitWriter& body )
@@ -183,9 +199,14 @@ namespace sw
         _mapRequestToPending.erase( pendingIt );
         switch ( pending._pendingKind )
         {
-            case PendingKind::Find:
+            case PendingKind::FindName:
             {
-                finishFind( pending, reply );
+                finishFindName( pending, reply );
+                break;
+            }
+            case PendingKind::FindAccount:
+            {
+                finishFindAccount( pending, reply );
                 break;
             }
             case PendingKind::Push:
@@ -233,7 +254,7 @@ namespace sw
         submitPending( EphemeralRequest::makeCompareAndSet( nameKey, nameBytes, nameBytes, _settings._ttlMs ), std::move( namePending ) );
     }
 
-    void OnlinePresence::finishFind( const PendingOperation& pending, const EphemeralReply& reply )
+    void OnlinePresence::finishFindName( const PendingOperation& pending, const EphemeralReply& reply )
     {
         AccountPresenceResult found{ AccountIdentity{}, pending._lookupId, 0 };
         if ( reply._result == EphemeralResult::Ok )
@@ -248,7 +269,35 @@ namespace sw
             if ( bNameOk && reader.hasOverflowed() == false && StringUtil::toLower( identity._displayName.c_str() ) == pending._nameKey )
                 found = AccountPresenceResult{ std::move( identity ), pending._lookupId, server };
         }
-        _listFound.push_back( std::move( found ) );
+        if ( pending._onFound.isBound() )
+            pending._onFound( found );
+    }
+
+    void OnlinePresence::finishFindAccount( const PendingOperation& pending, const EphemeralReply& reply )
+    {
+        AccountPresenceResult found{ AccountIdentity{}, pending._lookupId, 0 };
+        uint64                serverId = 0;
+        if ( reply._result == EphemeralResult::Ok && OnlinePresenceInternal::readServerId( reply._value, serverId ) )
+        {
+            found._identity._accountId = pending._accountId;
+            found._serverId            = serverId;
+        }
+        if ( pending._onFound.isBound() )
+            pending._onFound( found );
+    }
+
+    void OnlinePresence::deliverDeferred()
+    {
+        if ( _listDeferred.empty() )
+            return;
+        // 델리게이트 안에서 다시 찾기를 맡길 수 있다 — 지금 목록을 떼어 낸 뒤 부른다.
+        vector<DeferredFound> listDeferred = std::move( _listDeferred );
+        _listDeferred.clear();
+        for ( const DeferredFound& deferred : listDeferred )
+        {
+            if ( deferred._onFound.isBound() )
+                deferred._onFound( deferred._result );
+        }
     }
 
     void OnlinePresence::finishPush( const PendingOperation& pending, const EphemeralReply& reply )

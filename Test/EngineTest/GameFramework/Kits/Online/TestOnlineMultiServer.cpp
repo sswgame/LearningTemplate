@@ -1,6 +1,7 @@
 // 서버 여럿 — 두 서비스 호스트가 저장소(메모리 서비스 DB) · 캐시(메모리 휘발 DB) · 버스(프로세스 안 허브)를 나눠 쓴다.
 // 같은 계정이 다른 서버에 로그인하면 옛 서버의 연결이 버스로 바로 닫히고(세션 다시 읽기를 기다리지 않는다), 운영 끊기의 사유 코드가 다른 서버까지 가고,
 // 다른 서버에 붙은 상대와 거래가 끝까지 가며(초대 · 닫힘 알림이 버스로 건너간다), 캐시가 비어도 다음 다시 적기 주기에 접속 상태가 돌아온다.
+// 접속 상태 창구는 계정 id · 이름으로 붙은 서버를 찾고, 같이 찾는 둘이 서로의 결과를 가져가지 않는다.
 #include "pch.h"
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
@@ -243,6 +244,14 @@ namespace
             return false;
         }
     };
+
+    /** @brief 접속 상태 찾기 결과를 모읍니다(서비스 하나의 몫). */
+    struct PresenceRecorder
+    {
+        vector<AccountPresenceResult> _listResult{};
+
+        void onFound( const AccountPresenceResult& result ) { _listResult.push_back( result ); }
+    };
 } // namespace
 
 SW_TEST_CASE( OnlineMultiServerTest, LoginOnAnotherServerClosesTheOldConnectionThroughTheBus )
@@ -355,4 +364,36 @@ SW_TEST_CASE( OnlineMultiServerTest, WipedCacheComesBackOnTheNextPresenceRefresh
     const TradeClientReply found = rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.invite( "bob" ) );
     SW_EXPECT_EQUAL( int32( TradeResult::Ok ), int32( found._result ) );
     SW_EXPECT_TRUE( found._snapshot.findSideIndex( bobId ) >= 0 );
+}
+
+SW_TEST_CASE( OnlineMultiServerTest, PresenceFindsTheServerOfAnAccountByIdAndByName )
+{
+    MultiServerRig rig;
+    AccountId      aliceId = kInvalidAccountId;
+    AccountId      bobId   = kInvalidAccountId;
+    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceId, bobId ) );
+    IAccountPresence* pPresence = rig._serverA._accountServer.getPresence();
+    // 두 서비스가 같은 창구로 같이 찾는다 — 각자 맡긴 결과만 받는다.
+    PresenceRecorder chatRecorder;
+    PresenceRecorder socialRecorder;
+    const uint64     bobLookup     = pPresence->submitFindByAccount( bobId, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &chatRecorder ) );
+    const uint64     aliceLookup   = pPresence->submitFindByAccount( aliceId, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &socialRecorder ) );
+    const uint64     nameLookup    = pPresence->submitFindByDisplayName( "BOB", AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &socialRecorder ) );
+    const uint64     offlineLookup = pPresence->submitFindByAccount( 0xDEAD, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &chatRecorder ) );
+    SW_EXPECT_TRUE( chatRecorder._listResult.empty() ); // 맡긴 자리에서 부르지 않는다
+    rig.step( 2 );
+
+    SW_ASSERT_EQUAL( size_t( 2 ), chatRecorder._listResult.size() );
+    SW_EXPECT_EQUAL( bobLookup, chatRecorder._listResult[0]._requestId );
+    SW_EXPECT_EQUAL( bobId, chatRecorder._listResult[0]._identity._accountId );
+    SW_EXPECT_EQUAL( uint64( 2 ), chatRecorder._listResult[0]._serverId );
+    SW_EXPECT_EQUAL( offlineLookup, chatRecorder._listResult[1]._requestId );
+    SW_EXPECT_FALSE( chatRecorder._listResult[1].isOnline() );
+    SW_ASSERT_EQUAL( size_t( 2 ), socialRecorder._listResult.size() );
+    SW_EXPECT_EQUAL( aliceLookup, socialRecorder._listResult[0]._requestId );
+    SW_EXPECT_EQUAL( uint64( 1 ), socialRecorder._listResult[0]._serverId ); // 이 서버
+    SW_EXPECT_EQUAL( nameLookup, socialRecorder._listResult[1]._requestId );
+    SW_EXPECT_EQUAL( bobId, socialRecorder._listResult[1]._identity._accountId );
+    SW_EXPECT_TRUE( socialRecorder._listResult[1]._identity._displayName == "bob" );
+    SW_EXPECT_EQUAL( uint64( 2 ), socialRecorder._listResult[1]._serverId );
 }

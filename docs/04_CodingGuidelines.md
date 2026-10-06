@@ -160,7 +160,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - 클라이언트 · 서버로 나뉘는 기능은 모듈로 나눕니다 — 공유 `GF_<X>`, 서버 전용 `GF_Server_<X>`, 클라이언트 전용 `GF_Client_<X>`(매니페스트 `_listTarget`).
 
 ### 시계는 MonotonicClock 하나
-- 시각은 `Core/Time/MonotonicClock.h` 로만 읽습니다(`MonotonicClock::nowNanoseconds()` · 걸린 시간 `Stopwatch` · 기다림 기한 `Deadline::afterMilliseconds( ms )` + `isExpired()`). `std::chrono` 의 `steady_clock` · `high_resolution_clock` · `system_clock` 은 시험 코드에서도 쓰지 않습니다(별칭 · `using namespace` 포함, `sleep_for` 같은 기간 값은 괜찮다). 예외는 이유와 함께 게이트의 표 한 곳에 두고, `CheckClockReads.py` 가 Source · Test · Tools/ReflectionParser 에서 검사합니다.
+- 시각은 `Core/Time/MonotonicClock.h` 로만 읽습니다(`MonotonicClock::nowNanoseconds()` · 걸린 시간 `Stopwatch` · 기다림 기한 `Deadline::afterMilliseconds( ms )` + `isExpired()`), 기준점이 있는 UTC 시각(만료 · 기록 시각 · 기간)은 `WallClock::nowUnixMilliseconds()` 로 읽고 서비스에는 `nowMs` 매개변수로 넘깁니다. `std::chrono` 의 `steady_clock` · `high_resolution_clock` · `system_clock` 은 시험 코드에서도 쓰지 않습니다(별칭 · `using namespace` 포함, `sleep_for` 같은 기간 값은 괜찮다). 예외는 이유와 함께 게이트의 표 한 곳에 두고, `CheckClockReads.py` 가 Source · Test · Tools/ReflectionParser 에서 검사합니다.
 
 ### 이미 잡아 둔 메모리에 객체 만들기
 - placement new 는 `sw_placement_new( pMemory ) T( ... )` 로 씁니다(`Core/Memory/Memory.h`). 맨 `new ( pMemory ) T( ... )` 는 쓰지 않습니다.

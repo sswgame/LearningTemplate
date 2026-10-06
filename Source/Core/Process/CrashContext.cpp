@@ -10,6 +10,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
+#include "Core/Time/WallClock.h"
 
 #include <chrono>
 #include <cstdio>
@@ -103,9 +104,8 @@ namespace sw
             if ( s_arrSession[0] != '\0' )
                 return s_arrSession;
 
-            const uint64 nowTicks = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
-            const uint64 wallSeconds =
-                static_cast<uint64>( std::chrono::system_clock::now().time_since_epoch().count() );
+            const uint64       nowTicks    = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
+            const uint64       wallSeconds = static_cast<uint64>( WallClock::nowUnixMilliseconds() );
             std::random_device randomDevice;
             const uint64       mixed = nowTicks ^ ( wallSeconds << 16 ) ^ ( static_cast<uint64>( randomDevice() ) << 32 );
 

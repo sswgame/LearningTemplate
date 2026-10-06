@@ -109,7 +109,7 @@
   - 서비스 요청-응답 — `NetRequestClient`(요청 id · 시한 · 취소 · 연결 끊김 · 과부하 중 정확히 하나로 콜백 한 번) · `NetRequestServer`(메서드마다 처리기, 바로 또는
     토큰으로 나중에 `respond`, 멱등 키는 (주체, 메서드, 키) 범위로 기억 — 끝난 키는 기억한 응답, 처리 중인 키는 첫 응답을 같이). 복제용 RPC 가 아니라 서비스 호출이다
 - **Math/**: `VectorMath` · `MatrixMath` · `MathUtil` · `Frustum`
-- **Time/**: `MonotonicClock`(아래 "시간") · `GameTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE`)
+- **Time/**: `MonotonicClock`(아래 "시간") · `GameTimer` · `WallClock`(UTC 유닉스 밀리초 — 기간 · 만료 · 기록 시각, 경과 시간은 MonotonicClock) · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE`)
 - **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.
   - `ILogSink` / `Logger` — 매크로가 말을 거는 파사드. 포맷 · 타임스탬프 · 리스너 · 비동기 큐 · 상세도 ·
     Caller 표를 맡는다. 테스트 프레임워크는 이 인터페이스를 구현해 기존 싱크를 **감싼다**(로그 가로채기).
@@ -196,6 +196,8 @@
   직접 읽지 않는다(시험 코드 포함) — 프로파일러 · 로그 · 기한이 같은 시각을 봐야 한다. `Scripts/lint/gate/CheckClockReads.py` 가 막는다.
 - 기다리는 루프는 횟수가 아니라 시간(`Deadline`)으로 묶는다. 횟수 상한은 느린 머신에서 정상을 실패로 만든다.
 - 프레임 델타 · 일시정지가 필요하면 `GameTimer`(같은 OS 카운터)를 쓴다.
+- 기준점(epoch)이 있는 UTC 시각(서버의 만료 · 기록 시각 · 기간)은 `Time/WallClock.h` 하나다(`WallClock::nowUnixMilliseconds`) — `system_clock` 을 읽는 유일한 파일.
+  NTP 보정으로 거꾸로 갈 수 있으니 경과 시간에는 쓰지 않고, 서비스에는 `nowMs` 매개변수로 넘긴다(시험이 가짜 시각을 넣는다).
 
 ## 빌드 모델
 - 소스는 `Core_objects`(OBJECT)에서 **한 번만** 컴파일됩니다.

@@ -763,7 +763,7 @@ namespace sw
 
             _outcome._listOnline.push_back( LoginSessionRef{ session._accountId, token._sessionId, LoginRevokeReason::None } );
             _outcome._listEvent.push_back( LoginEvent{ session._accountId, token._sessionId, LoginRevokeReason::None, LoginEvent::Kind::Resumed } );
-            (void)readIdentity( session._accountId, outGrant._identity );
+            (void)readIdentity( _connection, session._accountId, outGrant._identity );
             Internal::ProfileRecord profile;
             if ( Internal::readProfile( _connection, session._accountId, profile ) == ServiceStoreResult::Ok )
                 outGrant._deletionDueMs = profile._deletionDueMs;
@@ -796,7 +796,7 @@ namespace sw
             *pOutRevokeReason = session._revokeReason;
         if ( state != LoginResult::Ok )
             return state;
-        return readIdentity( session._accountId, outIdentity ) ? LoginResult::Ok : LoginResult::StoreUnavailable;
+        return readIdentity( _connection, session._accountId, outIdentity ) == ServiceStoreResult::Ok ? LoginResult::Ok : LoginResult::StoreUnavailable;
     }
 
     LoginResult LoginStoreLogic::logout( const LoginSessionToken& token, int64 nowMs )
@@ -1216,28 +1216,33 @@ namespace sw
         }
     }
 
-    bool LoginStoreLogic::readIdentity( uint64 accountId, AccountIdentity& outIdentity )
+    ServiceStoreResult LoginStoreLogic::readIdentity( IServiceStoreConnection& connection, uint64 accountId, AccountIdentity& outIdentity )
     {
         LoginStoreLogicInternal::ProfileRecord profile;
-        if ( LoginStoreLogicInternal::readProfile( _connection, accountId, profile ) != ServiceStoreResult::Ok )
-            return false;
+        const ServiceStoreResult               readResult = LoginStoreLogicInternal::readProfile( connection, accountId, profile );
+        if ( readResult != ServiceStoreResult::Ok )
+            return readResult;
         outIdentity = LoginStoreLogicInternal::makeIdentity( accountId, profile );
-        return true;
+        return ServiceStoreResult::Ok;
     }
 
-    bool LoginStoreLogic::readIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity )
+    ServiceStoreResult LoginStoreLogic::readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity )
     {
         using Internal = LoginStoreLogicInternal;
         string nameKey;
         if ( Internal::normalizeLoginName( displayName, nameKey ) == false )
-            return false;
-        ServiceRecord accountRaw;
-        if ( _connection.readRecord( Internal::getAccountTable(), nameKey, accountRaw ) != ServiceStoreResult::Ok )
-            return false;
+            return ServiceStoreResult::NotFound;
+        ServiceRecord            accountRaw;
+        const ServiceStoreResult readResult = connection.readRecord( Internal::getAccountTable(), nameKey, accountRaw );
+        if ( readResult != ServiceStoreResult::Ok )
+            return readResult;
         Internal::AccountRecord account;
         if ( Internal::decodeAccount( accountRaw._bytes, account ) == false )
-            return false;
-        return readIdentity( account._accountId, outIdentity );
+        {
+            SW_LOG_ERROR( "account record '%#' is corrupt", nameKey.c_str() );
+            return ServiceStoreResult::Unavailable;
+        }
+        return readIdentity( connection, account._accountId, outIdentity );
     }
 
     LoginResult LoginStoreLogic::recordFailure( string_view nameKey, const vector<uint8>& accountBytes, uint64 accountVersion, int64 nowMs, int64& outRetryAfterMs )

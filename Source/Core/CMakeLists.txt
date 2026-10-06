@@ -80,6 +80,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Task/TaskTypes.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Time/MonotonicClock.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Time/GameTimer.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Time/WallClock.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Uuid/Uuid.cpp"
 )
 

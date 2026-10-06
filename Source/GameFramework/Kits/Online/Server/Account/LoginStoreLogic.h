@@ -19,6 +19,8 @@
 
 namespace sw
 {
+    enum class ServiceStoreResult : uint8;
+
     class IServiceStoreConnection;
     class ServiceTransaction;
 
@@ -86,9 +88,11 @@ namespace sw
         int32 purgeDueDeletions( int64 nowMs, int32 maxCount );
 
         /** @brief 서비스가 고른 세션을 다시 읽어, 다른 프로세스가 밀어낸 · 끝난 세션을 `_listRevoked` 에 넣습니다. 저장소가 아프면 아무도 끊지 않는다. */
-        void               refreshSessions( const vector<LoginSessionRef>& listOnline, int64 nowMs );
-        [[nodiscard]] bool readIdentity( uint64 accountId, AccountIdentity& outIdentity );
-        [[nodiscard]] bool readIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity );
+        void refreshSessions( const vector<LoginSessionRef>& listOnline, int64 nowMs );
+        /** @brief 계정 id 의 공개 신원입니다(이름 색인 `AccountNameIndex` 가 다른 키트의 저장소 일 안에서 부른다). */
+        [[nodiscard]] static ServiceStoreResult readIdentity( IServiceStoreConnection& connection, uint64 accountId, AccountIdentity& outIdentity );
+        /** @brief 정식 계정(소문자 로그인 이름 = 표시 이름)을 이름으로 찾습니다. 규칙 밖 이름이면 NotFound. */
+        [[nodiscard]] static ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity );
 
     private:
         LoginResult recordFailure( string_view nameKey, const vector<uint8>& accountBytes, uint64 accountVersion, int64 nowMs, int64& outRetryAfterMs );

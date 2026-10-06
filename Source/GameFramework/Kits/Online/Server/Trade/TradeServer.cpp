@@ -25,6 +25,7 @@ namespace sw
         , _mapTradeToLedger{}
         , _listCompletionScratch{}
         , _listUpdateScratch{}
+        , _listFound{}
         , _listFoundScratch{}
         , _pTradeService{ nullptr }
         , _pDirectory{ nullptr }
@@ -45,6 +46,7 @@ namespace sw
     {
         _mapTagToCall.clear();
         _mapLookupToCall.clear();
+        _listFound.clear();
         _pTradeService = nullptr;
     }
 
@@ -79,7 +81,8 @@ namespace sw
                 respondImmediately( host, context._token, TradeResult::PeerOffline );
                 return;
             }
-            _mapLookupToCall[_pPresence->submitFindByDisplayName( name )] = PendingLookup{ context._token, context._accountId, context._nowMs };
+            const uint64 lookupId      = _pPresence->submitFindByDisplayName( name, AccountPresenceDelegate::create<&TradeServer::onPresenceFound>( this ) );
+            _mapLookupToCall[lookupId] = PendingLookup{ context._token, context._accountId, context._nowMs };
             return;
         }
 
@@ -143,7 +146,7 @@ namespace sw
         if ( _pPresence != nullptr )
         {
             _listFoundScratch.clear();
-            (void)_pPresence->pollFound( _listFoundScratch );
+            _listFoundScratch.swap( _listFound );
             for ( const AccountPresenceResult& found : _listFoundScratch )
             {
                 const auto lookupIt = _mapLookupToCall.find( found._requestId );
@@ -219,6 +222,8 @@ namespace sw
                 (void)_pPresence->sendRemotePush( accountId, kind, body ); // 상대가 다른 서버에 붙어 있다
         }
     }
+
+    void TradeServer::onPresenceFound( const AccountPresenceResult& found ) { _listFound.push_back( found ); }
 
     void TradeServer::respondImmediately( OnlineServiceHost& host, const NetRequestToken& token, TradeResult result )
     {

@@ -36,7 +36,7 @@ _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 
 #: std 시계를 읽어도 되는 파일 → 이유.
 _kMapExemptFileToReason = {
-    "Source/Core/Process/CrashContext.cpp": "세션 ID 에 벽시계(epoch 기준) 값을 섞는다 — MonotonicClock 은 기준점이 없는 단조 시계라 대신할 수 없다",
+    "Source/Core/Time/WallClock.cpp": "UTC 벽시계의 유일한 자리 — 서버의 기간 · 만료 · 기록 시각은 기준점(epoch)이 있어야 한다. 경과 시간은 MonotonicClock",
 }
 
 _kClockNameRe = re.compile(r"(?<![\w$])(steady_clock|high_resolution_clock|system_clock)(?![\w$])")
@@ -117,7 +117,7 @@ class CheckClockReadsGate(LintGate):
         {
             "name": "std 시계를 더는 읽지 않는 예외 파일(낡은 예외)",
             "files": {
-                "Source/Core/Process/CrashContext.cpp": "// steady_clock 은 주석 안이라 읽기가 아니다\nint probe() { return 0; }\n",
+                "Source/Core/Time/WallClock.cpp": "// steady_clock 은 주석 안이라 읽기가 아니다\nint probe() { return 0; }\n",
             },
         },
     ]
